@@ -1,0 +1,53 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+
+*/
+
+
+#ifndef ERROR_H_
+#define ERROR_H_
+
+#include "types.h"
+
+/** error code type */
+typedef int_fast8_t		error_t;
+
+/** unknown or undefined error */
+#define EUNKNOWN	1
+
+/** missing ot not found entry error */
+#define ENOENT		2
+
+/** ressource busy error */
+#define EBUSY		3
+
+/** no more memory available for the requested operation */
+#define ENOMEM		4
+
+/** invalid value */
+#define EINVAL		5
+
+/** deadlock detected */
+#define EDEADLK		6
+
+/** operation not permitted */
+#define EPERM		7
+
+#endif
+

@@ -1,0 +1,82 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    This driver is based on svgalib code (http://www.svgalib.org/)
+
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+
+*/
+
+#include <mutek/types.h>
+#include <mutek/device.h>
+#include <mutek/iospace.h>
+#include <mutek/alloc.h>
+#include <mutek/lock.h>
+#include <string.h>
+
+#include <mutek/drivers/fb-vga.h>
+
+#include "fb-vga-private.h"
+
+/* 
+ * device close operation
+ */
+
+DEV_CLEANUP(fb_vga_cleanup)
+{
+  struct fb_vga_context_s	*pv = dev->private;
+
+  lock_destroy(&pv->lock);
+
+  mem_free(pv);
+}
+
+DEVFB_GETBUFFER(fb_vga_getbuffer)
+{
+  struct fb_vga_context_s	*pv = dev->private;
+
+  return FB_VGA_FB_ADDRESS + page * pv->mode->xres * pv->mode->yres;
+}
+
+/* 
+ * device open operation
+ */
+
+DEV_INIT(fb_vga_init)
+{
+  struct fb_vga_context_s	*pv;
+
+#ifndef CONFIG_STATIC_DRIVERS
+  dev->f_cleanup	= fb_vga_cleanup;
+  dev->fb.f_setmode	= fb_vga_setmode;
+  dev->fb.f_getbuffer	= fb_vga_getbuffer;
+  dev->fb.f_flippage	= fb_vga_flippage;
+#endif
+
+  /* alocate private driver data */
+  pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
+
+  if (!pv)
+    return -1;
+
+  lock_init(&pv->lock);
+
+  dev->private = pv;
+
+  return 0;
+}
+
