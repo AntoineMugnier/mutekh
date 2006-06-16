@@ -28,7 +28,7 @@
 
 #include "timer-soclib-private.h"
 
-#include <mutek/drivers/timer-soclib.h>
+#include "timer-soclib.h"
 
 /*
  * timer device callback setup
@@ -36,7 +36,7 @@
 
 DEVTIMER_SETCALLBACK(timer_soclib_setcallback)
 {
-  struct timer_soclib_context_s	*pv = dev->private;
+  struct timer_soclib_context_s	*pv = dev->drv_pv;
   uintptr_t			base = dev->addr[0] + id * TIMER_SOCLIB_REGSPACE_SIZE;
   uint32_t			mode = cpu_mem_read_32(base + TIMER_SOCLIB_REG_MODE);
 
@@ -107,7 +107,7 @@ DEVTIMER_GETVALUE(timer_soclib_getvalue)
 
 DEV_IRQ(timer_soclib_irq)
 {
-  struct timer_soclib_context_s	*pv = dev->private;
+  struct timer_soclib_context_s	*pv = dev->drv_pv;
   uint_fast16_t	id;
 
   /* check irq for each timer */
@@ -137,7 +137,7 @@ DEV_IRQ(timer_soclib_irq)
 
 DEV_CLEANUP(timer_soclib_cleanup)
 {
-  struct timer_soclib_context_s	*pv = dev->private;
+  struct timer_soclib_context_s	*pv = dev->drv_pv;
 
   mem_free(pv);
 }
@@ -167,7 +167,7 @@ DEV_INIT(timer_soclib_init)
 
   memset(pv, 0, sizeof(*pv));
 
-  dev->private = pv;
+  dev->drv_pv = pv;
 
   return 0;
 }

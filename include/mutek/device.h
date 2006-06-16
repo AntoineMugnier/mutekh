@@ -48,6 +48,7 @@ typedef DEV_IRQ(dev_irq_t);
 #include "device/icu.h"
 #include "device/fb.h"
 #include "device/timer.h"
+#include "device/enum.h"
 
 
 
@@ -89,6 +90,14 @@ typedef DEV_CLEANUP(dev_cleanup_t);
 
 /** Device descriptor structure */
 
+#define DEVICE_MAX_ADDRSLOT	4
+
+
+#ifdef CONFIG_DEVICE_HIERARCHY
+#include <mutek/template/dlist.h>
+DLIST_TYPE_DECL(device, struct device_s);
+#endif
+
 struct device_s
 {
 #ifndef CONFIG_STATIC_DRIVERS
@@ -105,18 +114,30 @@ struct device_s
     struct dev_class_fb_s	fb;
     /** timer devices */
     struct dev_class_timer_s	timer;
+    /** device enumerator class */
+    struct dev_class_enum_s	denum;
   };
 
 #endif
 
-  /** pointer to device private data if any, used by driver code */
-  void				*private;
+  /** pointer to device driver private data if any */
+  void				*drv_pv;
 
   /** hardware interrupt line number */
   uint_fast8_t			irq;
 
   /** device IO addresses table */
-  uintptr_t			addr[4];
+  uintptr_t			addr[DEVICE_MAX_ADDRSLOT];
+
+#ifdef CONFIG_DEVICE_HIERARCHY
+  /** pointer to device enumrator private data if any */
+  void				*enum_pv;
+
+  struct device_s		*parent;
+  device_entry_t		siblings;
+  device_cont_t			children;
+#endif /* !CONFIG_DEVICE_HIERARCHY */
+
 };
 
 #endif

@@ -22,7 +22,7 @@
 #ifndef DRIVER_TIMER_SOCLIB_H_
 #define DRIVER_TIMER_SOCLIB_H_
 
-#include "../device.h"
+#include <mutek/device.h>
 
 /* timer device functions */
 

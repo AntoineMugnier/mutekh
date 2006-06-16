@@ -27,7 +27,7 @@
 #include <mutek/interrupt.h>
 #include <mutek/error.h>
 
-#include <mutek/drivers/icu-8259.h>
+#include "icu-8259.h"
 
 #include "icu-8259-private.h"
 
@@ -50,7 +50,7 @@ DEVICU_ENABLE(icu_8259_enable)
 
 DEVICU_SETHNDL(icu_8259_sethndl)
 {
-  struct icu_8259_private_s	*pv = dev->private;
+  struct icu_8259_private_s	*pv = dev->drv_pv;
   struct icu_8259_handler_s	*h = pv->table + irq;
 
   h->hndl = hndl;
@@ -79,7 +79,7 @@ static CPU_INTERRUPT_HANDLER(icu_8259_cpu_handler)
 
 DEV_CLEANUP(icu_8259_cleanup)
 {
-  struct icu_8259_private_s	*pv = dev->private;
+  struct icu_8259_private_s	*pv = dev->drv_pv;
 
   mem_free(pv);
 }
@@ -98,7 +98,7 @@ DEV_INIT(icu_8259_init)
   if ((pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS))) /* FIXME allocation scope ? */
     {
       CPU_LOCAL_SET(icu_8259_pv, pv);
-      dev->private = pv;
+      dev->drv_pv = pv;
       pv->dev = dev;
 
       cpu_interrupt_hw_sethandler(icu_8259_cpu_handler);

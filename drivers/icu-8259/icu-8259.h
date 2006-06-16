@@ -23,7 +23,7 @@
 #ifndef DRIVER_ICU_8259_H_
 #define DRIVER_ICU_8259_H_
 
-#include "../device.h"
+#include <mutek/device.h>
 
 /* devices addresses slots */
 

@@ -27,7 +27,7 @@
 #include <mutek/lock.h>
 #include <mutek/interrupt.h>
 
-#include <mutek/drivers/uart-8250.h>
+#include "uart-8250.h"
 
 #include "uart-8250-private.h"
 
@@ -41,7 +41,7 @@
 
 DEVCHAR_READ(uart_8250_read)
 {
-  struct uart_8250_context_s	*pv = dev->private;
+  struct uart_8250_context_s	*pv = dev->drv_pv;
   size_t			res;
 
   lock_spin_irq(&pv->lock);
@@ -59,7 +59,7 @@ DEVCHAR_READ(uart_8250_read)
 
 DEVCHAR_WRITE(uart_8250_write)
 {
-  struct uart_8250_context_s	*pv = dev->private;
+  struct uart_8250_context_s	*pv = dev->drv_pv;
   uint_fast16_t			i;
 
   lock_spin_irq(&pv->lock);
@@ -84,7 +84,7 @@ DEVCHAR_WRITE(uart_8250_write)
 
 DEV_CLEANUP(uart_8250_cleanup)
 {
-  struct uart_8250_context_s	*pv = dev->private;
+  struct uart_8250_context_s	*pv = dev->drv_pv;
 
   lock_destroy(&pv->lock);
 
@@ -97,7 +97,7 @@ DEV_CLEANUP(uart_8250_cleanup)
 
 DEV_IRQ(uart_8250_irq)
 {
-  struct uart_8250_context_s*pv = dev->private;
+  struct uart_8250_context_s*pv = dev->drv_pv;
   __bool_t			res = 0;
 
   lock_spin(&pv->lock);
@@ -130,7 +130,7 @@ DEV_INIT(uart_8250_init)
 
   lock_init(&pv->lock);
 
-  dev->private = pv;
+  dev->drv_pv = pv;
 
   /* init tty input fifo */
   tty_read_fifo_init(&pv->read_fifo);

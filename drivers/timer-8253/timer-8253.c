@@ -28,7 +28,7 @@
 
 #include "timer-8253-private.h"
 
-#include <mutek/drivers/timer-8253.h>
+#include "timer-8253.h"
 
 /*
  * timer device callback setup
@@ -36,7 +36,7 @@
 
 DEVTIMER_SETCALLBACK(timer_8253_setcallback)
 {
-  struct timer_8253_context_s	*pv = dev->private;
+  struct timer_8253_context_s	*pv = dev->drv_pv;
 
   if (callback)
     {
@@ -94,7 +94,7 @@ DEVTIMER_GETVALUE(timer_8253_getvalue)
 
 DEV_IRQ(timer_8253_irq)
 {
-  struct timer_8253_context_s	*pv = dev->private;
+  struct timer_8253_context_s	*pv = dev->drv_pv;
   uint_fast8_t			id = 0;
 
   /* invoke timer callback */
@@ -110,7 +110,7 @@ DEV_IRQ(timer_8253_irq)
 
 DEV_CLEANUP(timer_8253_cleanup)
 {
-  struct timer_8253_context_s	*pv = dev->private;
+  struct timer_8253_context_s	*pv = dev->drv_pv;
 
   mem_free(pv);
 }
@@ -140,7 +140,7 @@ DEV_INIT(timer_8253_init)
 
   memset(pv, 0, sizeof(*pv));
 
-  dev->private = pv;
+  dev->drv_pv = pv;
 
   return 0;
 }

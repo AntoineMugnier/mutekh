@@ -27,7 +27,7 @@
 #include <mutek/alloc.h>
 #include <mutek/interrupt.h>
 
-#include <mutek/drivers/icu-soclib.h>
+#include "icu-soclib.h"
 
 #include "icu-soclib-private.h"
 
@@ -43,7 +43,7 @@ DEVICU_ENABLE(icu_soclib_enable)
 
 DEVICU_SETHNDL(icu_soclib_sethndl)
 {
-  struct icu_soclib_private_s	*pv = dev->private;
+  struct icu_soclib_private_s	*pv = dev->drv_pv;
   struct icu_soclib_handler_s	*h = pv->table + irq;
 
   h->hndl = hndl;
@@ -71,7 +71,7 @@ static CPU_INTERRUPT_HANDLER(icu_soclib_cpu_handler)
 
 DEV_CLEANUP(icu_soclib_cleanup)
 {
-  struct icu_soclib_private_s	*pv = dev->private;
+  struct icu_soclib_private_s	*pv = dev->drv_pv;
 
   mem_free(pv);
 }
@@ -90,7 +90,7 @@ DEV_INIT(icu_soclib_init)
   if ((pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS))) /* FIXME allocation scope ? */
     {
       CPU_LOCAL_SET(icu_soclib_pv, pv);
-      dev->private = pv;
+      dev->drv_pv = pv;
       pv->dev = dev;
 
       cpu_mem_write_32(dev->addr[0] + ICU_SOCLIB_REG_IER_CLR, -1);

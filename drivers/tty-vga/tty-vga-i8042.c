@@ -25,7 +25,7 @@
 #include <mutek/device.h>
 #include <mutek/iospace.h>
 
-#include <mutek/drivers/tty-vga.h>
+#include "tty-vga.h"
 
 #include "tty-vga-private.h"
 
@@ -169,7 +169,7 @@ static const struct tty_vga_ansi_keycode_s ansi_keycode_2[0x80] =
 void
 tty_vga_scancode_led(struct device_s *dev, uint8_t scancode)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
 
   if (scancode == 0xfa)
     cpu_io_write_8(0x60, pv->key_state & (VGA_KS_SCROLL | VGA_KS_NUM | VGA_KS_CAPS));
@@ -180,7 +180,7 @@ tty_vga_scancode_led(struct device_s *dev, uint8_t scancode)
 static void tty_vga_keycode_break(struct device_s *dev,
 				  const struct tty_vga_ansi_keycode_s *k)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
 
   pv->key_state ^= k->bstate;
 }
@@ -188,7 +188,7 @@ static void tty_vga_keycode_break(struct device_s *dev,
 static void tty_vga_keycode_make(struct device_s *dev,
 				 const struct tty_vga_ansi_keycode_s *k)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
 
   if (k->mstate)
     {
@@ -226,7 +226,7 @@ static void tty_vga_keycode_make(struct device_s *dev,
 static void
 tty_vga_scancode_ext(struct device_s *dev, uint8_t scancode)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
 
   if (scancode & 0x80)
     tty_vga_keycode_break(dev, ansi_keycode_2 + (scancode & 0x7f));
@@ -239,7 +239,7 @@ tty_vga_scancode_ext(struct device_s *dev, uint8_t scancode)
 void
 tty_vga_scancode_default(struct device_s *dev, uint8_t scancode)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
 
   switch (scancode)
     {
@@ -262,7 +262,7 @@ tty_vga_scancode_default(struct device_s *dev, uint8_t scancode)
 
 DEV_IRQ(tty_vga_irq)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   __bool_t			res = 0;
 
   lock_spin(&pv->lock);

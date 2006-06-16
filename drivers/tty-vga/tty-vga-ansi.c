@@ -23,7 +23,7 @@
 #include <mutek/types.h>
 #include <mutek/device.h>
 
-#include <mutek/drivers/tty-vga.h>
+#include "tty-vga.h"
 
 #include "tty-vga-private.h"
 
@@ -112,7 +112,7 @@ static void
 tty_vga_ansi_delete(struct device_s *dev, int_fast8_t count)
 {
   vga_text_buf_t		buf = (vga_text_buf_t)(dev->addr[VGA_TTY_ADDR_BUFFER]);
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   int_fast16_t	i;
 
   buf += pv->width * pv->ypos;
@@ -131,7 +131,7 @@ void
 tty_vga_ansi_insert(struct device_s *dev)
 {
   vga_text_buf_t		buf = (vga_text_buf_t)(dev->addr[VGA_TTY_ADDR_BUFFER]);
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   int_fast16_t	i;
 
   buf += pv->width * pv->ypos;
@@ -147,7 +147,7 @@ tty_vga_ansi_insert(struct device_s *dev)
 static void
 tty_vga_process_ansi_bracket(struct device_s *dev, uint8_t c)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   uint_fast8_t	i;
 
   switch (c)
@@ -320,7 +320,7 @@ tty_vga_process_ansi_bracket(struct device_s *dev, uint8_t c)
 void
 tty_vga_process_ansi(struct device_s *dev, uint8_t c)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
 
   pv->ansi_index = 0;
   pv->ansi_param[0] = 0;

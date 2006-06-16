@@ -19,22 +19,41 @@
 
 */
 
-#ifndef DRIVER_UART_8250_H_
-#define DRIVER_UART_8250_H_
+#ifndef __ENUM_PCI_PRIVATE_H_
+#define __ENUM_PCI_PRIVATE_H_
 
-#include <mutek/device.h>
+#include <mutek/types.h>
+#include <mutek/lock.h>
+#include <mutek/iospace.h>
 
-/* devices addresses slots */
+#ifdef __ARCH__ibmpc__
 
-#define UART_8250_ADDR	0
+# define PCI_IBMPC_CONF_ADDRIO	0x0cf8
+# define PCI_IBMPC_CONF_DATAIO	0x0cfc
 
-/* tty device functions */
+static inline uint32_t
+pci_confreg_read(uint_fast8_t addr)
+{
+  cpu_io_write_32(PCI_IBMPC_CONF_ADDRIO, addr);
 
-DEV_IRQ(uart_8250_irq);
-DEV_INIT(uart_8250_init);
-DEV_CLEANUP(uart_8250_cleanup);
-DEVCHAR_READ(uart_8250_read);
-DEVCHAR_WRITE(uart_8250_write);
+  return cpu_io_read_32(PCI_IBMPC_CONF_DATAIO);
+}
+
+static inline void
+pci_confreg_write(uint_fast8_t addr, uint32_t data)
+{
+  cpu_io_write_32(PCI_IBMPC_CONF_ADDRIO, addr);
+  cpu_io_write_32(PCI_IBMPC_CONF_DATAIO, data);
+}
+
+#else
+# error support missing for PCI enumerator device
+#endif
+
+struct enum_pci_context_s
+{
+  lock_t			lock;
+};
 
 #endif
 

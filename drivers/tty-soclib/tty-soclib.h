@@ -22,7 +22,7 @@
 #ifndef DRIVER_TTY_SOCLIB_H_
 #define DRIVER_TTY_SOCLIB_H_
 
-#include "../device.h"
+#include <mutek/device.h>
 
 /* tty device functions */
 

@@ -200,7 +200,7 @@ static error_t fb_vga_setmode_(const struct fb_vga_mode_s *mode)
 
 DEVFB_SETMODE(fb_vga_setmode)
 {
-  struct fb_vga_context_s	*pv = dev->private;
+  struct fb_vga_context_s	*pv = dev->drv_pv;
   const struct fb_vga_mode_s	*m;
 
   for (m = vga_modes; m->xres; m++)
@@ -218,7 +218,7 @@ DEVFB_SETMODE(fb_vga_setmode)
 
 DEVFB_FLIPPAGE(fb_vga_flippage)
 {
-  struct fb_vga_context_s	*pv = dev->private;
+  struct fb_vga_context_s	*pv = dev->drv_pv;
 
   if (page > pv->mode->maxpage)
     return -EINVAL;

@@ -30,12 +30,12 @@
 #include <mutek/lock.h>
 #include <mutek/task.h>
 
-#include <mutek/drivers/uart-8250.h>
-#include <mutek/drivers/tty-vga.h>
-#include <mutek/drivers/tty-soclib.h>
-#include <mutek/drivers/icu-8259.h>
-#include <mutek/drivers/icu-soclib.h>
-#include <mutek/drivers/fb-vga.h>
+#include <../drivers/uart-8250/uart-8250.h>
+#include <../drivers/tty-vga/tty-vga.h>
+#include <../drivers/tty-soclib/tty-soclib.h>
+#include <../drivers/icu-8259/icu-8259.h>
+#include <../drivers/icu-soclib/icu-soclib.h>
+#include <../drivers/fb-vga/fb-vga.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -288,7 +288,7 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
       dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 #endif
 
-      //      main(0, 0);
+      main(0, 0);
       while (1)
 	;
     }

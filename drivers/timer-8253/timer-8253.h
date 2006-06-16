@@ -22,7 +22,7 @@
 #ifndef DRIVER_TIMER_8253_H_
 #define DRIVER_TIMER_8253_H_
 
-#include "../device.h"
+#include <mutek/device.h>
 
 /* timer device functions */
 

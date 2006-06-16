@@ -5,6 +5,7 @@ ifeq ($(ARCH), ibmpc)
   include drivers/timer-8253/Makefile
   include drivers/tty-vga/Makefile
   include drivers/uart-8250/Makefile
+  include drivers/enum-pci/Makefile
 endif
 
 ifeq ($(ARCH), soclib)

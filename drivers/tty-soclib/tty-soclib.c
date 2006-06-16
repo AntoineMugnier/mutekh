@@ -27,7 +27,7 @@
 #include <mutek/lock.h>
 #include <mutek/interrupt.h>
 
-#include <mutek/drivers/tty-soclib.h>
+#include "tty-soclib.h"
 
 #include "tty-soclib-private.h"
 
@@ -41,7 +41,7 @@
 
 DEVCHAR_READ(tty_soclib_read)
 {
-  struct tty_soclib_context_s	*pv = dev->private;
+  struct tty_soclib_context_s	*pv = dev->drv_pv;
   size_t			res;
 
   lock_spin_irq(&pv->lock);
@@ -73,7 +73,7 @@ DEVCHAR_WRITE(tty_soclib_write)
 
 DEV_CLEANUP(tty_soclib_cleanup)
 {
-  struct tty_soclib_context_s	*pv = dev->private;
+  struct tty_soclib_context_s	*pv = dev->drv_pv;
 
   lock_destroy(&pv->lock);
 
@@ -86,7 +86,7 @@ DEV_CLEANUP(tty_soclib_cleanup)
 
 DEV_IRQ(tty_soclib_irq)
 {
-  struct tty_soclib_context_s	*pv = dev->private;
+  struct tty_soclib_context_s	*pv = dev->drv_pv;
   uint8_t	c;
 
   lock_spin(&pv->lock);
@@ -127,7 +127,7 @@ DEV_INIT(tty_soclib_init)
 
   lock_init(&pv->lock);
 
-  dev->private = pv;
+  dev->drv_pv = pv;
 
   /* init tty input fifo */
   tty_read_fifo_init(&pv->read_fifo);

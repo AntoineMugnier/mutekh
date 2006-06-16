@@ -27,7 +27,7 @@
 #include <mutek/lock.h>
 #include <mutek/interrupt.h>
 
-#include <mutek/drivers/tty-vga.h>
+#include "tty-vga.h"
 
 #include "tty-vga-private.h"
 
@@ -63,7 +63,7 @@ vga_reg_read(uintptr_t addr, uint8_t index)
 
 inline void tty_vga_updatecursor(struct device_s *dev)
 {
-  struct tty_vga_context_s		*pv = dev->private;
+  struct tty_vga_context_s		*pv = dev->drv_pv;
   uint_fast16_t				cur_addr;
 
   cur_addr = (pv->ypos * pv->width + pv->xpos);
@@ -80,7 +80,7 @@ inline void tty_vga_updatecursor(struct device_s *dev)
 inline __bool_t
 tty_vga_setcursor(struct device_s *dev, int_fast8_t x, int_fast8_t y)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   __bool_t			res = 0;
 
   /* check cursor position boundary */
@@ -125,7 +125,7 @@ void
 tty_vga_clear(struct device_s *dev, int_fast8_t rowstart, int_fast8_t rowend)
 {
   vga_text_buf_t		buf = (vga_text_buf_t)(dev->addr[VGA_TTY_ADDR_BUFFER]);
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   int_fast16_t			i;
 
   for (i = rowstart * pv->width; i < rowend * pv->width; i++)
@@ -146,7 +146,7 @@ tty_vga_clear(struct device_s *dev, int_fast8_t rowstart, int_fast8_t rowend)
 void
 tty_vga_reset(struct device_s *dev)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   pv->width = 80;
   pv->height = 25;
 
@@ -175,7 +175,7 @@ tty_vga_clear_row(struct device_s *dev, uint_fast8_t row,
 		  int_fast8_t colstart, int_fast8_t colend)
 {
   vga_text_buf_t		buf = (vga_text_buf_t)(dev->addr[VGA_TTY_ADDR_BUFFER]);
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   int_fast16_t	i;
 
   buf += pv->width * row;
@@ -203,7 +203,7 @@ inline void
 tty_vga_shift_rows_down(struct device_s *dev, uint_fast8_t rowstart, uint_fast8_t count)
 {
   vga_text_buf_t		buf = (vga_text_buf_t)(dev->addr[VGA_TTY_ADDR_BUFFER]);
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   int_fast16_t			i;
 
   rowstart *= pv->width;
@@ -222,7 +222,7 @@ inline void
 tty_vga_shift_rows_up(struct device_s *dev, uint_fast8_t rowstart, uint_fast8_t count)
 {
   vga_text_buf_t		buf = (vga_text_buf_t)(dev->addr[VGA_TTY_ADDR_BUFFER]);
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   int_fast16_t			i;
 
   rowstart *= pv->width;
@@ -241,7 +241,7 @@ inline void
 tty_vga_scroll_down(struct device_s *dev, uint_fast8_t count)
 {
   vga_text_buf_t		buf = (vga_text_buf_t)(dev->addr[VGA_TTY_ADDR_BUFFER]);
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   int_fast16_t			i;
 
   /* scroll buffer down */
@@ -262,7 +262,7 @@ inline void
 tty_vga_scroll_up(struct device_s *dev, uint_fast8_t count)
 {
   vga_text_buf_t		buf = (vga_text_buf_t)(dev->addr[VGA_TTY_ADDR_BUFFER]);
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   int_fast16_t			i;
 
   /* scroll buffer up */
@@ -280,7 +280,7 @@ tty_vga_scroll_up(struct device_s *dev, uint_fast8_t count)
 static inline void
 tty_vga_newline(struct device_s *dev)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
 
   if (tty_vga_setcursor(dev, 0, pv->ypos + 1))
     tty_vga_scroll_up(dev, 1);
@@ -293,7 +293,7 @@ tty_vga_newline(struct device_s *dev)
 static inline void
 tty_vga_backspace(struct device_s *dev)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   vga_text_buf_t		buf = (vga_text_buf_t)(dev->addr[VGA_TTY_ADDR_BUFFER]);
 
   tty_vga_setcursor(dev, pv->xpos - 1, pv->ypos);
@@ -308,7 +308,7 @@ static void
 tty_vga_putchar(struct device_s *dev, uint8_t data)
 {
   vga_text_buf_t		buf = (vga_text_buf_t)(dev->addr[VGA_TTY_ADDR_BUFFER]);
-  struct tty_vga_context_s	*pv = dev->private;  
+  struct tty_vga_context_s	*pv = dev->drv_pv;  
 
   if (pv->xpos >= pv->width)
     {
@@ -359,7 +359,7 @@ tty_vga_putchar(struct device_s *dev, uint8_t data)
 void
 tty_vga_process_default(struct device_s *dev, uint8_t c)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
 
   switch (c)
     {
@@ -395,7 +395,7 @@ tty_vga_process_default(struct device_s *dev, uint8_t c)
 
 DEVCHAR_READ(tty_vga_read)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   size_t			res;
 
   lock_spin_irq(&pv->lock);
@@ -413,7 +413,7 @@ DEVCHAR_READ(tty_vga_read)
 
 DEVCHAR_WRITE(tty_vga_write)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
   uint_fast16_t			i;
 
   for (i = 0; i < size; i++)
@@ -437,7 +437,7 @@ DEVCHAR_WRITE(tty_vga_write)
 
 DEV_CLEANUP(tty_vga_cleanup)
 {
-  struct tty_vga_context_s	*pv = dev->private;
+  struct tty_vga_context_s	*pv = dev->drv_pv;
 
   lock_destroy(&pv->lock);
 
@@ -467,7 +467,7 @@ DEV_INIT(tty_vga_init)
 
   lock_init(&pv->lock);
 
-  dev->private = pv;
+  dev->drv_pv = pv;
 
   /* init tty input fifo */
   tty_read_fifo_init(&pv->read_fifo);

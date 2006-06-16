@@ -15,56 +15,55 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    This driver is based on svgalib code (http://www.svgalib.org/)
-
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
 
 */
+
 
 #include <mutek/types.h>
 #include <mutek/device.h>
 #include <mutek/iospace.h>
 #include <mutek/alloc.h>
 #include <mutek/lock.h>
-#include <string.h>
+#include <mutek/interrupt.h>
 
-#include "fb-vga.h"
+//#include "enum-pci.h"
+#include "enum-pci-private.h"
 
-#include "fb-vga-private.h"
+/**************************************************************/
 
-/* 
+DEVENUM_FIND(enum_pci_find)
+{
+  struct enum_pci_context_s	*pv = dev->drv_pv;
+
+  return NULL;
+}
+
+/*
  * device close operation
  */
 
-DEV_CLEANUP(fb_vga_cleanup)
+DEV_CLEANUP(enum_pci_cleanup)
 {
-  struct fb_vga_context_s	*pv = dev->drv_pv;
+  struct enum_pci_context_s	*pv = dev->drv_pv;
 
-  lock_destroy(&pv->lock);
+  //  lock_destroy(&pv->lock);
 
   mem_free(pv);
 }
 
-DEVFB_GETBUFFER(fb_vga_getbuffer)
-{
-  struct fb_vga_context_s	*pv = dev->drv_pv;
-
-  return FB_VGA_FB_ADDRESS + page * pv->mode->xres * pv->mode->yres;
-}
-
-/* 
+/*
  * device open operation
  */
 
-DEV_INIT(fb_vga_init)
+DEV_INIT(enum_pci_init)
 {
-  struct fb_vga_context_s	*pv;
+  struct enum_pci_context_s	*pv;
 
 #ifndef CONFIG_STATIC_DRIVERS
-  dev->f_cleanup	= fb_vga_cleanup;
-  dev->fb.f_setmode	= fb_vga_setmode;
-  dev->fb.f_getbuffer	= fb_vga_getbuffer;
-  dev->fb.f_flippage	= fb_vga_flippage;
+  dev->f_cleanup	= enum_pci_cleanup;
+  dev->f_irq		= 0;
+  dev->denum.f_find	= enum_pci_find;
 #endif
 
   /* alocate private driver data */
