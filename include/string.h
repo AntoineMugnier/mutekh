@@ -134,11 +134,11 @@ stpcpy(char *dest, const char *src);
 
 /***************************************** bit string operations */
 
-int_fast8_t
-ffsl(uint32_t i);
+int_fast8_t ffsl(uint32_t i);
+#define ffsl	__builtin_ffsl
 
-int_fast8_t
-ffsll(uint64_t i);
+int_fast8_t ffsll(uint64_t i);
+#define ffsll	__builtin_ffsll
 
 #endif
 

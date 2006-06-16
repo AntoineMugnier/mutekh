@@ -49,5 +49,8 @@ typedef int_fast8_t		error_t;
 /** operation not permitted */
 #define EPERM		7
 
+/** operation not supported */
+#define ENOTSUP		8
+
 #endif
 

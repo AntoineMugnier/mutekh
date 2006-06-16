@@ -32,9 +32,6 @@
 
 /************************************************************************/
 
-/** pointer to task local storage itself */
-extern TASK_LOCAL void *__task_data_base;
-
 /** task local storage variable assignement from different task context */
 #define TASK_LOCAL_FOREIGN_SET(tls, n, v) { __asm__ ("mov %0, (%1,%2)" : : "r" ((typeof(n))v), "r" (&n), "r" (tls)) ; }
 
@@ -48,9 +45,6 @@ extern TASK_LOCAL void *__task_data_base;
 #define TASK_LOCAL_ADDR(n)   ({ typeof(n) *_ptr_ = &(n); __asm__ ("addl %%gs:0, %0" : "=r" (_ptr_) : "0" (_ptr_)) ; _ptr_; })
 
 /************************************************************************/
-
-/** pointer to cpu local storage itself */
-extern CPU_LOCAL void *__cpu_data_base;
 
 /** cpu local storage variable assignement */
 #define CPU_LOCAL_SET(n, v)  { __asm__ ("mov %1, %%fs:%0" : "=m" (n) : "r" ((typeof(n))v)); }

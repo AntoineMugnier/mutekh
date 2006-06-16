@@ -102,8 +102,7 @@ static inline void lock_spin_irq(lock_t *lock)
 {
   __reg_t		state;
 
-  cpu_interrupt_savestate(&state);
-  cpu_interrupt_disable();
+  cpu_interrupt_savestate_disable(&state);
 #ifdef CONFIG_SMP
   arch_lock_spin(&lock->arch);
 #endif

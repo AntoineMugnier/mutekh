@@ -28,7 +28,7 @@
 
 #ifndef HAS_CPU_MEMSET
 #undef memset
-inline void * memset(void * dst, int s, size_t count)
+inline void * memset(void * dst, int_fast8_t s, size_t count)
 {
   char	*a = dst;
 
@@ -86,9 +86,10 @@ inline int_fast8_t memcmp(const void *dst, const void *src, size_t count)
 
 #ifndef HAS_CPU_MEMCPY_REVERSE
 inline void *
-__memcpy_reverse(void *dst, const void *src, size_t size);
+__memcpy_reverse(void *dst, const void *src, size_t size)
 {
-  uint8_t	*dst_ = dst + size, *src_ = src + size;
+  uint8_t	*dst_ = (uint8_t*)dst + size;
+  uint8_t	*src_ = (uint8_t*)src + size;
 
   while (size--)
     *--dst_ = *--src_;

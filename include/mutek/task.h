@@ -22,11 +22,9 @@
 #ifndef TASK_H_
 #define TASK_H_
 
-#include "types.h"
-#include "local.h"
-#include "error.h"
-
-
+#include <mutek/types.h>
+#include <mutek/local.h>
+#include <mutek/error.h>
 
 /** cpu specific task structure */
 struct cpu_task_s;
@@ -46,7 +44,6 @@ struct task_s
   /* current stack pointer value */
   __reg_t			*stack_ptr;
 };
-
 
 /** task entry point function prototype */
 #define TASK_ENTRY(n) void (n) (void *param)

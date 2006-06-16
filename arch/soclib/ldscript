@@ -1,0 +1,72 @@
+
+PHDRS
+{
+  signature PT_NOTE ;
+  boot PT_LOAD ;
+  excep PT_LOAD ;
+  mem PT_LOAD ;
+}
+
+SECTIONS
+   {
+	. = 0xbfc00000;
+	.boot : { *(.boot) } : boot
+
+	. = 0x80000080;
+	.excep : { *(.excep) } : excep
+
+	. = 0x00100000;
+	.text : { *(.text) } : mem
+
+	. = ALIGN(16);
+	_gp = . + 0x7ff0;	/* global data register pointer */
+
+	.sdata :{ *(.sdata) }
+	.sbss :	{ *(.sbss) }
+
+	.bss :	{ *(.bss) }
+
+	.data :
+		{
+			/* global variables and const data section */
+			*(.data)
+			*(.rodata*)
+
+			/* data depending on cpu architecture (fonction pointer variables, ...) */
+			*(.cpuarchdata)
+		}
+
+	/* Task local data section */
+ 	.taskdata 0x0 : AT( LOADADDR(.cpudata) + SIZEOF(.cpudata ) )
+		{
+			/* first word contains pointer to taskdata section */
+			__task_data_base = . ;
+			LONG(0) ;
+
+			*(.taskdata)
+		}
+
+	__task_data_start = LOADADDR(.taskdata);
+	__task_data_end = LOADADDR(.taskdata) + SIZEOF(.taskdata);
+
+	/* CPU local data section */
+	.cpudata  0x0 : AT( LOADADDR(.data) + SIZEOF(.data) )
+		{
+			/* first word contains pointer to cpudata section */
+			__cpu_data_base = . ;
+			LONG(0) ;
+
+			/* second word contains pointer to taskdata section */
+			__cpu_task_data_base = . ;
+			LONG(0) ;
+
+			*(.cpudata)
+		}
+
+	__cpu_data_start = LOADADDR(.cpudata);
+	__cpu_data_end = LOADADDR(.cpudata) + SIZEOF(.cpudata);
+
+   }
+
+ENTRY(cpu_boot)
+

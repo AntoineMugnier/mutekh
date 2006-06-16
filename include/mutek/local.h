@@ -29,6 +29,15 @@
 /** cpu local storage type attribute */
 #define CPU_LOCAL	__attribute__((section (".cpudata")))
 
+/** pointer to cpu local storage itself */
+extern CPU_LOCAL void *__cpu_data_base;
+
+/** pointer to task local storage in cpu local storage */
+extern CPU_LOCAL void *__cpu_task_data_base;
+
+/** pointer to task local storage itself */
+extern TASK_LOCAL void *__task_data_base;
+
 #include "cpu/mutek/local.h"
 
 /** cpu architecture local storage type attribute */

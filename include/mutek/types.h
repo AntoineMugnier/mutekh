@@ -50,6 +50,10 @@ typedef signed long long	int64_t;
 #include "cpu/mutek/types.h"
 #include "arch/mutek/types.h"
 
+/* type used to prevent ld script symbols from being placed in
+   .sdata section */
+typedef struct __ldscript_symbol_s __ldscript_symbol_t;
+
 #ifdef __MUTEK__
 /** prevent use of compiler native short type */
 # define short	struct _dont_use_short_

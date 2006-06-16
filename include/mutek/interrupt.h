@@ -68,6 +68,8 @@ static void cpu_interrupt_disable(void);
 static void cpu_interrupt_enable(void);
 /** Save interrupts enable state (may use stack) */
 static void cpu_interrupt_savestate(__reg_t *state);
+/** Save interrupts enable state end disable interrupts */
+static void cpu_interrupt_savestate_disable(__reg_t *state);
 /** Restore interrupts enable state (may use stack) */
 static void cpu_interrupt_restorestate(const __reg_t *state);
 

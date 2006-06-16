@@ -108,6 +108,13 @@ cpu_interrupt_savestate(__reg_t *state)
 }
 
 static inline void
+cpu_interrupt_savestate_disable(__reg_t *state)
+{
+  cpu_interrupt_savestate(state);
+  cpu_interrupt_disable();
+}
+
+static inline void
 cpu_interrupt_restorestate(const __reg_t *state)
 {
   __asm__ volatile (

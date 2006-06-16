@@ -44,15 +44,8 @@ cpu_task_init(struct task_s *task, task_entry_t *entry, void *param)
   /* push default flags */
   *--task->stack_ptr = 0x00000046;	/* EFLAGS */
 
-  /* general purpose registers default values */
-  *--task->stack_ptr = 0;		/* EDI */
-  *--task->stack_ptr = 0;		/* ESI */
-  *--task->stack_ptr = 0;		/* EBP */
-  *--task->stack_ptr = 0;		/* ESP (ignored by popa) */
-  *--task->stack_ptr = 0;		/* EBX */
-  *--task->stack_ptr = 0;		/* EDX */
-  *--task->stack_ptr = 0;		/* ECX */
-  *--task->stack_ptr = 0;		/* EAX */
+  /* room for general purpose registers default values */
+  task->stack_ptr -= 8;
 
   /* push tls segment index */
   *--task->stack_ptr = tls_seg << 3;	/* GS */

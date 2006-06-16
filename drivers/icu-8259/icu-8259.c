@@ -23,62 +23,71 @@
 #include <mutek/types.h>
 #include <mutek/device.h>
 #include <mutek/iospace.h>
+#include <mutek/alloc.h>
 #include <mutek/interrupt.h>
+#include <mutek/error.h>
 
 #include <mutek/drivers/icu-8259.h>
 
+#include "icu-8259-private.h"
+
 #include "8259.h"
 
-struct icu_8259_handler_s
-{
-  dev_irq_t		*hndl;
-  void			*data;
-};
-
-static struct icu_8259_handler_s icu_8259_table[CPU_MAX_INTERRUPTS] = { };
+static CPU_LOCAL struct icu_8259_private_s *icu_8259_pv;
 
 DEVICU_ENABLE(icu_8259_enable)
 {
+  uint8_t			mask;
+
+  mask = pic_8259_getmask(dev->addr[ICU_ADDR_MASTER]);
+
+  mask = enable
+    ? mask & ~(1 << irq)
+    : mask |  (1 << irq);
+
+  pic_8259_setmask(dev->addr[ICU_ADDR_MASTER], mask);
 }
 
 DEVICU_SETHNDL(icu_8259_sethndl)
 {
-  struct icu_8259_handler_s	*h = icu_8259_table + irq;
-  uint8_t				mask;
+  struct icu_8259_private_s	*pv = dev->private;
+  struct icu_8259_handler_s	*h = pv->table + irq;
 
   h->hndl = hndl;
   h->data = data;
-
-  mask = pic_8259_getmask(dev->addr[ICU_ADDR_MASTER]);
-  mask &= ~ (1 << irq);
-  pic_8259_setmask(dev->addr[ICU_ADDR_MASTER], mask);
 
   return 0;
 }
 
 DEVICU_DELHNDL(icu_8259_delhndl)
 {
+  /* FIXME */
   return 0;
-}
-
-DEV_CLEANUP(icu_8259_cleanup)
-{
 }
 
 static CPU_INTERRUPT_HANDLER(icu_8259_cpu_handler)
 {
-  uint_fast8_t			line = irq;
-  struct icu_8259_handler_s	*h = icu_8259_table + line;
+  struct icu_8259_private_s	*pv = CPU_LOCAL_GET(icu_8259_pv);
+  struct icu_8259_handler_s	*h = pv->table + irq;
 
   /* reset interrupt line status on icu */
-  pic_8259_irqend_master(0x20, line);
+  pic_8259_irqend_master(pv->dev->addr[ICU_ADDR_MASTER], irq);
 
   /* call interrupt handler */
   h->hndl(h->data);
 }
 
+DEV_CLEANUP(icu_8259_cleanup)
+{
+  struct icu_8259_private_s	*pv = dev->private;
+
+  mem_free(pv);
+}
+
 DEV_INIT(icu_8259_init)
 {
+  struct icu_8259_private_s	*pv;
+
 #ifndef CONFIG_STATIC_DRIVERS
   dev->f_cleanup	= icu_8259_cleanup;
   dev->icu.f_enable	= icu_8259_enable;
@@ -86,10 +95,19 @@ DEV_INIT(icu_8259_init)
   dev->icu.f_delhndl	= icu_8259_delhndl;
 #endif
 
-  cpu_interrupt_hw_sethandler(icu_8259_cpu_handler);
+  if ((pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS))) /* FIXME allocation scope ? */
+    {
+      CPU_LOCAL_SET(icu_8259_pv, pv);
+      dev->private = pv;
+      pv->dev = dev;
 
-  pic_8259_init(dev->addr[ICU_ADDR_MASTER], dev->addr[ICU_ADDR_SLAVE], CPU_HWINT_VECTOR);
+      cpu_interrupt_hw_sethandler(icu_8259_cpu_handler);
 
-  return 0;
+      pic_8259_init(dev->addr[ICU_ADDR_MASTER], dev->addr[ICU_ADDR_SLAVE], CPU_HWINT_VECTOR);
+
+      return 0;
+    }
+
+  return -ENOMEM;
 }
 

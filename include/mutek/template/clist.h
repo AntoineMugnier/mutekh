@@ -26,6 +26,8 @@
 #ifndef CLIST_H_
 #define CLIST_H_
 
+#include <stddef.h>
+
 #include "container.h"
 
 #define		CLIST_TYPE_DECL(name, type)			\
@@ -54,7 +56,7 @@ static inline name##_item_t *					\
 prefix##_get_item(name##_entry_t *entry)			\
 {								\
   return (void*)(((char*)entry)					\
-                 - __builtin_offsetof(name##_item_t, f));	\
+                 - offsetof(name##_item_t, f));			\
 }								\
 								\
 attr name##_item_t *						\

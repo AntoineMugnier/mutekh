@@ -47,6 +47,7 @@ typedef DEV_IRQ(dev_irq_t);
 #include "device/char.h"
 #include "device/icu.h"
 #include "device/fb.h"
+#include "device/timer.h"
 
 
 
@@ -102,6 +103,8 @@ struct device_s
     struct dev_class_icu_s	icu;
     /** frame buffer devices */
     struct dev_class_fb_s	fb;
+    /** timer devices */
+    struct dev_class_timer_s	timer;
   };
 
 #endif
@@ -113,7 +116,7 @@ struct device_s
   uint_fast8_t			irq;
 
   /** device IO addresses table */
-  uintptr_t			addr[];
+  uintptr_t			addr[4];
 };
 
 #endif

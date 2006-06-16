@@ -70,6 +70,8 @@ typedef DEVICU_SETHNDL(icu_sethndl_t);
 #define dev_icu_sethndl(dev, ...) (dev)->icu.f_sethndl(dev, __VA_ARGS__ )
 
 
+/** bind an to this icu irq for an already configured device */
+#define DEV_ICU_BIND(icu_dev, dev) { if ((dev)->f_irq) { dev_icu_sethndl((icu_dev), (dev)->irq, (dev)->f_irq, (dev)); dev_icu_enable((icu_dev), (dev)->irq, 1); } }
 
 
 /** ICU device class delhndl() function template */

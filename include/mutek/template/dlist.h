@@ -29,6 +29,8 @@
 #ifndef DLIST_H_
 #define DLIST_H_
 
+#include <stddef.h>
+
 #include "container.h"
 
 #define		DLIST_TYPE_DECL(name, type)			\
@@ -57,7 +59,7 @@ static inline name##_item_t *					\
 prefix##_get_item(name##_entry_t *entry)			\
 {								\
   return (void*)(((char*)entry)					\
-                 - __builtin_offsetof(name##_item_t, f));	\
+                 - offsetof(name##_item_t, f));			\
 }								\
 								\
 attr name##_item_t *						\

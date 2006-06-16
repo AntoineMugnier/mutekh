@@ -23,6 +23,18 @@
     driver functions */
 //#define CONFIG_STATIC_DRIVERS
 
+/** TTY support */
+#define CONFIG_TTY
+
+/** TTY support use uart */
+#define CONFIG_TTY_UART
+
+/** frame buffer support */
+#define CONFIG_FB
+
+/** timer support */
+#define CONFIG_TIMER
+
 /** VGA tty support for ANSI codes */
 #define CONFIG_VGATTY_ANSI
 
@@ -44,11 +56,22 @@
 /** Provide pthread mutex attributes support */
 #define CONFIG_PTHREAD_MUTEX_ATTR
 
-#define CONFIG_FB_VGA
-
 /** Libc printf features are reduced */
 //#define CONFIG_LIBC_PRINTF_SIMPLE
 
 /** Libc printf support %S and %P extentions to dump buffers */
 #define CONFIG_LIBC_PRINTF_EXT
+
+/* Mips processor version (1, 2, 3, 4, 32, 322, 64) */
+#define CONFIG_MIPS_VERSION	1
+
+/* Mips ABI */
+#define CONFIG_MIPS_ABI_O32
+//#define CONFIG_MIPS_ABI_O64
+//#define CONFIG_MIPS_ABI_N32
+//#define CONFIG_MIPS_ABI_N64
+//#define CONFIG_MIPS_ABI_EABI
+
+/* Generate position independant code */
+#define CONFIG_PIC
 

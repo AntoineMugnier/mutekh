@@ -32,15 +32,19 @@ cpu_task_switch(struct task_s *old, struct task_s *new)
 {
   asm volatile (
 		/* save execution pointer */
+#ifdef CONFIG_PIC
 		"	call	1f		\n"
 		"	jmp	2f		\n"
 		"1:				\n"
+#else
+		"	pushl	2f		\n"
+#endif
 		/* save flags */
 		"	pushf			\n"
 		"	cli			\n"
 		/* save general purpose registers on stack */
 		"	pusha			\n"
-		/* save thread local storage on stack */
+		/* save task local storage on stack */
 		"	push	%%gs		\n"
 		/* switch stack pointer */
 		"	movl	%%esp, %0	\n"

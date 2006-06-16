@@ -19,6 +19,8 @@
 
 */
 
+#include <stdio.h>
+
 #include <mutek/alloc.h>
 #include <mutek/types.h>
 
@@ -90,6 +92,9 @@ __pthread_dump_runqueue(void)
 {
   pthread_item_t	*t;
 
+  if (lock_state(&__pthread_runnable.lock))
+    printf("__pthread_dump_runqueue(): __pthread_runnable.lock is held\n");
+
   lock_spin_irq(&__pthread_runnable.lock);
 
   t = __pthread_list_head(&__pthread_runnable.list);
@@ -114,19 +119,23 @@ void
 __pthread_switch(void)
 {
   struct pthread_s	*candidate;
-
-  lock_spin_irq(&__pthread_runnable.lock);
+  __reg_t		irq_state;
 
 #ifdef CONFIG_PTHREAD_CANCEL
   if (pthread_self()->cancelasync)
     pthread_testcancel();
 #endif
 
+  cpu_interrupt_savestate_disable(&irq_state);
+  lock_spin(&__pthread_runnable.lock);
+
   /* get next candidate for execution */
   candidate = __pthread_run_candidate(&__pthread_runnable);
+
   task_switch_to(&candidate->task);
 
-  lock_release_irq(&__pthread_runnable.lock);
+  lock_release(&__pthread_runnable.lock);
+  cpu_interrupt_restorestate(&irq_state);
 }
 
 
@@ -303,7 +312,7 @@ static TASK_ENTRY(pthread_task_entry)
   lock_release(&__pthread_runnable.lock);
 
   /* enable interrupts for current thread */
-  cpu_interrupt_enable();
+  cpu_interrupt_enable();	/* FIXME should reflect state at thread creation time ? */
 
   /* call pthread_exit with return value if thread main functions
      returns */

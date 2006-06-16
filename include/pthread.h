@@ -478,8 +478,7 @@ extern TASK_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
 {							\
   __reg_t				__irq_state;	\
 							\
-  cpu_interrupt_savestate(&__irq_state);		\
-  cpu_interrupt_disable();				\
+  cpu_interrupt_savestate_disable(&__irq_state);	\
 							\
   const struct __pthread_cleanup_s	__cleanup =	\
     {							\
@@ -493,8 +492,7 @@ extern TASK_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
   cpu_interrupt_restorestate(&__irq_state);
 
 #define pthread_cleanup_pop(execute)				\
-  cpu_interrupt_savestate(&__irq_state);			\
-  cpu_interrupt_disable();					\
+  cpu_interrupt_savestate_disable(&__irq_state);		\
 								\
   if (execute)							\
     __cleanup.fcn(__cleanup.arg);				\

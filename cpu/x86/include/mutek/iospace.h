@@ -107,14 +107,15 @@ cpu_io_read_32(uintptr_t addr)
   return data;
 }
 
+/****************************************************/
+
 static inline void
 cpu_mem_write_8(uintptr_t addr, uint8_t data)
 {
   __asm__ volatile (
-		    "movb	%0,	(%1)	\n"
-		    :
-		    : "a" (data)
-		    , "r" (addr)
+		    "movb	%1,	%0	\n"
+		    : "=m" (*(uint8_t*)addr)
+		    : "r" (data)
 		    );
 }
 
@@ -124,9 +125,9 @@ cpu_mem_read_8(uintptr_t addr)
   uint8_t	data;
 
   __asm__ volatile (
-		    "movb	(%1),	%0	\n"
-		    : "=a" (data)
-		    : "d" (addr)
+		    "movb	%1,	%0	\n"
+		    : "=r" (data)
+		    : "m" (*(uint8_t*)addr)
 		    );
 
   return data;
@@ -136,10 +137,9 @@ static inline void
 cpu_mem_write_16(uintptr_t addr, uint16_t data)
 {
   __asm__ volatile (
-		    "movw	%0,	(%1)	\n"
-		    :
-		    : "a" (data)
-		    , "r" (addr)
+		    "movw	%1,	%0	\n"
+		    : "=m" (*(uint16_t*)addr)
+		    : "r" (data)
 		    );
 }
 
@@ -149,23 +149,12 @@ cpu_mem_read_16(uintptr_t addr)
   uint16_t	data;
 
   __asm__ volatile (
-		    "movw	(%1),	%0	\n"
-		    : "=a" (data)
-		    : "d" (addr)
+		    "movw	%1,	%0	\n"
+		    : "=r" (data)
+		    : "m" (*(uint16_t*)addr)
 		    );
 
   return data;
-}
-
-static inline void
-cpu_mem_write_32(uintptr_t addr, uint32_t data)
-{
-  __asm__ volatile (
-		    "movl	%0,	(%1)	\n"
-		    :
-		    : "a" (data)
-		    , "r" (addr)
-		    );
 }
 
 static inline uint32_t
@@ -174,12 +163,23 @@ cpu_mem_read_32(uintptr_t addr)
   uint32_t	data;
 
   __asm__ volatile (
-		    "movl	(%1),	%0	\n"
-		    : "=a" (data)
-		    : "d" (addr)
+		    "movl	%1,	%0	\n"
+		    : "=r" (data)
+		    : "m" (*(uint32_t*)addr)
 		    );
 
   return data;
+}
+
+
+static inline void
+cpu_mem_write_32(uintptr_t addr, uint32_t data)
+{
+  __asm__ volatile (
+		    "movl	%1,	%0	\n"
+		    : "=m" (*(uint32_t*)addr)
+		    : "r" (data)
+		    );
 }
 
 #endif
