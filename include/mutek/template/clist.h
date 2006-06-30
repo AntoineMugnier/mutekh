@@ -30,7 +30,13 @@
 
 #include "container.h"
 
-#define		CLIST_TYPE_DECL(name, type)			\
+#define	__CONTAINER_CLIST_TYPE_DECL(name, type, lockname)	\
+								\
+struct				name##_list_s			\
+{								\
+  __CONT_##lockname##_FIELD	(lock);				\
+  struct name##_entry_s		*head;				\
+};								\
 								\
 struct				name##_entry_s			\
 {								\
@@ -38,154 +44,283 @@ struct				name##_entry_s			\
   struct name##_entry_s		*prev;				\
 };								\
 								\
-typedef type			name##_item_t;			\
-typedef type *			name##_cont_t;			\
+typedef type			name##_itembase_t;		\
+typedef type *			name##_item_t;			\
+typedef type *			name##_index_t;			\
+typedef struct name##_list_s	name##_cont_t;			\
 typedef struct name##_entry_s	name##_entry_t;
 
 
-
-#define		CLIST_FUNC(attr, name, prefix, f)		\
+#define	__CONTAINER_CLIST_FUNC(attr, name, prefix, lockname, f)	\
 								\
-attr void							\
-prefix##_init	(name##_cont_t *list)				\
-{								\
-  *list = 0;							\
-}								\
-								\
-static inline name##_item_t *					\
+static inline name##_item_t					\
 prefix##_get_item(name##_entry_t *entry)			\
 {								\
   return (void*)(((char*)entry)					\
-                 - offsetof(name##_item_t, f));			\
+                 - offsetof(name##_itembase_t, f));		\
 }								\
 								\
-attr name##_item_t *						\
-prefix##_head	(name##_cont_t *list)				\
+attr __CONTAINER_PROTO_ISNULL(name, prefix)			\
 {								\
-  return *list;							\
+  return !index;						\
 }								\
 								\
-attr name##_item_t *						\
-prefix##_next	(name##_item_t *item)				\
+attr __CONTAINER_PROTO_GET(name, prefix)			\
 {								\
-  return prefix##_get_item(item->f.next);			\
+  return index;							\
 }								\
 								\
-attr name##_item_t *						\
-prefix##_prev	(name##_item_t *item)				\
+attr __CONTAINER_PROTO_SET(name, prefix)			\
 {								\
-  return prefix##_get_item(item->f.prev);			\
+  name##_entry_t *next = item->f.next = index->f.next;		\
+  name##_entry_t *prev = item->f.prev = index->f.prev;		\
+								\
+  __CONT_##lockname##_WRLOCK(&root->lock);			\
+								\
+  prev->next = &item->f;					\
+  next->prev = &item->f;					\
+								\
+  if (root->head == &index->f)					\
+    root->head = &item->f;					\
+								\
+  __CONT_##lockname##_UNLOCK(&root->lock);			\
+								\
+  return index;							\
 }								\
 								\
-attr void							\
-prefix##_push	(name##_cont_t *list_,				\
-		 name##_item_t *new)				\
+attr __CONTAINER_PROTO_NEXT(name, prefix)			\
 {								\
-  name##_item_t		*head = *list_;				\
+  return prefix##_get_item(index->f.next);			\
+}								\
+								\
+attr __CONTAINER_PROTO_PREV(name, prefix)			\
+{								\
+  return prefix##_get_item(index->f.prev);			\
+}								\
+								\
+attr __CONTAINER_PROTO_HEAD(name, prefix)			\
+{								\
+  name##_item_t		item;					\
+								\
+  __CONT_##lockname##_RDLOCK(&root->lock);			\
+								\
+  item = root->head ? prefix##_get_item(root->head) : 0;	\
+								\
+  __CONT_##lockname##_UNLOCK(&root->lock);			\
+								\
+  return item;							\
+}								\
+								\
+attr __CONTAINER_PROTO_TAIL(name, prefix)			\
+{								\
+  name##_item_t		item;					\
+								\
+  __CONT_##lockname##_RDLOCK(&root->lock);			\
+								\
+  item = root->head ? prefix##_get_item(root->head->prev) : 0;	\
+								\
+  __CONT_##lockname##_UNLOCK(&root->lock);			\
+								\
+  return item;							\
+}								\
+								\
+attr __CONTAINER_PROTO_COUNT(name, prefix)			\
+{								\
+  __CONT_##lockname##_RDLOCK(&root->lock);			\
+								\
+  name##_entry_t	*head = root->head;			\
+  size_t		i = 0;					\
+								\
+  head = root->head;						\
+								\
+  if (head)							\
+    do {							\
+      i++;							\
+      head = head->next;					\
+    } while (head != root->head);				\
+								\
+  __CONT_##lockname##_UNLOCK(&root->lock);			\
+								\
+  return i;							\
+}								\
+								\
+attr __CONTAINER_PROTO_PUSH(name, prefix)			\
+{								\
+  __CONT_##lockname##_WRLOCK(&root->lock);			\
+								\
+  name##_entry_t	*head = root->head;			\
 								\
   if (head)							\
     {								\
-      name##_entry_t	*prev = head->f.prev;			\
+      name##_entry_t	*next = head;				\
+      name##_entry_t	*prev = next->prev;			\
 								\
-      new->f.prev = prev;					\
-      new->f.next = &head->f;					\
-      prev->next = &new->f;					\
-      head->f.prev = &new->f;					\
+      item->f.prev = prev;					\
+      item->f.next = next;					\
+      prev->next = &item->f;					\
+      next->prev = &item->f;					\
     }								\
   else								\
     {								\
-      new->f.prev = &new->f;					\
-      new->f.next = &new->f;					\
+      item->f.prev = &item->f;					\
+      item->f.next = &item->f;					\
     }								\
 								\
-  *list_ = new;							\
+  root->head = &item->f;					\
+								\
+  __CONT_##lockname##_UNLOCK(&root->lock);			\
+								\
+  return 1; 							\
 }								\
 								\
-attr void							\
-prefix##_pushback	(name##_cont_t *list_,			\
-			 name##_item_t *new)			\
+attr __CONTAINER_PROTO_PUSHBACK(name, prefix)			\
 {								\
-  name##_item_t		*list = *list_;				\
+  __CONT_##lockname##_WRLOCK(&root->lock);			\
 								\
-  if (list)							\
+  name##_entry_t	*head = root->head;			\
+								\
+  if (head)							\
     {								\
-      name##_entry_t	*prev = list->f.prev;			\
+      name##_entry_t	*next = head->prev;			\
+      name##_entry_t	*prev = next->prev;			\
 								\
-      new->f.next = &list->f;					\
-      new->f.prev = prev;					\
-      prev->next = &new->f;					\
-      list->f.prev = &new->f;					\
+      item->f.prev = prev;					\
+      item->f.next = next;					\
+      prev->next = &item->f;					\
+      next->prev = &item->f;					\
     }								\
   else								\
     {								\
-      new->f.prev = &new->f;					\
-      new->f.next = &new->f;					\
-      *list_ = new;						\
+      item->f.prev = &item->f;					\
+      item->f.next = &item->f;					\
+      root->head = &item->f;					\
     }								\
+								\
+  __CONT_##lockname##_UNLOCK(&root->lock);			\
+								\
+  return 1; 							\
 }								\
 								\
 static inline void						\
-prefix##_delete_	(name##_cont_t *list,			\
+prefix##_delete_	(name##_cont_t *root,			\
 			 name##_entry_t *entry)			\
 {								\
   name##_entry_t *next = entry->next;				\
   name##_entry_t *prev = entry->prev;				\
 								\
   if (next == entry)						\
-    *list = 0;							\
+    root->head = 0;						\
 								\
   prev->next = next;						\
   next->prev = prev;						\
 }								\
 								\
-attr name##_item_t *						\
-prefix##_delete	(name##_cont_t *list,				\
-		 name##_item_t *item)				\
+attr __CONTAINER_PROTO_DELETE(name, prefix)			\
 {								\
-  if (*list == item)						\
-    *list = prefix##_get_item(item->f.next);			\
+  __CONT_##lockname##_WRLOCK(&root->lock);			\
 								\
-  prefix##_delete_(list, &item->f);				\
+  if (root->head == &index->f)					\
+    root->head = index->f.next;					\
 								\
-  return item;							\
+  prefix##_delete_(root, &index->f);				\
+								\
+  __CONT_##lockname##_UNLOCK(&root->lock);			\
+								\
+  return index;							\
 }								\
 								\
-attr name##_item_t *						\
-prefix##_pop	(name##_cont_t	*list)				\
+attr __CONTAINER_PROTO_POP(name, prefix)			\
 {								\
-  name##_item_t	*item = *list;					\
+  __CONT_##lockname##_WRLOCK(&root->lock);			\
 								\
-  if (item)							\
+  name##_entry_t *entry = root->head;				\
+								\
+  if (entry)							\
     {								\
-      *list = prefix##_get_item(item->f.next);			\
-      prefix##_delete_(list, &item->f);				\
+      root->head = entry->next;					\
+      prefix##_delete_(root, entry);				\
+      return prefix##_get_item(entry);				\
     }								\
 								\
-  return item;							\
+  __CONT_##lockname##_UNLOCK(&root->lock);			\
+								\
+  return 0;							\
 }								\
 								\
-attr name##_item_t *						\
-prefix##_popback	(name##_cont_t	*list)			\
+attr __CONTAINER_PROTO_POPBACK(name, prefix)			\
 {								\
-  name##_item_t	*item = *list;					\
+  __CONT_##lockname##_WRLOCK(&root->lock);			\
 								\
-  if (item)							\
+  name##_entry_t *entry = root->head;				\
+								\
+  if (entry)							\
     {								\
-      item = prefix##_get_item(item->f.prev);			\
-      prefix##_delete_(list, &item->f);				\
+      entry = entry->prev;					\
+      prefix##_delete_(root, entry);				\
+      return prefix##_get_item(entry);				\
     }								\
 								\
-  return item;							\
+  __CONT_##lockname##_UNLOCK(&root->lock);			\
+								\
+  return 0;							\
+}								\
+								\
+attr __CONTAINER_PROTO_PUSH_ARRAY(name, prefix)			\
+{								\
+  uintptr_t	i;						\
+								\
+  /* FIXME could be optimized by writing specific code */	\
+  for (i = 0; i < size; i++)					\
+    prefix##_push(root, item[i]);				\
+								\
+  return size;							\
+}								\
+								\
+attr __CONTAINER_PROTO_PUSHBACK_ARRAY(name, prefix)		\
+{								\
+  uintptr_t	i;						\
+								\
+  /* FIXME could be optimized by writing specific code */	\
+  for (i = 0; i < size; i++)					\
+    prefix##_pushback(root, item[i]);				\
+								\
+  return size;							\
+}								\
+								\
+attr __CONTAINER_PROTO_POP_ARRAY(name, prefix)			\
+{								\
+  uintptr_t	i;						\
+								\
+  /* FIXME could be optimized by writing specific code */	\
+  for (i = 0; i < size; i++)					\
+    item[i] = prefix##_pop(root);				\
+								\
+  return size;							\
+}								\
+								\
+attr __CONTAINER_PROTO_POPBACK_ARRAY(name, prefix)		\
+{								\
+  uintptr_t	i;						\
+								\
+  /* FIXME could be optimized by writing specific code */	\
+  for (i = 0; i < size; i++)					\
+    item[i] = prefix##_popback(root);				\
+								\
+  return size;							\
+}								\
+								\
+attr __CONTAINER_PROTO_INIT(name, prefix)			\
+{								\
+  root->head = 0;						\
+  __CONT_##lockname##_INIT(&root->lock);			\
+								\
+  return 0;							\
+}								\
+								\
+attr __CONTAINER_PROTO_DESTROY(name, prefix)			\
+{								\
+  __CONT_##lockname##_DESTROY(&root->lock);			\
 }
-
-/*
-FIXME
-#define		CLIST_FOREACH(prefix, i, init, f)	\
-	for (i = init; i != init; i = prefix##_get_item(i->f.next))
-
-#define		CLIST_FOREACH_REVERSE(i, init, f)	\
-	for (i = init; i != init; i = prefix##_get_item(i->f.prev))
-*/
 
 #endif
 
