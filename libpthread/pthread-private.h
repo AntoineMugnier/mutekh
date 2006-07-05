@@ -28,7 +28,9 @@
 #include <mutek/task.h>
 #include <mutek/lock.h>
 
-CLIST_FUNC(static inline, pthread, __pthread_list, queue);
+#include <mutek/template/clist.h>
+
+CONTAINER_FUNC(static inline, pthread, CLIST, __pthread_list, queue);
 
 /** runnable thread list */
 extern struct pthread_pool_s __pthread_runnable;

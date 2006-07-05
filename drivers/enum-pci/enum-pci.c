@@ -52,6 +52,61 @@ DEV_CLEANUP(enum_pci_cleanup)
   mem_free(pv);
 }
 
+static error_t
+pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
+		   uint8_t dv, uint8_t fn)
+{
+  struct device_s		*new;
+  struct enum_pv_pci_s		*enum_pv;
+  uint16_t			vendor;
+  uint8_t			htype;
+
+  vendor = pci_confreg_read(bus, dv, fn, PCI_CONFREG_VENDOR);
+
+  if (!vendor || vendor == 0xffff)
+    return -ENOENT;
+
+  if (!(new = mem_alloc(sizeof (*new), MEM_SCOPE_SYS)))
+    goto err;
+
+  if (!(enum_pv = mem_alloc(sizeof (*enum_pv), MEM_SCOPE_SYS)))
+    goto err_alloc;
+
+  enum_pv->vendor = vendor;
+  enum_pv->devid = pci_confreg_read(bus, dv, fn, PCI_CONFREG_DEVID);
+  enum_pv->class = pci_confreg_read(bus, dv, fn, PCI_CONFREG_CLASS);
+
+  printf("PCI device %04x:%04x class %x06x\n",
+	 vendor, enum_pv->devid, enum_pv->class);
+
+  device_register(new, dev, enum_pv);
+
+  htype = pci_confreg_read(bus, dv, fn, PCI_CONFREG_HTYPE);
+
+  return (htype & PCI_CONFREG_HTYPE_MULTI);
+
+ err_alloc:
+  mem_free(new);
+ err:
+  return -ENOMEM;
+}
+
+
+static error_t
+pci_enum_probe(struct device_s *dev)
+{
+  uint_fast8_t	bus, dv, fn;
+
+  for (bus = 0; bus < PCI_CONF_MAXBUS; bus++)
+    for (dv = 0; dv < PCI_CONF_MAXDEVICE; dv++)
+      for (fn = 0; fn < PCI_CONF_MAXFCN; fn++)
+	if (pci_enum_dev_probe(dev, bus, dv, fn) <= 0)
+	  break;
+
+  return 0;
+}
+
+
 /*
  * device open operation
  */
@@ -75,6 +130,10 @@ DEV_INIT(enum_pci_init)
   lock_init(&pv->lock);
 
   dev->drv_pv = pv;
+
+  device_init(dev);
+  pci_enum_probe(dev);
+  device_dump_list(dev);
 
   return 0;
 }

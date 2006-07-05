@@ -34,7 +34,7 @@
 		PThread types
 ************************************************************************/
 
-CLIST_TYPE_DECL(pthread, struct pthread_s);
+CONTAINER_TYPE_DECL(pthread, CLIST, struct pthread_s);
 
 typedef void * pthread_start_routine_t(void *arg);
 
@@ -83,7 +83,7 @@ struct pthread_s
   __bool_t			joinable:1;
 
   /** pointer to thread waiting for termination */
-  pthread_cont_t		joined;
+  struct pthread_s		*joined;
   /** joined thread exit value */
   void				*joined_retval;
 #endif

@@ -59,9 +59,13 @@ __pthread_run_candidate(struct pthread_pool_s *pool)
 {
   struct pthread_s	*thread;
 
-  thread = pool->list ? (pool->list = __pthread_list_next(pool->list)) : 0;
+  if ((thread = __pthread_list_pop(&pool->list)))
+    {
+      __pthread_list_pushback(&pool->list, thread);
+      return __pthread_list_head(&pool->list);
+    }
 
-  return thread ? thread : &idle_thread;
+  return &idle_thread;
 }
 
 
@@ -90,7 +94,7 @@ __pthread_bootstrap(void)
 void
 __pthread_dump_runqueue(void)
 {
-  pthread_item_t	*t;
+  pthread_item_t	t;
 
   if (lock_state(&__pthread_runnable.lock))
     printf("__pthread_dump_runqueue(): __pthread_runnable.lock is held\n");
@@ -103,11 +107,11 @@ __pthread_dump_runqueue(void)
 
   if (t)
     do {
-      printf("  next %p prev %p\n",
-	     __pthread_list_next(t),
-	     __pthread_list_prev(t));
+      printf("  [%p] next %p prev %p\n", t,
+	     __pthread_list_next(&__pthread_runnable.list, t),
+	     __pthread_list_prev(&__pthread_runnable.list, t));
     
-      t = __pthread_list_next(t);
+      t = __pthread_list_next(&__pthread_runnable.list, t);
 
     } while (t != __pthread_list_head(&__pthread_runnable.list));
 

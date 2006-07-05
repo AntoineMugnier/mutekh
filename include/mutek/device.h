@@ -94,8 +94,9 @@ typedef DEV_CLEANUP(dev_cleanup_t);
 
 
 #ifdef CONFIG_DEVICE_HIERARCHY
+#include <mutek/template/lock_spin.h>
 #include <mutek/template/dlist.h>
-DLIST_TYPE_DECL(device, struct device_s);
+CONTAINER_LOCKED_TYPE_DECL(device, DLIST, struct device_s, SPIN);
 #endif
 
 struct device_s
@@ -139,6 +140,19 @@ struct device_s
 #endif /* !CONFIG_DEVICE_HIERARCHY */
 
 };
+
+
+#ifdef CONFIG_DEVICE_HIERARCHY
+
+error_t device_init(struct device_s *dev);
+
+error_t device_register(struct device_s *dev,
+			struct device_s *parent,
+			void *enum_pv);
+
+void device_dump_list(struct device_s *root);
+
+#endif /* !CONFIG_DEVICE_HIERARCHY */
 
 #endif
 

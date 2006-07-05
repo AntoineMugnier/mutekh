@@ -36,6 +36,7 @@
 #include <../drivers/icu-8259/icu-8259.h>
 #include <../drivers/icu-soclib/icu-soclib.h>
 #include <../drivers/fb-vga/fb-vga.h>
+#include <../drivers/enum-pci/enum-pci.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -56,6 +57,8 @@ struct device_s timer_dev = {};
 #endif
 
 struct device_s icu_dev = {};
+
+struct device_s enum_pci = {};
 
 extern const uint8_t mutek_logo_320x200[320*200];
 
@@ -100,6 +103,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   DEV_ICU_BIND(&icu_dev, &tty_dev);
 #endif /* CONFIG_TTY */
 
+  /********* Timer init ******************************** */
+
 #ifdef CONFIG_TIMER
 # if defined(__ARCH__ibmpc__)
   timer_dev.addr[0] = 0x0040;
@@ -126,6 +131,10 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
   puts("MutekH is alive.");
 
+# if defined(__ARCH__ibmpc__)
+  enum_pci_init(&enum_pci);
+# endif
+
   //arch_start_other_cpu(); /* let other CPUs enter main_smp() */
 
   mutek_main_smp();
@@ -135,8 +144,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
 DEVTIMER_CALLBACK(timer_callback)
 {
-  printf("timer callback\n");
-  pthread_yield();
+  //  printf("timer callback\n");
+  //  pthread_yield();
 }
 
 static CPU_EXCEPTION_HANDLER(fault_handler)
@@ -288,9 +297,14 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
       dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 #endif
 
+      __pthread_dump_runqueue();
+
       main(0, 0);
+
+      __pthread_dump_runqueue();
+
       while (1)
-	;
+	pthread_yield();
     }
 }
 
