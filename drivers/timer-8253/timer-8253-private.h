@@ -22,7 +22,7 @@
 #ifndef __TIMER_8253_PRIVATE_H_
 #define __TIMER_8253_PRIVATE_H_
 
-#include <mutek/device.h>
+#include <hexo/device.h>
 
 /* timer device registers addresses */
 #define TIMER_8253_CHANID(n)		((n) << 6)

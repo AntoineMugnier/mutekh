@@ -22,8 +22,8 @@
 #ifndef __CONTAINER_H_
 #define __CONTAINER_H_
 
-#include <mutek/error.h>
-#include <mutek/types.h>
+#include <hexo/error.h>
+#include <hexo/types.h>
 
 /*
   ===============

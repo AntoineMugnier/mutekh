@@ -1,5 +1,5 @@
 
-#include <mutek/alloc.h>
+#include <hexo/alloc.h>
 
 #include <string.h>
 #include <stdlib.h>

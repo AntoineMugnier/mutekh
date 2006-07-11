@@ -21,8 +21,8 @@
 
 #include <string.h>
 
-#include <mutek/types.h>
-#include <mutek/device.h>
+#include <hexo/types.h>
+#include <hexo/device.h>
 
 extern struct device_s *tty_dev;
 

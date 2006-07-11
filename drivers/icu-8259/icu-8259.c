@@ -20,12 +20,12 @@
 */
 
 
-#include <mutek/types.h>
-#include <mutek/device.h>
-#include <mutek/iospace.h>
-#include <mutek/alloc.h>
-#include <mutek/interrupt.h>
-#include <mutek/error.h>
+#include <hexo/types.h>
+#include <hexo/device.h>
+#include <hexo/iospace.h>
+#include <hexo/alloc.h>
+#include <hexo/interrupt.h>
+#include <hexo/error.h>
 
 #include "icu-8259.h"
 

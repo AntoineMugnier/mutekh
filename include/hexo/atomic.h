@@ -44,7 +44,7 @@ static void cpu_atomic_bit_waitclr(__atomic_t *a, uint_fast8_t n);
 /** test bit in memory */
 static __bool_t cpu_atomic_bit_test(__atomic_t *a, uint_fast8_t n);
 
-#include "cpu/mutek/atomic.h"
+#include "cpu/hexo/atomic.h"
 
 #endif
 

@@ -28,7 +28,7 @@
 #ifndef MULTIBOOT_H_
 #define MULTIBOOT_H_
 
-#include <mutek/types.h>
+#include <hexo/types.h>
 
 struct multiboot_header_s
 {

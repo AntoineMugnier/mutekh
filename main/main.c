@@ -19,16 +19,16 @@
 
 */
 
-#include <mutek/init.h>
-#include <mutek/types.h>
-#include <mutek/device.h>
-#include <mutek/endian.h>
+#include <hexo/init.h>
+#include <hexo/types.h>
+#include <hexo/device.h>
+#include <hexo/endian.h>
 
-#include <mutek/interrupt.h>
-#include <mutek/local.h>
-#include <mutek/iospace.h>
-#include <mutek/lock.h>
-#include <mutek/task.h>
+#include <hexo/interrupt.h>
+#include <hexo/local.h>
+#include <hexo/iospace.h>
+#include <hexo/lock.h>
+#include <hexo/task.h>
 
 #include <../drivers/uart-8250/uart-8250.h>
 #include <../drivers/tty-vga/tty-vga.h>

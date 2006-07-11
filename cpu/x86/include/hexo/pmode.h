@@ -33,7 +33,7 @@
 #ifndef CPU_PMODE_H_
 #define CPU_PMODE_H_
 
-#include "mutek/types.h"
+#include "hexo/types.h"
 
 /** x86 segement selector integer type */
 typedef uint16_t	cpu_x86_segsel_t;

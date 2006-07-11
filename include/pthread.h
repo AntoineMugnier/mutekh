@@ -22,13 +22,13 @@
 #ifndef PTHREAD_H_
 #define PTHREAD_H_
 
-#include <mutek/types.h>
-#include <mutek/error.h>
-#include <mutek/local.h>
-#include <mutek/lock.h>
-#include <mutek/task.h>
-#include <mutek/template/cont_clist.h>
-#include <mutek/interrupt.h>
+#include <hexo/types.h>
+#include <hexo/error.h>
+#include <hexo/local.h>
+#include <hexo/lock.h>
+#include <hexo/task.h>
+#include <hexo/template/cont_clist.h>
+#include <hexo/interrupt.h>
 
 /************************************************************************
 		PThread types

@@ -30,7 +30,7 @@ static inline uint32_t cpu_endian_swap32(uint32_t x);
 static inline uint64_t cpu_endian_swap64(uint64_t x);
 */
 
-#include "cpu/mutek/endian.h"
+#include "cpu/hexo/endian.h"
 
 static inline uint16_t __endian_swap16(uint16_t x)
 {
@@ -101,7 +101,7 @@ static inline uint64_t endian_swap64(uint64_t x)
 
 # elif
 
-#  error No endian mode defined in cpu/mutek/endian.h
+#  error No endian mode defined in cpu/hexo/endian.h
 
 # endif
 

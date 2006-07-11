@@ -20,10 +20,10 @@
 */
 
 
-#include <mutek/types.h>
-#include <mutek/device.h>
-#include <mutek/iospace.h>
-#include <mutek/alloc.h>
+#include <hexo/types.h>
+#include <hexo/device.h>
+#include <hexo/iospace.h>
+#include <hexo/alloc.h>
 #include <string.h>
 
 #include "timer-8253-private.h"

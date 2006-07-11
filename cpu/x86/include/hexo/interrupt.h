@@ -32,7 +32,7 @@
 
 #define CPU_INTERRUPT_H_
 
-#include "mutek/local.h"
+#include "hexo/local.h"
 
 /** first interrupt vector used for exceptions */
 #define CPU_EXCEPT_VECTOR		0

@@ -22,7 +22,7 @@
 #ifndef __ICU_8259_PRIVATE_H_
 #define __ICU_8259_PRIVATE_H_
 
-#include <mutek/device.h>
+#include <hexo/device.h>
 
 struct icu_8259_handler_s
 {

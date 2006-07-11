@@ -20,11 +20,11 @@
 */
 
 
-#include <mutek/types.h>
-#include <mutek/init.h>
-#include <mutek/lock.h>
+#include <hexo/types.h>
+#include <hexo/init.h>
+#include <hexo/lock.h>
 
-#include <cpu/mutek/apic.h>
+#include <cpu/hexo/apic.h>
 
 #include "multiboot.h"
 

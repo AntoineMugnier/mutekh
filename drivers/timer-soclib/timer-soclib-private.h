@@ -22,7 +22,7 @@
 #ifndef __TIMER_SOCLIB_PRIVATE_H_
 #define __TIMER_SOCLIB_PRIVATE_H_
 
-#include <mutek/device.h>
+#include <hexo/device.h>
 
 /* timer device registers addresses */
 #define TIMER_SOCLIB_REG_VALUE		0

@@ -38,7 +38,7 @@ extern CPU_LOCAL void *__cpu_task_data_base;
 /** pointer to task local storage itself */
 extern TASK_LOCAL void *__task_data_base;
 
-#include "cpu/mutek/local.h"
+#include "cpu/hexo/local.h"
 
 /** cpu architecture local storage type attribute */
 #define CPUARCH_LOCAL	__attribute__((section (".cpuarchdata")))

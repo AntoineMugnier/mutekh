@@ -29,7 +29,7 @@
 
 #define ARCH_LOCK_H_
 
-#include "mutek/iospace.h"
+#include "hexo/iospace.h"
 
 //#define ARCH_HAS_ATOMIC
 

@@ -20,9 +20,9 @@
 */
 
 
-#include <mutek/types.h>
-#include <mutek/init.h>
-#include <mutek/lock.h>
+#include <hexo/types.h>
+#include <hexo/init.h>
+#include <hexo/lock.h>
 
 uintptr_t __ramlock_base = 0x00c00000;
 

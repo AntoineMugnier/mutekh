@@ -22,7 +22,7 @@
 #ifndef STDINT_H_
 #define STDINT_H_
 
-#include <mutek/types.h>
+#include <hexo/types.h>
 
 #define INT8_MIN		__MINOF_TYPE(int8_t)
 #define INT16_MIN		__MINOF_TYPE(int16_t)

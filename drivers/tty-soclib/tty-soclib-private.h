@@ -23,10 +23,10 @@
 #ifndef TTY_VGA_PRIVATE_H_
 #define TTY_VGA_PRIVATE_H_
 
-#include <mutek/types.h>
-#include <mutek/device.h>
-#include <mutek/lock.h>
-#include <mutek/template/fifo.h>
+#include <hexo/types.h>
+#include <hexo/device.h>
+#include <hexo/lock.h>
+#include <hexo/template/fifo.h>
 
 /**************************************************************/
 

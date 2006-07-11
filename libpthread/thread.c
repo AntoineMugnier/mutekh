@@ -21,8 +21,8 @@
 
 #include <stdio.h>
 
-#include <mutek/alloc.h>
-#include <mutek/types.h>
+#include <hexo/alloc.h>
+#include <hexo/types.h>
 
 #include "pthread-private.h"
 

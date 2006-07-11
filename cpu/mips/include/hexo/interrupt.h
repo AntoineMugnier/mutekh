@@ -32,9 +32,9 @@
 
 #define CPU_INTERRUPT_H_
 
-#include "mutek/local.h"
+#include "hexo/local.h"
 
-#include "cpu/mutek/specific.h"
+#include "cpu/hexo/specific.h"
 
 extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
 extern CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;

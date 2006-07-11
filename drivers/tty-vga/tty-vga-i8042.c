@@ -21,9 +21,9 @@
 
 #include <string.h>
 
-#include <mutek/types.h>
-#include <mutek/device.h>
-#include <mutek/iospace.h>
+#include <hexo/types.h>
+#include <hexo/device.h>
+#include <hexo/iospace.h>
 
 #include "tty-vga.h"
 

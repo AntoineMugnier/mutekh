@@ -19,7 +19,7 @@
 
 */
 
-#include <mutek/types.h>
+#include <hexo/types.h>
 
 #include <ctype.h>
 #include <stdlib.h>

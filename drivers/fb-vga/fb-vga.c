@@ -21,11 +21,11 @@
 
 */
 
-#include <mutek/types.h>
-#include <mutek/device.h>
-#include <mutek/iospace.h>
-#include <mutek/alloc.h>
-#include <mutek/lock.h>
+#include <hexo/types.h>
+#include <hexo/device.h>
+#include <hexo/iospace.h>
+#include <hexo/alloc.h>
+#include <hexo/lock.h>
 #include <string.h>
 
 #include "fb-vga.h"

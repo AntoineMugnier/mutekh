@@ -35,7 +35,7 @@ static void arch_lock_spin(struct arch_lock_s *lock);
 static __bool_t arch_lock_state(struct arch_lock_s *lock);
 static void arch_lock_release(struct arch_lock_s *lock);
 
-#include "arch/mutek/lock.h"
+#include "arch/hexo/lock.h"
 
 struct			lock_s
 {

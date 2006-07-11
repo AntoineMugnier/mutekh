@@ -22,7 +22,7 @@
 #ifndef NETINET_IN_H_
 #define NETINET_IN_H_
 
-#include <mutek/endian.h>
+#include <hexo/endian.h>
 
 static inline uint32_t htonl(uint32_t x)
 {

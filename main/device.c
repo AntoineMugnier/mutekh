@@ -19,8 +19,8 @@
 
 */
 
-#include <mutek/device.h>
-#include <mutek/error.h>
+#include <hexo/device.h>
+#include <hexo/error.h>
 
 #ifdef CONFIG_DEVICE_HIERARCHY
 

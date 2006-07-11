@@ -19,21 +19,14 @@
 
 */
 
+#include <hexo/types.h>
 
-#include <hexo/alloc.h>
+#ifndef __ASSERT_H_
+#define __ASSERT_H_
 
-void * mem_alloc(size_t size, uint_fast8_t scope)
-{
-  static uint8_t	*addr = (void*)0x00400000;
-  void		*res;
+#include <stdio.h>
 
-  res = addr;
-  addr += size;
+#define assert(expr) if (!(expr)) { printf("Assertion failed at %s:%u: (" #expr ") is false\n", __func__, __LINE__); while (1); }
 
-  return res;
-}
-
-void mem_free(void *ptr)
-{
-}
+#endif
 

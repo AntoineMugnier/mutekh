@@ -1,6 +1,6 @@
 
-#include <mutek/error.h>
-#include <mutek/task.h>
+#include <hexo/error.h>
+#include <hexo/task.h>
 
 error_t
 cpu_task_bootstrap(struct task_s *task)

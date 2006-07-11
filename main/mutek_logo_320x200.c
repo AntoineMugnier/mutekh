@@ -1,5 +1,5 @@
 
-#include <mutek/types.h>
+#include <hexo/types.h>
 
 const uint8_t mutek_logo_320x200[320*200] =
   {

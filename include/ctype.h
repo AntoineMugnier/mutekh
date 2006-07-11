@@ -24,7 +24,7 @@
 #ifndef CTYPE_H_
 #define CTYPE_H_
 
-#include <mutek/types.h>
+#include <hexo/types.h>
 
 static inline __bool_t
 isalpha(int_fast8_t ch)

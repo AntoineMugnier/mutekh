@@ -24,7 +24,7 @@
 #ifndef DRIVER_FB_VGA_H_
 #define DRIVER_FB_VGA_H_
 
-#include <mutek/device.h>
+#include <hexo/device.h>
 
 /* devices addresses slots */
 

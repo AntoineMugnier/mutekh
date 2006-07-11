@@ -23,11 +23,11 @@
 #ifndef TTY_VGA_PRIVATE_H_
 #define TTY_VGA_PRIVATE_H_
 
-#include <mutek/types.h>
-#include <mutek/device.h>
-#include <mutek/lock.h>
-#include <mutek/template/cont_ring.h>
-#include <mutek/template/lock_spin.h>
+#include <hexo/types.h>
+#include <hexo/device.h>
+#include <hexo/lock.h>
+#include <hexo/template/cont_ring.h>
+#include <hexo/template/lock_spin.h>
 
 /**************************************************************/
 

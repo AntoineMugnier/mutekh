@@ -47,8 +47,8 @@ typedef signed int		int32_t;
 /** base interger type, 64 bits signed int */
 typedef signed long long	int64_t;
 
-#include "cpu/mutek/types.h"
-#include "arch/mutek/types.h"
+#include "cpu/hexo/types.h"
+#include "arch/hexo/types.h"
 
 /* type used to prevent ld script symbols from being placed in
    .sdata section */

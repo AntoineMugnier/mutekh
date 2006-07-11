@@ -22,7 +22,7 @@
 #ifndef STDDEF_H_
 #define STDDEF_H_
 
-#include <mutek/types.h>
+#include <hexo/types.h>
 
 #if (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 5))
 # define offsetof(t, f)	__builtin_offsetof(t, f)

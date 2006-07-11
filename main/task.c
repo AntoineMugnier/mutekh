@@ -1,8 +1,8 @@
 
-#include <mutek/error.h>
-#include <mutek/task.h>
-#include <mutek/local.h>
-#include <mutek/segment.h>
+#include <hexo/error.h>
+#include <hexo/task.h>
+#include <hexo/local.h>
+#include <hexo/segment.h>
 
 /** pointer to current task */
 TASK_LOCAL struct task_s *task_cur;

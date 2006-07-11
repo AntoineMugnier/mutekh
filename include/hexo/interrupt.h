@@ -74,7 +74,7 @@ static void cpu_interrupt_savestate_disable(__reg_t *state);
 static void cpu_interrupt_restorestate(const __reg_t *state);
 
 
-#include "cpu/mutek/interrupt.h"
+#include "cpu/hexo/interrupt.h"
 
 #endif
 

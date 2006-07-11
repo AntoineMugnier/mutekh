@@ -21,9 +21,9 @@
 
 */
 
-#include <mutek/types.h>
-#include <mutek/iospace.h>
-#include <mutek/error.h>
+#include <hexo/types.h>
+#include <hexo/iospace.h>
+#include <hexo/error.h>
 
 #include "fb-vga-private.h"
 

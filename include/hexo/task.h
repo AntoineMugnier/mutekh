@@ -22,9 +22,9 @@
 #ifndef TASK_H_
 #define TASK_H_
 
-#include <mutek/types.h>
-#include <mutek/local.h>
-#include <mutek/error.h>
+#include <hexo/types.h>
+#include <hexo/local.h>
+#include <hexo/error.h>
 
 /** cpu specific task structure */
 struct cpu_task_s;
@@ -70,7 +70,7 @@ void cpu_task_destroy(struct task_s *task);
 
 
 
-#include "cpu/mutek/task.h"
+#include "cpu/hexo/task.h"
 
 /** pointer to current task object */
 extern TASK_LOCAL struct task_s *task_cur;

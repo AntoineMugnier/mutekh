@@ -20,8 +20,8 @@
 */
 
 
-#include <mutek/types.h>
-#include <mutek/device.h>
+#include <hexo/types.h>
+#include <hexo/device.h>
 
 #include "tty-vga.h"
 

@@ -20,17 +20,17 @@
 */
 
 
-#include <mutek/alloc.h>
+#include <hexo/alloc.h>
 #include <string.h>
-#include <mutek/interrupt.h>
-#include <mutek/init.h>
-#include <mutek/iospace.h>
-#include <mutek/lock.h>
-#include <mutek/segment.h>
+#include <hexo/interrupt.h>
+#include <hexo/init.h>
+#include <hexo/iospace.h>
+#include <hexo/lock.h>
+#include <hexo/segment.h>
 
-#include <cpu/mutek/pmode.h>
-#include <cpu/mutek/apic.h>
-#include <arch/mutek/specific.h>
+#include <cpu/hexo/pmode.h>
+#include <cpu/hexo/apic.h>
+#include <arch/hexo/specific.h>
 
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;

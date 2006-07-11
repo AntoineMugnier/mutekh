@@ -22,10 +22,10 @@
 #ifndef UART_8250_PRIVATE_H_
 #define UART_8250_PRIVATE_H_
 
-#include <mutek/types.h>
-#include <mutek/lock.h>
-#include <mutek/template/cont_ring.h>
-#include <mutek/template/lock_spin.h>
+#include <hexo/types.h>
+#include <hexo/lock.h>
+#include <hexo/template/cont_ring.h>
+#include <hexo/template/lock_spin.h>
 
 CONTAINER_TYPE_DECL(tty_fifo, RING, uint8_t, SPIN_IRQ, 128);
 CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo, SPIN_IRQ);

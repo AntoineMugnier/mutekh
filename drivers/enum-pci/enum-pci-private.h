@@ -22,9 +22,9 @@
 #ifndef __ENUM_PCI_PRIVATE_H_
 #define __ENUM_PCI_PRIVATE_H_
 
-#include <mutek/types.h>
-#include <mutek/lock.h>
-#include <mutek/iospace.h>
+#include <hexo/types.h>
+#include <hexo/lock.h>
+#include <hexo/iospace.h>
 
 #define PCI_CONFREG_VENDOR		0x00
 #define PCI_CONFREG_DEVID		0x02

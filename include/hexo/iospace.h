@@ -139,7 +139,7 @@ static void cpu_mem_write_32(uintptr_t addr, uint32_t data);
 
 static uint32_t cpu_mem_read_32(uintptr_t addr);
 
-#include "cpu/mutek/iospace.h"
+#include "cpu/hexo/iospace.h"
 
 #endif
 

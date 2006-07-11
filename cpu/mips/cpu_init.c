@@ -20,11 +20,11 @@
 */
 
 
-#include <mutek/alloc.h>
-#include <mutek/init.h>
-#include <mutek/segment.h>
-#include <mutek/local.h>
-#include <mutek/interrupt.h>
+#include <hexo/alloc.h>
+#include <hexo/init.h>
+#include <hexo/segment.h>
+#include <hexo/local.h>
+#include <hexo/interrupt.h>
 
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;

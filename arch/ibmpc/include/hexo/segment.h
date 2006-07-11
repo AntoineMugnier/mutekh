@@ -26,8 +26,8 @@
 
 #define ARCH_SEGMENT_H_
 
-#include "mutek/types.h"
-#include "mutek/alloc.h"
+#include "hexo/types.h"
+#include "hexo/alloc.h"
 #include "string.h"
 
 /* cpu template segment load address defined in ld script*/

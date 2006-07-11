@@ -23,7 +23,7 @@
 #error This file can not be included directly
 #else
 
-#include "cpu/mutek/specific.h"
+#include "cpu/hexo/specific.h"
 
 struct cpu_task_s
 {

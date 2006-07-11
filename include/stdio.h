@@ -22,7 +22,7 @@
 #ifndef STDIO_H_
 #define STDIO_H_
 
-#include <mutek/types.h>
+#include <hexo/types.h>
 #include <stdarg.h>
 
 int_fast8_t putchar(char c);

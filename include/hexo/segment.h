@@ -44,7 +44,7 @@ static void arch_taskstack_free(void *ptr);
 
 
 
-#include "arch/mutek/segment.h"
+#include "arch/hexo/segment.h"
 
 #endif
 

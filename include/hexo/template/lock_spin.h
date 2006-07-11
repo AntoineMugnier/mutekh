@@ -22,8 +22,8 @@
 #ifndef __LOCK_MUTEK_H_
 #define __LOCK_MUTEK_H_
 
-#include <mutek/error.h>
-#include <mutek/lock.h>
+#include <hexo/error.h>
+#include <hexo/lock.h>
 
 #include "container.h"
 

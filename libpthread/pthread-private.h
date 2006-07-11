@@ -25,10 +25,10 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include <mutek/task.h>
-#include <mutek/lock.h>
+#include <hexo/task.h>
+#include <hexo/lock.h>
 
-#include <mutek/template/cont_clist.h>
+#include <hexo/template/cont_clist.h>
 
 CONTAINER_FUNC(static inline, pthread, CLIST, __pthread_list, NOLOCK, queue);
 

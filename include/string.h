@@ -24,8 +24,8 @@
 #ifndef STRING_H_
 #define STRING_H_
 
-#include <mutek/types.h>
-#include <mutek/error.h>
+#include <hexo/types.h>
+#include <hexo/error.h>
 #include <cpu/string.h>
 
 void * memset(void *dst, int_fast8_t data, size_t size);

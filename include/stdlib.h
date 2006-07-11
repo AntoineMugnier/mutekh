@@ -22,7 +22,7 @@
 #ifndef STDLIB_H_
 #define STDLIB_H_
 
-#include <mutek/types.h>
+#include <hexo/types.h>
 
 /********************* memory allocation */
 

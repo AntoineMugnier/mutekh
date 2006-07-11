@@ -22,7 +22,7 @@
 #ifndef __TEMPLATE_LOCK_PTHREAD_H_
 #define __TEMPLATE_LOCK_PTHREAD_H_
 
-#include <mutek/error.h>
+#include <hexo/error.h>
 #include <pthread.h>
 
 #include "container.h"

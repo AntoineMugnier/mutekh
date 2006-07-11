@@ -12,7 +12,7 @@ CFLAGS=-Wall -Winline \
 	-O2 -fomit-frame-pointer \
 	-fno-builtin
 
-INCS=-nostdinc -D__TEST__ -D__MUTEK__ -D__ARCH__$(ARCH)__ -D__CPU__$(CPU)__ -Iinclude -include mutek/config.h
+INCS=-nostdinc -D__TEST__ -D__MUTEK__ -D__ARCH__$(ARCH)__ -D__CPU__$(CPU)__ -Iinclude -include hexo/config.h
 
 subdirs-y=	arch/current \
 		cpu/current \
