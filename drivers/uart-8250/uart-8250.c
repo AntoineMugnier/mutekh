@@ -44,11 +44,7 @@ DEVCHAR_READ(uart_8250_read)
   struct uart_8250_context_s	*pv = dev->drv_pv;
   size_t			res;
 
-  lock_spin_irq(&pv->lock);
-
-  res = tty_read_fifo_poplist(&pv->read_fifo, data, size);
-
-  lock_release_irq(&pv->lock);
+  res = tty_fifo_pop_array(&pv->read_fifo, data, size);
 
   return res;
 }
@@ -86,6 +82,8 @@ DEV_CLEANUP(uart_8250_cleanup)
 {
   struct uart_8250_context_s	*pv = dev->drv_pv;
 
+  tty_fifo_destroy(&pv->read_fifo);
+
   lock_destroy(&pv->lock);
 
   mem_free(pv);
@@ -100,11 +98,13 @@ DEV_IRQ(uart_8250_irq)
   struct uart_8250_context_s*pv = dev->drv_pv;
   __bool_t			res = 0;
 
-  lock_spin(&pv->lock);
+  if (cpu_io_read_8(dev->addr[0] + UART_8250_IIR) & UART_8250_IIR_NOPENDING)
+    return 0;
 
-  lock_release(&pv->lock);
+  while (cpu_io_read_8(dev->addr[0] + UART_8250_IIR) & UART_8250_IIR_RX)
+    tty_fifo_noirq_pushback(&pv->read_fifo, cpu_io_read_8(dev->addr[0] + UART_8250_RBR));
 
-  return res;
+  return 1;
 }
 
 /* 
@@ -133,22 +133,30 @@ DEV_INIT(uart_8250_init)
   dev->drv_pv = pv;
 
   /* init tty input fifo */
-  tty_read_fifo_init(&pv->read_fifo);
+  tty_fifo_init(&pv->read_fifo);
 
   pv->line_mode = UART_8250_LCR_8BITS | UART_8250_LCR_PARNO | UART_8250_LCR_1STOP;
   pv->line_speed = 0x000c;
 
+  cpu_io_write_8(dev->addr[0] + UART_8250_LCR, 0);
+
+  cpu_io_write_8(dev->addr[0] + UART_8250_IER, UART_8250_IER_RX);
+
+  cpu_io_write_8(dev->addr[0] + UART_8250_FCR, UART_8250_FCR_FIFO | UART_8250_FCR_CLRRX | UART_8250_FCR_CLRTX);
   cpu_io_write_8(dev->addr[0] + UART_8250_FCR, UART_8250_FCR_FIFO);
 
-  cpu_io_write_8(dev->addr[0] + UART_8250_MCR, 0);
+  cpu_io_write_8(dev->addr[0] + UART_8250_MCR, 0
+#if defined(__ARCH__ibmpc__)
+		 /* GP Output pin must be set on ibmpc to activate IRQ */
+		 | UART_8250_MCR_OUT1 | UART_8250_MCR_OUT2
+#endif
+		 );
 
   cpu_io_write_8(dev->addr[0] + UART_8250_LCR, UART_8250_LCR_DLAB);
   cpu_io_write_8(dev->addr[0] + UART_8250_DLL, pv->line_speed & 0xff);
   cpu_io_write_8(dev->addr[0] + UART_8250_DLM, pv->line_speed >> 8);
 
   cpu_io_write_8(dev->addr[0] + UART_8250_LCR, pv->line_mode);
-
-  cpu_io_write_8(dev->addr[0] + UART_8250_IER, 0);
 
   return 0;
 }

@@ -90,7 +90,7 @@ asm(
     "	srl	$4,	$9,	2			\n" /* adjust cause arg */
     "	move	$5,	$8				\n" /* execution pointer */
     "	mfc0	$6,	$8				\n" /* bad address if any */
-    "	move	$7,	$sp				\n" /* register table on stack */
+    "	addiu	$7,	$sp,	0			\n" /* register table on stack */
 
     "	lw	$1,	cpu_interrupt_ex_handler($27)	\n"
     "	jalr	$1					\n"

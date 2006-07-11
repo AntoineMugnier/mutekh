@@ -27,14 +27,14 @@
 #include <mutek/local.h>
 #include <mutek/lock.h>
 #include <mutek/task.h>
-#include <mutek/template/clist.h>
+#include <mutek/template/cont_clist.h>
 #include <mutek/interrupt.h>
 
 /************************************************************************
 		PThread types
 ************************************************************************/
 
-CONTAINER_TYPE_DECL(pthread, CLIST, struct pthread_s);
+CONTAINER_TYPE_DECL(pthread, CLIST, struct pthread_s, NOLOCK);
 
 typedef void * pthread_start_routine_t(void *arg);
 
@@ -145,6 +145,8 @@ pthread_join(pthread_t thread, void **value_ptr);
 
 #endif
 
+/** display pthread current runqueue */
+void __pthread_dump_runqueue(void);
 
 /************************************************************************
 		PThread Mutex related public API

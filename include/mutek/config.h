@@ -26,11 +26,14 @@
 /** TTY support */
 #define CONFIG_TTY
 
+/** UART support */
+#define CONFIG_UART
+
 /** TTY support use uart */
-#define CONFIG_TTY_UART
+//#define CONFIG_TTY_UART
 
 /** frame buffer support */
-#define CONFIG_FB
+//#define CONFIG_FB
 
 /** timer support */
 #define CONFIG_TIMER

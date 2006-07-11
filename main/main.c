@@ -35,6 +35,7 @@
 #include <../drivers/tty-soclib/tty-soclib.h>
 #include <../drivers/icu-8259/icu-8259.h>
 #include <../drivers/icu-soclib/icu-soclib.h>
+#include <../drivers/timer-soclib/timer-soclib.h>
 #include <../drivers/fb-vga/fb-vga.h>
 #include <../drivers/enum-pci/enum-pci.h>
 
@@ -45,7 +46,7 @@
 
 #ifdef CONFIG_TTY
 lock_t tty_lock;
-struct device_s tty_dev = {};
+struct device_s *tty_dev;
 #endif
 
 #ifdef CONFIG_FB
@@ -55,6 +56,9 @@ struct device_s fb_dev = {};
 #ifdef CONFIG_TIMER
 struct device_s timer_dev = {};
 #endif
+
+struct device_s tty_uart_dev = {};
+struct device_s tty_con_dev = {};
 
 struct device_s icu_dev = {};
 
@@ -80,27 +84,38 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
   /********* TTY init ******************************** */
 
+#ifdef CONFIG_UART
+# if defined(__ARCH__ibmpc__)
+  tty_uart_dev.addr[UART_8250_ADDR] = 0x03f8;
+  tty_uart_dev.irq = 4;
+  uart_8250_init(&tty_uart_dev);
+  DEV_ICU_BIND(&icu_dev, &tty_uart_dev);
+# endif
+#endif
+
   /* TTY init */
 #ifdef CONFIG_TTY
   lock_init(&tty_lock);
 # if defined(__ARCH__ibmpc__)
 
 #  ifdef CONFIG_TTY_UART
-  tty_dev.addr[UART_8250_ADDR] = 0x03f8;
-  uart_8250_init(&tty_dev);
+  tty_dev = &tty_uart_dev;
 #  else	/* CONFIG_TTY_UART */
-  tty_dev.addr[VGA_TTY_ADDR_BUFFER] = 0x000b8000;
-  tty_dev.addr[VGA_TTY_ADDR_CRTC] = 0x03d4;
-  tty_dev.irq = 1;
-  tty_vga_init(&tty_dev);
+  tty_con_dev.addr[VGA_TTY_ADDR_BUFFER] = 0x000b8000;
+  tty_con_dev.addr[VGA_TTY_ADDR_CRTC] = 0x03d4;
+  tty_con_dev.irq = 1;
+  tty_vga_init(&tty_con_dev);
+  tty_dev = &tty_con_dev;
+  DEV_ICU_BIND(&icu_dev, &tty_con_dev);
 #  endif /* CONFIG_TTY_UART */
 
 # elif defined(__ARCH__soclib__)
-  tty_dev.addr[0] = 0xa0c00000;
-  tty_dev.irq = 1;
-  tty_soclib_init(&tty_dev);
+  tty_con_dev.addr[0] = 0xa0c00000;
+  tty_con_dev.irq = 1;
+  tty_soclib_init(&tty_con_dev);
+  tty_dev = &tty_con_dev;
+  DEV_ICU_BIND(&icu_dev, &tty_con_dev);
 # endif	/* defined(__ARCH__xxx__) */
-  DEV_ICU_BIND(&icu_dev, &tty_dev);
 #endif /* CONFIG_TTY */
 
   /********* Timer init ******************************** */
@@ -150,42 +165,21 @@ DEVTIMER_CALLBACK(timer_callback)
 
 static CPU_EXCEPTION_HANDLER(fault_handler)
 {
-# if defined(__ARCH__ibmpc__)
-  static const char *cpu_x86_ex_name[32] =
-    {
-      [0] = "Divide Error",
-      [1] = "Debug",
-      [2] = "NMI Interrupt",
-      [3] = "Break Point",
-      [4] = "Overflow",
-      [5] = "BOUND Range Exceeded",
-      [6] = "Invalid Opcode",
-      [7] = "Device Not Available",
-      [8] = "Double Fault",
-      [9] = "Coprocessor Segment Overrun",
-      [10] = "Invalid TSS",
-      [11] = "Segment Not Present",
-      [12] = "Stack-Segment Fault",
-      [13] = "General Protection Fault",
-      [14] = "Page Fault",
-      [15] = "",
-      [16] = "x87 FPU Floating-Point Error",
-      [17] = "Alignment Check",
-      [18] = "Machine Check",
-      [19] = "SIMD Floating-Point Exception",
-      [20 ... 31] = "",
-    };
-
   int_fast8_t		i;
 
-  printf("CPU Fault (%x:%s)\n", type, cpu_x86_ex_name[type]);
+  printf("CPU Fault %x\n", type);
   printf("Execution pointer: %p\n", execptr);
   puts("regs:");
 
+#if defined(__CPU__x86__)
   for (i = 0; i < 8; i++)
+#elif defined(__CPU__mips__)
+  for (i = 0; i < 32; i++)
+#elif
+# error
+#endif
     printf("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
 
-#endif /* defined(__ARCH__ibmpc__) */
   while (1);
 }
 
@@ -217,7 +211,7 @@ void *test_thread_main(void*arg)
   pthread_cleanup_pop(1);
   pthread_cleanup_pop(1);
 
-  return 0x123;
+  return (void*)0x123;
 }
 
 /** application main function */
@@ -290,8 +284,7 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 	  pthread_yield();
 	}
 
-      printf("plif\n");
-
+      //#if 0
 #ifdef CONFIG_TIMER
       dev_timer_setperiod(&timer_dev, 0, 0xffff);
       dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
@@ -299,12 +292,25 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 
       __pthread_dump_runqueue();
 
+      template_ring_test();
+
+#ifdef CONFIG_FB
       main(0, 0);
+#endif
 
       __pthread_dump_runqueue();
 
       while (1)
-	pthread_yield();
+	{
+	  uint8_t	buf[16];
+	  size_t	len;
+
+	  if ((len = dev_char_read(&tty_con_dev, buf, 16)))
+	    dev_char_write(&tty_uart_dev, buf, len);
+
+	  if ((len = dev_char_read(&tty_uart_dev, buf, 16)))
+	    dev_char_write(&tty_con_dev, buf, len);
+	}
     }
 }
 

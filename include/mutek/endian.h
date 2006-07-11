@@ -24,9 +24,11 @@
 
 #include "types.h"
 
+/*
 static inline uint16_t cpu_endian_swap16(uint16_t x);
 static inline uint32_t cpu_endian_swap32(uint32_t x);
 static inline uint64_t cpu_endian_swap64(uint64_t x);
+*/
 
 #include "cpu/mutek/endian.h"
 

@@ -26,7 +26,8 @@
 #include <mutek/types.h>
 #include <mutek/device.h>
 #include <mutek/lock.h>
-#include <mutek/template/fifo.h>
+#include <mutek/template/cont_ring.h>
+#include <mutek/template/lock_spin.h>
 
 /**************************************************************/
 
@@ -61,8 +62,10 @@ typedef volatile struct vga_text_char_s * vga_text_buf_t;
 typedef void tty_vga_char_process_t (struct device_s *dev, uint8_t c);
 typedef void tty_vga_key_process_t  (struct device_s *dev, uint8_t scancode);
 
-FIFO_TYPE_DECL(tty_read, uint8_t, 128);
-FIFO_FUNC(tty_read)
+CONTAINER_TYPE_DECL(tty_fifo, RING, uint8_t, SPIN_IRQ, 32);
+CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo, SPIN_IRQ);
+CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_noirq, SPIN);
+CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_nolock, NOLOCK);
 
 #define VGA_TTY_MAX_ANSI_PARAMS		4
 
@@ -78,7 +81,8 @@ struct tty_vga_context_s
   tty_vga_key_process_t		*scancode;
 
   /* tty input char fifo */
-  FIFO_DECL			(tty_read, read_fifo);
+  tty_fifo_cont_t		read_fifo;
+
   lock_t			lock;
 
   uint_fast8_t			key_state;

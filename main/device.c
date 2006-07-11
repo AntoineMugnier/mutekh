@@ -26,7 +26,7 @@
 
 static struct device_s dev_root = { } ;
 
-CONTAINER_LOCKED_FUNC(static inline, device, DLIST, device_list, SPIN, siblings);
+CONTAINER_FUNC(static inline, device, DLIST, device_list, SPIN, siblings);
 
 error_t
 device_init(struct device_s *dev)

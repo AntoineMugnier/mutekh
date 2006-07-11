@@ -91,14 +91,14 @@ static const struct tty_vga_ansi_keycode_s ansi_keycode_1[0x80] =
 
     /* Others keys */
     [0x2b] = { .lower = "\\", .upper = "|" },
-    [0x0e] = { .lower = "\b" },	/* BACKSPACE */
+    [0x0e] = { .lower = "\x7f" },	/* BACKSPACE */
     [0x39] = { .lower = " ", .ctrl = "\0" }, /* SPACE */
     [0x0f] = { .lower = "\t" },	/* TAB */
     [0x1c] = { .lower = "\n" },
     [0x01] = { .lower = "\x1b" }, /* ESC */
     [0x1a] = { .lower = "[", .upper = "{", .ctrl = "\x1b" },
     [0x1b] = { .lower = "]", .upper = "}", .ctrl = "\x1d" },
-    [0x27] = { .lower = ";", .upper = "." },
+    [0x27] = { .lower = ";", .upper = ":" },
     [0x28] = { .lower = "'", .upper = "\"" },
     [0x33] = { .lower = ",", .upper = "<" },
     [0x34] = { .lower = ".", .upper = ">" },
@@ -155,7 +155,7 @@ static const struct tty_vga_ansi_keycode_s ansi_keycode_2[0x80] =
     [0x47] = { .lower = "\x1b[H" }, /* home */
     [0x49] = { .lower = "\x1b[5~" }, /* pgup */
     [0x51] = { .lower = "\x1b[6~" }, /* pgdn */
-    [0x53] = { .lower = "\x1b[3~", .ctrl = "\xff"  }, /* delete */
+    [0x53] = { .lower = "\x1b[3~", .ctrl = "\xff"  }, /* remove */
     [0x4f] = { .lower = "\x1b[F" }, /* end */
     [0x48] = { .lower = "\x1b[A" }, /* up */
     [0x4b] = { .lower = "\x1b[D" }, /* left */
@@ -216,10 +216,10 @@ static void tty_vga_keycode_make(struct device_s *dev,
 	str = k->ctrl;
 
       if ((pv->key_state & VGA_KS_ALT) && str)
-	tty_read_fifo_push(&pv->read_fifo, 0x1b);
+	tty_fifo_noirq_pushback(&pv->read_fifo, 0x1b);
 
       if (str)
-	tty_read_fifo_pushlist(&pv->read_fifo, (uint8_t*)str, strlen(str));
+	tty_fifo_noirq_pushback_array(&pv->read_fifo, (uint8_t*)str, strlen(str));
     }
 }
 

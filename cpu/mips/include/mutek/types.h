@@ -60,7 +60,7 @@ typedef	uint64_t		uint_fast64_t;
 typedef uint32_t		uintptr_t;
 
 /** signed integer type suitable for memory addresses */
-typedef uint32_t		intptr_t;
+typedef int32_t			intptr_t;
 
 /** signed integer type suitable for memory addresses */
 typedef int32_t			ptrdiff_t;

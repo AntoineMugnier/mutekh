@@ -66,6 +66,8 @@
 /* MCR */
 #define UART_8250_MCR_DTR	0x01	/* Data Terminal Ready */
 #define UART_8250_MCR_RTS	0x02	/* Ready To Send */
+#define UART_8250_MCR_OUT1	0x04	/* GP Ouput pin 1 */
+#define UART_8250_MCR_OUT2	0x08	/* GP Ouput pin 2 */
 #define UART_8250_MCR_LOOPBACK	0x10	/* Loop Back Mode */
 
 /* IER */

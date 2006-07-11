@@ -24,7 +24,7 @@
 #include <mutek/types.h>
 #include <mutek/device.h>
 
-extern struct device_s tty_dev;
+extern struct device_s *tty_dev;
 
 void __puts(const char *s, size_t len)
 {
@@ -32,7 +32,7 @@ void __puts(const char *s, size_t len)
     {
       ssize_t	res;
 
-      res = dev_char_write(&tty_dev, (uint8_t*)s, len);
+      res = dev_char_write(tty_dev, (uint8_t*)s, len);
 
       if (res > 0)
 	{
@@ -45,7 +45,7 @@ void __puts(const char *s, size_t len)
 
 inline int_fast8_t putchar(char c)
 {
-  while (dev_char_write(&tty_dev, (uint8_t*)&c, 1) != 1)
+  while (dev_char_write(tty_dev, (uint8_t*)&c, 1) != 1)
     /* pthread_yield() */ ;
 
   return c;

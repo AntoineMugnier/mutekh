@@ -24,10 +24,13 @@
 
 #include <mutek/types.h>
 #include <mutek/lock.h>
-#include <mutek/template/fifo.h>
+#include <mutek/template/cont_ring.h>
+#include <mutek/template/lock_spin.h>
 
-FIFO_TYPE_DECL(tty_read, uint8_t, 128);
-FIFO_FUNC(tty_read);
+CONTAINER_TYPE_DECL(tty_fifo, RING, uint8_t, SPIN_IRQ, 128);
+CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo, SPIN_IRQ);
+CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_noirq, SPIN);
+CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_nolock, NOLOCK);
 
 struct uart_8250_context_s
 {
@@ -35,8 +38,9 @@ struct uart_8250_context_s
   uint16_t				line_speed;
 
   /* tty input char fifo */
-  FIFO_DECL			(tty_read, read_fifo);
-  lock_t			lock;
+  tty_fifo_cont_t			read_fifo;
+
+  lock_t				lock;
 };
 
 #endif

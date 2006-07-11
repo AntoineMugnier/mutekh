@@ -287,20 +287,6 @@ tty_vga_newline(struct device_s *dev)
 }
 
 /* 
- * new line with scrolling
- */
-
-static inline void
-tty_vga_backspace(struct device_s *dev)
-{
-  struct tty_vga_context_s	*pv = dev->drv_pv;
-  vga_text_buf_t		buf = (vga_text_buf_t)(dev->addr[VGA_TTY_ADDR_BUFFER]);
-
-  tty_vga_setcursor(dev, pv->xpos - 1, pv->ypos);
-  buf[pv->width * pv->ypos + pv->xpos].c = ' ';
-}
-
-/* 
  * put char at cursor position
  */
 
@@ -372,12 +358,13 @@ tty_vga_process_default(struct device_s *dev, uint8_t c)
       break;
 
     case ('\b'):
-      tty_vga_backspace(dev);
+      tty_vga_setcursor(dev, pv->xpos - 1, pv->ypos);
       break;
 
 #ifdef CONFIG_VGATTY_ANSI
     case(27):		/* ESC */
-      pv->process = &tty_vga_process_ansi;
+      //if (pv->key_state & VGA_KS_SCROLL)
+	pv->process = &tty_vga_process_ansi;
       break;
 #endif
 
@@ -398,11 +385,7 @@ DEVCHAR_READ(tty_vga_read)
   struct tty_vga_context_s	*pv = dev->drv_pv;
   size_t			res;
 
-  lock_spin_irq(&pv->lock);
-
-  res = tty_read_fifo_poplist(&pv->read_fifo, data, size);
-
-  lock_release_irq(&pv->lock);
+  res = tty_fifo_pop_array(&pv->read_fifo, data, size);
 
   return res;
 }
@@ -439,6 +422,7 @@ DEV_CLEANUP(tty_vga_cleanup)
 {
   struct tty_vga_context_s	*pv = dev->drv_pv;
 
+  tty_fifo_destroy(&pv->read_fifo);
   lock_destroy(&pv->lock);
 
   mem_free(pv);
@@ -470,7 +454,7 @@ DEV_INIT(tty_vga_init)
   dev->drv_pv = pv;
 
   /* init tty input fifo */
-  tty_read_fifo_init(&pv->read_fifo);
+  tty_fifo_init(&pv->read_fifo);
 
   /* set parser automata initial state */
   pv->process = &tty_vga_process_default;

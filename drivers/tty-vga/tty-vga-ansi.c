@@ -35,14 +35,14 @@
  * put ansi reponse data on device read fifo
  */
 
-#define VGA_TTY_ANSI_PUTSTR(fifo, str) tty_read_fifo_pushlist(fifo, (uint8_t*)str, sizeof(str) - 1)
+#define VGA_TTY_ANSI_PUTSTR(fifo, str) tty_fifo_nolock_pushback_array(fifo, (uint8_t*)str, sizeof(str) - 1)
 
 static void
-tty_vga_ansi_putint(FIFO_TYPE(tty_read) *fifo, uint_fast8_t n)
+tty_vga_ansi_putint(tty_fifo_cont_t *fifo, uint_fast8_t n)
 {
   if (n > 10)
     tty_vga_ansi_putint(fifo, n / 10);
-  tty_read_fifo_push(fifo, (n % 10) + '0');
+  tty_fifo_nolock_pushback(fifo, (n % 10) + '0');
 }
 
 /* 
@@ -118,7 +118,7 @@ tty_vga_ansi_delete(struct device_s *dev, int_fast8_t count)
   buf += pv->width * pv->ypos;
 
   for (i = pv->xpos; i < pv->width - count; i++)
-    buf[i] = buf[i + 1];
+    buf[i] = buf[i + count];
 
   for (; i < pv->width; i++)
     {
@@ -140,6 +140,60 @@ tty_vga_ansi_insert(struct device_s *dev)
     buf[i] = buf[i - 1];
 }
 
+
+/* 
+ * process as ansi code char after '?'
+ */
+
+static void
+tty_vga_process_ansi_qmark(struct device_s *dev, uint8_t c)
+{
+  struct tty_vga_context_s	*pv = dev->drv_pv;
+  uint_fast8_t	i;
+
+  switch (c)
+    {
+    case ('l'):
+      for (i = 0; i <= pv->ansi_index; i++)
+	switch (pv->ansi_param[i])
+	  {
+	  }
+      break;
+
+    case ('h'):
+      for (i = 0; i <= pv->ansi_index; i++)
+	switch (pv->ansi_param[i])
+	  {
+	  }
+      break;
+
+      /* param digits */
+    case '0'...'9':
+      pv->ansi_param[pv->ansi_index] = pv->ansi_param[pv->ansi_index] * 10 + c - '0';
+      return;
+
+    case (';'):			/* param separator */
+      pv->ansi_index = (pv->ansi_index + 1) % VGA_TTY_MAX_ANSI_PARAMS;
+      return;
+    }
+
+  pv->process = &tty_vga_process_default;
+}
+
+/* 
+ * process as ansi code char after '['
+ */
+
+static void
+tty_vga_process_ansi_charset(struct device_s *dev, uint8_t c)
+{
+  struct tty_vga_context_s	*pv = dev->drv_pv;
+
+  /* Select charset */
+
+  pv->process = &tty_vga_process_default;
+}
+
 /* 
  * process as ansi code char after '['
  */
@@ -157,10 +211,15 @@ tty_vga_process_ansi_bracket(struct device_s *dev, uint8_t c)
       return;
 
     case ('c'):			/* Query Device Code, report as vt102*/
+      tty_fifo_wrlock(&pv->read_fifo);
       VGA_TTY_ANSI_PUTSTR(&pv->read_fifo, "\x1b[?6c");
+      tty_fifo_unlock(&pv->read_fifo);
       break;
 
     case ('n'):
+
+      tty_fifo_wrlock(&pv->read_fifo);
+
       switch (pv->ansi_param[0])
 	{
 	case (5):		/* Query Device Status */
@@ -175,7 +234,14 @@ tty_vga_process_ansi_bracket(struct device_s *dev, uint8_t c)
 	  VGA_TTY_ANSI_PUTSTR(&pv->read_fifo, "R");
 	  break;
 	}
+
+      tty_fifo_unlock(&pv->read_fifo);
+
       break;
+
+    case ('?'):
+      pv->process = &tty_vga_process_ansi_qmark;
+      return;
 
     case ('l'):
       for (i = 0; i <= pv->ansi_index; i++)
@@ -210,7 +276,8 @@ tty_vga_process_ansi_bracket(struct device_s *dev, uint8_t c)
 
     case ('f'):			/* Force Cursor Position */
     case ('H'):			/* Cursor Home */
-      tty_vga_setcursor(dev, pv->ansi_param[0] - 1, pv->ansi_param[1] - 1);
+      tty_vga_setcursor(dev, (int_fast8_t)pv->ansi_param[1] - 1,
+			(int_fast8_t)pv->ansi_param[0] - 1);
       break;
 
     case ('A'):			/* Move Up */
@@ -299,14 +366,12 @@ tty_vga_process_ansi_bracket(struct device_s *dev, uint8_t c)
       break;
 
       /* param digits */
-    case ('0'): case ('1'): case ('2'): case ('3'): case ('4'):
-    case ('5'): case ('6'): case ('7'): case ('8'): case ('9'):
+    case '0' ... '9':
       pv->ansi_param[pv->ansi_index] = pv->ansi_param[pv->ansi_index] * 10 + c - '0';
       return;
 
     case (';'):			/* param separator */
       pv->ansi_index = (pv->ansi_index + 1) % VGA_TTY_MAX_ANSI_PARAMS;
-      pv->ansi_param[pv->ansi_index] = 0;
       return;
     }
 
@@ -323,11 +388,15 @@ tty_vga_process_ansi(struct device_s *dev, uint8_t c)
   struct tty_vga_context_s	*pv = dev->drv_pv;
 
   pv->ansi_index = 0;
-  pv->ansi_param[0] = 0;
+  memset(pv->ansi_param, 0, sizeof (pv->ansi_param));
 
   switch (c)
     {
     case(27):			/* ESC */
+      return;
+
+    case ('('): case (')'): case ('*'): case ('+'):
+      pv->process = &tty_vga_process_ansi_charset;
       return;
 
     case ('['):
