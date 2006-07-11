@@ -31,34 +31,34 @@
  *	PTHREAD_MUTEX lock functions to use with CONTAINER_LOCKED
  */
 
-#define __CONT_PTHREAD_MUTEX_FIELD(field)	pthread_mutex_t field
+typedef pthread_mutex_t __cont_PTHREAD_MUTEX_type_t;
 
 static inline error_t
-__CONT_PTHREAD_MUTEX_INIT(pthread_mutex_t *lock)
+__cont_PTHREAD_MUTEX_init(pthread_mutex_t *lock)
 {
   return pthread_mutex_init(lock, 0);
 }
 
 static inline void
-__CONT_PTHREAD_MUTEX_DESTROY(pthread_mutex_t *lock)
+__cont_PTHREAD_MUTEX_destroy(pthread_mutex_t *lock)
 {
   pthread_mutex_destroy(lock);
 }
 
 static inline void
-__CONT_PTHREAD_MUTEX_WRLOCK(pthread_mutex_t *lock)
+__cont_PTHREAD_MUTEX_wrlock(pthread_mutex_t *lock)
 {
   pthread_mutex_lock(lock);
 }
 
 static inline void
-__CONT_PTHREAD_MUTEX_RDLOCK(pthread_mutex_t *lock)
+__cont_PTHREAD_MUTEX_rdlock(pthread_mutex_t *lock)
 {
   pthread_mutex_lock(lock);
 }
 
 static inline void
-__CONT_PTHREAD_MUTEX_UNLOCK(pthread_mutex_t *lock)
+__cont_PTHREAD_MUTEX_unlock(pthread_mutex_t *lock)
 {
   pthread_mutex_unlock(lock);
 }

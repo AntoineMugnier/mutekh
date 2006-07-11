@@ -30,11 +30,11 @@
 
 #include "container.h"
 
-#define	__CONTAINER_CLIST_TYPE_DECL(name, type, lockname)	\
+#define	__CONTAINER_CLIST_TYPE_DECL(name, type, lockname, ...)	\
 								\
 struct				name##_list_s			\
 {								\
-  __CONT_##lockname##_FIELD	(lock);				\
+  __cont_##lockname##_type_t	lock;				\
   struct name##_entry_s		*head;				\
 };								\
 								\
@@ -75,7 +75,7 @@ attr __CONTAINER_PROTO_SET(name, prefix)			\
   name##_entry_t *next = item->f.next = index->f.next;		\
   name##_entry_t *prev = item->f.prev = index->f.prev;		\
 								\
-  __CONT_##lockname##_WRLOCK(&root->lock);			\
+  __cont_##lockname##_wrlock(&root->lock);			\
 								\
   prev->next = &item->f;					\
   next->prev = &item->f;					\
@@ -83,9 +83,7 @@ attr __CONTAINER_PROTO_SET(name, prefix)			\
   if (root->head == &index->f)					\
     root->head = &item->f;					\
 								\
-  __CONT_##lockname##_UNLOCK(&root->lock);			\
-								\
-  return index;							\
+  __cont_##lockname##_unlock(&root->lock);			\
 }								\
 								\
 attr __CONTAINER_PROTO_NEXT(name, prefix)			\
@@ -102,11 +100,11 @@ attr __CONTAINER_PROTO_HEAD(name, prefix)			\
 {								\
   name##_item_t		item;					\
 								\
-  __CONT_##lockname##_RDLOCK(&root->lock);			\
+  __cont_##lockname##_rdlock(&root->lock);			\
 								\
   item = root->head ? prefix##_get_item(root->head) : 0;	\
 								\
-  __CONT_##lockname##_UNLOCK(&root->lock);			\
+  __cont_##lockname##_unlock(&root->lock);			\
 								\
   return item;							\
 }								\
@@ -115,18 +113,18 @@ attr __CONTAINER_PROTO_TAIL(name, prefix)			\
 {								\
   name##_item_t		item;					\
 								\
-  __CONT_##lockname##_RDLOCK(&root->lock);			\
+  __cont_##lockname##_rdlock(&root->lock);			\
 								\
   item = root->head ? prefix##_get_item(root->head->prev) : 0;	\
 								\
-  __CONT_##lockname##_UNLOCK(&root->lock);			\
+  __cont_##lockname##_unlock(&root->lock);			\
 								\
   return item;							\
 }								\
 								\
 attr __CONTAINER_PROTO_COUNT(name, prefix)			\
 {								\
-  __CONT_##lockname##_RDLOCK(&root->lock);			\
+  __cont_##lockname##_rdlock(&root->lock);			\
 								\
   name##_entry_t	*head = root->head;			\
   size_t		i = 0;					\
@@ -139,14 +137,19 @@ attr __CONTAINER_PROTO_COUNT(name, prefix)			\
       head = head->next;					\
     } while (head != root->head);				\
 								\
-  __CONT_##lockname##_UNLOCK(&root->lock);			\
+  __cont_##lockname##_unlock(&root->lock);			\
 								\
   return i;							\
 }								\
 								\
+attr __CONTAINER_PROTO_MAXCOUNT(name, prefix)			\
+{								\
+  return -1;							\
+}								\
+								\
 attr __CONTAINER_PROTO_PUSH(name, prefix)			\
 {								\
-  __CONT_##lockname##_WRLOCK(&root->lock);			\
+  __cont_##lockname##_wrlock(&root->lock);			\
 								\
   name##_entry_t	*head = root->head;			\
 								\
@@ -168,14 +171,14 @@ attr __CONTAINER_PROTO_PUSH(name, prefix)			\
 								\
   root->head = &item->f;					\
 								\
-  __CONT_##lockname##_UNLOCK(&root->lock);			\
+  __cont_##lockname##_unlock(&root->lock);			\
 								\
   return 1; 							\
 }								\
 								\
 attr __CONTAINER_PROTO_PUSHBACK(name, prefix)			\
 {								\
-  __CONT_##lockname##_WRLOCK(&root->lock);			\
+  __cont_##lockname##_wrlock(&root->lock);			\
 								\
   name##_entry_t	*head = root->head;			\
 								\
@@ -196,7 +199,7 @@ attr __CONTAINER_PROTO_PUSHBACK(name, prefix)			\
       root->head = &item->f;					\
     }								\
 								\
-  __CONT_##lockname##_UNLOCK(&root->lock);			\
+  __cont_##lockname##_unlock(&root->lock);			\
 								\
   return 1; 							\
 }								\
@@ -217,21 +220,19 @@ prefix##_delete_	(name##_cont_t *root,			\
 								\
 attr __CONTAINER_PROTO_DELETE(name, prefix)			\
 {								\
-  __CONT_##lockname##_WRLOCK(&root->lock);			\
+  __cont_##lockname##_wrlock(&root->lock);			\
 								\
   if (root->head == &index->f)					\
     root->head = index->f.next;					\
 								\
   prefix##_delete_(root, &index->f);				\
 								\
-  __CONT_##lockname##_UNLOCK(&root->lock);			\
-								\
-  return index;							\
+  __cont_##lockname##_unlock(&root->lock);			\
 }								\
 								\
 attr __CONTAINER_PROTO_POP(name, prefix)			\
 {								\
-  __CONT_##lockname##_WRLOCK(&root->lock);			\
+  __cont_##lockname##_wrlock(&root->lock);			\
 								\
   name##_entry_t *entry = root->head;				\
 								\
@@ -242,14 +243,14 @@ attr __CONTAINER_PROTO_POP(name, prefix)			\
       return prefix##_get_item(entry);				\
     }								\
 								\
-  __CONT_##lockname##_UNLOCK(&root->lock);			\
+  __cont_##lockname##_unlock(&root->lock);			\
 								\
   return 0;							\
 }								\
 								\
 attr __CONTAINER_PROTO_POPBACK(name, prefix)			\
 {								\
-  __CONT_##lockname##_WRLOCK(&root->lock);			\
+  __cont_##lockname##_wrlock(&root->lock);			\
 								\
   name##_entry_t *entry = root->head;				\
 								\
@@ -260,7 +261,7 @@ attr __CONTAINER_PROTO_POPBACK(name, prefix)			\
       return prefix##_get_item(entry);				\
     }								\
 								\
-  __CONT_##lockname##_UNLOCK(&root->lock);			\
+  __cont_##lockname##_unlock(&root->lock);			\
 								\
   return 0;							\
 }								\
@@ -312,14 +313,13 @@ attr __CONTAINER_PROTO_POPBACK_ARRAY(name, prefix)		\
 attr __CONTAINER_PROTO_INIT(name, prefix)			\
 {								\
   root->head = 0;						\
-  __CONT_##lockname##_INIT(&root->lock);			\
 								\
-  return 0;							\
+  return __cont_##lockname##_init(&root->lock);			\
 }								\
 								\
 attr __CONTAINER_PROTO_DESTROY(name, prefix)			\
 {								\
-  __CONT_##lockname##_DESTROY(&root->lock);			\
+  __cont_##lockname##_destroy(&root->lock);			\
 }
 
 #endif

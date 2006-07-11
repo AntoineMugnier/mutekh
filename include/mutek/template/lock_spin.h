@@ -31,34 +31,34 @@
  *	`SPIN_IRQ' lock functions to use with CONTAINER_LOCKED
  */
 
-#define __CONT_SPIN_IRQ_FIELD(field)	lock_t field
+typedef lock_t __cont_SPIN_IRQ_type_t;
 
 static inline error_t
-__CONT_SPIN_IRQ_INIT(lock_t *lock)
+__cont_SPIN_IRQ_init(lock_t *lock)
 {
   return lock_init(lock);
 }
 
 static inline void
-__CONT_SPIN_IRQ_DESTROY(lock_t *lock)
+__cont_SPIN_IRQ_destroy(lock_t *lock)
 {
   lock_destroy(lock);
 }
 
 static inline void
-__CONT_SPIN_IRQ_WRLOCK(lock_t *lock)
+__cont_SPIN_IRQ_wrlock(lock_t *lock)
 {
   lock_spin_irq(lock);
 }
 
 static inline void
-__CONT_SPIN_IRQ_RDLOCK(lock_t *lock)
+__cont_SPIN_IRQ_rdlock(lock_t *lock)
 {
   lock_spin_irq(lock);
 }
 
 static inline void
-__CONT_SPIN_IRQ_UNLOCK(lock_t *lock)
+__cont_SPIN_IRQ_unlock(lock_t *lock)
 {
   lock_release_irq(lock);
 }
@@ -67,34 +67,34 @@ __CONT_SPIN_IRQ_UNLOCK(lock_t *lock)
  *	`SPIN' lock functions to use with CONTAINER_LOCKED
  */
 
-#define __CONT_SPIN_FIELD(field)	lock_t field
+typedef lock_t __cont_SPIN_type_t;
 
 static inline error_t
-__CONT_SPIN_INIT(lock_t *lock)
+__cont_SPIN_init(lock_t *lock)
 {
   return lock_init(lock);
 }
 
 static inline void
-__CONT_SPIN_DESTROY(lock_t *lock)
+__cont_SPIN_destroy(lock_t *lock)
 {
   lock_destroy(lock);
 }
 
 static inline void
-__CONT_SPIN_WRLOCK(lock_t *lock)
+__cont_SPIN_wrlock(lock_t *lock)
 {
   lock_spin(lock);
 }
 
 static inline void
-__CONT_SPIN_RDLOCK(lock_t *lock)
+__cont_SPIN_rdlock(lock_t *lock)
 {
   lock_spin(lock);
 }
 
 static inline void
-__CONT_SPIN_UNLOCK(lock_t *lock)
+__cont_SPIN_unlock(lock_t *lock)
 {
   lock_release(lock);
 }
