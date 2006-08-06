@@ -23,6 +23,8 @@
 #include <hexo/types.h>
 #include <hexo/device.h>
 
+#include <string.h>
+
 #include "tty-vga.h"
 
 #include "tty-vga-private.h"
@@ -253,6 +255,9 @@ tty_vga_process_ansi_bracket(struct device_s *dev, uint8_t c)
 	  case (7):		/* Disable line wrap */
 	    pv->linewrap = 0;
 	    break;
+	  case (20):		/* Disable newline mode */
+	    pv->nlmode = 0;
+	    break;
 	  }
       break;
 
@@ -265,6 +270,9 @@ tty_vga_process_ansi_bracket(struct device_s *dev, uint8_t c)
 	    break;
 	  case (7):		/* Enable line wrap */
 	    pv->linewrap = 1;
+	    break;
+	  case (20):		/* Enable newline mode */
+	    pv->nlmode = 1;
 	    break;
 	  }
       break;

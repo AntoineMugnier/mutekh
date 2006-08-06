@@ -63,8 +63,8 @@ DEVCHAR_WRITE(uart_8250_write)
   for (i = 0; i < size; i++)
     /* process each char */
     {
-      while (!(cpu_io_read_8(dev->addr[0] + UART_8250_LSR) & UART_8250_LSR_TXEMPTY))
-	;
+      if (!(cpu_io_read_8(dev->addr[0] + UART_8250_LSR) & UART_8250_LSR_TXEMPTY))
+	break;
 
       cpu_io_write_8(dev->addr[0] + UART_8250_THR, data[i]);
     }
@@ -96,7 +96,6 @@ DEV_CLEANUP(uart_8250_cleanup)
 DEV_IRQ(uart_8250_irq)
 {
   struct uart_8250_context_s*pv = dev->drv_pv;
-  __bool_t			res = 0;
 
   if (cpu_io_read_8(dev->addr[0] + UART_8250_IIR) & UART_8250_IIR_NOPENDING)
     return 0;
@@ -147,7 +146,7 @@ DEV_INIT(uart_8250_init)
 
   cpu_io_write_8(dev->addr[0] + UART_8250_MCR, 0
 #if defined(__ARCH__ibmpc__)
-		 /* GP Output pin must be set on ibmpc to activate IRQ */
+		 /* GP Output pins must be set on ibmpc to activate IRQ routing */
 		 | UART_8250_MCR_OUT1 | UART_8250_MCR_OUT2
 #endif
 		 );

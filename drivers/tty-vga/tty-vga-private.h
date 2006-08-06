@@ -90,8 +90,8 @@ struct tty_vga_context_s
 #ifdef CONFIG_VGATTY_ANSI
   uint_fast8_t			xsave, ysave;
   uint_fast8_t			forecolor, backcolor;
-  __bool_t			blink, bright, reverse;
-  __bool_t			linewrap, insert;
+  bool_t			blink, bright, reverse;
+  bool_t			linewrap, insert, nlmode;
   uint_fast8_t			ansi_index;
   uint_fast8_t			ansi_param[VGA_TTY_MAX_ANSI_PARAMS];
 #endif
@@ -119,7 +119,7 @@ void tty_vga_clear(struct device_s *dev, int_fast8_t rowstart, int_fast8_t rowen
 void tty_vga_clear_row(struct device_s *dev, uint_fast8_t row,
 		       int_fast8_t colstart, int_fast8_t colend);
 
-__bool_t tty_vga_setcursor(struct device_s *dev, int_fast8_t x, int_fast8_t y);
+bool_t tty_vga_setcursor(struct device_s *dev, int_fast8_t x, int_fast8_t y);
 
 void tty_vga_scroll_down(struct device_s *dev, uint_fast8_t count);
 

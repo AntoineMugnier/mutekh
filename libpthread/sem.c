@@ -21,7 +21,7 @@
 
 #include "pthread-private.h"
 
-error_t sem_init(sem_t *sem, __bool_t pshared, __pthread_sem_count_t value)
+error_t sem_init(sem_t *sem, bool_t pshared, __pthread_sem_count_t value)
 {
   sem->count = value;
   __pthread_list_init(&sem->wait);

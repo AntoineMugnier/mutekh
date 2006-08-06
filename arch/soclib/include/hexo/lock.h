@@ -55,7 +55,7 @@ static inline void arch_lock_destroy(struct arch_lock_s *lock)
 {
 }
 
-static inline __bool_t arch_lock_try(struct arch_lock_s *lock)
+static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 {
   return cpu_mem_read_32(lock->ramlock);
 }
@@ -71,9 +71,9 @@ static inline void arch_lock_release(struct arch_lock_s *lock)
   cpu_mem_write_32(lock->ramlock, 0);
 }
 
-static inline __bool_t arch_lock_state(struct arch_lock_s *lock)
+static inline bool_t arch_lock_state(struct arch_lock_s *lock)
 {
-  __bool_t	state = arch_lock_try(lock);
+  bool_t	state = arch_lock_try(lock);
 
   if (!state)
     arch_lock_release(lock);

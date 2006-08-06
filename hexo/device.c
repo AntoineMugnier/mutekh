@@ -21,19 +21,29 @@
 
 #include <hexo/device.h>
 #include <hexo/error.h>
+#include <hexo/alloc.h>
 
 #ifdef CONFIG_DEVICE_HIERARCHY
 
 static struct device_s dev_root = { } ;
 
-CONTAINER_FUNC(static inline, device, DLIST, device_list, SPIN, siblings);
+CONTAINER_OBJECT_FUNC(static inline, device, DLIST, device_list, SPIN, device_obj, siblings);
 
-error_t
-device_init(struct device_s *dev)
+device_object_t __device_obj_alloc()
 {
-  device_list_init(&dev->children);
+  device_object_t	obj;
 
-  return 0;
+  if ((obj = mem_alloc(sizeof (*obj), MEM_SCOPE_SYS)))
+    {
+      device_list_init(&obj->children);
+    }
+
+  return obj;
+}
+
+void __device_obj_free(device_object_t obj)
+{
+  mem_free(obj);
 }
 
 error_t
@@ -44,7 +54,7 @@ device_register(struct device_s *dev,
   if (!parent)
     parent = &dev_root;
 
-  dev->parent = parent;
+  dev->parent = device_obj_refnew(parent);
   dev->enum_pv = enum_pv;
 
   device_list_push(&parent->children, dev);
@@ -52,19 +62,20 @@ device_register(struct device_s *dev,
   return 0;
 }
 
+static error_t device_dump_iterator(device_object_t obj, void *param)
+{
+  printf("device %p\n", obj);
+
+  return 0;
+}
+
 void
 device_dump_list(struct device_s *root)
 {
-  struct device_s	*d;
-
   if (!root)
     root = &dev_root;
 
-  for (d = device_list_head(&root->children); d;
-       d = device_list_next(&root->children, d))
-    {
-      printf("device %p\n", d);
-    }
+  device_list_foreach(&root->children, device_dump_iterator, 0);
 }
 
 #endif

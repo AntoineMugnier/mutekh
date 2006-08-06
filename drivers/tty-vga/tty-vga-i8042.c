@@ -39,8 +39,8 @@ struct tty_vga_ansi_keycode_s
   const char	*upper;
   const char	*numlock;
   const char	*ctrl;
-  uint8_t		mstate;
-  uint8_t		bstate;
+  uint8_t	mstate;
+  uint8_t	bstate;
 };
 
 static const struct tty_vga_ansi_keycode_s ansi_keycode_1[0x80] =
@@ -94,7 +94,7 @@ static const struct tty_vga_ansi_keycode_s ansi_keycode_1[0x80] =
     [0x0e] = { .lower = "\x7f" },	/* BACKSPACE */
     [0x39] = { .lower = " ", .ctrl = "\0" }, /* SPACE */
     [0x0f] = { .lower = "\t" },	/* TAB */
-    [0x1c] = { .lower = "\n" },
+    [0x1c] = { .lower = "\x0d" },
     [0x01] = { .lower = "\x1b" }, /* ESC */
     [0x1a] = { .lower = "[", .upper = "{", .ctrl = "\x1b" },
     [0x1b] = { .lower = "]", .upper = "}", .ctrl = "\x1d" },
@@ -163,7 +163,7 @@ static const struct tty_vga_ansi_keycode_s ansi_keycode_2[0x80] =
     [0x50] = { .lower = "\x1b[B" }, /* down */
 
     [0x35] = { .lower = "/" },	/* numpad div */
-    [0x1c] = { .lower = "\n" },	/* numpad enter */
+    [0x1c] = { .lower = "\x0d" },	/* numpad enter */
   };
 
 void
@@ -220,6 +220,11 @@ static void tty_vga_keycode_make(struct device_s *dev,
 
       if (str)
 	tty_fifo_noirq_pushback_array(&pv->read_fifo, (uint8_t*)str, strlen(str));
+
+#ifdef CONFIG_VGATTY_ANSI
+      if (*str == 13 && pv->nlmode) /* CR LF in newline mode */
+	tty_fifo_noirq_pushback(&pv->read_fifo, 10);
+#endif
     }
 }
 
@@ -263,7 +268,7 @@ tty_vga_scancode_default(struct device_s *dev, uint8_t scancode)
 DEV_IRQ(tty_vga_irq)
 {
   struct tty_vga_context_s	*pv = dev->drv_pv;
-  __bool_t			res = 0;
+  bool_t			res = 0;
 
   lock_spin(&pv->lock);
 

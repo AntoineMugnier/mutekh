@@ -77,11 +77,11 @@ inline void tty_vga_updatecursor(struct device_s *dev)
  * Set curosr postion with bound checking
  */
 
-inline __bool_t
+inline bool_t
 tty_vga_setcursor(struct device_s *dev, int_fast8_t x, int_fast8_t y)
 {
   struct tty_vga_context_s	*pv = dev->drv_pv;
-  __bool_t			res = 0;
+  bool_t			res = 0;
 
   /* check cursor position boundary */
   if (x < 0)
@@ -157,6 +157,7 @@ tty_vga_reset(struct device_s *dev)
   pv->bright = 0;
   pv->reverse = 0;
   pv->linewrap = 1;
+  pv->nlmode = 0;
   pv->insert = 0;
   pv->xsave = 0;
   pv->xsave = 0;
@@ -282,8 +283,13 @@ tty_vga_newline(struct device_s *dev)
 {
   struct tty_vga_context_s	*pv = dev->drv_pv;
 
+#ifdef CONFIG_VGATTY_ANSI
+  if (tty_vga_setcursor(dev, pv->nlmode ? 0 : pv->xpos, pv->ypos + 1))
+    tty_vga_scroll_up(dev, 1);
+#else
   if (tty_vga_setcursor(dev, 0, pv->ypos + 1))
     tty_vga_scroll_up(dev, 1);
+#endif
 }
 
 /* 
@@ -349,11 +355,13 @@ tty_vga_process_default(struct device_s *dev, uint8_t c)
 
   switch (c)
     {
-    case('\n'):
+    case(12):
+    case(11):
+    case(10):
       tty_vga_newline(dev);
       break;
 
-    case('\r'):
+    case(13):
       tty_vga_setcursor(dev, 0, pv->ypos);
       break;
 
@@ -399,17 +407,15 @@ DEVCHAR_WRITE(tty_vga_write)
   struct tty_vga_context_s	*pv = dev->drv_pv;
   uint_fast16_t			i;
 
+  lock_spin_irq(&pv->lock);
+
   for (i = 0; i < size; i++)
     /* process each char */
-    {
-      lock_spin_irq(&pv->lock);
-
-      pv->process(dev, data[i]);
-
-      lock_release_irq(&pv->lock);
-    }
+    pv->process(dev, data[i]);
 
   tty_vga_updatecursor(dev);
+
+  lock_release_irq(&pv->lock);
 
   return size;
 }

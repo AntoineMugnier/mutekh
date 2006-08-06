@@ -81,7 +81,12 @@
   Functions used to access the container are defined using the
   CONTAINER_FUNC macro.
 
-  CONTAINER_FUNC(qualifier, name, algorithm, prefix, lockname, ...)
+  CONTAINER_FUNC_OBJECT can be used if the container is to be used
+  with an object manager for allocation, ref counting... the same
+  prefix must be used for container and object manager.
+
+  CONTAINER_FUNC       (qualifier, name, algorithm, prefix, lockname, ...)
+  CONTAINER_OBJECT_FUNC(qualifier, name, algorithm, prefix, lockname, objprefix...)
 
 	* `qualifier' functions qualifier (ex: static inline)
 
@@ -104,6 +109,8 @@
 	* `lockname' is the locking policy/algorithm used (NOLOCK, SPIN,
 	  SPIN_IRQ, PTHREAD_MUTEX, ...) to access container
 
+	* `objprefix' object management functions prefix.
+
  */
 
 /***********************************************************************
@@ -117,7 +124,7 @@
    @return non zero if index is a null index
 */
 #define __CONTAINER_PROTO_ISNULL(name, prefix)			\
-__bool_t							\
+bool_t							\
 prefix##_isnull	(name##_index_t index)
 
 
@@ -219,12 +226,12 @@ prefix##_maxcount(name##_cont_t *root)
    Delete the item at the given index in the container
 
    @param root container root
-   @param index index of the item to delete
-   @return deleted item
+   @param index index of the item to remove
+   @return removed item
  */
-#define __CONTAINER_PROTO_DELETE(name, prefix)			\
+#define __CONTAINER_PROTO_REMOVE(name, prefix)			\
 void								\
-prefix##_delete	(name##_cont_t *root, name##_index_t index)
+prefix##_remove	(name##_cont_t *root, name##_index_t index)
 
 
 /**
@@ -432,7 +439,7 @@ attr __CONTAINER_PROTO_HEAD(name, prefix);			\
 attr __CONTAINER_PROTO_TAIL(name, prefix);			\
 attr __CONTAINER_PROTO_COUNT(name, prefix);			\
 attr __CONTAINER_PROTO_MAXCOUNT(name, prefix);			\
-attr __CONTAINER_PROTO_DELETE(name, prefix);			\
+attr __CONTAINER_PROTO_REMOVE(name, prefix);			\
 attr __CONTAINER_PROTO_PUSH(name, prefix);			\
 attr __CONTAINER_PROTO_PUSHBACK(name, prefix);			\
 attr __CONTAINER_PROTO_POP(name, prefix);			\
@@ -468,16 +475,15 @@ attr __CONTAINER_LOCKED_PROTO_UNLOCK(name, prefix)		\
  *	User level container types and functions defintions macro
  */
 
-
-/* empty lock macros */
-
 typedef struct {} __cont_NOLOCK_type_t;
-#define		__cont_NOLOCK_wrlock(lock)
-#define		__cont_NOLOCK_rdlock(lock)
-#define		__cont_NOLOCK_unlock(lock)
-#define		__cont_NOLOCK_init(lock)		0
-#define		__cont_NOLOCK_destroy(lock)
+static inline void __cont_NOLOCK_wrlock(void *lock) {}
+static inline void __cont_NOLOCK_rdlock(void *lock) {}
+static inline void __cont_NOLOCK_unlock(void *lock) {}
+static inline error_t __cont_NOLOCK_init(void *lock) { return 0; }
+static inline void __cont_NOLOCK_destroy(void *lock) {}
 
+static inline void *__cont_NOOBJ_refnew(void *obj) { return obj; }
+static inline void __cont_NOOBJ_refdrop(void *obj) { }
 
 /**
    define type associated with a container.
@@ -501,8 +507,12 @@ typedef struct {} __cont_NOLOCK_type_t;
    @param lockname is the lock policy used (NONE, SPIN, SPIN_IRQ, PTHREAD_MUTEX, ...)
  */
 
-#define		CONTAINER_FUNC(attr, name, cont, prefix, lockname, ...)	\
-  __CONTAINER_##cont##_FUNC(attr, name, prefix, lockname, __VA_ARGS__)		\
+#define		CONTAINER_FUNC(attr, name, cont, prefix, lockname, ...)			\
+  __CONTAINER_##cont##_FUNC(attr, name, prefix, lockname, __cont_NOOBJ, __VA_ARGS__)	\
+  __CONTAINER_LOCK_FUNC(attr, name, prefix, lockname)
+
+#define		CONTAINER_OBJECT_FUNC(attr, name, cont, prefix, lockname, objprefix, ...)	\
+  __CONTAINER_##cont##_FUNC(attr, name, prefix, lockname, objprefix, __VA_ARGS__)		\
   __CONTAINER_LOCK_FUNC(attr, name, prefix, lockname)
 
 #endif

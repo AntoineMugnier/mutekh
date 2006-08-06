@@ -46,7 +46,7 @@ typedef type			name##_entry_t;
 #define	__CONTAINER_RING_NULL		-1
 #define	__CONTAINER_RING_EMPTY		0
 
-#define	__CONTAINER_RING_FUNC(attr, name, prefix, lockname, ...)	    \
+#define	__CONTAINER_RING_FUNC(attr, name, prefix, lockname, objprefix, ...) \
 									    \
 attr __CONTAINER_PROTO_ISNULL(name, prefix)				    \
 {									    \
@@ -156,7 +156,7 @@ attr __CONTAINER_PROTO_MAXCOUNT(name, prefix)				    \
   return __CONTAINER_RING_SIZEOF(name);					    \
 }									    \
 									    \
-attr __CONTAINER_PROTO_DELETE(name, prefix)				    \
+attr __CONTAINER_PROTO_REMOVE(name, prefix)				    \
 {									    \
   uintptr_t	j;							    \
 									    \
@@ -337,7 +337,7 @@ attr __CONTAINER_PROTO_FOREACH(name, prefix)				    \
 									    \
   __cont_##lockname##_unlock(&root->lock);				    \
 									    \
-  return 0;								    \
+  return res;								    \
 }									    \
 									    \
 attr __CONTAINER_PROTO_INIT(name, prefix)				    \

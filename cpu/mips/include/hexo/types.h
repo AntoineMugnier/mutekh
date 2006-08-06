@@ -66,7 +66,7 @@ typedef int32_t			intptr_t;
 typedef int32_t			ptrdiff_t;
 
 /** integer type used for atomic operation */
-typedef	int32_t			__atomic_t;
+typedef	int32_t			atomic_int_t;
 
 /** general cpu register integer type */
 typedef uint32_t		__reg_t;

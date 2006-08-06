@@ -39,8 +39,8 @@
 
 #define dev_char_read(dev, ...) (dev)->chr.f_read(dev, __VA_ARGS__ )
 /**
-   Char device class read() function type.
-   Read bytes data from the device.
+   Char device class read() function type.  Read bytes data from the
+   device. Should not block if unable to read more bytes.
     
    @param dev pointer to device descriptor
    @param data pointer to data buffer
@@ -56,8 +56,9 @@ typedef DEVCHAR_READ(devchar_read_t);
 #define DEVCHAR_WRITE(n)	ssize_t  (n) (struct device_s *dev, const uint8_t *data, size_t size)
 
 /** 
-    Char device class write() function type.
-    Write bytes data to the device.
+    Char device class write() function type.  Write bytes data to the
+    device. Return number of bytes written. Should not block if unable
+    to write more bytes.
 
     @param dev pointer to device descriptor
     @param data pointer to read only data buffer

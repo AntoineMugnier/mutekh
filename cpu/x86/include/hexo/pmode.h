@@ -106,7 +106,7 @@ struct cpu_x86_segdesc_s
 
 static inline void cpu_x86_seg_setup(volatile struct cpu_x86_segdesc_s *desc,
 				     uint32_t base, uint32_t limit, uint_fast8_t type,
-				     uint_fast8_t dpl, __bool_t bitint32_t)
+				     uint_fast8_t dpl, bool_t bitint32_t)
 {
   uint32_t	limit_ = limit > 0x000fffff ? limit >> 12 : limit;
 

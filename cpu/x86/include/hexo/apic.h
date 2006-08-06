@@ -109,7 +109,7 @@ cpu_apic_get_regaddr(void)
    @return apic enabled state
 */
 
-static inline __bool_t
+static inline bool_t
 cpu_apic_isenabled(void)
 {
   uint64_t	msr;
@@ -127,7 +127,7 @@ cpu_apic_isenabled(void)
    @return true if processor is the bootstrap processor
 */
 
-static inline __bool_t
+static inline bool_t
 cpu_apic_isbootstrap(void)
 {
   uint64_t	msr;

@@ -26,7 +26,7 @@
 
 #include <stdio.h>
 
-#define assert(expr) if (!(expr)) { printf("Assertion failed at %s:%u: (" #expr ") is false\n", __func__, __LINE__); while (1); }
+#define assert(expr) if (!(expr)) { printf("Assertion failed at " __FILE__ ":%u:%s(): (" #expr ") is false\n", __LINE__, __func__); while (1); }
 
 #endif
 

@@ -30,7 +30,7 @@
 #define CONFIG_UART
 
 /** TTY support use uart */
-//#define CONFIG_TTY_UART
+#define CONFIG_TTY_UART
 
 /** frame buffer support */
 //#define CONFIG_FB

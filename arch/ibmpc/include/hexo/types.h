@@ -29,7 +29,7 @@
 /* architecture specific integer types */
 
 /** boolean value */
-typedef int8_t		__bool_t;
+typedef int8_t		bool_t;
 /** data size integer type */
 typedef uint_fast32_t	size_t;
 /** signed data size integer type */

@@ -40,7 +40,7 @@ typedef struct				__pthread_sem_s
 }					sem_t;
 
 error_t
-sem_init(sem_t *sem, __bool_t pshared, __pthread_sem_count_t value);
+sem_init(sem_t *sem, bool_t pshared, __pthread_sem_count_t value);
 
 error_t
 sem_wait(sem_t *sem);

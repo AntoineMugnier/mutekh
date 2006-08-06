@@ -78,9 +78,9 @@ struct pthread_s
 
 #ifdef CONFIG_PTHREAD_JOIN
   /** thread is marked as detached */
-  __bool_t			detached:1;
+  bool_t			detached:1;
   /** thread has exited and is waiting for join/detach */
-  __bool_t			joinable:1;
+  bool_t			joinable:1;
 
   /** pointer to thread waiting for termination */
   struct pthread_s		*joined;
@@ -89,9 +89,9 @@ struct pthread_s
 #endif
 
 #ifdef CONFIG_PTHREAD_CANCEL
-  __bool_t			canceled:1;
-  __bool_t			cancelstate:1;
-  __bool_t			cancelasync:1;
+  bool_t			canceled:1;
+  bool_t			cancelstate:1;
+  bool_t			cancelasync:1;
 #endif
 
   /** start routine argument */
@@ -415,7 +415,7 @@ typedef struct arch_lock_s pthread_spinlock_t;
 
 static inline error_t
 pthread_spin_init(pthread_spinlock_t *spinlock,
-		      __bool_t pshared)
+		      bool_t pshared)
 {
   return arch_lock_init(spinlock);
 }

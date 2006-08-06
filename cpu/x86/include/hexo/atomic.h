@@ -31,8 +31,8 @@
 
 #define HAS_CPU_ATOMIC_INC
 
-static inline __bool_t
-cpu_atomic_inc(__atomic_t *a)
+static inline bool_t
+cpu_atomic_inc(volatile atomic_int_t *a)
 {
   uint8_t		zero;
 
@@ -46,8 +46,8 @@ cpu_atomic_inc(__atomic_t *a)
 
 #define HAS_CPU_ATOMIC_DEC
 
-static inline __bool_t
-cpu_atomic_dec(__atomic_t *a)
+static inline bool_t
+cpu_atomic_dec(volatile atomic_int_t *a)
 {
   uint8_t		zero;
 
@@ -61,8 +61,8 @@ cpu_atomic_dec(__atomic_t *a)
 
 #define HAS_CPU_ATOMIC_TESTSET
 
-static inline __bool_t
-cpu_atomic_bit_testset(__atomic_t *a, uint_fast8_t n)
+static inline bool_t
+cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
 {
   uint8_t		isset;
 
@@ -78,7 +78,7 @@ cpu_atomic_bit_testset(__atomic_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_WAITSET
 
 static inline void
-cpu_atomic_bit_waitset(__atomic_t *a, uint_fast8_t n)
+cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
 {
   asm volatile ("1:	lock bts	%1, %0	\n"
 		"	jc		1b	\n"
@@ -89,8 +89,8 @@ cpu_atomic_bit_waitset(__atomic_t *a, uint_fast8_t n)
 
 #define HAS_CPU_ATOMIC_TESTCLR
 
-static inline __bool_t
-cpu_atomic_bit_testclr(__atomic_t *a, uint_fast8_t n)
+static inline bool_t
+cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
 {
   uint8_t		isset;
 
@@ -107,7 +107,7 @@ cpu_atomic_bit_testclr(__atomic_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_WAITCLR
 
 static inline void
-cpu_atomic_bit_waitclr(__atomic_t *a, uint_fast8_t n)
+cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
 {
   asm volatile ("1:	lock btr	%1, %0	\n"
 		"	jnc		1b	\n"
@@ -119,7 +119,7 @@ cpu_atomic_bit_waitclr(__atomic_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_SET
 
 static inline void
-cpu_atomic_bit_set(__atomic_t *a, uint_fast8_t n)
+cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
 {
   asm volatile ("lock bts	%1, %0	\n"
 		: "=m,m" (*a)
@@ -130,7 +130,7 @@ cpu_atomic_bit_set(__atomic_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_CLR
 
 static inline void
-cpu_atomic_bit_clr(__atomic_t *a, uint_fast8_t n)
+cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
 {
   asm volatile ("lock btr	%1, %0	\n"
 		: "=m,m" (*a)
@@ -140,8 +140,8 @@ cpu_atomic_bit_clr(__atomic_t *a, uint_fast8_t n)
 
 #define HAS_CPU_ATOMIC_TEST
 
-static inline __bool_t
-cpu_atomic_bit_test(__atomic_t *a, uint_fast8_t n)
+static inline bool_t
+cpu_atomic_bit_test(volatile atomic_int_t *a, uint_fast8_t n)
 {
   uint8_t		isset;
 

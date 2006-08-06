@@ -35,7 +35,7 @@
 
 struct		arch_lock_s
 {
-  __atomic_t	a;
+  atomic_int_t	a;
 };
 
 #define ARCH_LOCK_INITIALIZER	{ .a = 0 }
@@ -50,7 +50,7 @@ static inline void arch_lock_destroy(struct arch_lock_s *lock)
 {
 }
 
-static inline __bool_t arch_lock_try(struct arch_lock_s *lock)
+static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 {
   return cpu_atomic_bit_testset(&lock->a, 0);
 }
@@ -60,7 +60,7 @@ static inline void arch_lock_spin(struct arch_lock_s *lock)
   cpu_atomic_bit_waitset(&lock->a, 0);
 }
 
-static inline __bool_t arch_lock_state(struct arch_lock_s *lock)
+static inline bool_t arch_lock_state(struct arch_lock_s *lock)
 {
   return cpu_atomic_bit_test(&lock->a, 0);
 }

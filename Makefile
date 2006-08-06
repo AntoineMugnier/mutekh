@@ -17,7 +17,7 @@ INCS=-nostdinc -D__TEST__ -D__MUTEK__ -D__ARCH__$(ARCH)__ -D__CPU__$(CPU)__ -Iin
 subdirs-y=	arch/current \
 		cpu/current \
 		drivers \
-		main \
+		hexo \
 		libc \
 		libpthread \
 		test

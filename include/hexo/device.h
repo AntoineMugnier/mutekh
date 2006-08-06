@@ -31,7 +31,7 @@ struct device_s;
 
 
 /** Common class irq() function tempate. */
-#define DEV_IRQ(n)	__bool_t (n) (struct device_s *dev)
+#define DEV_IRQ(n)	bool_t (n) (struct device_s *dev)
 
 /** Common device class irq() function type. Must be called on
     interrupt request.
@@ -94,9 +94,14 @@ typedef DEV_CLEANUP(dev_cleanup_t);
 
 
 #ifdef CONFIG_DEVICE_HIERARCHY
+
 #include <hexo/template/lock_spin.h>
 #include <hexo/template/cont_dlist.h>
+#include <hexo/template/object.h>
+
+OBJECT_TYPE_DECL(device, struct device_s);
 CONTAINER_TYPE_DECL(device, DLIST, struct device_s, SPIN);
+
 #endif
 
 struct device_s
@@ -137,6 +142,7 @@ struct device_s
   struct device_s		*parent;
   device_entry_t		siblings;
   device_cont_t			children;
+  device_counter_t		count;
 #endif /* !CONFIG_DEVICE_HIERARCHY */
 
 };
@@ -144,7 +150,10 @@ struct device_s
 
 #ifdef CONFIG_DEVICE_HIERARCHY
 
-error_t device_init(struct device_s *dev);
+device_object_t __device_obj_alloc();
+void __device_obj_free(device_object_t obj);
+
+OBJECT_REFCOUNT_FUNC(static inline, device, device_obj, __device_obj_alloc, __device_obj_free, count);
 
 error_t device_register(struct device_s *dev,
 			struct device_s *parent,
@@ -153,6 +162,12 @@ error_t device_register(struct device_s *dev,
 void device_dump_list(struct device_s *root);
 
 #endif /* !CONFIG_DEVICE_HIERARCHY */
+
+#ifdef CONFIG_DEVICE_HIERARCHY
+#define DEVICE_INITIALIZER	{ .children = CONT_DLIST_INTIALIZER, .count = OBJECT_REFCOUNT_INITIALIZER }
+#else
+#define DEVICE_INITIALIZER	{ }
+#endif
 
 #endif
 

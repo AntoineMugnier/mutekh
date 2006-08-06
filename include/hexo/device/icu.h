@@ -37,7 +37,7 @@ struct device_s;
 
 
 /** ICU device class enable() function template */
-#define DEVICU_ENABLE(n)	void (n) (struct device_s *dev, uint_fast8_t irq, __bool_t enable)
+#define DEVICU_ENABLE(n)	void (n) (struct device_s *dev, uint_fast8_t irq, bool_t enable)
 
 /** ICU device class enable() function type. Enable or Disable
     interrupt line.

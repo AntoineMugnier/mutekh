@@ -30,6 +30,9 @@
 
 #include "container.h"
 
+#define CONT_CLIST_INTIALIZER		{ }
+#define CONT_CLIST_ENTRY_INTIALIZER	{ }
+
 #define	__CONTAINER_CLIST_TYPE_DECL(name, type, lockname, ...)	\
 								\
 struct				name##_list_s			\
@@ -51,7 +54,8 @@ typedef struct name##_list_s	name##_cont_t;			\
 typedef struct name##_entry_s	name##_entry_t;
 
 
-#define	__CONTAINER_CLIST_FUNC(attr, name, prefix, lockname, f)	\
+#define	__CONTAINER_CLIST_FUNC(attr, name, prefix,		\
+			       lockname, objprefix, f)		\
 								\
 static inline name##_item_t					\
 prefix##_get_item(name##_entry_t *entry)			\
@@ -67,6 +71,7 @@ attr __CONTAINER_PROTO_ISNULL(name, prefix)			\
 								\
 attr __CONTAINER_PROTO_GET(name, prefix)			\
 {								\
+  objprefix##_refnew(index);					\
   return index;							\
 }								\
 								\
@@ -77,23 +82,27 @@ attr __CONTAINER_PROTO_SET(name, prefix)			\
 								\
   __cont_##lockname##_wrlock(&root->lock);			\
 								\
+  objprefix##_refnew(item);					\
+								\
   prev->next = &item->f;					\
   next->prev = &item->f;					\
 								\
   if (root->head == &index->f)					\
     root->head = &item->f;					\
 								\
+  objprefix##_refdrop(index);					\
+								\
   __cont_##lockname##_unlock(&root->lock);			\
 }								\
 								\
 attr __CONTAINER_PROTO_NEXT(name, prefix)			\
 {								\
-  return prefix##_get_item(index->f.next);			\
+  return objprefix##_refnew(prefix##_get_item(index->f.next));	\
 }								\
 								\
 attr __CONTAINER_PROTO_PREV(name, prefix)			\
 {								\
-  return prefix##_get_item(index->f.prev);			\
+  return objprefix##_refnew(prefix##_get_item(index->f.prev));	\
 }								\
 								\
 attr __CONTAINER_PROTO_HEAD(name, prefix)			\
@@ -102,7 +111,9 @@ attr __CONTAINER_PROTO_HEAD(name, prefix)			\
 								\
   __cont_##lockname##_rdlock(&root->lock);			\
 								\
-  item = root->head ? prefix##_get_item(root->head) : 0;	\
+  item = root->head						\
+       ? objprefix##_refnew(prefix##_get_item(root->head))	\
+       : 0;							\
 								\
   __cont_##lockname##_unlock(&root->lock);			\
 								\
@@ -115,7 +126,9 @@ attr __CONTAINER_PROTO_TAIL(name, prefix)			\
 								\
   __cont_##lockname##_rdlock(&root->lock);			\
 								\
-  item = root->head ? prefix##_get_item(root->head->prev) : 0;	\
+  item = root->head						\
+       ? objprefix##_refnew(prefix##_get_item(root->head->prev))\
+       : 0;							\
 								\
   __cont_##lockname##_unlock(&root->lock);			\
 								\
@@ -124,10 +137,10 @@ attr __CONTAINER_PROTO_TAIL(name, prefix)			\
 								\
 attr __CONTAINER_PROTO_COUNT(name, prefix)			\
 {								\
-  __cont_##lockname##_rdlock(&root->lock);			\
-								\
-  name##_entry_t	*head = root->head;			\
+  name##_entry_t	*head;					\
   size_t		i = 0;					\
+								\
+  __cont_##lockname##_rdlock(&root->lock);			\
 								\
   head = root->head;						\
 								\
@@ -150,6 +163,8 @@ attr __CONTAINER_PROTO_MAXCOUNT(name, prefix)			\
 attr __CONTAINER_PROTO_PUSH(name, prefix)			\
 {								\
   __cont_##lockname##_wrlock(&root->lock);			\
+								\
+  objprefix##_refnew(item);					\
 								\
   name##_entry_t	*head = root->head;			\
 								\
@@ -180,6 +195,8 @@ attr __CONTAINER_PROTO_PUSHBACK(name, prefix)			\
 {								\
   __cont_##lockname##_wrlock(&root->lock);			\
 								\
+  objprefix##_refnew(item);					\
+								\
   name##_entry_t	*head = root->head;			\
 								\
   if (head)							\
@@ -205,7 +222,7 @@ attr __CONTAINER_PROTO_PUSHBACK(name, prefix)			\
 }								\
 								\
 static inline void						\
-prefix##_delete_	(name##_cont_t *root,			\
+prefix##_remove_	(name##_cont_t *root,			\
 			 name##_entry_t *entry)			\
 {								\
   name##_entry_t *next = entry->next;				\
@@ -218,14 +235,15 @@ prefix##_delete_	(name##_cont_t *root,			\
   next->prev = prev;						\
 }								\
 								\
-attr __CONTAINER_PROTO_DELETE(name, prefix)			\
+attr __CONTAINER_PROTO_REMOVE(name, prefix)			\
 {								\
   __cont_##lockname##_wrlock(&root->lock);			\
 								\
   if (root->head == &index->f)					\
     root->head = index->f.next;					\
 								\
-  prefix##_delete_(root, &index->f);				\
+  prefix##_remove_(root, &index->f);				\
+  objprefix##_refdrop(index);					\
 								\
   __cont_##lockname##_unlock(&root->lock);			\
 }								\
@@ -239,7 +257,7 @@ attr __CONTAINER_PROTO_POP(name, prefix)			\
   if (entry)							\
     {								\
       root->head = entry->next;					\
-      prefix##_delete_(root, entry);				\
+      prefix##_remove_(root, entry);				\
       return prefix##_get_item(entry);				\
     }								\
 								\
@@ -257,7 +275,7 @@ attr __CONTAINER_PROTO_POPBACK(name, prefix)			\
   if (entry)							\
     {								\
       entry = entry->prev;					\
-      prefix##_delete_(root, entry);				\
+      prefix##_remove_(root, entry);				\
       return prefix##_get_item(entry);				\
     }								\
 								\
@@ -308,6 +326,27 @@ attr __CONTAINER_PROTO_POPBACK_ARRAY(name, prefix)		\
     item[i] = prefix##_popback(root);				\
 								\
   return size;							\
+}								\
+								\
+attr __CONTAINER_PROTO_FOREACH(name, prefix)			\
+{								\
+  name##_entry_t	*entry;					\
+  error_t		res = 0;				\
+								\
+  __cont_##lockname##_rdlock(&root->lock);			\
+								\
+  entry = root->head;						\
+								\
+  if (entry)							\
+    do {							\
+      if ((res = fcn(prefix##_get_item(entry), param)))		\
+        break;							\
+      entry = entry->next;					\
+    } while (entry != root->head);				\
+								\
+  __cont_##lockname##_unlock(&root->lock);			\
+								\
+  return res;							\
 }								\
 								\
 attr __CONTAINER_PROTO_INIT(name, prefix)			\

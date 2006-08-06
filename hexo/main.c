@@ -36,6 +36,7 @@
 #include <../drivers/icu-8259/icu-8259.h>
 #include <../drivers/icu-soclib/icu-soclib.h>
 #include <../drivers/timer-soclib/timer-soclib.h>
+#include <../drivers/timer-8253/timer-8253.h>
 #include <../drivers/fb-vga/fb-vga.h>
 #include <../drivers/enum-pci/enum-pci.h>
 
@@ -50,19 +51,19 @@ struct device_s *tty_dev;
 #endif
 
 #ifdef CONFIG_FB
-struct device_s fb_dev = {};
+struct device_s fb_dev = DEVICE_INITIALIZER;
 #endif
 
 #ifdef CONFIG_TIMER
-struct device_s timer_dev = {};
+struct device_s timer_dev = DEVICE_INITIALIZER;
 #endif
 
-struct device_s tty_uart_dev = {};
-struct device_s tty_con_dev = {};
+struct device_s tty_uart_dev = DEVICE_INITIALIZER;
+struct device_s tty_con_dev = DEVICE_INITIALIZER;
 
-struct device_s icu_dev = {};
+struct device_s icu_dev = DEVICE_INITIALIZER;
 
-struct device_s enum_pci = {};
+struct device_s enum_pci = DEVICE_INITIALIZER;
 
 extern const uint8_t mutek_logo_320x200[320*200];
 
@@ -293,6 +294,7 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
       __pthread_dump_runqueue();
 
       template_ring_test();
+      template_object_test();
 
 #ifdef CONFIG_FB
       main(0, 0);
@@ -300,17 +302,35 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 
       __pthread_dump_runqueue();
 
+      device_dump_list(&enum_pci);
+
+#if 0
       while (1)
 	{
-	  uint8_t	buf[16];
-	  size_t	len;
+	  uint8_t	buf_[16], *buf = buf_;
+	  size_t	len, res;
 
 	  if ((len = dev_char_read(&tty_con_dev, buf, 16)))
-	    dev_char_write(&tty_uart_dev, buf, len);
+	    while (len)
+	      {
+		res = dev_char_write(&tty_uart_dev, buf, len);
+		len -= res;
+		buf += res;
+	      }
 
 	  if ((len = dev_char_read(&tty_uart_dev, buf, 16)))
-	    dev_char_write(&tty_con_dev, buf, len);
+	    while (len)
+	      {
+		res = dev_char_write(&tty_con_dev, buf, len);
+		len -= res;
+		buf += res;
+	      }
 	}
+#endif
+
+      while (1)
+	;
+
     }
 }
 

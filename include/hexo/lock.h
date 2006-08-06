@@ -30,9 +30,9 @@ struct arch_lock_s;
 
 static error_t arch_lock_init(struct arch_lock_s *lock);
 static void arch_lock_destroy(struct arch_lock_s *lock);
-static __bool_t arch_lock_try(struct arch_lock_s *lock);
+static bool_t arch_lock_try(struct arch_lock_s *lock);
 static void arch_lock_spin(struct arch_lock_s *lock);
-static __bool_t arch_lock_state(struct arch_lock_s *lock);
+static bool_t arch_lock_state(struct arch_lock_s *lock);
 static void arch_lock_release(struct arch_lock_s *lock);
 
 #include "arch/hexo/lock.h"
@@ -70,7 +70,7 @@ static inline void lock_destroy(lock_t *lock)
 }
 
 /** try to take lock */
-static inline __bool_t lock_try(lock_t *lock)
+static inline bool_t lock_try(lock_t *lock)
 {
 #ifdef CONFIG_SMP
   return arch_lock_try(&lock->arch);
@@ -88,7 +88,7 @@ static inline void lock_spin(lock_t *lock)
 }
 
 /** return current lock state */
-static inline __bool_t lock_state(lock_t *lock)
+static inline bool_t lock_state(lock_t *lock)
 {
 #ifdef CONFIG_SMP
   return arch_lock_state(&lock->arch);

@@ -33,14 +33,19 @@ struct cpu_cld_s	*cpu_cld[256];
 static lock_t		cpu_init_lock;	/* cpu intialization lock */
 static lock_t		cpu_start_lock;	/* cpu wait for start lock */
 
+/* integer atomic operations global spin lock */
+lock_t			__atomic_arch_lock;
+
 /* architecture specific init function */
 void arch_init() 
 {
 #if 0
-  if (cpu_apic_isbootstrap())
+  if (cpu_apic_isbootstrap())	/* FIXME */
     /* First CPU */
     {
 #endif
+
+      lock_init(&__atomic_arch_lock);
 
       lock_init(&cpu_init_lock);
       lock_init(&cpu_start_lock);

@@ -103,7 +103,7 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 #ifndef CONFIG_LIBC_PRINTF_SIMPLE
   uint_fast8_t	typesize;
   ssize_t	padding;
-  __bool_t	zeropad, rightpad;
+  bool_t	zeropad, rightpad;
 #endif
 
  printf_state_main:
