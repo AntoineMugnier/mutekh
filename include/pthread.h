@@ -75,7 +75,7 @@ void __pthread_switch(void);
 
 struct pthread_s
 {
-  /** context context */
+  /** context */
   struct context_s			context;
 
 #ifdef CONFIG_PTHREAD_JOIN

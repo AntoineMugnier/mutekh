@@ -32,7 +32,7 @@
 
 /************************************************************************/
 
-/** context local storage variable assignement from different context context */
+/** context local storage variable assignement from different context */
 #define CONTEXT_LOCAL_FOREIGN_SET(tls, n, v)		\
 {							\
   __asm__ (						\

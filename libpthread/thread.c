@@ -339,7 +339,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   if (!thread)
     return ENOMEM;
 
-  /* setup context context for new thread */
+  /* setup context for new thread */
   res = context_init(&thread->context, CONFIG_PTHREAD_STACK_SIZE, pthread_context_entry, thread);
 
   if (res)

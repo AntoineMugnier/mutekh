@@ -32,7 +32,7 @@ struct cpu_context_s;
 /** context descriptor structure */
 struct context_s
 {
-  /* cpu specific context context pointer if any */
+  /* cpu specific context pointer if any */
   struct cpu_context_s	*ccontext;
 
   /* context local storage address */
@@ -53,13 +53,13 @@ typedef CONTEXT_ENTRY(context_entry_t);
 /** Switch context by saving/restoring all registers from/to context stack */
 static void cpu_context_switch(struct context_s *old, struct context_s *new);
 
-/** Jump to context from _non_ context context */
+/** Jump to context from _non_ context */
 static void cpu_context_jumpto(struct context_s *new);
 
 /** set new stack pointer and jump to a new function */
 static void cpu_context_set_stack(uintptr_t stack, void *jumpto);
 
-/** associate context context and cpu current execution state */
+/** associate context and cpu current execution state */
 error_t cpu_context_bootstrap(struct context_s *context);
 
 /** Prepare context execution by setting up original stack values */
