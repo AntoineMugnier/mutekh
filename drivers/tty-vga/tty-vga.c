@@ -157,7 +157,7 @@ tty_vga_reset(struct device_s *dev)
   pv->bright = 0;
   pv->reverse = 0;
   pv->linewrap = 1;
-  pv->nlmode = 0;
+  pv->nlmode = 1;
   pv->insert = 0;
   pv->xsave = 0;
   pv->xsave = 0;

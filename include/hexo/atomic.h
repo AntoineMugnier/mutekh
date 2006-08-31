@@ -142,6 +142,12 @@ static bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n);
 */
 static bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n);
 
+/**
+   static atomic value initializer
+
+#define ATOMIC_INITIALIZER(n)
+*/
+
 #include "arch/hexo/atomic.h"
 
 #endif

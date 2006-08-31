@@ -36,7 +36,7 @@ typedef struct				__pthread_sem_s
   __pthread_sem_count_t			count;
 
   /** blocked threads wait queue */
-  pthread_cont_t			wait;
+  pthread_root_t			wait;
 }					sem_t;
 
 error_t

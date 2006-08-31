@@ -27,21 +27,22 @@
 
 static struct device_s dev_root = { } ;
 
-CONTAINER_OBJECT_FUNC(static inline, device, DLIST, device_list, SPIN, device_obj, siblings);
+CONTAINER_OBJECT_FUNC(static inline, device_list, DLIST, device_list, HEXO_SPIN, device_obj, siblings);
 
-device_object_t __device_obj_alloc()
+OBJECT_CONSTRUCTOR(device_obj)
 {
-  device_object_t	obj;
+  struct device_s	*obj;
 
   if ((obj = mem_alloc(sizeof (*obj), MEM_SCOPE_SYS)))
     {
+      device_obj_init(obj);
       device_list_init(&obj->children);
     }
 
   return obj;
 }
 
-void __device_obj_free(device_object_t obj)
+OBJECT_DESTRUCTOR(device_obj)
 {
   mem_free(obj);
 }
@@ -62,9 +63,9 @@ device_register(struct device_s *dev,
   return 0;
 }
 
-static error_t device_dump_iterator(device_object_t obj, void *param)
+CONTAINER_ITERATOR(device_list, device_dump_iterator)
 {
-  printf("device %p\n", obj);
+  printf("device %p\n", item);
 
   return 0;
 }

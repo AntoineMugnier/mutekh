@@ -33,7 +33,7 @@
 #define CONFIG_TTY_UART
 
 /** frame buffer support */
-//#define CONFIG_FB
+#define CONFIG_FB
 
 /** timer support */
 #define CONFIG_TIMER

@@ -28,19 +28,19 @@ static void * arch_cpudata_alloc(void);
 
 
 
-/** allocate and setup task local storage memory */
-static void * arch_taskdata_alloc(void);
+/** allocate and setup context local storage memory */
+static void * arch_contextdata_alloc(void);
 
-/** free task local storage memory */
-static void arch_taskdata_free(void *ptr);
+/** free context local storage memory */
+static void arch_contextdata_free(void *ptr);
 
 
 
-/** allocate task stack memory */
-static void * arch_taskstack_alloc(size_t size);
+/** allocate context stack memory */
+static void * arch_contextstack_alloc(size_t size);
 
-/** free task stack memory */
-static void arch_taskstack_free(void *ptr);
+/** free context stack memory */
+static void arch_contextstack_free(void *ptr);
 
 
 

@@ -32,17 +32,17 @@
 
 /************************************************************************/
 
-/** task local storage variable assignement from different task context */
-#define TASK_LOCAL_FOREIGN_SET(tls, n, v) { __asm__ ("mov %0, (%1,%2)" : : "r" ((typeof(n))v), "r" (&n), "r" (tls)) ; }
+/** context local storage variable assignement from different context context */
+#define CONTEXT_LOCAL_FOREIGN_SET(tls, n, v) { __asm__ ("mov %0, (%1,%2)" : : "r" ((typeof(n))v), "r" (&n), "r" (tls)) ; }
 
-/** task local storage variable assignement */
-#define TASK_LOCAL_SET(n, v)  { __asm__ ("mov %1, %%gs:%0" : "=m" (n) : "r" ((typeof(n))v)); }
+/** context local storage variable assignement */
+#define CONTEXT_LOCAL_SET(n, v)  { __asm__ ("mov %1, %%gs:%0" : "=m" (n) : "r" ((typeof(n))v)); }
 
-/** task local storage variable read access */
-#define TASK_LOCAL_GET(n)    ({ typeof(n) _val_; __asm__ ("mov %%gs:%1, %0" : "=r" (_val_) : "m" (n)); _val_; })
+/** context local storage variable read access */
+#define CONTEXT_LOCAL_GET(n)    ({ typeof(n) _val_; __asm__ ("mov %%gs:%1, %0" : "=r" (_val_) : "m" (n)); _val_; })
 
-/** get address of task local object */
-#define TASK_LOCAL_ADDR(n)   ({ typeof(n) *_ptr_ = &(n); __asm__ ("addl %%gs:0, %0" : "=r" (_ptr_) : "0" (_ptr_)) ; _ptr_; })
+/** get address of context local object */
+#define CONTEXT_LOCAL_ADDR(n)   ({ typeof(n) *_ptr_ = &(n); __asm__ ("addl %%gs:0, %0" : "=r" (_ptr_) : "0" (_ptr_)) ; _ptr_; })
 
 /************************************************************************/
 

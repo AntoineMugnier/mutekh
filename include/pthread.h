@@ -26,15 +26,17 @@
 #include <hexo/error.h>
 #include <hexo/local.h>
 #include <hexo/lock.h>
-#include <hexo/task.h>
-#include <hexo/template/cont_clist.h>
+#include <hexo/context.h>
 #include <hexo/interrupt.h>
+
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_clist.h>
 
 /************************************************************************
 		PThread types
 ************************************************************************/
 
-CONTAINER_TYPE_DECL(pthread, CLIST, struct pthread_s, NOLOCK);
+CONTAINER_TYPE(pthread, CLIST, struct pthread_s, NOLOCK);
 
 typedef void * pthread_start_routine_t(void *arg);
 
@@ -42,7 +44,7 @@ typedef void * pthread_start_routine_t(void *arg);
 struct pthread_pool_s
 {
   lock_t			lock;
-  pthread_cont_t		list;
+  pthread_root_t		list;
 };
 
 struct pthread_s;
@@ -57,7 +59,7 @@ typedef struct pthread_attr_s pthread_attr_t;
 ************************************************************************/
 
 /** pointer to current thread */
-extern TASK_LOCAL pthread_t __pthread_current;
+extern CONTEXT_LOCAL pthread_t __pthread_current;
 
 /** init pthread sub system and bootstrap initial thread */
 void __pthread_bootstrap(void);
@@ -73,8 +75,8 @@ void __pthread_switch(void);
 
 struct pthread_s
 {
-  /** task context */
-  struct task_s			task;
+  /** context context */
+  struct context_s			context;
 
 #ifdef CONFIG_PTHREAD_JOIN
   /** thread is marked as detached */
@@ -122,7 +124,7 @@ pthread_exit(void *retval);
 static inline pthread_t
 pthread_self(void)
 {
-  return TASK_LOCAL_GET(__pthread_current);
+  return CONTEXT_LOCAL_GET(__pthread_current);
 }
 
 /** switch to next thread */
@@ -172,7 +174,7 @@ typedef struct				pthread_mutex_s
 #endif
 
   /** blocked threads wait queue */
-  pthread_cont_t			wait;
+  pthread_root_t			wait;
 
 }					pthread_mutex_t;
 
@@ -323,7 +325,7 @@ typedef struct pthread_cond_s
   lock_t			lock;
 
   /** blocked threads wait queue */
-  pthread_cont_t		wait;
+  pthread_root_t		wait;
 
 } pthread_cond_t;
 
@@ -375,9 +377,9 @@ typedef struct				pthread_rwlock_s
   int_fast8_t				count;
 
   /** blocked threads waiting for read */
-  pthread_cont_t			wait_rd;
+  pthread_root_t			wait_rd;
   /** blocked threads waiting for write */
-  pthread_cont_t			wait_wr;
+  pthread_root_t			wait_wr;
 }					pthread_rwlock_t;
 
 error_t
@@ -474,7 +476,7 @@ struct __pthread_cleanup_s
 };
 
 /** cleanup context linked list */
-extern TASK_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
+extern CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
 
 #define pthread_cleanup_push(routine_, arg_)		\
 {							\
@@ -486,10 +488,10 @@ extern TASK_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
     {							\
       .fcn = (routine_),				\
       .arg = (arg_),					\
-      .prev = TASK_LOCAL_GET(__pthread_cleanup_list),	\
+      .prev = CONTEXT_LOCAL_GET(__pthread_cleanup_list),	\
     };							\
 							\
-  TASK_LOCAL_SET(__pthread_cleanup_list, &__cleanup);	\
+  CONTEXT_LOCAL_SET(__pthread_cleanup_list, &__cleanup);	\
 							\
   cpu_interrupt_restorestate(&__irq_state);
 
@@ -499,7 +501,7 @@ extern TASK_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
   if (execute)							\
     __cleanup.fcn(__cleanup.arg);				\
 								\
-  TASK_LOCAL_SET(__pthread_cleanup_list, __cleanup.prev);	\
+  CONTEXT_LOCAL_SET(__pthread_cleanup_list, __cleanup.prev);	\
 								\
   cpu_interrupt_restorestate(&__irq_state);			\
 }

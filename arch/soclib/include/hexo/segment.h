@@ -47,25 +47,25 @@ arch_cpudata_alloc(void)
   return cls;
 }
 
-/* task template segment load address defined in ld script*/
-extern struct __segstart_dummy_type_s __task_data_start, __task_data_end;
+/* context template segment load address defined in ld script*/
+extern struct __segstart_dummy_type_s __context_data_start, __context_data_end;
 
 static inline void *
-arch_taskdata_alloc(void)
+arch_contextdata_alloc(void)
 {
   void			*tls;
 
   /* allocate memory and copy from template */
   if ((tls = mem_alloc((char*)&__cpu_data_end - (char*)&__cpu_data_start, MEM_SCOPE_SYS)))
     {
-      memcpy(tls, (char*)&__task_data_start, (char*)&__task_data_end - (char*)&__task_data_start);
+      memcpy(tls, (char*)&__context_data_start, (char*)&__context_data_end - (char*)&__context_data_start);
     }
 
   return tls;
 }
 
 static inline void
-arch_taskdata_free(void *ptr)
+arch_contextdata_free(void *ptr)
 {
   mem_free(ptr);
 }
@@ -74,13 +74,13 @@ arch_taskdata_free(void *ptr)
 
 
 static inline void *
-arch_taskstack_alloc(size_t size)
+arch_contextstack_alloc(size_t size)
 {
   return mem_alloc(size, MEM_SCOPE_SYS);
 }
 
 static inline void
-arch_taskstack_free(void *ptr)
+arch_contextstack_free(void *ptr)
 {
   mem_free(ptr);
 }

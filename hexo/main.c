@@ -28,7 +28,7 @@
 #include <hexo/local.h>
 #include <hexo/iospace.h>
 #include <hexo/lock.h>
-#include <hexo/task.h>
+#include <hexo/context.h>
 
 #include <../drivers/uart-8250/uart-8250.h>
 #include <../drivers/tty-vga/tty-vga.h>
@@ -293,9 +293,6 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 
       __pthread_dump_runqueue();
 
-      template_ring_test();
-      template_object_test();
-
 #ifdef CONFIG_FB
       main(0, 0);
 #endif
@@ -304,7 +301,7 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 
       device_dump_list(&enum_pci);
 
-#if 0
+#if 1
       while (1)
 	{
 	  uint8_t	buf_[16], *buf = buf_;

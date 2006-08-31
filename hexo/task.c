@@ -1,78 +1,78 @@
 
 #include <hexo/error.h>
-#include <hexo/task.h>
+#include <hexo/context.h>
 #include <hexo/local.h>
 #include <hexo/segment.h>
 
-/** pointer to current task */
-TASK_LOCAL struct task_s *task_cur;
+/** pointer to current context */
+CONTEXT_LOCAL struct context_s *context_cur;
 
-/** init a task object using current execution context */
+/** init a context object using current execution context */
 error_t
-task_bootstrap(struct task_s *task)
+context_bootstrap(struct context_s *context)
 {
   error_t	res;
 
-  /* allocate task local storage memory */
-  if (!(task->tls = arch_taskdata_alloc()))
+  /* allocate context local storage memory */
+  if (!(context->tls = arch_contextdata_alloc()))
     return -ENOMEM;
 
-  TASK_LOCAL_FOREIGN_SET(task->tls, task_cur, task);
+  CONTEXT_LOCAL_FOREIGN_SET(context->tls, context_cur, context);
 
   /* FIXME ? initial stack space will never be freed */
-  task->stack = NULL;
+  context->stack = NULL;
 
-  /* setup cpu specific task data */
-  if ((res = cpu_task_bootstrap(task)))
+  /* setup cpu specific context data */
+  if ((res = cpu_context_bootstrap(context)))
     {
-      arch_taskdata_free(task->tls);
+      arch_contextdata_free(context->tls);
       return res;
     }
 
   return 0;
 }
 
-/** init a task object allocating a new context */
+/** init a context object allocating a new context */
 error_t
-task_init(struct task_s *task, size_t stack_size, task_entry_t *entry, void *param)
+context_init(struct context_s *context, size_t stack_size, context_entry_t *entry, void *param)
 {
   error_t	res;
 
-  /* allocate task local storage memory */
-  if (!(task->tls = arch_taskdata_alloc()))
+  /* allocate context local storage memory */
+  if (!(context->tls = arch_contextdata_alloc()))
     return -ENOMEM;
 
-  TASK_LOCAL_FOREIGN_SET(task->tls, task_cur, task);
+  CONTEXT_LOCAL_FOREIGN_SET(context->tls, context_cur, context);
 
-  /* allocate task stack memory */
-  if (!(task->stack = arch_taskstack_alloc(stack_size * sizeof(__reg_t))))
+  /* allocate context stack memory */
+  if (!(context->stack = arch_contextstack_alloc(stack_size * sizeof(__reg_t))))
     {
-      arch_taskdata_free(task->tls);
+      arch_contextdata_free(context->tls);
       return -ENOMEM;      
     }
 
   /* initial stack pointer address */
-  task->stack_ptr = task->stack + stack_size - 1;
+  context->stack_ptr = context->stack + stack_size - 1;
 
-  /* setup cpu specific task data */
-  if ((res = cpu_task_init(task, entry, param)))
+  /* setup cpu specific context data */
+  if ((res = cpu_context_init(context, entry, param)))
     {
-      arch_taskdata_free(task->tls);
-      arch_taskstack_free(task->stack);
+      arch_contextdata_free(context->tls);
+      arch_contextstack_free(context->stack);
       return res;
     }
 
   return 0;
 }
 
-/** free ressource associated with a task */
+/** free ressource associated with a context */
 void
-task_destroy(struct task_s *task)
+context_destroy(struct context_s *context)
 {
-  cpu_task_destroy(task);
-  arch_taskdata_free(task->tls);
+  cpu_context_destroy(context);
+  arch_contextdata_free(context->tls);
 
-  if (task->stack)
-    arch_taskstack_free(task->stack);
+  if (context->stack)
+    arch_contextstack_free(context->stack);
 }
 

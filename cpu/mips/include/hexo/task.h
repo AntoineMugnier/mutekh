@@ -19,18 +19,18 @@
 
 */
 
-#if !defined(TASK_H_) || defined(CPU_TASK_H_)
+#if !defined(CONTEXT_H_) || defined(CPU_CONTEXT_H_)
 #error This file can not be included directly
 #else
 
 #include "cpu/hexo/specific.h"
 
-struct cpu_task_s
+struct cpu_context_s
 {
 };
 
 static inline void
-cpu_task_switch(struct task_s *old, struct task_s *new)
+cpu_context_switch(struct context_s *old, struct context_s *new)
 {
   void	*unused1, *unused2;
 
@@ -59,7 +59,7 @@ cpu_task_switch(struct task_s *old, struct task_s *new)
 		"	addiu	$1,	-1		\n"
 		"	mtc0	$1,	$12		\n"
 		"	MTC0_WAIT			\n"
-		/* save task local storage on stack */
+		/* save context local storage on stack */
 		"	sw	$15,	0*4($sp)	\n"
 		/* switch stack pointer */
 		"	sw	$sp,	(%0)		\n"
@@ -94,14 +94,14 @@ cpu_task_switch(struct task_s *old, struct task_s *new)
 		, "$24", "$25"	/* temp */
 		, "$31"		/* return value */
 #else
-# error Mips ABI support missing in task.h
+# error Mips ABI support missing in context.h
 #endif
 		);
 }
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_task_jumpto(struct task_s *new)
+cpu_context_jumpto(struct context_s *new)
 {
   asm volatile (
 		".set push			\n"
@@ -124,7 +124,7 @@ cpu_task_jumpto(struct task_s *new)
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_task_set_stack(uintptr_t stack, void *jumpto)
+cpu_context_set_stack(uintptr_t stack, void *jumpto)
 {
   asm volatile (
 		"	move	$sp,	%0	\n"

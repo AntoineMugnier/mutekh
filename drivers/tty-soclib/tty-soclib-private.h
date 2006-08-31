@@ -26,7 +26,7 @@
 #include <hexo/types.h>
 #include <hexo/device.h>
 #include <hexo/lock.h>
-#include <hexo/template/fifo.h>
+#include <gpct/fifo.h>
 
 /**************************************************************/
 

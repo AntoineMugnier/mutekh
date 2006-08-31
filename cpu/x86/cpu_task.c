@@ -1,62 +1,62 @@
 
 #include <hexo/error.h>
-#include <hexo/task.h>
+#include <hexo/context.h>
 
 #include <cpu/hexo/pmode.h>
 
 error_t
-cpu_task_bootstrap(struct task_s *task)
+cpu_context_bootstrap(struct context_s *context)
 {
   cpu_x86_segsel_t	tls_seg;
 
   /* get a new segment descriptor for tls */
-  if (!(tls_seg = cpu_x86_segment_alloc((uintptr_t)task->tls, 0xffffffff, CPU_X86_SEG_DATA_UP_RW)))
+  if (!(tls_seg = cpu_x86_segment_alloc((uintptr_t)context->tls, 0xffffffff, CPU_X86_SEG_DATA_UP_RW)))
     return -ENOMEM;
 
   /* load current tls segment */
   cpu_x86_dataseggs_use(tls_seg, 0);
 
-  TASK_LOCAL_SET(__task_data_base, task->tls);
+  CONTEXT_LOCAL_SET(__context_data_base, context->tls);
 
   return 0;
 }
 
 error_t
-cpu_task_init(struct task_s *task, task_entry_t *entry, void *param)
+cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 {
   cpu_x86_segsel_t	tls_seg;
 
   /* get a new segment descriptor for tls */
-  if (!(tls_seg = cpu_x86_segment_alloc((uintptr_t)task->tls, 0xffffffff, CPU_X86_SEG_DATA_UP_RW)))
+  if (!(tls_seg = cpu_x86_segment_alloc((uintptr_t)context->tls, 0xffffffff, CPU_X86_SEG_DATA_UP_RW)))
     return -ENOMEM;
 
-  TASK_LOCAL_FOREIGN_SET(task->tls, __task_data_base, task->tls);
+  CONTEXT_LOCAL_FOREIGN_SET(context->tls, __context_data_base, context->tls);
 
   /* push param */
-  *--task->stack_ptr = (uintptr_t)param;
+  *--context->stack_ptr = (uintptr_t)param;
 
-  /* push task entry function return pointer */
-  *--task->stack_ptr = (uintptr_t)0;
+  /* push context entry function return pointer */
+  *--context->stack_ptr = (uintptr_t)0;
 
   /* push execution pointer */
-  *--task->stack_ptr = (uintptr_t)entry;	/* EIP */
+  *--context->stack_ptr = (uintptr_t)entry;	/* EIP */
 
   /* push default flags */
-  *--task->stack_ptr = 0x00000046;	/* EFLAGS */
+  *--context->stack_ptr = 0x00000046;	/* EFLAGS */
 
   /* room for general purpose registers default values */
-  task->stack_ptr -= 8;
+  context->stack_ptr -= 8;
 
   /* push tls segment index */
-  *--task->stack_ptr = tls_seg << 3;	/* GS */
+  *--context->stack_ptr = tls_seg << 3;	/* GS */
 
   return 0;
 }
 
 void
-cpu_task_destroy(struct task_s *task)
+cpu_context_destroy(struct context_s *context)
 {
-  __reg_t		*stack = (__reg_t*)task->stack_ptr;
+  __reg_t		*stack = (__reg_t*)context->stack_ptr;
 
   /* free tls segment descriptor */
   cpu_x86_segdesc_free((uint16_t)stack[0]);

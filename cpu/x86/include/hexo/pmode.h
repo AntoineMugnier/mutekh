@@ -65,15 +65,15 @@ struct cpu_x86_segdesc_s
 } __attribute__ ((packed));
 
 /** x86 segment type Task 16 bits */
-#define CPU_X86_SEG_TASK16	0x01
+#define CPU_X86_SEG_CONTEXT16	0x01
 /** x86 segment type Local Descriptor Table */
 #define CPU_X86_SEG_LDT		0x02
 /** x86 segment type Task 16 bits busy */
-#define CPU_X86_SEG_TASK16_BUSY	0x03
+#define CPU_X86_SEG_CONTEXT16_BUSY	0x03
 /** x86 segment type Task 32 bits */
-#define CPU_X86_SEG_TASK32	0x09
+#define CPU_X86_SEG_CONTEXT32	0x09
 /** x86 segment type Task 32 bits busy */
-#define CPU_X86_SEG_TASK32_BUSY	0x0b
+#define CPU_X86_SEG_CONTEXT32_BUSY	0x0b
 /** x86 segment type Data Expand up, Read Only */
 #define CPU_X86_SEG_DATA_UP_RO	0x10
 /** x86 segment type Data Expand down, Read Only */
@@ -151,8 +151,8 @@ struct cpu_x86_gatedesc_s
 
 /** x86 gate type 16 bits call  */
 #define CPU_X86_GATE_CALL16	0x4
-/** x86 gate type task */
-#define CPU_X86_GATE_TASK	0x5
+/** x86 gate type context */
+#define CPU_X86_GATE_CONTEXT	0x5
 /** x86 gate type 16 bits interrupt */
 #define CPU_X86_GATE_INT16	0x6
 /** x86 gate type 16 bits trap */

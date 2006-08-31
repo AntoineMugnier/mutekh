@@ -40,7 +40,7 @@
 #define VGA_TTY_ANSI_PUTSTR(fifo, str) tty_fifo_nolock_pushback_array(fifo, (uint8_t*)str, sizeof(str) - 1)
 
 static void
-tty_vga_ansi_putint(tty_fifo_cont_t *fifo, uint_fast8_t n)
+tty_vga_ansi_putint(tty_fifo_root_t *fifo, uint_fast8_t n)
 {
   if (n > 10)
     tty_vga_ansi_putint(fifo, n / 10);

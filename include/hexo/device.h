@@ -95,12 +95,13 @@ typedef DEV_CLEANUP(dev_cleanup_t);
 
 #ifdef CONFIG_DEVICE_HIERARCHY
 
-#include <hexo/template/lock_spin.h>
-#include <hexo/template/cont_dlist.h>
-#include <hexo/template/object.h>
+#include <hexo/gpct_platform_hexo.h>
+#include <hexo/gpct_lock_hexo.h>
+#include <gpct/cont_dlist.h>
+#include <gpct/object_refcount.h>
 
-OBJECT_TYPE_DECL(device, struct device_s);
-CONTAINER_TYPE_DECL(device, DLIST, struct device_s, SPIN);
+OBJECT_TYPE(device_obj, REFCOUNT, struct device_s);
+CONTAINER_TYPE(device_list, DLIST, struct device_s, HEXO_SPIN);
 
 #endif
 
@@ -140,9 +141,9 @@ struct device_s
   void				*enum_pv;
 
   struct device_s		*parent;
-  device_entry_t		siblings;
-  device_cont_t			children;
-  device_counter_t		count;
+  device_list_entry_t		siblings;
+  device_obj_entry_t		obj_entry;
+  device_list_root_t		children;
 #endif /* !CONFIG_DEVICE_HIERARCHY */
 
 };
@@ -150,10 +151,10 @@ struct device_s
 
 #ifdef CONFIG_DEVICE_HIERARCHY
 
-device_object_t __device_obj_alloc();
-void __device_obj_free(device_object_t obj);
+OBJECT_CONSTRUCTOR(device_obj);
+OBJECT_DESTRUCTOR(device_obj);
 
-OBJECT_REFCOUNT_FUNC(static inline, device, device_obj, __device_obj_alloc, __device_obj_free, count);
+OBJECT_FUNC(static inline, device_obj, REFCOUNT, device_obj, obj_entry);
 
 error_t device_register(struct device_s *dev,
 			struct device_s *parent,
@@ -164,7 +165,7 @@ void device_dump_list(struct device_s *root);
 #endif /* !CONFIG_DEVICE_HIERARCHY */
 
 #ifdef CONFIG_DEVICE_HIERARCHY
-#define DEVICE_INITIALIZER	{ .children = CONT_DLIST_INTIALIZER, .count = OBJECT_REFCOUNT_INITIALIZER }
+#define DEVICE_INITIALIZER	{ .children = CONTAINER_ROOT_INITIALIZER(device_list, DLIST, HEXO_SPIN), .obj_entry = OBJECT_INITIALIZER(device_obj, REFCOUNT) }
 #else
 #define DEVICE_INITIALIZER	{ }
 #endif

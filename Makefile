@@ -19,8 +19,7 @@ subdirs-y=	arch/current \
 		drivers \
 		hexo \
 		libc \
-		libpthread \
-		test
+		libpthread
 
 define recurs
   $(eval include $(1)/Makefile)

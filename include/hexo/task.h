@@ -19,23 +19,23 @@
 
 */
 
-#ifndef TASK_H_
-#define TASK_H_
+#ifndef CONTEXT_H_
+#define CONTEXT_H_
 
 #include <hexo/types.h>
 #include <hexo/local.h>
 #include <hexo/error.h>
 
-/** cpu specific task structure */
-struct cpu_task_s;
+/** cpu specific context structure */
+struct cpu_context_s;
 
-/** task descriptor structure */
-struct task_s
+/** context descriptor structure */
+struct context_s
 {
-  /* cpu specific task context pointer if any */
-  struct cpu_task_s	*ctask;
+  /* cpu specific context context pointer if any */
+  struct cpu_context_s	*ccontext;
 
-  /* task local storage address */
+  /* context local storage address */
   void			*tls;
 
   /* stack memory address */
@@ -45,65 +45,65 @@ struct task_s
   __reg_t			*stack_ptr;
 };
 
-/** task entry point function prototype */
-#define TASK_ENTRY(n) void (n) (void *param)
-/** task entry point function type */
-typedef TASK_ENTRY(task_entry_t);
+/** context entry point function prototype */
+#define CONTEXT_ENTRY(n) void (n) (void *param)
+/** context entry point function type */
+typedef CONTEXT_ENTRY(context_entry_t);
 
-/** Switch task by saving/restoring all registers from/to task stack */
-static void cpu_task_switch(struct task_s *old, struct task_s *new);
+/** Switch context by saving/restoring all registers from/to context stack */
+static void cpu_context_switch(struct context_s *old, struct context_s *new);
 
-/** Jump to task from _non_ task context */
-static void cpu_task_jumpto(struct task_s *new);
+/** Jump to context from _non_ context context */
+static void cpu_context_jumpto(struct context_s *new);
 
 /** set new stack pointer and jump to a new function */
-static void cpu_task_set_stack(uintptr_t stack, void *jumpto);
+static void cpu_context_set_stack(uintptr_t stack, void *jumpto);
 
-/** associate task context and cpu current execution state */
-error_t cpu_task_bootstrap(struct task_s *task);
+/** associate context context and cpu current execution state */
+error_t cpu_context_bootstrap(struct context_s *context);
 
-/** Prepare task execution by setting up original stack values */
-error_t cpu_task_init(struct task_s *task, task_entry_t *entry, void *param);
+/** Prepare context execution by setting up original stack values */
+error_t cpu_context_init(struct context_s *context, context_entry_t *entry, void *param);
 
-/** cleanup task */
-void cpu_task_destroy(struct task_s *task);
+/** cleanup context */
+void cpu_context_destroy(struct context_s *context);
 
 
 
-#include "cpu/hexo/task.h"
+#include "cpu/hexo/context.h"
 
-/** pointer to current task object */
-extern TASK_LOCAL struct task_s *task_cur;
+/** pointer to current context object */
+extern CONTEXT_LOCAL struct context_s *context_cur;
 
-/** init a task object using current execution context */
-error_t task_bootstrap(struct task_s *task);
+/** init a context object using current execution context */
+error_t context_bootstrap(struct context_s *context);
 
-/** init a task object allocating a new context */
-error_t task_init(struct task_s *task, size_t stack_size, task_entry_t *entry, void *param);
+/** init a context object allocating a new context */
+error_t context_init(struct context_s *context, size_t stack_size, context_entry_t *entry, void *param);
 
-/** free ressource associated with a task */
-void task_destroy(struct task_s *task);
+/** free ressource associated with a context */
+void context_destroy(struct context_s *context);
 
-/** switch to a given task */
-static inline void task_switch_to(struct task_s *task)
+/** switch to a given context */
+static inline void context_switch_to(struct context_s *context)
 {
-  struct task_s		*cur = TASK_LOCAL_GET(task_cur);
+  struct context_s		*cur = CONTEXT_LOCAL_GET(context_cur);
 
-  cpu_task_switch(cur, task);
+  cpu_context_switch(cur, context);
 }
 
-/** jump to a given task without saving current context */
+/** jump to a given context without saving current context */
 static inline void
 __attribute__((noreturn))
-task_jump_to(struct task_s *task)
+context_jump_to(struct context_s *context)
 {
-  cpu_task_jumpto(task);
+  cpu_context_jumpto(context);
 }
 
-/** return current task object */
-static inline struct task_s * task_current(void)
+/** return current context object */
+static inline struct context_s * context_current(void)
 {
-  return TASK_LOCAL_GET(task_cur);
+  return CONTEXT_LOCAL_GET(context_cur);
 }
 
 #endif

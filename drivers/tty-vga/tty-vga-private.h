@@ -26,8 +26,10 @@
 #include <hexo/types.h>
 #include <hexo/device.h>
 #include <hexo/lock.h>
-#include <hexo/template/cont_ring.h>
-#include <hexo/template/lock_spin.h>
+
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_ring.h>
+#include <hexo/gpct_lock_hexo.h>
 
 /**************************************************************/
 
@@ -62,9 +64,9 @@ typedef volatile struct vga_text_char_s * vga_text_buf_t;
 typedef void tty_vga_char_process_t (struct device_s *dev, uint8_t c);
 typedef void tty_vga_key_process_t  (struct device_s *dev, uint8_t scancode);
 
-CONTAINER_TYPE_DECL(tty_fifo, RING, uint8_t, SPIN_IRQ, 32);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo, SPIN_IRQ);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_noirq, SPIN);
+CONTAINER_TYPE(tty_fifo, RING, uint8_t, HEXO_SPIN_IRQ, 32);
+CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo, HEXO_SPIN_IRQ);
+CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_noirq, HEXO_SPIN);
 CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_nolock, NOLOCK);
 
 #define VGA_TTY_MAX_ANSI_PARAMS		4
@@ -81,7 +83,7 @@ struct tty_vga_context_s
   tty_vga_key_process_t		*scancode;
 
   /* tty input char fifo */
-  tty_fifo_cont_t		read_fifo;
+  tty_fifo_root_t		read_fifo;
 
   lock_t			lock;
 

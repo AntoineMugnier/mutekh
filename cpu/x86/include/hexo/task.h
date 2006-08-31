@@ -19,16 +19,16 @@
 
 */
 
-#if !defined(TASK_H_) || defined(CPU_TASK_H_)
+#if !defined(CONTEXT_H_) || defined(CPU_CONTEXT_H_)
 #error This file can not be included directly
 #else
 
-struct cpu_task_s
+struct cpu_context_s
 {
 };
 
 static inline void
-cpu_task_switch(struct task_s *old, struct task_s *new)
+cpu_context_switch(struct context_s *old, struct context_s *new)
 {
   asm volatile (
 		/* save execution pointer */
@@ -44,7 +44,7 @@ cpu_task_switch(struct task_s *old, struct task_s *new)
 		"	cli			\n"
 		/* save general purpose registers on stack */
 		"	pusha			\n"
-		/* save task local storage on stack */
+		/* save context local storage on stack */
 		"	push	%%gs		\n"
 		/* switch stack pointer */
 		"	movl	%%esp, %0	\n"
@@ -65,7 +65,7 @@ cpu_task_switch(struct task_s *old, struct task_s *new)
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_task_jumpto(struct task_s *new)
+cpu_context_jumpto(struct context_s *new)
 {
   asm volatile (
 		"	movl	%0, %%esp	\n"
@@ -84,7 +84,7 @@ cpu_task_jumpto(struct task_s *new)
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_task_set_stack(uintptr_t stack, void *jumpto)
+cpu_context_set_stack(uintptr_t stack, void *jumpto)
 {
   asm volatile (
 		"	movl	%0, %%esp	\n"

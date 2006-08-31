@@ -32,8 +32,8 @@
 
 /************************************************************************/
 
-/** task local storage variable assignement from different task context */
-#define TASK_LOCAL_FOREIGN_SET(tls, n, v)		\
+/** context local storage variable assignement from different context context */
+#define CONTEXT_LOCAL_FOREIGN_SET(tls, n, v)		\
 {							\
   __asm__ (						\
 	   ".set push\n"				\
@@ -48,8 +48,8 @@
 	   );						\
 }
 
-/** task local storage variable assignement */
-#define TASK_LOCAL_SET(n, v)				\
+/** context local storage variable assignement */
+#define CONTEXT_LOCAL_SET(n, v)				\
 {							\
   __asm__ (						\
 	   ".set push\n"				\
@@ -64,8 +64,8 @@
 	   );						\
 }
 
-/** task local storage variable read access */
-#define TASK_LOCAL_GET(n)				\
+/** context local storage variable read access */
+#define CONTEXT_LOCAL_GET(n)				\
 ({							\
   typeof(n) _val_;					\
 							\
@@ -83,8 +83,8 @@
   _val_;						\
 })
 
-/** get address of task local object */
-#define TASK_LOCAL_ADDR(n)				\
+/** get address of context local object */
+#define CONTEXT_LOCAL_ADDR(n)				\
 ({							\
   typeof(n) *_ptr_;					\
 							\

@@ -36,10 +36,10 @@ static struct pthread_s init_thread;
 static struct pthread_s idle_thread;
 
 /** pointer to current thread */
-TASK_LOCAL pthread_t __pthread_current;
+CONTEXT_LOCAL pthread_t __pthread_current;
 
 /** idle thread function */
-static TASK_ENTRY(pthread_task_idle)
+static CONTEXT_ENTRY(pthread_context_idle)
 {
   /* release lock acquired in previous __pthread_switch() call */
   lock_release(&__pthread_runnable.lock);
@@ -79,16 +79,16 @@ __pthread_bootstrap(void)
 
   /* setup current thread */
   __pthread_init(&init_thread);
-  task_bootstrap(&init_thread.task);
+  context_bootstrap(&init_thread.context);
 
-  TASK_LOCAL_SET(__pthread_current, &init_thread);
+  CONTEXT_LOCAL_SET(__pthread_current, &init_thread);
 
   /* add thread to running threads list */
   __pthread_pool_add(&__pthread_runnable, &init_thread);
 
   /* setup idle thread */
   __pthread_init(&idle_thread);
-  task_init(&idle_thread.task, CONFIG_PTHREAD_STACK_SIZE, pthread_task_idle, 0);
+  context_init(&idle_thread.context, CONFIG_PTHREAD_STACK_SIZE, pthread_context_idle, 0);
 }
 
 void
@@ -136,7 +136,7 @@ __pthread_switch(void)
   /* get next candidate for execution */
   candidate = __pthread_run_candidate(&__pthread_runnable);
 
-  task_switch_to(&candidate->task);
+  context_switch_to(&candidate->context);
 
   lock_release(&__pthread_runnable.lock);
   cpu_interrupt_restorestate(&irq_state);
@@ -150,21 +150,21 @@ __pthread_cleanup(void)
   struct pthread_s *thread = pthread_self();
   struct pthread_s *candidate;
 
-  /* cleanup current task */
-  task_destroy(&thread->task);
+  /* cleanup current context */
+  context_destroy(&thread->context);
 
   /* free thread structure */
   mem_free(thread);
 
   /* jump to cadidate thread */
   candidate = __pthread_run_candidate(&__pthread_runnable);
-  task_jump_to(&candidate->task);
+  context_jump_to(&candidate->context);
 }
 
 #ifdef CONFIG_PTHREAD_CANCEL
 
 /** cancelation context linked list head */
-TASK_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list = 0;
+CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list = 0;
 
 void __pthread_cancel_self(void)
 {
@@ -173,7 +173,7 @@ void __pthread_cancel_self(void)
   cpu_interrupt_disable();
 
   /* call thread cleanup handlers */
-  for (c = TASK_LOCAL_GET(__pthread_cleanup_list); c; c = c->prev)
+  for (c = CONTEXT_LOCAL_GET(__pthread_cleanup_list); c; c = c->prev)
     c->fcn(c->arg);
 
   pthread_exit(PTHREAD_CANCELED);
@@ -230,7 +230,7 @@ pthread_exit(void *retval)
      end */
 
   /* setup temp stack memory and jump to __pthread_cleanup() */
-  cpu_task_set_stack((uintptr_t)(tmp_stack - 1) + sizeof(tmp_stack),
+  cpu_context_set_stack((uintptr_t)(tmp_stack - 1) + sizeof(tmp_stack),
 		     __pthread_cleanup);
 }
 
@@ -304,13 +304,13 @@ pthread_detach(pthread_t thread)
 
 #endif /* CONFIG_PTHREAD_JOIN */
 
-/** thread task entry point */
+/** thread context entry point */
 
-static TASK_ENTRY(pthread_task_entry)
+static CONTEXT_ENTRY(pthread_context_entry)
 {
   struct pthread_s	*thread = param;
 
-  TASK_LOCAL_SET(__pthread_current, thread);
+  CONTEXT_LOCAL_SET(__pthread_current, thread);
 
   /* release lock acquired in previous __pthread_switch() call */
   lock_release(&__pthread_runnable.lock);
@@ -339,8 +339,8 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   if (!thread)
     return ENOMEM;
 
-  /* setup task context for new thread */
-  res = task_init(&thread->task, CONFIG_PTHREAD_STACK_SIZE, pthread_task_entry, thread);
+  /* setup context context for new thread */
+  res = context_init(&thread->context, CONFIG_PTHREAD_STACK_SIZE, pthread_context_entry, thread);
 
   if (res)
     {

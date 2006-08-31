@@ -25,10 +25,10 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include <hexo/task.h>
+#include <hexo/context.h>
 #include <hexo/lock.h>
 
-#include <hexo/template/cont_clist.h>
+#include <gpct/cont_clist.h>
 
 CONTAINER_FUNC(static inline, pthread, CLIST, __pthread_list, NOLOCK, queue);
 
@@ -71,7 +71,7 @@ __pthread_pool_add(struct pthread_pool_s *pool,
 /** put thread in wait queue,
     irqs must be already disabled */
 static inline void
-__pthread_wait(pthread_cont_t *queue)
+__pthread_wait(pthread_root_t *queue)
 {
   struct pthread_s *thread;
 

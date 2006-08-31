@@ -44,7 +44,7 @@ struct cpu_x86_apic_s
   cpu_x86_apic___reg_t	res0060;
   cpu_x86_apic___reg_t	res0070;
   /* 0080 */
-  cpu_x86_apic___reg_t	task_prio;
+  cpu_x86_apic___reg_t	context_prio;
   cpu_x86_apic___reg_t	arbitr_prio;
   cpu_x86_apic___reg_t	processor_prio;
   cpu_x86_apic___reg_t	eoi;
