@@ -8,9 +8,9 @@ PHDRS
 SECTIONS
    {
 	/* must be within 8192 first bytes of kernel image */
-	.multiboot : { *(.multiboot) } : boot
-
 	. = 0x00100000;
+
+	.multiboot : { *(.multiboot) } : boot
 
 	.boot : { *(.boot) }
 	__boot_start = LOADADDR(.boot);
