@@ -19,11 +19,11 @@
 
 */
 
-#if !defined(ENDIAN_H_) || defined(CPU_ENDIAN_H_)
+#if !defined(__ENDIAN_H_) || defined(__CPU_ENDIAN_H_)
 #error This file can not be included directly
 #else
 
-#define CPU_ENDIAN_H_
+#define __CPU_ENDIAN_H_
 
 /** x86 CPU is little endian */
 #undef CPU_ENDIAN_ISBIG

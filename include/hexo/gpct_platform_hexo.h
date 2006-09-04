@@ -16,49 +16,34 @@
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
-
 */
 
-#if !defined(__ENDIAN_H_) || defined(CPU_ENDIAN_H_)
-#error This file can not be included directly
-#else
+#ifndef __GPCT_PLATFORM_HEXO_H__
+#define __GPCT_PLATFORM_HEXO_H__
 
-#define CPU_ENDIAN_H_
+#include <hexo/types.h>
+#include <hexo/atomic.h>
 
-/** x86 CPU is little endian */
-#undef CPU_ENDIAN_ISBIG
-#define CPU_ENDIAN_ISLITTLE
+#define GPCT_PLATFORM_EXTERNAL
 
-#define HAS_CPU_ENDIAN_SWAP16
+typedef bool_t		__gpct_bool_t;
+typedef	error_t		__gpct_error_t;
+typedef atomic_t	__gpct_atomic_t;
 
-static inline uint16_t cpu_endian_swap16(uint16_t x)
-{
-  asm ("rolw	$8, %0"
-       : "=r" (x)
-       : "0" (x)
-       );
+/* static value init */
+#define __ATOMIC_INITIALIZER(v)	ATOMIC_INITIALIZER(v)
 
-  return x;
-}
+/* set atomic value */
+#define	__atomic_set(a, v)	atomic_set(a, v)
 
-#define HAS_CPU_ENDIAN_SWAP32
+/* get atomic value */
+#define __atomic_get(a)		atomic_get(a)
 
-static inline uint32_t cpu_endian_swap32(uint32_t x)
-{
-  asm ("bswap	%0"
-       : "=r" (x)
-       : "0" (x)
-       );
+/* increment atomic value return true if not 0 */
+#define __atomic_inc(a)		atomic_inc(a)
 
-  return x;
-}
-
-#undef HAS_CPU_ENDIAN_SWAP64
-
-static inline uint64_t cpu_endian_swap64(uint64_t x)
-{
-  return 0;
-}
+/* decrement atomic value return true if not 0 */
+#define __atomic_dec(a)		atomic_dec(a)
 
 #endif
 

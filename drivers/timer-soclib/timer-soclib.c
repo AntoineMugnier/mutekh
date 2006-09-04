@@ -142,6 +142,21 @@ DEV_CLEANUP(timer_soclib_cleanup)
   mem_free(pv);
 }
 
+#ifndef CONFIG_STATIC_DRIVERS
+const struct driver_s	timer_soclib_drv =
+{
+  .f_init		= timer_soclib_init,
+  .f_cleanup		= timer_soclib_cleanup,
+  .f_irq		= timer_soclib_irq,
+  .f.chr = {
+    .f_setcallback	= timer_soclib_setcallback,
+    .f_setperiod	= timer_soclib_setperiod,
+    .f_setvalue		= timer_soclib_setvalue,
+    .f_getvalue		= timer_soclib_getvalue,
+  }
+};
+#endif
+
 /* 
  * device open operation
  */
@@ -151,12 +166,7 @@ DEV_INIT(timer_soclib_init)
   struct timer_soclib_context_s	*pv;
 
 #ifndef CONFIG_STATIC_DRIVERS
-  dev->f_cleanup		= timer_soclib_cleanup;
-  dev->f_irq			= timer_soclib_irq;
-  dev->timer.f_setcallback	= timer_soclib_setcallback;
-  dev->timer.f_setperiod	= timer_soclib_setperiod;
-  dev->timer.f_setvalue		= timer_soclib_setvalue;
-  dev->timer.f_getvalue		= timer_soclib_getvalue;
+  dev->drv = &timer_soclib_drv;
 #endif
 
   /* allocate private driver data */

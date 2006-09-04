@@ -110,15 +110,25 @@ DEV_IRQ(uart_8250_irq)
  * device open operation
  */
 
+#ifndef CONFIG_STATIC_DRIVERS
+const struct driver_s	uart_8250_drv =
+{
+  .f_init		= uart_8250_init,
+  .f_cleanup		= uart_8250_cleanup,
+  .f_irq		= uart_8250_irq,
+  .f.chr = {
+    .f_read		= uart_8250_read,
+    .f_write		= uart_8250_write,
+  }
+};
+#endif
+
 DEV_INIT(uart_8250_init)
 {
   struct uart_8250_context_s	*pv;
 
 #ifndef CONFIG_STATIC_DRIVERS
-  dev->f_cleanup	= uart_8250_cleanup;
-  dev->f_irq		= uart_8250_irq;
-  dev->chr.f_read	= uart_8250_read;
-  dev->chr.f_write	= uart_8250_write;
+  dev->drv = &uart_8250_drv;
 #endif
 
   /* alocate private driver data */

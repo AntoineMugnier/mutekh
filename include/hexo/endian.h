@@ -19,10 +19,14 @@
 
 */
 
-#ifndef ENDIAN_H_
-#define ENDIAN_H_
+#ifndef __ENDIAN_H_
+#define __ENDIAN_H_
 
 #include "types.h"
+
+/***********************************************************************
+ *		Words swap functions
+ */
 
 /*
 static inline uint16_t cpu_endian_swap16(uint16_t x);
@@ -81,6 +85,10 @@ static inline uint64_t endian_swap64(uint64_t x)
 # endif
 }
 
+/***********************************************************************
+ *		Endian dependent words access functions
+ */
+
 # if defined (CPU_ENDIAN_ISBIG)
 
 #  define endian_be16(x)	(x)
@@ -99,10 +107,45 @@ static inline uint64_t endian_swap64(uint64_t x)
 #  define endian_be32(x)	endian_swap32(x)
 #  define endian_be64(x)	endian_swap64(x)
 
-# elif
+# else
 
 #  error No endian mode defined in cpu/hexo/endian.h
 
+# endif
+
+/***********************************************************************
+ *		Endian dependent bitfield declaration macro
+
+ Bitfield can be declared trough the ENDIAN_BITFIELD() macro in the
+ direct (big endian) order. bit field declaration order will be swaped
+ on little endian machines. See example below:
+
+ struct my_data_s
+ {
+   ENDIAN_BITFIELD(uint32_t   a:8,
+                   uint32_t   b:8,
+                   uint32_t   c:16
+                  );
+
+   ENDIAN_BITFIELD(uint32_t   d:16,
+                   uint32_t   e:16
+                  );
+ };
+
+ */
+
+#define __ENDIAN_REVERSE_ARGS (b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15, b16, ...)    \
+			       b16; b15; b14; b13; b12; b11; b10; b09; b08; b07; b06; b05; b04; b03; b02; b01;
+
+#define __ENDIAN_ARGS	      (b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15, b16, ...)    \
+			       b01; b02; b03; b04; b05; b06; b07; b08; b09; b10; b11; b12; b13; b14; b15; b16;
+
+# if defined (CPU_ENDIAN_ISBIG)
+#  define ENDIAN_BITFIELD(...)	__ENDIAN_ARGS(__VA_ARGS__,,,,,,,,,,,,,,,)
+# elif defined (CPU_ENDIAN_ISLITTLE)
+#  define ENDIAN_BITFIELD(...)	__ENDIAN_REVERSE_ARGS(__VA_ARGS__,,,,,,,,,,,,,,,)
+# else
+#  error No bitfield endian mode defined in cpu/hexo/endian.h
 # endif
 
 #endif

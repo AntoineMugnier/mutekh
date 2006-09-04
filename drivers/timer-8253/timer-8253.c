@@ -119,17 +119,27 @@ DEV_CLEANUP(timer_8253_cleanup)
  * device open operation
  */
 
+#ifndef CONFIG_STATIC_DRIVERS
+const struct driver_s	timer_8253_drv =
+{
+  .f_init		= timer_8253_init,
+  .f_cleanup		= timer_8253_cleanup,
+  .f_irq		= timer_8253_irq,
+  .f.timer = {
+    .f_setcallback	= timer_8253_setcallback,
+    .f_setperiod	= timer_8253_setperiod,
+    .f_setvalue		= timer_8253_setvalue,
+    .f_getvalue		= timer_8253_getvalue,
+  }
+};
+#endif
+
 DEV_INIT(timer_8253_init)
 {
   struct timer_8253_context_s	*pv;
 
 #ifndef CONFIG_STATIC_DRIVERS
-  dev->f_cleanup		= timer_8253_cleanup;
-  dev->f_irq			= timer_8253_irq;
-  dev->timer.f_setcallback	= timer_8253_setcallback;
-  dev->timer.f_setperiod	= timer_8253_setperiod;
-  dev->timer.f_setvalue		= timer_8253_setvalue;
-  dev->timer.f_getvalue		= timer_8253_getvalue;
+  dev->drv = &timer_8253_drv;
 #endif
 
   /* allocate private driver data */

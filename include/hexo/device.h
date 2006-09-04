@@ -24,6 +24,7 @@
 #define DEVICE_H
 
 struct device_s;
+struct driver_s;
 
 #include "types.h"
 
@@ -58,7 +59,7 @@ typedef DEV_IRQ(dev_irq_t);
 #define DEV_INIT(n)	error_t (n) (struct device_s *dev)
 
 /** Common device class init() methode shortcut */
-//#define dev_init(dev) (dev)->f_init(dev)
+#define dev_init(dev) (dev)->drv->f_init(dev)
 
 /** Common device class init() function type. Must be called before
     using any other functions on the device. This function will
@@ -76,7 +77,7 @@ typedef DEV_INIT(dev_init_t);
 #define DEV_CLEANUP(n)	void    (n) (struct device_s *dev)
 
 /** Common device class cleanup() methode shortcut */
-#define dev_cleanup(dev, ...) (dev)->f_cleanup(dev, __VA_ARGS__ )
+#define dev_cleanup(dev, ...) (dev)->drv->f_cleanup(dev, __VA_ARGS__ )
 
 /** Common device class cleanup() function type. Free all ressources
     allocated with the init() function.
@@ -105,10 +106,11 @@ CONTAINER_TYPE(device_list, DLIST, struct device_s, HEXO_SPIN);
 
 #endif
 
-struct device_s
-{
-#ifndef CONFIG_STATIC_DRIVERS
+/** device driver object structure */
 
+struct driver_s
+{
+  dev_init_t			*f_init;
   dev_cleanup_t			*f_cleanup;
   dev_irq_t			*f_irq;
 
@@ -123,7 +125,16 @@ struct device_s
     struct dev_class_timer_s	timer;
     /** device enumerator class */
     struct dev_class_enum_s	denum;
-  };
+  } f;
+};
+
+/** device object structure */
+
+struct device_s
+{
+#ifndef CONFIG_STATIC_DRIVERS
+
+  const struct driver_s		*drv;
 
 #endif
 
@@ -141,7 +152,7 @@ struct device_s
   void				*enum_pv;
 
   struct device_s		*parent;
-  device_list_entry_t		siblings;
+  device_list_entry_t		list_entry;
   device_obj_entry_t		obj_entry;
   device_list_root_t		children;
 #endif /* !CONFIG_DEVICE_HIERARCHY */

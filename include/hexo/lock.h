@@ -51,6 +51,7 @@ typedef struct lock_s	lock_t;
 
 #define LOCK_INITIALIZER	{ .arch = ARCH_LOCK_INITIALIZER }
 
+
 /** allocate a new lock and return associated atomic memory location */
 static inline error_t lock_init(lock_t *lock)
 {
@@ -61,6 +62,7 @@ static inline error_t lock_init(lock_t *lock)
 #endif
 }
 
+
 /** free lock ressources */
 static inline void lock_destroy(lock_t *lock)
 {
@@ -68,6 +70,7 @@ static inline void lock_destroy(lock_t *lock)
   return arch_lock_destroy(&lock->arch);
 #endif
 }
+
 
 /** try to take lock */
 static inline bool_t lock_try(lock_t *lock)
@@ -79,6 +82,7 @@ static inline bool_t lock_try(lock_t *lock)
 #endif
 }
 
+
 /** spin to take lock */
 static inline void lock_spin(lock_t *lock)
 {
@@ -86,6 +90,7 @@ static inline void lock_spin(lock_t *lock)
   arch_lock_spin(&lock->arch);
 #endif
 }
+
 
 /** return current lock state */
 static inline bool_t lock_state(lock_t *lock)
@@ -97,17 +102,28 @@ static inline bool_t lock_state(lock_t *lock)
 #endif
 }
 
+
 /** save interrupts state, disable interrupts, and spin to take lock */
 static inline void lock_spin_irq(lock_t *lock)
 {
   __reg_t		state;
 
   cpu_interrupt_savestate_disable(&state);
-#ifdef CONFIG_SMP
-  arch_lock_spin(&lock->arch);
-#endif
+  lock_spin(lock);
   lock->irq_state = state;
 }
+
+
+/** save interrupts state, disable interrupts, and spin to take
+    lock. This macro must be matched with the LOCK_RELEASE_IRQ macro.
+    It is prefered over the lock_spin_irq() function because interrupt
+    state may be saved in a register */
+#define LOCK_SPIN_IRQ(lock)					\
+{								\
+  register __reg_t	__interrupt_state;			\
+  cpu_interrupt_savestate_disable(&__interrupt_state);		\
+  lock_spin(lock);
+
 
 /** release lock */
 static inline void lock_release(lock_t *lock)
@@ -117,15 +133,24 @@ static inline void lock_release(lock_t *lock)
 #endif
 }
 
+
 /** release lock and restore previous interrupts state */
 static inline void lock_release_irq(lock_t *lock)
 {
   __reg_t		state = lock->irq_state;
 
-#ifdef CONFIG_SMP
-  arch_lock_release(&lock->arch);
-#endif
+  lock_release(lock);
   cpu_interrupt_restorestate(&state);
+}
+
+
+/** release lock and restore previous interrupts state. This macro
+    must be matched with the LOCK_SPIN_IRQ macro. It is prefered over
+    the lock_release_irq() function because interrupt state may be
+    saved in a register */
+#define LOCK_RELEASE_IRQ(lock)					\
+  lock_release(lock);						\
+  cpu_interrupt_restorestate(&__interrupt_state);		\
 }
 
 #endif

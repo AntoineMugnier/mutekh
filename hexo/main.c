@@ -149,6 +149,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
 # if defined(__ARCH__ibmpc__)
   enum_pci_init(&enum_pci);
+  device_dump_list(&enum_pci);
 # endif
 
   //arch_start_other_cpu(); /* let other CPUs enter main_smp() */
@@ -186,35 +187,6 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 
 uint32_t a = 16;
 
-void test_thread_free(void*arg)
-{
-  printf("free %p\n", arg);
-}
-
-pthread_t test_thread;
-
-void *test_thread_main(void*arg)
-{
-  void	*mem;
-
-  printf("test_thread %p\n", pthread_self());
-  pthread_yield();
-
-  pthread_cleanup_push(test_thread_free, mem = malloc(512));
-  printf("alloc1 %p \n", mem);
-
-  pthread_cleanup_push(test_thread_free, mem = malloc(512));
-  printf("alloc2 %p \n", mem);
-
-  while (1)
-    pthread_testcancel();
-
-  pthread_cleanup_pop(1);
-  pthread_cleanup_pop(1);
-
-  return (void*)0x123;
-}
-
 /** application main function */
 int_fast8_t main(int_fast8_t argc, char **argv);
 
@@ -234,64 +206,10 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
       __pthread_bootstrap();
       puts("pthread init done");
 
-      printf("abc %% %u %i %d %s %x %c\n", 0, -128, 123412345, "test", 32, '*');
-
-      printf("abc %% _%u_ _%8u_ _%08u_ _%10u_\n", 128, 128, 128, 128);
-      printf("abc %% _%x_ _%8x_ _%08x_ _%10x_\n", 128, 128, 128, 128);
-      printf("abc %% _%u_ _%-8u_ _%-08u_ _%-10u_  _%-10u_\n", 128, 128, 128, 128, 128);
-      printf("abc %% _%p_ _%s_ _%10s_ _%-10s_ _%010s_\n", "test", "test", "test", "test", "test");
-
-      printf("abc %% %P\n", "abcdefghijklmnopq", 10);
-
-      memset(buf, 0xff, sizeof(buf));
-
-      res = snprintf(buf, 4, "abcdef");
-      printf("snprintf(buf, 4, \"abcdef\"); %i _%P_\n", res, buf, 16);
-
-      res = sprintf(buf, "abcdef");
-      printf("sprintf(buf, \"abcdef\"); %i _%P_\n", res, buf, 16);
-
-      res = snprintf(buf, 16, "ab%sef", "cd", 1);
-      printf("; %i _%P_\n", res, buf, 16);
-
-      printf("%08x %08x\n", endian_be32(16), endian_be32(a));
-
-      //      __pthread_dump_runqueue();
-
-      pthread_create(&test_thread, 0, test_thread_main, 0);
-
-      printf("created thread %p\n", test_thread);
-
-      pthread_cancel(test_thread);
-
-      void *join_retval;
-
-      __pthread_dump_runqueue();
-
-      pthread_join(test_thread, &join_retval);
-
-      __pthread_dump_runqueue();
-
-      printf("joined %p", join_retval);
-
-      /* application main function */
-      //      main(0, 0);
-
-      uint_fast8_t	i;
-
-      for (i = 0; i < 3; i++)
-	{
-	  puts("main thread");
-	  pthread_yield();
-	}
-
-      //#if 0
 #ifdef CONFIG_TIMER
       dev_timer_setperiod(&timer_dev, 0, 0xffff);
       dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 #endif
-
-      __pthread_dump_runqueue();
 
 #ifdef CONFIG_FB
       main(0, 0);

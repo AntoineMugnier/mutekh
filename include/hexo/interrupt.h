@@ -73,6 +73,18 @@ static void cpu_interrupt_savestate_disable(__reg_t *state);
 /** Restore interrupts enable state (may use stack) */
 static void cpu_interrupt_restorestate(const __reg_t *state);
 
+/** Save interrupts enable state end disable interrupts. This macro
+    must be matched with the CPU_INTERRUPT_RESTORESTATE macro. */
+#define CPU_INTERRUPT_SAVESTATE_DISABLE				\
+{								\
+  __reg_t	__interrupt_state;				\
+  cpu_interrupt_savestate_disable(&__interrupt_state);
+
+/** Restore interrupts enable state. This macro must be matched with
+    the CPU_INTERRUPT_SAVESTATE_DISABLE macro. */
+#define CPU_INTERRUPT_RESTORESTATE				\
+  cpu_interrupt_restorestate(&__interrupt_state);		\
+}
 
 #include "cpu/hexo/interrupt.h"
 

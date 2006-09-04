@@ -59,7 +59,7 @@
 typedef DEVFB_SETMODE(devfb_setmode_t);
 
 /** Fb device class setmode() methode shortcut */
-#define dev_fb_setmode(dev, ...) (dev)->chr.f_setmode(dev, __VA_ARGS__ )
+#define dev_fb_setmode(dev, ...) (dev)->drv->f.chr.f_setmode(dev, __VA_ARGS__ )
 
 
 
@@ -78,7 +78,7 @@ typedef DEVFB_SETMODE(devfb_setmode_t);
 typedef DEVFB_GETBUFFER(devfb_getbuffer_t);
 
 /** Fb device class getbuffer() methode shortcut */
-#define dev_fb_getbuffer(dev, ...) (dev)->chr.f_getbuffer(dev, __VA_ARGS__ )
+#define dev_fb_getbuffer(dev, ...) (dev)->drv->f.chr.f_getbuffer(dev, __VA_ARGS__ )
 
 
 
@@ -96,7 +96,7 @@ typedef DEVFB_GETBUFFER(devfb_getbuffer_t);
 typedef DEVFB_FLIPPAGE(devfb_flippage_t);
 
 /** Fb device class flippage() methode shortcut */
-#define dev_fb_flippage(dev, ...) (dev)->chr.f_flippage(dev, __VA_ARGS__ )
+#define dev_fb_flippage(dev, ...) (dev)->drv->f.chr.f_flippage(dev, __VA_ARGS__ )
 
 
 

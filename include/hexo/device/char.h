@@ -37,7 +37,7 @@
 
 /** Char device class read() methode shortcut */
 
-#define dev_char_read(dev, ...) (dev)->chr.f_read(dev, __VA_ARGS__ )
+#define dev_char_read(dev, ...) (dev)->drv->f.chr.f_read(dev, __VA_ARGS__ )
 /**
    Char device class read() function type.  Read bytes data from the
    device. Should not block if unable to read more bytes.
@@ -68,7 +68,7 @@ typedef DEVCHAR_READ(devchar_read_t);
 typedef DEVCHAR_WRITE(devchar_write_t);
 
 /** Char device class write() methode shortcut */
-#define dev_char_write(dev, ...) (dev)->chr.f_write(dev, __VA_ARGS__ )
+#define dev_char_write(dev, ...) (dev)->drv->f.chr.f_write(dev, __VA_ARGS__ )
 
 
 

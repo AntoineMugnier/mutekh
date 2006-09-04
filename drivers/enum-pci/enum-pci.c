@@ -27,17 +27,27 @@
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 
-//#include "enum-pci.h"
+#include "enum-pci.h"
 #include "enum-pci-private.h"
 
 /**************************************************************/
 
+#if 0
 DEVENUM_FIND(enum_pci_find)
 {
   struct enum_pci_context_s	*pv = dev->drv_pv;
-
+  struct enum_id_pci_s		*ident = id;
+  /*
+  CONTAINER_FOREACH(device_list, DLIST, device_list, &dev->children,
+  {
+    if (ident->vendor == ENUM_ID_PCI_WILDCARD)
+      ;
+  });
+  */
   return NULL;
 }
+
+#endif
 
 /*
  * device close operation
@@ -110,17 +120,25 @@ pci_enum_probe(struct device_s *dev)
  * device open operation
  */
 
+#ifndef CONFIG_STATIC_DRIVERS
+const struct driver_s	enum_pci_drv =
+{
+  .f_init		= enum_pci_init,
+  .f_cleanup		= enum_pci_cleanup,
+  .f.denum = {
+  }
+};
+#endif
+
 DEV_INIT(enum_pci_init)
 {
   struct enum_pci_context_s	*pv;
 
 #ifndef CONFIG_STATIC_DRIVERS
-  dev->f_cleanup	= enum_pci_cleanup;
-  dev->f_irq		= 0;
-  dev->denum.f_find	= enum_pci_find;
+  dev->drv = &enum_pci_drv;
 #endif
 
-  /* alocate private driver data */
+  /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
 
   if (!pv)

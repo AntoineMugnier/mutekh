@@ -30,31 +30,30 @@
 #include "../error.h"
 
 
+/** Enum device class register() function tempate. */
+#define DEVENUM_REGISTER(n)	struct device_s * (n) (struct device_s *dev, struct driver_s *drv, \
+						       uint_fast16_t id[], size_t idlen)
 
+/** Enum device class register() methode shortcut */
 
-/** Enum device class find() function tempate. */
-#define DEVENUM_FIND(n)	struct device_s * (n) (struct device_s *dev, void *id, size_t idlen)
-
-/** Enum device class find() methode shortcut */
-
-#define dev_enum_find(dev, ...) (dev)->chr.f_find(dev, __VA_ARGS__ )
+#define dev_enum_register(dev, ...) (dev)->drv->f.denum.f_register(dev, __VA_ARGS__ )
 /**
-   Enum device class find() function type.
-   Find an enumerated device matching the bus specific identifier
+   Enum device class register() function type.
+   Try to bind a driver
 
    @param dev pointer to enumerator device descriptor
    @param id pointer to identifier structure
    @param idlen size of the identifier structure
    @return pointer to first matching device
 */
-typedef DEVENUM_FIND(devenum_find_t);
+typedef DEVENUM_REGISTER(devenum_register_t);
 
 
 
 /** Enum device class methodes */
 struct dev_class_enum_s
 {
-  devenum_find_t		*f_find;
+  devenum_register_t		*f_register;
 };
 
 

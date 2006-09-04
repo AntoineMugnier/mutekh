@@ -52,7 +52,7 @@ typedef DEVTIMER_CALLBACK(timer_callback_t);
     */
 typedef DEVTIMER_SETCALLBACK(timer_setcallback_t);
 /** TIMER device class setcallback() function shortcut */
-#define dev_timer_setcallback(dev, ...) (dev)->timer.f_setcallback(dev, __VA_ARGS__ )
+#define dev_timer_setcallback(dev, ...) (dev)->drv->f.timer.f_setcallback(dev, __VA_ARGS__ )
 
 
 
@@ -69,7 +69,7 @@ typedef DEVTIMER_SETCALLBACK(timer_setcallback_t);
     */
 typedef DEVTIMER_SETPERIOD(timer_setperiod_t);
 /** TIMER device class setperiod() function shortcut */
-#define dev_timer_setperiod(dev, ...) (dev)->timer.f_setperiod(dev, __VA_ARGS__ )
+#define dev_timer_setperiod(dev, ...) (dev)->drv->f.timer.f_setperiod(dev, __VA_ARGS__ )
 
 
 
@@ -85,7 +85,7 @@ typedef DEVTIMER_SETPERIOD(timer_setperiod_t);
     */
 typedef DEVTIMER_SETVALUE(timer_setvalue_t);
 /** TIMER device class setvalue() function shortcut */
-#define dev_timer_setvalue(dev, ...) (dev)->timer.f_setvalue(dev, __VA_ARGS__ )
+#define dev_timer_setvalue(dev, ...) (dev)->drv->f.timer.f_setvalue(dev, __VA_ARGS__ )
 
 
 
@@ -101,7 +101,7 @@ typedef DEVTIMER_SETVALUE(timer_setvalue_t);
     */
 typedef DEVTIMER_GETVALUE(timer_getvalue_t);
 /** TIMER device class getvalue() function shortcut */
-#define dev_timer_getvalue(dev, ...) (dev)->timer.f_getvalue(dev, __VA_ARGS__ )
+#define dev_timer_getvalue(dev, ...) (dev)->drv->f.timer.f_getvalue(dev, __VA_ARGS__ )
 
 
 

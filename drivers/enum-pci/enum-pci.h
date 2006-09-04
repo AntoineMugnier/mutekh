@@ -22,9 +22,22 @@
 #ifndef __ENUM_PCI_H_
 #define __ENUM_PCI_H_
 
-DEVENUM_FIND(enum_pci_find);
+#include <stdint.h>
+
+DEVENUM_REGISTER(enum_pci_register);
 DEV_CLEANUP(enum_pci_cleanup);
 DEV_INIT(enum_pci_init);
+
+/* PCI device identification object */
+
+struct enum_id_pci_s
+{
+  uint16_t		vendor;
+  uint16_t		devid;
+  uint32_t		class;
+};
+
+#define ENUM_ID_PCI_WILDCARD	-1
 
 #endif
 

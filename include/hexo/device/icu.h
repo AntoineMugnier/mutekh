@@ -49,7 +49,7 @@ struct device_s;
 typedef DEVICU_ENABLE(icu_enable_t);
 
 /** ICU device class enable() function shortcut */
-#define dev_icu_enable(dev, ...) (dev)->icu.f_enable(dev, __VA_ARGS__ )
+#define dev_icu_enable(dev, ...) (dev)->drv->f.icu.f_enable(dev, __VA_ARGS__ )
 
 
 
@@ -67,11 +67,18 @@ typedef DEVICU_ENABLE(icu_enable_t);
     */
 typedef DEVICU_SETHNDL(icu_sethndl_t);
 /** ICU device class sethndl() function shortcut */
-#define dev_icu_sethndl(dev, ...) (dev)->icu.f_sethndl(dev, __VA_ARGS__ )
+#define dev_icu_sethndl(dev, ...) (dev)->drv->f.icu.f_sethndl(dev, __VA_ARGS__ )
 
 
 /** bind an to this icu irq for an already configured device */
-#define DEV_ICU_BIND(icu_dev, dev) { if ((dev)->f_irq) { dev_icu_sethndl((icu_dev), (dev)->irq, (dev)->f_irq, (dev)); dev_icu_enable((icu_dev), (dev)->irq, 1); } }
+#define DEV_ICU_BIND(icu_dev, dev)						\
+{										\
+  if ((dev)->drv->f_irq)								\
+    {										\
+      dev_icu_sethndl((icu_dev), (dev)->irq, (dev)->drv->f_irq, (dev));		\
+      dev_icu_enable((icu_dev), (dev)->irq, 1);					\
+    }										\
+}
 
 
 /** ICU device class delhndl() function template */
@@ -85,7 +92,7 @@ typedef DEVICU_SETHNDL(icu_sethndl_t);
     */
 typedef DEVICU_DELHNDL(icu_delhndl_t);
 /** ICU device class delhndl() function shortcut */
-#define dev_icu_delhndl(dev, ...) (dev)->icu.f_delhndl(dev, __VA_ARGS__ )
+#define dev_icu_delhndl(dev, ...) (dev)->drv->f.icu.f_delhndl(dev, __VA_ARGS__ )
 
 
 

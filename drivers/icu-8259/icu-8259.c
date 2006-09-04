@@ -84,15 +84,26 @@ DEV_CLEANUP(icu_8259_cleanup)
   mem_free(pv);
 }
 
+
+#ifndef CONFIG_STATIC_DRIVERS
+const struct driver_s	icu_8259_drv =
+{
+  .f_init		= icu_8259_init,
+  .f_cleanup		= icu_8259_cleanup,
+  .f.icu = {
+    .f_enable		= icu_8259_enable,
+    .f_sethndl		= icu_8259_sethndl,
+    .f_delhndl		= icu_8259_delhndl,
+  }
+};
+#endif
+
 DEV_INIT(icu_8259_init)
 {
   struct icu_8259_private_s	*pv;
 
 #ifndef CONFIG_STATIC_DRIVERS
-  dev->f_cleanup	= icu_8259_cleanup;
-  dev->icu.f_enable	= icu_8259_enable;
-  dev->icu.f_sethndl	= icu_8259_sethndl;
-  dev->icu.f_delhndl	= icu_8259_delhndl;
+  dev->drv = &icu_8259_drv;
 #endif
 
   if ((pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS))) /* FIXME allocation scope ? */

@@ -25,9 +25,7 @@
 
 #ifdef CONFIG_DEVICE_HIERARCHY
 
-static struct device_s dev_root = { } ;
-
-CONTAINER_OBJECT_FUNC(static inline, device_list, DLIST, device_list, HEXO_SPIN, device_obj, siblings);
+CONTAINER_OBJECT_FUNC(static inline, device_list, DLIST, device_list, HEXO_SPIN, device_obj, list_entry);
 
 OBJECT_CONSTRUCTOR(device_obj)
 {
@@ -52,9 +50,6 @@ device_register(struct device_s *dev,
 		struct device_s *parent,
 		void *enum_pv)
 {
-  if (!parent)
-    parent = &dev_root;
-
   dev->parent = device_obj_refnew(parent);
   dev->enum_pv = enum_pv;
 
@@ -63,20 +58,13 @@ device_register(struct device_s *dev,
   return 0;
 }
 
-CONTAINER_ITERATOR(device_list, device_dump_iterator)
-{
-  printf("device %p\n", item);
-
-  return 0;
-}
-
 void
 device_dump_list(struct device_s *root)
 {
-  if (!root)
-    root = &dev_root;
-
-  device_list_foreach(&root->children, device_dump_iterator, 0);
+  CONTAINER_FOREACH(device_list, DLIST, device_list, &root->children,
+  {
+    printf("device %p\n", item);
+  });
 }
 
 #endif

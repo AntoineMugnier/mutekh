@@ -108,15 +108,25 @@ DEV_IRQ(tty_soclib_irq)
  * device open operation
  */
 
+#ifndef CONFIG_STATIC_DRIVERS
+const struct driver_s	tty_soclib_drv =
+{
+  .f_init		= tty_soclib_init,
+  .f_cleanup		= tty_soclib_cleanup,
+  .f_irq		= tty_soclib_irq,
+  .f.chr = {
+    .f_read		= tty_soclib_read,
+    .f_write		= tty_soclib_write,
+  }
+};
+#endif
+
 DEV_INIT(tty_soclib_init)
 {
   struct tty_soclib_context_s	*pv;
 
 #ifndef CONFIG_STATIC_DRIVERS
-  dev->f_cleanup	= tty_soclib_cleanup;
-  dev->f_irq		= tty_soclib_irq;
-  dev->chr.f_read	= tty_soclib_read;
-  dev->chr.f_write	= tty_soclib_write;
+  dev->drv = &tty_soclib_drv;
 #endif
 
   /* alocate private driver data */
