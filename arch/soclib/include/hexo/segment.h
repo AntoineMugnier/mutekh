@@ -33,6 +33,9 @@
 /* cpu template segment load address defined in ld script*/
 extern __ldscript_symbol_t __cpu_data_start, __cpu_data_end;
 
+/* System global heap memory */
+extern __ldscript_symbol_t __system_heap_start;
+
 static inline void *
 arch_cpudata_alloc(void)
 {

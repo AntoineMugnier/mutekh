@@ -64,6 +64,9 @@ cpu_global_init(void)
   for (i = ARCH_GDT_FIRST_ALLOC; i < ARCH_GDT_SIZE; i++)
     gdt[i].seg.available = 1;
 
+  /* copy boot section below 1Mb for slave CPUs bootup */
+  memcpy((void*)ARCH_SMP_BOOT_ADDR, (char*)&__boot_start, (char*)&__boot_end - (char*)&__boot_start);
+
   return 0;
 }
 

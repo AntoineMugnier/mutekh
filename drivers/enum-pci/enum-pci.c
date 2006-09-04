@@ -32,22 +32,21 @@
 
 /**************************************************************/
 
-#if 0
-DEVENUM_FIND(enum_pci_find)
+DEVENUM_REGISTER(enum_pci_register)
 {
+#if 0
   struct enum_pci_context_s	*pv = dev->drv_pv;
   struct enum_id_pci_s		*ident = id;
-  /*
+
   CONTAINER_FOREACH(device_list, DLIST, device_list, &dev->children,
   {
     if (ident->vendor == ENUM_ID_PCI_WILDCARD)
       ;
   });
-  */
-  return NULL;
-}
 
+  return NULL;
 #endif
+}
 
 /*
  * device close operation

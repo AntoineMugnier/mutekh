@@ -1,7 +1,6 @@
 
 PHDRS
 {
-  signature PT_NOTE ;
   boot PT_LOAD ;
   mem PT_LOAD ;
 }
@@ -9,13 +8,14 @@ PHDRS
 SECTIONS
    {
 	/* must be within 8192 first bytes of kernel image */
-	.multiboot (INFO) : { *(.multiboot) } : signature
-
-	. = 0x00011000;
-
-	.boot : { *(.boot) } : boot
+	.multiboot (INFO) : { *(.multiboot) } : boot
 
 	. = 0x00100000;
+
+	.boot : { *(.boot) }
+	__boot_start = LOADADDR(.boot);
+	__boot_end = LOADADDR(.boot) + SIZEOF(.contextdata);
+
 	.text : { *(.text) } : mem
 	.bss : { *(.bss) }
 	.data :
@@ -27,6 +27,8 @@ SECTIONS
 			/* data depending on cpu architecture (fonction pointer variables, ...) */
 			*(.cpuarchdata)
 		}
+
+	__system_heap_start = .;
 
 	/* Task local data section */
  	.contextdata 0x0 : AT( LOADADDR(.cpudata) + SIZEOF(.cpudata ) )

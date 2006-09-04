@@ -36,6 +36,8 @@ SECTIONS
 			*(.cpuarchdata)
 		}
 
+	__system_heap_start = .;
+
 	/* Task local data section */
  	.contextdata 0x0 : AT( LOADADDR(.cpudata) + SIZEOF(.cpudata ) )
 		{
@@ -65,7 +67,6 @@ SECTIONS
 
 	__cpu_data_start = LOADADDR(.cpudata);
 	__cpu_data_end = LOADADDR(.cpudata) + SIZEOF(.cpudata);
-
    }
 
 ENTRY(cpu_boot)

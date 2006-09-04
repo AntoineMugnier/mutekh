@@ -24,7 +24,7 @@
 
 void * mem_alloc(size_t size, uint_fast8_t scope)
 {
-  static uint8_t	*addr = (void*)0x00200000;
+  static uint8_t	*addr = (void*)&__system_heap_start;
   void			*res;
 
   res = addr;

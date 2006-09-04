@@ -29,10 +29,17 @@
 #include "../types.h"
 #include "../error.h"
 
+/** device structure identification informations. wildcard values are
+    enum driver dependent */
+struct devenum_ident_s
+{
+  uint_fast16_t		vendor;
+  uint_fast16_t		device;
+};
 
 /** Enum device class register() function tempate. */
 #define DEVENUM_REGISTER(n)	struct device_s * (n) (struct device_s *dev, struct driver_s *drv, \
-						       uint_fast16_t id[], size_t idlen)
+						       struct devenum_ident_s ident[])
 
 /** Enum device class register() methode shortcut */
 

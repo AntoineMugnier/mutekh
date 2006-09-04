@@ -82,7 +82,7 @@ cpu_boot:
 	andl	$0x100, %eax
 	/* change stack offset depending on CPU id */
 	shll	$9, %eax
-	add	$0x0001fff0, %eax
+	add	$0x0001fffc, %eax
 	mov	%eax, %esp
 	/* call arch_init function */
 	call	arch_init

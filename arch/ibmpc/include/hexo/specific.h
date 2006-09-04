@@ -29,6 +29,8 @@
 #ifndef ARCH_SPECIFIC_H_
 #define ARCH_SPECIFIC_H_
 
+/* boot section address in memory */
+extern __ldscript_symbol_t __boot_start, __boot_end;
 
 /** index of the mandatory GDT null descriptor */
 #define ARCH_GDT_NULL		0
@@ -47,6 +49,9 @@
 
 /** size of the Globale Descriptor Table for x86 CPU */
 #define ARCH_GDT_SIZE		256
+
+/** CPU specific boot address for x86 SMP bootup sequence */
+#define ARCH_SMP_BOOT_ADDR	0x11000
 
 #endif
 
