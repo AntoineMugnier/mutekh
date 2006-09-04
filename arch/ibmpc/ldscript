@@ -8,7 +8,7 @@ PHDRS
 SECTIONS
    {
 	/* must be within 8192 first bytes of kernel image */
-	.multiboot (INFO) : { *(.multiboot) } : boot
+	.multiboot : { *(.multiboot) } : boot
 
 	. = 0x00100000;
 

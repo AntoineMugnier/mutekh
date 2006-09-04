@@ -152,7 +152,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   device_dump_list(&enum_pci);
 # endif
 
-  //arch_start_other_cpu(); /* let other CPUs enter main_smp() */
+  arch_start_other_cpu(); /* let other CPUs enter main_smp() */
 
   mutek_main_smp();
 
@@ -243,9 +243,10 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 	}
 #endif
 
-      while (1)
-	;
-
     }
+
+  while (1)
+    ;
+
 }
 
