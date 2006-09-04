@@ -14,7 +14,7 @@ SECTIONS
 
 	.boot : { *(.boot) }
 	__boot_start = LOADADDR(.boot);
-	__boot_end = LOADADDR(.boot) + SIZEOF(.contextdata);
+	__boot_end = LOADADDR(.boot) + SIZEOF(.boot);
 
 	.text : { *(.text) } : mem
 	.bss : { *(.bss) }
