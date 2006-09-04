@@ -1,3 +1,0 @@
-
-include test/hexo/Makefile
-
