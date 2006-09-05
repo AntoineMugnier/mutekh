@@ -80,4 +80,3 @@
 
 /* Have all device nodes sorted in a tree form */
 #define CONFIG_DEVICE_HIERARCHY
-

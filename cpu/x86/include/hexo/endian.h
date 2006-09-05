@@ -25,6 +25,9 @@
 
 #define CPU_ENDIAN_H_
 
+/** x86 CPU handle nonaligned memory access */
+#define CPU_NATIVE_NONALIGNED_ACCESS
+
 /** x86 CPU is little endian */
 #undef CPU_ENDIAN_ISBIG
 #define CPU_ENDIAN_ISLITTLE

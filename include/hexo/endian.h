@@ -148,5 +148,104 @@ static inline uint64_t endian_swap64(uint64_t x)
 #  error No bitfield endian mode defined in cpu/hexo/endian.h
 # endif
 
+/***********************************************************************
+ *		Non aligned access functions
+ */
+
+#if defined (CPU_NATIVE_NONALIGNED_ACCESS)
+/* direct non aligned word width memory access */
+# define __endian_16_na_load(a)		(*((uint16_t*)a))
+# define __endian_32_na_load(a)		(*((uint32_t*)a))
+# define __endian_64_na_load(a)		(*((uint64_t*)a))
+# define __endian_16_na_store(a, x)	(*((uint16_t*)a) = (x))
+# define __endian_32_na_store(a, x)	(*((uint32_t*)a) = (x))
+# define __endian_64_na_store(a, x)	(*((uint64_t*)a) = (x))
+#endif
+
+#if defined (CPU_NONALIGNED_ACCESS) || defined (CPU_NATIVE_NONALIGNED_ACCESS)
+/* direct non aligned word width memory access with endian perm */
+# define endian_le16_na_load(a)		endian_le16(__endian_16_na_load(a))
+# define endian_le32_na_load(a)		endian_le32(__endian_16_na_load(a))
+# define endian_le64_na_load(a)		endian_le64(__endian_16_na_load(a))
+# define endian_le16_na_store(a, x)	__endian_16_na_store(a, endian_le16(x))
+# define endian_le32_na_store(a, x)	__endian_32_na_store(a, endian_le32(x))
+# define endian_le64_na_store(a, x)	__endian_64_na_store(a, endian_le64(x))
+
+# define endian_be16_na_load(a)		endian_be16(__endian_16_na_load(a))
+# define endian_be32_na_load(a)		endian_be32(__endian_16_na_load(a))
+# define endian_be64_na_load(a)		endian_be64(__endian_16_na_load(a))
+# define endian_be16_na_store(a, x)	__endian_16_na_store(a, endian_be16(x))
+# define endian_be32_na_store(a, x)	__endian_32_na_store(a, endian_be32(x))
+# define endian_be64_na_store(a, x)	__endian_64_na_store(a, endian_be64(x))
+
+#else
+/* indirect byte width memory access with endian perm */
+
+# define __ENDIAN_NAL_L(addr, index, shift)		(((uint8_t*)addr)[index] << shift)
+# define __ENDIAN_NAS_R(addr, index, value, shift)	(((uint8_t*)addr)[index] = (uint8_t)(value >> shift))
+
+# define endian_le16_na_load(a)		(__ENDIAN_NAL_L(a, 0, 0)  | __ENDIAN_NAL_L(a, 1, 8))
+
+# define endian_le32_na_load(a)		(__ENDIAN_NAL_L(a, 0, 0)  | __ENDIAN_NAL_L(a, 1, 8)  | \
+				         __ENDIAN_NAL_L(a, 2, 16) | __ENDIAN_NAL_L(a, 3, 24))
+
+# define endian_le64_na_load(a)		(__ENDIAN_NAL_L(a, 0, 0)  | __ENDIAN_NAL_L(a, 1, 8)  | \
+					 __ENDIAN_NAL_L(a, 2, 16) | __ENDIAN_NAL_L(a, 3, 24) | \
+					 __ENDIAN_NAL_L(a, 4, 32) | __ENDIAN_NAL_L(a, 5, 40) | \
+					 __ENDIAN_NAL_L(a, 6, 48) | __ENDIAN_NAL_L(a, 7, 56))
+
+# define endian_le16_na_store(a, x)	({ const uint16_t __val = (x);			\
+					 __ENDIAN_NAS_R(a, 0, __val, 0);		\
+					 __ENDIAN_NAS_R(a, 1, __val, 8); __val; })
+
+# define endian_le32_na_store(a, x)	({ const uint32_t __val = (x);			\
+					 __ENDIAN_NAS_R(a, 0, __val, 0);		\
+					 __ENDIAN_NAS_R(a, 1, __val, 8);		\
+					 __ENDIAN_NAS_R(a, 2, __val, 16);		\
+					 __ENDIAN_NAS_R(a, 3, __val, 24); __val; })
+
+# define endian_le64_na_store(a, x)	({ const uint64_t __val = (x);			\
+					 __ENDIAN_NAS_R(a, 0, __val, 0);		\
+					 __ENDIAN_NAS_R(a, 1, __val, 8);		\
+					 __ENDIAN_NAS_R(a, 2, __val, 16);		\
+					 __ENDIAN_NAS_R(a, 3, __val, 24);		\
+					 __ENDIAN_NAS_R(a, 4, __val, 32);		\
+					 __ENDIAN_NAS_R(a, 5, __val, 40);		\
+					 __ENDIAN_NAS_R(a, 6, __val, 48);		\
+					 __ENDIAN_NAS_R(a, 7, __val, 56); __val; })
+
+# define endian_be16_na_load(a)		(__ENDIAN_NAL_L(a, 0, 8)  | __ENDIAN_NAL_L(a, 1, 0))
+
+# define endian_be32_na_load(a)		(__ENDIAN_NAL_L(a, 0, 24)  | __ENDIAN_NAL_L(a, 1, 16)  | \
+				         __ENDIAN_NAL_L(a, 2, 8) | __ENDIAN_NAL_L(a, 3, 0))
+
+# define endian_be64_na_load(a)		(__ENDIAN_NAL_L(a, 0, 56)  | __ENDIAN_NAL_L(a, 1, 48)  | \
+					 __ENDIAN_NAL_L(a, 2, 40) | __ENDIAN_NAL_L(a, 3, 32) | \
+					 __ENDIAN_NAL_L(a, 4, 24) | __ENDIAN_NAL_L(a, 5, 16) | \
+					 __ENDIAN_NAL_L(a, 6, 8) | __ENDIAN_NAL_L(a, 7, 0))
+
+# define endian_be16_na_store(a, x)	({ const uint16_t __val = (x);			\
+					 __ENDIAN_NAS_R(a, 0, __val, 8);		\
+					 __ENDIAN_NAS_R(a, 1, __val, 0); __val; })
+
+# define endian_be32_na_store(a, x)	({ const uint32_t __val = (x);			\
+					 __ENDIAN_NAS_R(a, 0, __val, 24);		\
+					 __ENDIAN_NAS_R(a, 1, __val, 16);		\
+					 __ENDIAN_NAS_R(a, 2, __val, 8);		\
+					 __ENDIAN_NAS_R(a, 3, __val, 0); __val; })
+
+# define endian_be64_na_store(a, x)	({ const uint64_t __val = (x);			\
+					 __ENDIAN_NAS_R(a, 0, __val, 56);		\
+					 __ENDIAN_NAS_R(a, 1, __val, 48);		\
+					 __ENDIAN_NAS_R(a, 2, __val, 40);		\
+					 __ENDIAN_NAS_R(a, 3, __val, 32);		\
+					 __ENDIAN_NAS_R(a, 4, __val, 24);		\
+					 __ENDIAN_NAS_R(a, 5, __val, 16);		\
+					 __ENDIAN_NAS_R(a, 6, __val, 8);		\
+					 __ENDIAN_NAS_R(a, 7, __val, 0); __val; })
+
+
+#endif
+
 #endif
 
