@@ -50,21 +50,25 @@ struct		ether_header
 #define	ETHER_IS_VALID_LEN(foo)	\
 	((foo) >= ETHER_MIN_LEN && (foo) <= ETHER_MAX_LEN)
 
-
 /*
  * -----8<-----
  */
 
-#include <hexo/device.h>
 #include <netinet/packet.h>
+#include <netinet/ether.h>
+
+/*
+ * Ethernet interface.
+ */
+
+struct	ether_interface_s
+{
+  /* XXX */
+};
+
 #include <netinet/protos.h>
 
-void		ethernet_push(struct device_s	*dev,
-			      struct packet_s	*packet);
-void		ethernet_init(void);
-void		ethernet_cleanup(void);
-error_t		ethernet_register(struct ether_proto_s	*proto);
-
+NET_PUSHPKT(ether_push);
 
 #endif
 

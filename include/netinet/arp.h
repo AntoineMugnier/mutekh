@@ -88,8 +88,8 @@ struct	rarp_interface_s
 
 #include <netinet/protos.h>
 
-ETH_PUSH(arp_push);
-ETH_PUSH(rarp_push);
+NET_PUSHPKT(arp_push);
+NET_PUSHPKT(rarp_push);
 
 #endif
 

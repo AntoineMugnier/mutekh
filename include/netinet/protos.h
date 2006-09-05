@@ -2,41 +2,65 @@
 #define NETINET_PROTOS_H_
 
 #include <hexo/types.h>
+#include <hexo/device.h>
 #include <netinet/packet.h>
-#include <netinet/ether.h>
+
+#include <hexo/gpct_platform_hexo.h>
+#include <hexo/gpct_lock_hexo.h>
+#include <gpct/cont_hashlist.h>
 
 /*
- * Prototype of a push function for ethernel level protocols.
+ * Container type for protocols list.
  */
 
-#define ETH_PUSH(f)	void (f)(struct ether_addr *source,		\
-				 struct ether_addr *target,		\
-				 struct packet_s *packet)
+CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, NOLOCK, 8, UNSIGNED);
 
-typedef ETH_PUSH(ether_push_t);
+/*
+ * Prototype of a push function.
+ */
 
+#define NET_PUSHPKT(f)	void (f)(struct device_s	*dev,		\
+				 struct net_packet_s	*packet,	\
+				 net_protos_root_t	protocols)
+
+typedef NET_PUSHPKT(net_pushpkt_t);
+
+#include <netinet/ether.h>
 #include <netinet/arp.h>
 #include <netinet/ip.h>
 #include <netinet/dummy.h>
 
 /*
- * This structure defines a protocol
+ * This structure defines a protocol.
  */
 
-struct				ether_proto_s
+struct					net_proto_s
 {
   const char				*name;	/* the name of the protocol */
   uint_fast16_t				id;	/* protocol identifier */
-  ether_push_t				*pushpkt; /* push packet function */
+  net_pushpkt_t				*pushpkt; /* push packet function */
   union
   {
+    const struct ether_interface_s	*ether;	/* ethernet interface */
     const struct ip_interface_s		*ip;	/* ip protocol interface */
     const struct arp_interface_s	*arp;	/* arp protocol interface */
     const struct rarp_interface_s	*rarp;	/* rarp protocol interface */
+#if 0
+    const struct icmp_interface_s	*icmp;	/* icmp protocol interface */
+    const struct udp_interface_s	*udp;	/* udp protocol interface */
+    const struct tcp_interface_s	*tcp;	/* tcp protocol interface */
+#endif
     const struct dummy_interface_s	*dummy;	/* fake protocol for debug */
     const void				*other;	/* other protocol interface */
   } f;
+  net_protos_entry_t			list_entry;
 };
+
+/*
+ * Container functions.
+ */
+
+CONTAINER_FUNC(static inline, net_protos, HASHLIST, net_protos, NOLOCK, list_entry, UNSIGNED, id);
 
 #endif
 

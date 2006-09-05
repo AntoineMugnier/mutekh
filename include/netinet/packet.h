@@ -13,12 +13,12 @@
  * This structure defines a packet.
  */
 
-struct		packet_s
+struct		net_packet_s
 {
-  uint8_t	*buf[NETWORK_MAX_STAGES];	/* pointers to subpackets */
+  uint8_t	*header[NETWORK_MAX_STAGES];	/* pointers to subpackets */
   uint_fast16_t	size[NETWORK_MAX_STAGES];	/* size of subpackets */
   uint_fast8_t	stage;				/* current stage */
-  uint8_t	*packet;			/* raw packet (fragmented) */
+  uint8_t	*packet;			/* raw packet */
 };
 
 #endif
