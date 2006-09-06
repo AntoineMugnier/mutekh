@@ -25,6 +25,16 @@ CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, NOLOCK, 8, UNSIGNED);
 
 typedef NET_PUSHPKT(net_pushpkt_t);
 
+/*
+ * Prototype of the function used to prepare a packet.
+ */
+
+#define NET_PREPAREPKT(f)	void (f)(struct device_s	*dev,	   \
+					 struct net_packet_s	*packet,   \
+					 net_protos_root_t	protocols)
+
+typedef NET_PREPAREPKT(net_preparepkt_t);
+
 #include <netinet/ether.h>
 #include <netinet/arp.h>
 #include <netinet/ip.h>
@@ -39,6 +49,7 @@ struct					net_proto_s
   const char				*name;	/* the name of the protocol */
   uint_fast16_t				id;	/* protocol identifier */
   net_pushpkt_t				*pushpkt; /* push packet function */
+  net_preparepkt_t			*preparepkt; /* prepare packet func */
   union
   {
     const struct ether_interface_s	*ether;	/* ethernet interface */

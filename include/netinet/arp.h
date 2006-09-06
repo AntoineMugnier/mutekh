@@ -2,6 +2,7 @@
 #define NETINET_ARP_H_
 
 #include <hexo/types.h>
+#include <netinet/ether.h>
 
 /* ARP protocol opcodes. */
 #define	ARPOP_REQUEST	1		/* ARP request.  */
@@ -66,7 +67,14 @@ struct		ether_arp
  */
 
 #include <netinet/packet.h>
-#include <netinet/ether.h>
+
+#define NET_ARP_REQUEST(f)	void (f)(uint8_t*	address)
+
+typedef NET_ARP_REQUEST(net_arp_request_t);
+
+#define NET_RARP_REQUEST(f)	void (f)()
+
+typedef NET_RARP_REQUEST(net_rarp_request_t);
 
 /*
  * ARP interface.
@@ -74,7 +82,7 @@ struct		ether_arp
 
 struct	arp_interface_s
 {
-  /* XXX */
+  net_arp_request_t	*request;
 };
 
 /*
@@ -83,13 +91,21 @@ struct	arp_interface_s
 
 struct	rarp_interface_s
 {
-  /* XXX */
+  net_rarp_request_t	*request;
 };
 
 #include <netinet/protos.h>
 
 NET_PUSHPKT(arp_push);
+NET_PREPAREPKT(arp_prepare);
+NET_ARP_REQUEST(arp_request);
+
 NET_PUSHPKT(rarp_push);
+NET_PREPAREPKT(rarp_prepare);
+NET_RARP_REQUEST(rarp_request);
+
+extern const struct net_proto_s	arp_protocol;
+extern const struct net_proto_s	rarp_protocol;
 
 #endif
 

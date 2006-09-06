@@ -22,8 +22,9 @@ static const struct dummy_interface_s	dummy_interface =
 const struct net_proto_s	dummy_protocol =
   {
     .name = "dummy",
-    .id = ETHERTYPE_ARP,
+    .id = 0, /* XXX */
     .pushpkt = dummy_push,
+    .preparepkt = NULL,
     .f.dummy = &dummy_interface
   };
 

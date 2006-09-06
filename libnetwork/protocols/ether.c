@@ -3,6 +3,7 @@
  *
  */
 
+#include <hexo/alloc.h>
 #include <netinet/ether.h>
 #include <netinet/packet.h>
 #include <netinet/protos.h>
@@ -16,7 +17,7 @@
 
 static const struct ether_interface_s	ether_interface =
 {
-  /* XXX */
+  .build = ether_build
 };
 
 const struct net_proto_s	ether_protocol =
@@ -24,6 +25,7 @@ const struct net_proto_s	ether_protocol =
     .name = "Ethernet",
     .id = 0,
     .pushpkt = ether_push,
+    .preparepkt = ether_prepare,
     .f.ether = &ether_interface
   };
 
@@ -82,5 +84,59 @@ NET_PUSHPKT(ether_push)
   });
 
   printf("NETWORK: no protocol to handle packet (id = 0x%x)\n", proto);
+}
+
+/*
+ * This function prepares an Ethernet packet.
+ */
+
+NET_PREPAREPKT(ether_prepare)
+{
+  uint_fast16_t		total = 0;
+  uint_fast8_t		i;
+
+  packet->size[packet->stage] = sizeof (struct ether_header) +
+    packet->size[packet->stage + 1];
+  for (i = packet->stage; i < NETWORK_MAX_STAGES; i++)
+    total += packet->size[i];
+
+  /* XXX about the fragmentation ? */
+
+  packet->packet = mem_alloc(total, MEM_SCOPE_THREAD);
+
+  packet->header[packet->stage] = packet->packet;
+}
+
+/*
+ * This function builds an Ethernet packet.
+ */
+
+NET_ETHER_BUILD(ether_build)
+{
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  struct ether_header	aligned;
+#endif
+  struct ether_header	*hdr;
+
+  /* get a pointer to the header */
+  hdr = (struct ether_header*)packet->header[packet->stage];
+
+  /* align the packet on 16 bits if necessary */
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  if (!ALIGNED(hdr, sizeof (uint16_t)))
+    {
+      memcpy(&aligned, hdr, sizeof (struct ether_header));
+      hdr = &aligned;
+    }
+#endif
+
+  /* fill the header */
+  memcpy(hdr->ether_shost, packet->sMAC, packet->MAClen);
+  memcpy(hdr->ether_dhost, packet->tMAC, packet->MAClen);
+  net_be16_store(hdr->ether_type, proto);
+
+  /* XXX ready to be sent */
+
+  dummy_push(dev, packet, protocols);
 }
 
