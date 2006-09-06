@@ -24,12 +24,12 @@
 # define net_be64_load(a)		endian_be64(a)
 #else
 /* otherwise, use non-aligned accesses */
-# define net_le16_load(a)		endian_le16_na_load(a)
-# define net_le32_load(a)		endian_le32_na_load(a)
-# define net_le64_load(a)		endian_le64_na_load(a)
-# define net_be16_load(a)		endian_be16_na_load(a)
-# define net_be32_load(a)		endian_be32_na_load(a)
-# define net_be64_load(a)		endian_be64_na_load(a)
+# define net_le16_load(a)		endian_le16_na_load(&a)
+# define net_le32_load(a)		endian_le32_na_load(&a)
+# define net_le64_load(a)		endian_le64_na_load(&a)
+# define net_be16_load(a)		endian_be16_na_load(&a)
+# define net_be32_load(a)		endian_be32_na_load(&a)
+# define net_be64_load(a)		endian_be64_na_load(&a)
 #endif
 
 /*
