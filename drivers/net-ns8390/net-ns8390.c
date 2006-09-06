@@ -253,8 +253,55 @@ static error_t			net_ns8390_probe(struct net_ns8390_context_s	*pv)
 DEVCHAR_READ(net_ns8390_read)
 {
   struct net_ns8390_context_s	*pv = dev->drv_pv;
+  uint_fast8_t			current;
+  uint_fast8_t			next;
+  uint_fast16_t			packet;
+  uint_fast16_t			fragment;
+  uint_fast16_t			total;
+  uint_fast16_t			length;
+  struct net_ns8380_header_s	header;
 
-  return 0;
+  if (!(cpu_io_read_8(pv->base + D8390_P0_RSR) & D8390_RSTAT_PRX))
+    return 0;
+  next = cpu_io_read_8(pv->base + D8390_P0_BOUND) + 1;
+  if (next >= pv->mem)
+    next = pv->rx_start;
+
+  cpu_io_write_8(pv->base + D8390_P0_COMMAND, D8390_COMMAND_PS1);
+  current = cpu_io_read_8(pv->base + D8390_P1_CURR);
+  cpu_io_write_8(pv->base + D8390_P0_COMMAND, D8390_COMMAND_PS0);
+  if (current >= pv->mem)
+    current = pv->rx_start;
+
+  if (current == next)
+    return 0;
+
+  packet = next << 8;
+  net_ns8390_pio_read(pv, packet, &header, 4);
+  packet += sizeof (struct net_ns8380_header_s);
+
+  length = header.size - 4;
+  total = length;
+  if (!(header.status & D8390_RSTAT_PRX) ||
+      length < ETH_ZLEN || length > ETH_FRAME_LEN)
+    return 0;
+
+  fragment = (pv->mem << 8) - packet;
+
+  if (length > fragment)
+    {
+      net_ns8390_pio_read(pv, packet, data, fragment);
+      packet = pv->rx_start << 8;
+      data += fragment;
+      length -= fragment;
+    }
+  net_ns8390_pio_read(pv, packet, data, length);
+
+  next = header.next;
+  if (next == pv->rx_start)
+    next = pv->mem;
+  cpu_io_write_8(pv->base + D8390_P0_BOUND, next - 1);
+  return total;
 }
 
 /*
@@ -299,6 +346,10 @@ DEV_CLEANUP(net_ns8390_cleanup)
 DEV_INIT(net_ns8390_init)
 {
   struct net_ns8390_context_s	*pv;
+
+#ifndef CONFIG_STATIC_DRIVERS
+  dev->drv = &net_ns8390_drv;
+#endif
 
   /* driver private data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

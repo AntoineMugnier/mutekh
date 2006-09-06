@@ -9,6 +9,8 @@
 
 #define TEST_FRAG
 
+extern struct device_s enum_pci;
+
 /*
  * test main.
  */
@@ -68,9 +70,35 @@ int_fast8_t		main()
 #endif
   net_protos_destroy(&protocols);
 #endif
-  struct device_s	drv = DEVICE_INITIALIZER;
+  struct device_s	ne2000 = DEVICE_INITIALIZER;
+  struct net_packet_s	pkt;
+  net_protos_root_t	protocols;
+  uint8_t		*buff[1514];
+  size_t		len;
 
-  net_ns8390_init(&drv);
+  /* XXX plutot que d'initialiser un autre device, reprendre celui de l'enum pci */
+
+  net_ns8390_init(&ne2000);
+
+  net_protos_init(&protocols);
+
+  net_protos_push(&protocols, &ether_protocol);
+  net_protos_push(&protocols, &arp_protocol);
+
+  while (1)
+    {
+      if ((len = dev_char_read(&ne2000, buff, 1514)))
+	{
+	  printf("New frame\n");
+	  memset(&pkt, 0, sizeof (pkt));
+	  pkt.packet = buff;
+	  pkt.stage = 0;
+	  pkt.header[0] = buff;
+	  pkt.size[0] = len;
+
+	  ether_push(&ne2000, &pkt, protocols);
+	}
+    }
 
   while (1)
     ;

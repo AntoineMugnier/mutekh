@@ -51,3 +51,5 @@ clean:
 
 re: clean all
 
+floppy: all libnetwork/test.o
+	mcopy -o -i floppy.img $(KOUT) ::/modules

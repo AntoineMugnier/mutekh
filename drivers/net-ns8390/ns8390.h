@@ -71,4 +71,11 @@
 #define D8390_RXBUF_END		32
 #define D8390_PAGE_SIZE         256
 
+struct		net_ns8380_header_s
+{
+  uint8_t	status;
+  uint8_t	next;
+  uint16_t	size;
+} __attribute__ ((packed));
+
 #endif
