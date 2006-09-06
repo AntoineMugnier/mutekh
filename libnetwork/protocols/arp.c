@@ -117,8 +117,8 @@ NET_ARP_REQUEST(arp_request)
   memcpy(packet->header[packet->stage], hdr, sizeof (struct ether_arp));
 #endif
 
-  /* XXX packet->sMAC = my MAC */
-  packet->tMAC = "\xff\xff\xff\xff\xff\xff";
+  packet->sMAC = hdr->arp_sha;
+  packet->tMAC = hdr->arp_tha;
 
   packet->stage--;
   ether_build(dev, packet, protocols, ETHERTYPE_ARP);

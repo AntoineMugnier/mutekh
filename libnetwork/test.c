@@ -15,6 +15,7 @@
 
 int_fast8_t		main()
 {
+#if 0
   struct net_packet_s	pkt;
   uint8_t		buf[1500];
   net_protos_root_t	protocols;
@@ -66,6 +67,10 @@ int_fast8_t		main()
   arp_request("\xc0\xa8\x01\x03");
 #endif
   net_protos_destroy(&protocols);
+#endif
+  struct device_s	drv = DEVICE_INITIALIZER;
+
+  net_ns8390_init(&drv);
 
   while (1)
     ;

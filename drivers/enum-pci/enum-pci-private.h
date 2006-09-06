@@ -39,6 +39,18 @@
 # define PCI_CONFREG_HTYPE_MULTI	0x80 /* multi-function device */
 #define PCI_CONFREG_BIST		0x0f
 
+#define PCI_BASE_ADDRESS_0      0x10    /* 32 bits */
+#define PCI_BASE_ADDRESS_1      0x14    /* 32 bits */
+#define PCI_BASE_ADDRESS_2      0x18    /* 32 bits */
+#define PCI_BASE_ADDRESS_3      0x1c    /* 32 bits */
+#define PCI_BASE_ADDRESS_4      0x20    /* 32 bits */
+#define PCI_BASE_ADDRESS_5      0x24    /* 32 bits */
+
+#ifndef	PCI_BASE_ADDRESS_IO_MASK
+#define	PCI_BASE_ADDRESS_IO_MASK       (~0x03)
+#endif
+#define	PCI_BASE_ADDRESS_SPACE_IO	0x01
+
 #define PCI_CONF_MAXBUS			8
 #define PCI_CONF_MAXDEVICE		32
 #define PCI_CONF_MAXFCN			8

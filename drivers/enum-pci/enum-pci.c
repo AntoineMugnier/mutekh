@@ -70,6 +70,8 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
   struct enum_pv_pci_s		*enum_pv;
   uint16_t			vendor;
   uint8_t			htype;
+  uint16_t			io;
+  uint16_t			reg;
 
   vendor = pci_confreg_read(bus, dv, fn, PCI_CONFREG_VENDOR);
 
@@ -84,8 +86,21 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
 	  enum_pv->devid = pci_confreg_read(bus, dv, fn, PCI_CONFREG_DEVID);
 	  enum_pv->class = pci_confreg_read(bus, dv, fn, PCI_CONFREG_CLASS);
 
-	  printf("PCI device %04x:%04x class %x06x\n",
-		 vendor, enum_pv->devid, enum_pv->class);
+	  for (reg = PCI_BASE_ADDRESS_0; reg <= PCI_BASE_ADDRESS_5; reg += 4)
+	    {
+	      io = pci_confreg_read(bus, dv, fn, reg);
+
+	      if ((io & PCI_BASE_ADDRESS_IO_MASK) == 0 ||
+		  (io & PCI_BASE_ADDRESS_SPACE_IO) == 0)
+		continue;
+	      io &= PCI_BASE_ADDRESS_IO_MASK;
+
+	      dev->addr[0] = io;
+	      break;
+	    }
+
+	  printf("PCI device %04x:%04x class %x06x, io base %04x\n",
+		 vendor, enum_pv->devid, enum_pv->class, dev->addr[0]);
 
 	  device_register(new, dev, enum_pv);
 
