@@ -119,6 +119,48 @@ static void	net_ns8390_pio_write(struct net_ns8390_context_s	*pv,
 }
 
 /*
+ * reset the device.
+ */
+
+static void	net_ns8390_reset(struct net_ns8390_context_s	*pv)
+{
+  uint_fast8_t	i;
+
+  /* setup transmit/receive buffer */
+  cpu_io_write_8(pv->base + D8390_P0_COMMAND,
+		 D8390_COMMAND_PS0 | D8390_COMMAND_RD2 | D8390_COMMAND_STP);
+  if (pv->mode_16bits)
+    cpu_io_write_8(pv->base + D8390_P0_DCR, 0x49);
+  else
+    cpu_io_write_8(pv->base + D8390_P0_DCR, 0x48);
+  cpu_io_write_8(pv->base + D8390_P0_RBCR0, 0);
+  cpu_io_write_8(pv->base + D8390_P0_RBCR1, 0);
+  cpu_io_write_8(pv->base + D8390_P0_RCR, 0x20);
+  cpu_io_write_8(pv->base + D8390_P0_TCR, 0x2);
+  cpu_io_write_8(pv->base + D8390_P0_TPSR, pv->tx_start);
+  cpu_io_write_8(pv->base + D8390_P0_PSTART, pv->rx_start);
+  cpu_io_write_8(pv->base + D8390_P0_PSTOP, pv->mem);
+  cpu_io_write_8(pv->base + D8390_P0_BOUND, pv->mem - 1);
+  cpu_io_write_8(pv->base + D8390_P0_ISR, 0xff);
+  cpu_io_write_8(pv->base + D8390_P0_IMR, 0);
+
+  /* setup MAC address */
+  cpu_io_write_8(pv->base + D8390_P0_COMMAND,
+		 D8390_COMMAND_PS1 | D8390_COMMAND_RD2 | D8390_COMMAND_STP);
+  for (i = 0; i < ETH_ALEN; i++)
+    cpu_io_write_8(pv->base + D8390_P1_PAR0 + i, pv->mac[i]);
+  for (i = 0; i < ETH_ALEN; i++)
+    cpu_io_write_8(pv->base + D8390_P1_MAR0 + i, 0xff);
+
+  cpu_io_write_8(pv->base + D8390_P1_CURR, pv->rx_start);
+  cpu_io_write_8(pv->base + D8390_P0_COMMAND,
+		 D8390_COMMAND_PS0 | D8390_COMMAND_RD2 | D8390_COMMAND_STA);
+  cpu_io_write_8(pv->base + D8390_P0_ISR, 0xff);
+  cpu_io_write_8(pv->base + D8390_P0_TCR, 0x0);
+  cpu_io_write_8(pv->base + D8390_P0_RCR, 0x4);
+}
+
+/*
  * probe the device.
  */
 
@@ -210,6 +252,8 @@ static error_t			net_ns8390_probe(struct net_ns8390_context_s	*pv)
 
 DEVCHAR_READ(net_ns8390_read)
 {
+  struct net_ns8390_context_s	*pv = dev->drv_pv;
+
   return 0;
 }
 
@@ -219,7 +263,22 @@ DEVCHAR_READ(net_ns8390_read)
 
 DEVCHAR_WRITE(net_ns8390_write)
 {
-  return 0;
+  struct net_ns8390_context_s	*pv = dev->drv_pv;
+  size_t			len;
+
+  net_ns8390_pio_write(pv, data, pv->tx_start << 8, size);
+  len = size;
+  if (len < ETH_ZLEN)
+    len = ETH_ZLEN;
+  cpu_io_write_8(pv->base + D8390_P0_COMMAND,
+		 D8390_COMMAND_PS0 | D8390_COMMAND_RD2 | D8390_COMMAND_STA);
+  cpu_io_write_8(pv->base + D8390_P0_TPSR, pv->tx_start);
+  cpu_io_write_8(pv->base + D8390_P0_TBCR0, len);
+  cpu_io_write_8(pv->base + D8390_P0_TBCR0, len >> 8);
+  cpu_io_write_8(pv->base + D8390_P0_COMMAND, D8390_COMMAND_PS0 |
+		 D8390_COMMAND_TXP | D8390_COMMAND_RD2 | D8390_COMMAND_STA);
+
+  return size;
 }
 
 /*
@@ -253,6 +312,8 @@ DEV_INIT(net_ns8390_init)
 
   if (net_ns8390_probe(pv))
     printf("No NE2000 device found\n");
+
+  net_ns8390_reset(pv);
 
   return 0;
 }
