@@ -11,6 +11,8 @@
 
 extern struct device_s enum_pci;
 
+struct device_s	ne2000 = DEVICE_INITIALIZER;
+
 /*
  * test main.
  */
@@ -70,7 +72,6 @@ int_fast8_t		main()
 #endif
   net_protos_destroy(&protocols);
 #endif
-  struct device_s	ne2000 = DEVICE_INITIALIZER;
   struct net_packet_s	pkt;
   net_protos_root_t	protocols;
   uint8_t		*buff[1514];
@@ -85,8 +86,15 @@ int_fast8_t		main()
   net_protos_push(&protocols, &ether_protocol);
   net_protos_push(&protocols, &arp_protocol);
 
+  uint_fast8_t	chiche = 0;
+
   while (1)
     {
+      if (!chiche)
+	{
+	  arp_request("\xc0\xa8\xda\x01");
+	  chiche = 1;
+	}
       if ((len = dev_char_read(&ne2000, buff, 1514)))
 	{
 	  printf("New frame\n");

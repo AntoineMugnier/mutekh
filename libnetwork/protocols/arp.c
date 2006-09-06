@@ -110,6 +110,9 @@ NET_ARP_REQUEST(arp_request)
   net_be16_store(hdr->arp_op, ARPOP_REQUEST);
   /* XXX sha = my MAC addr */
   /* XXX spa = my IP addr */
+  memcpy(hdr->arp_sha, "\x52\x54\x00\x12\x34\x56", hdr->arp_hln);
+  memcpy(hdr->arp_spa, "\xc0\xa8\cda\x02", hdr->arp_pln);
+
   memcpy(hdr->arp_tha, "\xff\xff\xff\xff\xff\xff", hdr->arp_hln);
   memcpy(hdr->arp_tpa, address, hdr->arp_pln);
 
@@ -119,6 +122,7 @@ NET_ARP_REQUEST(arp_request)
 
   packet->sMAC = hdr->arp_sha;
   packet->tMAC = hdr->arp_tha;
+  packet->MAClen = ETH_ALEN;
 
   packet->stage--;
   ether_build(dev, packet, protocols, ETHERTYPE_ARP);

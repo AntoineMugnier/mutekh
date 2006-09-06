@@ -107,6 +107,8 @@ NET_PREPAREPKT(ether_prepare)
   packet->header[packet->stage] = packet->packet;
 }
 
+extern struct device_s	ne2000;
+
 /*
  * This function builds an Ethernet packet.
  */
@@ -125,8 +127,8 @@ NET_ETHER_BUILD(ether_build)
 #ifdef CONFIG_NETWORK_AUTOALIGN
   if (!ALIGNED(hdr, sizeof (uint16_t)))
     {
-      memcpy(&aligned, hdr, sizeof (struct ether_header));
       hdr = &aligned;
+      memset(hdr, 0, sizeof (struct ether_header));
     }
 #endif
 
@@ -135,8 +137,13 @@ NET_ETHER_BUILD(ether_build)
   memcpy(hdr->ether_dhost, packet->tMAC, packet->MAClen);
   net_be16_store(hdr->ether_type, proto);
 
-  /* XXX ready to be sent */
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  memcpy(packet->header[packet->stage], hdr, sizeof (struct ether_header));
+#endif
+
+  /* XXX send packet */
 
   dummy_push(dev, packet, protocols);
+  dev_char_write(&ne2000, packet->packet, packet->size[packet->stage]);
 }
 
