@@ -70,5 +70,7 @@ struct	ether_interface_s
 
 NET_PUSHPKT(ether_push);
 
+extern const struct net_proto_s	ether_protocol;
+
 #endif
 

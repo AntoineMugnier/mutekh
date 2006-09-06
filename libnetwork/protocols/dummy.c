@@ -22,7 +22,7 @@ static const struct dummy_interface_s	dummy_interface =
 const struct net_proto_s	dummy_protocol =
   {
     .name = "dummy",
-    .id = 0,
+    .id = ETHERTYPE_ARP,
     .pushpkt = dummy_push,
     .f.dummy = &dummy_interface
   };
@@ -69,7 +69,15 @@ static void		dummy_hexdump(uint8_t	*data,
 
 NET_PUSHPKT(dummy_push)
 {
-  printf("Dummy packet dump:\n");
+  printf("Source MAC: %2x:%2x:%2x:%2x:%2x:%2x\n",
+	 packet->sMAC[0], packet->sMAC[1], packet->sMAC[2],
+	 packet->sMAC[3], packet->sMAC[4], packet->sMAC[5]);
+
+  printf("Target MAC: %2x:%2x:%2x:%2x:%2x:%2x\n",
+	 packet->tMAC[0], packet->tMAC[1], packet->tMAC[2],
+	 packet->tMAC[3], packet->tMAC[4], packet->tMAC[5]);
+
+  printf("Packet dump:\n");
 
   dummy_hexdump(packet->header[packet->stage], packet->size[packet->stage]);
 }

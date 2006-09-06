@@ -19,7 +19,7 @@ static const struct ether_interface_s	ether_interface =
   /* XXX */
 };
 
-const struct net_proto_s	ether_protocol_eth =
+const struct net_proto_s	ether_protocol =
   {
     .name = "Ethernet",
     .id = 0,
@@ -33,24 +33,41 @@ const struct net_proto_s	ether_protocol_eth =
 
 NET_PUSHPKT(ether_push)
 {
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  struct ether_header	aligned;
+#endif
   struct ether_header	*hdr;
   uint_fast16_t		proto;
 
   /* get the good header */
   hdr = (struct ether_header*)packet->header[packet->stage];
 
-  /* fill some info */
-#if 0
-  packet->sMAC = ether->ether_shost;
-  packet->tMAC = ether->ether_dhost;
+  /* align the packet on 16 bits if necessary */
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  if (!ALIGNED(hdr, sizeof (uint16_t)))
+    {
+      memcpy(&aligned, hdr, sizeof (struct ether_header));
+      hdr = &aligned;
+    }
 #endif
 
+  /* fill some info */
+  packet->MAClen = sizeof(struct ether_addr);
+  packet->sMAC = hdr->ether_shost;
+  packet->tMAC = hdr->ether_dhost;
+
   /* prepare packet for net stage */
-  /* XXX */
   packet->stage++;
+  if (!packet->header[packet->stage])
+    {
+      packet->header[packet->stage] = packet->packet +
+	sizeof(struct ether_header);
+      packet->size[packet->stage] = packet->size[packet->stage - 1] -
+	sizeof(struct ether_header);
+    }
 
   /* dispatch to the matching protocol */
-  proto = ntohs(hdr->ether_type);
+  proto = net_be16_load(hdr->ether_type);
   CONTAINER_FOREACH(net_protos, HASHLIST, net_protos, &protocols,
   {
     struct net_proto_s	*p;
@@ -63,5 +80,7 @@ NET_PUSHPKT(ether_push)
 	return ;
       }
   });
+
+  printf("NETWORK: no protocol to handle packet (id = 0x%x)\n", proto);
 }
 
