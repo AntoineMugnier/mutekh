@@ -12,8 +12,8 @@
 //DEV_IRQ(uart_8250_irq);
 DEV_INIT(net_ns8390_init);
 DEV_CLEANUP(net_ns8390_cleanup);
-DEVCHAR_READ(net_ns8390_read);
-DEVCHAR_WRITE(net_ns8390_write);
+DEVNET_READ(net_ns8390_read);
+DEVNET_WRITE(net_ns8390_write);
 
 #endif
 

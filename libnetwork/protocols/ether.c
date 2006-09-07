@@ -144,6 +144,6 @@ NET_ETHER_BUILD(ether_build)
   /* XXX send packet */
 
   dummy_push(dev, packet, protocols);
-  dev_char_write(&ne2000, packet->packet, packet->size[packet->stage]);
+  dev_net_write(dev, packet->packet, packet->size[packet->stage]);
 }
 

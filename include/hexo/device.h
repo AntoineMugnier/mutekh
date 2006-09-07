@@ -50,6 +50,7 @@ typedef DEV_IRQ(dev_irq_t);
 #include "device/fb.h"
 #include "device/timer.h"
 #include "device/enum.h"
+#include "device/net.h"
 
 
 
@@ -64,7 +65,7 @@ typedef DEV_IRQ(dev_irq_t);
 /** Common device class init() function type. Must be called before
     using any other functions on the device. This function will
     allocate device private data.
-    
+
     * @param dev pointer to device descriptor
     * @return negative error code, 0 on succes
     */
@@ -125,6 +126,8 @@ struct driver_s
     struct dev_class_timer_s	timer;
     /** device enumerator class */
     struct dev_class_enum_s	denum;
+    /** network devices */
+    struct dev_class_net_s	net;
   } f;
 };
 

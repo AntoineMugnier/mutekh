@@ -85,17 +85,13 @@ int_fast8_t		main()
 
   net_protos_push(&protocols, &ether_protocol);
   net_protos_push(&protocols, &arp_protocol);
+  net_protos_push(&protocols, &rarp_protocol);
 
-  uint_fast8_t	chiche = 0;
+  rarp_request(&ne2000, protocols, "\x52\x54\x00\x12\x34\x56");
 
   while (1)
     {
-      if (!chiche)
-	{
-	  arp_request("\xc0\xa8\xda\x01");
-	  chiche = 1;
-	}
-      if ((len = dev_char_read(&ne2000, buff, 1514)))
+      if ((len = dev_net_read(&ne2000, buff, 1514)))
 	{
 	  printf("New frame\n");
 	  memset(&pkt, 0, sizeof (pkt));

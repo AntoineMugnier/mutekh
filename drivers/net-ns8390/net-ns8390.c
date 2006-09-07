@@ -250,7 +250,7 @@ static error_t			net_ns8390_probe(struct net_ns8390_context_s	*pv)
  * device read operation
  */
 
-DEVCHAR_READ(net_ns8390_read)
+DEVNET_READ(net_ns8390_read)
 {
   struct net_ns8390_context_s	*pv = dev->drv_pv;
   uint_fast8_t			current;
@@ -261,12 +261,13 @@ DEVCHAR_READ(net_ns8390_read)
   uint_fast16_t			length;
   struct net_ns8380_header_s	header;
 
+  /* get the current state */
   if (!(cpu_io_read_8(pv->base + D8390_P0_RSR) & D8390_RSTAT_PRX))
     return 0;
+  /* identifies current and next packets */
   next = cpu_io_read_8(pv->base + D8390_P0_BOUND) + 1;
   if (next >= pv->mem)
     next = pv->rx_start;
-
   cpu_io_write_8(pv->base + D8390_P0_COMMAND, D8390_COMMAND_PS1);
   current = cpu_io_read_8(pv->base + D8390_P1_CURR);
   cpu_io_write_8(pv->base + D8390_P0_COMMAND, D8390_COMMAND_PS0);
@@ -276,6 +277,7 @@ DEVCHAR_READ(net_ns8390_read)
   if (current == next)
     return 0;
 
+  /* fetch the packet header */
   packet = next << 8;
   net_ns8390_pio_read(pv, packet, &header, 4);
   packet += sizeof (struct net_ns8380_header_s);
@@ -286,8 +288,10 @@ DEVCHAR_READ(net_ns8390_read)
       length < ETH_ZLEN || length > ETH_FRAME_LEN)
     return 0;
 
+  /* the packet may be fragmented in two parts */
   fragment = (pv->mem << 8) - packet;
 
+  /* fetch the first part (if packet splitted) */
   if (length > fragment)
     {
       net_ns8390_pio_read(pv, packet, data, fragment);
@@ -295,6 +299,7 @@ DEVCHAR_READ(net_ns8390_read)
       data += fragment;
       length -= fragment;
     }
+  /* fetch the second part (the entire packet if no split) */
   net_ns8390_pio_read(pv, packet, data, length);
 
   next = header.next;
@@ -308,20 +313,23 @@ DEVCHAR_READ(net_ns8390_read)
  * device write operation
  */
 
-DEVCHAR_WRITE(net_ns8390_write)
+DEVNET_WRITE(net_ns8390_write)
 {
   struct net_ns8390_context_s	*pv = dev->drv_pv;
   size_t			len;
 
+  /* copy the packet in the network card */
   net_ns8390_pio_write(pv, data, pv->tx_start << 8, size);
   len = size;
+  /* adjust the packet size if necessary */
   if (len < ETH_ZLEN)
     len = ETH_ZLEN;
+  /* setup the controller to send the packet */
   cpu_io_write_8(pv->base + D8390_P0_COMMAND,
 		 D8390_COMMAND_PS0 | D8390_COMMAND_RD2 | D8390_COMMAND_STA);
   cpu_io_write_8(pv->base + D8390_P0_TPSR, pv->tx_start);
   cpu_io_write_8(pv->base + D8390_P0_TBCR0, len);
-  cpu_io_write_8(pv->base + D8390_P0_TBCR0, len >> 8);
+  cpu_io_write_8(pv->base + D8390_P0_TBCR1, len >> 8);
   cpu_io_write_8(pv->base + D8390_P0_COMMAND, D8390_COMMAND_PS0 |
 		 D8390_COMMAND_TXP | D8390_COMMAND_RD2 | D8390_COMMAND_STA);
 

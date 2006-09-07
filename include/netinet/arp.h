@@ -68,11 +68,15 @@ struct		ether_arp
 
 #include <netinet/packet.h>
 
-#define NET_ARP_REQUEST(f)	void (f)(uint8_t*	address)
+#define NET_ARP_REQUEST(f)	void (f)(struct device_s	*dev,	  \
+					 net_protos_root_t	protocols,\
+					 uint8_t		*address)
 
 typedef NET_ARP_REQUEST(net_arp_request_t);
 
-#define NET_RARP_REQUEST(f)	void (f)()
+#define NET_RARP_REQUEST(f)	void (f)(struct device_s	*dev,	  \
+					 net_protos_root_t	protocols,\
+					 uint8_t		*mac)
 
 typedef NET_RARP_REQUEST(net_rarp_request_t);
 
