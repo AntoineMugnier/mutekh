@@ -4,6 +4,7 @@
 #include <hexo/types.h>
 #include <hexo/lock.h>
 #include <netinet/ether.h>
+#include <netinet/protos.h>
 
 struct			net_ns8390_context_s
 {
@@ -17,6 +18,8 @@ struct			net_ns8390_context_s
   uint_fast8_t		mode_16bits;
 
   uint8_t		mac[ETH_ALEN];
+
+  net_protos_root_t	protocols;
 };
 
 #endif

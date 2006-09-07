@@ -73,11 +73,12 @@ struct		net_packet_s
 
 static inline struct net_packet_s	*packet_create(void)
 {
+  /* XXX remplacer par un objet */
+
   struct net_packet_s			*packet;
 
   packet = mem_alloc(sizeof (struct net_packet_s), MEM_SCOPE_THREAD);
   memset(packet, 0, sizeof (struct net_packet_s));
-  packet->stage = NETWORK_MAX_STAGES - 1;
   return packet;
 }
 

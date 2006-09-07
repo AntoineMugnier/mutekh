@@ -50,36 +50,5 @@ struct		ether_header
 #define	ETHER_IS_VALID_LEN(foo)	\
 	((foo) >= ETHER_MIN_LEN && (foo) <= ETHER_MAX_LEN)
 
-/*
- * -----8<-----
- */
-
-#include <netinet/packet.h>
-#include <netinet/protos.h>
-
-/*
- * Ethernet interface.
- */
-
-#define NET_ETHER_BUILD(f)	void (f)(struct device_s	*dev,	   \
-					 struct net_packet_s	*packet,   \
-					 net_protos_root_t	protocols, \
-					 uint_fast16_t		proto)
-
-typedef NET_ETHER_BUILD(net_ether_build_t);
-
-struct	ether_interface_s
-{
-  net_ether_build_t	*build;
-};
-
-#include <netinet/protos.h>
-
-NET_PUSHPKT(ether_push);
-NET_PREPAREPKT(ether_prepare);
-NET_ETHER_BUILD(ether_build);
-
-extern const struct net_proto_s	ether_protocol;
-
 #endif
 

@@ -2,12 +2,13 @@
 #define NETINET_PROTOS_H_
 
 #include <hexo/types.h>
-#include <hexo/device.h>
 #include <netinet/packet.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_hashlist.h>
+
+struct device_s;
 
 /*
  * Container type for protocols list.
@@ -21,7 +22,7 @@ CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, NOLOCK, 8, UNSIGNED);
 
 #define NET_PUSHPKT(f)	void (f)(struct device_s	*dev,		\
 				 struct net_packet_s	*packet,	\
-				 net_protos_root_t	protocols)
+				 struct	net_proto_s	*protocol)
 
 typedef NET_PUSHPKT(net_pushpkt_t);
 
@@ -40,14 +41,17 @@ typedef NET_PREPAREPKT(net_preparepkt_t);
 #include <netinet/ip.h>
 #include <netinet/dummy.h>
 
+typedef uint_fast16_t net_pkt_size_t;
+typedef uint_fast16_t net_proto_id_t;
+
 /*
  * This structure defines a protocol.
  */
 
-struct					net_proto_s
+struct					net_proto_desc_s
 {
   const char				*name;	/* the name of the protocol */
-  uint_fast16_t				id;	/* protocol identifier */
+  net_proto_id_t			id;	/* protocol identifier */
   net_pushpkt_t				*pushpkt; /* push packet function */
   net_preparepkt_t			*preparepkt; /* prepare packet func */
   union
@@ -64,7 +68,15 @@ struct					net_proto_s
     const struct dummy_interface_s	*dummy;	/* fake protocol for debug */
     const void				*other;	/* other protocol interface */
   } f;
+  size_t				pv_size;
+};
+
+struct					net_proto_s
+{
+  const struct net_proto_desc_s		*desc;
   net_protos_entry_t			list_entry;
+  net_proto_id_t			id;	/* protocol identifier */
+  struct net_proto_pv_s			*pv;
 };
 
 /*

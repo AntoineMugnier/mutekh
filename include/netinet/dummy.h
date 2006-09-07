@@ -14,7 +14,7 @@ struct		dummy_interface_s
 
 NET_PUSHPKT(dummy_push);
 
-extern const struct net_proto_s	dummy_protocol;
+extern const struct net_proto_desc_s	dummy_protocol;
 
 #endif
 

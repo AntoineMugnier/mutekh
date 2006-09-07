@@ -5,15 +5,16 @@
 
 /* devices addresses slots */
 
-/* XXX */
+#define NET_NS8390_ADDR	0
 
 /* tty device functions */
 
-//DEV_IRQ(uart_8250_irq);
+DEV_IRQ(net_ns8390_irq);
 DEV_INIT(net_ns8390_init);
 DEV_CLEANUP(net_ns8390_cleanup);
-DEVNET_READ(net_ns8390_read);
-DEVNET_WRITE(net_ns8390_write);
+DEVNET_PREPAREPKT(net_ns8390_preparepkt);
+DEVNET_SENDPKT(net_ns8390_sendpkt);
+DEVNET_REGISTER_PROTO(net_ns8390_register_proto);
 
 #endif
 

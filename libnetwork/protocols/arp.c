@@ -6,6 +6,7 @@
 #include <netinet/arp.h>
 #include <netinet/packet.h>
 #include <netinet/protos.h>
+#include <hexo/device.h>
 
 #include <stdio.h>
 
@@ -18,27 +19,14 @@ static const struct arp_interface_s	arp_interface =
   .request = arp_request
 };
 
-const struct net_proto_s	arp_protocol =
+const struct net_proto_desc_s	arp_protocol =
   {
     .name = "ARP",
     .id = ETHERTYPE_ARP,
     .pushpkt = arp_push,
     .preparepkt = arp_prepare,
-    .f.arp = &arp_interface
-  };
-
-static const struct rarp_interface_s	rarp_interface =
-{
-  .request = rarp_request
-};
-
-const struct net_proto_s	rarp_protocol =
-  {
-    .name = "RARP",
-    .id = ETHERTYPE_REVARP,
-    .pushpkt = rarp_push,
-    .preparepkt = rarp_prepare,
-    .f.rarp = &rarp_interface
+    .f.arp = &arp_interface,
+    .pv_size = 0
   };
 
 /*
@@ -56,17 +44,9 @@ NET_PUSHPKT(arp_push)
 
 NET_PREPAREPKT(arp_prepare)
 {
+  dev_net_preparepkt(dev, packet, sizeof (struct ether_arp));
+
   packet->size[packet->stage] = sizeof (struct ether_arp);
-  packet->stage--;
-
-  ether_prepare(dev, packet, protocols);
-
-  packet->stage++;
-
-  /* this field is already valid if fragmentation is used */
-  if (!packet->header[packet->stage])
-    packet->header[packet->stage] = packet->header[packet->stage - 1] +
-      packet->size[packet->stage - 1] - packet->size[packet->stage];
 }
 
 /*
@@ -103,10 +83,8 @@ NET_ARP_REQUEST(arp_request)
   hdr->arp_hln = ETH_ALEN;
   hdr->arp_pln = 4;
   net_be16_store(hdr->arp_op, ARPOP_REQUEST);
-  /* XXX sha = my MAC addr */
-  /* XXX spa = my IP addr */
-  memcpy(hdr->arp_sha, "\x52\x54\x00\x12\x34\x56", hdr->arp_hln);
-  memcpy(hdr->arp_spa, "\xc0\xa8\x2a\x02", hdr->arp_pln);
+  /* XXX sha = my MAC */
+  /* XXX spa = my IP */
 
   memcpy(hdr->arp_tha, "\xff\xff\xff\xff\xff\xff", hdr->arp_hln);
   memcpy(hdr->arp_tpa, address, hdr->arp_pln);
@@ -120,71 +98,6 @@ NET_ARP_REQUEST(arp_request)
   packet->MAClen = ETH_ALEN;
 
   packet->stage--;
-  ether_build(dev, packet, protocols, ETHERTYPE_ARP);
-}
-
-NET_PUSHPKT(rarp_push)
-{
-}
-
-NET_PREPAREPKT(rarp_prepare)
-{
-  packet->size[packet->stage] = sizeof (struct ether_arp);
-  packet->stage--;
-
-  ether_prepare(dev, packet, protocols);
-
-  packet->stage++;
-
-  /* this field is already valid if fragmentation is used */
-  if (!packet->header[packet->stage])
-    packet->header[packet->stage] = packet->header[packet->stage - 1] +
-      packet->size[packet->stage - 1] - packet->size[packet->stage];
-}
-
-NET_RARP_REQUEST(rarp_request)
-{
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  struct ether_arp	aligned;
-#endif
-  struct ether_arp	*hdr;
-  struct net_packet_s	*packet;
-
-  packet = packet_create();
-
-  rarp_prepare(dev, packet, protocols);
-
-  /* get the header */
-  hdr = (struct ether_arp*)packet->header[packet->stage];
-
-  /* align the packet on 16 bits if necessary */
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!ALIGNED(hdr, sizeof (uint16_t)))
-    {
-      hdr = &aligned;
-      memset(hdr, 0, sizeof (struct ether_arp));
-    }
-#endif
-
-  /* fill the request */
-  net_be16_store(hdr->arp_hrd, ARPHRD_ETHER);
-  net_be16_store(hdr->arp_pro, ETHERTYPE_IP);
-  hdr->arp_hln = ETH_ALEN;
-  hdr->arp_pln = 4;
-  net_be16_store(hdr->arp_op, ARPOP_RREQUEST);
-  /* XXX sha = my MAC addr */
-  memcpy(hdr->arp_sha, "\x52\x54\x00\x12\x34\x56", hdr->arp_hln);
-  memcpy(hdr->arp_tha, mac, hdr->arp_hln);
-
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  memcpy(packet->header[packet->stage], hdr, sizeof (struct ether_arp));
-#endif
-
-  packet->sMAC = hdr->arp_sha;
-  packet->tMAC = "\xff\xff\xff\xff\xff\xff";
-  packet->MAClen = ETH_ALEN;
-
-  packet->stage--;
-  ether_build(dev, packet, protocols, ETHERTYPE_REVARP);
+  dev_net_sendpkt(dev, packet, ETHERTYPE_ARP);
 }
 

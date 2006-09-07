@@ -78,4 +78,26 @@ struct		net_ns8380_header_s
   uint16_t	size;
 } __attribute__ ((packed));
 
+void	net_ns8390_pio_read(struct net_ns8390_context_s		*pv,
+			    uint_fast16_t			src,
+			    uint8_t				*dst,
+			    size_t				size);
+
+void	net_ns8390_pio_write(struct net_ns8390_context_s	*pv,
+			     uint8_t				*src,
+			     uint_fast16_t			dst,
+			     size_t				size);
+
+void	net_ns8390_reset(struct net_ns8390_context_s		*pv);
+
+error_t	net_ns8390_probe(struct net_ns8390_context_s	*pv,
+			 uint_fast16_t			base);
+
+size_t	net_ns8390_read(struct net_ns8390_context_s	*pv,
+			uint8_t				**data);
+
+void	net_ns8390_write(struct net_ns8390_context_s	*pv,
+			 uint8_t			*data,
+			 size_t				size);
+
 #endif

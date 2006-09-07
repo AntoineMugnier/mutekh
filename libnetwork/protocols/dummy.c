@@ -19,13 +19,14 @@ static const struct dummy_interface_s	dummy_interface =
   /* XXX */
 };
 
-const struct net_proto_s	dummy_protocol =
+const struct net_proto_desc_s	dummy_protocol =
   {
     .name = "dummy",
     .id = 0, /* XXX */
     .pushpkt = dummy_push,
     .preparepkt = NULL,
-    .f.dummy = &dummy_interface
+    .f.dummy = &dummy_interface,
+    .pv_size = 0
   };
 
 /*

@@ -67,6 +67,7 @@ struct		ether_arp
  */
 
 #include <netinet/packet.h>
+#include <netinet/protos.h>
 
 #define NET_ARP_REQUEST(f)	void (f)(struct device_s	*dev,	  \
 					 net_protos_root_t	protocols,\
@@ -108,8 +109,8 @@ NET_PUSHPKT(rarp_push);
 NET_PREPAREPKT(rarp_prepare);
 NET_RARP_REQUEST(rarp_request);
 
-extern const struct net_proto_s	arp_protocol;
-extern const struct net_proto_s	rarp_protocol;
+extern const struct net_proto_desc_s	arp_protocol;
+extern const struct net_proto_desc_s	rarp_protocol;
 
 #endif
 

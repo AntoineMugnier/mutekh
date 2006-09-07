@@ -7,55 +7,34 @@
 #include "../types.h"
 #include "../error.h"
 
+#include <netinet/packet.h>
+#include <netinet/protos.h>
 
+#define DEVNET_PREPAREPKT(n)	void  (n) (struct device_s *dev, struct net_packet_s *packet, size_t size)
 
+typedef DEVNET_PREPAREPKT(devnet_preparepkt_t);
 
-/** Net device class read() function tempate. */
-#define DEVNET_READ(n)	ssize_t  (n) (struct device_s *dev, uint8_t *data, size_t size)
+#define dev_net_preparepkt(dev, ...) (dev)->drv->f.net.f_preparepkt(dev, __VA_ARGS__ )
 
-/** Net device class read() methode shortcut */
+#define DEVNET_SENDPKT(n)	void  (n) (struct device_s *dev, struct net_packet_s *packet, net_proto_id_t proto)
 
-#define dev_net_read(dev, ...) (dev)->drv->f.net.f_read(dev, __VA_ARGS__ )
-/**
-   Net device class read() function type.  Read bytes data from the
-   device. Should not block if unable to read more bytes.
+typedef DEVNET_SENDPKT(devnet_sendpkt_t);
 
-   @param dev pointer to device descriptor
-   @param data pointer to data buffer
-   @param size max data read bytes count
-   @return data bytes count read from the device or negative error code
-*/
-typedef DEVNET_READ(devnet_read_t);
+#define dev_net_sendpkt(dev, ...) (dev)->drv->f.net.f_sendpkt(dev, __VA_ARGS__ )
 
+#define DEVNET_REGISTER_PROTO(n)	void  (n) (struct device_s *dev)
 
+typedef DEVNET_REGISTER_PROTO(devnet_register_proto_t);
 
-
-/** Net device class write() function tempate. */
-#define DEVNET_WRITE(n)	ssize_t  (n) (struct device_s *dev, const uint8_t *data, size_t size)
-
-/**
-    Net device class write() function type.  Write bytes data to the
-    device. Return number of bytes written. Should not block if unable
-    to write more bytes.
-
-    @param dev pointer to device descriptor
-    @param data pointer to read only data buffer
-    @param size data bytes count
-    @return data bytes count written to the device or negative error code
-*/
-typedef DEVNET_WRITE(devnet_write_t);
-
-/** Net device class write() methode shortcut */
-#define dev_net_write(dev, ...) (dev)->drv->f.net.f_write(dev, __VA_ARGS__ )
-
-
+#define dev_net_register_proto(dev, ...) (dev)->drv->f.net.f_register_proto(dev, __VA_ARGS__ )
 
 
 /** Net device class methodes */
 struct dev_class_net_s
 {
-  devnet_read_t		*f_read;
-  devnet_write_t	*f_write;
+  devnet_preparepkt_t		*f_preparepkt;
+  devnet_sendpkt_t		*f_sendpkt;
+  devnet_register_proto_t	*f_register_proto;
 };
 
 
