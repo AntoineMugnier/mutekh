@@ -52,12 +52,20 @@
 
 #define NETWORK_MAX_STAGES	5
 
+/*
+ * XXX commenter tout ca
+ */
 
 struct		net_header_s
 {
   uint8_t	*data;	/* pointers to headers */
   uint_fast16_t	size;	/* size of subpackets */
 };
+
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/object_refcount.h>
+
+OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);
 
 /*
  * This structure defines a packet.
@@ -71,22 +79,18 @@ struct			net_packet_s
   uint8_t		*sMAC;			/* source MAC address */
   uint8_t		*tMAC;			/* target MAC address */
   uint_fast8_t		MAClen;			/* length of MAC addresses */
+
+  packet_obj_entry_t	obj_entry;
 };
 
 /*
- * Create and initialise a new packet.
+ * The packet object.
  */
 
-static inline struct net_packet_s	*packet_create(void)
-{
-  /* XXX remplacer par un objet */
+OBJECT_CONSTRUCTOR(packet_obj);
+OBJECT_DESTRUCTOR(packet_obj);
 
-  struct net_packet_s			*packet;
-
-  packet = mem_alloc(sizeof (struct net_packet_s), MEM_SCOPE_THREAD);
-  memset(packet, 0, sizeof (struct net_packet_s));
-  return packet;
-}
+OBJECT_FUNC(static inline, packet_obj, REFCOUNT, packet_obj, obj_entry);
 
 #endif
 

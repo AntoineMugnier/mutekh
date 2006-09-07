@@ -102,7 +102,7 @@ NET_RARP_REQUEST(rarp_request)
   struct net_packet_s	*packet;
   struct net_header_s	*nethdr;
 
-  packet = packet_create();
+  packet = packet_obj_new(NULL);
 
   rarp_prepare(dev, packet);
 
@@ -125,11 +125,11 @@ NET_RARP_REQUEST(rarp_request)
   hdr->arp_hln = ETH_ALEN;
   hdr->arp_pln = 4;
   net_be16_store(hdr->arp_op, ARPOP_RREQUEST);
-  memcpy(hdr->arp_sha, packet->sMAC, hdr->arp_hln);
+  memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
   if (!mac)
-    memcpy(hdr->arp_tha, packet->sMAC, hdr->arp_hln);
+    memcpy(hdr->arp_tha, packet->sMAC, ETH_ALEN);
   else
-    memcpy(hdr->arp_tha, mac, hdr->arp_hln);
+    memcpy(hdr->arp_tha, mac, ETH_ALEN);
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
   memcpy(nethdr->data, hdr, sizeof (struct ether_arp));

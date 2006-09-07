@@ -44,21 +44,20 @@ DEV_IRQ(net_ns8390_irq)
   struct ether_header		*hdr;
   struct net_proto_s		*p;
   struct net_packet_s		*packet;
+  struct net_header_s		*nethdr;
+  net_proto_id_t		proto;
   uint8_t			*buff;
   size_t			size;
-  net_proto_id_t		proto;
-  struct net_header_s		*nethdr;
-  struct net_header_s		*next_nethdr;
 
   /* create and read the packet from the card */
   if (!(size = net_ns8390_read(pv, &buff)))
     return 1;
 
-  packet = packet_create();
+  packet = packet_obj_new(NULL);
   packet->packet = buff;
 
   nethdr = &packet->header[0];
-  nethdr->data = packet->packet;
+  nethdr->data = buff;
   nethdr->size = size;
 
   /* get the good header */
@@ -79,9 +78,8 @@ DEV_IRQ(net_ns8390_irq)
   packet->tMAC = hdr->ether_dhost;
 
   /* prepare packet for next stage */
-  next_nethdr = &packet->header[1];
-  next_nethdr->data = packet->packet + sizeof(struct ether_header);
-  next_nethdr->size = nethdr->size - sizeof(struct ether_header);
+  nethdr[1].data = buff + sizeof(struct ether_header);
+  nethdr[1].size = size - sizeof(struct ether_header);
   packet->stage++;
 
   /* dispatch to the matching protocol */
@@ -123,19 +121,18 @@ DEVNET_PREPAREPKT(net_ns8390_preparepkt)
 {
   struct net_ns8390_context_s	*pv = dev->drv_pv;
   struct net_header_s		*nethdr;
-  struct net_header_s		*next_nethdr;
   uint_fast16_t			total = 0;
+  uint8_t			*buff;
 
   total = sizeof (struct ether_header) + size;
 
-  packet->packet = mem_alloc(total, MEM_SCOPE_THREAD);
+  buff = packet->packet = mem_alloc(total, MEM_SCOPE_THREAD);
 
   nethdr = &packet->header[0];
-  nethdr->data = packet->packet;
+  nethdr->data = buff;
   nethdr->size = total;
-  next_nethdr = &packet->header[1];
-  next_nethdr->data = packet->packet + sizeof (struct ether_header);
-  next_nethdr->size = size;
+  nethdr[1].data = buff + sizeof (struct ether_header);
+  nethdr[1].size = size;
 
   packet->stage = 1;
 
