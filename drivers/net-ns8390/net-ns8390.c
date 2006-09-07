@@ -80,12 +80,15 @@ DEV_IRQ(net_ns8390_irq)
   /* prepare packet for next stage */
   nethdr[1].data = buff + sizeof(struct ether_header);
   nethdr[1].size = size - sizeof(struct ether_header);
+
+  dummy_push(dev, packet, NULL, NULL); /* XXX remove me ! */
+
   packet->stage++;
 
   /* dispatch to the matching protocol */
   proto = net_be16_load(hdr->ether_type);
   if ((p = net_protos_lookup(&pv->protocols, proto)))
-    p->desc->pushpkt(dev, packet, p);
+    p->desc->pushpkt(dev, packet, p, &pv->protocols);
   else
     printf("NETWORK: no protocol to handle packet (id = 0x%x)\n", proto);
 
@@ -175,7 +178,8 @@ DEVNET_SENDPKT(net_ns8390_sendpkt)
   memcpy(nethdr->data, hdr, sizeof (struct ether_header));
 #endif
 
-  dummy_push(dev, packet, NULL);
+  dummy_push(dev, packet, NULL, NULL); /* XXX remove me ! */
+
   net_ns8390_write(pv, packet->packet, nethdr->size);
 }
 

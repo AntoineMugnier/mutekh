@@ -40,7 +40,6 @@ NET_PUSHPKT(rarp_push)
 #endif
   struct ether_arp	*hdr;
   struct net_header_s	*nethdr;
-  uint8_t		my_mac[ETH_HLEN];
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -56,28 +55,21 @@ NET_PUSHPKT(rarp_push)
 #endif
 
   /* check header */
-  if (net_be16_load(hdr->arp_hrd) != ARPHRD_ETHER)
-    {
-      printf("NETWORK: bad hrd\n");
-      return ;
-    }
-
-  if (net_be16_load(hdr->arp_pro) != ETHERTYPE_IP)
-    {
-      printf("NETWORK: bad pro\n");
-      return ;
-    }
+  if (net_be16_load(hdr->arp_hrd) != ARPHRD_ETHER ||
+      net_be16_load(hdr->arp_pro) != ETHERTYPE_IP)
+    return ;
 
   /* ARP reply message */
   if (net_be16_load(hdr->arp_op) == ARPOP_RREPLY)
     {
-      /*      if (memcmp(my_mac, hdr->arp_tha; ETH_HLEN))
-	{
+      if (memcmp(packet->tMAC, hdr->arp_tha, ETH_ALEN))
+	return ;
 
-	}*/
+      printf("My IP should be: %d.%d.%d.%d\n", hdr->arp_tpa[0],
+	     hdr->arp_tpa[1], hdr->arp_tpa[2], hdr->arp_tpa[3]);
+
+      /* XXX assign me the IP */
     }
-
-
 }
 
 /*
@@ -138,6 +130,7 @@ NET_RARP_REQUEST(rarp_request)
   packet->tMAC = "\xff\xff\xff\xff\xff\xff";
 
   packet->stage--;
+  /* send the packet to the driver */
   dev_net_sendpkt(dev, packet, ETHERTYPE_REVARP);
 }
 

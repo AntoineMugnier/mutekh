@@ -22,7 +22,8 @@ CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, NOLOCK, 8, UNSIGNED);
 
 #define NET_PUSHPKT(f)	void (f)(struct device_s	*dev,		\
 				 struct net_packet_s	*packet,	\
-				 struct	net_proto_s	*protocol)
+				 struct	net_proto_s	*protocol,	\
+				 net_protos_root_t	*protocols)
 
 typedef NET_PUSHPKT(net_pushpkt_t);
 

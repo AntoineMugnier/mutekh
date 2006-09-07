@@ -75,6 +75,13 @@ struct		ether_arp
 
 typedef NET_ARP_REQUEST(net_arp_request_t);
 
+#define NET_ARP_REPLY(f)	void (f)(struct device_s	*dev,	\
+					 struct net_proto_s	*arp,	\
+					 uint8_t		*mac,	\
+					 uint8_t		*ip)
+
+typedef NET_ARP_REPLY(net_arp_reply_t);
+
 #define NET_RARP_REQUEST(f)	void (f)(struct device_s	*dev,	\
 					 struct net_proto_s	*arp,	\
 					 uint8_t		*mac)
@@ -88,6 +95,16 @@ typedef NET_RARP_REQUEST(net_rarp_request_t);
 struct	arp_interface_s
 {
   net_arp_request_t	*request;
+  net_arp_reply_t	*reply;
+};
+
+/*
+ * ARP private data.
+ */
+
+struct			net_pv_arp_s
+{
+  struct net_proto_s	*ip;
 };
 
 /*
@@ -104,6 +121,7 @@ struct	rarp_interface_s
 NET_PUSHPKT(arp_push);
 NET_PREPAREPKT(arp_prepare);
 NET_ARP_REQUEST(arp_request);
+NET_ARP_REPLY(arp_reply);
 
 NET_PUSHPKT(rarp_push);
 NET_PREPAREPKT(rarp_prepare);
