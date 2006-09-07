@@ -78,8 +78,6 @@ error_t sem_trywait(sem_t *sem)
 
 error_t sem_post(sem_t *sem)
 {
-  struct pthread_s	*next;
-
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   sched_queue_wrlock(&sem->wait);
 

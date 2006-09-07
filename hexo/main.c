@@ -198,53 +198,21 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 
   cpu_interrupt_ex_sethandler(fault_handler);
 
+  sched_cpu_init();
+
   if (cpu_id() == 0)
     {
-      char	buf[16];
-      ssize_t	res;
-
-      sched_cpu_init();
-      
 #ifdef CONFIG_TIMER
       dev_timer_setperiod(&timer_dev, 0, 0xffff);
       dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 #endif
 
-#ifdef CONFIG_FB
-      main(0, 0);
-#endif
-
-      sched_lock();
-      sched_context_exit();
-
-#if 1
-      while (1)
-	{
-	  uint8_t	buf_[16], *buf = buf_;
-	  size_t	len, res;
-
-	  if ((len = dev_char_read(&tty_con_dev, buf, 16)))
-	    while (len)
-	      {
-		res = dev_char_write(&tty_uart_dev, buf, len);
-		len -= res;
-		buf += res;
-	      }
-
-	  if ((len = dev_char_read(&tty_uart_dev, buf, 16)))
-	    while (len)
-	      {
-		res = dev_char_write(&tty_con_dev, buf, len);
-		len -= res;
-		buf += res;
-	      }
-	}
-#endif
-
+      //      main(0, 0);
     }
 
-  while (1)
-    ;
+  //  while (1);
 
+  sched_lock();
+  sched_context_exit();
 }
 
