@@ -207,10 +207,10 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
       dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 #endif
 
-      //      main(0, 0);
+      main(0, 0);
     }
 
-  //  while (1);
+  while (1);
 
   sched_lock();
   sched_context_exit();

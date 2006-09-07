@@ -52,19 +52,25 @@
 
 #define NETWORK_MAX_STAGES	5
 
+
+struct		net_header_s
+{
+  uint8_t	*data;	/* pointers to headers */
+  uint_fast16_t	size;	/* size of subpackets */
+};
+
 /*
  * This structure defines a packet.
  */
 
-struct		net_packet_s
+struct			net_packet_s
 {
-  uint8_t	*header[NETWORK_MAX_STAGES];	/* pointers to headers */
-  uint_fast16_t	size[NETWORK_MAX_STAGES];	/* size of subpackets */
-  uint_fast8_t	stage;				/* current stage */
-  uint8_t	*packet;			/* raw packet */
-  uint8_t	*sMAC;				/* source MAC address */
-  uint8_t	*tMAC;				/* target MAC address */
-  uint_fast8_t	MAClen;				/* length of MAC addresses */
+  struct net_header_s	header[NETWORK_MAX_STAGES];
+  uint_fast8_t		stage;			/* current stage */
+  uint8_t		*packet;		/* raw packet */
+  uint8_t		*sMAC;			/* source MAC address */
+  uint8_t		*tMAC;			/* target MAC address */
+  uint_fast8_t		MAClen;			/* length of MAC addresses */
 };
 
 /*

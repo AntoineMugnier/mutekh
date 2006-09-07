@@ -95,12 +95,12 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
 		continue;
 	      io &= PCI_BASE_ADDRESS_IO_MASK;
 
-	      dev->addr[0] = io;
+	      new->addr[0] = io;
 	      break;
 	    }
 
 	  printf("PCI device %04x:%04x class %x06x, io base %04x\n",
-		 vendor, enum_pv->devid, enum_pv->class, dev->addr[0]);
+		 vendor, enum_pv->devid, enum_pv->class, new->addr[0]);
 
 	  device_register(new, dev, enum_pv);
 

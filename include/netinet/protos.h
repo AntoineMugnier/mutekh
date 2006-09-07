@@ -31,8 +31,7 @@ typedef NET_PUSHPKT(net_pushpkt_t);
  */
 
 #define NET_PREPAREPKT(f)	void (f)(struct device_s	*dev,	   \
-					 struct net_packet_s	*packet,   \
-					 net_protos_root_t	protocols)
+					 struct net_packet_s	*packet)
 
 typedef NET_PREPAREPKT(net_preparepkt_t);
 
@@ -73,10 +72,10 @@ struct					net_proto_desc_s
 
 struct					net_proto_s
 {
-  const struct net_proto_desc_s		*desc;
+  const struct net_proto_desc_s		*desc;	/* protocol descriptor */
   net_protos_entry_t			list_entry;
   net_proto_id_t			id;	/* protocol identifier */
-  struct net_proto_pv_s			*pv;
+  struct net_proto_pv_s			*pv;	/* private data */
 };
 
 /*

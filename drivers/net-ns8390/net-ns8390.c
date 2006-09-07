@@ -47,6 +47,8 @@ DEV_IRQ(net_ns8390_irq)
   uint8_t			*buff;
   size_t			size;
   net_proto_id_t		proto;
+  struct net_header_s		*nethdr;
+  struct net_header_s		*next_nethdr;
 
   /* create and read the packet from the card */
   if (!(size = net_ns8390_read(pv, &buff)))
@@ -55,11 +57,12 @@ DEV_IRQ(net_ns8390_irq)
   packet = packet_create();
   packet->packet = buff;
 
-  packet->header[0] = packet->packet;
-  packet->size[0] = size;
+  nethdr = &packet->header[0];
+  nethdr->data = packet->packet;
+  nethdr->size = size;
 
   /* get the good header */
-  hdr = (struct ether_header*)packet->header[packet->stage];
+  hdr = (struct ether_header*)nethdr->data;
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -76,12 +79,10 @@ DEV_IRQ(net_ns8390_irq)
   packet->tMAC = hdr->ether_dhost;
 
   /* prepare packet for next stage */
+  next_nethdr = &packet->header[1];
+  next_nethdr->data = packet->packet + sizeof(struct ether_header);
+  next_nethdr->size = nethdr->size - sizeof(struct ether_header);
   packet->stage++;
-  packet->header[packet->stage] = packet->packet + sizeof(struct ether_header);
-  packet->size[packet->stage] = packet->size[packet->stage - 1] -
-	sizeof(struct ether_header);
-
-  /* XXX better use fragmentation */
 
   /* dispatch to the matching protocol */
   proto = net_be16_load(hdr->ether_type);
@@ -93,9 +94,25 @@ DEV_IRQ(net_ns8390_irq)
   return 1;
 }
 
+/*
+ * register a new protocol for the device.
+ */
+
 DEVNET_REGISTER_PROTO(net_ns8390_register_proto)
 {
+  struct net_ns8390_context_s	*pv = dev->drv_pv;
+  struct net_proto_s		*proto;
 
+  proto = mem_alloc(sizeof (struct net_proto_s) + desc->pv_size,
+		    MEM_SCOPE_THREAD);
+
+  proto->desc = desc;
+  proto->id = desc->id;
+  proto->pv = (void*)((uint8_t*)proto + sizeof (struct net_proto_s));
+
+  net_protos_push(&pv->protocols, proto);
+
+  return proto;
 }
 
 /*
@@ -104,14 +121,26 @@ DEVNET_REGISTER_PROTO(net_ns8390_register_proto)
 
 DEVNET_PREPAREPKT(net_ns8390_preparepkt)
 {
-  uint_fast16_t		total = 0;
+  struct net_ns8390_context_s	*pv = dev->drv_pv;
+  struct net_header_s		*nethdr;
+  struct net_header_s		*next_nethdr;
+  uint_fast16_t			total = 0;
 
-  total = packet->size[packet->stage] = sizeof (struct ether_header) +
-    packet->size[packet->stage + 1];
+  total = sizeof (struct ether_header) + size;
 
   packet->packet = mem_alloc(total, MEM_SCOPE_THREAD);
 
-  packet->header[packet->stage] = packet->packet;
+  nethdr = &packet->header[0];
+  nethdr->data = packet->packet;
+  nethdr->size = total;
+  next_nethdr = &packet->header[1];
+  next_nethdr->data = packet->packet + sizeof (struct ether_header);
+  next_nethdr->size = size;
+
+  packet->stage = 1;
+
+  packet->sMAC = pv->mac;
+  packet->MAClen = ETH_ALEN;
 }
 
 /*
@@ -125,9 +154,11 @@ DEVNET_SENDPKT(net_ns8390_sendpkt)
   struct ether_header		aligned;
 #endif
   struct ether_header		*hdr;
+  struct net_header_s		*nethdr;
 
   /* get a pointer to the header */
-  hdr = (struct ether_header*)packet->header[packet->stage];
+  nethdr = &packet->header[0];
+  hdr = (struct ether_header*)nethdr->data;
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -144,11 +175,11 @@ DEVNET_SENDPKT(net_ns8390_sendpkt)
   net_be16_store(hdr->ether_type, proto);
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  memcpy(packet->header[packet->stage], hdr, sizeof (struct ether_header));
+  memcpy(nethdr->data, hdr, sizeof (struct ether_header));
 #endif
 
   dummy_push(dev, packet, NULL);
-  net_ns8390_write(dev, packet->packet, packet->size[packet->stage]);
+  net_ns8390_write(pv, packet->packet, nethdr->size);
 }
 
 /*
@@ -158,6 +189,8 @@ DEVNET_SENDPKT(net_ns8390_sendpkt)
 DEV_CLEANUP(net_ns8390_cleanup)
 {
   struct net_ns8390_context_s	*pv = dev->drv_pv;
+
+  net_protos_destroy(&pv->protocols);
 
   mem_free(pv);
 }
@@ -182,12 +215,18 @@ DEV_INIT(net_ns8390_init)
 
   lock_init(&pv->lock);
 
+  net_protos_init(&pv->protocols);
+
   dev->drv_pv = pv;
 
-  if (net_ns8390_probe(pv, 0xc100))
-    printf("No NE2000 device found\n");
+  if (net_ns8390_probe(pv, dev->addr[NET_NS8390_ADDR]))
+    {
+      printf("No NE2000 device found\n");
+      return -1;
+    }
 
   net_ns8390_reset(pv);
 
   return 0;
 }
+

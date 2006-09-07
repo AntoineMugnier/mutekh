@@ -22,7 +22,7 @@ typedef DEVNET_SENDPKT(devnet_sendpkt_t);
 
 #define dev_net_sendpkt(dev, ...) (dev)->drv->f.net.f_sendpkt(dev, __VA_ARGS__ )
 
-#define DEVNET_REGISTER_PROTO(n)	void  (n) (struct device_s *dev)
+#define DEVNET_REGISTER_PROTO(n)	struct net_proto_s  *(n) (struct device_s *dev, const struct net_proto_desc_s *desc)
 
 typedef DEVNET_REGISTER_PROTO(devnet_register_proto_t);
 

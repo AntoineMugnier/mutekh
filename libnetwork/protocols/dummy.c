@@ -81,6 +81,7 @@ NET_PUSHPKT(dummy_push)
 
   printf("Packet dump:\n");
 
-  dummy_hexdump(packet->header[packet->stage], packet->size[packet->stage]);
+  dummy_hexdump(packet->header[packet->stage].data,
+		packet->header[packet->stage].size);
 }
 

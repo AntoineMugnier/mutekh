@@ -252,7 +252,7 @@ size_t			net_ns8390_read(struct net_ns8390_context_s	*pv,
 
   /* fetch the packet header */
   packet = next << 8;
-  net_ns8390_pio_read(pv, packet, &header, 4);
+  net_ns8390_pio_read(pv, packet, (uint8_t*)&header, 4);
   packet += sizeof (struct net_ns8380_header_s);
 
   length = header.size - 4;
