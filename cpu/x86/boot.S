@@ -52,7 +52,7 @@
 	lgdt	0x1a
 	/* switch to protected mode */
 	movl	%cr0,		%eax
-	orl	$0x00000001,	%eax
+	orl	$0x00000001,	%eax /* enable protected mode */
 	movl	%eax,		%cr0
 	/* jump to (load) 32 bits code segment */
 	jmpl	$0x10, $1f
@@ -76,6 +76,9 @@
 
 .globl cpu_boot
 cpu_boot:
+	movl	%cr0,		%eax
+	andl	$0x9fffffff,	%eax /* enable normal cache mode */
+	movl	%eax,		%cr0
 	/* get CPU id */
 	mov	$0x1b, %ecx
 	rdmsr

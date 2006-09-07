@@ -56,7 +56,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 void
 cpu_context_destroy(struct context_s *context)
 {
-  __reg_t		*stack = (__reg_t*)context->stack_ptr;
+  reg_t		*stack = (reg_t*)context->stack_ptr;
 
   /* free tls segment descriptor */
   cpu_x86_segdesc_free((uint16_t)stack[0]);

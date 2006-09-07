@@ -44,7 +44,7 @@ struct			lock_s
   struct arch_lock_s	arch;
 #endif
   /** interrupt state save */
-  __reg_t			irq_state;
+  reg_t			irq_state;
 };
 
 typedef struct lock_s	lock_t;
@@ -106,7 +106,7 @@ static inline bool_t lock_state(lock_t *lock)
 /** save interrupts state, disable interrupts, and spin to take lock */
 static inline void lock_spin_irq(lock_t *lock)
 {
-  __reg_t		state;
+  reg_t		state;
 
   cpu_interrupt_savestate_disable(&state);
   lock_spin(lock);
@@ -120,7 +120,7 @@ static inline void lock_spin_irq(lock_t *lock)
     state may be saved in a register */
 #define LOCK_SPIN_IRQ(lock)					\
 {								\
-  register __reg_t	__interrupt_state;			\
+  register reg_t	__interrupt_state;			\
   cpu_interrupt_savestate_disable(&__interrupt_state);		\
   lock_spin(lock);
 
@@ -137,7 +137,7 @@ static inline void lock_release(lock_t *lock)
 /** release lock and restore previous interrupts state */
 static inline void lock_release_irq(lock_t *lock)
 {
-  __reg_t		state = lock->irq_state;
+  reg_t		state = lock->irq_state;
 
   lock_release(lock);
   cpu_interrupt_restorestate(&state);

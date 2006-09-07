@@ -34,14 +34,16 @@ CONTEXT_LOCAL pthread_t __pthread_current;
 void
 __pthread_switch(void)
 {
+  assert(cpu_interrupt_getstate());
+
 #ifdef CONFIG_PTHREAD_CANCEL
   if (pthread_self()->cancelasync)
     pthread_testcancel();
 #endif
 
-  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  cpu_interrupt_disable();
   sched_context_switch();
-  CPU_INTERRUPT_RESTORESTATE;
+  cpu_interrupt_enable();
 }
 
 
@@ -81,7 +83,7 @@ void __pthread_cancel_self(void)
 
 #endif /* CONFIG_PTHREAD_CANCEL */
 
-static __reg_t	tmp_stack[64];
+static reg_t	tmp_stack[64];
 
 /** end pthread execution */
 void
@@ -254,6 +256,9 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
       return res;
     }
 
+  sched_context_init(&thread->sched_ctx);
+  thread->sched_ctx.private = thread;
+
   sched_queue_init(&thread->joined);
   thread->start_routine = start_routine;
   thread->arg = arg;
@@ -264,7 +269,6 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   thread->cancelstate = PTHREAD_CANCEL_ENABLE;
   thread->cancelasync = PTHREAD_CANCEL_DEFERRED;
 #endif
-  thread->sched_ctx.private = thread;
 
   *thread_ = thread;
 

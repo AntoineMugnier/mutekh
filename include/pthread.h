@@ -122,6 +122,11 @@ pthread_yield(void)
   __pthread_switch();
 }
 
+static inline error_t
+pthread_equal(pthread_t t1, pthread_t t2)
+{
+  return t1 == t2;
+}
 
 #ifdef CONFIG_PTHREAD_JOIN
 
@@ -458,7 +463,7 @@ extern CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
 
 #define pthread_cleanup_push(routine_, arg_)		\
 {							\
-  __reg_t				__irq_state;	\
+  reg_t				__irq_state;	\
 							\
   cpu_interrupt_savestate_disable(&__irq_state);	\
 							\

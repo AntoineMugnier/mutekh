@@ -67,6 +67,12 @@ struct device_s enum_pci = DEVICE_INITIALIZER;
 
 extern const uint8_t mutek_logo_320x200[320*200];
 
+DEVTIMER_CALLBACK(timer_callback)
+{
+  //  printf("timer callback\n");
+  //  pthread_yield();
+}
+
 int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
   /********* ICU init ******************************** */
@@ -80,8 +86,6 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   icu_dev.addr[ICU_ADDR_MASTER] = 0x10c00000;
   icu_soclib_init(&icu_dev);
 #endif
-
-  cpu_interrupt_enable();
 
   /********* TTY init ******************************** */
 
@@ -132,6 +136,9 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   timer_soclib_init(&timer_dev);
 # endif	/* defined(__ARCH__xxx__) */
   DEV_ICU_BIND(&icu_dev, &timer_dev);
+
+  dev_timer_setperiod(&timer_dev, 0, 0xffff);
+  dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 #endif
 
   /********* FB init ********************************* */
@@ -152,6 +159,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   device_dump_list(&enum_pci);
 # endif
 
+  sched_global_init();
+
   arch_start_other_cpu(); /* let other CPUs enter main_smp() */
 
   mutek_main_smp();
@@ -159,17 +168,11 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   return 0;
 }
 
-DEVTIMER_CALLBACK(timer_callback)
-{
-  //  printf("timer callback\n");
-  //  pthread_yield();
-}
-
 static CPU_EXCEPTION_HANDLER(fault_handler)
 {
   int_fast8_t		i;
 
-  printf("CPU Fault %x\n", type);
+  printf("CPU Fault: cpuid(%u) faultid(%u)\n", cpu_id(), type);
   printf("Execution pointer: %p\n", execptr);
   puts("regs:");
 
@@ -185,8 +188,6 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   while (1);
 }
 
-uint32_t a = 16;
-
 /** application main function */
 int_fast8_t main(int_fast8_t argc, char **argv);
 
@@ -201,16 +202,7 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
   sched_cpu_init();
 
   if (cpu_id() == 0)
-    {
-#ifdef CONFIG_TIMER
-      dev_timer_setperiod(&timer_dev, 0, 0xffff);
-      dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
-#endif
-
-      main(0, 0);
-    }
-
-  while (1);
+    main(0, 0);
 
   sched_lock();
   sched_context_exit();

@@ -45,7 +45,7 @@ context_init(struct context_s *context, size_t stack_size, context_entry_t *entr
   CONTEXT_LOCAL_FOREIGN_SET(context->tls, context_cur, context);
 
   /* allocate context stack memory */
-  if (!(context->stack = arch_contextstack_alloc(stack_size * sizeof(__reg_t))))
+  if (!(context->stack = arch_contextstack_alloc(stack_size * sizeof(reg_t))))
     {
       arch_contextdata_free(context->tls);
       return -ENOMEM;      

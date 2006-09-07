@@ -48,6 +48,10 @@ void sched_lock(void);
 /** release main scheduler queue. Must be used after thread entry */
 void sched_unlock(void);
 
+/** initialize scheduler context. context_init(&sched_ctx->context)
+    must be called before */
+void sched_context_init(struct sched_context_s *sched_ctx);
+
 /** switch to next context */
 /* Must be called with interrupts disabled */
 void sched_context_switch(void);
@@ -59,7 +63,7 @@ void sched_context_exit(void);
 
 /** enqueue scheduler context for execution. Must be called with
     interrupts disabled */
-void sched_context_start(struct sched_context_s *shed_ctx);
+void sched_context_start(struct sched_context_s *sched_ctx);
 
 /** switch to next context without pushing current context back. Must
     be called with interrupts disabled */
@@ -85,6 +89,9 @@ void sched_wait_unlock(sched_queue_root_t *queue);
 /** wake a context from this queue */
 /* Must be called with interrupts disabled */
 struct sched_context_s *sched_wake(sched_queue_root_t *queue);
+
+/** scheduler intialization, must be called once */
+void sched_global_init(void);
 
 /** scheduler intialization, must be called for each processor */
 void sched_cpu_init(void);

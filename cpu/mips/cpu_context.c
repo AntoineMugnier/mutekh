@@ -62,7 +62,7 @@ void
 cpu_context_destroy(struct context_s *context)
 {
 #if 0
-  __reg_t		*stack = (__reg_t*)context->stack_ptr;
+  reg_t		*stack = (reg_t*)context->stack_ptr;
 #endif
 }
 

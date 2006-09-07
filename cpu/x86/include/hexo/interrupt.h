@@ -98,7 +98,7 @@ cpu_interrupt_enable(void)
 }
 
 static inline void
-cpu_interrupt_savestate(__reg_t *state)
+cpu_interrupt_savestate(reg_t *state)
 {
   __asm__ volatile (
 		    "pushfl	\n"
@@ -108,14 +108,14 @@ cpu_interrupt_savestate(__reg_t *state)
 }
 
 static inline void
-cpu_interrupt_savestate_disable(__reg_t *state)
+cpu_interrupt_savestate_disable(reg_t *state)
 {
   cpu_interrupt_savestate(state);
   cpu_interrupt_disable();
 }
 
 static inline void
-cpu_interrupt_restorestate(const __reg_t *state)
+cpu_interrupt_restorestate(const reg_t *state)
 {
   __asm__ volatile (
 		    "pushl	%0\n"
@@ -123,6 +123,20 @@ cpu_interrupt_restorestate(const __reg_t *state)
 		    :
 		    : "m,r" (*state)
 		    );
+}
+
+static inline bool_t
+cpu_interrupt_getstate(void)
+{
+  reg_t		flags;
+
+  __asm__ volatile (
+		    "pushfl	\n"
+		    "popl	%0\n"
+		    : "=r" (flags)
+		    );
+
+  return flags & 0x200 ? 1 : 0;
 }
 
 #endif

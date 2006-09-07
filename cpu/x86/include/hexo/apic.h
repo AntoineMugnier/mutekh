@@ -28,62 +28,62 @@ typedef union
 {
   volatile uint32_t	_32[4];
   volatile uint64_t	_64[2];
-} cpu_x86_apic___reg_t;
+} cpu_x86_apic_reg_t;
 
 /** x86 apic mapped memory registers */
 
 struct cpu_x86_apic_s
 {
   /* 0000 */
-  cpu_x86_apic___reg_t	res0000;
-  cpu_x86_apic___reg_t	res0010;
-  cpu_x86_apic___reg_t	lapic_id;
-  cpu_x86_apic___reg_t	lapic_version;
-  cpu_x86_apic___reg_t	res0040;
-  cpu_x86_apic___reg_t	res0050;
-  cpu_x86_apic___reg_t	res0060;
-  cpu_x86_apic___reg_t	res0070;
+  cpu_x86_apic_reg_t	res0000;
+  cpu_x86_apic_reg_t	res0010;
+  cpu_x86_apic_reg_t	lapic_id;
+  cpu_x86_apic_reg_t	lapic_version;
+  cpu_x86_apic_reg_t	res0040;
+  cpu_x86_apic_reg_t	res0050;
+  cpu_x86_apic_reg_t	res0060;
+  cpu_x86_apic_reg_t	res0070;
   /* 0080 */
-  cpu_x86_apic___reg_t	context_prio;
-  cpu_x86_apic___reg_t	arbitr_prio;
-  cpu_x86_apic___reg_t	processor_prio;
-  cpu_x86_apic___reg_t	eoi;
-  cpu_x86_apic___reg_t	res00c0;
-  cpu_x86_apic___reg_t	logical_dest;
-  cpu_x86_apic___reg_t	dest_format;
-  cpu_x86_apic___reg_t	spurious_int;
+  cpu_x86_apic_reg_t	context_prio;
+  cpu_x86_apic_reg_t	arbitr_prio;
+  cpu_x86_apic_reg_t	processor_prio;
+  cpu_x86_apic_reg_t	eoi;
+  cpu_x86_apic_reg_t	res00c0;
+  cpu_x86_apic_reg_t	logical_dest;
+  cpu_x86_apic_reg_t	dest_format;
+  cpu_x86_apic_reg_t	spurious_int;
   /* 0100 */
-  cpu_x86_apic___reg_t	isr[8];		/* in service register */
-  cpu_x86_apic___reg_t	tmr[8];		/* trigger mode register */
+  cpu_x86_apic_reg_t	isr[8];		/* in service register */
+  cpu_x86_apic_reg_t	tmr[8];		/* trigger mode register */
   /* 0200 */
-  cpu_x86_apic___reg_t	irr[8];		/* interrupt request register */
+  cpu_x86_apic_reg_t	irr[8];		/* interrupt request register */
   /* 0280 */
-  cpu_x86_apic___reg_t	error;		/* error status register */
-  cpu_x86_apic___reg_t	res0290;
-  cpu_x86_apic___reg_t	res02a0;
-  cpu_x86_apic___reg_t	res02b0;
-  cpu_x86_apic___reg_t	res02c0;
-  cpu_x86_apic___reg_t	res02d0;
-  cpu_x86_apic___reg_t	res02e0;
-  cpu_x86_apic___reg_t	res02f0;
+  cpu_x86_apic_reg_t	error;		/* error status register */
+  cpu_x86_apic_reg_t	res0290;
+  cpu_x86_apic_reg_t	res02a0;
+  cpu_x86_apic_reg_t	res02b0;
+  cpu_x86_apic_reg_t	res02c0;
+  cpu_x86_apic_reg_t	res02d0;
+  cpu_x86_apic_reg_t	res02e0;
+  cpu_x86_apic_reg_t	res02f0;
   /* 0300 */
-  cpu_x86_apic___reg_t	icr_0_31;	/* interrupt command register */
-  cpu_x86_apic___reg_t	icr_32_63;	/* interrupt command register */
-  cpu_x86_apic___reg_t	lvt_timer;	/* LVT Timer Register */
-  cpu_x86_apic___reg_t	lvt_thermal;	/* LVT Thermal Sensor Register */
-  cpu_x86_apic___reg_t	lvt_perf;	/* LVT Performance Monitoring Counters */
-  cpu_x86_apic___reg_t	lvt_lint0;	/* LVT LINT0 Register */
-  cpu_x86_apic___reg_t	lvt_lint1;	/* LVT LINT1 Register */
-  cpu_x86_apic___reg_t	lvt_error;	/* LVT Error Register */
+  cpu_x86_apic_reg_t	icr_0_31;	/* interrupt command register */
+  cpu_x86_apic_reg_t	icr_32_63;	/* interrupt command register */
+  cpu_x86_apic_reg_t	lvt_timer;	/* LVT Timer Register */
+  cpu_x86_apic_reg_t	lvt_thermal;	/* LVT Thermal Sensor Register */
+  cpu_x86_apic_reg_t	lvt_perf;	/* LVT Performance Monitoring Counters */
+  cpu_x86_apic_reg_t	lvt_lint0;	/* LVT LINT0 Register */
+  cpu_x86_apic_reg_t	lvt_lint1;	/* LVT LINT1 Register */
+  cpu_x86_apic_reg_t	lvt_error;	/* LVT Error Register */
   /* 0380 */
-  cpu_x86_apic___reg_t	timer_init;	/* Initial Count Register */
-  cpu_x86_apic___reg_t	timer_curr;	/* Current Count Register */
-  cpu_x86_apic___reg_t	res03a0;
-  cpu_x86_apic___reg_t	res03b0;
-  cpu_x86_apic___reg_t	res03c0;
-  cpu_x86_apic___reg_t	res03d0;
-  cpu_x86_apic___reg_t	timer_divide;	/* Divide Configuration Register */
-  cpu_x86_apic___reg_t	res03f0;
+  cpu_x86_apic_reg_t	timer_init;	/* Initial Count Register */
+  cpu_x86_apic_reg_t	timer_curr;	/* Current Count Register */
+  cpu_x86_apic_reg_t	res03a0;
+  cpu_x86_apic_reg_t	res03b0;
+  cpu_x86_apic_reg_t	res03c0;
+  cpu_x86_apic_reg_t	res03d0;
+  cpu_x86_apic_reg_t	timer_divide;	/* Divide Configuration Register */
+  cpu_x86_apic_reg_t	res03f0;
 } __attribute__ ((packed));
 
 /**

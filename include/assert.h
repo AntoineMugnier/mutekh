@@ -26,7 +26,11 @@
 
 #include <stdio.h>
 
+#ifndef NDEBUG
 #define assert(expr) if (!(expr)) { printf("Assertion failed at " __FILE__ ":%u:%s(): (" #expr ") is false\n", __LINE__, __func__); while (1); }
+#else
+#define assert(expr)
+#endif
 
 #endif
 

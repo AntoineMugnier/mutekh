@@ -100,7 +100,7 @@ cpu_interrupt_enable(void)
 }
 
 static inline void
-cpu_interrupt_savestate(__reg_t *state)
+cpu_interrupt_savestate(reg_t *state)
 {
   __asm__ volatile (
 		    "mfc0	%0,	$12	\n"
@@ -109,7 +109,7 @@ cpu_interrupt_savestate(__reg_t *state)
 }
 
 static inline void
-cpu_interrupt_savestate_disable(__reg_t *state)
+cpu_interrupt_savestate_disable(reg_t *state)
 {
   __asm__ volatile (
 		    ".set push				\n"
@@ -127,13 +127,26 @@ cpu_interrupt_savestate_disable(__reg_t *state)
 }
 
 static inline void
-cpu_interrupt_restorestate(const __reg_t *state)
+cpu_interrupt_restorestate(const reg_t *state)
 {
   __asm__ volatile (
 		    "mtc0	%0,	$12		\n"
 		    :
 		    : "r" (*state)
 		    );
+}
+
+static inline bool_t
+cpu_interrupt_getstate(void)
+{
+  reg_t		state;
+
+  __asm__ volatile (
+		    "mfc0	%0,	$12		\n"
+		    : "=r" (state)
+		    );
+
+  return state & 0x01;
 }
 
 #endif

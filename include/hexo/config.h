@@ -36,7 +36,7 @@
 #define CONFIG_FB
 
 /** timer support */
-//#define CONFIG_TIMER
+#define CONFIG_TIMER
 
 /** VGA tty support for ANSI codes */
 #define CONFIG_VGATTY_ANSI

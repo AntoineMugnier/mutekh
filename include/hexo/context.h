@@ -39,10 +39,10 @@ struct context_s
   void			*tls;
 
   /* stack memory address */
-  __reg_t			*stack;
+  reg_t			*stack;
 
   /* current stack pointer value */
-  __reg_t			*stack_ptr;
+  reg_t			*stack_ptr;
 };
 
 /** context entry point function prototype */

@@ -69,7 +69,7 @@ typedef int32_t			ptrdiff_t;
 typedef	int32_t			atomic_int_t;
 
 /** general cpu register integer type */
-typedef uint32_t		__reg_t;
+typedef uint32_t		reg_t;
 
 #endif
 

@@ -44,7 +44,7 @@ typedef CPU_INTERRUPT_HANDLER(cpu_interrupt_handler_t);
 
 /** CPU exception handler function template */
 #define CPU_EXCEPTION_HANDLER(n) void (n) (uint_fast8_t type, uintptr_t execptr, \
-					   uintptr_t dataptr, __reg_t *regtable)
+					   uintptr_t dataptr, reg_t *regtable)
 /**
    CPU exception handler function type.
 
@@ -67,17 +67,19 @@ static void cpu_interrupt_disable(void);
 /** Enable all maskable interrupts for the current cpu */
 static void cpu_interrupt_enable(void);
 /** Save interrupts enable state (may use stack) */
-static void cpu_interrupt_savestate(__reg_t *state);
+static void cpu_interrupt_savestate(reg_t *state);
 /** Save interrupts enable state end disable interrupts */
-static void cpu_interrupt_savestate_disable(__reg_t *state);
+static void cpu_interrupt_savestate_disable(reg_t *state);
 /** Restore interrupts enable state (may use stack) */
-static void cpu_interrupt_restorestate(const __reg_t *state);
+static void cpu_interrupt_restorestate(const reg_t *state);
+/** read current interrupts state as boolean */
+static bool_t cpu_interrupt_getstate(void);
 
 /** Save interrupts enable state end disable interrupts. This macro
     must be matched with the CPU_INTERRUPT_RESTORESTATE macro. */
 #define CPU_INTERRUPT_SAVESTATE_DISABLE				\
 {								\
-  __reg_t	__interrupt_state;				\
+  reg_t	__interrupt_state;				\
   cpu_interrupt_savestate_disable(&__interrupt_state);
 
 /** Restore interrupts enable state. This macro must be matched with
