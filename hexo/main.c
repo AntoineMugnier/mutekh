@@ -203,9 +203,8 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
       char	buf[16];
       ssize_t	res;
 
-      __pthread_bootstrap();
-      puts("pthread init done");
-
+      sched_cpu_init();
+      
 #ifdef CONFIG_TIMER
       dev_timer_setperiod(&timer_dev, 0, 0xffff);
       dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
@@ -215,9 +214,8 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
       main(0, 0);
 #endif
 
-      __pthread_dump_runqueue();
-
-      device_dump_list(&enum_pci);
+      sched_lock();
+      sched_context_exit();
 
 #if 1
       while (1)

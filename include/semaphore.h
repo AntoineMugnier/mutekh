@@ -29,14 +29,11 @@ typedef uint_fast8_t	__pthread_sem_count_t;
 /** mutex object structure */
 typedef struct				__pthread_sem_s
 {
-  /** struct protection spinlock */
-  lock_t				lock;
-
   /** sem counter */
   __pthread_sem_count_t			count;
 
   /** blocked threads wait queue */
-  pthread_root_t			wait;
+  sched_queue_root_t			wait;
 }					sem_t;
 
 error_t

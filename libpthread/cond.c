@@ -19,20 +19,21 @@
 
 */
 
-#include "pthread-private.h"
+#include <hexo/scheduler.h>
+#include <hexo/error.h>
+#include <pthread.h>
 
 error_t
 pthread_cond_init(pthread_cond_t *cond,
 		  const pthread_condattr_t *attr)
 {
-  __pthread_list_init(&cond->wait);
-  return lock_init(&cond->lock);
+  return sched_queue_init(&cond->wait);
 }
 
 error_t
 pthread_cond_destroy(pthread_cond_t *cond)
 {
-  lock_destroy(&cond->lock);
+  sched_queue_destroy(&cond->wait);
 
   return 0;
 }
@@ -40,14 +41,13 @@ pthread_cond_destroy(pthread_cond_t *cond)
 error_t
 pthread_cond_signal(pthread_cond_t *cond)
 {
-  struct pthread_s	*thread;
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&cond->wait);
 
-  lock_spin_irq(&cond->lock);
+  sched_wake(&cond->wait);
 
-  if ((thread = __pthread_list_pop(&cond->wait)))
-    __pthread_wake(thread);
-
-  lock_release_irq(&cond->lock);
+  sched_queue_unlock(&cond->wait);
+  CPU_INTERRUPT_RESTORESTATE;
 
   return 0;
 }
@@ -55,14 +55,13 @@ pthread_cond_signal(pthread_cond_t *cond)
 error_t
 pthread_cond_broadcast(pthread_cond_t *cond)
 {
-  struct pthread_s	*thread;
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&cond->wait);
 
-  lock_spin_irq(&cond->lock);
+  while (sched_wake(&cond->wait));
 
-  while ((thread = __pthread_list_pop(&cond->wait)))
-    __pthread_wake(thread);
-
-  lock_release_irq(&cond->lock);
+  sched_queue_unlock(&cond->wait);
+  CPU_INTERRUPT_RESTORESTATE;
 
   return 0;
 }
@@ -70,25 +69,28 @@ pthread_cond_broadcast(pthread_cond_t *cond)
 error_t
 pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
-  lock_spin_irq(&cond->lock);
+  error_t	res = 0;
+
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&cond->wait);
 
   if (pthread_mutex_unlock(mutex))
 #ifdef CONFIG_PTHREAD_CHECK
     {
-      lock_release_irq(&cond->lock);
-      return EINVAL;
+      sched_queue_unlock(&cond->wait);
+      res = EINVAL;
     }
+  else
 #endif
+    {
+      sched_wait_unlock(&cond->wait);
 
-  __pthread_wait(&cond->wait);
+      pthread_mutex_lock(mutex);
+    }
 
-  lock_release_irq(&cond->lock);
+  CPU_INTERRUPT_RESTORESTATE;
 
-  __pthread_switch();
-
-  pthread_mutex_lock(mutex);
-
-  return 0;
+  return res;
 }
 
 error_t

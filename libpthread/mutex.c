@@ -19,25 +19,9 @@
 
 */
 
-#include "pthread-private.h"
+#include <hexo/scheduler.h>
 
-
-/** unlock and relock the mutex if other threads are waiting */
-static inline void
-__pthread_mutex_unlock_relock(pthread_mutex_t *mutex)
-{
-  struct pthread_s	*thread = __pthread_list_pop(&mutex->wait);
-
-  mutex->count--;
-
-  if (thread)
-    {
-      __pthread_wake(thread);
-      mutex->count++;
-    }
-}
-
-
+#include <pthread.h>
 
 /************************************************************************
 		PTHREAD_MUTEX_NORMAL
@@ -46,24 +30,23 @@ __pthread_mutex_unlock_relock(pthread_mutex_t *mutex)
 error_t
 __pthread_mutex_normal_lock(pthread_mutex_t *mutex)
 {
-  lock_spin_irq(&mutex->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&mutex->wait);
 
   /* check current mutex state */
   if (mutex->count)
     {
       /* add current thread in mutex wait queue */
-      __pthread_wait(&mutex->wait);
-
-      /* switch to next thread */
-      lock_release_irq(&mutex->lock);
-      __pthread_switch();
+      sched_wait_unlock(&mutex->wait);
     }
   else
     {
       /* mark mutex as used */
       mutex->count++;
-      lock_release_irq(&mutex->lock);
+      sched_queue_unlock(&mutex->wait);
     }
+
+  CPU_INTERRUPT_RESTORESTATE;
 
   return 0;
 }
@@ -73,7 +56,8 @@ __pthread_mutex_normal_trylock(pthread_mutex_t *mutex)
 {
   error_t	res = EBUSY;
 
-  lock_spin_irq(&mutex->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&mutex->wait);
 
   /* check current mutex state */
   if (!mutex->count)
@@ -82,7 +66,8 @@ __pthread_mutex_normal_trylock(pthread_mutex_t *mutex)
       res = 0;
     }
 
-  lock_release_irq(&mutex->lock);
+  sched_queue_unlock(&mutex->wait);
+  CPU_INTERRUPT_RESTORESTATE;
 
   return res;
 }
@@ -90,11 +75,14 @@ __pthread_mutex_normal_trylock(pthread_mutex_t *mutex)
 error_t
 __pthread_mutex_normal_unlock(pthread_mutex_t *mutex)
 {
-  lock_spin_irq(&mutex->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&mutex->wait);
 
-  __pthread_mutex_unlock_relock(mutex);
+  if (!sched_wake(&mutex->wait))
+    mutex->count--;
 
-  lock_release_irq(&mutex->lock);
+  sched_queue_unlock(&mutex->wait);
+  CPU_INTERRUPT_RESTORESTATE;
 
   return 0;
 }
@@ -126,7 +114,8 @@ __pthread_mutex_errorcheck_lock(pthread_mutex_t *mutex)
 {
   error_t		res = 0;
 
-  lock_spin_irq(&mutex->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&mutex->wait);
 
   /* check current mutex state */
   if (mutex->count)
@@ -135,16 +124,12 @@ __pthread_mutex_errorcheck_lock(pthread_mutex_t *mutex)
 	{
 	  /* dead lock condition detected */
 	  res = EDEADLK;
-	  lock_release_irq(&mutex->lock);
+	  sched_queue_unlock(&mutex->wait);
 	}
       else
 	{
 	  /* add current thread in mutex wait queue */
-	  __pthread_wait(&mutex->wait);
-
-	  /* switch to next thread */
-	  lock_release_irq(&mutex->lock);
-	  __pthread_switch();
+	  sched_wait_unlock(&mutex->wait);
 	}
     }
   else
@@ -152,8 +137,10 @@ __pthread_mutex_errorcheck_lock(pthread_mutex_t *mutex)
       /* mark mutex as used */
       mutex->owner = pthread_self();
       mutex->count++;
-      lock_release_irq(&mutex->lock);
+      sched_queue_unlock(&mutex->wait);
     }
+
+  CPU_INTERRUPT_RESTORESTATE;
 
   return res;
 }
@@ -163,7 +150,8 @@ __pthread_mutex_errorcheck_trylock(pthread_mutex_t *mutex)
 {
   error_t	res = 0;
 
-  lock_spin_irq(&mutex->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&mutex->wait);
 
   /* check current mutex state */
   if (mutex->count)
@@ -177,7 +165,8 @@ __pthread_mutex_errorcheck_trylock(pthread_mutex_t *mutex)
   else
     mutex->count++;
 
-  lock_release_irq(&mutex->lock);
+  sched_queue_unlock(&mutex->wait);
+  CPU_INTERRUPT_RESTORESTATE;
 
   return res;
 }
@@ -187,19 +176,24 @@ __pthread_mutex_errorcheck_unlock(pthread_mutex_t *mutex)
 {
   error_t	res = 0;
 
-  lock_spin_irq(&mutex->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&mutex->wait);
 
   if (mutex->count)
     {
       if (mutex->owner == pthread_self())
-	__pthread_mutex_unlock_relock(mutex);
+	{
+	  if (!sched_wake(&mutex->wait))
+	    mutex->count--;
+	}
       else
 	res = EPERM;
     }
   else
     res = EBUSY;
 
-  lock_release_irq(&mutex->lock);
+  sched_queue_unlock(&mutex->wait);
+  CPU_INTERRUPT_RESTORESTATE;
 
   return 0;
 }
@@ -227,25 +221,24 @@ CPUARCH_LOCAL pthread_mutexattr_t __pthread_mutex_attr_errorcheck =
 static error_t
 __pthread_mutex_recursive_lock(pthread_mutex_t *mutex)
 {
-  lock_spin_irq(&mutex->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&mutex->wait);
 
   /* check current mutex state */
   if (mutex->count && (mutex->owner != pthread_self()))
     {
       /* add current thread in mutex wait queue */
-      __pthread_wait(&mutex->wait);
-
-      /* switch to next thread */
-      lock_release_irq(&mutex->lock);
-      __pthread_switch();
+      sched_wait_unlock(&mutex->wait);
     }
   else
     {
       /* mark mutex as used */
       mutex->owner = pthread_self();
       mutex->count++;
-      lock_release_irq(&mutex->lock);
+      sched_queue_unlock(&mutex->wait);
     }
+
+  CPU_INTERRUPT_RESTORESTATE;
 
   return 0;
 }
@@ -255,14 +248,16 @@ __pthread_mutex_recursive_trylock(pthread_mutex_t *mutex)
 {
   error_t	res = 0;
 
-  lock_spin_irq(&mutex->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&mutex->wait);
 
   if (mutex->count && (mutex->owner != pthread_self()))
     res = EBUSY;
   else
     mutex->count++;
 
-  lock_release_irq(&mutex->lock);
+  sched_queue_unlock(&mutex->wait);
+  CPU_INTERRUPT_RESTORESTATE;
 
   return res;
 }
@@ -270,14 +265,16 @@ __pthread_mutex_recursive_trylock(pthread_mutex_t *mutex)
 static error_t
 __pthread_mutex_recursive_unlock(pthread_mutex_t *mutex)
 {
-  lock_spin_irq(&mutex->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&mutex->wait);
 
   if (mutex->count == 1)
-    __pthread_mutex_unlock_relock(mutex);
-  else
-    mutex->count--;
+    sched_wake(&mutex->wait);
 
-  lock_release_irq(&mutex->lock);
+  mutex->count--;
+
+  sched_queue_unlock(&mutex->wait);
+  CPU_INTERRUPT_RESTORESTATE;
 
   return 0;
 }
@@ -305,7 +302,6 @@ pthread_mutex_init(pthread_mutex_t *mutex,
 		   const pthread_mutexattr_t *attr)
 {
   mutex->count = 0;
-  __pthread_list_init(&mutex->wait);
 
 #ifdef CONFIG_PTHREAD_MUTEX_ATTR
   /* default mutex attribute */
@@ -315,14 +311,13 @@ pthread_mutex_init(pthread_mutex_t *mutex,
   mutex->attr = attr;
 #endif
 
-  return lock_init(&mutex->lock);
+  return sched_queue_init(&mutex->wait);
 }
-
 
 error_t
 pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
-  lock_destroy(&mutex->lock);
+  sched_queue_destroy(&mutex->wait);
   return 0;
 }
 

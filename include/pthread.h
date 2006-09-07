@@ -27,6 +27,7 @@
 #include <hexo/local.h>
 #include <hexo/lock.h>
 #include <hexo/context.h>
+#include <hexo/scheduler.h>
 #include <hexo/interrupt.h>
 
 #include <hexo/gpct_platform_hexo.h>
@@ -36,16 +37,7 @@
 		PThread types
 ************************************************************************/
 
-CONTAINER_TYPE(pthread, CLIST, struct pthread_s, NOLOCK);
-
 typedef void * pthread_start_routine_t(void *arg);
-
-/** pthread pool */
-struct pthread_pool_s
-{
-  lock_t			lock;
-  pthread_root_t		list;
-};
 
 struct pthread_s;
 typedef struct pthread_s * pthread_t;
@@ -76,7 +68,7 @@ void __pthread_switch(void);
 struct pthread_s
 {
   /** context */
-  struct context_s			context;
+  struct sched_context_s	sched_ctx;
 
 #ifdef CONFIG_PTHREAD_JOIN
   /** thread is marked as detached */
@@ -85,7 +77,7 @@ struct pthread_s
   bool_t			joinable:1;
 
   /** pointer to thread waiting for termination */
-  struct pthread_s		*joined;
+  sched_queue_root_t		joined;
   /** joined thread exit value */
   void				*joined_retval;
 #endif
@@ -100,9 +92,6 @@ struct pthread_s
   void				*arg;
   /** start routine pointer */
   pthread_start_routine_t	*start_routine;
-
-  /** thread queue entry */
-  pthread_entry_t		queue;
 };
 
 /** pthread attributes structure */
@@ -117,8 +106,7 @@ pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 	       pthread_start_routine_t *start_routine, void *arg);
 
 /** end pthread execution */
-void
-pthread_exit(void *retval);
+void pthread_exit(void *retval);
 
 /** return current pthread */
 static inline pthread_t
@@ -159,9 +147,6 @@ typedef struct pthread_mutexattr_s pthread_mutexattr_t;
 /** mutex object structure */
 typedef struct				pthread_mutex_s
 {
-  /** struct protection spinlock */
-  lock_t				lock;
-
   /** mutex counter */
   uint_fast8_t				count;
 
@@ -174,8 +159,7 @@ typedef struct				pthread_mutex_s
 #endif
 
   /** blocked threads wait queue */
-  pthread_root_t			wait;
-
+  sched_queue_root_t			wait;
 }					pthread_mutex_t;
 
 #ifdef CONFIG_PTHREAD_MUTEX_ATTR
@@ -205,32 +189,32 @@ extern CPUARCH_LOCAL pthread_mutexattr_t __pthread_mutex_attr_errorcheck;
 extern CPUARCH_LOCAL pthread_mutexattr_t __pthread_mutex_attr_recursive;
 
 /** normal mutex object static initializer */
-# define PTHREAD_MUTEX_INITIALIZER				\
-  {								\
-    .lock = LOCK_INITIALIZER,					\
-    .attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_normal)	\
+# define PTHREAD_MUTEX_INITIALIZER						       \
+  {										       \
+    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, __SCHED_CONTAINER_ALGO, HEXO_SPIN), \
+    .attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_normal)			       \
   }
 
 /** recurvive mutex object static initializer */
-# define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP			\
-  {								\
-    .lock = LOCK_INITIALIZER,					\
-    .attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_recursive)	\
+# define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP					       \
+  {										       \
+    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, __SCHED_CONTAINER_ALGO, HEXO_SPIN), \
+    .attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_recursive)			       \
   }
 
 /** error checking mutex object static initializer */
-# define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP		\
-  {								\
-    .lock = LOCK_INITIALIZER,					\
-    .attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_errorcheck)	\
+# define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP				       \
+  {										       \
+    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, __SCHED_CONTAINER_ALGO, HEXO_SPIN), \
+    .attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_errorcheck)			       \
   }
 
 #else
 
 /** normal mutex object static initializer */
-# define PTHREAD_MUTEX_INITIALIZER				\
-  {								\
-    .lock = LOCK_INITIALIZER,					\
+# define PTHREAD_MUTEX_INITIALIZER						       \
+  {										       \
+    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, __SCHED_CONTAINER_ALGO, HEXO_SPIN), \
   }
 
 #endif
@@ -321,12 +305,8 @@ struct timespec;
 
 typedef struct pthread_cond_s
 {
-  /** struct protection spinlock */
-  lock_t			lock;
-
   /** blocked threads wait queue */
-  pthread_root_t		wait;
-
+  sched_queue_root_t		wait;
 } pthread_cond_t;
 
 typedef struct pthread_condattr_s pthread_condattr_t;
@@ -353,9 +333,9 @@ error_t
 pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 
 /** normal cond object static initializer */
-# define PTHREAD_COND_INITIALIZER				\
-  {								\
-    .lock = LOCK_INITIALIZER,					\
+# define PTHREAD_COND_INITIALIZER						       \
+  {										       \
+    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, __SCHED_CONTAINER_ALGO, HEXO_SPIN), \
   }
 
 /************************************************************************
@@ -367,9 +347,6 @@ typedef struct pthread_rwlockattr_s pthread_rwlockattr_t;
 /** mutex object structure */
 typedef struct				pthread_rwlock_s
 {
-  /** struct protection spinlock */
-  lock_t				lock;
-
   /** mutex counter
       == 0: free
       < 0 : write locked
@@ -377,9 +354,9 @@ typedef struct				pthread_rwlock_s
   int_fast8_t				count;
 
   /** blocked threads waiting for read */
-  pthread_root_t			wait_rd;
+  sched_queue_root_t			wait_rd;
   /** blocked threads waiting for write */
-  pthread_root_t			wait_wr;
+  sched_queue_root_t			wait_wr;
 }					pthread_rwlock_t;
 
 error_t
@@ -404,9 +381,10 @@ error_t
 pthread_rwlock_unlock(pthread_rwlock_t *rwlock);
 
 /** normal rwlock object static initializer */
-# define PTHREAD_RWLOCK_INITIALIZER				\
-  {								\
-    .lock = LOCK_INITIALIZER,					\
+# define PTHREAD_RWLOCK_INITIALIZER							  \
+  {											  \
+    .wait_rd = CONTAINER_ROOT_INITIALIZER(sched_queue, __SCHED_CONTAINER_ALGO, HEXO_SPIN), \
+    .wait_wr = CONTAINER_ROOT_INITIALIZER(sched_queue, __SCHED_CONTAINER_ALGO, HEXO_SPIN), \
   }
 
 /************************************************************************

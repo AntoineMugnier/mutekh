@@ -19,33 +19,41 @@
 
 */
 
-#include "pthread-private.h"
+#include <hexo/scheduler.h>
+#include <hexo/error.h>
+#include <pthread.h>
+#include <semaphore.h>
 
 error_t sem_init(sem_t *sem, bool_t pshared, __pthread_sem_count_t value)
 {
   sem->count = value;
-  __pthread_list_init(&sem->wait);
-  return lock_init(&sem->lock);
+  return sched_queue_init(&sem->wait);
+}
+
+error_t sem_destroy(sem_t *sem)
+{
+  sched_queue_destroy(&sem->wait);
+
+  return 0;
 }
 
 error_t sem_wait(sem_t *sem)
 {
-  lock_spin_irq(&sem->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&sem->wait);
 
   if (sem->count <= 0)
     {
       /* add current thread in sem wait queue */
-      __pthread_wait(&sem->wait);
-
-      /* switch to next thread */
-      lock_release_irq(&sem->lock);
-      __pthread_switch();
+      sched_wait_unlock(&sem->wait);
     }
   else
     {
       sem->count--;
-      lock_release_irq(&sem->lock);
+      sched_queue_unlock(&sem->wait);
     }
+
+  CPU_INTERRUPT_RESTORESTATE;
 
   return 0;
 }
@@ -54,14 +62,16 @@ error_t sem_trywait(sem_t *sem)
 {
   error_t	res = 0;
 
-  lock_spin_irq(&sem->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&sem->wait);
 
   if (sem->count <= 0)
     res = EBUSY;
   else
     sem->count--;
 
-  lock_release_irq(&sem->lock);
+  sched_queue_unlock(&sem->wait);
+  CPU_INTERRUPT_RESTORESTATE;
 
   return res;
 }
@@ -70,32 +80,27 @@ error_t sem_post(sem_t *sem)
 {
   struct pthread_s	*next;
 
-  lock_spin_irq(&sem->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&sem->wait);
 
-  if ((next = __pthread_list_pop(&sem->wait)))
-    __pthread_wake(next);
-  else
+  if (!sched_wake(&sem->wait))
     sem->count++;
 
-  lock_release_irq(&sem->lock);
+  sched_queue_unlock(&sem->wait);
+  CPU_INTERRUPT_RESTORESTATE;
 
   return 0;
 }
 
 error_t sem_getvalue(sem_t *sem, __pthread_sem_count_t *sval)
 {
-  lock_spin_irq(&sem->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&sem->wait);
 
   *sval = sem->count;
 
-  lock_release_irq(&sem->lock);
-
-  return 0;
-}
-
-error_t sem_destroy(sem_t *sem)
-{
-  lock_destroy(&sem->lock);
+  sched_queue_unlock(&sem->wait);
+  CPU_INTERRUPT_RESTORESTATE;
 
   return 0;
 }
