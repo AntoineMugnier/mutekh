@@ -99,5 +99,15 @@ atoll(const char *nptr);
 /** integer maximum value */
 #define __MAX(a, b) ({ const typeof(a) __a = (a); const typeof(b) __b = (b); __b > __a ? __b : __a; })
 
+/******************** random */
+
+typedef uint_fast8_t	__rand_type_t;
+
+#define RAND_MAX	(sizeof (__rand_type_t) > 1 ? 32767 : 255)
+
+__rand_type_t rand(void);
+__rand_type_t rand_r(__rand_type_t *seedp);
+void srand(__rand_type_t seed);
+
 #endif
 
