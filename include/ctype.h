@@ -104,5 +104,17 @@ isxdigit(int_fast8_t ch)
   return isdigit(ch) || ((uint8_t)((ch | 0x20) - 'a') < 6u);
 }
 
+static inline int_fast8_t
+toupper(int_fast8_t c)
+{
+  return isalpha(c) ? c & ~0x20 : c;
+}
+
+static inline int_fast8_t
+tolower(int_fast8_t c)
+{
+  return isalpha(c) ? c | 0x20 : c;
+}
+
 #endif
 
