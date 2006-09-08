@@ -72,8 +72,8 @@ struct iphdr {
   uint8_t	tos;
   uint16_t	tot_len;
   uint16_t	id;
-  ENDIAN_BITFIELD(uint16_t	flags:3,
-		  uint16_t	fragment:13);
+  uint16_t	fragment:13;
+  uint16_t	flags:3;
   uint8_t	ttl;
   uint8_t	protocol;
   uint16_t	check;

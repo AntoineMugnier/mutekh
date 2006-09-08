@@ -90,8 +90,8 @@ NET_PREPAREPKT(icmp_preparepkt)
   ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size);
 }
 
-static uint16_t		icmp_checksum(uint8_t		*data,
-				      size_t		size)
+static uint_fast16_t	icmp_checksum(uint8_t		*data,
+				    size_t		size)
 {
   uint_fast32_t		checksum = 0;
   uint16_t		*d = (uint16_t*)data;
@@ -105,10 +105,10 @@ static uint16_t		icmp_checksum(uint8_t		*data,
   if (size)
     checksum = checksum + *(uint8_t*)d;
 
-  checksum = (checksum >> 16) + (checksum & 0xffff);
-  checksum = checksum + (checksum >> 16);
+  while (checksum >> 16)
+    checksum = (checksum & 0xffff) + (checksum >> 16);
 
-  return (uint16_t)(~checksum);
+  return ~checksum;
 }
 
 NET_ICMP_ECHO(icmp_echo)
@@ -154,8 +154,8 @@ NET_ICMP_ECHO(icmp_echo)
   hdr = (struct icmphdr*)nethdr->data;
 #endif
 
-  /* checksum */
-  endian_be16_na_store(hdr->checksum, icmp_checksum(nethdr->data, nethdr->size));
+  /* XXX align */
+  hdr->checksum = icmp_checksum(nethdr->data, nethdr->size);
 
   /* target IP */
   packet->tIP = ip;
