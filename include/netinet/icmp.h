@@ -68,5 +68,42 @@ struct		icmphdr
   } un;
 } __attribute__ ((packed));
 
+/*
+ * -----8<-----
+ */
+
+#include <netinet/packet.h>
+#include <netinet/protos.h>
+
+#define NET_ICMP_ECHO(f)	void (f)(struct device_s	*dev,	\
+					 struct net_proto_s	*icmp,	\
+					 uint8_t		*ip,	\
+					 uint_fast16_t		id,	\
+					 uint_fast16_t		seq,	\
+					 uint8_t		*data,	\
+					 size_t			size)
+
+typedef NET_ICMP_ECHO(net_icmp_echo_t);
+
+/*
+ * ICMP protocol interface.
+ */
+
+struct	icmp_interface_s
+{
+  net_icmp_echo_t	*echo;
+};
+
+/*
+ * ICMP functions
+ */
+
+NET_INITPROTO(icmp_init);
+NET_PUSHPKT(icmp_pushpkt);
+NET_PREPAREPKT(icmp_preparepkt);
+NET_ICMP_ECHO(icmp_echo);
+
+extern const struct net_proto_desc_s	icmp_protocol;
+
 #endif
 

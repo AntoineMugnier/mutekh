@@ -112,7 +112,7 @@ NET_RARP_REQUEST(rarp_request)
 
   packet = packet_obj_new(NULL);
 
-  rarp_preparepkt(dev, packet);
+  rarp_preparepkt(dev, packet, 0);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];

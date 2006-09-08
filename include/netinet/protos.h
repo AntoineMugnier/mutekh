@@ -32,7 +32,8 @@ typedef NET_PUSHPKT(net_pushpkt_t);
  */
 
 #define NET_PREPAREPKT(f)	void (f)(struct device_s	*dev,	   \
-					 struct net_packet_s	*packet)
+					 struct net_packet_s	*packet,   \
+					 size_t			size)
 
 typedef NET_PREPAREPKT(net_preparepkt_t);
 
@@ -49,6 +50,7 @@ typedef NET_INITPROTO(net_initproto_t);
 #include <netinet/ether.h>
 #include <netinet/arp.h>
 #include <netinet/ip.h>
+#include <netinet/icmp.h>
 #include <netinet/dummy.h>
 
 typedef uint_fast16_t net_pkt_size_t;
@@ -71,8 +73,8 @@ struct					net_proto_desc_s
     const struct ip_interface_s		*ip;	/* ip protocol interface */
     const struct arp_interface_s	*arp;	/* arp protocol interface */
     const struct rarp_interface_s	*rarp;	/* rarp protocol interface */
-#if 0
     const struct icmp_interface_s	*icmp;	/* icmp protocol interface */
+#if 0
     const struct udp_interface_s	*udp;	/* udp protocol interface */
     const struct tcp_interface_s	*tcp;	/* tcp protocol interface */
 #endif

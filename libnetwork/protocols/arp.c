@@ -24,7 +24,8 @@ CONTAINER_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, list_entry
 static const struct arp_interface_s	arp_interface =
 {
   .request = arp_request,
-  .reply = arp_reply
+  .reply = arp_reply,
+  .update_table = arp_update_table
 };
 
 const struct net_proto_desc_s	arp_protocol =
@@ -103,9 +104,9 @@ NET_PUSHPKT(arp_pushpkt)
 	    if (!memcmp(arp_entry->mac, hdr->arp_sha, ETH_ALEN))
 	      break;
 	    arp_table_remove(&pv->table, arp_entry);
-	    mem_free(arp_entry);
 	  }
-	arp_entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_THREAD);
+	else
+	  arp_entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_THREAD);
 	memcpy(arp_entry->mac, hdr->arp_sha, ETH_ALEN);
 	memcpy(arp_entry->ip, hdr->arp_spa, 4);
 	arp_table_push(&pv->table, arp_entry);
@@ -146,7 +147,7 @@ NET_ARP_REQUEST(arp_request)
 
   packet = packet_obj_new(NULL);
 
-  arp_preparepkt(dev, packet);
+  arp_preparepkt(dev, packet, 0);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -199,7 +200,7 @@ NET_ARP_REPLY(arp_reply)
 
   packet = packet_obj_new(NULL);
 
-  arp_preparepkt(dev, packet);
+  arp_preparepkt(dev, packet, 0);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -234,4 +235,31 @@ NET_ARP_REPLY(arp_reply)
   packet->stage--;
   /* send the packet to the driver */
   dev_net_sendpkt(dev, packet, ETHERTYPE_ARP);
+}
+
+/*
+ * Update table entry.
+ */
+
+NET_ARP_UPDATE_TABLE(arp_update_table)
+{
+  struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)arp->pv;
+  struct arp_entry_s	*arp_entry;
+
+  if ((arp_entry = arp_table_lookup(&pv->table, ip)))
+    {
+      if (!memcmp(arp_entry->mac, mac, ETH_ALEN))
+	return ;
+      arp_table_remove(&pv->table, arp_entry);
+    }
+  else
+    arp_entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_THREAD);
+  memcpy(arp_entry->mac, mac, ETH_ALEN);
+  memcpy(arp_entry->ip, ip, 4);
+  arp_table_push(&pv->table, arp_entry);
+  printf("Added %d.%d.%d.%d as %2x:%2x:%2x:%2x:%2x:%2x\n",
+	 arp_entry->ip[0], arp_entry->ip[1], arp_entry->ip[2],
+	 arp_entry->ip[3], arp_entry->mac[0], arp_entry->mac[1],
+	 arp_entry->mac[2], arp_entry->mac[3], arp_entry->mac[4],
+	 arp_entry->mac[5]);
 }

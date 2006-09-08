@@ -78,6 +78,8 @@ struct			net_packet_s
   uint8_t		*packet;		/* raw packet */
   uint8_t		*sMAC;			/* source MAC address */
   uint8_t		*tMAC;			/* target MAC address */
+  uint8_t		*sIP;			/* source IP address */
+  uint8_t		*tIP;			/* target IP address */
   uint_fast8_t		MAClen;			/* length of MAC addresses */
 
   packet_obj_entry_t	obj_entry;

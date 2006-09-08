@@ -82,6 +82,13 @@ typedef NET_ARP_REQUEST(net_arp_request_t);
 
 typedef NET_ARP_REPLY(net_arp_reply_t);
 
+#define NET_ARP_UPDATE_TABLE(f)	void (f)(struct device_s	*dev,	\
+					 struct net_proto_s	*arp,	\
+					 uint8_t		*ip,	\
+					 uint8_t		*mac)
+
+typedef NET_ARP_UPDATE_TABLE(net_arp_update_table_t);
+
 #define NET_RARP_REQUEST(f)	void (f)(struct device_s	*dev,	\
 					 struct net_proto_s	*arp,	\
 					 uint8_t		*mac)
@@ -92,10 +99,11 @@ typedef NET_RARP_REQUEST(net_rarp_request_t);
  * ARP interface.
  */
 
-struct	arp_interface_s
+struct				arp_interface_s
 {
-  net_arp_request_t	*request;
-  net_arp_reply_t	*reply;
+  net_arp_request_t		*request;
+  net_arp_reply_t		*reply;
+  net_arp_update_table_t	*update_table;
 };
 
 /*
@@ -148,6 +156,7 @@ NET_PUSHPKT(arp_pushpkt);
 NET_PREPAREPKT(arp_preparepkt);
 NET_ARP_REQUEST(arp_request);
 NET_ARP_REPLY(arp_reply);
+NET_ARP_UPDATE_TABLE(arp_update_table);
 
 NET_INITPROTO(rarp_init);
 NET_PUSHPKT(rarp_pushpkt);

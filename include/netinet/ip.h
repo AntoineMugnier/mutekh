@@ -74,7 +74,6 @@ struct iphdr {
   uint16_t	id;
   ENDIAN_BITFIELD(uint16_t	flags:3,
 		  uint16_t	fragment:13);
-  uint16_t	frag_off;
   uint8_t	ttl;
   uint8_t	protocol;
   uint16_t	check;
@@ -111,6 +110,7 @@ struct			net_pv_ip_s
  * IP functions
  */
 
+NET_INITPROTO(ip_init);
 NET_PUSHPKT(ip_pushpkt);
 NET_PREPAREPKT(ip_preparepkt);
 

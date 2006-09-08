@@ -3,6 +3,10 @@
 #include <hexo/alloc.h>
 #include <../drivers/enum-pci/enum-pci.h>
 
+#include <netinet/ip.h>
+#include <netinet/arp.h>
+#include <netinet/icmp.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +27,7 @@ int_fast8_t		main()
   struct net_proto_s	*rarp;
   struct net_proto_s	*arp;
   struct net_proto_s	*ip;
+  struct net_proto_s	*icmp;
 
   /* look for a RTL8029 card */
   CONTAINER_FOREACH(device_list, DLIST, device_list, &enum_pci.children,
@@ -43,6 +48,7 @@ int_fast8_t		main()
   ip = dev_net_register_proto(ne2000, &ip_protocol);
   rarp = dev_net_register_proto(ne2000, &rarp_protocol);
   arp = dev_net_register_proto(ne2000, &arp_protocol);
+  icmp = dev_net_register_proto(ne2000, &icmp_protocol);
 
   /* an RARP request is used to assign us an IP */
   rarp_request(ne2000, rarp, NULL);
