@@ -30,12 +30,20 @@ const struct net_proto_desc_s	ip_protocol =
     .pv_size = sizeof (struct net_pv_ip_s),
   };
 
+/*
+ * Initialize private data of IP module.
+ */
+
 NET_INITPROTO(ip_init)
 {
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s*)proto->pv;
 
   memset(pv->addr, 0, 4);
 }
+
+/*
+ * Receive incoming IP packets.
+ */
 
 NET_PUSHPKT(ip_pushpkt)
 {
@@ -96,6 +104,10 @@ NET_PUSHPKT(ip_pushpkt)
     printf("NETWORK: no protocol to handle packet (id = 0x%x)\n", proto);
 }
 
+/*
+ * Prepare a new IP packet.
+ */
+
 NET_PREPAREPKT(ip_preparepkt)
 {
   struct net_header_s	*nethdr;
@@ -109,26 +121,9 @@ NET_PREPAREPKT(ip_preparepkt)
   packet->stage++;
 }
 
-static uint_fast16_t	ip_checksum(uint8_t		*data,
-				    size_t		size)
-{
-  uint_fast32_t		checksum = 0;
-  uint16_t		*d = (uint16_t*)data;
-
-  while(size > 1)
-    {
-      checksum = checksum + *d++;
-      size = size - 2;
-    }
-
-  if (size)
-    checksum = checksum + *(uint8_t*)d;
-
-  while (checksum >> 16)
-    checksum = (checksum & 0xffff) + (checksum >> 16);
-
-  return ~checksum;
-}
+/*
+ * Send an IP packet.
+ */
 
 NET_IP_SEND(ip_send)
 {
@@ -159,13 +154,13 @@ NET_IP_SEND(ip_send)
   net_be16_store(hdr->tot_len, nethdr->size);
   net_be16_store(hdr->id, 0);	/* XXX */
   hdr->fragment = 0;		/* XXX */
-  hdr->flags = (0 << 1);	/* XXX */
+  hdr->flags = 0;		/* XXX */
   hdr->ttl = 64;
   hdr->protocol = proto->id;
   memcpy(&hdr->saddr, pv->addr, 4);
   memcpy(&hdr->daddr, packet->tIP, 4);
   /* checksum */
-  hdr->check = ip_checksum(hdr, hdr->ihl * 4); /* XXX align */
+  endian_16_na_store(&hdr->check, packet_checksum(hdr, hdr->ihl * 4));
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
   memcpy(nethdr->data, hdr, sizeof (struct iphdr));

@@ -91,6 +91,8 @@ struct			net_packet_s
 
 OBJECT_CONSTRUCTOR(packet_obj);
 OBJECT_DESTRUCTOR(packet_obj);
+uint_fast16_t		packet_checksum(uint8_t		*data,
+					size_t		size);
 
 OBJECT_FUNC(static inline, packet_obj, REFCOUNT, packet_obj, obj_entry);
 

@@ -7,7 +7,7 @@
 
 #define NET_NS8390_ADDR	0
 
-/* tty device functions */
+/* net device functions */
 
 DEV_IRQ(net_ns8390_irq);
 DEV_INIT(net_ns8390_init);

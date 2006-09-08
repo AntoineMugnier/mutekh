@@ -32,6 +32,9 @@ const struct net_proto_desc_s	icmp_protocol =
     .pv_size = sizeof (struct net_pv_icmp_s)
   };
 
+/*
+ * Initialize ICMP module.
+ */
 
 NET_INITPROTO(icmp_init)
 {
@@ -40,6 +43,10 @@ NET_INITPROTO(icmp_init)
   pv->ip = net_protos_lookup(&other, ETHERTYPE_IP);
   printf("ICMP %s with IP (%p)\n", pv->ip ? "bound" : "not bound", pv->ip);
 }
+
+/*
+ * Receive incoming ICMP packets.
+ */
 
 NET_PUSHPKT(icmp_pushpkt)
 {
@@ -69,7 +76,6 @@ NET_PUSHPKT(icmp_pushpkt)
 	switch (hdr->code)
 	  {
 	    case 0:
-	      printf("Ping request\n");
 	      icmp_echo(dev, protocol, packet->sIP,
 			net_be16_load(hdr->un.echo.id),
 			net_be16_load(hdr->un.echo.sequence),
@@ -85,31 +91,18 @@ NET_PUSHPKT(icmp_pushpkt)
     }
 }
 
+/*
+ * Prepare ICMP part of a packet.
+ */
+
 NET_PREPAREPKT(icmp_preparepkt)
 {
   ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size);
 }
 
-static uint_fast16_t	icmp_checksum(uint8_t		*data,
-				    size_t		size)
-{
-  uint_fast32_t		checksum = 0;
-  uint16_t		*d = (uint16_t*)data;
-
-  while(size > 1)
-    {
-      checksum = checksum + *d++;
-      size = size - 2;
-    }
-
-  if (size)
-    checksum = checksum + *(uint8_t*)d;
-
-  while (checksum >> 16)
-    checksum = (checksum & 0xffff) + (checksum >> 16);
-
-  return ~checksum;
-}
+/*
+ * Reply an echo request.
+ */
 
 NET_ICMP_ECHO(icmp_echo)
 {
@@ -154,8 +147,8 @@ NET_ICMP_ECHO(icmp_echo)
   hdr = (struct icmphdr*)nethdr->data;
 #endif
 
-  /* XXX align */
-  hdr->checksum = icmp_checksum(nethdr->data, nethdr->size);
+  /* compute checksum */
+  endian_16_na_store(&hdr->checksum, packet_checksum(nethdr->data, nethdr->size));
 
   /* target IP */
   packet->tIP = ip;

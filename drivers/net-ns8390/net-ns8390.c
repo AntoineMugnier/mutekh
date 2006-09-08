@@ -14,7 +14,7 @@
 /**************************************************************/
 
 /*
- * device open operation
+ * device operations
  */
 
 #ifndef CONFIG_STATIC_DRIVERS

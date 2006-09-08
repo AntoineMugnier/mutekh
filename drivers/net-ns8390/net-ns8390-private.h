@@ -6,6 +6,10 @@
 #include <netinet/ether.h>
 #include <netinet/protos.h>
 
+/*
+ * private data of a ns8390 network device
+ */
+
 struct			net_ns8390_context_s
 {
   lock_t		lock;

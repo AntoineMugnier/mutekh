@@ -15,7 +15,7 @@
  * ARP table functions.
  */
 
-CONTAINER_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, list_entry, BLOB, ip, 4);
+CONTAINER_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, list_entry, BLOB, ip);
 
 /*
  * Structures for declaring the protocol's properties & interface.
@@ -103,22 +103,7 @@ NET_PUSHPKT(arp_pushpkt)
 	  }
 	/* no break here since we also need to refresh cache */
       case ARPOP_REPLY:
-	if ((arp_entry = arp_table_lookup(&pv->table, hdr->arp_spa)))
-	  {
-	    if (!memcmp(arp_entry->mac, hdr->arp_sha, ETH_ALEN))
-	      break;
-	    arp_table_remove(&pv->table, arp_entry);
-	  }
-	else
-	  arp_entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_THREAD);
-	memcpy(arp_entry->mac, hdr->arp_sha, ETH_ALEN);
-	memcpy(arp_entry->ip, hdr->arp_spa, 4);
-	arp_table_push(&pv->table, arp_entry);
-	printf("Added %d.%d.%d.%d as %2x:%2x:%2x:%2x:%2x:%2x\n",
-	       arp_entry->ip[0], arp_entry->ip[1], arp_entry->ip[2],
-	       arp_entry->ip[3], arp_entry->mac[0], arp_entry->mac[1],
-	       arp_entry->mac[2], arp_entry->mac[3], arp_entry->mac[4],
-	       arp_entry->mac[5]);
+	arp_update_table(dev, protocol, hdr->arp_spa, hdr->arp_sha);
 	break;
       default:
 	break;
@@ -188,7 +173,7 @@ NET_ARP_REQUEST(arp_request)
 }
 
 /*
- * ARP reply
+ * Send an ARP reply
  */
 
 NET_ARP_REPLY(arp_reply)
@@ -269,9 +254,9 @@ NET_ARP_UPDATE_TABLE(arp_update_table)
 }
 
 /*
- * get the MAC address corresponding to an IP.
+ * Het the MAC address corresponding to an IP.
  *
- * make an ARP request if needed.
+ * Make an ARP request if needed.
  */
 
 NET_ARP_GET_MAC(arp_get_mac)

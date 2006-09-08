@@ -44,7 +44,7 @@ NET_INITPROTO(rarp_init)
 }
 
 /*
- * RARP packet incoming.
+ * Receive incoming RARP packets.
  */
 
 NET_PUSHPKT(rarp_pushpkt)
@@ -89,7 +89,7 @@ NET_PUSHPKT(rarp_pushpkt)
 }
 
 /*
- * prepare a RARP packet.
+ * Prepare a RARP packet.
  */
 
 NET_PREPAREPKT(rarp_preparepkt)
@@ -98,7 +98,7 @@ NET_PREPAREPKT(rarp_preparepkt)
 }
 
 /*
- * make a RARP request.
+ * Make a RARP request.
  */
 
 NET_RARP_REQUEST(rarp_request)

@@ -1,13 +1,25 @@
 #ifndef _8390_H_
 #define _8390_H_
 
+/*
+ * Memory size constants.
+ */
+
 #define MEM_8192	32
 #define MEM_16384	64
 #define MEM_32768	128
 
+/*
+ * Offset of registers.
+ */
+
 #define NE_ASIC_OFFSET	0x10
 #define NE_RESET	0x0F		/* Used to reset card */
 #define NE_DATA		0x00		/* Used to read/write NIC mem */
+
+/*
+ * Commands and arguments.
+ */
 
 #define D8390_P0_COMMAND	0x00
 #define D8390_P0_PSTART		0x01
@@ -71,12 +83,20 @@
 #define D8390_RXBUF_END		32
 #define D8390_PAGE_SIZE         256
 
+/*
+ * Each packet in the card's memory is prefixed by this structure.
+ */
+
 struct		net_ns8380_header_s
 {
   uint8_t	status;
   uint8_t	next;
   uint16_t	size;
 } __attribute__ ((packed));
+
+/*
+ * Function to access the hardware.
+ */
 
 void	net_ns8390_pio_read(struct net_ns8390_context_s		*pv,
 			    uint_fast16_t			src,

@@ -45,6 +45,15 @@ int_fast8_t		main()
 
  ok:
   /* register protocols below */
+#if 0
+ /* alloc proto, alloc pv, set desc link */
+  ip = dev_net_alloc_proto(&ip_protocol);
+  arp = dev_net_alloc_proto(&arp_protocol);
+  /* init pv data and world */
+  ip = dev_net_register_proto(ip, ne2000, arp);
+  arp = dev_net_register_proto(ip, ne2000, ip);
+#endif
+
   ip = dev_net_register_proto(ne2000, &ip_protocol);
   rarp = dev_net_register_proto(ne2000, &rarp_protocol);
   arp = dev_net_register_proto(ne2000, &arp_protocol);

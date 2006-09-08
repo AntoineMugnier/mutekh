@@ -5,10 +5,7 @@
 #include <netinet/packet.h>
 #include <netinet/ether.h>
 
-struct		dummy_interface_s
-{
-  /* XXX */
-};
+struct		dummy_interface_s { };
 
 #include <netinet/protos.h>
 

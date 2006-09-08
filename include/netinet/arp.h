@@ -117,7 +117,7 @@ struct				arp_interface_s
  * ARP table types.
  */
 
-CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, 8, UNSIGNED);
+CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, 64, BLOB, 4);
 
 /*
  * ARP private data.

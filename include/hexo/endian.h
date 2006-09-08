@@ -154,29 +154,29 @@ static inline uint64_t endian_swap64(uint64_t x)
 
 #if defined (CPU_NATIVE_NONALIGNED_ACCESS)
 /* direct non aligned word width memory access */
-# define __endian_16_na_load(a)		(*((uint16_t*)a))
-# define __endian_32_na_load(a)		(*((uint32_t*)a))
-# define __endian_64_na_load(a)		(*((uint64_t*)a))
-# define __endian_16_na_store(a, x)	(*((uint16_t*)a) = (x))
-# define __endian_32_na_store(a, x)	(*((uint32_t*)a) = (x))
-# define __endian_64_na_store(a, x)	(*((uint64_t*)a) = (x))
+# define endian_16_na_load(a)		(*((uint16_t*)a))
+# define endian_32_na_load(a)		(*((uint32_t*)a))
+# define endian_64_na_load(a)		(*((uint64_t*)a))
+# define endian_16_na_store(a, x)	(*((uint16_t*)a) = (x))
+# define endian_32_na_store(a, x)	(*((uint32_t*)a) = (x))
+# define endian_64_na_store(a, x)	(*((uint64_t*)a) = (x))
 #endif
 
 #if defined (CPU_NONALIGNED_ACCESS) || defined (CPU_NATIVE_NONALIGNED_ACCESS)
 /* direct non aligned word width memory access with endian perm */
-# define endian_le16_na_load(a)		endian_le16(__endian_16_na_load(a))
-# define endian_le32_na_load(a)		endian_le32(__endian_16_na_load(a))
-# define endian_le64_na_load(a)		endian_le64(__endian_16_na_load(a))
-# define endian_le16_na_store(a, x)	__endian_16_na_store(a, endian_le16(x))
-# define endian_le32_na_store(a, x)	__endian_32_na_store(a, endian_le32(x))
-# define endian_le64_na_store(a, x)	__endian_64_na_store(a, endian_le64(x))
+# define endian_le16_na_load(a)		endian_le16(endian_16_na_load(a))
+# define endian_le32_na_load(a)		endian_le32(endian_16_na_load(a))
+# define endian_le64_na_load(a)		endian_le64(endian_16_na_load(a))
+# define endian_le16_na_store(a, x)	endian_16_na_store(a, endian_le16(x))
+# define endian_le32_na_store(a, x)	endian_32_na_store(a, endian_le32(x))
+# define endian_le64_na_store(a, x)	endian_64_na_store(a, endian_le64(x))
 
-# define endian_be16_na_load(a)		endian_be16(__endian_16_na_load(a))
-# define endian_be32_na_load(a)		endian_be32(__endian_16_na_load(a))
-# define endian_be64_na_load(a)		endian_be64(__endian_16_na_load(a))
-# define endian_be16_na_store(a, x)	__endian_16_na_store(a, endian_be16(x))
-# define endian_be32_na_store(a, x)	__endian_32_na_store(a, endian_be32(x))
-# define endian_be64_na_store(a, x)	__endian_64_na_store(a, endian_be64(x))
+# define endian_be16_na_load(a)		endian_be16(endian_16_na_load(a))
+# define endian_be32_na_load(a)		endian_be32(endian_16_na_load(a))
+# define endian_be64_na_load(a)		endian_be64(endian_16_na_load(a))
+# define endian_be16_na_store(a, x)	endian_16_na_store(a, endian_be16(x))
+# define endian_be32_na_store(a, x)	endian_32_na_store(a, endian_be32(x))
+# define endian_be64_na_store(a, x)	endian_64_na_store(a, endian_be64(x))
 
 #else
 /* indirect byte width memory access with endian perm */
