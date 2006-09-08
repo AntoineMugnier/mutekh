@@ -22,6 +22,7 @@ int_fast8_t		main()
   struct enum_id_pci_s	*enum_pv;
   struct net_proto_s	*rarp;
   struct net_proto_s	*arp;
+  struct net_proto_s	*ip;
 
   /* look for a RTL8029 card */
   CONTAINER_FOREACH(device_list, DLIST, device_list, &enum_pci.children,
@@ -39,6 +40,7 @@ int_fast8_t		main()
 
  ok:
   /* register protocols below */
+  ip = dev_net_register_proto(ne2000, &ip_protocol);
   rarp = dev_net_register_proto(ne2000, &rarp_protocol);
   arp = dev_net_register_proto(ne2000, &arp_protocol);
 

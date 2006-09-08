@@ -36,6 +36,16 @@ typedef NET_PUSHPKT(net_pushpkt_t);
 
 typedef NET_PREPAREPKT(net_preparepkt_t);
 
+/*
+ * Prototype of the function used to initialize private data.
+ */
+
+#define NET_INITPROTO(f)	void (f)(struct device_s	*dev,	\
+					 struct net_proto_s	*proto,	\
+					 net_protos_root_t	other)
+
+typedef NET_INITPROTO(net_initproto_t);
+
 #include <netinet/ether.h>
 #include <netinet/arp.h>
 #include <netinet/ip.h>
@@ -54,6 +64,7 @@ struct					net_proto_desc_s
   net_proto_id_t			id;	/* protocol identifier */
   net_pushpkt_t				*pushpkt; /* push packet function */
   net_preparepkt_t			*preparepkt; /* prepare packet func */
+  net_initproto_t			*initproto; /* init pv data */
   union
   {
     const struct ether_interface_s	*ether;	/* ethernet interface */

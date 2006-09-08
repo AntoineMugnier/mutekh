@@ -111,6 +111,9 @@ DEVNET_REGISTER_PROTO(net_ns8390_register_proto)
   proto->id = desc->id;
   proto->pv = (void*)((uint8_t*)proto + sizeof (struct net_proto_s));
 
+  if (desc->initproto)
+    desc->initproto(dev, proto, pv->protocols);
+
   net_protos_push(&pv->protocols, proto);
 
   return proto;

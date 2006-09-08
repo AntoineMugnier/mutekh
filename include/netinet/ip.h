@@ -83,6 +83,13 @@ struct iphdr {
 } __attribute__((packed));
 
 /*
+ * -----8<-----
+ */
+
+#include <netinet/packet.h>
+#include <netinet/protos.h>
+
+/*
  * IP protocol interface.
  */
 
@@ -90,6 +97,24 @@ struct	ip_interface_s
 {
   /* XXX */
 };
+
+/*
+ * IP private data.
+ */
+
+struct			net_pv_ip_s
+{
+  uint8_t		addr[4];
+};
+
+/*
+ * IP functions
+ */
+
+NET_PUSHPKT(ip_pushpkt);
+NET_PREPAREPKT(ip_preparepkt);
+
+extern const struct net_proto_desc_s	ip_protocol;
 
 #endif
 

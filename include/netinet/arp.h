@@ -99,12 +99,30 @@ struct	arp_interface_s
 };
 
 /*
+ * ARP table types.
+ */
+
+CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, 8, UNSIGNED);
+
+/*
  * ARP private data.
  */
 
 struct			net_pv_arp_s
 {
   struct net_proto_s	*ip;
+  arp_table_root_t	table;
+};
+
+/*
+ * ARP entry.
+ */
+
+struct			arp_entry_s
+{
+  uint8_t		ip[4];
+  uint8_t		mac[ETH_ALEN];
+  arp_table_entry_t	list_entry;
 };
 
 /*
@@ -116,15 +134,24 @@ struct	rarp_interface_s
   net_rarp_request_t	*request;
 };
 
-#include <netinet/protos.h>
+/*
+ * RARP private data.
+ */
 
-NET_PUSHPKT(arp_push);
-NET_PREPAREPKT(arp_prepare);
+struct			net_pv_rarp_s
+{
+  struct net_proto_s	*ip;
+};
+
+NET_INITPROTO(arp_init);
+NET_PUSHPKT(arp_pushpkt);
+NET_PREPAREPKT(arp_preparepkt);
 NET_ARP_REQUEST(arp_request);
 NET_ARP_REPLY(arp_reply);
 
-NET_PUSHPKT(rarp_push);
-NET_PREPAREPKT(rarp_prepare);
+NET_INITPROTO(rarp_init);
+NET_PUSHPKT(rarp_pushpkt);
+NET_PREPAREPKT(rarp_preparepkt);
 NET_RARP_REQUEST(rarp_request);
 
 extern const struct net_proto_desc_s	arp_protocol;

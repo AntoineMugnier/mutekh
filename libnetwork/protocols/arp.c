@@ -4,11 +4,18 @@
  */
 
 #include <netinet/arp.h>
+#include <netinet/ip.h>
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 #include <hexo/device.h>
 
 #include <stdio.h>
+
+/*
+ * ARP table functions.
+ */
+
+CONTAINER_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, list_entry, BLOB, ip, 4);
 
 /*
  * Structures for declaring the protocol's properties & interface.
@@ -24,24 +31,40 @@ const struct net_proto_desc_s	arp_protocol =
   {
     .name = "ARP",
     .id = ETHERTYPE_ARP,
-    .pushpkt = arp_push,
-    .preparepkt = arp_prepare,
+    .pushpkt = arp_pushpkt,
+    .preparepkt = arp_preparepkt,
+    .initproto = arp_init,
     .f.arp = &arp_interface,
     .pv_size = sizeof (struct net_pv_arp_s),
   };
 
 /*
+ * Init ARP.
+ */
+
+NET_INITPROTO(arp_init)
+{
+  struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)proto->pv;
+
+  arp_table_init(&pv->table);
+  pv->ip = net_protos_lookup(&other, ETHERTYPE_IP);
+  printf("ARP %s with IP (%p)\n", pv->ip ? "bound" : "not bound", pv->ip);
+}
+
+/*
  * This function decodes an incoming ARP packet.
  */
 
-NET_PUSHPKT(arp_push)
+NET_PUSHPKT(arp_pushpkt)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)protocol->pv;
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s*)pv->ip->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct ether_arp	aligned;
 #endif
   struct ether_arp	*hdr;
   struct net_header_s	*nethdr;
+  struct arp_entry_s	*arp_entry;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -65,16 +88,32 @@ NET_PUSHPKT(arp_push)
   switch (net_be16_load(hdr->arp_op))
     {
       case ARPOP_REQUEST:
-#if 0
-	if (!memcmp(hdr->arp_tpa, pv->ip->addr, 4))
+	printf("Requested %d.%d.%d.%d\n",
+	       hdr->arp_tpa[0], hdr->arp_tpa[1], hdr->arp_tpa[2],
+	       hdr->arp_tpa[3]);
+	if (!memcmp(hdr->arp_tpa, pv_ip->addr, 4))
 	  {
+	    printf("It's me !\n");
 	    arp_reply(dev, protocol, hdr->arp_sha, hdr->arp_spa);
 	  }
-#endif
 	/* no break here since we also need to refresh cache */
       case ARPOP_REPLY:
-	/* XXX refresh arp cache with source */
-	/* push(hdr->arp_spa, hdr->arp_sha) */
+	if ((arp_entry = arp_table_lookup(&pv->table, hdr->arp_spa)))
+	  {
+	    if (!memcmp(arp_entry->mac, hdr->arp_sha, ETH_ALEN))
+	      break;
+	    arp_table_remove(&pv->table, arp_entry);
+	    mem_free(arp_entry);
+	  }
+	arp_entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_THREAD);
+	memcpy(arp_entry->mac, hdr->arp_sha, ETH_ALEN);
+	memcpy(arp_entry->ip, hdr->arp_spa, 4);
+	arp_table_push(&pv->table, arp_entry);
+	printf("Added %d.%d.%d.%d as %2x:%2x:%2x:%2x:%2x:%2x\n",
+	       arp_entry->ip[0], arp_entry->ip[1], arp_entry->ip[2],
+	       arp_entry->ip[3], arp_entry->mac[0], arp_entry->mac[1],
+	       arp_entry->mac[2], arp_entry->mac[3], arp_entry->mac[4],
+	       arp_entry->mac[5]);
 	break;
       default:
 	break;
@@ -85,7 +124,7 @@ NET_PUSHPKT(arp_push)
  * This function prepares an ARP packet.
  */
 
-NET_PREPAREPKT(arp_prepare)
+NET_PREPAREPKT(arp_preparepkt)
 {
   dev_net_preparepkt(dev, packet, sizeof (struct ether_arp));
 }
@@ -97,6 +136,7 @@ NET_PREPAREPKT(arp_prepare)
 NET_ARP_REQUEST(arp_request)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)arp->pv;
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s*)pv->ip->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct ether_arp	aligned;
 #endif
@@ -106,7 +146,7 @@ NET_ARP_REQUEST(arp_request)
 
   packet = packet_obj_new(NULL);
 
-  arp_prepare(dev, packet);
+  arp_preparepkt(dev, packet);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -128,9 +168,7 @@ NET_ARP_REQUEST(arp_request)
   hdr->arp_pln = 4;
   net_be16_store(hdr->arp_op, ARPOP_REQUEST);
   memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
-#if 0
-  memcpy(hdr->arp_spa, pv->ip->addr, 4);
-#endif
+  memcpy(hdr->arp_spa, pv_ip->addr, 4);
   memcpy(hdr->arp_tpa, address, hdr->arp_pln);
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -151,6 +189,7 @@ NET_ARP_REQUEST(arp_request)
 NET_ARP_REPLY(arp_reply)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)arp->pv;
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s*)pv->ip->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct ether_arp	aligned;
 #endif
@@ -160,7 +199,7 @@ NET_ARP_REPLY(arp_reply)
 
   packet = packet_obj_new(NULL);
 
-  arp_prepare(dev, packet);
+  arp_preparepkt(dev, packet);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -182,9 +221,7 @@ NET_ARP_REPLY(arp_reply)
   hdr->arp_pln = 4;
   net_be16_store(hdr->arp_op, ARPOP_REPLY);
   memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
-#if 0
-  memcpy(hdr->arp_spa, pv->ip->addr, 4);
-#endif
+  memcpy(hdr->arp_spa, pv_ip->addr, 4);
   memcpy(hdr->arp_tha, mac, ETH_ALEN);
   memcpy(hdr->arp_tpa, ip, hdr->arp_pln);
 
@@ -197,5 +234,4 @@ NET_ARP_REPLY(arp_reply)
   packet->stage--;
   /* send the packet to the driver */
   dev_net_sendpkt(dev, packet, ETHERTYPE_ARP);
-
 }

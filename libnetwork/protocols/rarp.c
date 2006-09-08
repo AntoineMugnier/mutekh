@@ -23,18 +23,34 @@ const struct net_proto_desc_s	rarp_protocol =
   {
     .name = "RARP",
     .id = ETHERTYPE_REVARP,
-    .pushpkt = rarp_push,
-    .preparepkt = rarp_prepare,
+    .pushpkt = rarp_pushpkt,
+    .preparepkt = rarp_preparepkt,
+    .initproto = rarp_init,
     .f.rarp = &rarp_interface,
-    .pv_size = 0
+    .pv_size = sizeof (struct net_pv_rarp_s)
   };
+
+/*
+ * Init RARP.
+ */
+
+NET_INITPROTO(rarp_init)
+{
+  struct net_pv_rarp_s	*pv = (struct net_pv_rarp_s*)proto->pv;
+
+  pv->ip = net_protos_lookup(&other, ETHERTYPE_IP);
+  printf("RARP %s with IP (%p)\n", pv->ip ? "bound" : "not bound",
+	 pv->ip);
+}
 
 /*
  * RARP packet incoming.
  */
 
-NET_PUSHPKT(rarp_push)
+NET_PUSHPKT(rarp_pushpkt)
 {
+  struct net_pv_rarp_s	*pv = (struct net_pv_rarp_s*)protocol->pv;
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s*)pv->ip->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct ether_arp	aligned;
 #endif
@@ -65,10 +81,10 @@ NET_PUSHPKT(rarp_push)
       if (memcmp(packet->tMAC, hdr->arp_tha, ETH_ALEN))
 	return ;
 
-      printf("My IP should be: %d.%d.%d.%d\n", hdr->arp_tpa[0],
+      printf("Assigned IP: %d.%d.%d.%d\n", hdr->arp_tpa[0],
 	     hdr->arp_tpa[1], hdr->arp_tpa[2], hdr->arp_tpa[3]);
 
-      /* XXX assign me the IP */
+      memcpy(pv_ip->addr, hdr->arp_tpa, 4);
     }
 }
 
@@ -76,7 +92,7 @@ NET_PUSHPKT(rarp_push)
  * prepare a RARP packet.
  */
 
-NET_PREPAREPKT(rarp_prepare)
+NET_PREPAREPKT(rarp_preparepkt)
 {
   dev_net_preparepkt(dev, packet, sizeof (struct ether_arp));
 }
@@ -96,7 +112,7 @@ NET_RARP_REQUEST(rarp_request)
 
   packet = packet_obj_new(NULL);
 
-  rarp_prepare(dev, packet);
+  rarp_preparepkt(dev, packet);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
