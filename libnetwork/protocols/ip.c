@@ -16,7 +16,7 @@
 
 static const struct ip_interface_s	ip_interface =
 {
-  /* XXX */
+  .send = ip_send
 };
 
 const struct net_proto_desc_s	ip_protocol =
@@ -79,7 +79,7 @@ NET_PUSHPKT(ip_pushpkt)
     {
       hdr_len = hdr->ihl * 4;
       nethdr[1].data = nethdr->data + hdr_len;
-      nethdr[1].size = hdr->tot_len - hdr_len;
+      nethdr[1].size = net_be16_load(hdr->tot_len) - hdr_len;
     }
 
   /* update ARP cache */
@@ -98,5 +98,87 @@ NET_PUSHPKT(ip_pushpkt)
 
 NET_PREPAREPKT(ip_preparepkt)
 {
-  dev_net_preparepkt(dev, packet, sizeof (struct iphdr) + size);
+  struct net_header_s	*nethdr;
+
+  dev_net_preparepkt(dev, packet, 20 + size); /* XXX */
+
+  nethdr = &packet->header[packet->stage];
+  nethdr[1].data = nethdr->data + 20; /* XXX */
+  nethdr[1].size = size;
+
+  packet->stage++;
 }
+
+static uint16_t		ip_checksum(uint8_t		*data,
+				    size_t		size)
+{
+  uint_fast32_t		checksum = 0;
+  uint16_t		*d = (uint16_t*)data;
+
+  while(size > 1)
+    {
+      checksum = checksum + *d++;
+      size = size - 2;
+    }
+
+  if (size)
+    checksum = checksum + *(uint8_t*)d;
+
+  checksum = (checksum >> 16) + (checksum & 0xffff);
+  checksum = checksum + (checksum >> 16);
+
+  return (uint16_t)(~checksum);
+}
+
+NET_IP_SEND(ip_send)
+{
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s*)ip->pv;
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  struct iphdr		aligned;
+#endif
+  struct iphdr		*hdr;
+  struct net_header_s	*nethdr;
+
+  /* get the header */
+  nethdr = &packet->header[packet->stage];
+  hdr = (struct iphdr*)nethdr->data;
+
+  /* align the packet on 16 bits if necessary */
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  if (!ALIGNED(hdr, sizeof (uint16_t)))
+    {
+      hdr = &aligned;
+      memset(hdr, 0, sizeof (struct iphdr));
+    }
+#endif
+
+  /* fill IP header */
+  hdr->version = 4;
+  hdr->ihl = 5;
+  hdr->tos = 0;
+  net_be16_store(hdr->tot_len, nethdr->size);
+  net_be16_store(hdr->id, 0);
+  hdr->fragment = 0;
+  hdr->flags = 0x4;
+  hdr->ttl = 128;
+  hdr->protocol = proto->id;
+  memcpy(&hdr->saddr, pv->addr, 4);
+  memcpy(&hdr->daddr, packet->tIP, 4);
+  /* XXX checksum */
+
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  memcpy(nethdr->data, hdr, sizeof (struct iphdr));
+  hdr = (struct iphdr*)nethdr->data;
+#endif
+
+  endian_be16_na_store(hdr->check, ip_checksum(nethdr->data, nethdr->size));
+
+  packet->sIP = (uint8_t*)&hdr->saddr;
+  packet->tIP = (uint8_t*)&hdr->daddr;
+  packet->tMAC = arp_get_mac(dev, pv->arp, packet->sIP);
+
+  packet->stage--;
+  /* send the packet to the driver */
+  dev_net_sendpkt(dev, packet, ETHERTYPE_IP);
+}
+

@@ -29,13 +29,16 @@ const struct net_proto_desc_s	icmp_protocol =
     .preparepkt = icmp_preparepkt,
     .initproto = icmp_init,
     .f.icmp = &icmp_interface,
-    .pv_size = 0
+    .pv_size = sizeof (struct net_pv_icmp_s)
   };
 
 
 NET_INITPROTO(icmp_init)
 {
+  struct net_pv_icmp_s	*pv = (struct net_pv_icmp_s*)proto->pv;
 
+  pv->ip = net_protos_lookup(&other, ETHERTYPE_IP);
+  printf("ICMP %s with IP (%p)\n", pv->ip ? "bound" : "not bound", pv->ip);
 }
 
 NET_PUSHPKT(icmp_pushpkt)
@@ -87,8 +90,30 @@ NET_PREPAREPKT(icmp_preparepkt)
   ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size);
 }
 
+static uint16_t		icmp_checksum(uint8_t		*data,
+				      size_t		size)
+{
+  uint_fast32_t		checksum = 0;
+  uint16_t		*d = (uint16_t*)data;
+
+  while(size > 1)
+    {
+      checksum = checksum + *d++;
+      size = size - 2;
+    }
+
+  if (size)
+    checksum = checksum + *(uint8_t*)d;
+
+  checksum = (checksum >> 16) + (checksum & 0xffff);
+  checksum = checksum + (checksum >> 16);
+
+  return (uint16_t)(~checksum);
+}
+
 NET_ICMP_ECHO(icmp_echo)
 {
+  struct net_pv_icmp_s	*pv = (struct net_pv_icmp_s*)icmp->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct icmphdr	aligned;
 #endif
@@ -102,7 +127,7 @@ NET_ICMP_ECHO(icmp_echo)
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
-  hdr = (struct ether_arp*)nethdr->data;
+  hdr = (struct icmphdr*)nethdr->data;
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -116,7 +141,6 @@ NET_ICMP_ECHO(icmp_echo)
   /* fill the echo */
   hdr->type = 0;
   hdr->code = 3;
-  /* XXX checksum */
   net_be16_store(hdr->un.echo.id, id);
   net_be16_store(hdr->un.echo.sequence, seq);
 
@@ -127,15 +151,17 @@ NET_ICMP_ECHO(icmp_echo)
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
   memcpy(nethdr->data, hdr, sizeof (struct icmphdr));
+  hdr = (struct icmphdr*)nethdr->data;
 #endif
+
+  /* checksum */
+  endian_be16_na_store(hdr->checksum, icmp_checksum(nethdr->data, nethdr->size));
 
   /* target IP */
   packet->tIP = ip;
 
   packet->stage--;
   /* send the packet to IP */
-#if 0
-  ip_send(dev, packet, icmp);
-#endif
+  ip_send(dev, packet, pv->ip, icmp);
 }
 

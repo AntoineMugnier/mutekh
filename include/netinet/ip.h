@@ -88,13 +88,20 @@ struct iphdr {
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 
+#define NET_IP_SEND(f)		void (f)(struct device_s	*dev,	\
+					 struct net_packet_s	*packet,\
+					 struct net_proto_s	*ip,	\
+					 struct net_proto_s	*proto)
+
+typedef NET_IP_SEND(net_ip_send_t);
+
 /*
  * IP protocol interface.
  */
 
-struct	ip_interface_s
+struct		ip_interface_s
 {
-  /* XXX */
+  net_ip_send_t	*send;
 };
 
 /*
@@ -103,6 +110,7 @@ struct	ip_interface_s
 
 struct			net_pv_ip_s
 {
+  struct net_proto_s	*arp;
   uint8_t		addr[4];
 };
 
@@ -113,6 +121,8 @@ struct			net_pv_ip_s
 NET_INITPROTO(ip_init);
 NET_PUSHPKT(ip_pushpkt);
 NET_PREPAREPKT(ip_preparepkt);
+NET_IP_SEND(ip_send);
+
 
 extern const struct net_proto_desc_s	ip_protocol;
 

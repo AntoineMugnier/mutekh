@@ -25,7 +25,8 @@ static const struct arp_interface_s	arp_interface =
 {
   .request = arp_request,
   .reply = arp_reply,
-  .update_table = arp_update_table
+  .update_table = arp_update_table,
+  .get_mac = arp_get_mac
 };
 
 const struct net_proto_desc_s	arp_protocol =
@@ -46,10 +47,13 @@ const struct net_proto_desc_s	arp_protocol =
 NET_INITPROTO(arp_init)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)proto->pv;
+  struct net_pv_ip_s	*pv_ip;
 
   arp_table_init(&pv->table);
   pv->ip = net_protos_lookup(&other, ETHERTYPE_IP);
   printf("ARP %s with IP (%p)\n", pv->ip ? "bound" : "not bound", pv->ip);
+  pv_ip = (struct net_pv_ip_s*)pv->ip->pv;
+  pv_ip->arp = proto;
 }
 
 /*
@@ -263,3 +267,25 @@ NET_ARP_UPDATE_TABLE(arp_update_table)
 	 arp_entry->mac[2], arp_entry->mac[3], arp_entry->mac[4],
 	 arp_entry->mac[5]);
 }
+
+/*
+ * get the MAC address corresponding to an IP.
+ *
+ * make an ARP request if needed.
+ */
+
+NET_ARP_GET_MAC(arp_get_mac)
+{
+  struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)arp->pv;
+  struct arp_entry_s	*arp_entry;
+
+  if ((arp_entry = arp_table_lookup(&pv->table, ip)))
+    {
+      return arp_entry->mac;
+    }
+  else
+    {
+      /* XXX arp_request */
+    }
+}
+

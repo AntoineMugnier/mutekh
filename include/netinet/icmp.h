@@ -95,6 +95,15 @@ struct	icmp_interface_s
 };
 
 /*
+ * ICMP private data.
+ */
+
+struct			net_pv_icmp_s
+{
+  struct net_proto_s	*ip;
+};
+
+/*
  * ICMP functions
  */
 
