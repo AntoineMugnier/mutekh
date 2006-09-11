@@ -87,12 +87,12 @@ NET_PUSHPKT(rarp_pushpkt)
 #endif
 
   /* check header */
-  if (net_be16_load(hdr->arp_hrd) != ARPHRD_ETHER ||
-      net_be16_load(hdr->arp_pro) != ETHERTYPE_IP)
+  if (net_be16_load(hdr->ea_hdr.ar_hrd) != ARPHRD_ETHER ||
+      net_be16_load(hdr->ea_hdr.ar_pro) != ETHERTYPE_IP)
     return ;
 
   /* ARP reply message */
-  if (net_be16_load(hdr->arp_op) == ARPOP_RREPLY)
+  if (net_be16_load(hdr->ea_hdr.ar_op) == ARPOP_RREPLY)
     {
       if (memcmp(packet->tMAC, hdr->arp_tha, ETH_ALEN))
 	return ;
@@ -137,23 +137,22 @@ NET_RARP_REQUEST(rarp_request)
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
   if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
-    {
-      hdr = &aligned;
-      memset(hdr, 0, sizeof (struct ether_arp));
-    }
+    hdr = &aligned;
 #endif
 
   /* fill the request */
-  net_be16_store(hdr->arp_hrd, ARPHRD_ETHER);
-  net_be16_store(hdr->arp_pro, ETHERTYPE_IP);
-  hdr->arp_hln = ETH_ALEN;
-  hdr->arp_pln = 4;
-  net_be16_store(hdr->arp_op, ARPOP_RREQUEST);
+  net_be16_store(hdr->ea_hdr.ar_hrd, ARPHRD_ETHER);
+  net_be16_store(hdr->ea_hdr.ar_pro, ETHERTYPE_IP);
+  hdr->ea_hdr.ar_hln = ETH_ALEN;
+  hdr->ea_hdr.ar_pln = 4;
+  net_be16_store(hdr->ea_hdr.ar_op, ARPOP_RREQUEST);
   memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
   if (!mac)
     memcpy(hdr->arp_tha, packet->sMAC, ETH_ALEN);
   else
     memcpy(hdr->arp_tha, mac, ETH_ALEN);
+  memset(hdr->arp_spa, 0, 4);
+  memset(hdr->arp_tpa, 0, 4);
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
   if (hdr == &aligned)

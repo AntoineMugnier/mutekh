@@ -99,7 +99,6 @@ struct					net_proto_desc_s
     const struct udp_interface_s	*udp;	/* udp protocol interface */
     const struct tcp_interface_s	*tcp;	/* tcp protocol interface */
 #endif
-    const struct dummy_interface_s	*dummy;	/* fake protocol for debug */
     const void				*other;	/* other protocol interface */
   } f;
   size_t				pv_size;

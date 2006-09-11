@@ -98,12 +98,12 @@ NET_PUSHPKT(arp_pushpkt)
 #endif
 
   /* check header */
-  if (net_be16_load(hdr->arp_hrd) != ARPHRD_ETHER ||
-      net_be16_load(hdr->arp_pro) != ETHERTYPE_IP)
+  if (net_be16_load(hdr->ea_hdr.ar_hrd) != ARPHRD_ETHER ||
+      net_be16_load(hdr->ea_hdr.ar_pro) != ETHERTYPE_IP)
     return ;
 
   /* ARP message */
-  switch (net_be16_load(hdr->arp_op))
+  switch (net_be16_load(hdr->ea_hdr.ar_op))
     {
       case ARPOP_REQUEST:
 	printf("Requested %d.%d.%d.%d\n",
@@ -158,21 +158,19 @@ NET_ARP_REQUEST(arp_request)
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
   if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
-    {
-      hdr = &aligned;
-      memset(hdr, 0, sizeof (struct ether_arp));
-    }
+    hdr = &aligned;
 #endif
 
   /* fill the request */
-  net_be16_store(hdr->arp_hrd, ARPHRD_ETHER);
-  net_be16_store(hdr->arp_pro, ETHERTYPE_IP);
-  hdr->arp_hln = ETH_ALEN;
-  hdr->arp_pln = 4;
-  net_be16_store(hdr->arp_op, ARPOP_REQUEST);
+  net_be16_store(hdr->ea_hdr.ar_hrd, ARPHRD_ETHER);
+  net_be16_store(hdr->ea_hdr.ar_pro, ETHERTYPE_IP);
+  hdr->ea_hdr.ar_hln = ETH_ALEN;
+  hdr->ea_hdr.ar_pln = 4;
+  net_be16_store(hdr->ea_hdr.ar_op, ARPOP_REQUEST);
   memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
   memcpy(hdr->arp_spa, pv_ip->addr, 4);
-  memcpy(hdr->arp_tpa, address, hdr->arp_pln);
+  memset(hdr->arp_tha, 0xff, ETH_ALEN);
+  memcpy(hdr->arp_tpa, address, 4);
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
   if (hdr == &aligned)
@@ -212,18 +210,15 @@ NET_ARP_REPLY(arp_reply)
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
   if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
-    {
-      hdr = &aligned;
-      memset(hdr, 0, sizeof (struct ether_arp));
-    }
+    hdr = &aligned;
 #endif
 
   /* fill the reply */
-  net_be16_store(hdr->arp_hrd, ARPHRD_ETHER);
-  net_be16_store(hdr->arp_pro, ETHERTYPE_IP);
-  hdr->arp_hln = ETH_ALEN;
-  hdr->arp_pln = 4;
-  net_be16_store(hdr->arp_op, ARPOP_REPLY);
+  net_be16_store(hdr->ea_hdr.ar_hrd, ARPHRD_ETHER);
+  net_be16_store(hdr->ea_hdr.ar_pro, ETHERTYPE_IP);
+  hdr->ea_hdr.ar_hln = ETH_ALEN;
+  hdr->ea_hdr.ar_pln = 4;
+  net_be16_store(hdr->ea_hdr.ar_op, ARPOP_REPLY);
   memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
   memcpy(hdr->arp_spa, pv_ip->addr, 4);
   memcpy(hdr->arp_tha, mac, ETH_ALEN);

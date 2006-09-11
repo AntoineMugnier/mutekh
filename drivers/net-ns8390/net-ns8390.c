@@ -86,7 +86,7 @@ DEV_IRQ(net_ns8390_irq)
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct ether_header));
       hdr = &aligned;
@@ -183,7 +183,7 @@ DEVNET_SENDPKT(net_ns8390_sendpkt)
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
     {
       hdr = &aligned;
       memset(hdr, 0, sizeof (struct ether_header));

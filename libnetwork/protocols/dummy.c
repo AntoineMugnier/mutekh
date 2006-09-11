@@ -35,15 +35,13 @@
  * Structures for declaring the protocol's properties & interface.
  */
 
-static const struct dummy_interface_s	dummy_interface = { };
-
 const struct net_proto_desc_s	dummy_protocol =
   {
     .name = "dummy",
     .id = 0,
     .pushpkt = dummy_push,
     .preparepkt = NULL,
-    .f.dummy = &dummy_interface,
+    .f.other = NULL,
     .pv_size = 0
   };
 

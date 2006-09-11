@@ -78,12 +78,6 @@ struct		ether_arp
   uint8_t	arp_tpa[4];		/* target protocol address */
 } __attribute__ ((packed));
 
-#define	arp_hrd	ea_hdr.ar_hrd
-#define	arp_pro	ea_hdr.ar_pro
-#define	arp_hln	ea_hdr.ar_hln
-#define	arp_pln	ea_hdr.ar_pln
-#define	arp_op	ea_hdr.ar_op
-
 /*
     This file is part of MutekH.
 
