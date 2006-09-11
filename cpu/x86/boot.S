@@ -82,9 +82,11 @@ cpu_boot:
 	/* get CPU id */
 	mov	$0x1b, %ecx
 	rdmsr
-	andl	$0x100, %eax
+	andl	$0xfffff000, %eax /* get local APIC base address */
+	mov	0x20(%eax), %eax /* read local apic ID */
+	shrl	$24, %eax
 	/* change stack offset depending on CPU id */
-	shll	$9, %eax
+	shll	$10, %eax
 	add	$0x0001fffc, %eax
 	mov	%eax, %esp
 	/* call arch_init function */
