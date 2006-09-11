@@ -38,7 +38,7 @@ struct multiboot_header_s multiboot_header =
   .checksum = 0 - MULTIBOOT_MAGIC,
 };
 
-static uint_fast8_t		cpu_count = 0;
+static uint_fast8_t		cpu_count = 1;
 
 struct cpu_cld_s	*cpu_cld[256];
 
@@ -71,10 +71,11 @@ void arch_init()
     /* Other CPUs */
     {
       /* configure other CPUs */
+
       lock_spin(&cpu_init_lock);
 
-      cpu_count++;
       cpu_cld[cpu_count] = cpu_init(cpu_count);
+      cpu_count++;
 
       lock_release(&cpu_init_lock);
 
