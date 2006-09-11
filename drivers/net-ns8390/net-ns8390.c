@@ -184,10 +184,7 @@ DEVNET_SENDPKT(net_ns8390_sendpkt)
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
   if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
-    {
-      hdr = &aligned;
-      memset(hdr, 0, sizeof (struct ether_header));
-    }
+    hdr = &aligned;
 #endif
 
   /* fill the header */
@@ -196,7 +193,8 @@ DEVNET_SENDPKT(net_ns8390_sendpkt)
   net_be16_store(hdr->ether_type, proto);
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  memcpy(nethdr->data, hdr, sizeof (struct ether_header));
+  if (hdr == &aligned)
+    memcpy(nethdr->data, hdr, sizeof (struct ether_header));
 #endif
 
   dummy_push(dev, packet, NULL, NULL); /* XXX remove me ! */

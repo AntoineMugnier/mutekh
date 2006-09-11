@@ -161,10 +161,7 @@ NET_IP_SEND(ip_send)
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
   if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
-    {
-      hdr = &aligned;
-      memset(hdr, 0, sizeof (struct iphdr));
-    }
+    hdr = &aligned;
 #endif
 
   /* fill IP header */
@@ -188,11 +185,12 @@ NET_IP_SEND(ip_send)
   hdr = (struct iphdr*)nethdr->data;
 #endif
 
+  packet->stage--;
   packet->sIP = (uint8_t*)&hdr->saddr;
   packet->tIP = (uint8_t*)&hdr->daddr;
-  packet->tMAC = arp_get_mac(dev, pv->arp, packet->tIP);
+  if (!(packet->tMAC = arp_get_mac(dev, pv->arp, packet, packet->tIP)))
+    return;
 
-  packet->stage--;
   /* send the packet to the driver */
   dev_net_sendpkt(dev, packet, ETHERTYPE_IP);
 }

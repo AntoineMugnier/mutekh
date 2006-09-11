@@ -54,7 +54,7 @@ typedef DEVNET_SENDPKT(devnet_sendpkt_t);
  * protocol registration operation
  */
 
-#define DEVNET_REGISTER_PROTO(n)	void  *(n) (struct device_s *dev, struct net_proto_s *proto, ...)
+#define DEVNET_REGISTER_PROTO(n)	void  (n) (struct device_s *dev, struct net_proto_s *proto, ...)
 
 typedef DEVNET_REGISTER_PROTO(devnet_register_proto_t);
 

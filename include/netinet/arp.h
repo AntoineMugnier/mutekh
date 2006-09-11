@@ -102,49 +102,15 @@ struct		ether_arp
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 
-#define NET_ARP_REQUEST(f)	void (f)(struct device_s	*dev,	\
-					 struct net_proto_s	*arp,	\
-					 uint8_t		*address)
-
-typedef NET_ARP_REQUEST(net_arp_request_t);
-
-#define NET_ARP_REPLY(f)	void (f)(struct device_s	*dev,	\
-					 struct net_proto_s	*arp,	\
-					 uint8_t		*mac,	\
-					 uint8_t		*ip)
-
-typedef NET_ARP_REPLY(net_arp_reply_t);
-
-#define NET_ARP_UPDATE_TABLE(f)	void (f)(struct device_s	*dev,	\
-					 struct net_proto_s	*arp,	\
-					 uint8_t		*ip,	\
-					 uint8_t		*mac)
-
-typedef NET_ARP_UPDATE_TABLE(net_arp_update_table_t);
-
-#define NET_ARP_GET_MAC(f)	uint8_t *(f)(struct device_s	*dev,	\
-					     struct net_proto_s	*arp,	\
-					     uint8_t		*ip)
-
-typedef NET_ARP_GET_MAC(net_arp_get_mac_t);
-
-#define NET_RARP_REQUEST(f)	void (f)(struct device_s	*dev,	\
-					 struct net_proto_s	*arp,	\
-					 uint8_t		*mac)
-
-typedef NET_RARP_REQUEST(net_rarp_request_t);
+#include <hexo/gpct_platform_hexo.h>
 
 /*
- * ARP interface.
+ * Flags
  */
 
-struct				arp_interface_s
-{
-  net_arp_request_t		*request;
-  net_arp_reply_t		*reply;
-  net_arp_update_table_t	*update_table;
-  net_arp_get_mac_t		*get_mac;
-};
+#define ARP_TABLE_DEFAULT	0
+#define ARP_TABLE_NO_OVERWRITE	1
+#define ARP_TABLE_IN_PROGRESS	2
 
 /*
  * ARP table types.
@@ -170,16 +136,9 @@ struct			arp_entry_s
 {
   uint8_t		ip[4];
   uint8_t		mac[ETH_ALEN];
+  uint_fast8_t		valid;
   arp_table_entry_t	list_entry;
-};
-
-/*
- * RARP interface.
- */
-
-struct	rarp_interface_s
-{
-  net_rarp_request_t	*request;
+  arp_wait_root_t	wait;
 };
 
 /*
@@ -194,15 +153,29 @@ struct			net_pv_rarp_s
 NET_INITPROTO(arp_init);
 NET_PUSHPKT(arp_pushpkt);
 NET_PREPAREPKT(arp_preparepkt);
-NET_ARP_REQUEST(arp_request);
-NET_ARP_REPLY(arp_reply);
-NET_ARP_UPDATE_TABLE(arp_update_table);
-NET_ARP_GET_MAC(arp_get_mac);
+void			arp_reply(struct device_s		*dev,
+				  struct net_proto_s		*arp,
+				  uint8_t			*mac,
+				  uint8_t			*ip);
+void			arp_request(struct device_s	*dev,
+				    struct net_proto_s	*arp,
+				    uint8_t		*address);
+struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
+					  uint8_t		*ip,
+					  uint8_t		*mac,
+					  uint_fast8_t		flags);
+uint8_t			*arp_get_mac(struct device_s		*dev,
+				     struct net_proto_s		*arp,
+				     struct net_packet_s	*packet,
+				     uint8_t			*ip);
+
 
 NET_INITPROTO(rarp_init);
 NET_PUSHPKT(rarp_pushpkt);
 NET_PREPAREPKT(rarp_preparepkt);
-NET_RARP_REQUEST(rarp_request);
+void	rarp_request(struct device_s	*dev,
+		     struct net_proto_s	*arp,
+		     uint8_t		*mac);
 
 extern const struct net_proto_desc_s	arp_protocol;
 extern const struct net_proto_desc_s	rarp_protocol;

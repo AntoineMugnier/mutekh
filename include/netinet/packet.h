@@ -85,8 +85,11 @@ struct		net_header_s
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/object_refcount.h>
+#include <gpct/cont_dlist.h>
 
 OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);
+
+CONTAINER_TYPE(arp_wait, DLIST, struct net_packet_s, NOLOCK);
 
 /*
  * This structure defines a packet.
@@ -104,6 +107,7 @@ struct			net_packet_s
   uint_fast8_t		MAClen;			/* length of MAC addresses */
 
   packet_obj_entry_t	obj_entry;
+  arp_wait_entry_t	arp_wait_entry;
 };
 
 /*

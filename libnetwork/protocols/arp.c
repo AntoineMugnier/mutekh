@@ -32,18 +32,11 @@
  */
 
 CONTAINER_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, list_entry, BLOB, ip);
+CONTAINER_FUNC(static inline, arp_wait, DLIST, arp_wait, NOLOCK, arp_wait_entry);
 
 /*
  * Structures for declaring the protocol's properties & interface.
  */
-
-static const struct arp_interface_s	arp_interface =
-{
-  .request = arp_request,
-  .reply = arp_reply,
-  .update_table = arp_update_table,
-  .get_mac = arp_get_mac
-};
 
 const struct net_proto_desc_s	arp_protocol =
   {
@@ -52,7 +45,7 @@ const struct net_proto_desc_s	arp_protocol =
     .pushpkt = arp_pushpkt,
     .preparepkt = arp_preparepkt,
     .initproto = arp_init,
-    .f.arp = &arp_interface,
+    .f.other = NULL,
     .pv_size = sizeof (struct net_pv_arp_s),
   };
 
@@ -83,6 +76,8 @@ NET_PUSHPKT(arp_pushpkt)
 #endif
   struct ether_arp	*hdr;
   struct net_header_s	*nethdr;
+  struct arp_entry_s	*arp_entry;
+  struct net_packet_s	*waiting;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -114,9 +109,22 @@ NET_PUSHPKT(arp_pushpkt)
 	    printf("It's me !\n");
 	    arp_reply(dev, protocol, hdr->arp_sha, hdr->arp_spa);
 	  }
-	/* no break here since we also need to refresh cache */
+	/* try to update the cache */
+	arp_update_table(protocol, hdr->arp_spa, hdr->arp_sha,
+			 ARP_TABLE_NO_OVERWRITE);
+	break;
       case ARPOP_REPLY:
-	arp_update_table(dev, protocol, hdr->arp_spa, hdr->arp_sha);
+	/* update the cache */
+	arp_entry = arp_update_table(protocol, hdr->arp_spa, hdr->arp_sha,
+				     ARP_TABLE_DEFAULT);
+	/* send waiting packets */
+	while ((waiting = arp_wait_pop(&arp_entry->wait)))
+	  {
+	    waiting->tMAC = arp_entry->mac;
+
+	    /* send the packet */
+	    dev_net_sendpkt(dev, waiting, ETHERTYPE_IP);
+	  }
 	break;
       default:
 	break;
@@ -136,7 +144,9 @@ NET_PREPAREPKT(arp_preparepkt)
  * This function request a MAC address given an IP address.
  */
 
-NET_ARP_REQUEST(arp_request)
+void			arp_request(struct device_s	*dev,
+				    struct net_proto_s	*arp,
+				    uint8_t		*address)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
@@ -188,7 +198,10 @@ NET_ARP_REQUEST(arp_request)
  * Send an ARP reply
  */
 
-NET_ARP_REPLY(arp_reply)
+void			arp_reply(struct device_s		*dev,
+				  struct net_proto_s		*arp,
+				  uint8_t			*mac,
+				  uint8_t			*ip)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
@@ -240,27 +253,40 @@ NET_ARP_REPLY(arp_reply)
  * Update table entry.
  */
 
-NET_ARP_UPDATE_TABLE(arp_update_table)
+struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
+					  uint8_t		*ip,
+					  uint8_t		*mac,
+					  uint_fast8_t		flags)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct arp_entry_s	*arp_entry;
 
   if ((arp_entry = arp_table_lookup(&pv->table, ip)))
     {
-      if (!memcmp(arp_entry->mac, mac, ETH_ALEN))
-	return ;
-      arp_table_remove(&pv->table, arp_entry);
+      /* there's already an entry */
+      if ((flags & ARP_TABLE_NO_OVERWRITE) ||
+	  !memcmp(arp_entry->mac, mac, ETH_ALEN))
+	return arp_entry;
+      /* we are able to update it */
     }
   else
-    arp_entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_THREAD);
-  memcpy(arp_entry->mac, mac, ETH_ALEN);
-  memcpy(arp_entry->ip, ip, 4);
-  arp_table_push(&pv->table, arp_entry);
-  printf("Added %d.%d.%d.%d as %2x:%2x:%2x:%2x:%2x:%2x\n",
-	 arp_entry->ip[0], arp_entry->ip[1], arp_entry->ip[2],
-	 arp_entry->ip[3], arp_entry->mac[0], arp_entry->mac[1],
-	 arp_entry->mac[2], arp_entry->mac[3], arp_entry->mac[4],
-	 arp_entry->mac[5]);
+    {
+      /* otherwise, allocate a new entry */
+      arp_entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_THREAD);
+      memcpy(arp_entry->ip, ip, 4);
+      arp_table_push(&pv->table, arp_entry);
+    }
+  /* fill the significant fields */
+  if (!(flags & ARP_TABLE_IN_PROGRESS))
+    memcpy(arp_entry->mac, mac, ETH_ALEN);
+  arp_entry->valid = !(flags & ARP_TABLE_IN_PROGRESS);
+  if (arp_entry->valid)
+    printf("Added %d.%d.%d.%d as %2x:%2x:%2x:%2x:%2x:%2x\n",
+	   arp_entry->ip[0], arp_entry->ip[1], arp_entry->ip[2],
+	   arp_entry->ip[3], arp_entry->mac[0], arp_entry->mac[1],
+	   arp_entry->mac[2], arp_entry->mac[3], arp_entry->mac[4],
+	   arp_entry->mac[5]);
+  return arp_entry;
 }
 
 /*
@@ -269,19 +295,32 @@ NET_ARP_UPDATE_TABLE(arp_update_table)
  * Make an ARP request if needed.
  */
 
-NET_ARP_GET_MAC(arp_get_mac)
+uint8_t			*arp_get_mac(struct device_s		*dev,
+				     struct net_proto_s		*arp,
+				     struct net_packet_s	*packet,
+				     uint8_t			*ip)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct arp_entry_s	*arp_entry;
 
   if ((arp_entry = arp_table_lookup(&pv->table, ip)))
     {
-      return arp_entry->mac;
+      /* is the entry valid ? */
+      if (arp_entry->valid)
+	return arp_entry->mac;
+      /* otherwise, it is validating, so push the packet in the wait queue */
+      arp_wait_pushback(&arp_entry->wait, packet);
     }
   else
     {
-      /* XXX arp_request */
-      return NULL;
+      printf("No ARP entry. Sending request.\n");
+      arp_entry = arp_update_table(arp, ip, NULL, ARP_TABLE_IN_PROGRESS);
+      /* no entry, push the packet in the wait queue*/
+      arp_wait_init(&arp_entry->wait);
+      arp_wait_push(&arp_entry->wait, packet);
+      /* and send a request */
+      arp_request(dev, arp, ip);
     }
+  return NULL;
 }
 

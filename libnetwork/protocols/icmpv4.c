@@ -147,10 +147,7 @@ NET_ICMP_ECHO(icmp_echo)
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
   if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
-    {
-      hdr = &aligned;
-      memset(hdr, 0, sizeof (struct icmphdr));
-    }
+    hdr = &aligned;
 #endif
 
   /* fill the echo */

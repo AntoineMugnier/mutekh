@@ -92,8 +92,6 @@ struct					net_proto_desc_s
   {
     const struct ether_interface_s	*ether;	/* ethernet interface */
     const struct ip_interface_s		*ip;	/* ip protocol interface */
-    const struct arp_interface_s	*arp;	/* arp protocol interface */
-    const struct rarp_interface_s	*rarp;	/* rarp protocol interface */
     const struct icmp_interface_s	*icmp;	/* icmp protocol interface */
 #if 0
     const struct udp_interface_s	*udp;	/* udp protocol interface */

@@ -30,11 +30,6 @@
  * Structures for declaring the protocol's properties & interface.
  */
 
-static const struct rarp_interface_s	rarp_interface =
-{
-  .request = rarp_request
-};
-
 const struct net_proto_desc_s	rarp_protocol =
   {
     .name = "RARP",
@@ -42,7 +37,7 @@ const struct net_proto_desc_s	rarp_protocol =
     .pushpkt = rarp_pushpkt,
     .preparepkt = rarp_preparepkt,
     .initproto = rarp_init,
-    .f.rarp = &rarp_interface,
+    .f.other = NULL,
     .pv_size = sizeof (struct net_pv_rarp_s)
   };
 
@@ -117,7 +112,9 @@ NET_PREPAREPKT(rarp_preparepkt)
  * Make a RARP request.
  */
 
-NET_RARP_REQUEST(rarp_request)
+void			rarp_request(struct device_s	*dev,
+				     struct net_proto_s	*arp,
+				     uint8_t		*mac)
 {
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct ether_arp	aligned;
