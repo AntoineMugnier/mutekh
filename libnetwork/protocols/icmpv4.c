@@ -77,6 +77,8 @@ NET_PUSHPKT(icmp_pushpkt)
 #endif
   struct icmphdr	*hdr;
   struct net_header_s	*nethdr;
+  uint_fast16_t		check;
+  uint_fast16_t		computed_check;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -91,6 +93,15 @@ NET_PUSHPKT(icmp_pushpkt)
     }
 #endif
 
+  /* verify checksum */
+  check = net_be16_load(hdr->checksum);
+  endian_16_na_store(&hdr->checksum, 0);
+  computed_check = packet_checksum(nethdr->data, nethdr->size);
+  printf("%x %x %d\n", check, computed_check, nethdr->size);
+  /* incorrect packet */
+  if (0 && check != computed_check)
+    return;
+
   /* action */
   switch (hdr->type)
     {
@@ -98,6 +109,7 @@ NET_PUSHPKT(icmp_pushpkt)
 	switch (hdr->code)
 	  {
 	    case 0:
+	      printf("Ping\n");
 	      icmp_echo(dev, protocol, packet->sIP,
 			net_be16_load(hdr->un.echo.id),
 			net_be16_load(hdr->un.echo.sequence),
@@ -135,6 +147,8 @@ NET_ICMP_ECHO(icmp_echo)
   struct icmphdr	*hdr;
   struct net_packet_s	*packet;
   struct net_header_s	*nethdr;
+
+  printf("Pong\n");
 
   packet = packet_obj_new(NULL);
 
