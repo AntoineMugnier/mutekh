@@ -1,3 +1,24 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
+
+*/
+
 #include <hexo/types.h>
 #include <hexo/device.h>
 #include <hexo/iospace.h>
@@ -92,6 +113,8 @@ DEV_IRQ(net_ns8390_irq)
   else
     printf("NETWORK: no protocol to handle packet (id = 0x%x)\n", proto);
 
+  packet_obj_refdrop(packet);
+
   return 1;
 }
 
@@ -102,21 +125,16 @@ DEV_IRQ(net_ns8390_irq)
 DEVNET_REGISTER_PROTO(net_ns8390_register_proto)
 {
   struct net_ns8390_context_s	*pv = dev->drv_pv;
-  struct net_proto_s		*proto;
+  va_list			va;
 
-  proto = mem_alloc(sizeof (struct net_proto_s) + desc->pv_size,
-		    MEM_SCOPE_THREAD);
+  va_start(va, proto);
 
-  proto->desc = desc;
-  proto->id = desc->id;
-  proto->pv = (void*)((uint8_t*)proto + sizeof (struct net_proto_s));
-
-  if (desc->initproto)
-    desc->initproto(dev, proto, pv->protocols);
+  if (proto->desc->initproto)
+    proto->desc->initproto(dev, proto, va);
 
   net_protos_push(&pv->protocols, proto);
 
-  return proto;
+  va_end(va);
 }
 
 /*
@@ -184,6 +202,8 @@ DEVNET_SENDPKT(net_ns8390_sendpkt)
   dummy_push(dev, packet, NULL, NULL); /* XXX remove me ! */
 
   net_ns8390_write(pv, packet->packet, nethdr->size);
+
+  packet_obj_refdrop(packet);
 }
 
 /*

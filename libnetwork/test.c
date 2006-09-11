@@ -1,3 +1,24 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
+
+*/
+
 #include <hexo/device.h>
 #include <hexo/error.h>
 #include <hexo/alloc.h>
@@ -44,20 +65,17 @@ int_fast8_t		main()
   });
 
  ok:
-  /* register protocols below */
-#if 0
- /* alloc proto, alloc pv, set desc link */
-  ip = dev_net_alloc_proto(&ip_protocol);
-  arp = dev_net_alloc_proto(&arp_protocol);
-  /* init pv data and world */
-  ip = dev_net_register_proto(ip, ne2000, arp);
-  arp = dev_net_register_proto(ip, ne2000, ip);
-#endif
+  /* initialize protocols */
+  ip = net_alloc_proto(&ip_protocol);
+  arp = net_alloc_proto(&arp_protocol);
+  rarp = net_alloc_proto(&rarp_protocol);
+  icmp = net_alloc_proto(&icmp_protocol);
 
-  ip = dev_net_register_proto(ne2000, &ip_protocol);
-  rarp = dev_net_register_proto(ne2000, &rarp_protocol);
-  arp = dev_net_register_proto(ne2000, &arp_protocol);
-  icmp = dev_net_register_proto(ne2000, &icmp_protocol);
+  /* register protocols into the driver */
+  dev_net_register_proto(ne2000, ip, arp);
+  dev_net_register_proto(ne2000, arp, ip);
+  dev_net_register_proto(ne2000, rarp, ip);
+  dev_net_register_proto(ne2000, icmp, ip);
 
   /* an RARP request is used to assign us an IP */
   rarp_request(ne2000, rarp, NULL);

@@ -1,7 +1,23 @@
 /*
- * ARP protocol
- *
- */
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
+
+*/
 
 #include <netinet/arp.h>
 #include <netinet/ip.h>
@@ -46,14 +62,12 @@ const struct net_proto_desc_s	arp_protocol =
 
 NET_INITPROTO(arp_init)
 {
-  struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)proto->pv;
-  struct net_pv_ip_s	*pv_ip;
+  struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)proto->pv;
+  struct net_proto_s	*ip = va_arg(va, struct net_proto_s *);
 
   arp_table_init(&pv->table);
-  pv->ip = net_protos_lookup(&other, ETHERTYPE_IP);
+  pv->ip = ip;
   printf("ARP %s with IP (%p)\n", pv->ip ? "bound" : "not bound", pv->ip);
-  pv_ip = (struct net_pv_ip_s*)pv->ip->pv;
-  pv_ip->arp = proto;
 }
 
 /*
@@ -62,22 +76,21 @@ NET_INITPROTO(arp_init)
 
 NET_PUSHPKT(arp_pushpkt)
 {
-  struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)protocol->pv;
-  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s*)pv->ip->pv;
+  struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)protocol->pv;
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct ether_arp	aligned;
 #endif
   struct ether_arp	*hdr;
   struct net_header_s	*nethdr;
-  struct arp_entry_s	*arp_entry;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
-  hdr = (struct ether_arp*)nethdr->data;
+  hdr = (struct ether_arp *)nethdr->data;
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct ether_arp));
       hdr = &aligned;
@@ -125,8 +138,8 @@ NET_PREPAREPKT(arp_preparepkt)
 
 NET_ARP_REQUEST(arp_request)
 {
-  struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)arp->pv;
-  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s*)pv->ip->pv;
+  struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct ether_arp	aligned;
 #endif
@@ -140,11 +153,11 @@ NET_ARP_REQUEST(arp_request)
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
-  hdr = (struct ether_arp*)nethdr->data;
+  hdr = (struct ether_arp *)nethdr->data;
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
     {
       hdr = &aligned;
       memset(hdr, 0, sizeof (struct ether_arp));
@@ -162,10 +175,11 @@ NET_ARP_REQUEST(arp_request)
   memcpy(hdr->arp_tpa, address, hdr->arp_pln);
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  memcpy(nethdr->data, hdr, sizeof (struct ether_arp));
+  if (hdr == &aligned)
+    memcpy(nethdr->data, hdr, sizeof (struct ether_arp));
 #endif
 
-  packet->tMAC = (uint8_t*)"\xff\xff\xff\xff\xff\xff";
+  packet->tMAC = (uint8_t *)"\xff\xff\xff\xff\xff\xff";
 
   packet->stage--;
   /* send the packet to the driver */
@@ -178,8 +192,8 @@ NET_ARP_REQUEST(arp_request)
 
 NET_ARP_REPLY(arp_reply)
 {
-  struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)arp->pv;
-  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s*)pv->ip->pv;
+  struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct ether_arp	aligned;
 #endif
@@ -193,11 +207,11 @@ NET_ARP_REPLY(arp_reply)
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
-  hdr = (struct ether_arp*)nethdr->data;
+  hdr = (struct ether_arp *)nethdr->data;
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
     {
       hdr = &aligned;
       memset(hdr, 0, sizeof (struct ether_arp));
@@ -213,13 +227,14 @@ NET_ARP_REPLY(arp_reply)
   memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
   memcpy(hdr->arp_spa, pv_ip->addr, 4);
   memcpy(hdr->arp_tha, mac, ETH_ALEN);
-  memcpy(hdr->arp_tpa, ip, hdr->arp_pln);
+  memcpy(hdr->arp_tpa, ip, 4);
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  memcpy(nethdr->data, hdr, sizeof (struct ether_arp));
+  if (hdr == &aligned)
+    memcpy(nethdr->data, hdr, sizeof (struct ether_arp));
 #endif
 
-  packet->tMAC = (uint8_t*)"\xff\xff\xff\xff\xff\xff";
+  packet->tMAC = (uint8_t *)"\xff\xff\xff\xff\xff\xff";
 
   packet->stage--;
   /* send the packet to the driver */
@@ -232,7 +247,7 @@ NET_ARP_REPLY(arp_reply)
 
 NET_ARP_UPDATE_TABLE(arp_update_table)
 {
-  struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)arp->pv;
+  struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct arp_entry_s	*arp_entry;
 
   if ((arp_entry = arp_table_lookup(&pv->table, ip)))
@@ -254,14 +269,14 @@ NET_ARP_UPDATE_TABLE(arp_update_table)
 }
 
 /*
- * Het the MAC address corresponding to an IP.
+ * Get the MAC address corresponding to an IP.
  *
  * Make an ARP request if needed.
  */
 
 NET_ARP_GET_MAC(arp_get_mac)
 {
-  struct net_pv_arp_s	*pv = (struct net_pv_arp_s*)arp->pv;
+  struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct arp_entry_s	*arp_entry;
 
   if ((arp_entry = arp_table_lookup(&pv->table, ip)))
@@ -271,6 +286,7 @@ NET_ARP_GET_MAC(arp_get_mac)
   else
     {
       /* XXX arp_request */
+      return NULL;
     }
 }
 

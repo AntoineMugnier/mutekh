@@ -1,4 +1,25 @@
 /*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
+
+*/
+
+/*
  * IP protocol
  *
  */
@@ -37,7 +58,10 @@ const struct net_proto_desc_s	ip_protocol =
 NET_INITPROTO(ip_init)
 {
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s*)proto->pv;
+  struct net_proto_s	*arp = va_arg(va, struct net_proto_s *);
 
+  pv->arp = arp;
+  printf("IP %s with ARP (%p)\n", pv->arp ? "bound" : "not bound", pv->arp);
   memset(pv->addr, 0, 4);
 }
 
@@ -63,7 +87,7 @@ NET_PUSHPKT(ip_pushpkt)
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct iphdr));
       hdr = &aligned;
@@ -89,10 +113,6 @@ NET_PUSHPKT(ip_pushpkt)
       nethdr[1].data = nethdr->data + hdr_len;
       nethdr[1].size = net_be16_load(hdr->tot_len) - hdr_len;
     }
-
-  /* update ARP cache */
-  arp_update_table(dev, net_protos_lookup(protocols, ETHERTYPE_ARP),
-		   packet->sIP, packet->sMAC);
 
   packet->stage++;
 
@@ -140,7 +160,7 @@ NET_IP_SEND(ip_send)
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
     {
       hdr = &aligned;
       memset(hdr, 0, sizeof (struct iphdr));
@@ -163,7 +183,8 @@ NET_IP_SEND(ip_send)
   endian_16_na_store(&hdr->check, packet_checksum(hdr, hdr->ihl * 4));
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  memcpy(nethdr->data, hdr, sizeof (struct iphdr));
+  if (hdr == &aligned)
+    memcpy(nethdr->data, hdr, sizeof (struct iphdr));
   hdr = (struct iphdr*)nethdr->data;
 #endif
 

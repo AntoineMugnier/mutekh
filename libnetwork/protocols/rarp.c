@@ -1,7 +1,23 @@
 /*
- * RARP protocol
- *
- */
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
+
+*/
 
 #include <netinet/arp.h>
 #include <netinet/packet.h>
@@ -36,11 +52,11 @@ const struct net_proto_desc_s	rarp_protocol =
 
 NET_INITPROTO(rarp_init)
 {
-  struct net_pv_rarp_s	*pv = (struct net_pv_rarp_s*)proto->pv;
+  struct net_pv_rarp_s	*pv = (struct net_pv_rarp_s *)proto->pv;
+  struct net_proto_s	*ip = va_arg(va, struct net_proto_s *);
 
-  pv->ip = net_protos_lookup(&other, ETHERTYPE_IP);
-  printf("RARP %s with IP (%p)\n", pv->ip ? "bound" : "not bound",
-	 pv->ip);
+  pv->ip = ip;
+  printf("RARP %s with IP (%p)\n", pv->ip ? "bound" : "not bound", pv->ip);
 }
 
 /*
@@ -49,8 +65,8 @@ NET_INITPROTO(rarp_init)
 
 NET_PUSHPKT(rarp_pushpkt)
 {
-  struct net_pv_rarp_s	*pv = (struct net_pv_rarp_s*)protocol->pv;
-  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s*)pv->ip->pv;
+  struct net_pv_rarp_s	*pv = (struct net_pv_rarp_s *)protocol->pv;
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct ether_arp	aligned;
 #endif
@@ -59,11 +75,11 @@ NET_PUSHPKT(rarp_pushpkt)
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
-  hdr = (struct ether_arp*)nethdr->data;
+  hdr = (struct ether_arp *)nethdr->data;
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct ether_arp));
       hdr = &aligned;
@@ -116,11 +132,11 @@ NET_RARP_REQUEST(rarp_request)
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
-  hdr = (struct ether_arp*)nethdr->data;
+  hdr = (struct ether_arp *)nethdr->data;
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
     {
       hdr = &aligned;
       memset(hdr, 0, sizeof (struct ether_arp));
@@ -140,10 +156,11 @@ NET_RARP_REQUEST(rarp_request)
     memcpy(hdr->arp_tha, mac, ETH_ALEN);
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  memcpy(nethdr->data, hdr, sizeof (struct ether_arp));
+  if (hdr == &aligned)
+    memcpy(nethdr->data, hdr, sizeof (struct ether_arp));
 #endif
 
-  packet->tMAC = "\xff\xff\xff\xff\xff\xff";
+  packet->tMAC = (uint8_t *)"\xff\xff\xff\xff\xff\xff";
 
   packet->stage--;
   /* send the packet to the driver */

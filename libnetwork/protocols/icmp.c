@@ -1,4 +1,25 @@
 /*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
+
+*/
+
+/*
  * ICMP protocol
  *
  */
@@ -38,9 +59,10 @@ const struct net_proto_desc_s	icmp_protocol =
 
 NET_INITPROTO(icmp_init)
 {
-  struct net_pv_icmp_s	*pv = (struct net_pv_icmp_s*)proto->pv;
+  struct net_pv_icmp_s	*pv = (struct net_pv_icmp_s *)proto->pv;
+  struct net_proto_s	*ip = va_arg(va, struct net_proto_s *);
 
-  pv->ip = net_protos_lookup(&other, ETHERTYPE_IP);
+  pv->ip = ip;
   printf("ICMP %s with IP (%p)\n", pv->ip ? "bound" : "not bound", pv->ip);
 }
 
@@ -58,11 +80,11 @@ NET_PUSHPKT(icmp_pushpkt)
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
-  hdr = (struct icmphdr*)nethdr->data;
+  hdr = (struct icmphdr *)nethdr->data;
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct icmphdr));
       hdr = &aligned;
@@ -106,7 +128,7 @@ NET_PREPAREPKT(icmp_preparepkt)
 
 NET_ICMP_ECHO(icmp_echo)
 {
-  struct net_pv_icmp_s	*pv = (struct net_pv_icmp_s*)icmp->pv;
+  struct net_pv_icmp_s	*pv = (struct net_pv_icmp_s *)icmp->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct icmphdr	aligned;
 #endif
@@ -120,11 +142,11 @@ NET_ICMP_ECHO(icmp_echo)
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
-  hdr = (struct icmphdr*)nethdr->data;
+  hdr = (struct icmphdr *)nethdr->data;
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
     {
       hdr = &aligned;
       memset(hdr, 0, sizeof (struct icmphdr));
@@ -143,8 +165,9 @@ NET_ICMP_ECHO(icmp_echo)
 	 size);
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  memcpy(nethdr->data, hdr, sizeof (struct icmphdr));
-  hdr = (struct icmphdr*)nethdr->data;
+  if (hdr == &aligned)
+    memcpy(nethdr->data, hdr, sizeof (struct icmphdr));
+  hdr = (struct icmphdr *)nethdr->data;
 #endif
 
   /* compute checksum */
