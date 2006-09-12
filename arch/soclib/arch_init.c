@@ -23,15 +23,18 @@
 #include <hexo/types.h>
 #include <hexo/init.h>
 #include <hexo/lock.h>
+#include <hexo/cpu.h>
 
-uintptr_t __ramlock_base = 0x00c00000;
+uintptr_t __ramlock_base = 0x00c00004;
 
-static uint_fast8_t	cpu_count = 0;
+static uint_fast8_t	cpu_count = 1;
 
 struct cpu_cld_s	*cpu_cld[256];
 
+volatile bool_t		cpu_init_flag = 0;
+volatile bool_t		cpu_start_flag = 0;
+
 static lock_t		cpu_init_lock;	/* cpu intialization lock */
-static lock_t		cpu_start_lock;	/* cpu wait for start lock */
 
 /* integer atomic operations global spin lock */
 lock_t			__atomic_arch_lock;
@@ -39,16 +42,12 @@ lock_t			__atomic_arch_lock;
 /* architecture specific init function */
 void arch_init() 
 {
-#if 0
-  if (cpu_apic_isbootstrap())	/* FIXME */
+  if (cpu_isbootstrap())	/* FIXME */
     /* First CPU */
     {
-#endif
-
       lock_init(&__atomic_arch_lock);
 
       lock_init(&cpu_init_lock);
-      lock_init(&cpu_start_lock);
 
       /* configure system wide cpu data */
       cpu_global_init();
@@ -57,38 +56,40 @@ void arch_init()
       cpu_cld[0] = cpu_init(0);
 
       /* send reset/init signal to other CPUs */
-      lock_try(&cpu_start_lock);
-
-      cpu_start_other_cpu();
+      cpu_init_flag = 1;
 
       /* run mutek_main() */
       mutek_main(0, 0);
-#if 0
     }
   else
     /* Other CPUs */
     {
+      while (cpu_init_flag == 0)
+	;
+
+      //      *((char*)0x00000000) = 1;
+
       /* configure other CPUs */
       lock_spin(&cpu_init_lock);
 
-      cpu_count++;
       cpu_cld[cpu_count] = cpu_init(cpu_count);
+      cpu_count++;
 
       lock_release(&cpu_init_lock);
 
       /* wait for start signal */
-      while (lock_state(&cpu_start_lock))
+
+      while (cpu_start_flag == 0)
 	;
 
       /* run mutek_main_smp() */
       mutek_main_smp();
     }
-#endif
 }
 
 void arch_start_other_cpu(void)
 {
-  lock_release(&cpu_start_lock);
+  cpu_start_flag++;
 }
 
 inline uint_fast8_t arch_get_cpu_count(void)

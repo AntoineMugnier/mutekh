@@ -175,6 +175,7 @@ error_t device_register(struct device_s *dev,
 			void *enum_pv);
 
 void device_dump_list(struct device_s *root);
+void device_init(struct device_s *dev);
 
 #endif /* !CONFIG_DEVICE_HIERARCHY */
 

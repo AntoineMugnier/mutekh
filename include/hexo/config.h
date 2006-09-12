@@ -30,10 +30,10 @@
 #define CONFIG_UART
 
 /** TTY support use uart */
-#define CONFIG_TTY_UART
+//#define CONFIG_TTY_UART
 
 /** frame buffer support */
-#define CONFIG_FB
+//#define CONFIG_FB
 
 /** timer support */
 #define CONFIG_TIMER
@@ -45,7 +45,7 @@
 #define CONFIG_SMP
 
 /** Default entries count in pthread stack */
-#define CONFIG_PTHREAD_STACK_SIZE	(1 << 16)
+#define CONFIG_PTHREAD_STACK_SIZE	(1 << 20)
 
 /** Extensive error checking for pthread API */
 #define CONFIG_PTHREAD_CHECK

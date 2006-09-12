@@ -38,26 +38,5 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv);
 /** MutekH main function for non first CPU (located in main/main.c) */
 void mutek_main_smp(void);
 
-/** Cpu Local Descriptor pointer type */
-struct cpu_cld_s;
-
-/** init system wide cpu data */
-error_t cpu_global_init(void);
-
-/** send hardware reset/init signal to non first CPUs */
-void cpu_start_other_cpu(void);
-
-/** Setup CPU specific data */
-struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id);
-
-/** return CPU id number */
-uint_fast8_t cpu_id(void);
-
-/** return total cpus count */
-uint_fast8_t arch_get_cpu_count(void);
-
-/** unlock non first CPUs so that they can enter main_smp() */
-void arch_start_other_cpu(void);
-
 #endif
 

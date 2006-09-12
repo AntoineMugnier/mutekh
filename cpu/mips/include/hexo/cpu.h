@@ -19,34 +19,24 @@
 
 */
 
+#if !defined(__CPU_H_) || defined(CPU_CPU_H_)
+#error This file can not be included directly
+#else
 
-#ifndef TTY_VGA_PRIVATE_H_
-#define TTY_VGA_PRIVATE_H_
+#define CPU_CPU_H_
 
-#include <hexo/types.h>
-#include <hexo/device.h>
-
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
-#include <hexo/gpct_lock_hexo.h>
-
-
-/**************************************************************/
-
-/*
- * Private vgz tty device context
- */
-
-CONTAINER_TYPE(tty_fifo, RING, uint8_t, HEXO_SPIN_IRQ, 128);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo, HEXO_SPIN_IRQ);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_noirq, HEXO_SPIN);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_nolock, NOLOCK);
-
-struct tty_soclib_context_s
+static inline bool_t
+cpu_isbootstrap(void)
 {
-  /* tty input char fifo */
-  tty_fifo_root_t		read_fifo;
-};
+  reg_t		reg;
+
+  asm volatile (
+		"mfc0	%0,	$15		\n"
+		: "=r" (reg)
+		);
+
+  return (reg & 0x000003ff) == 0;
+}
 
 #endif
 

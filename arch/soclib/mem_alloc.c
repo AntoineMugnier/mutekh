@@ -21,6 +21,7 @@
 
 
 #include <hexo/alloc.h>
+#include <hexo/segment.h>
 
 void * mem_alloc(size_t size, uint_fast8_t scope)
 {

@@ -24,7 +24,6 @@
 #include <hexo/device.h>
 #include <hexo/iospace.h>
 #include <hexo/alloc.h>
-#include <hexo/lock.h>
 #include <hexo/interrupt.h>
 
 #include "tty-soclib.h"
@@ -44,11 +43,7 @@ DEVCHAR_READ(tty_soclib_read)
   struct tty_soclib_context_s	*pv = dev->drv_pv;
   size_t			res;
 
-  lock_spin_irq(&pv->lock);
-
-  res = tty_read_fifo_poplist(&pv->read_fifo, data, size);
-
-  lock_release_irq(&pv->lock);
+  res = tty_fifo_pop_array(&pv->read_fifo, data, size);
 
   return res;
 }
@@ -75,7 +70,7 @@ DEV_CLEANUP(tty_soclib_cleanup)
 {
   struct tty_soclib_context_s	*pv = dev->drv_pv;
 
-  lock_destroy(&pv->lock);
+  tty_fifo_destroy(&pv->read_fifo);
 
   mem_free(pv);
 }
@@ -89,15 +84,11 @@ DEV_IRQ(tty_soclib_irq)
   struct tty_soclib_context_s	*pv = dev->drv_pv;
   uint8_t	c;
 
-  lock_spin(&pv->lock);
-
   /* get character from tty */
   c = cpu_mem_read_8(dev->addr[0] + TTY_SOCLIB_REG_READ);
 
   /* add character to driver fifo */
-  tty_read_fifo_push(&pv->read_fifo, c);
-
-  lock_release(&pv->lock);
+  tty_fifo_noirq_pushback(&pv->read_fifo, c);
 
   printf("tty input %02x\n", c);
 
@@ -135,12 +126,10 @@ DEV_INIT(tty_soclib_init)
   if (!pv)
     return -1;
 
-  lock_init(&pv->lock);
-
   dev->drv_pv = pv;
 
   /* init tty input fifo */
-  tty_read_fifo_init(&pv->read_fifo);
+  tty_fifo_init(&pv->read_fifo);
 
   return 0;
 }

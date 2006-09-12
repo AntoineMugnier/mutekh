@@ -81,11 +81,10 @@ const struct driver_s	icu_soclib_drv =
 {
   .f_init		= icu_soclib_init,
   .f_cleanup		= icu_soclib_cleanup,
-  .f_irq		= icu_soclib_irq,
   .f.icu = {
-    .f_enable		= icu_soclib_enable;
-    .f_sethndl		= icu_soclib_sethndl;
-    .f_delhndl		= icu_soclib_delhndl;
+    .f_enable		= icu_soclib_enable,
+    .f_sethndl		= icu_soclib_sethndl,
+    .f_delhndl		= icu_soclib_delhndl,
   }
 };
 

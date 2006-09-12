@@ -67,5 +67,12 @@ device_dump_list(struct device_s *root)
   });
 }
 
+void
+device_init(struct device_s *dev)
+{
+  device_list_init(&dev->children);
+  device_obj_init(dev);
+}
+
 #endif
 

@@ -19,34 +19,36 @@
 
 */
 
+asm(
+    ".section        .boot,\"ax\",@progbits		\n"
 
-#ifndef TTY_VGA_PRIVATE_H_
-#define TTY_VGA_PRIVATE_H_
+    ".globl cpu_boot					\n"
+    "cpu_boot:						\n"
 
-#include <hexo/types.h>
-#include <hexo/device.h>
-
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
-#include <hexo/gpct_lock_hexo.h>
-
-
-/**************************************************************/
-
-/*
- * Private vgz tty device context
- */
-
-CONTAINER_TYPE(tty_fifo, RING, uint8_t, HEXO_SPIN_IRQ, 128);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo, HEXO_SPIN_IRQ);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_noirq, HEXO_SPIN);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_nolock, NOLOCK);
-
-struct tty_soclib_context_s
-{
-  /* tty input char fifo */
-  tty_fifo_root_t		read_fifo;
-};
-
-#endif
+    ".set push						\n"
+    ".set noreorder					\n"
+    "							\n"
+    /* set up IT disable and kernel mode */
+    "li        $8,   0x0000FF00  			\n"
+    "mtc0      $8,	$12         			\n"
+    "							\n"
+    /* get CPU id and adjust stack */
+    "							\n"
+    "la         $sp,	0x002ff0f0			\n"
+    "mfc0	$8,	$15				\n"
+    "andi	$8,	$8,	0x000003ff		\n"
+    "sll	$8,	$8,	10			\n"
+    "addu	$sp,	$8,	$sp			\n"
+    "							\n"
+    /* setup global data pointer */
+    "la	   $gp,   _gp					\n"
+    "							\n"
+    /* jumpto arch_init function */
+    "							\n"
+    "la         $8,   arch_init				\n"
+    "j          $8					\n"
+    "nop						\n"
+    "							\n"
+    ".set pop						\n"
+    );
 

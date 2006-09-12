@@ -29,6 +29,7 @@
 #include <hexo/iospace.h>
 #include <hexo/lock.h>
 #include <hexo/context.h>
+#include <hexo/cpu.h>
 
 #include <../drivers/uart-8250/uart-8250.h>
 #include <../drivers/tty-vga/tty-vga.h>
@@ -51,19 +52,19 @@ struct device_s *tty_dev;
 #endif
 
 #ifdef CONFIG_FB
-struct device_s fb_dev = DEVICE_INITIALIZER;
+struct device_s fb_dev;
 #endif
 
 #ifdef CONFIG_TIMER
-struct device_s timer_dev = DEVICE_INITIALIZER;
+struct device_s timer_dev;
 #endif
 
-struct device_s tty_uart_dev = DEVICE_INITIALIZER;
-struct device_s tty_con_dev = DEVICE_INITIALIZER;
+struct device_s tty_uart_dev;
+struct device_s tty_con_dev;
 
-struct device_s icu_dev = DEVICE_INITIALIZER;
+struct device_s icu_dev;
 
-struct device_s enum_pci = DEVICE_INITIALIZER;
+struct device_s enum_pci;
 
 extern const uint8_t mutek_logo_320x200[320*200];
 
@@ -78,6 +79,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   /********* ICU init ******************************** */
 
   /* ICU init */
+  device_init(&icu_dev);
 #if defined(__ARCH__ibmpc__)
   icu_dev.addr[ICU_ADDR_MASTER] = 0x0020;
   icu_dev.addr[ICU_ADDR_SLAVE] = 0x00a0;
@@ -90,6 +92,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   /********* TTY init ******************************** */
 
 #ifdef CONFIG_UART
+  device_init(&tty_uart_dev);
 # if defined(__ARCH__ibmpc__)
   tty_uart_dev.addr[UART_8250_ADDR] = 0x03f8;
   tty_uart_dev.irq = 4;
@@ -106,6 +109,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #  ifdef CONFIG_TTY_UART
   tty_dev = &tty_uart_dev;
 #  else	/* CONFIG_TTY_UART */
+  device_init(&tty_con_dev);
   tty_con_dev.addr[VGA_TTY_ADDR_BUFFER] = 0x000b8000;
   tty_con_dev.addr[VGA_TTY_ADDR_CRTC] = 0x03d4;
   tty_con_dev.irq = 1;
@@ -115,6 +119,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #  endif /* CONFIG_TTY_UART */
 
 # elif defined(__ARCH__soclib__)
+  device_init(&tty_con_dev);
   tty_con_dev.addr[0] = 0xa0c00000;
   tty_con_dev.irq = 1;
   tty_soclib_init(&tty_con_dev);
@@ -126,6 +131,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   /********* Timer init ******************************** */
 
 #ifdef CONFIG_TIMER
+  device_init(&timer_dev);
 # if defined(__ARCH__ibmpc__)
   timer_dev.addr[0] = 0x0040;
   timer_dev.irq = 0;
@@ -144,6 +150,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   /********* FB init ********************************* */
 
 #ifdef CONFIG_FB
+  device_init(&fb_dev);
 # if defined(__ARCH__ibmpc__)
   fb_vga_init(&fb_dev);
   fb_vga_setmode(&fb_dev, 320, 200, 8, FB_PACK_INDEX);
@@ -155,6 +162,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   puts("MutekH is alive.");
 
 # if defined(__ARCH__ibmpc__)
+  device_init(&enum_pci);
   enum_pci_init(&enum_pci);
   device_dump_list(&enum_pci);
 # endif
@@ -193,11 +201,11 @@ int_fast8_t main(int_fast8_t argc, char **argv);
 
 void mutek_main_smp(void)  /* ALL CPUs execute this function */
 {
+  cpu_interrupt_ex_sethandler(fault_handler);
+
   lock_spin(&tty_lock);
   printf("CPU %i is up and running.\n", cpu_id());
   lock_release(&tty_lock);
-
-  cpu_interrupt_ex_sethandler(fault_handler);
 
   sched_cpu_init();
 

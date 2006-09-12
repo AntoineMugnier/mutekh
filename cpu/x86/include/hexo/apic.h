@@ -122,23 +122,5 @@ cpu_apic_isenabled(void)
   return msr & 0x800 ? 1 : 0;
 }
 
-/**
-   x86 apic boot strap processor (BSP)
-   @return true if processor is the bootstrap processor
-*/
-
-static inline bool_t
-cpu_apic_isbootstrap(void)
-{
-  uint64_t	msr;
-
-  asm ("rdmsr\n"
-       : "=A" (msr)
-       : "c" (0x1b)
-       );
-
-  return msr & 0x100 ? 1 : 0;
-}
-
 #endif
 

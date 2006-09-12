@@ -26,11 +26,11 @@
 
 extern struct device_s *tty_dev;
 
-lock_t stdio_lock	= LOCK_INITIALIZER;
+//lock_t stdio_lock	= LOCK_INITIALIZER;
 
 void __puts(const char *s, size_t len)
 {
-  lock_spin(&stdio_lock);
+  //  lock_spin(&stdio_lock);
 
   while (len > 0)
     {
@@ -46,7 +46,7 @@ void __puts(const char *s, size_t len)
 	}
     }
 
-  lock_release(&stdio_lock);
+  //  lock_release(&stdio_lock);
 }
 
 inline int_fast8_t putchar(char c)

@@ -19,29 +19,36 @@
 
 */
 
-.section        .boot,"ax",@progbits
+#ifndef __CPU_H_
+#define __CPU_H_
 
-.globl cpu_boot
-cpu_boot:
+#include "types.h"
 
-	.set push
-	.set noreorder
+/** Cpu Local Descriptor pointer type */
+struct cpu_cld_s;
 
-        li        $8,   0x0000FF00  # set up IT disable and kernel mode
-        mtc0      $8,	$12         # once j fetched, stay in kernel mode with rfe
+/** init system wide cpu data */
+error_t cpu_global_init(void);
 
-	/* get CPU id */
+/** send hardware reset/init signal to non first CPUs */
+void cpu_start_other_cpu(void);
 
-	/* change stack offset depending on CPU id FIXME */
-        la         $sp,   0x002ffff0
+/** Setup CPU specific data */
+struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id);
 
-	/* setup global data pointer */
-	la	   $gp,   _gp
+/** return CPU id number, only available after arch_init() */
+uint_fast8_t cpu_id(void);
 
-	/* jumpto arch_init function */
+/** return true if bootstap processor */
+static inline bool_t cpu_isbootstrap(void);
 
-        la         $8,   arch_init
-        j          $8
-	nop
+/** return total cpus count */
+uint_fast8_t arch_get_cpu_count(void);
 
-	.set pop
+/** unlock non first CPUs so that they can enter main_smp() */
+void arch_start_other_cpu(void);
+
+#include "cpu/hexo/cpu.h"
+
+#endif
+
