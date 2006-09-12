@@ -18,3 +18,97 @@
     Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
 
 */
+
+/*
+ * UDP protocol
+ *
+ */
+
+#include <netinet/udp.h>
+#include <netinet/ip.h>
+#include <netinet/in.h>
+#include <netinet/packet.h>
+#include <netinet/protos.h>
+#include <hexo/device.h>
+
+#include <stdio.h>
+
+/*
+ * Structures for declaring the protocol's properties & interface.
+ */
+
+static const struct udp_interface_s	udp_interface =
+{
+};
+
+const struct net_proto_desc_s	udp_protocol =
+  {
+    .name = "UDP",
+    .id = IPPROTO_UDP,
+    .pushpkt = udp_pushpkt,
+    .preparepkt = udp_preparepkt,
+    .initproto = udp_init,
+    .f.udp = &udp_interface,
+    .pv_size = sizeof (struct net_pv_udp_s)
+  };
+
+/*
+ * Initialize UDP module.
+ */
+
+NET_INITPROTO(udp_init)
+{
+  struct net_pv_udp_s	*pv = (struct net_pv_udp_s *)proto->pv;
+  struct net_proto_s	*ip = va_arg(va, struct net_proto_s *);
+
+  pv->ip = ip;
+  printf("UDP %s with IP (%p)\n", pv->ip ? "bound" : "not bound", pv->ip);
+}
+
+/*
+ * Receive incoming UDP datagrams.
+ */
+
+NET_PUSHPKT(udp_pushpkt)
+{
+  struct net_pv_udp_s	*pv = (struct net_pv_udp_s *)protocol->pv;
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  struct udphdr		aligned;
+#endif
+  struct udphdr		*hdr;
+  struct net_header_s	*nethdr;
+
+  /* get the header */
+  nethdr = &packet->header[packet->stage];
+  hdr = (struct udphdr *)nethdr->data;
+
+  /* align the packet on 16 bits if necessary */
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
+    {
+      memcpy(&aligned, hdr, sizeof (struct udphdr));
+      hdr = &aligned;
+    }
+#endif
+
+  /* dump significant fields */
+  printf("UDP %d.%d.%d.%d:%u -> %d.%d.%d.%d:%u of length %u\n",
+	 packet->sIP[0], packet->sIP[1], packet->sIP[2], packet->sIP[3],
+	 net_be16_load(hdr->source),
+	 packet->tIP[0], packet->tIP[1], packet->tIP[2], packet->tIP[3],
+	 net_be16_load(hdr->dest),
+	 net_be16_load(hdr->len) - sizeof (struct udphdr));
+
+  /* don't panic, this is a test */
+  printf("%s\n", nethdr->data + sizeof (struct udphdr));
+}
+
+/*
+ * Prepare UDP packet.
+ */
+
+NET_PREPAREPKT(udp_preparepkt)
+{
+  ip_preparepkt(dev, packet, sizeof (struct udphdr) + size);
+}
+

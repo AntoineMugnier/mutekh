@@ -253,7 +253,7 @@ NET_PUSHPKT(ip_pushpkt)
   packet->stage++;
 
   /* is the packet fragmented ? */
-  fragment = net_16_load(hdr->fragment);
+  fragment = net_be16_load(hdr->fragment);
   if ((fragment & IP_FLAG_MF) || (fragment & IP_FRAG_MASK))
     {
       /* add fragment */
@@ -286,6 +286,8 @@ NET_PREPAREPKT(ip_preparepkt)
   struct net_header_s	*nethdr;
 
   dev_net_preparepkt(dev, packet, 20 + size);
+
+  /* XXX rewrite the preparepkt chain */
 
   nethdr = &packet->header[packet->stage];
   nethdr[1].data = nethdr->data + 20;
@@ -355,6 +357,8 @@ NET_IP_SEND(ip_send)
 	  /* setup fragment specific fields */
 	  frag->id = id;
 	  frag->fragment |= IP_FLAG_MF | (offs / 8);
+
+	  /* XXX setup the whole packet here */
 
 	  /* send the fragments */
 	  frag->stage--;

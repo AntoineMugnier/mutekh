@@ -72,6 +72,7 @@ typedef NET_INITPROTO(net_initproto_t);
 #include <netinet/arp.h>
 #include <netinet/ip.h>
 #include <netinet/icmp.h>
+#include <netinet/udp.h>
 #include <netinet/dummy.h>
 
 typedef uint_fast16_t net_pkt_size_t;
@@ -93,8 +94,8 @@ struct					net_proto_desc_s
     const struct ether_interface_s	*ether;	/* ethernet interface */
     const struct ip_interface_s		*ip;	/* ip protocol interface */
     const struct icmp_interface_s	*icmp;	/* icmp protocol interface */
-#if 0
     const struct udp_interface_s	*udp;	/* udp protocol interface */
+#if 0
     const struct tcp_interface_s	*tcp;	/* tcp protocol interface */
 #endif
     const void				*other;	/* other protocol interface */

@@ -27,6 +27,7 @@
 #include <netinet/ip.h>
 #include <netinet/arp.h>
 #include <netinet/icmp.h>
+#include <netinet/udp.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,6 +50,7 @@ int_fast8_t		main()
   struct net_proto_s	*arp;
   struct net_proto_s	*ip;
   struct net_proto_s	*icmp;
+  struct net_proto_s	*udp;
 
   /* look for a RTL8029 card */
   CONTAINER_FOREACH(device_list, DLIST, device_list, &enum_pci.children,
@@ -105,12 +107,14 @@ int_fast8_t		main()
   arp = net_alloc_proto(&arp_protocol);
   rarp = net_alloc_proto(&rarp_protocol);
   icmp = net_alloc_proto(&icmp_protocol);
+  udp = net_alloc_proto(&udp_protocol);
 
   /* register protocols into the driver */
   dev_net_register_proto(ne2000, ip, arp);
   dev_net_register_proto(ne2000, arp, ip);
   dev_net_register_proto(ne2000, rarp, ip);
   dev_net_register_proto(ne2000, icmp, ip);
+  dev_net_register_proto(ne2000, udp, ip);
 
   /* an RARP request is used to assign us an IP */
   rarp_request(ne2000, rarp, NULL);

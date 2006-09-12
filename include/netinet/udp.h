@@ -33,5 +33,36 @@ struct		udphdr
   uint16_t	check;
 } __attribute__ ((packed));
 
+
+#include <netinet/packet.h>
+#include <netinet/protos.h>
+
+/*
+ * UDP protocol interface.
+ */
+
+struct	udp_interface_s
+{
+};
+
+/*
+ * UDP private data.
+ */
+
+struct			net_pv_udp_s
+{
+  struct net_proto_s	*ip;
+};
+
+/*
+ * UDP functions
+ */
+
+NET_INITPROTO(udp_init);
+NET_PUSHPKT(udp_pushpkt);
+NET_PREPAREPKT(udp_preparepkt);
+
+extern const struct net_proto_desc_s	udp_protocol;
+
 #endif
 
