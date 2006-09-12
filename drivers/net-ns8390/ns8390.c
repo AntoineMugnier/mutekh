@@ -306,12 +306,14 @@ size_t			net_ns8390_read(struct net_ns8390_context_s	*pv,
   /* fetch the first part (if packet splitted) */
   if (length > fragment)
     {
+      printf("ns8390: fetching %d-%d %d -> %p\n", 0, fragment, packet, *data);
       net_ns8390_pio_read(pv, packet, *data, fragment);
       packet = pv->rx_start << 8;
       *data += fragment;
       length -= fragment;
     }
   /* fetch the second part (the entire packet if no split) */
+  printf("ns8390: fetching -%d %d -> %p\n", length, packet, *data);
   net_ns8390_pio_read(pv, packet, *data, length);
 
   next = header.next;

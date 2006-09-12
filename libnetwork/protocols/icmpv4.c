@@ -173,6 +173,7 @@ NET_ICMP_ECHO(icmp_echo)
   hdr->code = 3;
   net_be16_store(hdr->un.echo.id, id);
   net_be16_store(hdr->un.echo.sequence, seq);
+  endian_16_na_store(&hdr->checksum, 0);
 
   /* copy data */
   memcpy(nethdr->data + sizeof (struct icmphdr),

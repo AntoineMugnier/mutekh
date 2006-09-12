@@ -82,6 +82,7 @@
 #define IPVERSION	4
 #define MAXTTL		255
 #define IPDEFTTL	64
+#define IPMTU		ETH_DATA_LEN
 
 /*
  * IP flags.
@@ -138,7 +139,7 @@ CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, 64, UNSIGNED);
 
 struct			ip_packet_s
 {
-  uint_fast16_t		id;
+  uint_fast64_t		id;
   uint_fast16_t		size;
   uint_fast16_t		received;
   ip_fragment_root_t	packets;

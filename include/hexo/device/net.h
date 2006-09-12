@@ -69,23 +69,5 @@ struct dev_class_net_s
   devnet_register_proto_t	*f_register_proto;
 };
 
-/*
- * Allocate a new protocol node.
- */
-
-static inline struct net_proto_s	*net_alloc_proto(const struct net_proto_desc_s	*desc)
-{
-  struct net_proto_s	*proto;
-
-  proto = mem_alloc(sizeof (struct net_proto_s) + desc->pv_size,
-		    MEM_SCOPE_THREAD);
-
-  proto->desc = desc;
-  proto->id = desc->id;
-  proto->pv = (void*)((uint8_t*)proto + sizeof (struct net_proto_s));
-
-  return proto;
-}
-
 #endif
 
