@@ -83,6 +83,15 @@
 #define MAXTTL		255
 #define IPDEFTTL	64
 
+/*
+ * IP flags.
+ */
+
+#define IP_FLAG_MF	0x2000
+#define IP_FLAG_DF	0x4000
+#define IP_FLAG_RS	0x8000
+#define IP_FRAG_MASK	0x1fff
+
 /* IP packet header */
 struct iphdr {
   ENDIAN_BITFIELD(uint8_t	version:4,
@@ -90,8 +99,7 @@ struct iphdr {
   uint8_t	tos;
   uint16_t	tot_len;
   uint16_t	id;
-  uint16_t	fragment:13;
-  uint16_t	flags:3;
+  uint16_t	fragment;
   uint8_t	ttl;
   uint8_t	protocol;
   uint16_t	check;
@@ -123,6 +131,24 @@ struct iphdr {
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_hashlist.h>
+
+CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, 64, UNSIGNED);
+
+struct			ip_packet_s
+{
+  uint_fast16_t		id;
+  uint_fast16_t		size;
+  uint_fast16_t		received;
+  ip_fragment_root_t	packets;
+  ip_packet_entry_t	list_entry;
+};
+
+/*
+ * XXX comment
+ */
+
 #define NET_IP_SEND(f)		void (f)(struct device_s	*dev,	\
 					 struct net_packet_s	*packet,\
 					 struct net_proto_s	*ip,	\
@@ -147,6 +173,7 @@ struct			net_pv_ip_s
 {
   struct net_proto_s	*arp;
   uint8_t		addr[4];
+  ip_packet_root_t	fragments;
 };
 
 /*

@@ -51,6 +51,12 @@
 # define net_be16_store(a, v)		(a = endian_be16(v))
 # define net_be32_store(a, v)		(a = endian_be32(v))
 # define net_be64_store(a, v)		(a = endian_be64(v))
+# define net_16_load(a)			(a)
+# define net_32_load(a)			(a)
+# define net_64_load(a)			(a)
+# define net_16_store(a, v)		(a = (v))
+# define net_32_store(a, v)		(a = (v))
+# define net_64_store(a, v)		(a = (v))
 #else
 /* otherwise, use non-aligned accesses */
 # define net_le16_load(a)		endian_le16_na_load(&a)
@@ -65,6 +71,12 @@
 # define net_be16_store(a, v)		endian_be16_na_store(&a, v)
 # define net_be32_store(a, v)		endian_be32_na_store(&a, v)
 # define net_be64_store(a, v)		endian_be64_na_store(&a, v)
+# define net_16_load(a)			endian_16_na_load(&a)
+# define net_32_load(a)			endian_32_na_load(&a)
+# define net_64_load(a)			endian_64_na_load(&a)
+# define net_16_store(a, v)		endian_16_na_store(&a, v)
+# define net_32_store(a, v)		endian_32_na_store(&a, v)
+# define net_64_store(a, v)		endian_64_na_store(&a, v)
 #endif
 
 /*
@@ -86,10 +98,13 @@ struct		net_header_s
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/object_refcount.h>
 #include <gpct/cont_dlist.h>
+#include <gpct/cont_slist.h>
 
 OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);
 
 CONTAINER_TYPE(arp_wait, DLIST, struct net_packet_s, NOLOCK);
+
+CONTAINER_TYPE(ip_fragment, DLIST, struct net_packet_s, NOLOCK);
 
 /*
  * This structure defines a packet.
@@ -108,6 +123,7 @@ struct			net_packet_s
 
   packet_obj_entry_t	obj_entry;
   arp_wait_entry_t	arp_wait_entry;
+  ip_fragment_entry_t	ip_fragment_entry;
 };
 
 /*

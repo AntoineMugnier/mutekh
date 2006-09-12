@@ -36,6 +36,8 @@ OBJECT_CONSTRUCTOR(packet_obj)
 
   packet_obj_init(packet);
 
+  printf(" == NEW PACKET == \n");
+
   return packet;
 }
 
@@ -45,6 +47,8 @@ OBJECT_CONSTRUCTOR(packet_obj)
 
 OBJECT_DESTRUCTOR(packet_obj)
 {
+  printf(" == DEL PACKET == \n");
+
   if (obj->packet)
     mem_free(obj->packet);
 
@@ -59,7 +63,7 @@ uint_fast16_t		packet_checksum(uint8_t		*data,
 					size_t		size)
 {
   uint_fast32_t		checksum = 0;
-  uint16_t		*d = (uint16_t*)data;
+  uint16_t		*d = (uint16_t *)data;
 
   while(size > 1)
     {
@@ -69,10 +73,10 @@ uint_fast16_t		packet_checksum(uint8_t		*data,
     }
 
   if (size)
-    checksum = checksum + *(uint8_t*)d;
+    checksum = checksum + *(uint8_t *)d;
 
   while (checksum >> 16)
     checksum = (checksum & 0xffff) + (checksum >> 16);
 
-  return ~checksum;
+  return (~checksum) & 0xffff;
 }

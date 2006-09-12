@@ -32,6 +32,14 @@
 #include <stdio.h>
 
 /*
+ * Fragment lists.
+ */
+
+CONTAINER_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, list_entry, UNSIGNED, id);
+
+CONTAINER_FUNC(static inline, ip_fragment, DLIST, ip_fragment, NOLOCK, ip_fragment_entry);
+
+/*
  * Structures for declaring the protocol's properties & interface.
  */
 
@@ -57,12 +65,122 @@ const struct net_proto_desc_s	ip_protocol =
 
 NET_INITPROTO(ip_init)
 {
-  struct net_pv_ip_s	*pv = (struct net_pv_ip_s*)proto->pv;
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)proto->pv;
   struct net_proto_s	*arp = va_arg(va, struct net_proto_s *);
 
   pv->arp = arp;
   printf("IP %s with ARP (%p)\n", pv->arp ? "bound" : "not bound", pv->arp);
   memset(pv->addr, 0, 4);
+  ip_packet_init(&pv->fragments);
+}
+
+/*
+ * Receive fragments and try to reassemble a packet.
+ */
+
+static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
+					    struct net_packet_s	*packet,
+					    struct iphdr	*hdr)
+{
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ip->pv;
+  struct ip_packet_s	*p;
+  struct net_header_s	*nethdr;
+  struct net_packet_s	*frag;
+  uint_fast16_t		id;
+  uint_fast16_t		offs;
+  uint_fast16_t		fragment;
+  uint_fast16_t		datasz;
+  uint_fast16_t		total;
+  uint_fast16_t		headers_len;
+  uint8_t		*data;
+
+  /* XXX quand meme quelques goretures a revoir */
+
+  id = net_be16_load(hdr->id); /* XXX add source address */
+  fragment = net_be16_load(hdr->fragment);
+  offs = (fragment & IP_FRAG_MASK) * 8;
+  datasz = net_be16_load(hdr->tot_len) - hdr->ihl * 4;
+
+  printf("fragment id %d offs %d size %d\n", id, offs, datasz);
+
+  /* do we already received packet with same id ? */
+  if (!(p = ip_packet_lookup(&pv->fragments, id)))
+    {
+      p = mem_alloc(sizeof (struct ip_packet_s), MEM_SCOPE_THREAD);
+      p->id = id;
+      p->size = 0;
+      p->received = 0;
+      ip_fragment_init(&p->packets);
+      ip_packet_push(&pv->fragments, p);
+    }
+  p->received += datasz;
+  /* try to determine the total size */
+  if (!(fragment & IP_FLAG_MF))
+    {
+      p->size = offs + datasz;
+      printf("packet total size %d\n", p->size);
+    }
+
+  total = p->size;
+
+  if (total)
+    printf("received %d out of %d\n", p->received, total);
+
+  if (total && total == p->received)
+    {
+      printf("packet complete\n");
+
+      /* we received the whole packet, reassemble now */
+      nethdr = &packet->header[packet->stage];
+      headers_len = (packet->header[0].size - nethdr->size);
+      /* allocate a packet large enough */
+      data = mem_alloc(total + headers_len, MEM_SCOPE_THREAD);
+
+      /* copy previous headers (ethernet, ip, etc.) */
+      memcpy(data, packet->packet, headers_len);
+
+      printf("copying headers : %d-%d\n", 0, headers_len);
+
+      /* copy current packet to its position */
+      memcpy(data + headers_len + offs, nethdr->data, datasz);
+
+      printf("copying packet : %d-%d\n", offs, offs + datasz);
+
+      /* release current packet data */
+      mem_free(packet->packet);
+
+      /* replace by reassembling packet */
+      packet->packet = data;
+      data += headers_len;
+
+      nethdr->data = data;
+      nethdr->size = total;
+
+      /* loop through previously received packets and reassemble them */
+      while ((frag = ip_fragment_pop(&p->packets)))
+	{
+	  /* copy data in place */
+	  nethdr = &frag->header[packet->stage];
+	  offs = (net_be16_load(((struct iphdr *)nethdr[-1].data)->fragment) & IP_FRAG_MASK) * 8;
+	  memcpy(data + offs, nethdr->data, nethdr->size);
+
+	  printf("copying packet : %d-%d\n", offs, offs + nethdr->size);
+
+	  /* release our reference to the packet */
+	  packet_obj_refdrop(frag);
+	}
+
+      /* release memory */
+      ip_packet_remove(&pv->fragments, p);
+      mem_free(p);
+
+      return 1;
+    }
+
+  /* otherwise, this is just a fragment */
+  packet_obj_refnew(packet);
+  ip_fragment_push(&p->packets, packet);
+  return 0;
 }
 
 /*
@@ -71,7 +189,7 @@ NET_INITPROTO(ip_init)
 
 NET_PUSHPKT(ip_pushpkt)
 {
-  struct net_pv_ip_s	*pv = (struct net_pv_ip_s*)protocol->pv;
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)protocol->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct iphdr		aligned;
 #endif
@@ -80,10 +198,13 @@ NET_PUSHPKT(ip_pushpkt)
   uint_fast16_t		hdr_len;
   net_proto_id_t	proto;
   struct net_proto_s	*p;
+  uint_fast16_t		check;
+  uint_fast16_t		computed_check;
+  uint_fast16_t		fragment;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
-  hdr = (struct iphdr*)nethdr->data;
+  hdr = (struct iphdr *)nethdr->data;
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -95,12 +216,23 @@ NET_PUSHPKT(ip_pushpkt)
 #endif
 
   /* update packet info */
-  packet->sIP = (uint8_t*)&hdr->saddr;
-  packet->tIP = (uint8_t*)&hdr->daddr;
+  packet->sIP = (uint8_t *)&hdr->saddr;
+  packet->tIP = (uint8_t *)&hdr->daddr;
 
-  /* XXX check IP version, checksum */
+  /* check IP version */
+  if (hdr->version != 4)
+    return;
 
-  /* XXX fragments, etc... */
+  /* verify checksum */
+  check = net_16_load(hdr->check);
+  net_16_store(hdr->check, 0);
+  computed_check = packet_checksum((uint8_t *)hdr, hdr->ihl * 4);
+  /* incorrect packet */
+  if (check != computed_check)
+    {
+      printf("Rejected incorrect packet\n");
+      return;
+    }
 
   /* is the packet really for me ? */
   if (memcmp(&hdr->daddr, pv->addr, 4))
@@ -114,14 +246,32 @@ NET_PUSHPKT(ip_pushpkt)
       nethdr[1].size = net_be16_load(hdr->tot_len) - hdr_len;
     }
 
+  /* increment stage */
   packet->stage++;
+
+  /* is the packet fragmented ? */
+  fragment = net_16_load(hdr->fragment);
+  if ((fragment & IP_FLAG_MF) || (fragment & IP_FRAG_MASK))
+    {
+      /* add fragment */
+      if (ip_fragment_pushpkt(protocol, packet, hdr))
+	{
+	  /* last fragment: reassemble */
+
+	  dummy_push(dev, packet, NULL, NULL);
+
+	  /* probably nothing here */
+	}
+      else
+	return;
+    }
 
   /* dispatch to the matching protocol */
   proto = hdr->protocol;
   if ((p = net_protos_lookup(protocols, proto)))
     p->desc->pushpkt(dev, packet, p, protocols);
   else
-    printf("NETWORK: no protocol to handle packet (id = 0x%x)\n", proto);
+    printf("IP: no protocol to handle packet (id = 0x%x)\n", proto);
 }
 
 /*
@@ -132,10 +282,10 @@ NET_PREPAREPKT(ip_preparepkt)
 {
   struct net_header_s	*nethdr;
 
-  dev_net_preparepkt(dev, packet, 20 + size); /* XXX */
+  dev_net_preparepkt(dev, packet, 20 + size);
 
   nethdr = &packet->header[packet->stage];
-  nethdr[1].data = nethdr->data + 20; /* XXX */
+  nethdr[1].data = nethdr->data + 20;
   nethdr[1].size = size;
 
   packet->stage++;
@@ -147,7 +297,7 @@ NET_PREPAREPKT(ip_preparepkt)
 
 NET_IP_SEND(ip_send)
 {
-  struct net_pv_ip_s	*pv = (struct net_pv_ip_s*)ip->pv;
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ip->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct iphdr		aligned;
 #endif
@@ -156,7 +306,7 @@ NET_IP_SEND(ip_send)
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
-  hdr = (struct iphdr*)nethdr->data;
+  hdr = (struct iphdr *)nethdr->data;
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -164,30 +314,32 @@ NET_IP_SEND(ip_send)
     hdr = &aligned;
 #endif
 
+  /* XXX fragment packets here */
+
   /* fill IP header */
   hdr->version = 4;
   hdr->ihl = 5;
   hdr->tos = 0;
   net_be16_store(hdr->tot_len, nethdr->size);
-  net_be16_store(hdr->id, 0);	/* XXX */
-  hdr->fragment = 0;		/* XXX */
-  hdr->flags = 0;		/* XXX */
+  net_be16_store(hdr->id, 0);
+  hdr->fragment = 0;
   hdr->ttl = 64;
   hdr->protocol = proto->id;
   memcpy(&hdr->saddr, pv->addr, 4);
   memcpy(&hdr->daddr, packet->tIP, 4);
   /* checksum */
-  endian_16_na_store(&hdr->check, packet_checksum(hdr, hdr->ihl * 4));
+  endian_16_na_store(&hdr->check, packet_checksum((uint8_t *)hdr,
+						  hdr->ihl * 4));
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
   if (hdr == &aligned)
     memcpy(nethdr->data, hdr, sizeof (struct iphdr));
-  hdr = (struct iphdr*)nethdr->data;
+  hdr = (struct iphdr *)nethdr->data;
 #endif
 
   packet->stage--;
-  packet->sIP = (uint8_t*)&hdr->saddr;
-  packet->tIP = (uint8_t*)&hdr->daddr;
+  packet->sIP = (uint8_t *)&hdr->saddr;
+  packet->tIP = (uint8_t *)&hdr->daddr;
   if (!(packet->tMAC = arp_get_mac(dev, pv->arp, packet, packet->tIP)))
     return;
 

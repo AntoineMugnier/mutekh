@@ -84,6 +84,10 @@ NET_PUSHPKT(icmp_pushpkt)
   nethdr = &packet->header[packet->stage];
   hdr = (struct icmphdr *)nethdr->data;
 
+  /* XXX */
+  check = endian_16_na_load(&hdr->checksum);
+  endian_16_na_store(&hdr->checksum, 0);
+
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
   if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
@@ -94,13 +98,13 @@ NET_PUSHPKT(icmp_pushpkt)
 #endif
 
   /* verify checksum */
-  check = net_be16_load(hdr->checksum);
-  endian_16_na_store(&hdr->checksum, 0);
   computed_check = packet_checksum(nethdr->data, nethdr->size);
-  printf("%x %x %d\n", check, computed_check, nethdr->size);
   /* incorrect packet */
-  if (0 && check != computed_check)
-    return;
+  if (check != computed_check)
+    {
+      printf("Rejected incorrect packet\n");
+      return;
+    }
 
   /* action */
   switch (hdr->type)
