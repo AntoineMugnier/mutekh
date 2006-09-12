@@ -22,9 +22,8 @@
 
 #include <hexo/types.h>
 #include <hexo/init.h>
+#include <hexo/cpu.h>
 #include <hexo/lock.h>
-
-#include <cpu/hexo/apic.h>
 
 #include "multiboot.h"
 
@@ -48,7 +47,7 @@ static lock_t		cpu_start_lock;	/* cpu wait for start lock */
 /* architecture specific init function */
 void arch_init() 
 {
-  if (cpu_apic_isbootstrap())
+  if (cpu_isbootstrap())
     /* First CPU */
     {
       lock_init(&cpu_init_lock);
