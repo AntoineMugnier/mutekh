@@ -22,6 +22,8 @@
 #ifndef __ENDIAN_H_
 #define __ENDIAN_H_
 
+#include <assert.h>
+
 #include "types.h"
 
 /***********************************************************************
