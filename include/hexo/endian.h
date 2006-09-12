@@ -247,5 +247,19 @@ static inline uint64_t endian_swap64(uint64_t x)
 
 #endif
 
+/***********************************************************************
+ *		Address and values alignment
+ */
+
+/* return true if value is a power of 2 */
+#define ALIGN_ISPOWTWO(x)	!((x) & ((x) - 1))
+
+/* align value on the next power of two */
+#define ALIGN_VALUE(x, b)	(assert(ALIGN_ISPOWTWO(x)),	\
+				((((x) - 1) | ((b) - 1)) + 1))
+
+/* align address on the next power of two */
+#define ALIGN_ADDRESS(x, b)	((void*)ALIGN_VALUE((uintptr_t)(x), (b)))
+
 #endif
 

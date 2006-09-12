@@ -37,7 +37,7 @@ struct multiboot_header_s multiboot_header =
   .checksum = 0 - MULTIBOOT_MAGIC,
 };
 
-static uint_fast8_t		cpu_count = 1;
+static uint_fast8_t	cpu_count = 1;
 
 struct cpu_cld_s	*cpu_cld[256];
 
