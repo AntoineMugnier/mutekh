@@ -33,23 +33,38 @@
 #define PCI_CONFREG_REVID		0x08
 #define PCI_CONFREG_CLASS		0x09
 
+#define PCI_CONFREG_ADDRESS_0		0x10
+#define PCI_CONFREG_ADDRESS_1		0x14
+#define PCI_CONFREG_ADDRESS_2		0x18
+#define PCI_CONFREG_ADDRESS_3		0x1c
+#define PCI_CONFREG_ADDRESS_4		0x20
+#define PCI_CONFREG_ADDRESS_5		0x24
+#define PCI_CONFREG_ADDRESS_COUNT	6
+
+/* check if base register is an IO address */
+#define	PCI_CONFREG_ADDRESS_IS_IO(x)		((x) & 1)
+/* check if base register is a memory address of any size */
+#define	PCI_CONFREG_ADDRESS_IS_MEM(x)		!PCI_CONFREG_ADDRESS_IS_IO(x)
+/* check if base register is a 32 bits memory address */
+#define	PCI_CONFREG_ADDRESS_IS_MEM32(x)		(((x) & 0x5) == 0x0)
+/* check if base register is a 64 bits memory address */
+#define	PCI_CONFREG_ADDRESS_IS_MEM64(x)		(((x) & 0x5) == 0x4)
+/* check if base register is a 32 bits memory address below 1Mb */
+#define	PCI_CONFREG_ADDRESS_IS_MEM1M(x)		(((x) & 0x7) == 0x2)
+/* check if memory base register prefetchable */
+#define	PCI_CONFREG_ADDRESS_IS_PREFETCH(x)	((x) & 0x8)
+/* get io address from base register value */
+#define	PCI_CONFREG_ADDRESS_IO(x)		((x) & ~0x03)
+/* get 32 bits memory address from base register value */
+#define	PCI_CONFREG_ADDRESS_MEM32(x)		((x) & ~0x0f)
+/* get 64 bits memory address from 2 low & high base registers values */
+#define	PCI_CONFREG_ADDRESS_MEM64(l, h)		(((l) & ~0x0f) | ((uint64_t)(h) << 32))
+
 #define PCI_CONFREG_CLINE		0x0c
 #define PCI_CONFREG_LATENCY		0x0d
 #define PCI_CONFREG_HTYPE		0x0e
 # define PCI_CONFREG_HTYPE_MULTI	0x80 /* multi-function device */
 #define PCI_CONFREG_BIST		0x0f
-
-#define PCI_BASE_ADDRESS_0      0x10    /* 32 bits */
-#define PCI_BASE_ADDRESS_1      0x14    /* 32 bits */
-#define PCI_BASE_ADDRESS_2      0x18    /* 32 bits */
-#define PCI_BASE_ADDRESS_3      0x1c    /* 32 bits */
-#define PCI_BASE_ADDRESS_4      0x20    /* 32 bits */
-#define PCI_BASE_ADDRESS_5      0x24    /* 32 bits */
-
-#ifndef	PCI_BASE_ADDRESS_IO_MASK
-#define	PCI_BASE_ADDRESS_IO_MASK       (~0x03)
-#endif
-#define	PCI_BASE_ADDRESS_SPACE_IO	0x01
 
 #define PCI_CONF_MAXBUS			8
 #define PCI_CONF_MAXDEVICE		32

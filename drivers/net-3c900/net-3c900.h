@@ -19,18 +19,21 @@
 
 */
 
-#ifndef __ENUM_PCI_H_
-#define __ENUM_PCI_H_
+#ifndef DRIVER_NET_3C900_H_
+#define DRIVER_NET_3C900_H_
 
-#include <stdint.h>
+#include <hexo/device.h>
 
-DEVENUM_REGISTER(enum_pci_register);
-DEV_CLEANUP(enum_pci_cleanup);
-DEV_INIT(enum_pci_init);
+DEV_IRQ(net_3c900_irq);
+DEV_INIT(net_3c900_init);
+DEV_CLEANUP(net_3c900_cleanup);
+DEVNET_PREPAREPKT(net_3c900_preparepkt);
+DEVNET_SENDPKT(net_3c900_sendpkt);
+DEVNET_REGISTER_PROTO(net_3c900_register_proto);
 
-/* PCI device identification object */
-
-#define ENUM_ID_PCI_WILDCARD	0xffff
+#ifndef CONFIG_STATIC_DRIVERS
+extern const struct driver_s	net_3c900_drv;
+#endif
 
 #endif
 

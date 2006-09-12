@@ -29,17 +29,8 @@
 #include "../types.h"
 #include "../error.h"
 
-/** device structure identification informations. wildcard values are
-    enum driver dependent */
-struct devenum_ident_s
-{
-  uint_fast16_t		vendor;
-  uint_fast16_t		device;
-};
-
 /** Enum device class register() function tempate. */
-#define DEVENUM_REGISTER(n)	struct device_s * (n) (struct device_s *dev, struct driver_s *drv, \
-						       struct devenum_ident_s ident[])
+#define DEVENUM_REGISTER(n)	size_t (n) (struct device_s *dev, const struct driver_s *drv)
 
 /** Enum device class register() methode shortcut */
 
@@ -49,9 +40,8 @@ struct devenum_ident_s
    Try to bind a driver
 
    @param dev pointer to enumerator device descriptor
-   @param id pointer to identifier structure
-   @param idlen size of the identifier structure
-   @return pointer to first matching device
+   @param drv pointer pointer to driver to be used for matching devices
+   @return registered devices count
 */
 typedef DEVENUM_REGISTER(devenum_register_t);
 

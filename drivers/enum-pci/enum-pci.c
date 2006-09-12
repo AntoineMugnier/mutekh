@@ -26,6 +26,7 @@
 #include <hexo/alloc.h>
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
+#include <stdlib.h>
 
 #include "enum-pci.h"
 #include "enum-pci-private.h"
@@ -34,18 +35,38 @@
 
 DEVENUM_REGISTER(enum_pci_register)
 {
-#if 0
   struct enum_pci_context_s	*pv = dev->drv_pv;
-  struct enum_id_pci_s		*ident = id;
+  size_t			count = 0;
 
+  /* walk through all devices */
+  /* FIXME ignore already configured devices */
   CONTAINER_FOREACH(device_list, DLIST, device_list, &dev->children,
   {
-    if (ident->vendor == ENUM_ID_PCI_WILDCARD)
-      ;
+    struct enum_pv_pci_s		*enum_pv = item->enum_pv;
+    uint_fast8_t			i;
+    const struct devenum_ident_s	*id;
+
+    /* walk through all possible ids for this driver */
+    for (i = 0; (id = drv->id_table + i)->vendor != 0; i++)
+      {
+	
+	if ((id->vendor != ENUM_ID_PCI_WILDCARD) &&
+	    (id->vendor != enum_pv->vendor))
+	  continue;
+
+	if ((id->device != ENUM_ID_PCI_WILDCARD) &&
+	    (id->device != enum_pv->devid))
+	  continue;
+
+	/* call driver device init function */
+	if (!drv->f_init(item))
+	  count++;
+
+	break;
+      }
   });
 
-  return NULL;
-#endif
+  return count;
 }
 
 /*
@@ -70,9 +91,8 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
   struct enum_pv_pci_s		*enum_pv;
   uint16_t			vendor;
   uint8_t			htype;
-  uint16_t			io;
-  uint16_t			reg;
 
+  /* get pci vendor id */
   vendor = pci_confreg_read(bus, dv, fn, PCI_CONFREG_VENDOR);
 
   if (!vendor || vendor == 0xffff)
@@ -82,30 +102,59 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
     {
       if ((enum_pv = mem_alloc(sizeof (*enum_pv), MEM_SCOPE_SYS)))
 	{
+	  uint_fast8_t		regaddr;
+	  uint_fast8_t		index;
+
 	  enum_pv->vendor = vendor;
 	  enum_pv->devid = pci_confreg_read(bus, dv, fn, PCI_CONFREG_DEVID);
 	  enum_pv->class = pci_confreg_read(bus, dv, fn, PCI_CONFREG_CLASS);
 
-	  for (reg = PCI_BASE_ADDRESS_0; reg <= PCI_BASE_ADDRESS_5; reg += 4)
+	  printf("PCI device %04x:%04x class %x06x, device %p\n",
+		 vendor, enum_pv->devid, enum_pv->class, new);
+
+	  for ((index = 0, regaddr = PCI_CONFREG_ADDRESS_0);
+	       index < __MIN(PCI_CONFREG_ADDRESS_COUNT, DEVICE_MAX_ADDRSLOT);
+	       (index++, regaddr += 4))
 	    {
-	      io = pci_confreg_read(bus, dv, fn, reg);
+	      uint32_t		reg;
 
-	      if ((io & PCI_BASE_ADDRESS_IO_MASK) == 0 ||
-		  (io & PCI_BASE_ADDRESS_SPACE_IO) == 0)
-		continue;
-	      io &= PCI_BASE_ADDRESS_IO_MASK;
+	      reg = pci_confreg_read(bus, dv, fn, regaddr);
 
-	      new->addr[0] = io;
-	      break;
+	      /* test if register is implemented */
+	      pci_confreg_write(bus, dv, fn, regaddr, 0xffffffff);
+	      if (pci_confreg_read(bus, dv, fn, regaddr) == 0)
+		break;
+	      pci_confreg_write(bus, dv, fn, regaddr, reg);
+
+	      if (PCI_CONFREG_ADDRESS_IS_IO(reg))
+		/* get IO base address */
+		{
+		  new->addr[index] = PCI_CONFREG_ADDRESS_IO(reg);
+		  printf("  PCI IO base    : 0x%04x\n", new->addr[index]);
+		}
+	      else if (PCI_CONFREG_ADDRESS_IS_MEM32(reg))
+		/* get memory 32 base address */
+		{
+		  new->addr[index] = PCI_CONFREG_ADDRESS_MEM32(reg);
+		  printf("  PCI mem32 base : 0x%p\n", new->addr[index]);
+		}
+	      else if (PCI_CONFREG_ADDRESS_IS_MEM64(reg))
+		/* get memory 64 base address */
+		{
+		  uint32_t	high;
+
+		  regaddr += 4;
+		  assert(regaddr <= PCI_CONFREG_ADDRESS_5);
+		  high = pci_confreg_read(bus, dv, fn, regaddr);
+		  new->addr[index] = PCI_CONFREG_ADDRESS_MEM64(reg, high);
+		  printf("  PCI mem64 base : 0x%p\n", new->addr[index]);
+		}
 	    }
-
-	  printf("PCI device %04x:%04x class %x06x, io base %04x\n",
-		 vendor, enum_pv->devid, enum_pv->class, new->addr[0]);
 
 	  device_register(new, dev, enum_pv);
 
+	  /* device with multiple functions ? */
 	  htype = pci_confreg_read(bus, dv, fn, PCI_CONFREG_HTYPE);
-
 	  res = (htype & PCI_CONFREG_HTYPE_MULTI ? 1 : 0);
 	}
 
@@ -122,9 +171,11 @@ pci_enum_probe(struct device_s *dev)
 
   for (bus = 0; bus < PCI_CONF_MAXBUS; bus++)
     for (dv = 0; dv < PCI_CONF_MAXDEVICE; dv++)
-      for (fn = 0; fn < PCI_CONF_MAXFCN; fn++)
-	if (pci_enum_dev_probe(dev, bus, dv, fn) <= 0)
-	  break;
+      {
+	for (fn = 0; fn < PCI_CONF_MAXFCN; fn++)
+	  if (pci_enum_dev_probe(dev, bus, dv, fn) <= 0)
+	    break;
+      }
 
   return 0;
 }
@@ -140,6 +191,7 @@ const struct driver_s	enum_pci_drv =
   .f_init		= enum_pci_init,
   .f_cleanup		= enum_pci_cleanup,
   .f.denum = {
+    .f_register		= enum_pci_register,
   }
 };
 #endif

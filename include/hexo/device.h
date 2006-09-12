@@ -107,10 +107,20 @@ CONTAINER_TYPE(device_list, DLIST, struct device_s, HEXO_SPIN);
 
 #endif
 
+/** device structure identification informations. wildcard values are
+    enum driver dependent */
+struct devenum_ident_s
+{
+  uint_fast16_t		vendor;
+  uint_fast16_t		device;
+};
+
 /** device driver object structure */
 
 struct driver_s
 {
+  const struct devenum_ident_s	*id_table;
+
   dev_init_t			*f_init;
   dev_cleanup_t			*f_cleanup;
   dev_irq_t			*f_irq;
@@ -169,6 +179,7 @@ OBJECT_CONSTRUCTOR(device_obj);
 OBJECT_DESTRUCTOR(device_obj);
 
 OBJECT_FUNC(static inline, device_obj, REFCOUNT, device_obj, obj_entry);
+CONTAINER_PROTOTYPE(, device_list, device_list);
 
 error_t device_register(struct device_s *dev,
 			struct device_s *parent,
