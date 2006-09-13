@@ -173,6 +173,9 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
 	      }
 	  }
 
+	  /* the device is not bound to any driver */
+	  new->drv = NULL;
+
 	  device_register(new, dev, enum_pv);
 
 	  /* device with multiple functions ? */
