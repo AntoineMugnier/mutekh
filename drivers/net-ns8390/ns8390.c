@@ -298,7 +298,10 @@ size_t			net_ns8390_read(struct net_ns8390_context_s	*pv,
 
   if (!(header.status & D8390_RSTAT_PRX) ||
       length < ETH_ZLEN || length > ETH_FRAME_LEN)
-    return 0;
+    {
+      printf("ns8390: bad packet\n");
+      return 0;
+    }
 
   /* the packet may be fragmented in two parts */
   fragment = (pv->mem << 8) - packet;

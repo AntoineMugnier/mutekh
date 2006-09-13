@@ -137,7 +137,20 @@ NET_PUSHPKT(arp_pushpkt)
 
 NET_PREPAREPKT(arp_preparepkt)
 {
-  dev_net_preparepkt(dev, packet, sizeof (struct ether_arp));
+  struct net_header_s	*nethdr;
+  uint8_t		*next;
+
+  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp));
+
+  nethdr = &packet->header[packet->stage];
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  /* XXX align here */
+  /* next = ... */
+#endif
+  nethdr->data = next;
+  nethdr->size = sizeof (struct ether_arp);
+
+  return NULL;
 }
 
 /*
@@ -150,9 +163,6 @@ void			arp_request(struct device_s	*dev,
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  struct ether_arp	aligned;
-#endif
   struct ether_arp	*hdr;
   struct net_packet_s	*packet;
   struct net_header_s	*nethdr;
@@ -165,12 +175,6 @@ void			arp_request(struct device_s	*dev,
   nethdr = &packet->header[packet->stage];
   hdr = (struct ether_arp *)nethdr->data;
 
-  /* align the packet on 16 bits if necessary */
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
-    hdr = &aligned;
-#endif
-
   /* fill the request */
   net_be16_store(hdr->ea_hdr.ar_hrd, ARPHRD_ETHER);
   net_be16_store(hdr->ea_hdr.ar_pro, ETHERTYPE_IP);
@@ -181,11 +185,6 @@ void			arp_request(struct device_s	*dev,
   memcpy(hdr->arp_spa, pv_ip->addr, 4);
   memset(hdr->arp_tha, 0xff, ETH_ALEN);
   memcpy(hdr->arp_tpa, address, 4);
-
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (hdr == &aligned)
-    memcpy(nethdr->data, hdr, sizeof (struct ether_arp));
-#endif
 
   packet->tMAC = (uint8_t *)"\xff\xff\xff\xff\xff\xff";
 
@@ -205,9 +204,6 @@ void			arp_reply(struct device_s		*dev,
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  struct ether_arp	aligned;
-#endif
   struct ether_arp	*hdr;
   struct net_packet_s	*packet;
   struct net_header_s	*nethdr;
@@ -220,12 +216,6 @@ void			arp_reply(struct device_s		*dev,
   nethdr = &packet->header[packet->stage];
   hdr = (struct ether_arp *)nethdr->data;
 
-  /* align the packet on 16 bits if necessary */
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
-    hdr = &aligned;
-#endif
-
   /* fill the reply */
   net_be16_store(hdr->ea_hdr.ar_hrd, ARPHRD_ETHER);
   net_be16_store(hdr->ea_hdr.ar_pro, ETHERTYPE_IP);
@@ -236,11 +226,6 @@ void			arp_reply(struct device_s		*dev,
   memcpy(hdr->arp_spa, pv_ip->addr, 4);
   memcpy(hdr->arp_tha, mac, ETH_ALEN);
   memcpy(hdr->arp_tpa, ip, 4);
-
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (hdr == &aligned)
-    memcpy(nethdr->data, hdr, sizeof (struct ether_arp));
-#endif
 
   packet->tMAC = (uint8_t *)"\xff\xff\xff\xff\xff\xff";
 

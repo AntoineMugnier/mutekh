@@ -105,7 +105,20 @@ NET_PUSHPKT(rarp_pushpkt)
 
 NET_PREPAREPKT(rarp_preparepkt)
 {
-  dev_net_preparepkt(dev, packet, sizeof (struct ether_arp));
+  struct net_header_s	*nethdr;
+  uint8_t		*next;
+
+  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp));
+
+  nethdr = &packet->header[packet->stage];
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  /* XXX align here */
+  /* next = ... */
+#endif
+  nethdr->data = next;
+  nethdr->size = sizeof (struct ether_arp);
+
+  return NULL;
 }
 
 /*
@@ -116,9 +129,6 @@ void			rarp_request(struct device_s	*dev,
 				     struct net_proto_s	*arp,
 				     uint8_t		*mac)
 {
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  struct ether_arp	aligned;
-#endif
   struct ether_arp	*hdr;
   struct net_packet_s	*packet;
   struct net_header_s	*nethdr;
@@ -130,12 +140,6 @@ void			rarp_request(struct device_s	*dev,
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct ether_arp *)nethdr->data;
-
-  /* align the packet on 16 bits if necessary */
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
-    hdr = &aligned;
-#endif
 
   /* fill the request */
   net_be16_store(hdr->ea_hdr.ar_hrd, ARPHRD_ETHER);
@@ -150,11 +154,6 @@ void			rarp_request(struct device_s	*dev,
     memcpy(hdr->arp_tha, mac, ETH_ALEN);
   memset(hdr->arp_spa, 0, 4);
   memset(hdr->arp_tpa, 0, 4);
-
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (hdr == &aligned)
-    memcpy(nethdr->data, hdr, sizeof (struct ether_arp));
-#endif
 
   packet->tMAC = (uint8_t *)"\xff\xff\xff\xff\xff\xff";
 

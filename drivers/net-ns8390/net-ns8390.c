@@ -39,8 +39,16 @@
  */
 
 #ifndef CONFIG_STATIC_DRIVERS
+static const struct devenum_ident_s	net_ns8390_ids[] =
+  {
+    { .vendor = 0x10ec, .device = 0x8029 },
+    { 0 }
+  };
+
 const struct driver_s	net_ns8390_drv =
 {
+  .id_table		= net_ns8390_ids,
+
   .f_init		= net_ns8390_init,
   .f_cleanup		= net_ns8390_cleanup,
   .f_irq		= net_ns8390_irq,
@@ -155,13 +163,13 @@ DEVNET_PREPAREPKT(net_ns8390_preparepkt)
   nethdr = &packet->header[0];
   nethdr->data = buff;
   nethdr->size = total;
-  nethdr[1].data = buff + sizeof (struct ether_header);
-  nethdr[1].size = size;
 
   packet->stage = 1;
 
   packet->sMAC = pv->mac;
   packet->MAClen = ETH_ALEN;
+
+  return buff + sizeof (struct ether_header);
 }
 
 /*
@@ -224,6 +232,11 @@ DEV_CLEANUP(net_ns8390_cleanup)
 DEV_INIT(net_ns8390_init)
 {
   struct net_ns8390_context_s	*pv;
+  struct net_proto_s		*rarp;
+  struct net_proto_s		*arp;
+  struct net_proto_s		*ip;
+  struct net_proto_s		*icmp;
+  struct net_proto_s		*udp;
 
 #ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &net_ns8390_drv;
@@ -247,7 +260,28 @@ DEV_INIT(net_ns8390_init)
       return -1;
     }
 
+  /* reset the device */
   net_ns8390_reset(pv);
+
+  /* initialize protocols */
+  ip = net_alloc_proto(&ip_protocol);
+  arp = net_alloc_proto(&arp_protocol);
+  rarp = net_alloc_proto(&rarp_protocol);
+  icmp = net_alloc_proto(&icmp_protocol);
+  udp = net_alloc_proto(&udp_protocol);
+
+  /* register protocols into the driver */
+  dev_net_register_proto(dev, ip, arp);
+  dev_net_register_proto(dev, arp, ip);
+  dev_net_register_proto(dev, rarp, ip);
+  dev_net_register_proto(dev, icmp, ip);
+  dev_net_register_proto(dev, udp, ip);
+
+  /* an RARP request is used to assign us an IP */
+  rarp_request(dev, rarp, NULL);
+
+  while (1)
+    net_ns8390_irq(dev);	/* XXX remove me ! */
 
   return 0;
 }

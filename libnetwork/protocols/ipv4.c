@@ -284,19 +284,25 @@ NET_PUSHPKT(ip_pushpkt)
 NET_PREPAREPKT(ip_preparepkt)
 {
   struct net_header_s	*nethdr;
+  uint8_t		*next;
 
-  dev_net_preparepkt(dev, packet, 20 + size);
-
-  /* XXX rewrite the preparepkt chain */
+  next = dev_net_preparepkt(dev, packet, 20 + size);
 
   nethdr = &packet->header[packet->stage];
-  nethdr[1].data = nethdr->data + 20;
-  nethdr[1].size = size;
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  /* XXX align here */
+  /* next = ... */
+#endif
+  nethdr->data = next;
+  nethdr->size = 20 + size;
 
+  /* XXX remove this */
   packet->id = 0;
   packet->fragment = 0;
 
   packet->stage++;
+
+  return next + 20;
 }
 
 /*
@@ -306,9 +312,6 @@ NET_PREPAREPKT(ip_preparepkt)
 NET_IP_SEND(ip_send)
 {
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ip->pv;
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  struct iphdr		aligned;
-#endif
   struct iphdr		*hdr;
   struct net_header_s	*nethdr;
   uint_fast16_t		total;
@@ -317,16 +320,11 @@ NET_IP_SEND(ip_send)
   uint_fast16_t		fragsz;;
   struct net_packet_s	*frag;
   uint8_t		*data;
+  uint8_t		*dest;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct iphdr *)nethdr->data;
-
-  /* align the packet on 16 bits if necessary */
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
-    hdr = &aligned;
-#endif
 
   total = nethdr[1].size;
 
@@ -343,13 +341,12 @@ NET_IP_SEND(ip_send)
 	{
 	  /* prepare a new IP packet */
 	  frag = packet_obj_new(NULL);
-	  ip_preparepkt(dev, frag, fragsz);
+	  dest = ip_preparepkt(dev, frag, fragsz);
 
 	  printf("sending fragment %d-%d\n", offs, offs + fragsz);
 
 	  /* fill the data */
-	  nethdr = &frag->header[frag->stage];
-	  memcpy(nethdr->data, data + offs, fragsz);
+	  memcpy(dest, data + offs, fragsz);
 
 	  /* copy destination address */
 	  frag->tIP = packet->tIP;
@@ -368,13 +365,12 @@ NET_IP_SEND(ip_send)
 
       /* last packet */
       frag = packet_obj_new(NULL);
-      ip_preparepkt(dev, frag, total - offs);
+      dest = ip_preparepkt(dev, frag, total - offs);
 
       printf("sending last fragment %d-%d\n", offs, total);
 
       /* fill the data */
-      nethdr = &frag->header[frag->stage];
-      memcpy(nethdr->data, data + offs, total - offs);
+      memcpy(dest, data + offs, total - offs);
 
       /* copy destination address */
       frag->tIP = packet->tIP;
@@ -403,16 +399,9 @@ NET_IP_SEND(ip_send)
   hdr->protocol = proto->id;
   memcpy(&hdr->saddr, pv->addr, 4);
   memcpy(&hdr->daddr, packet->tIP, 4);
-  endian_16_na_store(&hdr->check, 0);
+  net_16_store(hdr->check, 0);
   /* checksum */
-  endian_16_na_store(&hdr->check, packet_checksum((uint8_t *)hdr,
-						  hdr->ihl * 4));
-
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (hdr == &aligned)
-    memcpy(nethdr->data, hdr, sizeof (struct iphdr));
-  hdr = (struct iphdr *)nethdr->data;
-#endif
+  net_16_store(hdr->check, packet_checksum((uint8_t *)hdr, hdr->ihl * 4));
 
   packet->stage--;
   packet->sIP = (uint8_t *)&hdr->saddr;

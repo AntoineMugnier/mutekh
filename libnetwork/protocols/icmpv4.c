@@ -84,7 +84,7 @@ NET_PUSHPKT(icmp_pushpkt)
   nethdr = &packet->header[packet->stage];
   hdr = (struct icmphdr *)nethdr->data;
 
-  /* XXX */
+  /* XXX na  */
   check = endian_16_na_load(&hdr->checksum);
   endian_16_na_store(&hdr->checksum, 0);
 
@@ -135,7 +135,23 @@ NET_PUSHPKT(icmp_pushpkt)
 
 NET_PREPAREPKT(icmp_preparepkt)
 {
-  ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size);
+  struct net_header_s	*nethdr;
+  uint8_t		*next;
+
+  next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size);
+
+  nethdr = &packet->header[packet->stage];
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  /* XXX align here */
+  /* next = ... */
+#endif
+  nethdr->data = next;
+  nethdr->size = sizeof (struct icmphdr) + size;
+
+  nethdr[1].data = next + sizeof (struct icmphdr);
+  nethdr[1].size = size;
+
+  return NULL;
 }
 
 /*
@@ -145,9 +161,6 @@ NET_PREPAREPKT(icmp_preparepkt)
 NET_ICMP_ECHO(icmp_echo)
 {
   struct net_pv_icmp_s	*pv = (struct net_pv_icmp_s *)icmp->pv;
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  struct icmphdr	aligned;
-#endif
   struct icmphdr	*hdr;
   struct net_packet_s	*packet;
   struct net_header_s	*nethdr;
@@ -162,32 +175,20 @@ NET_ICMP_ECHO(icmp_echo)
   nethdr = &packet->header[packet->stage];
   hdr = (struct icmphdr *)nethdr->data;
 
-  /* align the packet on 16 bits if necessary */
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
-    hdr = &aligned;
-#endif
-
   /* fill the echo */
   hdr->type = 0;
   hdr->code = 3;
   net_be16_store(hdr->un.echo.id, id);
   net_be16_store(hdr->un.echo.sequence, seq);
-  endian_16_na_store(&hdr->checksum, 0);
+  net_16_store(hdr->checksum, 0);
 
   /* copy data */
-  memcpy(nethdr->data + sizeof (struct icmphdr),
+  memcpy(nethdr[1].data,
 	 data,
 	 size);
 
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (hdr == &aligned)
-    memcpy(nethdr->data, hdr, sizeof (struct icmphdr));
-  hdr = (struct icmphdr *)nethdr->data;
-#endif
-
   /* compute checksum */
-  endian_16_na_store(&hdr->checksum, packet_checksum(nethdr->data, nethdr->size));
+  net_16_store(hdr->checksum, packet_checksum(nethdr->data, nethdr->size));
 
   /* target IP */
   packet->tIP = ip;

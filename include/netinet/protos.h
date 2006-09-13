@@ -52,7 +52,7 @@ typedef NET_PUSHPKT(net_pushpkt_t);
  * Prototype of the function used to prepare a packet.
  */
 
-#define NET_PREPAREPKT(f)	void (f)(struct device_s	*dev,	   \
+#define NET_PREPAREPKT(f)	uint8_t *(f)(struct device_s	*dev,	   \
 					 struct net_packet_s	*packet,   \
 					 size_t			size)
 

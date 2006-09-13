@@ -37,5 +37,10 @@ DEVNET_PREPAREPKT(net_ns8390_preparepkt);
 DEVNET_SENDPKT(net_ns8390_sendpkt);
 DEVNET_REGISTER_PROTO(net_ns8390_register_proto);
 
+
+#ifndef CONFIG_STATIC_DRIVERS
+extern const struct driver_s	net_ns8390_drv;
+#endif
+
 #endif
 

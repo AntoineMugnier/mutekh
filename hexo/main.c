@@ -40,6 +40,7 @@
 #include <../drivers/timer-8253/timer-8253.h>
 #include <../drivers/fb-vga/fb-vga.h>
 #include <../drivers/enum-pci/enum-pci.h>
+#include <../drivers/net-ns8390/net-ns8390.h>
 #include <../drivers/net-3c900/net-3c900.h>
 
 #include <string.h>
@@ -166,6 +167,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   device_init(&enum_pci);
   enum_pci_init(&enum_pci);
   dev_enum_register(&enum_pci, &net_3c900_drv);
+  dev_enum_register(&enum_pci, &net_ns8390_drv);
 # endif
 
   sched_global_init();
