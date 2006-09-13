@@ -39,17 +39,19 @@ DEVENUM_REGISTER(enum_pci_register)
   size_t			count = 0;
 
   /* walk through all devices */
-  /* FIXME ignore already configured devices */
   CONTAINER_FOREACH(device_list, DLIST, device_list, &dev->children,
   {
     struct enum_pv_pci_s		*enum_pv = item->enum_pv;
     uint_fast8_t			i;
     const struct devenum_ident_s	*id;
 
+    /* ignore already configured devices */
+    if (item->drv != NULL)
+      continue;
+
     /* walk through all possible ids for this driver */
     for (i = 0; (id = drv->id_table + i)->vendor != 0; i++)
       {
-	
 	if ((id->vendor != ENUM_ID_PCI_WILDCARD) &&
 	    (id->vendor != enum_pv->vendor))
 	  continue;
@@ -58,9 +60,12 @@ DEVENUM_REGISTER(enum_pci_register)
 	    (id->device != enum_pv->devid))
 	  continue;
 
-	/* call driver device init function */
-	if (!drv->f_init(item))
-	  count++;
+	/* call driver device init function, use same icu as PCI
+	   enumerator parent device */
+	if (!drv->f_init(item, dev->icudev))
+	  {
+	    count++;
+	  }
 
 	break;
       }
@@ -151,6 +156,23 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
 		}
 	    }
 
+	  /* get irq line */
+	  {
+	    uint8_t		reg;
+
+	    reg = pci_confreg_read(bus, dv, fn, PCI_CONFREG_IRQLINE);
+
+	    if (reg != 0xff)
+	      {
+		printf("  PCI irq : %u\n", reg);
+		new->irq = reg;
+	      }
+	    else
+	      {
+		new->irq = DEVICE_IRQ_INVALID;
+	      }
+	  }
+
 	  device_register(new, dev, enum_pv);
 
 	  /* device with multiple functions ? */
@@ -202,6 +224,7 @@ DEV_INIT(enum_pci_init)
 
 #ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &enum_pci_drv;
+  dev->icudev = icudev;
 #endif
 
   /* allocate private driver data */

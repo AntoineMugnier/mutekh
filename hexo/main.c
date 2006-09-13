@@ -85,10 +85,10 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #if defined(__ARCH__ibmpc__)
   icu_dev.addr[ICU_ADDR_MASTER] = 0x0020;
   icu_dev.addr[ICU_ADDR_SLAVE] = 0x00a0;
-  icu_8259_init(&icu_dev);
+  icu_8259_init(&icu_dev, NULL);
 #elif defined(__ARCH__soclib__)
   icu_dev.addr[ICU_ADDR_MASTER] = 0x10c00000;
-  icu_soclib_init(&icu_dev);
+  icu_soclib_init(&icu_dev, NULL);
 #endif
 
   /********* TTY init ******************************** */
@@ -98,7 +98,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # if defined(__ARCH__ibmpc__)
   tty_uart_dev.addr[UART_8250_ADDR] = 0x03f8;
   tty_uart_dev.irq = 4;
-  uart_8250_init(&tty_uart_dev);
+  uart_8250_init(&tty_uart_dev, &icu_dev);
   DEV_ICU_BIND(&icu_dev, &tty_uart_dev);
 # endif
 #endif
@@ -115,7 +115,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   tty_con_dev.addr[VGA_TTY_ADDR_BUFFER] = 0x000b8000;
   tty_con_dev.addr[VGA_TTY_ADDR_CRTC] = 0x03d4;
   tty_con_dev.irq = 1;
-  tty_vga_init(&tty_con_dev);
+  tty_vga_init(&tty_con_dev, &icu_dev);
   tty_dev = &tty_con_dev;
   DEV_ICU_BIND(&icu_dev, &tty_con_dev);
 #  endif /* CONFIG_TTY_UART */
@@ -124,7 +124,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   device_init(&tty_con_dev);
   tty_con_dev.addr[0] = 0xa0c00000;
   tty_con_dev.irq = 1;
-  tty_soclib_init(&tty_con_dev);
+  tty_soclib_init(&tty_con_dev, &icu_dev);
   tty_dev = &tty_con_dev;
   DEV_ICU_BIND(&icu_dev, &tty_con_dev);
 # endif	/* defined(__ARCH__xxx__) */
@@ -137,11 +137,11 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # if defined(__ARCH__ibmpc__)
   timer_dev.addr[0] = 0x0040;
   timer_dev.irq = 0;
-  timer_8253_init(&timer_dev);
+  timer_8253_init(&timer_dev, &icu_dev);
 # elif defined(__ARCH__soclib__)
   timer_dev.addr[0] = 0x20c00000;
   timer_dev.irq = 0;
-  timer_soclib_init(&timer_dev);
+  timer_soclib_init(&timer_dev, &icu_dev);
 # endif	/* defined(__ARCH__xxx__) */
   DEV_ICU_BIND(&icu_dev, &timer_dev);
 
@@ -154,7 +154,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #ifdef CONFIG_FB
   device_init(&fb_dev);
 # if defined(__ARCH__ibmpc__)
-  fb_vga_init(&fb_dev);
+  fb_vga_init(&fb_dev, &icu_dev);
   fb_vga_setmode(&fb_dev, 320, 200, 8, FB_PACK_INDEX);
   uint8_t *p = (void*)fb_vga_getbuffer(&fb_dev, 0);
   memcpy(p, mutek_logo_320x200, 64000);
@@ -165,7 +165,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
 # if defined(__ARCH__ibmpc__)
   device_init(&enum_pci);
-  enum_pci_init(&enum_pci);
+  enum_pci_init(&enum_pci, &icu_dev);
   dev_enum_register(&enum_pci, &net_3c900_drv);
   dev_enum_register(&enum_pci, &net_ns8390_drv);
 # endif

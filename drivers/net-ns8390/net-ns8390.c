@@ -167,7 +167,7 @@ DEVNET_PREPAREPKT(net_ns8390_preparepkt)
 
   total = sizeof (struct ether_header) + size;
 
-  buff = packet->packet = mem_alloc(total, MEM_SCOPE_THREAD);
+  buff = packet->packet = mem_alloc(total, MEM_SCOPE_CONTEXT);
 
   nethdr = &packet->header[0];
   nethdr->data = buff;

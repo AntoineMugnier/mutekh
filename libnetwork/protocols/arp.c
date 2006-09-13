@@ -262,7 +262,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
   else
     {
       /* otherwise, allocate a new entry */
-      arp_entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_THREAD);
+      arp_entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_CONTEXT);
       memcpy(arp_entry->ip, ip, 4);
       arp_table_push(&pv->table, arp_entry);
     }

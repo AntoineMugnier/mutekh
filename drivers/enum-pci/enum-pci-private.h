@@ -66,6 +66,8 @@
 # define PCI_CONFREG_HTYPE_MULTI	0x80 /* multi-function device */
 #define PCI_CONFREG_BIST		0x0f
 
+#define PCI_CONFREG_IRQLINE		0x3c
+
 #define PCI_CONF_MAXBUS			8
 #define PCI_CONF_MAXDEVICE		32
 #define PCI_CONF_MAXFCN			8

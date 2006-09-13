@@ -30,7 +30,9 @@
 #include "../error.h"
 
 /** Enum device class register() function tempate. */
-#define DEVENUM_REGISTER(n)	size_t (n) (struct device_s *dev, const struct driver_s *drv)
+#define DEVENUM_REGISTER(n)	size_t (n) (struct device_s *dev,	\
+					    const struct driver_s *drv)
+
 
 /** Enum device class register() methode shortcut */
 

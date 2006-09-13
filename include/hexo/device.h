@@ -57,7 +57,7 @@ typedef DEV_IRQ(dev_irq_t);
 
 
 /** Common class init() function tempate. */
-#define DEV_INIT(n)	error_t (n) (struct device_s *dev)
+#define DEV_INIT(n)	error_t (n) (struct device_s *dev, struct device_s *icudev)
 
 /** Common device class init() methode shortcut */
 #define dev_init(dev) (dev)->drv->f_init(dev)
@@ -148,6 +148,7 @@ struct device_s
 #ifndef CONFIG_STATIC_DRIVERS
 
   const struct driver_s		*drv;
+  struct device_s		*icudev;
 
 #endif
 
@@ -155,7 +156,7 @@ struct device_s
   void				*drv_pv;
 
   /** hardware interrupt line number */
-  uint_fast8_t			irq;
+  int_fast8_t			irq;
 
   /** device IO addresses table */
   uintptr_t			addr[DEVICE_MAX_ADDRSLOT];
@@ -172,6 +173,8 @@ struct device_s
 
 };
 
+/* used when no irq line is present/available */
+#define DEVICE_IRQ_INVALID	-1
 
 #ifdef CONFIG_DEVICE_HIERARCHY
 

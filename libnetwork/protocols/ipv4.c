@@ -109,7 +109,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   /* do we already received packet with same id ? */
   if (!(p = ip_packet_lookup(&pv->fragments, id)))
     {
-      p = mem_alloc(sizeof (struct ip_packet_s), MEM_SCOPE_THREAD);
+      p = mem_alloc(sizeof (struct ip_packet_s), MEM_SCOPE_CONTEXT);
       p->id = id;
       p->size = 0;
       p->received = 0;
@@ -141,7 +141,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       nethdr = &packet->header[packet->stage];
       headers_len = (packet->header[0].size - nethdr->size);
       /* allocate a packet large enough */
-      data = mem_alloc(total + headers_len, MEM_SCOPE_THREAD);
+      data = mem_alloc(total + headers_len, MEM_SCOPE_CONTEXT);
 
       /* copy previous headers (ethernet, ip, etc.) */
       memcpy(data, packet->packet, headers_len);

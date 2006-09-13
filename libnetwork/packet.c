@@ -31,7 +31,7 @@ OBJECT_CONSTRUCTOR(packet_obj)
 {
   struct net_packet_s		*packet;
 
-  packet = mem_alloc(sizeof (struct net_packet_s), MEM_SCOPE_THREAD);
+  packet = mem_alloc(sizeof (struct net_packet_s), MEM_SCOPE_CONTEXT);
   memset(packet, 0, sizeof (struct net_packet_s));
 
   packet_obj_init(packet);

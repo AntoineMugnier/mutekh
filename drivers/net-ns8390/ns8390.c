@@ -290,7 +290,7 @@ size_t			net_ns8390_read(struct net_ns8390_context_s	*pv,
   total = length;
 
   /* allocate the packet */
-  *data = mem_alloc(total, MEM_SCOPE_THREAD);
+  *data = mem_alloc(total, MEM_SCOPE_CONTEXT);
 
   if (!(header.status & D8390_RSTAT_PRX) ||
       length < ETH_ZLEN || length > ETH_FRAME_LEN)

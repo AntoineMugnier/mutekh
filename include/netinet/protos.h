@@ -126,7 +126,7 @@ static inline struct net_proto_s	*net_alloc_proto(const struct net_proto_desc_s	
   struct net_proto_s	*proto;
 
   proto = mem_alloc(sizeof (struct net_proto_s) + desc->pv_size,
-		    MEM_SCOPE_THREAD);
+		    MEM_SCOPE_CONTEXT);
 
   proto->desc = desc;
   proto->id = desc->id;
