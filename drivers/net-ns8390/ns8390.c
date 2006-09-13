@@ -188,7 +188,7 @@ error_t			net_ns8390_probe(struct net_ns8390_context_s	*pv,
   uint8_t		buff[32];
   uint8_t		rom[32];
 
-  pv->mode_16bits = 0;
+  pv->mode_16bits = 1;
   pv->base = base;
   pv->asic = base + NE_ASIC_OFFSET;
   pv->mem = MEM_16384;
@@ -245,9 +245,7 @@ error_t			net_ns8390_probe(struct net_ns8390_context_s	*pv,
   for (i = 0; i < ETH_ALEN; i++)
     pv->mac[i] = rom[i << 1];
 
-  printf("  MAC address: %2x:%2x:%2x:%2x:%2x:%2x\n",
-	 pv->mac[0], pv->mac[1], pv->mac[2],
-	 pv->mac[3], pv->mac[4], pv->mac[5]);
+  printf("  MAC address: %P\n", pv->mac, ETH_ALEN);
 
   return 0;
 }

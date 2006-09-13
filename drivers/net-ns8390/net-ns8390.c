@@ -251,6 +251,8 @@ DEV_INIT(net_ns8390_init)
   dev->drv = &net_ns8390_drv;
 #endif
 
+  printf("ns8390 (ne2000) driver init on device %p\n", dev);
+
   /* driver private data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
 

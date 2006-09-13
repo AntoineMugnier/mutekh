@@ -54,9 +54,9 @@ int_fast8_t		main()
 	       "pushl %esp\n\t"
 	       "pushl $0x43046\n\t"
 	       "pushl $0x1b\n\t"
-	       "pushl $next\n\t"
+	       "pushl $1f\n\t"
 	       "iret\n\t"
-	       "next:");
+	       "1:");
 
   uint32_t *p = 3;
 

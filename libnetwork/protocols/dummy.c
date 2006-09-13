@@ -62,7 +62,7 @@ static void		dummy_hexdump(uint8_t	*data,
 
       for (j = 0; j < 16 && i + j < sz; j++)
 	{
-	  printf("%2x ", data[i + j]);
+	  printf("%02x ", data[i + j]);
 	}
 
       for (; j < 16; j++)
@@ -87,7 +87,8 @@ static void		dummy_hexdump(uint8_t	*data,
 
 NET_PUSHPKT(dummy_push)
 {
-  return ;
+  return;
+
   printf("Source MAC: %2x:%2x:%2x:%2x:%2x:%2x\n",
 	 packet->sMAC[0], packet->sMAC[1], packet->sMAC[2],
 	 packet->sMAC[3], packet->sMAC[4], packet->sMAC[5]);
