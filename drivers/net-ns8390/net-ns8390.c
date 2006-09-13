@@ -41,7 +41,16 @@
 #ifndef CONFIG_STATIC_DRIVERS
 static const struct devenum_ident_s	net_ns8390_ids[] =
   {
-    { .vendor = 0x10ec, .device = 0x8029 },
+    { .vendor = 0x10ec, .device = 0x8029 },	/* Realtek 8029 */
+    { .vendor = 0x1050, .device = 0x0940 },	/* Winbond 89C940 */
+    { .vendor = 0x1050, .device = 0x5a5a },	/* Winbond 89C940F */
+    { .vendor = 0x8c4a, .device = 0x1980 },	/* Winbond 89C940 (bad ROM) */
+    { .vendor = 0x11f6, .device = 0x1401 },	/* Compex ReadyLink 2000 */
+    { .vendor = 0x8e2e, .device = 0x3000 },	/* KTI ET32P2 */
+    { .vendor = 0x4a14, .device = 0x5000 },	/* NetVin NV5000SC */
+    { .vendor = 0x12c3, .device = 0x0058 },	/* HolTek HT80232 */
+    { .vendor = 0x1106, .device = 0x0926 },	/* Via 86C926 */
+    { .vendor = 0x10bd, .device = 0x0e34 },	/* SureCom NE34 */
     { 0 }
   };
 
@@ -256,7 +265,7 @@ DEV_INIT(net_ns8390_init)
 
   if (net_ns8390_probe(pv, dev->addr[NET_NS8390_ADDR]))
     {
-      printf("No NE2000 device found\n");
+      printf("ns8390: unable to initialize card\n");
       return -1;
     }
 
@@ -277,7 +286,7 @@ DEV_INIT(net_ns8390_init)
   dev_net_register_proto(dev, icmp, ip);
   dev_net_register_proto(dev, udp, ip);
 
-  /* an RARP request is used to assign us an IP */
+  /* a RARP request is used to assign us an IP */
   rarp_request(dev, rarp, NULL);
 
   while (1)

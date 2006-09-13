@@ -20,7 +20,7 @@
 */
 
 /*
- * IP protocol
+ * IP protocol version 4
  *
  */
 
@@ -30,6 +30,7 @@
 #include <hexo/device.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
 /*
  * Fragment lists.
@@ -72,6 +73,8 @@ NET_INITPROTO(ip_init)
   printf("IP %s with ARP (%p)\n", pv->arp ? "bound" : "not bound", pv->arp);
   memset(pv->addr, 0, 4);
   ip_packet_init(&pv->fragments);
+  srand((uint_fast32_t)pv);
+  pv->id_seq = rand();
 }
 
 /*
@@ -85,14 +88,11 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ip->pv;
   struct ip_packet_s	*p;
   struct net_header_s	*nethdr;
-  struct net_packet_s	*frag;
   uint_fast64_t		id;
   uint_fast16_t		offs;
   uint_fast16_t		fragment;
   uint_fast16_t		datasz;
   uint_fast16_t		total;
-  uint_fast16_t		headers_len;
-  uint8_t		*data;
   uint32_t		*ip_addr = (uint32_t *)packet->sIP;
 
   /* the unique identifier of the packet is the concatenation of the
@@ -131,6 +131,10 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 
   if (total && total == p->received)
     {
+      struct net_packet_s	*frag;
+      uint_fast16_t		headers_len;
+      uint8_t			*data;
+
       printf("packet complete\n");
 
       /* we received the whole packet, reassemble now */
@@ -284,6 +288,7 @@ NET_PUSHPKT(ip_pushpkt)
 NET_PREPAREPKT(ip_preparepkt)
 {
   struct net_header_s	*nethdr;
+  struct iphdr		*hdr;
   uint8_t		*next;
 
   next = dev_net_preparepkt(dev, packet, 20 + size);
@@ -296,9 +301,11 @@ NET_PREPAREPKT(ip_preparepkt)
   nethdr->data = next;
   nethdr->size = 20 + size;
 
-  /* XXX remove this */
-  packet->id = 0;
-  packet->fragment = 0;
+  /* we need to set these fields to 0, because they are only set for
+     fragmented packets, otherwise, they must be 0 */
+  hdr = (struct iphdr *)nethdr->data;
+  net_16_store(hdr->id, 0);
+  net_16_store(hdr->fragment, 0);
 
   packet->stage++;
 
@@ -335,7 +342,8 @@ NET_IP_SEND(ip_send)
       offs = 0;
       fragsz = (IPMTU - 20) & ~7;
       /* choose a random identifier */
-      id = rand() & 0xffff; /* XXX */
+      id = pv->id_seq + (rand() & 0xff);
+      pv->id_seq = id + 1;
 
       while (offs + fragsz < total)
 	{
@@ -352,10 +360,10 @@ NET_IP_SEND(ip_send)
 	  frag->tIP = packet->tIP;
 
 	  /* setup fragment specific fields */
-	  frag->id = id;
-	  frag->fragment |= IP_FLAG_MF | (offs / 8);
-
-	  /* XXX setup the whole packet here */
+	  nethdr = &packet->header[packet->stage];
+	  hdr = (struct iphdr *)nethdr->data;
+	  net_be16_store(hdr->id, id);
+	  net_be16_store(hdr->fragment, IP_FLAG_MF | (offs / 8));
 
 	  /* send the fragments */
 	  frag->stage--;
@@ -376,8 +384,10 @@ NET_IP_SEND(ip_send)
       frag->tIP = packet->tIP;
 
       /* setup fragment specific fields */
-      frag->id = id;
-      frag->fragment |= offs / 8;
+      nethdr = &packet->header[packet->stage];
+      hdr = (struct iphdr *)nethdr->data;
+      net_be16_store(hdr->id, id);
+      net_be16_store(hdr->fragment, offs / 8);
 
       /* send the last fragment */
       frag->stage--;
@@ -388,13 +398,13 @@ NET_IP_SEND(ip_send)
       return ;
     }
 
+  /* for the non fragmented packets */
+
   /* fill IP header */
   hdr->version = 4;
   hdr->ihl = 5;
   hdr->tos = 0;
   net_be16_store(hdr->tot_len, nethdr->size);
-  net_be16_store(hdr->id, packet->id);
-  net_be16_store(hdr->fragment, packet->fragment);
   hdr->ttl = 64;
   hdr->protocol = proto->id;
   memcpy(&hdr->saddr, pv->addr, 4);

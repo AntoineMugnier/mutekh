@@ -19,6 +19,11 @@
 
 */
 
+/*
+ * ARP for IPv4
+ *
+ */
+
 #include <netinet/arp.h>
 #include <netinet/ip.h>
 #include <netinet/packet.h>

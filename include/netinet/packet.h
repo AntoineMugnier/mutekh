@@ -121,9 +121,6 @@ struct			net_packet_s
   uint8_t		*tIP;			/* target IP address */
   uint_fast8_t		MAClen;			/* length of MAC addresses */
 
-  uint_fast16_t		id;
-  uint_fast16_t		fragment;
-
   packet_obj_entry_t	obj_entry;
   arp_wait_entry_t	arp_wait_entry;
   ip_fragment_entry_t	ip_fragment_entry;

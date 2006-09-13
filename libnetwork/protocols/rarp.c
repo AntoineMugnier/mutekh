@@ -19,6 +19,11 @@
 
 */
 
+/*
+ * Reverse ARP for IPv4
+ *
+ */
+
 #include <netinet/arp.h>
 #include <netinet/packet.h>
 #include <netinet/protos.h>

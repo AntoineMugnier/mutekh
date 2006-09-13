@@ -175,6 +175,7 @@ struct			net_pv_ip_s
   struct net_proto_s	*arp;
   uint8_t		addr[4];
   ip_packet_root_t	fragments;
+  uint_fast32_t		id_seq;
 };
 
 /*

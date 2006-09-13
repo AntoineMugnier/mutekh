@@ -188,8 +188,6 @@ error_t			net_ns8390_probe(struct net_ns8390_context_s	*pv,
   uint8_t		buff[32];
   uint8_t		rom[32];
 
-  printf("Probing base 0x%x\n", base);
-
   pv->mode_16bits = 0;
   pv->base = base;
   pv->asic = base + NE_ASIC_OFFSET;
@@ -239,7 +237,7 @@ error_t			net_ns8390_probe(struct net_ns8390_context_s	*pv,
   return -1; /* no device found */
 
  ok:
-  printf("Found a NE2000 at I/O base 0x%x\n", base);
+  printf("ns8390: device I/O base 0x%x\n", base);
 
   /* read MAC address */
   net_ns8390_pio_read(pv, 0, rom, sizeof (rom));
@@ -247,7 +245,7 @@ error_t			net_ns8390_probe(struct net_ns8390_context_s	*pv,
   for (i = 0; i < ETH_ALEN; i++)
     pv->mac[i] = rom[i << 1];
 
-  printf("MAC address: %2x:%2x:%2x:%2x:%2x:%2x\n",
+  printf("  MAC address: %2x:%2x:%2x:%2x:%2x:%2x\n",
 	 pv->mac[0], pv->mac[1], pv->mac[2],
 	 pv->mac[3], pv->mac[4], pv->mac[5]);
 
@@ -307,7 +305,7 @@ size_t			net_ns8390_read(struct net_ns8390_context_s	*pv,
   fragment = (pv->mem << 8) - packet;
 
   /* fetch the first part (if packet splitted) */
-  if (length > fragment)
+  if (0 && length > fragment) /* XXX does not work */
     {
       printf("ns8390: fetching %d-%d %d -> %p\n", 0, fragment, packet, *data);
       net_ns8390_pio_read(pv, packet, *data, fragment);

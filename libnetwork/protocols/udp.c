@@ -39,6 +39,7 @@
 
 static const struct udp_interface_s	udp_interface =
 {
+  .send = udp_send
 };
 
 const struct net_proto_desc_s	udp_protocol =
@@ -109,6 +110,52 @@ NET_PUSHPKT(udp_pushpkt)
 
 NET_PREPAREPKT(udp_preparepkt)
 {
-  ip_preparepkt(dev, packet, sizeof (struct udphdr) + size);
+  struct net_header_s	*nethdr;
+  uint8_t		*next;
+
+  next = ip_preparepkt(dev, packet, sizeof (struct udphdr) + size);
+
+  nethdr = &packet->header[packet->stage];
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  /* XXX align here */
+  /* next = ... */
+#endif
+  nethdr->data = next;
+  nethdr->size = sizeof (struct udphdr) + size;
+
+  return next + sizeof (struct udphdr);
+}
+
+NET_UDP_SEND(udp_send)
+{
+  struct net_pv_udp_s	*pv = (struct net_pv_udp_s *)udp->pv;
+  struct udphdr		*hdr;
+  struct net_packet_s	*packet;
+  struct net_header_s	*nethdr;
+  uint8_t		*dest;
+
+  packet = packet_obj_new(NULL);
+
+  dest = udp_preparepkt(dev, packet, size);
+
+  /* get the header */
+  nethdr = &packet->header[packet->stage];
+  hdr = (struct udphdr *)nethdr->data;
+
+  /* fill the header */
+  /* XXX */
+
+  /* copy data */
+  memcpy(dest, data, size);
+
+  /* compute checksum */
+  /* XXX */
+
+  /* target IP */
+  packet->tIP = ip;
+
+  packet->stage--;
+  /* send the packet to IP */
+  ip_send(dev, packet, pv->ip, udp);
 }
 

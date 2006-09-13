@@ -20,7 +20,7 @@
 */
 
 /*
- * ICMP protocol
+ * ICMP protocol for IPv4
  *
  */
 
@@ -148,10 +148,7 @@ NET_PREPAREPKT(icmp_preparepkt)
   nethdr->data = next;
   nethdr->size = sizeof (struct icmphdr) + size;
 
-  nethdr[1].data = next + sizeof (struct icmphdr);
-  nethdr[1].size = size;
-
-  return NULL;
+  return next + sizeof (struct icmphdr);
 }
 
 /*
@@ -164,12 +161,13 @@ NET_ICMP_ECHO(icmp_echo)
   struct icmphdr	*hdr;
   struct net_packet_s	*packet;
   struct net_header_s	*nethdr;
+  uint8_t		*dest;
 
   printf("Pong\n");
 
   packet = packet_obj_new(NULL);
 
-  icmp_preparepkt(dev, packet, size);
+  dest = icmp_preparepkt(dev, packet, size);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -183,9 +181,7 @@ NET_ICMP_ECHO(icmp_echo)
   net_16_store(hdr->checksum, 0);
 
   /* copy data */
-  memcpy(nethdr[1].data,
-	 data,
-	 size);
+  memcpy(dest, data, size);
 
   /* compute checksum */
   net_16_store(hdr->checksum, packet_checksum(nethdr->data, nethdr->size));
