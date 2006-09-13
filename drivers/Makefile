@@ -6,7 +6,7 @@ ifeq ($(ARCH), ibmpc)
   include drivers/tty-vga/Makefile
   include drivers/uart-8250/Makefile
   include drivers/enum-pci/Makefile
-  include drivers/net-ns8390/Makefile
+  include drivers/net-ne2000pci/Makefile
   include drivers/net-3c900/Makefile
 endif
 
