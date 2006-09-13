@@ -88,9 +88,9 @@ NET_PUSHPKT(icmp_pushpkt)
   check = endian_16_na_load(&hdr->checksum);
   endian_16_na_store(&hdr->checksum, 0);
 
-  /* align the packet on 16 bits if necessary */
+  /* align the packet on 32 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint32_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct icmphdr));
       hdr = &aligned;
@@ -138,13 +138,14 @@ NET_PREPAREPKT(icmp_preparepkt)
   struct net_header_s	*nethdr;
   uint8_t		*next;
 
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size + 3);
+  next = ALIGN_ADDRESS(next, 4);
+#else
   next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size);
+#endif
 
   nethdr = &packet->header[packet->stage];
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  /* XXX align here */
-  /* next = ... */
-#endif
   nethdr->data = next;
   nethdr->size = sizeof (struct icmphdr) + size;
 

@@ -113,13 +113,14 @@ NET_PREPAREPKT(rarp_preparepkt)
   struct net_header_s	*nethdr;
   uint8_t		*next;
 
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp) + 1);
+  next = ALIGN_ADDRESS(next, 2);
+#else
   next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp));
+#endif
 
   nethdr = &packet->header[packet->stage];
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  /* XXX align here */
-  /* next = ... */
-#endif
   nethdr->data = next;
   nethdr->size = sizeof (struct ether_arp);
 

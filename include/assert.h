@@ -26,10 +26,22 @@
 
 #include <stdio.h>
 
+static inline void
+__assert_fail(const char *file,
+	      uint_fast16_t line,
+	      const char *func,
+	      const char *expr)
+{
+  printf("Assertion failed at %s:%u:%s(): (%s) is false\n", file, line, func, expr);
+
+  while (1)
+    ;
+}
+
 #ifndef NDEBUG
-#define assert(expr) if (!(expr)) { printf("Assertion failed at " __FILE__ ":%u:%s(): (" #expr ") is false\n", __LINE__, __func__); while (1); }
+#define assert(expr) ((void) ((expr) ? 0 : __assert_fail(__FILE__, __LINE__, __func__, #expr)))
 #else
-#define assert(expr)
+#define assert(expr) ((void) 0)
 #endif
 
 #endif

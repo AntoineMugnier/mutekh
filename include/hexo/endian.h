@@ -257,7 +257,7 @@ static inline uint64_t endian_swap64(uint64_t x)
 #define ALIGN_ISPOWTWO(x)	!((x) & ((x) - 1))
 
 /* align value on the next power of two */
-#define ALIGN_VALUE(x, b)	(assert(ALIGN_ISPOWTWO(x)),	\
+#define ALIGN_VALUE(x, b)	(assert(ALIGN_ISPOWTWO(b)),	\
 				((((x) - 1) | ((b) - 1)) + 1))
 
 /* align address on the next power of two */

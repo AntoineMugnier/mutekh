@@ -119,8 +119,6 @@ DEV_IRQ(net_ns8390_irq)
   nethdr[1].data = buff + sizeof(struct ether_header);
   nethdr[1].size = size - sizeof(struct ether_header);
 
-  dummy_push(dev, packet, NULL, NULL); /* XXX remove me ! */
-
   packet->stage++;
 
   /* dispatch to the matching protocol */
@@ -188,9 +186,6 @@ DEVNET_PREPAREPKT(net_ns8390_preparepkt)
 DEVNET_SENDPKT(net_ns8390_sendpkt)
 {
   struct net_ns8390_context_s	*pv = dev->drv_pv;
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  struct ether_header		aligned;
-#endif
   struct ether_header		*hdr;
   struct net_header_s		*nethdr;
 
@@ -198,25 +193,26 @@ DEVNET_SENDPKT(net_ns8390_sendpkt)
   nethdr = &packet->header[0];
   hdr = (struct ether_header*)nethdr->data;
 
-  /* align the packet on 16 bits if necessary */
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
-    hdr = &aligned;
-#endif
-
   /* fill the header */
   memcpy(hdr->ether_shost, packet->sMAC, packet->MAClen);
   memcpy(hdr->ether_dhost, packet->tMAC, packet->MAClen);
   net_be16_store(hdr->ether_type, proto);
 
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  if (hdr == &aligned)
-    memcpy(nethdr->data, hdr, sizeof (struct ether_header));
-#endif
-
-  dummy_push(dev, packet, NULL, NULL); /* XXX remove me ! */
-
+#ifndef CONFIG_NETWORK_AUTOALIGN
   net_ns8390_write(pv, packet->packet, nethdr->size);
+#else
+# ifdef CONFIG_NS8390_FRAGMENT
+  /* XXX */
+# else
+  uint_fast8_t			i;
+  uint8_t			*p;
+
+  p = packet->data;
+  for (i = 0; i < packet->total_stages; i++)
+    {
+    }
+# endif
+#endif
 
   packet_obj_refdrop(packet);
 }

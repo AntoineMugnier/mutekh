@@ -117,8 +117,7 @@ NET_PREPAREPKT(udp_preparepkt)
 
   nethdr = &packet->header[packet->stage];
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  /* XXX align here */
-  /* next = ... */
+  next = ALIGN_ADDRESS(next, 2);
 #endif
   nethdr->data = next;
   nethdr->size = sizeof (struct udphdr) + size;

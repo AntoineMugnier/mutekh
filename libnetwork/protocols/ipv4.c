@@ -290,13 +290,14 @@ NET_PREPAREPKT(ip_preparepkt)
   struct net_header_s	*nethdr;
   uint8_t		*next;
 
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  next = dev_net_preparepkt(dev, packet, 23 + size);
+  next = ALIGN_ADDRESS(next, 4);
+#else
   next = dev_net_preparepkt(dev, packet, 20 + size);
+#endif
 
   nethdr = &packet->header[packet->stage];
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  /* XXX align here */
-  /* next = ... */
-#endif
   nethdr->data = next;
   nethdr->size = 20 + size;
 
@@ -378,6 +379,7 @@ NET_IP_SEND(ip_send)
   hdr->tos = 0;
   hdr->ttl = 64;
   hdr->protocol = proto->id;
+  /* XXX manage IP as uint32 */
   memcpy(&hdr->saddr, pv->addr, 4);
   memcpy(&hdr->daddr, packet->tIP, 4);
 

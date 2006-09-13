@@ -91,11 +91,14 @@ void	net_ns8390_pio_read(struct net_ns8390_context_s		*pv,
  * programmed I/O writing.
  */
 
-void	net_ns8390_pio_write(struct net_ns8390_context_s	*pv,
-			     uint8_t				*src,
-			     uint_fast16_t			dst,
-			     size_t				size)
+void		net_ns8390_pio_write(struct net_ns8390_context_s	*pv,
+				     uint8_t				*src,
+				     uint_fast16_t			dst,
+				     size_t				size,
+				     uint_fast8_t			timeout)
 {
+  uint_fast16_t	i = 0;
+
   if (pv->mode_16bits)
     {
       ++size;
@@ -129,9 +132,10 @@ void	net_ns8390_pio_write(struct net_ns8390_context_s	*pv,
     }
 
   /* wait for the transfer to be completed */
-  while ((cpu_io_read_8(pv->base + D8390_P0_ISR) & D8390_ISR_RDC) !=
+  while (i < 2000 &&
+	 (cpu_io_read_8(pv->base + D8390_P0_ISR) & D8390_ISR_RDC) !=
 	 D8390_ISR_RDC)
-    ;
+    i += (timeout ? 1 : 0);
 }
 
 /*
@@ -188,6 +192,35 @@ error_t			net_ns8390_probe(struct net_ns8390_context_s	*pv,
   uint8_t		buff[32];
   uint8_t		rom[32];
 
+  pv->mode_16bits = 0;
+  pv->base = base;
+  pv->asic = base + NE_ASIC_OFFSET;
+  pv->mem = MEM_16384;
+  pv->tx_start = 32;
+  pv->rx_start = 32 + D8390_TXBUF_SIZE;
+
+  /* reset the controller */
+  cpu_io_write_8(pv->asic + NE_RESET, cpu_io_read_8(pv->asic + NE_RESET));
+
+  cpu_io_read_8(0x84);
+
+  /* configure the device for a R/W test */
+  cpu_io_write_8(base + D8390_P0_COMMAND,
+		 D8390_COMMAND_STP | D8390_COMMAND_RD2);
+
+  cpu_io_write_8(base + D8390_P0_RCR, D8390_RCR_MON);
+  cpu_io_write_8(base + D8390_P0_DCR, D8390_DCR_FT1 | D8390_DCR_LS);
+  cpu_io_write_8(base + D8390_P0_PSTART, MEM_8192);
+  cpu_io_write_8(base + D8390_P0_PSTOP, MEM_16384);
+
+  memset(buff, 0, sizeof (buff));
+  net_ns8390_pio_write(pv, (uint8_t*)ref_buff, 8192, sizeof (ref_buff), 1);
+  net_ns8390_pio_read(pv, 8192, buff, sizeof (ref_buff));
+
+  if (!memcmp(buff, ref_buff, sizeof (ref_buff)))
+    goto ok; /* test succeeded */
+
+  /* try 16 bits mode */
   pv->mode_16bits = 1;
   pv->base = base;
   pv->asic = base + NE_ASIC_OFFSET;
@@ -210,7 +243,7 @@ error_t			net_ns8390_probe(struct net_ns8390_context_s	*pv,
   cpu_io_write_8(base + D8390_P0_PSTOP, MEM_16384);
 
   memset(buff, 0, sizeof (buff));
-  net_ns8390_pio_write(pv, (uint8_t*)ref_buff, 8192, sizeof (ref_buff));
+  net_ns8390_pio_write(pv, (uint8_t*)ref_buff, 8192, sizeof (ref_buff), 1);
   net_ns8390_pio_read(pv, 8192, buff, sizeof (ref_buff));
 
   if (!memcmp(buff, ref_buff, sizeof (ref_buff)))
@@ -228,7 +261,7 @@ error_t			net_ns8390_probe(struct net_ns8390_context_s	*pv,
   cpu_io_write_8(base + D8390_P0_PSTOP, MEM_32768);
 
   memset(buff, 0, sizeof (buff));
-  net_ns8390_pio_write(pv, (uint8_t*)ref_buff, 16384, sizeof (ref_buff));
+  net_ns8390_pio_write(pv, (uint8_t*)ref_buff, 16384, sizeof (ref_buff), 1);
   net_ns8390_pio_read(pv, 16384, buff, sizeof (ref_buff));
 
   if (!memcmp(buff, ref_buff, sizeof (ref_buff)))
@@ -305,14 +338,12 @@ size_t			net_ns8390_read(struct net_ns8390_context_s	*pv,
   /* fetch the first part (if packet splitted) */
   if (0 && length > fragment) /* XXX does not work */
     {
-      printf("ns8390: fetching %d-%d %d -> %p\n", 0, fragment, packet, *data);
       net_ns8390_pio_read(pv, packet, *data, fragment);
       packet = pv->rx_start << 8;
       *data += fragment;
       length -= fragment;
     }
   /* fetch the second part (the entire packet if no split) */
-  printf("ns8390: fetching -%d %d -> %p\n", length, packet, *data);
   net_ns8390_pio_read(pv, packet, *data, length);
 
   next = header.next;
@@ -333,7 +364,7 @@ void			net_ns8390_write(struct net_ns8390_context_s	*pv,
   size_t		len;
 
   /* copy the packet in the network card */
-  net_ns8390_pio_write(pv, data, pv->tx_start << 8, size);
+  net_ns8390_pio_write(pv, data, pv->tx_start << 8, size, 0);
   len = size;
   /* adjust the packet size if necessary */
   if (len < ETH_ZLEN)

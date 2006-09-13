@@ -141,7 +141,8 @@ void	net_ns8390_pio_read(struct net_ns8390_context_s		*pv,
 void	net_ns8390_pio_write(struct net_ns8390_context_s	*pv,
 			     uint8_t				*src,
 			     uint_fast16_t			dst,
-			     size_t				size);
+			     size_t				size,
+			     uint_fast8_t			timeout);
 
 void	net_ns8390_reset(struct net_ns8390_context_s		*pv);
 

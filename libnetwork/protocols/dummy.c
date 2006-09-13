@@ -87,8 +87,6 @@ static void		dummy_hexdump(uint8_t	*data,
 
 NET_PUSHPKT(dummy_push)
 {
-  return;
-
   printf("Source MAC: %2x:%2x:%2x:%2x:%2x:%2x\n",
 	 packet->sMAC[0], packet->sMAC[1], packet->sMAC[2],
 	 packet->sMAC[3], packet->sMAC[4], packet->sMAC[5]);
