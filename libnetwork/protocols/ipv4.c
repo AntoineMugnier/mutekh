@@ -288,7 +288,6 @@ NET_PUSHPKT(ip_pushpkt)
 NET_PREPAREPKT(ip_preparepkt)
 {
   struct net_header_s	*nethdr;
-  struct iphdr		*hdr;
   uint8_t		*next;
 
   next = dev_net_preparepkt(dev, packet, 20 + size);
@@ -301,15 +300,61 @@ NET_PREPAREPKT(ip_preparepkt)
   nethdr->data = next;
   nethdr->size = 20 + size;
 
-  /* we need to set these fields to 0, because they are only set for
-     fragmented packets, otherwise, they must be 0 */
-  hdr = (struct iphdr *)nethdr->data;
-  net_16_store(hdr->id, 0);
-  net_16_store(hdr->fragment, 0);
-
   packet->stage++;
 
   return next + 20;
+}
+
+/*
+ * Fragment sending.
+ */
+
+static inline	void	ip_send_fragment(struct net_pv_ip_s	*pv,
+					 struct device_s	*dev,
+					 struct iphdr		*hdr,
+					 uint8_t		*data,
+					 uint_fast16_t		offs,
+					 size_t			fragsz,
+					 uint_fast8_t		last)
+{
+  struct net_packet_s	*frag;
+  struct net_header_s	*nethdr;
+  struct iphdr		*hdr_frag;
+  uint8_t		*dest;
+
+  /* prepare a new IP packet */
+  frag = packet_obj_new(NULL);
+  dest = ip_preparepkt(dev, frag, fragsz);
+  frag->stage--;
+
+  printf("sending fragment %d-%d\n", offs, offs + fragsz);
+
+  /* fill the data */
+  memcpy(dest, data + offs, fragsz);
+
+  /* copy header */
+  nethdr = &frag->header[frag->stage];
+  hdr_frag = (struct iphdr *)nethdr->data;
+  memcpy(hdr_frag, hdr, 20);
+
+  /* setup fragment specific fields */
+  net_be16_store(hdr_frag->fragment, (last ? 0 : IP_FLAG_MF) | (offs / 8));
+  net_be16_store(hdr_frag->tot_len, nethdr->size);
+  net_16_store(hdr_frag->check, 0);
+  /* checksum XXX don't recompute it! */
+  net_16_store(hdr_frag->check,
+	       packet_checksum((uint8_t *)hdr_frag, 20));
+
+  /* send the fragment */
+  frag->stage--;
+
+  frag->sIP = (uint8_t *)&hdr_frag->saddr;
+  frag->tIP = (uint8_t *)&hdr_frag->daddr;
+  if (!(frag->tMAC = arp_get_mac(dev, pv->arp, frag, frag->tIP)))
+    return;
+
+  /* send the packet to the driver */
+  dev_net_sendpkt(dev, frag, ETHERTYPE_IP);
 }
 
 /*
@@ -322,76 +367,48 @@ NET_IP_SEND(ip_send)
   struct iphdr		*hdr;
   struct net_header_s	*nethdr;
   uint_fast16_t		total;
-  uint_fast16_t		id;
-  uint_fast16_t		offs;
-  uint_fast16_t		fragsz;;
-  struct net_packet_s	*frag;
-  uint8_t		*data;
-  uint8_t		*dest;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct iphdr *)nethdr->data;
+
+  /* start filling common IP header fields */
+  hdr->version = 4;
+  hdr->ihl = 5;
+  hdr->tos = 0;
+  hdr->ttl = 64;
+  hdr->protocol = proto->id;
+  memcpy(&hdr->saddr, pv->addr, 4);
+  memcpy(&hdr->daddr, packet->tIP, 4);
 
   total = nethdr[1].size;
 
   /* need fragmentation */
   if (total > IPMTU - 20)
     {
+      uint_fast16_t		id;
+      uint_fast16_t		offs;
+      uint_fast16_t		fragsz;;
+      uint8_t			*data;
+
       data = nethdr[1].data;
       offs = 0;
       fragsz = (IPMTU - 20) & ~7;
       /* choose a random identifier */
       id = pv->id_seq + (rand() & 0xff);
+      net_be16_store(hdr->id, id);
       pv->id_seq = id + 1;
 
+      /* send the middle fragments */
       while (offs + fragsz < total)
 	{
-	  /* prepare a new IP packet */
-	  frag = packet_obj_new(NULL);
-	  dest = ip_preparepkt(dev, frag, fragsz);
+	  ip_send_fragment(pv, dev, hdr, data, offs, fragsz, 0);
 
-	  printf("sending fragment %d-%d\n", offs, offs + fragsz);
-
-	  /* fill the data */
-	  memcpy(dest, data + offs, fragsz);
-
-	  /* copy destination address */
-	  frag->tIP = packet->tIP;
-
-	  /* setup fragment specific fields */
-	  nethdr = &packet->header[packet->stage];
-	  hdr = (struct iphdr *)nethdr->data;
-	  net_be16_store(hdr->id, id);
-	  net_be16_store(hdr->fragment, IP_FLAG_MF | (offs / 8));
-
-	  /* send the fragments */
-	  frag->stage--;
-	  ip_send(dev, frag, ip, proto);
 	  offs += fragsz;
 	}
 
       /* last packet */
-      frag = packet_obj_new(NULL);
-      dest = ip_preparepkt(dev, frag, total - offs);
-
-      printf("sending last fragment %d-%d\n", offs, total);
-
-      /* fill the data */
-      memcpy(dest, data + offs, total - offs);
-
-      /* copy destination address */
-      frag->tIP = packet->tIP;
-
-      /* setup fragment specific fields */
-      nethdr = &packet->header[packet->stage];
-      hdr = (struct iphdr *)nethdr->data;
-      net_be16_store(hdr->id, id);
-      net_be16_store(hdr->fragment, offs / 8);
-
-      /* send the last fragment */
-      frag->stage--;
-      ip_send(dev, frag, ip, proto);
+      ip_send_fragment(pv, dev, hdr, data, offs, total - offs, 1);
 
       /* release the original packet */
       packet_obj_refdrop(packet);
@@ -399,16 +416,10 @@ NET_IP_SEND(ip_send)
     }
 
   /* for the non fragmented packets */
-
-  /* fill IP header */
-  hdr->version = 4;
-  hdr->ihl = 5;
-  hdr->tos = 0;
+  /* finish the IP header */
   net_be16_store(hdr->tot_len, nethdr->size);
-  hdr->ttl = 64;
-  hdr->protocol = proto->id;
-  memcpy(&hdr->saddr, pv->addr, 4);
-  memcpy(&hdr->daddr, packet->tIP, 4);
+  net_16_store(hdr->id, 0);
+  net_16_store(hdr->fragment, 0);
   net_16_store(hdr->check, 0);
   /* checksum */
   net_16_store(hdr->check, packet_checksum((uint8_t *)hdr, hdr->ihl * 4));
