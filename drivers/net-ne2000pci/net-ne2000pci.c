@@ -240,25 +240,18 @@ static void	ne2000_send(struct device_s	*dev)
 
 DEV_IRQ(net_ne2000pci_irq)
 {
-  //struct net_ne2000_context_s	*pv = dev->drv_pv;
-  //  uint_fast8_t			isr;
+  struct net_ne2000_context_s	*pv = dev->drv_pv;
+  uint_fast8_t			isr;
 
   printf("ne2000pci: IRQ!\n");
 
   /* select register bank 0 */
-  //ne2000_page(dev, NE2000_P0);
+  ne2000_page(dev, NE2000_P0);
 
   assert(!cpu_interrupt_getstate());
 
-  //isr = cpu_io_read_8(dev->addr[NET_NE2000_ISR]);
-    cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_IMR, 0x0);
-    /*  __asm__ volatile (
-		    "outb	%0,	%1	\n"
-		    :
-		    : "a" ((uint8_t)0x0)
-		    , "d" ((uint16_t)0xc10f)
-		    );*/
-#if 0
+  isr = cpu_io_read_8(dev->addr[NET_NE2000_ISR]);
+
   /* remote DMA completed */
   if (isr & NE2000_RDC)
     {
@@ -338,7 +331,7 @@ DEV_IRQ(net_ne2000pci_irq)
       /* acknowledge interrupt */
       cpu_io_write_8(dev->addr[NET_NE2000_ISR], NE2000_OVW);
     }
-#endif
+
   return 1;
 }
 
@@ -410,8 +403,6 @@ DEV_INIT(net_ne2000pci_init)
 
   rarp_request(dev, rarp, NULL);
   /* ------>8------>8------>8------>8------>8------>8------>8------>8------ */
-
-  cpu_interrupt_enable();
 
   return 0;
 }
