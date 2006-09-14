@@ -19,46 +19,39 @@
 
 */
 
-#ifndef NET_NE2000PCI_PRIVATE_H_
-#define NET_NE2000PCI_PRIVATE_H_
+#ifndef _NE2000_H
+#define _NE2000_H
 
-#include <hexo/types.h>
-#include <hexo/lock.h>
-#include <netinet/ether.h>
-#include <netinet/protos.h>
+/* command register bits */
+#define NE2000_STP	(1 << 0)
+#define NE2000_STA	(1 << 1)
+#define NE2000_TXP	(1 << 2)
+#define NE2000_RD0	(1 << 3)
+#define NE2000_RD1	(1 << 4)
+#define NE2000_RD2	(1 << 5)
+#define NE2000_PS0	(1 << 6)
+#define NE2000_PS1	(1 << 7)
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_dlist.h>
+/* shortcuts for DMA transfers */
+#define NE2000_DMA_RD	NE2000_RD0
+#define NE2000_DMA_WR	NE2000_RD1
+#define NE2000_DMA_SEND	(NE2000_RD1 | NE2000_RD0)
 
-/*
- * packet queue used when device is busy
- */
+/* shortcuts for page select */
+#define NE2000_P0	0
+#define NE2000_P1	NE2000_PS0
+#define NE2000_P2	NE2000_PS1
 
-CONTAINER_TYPE(ne2000_queue, DLIST, struct ne2000_packet_s, NOLOCK);
+/* interrupt register bits */
+#define NE2000_PRX	(1 << 0)
+#define NE2000_PTX	(1 << 1)
+#define NE2000_TXE	(1 << 3)
+#define NE2000_OVW	(1 << 4)
+#define NE2000_RDC	(1 << 6)
 
-struct			ne2000_packet_s
-{
-  struct net_packet_s	*packet;
-  ne2000_queue_entry_t	list_entry;
-};
-
-/*
- * private data of a ne2000 network device
- */
-
-struct			net_ne2000_context_s
-{
-  lock_t		lock;
-
-  uint_fast16_t		tx_buf;
-
-  ne2000_queue_root_t	queue;
-  struct net_packet_s	*current;
-
-  uint8_t		mac[ETH_ALEN];
-
-  net_protos_root_t	protocols;
-};
+/* register addresses */
+#define NE2000_TPSR	0x4
+#define NE2000_TBCR0	0x5
+#define NE2000_TBCR1	0x6
 
 #endif
-

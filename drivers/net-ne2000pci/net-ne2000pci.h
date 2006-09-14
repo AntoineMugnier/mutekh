@@ -26,7 +26,9 @@
 
 /* devices addresses slots */
 
-#define NET_NE2000PCI_ADDR	0
+#define NET_NE2000_ADDR		0
+#define NET_NE2000_COMMAND	1
+#define NET_NE2000_ISR		2
 
 /* net device functions */
 

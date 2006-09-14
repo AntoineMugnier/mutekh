@@ -29,7 +29,9 @@
 #include "net-ne2000pci.h"
 
 #include "net-ne2000pci-private.h"
+#include "ne2000.h"
 
+CONTAINER_FUNC(static inline, ne2000_queue, DLIST, ne2000_queue, NOLOCK, list_entry);
 
 #ifndef CONFIG_STATIC_DRIVERS
 
@@ -72,12 +74,117 @@ const struct driver_s	net_ne2000pci_drv =
 #endif
 
 /*
+ * update the command register.
+ */
+
+static inline void	ne2000_command(struct device_s	*dev,
+				       uint_fast8_t	cmd)
+{
+  uint_fast16_t		addr = dev->addr[NET_NE2000_COMMAND];
+
+  cpu_io_write_8(addr, cpu_io_read_8(addr) | cmd);
+}
+
+/*
+ * prepare sending a packet.
+ */
+
+static void	ne2000_send(struct device_s	*dev)
+{
+  struct net_ne2000_context_s	*pv = dev->drv_pv;
+#if defined(CONFIG_NE2000_FRAGMENT) || defined(CONFIG_NETWORK_AUTOALIGN)
+  /* XXX copy in several times */
+#else
+  /* XXX copy in one time */
+#endif
+
+  /* the data being written, we wait for remote DMA to be completed (IRQ) */
+}
+
+/*
  * device IRQ handling.
  */
 
 DEV_IRQ(net_ne2000pci_irq)
 {
-  /* XXX */
+  struct net_ne2000_context_s	*pv = dev->drv_pv;
+  uint_fast8_t			isr;
+
+  ne2000_command(dev, NE2000_P0);
+
+  isr = cpu_io_read_8(dev->addr[NET_NE2000_ISR]);
+
+  /* remote DMA completed */
+  if (isr & NE2000_RDC)
+    {
+      uint_fast16_t	length = pv->current->header[0].size;
+      /* the packet is in the device memory, we can send it */
+      /* set page start */
+      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TPSR, pv->tx_buf);
+
+      /* set packet size */
+      if (length < ETH_ZLEN)
+	length = ETH_ZLEN;
+      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TBCR0, length);
+      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TBCR1, length >> 8);
+
+      /* send it ! */
+      ne2000_command(dev, NE2000_TXP);
+
+      /* acknowledge interrupt */
+      cpu_io_write_8(dev->addr[NET_NE2000_ISR], NE2000_RDC);
+    }
+
+  /* packet transmitted */
+  if (isr & NE2000_PTX)
+    {
+      struct ne2000_packet_s	*wait;
+
+      /* packet sent successfully, drop it */
+      packet_obj_refdrop(pv->current);
+
+      /* one or more packets in the wait queue ? */
+      if ((wait = ne2000_queue_pop(&pv->queue)))
+	{
+	  pv->current = wait->packet;
+
+	  ne2000_send(dev);
+
+	  mem_free(wait);
+	}
+      else
+	pv->current = NULL;
+
+      /* acknowledge interrupt */
+      cpu_io_write_8(dev->addr[NET_NE2000_ISR], NE2000_PTX);
+    }
+
+  /* transmit error */
+  if (isr & NE2000_TXE)
+    {
+      /* XXX */
+
+      /* acknowledge interrupt */
+      cpu_io_write_8(dev->addr[NET_NE2000_ISR], NE2000_TXE);
+    }
+
+  /* packet received */
+  if (isr & NE2000_PRX)
+    {
+      /* XXX */
+
+      /* acknowledge interrupt */
+      cpu_io_write_8(dev->addr[NET_NE2000_ISR], NE2000_PRX);
+    }
+
+  /* buffer full */
+  if (isr & NE2000_OVW)
+    {
+      /* XXX */
+
+      /* acknowledge interrupt */
+      cpu_io_write_8(dev->addr[NET_NE2000_ISR], NE2000_OVW);
+    }
 
   return 0;
 }
@@ -89,11 +196,6 @@ DEV_IRQ(net_ne2000pci_irq)
 DEV_INIT(net_ne2000pci_init)
 {
   struct net_ne2000_context_s	*pv;
-  struct net_proto_s		*rarp;
-  struct net_proto_s		*arp;
-  struct net_proto_s		*ip;
-  struct net_proto_s		*icmp;
-  struct net_proto_s		*udp;
 
 #ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &net_ne2000pci_drv;
@@ -109,6 +211,7 @@ DEV_INIT(net_ne2000pci_init)
 
   lock_init(&pv->lock);
 
+  ne2000_queue_init(&pv->queue);
   net_protos_init(&pv->protocols);
 
   dev->drv_pv = pv;
@@ -127,9 +230,24 @@ DEV_INIT(net_ne2000pci_init)
 DEV_CLEANUP(net_ne2000pci_cleanup)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
+  struct ne2000_packet_s	*wait;
 
+  /* empty the waitqueue */
+  while ((wait = ne2000_queue_pop(&pv->queue)))
+    {
+      packet_obj_refdrop(wait->packet);
+
+      mem_free(wait);
+    }
+
+  /* destroy some containers */
+  ne2000_queue_destroy(&pv->queue);
   net_protos_destroy(&pv->protocols);
 
+  /* turn the device off */
+  ne2000_command(dev, NE2000_STP);
+
+  /* free private data */
   mem_free(pv);
 }
 
@@ -176,7 +294,42 @@ DEVNET_PREPAREPKT(net_ne2000pci_preparepkt)
 
 DEVNET_SENDPKT(net_ne2000pci_sendpkt)
 {
-  /* XXX */
+  struct net_ne2000_context_s	*pv = dev->drv_pv;
+  struct ether_header		*hdr;
+  struct net_header_s		*nethdr;
+
+  /* get a pointer to the header */
+  nethdr = &packet->header[0];
+  hdr = (struct ether_header*)nethdr->data;
+
+  /* fill the header */
+  memcpy(hdr->ether_shost, packet->sMAC, packet->MAClen);
+  memcpy(hdr->ether_dhost, packet->tMAC, packet->MAClen);
+  net_be16_store(hdr->ether_type, proto);
+
+  /* take lock */
+  lock_spin_irq(&pv->lock);
+
+  /* if the device is busy, queue the packet */
+  if (cpu_io_read_8(dev->addr[NET_NE2000_COMMAND]) & NE2000_TXP ||
+      pv->current)
+    {
+      struct ne2000_packet_s	*item;
+
+      item = mem_alloc(sizeof (struct ne2000_packet_s), MEM_SCOPE_CONTEXT);
+      item->packet = packet;
+      ne2000_queue_push(&pv->queue, item);
+
+      return;
+    }
+
+  /* otherwise, send the datagram immediately */
+  pv->current = packet;
+
+  /* release lock */
+  lock_release_irq(&pv->lock);
+
+  ne2000_send(dev);
 }
 
 /*
@@ -190,9 +343,11 @@ DEVNET_REGISTER_PROTO(net_ne2000pci_register_proto)
 
   va_start(va, proto);
 
+  /* call the protocol constructor */
   if (proto->desc->initproto)
     proto->desc->initproto(dev, proto, va);
 
+  /* insert in the protocol list */
   net_protos_push(&pv->protocols, proto);
 
   va_end(va);
