@@ -87,6 +87,8 @@ DEV_IRQ(net_ns8390_irq)
   uint8_t			*buff;
   size_t			size;
 
+  printf("irq\n");
+
   /* create and read the packet from the card */
   if (!(size = net_ns8390_read(pv, &buff)))
     return 1;
@@ -269,6 +271,8 @@ DEV_INIT(net_ns8390_init)
 
   /* reset the device */
   net_ns8390_reset(pv);
+  /* bind to ICU */
+  DEV_ICU_BIND(icudev, dev);
 
   /* initialize protocols */
   ip = net_alloc_proto(&ip_protocol);
@@ -287,8 +291,10 @@ DEV_INIT(net_ns8390_init)
   /* a RARP request is used to assign us an IP */
   rarp_request(dev, rarp, NULL);
 
-  while (1)
+  while (0)
     net_ns8390_irq(dev);	/* XXX remove me ! */
+
+  asm ("sti");
 
   return 0;
 }

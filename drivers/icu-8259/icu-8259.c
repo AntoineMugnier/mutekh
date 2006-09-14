@@ -39,13 +39,28 @@ DEVICU_ENABLE(icu_8259_enable)
 {
   uint8_t			mask;
 
-  mask = pic_8259_getmask(dev->addr[ICU_ADDR_MASTER]);
+  if (irq < 8)
+    {
+      mask = pic_8259_getmask(dev->addr[ICU_ADDR_MASTER]);
 
-  mask = enable
-    ? mask & ~(1 << irq)
-    : mask |  (1 << irq);
+      mask = enable
+	? mask & ~(1 << irq)
+	: mask |  (1 << irq);
 
-  pic_8259_setmask(dev->addr[ICU_ADDR_MASTER], mask);
+      pic_8259_setmask(dev->addr[ICU_ADDR_MASTER], mask);
+    }
+  else
+    {
+      irq -= 8;
+
+      mask = pic_8259_getmask(dev->addr[ICU_ADDR_SLAVE]);
+
+      mask = enable
+	? mask & ~(1 << irq)
+	: mask |  (1 << irq);
+
+      pic_8259_setmask(dev->addr[ICU_ADDR_SLAVE], mask);
+    }
 }
 
 DEVICU_SETHNDL(icu_8259_sethndl)
@@ -71,7 +86,14 @@ static CPU_INTERRUPT_HANDLER(icu_8259_cpu_handler)
   struct icu_8259_handler_s	*h = pv->table + irq;
 
   /* reset interrupt line status on icu */
-  pic_8259_irqend_master(pv->dev->addr[ICU_ADDR_MASTER], irq);
+  if (irq < 8)
+    pic_8259_irqend_master(pv->dev->addr[ICU_ADDR_MASTER], irq);
+  else
+    pic_8259_irqend_slave(pv->dev->addr[ICU_ADDR_MASTER],
+			  pv->dev->addr[ICU_ADDR_SLAVE], irq - 8);
+
+  printf("%d", irq);
+  printf("cool! %p %d\n", h, h->hndl);
 
   /* call interrupt handler */
   h->hndl(h->data);

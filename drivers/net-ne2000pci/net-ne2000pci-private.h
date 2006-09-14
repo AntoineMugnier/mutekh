@@ -50,7 +50,10 @@ struct			net_ne2000_context_s
 {
   lock_t		lock;
 
+  uint_fast8_t		io_16;
   uint_fast16_t		tx_buf;
+  uint_fast16_t		rx_buf;
+  uint_fast16_t		mem;
 
   ne2000_queue_root_t	queue;
   struct net_packet_s	*current;

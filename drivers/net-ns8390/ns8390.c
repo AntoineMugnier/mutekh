@@ -162,7 +162,7 @@ void		net_ns8390_reset(struct net_ns8390_context_s	*pv)
   cpu_io_write_8(pv->base + D8390_P0_PSTOP, pv->mem);
   cpu_io_write_8(pv->base + D8390_P0_BOUND, pv->mem - 1);
   cpu_io_write_8(pv->base + D8390_P0_ISR, 0xff);
-  cpu_io_write_8(pv->base + D8390_P0_IMR, 0);
+  cpu_io_write_8(pv->base + D8390_P0_IMR, 0x3f);
 
   /* setup MAC address */
   cpu_io_write_8(pv->base + D8390_P0_COMMAND,

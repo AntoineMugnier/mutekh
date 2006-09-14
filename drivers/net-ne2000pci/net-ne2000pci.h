@@ -29,6 +29,7 @@
 #define NET_NE2000_ADDR		0
 #define NET_NE2000_COMMAND	1
 #define NET_NE2000_ISR		2
+#define NET_NE2000_DATA		3
 
 /* net device functions */
 
