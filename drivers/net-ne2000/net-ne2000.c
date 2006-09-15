@@ -318,13 +318,13 @@ static uint_fast8_t	ne2000_probe(struct device_s	*dev)
 
   /* determine MAC address, the first 6 bytes/words of the PROM */
   ne2000_mem_read(dev, 0, buf, ETH_ALEN * 2);
-template<int i>class a:a<i+1>,a<2*i+1>{}; a<1> aa;
+
   if (pv->io_16)
     for (i = 0; i < ETH_ALEN; i++)
-      pv->mac[i] = buf[i];
+      pv->mac[i] = buf[i << 1];
   else
     for (i = 0; i < ETH_ALEN; i++)
-      pv->mac[i] = buf[i << 1];
+      pv->mac[i] = buf[i];
 
   return 1;
 }
@@ -369,7 +369,7 @@ static void		ne2000_init(struct device_s	*dev)
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TPSR, pv->tx_buf);
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_PSTART, pv->rx_buf);
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_PSTOP, pv->mem);
-  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_BOUND, pv->mem - 1);
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_BOUND, pv->rx_buf);
   /* clear ISR */
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, 0xff);
   /* activate interrupts */
@@ -383,7 +383,7 @@ static void		ne2000_init(struct device_s	*dev)
   for (i = 0; i < ETH_ALEN; i++)
     cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_MAR + i, 0xff);
   /* init current receive buffer pointer */
-  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_CURR, pv->rx_buf);
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_CURR, pv->rx_buf + 1);
   /* bring the device up */
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD,
 		 NE2000_P0 | NE2000_DMA_ABRT | NE2000_STA);
@@ -419,6 +419,57 @@ static void	ne2000_send(struct device_s	*dev)
 }
 
 /*
+ * push a packet.
+ */
+
+static void	ne2000_push(struct device_s	*dev,
+			    uint8_t		*data,
+			    uint_fast16_t	size)
+{
+  struct net_ne2000_context_s	*pv = dev->drv_pv;
+  struct ether_header		*hdr;
+  struct net_proto_s		*p;
+  struct net_packet_s		*packet;
+  struct net_header_s		*nethdr;
+  net_proto_id_t		proto;
+
+  /* create a new packet object */
+  packet = packet_obj_new(NULL);
+  packet->packet = data;
+
+  nethdr = &packet->header[0];
+  nethdr->data = data;
+  nethdr->size = size;
+
+  /* get the good header */
+  hdr = (struct ether_header*)nethdr->data;
+
+  /* fill some info */
+  packet->MAClen = sizeof(struct ether_addr);
+  packet->sMAC = hdr->ether_shost;
+  packet->tMAC = hdr->ether_dhost;
+
+  /* prepare packet for next stage */
+  nethdr[1].data = data + sizeof(struct ether_header);
+  nethdr[1].size = size - sizeof(struct ether_header);
+
+#ifdef CONFIG_NE2000_FRAGMENT
+  /* XXX fill next stage header */
+#endif
+
+  packet->stage++;
+
+  /* dispatch to the matching protocol */
+  proto = net_be16_load(hdr->ether_type);
+  if ((p = net_protos_lookup(&pv->protocols, proto)))
+    p->desc->pushpkt(dev, packet, p, &pv->protocols);
+  else
+    printf("NETWORK: no protocol to handle packet (id = 0x%x)\n", proto);
+
+  packet_obj_refdrop(packet);
+}
+
+/*
  * device IRQ handling.
  */
 
@@ -441,21 +492,25 @@ DEV_IRQ(net_ne2000_irq)
     {
       uint_fast16_t	length = pv->current->header[0].size;
 
-      printf("ne2000: remote DMA complete\n");
-      /* the packet is in the device memory, we can send it */
-      ne2000_dma(dev, NE2000_DMA_ABRT);
+      if (pv->current)
+	{
+	  printf("ne2000: remote DMA complete\n");
 
-      /* set page start */
-      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TPSR, pv->tx_buf);
+	  /* the packet is in the device memory, we can send it */
+	  ne2000_dma(dev, NE2000_DMA_ABRT);
 
-      /* set packet size */
-      if (length < ETH_ZLEN)
-	length = ETH_ZLEN;
-      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TBCR0, length);
-      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TBCR1, length >> 8);
+	  /* set page start */
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TPSR, pv->tx_buf);
 
-      /* send it ! */
-      ne2000_command(dev, NE2000_TXP);
+	  /* set packet size */
+	  if (length < ETH_ZLEN)
+	    length = ETH_ZLEN;
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TBCR0, length);
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TBCR1, length >> 8);
+
+	  /* send it ! */
+	  ne2000_command(dev, NE2000_TXP);
+	}
 
       /* acknowledge interrupt */
       cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_RDC);
@@ -497,12 +552,46 @@ DEV_IRQ(net_ne2000_irq)
   /* packet received */
   if (isr & NE2000_PRX)
     {
-      printf("ne2000: PRX\n");
+      printf("ne2000: received a packet\n");
 
       /* no errors */
       if (cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSR) & NE2000_SPRX)
 	{
-	  /* XXX */
+	  struct ne2000_header_s	hdr;
+	  uint_fast16_t			next;
+	  uint_fast16_t			dma;
+	  uint_fast16_t			size;
+	  uint8_t			*data;
+
+	  /* get next packet pointer */
+	  next = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_BOUND) + 1;
+	  if (next > pv->mem)
+	    next = pv->rx_buf;
+
+	  /* read the packet header (automatically appended by the chip) */
+	  dma = next << 8;
+	  ne2000_mem_read(dev, dma, (struct ne2000_header_s *)&hdr,
+			  sizeof (struct ne2000_header_s));
+
+	  /* read the packet itself */
+	  size = hdr.size - sizeof (struct ne2000_header_s);
+	  /* XXX check size */
+#ifdef CONFIG_NE2000_FRAGMENT
+	  /* XXX fragment the packet */
+#else
+	  data = mem_alloc(size, MEM_SCOPE_CONTEXT);
+	  ne2000_mem_read(dev, dma + sizeof (struct ne2000_header_s),
+			  data, size);
+#endif
+
+	  /* update the next packet pointer */
+	  next = hdr.next;
+	  if (next > pv->mem)
+	    next = pv->rx_buf;
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_BOUND, next - 1);
+
+	  /* push the packet into the network stack */
+	  ne2000_push(dev, data, size);
 	}
 
       /* acknowledge interrupt */

@@ -92,6 +92,7 @@
 #define NE2000_RBCR0	0xA
 #define NE2000_RBCR1	0xB
 #define NE2000_RCR	0xC
+#define NE2000_RSR	0xC
 #define NE2000_TCR	0xD
 #define NE2000_DCR	0xE
 #define NE2000_IMR	0xF
@@ -135,7 +136,7 @@
 
 /* the following struct is appended to the packet automatically on reception */
 
-struct		net_ne2000_header_s
+struct		ne2000_header_s
 {
   uint8_t	status;
   uint8_t	next;
