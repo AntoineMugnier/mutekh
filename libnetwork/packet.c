@@ -76,3 +76,9 @@ uint_fast16_t		packet_checksum(uint8_t		*data,
 
   return (~checksum) & 0xffff;
 }
+
+/*
+ * packet queue functions.
+ */
+
+CONTAINER_FUNC(, packet_queue, DLIST, packet_queue, NOLOCK, queue_entry);

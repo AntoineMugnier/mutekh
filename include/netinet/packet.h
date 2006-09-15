@@ -102,9 +102,7 @@ struct		net_header_s
 
 OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);
 
-CONTAINER_TYPE(arp_wait, DLIST, struct net_packet_s, NOLOCK);
-
-CONTAINER_TYPE(ip_fragment, DLIST, struct net_packet_s, NOLOCK);
+CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, NOLOCK);
 
 /*
  * This structure defines a packet.
@@ -122,8 +120,7 @@ struct			net_packet_s
   uint_fast8_t		MAClen;			/* length of MAC addresses */
 
   packet_obj_entry_t	obj_entry;
-  arp_wait_entry_t	arp_wait_entry;
-  ip_fragment_entry_t	ip_fragment_entry;
+  packet_queue_entry_t	queue_entry;
 };
 
 /*
@@ -136,6 +133,7 @@ uint_fast16_t		packet_checksum(uint8_t		*data,
 					size_t		size);
 
 OBJECT_FUNC(static inline, packet_obj, REFCOUNT, packet_obj, obj_entry);
+CONTAINER_PROTOTYPE(, packet_queue, packet_queue);
 
 #endif
 

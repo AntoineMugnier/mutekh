@@ -66,7 +66,7 @@ int_fast8_t		main()
   printf("%d\n", *p);
 #endif
 
-  while (1)
+  while (0)
     ;
 
   return 0;

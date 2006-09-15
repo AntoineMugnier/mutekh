@@ -37,7 +37,6 @@
  */
 
 CONTAINER_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, list_entry, BLOB, ip);
-CONTAINER_FUNC(static inline, arp_wait, DLIST, arp_wait, NOLOCK, arp_wait_entry);
 
 /*
  * Structures for declaring the protocol's properties & interface.
@@ -123,7 +122,7 @@ NET_PUSHPKT(arp_pushpkt)
 	arp_entry = arp_update_table(protocol, hdr->arp_spa, hdr->arp_sha,
 				     ARP_TABLE_DEFAULT);
 	/* send waiting packets */
-	while ((waiting = arp_wait_pop(&arp_entry->wait)))
+	while ((waiting = packet_queue_pop(&arp_entry->wait)))
 	  {
 	    waiting->tMAC = arp_entry->mac;
 
@@ -300,15 +299,15 @@ uint8_t			*arp_get_mac(struct device_s		*dev,
       if (arp_entry->valid)
 	return arp_entry->mac;
       /* otherwise, it is validating, so push the packet in the wait queue */
-      arp_wait_pushback(&arp_entry->wait, packet);
+      packet_queue_pushback(&arp_entry->wait, packet);
     }
   else
     {
       printf("No ARP entry. Sending request.\n");
       arp_entry = arp_update_table(arp, ip, NULL, ARP_TABLE_IN_PROGRESS);
       /* no entry, push the packet in the wait queue*/
-      arp_wait_init(&arp_entry->wait);
-      arp_wait_push(&arp_entry->wait, packet);
+      packet_queue_init(&arp_entry->wait);
+      packet_queue_push(&arp_entry->wait, packet);
       /* and send a request */
       arp_request(dev, arp, ip);
     }

@@ -19,31 +19,37 @@
 
 */
 
-#ifndef DRIVER_NET_NE2000PCI_H_
-#define DRIVER_NET_NE2000PCI_H_
+#ifndef NET_NE2000_PRIVATE_H_
+#define NET_NE2000_PRIVATE_H_
 
-#include <hexo/device.h>
+#include <hexo/types.h>
+#include <hexo/lock.h>
+#include <netinet/ether.h>
+#include <netinet/protos.h>
 
-/* devices addresses slots */
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_dlist.h>
 
-#define NET_NE2000_ADDR		0
-#define NET_NE2000_COMMAND	1
-#define NET_NE2000_ISR		2
-#define NET_NE2000_DATA		3
+/*
+ * private data of a ne2000 network device
+ */
 
-/* net device functions */
+struct			net_ne2000_context_s
+{
+  lock_t		lock;
 
-DEV_IRQ(net_ne2000pci_irq);
-DEV_INIT(net_ne2000pci_init);
-DEV_CLEANUP(net_ne2000pci_cleanup);
-DEVNET_PREPAREPKT(net_ne2000pci_preparepkt);
-DEVNET_SENDPKT(net_ne2000pci_sendpkt);
-DEVNET_REGISTER_PROTO(net_ne2000pci_register_proto);
+  uint_fast8_t		io_16;
+  uint_fast16_t		tx_buf;
+  uint_fast16_t		rx_buf;
+  uint_fast16_t		mem;
 
+  packet_queue_root_t	queue;
+  struct net_packet_s	*current;
 
-#ifndef CONFIG_STATIC_DRIVERS
-extern const struct driver_s	net_ne2000pci_drv;
-#endif
+  uint8_t		mac[ETH_ALEN];
+
+  net_protos_root_t	protocols;
+};
 
 #endif
 

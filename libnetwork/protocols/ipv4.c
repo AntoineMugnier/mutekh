@@ -38,8 +38,6 @@
 
 CONTAINER_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, list_entry, UNSIGNED, id);
 
-CONTAINER_FUNC(static inline, ip_fragment, DLIST, ip_fragment, NOLOCK, ip_fragment_entry);
-
 /*
  * Structures for declaring the protocol's properties & interface.
  */
@@ -97,7 +95,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 
   /* the unique identifier of the packet is the concatenation of the
      source address and the packet id */
-  id =  (net_32_load(*ip_addr)) + (net_be16_load(hdr->id) << 32);
+  id =  (net_32_load(*ip_addr)) + (net_be16_load(hdr->id) << 32); /* XXX */
 
   /* extract some useful fields */
   fragment = net_be16_load(hdr->fragment);
@@ -113,7 +111,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       p->id = id;
       p->size = 0;
       p->received = 0;
-      ip_fragment_init(&p->packets);
+      packet_queue_init(&p->packets);
       ip_packet_push(&pv->fragments, p);
     }
   p->received += datasz;
@@ -164,7 +162,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       nethdr->size = total;
 
       /* loop through previously received packets and reassemble them */
-      while ((frag = ip_fragment_pop(&p->packets)))
+      while ((frag = packet_queue_pop(&p->packets)))
 	{
 	  /* copy data in place */
 	  nethdr = &frag->header[packet->stage];
@@ -186,7 +184,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 
   /* otherwise, this is just a fragment */
   packet_obj_refnew(packet);
-  ip_fragment_push(&p->packets, packet);
+  packet_queue_push(&p->packets, packet);
   return 0;
 }
 

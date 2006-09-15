@@ -142,7 +142,7 @@ struct			ip_packet_s
   uint_fast64_t		id;
   uint_fast16_t		size;
   uint_fast16_t		received;
-  ip_fragment_root_t	packets;
+  packet_queue_root_t	packets;
   ip_packet_entry_t	list_entry;
 };
 

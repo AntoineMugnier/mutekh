@@ -138,7 +138,7 @@ struct			arp_entry_s
   uint8_t		mac[ETH_ALEN];
   uint_fast8_t		valid;
   arp_table_entry_t	list_entry;
-  arp_wait_root_t	wait;
+  packet_queue_root_t	wait;
 };
 
 /*
