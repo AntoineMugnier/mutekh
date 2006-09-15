@@ -56,7 +56,6 @@ NET_INITPROTO(rarp_init)
   struct net_proto_s	*ip = va_arg(va, struct net_proto_s *);
 
   pv->ip = ip;
-  printf("RARP %s with IP (%p)\n", pv->ip ? "bound" : "not bound", pv->ip);
 }
 
 /*

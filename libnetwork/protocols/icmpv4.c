@@ -63,7 +63,6 @@ NET_INITPROTO(icmp_init)
   struct net_proto_s	*ip = va_arg(va, struct net_proto_s *);
 
   pv->ip = ip;
-  printf("ICMP %s with IP (%p)\n", pv->ip ? "bound" : "not bound", pv->ip);
 }
 
 /*

@@ -68,7 +68,6 @@ NET_INITPROTO(ip_init)
   struct net_proto_s	*arp = va_arg(va, struct net_proto_s *);
 
   pv->arp = arp;
-  printf("IP %s with ARP (%p)\n", pv->arp ? "bound" : "not bound", pv->arp);
   memset(pv->addr, 0, 4);
   ip_packet_init(&pv->fragments);
   srand((uint_fast32_t)pv);

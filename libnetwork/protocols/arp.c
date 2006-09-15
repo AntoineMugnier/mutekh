@@ -64,7 +64,6 @@ NET_INITPROTO(arp_init)
 
   arp_table_init(&pv->table);
   pv->ip = ip;
-  printf("ARP %s with IP (%p)\n", pv->ip ? "bound" : "not bound", pv->ip);
 }
 
 /*

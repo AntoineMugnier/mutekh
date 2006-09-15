@@ -78,7 +78,7 @@ const struct driver_s	net_ne2000_drv =
 static inline void	ne2000_command(struct device_s	*dev,
 				       uint_fast8_t	cmd)
 {
-  uint_fast16_t		addr = dev->addr[NET_NE2000_COMMAND];
+  uint_fast16_t		addr = dev->addr[NET_NE2000_ADDR] + NE2000_CMD;
 
   cpu_io_write_8(addr, cpu_io_read_8(addr) | cmd);
 }
@@ -90,7 +90,7 @@ static inline void	ne2000_command(struct device_s	*dev,
 static inline void	ne2000_dma(struct device_s	*dev,
 				   uint_fast8_t		cmd)
 {
-  uint_fast16_t		addr = dev->addr[NET_NE2000_COMMAND];
+  uint_fast16_t		addr = dev->addr[NET_NE2000_ADDR] + NE2000_CMD;
 
   cpu_io_write_8(addr, (cpu_io_read_8(addr) & ~NE2000_DMA_MASK) | cmd);
 }
@@ -102,23 +102,133 @@ static inline void	ne2000_dma(struct device_s	*dev,
 static inline void	ne2000_page(struct device_s	*dev,
 				    uint_fast8_t	cmd)
 {
-  uint_fast16_t		addr = dev->addr[NET_NE2000_COMMAND];
+  uint_fast16_t		addr = dev->addr[NET_NE2000_ADDR] + NE2000_CMD;
 
   cpu_io_write_8(addr, (cpu_io_read_8(addr) & ~NE2000_PG_MASK) | cmd);
 }
 
 /*
- * init device. refer to the 8390 documentation for this sequence.
+ * read from the device's memory.
  */
 
-static void		ne2000_init(struct device_s	*dev)
+static void		ne2000_mem_read(struct device_s	*dev,
+					uint_fast16_t	offs,
+					void		*dst,
+					uint_fast16_t	size)
+{
+  struct net_ne2000_context_s	*pv = dev->drv_pv;
+
+  /* select register bank 0 */
+  ne2000_page(dev, NE2000_P0);
+
+  /* ensure DMA operations are reset */
+  ne2000_dma(dev, NE2000_DMA_ABRT);
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_RDC);
+
+  /* setup size */
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR0, size);
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR1, size >> 8);
+
+  /* setup position */
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSAR0, offs);
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSAR1, offs >> 8);
+
+  /* start write operation */
+  ne2000_dma(dev, NE2000_DMA_RD);
+
+  /* copy the whole packet */
+  if (pv->io_16)
+    {
+      uint16_t	*d = (uint16_t *)dst;
+
+      size >>= 1;
+      while (size--)
+	*d++ = cpu_io_read_16(dev->addr[NET_NE2000_ADDR] + NE2000_DATA);
+    }
+  else
+    {
+      uint8_t	*d = dst;
+
+      while (size--)
+	*d++ = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_DATA);
+    }
+
+  /* XXX better use insb/insw */
+}
+
+/*
+ * write to the device's memory.
+ */
+
+static void		ne2000_mem_write(struct device_s	*dev,
+					 uint_fast16_t		offs,
+					 void			*src,
+					 uint_fast16_t		size)
+{
+  struct net_ne2000_context_s	*pv = dev->drv_pv;
+
+  /* select register bank 0 */
+  ne2000_page(dev, NE2000_P0);
+
+  /* ensure DMA operations are reset */
+  ne2000_dma(dev, NE2000_DMA_ABRT);
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_RDC);
+
+  /* setup size */
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR0, size);
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR1, size >> 8);
+
+  /* setup position */
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSAR0, offs);
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSAR1, offs >> 8);
+
+  /* start write operation */
+  ne2000_dma(dev, NE2000_DMA_WR);
+
+  /* copy the whole packet */
+  if (pv->io_16)
+    {
+      uint16_t	*d = (uint16_t *)src;
+
+      size >>= 1;
+      while (size--)
+	cpu_io_write_16(dev->addr[NET_NE2000_ADDR] + NE2000_DATA, *d++);
+    }
+  else
+    {
+      uint8_t	*d = src;
+
+      while (size--)
+	cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_DATA, *d++);
+    }
+
+  /* XXX better use outsb/outsw */
+}
+
+/*
+ * try reading and writing a stupid sentence to memory.
+ */
+
+static uint_fast8_t	ne2000_rw_test(struct device_s	*dev)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
   uint_fast8_t			endian;
-  uint_fast8_t			i;
+  uint_fast16_t			timeout = 2000;
+  char				ref[] = "MutekH 42 NE2000 Driver";
+  char				buf[sizeof (ref)];
+
+  /* configure the device for the test */
+  /* send a reset signal */
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RESET,
+		 cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_RESET));
+
+  /* wait a moment */
+  while (timeout)
+    timeout--;
+  timeout = 200000;
 
   /* stop completely the device */
-  cpu_io_write_8(dev->addr[NET_NE2000_COMMAND],
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD,
 		 NE2000_P0 | NE2000_DMA_ABRT | NE2000_STP);
 
 #ifdef CPU_ENDIAN_ISBIG
@@ -134,13 +244,125 @@ static void		ne2000_init(struct device_s	*dev)
   else
     cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_DCR,
 		   NE2000_16BITS | endian | NE2000_NORMAL | NE2000_FIFO4);
-  /* clear receive state */
+  /* setup transmit and receive in loopback */
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RCR, NE2000_MONITOR);
+  /* setup RX ring */
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_PSTART, pv->tx_buf);
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_PSTOP, pv->mem);
+
+  /* start the device */
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD,
+		 NE2000_P0 | NE2000_DMA_ABRT | NE2000_STA);
+
+  /* do the R/W test */
+  ne2000_mem_write(dev, pv->tx_buf << 8, ref, sizeof (ref));
+  while (timeout && !(cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR) & NE2000_RDC))
+    timeout--;
+  memset(buf, 0, sizeof (ref));
+  ne2000_mem_read(dev, pv->tx_buf << 8, buf, sizeof (ref));
+
+  return !memcmp(ref, buf, sizeof (ref));
+}
+
+/*
+ * probe device capabilities.
+ */
+
+static uint_fast8_t	ne2000_probe(struct device_s	*dev)
+{
+  struct net_ne2000_context_s	*pv = dev->drv_pv;
+  uint8_t			buf[ETH_ALEN * 2];
+  uint_fast8_t			i;
+
+  /* try 8 bits mode with 16k */
+  pv->io_16 = 0;
+  pv->mem = NE2000_MEM_16K;
+  pv->tx_buf = NE2000_MEM_8K;
+  pv->rx_buf = NE2000_MEM_8K + NE2000_TX_BUFSZ;
+
+  if (ne2000_rw_test(dev))
+    goto ok;
+
+  /* try 16 bits mode with 16k */
+  pv->io_16 = 0;
+  pv->mem = NE2000_MEM_32K;
+  pv->tx_buf = NE2000_MEM_16K;
+  pv->rx_buf = NE2000_MEM_16K + NE2000_TX_BUFSZ;
+
+  if (ne2000_rw_test(dev))
+    goto ok;
+
+  /* try 8 bits mode with 32k */
+  pv->io_16 = 1;
+  pv->mem = NE2000_MEM_16K;
+  pv->tx_buf = NE2000_MEM_8K;
+  pv->rx_buf = NE2000_MEM_8K + NE2000_TX_BUFSZ;
+
+  if (ne2000_rw_test(dev))
+    goto ok;
+
+  /* try 16 bits mode with 32k */
+  pv->io_16 = 1;
+  pv->mem = NE2000_MEM_32K;
+  pv->tx_buf = NE2000_MEM_16K;
+  pv->rx_buf = NE2000_MEM_16K + NE2000_TX_BUFSZ;
+
+  if (ne2000_rw_test(dev))
+    goto ok;
+
+  /* all configuration failed */
+  return 0;
+
+ ok:
+  /* everything ok */
+
+  /* determine MAC address, the first 6 bytes/words of the PROM */
+  ne2000_mem_read(dev, 0, buf, ETH_ALEN * 2);
+template<int i>class a:a<i+1>,a<2*i+1>{}; a<1> aa;
+  if (pv->io_16)
+    for (i = 0; i < ETH_ALEN; i++)
+      pv->mac[i] = buf[i];
+  else
+    for (i = 0; i < ETH_ALEN; i++)
+      pv->mac[i] = buf[i << 1];
+
+  return 1;
+}
+
+/*
+ * init device. refer to the 8390 documentation for this sequence.
+ */
+
+static void		ne2000_init(struct device_s	*dev)
+{
+  struct net_ne2000_context_s	*pv = dev->drv_pv;
+  uint_fast8_t			endian;
+  uint_fast8_t			i;
+
+  /* stop completely the device */
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD,
+		 NE2000_P0 | NE2000_DMA_ABRT | NE2000_STP);
+
+#ifdef CPU_ENDIAN_ISBIG
+  endian = NE2000_BE;
+#else
+  endian = NE2000_LE;
+#endif
+
+  /* setup data configuration registers */
+  if (pv->io_16)
+    cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_DCR,
+		   NE2000_8BITS | endian | NE2000_NORMAL | NE2000_FIFO4);
+  else
+    cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_DCR,
+		   NE2000_16BITS | endian | NE2000_NORMAL | NE2000_FIFO4);
+  /* clear dma state */
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR0, 0);
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR1, 0);
   /* setup receive configuration register */
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RCR,
 		 NE2000_REJECT_ON_ERROR | NE2000_ACCEPT_BCAST |
-		 NE2000_REJECT_MCAST | NE2000_MONITOR);
+		 NE2000_REJECT_MCAST);
   /* enter loopback mode */
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TCR, 0x2);
   /* initialize TX and RX buffers */
@@ -149,7 +371,7 @@ static void		ne2000_init(struct device_s	*dev)
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_PSTOP, pv->mem);
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_BOUND, pv->mem - 1);
   /* clear ISR */
-  cpu_io_write_8(dev->addr[NET_NE2000_ISR], 0xff);
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, 0xff);
   /* activate interrupts */
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_IMR,
 		 NE2000_PRXE | NE2000_PTXE | NE2000_TXEE | NE2000_OVWE |
@@ -163,12 +385,12 @@ static void		ne2000_init(struct device_s	*dev)
   /* init current receive buffer pointer */
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_CURR, pv->rx_buf);
   /* bring the device up */
-  cpu_io_write_8(dev->addr[NET_NE2000_COMMAND],
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD,
 		 NE2000_P0 | NE2000_DMA_ABRT | NE2000_STA);
   /* setup transmit configuration register */
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TCR, NE2000_AUTOCRC);
   /* clear ISR */
-  cpu_io_write_8(dev->addr[NET_NE2000_ISR], 0xff);
+  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, 0xff);
 }
 
 /*
@@ -188,45 +410,9 @@ static void	ne2000_send(struct device_s	*dev)
   /* XXX copy in several times */
 #else
   /* copy in one time */
-  if (pv->io_16)
-    size = ALIGN_VALUE(nethdr->size, 2);
+  size = (pv->io_16 ? ALIGN_VALUE(nethdr->size, 2) : nethdr->size);
 
-  /* select register bank 0 */
-  ne2000_page(dev, NE2000_P0);
-
-  /* ensure DMA operations are reset */
-  ne2000_dma(dev, NE2000_DMA_ABRT);
-  cpu_io_write_8(dev->addr[NET_NE2000_ISR], NE2000_RDC);
-
-  /* setup size */
-  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR0, size);
-  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR1, size >> 8);
-
-  /* setup position */
-  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSAR0, 0);
-  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSAR1, pv->tx_buf);
-
-  /* start write operation */
-  ne2000_dma(dev, NE2000_DMA_WR);
-
-  /* copy the whole packet */
-  if (pv->io_16)
-    {
-      uint16_t	*d = (uint16_t*)nethdr->data;
-
-      size >>= 1;
-      while (size--)
-	cpu_io_write_16(dev->addr[NET_NE2000_DATA], *d++);
-    }
-  else
-    {
-      uint8_t	*d = nethdr->data;
-
-      while (size--)
-	cpu_io_write_8(dev->addr[NET_NE2000_DATA], *d++);
-    }
-
-  /* XXX better use outsb/outsw */
+  ne2000_mem_write(dev, pv->tx_buf << 8, nethdr->data, size);
 #endif
 
   /* the data being written, we wait for remote DMA to be completed (IRQ) */
@@ -248,7 +434,7 @@ DEV_IRQ(net_ne2000_irq)
 
   assert(!cpu_interrupt_getstate());
 
-  isr = cpu_io_read_8(dev->addr[NET_NE2000_ISR]);
+  isr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR);
 
   /* remote DMA completed */
   if (isr & NE2000_RDC)
@@ -272,7 +458,7 @@ DEV_IRQ(net_ne2000_irq)
       ne2000_command(dev, NE2000_TXP);
 
       /* acknowledge interrupt */
-      cpu_io_write_8(dev->addr[NET_NE2000_ISR], NE2000_RDC);
+      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_RDC);
     }
 
   /* packet transmitted */
@@ -295,7 +481,7 @@ DEV_IRQ(net_ne2000_irq)
 	pv->current = NULL; /* XXX prefer an atomic set ? */
 
       /* acknowledge interrupt */
-      cpu_io_write_8(dev->addr[NET_NE2000_ISR], NE2000_PTX);
+      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_PTX);
     }
 
   /* transmit error */
@@ -305,17 +491,22 @@ DEV_IRQ(net_ne2000_irq)
       printf("ne2000: TXE\n");
 
       /* acknowledge interrupt */
-      cpu_io_write_8(dev->addr[NET_NE2000_ISR], NE2000_TXE);
+      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_TXE);
     }
 
   /* packet received */
   if (isr & NE2000_PRX)
     {
       printf("ne2000: PRX\n");
-      /* XXX */
+
+      /* no errors */
+      if (cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSR) & NE2000_SPRX)
+	{
+	  /* XXX */
+	}
 
       /* acknowledge interrupt */
-      cpu_io_write_8(dev->addr[NET_NE2000_ISR], NE2000_PRX);
+      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_PRX);
     }
 
   /* buffer full */
@@ -325,7 +516,7 @@ DEV_IRQ(net_ne2000_irq)
       /* XXX */
 
       /* acknowledge interrupt */
-      cpu_io_write_8(dev->addr[NET_NE2000_ISR], NE2000_OVW);
+      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_OVW);
     }
 
   return 1;
@@ -353,29 +544,25 @@ DEV_INIT(net_ne2000_init)
 
   lock_init(&pv->lock);
 
-  packet_queue_init(&pv->queue);
-  net_protos_init(&pv->protocols);
-
   dev->drv_pv = pv;
 
   pv->current = NULL;
 
-  /* XXX probe mode and memory */
+  /* probe and init device */
+  if (!ne2000_probe(dev))
+    {
+      mem_free(pv);
 
-  pv->io_16 = 1;
-  pv->tx_buf = 64;
-  pv->rx_buf = 70;
-  pv->mem = 64;
-  memcpy(pv->mac, "\x00\x01\x02\x03\x04\x05", 6);
+      return -1;
+    }
   printf("ne2000: detected a %s ne2000 device with %d kb\n",
 	 pv->io_16 ? "16 bits" : "8 bits", pv->mem << 8);
   printf("ne2000: MAC is %P\n", pv->mac, ETH_ALEN);
   ne2000_init(dev);
 
-  /* setup commonly used registers */
-  dev->addr[NET_NE2000_COMMAND] = dev->addr[NET_NE2000_ADDR];
-  dev->addr[NET_NE2000_ISR] = dev->addr[NET_NE2000_ADDR] + 0x7;
-  dev->addr[NET_NE2000_DATA] = dev->addr[NET_NE2000_ADDR] + 0x10;
+  /* setup some containers */
+  packet_queue_init(&pv->queue);
+  net_protos_init(&pv->protocols);
 
   /* bind to ICU */
   DEV_ICU_BIND(icudev, dev);
@@ -494,7 +681,7 @@ DEVNET_SENDPKT(net_ne2000_sendpkt)
   lock_spin_irq(&pv->lock);
 
   /* if the device is busy, queue the packet */
-  if (cpu_io_read_8(dev->addr[NET_NE2000_COMMAND]) & NE2000_TXP ||
+  if (cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD) & NE2000_TXP ||
       pv->current)
     {
       printf("ne2000: device busy, queuing the packet\n");

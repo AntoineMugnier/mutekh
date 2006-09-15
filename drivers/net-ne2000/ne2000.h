@@ -22,6 +22,14 @@
 #ifndef _NE2000_H
 #define _NE2000_H
 
+/* memory size */
+#define NE2000_MEM_8K	32
+#define NE2000_MEM_16K	64
+#define NE2000_MEM_32K	128
+
+#define NE2000_TX_BUFSZ	6
+
+
 /* command register bits */
 #define NE2000_STP	(1 << 0)
 #define NE2000_STA	(1 << 1)
@@ -64,7 +72,11 @@
 #define NE2000_CNTE	(1 << 5)
 #define NE2000_RDCE	(1 << 6)
 
+/* receive status register flags */
+#define NE2000_SPRX	(1 << 0)
+
 /* register addresses */
+#define NE2000_CMD	0x0
 #define NE2000_PSTART	0x1
 #define NE2000_PAR	0x1
 #define NE2000_PSTOP	0x2
@@ -72,6 +84,7 @@
 #define NE2000_TPSR	0x4
 #define NE2000_TBCR0	0x5
 #define NE2000_TBCR1	0x6
+#define NE2000_ISR	0x7
 #define NE2000_CURR	0x7
 #define NE2000_MAR	0x8
 #define NE2000_RSAR0	0x8
@@ -82,6 +95,8 @@
 #define NE2000_TCR	0xD
 #define NE2000_DCR	0xE
 #define NE2000_IMR	0xF
+#define NE2000_DATA	0x10
+#define NE2000_RESET	0x1F
 
 /* data configuration flags */
 /* data width */
@@ -117,5 +132,14 @@
 #define NE2000_PROMISCUOUS	(1 << 4)
 /* enable hardware check of destination and CRC */
 #define NE2000_MONITOR		(1 << 5)
+
+/* the following struct is appended to the packet automatically on reception */
+
+struct		net_ne2000_header_s
+{
+  uint8_t	status;
+  uint8_t	next;
+  uint16_t	size;
+} __attribute__ ((packed));
 
 #endif
