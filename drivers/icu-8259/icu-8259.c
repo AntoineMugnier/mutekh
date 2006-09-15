@@ -92,9 +92,6 @@ static CPU_INTERRUPT_HANDLER(icu_8259_cpu_handler)
     pic_8259_irqend_slave(pv->dev->addr[ICU_ADDR_MASTER],
 			  pv->dev->addr[ICU_ADDR_SLAVE], irq - 8);
 
-  if (irq > 0)
-    printf("%d cool! %p %d\n", irq, h, h->hndl);
-
   /* call interrupt handler */
   h->hndl(h->data);
 }
