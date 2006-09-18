@@ -1,5 +1,6 @@
 
 OBJ-y += libnetwork/packet.o
+OBJ-y += libnetwork/if.o
 OBJ-y += libnetwork/protocols/dummy.o
 OBJ-y += libnetwork/protocols/arp.o
 OBJ-y += libnetwork/protocols/rarp.o

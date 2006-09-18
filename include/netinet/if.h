@@ -19,42 +19,62 @@
 
 */
 
-#ifndef NET_NE2000_PRIVATE_H_
-#define NET_NE2000_PRIVATE_H_
+#ifndef NETINET_IF_H
+#define NETINET_IF_H
 
-#include <hexo/types.h>
-#include <hexo/lock.h>
-
-#include <pthread.h>
-
-#include <netinet/ether.h>
+#include <hexo/device.h>
 #include <netinet/protos.h>
 
 #include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_dlist.h>
+#include <gpct/cont_hashlist.h>
 
 /*
- * private data of a ne2000 network device
+ * Misc.
  */
 
-struct				net_ne2000_context_s
+#define IFNAME_MAX_LEN	32
+
+/*
+ * Boot methods.
+ */
+
+#define IF_BOOT_RARP	1
+#define IF_BOOT_DHCP	2
+
+/*
+ * Interface container types.
+ */
+
+CONTAINER_TYPE(net_if, HASHLIST, struct net_if_s, NOLOCK, 4, STRING);
+
+/*
+ * An interface.
+ */
+
+struct			net_if_s
 {
-  lock_t			lock;
+  char			name[IFNAME_MAX_LEN];
+  struct device_s	*dev;
+  struct net_proto_s	*ip;
+  union
+  {
+    struct net_proto_s	*rarp;
+    struct net_proto_s	*dhcp;
+  } bootproto;
+  uint_fast8_t		boottype;
 
-  uint_fast8_t			io_16;
-  uint_fast16_t			tx_buf;
-  uint_fast16_t			rx_buf;
-  uint_fast16_t			mem;
-
-  pthread_t			dispatch;
-  packet_queue_root_t		sendqueue;
-  packet_queue_lock_root_t	rcvqueue;
-  struct net_packet_s		*current;
-
-  uint8_t			mac[ETH_ALEN];
-
-  net_protos_root_t		protocols;
+  net_if_entry_t	list_entry;
 };
 
-#endif
+/*
+ * Functions prototypes.
+ */
 
+void	if_register(struct device_s	*dev);
+void	if_unregister(struct device_s	*dev);
+void	if_up(const char*	name, ...);
+void	if_down(const char*	name, ...);
+
+
+
+#endif

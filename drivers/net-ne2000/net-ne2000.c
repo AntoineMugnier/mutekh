@@ -25,6 +25,9 @@
 #include <hexo/alloc.h>
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
+#include <pthread.h>
+
+#include <netinet/if.h>
 
 #include "net-ne2000.h"
 
@@ -133,7 +136,7 @@ static void		ne2000_mem_read(struct device_s	*dev,
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSAR0, offs);
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSAR1, offs >> 8);
 
-  /* start write operation */
+  /* start read operation */
   ne2000_dma(dev, NE2000_DMA_RD);
 
   /* copy the whole packet */
@@ -403,8 +406,6 @@ static void	ne2000_send(struct device_s	*dev)
   struct net_header_s		*nethdr;
   uint_fast16_t			size;
 
-  printf("ne2000: copying packet to network device memory\n");
-
   nethdr = &pv->current->header[0];
 #if defined(CONFIG_NE2000_FRAGMENT) || defined(CONFIG_NETWORK_AUTOALIGN)
   /* XXX copy in several times */
@@ -428,10 +429,8 @@ static void	ne2000_push(struct device_s	*dev,
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
   struct ether_header		*hdr;
-  struct net_proto_s		*p;
   struct net_packet_s		*packet;
   struct net_header_s		*nethdr;
-  net_proto_id_t		proto;
 
   /* create a new packet object */
   packet = packet_obj_new(NULL);
@@ -450,23 +449,17 @@ static void	ne2000_push(struct device_s	*dev,
   packet->tMAC = hdr->ether_dhost;
 
   /* prepare packet for next stage */
+#ifdef CONFIG_NE2000_FRAGMENT
   nethdr[1].data = data + sizeof(struct ether_header);
   nethdr[1].size = size - sizeof(struct ether_header);
-
-#ifdef CONFIG_NE2000_FRAGMENT
-  /* XXX fill next stage header */
+#else
+  nethdr[1].data = data + sizeof(struct ether_header) + 2;
+  nethdr[1].size = size - sizeof(struct ether_header);
 #endif
 
   packet->stage++;
 
-  /* dispatch to the matching protocol */
-  proto = net_be16_load(hdr->ether_type);
-  if ((p = net_protos_lookup(&pv->protocols, proto)))
-    p->desc->pushpkt(dev, packet, p, &pv->protocols);
-  else
-    printf("NETWORK: no protocol to handle packet (id = 0x%x)\n", proto);
-
-  packet_obj_refdrop(packet);
+  packet_queue_lock_push(&pv->rcvqueue, packet);
 }
 
 /*
@@ -477,8 +470,6 @@ DEV_IRQ(net_ne2000_irq)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
   uint_fast8_t			isr;
-
-  printf("ne2000: IRQ!\n");
 
   /* select register bank 0 */
   ne2000_page(dev, NE2000_P0);
@@ -494,8 +485,6 @@ DEV_IRQ(net_ne2000_irq)
 
       if (pv->current)
 	{
-	  printf("ne2000: remote DMA complete\n");
-
 	  /* the packet is in the device memory, we can send it */
 	  ne2000_dma(dev, NE2000_DMA_ABRT);
 
@@ -510,6 +499,8 @@ DEV_IRQ(net_ne2000_irq)
 
 	  /* send it ! */
 	  ne2000_command(dev, NE2000_TXP);
+
+	  /* XXX timeout here */
 	}
 
       /* acknowledge interrupt */
@@ -521,19 +512,32 @@ DEV_IRQ(net_ne2000_irq)
     {
       struct net_packet_s	*wait;
 
-      printf("ne2000: packet transmitted successfully\n");
       /* packet sent successfully, drop it */
       packet_obj_refdrop(pv->current);
 
       /* one or more packets in the wait queue ? */
-      if ((wait = packet_queue_pop(&pv->queue)))
+      if ((wait = packet_queue_pop(&pv->sendqueue)))
 	{
-	  pv->current = wait; /* XXX prefer an atomic set ? */
+	  /* take lock */
+	  lock_spin_irq(&pv->lock);
+
+	  pv->current = wait;
+
+	  /* release lock */
+	  lock_release_irq(&pv->lock);
 
 	  ne2000_send(dev);
 	}
       else
-	pv->current = NULL; /* XXX prefer an atomic set ? */
+	{
+	  /* take lock */
+	  lock_spin_irq(&pv->lock);
+
+	  pv->current = NULL;
+
+	  /* release lock */
+	  lock_release_irq(&pv->lock);
+	}
 
       /* acknowledge interrupt */
       cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_PTX);
@@ -575,9 +579,15 @@ DEV_IRQ(net_ne2000_irq)
 
 	  /* read the packet itself */
 	  size = hdr.size - sizeof (struct ne2000_header_s);
-	  /* XXX check size */
+
 #ifdef CONFIG_NE2000_FRAGMENT
-	  /* XXX fragment the packet */
+	  data = mem_alloc(size + 2, MEM_SCOPE_CONTEXT);
+	  ne2000_mem_read(dev, dma + sizeof (struct ne2000_header_s),
+			  data, sizeof (struct ether_header));
+	  ne2000_mem_read(dev, dma + sizeof (struct ne2000_header_s) +
+			  sizeof (struct ether_header),
+			  data + sizeof (struct ether_header) + 2,
+			  size - sizeof (struct ether_header));
 #else
 	  data = mem_alloc(size, MEM_SCOPE_CONTEXT);
 	  ne2000_mem_read(dev, dma + sizeof (struct ne2000_header_s),
@@ -618,6 +628,7 @@ DEV_IRQ(net_ne2000_irq)
 DEV_INIT(net_ne2000_init)
 {
   struct net_ne2000_context_s	*pv;
+  struct net_dispatch_s		*dispatch;
 
 #ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &net_ne2000_drv;
@@ -650,35 +661,29 @@ DEV_INIT(net_ne2000_init)
   ne2000_init(dev);
 
   /* setup some containers */
-  packet_queue_init(&pv->queue);
+  packet_queue_init(&pv->sendqueue);
+  packet_queue_lock_init(&pv->rcvqueue);
   net_protos_init(&pv->protocols);
 
   /* bind to ICU */
   DEV_ICU_BIND(icudev, dev);
 
-  /* XXX register as a net device */
+  /* start dispatch thread */
+  dispatch = mem_alloc(sizeof (struct net_dispatch_s), MEM_SCOPE_SYS);
+  dispatch->device = dev;
+  dispatch->packets = &pv->rcvqueue;
+  dispatch->protocols = &pv->protocols;
+  if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch))
+    {
+      printf("ne2000: cannot start dispatch thread\n");
 
-  /* XXX test only, remove me ! */
-  /* ------8<------8<------8<------8<------8<------8<------8<------8<------ */
-  struct net_proto_s		*rarp;
-  struct net_proto_s		*arp;
-  struct net_proto_s		*ip;
-  struct net_proto_s		*icmp;
-  struct net_proto_s		*udp;
+      net_ne2000_cleanup(dev);
 
-  ip = net_alloc_proto(&ip_protocol);
-  arp = net_alloc_proto(&arp_protocol);
-  rarp = net_alloc_proto(&rarp_protocol);
-  icmp = net_alloc_proto(&icmp_protocol);
-  udp = net_alloc_proto(&udp_protocol);
-  dev_net_register_proto(dev, ip, arp);
-  dev_net_register_proto(dev, arp, ip);
-  dev_net_register_proto(dev, rarp, ip);
-  dev_net_register_proto(dev, icmp, ip);
-  dev_net_register_proto(dev, udp, ip);
+      return -1;
+    }
 
-  rarp_request(dev, rarp, NULL);
-  /* ------>8------>8------>8------>8------>8------>8------>8------>8------ */
+  /* register as a net device */
+  if_register(dev);
 
   return 0;
 }
@@ -692,14 +697,27 @@ DEV_CLEANUP(net_ne2000_cleanup)
   struct net_ne2000_context_s	*pv = dev->drv_pv;
   struct net_packet_s		*wait;
 
-  /* empty the waitqueue */
-  while ((wait = packet_queue_pop(&pv->queue)))
+  /* unregister the device */
+  if_unregister(dev);
+
+  /* empty the sendqueue */
+  while ((wait = packet_queue_pop(&pv->sendqueue)))
+    {
+      packet_obj_refdrop(wait);
+    }
+
+  /* terminate the dispatch thread */
+  /* XXX */
+
+  /* empty the receive queue */
+  while ((wait = packet_queue_lock_pop(&pv->rcvqueue)))
     {
       packet_obj_refdrop(wait);
     }
 
   /* destroy some containers */
-  packet_queue_destroy(&pv->queue);
+  packet_queue_destroy(&pv->sendqueue);
+  packet_queue_lock_destroy(&pv->rcvqueue);
   net_protos_destroy(&pv->protocols);
 
   /* turn the device off */
@@ -773,8 +791,7 @@ DEVNET_SENDPKT(net_ne2000_sendpkt)
   if (cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD) & NE2000_TXP ||
       pv->current)
     {
-      printf("ne2000: device busy, queuing the packet\n");
-      packet_queue_push(&pv->queue, packet);
+      packet_queue_push(&pv->sendqueue, packet);
 
       return;
     }

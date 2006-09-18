@@ -96,6 +96,7 @@ struct		net_header_s
 };
 
 #include <hexo/gpct_platform_hexo.h>
+#include <hexo/gpct_lock_hexo.h>
 #include <gpct/object_refcount.h>
 #include <gpct/cont_dlist.h>
 #include <gpct/cont_slist.h>
@@ -103,24 +104,39 @@ struct		net_header_s
 OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);
 
 CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, NOLOCK);
+CONTAINER_TYPE(packet_queue_lock, DLIST, struct net_packet_s, HEXO_SPIN);
 
 /*
  * This structure defines a packet.
  */
 
-struct			net_packet_s
+struct				net_packet_s
 {
-  struct net_header_s	header[NETWORK_MAX_STAGES];
-  uint_fast8_t		stage;			/* current stage */
-  uint8_t		*packet;		/* raw packet */
-  uint8_t		*sMAC;			/* source MAC address */
-  uint8_t		*tMAC;			/* target MAC address */
-  uint8_t		*sIP;			/* source IP address */
-  uint8_t		*tIP;			/* target IP address */
-  uint_fast8_t		MAClen;			/* length of MAC addresses */
+  struct net_header_s		header[NETWORK_MAX_STAGES];
+  uint_fast8_t			stage;		/* current stage */
+  uint8_t			*packet;	/* raw packet */
+  uint8_t			*sMAC;		/* source MAC address */
+  uint8_t			*tMAC;		/* target MAC address */
+  uint8_t			*sIP;		/* source IP address */
+  uint8_t			*tIP;		/* target IP address */
+  uint_fast8_t			MAClen;		/* length of MAC addresses */
 
-  packet_obj_entry_t	obj_entry;
-  packet_queue_entry_t	queue_entry;
+  packet_obj_entry_t		obj_entry;
+  packet_queue_entry_t		queue_entry;
+  packet_queue_lock_entry_t	queue_entry_spin;
+};
+
+#include <netinet/protos.h>
+
+/*
+ * Used to give info to the dispatch thread.
+ */
+
+struct				net_dispatch_s
+{
+  packet_queue_lock_root_t	*packets;
+  net_protos_root_t		*protocols;
+  struct device_s		*device;
 };
 
 /*
@@ -131,9 +147,11 @@ OBJECT_CONSTRUCTOR(packet_obj);
 OBJECT_DESTRUCTOR(packet_obj);
 uint_fast16_t		packet_checksum(uint8_t		*data,
 					size_t		size);
+void			*packet_dispatch(void	*data);
 
 OBJECT_FUNC(static inline, packet_obj, REFCOUNT, packet_obj, obj_entry);
 CONTAINER_PROTOTYPE(, packet_queue, packet_queue);
+CONTAINER_PROTOTYPE(, packet_queue_lock, packet_queue_lock);
 
 #endif
 

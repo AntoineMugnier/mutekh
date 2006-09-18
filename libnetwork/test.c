@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <netinet/if.h>
+
 /*
  * test main.
  */
@@ -66,8 +68,7 @@ int_fast8_t		main()
   printf("%d\n", *p);
 #endif
 
-  while (0)
-    ;
+  if_up("eth0");
 
   return 0;
 }
