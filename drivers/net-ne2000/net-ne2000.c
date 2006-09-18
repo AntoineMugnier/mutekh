@@ -26,6 +26,7 @@
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 #include <netinet/if.h>
 
@@ -446,8 +447,8 @@ static void	ne2000_send(struct device_s	*dev)
     {
       uint_fast16_t	fragsz;
 
-      printf("%u: data %p, size %u\n", i, nethdr[i].data, nethdr[i].size);
-      printf("%u: data %p, size %u\n", i + 1, nethdr[i + 1].data, nethdr[i + 1].size);
+      net_debug("%u: data %p, size %u\n", i, nethdr[i].data, nethdr[i].size);
+      net_debug("%u: data %p, size %u\n", i + 1, nethdr[i + 1].data, nethdr[i + 1].size);
 
       if (!nethdr[i + 1].data)
 	fragsz = nethdr[i].size;
@@ -506,6 +507,8 @@ static void	ne2000_push(struct device_s	*dev,
   packet->stage++;
 
   packet_queue_lock_pushback(&pv->rcvqueue, packet);
+
+  sem_post(&pv->rcvsem);
 }
 
 /*
@@ -516,6 +519,8 @@ DEV_IRQ(net_ne2000_irq)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
   uint_fast8_t			isr;
+
+  lock_spin(&pv->lock);
 
   /* select register bank 0 */
   ne2000_page(dev, NE2000_P0);
@@ -589,25 +594,13 @@ DEV_IRQ(net_ne2000_irq)
       /* one or more packets in the wait queue ? */
       if ((wait = packet_queue_pop(&pv->sendqueue)))
 	{
-	  /* take lock */
-	  lock_spin_irq(&pv->lock);
-
 	  pv->current = wait;
-
-	  /* release lock */
-	  lock_release_irq(&pv->lock);
 
 	  ne2000_send(dev);
 	}
       else
 	{
-	  /* take lock */
-	  lock_spin_irq(&pv->lock);
-
 	  pv->current = NULL;
-
-	  /* release lock */
-	  lock_release_irq(&pv->lock);
 	}
 
       /* acknowledge interrupt */
@@ -677,6 +670,8 @@ DEV_IRQ(net_ne2000_irq)
       cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_PRX);
     }
 
+  lock_release(&pv->lock);
+
   return 1;
 }
 
@@ -724,22 +719,34 @@ DEV_INIT(net_ne2000_init)
   packet_queue_lock_init(&pv->rcvqueue);
   net_protos_init(&pv->protocols);
 
-  /* bind to ICU */
-  DEV_ICU_BIND(icudev, dev);
-
   /* start dispatch thread */
-  dispatch = mem_alloc(sizeof (struct net_dispatch_s), MEM_SCOPE_SYS);
-  dispatch->device = dev;
-  dispatch->packets = &pv->rcvqueue;
-  dispatch->protocols = &pv->protocols;
-  if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch))
+  if (sem_init(&pv->rcvsem, 0, 0))
     {
-      printf("ne2000: cannot start dispatch thread\n");
+      printf("ne2000: cannot init dispatch semaphore\n");
 
       net_ne2000_cleanup(dev);
 
       return -1;
     }
+  dispatch = mem_alloc(sizeof (struct net_dispatch_s), MEM_SCOPE_SYS);
+  dispatch->device = dev;
+  dispatch->packets = &pv->rcvqueue;
+  dispatch->protocols = &pv->protocols;
+  dispatch->sem = &pv->rcvsem;
+
+  /* XXX refaire ca */
+  if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch))
+    {
+      printf("ne2000: cannot start dispatch thread\n");
+
+      mem_free(dispatch);
+      net_ne2000_cleanup(dev);
+
+      return -1;
+    }
+
+  /* bind to ICU */
+  DEV_ICU_BIND(icudev, dev);
 
   /* register as a net device */
   if_register(dev);
@@ -772,6 +779,9 @@ DEV_CLEANUP(net_ne2000_cleanup)
   /* terminate the dispatch thread */
   /* XXX */
 
+  /* destroy the receive semaphore */
+  sem_destroy(&pv->rcvsem);
+
   /* empty the receive queue */
   while ((wait = packet_queue_lock_pop(&pv->rcvqueue)))
     {
@@ -803,7 +813,7 @@ DEVNET_PREPAREPKT(net_ne2000_preparepkt)
   uint8_t			*buff;
 
 #ifdef CONFIG_NE2000_FRAGMENT
-  total = sizeof (struct ether_header) + size + 2;
+  total = sizeof (struct ether_header) + size + 2 + max_padding;
 #else
   total = sizeof (struct ether_header) + size;
 #endif
@@ -812,7 +822,7 @@ DEVNET_PREPAREPKT(net_ne2000_preparepkt)
 
   nethdr = &packet->header[0];
   nethdr->data = buff;
-  nethdr->size = total;
+  nethdr->size = sizeof (struct ether_header) + size;
 
   packet->stage = 1;
 
@@ -851,21 +861,21 @@ DEVNET_SENDPKT(net_ne2000_sendpkt)
   lock_spin_irq(&pv->lock);
 
   /* if the device is busy, queue the packet */
-  if (cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD) & NE2000_TXP ||
-      pv->current)
+  if ((cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD) & NE2000_TXP) ||
+      pv->current != NULL)
     {
       packet_queue_push(&pv->sendqueue, packet);
-
-      return;
     }
+  else
+    {
+      /* otherwise, send the datagram immediately */
+      pv->current = packet;
 
-  /* otherwise, send the datagram immediately */
-  pv->current = packet;
+      ne2000_send(dev);
+    }
 
   /* release lock */
   lock_release_irq(&pv->lock);
-
-  ne2000_send(dev);
 }
 
 /*

@@ -101,6 +101,8 @@ struct		net_header_s
 #include <gpct/cont_dlist.h>
 #include <gpct/cont_slist.h>
 
+#include <semaphore.h>
+
 OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);
 
 CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, NOLOCK);
@@ -138,6 +140,7 @@ struct				net_dispatch_s
   packet_queue_lock_root_t	*packets;
   net_protos_root_t		*protocols;
   struct device_s		*device;
+  sem_t				*sem;
 };
 
 /*
@@ -160,7 +163,7 @@ CONTAINER_PROTOTYPE(, packet_queue_lock, packet_queue_lock);
 
 static inline uint_fast8_t printf_void(void *v, ...) { return 0; }
 
-#define net_debug printf
+#define net_debug printf_void
 
 #endif
 

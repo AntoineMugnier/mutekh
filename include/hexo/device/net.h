@@ -35,7 +35,7 @@
  * packet prepare operation
  */
 
-#define DEVNET_PREPAREPKT(n)	uint8_t  *(n) (struct device_s *dev, struct net_packet_s *packet, size_t size)
+#define DEVNET_PREPAREPKT(n)	uint8_t  *(n) (struct device_s *dev, struct net_packet_s *packet, size_t size, size_t max_padding)
 
 typedef DEVNET_PREPAREPKT(devnet_preparepkt_t);
 

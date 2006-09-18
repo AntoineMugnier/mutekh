@@ -22,6 +22,7 @@
 #include <hexo/endian.h>
 
 #include <pthread.h>
+#include <semaphore.h>
 
 #include <netinet/packet.h>
 #include <netinet/protos.h>
@@ -85,8 +86,8 @@ uint_fast16_t		packet_checksum(uint8_t		*data,
  * packet queue functions.
  */
 
-CONTAINER_FUNC(, packet_queue, DLIST, packet_queue, NOLOCK, queue_entry);
-CONTAINER_FUNC(, packet_queue_lock, DLIST, packet_queue_lock, HEXO_SPIN_IRQ, queue_entry_spin);
+CONTAINER_FUNC(inline, packet_queue, DLIST, packet_queue, NOLOCK, queue_entry);
+CONTAINER_FUNC(inline, packet_queue_lock, DLIST, packet_queue_lock, HEXO_SPIN_IRQ, queue_entry_spin);
 
 /*
  * packet dispatching thread.
@@ -98,13 +99,18 @@ void				*packet_dispatch(void	*data)
   net_protos_root_t		*protocols = info->protocols;
   packet_queue_lock_root_t	*root = info->packets;
   struct device_s		*dev = info->device;
+  sem_t				*sem = info->sem;
   struct net_packet_s		*packet;
   struct net_proto_s		*p;
 
   mem_free(data);
 
-  while (/* XXX */ 1)
+  while (1)
     {
+      /* wait for a packet */
+      sem_wait(sem);
+
+      /* retreive the incoming packet */
       packet = packet_queue_lock_pop(root);
       if (packet)
 	{
@@ -117,7 +123,7 @@ void				*packet_dispatch(void	*data)
 
 	  packet_obj_refdrop(packet);
 	}
-      pthread_yield();
+
     }
 
   return NULL;

@@ -88,7 +88,7 @@
 #define CONFIG_DEVICE_HIERARCHY
 
 /* Network option: force aligned memory accesses */
-//#define CONFIG_NETWORK_AUTOALIGN
+//#define CONFIG_NETWORK_AUTOALIGN /* XXX fix it */
 
 /* NE2000 driver option: use fragmenation */
 #define CONFIG_NE2000_FRAGMENT

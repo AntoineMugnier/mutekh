@@ -286,10 +286,10 @@ NET_PREPAREPKT(ip_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = dev_net_preparepkt(dev, packet, 23 + size);
+  next = dev_net_preparepkt(dev, packet, 20 + size, 4 + max_padding - 1);
   next = ALIGN_ADDRESS(next, 4);
 #else
-  next = dev_net_preparepkt(dev, packet, 20 + size);
+  next = dev_net_preparepkt(dev, packet, 20 + size, 0);
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -322,7 +322,7 @@ static inline	void	ip_send_fragment(struct net_pv_ip_s	*pv,
 
   /* prepare a new IP packet */
   frag = packet_obj_new(NULL);
-  dest = ip_preparepkt(dev, frag, fragsz);
+  dest = ip_preparepkt(dev, frag, fragsz, 0);
   frag->stage--;
 
   net_debug("sending fragment %d-%d\n", offs, offs + fragsz);

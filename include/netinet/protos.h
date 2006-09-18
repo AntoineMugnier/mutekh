@@ -54,7 +54,8 @@ typedef NET_PUSHPKT(net_pushpkt_t);
 
 #define NET_PREPAREPKT(f)	uint8_t *(f)(struct device_s	*dev,	   \
 					 struct net_packet_s	*packet,   \
-					 size_t			size)
+					 size_t			size,	   \
+					 size_t			max_padding)
 
 typedef NET_PREPAREPKT(net_preparepkt_t);
 

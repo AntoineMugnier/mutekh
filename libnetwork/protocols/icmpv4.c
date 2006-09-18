@@ -138,10 +138,10 @@ NET_PREPAREPKT(icmp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size + 3);
+  next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size, 4);
   next = ALIGN_ADDRESS(next, 4);
 #else
-  next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size);
+  next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size, 0);
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -169,7 +169,7 @@ NET_ICMP_ECHO(icmp_echo)
 
   packet = packet_obj_new(NULL);
 
-  dest = icmp_preparepkt(dev, packet, size);
+  dest = icmp_preparepkt(dev, packet, size, 0);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];

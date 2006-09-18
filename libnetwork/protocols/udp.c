@@ -112,12 +112,14 @@ NET_PREPAREPKT(udp_preparepkt)
   struct net_header_s	*nethdr;
   uint8_t		*next;
 
-  next = ip_preparepkt(dev, packet, sizeof (struct udphdr) + size);
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size, 2);
+  next = ALIGN_ADDRESS(next, 4);
+#else
+  next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size, 0);
+#endif
 
   nethdr = &packet->header[packet->stage];
-#ifdef CONFIG_NETWORK_AUTOALIGN
-  next = ALIGN_ADDRESS(next, 2);
-#endif
   nethdr->data = next;
   nethdr->size = sizeof (struct udphdr) + size;
 
@@ -136,7 +138,7 @@ NET_UDP_SEND(udp_send)
 
   packet = packet_obj_new(NULL);
 
-  dest = udp_preparepkt(dev, packet, size);
+  dest = udp_preparepkt(dev, packet, size, 0);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];

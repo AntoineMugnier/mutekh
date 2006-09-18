@@ -46,6 +46,7 @@ struct				net_ne2000_context_s
   uint_fast16_t			rx_buf;
   uint_fast16_t			mem;
 
+  sem_t				rcvsem;
   pthread_t			dispatch;
   packet_queue_root_t		sendqueue;
   uint_fast8_t			send_tries;

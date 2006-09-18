@@ -144,10 +144,10 @@ NET_PREPAREPKT(arp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp) + 1);
+  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp), 2);
   next = ALIGN_ADDRESS(next, 2);
 #else
-  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp));
+  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp), 0);
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -175,7 +175,7 @@ void			arp_request(struct device_s	*dev,
 
   packet = packet_obj_new(NULL);
 
-  arp_preparepkt(dev, packet, 0);
+  arp_preparepkt(dev, packet, 0, 0);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -216,7 +216,7 @@ void			arp_reply(struct device_s		*dev,
 
   packet = packet_obj_new(NULL);
 
-  arp_preparepkt(dev, packet, 0);
+  arp_preparepkt(dev, packet, 0, 0);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];

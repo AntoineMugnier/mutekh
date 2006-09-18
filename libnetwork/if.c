@@ -96,6 +96,9 @@ void			if_up(const char*	name, ...)
     {
       dev = interface->dev;
 
+      printf("Bringing up interface %s using %s...\n", name,
+	     interface->boottype == IF_BOOT_RARP ? "RARP" : "undefined");
+
       switch (interface->boottype)
 	{
 	  case IF_BOOT_RARP:

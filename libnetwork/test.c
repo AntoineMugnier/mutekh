@@ -68,6 +68,10 @@ int_fast8_t		main()
   printf("%d\n", *p);
 #endif
 
+  uint_fast32_t i;
+  for (i = 0; i < 10000000; i++)
+    ;
+
   if_up("eth0");
 
   return 0;
