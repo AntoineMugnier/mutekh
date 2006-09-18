@@ -5,5 +5,6 @@ OBJ-y += libc/alloc.o
 OBJ-y += libc/intconv.o
 OBJ-y += libc/printf.o
 OBJ-y += libc/rand.o
+OBJ-y += libc/sem.o
 
 

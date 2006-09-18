@@ -22,22 +22,20 @@
 #ifndef SEMAPHORE_H_
 #define SEMAPHORE_H_
 
-#include <pthread.h>
-
-typedef uint_fast8_t	__pthread_sem_count_t;
+typedef uint_fast8_t			__sem_count_t;
 
 /** mutex object structure */
-typedef struct				__pthread_sem_s
+typedef struct				__sem_s
 {
   /** sem counter */
-  __pthread_sem_count_t			count;
+  __sem_count_t			count;
 
   /** blocked threads wait queue */
   sched_queue_root_t			wait;
 }					sem_t;
 
 error_t
-sem_init(sem_t *sem, bool_t pshared, __pthread_sem_count_t value);
+sem_init(sem_t *sem, bool_t pshared, __sem_count_t value);
 
 error_t
 sem_wait(sem_t *sem);
@@ -49,7 +47,7 @@ error_t
 sem_post(sem_t *sem);
 
 error_t
-sem_getvalue(sem_t *sem, __pthread_sem_count_t *sval);
+sem_getvalue(sem_t *sem, __sem_count_t *sval);
 
 error_t
 sem_destroy(sem_t *sem);

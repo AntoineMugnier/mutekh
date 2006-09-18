@@ -21,10 +21,10 @@
 
 #include <hexo/scheduler.h>
 #include <hexo/error.h>
-#include <pthread.h>
+
 #include <semaphore.h>
 
-error_t sem_init(sem_t *sem, bool_t pshared, __pthread_sem_count_t value)
+error_t sem_init(sem_t *sem, bool_t pshared, __sem_count_t value)
 {
   sem->count = value;
   return sched_queue_init(&sem->wait);
@@ -90,7 +90,7 @@ error_t sem_post(sem_t *sem)
   return 0;
 }
 
-error_t sem_getvalue(sem_t *sem, __pthread_sem_count_t *sval)
+error_t sem_getvalue(sem_t *sem, __sem_count_t *sval)
 {
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   sched_queue_wrlock(&sem->wait);
