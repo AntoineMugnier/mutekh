@@ -26,6 +26,10 @@
 #include <hexo/local.h>
 #include <hexo/types.h>
 
+#include <hexo/gpct_platform_hexo.h>
+#include <hexo/gpct_lock_hexo.h>
+#include <gpct/cont_dlist.h>
+
 /***************** Memory allocation interface ******************/
 
 /** allocated memory scope is system local */
@@ -52,21 +56,33 @@ void mem_free(void *ptr);
 
 /***************** Memory allocatable region management ******************/
 
+CONTAINER_TYPE(alloc_list, DLIST, struct mem_alloc_block_s, HEXO_SPIN);
 
+/** free memory block content */
+struct mem_alloc_block_s
+{
+  alloc_list_entry_t	list_entry;
+};
+
+/** allocated memory block header */
 struct mem_alloc_header_s
 {
-  uintptr_t				size;
-  union {
-    uint8_t				data[0];
-  };
+  uintptr_t		size;
 };
 
+/** memory region handler */
 struct mem_alloc_region_s
 {
-  
+  alloc_list_root_t	root;
 };
 
-void mem_alloc_region_init();
+void *mem_alloc_region_pop(struct mem_alloc_region_s *region,
+			   size_t size, uint_fast8_t scope);
+
+void mem_alloc_region_push(struct mem_alloc_region_s *region,
+			   void *address, size_t size);
+
+void mem_alloc_region_init(struct mem_alloc_region_s *region);
 
 #endif
 

@@ -46,14 +46,28 @@
 
 /************************************************************************/
 
+#ifdef CONFIG_SMP
 /** cpu local storage variable assignement */
-#define CPU_LOCAL_SET(n, v)  { __asm__ ("mov %1, %%fs:%0" : "=m" (n) : "r" ((typeof(n))v)); }
+# define CPU_LOCAL_SET(n, v)  { __asm__ ("mov %1, %%fs:%0" : "=m" (n) : "r" ((typeof(n))v)); }
 
 /** cpu local storage variable read access */
-#define CPU_LOCAL_GET(n)    ({ typeof(n) _val_; __asm__ ("mov %%fs:%1, %0" : "=r" (_val_) : "m" (n)); _val_; })
+# define CPU_LOCAL_GET(n)    ({ typeof(n) _val_; __asm__ ("mov %%fs:%1, %0" : "=r" (_val_) : "m" (n)); _val_; })
 
 /** get address of cpu local object */
-#define CPU_LOCAL_ADDR(n)   ({ typeof(n) *_ptr_ = &(n); __asm__ ("addl %%fs:0, %0" : "=r" (_ptr_) : "0" (_ptr_)); _ptr_; })
+# define CPU_LOCAL_ADDR(n)   ({ typeof(n) *_ptr_ = &(n); __asm__ ("addl %%fs:0, %0" : "=r" (_ptr_) : "0" (_ptr_)); _ptr_; })
+
+#else
+
+/** cpu local storage variable assignement */
+# define CPU_LOCAL_SET(n, v)  (n) = (v)
+
+/** cpu local storage variable read access */
+# define CPU_LOCAL_GET(n)    (n)
+
+/** get address of cpu local object */
+# define CPU_LOCAL_ADDR(n)   (&(n))
+
+#endif /* !CONFIG_SMP */
 
 #endif
 

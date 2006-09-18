@@ -29,7 +29,7 @@ static lock_t mem_lock = LOCK_INITIALIZER;
 void * mem_alloc(size_t size, uint_fast8_t scope)
 {
   static uint8_t	*addr = (void*)&__system_heap_start;
-  void		*res;
+  void			*res;
 
   lock_spin(&mem_lock);
 

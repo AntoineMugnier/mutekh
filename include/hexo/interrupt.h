@@ -75,6 +75,10 @@ static void cpu_interrupt_restorestate(const reg_t *state);
 /** read current interrupts state as boolean */
 static bool_t cpu_interrupt_getstate(void);
 
+/** enter interrupt wait state if supported, may return imediatly if
+    unsupported */
+static void cpu_interrupt_wait(void);
+
 /** Save interrupts enable state end disable interrupts. This macro
     must be matched with the CPU_INTERRUPT_RESTORESTATE macro. */
 #define CPU_INTERRUPT_SAVESTATE_DISABLE				\

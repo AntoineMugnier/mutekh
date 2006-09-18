@@ -27,21 +27,22 @@
 
 uintptr_t __ramlock_base = 0x00c00004;
 
+#ifdef CONFIG_SMP
 static uint_fast8_t	cpu_count = 1;
-
 struct cpu_cld_s	*cpu_cld[256];
-
 volatile bool_t		cpu_init_flag = 0;
 volatile bool_t		cpu_start_flag = 0;
-
 static lock_t		cpu_init_lock;	/* cpu intialization lock */
-
 /* integer atomic operations global spin lock */
 lock_t			__atomic_arch_lock;
+#else
+struct cpu_cld_s	*cpu_cld[1];
+#endif
 
 /* architecture specific init function */
 void arch_init() 
 {
+#ifdef CONFIG_SMP
   if (cpu_isbootstrap())	/* FIXME */
     /* First CPU */
     {
@@ -49,17 +50,21 @@ void arch_init()
 
       lock_init(&cpu_init_lock);
 
+#endif
       /* configure system wide cpu data */
       cpu_global_init();
 
       /* configure first CPU */
       cpu_cld[0] = cpu_init(0);
 
+#ifdef CONFIG_SMP
       /* send reset/init signal to other CPUs */
       cpu_init_flag = 1;
+#endif
 
       /* run mutek_main() */
       mutek_main(0, 0);
+#ifdef CONFIG_SMP
     }
   else
     /* Other CPUs */
@@ -85,15 +90,22 @@ void arch_init()
       /* run mutek_main_smp() */
       mutek_main_smp();
     }
+#endif
 }
 
 void arch_start_other_cpu(void)
 {
+#ifdef CONFIG_SMP
   cpu_start_flag++;
+#endif
 }
 
 inline uint_fast8_t arch_get_cpu_count(void)
 {
+#ifdef CONFIG_SMP
   return cpu_count;
+#else
+  return 1;
+#ifdef CONFIG_SMP
 }
 

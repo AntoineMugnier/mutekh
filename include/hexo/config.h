@@ -41,8 +41,14 @@
 /** VGA tty support for ANSI codes */
 #define CONFIG_VGATTY_ANSI
 
-/** Multi processor support  */
+/** Multi processor support */
 #define CONFIG_SMP
+
+/** Multi processor support with Inter Processor Interrupt wake */
+#define CONFIG_IPI
+
+/** Provide scheduler preemption through timer */
+#define CONFIG_PREEMPT
 
 /** Default entries count in pthread stack */
 #define CONFIG_PTHREAD_STACK_SIZE	(1 << 20)

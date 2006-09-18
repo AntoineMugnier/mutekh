@@ -49,8 +49,11 @@ struct			lock_s
 
 typedef struct lock_s	lock_t;
 
-#define LOCK_INITIALIZER	{ .arch = ARCH_LOCK_INITIALIZER }
-
+#ifdef CONFIG_SMP
+# define LOCK_INITIALIZER	{ .arch = ARCH_LOCK_INITIALIZER }
+#else
+# define LOCK_INITIALIZER	{ }
+#endif
 
 /** allocate a new lock and return associated atomic memory location */
 static inline error_t lock_init(lock_t *lock)

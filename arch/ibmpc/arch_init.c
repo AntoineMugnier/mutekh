@@ -37,22 +37,26 @@ struct multiboot_header_s multiboot_header =
   .checksum = 0 - MULTIBOOT_MAGIC,
 };
 
+#ifdef CONFIG_SMP
 static uint_fast8_t	cpu_count = 1;
-
 struct cpu_cld_s	*cpu_cld[256];
-
 static lock_t		cpu_init_lock;	/* cpu intialization lock */
 static lock_t		cpu_start_lock;	/* cpu wait for start lock */
+#else
+struct cpu_cld_s	*cpu_cld[1];
+#endif
 
 /* architecture specific init function */
 void arch_init() 
 {
+#ifdef CONFIG_SMP
   if (cpu_isbootstrap())
     /* First CPU */
     {
       lock_init(&cpu_init_lock);
       lock_init(&cpu_start_lock);
 
+#endif
       /* configure system wide cpu data */
       cpu_global_init();
 
@@ -60,11 +64,14 @@ void arch_init()
       cpu_cld[0] = cpu_init(0);
 
       /* send reset/init signal to other CPUs */
+#ifdef CONFIG_SMP
       lock_try(&cpu_start_lock);
       cpu_start_other_cpu();
+#endif
 
       /* run mutek_main() */
       mutek_main(0, 0);
+#ifdef CONFIG_SMP
     }
   else
     /* Other CPUs */
@@ -85,15 +92,22 @@ void arch_init()
       /* run mutek_main_smp() */
       mutek_main_smp();
     }
+#endif
 }
 
 void arch_start_other_cpu(void)
 {
+#ifdef CONFIG_SMP
   lock_release(&cpu_start_lock);
+#endif
 }
 
 inline uint_fast8_t arch_get_cpu_count(void)
 {
+#ifdef CONFIG_SMP
   return cpu_count;
+#else
+  return 1;
+#endif
 }
 

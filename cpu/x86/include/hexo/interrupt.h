@@ -139,5 +139,11 @@ cpu_interrupt_getstate(void)
   return flags & 0x200 ? 1 : 0;
 }
 
+static inline void
+cpu_interrupt_wait(void)
+{
+  __asm__ volatile ("hlt");
+}
+
 #endif
 

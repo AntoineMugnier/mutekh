@@ -28,10 +28,14 @@ static CONTEXT_ENTRY(sched_context_idle)
 
   while (1)
     {
-//    printf("Cpu %u idle\n", cpu_id());
+      cpu_interrupt_enable();
+#if !defined(CONFIG_SMP) || defined(CONFIG_IPI)
+      /* CPU sleep waiting for interrupts */
+      cpu_interrupt_wait();
+#endif
+      /* try to switch to next context */
       cpu_interrupt_disable();
       sched_context_stop();
-      cpu_interrupt_enable();
     }
 }
 

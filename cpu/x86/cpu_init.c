@@ -122,7 +122,7 @@ struct cpu_cld_s
   /* pointer to CPU local storage */
   void				*cpu_local_storage;
   /* CPU id */
-  uint32_t				id;
+  uint32_t			id;
   /* CPU Interrupt descriptor table */
   struct cpu_x86_gatedesc_s	idt[CPU_MAX_INTERRUPTS];
 };

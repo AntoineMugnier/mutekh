@@ -103,8 +103,10 @@
 
 /************************************************************************/
 
+#ifdef CONFIG_SMP
+
 /** cpu local storage variable assignement */
-#define CPU_LOCAL_SET(n, v)				\
+# define CPU_LOCAL_SET(n, v)				\
 {							\
   __asm__ (						\
 	   ".set push\n"				\
@@ -119,7 +121,7 @@
 }
 
 /** cpu local storage variable read access */
-#define CPU_LOCAL_GET(n)				\
+# define CPU_LOCAL_GET(n)				\
 ({							\
   typeof(n) _val_;					\
 							\
@@ -137,7 +139,7 @@
 })
 
 /** get address of cpu local object */
-#define CPU_LOCAL_ADDR(n)				\
+# define CPU_LOCAL_ADDR(n)				\
 ({							\
   typeof(n) *_ptr_;					\
 							\
@@ -149,6 +151,19 @@
 							\
   _ptr_;						\
 })
+
+#else
+
+/** cpu local storage variable assignement */
+# define CPU_LOCAL_SET(n, v)  (n) = (v)
+
+/** cpu local storage variable read access */
+# define CPU_LOCAL_GET(n)    (n)
+
+/** get address of cpu local object */
+# define CPU_LOCAL_ADDR(n)   (&(n))
+
+#endif /* !CONFIG_SMP */
 
 #endif
 

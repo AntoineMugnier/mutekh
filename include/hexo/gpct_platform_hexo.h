@@ -21,6 +21,7 @@
 #ifndef __GPCT_PLATFORM_HEXO_H__
 #define __GPCT_PLATFORM_HEXO_H__
 
+#include <hexo/error.h>
 #include <hexo/types.h>
 #include <hexo/atomic.h>
 

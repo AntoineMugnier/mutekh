@@ -27,7 +27,11 @@
 #define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
 
 /** cpu local storage type attribute */
-#define CPU_LOCAL	__attribute__((section (".cpudata")))
+#ifdef CONFIG_SMP
+# define CPU_LOCAL	__attribute__((section (".cpudata")))
+#else
+# define CPU_LOCAL
+#endif
 
 /** pointer to cpu local storage itself */
 extern CPU_LOCAL void *__cpu_data_base;
@@ -41,16 +45,20 @@ extern CONTEXT_LOCAL void *__context_data_base;
 #include "cpu/hexo/local.h"
 
 /** cpu architecture local storage type attribute */
+#ifdef CONFIG_SMP
 #define CPUARCH_LOCAL	__attribute__((section (".cpuarchdata")))
+#else
+#define CPUARCH_LOCAL
+#endif
 
 /** cpu architecture local storage variable assignement */
-#define CPUARCH_LOCAL_SET(n, v)  { n = v; }
+#define CPUARCH_LOCAL_SET(n, v)  (n) = (v)
 
 /** cpu architecture local storage variable read access */
 #define CPUARCH_LOCAL_GET(n)    (n)
 
 /** get address of cpu architecture local object */
-#define CPUARCH_LOCAL_ADDR(n)   (&n)
+#define CPUARCH_LOCAL_ADDR(n)   (&(n))
 
 #endif
 
