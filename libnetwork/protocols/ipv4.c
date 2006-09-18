@@ -101,7 +101,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   offs = (fragment & IP_FRAG_MASK) * 8;
   datasz = net_be16_load(hdr->tot_len) - hdr->ihl * 4;
 
-  printf("fragment id %x offs %d size %d\n", id, offs, datasz);
+  net_debug("fragment id %x offs %d size %d\n", id, offs, datasz);
 
   /* do we already received packet with same id ? */
   if (!(p = ip_packet_lookup(&pv->fragments, id)))
@@ -118,13 +118,13 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   if (!(fragment & IP_FLAG_MF))
     {
       p->size = offs + datasz;
-      printf("packet total size %d\n", p->size);
+      net_debug("packet total size %d\n", p->size);
     }
 
   total = p->size;
 
   if (total)
-    printf("received %d out of %d\n", p->received, total);
+    net_debug("received %d out of %d\n", p->received, total);
 
   if (total && total == p->received)
     {
@@ -132,7 +132,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       uint_fast16_t		headers_len;
       uint8_t			*data;
 
-      printf("packet complete\n");
+      net_debug("packet complete\n");
 
       /* we received the whole packet, reassemble now */
       nethdr = &packet->header[packet->stage];
@@ -143,12 +143,12 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       /* copy previous headers (ethernet, ip, etc.) */
       memcpy(data, packet->packet, headers_len);
 
-      printf("copying headers : %d-%d\n", 0, headers_len);
+      net_debug("copying headers : %d-%d\n", 0, headers_len);
 
       /* copy current packet to its position */
       memcpy(data + headers_len + offs, nethdr->data, datasz);
 
-      printf("copying packet : %d-%d\n", offs, offs + datasz);
+      net_debug("copying packet : %d-%d\n", offs, offs + datasz);
 
       /* release current packet data */
       mem_free(packet->packet);
@@ -168,7 +168,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	  offs = (net_be16_load(((struct iphdr *)nethdr[-1].data)->fragment) & IP_FRAG_MASK) * 8;
 	  memcpy(data + offs, nethdr->data, nethdr->size);
 
-	  printf("copying packet : %d-%d\n", offs, offs + nethdr->size);
+	  net_debug("copying packet : %d-%d\n", offs, offs + nethdr->size);
 
 	  /* release our reference to the packet */
 	  packet_obj_refdrop(frag);
@@ -234,7 +234,7 @@ NET_PUSHPKT(ip_pushpkt)
   /* incorrect packet */
   if (check != computed_check)
     {
-      printf("Rejected incorrect packet\n");
+      net_debug("Rejected incorrect packet\n");
       return;
     }
 
@@ -262,8 +262,6 @@ NET_PUSHPKT(ip_pushpkt)
 	{
 	  /* last fragment: reassemble */
 
-	  dummy_push(dev, packet, NULL, NULL);
-
 	  /* probably nothing here */
 	}
       else
@@ -275,7 +273,7 @@ NET_PUSHPKT(ip_pushpkt)
   if ((p = net_protos_lookup(protocols, proto)))
     p->desc->pushpkt(dev, packet, p, protocols);
   else
-    printf("IP: no protocol to handle packet (id = 0x%x)\n", proto);
+    net_debug("IP: no protocol to handle packet (id = 0x%x)\n", proto);
 }
 
 /*
@@ -307,6 +305,8 @@ NET_PREPAREPKT(ip_preparepkt)
  * Fragment sending.
  */
 
+/* XXX refaire ca sans memcpy recount parent tt ca tt ca :) */
+
 static inline	void	ip_send_fragment(struct net_pv_ip_s	*pv,
 					 struct device_s	*dev,
 					 struct iphdr		*hdr,
@@ -325,7 +325,7 @@ static inline	void	ip_send_fragment(struct net_pv_ip_s	*pv,
   dest = ip_preparepkt(dev, frag, fragsz);
   frag->stage--;
 
-  printf("sending fragment %d-%d\n", offs, offs + fragsz);
+  net_debug("sending fragment %d-%d\n", offs, offs + fragsz);
 
   /* fill the data */
   memcpy(dest, data + offs, fragsz);

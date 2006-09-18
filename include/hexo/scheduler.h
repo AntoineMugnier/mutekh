@@ -73,7 +73,7 @@ void sched_context_stop(void);
 error_t sched_queue_lock(sched_queue_root_t *queue);
 
 /** unlock context queue */
-error_t sched_queue_lock(sched_queue_root_t *queue);
+void sched_queue_unlock(sched_queue_root_t *queue);
 
 /** init context queue */
 error_t sched_queue_init(sched_queue_root_t *queue);

@@ -104,7 +104,7 @@ struct		net_header_s
 OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);
 
 CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, NOLOCK);
-CONTAINER_TYPE(packet_queue_lock, DLIST, struct net_packet_s, HEXO_SPIN);
+CONTAINER_TYPE(packet_queue_lock, DLIST, struct net_packet_s, HEXO_SPIN_IRQ);
 
 /*
  * This structure defines a packet.
@@ -120,6 +120,7 @@ struct				net_packet_s
   uint8_t			*sIP;		/* source IP address */
   uint8_t			*tIP;		/* target IP address */
   uint_fast8_t			MAClen;		/* length of MAC addresses */
+  uint_fast16_t			proto;		/* level 2 protocol id */
 
   packet_obj_entry_t		obj_entry;
   packet_queue_entry_t		queue_entry;
@@ -152,6 +153,14 @@ void			*packet_dispatch(void	*data);
 OBJECT_FUNC(static inline, packet_obj, REFCOUNT, packet_obj, obj_entry);
 CONTAINER_PROTOTYPE(, packet_queue, packet_queue);
 CONTAINER_PROTOTYPE(, packet_queue_lock, packet_queue_lock);
+
+/*
+ * XXX debug
+ */
+
+static inline uint_fast8_t printf_void(void *v, ...) { return 0; }
+
+#define net_debug printf
 
 #endif
 

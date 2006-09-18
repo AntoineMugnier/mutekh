@@ -104,12 +104,12 @@ NET_PUSHPKT(arp_pushpkt)
   switch (net_be16_load(hdr->ea_hdr.ar_op))
     {
       case ARPOP_REQUEST:
-	printf("Requested %d.%d.%d.%d\n",
-	       hdr->arp_tpa[0], hdr->arp_tpa[1], hdr->arp_tpa[2],
-	       hdr->arp_tpa[3]);
+	net_debug("Requested %d.%d.%d.%d\n",
+		  hdr->arp_tpa[0], hdr->arp_tpa[1], hdr->arp_tpa[2],
+		  hdr->arp_tpa[3]);
 	if (!memcmp(hdr->arp_tpa, pv_ip->addr, 4))
 	  {
-	    printf("It's me !\n");
+	    net_debug("It's me !\n");
 	    arp_reply(dev, protocol, hdr->arp_sha, hdr->arp_spa);
 	  }
 	/* try to update the cache */
@@ -153,6 +153,8 @@ NET_PREPAREPKT(arp_preparepkt)
   nethdr = &packet->header[packet->stage];
   nethdr->data = next;
   nethdr->size = sizeof (struct ether_arp);
+
+  nethdr[1].data = NULL;
 
   return NULL;
 }
@@ -270,11 +272,11 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
     memcpy(arp_entry->mac, mac, ETH_ALEN);
   arp_entry->valid = !(flags & ARP_TABLE_IN_PROGRESS);
   if (arp_entry->valid)
-    printf("Added %d.%d.%d.%d as %2x:%2x:%2x:%2x:%2x:%2x\n",
-	   arp_entry->ip[0], arp_entry->ip[1], arp_entry->ip[2],
-	   arp_entry->ip[3], arp_entry->mac[0], arp_entry->mac[1],
-	   arp_entry->mac[2], arp_entry->mac[3], arp_entry->mac[4],
-	   arp_entry->mac[5]);
+    net_debug("Added %d.%d.%d.%d as %2x:%2x:%2x:%2x:%2x:%2x\n",
+	      arp_entry->ip[0], arp_entry->ip[1], arp_entry->ip[2],
+	      arp_entry->ip[3], arp_entry->mac[0], arp_entry->mac[1],
+	      arp_entry->mac[2], arp_entry->mac[3], arp_entry->mac[4],
+	      arp_entry->mac[5]);
   return arp_entry;
 }
 
@@ -302,7 +304,7 @@ uint8_t			*arp_get_mac(struct device_s		*dev,
     }
   else
     {
-      printf("No ARP entry. Sending request.\n");
+      net_debug("No ARP entry. Sending request.\n");
       arp_entry = arp_update_table(arp, ip, NULL, ARP_TABLE_IN_PROGRESS);
       /* no entry, push the packet in the wait queue*/
       packet_queue_init(&arp_entry->wait);

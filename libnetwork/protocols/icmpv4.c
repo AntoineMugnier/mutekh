@@ -101,7 +101,7 @@ NET_PUSHPKT(icmp_pushpkt)
   /* incorrect packet */
   if (check != computed_check)
     {
-      printf("Rejected incorrect packet\n");
+      net_debug("Rejected incorrect packet\n");
       return;
     }
 
@@ -112,7 +112,7 @@ NET_PUSHPKT(icmp_pushpkt)
 	switch (hdr->code)
 	  {
 	    case 0:
-	      printf("Ping\n");
+	      net_debug("Ping\n");
 	      icmp_echo(dev, protocol, packet->sIP,
 			net_be16_load(hdr->un.echo.id),
 			net_be16_load(hdr->un.echo.sequence),
@@ -148,6 +148,8 @@ NET_PREPAREPKT(icmp_preparepkt)
   nethdr->data = next;
   nethdr->size = sizeof (struct icmphdr) + size;
 
+  nethdr[1].data = NULL;
+
   return next + sizeof (struct icmphdr);
 }
 
@@ -163,7 +165,7 @@ NET_ICMP_ECHO(icmp_echo)
   struct net_header_s	*nethdr;
   uint8_t		*dest;
 
-  printf("Pong\n");
+  net_debug("Pong\n");
 
   packet = packet_obj_new(NULL);
 

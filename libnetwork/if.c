@@ -23,6 +23,9 @@
 #include <netinet/protos.h>
 #include <netinet/if.h>
 
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_hashlist.h>
+
 /*
  * Functions for the interface container.
  */
@@ -33,7 +36,7 @@ CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, list_entry, STRI
  * Some local variables.
  */
 
-static net_if_root_t	ifs;
+static net_if_root_t	ifs = CONTAINER_ROOT_INITIALIZER(net_if, HASHLIST, NOLOCK);
 static uint_fast8_t	ifid = 0;
 
 /*
@@ -93,9 +96,17 @@ void			if_up(const char*	name, ...)
     {
       dev = interface->dev;
 
-      if (interface->boottype == IF_BOOT_RARP)
-	rarp_request(dev, interface->bootproto.rarp, NULL);
-      /* XXX otherwise, static IP */
+      switch (interface->boottype)
+	{
+	  case IF_BOOT_RARP:
+	    rarp_request(dev, interface->bootproto.rarp, NULL);
+	    break;
+	  case IF_BOOT_DHCP:
+	    break;
+	  default:
+	    /* XXX otherwise, static IP */
+	    break;
+	}
     }
 }
 

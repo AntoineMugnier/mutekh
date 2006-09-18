@@ -160,16 +160,13 @@ static void		ne2000_mem_read(struct device_s	*dev,
 }
 
 /*
- * write to the device's memory.
+ * init a remote DMA writing transfer.
  */
 
-static void		ne2000_mem_write(struct device_s	*dev,
-					 uint_fast16_t		offs,
-					 void			*src,
-					 uint_fast16_t		size)
+static void		ne2000_dma_init_write(struct device_s	*dev,
+					      uint_fast16_t	offs,
+					      uint_fast16_t	size)
 {
-  struct net_ne2000_context_s	*pv = dev->drv_pv;
-
   /* select register bank 0 */
   ne2000_page(dev, NE2000_P0);
 
@@ -187,6 +184,17 @@ static void		ne2000_mem_write(struct device_s	*dev,
 
   /* start write operation */
   ne2000_dma(dev, NE2000_DMA_WR);
+}
+
+/*
+ * output data for remote DMA.
+ */
+
+static void		ne2000_dma_do_write(struct device_s	*dev,
+					 void			*src,
+					 uint_fast16_t		size)
+{
+  struct net_ne2000_context_s	*pv = dev->drv_pv;
 
   /* copy the whole packet */
   if (pv->io_16)
@@ -206,6 +214,20 @@ static void		ne2000_mem_write(struct device_s	*dev,
     }
 
   /* XXX better use outsb/outsw */
+}
+
+/*
+ * write to the device's memory.
+ */
+
+static inline void	ne2000_mem_write(struct device_s	*dev,
+					 uint_fast16_t		offs,
+					 void			*src,
+					 uint_fast16_t		size)
+{
+  ne2000_dma_init_write(dev, offs, size);
+
+  ne2000_dma_do_write(dev, src, size);
 }
 
 /*
@@ -407,12 +429,35 @@ static void	ne2000_send(struct device_s	*dev)
   uint_fast16_t			size;
 
   nethdr = &pv->current->header[0];
-#if defined(CONFIG_NE2000_FRAGMENT) || defined(CONFIG_NETWORK_AUTOALIGN)
-  /* XXX copy in several times */
-#else
+
   /* copy in one time */
   size = (pv->io_16 ? ALIGN_VALUE(nethdr->size, 2) : nethdr->size);
 
+  /* reset the tries counter */
+  pv->send_tries = 0;
+
+#if defined(CONFIG_NE2000_FRAGMENT) || defined(CONFIG_NETWORK_AUTOALIGN)
+  uint_fast8_t	i;
+
+  /* initialize writing */
+  ne2000_dma_init_write(dev, pv->tx_buf << 8, size);
+
+  for (i = 0; nethdr[i].data; i++)
+    {
+      uint_fast16_t	fragsz;
+
+      printf("%u: data %p, size %u\n", i, nethdr[i].data, nethdr[i].size);
+      printf("%u: data %p, size %u\n", i + 1, nethdr[i + 1].data, nethdr[i + 1].size);
+
+      if (!nethdr[i + 1].data)
+	fragsz = nethdr[i].size;
+      else
+	fragsz = nethdr[i].size - nethdr[i + 1].size;
+      net_debug("chunk size %u\n", fragsz);
+      /* write each chunk after the previous one */
+      ne2000_dma_do_write(dev, nethdr[i].data, fragsz);
+    }
+#else
   ne2000_mem_write(dev, pv->tx_buf << 8, nethdr->data, size);
 #endif
 
@@ -447,19 +492,20 @@ static void	ne2000_push(struct device_s	*dev,
   packet->MAClen = sizeof(struct ether_addr);
   packet->sMAC = hdr->ether_shost;
   packet->tMAC = hdr->ether_dhost;
+  packet->proto = net_be16_load(hdr->ether_type);
 
   /* prepare packet for next stage */
 #ifdef CONFIG_NE2000_FRAGMENT
-  nethdr[1].data = data + sizeof(struct ether_header);
+  nethdr[1].data = data + sizeof(struct ether_header) + 2;
   nethdr[1].size = size - sizeof(struct ether_header);
 #else
-  nethdr[1].data = data + sizeof(struct ether_header) + 2;
+  nethdr[1].data = data + sizeof(struct ether_header);
   nethdr[1].size = size - sizeof(struct ether_header);
 #endif
 
   packet->stage++;
 
-  packet_queue_lock_push(&pv->rcvqueue, packet);
+  packet_queue_lock_pushback(&pv->rcvqueue, packet);
 }
 
 /*
@@ -507,6 +553,31 @@ DEV_IRQ(net_ne2000_irq)
       cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_RDC);
     }
 
+  /* transmit error */
+  if (isr & NE2000_TXE)
+    {
+      net_debug("ne2000: TXE\n");
+
+      /* increment the retry counter */
+      pv->send_tries++;
+
+      /* too many retries, abording */
+      if (pv->send_tries > 3)
+	{
+	  /* set the interrupt flags as "transmitted without error",
+	     so the next queued packet can be sent */
+	  isr &= NE2000_PTX;
+	}
+      else
+	{
+	  /* resend the transmit command */
+	  ne2000_command(dev, NE2000_TXP);
+	}
+
+      /* acknowledge interrupt */
+      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_TXE);
+    }
+
   /* packet transmitted */
   if (isr & NE2000_PTX)
     {
@@ -543,21 +614,19 @@ DEV_IRQ(net_ne2000_irq)
       cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_PTX);
     }
 
-  /* transmit error */
-  if (isr & NE2000_TXE)
+  /* buffer full */
+  if (isr & NE2000_OVW)
     {
+      net_debug("ne2000: OVW\n");
       /* XXX */
-      printf("ne2000: TXE\n");
 
       /* acknowledge interrupt */
-      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_TXE);
+      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_OVW);
     }
 
   /* packet received */
   if (isr & NE2000_PRX)
     {
-      printf("ne2000: received a packet\n");
-
       /* no errors */
       if (cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSR) & NE2000_SPRX)
 	{
@@ -606,16 +675,6 @@ DEV_IRQ(net_ne2000_irq)
 
       /* acknowledge interrupt */
       cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_PRX);
-    }
-
-  /* buffer full */
-  if (isr & NE2000_OVW)
-    {
-      printf("ne2000: OVW\n");
-      /* XXX */
-
-      /* acknowledge interrupt */
-      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, NE2000_OVW);
     }
 
   return 1;
@@ -699,6 +758,10 @@ DEV_CLEANUP(net_ne2000_cleanup)
 
   /* unregister the device */
   if_unregister(dev);
+
+  /* destroy the packet scheduled for sending if necessary */
+  if (pv->current)
+    packet_obj_refdrop(pv->current);
 
   /* empty the sendqueue */
   while ((wait = packet_queue_pop(&pv->sendqueue)))

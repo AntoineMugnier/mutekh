@@ -86,7 +86,7 @@ uint_fast16_t		packet_checksum(uint8_t		*data,
  */
 
 CONTAINER_FUNC(, packet_queue, DLIST, packet_queue, NOLOCK, queue_entry);
-CONTAINER_FUNC(, packet_queue_lock, DLIST, packet_queue_lock, HEXO_SPIN, queue_entry_spin);
+CONTAINER_FUNC(, packet_queue_lock, DLIST, packet_queue_lock, HEXO_SPIN_IRQ, queue_entry_spin);
 
 /*
  * packet dispatching thread.
@@ -99,29 +99,21 @@ void				*packet_dispatch(void	*data)
   packet_queue_lock_root_t	*root = info->packets;
   struct device_s		*dev = info->device;
   struct net_packet_s		*packet;
-  uint_fast16_t			proto;
-  struct ether_header		*hdr;
   struct net_proto_s		*p;
 
   mem_free(data);
 
   while (/* XXX */ 1)
     {
-      printf("dispatch thread\n");
       packet = packet_queue_lock_pop(root);
       if (packet)
 	{
-	  printf("got a packet\n");
-
-	  hdr = (struct ether_header *)packet->header[0].data;
-
 	  /* dispatch to the matching protocol */
-	  proto = net_be16_load(hdr->ether_type);
-	  if ((p = net_protos_lookup(protocols, proto)))
+	  if ((p = net_protos_lookup(protocols, packet->proto)))
 	    p->desc->pushpkt(dev, packet, p, protocols);
 	  else
-	    printf("NETWORK: no protocol to handle packet (id = 0x%x)\n",
-		   proto);
+	    net_debug("NETWORK: no protocol to handle packet (id = 0x%x)\n",
+		      packet->proto);
 
 	  packet_obj_refdrop(packet);
 	}

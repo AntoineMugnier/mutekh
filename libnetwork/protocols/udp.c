@@ -121,6 +121,8 @@ NET_PREPAREPKT(udp_preparepkt)
   nethdr->data = next;
   nethdr->size = sizeof (struct udphdr) + size;
 
+  nethdr[1].data = NULL;
+
   return next + sizeof (struct udphdr);
 }
 

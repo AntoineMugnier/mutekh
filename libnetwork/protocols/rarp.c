@@ -96,8 +96,8 @@ NET_PUSHPKT(rarp_pushpkt)
       if (memcmp(packet->tMAC, hdr->arp_tha, ETH_ALEN))
 	return ;
 
-      printf("Assigned IP: %d.%d.%d.%d\n", hdr->arp_tpa[0],
-	     hdr->arp_tpa[1], hdr->arp_tpa[2], hdr->arp_tpa[3]);
+      net_debug("Assigned IP: %d.%d.%d.%d\n", hdr->arp_tpa[0],
+		hdr->arp_tpa[1], hdr->arp_tpa[2], hdr->arp_tpa[3]);
 
       memcpy(pv_ip->addr, hdr->arp_tpa, 4);
     }
@@ -122,6 +122,8 @@ NET_PREPAREPKT(rarp_preparepkt)
   nethdr = &packet->header[packet->stage];
   nethdr->data = next;
   nethdr->size = sizeof (struct ether_arp);
+
+  nethdr[1].data = NULL;
 
   return NULL;
 }

@@ -41,7 +41,6 @@
 #include <../drivers/fb-vga/fb-vga.h>
 #include <../drivers/enum-pci/enum-pci.h>
 #include <../drivers/net-ne2000/net-ne2000.h>
-#include <../drivers/net-ns8390/net-ns8390.h>
 #include <../drivers/net-3c900/net-3c900.h>
 
 #include <string.h>
@@ -79,6 +78,9 @@ DEVTIMER_CALLBACK(timer_callback)
 
 int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
+  sched_global_init();
+  sched_cpu_init();
+
   /********* ICU init ******************************** */
 
   /* ICU init */
@@ -168,11 +170,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   device_init(&enum_pci);
   enum_pci_init(&enum_pci, &icu_dev);
   dev_enum_register(&enum_pci, &net_3c900_drv);
-  //dev_enum_register(&enum_pci, &net_ns8390_drv);
   dev_enum_register(&enum_pci, &net_ne2000_drv);
 # endif
-
-  sched_global_init();
 
   arch_start_other_cpu(); /* let other CPUs enter main_smp() */
 
@@ -206,13 +205,16 @@ int_fast8_t main(int_fast8_t argc, char **argv);
 
 void mutek_main_smp(void)  /* ALL CPUs execute this function */
 {
+  if (!cpu_isbootstrap())
+    {
+      sched_cpu_init();
+    }
+
   cpu_interrupt_ex_sethandler(fault_handler);
 
   lock_spin(&tty_lock);
   printf("CPU %i is up and running.\n", cpu_id());
   lock_release(&tty_lock);
-
-  sched_cpu_init();
 
   if (cpu_id() == 0)
     main(0, 0);
