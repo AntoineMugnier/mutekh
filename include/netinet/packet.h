@@ -101,6 +101,8 @@ struct		net_header_s
 #include <gpct/cont_dlist.h>
 #include <gpct/cont_slist.h>
 
+#include <netinet/protos.h>
+
 #include <semaphore.h>
 
 OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);

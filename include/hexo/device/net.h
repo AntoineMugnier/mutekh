@@ -28,8 +28,8 @@
 #include "../types.h"
 #include "../error.h"
 
-#include <netinet/packet.h>
-#include <netinet/protos.h>
+struct net_packet_s;
+struct net_proto_s;
 
 /*
  * packet prepare operation
@@ -45,7 +45,7 @@ typedef DEVNET_PREPAREPKT(devnet_preparepkt_t);
  * packet send operation
  */
 
-#define DEVNET_SENDPKT(n)	void  (n) (struct device_s *dev, struct net_packet_s *packet, net_proto_id_t proto)
+#define DEVNET_SENDPKT(n)	void  (n) (struct device_s *dev, struct net_packet_s *packet, uint_fast16_t proto)
 
 typedef DEVNET_SENDPKT(devnet_sendpkt_t);
 

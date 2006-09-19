@@ -23,13 +23,13 @@
 #define NETINET_PROTOS_H_
 
 #include <hexo/types.h>
-#include <netinet/packet.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_hashlist.h>
 
 struct device_s;
+struct net_packet_s;
 
 /*
  * Container type for protocols list.
@@ -69,12 +69,12 @@ typedef NET_PREPAREPKT(net_preparepkt_t);
 
 typedef NET_INITPROTO(net_initproto_t);
 
-#include <netinet/ether.h>
-#include <netinet/arp.h>
-#include <netinet/ip.h>
-#include <netinet/icmp.h>
-#include <netinet/udp.h>
-#include <netinet/dummy.h>
+struct ether_interface_s;
+struct ip_interface_s;
+struct icmp_interface_s;
+struct udp_interface_s;
+struct tcp_interface_s;
+
 
 typedef uint_fast16_t net_pkt_size_t;
 typedef uint_fast16_t net_proto_id_t;
