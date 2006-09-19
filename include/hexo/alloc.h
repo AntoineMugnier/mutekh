@@ -56,32 +56,40 @@ void mem_free(void *ptr);
 
 /***************** Memory allocatable region management ******************/
 
-CONTAINER_TYPE(alloc_list, DLIST, struct mem_alloc_block_s, NOLOCK);
+CONTAINER_TYPE(alloc_list, DLIST, struct mem_alloc_header_s, NOLOCK);
+
+#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
+# define MEMALLOC_SIGNATURE	0x3a1b2ce1
+#endif
 
 /** memory block header */
 struct mem_alloc_header_s
 {
+#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
+  uint32_t		signature;
+#endif
+  uint8_t		is_free;
   uintptr_t		size;
   alloc_list_entry_t	list_entry;
 };
 
-/** free memory block content */
-struct mem_alloc_block_s
-{
-};
+#define MEMALLOC_SPLIT_SIZE	(2 * sizeof (struct mem_alloc_header_s) + 16)
 
 /** memory region handler */
 struct mem_alloc_region_s
 {
-  
+  lock_t		lock;
   alloc_list_root_t	root;
+#ifdef CONFIG_HEXO_MEMALLOC_STATS
+  size_t		alloc_blocks;
+  size_t		free_size;
+  size_t		free_blocks;
+#endif
 };
 
-void *mem_alloc_region_pop(struct mem_alloc_region_s *region,
-			   size_t size, uint_fast8_t scope);
+void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size);
 
-void mem_alloc_region_push(struct mem_alloc_region_s *region,
-			   void *address, size_t size);
+void mem_alloc_region_push(struct mem_alloc_region_s *region, void *address);
 
 void mem_alloc_region_init(struct mem_alloc_region_s *region,
 			   void *address, size_t size);

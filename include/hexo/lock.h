@@ -107,6 +107,7 @@ static inline bool_t lock_state(lock_t *lock)
 
 
 /** save interrupts state, disable interrupts, and spin to take lock */
+//__attribute__((deprecated))
 static inline void lock_spin_irq(lock_t *lock)
 {
   reg_t		state;
@@ -138,6 +139,7 @@ static inline void lock_release(lock_t *lock)
 
 
 /** release lock and restore previous interrupts state */
+//__attribute__((deprecated))
 static inline void lock_release_irq(lock_t *lock)
 {
   reg_t		state = lock->irq_state;
