@@ -115,11 +115,7 @@ NET_PUSHPKT(icmp_pushpkt)
 	  {
 	    case 0:
 	      net_debug("Ping\n");
-	      icmp_echo(dev, protocol, packet->sIP,
-			net_be16_load(hdr->un.echo.id),
-			net_be16_load(hdr->un.echo.sequence),
-			nethdr->data + sizeof (struct icmphdr),
-			nethdr->size - sizeof (struct icmphdr));
+	      icmp_echo(dev, protocol, packet);
 	      break;
 	    default:
 	      break;
@@ -163,15 +159,12 @@ NET_ICMP_ECHO(icmp_echo)
 {
   struct net_pv_icmp_s	*pv = (struct net_pv_icmp_s *)icmp->pv;
   struct icmphdr	*hdr;
-  struct net_packet_s	*packet;
   struct net_header_s	*nethdr;
-  uint8_t		*dest;
+  uint_fast32_t		xchg;
+
+  packet_obj_refnew(packet);
 
   net_debug("Pong\n");
-
-  packet = packet_obj_new(NULL);
-
-  dest = icmp_preparepkt(dev, packet, size, 0);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -180,18 +173,15 @@ NET_ICMP_ECHO(icmp_echo)
   /* fill the echo */
   hdr->type = 0;
   hdr->code = 3;
-  net_be16_store(hdr->un.echo.id, id);
-  net_be16_store(hdr->un.echo.sequence, seq);
   net_16_store(hdr->checksum, 0);
-
-  /* copy data */
-  memcpy(dest, data, size);
 
   /* compute checksum */
   net_16_store(hdr->checksum, packet_checksum(nethdr->data, nethdr->size));
 
   /* target IP */
-  packet->tIP = ip;
+  xchg = packet->tIP;
+  packet->tIP = packet->sIP;
+  packet->sIP = xchg;
 
   packet->stage--;
   /* send the packet to IP */

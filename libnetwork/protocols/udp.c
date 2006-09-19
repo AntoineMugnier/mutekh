@@ -94,11 +94,9 @@ NET_PUSHPKT(udp_pushpkt)
 #endif
 
   /* dump significant fields */
-  printf("UDP %d.%d.%d.%d:%u -> %d.%d.%d.%d:%u of length %u\n",
-	 packet->sIP[0], packet->sIP[1], packet->sIP[2], packet->sIP[3],
-	 net_be16_load(hdr->source),
-	 packet->tIP[0], packet->tIP[1], packet->tIP[2], packet->tIP[3],
-	 net_be16_load(hdr->dest),
+  printf("UDP %P:%u -> %P:%u of length %u\n",
+	 &packet->sIP, 4, net_be16_load(hdr->source),
+	 &packet->tIP, 4, net_be16_load(hdr->dest),
 	 net_be16_load(hdr->len) - sizeof (struct udphdr));
 
   /* don't panic, this is a test */

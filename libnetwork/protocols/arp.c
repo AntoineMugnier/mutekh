@@ -38,7 +38,7 @@
  * ARP table functions.
  */
 
-CONTAINER_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, list_entry, BLOB, ip);
+CONTAINER_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, list_entry, UNSIGNED, ip);
 
 /*
  * Structures for declaring the protocol's properties & interface.
@@ -83,14 +83,15 @@ NET_PUSHPKT(arp_pushpkt)
   struct net_header_s	*nethdr;
   struct arp_entry_s	*arp_entry;
   struct net_packet_s	*waiting;
+  uint_fast32_t		ip;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct ether_arp *)nethdr->data;
 
-  /* align the packet on 16 bits if necessary */
+  /* align the packet on 32 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint32_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct ether_arp));
       hdr = &aligned;
@@ -106,21 +107,22 @@ NET_PUSHPKT(arp_pushpkt)
   switch (net_be16_load(hdr->ea_hdr.ar_op))
     {
       case ARPOP_REQUEST:
-	net_debug("Requested %d.%d.%d.%d\n",
-		  hdr->arp_tpa[0], hdr->arp_tpa[1], hdr->arp_tpa[2],
-		  hdr->arp_tpa[3]);
-	if (!memcmp(hdr->arp_tpa, pv_ip->addr, 4))
+	net_debug("Requested %P\n",
+		  &hdr->arp_tpa, 4);
+	/* try to update the cache */
+	ip = net_be32_load(hdr->arp_tpa);
+	arp_update_table(protocol, ip, hdr->arp_sha,
+			 ARP_TABLE_NO_OVERWRITE);
+	if (ip == pv_ip->addr)
 	  {
 	    net_debug("It's me !\n");
-	    arp_reply(dev, protocol, hdr->arp_sha, hdr->arp_spa);
+	    arp_reply(dev, protocol, packet);
 	  }
-	/* try to update the cache */
-	arp_update_table(protocol, hdr->arp_spa, hdr->arp_sha,
-			 ARP_TABLE_NO_OVERWRITE);
 	break;
       case ARPOP_REPLY:
 	/* update the cache */
-	arp_entry = arp_update_table(protocol, hdr->arp_spa, hdr->arp_sha,
+	ip = net_be32_load(hdr->arp_spa);
+	arp_entry = arp_update_table(protocol, ip, hdr->arp_sha,
 				     ARP_TABLE_DEFAULT);
 	/* send waiting packets */
 	while ((waiting = packet_queue_pop(&arp_entry->wait)))
@@ -146,8 +148,8 @@ NET_PREPAREPKT(arp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp), 2);
-  next = ALIGN_ADDRESS(next, 2);
+  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp), 4);
+  next = ALIGN_ADDRESS(next, 4);
 #else
   next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp), 0);
 #endif
@@ -167,7 +169,7 @@ NET_PREPAREPKT(arp_preparepkt)
 
 void			arp_request(struct device_s	*dev,
 				    struct net_proto_s	*arp,
-				    uint8_t		*address)
+				    uint_fast32_t	address)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
@@ -190,9 +192,9 @@ void			arp_request(struct device_s	*dev,
   hdr->ea_hdr.ar_pln = 4;
   net_be16_store(hdr->ea_hdr.ar_op, ARPOP_REQUEST);
   memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
-  memcpy(hdr->arp_spa, pv_ip->addr, 4);
+  net_be32_store(hdr->arp_spa, pv_ip->addr);
   memset(hdr->arp_tha, 0xff, ETH_ALEN);
-  memcpy(hdr->arp_tpa, address, 4);
+  net_be32_store(hdr->arp_tpa, address);
 
   packet->tMAC = (uint8_t *)"\xff\xff\xff\xff\xff\xff";
 
@@ -207,35 +209,28 @@ void			arp_request(struct device_s	*dev,
 
 void			arp_reply(struct device_s		*dev,
 				  struct net_proto_s		*arp,
-				  uint8_t			*mac,
-				  uint8_t			*ip)
+				  struct net_packet_s		*packet)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
   struct ether_arp	*hdr;
-  struct net_packet_s	*packet;
   struct net_header_s	*nethdr;
 
-  packet = packet_obj_new(NULL);
-
-  arp_preparepkt(dev, packet, 0, 0);
+  packet_obj_refnew(packet);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct ether_arp *)nethdr->data;
 
   /* fill the reply */
-  net_be16_store(hdr->ea_hdr.ar_hrd, ARPHRD_ETHER);
-  net_be16_store(hdr->ea_hdr.ar_pro, ETHERTYPE_IP);
-  hdr->ea_hdr.ar_hln = ETH_ALEN;
-  hdr->ea_hdr.ar_pln = 4;
   net_be16_store(hdr->ea_hdr.ar_op, ARPOP_REPLY);
-  memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
-  memcpy(hdr->arp_spa, pv_ip->addr, 4);
-  memcpy(hdr->arp_tha, mac, ETH_ALEN);
-  memcpy(hdr->arp_tpa, ip, 4);
 
-  packet->tMAC = (uint8_t *)"\xff\xff\xff\xff\xff\xff";
+  memcpy(hdr->arp_tha, hdr->arp_sha, ETH_ALEN);
+  net_32_store(hdr->arp_tpa, net_32_load(hdr->arp_spa));
+  memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
+  net_be32_store(hdr->arp_spa, pv_ip->addr);
+
+  packet->tMAC = hdr->arp_tha;
 
   packet->stage--;
   /* send the packet to the driver */
@@ -247,7 +242,7 @@ void			arp_reply(struct device_s		*dev,
  */
 
 struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
-					  uint8_t		*ip,
+					  uint_fast32_t		ip,
 					  uint8_t		*mac,
 					  uint_fast8_t		flags)
 {
@@ -266,7 +261,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
     {
       /* otherwise, allocate a new entry */
       arp_entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_CONTEXT);
-      memcpy(arp_entry->ip, ip, 4);
+      arp_entry->ip = ip;
       arp_table_push(&pv->table, arp_entry);
     }
   /* fill the significant fields */
@@ -274,9 +269,8 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
     memcpy(arp_entry->mac, mac, ETH_ALEN);
   arp_entry->valid = !(flags & ARP_TABLE_IN_PROGRESS);
   if (arp_entry->valid)
-    net_debug("Added %d.%d.%d.%d as %2x:%2x:%2x:%2x:%2x:%2x\n",
-	      arp_entry->ip[0], arp_entry->ip[1], arp_entry->ip[2],
-	      arp_entry->ip[3], arp_entry->mac[0], arp_entry->mac[1],
+    net_debug("Added %P as %2x:%2x:%2x:%2x:%2x:%2x\n",
+	      &arp_entry->ip, 4, arp_entry->mac[0], arp_entry->mac[1],
 	      arp_entry->mac[2], arp_entry->mac[3], arp_entry->mac[4],
 	      arp_entry->mac[5]);
   return arp_entry;
@@ -291,7 +285,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 uint8_t			*arp_get_mac(struct device_s		*dev,
 				     struct net_proto_s		*arp,
 				     struct net_packet_s	*packet,
-				     uint8_t			*ip)
+				     uint_fast32_t		ip)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct arp_entry_s	*arp_entry;

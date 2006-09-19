@@ -143,4 +143,74 @@ struct		ne2000_header_s
   uint16_t	size;
 } __attribute__ ((packed));
 
+/*
+ * prototypes
+ */
+
+void		ne2000_mem_read(struct device_s	*dev,
+				uint_fast16_t	offs,
+				void		*dst,
+				uint_fast16_t	size);
+void		ne2000_dma_init_write(struct device_s	*dev,
+				      uint_fast16_t	offs,
+				      uint_fast16_t	size);
+void		ne2000_dma_do_write(struct device_s	*dev,
+				    void		*src,
+				    uint_fast16_t	size);
+uint_fast8_t	ne2000_probe(struct device_s	*dev);
+void		ne2000_init(struct device_s	*dev);
+
+#include <hexo/types.h>
+#include <hexo/iospace.h>
+
+/*
+ * update the command register.
+ */
+
+static inline void	ne2000_command(struct device_s	*dev,
+				       uint_fast8_t	cmd)
+{
+  uint_fast16_t		addr = dev->addr[NET_NE2000_ADDR] + NE2000_CMD;
+
+  cpu_io_write_8(addr, cpu_io_read_8(addr) | cmd);
+}
+
+/*
+ * update the command register for DMA operations.
+ */
+
+static inline void	ne2000_dma(struct device_s	*dev,
+				   uint_fast8_t		cmd)
+{
+  uint_fast16_t		addr = dev->addr[NET_NE2000_ADDR] + NE2000_CMD;
+
+  cpu_io_write_8(addr, (cpu_io_read_8(addr) & ~NE2000_DMA_MASK) | cmd);
+}
+
+/*
+ * update the command register for page selection.
+ */
+
+static inline void	ne2000_page(struct device_s	*dev,
+				    uint_fast8_t	cmd)
+{
+  uint_fast16_t		addr = dev->addr[NET_NE2000_ADDR] + NE2000_CMD;
+
+  cpu_io_write_8(addr, (cpu_io_read_8(addr) & ~NE2000_PG_MASK) | cmd);
+}
+
+/*
+ * write to the device's memory.
+ */
+
+static inline void	ne2000_mem_write(struct device_s	*dev,
+					 uint_fast16_t		offs,
+					 void			*src,
+					 uint_fast16_t		size)
+{
+  ne2000_dma_init_write(dev, offs, size);
+
+  ne2000_dma_do_write(dev, src, size);
+}
+
 #endif

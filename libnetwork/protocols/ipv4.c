@@ -70,7 +70,7 @@ NET_INITPROTO(ip_init)
   struct net_proto_s	*arp = va_arg(va, struct net_proto_s *);
 
   pv->arp = arp;
-  memset(pv->addr, 0, 4);
+  pv->addr = 0;
   ip_packet_init(&pv->fragments);
   srand((uint_fast32_t)pv);
   pv->id_seq = rand();
@@ -92,18 +92,17 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   uint_fast16_t		fragment;
   uint_fast16_t		datasz;
   uint_fast16_t		total;
-  uint32_t		*ip_addr = (uint32_t *)packet->sIP;
 
   /* the unique identifier of the packet is the concatenation of the
      source address and the packet id */
-  id =  (net_32_load(*ip_addr)) + (net_be16_load(hdr->id) << 32); /* XXX */
+  id = (net_32_load(packet->sIP)) + (net_be16_load(hdr->id) << 32); /* XXX */
 
   /* extract some useful fields */
   fragment = net_be16_load(hdr->fragment);
   offs = (fragment & IP_FRAG_MASK) * 8;
   datasz = net_be16_load(hdr->tot_len) - hdr->ihl * 4;
 
-  net_debug("fragment id %x offs %d size %d\n", id, offs, datasz);
+  net_debug("fragment id %lx offs %d size %d\n", id, offs, datasz);
 
   /* do we already received packet with same id ? */
   if (!(p = ip_packet_lookup(&pv->fragments, id)))
@@ -212,9 +211,9 @@ NET_PUSHPKT(ip_pushpkt)
   nethdr = &packet->header[packet->stage];
   hdr = (struct iphdr *)nethdr->data;
 
-  /* align the packet on 16 bits if necessary */
+  /* align the packet on 32 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint32_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct iphdr));
       hdr = &aligned;
@@ -222,8 +221,8 @@ NET_PUSHPKT(ip_pushpkt)
 #endif
 
   /* update packet info */
-  packet->sIP = (uint8_t *)&hdr->saddr;
-  packet->tIP = (uint8_t *)&hdr->daddr;
+  packet->sIP = net_be32_load(hdr->saddr);
+  packet->tIP = net_be32_load(hdr->daddr);
 
   /* check IP version */
   if (hdr->version != 4)
@@ -241,7 +240,7 @@ NET_PUSHPKT(ip_pushpkt)
     }
 
   /* is the packet really for me ? */
-  if (memcmp(&hdr->daddr, pv->addr, 4))
+  if (packet->tIP != pv->addr)
     return;
 
   /* next stage */
@@ -348,8 +347,8 @@ static inline	void	ip_send_fragment(struct net_pv_ip_s	*pv,
   /* send the fragment */
   frag->stage--;
 
-  frag->sIP = (uint8_t *)&hdr_frag->saddr;
-  frag->tIP = (uint8_t *)&hdr_frag->daddr;
+  frag->sIP = net_be32_load(hdr_frag->saddr);
+  frag->tIP = net_be32_load(hdr_frag->daddr);
   if (!(frag->tMAC = arp_get_mac(dev, pv->arp, frag, frag->tIP)))
     return;
 
@@ -378,9 +377,8 @@ NET_IP_SEND(ip_send)
   hdr->tos = 0;
   hdr->ttl = 64;
   hdr->protocol = proto->id;
-  /* XXX manage IP as uint32 */
-  memcpy(&hdr->saddr, pv->addr, 4);
-  memcpy(&hdr->daddr, packet->tIP, 4);
+  net_be32_store(hdr->saddr, pv->addr);
+  net_be32_store(hdr->daddr, packet->tIP);
 
   total = nethdr[1].size;
 
@@ -426,8 +424,7 @@ NET_IP_SEND(ip_send)
   net_16_store(hdr->check, packet_checksum((uint8_t *)hdr, hdr->ihl * 4));
 
   packet->stage--;
-  packet->sIP = (uint8_t *)&hdr->saddr;
-  packet->tIP = (uint8_t *)&hdr->daddr;
+  packet->sIP = pv->addr;
   if (!(packet->tMAC = arp_get_mac(dev, pv->arp, packet, packet->tIP)))
     return ;
 

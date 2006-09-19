@@ -91,4 +91,4 @@
 //#define CONFIG_NETWORK_AUTOALIGN /* XXX fix it */
 
 /* NE2000 driver option: use fragmenation */
-#define CONFIG_NE2000_FRAGMENT
+//#define CONFIG_NE2000_FRAGMENT

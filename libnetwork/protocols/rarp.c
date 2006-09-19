@@ -98,10 +98,9 @@ NET_PUSHPKT(rarp_pushpkt)
       if (memcmp(packet->tMAC, hdr->arp_tha, ETH_ALEN))
 	return ;
 
-      net_debug("Assigned IP: %d.%d.%d.%d\n", hdr->arp_tpa[0],
-		hdr->arp_tpa[1], hdr->arp_tpa[2], hdr->arp_tpa[3]);
+      net_debug("Assigned IP: %P\n", &hdr->arp_tpa, 4);
 
-      memcpy(pv_ip->addr, hdr->arp_tpa, 4);
+      pv_ip->addr = net_be32_load(hdr->arp_tpa);
     }
 }
 
@@ -161,8 +160,8 @@ void			rarp_request(struct device_s	*dev,
     memcpy(hdr->arp_tha, packet->sMAC, ETH_ALEN);
   else
     memcpy(hdr->arp_tha, mac, ETH_ALEN);
-  memset(hdr->arp_spa, 0, 4);
-  memset(hdr->arp_tpa, 0, 4);
+  net_32_store(hdr->arp_spa, 0);
+  net_32_store(hdr->arp_tpa, 0);
 
   packet->tMAC = (uint8_t *)"\xff\xff\xff\xff\xff\xff";
 

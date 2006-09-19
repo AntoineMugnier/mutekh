@@ -73,9 +73,9 @@ struct		ether_arp
 {
   struct arphdr	ea_hdr;		/* fixed-size header */
   uint8_t	arp_sha[ETH_ALEN];	/* sender hardware address */
-  uint8_t	arp_spa[4];		/* sender protocol address */
+  uint32_t	arp_spa;		/* sender protocol address */
   uint8_t	arp_tha[ETH_ALEN];	/* target hardware address */
-  uint8_t	arp_tpa[4];		/* target protocol address */
+  uint32_t	arp_tpa;		/* target protocol address */
 } __attribute__ ((packed));
 
 /*
@@ -116,7 +116,7 @@ struct		ether_arp
  * ARP table types.
  */
 
-CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, 64, BLOB, 4);
+CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, 64, UNSIGNED);
 
 /*
  * ARP private data.
@@ -134,7 +134,7 @@ struct			net_pv_arp_s
 
 struct			arp_entry_s
 {
-  uint8_t		ip[4];
+  uint_fast32_t		ip;
   uint8_t		mac[ETH_ALEN];
   uint_fast8_t		valid;
   arp_table_entry_t	list_entry;
@@ -155,19 +155,18 @@ NET_PUSHPKT(arp_pushpkt);
 NET_PREPAREPKT(arp_preparepkt);
 void			arp_reply(struct device_s		*dev,
 				  struct net_proto_s		*arp,
-				  uint8_t			*mac,
-				  uint8_t			*ip);
+				  struct net_packet_s		*packet);
 void			arp_request(struct device_s	*dev,
 				    struct net_proto_s	*arp,
-				    uint8_t		*address);
+				    uint_fast32_t	address);
 struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
-					  uint8_t		*ip,
+					  uint32_t		ip,
 					  uint8_t		*mac,
 					  uint_fast8_t		flags);
 uint8_t			*arp_get_mac(struct device_s		*dev,
 				     struct net_proto_s		*arp,
 				     struct net_packet_s	*packet,
-				     uint8_t			*ip);
+				     uint_fast32_t		ip);
 
 
 NET_INITPROTO(rarp_init);

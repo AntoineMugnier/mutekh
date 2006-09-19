@@ -112,11 +112,7 @@ struct		icmphdr
 
 #define NET_ICMP_ECHO(f)	void (f)(struct device_s	*dev,	\
 					 struct net_proto_s	*icmp,	\
-					 uint8_t		*ip,	\
-					 uint_fast16_t		id,	\
-					 uint_fast16_t		seq,	\
-					 uint8_t		*data,	\
-					 size_t			size)
+					 struct net_packet_s	*packet)
 
 typedef NET_ICMP_ECHO(net_icmp_echo_t);
 
