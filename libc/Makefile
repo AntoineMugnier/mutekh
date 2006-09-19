@@ -1,10 +1,9 @@
-
-OBJ-y += libc/stdio.o
-OBJ-y += libc/string.o
-OBJ-y += libc/alloc.o
-OBJ-y += libc/intconv.o
-OBJ-y += libc/printf.o
-OBJ-y += libc/rand.o
-OBJ-y += libc/sem.o
-
+objs = 											\
+stdio.o											\
+string.o										\
+alloc.o											\
+intconv.o										\
+printf.o										\
+rand.o \
+sem.o
 

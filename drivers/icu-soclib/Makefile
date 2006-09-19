@@ -1,3 +1,3 @@
 
-OBJ-y += drivers/icu-soclib/icu-soclib.o
+objs = icu-soclib.o
 

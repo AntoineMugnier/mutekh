@@ -1,3 +1,3 @@
 
-OBJ-y += drivers/enum-pci/enum-pci.o
+objs += enum-pci.o
 

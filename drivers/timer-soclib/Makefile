@@ -1,3 +1,3 @@
 
-OBJ-y += drivers/timer-soclib/timer-soclib.o
+objs = timer-soclib.o
 

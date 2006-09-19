@@ -1,19 +1,21 @@
 
 ifeq ($(ARCH), ibmpc)
-  include drivers/fb-vga/Makefile
-  include drivers/icu-8259/Makefile
-  include drivers/timer-8253/Makefile
-  include drivers/tty-vga/Makefile
-  include drivers/uart-8250/Makefile
-  include drivers/enum-pci/Makefile
-  include drivers/net-ne2000/Makefile
-  include drivers/net-3c900/Makefile
+subdirs = 										\
+ fb-vga									\
+ icu-8259								\
+ timer-8253								\
+ tty-vga								\
+ uart-8250								\
+ enum-pci								\
+ net-ne2000								\
+ net-3c900
 endif
 
 ifeq ($(ARCH), soclib)
-  include drivers/tty-soclib/Makefile
-  include drivers/icu-soclib/Makefile
-  include drivers/timer-soclib/Makefile
+subdirs = 										\
+ tty-soclib								\
+ icu-soclib								\
+ timer-soclib
 endif
 
 

@@ -1,3 +1,3 @@
 
-OBJ-y += drivers/tty-soclib/tty-soclib.o
+objs = tty-soclib.o
 

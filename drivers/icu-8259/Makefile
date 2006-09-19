@@ -1,3 +1,3 @@
 
-OBJ-y += drivers/icu-8259/icu-8259.o
+objs = icu-8259.o
 

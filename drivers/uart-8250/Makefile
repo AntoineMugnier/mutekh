@@ -1,3 +1,3 @@
 
-OBJ-y += drivers/uart-8250/uart-8250.o
+objs = uart-8250.o
 

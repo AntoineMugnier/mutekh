@@ -1,0 +1,6 @@
+objs = dummy.o									\
+arp.o											\
+rarp.o											\
+ipv4.o											\
+icmpv4.o										\
+udp.o

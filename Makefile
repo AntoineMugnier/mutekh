@@ -1,56 +1,31 @@
+BASE_PWD:=$(PWD)
+BUILD_DIR:=$(BASE_PWD)
+SRC_DIR=$(BASE_PWD)
 
-CC=$(CPUTOOLS)gcc
-CPP=$(CPUTOOLS)cpp
-LD=$(CPUTOOLS)ld
-AS=$(CPUTOOLS)as
+export SRC_DIR
+export BUILD_DIR
 
-#LIBAPP=libapp.a
+include $(SRC_DIR)/arch/current/config.mk
+include $(SRC_DIR)/cpu/current/config.mk
 
-#######################################################################
+target = kernel-$(ARCH)-$(CPU).out
 
-CFLAGS=-Wall \
-	-O2 -fomit-frame-pointer \
-	-fno-builtin
-#	-Winline
+subdirs = arch \
+cpu \
+drivers \
+hexo \
+libc \
+libpthread \
+libnetwork
+objs = 
 
-INCS=-nostdinc -D__TEST__ -D__MUTEK__ -D__ARCH__$(ARCH)__ -D__CPU__$(CPU)__ -Iinclude -include config.h
+include $(SRC_DIR)/scripts/common.mk
 
-subdirs-y=	arch/current \
-		cpu/current \
-		drivers \
-		hexo \
-		libc \
-		libpthread \
-		libnetwork
+.PRECIOUS: $(target)
 
-define recurs
-  $(eval include $(1)/Makefile)
-endef
-
-$(foreach dir,$(subdirs-y),$(eval $(call recurs,$(dir))))
-
-KOUT=kernel-$(ARCH)-$(CPU).out
-
-all: $(KOUT)
-
-$(KOUT): $(OBJ-y) arch/current/ldscript $(LIBAPP)
-	@printf $$'LD      %s\n' "$@"
-	@$(LD) -o $@ -q -T arch/current/ldscript $(OBJ-y) $(LIBAPP)
-
-%.o: %.S
-	@printf $$'AS      %s\n' "$@"
-	@$(CPP) $(INCS) $< | $(AS) -o $@
-
-%.o: %.c
-	@printf $$'CC      %s\n' "$@"
-	@$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -c $< -o $@
-
-clean:
-	@printf $$'CLEAN\n' "$@"
-	@find . -name '*~' -exec rm '{}' ';'
-	@rm -f $(OBJ-y) $(KOUT)
-
-re: clean all
-
-floppy: all libnetwork/test.o
-	mcopy -o -i floppy.img $(KOUT) ::/modules
+$(target): $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(ARCH)/ldscript $(LIBAPP)
+	@echo '  LD   $@'
+	@$(LD) -q $$(cat /dev/null $(filter %.list,$^)) \
+	$(filter %.o,$^) $(filter %.a,$^) \
+	-T $(SRC_DIR)/arch/$(ARCH)/ldscript \
+	-o $@

@@ -1,12 +1,9 @@
 
-CPU=x86
-CPUCFLAGS=-mno-tls-direct-seg-refs
-CPUTOOLS=
+objs =											\
+interrupts.o									\
+boot.o											\
+cpu_init.o										\
+cpu_context.o
 
-OBJ-y += cpu/x86/interrupts.o
-OBJ-y += cpu/x86/boot.o
-OBJ-y += cpu/x86/cpu_init.o
-OBJ-y += cpu/x86/cpu_context.o
-
-include  cpu/x86/libc/Makefile
+subdirs = libc
 

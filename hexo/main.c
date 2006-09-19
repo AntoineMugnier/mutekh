@@ -192,7 +192,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   for (i = 0; i < 8; i++)
 #elif defined(__CPU__mips__)
   for (i = 0; i < 32; i++)
-#elif
+#else
 # error
 #endif
     printf("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');

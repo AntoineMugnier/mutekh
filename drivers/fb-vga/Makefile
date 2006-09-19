@@ -1,4 +1,4 @@
-
-OBJ-y += drivers/fb-vga/fb-vga.o
-OBJ-y += drivers/fb-vga/fb-vga-modes.o
+objs =											\
+fb-vga.o										\
+fb-vga-modes.o
 
