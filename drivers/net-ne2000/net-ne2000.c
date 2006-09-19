@@ -20,12 +20,18 @@
 */
 
 #include <hexo/types.h>
+
+#include <hexo/device/icu.h>
+#include <hexo/device/net.h>
 #include <hexo/device.h>
 #include <hexo/driver.h>
+
 #include <hexo/iospace.h>
 #include <hexo/alloc.h>
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
+#include <hexo/endian.h>
+
 #include <pthread.h>
 #include <semaphore.h>
 

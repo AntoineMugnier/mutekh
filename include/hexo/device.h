@@ -26,9 +26,8 @@
 struct device_s;
 struct driver_s;
 
-#include "types.h"
-
-
+#include <hexo/types.h>
+#include <hexo/error.h>
 
 
 /** Common class irq() function tempate. */
@@ -41,17 +40,6 @@ struct driver_s;
     * @return 1 if interrupt have been handled by the device
     */
 typedef DEV_IRQ(dev_irq_t);
-
-
-
-
-#include "device/char.h"
-#include "device/icu.h"
-#include "device/fb.h"
-#include "device/timer.h"
-#include "device/enum.h"
-#include "device/net.h"
-
 
 
 

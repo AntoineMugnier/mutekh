@@ -113,10 +113,10 @@ NET_PREPAREPKT(udp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size, 2);
+  next = ip_preparepkt(dev, packet, sizeof (struct udphdr) + size, 2);
   next = ALIGN_ADDRESS(next, 4);
 #else
-  next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size, 0);
+  next = ip_preparepkt(dev, packet, sizeof (struct udphdr) + size, 0);
 #endif
 
   nethdr = &packet->header[packet->stage];

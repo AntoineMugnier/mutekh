@@ -21,6 +21,8 @@
 
 */
 
+#include <hexo/device/fb.h>
+
 #include <hexo/types.h>
 #include <hexo/iospace.h>
 #include <hexo/error.h>

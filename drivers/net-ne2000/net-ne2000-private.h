@@ -27,6 +27,7 @@
 
 #include <pthread.h>
 
+#include <netinet/packet.h>
 #include <netinet/ether.h>
 #include <netinet/protos.h>
 

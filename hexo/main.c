@@ -21,8 +21,6 @@
 
 #include <hexo/init.h>
 #include <hexo/types.h>
-#include <hexo/device.h>
-#include <hexo/driver.h>
 #include <hexo/endian.h>
 
 #include <hexo/interrupt.h>
@@ -43,6 +41,9 @@
 #include <../drivers/enum-pci/enum-pci.h>
 #include <../drivers/net-ne2000/net-ne2000.h>
 #include <../drivers/net-3c900/net-3c900.h>
+
+#include <hexo/device.h>
+#include <hexo/driver.h>
 
 #include <string.h>
 #include <stdio.h>

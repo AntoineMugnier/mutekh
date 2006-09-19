@@ -23,8 +23,14 @@
 #include <netinet/protos.h>
 #include <netinet/if.h>
 
-#include <hexo/driver.h>
+#include <netinet/ip.h>
+#include <netinet/arp.h>
+#include <netinet/icmp.h>
+#include <netinet/udp.h>
+
+#include <hexo/device/net.h>
 #include <hexo/device.h>
+#include <hexo/driver.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>

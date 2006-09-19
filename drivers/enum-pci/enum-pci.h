@@ -22,6 +22,9 @@
 #ifndef __ENUM_PCI_H_
 #define __ENUM_PCI_H_
 
+#include <hexo/device/enum.h>
+#include <hexo/device.h>
+
 #include <stdint.h>
 
 DEVENUM_REGISTER(enum_pci_register);

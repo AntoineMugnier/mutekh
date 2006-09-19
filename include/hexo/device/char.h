@@ -19,18 +19,14 @@
 
 */
 
-
-#if !defined(__DEVICE_H__) || defined(__DEVICE_CHAR_H__)
-#error This file can not be included directly
-#else
-
+#ifndef __DEVICE_CHAR_H__
 #define __DEVICE_CHAR_H__
 
-#include "../types.h"
-#include "../error.h"
+#include <hexo/types.h>
+#include <hexo/error.h>
 
-
-
+struct device_s;
+struct driver_s;
 
 /** Char device class read() function tempate. */
 #define DEVCHAR_READ(n)	ssize_t  (n) (struct device_s *dev, uint8_t *data, size_t size)

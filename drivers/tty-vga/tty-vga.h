@@ -22,6 +22,7 @@
 #ifndef DRIVER_TTY_VGA_H_
 #define DRIVER_TTY_VGA_H_
 
+#include <hexo/device/char.h>
 #include <hexo/device.h>
 
 /* devices addresses slots */

@@ -24,6 +24,7 @@
 #ifndef DRIVER_FB_VGA_H_
 #define DRIVER_FB_VGA_H_
 
+#include <hexo/device/fb.h>
 #include <hexo/device.h>
 
 /* devices addresses slots */

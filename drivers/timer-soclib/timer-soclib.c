@@ -21,8 +21,11 @@
 
 
 #include <hexo/types.h>
+
+#include <hexo/device/timer.h>
 #include <hexo/device.h>
 #include <hexo/driver.h>
+
 #include <hexo/iospace.h>
 #include <hexo/alloc.h>
 #include <string.h>

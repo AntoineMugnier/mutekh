@@ -19,16 +19,14 @@
 
 */
 
-
-#if !defined(__DEVICE_H__) || defined(__DEVICE_FB_H__)
-#error This file can not be included directly
-#else
-
+#ifndef __DEVICE_FB_H__
 #define __DEVICE_FB_H__
 
-#include "../types.h"
-#include "../error.h"
+#include <hexo/types.h>
+#include <hexo/error.h>
 
+struct device_s;
+struct driver_s;
 
 /** pixel color packing is text mode */
 #define FB_PACK_TEXT	0

@@ -137,6 +137,8 @@ struct				net_packet_s
  * Used to give info to the dispatch thread.
  */
 
+struct device_s;
+
 struct				net_dispatch_s
 {
   packet_queue_lock_root_t	*packets;

@@ -19,22 +19,15 @@
 
 */
 
-
-#if !defined(__DEVICE_H__) || defined(__DEVICE_ICU_H__)
-#error This file can not be included directly
-#else
-
+#ifndef __DEVICE_ICU_H__
 #define __DEVICE_ICU_H__
 
-#include "../types.h"
-#include "../error.h"
+#include <hexo/types.h>
+#include <hexo/error.h>
+#include <hexo/device.h>
 
 struct device_s;
-
-
-
-
-
+struct driver_s;
 
 /** ICU device class enable() function template */
 #define DEVICU_ENABLE(n)	void (n) (struct device_s *dev, uint_fast8_t irq, bool_t enable)

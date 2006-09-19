@@ -19,17 +19,15 @@
 
 */
 
-
-#if !defined(__DEVICE_H__) || defined(__DEVICE_TIMER_H__)
-#error This file can not be included directly
-#else
-
+#ifndef __DEVICE_TIMER_H__
 #define __DEVICE_TIMER_H__
 
-#include "../types.h"
-#include "../error.h"
+#include <hexo/types.h>
+#include <hexo/error.h>
 
 struct device_s;
+struct driver_s;
+
 
 
 /** timer device class callback function template */

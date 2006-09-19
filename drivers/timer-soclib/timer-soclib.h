@@ -22,6 +22,7 @@
 #ifndef DRIVER_TIMER_SOCLIB_H_
 #define DRIVER_TIMER_SOCLIB_H_
 
+#include <hexo/device/timer.h>
 #include <hexo/device.h>
 
 /* timer device functions */

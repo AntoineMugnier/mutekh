@@ -22,6 +22,10 @@
 #ifndef __DRIVER_H__
 #define __DRIVER_H__
 
+#include <hexo/types.h>
+#include <hexo/error.h>
+#include <hexo/device.h>
+
 /** device structure identification informations. wildcard values are
     enum driver dependent */
 struct devenum_ident_s
@@ -32,6 +36,8 @@ struct devenum_ident_s
 
 /** device driver object structure */
 
+#define DRV_MAX_FUNC_COUNT	4
+
 struct driver_s
 {
   const struct devenum_ident_s	*id_table;
@@ -41,18 +47,38 @@ struct driver_s
   dev_irq_t			*f_irq;
 
   union {
+    void			*ptrs[DRV_MAX_FUNC_COUNT];
+
+#ifdef __DEVICE_CHAR_H__
     /** char devices */
     struct dev_class_char_s	chr;
+#endif
+
+#ifdef __DEVICE_ICU_H__
     /** icu devices */
     struct dev_class_icu_s	icu;
+#endif
+
+#ifdef __DEVICE_FB_H__
     /** frame buffer devices */
     struct dev_class_fb_s	fb;
+#endif
+
+
+#ifdef __DEVICE_TIMER_H__
     /** timer devices */
     struct dev_class_timer_s	timer;
+#endif
+
+#ifdef __DEVICE_ENUM_H__
     /** device enumerator class */
     struct dev_class_enum_s	denum;
+#endif
+
+#ifdef __DEVICE_NET_H__
     /** network devices */
     struct dev_class_net_s	net;
+#endif
   } f;
 };
 
