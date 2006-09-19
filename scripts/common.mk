@@ -51,6 +51,8 @@ clean:
 print_dir:
 	@ test -z '$(objs)' || echo $$'\n --------  $(H)  --------'
 
+.PHONY: $(subdirs-lists) $(target)
+
 ../.$(DIR).list: print_dir $(objs) $(subdirs-lists) $(SRC_DIR)$(H)/Makefile
 	@rm -f $@
 	@for obj in $(filter %.o,$^) \
@@ -58,9 +60,15 @@ print_dir:
 		echo $(DIR)/$${obj} >> $@ ; \
 	done
 
-.%.list: $(SRC_DIR)$(H)/%/Makefile
-	@test -d $* || mkdir -p $*
-	@$(MAKE) -C $* -f $(SRC_DIR)/scripts/rules.mk ../$@ DIR=$* H="$(H)/$*"
+define recurse
+
+.$(1).list: $$(SRC_DIR)$$(H)/$(1)/Makefile
+	@test -d $(1) || mkdir -p $(1)
+	@rm -f $$@
+	@$$(MAKE) -C $(1) -f $$(SRC_DIR)/scripts/rules.mk ../$$@ DIR=$(1) H="$$(H)/$(1)"
+
+endef
+
+$(eval $(foreach dirname,$(subdirs),$(call recurse,$(dirname))))
 
 re: clean default
-
