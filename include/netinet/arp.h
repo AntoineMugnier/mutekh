@@ -111,6 +111,7 @@ struct		ether_arp
 #define ARP_TABLE_DEFAULT	0
 #define ARP_TABLE_NO_OVERWRITE	1
 #define ARP_TABLE_IN_PROGRESS	2
+#define ARP_TABLE_NO_UPDATE	4
 
 /*
  * ARP table types.

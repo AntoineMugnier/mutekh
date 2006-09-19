@@ -84,7 +84,6 @@ NET_PUSHPKT(arp_pushpkt)
   struct net_header_s	*nethdr;
   struct arp_entry_s	*arp_entry;
   struct net_packet_s	*waiting;
-  uint_fast32_t		ip;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -108,23 +107,25 @@ NET_PUSHPKT(arp_pushpkt)
   switch (net_be16_load(hdr->ea_hdr.ar_op))
     {
       case ARPOP_REQUEST:
-	net_debug("Requested %P\n",
-		  &hdr->arp_tpa, 4);
-	/* try to update the cache */
-	ip = net_be32_load(hdr->arp_tpa);
-	arp_update_table(protocol, ip, hdr->arp_sha,
-			 ARP_TABLE_NO_OVERWRITE);
-	if (ip == pv_ip->addr)
+	net_debug("Requested %P\n", &hdr->arp_tpa, 4);
+	if (net_be32_load(hdr->arp_tpa) == pv_ip->addr)
 	  {
-	    net_debug("It's me !\n");
+	    /* force adding the entry */
+	    arp_update_table(protocol, net_be32_load(hdr->arp_spa),
+			     hdr->arp_sha, ARP_TABLE_DEFAULT);
 	    arp_reply(dev, protocol, packet);
+	  }
+	else
+	  {
+	    /* try to update the cache */
+	    arp_update_table(protocol, net_be32_load(hdr->arp_spa),
+			     hdr->arp_sha, ARP_TABLE_NO_UPDATE);
 	  }
 	break;
       case ARPOP_REPLY:
-	/* update the cache */
-	ip = net_be32_load(hdr->arp_spa);
-	arp_entry = arp_update_table(protocol, ip, hdr->arp_sha,
-				     ARP_TABLE_DEFAULT);
+	/* try to update the cache */
+	arp_entry = arp_update_table(protocol, net_be32_load(hdr->arp_spa),
+				     hdr->arp_sha, ARP_TABLE_DEFAULT);
 	/* send waiting packets */
 	while ((waiting = packet_queue_pop(&arp_entry->wait)))
 	  {
@@ -228,9 +229,10 @@ void			arp_reply(struct device_s		*dev,
 
   memcpy(hdr->arp_tha, hdr->arp_sha, ETH_ALEN);
   net_32_store(hdr->arp_tpa, net_32_load(hdr->arp_spa));
-  memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
+  memcpy(hdr->arp_sha, packet->tMAC, ETH_ALEN);
   net_be32_store(hdr->arp_spa, pv_ip->addr);
 
+  packet->sMAC = packet->tMAC;
   packet->tMAC = hdr->arp_tha;
 
   packet->stage--;
@@ -256,6 +258,9 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
       if ((flags & ARP_TABLE_NO_OVERWRITE) ||
 	  !memcmp(arp_entry->mac, mac, ETH_ALEN))
 	return arp_entry;
+      /* if we must not update */
+      if (flags & ARP_TABLE_NO_UPDATE)
+	return NULL;
       /* we are able to update it */
     }
   else

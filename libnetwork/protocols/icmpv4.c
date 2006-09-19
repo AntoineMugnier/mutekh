@@ -30,8 +30,7 @@
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 
-#include <hexo/device.h>
-#include <hexo/driver.h>
+struct device_s;
 
 #include <stdio.h>
 
