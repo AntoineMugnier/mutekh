@@ -20,11 +20,11 @@
 */
 
 
-#if !defined(DEVICE_H) || defined(DEVICE_TIMER_H_)
+#if !defined(__DEVICE_H__) || defined(__DEVICE_TIMER_H__)
 #error This file can not be included directly
 #else
 
-#define DEVICE_TIMER_H_
+#define __DEVICE_TIMER_H__
 
 #include "../types.h"
 #include "../error.h"

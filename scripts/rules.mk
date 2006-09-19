@@ -16,6 +16,10 @@ deps = $(patsubst %.o,.depends/%.deps,$(objs))
 depend.mk: $(deps)
 	@cat /dev/null $^ > $@
 
+.depends/%.deps: %.S
+	@test -d .depends || mkdir .depends
+	@-$(CC) $(CFLAGS) $(INCS) -MM -MF $@ $<
+
 .depends/%.deps: %.c
 	@test -d .depends || mkdir .depends
 	@-$(CC) $(CFLAGS) $(INCS) -MM -MF $@ $<

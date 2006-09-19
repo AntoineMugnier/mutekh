@@ -22,6 +22,7 @@
 #include <hexo/init.h>
 #include <hexo/types.h>
 #include <hexo/device.h>
+#include <hexo/driver.h>
 #include <hexo/endian.h>
 
 #include <hexo/interrupt.h>

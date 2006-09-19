@@ -23,6 +23,7 @@
 
 #include <hexo/types.h>
 #include <hexo/device.h>
+#include <hexo/driver.h>
 
 extern struct device_s *tty_dev;
 

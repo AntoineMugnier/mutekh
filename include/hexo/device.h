@@ -20,8 +20,8 @@
 */
 
 
-#ifndef DEVICE_H
-#define DEVICE_H
+#ifndef __DEVICE_H__
+#define __DEVICE_H__
 
 struct device_s;
 struct driver_s;
@@ -106,40 +106,6 @@ OBJECT_TYPE(device_obj, REFCOUNT, struct device_s);
 CONTAINER_TYPE(device_list, DLIST, struct device_s, HEXO_SPIN);
 
 #endif
-
-/** device structure identification informations. wildcard values are
-    enum driver dependent */
-struct devenum_ident_s
-{
-  uint_fast16_t		vendor;
-  uint_fast16_t		device;
-};
-
-/** device driver object structure */
-
-struct driver_s
-{
-  const struct devenum_ident_s	*id_table;
-
-  dev_init_t			*f_init;
-  dev_cleanup_t			*f_cleanup;
-  dev_irq_t			*f_irq;
-
-  union {
-    /** char devices */
-    struct dev_class_char_s	chr;
-    /** icu devices */
-    struct dev_class_icu_s	icu;
-    /** frame buffer devices */
-    struct dev_class_fb_s	fb;
-    /** timer devices */
-    struct dev_class_timer_s	timer;
-    /** device enumerator class */
-    struct dev_class_enum_s	denum;
-    /** network devices */
-    struct dev_class_net_s	net;
-  } f;
-};
 
 /** device object structure */
 

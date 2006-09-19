@@ -23,6 +23,9 @@
 #include <netinet/protos.h>
 #include <netinet/if.h>
 
+#include <hexo/driver.h>
+#include <hexo/device.h>
+
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
 

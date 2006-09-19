@@ -8,14 +8,14 @@ CFLAGS=-Wall \
 INCS=-nostdinc -D__TEST__ -D__MUTEK__ -D__ARCH__$(ARCH)__ -D__CPU__$(CPU)__ -I$(SRC_DIR)/include -include $(SRC_DIR)/config.h
 
 %.o: %.S
-	@echo '  AS   $@'
+	@echo '    AS      $@'
 	@$(CPP) $(INCS) $< | $(AS) -o $@
 
 %.o: %.c
-	@echo '  CC   $@'
+	@echo '    CC      $@'
 	@$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -c $< -o $@
 
-subdirs-lists = $(foreach name,$(subdirs),$(patsubst %,%.list,$(name)))
+subdirs-lists = $(foreach name,$(subdirs),$(patsubst %,.%.list,$(name)))
 CC=$(CPUTOOLS)gcc
 CPP=$(CPUTOOLS)cpp
 LD=$(CPUTOOLS)ld
@@ -41,21 +41,26 @@ cpu/current:
 arch_cpu_dirs: arch/$(ARCH) cpu/$(CPU) arch/current cpu/current
 
 clean:
-	@echo "CLEAN $(H)"
+	@echo " CLEAN      $(H)"
 	@rm -f *.out *~ depend.mk $(objs) $(subdirs-lists) *.map
 	@rm -rf .depends
 	@for i in $(subdirs) ; do \
 		make -C $$i -f $(SRC_DIR)/scripts/rules.mk H="$(H)/$$i" clean; \
 	done
 
-../$(DIR).list: $(objs) $(subdirs-lists) $(SRC_DIR)$(H)/Makefile
-	@echo " LIST $(H)"
+print_dir:
+	@ test -z '$(objs)' || echo $$'\n --------  $(H)  --------'
+
+../.$(DIR).list: print_dir $(objs) $(subdirs-lists) $(SRC_DIR)$(H)/Makefile
 	@rm -f $@
 	@for obj in $(filter %.o,$^) \
 			$$(cat /dev/null $(filter %.list,$^)) ; do \
 		echo $(DIR)/$${obj} >> $@ ; \
 	done
 
-%.list: $(SRC_DIR)$(H)/%/Makefile
+.%.list: $(SRC_DIR)$(H)/%/Makefile
 	@test -d $* || mkdir -p $*
 	@$(MAKE) -C $* -f $(SRC_DIR)/scripts/rules.mk ../$@ DIR=$* H="$(H)/$*"
+
+re: clean default
+

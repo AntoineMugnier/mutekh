@@ -28,7 +28,9 @@
 #include <netinet/ip.h>
 #include <netinet/packet.h>
 #include <netinet/protos.h>
+
 #include <hexo/device.h>
+#include <hexo/driver.h>
 
 #include <stdio.h>
 

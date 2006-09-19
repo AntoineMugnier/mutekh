@@ -19,11 +19,11 @@
 
 */
 
-#if !defined(DEVICE_H) || defined(DEVICE_NET_H_)
+#if !defined(__DEVICE_H__) || defined(__DEVICE_NET_H__)
 #error This file can not be included directly
 #else
 
-#define DEVICE_NET_H_
+#define __DEVICE_NET_H__
 
 #include "../types.h"
 #include "../error.h"
