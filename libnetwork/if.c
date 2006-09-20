@@ -56,7 +56,8 @@ static uint_fast8_t	ethid = 0;
  */
 
 struct net_if_s	*if_register(struct device_s	*dev,
-			     net_if_type_t	type)
+			     net_if_type_t	type,
+			     uint8_t		*mac)
 {
   struct net_proto_s				*arp;
   struct net_proto_s				*icmp;
@@ -82,6 +83,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
 
   /* name the interface */
   interface->dev = dev;
+  interface->mac = mac;
   if (type == IF_ETHERNET)
     sprintf(interface->name, "eth%d", ethid++);
   else

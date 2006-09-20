@@ -444,7 +444,7 @@ DEV_INIT(net_ne2000_init)
   net_protos_init(&pv->protocols);
 
   /* register as a net device */
-  pv->interface = if_register(dev, IF_ETHERNET);
+  pv->interface = if_register(dev, IF_ETHERNET, pv->mac);
 
   /* start dispatch thread */
   if (sem_init(&pv->rcvsem, 0, 0))

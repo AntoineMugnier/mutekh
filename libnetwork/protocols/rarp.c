@@ -80,9 +80,9 @@ NET_PUSHPKT(rarp_pushpkt)
   nethdr = &packet->header[packet->stage];
   hdr = (struct ether_arp *)nethdr->data;
 
-  /* align the packet on 16 bits if necessary */
+  /* align the packet on 32 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
+  if (!NET_ALIGNED(hdr, sizeof (uint32_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct ether_arp));
       hdr = &aligned;
@@ -116,8 +116,8 @@ NET_PREPAREPKT(rarp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 2);
-  next = ALIGN_ADDRESS(next, 2);
+  next = if_preparepkt(inteface, packet, sizeof (struct ether_arp), 4);
+  next = ALIGN_ADDRESS(next, 4);
 #else
   next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 0);
 #endif
@@ -168,7 +168,7 @@ void			rarp_request(struct net_if_s	*interface,
   packet->tMAC = (uint8_t *)"\xff\xff\xff\xff\xff\xff";
 
   packet->stage--;
-  /* send the packet to the driver */
+  /* send the packet to the interface */
   if_sendpkt(interface, packet, rarp);
 }
 

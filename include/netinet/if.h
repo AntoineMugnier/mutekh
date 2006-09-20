@@ -65,6 +65,7 @@ struct			net_if_s
 {
   char			name[IFNAME_MAX_LEN];
   struct device_s	*dev;
+  const uint8_t		*mac;
   net_protos_root_t	protocols;
 
   struct net_proto_s	*ip;
@@ -94,7 +95,8 @@ struct			net_if_s
  */
 
 struct net_if_s	*if_register(struct device_s	*dev,
-			     net_if_type_t	type);
+			     net_if_type_t	type,
+			     uint8_t		*mac);
 void	if_unregister(struct net_if_s	*interface);
 
 void	if_up(char*	name, ...);
@@ -115,3 +117,4 @@ void	if_sendpkt(struct net_if_s	*interface,
 void	if_stats(const char	*name);
 
 #endif
+

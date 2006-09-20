@@ -221,12 +221,16 @@ NET_PUSHPKT(ip_pushpkt)
     }
 #endif
 
+  /* check IP version */
+  if (hdr->version != 4)
+    return;
+
   /* update packet info */
   packet->sIP = net_be32_load(hdr->saddr);
   packet->tIP = net_be32_load(hdr->daddr);
 
-  /* check IP version */
-  if (hdr->version != 4)
+  /* is the packet really for me ? */
+  if (packet->tIP != pv->addr)
     return;
 
   /* verify checksum */
@@ -239,10 +243,6 @@ NET_PUSHPKT(ip_pushpkt)
       net_debug("Rejected incorrect packet\n");
       return;
     }
-
-  /* is the packet really for me ? */
-  if (packet->tIP != pv->addr)
-    return;
 
   /* next stage */
   if (!nethdr[1].data)

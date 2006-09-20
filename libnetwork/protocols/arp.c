@@ -105,7 +105,6 @@ NET_PUSHPKT(arp_pushpkt)
   switch (net_be16_load(hdr->ea_hdr.ar_op))
     {
       case ARPOP_REQUEST:
-	net_debug("Requested %P\n", &hdr->arp_tpa, 4);
 	if (net_be32_load(hdr->arp_tpa) == pv_ip->addr)
 	  {
 	    /* force adding the entry */
@@ -196,10 +195,10 @@ void			arp_request(struct net_if_s	*interface,
   memset(hdr->arp_tha, 0xff, ETH_ALEN);
   net_be32_store(hdr->arp_tpa, address);
 
-  packet->tMAC = (uint8_t *)"\xff\xff\xff\xff\xff\xff";
+  packet->tMAC = hdr->arp_tha;
 
   packet->stage--;
-  /* send the packet to the driver */
+  /* send the packet to the interface */
   if_sendpkt(interface, packet, arp);
 }
 
@@ -227,14 +226,14 @@ void			arp_reply(struct net_if_s		*interface,
 
   memcpy(hdr->arp_tha, hdr->arp_sha, ETH_ALEN);
   net_32_store(hdr->arp_tpa, net_32_load(hdr->arp_spa));
-  memcpy(hdr->arp_sha, packet->tMAC, ETH_ALEN);
+  memcpy(hdr->arp_sha, interface->mac, ETH_ALEN);
   net_be32_store(hdr->arp_spa, pv_ip->addr);
 
-  packet->sMAC = packet->tMAC;
+  packet->sMAC = hdr->arp_sha;
   packet->tMAC = hdr->arp_tha;
 
   packet->stage--;
-  /* send the packet to the driver */
+  /* send the packet to the interface */
   if_sendpkt(interface, packet, arp);
 }
 
@@ -254,7 +253,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
     {
       /* there's already an entry */
       if ((flags & ARP_TABLE_NO_OVERWRITE) ||
-	  !memcmp(arp_entry->mac, mac, ETH_ALEN))
+	  (arp_entry->valid && !memcmp(arp_entry->mac, mac, ETH_ALEN)))
 	return arp_entry;
       /* if we must not update */
       if (flags & ARP_TABLE_NO_UPDATE)
@@ -272,11 +271,6 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
   if (!(flags & ARP_TABLE_IN_PROGRESS))
     memcpy(arp_entry->mac, mac, ETH_ALEN);
   arp_entry->valid = !(flags & ARP_TABLE_IN_PROGRESS);
-  if (arp_entry->valid)
-    net_debug("Added %P as %2x:%2x:%2x:%2x:%2x:%2x\n",
-	      &arp_entry->ip, 4, arp_entry->mac[0], arp_entry->mac[1],
-	      arp_entry->mac[2], arp_entry->mac[3], arp_entry->mac[4],
-	      arp_entry->mac[5]);
   return arp_entry;
 }
 
@@ -304,7 +298,6 @@ uint8_t			*arp_get_mac(struct net_if_s		*interface,
     }
   else
     {
-      net_debug("No ARP entry. Sending request.\n");
       arp_entry = arp_update_table(arp, ip, NULL, ARP_TABLE_IN_PROGRESS);
       /* no entry, push the packet in the wait queue*/
       packet_queue_init(&arp_entry->wait);
