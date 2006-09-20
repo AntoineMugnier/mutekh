@@ -176,10 +176,10 @@ static uint_fast8_t	ne2000_rw_test(struct device_s	*dev)
   /* setup data configuration registers */
   if (pv->io_16)
     cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_DCR,
-		   NE2000_8BITS | endian | NE2000_NORMAL | NE2000_FIFO4);
+		   NE2000_16BITS | endian | NE2000_NORMAL | NE2000_FIFO4);
   else
     cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_DCR,
-		   NE2000_16BITS | endian | NE2000_NORMAL | NE2000_FIFO4);
+		   NE2000_8BITS | endian | NE2000_NORMAL | NE2000_FIFO4);
   /* setup transmit and receive in loopback */
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RCR, NE2000_MONITOR);
   /* setup RX ring */
@@ -210,17 +210,8 @@ uint_fast8_t			ne2000_probe(struct device_s	*dev)
   uint8_t			buf[ETH_ALEN * 2];
   uint_fast8_t			i;
 
-  /* try 8 bits mode with 16k */
-  pv->io_16 = 0;
-  pv->mem = NE2000_MEM_16K;
-  pv->tx_buf = NE2000_MEM_8K;
-  pv->rx_buf = NE2000_MEM_8K + NE2000_TX_BUFSZ;
-
-  if (ne2000_rw_test(dev))
-    goto ok;
-
-  /* try 8 bits mode with 32k */
-  pv->io_16 = 0;
+  /* try 16 bits mode with 32k */
+  pv->io_16 = 1;
   pv->mem = NE2000_MEM_32K;
   pv->tx_buf = NE2000_MEM_16K;
   pv->rx_buf = NE2000_MEM_16K + NE2000_TX_BUFSZ;
@@ -238,10 +229,19 @@ uint_fast8_t			ne2000_probe(struct device_s	*dev)
     goto ok;
 
   /* try 8 bits mode with 32k */
-  pv->io_16 = 1;
+  pv->io_16 = 0;
   pv->mem = NE2000_MEM_32K;
   pv->tx_buf = NE2000_MEM_16K;
   pv->rx_buf = NE2000_MEM_16K + NE2000_TX_BUFSZ;
+
+  if (ne2000_rw_test(dev))
+    goto ok;
+
+  /* try 8 bits mode with 16k */
+  pv->io_16 = 0;
+  pv->mem = NE2000_MEM_16K;
+  pv->tx_buf = NE2000_MEM_8K;
+  pv->rx_buf = NE2000_MEM_8K + NE2000_TX_BUFSZ;
 
   if (ne2000_rw_test(dev))
     goto ok;

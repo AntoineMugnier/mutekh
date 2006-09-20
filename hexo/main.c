@@ -181,6 +181,11 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   isawd->addr[0] = 0x300;
   isawd->irq = 10;
   net_ne2000_init(isawd, &icu_dev);
+  isawd = malloc(sizeof (struct device_s));
+  device_init(isawd);
+  isawd->addr[0] = 0x320;
+  isawd->irq = 3;
+  net_ne2000_init(isawd, &icu_dev);
 
 # endif
 

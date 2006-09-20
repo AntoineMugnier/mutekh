@@ -69,11 +69,13 @@ int_fast8_t		main()
 #endif
 
   uint_fast32_t i;
+
   for (i = 0; i < 10000000; i++)
     ;
 
   if_up("eth0");
-  if_up("eth1");
+  //  if_up("eth1");
+  //  if_up("eth2");
 
   return 0;
 }

@@ -50,6 +50,9 @@ OBJECT_CONSTRUCTOR(packet_obj)
 
 OBJECT_DESTRUCTOR(packet_obj)
 {
+  if (obj->parent)
+    packet_obj_refdrop(obj->parent);
+
   if (obj->packet)
     mem_free(obj->packet);
 

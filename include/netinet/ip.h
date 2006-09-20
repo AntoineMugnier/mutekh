@@ -135,11 +135,11 @@ struct iphdr {
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
 
-CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, 64, UNSIGNED);
+CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, 64, BLOB, 6);
 
 struct			ip_packet_s
 {
-  uint_fast64_t		id;
+  uint8_t		id[6];
   uint_fast16_t		size;
   uint_fast16_t		received;
   packet_queue_root_t	packets;

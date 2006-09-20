@@ -238,8 +238,6 @@ DEV_IRQ(net_ne2000_irq)
   /* select register bank 0 */
   ne2000_page(dev, NE2000_P0);
 
-  assert(!cpu_interrupt_getstate());
-
   isr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR);
 
   /* remote DMA completed */

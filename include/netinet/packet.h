@@ -116,6 +116,7 @@ CONTAINER_TYPE(packet_queue_lock, DLIST, struct net_packet_s, HEXO_SPIN_IRQ);
 
 struct				net_packet_s
 {
+  struct net_packet_s		*parent;
   struct net_header_s		header[NETWORK_MAX_STAGES];
   uint_fast8_t			stage;		/* current stage */
   uint8_t			*packet;	/* raw packet */
