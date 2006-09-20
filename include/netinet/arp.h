@@ -154,17 +154,17 @@ struct			net_pv_rarp_s
 NET_INITPROTO(arp_init);
 NET_PUSHPKT(arp_pushpkt);
 NET_PREPAREPKT(arp_preparepkt);
-void			arp_reply(struct device_s		*dev,
+void			arp_reply(struct net_if_s		*interface,
 				  struct net_proto_s		*arp,
 				  struct net_packet_s		*packet);
-void			arp_request(struct device_s	*dev,
+void			arp_request(struct net_if_s	*interface,
 				    struct net_proto_s	*arp,
 				    uint_fast32_t	address);
 struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 					  uint32_t		ip,
 					  uint8_t		*mac,
 					  uint_fast8_t		flags);
-uint8_t			*arp_get_mac(struct device_s		*dev,
+uint8_t			*arp_get_mac(struct net_if_s		*interface,
 				     struct net_proto_s		*arp,
 				     struct net_packet_s	*packet,
 				     uint_fast32_t		ip);
@@ -173,8 +173,8 @@ uint8_t			*arp_get_mac(struct device_s		*dev,
 NET_INITPROTO(rarp_init);
 NET_PUSHPKT(rarp_pushpkt);
 NET_PREPAREPKT(rarp_preparepkt);
-void	rarp_request(struct device_s	*dev,
-		     struct net_proto_s	*arp,
+void	rarp_request(struct net_if_s	*interface,
+		     struct net_proto_s	*rarp,
 		     uint8_t		*mac);
 
 extern const struct net_proto_desc_s	arp_protocol;

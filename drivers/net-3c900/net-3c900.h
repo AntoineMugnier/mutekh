@@ -30,7 +30,6 @@ DEV_INIT(net_3c900_init);
 DEV_CLEANUP(net_3c900_cleanup);
 DEVNET_PREPAREPKT(net_3c900_preparepkt);
 DEVNET_SENDPKT(net_3c900_sendpkt);
-DEVNET_REGISTER_PROTO(net_3c900_register_proto);
 
 #ifndef CONFIG_STATIC_DRIVERS
 extern const struct driver_s	net_3c900_drv;

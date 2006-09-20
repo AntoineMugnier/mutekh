@@ -30,6 +30,7 @@
 #include <netinet/packet.h>
 #include <netinet/ether.h>
 #include <netinet/protos.h>
+#include <netinet/if.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_dlist.h>
@@ -55,6 +56,7 @@ struct				net_ne2000_context_s
   struct net_packet_s		*current;
 
   uint8_t			mac[ETH_ALEN];
+  struct net_if_s		*interface;
 
   net_protos_root_t		protocols;
 };

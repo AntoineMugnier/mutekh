@@ -23,12 +23,13 @@
 #define NETINET_PROTOS_H_
 
 #include <hexo/types.h>
+#include <hexo/alloc.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_hashlist.h>
 
-struct device_s;
+struct net_if_s;
 struct net_packet_s;
 
 /*
@@ -41,10 +42,9 @@ CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, NOLOCK, 8, UNSIGNED);
  * Prototype of a push function.
  */
 
-#define NET_PUSHPKT(f)	void (f)(struct device_s	*dev,		\
+#define NET_PUSHPKT(f)	void (f)(struct net_if_s	*interface,	\
 				 struct net_packet_s	*packet,	\
-				 struct	net_proto_s	*protocol,	\
-				 net_protos_root_t	*protocols)
+				 struct	net_proto_s	*protocol)
 
 typedef NET_PUSHPKT(net_pushpkt_t);
 
@@ -52,7 +52,7 @@ typedef NET_PUSHPKT(net_pushpkt_t);
  * Prototype of the function used to prepare a packet.
  */
 
-#define NET_PREPAREPKT(f)	uint8_t *(f)(struct device_s	*dev,	   \
+#define NET_PREPAREPKT(f)	uint8_t *(f)(struct net_if_s	*interface,\
 					 struct net_packet_s	*packet,   \
 					 size_t			size,	   \
 					 size_t			max_padding)
@@ -63,8 +63,8 @@ typedef NET_PREPAREPKT(net_preparepkt_t);
  * Prototype of the function used to initialize private data.
  */
 
-#define NET_INITPROTO(f)	void (f)(struct device_s	*dev,	\
-					 struct net_proto_s	*proto,	\
+#define NET_INITPROTO(f)	void (f)(struct net_if_s	*interface, \
+					 struct net_proto_s	*proto,	    \
 					 va_list		va)
 
 typedef NET_INITPROTO(net_initproto_t);

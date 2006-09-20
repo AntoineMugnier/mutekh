@@ -29,9 +29,7 @@
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 
-#include <hexo/device/net.h>
-#include <hexo/device.h>
-#include <hexo/driver.h>
+#include <netinet/if.h>
 
 #include <stdio.h>
 
@@ -113,7 +111,7 @@ NET_PUSHPKT(arp_pushpkt)
 	    /* force adding the entry */
 	    arp_update_table(protocol, net_be32_load(hdr->arp_spa),
 			     hdr->arp_sha, ARP_TABLE_DEFAULT);
-	    arp_reply(dev, protocol, packet);
+	    arp_reply(interface, protocol, packet);
 	  }
 	else
 	  {
@@ -132,7 +130,7 @@ NET_PUSHPKT(arp_pushpkt)
 	    waiting->tMAC = arp_entry->mac;
 
 	    /* send the packet */
-	    dev_net_sendpkt(dev, waiting, ETHERTYPE_IP);
+	    if_sendpkt(interface, waiting, pv->ip);
 	  }
 	break;
       default:
@@ -150,10 +148,10 @@ NET_PREPAREPKT(arp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp), 4);
+  next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 4);
   next = ALIGN_ADDRESS(next, 4);
 #else
-  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp), 0);
+  next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 0);
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -169,7 +167,7 @@ NET_PREPAREPKT(arp_preparepkt)
  * This function request a MAC address given an IP address.
  */
 
-void			arp_request(struct device_s	*dev,
+void			arp_request(struct net_if_s	*interface,
 				    struct net_proto_s	*arp,
 				    uint_fast32_t	address)
 {
@@ -181,7 +179,7 @@ void			arp_request(struct device_s	*dev,
 
   packet = packet_obj_new(NULL);
 
-  arp_preparepkt(dev, packet, 0, 0);
+  arp_preparepkt(interface, packet, 0, 0);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -202,14 +200,14 @@ void			arp_request(struct device_s	*dev,
 
   packet->stage--;
   /* send the packet to the driver */
-  dev_net_sendpkt(dev, packet, ETHERTYPE_ARP);
+  if_sendpkt(interface, packet, arp);
 }
 
 /*
  * Send an ARP reply
  */
 
-void			arp_reply(struct device_s		*dev,
+void			arp_reply(struct net_if_s		*interface,
 				  struct net_proto_s		*arp,
 				  struct net_packet_s		*packet)
 {
@@ -237,7 +235,7 @@ void			arp_reply(struct device_s		*dev,
 
   packet->stage--;
   /* send the packet to the driver */
-  dev_net_sendpkt(dev, packet, ETHERTYPE_ARP);
+  if_sendpkt(interface, packet, arp);
 }
 
 /*
@@ -288,7 +286,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
  * Make an ARP request if needed.
  */
 
-uint8_t			*arp_get_mac(struct device_s		*dev,
+uint8_t			*arp_get_mac(struct net_if_s		*interface,
 				     struct net_proto_s		*arp,
 				     struct net_packet_s	*packet,
 				     uint_fast32_t		ip)
@@ -312,7 +310,7 @@ uint8_t			*arp_get_mac(struct device_s		*dev,
       packet_queue_init(&arp_entry->wait);
       packet_queue_push(&arp_entry->wait, packet);
       /* and send a request */
-      arp_request(dev, arp, ip);
+      arp_request(interface, arp, ip);
     }
   return NULL;
 }

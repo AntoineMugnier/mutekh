@@ -150,9 +150,9 @@ struct			ip_packet_s
  * XXX comment
  */
 
-#define NET_IP_SEND(f)		void (f)(struct device_s	*dev,	\
-					 struct net_packet_s	*packet,\
-					 struct net_proto_s	*ip,	\
+#define NET_IP_SEND(f)		void (f)(struct net_if_s	*interface, \
+					 struct net_packet_s	*packet,    \
+					 struct net_proto_s	*ip,	    \
 					 struct net_proto_s	*proto)
 
 typedef NET_IP_SEND(net_ip_send_t);

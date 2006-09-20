@@ -25,13 +25,12 @@
  */
 
 #include <netinet/ip.h>
+#include <netinet/arp.h>
 #include <netinet/packet.h>
 #include <netinet/ether.h>
 #include <netinet/protos.h>
 
-#include <hexo/device/net.h>
-#include <hexo/device.h>
-#include <hexo/driver.h>
+#include <netinet/if.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -273,8 +272,8 @@ NET_PUSHPKT(ip_pushpkt)
 
   /* dispatch to the matching protocol */
   proto = hdr->protocol;
-  if ((p = net_protos_lookup(protocols, proto)))
-    p->desc->pushpkt(dev, packet, p, protocols);
+  if ((p = net_protos_lookup(&interface->protocols, proto)))
+    p->desc->pushpkt(interface, packet, p);
   else
     net_debug("IP: no protocol to handle packet (id = 0x%x)\n", proto);
 }
@@ -289,10 +288,10 @@ NET_PREPAREPKT(ip_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = dev_net_preparepkt(dev, packet, 20 + size, 4 + max_padding - 1);
+  next = if_preparepkt(interface, packet, 20 + size, 4 + max_padding - 1);
   next = ALIGN_ADDRESS(next, 4);
 #else
-  next = dev_net_preparepkt(dev, packet, 20 + size, 0);
+  next = if_preparepkt(interface, packet, 20 + size, 0);
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -310,14 +309,15 @@ NET_PREPAREPKT(ip_preparepkt)
 
 /* XXX refaire ca sans memcpy recount parent tt ca tt ca :) */
 
-static inline	void	ip_send_fragment(struct net_pv_ip_s	*pv,
-					 struct device_s	*dev,
+static inline	void	ip_send_fragment(struct net_proto_s	*ip,
+					 struct net_if_s	*interface,
 					 struct iphdr		*hdr,
 					 uint8_t		*data,
 					 uint_fast16_t		offs,
 					 size_t			fragsz,
 					 uint_fast8_t		last)
 {
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ip->pv;
   struct net_packet_s	*frag;
   struct net_header_s	*nethdr;
   struct iphdr		*hdr_frag;
@@ -325,7 +325,7 @@ static inline	void	ip_send_fragment(struct net_pv_ip_s	*pv,
 
   /* prepare a new IP packet */
   frag = packet_obj_new(NULL);
-  dest = ip_preparepkt(dev, frag, fragsz, 0);
+  dest = ip_preparepkt(interface, frag, fragsz, 0);
   frag->stage--;
 
   net_debug("sending fragment %d-%d\n", offs, offs + fragsz);
@@ -351,11 +351,11 @@ static inline	void	ip_send_fragment(struct net_pv_ip_s	*pv,
 
   frag->sIP = net_be32_load(hdr_frag->saddr);
   frag->tIP = net_be32_load(hdr_frag->daddr);
-  if (!(frag->tMAC = arp_get_mac(dev, pv->arp, frag, frag->tIP)))
+  if (!(frag->tMAC = arp_get_mac(interface, pv->arp, frag, frag->tIP)))
     return;
 
   /* send the packet to the driver */
-  dev_net_sendpkt(dev, frag, ETHERTYPE_IP);
+  if_sendpkt(interface, frag, ip);
 }
 
 /*
@@ -403,13 +403,13 @@ NET_IP_SEND(ip_send)
       /* send the middle fragments */
       while (offs + fragsz < total)
 	{
-	  ip_send_fragment(pv, dev, hdr, data, offs, fragsz, 0);
+	  ip_send_fragment(ip, interface, hdr, data, offs, fragsz, 0);
 
 	  offs += fragsz;
 	}
 
       /* last packet */
-      ip_send_fragment(pv, dev, hdr, data, offs, total - offs, 1);
+      ip_send_fragment(ip, interface, hdr, data, offs, total - offs, 1);
 
       /* release the original packet */
       packet_obj_refdrop(packet);
@@ -427,10 +427,10 @@ NET_IP_SEND(ip_send)
 
   packet->stage--;
   packet->sIP = pv->addr;
-  if (!(packet->tMAC = arp_get_mac(dev, pv->arp, packet, packet->tIP)))
+  if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet, packet->tIP)))
     return ;
 
   /* send the packet to the driver */
-  dev_net_sendpkt(dev, packet, ETHERTYPE_IP);
+  if_sendpkt(interface, packet, ip);
 }
 

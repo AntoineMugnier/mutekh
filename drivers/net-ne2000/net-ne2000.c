@@ -79,7 +79,6 @@ const struct driver_s	net_ne2000_drv =
   .f.net = {
     .f_preparepkt	= net_ne2000_preparepkt,
     .f_sendpkt		= net_ne2000_sendpkt,
-    .f_register_proto	= net_ne2000_register_proto,
   }
 };
 #endif
@@ -272,7 +271,7 @@ DEV_IRQ(net_ne2000_irq)
   /* transmit error */
   if (isr & NE2000_TXE)
     {
-      net_debug("ne2000: TXE\n");
+      net_debug("%s: TXE\n", pv->interface->name);
 
       /* increment the retry counter */
       pv->send_tries++;
@@ -320,7 +319,7 @@ DEV_IRQ(net_ne2000_irq)
       uint_fast8_t	i;
       uint_fast16_t	total;
 
-      net_debug("ne2000: recovery from overflow\n");
+      net_debug("%s: recovery from overflow\n", pv->interface->name);
 
       /* save the NIC state */
       cr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD);
@@ -444,6 +443,9 @@ DEV_INIT(net_ne2000_init)
   packet_queue_lock_init(&pv->rcvqueue);
   net_protos_init(&pv->protocols);
 
+  /* register as a net device */
+  pv->interface = if_register(dev, IF_ETHERNET);
+
   /* start dispatch thread */
   if (sem_init(&pv->rcvsem, 0, 0))
     {
@@ -454,12 +456,10 @@ DEV_INIT(net_ne2000_init)
       return -1;
     }
   dispatch = mem_alloc(sizeof (struct net_dispatch_s), MEM_SCOPE_SYS);
-  dispatch->device = dev;
+  dispatch->interface = pv->interface;
   dispatch->packets = &pv->rcvqueue;
-  dispatch->protocols = &pv->protocols;
   dispatch->sem = &pv->rcvsem;
 
-  /* XXX refaire ca */
   if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch))
     {
       printf("ne2000: cannot start dispatch thread\n");
@@ -472,9 +472,6 @@ DEV_INIT(net_ne2000_init)
 
   /* bind to ICU */
   DEV_ICU_BIND(icudev, dev);
-
-  /* register as a net device */
-  if_register(dev);
 
   return 0;
 }
@@ -489,7 +486,7 @@ DEV_CLEANUP(net_ne2000_cleanup)
   struct net_packet_s		*wait;
 
   /* unregister the device */
-  if_unregister(dev);
+  if_unregister(pv->interface);
 
   /* destroy the packet scheduled for sending if necessary */
   if (pv->current)
@@ -601,25 +598,4 @@ DEVNET_SENDPKT(net_ne2000_sendpkt)
 
   /* release lock */
   lock_release_irq(&pv->lock);
-}
-
-/*
- * registering a new protocol.
- */
-
-DEVNET_REGISTER_PROTO(net_ne2000_register_proto)
-{
-  struct net_ne2000_context_s	*pv = dev->drv_pv;
-  va_list			va;
-
-  va_start(va, proto);
-
-  /* call the protocol constructor */
-  if (proto->desc->initproto)
-    proto->desc->initproto(dev, proto, va);
-
-  /* insert in the protocol list */
-  net_protos_push(&pv->protocols, proto);
-
-  va_end(va);
 }

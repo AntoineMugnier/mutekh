@@ -30,8 +30,7 @@
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 
-#include <hexo/device.h>
-#include <hexo/driver.h>
+#include <netinet/if.h>
 
 #include <stdio.h>
 
@@ -113,10 +112,10 @@ NET_PREPAREPKT(udp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = ip_preparepkt(dev, packet, sizeof (struct udphdr) + size, 2);
+  next = ip_preparepkt(interface, packet, sizeof (struct udphdr) + size, 2);
   next = ALIGN_ADDRESS(next, 4);
 #else
-  next = ip_preparepkt(dev, packet, sizeof (struct udphdr) + size, 0);
+  next = ip_preparepkt(interface, packet, sizeof (struct udphdr) + size, 0);
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -138,7 +137,7 @@ NET_UDP_SEND(udp_send)
 
   packet = packet_obj_new(NULL);
 
-  dest = udp_preparepkt(dev, packet, size, 0);
+  dest = udp_preparepkt(interface, packet, size, 0);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -158,6 +157,6 @@ NET_UDP_SEND(udp_send)
 
   packet->stage--;
   /* send the packet to IP */
-  ip_send(dev, packet, pv->ip, udp);
+  ip_send(interface, packet, pv->ip, udp);
 }
 

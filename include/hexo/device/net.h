@@ -28,7 +28,6 @@
 
 struct device_s;
 struct driver_s;
-struct net_proto_s;
 struct net_packet_s;
 
 /*
@@ -50,23 +49,12 @@ typedef DEVNET_PREPAREPKT(devnet_preparepkt_t);
 typedef DEVNET_SENDPKT(devnet_sendpkt_t);
 
 #define dev_net_sendpkt(dev, ...) (dev)->drv->f.net.f_sendpkt(dev, __VA_ARGS__ )
-/*
- * protocol registration operation
- */
-
-#define DEVNET_REGISTER_PROTO(n)	void  (n) (struct device_s *dev, struct net_proto_s *proto, ...)
-
-typedef DEVNET_REGISTER_PROTO(devnet_register_proto_t);
-
-#define dev_net_register_proto(dev, ...) (dev)->drv->f.net.f_register_proto(dev, __VA_ARGS__ )
-
 
 /** Net device class methodes */
 struct dev_class_net_s
 {
   devnet_preparepkt_t		*f_preparepkt;
   devnet_sendpkt_t		*f_sendpkt;
-  devnet_register_proto_t	*f_register_proto;
 };
 
 #endif

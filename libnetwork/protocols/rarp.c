@@ -29,9 +29,8 @@
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 
-#include <hexo/device/net.h>
-#include <hexo/device.h>
-#include <hexo/driver.h>
+#include <netinet/if.h>
+
 #include <hexo/endian.h>
 
 #include <stdio.h>
@@ -117,10 +116,10 @@ NET_PREPAREPKT(rarp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp), 2);
+  next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 2);
   next = ALIGN_ADDRESS(next, 2);
 #else
-  next = dev_net_preparepkt(dev, packet, sizeof (struct ether_arp), 0);
+  next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 0);
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -136,8 +135,8 @@ NET_PREPAREPKT(rarp_preparepkt)
  * Make a RARP request.
  */
 
-void			rarp_request(struct device_s	*dev,
-				     struct net_proto_s	*arp,
+void			rarp_request(struct net_if_s	*interface,
+				     struct net_proto_s	*rarp,
 				     uint8_t		*mac)
 {
   struct ether_arp	*hdr;
@@ -146,7 +145,7 @@ void			rarp_request(struct device_s	*dev,
 
   packet = packet_obj_new(NULL);
 
-  rarp_preparepkt(dev, packet, 0, 0);
+  rarp_preparepkt(interface, packet, 0, 0);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -170,6 +169,6 @@ void			rarp_request(struct device_s	*dev,
 
   packet->stage--;
   /* send the packet to the driver */
-  dev_net_sendpkt(dev, packet, ETHERTYPE_REVARP);
+  if_sendpkt(interface, packet, rarp);
 }
 

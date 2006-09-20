@@ -30,7 +30,7 @@
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 
-struct device_s;
+#include <netinet/if.h>
 
 #include <stdio.h>
 
@@ -114,7 +114,7 @@ NET_PUSHPKT(icmp_pushpkt)
 	  {
 	    case 0:
 	      net_debug("Ping\n");
-	      icmp_echo(dev, protocol, packet);
+	      icmp_echo(interface, protocol, packet);
 	      break;
 	    default:
 	      break;
@@ -135,10 +135,10 @@ NET_PREPAREPKT(icmp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size, 4);
+  next = ip_preparepkt(interface, packet, sizeof (struct icmphdr) + size, 4);
   next = ALIGN_ADDRESS(next, 4);
 #else
-  next = ip_preparepkt(dev, packet, sizeof (struct icmphdr) + size, 0);
+  next = ip_preparepkt(interface, packet, sizeof (struct icmphdr) + size, 0);
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -184,6 +184,6 @@ NET_ICMP_ECHO(icmp_echo)
 
   packet->stage--;
   /* send the packet to IP */
-  ip_send(dev, packet, pv->ip, icmp);
+  ip_send(interface, packet, pv->ip, icmp);
 }
 

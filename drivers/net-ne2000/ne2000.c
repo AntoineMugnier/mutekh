@@ -219,7 +219,7 @@ uint_fast8_t			ne2000_probe(struct device_s	*dev)
   if (ne2000_rw_test(dev))
     goto ok;
 
-  /* try 16 bits mode with 16k */
+  /* try 8 bits mode with 32k */
   pv->io_16 = 0;
   pv->mem = NE2000_MEM_32K;
   pv->tx_buf = NE2000_MEM_16K;
@@ -228,7 +228,7 @@ uint_fast8_t			ne2000_probe(struct device_s	*dev)
   if (ne2000_rw_test(dev))
     goto ok;
 
-  /* try 8 bits mode with 32k */
+  /* try 16 bits mode with 16k */
   pv->io_16 = 1;
   pv->mem = NE2000_MEM_16K;
   pv->tx_buf = NE2000_MEM_8K;
@@ -237,7 +237,7 @@ uint_fast8_t			ne2000_probe(struct device_s	*dev)
   if (ne2000_rw_test(dev))
     goto ok;
 
-  /* try 16 bits mode with 32k */
+  /* try 8 bits mode with 32k */
   pv->io_16 = 1;
   pv->mem = NE2000_MEM_32K;
   pv->tx_buf = NE2000_MEM_16K;
@@ -288,10 +288,10 @@ void				ne2000_init(struct device_s	*dev)
   /* setup data configuration registers */
   if (pv->io_16)
     cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_DCR,
-		   NE2000_8BITS | endian | NE2000_NORMAL | NE2000_FIFO4);
+		   NE2000_16BITS | endian | NE2000_NORMAL | NE2000_FIFO4);
   else
     cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_DCR,
-		   NE2000_16BITS | endian | NE2000_NORMAL | NE2000_FIFO4);
+		   NE2000_8BITS | endian | NE2000_NORMAL | NE2000_FIFO4);
   /* clear dma state */
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR0, 0);
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR1, 0);

@@ -142,8 +142,7 @@ struct device_s;
 struct				net_dispatch_s
 {
   packet_queue_lock_root_t	*packets;
-  net_protos_root_t		*protocols;
-  struct device_s		*device;
+  struct net_if_s		*interface;
   sem_t				*sem;
 };
 

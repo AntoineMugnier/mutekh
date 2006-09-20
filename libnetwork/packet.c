@@ -26,7 +26,7 @@
 
 #include <netinet/packet.h>
 #include <netinet/protos.h>
-#include <netinet/ether.h>
+#include <netinet/if.h>
 
 /*
  * The packet object constructor.
@@ -96,12 +96,10 @@ CONTAINER_FUNC(inline, packet_queue_lock, DLIST, packet_queue_lock, HEXO_SPIN_IR
 void				*packet_dispatch(void	*data)
 {
   struct net_dispatch_s		*info = (struct net_dispatch_s *)data;
-  net_protos_root_t		*protocols = info->protocols;
   packet_queue_lock_root_t	*root = info->packets;
-  struct device_s		*dev = info->device;
+  struct net_if_s		*interface = info->interface;
   sem_t				*sem = info->sem;
   struct net_packet_s		*packet;
-  struct net_proto_s		*p;
 
   mem_free(data);
 
@@ -114,13 +112,10 @@ void				*packet_dispatch(void	*data)
       packet = packet_queue_lock_pop(root);
       if (packet)
 	{
-	  /* dispatch to the matching protocol */
-	  if ((p = net_protos_lookup(protocols, packet->proto)))
-	    p->desc->pushpkt(dev, packet, p, protocols);
-	  else
-	    net_debug("NETWORK: no protocol to handle packet (id = 0x%x)\n",
-		      packet->proto);
+	  /* dispatch to the interface */
+	  if_pushpkt(interface, packet);
 
+	  /* drop the packet */
 	  packet_obj_refdrop(packet);
 	}
 

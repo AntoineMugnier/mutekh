@@ -52,13 +52,10 @@ DEV_CLEANUP(net_3c900_cleanup)
 
 DEVNET_PREPAREPKT(net_3c900_preparepkt)
 {
+  return 0;
 }
 
 DEVNET_SENDPKT(net_3c900_sendpkt)
-{
-}
-
-DEVNET_REGISTER_PROTO(net_3c900_register_proto)
 {
 }
 
@@ -80,7 +77,6 @@ const struct driver_s	net_3c900_drv =
   .f.net = {
     .f_preparepkt	= net_3c900_preparepkt,
     .f_sendpkt		= net_3c900_sendpkt,
-    .f_register_proto	= net_3c900_register_proto,
   }
 };
 #endif

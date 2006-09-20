@@ -37,7 +37,7 @@ struct		udphdr
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 
-#define NET_UDP_SEND(f)	void (f)(struct device_s	*dev,	\
+#define NET_UDP_SEND(f)	void (f)(struct net_if_s	*interface,	\
 				 struct net_proto_s	*udp,	\
 				 uint8_t		*ip,	\
 				 uint_fast16_t		port,	\
