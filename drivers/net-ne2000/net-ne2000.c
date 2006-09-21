@@ -42,8 +42,6 @@
 #include "net-ne2000-private.h"
 #include "ne2000.h"
 
-#define net_debug printf
-
 #ifndef CONFIG_STATIC_DRIVERS
 
 /*
@@ -93,6 +91,7 @@ static void	ne2000_send(struct device_s	*dev)
   struct net_ne2000_context_s	*pv = dev->drv_pv;
   struct net_header_s		*nethdr;
   uint_fast16_t			size;
+  uint_fast8_t			i;
 
   nethdr = &pv->current->header[0];
 
@@ -101,9 +100,6 @@ static void	ne2000_send(struct device_s	*dev)
 
   /* reset the tries counter */
   pv->send_tries = 0;
-
-#if defined(CONFIG_NE2000_FRAGMENT) || defined(CONFIG_NETWORK_AUTOALIGN)
-  uint_fast8_t	i;
 
   /* initialize writing */
   ne2000_dma_init_write(dev, pv->tx_buf << 8, size);
@@ -123,9 +119,6 @@ static void	ne2000_send(struct device_s	*dev)
       /* write each chunk after the previous one */
       ne2000_dma_do_write(dev, nethdr[i].data, fragsz);
     }
-#else
-  ne2000_mem_write(dev, pv->tx_buf << 8, nethdr->data, size);
-#endif
 
   /* the data being written, we wait for remote DMA to be completed (IRQ) */
 }
@@ -231,167 +224,180 @@ static void	ne2000_push(struct device_s	*dev,
 DEV_IRQ(net_ne2000_irq)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
+  uint_fast8_t			tx_serviced = 0;
   uint_fast8_t			isr;
 
+  printf("IRQ\n");
+
+  /* lock the device */
   lock_spin(&pv->lock);
 
   /* select register bank 0 */
   ne2000_page(dev, NE2000_P0);
 
-  isr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR);
-
-  /* remote DMA completed */
-  if (isr & NE2000_RDC)
+  /* the loop is needed because some devices do not re emit interrupts
+     until all the bits in ISR are reset */
+  while ((isr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR)))
     {
-      uint_fast16_t	length = pv->current->header[0].size;
-
-      if (pv->current)
+     /* remote DMA completed */
+      if (isr & NE2000_RDC)
 	{
-	  /* the packet is in the device memory, we can send it */
-	  ne2000_dma(dev, NE2000_DMA_ABRT);
+	  if (pv->current)
+	    {
+	      uint_fast16_t	length = pv->current->header[0].size;
 
-	  /* set page start */
-	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TPSR, pv->tx_buf);
+	      /* the packet is in the device memory, we can send it */
+	      ne2000_dma(dev, NE2000_DMA_ABRT);
 
-	  /* set packet size */
-	  if (length < ETH_ZLEN)
-	    length = ETH_ZLEN;
-	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TBCR0, length);
-	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TBCR1, length >> 8);
+	      /* set page start */
+	      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TPSR, pv->tx_buf);
 
-	  /* send it ! */
-	  ne2000_command(dev, NE2000_TXP);
+	      /* set packet size */
+	      if (length < ETH_ZLEN)
+		length = ETH_ZLEN;
+	      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TBCR0, length);
+	      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TBCR1, length >> 8);
 
-	  /* XXX timeout here */
-	}
-    }
+	      /* send it ! */
+	      ne2000_command(dev, NE2000_TXP);
 
-  /* transmit error */
-  if (isr & NE2000_TXE)
-    {
-      net_debug("%s: TXE\n", pv->interface->name);
-
-      /* increment the retry counter */
-      pv->send_tries++;
-
-      /* too many retries, abording */
-      if (pv->send_tries > 3)
-	{
-	  /* set the interrupt flags as "transmitted without error",
-	     so the next queued packet can be sent */
-	  isr &= NE2000_PTX;
-	}
-      else
-	{
-	  /* resend the transmit command */
-	  ne2000_command(dev, NE2000_TXP);
-	}
-    }
-
-  /* packet transmitted */
-  if (isr & NE2000_PTX)
-    {
-      struct net_packet_s	*wait;
-
-      /* packet sent successfully, drop it */
-      packet_obj_refdrop(pv->current);
-
-      /* one or more packets in the wait queue ? */
-      if ((wait = packet_queue_pop(&pv->sendqueue)))
-	{
-	  pv->current = wait;
-
-	  ne2000_send(dev);
-	}
-      else
-	{
-	  pv->current = NULL;
-	}
-    }
-
-  /* buffer full */
-  if (isr & NE2000_OVW)
-    {
-      uint_fast8_t	cr;
-      uint_fast8_t	resend = 0;
-      uint_fast8_t	i;
-      uint_fast16_t	total;
-
-      net_debug("%s: recovery from overflow\n", pv->interface->name);
-
-      /* save the NIC state */
-      cr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD);
-
-      /* stop completely the device */
-      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD,
-		 NE2000_P0 | NE2000_DMA_ABRT | NE2000_STP);
-
-      /* wait for the NIC to complete operations */
-      for (i = 0; i < 10000000; i++)
-	;
-      /* XXX */
-      //usleep(1600);
-
-      /* reset remote byte count registers */
-      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR0, 0);
-      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR1, 0);
-
-      /* do we need to resend the outgoing packet ? */
-      resend = (cr & NE2000_TXP) && !((isr & NE2000_PTX) || (isr & NE2000_TXE));
-
-      /* enter loopback mode */
-      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TCR, 0x2);
-
-      /* bring the device up */
-      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD,
-		     NE2000_P0 | NE2000_DMA_ABRT | NE2000_STA);
-
-      /* read some packets until half the memory is free */
-      for (total = 0; total < ((pv->mem - pv->rx_buf) << 8) / 2; )
-	{
-	  uint_fast16_t	size;
-	  uint8_t	*data;
-
-	  /* read a packet */
-	  ne2000_rx(dev, &data, &size);
-
-	  /* push the packet into the network stack */
-	  ne2000_push(dev, data, size);
-
-	  total += size;
+	      /* XXX timeout here */
+	    }
 	}
 
-      /* force ISR reset */
+      /* transmit error */
+      if (isr & NE2000_TXE)
+	{
+	  net_debug("%s: TXE\n", pv->interface->name);
+
+	  /* increment the retry counter */
+	  pv->send_tries++;
+
+	  /* too many retries, abording */
+	  if (pv->send_tries > 3)
+	    {
+	      /* set the interrupt flags as "transmitted without error",
+		 so the next queued packet can be sent */
+	      isr &= NE2000_PTX;
+	    }
+	  else
+	    {
+	      /* resend the transmit command */
+	      ne2000_command(dev, NE2000_TXP);
+	    }
+	}
+
+      /* packet transmitted */
+      if (isr & NE2000_PTX)
+	{
+	  struct net_packet_s	*wait;
+
+	  /* the big dirty test. on some device, the PTX bit of ISR is
+	     not correctly acknowleged */
+	  if (!tx_serviced && pv->current)
+	    {
+	      /* packet sent successfully, drop it */
+	      packet_obj_refdrop(pv->current);
+
+	      /* one or more packets in the wait queue ? */
+	      if ((wait = packet_queue_pop(&pv->sendqueue)))
+		{
+		  pv->current = wait;
+
+		  ne2000_send(dev);
+		}
+	      else
+		pv->current = NULL;
+
+	      tx_serviced = 1;
+	    }
+	}
+
+      /* buffer full */
+      if (isr & NE2000_OVW)
+	{
+	  uint_fast8_t	cr;
+	  uint_fast8_t	resend = 0;
+	  uint_fast8_t	i;
+	  uint_fast16_t	total;
+
+	  net_debug("%s: recovery from overflow\n", pv->interface->name);
+
+	  /* save the NIC state */
+	  cr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD);
+
+	  /* stop completely the device */
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD,
+			 NE2000_P0 | NE2000_DMA_ABRT | NE2000_STP);
+
+	  /* wait for the NIC to complete operations */
+	  for (i = 0; i < 10000000; i++)
+	    ;
+	  /* XXX */
+	  //usleep(1600);
+
+	  /* reset remote byte count registers */
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR0, 0);
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR1, 0);
+
+	  /* do we need to resend the outgoing packet ? */
+	  resend = (cr & NE2000_TXP) && !((isr & NE2000_PTX) || (isr & NE2000_TXE));
+
+	  /* enter loopback mode */
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TCR, 0x2);
+
+	  /* bring the device up */
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD,
+			 NE2000_P0 | NE2000_DMA_ABRT | NE2000_STA);
+
+	  /* read some packets until half the memory is free */
+	  for (total = 0; total < ((pv->mem - pv->rx_buf) << 8) / 2; )
+	    {
+	      uint_fast16_t	size;
+	      uint8_t	*data;
+
+	      /* read a packet */
+	      ne2000_rx(dev, &data, &size);
+
+	      /* push the packet into the network stack */
+	      ne2000_push(dev, data, size);
+
+	      total += size;
+	    }
+
+	  /* force ISR reset */
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, isr);
+
+	  /* setup transmit configuration register (disable loopback) */
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TCR, NE2000_AUTOCRC);
+
+	  /* if a transmission was aborted, restart it */
+	  if (resend)
+	    ne2000_command(dev, NE2000_PTX);
+	}
+
+      /* packet received */
+      if (isr & NE2000_PRX)
+	{
+	  /* no errors */
+	  if (cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSR) & NE2000_SPRX)
+	    {
+	      uint_fast16_t			size;
+	      uint8_t			*data;
+
+	      /* read the packet */
+	      ne2000_rx(dev, &data, &size);
+
+	      /* push the packet into the network stack */
+	      ne2000_push(dev, data, size);
+	    }
+	}
+
+      /* acknowledge interrupt */
       cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, isr);
-
-      /* setup transmit configuration register (disable loopback) */
-      cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_TCR, NE2000_AUTOCRC);
-
-      /* if a transmission was aborted, restart it */
-      if (resend)
-	ne2000_command(dev, NE2000_PTX);
     }
 
-  /* packet received */
-  if (isr & NE2000_PRX)
-    {
-      /* no errors */
-      if (cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSR) & NE2000_SPRX)
-	{
-	  uint_fast16_t			size;
-	  uint8_t			*data;
-
-	  /* read the packet */
-	  ne2000_rx(dev, &data, &size);
-
-	  /* push the packet into the network stack */
-	  ne2000_push(dev, data, size);
-	}
-    }
-
-  /* acknowledge interrupt */
-  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR, isr);
-
+  /* release lock */
   lock_release(&pv->lock);
 
   return 1;

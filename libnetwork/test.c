@@ -74,7 +74,7 @@ int_fast8_t		main()
     ;
 
   if_up("eth0");
-  //  if_up("eth1");
+  if_up("eth1");
   //  if_up("eth2");
 
   return 0;

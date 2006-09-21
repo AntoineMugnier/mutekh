@@ -121,7 +121,6 @@ void				*packet_dispatch(void	*data)
 	  /* drop the packet */
 	  packet_obj_refdrop(packet);
 	}
-
     }
 
   return NULL;

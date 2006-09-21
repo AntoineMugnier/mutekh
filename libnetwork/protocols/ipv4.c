@@ -104,7 +104,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   offs = (fragment & IP_FRAG_MASK) * 8;
   datasz = net_be16_load(hdr->tot_len) - hdr->ihl * 4;
 
-  net_debug("fragment id %lx offs %d size %d\n", id, offs, datasz);
+  net_debug("fragment id %P offs %d size %d\n", id, 6, offs, datasz);
 
   /* do we already received packet with same id ? */
   if (!(p = ip_packet_lookup(&pv->fragments, id)))
@@ -308,8 +308,6 @@ NET_PREPAREPKT(ip_preparepkt)
  * Fragment sending.
  */
 
-/* XXX refaire ca sans memcpy recount parent tt ca tt ca :) */
-
 static inline	void	ip_send_fragment(struct net_proto_s	*ip,
 					 struct net_if_s	*interface,
 					 struct iphdr		*hdr,
@@ -323,11 +321,13 @@ static inline	void	ip_send_fragment(struct net_proto_s	*ip,
   struct net_header_s	*nethdr;
   struct iphdr		*hdr_frag;
   uint8_t		*dest;
+  uint_fast8_t		i;
 
   /* prepare a new IP packet */
   frag = packet_obj_new(NULL);
-  frag->parent = packet;
   packet_obj_refnew(packet);
+  frag->parent = packet;
+  frag->header[frag->stage + 1].data = NULL;
 
   dest = ip_preparepkt(interface, frag, 0, 0);
 
@@ -336,10 +336,11 @@ static inline	void	ip_send_fragment(struct net_proto_s	*ip,
   /* fill the data */
   frag->header[frag->stage].data = packet->header[packet->stage + 1].data + offs;
   frag->header[frag->stage].size = fragsz;
+  for (i = 0; i < frag->stage; i++)
+    {
+      frag->header[i].size += fragsz;
+    }
   frag->stage--;
-  frag->header[frag->stage].size += fragsz;
-
-  dummy_push(interface, frag, 0);
 
   /* copy header */
   nethdr = &frag->header[frag->stage];
@@ -348,7 +349,7 @@ static inline	void	ip_send_fragment(struct net_proto_s	*ip,
 
   /* setup fragment specific fields */
   net_be16_store(hdr_frag->fragment, (last ? 0 : IP_FLAG_MF) | (offs / 8));
-  net_be16_store(hdr_frag->tot_len, nethdr->size + fragsz);
+  net_be16_store(hdr_frag->tot_len, nethdr->size);
   net_16_store(hdr_frag->check, 0);
   /* checksum XXX don't recompute it! */
   net_16_store(hdr_frag->check,
