@@ -1,0 +1,22 @@
+* driver NE2000
+  - revoir tout le cleanup
+  - ajouter les stats (avec un define pr desactiver)
+
+* IPv4
+  - optimiser les calculs de checksum
+  - champ id: revoir l'attribution des id
+
+* ARP
+  - prevoir une gestion d'autre chose qu'Ethernet
+
+* ICMPv4
+  - faire tout les autres messages
+
+* if
+  - coder if_down
+  - ajouter un champs MTU et l'utiliser dans IP plutot que la macro IPMTU
+  - mettre une option pour indiquer les NIC qui gerent le checksum en hard
+  - gestion IP statique, route, etc...
+
+* general
+  - verifier l'alignement des acces memoire

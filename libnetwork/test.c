@@ -75,6 +75,15 @@ int_fast8_t		main()
 
   if_up("eth0");
   if_up("eth1");
+
+  struct net_route_s *route = mem_alloc(sizeof(struct net_route_s *), MEM_SCOPE_SYS);
+
+  route->interface = if_get("eth1");
+  IPV4_ADDR_SET(route->target, 0x2a2aa8c0);
+  route->type = ROUTETYPE_HOST;
+  IPV4_ADDR_SET(route->router, 0xfe2aa8c0);
+
+  route_add(if_get("eth0"), route);
   //  if_up("eth2");
 
   return 0;

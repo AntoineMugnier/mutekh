@@ -36,12 +36,16 @@
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
+#include <gpct/cont_dlist.h>
 
 /*
  * Functions for the interface container.
  */
 
 CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, list_entry, STRING, name);
+
+/* XXX */
+CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK, list_entry);
 
 /*
  * Some local variables.
@@ -67,6 +71,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
   /* create new device node */
   interface = mem_alloc(sizeof (struct net_if_s), MEM_SCOPE_SYS);
   interface->rx_bytes = interface->rx_packets = interface->tx_bytes = interface->tx_packets = 0;
+  route_table_init(&interface->route_table);
 
   /* initialize standard protocols for the device */
   interface->ip = net_alloc_proto(&ip_protocol);
@@ -102,6 +107,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
 void			if_unregister(struct net_if_s	*interface)
 {
   /* XXX */
+
 }
 
 /*
@@ -234,4 +240,13 @@ void			if_stats(const char	*name)
 	     interface->tx_bytes, interface->tx_packets,
 	     interface->rx_bytes, interface->rx_packets);
     }
+}
+
+/*
+ * Get interface from name.
+ */
+
+struct net_if_s	*if_get(const char	*name)
+{
+  return net_if_lookup(&ifs, name);
 }

@@ -30,6 +30,8 @@
 #include <netinet/protos.h>
 
 #include <netinet/if.h>
+#include <netinet/route.h>
+#include <netinet/in.h>
 
 #include <hexo/endian.h>
 
@@ -75,6 +77,7 @@ NET_PUSHPKT(rarp_pushpkt)
 #endif
   struct ether_arp	*hdr;
   struct net_header_s	*nethdr;
+  uint_fast32_t		ip;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -100,9 +103,17 @@ NET_PUSHPKT(rarp_pushpkt)
       if (memcmp(packet->tMAC, hdr->arp_tha, ETH_ALEN))
 	return ;
 
-      net_debug("Assigned IP: %P\n", &hdr->arp_tpa, 4);
+      /* assign IP */
+      ip = pv_ip->addr = net_be32_load(hdr->arp_tpa);
+      /* guess netmask */
+      if (IN_CLASSA(ip))
+	pv_ip->mask = IN_CLASSA_NET;
+      else if (IN_CLASSB(ip))
+	pv_ip->mask = IN_CLASSB_NET;
+      else if (IN_CLASSC(ip))
+	pv_ip->mask = IN_CLASSC_NET;
 
-      pv_ip->addr = net_be32_load(hdr->arp_tpa);
+      net_debug("Assigned IP: %P, netmask: %P\n", &ip, 4, &pv_ip->mask, 4);
     }
 }
 

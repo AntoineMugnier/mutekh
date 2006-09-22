@@ -131,9 +131,14 @@ struct iphdr {
 
 #include <netinet/packet.h>
 #include <netinet/protos.h>
+#include <netinet/route.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
+
+
+#define IP_DELIVERY_DIRECT	0
+#define IP_DELIVERY_INDIRECT	1
 
 CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, 64, BLOB, 6);
 
@@ -173,7 +178,8 @@ struct		ip_interface_s
 struct			net_pv_ip_s
 {
   struct net_proto_s	*arp;
-  uint32_t		addr;
+  uint_fast32_t		addr;
+  uint_fast32_t		mask;
   ip_packet_root_t	fragments;
   uint_fast32_t		id_seq;
 };
@@ -186,7 +192,9 @@ NET_INITPROTO(ip_init);
 NET_PUSHPKT(ip_pushpkt);
 NET_PREPAREPKT(ip_preparepkt);
 NET_IP_SEND(ip_send);
-
+void		ip_route(struct net_if_s	*interface,
+			 struct net_packet_s	*packet,
+			 struct net_route_s	*route);
 
 extern const struct net_proto_desc_s	ip_protocol;
 

@@ -44,6 +44,38 @@
 #define IF_BOOT_DHCP	1
 
 /*
+ * Address and mask structures.
+ */
+
+enum	net_addr_e
+  {
+	addr_ipv4
+  };
+
+struct			net_addr_s
+{
+  enum net_addr_e	family;
+  union
+  {
+    uint_fast32_t	ipv4;
+  } addr;
+};
+
+#define IPV4_ADDR_SET(_addr_,_ip_)					\
+  {									\
+    (_addr_).family = addr_ipv4;					\
+    (_addr_).addr.ipv4 = (_ip_);					\
+  }
+
+#define IPV4_ADDR_GET(_addr_)						\
+  ({									\
+    assert(1 || (_addr_).family == addr_ipv4);				\
+    (_addr_).addr.ipv4;							\
+  })
+
+#include <netinet/route.h>
+
+/*
  * Interface types.
  */
 
@@ -67,6 +99,7 @@ struct			net_if_s
   struct device_s	*dev;
   const uint8_t		*mac;
   net_protos_root_t	protocols;
+  route_table_root_t	route_table;
 
   struct net_proto_s	*ip;
 
@@ -115,6 +148,7 @@ void	if_sendpkt(struct net_if_s	*interface,
 		   struct net_packet_s	*packet,
 		   struct net_proto_s	*proto);
 void	if_stats(const char	*name);
+struct net_if_s	*if_get(const char	*name);
 
 #endif
 

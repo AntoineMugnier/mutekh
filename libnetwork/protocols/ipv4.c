@@ -31,6 +31,7 @@
 #include <netinet/protos.h>
 
 #include <netinet/if.h>
+#include <netinet/route.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,6 +76,22 @@ NET_INITPROTO(ip_init)
   ip_packet_init(&pv->fragments);
   srand((uint_fast32_t)pv);
   pv->id_seq = rand();
+}
+
+/*
+ * Does an address need to be routed ?
+ */
+
+static inline	uint_fast8_t	ip_delivery(struct net_if_s	*interface,
+					    struct net_proto_s	*ip,
+					    uint32_t		addr)
+{
+  struct net_pv_ip_s		*pv = (struct net_pv_ip_s *)ip->pv;
+
+  if ((addr & pv->mask) == (pv->addr & pv->mask))
+    return IP_DELIVERY_DIRECT;
+  else
+    return IP_DELIVERY_INDIRECT;
 }
 
 /*
@@ -232,7 +249,29 @@ NET_PUSHPKT(ip_pushpkt)
 
   /* is the packet really for me ? */
   if (packet->tIP != pv->addr)
-    return;
+    {
+      struct net_route_s	*route_entry = NULL;
+      struct net_addr_s		addr;
+
+      IPV4_ADDR_SET(addr, packet->tIP);
+
+      /* is there a route for this address ? */
+      if (ip_delivery(interface, protocol, packet->tIP) == IP_DELIVERY_DIRECT ||
+	  (route_entry = route_get(interface, &addr)) != NULL)
+	{
+	  net_debug("routing to host %P\n", &packet->tIP, 4);
+	  /* route the packet */
+	  ip_route(interface, packet, route_entry);
+	}
+      else
+	{
+	  net_debug("no route to host %P\n", &packet->tIP, 4);
+	  /* network unreachable */
+	  //icmp_error(interface, ICMP_NETWORK_UNREACHABLE, packet->sIP);
+	}
+
+      return ;
+    }
 
   /* verify checksum */
   check = net_16_load(hdr->check);
@@ -308,17 +347,18 @@ NET_PREPAREPKT(ip_preparepkt)
  * Fragment sending.
  */
 
-static inline	void	ip_send_fragment(struct net_proto_s	*ip,
-					 struct net_if_s	*interface,
-					 struct iphdr		*hdr,
-					 struct net_packet_s	*packet,
-					 uint_fast16_t		offs,
-					 size_t			fragsz,
-					 uint_fast8_t		last)
+static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
+					    struct net_if_s	*interface,
+					    struct iphdr	*hdr,
+					    struct net_packet_s	*packet,
+					    uint_fast16_t	offs,
+					    size_t		fragsz,
+					    uint_fast8_t	last)
 {
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ip->pv;
   struct net_packet_s	*frag;
   struct net_header_s	*nethdr;
+  struct net_route_s	*route_entry;
   struct iphdr		*hdr_frag;
   uint8_t		*dest;
   uint_fast8_t		i;
@@ -360,11 +400,35 @@ static inline	void	ip_send_fragment(struct net_proto_s	*ip,
 
   frag->sIP = net_be32_load(hdr_frag->saddr);
   frag->tIP = net_be32_load(hdr_frag->daddr);
-  if (!(frag->tMAC = arp_get_mac(interface, pv->arp, frag, frag->tIP)))
-    return;
+  /* need to route ? */
+  if (ip_delivery(interface, ip, frag->tIP) == IP_DELIVERY_INDIRECT)
+    {
+      struct net_addr_s	addr;
+
+      IPV4_ADDR_SET(addr, frag->tIP);
+      if ((route_entry = route_get(interface, &addr)))
+	{
+	  if (!(frag->tMAC = arp_get_mac(interface, pv->arp, frag,
+					 IPV4_ADDR_GET(route_entry->router))))
+	    return 1;
+	}
+      else
+	{
+	  /* network unreachable */
+	  //icmp_error(interface, ICMP_NETWORK_UNREACHABLE, packet->sIP);
+	  return 0;
+	}
+    }
+  else
+    {
+      /* no route IP -> MAC translation */
+      if (!(frag->tMAC = arp_get_mac(interface, pv->arp, frag, frag->tIP)))
+	return 1;
+    }
 
   /* send the packet to the driver */
   if_sendpkt(interface, frag, ip);
+  return 1;
 }
 
 /*
@@ -376,6 +440,7 @@ NET_IP_SEND(ip_send)
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ip->pv;
   struct iphdr		*hdr;
   struct net_header_s	*nethdr;
+  struct net_route_s	*route_entry;
   uint_fast16_t		total;
 
   /* get the header */
@@ -398,7 +463,8 @@ NET_IP_SEND(ip_send)
     {
       uint_fast16_t		id;
       uint_fast16_t		offs;
-      uint_fast16_t		fragsz;;
+      uint_fast16_t		fragsz;
+      uint_fast8_t		sent;
       uint8_t			*data;
 
       data = nethdr[1].data;
@@ -410,15 +476,17 @@ NET_IP_SEND(ip_send)
       pv->id_seq = id + 1;
 
       /* send the middle fragments */
-      while (offs + fragsz < total)
+      sent = 1;
+      while (sent && offs + fragsz < total)
 	{
-	  ip_send_fragment(ip, interface, hdr, packet, offs, fragsz, 0);
+	  sent = ip_send_fragment(ip, interface, hdr, packet, offs, fragsz, 0);
 
 	  offs += fragsz;
 	}
 
       /* last packet */
-      ip_send_fragment(ip, interface, hdr, packet, offs, total - offs, 1);
+      if (sent)
+	ip_send_fragment(ip, interface, hdr, packet, offs, total - offs, 1);
 
       /* release the original packet */
       packet_obj_refdrop(packet);
@@ -436,10 +504,92 @@ NET_IP_SEND(ip_send)
 
   packet->stage--;
   packet->sIP = pv->addr;
-  if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet, packet->tIP)))
-    return ;
+  /* need to route ? */
+  if (ip_delivery(interface, ip, packet->tIP) == IP_DELIVERY_INDIRECT)
+    {
+      struct net_addr_s	addr;
+
+      IPV4_ADDR_SET(addr, packet->tIP);
+      if ((route_entry = route_get(interface, &addr)))
+	{
+	  if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet,
+					 IPV4_ADDR_GET(route_entry->router))))
+	    return;
+	}
+      else
+	{
+	  /* network unreachable */
+	  //icmp_error(interface, ICMP_NETWORK_UNREACHABLE, packet->sIP);
+
+	  return;
+	}
+    }
+  else
+    {
+      /* no route IP -> MAC translation */
+      if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet, packet->tIP)))
+	return;
+    }
 
   /* send the packet to the driver */
   if_sendpkt(interface, packet, ip);
 }
 
+/*
+ * Route a packet.
+ */
+
+void		ip_route(struct net_if_s	*interface,
+			 struct net_packet_s	*packet,
+			 struct net_route_s	*route)
+{
+  struct net_pv_ip_s	*pv;
+  struct iphdr		*hdr;
+  struct net_header_s	*nethdr;
+  uint_fast32_t		router;
+
+  /* get the packet header */
+  nethdr = &packet->header[packet->stage];
+  hdr = (struct iphdr *)nethdr->data;
+
+  /* decrement TTL */
+  hdr->ttl--;
+
+  /* check for fragmentation */
+
+  /* recompute checksum*/
+  net_16_store(hdr->check, packet_checksum((uint8_t *)hdr, hdr->ihl * 4));
+
+  /* send the packet */
+  packet->stage--;
+
+  /* is the destination address local ? */
+  if (route == NULL)
+    {
+      pv = (struct net_pv_ip_s *)interface->ip->pv;
+
+      net_debug("local delivery\n");
+
+      /* yes, direct delivery */
+      if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet,
+				       packet->tIP)))
+	return;
+    }
+  else
+    {
+      interface = route->interface;
+      pv = (struct net_pv_ip_s *)interface->ip->pv;
+
+      /* get router address */
+      router = IPV4_ADDR_GET(route->router);
+
+      net_debug("remote delivery thru %P\n", &router, 4);
+
+      /* no, indirect delivery*/
+      if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet, router)))
+	return;
+    }
+
+  /* send the packet to the driver */
+  if_sendpkt(interface, packet, interface->ip);
+}

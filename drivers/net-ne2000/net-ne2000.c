@@ -227,8 +227,6 @@ DEV_IRQ(net_ne2000_irq)
   uint_fast8_t			tx_serviced = 0;
   uint_fast8_t			isr;
 
-  printf("IRQ\n");
-
   /* lock the device */
   lock_spin(&pv->lock);
 
