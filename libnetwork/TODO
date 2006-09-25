@@ -4,7 +4,7 @@
 
 * IPv4
   - optimiser les calculs de checksum
-  - champ id: revoir l'attribution des id
+  - fragmentation lors du routage
 
 * ARP
   - prevoir une gestion d'autre chose qu'Ethernet
@@ -14,9 +14,8 @@
 
 * if
   - coder if_down
-  - ajouter un champs MTU et l'utiliser dans IP plutot que la macro IPMTU
   - mettre une option pour indiquer les NIC qui gerent le checksum en hard
-  - gestion IP statique, route, etc...
+  - aliasing et bridging
 
 * general
   - verifier l'alignement des acces memoire

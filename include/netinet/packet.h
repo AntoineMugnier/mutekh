@@ -111,6 +111,36 @@ CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, NOLOCK);
 CONTAINER_TYPE(packet_queue_lock, DLIST, struct net_packet_s, HEXO_SPIN_IRQ);
 
 /*
+ * Address and mask structures.
+ */
+
+enum	net_addr_e
+  {
+	addr_ipv4
+  };
+
+struct			net_addr_s
+{
+  enum net_addr_e	family;
+  union
+  {
+    uint_fast32_t	ipv4;
+  } addr;
+};
+
+#define IPV4_ADDR_SET(_addr_,_ip_)					\
+  {									\
+    (_addr_).family = addr_ipv4;					\
+    (_addr_).addr.ipv4 = (_ip_);					\
+  }
+
+#define IPV4_ADDR_GET(_addr_)						\
+  ({									\
+    assert((_addr_).family == addr_ipv4);				\
+    (_addr_).addr.ipv4;							\
+  })
+
+/*
  * This structure defines a packet.
  */
 
@@ -122,8 +152,8 @@ struct				net_packet_s
   uint8_t			*packet;	/* raw packet */
   uint8_t			*sMAC;		/* source MAC address */
   uint8_t			*tMAC;		/* target MAC address */
-  uint_fast32_t			sIP;		/* source IP address */
-  uint_fast32_t			tIP;		/* target IP address */
+  struct net_addr_s		sADDR;		/* source protocol address */
+  struct net_addr_s		tADDR;		/* target protocol address */
   uint_fast8_t			MAClen;		/* length of MAC addresses */
   uint_fast16_t			proto;		/* level 2 protocol id */
 
@@ -131,8 +161,6 @@ struct				net_packet_s
   packet_queue_entry_t		queue_entry;
   packet_queue_lock_entry_t	queue_entry_spin;
 };
-
-#include <netinet/protos.h>
 
 /*
  * Used to give info to the dispatch thread.

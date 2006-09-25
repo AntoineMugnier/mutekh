@@ -61,7 +61,8 @@ static uint_fast8_t	ethid = 0;
 
 struct net_if_s	*if_register(struct device_s	*dev,
 			     net_if_type_t	type,
-			     uint8_t		*mac)
+			     uint8_t		*mac,
+			     uint_fast16_t	mtu)
 {
   struct net_proto_s				*arp;
   struct net_proto_s				*icmp;
@@ -84,11 +85,19 @@ struct net_if_s	*if_register(struct device_s	*dev,
   if_register_proto(interface, interface->bootproto.rarp, interface->ip);
   if_register_proto(interface, icmp, interface->ip);
   if_register_proto(interface, udp, interface->ip);
-  interface->boottype = IF_BOOT_RARP;
+
+  /* XXX a funny hack */
+  static uint_fast8_t chiche = 0;
+  if (!chiche)
+    interface->boottype = IF_BOOT_RARP;
+  else
+    interface->boottype = IF_BOOT_NONE;
+  chiche = 1;
 
   /* name the interface */
   interface->dev = dev;
   interface->mac = mac;
+  interface->mtu = mtu;
   if (type == IF_ETHERNET)
     sprintf(interface->name, "eth%d", ethid++);
   else
@@ -118,6 +127,11 @@ void			if_up(char*		name, ...)
 {
   struct device_s	*dev;
   struct net_if_s	*interface;
+  va_list		va;
+
+  struct net_pv_ip_s *pv_ip;
+
+  va_start(va, name);
 
   if ((interface = net_if_lookup(&ifs, name)))
     {
@@ -135,9 +149,14 @@ void			if_up(char*		name, ...)
 	    break;
 	  default:
 	    /* XXX otherwise, static IP */
+	    pv_ip = (struct net_pv_ip_s *)interface->ip->pv;
+	    pv_ip->addr = va_arg(va, uint_fast32_t);
+	    net_debug("Assigning static IP %P\n", &pv_ip->addr, 4);
 	    break;
 	}
     }
+
+  va_end(va);
 }
 
 /*
@@ -221,7 +240,14 @@ void			if_sendpkt(struct net_if_s	*interface,
   interface->tx_bytes += packet->header[0].size;
   interface->tx_packets++;
 
-  return dev_net_sendpkt(interface->dev, packet, proto->id);
+  if (!memcmp(interface->mac, packet->tMAC, packet->MAClen))
+    {
+      net_debug("sending a packet for me !\n");
+      if_pushpkt(interface, packet);
+      packet_obj_refdrop(packet);
+    }
+  else
+    dev_net_sendpkt(interface->dev, packet, proto->id);
 }
 
 /*

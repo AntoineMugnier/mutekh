@@ -74,16 +74,49 @@ int_fast8_t		main()
     ;
 
   if_up("eth0");
-  if_up("eth1");
+  if_up("eth1", 0x0a020301);
 
-  struct net_route_s *route = mem_alloc(sizeof(struct net_route_s *), MEM_SCOPE_SYS);
+  struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
+
+#if 0
+  route->interface = if_get("eth1");
+  IPV4_ADDR_SET(route->target, 0xc0a82a00);
+  IPV4_ADDR_SET(route->mask, 0xffffff00);
+  route->type = ROUTETYPE_NET;
+  IPV4_ADDR_SET(route->router, 0x0a0202f3);
+#endif
+  route->interface = if_get("eth0");
+  IPV4_ADDR_SET(route->target, 0x0a020200);
+  IPV4_ADDR_SET(route->mask, 0xffffff00);
+  route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
+  route_add(if_get("eth0"), route);
+
+  route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
   route->interface = if_get("eth1");
-  IPV4_ADDR_SET(route->target, 0x2a2aa8c0);
-  route->type = ROUTETYPE_HOST;
-  IPV4_ADDR_SET(route->router, 0xfe2aa8c0);
+  IPV4_ADDR_SET(route->target, 0x0a020300);
+  IPV4_ADDR_SET(route->mask, 0xffffff00);
+  route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
+  route_add(if_get("eth1"), route);
 
+  route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
+
+  route->interface = if_get("eth0");
+  IPV4_ADDR_SET(route->target, 0x0a020200);
+  IPV4_ADDR_SET(route->mask, 0xffffff00);
+  route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
+  route_add(if_get("eth1"), route);
+
+  route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
+
+  route->interface = if_get("eth1");
+  IPV4_ADDR_SET(route->target, 0x0a020300);
+  IPV4_ADDR_SET(route->mask, 0xffffff00);
+  route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
   route_add(if_get("eth0"), route);
+
+  //arp_hardwire(if_get("eth0"), "\x08\x00\x11\x06\x76\x65", 0x0a020302);
+
   //  if_up("eth2");
 
   return 0;

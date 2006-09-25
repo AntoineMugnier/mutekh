@@ -94,8 +94,8 @@ NET_PUSHPKT(udp_pushpkt)
 
   /* dump significant fields */
   printf("UDP %P:%u -> %P:%u of length %u\n",
-	 &packet->sIP, 4, net_be16_load(hdr->source),
-	 &packet->tIP, 4, net_be16_load(hdr->dest),
+	 &packet->sADDR.addr.ipv4, 4, net_be16_load(hdr->source),
+	 &packet->tADDR.addr.ipv4, 4, net_be16_load(hdr->dest),
 	 net_be16_load(hdr->len) - sizeof (struct udphdr));
 
   /* don't panic, this is a test */
@@ -153,7 +153,7 @@ NET_UDP_SEND(udp_send)
   /* XXX */
 
   /* target IP */
-  packet->tIP = ip;
+  IPV4_ADDR_SET(packet->tADDR, ip);
 
   packet->stage--;
   /* send the packet to IP */

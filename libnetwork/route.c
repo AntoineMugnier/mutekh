@@ -53,8 +53,6 @@ struct net_route_s	*route_get(struct net_if_s	*interface,
   {
     target = IPV4_ADDR_GET(item->target);
 
-    printf("  target = %P\n", &target, 4);
-
     if (item->type == ROUTETYPE_HOST)
       {
 	if (target == addr4)

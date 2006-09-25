@@ -105,8 +105,11 @@ NET_PUSHPKT(arp_pushpkt)
   switch (net_be16_load(hdr->ea_hdr.ar_op))
     {
       case ARPOP_REQUEST:
+	printf("ARP Req %P / %P\n", &hdr->arp_tpa, 4, &pv_ip->addr, 4);
+
 	if (net_be32_load(hdr->arp_tpa) == pv_ip->addr)
 	  {
+	    printf("Me!\n");
 	    /* force adding the entry */
 	    arp_update_table(protocol, net_be32_load(hdr->arp_spa),
 			     hdr->arp_sha, ARP_TABLE_DEFAULT);
@@ -271,6 +274,8 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
   if (!(flags & ARP_TABLE_IN_PROGRESS))
     memcpy(arp_entry->mac, mac, ETH_ALEN);
   arp_entry->valid = !(flags & ARP_TABLE_IN_PROGRESS);
+  if (arp_entry->valid)
+    printf("Added entry %P for %P\n", mac, ETH_ALEN, &ip, 4);
   return arp_entry;
 }
 
@@ -286,8 +291,13 @@ uint8_t			*arp_get_mac(struct net_if_s		*interface,
 				     uint_fast32_t		ip)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
   struct arp_entry_s	*arp_entry;
 
+  if (ip == pv_ip->addr)
+    {
+      return interface->mac;
+    }
   if ((arp_entry = arp_table_lookup(&pv->table, ip)))
     {
       /* is the entry valid ? */

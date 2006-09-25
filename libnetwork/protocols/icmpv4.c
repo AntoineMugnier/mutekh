@@ -178,9 +178,9 @@ NET_ICMP_ECHO(icmp_echo)
   net_16_store(hdr->checksum, packet_checksum(nethdr->data, nethdr->size));
 
   /* target IP */
-  xchg = packet->tIP;
-  packet->tIP = packet->sIP;
-  packet->sIP = xchg;
+  xchg = packet->tADDR.addr.ipv4;
+  packet->tADDR.addr.ipv4 = packet->sADDR.addr.ipv4;
+  packet->sADDR.addr.ipv4 = xchg;
 
   packet->stage--;
   /* send the packet to IP */

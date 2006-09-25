@@ -34,6 +34,9 @@
 #define ROUTETYPE_NET	0
 #define ROUTETYPE_HOST	1
 
+#define ROUTETYPE_DIRECT	2
+#define ROUTETYPE_INDIRECT	4
+
 /*
  * Route table container.
  */

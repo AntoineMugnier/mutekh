@@ -108,14 +108,10 @@ static void	ne2000_send(struct device_s	*dev)
     {
       uint_fast16_t	fragsz;
 
-      net_debug("%u: data %p, size %u\n", i, nethdr[i].data, nethdr[i].size);
-      net_debug("%u: data %p, size %u\n", i + 1, nethdr[i + 1].data, nethdr[i + 1].size);
-
       if (!nethdr[i + 1].data)
 	fragsz = nethdr[i].size;
       else
 	fragsz = nethdr[i].size - nethdr[i + 1].size;
-      net_debug("chunk size %u\n", fragsz);
       /* write each chunk after the previous one */
       ne2000_dma_do_write(dev, nethdr[i].data, fragsz);
     }
@@ -446,7 +442,7 @@ DEV_INIT(net_ne2000_init)
   net_protos_init(&pv->protocols);
 
   /* register as a net device */
-  pv->interface = if_register(dev, IF_ETHERNET, pv->mac);
+  pv->interface = if_register(dev, IF_ETHERNET, pv->mac, ETHERMTU);
 
   /* start dispatch thread */
   if (sem_init(&pv->rcvsem, 0, 0))

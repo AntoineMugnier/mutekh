@@ -80,8 +80,6 @@ void				ne2000_mem_read(struct device_s	*dev,
       while (size--)
 	*d++ = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_DATA);
     }
-
-  /* XXX better use insb/insw */
 }
 
 /*
@@ -137,8 +135,6 @@ void				ne2000_dma_do_write(struct device_s	*dev,
       while (size--)
 	cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_DATA, *d++);
     }
-
-  /* XXX better use outsb/outsw */
 }
 
 /*

@@ -120,16 +120,6 @@ struct		ether_arp
 CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, 64, UNSIGNED);
 
 /*
- * ARP private data.
- */
-
-struct			net_pv_arp_s
-{
-  struct net_proto_s	*ip;
-  arp_table_root_t	table;
-};
-
-/*
  * ARP entry.
  */
 
@@ -140,6 +130,16 @@ struct			arp_entry_s
   uint_fast8_t		valid;
   arp_table_entry_t	list_entry;
   packet_queue_root_t	wait;
+};
+
+/*
+ * ARP private data.
+ */
+
+struct			net_pv_arp_s
+{
+  struct net_proto_s	*ip;
+  arp_table_root_t	table;
 };
 
 /*

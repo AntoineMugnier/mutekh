@@ -74,8 +74,7 @@ NET_INITPROTO(ip_init)
   pv->arp = arp;
   pv->addr = 0;
   ip_packet_init(&pv->fragments);
-  srand((uint_fast32_t)pv);
-  pv->id_seq = rand();
+  pv->id_seq = 1;
 }
 
 /*
@@ -113,7 +112,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 
   /* the unique identifier of the packet is the concatenation of the
      source address and the packet id */
-  memcpy(id, &packet->sIP, 4);
+  memcpy(id, &packet->sADDR.addr.ipv4, 4);
   memcpy(&id[3], &hdr->id, 2);
 
   /* extract some useful fields */
@@ -244,28 +243,24 @@ NET_PUSHPKT(ip_pushpkt)
     return;
 
   /* update packet info */
-  packet->sIP = net_be32_load(hdr->saddr);
-  packet->tIP = net_be32_load(hdr->daddr);
+  IPV4_ADDR_SET(packet->sADDR, net_be32_load(hdr->saddr));
+  IPV4_ADDR_SET(packet->tADDR, net_be32_load(hdr->daddr));
 
   /* is the packet really for me ? */
-  if (packet->tIP != pv->addr)
+  if (packet->tADDR.addr.ipv4 != pv->addr)
     {
       struct net_route_s	*route_entry = NULL;
-      struct net_addr_s		addr;
-
-      IPV4_ADDR_SET(addr, packet->tIP);
 
       /* is there a route for this address ? */
-      if (ip_delivery(interface, protocol, packet->tIP) == IP_DELIVERY_DIRECT ||
-	  (route_entry = route_get(interface, &addr)) != NULL)
+      if ((route_entry = route_get(interface, &packet->tADDR)) != NULL)
 	{
-	  net_debug("routing to host %P\n", &packet->tIP, 4);
+	  net_debug("routing to host %P\n", &packet->tADDR.addr.ipv4, 4);
 	  /* route the packet */
 	  ip_route(interface, packet, route_entry);
 	}
       else
 	{
-	  net_debug("no route to host %P\n", &packet->tIP, 4);
+	  net_debug("no route to host %P\n", &packet->tADDR.addr.ipv4, 4);
 	  /* network unreachable */
 	  //icmp_error(interface, ICMP_NETWORK_UNREACHABLE, packet->sIP);
 	}
@@ -398,15 +393,12 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
   /* send the fragment */
   frag->stage--;
 
-  frag->sIP = net_be32_load(hdr_frag->saddr);
-  frag->tIP = net_be32_load(hdr_frag->daddr);
+  IPV4_ADDR_SET(frag->sADDR, net_be32_load(hdr_frag->saddr));
+  IPV4_ADDR_SET(frag->tADDR, net_be32_load(hdr_frag->daddr));
   /* need to route ? */
-  if (ip_delivery(interface, ip, frag->tIP) == IP_DELIVERY_INDIRECT)
+  if (ip_delivery(interface, ip, frag->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
     {
-      struct net_addr_s	addr;
-
-      IPV4_ADDR_SET(addr, frag->tIP);
-      if ((route_entry = route_get(interface, &addr)))
+      if ((route_entry = route_get(interface, &frag->tADDR)))
 	{
 	  if (!(frag->tMAC = arp_get_mac(interface, pv->arp, frag,
 					 IPV4_ADDR_GET(route_entry->router))))
@@ -422,7 +414,7 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
   else
     {
       /* no route IP -> MAC translation */
-      if (!(frag->tMAC = arp_get_mac(interface, pv->arp, frag, frag->tIP)))
+      if (!(frag->tMAC = arp_get_mac(interface, pv->arp, frag, frag->tADDR.addr.ipv4)))
 	return 1;
     }
 
@@ -454,12 +446,12 @@ NET_IP_SEND(ip_send)
   hdr->ttl = 64;
   hdr->protocol = proto->id;
   net_be32_store(hdr->saddr, pv->addr);
-  net_be32_store(hdr->daddr, packet->tIP);
+  net_be32_store(hdr->daddr, IPV4_ADDR_GET(packet->tADDR));
 
   total = nethdr[1].size;
 
   /* need fragmentation */
-  if (total > IPMTU - 20)
+  if (total > interface->mtu - 20)
     {
       uint_fast16_t		id;
       uint_fast16_t		offs;
@@ -469,11 +461,10 @@ NET_IP_SEND(ip_send)
 
       data = nethdr[1].data;
       offs = 0;
-      fragsz = (IPMTU - 20) & ~7;
+      fragsz = (interface->mtu - 20) & ~7;
       /* choose a random identifier */
-      id = pv->id_seq + (rand() & 0xff);
+      id = pv->id_seq++;
       net_be16_store(hdr->id, id);
-      pv->id_seq = id + 1;
 
       /* send the middle fragments */
       sent = 1;
@@ -496,21 +487,18 @@ NET_IP_SEND(ip_send)
   /* for the non fragmented packets */
   /* finish the IP header */
   net_be16_store(hdr->tot_len, nethdr->size);
-  net_16_store(hdr->id, 0);
+  net_16_store(hdr->id, pv->id_seq++);
   net_16_store(hdr->fragment, 0);
   net_16_store(hdr->check, 0);
   /* checksum */
   net_16_store(hdr->check, packet_checksum((uint8_t *)hdr, hdr->ihl * 4));
 
   packet->stage--;
-  packet->sIP = pv->addr;
+  IPV4_ADDR_SET(packet->sADDR, pv->addr);
   /* need to route ? */
-  if (ip_delivery(interface, ip, packet->tIP) == IP_DELIVERY_INDIRECT)
+  if (ip_delivery(interface, ip, packet->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
     {
-      struct net_addr_s	addr;
-
-      IPV4_ADDR_SET(addr, packet->tIP);
-      if ((route_entry = route_get(interface, &addr)))
+      if ((route_entry = route_get(interface, &packet->tADDR)))
 	{
 	  if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet,
 					 IPV4_ADDR_GET(route_entry->router))))
@@ -527,7 +515,7 @@ NET_IP_SEND(ip_send)
   else
     {
       /* no route IP -> MAC translation */
-      if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet, packet->tIP)))
+      if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet, packet->tADDR.addr.ipv4)))
 	return;
     }
 
@@ -548,6 +536,8 @@ void		ip_route(struct net_if_s	*interface,
   struct net_header_s	*nethdr;
   uint_fast32_t		router;
 
+  packet_obj_refnew(packet);
+
   /* get the packet header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct iphdr *)nethdr->data;
@@ -555,37 +545,33 @@ void		ip_route(struct net_if_s	*interface,
   /* decrement TTL */
   hdr->ttl--;
 
-  /* check for fragmentation */
+  /* XXX check for fragmentation */
 
   /* recompute checksum*/
+  net_16_store(hdr->check, 0);
   net_16_store(hdr->check, packet_checksum((uint8_t *)hdr, hdr->ihl * 4));
 
   /* send the packet */
   packet->stage--;
 
-  /* is the destination address local ? */
-  if (route == NULL)
+  interface = route->interface;
+  pv = (struct net_pv_ip_s *)interface->ip->pv;
+
+  /* direct or indirect delivery */
+  if (route->type & ROUTETYPE_DIRECT)
     {
-      pv = (struct net_pv_ip_s *)interface->ip->pv;
+      net_debug("local delivery on %s\n", interface->name);
 
-      net_debug("local delivery\n");
-
-      /* yes, direct delivery */
-      if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet,
-				       packet->tIP)))
+      if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet, packet->tADDR.addr.ipv4)))
 	return;
     }
   else
     {
-      interface = route->interface;
-      pv = (struct net_pv_ip_s *)interface->ip->pv;
-
       /* get router address */
       router = IPV4_ADDR_GET(route->router);
 
-      net_debug("remote delivery thru %P\n", &router, 4);
+      net_debug("remote delivery thru %P on %s\n", &router, 4, interface->name);
 
-      /* no, indirect delivery*/
       if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet, router)))
 	return;
     }

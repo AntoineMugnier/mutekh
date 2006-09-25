@@ -82,7 +82,6 @@
 #define IPVERSION	4
 #define MAXTTL		255
 #define IPDEFTTL	64
-#define IPMTU		ETH_DATA_LEN
 
 /*
  * IP flags.
