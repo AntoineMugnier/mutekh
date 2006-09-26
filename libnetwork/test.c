@@ -24,6 +24,43 @@
 #include <string.h>
 
 #include <netinet/if.h>
+#include <netinet/in.h>
+#include <netinet/libudp.h>
+
+#include <stdio.h>
+#include <string.h>
+
+UDP_CALLBACK(test_add)
+{
+  char		result[20];
+  char		*op;
+  char		*op1, *op2;
+  uint_fast32_t	a, b;
+
+  op = mem_alloc(size + 1, MEM_SCOPE_SYS);
+  memcpy(op, data, size);
+  op[size] = 0;
+
+  printf("Servicing client (%P:%u) for \"%s\"\n", &remote->address.addr.ipv4, 4, remote->port, op);
+
+  op1 = op;
+
+  op2 = strchr(op, '+');
+  *op2 = 0;
+  op2++;
+
+  a = atoi(op1);
+  b = atoi(op2);
+
+  sprintf(result, "%d", a + b);
+
+  printf("Answering \"%s\"\n", result);
+
+  mem_free(op);
+
+  remote->port = htons(4242);
+  udp_send(local, remote, result, strlen(result));
+}
 
 /*
  * test main.
@@ -31,43 +68,6 @@
 
 int_fast8_t		main()
 {
-#if 0
-  /* #AC on intel */
-
-  asm volatile("movl %%cr0, %%eax\n\t"
-	       "orl $0x43000, %%eax\n\t"
-	       "movl %%eax, %%cr0"
-	       :
-	       :
-	       : "%eax");
-  asm volatile("mov $0x23, %%ax\n\t"
-	       "mov %%ax, %%ds\n\t"
-	       "mov %%ax, %%es\n\t"
-	       "mov %%ax, %%fs\n\t"
-	       "mov %%ax, %%gs\n\t"
-	       :
-	       :
-	       : "%eax");
-  uint16_t tr = 0x28;
-  asm volatile("ltr %0\n\t"
-	       :
-	       : "r" (tr));
-  asm volatile("pushl $0x23\n\t"
-	       "pushl %esp\n\t"
-	       "pushl $0x43046\n\t"
-	       "pushl $0x1b\n\t"
-	       "pushl $1f\n\t"
-	       "iret\n\t"
-	       "1:");
-
-  uint32_t *p = 3;
-
-  printf("%p\n", p);
-
-  *p = 42;
-  printf("%d\n", *p);
-#endif
-
   uint_fast32_t i;
 
   for (i = 0; i < 10000000; i++)
@@ -76,15 +76,10 @@ int_fast8_t		main()
   if_up("eth0");
   if_up("eth1", 0x0a020301);
 
+#if 0
   struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
-#if 0
-  route->interface = if_get("eth1");
-  IPV4_ADDR_SET(route->target, 0xc0a82a00);
-  IPV4_ADDR_SET(route->mask, 0xffffff00);
-  route->type = ROUTETYPE_NET;
-  IPV4_ADDR_SET(route->router, 0x0a0202f3);
-#endif
+
   route->interface = if_get("eth0");
   IPV4_ADDR_SET(route->target, 0x0a020200);
   IPV4_ADDR_SET(route->mask, 0xffffff00);
@@ -118,6 +113,14 @@ int_fast8_t		main()
   //arp_hardwire(if_get("eth0"), "\x08\x00\x11\x06\x76\x65", 0x0a020302);
 
   //  if_up("eth2");
+#endif
+
+  struct net_udp_addr_s	listen;
+
+  IPV4_ADDR_SET(listen.address, 0x0a0202f0);
+  listen.port = htons(4242);
+
+  udp_callback(&listen, test_add);
 
   return 0;
 }

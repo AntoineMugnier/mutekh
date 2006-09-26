@@ -71,7 +71,7 @@ struct			net_pv_udp_s
 NET_INITPROTO(udp_init);
 NET_PUSHPKT(udp_pushpkt);
 NET_PREPAREPKT(udp_preparepkt);
-NET_UDP_SEND(udp_send);
+NET_UDP_SEND(udp_sendpkt);
 
 extern const struct net_proto_desc_s	udp_protocol;
 

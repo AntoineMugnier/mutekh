@@ -32,6 +32,8 @@
 
 #include <netinet/if.h>
 
+#include <netinet/libudp.h>
+
 #include <stdio.h>
 
 /*
@@ -40,7 +42,7 @@
 
 static const struct udp_interface_s	udp_interface =
 {
-  .send = udp_send
+  .send = udp_sendpkt
 };
 
 const struct net_proto_desc_s	udp_protocol =
@@ -92,14 +94,17 @@ NET_PUSHPKT(udp_pushpkt)
     }
 #endif
 
-  /* dump significant fields */
-  printf("UDP %P:%u -> %P:%u of length %u\n",
-	 &packet->sADDR.addr.ipv4, 4, net_be16_load(hdr->source),
-	 &packet->tADDR.addr.ipv4, 4, net_be16_load(hdr->dest),
-	 net_be16_load(hdr->len) - sizeof (struct udphdr));
+  /* XXX udp checksum */
 
-  /* don't panic, this is a test */
-  printf("%s\n", nethdr->data + sizeof (struct udphdr));
+  /* next stage */
+  if (!nethdr[1].data)
+    {
+      nethdr[1].data = nethdr->data + sizeof (struct udphdr);
+      nethdr[1].size = net_be16_load(hdr->len) - sizeof (struct udphdr);
+    }
+  packet->stage++;
+
+  udp_signal(packet, hdr);
 }
 
 /*
@@ -127,7 +132,11 @@ NET_PREPAREPKT(udp_preparepkt)
   return next + sizeof (struct udphdr);
 }
 
-NET_UDP_SEND(udp_send)
+/*
+ * Send a packet.
+ */
+
+NET_UDP_SEND(udp_sendpkt)
 {
   struct net_pv_udp_s	*pv = (struct net_pv_udp_s *)udp->pv;
   struct udphdr		*hdr;
@@ -143,14 +152,12 @@ NET_UDP_SEND(udp_send)
   nethdr = &packet->header[packet->stage];
   hdr = (struct udphdr *)nethdr->data;
 
-  /* fill the header */
-  /* XXX */
+  /* XXX fill the header */
 
   /* copy data */
   memcpy(dest, data, size);
 
-  /* compute checksum */
-  /* XXX */
+  /* XXX compute checksum */
 
   /* target IP */
   IPV4_ADDR_SET(packet->tADDR, ip);

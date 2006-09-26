@@ -1,10 +1,8 @@
 * driver NE2000
   - revoir tout le cleanup
-  - ajouter les stats (avec un define pr desactiver)
 
 * IPv4
   - optimiser les calculs de checksum
-  - fragmentation lors du routage
 
 * ARP
   - prevoir une gestion d'autre chose qu'Ethernet

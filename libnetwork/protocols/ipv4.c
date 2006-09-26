@@ -535,8 +535,12 @@ void		ip_route(struct net_if_s	*interface,
   struct iphdr		*hdr;
   struct net_header_s	*nethdr;
   uint_fast32_t		router;
+  uint_fast16_t		total;
 
   packet_obj_refnew(packet);
+
+  interface = route->interface;
+  pv = (struct net_pv_ip_s *)interface->ip->pv;
 
   /* get the packet header */
   nethdr = &packet->header[packet->stage];
@@ -545,7 +549,50 @@ void		ip_route(struct net_if_s	*interface,
   /* decrement TTL */
   hdr->ttl--;
 
-  /* XXX check for fragmentation */
+  total = nethdr[1].size;
+
+  /* check for fragmentation XXX need to be tested */
+  if (total < interface->mtu - 20)
+    {
+      uint_fast16_t		id;
+      uint_fast16_t		offs;
+      uint_fast16_t		shift;
+      uint_fast16_t		fragsz;
+      uint_fast8_t		sent;
+      uint8_t			*data;
+      uint_fast16_t		fragment;
+
+      fragment = net_be16_load(hdr->fragment);
+
+      /* if the Don't Fragment flag is set, destroy the packet */
+      if (fragment & IP_FLAG_DF)
+	{
+	  packet_obj_refdrop(packet);
+	  return;
+	}
+
+      data = nethdr[1].data;
+      offs = 0;
+      shift = (fragment & IP_FRAG_MASK) * 8;
+      fragsz = (interface->mtu - 20) & ~7;
+
+      /* send the middle fragments */
+      sent = 1;
+      while (sent && offs + fragsz < total)
+	{
+	  sent = ip_send_fragment(interface->ip, interface, hdr, packet, shift + offs, fragsz, 0);
+
+	  offs += fragsz;
+	}
+
+      /* last packet */
+      if (sent)
+	ip_send_fragment(interface->ip, interface, hdr, packet, shift + offs, total - offs, 1);
+
+      /* release the original packet */
+      packet_obj_refdrop(packet);
+      return ;
+    }
 
   /* recompute checksum*/
   net_16_store(hdr->check, 0);
@@ -553,9 +600,6 @@ void		ip_route(struct net_if_s	*interface,
 
   /* send the packet */
   packet->stage--;
-
-  interface = route->interface;
-  pv = (struct net_pv_ip_s *)interface->ip->pv;
 
   /* direct or indirect delivery */
   if (route->type & ROUTETYPE_DIRECT)
