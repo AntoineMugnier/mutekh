@@ -123,13 +123,14 @@ static void	ne2000_send(struct device_s	*dev)
  * read a packet from the NIC ring buffer.
  */
 
-static void			ne2000_rx(struct device_s	*dev,
+static uint_fast8_t		ne2000_rx(struct device_s	*dev,
 					  uint8_t		**data,
 					  uint_fast16_t		*size)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
   struct ne2000_header_s	hdr;
   uint_fast16_t			next;
+  uint_fast16_t			curr;
   uint_fast16_t			dma;
   uint8_t			*buf;
 
@@ -137,6 +138,13 @@ static void			ne2000_rx(struct device_s	*dev,
   next = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_BOUND) + 1;
   if (next > pv->mem)
     next = pv->rx_buf;
+  ne2000_page(dev, NE2000_P1);
+  curr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_CURR);
+  if (curr > pv->mem)
+    curr = pv->rx_buf;
+  ne2000_page(dev, NE2000_P0);
+  if (curr == next)
+    return 0;
 
   /* read the packet header (automatically appended by the chip) */
   dma = next << 8;
@@ -165,6 +173,7 @@ static void			ne2000_rx(struct device_s	*dev,
   if (next > pv->mem)
     next = pv->rx_buf;
   cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_BOUND, next - 1);
+  return 1;
 }
 
 /*
@@ -380,10 +389,11 @@ DEV_IRQ(net_ne2000_irq)
 	      uint8_t			*data;
 
 	      /* read the packet */
-	      ne2000_rx(dev, &data, &size);
-
-	      /* push the packet into the network stack */
-	      ne2000_push(dev, data, size);
+	      while (ne2000_rx(dev, &data, &size))
+		{
+		  /* push the packet into the network stack */
+		  ne2000_push(dev, data, size);
+		}
 	    }
 	}
 

@@ -74,9 +74,9 @@ int_fast8_t		main()
     ;
 
   if_up("eth0");
-  if_up("eth1", 0x0a020301);
+  if_up("eth1", 0x0a020302);
 
-#if 0
+#if 1
   struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
 

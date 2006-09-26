@@ -218,7 +218,6 @@ NET_PUSHPKT(ip_pushpkt)
 #endif
   struct iphdr		*hdr;
   struct net_header_s	*nethdr;
-  uint_fast16_t		hdr_len;
   net_proto_id_t	proto;
   struct net_proto_s	*p;
   uint_fast16_t		check;
@@ -282,7 +281,7 @@ NET_PUSHPKT(ip_pushpkt)
   /* next stage */
   if (!nethdr[1].data)
     {
-      hdr_len = hdr->ihl * 4;
+      uint_fast8_t	hdr_len = hdr->ihl * 4;
       nethdr[1].data = nethdr->data + hdr_len;
       nethdr[1].size = net_be16_load(hdr->tot_len) - hdr_len;
     }
@@ -549,10 +548,17 @@ void		ip_route(struct net_if_s	*interface,
   /* decrement TTL */
   hdr->ttl--;
 
+  if (!nethdr[1].data)
+    {
+      uint_fast8_t	hdr_len = hdr->ihl * 4;
+      nethdr[1].data = nethdr->data + hdr_len;
+      nethdr[1].size = net_be16_load(hdr->tot_len) - hdr_len;
+    }
+
   total = nethdr[1].size;
 
   /* check for fragmentation XXX need to be tested */
-  if (total < interface->mtu - 20)
+  if (total > interface->mtu - 20)
     {
       uint_fast16_t		id;
       uint_fast16_t		offs;
@@ -563,6 +569,8 @@ void		ip_route(struct net_if_s	*interface,
       uint_fast16_t		fragment;
 
       fragment = net_be16_load(hdr->fragment);
+
+      net_debug("routing with fragmentation\n");
 
       /* if the Don't Fragment flag is set, destroy the packet */
       if (fragment & IP_FLAG_DF)
@@ -587,7 +595,7 @@ void		ip_route(struct net_if_s	*interface,
 
       /* last packet */
       if (sent)
-	ip_send_fragment(interface->ip, interface, hdr, packet, shift + offs, total - offs, 1);
+	ip_send_fragment(interface->ip, interface, hdr, packet, shift + offs, total - offs, !(fragment & IP_FLAG_MF));
 
       /* release the original packet */
       packet_obj_refdrop(packet);

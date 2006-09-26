@@ -89,9 +89,13 @@ struct net_if_s	*if_register(struct device_s	*dev,
   /* XXX a funny hack */
   static uint_fast8_t chiche = 0;
   if (!chiche)
-    interface->boottype = IF_BOOT_RARP;
+    {
+      interface->boottype = IF_BOOT_RARP;
+    }
   else
-    interface->boottype = IF_BOOT_NONE;
+    {
+      interface->boottype = IF_BOOT_NONE;
+    }
   chiche = 1;
 
   /* name the interface */
@@ -105,6 +109,8 @@ struct net_if_s	*if_register(struct device_s	*dev,
 
   /* add to the interface list */
   net_if_push(&ifs, interface);
+
+  printf("Registered new interface %s (MTU = %u)\n", interface->name, interface->mtu);
 
   return interface;
 }
@@ -213,8 +219,11 @@ void			if_pushpkt(struct net_if_s	*interface,
   if ((p = net_protos_lookup(&interface->protocols, packet->proto)))
     p->desc->pushpkt(interface, packet, p);
   else
-    net_debug("NETWORK: no protocol to handle packet (id = 0x%x)\n",
-	      packet->proto);
+    {
+      net_debug("NETWORK: no protocol to handle packet (id = 0x%x)\n",
+		packet->proto);
+      assert(0);
+    }
 }
 
 /*

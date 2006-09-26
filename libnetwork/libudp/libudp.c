@@ -46,12 +46,22 @@ CONTAINER_FUNC(static inline, udp_callback, HASHLIST, udp_callback, NOLOCK, list
  * Send a datagram via UDP
  */
 
-int_fast8_t	udp_send(struct net_udp_addr_s	*local,
-			 struct net_udp_addr_s	*remote,
-			 void			*data,
-			 size_t			size)
+int_fast8_t		udp_send(struct net_udp_addr_s	*local,
+				 struct net_udp_addr_s	*remote,
+				 void			*data,
+				 size_t			size)
 {
-  return -1;
+  struct net_if_s	*interface;
+#if 0
+  if ((interface = if_get_by_route(&remote->address)) == NULL)
+    {
+      /* no route to host */
+      return -1;
+    }
+
+  udp_sendpkt(interface, 42);
+#endif
+  return 0;
 }
 
 /*
@@ -116,3 +126,4 @@ void				udp_signal(struct net_packet_s	*packet,
   /* callback */
   desc->callback(local, remote, buff, size);
 }
+
