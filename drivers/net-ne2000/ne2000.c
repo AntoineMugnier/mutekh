@@ -24,6 +24,7 @@
 #include <hexo/iospace.h>
 #include <hexo/alloc.h>
 #include <hexo/lock.h>
+#include <hexo/endian.h>
 #include <hexo/interrupt.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -67,11 +68,13 @@ void				ne2000_mem_read(struct device_s	*dev,
   /* copy the whole packet */
   if (pv->io_16)
     {
-      uint16_t	*d = (uint16_t *)dst;
+      uint16_t		*d = (uint16_t *)dst;
+      uint_fast16_t	size_w = size >> 1;
 
-      size >>= 1;
-      while (size--)
+      while (size_w--)
 	*d++ = cpu_io_read_16(dev->addr[NET_NE2000_ADDR] + NE2000_DATA);
+      if (size & 0x1)
+	*(uint8_t *)d = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_DATA);
     }
   else
     {
@@ -124,6 +127,8 @@ void				ne2000_dma_do_write(struct device_s	*dev,
     {
       uint16_t	*d = (uint16_t *)src;
 
+      size = ALIGN_VALUE(size, 2);
+
       size >>= 1;
       while (size--)
 	cpu_io_write_16(dev->addr[NET_NE2000_ADDR] + NE2000_DATA, *d++);
@@ -133,7 +138,9 @@ void				ne2000_dma_do_write(struct device_s	*dev,
       uint8_t	*d = src;
 
       while (size--)
-	cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_DATA, *d++);
+	{
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_DATA, *d++);
+	}
     }
 }
 
@@ -146,7 +153,7 @@ static uint_fast8_t	ne2000_rw_test(struct device_s	*dev)
   struct net_ne2000_context_s	*pv = dev->drv_pv;
   uint_fast8_t			endian;
   uint_fast16_t			timeout = 2000;
-  char				ref[] = "MutekH 42 NE2000 Driver";
+  char				ref[] = "MutekH NE2000 Driver";
   char				buf[sizeof (ref)];
 
   /* configure the device for the test */
@@ -205,7 +212,7 @@ uint_fast8_t			ne2000_probe(struct device_s	*dev)
   struct net_ne2000_context_s	*pv = dev->drv_pv;
   uint8_t			buf[ETH_ALEN * 2];
   uint_fast8_t			i;
-
+#if 1
   /* try 16 bits mode with 32k */
   pv->io_16 = 1;
   pv->mem = NE2000_MEM_32K;
@@ -223,7 +230,7 @@ uint_fast8_t			ne2000_probe(struct device_s	*dev)
 
   if (ne2000_rw_test(dev))
     goto ok;
-
+#endif
   /* try 8 bits mode with 32k */
   pv->io_16 = 0;
   pv->mem = NE2000_MEM_32K;

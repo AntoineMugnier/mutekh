@@ -84,7 +84,6 @@ NET_PUSHPKT(icmp_pushpkt)
   nethdr = &packet->header[packet->stage];
   hdr = (struct icmphdr *)nethdr->data;
 
-  /* XXX na  */
   check = endian_16_na_load(&hdr->checksum);
   endian_16_na_store(&hdr->checksum, 0);
 
@@ -168,6 +167,8 @@ NET_ICMP_ECHO(icmp_echo)
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct icmphdr *)nethdr->data;
+
+  nethdr[1].data = NULL;
 
   /* fill the echo */
   hdr->type = 0;

@@ -223,6 +223,7 @@ NET_PUSHPKT(ip_pushpkt)
   uint_fast16_t		check;
   uint_fast16_t		computed_check;
   uint_fast16_t		fragment;
+  uint_fast16_t		tot_len;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -278,12 +279,24 @@ NET_PUSHPKT(ip_pushpkt)
       return;
     }
 
+  /* fix the packet size (if the interface has a minimum transfert unit) */
+  tot_len = net_be16_load(hdr->tot_len);
+  if (nethdr->size != tot_len)
+    {
+      int_fast8_t	i;
+      uint_fast16_t	delta = nethdr->size - tot_len;
+
+      for (i = packet->stage; i >= 0; i--)
+	packet->header[i].size -= delta;
+    }
+
   /* next stage */
   if (!nethdr[1].data)
     {
       uint_fast8_t	hdr_len = hdr->ihl * 4;
+
       nethdr[1].data = nethdr->data + hdr_len;
-      nethdr[1].size = net_be16_load(hdr->tot_len) - hdr_len;
+      nethdr[1].size = nethdr->size - hdr_len;
     }
 
   /* increment stage */
