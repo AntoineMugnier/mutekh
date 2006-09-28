@@ -46,11 +46,6 @@ CONTAINER_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, list_entry
  * Structures for declaring the protocol's properties & interface.
  */
 
-static const struct ip_interface_s	ip_interface =
-{
-  .send = ip_send
-};
-
 const struct net_proto_desc_s	ip_protocol =
   {
     .name = "IP",
@@ -58,7 +53,6 @@ const struct net_proto_desc_s	ip_protocol =
     .pushpkt = ip_pushpkt,
     .preparepkt = ip_preparepkt,
     .initproto = ip_init,
-    .f.ip = &ip_interface,
     .pv_size = sizeof (struct net_pv_ip_s),
   };
 
@@ -70,9 +64,13 @@ NET_INITPROTO(ip_init)
 {
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)proto->pv;
   struct net_proto_s	*arp = va_arg(va, struct net_proto_s *);
+  uint_fast32_t		ip = va_arg(va, uint_fast32_t);
+  uint_fast32_t		mask = va_arg(va, uint_fast32_t);
 
+  pv->interface = interface;
   pv->arp = arp;
-  pv->addr = 0;
+  pv->addr = ip;
+  pv->mask =mask;
   ip_packet_init(&pv->fragments);
   pv->id_seq = 1;
 }
@@ -320,7 +318,7 @@ NET_PUSHPKT(ip_pushpkt)
   /* dispatch to the matching protocol */
   proto = hdr->protocol;
   if ((p = net_protos_lookup(&interface->protocols, proto)))
-    p->desc->pushpkt(interface, packet, p);
+    p->desc->pushpkt(interface, packet, protocol, p);
   else
     net_debug("IP: no protocol to handle packet (id = 0x%x)\n", proto);
 }
@@ -412,7 +410,7 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
     {
       if ((route_entry = route_get(interface, &frag->tADDR)))
 	{
-	  if (!(frag->tMAC = arp_get_mac(interface, pv->arp, frag,
+	  if (!(frag->tMAC = arp_get_mac(ip, pv->arp, frag,
 					 IPV4_ADDR_GET(route_entry->router))))
 	    return 1;
 	}
@@ -426,12 +424,12 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
   else
     {
       /* no route IP -> MAC translation */
-      if (!(frag->tMAC = arp_get_mac(interface, pv->arp, frag, frag->tADDR.addr.ipv4)))
+      if (!(frag->tMAC = arp_get_mac(ip, pv->arp, frag, frag->tADDR.addr.ipv4)))
 	return 1;
     }
 
   /* send the packet to the driver */
-  if_sendpkt(interface, frag, ip);
+  if_sendpkt(interface, frag, ETHERTYPE_IP);
   return 1;
 }
 
@@ -439,7 +437,10 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
  * Send an IP packet.
  */
 
-NET_IP_SEND(ip_send)
+void			ip_send(struct net_if_s		*interface,
+				struct net_packet_s	*packet,
+				struct net_proto_s	*ip,
+				struct net_proto_s	*proto)
 {
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ip->pv;
   struct iphdr		*hdr;
@@ -512,7 +513,7 @@ NET_IP_SEND(ip_send)
     {
       if ((route_entry = route_get(interface, &packet->tADDR)))
 	{
-	  if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet,
+	  if (!(packet->tMAC = arp_get_mac(ip, pv->arp, packet,
 					 IPV4_ADDR_GET(route_entry->router))))
 	    return;
 	}
@@ -527,12 +528,12 @@ NET_IP_SEND(ip_send)
   else
     {
       /* no route IP -> MAC translation */
-      if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet, packet->tADDR.addr.ipv4)))
+      if (!(packet->tMAC = arp_get_mac(ip, pv->arp, packet, packet->tADDR.addr.ipv4)))
 	return;
     }
 
   /* send the packet to the driver */
-  if_sendpkt(interface, packet, ip);
+  if_sendpkt(interface, packet, ETHERTYPE_IP);
 }
 
 /*
@@ -573,7 +574,6 @@ void		ip_route(struct net_if_s	*interface,
   /* check for fragmentation XXX need to be tested */
   if (total > interface->mtu - 20)
     {
-      uint_fast16_t		id;
       uint_fast16_t		offs;
       uint_fast16_t		shift;
       uint_fast16_t		fragsz;
@@ -627,7 +627,7 @@ void		ip_route(struct net_if_s	*interface,
     {
       net_debug("local delivery on %s\n", interface->name);
 
-      if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet, packet->tADDR.addr.ipv4)))
+      if (!(packet->tMAC = arp_get_mac(route->addressing , pv->arp, packet, packet->tADDR.addr.ipv4)))
 	return;
     }
   else
@@ -637,10 +637,10 @@ void		ip_route(struct net_if_s	*interface,
 
       net_debug("remote delivery thru %P on %s\n", &router, 4, interface->name);
 
-      if (!(packet->tMAC = arp_get_mac(interface, pv->arp, packet, router)))
+      if (!(packet->tMAC = arp_get_mac(route->addressing, pv->arp, packet, router)))
 	return;
     }
 
   /* send the packet to the driver */
-  if_sendpkt(interface, packet, interface->ip);
+  if_sendpkt(interface, packet, ETHERTYPE_IP);
 }

@@ -44,7 +44,9 @@
 
 CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, list_entry, STRING, name);
 
-/* XXX */
+/*
+ * We only need route_table_init
+ */
 CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK, list_entry);
 
 /*
@@ -64,6 +66,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
 			     uint8_t		*mac,
 			     uint_fast16_t	mtu)
 {
+  struct net_proto_s				*ip;
   struct net_proto_s				*arp;
   struct net_proto_s				*icmp;
   struct net_proto_s				*udp;
@@ -74,19 +77,19 @@ struct net_if_s	*if_register(struct device_s	*dev,
   interface->rx_bytes = interface->rx_packets = interface->tx_bytes = interface->tx_packets = 0;
   route_table_init(&interface->route_table);
 
-  /* initialize standard protocols for the device */
-  interface->ip = net_alloc_proto(&ip_protocol);
+  /* XXX initialize standard protocols for the device */
+  ip = net_alloc_proto(&ip_protocol);
   arp = net_alloc_proto(&arp_protocol);
   interface->bootproto.rarp = net_alloc_proto(&rarp_protocol);
   icmp = net_alloc_proto(&icmp_protocol);
   udp = net_alloc_proto(&udp_protocol);
-  if_register_proto(interface, interface->ip, arp);
-  if_register_proto(interface, arp, interface->ip);
-  if_register_proto(interface, interface->bootproto.rarp, interface->ip);
-  if_register_proto(interface, icmp, interface->ip);
-  if_register_proto(interface, udp, interface->ip);
+  if_register_proto(interface, ip, arp, 0x0a020302, 0xffffff00);
+  if_register_proto(interface, arp);
+  if_register_proto(interface, interface->bootproto.rarp, ip);
+  if_register_proto(interface, icmp);
+  if_register_proto(interface, udp);
 
-  /* XXX a funny hack */
+  /* XXX a funny hack for testing, to be removed */
   static uint_fast8_t chiche = 0;
   if (!chiche)
     {
@@ -135,8 +138,6 @@ void			if_up(char*		name, ...)
   struct net_if_s	*interface;
   va_list		va;
 
-  struct net_pv_ip_s *pv_ip;
-
   va_start(va, name);
 
   if ((interface = net_if_lookup(&ifs, name)))
@@ -154,10 +155,6 @@ void			if_up(char*		name, ...)
 	  case IF_BOOT_DHCP:
 	    break;
 	  default:
-	    /* XXX otherwise, static IP */
-	    pv_ip = (struct net_pv_ip_s *)interface->ip->pv;
-	    pv_ip->addr = va_arg(va, uint_fast32_t);
-	    net_debug("Assigning static IP %P\n", &pv_ip->addr, 4);
 	    break;
 	}
     }
@@ -216,14 +213,12 @@ void			if_pushpkt(struct net_if_s	*interface,
   interface->rx_bytes += packet->header[0].size;
   interface->rx_packets++;
 
+  /* XXX lookup foireux maintenant, car +sieurs ip possible */
   if ((p = net_protos_lookup(&interface->protocols, packet->proto)))
-    p->desc->pushpkt(interface, packet, p);
+    p->desc->pushpkt(interface, packet, NULL, p);
   else
-    {
-      net_debug("NETWORK: no protocol to handle packet (id = 0x%x)\n",
-		packet->proto);
-      assert(0);
-    }
+    net_debug("NETWORK: no protocol to handle packet (id = 0x%x)\n",
+	      packet->proto);
 }
 
 /*
@@ -244,19 +239,19 @@ uint8_t			*if_preparepkt(struct net_if_s		*interface,
 
 void			if_sendpkt(struct net_if_s	*interface,
 				   struct net_packet_s	*packet,
-				   struct net_proto_s	*proto)
+				   net_proto_id_t	proto)
 {
   interface->tx_bytes += packet->header[0].size;
   interface->tx_packets++;
 
   if (!memcmp(interface->mac, packet->tMAC, packet->MAClen))
     {
-      net_debug("sending a packet for me !\n");
+      /* XXX c'est mal poli on passe devant tout le monde */
       if_pushpkt(interface, packet);
       packet_obj_refdrop(packet);
     }
   else
-    dev_net_sendpkt(interface->dev, packet, proto->id);
+    dev_net_sendpkt(interface->dev, packet, proto);
 }
 
 /*

@@ -52,6 +52,7 @@ CONTAINER_TYPE(route_table, DLIST, struct net_route_s, NOLOCK);
 struct			net_route_s
 {
   struct net_if_s	*interface;
+  struct net_proto_s	*addressing;
   struct net_addr_s	target;
   uint_fast8_t		type;
   struct net_addr_s	mask;

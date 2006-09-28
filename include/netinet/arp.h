@@ -138,7 +138,6 @@ struct			arp_entry_s
 
 struct			net_pv_arp_s
 {
-  struct net_proto_s	*ip;
   arp_table_root_t	table;
 };
 
@@ -154,17 +153,11 @@ struct			net_pv_rarp_s
 NET_INITPROTO(arp_init);
 NET_PUSHPKT(arp_pushpkt);
 NET_PREPAREPKT(arp_preparepkt);
-void			arp_reply(struct net_if_s		*interface,
-				  struct net_proto_s		*arp,
-				  struct net_packet_s		*packet);
-void			arp_request(struct net_if_s	*interface,
-				    struct net_proto_s	*arp,
-				    uint_fast32_t	address);
 struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 					  uint32_t		ip,
 					  uint8_t		*mac,
 					  uint_fast8_t		flags);
-uint8_t			*arp_get_mac(struct net_if_s		*interface,
+uint8_t			*arp_get_mac(struct net_proto_s		*addressing,
 				     struct net_proto_s		*arp,
 				     struct net_packet_s	*packet,
 				     uint_fast32_t		ip);

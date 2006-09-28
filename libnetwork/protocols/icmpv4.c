@@ -38,33 +38,57 @@
  * Structures for declaring the protocol's properties & interface.
  */
 
-static const struct icmp_interface_s	icmp_interface =
-{
-  .echo = icmp_echo
-};
-
 const struct net_proto_desc_s	icmp_protocol =
   {
     .name = "ICMP",
     .id = IPPROTO_ICMP,
     .pushpkt = icmp_pushpkt,
     .preparepkt = icmp_preparepkt,
-    .initproto = icmp_init,
-    .f.icmp = &icmp_interface,
-    .pv_size = sizeof (struct net_pv_icmp_s)
+    .initproto = NULL,
+    .pv_size = 0
   };
 
 /*
- * Initialize ICMP module.
+ * Reply an echo request.
  */
 
-NET_INITPROTO(icmp_init)
+static inline void	icmp_echo(struct net_if_s	*interface,
+				  struct net_proto_s	*addressing,
+				  struct net_proto_s	*icmp,
+				  struct net_packet_s	*packet)
 {
-  struct net_pv_icmp_s	*pv = (struct net_pv_icmp_s *)proto->pv;
-  struct net_proto_s	*ip = va_arg(va, struct net_proto_s *);
+  struct icmphdr	*hdr;
+  struct net_header_s	*nethdr;
+  uint_fast32_t		xchg;
 
-  pv->ip = ip;
+  packet_obj_refnew(packet);
+
+  net_debug("Pong\n");
+
+  /* get the header */
+  nethdr = &packet->header[packet->stage];
+  hdr = (struct icmphdr *)nethdr->data;
+
+  nethdr[1].data = NULL;
+
+  /* fill the echo */
+  hdr->type = 0;
+  hdr->code = 3;
+  net_16_store(hdr->checksum, 0);
+
+  /* compute checksum */
+  net_16_store(hdr->checksum, packet_checksum(nethdr->data, nethdr->size));
+
+  /* target IP */
+  xchg = packet->tADDR.addr.ipv4;
+  packet->tADDR.addr.ipv4 = packet->sADDR.addr.ipv4;
+  packet->sADDR.addr.ipv4 = xchg;
+
+  packet->stage--;
+  /* send the packet to IP */
+  ip_send(interface, packet, addressing, icmp);
 }
+
 
 /*
  * Receive incoming ICMP packets.
@@ -113,7 +137,7 @@ NET_PUSHPKT(icmp_pushpkt)
 	  {
 	    case 0:
 	      net_debug("Ping\n");
-	      icmp_echo(interface, protocol, packet);
+	      icmp_echo(interface, addressing, protocol, packet);
 	      break;
 	    default:
 	      break;
@@ -148,43 +172,3 @@ NET_PREPAREPKT(icmp_preparepkt)
 
   return next + sizeof (struct icmphdr);
 }
-
-/*
- * Reply an echo request.
- */
-
-NET_ICMP_ECHO(icmp_echo)
-{
-  struct net_pv_icmp_s	*pv = (struct net_pv_icmp_s *)icmp->pv;
-  struct icmphdr	*hdr;
-  struct net_header_s	*nethdr;
-  uint_fast32_t		xchg;
-
-  packet_obj_refnew(packet);
-
-  net_debug("Pong\n");
-
-  /* get the header */
-  nethdr = &packet->header[packet->stage];
-  hdr = (struct icmphdr *)nethdr->data;
-
-  nethdr[1].data = NULL;
-
-  /* fill the echo */
-  hdr->type = 0;
-  hdr->code = 3;
-  net_16_store(hdr->checksum, 0);
-
-  /* compute checksum */
-  net_16_store(hdr->checksum, packet_checksum(nethdr->data, nethdr->size));
-
-  /* target IP */
-  xchg = packet->tADDR.addr.ipv4;
-  packet->tADDR.addr.ipv4 = packet->sADDR.addr.ipv4;
-  packet->sADDR.addr.ipv4 = xchg;
-
-  packet->stage--;
-  /* send the packet to IP */
-  ip_send(interface, packet, pv->ip, icmp);
-}
-

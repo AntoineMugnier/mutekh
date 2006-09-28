@@ -50,7 +50,6 @@ const struct net_proto_desc_s	arp_protocol =
     .pushpkt = arp_pushpkt,
     .preparepkt = arp_preparepkt,
     .initproto = arp_init,
-    .f.other = NULL,
     .pv_size = sizeof (struct net_pv_arp_s),
   };
 
@@ -61,10 +60,81 @@ const struct net_proto_desc_s	arp_protocol =
 NET_INITPROTO(arp_init)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)proto->pv;
-  struct net_proto_s	*ip = va_arg(va, struct net_proto_s *);
 
   arp_table_init(&pv->table);
-  pv->ip = ip;
+}
+
+/*
+ * This function request a MAC address given an IP address.
+ */
+
+static inline void	arp_request(struct net_if_s	*interface,
+				    struct net_proto_s	*ip,
+				    uint_fast32_t	address)
+{
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)ip->pv;
+  struct ether_arp	*hdr;
+  struct net_packet_s	*packet;
+  struct net_header_s	*nethdr;
+
+  packet = packet_obj_new(NULL);
+
+  arp_preparepkt(interface, packet, 0, 0);
+
+  /* get the header */
+  nethdr = &packet->header[packet->stage];
+  hdr = (struct ether_arp *)nethdr->data;
+
+  /* fill the request */
+  net_be16_store(hdr->ea_hdr.ar_hrd, ARPHRD_ETHER);
+  net_be16_store(hdr->ea_hdr.ar_pro, ETHERTYPE_IP);
+  hdr->ea_hdr.ar_hln = ETH_ALEN;
+  hdr->ea_hdr.ar_pln = 4;
+  net_be16_store(hdr->ea_hdr.ar_op, ARPOP_REQUEST);
+  memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
+  net_be32_store(hdr->arp_spa, pv_ip->addr);
+  memset(hdr->arp_tha, 0xff, ETH_ALEN);
+  net_be32_store(hdr->arp_tpa, address);
+
+  packet->tMAC = hdr->arp_tha;
+
+  packet->stage--;
+  /* send the packet to the interface */
+  if_sendpkt(interface, packet, ETHERTYPE_ARP);
+}
+
+/*
+ * Send an ARP reply
+ */
+
+static inline void	arp_reply(struct net_if_s		*interface,
+				  struct net_proto_s		*ip,
+				  struct net_packet_s		*packet)
+{
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)ip->pv;
+  struct ether_arp	*hdr;
+  struct net_header_s	*nethdr;
+
+  packet_obj_refnew(packet);
+
+  /* get the header */
+  nethdr = &packet->header[packet->stage];
+  hdr = (struct ether_arp *)nethdr->data;
+
+  /* fill the reply */
+  net_be16_store(hdr->ea_hdr.ar_op, ARPOP_REPLY);
+
+  memcpy(hdr->arp_tha, hdr->arp_sha, ETH_ALEN);
+  net_32_store(hdr->arp_tpa, net_32_load(hdr->arp_spa));
+  memcpy(hdr->arp_sha, interface->mac, ETH_ALEN);
+  net_be32_store(hdr->arp_spa, pv_ip->addr);
+
+  packet->sMAC = hdr->arp_sha;
+  packet->tMAC = hdr->arp_tha;
+
+  packet->stage--;
+  /* send the packet to the interface */
+  if_sendpkt(interface, packet, ETHERTYPE_ARP);
 }
 
 /*
@@ -73,8 +143,6 @@ NET_INITPROTO(arp_init)
 
 NET_PUSHPKT(arp_pushpkt)
 {
-  struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)protocol->pv;
-  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct ether_arp	aligned;
 #endif
@@ -105,23 +173,41 @@ NET_PUSHPKT(arp_pushpkt)
   switch (net_be16_load(hdr->ea_hdr.ar_op))
     {
       case ARPOP_REQUEST:
-	net_debug("ARP Req %P / %P\n", &hdr->arp_tpa, 4, &pv_ip->addr, 4);
+	{
+	  uint_fast32_t		requested;
+	  struct net_pv_ip_s	*pv_ip;
 
-	if (net_be32_load(hdr->arp_tpa) == pv_ip->addr)
+	  requested = net_be32_load(hdr->arp_tpa);
+	  net_debug("ARP Req %P\n", &requested, 4);
+
+	  /* loop thru IP modules bound to interface */
+	  CONTAINER_FOREACH(net_protos, HASHLIST, net_protos,
+			    &interface->protocols,
 	  {
-	    net_debug("Me!\n");
-	    /* force adding the entry */
-	    arp_update_table(protocol, net_be32_load(hdr->arp_spa),
-			     hdr->arp_sha, ARP_TABLE_DEFAULT);
-	    arp_reply(interface, protocol, packet);
-	  }
-	else
-	  {
-	    /* try to update the cache */
+	    if (item->id == ETHERTYPE_IP)
+	      {
+		pv_ip = (struct net_pv_ip_s *)item->pv;
+
+		if (requested == pv_ip->addr)
+		  {
+		    net_debug("Me!\n");
+		    /* force adding the entry */
+		    arp_update_table(protocol, net_be32_load(hdr->arp_spa),
+				     hdr->arp_sha, ARP_TABLE_DEFAULT);
+		    arp_reply(interface, item, packet);
+		    requested = 0;
+		    break;
+		  }
+	      }
+	  });
+
+	  /* try to update the cache */
+	  if (requested)
 	    arp_update_table(protocol, net_be32_load(hdr->arp_spa),
 			     hdr->arp_sha, ARP_TABLE_NO_UPDATE);
-	  }
-	break;
+
+	  break;
+	}
       case ARPOP_REPLY:
 	/* try to update the cache */
 	arp_entry = arp_update_table(protocol, net_be32_load(hdr->arp_spa),
@@ -132,7 +218,7 @@ NET_PUSHPKT(arp_pushpkt)
 	    waiting->tMAC = arp_entry->mac;
 
 	    /* send the packet */
-	    if_sendpkt(interface, waiting, pv->ip);
+	    if_sendpkt(interface, waiting, ETHERTYPE_IP);
 	  }
 	break;
       default:
@@ -163,81 +249,6 @@ NET_PREPAREPKT(arp_preparepkt)
   nethdr[1].data = NULL;
 
   return NULL;
-}
-
-/*
- * This function request a MAC address given an IP address.
- */
-
-void			arp_request(struct net_if_s	*interface,
-				    struct net_proto_s	*arp,
-				    uint_fast32_t	address)
-{
-  struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
-  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
-  struct ether_arp	*hdr;
-  struct net_packet_s	*packet;
-  struct net_header_s	*nethdr;
-
-  packet = packet_obj_new(NULL);
-
-  arp_preparepkt(interface, packet, 0, 0);
-
-  /* get the header */
-  nethdr = &packet->header[packet->stage];
-  hdr = (struct ether_arp *)nethdr->data;
-
-  /* fill the request */
-  net_be16_store(hdr->ea_hdr.ar_hrd, ARPHRD_ETHER);
-  net_be16_store(hdr->ea_hdr.ar_pro, ETHERTYPE_IP);
-  hdr->ea_hdr.ar_hln = ETH_ALEN;
-  hdr->ea_hdr.ar_pln = 4;
-  net_be16_store(hdr->ea_hdr.ar_op, ARPOP_REQUEST);
-  memcpy(hdr->arp_sha, packet->sMAC, ETH_ALEN);
-  net_be32_store(hdr->arp_spa, pv_ip->addr);
-  memset(hdr->arp_tha, 0xff, ETH_ALEN);
-  net_be32_store(hdr->arp_tpa, address);
-
-  packet->tMAC = hdr->arp_tha;
-
-  packet->stage--;
-  /* send the packet to the interface */
-  if_sendpkt(interface, packet, arp);
-}
-
-/*
- * Send an ARP reply
- */
-
-void			arp_reply(struct net_if_s		*interface,
-				  struct net_proto_s		*arp,
-				  struct net_packet_s		*packet)
-{
-  struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
-  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
-  struct ether_arp	*hdr;
-  struct net_header_s	*nethdr;
-
-  packet_obj_refnew(packet);
-
-  /* get the header */
-  nethdr = &packet->header[packet->stage];
-  hdr = (struct ether_arp *)nethdr->data;
-
-  /* fill the reply */
-  net_be16_store(hdr->ea_hdr.ar_op, ARPOP_REPLY);
-
-  memcpy(hdr->arp_tha, hdr->arp_sha, ETH_ALEN);
-  net_32_store(hdr->arp_tpa, net_32_load(hdr->arp_spa));
-  memcpy(hdr->arp_sha, interface->mac, ETH_ALEN);
-  net_be32_store(hdr->arp_spa, pv_ip->addr);
-
-  packet->sMAC = hdr->arp_sha;
-  packet->tMAC = hdr->arp_tha;
-
-  packet->stage--;
-  /* send the packet to the interface */
-  if_sendpkt(interface, packet, arp);
 }
 
 /*
@@ -285,18 +296,18 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
  * Make an ARP request if needed.
  */
 
-uint8_t			*arp_get_mac(struct net_if_s		*interface,
+uint8_t			*arp_get_mac(struct net_proto_s		*addressing,
 				     struct net_proto_s		*arp,
 				     struct net_packet_s	*packet,
 				     uint_fast32_t		ip)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
-  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)pv->ip->pv;
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)addressing->pv;
   struct arp_entry_s	*arp_entry;
 
   if (ip == pv_ip->addr)
     {
-      return interface->mac;
+      return pv_ip->interface->mac;
     }
   if ((arp_entry = arp_table_lookup(&pv->table, ip)))
     {
@@ -313,7 +324,7 @@ uint8_t			*arp_get_mac(struct net_if_s		*interface,
       packet_queue_init(&arp_entry->wait);
       packet_queue_push(&arp_entry->wait, packet);
       /* and send a request */
-      arp_request(interface, arp, ip);
+      arp_request(pv_ip->interface, arp, ip);
     }
   return NULL;
 }

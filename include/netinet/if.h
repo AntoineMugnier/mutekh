@@ -119,7 +119,7 @@ uint8_t	*if_preparepkt(struct net_if_s		*interface,
 		       size_t			max_padding);
 void	if_sendpkt(struct net_if_s	*interface,
 		   struct net_packet_s	*packet,
-		   struct net_proto_s	*proto);
+		   net_proto_id_t	proto);
 void	if_stats(const char	*name);
 struct net_if_s	*if_get(const char	*name);
 

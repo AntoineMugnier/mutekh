@@ -40,33 +40,15 @@
  * Structures for declaring the protocol's properties & interface.
  */
 
-static const struct udp_interface_s	udp_interface =
-{
-  .send = udp_sendpkt
-};
-
 const struct net_proto_desc_s	udp_protocol =
   {
     .name = "UDP",
     .id = IPPROTO_UDP,
     .pushpkt = udp_pushpkt,
     .preparepkt = udp_preparepkt,
-    .initproto = udp_init,
-    .f.udp = &udp_interface,
-    .pv_size = sizeof (struct net_pv_udp_s)
+    .initproto = NULL,
+    .pv_size = 0
   };
-
-/*
- * Initialize UDP module.
- */
-
-NET_INITPROTO(udp_init)
-{
-  struct net_pv_udp_s	*pv = (struct net_pv_udp_s *)proto->pv;
-  struct net_proto_s	*ip = va_arg(va, struct net_proto_s *);
-
-  pv->ip = ip;
-}
 
 /*
  * Receive incoming UDP datagrams.
@@ -135,7 +117,7 @@ NET_PREPAREPKT(udp_preparepkt)
 /*
  * Send a packet.
  */
-
+#if 0
 NET_UDP_SEND(udp_sendpkt)
 {
   struct net_pv_udp_s	*pv = (struct net_pv_udp_s *)udp->pv;
@@ -167,3 +149,4 @@ NET_UDP_SEND(udp_sendpkt)
   ip_send(interface, packet, pv->ip, udp);
 }
 
+#endif

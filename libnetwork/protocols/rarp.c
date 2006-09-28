@@ -48,7 +48,6 @@ const struct net_proto_desc_s	rarp_protocol =
     .pushpkt = rarp_pushpkt,
     .preparepkt = rarp_preparepkt,
     .initproto = rarp_init,
-    .f.other = NULL,
     .pv_size = sizeof (struct net_pv_rarp_s)
   };
 
@@ -180,6 +179,6 @@ void			rarp_request(struct net_if_s	*interface,
 
   packet->stage--;
   /* send the packet to the interface */
-  if_sendpkt(interface, packet, rarp);
+  if_sendpkt(interface, packet, ETHERTYPE_REVARP);
 }
 

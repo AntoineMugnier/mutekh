@@ -44,6 +44,7 @@ CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, NOLOCK, 8, UNSIGNED);
 
 #define NET_PUSHPKT(f)	void (f)(struct net_if_s	*interface,	\
 				 struct net_packet_s	*packet,	\
+				 struct net_proto_s	*addressing,	\
 				 struct	net_proto_s	*protocol)
 
 typedef NET_PUSHPKT(net_pushpkt_t);
@@ -69,13 +70,6 @@ typedef NET_PREPAREPKT(net_preparepkt_t);
 
 typedef NET_INITPROTO(net_initproto_t);
 
-struct ether_interface_s;
-struct ip_interface_s;
-struct icmp_interface_s;
-struct udp_interface_s;
-struct tcp_interface_s;
-
-
 typedef uint_fast16_t net_pkt_size_t;
 typedef uint_fast16_t net_proto_id_t;
 
@@ -90,17 +84,6 @@ struct					net_proto_desc_s
   net_pushpkt_t				*pushpkt; /* push packet function */
   net_preparepkt_t			*preparepkt; /* prepare packet func */
   net_initproto_t			*initproto; /* init pv data */
-  union
-  {
-    const struct ether_interface_s	*ether;	/* ethernet interface */
-    const struct ip_interface_s		*ip;	/* ip protocol interface */
-    const struct icmp_interface_s	*icmp;	/* icmp protocol interface */
-    const struct udp_interface_s	*udp;	/* udp protocol interface */
-#if 0
-    const struct tcp_interface_s	*tcp;	/* tcp protocol interface */
-#endif
-    const void				*other;	/* other protocol interface */
-  } f;
   size_t				pv_size;
 };
 
