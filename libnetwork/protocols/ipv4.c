@@ -273,7 +273,7 @@ NET_PUSHPKT(ip_pushpkt)
   /* incorrect packet */
   if (check != computed_check)
     {
-      net_debug("Rejected incorrect packet\n");
+      net_debug("Rejected incorrect packet %x %x\n", check, computed_check);
       return;
     }
 

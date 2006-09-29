@@ -87,7 +87,11 @@ int_fast8_t		main()
   //  if_up("eth2");
 #endif
 
-  eval_server();
+  //  eval_server();
+
+  char toto[] = "\x01\x01\x01\x01\x01\x01\x01\x01\0\0\0\0";
+
+  printf("%d\n", packet_checksum(toto, 8));
 
   return 0;
 }

@@ -62,7 +62,7 @@ OBJECT_DESTRUCTOR(packet_obj)
 /*
  * Compute the checksum of a packet chunk.
  */
-
+#if 0
 uint_fast16_t		packet_checksum(uint8_t		*data,
 					size_t		size)
 {
@@ -84,6 +84,7 @@ uint_fast16_t		packet_checksum(uint8_t		*data,
 
   return (~checksum) & 0xffff;
 }
+#endif
 
 /*
  * packet queue functions.
