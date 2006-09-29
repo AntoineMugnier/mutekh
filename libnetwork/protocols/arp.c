@@ -324,7 +324,7 @@ uint8_t			*arp_get_mac(struct net_proto_s		*addressing,
       packet_queue_init(&arp_entry->wait);
       packet_queue_push(&arp_entry->wait, packet);
       /* and send a request */
-      arp_request(pv_ip->interface, arp, ip);
+      arp_request(pv_ip->interface, addressing, ip);
     }
   return NULL;
 }

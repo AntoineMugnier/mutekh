@@ -53,7 +53,7 @@ CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK, list_entr
  * Some local variables.
  */
 
-static net_if_root_t	ifs = CONTAINER_ROOT_INITIALIZER(net_if, HASHLIST, NOLOCK);
+net_if_root_t	net_interfaces = CONTAINER_ROOT_INITIALIZER(net_if, HASHLIST, NOLOCK);
 static uint_fast8_t	ifid = 0;
 static uint_fast8_t	ethid = 0;
 
@@ -83,7 +83,6 @@ struct net_if_s	*if_register(struct device_s	*dev,
   interface->bootproto.rarp = net_alloc_proto(&rarp_protocol);
   icmp = net_alloc_proto(&icmp_protocol);
   udp = net_alloc_proto(&udp_protocol);
-  if_register_proto(interface, ip, arp, 0x0a020302, 0xffffff00);
   if_register_proto(interface, arp);
   if_register_proto(interface, interface->bootproto.rarp, ip);
   if_register_proto(interface, icmp);
@@ -93,11 +92,17 @@ struct net_if_s	*if_register(struct device_s	*dev,
   static uint_fast8_t chiche = 0;
   if (!chiche)
     {
-      interface->boottype = IF_BOOT_RARP;
+      interface->boottype = IF_BOOT_NONE;
+      if_register_proto(interface, ip, arp, 0x0a0202f0, 0xffffff00);
+#if 0
+      ip = net_alloc_proto(&ip_protocol);
+      if_register_proto(interface, ip, arp, 0x0a0202f1, 0xffffff00);
+#endif
     }
   else
     {
       interface->boottype = IF_BOOT_NONE;
+      if_register_proto(interface, ip, arp, 0x0a020302, 0xffffff00);
     }
   chiche = 1;
 
@@ -111,7 +116,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
     sprintf(interface->name, "if%d", ifid++);
 
   /* add to the interface list */
-  net_if_push(&ifs, interface);
+  net_if_push(&net_interfaces, interface);
 
   printf("Registered new interface %s (MTU = %u)\n", interface->name, interface->mtu);
 
@@ -124,7 +129,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
 
 void			if_unregister(struct net_if_s	*interface)
 {
-  /* XXX */
+  /* XXX if_unregister */
 
 }
 
@@ -140,12 +145,12 @@ void			if_up(char*		name, ...)
 
   va_start(va, name);
 
-  if ((interface = net_if_lookup(&ifs, name)))
+  if ((interface = net_if_lookup(&net_interfaces, name)))
     {
       dev = interface->dev;
 
       printf("Bringing up interface %s using %s...\n", name,
-	     interface->boottype == IF_BOOT_RARP ? "RARP" : "undefined");
+	     interface->boottype == IF_BOOT_RARP ? "Reverse ARP" : "Static address");
 
       switch (interface->boottype)
 	{
@@ -171,11 +176,11 @@ void			if_down(char*		name, ...)
   struct device_s	*dev;
   struct net_if_s	*interface;
 
-  if ((interface = net_if_lookup(&ifs, name)))
+  if ((interface = net_if_lookup(&net_interfaces, name)))
     {
       dev = interface->dev;
 
-      /* XXX */
+      /* XXX if_down */
     }
 }
 
@@ -208,17 +213,17 @@ void			if_register_proto(struct net_if_s	*interface,
 void			if_pushpkt(struct net_if_s	*interface,
 				   struct net_packet_s	*packet)
 {
-  struct net_proto_s		*p;
-
   interface->rx_bytes += packet->header[0].size;
   interface->rx_packets++;
 
-  /* XXX lookup foireux maintenant, car +sieurs ip possible */
-  if ((p = net_protos_lookup(&interface->protocols, packet->proto)))
-    p->desc->pushpkt(interface, packet, NULL, p);
-  else
-    net_debug("NETWORK: no protocol to handle packet (id = 0x%x)\n",
-	      packet->proto);
+  /* lookup to all possible addressing modules XXX optimize */
+  CONTAINER_FOREACH(net_protos, HASHLIST, net_protos, &interface->protocols,
+  {
+    if (item->id == packet->proto)
+      {
+	item->desc->pushpkt(interface, packet, NULL, item);
+      }
+  });
 }
 
 /*
@@ -262,7 +267,7 @@ void			if_stats(const char	*name)
 {
   struct net_if_s	*interface;
 
-  if ((interface = net_if_lookup(&ifs, name)))
+  if ((interface = net_if_lookup(&net_interfaces, name)))
     {
       printf("%s statistics:\n", name);
 
@@ -278,5 +283,5 @@ void			if_stats(const char	*name)
 
 struct net_if_s	*if_get(const char	*name)
 {
-  return net_if_lookup(&ifs, name);
+  return net_if_lookup(&net_interfaces, name);
 }

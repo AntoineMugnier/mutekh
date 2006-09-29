@@ -43,6 +43,11 @@ struct		udphdr
 
 NET_PUSHPKT(udp_pushpkt);
 NET_PREPAREPKT(udp_preparepkt);
+void		udp_sendpkt(struct net_if_s	*interface,
+			    struct net_proto_s	*addressing,
+			    struct net_packet_s	*packet,
+			    uint_fast16_t	source_port,
+			    uint_fast16_t	dest_port);
 
 extern const struct net_proto_desc_s	udp_protocol;
 

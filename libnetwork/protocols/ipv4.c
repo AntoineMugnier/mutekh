@@ -440,7 +440,7 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
 void			ip_send(struct net_if_s		*interface,
 				struct net_packet_s	*packet,
 				struct net_proto_s	*ip,
-				struct net_proto_s	*proto)
+				net_proto_id_t		proto)
 {
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ip->pv;
   struct iphdr		*hdr;
@@ -457,7 +457,7 @@ void			ip_send(struct net_if_s		*interface,
   hdr->ihl = 5;
   hdr->tos = 0;
   hdr->ttl = 64;
-  hdr->protocol = proto->id;
+  hdr->protocol = proto;
   net_be32_store(hdr->saddr, pv->addr);
   net_be32_store(hdr->daddr, IPV4_ADDR_GET(packet->tADDR));
 
@@ -553,7 +553,7 @@ void		ip_route(struct net_if_s	*interface,
   packet_obj_refnew(packet);
 
   interface = route->interface;
-  pv = (struct net_pv_ip_s *)interface->ip->pv;
+  pv = (struct net_pv_ip_s *)route->addressing->pv;
 
   /* get the packet header */
   nethdr = &packet->header[packet->stage];
@@ -571,7 +571,7 @@ void		ip_route(struct net_if_s	*interface,
 
   total = nethdr[1].size;
 
-  /* check for fragmentation XXX need to be tested */
+  /* check for fragmentation */
   if (total > interface->mtu - 20)
     {
       uint_fast16_t		offs;
@@ -601,14 +601,14 @@ void		ip_route(struct net_if_s	*interface,
       sent = 1;
       while (sent && offs + fragsz < total)
 	{
-	  sent = ip_send_fragment(interface->ip, interface, hdr, packet, shift + offs, fragsz, 0);
+	  sent = ip_send_fragment(route->addressing, interface, hdr, packet, shift + offs, fragsz, 0);
 
 	  offs += fragsz;
 	}
 
       /* last packet */
       if (sent)
-	ip_send_fragment(interface->ip, interface, hdr, packet, shift + offs, total - offs, !(fragment & IP_FLAG_MF));
+	ip_send_fragment(route->addressing, interface, hdr, packet, shift + offs, total - offs, !(fragment & IP_FLAG_MF));
 
       /* release the original packet */
       packet_obj_refdrop(packet);

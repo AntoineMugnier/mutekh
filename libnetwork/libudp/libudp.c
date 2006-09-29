@@ -30,9 +30,20 @@
 #include <netinet/protos.h>
 #include <netinet/udp.h>
 #include <netinet/ip.h>
+#include <netinet/ether.h>
 #include <netinet/in.h>
 
 #include <netinet/libudp.h>
+
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_hashlist.h>
+#include <gpct/cont_dlist.h>
+
+/*
+ * Functions for the interface container.
+ */
+
+CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, list_entry, STRING, name);
 
 /*
  * Callback container.
@@ -51,16 +62,58 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
 				 void			*data,
 				 size_t			size)
 {
-  struct net_if_s	*interface;
-#if 0
-  if ((interface = if_get_by_route(&remote->address)) == NULL)
-    {
-      /* no route to host */
-      return -1;
-    }
+  struct net_if_s	*interface = NULL;
+  struct net_proto_s	*addressing = NULL;
+  struct net_packet_s	*packet;
+  uint8_t		*dest;
 
-  udp_sendpkt(interface, 42);
-#endif
+  CONTAINER_FOREACH(net_if, HASHLIST, net_if, &net_interfaces,
+  {
+    interface = item;
+    CONTAINER_FOREACH(net_protos, HASHLIST, net_protos, &interface->protocols,
+    {
+      switch (local->address.family)
+	{
+	  case addr_ipv4:
+	    {
+	      if (item->id != ETHERTYPE_IP)
+		break;
+	      struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)item->pv;
+
+	      if (pv->addr == local->address.addr.ipv4)
+		{
+		  addressing = item;
+		  break;
+		}
+	    }
+	    break;
+	  default:
+	    return -1;
+	}
+      if (addressing)
+	break;
+    });
+    if (addressing)
+      break;
+  });
+
+  if (interface == NULL || addressing == NULL)
+    return -1;
+
+  packet = packet_obj_new(NULL);
+
+  /* prepare the packet */
+  dest = udp_preparepkt(interface, packet, size, 0);
+
+  /* copy data into the packet */
+  memcpy(dest, data, size);
+
+  /* setup source and destination address */
+  memcpy(&packet->tADDR, &remote->address, sizeof (struct net_addr_s));
+
+  /* send UDP packet */
+  udp_sendpkt(interface, addressing, packet, local->port, remote->port);
+
   return 0;
 }
 
@@ -116,7 +169,7 @@ void				udp_signal(struct net_packet_s	*packet,
   remote = mem_alloc(sizeof (struct net_udp_addr_s), MEM_SCOPE_SYS);
 
   memcpy(&remote->address, &packet->sADDR, sizeof (struct net_addr_s));
-  remote->port = net_be16_load(hdr->source);
+  remote->port = hdr->source;
 
   /* copy the packet */
   size = net_be16_load(hdr->len) - sizeof (struct udphdr);

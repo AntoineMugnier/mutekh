@@ -336,8 +336,7 @@ DEV_IRQ(net_ne2000_irq)
 	  /* wait for the NIC to complete operations */
 	  for (i = 0; i < 10000000; i++)
 	    ;
-	  /* XXX */
-	  //usleep(1600);
+	  /* XXX usleep(1600); */
 
 	  /* reset remote byte count registers */
 	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR0, 0);
@@ -506,8 +505,7 @@ DEV_CLEANUP(net_ne2000_cleanup)
       packet_obj_refdrop(wait);
     }
 
-  /* terminate the dispatch thread */
-  /* XXX */
+  /* XXX terminate the dispatch thread */
 
   /* destroy the receive semaphore */
   sem_destroy(&pv->rcvsem);

@@ -30,37 +30,7 @@
 #include <stdio.h>
 #include <string.h>
 
-UDP_CALLBACK(test_add)
-{
-  char		result[20];
-  char		*op;
-  char		*op1, *op2;
-  uint_fast32_t	a, b;
-
-  op = mem_alloc(size + 1, MEM_SCOPE_SYS);
-  memcpy(op, data, size);
-  op[size] = 0;
-
-  printf("Servicing client (%P:%u) for \"%s\"\n", &remote->address.addr.ipv4, 4, remote->port, op);
-
-  op1 = op;
-
-  op2 = strchr(op, '+');
-  *op2 = 0;
-  op2++;
-
-  a = atoi(op1);
-  b = atoi(op2);
-
-  sprintf(result, "%d", a + b);
-
-  printf("Answering \"%s\"\n", result);
-
-  mem_free(op);
-
-  remote->port = htons(4242);
-  udp_send(local, remote, result, strlen(result));
-}
+void			eval_server();
 
 /*
  * test main.
@@ -74,9 +44,11 @@ int_fast8_t		main()
     ;
 
   if_up("eth0");
-  if_up("eth1", 0x0a020302);
+  //  if_up("eth1");
+
 
 #if 0
+
   struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
 
@@ -115,12 +87,7 @@ int_fast8_t		main()
   //  if_up("eth2");
 #endif
 
-  struct net_udp_addr_s	listen;
-
-  IPV4_ADDR_SET(listen.address, 0x0a0202f0);
-  listen.port = htons(4242);
-
-  udp_callback(&listen, test_add);
+  eval_server();
 
   return 0;
 }

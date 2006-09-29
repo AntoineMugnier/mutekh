@@ -174,7 +174,7 @@ NET_PREPAREPKT(ip_preparepkt);
 void		ip_send(struct net_if_s		*interface,
 			struct net_packet_s	*packet,
 			struct net_proto_s	*ip,
-			struct net_proto_s	*proto);
+			net_proto_id_t		proto);
 void		ip_route(struct net_if_s	*interface,
 			 struct net_packet_s	*packet,
 			 struct net_route_s	*route);

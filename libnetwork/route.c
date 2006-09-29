@@ -54,16 +54,15 @@ void			route_add(struct net_if_s	*interface,
       mask = IPV4_ADDR_GET(route->mask);
     }
 
-  CONTAINER_FOREACH(net_protos, HASHLIST, net_protos, &interface->protocols,
+  /* look for the addressing module to bind to the route */
+  CONTAINER_FOREACH(net_protos, HASHLIST, net_protos, &route->interface->protocols,
   {
     if (item->id == ETHERTYPE_IP)
       {
 	struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)item->pv;
 
-	printf("%P (%P) - %P (%P)\n", &target, 4, &mask, 4, &pv_ip->addr, 4, &pv_ip->mask, 4);
 	if ((target & mask) == (pv_ip->addr & pv_ip->mask))
 	  {
-	    printf("Bound!\n");
 	    route->addressing = item;
 	    break;
 	  }

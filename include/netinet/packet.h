@@ -86,7 +86,8 @@
 #define NETWORK_MAX_STAGES	5
 
 /*
- * XXX commenter tout ca
+ * Each packet is divided into one or more parts. The following
+ * structure describes a subpacket.
  */
 
 struct		net_header_s
@@ -94,6 +95,7 @@ struct		net_header_s
   uint8_t	*data;	/* pointers to headers */
   uint_fast16_t	size;	/* size of subpackets */
 };
+
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
@@ -105,13 +107,22 @@ struct		net_header_s
 
 #include <semaphore.h>
 
+/*
+ * A packet is an object with ref counting mecanism.
+ */
+
 OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);
+
+/*
+ * We need to create packet lists, one without lock and another with
+ * spin-locks.
+ */
 
 CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, NOLOCK);
 CONTAINER_TYPE(packet_queue_lock, DLIST, struct net_packet_s, HEXO_SPIN_IRQ);
 
 /*
- * Address and mask structures.
+ * Address and mask structures and macros.
  */
 
 enum	net_addr_e
@@ -190,12 +201,12 @@ CONTAINER_PROTOTYPE(, packet_queue, packet_queue);
 CONTAINER_PROTOTYPE(, packet_queue_lock, packet_queue_lock);
 
 /*
- * XXX debug
+ * XXX for debug, remove me
  */
 
 static inline uint_fast8_t printf_void(void *v, ...) { return 0; }
 
-#define net_debug printf
+#define net_debug printf_void
 
 #endif
 

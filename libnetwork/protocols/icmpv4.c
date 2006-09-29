@@ -86,7 +86,7 @@ static inline void	icmp_echo(struct net_if_s	*interface,
 
   packet->stage--;
   /* send the packet to IP */
-  ip_send(interface, packet, addressing, icmp);
+  ip_send(interface, packet, addressing, IPPROTO_ICMP);
 }
 
 

@@ -73,8 +73,6 @@ struct			net_if_s
   net_protos_root_t	protocols;
   route_table_root_t	route_table;
 
-  struct net_proto_s	*ip;
-
   /* fields for booting */
   union
   {
@@ -82,9 +80,6 @@ struct			net_if_s
     struct net_proto_s	*dhcp;
   } bootproto;
   uint_fast8_t		boottype;
-
-  /* aliasing */
-  /* XXX */
 
   /* statistics */
   uint_fast64_t		rx_bytes;
@@ -122,6 +117,8 @@ void	if_sendpkt(struct net_if_s	*interface,
 		   net_proto_id_t	proto);
 void	if_stats(const char	*name);
 struct net_if_s	*if_get(const char	*name);
+
+extern net_if_root_t	net_interfaces;
 
 #endif
 

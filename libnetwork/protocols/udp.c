@@ -56,7 +56,6 @@ const struct net_proto_desc_s	udp_protocol =
 
 NET_PUSHPKT(udp_pushpkt)
 {
-  struct net_pv_udp_s	*pv = (struct net_pv_udp_s *)protocol->pv;
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct udphdr		aligned;
 #endif
@@ -117,36 +116,30 @@ NET_PREPAREPKT(udp_preparepkt)
 /*
  * Send a packet.
  */
-#if 0
-NET_UDP_SEND(udp_sendpkt)
+
+void		udp_sendpkt(struct net_if_s	*interface,
+			    struct net_proto_s	*addressing,
+			    struct net_packet_s	*packet,
+			    uint_fast16_t	source_port,
+			    uint_fast16_t	dest_port)
 {
-  struct net_pv_udp_s	*pv = (struct net_pv_udp_s *)udp->pv;
   struct udphdr		*hdr;
-  struct net_packet_s	*packet;
   struct net_header_s	*nethdr;
-  uint8_t		*dest;
-
-  packet = packet_obj_new(NULL);
-
-  dest = udp_preparepkt(interface, packet, size, 0);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct udphdr *)nethdr->data;
 
-  /* XXX fill the header */
-
-  /* copy data */
-  memcpy(dest, data, size);
+  /* fill the header */
+  hdr->source = source_port;
+  hdr->dest = dest_port;
+  net_be16_store(hdr->len, nethdr->size);
 
   /* XXX compute checksum */
-
-  /* target IP */
-  IPV4_ADDR_SET(packet->tADDR, ip);
+  hdr->check = 0;
 
   packet->stage--;
   /* send the packet to IP */
-  ip_send(interface, packet, pv->ip, udp);
+  ip_send(interface, packet, addressing, IPPROTO_UDP);
 }
 
-#endif

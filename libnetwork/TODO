@@ -3,6 +3,7 @@
 
 * IPv4
   - optimiser les calculs de checksum
+  - options du header IP
 
 * ARP
   - prevoir une gestion d'autre chose qu'Ethernet
@@ -11,7 +12,7 @@
   - faire tout les autres messages
 
 * if
-  - coder if_down
+  - coder if_down, if_unregister
   - mettre une option pour indiquer les NIC qui gerent le checksum en hard
   - aliasing et bridging
 
