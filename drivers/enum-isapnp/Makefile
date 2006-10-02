@@ -1,0 +1,3 @@
+
+objs += enum-isapnp.o
+
