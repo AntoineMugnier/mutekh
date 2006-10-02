@@ -54,7 +54,7 @@ typedef signed long long	int64_t;
    .sdata section */
 typedef struct __ldscript_symbol_s __ldscript_symbol_t;
 
-#ifdef __MUTEK__
+#if 0 //defined __MUTEK__
 /** prevent use of compiler native short type */
 # define short	struct _dont_use_short_
 

@@ -38,5 +38,28 @@ cpu_isbootstrap(void)
   return (reg & 0x000003ff) == 0;
 }
 
+/**
+   cpu cycle touner type
+*/
+
+typedef uint32_t cpu_cycle_t;
+
+/**
+   cpu cycle counter read function
+*/
+
+static inline cpu_cycle_t
+cpu_cycle_count(void)
+{
+  uint32_t      result;
+
+  asm volatile(
+	       "mfc0	%0, $9"
+	       : "=r" (result)
+	       );
+
+  return result;
+}
+
 #endif
 

@@ -43,6 +43,25 @@ cpu_isbootstrap(void)
   return msr & 0x100 ? 1 : 0;
 }
 
+/**
+   cpu cycle touner type
+*/
+
+typedef uint64_t cpu_cycle_t;
+
+/**
+   cpu cycle counter read function
+*/
+
+static inline cpu_cycle_t
+cpu_cycle_count(void)
+{
+  uint32_t      low, high;
+
+  asm volatile("rdtsc" : "=a" (low), "=d" (high));
+
+  return (low | ((uint64_t)high << 32));
+}
 
 #endif
 

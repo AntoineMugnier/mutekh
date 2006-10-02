@@ -39,6 +39,7 @@
 #include <../drivers/timer-8253/timer-8253.h>
 #include <../drivers/fb-vga/fb-vga.h>
 #include <../drivers/enum-pci/enum-pci.h>
+#include <../drivers/enum-isapnp/enum-isapnp.h>
 #include <../drivers/net-ne2000/net-ne2000.h>
 #include <../drivers/net-3c900/net-3c900.h>
 
@@ -69,6 +70,7 @@ struct device_s tty_con_dev;
 struct device_s icu_dev;
 
 struct device_s enum_pci;
+struct device_s enum_isapnp;
 
 extern const uint8_t mutek_logo_320x200[320*200];
 
@@ -171,6 +173,10 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # if defined(__ARCH__ibmpc__)
   device_init(&enum_pci);
   enum_pci_init(&enum_pci, &icu_dev);
+
+  device_init(&enum_isapnp);
+  enum_isapnp_init(&enum_isapnp, &icu_dev);
+
   dev_enum_register(&enum_pci, &net_3c900_drv);
   dev_enum_register(&enum_pci, &net_ne2000_drv);
 

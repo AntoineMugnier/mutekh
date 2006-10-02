@@ -23,6 +23,7 @@
 #include <hexo/alloc.h>
 #include <hexo/segment.h>
 #include <hexo/lock.h>
+#include <hexo/endian.h>
 
 static lock_t mem_lock = LOCK_INITIALIZER;
 
@@ -34,7 +35,7 @@ void * mem_alloc(size_t size, uint_fast8_t scope)
   lock_spin(&mem_lock);
 
   res = addr;
-  addr += size;
+  addr = (uint8_t*)ALIGN_VALUE((uintptr_t)addr + size, 4);
 
   lock_release(&mem_lock);
 

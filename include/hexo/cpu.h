@@ -50,5 +50,7 @@ void arch_start_other_cpu(void);
 
 #include "cpu/hexo/cpu.h"
 
+cpu_cycle_t cpu_cycle_count(void);
+
 #endif
 
