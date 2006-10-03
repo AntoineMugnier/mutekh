@@ -22,6 +22,7 @@
 #ifndef NETINET_PACKET_H_
 #define NETINET_PACKET_H_
 
+#include <cpu/packet.h>
 #include <hexo/types.h>
 #include <hexo/alloc.h>
 #include <string.h>
@@ -192,8 +193,11 @@ struct				net_dispatch_s
 
 OBJECT_CONSTRUCTOR(packet_obj);
 OBJECT_DESTRUCTOR(packet_obj);
-uint_fast16_t		packet_checksum(uint8_t		*data,
+uint16_t		packet_checksum(const void	*data,
 					size_t		size);
+uint_fast16_t		packet_memcpy(void		*dst,
+				      const void	*src,
+				      size_t		size);
 void			*packet_dispatch(void	*data);
 
 OBJECT_FUNC(static inline, packet_obj, REFCOUNT, packet_obj, obj_entry);
@@ -206,7 +210,7 @@ CONTAINER_PROTOTYPE(, packet_queue_lock, packet_queue_lock);
 
 static inline uint_fast8_t printf_void(void *v, ...) { return 0; }
 
-#define net_debug printf
+#define net_debug printf_void
 
 #endif
 

@@ -62,8 +62,10 @@ OBJECT_DESTRUCTOR(packet_obj)
 /*
  * Compute the checksum of a packet chunk.
  */
-#if 0
-uint_fast16_t		packet_checksum(uint8_t		*data,
+
+#ifndef HAS_CPU_PACKET_CHECKSUM
+#undef packet_checksum
+uint16_t		packet_checksum(const void	*data,
 					size_t		size)
 {
   uint_fast32_t		checksum = 0;
@@ -82,9 +84,45 @@ uint_fast16_t		packet_checksum(uint8_t		*data,
   while (checksum >> 16)
     checksum = (checksum & 0xffff) + (checksum >> 16);
 
+  return checksum;
+}
+#endif
+
+/*
+ * Compute the checksum of a packet chunk.
+ */
+
+#ifndef HAS_CPU_PACKET_MEMCPY
+#undef packet_memcpy
+uint_fast16_t		packet_memcpy(void		*dst,
+				      const void	*src,
+				      size_t		size)
+{
+  uint_fast32_t		checksum = 0;
+  uint16_t		*d = (uint16_t *)src;
+  uint16_t		*p = (uint16_t *)dst;
+
+  while(size > 1)
+    {
+      checksum = checksum + net_16_load(*d);
+      net_16_store(*p, *d);
+      d++;
+      size = size - 2;
+    }
+
+  if (size)
+    {
+      checksum = checksum + *(uint8_t *)d;
+      *(uint8_t *)p = *(uint8_t *)d;
+    }
+
+  while (checksum >> 16)
+    checksum = (checksum & 0xffff) + (checksum >> 16);
+
   return (~checksum) & 0xffff;
 }
 #endif
+
 
 /*
  * packet queue functions.

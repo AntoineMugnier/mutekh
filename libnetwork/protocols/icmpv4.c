@@ -77,7 +77,7 @@ static inline void	icmp_echo(struct net_if_s	*interface,
   net_16_store(hdr->checksum, 0);
 
   /* compute checksum */
-  net_16_store(hdr->checksum, packet_checksum(nethdr->data, nethdr->size));
+  net_16_store(hdr->checksum, ~packet_checksum(nethdr->data, nethdr->size));
 
   /* target IP */
   xchg = packet->tADDR.addr.ipv4;
@@ -101,15 +101,11 @@ NET_PUSHPKT(icmp_pushpkt)
 #endif
   struct icmphdr	*hdr;
   struct net_header_s	*nethdr;
-  uint_fast16_t		check;
   uint_fast16_t		computed_check;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct icmphdr *)nethdr->data;
-
-  check = endian_16_na_load(&hdr->checksum);
-  endian_16_na_store(&hdr->checksum, 0);
 
   /* align the packet on 32 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -122,10 +118,11 @@ NET_PUSHPKT(icmp_pushpkt)
 
   /* verify checksum */
   computed_check = packet_checksum(nethdr->data, nethdr->size);
+
   /* incorrect packet */
-  if (check != computed_check)
+  if (computed_check != 0xffff)
     {
-      net_debug("Rejected incorrect packet\n");
+      net_debug("ICMP: Rejected incorrect packet %x\n", computed_check);
       return;
     }
 

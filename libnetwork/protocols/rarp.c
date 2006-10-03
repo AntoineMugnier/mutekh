@@ -126,7 +126,7 @@ NET_PREPAREPKT(rarp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = if_preparepkt(inteface, packet, sizeof (struct ether_arp), 4);
+  next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 4);
   next = ALIGN_ADDRESS(next, 4);
 #else
   next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 0);

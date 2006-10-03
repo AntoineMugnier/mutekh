@@ -45,7 +45,7 @@ const struct net_proto_desc_s	udp_protocol =
     .name = "UDP",
     .id = IPPROTO_UDP,
     .pushpkt = udp_pushpkt,
-    .preparepkt = udp_preparepkt,
+    .preparepkt = NULL,
     .initproto = NULL,
     .pv_size = 0
   };
@@ -61,6 +61,7 @@ NET_PUSHPKT(udp_pushpkt)
 #endif
   struct udphdr		*hdr;
   struct net_header_s	*nethdr;
+  uint32_t		check;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -75,7 +76,9 @@ NET_PUSHPKT(udp_pushpkt)
     }
 #endif
 
-  /* XXX udp checksum */
+  /* XXX */
+  check = addressing->desc->f.addressing->pseudoheader_checksum(packet, IPPROTO_UDP, net_16_load(hdr->len));
+  check += packet_checksum(nethdr->data, net_be16_load(hdr->len));
 
   /* next stage */
   if (!nethdr[1].data)
@@ -92,16 +95,20 @@ NET_PUSHPKT(udp_pushpkt)
  * Prepare UDP packet.
  */
 
-NET_PREPAREPKT(udp_preparepkt)
+uint8_t			*udp_preparepkt(struct net_if_s		*interface,
+					struct net_proto_s	*addressing,
+					struct net_packet_s	*packet,
+					size_t			size,
+					size_t			max_padding)
 {
   struct net_header_s	*nethdr;
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = ip_preparepkt(interface, packet, sizeof (struct udphdr) + size, 2);
+  next = addressing->desc->preparepkt(interface, packet, sizeof (struct udphdr) + size, 2);
   next = ALIGN_ADDRESS(next, 4);
 #else
-  next = ip_preparepkt(interface, packet, sizeof (struct udphdr) + size, 0);
+  next = addressing->desc->preparepkt(interface, packet, sizeof (struct udphdr) + size, 0);
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -140,6 +147,6 @@ void		udp_sendpkt(struct net_if_s	*interface,
 
   packet->stage--;
   /* send the packet to IP */
-  ip_send(interface, packet, addressing, IPPROTO_UDP);
+  addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_UDP);
 }
 

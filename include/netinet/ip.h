@@ -141,6 +141,23 @@ struct iphdr {
 
 CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, 64, BLOB, 6);
 
+/*
+ * IP pseudo header (for upper layer checksum computation)
+ */
+
+struct		ip_pseudoheader_s
+{
+  uint32_t	source;
+  uint32_t	dest;
+  uint8_t	zero;
+  uint8_t	type;
+  uint16_t	size;
+} __attribute__((packed));
+
+/*
+ * Fragmentation structures.
+ */
+
 struct			ip_packet_s
 {
   uint8_t		id[6];
@@ -171,10 +188,9 @@ struct			net_pv_ip_s
 NET_INITPROTO(ip_init);
 NET_PUSHPKT(ip_pushpkt);
 NET_PREPAREPKT(ip_preparepkt);
-void		ip_send(struct net_if_s		*interface,
-			struct net_packet_s	*packet,
-			struct net_proto_s	*ip,
-			net_proto_id_t		proto);
+NET_SENDPKT(ip_send);
+NET_MATCHADDR(ip_matchaddr);
+NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum);
 void		ip_route(struct net_if_s	*interface,
 			 struct net_packet_s	*packet,
 			 struct net_route_s	*route);

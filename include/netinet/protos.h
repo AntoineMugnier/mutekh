@@ -31,6 +31,8 @@
 
 struct net_if_s;
 struct net_packet_s;
+struct net_addr_s;
+struct net_proto_s;
 
 /*
  * Container type for protocols list.
@@ -74,6 +76,50 @@ typedef uint_fast16_t net_pkt_size_t;
 typedef uint_fast16_t net_proto_id_t;
 
 /*
+ * Prototype of the function used to send a packet.
+ */
+
+#define NET_SENDPKT(f)		void (f)(struct net_if_s	*interface,  \
+					 struct net_packet_s	*packet,     \
+					 struct net_proto_s	*protocol,   \
+					 net_proto_id_t		proto)
+
+typedef NET_SENDPKT(net_sendpkt_t);
+
+/*
+ * Prototype of the function used to match internet addresses.
+ */
+
+#define NET_MATCHADDR(f) uint_fast8_t (f)(struct net_proto_s	*protocol,\
+					  struct net_addr_s	*a,	  \
+					  struct net_addr_s	*b,	  \
+					  struct net_addr_s	*mask)
+
+typedef NET_MATCHADDR(net_matchaddr_t);
+
+/*
+ * Prototype of the function that computes the pseudo header checksum.
+ */
+
+#define NET_PSEUDOHEADER_CHECKSUM(f)					\
+  uint16_t	(f)(struct net_packet_s	*packet,			\
+		    net_proto_id_t	proto,				\
+		    uint_fast16_t	size)
+
+typedef NET_PSEUDOHEADER_CHECKSUM(net_pseudoheader_checksum_t);
+
+/*
+ * This structure defines the interface of an addressing protocol.
+ */
+
+struct				net_addressing_interface_s
+{
+  net_sendpkt_t			*sendpkt;
+  net_matchaddr_t		*matchaddr;
+  net_pseudoheader_checksum_t	*pseudoheader_checksum;
+};
+
+/*
  * This structure defines a protocol.
  */
 
@@ -84,6 +130,10 @@ struct					net_proto_desc_s
   net_pushpkt_t				*pushpkt; /* push packet function */
   net_preparepkt_t			*preparepkt; /* prepare packet func */
   net_initproto_t			*initproto; /* init pv data */
+  union
+  {
+    const struct net_addressing_interface_s	*addressing;
+  } f;
   size_t				pv_size;
 };
 

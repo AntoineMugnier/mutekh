@@ -42,7 +42,11 @@ struct		udphdr
  */
 
 NET_PUSHPKT(udp_pushpkt);
-NET_PREPAREPKT(udp_preparepkt);
+uint8_t		*udp_preparepkt(struct net_if_s		*interface,
+				struct net_proto_s	*addressing,
+				struct net_packet_s	*packet,
+				size_t			size,
+				size_t			max_padding);
 void		udp_sendpkt(struct net_if_s	*interface,
 			    struct net_proto_s	*addressing,
 			    struct net_packet_s	*packet,

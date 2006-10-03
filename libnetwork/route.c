@@ -34,24 +34,22 @@ CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK, list_entr
 void			route_add(struct net_if_s	*interface,
 				  struct net_route_s	*route)
 {
-  uint_fast32_t		target;
-  uint_fast32_t		mask;
-
-  /* XXX this is ipv4 code */
+  struct net_addr_s	*target;
+  struct net_addr_s	*mask;
 
   if (route->type & ROUTETYPE_DIRECT)
     {
       /* direct route: we use the target address to determine which
 	 addressing module to use */
-      target = IPV4_ADDR_GET(route->target);
-      mask = IPV4_ADDR_GET(route->mask);
+      target = &route->target;
+      mask = &route->mask;
     }
   else
     {
       /* indirect route: we use the router address to determine which
 	 addressing module to use */
-      target = IPV4_ADDR_GET(route->router);
-      mask = IPV4_ADDR_GET(route->mask);
+      target = &route->router;
+      mask = &route->mask;
     }
 
   /* look for the addressing module to bind to the route */
@@ -59,9 +57,7 @@ void			route_add(struct net_if_s	*interface,
   {
     if (item->id == ETHERTYPE_IP)
       {
-	struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)item->pv;
-
-	if ((target & mask) == (pv_ip->addr & pv_ip->mask))
+	if (item->desc->f.addressing->matchaddr(item, NULL, target, mask))
 	  {
 	    route->addressing = item;
 	    break;
@@ -80,26 +76,18 @@ void			route_add(struct net_if_s	*interface,
 struct net_route_s	*route_get(struct net_if_s	*interface,
 				   struct net_addr_s	*addr)
 {
-  uint_fast32_t		target;
-  uint_fast32_t		mask;
-  uint_fast32_t		addr4;
-
-  /* XXX this is IPv4 code */
-
-  addr4 = IPV4_ADDR_GET(*addr);
+  /* look into the route table */
   CONTAINER_FOREACH(route_table, DLIST, route_table, &interface->route_table,
   {
-    target = IPV4_ADDR_GET(item->target);
-
+    /* an entry for a single host */
     if (item->type == ROUTETYPE_HOST)
       {
-	if (target == addr4)
+	if (item->addressing->desc->f.addressing->matchaddr(item->addressing, &item->target, addr, NULL))
 	  return item;
       }
-    else
+    else /* an entry for a subnet */
       {
-	mask = IPV4_ADDR_GET(item->mask);
-	if ((addr4 & mask) == target)
+	if (item->addressing->desc->f.addressing->matchaddr(item->addressing, &item->target, addr, &item->mask))
 	  return item;
       }
   });

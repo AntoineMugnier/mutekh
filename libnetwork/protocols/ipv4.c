@@ -46,6 +46,13 @@ CONTAINER_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, list_entry
  * Structures for declaring the protocol's properties & interface.
  */
 
+const struct net_addressing_interface_s	ip_interface =
+  {
+    .sendpkt = ip_send,
+    .matchaddr = ip_matchaddr,
+    .pseudoheader_checksum = ip_pseudoheader_checksum
+  };
+
 const struct net_proto_desc_s	ip_protocol =
   {
     .name = "IP",
@@ -53,7 +60,8 @@ const struct net_proto_desc_s	ip_protocol =
     .pushpkt = ip_pushpkt,
     .preparepkt = ip_preparepkt,
     .initproto = ip_init,
-    .pv_size = sizeof (struct net_pv_ip_s),
+    .f.addressing = &ip_interface,
+    .pv_size = sizeof (struct net_pv_ip_s)
   };
 
 /*
@@ -148,6 +156,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       struct net_packet_s	*frag;
       uint_fast16_t		headers_len;
       uint8_t			*data;
+      uint8_t			*ptr;
 
       net_debug("packet complete\n");
 
@@ -155,7 +164,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       nethdr = &packet->header[packet->stage];
       headers_len = (packet->header[0].size - nethdr->size);
       /* allocate a packet large enough */
-      data = mem_alloc(total + headers_len, MEM_SCOPE_CONTEXT);
+      data = mem_alloc(total + headers_len + 3, MEM_SCOPE_CONTEXT);
 
       /* copy previous headers (ethernet, ip, etc.) */
       memcpy(data, packet->packet, headers_len);
@@ -163,7 +172,12 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       net_debug("copying headers : %d-%d\n", 0, headers_len);
 
       /* copy current packet to its position */
-      memcpy(data + headers_len + offs, nethdr->data, datasz);
+#ifdef CONFIG_NETWORK_AUTOALIGN
+      ptr = (uint8_t *)ALIGN_VALUE((uintptr_t)(data + headers_len), 4);
+#else
+      ptr = data + headers_len;
+#endif
+      memcpy(ptr + offs, nethdr->data, datasz);
 
       net_debug("copying packet : %d-%d\n", offs, offs + datasz);
 
@@ -172,7 +186,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 
       /* replace by reassembling packet */
       packet->packet = data;
-      data += headers_len;
+      data = ptr;
 
       nethdr->data = data;
       nethdr->size = total;
@@ -218,7 +232,6 @@ NET_PUSHPKT(ip_pushpkt)
   struct net_header_s	*nethdr;
   net_proto_id_t	proto;
   struct net_proto_s	*p;
-  uint_fast16_t		check;
   uint_fast16_t		computed_check;
   uint_fast16_t		fragment;
   uint_fast16_t		tot_len;
@@ -267,13 +280,11 @@ NET_PUSHPKT(ip_pushpkt)
     }
 
   /* verify checksum */
-  check = net_16_load(hdr->check);
-  net_16_store(hdr->check, 0);
   computed_check = packet_checksum((uint8_t *)hdr, hdr->ihl * 4);
   /* incorrect packet */
-  if (check != computed_check)
+  if (computed_check != 0xffff)
     {
-      net_debug("Rejected incorrect packet %x %x\n", check, computed_check);
+      net_debug("IP: Rejected incorrect packet %x\n", computed_check);
       return;
     }
 
@@ -367,6 +378,7 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
   struct iphdr		*hdr_frag;
   uint8_t		*dest;
   uint_fast8_t		i;
+  uint_fast32_t		check;
 
   /* prepare a new IP packet */
   frag = packet_obj_new(NULL);
@@ -390,15 +402,17 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
   /* copy header */
   nethdr = &frag->header[frag->stage];
   hdr_frag = (struct iphdr *)nethdr->data;
-  memcpy(hdr_frag, hdr, 20);
+  memcpy(hdr_frag, hdr, hdr->ihl * 4);
 
   /* setup fragment specific fields */
   net_be16_store(hdr_frag->fragment, (last ? 0 : IP_FLAG_MF) | (offs / 8));
   net_be16_store(hdr_frag->tot_len, nethdr->size);
-  net_16_store(hdr_frag->check, 0);
-  /* checksum XXX don't recompute it! */
-  net_16_store(hdr_frag->check,
-	       packet_checksum((uint8_t *)hdr_frag, 20));
+  /* XXX checksum */
+  check = net_16_load(hdr_frag->check);
+  check += net_be16_load(hdr_frag->fragment);
+  check += nethdr->size;
+  check = check + (check >> 16);
+  net_16_store(hdr_frag->check, ~check);
 
   /* send the fragment */
   frag->stage--;
@@ -437,12 +451,9 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
  * Send an IP packet.
  */
 
-void			ip_send(struct net_if_s		*interface,
-				struct net_packet_s	*packet,
-				struct net_proto_s	*ip,
-				net_proto_id_t		proto)
+NET_SENDPKT(ip_send)
 {
-  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ip->pv;
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)protocol->pv;
   struct iphdr		*hdr;
   struct net_header_s	*nethdr;
   struct net_route_s	*route_entry;
@@ -466,7 +477,6 @@ void			ip_send(struct net_if_s		*interface,
   /* need fragmentation */
   if (total > interface->mtu - 20)
     {
-      uint_fast16_t		id;
       uint_fast16_t		offs;
       uint_fast16_t		fragsz;
       uint_fast8_t		sent;
@@ -476,21 +486,27 @@ void			ip_send(struct net_if_s		*interface,
       offs = 0;
       fragsz = (interface->mtu - 20) & ~7;
       /* choose a random identifier */
-      id = pv->id_seq++;
-      net_be16_store(hdr->id, id);
+      net_be16_store(hdr->id, pv->id_seq++);
+      /* compute the checksum of the header. as the header will be
+	 completed during next step, the checksum will be incrementaly
+	 updated */
+      net_16_store(hdr->tot_len, 0);
+      net_16_store(hdr->fragment, 0);
+      net_16_store(hdr->check, 0);
+      net_16_store(hdr->check, packet_checksum((uint8_t *)hdr, 20));
 
       /* send the middle fragments */
       sent = 1;
       while (sent && offs + fragsz < total)
 	{
-	  sent = ip_send_fragment(ip, interface, hdr, packet, offs, fragsz, 0);
+	  sent = ip_send_fragment(protocol, interface, hdr, packet, offs, fragsz, 0);
 
 	  offs += fragsz;
 	}
 
       /* last packet */
       if (sent)
-	ip_send_fragment(ip, interface, hdr, packet, offs, total - offs, 1);
+	ip_send_fragment(protocol, interface, hdr, packet, offs, total - offs, 1);
 
       /* release the original packet */
       packet_obj_refdrop(packet);
@@ -504,16 +520,16 @@ void			ip_send(struct net_if_s		*interface,
   net_16_store(hdr->fragment, 0);
   net_16_store(hdr->check, 0);
   /* checksum */
-  net_16_store(hdr->check, packet_checksum((uint8_t *)hdr, hdr->ihl * 4));
+  net_16_store(hdr->check, ~packet_checksum((uint8_t *)hdr, hdr->ihl * 4));
 
   packet->stage--;
   IPV4_ADDR_SET(packet->sADDR, pv->addr);
   /* need to route ? */
-  if (ip_delivery(interface, ip, packet->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
+  if (ip_delivery(interface, protocol, packet->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
     {
       if ((route_entry = route_get(interface, &packet->tADDR)))
 	{
-	  if (!(packet->tMAC = arp_get_mac(ip, pv->arp, packet,
+	  if (!(packet->tMAC = arp_get_mac(protocol, pv->arp, packet,
 					 IPV4_ADDR_GET(route_entry->router))))
 	    return;
 	}
@@ -528,7 +544,7 @@ void			ip_send(struct net_if_s		*interface,
   else
     {
       /* no route IP -> MAC translation */
-      if (!(packet->tMAC = arp_get_mac(ip, pv->arp, packet, packet->tADDR.addr.ipv4)))
+      if (!(packet->tMAC = arp_get_mac(protocol, pv->arp, packet, packet->tADDR.addr.ipv4)))
 	return;
     }
 
@@ -549,6 +565,8 @@ void		ip_route(struct net_if_s	*interface,
   struct net_header_s	*nethdr;
   uint_fast32_t		router;
   uint_fast16_t		total;
+  uint_fast16_t		check;
+  uint_fast8_t		old_ttl;
 
   packet_obj_refnew(packet);
 
@@ -560,7 +578,7 @@ void		ip_route(struct net_if_s	*interface,
   hdr = (struct iphdr *)nethdr->data;
 
   /* decrement TTL */
-  hdr->ttl--;
+  old_ttl = hdr->ttl--;
 
   if (!nethdr[1].data)
     {
@@ -615,9 +633,9 @@ void		ip_route(struct net_if_s	*interface,
       return ;
     }
 
-  /* recompute checksum*/
-  net_16_store(hdr->check, 0);
-  net_16_store(hdr->check, packet_checksum((uint8_t *)hdr, hdr->ihl * 4));
+  /* recompute checksum */
+  check = net_16_load(hdr->check) + 1;
+  net_16_store(hdr->check, check + (check >> 16));
 
   /* send the packet */
   packet->stage--;
@@ -643,4 +661,49 @@ void		ip_route(struct net_if_s	*interface,
 
   /* send the packet to the driver */
   if_sendpkt(interface, packet, ETHERTYPE_IP);
+}
+
+/*
+ * Address matching function.
+ */
+
+NET_MATCHADDR(ip_matchaddr)
+{
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)protocol->pv;
+  uint_fast32_t		A;
+  uint_fast32_t		B;
+  uint_fast32_t		M;
+
+
+  if (a)
+    A = IPV4_ADDR_GET(*a);
+  else
+    A = pv->addr;
+  if (b)
+    B = IPV4_ADDR_GET(*b);
+  else
+    B = pv->addr;
+  if (mask)
+    M = IPV4_ADDR_GET(*mask);
+  else
+    return A == B;
+
+  return (A & M) == (B & M);
+}
+
+/*
+ * Compute checksum of the IP pseudo-header.
+ */
+
+NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum)
+{
+  struct ip_pseudoheader_s	hdr;
+
+  hdr.source = IPV4_ADDR_GET(packet->sADDR);
+  hdr.dest = IPV4_ADDR_GET(packet->tADDR);
+  hdr.zero = 0;
+  hdr.type = proto;
+  hdr.size = size;
+
+  return packet_checksum(&hdr, sizeof (hdr));
 }

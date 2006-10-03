@@ -67,9 +67,11 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
   struct net_packet_s	*packet;
   uint8_t		*dest;
 
+  /* look for the good IP module */
   CONTAINER_FOREACH(net_if, HASHLIST, net_if, &net_interfaces,
   {
     interface = item;
+    /* XXX foreach + lookup will be better */
     CONTAINER_FOREACH(net_protos, HASHLIST, net_protos, &interface->protocols,
     {
       switch (local->address.family)
@@ -103,7 +105,7 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
   packet = packet_obj_new(NULL);
 
   /* prepare the packet */
-  dest = udp_preparepkt(interface, packet, size, 0);
+  dest = udp_preparepkt(interface, addressing, packet, size, 0);
 
   /* copy data into the packet */
   memcpy(dest, data, size);

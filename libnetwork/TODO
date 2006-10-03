@@ -2,7 +2,6 @@
   - revoir tout le cleanup
 
 * IPv4
-  - optimiser les calculs de checksum
   - options du header IP
 
 * ARP
@@ -10,6 +9,9 @@
 
 * ICMPv4
   - faire tout les autres messages
+
+* UDP
+  - calculer le checksum
 
 * if
   - coder if_down, if_unregister

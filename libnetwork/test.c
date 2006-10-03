@@ -44,10 +44,10 @@ int_fast8_t		main()
     ;
 
   if_up("eth0");
-  //  if_up("eth1");
+  if_up("eth1");
 
 
-#if 0
+#if 1
 
   struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
@@ -82,16 +82,10 @@ int_fast8_t		main()
   route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
   route_add(if_get("eth0"), route);
 
-  //arp_hardwire(if_get("eth0"), "\x08\x00\x11\x06\x76\x65", 0x0a020302);
-
   //  if_up("eth2");
 #endif
 
-  //  eval_server();
-
-  char toto[] = "\x01\x01\x01\x01\x01\x01\x01\x01\0\0\0\0";
-
-  printf("%d\n", packet_checksum(toto, 8));
+  eval_server();
 
   return 0;
 }
