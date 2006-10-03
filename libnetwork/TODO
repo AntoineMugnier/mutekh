@@ -3,6 +3,7 @@
 
 * IPv4
   - options du header IP
+  - gerer addresse loopback et broadcast
 
 * ARP
   - prevoir une gestion d'autre chose qu'Ethernet
@@ -20,3 +21,4 @@
 
 * general
   - verifier l'alignement des acces memoire
+  - voir les locks un peu partout
