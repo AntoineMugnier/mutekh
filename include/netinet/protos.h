@@ -102,7 +102,8 @@ typedef NET_MATCHADDR(net_matchaddr_t);
  */
 
 #define NET_PSEUDOHEADER_CHECKSUM(f)					\
-  uint16_t	(f)(struct net_packet_s	*packet,			\
+  uint16_t	(f)(struct net_proto_s	*addressing,			\
+		    struct net_packet_s	*packet,			\
 		    net_proto_id_t	proto,				\
 		    uint_fast16_t	size)
 

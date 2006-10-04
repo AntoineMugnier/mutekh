@@ -25,14 +25,8 @@
 #include <cpu/packet.h>
 #include <hexo/types.h>
 #include <hexo/alloc.h>
+#include <hexo/endian.h>
 #include <string.h>
-
-/*
- * A macro function to check alignment of headers.
- */
-
-#define NET_ALIGNED(a, v)						\
-  ((uintptr_t)(a) % (v))
 
 /*
  * Memory access macros.

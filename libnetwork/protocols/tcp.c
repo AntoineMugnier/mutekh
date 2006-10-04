@@ -68,12 +68,14 @@ NET_PUSHPKT(tcp_pushpkt)
 
   /* align the packet on 32 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint32_t)))
+  if (!IS_ALIGNED(hdr, sizeof (uint32_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct tcphdr));
       hdr = &aligned;
     }
 #endif
+
+  /* XXX verify checksum */
 
   flags = hdr->th_flags;
 
@@ -137,36 +139,93 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   struct net_if_s	*interface = session->interface;
   struct net_header_s	*nethdr;
   struct tcphdr		*hdr;
+  uint16_t		check;
 
   packet = packet_obj_new(NULL);
 
   /* prepare the packet */
-  tcp_preparepkt(interface, addressing, packet, 0, 0);
+  tcp_preparepkt(interface, addressing, packet, (TCP_OPEN || TCP_ACK_OPEN) ? 4 : 0, 0);
   nethdr = &packet->header[packet->stage];
   hdr = (struct tcphdr *)nethdr->data;
+
+  /* setup the targeted address */
+  memcpy(&packet->tADDR, &session->remote[0].address,
+	 sizeof (struct net_addr_s));
+  net_16_store(hdr->th_sport, session->local.port);
+  net_16_store(hdr->th_dport, session->remote[0].port);
 
   /* fill the packet header */
   switch (operation)
     {
+      /* connection opening */
       case TCP_OPEN:
-	/* XXX */
+	{
+	  uint32_t	*mss;
+
+	  hdr->th_flags = TH_SYN;
+	  net_be32_store(hdr->th_seq, session->send_seq);
+	  net_be32_store(hdr->th_ack, 0);
+	  net_be16_store(hdr->th_win, session->send_win);
+	  hdr->th_urp = 0;
+	  hdr->th_off = 6;
+	  /* add MSS option */
+	  mss = (uint32_t *)(hdr + 1);
+	  net_be32_store(*mss, (2 << 24) | (4 << 16) | TCP_MSS);
+	}
 	break;
+      /* acknowledgment of connection opening */
       case TCP_ACK_OPEN:
-	/* XXX */
+	{
+	  uint32_t	*mss;
+
+	  hdr->th_flags = TH_SYN | TH_ACK;
+	  net_be32_store(hdr->th_seq, session->send_seq);
+	  net_be32_store(hdr->th_ack, session->recv_ack);
+	  net_be16_store(hdr->th_win, session->send_win);
+	  hdr->th_urp = 0;
+	  hdr->th_off = 6;
+	  /* add MSS option */
+	  mss = (uint32_t *)(hdr + 1);
+	  net_be32_store(*mss, (2 << 24) | (4 << 16) | TCP_MSS);
+	}
 	break;
+      /* simple acknowlegment of received dat when no data to send */
       case TCP_ACK_DATA:
-	/* XXX */
+	hdr->th_flags = TH_ACK;
+	net_be32_store(hdr->th_seq, session->send_seq);
+	net_be32_store(hdr->th_ack, session->recv_ack);
+	net_be16_store(hdr->th_win, session->send_win);
+	hdr->th_urp = 0;
+	hdr->th_off = 5;
 	break;
+      /* request for closing connection */
       case TCP_CLOSE:
-	/* XXX */
+	hdr->th_flags = TH_FIN | TH_ACK;
+	net_be32_store(hdr->th_seq, session->send_seq);
+	net_be32_store(hdr->th_ack, session->recv_ack);
+	net_be16_store(hdr->th_win, session->send_win);
+	hdr->th_urp = 0;
+	hdr->th_off = 5;
 	break;
+      /* acceptation of closing connection */
       case TCP_ACK_CLOSE:
-	/* XXX */
+	hdr->th_flags = TH_FIN | TH_ACK;
+	net_be32_store(hdr->th_seq, session->send_seq);
+	net_be32_store(hdr->th_ack, session->recv_ack);
+	net_be16_store(hdr->th_win, session->send_win);
+	hdr->th_urp = 0;
+	hdr->th_off = 5;
 	break;
       default:
 	assert(0);
 	break;
     }
+
+  /* checksum */
+  check = addressing->desc->f.addressing->pseudoheader_checksum(addressing, packet, IPPROTO_TCP, hdr->th_off * 4);
+  check += packet_checksum((uint8_t *)hdr, hdr->th_off * 4);
+  check = (check & 0xffff) + (check >> 16);
+  net_16_store(hdr->th_sum, ~check);
 
   packet->stage--;
   /* send the packet to IP */
@@ -188,6 +247,7 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   uint8_t		*dest;
   struct net_header_s	*nethdr;
   struct tcphdr		*hdr;
+  uint16_t		check;
 
   packet = packet_obj_new(NULL);
 
@@ -196,14 +256,28 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   nethdr = &packet->header[packet->stage];
   hdr = (struct tcphdr *)nethdr->data;
 
+  /* setup the targeted address */
+  memcpy(&packet->tADDR, &session->remote[0].address,
+	 sizeof (struct net_tcp_addr_s));
+  net_16_store(hdr->th_sport, session->local.port);
+  net_16_store(hdr->th_dport, session->remote[0].port);
+
   /* fill the packet header */
-  /* XXX */
+  hdr->th_flags = TH_ACK | flags;
+  net_be32_store(hdr->th_seq, session->send_seq);
+  net_be32_store(hdr->th_ack, session->recv_ack);
+  net_be16_store(hdr->th_win, session->send_win);
+  hdr->th_urp = 0;
+  hdr->th_off = 5;
 
   /* copy the data */
-  /* XXX */
+  memcpy(dest, data, size);
 
-  /* update the session */
-  /* XXX */
+  /* checksum */
+  check = addressing->desc->f.addressing->pseudoheader_checksum(addressing, packet, IPPROTO_TCP, size);
+  check += packet_checksum((uint8_t *)hdr, hdr->th_off * 4);
+  check = (check & 0xffff) + (check >> 16);
+  net_16_store(hdr->th_sum, ~check);
 
   packet->stage--;
   /* send the packet to IP */

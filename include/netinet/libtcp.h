@@ -24,7 +24,9 @@
 
 #include <netinet/protos.h>
 #include <netinet/packet.h>
-#include <netinet/tcp.h>
+
+struct tcphdr;
+struct net_tcp_session_s;
 
 #define TCP_EVENT_ACCEPT	1
 #define TCP_EVENT_RECEIVE	2

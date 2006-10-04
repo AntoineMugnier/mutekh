@@ -74,26 +74,14 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
     /* XXX foreach + lookup will be better */
     CONTAINER_FOREACH(net_protos, HASHLIST, net_protos, &interface->protocols,
     {
-      switch (local->address.family)
+      if (item->id == ETHERTYPE_IP)
 	{
-	  case addr_ipv4:
+	  if (item->desc->f.addressing->matchaddr(item, &local->address, NULL, NULL))
 	    {
-	      if (item->id != ETHERTYPE_IP)
-		break;
-	      struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)item->pv;
-
-	      if (pv->addr == local->address.addr.ipv4)
-		{
-		  addressing = item;
-		  break;
-		}
+	      addressing = item;
+	      break;
 	    }
-	    break;
-	  default:
-	    return -1;
 	}
-      if (addressing)
-	break;
     });
     if (addressing)
       break;

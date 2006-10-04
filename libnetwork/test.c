@@ -26,11 +26,36 @@
 #include <netinet/if.h>
 #include <netinet/in.h>
 #include <netinet/libudp.h>
+#include <netinet/libtcp.h>
 
 #include <stdio.h>
 #include <string.h>
 
+#include <pthread.h>
+
 void			eval_server();
+
+void			*tcp_test(void *p)
+{
+  struct net_tcp_addr_s local;
+  struct net_tcp_addr_s remote;
+  struct net_tcp_session_s *session;
+
+  IPV4_ADDR_SET(local.address, 0x0a0202f0);
+  IPV4_ADDR_SET(remote.address, 0x0a020225);
+  remote.port = htons(22);
+
+  session = tcp_open(&local, &remote);
+
+  if (session == NULL)
+    printf("error\n");
+  else
+    {
+      tcp_close(session);
+    }
+
+  return NULL;
+}
 
 /*
  * test main.
@@ -85,8 +110,12 @@ int_fast8_t		main()
   //  if_up("eth2");
 #endif
 
-  eval_server();
+  //  eval_server();
+
+  pthread_t th;
+  pthread_create(&th, NULL, tcp_test, NULL);
 
   return 0;
 }
+
 

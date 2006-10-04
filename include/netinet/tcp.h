@@ -57,8 +57,8 @@ struct		tcphdr
   uint16_t	th_dport;		/* destination port */
   uint32_t	th_seq;		/* sequence number */
   uint32_t	th_ack;		/* acknowledgement number */
-  ENDIAN_BITFIELD(uint8_t th_x2:4,		/* (unused) */
-		  uint8_t th_off:4);		/* data offset */
+  ENDIAN_BITFIELD(uint8_t th_off:4,		/* data offset */
+		  uint8_t th_x2:4);		/* (unused) */
   uint8_t	th_flags;
   uint16_t	th_win;		/* window */
   uint16_t	th_sum;		/* checksum */
@@ -101,6 +101,34 @@ struct		tcphdr
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 #include <netinet/if.h>
+#include <netinet/libtcp.h>
+
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_hashlist.h>
+
+#include <semaphore.h>
+
+/*
+ * Container types for tcp session list.
+ */
+
+CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, 64, BLOB, sizeof (struct net_tcp_addr_s));
+
+/*
+ * Window default size
+ */
+
+#define TCP_DFL_WINDOW	4096
+
+/*
+ * Connection stage
+ */
+
+#define TCP_STATE_ERROR		0
+#define TCP_STATE_SYN_SENT	1
+#define TCP_STATE_FIN_WAIT	2
+#define TCP_STATE_ESTABLISHED	3
+#define TCP_STATE_LISTEN	4
 
 /*
  * Control operations
@@ -120,6 +148,20 @@ struct			net_tcp_session_s
 {
   struct net_if_s	*interface;
   struct net_proto_s	*addressing;
+  struct net_tcp_addr_s	local;
+  struct net_tcp_addr_s	remote[1];
+
+  uint_fast32_t		send_seq;
+  uint_fast32_t		send_ack;
+  uint_fast16_t		send_win;
+  uint_fast32_t		recv_seq;
+  uint_fast32_t		recv_ack;
+  uint_fast16_t		recv_win;
+
+  uint_fast8_t		state;
+  sem_t			sem;
+
+  tcp_session_entry_t	list_entry;
 };
 
 /*

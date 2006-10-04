@@ -256,6 +256,9 @@ static inline uint64_t endian_swap64(uint64_t x)
 /* return true if value is a power of 2 */
 #define ALIGN_ISPOWTWO(x)	!((x) & ((x) - 1))
 
+/* return true if value is aligned */
+#define IS_ALIGNED(x, b)	!(((uintptr_t)x) & ((b) - 1))
+
 /* align value on the next power of two */
 #define ALIGN_VALUE(x, b)	(assert(ALIGN_ISPOWTWO(b)),	\
 				((((x) - 1) | ((b) - 1)) + 1))

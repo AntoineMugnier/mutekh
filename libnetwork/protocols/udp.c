@@ -61,7 +61,9 @@ NET_PUSHPKT(udp_pushpkt)
 #endif
   struct udphdr		*hdr;
   struct net_header_s	*nethdr;
-  uint32_t		check;
+  uint32_t		computed_check;
+  uint16_t		check;
+  uint_fast16_t		len;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -69,22 +71,36 @@ NET_PUSHPKT(udp_pushpkt)
 
   /* align the packet on 16 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint16_t)))
+  if (!IS_ALIGNED(hdr, sizeof (uint16_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct udphdr));
       hdr = &aligned;
     }
 #endif
 
-  /* XXX */
-  check = addressing->desc->f.addressing->pseudoheader_checksum(packet, IPPROTO_UDP, net_16_load(hdr->len));
-  check += packet_checksum(nethdr->data, net_be16_load(hdr->len));
+  len = net_be16_load(hdr->len);
+  check = net_be16_load(hdr->check);
+
+  /* checksum is optional */
+  if (check)
+    {
+      computed_check = addressing->desc->f.addressing->pseudoheader_checksum(NULL, packet, IPPROTO_UDP, len);
+      computed_check += packet_checksum(nethdr->data, len);
+      computed_check = (computed_check & 0xffff) + (computed_check >> 16);
+
+      /* incorrect packet */
+      if (computed_check != 0xffff)
+	{
+	  net_debug("UDP: Rejected incorrect packet %x\n", computed_check);
+	  return;
+	}
+    }
 
   /* next stage */
   if (!nethdr[1].data)
     {
       nethdr[1].data = nethdr->data + sizeof (struct udphdr);
-      nethdr[1].size = net_be16_load(hdr->len) - sizeof (struct udphdr);
+      nethdr[1].size = len - sizeof (struct udphdr);
     }
   packet->stage++;
 
@@ -132,18 +148,22 @@ void		udp_sendpkt(struct net_if_s	*interface,
 {
   struct udphdr		*hdr;
   struct net_header_s	*nethdr;
+  uint32_t		computed_check;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct udphdr *)nethdr->data;
 
   /* fill the header */
-  hdr->source = source_port;
-  hdr->dest = dest_port;
+  net_16_store(hdr->source, source_port);
+  net_16_store(hdr->dest, dest_port);
   net_be16_store(hdr->len, nethdr->size);
 
-  /* XXX compute checksum */
-  hdr->check = 0;
+  /* compute checksum */
+  computed_check = addressing->desc->f.addressing->pseudoheader_checksum(addressing, packet, IPPROTO_UDP, nethdr->size);
+  computed_check += packet_checksum(nethdr->data, nethdr->size);
+  computed_check = (computed_check & 0xffff) + (computed_check >> 16);
+  net_16_store(hdr->check, ~computed_check);
 
   packet->stage--;
   /* send the packet to IP */

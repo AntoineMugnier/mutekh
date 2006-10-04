@@ -157,7 +157,7 @@ NET_PUSHPKT(arp_pushpkt)
 
   /* align the packet on 32 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint32_t)))
+  if (!IS_ALIGNED(hdr, sizeof (uint32_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct ether_arp));
       hdr = &aligned;

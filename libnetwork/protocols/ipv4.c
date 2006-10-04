@@ -242,7 +242,7 @@ NET_PUSHPKT(ip_pushpkt)
 
   /* align the packet on 32 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  if (!NET_ALIGNED(hdr, sizeof (uint32_t)))
+  if (!IS_ALIGNED(hdr, sizeof (uint32_t)))
     {
       memcpy(&aligned, hdr, sizeof (struct iphdr));
       hdr = &aligned;
@@ -699,11 +699,14 @@ NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum)
 {
   struct ip_pseudoheader_s	hdr;
 
-  hdr.source = IPV4_ADDR_GET(packet->sADDR);
+  if (addressing == NULL)
+    hdr.source = IPV4_ADDR_GET(packet->sADDR);
+  else
+    hdr.source = ((struct net_pv_ip_s *)addressing->pv)->addr;
   hdr.dest = IPV4_ADDR_GET(packet->tADDR);
   hdr.zero = 0;
   hdr.type = proto;
-  hdr.size = size;
+  hdr.size = endian_be16(size);
 
   return packet_checksum(&hdr, sizeof (hdr));
 }
