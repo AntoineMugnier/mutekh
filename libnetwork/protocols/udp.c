@@ -88,7 +88,7 @@ NET_PUSHPKT(udp_pushpkt)
     }
   packet->stage++;
 
-  udp_signal(packet, hdr);
+  libudp_signal(packet, hdr);
 }
 
 /*

@@ -27,6 +27,7 @@
 #include <netinet/arp.h>
 #include <netinet/icmp.h>
 #include <netinet/udp.h>
+#include <netinet/tcp.h>
 
 #include <hexo/device/net.h>
 #include <hexo/device.h>
@@ -70,6 +71,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
   struct net_proto_s				*arp;
   struct net_proto_s				*icmp;
   struct net_proto_s				*udp;
+  struct net_proto_s				*tcp;
   struct net_if_s				*interface;
 
   /* create new device node */
@@ -83,10 +85,12 @@ struct net_if_s	*if_register(struct device_s	*dev,
   interface->bootproto.rarp = net_alloc_proto(&rarp_protocol);
   icmp = net_alloc_proto(&icmp_protocol);
   udp = net_alloc_proto(&udp_protocol);
+  tcp = net_alloc_proto(&tcp_protocol);
   if_register_proto(interface, arp);
   if_register_proto(interface, interface->bootproto.rarp, ip);
   if_register_proto(interface, icmp);
   if_register_proto(interface, udp);
+  if_register_proto(interface, tcp);
 
   /* XXX a funny hack for testing, to be removed */
   static uint_fast8_t chiche = 0;

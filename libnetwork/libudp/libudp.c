@@ -144,8 +144,8 @@ int_fast8_t			udp_callback(struct net_udp_addr_s	*local,
  * Signal packet reception
  */
 
-void				udp_signal(struct net_packet_s	*packet,
-					   struct udphdr	*hdr)
+void				libudp_signal(struct net_packet_s	*packet,
+					      struct udphdr		*hdr)
 {
   struct udp_callback_desc_s	*desc;
   struct net_udp_addr_s		*local;

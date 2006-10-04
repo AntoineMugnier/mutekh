@@ -19,53 +19,46 @@
 
 */
 
-#ifndef NETINET_LIBUDP_H
-#define NETINET_LIBUDP_H
+#ifndef NETINET_LIBTCP_H
+#define NETINET_LIBTCP_H
 
 #include <netinet/protos.h>
 #include <netinet/packet.h>
-#include <netinet/udp.h>
+#include <netinet/tcp.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_hashlist.h>
+#define TCP_EVENT_ACCEPT	1
+#define TCP_EVENT_RECEIVE	2
+#define TCP_EVENT_CLOSE		4
 
-/*
- * Types
- */
-
-struct	net_udp_addr_s
+struct	net_tcp_addr_s
 {
   struct net_addr_s	address;
   uint_fast16_t		port;
 };
 
-#define UDP_CALLBACK(f)	void (f)(struct net_udp_addr_s	*local,		\
-				 struct net_udp_addr_s	*remote,	\
+#define TCP_CALLBACK(f)	void (f)(struct net_tcp_session_s *session,	\
+				 uint_fast8_t		event,		\
 				 void			*data,		\
 				 size_t			size)
-typedef UDP_CALLBACK(udp_callback_t);
 
-CONTAINER_TYPE(udp_callback, HASHLIST, struct udp_callback_desc_s, NOLOCK, 64, BLOB, sizeof (struct net_udp_addr_s));
+typedef TCP_CALLBACK(tcp_callback_t);
 
-struct	udp_callback_desc_s
-{
-  struct net_udp_addr_s	address[1];
-  udp_callback_t	*callback;
-  udp_callback_entry_t	list_entry;
-};
+struct net_tcp_session_s	*tcp_open(struct net_tcp_addr_s	*local,
+					  struct net_tcp_addr_s	*remote);
+void			tcp_close(struct net_tcp_session_s	*session);
+void			tcp_callback(struct net_tcp_addr_s	*local,
+				     tcp_callback_t		*callback,
+				     uint_fast8_t		event);
+void			tcp_send(struct net_tcp_session_s	*session,
+				 void				*data,
+				 size_t				size);
 
-/*
- * Prototypes
- */
 
-int_fast8_t	udp_send(struct net_udp_addr_s	*local,
-			 struct net_udp_addr_s	*remote,
-			 void			*data,
-			 size_t			size);
-int_fast8_t	udp_callback(struct net_udp_addr_s	*local,
-			     udp_callback_t		*callback);
-
-void		libudp_signal(struct net_packet_s	*packet,
-			      struct udphdr		*hdr);
+void		libtcp_open(struct net_packet_s	*packet,
+			    struct tcphdr	*hdr);
+void		libtcp_close(struct net_packet_s	*packet,
+			 struct tcphdr			*hdr);
+void		libtcp_push(struct net_packet_s	*packet,
+			    struct tcphdr	*hdr);
 
 #endif

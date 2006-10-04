@@ -33,6 +33,7 @@
 #define NETINET_TCP_H_
 
 #include <hexo/types.h>
+#include <hexo/endian.h>
 
 /*
  * TCP header flags.
@@ -56,8 +57,8 @@ struct		tcphdr
   uint16_t	th_dport;		/* destination port */
   uint32_t	th_seq;		/* sequence number */
   uint32_t	th_ack;		/* acknowledgement number */
-  ENDIAN_BITFIELD(u_int8_t th_x2:4,		/* (unused) */
-		  u_int8_t th_off:4);		/* data offset */
+  ENDIAN_BITFIELD(uint8_t th_x2:4,		/* (unused) */
+		  uint8_t th_off:4);		/* data offset */
   uint8_t	th_flags;
   uint16_t	th_win;		/* window */
   uint16_t	th_sum;		/* checksum */
@@ -97,7 +98,48 @@ struct		tcphdr
 
 */
 
+#include <netinet/packet.h>
+#include <netinet/protos.h>
+#include <netinet/if.h>
 
+/*
+ * Control operations
+ */
+
+#define TCP_OPEN	0
+#define TCP_ACK_OPEN	1
+#define TCP_ACK_DATA	2
+#define TCP_CLOSE	3
+#define TCP_ACK_CLOSE	4
+
+/*
+ * This structure defines a TCP session.
+ */
+
+struct			net_tcp_session_s
+{
+  struct net_if_s	*interface;
+  struct net_proto_s	*addressing;
+};
+
+/*
+ * Prototypes
+ */
+
+NET_PUSHPKT(tcp_pushpkt);
+uint8_t	*tcp_preparepkt(struct net_if_s		*interface,
+			struct net_proto_s	*addressing,
+			struct net_packet_s	*packet,
+			size_t			size,
+			size_t			max_padding);
+void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
+			    uint_fast8_t		operation);
+void	tcp_send_datapkt(struct net_tcp_session_s	*session,
+			 void				*data,
+			 size_t				size,
+			 uint_fast8_t			flags);
+
+extern const struct net_proto_desc_s	tcp_protocol;
 
 #endif
 

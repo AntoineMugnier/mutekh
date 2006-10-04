@@ -5,4 +5,4 @@ objs += route.o
 
 objs += test_server.o
 
-subdirs = protocols libudp
+subdirs = protocols libudp libtcp
