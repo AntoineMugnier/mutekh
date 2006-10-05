@@ -12,7 +12,9 @@
   - faire tout les autres messages
 
 * UDP
-  - calculer le checksum
+  - faire la fonction qui manque : virer un callback
+  - verifier la taille aussi si > 64k
+  - ajouter un void* aux callback
 
 * if
   - coder if_down, if_unregister

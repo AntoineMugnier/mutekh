@@ -106,8 +106,6 @@ struct		tcphdr
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
 
-#include <semaphore.h>
-
 /*
  * Container types for tcp session list.
  */
@@ -129,6 +127,7 @@ CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, 64, BLOB
 #define TCP_STATE_FIN_WAIT	2
 #define TCP_STATE_ESTABLISHED	3
 #define TCP_STATE_LISTEN	4
+#define TCP_STATE_FIN_REQ	5
 
 /*
  * Control operations
@@ -137,8 +136,8 @@ CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, 64, BLOB
 #define TCP_OPEN	0
 #define TCP_ACK_OPEN	1
 #define TCP_ACK_DATA	2
-#define TCP_CLOSE	3
-#define TCP_ACK_CLOSE	4
+#define TCP_FIN		3
+#define TCP_ACK_FIN	4
 
 /*
  * This structure defines a TCP session.
@@ -154,12 +153,22 @@ struct			net_tcp_session_s
   uint_fast32_t		send_seq;
   uint_fast32_t		send_ack;
   uint_fast16_t		send_win;
+  uint_fast16_t		send_mss;
   uint_fast32_t		recv_seq;
   uint_fast32_t		recv_ack;
   uint_fast16_t		recv_win;
+  uint_fast16_t		recv_mss;
+
+  tcp_connect_t		*connect;
+  void			*connect_data;
+  tcp_receive_t		*receive;
+  void			*receive_data;
+  tcp_close_t		*close;
+  void			*close_data;
+  tcp_accept_t		*accept;
+  void			*accept_data;
 
   uint_fast8_t		state;
-  sem_t			sem;
 
   tcp_session_entry_t	list_entry;
 };

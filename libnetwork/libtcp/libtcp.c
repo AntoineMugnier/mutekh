@@ -25,6 +25,7 @@
 
 #include <hexo/types.h>
 #include <hexo/alloc.h>
+#include <hexo/cpu.h>
 
 #include <netinet/packet.h>
 #include <netinet/protos.h>
@@ -35,6 +36,9 @@
 #include <netinet/tcp.h>
 
 #include <netinet/libtcp.h>
+
+#undef net_debug
+#define net_debug printf
 
 /*
  * Functions for the interface container.
@@ -62,8 +66,10 @@ static tcp_session_root_t	sessions = CONTAINER_ROOT_INITIALIZER(tcp_session, HAS
  * Open a new TCP connection.
  */
 
-struct net_tcp_session_s	*tcp_open(struct net_tcp_addr_s	*local,
-					  struct net_tcp_addr_s	*remote)
+int_fast8_t			tcp_open(struct net_tcp_addr_s	*local,
+					 struct net_tcp_addr_s	*remote,
+					 tcp_connect_t		callback,
+					 void			*ptr)
 {
   struct net_tcp_session_s	*session;
   struct net_if_s		*interface = NULL;
@@ -90,21 +96,30 @@ struct net_tcp_session_s	*tcp_open(struct net_tcp_addr_s	*local,
   });
 
   if (interface == NULL || addressing == NULL)
-    return NULL;
+    return -1;
 
   /* create session instance */
   session = mem_alloc(sizeof (struct net_tcp_session_s), MEM_SCOPE_SYS);
   session->interface = interface;
   session->addressing = addressing;
 
+  session->connect = callback;
+  session->connect_data = ptr;
+  session->receive = NULL;
+  session->close = NULL;
+  session->accept = NULL;
+
   /* choose a local port */
-  local->port = 0x4242; /* XXX choose me better! */
+  local->port = 1024 + (cpu_cycle_count() % 32768) ; /* XXX choose me better! */
   memcpy(&session->local, local, sizeof (struct net_tcp_addr_s));
   memcpy(&session->remote, remote, sizeof (struct net_tcp_addr_s));
 
   session->send_seq = 1; /* XXX generate it */
   session->send_ack = session->send_seq + 1;
   session->send_win = TCP_DFL_WINDOW;
+  session->send_mss = TCP_MSS;
+
+  session->recv_mss = TCP_MSS; /* XXX compute me! */
 
   /* enter SYN sent mode, waiting for SYN ACK */
   session->state = TCP_STATE_SYN_SENT;
@@ -114,27 +129,11 @@ struct net_tcp_session_s	*tcp_open(struct net_tcp_addr_s	*local,
 
   /* XXX timeout here */
 
-  sem_init(&session->sem, 0, 0);
-
   /* send the SYN packet */
   tcp_send_controlpkt(session, TCP_OPEN);
-  printf("<- SYN\n");
+  net_debug("<- SYN\n");
 
-  /* wait for connection being established (or timeout'ed) */
-  sem_wait(&session->sem);
-  sem_destroy(&session->sem);
-
-  printf("<> ESTABLISHED\n");
-
-  /* error, delete the session */
-  if (session->state == TCP_STATE_ERROR)
-    {
-      tcp_session_remove(&sessions, session);
-      mem_free(session);
-      return NULL;
-    }
-
-  return session;
+  return 0;
 }
 
 /*
@@ -143,23 +142,40 @@ struct net_tcp_session_s	*tcp_open(struct net_tcp_addr_s	*local,
 
 void			tcp_close(struct net_tcp_session_s	*session)
 {
-  /* enter FIN WAIT state, waiting for FIN */
+  /* enter FIN WAIT state, waiting for FIN ACK */
   session->state = TCP_STATE_FIN_WAIT;
+  session->recv_win = 0;
 
   /* just send a close request */
-  tcp_send_controlpkt(session, TCP_CLOSE);
-  printf("<- FIN\n");
+  tcp_send_controlpkt(session, TCP_FIN);
+  session->send_seq++;
+  net_debug("<- FIN\n");
 }
 
 /*
- * Register a callback for data reception on a given connection.
+ * Setup receiving callback.
  */
 
-void			tcp_callback(struct net_tcp_addr_s	*local,
-				     tcp_callback_t		*callback,
-				     uint_fast8_t		event)
+void	tcp_on_receive(struct net_tcp_session_s	*session,
+		       tcp_receive_t		*callback,
+		       void			*ptr)
 {
-  /* XXX */
+  session->receive = callback;
+  session->receive_data = ptr;
+}
+
+void	tcp_on_close(struct net_tcp_session_s	*session,
+		     tcp_close_t		*callback,
+		     void			*ptr)
+{
+
+}
+
+void	tcp_on_accept(struct net_tcp_session_s	*session,
+		      tcp_accept_t		*callback,
+		      void			*ptr)
+{
+
 }
 
 /*
@@ -170,7 +186,9 @@ void			tcp_send(struct net_tcp_session_s	*session,
 				 void				*data,
 				 size_t				size)
 {
-  /* XXX */
+  net_debug("tcp_send: %P\n", data, size);
+
+  /* XXX bufferisation */
 
   /* send the data packet */
   tcp_send_datapkt(session, data, size, TH_PUSH);
@@ -202,9 +220,12 @@ void				libtcp_open(struct net_packet_s	*packet,
 
   if (session->state == TCP_STATE_SYN_SENT)
     {
+      tcp_connect_t	*callback = session->connect;
+      void		*ptr = session->connect_data;
+
       if ((hdr->th_flags & TH_ACK) && (net_be32_load(hdr->th_ack) == session->send_ack))
 	{
-	  printf("-> SYN ACK\n");
+	  net_debug("-> SYN ACK\n");
 
 	  /* ok, connection aknowleged */
 	  session->state = TCP_STATE_ESTABLISHED;
@@ -216,18 +237,39 @@ void				libtcp_open(struct net_packet_s	*packet,
 
 	  /* increment seq */
 	  session->send_seq++;
+
+	  /* get mss if present */
+	  if (hdr->th_off > 5)
+	    {
+	      uint32_t	opt;
+
+	      opt = net_be32_load(*(uint32_t *)(hdr + 1));
+	      if (opt & (2 << 24))
+		session->send_mss = opt & 0xffff;
+	    }
+
+	  net_debug("<> ESTABLISHED\n");
+	  net_debug("  send MSS = %u\n", session->send_mss);
+	  net_debug("  recv MSS = %u\n", session->recv_mss);
+
+	  callback(session, ptr);
 	}
       else /* otherwise, this is a bad connection sequence, report error */
-	session->state = TCP_STATE_ERROR;
+	{
+	  session->state = TCP_STATE_ERROR;
 
-      /* wake up the opening thread */
-      sem_post(&session->sem);
+	  callback(session, ptr);
+
+	  tcp_session_remove(&sessions, session);
+	  mem_free(session);
+	}
+
     }
   else if (session->state == TCP_STATE_LISTEN)
     {
       /* incoming connection request */
 
-      /* XXX */
+      /* XXX callback + create new session */
     }
 }
 
@@ -248,18 +290,48 @@ void				libtcp_close(struct net_packet_s	*packet,
   if ((session = tcp_session_lookup(&sessions, (void *)&key)) == NULL)
     return ;
 
-  /* it is a FIN acknowlegment */
-  if (session->state == TCP_STATE_FIN_WAIT)
+  /* error when opening */
+  if (session->state == TCP_STATE_SYN_SENT)
     {
-      printf("-> FIN ACK\n");
+      net_debug("-> FIN (while connecting)\n");
+
+      /* set error state */
+      session->state = TCP_STATE_ERROR;
+
+      session->connect(session, session->connect_data);
+
+      tcp_session_remove(&sessions, session);
+      mem_free(session);
+    }
+  else if (session->state == TCP_STATE_FIN_WAIT) /* it is a FIN acknowlegment */
+    {
+      net_debug("-> FIN ACK\n");
+
+      tcp_send_controlpkt(session, TCP_ACK_DATA);
+      net_debug("<- ACK\n");
 
       tcp_session_remove(&sessions, session);
       mem_free(session);
     }
   else /* otherwise, it is a FIN request */
     {
-      printf("-> FIN\n");
-      /* XXX */
+      net_debug("-> FIN\n");
+
+      /* no data remaining, close the connection */
+      if (1)
+	{
+	  tcp_send_controlpkt(session, TCP_ACK_FIN);
+
+	  net_debug("<- FIN ACK\n");
+
+	  if (session->close != NULL)
+	    session->close(session, session->close_data);
+
+	  tcp_session_remove(&sessions, session);
+	  mem_free(session);
+	}
+      else /* otherwise, wait for the remaining operations and change state */
+	session->state = TCP_STATE_FIN_REQ;
     }
 }
 
@@ -267,9 +339,47 @@ void				libtcp_close(struct net_packet_s	*packet,
  * Called on packet incoming (data or control).
  */
 
-void		libtcp_push(struct net_packet_s	*packet,
-			    struct tcphdr	*hdr)
+void				libtcp_push(struct net_packet_s	*packet,
+					    struct tcphdr	*hdr)
 {
-  /* XXX */
+  struct net_tcp_session_s	*session;
+  struct net_tcp_addr_s		key;
+  struct net_header_s		*nethdr;
+
+  /* look for the corresponding session */
+  memcpy(&key.address, &packet->sADDR, sizeof (struct net_addr_s));
+  key.port = net_16_load(hdr->th_sport);
+
+  if ((session = tcp_session_lookup(&sessions, (void *)&key)) == NULL)
+    return ;
+
+  /* get the header */
+  nethdr = &packet->header[packet->stage];
+
+  /* XXX check for lost packet(s) */
+
+  /* XXX update sequence numbers */
+
+  /* control packet */
+  if (nethdr->size == hdr->th_off * 4)
+    {
+      /* XXX nothing here ?? */
+    }
+  else /* data packet */
+    {
+      uint8_t	*data = (nethdr->data + hdr->th_off * 4);
+      size_t	length = nethdr->size - hdr->th_off * 4;
+
+      /* deliver data to application */
+      if (hdr->th_flags & TH_PUSH || 1) /* XXX || buffer reception plein */
+	{
+	  if (session->receive != NULL)
+	    session->receive(session, data, length, session->receive_data);
+	}
+      else /* otherwise, push the data into the receive buffer */
+	{
+	  /* XXX buffer */
+	}
+    }
 }
 

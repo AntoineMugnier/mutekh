@@ -35,6 +35,9 @@
 
 #include <stdio.h>
 
+#undef net_debug
+#define net_debug printf
+
 /*
  * Structures for declaring the protocol's properties & interface.
  */
@@ -61,6 +64,7 @@ NET_PUSHPKT(tcp_pushpkt)
   struct tcphdr		*hdr;
   struct net_header_s	*nethdr;
   uint_fast8_t		flags;
+  uint32_t		computed_check;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -70,12 +74,22 @@ NET_PUSHPKT(tcp_pushpkt)
 #ifdef CONFIG_NETWORK_AUTOALIGN
   if (!IS_ALIGNED(hdr, sizeof (uint32_t)))
     {
-      memcpy(&aligned, hdr, sizeof (struct tcphdr));
+      memcpy(&aligned, hdr, hdr->th_off * 4);
       hdr = &aligned;
     }
 #endif
 
-  /* XXX verify checksum */
+  /* verify checksum */
+  computed_check = addressing->desc->f.addressing->pseudoheader_checksum(NULL, packet, IPPROTO_TCP, nethdr->size);
+  computed_check += packet_checksum(nethdr->data, nethdr->size);
+  computed_check = (computed_check & 0xffff) + (computed_check >> 16);
+
+  /* incorrect packet */
+  if (computed_check != 0xffff)
+    {
+      net_debug("TCP: Rejected incorrect packet %x\n", computed_check);
+      return;
+    }
 
   flags = hdr->th_flags;
 
@@ -90,7 +104,7 @@ NET_PUSHPKT(tcp_pushpkt)
     }
   else if (flags & TH_RST) /* reset connection due to unrecoverable error(s) */
     {
-      /* XXX */
+      /* XXX reset */
     }
   else /* data packet */
     {
@@ -144,7 +158,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   packet = packet_obj_new(NULL);
 
   /* prepare the packet */
-  tcp_preparepkt(interface, addressing, packet, (TCP_OPEN || TCP_ACK_OPEN) ? 4 : 0, 0);
+  tcp_preparepkt(interface, addressing, packet, (operation == TCP_OPEN || operation == TCP_ACK_OPEN) ? 4 : 0, 0);
   nethdr = &packet->header[packet->stage];
   hdr = (struct tcphdr *)nethdr->data;
 
@@ -170,7 +184,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
 	  hdr->th_off = 6;
 	  /* add MSS option */
 	  mss = (uint32_t *)(hdr + 1);
-	  net_be32_store(*mss, (2 << 24) | (4 << 16) | TCP_MSS);
+	  net_be32_store(*mss, (2 << 24) | (4 << 16) | session->recv_mss);
 	}
 	break;
       /* acknowledgment of connection opening */
@@ -186,10 +200,10 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
 	  hdr->th_off = 6;
 	  /* add MSS option */
 	  mss = (uint32_t *)(hdr + 1);
-	  net_be32_store(*mss, (2 << 24) | (4 << 16) | TCP_MSS);
+	  net_be32_store(*mss, (2 << 24) | (4 << 16) | session->recv_mss);
 	}
 	break;
-      /* simple acknowlegment of received dat when no data to send */
+      /* simple acknowlegment of received data when no data to send */
       case TCP_ACK_DATA:
 	hdr->th_flags = TH_ACK;
 	net_be32_store(hdr->th_seq, session->send_seq);
@@ -199,7 +213,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
 	hdr->th_off = 5;
 	break;
       /* request for closing connection */
-      case TCP_CLOSE:
+      case TCP_FIN:
 	hdr->th_flags = TH_FIN | TH_ACK;
 	net_be32_store(hdr->th_seq, session->send_seq);
 	net_be32_store(hdr->th_ack, session->recv_ack);
@@ -208,7 +222,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
 	hdr->th_off = 5;
 	break;
       /* acceptation of closing connection */
-      case TCP_ACK_CLOSE:
+      case TCP_ACK_FIN:
 	hdr->th_flags = TH_FIN | TH_ACK;
 	net_be32_store(hdr->th_seq, session->send_seq);
 	net_be32_store(hdr->th_ack, session->recv_ack);
@@ -223,6 +237,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
 
   /* checksum */
   check = addressing->desc->f.addressing->pseudoheader_checksum(addressing, packet, IPPROTO_TCP, hdr->th_off * 4);
+  net_16_store(hdr->th_sum, 0);
   check += packet_checksum((uint8_t *)hdr, hdr->th_off * 4);
   check = (check & 0xffff) + (check >> 16);
   net_16_store(hdr->th_sum, ~check);
@@ -252,13 +267,13 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   packet = packet_obj_new(NULL);
 
   /* prepare the packet */
-  dest = tcp_preparepkt(interface, addressing, packet, 0, 0);
+  dest = tcp_preparepkt(interface, addressing, packet, size, 0);
   nethdr = &packet->header[packet->stage];
   hdr = (struct tcphdr *)nethdr->data;
 
   /* setup the targeted address */
   memcpy(&packet->tADDR, &session->remote[0].address,
-	 sizeof (struct net_tcp_addr_s));
+	 sizeof (struct net_addr_s));
   net_16_store(hdr->th_sport, session->local.port);
   net_16_store(hdr->th_dport, session->remote[0].port);
 
@@ -274,8 +289,9 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   memcpy(dest, data, size);
 
   /* checksum */
-  check = addressing->desc->f.addressing->pseudoheader_checksum(addressing, packet, IPPROTO_TCP, size);
-  check += packet_checksum((uint8_t *)hdr, hdr->th_off * 4);
+  check = addressing->desc->f.addressing->pseudoheader_checksum(addressing, packet, IPPROTO_TCP, nethdr->size);
+  net_16_store(hdr->th_sum, 0);
+  check += packet_checksum((uint8_t *)hdr, nethdr->size);
   check = (check & 0xffff) + (check >> 16);
   net_16_store(hdr->th_sum, ~check);
 

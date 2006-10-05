@@ -27,6 +27,7 @@
 #include <netinet/in.h>
 #include <netinet/libudp.h>
 #include <netinet/libtcp.h>
+#include <netinet/tcp.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -35,24 +36,54 @@
 
 void			eval_server();
 
+void			connection_close(struct net_tcp_session_s *session,
+					 void			  *ptr)
+{
+  printf("%p closed\n", session);
+}
+
+void			data_arrival(struct net_tcp_session_s	*session,
+				     void			*data,
+				     size_t			size,
+				     void			*ptr)
+{
+  printf("%p received %P\n", session, data, size);
+}
+
+void			after_connect(struct net_tcp_session_s	*session,
+				      void			*ptr)
+{
+  uint_fast32_t		i;
+
+  if (session->state == TCP_STATE_ERROR)
+    {
+      printf("error\n");
+      return;
+    }
+
+  printf("%p opened\n", session);
+
+  tcp_on_receive(session, data_arrival, NULL);
+  tcp_on_close(session, connection_close, NULL);
+
+  tcp_send(session, "GET / HTTP/1.1\r\n\r\n", 16);
+
+  for (i = 0; i < 500000000; i++)
+    ;
+
+  tcp_close(session);
+}
+
 void			*tcp_test(void *p)
 {
   struct net_tcp_addr_s local;
   struct net_tcp_addr_s remote;
-  struct net_tcp_session_s *session;
 
   IPV4_ADDR_SET(local.address, 0x0a0202f0);
   IPV4_ADDR_SET(remote.address, 0x0a020225);
-  remote.port = htons(22);
+  remote.port = htons(80);
 
-  session = tcp_open(&local, &remote);
-
-  if (session == NULL)
-    printf("error\n");
-  else
-    {
-      tcp_close(session);
-    }
+  tcp_open(&local, &remote, after_connect, NULL);
 
   return NULL;
 }
