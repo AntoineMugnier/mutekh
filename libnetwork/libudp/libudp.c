@@ -79,13 +79,13 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
 	  if (item->desc->f.addressing->matchaddr(item, &local->address, NULL, NULL))
 	    {
 	      addressing = item;
-	      break;
+	      goto ok;
 	    }
 	}
     });
-    if (addressing)
-      break;
   });
+
+ ok:
 
   if (interface == NULL || addressing == NULL)
     return -1;

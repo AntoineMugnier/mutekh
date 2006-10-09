@@ -57,8 +57,6 @@ struct				net_ne2000_context_s
 
   uint8_t			mac[ETH_ALEN];
   struct net_if_s		*interface;
-
-  net_protos_root_t		protocols;
 };
 
 #endif

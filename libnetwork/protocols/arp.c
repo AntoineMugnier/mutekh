@@ -196,10 +196,11 @@ NET_PUSHPKT(arp_pushpkt)
 				     hdr->arp_sha, ARP_TABLE_DEFAULT);
 		    arp_reply(interface, item, packet);
 		    requested = 0;
-		    break;
+		    goto out;
 		  }
 	      }
 	  });
+	out:
 
 	  /* try to update the cache */
 	  if (requested)

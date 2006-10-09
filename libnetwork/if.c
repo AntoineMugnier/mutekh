@@ -78,6 +78,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
   interface = mem_alloc(sizeof (struct net_if_s), MEM_SCOPE_SYS);
   interface->rx_bytes = interface->rx_packets = interface->tx_bytes = interface->tx_packets = 0;
   route_table_init(&interface->route_table);
+  net_protos_init(&interface->protocols);
 
   /* XXX initialize standard protocols for the device */
   ip = net_alloc_proto(&ip_protocol);
@@ -226,6 +227,7 @@ void			if_pushpkt(struct net_if_s	*interface,
     if (item->id == packet->proto)
       {
 	item->desc->pushpkt(interface, packet, NULL, item);
+	return;
       }
   });
 }

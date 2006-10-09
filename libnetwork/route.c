@@ -60,11 +60,12 @@ void			route_add(struct net_if_s	*interface,
 	if (item->desc->f.addressing->matchaddr(item, NULL, target, mask))
 	  {
 	    route->addressing = item;
-	    break;
+	    goto ok; /* XXX */
 	  }
       }
   });
 
+ ok:
   route_table_push(&interface->route_table, route);
 }
 

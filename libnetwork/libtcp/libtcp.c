@@ -87,13 +87,13 @@ int_fast8_t			tcp_open(struct net_tcp_addr_s	*local,
 	  if (item->desc->f.addressing->matchaddr(item, &local->address, NULL, NULL))
 	    {
 	      addressing = item;
-	      break;
+	      goto ok;
 	    }
 	}
     });
-    if (addressing)
-      break;
   });
+
+ ok:
 
   if (interface == NULL || addressing == NULL)
     return -1;
@@ -114,8 +114,7 @@ int_fast8_t			tcp_open(struct net_tcp_addr_s	*local,
   memcpy(&session->local, local, sizeof (struct net_tcp_addr_s));
   memcpy(&session->remote, remote, sizeof (struct net_tcp_addr_s));
 
-  session->send_seq = 1; /* XXX generate it */
-  session->send_ack = session->send_seq + 1;
+  session->curr_seq = 1; /* XXX generate it */
   session->send_win = TCP_DFL_WINDOW;
   session->send_mss = TCP_MSS;
 
@@ -148,7 +147,7 @@ void			tcp_close(struct net_tcp_session_s	*session)
 
   /* just send a close request */
   tcp_send_controlpkt(session, TCP_FIN);
-  session->send_seq++;
+  session->curr_seq++;
   net_debug("<- FIN\n");
 }
 
@@ -164,18 +163,28 @@ void	tcp_on_receive(struct net_tcp_session_s	*session,
   session->receive_data = ptr;
 }
 
+/*
+ * Setup close callback.
+ */
+
 void	tcp_on_close(struct net_tcp_session_s	*session,
 		     tcp_close_t		*callback,
 		     void			*ptr)
 {
-
+  session->close = callback;
+  session->close_data = ptr;
 }
+
+/*
+ * Setup accept callback.
+ */
 
 void	tcp_on_accept(struct net_tcp_session_s	*session,
 		      tcp_accept_t		*callback,
 		      void			*ptr)
 {
-
+  session->accept = callback;
+  session->accept_data = ptr;
 }
 
 /*
@@ -190,11 +199,16 @@ void			tcp_send(struct net_tcp_session_s	*session,
 
   /* XXX bufferisation */
 
-  /* send the data packet */
-  tcp_send_datapkt(session, data, size, TH_PUSH);
+  if (1) /* XXX buffer full */
+    {
+      /* send the data packet */
+      tcp_send_datapkt(session, data, size, TH_PUSH);
 
-  /* increment the sequence number */
-  session->send_seq += size;
+      /* increment the sequence number */
+      session->curr_seq += size;
+    }
+
+  /* XXX retransmission timeout */
 }
 
 /*
@@ -223,7 +237,7 @@ void				libtcp_open(struct net_packet_s	*packet,
       tcp_connect_t	*callback = session->connect;
       void		*ptr = session->connect_data;
 
-      if ((hdr->th_flags & TH_ACK) && (net_be32_load(hdr->th_ack) == session->send_ack))
+      if ((hdr->th_flags & TH_ACK) && (net_be32_load(hdr->th_ack) == session->curr_seq + 1))
 	{
 	  net_debug("-> SYN ACK\n");
 
@@ -232,11 +246,11 @@ void				libtcp_open(struct net_packet_s	*packet,
 
 	  /* get the sender seq & win */
 	  session->recv_seq = net_be32_load(hdr->th_seq);
-	  session->recv_ack = session->recv_seq + 1;
 	  session->recv_win = net_be16_load(hdr->th_win);
 
-	  /* increment seq */
-	  session->send_seq++;
+	  /* increment seq and set ack */
+	  session->curr_seq++;
+	  session->to_ack = session->recv_seq + 1;
 
 	  /* get mss if present */
 	  if (hdr->th_off > 5)
@@ -318,7 +332,7 @@ void				libtcp_close(struct net_packet_s	*packet,
       net_debug("-> FIN\n");
 
       /* no data remaining, close the connection */
-      if (1)
+      if (1) /* XXX data remaining ? */
 	{
 	  tcp_send_controlpkt(session, TCP_ACK_FIN);
 
@@ -345,6 +359,8 @@ void				libtcp_push(struct net_packet_s	*packet,
   struct net_tcp_session_s	*session;
   struct net_tcp_addr_s		key;
   struct net_header_s		*nethdr;
+  size_t			length;
+  uint_fast32_t			seq;
 
   /* look for the corresponding session */
   memcpy(&key.address, &packet->sADDR, sizeof (struct net_addr_s));
@@ -355,10 +371,19 @@ void				libtcp_push(struct net_packet_s	*packet,
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
+  length = nethdr->size - hdr->th_off * 4;
 
-  /* XXX check for lost packet(s) */
+  /* check for lost packet(s) */
+  seq = net_be32_load(hdr->th_seq);
+  if (seq != session->to_ack)
+    {
+      /* XXX a packet was lost (receive) */
 
-  /* XXX update sequence numbers */
+    }
+
+  /* update sequence numbers */
+  session->recv_seq = seq;
+  session->to_ack = session->recv_seq + length;
 
   /* control packet */
   if (nethdr->size == hdr->th_off * 4)
@@ -368,7 +393,6 @@ void				libtcp_push(struct net_packet_s	*packet,
   else /* data packet */
     {
       uint8_t	*data = (nethdr->data + hdr->th_off * 4);
-      size_t	length = nethdr->size - hdr->th_off * 4;
 
       /* deliver data to application */
       if (hdr->th_flags & TH_PUSH || 1) /* XXX || buffer reception plein */
@@ -379,6 +403,13 @@ void				libtcp_push(struct net_packet_s	*packet,
       else /* otherwise, push the data into the receive buffer */
 	{
 	  /* XXX buffer */
+	}
+
+      /* if needed, send a control packet to acknowledge */
+      if (1) /* XXX pas de data dans le buffer send && seq == mid-window */
+	{
+	  tcp_send_controlpkt(session, TCP_ACK_DATA);
+	  net_debug("<- ACK\n");
 	}
     }
 }

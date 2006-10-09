@@ -63,7 +63,7 @@ struct		tcphdr
   uint16_t	th_win;		/* window */
   uint16_t	th_sum;		/* checksum */
   uint16_t	th_urp;		/* urgent pointer */
-};
+} __attribute__((packed));
 
 /*
  * Default maximum segment size for TCP.
@@ -150,12 +150,11 @@ struct			net_tcp_session_s
   struct net_tcp_addr_s	local;
   struct net_tcp_addr_s	remote[1];
 
-  uint_fast32_t		send_seq;
-  uint_fast32_t		send_ack;
+  uint_fast32_t		curr_seq;
+  uint_fast32_t		to_ack;
   uint_fast16_t		send_win;
   uint_fast16_t		send_mss;
   uint_fast32_t		recv_seq;
-  uint_fast32_t		recv_ack;
   uint_fast16_t		recv_win;
   uint_fast16_t		recv_mss;
 

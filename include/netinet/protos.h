@@ -165,7 +165,10 @@ static inline struct net_proto_s	*net_alloc_proto(const struct net_proto_desc_s	
 
   proto->desc = desc;
   proto->id = desc->id;
-  proto->pv = (void*)((uint8_t*)proto + sizeof (struct net_proto_s));
+  if (desc->pv_size)
+    proto->pv = (void*)(proto + 1);
+  else
+    proto->pv = NULL;
 
   return proto;
 }

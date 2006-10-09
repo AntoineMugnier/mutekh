@@ -98,10 +98,6 @@ NET_PUSHPKT(tcp_pushpkt)
     {
       libtcp_open(packet, hdr);
     }
-  else if (flags & TH_FIN) /* connection closing */
-    {
-      libtcp_close(packet, hdr);
-    }
   else if (flags & TH_RST) /* reset connection due to unrecoverable error(s) */
     {
       /* XXX reset */
@@ -109,6 +105,12 @@ NET_PUSHPKT(tcp_pushpkt)
   else /* data packet */
     {
       libtcp_push(packet, hdr);
+    }
+
+  if (flags & TH_FIN) /* connection closing */
+    {
+      /* XXX bad: dual lookup de la session */
+      libtcp_close(packet, hdr);
     }
 }
 
@@ -161,6 +163,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   tcp_preparepkt(interface, addressing, packet, (operation == TCP_OPEN || operation == TCP_ACK_OPEN) ? 4 : 0, 0);
   nethdr = &packet->header[packet->stage];
   hdr = (struct tcphdr *)nethdr->data;
+  hdr->th_x2 = 0;
 
   /* setup the targeted address */
   memcpy(&packet->tADDR, &session->remote[0].address,
@@ -177,7 +180,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
 	  uint32_t	*mss;
 
 	  hdr->th_flags = TH_SYN;
-	  net_be32_store(hdr->th_seq, session->send_seq);
+	  net_be32_store(hdr->th_seq, session->curr_seq);
 	  net_be32_store(hdr->th_ack, 0);
 	  net_be16_store(hdr->th_win, session->send_win);
 	  hdr->th_urp = 0;
@@ -193,8 +196,8 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
 	  uint32_t	*mss;
 
 	  hdr->th_flags = TH_SYN | TH_ACK;
-	  net_be32_store(hdr->th_seq, session->send_seq);
-	  net_be32_store(hdr->th_ack, session->recv_ack);
+	  net_be32_store(hdr->th_seq, session->curr_seq);
+	  net_be32_store(hdr->th_ack, session->to_ack);
 	  net_be16_store(hdr->th_win, session->send_win);
 	  hdr->th_urp = 0;
 	  hdr->th_off = 6;
@@ -206,8 +209,8 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
       /* simple acknowlegment of received data when no data to send */
       case TCP_ACK_DATA:
 	hdr->th_flags = TH_ACK;
-	net_be32_store(hdr->th_seq, session->send_seq);
-	net_be32_store(hdr->th_ack, session->recv_ack);
+	net_be32_store(hdr->th_seq, session->curr_seq);
+	net_be32_store(hdr->th_ack, session->to_ack);
 	net_be16_store(hdr->th_win, session->send_win);
 	hdr->th_urp = 0;
 	hdr->th_off = 5;
@@ -215,8 +218,8 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
       /* request for closing connection */
       case TCP_FIN:
 	hdr->th_flags = TH_FIN | TH_ACK;
-	net_be32_store(hdr->th_seq, session->send_seq);
-	net_be32_store(hdr->th_ack, session->recv_ack);
+	net_be32_store(hdr->th_seq, session->curr_seq);
+	net_be32_store(hdr->th_ack, session->to_ack);
 	net_be16_store(hdr->th_win, session->send_win);
 	hdr->th_urp = 0;
 	hdr->th_off = 5;
@@ -224,8 +227,8 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
       /* acceptation of closing connection */
       case TCP_ACK_FIN:
 	hdr->th_flags = TH_FIN | TH_ACK;
-	net_be32_store(hdr->th_seq, session->send_seq);
-	net_be32_store(hdr->th_ack, session->recv_ack);
+	net_be32_store(hdr->th_seq, session->curr_seq);
+	net_be32_store(hdr->th_ack, session->to_ack);
 	net_be16_store(hdr->th_win, session->send_win);
 	hdr->th_urp = 0;
 	hdr->th_off = 5;
@@ -270,6 +273,7 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   dest = tcp_preparepkt(interface, addressing, packet, size, 0);
   nethdr = &packet->header[packet->stage];
   hdr = (struct tcphdr *)nethdr->data;
+  hdr->th_x2 = 0;
 
   /* setup the targeted address */
   memcpy(&packet->tADDR, &session->remote[0].address,
@@ -279,8 +283,8 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
 
   /* fill the packet header */
   hdr->th_flags = TH_ACK | flags;
-  net_be32_store(hdr->th_seq, session->send_seq);
-  net_be32_store(hdr->th_ack, session->recv_ack);
+  net_be32_store(hdr->th_seq, session->curr_seq);
+  net_be32_store(hdr->th_ack, session->to_ack);
   net_be16_store(hdr->th_win, session->send_win);
   hdr->th_urp = 0;
   hdr->th_off = 5;

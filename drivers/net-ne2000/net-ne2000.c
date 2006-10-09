@@ -448,7 +448,6 @@ DEV_INIT(net_ne2000_init)
   /* setup some containers */
   packet_queue_init(&pv->sendqueue);
   packet_queue_lock_init(&pv->rcvqueue);
-  net_protos_init(&pv->protocols);
 
   /* register as a net device */
   pv->interface = if_register(dev, IF_ETHERNET, pv->mac, ETHERMTU);
@@ -519,7 +518,6 @@ DEV_CLEANUP(net_ne2000_cleanup)
   /* destroy some containers */
   packet_queue_destroy(&pv->sendqueue);
   packet_queue_lock_destroy(&pv->rcvqueue);
-  net_protos_destroy(&pv->protocols);
 
   /* turn the device off */
   ne2000_dma(dev, NE2000_DMA_ABRT);

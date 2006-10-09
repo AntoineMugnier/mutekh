@@ -31,11 +31,15 @@ void * mem_alloc(size_t size, uint_fast8_t scope)
 {
   static uint8_t	*addr = (void*)&__system_heap_start;
   void			*res;
+  uint32_t		*p;
 
   lock_spin(&mem_lock);
 
   res = addr;
   addr = (uint8_t*)ALIGN_VALUE((uintptr_t)addr + size, 4);
+
+  for (p = (uint32_t *)addr; (uintptr_t)p < (uintptr_t)addr + size; p++)
+    *p = 0x5555AAAA;
 
   lock_release(&mem_lock);
 

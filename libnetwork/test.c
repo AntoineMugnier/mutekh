@@ -47,31 +47,30 @@ void			data_arrival(struct net_tcp_session_s	*session,
 				     size_t			size,
 				     void			*ptr)
 {
-  printf("%p received %P\n", session, data, size);
+  //  printf("%p received %P\n", session, data, size);
+
+  //tcp_send(session, ptr, strlen(ptr));
 }
 
 void			after_connect(struct net_tcp_session_s	*session,
 				      void			*ptr)
 {
   uint_fast32_t		i;
+  char			req[] = "GET / HTTP/1.1\r\nHost: 10.2.2.37\r\nConnection: keep-alive\r\n\r\n";
 
   if (session->state == TCP_STATE_ERROR)
     {
-      printf("error\n");
+      printf("error %d\n", session->state);
       return;
     }
 
   printf("%p opened\n", session);
 
-  tcp_on_receive(session, data_arrival, NULL);
+  tcp_on_receive(session, data_arrival, ptr);
   tcp_on_close(session, connection_close, NULL);
 
-  tcp_send(session, "GET / HTTP/1.1\r\n\r\n", 16);
+  tcp_send(session, req, strlen(req));
 
-  for (i = 0; i < 500000000; i++)
-    ;
-
-  tcp_close(session);
 }
 
 void			*tcp_test(void *p)
@@ -101,7 +100,6 @@ int_fast8_t		main()
 
   if_up("eth0");
   if_up("eth1");
-
 
 #if 1
 

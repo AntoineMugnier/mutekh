@@ -191,6 +191,8 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       nethdr->data = data;
       nethdr->size = total;
 
+      /* XXX check for overflow */
+
       /* loop through previously received packets and reassemble them */
       while ((frag = packet_queue_pop(&p->packets)))
 	{
@@ -407,10 +409,10 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
   /* setup fragment specific fields */
   net_be16_store(hdr_frag->fragment, (last ? 0 : IP_FLAG_MF) | (offs / 8));
   net_be16_store(hdr_frag->tot_len, nethdr->size);
-  /* XXX checksum */
+  /* finalize checksum computation */
   check = net_16_load(hdr_frag->check);
-  check += net_be16_load(hdr_frag->fragment);
-  check += nethdr->size;
+  check += net_16_load(hdr_frag->fragment);
+  check += net_16_load(hdr_frag->tot_len);
   check = check + (check >> 16);
   net_16_store(hdr_frag->check, ~check);
 
