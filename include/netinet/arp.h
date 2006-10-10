@@ -103,6 +103,16 @@ struct		ether_arp
 #include <netinet/protos.h>
 
 #include <hexo/gpct_platform_hexo.h>
+#include <hexo/gpct_lock_hexo.h>
+
+#include <timer.h>
+
+/*
+ * Request timeout and retry count
+ */
+
+#define ARP_REQUEST_TIMEOUT	2000 /* 2 seconds */
+#define ARP_MAX_RETRIES		3
 
 /*
  * Flags
@@ -127,9 +137,15 @@ struct			arp_entry_s
 {
   uint_fast32_t		ip;
   uint8_t		mac[ETH_ALEN];
-  uint_fast8_t		valid;
+  bool_t		valid;
   arp_table_entry_t	list_entry;
+  /* XXX les 5 champs en dessous sevent qu'a la resolution, apres ils servent a rien */
   packet_queue_root_t	wait;
+  uint_fast8_t		retry;
+  struct net_if_s	*interface;
+  struct net_proto_s	*addressing;
+  struct net_proto_s	*arp;
+  struct timer_event_s	*timeout;
 };
 
 /*
@@ -169,6 +185,7 @@ NET_PREPAREPKT(rarp_preparepkt);
 void	rarp_request(struct net_if_s	*interface,
 		     struct net_proto_s	*rarp,
 		     uint8_t		*mac);
+TIMER_CALLBACK(arp_timeout);
 
 extern const struct net_proto_desc_s	arp_protocol;
 extern const struct net_proto_desc_s	rarp_protocol;

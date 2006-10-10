@@ -33,12 +33,12 @@ struct driver_s;
 /** timer device class callback function template */
 #define DEVTIMER_CALLBACK(n)	void (n) (void *private)
 /** timer device class callback function type */
-typedef DEVTIMER_CALLBACK(timer_callback_t);
+typedef DEVTIMER_CALLBACK(devtimer_callback_t);
 
 
 
 /** TIMER device class setcallback() function template */
-#define DEVTIMER_SETCALLBACK(n)	error_t (n) (struct device_s *dev, uint_fast8_t id, timer_callback_t *callback, void *private)
+#define DEVTIMER_SETCALLBACK(n)	error_t (n) (struct device_s *dev, uint_fast8_t id, devtimer_callback_t *callback, void *private)
 /** TIMER device class setcallback() function type. Change current
     timer/counter callback. a NULL pointer may be used to disable
     timer callback.
@@ -48,7 +48,7 @@ typedef DEVTIMER_CALLBACK(timer_callback_t);
     * @param callback new timer callback
     * @param private private data passed to callback function
     */
-typedef DEVTIMER_SETCALLBACK(timer_setcallback_t);
+typedef DEVTIMER_SETCALLBACK(devtimer_setcallback_t);
 /** TIMER device class setcallback() function shortcut */
 #define dev_timer_setcallback(dev, ...) (dev)->drv->f.timer.f_setcallback(dev, __VA_ARGS__ )
 
@@ -65,7 +65,7 @@ typedef DEVTIMER_SETCALLBACK(timer_setcallback_t);
     * @param id timer id
     * @param period timer period
     */
-typedef DEVTIMER_SETPERIOD(timer_setperiod_t);
+typedef DEVTIMER_SETPERIOD(devtimer_setperiod_t);
 /** TIMER device class setperiod() function shortcut */
 #define dev_timer_setperiod(dev, ...) (dev)->drv->f.timer.f_setperiod(dev, __VA_ARGS__ )
 
@@ -81,7 +81,7 @@ typedef DEVTIMER_SETPERIOD(timer_setperiod_t);
     * @param id timer id
     * @param value new timer value
     */
-typedef DEVTIMER_SETVALUE(timer_setvalue_t);
+typedef DEVTIMER_SETVALUE(devtimer_setvalue_t);
 /** TIMER device class setvalue() function shortcut */
 #define dev_timer_setvalue(dev, ...) (dev)->drv->f.timer.f_setvalue(dev, __VA_ARGS__ )
 
@@ -97,7 +97,7 @@ typedef DEVTIMER_SETVALUE(timer_setvalue_t);
     * @param id timer id
     * @return current timer value
     */
-typedef DEVTIMER_GETVALUE(timer_getvalue_t);
+typedef DEVTIMER_GETVALUE(devtimer_getvalue_t);
 /** TIMER device class getvalue() function shortcut */
 #define dev_timer_getvalue(dev, ...) (dev)->drv->f.timer.f_getvalue(dev, __VA_ARGS__ )
 
@@ -107,10 +107,10 @@ typedef DEVTIMER_GETVALUE(timer_getvalue_t);
 
 struct dev_class_timer_s
 {
-  timer_setperiod_t			*f_setperiod;
-  timer_getvalue_t			*f_getvalue;
-  timer_setcallback_t			*f_setcallback;
-  timer_setvalue_t			*f_setvalue;
+  devtimer_setperiod_t			*f_setperiod;
+  devtimer_getvalue_t			*f_getvalue;
+  devtimer_setcallback_t		*f_setcallback;
+  devtimer_setvalue_t			*f_setvalue;
 };
 
 

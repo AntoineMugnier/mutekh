@@ -33,6 +33,7 @@
 #include <string.h>
 
 #include <pthread.h>
+#include <timer.h>
 
 void			eval_server();
 
@@ -55,7 +56,6 @@ void			data_arrival(struct net_tcp_session_s	*session,
 void			after_connect(struct net_tcp_session_s	*session,
 				      void			*ptr)
 {
-  uint_fast32_t		i;
   char			req[] = "GET / HTTP/1.1\r\nHost: 10.2.2.37\r\nConnection: keep-alive\r\n\r\n";
 
   if (session->state == TCP_STATE_ERROR)
@@ -79,7 +79,7 @@ void			*tcp_test(void *p)
   struct net_tcp_addr_s remote;
 
   IPV4_ADDR_SET(local.address, 0x0a0202f0);
-  IPV4_ADDR_SET(remote.address, 0x0a020225);
+  IPV4_ADDR_SET(remote.address, 0x0a02026d);
   remote.port = htons(80);
 
   tcp_open(&local, &remote, after_connect, NULL);
@@ -139,7 +139,7 @@ int_fast8_t		main()
   //  if_up("eth2");
 #endif
 
-  //  eval_server();
+  eval_server();
 
   pthread_t th;
   pthread_create(&th, NULL, tcp_test, NULL);

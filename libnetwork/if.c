@@ -161,6 +161,8 @@ void			if_up(char*		name, ...)
 	{
 	  case IF_BOOT_RARP:
 	    rarp_request(interface, interface->bootproto.rarp, NULL);
+
+	    /* XXX timeout */
 	    break;
 	  case IF_BOOT_DHCP:
 	    break;

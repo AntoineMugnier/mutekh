@@ -4,6 +4,7 @@ string.o										\
 alloc.o											\
 intconv.o										\
 printf.o										\
-rand.o \
-sem.o
+rand.o											\
+sem.o											\
+timer.o
 

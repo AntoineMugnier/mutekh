@@ -155,7 +155,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   struct net_if_s	*interface = session->interface;
   struct net_header_s	*nethdr;
   struct tcphdr		*hdr;
-  uint16_t		check;
+  uint_fast32_t		check;
 
   packet = packet_obj_new(NULL);
 
@@ -242,8 +242,10 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   check = addressing->desc->f.addressing->pseudoheader_checksum(addressing, packet, IPPROTO_TCP, hdr->th_off * 4);
   net_16_store(hdr->th_sum, 0);
   check += packet_checksum((uint8_t *)hdr, hdr->th_off * 4);
-  check = (check & 0xffff) + (check >> 16);
+  check = check + (check >> 16);
   net_16_store(hdr->th_sum, ~check);
+
+  printf("%P\n", hdr, nethdr->size);
 
   packet->stage--;
   /* send the packet to IP */
@@ -265,7 +267,7 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   uint8_t		*dest;
   struct net_header_s	*nethdr;
   struct tcphdr		*hdr;
-  uint16_t		check;
+  uint_fast32_t		check;
 
   packet = packet_obj_new(NULL);
 
@@ -296,8 +298,10 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   check = addressing->desc->f.addressing->pseudoheader_checksum(addressing, packet, IPPROTO_TCP, nethdr->size);
   net_16_store(hdr->th_sum, 0);
   check += packet_checksum((uint8_t *)hdr, nethdr->size);
-  check = (check & 0xffff) + (check >> 16);
+  check = check + (check >> 16);
   net_16_store(hdr->th_sum, ~check);
+
+  printf("%P\n", hdr, hdr->th_off * 4);
 
   packet->stage--;
   /* send the packet to IP */

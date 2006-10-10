@@ -61,7 +61,7 @@ NET_PUSHPKT(udp_pushpkt)
 #endif
   struct udphdr		*hdr;
   struct net_header_s	*nethdr;
-  uint32_t		computed_check;
+  uint_fast32_t		computed_check;
   uint16_t		check;
   uint_fast16_t		len;
 
@@ -85,7 +85,10 @@ NET_PUSHPKT(udp_pushpkt)
   if (check)
     {
       computed_check = addressing->desc->f.addressing->pseudoheader_checksum(NULL, packet, IPPROTO_UDP, len);
+      printf("%x\n", addressing->desc->f.addressing->pseudoheader_checksum(NULL, packet, IPPROTO_UDP, len));
+
       computed_check += packet_checksum(nethdr->data, len);
+      printf("%x\n", packet_checksum(nethdr->data, len));
       computed_check = (computed_check & 0xffff) + (computed_check >> 16);
 
       /* incorrect packet */
@@ -148,7 +151,7 @@ void		udp_sendpkt(struct net_if_s	*interface,
 {
   struct udphdr		*hdr;
   struct net_header_s	*nethdr;
-  uint32_t		computed_check;
+  uint_fast32_t		computed_check;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];

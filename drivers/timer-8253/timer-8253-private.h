@@ -43,7 +43,7 @@
 
 struct			timer_8253_context_s
 {
-  timer_callback_t	*cb[TIMER_8253_IDCOUNT];
+  devtimer_callback_t	*cb[TIMER_8253_IDCOUNT];
   void			*pv[TIMER_8253_IDCOUNT];
 };
 

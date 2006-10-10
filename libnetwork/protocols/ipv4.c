@@ -137,6 +137,8 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       p->received = 0;
       packet_queue_init(&p->packets);
       ip_packet_push(&pv->fragments, p);
+
+      /* XXX timeout */
     }
   p->received += datasz;
   /* try to determine the total size */
@@ -709,6 +711,8 @@ NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum)
   hdr.zero = 0;
   hdr.type = proto;
   hdr.size = endian_be16(size);
+
+  printf("%P\n", &hdr, sizeof(hdr));
 
   return packet_checksum(&hdr, sizeof (hdr));
 }

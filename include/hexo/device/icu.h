@@ -39,7 +39,7 @@ struct driver_s;
     * @param irq icu interrupt line number
     * @param enable 0 disable interrupt
     */
-typedef DEVICU_ENABLE(icu_enable_t);
+typedef DEVICU_ENABLE(devicu_enable_t);
 
 /** ICU device class enable() function shortcut */
 #define dev_icu_enable(dev, ...) (dev)->drv->f.icu.f_enable(dev, __VA_ARGS__ )
@@ -58,7 +58,7 @@ typedef DEVICU_ENABLE(icu_enable_t);
     * @param data pointer to associated private data if any
     * @return negative error code
     */
-typedef DEVICU_SETHNDL(icu_sethndl_t);
+typedef DEVICU_SETHNDL(devicu_sethndl_t);
 /** ICU device class sethndl() function shortcut */
 #define dev_icu_sethndl(dev, ...) (dev)->drv->f.icu.f_sethndl(dev, __VA_ARGS__ )
 
@@ -83,7 +83,7 @@ typedef DEVICU_SETHNDL(icu_sethndl_t);
     * @param hndl pointer to handler function
     * @return negative error code
     */
-typedef DEVICU_DELHNDL(icu_delhndl_t);
+typedef DEVICU_DELHNDL(devicu_delhndl_t);
 /** ICU device class delhndl() function shortcut */
 #define dev_icu_delhndl(dev, ...) (dev)->drv->f.icu.f_delhndl(dev, __VA_ARGS__ )
 
@@ -94,9 +94,9 @@ typedef DEVICU_DELHNDL(icu_delhndl_t);
 
 struct dev_class_icu_s
 {
-  icu_enable_t			*f_enable;
-  icu_sethndl_t			*f_sethndl;
-  icu_delhndl_t			*f_delhndl;
+  devicu_enable_t			*f_enable;
+  devicu_sethndl_t			*f_sethndl;
+  devicu_delhndl_t			*f_delhndl;
 };
 
 

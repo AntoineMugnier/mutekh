@@ -50,6 +50,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <timer.h>
 
 #ifdef CONFIG_TTY
 lock_t tty_lock;
@@ -72,12 +73,15 @@ struct device_s icu_dev;
 struct device_s enum_pci;
 struct device_s enum_isapnp;
 
+struct timer_s	timer_ms;
+
 extern const uint8_t mutek_logo_320x200[320*200];
 
 DEVTIMER_CALLBACK(timer_callback)
 {
   //  printf("timer callback\n");
   //  pthread_yield();
+  timer_inc_ticks(&timer_ms, 10);
 }
 
 int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
@@ -141,6 +145,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
 #ifdef CONFIG_TIMER
   device_init(&timer_dev);
+  timer_init(&timer_ms.root);
+  timer_ms.ticks = 0;
 # if defined(__ARCH__ibmpc__)
   timer_dev.addr[0] = 0x0040;
   timer_dev.irq = 0;
@@ -152,7 +158,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # endif	/* defined(__ARCH__xxx__) */
   DEV_ICU_BIND(&icu_dev, &timer_dev);
 
-  dev_timer_setperiod(&timer_dev, 0, 0xffff);
+  //  dev_timer_setperiod(&timer_dev, 0, 0xffff);
+  dev_timer_setperiod(&timer_dev, 0, 1193180 / 100);
   dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 #endif
 

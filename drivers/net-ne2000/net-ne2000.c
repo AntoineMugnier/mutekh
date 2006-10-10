@@ -263,8 +263,6 @@ DEV_IRQ(net_ne2000_irq)
 
 	      /* send it ! */
 	      ne2000_command(dev, NE2000_TXP);
-
-	      /* XXX timeout here */
 	    }
 	}
 

@@ -32,6 +32,7 @@
 #include <netinet/if.h>
 
 #include <stdio.h>
+#include <timer.h>
 
 /*
  * ARP table functions.
@@ -280,14 +281,23 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
       /* otherwise, allocate a new entry */
       arp_entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_CONTEXT);
       arp_entry->ip = ip;
+      arp_entry->timeout = NULL;
       arp_table_push(&pv->table, arp_entry);
     }
   /* fill the significant fields */
-  if (!(flags & ARP_TABLE_IN_PROGRESS))
-    memcpy(arp_entry->mac, mac, ETH_ALEN);
   arp_entry->valid = !(flags & ARP_TABLE_IN_PROGRESS);
   if (arp_entry->valid)
-    net_debug("Added entry %P for %P\n", mac, ETH_ALEN, &ip, 4);
+    {
+      memcpy(arp_entry->mac, mac, ETH_ALEN);
+      net_debug("Added entry %P for %P\n", mac, ETH_ALEN, &ip, 4);
+      if (arp_entry->timeout != NULL)
+	{
+	  timer_cancel_event(arp_entry->timeout, 0);
+	  mem_free(arp_entry->timeout);
+	  arp_entry->timeout = NULL;
+	}
+      /* XXX timeout for valid entries */
+    }
   return arp_entry;
 }
 
@@ -320,13 +330,62 @@ uint8_t			*arp_get_mac(struct net_proto_s		*addressing,
     }
   else
     {
+      struct timer_event_s	*event;
+
       arp_entry = arp_update_table(arp, ip, NULL, ARP_TABLE_IN_PROGRESS);
       /* no entry, push the packet in the wait queue*/
       packet_queue_init(&arp_entry->wait);
       packet_queue_push(&arp_entry->wait, packet);
       /* and send a request */
+      arp_entry->interface = pv_ip->interface;
+      arp_entry->addressing = addressing;
       arp_request(pv_ip->interface, addressing, ip);
+
+      /* request time out */
+      arp_entry->retry = 0;
+      arp_entry->timeout = event = mem_alloc(sizeof (struct timer_event_s), MEM_SCOPE_CONTEXT);
+      event->callback = arp_timeout;
+      event->pv = (void *)arp_entry;
+      event->delay = ARP_REQUEST_TIMEOUT;
+      timer_add_event(&timer_ms, event);
     }
   return NULL;
+}
+
+/*
+ * Request timeout callback.
+ */
+
+TIMER_CALLBACK(arp_timeout)
+{
+  struct arp_entry_s	*entry = (struct arp_entry_s *)pv;
+
+  if (++entry->retry < ARP_MAX_RETRIES)
+    {
+      /* retry */
+      arp_request(entry->interface, entry->addressing, entry->ip);
+
+      /* set another timeout */
+      timer_add_event(&timer_ms, timer);
+    }
+  else
+    {
+      struct net_packet_s	*waiting;
+      struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)entry->arp->pv;
+
+      /* otherwise, error */
+
+      /* delete the entry */
+      arp_table_remove(&pv->table, entry);
+
+      /* delete the queued packets */
+      while ((waiting = packet_queue_pop(&entry->wait)))
+	{
+	  packet_obj_refdrop(waiting);
+	}
+
+      /* free the arp entry */
+      mem_free(entry);
+    }
 }
 

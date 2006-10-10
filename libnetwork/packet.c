@@ -89,7 +89,7 @@ uint16_t		packet_checksum(const void	*data,
 #endif
 
 /*
- * Compute the checksum of a packet chunk.
+ * Compute the checksum of a packet chunk while copying it.
  */
 
 #ifndef HAS_CPU_PACKET_MEMCPY
