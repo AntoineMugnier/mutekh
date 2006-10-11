@@ -118,7 +118,7 @@ int_fast8_t			tcp_open(struct net_tcp_addr_s	*local,
   session->send_win = TCP_DFL_WINDOW;
   session->send_mss = TCP_MSS;
 
-  session->recv_mss = TCP_MSS; /* XXX compute me! */
+  session->recv_mss = interface->mtu - TCP_HEADERS_LEN;
 
   /* enter SYN sent mode, waiting for SYN ACK */
   session->state = TCP_STATE_SYN_SENT;

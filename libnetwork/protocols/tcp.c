@@ -246,8 +246,6 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   check = check + (check >> 16);
   net_16_store(hdr->th_sum, ~check);
 
-  printf("%P\n", hdr, nethdr->size);
-
   packet->stage--;
   /* send the packet to IP */
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_TCP);
@@ -301,8 +299,6 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   check += packet_checksum((uint8_t *)hdr, nethdr->size);
   check = check + (check >> 16);
   net_16_store(hdr->th_sum, ~check);
-
-  printf("%P\n", hdr, hdr->th_off * 4);
 
   packet->stage--;
   /* send the packet to IP */

@@ -193,6 +193,9 @@ NET_ERRORMSG(icmp_errormsg)
   uint8_t		*dest;
   uint_fast16_t		offs;
   uint_fast16_t		size;
+  va_list		va;
+
+  va_start(va, error);
 
   /* get a pointer to the erroneous packet */
   nethdr = &erroneous->header[erroneous->stage];
@@ -251,8 +254,13 @@ NET_ERRORMSG(icmp_errormsg)
 	hdr->code = 3;
 	break;
       case ERROR_CANNOT_FRAGMENT:
-	hdr->type = 3;
-	hdr->code = 4;
+	{
+	  struct net_route_s	*route = va_arg(va, struct net_route_s *);
+
+	  hdr->type = 3;
+	  hdr->code = 4;
+	  net_be16_store(hdr->un.frag.mtu, route->interface->mtu);
+	}
 	break;
       case ERROR_NET_DENIED:
 	hdr->type = 3;
@@ -295,5 +303,7 @@ NET_ERRORMSG(icmp_errormsg)
   packet->stage--;
   /* send the packet to the interface */
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_ICMP);
+
+  va_end(va);
 }
 

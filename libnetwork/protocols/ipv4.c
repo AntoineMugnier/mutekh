@@ -682,7 +682,7 @@ void		ip_route(struct net_packet_s	*packet,
       /* if the Don't Fragment flag is set, destroy the packet */
       if (fragment & IP_FLAG_DF)
 	{
-	  pv->icmp->desc->f.control->errormsg(packet, ERROR_CANNOT_FRAGMENT);
+	  pv->icmp->desc->f.control->errormsg(packet, ERROR_CANNOT_FRAGMENT, route);
 
 	  packet_obj_refdrop(packet);
 	  return;

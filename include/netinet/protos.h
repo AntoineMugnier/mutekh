@@ -130,7 +130,7 @@ typedef NET_PSEUDOHEADER_CHECKSUM(net_pseudoheader_checksum_t);
  */
 
 #define NET_ERRORMSG(f)	void	(f)(struct net_packet_s	*erroneous,	\
-				    net_error_id_t	error)
+				    net_error_id_t	error, ...)
 
 typedef NET_ERRORMSG(net_errormsg_t);
 

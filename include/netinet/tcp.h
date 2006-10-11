@@ -119,6 +119,12 @@ CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, 64, BLOB
 #define TCP_DFL_WINDOW	4096
 
 /*
+ * Total length of headers for a TCP packet
+ */
+
+#define TCP_HEADERS_LEN	40	/* IP + TCP headers */
+
+/*
  * Connection stage
  */
 

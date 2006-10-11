@@ -98,7 +98,7 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
   /* copy data into the packet */
   memcpy(dest, data, size);
 
-  /* setup source and destination address */
+  /* setup destination address */
   memcpy(&packet->tADDR, &remote->address, sizeof (struct net_addr_s));
 
   /* send UDP packet */
@@ -120,7 +120,7 @@ int_fast8_t			udp_callback(struct net_udp_addr_s	*local,
   /* allocate an build the descriptor */
   desc = mem_alloc(sizeof (struct udp_callback_desc_s), MEM_SCOPE_SYS);
 
-  memcpy(&desc->address[0], local, sizeof (struct net_udp_addr_s));
+  memcpy(desc->address, local, sizeof (struct net_udp_addr_s));
   desc->callback = callback;
   desc->pv = pv;
 
@@ -150,7 +150,7 @@ void				libudp_signal(struct net_packet_s	*packet,
   local->port = hdr->dest;
 
   /* do we have a callback to handle the packet */
-  if (!(desc = udp_callback_lookup(&udp_callbacks, (void *)local))) /* XXX lol */
+  if (!(desc = udp_callback_lookup(&udp_callbacks, (void *)local)))
     {
       packet->stage -= 2;
 
@@ -160,8 +160,6 @@ void				libudp_signal(struct net_packet_s	*packet,
       mem_free(local);
       return;
     }
-
-  printf("%P / %P\n", local, sizeof (struct net_udp_addr_s), desc->address, sizeof (struct net_udp_addr_s));
 
   /* build remote address descriptor */
   remote = mem_alloc(sizeof (struct net_udp_addr_s), MEM_SCOPE_SYS);

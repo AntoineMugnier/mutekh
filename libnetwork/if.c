@@ -108,6 +108,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
     {
       interface->boottype = IF_BOOT_NONE;
       if_register_proto(interface, ip, arp, icmp, 0x0a020302, 0xffffff00);
+      mtu = 512;
     }
   chiche = 1;
 
