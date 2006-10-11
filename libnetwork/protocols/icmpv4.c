@@ -194,9 +194,6 @@ NET_ERRORMSG(icmp_errormsg)
   uint_fast16_t		offs;
   uint_fast16_t		size;
 
-
-  printf("Control %u\n", error);
-
   /* get a pointer to the erroneous packet */
   nethdr = &erroneous->header[erroneous->stage];
   hdr_err = (struct iphdr *)nethdr->data;

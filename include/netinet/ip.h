@@ -135,11 +135,18 @@ struct iphdr {
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
 
+#include <timer.h>
 
 #define IP_DELIVERY_DIRECT	0
 #define IP_DELIVERY_INDIRECT	1
 
 CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, 64, BLOB, 6);
+
+/*
+ * Reassembly timeout.
+ */
+
+#define IP_REASSEMBLY_TIMEOUT	10000; /* 10 seconds */
 
 /*
  * IP pseudo header (for upper layer checksum computation)
@@ -163,6 +170,8 @@ struct			ip_packet_s
   uint8_t		id[6];
   uint_fast16_t		size;
   uint_fast16_t		received;
+  struct net_proto_s	*addressing;
+  struct timer_event_s	timeout;
   packet_queue_root_t	packets;
   ip_packet_entry_t	list_entry;
 };
@@ -194,6 +203,7 @@ NET_MATCHADDR(ip_matchaddr);
 NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum);
 void		ip_route(struct net_packet_s	*packet,
 			 struct net_route_s	*route);
+TIMER_CALLBACK(ip_fragment_timeout);
 
 extern const struct net_proto_desc_s	ip_protocol;
 

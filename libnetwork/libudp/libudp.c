@@ -150,7 +150,7 @@ void				libudp_signal(struct net_packet_s	*packet,
   local->port = hdr->dest;
 
   /* do we have a callback to handle the packet */
-  if (!(desc = udp_callback_lookup(&udp_callbacks, (void *)local)))
+  if (!(desc = udp_callback_lookup(&udp_callbacks, (void *)local))) /* XXX lol */
     {
       packet->stage -= 2;
 

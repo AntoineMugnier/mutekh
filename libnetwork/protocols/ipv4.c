@@ -36,6 +36,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <timer.h>
 
 /*
  * Fragment lists.
@@ -128,6 +129,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   /* extract some useful fields */
   fragment = net_be16_load(hdr->fragment);
   offs = (fragment & IP_FRAG_MASK) * 8;
+
   datasz = net_be16_load(hdr->tot_len) - hdr->ihl * 4;
 
   net_debug("fragment id %P offs %d size %d\n", id, 6, offs, datasz);
@@ -135,15 +137,22 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   /* do we already received packet with same id ? */
   if (!(p = ip_packet_lookup(&pv->fragments, id)))
     {
+      /* initialize the reassembly structure */
       p = mem_alloc(sizeof (struct ip_packet_s), MEM_SCOPE_CONTEXT);
       memcpy(p->id, id, 6);
       p->size = 0;
       p->received = 0;
+      p->addressing = ip;
       packet_queue_init(&p->packets);
       ip_packet_push(&pv->fragments, p);
 
-      /* XXX timeout */
+      /* start timeout timer */
+      p->timeout.callback = ip_fragment_timeout;
+      p->timeout.pv = (void *)p;
+      p->timeout.delay = IP_REASSEMBLY_TIMEOUT;
+      timer_add_event(&timer_ms, &p->timeout);
     }
+
   p->received += datasz;
   /* try to determine the total size */
   if (!(fragment & IP_FLAG_MF))
@@ -165,6 +174,9 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       uint8_t			*ptr;
 
       net_debug("packet complete\n");
+
+      /* disable timeout */
+      timer_cancel_event(&p->timeout, 0);
 
       /* we received the whole packet, reassemble now */
       nethdr = &packet->header[packet->stage];
@@ -214,6 +226,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	      while ((frag = packet_queue_pop(&p->packets)))
 		packet_obj_refdrop(frag);
 	      packet_obj_refdrop(packet);
+	      packet_queue_destroy(&p->packets);
 	      ip_packet_remove(&pv->fragments, p);
 	      mem_free(p);
 
@@ -229,6 +242,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	}
 
       /* release memory */
+      packet_queue_destroy(&p->packets);
       ip_packet_remove(&pv->fragments, p);
       mem_free(p);
 
@@ -239,6 +253,30 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   packet_obj_refnew(packet);
   packet_queue_push(&p->packets, packet);
   return 0;
+}
+
+/*
+ * Fragment reassembly timeout.
+ */
+
+TIMER_CALLBACK(ip_fragment_timeout)
+{
+  struct ip_packet_s	*p = (struct ip_packet_s *)pv;
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)p->addressing->pv;
+  struct net_packet_s	*packet;
+
+  packet = packet_queue_pop(&p->packets);
+  packet->stage--;
+
+  pv_ip->icmp->desc->f.control->errormsg(packet, ERROR_FRAGMENT_TIMEOUT);
+
+  /* delete all the packets */
+  packet_obj_refdrop(packet);
+  while ((packet = packet_queue_pop(&p->packets)))
+    packet_obj_refdrop(packet);
+  packet_queue_destroy(&p->packets);
+  ip_packet_remove(&pv_ip->fragments, p);
+  mem_free(p);
 }
 
 /*
