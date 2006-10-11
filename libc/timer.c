@@ -70,7 +70,7 @@ error_t	timer_cancel_event(struct timer_event_s	*event,
 {
   /* remove the timer */
   if (timer_remove(&event->timer->root, event))
-    return -EUNKNOWN;
+    return -ENOENT;
 
   /* perform the callback if asked by user */
   if (callback)

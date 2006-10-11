@@ -65,7 +65,7 @@
 
 /* Codes for TIME_EXCEEDED. */
 #define ICMP_EXC_TTL		0	/* TTL count exceeded		*/
-#define ICMP_EXC_FRAGTIME	1	/
+#define ICMP_EXC_FRAGTIME	1	/* Fragment Reass time exceeded	*/
 
 /* ICMP header */
 struct		icmphdr
@@ -116,6 +116,7 @@ struct		icmphdr
 
 NET_PUSHPKT(icmp_pushpkt);
 NET_PREPAREPKT(icmp_preparepkt);
+NET_ERRORMSG(icmp_errormsg);
 
 extern const struct net_proto_desc_s	icmp_protocol;
 

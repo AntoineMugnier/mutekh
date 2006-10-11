@@ -158,6 +158,7 @@ struct				net_packet_s
   uint8_t			*packet;	/* raw packet */
   uint8_t			*sMAC;		/* source MAC address */
   uint8_t			*tMAC;		/* target MAC address */
+  struct net_proto_s		*source_addressing;
   struct net_addr_s		sADDR;		/* source protocol address */
   struct net_addr_s		tADDR;		/* target protocol address */
   uint_fast8_t			MAClen;		/* length of MAC addresses */

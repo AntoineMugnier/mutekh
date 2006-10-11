@@ -381,6 +381,8 @@ TIMER_CALLBACK(arp_timeout)
       /* delete the queued packets */
       while ((waiting = packet_queue_pop(&entry->wait)))
 	{
+	  waiting->stage++;
+	  entry->addressing->desc->f.addressing->errormsg(waiting, ERROR_HOST_UNREACHABLE);
 	  packet_obj_refdrop(waiting);
 	}
 

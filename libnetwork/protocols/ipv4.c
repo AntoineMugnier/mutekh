@@ -25,6 +25,7 @@
  */
 
 #include <netinet/ip.h>
+#include <netinet/icmp.h>
 #include <netinet/arp.h>
 #include <netinet/packet.h>
 #include <netinet/ether.h>
@@ -50,7 +51,8 @@ const struct net_addressing_interface_s	ip_interface =
   {
     .sendpkt = ip_send,
     .matchaddr = ip_matchaddr,
-    .pseudoheader_checksum = ip_pseudoheader_checksum
+    .pseudoheader_checksum = ip_pseudoheader_checksum,
+    .errormsg = icmp_errormsg
   };
 
 const struct net_proto_desc_s	ip_protocol =
@@ -72,13 +74,15 @@ NET_INITPROTO(ip_init)
 {
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)proto->pv;
   struct net_proto_s	*arp = va_arg(va, struct net_proto_s *);
+  struct net_proto_s	*icmp = va_arg(va, struct net_proto_s *);
   uint_fast32_t		ip = va_arg(va, uint_fast32_t);
   uint_fast32_t		mask = va_arg(va, uint_fast32_t);
 
   pv->interface = interface;
   pv->arp = arp;
+  pv->icmp = icmp;
   pv->addr = ip;
-  pv->mask =mask;
+  pv->mask = mask;
   ip_packet_init(&pv->fragments);
   pv->id_seq = 1;
 }
@@ -193,14 +197,29 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       nethdr->data = data;
       nethdr->size = total;
 
-      /* XXX check for overflow */
-
       /* loop through previously received packets and reassemble them */
       while ((frag = packet_queue_pop(&p->packets)))
 	{
 	  /* copy data in place */
 	  nethdr = &frag->header[packet->stage];
 	  offs = (net_be16_load(((struct iphdr *)nethdr[-1].data)->fragment) & IP_FRAG_MASK) * 8;
+
+	  /* check for overflow */
+	  if (offs >= total)
+	    {
+	      pv->icmp->desc->f.control->errormsg(frag, ERROR_BAD_HEADER);
+
+	      /* delete all the packets */
+	      packet_obj_refdrop(frag);
+	      while ((frag = packet_queue_pop(&p->packets)))
+		packet_obj_refdrop(frag);
+	      packet_obj_refdrop(packet);
+	      ip_packet_remove(&pv->fragments, p);
+	      mem_free(p);
+
+	      return 0;
+	    }
+
 	  memcpy(data + offs, nethdr->data, nethdr->size);
 
 	  net_debug("copying packet : %d-%d\n", offs, offs + nethdr->size);
@@ -260,6 +279,7 @@ NET_PUSHPKT(ip_pushpkt)
   /* update packet info */
   IPV4_ADDR_SET(packet->sADDR, net_be32_load(hdr->saddr));
   IPV4_ADDR_SET(packet->tADDR, net_be32_load(hdr->daddr));
+  packet->source_addressing = protocol;
 
   /* is the packet really for me ? */
   if (packet->tADDR.addr.ipv4 != pv->addr)
@@ -271,13 +291,13 @@ NET_PUSHPKT(ip_pushpkt)
 	{
 	  net_debug("routing to host %P\n", &packet->tADDR.addr.ipv4, 4);
 	  /* route the packet */
-	  ip_route(interface, packet, route_entry);
+	  ip_route(packet, route_entry);
 	}
       else
 	{
 	  net_debug("no route to host %P\n", &packet->tADDR.addr.ipv4, 4);
 	  /* network unreachable */
-	  //icmp_error(interface, ICMP_NETWORK_UNREACHABLE, packet->sIP);
+	  pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
 	}
 
       return ;
@@ -333,9 +353,9 @@ NET_PUSHPKT(ip_pushpkt)
   /* dispatch to the matching protocol */
   proto = hdr->protocol;
   if ((p = net_protos_lookup(&interface->protocols, proto)))
-    p->desc->pushpkt(interface, packet, protocol, p);
+    p->desc->pushpkt(interface, packet, p);
   else
-    net_debug("IP: no protocol to handle packet (id = 0x%x)\n", proto);
+    pv->icmp->desc->f.control->errormsg(packet, ERROR_PROTO_UNREACHABLE);
 }
 
 /*
@@ -435,7 +455,9 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
       else
 	{
 	  /* network unreachable */
-	  //icmp_error(interface, ICMP_NETWORK_UNREACHABLE, packet->sIP);
+	  pv->icmp->desc->f.control->errormsg(frag, ERROR_NET_UNREACHABLE);
+
+	  packet_obj_refdrop(frag);
 	  return 0;
 	}
     }
@@ -462,6 +484,8 @@ NET_SENDPKT(ip_send)
   struct net_header_s	*nethdr;
   struct net_route_s	*route_entry;
   uint_fast16_t		total;
+
+  packet->source_addressing = protocol;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -540,8 +564,9 @@ NET_SENDPKT(ip_send)
       else
 	{
 	  /* network unreachable */
-	  //icmp_error(interface, ICMP_NETWORK_UNREACHABLE, packet->sIP);
+	  pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
 
+	  packet_obj_refdrop(packet);
 	  return;
 	}
     }
@@ -560,13 +585,13 @@ NET_SENDPKT(ip_send)
  * Route a packet.
  */
 
-void		ip_route(struct net_if_s	*interface,
-			 struct net_packet_s	*packet,
+void		ip_route(struct net_packet_s	*packet,
 			 struct net_route_s	*route)
 {
   struct net_pv_ip_s	*pv;
   struct iphdr		*hdr;
   struct net_header_s	*nethdr;
+  struct net_if_s	*interface;
   uint_fast32_t		router;
   uint_fast16_t		total;
   uint_fast16_t		check;
@@ -583,6 +608,15 @@ void		ip_route(struct net_if_s	*interface,
 
   /* decrement TTL */
   old_ttl = hdr->ttl--;
+
+  /* check for timeout */
+  if (hdr->ttl == 0)
+    {
+      pv->icmp->desc->f.control->errormsg(packet, ERROR_TIMEOUT);
+
+      packet_obj_refdrop(packet);
+      return;
+    }
 
   if (!nethdr[1].data)
     {
@@ -610,6 +644,8 @@ void		ip_route(struct net_if_s	*interface,
       /* if the Don't Fragment flag is set, destroy the packet */
       if (fragment & IP_FLAG_DF)
 	{
+	  pv->icmp->desc->f.control->errormsg(packet, ERROR_CANNOT_FRAGMENT);
+
 	  packet_obj_refdrop(packet);
 	  return;
 	}
@@ -711,8 +747,6 @@ NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum)
   hdr.zero = 0;
   hdr.type = proto;
   hdr.size = endian_be16(size);
-
-  printf("%P\n", &hdr, sizeof(hdr));
 
   return packet_checksum(&hdr, sizeof (hdr));
 }

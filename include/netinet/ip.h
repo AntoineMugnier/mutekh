@@ -175,6 +175,7 @@ struct			net_pv_ip_s
 {
   struct net_if_s	*interface;
   struct net_proto_s	*arp;
+  struct net_proto_s	*icmp;
   uint_fast32_t		addr;
   uint_fast32_t		mask;
   ip_packet_root_t	fragments;
@@ -191,8 +192,7 @@ NET_PREPAREPKT(ip_preparepkt);
 NET_SENDPKT(ip_send);
 NET_MATCHADDR(ip_matchaddr);
 NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum);
-void		ip_route(struct net_if_s	*interface,
-			 struct net_packet_s	*packet,
+void		ip_route(struct net_packet_s	*packet,
 			 struct net_route_s	*route);
 
 extern const struct net_proto_desc_s	ip_protocol;

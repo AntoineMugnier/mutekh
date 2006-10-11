@@ -38,6 +38,11 @@
  * Structures for declaring the protocol's properties & interface.
  */
 
+const struct net_control_interface_s	icmp_interface =
+  {
+    .errormsg = icmp_errormsg
+  };
+
 const struct net_proto_desc_s	icmp_protocol =
   {
     .name = "ICMP",
@@ -45,6 +50,7 @@ const struct net_proto_desc_s	icmp_protocol =
     .pushpkt = icmp_pushpkt,
     .preparepkt = icmp_preparepkt,
     .initproto = NULL,
+    .f.control = &icmp_interface,
     .pv_size = 0
   };
 
@@ -86,7 +92,7 @@ static inline void	icmp_echo(struct net_if_s	*interface,
 
   packet->stage--;
   /* send the packet to IP */
-  ip_send(interface, packet, addressing, IPPROTO_ICMP);
+  addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_ICMP);
 }
 
 
@@ -102,6 +108,7 @@ NET_PUSHPKT(icmp_pushpkt)
   struct icmphdr	*hdr;
   struct net_header_s	*nethdr;
   uint_fast16_t		computed_check;
+  struct net_proto_s	*addressing = packet->source_addressing;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -169,3 +176,127 @@ NET_PREPAREPKT(icmp_preparepkt)
 
   return next + sizeof (struct icmphdr);
 }
+
+/*
+ * Report error with ICMP.
+ */
+
+NET_ERRORMSG(icmp_errormsg)
+{
+  struct net_proto_s	*addressing = erroneous->source_addressing;
+  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)addressing->pv;
+  struct net_if_s	*interface = (struct net_if_s *)pv_ip->interface;
+  struct net_packet_s	*packet;
+  struct icmphdr	*hdr;
+  struct iphdr		*hdr_err;
+  struct net_header_s	*nethdr;
+  uint8_t		*dest;
+  uint_fast16_t		offs;
+  uint_fast16_t		size;
+
+
+  printf("Control %u\n", error);
+
+  /* get a pointer to the erroneous packet */
+  nethdr = &erroneous->header[erroneous->stage];
+  hdr_err = (struct iphdr *)nethdr->data;
+
+  /* we must not generate error on ICMP packets (except ping) */
+  if (hdr_err->protocol == IPPROTO_ICMP)
+    {
+      struct icmphdr	*hdr_icmp;
+
+      hdr_icmp = (struct icmphdr *)nethdr[1].data;
+      if (hdr_icmp->type != 0 && hdr_icmp->type != 8)
+	return;
+    }
+
+  offs = hdr_err->ihl * 4;
+  /* next stage */
+  if (!nethdr[1].data)
+    {
+      nethdr[1].data = nethdr->data + offs;
+      nethdr[1].size = nethdr->size - offs;
+    }
+
+  size = nethdr[1].size;
+  if (size > 8)
+    size = 8;
+
+  /* prepare the packet */
+  packet = packet_obj_new(NULL);
+  dest = icmp_preparepkt(interface, packet, offs + size, 0);
+  memcpy(&packet->tADDR, &erroneous->sADDR, sizeof (struct net_addr_s));
+
+  /* get the header */
+  nethdr = &packet->header[packet->stage];
+  hdr = (struct icmphdr *)nethdr->data;
+
+  hdr->un.gateway = 0;
+
+  /* fill the type and code */
+  switch (error)
+    {
+      case ERROR_NET_UNREACHABLE:
+	hdr->type = 3;
+	hdr->code = 0;
+	break;
+      case ERROR_HOST_UNREACHABLE:
+	hdr->type = 3;
+	hdr->code = 1;
+	break;
+      case ERROR_PROTO_UNREACHABLE:
+	hdr->type = 3;
+	hdr->code = 2;
+	break;
+      case ERROR_PORT_UNREACHABLE:
+	hdr->type = 3;
+	hdr->code = 3;
+	break;
+      case ERROR_CANNOT_FRAGMENT:
+	hdr->type = 3;
+	hdr->code = 4;
+	break;
+      case ERROR_NET_DENIED:
+	hdr->type = 3;
+	hdr->code = 11;
+	break;
+      case ERROR_HOST_DENIED:
+	hdr->type = 3;
+	hdr->code = 10;
+	break;
+      case ERROR_CONGESTION:
+	hdr->type = 4;
+	hdr->code = 0;
+	break;
+      case ERROR_TIMEOUT:
+	hdr->type = 11;
+	hdr->code = 0;
+	break;
+      case ERROR_FRAGMENT_TIMEOUT:
+	hdr->type = 11;
+	hdr->code = 1;
+	break;
+      case ERROR_BAD_HEADER:
+	hdr->type = 12;
+	hdr->code = 0;
+	break;
+      default:
+	assert(0);
+	break;
+    }
+
+  /* copy the head of the packet that caused the error */
+  memcpy(dest, hdr_err, offs);
+  memcpy(dest + offs, erroneous->header[erroneous->stage + 1].data, size);
+
+  net_16_store(hdr->checksum, 0);
+
+  /* compute checksum */
+  net_16_store(hdr->checksum, ~packet_checksum(nethdr->data, nethdr->size));
+
+  packet->stage--;
+  /* send the packet to the interface */
+  addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_ICMP);
+}
+

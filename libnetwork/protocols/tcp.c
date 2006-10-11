@@ -65,6 +65,7 @@ NET_PUSHPKT(tcp_pushpkt)
   struct net_header_s	*nethdr;
   uint_fast8_t		flags;
   uint32_t		computed_check;
+  struct net_proto_s	*addressing = packet->source_addressing;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];

@@ -35,6 +35,22 @@ struct net_addr_s;
 struct net_proto_s;
 
 /*
+ * Error types
+ */
+
+#define	ERROR_NET_UNREACHABLE		0
+#define	ERROR_HOST_UNREACHABLE		1
+#define	ERROR_PROTO_UNREACHABLE		2
+#define	ERROR_PORT_UNREACHABLE		3
+#define	ERROR_CANNOT_FRAGMENT		4
+#define	ERROR_NET_DENIED		5
+#define	ERROR_HOST_DENIED		6
+#define	ERROR_CONGESTION		7
+#define ERROR_TIMEOUT			8
+#define ERROR_FRAGMENT_TIMEOUT		9
+#define ERROR_BAD_HEADER		10
+
+/*
  * Container type for protocols list.
  */
 
@@ -46,7 +62,6 @@ CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, NOLOCK, 8, UNSIGNED);
 
 #define NET_PUSHPKT(f)	void (f)(struct net_if_s	*interface,	\
 				 struct net_packet_s	*packet,	\
-				 struct net_proto_s	*addressing,	\
 				 struct	net_proto_s	*protocol)
 
 typedef NET_PUSHPKT(net_pushpkt_t);
@@ -74,6 +89,7 @@ typedef NET_INITPROTO(net_initproto_t);
 
 typedef uint_fast16_t net_pkt_size_t;
 typedef uint_fast16_t net_proto_id_t;
+typedef uint_fast16_t net_error_id_t;
 
 /*
  * Prototype of the function used to send a packet.
@@ -110,6 +126,15 @@ typedef NET_MATCHADDR(net_matchaddr_t);
 typedef NET_PSEUDOHEADER_CHECKSUM(net_pseudoheader_checksum_t);
 
 /*
+ * Prototype of function reporting error.
+ */
+
+#define NET_ERRORMSG(f)	void	(f)(struct net_packet_s	*erroneous,	\
+				    net_error_id_t	error)
+
+typedef NET_ERRORMSG(net_errormsg_t);
+
+/*
  * This structure defines the interface of an addressing protocol.
  */
 
@@ -118,6 +143,16 @@ struct				net_addressing_interface_s
   net_sendpkt_t			*sendpkt;
   net_matchaddr_t		*matchaddr;
   net_pseudoheader_checksum_t	*pseudoheader_checksum;
+  net_errormsg_t		*errormsg;
+};
+
+/*
+ * This structure defines the interface of a control protocol.
+ */
+
+struct				net_control_interface_s
+{
+  net_errormsg_t		*errormsg;
 };
 
 /*
@@ -134,6 +169,7 @@ struct					net_proto_desc_s
   union
   {
     const struct net_addressing_interface_s	*addressing;
+    const struct net_control_interface_s	*control;
   } f;
   size_t				pv_size;
 };

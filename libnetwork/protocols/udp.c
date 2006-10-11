@@ -64,6 +64,8 @@ NET_PUSHPKT(udp_pushpkt)
   uint_fast32_t		computed_check;
   uint16_t		check;
   uint_fast16_t		len;
+  struct net_proto_s	*addressing = packet->source_addressing;
+
 
   /* get the header */
   nethdr = &packet->header[packet->stage];

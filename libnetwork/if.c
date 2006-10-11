@@ -98,16 +98,16 @@ struct net_if_s	*if_register(struct device_s	*dev,
   if (!chiche)
     {
       interface->boottype = IF_BOOT_NONE;
-      if_register_proto(interface, ip, arp, 0x0a0202f0, 0xffffff00);
+      if_register_proto(interface, ip, arp, icmp, 0x0a0202f0, 0xffffff00);
 #if 0
       ip = net_alloc_proto(&ip_protocol);
-      if_register_proto(interface, ip, arp, 0x0a0202f1, 0xffffff00);
+      if_register_proto(interface, ip, arp, icmp, 0x0a0202f1, 0xffffff00);
 #endif
     }
   else
     {
       interface->boottype = IF_BOOT_NONE;
-      if_register_proto(interface, ip, arp, 0x0a020302, 0xffffff00);
+      if_register_proto(interface, ip, arp, icmp, 0x0a020302, 0xffffff00);
     }
   chiche = 1;
 
@@ -228,7 +228,7 @@ void			if_pushpkt(struct net_if_s	*interface,
   {
     if (item->id == packet->proto)
       {
-	item->desc->pushpkt(interface, packet, NULL, item);
+	item->desc->pushpkt(interface, packet, item);
 	return;
       }
   });
