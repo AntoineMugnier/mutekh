@@ -61,7 +61,6 @@ NET_PUSHPKT(udp_pushpkt)
 #endif
   struct udphdr		*hdr;
   struct net_header_s	*nethdr;
-  uint_fast32_t		computed_check;
   uint16_t		check;
   uint_fast16_t		len;
   struct net_proto_s	*addressing = packet->source_addressing;
@@ -81,22 +80,21 @@ NET_PUSHPKT(udp_pushpkt)
 #endif
 
   len = net_be16_load(hdr->len);
-  check = net_be16_load(hdr->check);
+  check = net_16_load(hdr->check);
 
   /* checksum is optional */
   if (check)
     {
-      computed_check = addressing->desc->f.addressing->pseudoheader_checksum(NULL, packet, IPPROTO_UDP, len);
-      printf("%x\n", addressing->desc->f.addressing->pseudoheader_checksum(NULL, packet, IPPROTO_UDP, len));
+      uint32_t		computed_check;
 
+      computed_check = addressing->desc->f.addressing->pseudoheader_checksum(NULL, packet, IPPROTO_UDP, len);
       computed_check += packet_checksum(nethdr->data, len);
-      printf("%x\n", packet_checksum(nethdr->data, len));
       computed_check = (computed_check & 0xffff) + (computed_check >> 16);
 
       /* incorrect packet */
       if (computed_check != 0xffff)
 	{
-	  net_debug("UDP: Rejected incorrect packet %x\n", computed_check);
+	  net_debug("UDP: Rejected incorrect packet %x %x\n", check, ~computed_check);
 	  return;
 	}
     }
@@ -166,6 +164,7 @@ void		udp_sendpkt(struct net_if_s	*interface,
 
   /* compute checksum */
   computed_check = addressing->desc->f.addressing->pseudoheader_checksum(addressing, packet, IPPROTO_UDP, nethdr->size);
+  net_16_store(hdr->check, 0);
   computed_check += packet_checksum(nethdr->data, nethdr->size);
   computed_check = (computed_check & 0xffff) + (computed_check >> 16);
   net_16_store(hdr->check, ~computed_check);

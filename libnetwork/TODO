@@ -9,18 +9,16 @@
   - prevoir une gestion d'autre chose qu'Ethernet
   - gestion des doublons
 
-* ICMPv4
-  - faire tout les autres messages
-
 * UDP
-  - faire la fonction qui manque : virer un callback
-  - verifier la taille aussi si > 64k
-  - ajouter un void* aux callback
+  - verifier la taille si > 64k
 
 * if
   - coder if_down, if_unregister
   - mettre une option pour indiquer les NIC qui gerent le checksum en hard
   - aliasing et bridging
+
+* route
+  - trier le container selon le netmask
 
 * general
   - verifier l'alignement des acces memoire

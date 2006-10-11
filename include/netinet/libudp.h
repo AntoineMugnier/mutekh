@@ -42,7 +42,8 @@ struct	net_udp_addr_s
 #define UDP_CALLBACK(f)	void (f)(struct net_udp_addr_s	*local,		\
 				 struct net_udp_addr_s	*remote,	\
 				 void			*data,		\
-				 size_t			size)
+				 size_t			size,		\
+				 void			*pv)
 typedef UDP_CALLBACK(udp_callback_t);
 
 CONTAINER_TYPE(udp_callback, HASHLIST, struct udp_callback_desc_s, NOLOCK, 64, BLOB, sizeof (struct net_udp_addr_s));
@@ -51,6 +52,7 @@ struct	udp_callback_desc_s
 {
   struct net_udp_addr_s	address[1];
   udp_callback_t	*callback;
+  void			*pv;
   udp_callback_entry_t	list_entry;
 };
 
@@ -63,7 +65,9 @@ int_fast8_t	udp_send(struct net_udp_addr_s	*local,
 			 void			*data,
 			 size_t			size);
 int_fast8_t	udp_callback(struct net_udp_addr_s	*local,
-			     udp_callback_t		*callback);
+			     udp_callback_t		*callback,
+			     void			*pv);
+void		udp_close(struct net_udp_addr_s	*local);
 
 void		libudp_signal(struct net_packet_s	*packet,
 			      struct udphdr		*hdr);

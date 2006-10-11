@@ -740,10 +740,10 @@ NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum)
   struct ip_pseudoheader_s	hdr;
 
   if (addressing == NULL)
-    hdr.source = IPV4_ADDR_GET(packet->sADDR);
+    hdr.source = endian_be32(IPV4_ADDR_GET(packet->sADDR));
   else
-    hdr.source = ((struct net_pv_ip_s *)addressing->pv)->addr;
-  hdr.dest = IPV4_ADDR_GET(packet->tADDR);
+    hdr.source = endian_be32(((struct net_pv_ip_s *)addressing->pv)->addr);
+  hdr.dest = endian_be32(IPV4_ADDR_GET(packet->tADDR));
   hdr.zero = 0;
   hdr.type = proto;
   hdr.size = endian_be16(size);

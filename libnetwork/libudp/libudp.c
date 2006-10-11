@@ -112,7 +112,8 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
  */
 
 int_fast8_t			udp_callback(struct net_udp_addr_s	*local,
-					     udp_callback_t		*callback)
+					     udp_callback_t		*callback,
+					     void			*pv)
 {
   struct udp_callback_desc_s	*desc;
 
@@ -121,6 +122,7 @@ int_fast8_t			udp_callback(struct net_udp_addr_s	*local,
 
   memcpy(&desc->address[0], local, sizeof (struct net_udp_addr_s));
   desc->callback = callback;
+  desc->pv = pv;
 
   /* register the callback */
   udp_callback_push(&udp_callbacks, desc);
@@ -148,12 +150,18 @@ void				libudp_signal(struct net_packet_s	*packet,
   local->port = hdr->dest;
 
   /* do we have a callback to handle the packet */
-  if (!(desc = udp_callback_lookup(&udp_callbacks, (void*)local)))
+  if (!(desc = udp_callback_lookup(&udp_callbacks, (void *)local)))
     {
+      packet->stage -= 2;
+
       /* this packet is destinated to no one */
+      packet->source_addressing->desc->f.addressing->errormsg(packet, ERROR_PORT_UNREACHABLE);
+
       mem_free(local);
       return;
     }
+
+  printf("%P / %P\n", local, sizeof (struct net_udp_addr_s), desc->address, sizeof (struct net_udp_addr_s));
 
   /* build remote address descriptor */
   remote = mem_alloc(sizeof (struct net_udp_addr_s), MEM_SCOPE_SYS);
@@ -167,6 +175,19 @@ void				libudp_signal(struct net_packet_s	*packet,
   memcpy(buff, packet->header[packet->stage].data, size);
 
   /* callback */
-  desc->callback(local, remote, buff, size);
+  desc->callback(local, remote, buff, size, desc->pv);
 }
 
+/*
+ * Close a listening UDP connection.
+ */
+
+void		udp_close(struct net_udp_addr_s	*local)
+{
+  struct udp_callback_desc_s	*desc;
+
+  if ((desc = udp_callback_lookup(&udp_callbacks, (void *)local)) != NULL)
+    {
+      udp_callback_remove(&udp_callbacks, desc);
+    }
+}
