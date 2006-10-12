@@ -1,0 +1,1 @@
+objs += nfs.o

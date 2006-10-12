@@ -98,6 +98,7 @@ static inline	uint_fast8_t	ip_delivery(struct net_if_s	*interface,
 {
   struct net_pv_ip_s		*pv = (struct net_pv_ip_s *)ip->pv;
 
+  /* masked destination address must be equal to masked local address */
   if ((addr & pv->mask) == (pv->addr & pv->mask))
     return IP_DELIVERY_DIRECT;
   else
@@ -129,7 +130,6 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   /* extract some useful fields */
   fragment = net_be16_load(hdr->fragment);
   offs = (fragment & IP_FRAG_MASK) * 8;
-
   datasz = net_be16_load(hdr->tot_len) - hdr->ihl * 4;
 
   net_debug("fragment id %P offs %d size %d\n", id, 6, offs, datasz);
@@ -268,6 +268,7 @@ TIMER_CALLBACK(ip_fragment_timeout)
   packet = packet_queue_pop(&p->packets);
   packet->stage--;
 
+  /* report the error */
   pv_ip->icmp->desc->f.control->errormsg(packet, ERROR_FRAGMENT_TIMEOUT);
 
   /* delete all the packets */
@@ -350,7 +351,10 @@ NET_PUSHPKT(ip_pushpkt)
       return;
     }
 
-  /* fix the packet size (if the interface has a minimum transfert unit) */
+  /* fix the packet size (if the interface has a minimum transfert
+     unit).  this must be done because some other modules in the
+     protocol stack use the size specified in the header array, and if
+     the network device set a bad size, we must adjust it */
   tot_len = net_be16_load(hdr->tot_len);
   if (nethdr->size != tot_len)
     {
@@ -378,14 +382,9 @@ NET_PUSHPKT(ip_pushpkt)
   if ((fragment & IP_FLAG_MF) || (fragment & IP_FRAG_MASK))
     {
       /* add fragment */
-      if (ip_fragment_pushpkt(protocol, packet, hdr))
-	{
-	  /* last fragment: reassemble */
-
-	  /* probably nothing here */
-	}
-      else
+      if (!ip_fragment_pushpkt(protocol, packet, hdr))
 	return;	/* abord the packet, the last fragment will unblock it */
+      /* otherwise, the packet has been reassembled and is ready to continue its path */
     }
 
   /* dispatch to the matching protocol */
@@ -501,7 +500,7 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
     }
   else
     {
-      /* no route IP -> MAC translation */
+      /* no route: IP -> MAC translation */
       if (!(frag->tMAC = arp_get_mac(ip, pv->arp, frag, frag->tADDR.addr.ipv4)))
 	return 1;
     }
@@ -553,7 +552,7 @@ NET_SENDPKT(ip_send)
       fragsz = (interface->mtu - 20) & ~7;
       /* choose a random identifier */
       net_be16_store(hdr->id, pv->id_seq++);
-      /* compute the checksum of the header. as the header will be
+      /* compute the (partial) checksum of the header. as the header will be
 	 completed during next step, the checksum will be incrementaly
 	 updated */
       net_16_store(hdr->tot_len, 0);
@@ -570,7 +569,7 @@ NET_SENDPKT(ip_send)
 	  offs += fragsz;
 	}
 
-      /* last packet */
+      /* last fragment */
       if (sent)
 	ip_send_fragment(protocol, interface, hdr, packet, offs, total - offs, 1);
 
@@ -610,7 +609,7 @@ NET_SENDPKT(ip_send)
     }
   else
     {
-      /* no route IP -> MAC translation */
+      /* no route: IP -> MAC translation */
       if (!(packet->tMAC = arp_get_mac(protocol, pv->arp, packet, packet->tADDR.addr.ipv4)))
 	return;
     }
@@ -682,6 +681,7 @@ void		ip_route(struct net_packet_s	*packet,
       /* if the Don't Fragment flag is set, destroy the packet */
       if (fragment & IP_FLAG_DF)
 	{
+	  /* report the error */
 	  pv->icmp->desc->f.control->errormsg(packet, ERROR_CANNOT_FRAGMENT, route);
 
 	  packet_obj_refdrop(packet);
@@ -691,6 +691,7 @@ void		ip_route(struct net_packet_s	*packet,
       data = nethdr[1].data;
       offs = 0;
       shift = (fragment & IP_FRAG_MASK) * 8;
+      /* XXX interesting idea: compute an optimal fragment size */
       fragsz = (interface->mtu - 20) & ~7;
 
       /* send the middle fragments */
@@ -702,7 +703,7 @@ void		ip_route(struct net_packet_s	*packet,
 	  offs += fragsz;
 	}
 
-      /* last packet */
+      /* last fragment */
       if (sent)
 	ip_send_fragment(route->addressing, interface, hdr, packet, shift + offs, total - offs, !(fragment & IP_FLAG_MF));
 
@@ -711,7 +712,7 @@ void		ip_route(struct net_packet_s	*packet,
       return ;
     }
 
-  /* recompute checksum */
+  /* recompute checksum (in fact, incrementally adjust it) */
   check = net_16_load(hdr->check) + 1;
   net_16_store(hdr->check, check + (check >> 16));
 
@@ -763,14 +764,15 @@ NET_MATCHADDR(ip_matchaddr)
     B = pv->addr;
   if (mask)
     M = IPV4_ADDR_GET(*mask);
-  else
+  else /* no mask set, equality test */
     return A == B;
 
+  /* masked equality test */
   return (A & M) == (B & M);
 }
 
 /*
- * Compute checksum of the IP pseudo-header.
+ * Compute checksum of the IP pseudo-header (needed by higher protocols).
  */
 
 NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum)

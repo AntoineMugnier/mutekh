@@ -50,9 +50,11 @@ OBJECT_CONSTRUCTOR(packet_obj)
 
 OBJECT_DESTRUCTOR(packet_obj)
 {
+  /* if the packet refers to another packet, decrement the ref count */
   if (obj->parent)
     packet_obj_refdrop(obj->parent);
 
+  /* if the packet has data, free it */
   if (obj->packet)
     mem_free(obj->packet);
 
@@ -71,6 +73,7 @@ uint16_t		packet_checksum(const void	*data,
   uint_fast32_t		checksum = 0;
   uint16_t		*d = (uint16_t *)data;
 
+  /* compute the 32 bits sum of 16 words */
   while(size > 1)
     {
       checksum = checksum + net_16_load(*d);
@@ -78,9 +81,11 @@ uint16_t		packet_checksum(const void	*data,
       size = size - 2;
     }
 
+  /* check the parity of size, add the last byte if necessary */
   if (size)
     checksum = checksum + *(uint8_t *)d;
 
+  /* take account of carries of 16 bits words */
   while (checksum >> 16)
     checksum = (checksum & 0xffff) + (checksum >> 16);
 
@@ -94,7 +99,7 @@ uint16_t		packet_checksum(const void	*data,
 
 #ifndef HAS_CPU_PACKET_MEMCPY
 #undef packet_memcpy
-uint_fast16_t		packet_memcpy(void		*dst,
+uint_16_t		packet_memcpy(void		*dst,
 				      const void	*src,
 				      size_t		size)
 {
@@ -102,6 +107,7 @@ uint_fast16_t		packet_memcpy(void		*dst,
   uint16_t		*d = (uint16_t *)src;
   uint16_t		*p = (uint16_t *)dst;
 
+  /* compute 32 bits sum and copy */
   while(size > 1)
     {
       checksum = checksum + net_16_load(*d);
@@ -110,16 +116,18 @@ uint_fast16_t		packet_memcpy(void		*dst,
       size = size - 2;
     }
 
+  /* count and copy the last remaining byte if needed */
   if (size)
     {
       checksum = checksum + *(uint8_t *)d;
       *(uint8_t *)p = *(uint8_t *)d;
     }
 
+  /* take account of carries of 16 bits words */
   while (checksum >> 16)
     checksum = (checksum & 0xffff) + (checksum >> 16);
 
-  return (~checksum) & 0xffff;
+  return checksum;
 }
 #endif
 

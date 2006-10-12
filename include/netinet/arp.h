@@ -130,7 +130,7 @@ struct		ether_arp
 CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, 64, UNSIGNED);
 
 /*
- * ARP entry.
+ * ARP table entry.
  */
 
 struct			arp_entry_s
@@ -166,6 +166,10 @@ struct			net_pv_rarp_s
   struct net_proto_s	*ip;
 };
 
+/*
+ * Prototypes of ARP and RARP functions.
+ */
+
 NET_INITPROTO(arp_init);
 NET_PUSHPKT(arp_pushpkt);
 NET_PREPAREPKT(arp_preparepkt);
@@ -186,6 +190,10 @@ void	rarp_request(struct net_if_s	*interface,
 		     struct net_proto_s	*rarp,
 		     uint8_t		*mac);
 TIMER_CALLBACK(arp_timeout);
+
+/*
+ * ARP & RARP protocol descriptors.
+ */
 
 extern const struct net_proto_desc_s	arp_protocol;
 extern const struct net_proto_desc_s	rarp_protocol;

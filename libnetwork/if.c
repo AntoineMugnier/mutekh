@@ -48,13 +48,14 @@ CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, list_entry, STRI
 /*
  * We only need route_table_init
  */
+
 CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK, list_entry);
 
 /*
  * Some local variables.
  */
 
-net_if_root_t	net_interfaces = CONTAINER_ROOT_INITIALIZER(net_if, HASHLIST, NOLOCK);
+net_if_root_t		net_interfaces = CONTAINER_ROOT_INITIALIZER(net_if, HASHLIST, NOLOCK);
 static uint_fast8_t	ifid = 0;
 static uint_fast8_t	ethid = 0;
 
@@ -112,7 +113,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
     }
   chiche = 1;
 
-  /* name the interface */
+  /* copy properties and name the interface */
   interface->dev = dev;
   interface->mac = mac;
   interface->mtu = mtu;
@@ -224,7 +225,7 @@ void			if_pushpkt(struct net_if_s	*interface,
   interface->rx_bytes += packet->header[0].size;
   interface->rx_packets++;
 
-  /* lookup to all possible addressing modules XXX optimize */
+  /* lookup to all possible addressing modules XXX */
   CONTAINER_FOREACH(net_protos, HASHLIST, net_protos, &interface->protocols,
   {
     if (item->id == packet->proto)
@@ -239,7 +240,7 @@ void			if_pushpkt(struct net_if_s	*interface,
  * Prepare a packet.
  */
 
-uint8_t			*if_preparepkt(struct net_if_s		*interface,
+inline uint8_t			*if_preparepkt(struct net_if_s		*interface,
 				       struct net_packet_s	*packet,
 				       size_t			size,
 				       size_t			max_padding)

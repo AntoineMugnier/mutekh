@@ -53,6 +53,10 @@ void		udp_sendpkt(struct net_if_s	*interface,
 			    uint_fast16_t	source_port,
 			    uint_fast16_t	dest_port);
 
+/*
+ * UDP protocol descriptor.
+ */
+
 extern const struct net_proto_desc_s	udp_protocol;
 
 #endif

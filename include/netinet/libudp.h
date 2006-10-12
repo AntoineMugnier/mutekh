@@ -33,11 +33,19 @@
  * Types
  */
 
+/*
+ * An UDP address is made of an IP address and a port number.
+ */
+
 struct	net_udp_addr_s
 {
   struct net_addr_s	address;
   uint_fast16_t		port;
 };
+
+/*
+ * UDP callback on packet receiving.
+ */
 
 #define UDP_CALLBACK(f)	void (f)(struct net_udp_addr_s	*local,		\
 				 struct net_udp_addr_s	*remote,	\
@@ -45,6 +53,10 @@ struct	net_udp_addr_s
 				 size_t			size,		\
 				 void			*pv)
 typedef UDP_CALLBACK(udp_callback_t);
+
+/*
+ * Callbacks container.
+ */
 
 CONTAINER_TYPE(udp_callback, HASHLIST, struct udp_callback_desc_s, NOLOCK, 64, BLOB, sizeof (struct net_udp_addr_s));
 

@@ -118,6 +118,10 @@ NET_PUSHPKT(icmp_pushpkt);
 NET_PREPAREPKT(icmp_preparepkt);
 NET_ERRORMSG(icmp_errormsg);
 
+/*
+ * ICMP protocol descriptor.
+ */
+
 extern const struct net_proto_desc_s	icmp_protocol;
 
 #endif

@@ -1,16 +1,25 @@
 * driver NE2000
   - revoir tout le cleanup
 
-* IPv4
-  - options du header IP
+* IP
+  - options du header IP (seulement les trucs utiles)
+    + MTU Probe/Reply
+    + Trace route
+    + Record route / Strict route ?
   - gerer addresse loopback et broadcast
+  - idee de nipo: dans le routage avec fragmentation, calculer taille optimale
+
+* ICMP
+  - gerer les erreurs (entrantes)
 
 * ARP
   - prevoir une gestion d'autre chose qu'Ethernet
+  - timeout sur les entrées valides
   - gestion des doublons
 
 * UDP
   - verifier la taille si > 64k
+  - gerer UDP Lite ?
 
 * if
   - coder if_down, if_unregister
@@ -23,3 +32,4 @@
 * general
   - verifier l'alignement des acces memoire
   - voir les locks un peu partout
+  - faire un callback cleanup pour les protocols

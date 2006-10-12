@@ -175,7 +175,7 @@ NET_PUSHPKT(arp_pushpkt)
     {
       case ARPOP_REQUEST:
 	{
-	  uint_fast32_t		requested;
+	  uint_fast32_t		requested = 1;
 	  struct net_pv_ip_s	*pv_ip;
 
 	  requested = net_be32_load(hdr->arp_tpa);

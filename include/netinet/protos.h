@@ -35,7 +35,7 @@ struct net_addr_s;
 struct net_proto_s;
 
 /*
- * Error types
+ * Error types for control protocols (ICMP for example).
  */
 
 #define	ERROR_NET_UNREACHABLE		0

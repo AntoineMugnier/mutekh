@@ -108,7 +108,7 @@ void	if_register_proto(struct net_if_s	*interface,
 			  ...);
 void	if_pushpkt(struct net_if_s	*interface,
 		   struct net_packet_s	*packet);
-uint8_t	*if_preparepkt(struct net_if_s		*interface,
+inline uint8_t	*if_preparepkt(struct net_if_s		*interface,
 		       struct net_packet_s	*packet,
 		       size_t			size,
 		       size_t			max_padding);

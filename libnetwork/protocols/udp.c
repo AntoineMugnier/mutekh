@@ -107,6 +107,7 @@ NET_PUSHPKT(udp_pushpkt)
     }
   packet->stage++;
 
+  /* signal the incoming valid packet to the LibUDP */
   libudp_signal(packet, hdr);
 }
 
@@ -162,7 +163,7 @@ void		udp_sendpkt(struct net_if_s	*interface,
   net_16_store(hdr->dest, dest_port);
   net_be16_store(hdr->len, nethdr->size);
 
-  /* compute checksum */
+  /* compute checksum XXX option to avoid checksum computation */
   computed_check = addressing->desc->f.addressing->pseudoheader_checksum(addressing, packet, IPPROTO_UDP, nethdr->size);
   net_16_store(hdr->check, 0);
   computed_check += packet_checksum(nethdr->data, nethdr->size);

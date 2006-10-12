@@ -133,7 +133,7 @@ NET_PUSHPKT(icmp_pushpkt)
       return;
     }
 
-  /* action */
+  /* XXX action */
   switch (hdr->type)
     {
       case 8:
@@ -232,7 +232,7 @@ NET_ERRORMSG(icmp_errormsg)
   nethdr = &packet->header[packet->stage];
   hdr = (struct icmphdr *)nethdr->data;
 
-  hdr->un.gateway = 0;
+  net_32_store(hdr->un.gateway, 0);
 
   /* fill the type and code */
   switch (error)
@@ -296,7 +296,6 @@ NET_ERRORMSG(icmp_errormsg)
   memcpy(dest + offs, erroneous->header[erroneous->stage + 1].data, size);
 
   net_16_store(hdr->checksum, 0);
-
   /* compute checksum */
   net_16_store(hdr->checksum, ~packet_checksum(nethdr->data, nethdr->size));
 

@@ -25,6 +25,7 @@
 
 #include <hexo/types.h>
 #include <hexo/alloc.h>
+#include <hexo/cpu.h>
 
 #include <netinet/packet.h>
 #include <netinet/protos.h>
@@ -100,6 +101,12 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
 
   /* setup destination address */
   memcpy(&packet->tADDR, &remote->address, sizeof (struct net_addr_s));
+
+  /* port specified */
+  if (local->port == 0)
+    {
+      local->port = 1024 + (cpu_cycle_count() % 32768) ; /* XXX choose me better! */
+    }
 
   /* send UDP packet */
   udp_sendpkt(interface, addressing, packet, local->port, remote->port);

@@ -134,6 +134,10 @@ struct			net_addr_s
   } addr;
 };
 
+/*
+ * IPv4 addresses manipulation macros.
+ */
+
 #define IPV4_ADDR_SET(_addr_,_ip_)					\
   {									\
     (_addr_).family = addr_ipv4;					\
@@ -190,7 +194,7 @@ OBJECT_CONSTRUCTOR(packet_obj);
 OBJECT_DESTRUCTOR(packet_obj);
 uint16_t		packet_checksum(const void	*data,
 					size_t		size);
-uint_fast16_t		packet_memcpy(void		*dst,
+uint16_t		packet_memcpy(void		*dst,
 				      const void	*src,
 				      size_t		size);
 void			*packet_dispatch(void	*data);

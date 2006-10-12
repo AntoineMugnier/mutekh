@@ -28,6 +28,7 @@
 #include <netinet/libudp.h>
 #include <netinet/libtcp.h>
 #include <netinet/tcp.h>
+#include <netinet/nfs.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -87,6 +88,37 @@ void			*tcp_test(void *p)
   return NULL;
 }
 
+void			*nfs_test(void *p)
+{
+
+  struct nfs_s	nfs;
+  nfs_handle_t	root;
+  nfs_handle_t	test;
+
+  memset(&nfs, 0, sizeof (nfs));
+  IPV4_ADDR_SET(nfs.address, 0x0a02026d);
+  IPV4_ADDR_SET(nfs.local.address, 0x0a0202f0);
+  nfs_init(&nfs);
+
+  printf("mountd port: %u\nnfsd port: %u\n", ntohs(nfs.mountd.port), ntohs(nfs.nfsd.port));
+
+  if (!nfs_mount(&nfs, "/home/buck/export", root))
+    {
+      if (!nfs_lookup(&nfs, "test", root, test, NULL))
+	{
+	  char buf[1024];
+	  ssize_t read;
+
+	  read = nfs_read(&nfs, test, buf, 0, 1024);
+	  printf("read: %P\n", buf, read);
+	}
+
+      nfs_umount(&nfs);
+    }
+
+  return NULL;
+}
+
 /*
  * test main.
  */
@@ -139,10 +171,19 @@ int_fast8_t		main()
   //  if_up("eth2");
 #endif
 
+#if 0
   eval_server();
+#endif
 
+#if 0
   pthread_t th;
   pthread_create(&th, NULL, tcp_test, NULL);
+#endif
+
+#if 1
+  pthread_t th;
+  pthread_create(&th, NULL, nfs_test, NULL);
+#endif
 
   return 0;
 }
