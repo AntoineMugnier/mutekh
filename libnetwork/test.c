@@ -177,12 +177,12 @@ int_fast8_t		main()
   eval_server();
 #endif
 
-#if 0
+#if 1
   pthread_t th;
   pthread_create(&th, NULL, tcp_test, NULL);
 #endif
 
-#if 1
+#if 0
   pthread_t th;
   pthread_create(&th, NULL, nfs_test, NULL);
 #endif

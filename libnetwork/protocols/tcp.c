@@ -161,7 +161,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   packet = packet_obj_new(NULL);
 
   /* prepare the packet */
-  tcp_preparepkt(interface, addressing, packet, (operation == TCP_OPEN || operation == TCP_ACK_OPEN) ? 4 : 0, 0);
+  tcp_preparepkt(interface, addressing, packet, (operation == TCP_SYN || operation == TCP_SYN_ACK) ? 4 : 0, 0);
   nethdr = &packet->header[packet->stage];
   hdr = (struct tcphdr *)nethdr->data;
   hdr->th_x2 = 0;
@@ -176,7 +176,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   switch (operation)
     {
       /* connection opening */
-      case TCP_OPEN:
+      case TCP_SYN:
 	{
 	  uint32_t	*mss;
 
@@ -192,7 +192,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
 	}
 	break;
       /* acknowledgment of connection opening */
-      case TCP_ACK_OPEN:
+      case TCP_SYN_ACK:
 	{
 	  uint32_t	*mss;
 
@@ -208,7 +208,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
 	}
 	break;
       /* simple acknowlegment of received data when no data to send */
-      case TCP_ACK_DATA:
+      case TCP_ACK:
 	hdr->th_flags = TH_ACK;
 	net_be32_store(hdr->th_seq, session->curr_seq);
 	net_be32_store(hdr->th_ack, session->to_ack);
@@ -218,15 +218,6 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
 	break;
       /* request for closing connection */
       case TCP_FIN:
-	hdr->th_flags = TH_FIN | TH_ACK;
-	net_be32_store(hdr->th_seq, session->curr_seq);
-	net_be32_store(hdr->th_ack, session->to_ack);
-	net_be16_store(hdr->th_win, session->send_win);
-	hdr->th_urp = 0;
-	hdr->th_off = 5;
-	break;
-      /* acceptation of closing connection */
-      case TCP_ACK_FIN:
 	hdr->th_flags = TH_FIN | TH_ACK;
 	net_be32_store(hdr->th_seq, session->curr_seq);
 	net_be32_store(hdr->th_ack, session->to_ack);

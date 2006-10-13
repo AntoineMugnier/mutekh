@@ -129,7 +129,7 @@ int_fast8_t			tcp_open(struct net_tcp_addr_s	*local,
   /* XXX timeout here */
 
   /* send the SYN packet */
-  tcp_send_controlpkt(session, TCP_OPEN);
+  tcp_send_controlpkt(session, TCP_SYN);
   net_debug("<- SYN\n");
 
   return 0;
@@ -141,14 +141,37 @@ int_fast8_t			tcp_open(struct net_tcp_addr_s	*local,
 
 void			tcp_close(struct net_tcp_session_s	*session)
 {
-  /* enter FIN WAIT state, waiting for FIN ACK */
-  session->state = TCP_STATE_FIN_WAIT;
-  session->recv_win = 0;
+  if (session->state == TCP_STATE_ESTABLISHED || session->state == TCP_STATE_SYN_RCVD)
+    {
+      /* enter FIN WAIT-1 state, waiting for FIN ACK */
+      session->state = TCP_STATE_FIN_WAIT1;
+      session->recv_win = 0;
 
-  /* just send a close request */
-  tcp_send_controlpkt(session, TCP_FIN);
-  session->curr_seq++;
-  net_debug("<- FIN\n");
+      /* just send a close request */
+      tcp_send_controlpkt(session, TCP_FIN);
+      net_debug("<- FIN\n");
+    }
+  else if (session->state == TCP_STATE_CLOSE_WAIT)
+    {
+      /* goto LAST ACK state */
+      session->state = TCP_STATE_LAST_ACK;
+
+      /* just send a FIN */
+      tcp_send_controlpkt(session, TCP_FIN);
+      net_debug("<- FIN\n");
+    }
+  else
+    {
+      session->state = TCP_STATE_ERROR;
+
+      if (session->close != NULL)
+	session->close(session, session->close_data);
+
+      /* closing on error, just remove the session */
+
+      tcp_session_remove(&sessions, session);
+      mem_free(session);
+    }
 }
 
 /*
@@ -237,7 +260,18 @@ void				libtcp_open(struct net_packet_s	*packet,
       tcp_connect_t	*callback = session->connect;
       void		*ptr = session->connect_data;
 
-      if ((hdr->th_flags & TH_ACK) && (net_be32_load(hdr->th_ack) == session->curr_seq + 1))
+      /* get mss if present */
+      if (hdr->th_off > 5)
+	{
+	  uint32_t	opt;
+
+	  opt = net_be32_load(*(uint32_t *)(hdr + 1));
+	  if (opt & (2 << 24))
+	    session->send_mss = opt & 0xffff;
+	}
+
+      /* make the transition */
+      if (hdr->th_flags & TH_ACK)
 	{
 	  net_debug("-> SYN ACK\n");
 
@@ -249,41 +283,59 @@ void				libtcp_open(struct net_packet_s	*packet,
 	  session->recv_win = net_be16_load(hdr->th_win);
 
 	  /* increment seq and set ack */
-	  session->curr_seq++;
 	  session->to_ack = session->recv_seq + 1;
-
-	  /* get mss if present */
-	  if (hdr->th_off > 5)
-	    {
-	      uint32_t	opt;
-
-	      opt = net_be32_load(*(uint32_t *)(hdr + 1));
-	      if (opt & (2 << 24))
-		session->send_mss = opt & 0xffff;
-	    }
 
 	  net_debug("<> ESTABLISHED\n");
 	  net_debug("  send MSS = %u\n", session->send_mss);
 	  net_debug("  recv MSS = %u\n", session->recv_mss);
 
+	  /* send ACK */
+	  net_debug("<- ACK\n");
+	  session->curr_seq++;
+	  tcp_send_controlpkt(session, TCP_ACK);
+
 	  callback(session, ptr);
 	}
-      else /* otherwise, this is a bad connection sequence, report error */
+      else
 	{
-	  session->state = TCP_STATE_ERROR;
+	  net_debug("-> SYN\n");
 
-	  callback(session, ptr);
+	  /* enter SYN RCVD state  */
+	  session->state = TCP_STATE_SYN_RCVD;
 
-	  tcp_session_remove(&sessions, session);
-	  mem_free(session);
+	  /* send ACK */
+	  net_debug("<- ACK\n");
+	  session->curr_seq++;
+	  tcp_send_controlpkt(session, TCP_ACK);
 	}
 
     }
-  else if (session->state == TCP_STATE_LISTEN)
+  else if (session->state == TCP_STATE_LISTEN) /* incoming connection request */
     {
-      /* incoming connection request */
+      struct net_tcp_session_s	*new;
 
-      /* XXX callback + create new session */
+      net_debug("-> SYN\n");
+
+      /* enter SYN RCVD state  */
+      session->state = TCP_STATE_SYN_RCVD;
+
+      /* send SYN ACK */
+      net_debug("<- SYN ACK\n");
+      tcp_send_controlpkt(session, TCP_SYN_ACK);
+
+      /* create a new session */
+      new = mem_alloc(sizeof (struct net_tcp_session_s), MEM_SCOPE_SYS);
+      new->interface = session->interface;
+      new->addressing = session->addressing;
+
+      /* XXX fill me */
+
+      /* push the new session into the hashlist */
+      tcp_session_push(&sessions, new);
+
+      /* callback */
+      if (session->accept != NULL)
+	session->accept(session, new, session->accept_data);
     }
 }
 
@@ -304,48 +356,74 @@ void				libtcp_close(struct net_packet_s	*packet,
   if ((session = tcp_session_lookup(&sessions, (void *)&key)) == NULL)
     return ;
 
-  /* error when opening */
-  if (session->state == TCP_STATE_SYN_SENT)
+  switch (session->state)
     {
-      net_debug("-> FIN (while connecting)\n");
+      case TCP_STATE_SYN_SENT: /* error when opening */
+      case TCP_STATE_SYN_RCVD:
+	net_debug("-> FIN (while connecting)\n");
 
-      /* set error state */
-      session->state = TCP_STATE_ERROR;
+	tcp_send_controlpkt(session, TCP_FIN);
+	net_debug("<- FIN ACK\n");
 
-      session->connect(session, session->connect_data);
+	/* set error state */
+	session->state = TCP_STATE_ERROR;
 
-      tcp_session_remove(&sessions, session);
-      mem_free(session);
-    }
-  else if (session->state == TCP_STATE_FIN_WAIT) /* it is a FIN acknowlegment */
-    {
-      net_debug("-> FIN ACK\n");
+	/* callback to report the error */
+	session->connect(session, session->connect_data);
 
-      tcp_send_controlpkt(session, TCP_ACK_DATA);
-      net_debug("<- ACK\n");
+	tcp_session_remove(&sessions, session);
+	mem_free(session);
+	break;
+      case TCP_STATE_FIN_WAIT1: /* it is a FIN acknowlegment */
+	/* goto CLOSING */
+	session->state = TCP_STATE_CLOSING;
 
-      tcp_session_remove(&sessions, session);
-      mem_free(session);
-    }
-  else /* otherwise, it is a FIN request */
-    {
-      net_debug("-> FIN\n");
+	net_debug("-> FIN ACK\n");
 
-      /* no data remaining, close the connection */
-      if (1) /* XXX data remaining ? */
-	{
-	  tcp_send_controlpkt(session, TCP_ACK_FIN);
+	/* send a ACK */
+	tcp_send_controlpkt(session, TCP_ACK);
+	net_debug("<- ACK\n");
+	break;
+      case TCP_STATE_LAST_ACK:
+      case TCP_STATE_CLOSING:
+      case TCP_STATE_FIN_WAIT2:
+	/* send a ACK */
+	tcp_send_controlpkt(session, TCP_ACK);
+	net_debug("<- ACK\n");
 
-	  net_debug("<- FIN ACK\n");
+	session->state = TCP_STATE_CLOSED;
 
-	  if (session->close != NULL)
-	    session->close(session, session->close_data);
+	if (session->close != NULL)
+	  session->close(session, session->close_data);
 
-	  tcp_session_remove(&sessions, session);
-	  mem_free(session);
-	}
-      else /* otherwise, wait for the remaining operations and change state */
-	session->state = TCP_STATE_FIN_REQ;
+	/* delete session */
+	tcp_session_remove(&sessions, session);
+	mem_free(session);
+	break;
+      default:
+	/* otherwise, it is a FIN request */
+	net_debug("-> FIN\n");
+
+	/* send a ACK */
+	net_debug("<- ACK\n");
+	tcp_send_controlpkt(session, TCP_ACK);
+
+	/* no data remaining, close the connection */
+	if (1) /* XXX data remaining ? */
+	  {
+	    net_debug("<- FIN\n");
+	    tcp_send_controlpkt(session, TCP_FIN);
+
+	    session->state = TCP_STATE_CLOSED;
+
+	    if (session->close != NULL)
+	      session->close(session, session->close_data);
+
+	    tcp_session_remove(&sessions, session);
+	    mem_free(session);
+	  }
+	else /* otherwise, wait for the remaining operations and change state */
+	  session->state = TCP_STATE_CLOSE_WAIT;
     }
 }
 
@@ -385,6 +463,18 @@ void				libtcp_push(struct net_packet_s	*packet,
   session->recv_seq = seq;
   session->to_ack = session->recv_seq + length;
 
+  /* check for transition from SYN RCVD to ESTABLISHED */
+  if (session->state == TCP_STATE_SYN_RCVD)
+    {
+      net_debug("-> ACK\n");
+
+      net_debug("<> ESTABLISHED\n");
+      net_debug("  send MSS = %u\n", session->send_mss);
+      net_debug("  recv MSS = %u\n", session->recv_mss);
+
+      session->state = TCP_STATE_ESTABLISHED;
+    }
+
   /* control packet */
   if (nethdr->size == hdr->th_off * 4)
     {
@@ -406,9 +496,9 @@ void				libtcp_push(struct net_packet_s	*packet,
 	}
 
       /* if needed, send a control packet to acknowledge */
-      if (1) /* XXX pas de data dans le buffer send && seq == mid-window */
+      if (1) /* XXX ACK acumulés */
 	{
-	  tcp_send_controlpkt(session, TCP_ACK_DATA);
+	  tcp_send_controlpkt(session, TCP_ACK);
 	  net_debug("<- ACK\n");
 	}
     }

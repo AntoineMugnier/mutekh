@@ -125,25 +125,30 @@ CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, 64, BLOB
 #define TCP_HEADERS_LEN	40	/* IP + TCP headers */
 
 /*
- * Connection stage
+ * Connection state
  */
 
 #define TCP_STATE_ERROR		0
 #define TCP_STATE_SYN_SENT	1
-#define TCP_STATE_FIN_WAIT	2
-#define TCP_STATE_ESTABLISHED	3
-#define TCP_STATE_LISTEN	4
-#define TCP_STATE_FIN_REQ	5
+#define TCP_STATE_SYN_RCVD	2
+#define TCP_STATE_LISTEN	3
+#define TCP_STATE_FIN_WAIT1	4
+#define TCP_STATE_FIN_WAIT2	5
+#define TCP_STATE_CLOSING	6
+#define TCP_STATE_TIME_WAIT	7
+#define TCP_STATE_CLOSE_WAIT	8
+#define TCP_STATE_LAST_ACK	9
+#define TCP_STATE_ESTABLISHED	10
+#define TCP_STATE_CLOSED	11
 
 /*
  * Control operations
  */
 
-#define TCP_OPEN	0
-#define TCP_ACK_OPEN	1
-#define TCP_ACK_DATA	2
+#define TCP_SYN		0
+#define TCP_SYN_ACK	1
+#define TCP_ACK		2
 #define TCP_FIN		3
-#define TCP_ACK_FIN	4
 
 /*
  * This structure defines a TCP session.
