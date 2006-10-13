@@ -25,8 +25,11 @@
 
 #include <netinet/nfs.h>
 
+#include <semaphore.h>
+#include <timer.h>
+
 /*
- * NFS version 2 lightweight implementation (read-only support).
+ * NFS version 2 lightweight implementation (single-thread and read-only support).
  *
  * Supported NFS operations:
  *
@@ -34,6 +37,21 @@
  *  + READ: read data from a file
  *
  */
+
+/*
+ * RPC timeout.
+ */
+
+TIMER_CALLBACK(rpc_timeout)
+{
+  struct nfs_s	*server = (struct nfs_s *)pv;
+
+  if (server->data == NULL)
+    {
+      /* wake up */
+      sem_post(&server->sem);
+    }
+}
 
 /*
  * Receive RPC replies.
@@ -45,6 +63,9 @@ UDP_CALLBACK(rpc_callback)
 
   server->data = data;
   server->size = size;
+
+  /* cancel the timeout */
+  timer_cancel_event(&server->timeout, 0);
 
   /* wake up */
   sem_post(&server->sem);
@@ -83,6 +104,11 @@ static inline error_t	do_rpc(struct nfs_s	*server,
   p = (void *)(call + 1);
   memcpy(p, *data, sz);
 
+  server->data = NULL;
+  server->tries = 0;
+
+ retry:
+
   /* send the packet */
   switch (program)
     {
@@ -99,18 +125,43 @@ static inline error_t	do_rpc(struct nfs_s	*server,
 	assert(0);
     }
 
+  /* start timeout */
+  server->timeout.delay = RPC_TIMEOUT;
+  server->timeout.callback = rpc_timeout;
+  server->timeout.pv = server;
+  timer_add_event(&timer_ms, &server->timeout);
+
   /* wait reply */
   sem_wait(&server->sem);
 
   /* get reply */
   reply = (struct rpc_reply_s *)server->data;
 
+  /* check for error */
+  if (reply == NULL)
+    {
+      /* retry 3 times */
+      if (server->tries++ < 3)
+	goto retry;
+      else
+	{
+	  printf("RPC timeout\n");
+
+	  mem_free(pkt);
+
+	  return -1;
+	}
+    }
+
   if (reply->rstatus || reply->astatus || reply->verifier)
     {
+      mem_free(pkt);
       mem_free(reply);
 
       return -1;
     }
+
+  mem_free(pkt);
 
   *data = server->data;
   *size = server->size;
@@ -200,6 +251,18 @@ error_t		nfs_init(struct nfs_s	*server)
   mem_free(req);
 
   return 0;
+}
+
+/*
+ * Close a NFS connection, unmounting all exports.
+ */
+
+void			nfs_destroy(struct nfs_s	*server)
+{
+  nfs_umount(server);
+
+  udp_close(&server->local);
+  sem_destroy(&server->sem);
 }
 
 /*
@@ -364,7 +427,7 @@ ssize_t		nfs_read(struct nfs_s	*server,
   mem_free(req);
   mem_free(to_free);
 
-  return 0;
+  return rd;
 }
 
 /*

@@ -26,6 +26,13 @@
 #include <netinet/libudp.h>
 
 #include <semaphore.h>
+#include <timer.h>
+
+/*
+ * RPC timeout.
+ */
+
+#define RPC_TIMEOUT	3000 /* 3 seconds */
 
 /*
  * Programs ID.
@@ -116,6 +123,8 @@ struct			nfs_s
   struct net_udp_addr_s	mountd;		/* mountd server address */
   struct net_udp_addr_s	nfsd;		/* nfsd server address */
   uint_fast32_t		rpc_id;		/* rpc sequence id */
+  uint_fast8_t		tries;
+  struct timer_event_s	timeout;
 
   void			*data;
   size_t		size;
@@ -194,6 +203,7 @@ struct			rpc_reply_s
  */
 
 error_t		nfs_init(struct nfs_s	*server);
+void		nfs_destroy(struct nfs_s	*server);
 error_t		nfs_mount(struct nfs_s	*server,
 			  char		*path,
 			  nfs_handle_t	root);

@@ -110,11 +110,13 @@ void			*nfs_test(void *p)
 	  ssize_t read;
 
 	  read = nfs_read(&nfs, test, buf, 0, 1024);
-	  printf("read: %P\n", buf, read);
+	  printf("read(%d): %P\n", read, buf, read);
 	}
 
       nfs_umount(&nfs);
     }
+
+  nfs_destroy(&nfs);
 
   return NULL;
 }
