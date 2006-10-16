@@ -4,8 +4,6 @@
 * IP
   - options du header IP (seulement les trucs utiles)
     + MTU Probe/Reply
-    + Trace route
-    + Record route / Strict route ?
   - gerer addresse loopback et broadcast
   - idee de nipo: dans le routage avec fragmentation, calculer taille optimale
 

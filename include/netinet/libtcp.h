@@ -80,12 +80,6 @@ void	tcp_send(struct net_tcp_session_s	*session,
 		 void				*data,
 		 size_t				size);
 
-void	libtcp_open(struct net_packet_s	*packet,
-		    struct tcphdr	*hdr);
-
-void	libtcp_close(struct net_packet_s	*packet,
-		     struct tcphdr		*hdr);
-
 void	libtcp_push(struct net_packet_s	*packet,
 		    struct tcphdr	*hdr);
 

@@ -94,25 +94,7 @@ NET_PUSHPKT(tcp_pushpkt)
 
   flags = hdr->th_flags;
 
-  /* connection opening */
-  if (flags & TH_SYN)
-    {
-      libtcp_open(packet, hdr);
-    }
-  else if (flags & TH_RST) /* reset connection due to unrecoverable error(s) */
-    {
-      /* XXX reset */
-    }
-  else /* data packet */
-    {
-      libtcp_push(packet, hdr);
-    }
-
-  if (flags & TH_FIN) /* connection closing */
-    {
-      /* XXX bad: dual lookup de la session */
-      libtcp_close(packet, hdr);
-    }
+  libtcp_push(packet, hdr);
 }
 
 /*

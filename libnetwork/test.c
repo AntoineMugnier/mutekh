@@ -57,7 +57,7 @@ void			data_arrival(struct net_tcp_session_s	*session,
 void			after_connect(struct net_tcp_session_s	*session,
 				      void			*ptr)
 {
-  char			req[] = "GET / HTTP/1.1\r\nHost: 10.2.2.37\r\nConnection: keep-alive\r\n\r\n";
+  char			req[] = "GET /icons/apache_pb2.gif HTTP/1.1\r\nHost: 10.2.2.37\r\nConnection: Keep-Alive\r\n\r\n";
 
   if (session->state == TCP_STATE_ERROR)
     {
@@ -71,6 +71,8 @@ void			after_connect(struct net_tcp_session_s	*session,
   tcp_on_close(session, connection_close, NULL);
 
   tcp_send(session, req, strlen(req));
+
+  // tcp_close(session);
 
 }
 

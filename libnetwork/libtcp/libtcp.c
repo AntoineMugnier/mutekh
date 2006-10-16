@@ -21,6 +21,14 @@
 
 /*
  * User interface to TCP transport layer.
+ *
+ * TODO
+ *  - Nagle's (bufferisation)
+ *  - Window + Clark's (evitement du SWS)
+ *  - Karn's & RTT (retransmission)
+ *  - Fast retransmit/Fast recovery
+ *  - Van Jacobson's (congestion window)
+ *  - Connexion rompues & RST
  */
 
 #include <hexo/types.h>
@@ -145,10 +153,10 @@ void			tcp_close(struct net_tcp_session_s	*session)
     {
       /* enter FIN WAIT-1 state, waiting for FIN ACK */
       session->state = TCP_STATE_FIN_WAIT1;
-      session->recv_win = 0;
 
       /* just send a close request */
       tcp_send_controlpkt(session, TCP_FIN);
+      session->curr_seq++;
       net_debug("<- FIN\n");
     }
   else if (session->state == TCP_STATE_CLOSE_WAIT)
@@ -158,6 +166,7 @@ void			tcp_close(struct net_tcp_session_s	*session)
 
       /* just send a FIN */
       tcp_send_controlpkt(session, TCP_FIN);
+      session->curr_seq++;
       net_debug("<- FIN\n");
     }
   else
@@ -242,19 +251,10 @@ void			tcp_send(struct net_tcp_session_s	*session,
  * Called on incoming connection.
  */
 
-void				libtcp_open(struct net_packet_s	*packet,
-					    struct tcphdr	*hdr)
+static void			libtcp_open(struct net_tcp_session_s	*session,
+					    struct net_packet_s		*packet,
+					    struct tcphdr		*hdr)
 {
-  struct net_tcp_session_s	*session;
-  struct net_tcp_addr_s		key;
-
-  /* look for the corresponding session */
-  memcpy(&key.address, &packet->sADDR, sizeof (struct net_addr_s));
-  key.port = net_16_load(hdr->th_sport);
-
-  if ((session = tcp_session_lookup(&sessions, (void *)&key)) == NULL)
-    return ; /* no session, no one is waiting for this connection */
-
   if (session->state == TCP_STATE_SYN_SENT)
     {
       tcp_connect_t	*callback = session->connect;
@@ -343,19 +343,10 @@ void				libtcp_open(struct net_packet_s	*packet,
  * Called on remote connection closing.
  */
 
-void				libtcp_close(struct net_packet_s	*packet,
+static void			libtcp_close(struct net_tcp_session_s	*session,
+					     struct net_packet_s	*packet,
 					     struct tcphdr		*hdr)
 {
-  struct net_tcp_session_s	*session;
-  struct net_tcp_addr_s		key;
-
-  /* look for the corresponding session */
-  memcpy(&key.address, &packet->sADDR, sizeof (struct net_addr_s));
-  key.port = net_16_load(hdr->th_sport);
-
-  if ((session = tcp_session_lookup(&sessions, (void *)&key)) == NULL)
-    return ;
-
   switch (session->state)
     {
       case TCP_STATE_SYN_SENT: /* error when opening */
@@ -378,17 +369,24 @@ void				libtcp_close(struct net_packet_s	*packet,
 	/* goto CLOSING */
 	session->state = TCP_STATE_CLOSING;
 
-	net_debug("-> FIN ACK\n");
+	if (!(hdr->th_flags & TH_ACK))
+	  {
+	    net_debug("-> FIN\n");
 
-	/* send a ACK */
-	tcp_send_controlpkt(session, TCP_ACK);
-	net_debug("<- ACK\n");
-	break;
+	    /* send a ACK */
+	    session->to_ack++;
+	    tcp_send_controlpkt(session, TCP_FIN);
+	    net_debug("<- ACK\n");
+	    break;
+	  }
+	/* if FIN ACK, directly goto CLOSING state */
+	net_debug("-> FIN ACK\n");
       case TCP_STATE_LAST_ACK:
       case TCP_STATE_CLOSING:
       case TCP_STATE_FIN_WAIT2:
 	/* send a ACK */
-	tcp_send_controlpkt(session, TCP_ACK);
+	session->to_ack++;
+	tcp_send_controlpkt(session, TCP_FIN);
 	net_debug("<- ACK\n");
 
 	session->state = TCP_STATE_CLOSED;
@@ -405,8 +403,9 @@ void				libtcp_close(struct net_packet_s	*packet,
 	net_debug("-> FIN\n");
 
 	/* send a ACK */
-	net_debug("<- ACK\n");
+	session->to_ack++;
 	tcp_send_controlpkt(session, TCP_ACK);
+	net_debug("<- ACK\n");
 
 	/* no data remaining, close the connection */
 	if (1) /* XXX data remaining ? */
@@ -475,6 +474,10 @@ void				libtcp_push(struct net_packet_s	*packet,
       session->state = TCP_STATE_ESTABLISHED;
     }
 
+  /* check for SYN flag */
+  if (hdr->th_flags & TH_SYN)
+    libtcp_open(session, packet, hdr);
+
   /* control packet */
   if (nethdr->size == hdr->th_off * 4)
     {
@@ -496,11 +499,15 @@ void				libtcp_push(struct net_packet_s	*packet,
 	}
 
       /* if needed, send a control packet to acknowledge */
-      if (1) /* XXX ACK acumulés */
+      if (1 && !(hdr->th_flags & TH_FIN)) /* XXX ACK acumulés */
 	{
 	  tcp_send_controlpkt(session, TCP_ACK);
 	  net_debug("<- ACK\n");
 	}
     }
+
+  /* check for FIn flag */
+  if (hdr->th_flags & TH_FIN)
+    libtcp_close(session, packet, hdr);
 }
 
