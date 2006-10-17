@@ -52,13 +52,13 @@
  * Functions for the interface container.
  */
 
-CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, list_entry, STRING, name);
+CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, name);
 
 /*
  * Session container.
  */
 
-CONTAINER_FUNC(static inline, tcp_session, HASHLIST, tcp_session, NOLOCK, list_entry, BLOB, remote);
+CONTAINER_FUNC(static inline, tcp_session, HASHLIST, tcp_session, NOLOCK, remote);
 
 /*
  * TCP session list.

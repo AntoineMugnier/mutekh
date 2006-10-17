@@ -30,7 +30,7 @@
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_dlist.h> /* XXX change to b-list */
 
-CONTAINER_FUNC(inline, timer, DLIST, timer, HEXO_SPIN, list_entry);
+CONTAINER_FUNC(inline, timer, DLIST, timer, HEXO_SPIN);
 
 /*
  * add a delay timer.

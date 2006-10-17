@@ -25,11 +25,11 @@
 #include <hexo/types.h>
 #include <hexo/atomic.h>
 
-#define GPCT_PLATFORM_EXTERNAL
+#define GPCT_CONFIG_NOPLATFORM
 
-typedef bool_t		__gpct_bool_t;
-typedef	error_t		__gpct_error_t;
-typedef atomic_t	__gpct_atomic_t;
+typedef bool_t		gpct_bool_t;
+typedef	error_t		gpct_error_t;
+typedef atomic_t	gpct_atomic_t;
 
 /* static value init */
 #define __ATOMIC_INITIALIZER(v)	ATOMIC_INITIALIZER(v)

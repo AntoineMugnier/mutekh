@@ -56,8 +56,6 @@ void mem_free(void *ptr);
 
 /***************** Memory allocatable region management ******************/
 
-CONTAINER_TYPE(alloc_list, DLIST, struct mem_alloc_header_s, NOLOCK);
-
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
 # define MEMALLOC_SIGNATURE	0x3a1b2ce1
 #endif
@@ -66,12 +64,14 @@ CONTAINER_TYPE(alloc_list, DLIST, struct mem_alloc_header_s, NOLOCK);
 struct mem_alloc_header_s
 {
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
-  uint32_t		signature;
+  uint32_t			signature;
 #endif
-  uint8_t		is_free;
-  uintptr_t		size;
-  alloc_list_entry_t	list_entry;
+  uint8_t			is_free;
+  uintptr_t			size;
+  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
 };
+
+CONTAINER_TYPE(alloc_list, DLIST, struct mem_alloc_header_s, NOLOCK, NOOBJ, list_entry);
 
 #define MEMALLOC_SPLIT_SIZE	(2 * sizeof (struct mem_alloc_header_s) + 16)
 

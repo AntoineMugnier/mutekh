@@ -43,13 +43,13 @@
  * Functions for the interface container.
  */
 
-CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, list_entry, STRING, name);
+CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, name);
 
 /*
  * We only need route_table_init
  */
 
-CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK, list_entry);
+CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK);
 
 /*
  * Some local variables.

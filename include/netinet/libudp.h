@@ -58,15 +58,16 @@ typedef UDP_CALLBACK(udp_callback_t);
  * Callbacks container.
  */
 
-CONTAINER_TYPE(udp_callback, HASHLIST, struct udp_callback_desc_s, NOLOCK, 64, BLOB, sizeof (struct net_udp_addr_s));
-
-struct	udp_callback_desc_s
+struct					udp_callback_desc_s
 {
-  struct net_udp_addr_s	address[1];
-  udp_callback_t	*callback;
-  void			*pv;
-  udp_callback_entry_t	list_entry;
+  struct net_udp_addr_s			address;
+  udp_callback_t			*callback;
+  void					*pv;
+  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
+
+CONTAINER_TYPE(udp_callback, HASHLIST, struct udp_callback_desc_s, NOLOCK, NOOBJ, list_entry, 64);
+CONTAINER_KEY_TYPE(udp_callback, BLOB, address, sizeof (struct net_udp_addr_s));
 
 /*
  * Prototypes

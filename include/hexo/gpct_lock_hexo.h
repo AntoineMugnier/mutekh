@@ -24,8 +24,8 @@
 
 #include <hexo/lock.h>
 
-#include <gpct/platform.h>
-#include <gpct/container.h>
+#include <gpct/_platform.h>
+//#include <gpct/container.h> XXX
 
 /*************************************************************
  *	HEXO_SPIN mutex lock functions to use with container
@@ -35,7 +35,7 @@
 
 typedef lock_t __gpct_lock_HEXO_SPIN_type_t;
 
-static inline __gpct_error_t
+static inline gpct_error_t
 __gpct_lock_HEXO_SPIN_init(lock_t *lock)
 {
   return lock_init(lock);
@@ -73,7 +73,7 @@ __gpct_lock_HEXO_SPIN_unlock(lock_t *lock)
 
 typedef lock_t __gpct_lock_HEXO_SPIN_IRQ_type_t;
 
-static inline __gpct_error_t
+static inline gpct_error_t
 __gpct_lock_HEXO_SPIN_IRQ_init(lock_t *lock)
 {
   return lock_init(lock);

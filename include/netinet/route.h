@@ -24,6 +24,7 @@
 
 #include <hexo/types.h>
 
+#include <netinet/if.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_dlist.h>
 
@@ -31,19 +32,10 @@
  * Specify if a route entry is for a network or a specific host.
  */
 
-#define ROUTETYPE_NET	0
-#define ROUTETYPE_HOST	1
-
+#define ROUTETYPE_NET		0
+#define ROUTETYPE_HOST		1
 #define ROUTETYPE_DIRECT	2
-#define ROUTETYPE_INDIRECT	4
-
-/*
- * Route table container.
- */
-
-CONTAINER_TYPE(route_table, DLIST, struct net_route_s, NOLOCK);
-
-#include <netinet/if.h>
+#define ROUTETYPE_INDIRECT	3
 
 /*
  * Structure defining a route.
@@ -61,6 +53,12 @@ struct			net_route_s
 
   route_table_entry_t	list_entry;
 };
+
+/*
+ * Route table container.
+ */
+
+CONTAINER_TYPE(route_table, DLIST, struct net_route_s, NOLOCK, NOOBJ, list_entry);
 
 /*
  * Prototypes

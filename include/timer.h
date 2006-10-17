@@ -32,12 +32,6 @@
 struct timer_event_s;
 
 /*
- * container type for timer list.
- */
-
-CONTAINER_TYPE(timer, DLIST, struct timer_event_s, HEXO_SPIN);
-
-/*
  * typedef for timer delays.
  */
 
@@ -64,8 +58,14 @@ struct				timer_event_s
   timer_delay_t			start;
   timer_delay_t			delay;
 
-  timer_entry_t			list_entry;
+  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
 };
+
+/*
+ * container type for timer list.
+ */
+
+CONTAINER_TYPE(timer, DLIST, struct timer_event_s, HEXO_SPIN, NOOBJ, list_entry);
 
 /*
  * this structure declares a timer list.

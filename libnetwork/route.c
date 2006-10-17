@@ -25,7 +25,7 @@
 #include <netinet/if.h>
 #include <netinet/ip.h>
 
-CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK, list_entry);
+CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK);
 
 /*
  * Add a route entry.

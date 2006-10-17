@@ -25,7 +25,7 @@
 
 #ifdef CONFIG_DEVICE_HIERARCHY
 
-CONTAINER_OBJECT_FUNC(inline, device_list, DLIST, device_list, HEXO_SPIN, device_obj, list_entry);
+CONTAINER_FUNC(inline, device_list, DLIST, device_list, HEXO_SPIN);
 
 OBJECT_CONSTRUCTOR(device_obj)
 {

@@ -91,7 +91,6 @@ typedef DEV_CLEANUP(dev_cleanup_t);
 #include <gpct/object_refcount.h>
 
 OBJECT_TYPE(device_obj, REFCOUNT, struct device_s);
-CONTAINER_TYPE(device_list, DLIST, struct device_s, HEXO_SPIN);
 
 #endif
 
@@ -120,12 +119,14 @@ struct device_s
   void				*enum_pv;
 
   struct device_s		*parent;
-  device_list_entry_t		list_entry;
+  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
   device_obj_entry_t		obj_entry;
   device_list_root_t		children;
 #endif /* !CONFIG_DEVICE_HIERARCHY */
 
 };
+
+CONTAINER_TYPE(device_list, DLIST, struct device_s, HEXO_SPIN, device_obj, list_entry);
 
 /* used when no irq line is present/available */
 #define DEVICE_IRQ_INVALID	-1

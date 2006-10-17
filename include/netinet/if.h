@@ -55,40 +55,41 @@ typedef uint_fast8_t	net_if_type_t;
 #define IF_ETHERNET	0
 
 /*
- * Interface container types.
- */
-
-CONTAINER_TYPE(net_if, HASHLIST, struct net_if_s, NOLOCK, 4, STRING);
-
-/*
  * An interface.
  */
 
-struct			net_if_s
+struct					net_if_s
 {
-  char			name[IFNAME_MAX_LEN];
-  struct device_s	*dev;
-  const uint8_t		*mac;
-  uint_fast16_t		mtu;
-  net_protos_root_t	protocols;
-  route_table_root_t	route_table;
+  char					name[IFNAME_MAX_LEN];
+  struct device_s			*dev;
+  const uint8_t				*mac;
+  uint_fast16_t				mtu;
+  net_protos_root_t			protocols;
+  route_table_root_t			route_table;
 
   /* fields for booting */
   union
   {
-    struct net_proto_s	*rarp;
-    struct net_proto_s	*dhcp;
+    struct net_proto_s			*rarp;
+    struct net_proto_s			*dhcp;
   } bootproto;
-  uint_fast8_t		boottype;
+  uint_fast8_t				boottype;
 
   /* statistics */
-  uint_fast64_t		rx_bytes;
-  uint_fast64_t		tx_bytes;
-  uint_fast32_t		rx_packets;
-  uint_fast32_t		tx_packets;
+  uint_fast64_t				rx_bytes;
+  uint_fast64_t				tx_bytes;
+  uint_fast32_t				rx_packets;
+  uint_fast32_t				tx_packets;
 
-  net_if_entry_t	list_entry;
+  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
+
+/*
+ * Interface container types.
+ */
+
+CONTAINER_TYPE(net_if, HASHLIST, struct net_if_s, NOLOCK, NOOBJ, 4);
+CONTAINER_KEY_TYPE(net_if, STRING, name);
 
 /*
  * Functions prototypes.

@@ -17,7 +17,7 @@ hexo \
 libc \
 libpthread \
 libnetwork
-objs = 
+objs =
 
 include $(SRC_DIR)/scripts/common.mk
 

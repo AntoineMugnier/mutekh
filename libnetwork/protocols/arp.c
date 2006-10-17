@@ -38,7 +38,7 @@
  * ARP table functions.
  */
 
-CONTAINER_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, list_entry, UNSIGNED, ip);
+CONTAINER_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, ip);
 
 /*
  * Structures for declaring the protocol's properties & interface.

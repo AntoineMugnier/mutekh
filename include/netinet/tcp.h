@@ -107,12 +107,6 @@ struct		tcphdr
 #include <gpct/cont_hashlist.h>
 
 /*
- * Container types for tcp session list.
- */
-
-CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, 64, BLOB, sizeof (struct net_tcp_addr_s));
-
-/*
  * Window default size
  */
 
@@ -154,34 +148,41 @@ CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, 64, BLOB
  * This structure defines a TCP session.
  */
 
-struct			net_tcp_session_s
+struct					net_tcp_session_s
 {
-  struct net_if_s	*interface;
-  struct net_proto_s	*addressing;
-  struct net_tcp_addr_s	local;
-  struct net_tcp_addr_s	remote[1];
+  struct net_if_s			*interface;
+  struct net_proto_s			*addressing;
+  struct net_tcp_addr_s			local;
+  struct net_tcp_addr_s			remote;
 
-  uint_fast32_t		curr_seq;
-  uint_fast32_t		to_ack;
-  uint_fast16_t		send_win;
-  uint_fast16_t		send_mss;
-  uint_fast32_t		recv_seq;
-  uint_fast16_t		recv_win;
-  uint_fast16_t		recv_mss;
+  uint_fast32_t				curr_seq;
+  uint_fast32_t				to_ack;
+  uint_fast16_t				send_win;
+  uint_fast16_t				send_mss;
+  uint_fast32_t				recv_seq;
+  uint_fast16_t				recv_win;
+  uint_fast16_t				recv_mss;
 
-  tcp_connect_t		*connect;
-  void			*connect_data;
-  tcp_receive_t		*receive;
-  void			*receive_data;
-  tcp_close_t		*close;
-  void			*close_data;
-  tcp_accept_t		*accept;
-  void			*accept_data;
+  tcp_connect_t				*connect;
+  void					*connect_data;
+  tcp_receive_t				*receive;
+  void					*receive_data;
+  tcp_close_t				*close;
+  void					*close_data;
+  tcp_accept_t				*accept;
+  void					*accept_data;
 
-  uint_fast8_t		state;
+  uint_fast8_t				state;
 
-  tcp_session_entry_t	list_entry;
+  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
+
+/*
+ * Container types for tcp session list.
+ */
+
+CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, NOOBJ, list_entry);
+CONTAINER_KEY_TYPE(tcp_session, BLOB, remote, sizeof (struct net_tcp_addr_s));
 
 /*
  * Prototypes

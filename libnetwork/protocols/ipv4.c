@@ -42,7 +42,7 @@
  * Fragment lists.
  */
 
-CONTAINER_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, list_entry, BLOB, id);
+CONTAINER_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, id);
 
 /*
  * Structures for declaring the protocol's properties & interface.

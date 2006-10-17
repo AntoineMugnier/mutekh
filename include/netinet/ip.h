@@ -140,8 +140,6 @@ struct iphdr {
 #define IP_DELIVERY_DIRECT	0
 #define IP_DELIVERY_INDIRECT	1
 
-CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, 64, BLOB, 6);
-
 /*
  * Reassembly timeout.
  */
@@ -165,16 +163,23 @@ struct		ip_pseudoheader_s
  * Fragmentation structures.
  */
 
-struct			ip_packet_s
+struct					ip_packet_s
 {
-  uint8_t		id[6];
-  uint_fast16_t		size;
-  uint_fast16_t		received;
-  struct net_proto_s	*addressing;
-  struct timer_event_s	timeout;
-  packet_queue_root_t	packets;
-  ip_packet_entry_t	list_entry;
+  uint8_t				id[6];
+  uint_fast16_t				size;
+  uint_fast16_t				received;
+  struct net_proto_s			*addressing;
+  struct timer_event_s			timeout;
+  packet_queue_root_t			packets;
+  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
+
+/*
+ * Fragments list.
+ */
+
+CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, NOOBJ, list_entry, 64);
+CONTAINER_KEY_TYPE(ip_packet, BLOB, id, 6);
 
 /*
  * IP private data.

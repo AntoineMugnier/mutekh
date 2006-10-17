@@ -44,7 +44,7 @@
  * Functions for the interface container.
  */
 
-CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, list_entry, STRING, name);
+CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, name);
 
 /*
  * Callback container.

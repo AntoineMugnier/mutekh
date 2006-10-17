@@ -136,8 +136,8 @@ uint_16_t		packet_memcpy(void		*dst,
  * packet queue functions.
  */
 
-CONTAINER_FUNC(inline, packet_queue, DLIST, packet_queue, NOLOCK, queue_entry);
-CONTAINER_FUNC(inline, packet_queue_lock, DLIST, packet_queue_lock, HEXO_SPIN_IRQ, queue_entry_spin);
+CONTAINER_FUNC(inline, packet_queue, DLIST, packet_queue, NOLOCK);
+CONTAINER_FUNC(inline, packet_queue, DLIST, packet_queue_lock, HEXO_SPIN_IRQ);
 
 /*
  * packet dispatching thread.

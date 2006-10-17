@@ -51,12 +51,6 @@ struct net_proto_s;
 #define ERROR_BAD_HEADER		10
 
 /*
- * Container type for protocols list.
- */
-
-CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, NOLOCK, 8, UNSIGNED);
-
-/*
  * Prototype of a push function.
  */
 
@@ -183,10 +177,17 @@ struct					net_proto_s
 };
 
 /*
+ * Container type for protocols list.
+ */
+
+CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, NOLOCK, NOOBJ, list_entry, 8);
+CONTAINER_KEY_TYPE(net_protos, SCALAR, id);
+
+/*
  * Container functions.
  */
 
-CONTAINER_FUNC(static inline, net_protos, HASHLIST, net_protos, NOLOCK, list_entry, UNSIGNED, id);
+CONTAINER_FUNC(static inline, net_protos, HASHLIST, net_protos, NOLOCK, id);
 
 /*
  * Allocate a new protocol node.

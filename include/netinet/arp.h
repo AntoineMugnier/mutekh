@@ -124,29 +124,31 @@ struct		ether_arp
 #define ARP_TABLE_NO_UPDATE	4
 
 /*
- * ARP table types.
- */
-
-CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, 64, UNSIGNED);
-
-/*
  * ARP table entry.
  */
 
-struct			arp_entry_s
+struct					arp_entry_s
 {
-  uint_fast32_t		ip;
-  uint8_t		mac[ETH_ALEN];
-  bool_t		valid;
-  arp_table_entry_t	list_entry;
+  uint_fast32_t				ip;
+  uint8_t				mac[ETH_ALEN];
+  bool_t				valid;
+  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+
   /* XXX les 5 champs en dessous sevent qu'a la resolution, apres ils servent a rien */
-  packet_queue_root_t	wait;
-  uint_fast8_t		retry;
-  struct net_if_s	*interface;
-  struct net_proto_s	*addressing;
-  struct net_proto_s	*arp;
-  struct timer_event_s	*timeout;
+  packet_queue_root_t			wait;
+  uint_fast8_t				retry;
+  struct net_if_s			*interface;
+  struct net_proto_s			*addressing;
+  struct net_proto_s			*arp;
+  struct timer_event_s			*timeout;
 };
+
+/*
+ * ARP table types.
+ */
+
+CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, NOOBJ, list_entry, 64);
+CONTAINER_KEY_TYPE(arp_table, SCALAR, ip);
 
 /*
  * ARP private data.
