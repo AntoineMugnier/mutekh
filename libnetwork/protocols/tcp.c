@@ -149,10 +149,10 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   hdr->th_x2 = 0;
 
   /* setup the targeted address */
-  memcpy(&packet->tADDR, &session->remote[0].address,
+  memcpy(&packet->tADDR, &session->remote.address,
 	 sizeof (struct net_addr_s));
   net_16_store(hdr->th_sport, session->local.port);
-  net_16_store(hdr->th_dport, session->remote[0].port);
+  net_16_store(hdr->th_dport, session->remote.port);
 
   /* fill the packet header */
   switch (operation)
@@ -250,10 +250,10 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   hdr->th_x2 = 0;
 
   /* setup the targeted address */
-  memcpy(&packet->tADDR, &session->remote[0].address,
+  memcpy(&packet->tADDR, &session->remote.address,
 	 sizeof (struct net_addr_s));
   net_16_store(hdr->th_sport, session->local.port);
-  net_16_store(hdr->th_dport, session->remote[0].port);
+  net_16_store(hdr->th_dport, session->remote.port);
 
   /* fill the packet header */
   hdr->th_flags = TH_ACK | flags;

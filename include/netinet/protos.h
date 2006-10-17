@@ -188,6 +188,7 @@ CONTAINER_KEY_TYPE(net_protos, SCALAR, id);
  */
 
 CONTAINER_FUNC(static inline, net_protos, HASHLIST, net_protos, NOLOCK, id);
+CONTAINER_KEY_FUNC(static inline, net_protos, HASHLIST, net_protos, NOLOCK, id);
 
 /*
  * Allocate a new protocol node.

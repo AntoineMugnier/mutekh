@@ -39,6 +39,7 @@
  */
 
 CONTAINER_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, ip);
+CONTAINER_KEY_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, ip);
 
 /*
  * Structures for declaring the protocol's properties & interface.

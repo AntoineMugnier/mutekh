@@ -67,7 +67,7 @@ struct					udp_callback_desc_s
 };
 
 CONTAINER_TYPE(udp_callback, HASHLIST, struct udp_callback_desc_s, NOLOCK, NOOBJ, list_entry, 64);
-CONTAINER_KEY_TYPE(udp_callback, BLOB, address, sizeof (struct net_udp_addr_s));
+CONTAINER_KEY_TYPE(udp_callback, AGGREGATE, address, sizeof (struct net_udp_addr_s));
 
 /*
  * Prototypes

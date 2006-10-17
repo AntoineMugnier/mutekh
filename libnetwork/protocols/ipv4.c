@@ -43,6 +43,7 @@
  */
 
 CONTAINER_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, id);
+CONTAINER_KEY_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, id);
 
 /*
  * Structures for declaring the protocol's properties & interface.

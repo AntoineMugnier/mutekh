@@ -33,6 +33,7 @@
 #include <netinet/ip.h>
 #include <netinet/ether.h>
 #include <netinet/in.h>
+#include <netinet/if.h>
 
 #include <netinet/libudp.h>
 
@@ -41,18 +42,13 @@
 #include <gpct/cont_dlist.h>
 
 /*
- * Functions for the interface container.
- */
-
-CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, name);
-
-/*
  * Callback container.
  */
 
 static udp_callback_root_t	udp_callbacks = CONTAINER_ROOT_INITIALIZER(udp_callback, HASHLIST, NOLOCK);
 
-CONTAINER_FUNC(static inline, udp_callback, HASHLIST, udp_callback, NOLOCK, list_entry, BLOB, address);
+CONTAINER_FUNC(static inline, udp_callback, HASHLIST, udp_callback, NOLOCK, address);
+CONTAINER_KEY_FUNC(static inline, udp_callback, HASHLIST, udp_callback, NOLOCK, address);
 
 /*
  * Send a datagram via UDP
@@ -127,7 +123,7 @@ int_fast8_t			udp_callback(struct net_udp_addr_s	*local,
   /* allocate an build the descriptor */
   desc = mem_alloc(sizeof (struct udp_callback_desc_s), MEM_SCOPE_SYS);
 
-  memcpy(desc->address, local, sizeof (struct net_udp_addr_s));
+  memcpy(&desc->address, local, sizeof (struct net_udp_addr_s));
   desc->callback = callback;
   desc->pv = pv;
 
@@ -145,34 +141,30 @@ void				libudp_signal(struct net_packet_s	*packet,
 					      struct udphdr		*hdr)
 {
   struct udp_callback_desc_s	*desc;
-  struct net_udp_addr_s		*local;
-  struct net_udp_addr_s		*remote;
+  struct net_udp_addr_s		local;
+  struct net_udp_addr_s		remote;
+  struct net_udp_addr_s		*p_local;
   uint8_t			*buff;
   uint_fast16_t			size;
 
   /* build local address descriptor */
-  local = mem_alloc(sizeof (struct net_udp_addr_s), MEM_SCOPE_SYS);
+  p_local = &local;
 
-  memcpy(&local->address, &packet->tADDR, sizeof (struct net_addr_s));
-  local->port = hdr->dest;
+  memcpy(&local.address, &packet->tADDR, sizeof (struct net_addr_s));
+  local.port = hdr->dest;
 
   /* do we have a callback to handle the packet */
-  if (!(desc = udp_callback_lookup(&udp_callbacks, (void *)local)))
+  if (!(desc = udp_callback_lookup(&udp_callbacks, (void *)p_local)))
     {
       packet->stage -= 2;
 
       /* this packet is destinated to no one */
       packet->source_addressing->desc->f.addressing->errormsg(packet, ERROR_PORT_UNREACHABLE);
-
-      mem_free(local);
       return;
     }
 
-  /* build remote address descriptor */
-  remote = mem_alloc(sizeof (struct net_udp_addr_s), MEM_SCOPE_SYS);
-
-  memcpy(&remote->address, &packet->sADDR, sizeof (struct net_addr_s));
-  remote->port = hdr->source;
+  memcpy(&remote.address, &packet->sADDR, sizeof (struct net_addr_s));
+  remote.port = hdr->source;
 
   /* copy the packet */
   size = net_be16_load(hdr->len) - sizeof (struct udphdr);
@@ -180,7 +172,7 @@ void				libudp_signal(struct net_packet_s	*packet,
   memcpy(buff, packet->header[packet->stage].data, size);
 
   /* callback */
-  desc->callback(local, remote, buff, size, desc->pv);
+  desc->callback(p_local, &remote, buff, size, desc->pv);
 }
 
 /*

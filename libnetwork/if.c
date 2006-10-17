@@ -44,6 +44,7 @@
  */
 
 CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, name);
+CONTAINER_KEY_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, name);
 
 /*
  * We only need route_table_init

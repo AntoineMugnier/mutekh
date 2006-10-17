@@ -49,16 +49,11 @@
 #define net_debug printf
 
 /*
- * Functions for the interface container.
- */
-
-CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, name);
-
-/*
  * Session container.
  */
 
 CONTAINER_FUNC(static inline, tcp_session, HASHLIST, tcp_session, NOLOCK, remote);
+CONTAINER_KEY_FUNC(static inline, tcp_session, HASHLIST, tcp_session, NOLOCK, remote);
 
 /*
  * TCP session list.

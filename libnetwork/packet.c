@@ -146,7 +146,7 @@ CONTAINER_FUNC(inline, packet_queue, DLIST, packet_queue_lock, HEXO_SPIN_IRQ);
 void				*packet_dispatch(void	*data)
 {
   struct net_dispatch_s		*info = (struct net_dispatch_s *)data;
-  packet_queue_lock_root_t	*root = info->packets;
+  packet_queue_root_t		*root = info->packets;
   struct net_if_s		*interface = info->interface;
   sem_t				*sem = info->sem;
   struct net_packet_s		*packet;

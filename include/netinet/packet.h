@@ -168,7 +168,7 @@ struct				net_packet_s
  * Packet list.
  */
 
-CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, NOLOCK, NOOBJ, queue_entry);
+CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, HEXO_SPIN_IRQ, NOOBJ, queue_entry);
 
 /*
  * Used to give info to the dispatch thread.
@@ -197,8 +197,8 @@ uint16_t		packet_memcpy(void		*dst,
 void			*packet_dispatch(void	*data);
 
 OBJECT_FUNC(static inline, packet_obj, REFCOUNT, packet_obj, obj_entry);
-CONTAINER_PROTOTYPE(, packet_queue, packet_queue);
-CONTAINER_PROTOTYPE(, packet_queue, packet_queue_lock);
+CONTAINER_PROTOTYPE(inline, packet_queue, packet_queue);
+CONTAINER_PROTOTYPE(inline, packet_queue, packet_queue_lock);
 
 /*
  * XXX for debug, remove me

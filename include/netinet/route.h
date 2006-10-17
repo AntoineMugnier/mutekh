@@ -24,9 +24,12 @@
 
 #include <hexo/types.h>
 
-#include <netinet/if.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_dlist.h>
+
+#include <netinet/packet.h>
+
+struct net_if_s;
 
 /*
  * Specify if a route entry is for a network or a specific host.

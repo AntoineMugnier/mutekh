@@ -138,7 +138,7 @@ OBJECT_DESTRUCTOR(device_obj);
 
 OBJECT_FUNC(static inline, device_obj, REFCOUNT, device_obj, obj_entry);
 
-CONTAINER_PROTOTYPE(, device_list, device_list);
+CONTAINER_PROTOTYPE(inline, device_list, device_list);
 
 error_t device_register(struct device_s *dev,
 			struct device_s *parent,
