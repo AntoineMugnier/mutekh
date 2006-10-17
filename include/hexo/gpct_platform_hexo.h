@@ -32,19 +32,19 @@ typedef	error_t		gpct_error_t;
 typedef atomic_t	gpct_atomic_t;
 
 /* static value init */
-#define __ATOMIC_INITIALIZER(v)	ATOMIC_INITIALIZER(v)
+#define gpct_ATOMIC_INITIALIZER(v)	ATOMIC_INITIALIZER(v)
 
 /* set atomic value */
-#define	__atomic_set(a, v)	atomic_set(a, v)
+#define	gpct_atomic_set(a, v)	atomic_set(a, v)
 
 /* get atomic value */
-#define __atomic_get(a)		atomic_get(a)
+#define gpct_atomic_get(a)		atomic_get(a)
 
 /* increment atomic value return true if not 0 */
-#define __atomic_inc(a)		atomic_inc(a)
+#define gpct_atomic_inc(a)		atomic_inc(a)
 
 /* decrement atomic value return true if not 0 */
-#define __atomic_dec(a)		atomic_dec(a)
+#define gpct_atomic_dec(a)		atomic_dec(a)
 
 #endif
 

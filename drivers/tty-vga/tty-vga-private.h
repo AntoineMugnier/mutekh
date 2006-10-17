@@ -64,7 +64,7 @@ typedef volatile struct vga_text_char_s * vga_text_buf_t;
 typedef void tty_vga_char_process_t (struct device_s *dev, uint8_t c);
 typedef void tty_vga_key_process_t  (struct device_s *dev, uint8_t scancode);
 
-CONTAINER_TYPE(tty_fifo, RING, uint8_t, HEXO_SPIN_IRQ, 32);
+CONTAINER_TYPE(tty_fifo, RING, uint8_t, HEXO_SPIN_IRQ, NOOBJ, 32);
 CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo, HEXO_SPIN_IRQ);
 CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_noirq, HEXO_SPIN);
 CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_nolock, NOLOCK);

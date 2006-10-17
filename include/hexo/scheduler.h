@@ -30,14 +30,12 @@
 
 #define __SCHED_CONTAINER_ALGO		DLIST
 
-CONTAINER_TYPE(sched_queue, __SCHED_CONTAINER_ALGO, struct sched_context_s, HEXO_SPIN_IRQ);
-
-struct sched_context_s
+CONTAINER_TYPE(sched_queue, __SCHED_CONTAINER_ALGO, struct sched_context_s
 {
   struct context_s	context;
   sched_queue_entry_t	list_entry;
   void			*private;
-};
+}, HEXO_SPIN_IRQ, NOOBJ, list_entry);
 
 CONTAINER_FUNC(static inline, sched_queue, __SCHED_CONTAINER_ALGO, sched_queue, HEXO_SPIN, list_entry);
 CONTAINER_FUNC(static inline, sched_queue, __SCHED_CONTAINER_ALGO, sched_queue_nolock, NOLOCK, list_entry);

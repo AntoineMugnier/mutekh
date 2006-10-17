@@ -31,7 +31,7 @@
 #include <hexo/interrupt.h>
 
 #include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
+#include <gpct/cont_dlist.h>
 
 /************************************************************************
 		PThread types

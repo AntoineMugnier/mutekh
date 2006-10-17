@@ -92,11 +92,13 @@ typedef DEV_CLEANUP(dev_cleanup_t);
 
 OBJECT_TYPE(device_obj, REFCOUNT, struct device_s);
 
+OBJECT_PROTOTYPE(static inline, device_obj, device_obj);
+
 #endif
 
 /** device object structure */
 
-struct device_s
+CONTAINER_TYPE(device_list, DLIST, struct device_s
 {
 #ifndef CONFIG_STATIC_DRIVERS
 
@@ -124,9 +126,7 @@ struct device_s
   device_list_root_t		children;
 #endif /* !CONFIG_DEVICE_HIERARCHY */
 
-};
-
-CONTAINER_TYPE(device_list, DLIST, struct device_s, HEXO_SPIN, device_obj, list_entry);
+}, HEXO_SPIN, device_obj, list_entry);
 
 /* used when no irq line is present/available */
 #define DEVICE_IRQ_INVALID	-1
@@ -137,6 +137,7 @@ OBJECT_CONSTRUCTOR(device_obj);
 OBJECT_DESTRUCTOR(device_obj);
 
 OBJECT_FUNC(static inline, device_obj, REFCOUNT, device_obj, obj_entry);
+
 CONTAINER_PROTOTYPE(, device_list, device_list);
 
 error_t device_register(struct device_s *dev,

@@ -25,42 +25,41 @@
 #include <hexo/lock.h>
 
 #include <gpct/_platform.h>
-//#include <gpct/container.h> XXX
 
 /*************************************************************
  *	HEXO_SPIN mutex lock functions to use with container
  */
 
-#define __GPCT_LOCK_HEXO_SPIN_INITIALIZER	LOCK_INITIALIZER
+#define GPCT_LOCK_HEXO_SPIN_INITIALIZER	LOCK_INITIALIZER
 
-typedef lock_t __gpct_lock_HEXO_SPIN_type_t;
+typedef lock_t gpct_lock_HEXO_SPIN_type_t;
 
 static inline gpct_error_t
-__gpct_lock_HEXO_SPIN_init(lock_t *lock)
+gpct_lock_HEXO_SPIN_init(lock_t *lock)
 {
   return lock_init(lock);
 }
 
 static inline void
-__gpct_lock_HEXO_SPIN_destroy(lock_t *lock)
+gpct_lock_HEXO_SPIN_destroy(lock_t *lock)
 {
   lock_destroy(lock);
 }
 
 static inline void
-__gpct_lock_HEXO_SPIN_wrlock(lock_t *lock)
+gpct_lock_HEXO_SPIN_wrlock(lock_t *lock)
 {
   lock_spin(lock);
 }
 
 static inline void
-__gpct_lock_HEXO_SPIN_rdlock(lock_t *lock)
+gpct_lock_HEXO_SPIN_rdlock(lock_t *lock)
 {
   lock_spin(lock);
 }
 
 static inline void
-__gpct_lock_HEXO_SPIN_unlock(lock_t *lock)
+gpct_lock_HEXO_SPIN_unlock(lock_t *lock)
 {
   lock_release(lock);
 }
@@ -69,36 +68,36 @@ __gpct_lock_HEXO_SPIN_unlock(lock_t *lock)
  *	HEXO_SPIN_IRQ mutex lock functions to use with container
  */
 
-#define __GPCT_LOCK_HEXO_SPIN_IRQ_INITIALIZER	LOCK_INITIALIZER
+#define GPCT_LOCK_HEXO_SPIN_IRQ_INITIALIZER	LOCK_INITIALIZER
 
-typedef lock_t __gpct_lock_HEXO_SPIN_IRQ_type_t;
+typedef lock_t gpct_lock_HEXO_SPIN_IRQ_type_t;
 
 static inline gpct_error_t
-__gpct_lock_HEXO_SPIN_IRQ_init(lock_t *lock)
+gpct_lock_HEXO_SPIN_IRQ_init(lock_t *lock)
 {
   return lock_init(lock);
 }
 
 static inline void
-__gpct_lock_HEXO_SPIN_IRQ_destroy(lock_t *lock)
+gpct_lock_HEXO_SPIN_IRQ_destroy(lock_t *lock)
 {
   lock_destroy(lock);
 }
 
 static inline void
-__gpct_lock_HEXO_SPIN_IRQ_wrlock(lock_t *lock)
+gpct_lock_HEXO_SPIN_IRQ_wrlock(lock_t *lock)
 {
   lock_spin_irq(lock);
 }
 
 static inline void
-__gpct_lock_HEXO_SPIN_IRQ_rdlock(lock_t *lock)
+gpct_lock_HEXO_SPIN_IRQ_rdlock(lock_t *lock)
 {
   lock_spin_irq(lock);
 }
 
 static inline void
-__gpct_lock_HEXO_SPIN_IRQ_unlock(lock_t *lock)
+gpct_lock_HEXO_SPIN_IRQ_unlock(lock_t *lock)
 {
   lock_release_irq(lock);
 }

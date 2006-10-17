@@ -45,7 +45,7 @@
 
 /************************************************************************/
 
-CONTAINER_TYPE(isapnp_id, BITMAP, uint8_t, NOLOCK, ISAPNP_SERIALID_LEN);
+CONTAINER_TYPE(isapnp_id, BITMAP, uint8_t, NOLOCK, NOOBJ, ISAPNP_SERIALID_LEN);
 CONTAINER_FUNC(static inline, isapnp_id, BITMAP, isapnp_id, NOLOCK);
 
 struct enum_isapnp_context_s
