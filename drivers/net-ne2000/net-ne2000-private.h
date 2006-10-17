@@ -52,7 +52,7 @@ struct				net_ne2000_context_s
   pthread_t			dispatch;
   packet_queue_root_t		sendqueue;
   uint_fast8_t			send_tries;
-  packet_queue_lock_root_t	rcvqueue;
+  packet_queue_root_t		rcvqueue;
   struct net_packet_s		*current;
 
   uint8_t			mac[ETH_ALEN];

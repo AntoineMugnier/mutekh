@@ -121,7 +121,7 @@ CONTAINER_TYPE(device_list, DLIST, struct device_s
   void				*enum_pv;
 
   struct device_s		*parent;
-  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
+  device_list_entry_t		list_entry;
   device_obj_entry_t		obj_entry;
   device_list_root_t		children;
 #endif /* !CONFIG_DEVICE_HIERARCHY */

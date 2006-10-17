@@ -168,7 +168,7 @@ struct				net_packet_s
  * Packet list.
  */
 
-CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, NOLOCK, NOOBJ, list_entry);
+CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, NOLOCK, NOOBJ, queue_entry);
 
 /*
  * Used to give info to the dispatch thread.
@@ -178,7 +178,7 @@ struct device_s;
 
 struct				net_dispatch_s
 {
-  packet_queue_lock_root_t	*packets;
+  packet_queue_root_t		*packets;
   struct net_if_s		*interface;
   sem_t				*sem;
 };

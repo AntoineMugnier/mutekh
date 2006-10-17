@@ -88,7 +88,7 @@ struct					net_if_s
  * Interface container types.
  */
 
-CONTAINER_TYPE(net_if, HASHLIST, struct net_if_s, NOLOCK, NOOBJ, 4);
+CONTAINER_TYPE(net_if, HASHLIST, struct net_if_s, NOLOCK, NOOBJ, list_entry, 4);
 CONTAINER_KEY_TYPE(net_if, STRING, name);
 
 /*

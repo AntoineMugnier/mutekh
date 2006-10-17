@@ -171,7 +171,7 @@ struct					net_proto_desc_s
 struct					net_proto_s
 {
   const struct net_proto_desc_s		*desc;	/* protocol descriptor */
-  net_protos_entry_t			list_entry;
+  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
   net_proto_id_t			id;	/* protocol identifier */
   struct net_proto_pv_s			*pv;	/* private data */
 };

@@ -41,17 +41,17 @@
  * Structure defining a route.
  */
 
-struct			net_route_s
+struct				net_route_s
 {
-  struct net_if_s	*interface;
-  struct net_proto_s	*addressing;
-  struct net_addr_s	target;
-  uint_fast8_t		type;
-  struct net_addr_s	mask;
-  struct net_addr_s	router;
-  uint_fast16_t		flags;
+  struct net_if_s		*interface;
+  struct net_proto_s		*addressing;
+  struct net_addr_s		target;
+  uint_fast8_t			type;
+  struct net_addr_s		mask;
+  struct net_addr_s		router;
+  uint_fast16_t			flags;
 
-  route_table_entry_t	list_entry;
+  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
 };
 
 /*
