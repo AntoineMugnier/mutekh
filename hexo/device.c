@@ -61,7 +61,7 @@ device_register(struct device_s *dev,
 void
 device_dump_list(struct device_s *root)
 {
-  CONTAINER_FOREACH(device_list, DLIST, device_list, &root->children,
+  CONTAINER_FOREACH(device_list, DLIST, HEXO_SPIN, &root->children,
   {
     printf("device %p\n", item);
   });

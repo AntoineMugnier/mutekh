@@ -31,7 +31,7 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
   lock_spin(&region->lock);
 
   /* find suitable free block */
-  CONTAINER_FOREACH(alloc_list, DLIST, alloc_list, &region->root,
+  CONTAINER_FOREACH(alloc_list, DLIST, NOLOCK, &region->root,
   {
     if (hdr->is_free && hdr->size >= size)
       {
@@ -156,7 +156,7 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
 
   /* push initial block */
 
-  assert(size > sizeof(*hdr));  
+  assert(size > sizeof(*hdr));
 
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
   hdr->signature = MEMALLOC_SIGNATURE;

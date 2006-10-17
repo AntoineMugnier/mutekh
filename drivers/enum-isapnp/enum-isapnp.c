@@ -43,7 +43,7 @@ DEVENUM_REGISTER(enum_isapnp_register)
   size_t			count = 0;
 
   /* walk through all devices */
-  CONTAINER_FOREACH(device_list, DLIST, device_list, &dev->children,
+  CONTAINER_FOREACH(device_list, DLIST, HEXO_SPIN, &dev->children,
   {
     struct enum_pv_isapnp_s		*enum_pv = item->enum_pv;
     uint_fast8_t			i;
@@ -99,7 +99,7 @@ static void
 isapnp_init_key(void)
 {
   uint_fast8_t	i;
-  uint8_t	key[32] = 
+  uint8_t	key[32] =
     {
       0x6a, 0xb5, 0xda, 0xed, 0xf6, 0xfb, 0x7d, 0xbe,
       0xdf, 0x6f, 0x37, 0x1b, 0x0d, 0x86, 0xc3, 0x61,
@@ -121,7 +121,7 @@ static void isapnp_write(uint8_t addr, uint8_t data)
 {
   cpu_io_write_8(ISAPNP_ADDRESS_REG, addr);
   udelay(20);
-  cpu_io_write_8(ISAPNP_WRITE_REG, data);  
+  cpu_io_write_8(ISAPNP_WRITE_REG, data);
 }
 
 static error_t

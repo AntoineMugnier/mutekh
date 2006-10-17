@@ -65,11 +65,11 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
   uint8_t		*dest;
 
   /* look for the good IP module */
-  CONTAINER_FOREACH(net_if, HASHLIST, net_if, &net_interfaces,
+  CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
   {
     interface = item;
     /* XXX foreach + lookup will be better */
-    CONTAINER_FOREACH(net_protos, HASHLIST, net_protos, &interface->protocols,
+    CONTAINER_FOREACH(net_protos, HASHLIST, NOLOCK, &interface->protocols,
     {
       if (item->id == ETHERTYPE_IP)
 	{

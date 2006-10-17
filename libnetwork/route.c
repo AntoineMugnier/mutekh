@@ -53,7 +53,7 @@ void			route_add(struct net_if_s	*interface,
     }
 
   /* look for the addressing module to bind to the route */
-  CONTAINER_FOREACH(net_protos, HASHLIST, net_protos, &route->interface->protocols,
+  CONTAINER_FOREACH(net_protos, HASHLIST, NOLOCK, &route->interface->protocols,
   {
     if (item->id == ETHERTYPE_IP)
       {
@@ -78,7 +78,7 @@ struct net_route_s	*route_get(struct net_if_s	*interface,
 				   struct net_addr_s	*addr)
 {
   /* look into the route table XXX must sort it with netmask */
-  CONTAINER_FOREACH(route_table, DLIST, route_table, &interface->route_table,
+  CONTAINER_FOREACH(route_table, DLIST, NOLOCK, &interface->route_table,
   {
     /* an entry for a single host */
     if (item->type == ROUTETYPE_HOST)

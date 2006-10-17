@@ -183,7 +183,7 @@ NET_PUSHPKT(arp_pushpkt)
 	  net_debug("ARP Req %P\n", &requested, 4);
 
 	  /* loop thru IP modules bound to interface */
-	  CONTAINER_FOREACH(net_protos, HASHLIST, net_protos,
+	  CONTAINER_FOREACH(net_protos, HASHLIST, NOLOCK,
 			    &interface->protocols,
 	  {
 	    if (item->id == ETHERTYPE_IP)

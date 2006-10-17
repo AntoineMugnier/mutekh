@@ -227,7 +227,7 @@ void			if_pushpkt(struct net_if_s	*interface,
   interface->rx_packets++;
 
   /* lookup to all possible addressing modules XXX */
-  CONTAINER_FOREACH(net_protos, HASHLIST, net_protos, &interface->protocols,
+  CONTAINER_FOREACH(net_protos, HASHLIST, NOLOCK, &interface->protocols,
   {
     if (item->id == packet->proto)
       {
