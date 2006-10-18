@@ -87,6 +87,8 @@ error_t	timer_cancel_event(struct timer_event_s	*event,
 			   bool_t		callback);
 void	timer_inc_ticks(struct timer_s		*timer,
 			timer_delay_t		ticks);
+inline timer_delay_t	timer_get_tick(struct timer_s		*timer);
+
 CONTAINER_PROTOTYPE(inline, timer, timer);
 
 extern struct timer_s	timer_ms;

@@ -173,6 +173,7 @@ struct			net_pv_rarp_s
  */
 
 NET_INITPROTO(arp_init);
+NET_DESTROYPROTO(arp_destroy);
 NET_PUSHPKT(arp_pushpkt);
 NET_PREPAREPKT(arp_preparepkt);
 struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,

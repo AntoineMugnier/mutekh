@@ -65,7 +65,6 @@ struct					net_if_s
   const uint8_t				*mac;
   uint_fast16_t				mtu;
   net_protos_root_t			protocols;
-  route_table_root_t			route_table;
 
   /* fields for booting */
   union

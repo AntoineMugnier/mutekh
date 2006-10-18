@@ -182,7 +182,7 @@ struct					net_tcp_session_s
  */
 
 CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, NOOBJ, list_entry, 64);
-CONTAINER_KEY_TYPE(tcp_session, AGGREGATE, remote, sizeof (struct net_tcp_addr_s));
+CONTAINER_KEY_TYPE(tcp_session, AGGREGATE, remote);
 
 /*
  * Prototypes

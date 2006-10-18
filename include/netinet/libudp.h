@@ -61,13 +61,14 @@ typedef UDP_CALLBACK(udp_callback_t);
 struct					udp_callback_desc_s
 {
   struct net_udp_addr_s			address;
+  struct net_proto_s			*addressing;
   udp_callback_t			*callback;
   void					*pv;
   CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
 
 CONTAINER_TYPE(udp_callback, HASHLIST, struct udp_callback_desc_s, NOLOCK, NOOBJ, list_entry, 64);
-CONTAINER_KEY_TYPE(udp_callback, AGGREGATE, address, sizeof (struct net_udp_addr_s));
+CONTAINER_KEY_TYPE(udp_callback, AGGREGATE, address);
 
 /*
  * Prototypes
@@ -84,5 +85,6 @@ void		udp_close(struct net_udp_addr_s	*local);
 
 void		libudp_signal(struct net_packet_s	*packet,
 			      struct udphdr		*hdr);
+void		libudp_destroy(void);
 
 #endif

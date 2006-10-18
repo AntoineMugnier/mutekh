@@ -47,12 +47,6 @@ CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, name);
 CONTAINER_KEY_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, name);
 
 /*
- * We only need route_table_init
- */
-
-CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK);
-
-/*
  * Some local variables.
  */
 
@@ -79,7 +73,6 @@ struct net_if_s	*if_register(struct device_s	*dev,
   /* create new device node */
   interface = mem_alloc(sizeof (struct net_if_s), MEM_SCOPE_SYS);
   interface->rx_bytes = interface->rx_packets = interface->tx_bytes = interface->tx_packets = 0;
-  route_table_init(&interface->route_table);
   net_protos_init(&interface->protocols);
 
   /* XXX initialize standard protocols for the device */
@@ -223,25 +216,23 @@ void			if_register_proto(struct net_if_s	*interface,
 void			if_pushpkt(struct net_if_s	*interface,
 				   struct net_packet_s	*packet)
 {
+  struct net_proto_s	*item;
+
   interface->rx_bytes += packet->header[0].size;
   interface->rx_packets++;
 
-  /* lookup to all possible addressing modules XXX */
-  CONTAINER_FOREACH(net_protos, HASHLIST, NOLOCK, &interface->protocols,
-  {
-    if (item->id == packet->proto)
-      {
-	item->desc->pushpkt(interface, packet, item);
-	return;
-      }
-  });
+  /* lookup to all modules matching the protocol  */
+  for (item = net_protos_lookup(&interface->protocols, packet->proto);
+       item != NULL;
+       item = net_protos_lookup_next(&interface->protocols, item, packet->proto))
+    item->desc->pushpkt(interface, packet, item);
 }
 
 /*
  * Prepare a packet.
  */
 
-inline uint8_t			*if_preparepkt(struct net_if_s		*interface,
+inline uint8_t		*if_preparepkt(struct net_if_s		*interface,
 				       struct net_packet_s	*packet,
 				       size_t			size,
 				       size_t			max_padding)
@@ -263,6 +254,8 @@ void			if_sendpkt(struct net_if_s	*interface,
   if (!memcmp(interface->mac, packet->tMAC, packet->MAClen))
     {
       /* XXX c'est mal poli on passe devant tout le monde */
+      packet->proto = proto;
+      packet->stage++;
       if_pushpkt(interface, packet);
       packet_obj_refdrop(packet);
     }

@@ -67,9 +67,7 @@ CONTAINER_TYPE(route_table, DLIST, struct net_route_s, NOLOCK, NOOBJ, list_entry
  * Prototypes
  */
 
-void			route_add(struct net_if_s	*interface,
-				  struct net_route_s	*route);
-struct net_route_s	*route_get(struct net_if_s	*interface,
-				   struct net_addr_s	*addr);
+void			route_add(struct net_route_s	*route);
+struct net_route_s	*route_get(struct net_addr_s	*addr);
 
 #endif

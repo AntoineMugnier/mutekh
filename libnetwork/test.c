@@ -146,7 +146,7 @@ int_fast8_t		main()
   IPV4_ADDR_SET(route->target, 0x0a020200);
   IPV4_ADDR_SET(route->mask, 0xffffff00);
   route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
-  route_add(if_get("eth0"), route);
+  route_add(route);
 
   route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
@@ -154,32 +154,15 @@ int_fast8_t		main()
   IPV4_ADDR_SET(route->target, 0x0a020300);
   IPV4_ADDR_SET(route->mask, 0xffffff00);
   route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
-  route_add(if_get("eth1"), route);
+  route_add(route);
 
-  route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
-
-  route->interface = if_get("eth0");
-  IPV4_ADDR_SET(route->target, 0x0a020200);
-  IPV4_ADDR_SET(route->mask, 0xffffff00);
-  route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
-  route_add(if_get("eth1"), route);
-
-  route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
-
-  route->interface = if_get("eth1");
-  IPV4_ADDR_SET(route->target, 0x0a020300);
-  IPV4_ADDR_SET(route->mask, 0xffffff00);
-  route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
-  route_add(if_get("eth0"), route);
-
-  //  if_up("eth2");
-#endif
-
-#if 0
-  eval_server();
 #endif
 
 #if 1
+  eval_server();
+#endif
+
+#if 0
   pthread_t th;
   pthread_create(&th, NULL, tcp_test, NULL);
 #endif

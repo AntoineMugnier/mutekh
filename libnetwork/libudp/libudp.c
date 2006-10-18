@@ -62,34 +62,42 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
   struct net_if_s	*interface = NULL;
   struct net_proto_s	*addressing = NULL;
   struct net_packet_s	*packet;
+  net_proto_id_t	id;
   uint8_t		*dest;
 
+  /* check size */
+  if (size > 65507)
+    return -EINVAL;
+
   /* look for the good IP module */
+  id = local->address.family;
   CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
   {
     interface = item;
-    /* XXX foreach + lookup will be better */
-    CONTAINER_FOREACH(net_protos, HASHLIST, NOLOCK, &interface->protocols,
-    {
-      if (item->id == ETHERTYPE_IP)
-	{
-	  if (item->desc->f.addressing->matchaddr(item, &local->address, NULL, NULL))
-	    {
-	      addressing = item;
-	      goto ok;
-	    }
-	}
-    });
+    for (addressing = net_protos_lookup(&interface->protocols, id);
+	 addressing != NULL;
+	 addressing = net_protos_lookup_next(&interface->protocols, addressing, id))
+      if (addressing->desc->f.addressing->matchaddr(addressing, &local->address, NULL, NULL))
+	goto ok;
+
   });
 
  ok:
 
   if (interface == NULL || addressing == NULL)
-    return -1;
+    return -ENOENT;
 
-  packet = packet_obj_new(NULL);
+  /* port selection */
+  if (local->port == 0)
+    {
+      local->port = addressing->desc->f.addressing->reserve_port(addressing,
+								 IPPROTO_UDP);
+      if (local->port == 0)
+	return -EAGAIN;
+    }
 
   /* prepare the packet */
+  packet = packet_obj_new(NULL);
   dest = udp_preparepkt(interface, addressing, packet, size, 0);
 
   /* copy data into the packet */
@@ -98,14 +106,11 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
   /* setup destination address */
   memcpy(&packet->tADDR, &remote->address, sizeof (struct net_addr_s));
 
-  /* port specified */
-  if (local->port == 0)
-    {
-      local->port = 1024 + (cpu_cycle_count() % 32768) ; /* XXX choose me better! */
-    }
-
   /* send UDP packet */
   udp_sendpkt(interface, addressing, packet, local->port, remote->port);
+
+  /* release used port */
+  addressing->desc->f.addressing->release_port(addressing, IPPROTO_UDP, local->port);
 
   return 0;
 }
@@ -119,11 +124,45 @@ int_fast8_t			udp_callback(struct net_udp_addr_s	*local,
 					     void			*pv)
 {
   struct udp_callback_desc_s	*desc;
+  struct net_if_s		*interface = NULL;
+  struct net_proto_s		*addressing = NULL;
+  net_proto_id_t		id;
 
-  /* allocate an build the descriptor */
+  /* look for the good IP module */
+  id = local->address.family;
+  CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
+  {
+    interface = item;
+    for (addressing = net_protos_lookup(&interface->protocols, id);
+	 addressing != NULL;
+	 addressing = net_protos_lookup_next(&interface->protocols, addressing, id))
+      if (addressing->desc->f.addressing->matchaddr(addressing, &local->address, NULL, NULL))
+	goto ok;
+
+  });
+
+ ok:
+
+  if (interface == NULL || addressing == NULL)
+    return -EADDRNOTAVAIL;
+
+  if (local->port == 0)
+    {
+      if ((local->port = addressing->desc->f.addressing->reserve_port(addressing, IPPROTO_UDP)) == 0)
+	return -EAGAIN;
+    }
+  else
+    {
+      /* mask the port as reserved */
+      if (addressing->desc->f.addressing->mark_port(addressing, IPPROTO_UDP, local->port))
+	return -EADDRINUSE;
+    }
+
+  /* allocate and build the descriptor */
   desc = mem_alloc(sizeof (struct udp_callback_desc_s), MEM_SCOPE_SYS);
 
   memcpy(&desc->address, local, sizeof (struct net_udp_addr_s));
+  desc->addressing = addressing;
   desc->callback = callback;
   desc->pv = pv;
 
@@ -159,7 +198,8 @@ void				libudp_signal(struct net_packet_s	*packet,
       packet->stage -= 2;
 
       /* this packet is destinated to no one */
-      packet->source_addressing->desc->f.addressing->errormsg(packet, ERROR_PORT_UNREACHABLE);
+      packet->source_addressing->desc->f.addressing->errormsg(packet,
+							      ERROR_PORT_UNREACHABLE);
       return;
     }
 
@@ -185,6 +225,26 @@ void		udp_close(struct net_udp_addr_s	*local)
 
   if ((desc = udp_callback_lookup(&udp_callbacks, (void *)local)) != NULL)
     {
+      desc->addressing->desc->f.addressing->release_port(desc->addressing,
+							 IPPROTO_UDP, local->port);
       udp_callback_remove(&udp_callbacks, desc);
+
+      mem_free(desc);
+    }
+}
+
+/*
+ * Cleanup LibUDP.
+ */
+
+void		libudp_destroy(void)
+{
+  struct udp_callback_desc_s	*desc;
+
+  while ((desc = udp_callback_pop(&udp_callbacks)) != NULL)
+    {
+      desc->addressing->desc->f.addressing->release_port(desc->addressing,
+							 IPPROTO_UDP, desc->address.port);
+      mem_free(desc);
     }
 }

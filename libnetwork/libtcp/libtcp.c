@@ -42,8 +42,9 @@
 #include <netinet/ether.h>
 
 #include <netinet/tcp.h>
-
 #include <netinet/libtcp.h>
+
+#include <timer.h>
 
 #undef net_debug
 #define net_debug printf
@@ -77,23 +78,19 @@ int_fast8_t			tcp_open(struct net_tcp_addr_s	*local,
   struct net_tcp_session_s	*session;
   struct net_if_s		*interface = NULL;
   struct net_proto_s		*addressing = NULL;
+  net_proto_id_t		id;
 
   /* look for the good IP module */
+  id = local->address.family;
   CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
   {
     interface = item;
-    /* XXX foreach + lookup will be better */
-    CONTAINER_FOREACH(net_protos, HASHLIST, NOLOCK, &interface->protocols,
-    {
-      if (item->id == ETHERTYPE_IP)
-	{
-	  if (item->desc->f.addressing->matchaddr(item, &local->address, NULL, NULL))
-	    {
-	      addressing = item;
-	      goto ok;
-	    }
-	}
-    });
+    for (addressing = net_protos_lookup(&interface->protocols, id);
+	 addressing != NULL;
+	 addressing = net_protos_lookup_next(&interface->protocols, addressing, id))
+      if (addressing->desc->f.addressing->matchaddr(addressing, &local->address, NULL, NULL))
+	goto ok;
+
   });
 
  ok:
@@ -117,7 +114,7 @@ int_fast8_t			tcp_open(struct net_tcp_addr_s	*local,
   memcpy(&session->local, local, sizeof (struct net_tcp_addr_s));
   memcpy(&session->remote, remote, sizeof (struct net_tcp_addr_s));
 
-  session->curr_seq = 1; /* XXX generate it */
+  session->curr_seq = timer_get_tick(&timer_ms);
   session->send_win = TCP_DFL_WINDOW;
   session->send_mss = TCP_MSS;
 

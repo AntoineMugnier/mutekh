@@ -48,6 +48,7 @@ const struct net_proto_desc_s	rarp_protocol =
     .pushpkt = rarp_pushpkt,
     .preparepkt = rarp_preparepkt,
     .initproto = rarp_init,
+    .destroyproto = NULL,
     .pv_size = sizeof (struct net_pv_rarp_s)
   };
 

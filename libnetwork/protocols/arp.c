@@ -34,6 +34,9 @@
 #include <stdio.h>
 #include <timer.h>
 
+#undef net_debug
+#define net_debug printf
+
 /*
  * ARP table functions.
  */
@@ -52,6 +55,7 @@ const struct net_proto_desc_s	arp_protocol =
     .pushpkt = arp_pushpkt,
     .preparepkt = arp_preparepkt,
     .initproto = arp_init,
+    .destroyproto = arp_destroy,
     .pv_size = sizeof (struct net_pv_arp_s),
   };
 
@@ -62,8 +66,32 @@ const struct net_proto_desc_s	arp_protocol =
 NET_INITPROTO(arp_init)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)proto->pv;
-
   arp_table_init(&pv->table);
+}
+
+/*
+ * Destroy ARP.
+ */
+
+NET_DESTROYPROTO(arp_destroy)
+{
+  struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)proto->pv;
+  struct arp_entry_s	*ent;
+  struct net_packet_s	*pkt;
+
+  while ((ent = arp_table_pop(&pv->table)) != NULL)
+    {
+      if (ent->timeout != NULL)
+	timer_cancel_event(ent->timeout, 0);
+      mem_free(ent->timeout);
+
+      while ((pkt = packet_queue_pop(&ent->wait)) != NULL)
+	packet_obj_refdrop(pkt);
+      packet_queue_destroy(&ent->wait);
+      mem_free(ent);
+    }
+
+  arp_table_destroy(&pv->table);
 }
 
 /*

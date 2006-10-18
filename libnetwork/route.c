@@ -27,15 +27,18 @@
 
 CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK);
 
+static route_table_root_t	route_table = CONTAINER_ROOT_INITIALIZER(route_table, DLIST, NOLOCK);
+
 /*
  * Add a route entry.
  */
 
-void			route_add(struct net_if_s	*interface,
-				  struct net_route_s	*route)
+void			route_add(struct net_route_s	*route)
 {
   struct net_addr_s	*target;
   struct net_addr_s	*mask;
+  struct net_proto_s	*item;
+  net_proto_id_t	id;
 
   if (route->type & ROUTETYPE_DIRECT)
     {
@@ -52,21 +55,21 @@ void			route_add(struct net_if_s	*interface,
       mask = &route->mask;
     }
 
-  /* look for the addressing module to bind to the route */
-  CONTAINER_FOREACH(net_protos, HASHLIST, NOLOCK, &route->interface->protocols,
-  {
-    if (item->id == ETHERTYPE_IP)
-      {
-	if (item->desc->f.addressing->matchaddr(item, NULL, target, mask))
-	  {
-	    route->addressing = item;
-	    goto ok;
-	  }
-      }
-  });
+  id = target->family;
 
- ok:
-  route_table_push(&interface->route_table, route);
+  /* look throught all the matching addressing protocols */
+  for (item = net_protos_lookup(&route->interface->protocols, id);
+       item != NULL;
+       item = net_protos_lookup_next(&route->interface->protocols, item, id))
+    {
+      if (item->desc->f.addressing->matchaddr(item, NULL, target, mask))
+	{
+	  route->addressing = item;
+	  break;
+	}
+    }
+
+  route_table_push(&route_table, route);
 }
 
 /*
@@ -74,11 +77,10 @@ void			route_add(struct net_if_s	*interface,
  */
 
 
-struct net_route_s	*route_get(struct net_if_s	*interface,
-				   struct net_addr_s	*addr)
+struct net_route_s	*route_get(struct net_addr_s	*addr)
 {
   /* look into the route table XXX must sort it with netmask */
-  CONTAINER_FOREACH(route_table, DLIST, NOLOCK, &interface->route_table,
+  CONTAINER_FOREACH(route_table, DLIST, NOLOCK, &route_table,
   {
     /* an entry for a single host */
     if (item->type == ROUTETYPE_HOST)

@@ -50,6 +50,7 @@ const struct net_proto_desc_s	icmp_protocol =
     .pushpkt = icmp_pushpkt,
     .preparepkt = icmp_preparepkt,
     .initproto = NULL,
+    .destroyproto = NULL,
     .f.control = &icmp_interface,
     .pv_size = 0
   };

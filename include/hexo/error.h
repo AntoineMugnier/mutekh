@@ -52,5 +52,14 @@ typedef int_fast8_t		error_t;
 /** operation not supported */
 #define ENOTSUP		8
 
+/** service temporarily unavailable */
+#define EAGAIN		9
+
+/** address in use */
+#define EADDRINUSE	40
+
+/** address not available */
+#define EADDRNOTAVAIL	41
+
 #endif
 

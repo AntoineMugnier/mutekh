@@ -4,7 +4,6 @@
 * IP
   - options du header IP (seulement les trucs utiles)
     + MTU Probe/Reply
-  - gerer addresse loopback et broadcast
   - idee de nipo: dans le routage avec fragmentation, calculer taille optimale
 
 * ICMP
@@ -15,19 +14,15 @@
   - timeout sur les entrées valides
   - gestion des doublons
 
-* UDP
-  - verifier la taille si > 64k
-  - gerer UDP Lite ?
-
 * if
-  - coder if_down, if_unregister
-  - mettre une option pour indiquer les NIC qui gerent le checksum en hard
-  - aliasing et bridging
+  - revoir les if_up/down/register/unregister
+  - lo
 
 * route
   - trier le container selon le netmask
 
+* filter
+
 * general
   - verifier l'alignement des acces memoire
   - voir les locks un peu partout
-  - faire un callback cleanup pour les protocols

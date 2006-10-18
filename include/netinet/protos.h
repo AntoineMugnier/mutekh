@@ -81,6 +81,14 @@ typedef NET_PREPAREPKT(net_preparepkt_t);
 
 typedef NET_INITPROTO(net_initproto_t);
 
+/*
+ * Prototype of the function used to clear a protocol and its private data.
+ */
+
+#define NET_DESTROYPROTO(f)	void (f)(struct net_proto_s	*proto)
+
+typedef NET_DESTROYPROTO(net_destroyproto_t);
+
 typedef uint_fast16_t net_pkt_size_t;
 typedef uint_fast16_t net_proto_id_t;
 typedef uint_fast16_t net_error_id_t;
@@ -129,6 +137,35 @@ typedef NET_PSEUDOHEADER_CHECKSUM(net_pseudoheader_checksum_t);
 typedef NET_ERRORMSG(net_errormsg_t);
 
 /*
+ * Prototype of function to reserve a port.
+ */
+
+#define NET_RESERVE_PORT(f)	uint_fast16_t	(f)(struct net_proto_s	*addressing,\
+						    net_proto_id_t	protocol)
+
+typedef NET_RESERVE_PORT(net_reserve_port_t);
+
+/*
+ * Prototype of function to mark a port as reserved.
+ */
+
+#define NET_MARK_PORT(f)	error_t	(f)(struct net_proto_s	*addressing,	\
+					    net_proto_id_t	protocol,	\
+					    uint_fast16_t	port)
+
+typedef NET_MARK_PORT(net_mark_port_t);
+
+/*
+ * Prototype of function to release a port.
+ */
+
+#define NET_RELEASE_PORT(f)	void	(f)(struct net_proto_s	*addressing,	\
+					    net_proto_id_t	protocol,	\
+					    uint_fast16_t	port)
+
+typedef NET_RELEASE_PORT(net_release_port_t);
+
+/*
  * This structure defines the interface of an addressing protocol.
  */
 
@@ -138,6 +175,9 @@ struct				net_addressing_interface_s
   net_matchaddr_t		*matchaddr;
   net_pseudoheader_checksum_t	*pseudoheader_checksum;
   net_errormsg_t		*errormsg;
+  net_reserve_port_t		*reserve_port;
+  net_release_port_t		*release_port;
+  net_mark_port_t		*mark_port;
 };
 
 /*
@@ -160,6 +200,7 @@ struct					net_proto_desc_s
   net_pushpkt_t				*pushpkt; /* push packet function */
   net_preparepkt_t			*preparepkt; /* prepare packet func */
   net_initproto_t			*initproto; /* init pv data */
+  net_destroyproto_t			*destroyproto; /* clear pv data */
   union
   {
     const struct net_addressing_interface_s	*addressing;

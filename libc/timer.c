@@ -103,3 +103,11 @@ void			timer_inc_ticks(struct timer_s		*timer,
     }
 }
 
+/*
+ * get the current tick count.
+ */
+
+timer_delay_t		timer_get_tick(struct timer_s		*timer)
+{
+  return timer->ticks;
+}

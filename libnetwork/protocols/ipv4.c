@@ -30,6 +30,7 @@
 #include <netinet/packet.h>
 #include <netinet/ether.h>
 #include <netinet/protos.h>
+#include <netinet/in.h>
 
 #include <netinet/if.h>
 #include <netinet/route.h>
@@ -46,6 +47,12 @@ CONTAINER_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, id);
 CONTAINER_KEY_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, id);
 
 /*
+ * Ports bitmap.
+ */
+
+CONTAINER_FUNC(static inline, net_port, BITMAP, net_port, HEXO_SPIN);
+
+/*
  * Structures for declaring the protocol's properties & interface.
  */
 
@@ -54,7 +61,10 @@ const struct net_addressing_interface_s	ip_interface =
     .sendpkt = ip_send,
     .matchaddr = ip_matchaddr,
     .pseudoheader_checksum = ip_pseudoheader_checksum,
-    .errormsg = icmp_errormsg
+    .errormsg = icmp_errormsg,
+    .reserve_port = ip_reserve_port,
+    .release_port = ip_release_port,
+    .mark_port = ip_mark_port
   };
 
 const struct net_proto_desc_s	ip_protocol =
@@ -64,6 +74,7 @@ const struct net_proto_desc_s	ip_protocol =
     .pushpkt = ip_pushpkt,
     .preparepkt = ip_preparepkt,
     .initproto = ip_init,
+    .destroyproto = ip_destroy,
     .f.addressing = &ip_interface,
     .pv_size = sizeof (struct net_pv_ip_s)
   };
@@ -86,7 +97,32 @@ NET_INITPROTO(ip_init)
   pv->addr = ip;
   pv->mask = mask;
   ip_packet_init(&pv->fragments);
+  net_port_init(&pv->udp_ports);
   pv->id_seq = 1;
+}
+
+/*
+ * Clear IP module.
+ */
+
+NET_DESTROYPROTO(ip_destroy)
+{
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)proto->pv;
+  struct ip_packet_s	*p;
+  struct net_packet_s	*pkt;
+
+  while ((p = ip_packet_pop(&pv->fragments)) != NULL)
+    {
+      timer_cancel_event(&p->timeout, 0);
+
+      while ((pkt = packet_queue_pop(&p->packets)) != NULL)
+	packet_obj_refdrop(pkt);
+      packet_queue_destroy(&p->packets);
+      mem_free(p);
+    }
+
+  ip_packet_destroy(&pv->fragments);
+  net_port_destroy(&pv->udp_ports);
 }
 
 /*
@@ -298,6 +334,8 @@ NET_PUSHPKT(ip_pushpkt)
   uint_fast16_t		computed_check;
   uint_fast16_t		fragment;
   uint_fast16_t		tot_len;
+  bool_t		on_subnet;
+  bool_t		is_broadcast;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -321,26 +359,40 @@ NET_PUSHPKT(ip_pushpkt)
   IPV4_ADDR_SET(packet->tADDR, net_be32_load(hdr->daddr));
   packet->source_addressing = protocol;
 
+  net_debug("%s: incoming for %P\n", interface->name, &packet->tADDR.addr.ipv4, 4);
+
+  on_subnet = (packet->tADDR.addr.ipv4 & pv->mask) == (pv->addr & pv->mask);
+  is_broadcast = (packet->tADDR.addr.ipv4 & ~pv->mask) == ~pv->mask;
+
   /* is the packet really for me ? */
   if (packet->tADDR.addr.ipv4 != pv->addr)
     {
-      struct net_route_s	*route_entry = NULL;
-
-      /* is there a route for this address ? */
-      if ((route_entry = route_get(interface, &packet->tADDR)) != NULL)
+      if (!on_subnet && packet->tADDR.addr.ipv4 != 0xffffffff)
 	{
-	  net_debug("routing to host %P\n", &packet->tADDR.addr.ipv4, 4);
-	  /* route the packet */
-	  ip_route(packet, route_entry);
+	  struct net_route_s	*route_entry = NULL;
+
+	  if (is_broadcast)
+	    return ;
+
+	  /* is there a route for this address ? */
+	  if ((route_entry = route_get(&packet->tADDR)) != NULL)
+	    {
+	      net_debug("routing to host %P\n", &packet->tADDR.addr.ipv4, 4);
+	      /* route the packet */
+	      ip_route(packet, route_entry);
+	    }
+	  else
+	    {
+	      net_debug("no route to host %P\n", &packet->tADDR.addr.ipv4, 4);
+	      /* network unreachable */
+	    pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
+	    }
+
+	  return ;
 	}
       else
-	{
-	  net_debug("no route to host %P\n", &packet->tADDR.addr.ipv4, 4);
-	  /* network unreachable */
-	  pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
-	}
-
-      return ;
+	if (!is_broadcast)
+	  return ;
     }
 
   /* verify checksum */
@@ -476,19 +528,15 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
   check = check + (check >> 16);
   net_16_store(hdr_frag->check, ~check);
 
-  /* send the fragment */
-  frag->stage--;
-
   IPV4_ADDR_SET(frag->sADDR, net_be32_load(hdr_frag->saddr));
   IPV4_ADDR_SET(frag->tADDR, net_be32_load(hdr_frag->daddr));
   /* need to route ? */
   if (ip_delivery(interface, ip, frag->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
     {
-      if ((route_entry = route_get(interface, &frag->tADDR)))
+      if ((route_entry = route_get(&frag->tADDR)))
 	{
-	  if (!(frag->tMAC = arp_get_mac(ip, pv->arp, frag,
-					 IPV4_ADDR_GET(route_entry->router))))
-	    return 1;
+	  ip_route(frag, route_entry);
+	  return 1;
 	}
       else
 	{
@@ -506,6 +554,7 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
 	return 1;
     }
 
+  frag->stage--;
   /* send the packet to the driver */
   if_sendpkt(interface, frag, ETHERTYPE_IP);
   return 1;
@@ -537,6 +586,8 @@ NET_SENDPKT(ip_send)
   hdr->protocol = proto;
   net_be32_store(hdr->saddr, pv->addr);
   net_be32_store(hdr->daddr, IPV4_ADDR_GET(packet->tADDR));
+
+  net_debug("%s: outgoing from %P\n", interface->name, &pv->addr, 4);
 
   total = nethdr[1].size;
 
@@ -588,16 +639,13 @@ NET_SENDPKT(ip_send)
   /* checksum */
   net_16_store(hdr->check, ~packet_checksum((uint8_t *)hdr, hdr->ihl * 4));
 
-  packet->stage--;
   IPV4_ADDR_SET(packet->sADDR, pv->addr);
   /* need to route ? */
   if (ip_delivery(interface, protocol, packet->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
     {
-      if ((route_entry = route_get(interface, &packet->tADDR)))
+      if ((route_entry = route_get(&packet->tADDR)))
 	{
-	  if (!(packet->tMAC = arp_get_mac(protocol, pv->arp, packet,
-					 IPV4_ADDR_GET(route_entry->router))))
-	    return;
+	  ip_route(packet, route_entry);
 	}
       else
 	{
@@ -605,8 +653,8 @@ NET_SENDPKT(ip_send)
 	  pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
 
 	  packet_obj_refdrop(packet);
-	  return;
 	}
+      return ;
     }
   else
     {
@@ -615,6 +663,7 @@ NET_SENDPKT(ip_send)
 	return;
     }
 
+  packet->stage--;
   /* send the packet to the driver */
   if_sendpkt(interface, packet, ETHERTYPE_IP);
 }
@@ -754,16 +803,15 @@ NET_MATCHADDR(ip_matchaddr)
   uint_fast32_t		B;
   uint_fast32_t		M;
 
-
-  if (a)
+  if (a != NULL)
     A = IPV4_ADDR_GET(*a);
   else
     A = pv->addr;
-  if (b)
+  if (b != NULL)
     B = IPV4_ADDR_GET(*b);
   else
     B = pv->addr;
-  if (mask)
+  if (mask != NULL)
     M = IPV4_ADDR_GET(*mask);
   else /* no mask set, equality test */
     return A == B;
@@ -790,4 +838,85 @@ NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum)
   hdr.size = endian_be16(size);
 
   return packet_checksum(&hdr, sizeof (hdr));
+}
+
+/*
+ * Reserve a free port.
+ */
+
+NET_RESERVE_PORT(ip_reserve_port)
+{
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)addressing->pv;
+  uint_fast16_t		base;
+  net_port_root_t	*root;
+
+  switch (protocol)
+    {
+      case IPPROTO_UDP:
+	root = &pv->udp_ports;
+	break;
+      default:
+	assert(0);
+    }
+
+  for (base = 1024; base < 65535; base++)
+    if (!net_port_get(root, base))
+      break;
+
+  if (base == 65535)
+    return 0;
+
+  net_port_set(root, base, 1);
+
+  return htons(base);
+}
+
+/*
+ * Release a port.
+ */
+
+NET_RELEASE_PORT(ip_release_port)
+{
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)addressing->pv;
+  net_port_root_t	*root;
+
+  switch (protocol)
+    {
+      case IPPROTO_UDP:
+	root = &pv->udp_ports;
+	break;
+      default:
+	assert(0);
+    }
+
+  net_port_set(root, ntohs(port), 0);
+}
+
+/*
+ * Mark a port as used.
+ */
+
+NET_MARK_PORT(ip_mark_port)
+{
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)addressing->pv;
+  net_port_root_t	*root;
+  uint_fast16_t		p = ntohs(port);
+
+  switch (protocol)
+    {
+      case IPPROTO_UDP:
+	root = &pv->udp_ports;
+	break;
+      default:
+	assert(0);
+    }
+
+  if (net_port_get(root, p))
+    {
+      return -1;
+    }
+
+  net_port_set(root, p, 1);
+
+  return 0;
 }

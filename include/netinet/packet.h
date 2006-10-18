@@ -99,6 +99,7 @@ struct		net_header_s
 #include <gpct/cont_slist.h>
 
 #include <netinet/protos.h>
+#include <netinet/ether.h>
 
 #include <semaphore.h>
 
@@ -114,7 +115,7 @@ OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);
 
 enum	net_addr_e
   {
-	addr_ipv4
+	addr_ipv4 = ETHERTYPE_IP
   };
 
 struct			net_addr_s

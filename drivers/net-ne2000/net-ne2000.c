@@ -319,10 +319,9 @@ DEV_IRQ(net_ne2000_irq)
 	{
 	  uint_fast8_t	cr;
 	  uint_fast8_t	resend = 0;
-	  uint_fast8_t	i;
 	  uint_fast16_t	total;
 
-	  net_debug("%s: recovery from overflow\n", pv->interface->name);
+	  printf("%s: recovery from overflow\n", pv->interface->name);
 
 	  /* save the NIC state */
 	  cr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD);
@@ -332,9 +331,7 @@ DEV_IRQ(net_ne2000_irq)
 			 NE2000_P0 | NE2000_DMA_ABRT | NE2000_STP);
 
 	  /* wait for the NIC to complete operations */
-	  for (i = 0; i < 10000000; i++)
-	    ;
-	  /* XXX usleep(1600); */
+	  /* usleep(1600); XXX */
 
 	  /* reset remote byte count registers */
 	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RBCR0, 0);
