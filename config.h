@@ -94,6 +94,13 @@
 #define CONFIG_NE2000_FRAGMENT
 
 #define CONFIG_HEXO_MEMALLOC_ALIGN	0x20
+
+/* keep stats about allocated blocks */
 #define CONFIG_HEXO_MEMALLOC_STATS
+
+/* add signature to memory allocated blocks headers */
 #define CONFIG_HEXO_MEMALLOC_SIGNED
+
+/* fill allocated and freed memory blocks with 0x5a pattern */
+#define CONFIG_HEXO_MEMALLOC_DEBUG
 

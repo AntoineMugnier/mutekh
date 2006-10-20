@@ -65,6 +65,9 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
       region->alloc_blocks++;
 #endif
 
+#ifdef CONFIG_HEXO_MEMALLOC_DEBUG
+      memset(hdr + 1, 0x5a, hdr->size - sizeof(*hdr));
+#endif
     }
 
   lock_release(&region->lock);
@@ -88,6 +91,11 @@ void mem_alloc_region_push(void *address)
 #endif
 
   hdr->is_free = 1;
+
+#ifdef CONFIG_HEXO_MEMALLOC_DEBUG
+  memset(hdr + 1, 0x5a, hdr->size - sizeof(*hdr));
+#endif
+
 #ifdef CONFIG_HEXO_MEMALLOC_STATS
   region->free_size += hdr->size;
   region->alloc_blocks--;
