@@ -23,24 +23,56 @@
 
 CONTAINER_FUNC(static inline, alloc_list, DLIST, alloc_list, NOLOCK, list_entry);
 
+
+#if defined(CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT)
+
+/* FIRST FIT allocation algorithm */
+
+static inline struct mem_alloc_header_s *
+mem_alloc_region_cadidate(struct mem_alloc_region_s *region, size_t size)
+{
+  CONTAINER_FOREACH(alloc_list, DLIST, NOLOCK, &region->root,
+  {
+    if (item->is_free && item->size >= size)
+      return item;
+  });
+
+  return NULL;
+}
+
+#elif defined(CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT)
+
+/* BEST FIT allocation algorithm */
+
+static inline struct mem_alloc_header_s *
+mem_alloc_region_cadidate(struct mem_alloc_region_s *region, size_t size)
+{
+  struct mem_alloc_header_s	*best = NULL;
+
+  CONTAINER_FOREACH(alloc_list, DLIST, NOLOCK, &region->root,
+  {
+    if (item->is_free && item->size >= size &&
+	((best == NULL) || (best->size > item->size)))
+      best = item;
+  });
+
+  return best;
+}
+
+#else
+# error no memory allocation algorithm selected in config.h
+#endif
+
+
 void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
 {
-  struct mem_alloc_header_s	*hdr = NULL;
+  struct mem_alloc_header_s	*hdr;
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   lock_spin(&region->lock);
 
   /* find suitable free block */
-  CONTAINER_FOREACH(alloc_list, DLIST, NOLOCK, &region->root,
-  {
-    if (item->is_free && item->size >= size)
-      {
-	hdr = item;
-	CONTAINER_FOREACH_BREAK;
-      }
-  });
-
-  if (hdr)
+  if ((hdr = mem_alloc_region_cadidate(region, size)))
     {
       hdr->is_free = 0;
 
@@ -149,10 +181,10 @@ void mem_alloc_region_push(void *address)
 }
 
 void mem_alloc_region_init(struct mem_alloc_region_s *region,
-			   void *address, void *end)
+			   void *start, void *end)
 {
-  struct mem_alloc_header_s	*hdr = address;
-  size_t			size = (uint8_t*)end - (uint8_t*)address;
+  struct mem_alloc_header_s	*hdr = start;
+  size_t			size = (uint8_t*)end - (uint8_t*)start;
 
   /* init region struct */
 

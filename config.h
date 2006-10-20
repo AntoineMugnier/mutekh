@@ -95,7 +95,7 @@
 
 #define CONFIG_HEXO_MEMALLOC_ALIGN	0x20
 
-/* keep stats about allocated blocks */
+/* keep stats about allocated blocks count */
 #define CONFIG_HEXO_MEMALLOC_STATS
 
 /* add signature to memory allocated blocks headers */
@@ -103,4 +103,8 @@
 
 /* fill allocated and freed memory blocks with 0x5a pattern */
 #define CONFIG_HEXO_MEMALLOC_DEBUG
+
+/* select memory allocation algorithm */
+#define CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT
+//#define CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
 
