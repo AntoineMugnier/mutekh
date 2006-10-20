@@ -33,36 +33,39 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
   /* find suitable free block */
   CONTAINER_FOREACH(alloc_list, DLIST, NOLOCK, &region->root,
   {
-    if (hdr->is_free && hdr->size >= size)
+    if (item->is_free && item->size >= size)
       {
 	hdr = item;
-	goto exit_foreach;
+	CONTAINER_FOREACH_BREAK;
       }
   });
 
- exit_foreach:
-
-  hdr->is_free = 0;
-
-  /* check if split is needed */
-  if (hdr && hdr->size >= size + MEMALLOC_SPLIT_SIZE)
+  if (hdr)
     {
-      struct mem_alloc_header_s	*next = (void*)((uint8_t*)hdr + size);
+      hdr->is_free = 0;
+
+      /* check if split is needed */
+      if (hdr->size >= size + MEMALLOC_SPLIT_SIZE)
+	{
+	  struct mem_alloc_header_s	*next = (void*)((uint8_t*)hdr + size);
 
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
-      next->signature = MEMALLOC_SIGNATURE;
+	  next->signature = MEMALLOC_SIGNATURE;
 #endif
-      next->is_free = 1;
-      next->size = hdr->size - size;
-      hdr->size = size;
+	  next->is_free = 1;
+	  next->size = hdr->size - size;
+	  next->region = hdr->region;
+	  hdr->size = size;
 
-      alloc_list_insert_post(&region->root, hdr, next);
-    }
+	  alloc_list_insert_post(&region->root, hdr, next);
+	}
 
 #ifdef CONFIG_HEXO_MEMALLOC_STATS
-  region->free_size -= size;
-  region->alloc_blocks++;
+      region->free_size -= size;
+      region->alloc_blocks++;
 #endif
+
+    }
 
   lock_release(&region->lock);
   CPU_INTERRUPT_RESTORESTATE;
@@ -70,15 +73,13 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
   return hdr;
 }
 
-void mem_alloc_region_push(struct mem_alloc_region_s *region, void *address)
+void mem_alloc_region_push(void *address)
 {
   struct mem_alloc_header_s	*hdr = address, *next, *prev;
+  struct mem_alloc_region_s	*region = hdr->region;
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   lock_spin(&region->lock);
-
-  next = alloc_list_next(&region->root, hdr);
-  prev = alloc_list_prev(&region->root, hdr);
 
   assert(hdr->size >= sizeof(*hdr));
 
@@ -86,52 +87,53 @@ void mem_alloc_region_push(struct mem_alloc_region_s *region, void *address)
   assert(hdr->signature == MEMALLOC_SIGNATURE);
 #endif
 
-  if (next)
+  hdr->is_free = 1;
+#ifdef CONFIG_HEXO_MEMALLOC_STATS
+  region->free_size += hdr->size;
+  region->alloc_blocks--;
+  region->free_blocks++;
+#endif
+
+  if ((next = alloc_list_next(&region->root, hdr)))
     {
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
       assert(next->signature == MEMALLOC_SIGNATURE);
 #endif
       assert((uint8_t*)next == (uint8_t*)hdr + hdr->size);
+
+      /* merge with next if free */
+      if (next->is_free)
+	{
+	  hdr->size += next->size;
+	  alloc_list_remove(&region->root, next);
+#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
+	  next->signature = 0;
+#endif
+#ifdef CONFIG_HEXO_MEMALLOC_STATS
+	  region->free_blocks--;
+#endif
+	}
     }
 
-  if (prev)
+  if ((prev = alloc_list_prev(&region->root, hdr)))
     {
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
       assert(prev->signature == MEMALLOC_SIGNATURE);
 #endif
-      assert(!prev || (uint8_t*)hdr == (uint8_t*)prev + prev->size);
-    }
+      assert((uint8_t*)hdr == (uint8_t*)prev + prev->size);
 
-  hdr->is_free = 1;
-#ifdef CONFIG_HEXO_MEMALLOC_STATS
-  region->free_size += hdr->size;
-  region->alloc_blocks--;
-#endif
-
-  /* merge with next if free */
-  if (next && next->is_free)
-    {
-      hdr->size += next->size;
-      alloc_list_remove(&region->root, next);
+      /* merge with prev if free */
+      if (prev->is_free)
+	{
+	  prev->size += hdr->size;
+	  alloc_list_remove(&region->root, hdr);
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
-      next->signature = 0;
+	  hdr->signature = 0;
 #endif
 #ifdef CONFIG_HEXO_MEMALLOC_STATS
-      region->free_blocks--;
+	  region->free_blocks--;
 #endif
-    }
-
-  /* merge with prev if free */
-  if (prev && prev->is_free)
-    {
-      prev->size += hdr->size;
-      alloc_list_remove(&region->root, hdr);
-#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
-      hdr->signature = 0;
-#endif
-#ifdef CONFIG_HEXO_MEMALLOC_STATS
-      region->free_blocks--;
-#endif
+	}
     }
 
   lock_release(&region->lock);
@@ -139,9 +141,10 @@ void mem_alloc_region_push(struct mem_alloc_region_s *region, void *address)
 }
 
 void mem_alloc_region_init(struct mem_alloc_region_s *region,
-			   void *address, size_t size)
+			   void *address, void *end)
 {
   struct mem_alloc_header_s	*hdr = address;
+  size_t			size = (uint8_t*)end - (uint8_t*)address;
 
   /* init region struct */
 
@@ -163,6 +166,7 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
 #endif
   hdr->size = size;
   hdr->is_free = 1;
+  hdr->region = region;
 
   alloc_list_push(&region->root, hdr);
 }

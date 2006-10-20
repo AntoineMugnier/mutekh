@@ -126,7 +126,7 @@ uint8_t			*udp_preparepkt(struct net_if_s		*interface,
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
   next = addressing->desc->preparepkt(interface, packet, sizeof (struct udphdr) + size, 2);
-  next = ALIGN_ADDRESS(next, 4);
+  next = ALIGN_ADDRESS_UP(next, 4);
 #else
   next = addressing->desc->preparepkt(interface, packet, sizeof (struct udphdr) + size, 0);
 #endif

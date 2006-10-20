@@ -277,7 +277,7 @@ error_t			nfs_mount(struct nfs_s	*server,
   void			*req, *to_free;
   size_t		path_len = strlen(path);
   uint32_t		*p;
-  size_t		sz = sizeof (struct nfs_auth_s) + 4 + ALIGN_VALUE(path_len, 4);
+  size_t		sz = sizeof (struct nfs_auth_s) + 4 + ALIGN_VALUE_UP(path_len, 4);
 
   /* allocate packet for the request */
   to_free = req = mem_alloc(sz, MEM_SCOPE_CONTEXT);
@@ -445,7 +445,7 @@ error_t		nfs_lookup(struct nfs_s		*server,
   size_t		path_len = strlen(path);
   struct nfs_attr_s	*attr;
   uint32_t		*p;
-  size_t		sz = sizeof (struct nfs_auth_s) + 4 + sizeof (nfs_handle_t) + ALIGN_VALUE(path_len, 4);
+  size_t		sz = sizeof (struct nfs_auth_s) + 4 + sizeof (nfs_handle_t) + ALIGN_VALUE_UP(path_len, 4);
 
   /* allocate packet for the request */
   to_free = req = mem_alloc(sz, MEM_SCOPE_CONTEXT);

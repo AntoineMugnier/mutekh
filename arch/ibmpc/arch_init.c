@@ -24,6 +24,7 @@
 #include <hexo/init.h>
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
+#include <hexo/alloc.h>
 
 #include "multiboot.h"
 
@@ -55,6 +56,8 @@ void arch_init()
     {
       lock_init(&cpu_init_lock);
       lock_init(&cpu_start_lock);
+
+      mem_init();
 
 #endif
       /* configure system wide cpu data */

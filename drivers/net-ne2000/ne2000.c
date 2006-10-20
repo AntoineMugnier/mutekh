@@ -127,7 +127,7 @@ void				ne2000_dma_do_write(struct device_s	*dev,
     {
       uint16_t	*d = (uint16_t *)src;
 
-      size = ALIGN_VALUE(size, 2);
+      size = ALIGN_VALUE_UP(size, 2);
 
       size >>= 1;
       while (size--)

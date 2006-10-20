@@ -92,3 +92,8 @@
 
 /* NE2000 driver option: use fragmenation */
 #define CONFIG_NE2000_FRAGMENT
+
+#define CONFIG_HEXO_MEMALLOC_ALIGN	0x20
+#define CONFIG_HEXO_MEMALLOC_STATS
+#define CONFIG_HEXO_MEMALLOC_SIGNED
+

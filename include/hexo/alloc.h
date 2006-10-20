@@ -54,6 +54,9 @@ void * mem_alloc(size_t size, uint_fast8_t scope);
 /** free memory pointer */
 void mem_free(void *ptr);
 
+/** initialize memory subsystem */
+void mem_init(void);
+
 /***************** Memory allocatable region management ******************/
 
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
@@ -66,7 +69,9 @@ struct mem_alloc_header_s
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
   uint32_t			signature;
 #endif
+  struct mem_alloc_region_s	*region;
   uint8_t			is_free;
+  /* block size including header */
   uintptr_t			size;
   CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
 };
@@ -89,10 +94,13 @@ struct mem_alloc_region_s
 
 void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size);
 
-void mem_alloc_region_push(struct mem_alloc_region_s *region, void *address);
+void mem_alloc_region_push(void *address);
 
 void mem_alloc_region_init(struct mem_alloc_region_s *region,
-			   void *address, size_t size);
+			   void *address, void *end);
+
+error_t mem_stats(uint_fast8_t scope, size_t *alloc_blocks,
+		  size_t *free_size, size_t *free_blocks);
 
 #endif
 

@@ -164,7 +164,7 @@ NET_PREPAREPKT(icmp_preparepkt)
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
   next = ip_preparepkt(interface, packet, sizeof (struct icmphdr) + size, 4);
-  next = ALIGN_ADDRESS(next, 4);
+  next = ALIGN_ADDRESS_UP(next, 4);
 #else
   next = ip_preparepkt(interface, packet, sizeof (struct icmphdr) + size, 0);
 #endif

@@ -25,28 +25,83 @@
 #include <hexo/lock.h>
 #include <hexo/endian.h>
 
-static lock_t mem_lock = LOCK_INITIALIZER;
+static struct mem_alloc_region_s mem_ram;
+
+static void *
+mem_ibmpc_memsize_probe(void *start)
+{
+  volatile uint8_t	*x = ALIGN_ADDRESS_UP(start, 4096);
+  size_t		step = 4096;
+
+  while (1) {
+    x += step;
+    *x = 0x5a;
+    *x = ~*x;
+
+    if (*x == 0xa5)
+      continue;
+
+    x -= step;
+
+    if (step == 1)
+      break;
+
+    step /= 2;
+  }
+
+  return (void*)x;
+}
+
+static const size_t	hdr_size = ALIGN_VALUE_UP(sizeof (struct mem_alloc_header_s),
+						  CONFIG_HEXO_MEMALLOC_ALIGN);
 
 void * mem_alloc(size_t size, uint_fast8_t scope)
 {
-  static uint8_t	*addr = (void*)&__system_heap_start;
-  void			*res;
-  uint32_t		*p;
+  struct mem_alloc_header_s	*hdr;
 
-  lock_spin(&mem_lock);
+  size = hdr_size + ALIGN_VALUE_UP(size, CONFIG_HEXO_MEMALLOC_ALIGN);
 
-  res = addr;
-  addr = (uint8_t*)ALIGN_VALUE((uintptr_t)addr + size, 4);
+  hdr = mem_alloc_region_pop(&mem_ram, size);
 
-  for (p = (uint32_t *)addr; (uintptr_t)p < (uintptr_t)addr + size; p++)
-    *p = 0x5555AAAA;
-
-  lock_release(&mem_lock);
-
-  return res;
+  return (uint8_t*)hdr + hdr_size;
 }
 
 void mem_free(void *ptr)
 {
+  struct mem_alloc_header_s	*hdr = (void*)((uint8_t*)ptr - hdr_size);
+
+  mem_alloc_region_push(hdr);
+}
+
+void mem_init(void)
+{
+  void	*mem_end = mem_ibmpc_memsize_probe(&__system_heap_start);
+  void	*mem_start = (uint8_t*)&__system_heap_start;
+
+  mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_HEXO_MEMALLOC_ALIGN);
+  mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_HEXO_MEMALLOC_ALIGN);
+
+  mem_alloc_region_init(&mem_ram, mem_start, mem_end);
+}
+
+error_t mem_stats(uint_fast8_t scope, size_t *alloc_blocks,
+		  size_t *free_size, size_t *free_blocks)
+{
+#ifdef CONFIG_HEXO_MEMALLOC_STATS
+  struct mem_alloc_region_s *region = &mem_ram;
+
+  if (alloc_blocks)
+    *alloc_blocks = region->alloc_blocks;
+
+  if (free_size)
+    *free_size = region->free_size;
+
+  if (free_blocks)
+    *free_blocks = region->free_blocks;    
+
+  return 0;
+#else
+  return -ENOTSUP;
+#endif
 }
 

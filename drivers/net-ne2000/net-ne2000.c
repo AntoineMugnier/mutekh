@@ -96,7 +96,7 @@ static void	ne2000_send(struct device_s	*dev)
   nethdr = &pv->current->header[0];
 
   /* copy in one time */
-  size = (pv->io_16 ? ALIGN_VALUE(nethdr->size, 2) : nethdr->size);
+  size = (pv->io_16 ? ALIGN_VALUE_UP(nethdr->size, 2) : nethdr->size);
 
   /* reset the tries counter */
   pv->send_tries = 0;

@@ -228,7 +228,7 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 
       /* copy current packet to its position */
 #ifdef CONFIG_NETWORK_AUTOALIGN
-      ptr = (uint8_t *)ALIGN_VALUE((uintptr_t)(data + headers_len), 4);
+      ptr = (uint8_t *)ALIGN_VALUE_UP((uintptr_t)(data + headers_len), 4);
 #else
       ptr = data + headers_len;
 #endif
@@ -459,7 +459,7 @@ NET_PREPAREPKT(ip_preparepkt)
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
   next = if_preparepkt(interface, packet, 20 + size, 4 + max_padding - 1);
-  next = ALIGN_ADDRESS(next, 4);
+  next = ALIGN_ADDRESS_UP(next, 4);
 #else
   next = if_preparepkt(interface, packet, 20 + size, 0);
 #endif

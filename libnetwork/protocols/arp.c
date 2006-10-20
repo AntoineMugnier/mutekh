@@ -268,7 +268,7 @@ NET_PREPAREPKT(arp_preparepkt)
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
   next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 4);
-  next = ALIGN_ADDRESS(next, 4);
+  next = ALIGN_ADDRESS_UP(next, 4);
 #else
   next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 0);
 #endif

@@ -260,11 +260,16 @@ static inline uint64_t endian_swap64(uint64_t x)
 #define IS_ALIGNED(x, b)	!(((uintptr_t)x) & ((b) - 1))
 
 /* align value on the next power of two */
-#define ALIGN_VALUE(x, b)	(assert(ALIGN_ISPOWTWO(b)),	\
-				((((x) - 1) | ((b) - 1)) + 1))
+#define ALIGN_VALUE_UP(x, b)	((((x) - 1) | ((b) - 1)) + 1)
+
+/* align value on the next power of two */
+#define ALIGN_VALUE_LOW(x, b)	((x) & ~((b) - 1))
 
 /* align address on the next power of two */
-#define ALIGN_ADDRESS(x, b)	((void*)ALIGN_VALUE((uintptr_t)(x), (b)))
+#define ALIGN_ADDRESS_UP(x, b)	((void*)ALIGN_VALUE_UP((uintptr_t)(x), (b)))
+
+/* align address on the next power of two */
+#define ALIGN_ADDRESS_LOW(x, b)	((void*)ALIGN_VALUE_LOW((uintptr_t)(x), (b)))
 
 #endif
 
