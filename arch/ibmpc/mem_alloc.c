@@ -97,7 +97,7 @@ error_t mem_stats(uint_fast8_t scope, size_t *alloc_blocks,
     *free_size = region->free_size;
 
   if (free_blocks)
-    *free_blocks = region->free_blocks;    
+    *free_blocks = region->free_blocks;
 
   return 0;
 #else

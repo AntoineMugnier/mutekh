@@ -86,5 +86,6 @@ void		udp_close(struct net_udp_addr_s	*local);
 void		libudp_signal(struct net_packet_s	*packet,
 			      struct udphdr		*hdr);
 void		libudp_destroy(void);
+NET_SIGNAL_ERROR(libudp_signal_error);
 
 #endif

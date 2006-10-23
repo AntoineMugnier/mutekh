@@ -322,7 +322,7 @@ void			eval_server()
   struct net_udp_addr_s	listen;
   error_t		err;
 
-  IPV4_ADDR_SET(listen.address, 0x0a0202f0);
+  IPV4_ADDR_SET(listen.address, htonl(INADDR_ANY));
   listen.port = htons(4242);
 
   err = udp_callback(&listen, test_add, NULL);

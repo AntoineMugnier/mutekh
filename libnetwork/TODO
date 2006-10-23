@@ -1,3 +1,13 @@
+(dans l'ordre)
+
+* ARP
+  - gestion des doublons
+
+* route
+  - trier le container selon le netmask
+
+* filter
+
 * driver NE2000
   - revoir tout le cleanup
 
@@ -6,23 +16,11 @@
     + MTU Probe/Reply
   - idee de nipo: dans le routage avec fragmentation, calculer taille optimale
 
-* ICMP
-  - gerer les erreurs (entrantes)
-
-* ARP
-  - prevoir une gestion d'autre chose qu'Ethernet
-  - timeout sur les entrées valides
-  - gestion des doublons
-
 * if
   - revoir les if_up/down/register/unregister
   - lo
 
-* route
-  - trier le container selon le netmask
-
-* filter
-
 * general
   - verifier l'alignement des acces memoire
   - voir les locks un peu partout
+  - prevoir une gestion d'autre chose qu'Ethernet ?

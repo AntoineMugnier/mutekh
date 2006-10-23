@@ -204,7 +204,7 @@ pthread_detach(pthread_t thread)
       if (thread->joinable)
 	sched_context_start(&thread->sched_ctx);
 
-      sched_queue_unlock(&thread->joined);      
+      sched_queue_unlock(&thread->joined);
     }
 
   return res;

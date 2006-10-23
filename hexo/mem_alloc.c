@@ -125,7 +125,7 @@ void mem_alloc_region_push(void *address)
   hdr->is_free = 1;
 
 #ifdef CONFIG_HEXO_MEMALLOC_DEBUG
-  memset(hdr + 1, 0x5a, hdr->size - sizeof(*hdr));
+  memset(hdr + 1, 0xa5, hdr->size - sizeof(*hdr));
 #endif
 
 #ifdef CONFIG_HEXO_MEMALLOC_STATS

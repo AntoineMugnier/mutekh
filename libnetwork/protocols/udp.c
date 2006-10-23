@@ -115,7 +115,7 @@ NET_PUSHPKT(udp_pushpkt)
  * Prepare UDP packet.
  */
 
-uint8_t			*udp_preparepkt(struct net_if_s		*interface,
+inline uint8_t		*udp_preparepkt(struct net_if_s		*interface,
 					struct net_proto_s	*addressing,
 					struct net_packet_s	*packet,
 					size_t			size,
@@ -144,11 +144,12 @@ uint8_t			*udp_preparepkt(struct net_if_s		*interface,
  * Send a packet.
  */
 
-void		udp_sendpkt(struct net_if_s	*interface,
+inline void	udp_sendpkt(struct net_if_s	*interface,
 			    struct net_proto_s	*addressing,
 			    struct net_packet_s	*packet,
 			    uint_fast16_t	source_port,
-			    uint_fast16_t	dest_port)
+			    uint_fast16_t	dest_port,
+			    bool_t		compute_checksum)
 {
   struct udphdr		*hdr;
   struct net_header_s	*nethdr;
@@ -163,12 +164,15 @@ void		udp_sendpkt(struct net_if_s	*interface,
   net_16_store(hdr->dest, dest_port);
   net_be16_store(hdr->len, nethdr->size);
 
-  /* compute checksum XXX option to avoid checksum computation */
-  computed_check = addressing->desc->f.addressing->pseudoheader_checksum(addressing, packet, IPPROTO_UDP, nethdr->size);
+  /* compute checksum */
   net_16_store(hdr->check, 0);
-  computed_check += packet_checksum(nethdr->data, nethdr->size);
-  computed_check = (computed_check & 0xffff) + (computed_check >> 16);
-  net_16_store(hdr->check, ~computed_check);
+  if (compute_checksum)
+    {
+      computed_check = addressing->desc->f.addressing->pseudoheader_checksum(addressing, packet, IPPROTO_UDP, nethdr->size);
+      computed_check += packet_checksum(nethdr->data, nethdr->size);
+      computed_check = (computed_check & 0xffff) + (computed_check >> 16);
+      net_16_store(hdr->check, ~computed_check);
+    }
 
   packet->stage--;
   /* send the packet to IP */

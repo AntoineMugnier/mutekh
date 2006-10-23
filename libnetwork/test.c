@@ -90,6 +90,21 @@ void			*tcp_test(void *p)
   return NULL;
 }
 
+void			*err_test(void *p)
+{
+  struct net_udp_addr_s local;
+  struct net_udp_addr_s remote;
+
+  IPV4_ADDR_SET(local.address, 0x0a0202f0);
+  local.port = htons(4242);
+  IPV4_ADDR_SET(remote.address, 0x0a020266);
+  remote.port = htons(80);
+
+  udp_send(&local, &remote, "test", 4);
+
+  return NULL;
+}
+
 void			*nfs_test(void *p)
 {
 
@@ -158,8 +173,13 @@ int_fast8_t		main()
 
 #endif
 
-#if 1
+#if 0
   eval_server();
+#endif
+
+#if 0
+  pthread_t th;
+  pthread_create(&th, NULL, err_test, NULL);
 #endif
 
 #if 0

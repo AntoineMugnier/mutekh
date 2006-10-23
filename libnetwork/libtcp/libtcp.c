@@ -503,3 +503,11 @@ void				libtcp_push(struct net_packet_s	*packet,
     libtcp_close(session, packet, hdr);
 }
 
+/*
+ * Error reception callback.
+ */
+
+NET_SIGNAL_ERROR(libtcp_signal_error)
+{
+
+}

@@ -112,6 +112,8 @@ struct		ether_arp
  */
 
 #define ARP_REQUEST_TIMEOUT	2000 /* 2 seconds */
+#define ARP_ENTRY_TIMEOUT	120000 /* 2 minutes */
+#define ARP_STALE_TIMEOUT	900000 /* 15 minutes */
 #define ARP_MAX_RETRIES		3
 
 /*
@@ -119,9 +121,8 @@ struct		ether_arp
  */
 
 #define ARP_TABLE_DEFAULT	0
-#define ARP_TABLE_NO_OVERWRITE	1
-#define ARP_TABLE_IN_PROGRESS	2
-#define ARP_TABLE_NO_UPDATE	4
+#define ARP_TABLE_IN_PROGRESS	1
+#define ARP_TABLE_NO_UPDATE	2
 
 /*
  * ARP table entry.
@@ -132,6 +133,7 @@ struct					arp_entry_s
   uint_fast32_t				ip;
   uint8_t				mac[ETH_ALEN];
   bool_t				valid;
+  timer_delay_t				timestamp;
   CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 
   /* XXX les 5 champs en dessous sevent qu'a la resolution, apres ils servent a rien */
@@ -157,6 +159,7 @@ CONTAINER_KEY_TYPE(arp_table, SCALAR, ip);
 struct			net_pv_arp_s
 {
   arp_table_root_t	table;
+  struct timer_event_s	stale_timeout;
 };
 
 /*
@@ -193,6 +196,7 @@ void	rarp_request(struct net_if_s	*interface,
 		     struct net_proto_s	*rarp,
 		     uint8_t		*mac);
 TIMER_CALLBACK(arp_timeout);
+TIMER_CALLBACK(arp_stale_timeout);
 
 /*
  * ARP & RARP protocol descriptors.

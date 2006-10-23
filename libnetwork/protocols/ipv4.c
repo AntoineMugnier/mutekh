@@ -47,12 +47,6 @@ CONTAINER_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, id);
 CONTAINER_KEY_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, id);
 
 /*
- * Ports bitmap.
- */
-
-CONTAINER_FUNC(static inline, net_port, BITMAP, net_port, HEXO_SPIN);
-
-/*
  * Structures for declaring the protocol's properties & interface.
  */
 
@@ -62,9 +56,6 @@ const struct net_addressing_interface_s	ip_interface =
     .matchaddr = ip_matchaddr,
     .pseudoheader_checksum = ip_pseudoheader_checksum,
     .errormsg = icmp_errormsg,
-    .reserve_port = ip_reserve_port,
-    .release_port = ip_release_port,
-    .mark_port = ip_mark_port
   };
 
 const struct net_proto_desc_s	ip_protocol =
@@ -97,7 +88,6 @@ NET_INITPROTO(ip_init)
   pv->addr = ip;
   pv->mask = mask;
   ip_packet_init(&pv->fragments);
-  net_port_init(&pv->udp_ports);
   pv->id_seq = 1;
 }
 
@@ -122,7 +112,6 @@ NET_DESTROYPROTO(ip_destroy)
     }
 
   ip_packet_destroy(&pv->fragments);
-  net_port_destroy(&pv->udp_ports);
 }
 
 /*
@@ -209,6 +198,8 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       uint_fast16_t		headers_len;
       uint8_t			*data;
       uint8_t			*ptr;
+      size_t			sizes[NETWORK_MAX_STAGES];
+      uint_fast8_t		i;
 
       net_debug("packet complete\n");
 
@@ -223,6 +214,8 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 
       /* copy previous headers (ethernet, ip, etc.) */
       memcpy(data, packet->packet, headers_len);
+
+      /* XXX maj frag/flags */
 
       net_debug("copying headers : %d-%d\n", 0, headers_len);
 
@@ -256,6 +249,8 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	  /* check for overflow */
 	  if (offs >= total)
 	    {
+	      /* XXX error on fragment must be reported by 1st fragment */
+
 	      pv->icmp->desc->f.control->errormsg(frag, ERROR_BAD_HEADER);
 
 	      /* delete all the packets */
@@ -282,6 +277,17 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       packet_queue_destroy(&p->packets);
       ip_packet_remove(&pv->fragments, p);
       mem_free(p);
+
+      /* update nethdr */
+      nethdr = packet->header;
+      for (i = 0; i < packet->stage - 1; i++)
+	sizes[i] = nethdr[i + 1].data - nethdr[i].data;
+      nethdr[0].data = packet->packet;
+      for (i = 1; i < packet->stage; i++)
+	nethdr[i].data = nethdr[i - 1].data + sizes[i - 1];
+      for (i = 0; i < packet->stage; i++)
+	nethdr[i].size = nethdr[i].size - datasz + total;
+      nethdr[packet->stage].size = total;
 
       return 1;
     }
@@ -385,7 +391,7 @@ NET_PUSHPKT(ip_pushpkt)
 	    {
 	      net_debug("no route to host %P\n", &packet->tADDR.addr.ipv4, 4);
 	      /* network unreachable */
-	    pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
+	      pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
 	    }
 
 	  return ;
@@ -437,6 +443,18 @@ NET_PUSHPKT(ip_pushpkt)
       /* add fragment */
       if (!ip_fragment_pushpkt(protocol, packet, hdr))
 	return;	/* abord the packet, the last fragment will unblock it */
+
+      nethdr = &packet->header[packet->stage - 1];
+      hdr = (struct iphdr *)nethdr->data;
+
+      /* align the packet on 32 bits if necessary */
+#ifdef CONFIG_NETWORK_AUTOALIGN
+      if (!IS_ALIGNED(hdr, sizeof (uint32_t)))
+	{
+	  memcpy(&aligned, hdr, sizeof (struct iphdr));
+	  hdr = &aligned;
+	}
+#endif
       /* otherwise, the packet has been reassembled and is ready to continue its path */
     }
 
@@ -445,7 +463,11 @@ NET_PUSHPKT(ip_pushpkt)
   if ((p = net_protos_lookup(&interface->protocols, proto)))
     p->desc->pushpkt(interface, packet, p);
   else
-    pv->icmp->desc->f.control->errormsg(packet, ERROR_PROTO_UNREACHABLE);
+    {
+      printf("%P\n", hdr, sizeof(*hdr));
+      printf("%d\n", proto);
+      pv->icmp->desc->f.control->errormsg(packet, ERROR_PROTO_UNREACHABLE);
+    }
 }
 
 /*
@@ -477,18 +499,19 @@ NET_PREPAREPKT(ip_preparepkt)
  * Fragment sending.
  */
 
-static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
-					    struct net_if_s	*interface,
-					    struct iphdr	*hdr,
-					    struct net_packet_s	*packet,
-					    uint_fast16_t	offs,
-					    size_t		fragsz,
-					    uint_fast8_t	last)
+static inline void	 ip_send_fragment(struct net_proto_s	*ip,
+					  struct net_if_s	*interface,
+					  struct iphdr		*hdr,
+					  struct net_packet_s	*packet,
+					  struct net_route_s	*route_entry,
+					  uint_fast16_t		shift,
+					  uint_fast16_t		offs,
+					  size_t		fragsz,
+					  uint_fast8_t		last)
 {
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ip->pv;
   struct net_packet_s	*frag;
   struct net_header_s	*nethdr;
-  struct net_route_s	*route_entry;
   struct iphdr		*hdr_frag;
   uint8_t		*dest;
   uint_fast8_t		i;
@@ -502,7 +525,7 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
 
   dest = ip_preparepkt(interface, frag, 0, 0);
 
-  net_debug("sending fragment %d-%d\n", offs, offs + fragsz);
+  net_debug("sending fragment %d-%d\n", shift + offs, shift + offs + fragsz);
 
   /* fill the data */
   frag->header[frag->stage].data = packet->header[packet->stage + 1].data + offs;
@@ -519,7 +542,7 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
   memcpy(hdr_frag, hdr, hdr->ihl * 4);
 
   /* setup fragment specific fields */
-  net_be16_store(hdr_frag->fragment, (last ? 0 : IP_FLAG_MF) | (offs / 8));
+  net_be16_store(hdr_frag->fragment, (last ? 0 : IP_FLAG_MF) | ((shift + offs) / 8));
   net_be16_store(hdr_frag->tot_len, nethdr->size);
   /* finalize checksum computation */
   check = net_16_load(hdr_frag->check);
@@ -531,33 +554,21 @@ static inline uint_fast8_t ip_send_fragment(struct net_proto_s	*ip,
   IPV4_ADDR_SET(frag->sADDR, net_be32_load(hdr_frag->saddr));
   IPV4_ADDR_SET(frag->tADDR, net_be32_load(hdr_frag->daddr));
   /* need to route ? */
-  if (ip_delivery(interface, ip, frag->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
+  if (route_entry != NULL)
     {
-      if ((route_entry = route_get(&frag->tADDR)))
-	{
-	  ip_route(frag, route_entry);
-	  return 1;
-	}
-      else
-	{
-	  /* network unreachable */
-	  pv->icmp->desc->f.control->errormsg(frag, ERROR_NET_UNREACHABLE);
-
-	  packet_obj_refdrop(frag);
-	  return 0;
-	}
+      ip_route(frag, route_entry);
+      return ;
     }
   else
     {
       /* no route: IP -> MAC translation */
       if (!(frag->tMAC = arp_get_mac(ip, pv->arp, frag, frag->tADDR.addr.ipv4)))
-	return 1;
+	return ;
     }
 
   frag->stage--;
   /* send the packet to the driver */
   if_sendpkt(interface, frag, ETHERTYPE_IP);
-  return 1;
 }
 
 /*
@@ -596,7 +607,6 @@ NET_SENDPKT(ip_send)
     {
       uint_fast16_t		offs;
       uint_fast16_t		fragsz;
-      uint_fast8_t		sent;
       uint8_t			*data;
 
       data = nethdr[1].data;
@@ -612,18 +622,32 @@ NET_SENDPKT(ip_send)
       net_16_store(hdr->check, 0);
       net_16_store(hdr->check, packet_checksum((uint8_t *)hdr, 20));
 
-      /* send the middle fragments */
-      sent = 1;
-      while (sent && offs + fragsz < total)
+      IPV4_ADDR_SET(packet->sADDR, pv->addr);
+      /* need to route ? */
+      if (ip_delivery(interface, protocol, packet->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
 	{
-	  sent = ip_send_fragment(protocol, interface, hdr, packet, offs, fragsz, 0);
+	  if ((route_entry = route_get(&packet->tADDR)) == NULL)
+	    {
+	      /* network unreachable */
+	      pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
+
+	      packet_obj_refdrop(packet);
+	      return ;
+	    }
+	}
+      else
+	route_entry = NULL;
+
+      /* send the middle fragments */
+      while (offs + fragsz < total)
+	{
+	  ip_send_fragment(protocol, interface, hdr, packet, route_entry, 0, offs, fragsz, 0);
 
 	  offs += fragsz;
 	}
 
       /* last fragment */
-      if (sent)
-	ip_send_fragment(protocol, interface, hdr, packet, offs, total - offs, 1);
+      ip_send_fragment(protocol, interface, hdr, packet, route_entry, 0, offs, total - offs, 1);
 
       /* release the original packet */
       packet_obj_refdrop(packet);
@@ -682,7 +706,6 @@ void		ip_route(struct net_packet_s	*packet,
   uint_fast32_t		router;
   uint_fast16_t		total;
   uint_fast16_t		check;
-  uint_fast8_t		old_ttl;
 
   packet_obj_refnew(packet);
 
@@ -693,11 +716,8 @@ void		ip_route(struct net_packet_s	*packet,
   nethdr = &packet->header[packet->stage];
   hdr = (struct iphdr *)nethdr->data;
 
-  /* decrement TTL */
-  old_ttl = hdr->ttl--;
-
   /* check for timeout */
-  if (hdr->ttl == 0)
+  if (hdr->ttl == 1)
     {
       pv->icmp->desc->f.control->errormsg(packet, ERROR_TIMEOUT);
 
@@ -715,12 +735,11 @@ void		ip_route(struct net_packet_s	*packet,
   total = nethdr[1].size;
 
   /* check for fragmentation */
-  if (total > interface->mtu - 20)
+  if (total > interface->mtu - hdr->ihl * 4)
     {
       uint_fast16_t		offs;
       uint_fast16_t		shift;
       uint_fast16_t		fragsz;
-      uint_fast8_t		sent;
       uint8_t			*data;
       uint_fast16_t		fragment;
 
@@ -744,18 +763,20 @@ void		ip_route(struct net_packet_s	*packet,
       /* XXX interesting idea: compute an optimal fragment size */
       fragsz = (interface->mtu - 20) & ~7;
 
+      /* adjust packet checksum, erasing the fields tot_len & fragment */
+      check = ~net_16_load(hdr->check) - net_16_load(hdr->tot_len) - net_16_load(hdr->fragment) + 1;
+      net_16_store(hdr->check, check + (check >> 16));
+
       /* send the middle fragments */
-      sent = 1;
-      while (sent && offs + fragsz < total)
+      while (offs + fragsz < total)
 	{
-	  sent = ip_send_fragment(route->addressing, interface, hdr, packet, shift + offs, fragsz, 0);
+	  ip_send_fragment(route->addressing, interface, hdr, packet, route, shift, offs, fragsz, 0);
 
 	  offs += fragsz;
 	}
 
       /* last fragment */
-      if (sent)
-	ip_send_fragment(route->addressing, interface, hdr, packet, shift + offs, total - offs, !(fragment & IP_FLAG_MF));
+      ip_send_fragment(route->addressing, interface, hdr, packet, route, shift, offs, total - offs, !(fragment & IP_FLAG_MF));
 
       /* release the original packet */
       packet_obj_refdrop(packet);
@@ -763,11 +784,9 @@ void		ip_route(struct net_packet_s	*packet,
     }
 
   /* recompute checksum (in fact, incrementally adjust it) */
+  hdr->ttl--;
   check = net_16_load(hdr->check) + 1;
   net_16_store(hdr->check, check + (check >> 16));
-
-  /* send the packet */
-  packet->stage--;
 
   /* direct or indirect delivery */
   if (route->type & ROUTETYPE_DIRECT)
@@ -788,6 +807,8 @@ void		ip_route(struct net_packet_s	*packet,
 	return;
     }
 
+  /* send the packet */
+  packet->stage--;
   /* send the packet to the driver */
   if_sendpkt(interface, packet, ETHERTYPE_IP);
 }
@@ -838,85 +859,4 @@ NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum)
   hdr.size = endian_be16(size);
 
   return packet_checksum(&hdr, sizeof (hdr));
-}
-
-/*
- * Reserve a free port.
- */
-
-NET_RESERVE_PORT(ip_reserve_port)
-{
-  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)addressing->pv;
-  uint_fast16_t		base;
-  net_port_root_t	*root;
-
-  switch (protocol)
-    {
-      case IPPROTO_UDP:
-	root = &pv->udp_ports;
-	break;
-      default:
-	assert(0);
-    }
-
-  for (base = 1024; base < 65535; base++)
-    if (!net_port_get(root, base))
-      break;
-
-  if (base == 65535)
-    return 0;
-
-  net_port_set(root, base, 1);
-
-  return htons(base);
-}
-
-/*
- * Release a port.
- */
-
-NET_RELEASE_PORT(ip_release_port)
-{
-  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)addressing->pv;
-  net_port_root_t	*root;
-
-  switch (protocol)
-    {
-      case IPPROTO_UDP:
-	root = &pv->udp_ports;
-	break;
-      default:
-	assert(0);
-    }
-
-  net_port_set(root, ntohs(port), 0);
-}
-
-/*
- * Mark a port as used.
- */
-
-NET_MARK_PORT(ip_mark_port)
-{
-  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)addressing->pv;
-  net_port_root_t	*root;
-  uint_fast16_t		p = ntohs(port);
-
-  switch (protocol)
-    {
-      case IPPROTO_UDP:
-	root = &pv->udp_ports;
-	break;
-      default:
-	assert(0);
-    }
-
-  if (net_port_get(root, p))
-    {
-      return -1;
-    }
-
-  net_port_set(root, p, 1);
-
-  return 0;
 }

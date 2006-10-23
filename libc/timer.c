@@ -50,13 +50,13 @@ error_t			timer_add_event(struct timer_s		*timer,
 
   /* insert the timer in the list (sorted) */
   for (e = timer_head(&timer->root);
-       e != NULL && e->start + e->delay < t;
+       e != NULL && t > e->start + e->delay;
        e = timer_next(&timer->root, e))
     ;
   if (e == NULL)
     timer_pushback(&timer->root, event);
   else
-    timer_insert_post(&timer->root, e, event);
+    timer_insert_pre(&timer->root, e, event);
 
   return 0;
 }
@@ -107,7 +107,7 @@ void			timer_inc_ticks(struct timer_s		*timer,
  * get the current tick count.
  */
 
-timer_delay_t		timer_get_tick(struct timer_s		*timer)
+inline timer_delay_t	timer_get_tick(struct timer_s		*timer)
 {
   return timer->ticks;
 }

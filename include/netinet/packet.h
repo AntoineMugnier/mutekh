@@ -207,7 +207,7 @@ CONTAINER_PROTOTYPE(inline, packet_queue, packet_queue_lock);
 
 static inline uint_fast8_t printf_void(void *v, ...) { return 0; }
 
-#define net_debug printf_void
+#define net_debug printf
 
 #endif
 

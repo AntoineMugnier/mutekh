@@ -85,15 +85,12 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
  ok:
 
   if (interface == NULL || addressing == NULL)
-    return -ENOENT;
+    return -EADDRNOTAVAIL;
 
   /* port selection */
   if (local->port == 0)
     {
-      local->port = addressing->desc->f.addressing->reserve_port(addressing,
-								 IPPROTO_UDP);
-      if (local->port == 0)
-	return -EAGAIN;
+      /* XXX */
     }
 
   /* prepare the packet */
@@ -107,10 +104,7 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
   memcpy(&packet->tADDR, &remote->address, sizeof (struct net_addr_s));
 
   /* send UDP packet */
-  udp_sendpkt(interface, addressing, packet, local->port, remote->port);
-
-  /* release used port */
-  addressing->desc->f.addressing->release_port(addressing, IPPROTO_UDP, local->port);
+  udp_sendpkt(interface, addressing, packet, local->port, remote->port, 1);
 
   return 0;
 }
@@ -148,14 +142,11 @@ int_fast8_t			udp_callback(struct net_udp_addr_s	*local,
 
   if (local->port == 0)
     {
-      if ((local->port = addressing->desc->f.addressing->reserve_port(addressing, IPPROTO_UDP)) == 0)
-	return -EAGAIN;
+      /* XXX */
     }
   else
     {
-      /* mask the port as reserved */
-      if (addressing->desc->f.addressing->mark_port(addressing, IPPROTO_UDP, local->port))
-	return -EADDRINUSE;
+      /* XXX */
     }
 
   /* allocate and build the descriptor */
@@ -225,8 +216,6 @@ void		udp_close(struct net_udp_addr_s	*local)
 
   if ((desc = udp_callback_lookup(&udp_callbacks, (void *)local)) != NULL)
     {
-      desc->addressing->desc->f.addressing->release_port(desc->addressing,
-							 IPPROTO_UDP, local->port);
       udp_callback_remove(&udp_callbacks, desc);
 
       mem_free(desc);
@@ -243,8 +232,15 @@ void		libudp_destroy(void)
 
   while ((desc = udp_callback_pop(&udp_callbacks)) != NULL)
     {
-      desc->addressing->desc->f.addressing->release_port(desc->addressing,
-							 IPPROTO_UDP, desc->address.port);
       mem_free(desc);
     }
+}
+
+/*
+ * Error reception callback.
+ */
+
+NET_SIGNAL_ERROR(libudp_signal_error)
+{
+  printf("UDP error\n%P:%d %d\n", &address.addr.ipv4, 4, port, error);
 }

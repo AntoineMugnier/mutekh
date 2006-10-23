@@ -199,7 +199,7 @@ error_t		nfs_init(struct nfs_s	*server)
   /* init reply semaphore */
   sem_init(&server->sem, 0, 0);
 
-  /* choose a local port */
+  /* set local port so UDP will determine a free port */
   server->local.port = htons(700); /* XXX */
 
   /* fill the portmap address */
@@ -207,7 +207,7 @@ error_t		nfs_init(struct nfs_s	*server)
   server->portmap.port = htons(111);
 
   /* generate a RPC identifier */
-  server->rpc_id = 1; /* XXX */
+  server->rpc_id = timer_get_tick(&timer_ms);
 
   /* register local rpc socket */
   udp_callback(&server->local, rpc_callback, server);

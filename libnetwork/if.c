@@ -103,7 +103,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
     {
       interface->boottype = IF_BOOT_NONE;
       if_register_proto(interface, ip, arp, icmp, 0x0a020302, 0xffffff00);
-      mtu = 512;
+      mtu = 520;
     }
   chiche = 1;
 
@@ -254,6 +254,7 @@ void			if_sendpkt(struct net_if_s	*interface,
   if (!memcmp(interface->mac, packet->tMAC, packet->MAClen))
     {
       /* XXX c'est mal poli on passe devant tout le monde */
+      /* XXX maj header */
       packet->proto = proto;
       packet->stage++;
       if_pushpkt(interface, packet);

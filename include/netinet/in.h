@@ -20,6 +20,7 @@
 #define NETINET_IN_H_
 
 #include <hexo/endian.h>
+#include <netinet/sockaddr.h>
 
 /* Standard well-defined IP protocols.  */
 #define IPPROTO_ICMP	1	/* Internet Control Message Protocol.  */
@@ -32,8 +33,6 @@
 
    On subnets, host and network parts are found according to
    the subnet mask, not these masks.  */
-
-typedef uint32_t	in_addr_t;
 
 #define	IN_CLASSA(a)		((((in_addr_t)(a)) & 0x80000000) == 0)
 #define	IN_CLASSA_NET		0xff000000
@@ -77,6 +76,30 @@ typedef uint32_t	in_addr_t;
 #define INADDR_ALLHOSTS_GROUP	((in_addr_t) 0xe0000001) /* 224.0.0.1 */
 #define INADDR_ALLRTRS_GROUP    ((in_addr_t) 0xe0000002) /* 224.0.0.2 */
 #define INADDR_MAX_LOCAL_GROUP  ((in_addr_t) 0xe00000ff) /* 224.0.0.255 */
+
+/* Internet address.  */
+typedef uint32_t in_addr_t;
+struct in_addr
+  {
+    in_addr_t s_addr;
+  };
+
+/* Type to represent a port.  */
+typedef uint16_t in_port_t;
+
+/* Structure describing an Internet socket address.  */
+struct sockaddr_in
+  {
+    __SOCKADDR_COMMON (sin_);
+    in_port_t sin_port;			/* Port number.  */
+    struct in_addr sin_addr;		/* Internet address.  */
+
+    /* Pad to size of `struct sockaddr'.  */
+    unsigned char sin_zero[sizeof (struct sockaddr) -
+			   __SOCKADDR_COMMON_SIZE -
+			   sizeof (in_port_t) -
+			   sizeof (struct in_addr)];
+  };
 
 /*
     This file is part of MutekH.

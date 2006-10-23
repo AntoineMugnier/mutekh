@@ -49,6 +49,7 @@ struct net_proto_s;
 #define ERROR_TIMEOUT			8
 #define ERROR_FRAGMENT_TIMEOUT		9
 #define ERROR_BAD_HEADER		10
+#define	ERROR_UNKNOWN			11
 
 /*
  * Prototype of a push function.
@@ -92,6 +93,7 @@ typedef NET_DESTROYPROTO(net_destroyproto_t);
 typedef uint_fast16_t net_pkt_size_t;
 typedef uint_fast16_t net_proto_id_t;
 typedef uint_fast16_t net_error_id_t;
+typedef uint_fast16_t net_port_t;
 
 /*
  * Prototype of the function used to send a packet.
@@ -137,33 +139,14 @@ typedef NET_PSEUDOHEADER_CHECKSUM(net_pseudoheader_checksum_t);
 typedef NET_ERRORMSG(net_errormsg_t);
 
 /*
- * Prototype of function to reserve a port.
+ * Prototype of function signaling an error to an higher level.
  */
 
-#define NET_RESERVE_PORT(f)	uint_fast16_t	(f)(struct net_proto_s	*addressing,\
-						    net_proto_id_t	protocol)
+#define NET_SIGNAL_ERROR(f)	void	(f)(net_error_id_t	error,		\
+					    struct net_addr_s	address,	\
+					    net_port_t		port)
 
-typedef NET_RESERVE_PORT(net_reserve_port_t);
-
-/*
- * Prototype of function to mark a port as reserved.
- */
-
-#define NET_MARK_PORT(f)	error_t	(f)(struct net_proto_s	*addressing,	\
-					    net_proto_id_t	protocol,	\
-					    uint_fast16_t	port)
-
-typedef NET_MARK_PORT(net_mark_port_t);
-
-/*
- * Prototype of function to release a port.
- */
-
-#define NET_RELEASE_PORT(f)	void	(f)(struct net_proto_s	*addressing,	\
-					    net_proto_id_t	protocol,	\
-					    uint_fast16_t	port)
-
-typedef NET_RELEASE_PORT(net_release_port_t);
+typedef NET_SIGNAL_ERROR(net_signal_error_t);
 
 /*
  * This structure defines the interface of an addressing protocol.
@@ -175,9 +158,6 @@ struct				net_addressing_interface_s
   net_matchaddr_t		*matchaddr;
   net_pseudoheader_checksum_t	*pseudoheader_checksum;
   net_errormsg_t		*errormsg;
-  net_reserve_port_t		*reserve_port;
-  net_release_port_t		*release_port;
-  net_mark_port_t		*mark_port;
 };
 
 /*
@@ -237,7 +217,7 @@ CONTAINER_KEY_FUNC(static inline, net_protos, HASHLIST, net_protos, NOLOCK, id);
 
 static inline struct net_proto_s	*net_alloc_proto(const struct net_proto_desc_s	*desc)
 {
-  struct net_proto_s	*proto;
+  struct net_proto_s			*proto;
 
   proto = mem_alloc(sizeof (struct net_proto_s) + desc->pv_size,
 		    MEM_SCOPE_CONTEXT);
@@ -245,7 +225,7 @@ static inline struct net_proto_s	*net_alloc_proto(const struct net_proto_desc_s	
   proto->desc = desc;
   proto->id = desc->id;
   if (desc->pv_size)
-    proto->pv = (void*)(proto + 1);
+    proto->pv = (void *)(proto + 1);
   else
     proto->pv = NULL;
 

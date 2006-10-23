@@ -135,7 +135,6 @@ struct iphdr {
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_hashlist.h>
-#include <gpct/cont_bitmap.h>
 
 #include <timer.h>
 
@@ -184,12 +183,6 @@ CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, NOOBJ, list_entr
 CONTAINER_KEY_TYPE(ip_packet, BLOB, id, 6);
 
 /*
- * Ports bitmap.
- */
-
-CONTAINER_TYPE(net_port, BITMAP, uint8_t, HEXO_SPIN, NOOBJ, 65536);
-
-/*
  * IP private data.
  */
 
@@ -201,7 +194,6 @@ struct			net_pv_ip_s
   uint_fast32_t		addr;
   uint_fast32_t		mask;
   ip_packet_root_t	fragments;
-  net_port_root_t	udp_ports;
   uint_fast32_t		id_seq;
 };
 
@@ -219,10 +211,6 @@ NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum);
 void		ip_route(struct net_packet_s	*packet,
 			 struct net_route_s	*route);
 TIMER_CALLBACK(ip_fragment_timeout);
-
-NET_RESERVE_PORT(ip_reserve_port);
-NET_RELEASE_PORT(ip_release_port);
-NET_MARK_PORT(ip_mark_port);
 
 extern const struct net_proto_desc_s	ip_protocol;
 

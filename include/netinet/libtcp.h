@@ -83,5 +83,7 @@ void	tcp_send(struct net_tcp_session_s	*session,
 void	libtcp_push(struct net_packet_s	*packet,
 		    struct tcphdr	*hdr);
 
+NET_SIGNAL_ERROR(libtcp_signal_error);
+
 #endif
 

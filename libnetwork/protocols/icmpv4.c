@@ -29,6 +29,9 @@
 #include <netinet/in.h>
 #include <netinet/packet.h>
 #include <netinet/protos.h>
+#include <netinet/libudp.h>
+#include <netinet/libtcp.h>
+#include <netinet/tcp.h>
 
 #include <netinet/if.h>
 
@@ -105,11 +108,17 @@ NET_PUSHPKT(icmp_pushpkt)
 {
 #ifdef CONFIG_NETWORK_AUTOALIGN
   struct icmphdr	aligned;
+  struct iphdr		aligned_ip;
 #endif
   struct icmphdr	*hdr;
   struct net_header_s	*nethdr;
   uint_fast16_t		computed_check;
   struct net_proto_s	*addressing = packet->source_addressing;
+  struct iphdr		*hdr_ip;
+  struct net_addr_s	address;
+  uint_fast16_t		port;
+  net_proto_id_t	proto;
+  net_signal_error_t	*signal_error;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -134,21 +143,123 @@ NET_PUSHPKT(icmp_pushpkt)
       return;
     }
 
-  /* XXX action */
+  /* special case: the ping */
+  if (hdr->type == 8 && hdr->code == 0)
+    {
+      net_debug("Ping\n");
+      icmp_echo(interface, addressing, protocol, packet);
+      return ;
+    }
+
+  /* isolate the erroneous packet: destination ip/proto/port */
+  if (nethdr[1].data == NULL)
+    {
+      nethdr[1].data = nethdr->data + sizeof (struct icmphdr);
+      nethdr[1].size = nethdr->size - sizeof (struct icmphdr);
+    }
+
+  hdr_ip = (struct iphdr *)nethdr[1].data;
+
+  /* align the ip packet on 32 bits if necessary */
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  if (!IS_ALIGNED(hdr_ip, sizeof (uint32_t)))
+    {
+      memcpy(&aligned_ip, hdr_ip, sizeof (struct iphdr));
+      hdr_ip = &aligned_ip;
+    }
+#endif
+
+  if (nethdr[2].data == NULL)
+    {
+      uint_fast8_t	hdr_len = hdr_ip->ihl * 4;
+
+      nethdr[2].data = nethdr[1].data + hdr_len;
+      nethdr[2].size = nethdr[1].size - hdr_len;
+    }
+
+  /* determine source IP and protocol */
+  IPV4_ADDR_SET(address, net_be32_load(hdr_ip->saddr));
+  proto = hdr_ip->protocol;
+
+  switch (proto)
+    {
+      case IPPROTO_UDP:
+	{
+	  struct udphdr	*hdr_udp;
+#ifdef CONFIG_NETWORK_AUTOALIGN
+	  struct udphdr	aligned_udp;
+#endif
+
+	  hdr_udp = (struct udphdr *)nethdr[2].data;
+
+	  /* align on 16 bits if needed */
+#ifdef CONFIG_NETWORK_AUTOALIGN
+	  if (!IS_ALIGNED(hdr_udp, sizeof (uint16_t)))
+	    {
+	      memcpy(&aligned_udp, hdr_udp, sizeof (struct udphdr));
+	      hdr_udp = &aligned_udp;
+	    }
+#endif
+
+	  port = net_be16_load(hdr_udp->source);
+	  signal_error = libudp_signal_error;
+	}
+	break;
+      case IPPROTO_TCP:
+	{
+	  struct tcphdr	*hdr_tcp;
+#ifdef CONFIG_NETWORK_AUTOALIGN
+	  struct tcphdr	aligned_tcp;
+#endif
+
+	  hdr_tcp = (struct tcphdr *)nethdr[2].data;
+
+	  /* align on 32 bits if needed */
+#ifdef CONFIG_NETWORK_AUTOALIGN
+	  if (!IS_ALIGNED(hdr_tcp, sizeof (uint32_t)))
+	    {
+	      memcpy(&aligned_tcp, hdr_tcp, sizeof (struct tcphdr));
+	      hdr_tcp = &aligned_tcp;
+	    }
+#endif
+
+	  port = net_be16_load(hdr_tcp->th_sport);
+	  signal_error = libtcp_signal_error;
+	}
+	break;
+      default:
+	return; /* unknown protocol, we can't do anything */
+    }
+
+  /* at this point, address is the source address of the erroneous
+     packet, proto is either UDP or TCP, and port is the source port
+     of the connection that caused the error */
+
+  /* analyse the error */
   switch (hdr->type)
     {
-      case 8:
+      case 3:
 	switch (hdr->code)
 	  {
-	    case 0:
-	      net_debug("Ping\n");
-	      icmp_echo(interface, addressing, protocol, packet);
+	    case 2:	/* protocol unavailable */
+	      signal_error(ERROR_PROTO_UNREACHABLE, address, port);
 	      break;
-	    default:
+	    case 3:	/* port unreachable */
+	      signal_error(ERROR_PORT_UNREACHABLE, address, port);
+	      break;
+	    default:	/* other: host unreachable, net unreachable... */
+	      signal_error(ERROR_HOST_UNREACHABLE, address, port);
 	      break;
 	  }
 	break;
-      default:
+      case 4:	/* source quench */
+	signal_error(ERROR_CONGESTION, address, port);
+	break;
+      case 11:	/* timeout */
+	signal_error(ERROR_TIMEOUT, address, port);
+	break;
+      default:	/* other kind of error */
+	signal_error(ERROR_UNKNOWN, address, port);
 	break;
     }
 }
@@ -198,6 +309,8 @@ NET_ERRORMSG(icmp_errormsg)
 
   va_start(va, error);
 
+  net_debug("ICMP error %d\n", error);
+
   /* get a pointer to the erroneous packet */
   nethdr = &erroneous->header[erroneous->stage];
   hdr_err = (struct iphdr *)nethdr->data;
@@ -214,7 +327,7 @@ NET_ERRORMSG(icmp_errormsg)
 
   offs = hdr_err->ihl * 4;
   /* next stage */
-  if (!nethdr[1].data)
+  if (nethdr[1].data == NULL)
     {
       nethdr[1].data = nethdr->data + offs;
       nethdr[1].size = nethdr->size - offs;
@@ -302,7 +415,10 @@ NET_ERRORMSG(icmp_errormsg)
 
   packet->stage--;
   /* send the packet to the interface */
+  printf("ICMP sending\n");
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_ICMP);
+
+  printf("ICMP sent\n");
 
   va_end(va);
 }
