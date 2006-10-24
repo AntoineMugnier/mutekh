@@ -53,7 +53,7 @@ print_dir:
 
 .PHONY: $(subdirs-lists) $(target)
 
-../.$(DIR).list: print_dir $(objs) $(subdirs-lists) $(SRC_DIR)$(H)/Makefile
+$(HH)/.$(DIR).list: print_dir $(objs) $(subdirs-lists) $(SRC_DIR)$(H)/Makefile
 	@rm -f $@
 	@for obj in $(filter %.o,$^) \
 			$$(cat /dev/null $(filter %.list,$^)) ; do \
@@ -65,7 +65,7 @@ define recurse
 .$(1).list: $$(SRC_DIR)$$(H)/$(1)/Makefile
 	@test -d $(1) || mkdir -p $(1)
 	@rm -f $$@
-	@$$(MAKE) -C $(1) -f $$(SRC_DIR)/scripts/rules.mk ../$$@ DIR=$(1) H="$$(H)/$(1)"
+	@$$(MAKE) -C $(1) -f $$(SRC_DIR)/scripts/rules.mk $$(SRC_DIR)$$(H)/$$@ DIR=$(1) H="$$(H)/$(1)" HH="$$(SRC_DIR)$$(H)"
 
 endef
 
