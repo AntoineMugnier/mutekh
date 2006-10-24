@@ -99,7 +99,7 @@ uint16_t		packet_checksum(const void	*data,
 
 #ifndef HAS_CPU_PACKET_MEMCPY
 #undef packet_memcpy
-uint_16_t		packet_memcpy(void		*dst,
+uint16_t		packet_memcpy(void		*dst,
 				      const void	*src,
 				      size_t		size)
 {

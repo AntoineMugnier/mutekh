@@ -19,6 +19,9 @@
 
 */
 
+#include "tty-soclib.h"
+
+#include "tty-soclib-private.h"
 
 #include <hexo/types.h>
 #include <hexo/device.h>
@@ -26,10 +29,6 @@
 #include <hexo/iospace.h>
 #include <hexo/alloc.h>
 #include <hexo/interrupt.h>
-
-#include "tty-soclib.h"
-
-#include "tty-soclib-private.h"
 
 #define TTY_SOCLIB_REG_WRITE	0
 #define TTY_SOCLIB_REG_STATUS	4

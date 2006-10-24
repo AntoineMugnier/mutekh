@@ -19,6 +19,10 @@
 
 */
 
+#include "icu-soclib.h"
+
+#include "icu-soclib-private.h"
+
 #include <string.h>
 
 #include <hexo/types.h>
@@ -27,10 +31,6 @@
 #include <hexo/iospace.h>
 #include <hexo/alloc.h>
 #include <hexo/interrupt.h>
-
-#include "icu-soclib.h"
-
-#include "icu-soclib-private.h"
 
 static CPU_LOCAL struct icu_soclib_private_s *icu_soclib_pv;
 

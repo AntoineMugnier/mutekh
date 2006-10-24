@@ -23,18 +23,38 @@
 #include <hexo/alloc.h>
 #include <hexo/segment.h>
 
-void * mem_alloc(size_t size, uint_fast8_t scope)
+#include "dsx_addresses.h"
+
+struct mem_alloc_region_s mem_region_system;
+
+#if defined(CONFIG_SMP)
+struct mem_alloc_region_s mem_region_cpu;
+#endif
+
+#if defined(CONFIG_CLUSTER)
+struct mem_alloc_region_s mem_region_cluster;
+#endif
+
+#if defined(CONFIG_SMP) || defined(CONFIG_CLUSTER)
+struct mem_alloc_region_s *mem_region_default;
+#endif
+
+void mem_init(void)
 {
-  static uint8_t	*addr = (void*)&__system_heap_start;
-  void			*res;
+#if defined(CONFIG_SMP)
+  mem_alloc_region_init(&mem_region_cpu,
+			(uint8_t*)DSX_SEGMENT_HEAP_C_ADDR,
+			(uint8_t*)DSX_SEGMENT_HEAP_C_ADDR + DSX_SEGMENT_HEAP_C_SIZE
+			);
+#endif
 
-  res = addr;
-  addr += size;
+  mem_alloc_region_init(&mem_region_system,
+			(uint8_t*)DSX_SEGMENT_HEAP_U_ADDR,
+			(uint8_t*)DSX_SEGMENT_HEAP_U_ADDR + DSX_SEGMENT_HEAP_U_SIZE
+			);
 
-  return res;
-}
-
-void mem_free(void *ptr)
-{
+#if defined(CONFIG_SMP) || defined(CONFIG_CLUSTER)
+  mem_region_default = &mem_region_system;
+#endif
 }
 

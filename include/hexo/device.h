@@ -150,7 +150,11 @@ void device_init(struct device_s *dev);
 #endif /* !CONFIG_DEVICE_HIERARCHY */
 
 #ifdef CONFIG_DEVICE_HIERARCHY
-#define DEVICE_INITIALIZER	{ .children = CONTAINER_ROOT_INITIALIZER(device_list, DLIST, HEXO_SPIN), .obj_entry = OBJECT_INITIALIZER(device_obj, REFCOUNT) }
+#define DEVICE_INITIALIZER							\
+{										\
+  .children = CONTAINER_ROOT_INITIALIZER(device_list, DLIST, HEXO_SPIN),	\
+  .obj_entry = OBJECT_INITIALIZER(device_obj, REFCOUNT)				\
+}
 #else
 #define DEVICE_INITIALIZER	{ }
 #endif

@@ -51,6 +51,9 @@ void arch_init()
       lock_init(&cpu_init_lock);
 
 #endif
+
+      mem_init();
+
       /* configure system wide cpu data */
       cpu_global_init();
 
@@ -106,6 +109,6 @@ inline uint_fast8_t arch_get_cpu_count(void)
   return cpu_count;
 #else
   return 1;
-#ifdef CONFIG_SMP
+#endif
 }
 

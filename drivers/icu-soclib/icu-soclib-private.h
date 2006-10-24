@@ -22,6 +22,7 @@
 #ifndef __ICU_soclib_PRIVATE_H_
 #define __ICU_soclib_PRIVATE_H_
 
+#include <hexo/device/icu.h>
 #include <hexo/device.h>
 
 struct icu_soclib_handler_s

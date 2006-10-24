@@ -22,6 +22,7 @@
 #ifndef DRIVER_TTY_SOCLIB_H_
 #define DRIVER_TTY_SOCLIB_H_
 
+#include <hexo/device/char.h>
 #include <hexo/device.h>
 
 /* tty device functions */

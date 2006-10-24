@@ -65,9 +65,6 @@ SECTIONS
 
 	__context_data_start = LOADADDR(.contextdata);
 	__context_data_end = LOADADDR(.contextdata) + SIZEOF(.contextdata);
-
-	__system_heap_start = __context_data_end;
-
    }
 
 ENTRY(cpu_boot)

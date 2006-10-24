@@ -45,6 +45,11 @@ sub cmd_exclude
     $$opts{exclude} = "@args";
 }
 
+sub cmd_mandatory
+{
+    my ($location, $opts, @args) = @_;
+}
+
 sub cmd_require
 {
     my ($location, $opts, @args) = @_;
@@ -59,6 +64,7 @@ my %config_cmd =
  "exclude" => \&cmd_exclude,
  "default" => \&cmd_default,
  "depend" => \&cmd_depend,
+ "mandatory" => \&cmd_mandatory,
  "require" => \&cmd_require,
  "desc" => \&cmd_desc,
  "description" => \&cmd_desc
@@ -135,6 +141,11 @@ sub process_file
 		    die "error:$file:$lnum: unknown command `".@line_l[0]."' in %config block\n";
 		}
 	    }
+	}
+
+	if ($state)
+	{
+	    die "error:$file:$lnum: unexpected end of file\n";
 	}
 
 	close(FILE);
@@ -271,6 +282,11 @@ sub process_config
 	    $$opt{value} = $$opt{default};
 	    $changed = 1;
 	}
+
+	if (not @{$$opt{desc}})
+	{
+	    print "warning:".$$opt{location}.": missing description for `".$$opt{name}."'\n";
+	}
     }
 
     # check exclusion
@@ -335,7 +351,6 @@ sub read_header
 		else
 		{
 		    $$opt{"value"} = $2;
-		    print "+ $1\n";
 		    next;
 		}
 	    }
@@ -351,7 +366,6 @@ sub read_header
 		else
 		{
 		    $$opt{"value"} = "undefined";
-		    print "-";
 		    next;
 		}
 	    }
@@ -365,22 +379,27 @@ sub write_header
 {
     my ($file) = @_;
 
-    if (open(FILE, ">_".$file))
+    if (open(FILE, ">".$file))
     {
 	foreach my $opt (values %config_opts)
 	{
 	    my @desc = @{$$opt{"desc"}};
 
-	    print FILE "\n/* "."@desc"."*/\n\n";
+	    print FILE "\n/* "."@desc"." */\n\n";
 
 	    if ($$opt{value} eq "undefined")
 	    {
 		print FILE "#undef ".$$opt{name}."\n";
+		next;
 	    }
-	    else
+
+	    if ($$opt{value} eq "defined")
 	    {
-		print FILE "#define ".$$opt{name}." ".$$opt{value}."\n";
+		print FILE "#define ".$$opt{name}."\n";
+		next;
 	    }
+
+	    print FILE "#define ".$$opt{name}." ".$$opt{value}."\n";
 	}
     }
 }

@@ -57,9 +57,10 @@ void arch_init()
       lock_init(&cpu_init_lock);
       lock_init(&cpu_start_lock);
 
+#endif
+
       mem_init();
 
-#endif
       /* configure system wide cpu data */
       cpu_global_init();
 

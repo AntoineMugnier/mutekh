@@ -20,42 +20,15 @@
 */
 
 
-#ifndef ARCH_ALLOC_H_
-#define ARCH_ALLOC_H_
+#ifndef ALLOC_H_
+#define ALLOC_H_
 
-#include <hexo/local.h>
 #include <hexo/types.h>
 #include <hexo/lock.h>
+#include <hexo/endian.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_dlist.h>
-
-/***************** Memory allocation interface ******************/
-
-/** allocated memory scope is system local */
-#define MEM_SCOPE_SYS		1
-/** allocated memory scope is cpu local */
-#define MEM_SCOPE_CPU		2
-/** allocated memory scope is cpu cluster local */
-#define MEM_SCOPE_CLUSTER	4
-/** allocated memory scope is context local */
-#define MEM_SCOPE_CONTEXT	8
-/** use current default allocation policy */
-#define MEM_SCOPE_DEFAULT	16
-
-extern CONTEXT_LOCAL uint_fast8_t	mem_alloc_policy;
-
-/** set default allocation policy */
-void mem_alloc_set_policy(uint_fast8_t policy);
-
-/** allocate memory */
-void * mem_alloc(size_t size, uint_fast8_t scope);
-
-/** free memory pointer */
-void mem_free(void *ptr);
-
-/** initialize memory subsystem */
-void mem_init(void);
 
 /***************** Memory allocatable region management ******************/
 
@@ -75,6 +48,9 @@ struct mem_alloc_header_s
   uintptr_t			size;
   CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
 };
+
+static const size_t	mem_hdr_size = ALIGN_VALUE_UP(sizeof (struct mem_alloc_header_s),
+						      CONFIG_HEXO_MEMALLOC_ALIGN);
 
 CONTAINER_TYPE(alloc_list, DLIST, struct mem_alloc_header_s, NOLOCK, NOOBJ, list_entry);
 
@@ -99,8 +75,59 @@ void mem_alloc_region_push(void *address);
 void mem_alloc_region_init(struct mem_alloc_region_s *region,
 			   void *address, void *end);
 
-error_t mem_stats(uint_fast8_t scope, size_t *alloc_blocks,
-		  size_t *free_size, size_t *free_blocks);
+error_t mem_alloc_stats(struct mem_alloc_region_s *region,
+			size_t *alloc_blocks,
+			size_t *free_size,
+			size_t *free_blocks);
+
+/***************** Memory allocation interface ******************/
+
+/** set default allocatable region */
+static inline void
+mem_alloc_set_default(struct mem_alloc_region_s *region);
+
+/** allocate a new memory block in given region */
+static inline void *
+mem_alloc(size_t size, struct mem_alloc_region_s *region)
+{
+  struct mem_alloc_header_s	*hdr;
+
+  size = mem_hdr_size + ALIGN_VALUE_UP(size, CONFIG_HEXO_MEMALLOC_ALIGN);
+  hdr = mem_alloc_region_pop(region, size);
+  return hdr != NULL ? (uint8_t*)hdr + mem_hdr_size : NULL;
+}
+
+/** free allocated memory block */
+static inline void mem_free(void *ptr)
+{
+  struct mem_alloc_header_s	*hdr = (void*)((uint8_t*)ptr - mem_hdr_size);
+
+  mem_alloc_region_push(hdr);
+}
+
+/** initialize memory subsystem. found in arch/name/mem_alloc.c */
+void mem_init(void);
+
+#include <arch/hexo/alloc.h>
+
+#ifndef MEM_SCOPE_CPU
+# define MEM_SCOPE_CPU		MEM_SCOPE_SYS
+# if defined(CONFIG_SMP) && defined(CONFIG_CACHE) && !defined(CONFIG_CACHE_COHERENCY)
+#  warning No CPU local memory region is available, cache problems may occur
+# endif
+#endif
+
+#ifndef MEM_SCOPE_CLUSTER
+# define MEM_SCOPE_CLUSTER	MEM_SCOPE_SYS
+#endif
+
+#ifndef MEM_SCOPE_CONTEXT
+# define MEM_SCOPE_CONTEXT	MEM_SCOPE_SYS
+#endif
+
+#ifndef MEM_SCOPE_DEFAULT
+# define MEM_SCOPE_DEFAULT	MEM_SCOPE_SYS
+#endif
 
 #endif
 

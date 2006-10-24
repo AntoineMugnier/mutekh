@@ -22,6 +22,7 @@
 #ifndef __TIMER_SOCLIB_PRIVATE_H_
 #define __TIMER_SOCLIB_PRIVATE_H_
 
+#include <hexo/device/timer.h>
 #include <hexo/device.h>
 
 /* timer device registers addresses */
@@ -38,7 +39,7 @@
 
 struct			timer_soclib_context_s
 {
-  timer_callback_t	*cb[TIMER_SOCLIB_IDCOUNT];
+  devtimer_callback_t	*cb[TIMER_SOCLIB_IDCOUNT];
   void			*pv[TIMER_SOCLIB_IDCOUNT];
 };
 

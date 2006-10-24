@@ -25,7 +25,7 @@
 #include <hexo/lock.h>
 #include <hexo/endian.h>
 
-static struct mem_alloc_region_s mem_ram;
+struct mem_alloc_region_s mem_region_ibmpc_ram;
 
 static void *
 mem_ibmpc_memsize_probe(void *start)
@@ -52,27 +52,6 @@ mem_ibmpc_memsize_probe(void *start)
   return (void*)x;
 }
 
-static const size_t	hdr_size = ALIGN_VALUE_UP(sizeof (struct mem_alloc_header_s),
-						  CONFIG_HEXO_MEMALLOC_ALIGN);
-
-void * mem_alloc(size_t size, uint_fast8_t scope)
-{
-  struct mem_alloc_header_s	*hdr;
-
-  size = hdr_size + ALIGN_VALUE_UP(size, CONFIG_HEXO_MEMALLOC_ALIGN);
-
-  hdr = mem_alloc_region_pop(&mem_ram, size);
-
-  return (uint8_t*)hdr + hdr_size;
-}
-
-void mem_free(void *ptr)
-{
-  struct mem_alloc_header_s	*hdr = (void*)((uint8_t*)ptr - hdr_size);
-
-  mem_alloc_region_push(hdr);
-}
-
 void mem_init(void)
 {
   void	*mem_end = mem_ibmpc_memsize_probe(&__system_heap_start);
@@ -81,7 +60,7 @@ void mem_init(void)
   mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_HEXO_MEMALLOC_ALIGN);
   mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_HEXO_MEMALLOC_ALIGN);
 
-  mem_alloc_region_init(&mem_ram, mem_start, mem_end);
+  mem_alloc_region_init(&mem_region_ibmpc_ram, mem_start, mem_end);
 }
 
 error_t mem_stats(uint_fast8_t scope, size_t *alloc_blocks,
