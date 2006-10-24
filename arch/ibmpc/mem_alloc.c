@@ -63,24 +63,3 @@ void mem_init(void)
   mem_alloc_region_init(&mem_region_ibmpc_ram, mem_start, mem_end);
 }
 
-error_t mem_stats(uint_fast8_t scope, size_t *alloc_blocks,
-		  size_t *free_size, size_t *free_blocks)
-{
-#ifdef CONFIG_HEXO_MEMALLOC_STATS
-  struct mem_alloc_region_s *region = &mem_ram;
-
-  if (alloc_blocks)
-    *alloc_blocks = region->alloc_blocks;
-
-  if (free_size)
-    *free_size = region->free_size;
-
-  if (free_blocks)
-    *free_blocks = region->free_blocks;
-
-  return 0;
-#else
-  return -ENOTSUP;
-#endif
-}
-

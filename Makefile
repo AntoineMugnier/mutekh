@@ -21,10 +21,14 @@ objs =
 
 include $(SRC_DIR)/scripts/common.mk
 
-$(target): $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(ARCH)/ldscript $(LIBAPP)
+$(target): config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(ARCH)/ldscript $(LIBAPP)
 	@echo '    LD      $@'
 	@$(LD) -q $$(cat /dev/null $(filter %.list,$^)) \
 	$(filter %.o,$^) $(filter %.a,$^) \
 	-T $(SRC_DIR)/arch/$(ARCH)/ldscript \
 	-o $@
 
+config.h: FORCE
+	perl scripts/config.pl
+
+FORCE::
