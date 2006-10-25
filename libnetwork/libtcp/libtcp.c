@@ -110,7 +110,7 @@ int_fast8_t			tcp_open(struct net_tcp_addr_s	*local,
   session->accept = NULL;
 
   /* choose a local port */
-  local->port = 1024 + (cpu_cycle_count() % 32768) ; /* XXX choose me better! */
+  local->port = 1024 + (timer_get_tick(&timer_ms) % 32768) ; /* XXX choose me better! */
   memcpy(&session->local, local, sizeof (struct net_tcp_addr_s));
   memcpy(&session->remote, remote, sizeof (struct net_tcp_addr_s));
 

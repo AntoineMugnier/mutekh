@@ -20,7 +20,7 @@
 */
 
 /*
- * UDP protocol
+ * UDP protocol XXX a merger w/ libudp ?
  *
  */
 
@@ -125,7 +125,7 @@ inline uint8_t		*udp_preparepkt(struct net_if_s		*interface,
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = addressing->desc->preparepkt(interface, packet, sizeof (struct udphdr) + size, 2);
+  next = addressing->desc->preparepkt(interface, packet, sizeof (struct udphdr) + size, 4);
   next = ALIGN_ADDRESS_UP(next, 4);
 #else
   next = addressing->desc->preparepkt(interface, packet, sizeof (struct udphdr) + size, 0);

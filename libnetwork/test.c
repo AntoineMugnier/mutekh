@@ -142,7 +142,11 @@ void			*nfs_test(void *p)
  * test main.
  */
 
+#ifndef LINUXSIM
 int_fast8_t		main()
+#else
+int_fast8_t		_main()
+#endif
 {
   uint_fast32_t i;
 
@@ -173,7 +177,7 @@ int_fast8_t		main()
 
 #endif
 
-#if 0
+#if 1
   eval_server();
 #endif
 

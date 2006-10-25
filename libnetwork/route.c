@@ -45,16 +45,15 @@ void			route_add(struct net_route_s	*route)
       /* direct route: we use the target address to determine which
 	 addressing module to use */
       target = &route->target;
-      mask = &route->mask;
     }
   else
     {
       /* indirect route: we use the router address to determine which
 	 addressing module to use */
       target = &route->router;
-      mask = &route->mask;
     }
 
+  mask = &route->mask;
   id = target->family;
 
   /* look throught all the matching addressing protocols */
@@ -65,11 +64,11 @@ void			route_add(struct net_route_s	*route)
       if (item->desc->f.addressing->matchaddr(item, NULL, target, mask))
 	{
 	  route->addressing = item;
-	  break;
+	  route_table_push(&route_table, route);
+	  return ;
 	}
     }
-
-  route_table_push(&route_table, route);
+  /* XXX return */
 }
 
 /*
@@ -82,15 +81,17 @@ struct net_route_s	*route_get(struct net_addr_s	*addr)
   /* look into the route table XXX must sort it with netmask */
   CONTAINER_FOREACH(route_table, DLIST, NOLOCK, &route_table,
   {
+    struct net_proto_s	*addressing = item->addressing;
+
     /* an entry for a single host */
     if (item->type == ROUTETYPE_HOST)
       {
-	if (item->addressing->desc->f.addressing->matchaddr(item->addressing, &item->target, addr, NULL))
+	if (addressing->desc->f.addressing->matchaddr(addressing, &item->target, addr, NULL))
 	  return item;
       }
     else /* an entry for a subnet */
       {
-	if (item->addressing->desc->f.addressing->matchaddr(item->addressing, &item->target, addr, &item->mask))
+	if (addressing->desc->f.addressing->matchaddr(addressing, &item->target, addr, &item->mask))
 	  return item;
       }
   });

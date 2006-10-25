@@ -127,10 +127,12 @@ NET_PREPAREPKT(rarp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 4);
+  if ((next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 4)) == NULL)
+    return NULL;
   next = ALIGN_ADDRESS_UP(next, 4);
 #else
-  next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 0);
+  if ((next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 0)) == NULL)
+    return NULL;
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -154,9 +156,14 @@ void			rarp_request(struct net_if_s	*interface,
   struct net_packet_s	*packet;
   struct net_header_s	*nethdr;
 
-  packet = packet_obj_new(NULL);
+  if ((packet = packet_obj_new(NULL)) == NULL)
+    return ;
 
-  rarp_preparepkt(interface, packet, 0, 0);
+  if (rarp_preparepkt(interface, packet, 0, 0) == NULL)
+    {
+      packet_obj_refdrop(packet);
+      return ;
+    }
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -176,10 +183,10 @@ void			rarp_request(struct net_if_s	*interface,
   net_32_store(hdr->arp_spa, 0);
   net_32_store(hdr->arp_tpa, 0);
 
-  packet->tMAC = (uint8_t *)"\xff\xff\xff\xff\xff\xff";
+  packet->tMAC = (const uint8_t *)"\xff\xff\xff\xff\xff\xff";
 
-  packet->stage--;
   /* send the packet to the interface */
+  packet->stage--;
   if_sendpkt(interface, packet, ETHERTYPE_REVARP);
 }
 

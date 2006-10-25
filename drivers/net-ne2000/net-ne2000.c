@@ -123,7 +123,7 @@ static void	ne2000_send(struct device_s	*dev)
  * read a packet from the NIC ring buffer.
  */
 
-static uint_fast8_t		ne2000_rx(struct device_s	*dev,
+static bool_t			ne2000_rx(struct device_s	*dev,
 					  uint8_t		**data,
 					  uint_fast16_t		*size)
 {
@@ -155,7 +155,8 @@ static uint_fast8_t		ne2000_rx(struct device_s	*dev,
   *size = hdr.size - sizeof (struct ne2000_header_s);
 
 #ifdef CONFIG_NE2000_FRAGMENT
-  buf = *data = mem_alloc(*size + 2, MEM_SCOPE_CONTEXT);
+  if ((buf = *data = mem_alloc(*size + 2, MEM_SCOPE_CONTEXT)) == NULL)
+    return 0;
   ne2000_mem_read(dev, dma + sizeof (struct ne2000_header_s),
 		  buf, sizeof (struct ether_header));
   ne2000_mem_read(dev, dma + sizeof (struct ne2000_header_s) +
@@ -163,7 +164,8 @@ static uint_fast8_t		ne2000_rx(struct device_s	*dev,
 		  buf + sizeof (struct ether_header) + 2,
 		  *size - sizeof (struct ether_header));
 #else
-  buf = *data = mem_alloc(*size, MEM_SCOPE_CONTEXT);
+  if ((buf = *data = mem_alloc(*size, MEM_SCOPE_CONTEXT)) == NULL)
+    return 0;
   ne2000_mem_read(dev, dma + sizeof (struct ne2000_header_s),
 		  buf, *size);
 #endif
@@ -190,7 +192,8 @@ static void	ne2000_push(struct device_s	*dev,
   struct net_header_s		*nethdr;
 
   /* create a new packet object */
-  packet = packet_obj_new(NULL);
+  if ((packet = packet_obj_new(NULL)) == NULL)
+    return ;
   packet->packet = data;
 
   nethdr = &packet->header[0];
@@ -198,7 +201,7 @@ static void	ne2000_push(struct device_s	*dev,
   nethdr->size = size;
 
   /* get the good header */
-  hdr = (struct ether_header*)nethdr->data;
+  hdr = (struct ether_header *)nethdr->data;
 
   /* fill some info */
   packet->MAClen = sizeof(struct ether_addr);
@@ -379,7 +382,7 @@ DEV_IRQ(net_ne2000_irq)
 	  /* no errors */
 	  if (cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_RSR) & NE2000_SPRX)
 	    {
-	      uint_fast16_t			size;
+	      uint_fast16_t		size;
 	      uint8_t			*data;
 
 	      /* read the packet */
@@ -417,9 +420,9 @@ DEV_INIT(net_ne2000_init)
   printf("ne2000 driver init on device %p\n", dev);
 
   /* driver private data */
-  pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
+  pv = mem_alloc(sizeof (struct net_ne2000_context_s), MEM_SCOPE_SYS);
 
-  if (!pv)
+  if (pv == NULL)
     return -1;
 
   lock_init(&pv->lock);
@@ -435,6 +438,7 @@ DEV_INIT(net_ne2000_init)
 
       return -1;
     }
+
   printf("ne2000: detected a %s ne2000 device with %d kb\n",
 	 pv->io_16 ? "16 bits" : "8 bits", pv->mem << 8);
   printf("ne2000: MAC is %P\n", pv->mac, ETH_ALEN);
@@ -456,10 +460,19 @@ DEV_INIT(net_ne2000_init)
 
       return -1;
     }
-  dispatch = mem_alloc(sizeof (struct net_dispatch_s), MEM_SCOPE_SYS);
+  if ((dispatch = mem_alloc(sizeof (struct net_dispatch_s), MEM_SCOPE_SYS)) == NULL)
+    {
+      printf("ne2000: cannot init dispatch structure\n");
+
+      net_ne2000_cleanup(dev);
+
+      return -1;
+    }
   dispatch->interface = pv->interface;
   dispatch->packets = &pv->rcvqueue;
   dispatch->sem = &pv->rcvsem;
+  pv->run = 1;
+  dispatch->running = &pv->run;
 
   if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch))
     {
@@ -484,7 +497,6 @@ DEV_INIT(net_ne2000_init)
 DEV_CLEANUP(net_ne2000_cleanup)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
-  struct net_packet_s		*wait;
 
   /* unregister the device */
   if_unregister(pv->interface);
@@ -494,21 +506,17 @@ DEV_CLEANUP(net_ne2000_cleanup)
     packet_obj_refdrop(pv->current);
 
   /* empty the sendqueue */
-  while ((wait = packet_queue_pop(&pv->sendqueue)))
-    {
-      packet_obj_refdrop(wait);
-    }
+  packet_queue_clear(&pv->sendqueue);
 
-  /* XXX terminate the dispatch thread */
+  /* empty the receive queue */
+  packet_queue_clear(&pv->rcvqueue);
+
+  /* terminate the dispatch thread */
+  pv->run = 0;
+  sem_post(&pv->rcvsem);
 
   /* destroy the receive semaphore */
   sem_destroy(&pv->rcvsem);
-
-  /* empty the receive queue */
-  while ((wait = packet_queue_lock_pop(&pv->rcvqueue)))
-    {
-      packet_obj_refdrop(wait);
-    }
 
   /* destroy some containers */
   packet_queue_destroy(&pv->sendqueue);
@@ -539,7 +547,8 @@ DEVNET_PREPAREPKT(net_ne2000_preparepkt)
   total = sizeof (struct ether_header) + size;
 #endif
 
-  buff = packet->packet = mem_alloc(total, MEM_SCOPE_CONTEXT);
+  if ((buff = packet->packet = mem_alloc(total, MEM_SCOPE_CONTEXT)) == NULL)
+    return NULL;
 
   nethdr = &packet->header[0];
   nethdr->data = buff;

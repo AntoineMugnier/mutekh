@@ -19,16 +19,16 @@
 
 */
 
+/* enable orhpan checking in this file */
+#define GPCT_ORPHAN_CHECK
+
 #include <timer.h>
 #include <hexo/types.h>
 #include <hexo/error.h>
 
-/* enable orhpan checking in this file */
-#define GPCT_ORPHAN_CHECK
-
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_dlist.h> /* XXX change to b-list */
+#include <gpct/cont_blist.h> /* XXX change to b-list */
 
 CONTAINER_FUNC(inline, timer, DLIST, timer, HEXO_SPIN);
 

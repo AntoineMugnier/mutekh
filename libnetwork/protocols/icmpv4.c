@@ -159,6 +159,7 @@ NET_PUSHPKT(icmp_pushpkt)
     }
 
   hdr_ip = (struct iphdr *)nethdr[1].data;
+  assert(hdr_ip != NULL);
 
   /* align the ip packet on 32 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -191,6 +192,7 @@ NET_PUSHPKT(icmp_pushpkt)
 #endif
 
 	  hdr_udp = (struct udphdr *)nethdr[2].data;
+	  assert(hdr_udp != NULL);
 
 	  /* align on 16 bits if needed */
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -213,6 +215,7 @@ NET_PUSHPKT(icmp_pushpkt)
 #endif
 
 	  hdr_tcp = (struct tcphdr *)nethdr[2].data;
+	  assert(hdr_tcp != NULL);
 
 	  /* align on 32 bits if needed */
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -274,10 +277,12 @@ NET_PREPAREPKT(icmp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = ip_preparepkt(interface, packet, sizeof (struct icmphdr) + size, 4);
+  if ((next = ip_preparepkt(interface, packet, sizeof (struct icmphdr) + size, 4)) == NULL)
+    return NULL;
   next = ALIGN_ADDRESS_UP(next, 4);
 #else
-  next = ip_preparepkt(interface, packet, sizeof (struct icmphdr) + size, 0);
+  if ((next = ip_preparepkt(interface, packet, sizeof (struct icmphdr) + size, 0)) == NULL)
+    return NULL;
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -322,7 +327,7 @@ NET_ERRORMSG(icmp_errormsg)
 
       hdr_icmp = (struct icmphdr *)nethdr[1].data;
       if (hdr_icmp->type != 0 && hdr_icmp->type != 8)
-	return;
+	return ;
     }
 
   offs = hdr_err->ihl * 4;
@@ -338,8 +343,14 @@ NET_ERRORMSG(icmp_errormsg)
     size = 8;
 
   /* prepare the packet */
-  packet = packet_obj_new(NULL);
-  dest = icmp_preparepkt(interface, packet, offs + size, 0);
+  if ((packet = packet_obj_new(NULL)) == NULL)
+    return ;
+  if ((dest = icmp_preparepkt(interface, packet, offs + size, 0)) == NULL)
+    {
+      packet_obj_refdrop(packet);
+      return ;
+    }
+
   memcpy(&packet->tADDR, &erroneous->sADDR, sizeof (struct net_addr_s));
 
   /* get the header */

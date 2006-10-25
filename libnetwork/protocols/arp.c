@@ -78,24 +78,51 @@ NET_INITPROTO(arp_init)
 NET_DESTROYPROTO(arp_destroy)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)proto->pv;
-  struct arp_entry_s	*ent;
-  struct net_packet_s	*pkt;
 
   timer_cancel_event(&pv->stale_timeout, 0);
+  arp_table_clear(&pv->table);
+  arp_table_destroy(&pv->table);
+}
 
-  while ((ent = arp_table_pop(&pv->table)) != NULL)
+/*
+ * ARP entry constructor.
+ */
+
+OBJECT_CONSTRUCTOR(arp_entry_obj)
+{
+  struct arp_entry_s	*entry;
+  uint_fast32_t		ip = va_arg(ap, uint_fast32_t);
+
+  assert(ip != 0 && ip != 0xffffffff && ip != 0x7f000001);
+
+  if ((entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_NETWORK)) == NULL)
+    return NULL;
+
+  arp_entry_obj_init(entry);
+
+  entry->ip = ip;
+
+  return entry;
+}
+
+/*
+ * ARP entry destructor.
+ */
+
+OBJECT_DESTRUCTOR(arp_entry_obj)
+{
+  struct arp_resolution_s	*res = obj->resolution;
+
+  if (res != NULL)
     {
-      if (ent->timeout != NULL)
-	timer_cancel_event(ent->timeout, 0);
-      mem_free(ent->timeout);
+      timer_cancel_event(&res->timeout, 0);
+      packet_queue_clear(&res->wait);
+      packet_queue_destroy(&res->wait);
 
-      while ((pkt = packet_queue_pop(&ent->wait)) != NULL)
-	packet_obj_refdrop(pkt);
-      packet_queue_destroy(&ent->wait);
-      mem_free(ent);
+      mem_free(obj->resolution);
     }
 
-  arp_table_destroy(&pv->table);
+  mem_free(obj);
 }
 
 /*
@@ -111,10 +138,14 @@ static inline void	arp_request(struct net_if_s	*interface,
   struct net_packet_s	*packet;
   struct net_header_s	*nethdr;
 
-  packet = packet_obj_new(NULL);
+  if ((packet = packet_obj_new(NULL)) == NULL)
+    return ;
 
-  arp_preparepkt(interface, packet, 0, 0);
-
+  if (arp_preparepkt(interface, packet, 0, 0) == NULL)
+    {
+      packet_obj_refdrop(packet);
+      return ;
+    }
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct ether_arp *)nethdr->data;
@@ -129,11 +160,10 @@ static inline void	arp_request(struct net_if_s	*interface,
   net_be32_store(hdr->arp_spa, pv_ip->addr);
   memset(hdr->arp_tha, 0xff, ETH_ALEN);
   net_be32_store(hdr->arp_tpa, address);
-
   packet->tMAC = hdr->arp_tha;
 
-  packet->stage--;
   /* send the packet to the interface */
+  packet->stage--;
   if_sendpkt(interface, packet, ETHERTYPE_ARP);
 }
 
@@ -157,7 +187,6 @@ static inline void	arp_reply(struct net_if_s		*interface,
 
   /* fill the reply */
   net_be16_store(hdr->ea_hdr.ar_op, ARPOP_REPLY);
-
   memcpy(hdr->arp_tha, hdr->arp_sha, ETH_ALEN);
   net_32_store(hdr->arp_tpa, net_32_load(hdr->arp_spa));
   memcpy(hdr->arp_sha, interface->mac, ETH_ALEN);
@@ -166,8 +195,8 @@ static inline void	arp_reply(struct net_if_s		*interface,
   packet->sMAC = hdr->arp_sha;
   packet->tMAC = hdr->arp_tha;
 
-  packet->stage--;
   /* send the packet to the interface */
+  packet->stage--;
   if_sendpkt(interface, packet, ETHERTYPE_ARP);
 }
 
@@ -182,8 +211,6 @@ NET_PUSHPKT(arp_pushpkt)
 #endif
   struct ether_arp	*hdr;
   struct net_header_s	*nethdr;
-  struct arp_entry_s	*arp_entry;
-  struct net_packet_s	*waiting;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -208,7 +235,7 @@ NET_PUSHPKT(arp_pushpkt)
     {
       case ARPOP_REQUEST:
 	{
-	  uint_fast32_t		requested = 1;
+	  uint_fast32_t		requested;
 	  struct net_proto_s	*item;
 	  struct net_addr_s	addr;
 
@@ -223,16 +250,14 @@ NET_PUSHPKT(arp_pushpkt)
 	    {
 	      if (item->desc->f.addressing->matchaddr(item, NULL, &addr, NULL))
 		{
-		  net_debug("Me!\n");
 		  /* force adding the entry */
 		  arp_update_table(protocol, net_be32_load(hdr->arp_spa),
 				   hdr->arp_sha, ARP_TABLE_DEFAULT);
 		  arp_reply(interface, item, packet);
 		  requested = 0;
-		  goto out;
+		  break;
 		}
 	    }
-	out:
 
 	  /* try to update the cache */
 	  if (requested)
@@ -242,17 +267,9 @@ NET_PUSHPKT(arp_pushpkt)
 	  break;
 	}
       case ARPOP_REPLY:
+	net_debug("ARP Reply\n");
 	/* try to update the cache */
-	arp_entry = arp_update_table(protocol, net_be32_load(hdr->arp_spa),
-				     hdr->arp_sha, ARP_TABLE_DEFAULT);
-	/* send waiting packets */
-	while ((waiting = packet_queue_pop(&arp_entry->wait)))
-	  {
-	    waiting->tMAC = arp_entry->mac;
-
-	    /* send the packet */
-	    if_sendpkt(interface, waiting, ETHERTYPE_IP);
-	  }
+	arp_update_table(protocol, net_be32_load(hdr->arp_spa), hdr->arp_sha, ARP_TABLE_DEFAULT);
 	break;
       default:
 	break;
@@ -269,10 +286,12 @@ NET_PREPAREPKT(arp_preparepkt)
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 4);
+  if ((next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 4)) == NULL)
+    return NULL;
   next = ALIGN_ADDRESS_UP(next, 4);
 #else
-  next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 0);
+  if ((next = if_preparepkt(interface, packet, sizeof (struct ether_arp), 0)) == NULL)
+    return NULL;
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -281,7 +300,7 @@ NET_PREPAREPKT(arp_preparepkt)
 
   nethdr[1].data = NULL;
 
-  return NULL;
+  return next + sizeof (struct ether_arp);
 }
 
 /*
@@ -296,7 +315,10 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct arp_entry_s	*arp_entry;
 
-  if ((arp_entry = arp_table_lookup(&pv->table, ip)))
+  assert(arp != NULL);
+  assert(ip != 0);
+
+  if ((arp_entry = arp_table_lookup(&pv->table, ip)) != NULL)
     {
       /* if we must not update */
       if (flags & ARP_TABLE_NO_UPDATE)
@@ -306,25 +328,43 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
   else
     {
       /* otherwise, allocate a new entry */
-      arp_entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_CONTEXT);
-      arp_entry->ip = ip;
-      arp_entry->timeout = NULL;
+      if ((arp_entry = arp_entry_obj_new(NULL, ip)) == NULL)
+	return NULL;
+      arp_entry->resolution = NULL;
       arp_table_push(&pv->table, arp_entry);
     }
+
   /* fill the significant fields */
   arp_entry->valid = !(flags & ARP_TABLE_IN_PROGRESS);
   if (arp_entry->valid)
     {
       memcpy(arp_entry->mac, mac, ETH_ALEN);
       net_debug("Added entry %P for %P\n", mac, ETH_ALEN, &ip, 4);
-      if (arp_entry->timeout != NULL)
+      if (arp_entry->resolution != NULL)
 	{
-	  timer_cancel_event(arp_entry->timeout, 0);
-	  mem_free(arp_entry->timeout);
-	  arp_entry->timeout = NULL;
+	  struct net_packet_s	*waiting;
+
+	  /* cancel timeout */
+	  timer_cancel_event(&arp_entry->resolution->timeout, 0);
+
+	  /* send waiting packets */
+	  while ((waiting = packet_queue_pop(&arp_entry->resolution->wait)))
+	    {
+	      waiting->tMAC = arp_entry->mac;
+
+	      /* send the packet */
+	      if_sendpkt(arp_entry->resolution->interface, waiting, ETHERTYPE_IP);
+	    }
+
+	  /* clear the resolution structure */
+	  packet_queue_destroy(&arp_entry->resolution->wait);
+	  mem_free(arp_entry->resolution);
+	  arp_entry->resolution = NULL;
 	}
     }
+
   arp_entry->timestamp = timer_get_tick(&timer_ms);
+
   return arp_entry;
 }
 
@@ -334,7 +374,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
  * Make an ARP request if needed.
  */
 
-uint8_t			*arp_get_mac(struct net_proto_s		*addressing,
+const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
 				     struct net_proto_s		*arp,
 				     struct net_packet_s	*packet,
 				     uint_fast32_t		ip)
@@ -347,18 +387,23 @@ uint8_t			*arp_get_mac(struct net_proto_s		*addressing,
     {
       return pv_ip->interface->mac;
     }
+
   if ((arp_entry = arp_table_lookup(&pv->table, ip)) != NULL &&
       timer_get_tick(&timer_ms) - arp_entry->timestamp < ARP_ENTRY_TIMEOUT)
     {
       /* is the entry valid ? */
       if (arp_entry->valid)
 	return arp_entry->mac;
+
       /* otherwise, it is validating, so push the packet in the wait queue */
-      packet_queue_pushback(&arp_entry->wait, packet);
+      packet_queue_pushback(&arp_entry->resolution->wait, packet);
     }
   else
     {
+      struct arp_resolution_s	*res;
       struct timer_event_s	*event;
+
+      net_debug("Looking for %P\n", &ip, 4);
 
       if (arp_entry != NULL)
 	{
@@ -366,26 +411,34 @@ uint8_t			*arp_get_mac(struct net_proto_s		*addressing,
 	  arp_entry->valid = 0;
 	}
       else
-	arp_entry = arp_update_table(arp, ip, NULL, ARP_TABLE_IN_PROGRESS);
+	if ((arp_entry = arp_update_table(arp, ip, NULL, ARP_TABLE_IN_PROGRESS)) == NULL)
+	  return NULL;
 
-      /* no entry, push the packet in the wait queue */
-      packet_queue_init(&arp_entry->wait);
-      packet_queue_push(&arp_entry->wait, packet);
+      /* entry need to be created or refreshed. first create a
+	 resolution structure */
+      res = arp_entry->resolution = mem_alloc(sizeof (struct arp_resolution_s), MEM_SCOPE_NETWORK);
+      if (res == NULL)
+	return NULL;
 
-      arp_entry->interface = pv_ip->interface;
-      arp_entry->addressing = addressing;
+      /* fill the significant fields */
+      packet_queue_init(&res->wait);
+      packet_queue_push(&res->wait, packet);
+      res->interface = pv_ip->interface;
+      res->addressing = addressing;
 
       /* setup request time out */
-      arp_entry->retry = 0;
-      arp_entry->timeout = event = mem_alloc(sizeof (struct timer_event_s), MEM_SCOPE_CONTEXT);
+      res->retry = 0;
+      event = &res->timeout;
       event->callback = arp_timeout;
       event->pv = (void *)arp_entry;
       event->delay = ARP_REQUEST_TIMEOUT;
       timer_add_event(&timer_ms, event);
 
       /* and send the request */
+      net_debug("Emitting request\n");
       arp_request(pv_ip->interface, addressing, ip);
     }
+
   return NULL;
 }
 
@@ -395,14 +448,15 @@ uint8_t			*arp_get_mac(struct net_proto_s		*addressing,
 
 TIMER_CALLBACK(arp_timeout)
 {
-  struct arp_entry_s	*entry = (struct arp_entry_s *)pv;
+  struct arp_entry_s		*entry = (struct arp_entry_s *)pv;
+  struct arp_resolution_s	*res = entry->resolution;
 
   net_debug("ARP timeout\n");
 
-  if (++entry->retry < ARP_MAX_RETRIES)
+  if (++res->retry < ARP_MAX_RETRIES)
     {
       /* retry */
-      arp_request(entry->interface, entry->addressing, entry->ip);
+      arp_request(res->interface, res->addressing, entry->ip);
 
       /* set another timeout */
       timer_add_event(&timer_ms, timer);
@@ -410,24 +464,23 @@ TIMER_CALLBACK(arp_timeout)
   else
     {
       struct net_packet_s	*waiting;
-      struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)entry->arp->pv;
+      struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)res->arp->pv;
 
       /* otherwise, error */
+      net_debug("ARP error\n");
 
       /* delete the entry */
       arp_table_remove(&pv->table, entry);
 
-      /* delete the queued packets */
-      while ((waiting = packet_queue_pop(&entry->wait)))
+      /* delete the queued packets and send errors */
+      while ((waiting = packet_queue_pop(&res->wait)))
 	{
-	  entry->addressing->desc->f.addressing->errormsg(waiting, ERROR_HOST_UNREACHABLE);
+	  res->addressing->desc->f.addressing->errormsg(waiting, ERROR_HOST_UNREACHABLE);
 	  packet_obj_refdrop(waiting);
 	}
 
       /* free the arp entry */
-      mem_free(entry->timeout);
-      packet_queue_destroy(&entry->wait);
-      mem_free(entry);
+      arp_entry_obj_refdrop(entry);
     }
 }
 
@@ -439,20 +492,34 @@ TIMER_CALLBACK(arp_stale_timeout)
 {
   struct net_pv_arp_s	*pv_arp = (struct net_pv_arp_s *)pv;
   timer_delay_t		t = timer_get_tick(&timer_ms);
-  struct arp_entry_s	*item, *next;
+  struct arp_entry_s	*to_remove = NULL;
 
-  /* delete all the stale entries */
-  for (item = arp_table_head(&pv_arp->table); item != NULL; item = next)
+  CONTAINER_FOREACH(arp_table, HASHLIST, NOLOCK, &pv_arp->table,
+  {
+    /* remove previously marked item */
+    if (to_remove != NULL)
+      {
+	net_debug("Clearing stale entry %P\n", &to_remove->ip, 4);
+	arp_table_remove(&pv_arp->table, to_remove);
+	arp_entry_obj_refdrop(to_remove);
+	to_remove = NULL;
+      }
+
+    /* look for an item to remove */
+    if (item->valid && t - item->timestamp > ARP_ENTRY_TIMEOUT)
+      {
+	to_remove = item;
+      }
+  });
+
+  /* particular case handling */
+  if (to_remove != NULL)
     {
-      next = arp_table_next(&pv_arp->table, item);
-      if (item->valid && t - item->timestamp > ARP_STALE_TIMEOUT)
-	{
-	  net_debug("Clearing stale entry %P\n", &item->ip, 4);
-	  arp_table_remove(&pv_arp->table, item);
-	  mem_free(item);
-	}
+      net_debug("Clearing stale entry %P\n", &to_remove->ip, 4);
+      arp_table_remove(&pv_arp->table, to_remove);
+      arp_entry_obj_refdrop(to_remove);
     }
 
-  /* setup the timer again */
+  /* schedule the timer again */
   timer_add_event(&timer_ms, &pv_arp->stale_timeout);
 }

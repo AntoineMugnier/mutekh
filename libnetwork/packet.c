@@ -20,6 +20,7 @@
 */
 
 #include <hexo/endian.h>
+#include <hexo/types.h>
 
 #include <pthread.h>
 #include <semaphore.h>
@@ -36,8 +37,12 @@ OBJECT_CONSTRUCTOR(packet_obj)
 {
   struct net_packet_s		*packet;
 
-  packet = mem_alloc(sizeof (struct net_packet_s), MEM_SCOPE_CONTEXT);
-  memset(packet, 0, sizeof (struct net_packet_s));
+  if ((packet = mem_alloc(sizeof (struct net_packet_s), MEM_SCOPE_NETWORK)) == NULL)
+    return NULL;
+  memset(packet->header, 0, sizeof (packet->header));
+  packet->parent = NULL;
+  packet->stage = 0;
+  packet->packet = NULL;
 
   packet_obj_init(packet);
 
@@ -149,18 +154,19 @@ void				*packet_dispatch(void	*data)
   packet_queue_root_t		*root = info->packets;
   struct net_if_s		*interface = info->interface;
   sem_t				*sem = info->sem;
+  bool_t			*run = info->running;
   struct net_packet_s		*packet;
 
   mem_free(data);
 
-  while (1)
+  while (*run)
     {
       /* wait for a packet */
-      sem_wait(sem);
+      /* XXX sem_wait(sem); */
 
       /* retreive the incoming packet */
       packet = packet_queue_lock_pop(root);
-      if (packet)
+      if (packet != NULL)
 	{
 	  /* dispatch to the interface */
 	  if_pushpkt(interface, packet);

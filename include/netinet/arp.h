@@ -104,6 +104,7 @@ struct		ether_arp
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
+#include <gpct/object_refcount.h>
 
 #include <timer.h>
 
@@ -113,7 +114,7 @@ struct		ether_arp
 
 #define ARP_REQUEST_TIMEOUT	2000 /* 2 seconds */
 #define ARP_ENTRY_TIMEOUT	120000 /* 2 minutes */
-#define ARP_STALE_TIMEOUT	900000 /* 15 minutes */
+#define ARP_STALE_TIMEOUT	240000 /* 4 minutes */
 #define ARP_MAX_RETRIES		3
 
 /*
@@ -125,8 +126,24 @@ struct		ether_arp
 #define ARP_TABLE_NO_UPDATE	2
 
 /*
+ * Resolution structure.
+ */
+
+struct					arp_resolution_s
+{
+  packet_queue_root_t			wait;
+  uint_fast8_t				retry;
+  struct net_if_s			*interface;
+  struct net_proto_s			*addressing;
+  struct net_proto_s			*arp;
+  struct timer_event_s			timeout;
+};
+
+/*
  * ARP table entry.
  */
+
+OBJECT_TYPE(arp_entry_obj, REFCOUNT, struct arp_entry_s); /* XXX no refcount */
 
 struct					arp_entry_s
 {
@@ -134,22 +151,21 @@ struct					arp_entry_s
   uint8_t				mac[ETH_ALEN];
   bool_t				valid;
   timer_delay_t				timestamp;
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+  struct arp_resolution_s		*resolution;
 
-  /* XXX les 5 champs en dessous sevent qu'a la resolution, apres ils servent a rien */
-  packet_queue_root_t			wait;
-  uint_fast8_t				retry;
-  struct net_if_s			*interface;
-  struct net_proto_s			*addressing;
-  struct net_proto_s			*arp;
-  struct timer_event_s			*timeout;
+  arp_entry_obj_entry_t			obj_entry;
+  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
+
+OBJECT_CONSTRUCTOR(arp_entry_obj);
+OBJECT_DESTRUCTOR(arp_entry_obj);
+OBJECT_FUNC(static inline, arp_entry_obj, REFCOUNT, arp_entry_obj, obj_entry);
 
 /*
  * ARP table types.
  */
 
-CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, NOOBJ, list_entry, 64);
+CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, arp_entry_obj, list_entry, 64);
 CONTAINER_KEY_TYPE(arp_table, SCALAR, ip);
 
 /*
@@ -183,7 +199,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 					  uint32_t		ip,
 					  uint8_t		*mac,
 					  uint_fast8_t		flags);
-uint8_t			*arp_get_mac(struct net_proto_s		*addressing,
+const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
 				     struct net_proto_s		*arp,
 				     struct net_packet_s	*packet,
 				     uint_fast32_t		ip);

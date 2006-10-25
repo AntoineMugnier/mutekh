@@ -187,6 +187,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   dev_enum_register(&enum_pci, &net_3c900_drv);
   dev_enum_register(&enum_pci, &net_ne2000_drv);
 
+#if 1
   struct device_s *isawd;
 
   isawd = malloc(sizeof (struct device_s));
@@ -195,6 +196,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   isawd->addr[0] = 0x320;
   isawd->irq = 3;
   net_ne2000_init(isawd, &icu_dev);
+#endif
 
 # endif
 

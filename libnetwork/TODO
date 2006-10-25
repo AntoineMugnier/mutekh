@@ -8,9 +8,6 @@
 
 * filter
 
-* driver NE2000
-  - revoir tout le cleanup
-
 * IP
   - options du header IP (seulement les trucs utiles)
     + MTU Probe/Reply

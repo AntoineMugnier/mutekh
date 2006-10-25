@@ -135,6 +135,7 @@ struct iphdr {
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_hashlist.h>
+#include <gpct/object_refcount.h>
 
 #include <timer.h>
 
@@ -164,6 +165,8 @@ struct		ip_pseudoheader_s
  * Fragmentation structures.
  */
 
+OBJECT_TYPE(fragment_obj, REFCOUNT, struct ip_packet_s); /* XXX no refcount */
+
 struct					ip_packet_s
 {
   uint8_t				id[6];
@@ -172,14 +175,20 @@ struct					ip_packet_s
   struct net_proto_s			*addressing;
   struct timer_event_s			timeout;
   packet_queue_root_t			packets;
+
+  fragment_obj_entry_t			obj_entry;
   CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
+
+OBJECT_CONSTRUCTOR(fragment_obj);
+OBJECT_DESTRUCTOR(fragment_obj);
+OBJECT_FUNC(static inline, fragment_obj, REFCOUNT, fragment_obj, obj_entry);
 
 /*
  * Fragments list.
  */
 
-CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, NOOBJ, list_entry, 64);
+CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, fragment_obj, list_entry, 64);
 CONTAINER_KEY_TYPE(ip_packet, BLOB, id, 6);
 
 /*

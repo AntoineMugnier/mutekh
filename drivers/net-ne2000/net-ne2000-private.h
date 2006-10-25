@@ -26,6 +26,7 @@
 #include <hexo/lock.h>
 
 #include <pthread.h>
+#include <semaphore.h>
 
 #include <netinet/packet.h>
 #include <netinet/ether.h>
@@ -48,6 +49,7 @@ struct				net_ne2000_context_s
   uint_fast16_t			rx_buf;
   uint_fast16_t			mem;
 
+  bool_t			run;
   sem_t				rcvsem;
   pthread_t			dispatch;
   packet_queue_root_t		sendqueue;

@@ -103,11 +103,6 @@ struct		net_header_s
 
 #include <semaphore.h>
 
-/*
- * A packet is an object with ref counting mecanism.
- */
-
-OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);
 
 /*
  * Address and mask structures and macros.
@@ -147,6 +142,8 @@ struct			net_addr_s
  * This structure defines a packet.
  */
 
+OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);
+
 struct				net_packet_s
 {
   struct net_packet_s		*parent;
@@ -154,7 +151,7 @@ struct				net_packet_s
   uint_fast8_t			stage;		/* current stage */
   uint8_t			*packet;	/* raw packet */
   uint8_t			*sMAC;		/* source MAC address */
-  uint8_t			*tMAC;		/* target MAC address */
+  const uint8_t			*tMAC;		/* target MAC address */
   struct net_proto_s		*source_addressing;
   struct net_addr_s		sADDR;		/* source protocol address */
   struct net_addr_s		tADDR;		/* target protocol address */
@@ -165,11 +162,15 @@ struct				net_packet_s
   CONTAINER_ENTRY_TYPE(DLIST)	queue_entry;
 };
 
+OBJECT_CONSTRUCTOR(packet_obj);
+OBJECT_DESTRUCTOR(packet_obj);
+OBJECT_FUNC(static inline, packet_obj, REFCOUNT, packet_obj, obj_entry);
+
 /*
  * Packet list.
  */
 
-CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, HEXO_SPIN_IRQ, NOOBJ, queue_entry);
+CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, HEXO_SPIN_IRQ, packet_obj, queue_entry);
 
 /*
  * Used to give info to the dispatch thread.
@@ -182,14 +183,13 @@ struct				net_dispatch_s
   packet_queue_root_t		*packets;
   struct net_if_s		*interface;
   sem_t				*sem;
+  bool_t			*running;
 };
 
 /*
  * The packet object.
  */
 
-OBJECT_CONSTRUCTOR(packet_obj);
-OBJECT_DESTRUCTOR(packet_obj);
 uint16_t		packet_checksum(const void	*data,
 					size_t		size);
 uint16_t		packet_memcpy(void		*dst,
@@ -197,13 +197,14 @@ uint16_t		packet_memcpy(void		*dst,
 				      size_t		size);
 void			*packet_dispatch(void	*data);
 
-OBJECT_FUNC(static inline, packet_obj, REFCOUNT, packet_obj, obj_entry);
 CONTAINER_PROTOTYPE(inline, packet_queue, packet_queue);
 CONTAINER_PROTOTYPE(inline, packet_queue, packet_queue_lock);
 
 /*
  * XXX for debug, remove me
  */
+
+#define MEM_SCOPE_NETWORK	MEM_SCOPE_SYS
 
 static inline uint_fast8_t printf_void(void *v, ...) { return 0; }
 

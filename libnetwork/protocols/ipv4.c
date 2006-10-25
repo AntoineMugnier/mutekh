@@ -82,6 +82,10 @@ NET_INITPROTO(ip_init)
   uint_fast32_t		ip = va_arg(va, uint_fast32_t);
   uint_fast32_t		mask = va_arg(va, uint_fast32_t);
 
+  assert(interface != NULL);
+  assert(arp != NULL);
+  assert(icmp != NULL);
+
   pv->interface = interface;
   pv->arp = arp;
   pv->icmp = icmp;
@@ -98,20 +102,57 @@ NET_INITPROTO(ip_init)
 NET_DESTROYPROTO(ip_destroy)
 {
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)proto->pv;
-  struct ip_packet_s	*p;
-  struct net_packet_s	*pkt;
 
-  while ((p = ip_packet_pop(&pv->fragments)) != NULL)
-    {
-      timer_cancel_event(&p->timeout, 0);
-
-      while ((pkt = packet_queue_pop(&p->packets)) != NULL)
-	packet_obj_refdrop(pkt);
-      packet_queue_destroy(&p->packets);
-      mem_free(p);
-    }
-
+  ip_packet_clear(&pv->fragments);
   ip_packet_destroy(&pv->fragments);
+}
+
+/*
+ * Fragment object constructor.
+ */
+
+OBJECT_CONSTRUCTOR(fragment_obj)
+{
+  struct ip_packet_s	*frag;
+  struct net_proto_s	*addressing = va_arg(ap, struct net_proto_s *);
+  uint8_t		*id = va_arg(ap, uint8_t *);
+
+  assert(addressing != NULL);
+  assert(id != NULL);
+
+  if ((frag = mem_alloc(sizeof (struct ip_packet_s), MEM_SCOPE_NETWORK)) == NULL)
+    return NULL;
+
+  fragment_obj_init(frag);
+
+  /* setup critical fields */
+  frag->size = 0;
+  frag->received = 0;
+  frag->addressing = addressing;
+  memcpy(frag->id, id, 6);
+  packet_queue_init(&frag->packets);
+
+  /* start timeout timer */
+  frag->timeout.callback = ip_fragment_timeout;
+  frag->timeout.pv = (void *)frag;
+  frag->timeout.delay = IP_REASSEMBLY_TIMEOUT;
+  timer_add_event(&timer_ms, &frag->timeout);
+
+  return frag;
+}
+
+/*
+ * Fragment object destructor.
+ */
+
+OBJECT_DESTRUCTOR(fragment_obj)
+{
+  timer_cancel_event(&obj->timeout, 0);
+
+  packet_queue_clear(&obj->packets);
+  packet_queue_destroy(&obj->packets);
+
+  mem_free(obj);
 }
 
 /*
@@ -135,7 +176,7 @@ static inline	uint_fast8_t	ip_delivery(struct net_if_s	*interface,
  * Receive fragments and try to reassemble a packet.
  */
 
-static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
+static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 					    struct net_packet_s	*packet,
 					    struct iphdr	*hdr)
 {
@@ -158,34 +199,26 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   offs = (fragment & IP_FRAG_MASK) * 8;
   datasz = net_be16_load(hdr->tot_len) - hdr->ihl * 4;
 
-  net_debug("fragment id %P offs %d size %d\n", id, 6, offs, datasz);
+  net_debug("fragment %d offs %d size %d\n", hdr->id, offs, datasz);
 
   /* do we already received packet with same id ? */
   if (!(p = ip_packet_lookup(&pv->fragments, id)))
     {
       /* initialize the reassembly structure */
-      p = mem_alloc(sizeof (struct ip_packet_s), MEM_SCOPE_CONTEXT);
-      memcpy(p->id, id, 6);
-      p->size = 0;
-      p->received = 0;
-      p->addressing = ip;
-      packet_queue_init(&p->packets);
-      ip_packet_push(&pv->fragments, p);
+      if ((p = fragment_obj_new(NULL, ip, id)) == NULL)
+	{
+	  /* no more memory, discard the packet */
+	  return 0;
+	}
 
-      /* start timeout timer */
-      p->timeout.callback = ip_fragment_timeout;
-      p->timeout.pv = (void *)p;
-      p->timeout.delay = IP_REASSEMBLY_TIMEOUT;
-      timer_add_event(&timer_ms, &p->timeout);
+      ip_packet_push(&pv->fragments, p);
     }
 
   p->received += datasz;
+
   /* try to determine the total size */
   if (!(fragment & IP_FLAG_MF))
-    {
-      p->size = offs + datasz;
-      net_debug("packet total size %d\n", p->size);
-    }
+    p->size = offs + datasz;
 
   total = p->size;
 
@@ -201,23 +234,29 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       size_t			sizes[NETWORK_MAX_STAGES];
       uint_fast8_t		i;
 
-      net_debug("packet complete\n");
-
-      /* disable timeout */
+      /* disable timeout & remove the fragment structure */
+      ip_packet_remove(&pv->fragments, p);
       timer_cancel_event(&p->timeout, 0);
 
       /* we received the whole packet, reassemble now */
       nethdr = &packet->header[packet->stage];
       headers_len = (packet->header[0].size - nethdr->size);
+
       /* allocate a packet large enough */
-      data = mem_alloc(total + headers_len + 3, MEM_SCOPE_CONTEXT);
+      if ((data = mem_alloc(total + headers_len + 3, MEM_SCOPE_NETWORK)) == NULL)
+	{
+	  /* memory exhausted, clear the packet */
+	  fragment_obj_refdrop(p);
+	  return 0;
+	}
 
       /* copy previous headers (ethernet, ip, etc.) */
+      net_debug("copying headers : %d-%d\n", 0, headers_len);
       memcpy(data, packet->packet, headers_len);
 
-      /* XXX maj frag/flags */
-
-      net_debug("copying headers : %d-%d\n", 0, headers_len);
+      /* update final packet flags & total length */
+      endian_16_na_store(&((struct iphdr *)nethdr[-1].data)->fragment, 0);
+      endian_16_na_store(&((struct iphdr *)nethdr[-1].data)->tot_len, total);
 
       /* copy current packet to its position */
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -225,9 +264,10 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 #else
       ptr = data + headers_len;
 #endif
-      memcpy(ptr + offs, nethdr->data, datasz);
 
+      /* copy the first part of the packet */
       net_debug("copying packet : %d-%d\n", offs, offs + datasz);
+      memcpy(ptr + offs, nethdr->data, datasz);
 
       /* release current packet data */
       mem_free(packet->packet);
@@ -236,13 +276,14 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       packet->packet = data;
       data = ptr;
 
+      /* update internal fields */
       nethdr->data = data;
       nethdr->size = total;
 
       /* loop through previously received packets and reassemble them */
       while ((frag = packet_queue_pop(&p->packets)))
 	{
-	  /* copy data in place */
+	  /* determine destination offset */
 	  nethdr = &frag->header[packet->stage];
 	  offs = (net_be16_load(((struct iphdr *)nethdr[-1].data)->fragment) & IP_FRAG_MASK) * 8;
 
@@ -250,35 +291,31 @@ static uint_fast8_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	  if (offs >= total)
 	    {
 	      /* XXX error on fragment must be reported by 1st fragment */
-
+	      /* report the error */
 	      pv->icmp->desc->f.control->errormsg(frag, ERROR_BAD_HEADER);
 
 	      /* delete all the packets */
 	      packet_obj_refdrop(frag);
-	      while ((frag = packet_queue_pop(&p->packets)))
-		packet_obj_refdrop(frag);
-	      packet_obj_refdrop(packet);
-	      packet_queue_destroy(&p->packets);
-	      ip_packet_remove(&pv->fragments, p);
-	      mem_free(p);
+	      fragment_obj_refdrop(p);
 
 	      return 0;
 	    }
 
-	  memcpy(data + offs, nethdr->data, nethdr->size);
-
+	  /* copy data to their final place */
 	  net_debug("copying packet : %d-%d\n", offs, offs + nethdr->size);
+	  memcpy(data + offs, nethdr->data, nethdr->size);
 
 	  /* release our reference to the packet */
 	  packet_obj_refdrop(frag);
 	}
 
       /* release memory */
-      packet_queue_destroy(&p->packets);
-      ip_packet_remove(&pv->fragments, p);
-      mem_free(p);
+      fragment_obj_refdrop(p);
 
-      /* update nethdr */
+      /* update nethdr. first, we need to determine the real size of
+	 each chunks. then we must update the pointers to the
+	 different headers into the reassembled packets. to finish, we
+	 update the size of each subpackets. */
       nethdr = packet->header;
       for (i = 0; i < packet->stage - 1; i++)
 	sizes[i] = nethdr[i + 1].data - nethdr[i].data;
@@ -308,19 +345,20 @@ TIMER_CALLBACK(ip_fragment_timeout)
   struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)p->addressing->pv;
   struct net_packet_s	*packet;
 
-  packet = packet_queue_pop(&p->packets);
-  packet->stage--;
+  /* remove the fragment structure from the waiting list */
+  ip_packet_remove(&pv_ip->fragments, p);
 
   /* report the error */
-  pv_ip->icmp->desc->f.control->errormsg(packet, ERROR_FRAGMENT_TIMEOUT);
+  packet = packet_queue_pop(&p->packets);
+  if (packet != NULL)
+    {
+      packet->stage--;
+      pv_ip->icmp->desc->f.control->errormsg(packet, ERROR_FRAGMENT_TIMEOUT);
+      packet_obj_refdrop(packet);
+    }
 
-  /* delete all the packets */
-  packet_obj_refdrop(packet);
-  while ((packet = packet_queue_pop(&p->packets)))
-    packet_obj_refdrop(packet);
-  packet_queue_destroy(&p->packets);
-  ip_packet_remove(&pv_ip->fragments, p);
-  mem_free(p);
+  /* delete all the fragments */
+  fragment_obj_refdrop(p);
 }
 
 /*
@@ -343,9 +381,15 @@ NET_PUSHPKT(ip_pushpkt)
   bool_t		on_subnet;
   bool_t		is_broadcast;
 
+  assert(interface != NULL);
+  assert(packet != NULL);
+  assert(protocol != NULL);
+
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct iphdr *)nethdr->data;
+
+  assert(hdr != NULL);
 
   /* align the packet on 32 bits if necessary */
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -367,12 +411,14 @@ NET_PUSHPKT(ip_pushpkt)
 
   net_debug("%s: incoming for %P\n", interface->name, &packet->tADDR.addr.ipv4, 4);
 
+  /* determine target info */
   on_subnet = (packet->tADDR.addr.ipv4 & pv->mask) == (pv->addr & pv->mask);
   is_broadcast = (packet->tADDR.addr.ipv4 & ~pv->mask) == ~pv->mask;
 
   /* is the packet really for me ? */
   if (packet->tADDR.addr.ipv4 != pv->addr)
     {
+      /* if the packet is not on the same subnet (and is not broadcast) */
       if (!on_subnet && packet->tADDR.addr.ipv4 != 0xffffffff)
 	{
 	  struct net_route_s	*route_entry = NULL;
@@ -383,14 +429,14 @@ NET_PUSHPKT(ip_pushpkt)
 	  /* is there a route for this address ? */
 	  if ((route_entry = route_get(&packet->tADDR)) != NULL)
 	    {
-	      net_debug("routing to host %P\n", &packet->tADDR.addr.ipv4, 4);
 	      /* route the packet */
+	      net_debug("routing to host %P\n", &packet->tADDR.addr.ipv4, 4);
 	      ip_route(packet, route_entry);
 	    }
 	  else
 	    {
-	      net_debug("no route to host %P\n", &packet->tADDR.addr.ipv4, 4);
 	      /* network unreachable */
+	      net_debug("no route to host %P\n", &packet->tADDR.addr.ipv4, 4);
 	      pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
 	    }
 
@@ -403,6 +449,7 @@ NET_PUSHPKT(ip_pushpkt)
 
   /* verify checksum */
   computed_check = packet_checksum((uint8_t *)hdr, hdr->ihl * 4);
+
   /* incorrect packet */
   if (computed_check != 0xffff)
     {
@@ -444,18 +491,9 @@ NET_PUSHPKT(ip_pushpkt)
       if (!ip_fragment_pushpkt(protocol, packet, hdr))
 	return;	/* abord the packet, the last fragment will unblock it */
 
+      /* once the packet is reassembled, update its header pointer */
       nethdr = &packet->header[packet->stage - 1];
       hdr = (struct iphdr *)nethdr->data;
-
-      /* align the packet on 32 bits if necessary */
-#ifdef CONFIG_NETWORK_AUTOALIGN
-      if (!IS_ALIGNED(hdr, sizeof (uint32_t)))
-	{
-	  memcpy(&aligned, hdr, sizeof (struct iphdr));
-	  hdr = &aligned;
-	}
-#endif
-      /* otherwise, the packet has been reassembled and is ready to continue its path */
     }
 
   /* dispatch to the matching protocol */
@@ -463,11 +501,7 @@ NET_PUSHPKT(ip_pushpkt)
   if ((p = net_protos_lookup(&interface->protocols, proto)))
     p->desc->pushpkt(interface, packet, p);
   else
-    {
-      printf("%P\n", hdr, sizeof(*hdr));
-      printf("%d\n", proto);
-      pv->icmp->desc->f.control->errormsg(packet, ERROR_PROTO_UNREACHABLE);
-    }
+    pv->icmp->desc->f.control->errormsg(packet, ERROR_PROTO_UNREACHABLE);
 }
 
 /*
@@ -479,11 +513,16 @@ NET_PREPAREPKT(ip_preparepkt)
   struct net_header_s	*nethdr;
   uint8_t		*next;
 
+  assert(interface != NULL);
+  assert(packet != NULL);
+
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = if_preparepkt(interface, packet, 20 + size, 4 + max_padding - 1);
+  if ((next = if_preparepkt(interface, packet, 20 + size, 4 + max_padding - 1)) == NULL)
+    return NULL;
   next = ALIGN_ADDRESS_UP(next, 4);
 #else
-  next = if_preparepkt(interface, packet, 20 + size, 0);
+  if ((next = if_preparepkt(interface, packet, 20 + size, 0)) == NULL)
+    return NULL;
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -499,7 +538,7 @@ NET_PREPAREPKT(ip_preparepkt)
  * Fragment sending.
  */
 
-static inline void	 ip_send_fragment(struct net_proto_s	*ip,
+static inline bool_t	 ip_send_fragment(struct net_proto_s	*ip,
 					  struct net_if_s	*interface,
 					  struct iphdr		*hdr,
 					  struct net_packet_s	*packet,
@@ -517,26 +556,32 @@ static inline void	 ip_send_fragment(struct net_proto_s	*ip,
   uint_fast8_t		i;
   uint_fast32_t		check;
 
-  /* prepare a new IP packet */
-  frag = packet_obj_new(NULL);
+  /* prepare a new (child) IP packet */
+  if ((frag = packet_obj_new(NULL)) == NULL)
+    return 0;
   packet_obj_refnew(packet);
   frag->parent = packet;
   frag->header[frag->stage + 1].data = NULL;
-
-  dest = ip_preparepkt(interface, frag, 0, 0);
+  if ((dest = ip_preparepkt(interface, frag, 0, 0)) == NULL)
+    {
+      packet_obj_refdrop(frag);
+      return 0;
+    }
 
   net_debug("sending fragment %d-%d\n", shift + offs, shift + offs + fragsz);
 
   /* fill the data */
   frag->header[frag->stage].data = packet->header[packet->stage + 1].data + offs;
   frag->header[frag->stage].size = fragsz;
+
+  /* and update the size fields */
   for (i = 0; i < frag->stage; i++)
     {
       frag->header[i].size += fragsz;
     }
   frag->stage--;
 
-  /* copy header */
+  /* copy IP header */
   nethdr = &frag->header[frag->stage];
   hdr_frag = (struct iphdr *)nethdr->data;
   memcpy(hdr_frag, hdr, hdr->ihl * 4);
@@ -551,24 +596,28 @@ static inline void	 ip_send_fragment(struct net_proto_s	*ip,
   check = check + (check >> 16);
   net_16_store(hdr_frag->check, ~check);
 
+  /* fill the source and destination address fields */
   IPV4_ADDR_SET(frag->sADDR, net_be32_load(hdr_frag->saddr));
   IPV4_ADDR_SET(frag->tADDR, net_be32_load(hdr_frag->daddr));
+
   /* need to route ? */
   if (route_entry != NULL)
     {
       ip_route(frag, route_entry);
-      return ;
+      return 1;
     }
   else
     {
       /* no route: IP -> MAC translation */
       if (!(frag->tMAC = arp_get_mac(ip, pv->arp, frag, frag->tADDR.addr.ipv4)))
-	return ;
+	return 1;
     }
 
-  frag->stage--;
   /* send the packet to the driver */
+  frag->stage--;
   if_sendpkt(interface, frag, ETHERTYPE_IP);
+
+  return 1;
 }
 
 /*
@@ -583,31 +632,36 @@ NET_SENDPKT(ip_send)
   struct net_route_s	*route_entry;
   uint_fast16_t		total;
 
+  assert(interface != NULL);
+  assert(packet != NULL);
+  assert(protocol != NULL);
+
   packet->source_addressing = protocol;
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct iphdr *)nethdr->data;
+  assert(hdr != NULL);
 
   /* start filling common IP header fields */
   hdr->version = 4;
   hdr->ihl = 5;
   hdr->tos = 0;
-  hdr->ttl = 64;
+  hdr->ttl = IPDEFTTL;
   hdr->protocol = proto;
   net_be32_store(hdr->saddr, pv->addr);
   net_be32_store(hdr->daddr, IPV4_ADDR_GET(packet->tADDR));
 
   net_debug("%s: outgoing from %P\n", interface->name, &pv->addr, 4);
 
+  /* need fragmentation ? */
   total = nethdr[1].size;
-
-  /* need fragmentation */
   if (total > interface->mtu - 20)
     {
       uint_fast16_t		offs;
       uint_fast16_t		fragsz;
       uint8_t			*data;
+      bool_t			error = 0;
 
       data = nethdr[1].data;
       offs = 0;
@@ -622,8 +676,8 @@ NET_SENDPKT(ip_send)
       net_16_store(hdr->check, 0);
       net_16_store(hdr->check, packet_checksum((uint8_t *)hdr, 20));
 
-      IPV4_ADDR_SET(packet->sADDR, pv->addr);
       /* need to route ? */
+      IPV4_ADDR_SET(packet->sADDR, pv->addr);
       if (ip_delivery(interface, protocol, packet->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
 	{
 	  if ((route_entry = route_get(&packet->tADDR)) == NULL)
@@ -639,15 +693,16 @@ NET_SENDPKT(ip_send)
 	route_entry = NULL;
 
       /* send the middle fragments */
-      while (offs + fragsz < total)
+      while (!error && offs + fragsz < total)
 	{
-	  ip_send_fragment(protocol, interface, hdr, packet, route_entry, 0, offs, fragsz, 0);
+	  error = !ip_send_fragment(protocol, interface, hdr, packet, route_entry, 0, offs, fragsz, 0);
 
 	  offs += fragsz;
 	}
 
       /* last fragment */
-      ip_send_fragment(protocol, interface, hdr, packet, route_entry, 0, offs, total - offs, 1);
+      if (!error)
+	ip_send_fragment(protocol, interface, hdr, packet, route_entry, 0, offs, total - offs, 1);
 
       /* release the original packet */
       packet_obj_refdrop(packet);
@@ -663,8 +718,8 @@ NET_SENDPKT(ip_send)
   /* checksum */
   net_16_store(hdr->check, ~packet_checksum((uint8_t *)hdr, hdr->ihl * 4));
 
-  IPV4_ADDR_SET(packet->sADDR, pv->addr);
   /* need to route ? */
+  IPV4_ADDR_SET(packet->sADDR, pv->addr);
   if (ip_delivery(interface, protocol, packet->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
     {
       if ((route_entry = route_get(&packet->tADDR)))
@@ -678,17 +733,18 @@ NET_SENDPKT(ip_send)
 
 	  packet_obj_refdrop(packet);
 	}
+
       return ;
     }
   else
     {
       /* no route: IP -> MAC translation */
       if (!(packet->tMAC = arp_get_mac(protocol, pv->arp, packet, packet->tADDR.addr.ipv4)))
-	return;
+	return ;
     }
 
-  packet->stage--;
   /* send the packet to the driver */
+  packet->stage--;
   if_sendpkt(interface, packet, ETHERTYPE_IP);
 }
 
@@ -701,6 +757,9 @@ void		ip_route(struct net_packet_s	*packet,
 {
   struct net_pv_ip_s	*pv;
   struct iphdr		*hdr;
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  struct iphdr		aligned;
+#endif
   struct net_header_s	*nethdr;
   struct net_if_s	*interface;
   uint_fast32_t		router;
@@ -722,8 +781,17 @@ void		ip_route(struct net_packet_s	*packet,
       pv->icmp->desc->f.control->errormsg(packet, ERROR_TIMEOUT);
 
       packet_obj_refdrop(packet);
-      return;
+      return ;
     }
+
+  /* align the packet on 32 bits if necessary */
+#ifdef CONFIG_NETWORK_AUTOALIGN
+  if (!IS_ALIGNED(hdr, sizeof (uint32_t)))
+    {
+      memcpy(&aligned, hdr, sizeof (struct iphdr));
+      hdr = &aligned;
+    }
+#endif
 
   if (!nethdr[1].data)
     {
@@ -732,9 +800,8 @@ void		ip_route(struct net_packet_s	*packet,
       nethdr[1].size = net_be16_load(hdr->tot_len) - hdr_len;
     }
 
-  total = nethdr[1].size;
-
   /* check for fragmentation */
+  total = nethdr[1].size;
   if (total > interface->mtu - hdr->ihl * 4)
     {
       uint_fast16_t		offs;
@@ -742,12 +809,12 @@ void		ip_route(struct net_packet_s	*packet,
       uint_fast16_t		fragsz;
       uint8_t			*data;
       uint_fast16_t		fragment;
-
-      fragment = net_be16_load(hdr->fragment);
+      bool_t			error = 0;
 
       net_debug("routing with fragmentation\n");
 
       /* if the Don't Fragment flag is set, destroy the packet */
+      fragment = net_be16_load(hdr->fragment);
       if (fragment & IP_FLAG_DF)
 	{
 	  /* report the error */
@@ -760,7 +827,6 @@ void		ip_route(struct net_packet_s	*packet,
       data = nethdr[1].data;
       offs = 0;
       shift = (fragment & IP_FRAG_MASK) * 8;
-      /* XXX interesting idea: compute an optimal fragment size */
       fragsz = (interface->mtu - 20) & ~7;
 
       /* adjust packet checksum, erasing the fields tot_len & fragment */
@@ -768,15 +834,16 @@ void		ip_route(struct net_packet_s	*packet,
       net_16_store(hdr->check, check + (check >> 16));
 
       /* send the middle fragments */
-      while (offs + fragsz < total)
+      while (!error && offs + fragsz < total)
 	{
-	  ip_send_fragment(route->addressing, interface, hdr, packet, route, shift, offs, fragsz, 0);
+	  error = !ip_send_fragment(route->addressing, interface, hdr, packet, route, shift, offs, fragsz, 0);
 
 	  offs += fragsz;
 	}
 
       /* last fragment */
-      ip_send_fragment(route->addressing, interface, hdr, packet, route, shift, offs, total - offs, !(fragment & IP_FLAG_MF));
+      if (!error)
+	ip_send_fragment(route->addressing, interface, hdr, packet, route, shift, offs, total - offs, !(fragment & IP_FLAG_MF));
 
       /* release the original packet */
       packet_obj_refdrop(packet);
@@ -786,7 +853,7 @@ void		ip_route(struct net_packet_s	*packet,
   /* recompute checksum (in fact, incrementally adjust it) */
   hdr->ttl--;
   check = net_16_load(hdr->check) + 1;
-  net_16_store(hdr->check, check + (check >> 16));
+  endian_16_na_store(&hdr->check, check + (check >> 16));
 
   /* direct or indirect delivery */
   if (route->type & ROUTETYPE_DIRECT)
@@ -794,22 +861,20 @@ void		ip_route(struct net_packet_s	*packet,
       net_debug("local delivery on %s\n", interface->name);
 
       if (!(packet->tMAC = arp_get_mac(route->addressing , pv->arp, packet, packet->tADDR.addr.ipv4)))
-	return;
+	return ;
     }
   else
     {
       /* get router address */
       router = IPV4_ADDR_GET(route->router);
-
       net_debug("remote delivery thru %P on %s\n", &router, 4, interface->name);
 
       if (!(packet->tMAC = arp_get_mac(route->addressing, pv->arp, packet, router)))
-	return;
+	return ;
     }
 
   /* send the packet */
   packet->stage--;
-  /* send the packet to the driver */
   if_sendpkt(interface, packet, ETHERTYPE_IP);
 }
 
@@ -828,10 +893,12 @@ NET_MATCHADDR(ip_matchaddr)
     A = IPV4_ADDR_GET(*a);
   else
     A = pv->addr;
+
   if (b != NULL)
     B = IPV4_ADDR_GET(*b);
   else
     B = pv->addr;
+
   if (mask != NULL)
     M = IPV4_ADDR_GET(*mask);
   else /* no mask set, equality test */
