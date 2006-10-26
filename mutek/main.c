@@ -52,23 +52,6 @@
 #include <stdlib.h>
 #include <timer.h>
 
-/*
-    %config CONFIG_MUTEK_CONSOLE
-    depend CONFIG_DRIVER_TTY CONFIG_DRIVER_UART
-    default defined
-    %config end
-
-    %config CONFIG_MUTEK_TIMERMS
-    depend CONFIG_DRIVER_TIMER
-    default defined
-    %config end
-
-    %config CONFIG_MUTEK_LOGO
-    depend CONFIG_DRIVER_FB
-    default defined
-    %config end
-*/
-
 #if defined(CONFIG_MUTEK_CONSOLE)
 struct device_s *tty_dev;
 #endif

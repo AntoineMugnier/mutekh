@@ -442,11 +442,25 @@ sub process_config
 
     foreach my $opt (values %config_opts)
     {
-	if ($$opt{value} ne "undefined")
-	{
-	    process_config_provide($opt);
+	    if ($$opt{value} ne "undefined")
+	    {
+		process_config_provide($opt);
+	    }
 	}
-    }
+
+    # check dependencies
+
+	foreach my $opt (values %config_opts)
+	{
+	    if ($$opt{value} ne "undefined")
+	    {
+		if (not process_config_depend($opt))
+		{
+		    $$opt{value} = "undefined";
+		    $changed = 1;
+		}
+	    }
+	}
 
     # check exclusion
 
@@ -455,20 +469,6 @@ sub process_config
 	if ($$opt{value} ne "undefined")
 	{
 	    process_config_exclude($opt);
-	}
-    }
-
-    # check dependencies
-
-    foreach my $opt (values %config_opts)
-    {
-	if ($$opt{value} ne "undefined")
-	{
-	    if (not process_config_depend($opt))
-	    {
-		$$opt{value} = "undefined";
-		$changed = 1;
-	    }
 	}
     }
 
@@ -486,8 +486,47 @@ sub process_config
 	    error(" `".$$opt{name}."' token must be defined");
 	}
     }
+}
 
-    return $changed;
+sub read_myconfig
+{
+    my ($file) = @_;
+
+    if (open(FILE, "<".$file))
+    {
+	my $lnum = 0;
+
+	foreach my $line (<FILE>)
+	{
+	    $lnum++;
+
+	    next if ($line =~ /^\s*$/);
+
+	    if ($line =~ /^\s*([^\s]+)\s+([^\s]*)/)
+	    {
+		my $opt = $config_opts{$1};
+
+		if (not $opt)
+		{
+		     warning("$file:$lnum: unknown configuration token `$1'");
+		}
+		else
+		{
+		    if ($2)
+		    {
+			$$opt{"value"} = $2;
+		    }
+		    else
+		    {
+			$$opt{"value"} = "defined";
+		    }
+		    next;
+		}
+	    }
+	}
+
+	close(FILE);
+    }
 }
 
 sub read_header
@@ -614,14 +653,14 @@ sub main
     explore(".");
     exit 1 if $err_flag;
 
-    read_header("config.h");
+    read_myconfig("myconfig");
     exit 1 if $err_flag;
 
     $changed = process_config();
     exit 1 if $err_flag;
 
-    write_header("config.h") if ($changed or not -f "config.h");
-    write_makefile("config.mk") if ($changed or not -f "config.mk");
+    write_header(@ARGV[0]);# if ($changed or not -f "config.h");
+    write_makefile(@ARGV[1]);# if ($changed or not -f "config.mk");
 }
 
 main;
