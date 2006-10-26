@@ -52,37 +52,64 @@
 #include <stdlib.h>
 #include <timer.h>
 
-#ifdef CONFIG_TTY
-lock_t tty_lock;
+/*
+    %config CONFIG_FEATURE_CONSOLE
+    depend CONFIG_DRIVER_TTY CONFIG_DRIVER_UART
+    default defined
+    %config end
+
+    %config CONFIG_FEATURE_TIMERMS
+    depend CONFIG_DRIVER_TIMER
+    default defined
+    %config end
+
+    %config CONFIG_FEATURE_LOGO
+    depend CONFIG_DRIVER_FB
+    default defined
+    %config end
+*/
+
+#if defined(CONFIG_FEATURE_CONSOLE)
 struct device_s *tty_dev;
 #endif
 
-#ifdef CONFIG_FB
+#if defined(CONFIG_DRIVER_FB)
 struct device_s fb_dev;
 #endif
 
-#ifdef CONFIG_TIMER
+#if defined(CONFIG_DRIVER_TIMER)
 struct device_s timer_dev;
 #endif
 
-struct device_s tty_uart_dev;
-struct device_s tty_con_dev;
-
-struct device_s icu_dev;
-
+#if defined(CONFIG_DRIVER_ENUM_PCI)
 struct device_s enum_pci;
+#endif
+
+#if defined(CONFIG_DRIVER_ENUM_ISAPNP)
 struct device_s enum_isapnp;
+#endif
 
+#if defined(CONFIG_FEATURE_TIMERMS)
 struct timer_s	timer_ms;
+#endif
 
+#if defined(CONFIG_FEATURE_LOGO)
 extern const uint8_t mutek_logo_320x200[320*200];
+#endif
 
+#if defined(CONFIG_DRIVER_TIMER)
 DEVTIMER_CALLBACK(timer_callback)
 {
   //  printf("timer callback\n");
-  //  pthread_yield();
+# if defined(CONFIG_HEXO_SCHED_PREEMPT)
+  sched_context_switch();
+# endif
+
+# if defined(CONFIG_FEATURE_TIMERMS)
   timer_inc_ticks(&timer_ms, 10);
+# endif
 }
+#endif
 
 int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
@@ -91,22 +118,27 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
   /********* ICU init ******************************** */
 
-  /* ICU init */
+#if defined(CONFIG_DRIVER_ICU)
+  static struct device_s icu_dev;
+
   device_init(&icu_dev);
-#if defined(__ARCH__ibmpc__)
+# if defined(CONFIG_DRIVER_ICU_8259)
   icu_dev.addr[ICU_ADDR_MASTER] = 0x0020;
   icu_dev.addr[ICU_ADDR_SLAVE] = 0x00a0;
   icu_8259_init(&icu_dev, NULL);
-#elif defined(__ARCH__soclib__)
+# elif defined(CONFIG_DRIVER_ICU_SOCLIB)
   icu_dev.addr[ICU_ADDR_MASTER] = 0x10c00000;
   icu_soclib_init(&icu_dev, NULL);
+# endif
 #endif
 
   /********* TTY init ******************************** */
 
-#ifdef CONFIG_UART
-  device_init(&tty_uart_dev);
-# if defined(__ARCH__ibmpc__)
+#if defined(CONFIG_DRIVER_UART)
+  static struct device_s uart_dev;
+
+  device_init(&uart_dev);
+# if defined(CONFIG_DRIVER_CHAR_UART8250)
   tty_uart_dev.addr[UART_8250_ADDR] = 0x03f8;
   tty_uart_dev.irq = 4;
   uart_8250_init(&tty_uart_dev, &icu_dev);
@@ -115,13 +147,10 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #endif
 
   /* TTY init */
-#ifdef CONFIG_TTY
-  lock_init(&tty_lock);
-# if defined(__ARCH__ibmpc__)
+#ifdef CONFIG_DRIVER_TTY
+  static struct device_s tty_con_dev;
 
-#  ifdef CONFIG_TTY_UART
-  tty_dev = &tty_uart_dev;
-#  else	/* CONFIG_TTY_UART */
+# if defined(CONFIG_DRIVER_CHAR_VGATTY)
   device_init(&tty_con_dev);
   tty_con_dev.addr[VGA_TTY_ADDR_BUFFER] = 0x000b8000;
   tty_con_dev.addr[VGA_TTY_ADDR_CRTC] = 0x03d4;
@@ -129,75 +158,89 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   tty_vga_init(&tty_con_dev, &icu_dev);
   tty_dev = &tty_con_dev;
   DEV_ICU_BIND(&icu_dev, &tty_con_dev);
-#  endif /* CONFIG_TTY_UART */
-
-# elif defined(__ARCH__soclib__)
+# elif defined(CONFIG_DRIVER_CHAR_SOCLIBTTY)
   device_init(&tty_con_dev);
   tty_con_dev.addr[0] = 0xa0c00000;
   tty_con_dev.irq = 1;
   tty_soclib_init(&tty_con_dev, &icu_dev);
   tty_dev = &tty_con_dev;
   DEV_ICU_BIND(&icu_dev, &tty_con_dev);
-# endif	/* defined(__ARCH__xxx__) */
-#endif /* CONFIG_TTY */
+# endif
+#endif
+
+#if defined(CONFIG_FEATURE_CONSOLE)
+# if defined(CONFIG_DRIVER_TTY)
+  tty_dev = &tty_con_dev;
+# elif defined(CONFIG_DRIVER_TTY)
+  tty_dev = &uart_dev;
+# endif
+#endif
 
   /********* Timer init ******************************** */
 
-#ifdef CONFIG_TIMER
+#if defined(CONFIG_DRIVER_TIMER)
   device_init(&timer_dev);
-  timer_init(&timer_ms.root);
-  timer_ms.ticks = 0;
-# if defined(__ARCH__ibmpc__)
+# if defined(CONFIG_DRIVER_TIMER_8253)
   timer_dev.addr[0] = 0x0040;
   timer_dev.irq = 0;
   timer_8253_init(&timer_dev, &icu_dev);
-# elif defined(__ARCH__soclib__)
+  dev_timer_setperiod(&timer_dev, 0, 1193180 / 100);
+# elif defined(CONFIG_DRIVER_TIMER_SOCLIB)
   timer_dev.addr[0] = 0x20c00000;
   timer_dev.irq = 0;
   timer_soclib_init(&timer_dev, &icu_dev);
-# endif	/* defined(__ARCH__xxx__) */
+  dev_timer_setperiod(&timer_dev, 0, 0xffff);
+# endif
   DEV_ICU_BIND(&icu_dev, &timer_dev);
-
-  //  dev_timer_setperiod(&timer_dev, 0, 0xffff);
-  dev_timer_setperiod(&timer_dev, 0, 1193180 / 100);
   dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
+#endif
+
+#if defined (CONFIG_FEATURE_TIMERMS)
+  timer_init(&timer_ms.root);
+  timer_ms.ticks = 0;
 #endif
 
   /********* FB init ********************************* */
 
-#ifdef CONFIG_FB
+#if defined(CONFIG_DRIVER_FB)
   device_init(&fb_dev);
-# if defined(__ARCH__ibmpc__)
+# if defined(CONFIG_DRIVER_FB_VGA)
   fb_vga_init(&fb_dev, &icu_dev);
   fb_vga_setmode(&fb_dev, 320, 200, 8, FB_PACK_INDEX);
   uint8_t *p = (void*)fb_vga_getbuffer(&fb_dev, 0);
-  memcpy(p, mutek_logo_320x200, 64000);
-# endif	/* defined(__ARCH__xxx__) */
-#endif /* CONFIG_FB */
+#  if defined(CONFIG_FEATURE_LOGO)
+   memcpy(p, mutek_logo_320x200, 64000);
+#  endif
+# endif
+#endif
 
   puts("MutekH is alive.");
 
-# if defined(__ARCH__ibmpc__)
+#if defined(CONFIG_DRIVER_ENUM_PCI)
   device_init(&enum_pci);
   enum_pci_init(&enum_pci, &icu_dev);
-
-  device_init(&enum_isapnp);
-  enum_isapnp_init(&enum_isapnp, &icu_dev);
-
-  dev_enum_register(&enum_pci, &net_3c900_drv);
-  dev_enum_register(&enum_pci, &net_ne2000_drv);
-
-#if 1
-  struct device_s *isawd;
-
-  isawd = malloc(sizeof (struct device_s));
-
-  device_init(isawd);
-  isawd->addr[0] = 0x320;
-  isawd->irq = 3;
-  net_ne2000_init(isawd, &icu_dev);
 #endif
 
+#if defined(CONFIG_DRIVER_ENUM_ISAPNP)
+  device_init(&enum_isapnp);
+  enum_isapnp_init(&enum_isapnp, &icu_dev);
+#endif
+
+#if defined(CONFIG_DRIVER_ENUM_PCI) && defined(CONFIG_DRIVER_NET_3C900)
+  dev_enum_register(&enum_pci, &net_3c900_drv);
+#endif
+
+#if defined(CONFIG_DRIVER_ENUM_PCI) && defined(CONFIG_DRIVER_NET_NE2000)
+  dev_enum_register(&enum_pci, &net_ne2000_drv);
+#endif
+
+#if defined(CONFIG_DRIVER_NET_NE2000)
+  static struct device_s net_isawd;
+
+  device_init(&net_isawd);
+  net_isawd->addr[0] = 0x320;
+  net_isawd->irq = 3;
+  net_ne2000_init(isawd, &icu_dev);
 # endif
 
   arch_start_other_cpu(); /* let other CPUs enter main_smp() */
@@ -215,9 +258,9 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   printf("Execution pointer: %p\n", execptr);
   puts("regs:");
 
-#if defined(__CPU__x86__)
+#if defined(CONFIG_CPU_X86)
   for (i = 0; i < 8; i++)
-#elif defined(__CPU__mips__)
+#elif defined(CONFIG_CPU_MIPS)
   for (i = 0; i < 32; i++)
 #else
 # error
@@ -239,9 +282,7 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 
   cpu_interrupt_ex_sethandler(fault_handler);
 
-  lock_spin(&tty_lock);
   printf("CPU %i is up and running.\n", cpu_id());
-  lock_release(&tty_lock);
 
   if (cpu_id() == 0)
     main(0, 0);

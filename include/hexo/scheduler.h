@@ -19,6 +19,21 @@
 
 */
 
+/*
+
+    %config CONFIG_HEXO_SCHED_PREEMPT
+    desc Scheduler is preemptiv
+    default undefined
+    depend CONFIG_DRIVER_TIMER
+    %config end
+
+    %config CONFIG_HEXO_SCHED_MIGRATION
+    desc Scheduler algorithm use permanent context migration among available processors
+    default defined
+    %config end
+
+*/
+
 #ifndef __HEXO_SCHEDULER_H__
 #define __HEXO_SCHEDULER_H__
 

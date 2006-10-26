@@ -19,6 +19,29 @@
 
 */
 
+/*
+
+    %config CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT
+    desc select memory allocation algorithm first fit
+    default defined
+    exclude CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
+    %config end
+
+    %config CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
+    desc select memory allocation algorithm best fit
+    default undefined
+    exclude CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT
+    %config end
+
+    %config CONFIG_HEXO_MEMALLOC_ALGO_META
+    desc	meta configuration token used to impose requirements
+    default	defined
+    flags	mandatory noexport
+    require	CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
+    %config end
+
+*/
+
 #include <hexo/alloc.h>
 
 CONTAINER_FUNC(static inline, alloc_list, DLIST, alloc_list, NOLOCK, list_entry);

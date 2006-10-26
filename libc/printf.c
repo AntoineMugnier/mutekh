@@ -19,6 +19,20 @@
 
 */
 
+/*
+
+    %config CONFIG_LIBC_PRINTF_SIMPLE
+    desc libc printf() features are reduced
+    default undefined
+    %config end
+
+    %config CONFIG_LIBC_PRINTF_EXT
+    desc libc printf support %S and %P extentions to dump buffers
+    default defined
+    %config end
+
+*/
+
 #include <hexo/types.h>
 
 #include <stdio.h>

@@ -1,6 +1,4 @@
 
-default: arch_cpu_dirs $(target)
-
 CFLAGS=-Wall \
 	-O2 -fomit-frame-pointer \
 	-fno-builtin
@@ -26,23 +24,9 @@ OBJDUMP=$(CPUTOOLS)objdump
 
 MAKEFLAGS += -s
 
-arch/$(ARCH):
-	@mkdir -p $@
-
-cpu/$(CPU):
-	@mkdir -p $@
-
-arch/current:
-	@ln -s $(ARCH) $@
-
-cpu/current:
-	@ln -s $(CPU) $@
-
-arch_cpu_dirs: arch/$(ARCH) cpu/$(CPU) arch/current cpu/current
-
 clean:
 	@echo " CLEAN      $(H)"
-	@rm -f *.out *~ depend.mk $(objs) $(subdirs-lists) *.map
+	@rm -f $target *~ depend.mk $(objs) $(subdirs-lists) *.map
 	@rm -rf .depends
 	@for i in $(subdirs) ; do \
 		make -C $$i -f $(SRC_DIR)/scripts/rules.mk H="$(H)/$$i" clean; \

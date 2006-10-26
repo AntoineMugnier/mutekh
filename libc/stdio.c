@@ -27,7 +27,9 @@
 #include <hexo/device.h>
 #include <hexo/driver.h>
 
+#if defined(CONFIG_FEATURE_CONSOLE)
 extern struct device_s *tty_dev;
+#endif
 
 //lock_t stdio_lock	= LOCK_INITIALIZER;
 
@@ -35,6 +37,7 @@ void __puts(const char *s, size_t len)
 {
   //  lock_spin(&stdio_lock);
 
+#if defined(CONFIG_FEATURE_CONSOLE)
   while (len > 0)
     {
       ssize_t	res;
@@ -48,14 +51,16 @@ void __puts(const char *s, size_t len)
 	  /* pthread_yield(); */
 	}
     }
-
+#endif
   //  lock_release(&stdio_lock);
 }
 
 inline int_fast8_t putchar(char c)
 {
+#if defined(CONFIG_FEATURE_CONSOLE)
   while (dev_char_write(tty_dev, (uint8_t*)&c, 1) != 1)
-    /* pthread_yield() */ ;
+    ;
+#endif
 
   return c;
 }

@@ -29,7 +29,7 @@ static CONTEXT_ENTRY(sched_context_idle)
   while (1)
     {
       cpu_interrupt_enable();
-#if !defined(CONFIG_SMP) || defined(CONFIG_IPI)
+#if !defined(CONFIG_SMP) || defined(CONFIG_HEXO_IPI)
       /* CPU sleep waiting for interrupts */
       cpu_interrupt_wait();
 #endif

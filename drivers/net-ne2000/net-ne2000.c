@@ -19,6 +19,15 @@
 
 */
 
+/*
+
+    %config CONFIG_DRIVER_NET_NE2000_FRAGMENT
+    desc NE2000 driver option: use fragmenation
+    default defined
+    %config end
+
+*/
+
 #include <hexo/types.h>
 
 #include <hexo/device/icu.h>
@@ -154,7 +163,7 @@ static bool_t			ne2000_rx(struct device_s	*dev,
   /* read the packet itself */
   *size = hdr.size - sizeof (struct ne2000_header_s);
 
-#ifdef CONFIG_NE2000_FRAGMENT
+#ifdef CONFIG_DRIVER_NET_NE2000_FRAGMENT
   if ((buf = *data = mem_alloc(*size + 2, MEM_SCOPE_CONTEXT)) == NULL)
     return 0;
   ne2000_mem_read(dev, dma + sizeof (struct ne2000_header_s),
@@ -210,7 +219,7 @@ static void	ne2000_push(struct device_s	*dev,
   packet->proto = net_be16_load(hdr->ether_type);
 
   /* prepare packet for next stage */
-#ifdef CONFIG_NE2000_FRAGMENT
+#ifdef CONFIG_DRIVER_NET_NE2000_FRAGMENT
   nethdr[1].data = data + sizeof(struct ether_header) + 2;
   nethdr[1].size = size - sizeof(struct ether_header);
 #else
@@ -541,7 +550,7 @@ DEVNET_PREPAREPKT(net_ne2000_preparepkt)
   uint_fast16_t			total = 0;
   uint8_t			*buff;
 
-#ifdef CONFIG_NE2000_FRAGMENT
+#ifdef CONFIG_DRIVER_NET_NE2000_FRAGMENT
   total = sizeof (struct ether_header) + size + 2 + max_padding;
 #else
   total = sizeof (struct ether_header) + size;
@@ -559,7 +568,7 @@ DEVNET_PREPAREPKT(net_ne2000_preparepkt)
   packet->sMAC = pv->mac;
   packet->MAClen = ETH_ALEN;
 
-#ifdef CONFIG_NE2000_FRAGMENT
+#ifdef CONFIG_DRIVER_NET_NE2000_FRAGMENT
   /* when we use fragmentation, the next packet will be aligned on 4
      bytes boundary */
   return buff + sizeof (struct ether_header) + 2;

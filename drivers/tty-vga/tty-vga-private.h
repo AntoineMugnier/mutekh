@@ -41,7 +41,7 @@ struct vga_text_char_s
 {
   uint8_t		c;
   union {
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
     struct {
       uint8_t		foreground:3, bright:1, background:3, blink:1;
     };
@@ -89,7 +89,7 @@ struct tty_vga_context_s
 
   uint_fast8_t			key_state;
 
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
   uint_fast8_t			xsave, ysave;
   uint_fast8_t			forecolor, backcolor;
   bool_t			blink, bright, reverse;
@@ -129,7 +129,7 @@ void tty_vga_scroll_up(struct device_s *dev, uint_fast8_t count);
 
 void tty_vga_ansi_insert(struct device_s *dev);
 
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
 void tty_vga_process_ansi(struct device_s *dev, uint8_t c);
 #endif
 

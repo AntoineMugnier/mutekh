@@ -114,7 +114,7 @@ static const struct tty_vga_ansi_keycode_s ansi_keycode_1[0x80] =
     [0x46] = { .mstate = VGA_KS_SCROLL },
     [0x45] = { .mstate = VGA_KS_NUM },
 
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
 
     /* Top row functions keys */
     [0x3b] = { .lower = "\x1b[OP" }, /* F1 */
@@ -222,7 +222,7 @@ static void tty_vga_keycode_make(struct device_s *dev,
       if (str)
 	tty_fifo_noirq_pushback_array(&pv->read_fifo, (uint8_t*)str, strlen(str));
 
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
       if (*str == 13 && pv->nlmode) /* CR LF in newline mode */
 	tty_fifo_noirq_pushback(&pv->read_fifo, 10);
 #endif

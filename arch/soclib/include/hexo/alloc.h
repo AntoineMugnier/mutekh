@@ -43,7 +43,7 @@ extern struct mem_alloc_region_s mem_region_cluster;
 #endif
 
 /** allocated memory scope is context local */
-#if defined(CONFIG_SHED_MIGRATION) && !defined(CONFIG_CACHE_COHERENCY)
+#if defined(CONFIG_HEXO_SCHED_MIGRATION) && !defined(CONFIG_CPU_CACHE_COHERENCY)
 # define MEM_SCOPE_CONTEXT	MEM_SCOPE_SYS
 #else
 # define MEM_SCOPE_CONTEXT	MEM_SCOPE_CPU

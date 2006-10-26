@@ -23,7 +23,7 @@
 #include <hexo/error.h>
 #include <hexo/alloc.h>
 
-#ifdef CONFIG_DEVICE_HIERARCHY
+#ifdef CONFIG_HEXO_DEVICE_TREE
 
 CONTAINER_FUNC(inline, device_list, DLIST, device_list, HEXO_SPIN);
 

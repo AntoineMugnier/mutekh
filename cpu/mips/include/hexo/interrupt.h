@@ -67,7 +67,7 @@ cpu_interrupt_disable(void)
 		    ".set push			\n"
 		    ".set noat			\n"
 		    ".set reorder		\n"
-#if (CONFIG_MIPS_VERSION >= 322)
+#if (CONFIG_CPU_MIPS_VERSION >= 322)
 		    "di				\n"
 #else
 		    "mfc0	$1,	$12	\n"
@@ -88,7 +88,7 @@ cpu_interrupt_enable(void)
 		    ".set push			\n"
 		    ".set noat			\n"
 		    ".set reorder		\n"
-#if (CONFIG_MIPS_VERSION >= 322)
+#if (CONFIG_CPU_MIPS_VERSION >= 322)
 		    "ei				\n"
 #else
 		    "mfc0	$1,	$12	\n"
@@ -152,7 +152,7 @@ cpu_interrupt_getstate(void)
 static inline void
 cpu_interrupt_wait(void)
 {
-#if (CONFIG_MIPS_VERSION >= 322)
+#if (CONFIG_CPU_MIPS_VERSION >= 322)
   __asm__ volatile ("wait");
 #endif
 }

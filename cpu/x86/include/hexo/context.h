@@ -32,7 +32,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 {
   asm volatile (
 		/* save execution pointer */
-#ifdef CONFIG_PIC
+#ifdef CONFIG_CODE_PIC
 		"	call	1f		\n"
 		"	jmp	2f		\n"
 		"1:				\n"

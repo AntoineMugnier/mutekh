@@ -19,6 +19,29 @@
 
 */
 
+/*
+
+    %config CONFIG_HEXO_MEMALLOC_ALIGN
+    desc Memory allocation block address alignment
+    flags mandatory
+    default 0x20
+    %config end
+
+    %config CONFIG_HEXO_MEMALLOC_STATS
+    desc keep stats about allocated blocks count and size
+    default defined
+    %config end
+
+    %config CONFIG_HEXO_MEMALLOC_SIGNED
+    desc When enabled all memory block headers will include a special magic value
+    %config end
+
+    %config CONFIG_HEXO_MEMALLOC_DEBUG
+    desc When enabled all allocated and freed memory blocks will filled be with 0x5a and 0xa5 bytes
+    %config end
+
+*/
+
 
 #ifndef ALLOC_H_
 #define ALLOC_H_
@@ -112,7 +135,7 @@ void mem_init(void);
 
 #ifndef MEM_SCOPE_CPU
 # define MEM_SCOPE_CPU		MEM_SCOPE_SYS
-# if defined(CONFIG_SMP) && defined(CONFIG_CACHE) && !defined(CONFIG_CACHE_COHERENCY)
+# if defined(CONFIG_SMP) && defined(CONFIG_CPU_CACHE) && !defined(CONFIG_CPU_CACHE_COHERENCY)
 #  warning No CPU local memory region is available, cache problems may occur
 # endif
 #endif

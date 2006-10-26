@@ -136,7 +136,7 @@ tty_vga_clear(struct device_s *dev, int_fast8_t rowstart, int_fast8_t rowend)
     {
       buf[i].c = ' ';
       buf[i].attrs = 0x07;
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
       buf[i].foreground = pv->forecolor;
       buf[i].background = pv->backcolor;
 #endif
@@ -154,7 +154,7 @@ tty_vga_reset(struct device_s *dev)
   pv->width = 80;
   pv->height = 25;
 
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
   pv->forecolor = 7;
   pv->backcolor = 0;
   pv->blink = 0;
@@ -189,14 +189,14 @@ tty_vga_clear_row(struct device_s *dev, uint_fast8_t row,
     {
       buf[i].c = ' ';
       buf[i].attrs = 0x07;
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
       buf[i].foreground = pv->forecolor;
       buf[i].background = pv->backcolor;
 #endif
     }
 }
 
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
 
 #if 0
 
@@ -287,7 +287,7 @@ tty_vga_newline(struct device_s *dev)
 {
   struct tty_vga_context_s	*pv = dev->drv_pv;
 
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
   if (tty_vga_setcursor(dev, pv->nlmode ? 0 : pv->xpos, pv->ypos + 1))
     tty_vga_scroll_up(dev, 1);
 #else
@@ -308,14 +308,14 @@ tty_vga_putchar(struct device_s *dev, uint8_t data)
 
   if (pv->xpos >= pv->width)
     {
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
       if (!pv->linewrap)
 	pv->xpos = pv->width - 1;
       else
 #endif
 	tty_vga_newline(dev);
     }
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
   else
     {
       if (pv->insert)
@@ -327,7 +327,7 @@ tty_vga_putchar(struct device_s *dev, uint8_t data)
 
   buf->c = data;
 
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
   if (pv->reverse)
     {
       buf->background = pv->forecolor;
@@ -373,7 +373,7 @@ tty_vga_process_default(struct device_s *dev, uint8_t c)
       tty_vga_setcursor(dev, pv->xpos - 1, pv->ypos);
       break;
 
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
     case(27):		/* ESC */
       //if (pv->key_state & VGA_KS_SCROLL)
 	pv->process = &tty_vga_process_ansi;

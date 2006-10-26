@@ -32,7 +32,7 @@
 
 /**************************************************************/
 
-#ifdef CONFIG_VGATTY_ANSI
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
 
 /* 
  * put ansi reponse data on device read fifo
