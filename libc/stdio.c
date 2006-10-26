@@ -27,7 +27,7 @@
 #include <hexo/device.h>
 #include <hexo/driver.h>
 
-#if defined(CONFIG_FEATURE_CONSOLE)
+#if defined(CONFIG_MUTEK_CONSOLE)
 extern struct device_s *tty_dev;
 #endif
 
@@ -37,7 +37,7 @@ void __puts(const char *s, size_t len)
 {
   //  lock_spin(&stdio_lock);
 
-#if defined(CONFIG_FEATURE_CONSOLE)
+#if defined(CONFIG_MUTEK_CONSOLE)
   while (len > 0)
     {
       ssize_t	res;
@@ -57,7 +57,7 @@ void __puts(const char *s, size_t len)
 
 inline int_fast8_t putchar(char c)
 {
-#if defined(CONFIG_FEATURE_CONSOLE)
+#if defined(CONFIG_MUTEK_CONSOLE)
   while (dev_char_write(tty_dev, (uint8_t*)&c, 1) != 1)
     ;
 #endif

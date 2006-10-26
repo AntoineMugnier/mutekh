@@ -21,7 +21,7 @@ arch/current: $(SRC_DIR)/config.mk
 cpu/current: $(SRC_DIR)/config.mk
 	ln -sfn $(CONFIG_CPU_NAME) $@
 
-subdirs = arch cpu drivers hexo libc
+subdirs = arch cpu drivers hexo mutek libc
 
 ifeq ($(CONFIG_NETWORK), defined)
  subdirs += libnetwork

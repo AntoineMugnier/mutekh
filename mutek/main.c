@@ -53,23 +53,23 @@
 #include <timer.h>
 
 /*
-    %config CONFIG_FEATURE_CONSOLE
+    %config CONFIG_MUTEK_CONSOLE
     depend CONFIG_DRIVER_TTY CONFIG_DRIVER_UART
     default defined
     %config end
 
-    %config CONFIG_FEATURE_TIMERMS
+    %config CONFIG_MUTEK_TIMERMS
     depend CONFIG_DRIVER_TIMER
     default defined
     %config end
 
-    %config CONFIG_FEATURE_LOGO
+    %config CONFIG_MUTEK_LOGO
     depend CONFIG_DRIVER_FB
     default defined
     %config end
 */
 
-#if defined(CONFIG_FEATURE_CONSOLE)
+#if defined(CONFIG_MUTEK_CONSOLE)
 struct device_s *tty_dev;
 #endif
 
@@ -89,11 +89,11 @@ struct device_s enum_pci;
 struct device_s enum_isapnp;
 #endif
 
-#if defined(CONFIG_FEATURE_TIMERMS)
+#if defined(CONFIG_MUTEK_TIMERMS)
 struct timer_s	timer_ms;
 #endif
 
-#if defined(CONFIG_FEATURE_LOGO)
+#if defined(CONFIG_MUTEK_LOGO)
 extern const uint8_t mutek_logo_320x200[320*200];
 #endif
 
@@ -105,7 +105,7 @@ DEVTIMER_CALLBACK(timer_callback)
   sched_context_switch();
 # endif
 
-# if defined(CONFIG_FEATURE_TIMERMS)
+# if defined(CONFIG_MUTEK_TIMERMS)
   timer_inc_ticks(&timer_ms, 10);
 # endif
 }
@@ -168,7 +168,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # endif
 #endif
 
-#if defined(CONFIG_FEATURE_CONSOLE)
+#if defined(CONFIG_MUTEK_CONSOLE)
 # if defined(CONFIG_DRIVER_TTY)
   tty_dev = &tty_con_dev;
 # elif defined(CONFIG_DRIVER_TTY)
@@ -195,7 +195,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 #endif
 
-#if defined (CONFIG_FEATURE_TIMERMS)
+#if defined (CONFIG_MUTEK_TIMERMS)
   timer_init(&timer_ms.root);
   timer_ms.ticks = 0;
 #endif
@@ -208,7 +208,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   fb_vga_init(&fb_dev, &icu_dev);
   fb_vga_setmode(&fb_dev, 320, 200, 8, FB_PACK_INDEX);
   uint8_t *p = (void*)fb_vga_getbuffer(&fb_dev, 0);
-#  if defined(CONFIG_FEATURE_LOGO)
+#  if defined(CONFIG_MUTEK_LOGO)
    memcpy(p, mutek_logo_320x200, 64000);
 #  endif
 # endif
