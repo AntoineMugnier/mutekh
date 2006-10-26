@@ -138,6 +138,10 @@ OBJECT_CONSTRUCTOR(fragment_obj)
   frag->timeout.delay = IP_REASSEMBLY_TIMEOUT;
   timer_add_event(&timer_ms, &frag->timeout);
 
+#ifdef CONFIG_NETWORK_PROFILING
+  netobj_new++;
+#endif
+
   return frag;
 }
 
@@ -153,6 +157,11 @@ OBJECT_DESTRUCTOR(fragment_obj)
   packet_queue_destroy(&obj->packets);
 
   mem_free(obj);
+
+#ifdef CONFIG_NETWORK_PROFILING
+  netobj_del++;
+#endif
+
 }
 
 /*
@@ -418,6 +427,7 @@ NET_PUSHPKT(ip_pushpkt)
   /* is the packet really for me ? */
   if (packet->tADDR.addr.ipv4 != pv->addr)
     {
+#ifdef CONFIG_NETWORK_ROUTING
       /* if the packet is not on the same subnet (and is not broadcast) */
       if (!on_subnet && packet->tADDR.addr.ipv4 != 0xffffffff)
 	{
@@ -442,9 +452,9 @@ NET_PUSHPKT(ip_pushpkt)
 
 	  return ;
 	}
-      else
-	if (!is_broadcast)
-	  return ;
+#endif
+      if (!is_broadcast)
+	return ;
     }
 
   /* verify checksum */
@@ -603,8 +613,12 @@ static inline bool_t	 ip_send_fragment(struct net_proto_s	*ip,
   /* need to route ? */
   if (route_entry != NULL)
     {
+#ifdef CONFIG_NETWORK_ROUTING
       ip_route(frag, route_entry);
       return 1;
+#else
+      assert(route_entry == NULL);
+#endif
     }
   else
     {
@@ -680,14 +694,18 @@ NET_SENDPKT(ip_send)
       IPV4_ADDR_SET(packet->sADDR, pv->addr);
       if (ip_delivery(interface, protocol, packet->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
 	{
+#ifdef CONFIG_NETWORK_ROUTING
 	  if ((route_entry = route_get(&packet->tADDR)) == NULL)
 	    {
+#endif
 	      /* network unreachable */
 	      pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
 
 	      packet_obj_refdrop(packet);
 	      return ;
+#ifdef CONFIG_NETWORK_ROUTING
 	    }
+#endif
 	}
       else
 	route_entry = NULL;
@@ -722,17 +740,21 @@ NET_SENDPKT(ip_send)
   IPV4_ADDR_SET(packet->sADDR, pv->addr);
   if (ip_delivery(interface, protocol, packet->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
     {
+#ifdef CONFIG_NETWORK_ROUTING
       if ((route_entry = route_get(&packet->tADDR)))
 	{
 	  ip_route(packet, route_entry);
 	}
       else
 	{
+#endif
 	  /* network unreachable */
 	  pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
 
 	  packet_obj_refdrop(packet);
+#ifdef CONFIG_NETWORK_ROUTING
 	}
+#endif
 
       return ;
     }
@@ -748,6 +770,7 @@ NET_SENDPKT(ip_send)
   if_sendpkt(interface, packet, ETHERTYPE_IP);
 }
 
+#ifdef CONFIG_NETWORK_ROUTING
 /*
  * Route a packet.
  */
@@ -877,6 +900,7 @@ void		ip_route(struct net_packet_s	*packet,
   packet->stage--;
   if_sendpkt(interface, packet, ETHERTYPE_IP);
 }
+#endif
 
 /*
  * Address matching function.

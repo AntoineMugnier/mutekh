@@ -1,21 +1,30 @@
 (dans l'ordre)
 
-* ARP
-  - gestion des doublons
+* UDP
+  - le refaire marcher comme avant !
+
+* TCP
+  - a finir
+
+* libsocket
+  - a coder integralement
 
 * route
-  - trier le container selon le netmask
+  - refaire avec un arbre comme a dit Alex
+
+* if
+  - a coder integralement
 
 * filter
+  - a coder integralement
+
+* ARP
+  - gestion des doublons
 
 * IP
   - options du header IP (seulement les trucs utiles)
     + MTU Probe/Reply
   - idee de nipo: dans le routage avec fragmentation, calculer taille optimale
-
-* if
-  - revoir les if_up/down/register/unregister
-  - lo
 
 * general
   - verifier l'alignement des acces memoire

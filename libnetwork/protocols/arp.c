@@ -102,6 +102,10 @@ OBJECT_CONSTRUCTOR(arp_entry_obj)
 
   entry->ip = ip;
 
+#ifdef CONFIG_NETWORK_PROFILING
+  netobj_new++;
+#endif
+
   return entry;
 }
 
@@ -123,6 +127,10 @@ OBJECT_DESTRUCTOR(arp_entry_obj)
     }
 
   mem_free(obj);
+
+#ifdef CONFIG_NETWORK_PROFILING
+  netobj_del++;
+#endif
 }
 
 /*
@@ -425,6 +433,7 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
       packet_queue_push(&res->wait, packet);
       res->interface = pv_ip->interface;
       res->addressing = addressing;
+      res->arp = arp;
 
       /* setup request time out */
       res->retry = 0;

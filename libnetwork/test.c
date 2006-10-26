@@ -36,8 +36,7 @@
 #include <pthread.h>
 #include <timer.h>
 
-void			eval_server();
-
+#ifdef CONFIG_NETWORK_TCP
 void			connection_close(struct net_tcp_session_s *session,
 					 void			  *ptr)
 {
@@ -89,6 +88,10 @@ void			*tcp_test(void *p)
 
   return NULL;
 }
+#endif
+
+#ifdef CONFIG_NETWORK_UDP
+#include "test_server.c"
 
 void			*err_test(void *p)
 {
@@ -104,7 +107,9 @@ void			*err_test(void *p)
 
   return NULL;
 }
+#endif
 
+#ifdef CONFIG_NETWORK_NFS
 void			*nfs_test(void *p)
 {
 
@@ -137,6 +142,7 @@ void			*nfs_test(void *p)
 
   return NULL;
 }
+#endif
 
 /*
  * test main.
@@ -156,7 +162,15 @@ int_fast8_t		_main()
   if_up("eth0");
   if_up("eth1");
 
-#if 1
+  /*
+   * Enable AC (on linux sim)
+   */
+
+  asm volatile("	pushf						\n"
+	       "	orl	$0x40000, (%esp)			\n"
+	       "	popf						\n");
+
+#ifdef CONFIG_NETWORK_ROUTE
 
   struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
@@ -177,7 +191,7 @@ int_fast8_t		_main()
 
 #endif
 
-#if 1
+#if 0
   eval_server();
 #endif
 
@@ -194,6 +208,18 @@ int_fast8_t		_main()
 #if 0
   pthread_t th;
   pthread_create(&th, NULL, nfs_test, NULL);
+#endif
+
+#if 0
+  pthread_t th;
+  sem_t	*sem = mem_alloc(sizeof (sem_t), MEM_SCOPE_SYS);
+
+  sem_init(sem, 0, 0);
+
+  pthread_create(&th, NULL, sem_test, sem);
+  pthread_create(&th, NULL, sem_test2, sem);
+
+
 #endif
 
   return 0;

@@ -53,6 +53,7 @@
 
 #ifndef CONFIG_STATIC_DRIVERS
 
+#ifdef CONFIG_DRIVER_ENUM_PCI
 /*
  * PCI identifiers of compatible cards.
  */
@@ -71,6 +72,7 @@ static const struct devenum_ident_s	net_ne2000_ids[] =
     { .vendor = 0x10bd, .device = 0x0e34 },	/* SureCom NE34 */
     { 0 }
   };
+#endif
 
 /*
  * Driver operations vector.
@@ -78,7 +80,9 @@ static const struct devenum_ident_s	net_ne2000_ids[] =
 
 const struct driver_s	net_ne2000_drv =
 {
+#ifdef CONFIG_DRIVER_ENUM_PCI
   .id_table		= net_ne2000_ids,
+#endif
 
   .f_init		= net_ne2000_init,
   .f_cleanup		= net_ne2000_cleanup,
@@ -483,7 +487,7 @@ DEV_INIT(net_ne2000_init)
   pv->run = 1;
   dispatch->running = &pv->run;
 
-  if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch))
+  if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch)) /* XXX */
     {
       printf("ne2000: cannot start dispatch thread\n");
 

@@ -46,6 +46,10 @@ OBJECT_CONSTRUCTOR(packet_obj)
 
   packet_obj_init(packet);
 
+#ifdef CONFIG_NETWORK_PROFILING
+  netobj_new++;
+#endif
+
   return packet;
 }
 
@@ -64,6 +68,10 @@ OBJECT_DESTRUCTOR(packet_obj)
     mem_free(obj->packet);
 
   mem_free(obj);
+
+#ifdef CONFIG_NETWORK_PROFILING
+  netobj_del++;
+#endif
 }
 
 /*
@@ -162,7 +170,7 @@ void				*packet_dispatch(void	*data)
   while (*run)
     {
       /* wait for a packet */
-      /* XXX sem_wait(sem); */
+      sem_wait(sem);
 
       /* retreive the incoming packet */
       packet = packet_queue_lock_pop(root);

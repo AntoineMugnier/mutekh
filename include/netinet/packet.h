@@ -201,6 +201,15 @@ CONTAINER_PROTOTYPE(inline, packet_queue, packet_queue);
 CONTAINER_PROTOTYPE(inline, packet_queue, packet_queue_lock);
 
 /*
+ * Profiling info.
+ */
+
+#ifndef CONFIG_NETWORK_PROFILING
+extern uint_fast32_t	netobj_new;
+extern uint_fast32_t	netobj_del;
+#endif
+
+/*
  * XXX for debug, remove me
  */
 

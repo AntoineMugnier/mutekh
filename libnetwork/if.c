@@ -76,24 +76,36 @@ struct net_if_s	*if_register(struct device_s	*dev,
   net_protos_init(&interface->protocols);
 
   /* XXX initialize standard protocols for the device */
+#ifdef CONFIG_NETWORK_IPV4
   ip = net_alloc_proto(&ip_protocol);
   arp = net_alloc_proto(&arp_protocol);
-  interface->bootproto.rarp = net_alloc_proto(&rarp_protocol);
   icmp = net_alloc_proto(&icmp_protocol);
-  udp = net_alloc_proto(&udp_protocol);
-  tcp = net_alloc_proto(&tcp_protocol);
   if_register_proto(interface, arp);
-  if_register_proto(interface, interface->bootproto.rarp, ip);
   if_register_proto(interface, icmp);
+#endif
+
+#ifdef CONFIG_NETWORK_RARP
+  interface->bootproto.rarp = net_alloc_proto(&rarp_protocol);
+  if_register_proto(interface, interface->bootproto.rarp, ip);
+#endif
+
+#ifdef CONFIG_NETWORK_UDP
+  udp = net_alloc_proto(&udp_protocol);
   if_register_proto(interface, udp);
+#endif
+#ifdef CONFIG_NETWORK_TCP
+  tcp = net_alloc_proto(&tcp_protocol);
   if_register_proto(interface, tcp);
+#endif
 
   /* XXX a funny hack for testing, to be removed */
   static uint_fast8_t chiche = 0;
   if (!chiche)
     {
       interface->boottype = IF_BOOT_NONE;
+#ifdef CONFIG_NETWORK_IPV4
       if_register_proto(interface, ip, arp, icmp, 0x0a0202f0, 0xffffff00);
+#endif
 #if 0
       ip = net_alloc_proto(&ip_protocol);
       if_register_proto(interface, ip, arp, icmp, 0x0a0202f1, 0xffffff00);
@@ -102,7 +114,9 @@ struct net_if_s	*if_register(struct device_s	*dev,
   else
     {
       interface->boottype = IF_BOOT_NONE;
+#ifdef CONFIG_NETWORK_IPV4
       if_register_proto(interface, ip, arp, icmp, 0x0a020302, 0xffffff00);
+#endif
       mtu = 520;
     }
   chiche = 1;
@@ -156,9 +170,9 @@ void			if_up(char*		name, ...)
       switch (interface->boottype)
 	{
 	  case IF_BOOT_RARP:
+#ifdef CONFIG_NETWORK_RARP
 	    rarp_request(interface, interface->bootproto.rarp, NULL);
-
-	    /* XXX timeout */
+#endif
 	    break;
 	  case IF_BOOT_DHCP:
 	    break;
