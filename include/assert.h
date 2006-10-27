@@ -19,6 +19,14 @@
 
 */
 
+/*
+
+    %config CONFIG_LIBC_ASSERT
+    desc Enable assert() support
+    %config end
+
+*/
+
 #include <hexo/types.h>
 
 #ifndef __ASSERT_H_
@@ -38,7 +46,11 @@ __assert_fail(const char *file,
     ;
 }
 
-#ifndef NDEBUG
+#ifdef NDEBUG
+# warning NDEBUG is deprecated here, use CONFIG_LIBC_ASSERT or CONFIG_DEBUG
+#endif
+
+#if defined(CONFIG_LIBC_ASSERT)
 #define assert(expr) ((void) ((expr) ? 0 : __assert_fail(__FILE__, __LINE__, __func__, #expr)))
 #else
 #define assert(expr) ((void) 0)

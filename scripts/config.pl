@@ -213,15 +213,6 @@ sub process_file
 		    $$opts{provided_count} = 0;
 		    $state = 1;
 
-		    if (uc($name) ne $name)
-		    {
-			warning("$file:$lnum: `".$name."' is not strictly upper case");
-		    }
-
-		    if (not (lc($name) =~ /^config_/))
-		    {
-			warning("$file:$lnum: `".$name."' has no `CONFIG_' prefix");
-		    }
 		}
 
 		next;
@@ -509,6 +500,16 @@ sub set_config
 	    $$opt{vlocation} = $$opt{location};
 	}
     }
+
+    # provides all tokens
+
+    foreach my $opt (values %config_opts)
+    {
+	if ($$opt{value} ne "undefined")
+	{
+	    process_config_provide($opt);
+	}
+    }
 }
 
 ##
@@ -519,18 +520,23 @@ sub check_config
 {
     my $changed = 0;
 
-    # provides all tokens
-
     foreach my $opt (values %config_opts)
     {
+	my $name = $$opt{name};
+
 	if (not @{$$opt{desc}})
 	{
 	    warning($$opt{location}.": missing description for `".$$opt{name}."' token");
 	}
 
-	if ($$opt{value} ne "undefined")
+	if (uc($name) ne $name)
 	{
-	    process_config_provide($opt);
+	    warning($$opt{location}.": `".$name."' is not strictly upper case");
+	}
+
+	if (not (lc($name) =~ /^config_/))
+	{
+	    warning($$opt{location}.": `".$name."' has no `CONFIG_' prefix");
 	}
     }
 
@@ -578,7 +584,7 @@ sub check_config
 
 	if ($$opt{mandatory} and ($$opt{value} eq "undefined"))
 	{
-	    error($$opt{vlocation}.": `".$$opt{name}."' token must be not be undefined");
+	    error($$opt{vlocation}.": `".$$opt{name}."' token must not be undefined");
 	}
     }
 }
@@ -819,14 +825,14 @@ sub main
 	print "
 Usage: config.pl [options]
 
-	--input=file     Sets configuration input file. Default is `myconfig'.
+	--input=file     Set configuration input file. Default is `myconfig'.
 
-	--header=file    Outputs configuration header in `file'.
-	--makefile=file  Outputs configuration makefile variables in `file'.
+	--header=file    Output configuration header in `file'.
+	--makefile=file  Output configuration makefile variables in `file'.
 
-	--check          Checks configuration constraints without output.
-	--list           Displays configuration tokens list.
-	--info=token     Displays informations about `token'.
+	--check          Check configuration constraints without output.
+	--list           Display configuration tokens list.
+	--info=token     Display informations about `token'.
 
 ";
 	return;
