@@ -729,13 +729,12 @@ sub tokens_info
 	print "(no description)\n";
     }
 
-    print("\n  This token is mandatory and must not be undefined.") if $$opt{mandatory};
+    print("\n  This token is mandatory and must not be undefined.\n") if $$opt{mandatory};
 
     print("\n".text80("This token can not be defined directly; it must be provided ".
-		      "by defining other appropriate token(s).", "  ")) if $$opt{nodefine};
+		      "by defining other appropriate token(s).", "  ")."\n") if $$opt{nodefine};
 
     printf("
-
   declared at   :  %s
   defined  at   :  %s
   default value :  %s
