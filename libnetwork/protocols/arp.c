@@ -103,7 +103,7 @@ OBJECT_CONSTRUCTOR(arp_entry_obj)
   entry->ip = ip;
 
 #ifdef CONFIG_NETWORK_PROFILING
-  netobj_new++;
+  netobj_new[NETWORK_PROFILING_ARP_ENTRY]++;
 #endif
 
   return entry;
@@ -129,7 +129,7 @@ OBJECT_DESTRUCTOR(arp_entry_obj)
   mem_free(obj);
 
 #ifdef CONFIG_NETWORK_PROFILING
-  netobj_del++;
+  netobj_del[NETWORK_PROFILING_ARP_ENTRY]++;
 #endif
 }
 
@@ -154,6 +154,7 @@ static inline void	arp_request(struct net_if_s	*interface,
       packet_obj_refdrop(packet);
       return ;
     }
+
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct ether_arp *)nethdr->data;
@@ -405,6 +406,7 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
 
       /* otherwise, it is validating, so push the packet in the wait queue */
       packet_queue_pushback(&arp_entry->resolution->wait, packet);
+      packet_obj_refdrop(packet);
     }
   else
     {

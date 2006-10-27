@@ -139,14 +139,18 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   tty_con_dev.addr[VGA_TTY_ADDR_CRTC] = 0x03d4;
   tty_con_dev.irq = 1;
   tty_vga_init(&tty_con_dev, &icu_dev);
+#  if defined(CONFIG_MUTEK_CONSOLE)
   tty_dev = &tty_con_dev;
+#  endif
   DEV_ICU_BIND(&icu_dev, &tty_con_dev);
 # elif defined(CONFIG_DRIVER_CHAR_SOCLIBTTY)
   device_init(&tty_con_dev);
   tty_con_dev.addr[0] = 0xa0c00000;
   tty_con_dev.irq = 1;
   tty_soclib_init(&tty_con_dev, &icu_dev);
+#  if defined(CONFIG_MUTEK_CONSOLE)
   tty_dev = &tty_con_dev;
+#  endif
   DEV_ICU_BIND(&icu_dev, &tty_con_dev);
 # endif
 #endif

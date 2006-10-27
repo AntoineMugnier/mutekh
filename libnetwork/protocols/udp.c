@@ -65,7 +65,6 @@ NET_PUSHPKT(udp_pushpkt)
   uint_fast16_t		len;
   struct net_proto_s	*addressing = packet->source_addressing;
 
-
   /* get the header */
   nethdr = &packet->header[packet->stage];
   hdr = (struct udphdr *)nethdr->data;
@@ -125,10 +124,12 @@ inline uint8_t		*udp_preparepkt(struct net_if_s		*interface,
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = addressing->desc->preparepkt(interface, packet, sizeof (struct udphdr) + size, 4);
+  if ((next = addressing->desc->preparepkt(interface, packet, sizeof (struct udphdr) + size, 4)) == NULL)
+    return NULL;
   next = ALIGN_ADDRESS_UP(next, 4);
 #else
-  next = addressing->desc->preparepkt(interface, packet, sizeof (struct udphdr) + size, 0);
+  if ((next = addressing->desc->preparepkt(interface, packet, sizeof (struct udphdr) + size, 0)) == NULL)
+    return NULL;
 #endif
 
   nethdr = &packet->header[packet->stage];

@@ -114,10 +114,9 @@ NET_DESTROYPROTO(ip_destroy)
 OBJECT_CONSTRUCTOR(fragment_obj)
 {
   struct ip_packet_s	*frag;
-  struct net_proto_s	*addressing = va_arg(ap, struct net_proto_s *);
   uint8_t		*id = va_arg(ap, uint8_t *);
 
-  assert(addressing != NULL);
+  assert(param != NULL);
   assert(id != NULL);
 
   if ((frag = mem_alloc(sizeof (struct ip_packet_s), MEM_SCOPE_NETWORK)) == NULL)
@@ -128,7 +127,7 @@ OBJECT_CONSTRUCTOR(fragment_obj)
   /* setup critical fields */
   frag->size = 0;
   frag->received = 0;
-  frag->addressing = addressing;
+  frag->addressing = param;
   memcpy(frag->id, id, 6);
   packet_queue_init(&frag->packets);
 
@@ -139,7 +138,7 @@ OBJECT_CONSTRUCTOR(fragment_obj)
   timer_add_event(&timer_ms, &frag->timeout);
 
 #ifdef CONFIG_NETWORK_PROFILING
-  netobj_new++;
+  netobj_new[NETWORK_PROFILING_FRAGMENT]++;
 #endif
 
   return frag;
@@ -159,9 +158,8 @@ OBJECT_DESTRUCTOR(fragment_obj)
   mem_free(obj);
 
 #ifdef CONFIG_NETWORK_PROFILING
-  netobj_del++;
+  netobj_del[NETWORK_PROFILING_FRAGMENT]++;
 #endif
-
 }
 
 /*
@@ -211,10 +209,10 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   net_debug("fragment %d offs %d size %d\n", hdr->id, offs, datasz);
 
   /* do we already received packet with same id ? */
-  if (!(p = ip_packet_lookup(&pv->fragments, id)))
+  if ((p = ip_packet_lookup(&pv->fragments, id)) == NULL)
     {
       /* initialize the reassembly structure */
-      if ((p = fragment_obj_new(NULL, ip, id)) == NULL)
+      if ((p = fragment_obj_new(ip, id)) == NULL)
 	{
 	  /* no more memory, discard the packet */
 	  return 0;
@@ -256,6 +254,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	{
 	  /* memory exhausted, clear the packet */
 	  fragment_obj_refdrop(p);
+
 	  return 0;
 	}
 
@@ -296,6 +295,8 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	  nethdr = &frag->header[packet->stage];
 	  offs = (net_be16_load(((struct iphdr *)nethdr[-1].data)->fragment) & IP_FRAG_MASK) * 8;
 
+	  net_debug("copying packet : %d-%d\n", offs, offs + nethdr->size);
+
 	  /* check for overflow */
 	  if (offs >= total)
 	    {
@@ -311,7 +312,6 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	    }
 
 	  /* copy data to their final place */
-	  net_debug("copying packet : %d-%d\n", offs, offs + nethdr->size);
 	  memcpy(data + offs, nethdr->data, nethdr->size);
 
 	  /* release our reference to the packet */
@@ -329,17 +329,15 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       for (i = 0; i < packet->stage - 1; i++)
 	sizes[i] = nethdr[i + 1].data - nethdr[i].data;
       nethdr[0].data = packet->packet;
-      for (i = 1; i < packet->stage; i++)
+      for (i = 1; i < packet->stage - 1; i++)
 	nethdr[i].data = nethdr[i - 1].data + sizes[i - 1];
-      for (i = 0; i < packet->stage; i++)
+      for (i = 0; i < packet->stage - 1; i++)
 	nethdr[i].size = nethdr[i].size - datasz + total;
-      nethdr[packet->stage].size = total;
 
       return 1;
     }
 
   /* otherwise, this is just a fragment */
-  packet_obj_refnew(packet);
   packet_queue_push(&p->packets, packet);
   return 0;
 }

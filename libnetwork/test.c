@@ -32,6 +32,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <timer.h>
 
 #include <pthread.h>
 #include <timer.h>
@@ -144,6 +145,14 @@ void			*nfs_test(void *p)
 }
 #endif
 
+#ifdef CONFIG_NETWORK_PROFILING
+static TIMER_CALLBACK(profiling)
+{
+  netprofile_show();
+  timer_add_event(&timer_ms, timer);
+}
+#endif
+
 /*
  * test main.
  */
@@ -154,6 +163,7 @@ int_fast8_t		main()
 int_fast8_t		_main()
 #endif
 {
+  pthread_t th;
   uint_fast32_t i;
 
   for (i = 0; i < 10000000; i++)
@@ -170,7 +180,7 @@ int_fast8_t		_main()
 	       "	orl	$0x40000, (%esp)			\n"
 	       "	popf						\n");
 
-#ifdef CONFIG_NETWORK_ROUTE
+#ifdef CONFIG_NETWORK_ROUTING
 
   struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
@@ -191,38 +201,31 @@ int_fast8_t		_main()
 
 #endif
 
-#if 0
+#ifdef CONFIG_NETWORK_UDP
   eval_server();
 #endif
 
 #if 0
-  pthread_t th;
   pthread_create(&th, NULL, err_test, NULL);
 #endif
 
 #if 0
-  pthread_t th;
   pthread_create(&th, NULL, tcp_test, NULL);
 #endif
 
 #if 0
-  pthread_t th;
   pthread_create(&th, NULL, nfs_test, NULL);
 #endif
 
-#if 0
-  pthread_t th;
-  sem_t	*sem = mem_alloc(sizeof (sem_t), MEM_SCOPE_SYS);
+#ifdef CONFIG_NETWORK_PROFILING
+  static struct timer_event_s prof;
 
-  sem_init(sem, 0, 0);
+  prof.delay = 30000;
+  prof.pv = NULL;
+  prof.callback = profiling;
 
-  pthread_create(&th, NULL, sem_test, sem);
-  pthread_create(&th, NULL, sem_test2, sem);
-
-
+  timer_add_event(&timer_ms, &prof);
 #endif
 
   return 0;
 }
-
-

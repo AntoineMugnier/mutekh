@@ -273,6 +273,7 @@ void			if_sendpkt(struct net_if_s	*interface,
       packet->stage++;
       if_pushpkt(interface, packet);
       packet_obj_refdrop(packet);
+      packet_obj_refdrop(packet);
     }
   else
     dev_net_sendpkt(interface->dev, packet, proto);

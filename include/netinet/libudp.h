@@ -33,6 +33,8 @@
  * Types
  */
 
+struct net_udp_desc_s;
+
 /*
  * An UDP address is made of an IP address and a port number.
  */
@@ -47,7 +49,7 @@ struct	net_udp_addr_s
  * UDP callback on packet receiving.
  */
 
-#define UDP_CALLBACK(f)	void (f)(struct net_udp_addr_s	*local,		\
+#define UDP_CALLBACK(f)	void (f)(struct net_udp_desc_s	*desc,		\
 				 struct net_udp_addr_s	*remote,	\
 				 void			*data,		\
 				 size_t			size,		\
@@ -55,33 +57,64 @@ struct	net_udp_addr_s
 typedef UDP_CALLBACK(udp_callback_t);
 
 /*
+ * UDP callback on error.
+ */
+
+#define UDP_ERROR_CALLBACK(f)	void (f)(struct net_udp_desc_s	*desc,	\
+					 net_error_id_t		error,	\
+					 void			*pv)
+
+typedef UDP_ERROR_CALLBACK(udp_error_callback_t);
+
+/*
  * Callbacks container.
  */
 
-struct					udp_callback_desc_s
+struct					net_udp_desc_s
 {
+  /* address of the descriptor. remote address for a connected
+     descriptor, local for a bound descriptor */
   struct net_udp_addr_s			address;
-  struct net_proto_s			*addressing;
-  udp_callback_t			*callback;
-  void					*pv;
+  bool_t				connected;
+
+  /* error callback */
+  udp_error_callback_t			*callback_error;
+  void					*pv_error;
+
+  union
+  {
+    /* structure used for bound descriptors */
+    struct
+    {
+      udp_callback_t			*callback;
+      void				*pv;
+    } bind;
+    /* structure used for a connected descriptor */
+    struct
+    {
+      struct net_proto_s		*addressing;
+    } connect;
+  } u;
+
   CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
 
-CONTAINER_TYPE(udp_callback, HASHLIST, struct udp_callback_desc_s, NOLOCK, NOOBJ, list_entry, 64);
+CONTAINER_TYPE(udp_callback, HASHLIST, struct net_udp_desc_s, NOLOCK, NOOBJ, list_entry, 64);
 CONTAINER_KEY_TYPE(udp_callback, AGGREGATE, address);
 
 /*
  * Prototypes
  */
 
-int_fast8_t	udp_send(struct net_udp_addr_s	*local,
-			 struct net_udp_addr_s	*remote,
-			 void			*data,
-			 size_t			size);
-int_fast8_t	udp_callback(struct net_udp_addr_s	*local,
-			     udp_callback_t		*callback,
-			     void			*pv);
-void		udp_close(struct net_udp_addr_s	*local);
+struct net_udp_desc_s	*udp_connect(struct net_udp_addr_s	*remote);
+struct net_udp_desc_s	*udp_bind(struct net_udp_addr_s		*local,
+				  udp_callback_t		*callback,
+				  void				*pv);
+error_t			udp_send(struct net_udp_desc_s		*desc,
+				 struct net_udp_addr_s		*remote,
+				 void				*data,
+				 size_t				size);
+void			udp_close(struct net_udp_desc_s		*desc);
 
 void		libudp_signal(struct net_packet_s	*packet,
 			      struct udphdr		*hdr);

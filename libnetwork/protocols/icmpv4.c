@@ -86,7 +86,7 @@ static inline void	icmp_echo(struct net_if_s	*interface,
   hdr->code = 3;
   net_16_store(hdr->checksum, 0);
 
-  /* compute checksum */
+  /* compute checksum XXX incremental */
   net_16_store(hdr->checksum, ~packet_checksum(nethdr->data, nethdr->size));
 
   /* target IP */
@@ -184,52 +184,56 @@ NET_PUSHPKT(icmp_pushpkt)
 
   switch (proto)
     {
+#ifdef CONFIG_NETWORK_UDP
       case IPPROTO_UDP:
 	{
 	  struct udphdr	*hdr_udp;
-#ifdef CONFIG_NETWORK_AUTOALIGN
+# ifdef CONFIG_NETWORK_AUTOALIGN
 	  struct udphdr	aligned_udp;
-#endif
+# endif
 
 	  hdr_udp = (struct udphdr *)nethdr[2].data;
 	  assert(hdr_udp != NULL);
 
 	  /* align on 16 bits if needed */
-#ifdef CONFIG_NETWORK_AUTOALIGN
+# ifdef CONFIG_NETWORK_AUTOALIGN
 	  if (!IS_ALIGNED(hdr_udp, sizeof (uint16_t)))
 	    {
 	      memcpy(&aligned_udp, hdr_udp, sizeof (struct udphdr));
 	      hdr_udp = &aligned_udp;
 	    }
-#endif
+# endif
 
 	  port = net_be16_load(hdr_udp->source);
 	  signal_error = libudp_signal_error;
 	}
 	break;
+#endif
+#ifdef CONFIG_NETWORK_TCP
       case IPPROTO_TCP:
 	{
 	  struct tcphdr	*hdr_tcp;
-#ifdef CONFIG_NETWORK_AUTOALIGN
+# ifdef CONFIG_NETWORK_AUTOALIGN
 	  struct tcphdr	aligned_tcp;
-#endif
+# endif
 
 	  hdr_tcp = (struct tcphdr *)nethdr[2].data;
 	  assert(hdr_tcp != NULL);
 
 	  /* align on 32 bits if needed */
-#ifdef CONFIG_NETWORK_AUTOALIGN
+# ifdef CONFIG_NETWORK_AUTOALIGN
 	  if (!IS_ALIGNED(hdr_tcp, sizeof (uint32_t)))
 	    {
 	      memcpy(&aligned_tcp, hdr_tcp, sizeof (struct tcphdr));
 	      hdr_tcp = &aligned_tcp;
 	    }
-#endif
+# endif
 
 	  port = net_be16_load(hdr_tcp->th_sport);
 	  signal_error = libtcp_signal_error;
 	}
 	break;
+#endif
       default:
 	return; /* unknown protocol, we can't do anything */
     }
@@ -245,24 +249,24 @@ NET_PUSHPKT(icmp_pushpkt)
 	switch (hdr->code)
 	  {
 	    case 2:	/* protocol unavailable */
-	      signal_error(ERROR_PROTO_UNREACHABLE, address, port);
+	      signal_error(ERROR_PROTO_UNREACHABLE, &address, port);
 	      break;
 	    case 3:	/* port unreachable */
-	      signal_error(ERROR_PORT_UNREACHABLE, address, port);
+	      signal_error(ERROR_PORT_UNREACHABLE, &address, port);
 	      break;
 	    default:	/* other: host unreachable, net unreachable... */
-	      signal_error(ERROR_HOST_UNREACHABLE, address, port);
+	      signal_error(ERROR_HOST_UNREACHABLE, &address, port);
 	      break;
 	  }
 	break;
       case 4:	/* source quench */
-	signal_error(ERROR_CONGESTION, address, port);
+	signal_error(ERROR_CONGESTION, &address, port);
 	break;
       case 11:	/* timeout */
-	signal_error(ERROR_TIMEOUT, address, port);
+	signal_error(ERROR_TIMEOUT, &address, port);
 	break;
       default:	/* other kind of error */
-	signal_error(ERROR_UNKNOWN, address, port);
+	signal_error(ERROR_UNKNOWN, &address, port);
 	break;
     }
 }

@@ -40,7 +40,7 @@
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/cont_dlist.h>
-
+#if 0
 /*
  * Callback container.
  */
@@ -94,8 +94,14 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
     }
 
   /* prepare the packet */
-  packet = packet_obj_new(NULL);
-  dest = udp_preparepkt(interface, addressing, packet, size, 0);
+  if ((packet = packet_obj_new(NULL)) == NULL)
+    return -ENOMEM;
+  if ((dest = udp_preparepkt(interface, addressing, packet, size, 0)) == NULL)
+    {
+      packet_obj_refdrop(packet);
+
+      return -ENOMEM;
+    }
 
   /* copy data into the packet */
   memcpy(dest, data, size);
@@ -173,18 +179,15 @@ void				libudp_signal(struct net_packet_s	*packet,
   struct udp_callback_desc_s	*desc;
   struct net_udp_addr_s		local;
   struct net_udp_addr_s		remote;
-  struct net_udp_addr_s		*p_local;
   uint8_t			*buff;
   uint_fast16_t			size;
 
   /* build local address descriptor */
-  p_local = &local;
-
   memcpy(&local.address, &packet->tADDR, sizeof (struct net_addr_s));
   local.port = hdr->dest;
 
   /* do we have a callback to handle the packet */
-  if (!(desc = udp_callback_lookup(&udp_callbacks, (void *)p_local)))
+  if ((desc = udp_callback_lookup(&udp_callbacks, (void *)&local)) == NULL)
     {
       packet->stage -= 2;
 
@@ -203,7 +206,7 @@ void				libudp_signal(struct net_packet_s	*packet,
   memcpy(buff, packet->header[packet->stage].data, size);
 
   /* callback */
-  desc->callback(p_local, &remote, buff, size, desc->pv);
+  desc->callback(&local, &remote, buff, size, desc->pv);
 }
 
 /*
@@ -242,5 +245,19 @@ void		libudp_destroy(void)
 
 NET_SIGNAL_ERROR(libudp_signal_error)
 {
-  printf("UDP error\n%P:%d %d\n", &address.addr.ipv4, 4, port, error);
+  struct udp_callback_desc_s	*desc;
+  struct net_udp_addr_s		local;
+
+  memcpy(&local.address, address, sizeof (struct net_addr_s));
+  local.port = port;
+
+  /* do we have a callback to handle the packet */
+  if ((desc = udp_callback_lookup(&udp_callbacks, (void *)&local)) != NULL)
+    {
+      if (desc->callback_error != NULL)
+	{
+	  desc->callback_error(&local, error, desc->pv_error);
+	}
+    }
 }
+#endif

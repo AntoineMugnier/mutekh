@@ -204,9 +204,15 @@ CONTAINER_PROTOTYPE(inline, packet_queue, packet_queue_lock);
  * Profiling info.
  */
 
-#ifndef CONFIG_NETWORK_PROFILING
-extern uint_fast32_t	netobj_new;
-extern uint_fast32_t	netobj_del;
+#ifdef CONFIG_NETWORK_PROFILING
+#define NETWORK_PROFILING_PACKET	0
+#define NETWORK_PROFILING_ARP_ENTRY	1
+#define NETWORK_PROFILING_FRAGMENT	2
+#define NETWORK_PROFILING_NB_OBJS	3
+extern uint_fast32_t	netobj_new[NETWORK_PROFILING_NB_OBJS];
+extern uint_fast32_t	netobj_del[NETWORK_PROFILING_NB_OBJS];
+
+void	netprofile_show(void);
 #endif
 
 /*

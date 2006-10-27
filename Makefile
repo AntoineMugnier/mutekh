@@ -12,7 +12,9 @@ config: $(SRC_DIR)/config.mk $(SRC_DIR)/config.h
 include $(SRC_DIR)/config.mk
 
 $(SRC_DIR)/myconfig:
-	touch $@
+	echo -e "Missing user configuration file \`myconfig'."
+	echo -e "Please refer to the documentation."
+	false
 
 $(SRC_DIR)/config.mk $(SRC_DIR)/config.h: $(SRC_DIR)/myconfig
 	perl $(SRC_DIR)/scripts/config.pl	\

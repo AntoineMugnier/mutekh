@@ -29,6 +29,11 @@
 #include <netinet/protos.h>
 #include <netinet/if.h>
 
+#ifdef CONFIG_NETWORK_PROFILING
+uint_fast32_t	netobj_new[NETWORK_PROFILING_NB_OBJS] = { 0, 0, 0 };
+uint_fast32_t	netobj_del[NETWORK_PROFILING_NB_OBJS] = { 0, 0, 0 };
+#endif
+
 /*
  * The packet object constructor.
  */
@@ -47,7 +52,7 @@ OBJECT_CONSTRUCTOR(packet_obj)
   packet_obj_init(packet);
 
 #ifdef CONFIG_NETWORK_PROFILING
-  netobj_new++;
+  netobj_new[NETWORK_PROFILING_PACKET]++;
 #endif
 
   return packet;
@@ -70,7 +75,7 @@ OBJECT_DESTRUCTOR(packet_obj)
   mem_free(obj);
 
 #ifdef CONFIG_NETWORK_PROFILING
-  netobj_del++;
+  netobj_del[NETWORK_PROFILING_PACKET]++;
 #endif
 }
 
@@ -186,3 +191,18 @@ void				*packet_dispatch(void	*data)
 
   return NULL;
 }
+
+#ifdef CONFIG_NETWORK_PROFILING
+/*
+ * Display network layer profiling info.
+ */
+
+void				netprofile_show(void)
+{
+  uint_fast8_t			i;
+
+  for (i = 0; i < NETWORK_PROFILING_NB_OBJS; i++)
+    printf("%s%u / %u", i != 0 ? " - " : "", netobj_new[i], netobj_del[i]);
+  printf("\n");
+}
+#endif

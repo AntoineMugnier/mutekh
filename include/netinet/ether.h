@@ -56,6 +56,12 @@ struct		ether_header
 #define	ETHERTYPE_ARP		0x0806		/* Address resolution */
 #define	ETHERTYPE_REVARP	0x8035		/* Reverse ARP */
 
+/* For PF_PACKET */
+#define ETH_P_ALL		0x0003		/* Every packet (be careful!!!) */
+#define ETH_P_IP		ETHERTYPE_IP
+#define ETH_P_ARP		ETHERTYPE_ARP
+#define ETH_P_RARP		ETHERTYPE_REVARP
+
 /* Some size constants */
 #define	ETHER_ADDR_LEN	ETH_ALEN                 /* size of ethernet addr */
 #define	ETHER_TYPE_LEN	2                        /* bytes in type field */

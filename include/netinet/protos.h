@@ -143,7 +143,7 @@ typedef NET_ERRORMSG(net_errormsg_t);
  */
 
 #define NET_SIGNAL_ERROR(f)	void	(f)(net_error_id_t	error,		\
-					    struct net_addr_s	address,	\
+					    struct net_addr_s	*address,	\
 					    net_port_t		port)
 
 typedef NET_SIGNAL_ERROR(net_signal_error_t);

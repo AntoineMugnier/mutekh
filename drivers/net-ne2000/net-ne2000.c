@@ -235,6 +235,8 @@ static void	ne2000_push(struct device_s	*dev,
 
   packet_queue_lock_pushback(&pv->rcvqueue, packet);
 
+  packet_obj_refdrop(packet);
+
   sem_post(&pv->rcvsem);
 }
 
@@ -607,7 +609,8 @@ DEVNET_SENDPKT(net_ne2000_sendpkt)
   if ((cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD) & NE2000_TXP) ||
       pv->current != NULL)
     {
-      packet_queue_push(&pv->sendqueue, packet);
+      packet_queue_pushback(&pv->sendqueue, packet);
+      packet_obj_refdrop(packet);
     }
   else
     {
