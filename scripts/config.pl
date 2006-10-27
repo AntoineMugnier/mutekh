@@ -212,6 +212,16 @@ sub process_file
 		    $$opts{exclude} = [];
 		    $$opts{provided_count} = 0;
 		    $state = 1;
+
+		    if (uc($name) ne $name)
+		    {
+			warning("$file:$lnum: `".$name."' is not strictly upper case");
+		    }
+
+		    if (not (lc($name) =~ /^config_/))
+		    {
+			warning("$file:$lnum: `".$name."' has no `CONFIG_' prefix");
+		    }
 		}
 
 		next;
@@ -593,14 +603,14 @@ sub read_myconfig
 
 		if (not $opt)
 		{
-		     warning("$file:$lnum: unknown configuration token `$1'");
+		     warning("$file:$lnum: undeclared configuration token `$1', ignored");
 		}
 		else
 		{
 		    if ($$opt{nodefine})
 		    {
 			error("$file:$lnum: `".$$opt{name}."' token can not be defined directly;".
-			      " it must be provided by defining appropriate configuration tokens instead.");
+			      " it must be provided by defining other appropriate token(s) instead.");
 		    }
 
 		    if ($2)
@@ -712,12 +722,18 @@ sub tokens_info
 
     if (my @desc = @{$$opt{"desc"}})
     {
-	print text80("@desc", "  ");
+	print text80("@desc", "  ")."\n";
     }
     else
     {
-	print "(no description)";
+	print "(no description)\n";
     }
+
+    print("\n  This token is mandatory and must not be undefined.") if $$opt{mandatory};
+
+    print("\n".text80("This token can not be defined directly; it must be provided ".
+		      "by defining other appropriate token(s).", "  ")) if $$opt{nodefine};
+
     printf("
 
   declared at   :  %s
