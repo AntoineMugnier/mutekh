@@ -7,15 +7,18 @@ my $err_flag = 0;
 
 sub text80
 {
-    my ($msg) = @_;
+    my ($msg, $prefix, $firstprefix) = @_;
     my $res;
     my $len;
+    my $maxlen = 80 - length($prefix);
+
+    $firstprefix = $prefix if (not defined $firstprefix);
 
     foreach my $word (split(/\s+/, $msg))
     {
-	if ($len + 1 + length($word) >= 80)
+	if ($len + 1 + length($word) >= $maxlen)
 	{
-	    $res .= "\n".$word;
+	    $res .= "\n".$prefix.$word;
 	    $len = length($word);
 	}
 	else
@@ -28,7 +31,7 @@ sub text80
 	    else
 	    {
 		$len += length($word);
-		$res .= $word;
+		$res .= $firstprefix.$word;
 	    }
 	}
     }
@@ -36,18 +39,12 @@ sub text80
     return $res;
 }
 
-sub text_list
-{
-    return "  * ".join("\n  * ", @_)."\n";
-}
-
 sub error
 {
     my ($msg, @list) = @_;
+    my $tlist = join(", ", @list) if (@list);
 
-    print text80("error:".$msg)."\n";
-
-    print text_list(@list) if (@list);
+    print text80($msg.$tlist, "      ", "error ")."\n";
 
     $err_flag = 1;
 }
@@ -55,10 +52,9 @@ sub error
 sub warning
 {
     my ($msg, @list) = @_;
+    my $tlist = join(", ", @list) if (@list);
 
-    print text80("warning:".$msg)."\n";
-
-    print text_list(@list) if (@list);
+    print text80($msg.$tlist, "        ", "warning ")."\n";
 }
 
 # set description
@@ -85,7 +81,7 @@ sub cmd_provide
 {
     my ($location, $opts, @args) = @_;
 
-    push(@{$$opts{provide}}, "@args");
+    push(@{$$opts{provide}}, @args);
 }
 
 # set default value
@@ -106,9 +102,7 @@ sub cmd_exclude
 {
     my ($location, $opts, @args) = @_;
 
-    warning($location.": exclusion list redefined for `".$$opts{name}." token'") if ($$opts{exclude});
-
-    $$opts{exclude} = "@args";
+    push(@{$$opts{exclude}}, @args);
 }
 
 sub cmd_flags
@@ -147,7 +141,9 @@ my %config_cmd =
  "description" => \&cmd_desc
 );
 
-# process source and configuration files
+##
+## parses source and configuration files and process %config blocks
+##
 
 sub process_file
 {
@@ -165,8 +161,6 @@ sub process_file
 	{
 	    $lnum++;
 
-#	    last if (($lnum > 50) and ($blocks == 0));
-
 	    next if ($line =~ /^\s*$/);
 
 	    # catch %config blocks start and end
@@ -180,7 +174,14 @@ sub process_file
 			error("$file:$lnum: unexpected `%config end'");
 			next;
 		    }
-		    $$opts{default} = "undefined" if (not defined $$opts{default});
+
+		    # set token default attribute to `undefined' if no default set
+
+		    if (not defined $$opts{default})
+		    {
+			$$opts{default} = "undefined";
+		    }
+
 		    $state = 0;
 		}
 		else
@@ -208,6 +209,8 @@ sub process_file
 		    $$opts{require} = [];
 		    $$opts{desc} = [];
 		    $$opts{provide} = [];
+		    $$opts{exclude} = [];
+		    $$opts{provided_count} = 0;
 		    $state = 1;
 		}
 
@@ -244,6 +247,11 @@ sub process_file
     }
 }
 
+
+##
+## explores all subdirectories to find configuration token declarations
+##
+
 sub explore
 {
     my ($dir) = @_;
@@ -255,7 +263,6 @@ sub explore
 
 	if ((-d $ent) && (! -l $ent))
 	{
-#	    print $ent."\n";
 	    explore($ent);
 	}
 	else
@@ -269,14 +276,20 @@ sub explore
 
 }
 
+##
+## recursively checks all dependency of a defined token
+##
+
+my %depend_cache;
+
 sub process_config_depend
 {
     my $res = 1;
     my ($orig) = @_;
 
-    if (defined $$orig{depend_result})
+    if (defined $depend_cache{$orig})
     {
-	return $$orig{depend_result};
+	return $depend_cache{$orig};
     }
 
     foreach my $dep_and (@{$$orig{depend}})
@@ -297,30 +310,32 @@ sub process_config_depend
 	    }
 	    else
 	    {
-		warning(" undeclared `".$dep."' token ignored in dependency list for `".
-			$$orig{name}."' token declared at `".$$orig{location}."'");
+		warning($$orig{location}.": `".$$orig{name}."' depends on undeclared token `".$dep."', ignored.");
 	    }
 	}
 
 	# return 0 if dependency not ok
 	if (not $flag)
 	{
-	    warning(" `".$$orig{name}."' declared at `".$$orig{location}.
-		    "' will be undefined due to unmet dependencies. ".
-		    "At least one of the tokens below should be defined:", @deps_and) if (not $$orig{nowarn});
+	    warning($$orig{vlocation}.": `".$$orig{name}."' token will be undefined ".
+		    "due to unmet dependencies; dependencies list is: ",
+		    @deps_and) if (not $$orig{nowarn});
 	    $res = 0;
 	}
     }
 
-    $$orig{depend_result} = $res;
-    return $res;
+    return ($depend_cache{$orig} = $res);
 }
+
+##
+## checks exclusion list of a defined token
+##
 
 sub process_config_exclude
 {
     my ($orig) = @_;
 
-    foreach my $dep (split(/\s+/, $$orig{exclude}))
+    foreach my $dep (@{$$orig{exclude}})
     {
 	my $opt = $config_opts{$dep};
 
@@ -328,56 +343,20 @@ sub process_config_exclude
 	{
 	    if ($$opt{value} ne "undefined")
 	    {
-		error(" `".$$orig{name}."' token declared at `".$$orig{location}.
-		      "' is defined and prevents `".$dep."' from being defined");
+		error($$orig{vlocation}.": `".$$orig{name}."' and ".
+		      " `".$dep."' (".$$opt{vlocation}.") can not be defined at the same time");
 	    }
 	}
 	else
 	{
-	    warning(" undeclared `".$dep."' token ignored in exclusion list for `".
-		$$orig{name}."' declared at `".$$orig{location}."'");
+	    warning($$orig{location}.": `".$$orig{name}."' excludes undeclared token `".$dep."', ignored.");
 	}
     }
 }
 
-sub process_config_provide
-{
-    my ($orig) = @_;
-
-    foreach my $rule (@{$$orig{provide}})
-    {
-	$rule =~ /^([^\s=]+)=?([^\s]*)$/;
-	my $dep = $1;
-	my $val = $2;
-	my $opt = $config_opts{$dep};
-
-	if ($opt)
-	{
-	    if ($$opt{value} eq "undefined")
-	    {
-		if ($val)
-		{
-		    $$opt{value} = $val;
-		}
-		else
-		{
-		    $$opt{value} = "defined";	    
-		}
-		process_config_provide($opt);
-	    }
-	    else
-	    {
-		warning(" `".$$orig{name}."' token declared at `".$$orig{location}.
-			"' provide already defined token `".$dep."'") if (not $$orig{nowarn});
-	    }
-	}
-	else
-	{
-	    warning(" undeclared `".$dep."' token ignored in provide list for `".
-		$$orig{name}."' declared at `".$$orig{location}."'");
-	}
-    }
-}
+##
+## checks requirement list of a defined token
+##
 
 sub process_config_require
 {
@@ -406,24 +385,110 @@ sub process_config_require
 	    }
 	    else
 	    {
-		warning(" undeclared `".$dep."' token ignored in requirement list for `".
-		    $$orig{name}."' declared at `".$$orig{location}."'");
+		warning($$orig{location}.": `".$$orig{name}."' requires undeclared token `".$dep."', ignored.");
 	    }
 	}
 
 	if (not $flag)
 	{
-	    error(" `".$$orig{name}."' declared at `".$$orig{location}.
-		  "' is defined but has unmet requirements. ".
-		  "At least one of the tokens below must be defined:", @deps_and);
+	    error($$orig{vlocation}.": `".$$orig{name}."' token is defined ".
+		  "but has unmet requirements; requirements list is: ",
+		  @deps_and) if (not $$orig{nowarn});
 	}
     }
 }
 
-sub process_config
-{
-    my $changed = 0;
+##
+## defines all tokens provided by a defined token
+##
 
+sub process_config_provide
+{
+    my ($orig) = @_;
+
+    return if ($$orig{provide_done});
+    $$orig{provide_done} = 1;
+
+    foreach my $rule (@{$$orig{provide}})
+    {
+	$rule =~ /^([^\s=]+)=?([^\s]*)$/;
+	my $dep = $1;
+	my $val = $2 ? $2 : "defined";
+	my $opt = $config_opts{$dep};
+
+	if ($val eq "undefined")
+	{
+	    error($$orig{location}.": `".$$orig{name}."' token provides `".
+		  $dep."' with `undefined' value");
+	    next;
+	}
+
+	if ($opt)
+	{
+	    if ($$opt{value} eq "undefined")
+	    {		
+		$$opt{value} = $val;
+		$$opt{vlocation} = $$orig{location};
+	    }
+	    else
+	    {
+		if ($val ne $$opt{value})
+		{
+		    error($$orig{location}.": `".$$orig{name}."' token provides ".
+			  "already defined token `".$dep."' with a different value;".
+			  " previous value definition was at ".$$opt{vlocation});
+		}
+
+		# prevent previously defined tokens from being undefined by unprovide
+		if (not $$opt{provided_count})
+		{
+		    $$opt{provided_count}++;
+		}
+
+	    }
+	    $$opt{provided_count}++;
+
+	    process_config_provide($opt);
+	}
+	else
+	{
+	    warning($$orig{location}.": `".$$orig{name}."' provides undeclared token `".$dep."', ignored.");
+	}
+    }
+}
+
+##
+## cancels/removes provided tokens
+##
+
+sub process_config_unprovide
+{
+    my ($orig) = @_;
+
+    foreach my $rule (@{$$orig{provide}})
+    {
+	$rule =~ /^([^\s=]+)/;
+	my $dep = $1;
+	my $opt = $config_opts{$dep};
+
+	if ($opt)
+	{
+	    $$opt{provided_count}--;
+
+	    if ($$opt{provided_count} < 1)
+	    {
+		$$opt{value} = "undefined";
+	    }
+	}
+    }
+}
+
+##
+## sets token values
+##
+
+sub set_config
+{
     # set default values
 
     foreach my $opt (values %config_opts)
@@ -431,24 +496,40 @@ sub process_config
 	if (not defined $$opt{value})
 	{
 	    $$opt{value} = $$opt{default};
-	    $changed = 1;
+	    $$opt{vlocation} = $$opt{location};
 	}
+    }
+}
 
+##
+## checks all configuration constraints
+##
+
+sub check_config
+{
+    my $changed = 0;
+
+    # provides all tokens
+
+    foreach my $opt (values %config_opts)
+    {
 	if (not @{$$opt{desc}})
 	{
 	    warning($$opt{location}.": missing description for `".$$opt{name}."' token");
 	}
+
+	if ($$opt{value} ne "undefined")
+	{
+	    process_config_provide($opt);
+	}
     }
 
-    foreach my $opt (values %config_opts)
-    {
-	    if ($$opt{value} ne "undefined")
-	    {
-		process_config_provide($opt);
-	    }
-	}
+    # checks and adjusts dependencies
 
-    # check dependencies
+    do
+    {
+	$changed = 0;
+	%depend_cache = ();
 
 	foreach my $opt (values %config_opts)
 	{
@@ -457,12 +538,16 @@ sub process_config
 		if (not process_config_depend($opt))
 		{
 		    $$opt{value} = "undefined";
+		    process_config_unprovide($opt);
 		    $changed = 1;
+		    last;
 		}
 	    }
 	}
+    }
+    until (not $changed);
 
-    # check exclusion
+    # checks exclusion
 
     foreach my $opt (values %config_opts)
     {
@@ -472,7 +557,7 @@ sub process_config
 	}
     }
 
-    # check require and mandatory
+    # checks require and mandatory
 
     foreach my $opt (values %config_opts)
     {
@@ -483,7 +568,7 @@ sub process_config
 
 	if ($$opt{mandatory} and ($$opt{value} eq "undefined"))
 	{
-	    error(" `".$$opt{name}."' token must be defined");
+	    error($$opt{vlocation}.": `".$$opt{name}."' token must be not be undefined");
 	}
     }
 }
@@ -512,71 +597,22 @@ sub read_myconfig
 		}
 		else
 		{
+		    if ($$opt{nodefine})
+		    {
+			error("$file:$lnum: `".$$opt{name}."' token can not be defined directly;".
+			      " it must be provided by defining appropriate configuration tokens instead.");
+		    }
+
 		    if ($2)
 		    {
-			$$opt{"value"} = $2;
+			$$opt{value} = $2;
 		    }
 		    else
 		    {
-			$$opt{"value"} = "defined";
+			$$opt{value} = "defined";
 		    }
-		    next;
-		}
-	    }
-	}
 
-	close(FILE);
-    }
-}
-
-sub read_header
-{
-    my ($file) = @_;
-
-    if (open(FILE, "<".$file))
-    {
-	my $lnum = 0;
-
-	foreach my $line (<FILE>)
-	{
-	    $lnum++;
-
-	    next if ($line =~ /^\s*$/);
-
-	    if ($line =~ /^\s*\#define\s+([^\s]+)\s+([^\s]*)/)
-	    {
-		my $opt = $config_opts{$1};
-
-		if (not $opt)
-		{
-		     warning("$file:$lnum: unknown configuration token `$1'");
-		}
-		else
-		{
-		    if ($2)
-		    {
-			$$opt{"value"} = $2;
-		    }
-		    else
-		    {
-			$$opt{"value"} = "defined";
-		    }
-		    next;
-		}
-	    }
-
-	    if ($line =~ /^\s*\#undef\s+([^\s]+)/)
-	    {
-		my $opt = $config_opts{$1};
-
-		if (not $opt)
-		{
-		    warning("$file:$lnum: unknown configuration token `$1'");
-		}
-		else
-		{
-		    $$opt{"value"} = "undefined";
-		    next;
+		    $$opt{vlocation} = "$file:$lnum";
 		}
 	    }
 	}
@@ -591,16 +627,15 @@ sub write_header
 
     if (open(FILE, ">".$file))
     {
-	foreach my $optname (sort keys %config_opts)
+	print FILE ("/*\n".
+		    " * This file has been generated by the configuration script.\n".
+		    " */\n\n");
+
+	foreach my $opt (values %config_opts)
 	{
-	    my $opt = $config_opts{$optname};
 	    my @desc = @{$$opt{"desc"}};
 
 	    next if $$opt{noexport} or $$opt{noheader};
-
-	    print FILE ("\n".
-			text80("/* "."@desc"." */").
-			"\n");
 
 	    if ($$opt{value} eq "undefined")
 	    {
@@ -631,6 +666,10 @@ sub write_makefile
 
     if (open(FILE, ">".$file))
     {
+	print FILE ("##\n".
+		    "## This file has been generated by the configuration script.\n".
+		    "##/\n\n");
+
 	foreach my $opt (values %config_opts)
 	{
 	    next if $$opt{noexport} or $$opt{nomakefile};
@@ -646,21 +685,169 @@ sub write_makefile
     }
 }
 
+sub tokens_list
+{
+    foreach my $name (sort keys %config_opts)
+    {
+	my $opt = $config_opts{$name};
+	printf("  * %-40s (%s)\n", $name, $$opt{location});
+    }
+}
+
+sub tokens_info
+{
+    my ($name) = @_;
+    my $opt = $config_opts{$name};
+
+    if (not $opt)
+    {
+	print "No `".$name." token declared\n";
+	return;
+    }
+
+    printf("
+==================== %s ====================
+
+", $name);
+
+    if (my @desc = @{$$opt{"desc"}})
+    {
+	print text80("@desc", "  ");
+    }
+    else
+    {
+	print "(no description)";
+    }
+    printf("
+
+  declared at   :  %s
+  defined  at   :  %s
+  default value :  %s
+  current value :  %s
+", $$opt{location}, $$opt{vlocation}, $$opt{default}, $$opt{value});
+
+    if (my @list = @{$$opt{depend}})
+    {
+	print "\n  depends on :\n\n";
+
+	foreach my $dep_and (@list)
+	{
+	    print text80(join(" or ", split(/\s+/, $dep_and)),
+			 "      ", "    * ")."\n";
+	}
+    }
+
+    if (my @list = @{$$opt{require}})
+    {
+	print "\n  require :\n\n";
+
+	foreach my $dep_and (@list)
+	{
+	    print text80(join(" or ", split(/\s+/, $dep_and)),
+			 "      ", "    * ")."\n";
+	}
+    }
+
+    if (my @list = @{$$opt{exclude}})
+    {
+	print "\n  excludes :\n\n";
+
+	foreach my $dep (@list)
+	{
+	    print text80(join(" or ", split(/\s+/, $dep)),
+			 "      ", "    * ")."\n";
+	}
+    }
+
+    if (my @list = @{$$opt{provide}})
+    {
+	print "\n  provides :\n\n";
+
+	foreach my $dep (@list)
+	{
+	    print text80(join(" or ", split(/\s+/, $dep)),
+			 "      ", "    * ")."\n";
+	}
+    }
+
+    print "\n";
+}
+
 sub main
 {
-    my $changed;
+    my %param_h = (
+		   "input" => "myconfig",
+		   );
+
+    foreach my $param (@ARGV)
+    {
+	error " bad command line parameter `$param'"
+	    if (! ($param =~ /--([^=]+)=?(.*)/));
+	
+	my $name = $1;
+	my $value = $2;
+
+	$name =~ s/-/_/g;
+
+	if ($value)
+	{
+	    $param_h{$name} = $value;
+	}
+	else
+	{
+	    $param_h{$name} = 1;
+	}
+    }
+
+    if (not @ARGV or $param_h{help})
+    {
+	print "
+Usage: config.pl [options]
+
+	--input=file     Sets configuration input file. Default is `myconfig'.
+
+	--header=file    Outputs configuration header in `file'.
+	--makefile=file  Outputs configuration makefile variables in `file'.
+
+	--check          Checks configuration constraints without output.
+	--list           Displays configuration tokens list.
+	--info=token     Displays informations about `token'.
+
+";
+	return;
+    }
 
     explore(".");
     exit 1 if $err_flag;
 
-    read_myconfig("myconfig");
+    read_myconfig($param_h{input});
     exit 1 if $err_flag;
 
-    $changed = process_config();
-    exit 1 if $err_flag;
+    set_config();
 
-    write_header(@ARGV[0]);# if ($changed or not -f "config.h");
-    write_makefile(@ARGV[1]);# if ($changed or not -f "config.mk");
+    if ($param_h{list})
+    {
+	tokens_list();
+	return;
+    }
+
+    if ($param_h{info})
+    {
+	tokens_info($param_h{info});
+	return;
+    }
+
+    if ($param_h{header} or $param_h{makefile} or $param_h{check})
+    {
+	check_config();
+	exit 1 if $err_flag;
+
+	write_header($param_h{header}) if $param_h{header};
+	write_makefile($param_h{makefile}) if $param_h{makefile};
+	return;
+    }
+
+    warning " No action performed";
 }
 
 main;

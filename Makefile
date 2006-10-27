@@ -7,6 +7,7 @@ export BUILD_DIR
 
 all: default
 
+config: $(SRC_DIR)/config.mk $(SRC_DIR)/config.h
 
 include $(SRC_DIR)/config.mk
 
@@ -14,7 +15,10 @@ $(SRC_DIR)/myconfig:
 	touch $@
 
 $(SRC_DIR)/config.mk $(SRC_DIR)/config.h: $(SRC_DIR)/myconfig
-	perl $(SRC_DIR)/scripts/config.pl $(SRC_DIR)/config.h $(SRC_DIR)/config.mk
+	perl $(SRC_DIR)/scripts/config.pl	\
+		--input=$(SRC_DIR)/myconfig	\
+		--header=$(SRC_DIR)/config.h	\
+		--makefile=$(SRC_DIR)/config.mk
 
 arch/current: $(SRC_DIR)/config.mk
 	ln -sfn $(CONFIG_ARCH_NAME) $@
