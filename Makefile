@@ -1,6 +1,7 @@
 BASE_PWD:=$(PWD)
 BUILD_DIR:=$(BASE_PWD)
 SRC_DIR=$(BASE_PWD)
+LDFLAGS=
 
 export SRC_DIR
 export BUILD_DIR
@@ -48,10 +49,8 @@ default: arch/current cpu/current $(target)
 
 $(target): $(SRC_DIR)/config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript $(LIBAPP)
 	@echo '    LD      $@'
-	@$(LD) -q $$(cat /dev/null $(filter %.list,$^)) \
+	@$(LD) $(LDFLAGS) -q $$(cat /dev/null $(filter %.list,$^)) \
 	$(filter %.o,$^) $(filter %.a,$^) \
 	-T $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript \
 	-o $@
-
-
 

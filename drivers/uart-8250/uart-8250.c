@@ -159,7 +159,7 @@ DEV_INIT(uart_8250_init)
   cpu_io_write_8(dev->addr[0] + UART_8250_FCR, UART_8250_FCR_FIFO);
 
   cpu_io_write_8(dev->addr[0] + UART_8250_MCR, 0
-#if defined(__ARCH__ibmpc__)
+#if defined(CONFIG_ARCH_IBMPC)
 		 /* GP Output pins must be set on ibmpc to activate IRQ routing */
 		 | UART_8250_MCR_OUT1 | UART_8250_MCR_OUT2
 #endif

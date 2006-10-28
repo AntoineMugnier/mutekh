@@ -28,16 +28,11 @@ static CONTEXT_ENTRY(sched_context_idle)
 
   while (1)
     {
-      cpu_interrupt_enable();
+      cpu_interrupt_process();
 #if !defined(CONFIG_SMP) || defined(CONFIG_HEXO_IPI)
       /* CPU sleep waiting for interrupts */
       cpu_interrupt_wait();
 #endif
-      asm volatile("nop"); /* XXX trouver une logique a ca */
-      /*
-	 on dirait que si on omet le "nop", le cpu n'arrive pas a
-	 gerer les int entre le sti et le cli.
-      */
       /* try to switch to next context */
       cpu_interrupt_disable();
       sched_context_stop();

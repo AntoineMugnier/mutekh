@@ -5,6 +5,10 @@ use strict;
 my %config_opts;
 my $err_flag = 0;
 
+my %param_h = (
+	       "input" => "myconfig",
+	       );
+
 sub text80
 {
     my ($msg, $prefix, $firstprefix) = @_;
@@ -706,6 +710,9 @@ sub tokens_list
     foreach my $name (sort keys %config_opts)
     {
 	my $opt = $config_opts{$name};
+
+	next if ($$opt{nodefine} and not ($param_h{list} eq "all"));
+
 	printf("  * %-40s (%s)\n", $name, $$opt{location});
     }
 }
@@ -737,7 +744,7 @@ sub tokens_info
 
     print("\n  This token is mandatory and must not be undefined.\n") if $$opt{mandatory};
 
-    print("\n".text80("This token can not be defined directly; it must be provided ".
+    print("\n".text80("This token can not be defined directly by user; it must be provided ".
 		      "by defining other appropriate token(s).", "  ")."\n") if $$opt{nodefine};
 
     printf("
@@ -796,10 +803,6 @@ sub tokens_info
 
 sub main
 {
-    my %param_h = (
-		   "input" => "myconfig",
-		   );
-
     foreach my $param (@ARGV)
     {
 	error " bad command line parameter `$param'"
@@ -831,7 +834,7 @@ Usage: config.pl [options]
 	--makefile=file  Output configuration makefile variables in `file'.
 
 	--check          Check configuration constraints without output.
-	--list           Display configuration tokens list.
+	--list[=all]     Display configuration tokens list.
 	--info=token     Display informations about `token'.
 
 ";

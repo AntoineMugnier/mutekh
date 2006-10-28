@@ -19,50 +19,17 @@
 
 */
 
+#ifndef _8042_H_
+#define _8042_H_
 
-#ifndef ERROR_H_
-#define ERROR_H_
+/* FIXME rename and add more */
+#define KEYB_8042_REG1	0
+#define KEYB_8042_REG2	4
+#define KEYB_8042_VALUE1 0x01
 
-#include "types.h"
-
-/** error code type */
-typedef int_fast8_t		error_t;
-
-/** unknown or undefined error */
-#define EUNKNOWN	1
-
-/** missing ot not found entry error */
-#define ENOENT		2
-
-/** ressource busy error */
-#define EBUSY		3
-
-/** no more memory available for the requested operation */
-#define ENOMEM		4
-
-/** invalid value */
-#define EINVAL		5
-
-/** deadlock detected */
-#define EDEADLK		6
-
-/** operation not permitted */
-#define EPERM		7
-
-/** operation not supported */
-#define ENOTSUP		8
-
-/** service temporarily unavailable */
-#define EAGAIN		9
-
-/** value out of range */
-#define ERANGE		10
-
-/** address in use */
-#define EADDRINUSE	40
-
-/** address not available */
-#define EADDRNOTAVAIL	41
+#define KEYB_8042_LED_SCROLL	0x01
+#define KEYB_8042_LED_NUM	0x02
+#define KEYB_8042_LED_CAPS	0x04
 
 #endif
 

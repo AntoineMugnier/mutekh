@@ -75,7 +75,7 @@
 
 /************************************************************************/
 
-#ifdef __ARCH__ibmpc__
+#ifdef CONFIG_ARCH_IBMPC
 
 # define PCI_IBMPC_CONF_ADDRIO	0x0cf8
 # define PCI_IBMPC_CONF_DATAIO	0x0cfc

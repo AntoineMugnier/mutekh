@@ -100,6 +100,12 @@ cpu_interrupt_enable(void)
 }
 
 static inline void
+cpu_interrupt_process(void)
+{
+  cpu_interrupt_enable();
+}
+
+static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
   __asm__ volatile (

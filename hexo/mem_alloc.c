@@ -36,7 +36,7 @@
     %config CONFIG_HEXO_MEMALLOC_ALGO_META
     desc	meta configuration token used to impose requirements
     default	defined
-    flags	mandatory noexport
+    flags	mandatory noexport nodefine
     require	CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
     %config end
 

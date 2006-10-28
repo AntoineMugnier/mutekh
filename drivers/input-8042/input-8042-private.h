@@ -19,50 +19,39 @@
 
 */
 
+#ifndef INPUT_8042_PRIVATE_H_
+#define INPUT_8042_PRIVATE_H_
 
-#ifndef ERROR_H_
-#define ERROR_H_
+#include <hexo/types.h>
+#include <hexo/lock.h>
 
-#include "types.h"
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_bitmap.h>
 
-/** error code type */
-typedef int_fast8_t		error_t;
+#define INPUT_8042_KEYCOUNT	128
 
-/** unknown or undefined error */
-#define EUNKNOWN	1
+CONTAINER_TYPE(input_state, BITMAP, uint32_t, NOLOCK, NOOBJ, INPUT_8042_KEYCOUNT);
+CONTAINER_FUNC(static inline, input_state, BITMAP, input_state, NOLOCK);
 
-/** missing ot not found entry error */
-#define ENOENT		2
+struct input_8042_context_s;
 
-/** ressource busy error */
-#define EBUSY		3
+typedef void input_key_process_t  (struct device_s *dev,
+				   uint8_t scancode);
 
-/** no more memory available for the requested operation */
-#define ENOMEM		4
+struct input_8042_context_s
+{
+  lock_t			lock;
+  input_key_process_t		*scancode;
+  input_state_root_t		key_state;
+  uint_fast8_t			led_state;
 
-/** invalid value */
-#define EINVAL		5
-
-/** deadlock detected */
-#define EDEADLK		6
-
-/** operation not permitted */
-#define EPERM		7
-
-/** operation not supported */
-#define ENOTSUP		8
-
-/** service temporarily unavailable */
-#define EAGAIN		9
-
-/** value out of range */
-#define ERANGE		10
-
-/** address in use */
-#define EADDRINUSE	40
-
-/** address not available */
-#define EADDRNOTAVAIL	41
+  struct 
+  {
+    devinput_callback_t		*callback;
+    void			*private;
+    uint_fast8_t		type;
+  }				events[INPUT_8042_KEYCOUNT];
+};
 
 #endif
 

@@ -14,6 +14,8 @@ VPATH = $(SRC_DIR)$(H)
 
 deps = $(patsubst %.o,.depends/%.deps,$(objs))
 
+include $(SRC_DIR)/scripts/common.mk
+
 depend.mk: $(deps)
 	@cat /dev/null $^ > $@
 
@@ -25,5 +27,4 @@ depend.mk: $(deps)
 	@test -d .depends || mkdir .depends
 	@-$(CC) $(CFLAGS) $(INCS) -MM -MF $@ $<
 
-include $(SRC_DIR)/scripts/common.mk
 

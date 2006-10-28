@@ -10,30 +10,30 @@ PHDRS
 SECTIONS
    {
 	. = 0xbfc00000;
-	.boot : { *(.boot) } : boot
+	.boot : { *(.boot*) } : boot
 
 	. = 0x80000080;
-	.excep : { *(.excep) } : excep
+	.excep : { *(.excep*) } : excep
 
 	. = 0x00100000;
-	.text : { *(.text) } : mem
+	.text : { *(.text*) } : mem
 
 	. = ALIGN(16);
 	_gp = . + 0x7ff0;	/* global data register pointer */
 
-	.sdata :{ *(.sdata) }
-	.sbss :	{ *(.sbss) }
+	.sdata :{ *(.sdata*) }
+	.sbss :	{ *(.sbss*) }
 
-	.bss :	{ *(.bss) }
+	.bss :	{ *(.bss*) }
 
 	.data :
 		{
 			/* global variables and const data section */
-			*(.data)
+			*(.data*)
 			*(.rodata*)
 
 			/* data depending on cpu architecture (fonction pointer variables, ...) */
-			*(.cpuarchdata)
+			*(.cpuarchdata*)
 		}
 
 	/* CPU local data section */
@@ -47,7 +47,7 @@ SECTIONS
 			__cpu_context_data_base = . ;
 			LONG(0) ;
 
-			*(.cpudata)
+			*(.cpudata*)
 		}
 
 	__cpu_data_start = LOADADDR(.cpudata);
@@ -60,7 +60,7 @@ SECTIONS
 			__context_data_base = . ;
 			LONG(0) ;
 
-			*(.contextdata)
+			*(.contextdata*)
 		}
 
 	__context_data_start = LOADADDR(.contextdata);

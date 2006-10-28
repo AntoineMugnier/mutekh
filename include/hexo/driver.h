@@ -70,6 +70,11 @@ struct driver_s
     struct dev_class_timer_s	timer;
 #endif
 
+#ifdef __DEVICE_INPUT_H__
+    /** input devices */
+    struct dev_class_input_s	input;
+#endif
+
 #ifdef __DEVICE_ENUM_H__
     /** device enumerator class */
     struct dev_class_enum_s	denum;

@@ -124,7 +124,7 @@ static inline void lock_spin_irq(lock_t *lock)
     state may be saved in a register */
 #define LOCK_SPIN_IRQ(lock)					\
 {								\
-  register reg_t	__interrupt_state;			\
+  reg_t	__interrupt_state;					\
   cpu_interrupt_savestate_disable(&__interrupt_state);		\
   lock_spin(lock);
 

@@ -72,7 +72,7 @@ error_t	timer_cancel_event(struct timer_event_s	*event,
   if (timer_remove(&event->timer->root, event))
     return -ENOENT;
 
-  /* perform the callback if asked by user */
+  /* perform the callback if requested by user */
   if (callback)
     event->callback(event, event->pv);
 
@@ -91,6 +91,7 @@ void			timer_inc_ticks(struct timer_s		*timer,
   /* adjust current tick count */
   timer->ticks += ticks;
 
+  /* XXX use FOREACH ?! */
   /* the timers are sorted by expire time */
   while ((event = timer_head(&timer->root)) != NULL &&
 	 event->start + event->delay <= timer->ticks)

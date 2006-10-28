@@ -37,6 +37,7 @@
 #include <../drivers/icu-soclib/icu-soclib.h>
 #include <../drivers/timer-soclib/timer-soclib.h>
 #include <../drivers/timer-8253/timer-8253.h>
+#include <../drivers/input-8042/input-8042.h>
 #include <../drivers/fb-vga/fb-vga.h>
 #include <../drivers/enum-pci/enum-pci.h>
 #include <../drivers/enum-isapnp/enum-isapnp.h>
@@ -62,6 +63,10 @@ struct device_s fb_dev;
 
 #if defined(CONFIG_DRIVER_TIMER)
 struct device_s timer_dev;
+#endif
+
+#if defined(CONFIG_DRIVER_KEYBOARD)
+struct device_s keyboard_dev;
 #endif
 
 #if defined(CONFIG_DRIVER_ENUM_PCI)
@@ -112,6 +117,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # elif defined(CONFIG_DRIVER_ICU_SOCLIB)
   icu_dev.addr[ICU_ADDR_MASTER] = 0x10c00000;
   icu_soclib_init(&icu_dev, NULL);
+# else
+#  warning CONFIG_DRIVER_ICU case not handled in mutek_main()
 # endif
 #endif
 
@@ -126,6 +133,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   tty_uart_dev.irq = 4;
   uart_8250_init(&tty_uart_dev, &icu_dev);
   DEV_ICU_BIND(&icu_dev, &tty_uart_dev);
+# else
+#  warning CONFIG_DRIVER_UART case not handled in mutek_main()
 # endif
 #endif
 
@@ -152,6 +161,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   tty_dev = &tty_con_dev;
 #  endif
   DEV_ICU_BIND(&icu_dev, &tty_con_dev);
+# else
+#  warning CONFIG_DRIVER_TTY case not handled in mutek_main()
 # endif
 #endif
 
@@ -172,19 +183,35 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   timer_dev.irq = 0;
   timer_8253_init(&timer_dev, &icu_dev);
   dev_timer_setperiod(&timer_dev, 0, 1193180 / 100);
+  DEV_ICU_BIND(&icu_dev, &timer_dev);
+  dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 # elif defined(CONFIG_DRIVER_TIMER_SOCLIB)
   timer_dev.addr[0] = 0x20c00000;
   timer_dev.irq = 0;
   timer_soclib_init(&timer_dev, &icu_dev);
   dev_timer_setperiod(&timer_dev, 0, 0xffff);
-# endif
   DEV_ICU_BIND(&icu_dev, &timer_dev);
   dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
+# else
+#  warning CONFIG_DRIVER_TIMER case not handled in mutek_main()
+# endif
 #endif
 
 #if defined (CONFIG_MUTEK_TIMERMS)
   timer_init(&timer_ms.root);
   timer_ms.ticks = 0;
+#endif
+
+#if defined(CONFIG_DRIVER_KEYBOARD)
+  device_init(&keyboard_dev);
+# if defined(CONFIG_DRIVER_INPUT_8042)
+  keyboard_dev.addr[0] = 0x60;
+  keyboard_dev.irq = 1;
+  input_8042_init(&keyboard_dev, &icu_dev);
+  DEV_ICU_BIND(&icu_dev, &keyboard_dev);
+# else
+#  warning CONFIG_DRIVER_KEYBOARD case not handled in mutek_main()
+# endif
 #endif
 
   /********* FB init ********************************* */
@@ -198,6 +225,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #  if defined(CONFIG_MUTEK_LOGO)
    memcpy(p, mutek_logo_320x200, 64000);
 #  endif
+# else
+#  warning CONFIG_DRIVER_FB case not handled in mutek_main()
 # endif
 #endif
 

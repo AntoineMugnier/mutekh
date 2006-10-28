@@ -38,7 +38,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		".set push			\n"
 		".set noat			\n"
 		//		".set noreorder			\n"
-#ifdef CONFIG_CODE_PIC
+#ifdef CONFIG_COMPILE_PIC
 		/* save execution pointer based on current PC */
 		"	addiu	$sp, 	-3*4		\n"
 		"	bal	1f			\n"

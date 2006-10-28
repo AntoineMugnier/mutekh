@@ -78,6 +78,12 @@ static void cpu_interrupt_restorestate(const reg_t *state);
 /** read current interrupts state as boolean */
 static bool_t cpu_interrupt_getstate(void);
 
+/** enable interrupts and give a change to pending requests to
+    execute. This function must be used to avoid the "sti; cli"
+    syndrome which makes iterrupts execution impossible on some
+    procesors */
+static void cpu_interrupt_process(void);
+
 /** enter interrupt wait state if supported, may return imediatly if
     unsupported */
 static void cpu_interrupt_wait(void);

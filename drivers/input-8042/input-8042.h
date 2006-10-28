@@ -19,50 +19,25 @@
 
 */
 
+#ifndef DRIVER_INPUT_8042_H_
+#define DRIVER_INPUT_8042_H_
 
-#ifndef ERROR_H_
-#define ERROR_H_
+#include <hexo/device/input.h>
+#include <hexo/device.h>
 
-#include "types.h"
+/* devices addresses slots */
 
-/** error code type */
-typedef int_fast8_t		error_t;
+#define UART_8042_ADDR	0
 
-/** unknown or undefined error */
-#define EUNKNOWN	1
+/* input device functions */
 
-/** missing ot not found entry error */
-#define ENOENT		2
-
-/** ressource busy error */
-#define EBUSY		3
-
-/** no more memory available for the requested operation */
-#define ENOMEM		4
-
-/** invalid value */
-#define EINVAL		5
-
-/** deadlock detected */
-#define EDEADLK		6
-
-/** operation not permitted */
-#define EPERM		7
-
-/** operation not supported */
-#define ENOTSUP		8
-
-/** service temporarily unavailable */
-#define EAGAIN		9
-
-/** value out of range */
-#define ERANGE		10
-
-/** address in use */
-#define EADDRINUSE	40
-
-/** address not available */
-#define EADDRNOTAVAIL	41
+DEV_IRQ(input_8042_irq);
+DEV_INIT(input_8042_init);
+DEV_CLEANUP(input_8042_cleanup);
+DEVINPUT_INFO(input_8042_info);
+DEVINPUT_READ(input_8042_read);
+DEVINPUT_WRITE(input_8042_write);
+DEVINPUT_SETCALLBACK(input_8042_setcallback);
 
 #endif
 

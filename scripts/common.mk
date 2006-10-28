@@ -3,7 +3,15 @@ CFLAGS=-Wall \
 	-O2 -fomit-frame-pointer \
 	-fno-builtin
 
-INCS=-nostdinc -D__TEST__ -D__MUTEK__ -D__ARCH__$(ARCH)__ -D__CPU__$(CPU)__ -I$(SRC_DIR)/include -include $(SRC_DIR)/config.h
+ifeq ($(CONFIG_COMPILE_COLLECT), defined)
+CFLAGS += -ffunction-sections -fdata-sections
+endif
+
+ifeq ($(CONFIG_COMPILE_COLLECT), defined)
+LDFLAGS += --gc-sections
+endif
+
+INCS=-nostdinc -D__TEST__ -D__MUTEK__ -I$(SRC_DIR)/include -include $(SRC_DIR)/config.h
 
 %.o: %.S
 	@echo '    AS      $@'
