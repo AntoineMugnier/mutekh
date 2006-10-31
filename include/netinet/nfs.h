@@ -24,6 +24,9 @@
 
 #include <hexo/types.h>
 #include <netinet/libudp.h>
+#include <hexo/gpct_platform_hexo.h>
+#include <hexo/gpct_lock_hexo.h>
+#include <gpct/cont_hashlist.h>
 
 #include <semaphore.h>
 #include <timer.h>
@@ -59,15 +62,33 @@
  * mountd calls.
  */
 
-#define MOUNT_ADDENTRY	1
+#define MOUNT_NULL	0
+#define MOUNT_MOUNT	1
+#define MOUNT_UMOUNT	3
 #define MOUNT_UMOUNTALL	4
 
 /*
  * nfsd calls
  */
 
+#define NFS_NULL	0
+#define NFS_GETATTR	1
+#define NFS_SETATTR	2
+#define NFS_ROOT	3
 #define NFS_LOOKUP	4
+#define NFS_READLINK	5
 #define NFS_READ	6
+#define NFS_WRITECACHE	7
+#define NFS_WRITE	8
+#define NFS_CREATE	9
+#define NFS_REMOVE	10
+#define NFS_RENAME	11
+#define NFS_LINK	12
+#define NFS_SYMLINK	13
+#define NFS_MKDIR	14
+#define NFS_RMDIR	15
+#define NFS_READDIR	16
+#define NFS_STATFS	17
 
 /*
  * File handles.
@@ -112,6 +133,24 @@ typedef uint8_t nfs_handle_t[FHSIZE];
 #define NFSERR_WFLUSH		99
 
 /*
+ * RPC block.
+ */
+
+struct					rpcb_s
+{
+  uint_fast32_t				id;
+  struct timer_event_s			timeout;
+  void					*data;
+  size_t				size;
+  sem_t					sem;
+
+  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+};
+
+CONTAINER_TYPE(rpcb, HASHLIST, struct rpcb_s, NOLOCK, NOOBJ, list_entry, 64);
+CONTAINER_KEY_TYPE(rpcb, SCALAR, id);
+
+/*
  * NFS connection descriptor.
  */
 
@@ -123,12 +162,8 @@ struct			nfs_s
   struct net_udp_addr_s	mountd;		/* mountd server address */
   struct net_udp_addr_s	nfsd;		/* nfsd server address */
   uint_fast32_t		rpc_id;		/* rpc sequence id */
-  uint_fast8_t		tries;
-  struct timer_event_s	timeout;
 
-  void			*data;
-  size_t		size;
-  sem_t			sem;
+  rpcb_root_t		rpc_blocks;
 };
 
 /*

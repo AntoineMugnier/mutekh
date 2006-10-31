@@ -45,6 +45,10 @@ include $(SRC_DIR)/scripts/common.mk
 
 target = kernel-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME).out
 
+ifeq ($(CONFIG_ARCH_NAME), emu)
+LDFLAGS += -r -L/usr/lib -lc
+endif
+
 default: arch/current cpu/current $(target)
 
 $(target): $(SRC_DIR)/config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript $(LIBAPP)
@@ -53,4 +57,8 @@ $(target): $(SRC_DIR)/config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(CONFIG
 	$(filter %.o,$^) $(filter %.a,$^) \
 	-T $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript \
 	-o $@
-
+ifeq ($(CONFIG_ARCH_NAME), emu)
+	mv $(target) $(target).lo
+	$(CC) -o $(target) $(target).lo
+	$(RM) $(target).lo
+endif

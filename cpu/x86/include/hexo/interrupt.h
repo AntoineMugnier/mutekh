@@ -84,17 +84,21 @@ cpu_interrupt_sys_sethandler(cpu_interrupt_handler_t *hndl)
 static inline void
 cpu_interrupt_disable(void)
 {
+#if !defined(CONFIG_ARCH_EMU)
   __asm__ volatile (
 		    "cli\n"
 		    );
+#endif
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
+#if !defined(CONFIG_ARCH_EMU)
   __asm__ volatile (
 		    "sti\n"
 		    );
+#endif
 }
 
 static inline void

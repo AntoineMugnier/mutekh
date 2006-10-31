@@ -29,7 +29,8 @@
 #include <timer.h>
 
 /*
- * NFS version 2 lightweight implementation (single-thread and read-only support).
+ * NFS version 2 lightweight implementation
+ * Multithreaded and read-only support
  *
  * Supported NFS operations:
  *
@@ -38,18 +39,21 @@
  *
  */
 
+CONTAINER_FUNC(static inline, rpcb, HASHLIST, rpcb, NOLOCK, id);
+CONTAINER_KEY_FUNC(static inline, rpcb, HASHLIST, rpcb, NOLOCK, id);
+
 /*
  * RPC timeout.
  */
 
 TIMER_CALLBACK(rpc_timeout)
 {
-  struct nfs_s	*server = (struct nfs_s *)pv;
+  struct rpcb_s	*rpcb = (struct rpcb_s *)pv;
 
-  if (server->data == NULL)
+  if (rpcb->data == NULL)
     {
       /* wake up */
-      sem_post(&server->sem);
+      sem_post(&rpcb->sem);
     }
 }
 
@@ -60,15 +64,22 @@ TIMER_CALLBACK(rpc_timeout)
 UDP_CALLBACK(rpc_callback)
 {
   struct nfs_s	*server = (struct nfs_s *)pv;
+  struct rpcb_s	*rpcb;
+  uint_fast32_t	id;
 
-  server->data = data;
-  server->size = size;
+  id = ((struct rpc_reply_s *)data)->id;
 
-  /* cancel the timeout */
-  timer_cancel_event(&server->timeout, 0);
+  if ((rpcb = rpcb_lookup(&server->rpc_blocks, id)) != NULL)
+    {
+      rpcb->data = data;
+      rpcb->size = size;
 
-  /* wake up */
-  sem_post(&server->sem);
+      /* cancel the timeout */
+      timer_cancel_event(&rpcb->timeout, 0);
+
+      /* wake up */
+      sem_post(&rpcb->sem);
+    }
 }
 
 /*
@@ -82,18 +93,22 @@ static inline error_t	do_rpc(struct nfs_s	*server,
 			       void		**data,
 			       size_t		*size)
 {
+  struct net_udp_addr_s	*dest;
   struct rpc_call_s	*call;
   struct rpc_reply_s	*reply;
+  struct rpcb_s		rpcb;
   void			*pkt;
   void			*p;
   size_t		sz = *size;
+  uint_fast8_t		tries = 0;
 
   /* build the call packet */
-  pkt = mem_alloc(sizeof (struct rpc_call_s) + sz, MEM_SCOPE_CONTEXT);
+  if ((pkt = mem_alloc(sizeof (struct rpc_call_s) + sz, MEM_SCOPE_CONTEXT)) == NULL)
+    return -ENOMEM;
   call = (struct rpc_call_s *)pkt;
 
   /* fill the request */
-  call->id = htonl(server->rpc_id++);
+  rpcb.id = call->id = htonl(server->rpc_id++);
   call->type = htonl(MSG_CALL);
   call->rpcvers = htonl(2);
   call->prog = htonl(program);
@@ -104,8 +119,10 @@ static inline error_t	do_rpc(struct nfs_s	*server,
   p = (void *)(call + 1);
   memcpy(p, *data, sz);
 
-  server->data = NULL;
-  server->tries = 0;
+  /* fill RPC block */
+  sem_init(&rpcb.sem, 0, 0);
+  rpcb.data = NULL;
+  rpcb_push(&server->rpc_blocks, &rpcb);
 
  retry:
 
@@ -113,58 +130,63 @@ static inline error_t	do_rpc(struct nfs_s	*server,
   switch (program)
     {
       case PROGRAM_PORTMAP:
-	udp_send(&server->local, &server->portmap, pkt, sizeof (struct rpc_call_s) + sz);
+	dest = &server->portmap;
 	break;
       case PROGRAM_MOUNTD:
-	udp_send(&server->local, &server->mountd, pkt, sizeof (struct rpc_call_s) + sz);
+	dest = &server->mountd;
 	break;
       case PROGRAM_NFSD:
-	udp_send(&server->local, &server->nfsd, pkt, sizeof (struct rpc_call_s) + sz);
+	dest = &server->nfsd;
 	break;
       default:
-	assert(0);
+	assert(!"bad RPC program id");
     }
 
+  udp_send(&server->local, dest, pkt, sizeof (struct rpc_call_s) + sz);
+
   /* start timeout */
-  server->timeout.delay = RPC_TIMEOUT;
-  server->timeout.callback = rpc_timeout;
-  server->timeout.pv = server;
-  timer_add_event(&timer_ms, &server->timeout);
+  rpcb.timeout.delay = RPC_TIMEOUT;
+  rpcb.timeout.callback = rpc_timeout;
+  rpcb.timeout.pv = &rpcb;
+  timer_add_event(&timer_ms, &rpcb.timeout);
 
   /* wait reply */
-  sem_wait(&server->sem);
+  sem_wait(&rpcb.sem);
 
   /* get reply */
-  reply = (struct rpc_reply_s *)server->data;
+  reply = (struct rpc_reply_s *)rpcb.data;
 
   /* check for error */
   if (reply == NULL)
     {
       /* retry 3 times */
-      if (server->tries++ < 3)
+      if (tries++ < 3)
 	goto retry;
       else
 	{
 	  printf("RPC timeout\n");
 
+	  rpcb_remove(&server->rpc_blocks, &rpcb);
 	  mem_free(pkt);
 
-	  return -1;
+	  return -EAGAIN;
 	}
     }
+
+  rpcb_remove(&server->rpc_blocks, &rpcb);
 
   if (reply->rstatus || reply->astatus || reply->verifier)
     {
       mem_free(pkt);
       mem_free(reply);
 
-      return -1;
+      return -EINVAL;
     }
 
   mem_free(pkt);
 
-  *data = server->data;
-  *size = server->size;
+  *data = rpcb.data;
+  *size = rpcb.size;
 
   return 0;
 }
@@ -196,8 +218,8 @@ error_t		nfs_init(struct nfs_s	*server)
   size_t	size;
   uint32_t	*port;
 
-  /* init reply semaphore */
-  sem_init(&server->sem, 0, 0);
+  /* init RPC block list */
+  rpcb_init(&server->rpc_blocks);
 
   /* set local port so UDP will determine a free port */
   server->local.port = htons(700); /* XXX */
@@ -262,7 +284,7 @@ void			nfs_destroy(struct nfs_s	*server)
   nfs_umount(server);
 
   udp_close(&server->local);
-  sem_destroy(&server->sem);
+  rpcb_destroy(&server->rpc_blocks);
 }
 
 /*
@@ -280,7 +302,8 @@ error_t			nfs_mount(struct nfs_s	*server,
   size_t		sz = sizeof (struct nfs_auth_s) + 4 + ALIGN_VALUE_UP(path_len, 4);
 
   /* allocate packet for the request */
-  to_free = req = mem_alloc(sz, MEM_SCOPE_CONTEXT);
+  if ((to_free = req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
+    return -ENOMEM;
   auth = (struct nfs_auth_s *)req;
 
   /* insert auth info */
@@ -301,19 +324,20 @@ error_t			nfs_mount(struct nfs_s	*server,
   memcpy(++p, path, path_len);
 
   /* RPC */
-  if (do_rpc(server, PROGRAM_MOUNTD, 1, MOUNT_ADDENTRY, &req, &sz))
+  if (do_rpc(server, PROGRAM_MOUNTD, 1, MOUNT_MOUNT, &req, &sz))
     {
       mem_free(to_free);
 
-      return -1;
+      return -EINVAL;
     }
+
+  mem_free(to_free);
 
   /* read error code */
   p = (uint32_t *)((struct rpc_reply_s *)req + 1);
   if (*p)
     {
       mem_free(req);
-      mem_free(to_free);
 
       return *p;
     }
@@ -322,13 +346,12 @@ error_t			nfs_mount(struct nfs_s	*server,
   memcpy(root, ++p, sizeof (nfs_handle_t));
 
   mem_free(req);
-  mem_free(to_free);
 
   return 0;
 }
 
 /*
- * Unmount the mounted export.
+ * Unmount the mounted exports.
  */
 
 error_t		nfs_umount(struct nfs_s	*server)
@@ -338,7 +361,8 @@ error_t		nfs_umount(struct nfs_s	*server)
   size_t		sz = sizeof (struct nfs_auth_s);
 
   /* allocate packet for the request */
-  to_free = req = mem_alloc(sz, MEM_SCOPE_CONTEXT);
+  if ((to_free = req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
+    return -ENOMEM;
   auth = (struct nfs_auth_s *)req;
 
   /* insert auth info */
@@ -357,8 +381,9 @@ error_t		nfs_umount(struct nfs_s	*server)
     {
       mem_free(to_free);
 
-      return -1;
+      return -EINVAL;
     }
+
   mem_free(req);
   mem_free(to_free);
 
@@ -383,7 +408,8 @@ ssize_t		nfs_read(struct nfs_s	*server,
   ssize_t		rd;
 
   /* allocate packet for the request */
-  to_free = req = mem_alloc(sz, MEM_SCOPE_CONTEXT);
+  if ((to_free = req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
+    return -ENOMEM;
   auth = (struct nfs_auth_s *)req;
 
   /* insert auth info */
@@ -410,7 +436,7 @@ ssize_t		nfs_read(struct nfs_s	*server,
     {
       mem_free(to_free);
 
-      return -1;
+      return -EINVAL;
     }
 
   /* copy data */
@@ -448,7 +474,8 @@ error_t		nfs_lookup(struct nfs_s		*server,
   size_t		sz = sizeof (struct nfs_auth_s) + 4 + sizeof (nfs_handle_t) + ALIGN_VALUE_UP(path_len, 4);
 
   /* allocate packet for the request */
-  to_free = req = mem_alloc(sz, MEM_SCOPE_CONTEXT);
+  if ((to_free = req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
+    return -ENOMEM;
   auth = (struct nfs_auth_s *)req;
 
   /* insert auth info */
@@ -475,15 +502,16 @@ error_t		nfs_lookup(struct nfs_s		*server,
     {
       mem_free(to_free);
 
-      return -1;
+      return -EINVAL;
     }
+
+  mem_free(to_free);
 
   /* read error code */
   p = (uint32_t *)((struct rpc_reply_s *)req + 1);
   if (*p)
     {
       mem_free(req);
-      mem_free(to_free);
 
       return *p;
     }
@@ -498,7 +526,6 @@ error_t		nfs_lookup(struct nfs_s		*server,
     memcpy(stat, attr, sizeof (struct nfs_attr_s));
 
   mem_free(req);
-  mem_free(to_free);
 
   return 0;
 }

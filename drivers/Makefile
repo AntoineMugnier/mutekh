@@ -11,12 +11,20 @@ ifeq ($(CONFIG_DRIVER_CHAR_VGATTY), defined)
  subdirs += tty-vga
 endif
 
+ifeq ($(CONFIG_DRIVER_CHAR_EMUTTY), defined)
+ subdirs += tty-emu
+endif
+
 ifeq ($(CONFIG_DRIVER_CHAR_UART8250), defined)
  subdirs += uart-8250
 endif
 
 ifeq ($(CONFIG_DRIVER_TIMER_8253), defined)
  subdirs += timer-8253
+endif
+
+ifeq ($(CONFIG_DRIVER_TIMER_EMU), defined)
+ subdirs += timer-emu
 endif
 
 ifeq ($(CONFIG_DRIVER_NET_3C900), defined)

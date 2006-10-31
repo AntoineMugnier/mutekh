@@ -1,7 +1,13 @@
 
+ifeq ($(CONFIG_ARCH_NAME), emu)
+CFLAGS=-Wall \
+	-O0 -ggdb \
+	-fno-builtin
+else
 CFLAGS=-Wall \
 	-O2 -fomit-frame-pointer \
 	-fno-builtin
+endif
 
 ifeq ($(CONFIG_COMPILE_COLLECT), defined)
 CFLAGS += -ffunction-sections -fdata-sections

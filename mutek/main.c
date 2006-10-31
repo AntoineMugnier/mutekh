@@ -33,10 +33,12 @@
 #include <../drivers/uart-8250/uart-8250.h>
 #include <../drivers/tty-vga/tty-vga.h>
 #include <../drivers/tty-soclib/tty-soclib.h>
+#include <../drivers/tty-emu/tty-emu.h>
 #include <../drivers/icu-8259/icu-8259.h>
 #include <../drivers/icu-soclib/icu-soclib.h>
 #include <../drivers/timer-soclib/timer-soclib.h>
 #include <../drivers/timer-8253/timer-8253.h>
+#include <../drivers/timer-emu/timer-emu.h>
 #include <../drivers/input-8042/input-8042.h>
 #include <../drivers/fb-vga/fb-vga.h>
 #include <../drivers/enum-pci/enum-pci.h>
@@ -102,7 +104,9 @@ DEVTIMER_CALLBACK(timer_callback)
 int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
   sched_global_init();
+#if !defined(CONFIG_ARCH_EMU)
   sched_cpu_init();
+#endif
 
   /********* ICU init ******************************** */
 
@@ -161,6 +165,12 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   tty_dev = &tty_con_dev;
 #  endif
   DEV_ICU_BIND(&icu_dev, &tty_con_dev);
+# elif defined(CONFIG_DRIVER_CHAR_EMUTTY)
+  device_init(&tty_con_dev);
+  tty_emu_init(&tty_con_dev, NULL);
+#  if defined(CONFIG_MUTEK_CONSOLE)
+  tty_dev = &tty_con_dev;
+#  endif
 # else
 #  warning CONFIG_DRIVER_TTY case not handled in mutek_main()
 # endif
@@ -191,6 +201,10 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   timer_soclib_init(&timer_dev, &icu_dev);
   dev_timer_setperiod(&timer_dev, 0, 0xffff);
   DEV_ICU_BIND(&icu_dev, &timer_dev);
+  dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
+# elif defined(CONFIG_DRIVER_TIMER_EMU)
+  timer_emu_init(&timer_dev, NULL);
+  dev_timer_setperiod(&timer_dev, 0, 0xffff);
   dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 # else
 #  warning CONFIG_DRIVER_TIMER case not handled in mutek_main()
@@ -261,7 +275,12 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
   arch_start_other_cpu(); /* let other CPUs enter main_smp() */
 
+#if defined(CONFIG_ARCH_EMU)
+  main();
+#else
   mutek_main_smp();
+#endif
+
 
   return 0;
 }
