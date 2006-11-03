@@ -27,3 +27,7 @@ endif
 ifeq ($(CONFIG_NETWORK_NFS), defined)
  subdirs += lwnfs
 endif
+
+ifeq ($(CONFIG_NETWORK_RARP), defined)
+ subdirs += rarp
+endif

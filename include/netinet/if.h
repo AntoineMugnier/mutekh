@@ -37,12 +37,12 @@
 #define IFNAME_MAX_LEN	32
 
 /*
- * Boot methods.
+ * Ifconfig actions.
  */
 
-#define IF_BOOT_NONE	0
-#define IF_BOOT_RARP	1
-#define IF_BOOT_DHCP	2
+#define IF_SET	0
+#define IF_ADD	1
+#define IF_DEL	2
 
 #include <netinet/route.h>
 
@@ -66,14 +66,6 @@ struct					net_if_s
   const uint8_t				*mac;
   uint_fast16_t				mtu;
   net_protos_root_t			protocols;
-
-  /* fields for booting */
-  union
-  {
-    struct net_proto_s			*rarp;
-    struct net_proto_s			*dhcp;
-  } bootproto;
-  uint_fast8_t				boottype;
 
   /* statistics */
   uint_fast64_t				rx_bytes;
@@ -103,6 +95,10 @@ void	if_unregister(struct net_if_s	*interface);
 
 void	if_up(char*	name, ...);
 void	if_down(char*	name, ...);
+error_t	if_config(int_fast32_t		ifindex,
+		  uint_fast8_t		action,
+		  struct net_addr_s	*address,
+		  struct net_addr_s	*mask);
 
 void	if_register_proto(struct net_if_s	*interface,
 			  struct net_proto_s	*proto,

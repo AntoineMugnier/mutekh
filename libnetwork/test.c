@@ -179,32 +179,14 @@ static TIMER_CALLBACK(profiling)
 }
 #endif
 
-/*
- * test main.
- */
-
-#ifndef LINUXSIM
-int_fast8_t		main()
-#else
-int_fast8_t		_main()
-#endif
+void *net_up(void *p)
 {
   pthread_t th;
-  uint_fast32_t i;
-
-  for (i = 0; i < 10000000; i++)
-    ;
 
   if_up("eth0");
   if_up("eth1");
 
-  /*
-   * Enable AC (on linux sim)
-   */
-
-  asm volatile("	pushf						\n"
-	       "	orl	$0x40000, (%esp)			\n"
-	       "	popf						\n");
+  rarp_client("eth0");
 
 #ifdef CONFIG_NETWORK_ROUTING
 
@@ -243,7 +225,7 @@ int_fast8_t		_main()
   pthread_create(&th, NULL, nfs_test, NULL);
 #endif
 
-#if 1
+#if 0
   pthread_create(&th, NULL, pf_packet_test, NULL);
 #endif
 
@@ -256,6 +238,37 @@ int_fast8_t		_main()
 
   timer_add_event(&timer_ms, &prof);
 #endif
+
+  return NULL;
+}
+
+
+/*
+ * test main.
+ */
+
+#ifndef LINUXSIM
+int_fast8_t		main()
+#else
+int_fast8_t		_main()
+#endif
+{
+  pthread_t th;
+  uint_fast32_t i;
+
+  for (i = 0; i < 10000000; i++)
+    ;
+
+  /*
+   * Enable AC (on linux sim)
+   */
+
+  asm volatile("	pushf						\n"
+	       "	orl	$0x40000, (%esp)			\n"
+	       "	popf						\n");
+
+
+  pthread_create(&th, NULL, net_up, NULL);
 
   return 0;
 }

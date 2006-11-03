@@ -53,7 +53,7 @@ static _SOCKET(socket_raw)
   /* setup private data */
   pv->layer = (domain == PF_PACKET ? 2 : 3);
   pv->proto = protocol;
-  pv->interface = NULL;
+  pv->interface = 0;
   pv->shutdown = -1;
   sem_init(&pv->recv_sem, 0, 0);
   packet_queue_lock_init(&pv->recv_q);
@@ -90,14 +90,14 @@ static _BIND(bind_raw)
       struct sockaddr_ll	*sll = (struct sockaddr_ll *)addr;
       struct net_if_s		*interface;
 
-      if (len < sizeof (struct sockaddr_ll))
+      if (len < sizeof (struct sockaddr_ll) || sll->sll_family != AF_PACKET)
 	return -1;
 
       /* bind to the given interface and protocol */
       if ((interface = if_get_by_index(sll->sll_ifindex)) == NULL)
 	return -1;
 
-      pv->interface = interface;
+      pv->interface = interface->index;
       pv->proto = ntohs(sll->sll_protocol);
 
       return 0;
@@ -127,11 +127,12 @@ static _GETSOCKNAME(getsockname_raw)
 	return -1;
 
       /* not bound... */
-      if (pv->interface == NULL)
+      if (pv->interface == 0)
 	return -1;
 
       /* fill socket name */
-      sll->sll_ifindex = pv->interface->index;
+      sll->sll_family = AF_PACKET;
+      sll->sll_ifindex = pv->interface;
       sll->sll_protocol = htons(pv->proto);
 
       *len = sizeof (struct sockaddr_ll);
@@ -261,6 +262,7 @@ static _SENDTO(sendto_raw)
 	  /* set the packet content */
 	  nethdr = &packet->header[packet->stage];
 	  nethdr->data = next;
+	  nethdr->size = n;
 	  memcpy(next, buf, n);
 	  packet->header[packet->stage + 1].data = NULL;
 	  packet->MAClen = sll->sll_halen;
@@ -298,6 +300,7 @@ static _RECVFROM(recvfrom_raw)
     packet = packet_queue_lock_head(&pv->recv_q);
   else
     packet = packet_queue_lock_pop(&pv->recv_q);
+
   if (packet == NULL)
     {
       sem_wait(&pv->recv_sem);
@@ -532,7 +535,10 @@ void			libsocket_signal(struct net_if_s	*interface,
       /* deliver packet to all sockets matching interface and protocol id */
       CONTAINER_FOREACH(socket_raw, DLIST, NOLOCK, &pf_packet,
       {
-	if (item->interface == NULL || item->interface == interface)
+	if (item->shutdown == SHUT_RD || item->shutdown == SHUT_RDWR)
+	  CONTAINER_FOREACH_CONTINUE;
+
+	if (item->interface == 0 || item->interface == interface->index)
 	  {
 	    if (item->proto == protocol || item->proto == ETH_P_ALL)
 	      {

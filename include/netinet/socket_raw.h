@@ -36,7 +36,7 @@ struct				socket_raw_pv_s
   uint_fast8_t			layer;
   net_proto_id_t		proto;
   bool_t			header;
-  struct net_if_s		*interface;
+  uint_fast32_t			interface;
   int				shutdown;
   packet_queue_root_t		recv_q;
   sem_t				recv_sem;

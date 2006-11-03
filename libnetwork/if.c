@@ -64,9 +64,6 @@ struct net_if_s	*if_register(struct device_s	*dev,
 			     uint8_t		*mac,
 			     uint_fast16_t	mtu)
 {
-  struct net_proto_s				*ip;
-  struct net_proto_s				*arp;
-  struct net_proto_s				*icmp;
   struct net_proto_s				*udp;
   struct net_proto_s				*tcp;
   struct net_if_s				*interface;
@@ -76,20 +73,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
   interface->rx_bytes = interface->rx_packets = interface->tx_bytes = interface->tx_packets = 0;
   net_protos_init(&interface->protocols);
 
-  /* XXX initialize standard protocols for the device */
-#ifdef CONFIG_NETWORK_IPV4
-  ip = net_alloc_proto(&ip_protocol);
-  arp = net_alloc_proto(&arp_protocol);
-  icmp = net_alloc_proto(&icmp_protocol);
-  if_register_proto(interface, arp);
-  if_register_proto(interface, icmp);
-#endif
-
-#ifdef CONFIG_NETWORK_RARP
-  interface->bootproto.rarp = net_alloc_proto(&rarp_protocol);
-  if_register_proto(interface, interface->bootproto.rarp, ip);
-#endif
-
+  /* initialize standard protocols for the device */
 #ifdef CONFIG_NETWORK_UDP
   udp = net_alloc_proto(&udp_protocol);
   if_register_proto(interface, udp);
@@ -98,29 +82,6 @@ struct net_if_s	*if_register(struct device_s	*dev,
   tcp = net_alloc_proto(&tcp_protocol);
   if_register_proto(interface, tcp);
 #endif
-
-  /* XXX a funny hack for testing, to be removed */
-  static uint_fast8_t chiche = 0;
-  if (!chiche)
-    {
-      interface->boottype = IF_BOOT_NONE;
-#ifdef CONFIG_NETWORK_IPV4
-      if_register_proto(interface, ip, arp, icmp, 0x0a0202f0, 0xffffff00);
-#endif
-#if 0
-      ip = net_alloc_proto(&ip_protocol);
-      if_register_proto(interface, ip, arp, icmp, 0x0a0202f1, 0xffffff00);
-#endif
-    }
-  else
-    {
-      interface->boottype = IF_BOOT_NONE;
-#ifdef CONFIG_NETWORK_IPV4
-      if_register_proto(interface, ip, arp, icmp, 0x0a020302, 0xffffff00);
-#endif
-      mtu = 520;
-    }
-  chiche = 1;
 
   /* copy properties and name the interface */
   interface->dev = dev;
@@ -167,21 +128,9 @@ void			if_up(char*		name, ...)
     {
       dev = interface->dev;
 
-      printf("Bringing up interface %s using %s...\n", name,
-	     interface->boottype == IF_BOOT_RARP ? "Reverse ARP" : "Static address");
+      printf("Bringing up interface %s\n", name);
 
-      switch (interface->boottype)
-	{
-	  case IF_BOOT_RARP:
-#ifdef CONFIG_NETWORK_RARP
-	    rarp_request(interface, interface->bootproto.rarp, NULL);
-#endif
-	    break;
-	  case IF_BOOT_DHCP:
-	    break;
-	  default:
-	    break;
-	}
+      /* XXX */
     }
 
   va_end(va);
@@ -202,6 +151,37 @@ void			if_down(char*		name, ...)
 
       /* XXX if_down */
     }
+}
+
+/*
+ * Configure an interface.
+ */
+
+error_t			if_config(int_fast32_t		ifindex,
+				  uint_fast8_t		action,
+				  struct net_addr_s	*address,
+				  struct net_addr_s	*mask)
+{
+  struct net_if_s	*interface = if_get_by_index(ifindex);
+  struct net_proto_s	*ip;
+  struct net_proto_s	*arp;
+  struct net_proto_s	*icmp;
+
+#ifdef CONFIG_NETWORK_IPV4
+  if (address->family == addr_ipv4)
+    {
+      ip = net_alloc_proto(&ip_protocol);
+      arp = net_alloc_proto(&arp_protocol);
+      icmp = net_alloc_proto(&icmp_protocol);
+      if_register_proto(interface, arp);
+      if_register_proto(interface, icmp);
+      if_register_proto(interface, ip, arp, icmp, IPV4_ADDR_GET(*address), IPV4_ADDR_GET(*mask));
+
+      return 0;
+    }
+#endif
+
+  return -1;
 }
 
 /*
@@ -240,14 +220,15 @@ void			if_pushpkt(struct net_if_s	*interface,
 
   packet->interface = interface;
 
+#ifdef CONFIG_NETWORK_SOCKET_RAW
+  libsocket_signal(interface, packet, packet->proto);
+#endif
+
   /* lookup to all modules matching the protocol  */
   for (item = net_protos_lookup(&interface->protocols, packet->proto);
        item != NULL;
        item = net_protos_lookup_next(&interface->protocols, item, packet->proto))
     {
-#ifdef CONFIG_NETWORK_SOCKET_RAW
-      libsocket_signal(interface, packet, packet->proto);
-#endif
       item->desc->pushpkt(interface, packet, item);
     }
 }
