@@ -34,6 +34,7 @@
 
 #include <netinet/if.h>
 #include <netinet/route.h>
+#include <netinet/libsocket.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -506,6 +507,9 @@ NET_PUSHPKT(ip_pushpkt)
 
   /* dispatch to the matching protocol */
   proto = hdr->protocol;
+#ifdef CONFIG_NETWORK_SOCKET_RAW
+  libsocket_signal(interface, packet, proto);
+#endif
   if ((p = net_protos_lookup(&interface->protocols, proto)))
     p->desc->pushpkt(interface, packet, p);
   else

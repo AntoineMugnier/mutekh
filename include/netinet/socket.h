@@ -146,6 +146,9 @@
 #define IP_DEFAULT_MULTICAST_LOOP	1
 #define IP_MAX_MEMBERSHIPS		20
 
+/* socklen type */
+typedef size_t socklen_t;
+
 /* Structure used to describe IP options for IP_OPTIONS and IP_RETOPTS.
    The `ip_dst' field is used for the first-hop gateway when using a
    source route (this gets put into the header proper).  */
@@ -170,6 +173,83 @@ struct in_pktinfo
     struct in_addr ipi_spec_dst;	/* Routing destination address  */
     struct in_addr ipi_addr;		/* Header destination address  */
   };
+
+/* I/O vector is used for messages */
+struct iovec
+  {
+    void *iov_base;	/* Pointer to data.  */
+    size_t iov_len;	/* Length of data.  */
+  };
+
+/* Structure describing messages sent by
+   `sendmsg' and received by `recvmsg'.  */
+struct msghdr
+  {
+    void *msg_name;		/* Address to send to/receive from.  */
+    socklen_t msg_namelen;	/* Length of address data.  */
+
+    struct iovec *msg_iov;	/* Vector of data to send/receive into.  */
+    size_t msg_iovlen;		/* Number of elements in the vector.  */
+
+    void *msg_control;		/* Ancillary data (eg BSD filedesc passing). */
+    size_t msg_controllen;	/* Ancillary data buffer length.  */
+
+    int msg_flags;		/* Flags on received message.  */
+  };
+
+/* Structure used for storage of ancillary data object information.  */
+struct cmsghdr
+  {
+    size_t cmsg_len;		/* Length of data in cmsg_data plus length
+				   of cmsghdr structure.  */
+    int cmsg_level;		/* Originating protocol.  */
+    int cmsg_type;		/* Protocol specific type.  */
+  };
+
+#define CMSG_DATA(cmsg) ((unsigned char *) ((struct cmsghdr *) (cmsg) + 1))
+
+/* for PF_PACKET */
+struct sockaddr_pkt
+{
+	unsigned short spkt_family;
+	unsigned char spkt_device[14];
+	unsigned short spkt_protocol;
+};
+
+struct sockaddr_ll
+{
+	unsigned short	sll_family;
+	unsigned short	sll_protocol;
+	int		sll_ifindex;
+	unsigned short	sll_hatype;
+	unsigned char	sll_pkttype;
+	unsigned char	sll_halen;
+	unsigned char	sll_addr[8];
+};
+
+/* Packet types */
+#define PACKET_HOST		0		/* To us		*/
+#define PACKET_BROADCAST	1		/* To all		*/
+#define PACKET_MULTICAST	2		/* To group		*/
+#define PACKET_OTHERHOST	3		/* To someone else 	*/
+#define PACKET_OUTGOING		4		/* Outgoing of any type */
+
+#define PACKET_ADD_MEMBERSHIP		1
+#define PACKET_DROP_MEMBERSHIP		2
+#define PACKET_RECV_OUTPUT		3
+
+struct packet_mreq
+{
+	int		mr_ifindex;
+	unsigned short	mr_type;
+	unsigned short	mr_alen;
+	unsigned char	mr_address[8];
+};
+
+#define PACKET_MR_MULTICAST	0
+#define PACKET_MR_PROMISC	1
+#define PACKET_MR_ALLMULTI	2
+
 
 /* The following constants should be used for the second parameter of
    `shutdown'.  */
@@ -216,10 +296,6 @@ struct in_pktinfo
 
 */
 
-/* socklen type */
-typedef size_t socklen_t;
-struct msghdr; /* XXX */
-
 struct socket_s;
 struct socket_api_s;
 
@@ -241,19 +317,19 @@ struct socket_api_s;
 				     int	protocol)
 
 #define _BIND(f)	int (f)(socket_t	fd,	\
-				struct sockaddr	addr,	\
+				struct sockaddr	*addr,	\
 				socklen_t	len)
 
 #define _GETSOCKNAME(f)	int (f)(socket_t	fd,	\
-				struct sockaddr	addr,	\
+				struct sockaddr	*addr,	\
 				socklen_t	*len)
 
 #define _CONNECT(f)	int (f)(socket_t	fd,	\
-				struct sockaddr	addr,	\
+				struct sockaddr	*addr,	\
 				socklen_t	len)
 
 #define _GETPEERNAME(f)	int (f)(socket_t	fd,	\
-				struct sockaddr	addr,	\
+				struct sockaddr	*addr,	\
 				socklen_t	*len)
 
 #define _SEND(f)	ssize_t (f)(socket_t	fd,	\
@@ -264,19 +340,19 @@ struct socket_api_s;
 #define _RECV(f)	ssize_t (f)(socket_t	fd,	\
 				    void	*buf,	\
 				    size_t	n,	\
-				    int		lags)
+				    int		flags)
 #define _SENDTO(f)	ssize_t (f)(socket_t		fd,		\
 				    const void		*buf,		\
 				    size_t		n,		\
 				    int			flags,		\
-				    struct sockaddr	addr,		\
+				    struct sockaddr	*addr,		\
 				    socklen_t		addr_len)
 
 #define _RECVFROM(f)	ssize_t (f)(socket_t		fd,		\
 				    void		*buf,		\
 				    size_t		n,		\
 				    int			flags,		\
-				    struct sockaddr	addr,		\
+				    struct sockaddr	*addr,		\
 				    socklen_t		*addr_len)
 
 #define _SENDMSG(f)	ssize_t (f)(socket_t		fd,		\
@@ -303,7 +379,7 @@ struct socket_api_s;
 				int		n)
 
 #define _ACCEPT(f)	int (f)(socket_t	fd,		\
-				struct sockaddr	addr,		\
+				struct sockaddr	*addr,		\
 				socklen_t	*addr_len)
 
 #define _SHUTDOWN(f)	int (f)(socket_t	fd,	\

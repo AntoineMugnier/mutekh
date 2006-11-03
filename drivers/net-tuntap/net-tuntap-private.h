@@ -19,38 +19,33 @@
 
 */
 
+#ifndef DRIVERS_TUNTAP_PRIVATE_H
+#define DRIVERS_TUNTAP_PRIVATE_H
 
 #include <hexo/types.h>
-#include <hexo/init.h>
-#include <hexo/cpu.h>
 #include <hexo/lock.h>
-#include <hexo/alloc.h>
 
-struct cpu_cld_s	*cpu_cld[1];
+#include <pthread.h>
 
-/* architecture specific init function */
-void arch_init()
+#include <netinet/packet.h>
+#include <netinet/ether.h>
+#include <netinet/protos.h>
+#include <netinet/if.h>
+
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_dlist.h>
+
+struct				net_tuntap_context_s
 {
+  sem_t				rcvsem;
+  pthread_t			dispatch;
+  packet_queue_root_t		rcvqueue;
+  lock_t			lock;
+  bool_t			run;
 
-  /* enable alignment check */
-#ifdef CONFIG_DEBUG
-  asm volatile("	pushf						\n"
-	       "	orl	$0x40000, (%esp)			\n"
-	       "	popf						\n");
+  uint8_t			mac[ETH_ALEN];
+  struct net_if_s		*interface;
+  int				fd;
+};
+
 #endif
-
-  mem_init();
-
-  /* run mutek_main() */
-  mutek_main(0, 0);
-}
-
-void arch_start_other_cpu(void)
-{
-}
-
-inline uint_fast8_t arch_get_cpu_count(void)
-{
-  return 1;
-}
-

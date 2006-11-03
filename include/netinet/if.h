@@ -61,6 +61,7 @@ typedef uint_fast8_t	net_if_type_t;
 struct					net_if_s
 {
   char					name[IFNAME_MAX_LEN];
+  int_fast32_t				index;
   struct device_s			*dev;
   const uint8_t				*mac;
   uint_fast16_t				mtu;
@@ -116,7 +117,8 @@ void	if_sendpkt(struct net_if_s	*interface,
 		   struct net_packet_s	*packet,
 		   net_proto_id_t	proto);
 void	if_stats(const char	*name);
-struct net_if_s	*if_get(const char	*name);
+struct net_if_s	*if_get_by_name(const char	*name);
+struct net_if_s	*if_get_by_index(int32_t	index);
 
 extern net_if_root_t	net_interfaces;
 

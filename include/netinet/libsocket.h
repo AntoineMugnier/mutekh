@@ -19,38 +19,16 @@
 
 */
 
+#ifndef NETINET_LIBSOCKET_H
+#define NETINET_LIBSOCKET_H
 
-#include <hexo/types.h>
-#include <hexo/init.h>
-#include <hexo/cpu.h>
-#include <hexo/lock.h>
-#include <hexo/alloc.h>
+#include <netinet/protos.h>
+#include <netinet/packet.h>
+#include <netinet/if.h>
 
-struct cpu_cld_s	*cpu_cld[1];
+void	libsocket_signal(struct net_if_s	*interface,
+			 struct net_packet_s	*packet,
+			 net_proto_id_t		protocol);
 
-/* architecture specific init function */
-void arch_init()
-{
-
-  /* enable alignment check */
-#ifdef CONFIG_DEBUG
-  asm volatile("	pushf						\n"
-	       "	orl	$0x40000, (%esp)			\n"
-	       "	popf						\n");
 #endif
-
-  mem_init();
-
-  /* run mutek_main() */
-  mutek_main(0, 0);
-}
-
-void arch_start_other_cpu(void)
-{
-}
-
-inline uint_fast8_t arch_get_cpu_count(void)
-{
-  return 1;
-}
 

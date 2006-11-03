@@ -28,6 +28,7 @@
 #define IPPROTO_TCP	6	/* Transmission Control Protocol.  */
 #define IPPROTO_UDP	17	/* User Datagram Protocol.  */
 #define IPPROTO_LWUDP	136	/* UDP Lite */
+#define IPPROTO_RAW	255	/* Raw IP packets.  */
 
 /* Definitions of the bits in an Internet address integer.
 

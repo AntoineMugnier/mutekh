@@ -71,7 +71,7 @@ static inline void	icmp_echo(struct net_if_s	*interface,
   struct net_header_s	*nethdr;
   uint_fast32_t		xchg;
 
-  packet_obj_refnew(packet);
+  packet_obj_refnew(packet); /* XXX dup */
 
   net_debug("Pong\n");
 

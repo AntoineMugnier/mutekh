@@ -32,10 +32,10 @@ typedef struct socket_s *socket_t;
 socket_t			socket(int domain, int type, int protocol);
 
 /* Give the socket FD the local address ADDR (which is LEN bytes long).  */
-#define bind(fd, ...)		(fd)->f.bind(fd, __VA_ARGS__)
+#define bind(fd, ...)		(fd)->f->bind(fd, __VA_ARGS__)
 
 /* Put the local address of FD into *ADDR and its length in *LEN.  */
-#define getsockname(fd, ...)	(fd)->f.getsockname(fd, __VA_ARGS__)
+#define getsockname(fd, ...)	(fd)->f->getsockname(fd, __VA_ARGS__)
 
 /* Open a connection on socket FD to peer at ADDR (which LEN bytes long).
    For connectionless socket types, just set the default address to send to
@@ -44,31 +44,31 @@ socket_t			socket(int domain, int type, int protocol);
 
    This function is a cancellation point and therefore not marked with
   .  */
-#define connect(fd, ...)	(fd)->f.connect(fd, __VA_ARGS__)
+#define connect(fd, ...)	(fd)->f->connect(fd, __VA_ARGS__)
 
 /* Put the address of the peer connected to socket FD into *ADDR
    (which is *LEN bytes long), and its actual length into *LEN.  */
-#define getpeername(fd, ...)	(fd)->f.getpeername(fd, __VA_ARGS__)
+#define getpeername(fd, ...)	(fd)->f->getpeername(fd, __VA_ARGS__)
 
 /* Send N bytes of BUF to socket FD.  Returns the number sent or -1.
 
    This function is a cancellation point and therefore not marked with
   .  */
-#define send(fd, ...)		(fd)->f.send(fd, __VA_ARGS__)
+#define send(fd, ...)		(fd)->f->send(fd, __VA_ARGS__)
 
 /* Read N bytes into BUF from socket FD.
    Returns the number read or -1 for errors.
 
    This function is a cancellation point and therefore not marked with
   .  */
-#define recv(fd, ...)		(fd)->f.recv(fd, __VA_ARGS__)
+#define recv(fd, ...)		(fd)->f->recv(fd, __VA_ARGS__)
 
 /* Send N bytes of BUF on socket FD to peer at address ADDR (which is
    ADDR_LEN bytes long).  Returns the number sent, or -1 for errors.
 
    This function is a cancellation point and therefore not marked with
   .  */
-#define sendto(fd, ...)		(fd)->f.sendto(fd, __VA_ARGS__)
+#define sendto(fd, ...)		(fd)->f->sendto(fd, __VA_ARGS__)
 
 /* Read N bytes into BUF through socket FD.
    If ADDR is not NULL, fill in *ADDR_LEN bytes of it with tha address of
@@ -77,36 +77,36 @@ socket_t			socket(int domain, int type, int protocol);
 
    This function is a cancellation point and therefore not marked with
   .  */
-#define recvfrom(fd, ...)	(fd)->f.recvfrom(fd, __VA_ARGS__)
+#define recvfrom(fd, ...)	(fd)->f->recvfrom(fd, __VA_ARGS__)
 
 /* Send a message described MESSAGE on socket FD.
    Returns the number of bytes sent, or -1 for errors.
 
    This function is a cancellation point and therefore not marked with
   .  */
-#define sendmsg(fd, ...)	(fd)->f.sendmsg(fd, __VA_ARGS__)
+#define sendmsg(fd, ...)	(fd)->f->sendmsg(fd, __VA_ARGS__)
 
 /* Receive a message as described by MESSAGE from socket FD.
    Returns the number of bytes read or -1 for errors.
 
    This function is a cancellation point and therefore not marked with
   .  */
-#define recvmsg(fd, ...)	(fd)->f.recvmsg(fd, __VA_ARGS__)
+#define recvmsg(fd, ...)	(fd)->f->recvmsg(fd, __VA_ARGS__)
 
 /* Put the current value for socket FD's option OPTNAME at protocol level LEVEL
    into OPTVAL (which is *OPTLEN bytes long), and set *OPTLEN to the value's
    actual length.  Returns 0 on success, -1 for errors.  */
-#define getsockopt(fd, ...)	(fd)->f.getsockopt(fd, __VA_ARGS__)
+#define getsockopt(fd, ...)	(fd)->f->getsockopt(fd, __VA_ARGS__)
 
 /* Set socket FD's option OPTNAME at protocol level LEVEL
    to *OPTVAL (which is OPTLEN bytes long).
    Returns 0 on success, -1 for errors.  */
-#define setsockopt(fd, ...)	(fd)->f.setsockopt(fd, __VA_ARGS__)
+#define setsockopt(fd, ...)	(fd)->f->setsockopt(fd, __VA_ARGS__)
 
 /* Prepare to accept connections on socket FD.
    N connection requests will be queued before further requests are refused.
    Returns 0 on success, -1 for errors.  */
-#define listen(fd, ...)		(fd)->f.listen(fd, __VA_ARGS__)
+#define listen(fd, ...)		(fd)->f->listen(fd, __VA_ARGS__)
 
 /* Await a connection on socket FD.
    When a connection arrives, open a new socket to communicate with it,
@@ -116,7 +116,7 @@ socket_t			socket(int domain, int type, int protocol);
 
    This function is a cancellation point and therefore not marked with
   .  */
-#define accept(fd, ...)		(fd)->f.accept(fd, __VA_ARGS__)
+#define accept(fd, ...)		(fd)->f->accept(fd, __VA_ARGS__)
 
 /* Shut down all or part of the connection open on socket FD.
    HOW determines what to shut down:
@@ -124,6 +124,6 @@ socket_t			socket(int domain, int type, int protocol);
      SHUT_WR   = No more transmissions;
      SHUT_RDWR = No more receptions or transmissions.
    Returns 0 on success, -1 for errors.  */
-#define shutdown(fd, ...)	(fd)->f.shutdown(fd, __VA_ARGS__)
+#define shutdown(fd, ...)	(fd)->f->shutdown(fd, __VA_ARGS__)
 
 #endif

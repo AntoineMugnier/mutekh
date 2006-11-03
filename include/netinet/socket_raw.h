@@ -22,9 +22,28 @@
 #ifndef NETINET_SOCKET_RAW_H
 #define NETINET_SOCKET_RAW_H
 
-struct			socket_raw_pv_s
-{
+#include <netinet/packet.h>
+#include <netinet/protos.h>
+#include <netinet/if.h>
 
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_dlist.h>
+
+#include <semaphore.h>
+
+struct				socket_raw_pv_s
+{
+  uint_fast8_t			layer;
+  net_proto_id_t		proto;
+  bool_t			header;
+  struct net_if_s		*interface;
+  int				shutdown;
+  packet_queue_root_t		recv_q;
+  sem_t				recv_sem;
+
+  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
 };
+
+CONTAINER_TYPE(socket_raw, DLIST, struct socket_raw_pv_s, NOLOCK, NOOBJ, list_entry);
 
 #endif

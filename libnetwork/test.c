@@ -29,6 +29,7 @@
 #include <netinet/libtcp.h>
 #include <netinet/tcp.h>
 #include <netinet/nfs.h>
+#include <netinet/socket.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -145,6 +146,31 @@ void			*nfs_test(void *p)
 }
 #endif
 
+void			*pf_packet_test(void *p)
+{
+  uint8_t		buff[1514];
+  socket_t		s;
+  ssize_t		sz;
+  struct sockaddr_ll	addr;
+  socklen_t		addrlen = sizeof (addr);
+
+  s = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+
+  assert(s != NULL);
+
+  addr.sll_ifindex = 1;
+  addr.sll_protocol = htons(ETH_P_ARP);
+  assert(bind(s, (struct sockaddr *)&addr, addrlen) >= 0);
+
+  while ((sz = recvfrom(s, buff, sizeof (buff), 0, (struct sockaddr *)&addr, &addrlen)) > 0)
+    {
+      printf("\n\n\n%P\n", buff, sz);
+    }
+
+  return NULL;
+}
+
+
 #ifdef CONFIG_NETWORK_PROFILING
 static TIMER_CALLBACK(profiling)
 {
@@ -185,7 +211,7 @@ int_fast8_t		_main()
   struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
 
-  route->interface = if_get("eth0");
+  route->interface = if_get_by_name("eth0");
   IPV4_ADDR_SET(route->target, 0x0a020200);
   IPV4_ADDR_SET(route->mask, 0xffffff00);
   route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
@@ -193,7 +219,7 @@ int_fast8_t		_main()
 
   route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
-  route->interface = if_get("eth1");
+  route->interface = if_get_by_name("eth1");
   IPV4_ADDR_SET(route->target, 0x0a020300);
   IPV4_ADDR_SET(route->mask, 0xffffff00);
   route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
@@ -215,6 +241,10 @@ int_fast8_t		_main()
 
 #if 0
   pthread_create(&th, NULL, nfs_test, NULL);
+#endif
+
+#if 1
+  pthread_create(&th, NULL, pf_packet_test, NULL);
 #endif
 
 #ifdef CONFIG_NETWORK_PROFILING

@@ -188,7 +188,7 @@ static inline void	arp_reply(struct net_if_s		*interface,
   struct ether_arp	*hdr;
   struct net_header_s	*nethdr;
 
-  packet_obj_refnew(packet);
+  packet_obj_refnew(packet); /* XXX dup */
 
   /* get the header */
   nethdr = &packet->header[packet->stage];

@@ -151,6 +151,15 @@ uint16_t		packet_memcpy(void		*dst,
 
 
 /*
+ * clone a packet if refcount > 1
+ */
+
+struct net_packet_s		*packet_dup(struct net_packet_s	*orig)
+{
+  return orig; /* XXX */
+}
+
+/*
  * packet queue functions.
  */
 

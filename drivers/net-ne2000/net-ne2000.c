@@ -593,14 +593,17 @@ DEVNET_SENDPKT(net_ne2000_sendpkt)
   struct ether_header		*hdr;
   struct net_header_s		*nethdr;
 
-  /* get a pointer to the header */
-  nethdr = &packet->header[0];
-  hdr = (struct ether_header*)nethdr->data;
+  if (packet->stage == 0)
+    {
+      /* get a pointer to the header */
+      nethdr = &packet->header[0];
+      hdr = (struct ether_header*)nethdr->data;
 
-  /* fill the header */
-  memcpy(hdr->ether_shost, packet->sMAC, packet->MAClen);
-  memcpy(hdr->ether_dhost, packet->tMAC, packet->MAClen);
-  net_be16_store(hdr->ether_type, proto);
+      /* fill the header */
+      memcpy(hdr->ether_shost, packet->sMAC, packet->MAClen);
+      memcpy(hdr->ether_dhost, packet->tMAC, packet->MAClen);
+      net_be16_store(hdr->ether_type, proto);
+    }
 
   /* take lock */
   lock_spin_irq(&pv->lock);

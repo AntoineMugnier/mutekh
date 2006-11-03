@@ -148,10 +148,11 @@ struct				net_packet_s
 {
   struct net_packet_s		*parent;
   struct net_header_s		header[NETWORK_MAX_STAGES];
-  uint_fast8_t			stage;		/* current stage */
+  int_fast8_t			stage;		/* current stage */
   uint8_t			*packet;	/* raw packet */
   uint8_t			*sMAC;		/* source MAC address */
   const uint8_t			*tMAC;		/* target MAC address */
+  struct net_if_s		*interface;
   struct net_proto_s		*source_addressing;
   struct net_addr_s		sADDR;		/* source protocol address */
   struct net_addr_s		tADDR;		/* target protocol address */

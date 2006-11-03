@@ -3,6 +3,10 @@ ifeq ($(CONFIG_DRIVER_NET_NE2000), defined)
  subdirs += net-ne2000
 endif
 
+ifeq ($(CONFIG_DRIVER_NET_TUNTAP), defined)
+ subdirs += net-tuntap
+endif
+
 ifeq ($(CONFIG_DRIVER_CHAR_SOCLIBTTY), defined)
  subdirs += tty-soclib
 endif

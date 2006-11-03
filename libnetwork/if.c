@@ -28,6 +28,7 @@
 #include <netinet/icmp.h>
 #include <netinet/udp.h>
 #include <netinet/tcp.h>
+#include <netinet/libsocket.h>
 
 #include <hexo/device/net.h>
 #include <hexo/device.h>
@@ -128,7 +129,9 @@ struct net_if_s	*if_register(struct device_s	*dev,
   if (type == IF_ETHERNET)
     sprintf(interface->name, "eth%d", ethid++);
   else
-    sprintf(interface->name, "if%d", ifid++);
+    sprintf(interface->name, "if%d", ifid);
+  ifid++;
+  interface->index = ifid;
 
   /* add to the interface list */
   net_if_push(&net_interfaces, interface);
@@ -235,11 +238,18 @@ void			if_pushpkt(struct net_if_s	*interface,
   interface->rx_bytes += packet->header[0].size;
   interface->rx_packets++;
 
+  packet->interface = interface;
+
   /* lookup to all modules matching the protocol  */
   for (item = net_protos_lookup(&interface->protocols, packet->proto);
        item != NULL;
        item = net_protos_lookup_next(&interface->protocols, item, packet->proto))
-    item->desc->pushpkt(interface, packet, item);
+    {
+#ifdef CONFIG_NETWORK_SOCKET_RAW
+      libsocket_signal(interface, packet, packet->proto);
+#endif
+      item->desc->pushpkt(interface, packet, item);
+    }
 }
 
 /*
@@ -301,7 +311,21 @@ void			if_stats(const char	*name)
  * Get interface from name.
  */
 
-struct net_if_s	*if_get(const char	*name)
+struct net_if_s	*if_get_by_name(const char	*name)
 {
   return net_if_lookup(&net_interfaces, name);
 }
+
+/*
+ * Get interface from name.
+ */
+
+struct net_if_s	*if_get_by_index(int_fast32_t	index)
+{
+  char	name[10];
+
+  /* XXX */
+  sprintf(name, "eth%d", index - 1);
+  return if_get_by_name(name);
+}
+

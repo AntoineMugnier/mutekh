@@ -19,38 +19,25 @@
 
 */
 
+/*
+ * Linux simulation. TUN/TAP driver.
+ */
 
-#include <hexo/types.h>
-#include <hexo/init.h>
-#include <hexo/cpu.h>
-#include <hexo/lock.h>
-#include <hexo/alloc.h>
+#ifndef DRIVERS_TUNTAP_H
+#define DRIVERS_TUNTAP_H
 
-struct cpu_cld_s	*cpu_cld[1];
+#include <hexo/device/net.h>
+#include <hexo/device.h>
 
-/* architecture specific init function */
-void arch_init()
-{
+DEV_IRQ(net_tuntap_irq);
+DEV_INIT(net_tuntap_init);
+DEV_CLEANUP(net_tuntap_cleanup);
+DEVNET_PREPAREPKT(net_tuntap_preparepkt);
+DEVNET_SENDPKT(net_tuntap_sendpkt);
 
-  /* enable alignment check */
-#ifdef CONFIG_DEBUG
-  asm volatile("	pushf						\n"
-	       "	orl	$0x40000, (%esp)			\n"
-	       "	popf						\n");
+#ifndef CONFIG_STATIC_DRIVERS
+extern const struct driver_s	net_tuntap_drv;
 #endif
 
-  mem_init();
-
-  /* run mutek_main() */
-  mutek_main(0, 0);
-}
-
-void arch_start_other_cpu(void)
-{
-}
-
-inline uint_fast8_t arch_get_cpu_count(void)
-{
-  return 1;
-}
+#endif
 
