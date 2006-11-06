@@ -220,8 +220,8 @@ void			if_pushpkt(struct net_if_s	*interface,
 
   packet->interface = interface;
 
-#ifdef CONFIG_NETWORK_SOCKET_RAW
-  libsocket_signal(interface, packet, packet->proto);
+#ifdef CONFIG_NETWORK_SOCKET_PACKET
+  pf_packet_signal(interface, packet, packet->proto);
 #endif
 
   /* lookup to all modules matching the protocol  */

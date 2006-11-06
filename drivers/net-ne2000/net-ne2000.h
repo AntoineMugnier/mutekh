@@ -36,6 +36,7 @@ DEV_INIT(net_ne2000_init);
 DEV_CLEANUP(net_ne2000_cleanup);
 DEVNET_PREPAREPKT(net_ne2000_preparepkt);
 DEVNET_SENDPKT(net_ne2000_sendpkt);
+DEVNET_SETOPT(net_ne2000_setopt);
 
 #ifndef CONFIG_STATIC_DRIVERS
 extern const struct driver_s	net_ne2000_drv;

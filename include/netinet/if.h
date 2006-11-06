@@ -116,6 +116,10 @@ void	if_stats(const char	*name);
 struct net_if_s	*if_get_by_name(const char	*name);
 struct net_if_s	*if_get_by_index(int32_t	index);
 
+#ifdef CONFIG_NETWORK_RARP
+error_t			rarp_client(const char	*ifname);
+#endif
+
 extern net_if_root_t	net_interfaces;
 
 #endif

@@ -82,10 +82,10 @@ socket_t			socket(int domain, int type, int protocol)
 	      return error;
 	  }
 	break;
-#ifdef CONFIG_NETWORK_SOCKET_RAW
+#ifdef CONFIG_NETWORK_SOCKET_PACKET
       /* Packet sockets, used to write Layer 2 protocols */
       case PF_PACKET:
-	api = &raw_socket;
+	api = &packet_socket;
 	break;
 #endif
       default:
@@ -100,4 +100,95 @@ socket_t			socket(int domain, int type, int protocol)
 #else
 # error Neither CONFIG_NETWORK_SOCKET_HEXO nor CONFIG_NETWORK_SOCKET_POSIX are defined.
 #endif
+}
+
+/*
+ * Receive a chunk of data.
+ */
+
+_RECV(recv)
+{
+  return recvfrom(fd, buf, n, flags, NULL, NULL);
+}
+
+/*
+ * Send some data.
+ */
+
+_SEND(send)
+{
+  return sendto(fd, buf, n, flags, NULL, 0);
+}
+
+/*
+ * Send a message.
+ */
+
+_SENDMSG(sendmsg)
+{
+  ssize_t	ret;
+  uint8_t	*buf;
+  size_t	n = 0;
+  size_t	i;
+
+  /* determine the total size */
+  for (i = 0; i < message->msg_iovlen; i++)
+    n += message->msg_iov[i].iov_len;
+
+  /* allocate a buffer large enough */
+  if ((buf = mem_alloc(n, MEM_SCOPE_SYS)) == NULL)
+    return -1;
+
+  /* build the buffer */
+  for (i = 0, n = 0; i < message->msg_iovlen; i++)
+    {
+      struct iovec	*v = &message->msg_iov[i];
+      memcpy(buf + n, v->iov_base, v->iov_len);
+      n += v->iov_len;
+    }
+
+  /* send & free */
+  ret = sendto(fd, buf, n, flags, message->msg_name, message->msg_namelen);
+  mem_free(buf);
+
+  return ret;
+}
+
+/*
+ * Receive a message.
+ */
+
+_RECVMSG(recvmsg)
+{
+  ssize_t	ret;
+  uint8_t	*buf;
+  size_t	n = 0;
+  size_t	i;
+
+  /* determine the total size */
+  for (i = 0; i < message->msg_iovlen; i++)
+    n += message->msg_iov[i].iov_len;
+
+  /* allocate a buffer large enough */
+  if ((buf = mem_alloc(n, MEM_SCOPE_SYS)) == NULL)
+    return -1;
+
+  /* receive the data */
+  ret = recvfrom(fd, buf, n, flags, message->msg_name, &message->msg_namelen);
+
+  /* pack into multiple vectors */
+  for (i = 0, n = 0; i < message->msg_iovlen; i++)
+    {
+      struct iovec	*v = &message->msg_iov[i];
+
+      if (n + v->iov_len > ret)
+	memcpy(v->iov_base, buf + n, ret - n);
+      else
+	memcpy(v->iov_base, buf + n, v->iov_len);
+      n += v->iov_len;
+    }
+
+  mem_free(buf);
+
+  return ret;
 }

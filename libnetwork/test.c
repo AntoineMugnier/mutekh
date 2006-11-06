@@ -29,6 +29,7 @@
 #include <netinet/libtcp.h>
 #include <netinet/tcp.h>
 #include <netinet/nfs.h>
+#include <netinet/ping.h>
 #include <netinet/socket.h>
 
 #include <stdio.h>
@@ -153,14 +154,20 @@ void			*pf_packet_test(void *p)
   ssize_t		sz;
   struct sockaddr_ll	addr;
   socklen_t		addrlen = sizeof (addr);
+  struct packet_mreq	req;
 
   s = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 
   assert(s != NULL);
 
+  addr.sll_family = AF_PACKET;
   addr.sll_ifindex = 1;
-  addr.sll_protocol = htons(ETH_P_ARP);
+  addr.sll_protocol = htons(ETH_P_ALL);
   assert(bind(s, (struct sockaddr *)&addr, addrlen) >= 0);
+
+  req.mr_ifindex = 1;
+  req.mr_type = PACKET_MR_PROMISC;
+  assert(setsockopt(s, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &req, sizeof (req)) >= 0);
 
   while ((sz = recvfrom(s, buff, sizeof (buff), 0, (struct sockaddr *)&addr, &addrlen)) > 0)
     {
@@ -186,7 +193,9 @@ void *net_up(void *p)
   if_up("eth0");
   if_up("eth1");
 
+#ifdef CONFIG_NETWORK_RARP
   rarp_client("eth0");
+#endif
 
 #ifdef CONFIG_NETWORK_ROUTING
 
@@ -207,6 +216,15 @@ void *net_up(void *p)
   route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
   route_add(route);
 
+#endif
+
+#ifdef CONFIG_NETWORK_PING
+  struct net_addr_s	addr;
+  struct ping_s		stat;
+
+  IPV4_ADDR_SET(addr, 0x0a020201);
+
+  ping(&addr, 3, 56, &stat);
 #endif
 
 #ifdef CONFIG_NETWORK_UDP

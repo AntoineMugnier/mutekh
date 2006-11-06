@@ -90,6 +90,7 @@ const struct driver_s	net_ne2000_drv =
   .f.net = {
     .f_preparepkt	= net_ne2000_preparepkt,
     .f_sendpkt		= net_ne2000_sendpkt,
+    .f_setopt		= net_ne2000_setopt,
   }
 };
 #endif
@@ -625,4 +626,36 @@ DEVNET_SENDPKT(net_ne2000_sendpkt)
 
   /* release lock */
   lock_release_irq(&pv->lock);
+}
+
+/*
+ * Setup driver level options.
+ */
+
+DEVNET_SETOPT(net_ne2000_setopt)
+{
+  struct net_ne2000_context_s	*pv = dev->drv_pv;
+
+  switch (option)
+    {
+      case DEV_NET_OPT_PROMISC:
+	{
+	  uint8_t	rcr;
+
+	  ne2000_page(dev, NE2000_P2);
+	  rcr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_RCR);
+	  if (value)
+	    rcr |= NE2000_PROMISCUOUS;
+	  else
+	    rcr &= ~NE2000_PROMISCUOUS;
+	  printf("%s: %s promiscuous mode\n", pv->interface->name, value ? "entering" : "leaving");
+	  ne2000_page(dev, NE2000_P0);
+	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RCR, rcr);
+	}
+	break;
+      default:
+	return -1;
+    }
+
+  return 0;
 }

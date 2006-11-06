@@ -26,9 +26,17 @@
 #include <netinet/packet.h>
 #include <netinet/if.h>
 
-void	libsocket_signal(struct net_if_s	*interface,
+#ifdef CONFIG_NETWORK_SOCKET_PACKET
+void	pf_packet_signal(struct net_if_s	*interface,
 			 struct net_packet_s	*packet,
 			 net_proto_id_t		protocol);
+#endif
+
+#ifdef CONFIG_NETWORK_SOCKET_RAW
+void	sock_raw_signal(struct net_proto_s	*addressing,
+			struct net_packet_s	*packet,
+			net_proto_id_t		protocol);
+#endif
 
 #endif
 

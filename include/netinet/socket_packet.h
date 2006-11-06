@@ -19,8 +19,8 @@
 
 */
 
-#ifndef NETINET_SOCKET_RAW_H
-#define NETINET_SOCKET_RAW_H
+#ifndef NETINET_SOCKET_PACKET_H
+#define NETINET_SOCKET_PACKET_H
 
 #include <netinet/packet.h>
 #include <netinet/protos.h>
@@ -31,19 +31,11 @@
 
 #include <semaphore.h>
 
-struct				socket_raw_pv_s
+struct				socket_packet_pv_s
 {
   net_proto_id_t		proto;
   bool_t			header;
-
-  uint_fast32_t			family;
-  struct net_addr_s		local;
-  struct net_addr_s		remote;
-  bool_t			any;
-  bool_t			connected;
-  struct net_if_s		*interface;
-  struct net_proto_s		*addressing;
-
+  uint_fast32_t			interface;
   int				shutdown;
   packet_queue_root_t		recv_q;
   sem_t				recv_sem;
@@ -51,6 +43,6 @@ struct				socket_raw_pv_s
   CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
 };
 
-CONTAINER_TYPE(socket_raw, DLIST, struct socket_raw_pv_s, NOLOCK, NOOBJ, list_entry);
+CONTAINER_TYPE(socket_packet, DLIST, struct socket_packet_pv_s, NOLOCK, NOOBJ, list_entry);
 
 #endif

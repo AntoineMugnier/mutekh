@@ -413,12 +413,8 @@ struct			socket_api_s
   _getsockname_t	*getsockname;
   _connect_t		*connect;
   _getpeername_t	*getpeername;
-  _send_t		*send;
-  _recv_t		*recv;
   _sendto_t		*sendto;
   _recvfrom_t		*recvfrom;
-  _sendmsg_t		*sendmsg;
-  _recvmsg_t		*recvmsg;
   _getsockopt_t		*getsockopt;
   _setsockopt_t		*setsockopt;
   _listen_t		*listen;
@@ -426,11 +422,27 @@ struct			socket_api_s
   _shutdown_t		*shutdown;
 };
 
+/*
+ * Common operations.
+ */
+
+_RECV(recv);
+_SEND(send);
+_RECVMSG(recvmsg);
+_SENDMSG(sendmsg);
+
+/*
+ * Dispatch structure instances.
+ */
+
 #ifdef CONFIG_NETWORK_UDP
 extern const struct socket_api_s	udp_socket;
 #endif
 #ifdef CONFIG_NETWORK_TDP
 extern const struct socket_api_s	tcp_socket;
+#endif
+#ifdef CONFIG_NETWORK_SOCKET_PACKET
+extern const struct socket_api_s	packet_socket;
 #endif
 #ifdef CONFIG_NETWORK_SOCKET_RAW
 extern const struct socket_api_s	raw_socket;

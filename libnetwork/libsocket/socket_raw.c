@@ -27,17 +27,15 @@
 #include <netinet/socket.h>
 #include <netinet/socket_raw.h>
 #include <netinet/if.h>
+#include <netinet/route.h>
 #include <netinet/arp.h>
 
 #include <hexo/alloc.h>
 
 #include <semaphore.h>
 
-static _RECVFROM(recvfrom_raw);
-
 CONTAINER_FUNC(static inline, socket_raw, DLIST, socket_raw, NOLOCK);
 
-static socket_raw_root_t	pf_packet = CONTAINER_ROOT_INITIALIZER(socket_raw, DLIST, NOLOCK);
 static socket_raw_root_t	sock_raw = CONTAINER_ROOT_INITIALIZER(socket_raw, DLIST, NOLOCK);
 
 /*
@@ -47,32 +45,34 @@ static socket_raw_root_t	sock_raw = CONTAINER_ROOT_INITIALIZER(socket_raw, DLIST
 static _SOCKET(socket_raw)
 {
   struct socket_raw_pv_s	*pv;
+
   pv = fd->pv = mem_alloc(sizeof (struct socket_raw_pv_s), MEM_SCOPE_NETWORK);
 
   protocol = ntohs(protocol);
   /* setup private data */
-  pv->layer = (domain == PF_PACKET ? 2 : 3);
+  switch (domain)
+    {
+      case PF_INET:
+	IPV4_ADDR_SET(pv->local, INADDR_ANY);
+	IPV4_ADDR_SET(pv->remote, INADDR_NONE);
+	pv->any = 1;
+	pv->connected = 0;
+	pv->family = AF_INET;
+	break;
+      case PF_INET6:
+	/* IPV6 */
+      default:
+	mem_free(pv);
+	return NULL;
+    }
   pv->proto = protocol;
-  pv->interface = 0;
   pv->shutdown = -1;
   sem_init(&pv->recv_sem, 0, 0);
   packet_queue_lock_init(&pv->recv_q);
 
   /* determine if headers must be included or not */
-  switch (domain)
-    {
-      case PF_PACKET:
-	pv->header = (type == SOCK_RAW);
-	socket_raw_push(&pf_packet, pv);
-	break;
-      case PF_INET:
-      case PF_INET6:
-	pv->header = (protocol == IPPROTO_RAW);
-	socket_raw_push(&sock_raw, pv);
-	break;
-      default:
-	assert(0);
-    }
+  pv->header = (protocol == IPPROTO_RAW);
+  socket_raw_push(&sock_raw, pv);
 
   return fd;
 }
@@ -84,30 +84,60 @@ static _SOCKET(socket_raw)
 static _BIND(bind_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-  /* on PF_PACKET */
-  if (pv->layer == 2)
+  struct sockaddr_in		*in;
+  struct net_if_s		*interface = NULL;
+  struct net_proto_s		*addressing = NULL;
+  net_proto_id_t		id;
+  struct net_addr_s		address;
+  bool_t			any;
+
+  if (addr->sa_family != pv->family)
+    return -1;
+
+  /* do protocol dependent things */
+  switch (addr->sa_family)
     {
-      struct sockaddr_ll	*sll = (struct sockaddr_ll *)addr;
-      struct net_if_s		*interface;
+      case AF_INET:
+	{
+	  uint_fast32_t	ip;
 
-      if (len < sizeof (struct sockaddr_ll) || sll->sll_family != AF_PACKET)
+	  if (len < sizeof (struct sockaddr_in))
+	    return -1;
+
+	  in = (struct sockaddr_in *)addr;
+	  id = ETHERTYPE_IP;
+	  ip = ntohl(in->sin_addr.s_addr);
+	  any = (ip == INADDR_ANY);
+	  IPV4_ADDR_SET(address, ip);
+	}
+	break;
+      case AF_INET6:
+	/* IPV6 */
+      default:
 	return -1;
-
-      /* bind to the given interface and protocol */
-      if ((interface = if_get_by_index(sll->sll_ifindex)) == NULL)
-	return -1;
-
-      pv->interface = interface->index;
-      pv->proto = ntohs(sll->sll_protocol);
-
-      return 0;
-    }
-  else /* on SOCK_RAW */
-    {
-
     }
 
-  return -1;
+  /* look for address validity */
+  CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
+  {
+    interface = item;
+    for (addressing = net_protos_lookup(&interface->protocols, id);
+	 addressing != NULL;
+	 addressing = net_protos_lookup_next(&interface->protocols, addressing, id))
+      if (addressing->desc->f.addressing->matchaddr(addressing, &address, NULL, NULL))
+	goto ok;
+
+  });
+
+ ok:
+  if (interface == NULL || addressing == NULL)
+    return -1;
+
+  /* setup the local address */
+  memcpy(&pv->local, &address, sizeof (struct net_addr_s));
+  pv->any = any;
+
+  return 0;
 }
 
 /*
@@ -118,33 +148,27 @@ static _GETSOCKNAME(getsockname_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
 
-  /* on PF_PACKET */
-  if (pv->layer == 2)
+  if (pv->local.family == addr_ipv4)
     {
-      struct sockaddr_ll	*sll = (struct sockaddr_ll *)addr;
+      struct sockaddr_in	*in = (struct sockaddr_in *)addr;
 
-      if (*len < sizeof (struct sockaddr_ll))
+      if (*len < sizeof (struct sockaddr_in))
 	return -1;
 
-      /* not bound... */
-      if (pv->interface == 0)
-	return -1;
+      /* fill the address structure */
+      in->sin_family = AF_INET;
+      in->sin_port = htons(pv->proto);
+      in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(pv->local));
 
-      /* fill socket name */
-      sll->sll_family = AF_PACKET;
-      sll->sll_ifindex = pv->interface;
-      sll->sll_protocol = htons(pv->proto);
-
-      *len = sizeof (struct sockaddr_ll);
+      *len = sizeof (struct sockaddr_in);
 
       return 0;
     }
-  else /* on SOCK_RAW */
+  else
     {
-
+      /* IPV6 */
+      return -1;
     }
-
-  return -1;
 }
 
 /*
@@ -154,12 +178,38 @@ static _GETSOCKNAME(getsockname_raw)
 static _CONNECT(connect_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
+  struct sockaddr_in		*in;
+  struct net_addr_s		dest;
+  struct net_route_s		*route;
 
-  /* not supported on PF_PACKET */
-  if (pv->layer == 2)
+  if (addr->sa_family != pv->family)
     return -1;
 
-  return -1;
+  switch (addr->sa_family)
+    {
+      case AF_INET:
+	in = (struct sockaddr_in *)addr;
+
+	if (len < sizeof (struct sockaddr_in))
+	  return -1;
+
+	IPV4_ADDR_SET(dest, ntohl(in->sin_addr.s_addr));
+	break;
+      case AF_INET6:
+	/* IPV6 */
+      default:
+	return -1;
+    }
+
+  if ((route = route_get(&dest)) == NULL)
+    return -1;
+
+  memcpy(&pv->remote, &dest, sizeof (struct net_addr_s));
+  pv->interface = route->interface;
+  pv->addressing = route->addressing;
+  pv->connected = 1;
+
+  return 0;
 }
 
 /*
@@ -170,35 +220,30 @@ static _GETPEERNAME(getpeername_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
 
-  /* not supported on PF_PACKET */
-  if (pv->layer == 2)
+  if (!pv->connected)
     return -1;
 
-  return -1;
-}
+  if (pv->local.family == addr_ipv4)
+    {
+      struct sockaddr_in	*in = (struct sockaddr_in *)addr;
 
-/*
- * Send a chunk of data.
- */
+      if (*len < sizeof (struct sockaddr_in))
+	return -1;
 
-static _SEND(send_raw)
-{
-  struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
+      /* fill the address structure */
+      in->sin_family = AF_INET;
+      in->sin_port = htons(pv->proto);
+      in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(pv->remote));
 
-  /* not supported on PF_PACKET */
-  if (pv->layer == 2)
-    return -1;
+      *len = sizeof (struct sockaddr_in);
 
-  return -1;
-}
-
-/*
- * Receive a chunk of data.
- */
-
-static _RECV(recv_raw)
-{
-  return recvfrom_raw(fd, buf, n, flags, NULL, NULL);
+      return 0;
+    }
+  else
+    {
+      /* IPV6 */
+      return -1;
+    }
 }
 
 /*
@@ -208,78 +253,118 @@ static _RECV(recv_raw)
 static _SENDTO(sendto_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-  struct sockaddr_ll		*sll = (struct sockaddr_ll *)addr;
+  struct sockaddr_in		*in;
   struct net_packet_s		*packet;
   struct net_if_s		*interface;
-
-  if (pv->shutdown == SHUT_WR || pv->shutdown == SHUT_RDWR)
-    return -1;
-
-  if (pv->layer == 2 && (addr_len < sizeof (struct sockaddr_ll) || sll->sll_family != AF_PACKET))
-    return -1;
+  struct net_proto_s		*addressing;
+  struct net_header_s		*nethdr;
+  uint8_t			*p;
 
   if ((packet = packet_obj_new(NULL)) == NULL)
     return -1;
 
-  /* PF_PACKET */
-  if (pv->layer == 2)
+  /* determine endpoint */
+  if (addr == NULL)
     {
-      struct net_header_s	*nethdr;
-
-      /* retrieve the interface from the if index */
-      interface = if_get_by_index(sll->sll_ifindex);
-
-      if (pv->header)
+      if (!pv->connected)
 	{
-	  /* alloc a buffer to copy the packet content */
-	  if ((packet->packet = mem_alloc(n, MEM_SCOPE_NETWORK)) == NULL)
-	    {
-	      packet_obj_refdrop(packet);
-	      return -1;
-	    }
-
-	  /* set the packet content */
-	  memcpy(packet->packet, buf, n);
-	  nethdr = &packet->header[0];
-	  nethdr->data = packet->packet;
-	  nethdr->size = n;
-	  nethdr[1].data = NULL;
-	  packet->stage = -1;
-	  /* send it to the driver */
-	  if_sendpkt(interface, packet, ntohs(sll->sll_protocol));
-	}
-      else
-	{
-	  uint8_t	*next;
-
-	  /* prepare the packet */
-	  if ((next = if_preparepkt(interface, packet, n, 0)) == NULL)
-	    {
-	      packet_obj_refdrop(packet);
-	      return -1;
-	    }
-
-	  /* set the packet content */
-	  nethdr = &packet->header[packet->stage];
-	  nethdr->data = next;
-	  nethdr->size = n;
-	  memcpy(next, buf, n);
-	  packet->header[packet->stage + 1].data = NULL;
-	  packet->MAClen = sll->sll_halen;
-	  packet->tMAC = sll->sll_addr;
-	  packet->stage--;
-	  /* send to the driver */
-	  if_sendpkt(interface, packet, ntohs(sll->sll_protocol));
+	  packet_obj_refdrop(packet);
+	  return -1;
 	}
 
-      return n;
+      memcpy(&packet->tADDR, &pv->remote, sizeof (struct net_addr_s));
     }
-  else /* SOCK_RAW */
+  else
     {
+      if (addr->sa_family != pv->family)
+	return -1;
 
+      switch (addr->sa_family)
+	{
+	  case AF_INET:
+	    if (addr_len < sizeof (struct sockaddr_in))
+	      {
+		packet_obj_refdrop(packet);
+		return -1;
+	      }
+	    in = (struct sockaddr_in *)addr;
+	    IPV4_ADDR_SET(packet->tADDR, ntohl(in->sin_addr.s_addr));
+	    break;
+	  case AF_INET6:
+	    /* IPV6 */
+	  default:
+	    packet_obj_refdrop(packet);
+	    return -1;
+	}
     }
 
-  return -1;
+  /* now, deduce the source */
+  if (pv->connected)
+    {
+      /* simply read the pv info */
+      interface = pv->interface;
+      addressing = pv->addressing;
+    }
+  else
+    {
+      /* otherwise, determine the route */
+      struct net_route_s	*route;
+
+      if ((route = route_get(&packet->tADDR)) == NULL)
+	{
+	  packet_obj_refdrop(packet);
+	  return -1;
+	}
+      interface = route->interface;
+      addressing = route->addressing;
+    }
+
+  /* prepare the packet */
+  if (pv->header)
+    {
+      return -1; /* XXX */
+      if ((p = if_preparepkt(interface, packet, n, 0)) == NULL)
+	{
+	  packet_obj_refdrop(packet);
+	  return -1;
+	}
+    }
+  else
+    {
+      if ((p = addressing->desc->preparepkt(interface, packet, n, 0)) == NULL)
+	{
+	  packet_obj_refdrop(packet);
+	  return -1;
+	}
+    }
+  nethdr = &packet->header[packet->stage];
+  nethdr->data = p;
+  nethdr->size = n;
+  nethdr[1].data = NULL;
+
+  /* copy the buffer into the packet */
+  memcpy(p, buf, n);
+
+  /* adjust some IP header fields */
+  if (pv->header)
+    {
+      switch (pv->family)
+	{
+	  case AF_INET:
+	    /* XXX */
+	    break;
+	  case AF_INET6:
+	    /* IPV6 */
+	  default:
+	    assert(0);
+	}
+    }
+
+  /* send the packet */
+  packet->stage--;
+  addressing->desc->f.addressing->sendpkt(interface, packet, addressing, pv->proto);
+
+  return n;
 }
 
 /*
@@ -287,112 +372,6 @@ static _SENDTO(sendto_raw)
  */
 
 static _RECVFROM(recvfrom_raw)
-{
-  struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-  struct net_packet_s		*packet;
-
-  /* try to grab a packet */
- again:
-  if (pv->shutdown == SHUT_RD || pv->shutdown == SHUT_RDWR)
-    return -1;
-
-  if (flags & MSG_PEEK)
-    packet = packet_queue_lock_head(&pv->recv_q);
-  else
-    packet = packet_queue_lock_pop(&pv->recv_q);
-
-  if (packet == NULL)
-    {
-      sem_wait(&pv->recv_sem);
-
-      goto again;
-    }
-
-  /* process the packet */
-  if (pv->layer == 2)
-    {
-      struct sockaddr_ll	*sll = (struct sockaddr_ll *)addr;
-      ssize_t			sz;
-      struct net_header_s	*nethdr;
-
-      /* fill the address if required */
-      if (sll != NULL)
-	{
-	  if (*addr_len < sizeof (struct sockaddr_ll))
-	    {
-	      packet_obj_refdrop(packet);
-	      return -1;
-	    }
-
-	  sll->sll_family = AF_PACKET;
-	  sll->sll_protocol = htons(packet->proto);
-	  sll->sll_ifindex = packet->interface->index;
-	  sll->sll_hatype = ARPHRD_ETHER; /* XXX */
-	  sll->sll_halen = packet->MAClen;
-	  memcpy(sll->sll_addr, packet->sMAC, packet->MAClen);
-	  if (!memcmp(packet->interface->mac, packet->tMAC, packet->MAClen))
-	    sll->sll_pkttype = PACKET_HOST;
-	  else if (!memcmp("\xff\xff\xff\xff\xff\xff\xff\xff", packet->tMAC, packet->MAClen))
-	    sll->sll_pkttype = PACKET_BROADCAST;
-	  else
-	    sll->sll_pkttype = PACKET_OTHERHOST;
-
-	  *addr_len = sizeof (struct sockaddr_ll);
-	}
-
-      /* copy the data */
-      if (pv->header)
-	{
-	  ssize_t	header_sz;
-
-	  nethdr = &packet->header[0];
-	  header_sz = nethdr->size - nethdr[1].size;
-	  if (header_sz > n)
-	    {
-	      header_sz = n;
-	      sz = 0;
-	    }
-	  else
-	    sz = nethdr->size > n ? n : nethdr->size;
-	  memcpy(buf, nethdr->data, header_sz);
-	  if (sz)
-	    memcpy(buf + header_sz, nethdr[1].data, sz - header_sz);
-	}
-      else
-	{
-	  nethdr = &packet->header[packet->stage];
-	  sz = nethdr->size > n ? n : nethdr->size;
-	  memcpy(buf, nethdr->data, sz);
-	}
-
-      /* drop the packet */
-      packet_obj_refdrop(packet);
-
-      return sz;
-    }
-  else
-    {
-
-    }
-
-  return -1;
-}
-
-/*
- * Send a message.
- */
-
-static _SENDMSG(sendmsg_raw)
-{
-  struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-  return -1;
-}
-
-/*
- * Receive a message.
- */
-
-static _RECVMSG(recvmsg_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
   return -1;
@@ -405,11 +384,6 @@ static _RECVMSG(recvmsg_raw)
 static _GETSOCKOPT(getsockopt_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-
-  /* no option to get on PF_PACKET */
-  if (pv->layer == 2)
-    return -1;
-
   return -1;
 }
 
@@ -420,39 +394,6 @@ static _GETSOCKOPT(getsockopt_raw)
 static _SETSOCKOPT(setsockopt_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-
-  /* sockopt on PF_PACKET */
-  if (pv->layer == 2)
-    {
-      struct packet_mreq	*req = (struct packet_mreq *)optval;
-      struct net_if_s		*interface;
-
-      if (optname != PACKET_ADD_MEMBERSHIP && optname != PACKET_DROP_MEMBERSHIP)
-	return -1;
-
-      if (optlen < sizeof (struct packet_mreq))
-	return -1;
-
-      switch (req->mr_type)
-	{
-	  /* enable or disable promiscuous mode */
-	  case PACKET_MR_PROMISC:
-	    if ((interface = if_get_by_index(req->mr_ifindex)) == NULL)
-	      return -1;
-	    dev_net_setopt(interface->dev, DEV_NET_OPT_PROMISC, optname == PACKET_ADD_MEMBERSHIP);
-	    break;
-	  /* other options not supported (multicast) */
-	  default:
-	    return -1;
-	}
-
-      return 0;
-    }
-  else /* on SOCK_RAW */
-    {
-
-    }
-
   return -1;
 }
 
@@ -463,7 +404,6 @@ static _SETSOCKOPT(setsockopt_raw)
 static _SHUTDOWN(shutdown_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-  uint_fast8_t			val;
 
   if (how != SHUT_RDWR && how != SHUT_RD && how != SHUT_WR)
     return -1;
@@ -478,6 +418,13 @@ static _SHUTDOWN(shutdown_raw)
   /* end all the recv with errors */
   if (pv->shutdown == SHUT_RDWR || pv->shutdown == SHUT_RD)
     {
+      uint_fast8_t		val;
+      struct net_packet_s	*packet;
+
+      /* drop all waiting packets */
+      while ((packet = packet_queue_lock_pop(&pv->recv_q)) != NULL)
+	packet_obj_refdrop(packet);
+
       sem_getvalue(&pv->recv_sem, &val);
       while (val < 0)
 	{
@@ -497,7 +444,7 @@ static _LISTEN(listen_raw) { return -1; }
 static _ACCEPT(accept_raw) { return -1; }
 
 /*
- * Socket API for RAW and PACKET sockets.
+ * Socket API for RAW sockets.
  */
 
 const struct socket_api_s	raw_socket =
@@ -507,12 +454,8 @@ const struct socket_api_s	raw_socket =
     .getsockname = getsockname_raw,
     .connect = connect_raw,
     .getpeername = getpeername_raw,
-    .send = send_raw,
-    .recv = recv_raw,
     .sendto = sendto_raw,
     .recvfrom = recvfrom_raw,
-    .sendmsg = sendmsg_raw,
-    .recvmsg = recvmsg_raw,
     .getsockopt = getsockopt_raw,
     .setsockopt = setsockopt_raw,
     .listen = listen_raw,
@@ -521,35 +464,26 @@ const struct socket_api_s	raw_socket =
   };
 
 /*
- * Signal an incoming packet (for RAW sockets).
- *
- * MUST NOT ALTER THE PACKET.
+ * Signal an incoming packet at level 3 layer.
  */
 
-void			libsocket_signal(struct net_if_s	*interface,
-					 struct net_packet_s	*packet,
-					 net_proto_id_t		protocol)
+void		sock_raw_signal(struct net_proto_s	*addressing,
+				struct net_packet_s	*packet,
+				net_proto_id_t		protocol)
 {
-  if (packet->stage == 1) /* for PF_PACKET */
-    {
-      /* deliver packet to all sockets matching interface and protocol id */
-      CONTAINER_FOREACH(socket_raw, DLIST, NOLOCK, &pf_packet,
+  /* deliver packet to all sockets matching interface and protocol id */
+  CONTAINER_FOREACH(socket_raw, DLIST, NOLOCK, &sock_raw,
+  {
+    if (item->shutdown == SHUT_RD || item->shutdown == SHUT_RDWR)
+      CONTAINER_FOREACH_CONTINUE;
+
+    if (item->any || addressing->desc->f.addressing->matchaddr(addressing, &packet->tADDR, &item->local, NULL))
       {
-	if (item->shutdown == SHUT_RD || item->shutdown == SHUT_RDWR)
-	  CONTAINER_FOREACH_CONTINUE;
-
-	if (item->interface == 0 || item->interface == interface->index)
+	if (item->proto == protocol || item->proto == IPPROTO_RAW)
 	  {
-	    if (item->proto == protocol || item->proto == ETH_P_ALL)
-	      {
-		packet_queue_lock_push(&item->recv_q, packet);
-		sem_post(&item->recv_sem);
-	      }
+	    packet_queue_lock_push(&item->recv_q, packet);
+	    sem_post(&item->recv_sem);
 	  }
-      });
-    }
-  else if (packet->stage == 2) /* for SOCK RAW*/
-    {
-
-    }
+      }
+  });
 }

@@ -31,3 +31,7 @@ endif
 ifeq ($(CONFIG_NETWORK_RARP), defined)
  subdirs += rarp
 endif
+
+ifeq ($(CONFIG_NETWORK_PING), defined)
+ subdirs += ping
+endif

@@ -82,26 +82,6 @@ static _GETPEERNAME(getpeername_udp)
 }
 
 /*
- * Send a chunk of data.
- */
-
-static _SEND(send_udp)
-{
-  struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-  return -1;
-}
-
-/*
- * Receive a chunk of data.
- */
-
-static _RECV(recv_udp)
-{
-  struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-  return -1;
-}
-
-/*
  * Send some data specifiyng explicitely the destination.
  */
 
@@ -116,26 +96,6 @@ static _SENDTO(sendto_udp)
  */
 
 static _RECVFROM(recvfrom_udp)
-{
-  struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-  return -1;
-}
-
-/*
- * Send a message.
- */
-
-static _SENDMSG(sendmsg_udp)
-{
-  struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-  return -1;
-}
-
-/*
- * Receive a message.
- */
-
-static _RECVMSG(recvmsg_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
   return -1;
@@ -189,12 +149,8 @@ const struct socket_api_s	udp_socket =
     .getsockname = getsockname_udp,
     .connect = connect_udp,
     .getpeername = getpeername_udp,
-    .send = send_udp,
-    .recv = recv_udp,
     .sendto = sendto_udp,
     .recvfrom = recvfrom_udp,
-    .sendmsg = sendmsg_udp,
-    .recvmsg = recvmsg_udp,
     .getsockopt = getsockopt_udp,
     .setsockopt = setsockopt_udp,
     .listen = listen_udp,

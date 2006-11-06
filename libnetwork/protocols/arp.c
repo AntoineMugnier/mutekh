@@ -360,6 +360,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 	  while ((waiting = packet_queue_pop(&arp_entry->resolution->wait)))
 	    {
 	      waiting->tMAC = arp_entry->mac;
+	      waiting->stage--;
 
 	      /* send the packet */
 	      if_sendpkt(arp_entry->resolution->interface, waiting, ETHERTYPE_IP);
