@@ -1,19 +1,11 @@
 
 PHDRS
 {
-  boot PT_LOAD ;
   mem PT_LOAD ;
 }
 
 SECTIONS
    {
-	/* must be within 8192 first bytes of kernel image */
-	. = 0x00100000;
-
-	.boot : { *(.boot*) }
-	__boot_start = LOADADDR(.boot);
-	__boot_end = LOADADDR(.boot) + SIZEOF(.boot);
-
 	.text : { *(.text*) } : mem
 	.bss : { *(.bss*) }
 	.data :
@@ -60,5 +52,5 @@ SECTIONS
 
    }
 
-ENTRY(cpu_boot)
+ENTRY(arch_init)
 

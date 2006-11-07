@@ -32,36 +32,15 @@
 
 #define CPU_INTERRUPT_H_
 
+#include <assert.h>
+
 #include "hexo/local.h"
 
-/** first interrupt vector used for exceptions */
-#define CPU_EXCEPT_VECTOR		0
-/** exceptions vector count */
-#define CPU_EXCEPT_VECTOR_COUNT		32
-
-/** first interrupt vector used for hardware interrupts */
-#define CPU_HWINT_VECTOR		32
-/** hardware interrupts vector count */
-#define CPU_HWINT_VECTOR_COUNT		96
-
-/** first interrupt vector used for system calls */
-#define CPU_SYSCALL_VECTOR		128
-/** syscall vector count */
-#define CPU_SYSCALL_VECTOR_COUNT	128
-
-/** max interrupt line handled by the CPU */
-#define CPU_MAX_INTERRUPTS		256
-
-/** interrupts entry tampline code size  */
-#define CPU_INTERRUPT_ENTRY_ALIGN	16
+extern volatile CPU_LOCAL bool_t cpu_irq_state;
 
 extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
 extern CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;
 extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_sys_handler;
-
-void x86_interrupt_hw_entry(void);
-void x86_interrupt_ex_entry(void);
-void x86_interrupt_sys_entry(void);
 
 static inline void
 cpu_interrupt_hw_sethandler(cpu_interrupt_handler_t *hndl)
@@ -84,36 +63,25 @@ cpu_interrupt_sys_sethandler(cpu_interrupt_handler_t *hndl)
 static inline void
 cpu_interrupt_disable(void)
 {
-  __asm__ volatile (
-		    "cli\n"
-		    );
+  CPU_LOCAL_SET(cpu_irq_state, 0);
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
-  __asm__ volatile (
-		    "sti\n"
-		    );
+  CPU_LOCAL_SET(cpu_irq_state, 1);
 }
 
 static inline void
 cpu_interrupt_process(void)
 {
-  __asm__ volatile (
-		    "sti\n"
-		    "nop\n"
-		    );
+  assert(!"not supported");
 }
 
 static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
-  __asm__ volatile (
-		    "pushfl	\n"
-		    "popl	%0\n"
-		    : "=m,r" (*state)
-		    );
+  *state = CPU_LOCAL_GET(cpu_irq_state);
 }
 
 static inline void
@@ -126,32 +94,19 @@ cpu_interrupt_savestate_disable(reg_t *state)
 static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
-  __asm__ volatile (
-		    "pushl	%0\n"
-		    "popfl	\n"
-		    :
-		    : "m,r" (*state)
-		    );
+  CPU_LOCAL_SET(cpu_irq_state, *state);
 }
 
 static inline bool_t
 cpu_interrupt_getstate(void)
 {
-  reg_t		flags;
-
-  __asm__ volatile (
-		    "pushfl	\n"
-		    "popl	%0\n"
-		    : "=r" (flags)
-		    );
-
-  return flags & 0x200 ? 1 : 0;
+  return CPU_LOCAL_GET(cpu_irq_state);
 }
 
 static inline void
 cpu_interrupt_wait(void)
 {
-  __asm__ volatile ("hlt");
+  assert(!"not supported");  
 }
 
 #endif

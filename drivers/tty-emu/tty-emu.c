@@ -26,7 +26,7 @@
 #include <hexo/device.h>
 #include <hexo/driver.h>
 
-#include <arch/hexo/stdio.h>
+#include <arch/hexo/emu_syscalls.h>
 
 #include "tty-emu.h"
 
@@ -38,7 +38,7 @@
 
 DEVCHAR_READ(tty_emu_read)
 {
-  return fread(data, 1, size, stdin);
+  return emu_do_syscall(EMU_SYSCALL_READ, 3, 1, data, size);
 }
 
 /*
@@ -47,7 +47,7 @@ DEVCHAR_READ(tty_emu_read)
 
 DEVCHAR_WRITE(tty_emu_write)
 {
-  return fwrite(data, 1, size, stdout);
+  return emu_do_syscall(EMU_SYSCALL_WRITE, 3, 1, data, size);
 }
 
 /*
@@ -56,8 +56,6 @@ DEVCHAR_WRITE(tty_emu_write)
 
 DEV_CLEANUP(tty_emu_cleanup)
 {
-  fflush(stdout);
-  fpurge(stdin);
 }
 
 /*
@@ -82,9 +80,6 @@ DEV_INIT(tty_emu_init)
 #ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &tty_emu_drv;
 #endif
-
-  fflush(stdout);
-  fpurge(stdin);
 
   return 0;
 }

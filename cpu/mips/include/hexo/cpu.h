@@ -25,6 +25,9 @@
 
 #define CPU_CPU_H_
 
+/** general purpose regsiters count */
+#define CPU_GPREG_COUNT	32
+
 static inline bool_t
 cpu_isbootstrap(void)
 {

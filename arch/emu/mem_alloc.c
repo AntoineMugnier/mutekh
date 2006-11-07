@@ -33,23 +33,28 @@
 #include <hexo/lock.h>
 #include <hexo/endian.h>
 
-#include <arch/hexo/mman.h>
+#include <arch/hexo/emu_syscalls.h>
 
-struct mem_alloc_region_s mem_region_ibmpc_ram;
+struct mem_alloc_region_s mem_region_mmap;
 
 void mem_init(void)
 {
   void	*mem_start;
   void	*mem_end;
 
-  mem_start = mmap(NULL, CONFIG_ARCH_EMU_MEMORY * 1048576, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+  mem_start = emu_do_syscall(EMU_SYSCALL_MMAP, 6, NULL, 
+			     CONFIG_ARCH_EMU_MEMORY * 1048576,
+			     PROT_READ | PROT_WRITE | PROT_EXEC,
+			     MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+
   if (mem_start == MAP_FAILED)
-    abort();
+    emu_do_syscall(EMU_SYSCALL_EXIT, 0);
+
   mem_end = (uint8_t *)mem_start + CONFIG_ARCH_EMU_MEMORY * 1048576;
 
   mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_HEXO_MEMALLOC_ALIGN);
   mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_HEXO_MEMALLOC_ALIGN);
 
-  mem_alloc_region_init(&mem_region_ibmpc_ram, mem_start, mem_end);
+  mem_alloc_region_init(&mem_region_mmap, mem_start, mem_end);
 }
 

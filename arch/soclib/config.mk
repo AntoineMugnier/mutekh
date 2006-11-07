@@ -1,2 +1,1 @@
-ARCH=soclib
 ARCHCFLAGS=

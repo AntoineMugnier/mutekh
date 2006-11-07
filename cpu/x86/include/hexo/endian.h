@@ -56,12 +56,5 @@ static inline uint32_t cpu_endian_swap32(uint32_t x)
   return x;
 }
 
-#undef HAS_CPU_ENDIAN_SWAP64
-
-static inline uint64_t cpu_endian_swap64(uint64_t x)
-{
-  return 0;
-}
-
 #endif
 

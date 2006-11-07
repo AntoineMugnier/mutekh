@@ -1,1 +1,1 @@
-subdirs = $(CPU)
+subdirs = $(CONFIG_CPU_NAME)

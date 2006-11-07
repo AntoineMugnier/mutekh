@@ -254,8 +254,12 @@ void cpu_start_other_cpu(void)
 
 uint_fast8_t cpu_id(void)
 {
+#ifdef CONFIG_SMP
   struct cpu_cld_s	*cld = CPU_LOCAL_GET(cpu_cld);
 
   return cld->id;
+#else
+  return 0;
+#endif
 }
 

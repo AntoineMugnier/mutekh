@@ -15,25 +15,51 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
 
 */
 
-#ifndef ARCH_MMAN_H_
-# define ARCH_MMAN_H_
+#if !defined(__CPU_H_) || defined(CPU_CPU_H_)
+#error This file can not be included directly
+#else
 
-#include <hexo/types.h>
+#define CPU_CPU_H_
 
-void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset);
-int munmap(void *start, size_t length);
+#include <assert.h>
 
-#define PROT_READ	0x1
-#define PROT_WRITE	0x2
-#define PROT_EXEC	0x4
+/** general purpose regsiters count */
+#define CPU_GPREG_COUNT	0
 
-#define MAP_PRIVATE	0x02
-#define MAP_ANONYMOUS	0x20
+/**
+   x86 apic boot strap processor (BSP)
+   @return true if processor is the bootstrap processor
+*/
 
-#define MAP_FAILED	((void *)-1)
+static inline bool_t
+cpu_isbootstrap(void)
+{
+#ifdef CONFIG_SMP
+  assert(!"not supported"); /* FIXME */
+#endif
+  return 0;
+}
+
+/**
+   cpu cycle touner type
+*/
+
+typedef uint64_t cpu_cycle_t;
+
+/**
+   cpu cycle counter read function
+*/
+
+static inline cpu_cycle_t
+cpu_cycle_count(void)
+{
+  assert(!"not supported"); /* FIXME */
+  return 0;
+}
 
 #endif
+

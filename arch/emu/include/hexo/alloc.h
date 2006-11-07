@@ -27,16 +27,16 @@
 
 #include <assert.h>
 
-extern struct mem_alloc_region_s mem_region_ibmpc_ram;
+extern struct mem_alloc_region_s mem_region_mmap;
 
 /** allocated memory scope is system global */
-#define MEM_SCOPE_SYS		(&mem_region_ibmpc_ram)
+#define MEM_SCOPE_SYS		(&mem_region_mmap)
 
 /** set default allocation policy */
 static inline void
 mem_alloc_set_default(struct mem_alloc_region_s *region)
 {
-  assert(region == &mem_region_ibmpc_ram);
+  assert(region == &mem_region_mmap);
 }
 
 #endif

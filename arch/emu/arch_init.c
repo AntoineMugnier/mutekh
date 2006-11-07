@@ -33,7 +33,7 @@ void arch_init()
 {
 
   /* enable alignment check */
-#ifdef CONFIG_DEBUG
+#if defined(CONFIG_DEBUG)
   asm volatile("	pushf						\n"
 	       "	orl	$0x40000, (%esp)			\n"
 	       "	popf						\n");

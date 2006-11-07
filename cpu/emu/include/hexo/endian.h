@@ -15,26 +15,22 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
 
 */
 
-#ifndef ARCH_STDIO_H_
-# define ARCH_STDIO_H_
+#if !defined(__ENDIAN_H_) || defined(CPU_ENDIAN_H_)
+#error This file can not be included directly
+#else
 
-#include <hexo/types.h>
+#define CPU_ENDIAN_H_
 
-#define fpurge __fpurge
+/** x86 CPU handle nonaligned memory access */
+#define CPU_NATIVE_NONALIGNED_ACCESS
 
-struct _IO_FILE;
-typedef struct _IO_FILE FILE;
-
-extern FILE *stdin;
-extern FILE *stdout;
-
-size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
-size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
-int fflush(FILE *stream);
-int __fpurge(FILE *stream);
+/** x86 CPU is little endian */
+#undef CPU_ENDIAN_ISBIG
+#define CPU_ENDIAN_ISLITTLE
 
 #endif
+

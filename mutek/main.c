@@ -275,12 +275,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
   arch_start_other_cpu(); /* let other CPUs enter main_smp() */
 
-#if defined(CONFIG_ARCH_EMU)
-  main();
-#else
   mutek_main_smp();
-#endif
-
 
   return 0;
 }
@@ -293,13 +288,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   printf("Execution pointer: %p\n", execptr);
   puts("regs:");
 
-#if defined(CONFIG_CPU_X86)
-  for (i = 0; i < 8; i++)
-#elif defined(CONFIG_CPU_MIPS)
-  for (i = 0; i < 32; i++)
-#else
-# error
-#endif
+  for (i = 0; i < CPU_GPREG_COUNT; i++)
     printf("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
 
   while (1);

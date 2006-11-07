@@ -2,6 +2,7 @@ BASE_PWD:=$(PWD)
 BUILD_DIR:=$(BASE_PWD)
 SRC_DIR=$(BASE_PWD)
 LDFLAGS=
+CONF=myconfig
 
 export SRC_DIR
 export BUILD_DIR
@@ -12,14 +13,14 @@ config: $(SRC_DIR)/config.mk $(SRC_DIR)/config.h
 
 include $(SRC_DIR)/config.mk
 
-$(SRC_DIR)/myconfig:
-	echo -e "Missing user configuration file \`myconfig'."
+$(SRC_DIR)/$(CONF):
+	echo -e "Missing user configuration file \`$(CONF)'."
 	echo -e "Please refer to the documentation."
 	false
 
-$(SRC_DIR)/config.mk $(SRC_DIR)/config.h: $(SRC_DIR)/myconfig
+$(SRC_DIR)/config.mk $(SRC_DIR)/config.h: $(SRC_DIR)/$(CONF)
 	perl $(SRC_DIR)/scripts/config.pl	\
-		--input=$(SRC_DIR)/myconfig	\
+		--input=$(SRC_DIR)/$(CONF)	\
 		--header=$(SRC_DIR)/config.h	\
 		--makefile=$(SRC_DIR)/config.mk
 
@@ -45,10 +46,6 @@ include $(SRC_DIR)/scripts/common.mk
 
 target = kernel-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME).out
 
-ifeq ($(CONFIG_ARCH_NAME), emu)
-LDFLAGS += -r -L/usr/lib -lc
-endif
-
 default: arch/current cpu/current $(target)
 
 $(target): $(SRC_DIR)/config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript $(LIBAPP)
@@ -57,8 +54,4 @@ $(target): $(SRC_DIR)/config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(CONFIG
 	$(filter %.o,$^) $(filter %.a,$^) \
 	-T $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript \
 	-o $@
-ifeq ($(CONFIG_ARCH_NAME), emu)
-	mv $(target) $(target).lo
-	$(CC) -o $(target) $(target).lo
-	$(RM) $(target).lo
-endif
+

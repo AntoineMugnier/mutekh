@@ -25,6 +25,9 @@
 
 #define CPU_CPU_H_
 
+/** general purpose regsiters count */
+#define CPU_GPREG_COUNT	8
+
 /**
    x86 apic boot strap processor (BSP)
    @return true if processor is the bootstrap processor

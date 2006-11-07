@@ -21,12 +21,26 @@
 
 */
 
+/*
+
+	%config CONFIG_LIBC_STRING_ASM
+	desc A processor specific libc string.h header
+	desc is available.
+	default undefined
+	flags nodefine
+	%config end
+
+*/
+
 #ifndef STRING_H_
 #define STRING_H_
 
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <cpu/string.h>
+
+#if defined (CONFIG_LIBC_STRING_ASM)
+# include <cpu/string.h>
+#endif
 
 void * memset(void *dst, int_fast8_t data, size_t size);
 #define memset __builtin_memset

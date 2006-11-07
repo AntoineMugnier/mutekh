@@ -23,15 +23,7 @@
 #ifndef LOCAL_H_
 #define LOCAL_H_
 
-/** context local storage type attribute */
-#define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
-
-/** cpu local storage type attribute */
-#ifdef CONFIG_SMP
-# define CPU_LOCAL	__attribute__((section (".cpudata")))
-#else
-# define CPU_LOCAL
-#endif
+#include "cpu/hexo/local.h"
 
 /** pointer to cpu local storage itself */
 extern CPU_LOCAL void *__cpu_data_base;
@@ -41,8 +33,6 @@ extern CPU_LOCAL void *__cpu_context_data_base;
 
 /** pointer to context local storage itself */
 extern CONTEXT_LOCAL void *__context_data_base;
-
-#include "cpu/hexo/local.h"
 
 /** cpu architecture local storage type attribute */
 #ifdef CONFIG_SMP

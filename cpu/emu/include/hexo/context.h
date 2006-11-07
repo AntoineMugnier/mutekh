@@ -19,27 +19,35 @@
 
 */
 
+#if !defined(CONTEXT_H_) || defined(CPU_CONTEXT_H_)
+#error This file can not be included directly
+#else
 
-/**
-   @file
+#include <assert.h>
 
-   General purpose optimized memory operations
- */
+struct cpu_context_s
+{
+};
 
-#ifndef CPU_STRING_H_
-#define CPU_STRING_H_
+static inline void
+cpu_context_switch(struct context_s *old, struct context_s *new)
+{
+  assert(!"not implemented");
+}
 
-//#define HAS_CPU_MEMSET
-//#define HAS_CPU_MEMCPY
-//#define HAS_CPU_MEMCMP
-//#define HAS_CPU_MEMCPY_REVERSE
-//#define HAS_CPU_STRLEN
-//#define HAS_CPU_STRCAT
-//#define HAS_CPU_STRCHR
-//#define HAS_CPU_STRCMP
-//#define HAS_CPU_STRCPY
-//#define HAS_CPU_STRDUP
-//#define HAS_CPU_STRSTR
+static inline void
+__attribute__((always_inline, noreturn))
+cpu_context_jumpto(struct context_s *new)
+{
+  assert(!"not implemented");
+}
+
+static inline void
+__attribute__((always_inline, noreturn))
+cpu_context_set_stack(uintptr_t stack, void *jumpto)
+{
+  assert(!"not implemented");
+}
 
 #endif
 
