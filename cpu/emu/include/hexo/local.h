@@ -30,25 +30,6 @@
 
 #define CPU_LOCAL_H_
 
-extern void *cpu_context_reg;
-
-/************************************************************************/
-
-/** context local storage type attribute */
-#define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
-
-/** context local storage variable assignement from different context */
-#define CONTEXT_LOCAL_FOREIGN_SET(tls, n, v)	({ *(typeof(n)*)((uintptr_t)(tls) + (uintptr_t)&(n)) = (v); })
-
-/** context local storage variable assignement */
-#define CONTEXT_LOCAL_SET(n, v)	({ *(typeof(n)*)((uintptr_t)(cpu_context_reg) + (uintptr_t)&(n)) = (v); })
-
-/** context local storage variable read access */
-#define CONTEXT_LOCAL_GET(n) 	({ *(typeof(n)*)((uintptr_t)(cpu_context_reg) + (uintptr_t)&(n)); })
-
-/** get address of context local object */
-#define CONTEXT_LOCAL_ADDR(n)	({ (void*)((uintptr_t)(cpu_context_reg) + (uintptr_t)&(n)); })
-
 /************************************************************************/
 
 /** cpu local storage type attribute */
@@ -66,6 +47,23 @@ extern void *cpu_context_reg;
 
 /** get address of cpu local object */
 # define CPU_LOCAL_ADDR(n)   (&(n))
+
+/************************************************************************/
+
+/** context local storage type attribute */
+#define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
+
+/** context local storage variable assignement from different context */
+#define CONTEXT_LOCAL_FOREIGN_SET(tls, n, v)	({ *(typeof(n)*)((uintptr_t)(tls) + (uintptr_t)&(n)) = (v); })
+
+/** context local storage variable assignement */
+#define CONTEXT_LOCAL_SET(n, v)	({ *(typeof(n)*)((uintptr_t)(CPU_LOCAL_GET(__cpu_context_data_base)) + (uintptr_t)&(n)) = (v); })
+
+/** context local storage variable read access */
+#define CONTEXT_LOCAL_GET(n) 	({ *(typeof(n)*)((uintptr_t)(CPU_LOCAL_GET(__cpu_context_data_base)) + (uintptr_t)&(n)); })
+
+/** get address of context local object */
+#define CONTEXT_LOCAL_ADDR(n)	({ (void*)((uintptr_t)(CPU_LOCAL_GET(__cpu_context_data_base)) + (uintptr_t)&(n)); })
 
 #endif
 

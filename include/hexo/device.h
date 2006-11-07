@@ -107,7 +107,10 @@ OBJECT_PROTOTYPE(static inline, device_obj, device_obj);
 
 /** device object structure */
 
-CONTAINER_TYPE(device_list, DLIST, struct device_s
+#ifdef CONFIG_HEXO_DEVICE_TREE
+CONTAINER_TYPE(device_list, DLIST,
+#endif
+struct device_s
 {
 #ifndef CONFIG_STATIC_DRIVERS
 
@@ -135,7 +138,11 @@ CONTAINER_TYPE(device_list, DLIST, struct device_s
   device_list_root_t		children;
 #endif /* !CONFIG_HEXO_DEVICE_TREE */
 
-}, HEXO_SPIN, device_obj, list_entry);
+}
+#ifdef CONFIG_HEXO_DEVICE_TREE
+, HEXO_SPIN, device_obj, list_entry)
+#endif
+;
 
 /* used when no irq line is present/available */
 #define DEVICE_IRQ_INVALID	-1

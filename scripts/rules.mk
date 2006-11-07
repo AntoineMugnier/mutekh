@@ -1,8 +1,6 @@
 export SRC_DIR
 export BUILD_DIR
 
-include $(SRC_DIR)/arch/current/config.mk
-include $(SRC_DIR)/cpu/current/config.mk
 include $(SRC_DIR)/config.mk
 
 ifneq ($(H),/)

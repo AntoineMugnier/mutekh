@@ -50,7 +50,7 @@ default: arch/current cpu/current $(target)
 
 $(target): $(SRC_DIR)/config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript $(LIBAPP)
 	@echo '    LD      $@'
-	@$(LD) $(LDFLAGS) -q $$(cat /dev/null $(filter %.list,$^)) \
+	@$(LD) $(LDFLAGS) $(ARCHLDFLAGS) -q $$(cat /dev/null $(filter %.list,$^)) \
 	$(filter %.o,$^) $(filter %.a,$^) \
 	-T $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript \
 	-o $@

@@ -41,7 +41,7 @@ cpu_isbootstrap(void)
 #ifdef CONFIG_SMP
   assert(!"not supported"); /* FIXME */
 #endif
-  return 0;
+  return 1;
 }
 
 /**

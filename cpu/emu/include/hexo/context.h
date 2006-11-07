@@ -23,7 +23,7 @@
 #error This file can not be included directly
 #else
 
-#include <assert.h>
+#include <hexo/local.h>
 
 struct cpu_context_s
 {
@@ -32,21 +32,70 @@ struct cpu_context_s
 static inline void
 cpu_context_switch(struct context_s *old, struct context_s *new)
 {
-  assert(!"not implemented");
+  asm volatile (
+		/* save execution pointer */
+#ifdef CONFIG_COMPILE_PIC
+		"	call	1f		\n"
+		"	jmp	2f		\n"
+		"1:				\n"
+#else
+		"	pushl	2f		\n"
+#endif
+		/* save flags */
+		"	pushf			\n"
+//		"	cli			\n" /* FIXME */
+		/* save general purpose registers on stack */
+		"	pusha			\n"
+		/* save context local storage on stack */
+		"	push	(%2)		\n"
+		/* switch stack pointer */
+		"	movl	%%esp, %0	\n"
+		"	movl	%1, %%esp	\n"
+		/* restore tls */
+		"	pop	(%2)		\n"
+		/* restore general purpose registers */
+		"	popa			\n"
+		/* restore flags */
+		"	popf			\n"
+		/* restore execution pointer */
+		"	ret			\n"
+		"2:				\n"
+		: "=m,m" (old->stack_ptr)
+		: "r,m" (new->stack_ptr)
+		, "r,r" (CPU_LOCAL_ADDR(__cpu_context_data_base))
+		);
 }
 
 static inline void
 __attribute__((always_inline, noreturn))
 cpu_context_jumpto(struct context_s *new)
 {
-  assert(!"not implemented");
+  asm volatile (
+		"	movl	%0, %%esp	\n"
+		/* restore tls */
+		"	pop	(%1)		\n"
+		/* restore general purpose registers */
+		"	popa			\n"
+ 		/* restore flags */
+		"	popf			\n"
+		/* restore execution pointer */
+		"	ret			\n"
+		:
+		: "r" (new->stack_ptr)
+		, "r" (CPU_LOCAL_ADDR(__cpu_context_data_base))
+		);
 }
 
 static inline void
 __attribute__((always_inline, noreturn))
 cpu_context_set_stack(uintptr_t stack, void *jumpto)
 {
-  assert(!"not implemented");
+  asm volatile (
+		"	movl	%0, %%esp	\n"
+		"	jmpl	*%1		\n"
+		:
+		: "r,m" (stack), "r,r" (jumpto)
+		);
 }
 
 #endif

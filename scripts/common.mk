@@ -1,21 +1,23 @@
 
-ifeq ($(CONFIG_ARCH_NAME), emu)
-CFLAGS=-Wall \
-	-O0 -ggdb \
-	-fno-builtin
+CFLAGS=	-fno-builtin -Wall
+
+ifeq ($(CONFIG_COMPILE_DEBUG), defined)
+CFLAGS += -O2 -fomit-frame-pointer
 else
-CFLAGS=-Wall \
-	-O2 -fomit-frame-pointer \
-	-fno-builtin
+CFLAGS += -O0 -ggdb
 endif
 
 ifeq ($(CONFIG_COMPILE_COLLECT), defined)
 CFLAGS += -ffunction-sections -fdata-sections
-endif
-
-ifeq ($(CONFIG_COMPILE_COLLECT), defined)
 LDFLAGS += --gc-sections
 endif
+
+ifeq ($(CONFIG_COMPILE_INSTRUMENT), defined)
+CFLAGS += -finstrument-functions
+endif
+
+include $(SRC_DIR)/arch/current/config.mk
+include $(SRC_DIR)/cpu/current/config.mk
 
 INCS=-nostdinc -D__TEST__ -D__MUTEK__ -I$(SRC_DIR)/include -include $(SRC_DIR)/config.h
 
@@ -70,3 +72,4 @@ endef
 $(eval $(foreach dirname,$(subdirs),$(call recurse,$(dirname))))
 
 re: clean default
+

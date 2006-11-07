@@ -32,9 +32,6 @@ CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_sys_handler;
 
-/* context local storage emulated cpu register */
-CPU_LOCAL void *cpu_context_reg;
-
 /* cpu interrupts state */
 volatile CPU_LOCAL bool_t cpu_irq_state = 0;
 

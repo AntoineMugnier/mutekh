@@ -14,7 +14,7 @@ cpu_context_bootstrap(struct context_s *context)
 
 
 
-/* fake context entry point, pop entry funciton param and entry function
+/* fake context entry point, pop entry function param and entry function
    address from stack and perform jump to real entry function.  We
    need to do this to pass an argument to the context entry function. */
 void __mips_context_entry(void);

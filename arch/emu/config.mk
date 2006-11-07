@@ -1,1 +1,4 @@
-ARCHCFLAGS=
+ARCHCFLAGS= -static
+ARCHLDFLAGS= -static
+
+

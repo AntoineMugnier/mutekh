@@ -104,9 +104,7 @@ DEVTIMER_CALLBACK(timer_callback)
 int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
   sched_global_init();
-#if !defined(CONFIG_ARCH_EMU)
   sched_cpu_init();
-#endif
 
   /********* ICU init ******************************** */
 
@@ -307,6 +305,10 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
   cpu_interrupt_ex_sethandler(fault_handler);
 
   printf("CPU %i is up and running.\n", cpu_id());
+
+#if defined(CONFIG_COMPILE_INSTRUMENT)
+  hexo_instrument_trace(1);
+#endif
 
   if (cpu_id() == 0)
     main(0, 0);

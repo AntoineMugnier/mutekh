@@ -67,12 +67,14 @@ device_dump_list(struct device_s *root)
   });
 }
 
+#endif
+
 void
 device_init(struct device_s *dev)
 {
+#ifdef CONFIG_HEXO_DEVICE_TREE
   device_list_init(&dev->children);
   device_obj_init(dev);
-}
-
 #endif
+}
 

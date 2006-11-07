@@ -32,8 +32,6 @@
 
 #define CPU_INTERRUPT_H_
 
-#include <assert.h>
-
 #include "hexo/local.h"
 
 extern volatile CPU_LOCAL bool_t cpu_irq_state;
@@ -75,7 +73,8 @@ cpu_interrupt_enable(void)
 static inline void
 cpu_interrupt_process(void)
 {
-  assert(!"not supported");
+  cpu_interrupt_enable();
+  /* FIXME */
 }
 
 static inline void
@@ -106,7 +105,7 @@ cpu_interrupt_getstate(void)
 static inline void
 cpu_interrupt_wait(void)
 {
-  assert(!"not supported");  
+  /* FIXME */
 }
 
 #endif
