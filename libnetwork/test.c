@@ -222,7 +222,7 @@ void *net_up(void *p)
   struct net_addr_s	addr;
   struct ping_s		stat;
 
-  IPV4_ADDR_SET(addr, 0x0a020202);
+  IPV4_ADDR_SET(addr, 0x0a0202f0);
 
   ping(&addr, 3, 56, &stat);
 
