@@ -222,9 +222,12 @@ void *net_up(void *p)
   struct net_addr_s	addr;
   struct ping_s		stat;
 
-  IPV4_ADDR_SET(addr, 0x0a020201);
+  IPV4_ADDR_SET(addr, 0x0a020202);
 
   ping(&addr, 3, 56, &stat);
+
+  printf("Total: %u transmitted, %u lost, %u error, min/avg/max = %u/%u/%u ms\n",
+	 stat.total, stat.lost, stat.error, stat.min, stat.avg, stat.max);
 #endif
 
 #ifdef CONFIG_NETWORK_UDP

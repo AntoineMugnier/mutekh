@@ -374,7 +374,75 @@ static _SENDTO(sendto_raw)
 static _RECVFROM(recvfrom_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-  return -1;
+  struct net_packet_s		*packet;
+  struct sockaddr_in		*in;
+  ssize_t			sz;
+  struct net_header_s		*nethdr;
+
+  /* try to grab a packet */
+ again:
+  if (pv->shutdown == SHUT_RD || pv->shutdown == SHUT_RDWR)
+    return -1;
+
+  if (flags & MSG_PEEK)
+    packet = packet_queue_lock_head(&pv->recv_q);
+  else
+    packet = packet_queue_lock_pop(&pv->recv_q);
+
+  if (packet == NULL)
+    {
+      if (flags & MSG_DONTWAIT)
+	return -1;
+
+      sem_wait(&pv->recv_sem);
+
+      goto again;
+    }
+
+  /* fill the address if required */
+  if (addr != NULL)
+    {
+      switch (pv->family)
+	{
+	  case AF_INET:
+	    in = (struct sockaddr_in *)addr;
+
+	    if (*addr_len < sizeof (struct sockaddr_in))
+	      {
+		packet_obj_refdrop(packet);
+		return -1;
+	      }
+
+	    in->sin_family = AF_INET;
+	    in->sin_port = htons(pv->proto);
+	    in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(packet->sADDR));
+
+	    *addr_len = sizeof (struct sockaddr_in);
+	    break;
+	  case AF_INET6:
+	    /* IPV6 */
+	  default:
+	    packet_obj_refdrop(packet);
+	    return -1;
+	}
+    }
+
+  /* copy the data */
+  if (pv->header)
+    {
+      /* XXX */
+    }
+  else
+    {
+      nethdr = &packet->header[packet->stage];
+      sz = nethdr->size > n ? n : nethdr->size;
+      memcpy(buf, nethdr->data, sz);
+    }
+
+  /* drop the packet */
+  packet_obj_refdrop(packet);
+
+  return sz;
 }
 
 /*
@@ -481,7 +549,7 @@ void		sock_raw_signal(struct net_proto_s	*addressing,
       {
 	if (item->proto == protocol || item->proto == IPPROTO_RAW)
 	  {
-	    packet_queue_lock_push(&item->recv_q, packet);
+	    packet_queue_lock_pushback(&item->recv_q, packet);
 	    sem_post(&item->recv_sem);
 	  }
       }

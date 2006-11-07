@@ -430,10 +430,7 @@ NET_ERRORMSG(icmp_errormsg)
 
   packet->stage--;
   /* send the packet to the interface */
-  printf("ICMP sending\n");
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_ICMP);
-
-  printf("ICMP sent\n");
 
   va_end(va);
 }

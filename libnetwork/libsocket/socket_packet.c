@@ -390,7 +390,7 @@ void		pf_packet_signal(struct net_if_s	*interface,
       {
 	if (item->proto == protocol || item->proto == ETH_P_ALL)
 	  {
-	    packet_queue_lock_push(&item->recv_q, packet);
+	    packet_queue_lock_pushback(&item->recv_q, packet);
 	    sem_post(&item->recv_sem);
 	  }
       }

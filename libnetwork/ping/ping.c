@@ -34,54 +34,62 @@
 
 #include <netinet/ping.h>
 
-static void	usleep(uint_fast32_t	usec) /* XXX remove me */
-{
-  timer_delay_t	t;
-
-  t = timer_get_tick(&timer_ms) + usec / 1000;
-  while (timer_get_tick(&timer_ms) < t)
-    ;
-}
-
 error_t			ping(struct net_addr_s	*host,
 			     uint_fast32_t	count,
 			     size_t		size,
 			     struct ping_s	*stat)
 {
   struct sockaddr_in	addr;
-  uint8_t		*buf;
+  uint8_t		*buf1;
+  uint8_t		*buf2;
   struct icmphdr	*hdr;
   size_t		i;
   socket_t		sock;
   uint_fast32_t		id;
-  uint_fast32_t		check;
+  uint_fast32_t		seq;
+  struct sockaddr_in	from;
+  socklen_t		len;
+  ssize_t		recvd;
+  timer_delay_t		*t1;
+  timer_delay_t		*t2;
+  timer_delay_t		timeout;
+  size_t		tot;
 
   /* reset the statistics */
   memset(stat, 0, sizeof (struct ping_s));
 
   /* allocate and create the message */
-  if ((buf = mem_alloc(size + sizeof (struct icmphdr), MEM_SCOPE_SYS)) == NULL)
+  if ((buf1 = mem_alloc(size + sizeof (struct icmphdr), MEM_SCOPE_SYS)) == NULL)
     return -1;
 
-  for (i = 0; i < size; i++)
-    buf[sizeof (struct icmphdr) + i] = 32 + i % 96;
+  if ((buf2 = mem_alloc(size + sizeof (struct icmphdr), MEM_SCOPE_SYS)) == NULL)
+    {
+      mem_free(buf1);
+      return -1;
+    }
+
+  /* fill with junk bytes */
+  for (i = 0; i < size - sizeof (timer_delay_t); i++)
+    buf1[sizeof (struct icmphdr) + sizeof (timer_delay_t) + i] = 32 + i % 96;
+
+  t1 = (timer_delay_t *)&buf1[sizeof (struct icmphdr)];
+  t2 = (timer_delay_t *)&buf2[sizeof (struct icmphdr)];
 
   /* fill icmp header */
-  hdr = (struct icmphdr *)buf;
+  hdr = (struct icmphdr *)buf1;
   id = (uint32_t)hdr;
-  id = id + (id >> 16);
+  id = (id & 0xffff) + (id >> 16);
 
   hdr->type = 8;
   hdr->code = 0;
-  hdr->un.echo.id = id;
-  hdr->un.echo.sequence = 0;
-  hdr->checksum = 0;
-  check = hdr->checksum = ~packet_checksum(buf, size + sizeof (struct icmphdr));
+  hdr->un.echo.id = htons(id);
+  seq = hdr->un.echo.sequence = 0;
 
   /* open a SOCK_RAW socket and connect it */
   if ((sock = socket(PF_INET, SOCK_RAW, htons(IPPROTO_ICMP))) == NULL)
     {
-      mem_free(buf);
+      mem_free(buf1);
+      mem_free(buf2);
       return -1;
     }
 
@@ -90,39 +98,158 @@ error_t			ping(struct net_addr_s	*host,
 
   if (connect(sock, (struct sockaddr *)&addr, sizeof (struct sockaddr_in)) < 0)
     {
-      mem_free(buf);
+      mem_free(buf1);
+      mem_free(buf2);
       return -1;
     }
 
-  printf("PING %u.%u.%u.%u %u bytes of data.\n",
-	 addr.sin_addr.s_addr & 0xff,
-	 (addr.sin_addr.s_addr >> 8) & 0xff,
-	 (addr.sin_addr.s_addr >> 16) & 0xff,
-	 (addr.sin_addr.s_addr >> 24) & 0xff,
-	 size);
+  printf("PING %u.%u.%u.%u %u bytes of data.\n", addr.sin_addr.s_addr & 0xff,
+	 (addr.sin_addr.s_addr >> 8) & 0xff, (addr.sin_addr.s_addr >> 16) & 0xff,
+	 (addr.sin_addr.s_addr >> 24) & 0xff, size);
+
+  tot = size + sizeof (struct icmphdr);
 
   /* send successive ping */
-  for (i = 0; i < count; i++)
+  for (seq = 0; seq < count; seq++)
     {
       ssize_t	sent;
 
-      if (i)
-	usleep(PING_INTERVAL * 1000);
+      hdr = (struct icmphdr *)buf1;
 
-      sent = send(sock, buf, size + sizeof (struct icmphdr), 0);
+      /* sequence number */
+      hdr->un.echo.sequence = htons(seq);
 
-      if (sent != size + sizeof (struct icmphdr))
+      /* setup start time */
+      *t1 = timer_get_tick(&timer_ms);
+
+      /* compute checksum */
+      hdr->checksum = 0;
+      hdr->checksum = ~packet_checksum(buf1, tot);
+
+      /* send ! */
+      sent = send(sock, buf1, tot, 0);
+
+      if (sent != tot)
 	printf("Error (sent = %d)\n", sent);
 
-      /* increment sequence number */
-      hdr->un.echo.sequence++;
-      check = hdr->checksum - 1;
-      hdr->checksum = check + (check >> 16);
+      /* start timeout */
+      timeout = timer_get_tick(&timer_ms);
+
+      /* wait for echo */
+      while (1)
+	{
+	  recvd = recvfrom(sock, buf2, tot, MSG_DONTWAIT, (struct sockaddr *)&from, &len);
+
+	  if (recvd > 0)
+	    {
+	      hdr = (struct icmphdr *)buf2;
+
+	      /* if valid echo reply */
+	      if (hdr->type == 0 && ntohs(hdr->un.echo.id) == id &&
+		  from.sin_addr.s_addr == addr.sin_addr.s_addr)
+		{
+		  timer_delay_t	t = timer_get_tick(&timer_ms) - *t2;
+
+		  /* check size */
+		  if (recvd != tot)
+		    {
+		      printf("Reply %d bytes (instead of %d)\n", recvd, tot);
+		      break;
+		    }
+
+		  /* check data */
+		  for (i = 0; i < size - sizeof (timer_delay_t); i++)
+		    if (buf2[sizeof (struct icmphdr) + sizeof (timer_delay_t) + i] != 32 + i % 96)
+		      {
+			printf("Reply %d bytes with incorrect data\n", recvd);
+			break;
+		      }
+
+		  if (t < stat->min)
+		    stat->min = t;
+		  else if (t > stat->max)
+		    stat->max = t;
+		  stat->avg += t;
+
+		  printf("Reply %d bytes from %u.%u.%u.%u: seq=%d time=%u ms\n", recvd,
+			 addr.sin_addr.s_addr & 0xff, (addr.sin_addr.s_addr >> 8) & 0xff,
+			 (addr.sin_addr.s_addr >> 16) & 0xff, (addr.sin_addr.s_addr >> 24) & 0xff,
+			 ntohs(hdr->un.echo.sequence), t);
+		  break;
+		}
+	      else if (hdr->type != 0)
+		{
+		  /* ICMP error */
+		  switch (hdr->type)
+		    {
+		      case 3:
+			switch (hdr->code)
+			  {
+			    case 0:
+			      printf("Reply: Network unreachable\n");
+			      break;
+			    case 1:
+			      printf("Reply: Host unreachable\n");
+			      break;
+			    case 2:
+			      printf("Reply: Protocol unreachable\n");
+			      break;
+			    case 4:
+			      printf("Reply: Cannot fragment (Next HOP MTU = %u)\n",
+				     ntohs(hdr->un.frag.mtu));
+			      break;
+			    case 10:
+			      printf("Reply: Host denied\n");
+			      break;
+			    case 11:
+			      printf("Reply: Network denied\n");
+			      break;
+			    default:
+			      printf("Reply: unknown error\n");
+			      break;
+			  }
+			break;
+		      case 11:
+			switch (hdr->code)
+			  {
+			    case 0:
+			      printf("Reply: Timeout (ttl has reached 0)\n");
+			      break;
+			    case 1:
+			      printf("Reply: Reassembly timeout\n");
+			      break;
+			    default:
+			      printf("Reply: timeout\n");
+			      break;
+			  }
+			break;
+		      default:
+			printf("Reply: unknown error\n");
+			break;
+		    }
+		  stat->error++;
+		  break;
+		}
+	    }
+
+	  /* check for timeout */
+	  if ((timer_get_tick(&timer_ms) - timeout) >= PING_TIMEOUT)
+	    {
+	      stat->lost++;
+	      printf("No reply\n");
+	      break;
+	    }
+	}
+
+      /* update statistics */
+      stat->total++;
     }
 
-  /* wait for echo */
+  if (stat->total)
+    stat->avg /= stat->total;
 
-  mem_free(buf);
+  mem_free(buf1);
+  mem_free(buf2);
 
   return 0;
 }

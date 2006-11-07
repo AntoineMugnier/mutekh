@@ -33,6 +33,7 @@ struct		ping_s
 {
   uint_fast32_t	total;
   uint_fast32_t	lost;
+  uint_fast32_t	error;
   timer_delay_t	min;
   timer_delay_t	max;
   timer_delay_t	avg;
