@@ -64,7 +64,7 @@ lbl:						; \
 	pushl	40(%esp)			; \
 	pushl	%eax				; \
 	call	%fs: *(callback)		; \
-	add	$16, %esp			; \
+	add	$20, %esp			; \
 	popa					; \
 	iret
 
@@ -79,7 +79,7 @@ lbl:						; \
 	pushl	44(%esp)			; \
 	pushl	%eax				; \
 	call	%fs: *(callback)		; \
-	add	$20, %esp			; \
+	add	$24, %esp			; \
 	popa					; \
 	iret
 

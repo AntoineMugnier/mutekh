@@ -278,12 +278,16 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   return 0;
 }
 
+static lock_t fault_lock;
+
 static CPU_EXCEPTION_HANDLER(fault_handler)
 {
   int_fast8_t		i;
 #ifdef CPU_GPREG_NAMES
   const char		*reg_names[] = CPU_GPREG_NAMES;
 #endif
+
+  lock_spin(&fault_lock);
 
   printf("CPU Fault: cpuid(%u) faultid(%u)\n", cpu_id(), type);
   printf("Execution pointer: %p\n", execptr);
@@ -301,6 +305,8 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   for (i = 0; i < 8; i++)
     printf("%p%c", stackptr[i], (i + 1) % 4 ? ' ' : '\n');
 
+  lock_release(&fault_lock);
+
   while (1);
 }
 
@@ -314,6 +320,7 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
       sched_cpu_init();
     }
 
+  lock_init(&fault_lock);
   cpu_interrupt_ex_sethandler(fault_handler);
 
   printf("CPU %i is up and running.\n", cpu_id());
