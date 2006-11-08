@@ -19,9 +19,9 @@
 CFLAGS=	-fno-builtin -Wall
 
 ifeq ($(CONFIG_COMPILE_DEBUG), defined)
-CFLAGS += -O2 -fomit-frame-pointer
-else
 CFLAGS += -O0 -ggdb
+else
+CFLAGS += -O2 -fomit-frame-pointer
 endif
 
 ifeq ($(CONFIG_COMPILE_COLLECT), defined)
