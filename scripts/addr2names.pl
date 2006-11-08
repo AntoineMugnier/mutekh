@@ -28,8 +28,9 @@ foreach my $line(<STDIN>)
 	my $addr = $1;
 	my $ref = `echo $addr | addr2line -f -s -e $binary`;
 	$ref =~ s/\n//g;
+	$ref = sprintf("%-50s", $ref);
 
-	$line =~ s/$addr/$ref/g;
+	$line =~ s/f:$addr/$ref/g;
     }
 
     print $line;
