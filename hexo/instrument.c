@@ -17,7 +17,7 @@ void __cyg_profile_func_enter (void *this_fn,
   if (hexo_instrument_trace_flag)
     {
       hexo_instrument_trace_flag = 0;
-      printf(">>> %p Called from %p\n", this_fn, call_site);
+      printf(">>> f:%p Called from f:%p\n", this_fn, call_site);
       hexo_instrument_trace_flag = 1;
     }
 }
@@ -29,7 +29,7 @@ void __cyg_profile_func_exit  (void *this_fn,
   if (hexo_instrument_trace_flag)
     {
       hexo_instrument_trace_flag = 0;
-      printf("<<< %p Called from %p\n", this_fn, call_site);
+      printf("<<< f:%p Called from f:%p\n", this_fn, call_site);
       hexo_instrument_trace_flag = 1;
     }
 }
