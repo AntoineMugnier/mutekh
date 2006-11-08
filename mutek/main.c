@@ -281,13 +281,20 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 static CPU_EXCEPTION_HANDLER(fault_handler)
 {
   int_fast8_t		i;
+#ifdef CPU_GPREG_NAMES
+  const char		*reg_names[] = CPU_GPREG_NAMES;
+#endif
 
   printf("CPU Fault: cpuid(%u) faultid(%u)\n", cpu_id(), type);
   printf("Execution pointer: %p\n", execptr);
   puts("regs:");
 
   for (i = 0; i < CPU_GPREG_COUNT; i++)
+#ifdef CPU_GPREG_NAMES
+    printf("%s=%p%c", reg_names[i], regtable[i], (i + 1) % 4 ? ' ' : '\n');
+#else
     printf("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
+#endif
 
   while (1);
 }
