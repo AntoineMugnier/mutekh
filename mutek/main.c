@@ -287,7 +287,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 
   printf("CPU Fault: cpuid(%u) faultid(%u)\n", cpu_id(), type);
   printf("Execution pointer: %p\n", execptr);
-  puts("regs:");
+  puts("Registers:");
 
   for (i = 0; i < CPU_GPREG_COUNT; i++)
 #ifdef CPU_GPREG_NAMES
@@ -295,6 +295,11 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 #else
     printf("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
+
+  puts("Stack top:");
+
+  for (i = 0; i < 8; i++)
+    printf("%p%c", stackptr[i], (i + 1) % 4 ? ' ' : '\n');
 
   while (1);
 }

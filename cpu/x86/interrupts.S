@@ -56,6 +56,8 @@ lbl:						; \
 /** interruption callback */
 #define PUT_TAIL_EX(callback, lbl)		\
 lbl:						; \
+	lea	44(%esp), %ebx			; \
+	pushl	%ebx				; \
 	pushl	%esp				; \
 	movl	%cr2, %ebx			; \
 	pushl	%ebx				; \
@@ -69,6 +71,8 @@ lbl:						; \
 /** exception with error code callback */
 #define PUT_TAIL_EX_ERR(callback, lbl)		\
 lbl:						; \
+	lea	48(%esp), %ebx			; \
+	pushl	%ebx				; \
 	pushl	%esp				; \
 	mov	%cr2, %ebx			; \
 	pushl	%ebx				; \

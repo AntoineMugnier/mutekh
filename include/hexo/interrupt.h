@@ -47,7 +47,8 @@ typedef CPU_INTERRUPT_HANDLER(cpu_interrupt_handler_t);
 
 /** CPU exception handler function template */
 #define CPU_EXCEPTION_HANDLER(n) void (n) (uint_fast8_t type, uintptr_t execptr, \
-					   uintptr_t dataptr, reg_t *regtable)
+					   uintptr_t dataptr, reg_t *regtable, \
+					   reg_t *stackptr)
 /**
    CPU exception handler function type.
 
