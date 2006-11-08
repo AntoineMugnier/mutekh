@@ -28,10 +28,10 @@
 #include <assert.h>
 
 /** general purpose regsiters count */
-#define CPU_GPREG_COUNT	0
+#define CPU_GPREG_COUNT	8
 
 /**
-   x86 apic boot strap processor (BSP)
+   boot strap processor test
    @return true if processor is the bootstrap processor
 */
 

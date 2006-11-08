@@ -133,6 +133,27 @@ sub cmd_require
     push(@{$$opts{require}}, "@args");
 }
 
+sub cmd_single
+{
+    my ($location, $opts, @args) = @_;
+
+    push(@{$$opts{single}}, "@args");
+}
+
+sub cmd_fallback
+{
+    my ($location, $opts, $arg) = @_;
+
+    if (defined $$opts{fallback})
+    {
+	error($location.": fallback token already declared for `".$$opts{name}." token'");
+    }
+    else
+    {
+	$$opts{fallback} = $arg;
+    }
+}
+
 my %config_cmd =
 (
  "exclude" => \&cmd_exclude,
@@ -140,6 +161,8 @@ my %config_cmd =
  "depend" => \&cmd_depend,
  "flags" => \&cmd_flags,
  "require" => \&cmd_require,
+ "single" => \&cmd_single,
+ "fallback" => \&cmd_fallback,
  "provide" => \&cmd_provide,
  "desc" => \&cmd_desc,
  "description" => \&cmd_desc
@@ -211,6 +234,7 @@ sub process_file
 		    $$opts{name} = $name;
 		    $$opts{depend} = [];
 		    $$opts{require} = [];
+		    $$opts{single} = [];
 		    $$opts{desc} = [];
 		    $$opts{provide} = [];
 		    $$opts{exclude} = [];
@@ -325,6 +349,29 @@ sub process_config_depend
 	    warning($$orig{vlocation}.": `".$$orig{name}."' token will be undefined ".
 		    "due to unmet dependencies; dependencies list is: ",
 		    @deps_and) if (not $$orig{nowarn});
+
+	    if (my $fb = $$orig{fallback})
+	    {
+		$fb =~ /^([^\s=]+)=?([^\s]*)$/;
+		my $dep = $1;
+		my $val = $2 ? $2 : "defined";
+		my $opt = $config_opts{$dep};
+
+		if ($opt)
+		{
+		    if ($$opt{value} eq "undefined")
+		    {
+			warning("using `".$fb."' as fall-back definition for `".$$orig{name}."'.");
+			$$opt{value} = $val;
+			process_config_provide($opt);
+		    }
+		    else
+		    {
+			warning("`".$dep."' fall-back token for `".$$orig{name}."' has already been defined, good.");
+		    }
+		}
+	    }
+
 	    $res = 0;
 	}
     }
@@ -398,7 +445,32 @@ sub process_config_require
 	{
 	    error($$orig{vlocation}.": `".$$orig{name}."' token is defined ".
 		  "but has unmet requirements; requirements list is: ",
-		  @deps_and) if (not $$orig{nowarn});
+		  @deps_and);
+	}
+    }
+}
+
+##
+## process single definition constraints and add to exclude lists
+##
+
+sub process_config_single
+{
+    my ($orig) = @_;
+
+    foreach my $dep_and (@{$$orig{single}})
+    {
+	my @deps_and = split(/\s+/, $dep_and);
+
+	foreach my $r1 (@deps_and)
+	{
+	    foreach my $r2 (@deps_and)
+	    {
+		next if ($r1 eq $r2);
+
+		my $opt = $config_opts{$r1};
+		push(@{$$opt{exclude}}, $r2);
+	    }
 	}
     }
 }
@@ -514,6 +586,11 @@ sub set_config
 	    process_config_provide($opt);
 	}
     }
+
+    foreach my $opt (values %config_opts)
+    {
+	process_config_single($opt);
+    }
 }
 
 ##
@@ -542,6 +619,21 @@ sub check_config
 	{
 	    warning($$opt{location}.": `".$name."' has no `CONFIG_' prefix");
 	}
+
+	if (my $fb = $$opt{fallback})
+	{
+	    $fb =~ /^([^\s=]+)/;
+
+	    if (not $config_opts{$1})
+	    {
+		warning($$opt{location}.": `".$$opt{name}."' fall-back to undeclared token `".$1."'");
+	    }
+
+	    if ($config_opts{$1} eq $opt)
+	    {
+		error($$opt{location}.": `".$$opt{name}."' fall-back to self");
+	    }
+	}
     }
 
     # checks and adjusts dependencies
@@ -567,7 +659,7 @@ sub check_config
     }
     until (not $changed);
 
-    # checks exclusion
+    # update exclusions with single def constraints
 
     foreach my $opt (values %config_opts)
     {
@@ -745,15 +837,20 @@ sub tokens_info
 
     print("\n  This token is mandatory and must not be undefined.\n") if $$opt{mandatory};
 
-    print("\n".text80("This token can not be defined directly by user; it must be provided ".
-		      "by defining other appropriate token(s).", "  ")."\n") if $$opt{nodefine};
+    print("\n  This token can not be defined directly by user.\n") if $$opt{nodefine};
 
     printf("
   declared at   :  %s
   defined  at   :  %s
   default value :  %s
   current value :  %s
-", $$opt{location}, $$opt{vlocation}, $$opt{default}, $$opt{value});
+", $$opt{location}, $$opt{vlocation},
+	   $$opt{default}, $$opt{value});
+
+    if (my $fb = $$opt{fallback})
+    {
+	printf("  fall-back def :  %s\n", $fb);
+    }
 
     if (my @list = @{$$opt{depend}})
     {
