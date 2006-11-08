@@ -19,29 +19,35 @@
 
 */
 
-#ifndef DRIVER_NET_NE2000_H_
-#define DRIVER_NET_NE2000_H_
+#ifndef LIMITS_H_
+#define LIMITS_H_
 
-#include <hexo/device/net.h>
-#include <hexo/device.h>
+#include <hexo/types.h>
 
-/* devices addresses slots */
+/* char type */
 
-#define NET_NE2000_ADDR		0
+#define CHAR_BIT	8
 
-/* net device functions */
+#define SCHAR_MIN	(__MINOF_TYPE(int8_t))
+#define SCHAR_MAX	(__MAXOF_TYPE(int8_t))
 
-DEV_IRQ(net_ne2000_irq);
-DEV_INIT(net_ne2000_init);
-DEV_CLEANUP(net_ne2000_cleanup);
-DEVNET_PREPAREPKT(net_ne2000_preparepkt);
-DEVNET_SENDPKT(net_ne2000_sendpkt);
-DEVNET_SETOPT(net_ne2000_setopt);
-DEVNET_GETOPT(net_ne2000_getopt);
+#define UCHAR_MAX	(__MAXOF_TYPE(uint8_t))
 
-#ifndef CONFIG_STATIC_DRIVERS
-extern const struct driver_s	net_ne2000_drv;
+#define CHAR_MIN	SCHAR_MIN
+#define CHAR_MAX	SCHAR_MAX
+
+/* short type */
+
+#define SHRT_MIN	(__MINOF_TYPE(int16_t))
+#define SHRT_MAX	(__MAXOF_TYPE(int16_t))
+
+#define USHRT_MAX	(__MAXOF_TYPE(uint16_t))
+
+/* int type */
+
+#define INT_MIN		(__MINOF_TYPE(int32_t))
+#define INT_MAX		(__MAXOF_TYPE(int32_t))
+
+#define UINT_MAX	(__MAXOF_TYPE(uint32_t))
+
 #endif
-
-#endif
-

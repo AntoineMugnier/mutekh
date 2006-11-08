@@ -33,6 +33,7 @@
 #include <hexo/alloc.h>
 
 #include <semaphore.h>
+#include <errno.h>
 
 CONTAINER_FUNC(static inline, socket_raw, DLIST, socket_raw, NOLOCK);
 
@@ -46,7 +47,12 @@ static _SOCKET(socket_raw)
 {
   struct socket_raw_pv_s	*pv;
 
-  pv = fd->pv = mem_alloc(sizeof (struct socket_raw_pv_s), MEM_SCOPE_NETWORK);
+  if ((pv = fd->pv = mem_alloc(sizeof (struct socket_raw_pv_s), MEM_SCOPE_NETWORK)) == NULL)
+    {
+      mem_free(fd);
+      errno = ENOMEM;
+      return NULL;
+    }
 
   protocol = ntohs(protocol);
   /* setup private data */
@@ -62,6 +68,8 @@ static _SOCKET(socket_raw)
       case PF_INET6:
 	/* IPV6 */
       default:
+	errno = EPFNOSUPPORT;
+	mem_free(fd);
 	mem_free(pv);
 	return NULL;
     }
@@ -92,7 +100,10 @@ static _BIND(bind_raw)
   bool_t			any;
 
   if (addr->sa_family != pv->family)
-    return -1;
+    {
+      errno = fd->error = EAFNOSUPPORT;
+      return -1;
+    }
 
   /* do protocol dependent things */
   switch (addr->sa_family)
@@ -102,7 +113,10 @@ static _BIND(bind_raw)
 	  uint_fast32_t	ip;
 
 	  if (len < sizeof (struct sockaddr_in))
-	    return -1;
+	    {
+	      errno = fd->error = EINVAL;
+	      return -1;
+	    }
 
 	  in = (struct sockaddr_in *)addr;
 	  id = ETHERTYPE_IP;
@@ -114,6 +128,7 @@ static _BIND(bind_raw)
       case AF_INET6:
 	/* IPV6 */
       default:
+	errno = fd->error = EAFNOSUPPORT;
 	return -1;
     }
 
@@ -131,7 +146,10 @@ static _BIND(bind_raw)
 
  ok:
   if (interface == NULL || addressing == NULL)
-    return -1;
+    {
+      errno = fd->error = EADDRNOTAVAIL;
+      return -1;
+    }
 
   /* setup the local address */
   memcpy(&pv->local, &address, sizeof (struct net_addr_s));
@@ -153,7 +171,10 @@ static _GETSOCKNAME(getsockname_raw)
       struct sockaddr_in	*in = (struct sockaddr_in *)addr;
 
       if (*len < sizeof (struct sockaddr_in))
-	return -1;
+	{
+	  errno = fd->error = EINVAL;
+	  return -1;
+	}
 
       /* fill the address structure */
       in->sin_family = AF_INET;
@@ -167,6 +188,7 @@ static _GETSOCKNAME(getsockname_raw)
   else
     {
       /* IPV6 */
+      errno = fd->error = EAFNOSUPPORT;
       return -1;
     }
 }
@@ -183,7 +205,10 @@ static _CONNECT(connect_raw)
   struct net_route_s		*route;
 
   if (addr->sa_family != pv->family)
-    return -1;
+    {
+      errno = fd->error = EAFNOSUPPORT;
+      return -1;
+    }
 
   switch (addr->sa_family)
     {
@@ -191,18 +216,25 @@ static _CONNECT(connect_raw)
 	in = (struct sockaddr_in *)addr;
 
 	if (len < sizeof (struct sockaddr_in))
-	  return -1;
+	  {
+	    errno = fd->error = EINVAL;
+	    return -1;
+	  }
 
 	IPV4_ADDR_SET(dest, ntohl(in->sin_addr.s_addr));
 	break;
       case AF_INET6:
 	/* IPV6 */
       default:
+	errno = fd->error = EAFNOSUPPORT;
 	return -1;
     }
 
   if ((route = route_get(&dest)) == NULL)
-    return -1;
+    {
+      errno = fd->error = EADDRNOTAVAIL;
+      return -1;
+    }
 
   memcpy(&pv->remote, &dest, sizeof (struct net_addr_s));
   pv->interface = route->interface;
@@ -221,14 +253,20 @@ static _GETPEERNAME(getpeername_raw)
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
 
   if (!pv->connected)
-    return -1;
+    {
+      errno = fd->error = ENOTCONN;
+      return -1;
+    }
 
   if (pv->local.family == addr_ipv4)
     {
       struct sockaddr_in	*in = (struct sockaddr_in *)addr;
 
       if (*len < sizeof (struct sockaddr_in))
-	return -1;
+	{
+	  errno = fd->error = EINVAL;
+	  return -1;
+	}
 
       /* fill the address structure */
       in->sin_family = AF_INET;
@@ -242,6 +280,7 @@ static _GETPEERNAME(getpeername_raw)
   else
     {
       /* IPV6 */
+      errno = fd->error = EAFNOSUPPORT;
       return -1;
     }
 }
@@ -261,7 +300,10 @@ static _SENDTO(sendto_raw)
   uint8_t			*p;
 
   if ((packet = packet_obj_new(NULL)) == NULL)
-    return -1;
+    {
+      errno = fd->error = ENOMEM;
+      return -1;
+    }
 
   /* determine endpoint */
   if (addr == NULL)
@@ -269,6 +311,7 @@ static _SENDTO(sendto_raw)
       if (!pv->connected)
 	{
 	  packet_obj_refdrop(packet);
+	  errno = fd->error = EDESTADDRREQ;
 	  return -1;
 	}
 
@@ -277,7 +320,10 @@ static _SENDTO(sendto_raw)
   else
     {
       if (addr->sa_family != pv->family)
-	return -1;
+	{
+	  errno = fd->error = EAFNOSUPPORT;
+	  return -1;
+	}
 
       switch (addr->sa_family)
 	{
@@ -285,6 +331,7 @@ static _SENDTO(sendto_raw)
 	    if (addr_len < sizeof (struct sockaddr_in))
 	      {
 		packet_obj_refdrop(packet);
+		errno = fd->error = EINVAL;
 		return -1;
 	      }
 	    in = (struct sockaddr_in *)addr;
@@ -294,6 +341,7 @@ static _SENDTO(sendto_raw)
 	    /* IPV6 */
 	  default:
 	    packet_obj_refdrop(packet);
+	    errno = fd->error = EAFNOSUPPORT;
 	    return -1;
 	}
     }
@@ -313,6 +361,7 @@ static _SENDTO(sendto_raw)
       if ((route = route_get(&packet->tADDR)) == NULL)
 	{
 	  packet_obj_refdrop(packet);
+	  errno = fd->error = EHOSTUNREACH;
 	  return -1;
 	}
       interface = route->interface;
@@ -322,10 +371,10 @@ static _SENDTO(sendto_raw)
   /* prepare the packet */
   if (pv->header)
     {
-      return -1; /* XXX */
       if ((p = if_preparepkt(interface, packet, n, 0)) == NULL)
 	{
 	  packet_obj_refdrop(packet);
+	  errno = fd->error = ENOMEM;
 	  return -1;
 	}
     }
@@ -334,6 +383,7 @@ static _SENDTO(sendto_raw)
       if ((p = addressing->desc->preparepkt(interface, packet, n, 0)) == NULL)
 	{
 	  packet_obj_refdrop(packet);
+	  errno = fd->error = ENOMEM;
 	  return -1;
 	}
     }
@@ -382,7 +432,10 @@ static _RECVFROM(recvfrom_raw)
   /* try to grab a packet */
  again:
   if (pv->shutdown == SHUT_RD || pv->shutdown == SHUT_RDWR)
-    return -1;
+    {
+      errno = fd->error = ESHUTDOWN;
+      return -1;
+    }
 
   if (flags & MSG_PEEK)
     packet = packet_queue_lock_head(&pv->recv_q);
@@ -392,7 +445,10 @@ static _RECVFROM(recvfrom_raw)
   if (packet == NULL)
     {
       if (flags & MSG_DONTWAIT)
-	return -1;
+	{
+	  errno = fd->error = EAGAIN;
+	  return -1;
+	}
 
       sem_wait(&pv->recv_sem);
 
@@ -410,6 +466,7 @@ static _RECVFROM(recvfrom_raw)
 	    if (*addr_len < sizeof (struct sockaddr_in))
 	      {
 		packet_obj_refdrop(packet);
+		errno = fd->error = EINVAL;
 		return -1;
 	      }
 
@@ -423,6 +480,7 @@ static _RECVFROM(recvfrom_raw)
 	    /* IPV6 */
 	  default:
 	    packet_obj_refdrop(packet);
+	    errno = fd->error = EAFNOSUPPORT;
 	    return -1;
 	}
     }
@@ -462,7 +520,20 @@ static _GETSOCKOPT(getsockopt_raw)
 static _SETSOCKOPT(setsockopt_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-  return -1;
+
+  switch (level)
+    {
+      case SOL_SOCKET:
+      case SOL_IP:
+	/* XXX */
+	break;
+      case SOL_RAW:
+	break;
+      default:
+	return -1;
+    }
+
+  return 0;
 }
 
 /*
@@ -474,7 +545,10 @@ static _SHUTDOWN(shutdown_raw)
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
 
   if (how != SHUT_RDWR && how != SHUT_RD && how != SHUT_WR)
-    return -1;
+    {
+      errno = fd->error = EINVAL;
+      return -1;
+    }
 
   /* check combinations */
   if (how == SHUT_RDWR || (pv->shutdown == SHUT_RD && how == SHUT_WR) ||
@@ -508,8 +582,8 @@ static _SHUTDOWN(shutdown_raw)
  * Following operations are not supported with RAW sockets.
  */
 
-static _LISTEN(listen_raw) { return -1; }
-static _ACCEPT(accept_raw) { return -1; }
+static _LISTEN(listen_raw) { errno = fd->error = EOPNOTSUPP; return -1; }
+static _ACCEPT(accept_raw) { errno = fd->error = EOPNOTSUPP; return -1; }
 
 /*
  * Socket API for RAW sockets.

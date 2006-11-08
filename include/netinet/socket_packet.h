@@ -30,6 +30,7 @@
 #include <gpct/cont_dlist.h>
 
 #include <semaphore.h>
+#include <timer.h>
 
 struct				socket_packet_pv_s
 {
@@ -37,8 +38,12 @@ struct				socket_packet_pv_s
   bool_t			header;
   uint_fast32_t			interface;
   int				shutdown;
+  bool_t			broadcast;
+  error_t			error;
+
   packet_queue_root_t		recv_q;
   sem_t				recv_sem;
+  timer_delay_t			recv_timeout;
 
   CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
 };

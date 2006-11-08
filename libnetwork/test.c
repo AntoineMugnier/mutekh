@@ -205,6 +205,9 @@ void *net_up(void *p)
   route->interface = if_get_by_name("eth0");
   IPV4_ADDR_SET(route->target, 0x0a020200);
   IPV4_ADDR_SET(route->mask, 0xffffff00);
+  //IPV4_ADDR_SET(route->target, 0x0);
+  //IPV4_ADDR_SET(route->mask, 0x0);
+  //IPV4_ADDR_SET(route->router, 0x0a020201);
   route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
   route_add(route);
 
@@ -222,7 +225,8 @@ void *net_up(void *p)
   struct net_addr_s	addr;
   struct ping_s		stat;
 
-  IPV4_ADDR_SET(addr, 0x0a0202f0);
+  //  IPV4_ADDR_SET(addr, 0x84e33f32);
+  IPV4_ADDR_SET(addr, 0x0a020201);
 
   ping(&addr, 3, 56, &stat);
 

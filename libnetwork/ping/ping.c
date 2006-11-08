@@ -30,6 +30,7 @@
 #include <netinet/icmp.h>
 #include <netinet/socket.h>
 
+#include <limits.h>
 #include <timer.h>
 
 #include <netinet/ping.h>
@@ -57,6 +58,7 @@ error_t			ping(struct net_addr_s	*host,
 
   /* reset the statistics */
   memset(stat, 0, sizeof (struct ping_s));
+  stat->min = UINT_MAX;
 
   /* allocate and create the message */
   if ((buf1 = mem_alloc(size + sizeof (struct icmphdr), MEM_SCOPE_SYS)) == NULL)
@@ -205,7 +207,7 @@ error_t			ping(struct net_addr_s	*host,
 			      printf("Reply: Network denied\n");
 			      break;
 			    default:
-			      printf("Reply: unknown error\n");
+			      printf("Reply: Destination unreachable\n");
 			      break;
 			  }
 			break;
@@ -219,7 +221,7 @@ error_t			ping(struct net_addr_s	*host,
 			      printf("Reply: Reassembly timeout\n");
 			      break;
 			    default:
-			      printf("Reply: timeout\n");
+			      printf("Reply: Timeout\n");
 			      break;
 			  }
 			break;

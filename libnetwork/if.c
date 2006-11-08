@@ -259,11 +259,9 @@ void			if_sendpkt(struct net_if_s	*interface,
   if (!memcmp(interface->mac, packet->tMAC, packet->MAClen))
     {
       /* XXX c'est mal poli on passe devant tout le monde */
-      /* XXX maj header */
       packet->proto = proto;
       packet->stage++;
       if_pushpkt(interface, packet);
-      packet_obj_refdrop(packet);
     }
   else
     dev_net_sendpkt(interface->dev, packet, proto);

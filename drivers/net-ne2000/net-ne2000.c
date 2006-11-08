@@ -91,6 +91,7 @@ const struct driver_s	net_ne2000_drv =
     .f_preparepkt	= net_ne2000_preparepkt,
     .f_sendpkt		= net_ne2000_sendpkt,
     .f_setopt		= net_ne2000_setopt,
+    .f_getopt		= net_ne2000_getopt,
   }
 };
 #endif
@@ -614,11 +615,11 @@ DEVNET_SENDPKT(net_ne2000_sendpkt)
       pv->current != NULL)
     {
       packet_queue_pushback(&pv->sendqueue, packet);
-      packet_obj_refdrop(packet);
     }
   else
     {
       /* otherwise, send the datagram immediately */
+      packet_obj_refnew(packet);
       pv->current = packet;
 
       ne2000_send(dev);
@@ -641,17 +642,41 @@ DEVNET_SETOPT(net_ne2000_setopt)
       case DEV_NET_OPT_PROMISC:
 	{
 	  uint8_t	rcr;
+	  bool_t	*val = value;
+
+	  if (len < sizeof (bool_t))
+	    return -1;
 
 	  ne2000_page(dev, NE2000_P2);
 	  rcr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_RCR);
-	  if (value)
+	  if (*val)
 	    rcr |= NE2000_PROMISCUOUS;
 	  else
 	    rcr &= ~NE2000_PROMISCUOUS;
-	  printf("%s: %s promiscuous mode\n", pv->interface->name, value ? "entering" : "leaving");
+	  printf("%s: %s promiscuous mode\n", pv->interface->name, *val ? "entering" : "leaving");
 	  ne2000_page(dev, NE2000_P0);
 	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RCR, rcr);
 	}
+	break;
+      default:
+	return -1;
+    }
+
+  return 0;
+}
+
+/*
+ * Get driver level options / info.
+ */
+
+DEVNET_GETOPT(net_ne2000_getopt)
+{
+  switch (option)
+    {
+      case DEV_NET_OPT_BCAST:
+	if (*len < ETH_ALEN)
+	  return -1;
+	memcpy(value, "\xff\xff\xff\xff\xff\xff", ETH_ALEN);
 	break;
       default:
 	return -1;

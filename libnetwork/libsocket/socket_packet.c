@@ -32,6 +32,8 @@
 #include <hexo/alloc.h>
 
 #include <semaphore.h>
+#include <timer.h>
+#include <errno.h>
 
 static _RECVFROM(recvfrom_packet);
 
@@ -47,12 +49,19 @@ static _SOCKET(socket_packet)
 {
   struct socket_packet_pv_s	*pv;
 
-  pv = fd->pv = mem_alloc(sizeof (struct socket_packet_pv_s), MEM_SCOPE_NETWORK);
+  if ((pv = fd->pv = mem_alloc(sizeof (struct socket_packet_pv_s), MEM_SCOPE_NETWORK)) == NULL)
+    {
+      errno = ENOMEM;
+      mem_free(fd);
+      return NULL;
+    }
 
   /* setup private data */
   pv->proto = ntohs(protocol);
   pv->interface = 0;
   pv->shutdown = -1;
+  pv->broadcast = 0;
+  pv->recv_timeout = 0;
   sem_init(&pv->recv_sem, 0, 0);
   packet_queue_lock_init(&pv->recv_q);
   pv->header = (type == SOCK_RAW);
@@ -72,11 +81,17 @@ static _BIND(bind_packet)
   struct net_if_s		*interface;
 
   if (len < sizeof (struct sockaddr_ll) || sll->sll_family != AF_PACKET)
-    return -1;
+    {
+      errno = fd->error = EINVAL;
+      return -1;
+    }
 
   /* bind to the given interface and protocol */
   if ((interface = if_get_by_index(sll->sll_ifindex)) == NULL)
-    return -1;
+    {
+      errno = fd->error = EADDRNOTAVAIL;
+      return -1;
+    }
 
   pv->interface = interface->index;
   pv->proto = ntohs(sll->sll_protocol);
@@ -94,11 +109,17 @@ static _GETSOCKNAME(getsockname_packet)
   struct sockaddr_ll		*sll = (struct sockaddr_ll *)addr;
 
   if (*len < sizeof (struct sockaddr_ll))
-    return -1;
+    {
+      errno = fd->error = EINVAL;
+      return -1;
+    }
 
   /* not bound... */
   if (pv->interface == 0)
-    return -1;
+    {
+      errno = fd->error = EADDRNOTAVAIL;
+      return -1;
+    }
 
   /* fill socket name */
   sll->sll_family = AF_PACKET;
@@ -123,13 +144,22 @@ static _SENDTO(sendto_packet)
   struct net_header_s		*nethdr;
 
   if (pv->shutdown == SHUT_WR || pv->shutdown == SHUT_RDWR)
-    return -1;
+    {
+      errno = fd->error = ESHUTDOWN;
+      return -1;
+    }
 
   if (sll == NULL || addr_len < sizeof (struct sockaddr_ll) || sll->sll_family != AF_PACKET)
-    return -1;
+    {
+      errno = fd->error = (sll == NULL ? EDESTADDRREQ : EINVAL);
+      return -1;
+    }
 
   if ((packet = packet_obj_new(NULL)) == NULL)
-    return -1;
+    {
+      errno = fd->error = ENOMEM;
+      return -1;
+    }
 
   /* retrieve the interface from the if index */
   interface = if_get_by_index(sll->sll_ifindex);
@@ -140,6 +170,7 @@ static _SENDTO(sendto_packet)
       if ((packet->packet = mem_alloc(n, MEM_SCOPE_NETWORK)) == NULL)
 	{
 	  packet_obj_refdrop(packet);
+	  errno = fd->error = ENOMEM;
 	  return -1;
 	}
 
@@ -161,6 +192,7 @@ static _SENDTO(sendto_packet)
       if ((next = if_preparepkt(interface, packet, n, 0)) == NULL)
 	{
 	  packet_obj_refdrop(packet);
+	  errno = fd->error = ENOMEM;
 	  return -1;
 	}
 
@@ -196,7 +228,10 @@ static _RECVFROM(recvfrom_packet)
   /* try to grab a packet */
  again:
   if (pv->shutdown == SHUT_RD || pv->shutdown == SHUT_RDWR)
-    return -1;
+    {
+      errno = fd->error = ESHUTDOWN;
+      return -1;
+    }
 
   if (flags & MSG_PEEK)
     packet = packet_queue_lock_head(&pv->recv_q);
@@ -205,9 +240,24 @@ static _RECVFROM(recvfrom_packet)
 
   if (packet == NULL)
     {
-      if (flags & MSG_DONTWAIT)
-	return -1;
+      struct timer_event_s	timeout;
 
+      if (flags & MSG_DONTWAIT)
+	{
+	  errno = fd->error = EAGAIN;
+	  return -1;
+	}
+
+      /* if there is a receive timeout, start a timer */
+      if (pv->recv_timeout)
+	{
+	  //	  timeout.callback = recv_timeout;
+	  timeout.delay = pv->recv_timeout;
+
+	  timer_add_event(&timer_ms, &timeout);
+	}
+
+      /* wait */
       sem_wait(&pv->recv_sem);
 
       goto again;
@@ -218,6 +268,7 @@ static _RECVFROM(recvfrom_packet)
     {
       if (*addr_len < sizeof (struct sockaddr_ll))
 	{
+	  errno = fd->error = ENOMEM;
 	  packet_obj_refdrop(packet);
 	  return -1;
 	}
@@ -275,33 +326,190 @@ static _RECVFROM(recvfrom_packet)
 
 static _SETSOCKOPT(setsockopt_packet)
 {
-  struct packet_mreq		*req = (struct packet_mreq *)optval;
+  struct socket_packet_pv_s	*pv = (struct socket_packet_pv_s *)fd->pv;
+  struct packet_mreq		*req;
   struct net_if_s		*interface;
 
-  if (level != SOL_PACKET)
-    return -1;
-
-  if (optname != PACKET_ADD_MEMBERSHIP && optname != PACKET_DROP_MEMBERSHIP)
-    return -1;
-
-  if (optlen < sizeof (struct packet_mreq))
-    return -1;
-
-  switch (req->mr_type)
+  switch (level)
     {
-      /* enable or disable promiscuous mode */
-      case PACKET_MR_PROMISC:
-	if ((interface = if_get_by_index(req->mr_ifindex)) == NULL)
-	  return -1;
-	dev_net_setopt(interface->dev, DEV_NET_OPT_PROMISC, optname == PACKET_ADD_MEMBERSHIP);
+      /* PF_PACKET options */
+      case SOL_PACKET:
+	if (optname != PACKET_ADD_MEMBERSHIP && optname != PACKET_DROP_MEMBERSHIP)
+	  {
+	    errno = fd->error = ENOPROTOOPT;
+	    return -1;
+	  }
+
+	if (optlen < sizeof (struct packet_mreq))
+	  {
+	    errno = fd->error = EINVAL;
+	    return -1;
+	  }
+
+	req = (struct packet_mreq *)optval;
+
+	switch (req->mr_type)
+	  {
+	    /* enable or disable promiscuous mode */
+	    case PACKET_MR_PROMISC:
+	      {
+		bool_t	enabled = optname == PACKET_ADD_MEMBERSHIP;
+
+		if ((interface = if_get_by_index(req->mr_ifindex)) == NULL)
+		  {
+		    errno = fd->error = EADDRNOTAVAIL;
+		    return -1;
+		  }
+		dev_net_setopt(interface->dev, DEV_NET_OPT_PROMISC, &enabled, sizeof (bool_t));
+	      }
+	      break;
+	      /* other options not supported (multicast) */
+	    default:
+	      errno = fd->error = ENOPROTOOPT;
+	      return -1;
+	  }
 	break;
-	/* other options not supported (multicast) */
+      /* socket options */
+      case SOL_SOCKET:
+	switch (optname)
+	  {
+	    /* recv timeout */
+	    case SO_RCVTIMEO:
+	      {
+		const struct timeval	*tv;
+
+		if (optlen < sizeof (struct timeval))
+		  {
+		    errno = fd->error = EINVAL;
+		    return -1;
+		  }
+
+		tv = optval;
+		pv->recv_timeout = tv->tv_sec * 1000 + tv->tv_usec / 1000;
+	      }
+	      break;
+	    /* allow sending/receiving broadcast */
+	    case SO_BROADCAST:
+	      {
+		const int		*enable;
+
+		if (optlen < sizeof (int))
+		  {
+		    errno = fd->error = EINVAL;
+		    return -1;
+		  }
+
+		enable = optval;
+		pv->broadcast = *enable;
+	      }
+	      break;
+	    default:
+	      errno = fd->error = ENOPROTOOPT;
+	      return -1;
+	  }
+	return 0;
+	break;
       default:
+	errno = fd->error = ENOPROTOOPT;
 	return -1;
     }
 
   return 0;
 }
+
+/*
+ * Get a socket option value.
+ */
+
+static _GETSOCKOPT(getsockopt_packet)
+{
+  struct socket_packet_pv_s	*pv = (struct socket_packet_pv_s *)fd->pv;
+
+  if (level != SOL_SOCKET)
+    {
+      errno = fd->error = ENOPROTOOPT;
+      return -1;
+    }
+
+  switch (optname)
+    {
+      /* recv timeout */
+      case SO_RCVTIMEO:
+	{
+	  struct timeval	*tv;
+
+	  if (*optlen < sizeof (struct timeval))
+	    {
+	      errno = fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  tv = optval;
+	  tv->tv_usec = (pv->recv_timeout % 1000) * 1000;
+	  tv->tv_sec = pv->recv_timeout / 1000;
+
+	  *optlen = sizeof (struct timeval);
+	}
+	break;
+      /* broadcast enabled */
+      case SO_BROADCAST:
+	{
+	  int			*enabled;
+
+	  if (*optlen < sizeof (int))
+	    {
+	      errno = fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  enabled = optval;
+	  *enabled = pv->broadcast;
+
+	  *optlen = sizeof (int);
+	}
+	break;
+      /* socket type */
+      case SO_TYPE:
+	{
+	  int			*type;
+
+	  if (*optlen < sizeof (int))
+	    {
+	      errno = fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  type = optval;
+	  *type = (pv->header ? SOCK_RAW : SOCK_DGRAM);
+
+	  *optlen = sizeof (int);
+	}
+	break;
+      /* socket last error */
+      case SO_ERROR:
+	{
+	  int			*error;
+
+	  if (*optlen < sizeof (int))
+	    {
+	      errno = fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  error = optval;
+	  *error = fd->error;
+
+	  *optlen = sizeof (int);
+	}
+	break;
+      default:
+	errno = fd->error = ENOPROTOOPT;
+	return -1;
+    }
+
+  return 0;
+}
+
 
 /*
  * Stop dataflow on a socket.
@@ -312,7 +520,10 @@ static _SHUTDOWN(shutdown_packet)
   struct socket_packet_pv_s	*pv = (struct socket_packet_pv_s *)fd->pv;
 
   if (how != SHUT_RDWR && how != SHUT_RD && how != SHUT_WR)
-    return -1;
+    {
+      errno = fd->error = EINVAL;
+      return -1;
+    }
 
   /* check combinations */
   if (how == SHUT_RDWR || (pv->shutdown == SHUT_RD && how == SHUT_WR) ||
@@ -346,11 +557,10 @@ static _SHUTDOWN(shutdown_packet)
  * Following operations are not supported with PACKET sockets.
  */
 
-static _LISTEN(listen_packet) { return -1; }
-static _ACCEPT(accept_packet) { return -1; }
-static _CONNECT(connect_packet) { return -1; }
-static _GETPEERNAME(getpeername_packet) { return -1; }
-static _GETSOCKOPT(getsockopt_packet) { return -1; }
+static _LISTEN(listen_packet) { errno = fd->error = EOPNOTSUPP; return -1; }
+static _ACCEPT(accept_packet) { errno = fd->error = EOPNOTSUPP; return -1; }
+static _CONNECT(connect_packet) { errno = fd->error = EOPNOTSUPP; return -1; }
+static _GETPEERNAME(getpeername_packet) { errno = fd->error = EOPNOTSUPP; return -1; }
 
 /*
  * Socket API for PACKET sockets.
@@ -380,6 +590,12 @@ void		pf_packet_signal(struct net_if_s	*interface,
 				 struct net_packet_s	*packet,
 				 net_proto_id_t		protocol)
 {
+  uint8_t	bcast[packet->MAClen];
+  size_t	maclen = packet->MAClen;
+
+  assert(!dev_net_getopt(interface->dev, DEV_NET_OPT_BCAST, bcast, &maclen));
+  assert(maclen == packet->MAClen);
+
   /* deliver packet to all sockets matching interface and protocol id */
   CONTAINER_FOREACH(socket_packet, DLIST, NOLOCK, &pf_packet,
   {
@@ -390,6 +606,9 @@ void		pf_packet_signal(struct net_if_s	*interface,
       {
 	if (item->proto == protocol || item->proto == ETH_P_ALL)
 	  {
+	    if (!item->broadcast && !memcmp(packet->tMAC, bcast, maclen))
+	      CONTAINER_FOREACH_CONTINUE;
+
 	    packet_queue_lock_pushback(&item->recv_q, packet);
 	    sem_post(&item->recv_sem);
 	  }

@@ -97,6 +97,7 @@ static inline void	icmp_echo(struct net_if_s	*interface,
   packet->stage--;
   /* send the packet to IP */
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_ICMP);
+  packet_obj_refdrop(packet);
 }
 
 
@@ -431,6 +432,7 @@ NET_ERRORMSG(icmp_errormsg)
   packet->stage--;
   /* send the packet to the interface */
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_ICMP);
+  packet_obj_refdrop(packet);
 
   va_end(va);
 }

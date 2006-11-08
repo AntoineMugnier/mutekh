@@ -174,6 +174,7 @@ static inline void	arp_request(struct net_if_s	*interface,
   /* send the packet to the interface */
   packet->stage--;
   if_sendpkt(interface, packet, ETHERTYPE_ARP);
+  packet_obj_refdrop(packet);
 }
 
 /*
@@ -207,6 +208,7 @@ static inline void	arp_reply(struct net_if_s		*interface,
   /* send the packet to the interface */
   packet->stage--;
   if_sendpkt(interface, packet, ETHERTYPE_ARP);
+  packet_obj_refdrop(packet);
 }
 
 /*
@@ -407,7 +409,6 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
 
       /* otherwise, it is validating, so push the packet in the wait queue */
       packet_queue_pushback(&arp_entry->resolution->wait, packet);
-      packet_obj_refdrop(packet);
     }
   else
     {

@@ -250,6 +250,15 @@ struct packet_mreq
 #define PACKET_MR_PROMISC	1
 #define PACKET_MR_ALLMULTI	2
 
+#include <timer.h>
+
+typedef timer_delay_t	time_t;
+typedef timer_delay_t	suseconds_t;
+
+struct timeval {
+	time_t		tv_sec;		/* seconds */
+	suseconds_t	tv_usec;	/* microseconds */
+};
 
 /* The following constants should be used for the second parameter of
    `shutdown'.  */
@@ -455,6 +464,7 @@ extern const struct socket_api_s	raw_socket;
 struct				socket_s
 {
   const struct socket_api_s	*f;
+  error_t			error;
   void				*pv;
 };
 

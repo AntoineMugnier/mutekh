@@ -64,5 +64,32 @@ typedef int_fast8_t		error_t;
 /** address not available */
 #define EADDRNOTAVAIL	41
 
+/** destination address required */
+#define EDESTADDRREQ	89
+
+/** protocol or option not available */
+#define ENOPROTOOPT	92
+
+/** protocol not supported */
+#define EPROTONOSUPPORT	93
+
+/** operation not supported on transport endpoint */
+#define EOPNOTSUPP	95
+
+/** protocol family not supported */
+#define EPFNOSUPPORT	96
+
+/** address family not supported by protocol */
+#define EAFNOSUPPORT	97
+
+/** transport endpoint not connected */
+#define ENOTCONN	107
+
+/** cannot send after transport endpoint shutdown */
+#define ESHUTDOWN	108
+
+/** no route to host */
+#define EHOSTUNREACH	113
+
 #endif
 

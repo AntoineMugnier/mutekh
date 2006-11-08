@@ -248,7 +248,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 
       /* we received the whole packet, reassemble now */
       nethdr = &packet->header[packet->stage];
-      headers_len = (packet->header[0].size - nethdr->size);
+      headers_len = (nethdr->data - packet->header[0].data);
 
       /* allocate a packet large enough */
       if ((data = mem_alloc(total + headers_len + 3, MEM_SCOPE_NETWORK)) == NULL)
@@ -284,10 +284,6 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       /* replace by reassembling packet */
       packet->packet = data;
       data = ptr;
-
-      /* update internal fields */
-      nethdr->data = data;
-      nethdr->size = total;
 
       /* loop through previously received packets and reassemble them */
       while ((frag = packet_queue_pop(&p->packets)))
@@ -327,13 +323,15 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	 different headers into the reassembled packets. to finish, we
 	 update the size of each subpackets. */
       nethdr = packet->header;
-      for (i = 0; i < packet->stage - 1; i++)
+      for (i = 0; i < packet->stage; i++)
 	sizes[i] = nethdr[i + 1].data - nethdr[i].data;
       nethdr[0].data = packet->packet;
-      for (i = 1; i < packet->stage - 1; i++)
+      for (i = 1; i < packet->stage; i++)
 	nethdr[i].data = nethdr[i - 1].data + sizes[i - 1];
-      for (i = 0; i < packet->stage - 1; i++)
+      for (i = 0; i < packet->stage; i++)
 	nethdr[i].size = nethdr[i].size - datasz + total;
+      nethdr[i].data = data;
+      nethdr[i].size = total;
 
       return 1;
     }
@@ -632,6 +630,7 @@ static inline bool_t	 ip_send_fragment(struct net_proto_s	*ip,
   /* send the packet to the driver */
   frag->stage--;
   if_sendpkt(interface, frag, ETHERTYPE_IP);
+  packet_obj_refdrop(frag);
 
   return 1;
 }
@@ -703,7 +702,6 @@ NET_SENDPKT(ip_send)
 	      /* network unreachable */
 	      pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
 
-	      packet_obj_refdrop(packet);
 	      return ;
 #ifdef CONFIG_NETWORK_ROUTING
 	    }
@@ -724,8 +722,6 @@ NET_SENDPKT(ip_send)
       if (!error)
 	ip_send_fragment(protocol, interface, hdr, packet, route_entry, 0, offs, total - offs, 1);
 
-      /* release the original packet */
-      packet_obj_refdrop(packet);
       return ;
     }
 
@@ -752,8 +748,6 @@ NET_SENDPKT(ip_send)
 #endif
 	  /* network unreachable */
 	  pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
-
-	  packet_obj_refdrop(packet);
 #ifdef CONFIG_NETWORK_ROUTING
 	}
 #endif
@@ -791,8 +785,6 @@ void		ip_route(struct net_packet_s	*packet,
   uint_fast16_t		total;
   uint_fast16_t		check;
 
-  packet_obj_refnew(packet);
-
   interface = route->interface;
   pv = (struct net_pv_ip_s *)route->addressing->pv;
 
@@ -805,7 +797,6 @@ void		ip_route(struct net_packet_s	*packet,
     {
       pv->icmp->desc->f.control->errormsg(packet, ERROR_TIMEOUT);
 
-      packet_obj_refdrop(packet);
       return ;
     }
 
@@ -845,7 +836,6 @@ void		ip_route(struct net_packet_s	*packet,
 	  /* report the error */
 	  pv->icmp->desc->f.control->errormsg(packet, ERROR_CANNOT_FRAGMENT, route);
 
-	  packet_obj_refdrop(packet);
 	  return;
 	}
 
@@ -870,8 +860,6 @@ void		ip_route(struct net_packet_s	*packet,
       if (!error)
 	ip_send_fragment(route->addressing, interface, hdr, packet, route, shift, offs, total - offs, !(fragment & IP_FLAG_MF));
 
-      /* release the original packet */
-      packet_obj_refdrop(packet);
       return ;
     }
 

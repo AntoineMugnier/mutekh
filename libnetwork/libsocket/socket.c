@@ -21,6 +21,8 @@
 
 #include <netinet/socket.h>
 
+#include <errno.h>
+
 /* Create a new socket of type TYPE in domain DOMAIN, using
    protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
    Returns a file descriptor for the new socket, or -1 for errors.  */
@@ -55,6 +57,7 @@ socket_t			socket(int domain, int type, int protocol)
 		    break;
 #endif
 		  default:
+		    errno = EPROTONOSUPPORT;
 		    return error;
 		}
 	      break;
@@ -69,6 +72,7 @@ socket_t			socket(int domain, int type, int protocol)
 		    break;
 #endif
 		  default:
+		    errno = EPROTONOSUPPORT;
 		    return error;
 		}
 	      break;
@@ -79,6 +83,7 @@ socket_t			socket(int domain, int type, int protocol)
 	      break;
 #endif
 	    default:
+	      errno = EPROTONOSUPPORT;
 	      return error;
 	  }
 	break;
@@ -89,9 +94,15 @@ socket_t			socket(int domain, int type, int protocol)
 	break;
 #endif
       default:
+	errno = EPFNOSUPPORT;
 	return error;
     }
-  sock = mem_alloc(sizeof (struct socket_s), MEM_SCOPE_NETWORK);
+  if ((sock = mem_alloc(sizeof (struct socket_s), MEM_SCOPE_NETWORK)) == NULL)
+    {
+      errno = ENOMEM;
+      return -1;
+    }
+  sock->error = 0;
   sock->f = api;
 #if defined(CONFIG_NETWORK_SOCKET_HEXO)
   return api->socket(sock, domain, type, protocol);
@@ -137,7 +148,10 @@ _SENDMSG(sendmsg)
 
   /* allocate a buffer large enough */
   if ((buf = mem_alloc(n, MEM_SCOPE_SYS)) == NULL)
-    return -1;
+    {
+      fd->error = errno = ENOMEM;
+      return -1;
+    }
 
   /* build the buffer */
   for (i = 0, n = 0; i < message->msg_iovlen; i++)
@@ -171,7 +185,10 @@ _RECVMSG(recvmsg)
 
   /* allocate a buffer large enough */
   if ((buf = mem_alloc(n, MEM_SCOPE_SYS)) == NULL)
-    return -1;
+    {
+      fd->error = errno = ENOMEM;
+      return -1;
+    }
 
   /* receive the data */
   ret = recvfrom(fd, buf, n, flags, message->msg_name, &message->msg_namelen);

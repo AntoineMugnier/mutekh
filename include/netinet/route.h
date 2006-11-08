@@ -35,10 +35,10 @@ struct net_if_s;
  * Specify if a route entry is for a network or a specific host.
  */
 
-#define ROUTETYPE_NET		0
-#define ROUTETYPE_HOST		1
-#define ROUTETYPE_DIRECT	2
-#define ROUTETYPE_INDIRECT	3
+#define ROUTETYPE_NET		1
+#define ROUTETYPE_HOST		2
+#define ROUTETYPE_DIRECT	4
+#define ROUTETYPE_INDIRECT	8
 
 /*
  * Structure defining a route.

@@ -7,7 +7,8 @@
   - a finir
 
 * libsocket
-  - a coder integralement
+  - sockopt sur socket IP
+  - sockets UDP et TCP
 
 * route
   - refaire avec un arbre comme a dit Alex
