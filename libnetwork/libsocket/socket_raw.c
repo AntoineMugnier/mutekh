@@ -80,7 +80,15 @@ static _SOCKET(socket_raw)
 
   /* determine if headers must be included or not */
   pv->header = (protocol == IPPROTO_RAW);
-  socket_raw_push(&sock_raw, pv);
+  if (!socket_raw_push(&sock_raw, pv))
+    {
+      errno = ENOMEM;
+      mem_free(fd);
+      sem_destroy(&pv->recv_sem);
+      packet_queue_lock_destroy(&pv->recv_q);
+      mem_free(pv);
+      return NULL;
+    }
 
   return fd;
 }
@@ -166,31 +174,32 @@ static _GETSOCKNAME(getsockname_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
 
-  if (pv->local.family == addr_ipv4)
+  switch (pv->local.family)
     {
-      struct sockaddr_in	*in = (struct sockaddr_in *)addr;
-
-      if (*len < sizeof (struct sockaddr_in))
+      case addr_ipv4:
 	{
-	  errno = fd->error = EINVAL;
-	  return -1;
+	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
+
+	  if (*len < sizeof (struct sockaddr_in))
+	    {
+	      errno = fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  /* fill the address structure */
+	  in->sin_family = AF_INET;
+	  in->sin_port = htons(pv->proto);
+	  in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(pv->local));
+
+	  *len = sizeof (struct sockaddr_in);
 	}
-
-      /* fill the address structure */
-      in->sin_family = AF_INET;
-      in->sin_port = htons(pv->proto);
-      in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(pv->local));
-
-      *len = sizeof (struct sockaddr_in);
-
-      return 0;
+	break;
+      default:
+	errno = fd->error = EAFNOSUPPORT;
+	return -1;
     }
-  else
-    {
-      /* IPV6 */
-      errno = fd->error = EAFNOSUPPORT;
-      return -1;
-    }
+
+  return 0;
 }
 
 /*
@@ -258,31 +267,32 @@ static _GETPEERNAME(getpeername_raw)
       return -1;
     }
 
-  if (pv->local.family == addr_ipv4)
+  switch (pv->local.family)
     {
-      struct sockaddr_in	*in = (struct sockaddr_in *)addr;
-
-      if (*len < sizeof (struct sockaddr_in))
+      case addr_ipv4:
 	{
-	  errno = fd->error = EINVAL;
-	  return -1;
+	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
+
+	  if (*len < sizeof (struct sockaddr_in))
+	    {
+	      errno = fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  /* fill the address structure */
+	  in->sin_family = AF_INET;
+	  in->sin_port = htons(pv->proto);
+	  in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(pv->remote));
+
+	  *len = sizeof (struct sockaddr_in);
 	}
-
-      /* fill the address structure */
-      in->sin_family = AF_INET;
-      in->sin_port = htons(pv->proto);
-      in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(pv->remote));
-
-      *len = sizeof (struct sockaddr_in);
-
-      return 0;
+	break;
+      default:
+	errno = fd->error = EAFNOSUPPORT;
+	return -1;
     }
-  else
-    {
-      /* IPV6 */
-      errno = fd->error = EAFNOSUPPORT;
-      return -1;
-    }
+
+  return 0;
 }
 
 /*
@@ -510,7 +520,19 @@ static _RECVFROM(recvfrom_raw)
 static _GETSOCKOPT(getsockopt_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-  return -1;
+  switch (level) /* XXX */
+    {
+      case SOL_SOCKET:
+	break;
+      case SOL_IP:
+	break;
+      case SOL_RAW:
+	break;
+      default:
+	return -1;
+    }
+
+  return 0;
 }
 
 /*
@@ -521,11 +543,11 @@ static _SETSOCKOPT(setsockopt_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
 
-  switch (level)
+  switch (level) /* XXX */
     {
       case SOL_SOCKET:
+	break;
       case SOL_IP:
-	/* XXX */
 	break;
       case SOL_RAW:
 	break;
@@ -623,8 +645,8 @@ void		sock_raw_signal(struct net_proto_s	*addressing,
       {
 	if (item->proto == protocol || item->proto == IPPROTO_RAW)
 	  {
-	    packet_queue_lock_pushback(&item->recv_q, packet);
-	    sem_post(&item->recv_sem);
+	    if (packet_queue_lock_pushback(&item->recv_q, packet))
+	      sem_post(&item->recv_sem);
 	  }
       }
   });

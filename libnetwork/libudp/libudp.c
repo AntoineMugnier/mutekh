@@ -34,69 +34,178 @@
 #include <netinet/ether.h>
 #include <netinet/in.h>
 #include <netinet/if.h>
+#include <netinet/route.h>
 
 #include <netinet/libudp.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/cont_dlist.h>
-#if 0
-/*
- * Callback container.
- */
-
-static udp_callback_root_t	udp_callbacks = CONTAINER_ROOT_INITIALIZER(udp_callback, HASHLIST, NOLOCK);
-
-CONTAINER_FUNC(static inline, udp_callback, HASHLIST, udp_callback, NOLOCK, address);
-CONTAINER_KEY_FUNC(static inline, udp_callback, HASHLIST, udp_callback, NOLOCK, address);
 
 /*
- * Send a datagram via UDP
+ * The descriptors set.
  */
 
-int_fast8_t		udp_send(struct net_udp_addr_s	*local,
-				 struct net_udp_addr_s	*remote,
-				 void			*data,
-				 size_t			size)
+static udp_desc_root_t	descriptors = CONTAINER_ROOT_INITIALIZER(udp_desc, HASHLIST, NOLOCK);
+
+CONTAINER_FUNC(static inline, udp_desc, HASHLIST, udp_desc, NOLOCK, address);
+CONTAINER_KEY_FUNC(static inline, udp_desc, HASHLIST, udp_desc, NOLOCK, address);
+
+/*
+ * Descriptors contructor and destructor.
+ */
+
+OBJECT_CONSTRUCTOR(udp_desc_obj)
 {
-  struct net_if_s	*interface = NULL;
-  struct net_proto_s	*addressing = NULL;
+  struct net_udp_desc_s	*obj;
+
+  if ((obj = mem_alloc(sizeof (struct net_udp_desc_s), MEM_SCOPE_NETWORK)) == NULL)
+    return NULL;
+
+  udp_desc_obj_init(obj);
+
+  return obj;
+}
+
+OBJECT_DESTRUCTOR(udp_desc_obj)
+{
+  mem_free(obj);
+}
+
+/*
+ * Create or connect a connected UDP descriptor.
+ */
+
+error_t			udp_connect(struct net_udp_desc_s	**desc,
+				    struct net_udp_addr_s	*remote)
+{
+  struct net_route_s	*route;
+
+  /* look for a route */
+  if ((route = route_get(&remote->address)) == NULL)
+    return -EHOSTUNREACH;
+
+  /* allocate a descriptor if needed */
+  if (*desc == NULL)
+    {
+      if ((*desc = udp_desc_obj_new(NULL)) == NULL)
+	return -ENOMEM;
+      (*desc)->bound = 0;
+      (*desc)->checksum = 1;
+      (*desc)->callback_error = NULL;
+    }
+
+  /* setup the connection endpoint */
+  memcpy(&(*desc)->remote, remote, sizeof (struct net_udp_addr_s));
+  (*desc)->route = route;
+  (*desc)->connected = 1;
+
+  return 0;
+}
+
+/*
+ * Create or bind a listening UDP descriptor.
+ */
+
+error_t			udp_bind(struct net_udp_desc_s	**desc,
+				 struct net_udp_addr_s	*local,
+				 udp_callback_t		*callback,
+				 void			*pv)
+{
+  struct net_udp_desc_s	*d;
+
+  /* alloc a descriptor if needed */
+  if (*desc == NULL)
+    {
+      if ((d = udp_desc_obj_new(NULL)) == NULL)
+	return -ENOMEM;
+      d->connected = 0;
+      d->checksum = 1;
+      d->callback_error = NULL;
+    }
+  else
+    {
+      d = *desc;
+
+      /* if already bound */
+      if (d->bound)
+	{
+	  /* XXX what to do ? */
+	}
+    }
+
+  /* bind the socket */
+  d->bound = 1;
+  d->callback = callback;
+  d->pv = pv;
+  memcpy(&d->address, local, sizeof (struct net_udp_addr_s));
+  if (!udp_desc_push(&descriptors, d))
+    {
+      udp_desc_obj_refdrop(d);
+      return -ENOMEM;
+    }
+
+  if (desc != NULL)
+    *desc = d;
+
+  return 0;
+}
+
+/*
+ * Send an UDP packet.
+ *
+ * If desc is NULL, a temporary descriptor is created, used, and removed.
+ * If desc is not NULL, remote can be NULL if the socket is connected.
+ */
+
+error_t			udp_send(struct net_udp_desc_s		*desc,
+				 struct net_udp_addr_s		*remote,
+				 const void			*data,
+				 size_t				size)
+{
+  struct net_route_s	*route;
   struct net_packet_s	*packet;
-  net_proto_id_t	id;
+  uint_fast16_t		local_port;
   uint8_t		*dest;
 
-  /* check size */
-  if (size > 65507)
-    return -EINVAL;
-
-  /* look for the good IP module */
-  id = local->address.family;
-  CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
-  {
-    interface = item;
-    for (addressing = net_protos_lookup(&interface->protocols, id);
-	 addressing != NULL;
-	 addressing = net_protos_lookup_next(&interface->protocols, addressing, id))
-      if (addressing->desc->f.addressing->matchaddr(addressing, &local->address, NULL, NULL))
-	goto ok;
-
-  });
-
- ok:
-
-  if (interface == NULL || addressing == NULL)
-    return -EADDRNOTAVAIL;
-
-  /* port selection */
-  if (local->port == 0)
+  /* find a route to the remote host */
+  if (desc == NULL)
     {
-      /* XXX */
+      if (remote == NULL)
+	return -EDESTADDRREQ;
+
+      if ((route = route_get(&remote->address)) == NULL)
+	return -EHOSTUNREACH;
+    }
+  else
+    {
+      if (remote == NULL)
+	{
+	  if (!desc->connected)
+	    return -EDESTADDRREQ;
+
+	  remote = &desc->remote;
+	  route = desc->route;
+	}
+      else
+	{
+	  if ((route = route_get(&remote->address)) == NULL)
+	    return -EHOSTUNREACH;
+	}
+    }
+
+  /* select a port */
+  if (desc != NULL && desc->bound)
+    local_port = desc->address.port;
+  else
+    {
+      local_port = 1024; /* XXX */
     }
 
   /* prepare the packet */
   if ((packet = packet_obj_new(NULL)) == NULL)
     return -ENOMEM;
-  if ((dest = udp_preparepkt(interface, addressing, packet, size, 0)) == NULL)
+  if ((dest = udp_preparepkt(route->interface, route->addressing, packet, size, 0)) == NULL)
     {
       packet_obj_refdrop(packet);
 
@@ -110,90 +219,46 @@ int_fast8_t		udp_send(struct net_udp_addr_s	*local,
   memcpy(&packet->tADDR, &remote->address, sizeof (struct net_addr_s));
 
   /* send UDP packet */
-  udp_sendpkt(interface, addressing, packet, local->port, remote->port, 1);
+  udp_sendpkt(route->interface, route->addressing, packet, local_port, remote->port, desc->checksum);
 
   return 0;
 }
 
 /*
- * Register a callback for receiving packets
+ * Close an UDP descriptor.
  */
 
-int_fast8_t			udp_callback(struct net_udp_addr_s	*local,
-					     udp_callback_t		*callback,
-					     void			*pv)
+void			udp_close(struct net_udp_desc_s		*desc)
 {
-  struct udp_callback_desc_s	*desc;
-  struct net_if_s		*interface = NULL;
-  struct net_proto_s		*addressing = NULL;
-  net_proto_id_t		id;
-
-  /* look for the good IP module */
-  id = local->address.family;
-  CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
-  {
-    interface = item;
-    for (addressing = net_protos_lookup(&interface->protocols, id);
-	 addressing != NULL;
-	 addressing = net_protos_lookup_next(&interface->protocols, addressing, id))
-      if (addressing->desc->f.addressing->matchaddr(addressing, &local->address, NULL, NULL))
-	goto ok;
-
-  });
-
- ok:
-
-  if (interface == NULL || addressing == NULL)
-    return -EADDRNOTAVAIL;
-
-  if (local->port == 0)
-    {
-      /* XXX */
-    }
-  else
-    {
-      /* XXX */
-    }
-
-  /* allocate and build the descriptor */
-  desc = mem_alloc(sizeof (struct udp_callback_desc_s), MEM_SCOPE_SYS);
-
-  memcpy(&desc->address, local, sizeof (struct net_udp_addr_s));
-  desc->addressing = addressing;
-  desc->callback = callback;
-  desc->pv = pv;
-
-  /* register the callback */
-  udp_callback_push(&udp_callbacks, desc);
-
-  return 0;
+  if (desc->bound)
+    udp_desc_remove(&descriptors, desc);
 }
 
 /*
- * Signal packet reception
+ * Signal an incoming packet. This function is called by the UDP
+ * protocol module.
  */
 
-void				libudp_signal(struct net_packet_s	*packet,
-					      struct udphdr		*hdr)
+void			libudp_signal(struct net_packet_s	*packet,
+				      struct udphdr		*hdr)
 {
-  struct udp_callback_desc_s	*desc;
-  struct net_udp_addr_s		local;
-  struct net_udp_addr_s		remote;
-  uint8_t			*buff;
-  uint_fast16_t			size;
+  struct net_udp_desc_s	*desc;
+  struct net_udp_addr_s	local;
+  struct net_udp_addr_s	remote;
+  uint8_t		*buff;
+  uint_fast16_t		size;
 
   /* build local address descriptor */
   memcpy(&local.address, &packet->tADDR, sizeof (struct net_addr_s));
   local.port = hdr->dest;
 
   /* do we have a callback to handle the packet */
-  if ((desc = udp_callback_lookup(&udp_callbacks, (void *)&local)) == NULL)
+  if ((desc = udp_desc_lookup(&descriptors, (void *)&local)) == NULL)
     {
       packet->stage -= 2;
 
       /* this packet is destinated to no one */
-      packet->source_addressing->desc->f.addressing->errormsg(packet,
-							      ERROR_PORT_UNREACHABLE);
+      packet->source_addressing->desc->f.addressing->errormsg(packet, ERROR_PORT_UNREACHABLE);
       return;
     }
 
@@ -202,62 +267,43 @@ void				libudp_signal(struct net_packet_s	*packet,
 
   /* copy the packet */
   size = net_be16_load(hdr->len) - sizeof (struct udphdr);
-  buff = mem_alloc(size, MEM_SCOPE_SYS);
+  if ((buff = mem_alloc(size, MEM_SCOPE_NETWORK)) == NULL)
+    return;
   memcpy(buff, packet->header[packet->stage].data, size);
 
   /* callback */
-  desc->callback(&local, &remote, buff, size, desc->pv);
+  desc->callback(desc, &remote, buff, size, desc->pv);
 }
 
 /*
- * Close a listening UDP connection.
- */
-
-void		udp_close(struct net_udp_addr_s	*local)
-{
-  struct udp_callback_desc_s	*desc;
-
-  if ((desc = udp_callback_lookup(&udp_callbacks, (void *)local)) != NULL)
-    {
-      udp_callback_remove(&udp_callbacks, desc);
-
-      mem_free(desc);
-    }
-}
-
-/*
- * Cleanup LibUDP.
+ * This function is used to clean the LibUDP.
  */
 
 void		libudp_destroy(void)
 {
-  struct udp_callback_desc_s	*desc;
-
-  while ((desc = udp_callback_pop(&udp_callbacks)) != NULL)
-    {
-      mem_free(desc);
-    }
+  udp_desc_clear(&descriptors);
 }
 
 /*
- * Error reception callback.
+ * Signal an error on an UDP packet. This function is called by a
+ * control protocol such as ICMP.
  */
 
 NET_SIGNAL_ERROR(libudp_signal_error)
 {
-  struct udp_callback_desc_s	*desc;
-  struct net_udp_addr_s		local;
+  struct net_udp_desc_s	*desc;
+  struct net_udp_addr_s	local;
 
   memcpy(&local.address, address, sizeof (struct net_addr_s));
   local.port = port;
 
-  /* do we have a callback to handle the packet */
-  if ((desc = udp_callback_lookup(&udp_callbacks, (void *)&local)) != NULL)
+  /* do we have a callback to handle the error */
+  if ((desc = udp_desc_lookup(&descriptors, (void *)&local)) != NULL)
     {
       if (desc->callback_error != NULL)
 	{
-	  desc->callback_error(&local, error, desc->pv_error);
+	  desc->callback_error(desc, error, desc->pv_error);
 	}
     }
 }
-#endif
+

@@ -38,6 +38,7 @@ error_t			rarp_client(const char	*ifname)
   socket_t		sock;
   struct net_if_s	*interface;
   ssize_t		sz;
+  int32_t		one = 1;
 
   /* create a PF_PACKET socket */
   if ((interface = if_get_by_name(ifname)) == NULL)
@@ -51,6 +52,9 @@ error_t			rarp_client(const char	*ifname)
   addr.sll_ifindex = interface->index;
 
   if (bind(sock, (struct sockaddr *)&addr, sizeof (struct sockaddr_ll)) < 0)
+    goto leave;
+
+  if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &one, sizeof (int)) < 0)
     goto leave;
 
   /* build a RARP request */

@@ -25,9 +25,11 @@
 #include <netinet/protos.h>
 #include <netinet/packet.h>
 #include <netinet/udp.h>
+#include <netinet/route.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
+#include <gpct/object_refcount.h>
 
 /*
  * Types
@@ -67,58 +69,62 @@ typedef UDP_CALLBACK(udp_callback_t);
 typedef UDP_ERROR_CALLBACK(udp_error_callback_t);
 
 /*
- * Callbacks container.
+ * Connection descriptors container.
  */
+
+OBJECT_TYPE(udp_desc_obj, REFCOUNT, struct net_udp_desc_s); /* XXX no refcount */
 
 struct					net_udp_desc_s
 {
-  /* address of the descriptor. remote address for a connected
-     descriptor, local for a bound descriptor */
+  /* local address of the descriptor */
   struct net_udp_addr_s			address;
   bool_t				connected;
+  bool_t				bound;
 
   /* error callback */
   udp_error_callback_t			*callback_error;
   void					*pv_error;
 
-  union
-  {
-    /* structure used for bound descriptors */
-    struct
-    {
-      udp_callback_t			*callback;
-      void				*pv;
-    } bind;
-    /* structure used for a connected descriptor */
-    struct
-    {
-      struct net_proto_s		*addressing;
-    } connect;
-  } u;
+  /* used for bound descriptors */
+  udp_callback_t			*callback;
+  void					*pv;
+  /* used for a connected descriptor */
+  struct net_udp_addr_s			remote;
+  struct net_route_s			*route;
 
+  /* options */
+  bool_t				checksum;
+
+  udp_desc_obj_entry_t			obj_entry;
   CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
 
-CONTAINER_TYPE(udp_callback, HASHLIST, struct net_udp_desc_s, NOLOCK, NOOBJ, list_entry, 64);
-CONTAINER_KEY_TYPE(udp_callback, AGGREGATE, address);
+OBJECT_CONSTRUCTOR(udp_desc_obj);
+OBJECT_DESTRUCTOR(udp_desc_obj);
+OBJECT_FUNC(static inline, udp_desc_obj, REFCOUNT, udp_desc_obj, obj_entry);
+
+CONTAINER_TYPE(udp_desc, HASHLIST, struct net_udp_desc_s, NOLOCK, udp_desc_obj, list_entry, 64);
+CONTAINER_KEY_TYPE(udp_desc, AGGREGATE, address);
 
 /*
  * Prototypes
  */
 
-struct net_udp_desc_s	*udp_connect(struct net_udp_addr_s	*remote);
-struct net_udp_desc_s	*udp_bind(struct net_udp_addr_s		*local,
-				  udp_callback_t		*callback,
-				  void				*pv);
-error_t			udp_send(struct net_udp_desc_s		*desc,
-				 struct net_udp_addr_s		*remote,
-				 void				*data,
-				 size_t				size);
-void			udp_close(struct net_udp_desc_s		*desc);
+error_t	udp_connect(struct net_udp_desc_s	**desc,
+		    struct net_udp_addr_s	*remote);
+error_t	udp_bind(struct net_udp_desc_s		**desc,
+		 struct net_udp_addr_s		*local,
+		 udp_callback_t			*callback,
+		 void				*pv);
+error_t	udp_send(struct net_udp_desc_s		*desc,
+		 struct net_udp_addr_s		*remote,
+		 const void			*data,
+		 size_t				size);
+void	udp_close(struct net_udp_desc_s		*desc);
 
-void		libudp_signal(struct net_packet_s	*packet,
-			      struct udphdr		*hdr);
-void		libudp_destroy(void);
+void	libudp_signal(struct net_packet_s	*packet,
+		      struct udphdr		*hdr);
+void	libudp_destroy(void);
 NET_SIGNAL_ERROR(libudp_signal_error);
 
 #endif

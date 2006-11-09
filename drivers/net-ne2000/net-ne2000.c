@@ -235,11 +235,10 @@ static void	ne2000_push(struct device_s	*dev,
 
   packet->stage++;
 
-  packet_queue_lock_pushback(&pv->rcvqueue, packet);
+  if (packet_queue_lock_pushback(&pv->rcvqueue, packet))
+    sem_post(&pv->rcvsem);
 
   packet_obj_refdrop(packet);
-
-  sem_post(&pv->rcvsem);
 }
 
 /*
@@ -677,6 +676,7 @@ DEVNET_GETOPT(net_ne2000_getopt)
 	if (*len < ETH_ALEN)
 	  return -1;
 	memcpy(value, "\xff\xff\xff\xff\xff\xff", ETH_ALEN);
+	*len = ETH_ALEN;
 	break;
       default:
 	return -1;

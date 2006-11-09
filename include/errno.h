@@ -19,17 +19,11 @@
 
 */
 
-#ifndef NETINET_SOCKET_UDP_H
-#define NETINET_SOCKET_UDP_H
+#ifndef ERRNO_H_
+#define ERRNO_H_
 
-#include <netinet/libudp.h>
+#include <hexo/error.h>
 
-struct			socket_udp_pv_s
-{
-  struct net_udp_desc_s	*desc;
-  uint_fast32_t		family;
-
-  int			shutdown;
-};
+extern int errno;
 
 #endif

@@ -27,6 +27,18 @@
 
 #include <hexo/alloc.h>
 
+#include <errno.h>
+
+static UDP_CALLBACK(socket_recv_callback)
+{
+
+}
+
+static UDP_ERROR_CALLBACK(socket_err_callback)
+{
+
+}
+
 /*
  * Create an UDP socket. Allocate private data.
  */
@@ -36,6 +48,22 @@ static _SOCKET(socket_udp)
   struct socket_udp_pv_s	*pv;
   pv = fd->pv = mem_alloc(sizeof (struct socket_udp_pv_s), MEM_SCOPE_NETWORK);
   pv->desc = NULL;
+  pv->shutdown = -1;
+
+  switch (domain)
+    {
+      case PF_INET:
+	pv->family = AF_INET;
+	break;
+      case PF_INET6:
+	pv->family = AF_INET6;
+	break;
+      default:
+	errno = EPFNOSUPPORT;
+	mem_free(fd);
+	mem_free(pv);
+	return NULL;
+    }
 
   return fd;
 }
@@ -47,8 +75,47 @@ static _SOCKET(socket_udp)
 static _BIND(bind_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
+  struct net_udp_addr_s		local;
+  error_t			err;
 
-  return -1;
+  if (addr->sa_family != pv->family)
+    {
+      errno = fd->error = EAFNOSUPPORT;
+      return -1;
+    }
+
+  switch (addr->sa_family)
+    {
+      case AF_INET:
+	{
+	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
+
+	  if (len < sizeof (struct sockaddr_in))
+	    {
+	      errno = fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  IPV4_ADDR_SET(local.address, in->sin_addr.s_addr);
+	  local.port = in->sin_port;
+	}
+	break;
+      case AF_INET6:
+	/* IPV6 */
+      default:
+	errno = fd->error = EAFNOSUPPORT;
+	return -1;
+    }
+
+  err = udp_bind(&pv->desc, &local, socket_recv_callback, pv);
+
+  if (err)
+    {
+      errno = fd->error = -err;
+      return -1;
+    }
+
+  return 0;
 }
 
 /*
@@ -58,7 +125,39 @@ static _BIND(bind_udp)
 static _GETSOCKNAME(getsockname_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-  return -1;
+
+  if (pv->desc == NULL || !pv->desc->bound)
+    {
+      errno = fd->error = -EINVAL; /* XXX check this behaviour */
+      return -1;
+    }
+
+  switch (pv->desc->address.address.family)
+    {
+      case addr_ipv4:
+	{
+	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
+
+	  if (*len < sizeof (struct sockaddr_in))
+	    {
+	      errno = fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  /* fill the address structure */
+	  in->sin_family = AF_INET;
+	  in->sin_port = htons(pv->desc->address.port);
+	  in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(pv->desc->address.address));
+
+	  *len = sizeof (struct sockaddr_in);
+	}
+	break;
+      default:
+	errno = fd->error = EAFNOSUPPORT;
+	return -1;
+    }
+
+  return 0;
 }
 
 /*
@@ -68,7 +167,47 @@ static _GETSOCKNAME(getsockname_udp)
 static _CONNECT(connect_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-  return -1;
+  struct net_udp_addr_s		remote;
+  error_t			err;
+
+  if (addr->sa_family != pv->family)
+    {
+      errno = fd->error = EAFNOSUPPORT;
+      return -1;
+    }
+
+  switch (addr->sa_family)
+    {
+      case AF_INET:
+	{
+	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
+
+	  if (len < sizeof (struct sockaddr_in))
+	    {
+	      errno = fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  IPV4_ADDR_SET(remote.address, in->sin_addr.s_addr);
+	  remote.port = in->sin_port;
+	}
+	break;
+      case AF_INET6:
+	/* IPV6 */
+      default:
+	errno = fd->error = EAFNOSUPPORT;
+	return -1;
+    }
+
+  err = udp_connect(&pv->desc, &remote);
+
+  if (err)
+    {
+      errno = fd->error = -err;
+      return -1;
+    }
+
+  return 0;
 }
 
 /*
@@ -78,7 +217,39 @@ static _CONNECT(connect_udp)
 static _GETPEERNAME(getpeername_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-  return -1;
+
+  if (pv->desc == NULL || !pv->desc->connected)
+    {
+      errno = fd->error = -EINVAL;
+      return -1;
+    }
+
+  switch (pv->desc->remote.address.family)
+    {
+      case addr_ipv4:
+	{
+	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
+
+	  if (*len < sizeof (struct sockaddr_in))
+	    {
+	      errno = fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  /* fill the address structure */
+	  in->sin_family = AF_INET;
+	  in->sin_port = htons(pv->desc->remote.port);
+	  in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(pv->desc->remote.address));
+
+	  *len = sizeof (struct sockaddr_in);
+	}
+	break;
+      default:
+	errno = fd->error = EAFNOSUPPORT;
+	return -1;
+    }
+
+  return 0;
 }
 
 /*
@@ -88,7 +259,49 @@ static _GETPEERNAME(getpeername_udp)
 static _SENDTO(sendto_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-  return -1;
+  error_t			err;
+
+  if (addr == NULL)
+    {
+      err = udp_send(pv->desc, NULL, buf, n);
+    }
+  else
+    {
+      struct net_udp_addr_s	remote;
+
+      switch (addr->sa_family)
+	{
+	  case AF_INET:
+	    {
+	      struct sockaddr_in	*in = (struct sockaddr_in *)addr;
+
+	      if (addr_len < sizeof (struct sockaddr_in))
+		{
+		  errno = fd->error = EINVAL;
+		  return -1;
+		}
+
+	      IPV4_ADDR_SET(remote.address, in->sin_addr.s_addr);
+	      remote.port = in->sin_port;
+	    }
+	    break;
+	  case AF_INET6:
+	    /* IPV6 */
+	  default:
+	    errno = fd->error = EAFNOSUPPORT;
+	    return -1;
+	}
+
+      err = udp_send(pv->desc, &remote, buf, n);
+    }
+
+  if (err)
+    {
+      errno = fd->error = -err;
+      return -1;
+    }
+
+  return n;
 }
 
 /*
@@ -98,6 +311,7 @@ static _SENDTO(sendto_udp)
 static _RECVFROM(recvfrom_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
+  /* XXX */
   return -1;
 }
 
@@ -108,6 +322,7 @@ static _RECVFROM(recvfrom_udp)
 static _GETSOCKOPT(getsockopt_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
+  /* XXX */
   return -1;
 }
 
@@ -128,6 +343,27 @@ static _SETSOCKOPT(setsockopt_udp)
 static _SHUTDOWN(shutdown_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
+
+  if (how != SHUT_RDWR && how != SHUT_RD && how != SHUT_WR)
+    {
+      errno = fd->error = EINVAL;
+      return -1;
+    }
+
+  /* check combinations */
+  if (how == SHUT_RDWR || (pv->shutdown == SHUT_RD && how == SHUT_WR) ||
+      (pv->shutdown == SHUT_WR && how == SHUT_RD))
+    pv->shutdown = SHUT_RDWR;
+  else
+    pv->shutdown = how;
+
+  /* close the descriptor if needed */
+  if (pv->desc != NULL && pv->shutdown == SHUT_RDWR)
+    {
+      udp_close(pv->desc);
+      pv->desc = NULL;
+    }
+
   return -1;
 }
 

@@ -93,20 +93,17 @@ void			*tcp_test(void *p)
 }
 #endif
 
-#ifdef CONFIG_NETWORK_UDP
+#if defined(CONFIG_NETWORK_UDP)
 #include "test_server.c"
 
 void			*err_test(void *p)
 {
-  struct net_udp_addr_s local;
   struct net_udp_addr_s remote;
 
-  IPV4_ADDR_SET(local.address, 0x0a0202f0);
-  local.port = htons(4242);
   IPV4_ADDR_SET(remote.address, 0x0a020266);
   remote.port = htons(80);
 
-  udp_send(&local, &remote, "test", 4);
+  udp_send(NULL, &remote, "test", 4);
 
   return NULL;
 }

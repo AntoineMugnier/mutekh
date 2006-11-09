@@ -350,6 +350,7 @@ struct socket_api_s;
 				    void	*buf,	\
 				    size_t	n,	\
 				    int		flags)
+
 #define _SENDTO(f)	ssize_t (f)(socket_t		fd,		\
 				    const void		*buf,		\
 				    size_t		n,		\
@@ -467,5 +468,53 @@ struct				socket_s
   error_t			error;
   void				*pv;
 };
+
+/*
+ * Address conversion.
+ */
+
+#include <errno.h>
+
+static inline error_t	socket_in_addr(struct socket_s		*fd,
+				       struct net_addr_s	*a,
+				       struct sockaddr		*addr,
+				       socklen_t		len)
+{
+  return 0;
+}
+
+static inline error_t	socket_addr_in(struct socket_s		*fd,
+				       struct net_addr_s	*a,
+				       struct sockaddr		*addr,
+				       socklen_t		*len,
+				       uint_fast16_t		port)
+{
+  switch (a->family)
+    {
+      case addr_ipv4:
+	{
+	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
+
+	  if (*len < sizeof (struct sockaddr_in))
+	    {
+	      errno = fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  /* fill the address structure */
+	  in->sin_family = AF_INET;
+	  in->sin_port = port;
+	  in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(*a));
+
+	  *len = sizeof (struct sockaddr_in);
+	}
+	break;
+      default:
+	errno = fd->error = EAFNOSUPPORT;
+	return -1;
+    }
+
+  return 0;
+}
 
 #endif

@@ -342,7 +342,8 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
       if ((arp_entry = arp_entry_obj_new(NULL, ip)) == NULL)
 	return NULL;
       arp_entry->resolution = NULL;
-      arp_table_push(&pv->table, arp_entry);
+      if (!arp_table_push(&pv->table, arp_entry))
+	return NULL;
     }
 
   /* fill the significant fields */

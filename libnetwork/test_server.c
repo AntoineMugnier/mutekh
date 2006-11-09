@@ -308,9 +308,8 @@ UDP_CALLBACK(test_add)
 
   mem_free(op);
 
-  local->port = 0;
   remote->port = htons(4242);
-  udp_send(local, remote, result, strlen(result));
+  udp_send(desc, remote, result, strlen(result));
 }
 
 /*
@@ -322,10 +321,10 @@ void			eval_server()
   struct net_udp_addr_s	listen;
   error_t		err;
 
-  IPV4_ADDR_SET(listen.address, 0x0a0202f0);
+  IPV4_ADDR_SET(listen.address, INADDR_ANY);
   listen.port = htons(4242);
 
-  err = udp_callback(&listen, test_add, NULL);
+  err = udp_bind(NULL, &listen, test_add, NULL);
   if (err)
     printf("err = %d\n", err);
 

@@ -65,7 +65,15 @@ static _SOCKET(socket_packet)
   sem_init(&pv->recv_sem, 0, 0);
   packet_queue_lock_init(&pv->recv_q);
   pv->header = (type == SOCK_RAW);
-  socket_packet_push(&pf_packet, pv);
+  if (!socket_packet_push(&pf_packet, pv))
+    {
+      errno = ENOMEM;
+      mem_free(fd);
+      sem_destroy(&pv->recv_sem);
+      packet_queue_lock_destroy(&pv->recv_q);
+      mem_free(pv);
+      return NULL;
+    }
 
   return fd;
 }
@@ -149,7 +157,8 @@ static _SENDTO(sendto_packet)
       return -1;
     }
 
-  if (sll == NULL || addr_len < sizeof (struct sockaddr_ll) || sll->sll_family != AF_PACKET)
+  if ((sll == NULL && !pv->header) || addr_len < sizeof (struct sockaddr_ll) ||
+      sll->sll_family != AF_PACKET)
     {
       errno = fd->error = (sll == NULL ? EDESTADDRREQ : EINVAL);
       return -1;
@@ -187,6 +196,18 @@ static _SENDTO(sendto_packet)
   else
     {
       uint8_t	*next;
+      uint8_t	bcast[8];
+      size_t	maclen = 8;
+
+      assert(!dev_net_getopt(interface->dev, DEV_NET_OPT_BCAST, bcast, &maclen));
+
+      /* is broadcast allowed */
+      if (!pv->broadcast && !memcmp(bcast, sll->sll_addr, maclen))
+	{
+	  packet_obj_refdrop(packet);
+	  errno = fd->error = EINVAL;
+	  return -1;
+	}
 
       /* prepare the packet */
       if ((next = if_preparepkt(interface, packet, n, 0)) == NULL)
@@ -251,10 +272,12 @@ static _RECVFROM(recvfrom_packet)
       /* if there is a receive timeout, start a timer */
       if (pv->recv_timeout)
 	{
-	  //	  timeout.callback = recv_timeout;
+#if 0
+	  timeout.callback = recv_timeout;
 	  timeout.delay = pv->recv_timeout;
 
-	  timer_add_event(&timer_ms, &timeout);
+	  timer_add_event(&timer_ms, &timeout); /* XXX */
+#endif
 	}
 
       /* wait */
@@ -591,10 +614,12 @@ void		pf_packet_signal(struct net_if_s	*interface,
 				 net_proto_id_t		protocol)
 {
   uint8_t	bcast[packet->MAClen];
+  bool_t	is_bcast;
   size_t	maclen = packet->MAClen;
 
   assert(!dev_net_getopt(interface->dev, DEV_NET_OPT_BCAST, bcast, &maclen));
   assert(maclen == packet->MAClen);
+  is_bcast = !memcmp(packet->tMAC, bcast, maclen);
 
   /* deliver packet to all sockets matching interface and protocol id */
   CONTAINER_FOREACH(socket_packet, DLIST, NOLOCK, &pf_packet,
@@ -606,11 +631,11 @@ void		pf_packet_signal(struct net_if_s	*interface,
       {
 	if (item->proto == protocol || item->proto == ETH_P_ALL)
 	  {
-	    if (!item->broadcast && !memcmp(packet->tMAC, bcast, maclen))
+	    if (!item->broadcast && is_bcast)
 	      CONTAINER_FOREACH_CONTINUE;
 
-	    packet_queue_lock_pushback(&item->recv_q, packet);
-	    sem_post(&item->recv_sem);
+	    if (packet_queue_lock_pushback(&item->recv_q, packet))
+	      sem_post(&item->recv_sem);
 	  }
       }
   });

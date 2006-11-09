@@ -214,12 +214,10 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
     {
       /* initialize the reassembly structure */
       if ((p = fragment_obj_new(ip, id)) == NULL)
-	{
-	  /* no more memory, discard the packet */
-	  return 0;
-	}
+	return 0;
 
-      ip_packet_push(&pv->fragments, p);
+      if (!ip_packet_push(&pv->fragments, p))
+	return 0;
     }
 
   p->received += datasz;

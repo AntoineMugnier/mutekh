@@ -100,7 +100,7 @@ socket_t			socket(int domain, int type, int protocol)
   if ((sock = mem_alloc(sizeof (struct socket_s), MEM_SCOPE_NETWORK)) == NULL)
     {
       errno = ENOMEM;
-      return -1;
+      return error;
     }
   sock->error = 0;
   sock->f = api;
