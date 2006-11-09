@@ -42,6 +42,10 @@ $(SRC_DIR)/config.mk $(SRC_DIR)/config.h: $(SRC_DIR)/$(CONF)
 		--header=$(SRC_DIR)/config.h	\
 		--makefile=$(SRC_DIR)/config.mk
 
+$(SRC_DIR)/arch/current/config.mk: arch/current
+
+$(SRC_DIR)/cpu/current/config.mk: cpu/current
+
 arch/current: $(SRC_DIR)/config.mk
 	ln -sfn $(CONFIG_ARCH_NAME) $@
 

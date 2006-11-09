@@ -19,47 +19,25 @@
 
 */
 
+#if !defined(ALLOC_H_) || defined(ARCH_ALLOC_H_)
+#error This file can not be included directly
+#else
 
-#include <hexo/alloc.h>
-#include <hexo/segment.h>
-#include <hexo/lock.h>
-#include <hexo/endian.h>
+#define ARCH_ALLOC_H_
 
-struct mem_alloc_region_s mem_region_ram;
+#include <assert.h>
 
-static void *
-mem_ibmpc_memsize_probe(void *start)
+extern struct mem_alloc_region_s mem_region_ram;
+
+/** allocated memory scope is system global */
+#define MEM_SCOPE_SYS		(&mem_region_ram)
+
+/** set default allocation policy */
+static inline void
+mem_alloc_set_default(struct mem_alloc_region_s *region)
 {
-  volatile uint8_t	*x = ALIGN_ADDRESS_UP(start, 4096);
-  size_t		step = 4096;
-
-  while (1) {
-    x += step;
-    *x = 0x5a;
-    *x = ~*x;
-
-    if (*x == 0xa5)
-      continue;
-
-    x -= step;
-
-    if (step == 1)
-      break;
-
-    step /= 2;
-  }
-
-  return (void*)x;
+  assert(region == &mem_region_ram);
 }
 
-void mem_init(void)
-{
-  void	*mem_end = mem_ibmpc_memsize_probe(&__system_heap_start);
-  void	*mem_start = (uint8_t*)&__system_heap_start;
-
-  mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_HEXO_MEMALLOC_ALIGN);
-  mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_HEXO_MEMALLOC_ALIGN);
-
-  mem_alloc_region_init(&mem_region_ram, mem_start, mem_end);
-}
+#endif
 

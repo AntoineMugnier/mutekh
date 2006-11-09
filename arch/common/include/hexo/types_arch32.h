@@ -20,46 +20,26 @@
 */
 
 
-#include <hexo/alloc.h>
-#include <hexo/segment.h>
-#include <hexo/lock.h>
-#include <hexo/endian.h>
+#if !defined(TYPES_H_) || defined(ARCH_TYPES_H_)
+#error This file can not be included directly
+#else
 
-struct mem_alloc_region_s mem_region_ram;
+#define ARCH_TYPES_H_
 
-static void *
-mem_ibmpc_memsize_probe(void *start)
-{
-  volatile uint8_t	*x = ALIGN_ADDRESS_UP(start, 4096);
-  size_t		step = 4096;
+/* architecture specific integer types */
 
-  while (1) {
-    x += step;
-    *x = 0x5a;
-    *x = ~*x;
+/** boolean value */
+typedef int8_t		bool_t;
+/** data size integer type */
+typedef uint_fast32_t	size_t;
+/** signed data size integer type */
+typedef int_fast32_t	ssize_t;
+/** offset integer type */
+typedef int_fast32_t	off_t;
+/** biggest unsigned integer type available */
+typedef uint64_t	uintmax_t;
+/** biggest signed integer type available */
+typedef uint64_t	intmax_t;
 
-    if (*x == 0xa5)
-      continue;
-
-    x -= step;
-
-    if (step == 1)
-      break;
-
-    step /= 2;
-  }
-
-  return (void*)x;
-}
-
-void mem_init(void)
-{
-  void	*mem_end = mem_ibmpc_memsize_probe(&__system_heap_start);
-  void	*mem_start = (uint8_t*)&__system_heap_start;
-
-  mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_HEXO_MEMALLOC_ALIGN);
-  mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_HEXO_MEMALLOC_ALIGN);
-
-  mem_alloc_region_init(&mem_region_ram, mem_start, mem_end);
-}
+#endif
 

@@ -31,18 +31,35 @@ struct cpu_cld_s	*cpu_cld[1];
 /* architecture specific init function */
 void arch_init()
 {
-
-  /* enable alignment check */
-#if defined(CONFIG_DEBUG)
-  asm volatile("	pushf						\n"
-	       "	orl	$0x40000, (%esp)			\n"
-	       "	popf						\n");
+#ifdef CONFIG_SMP
+  if (cpu_isbootstrap())
+    /* First CPU */
+    {
 #endif
+      mem_init();
 
-  mem_init();
+      cpu_global_init();
 
-  /* run mutek_main() */
-  mutek_main(0, 0);
+      /* configure first CPU */
+      cpu_cld[0] = cpu_init(0);
+
+      /* run mutek_main() */
+      mutek_main(0, 0);
+#ifdef CONFIG_SMP
+    }
+  else
+    /* Other CPUs */
+    {
+      /* configure other CPUs */
+
+      #error init lock missing
+      cpu_cld[cpu_count] = cpu_init(cpu_count);
+      cpu_count++;
+
+      /* run mutek_main_smp() */
+      mutek_main_smp();
+    }
+#endif
 }
 
 void arch_start_other_cpu(void)
@@ -51,6 +68,10 @@ void arch_start_other_cpu(void)
 
 inline uint_fast8_t arch_get_cpu_count(void)
 {
+#ifdef CONFIG_SMP
+  return cpu_count;
+#else
   return 1;
+#endif
 }
 

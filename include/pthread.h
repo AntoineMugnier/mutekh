@@ -22,6 +22,10 @@
 #ifndef PTHREAD_H_
 #define PTHREAD_H_
 
+#ifndef CONFIG_PTHREAD
+# warning pthread support is not enabled in configuration file
+#else
+
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/local.h>
@@ -533,6 +537,8 @@ pthread_setcanceltype(int_fast8_t type, int_fast8_t *oldtype)
 
 
 #endif /* CONFIG_PTHREAD_CANCEL */
+
+#endif
 
 #endif
 

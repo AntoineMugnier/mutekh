@@ -89,6 +89,7 @@ cpu_boot:
 	shll	$10, %eax
 	add	$0x0001fffc, %eax
 	mov	%eax, %esp
+	xor	%ebp, %ebp
 	/* call arch_init function */
 	call	arch_init
 	/* stop processor execution */

@@ -35,7 +35,7 @@
 
 #include <arch/hexo/emu_syscalls.h>
 
-struct mem_alloc_region_s mem_region_mmap;
+struct mem_alloc_region_s mem_region_ram;
 
 void mem_init(void)
 {
@@ -55,6 +55,6 @@ void mem_init(void)
   mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_HEXO_MEMALLOC_ALIGN);
   mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_HEXO_MEMALLOC_ALIGN);
 
-  mem_alloc_region_init(&mem_region_mmap, mem_start, mem_end);
+  mem_alloc_region_init(&mem_region_ram, mem_start, mem_end);
 }
 

@@ -19,47 +19,47 @@
 
 */
 
+#if !defined(__CPU_H_) || defined(CPU_CPU_H_)
+#error This file can not be included directly
+#else
 
-#include <hexo/alloc.h>
-#include <hexo/segment.h>
-#include <hexo/lock.h>
-#include <hexo/endian.h>
+#define CPU_CPU_H_
 
-struct mem_alloc_region_s mem_region_ram;
+#include <assert.h>
 
-static void *
-mem_ibmpc_memsize_probe(void *start)
+/** general purpose regsiters count */
+#define CPU_GPREG_COUNT	8
+
+/**
+   boot strap processor test
+   @return true if processor is the bootstrap processor
+*/
+
+static inline bool_t
+cpu_isbootstrap(void)
 {
-  volatile uint8_t	*x = ALIGN_ADDRESS_UP(start, 4096);
-  size_t		step = 4096;
-
-  while (1) {
-    x += step;
-    *x = 0x5a;
-    *x = ~*x;
-
-    if (*x == 0xa5)
-      continue;
-
-    x -= step;
-
-    if (step == 1)
-      break;
-
-    step /= 2;
-  }
-
-  return (void*)x;
+#ifdef CONFIG_SMP
+  assert(!"not supported"); /* FIXME */
+#endif
+  return 1;
 }
 
-void mem_init(void)
+/**
+   cpu cycle touner type
+*/
+
+typedef uint64_t cpu_cycle_t;
+
+/**
+   cpu cycle counter read function
+*/
+
+static inline cpu_cycle_t
+cpu_cycle_count(void)
 {
-  void	*mem_end = mem_ibmpc_memsize_probe(&__system_heap_start);
-  void	*mem_start = (uint8_t*)&__system_heap_start;
-
-  mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_HEXO_MEMALLOC_ALIGN);
-  mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_HEXO_MEMALLOC_ALIGN);
-
-  mem_alloc_region_init(&mem_region_ram, mem_start, mem_end);
+  assert(!"not supported"); /* FIXME */
+  return 0;
 }
+
+#endif
 

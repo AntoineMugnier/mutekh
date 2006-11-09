@@ -29,26 +29,20 @@
 
 #define ARCH_LOCK_H_
 
-#include "hexo/iospace.h"
+#include "hexo/atomic.h"
 
-//#define ARCH_HAS_ATOMIC
+#define ARCH_HAS_ATOMIC
 
 struct		arch_lock_s
 {
-  uintptr_t	ramlock;
+  atomic_int_t	a;
 };
 
-//#define ARCH_LOCK_INITIALIZER	{ .a = 0 }
-
-extern uintptr_t __ramlock_base;
+#define ARCH_LOCK_INITIALIZER	{ .a = 0 }
 
 static inline error_t arch_lock_init(struct arch_lock_s *lock)
 {
-  /* FIXME add allocation algorithm */
-  lock->ramlock = __ramlock_base;
-
-  __ramlock_base += 4;
-
+  cpu_atomic_bit_clr(&lock->a, 0);
   return 0;
 }
 
@@ -58,28 +52,22 @@ static inline void arch_lock_destroy(struct arch_lock_s *lock)
 
 static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 {
-  return cpu_mem_read_32(lock->ramlock);
+  return cpu_atomic_bit_testset(&lock->a, 0);
 }
 
 static inline void arch_lock_spin(struct arch_lock_s *lock)
 {
-  while (arch_lock_try(lock))
-    ;
-}
-
-static inline void arch_lock_release(struct arch_lock_s *lock)
-{
-  cpu_mem_write_32(lock->ramlock, 0);
+  cpu_atomic_bit_waitset(&lock->a, 0);
 }
 
 static inline bool_t arch_lock_state(struct arch_lock_s *lock)
 {
-  bool_t	state = arch_lock_try(lock);
+  return cpu_atomic_bit_test(&lock->a, 0);
+}
 
-  if (!state)
-    arch_lock_release(lock);
-
-  return state;
+static inline void arch_lock_release(struct arch_lock_s *lock)
+{
+  cpu_atomic_bit_clr(&lock->a, 0);
 }
 
 #endif

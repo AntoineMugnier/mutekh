@@ -257,6 +257,7 @@ sub process_file
 		    $$opts{single} = [];
 		    $$opts{desc} = [];
 		    $$opts{provide} = [];
+		    $$opts{provided_by} = [];
 		    $$opts{exclude} = [];
 		    $$opts{provided_count} = 0;
 		    $state = 1;
@@ -581,6 +582,27 @@ sub process_config_unprovide
 }
 
 ##
+## set provided_by list for all tokens
+##
+
+sub set_provided_by
+{
+    foreach my $opt (values %config_opts)
+    {
+	foreach my $rule (@{$$opt{provide}})
+	{
+	    $rule =~ /^([^\s=]+)=?([^\s]*)$/;
+	    my $dep = $1;
+
+	    if (my $opt2 = $config_opts{$dep})
+	    {
+		push(@{$$opt2{provided_by}}, $$opt{name});
+	    }
+	}
+    }
+}
+
+##
 ## sets token values
 ##
 
@@ -700,7 +722,7 @@ sub check_config
 
 	if ($$opt{mandatory} and ($$opt{value} eq "undefined"))
 	{
-	    error($$opt{vlocation}.": `".$$opt{name}."' token must not be undefined");
+	    error($$opt{vlocation}.": `".$$opt{name}."' token can not be undefined");
 	}
     }
 }
@@ -855,7 +877,7 @@ sub tokens_info
 	print "(no description)\n";
     }
 
-    print("\n  This token is mandatory and must not be undefined.\n") if $$opt{mandatory};
+    print("\n  This token is mandatory and can not be undefined.\n") if $$opt{mandatory};
 
     print("\n  This token can not be defined directly by user.\n") if $$opt{nodefine};
 
@@ -908,6 +930,17 @@ sub tokens_info
     if (my @list = @{$$opt{provide}})
     {
 	print "\n  provides :\n\n";
+
+	foreach my $dep (@list)
+	{
+	    print text80(join(" or ", split(/\s+/, $dep)),
+			 "      ", "    * ")."\n";
+	}
+    }
+
+    if (my @list = @{$$opt{provided_by}})
+    {
+	print "\n  can be provided by :\n\n";
 
 	foreach my $dep (@list)
 	{
@@ -975,6 +1008,7 @@ Usage: config.pl [options]
 
     if ($param_h{info})
     {
+	set_provided_by();
 	tokens_info($param_h{info});
 	return;
     }

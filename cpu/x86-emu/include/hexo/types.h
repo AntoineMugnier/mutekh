@@ -1,0 +1,1 @@
+../../../x86/include/hexo/types.h

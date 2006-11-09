@@ -22,6 +22,7 @@
 #ifndef CONTEXT_H_
 #define CONTEXT_H_
 
+#include <assert.h>
 #include <hexo/types.h>
 #include <hexo/local.h>
 #include <hexo/error.h>
@@ -88,6 +89,8 @@ void context_destroy(struct context_s *context);
 static inline void context_switch_to(struct context_s *context)
 {
   struct context_s		*cur = CONTEXT_LOCAL_GET(context_cur);
+
+  assert(cur != context);
 
   cpu_context_switch(cur, context);
 }

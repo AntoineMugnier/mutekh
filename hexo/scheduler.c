@@ -9,6 +9,24 @@ CONTEXT_LOCAL struct sched_context_s *sched_cur;
 /* processor idle context */
 CPU_LOCAL struct sched_context_s sched_idle;
 
+/* return next scheduler candidate */
+static inline struct sched_context_s *
+__sched_candidate_noidle(sched_queue_root_t *root)
+{
+  return sched_queue_nolock_pop(root);
+}
+
+/* return next scheduler candidate */
+static inline struct sched_context_s *
+__sched_candidate(sched_queue_root_t *root)
+{
+  struct sched_context_s	*next;
+
+  if (!(next = __sched_candidate_noidle(root)))
+    next = CPU_LOCAL_ADDR(sched_idle);
+
+  return next;
+}
 
 /* scheduler root */
 static sched_queue_root_t	sched_root;
@@ -22,12 +40,16 @@ __sched_root(void)
 /* idle context runtime */
 static CONTEXT_ENTRY(sched_context_idle)
 {
+  sched_queue_root_t *root = __sched_root();
+
   /* release lock acquired in previous sched_context_switch() call */
   sched_unlock();
   cpu_interrupt_enable();
 
   while (1)
     {
+      struct sched_context_s	*next;
+
       cpu_interrupt_process();
 #if !defined(CONFIG_SMP) || defined(CONFIG_HEXO_IPI)
       /* CPU sleep waiting for interrupts */
@@ -35,20 +57,13 @@ static CONTEXT_ENTRY(sched_context_idle)
 #endif
       /* try to switch to next context */
       cpu_interrupt_disable();
-      sched_context_stop();
+      sched_queue_wrlock(root);
+
+      if ((next = __sched_candidate_noidle(root)))
+	  context_switch_to(&next->context);
+
+      sched_queue_unlock(root);
     }
-}
-
-/* return next scheduler candidate */
-static inline struct sched_context_s *
-__sched_candidate(sched_queue_root_t *root)
-{
-  struct sched_context_s	*next;
-
-  if (!(next = sched_queue_nolock_pop(root)))
-    next = CPU_LOCAL_ADDR(sched_idle);
-
-  return next;
 }
 
 /* switch to next context available in the 'root' queue, do not put
@@ -196,10 +211,21 @@ void sched_global_init(void)
   sched_queue_init(__sched_root());
 }
 
+/*
+
+%config CONFIG_HEXO_SCHED_IDLE_STACK_SIZE
+desc Size of the stack allocated for idle scheduler thread.
+desc Stack size is specified in stack words count.
+default 256
+flags mandatory
+%config end
+
+*/
+
 void sched_cpu_init(void)
 {
   struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);
 
-  context_init(&idle->context, 128, sched_context_idle, 0);
+  context_init(&idle->context, CONFIG_HEXO_SCHED_IDLE_STACK_SIZE, sched_context_idle, 0);
 }
 
