@@ -33,7 +33,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   /* room for general purpose registers default values */
   context->stack_ptr -= 15;
 
-#if 1
+#if 0
   context->stack_ptr[14] = 0;	/* rax */
   context->stack_ptr[13] = 0;	/* rbx */
   context->stack_ptr[12] = 0;	/* rcx */
@@ -42,9 +42,10 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 #endif
   context->stack_ptr[9] = (reg_t)param; /* rdi */
 #ifdef CONFIG_COMPILE_DEBUG
+  /* frame pointer initial value set to zero for debugger */
   context->stack_ptr[8] = 0;	/* rbp */
 #endif
-#if 1
+#if 0
   context->stack_ptr[7] = 0;	/* r8 */
   context->stack_ptr[6] = 0;	/* r9 */
   context->stack_ptr[5] = 0;	/* r10 */
