@@ -174,30 +174,8 @@ static _GETSOCKNAME(getsockname_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
 
-  switch (pv->local.family)
-    {
-      case addr_ipv4:
-	{
-	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
-
-	  if (*len < sizeof (struct sockaddr_in))
-	    {
-	      errno = fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  /* fill the address structure */
-	  in->sin_family = AF_INET;
-	  in->sin_port = htons(pv->proto);
-	  in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(pv->local));
-
-	  *len = sizeof (struct sockaddr_in);
-	}
-	break;
-      default:
-	errno = fd->error = EAFNOSUPPORT;
-	return -1;
-    }
+  if (socket_addr_in(fd, &pv->local, addr, len, htons(pv->proto)))
+    return -1;
 
   return 0;
 }
@@ -267,30 +245,8 @@ static _GETPEERNAME(getpeername_raw)
       return -1;
     }
 
-  switch (pv->local.family)
-    {
-      case addr_ipv4:
-	{
-	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
-
-	  if (*len < sizeof (struct sockaddr_in))
-	    {
-	      errno = fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  /* fill the address structure */
-	  in->sin_family = AF_INET;
-	  in->sin_port = htons(pv->proto);
-	  in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(pv->remote));
-
-	  *len = sizeof (struct sockaddr_in);
-	}
-	break;
-      default:
-	errno = fd->error = EAFNOSUPPORT;
-	return -1;
-    }
+  if (socket_addr_in(fd, &pv->remote, addr, len, htons(pv->proto)))
+    return -1;
 
   return 0;
 }

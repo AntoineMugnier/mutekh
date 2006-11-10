@@ -183,9 +183,36 @@ static TIMER_CALLBACK(profiling)
 }
 #endif
 
+void *toto(void *p)
+{
+  printf("wait...");
+  sem_wait(p);
+  printf("ok\n");
+}
+
 void *net_up(void *p)
 {
   pthread_t th;
+  sem_t sem;
+
+#if 1
+  sem_init(&sem, 0, 0);
+
+  pthread_create(&th, NULL, toto, &sem);
+
+  pthread_yield();
+  pthread_yield();
+  pthread_yield();
+  pthread_yield();
+  pthread_yield();
+
+  int i;
+  for (i = 0; i < 1000000000; i++)
+    ;
+
+  printf("post\n");
+  sem_post(&sem);
+#endif
 
   if_up("eth0");
   if_up("eth1");

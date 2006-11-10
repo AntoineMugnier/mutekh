@@ -35,3 +35,7 @@ endif
 ifeq ($(CONFIG_NETWORK_PING), defined)
  subdirs += ping
 endif
+
+ifeq ($(CONFIG_NETWORK_DHCLIENT), defined)
+ subdirs += dhclient
+endif

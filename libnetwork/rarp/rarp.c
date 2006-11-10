@@ -39,6 +39,7 @@ error_t			rarp_client(const char	*ifname)
   struct net_if_s	*interface;
   ssize_t		sz;
   int32_t		one = 1;
+  struct timeval	tv;
 
   /* create a PF_PACKET socket */
   if ((interface = if_get_by_name(ifname)) == NULL)
@@ -51,11 +52,19 @@ error_t			rarp_client(const char	*ifname)
   addr.sll_protocol = htons(ETH_P_RARP);
   addr.sll_ifindex = interface->index;
 
+  /* init the socket */
   if (bind(sock, (struct sockaddr *)&addr, sizeof (struct sockaddr_ll)) < 0)
     goto leave;
 
   if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &one, sizeof (int)) < 0)
     goto leave;
+
+  tv.tv_usec = 0;
+  tv.tv_sec = RARP_TIMEOUT;
+
+  if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof (struct timeval)) < 0)
+    goto leave;
+
 
   /* build a RARP request */
   arp.ea_hdr.ar_hrd = htons(ARPHRD_ETHER);

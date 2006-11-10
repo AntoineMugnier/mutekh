@@ -116,6 +116,7 @@ struct		ether_arp
 #define ARP_ENTRY_TIMEOUT	120000 /* 2 minutes */
 #define ARP_STALE_TIMEOUT	240000 /* 4 minutes */
 #define ARP_MAX_RETRIES		3
+#define RARP_TIMEOUT		30 /* 30 seconds */
 
 /*
  * Flags
