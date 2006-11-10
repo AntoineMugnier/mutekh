@@ -19,7 +19,7 @@
 CFLAGS=	-fno-builtin -Wall
 
 ifeq ($(CONFIG_COMPILE_DEBUG), defined)
-CFLAGS += -O0 -ggdb
+CFLAGS += -O0 -gstabs #-ggdb
 else
 CFLAGS += -O2 -fomit-frame-pointer
 endif

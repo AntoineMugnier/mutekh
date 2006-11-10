@@ -41,7 +41,7 @@
 #include <string.h>
 
 typedef void __printf_out_t(void *ctx, const char *str, size_t offset, size_t len);
-typedef int_fast8_t __printf_int_t;
+typedef intptr_t __printf_int_t;
 
 #define PRINTF_INT_BUFFER_LEN	20
 

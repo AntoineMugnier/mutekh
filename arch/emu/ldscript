@@ -23,11 +23,11 @@ SECTIONS
 		{
 			/* first word contains pointer to cpudata section */
 			__cpu_data_base = . ;
-			LONG(0) ;
+			QUAD(0) ;
 
 			/* second word contains pointer to contextdata section */
 			__cpu_context_data_base = . ;
-			LONG(0) ;
+			QUAD(0) ;
 
 			*(.cpudata*)
 		}
@@ -40,7 +40,7 @@ SECTIONS
 		{
 			/* first word contains pointer to contextdata section */
 			__context_data_base = . ;
-			LONG(0) ;
+			QUAD(0) ;
 
 			*(.contextdata*)
 		}

@@ -60,6 +60,8 @@ void arch_init()
       mutek_main_smp();
     }
 #endif
+
+  assert(!"mutek_main*() should not return");
 }
 
 void arch_start_other_cpu(void)

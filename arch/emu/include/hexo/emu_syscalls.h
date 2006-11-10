@@ -28,6 +28,13 @@
 
 /* FIXME linux x86 specific */
 
+#ifdef CONFIG_CPU_X86_EMU
+
+#define EMU_SYSCALL_MMAP	90
+#define EMU_SYSCALL_WRITE	4
+#define EMU_SYSCALL_READ	3
+#define EMU_SYSCALL_EXIT	1
+
 static inline reg_t
 emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 {
@@ -63,6 +70,43 @@ emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
   return res;
 }
 
+#elif defined (CONFIG_CPU_X86_64_EMU)
+
+#define EMU_SYSCALL_MMAP	9
+#define EMU_SYSCALL_WRITE	1
+#define EMU_SYSCALL_READ	0
+#define EMU_SYSCALL_EXIT	60
+
+static inline reg_t
+emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
+{
+  reg_t		res;
+
+  register reg_t p1 asm("rdi") = va_arg(ap, reg_t);
+  register reg_t p2 asm("rsi") = va_arg(ap, reg_t);
+  register reg_t p3 asm("rdx") = va_arg(ap, reg_t);
+  register reg_t p4 asm("r10") = va_arg(ap, reg_t);
+  register reg_t p5 asm("r8") = va_arg(ap, reg_t);
+  register reg_t p6 asm("r9") = va_arg(ap, reg_t);
+
+  asm volatile ("syscall\n"
+		: "=a" (res)
+		: "a" (id)
+		, "r" (p1)
+		, "r" (p2)
+		, "r" (p3)
+		, "r" (p4)
+		, "r" (p5)
+		, "r" (p6)
+		);
+
+  return res;
+}
+
+#elif
+# error emu_do_syscall_va not available for this processor type
+#endif
+
 static inline reg_t
 emu_do_syscall(uint_fast16_t id, size_t argc, ...)
 {
@@ -78,8 +122,6 @@ emu_do_syscall(uint_fast16_t id, size_t argc, ...)
 
 /******************************* mmap syscall */
 
-#define EMU_SYSCALL_MMAP	90
-
 #define PROT_READ		0x1
 #define PROT_WRITE		0x2
 #define PROT_EXEC		0x4
@@ -90,10 +132,6 @@ emu_do_syscall(uint_fast16_t id, size_t argc, ...)
 #define MAP_FAILED		((void *)-1)
 
 /******************************* other syscalls */
-
-#define EMU_SYSCALL_WRITE	4
-#define EMU_SYSCALL_READ	3
-#define EMU_SYSCALL_EXIT	1
 
 #endif
 

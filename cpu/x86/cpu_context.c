@@ -48,18 +48,18 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   context->stack_ptr -= 8;
 #if 0
   context->stack_ptr[0] = 0; 	/* eax */
-  context->stack_ptr[-1] = 0; 	/* ecx */
-  context->stack_ptr[-2] = 0; 	/* edx */
-  context->stack_ptr[-3] = 0; 	/* ebx */
-  context->stack_ptr[-4] = 0; 	/* esp (skiped by popa) */
+  context->stack_ptr[1] = 0; 	/* ecx */
+  context->stack_ptr[2] = 0; 	/* edx */
+  context->stack_ptr[3] = 0; 	/* ebx */
+  context->stack_ptr[4] = 0; 	/* esp (skiped by popa) */
 #endif
 #if defined (CONFIG_COMPILE_DEBUG)
   /* frame pointer initial value set to zero for debugger */
-  context->stack_ptr[-5] = 0; 	/* ebp */
+  context->stack_ptr[5] = 0; 	/* ebp */
 #endif
 #if 0
-  context->stack_ptr[-6] = 0; 	/* esi */
-  context->stack_ptr[-7] = 0; 	/* edi */
+  context->stack_ptr[6] = 0; 	/* esi */
+  context->stack_ptr[7] = 0; 	/* edi */
 #endif
 
   /* push tls segment index */

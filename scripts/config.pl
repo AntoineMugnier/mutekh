@@ -701,7 +701,7 @@ sub check_config
     }
     until (not $changed);
 
-    # update exclusions with single def constraints
+    # check update exclusion lists
 
     foreach my $opt (values %config_opts)
     {

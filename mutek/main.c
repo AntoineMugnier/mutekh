@@ -29,6 +29,7 @@
 #include <hexo/lock.h>
 #include <hexo/context.h>
 #include <hexo/cpu.h>
+#include <hexo/scheduler.h>
 
 #include <../drivers/uart-8250/uart-8250.h>
 #include <../drivers/tty-vga/tty-vga.h>
@@ -51,7 +52,6 @@
 
 #include <string.h>
 #include <stdio.h>
-#include <pthread.h>
 #include <stdlib.h>
 #include <timer.h>
 
