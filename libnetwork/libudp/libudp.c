@@ -199,7 +199,7 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
     local_port = desc->address.port;
   else
     {
-      local_port = 1024; /* XXX */
+      local_port = UDP_TEMP_PORT_BASE + (rand() % UDP_TEMP_PORT_RANGE);
     }
 
   /* prepare the packet */

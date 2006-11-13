@@ -124,13 +124,11 @@ error_t			rarp_client(const char	*ifname)
     }
 
   shutdown(sock, SHUT_RDWR);
-  /* XXX close socket */
 
   return 0;
 
  leave:
   shutdown(sock, SHUT_RDWR);
-  /* XXX close socket */
 
   return -1;
 }

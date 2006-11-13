@@ -27,8 +27,6 @@
 
 #include <hexo/alloc.h>
 
-#include <errno.h>
-
 static UDP_CALLBACK(socket_recv_callback)
 {
 
@@ -59,13 +57,11 @@ static _SOCKET(socket_udp)
 	pv->family = AF_INET6;
 	break;
       default:
-	errno = EPFNOSUPPORT;
-	mem_free(fd);
 	mem_free(pv);
-	return NULL;
+	return -EPFNOSUPPORT;
     }
 
-  return fd;
+  return 0;
 }
 
 /*
@@ -80,7 +76,7 @@ static _BIND(bind_udp)
 
   if (addr->sa_family != pv->family)
     {
-      errno = fd->error = EAFNOSUPPORT;
+      fd->error = EAFNOSUPPORT;
       return -1;
     }
 
@@ -91,7 +87,7 @@ static _BIND(bind_udp)
 
   if (err)
     {
-      errno = fd->error = -err;
+      fd->error = -err;
       return -1;
     }
 
@@ -108,7 +104,7 @@ static _GETSOCKNAME(getsockname_udp)
 
   if (pv->desc == NULL || !pv->desc->bound)
     {
-      errno = fd->error = -EINVAL; /* XXX check this behaviour */
+      fd->error = -EINVAL; /* XXX check this behaviour */
       return -1;
     }
 
@@ -130,7 +126,7 @@ static _CONNECT(connect_udp)
 
   if (addr->sa_family != pv->family)
     {
-      errno = fd->error = EAFNOSUPPORT;
+      fd->error = EAFNOSUPPORT;
       return -1;
     }
 
@@ -141,7 +137,7 @@ static _CONNECT(connect_udp)
 
   if (err)
     {
-      errno = fd->error = -err;
+      fd->error = -err;
       return -1;
     }
 
@@ -158,7 +154,7 @@ static _GETPEERNAME(getpeername_udp)
 
   if (pv->desc == NULL || !pv->desc->connected)
     {
-      errno = fd->error = -EINVAL;
+      fd->error = -EINVAL;
       return -1;
     }
 
@@ -193,7 +189,7 @@ static _SENDTO(sendto_udp)
 
   if (err)
     {
-      errno = fd->error = -err;
+      fd->error = -err;
       return -1;
     }
 
@@ -242,7 +238,7 @@ static _SHUTDOWN(shutdown_udp)
 
   if (how != SHUT_RDWR && how != SHUT_RD && how != SHUT_WR)
     {
-      errno = fd->error = EINVAL;
+      fd->error = EINVAL;
       return -1;
     }
 

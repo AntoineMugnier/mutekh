@@ -21,21 +21,11 @@
 
 #include <netinet/socket.h>
 
-#include <errno.h>
-
 /* Create a new socket of type TYPE in domain DOMAIN, using
    protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
-   Returns a file descriptor for the new socket, or -1 for errors.  */
+   Returns a file descriptor for the new socket, or NULL for errors.  */
 socket_t			socket(int domain, int type, int protocol)
 {
-#if defined(CONFIG_NETWORK_SOCKET_HEXO)
-  const socket_t		error = NULL;
-#elif defined(CONFIG_NETWORK_SOCKET_POSIX)
-  const socket_t		error = -1;
-#else
-# error Neither CONFIG_NETWORK_SOCKET_HEXO nor CONFIG_NETWORK_SOCKET_POSIX are defined.
-#endif
-
   const struct socket_api_s	*api;
   socket_t			sock;
 
@@ -57,8 +47,8 @@ socket_t			socket(int domain, int type, int protocol)
 		    break;
 #endif
 		  default:
-		    errno = EPROTONOSUPPORT;
-		    return error;
+		    //return -EPROTONOSUPPORT;
+		    return NULL;
 		}
 	      break;
 	    case SOCK_STREAM:
@@ -72,8 +62,8 @@ socket_t			socket(int domain, int type, int protocol)
 		    break;
 #endif
 		  default:
-		    errno = EPROTONOSUPPORT;
-		    return error;
+		    //return -EPROTONOSUPPORT;
+		    return NULL;
 		}
 	      break;
 #ifdef CONFIG_NETWORK_SOCKET_RAW
@@ -83,8 +73,8 @@ socket_t			socket(int domain, int type, int protocol)
 	      break;
 #endif
 	    default:
-	      errno = EPROTONOSUPPORT;
-	      return error;
+	      //return -EPROTONOSUPPORT;
+	      return NULL;
 	  }
 	break;
 #ifdef CONFIG_NETWORK_SOCKET_PACKET
@@ -94,41 +84,16 @@ socket_t			socket(int domain, int type, int protocol)
 	break;
 #endif
       default:
-	errno = EPFNOSUPPORT;
-	return error;
+	//return -EPFNOSUPPORT;
+	return NULL;
     }
   if ((sock = mem_alloc(sizeof (struct socket_s), MEM_SCOPE_NETWORK)) == NULL)
-    {
-      errno = ENOMEM;
-      return error;
-    }
+    //return -ENOMEM;
+    return NULL;
   sock->error = 0;
   sock->f = api;
-#if defined(CONFIG_NETWORK_SOCKET_HEXO)
-  return api->socket(sock, domain, type, protocol);
-#elif defined(CONFIG_NETWORK_SOCKET_POSIX)
-  /* XXX */
-#else
-# error Neither CONFIG_NETWORK_SOCKET_HEXO nor CONFIG_NETWORK_SOCKET_POSIX are defined.
-#endif
-}
-
-/*
- * Receive a chunk of data.
- */
-
-_RECV(recv)
-{
-  return recvfrom(fd, buf, n, flags, NULL, NULL);
-}
-
-/*
- * Send some data.
- */
-
-_SEND(send)
-{
-  return sendto(fd, buf, n, flags, NULL, 0);
+  api->socket(sock, domain, type, protocol);
+  return sock;
 }
 
 /*
@@ -149,7 +114,7 @@ _SENDMSG(sendmsg)
   /* allocate a buffer large enough */
   if ((buf = mem_alloc(n, MEM_SCOPE_SYS)) == NULL)
     {
-      fd->error = errno = ENOMEM;
+      fd->error = ENOMEM;
       return -1;
     }
 
@@ -162,7 +127,7 @@ _SENDMSG(sendmsg)
     }
 
   /* send & free */
-  ret = sendto(fd, buf, n, flags, message->msg_name, message->msg_namelen);
+  ret = fd->f->sendto(fd, buf, n, flags, message->msg_name, message->msg_namelen, message);
   mem_free(buf);
 
   return ret;
@@ -186,12 +151,12 @@ _RECVMSG(recvmsg)
   /* allocate a buffer large enough */
   if ((buf = mem_alloc(n, MEM_SCOPE_SYS)) == NULL)
     {
-      fd->error = errno = ENOMEM;
+      fd->error = ENOMEM;
       return -1;
     }
 
   /* receive the data */
-  ret = recvfrom(fd, buf, n, flags, message->msg_name, &message->msg_namelen);
+  ret = fd->f->recvfrom(fd, buf, n, flags, message->msg_name, &message->msg_namelen, message);
 
   /* pack into multiple vectors */
   for (i = 0, n = 0; i < message->msg_iovlen; i++)

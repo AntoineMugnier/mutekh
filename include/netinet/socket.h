@@ -308,22 +308,17 @@ struct timeval {
 struct socket_s;
 struct socket_api_s;
 
-# if defined(CONFIG_NETWORK_SOCKET_HEXO)
-#include "socket_hexo.h"
-# elif defined(CONFIG_NETWORK_SOCKET_POSIX)
-#include "socket_posix.h"
-# else
-#  error Neither CONFIG_NETWORK_SOCKET_HEXO nor CONFIG_NETWORK_SOCKET_POSIX are defined.
-# endif
+/* a socket is a socket_s structure */
+typedef struct socket_s *socket_t;
 
 /*
  * Socket API prototypes.
  */
 
-#define _SOCKET(f)	socket_t (f)(socket_t	fd,		\
-				     int	domain,		\
-				     int	type,		\
-				     int	protocol)
+#define _SOCKET(f)	error_t (f)(socket_t	fd,	\
+				    int		domain,	\
+				    int		type,	\
+				    int		protocol)
 
 #define _BIND(f)	int (f)(socket_t	fd,	\
 				struct sockaddr	*addr,	\
@@ -356,9 +351,25 @@ struct socket_api_s;
 				    size_t		n,		\
 				    int			flags,		\
 				    struct sockaddr	*addr,		\
+				    socklen_t		addr_len,	\
+				    const struct msghdr	*message)
+
+#define _SENDTO_LIB(f)	ssize_t (f)(socket_t		fd,		\
+				    const void		*buf,		\
+				    size_t		n,		\
+				    int			flags,		\
+				    struct sockaddr	*addr,		\
 				    socklen_t		addr_len)
 
 #define _RECVFROM(f)	ssize_t (f)(socket_t		fd,		\
+				    void		*buf,		\
+				    size_t		n,		\
+				    int			flags,		\
+				    struct sockaddr	*addr,		\
+				    socklen_t		*addr_len,	\
+				    struct msghdr	*message)
+
+#define _RECVFROM_LIB(f) ssize_t (f)(socket_t		fd,		\
 				    void		*buf,		\
 				    size_t		n,		\
 				    int			flags,		\
@@ -436,8 +447,6 @@ struct			socket_api_s
  * Common operations.
  */
 
-_RECV(recv);
-_SEND(send);
 _RECVMSG(recvmsg);
 _SENDMSG(sendmsg);
 
@@ -469,11 +478,11 @@ struct				socket_s
   void				*pv;
 };
 
+#include "socket_hexo.h"
+
 /*
  * Address conversion.
  */
-
-#include <errno.h>
 
 static inline error_t	socket_in_addr(struct socket_s		*fd,
 				       struct net_addr_s	*a,
@@ -491,7 +500,7 @@ static inline error_t	socket_in_addr(struct socket_s		*fd,
 
 	  if (len < sizeof (struct sockaddr_in))
 	    {
-	      errno = fd->error = EINVAL;
+	      fd->error = EINVAL;
 	      return -1;
 	    }
 
@@ -503,7 +512,7 @@ static inline error_t	socket_in_addr(struct socket_s		*fd,
       case AF_INET6:
 	/* IPV6 */
       default:
-	errno = fd->error = EAFNOSUPPORT;
+	fd->error = EAFNOSUPPORT;
 	return -1;
     }
 
@@ -524,7 +533,7 @@ static inline error_t	socket_addr_in(struct socket_s		*fd,
 
 	  if (*len < sizeof (struct sockaddr_in))
 	    {
-	      errno = fd->error = EINVAL;
+	      fd->error = EINVAL;
 	      return -1;
 	    }
 
@@ -537,7 +546,7 @@ static inline error_t	socket_addr_in(struct socket_s		*fd,
 	}
 	break;
       default:
-	errno = fd->error = EAFNOSUPPORT;
+	fd->error = EAFNOSUPPORT;
 	return -1;
     }
 

@@ -32,6 +32,13 @@
 #include <gpct/object_refcount.h>
 
 /*
+ * Temporary ports boundaries.
+ */
+
+#define UDP_TEMP_PORT_BASE	46000
+#define UDP_TEMP_PORT_RANGE	4000
+
+/*
  * Types
  */
 

@@ -33,7 +33,6 @@
 
 #include <semaphore.h>
 #include <timer.h>
-#include <errno.h>
 
 static _RECVFROM(recvfrom_packet);
 
@@ -50,11 +49,7 @@ static _SOCKET(socket_packet)
   struct socket_packet_pv_s	*pv;
 
   if ((pv = fd->pv = mem_alloc(sizeof (struct socket_packet_pv_s), MEM_SCOPE_NETWORK)) == NULL)
-    {
-      errno = ENOMEM;
-      mem_free(fd);
-      return NULL;
-    }
+    return -ENOMEM;
 
   /* setup private data */
   pv->proto = ntohs(protocol);
@@ -67,15 +62,13 @@ static _SOCKET(socket_packet)
   pv->header = (type == SOCK_RAW);
   if (!socket_packet_push(&pf_packet, pv))
     {
-      errno = ENOMEM;
-      mem_free(fd);
       sem_destroy(&pv->recv_sem);
       packet_queue_lock_destroy(&pv->recv_q);
       mem_free(pv);
-      return NULL;
+      return -ENOMEM;
     }
 
-  return fd;
+  return 0;
 }
 
 /*
@@ -90,14 +83,14 @@ static _BIND(bind_packet)
 
   if (len < sizeof (struct sockaddr_ll) || sll->sll_family != AF_PACKET)
     {
-      errno = fd->error = EINVAL;
+      fd->error = EINVAL;
       return -1;
     }
 
   /* bind to the given interface and protocol */
   if ((interface = if_get_by_index(sll->sll_ifindex)) == NULL)
     {
-      errno = fd->error = EADDRNOTAVAIL;
+      fd->error = EADDRNOTAVAIL;
       return -1;
     }
 
@@ -118,14 +111,14 @@ static _GETSOCKNAME(getsockname_packet)
 
   if (*len < sizeof (struct sockaddr_ll))
     {
-      errno = fd->error = EINVAL;
+      fd->error = EINVAL;
       return -1;
     }
 
   /* not bound... */
   if (pv->interface == 0)
     {
-      errno = fd->error = EADDRNOTAVAIL;
+      fd->error = EADDRNOTAVAIL;
       return -1;
     }
 
@@ -153,20 +146,20 @@ static _SENDTO(sendto_packet)
 
   if (pv->shutdown == SHUT_WR || pv->shutdown == SHUT_RDWR)
     {
-      errno = fd->error = ESHUTDOWN;
+      fd->error = ESHUTDOWN;
       return -1;
     }
 
   if ((sll == NULL && !pv->header) || addr_len < sizeof (struct sockaddr_ll) ||
       sll->sll_family != AF_PACKET)
     {
-      errno = fd->error = (sll == NULL ? EDESTADDRREQ : EINVAL);
+      fd->error = (sll == NULL ? EDESTADDRREQ : EINVAL);
       return -1;
     }
 
   if ((packet = packet_obj_new(NULL)) == NULL)
     {
-      errno = fd->error = ENOMEM;
+      fd->error = ENOMEM;
       return -1;
     }
 
@@ -179,7 +172,7 @@ static _SENDTO(sendto_packet)
       if ((packet->packet = mem_alloc(n, MEM_SCOPE_NETWORK)) == NULL)
 	{
 	  packet_obj_refdrop(packet);
-	  errno = fd->error = ENOMEM;
+	  fd->error = ENOMEM;
 	  return -1;
 	}
 
@@ -205,7 +198,7 @@ static _SENDTO(sendto_packet)
       if (!pv->broadcast && !memcmp(bcast, sll->sll_addr, maclen))
 	{
 	  packet_obj_refdrop(packet);
-	  errno = fd->error = EINVAL;
+	  fd->error = EINVAL;
 	  return -1;
 	}
 
@@ -213,7 +206,7 @@ static _SENDTO(sendto_packet)
       if ((next = if_preparepkt(interface, packet, n, 0)) == NULL)
 	{
 	  packet_obj_refdrop(packet);
-	  errno = fd->error = ENOMEM;
+	  fd->error = ENOMEM;
 	  return -1;
 	}
 
@@ -250,7 +243,7 @@ static _RECVFROM(recvfrom_packet)
  again:
   if (pv->shutdown == SHUT_RD || pv->shutdown == SHUT_RDWR)
     {
-      errno = fd->error = ESHUTDOWN;
+      fd->error = ESHUTDOWN;
       return -1;
     }
 
@@ -265,7 +258,7 @@ static _RECVFROM(recvfrom_packet)
 
       if (flags & MSG_DONTWAIT)
 	{
-	  errno = fd->error = EAGAIN;
+	  fd->error = EAGAIN;
 	  return -1;
 	}
 
@@ -291,7 +284,7 @@ static _RECVFROM(recvfrom_packet)
     {
       if (*addr_len < sizeof (struct sockaddr_ll))
 	{
-	  errno = fd->error = ENOMEM;
+	  fd->error = ENOMEM;
 	  packet_obj_refdrop(packet);
 	  return -1;
 	}
@@ -359,13 +352,13 @@ static _SETSOCKOPT(setsockopt_packet)
       case SOL_PACKET:
 	if (optname != PACKET_ADD_MEMBERSHIP && optname != PACKET_DROP_MEMBERSHIP)
 	  {
-	    errno = fd->error = ENOPROTOOPT;
+	    fd->error = ENOPROTOOPT;
 	    return -1;
 	  }
 
 	if (optlen < sizeof (struct packet_mreq))
 	  {
-	    errno = fd->error = EINVAL;
+	    fd->error = EINVAL;
 	    return -1;
 	  }
 
@@ -380,7 +373,7 @@ static _SETSOCKOPT(setsockopt_packet)
 
 		if ((interface = if_get_by_index(req->mr_ifindex)) == NULL)
 		  {
-		    errno = fd->error = EADDRNOTAVAIL;
+		    fd->error = EADDRNOTAVAIL;
 		    return -1;
 		  }
 		dev_net_setopt(interface->dev, DEV_NET_OPT_PROMISC, &enabled, sizeof (bool_t));
@@ -388,7 +381,7 @@ static _SETSOCKOPT(setsockopt_packet)
 	      break;
 	      /* other options not supported (multicast) */
 	    default:
-	      errno = fd->error = ENOPROTOOPT;
+	      fd->error = ENOPROTOOPT;
 	      return -1;
 	  }
 	break;
@@ -403,7 +396,7 @@ static _SETSOCKOPT(setsockopt_packet)
 
 		if (optlen < sizeof (struct timeval))
 		  {
-		    errno = fd->error = EINVAL;
+		    fd->error = EINVAL;
 		    return -1;
 		  }
 
@@ -418,7 +411,7 @@ static _SETSOCKOPT(setsockopt_packet)
 
 		if (optlen < sizeof (int))
 		  {
-		    errno = fd->error = EINVAL;
+		    fd->error = EINVAL;
 		    return -1;
 		  }
 
@@ -427,13 +420,13 @@ static _SETSOCKOPT(setsockopt_packet)
 	      }
 	      break;
 	    default:
-	      errno = fd->error = ENOPROTOOPT;
+	      fd->error = ENOPROTOOPT;
 	      return -1;
 	  }
 	return 0;
 	break;
       default:
-	errno = fd->error = ENOPROTOOPT;
+	fd->error = ENOPROTOOPT;
 	return -1;
     }
 
@@ -450,7 +443,7 @@ static _GETSOCKOPT(getsockopt_packet)
 
   if (level != SOL_SOCKET)
     {
-      errno = fd->error = ENOPROTOOPT;
+      fd->error = ENOPROTOOPT;
       return -1;
     }
 
@@ -463,7 +456,7 @@ static _GETSOCKOPT(getsockopt_packet)
 
 	  if (*optlen < sizeof (struct timeval))
 	    {
-	      errno = fd->error = EINVAL;
+	      fd->error = EINVAL;
 	      return -1;
 	    }
 
@@ -481,7 +474,7 @@ static _GETSOCKOPT(getsockopt_packet)
 
 	  if (*optlen < sizeof (int))
 	    {
-	      errno = fd->error = EINVAL;
+	      fd->error = EINVAL;
 	      return -1;
 	    }
 
@@ -498,7 +491,7 @@ static _GETSOCKOPT(getsockopt_packet)
 
 	  if (*optlen < sizeof (int))
 	    {
-	      errno = fd->error = EINVAL;
+	      fd->error = EINVAL;
 	      return -1;
 	    }
 
@@ -515,7 +508,7 @@ static _GETSOCKOPT(getsockopt_packet)
 
 	  if (*optlen < sizeof (int))
 	    {
-	      errno = fd->error = EINVAL;
+	      fd->error = EINVAL;
 	      return -1;
 	    }
 
@@ -526,7 +519,7 @@ static _GETSOCKOPT(getsockopt_packet)
 	}
 	break;
       default:
-	errno = fd->error = ENOPROTOOPT;
+	fd->error = ENOPROTOOPT;
 	return -1;
     }
 
@@ -544,7 +537,7 @@ static _SHUTDOWN(shutdown_packet)
 
   if (how != SHUT_RDWR && how != SHUT_RD && how != SHUT_WR)
     {
-      errno = fd->error = EINVAL;
+      fd->error = EINVAL;
       return -1;
     }
 
@@ -580,10 +573,10 @@ static _SHUTDOWN(shutdown_packet)
  * Following operations are not supported with PACKET sockets.
  */
 
-static _LISTEN(listen_packet) { errno = fd->error = EOPNOTSUPP; return -1; }
-static _ACCEPT(accept_packet) { errno = fd->error = EOPNOTSUPP; return -1; }
-static _CONNECT(connect_packet) { errno = fd->error = EOPNOTSUPP; return -1; }
-static _GETPEERNAME(getpeername_packet) { errno = fd->error = EOPNOTSUPP; return -1; }
+static _LISTEN(listen_packet) { fd->error = EOPNOTSUPP; return -1; }
+static _ACCEPT(accept_packet) { fd->error = EOPNOTSUPP; return -1; }
+static _CONNECT(connect_packet) { fd->error = EOPNOTSUPP; return -1; }
+static _GETPEERNAME(getpeername_packet) { fd->error = EOPNOTSUPP; return -1; }
 
 /*
  * Socket API for PACKET sockets.
