@@ -9,4 +9,5 @@ ifeq ($(CONFIG_COMPILE_INSTRUMENT), defined)
 objs += instrument.o
 endif
 
+clean:
 

@@ -842,6 +842,9 @@ sub write_makefile
 
 sub tokens_list
 {
+    printf("    %-40s %s \n", "Configuration token name", "Declare location");
+    print ("="x79, "\n");
+
     foreach my $name (sort keys %config_opts)
     {
 	my $opt = $config_opts{$name};

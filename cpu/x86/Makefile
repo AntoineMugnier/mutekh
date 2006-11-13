@@ -7,3 +7,5 @@ cpu_context.o
 
 subdirs = libc libnetwork
 
+clean:
+

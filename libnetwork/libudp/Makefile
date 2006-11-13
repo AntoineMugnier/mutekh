@@ -1,1 +1,4 @@
 objs += libudp.o
+
+clean:
+

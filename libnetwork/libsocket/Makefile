@@ -15,3 +15,6 @@ endif
 ifeq ($(CONFIG_NETWORK_SOCKET_RAW), defined)
   objs += socket_raw.o
 endif
+
+clean:
+

@@ -1,3 +1,5 @@
 
 objs = packet.o
 
+clean:
+

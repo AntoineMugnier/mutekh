@@ -1,1 +1,4 @@
 objs += dhclient.o
+
+clean:
+

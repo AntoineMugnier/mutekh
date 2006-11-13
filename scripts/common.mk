@@ -16,6 +16,9 @@
 #     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 #
 
+export SRC_DIR
+export BUILD_DIR
+
 CFLAGS=	-fno-builtin -Wall
 
 ifeq ($(CONFIG_COMPILE_DEBUG), defined)
@@ -33,10 +36,7 @@ ifeq ($(CONFIG_COMPILE_INSTRUMENT), defined)
 CFLAGS += -finstrument-functions
 endif
 
-include $(SRC_DIR)/arch/current/config.mk
-include $(SRC_DIR)/cpu/current/config.mk
-
-INCS=-nostdinc -D__TEST__ -D__MUTEK__ -I$(SRC_DIR)/include -include $(SRC_DIR)/config.h
+INCS=-nostdinc -D__MUTEK__ -I$(SRC_DIR)/include -include $(SRC_DIR)/config.h
 
 %.o: %.S
 	@echo '    AS      $@'
@@ -55,15 +55,7 @@ AS=$(CPUTOOLS)as
 OBJCOPY=$(CPUTOOLS)objcopy
 OBJDUMP=$(CPUTOOLS)objdump
 
-MAKEFLAGS += -s
-
-clean:
-	@echo " CLEAN      $(H)"
-	@rm -f $target *~ depend.mk $(objs) $(subdirs-lists) *.map
-	@rm -rf .depends
-	@for i in $(subdirs) ; do \
-		make -C $$i -f $(SRC_DIR)/scripts/rules.mk H="$(H)/$$i" clean; \
-	done
+#MAKEFLAGS += -s
 
 print_dir:
 	@ test -z '$(objs)' || echo $$'\n --------  $(H)  --------'
@@ -82,11 +74,17 @@ define recurse
 .$(1).list: $$(SRC_DIR)$$(H)/$(1)/Makefile
 	@test -d $(1) || mkdir -p $(1)
 	@rm -f $$@
-	@$$(MAKE) -C $(1) -f $$(SRC_DIR)/scripts/rules.mk $$(SRC_DIR)$$(H)/$$@ DIR=$(1) H="$$(H)/$(1)" HH="$$(SRC_DIR)$$(H)"
+	@$$(MAKE) -C $(1) -f $$(SRC_DIR)/scripts/rules_subdir.mk $$(SRC_DIR)$$(H)/$$@ DIR=$(1) H="$$(H)/$(1)" HH="$$(SRC_DIR)$$(H)"
 
 endef
 
-$(eval $(foreach dirname,$(subdirs),$(call recurse,$(dirname))))
+clean_sub:
+	@echo " CLEAN      $(H)"
+	@rm -f depend.mk $(objs) $(subdirs-lists)
+	@rm -rf .depends
+	@for i in $(subdirs) ; do \
+		$(MAKE) -i -C $$i -f $(SRC_DIR)/scripts/rules_clean.mk H="$(H)/$$i" clean_sub clean; \
+	done
 
-re: clean default
+$(eval $(foreach dirname,$(subdirs),$(call recurse,$(dirname))))
 

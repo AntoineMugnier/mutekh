@@ -1,1 +1,4 @@
 objs += nfs.o
+
+clean:
+

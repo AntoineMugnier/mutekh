@@ -11,3 +11,6 @@ endif
 ifeq ($(CONFIG_NETWORK_TCP), defined)
  objs += tcp.o
 endif
+
+clean:
+

@@ -8,3 +8,5 @@ rand.o											\
 sem.o											\
 timer.o
 
+clean:
+

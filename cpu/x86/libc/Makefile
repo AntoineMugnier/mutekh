@@ -1,4 +1,5 @@
 
 objs = string.o
 
+clean:
 

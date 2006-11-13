@@ -1,1 +1,4 @@
 objs += rarp.o
+
+clean:
+

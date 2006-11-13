@@ -16,20 +16,16 @@
 #     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 #
 
-export SRC_DIR
-export BUILD_DIR
-
-include $(SRC_DIR)/config.mk
-
-ifneq ($(H),/)
+include $(BUILD_DIR)/config.mk
 include $(SRC_DIR)$(H)/Makefile
-endif
 -include depend.mk
 
 VPATH = $(SRC_DIR)$(H)
 
 deps = $(patsubst %.o,.depends/%.deps,$(objs))
 
+include $(BUILD_DIR)/arch/current/config.mk
+include $(BUILD_DIR)/cpu/current/config.mk
 include $(SRC_DIR)/scripts/common.mk
 
 depend.mk: $(deps)

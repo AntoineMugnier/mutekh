@@ -19,61 +19,42 @@
 BASE_PWD:=$(PWD)
 BUILD_DIR:=$(BASE_PWD)
 SRC_DIR=$(BASE_PWD)
-LDFLAGS=
 CONF=myconfig
 
 export SRC_DIR
 export BUILD_DIR
+MAKEFLAGS = -s
 
-all: default
+kernel: config
+	test -f $(LIBAPP) && echo "Warning: LIBAPP variable must point to a valid application library or object file"
+	$(MAKE) -f $(SRC_DIR)/scripts/rules_main.mk kernel
 
-config: $(SRC_DIR)/config.mk $(SRC_DIR)/config.h
-
-include $(SRC_DIR)/config.mk
-
-$(SRC_DIR)/$(CONF):
-	echo -e "Missing user configuration file \`$(CONF)'."
-	echo -e "Please refer to the documentation."
-	false
-
-$(SRC_DIR)/config.mk $(SRC_DIR)/config.h: $(SRC_DIR)/$(CONF)
+$(BUILD_DIR)/config.mk $(BUILD_DIR)/config.h: $(CONF)
 	perl $(SRC_DIR)/scripts/config.pl	\
-		--input=$(SRC_DIR)/$(CONF)	\
+		--input=$(CONF)			\
 		--header=$(SRC_DIR)/config.h	\
 		--makefile=$(SRC_DIR)/config.mk
 
-$(SRC_DIR)/arch/current/config.mk: arch/current
+config: $(BUILD_DIR)/config.mk $(BUILD_DIR)/config.h
+	$(MAKE) -f $(SRC_DIR)/scripts/rules_links.mk
 
-$(SRC_DIR)/cpu/current/config.mk: cpu/current
+config_check:
+	perl $(SRC_DIR)/scripts/config.pl	\
+		--input=$(CONF) --check
 
-arch/current: $(SRC_DIR)/config.mk
-	ln -sfn $(CONFIG_ARCH_NAME) $@
+$(CONF):
+	echo -e "The \`$(CONF)' source configuration file is missing."
+	echo -e "Please set the CONF variable to use an alternative"
+	echo -e "file or provide the missing file. Available configuration"
+	echo -e "options can be displayed using the ./configure script."
+	false
 
-cpu/current: $(SRC_DIR)/config.mk
-	ln -sfn $(CONFIG_CPU_NAME) $@
+clean_sub:
+	$(MAKE) -f $(SRC_DIR)/scripts/rules_main.mk clean clean_sub
 
-subdirs = arch cpu drivers hexo mutek libc
+clean: clean_sub
+	rm -f $(BUILD_DIR)/cpu/current $(BUILD_DIR)/arch/current
+	rm -f $(BUILD_DIR)/config.h $(BUILD_DIR)/config.mk
 
-ifeq ($(CONFIG_NETWORK), defined)
- subdirs += libnetwork
-endif
-
-ifeq ($(CONFIG_PTHREAD), defined)
- subdirs += libpthread
-endif
-
-objs =
-
-include $(SRC_DIR)/scripts/common.mk
-
-target = kernel-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME).out
-
-default: arch/current cpu/current $(target)
-
-$(target): $(SRC_DIR)/config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript $(LIBAPP)
-	@echo '    LD      $@'
-	@$(LD) $(LDFLAGS) $(ARCHLDFLAGS) -q $$(cat /dev/null $(filter %.list,$^)) \
-	$(filter %.o,$^) $(filter %.a,$^) \
-	-T $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript \
-	-o $@
+re: clean default
 
