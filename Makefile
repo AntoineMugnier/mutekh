@@ -59,5 +59,5 @@ clean: clean_sub
 	rm -f $(BUILD_DIR)/cpu/current $(BUILD_DIR)/arch/current
 	rm -f $(BUILD_DIR)/config.h $(BUILD_DIR)/config.mk
 
-re: clean default
+re: clean kernel
 

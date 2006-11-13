@@ -68,8 +68,6 @@ print_dir:
 .PHONY: $(subdirs-lists) $(target)
 
 $(BUILD_DIR)$(H)/.$(DIR).list: print_dir $(objs) $(subdirs-lists) $(SRC_DIR)/$(H)/Makefile
-	echo $(subdirs-lists) +++ $(objs)
-	echo $(BUILD_DIR)
 	cat /dev/null $(filter %.list,$^) > $@
 	for obj in $(objs) ; do \
 		echo $(BUILD_DIR)$(H)/$${obj} >> $@ ; \
