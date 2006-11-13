@@ -84,28 +84,8 @@ static _BIND(bind_udp)
       return -1;
     }
 
-  switch (addr->sa_family)
-    {
-      case AF_INET:
-	{
-	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
-
-	  if (len < sizeof (struct sockaddr_in))
-	    {
-	      errno = fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  IPV4_ADDR_SET(local.address, in->sin_addr.s_addr);
-	  local.port = in->sin_port;
-	}
-	break;
-      case AF_INET6:
-	/* IPV6 */
-      default:
-	errno = fd->error = EAFNOSUPPORT;
-	return -1;
-    }
+  if (socket_in_addr(fd, &local.address, addr, len, &local.port))
+    return -1;
 
   err = udp_bind(&pv->desc, &local, socket_recv_callback, pv);
 
@@ -132,30 +112,8 @@ static _GETSOCKNAME(getsockname_udp)
       return -1;
     }
 
-  switch (pv->desc->address.address.family)
-    {
-      case addr_ipv4:
-	{
-	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
-
-	  if (*len < sizeof (struct sockaddr_in))
-	    {
-	      errno = fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  /* fill the address structure */
-	  in->sin_family = AF_INET;
-	  in->sin_port = htons(pv->desc->address.port);
-	  in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(pv->desc->address.address));
-
-	  *len = sizeof (struct sockaddr_in);
-	}
-	break;
-      default:
-	errno = fd->error = EAFNOSUPPORT;
-	return -1;
-    }
+  if (socket_addr_in(fd, &pv->desc->address.address, addr, len, htons(pv->desc->address.port)))
+    return -1;
 
   return 0;
 }
@@ -176,28 +134,8 @@ static _CONNECT(connect_udp)
       return -1;
     }
 
-  switch (addr->sa_family)
-    {
-      case AF_INET:
-	{
-	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
-
-	  if (len < sizeof (struct sockaddr_in))
-	    {
-	      errno = fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  IPV4_ADDR_SET(remote.address, in->sin_addr.s_addr);
-	  remote.port = in->sin_port;
-	}
-	break;
-      case AF_INET6:
-	/* IPV6 */
-      default:
-	errno = fd->error = EAFNOSUPPORT;
-	return -1;
-    }
+  if (socket_in_addr(fd, &remote.address, addr, len, &remote.port))
+    return -1;
 
   err = udp_connect(&pv->desc, &remote);
 
@@ -224,30 +162,8 @@ static _GETPEERNAME(getpeername_udp)
       return -1;
     }
 
-  switch (pv->desc->remote.address.family)
-    {
-      case addr_ipv4:
-	{
-	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
-
-	  if (*len < sizeof (struct sockaddr_in))
-	    {
-	      errno = fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  /* fill the address structure */
-	  in->sin_family = AF_INET;
-	  in->sin_port = htons(pv->desc->remote.port);
-	  in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(pv->desc->remote.address));
-
-	  *len = sizeof (struct sockaddr_in);
-	}
-	break;
-      default:
-	errno = fd->error = EAFNOSUPPORT;
-	return -1;
-    }
+  if (socket_addr_in(fd, &pv->desc->remote.address, addr, len, htons(pv->desc->remote.port)))
+    return -1;
 
   return 0;
 }
@@ -269,28 +185,8 @@ static _SENDTO(sendto_udp)
     {
       struct net_udp_addr_s	remote;
 
-      switch (addr->sa_family)
-	{
-	  case AF_INET:
-	    {
-	      struct sockaddr_in	*in = (struct sockaddr_in *)addr;
-
-	      if (addr_len < sizeof (struct sockaddr_in))
-		{
-		  errno = fd->error = EINVAL;
-		  return -1;
-		}
-
-	      IPV4_ADDR_SET(remote.address, in->sin_addr.s_addr);
-	      remote.port = in->sin_port;
-	    }
-	    break;
-	  case AF_INET6:
-	    /* IPV6 */
-	  default:
-	    errno = fd->error = EAFNOSUPPORT;
-	    return -1;
-	}
+      if (socket_in_addr(fd, &remote.address, addr, addr_len, &remote.port))
+	return -1;
 
       err = udp_send(pv->desc, &remote, buf, n);
     }

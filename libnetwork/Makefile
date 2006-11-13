@@ -1,10 +1,5 @@
 
-objs += packet.o
-objs += if.o
-
-ifeq ($(CONFIG_NETWORK_ROUTING), defined)
- objs += route.o
-endif
+objs += packet.o if.o route.o
 
 ifeq ($(CONFIG_NETWORK_FILTER), defined)
  objs += filter.o

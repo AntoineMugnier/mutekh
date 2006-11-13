@@ -1,20 +1,32 @@
 (dans l'ordre)
 
-* UDP
-  - le refaire marcher comme avant !
+* alignements memoire dans rarp et dhclient
+
+* libsocket
+  - finir sockets UDP
+
+* route
+  - gestion par objets refcount
+  - faire une version light avec liste triée
+
+* if
+  - a coder integralement
+  - gerer les trucs fun genre bridging
+
+* lwNFS
+  - adapter la nouvelle API UDP
+
+* libsocket
+  - sockopt sur socket IP
 
 * TCP
   - a finir
 
 * libsocket
-  - sockopt sur socket IP
-  - sockets UDP et TCP
+  - sockets TCP
 
 * route
-  - refaire avec un arbre comme a dit Alex
-
-* if
-  - a coder integralement
+  - faire avec un arbre comme a dit Alex
 
 * filter
   - a coder integralement
@@ -23,8 +35,6 @@
   - gestion des doublons
 
 * IP
-  - options du header IP (seulement les trucs utiles)
-    + MTU Probe/Reply
   - idee de nipo: dans le routage avec fragmentation, calculer taille optimale
 
 * general

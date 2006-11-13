@@ -197,25 +197,8 @@ static _CONNECT(connect_raw)
       return -1;
     }
 
-  switch (addr->sa_family)
-    {
-      case AF_INET:
-	in = (struct sockaddr_in *)addr;
-
-	if (len < sizeof (struct sockaddr_in))
-	  {
-	    errno = fd->error = EINVAL;
-	    return -1;
-	  }
-
-	IPV4_ADDR_SET(dest, ntohl(in->sin_addr.s_addr));
-	break;
-      case AF_INET6:
-	/* IPV6 */
-      default:
-	errno = fd->error = EAFNOSUPPORT;
-	return -1;
-    }
+  if (socket_in_addr(fd, &dest, addr, len, NULL))
+    return -1;
 
   if ((route = route_get(&dest)) == NULL)
     {
@@ -291,24 +274,10 @@ static _SENDTO(sendto_raw)
 	  return -1;
 	}
 
-      switch (addr->sa_family)
+      if (socket_in_addr(fd, &packet->tADDR, addr, addr_len, NULL))
 	{
-	  case AF_INET:
-	    if (addr_len < sizeof (struct sockaddr_in))
-	      {
-		packet_obj_refdrop(packet);
-		errno = fd->error = EINVAL;
-		return -1;
-	      }
-	    in = (struct sockaddr_in *)addr;
-	    IPV4_ADDR_SET(packet->tADDR, ntohl(in->sin_addr.s_addr));
-	    break;
-	  case AF_INET6:
-	    /* IPV6 */
-	  default:
-	    packet_obj_refdrop(packet);
-	    errno = fd->error = EAFNOSUPPORT;
-	    return -1;
+	  packet_obj_refdrop(packet);
+	  return -1;
 	}
     }
 
@@ -424,30 +393,10 @@ static _RECVFROM(recvfrom_raw)
   /* fill the address if required */
   if (addr != NULL)
     {
-      switch (pv->family)
+      if (socket_addr_in(fd, &packet->sADDR, addr, addr_len, htons(pv->proto)))
 	{
-	  case AF_INET:
-	    in = (struct sockaddr_in *)addr;
-
-	    if (*addr_len < sizeof (struct sockaddr_in))
-	      {
-		packet_obj_refdrop(packet);
-		errno = fd->error = EINVAL;
-		return -1;
-	      }
-
-	    in->sin_family = AF_INET;
-	    in->sin_port = htons(pv->proto);
-	    in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(packet->sADDR));
-
-	    *addr_len = sizeof (struct sockaddr_in);
-	    break;
-	  case AF_INET6:
-	    /* IPV6 */
-	  default:
-	    packet_obj_refdrop(packet);
-	    errno = fd->error = EAFNOSUPPORT;
-	    return -1;
+	  packet_obj_refdrop(packet);
+	  return -1;
 	}
     }
 

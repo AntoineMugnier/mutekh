@@ -422,7 +422,7 @@ NET_PUSHPKT(ip_pushpkt)
   /* is the packet really for me ? */
   if (packet->tADDR.addr.ipv4 != pv->addr)
     {
-#ifdef CONFIG_NETWORK_ROUTING
+#ifdef CONFIG_NETWORK_FORWARDING
       /* if the packet is not on the same subnet (and is not broadcast) */
       if (!on_subnet && packet->tADDR.addr.ipv4 != 0xffffffff)
 	{
@@ -611,7 +611,7 @@ static inline bool_t	 ip_send_fragment(struct net_proto_s	*ip,
   /* need to route ? */
   if (route_entry != NULL)
     {
-#ifdef CONFIG_NETWORK_ROUTING
+#ifdef CONFIG_NETWORK_FORWARDING
       ip_route(frag, route_entry);
       return 1;
 #else
@@ -693,7 +693,7 @@ NET_SENDPKT(ip_send)
       IPV4_ADDR_SET(packet->sADDR, pv->addr);
       if (ip_delivery(interface, protocol, packet->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
 	{
-#ifdef CONFIG_NETWORK_ROUTING
+#ifdef CONFIG_NETWORK_FORWARDING
 	  if ((route_entry = route_get(&packet->tADDR)) == NULL)
 	    {
 #endif
@@ -701,7 +701,7 @@ NET_SENDPKT(ip_send)
 	      pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
 
 	      return ;
-#ifdef CONFIG_NETWORK_ROUTING
+#ifdef CONFIG_NETWORK_FORWARDING
 	    }
 #endif
 	}
@@ -736,7 +736,7 @@ NET_SENDPKT(ip_send)
   IPV4_ADDR_SET(packet->sADDR, pv->addr);
   if (ip_delivery(interface, protocol, packet->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
     {
-#ifdef CONFIG_NETWORK_ROUTING
+#ifdef CONFIG_NETWORK_FORWARDING
       if ((route_entry = route_get(&packet->tADDR)))
 	{
 	  ip_route(packet, route_entry);
@@ -746,7 +746,7 @@ NET_SENDPKT(ip_send)
 #endif
 	  /* network unreachable */
 	  pv->icmp->desc->f.control->errormsg(packet, ERROR_NET_UNREACHABLE);
-#ifdef CONFIG_NETWORK_ROUTING
+#ifdef CONFIG_NETWORK_FORWARDING
 	}
 #endif
 
@@ -764,7 +764,7 @@ NET_SENDPKT(ip_send)
   if_sendpkt(interface, packet, ETHERTYPE_IP);
 }
 
-#ifdef CONFIG_NETWORK_ROUTING
+#ifdef CONFIG_NETWORK_FORWARDING
 /*
  * Route a packet.
  */

@@ -47,6 +47,7 @@
 #define DHCP_ROUTER	3
 #define DHCP_HOSTNAME	12
 #define DHCP_REQIP	50
+#define DHCP_LEASE	51
 #define DHCP_MSG	53
 #define DHCP_SERVER	54
 #define DHCP_REQLIST	55
@@ -71,6 +72,22 @@
  */
 
 #define DHCP_TIMEOUT	10 /* 10 seconds */
+#define DHCP_DFL_LEASE	120000 /* 2 minutes */
+
+#include <netinet/if.h>
+#include <timer.h>
+
+/*
+ * DHCP lease info.
+ */
+
+struct			dhcp_lease_s
+{
+  struct net_if_s	*interface;
+  timer_delay_t		delay;
+  uint_fast32_t		serv;
+  uint_fast32_t		ip;
+};
 
 /*
  * DHCP options.

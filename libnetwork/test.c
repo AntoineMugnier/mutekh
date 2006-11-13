@@ -144,6 +144,7 @@ void			*nfs_test(void *p)
 }
 #endif
 
+#ifdef CONFIG_NETWORK_SOCKET_PACKET
 void			*pf_packet_test(void *p)
 {
   uint8_t		buff[1514];
@@ -173,7 +174,7 @@ void			*pf_packet_test(void *p)
 
   return NULL;
 }
-
+#endif
 
 #ifdef CONFIG_NETWORK_PROFILING
 static TIMER_CALLBACK(profiling)
@@ -195,16 +196,15 @@ void *net_up(void *p)
   pthread_t th;
   sem_t sem;
 
-#if 1
+  while (1)
+    printf("kikou lol\n");
+
+#ifdef CONFIG_NETWORK
+
+#if 0
   sem_init(&sem, 0, 0);
 
   pthread_create(&th, NULL, toto, &sem);
-
-  pthread_yield();
-  pthread_yield();
-  pthread_yield();
-  pthread_yield();
-  pthread_yield();
 
   int i;
   for (i = 0; i < 1000000000; i++)
@@ -221,7 +221,9 @@ void *net_up(void *p)
   rarp_client("eth0");
 #endif
 
-#ifdef CONFIG_NETWORK_ROUTING
+#ifdef CONFIG_NETWORK_DHCLIENT
+  dhcp_client("eth0");
+#endif
 
   struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
@@ -242,8 +244,6 @@ void *net_up(void *p)
   IPV4_ADDR_SET(route->mask, 0xffffff00);
   route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
   route_add(route);
-
-#endif
 
 #ifdef CONFIG_NETWORK_PING
   struct net_addr_s	addr;
@@ -287,7 +287,7 @@ void *net_up(void *p)
 
   timer_add_event(&timer_ms, &prof);
 #endif
-
+#endif
   return NULL;
 }
 

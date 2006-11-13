@@ -348,7 +348,8 @@ static error_t		dhcp_packet(struct net_if_s	*interface,
 
 static error_t		dhcp_request(struct net_if_s	*interface,
 				     socket_t		sock,
-				     socket_t		sock_packet)
+				     socket_t		sock_packet,
+				     struct dhcp_lease_s *lease)
 {
   ssize_t		sz;
   uint8_t		*packet = NULL;
@@ -407,6 +408,16 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 
 		  printf("dhclient: end of negociation.\n");
 
+		  lease->serv = dhcp->siaddr;
+		  lease->ip = dhcp->yiaddr;
+
+		  /* compute lease time */
+		  opt = dhcp_get_opt(dhcp, DHCP_LEASE);
+		  if (opt != NULL)
+		    lease->delay = ((*(uint32_t *)opt->data) / 2) * 1000;
+		  else
+		    lease->delay = DHCP_DFL_LEASE;
+
 		  /* configure IP */
 		  IPV4_ADDR_SET(addr, 0);
 		  if_config(interface->index, IF_DEL, &addr, &addr);
@@ -452,19 +463,77 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 }
 
 /*
+ * DHCP renew thread.
+ */
+
+static TIMER_CALLBACK(dhcp_renew)
+{
+  struct dhcp_lease_s	*lease = (struct dhcp_lease_s *)pv;
+  socket_t		sock = NULL;
+  socket_t		sock_packet = NULL;
+  uint_fast8_t		i;
+
+  /* create sockets */
+  if (dhcp_init(lease->interface, &sock, &sock_packet))
+    goto leave;
+
+  /* try to renew (12 times is about 2 min) */
+  for (i = 0; i < 12; i++)
+    {
+      /* send a DHCPREQUEST */
+      dhcp_packet(lease->interface, DHCPREQUEST, lease->ip, lease->serv, sock);
+
+      /* wait answer */
+      if (!dhcp_request(lease->interface, sock, sock_packet, lease))
+	break;
+    }
+
+  /* critical error, panic */
+  if (i == 12)
+    {
+      /* best solution is to restart from the beginning... */
+
+      /* discover DHCP servers */
+      if (dhcp_packet(lease->interface, DHCPDISCOVER, 0, INADDR_BROADCAST, sock))
+	goto leave;
+
+      /* answer DHCP offers */
+      if (dhcp_request(lease->interface, sock, sock_packet, lease))
+	goto leave;
+    }
+
+ leave:
+
+  if (sock != NULL)
+    shutdown(sock, SHUT_RDWR);
+  if (sock_packet != NULL)
+    shutdown(sock_packet, SHUT_RDWR);
+
+  /* start the timer again */
+  timer_add_event(&timer_ms, timer);
+}
+
+/*
  * DHCP client entry function. Request an address for the given
  * interface.
  */
 
 error_t			dhcp_client(const char	*ifname)
 {
-  socket_t		sock;
-  socket_t		sock_packet;
+  struct timer_event_s	*timer;
+  struct dhcp_lease_s	*lease;
+  socket_t		sock = NULL;
+  socket_t		sock_packet = NULL;
   struct net_if_s	*interface;
   struct net_addr_s	null;
 
   if ((interface = if_get_by_name(ifname)) == NULL)
     return -1;
+
+  if ((lease = malloc(sizeof (struct dhcp_lease_s))) == NULL)
+    return -1;
+
+  lease->interface = interface;
 
   /* ifconfig 0.0.0.0 */
   IPV4_ADDR_SET(null, 0);
@@ -479,8 +548,17 @@ error_t			dhcp_client(const char	*ifname)
     goto leave;
 
   /* answer DHCP offers */
-  if (dhcp_request(interface, sock, sock_packet))
+  if (dhcp_request(interface, sock, sock_packet, lease))
     goto leave;
+
+  /* start DHCP renew timer */
+  if ((timer = malloc(sizeof (struct timer_event_s))) != NULL)
+    {
+      timer->callback = dhcp_renew;
+      timer->delay = lease->delay;
+      timer->pv = lease;
+      timer_add_event(&timer_ms, timer);
+    }
 
   shutdown(sock, SHUT_RDWR);
   shutdown(sock_packet, SHUT_RDWR);
@@ -490,8 +568,12 @@ error_t			dhcp_client(const char	*ifname)
  leave:
   printf("dhclient: error, leaving\n");
 
-  shutdown(sock, SHUT_RDWR);
-  shutdown(sock_packet, SHUT_RDWR);
+  free(lease);
+
+  if (sock != NULL)
+    shutdown(sock, SHUT_RDWR);
+  if (sock_packet != NULL)
+    shutdown(sock_packet, SHUT_RDWR);
 
   return -1;
 }
