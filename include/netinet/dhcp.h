@@ -46,6 +46,7 @@
 #define DHCP_NETMASK	1
 #define DHCP_ROUTER	3
 #define DHCP_HOSTNAME	12
+#define DHCP_REQIP	50
 #define DHCP_MSG	53
 #define DHCP_SERVER	54
 #define DHCP_REQLIST	55
@@ -64,6 +65,12 @@
 #define DHCPNACK	6
 #define DHCPRELEASE	7
 #define DHCPINFORM	8
+
+/*
+ * Misc.
+ */
+
+#define DHCP_TIMEOUT	10 /* 10 seconds */
 
 /*
  * DHCP options.
@@ -96,7 +103,7 @@ struct			dhcphdr
   uint8_t		chaddr[16];
   uint8_t		sname[64];
   uint8_t		file[128];
-  struct dhcp_opt_s	opts[1];
+  uint8_t		magic[4];
 } __attribute__((packed));
 
 #endif

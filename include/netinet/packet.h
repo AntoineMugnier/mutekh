@@ -127,10 +127,10 @@ struct			net_addr_s
  */
 
 #define IPV4_ADDR_SET(_addr_,_ip_)					\
-  {									\
+  do {									\
     (_addr_).family = addr_ipv4;					\
     (_addr_).addr.ipv4 = (_ip_);					\
-  }
+  } while (0)
 
 #define IPV4_ADDR_GET(_addr_)						\
   ({									\
