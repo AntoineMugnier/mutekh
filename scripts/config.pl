@@ -943,7 +943,7 @@ sub tokens_info
 
     if (my @list = @{$$opt{provided_by}})
     {
-	print "\n  can be provided by :\n\n";
+	print "\n  may be provided by :\n\n";
 
 	foreach my $dep (@list)
 	{

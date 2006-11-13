@@ -17,7 +17,7 @@
 #
 
 BASE_PWD:=$(PWD)
-BUILD_DIR:=$(BASE_PWD)
+BUILD_DIR=$(BASE_PWD)
 SRC_DIR=$(BASE_PWD)
 CONF=myconfig
 
@@ -25,17 +25,20 @@ export SRC_DIR
 export BUILD_DIR
 MAKEFLAGS = -s
 
-kernel: config
-	test -f $(LIBAPP) && echo "Warning: LIBAPP variable must point to a valid application library or object file"
-	$(MAKE) -f $(SRC_DIR)/scripts/rules_main.mk kernel
+kernel: config $(BUILD_DIR)
+	-test -f $(LIBAPP) || echo "Warning: LIBAPP variable must point to a valid application library or object file"
+	$(MAKE) -C $(BUILD_DIR) -f $(SRC_DIR)/scripts/rules_main.mk kernel
+
+$(BUILD_DIR):
+	mkdir -p $@
 
 $(BUILD_DIR)/config.mk $(BUILD_DIR)/config.h: $(CONF)
 	perl $(SRC_DIR)/scripts/config.pl	\
 		--input=$(CONF)			\
-		--header=$(SRC_DIR)/config.h	\
-		--makefile=$(SRC_DIR)/config.mk
+		--header=$(BUILD_DIR)/config.h	\
+		--makefile=$(BUILD_DIR)/config.mk
 
-config: $(BUILD_DIR)/config.mk $(BUILD_DIR)/config.h
+config: $(BUILD_DIR) $(BUILD_DIR)/config.mk $(BUILD_DIR)/config.h
 	$(MAKE) -f $(SRC_DIR)/scripts/rules_links.mk
 
 config_check:

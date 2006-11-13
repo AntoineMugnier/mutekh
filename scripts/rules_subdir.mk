@@ -29,13 +29,13 @@ include $(BUILD_DIR)/cpu/current/config.mk
 include $(SRC_DIR)/scripts/common.mk
 
 depend.mk: $(deps)
-	@cat /dev/null $^ > $@
+	cat /dev/null $^ > $@
 
 .depends/%.deps: %.S
-	@test -d .depends || mkdir .depends
-	@-$(CC) $(CFLAGS) $(INCS) -MM -MF $@ $<
+	test -d .depends || mkdir .depends
+	$(CC) $(CFLAGS) $(INCS) -MM -MF $@ $<
 
 .depends/%.deps: %.c
-	@test -d .depends || mkdir .depends
-	@-$(CC) $(CFLAGS) $(INCS) -MM -MF $@ $<
+	test -d .depends || mkdir .depends
+	$(CC) $(CFLAGS) $(INCS) -MM -MF $@ $<
 

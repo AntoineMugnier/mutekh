@@ -21,15 +21,15 @@ objs =
 
 include $(SRC_DIR)/scripts/common.mk
 
-kernel: $(BUILD_DIR)/$(target)
+kernel: $(target)
 
-$(BUILD_DIR)/$(target): $(BUILD_DIR)/config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript $(LIBAPP)
+$(target): $(BUILD_DIR)/config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript $(LIBAPP)
 	@echo '    LD      $@'
-	@$(LD) $(LDFLAGS) $(ARCHLDFLAGS) \
+	$(LD) $(LDFLAGS) $(ARCHLDFLAGS) \
 		-q $$(cat /dev/null $(filter %.list,$^)) \
 		$(filter %.o,$^) $(filter %.a,$^) \
 		-T $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript \
-		-o $@
+		-o $(BUILD_DIR)/$@
 
 clean:
 	rm -f $(BUILD_DIR)/$(target)
