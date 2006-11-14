@@ -37,12 +37,14 @@ CFLAGS += -finstrument-functions
 endif
 
 INCS=-nostdinc -D__MUTEK__ \
-	-I$(BUILD_DIR)/include \
 	-I$(SRC_DIR)/include \
+	-I$(BUILD_DIR)/include \
+	-I$(BUILD_DIR) \
 	-include $(BUILD_DIR)/config.h
 
 %.o: %.S
 	@echo '    AS      $@'
+	mkdir -p $(BUILD_DIR)/$(H)
 	$(CPP) $(INCS) $(SRC_DIR)/$(H)/$(<F) | $(AS) -o $(BUILD_DIR)/$(H)/$@
 
 %.o: %.c
@@ -50,6 +52,11 @@ INCS=-nostdinc -D__MUTEK__ \
 	mkdir -p $(BUILD_DIR)/$(H)
 	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -c \
 		$(SRC_DIR)/$(H)/$(<F) -o $(BUILD_DIR)/$(H)/$@
+
+%.hdef:
+	@echo '    CPP     $@'
+	mkdir -p $(BUILD_DIR)/$(@D)
+	$(CPP) $(SRC_DIR)/$(patsubst %.hdef,%.def,$@) > $(BUILD_DIR)/$@
 
 subdirs-lists = $(foreach name,$(subdirs),$(patsubst %,$(BUILD_DIR)$(H)/%.list,$(name)/.$(name)))
 CC=$(CPUTOOLS)gcc
@@ -84,8 +91,7 @@ endef
 
 clean_sub:
 	echo " CLEAN      $(H)"
-	cd $(BUILD_DIR)$(H)/ && rm -f depend.mk $(objs) $(subdirs-lists)
-	rm -rf $(BUILD_DIR)$(H)/.depends
+	cd $(BUILD_DIR)$(H)/ && rm -f depend.mk .*.deps $(objs) $(subdirs-lists)
 	for i in $(subdirs) ; do \
 		$(MAKE) -i -C $$i -f $(SRC_DIR)/scripts/rules_clean.mk H="$(H)/$$i" clean_sub clean; \
 	done

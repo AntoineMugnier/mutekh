@@ -1,0 +1,13 @@
+
+#include <asm/unistd.h>
+
+#define X(x)	x
+
+X(#define EMU_SYSCALL_GETPID	__NR_getpid)
+X(#define EMU_SYSCALL_MMAP	__NR_mmap)
+X(#define EMU_SYSCALL_READ	__NR_read)
+X(#define EMU_SYSCALL_WRITE	__NR_write)
+X(#define EMU_SYSCALL_EXIT	__NR_exit)
+X(#define EMU_SYSCALL_CLONE	__NR_clone)
+
+

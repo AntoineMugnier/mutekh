@@ -28,12 +28,9 @@
 
 /* FIXME linux x86 specific */
 
-#ifdef CONFIG_CPU_X86_EMU
+#include "arch/emu/include/hexo/syscalls_nums.hdef"
 
-#define EMU_SYSCALL_MMAP	90
-#define EMU_SYSCALL_WRITE	4
-#define EMU_SYSCALL_READ	3
-#define EMU_SYSCALL_EXIT	1
+#ifdef CONFIG_CPU_X86_EMU
 
 static inline reg_t
 emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
@@ -71,11 +68,6 @@ emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 }
 
 #elif defined (CONFIG_CPU_X86_64_EMU)
-
-#define EMU_SYSCALL_MMAP	9
-#define EMU_SYSCALL_WRITE	1
-#define EMU_SYSCALL_READ	0
-#define EMU_SYSCALL_EXIT	60
 
 static inline reg_t
 emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)

@@ -22,20 +22,23 @@ include $(SRC_DIR)$(H)/Makefile
 
 VPATH = $(SRC_DIR)$(H)
 
-deps = $(patsubst %.o,.depends/%.deps,$(objs))
+deps = $(patsubst %.o,.%.deps,$(objs))
 
 include $(BUILD_DIR)/arch/current/config.mk
 include $(BUILD_DIR)/cpu/current/config.mk
 include $(SRC_DIR)/scripts/common.mk
 
 depend.mk: $(deps)
-	cat /dev/null $^ > $@
+	@echo '    DEP     depend.mk'
+	cat /dev/null $(patsubst .%.deps, $(BUILD_DIR)/$(H)/.%.deps,$^) > $(BUILD_DIR)/$(H)/$@
 
-.depends/%.deps: %.S
-	test -d .depends || mkdir .depends
-	$(CC) $(CFLAGS) $(INCS) -MM -MF $@ $<
+.%.deps: %.S
+	@echo '    DEP     $(<F)'
+	mkdir -p $(BUILD_DIR)/$(H)
+	$(CPP) $(CFLAGS) $(INCS) -M -MG -MF $(BUILD_DIR)/$(H)/$@ $<
 
-.depends/%.deps: %.c
-	test -d .depends || mkdir .depends
-	$(CC) $(CFLAGS) $(INCS) -MM -MF $@ $<
+.%.deps: %.c
+	@echo '    DEP     $(<F)'
+	mkdir -p $(BUILD_DIR)/$(H)
+	$(CPP) $(CFLAGS) $(INCS) -M -MG -MF $(BUILD_DIR)/$(H)/$@ $<
 

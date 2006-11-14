@@ -27,6 +27,7 @@
 #include <hexo/iospace.h>
 #include <hexo/lock.h>
 #include <hexo/segment.h>
+#include <arch/hexo/emu_syscalls.h>
 
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;
@@ -45,6 +46,10 @@ struct cpu_cld_s
 {
   /* CPU id */
   uint32_t			id;
+  /* PID of the worker unix process */
+  uint32_t			worker_pid;
+  /* PID of the unix process used to perform ptrace ops */
+  uint32_t			tracer_pid;
 };
 
 //static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
@@ -58,6 +63,7 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
     return NULL;
 
   cld->id = cpu_id;
+  cld->worker_pid = EMU_SYSCALL_GETPID;
 
 #if defined(CONFIG_DEBUG)
   /* enable alignment check */
