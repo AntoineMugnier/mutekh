@@ -90,7 +90,14 @@ socket_t			socket(int domain, int type, int protocol)
   if ((sock = mem_alloc(sizeof (struct socket_s), MEM_SCOPE_NETWORK)) == NULL)
     //return -ENOMEM;
     return NULL;
+  /* setup common fields to their defaults */
   sock->error = 0;
+  sock->shutdown = -1;
+  sock->type = type;
+  sock->broadcast = 0;
+  sock->keepalive = 0;
+  sock->recv_timeout = 0;
+  sock->send_timeout = 0;
   sock->f = api;
   api->socket(sock, domain, type, protocol);
   return sock;
@@ -173,4 +180,268 @@ _RECVMSG(recvmsg)
   mem_free(buf);
 
   return ret;
+}
+
+/*
+ * Setsock opt, SOL_SOCKET level.
+ */
+
+int setsockopt_socket(socket_t		fd,
+		      int		optname,
+		      const void	*optval,
+		      socklen_t		optlen)
+{
+  switch (optname)
+    {
+      /* recv timeout */
+      case SO_RCVTIMEO:
+	{
+	  const struct timeval	*tv;
+
+	  if (optlen < sizeof (struct timeval))
+	    {
+	      fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  tv = optval;
+	  fd->recv_timeout = tv->tv_sec * 1000 + tv->tv_usec / 1000;
+	}
+	break;
+      /* send timeout */
+      case SO_SNDTIMEO:
+	{
+	  const struct timeval	*tv;
+
+	  if (optlen < sizeof (struct timeval))
+	    {
+	      fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  tv = optval;
+	  fd->send_timeout = tv->tv_sec * 1000 + tv->tv_usec / 1000;
+	}
+	break;
+      /* allow sending/receiving broadcast */
+      case SO_BROADCAST:
+	{
+	  const int		*enable;
+
+	  if (optlen < sizeof (int))
+	    {
+	      fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  enable = optval;
+	  fd->broadcast = *enable;
+	}
+	break;
+      /* allow keepalive packets */
+      case SO_KEEPALIVE:
+	{
+	  const int		*enable;
+
+	  if (optlen < sizeof (int))
+	    {
+	      fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  enable = optval;
+	  fd->keepalive = *enable;
+	}
+	break;
+      default:
+	fd->error = ENOPROTOOPT;
+	return -1;
+    }
+
+  return 0;
+}
+
+/*
+ * Getsock opt, SOL_SOCKET level.
+ */
+
+int getsockopt_socket(socket_t	fd,
+		      int	optname,
+		      void	*optval,
+		      socklen_t	*optlen)
+{
+  switch (optname)
+    {
+      /* recv timeout */
+      case SO_RCVTIMEO:
+	{
+	  struct timeval	*tv;
+
+	  if (*optlen < sizeof (struct timeval))
+	    {
+	      fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  tv = optval;
+	  tv->tv_usec = (fd->recv_timeout % 1000) * 1000;
+	  tv->tv_sec = fd->recv_timeout / 1000;
+
+	  *optlen = sizeof (struct timeval);
+	}
+	break;
+      /* send timeout */
+      case SO_SNDTIMEO:
+	{
+	  struct timeval	*tv;
+
+	  if (*optlen < sizeof (struct timeval))
+	    {
+	      fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  tv = optval;
+	  tv->tv_usec = (fd->send_timeout % 1000) * 1000;
+	  tv->tv_sec = fd->send_timeout / 1000;
+
+	  *optlen = sizeof (struct timeval);
+	}
+	break;
+      /* broadcast enabled */
+      case SO_BROADCAST:
+	{
+	  int			*enabled;
+
+	  if (*optlen < sizeof (int))
+	    {
+	      fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  enabled = optval;
+	  *enabled = fd->broadcast;
+
+	  *optlen = sizeof (int);
+	}
+	break;
+      /* keepalive enabled */
+      case SO_KEEPALIVE:
+	{
+	  int			*enabled;
+
+	  if (*optlen < sizeof (int))
+	    {
+	      fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  enabled = optval;
+	  *enabled = fd->keepalive;
+
+	  *optlen = sizeof (int);
+	}
+	break;
+      /* socket type */
+      case SO_TYPE:
+	{
+	  int			*type;
+
+	  if (*optlen < sizeof (int))
+	    {
+	      fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  type = optval;
+	  *type = fd->type;
+
+	  *optlen = sizeof (int);
+	}
+	break;
+      /* socket last error */
+      case SO_ERROR:
+	{
+	  int			*error;
+
+	  if (*optlen < sizeof (int))
+	    {
+	      fd->error = EINVAL;
+	      return -1;
+	    }
+
+	  error = optval;
+	  *error = fd->error;
+
+	  *optlen = sizeof (int);
+	}
+	break;
+      default:
+	fd->error = ENOPROTOOPT;
+	return -1;
+    }
+
+  return 0;
+}
+
+/*
+ * Shutdown
+ */
+
+_SHUTDOWN(shutdown_socket)
+{
+  if (how != SHUT_RDWR && how != SHUT_RD && how != SHUT_WR)
+    {
+      fd->error = EINVAL;
+      return -1;
+    }
+
+  /* check combinations */
+  if (how == SHUT_RDWR || (fd->shutdown == SHUT_RD && how == SHUT_WR) ||
+      (fd->shutdown == SHUT_WR && how == SHUT_RD))
+    fd->shutdown = SHUT_RDWR;
+  else
+    fd->shutdown = how;
+
+  return 0;
+}
+
+/*
+ * Setsock opt, SOL_IP level.
+ */
+
+int setsockopt_inet(socket_t	fd,
+		    int		optname,
+		    const void	*optval,
+		    socklen_t	optlen)
+{
+  switch (optname)
+    {
+      /* XXX SOL_IP */
+      default:
+	fd->error = ENOPROTOOPT;
+	return -1;
+    }
+
+  return 0;
+}
+
+/*
+ * Getsock opt, SOL_SOCKET level.
+ */
+
+int getsockopt_inet(socket_t	fd,
+		    int		optname,
+		    void	*optval,
+		    socklen_t	*optlen)
+{
+  switch (optname)
+    {
+      /* XXX SOL_IP */
+      default:
+	fd->error = ENOPROTOOPT;
+	return -1;
+    }
+
+  return 0;
 }

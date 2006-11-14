@@ -27,6 +27,8 @@
 #include <netinet/socket.h>
 #include <netinet/socket_raw.h>
 #include <netinet/if.h>
+#include <netinet/ip.h>
+#include <netinet/icmp.h>
 #include <netinet/route.h>
 #include <netinet/arp.h>
 
@@ -34,9 +36,7 @@
 
 #include <semaphore.h>
 
-CONTAINER_FUNC(static inline, socket_raw, DLIST, socket_raw, NOLOCK);
-
-static socket_raw_root_t	sock_raw = CONTAINER_ROOT_INITIALIZER(socket_raw, DLIST, NOLOCK);
+static socket_table_root_t	sock_raw = CONTAINER_ROOT_INITIALIZER(socket_table, DLIST, NOLOCK);
 
 /*
  * Create a RAW socket. Allocate private data.
@@ -67,13 +67,13 @@ static _SOCKET(socket_raw)
 	return -EPFNOSUPPORT;
     }
   pv->proto = protocol;
-  pv->shutdown = -1;
+  pv->icmp_mask = 0;
   sem_init(&pv->recv_sem, 0, 0);
   packet_queue_lock_init(&pv->recv_q);
 
   /* determine if headers must be included or not */
   pv->header = (protocol == IPPROTO_RAW);
-  if (!socket_raw_push(&sock_raw, pv))
+  if (!socket_table_push(&sock_raw, fd))
     {
       sem_destroy(&pv->recv_sem);
       packet_queue_lock_destroy(&pv->recv_q);
@@ -131,23 +131,26 @@ static _BIND(bind_raw)
 	return -1;
     }
 
-  /* look for address validity */
-  CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
-  {
-    interface = item;
-    for (addressing = net_protos_lookup(&interface->protocols, id);
-	 addressing != NULL;
-	 addressing = net_protos_lookup_next(&interface->protocols, addressing, id))
-      if (addressing->desc->f.addressing->matchaddr(addressing, &address, NULL, NULL))
-	goto ok;
-
-  });
-
- ok:
-  if (interface == NULL || addressing == NULL)
+  if (!any)
     {
-      fd->error = EADDRNOTAVAIL;
-      return -1;
+      /* look for address validity */
+      CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
+      {
+	interface = item;
+	for (addressing = net_protos_lookup(&interface->protocols, id);
+	     addressing != NULL;
+	     addressing = net_protos_lookup_next(&interface->protocols, addressing, id))
+	  if (addressing->desc->f.addressing->matchaddr(addressing, &address, NULL, NULL))
+	    goto ok;
+
+      });
+
+    ok:
+      if (interface == NULL || addressing == NULL)
+	{
+	  fd->error = EADDRNOTAVAIL;
+	  return -1;
+	}
     }
 
   /* setup the local address */
@@ -178,7 +181,6 @@ static _GETSOCKNAME(getsockname_raw)
 static _CONNECT(connect_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-  struct sockaddr_in		*in;
   struct net_addr_s		dest;
   struct net_route_s		*route;
 
@@ -232,12 +234,17 @@ static _GETPEERNAME(getpeername_raw)
 static _SENDTO(sendto_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-  struct sockaddr_in		*in;
   struct net_packet_s		*packet;
   struct net_if_s		*interface;
   struct net_proto_s		*addressing;
   struct net_header_s		*nethdr;
   uint8_t			*p;
+
+  if (fd->shutdown == SHUT_WR || fd->shutdown == SHUT_RDWR)
+    {
+      fd->error = ESHUTDOWN;
+      return -1;
+    }
 
   if ((packet = packet_obj_new(NULL)) == NULL)
     {
@@ -327,7 +334,19 @@ static _SENDTO(sendto_raw)
       switch (pv->family)
 	{
 	  case AF_INET:
-	    /* XXX */
+	    {
+	      struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)addressing->pv;
+	      struct iphdr		*ip;
+
+	      ip = (struct iphdr *)p;
+	      if (net_32_load(ip->saddr) == 0)
+		net_be32_store(ip->saddr, pv_ip->addr);
+	      if (net_16_load(ip->id) == 0)
+		net_be16_store(ip->id, pv_ip->id_seq++);
+	      net_be16_store(ip->tot_len, n);
+	      net_16_store(ip->check, 0);
+	      net_16_store(ip->check, ~packet_checksum(p, ip->ihl * 4));
+	    }
 	    break;
 	  case AF_INET6:
 	    /* IPV6 */
@@ -351,13 +370,12 @@ static _RECVFROM(recvfrom_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
   struct net_packet_s		*packet;
-  struct sockaddr_in		*in;
   ssize_t			sz;
   struct net_header_s		*nethdr;
 
   /* try to grab a packet */
  again:
-  if (pv->shutdown == SHUT_RD || pv->shutdown == SHUT_RDWR)
+  if (fd->shutdown == SHUT_RD || fd->shutdown == SHUT_RDWR)
     {
       fd->error = ESHUTDOWN;
       return -1;
@@ -394,7 +412,24 @@ static _RECVFROM(recvfrom_raw)
   /* copy the data */
   if (pv->header)
     {
-      /* XXX */
+      nethdr = &packet->header[packet->stage - 1];
+      sz = nethdr[1].size - nethdr->size;
+      if (sz > n)
+	{
+	  sz = n;
+	  memcpy(buf, nethdr->data, n);
+	}
+      else
+	{
+	  uint8_t	subsz;
+
+	  memcpy(buf, nethdr->data, sz);
+	  subsz = nethdr[1].size;
+	  if (sz + subsz > n)
+	    subsz = n - sz;
+	  memcpy(buf, nethdr[1].data, subsz);
+	  sz += subsz;
+	}
     }
   else
     {
@@ -416,15 +451,55 @@ static _RECVFROM(recvfrom_raw)
 static _GETSOCKOPT(getsockopt_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-  switch (level) /* XXX */
+
+  switch (level)
     {
       case SOL_SOCKET:
-	break;
+	return getsockopt_socket(fd, optname, optval, optlen);
       case SOL_IP:
+	if (optname == IP_HDRINCL)
+	  {
+	    int			*enabled;
+
+	    if (*optlen < sizeof (int))
+	      {
+		fd->error = EINVAL;
+		return -1;
+	      }
+
+	    enabled = optval;
+	    *enabled = pv->header;
+
+	    *optlen = sizeof (int);
+	  }
+	else
+	  return getsockopt_inet(fd, optname, optval, optlen);
 	break;
       case SOL_RAW:
-	break;
+	if (optname == ICMP_FILTER)
+	  {
+	    struct icmp_filter	*filt;
+
+	    if (pv->proto != IPPROTO_ICMP)
+	      {
+		fd->error = EOPNOTSUPP;
+		return -1;
+	      }
+
+	    if (*optlen < sizeof (struct icmp_filter))
+	      {
+		fd->error = EINVAL;
+		return -1;
+	      }
+
+	    filt = optval;
+	    filt->data = pv->icmp_mask;
+
+	    *optlen = sizeof (int);
+	    break;
+	  }
       default:
+	fd->error = ENOPROTOOPT;
 	return -1;
     }
 
@@ -439,15 +514,62 @@ static _SETSOCKOPT(setsockopt_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
 
-  switch (level) /* XXX */
+  switch (level)
     {
       case SOL_SOCKET:
-	break;
+	if (optname == SO_BINDTODEVICE)
+	  {
+	    struct net_if_s	*interface;
+
+	    if ((interface = if_get_by_name((char *)optval)) == NULL)
+	      {
+		fd->error = EINVAL;
+		return -1;
+	      }
+
+	    pv->interface = interface;
+	  }
+	else
+	  return setsockopt_socket(fd, optname, optval, optlen);
       case SOL_IP:
+	if (optname == IP_HDRINCL)
+	  {
+	    const int		*enable;
+
+	    if (optlen < sizeof (int))
+	      {
+		fd->error = EINVAL;
+		return -1;
+	      }
+
+	    enable = optval;
+	    pv->header = *enable;
+	  }
+	else
+	  return setsockopt_inet(fd, optname, optval, optlen);
 	break;
       case SOL_RAW:
-	break;
+	if (optname == ICMP_FILTER)
+	  {
+	    const struct icmp_filter	*filt;
+
+	    if (pv->proto != IPPROTO_ICMP)
+	      {
+		fd->error = EOPNOTSUPP;
+		return -1;
+	      }
+
+	    if (optlen < sizeof (int))
+	      {
+		fd->error = EINVAL;
+		return -1;
+	      }
+
+	    filt = optval;
+	    pv->icmp_mask = filt->data;
+	  }
       default:
+	fd->error = ENOPROTOOPT;
 	return -1;
     }
 
@@ -462,28 +584,16 @@ static _SHUTDOWN(shutdown_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
 
-  if (how != SHUT_RDWR && how != SHUT_RD && how != SHUT_WR)
-    {
-      fd->error = EINVAL;
-      return -1;
-    }
-
-  /* check combinations */
-  if (how == SHUT_RDWR || (pv->shutdown == SHUT_RD && how == SHUT_WR) ||
-      (pv->shutdown == SHUT_WR && how == SHUT_RD))
-    pv->shutdown = SHUT_RDWR;
-  else
-    pv->shutdown = how;
+  if (shutdown_socket(fd, how))
+    return -1;
 
   /* end all the recv with errors */
-  if (pv->shutdown == SHUT_RDWR || pv->shutdown == SHUT_RD)
+  if (fd->shutdown == SHUT_RDWR || fd->shutdown == SHUT_RD)
     {
       uint_fast8_t		val;
-      struct net_packet_s	*packet;
 
       /* drop all waiting packets */
-      while ((packet = packet_queue_lock_pop(&pv->recv_q)) != NULL)
-	packet_obj_refdrop(packet);
+      packet_queue_lock_clear(&pv->recv_q);
 
       sem_getvalue(&pv->recv_sem, &val);
       while (val < 0)
@@ -491,6 +601,11 @@ static _SHUTDOWN(shutdown_raw)
 	  sem_post(&pv->recv_sem);
 	  sem_getvalue(&pv->recv_sem, &val);
 	}
+
+      if (fd->shutdown == SHUT_RDWR)
+	socket_table_remove(&sock_raw, fd);
+
+      /* XXX should mem_free here */
     }
 
   return 0;
@@ -527,22 +642,62 @@ const struct socket_api_s	raw_socket =
  * Signal an incoming packet at level 3 layer.
  */
 
-void		sock_raw_signal(struct net_proto_s	*addressing,
+void		sock_raw_signal(struct net_if_s		*interface,
+				struct net_proto_s	*addressing,
 				struct net_packet_s	*packet,
 				net_proto_id_t		protocol)
 {
+  bool_t	is_bcast;
+
+  /* determine is broadcast destination */
+  switch (packet->tADDR.family)
+    {
+      case addr_ipv4:
+	{
+	  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)addressing->pv;
+
+	  is_bcast = (packet->tADDR.addr.ipv4 & ~pv_ip->mask) == ~pv_ip->mask;
+	}
+	break;
+      default:
+	/* IPV6 */
+	is_bcast = 0;
+	break;
+    }
+
   /* deliver packet to all sockets matching interface and protocol id */
-  CONTAINER_FOREACH(socket_raw, DLIST, NOLOCK, &sock_raw,
+  CONTAINER_FOREACH(socket_table, DLIST, NOLOCK, &sock_raw,
   {
+    struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)item->pv;
+
     if (item->shutdown == SHUT_RD || item->shutdown == SHUT_RDWR)
       CONTAINER_FOREACH_CONTINUE;
 
-    if (item->any || addressing->desc->f.addressing->matchaddr(addressing, &packet->tADDR, &item->local, NULL))
+    if (pv->any || addressing->desc->f.addressing->matchaddr(addressing, &packet->tADDR, &pv->local, NULL) || pv->interface == interface)
       {
-	if (item->proto == protocol || item->proto == IPPROTO_RAW)
+	if (pv->proto == protocol || pv->proto == IPPROTO_RAW)
 	  {
-	    if (packet_queue_lock_pushback(&item->recv_q, packet))
-	      sem_post(&item->recv_sem);
+	    if (!item->broadcast && is_bcast)
+	      CONTAINER_FOREACH_CONTINUE;
+
+	    /* do ICMP type filtering */
+	    if (protocol == IPPROTO_ICMP)
+	      {
+		struct net_header_s	*nethdr;
+
+		nethdr = &packet->header[packet->stage];
+		if (nethdr->size >= sizeof (struct icmphdr))
+		  {
+		    struct icmphdr	*icmp;
+
+		    icmp = nethdr->data;
+		    if (pv->icmp_mask & (1 << icmp->type))
+		      CONTAINER_FOREACH_CONTINUE;
+		  }
+	      }
+
+	    if (packet_queue_lock_pushback(&pv->recv_q, packet))
+	      sem_post(&pv->recv_sem);
 	  }
       }
   });

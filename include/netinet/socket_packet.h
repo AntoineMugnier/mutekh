@@ -25,29 +25,19 @@
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 #include <netinet/if.h>
-
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_dlist.h>
+#include <netinet/socket.h>
 
 #include <semaphore.h>
-#include <timer.h>
 
 struct				socket_packet_pv_s
 {
   net_proto_id_t		proto;
   bool_t			header;
   uint_fast32_t			interface;
-  int				shutdown;
-  bool_t			broadcast;
   error_t			error;
 
   packet_queue_root_t		recv_q;
   sem_t				recv_sem;
-  timer_delay_t			recv_timeout;
-
-  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
 };
-
-CONTAINER_TYPE(socket_packet, DLIST, struct socket_packet_pv_s, NOLOCK, NOOBJ, list_entry);
 
 #endif

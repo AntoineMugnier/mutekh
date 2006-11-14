@@ -504,7 +504,7 @@ NET_PUSHPKT(ip_pushpkt)
   /* dispatch to the matching protocol */
   proto = hdr->protocol;
 #ifdef CONFIG_NETWORK_SOCKET_RAW
-  sock_raw_signal(protocol, packet, proto);
+  sock_raw_signal(interface, protocol, packet, proto);
 #endif
   if ((p = net_protos_lookup(&interface->protocols, proto)))
     p->desc->pushpkt(interface, packet, p);

@@ -42,6 +42,8 @@
 #include <gpct/cont_hashlist.h>
 #include <gpct/cont_dlist.h>
 
+#include <stdlib.h>
+
 /*
  * The descriptors set.
  */

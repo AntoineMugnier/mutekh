@@ -196,9 +196,6 @@ void *net_up(void *p)
   pthread_t th;
   sem_t sem;
 
-  while (1)
-    printf("kikou lol\n");
-
 #ifdef CONFIG_NETWORK
 
 #if 0

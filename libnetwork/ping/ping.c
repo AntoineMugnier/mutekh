@@ -55,6 +55,7 @@ error_t			ping(struct net_addr_s	*host,
   timer_delay_t		*t2;
   timer_delay_t		timeout;
   size_t		tot;
+  struct icmp_filter	filt;
 
   /* reset the statistics */
   memset(stat, 0, sizeof (struct ping_s));
@@ -98,8 +99,20 @@ error_t			ping(struct net_addr_s	*host,
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(IPV4_ADDR_GET(*host));
 
+  /* filter incoming ICMP responses */
+  filt.data = ~(ICMP_ECHOREPLY | ICMP_DEST_UNREACH | ICMP_TIME_EXCEEDED);
+
+  if (setsockopt(sock, SOL_RAW, ICMP_FILTER, &filt, sizeof (struct icmp_filter)) < 0)
+    {
+      shutdown(sock, SHUT_RDWR);
+      mem_free(buf1);
+      mem_free(buf2);
+      return -1;
+    }
+
   if (connect(sock, (struct sockaddr *)&addr, sizeof (struct sockaddr_in)) < 0)
     {
+      shutdown(sock, SHUT_RDWR);
       mem_free(buf1);
       mem_free(buf2);
       return -1;
@@ -147,7 +160,7 @@ error_t			ping(struct net_addr_s	*host,
 	      hdr = (struct icmphdr *)buf2;
 
 	      /* if valid echo reply */
-	      if (hdr->type == 0 && ntohs(hdr->un.echo.id) == id &&
+	      if (hdr->type == ICMP_ECHOREPLY && ntohs(hdr->un.echo.id) == id &&
 		  from.sin_addr.s_addr == addr.sin_addr.s_addr)
 		{
 		  timer_delay_t	t = timer_get_tick(&timer_ms) - *t2;
@@ -184,40 +197,34 @@ error_t			ping(struct net_addr_s	*host,
 		  /* ICMP error */
 		  switch (hdr->type)
 		    {
-		      case 3:
+		      case ICMP_DEST_UNREACH:
 			switch (hdr->code)
 			  {
-			    case 0:
+			    case ICMP_NET_UNREACH:
 			      printf("Reply: Network unreachable\n");
 			      break;
-			    case 1:
+			    case ICMP_HOST_UNREACH:
 			      printf("Reply: Host unreachable\n");
 			      break;
-			    case 2:
+			    case ICMP_PROT_UNREACH:
 			      printf("Reply: Protocol unreachable\n");
 			      break;
-			    case 4:
+			    case ICMP_FRAG_NEEDED:
 			      printf("Reply: Cannot fragment (Next HOP MTU = %u)\n",
 				     ntohs(hdr->un.frag.mtu));
-			      break;
-			    case 10:
-			      printf("Reply: Host denied\n");
-			      break;
-			    case 11:
-			      printf("Reply: Network denied\n");
 			      break;
 			    default:
 			      printf("Reply: Destination unreachable\n");
 			      break;
 			  }
 			break;
-		      case 11:
+		      case ICMP_TIME_EXCEEDED:
 			switch (hdr->code)
 			  {
-			    case 0:
+			    case ICMP_EXC_TTL:
 			      printf("Reply: Timeout (ttl has reached 0)\n");
 			      break;
-			    case 1:
+			    case ICMP_EXC_FRAGTIME:
 			      printf("Reply: Reassembly timeout\n");
 			      break;
 			    default:
@@ -250,6 +257,7 @@ error_t			ping(struct net_addr_s	*host,
   if (stat->total)
     stat->avg /= stat->total;
 
+  shutdown(sock, SHUT_RDWR);
   mem_free(buf1);
   mem_free(buf2);
 

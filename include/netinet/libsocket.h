@@ -33,7 +33,8 @@ void	pf_packet_signal(struct net_if_s	*interface,
 #endif
 
 #ifdef CONFIG_NETWORK_SOCKET_RAW
-void	sock_raw_signal(struct net_proto_s	*addressing,
+void	sock_raw_signal(struct net_if_s		*interface,
+			struct net_proto_s	*addressing,
 			struct net_packet_s	*packet,
 			net_proto_id_t		protocol);
 #endif

@@ -36,9 +36,7 @@
 
 static _RECVFROM(recvfrom_packet);
 
-CONTAINER_FUNC(static inline, socket_packet, DLIST, socket_packet, NOLOCK);
-
-socket_packet_root_t	pf_packet = CONTAINER_ROOT_INITIALIZER(socket_packet, DLIST, NOLOCK);
+socket_table_root_t	pf_packet = CONTAINER_ROOT_INITIALIZER(socket_table, DLIST, NOLOCK);
 
 /*
  * Create a PACKET socket. Allocate private data.
@@ -54,13 +52,10 @@ static _SOCKET(socket_packet)
   /* setup private data */
   pv->proto = ntohs(protocol);
   pv->interface = 0;
-  pv->shutdown = -1;
-  pv->broadcast = 0;
-  pv->recv_timeout = 0;
   sem_init(&pv->recv_sem, 0, 0);
   packet_queue_lock_init(&pv->recv_q);
   pv->header = (type == SOCK_RAW);
-  if (!socket_packet_push(&pf_packet, pv))
+  if (!socket_table_push(&pf_packet, fd))
     {
       sem_destroy(&pv->recv_sem);
       packet_queue_lock_destroy(&pv->recv_q);
@@ -144,7 +139,7 @@ static _SENDTO(sendto_packet)
   struct net_if_s		*interface;
   struct net_header_s		*nethdr;
 
-  if (pv->shutdown == SHUT_WR || pv->shutdown == SHUT_RDWR)
+  if (fd->shutdown == SHUT_WR || fd->shutdown == SHUT_RDWR)
     {
       fd->error = ESHUTDOWN;
       return -1;
@@ -195,7 +190,7 @@ static _SENDTO(sendto_packet)
       assert(!dev_net_getopt(interface->dev, DEV_NET_OPT_BCAST, bcast, &maclen));
 
       /* is broadcast allowed */
-      if (!pv->broadcast && !memcmp(bcast, sll->sll_addr, maclen))
+      if (!fd->broadcast && !memcmp(bcast, sll->sll_addr, maclen))
 	{
 	  packet_obj_refdrop(packet);
 	  fd->error = EINVAL;
@@ -241,7 +236,7 @@ static _RECVFROM(recvfrom_packet)
 
   /* try to grab a packet */
  again:
-  if (pv->shutdown == SHUT_RD || pv->shutdown == SHUT_RDWR)
+  if (fd->shutdown == SHUT_RD || fd->shutdown == SHUT_RDWR)
     {
       fd->error = ESHUTDOWN;
       return -1;
@@ -263,15 +258,15 @@ static _RECVFROM(recvfrom_packet)
 	}
 
       /* if there is a receive timeout, start a timer */
+#if 0
       if (pv->recv_timeout)
 	{
-#if 0
 	  timeout.callback = recv_timeout;
 	  timeout.delay = pv->recv_timeout;
 
 	  timer_add_event(&timer_ms, &timeout); /* XXX */
-#endif
 	}
+#endif
 
       /* wait */
       sem_wait(&pv->recv_sem);
@@ -342,7 +337,6 @@ static _RECVFROM(recvfrom_packet)
 
 static _SETSOCKOPT(setsockopt_packet)
 {
-  struct socket_packet_pv_s	*pv = (struct socket_packet_pv_s *)fd->pv;
   struct packet_mreq		*req;
   struct net_if_s		*interface;
 
@@ -379,7 +373,7 @@ static _SETSOCKOPT(setsockopt_packet)
 		dev_net_setopt(interface->dev, DEV_NET_OPT_PROMISC, &enabled, sizeof (bool_t));
 	      }
 	      break;
-	      /* other options not supported (multicast) */
+	    /* other options not supported (multicast) */
 	    default:
 	      fd->error = ENOPROTOOPT;
 	      return -1;
@@ -387,44 +381,7 @@ static _SETSOCKOPT(setsockopt_packet)
 	break;
       /* socket options */
       case SOL_SOCKET:
-	switch (optname)
-	  {
-	    /* recv timeout */
-	    case SO_RCVTIMEO:
-	      {
-		const struct timeval	*tv;
-
-		if (optlen < sizeof (struct timeval))
-		  {
-		    fd->error = EINVAL;
-		    return -1;
-		  }
-
-		tv = optval;
-		pv->recv_timeout = tv->tv_sec * 1000 + tv->tv_usec / 1000;
-	      }
-	      break;
-	    /* allow sending/receiving broadcast */
-	    case SO_BROADCAST:
-	      {
-		const int		*enable;
-
-		if (optlen < sizeof (int))
-		  {
-		    fd->error = EINVAL;
-		    return -1;
-		  }
-
-		enable = optval;
-		pv->broadcast = *enable;
-	      }
-	      break;
-	    default:
-	      fd->error = ENOPROTOOPT;
-	      return -1;
-	  }
-	return 0;
-	break;
+	return setsockopt_socket(fd, optname, optval, optlen);
       default:
 	fd->error = ENOPROTOOPT;
 	return -1;
@@ -439,91 +396,13 @@ static _SETSOCKOPT(setsockopt_packet)
 
 static _GETSOCKOPT(getsockopt_packet)
 {
-  struct socket_packet_pv_s	*pv = (struct socket_packet_pv_s *)fd->pv;
-
   if (level != SOL_SOCKET)
     {
       fd->error = ENOPROTOOPT;
       return -1;
     }
 
-  switch (optname)
-    {
-      /* recv timeout */
-      case SO_RCVTIMEO:
-	{
-	  struct timeval	*tv;
-
-	  if (*optlen < sizeof (struct timeval))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  tv = optval;
-	  tv->tv_usec = (pv->recv_timeout % 1000) * 1000;
-	  tv->tv_sec = pv->recv_timeout / 1000;
-
-	  *optlen = sizeof (struct timeval);
-	}
-	break;
-      /* broadcast enabled */
-      case SO_BROADCAST:
-	{
-	  int			*enabled;
-
-	  if (*optlen < sizeof (int))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  enabled = optval;
-	  *enabled = pv->broadcast;
-
-	  *optlen = sizeof (int);
-	}
-	break;
-      /* socket type */
-      case SO_TYPE:
-	{
-	  int			*type;
-
-	  if (*optlen < sizeof (int))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  type = optval;
-	  *type = (pv->header ? SOCK_RAW : SOCK_DGRAM);
-
-	  *optlen = sizeof (int);
-	}
-	break;
-      /* socket last error */
-      case SO_ERROR:
-	{
-	  int			*error;
-
-	  if (*optlen < sizeof (int))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  error = optval;
-	  *error = fd->error;
-
-	  *optlen = sizeof (int);
-	}
-	break;
-      default:
-	fd->error = ENOPROTOOPT;
-	return -1;
-    }
-
-  return 0;
+  return getsockopt_socket(fd, optname, optval, optlen);
 }
 
 
@@ -535,28 +414,16 @@ static _SHUTDOWN(shutdown_packet)
 {
   struct socket_packet_pv_s	*pv = (struct socket_packet_pv_s *)fd->pv;
 
-  if (how != SHUT_RDWR && how != SHUT_RD && how != SHUT_WR)
-    {
-      fd->error = EINVAL;
-      return -1;
-    }
-
-  /* check combinations */
-  if (how == SHUT_RDWR || (pv->shutdown == SHUT_RD && how == SHUT_WR) ||
-      (pv->shutdown == SHUT_WR && how == SHUT_RD))
-    pv->shutdown = SHUT_RDWR;
-  else
-    pv->shutdown = how;
+  if (shutdown_socket(fd, how))
+    return -1;
 
   /* end all the recv with errors */
-  if (pv->shutdown == SHUT_RDWR || pv->shutdown == SHUT_RD)
+  if (fd->shutdown == SHUT_RDWR || fd->shutdown == SHUT_RD)
     {
       uint_fast8_t		val;
-      struct net_packet_s	*packet;
 
       /* drop all waiting packets */
-      while ((packet = packet_queue_lock_pop(&pv->recv_q)) != NULL)
-	packet_obj_refdrop(packet);
+      packet_queue_lock_clear(&pv->recv_q);
 
       sem_getvalue(&pv->recv_sem, &val);
       while (val < 0)
@@ -564,6 +431,11 @@ static _SHUTDOWN(shutdown_packet)
 	  sem_post(&pv->recv_sem);
 	  sem_getvalue(&pv->recv_sem, &val);
 	}
+
+      if (fd->shutdown == SHUT_RDWR)
+	socket_table_remove(&pf_packet, fd);
+
+      /* XXX should mem_free here */
     }
 
   return 0;
@@ -615,20 +487,22 @@ void		pf_packet_signal(struct net_if_s	*interface,
   is_bcast = !memcmp(packet->tMAC, bcast, maclen);
 
   /* deliver packet to all sockets matching interface and protocol id */
-  CONTAINER_FOREACH(socket_packet, DLIST, NOLOCK, &pf_packet,
+  CONTAINER_FOREACH(socket_table, DLIST, NOLOCK, &pf_packet,
   {
+    struct socket_packet_pv_s	*pv = (struct socket_packet_pv_s *)item->pv;
+
     if (item->shutdown == SHUT_RD || item->shutdown == SHUT_RDWR)
       CONTAINER_FOREACH_CONTINUE;
 
-    if (item->interface == 0 || item->interface == interface->index)
+    if (pv->interface == 0 || pv->interface == interface->index)
       {
-	if (item->proto == protocol || item->proto == ETH_P_ALL)
+	if (pv->proto == protocol || pv->proto == ETH_P_ALL)
 	  {
 	    if (!item->broadcast && is_bcast)
 	      CONTAINER_FOREACH_CONTINUE;
 
-	    if (packet_queue_lock_pushback(&item->recv_q, packet))
-	      sem_post(&item->recv_sem);
+	    if (packet_queue_lock_pushback(&pv->recv_q, packet))
+	      sem_post(&pv->recv_sem);
 	  }
       }
   });

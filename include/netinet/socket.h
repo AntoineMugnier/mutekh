@@ -146,6 +146,12 @@
 #define IP_DEFAULT_MULTICAST_LOOP	1
 #define IP_MAX_MEMBERSHIPS		20
 
+#define ICMP_FILTER		1
+
+struct icmp_filter {
+	uint32_t		data;
+};
+
 /* socklen type */
 typedef size_t socklen_t;
 
@@ -449,6 +455,23 @@ struct			socket_api_s
 
 _RECVMSG(recvmsg);
 _SENDMSG(sendmsg);
+int getsockopt_socket(socket_t	fd,
+		      int	optname,
+		      void	*optval,
+		      socklen_t	*optlen);
+int setsockopt_socket(socket_t		fd,
+		      int		optname,
+		      const void	*optval,
+		      socklen_t		optlen);
+int setsockopt_inet(socket_t	fd,
+		    int		optname,
+		    const void	*optval,
+		    socklen_t	optlen);
+int getsockopt_inet(socket_t	fd,
+		    int		optname,
+		    void	*optval,
+		    socklen_t	*optlen);
+_SHUTDOWN(shutdown_socket);
 
 /*
  * Dispatch structure instances.
@@ -471,12 +494,26 @@ extern const struct socket_api_s	raw_socket;
  * A socket.
  */
 
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_dlist.h>
+
 struct				socket_s
 {
   const struct socket_api_s	*f;
+  int				type;
+  int				shutdown;
   error_t			error;
+  bool_t			broadcast;
+  bool_t			keepalive;
+  timer_delay_t			recv_timeout;
+  timer_delay_t			send_timeout;
   void				*pv;
+
+  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
 };
+
+CONTAINER_TYPE(socket_table, DLIST, struct socket_s, NOLOCK, NOOBJ, list_entry);
+CONTAINER_FUNC(static inline, socket_table, DLIST, socket_table, NOLOCK);
 
 #include "socket_hexo.h"
 
