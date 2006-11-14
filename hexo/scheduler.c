@@ -66,9 +66,10 @@ static CONTEXT_ENTRY(sched_context_idle)
     }
 }
 
-/* switch to next context available in the 'root' queue, do not put
-   current thread in any queue */
-/* must be called with interrupts disabled */
+/* Switch to next context available in the 'root' queue, do not put
+   current context in any queue. Idle context may be selected if no
+   other contexts are available. Must be called with interrupts
+   disabled */
 static inline
 void __sched_context_switch(sched_queue_root_t *root)
 {
@@ -76,46 +77,47 @@ void __sched_context_switch(sched_queue_root_t *root)
 
   assert(!cpu_interrupt_getstate());
 
-  /* get next running thread */
+  /* get next running context */
   sched_queue_wrlock(root);
   next = __sched_candidate(root);
   context_switch_to(&next->context);
   sched_queue_unlock(root);
 }
 
-/* switch to next context available in the root queue */
+/* Switch to next context available in the root queue. This function
+   returns if no other context is available, controle is not passed
+   back to current context rather than Idle context. Must be called
+   with interrupts disabled */
 static inline
 void __sched_pushback_switch(sched_queue_root_t *root)
 {
   struct sched_context_s	*next;
 
-  assert(!cpu_interrupt_getstate());
-
-  /* push thread back in running queue */
+  /* push context back in running queue */
   sched_queue_wrlock(root);
-  sched_queue_nolock_pushback(root, CONTEXT_LOCAL_GET(sched_cur));
 
-  /* get next running thread */
-  next = __sched_candidate(root);
-  context_switch_to(&next->context);
+  if ((next = __sched_candidate_noidle(root)))
+    {
+      sched_queue_nolock_pushback(root, CONTEXT_LOCAL_GET(sched_cur));
+      context_switch_to(&next->context);
+    }
+
   sched_queue_unlock(root);
 }
 
-/* switch to next context available in the 'root' queue and push current
-   context in the 'queue' */
-/* must be called with interrupts disabled */
+/* Switch to next context available in the 'root' queue and push current
+   context in the 'queue'. Must be called with interrupts disabled */
 static inline
-void __sched_wait_switch(sched_queue_root_t *root, sched_queue_root_t *wait)
+void __sched_wait_switch(sched_queue_root_t *root,
+			 sched_queue_root_t *wait)
 {
   struct sched_context_s	*next;
 
-  assert(!cpu_interrupt_getstate());
-
-  /* add current thread to queue, assume queue is already locked */
+  /* add current context to queue, assume queue is already locked */
   sched_queue_nolock_pushback(wait, CONTEXT_LOCAL_GET(sched_cur));
   sched_queue_unlock(wait);
 
-  /* get next running thread */
+  /* get next running context */
   sched_queue_wrlock(root);
   next = __sched_candidate(root);
   context_switch_to(&next->context);
@@ -127,12 +129,12 @@ void __sched_context_exit(sched_queue_root_t *root)
 {
   struct sched_context_s	*next;
 
-  assert(!cpu_interrupt_getstate());
-
-  /* get next running thread */
+  /* get next running context */
   next = __sched_candidate(root);
   context_jump_to(&next->context);
 }
+
+/************************************************************************/
 
 /* Must be called with interrupts disabled */
 void sched_context_switch(void)
@@ -145,6 +147,8 @@ void sched_context_switch(void)
 /* Must be called with interrupts disabled and sched locked */
 void sched_context_exit(void)
 {
+  assert(!cpu_interrupt_getstate());
+
   __sched_context_exit(__sched_root());
 }
 
@@ -214,7 +218,7 @@ void sched_global_init(void)
 /*
 
 %config CONFIG_HEXO_SCHED_IDLE_STACK_SIZE
-desc Size of the stack allocated for idle scheduler thread.
+desc Size of the stack allocated for idle scheduler context.
 desc Stack size is specified in stack words count.
 default 256
 flags mandatory

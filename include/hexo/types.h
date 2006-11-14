@@ -54,17 +54,22 @@ typedef signed long long	int64_t;
    .sdata section */
 typedef struct __ldscript_symbol_s __ldscript_symbol_t;
 
-#if 0 //defined __MUTEK__
-/** prevent use of compiler native short type */
-# define short	struct _dont_use_short_
+#ifdef __MUTEK__
+/** prevent use of compiler native short type,
+    int_fast*_t and uint_fast*_t types are prefered */
+typedef short _dont_use_native_short_type_t __attribute__ ((deprecated));
+# define short	_dont_use_native_short_type_t
 
-/** prevent use of compiler native int type */
-# define int	struct _dont_use_int_
+/** prevent use of compiler native int type,
+    int_fast*_t and uint_fast*_t types are prefered */
+typedef int _dont_use_native_int_type_t __attribute__ ((deprecated));
+# define int	_dont_use_native_int_type_t
 
-/** prevent use of compiler native long type */
-# define long	struct _dont_use_long_
+/** prevent use of compiler native long type,
+    int_fast*_t and uint_fast*_t types are prefered */
+typedef long _dont_use_native_long_type_t __attribute__ ((deprecated));
+# define long	_dont_use_native_long_type_t
 #endif
-
 
 /* integer types MAX and MIN values */
 

@@ -42,10 +42,10 @@ void mem_init(void)
   void	*mem_start;
   void	*mem_end;
 
-  mem_start = emu_do_syscall(EMU_SYSCALL_MMAP, 6, NULL, 
-			     CONFIG_ARCH_EMU_MEMORY * 1048576,
-			     PROT_READ | PROT_WRITE | PROT_EXEC,
-			     MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+  mem_start = (void*)emu_do_syscall(EMU_SYSCALL_MMAP, 6, NULL, 
+				    CONFIG_ARCH_EMU_MEMORY * 1048576,
+				    PROT_READ | PROT_WRITE | PROT_EXEC,
+				    MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
 
   if (mem_start == MAP_FAILED)
     emu_do_syscall(EMU_SYSCALL_EXIT, 0);

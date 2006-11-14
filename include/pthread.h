@@ -397,6 +397,37 @@ pthread_rwlock_unlock(pthread_rwlock_t *rwlock);
   }
 
 /************************************************************************
+		PThread barrier related public API
+************************************************************************/
+
+typedef struct pthread_barrierattr_s pthread_barrierattr_t;
+
+/** mutex object structure */
+typedef struct				pthread_barrier_s
+{
+  int_fast8_t				count;
+  /** blocked threads waiting for read */
+  sched_queue_root_t			wait;
+}					pthread_barrier_t;
+
+error_t pthread_barrier_destroy(pthread_barrier_t *barrier);
+
+error_t pthread_barrier_init(pthread_barrier_t *barrier,
+			     const pthread_barrierattr_t *attr,
+			     unsigned count);
+
+error_t pthread_barrier_wait(pthread_barrier_t *barrier);
+
+#define PTHREAD_BARRIER_SERIAL_THREAD	-1
+
+/** normal rwlock object static initializer */
+# define PTHREAD_BARRIER_INITIALIZER(n)							  \
+  {											  \
+    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, __SCHED_CONTAINER_ALGO, HEXO_SPIN),	  \
+    .count = (n),									  \
+  }
+
+/************************************************************************
 		PThread Spinlock related public API
 ************************************************************************/
 

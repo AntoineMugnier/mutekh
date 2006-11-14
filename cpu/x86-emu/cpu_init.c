@@ -47,14 +47,12 @@ struct cpu_cld_s
   uint32_t			id;
 };
 
-static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
+//static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
 
 struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
 {
   struct cpu_cld_s	*cld;
-  void			*cls;
-  uint16_t			cls_sel;
-  uint_fast16_t		i;
+  //void			*cls;
 
   if (!(cld = mem_alloc(sizeof (struct cpu_cld_s), MEM_SCOPE_SYS)))
     return NULL;
