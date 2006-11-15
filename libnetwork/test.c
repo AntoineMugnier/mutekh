@@ -93,7 +93,7 @@ void			*tcp_test(void *p)
 }
 #endif
 
-#if defined(CONFIG_NETWORK_UDP)
+#if !defined(CONFIG_NETWORK_UDP)
 #include "test_server.c"
 
 void			*err_test(void *p)
@@ -189,7 +189,7 @@ static TIMER_CALLBACK(profiling)
 void *toto(void *p)
 {
   printf("wait...");
-  //sem_wait(&sem);
+  sem_wait(&sem);
   printf("ok\n");
 }
 
@@ -197,17 +197,17 @@ void *net_up(void *p)
 {
   pthread_t th;
 
-#if 1
+#if 0
   sem_init(&sem, 0, 0);
 
-  //pthread_create(&th, NULL, toto, NULL);
+  pthread_create(&th, NULL, toto, NULL);
 
   int i;
   for (i = 0; 0 && i < 1000000000; i++)
     ;
 
   printf("post\n");
-  // sem_post(&sem);
+   sem_post(&sem);
 #endif
 
 #ifdef CONFIG_NETWORK
@@ -257,7 +257,7 @@ void *net_up(void *p)
 #endif
 
 #ifdef CONFIG_NETWORK_UDP
-  eval_server();
+  //eval_server();
 #endif
 
 #if 0

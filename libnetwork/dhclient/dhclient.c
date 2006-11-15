@@ -32,6 +32,7 @@
 #include <netinet/dhcp.h>
 #include <netinet/arp.h>
 #include <netinet/udp.h>
+#include <netinet/route.h>
 #include <netinet/socket.h>
 #include <netinet/packet.h>
 
@@ -526,6 +527,7 @@ error_t			dhcp_client(const char	*ifname)
   socket_t		sock_packet = NULL;
   struct net_if_s	*interface;
   struct net_addr_s	null;
+  struct net_route_s	route;
 
   if ((interface = if_get_by_name(ifname)) == NULL)
     return -1;
@@ -538,10 +540,15 @@ error_t			dhcp_client(const char	*ifname)
   /* ifconfig 0.0.0.0 */
   IPV4_ADDR_SET(null, 0);
   if_config(interface->index, IF_SET, &null, &null);
+  route.interface = if_get_by_name(ifname);
+  IPV4_ADDR_SET(route.target, 0x0);
+  IPV4_ADDR_SET(route.mask, 0xffffffff);
+  route.type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
+  route_add(&route);
 
   /* create sockets */
   if (dhcp_init(interface, &sock, &sock_packet))
-    return -1;
+    goto leave;
 
   /* discover DHCP servers */
   if (dhcp_packet(interface, DHCPDISCOVER, 0, INADDR_BROADCAST, sock))

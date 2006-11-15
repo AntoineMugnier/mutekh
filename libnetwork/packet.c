@@ -184,7 +184,8 @@ void				*packet_dispatch(void	*data)
   while (*run)
     {
       /* wait for a packet */
-      sem_wait(sem);
+      //sem_wait(sem);
+      pthread_yield();
 
       /* retreive the incoming packet */
       packet = packet_queue_lock_pop(root);

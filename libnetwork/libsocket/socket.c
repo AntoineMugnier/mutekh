@@ -102,7 +102,7 @@ socket_t			socket(int_fast32_t domain, int_fast32_t type, int_fast32_t protocol)
   api->socket(sock, domain, type, protocol);
   return sock;
 }
-
+#if 0
 /*
  * Send a message.
  */
@@ -181,7 +181,7 @@ _RECVMSG(recvmsg)
 
   return ret;
 }
-
+#endif
 /*
  * Setsock opt, SOL_SOCKET level.
  */
@@ -226,9 +226,9 @@ int_fast32_t setsockopt_socket(socket_t		fd,
       /* allow sending/receiving broadcast */
       case SO_BROADCAST:
 	{
-	  const int_fast32_t	*enable;
+	  const bool_t	*enable;
 
-	  if (optlen < sizeof (int_fast32_t))
+	  if (optlen < sizeof (bool_t))
 	    {
 	      fd->error = EINVAL;
 	      return -1;
@@ -241,9 +241,9 @@ int_fast32_t setsockopt_socket(socket_t		fd,
       /* allow keepalive packets */
       case SO_KEEPALIVE:
 	{
-	  const int_fast32_t	*enable;
+	  const bool_t	*enable;
 
-	  if (optlen < sizeof (int_fast32_t))
+	  if (optlen < sizeof (bool_t))
 	    {
 	      fd->error = EINVAL;
 	      return -1;
@@ -311,9 +311,9 @@ int_fast32_t getsockopt_socket(socket_t	fd,
       /* broadcast enabled */
       case SO_BROADCAST:
 	{
-	  int_fast32_t	*enabled;
+	  bool_t	*enabled;
 
-	  if (*optlen < sizeof (int_fast32_t))
+	  if (*optlen < sizeof (bool_t))
 	    {
 	      fd->error = EINVAL;
 	      return -1;
@@ -322,15 +322,15 @@ int_fast32_t getsockopt_socket(socket_t	fd,
 	  enabled = optval;
 	  *enabled = fd->broadcast;
 
-	  *optlen = sizeof (int_fast32_t);
+	  *optlen = sizeof (bool_t);
 	}
 	break;
       /* keepalive enabled */
       case SO_KEEPALIVE:
 	{
-	  int_fast32_t	*enabled;
+	  bool_t	*enabled;
 
-	  if (*optlen < sizeof (int_fast32_t))
+	  if (*optlen < sizeof (bool_t))
 	    {
 	      fd->error = EINVAL;
 	      return -1;
@@ -339,7 +339,7 @@ int_fast32_t getsockopt_socket(socket_t	fd,
 	  enabled = optval;
 	  *enabled = fd->keepalive;
 
-	  *optlen = sizeof (int_fast32_t);
+	  *optlen = sizeof (bool_t);
 	}
 	break;
       /* socket type */

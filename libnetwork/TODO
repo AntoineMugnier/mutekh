@@ -41,3 +41,4 @@
   - verifier l'alignement des acces memoire
   - voir les locks un peu partout
   - prevoir une gestion d'autre chose qu'Ethernet ?
+  - taille de packet > taille max

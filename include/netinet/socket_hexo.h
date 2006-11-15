@@ -64,14 +64,39 @@ static inline __attribute__((always_inline)) _GETPEERNAME(getpeername)
 
    This function is a cancellation point and therefore not marked with
   .  */
-static inline __attribute__((always_inline)) _SENDTO_LIB(sendto)
+static inline __attribute__((always_inline)) _SENDMSG(sendmsg)
 {
-  return fd->f->sendto(fd, buf, n, flags, addr, addr_len, NULL);
+  return fd->f->sendmsg(fd, message, flags);
+}
+
+static inline __attribute__((always_inline)) _SENDTO(sendto)
+{
+  struct msghdr	msg;
+  struct iovec	v;
+
+  v.iov_base = (void *)buf;
+  v.iov_len = n;
+  msg.msg_name = addr;
+  msg.msg_namelen = addr_len;
+  msg.msg_iov = &v;
+  msg.msg_iovlen = 1;
+  msg.msg_controllen = 0;
+  return fd->f->sendmsg(fd, &msg, flags);
 }
 
 static inline __attribute__((always_inline)) _SEND(send)
 {
-  return fd->f->sendto(fd, buf, n, flags, NULL, 0, NULL);
+  struct msghdr	msg;
+  struct iovec	v;
+
+  v.iov_base = (void *)buf;
+  v.iov_len = n;
+  msg.msg_name = NULL;
+  msg.msg_namelen = 0;
+  msg.msg_iov = &v;
+  msg.msg_iovlen = 1;
+  msg.msg_controllen = 0;
+  return fd->f->sendmsg(fd, &msg, flags);
 }
 
 /* Read N bytes into BUF through socket FD.
@@ -81,14 +106,43 @@ static inline __attribute__((always_inline)) _SEND(send)
 
    This function is a cancellation point and therefore not marked with
   .  */
-static inline __attribute__((always_inline)) _RECVFROM_LIB(recvfrom)
+static inline __attribute__((always_inline)) _RECVMSG(recvmsg)
 {
-  return fd->f->recvfrom(fd, buf, n, flags, addr, addr_len, NULL);
+  return fd->f->recvmsg(fd, message, flags);
+}
+
+static inline __attribute__((always_inline)) _RECVFROM(recvfrom)
+{
+  struct msghdr	msg;
+  struct iovec	v;
+  ssize_t	ret;
+
+  v.iov_base = buf;
+  v.iov_len = n;
+  msg.msg_name = addr;
+  msg.msg_namelen = *addr_len;
+  msg.msg_iov = &v;
+  msg.msg_iovlen = 1;
+  msg.msg_controllen = 0;
+  ret = fd->f->recvmsg(fd, &msg, flags);
+  if (!ret)
+    *addr_len = msg.msg_namelen;
+  return ret;
 }
 
 static inline __attribute__((always_inline)) _RECV(recv)
 {
-  return fd->f->recvfrom(fd, buf, n, flags, NULL, NULL, NULL);
+  struct msghdr	msg;
+  struct iovec	v;
+
+  v.iov_base = buf;
+  v.iov_len = n;
+  msg.msg_name = NULL;
+  msg.msg_namelen = 0;
+  msg.msg_iov = &v;
+  msg.msg_iovlen = 1;
+  msg.msg_controllen = 0;
+  return fd->f->recvmsg(fd, &msg, flags);
 }
 
 /* Put the current value for socket FD's option OPTNAME at protocol level LEVEL

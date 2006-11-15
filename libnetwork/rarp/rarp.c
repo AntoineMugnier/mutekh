@@ -128,6 +128,8 @@ error_t			rarp_client(const char	*ifname)
   return 0;
 
  leave:
+  printf("rarp: error\n");
+
   shutdown(sock, SHUT_RDWR);
 
   return -1;

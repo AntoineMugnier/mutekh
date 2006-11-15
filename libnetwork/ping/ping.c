@@ -153,6 +153,7 @@ error_t			ping(struct net_addr_s	*host,
       /* wait for echo */
       while (1)
 	{
+	  len = sizeof (struct sockaddr_in);
 	  recvd = recvfrom(sock, buf2, tot, MSG_DONTWAIT, (struct sockaddr *)&from, &len);
 
 	  if (recvd > 0)

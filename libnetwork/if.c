@@ -87,6 +87,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
   interface->dev = dev;
   interface->mac = mac;
   interface->mtu = mtu;
+  interface->type = type;
   if (type == IF_ETHERNET)
     sprintf(interface->name, "eth%d", ethid++);
   else

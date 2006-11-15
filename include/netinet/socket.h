@@ -358,25 +358,10 @@ typedef struct socket_s *socket_t;
 				    size_t		n,		\
 				    int_fast32_t	flags,		\
 				    struct sockaddr	*addr,		\
-				    socklen_t		addr_len,	\
-				    const struct msghdr	*message)
-
-#define _SENDTO_LIB(f)	ssize_t (f)(socket_t		fd,		\
-				    const void		*buf,		\
-				    size_t		n,		\
-				    int_fast32_t	flags,		\
-				    struct sockaddr	*addr,		\
 				    socklen_t		addr_len)
 
-#define _RECVFROM(f)	ssize_t (f)(socket_t		fd,		\
-				    void		*buf,		\
-				    size_t		n,		\
-				    int_fast32_t	flags,		\
-				    struct sockaddr	*addr,		\
-				    socklen_t		*addr_len,	\
-				    struct msghdr	*message)
 
-#define _RECVFROM_LIB(f) ssize_t (f)(socket_t		fd,		\
+#define _RECVFROM(f)	ssize_t (f)(socket_t		fd,		\
 				    void		*buf,		\
 				    size_t		n,		\
 				    int_fast32_t	flags,		\
@@ -441,8 +426,8 @@ struct			socket_api_s
   _getsockname_t	*getsockname;
   _connect_t		*connect;
   _getpeername_t	*getpeername;
-  _sendto_t		*sendto;
-  _recvfrom_t		*recvfrom;
+  _sendmsg_t		*sendmsg;
+  _recvmsg_t		*recvmsg;
   _getsockopt_t		*getsockopt;
   _setsockopt_t		*setsockopt;
   _listen_t		*listen;
@@ -454,8 +439,6 @@ struct			socket_api_s
  * Common operations.
  */
 
-_RECVMSG(recvmsg);
-_SENDMSG(sendmsg);
 int_fast32_t getsockopt_socket(socket_t		fd,
 			       int_fast32_t	optname,
 			       void		*optval,

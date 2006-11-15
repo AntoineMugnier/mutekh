@@ -228,21 +228,36 @@ static _GETPEERNAME(getpeername_raw)
 }
 
 /*
- * Send some data specifiyng explicitely the destination.
+ * Send a message
  */
 
-static _SENDTO(sendto_raw)
+static _SENDMSG(sendmsg_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
+  struct sockaddr		*addr;
   struct net_packet_s		*packet;
   struct net_if_s		*interface;
   struct net_proto_s		*addressing;
   struct net_header_s		*nethdr;
   uint8_t			*p;
+  size_t			i;
+  size_t			n;
+
+  if (flags & MSG_OOB || flags & MSG_TRUNC)
+    {
+      fd->error = EOPNOTSUPP;
+      return -1;
+    }
 
   if (fd->shutdown == SHUT_WR || fd->shutdown == SHUT_RDWR)
     {
       fd->error = ESHUTDOWN;
+      return -1;
+    }
+
+  if (message == NULL)
+    {
+      fd->error = EINVAL;
       return -1;
     }
 
@@ -251,6 +266,8 @@ static _SENDTO(sendto_raw)
       fd->error = ENOMEM;
       return -1;
     }
+
+  addr = message->msg_name;
 
   /* determine endpoint */
   if (addr == NULL)
@@ -272,7 +289,7 @@ static _SENDTO(sendto_raw)
 	  return -1;
 	}
 
-      if (socket_in_addr(fd, &packet->tADDR, addr, addr_len, NULL))
+      if (socket_in_addr(fd, &packet->tADDR, addr, message->msg_namelen, NULL))
 	{
 	  packet_obj_refdrop(packet);
 	  return -1;
@@ -301,6 +318,10 @@ static _SENDTO(sendto_raw)
       addressing = route->addressing;
     }
 
+  /* compute buffer length */
+  for (i = 0, n = 0; i < message->msg_iovlen; i++)
+    n += message->msg_iov[i].iov_len;
+
   /* prepare the packet */
   if (pv->header)
     {
@@ -326,7 +347,8 @@ static _SENDTO(sendto_raw)
   nethdr[1].data = NULL;
 
   /* copy the buffer into the packet */
-  memcpy(p, buf, n);
+  for (i = 0, n = 0; i < message->msg_iovlen; i++, n += message->msg_iov[i].iov_len)
+    memcpy(p + n, message->msg_iov[i].iov_base, message->msg_iov[i].iov_len);
 
   /* adjust some IP header fields */
   if (pv->header)
@@ -363,15 +385,28 @@ static _SENDTO(sendto_raw)
 }
 
 /*
- * Receive some data and get the source address.
+ * Receive a message
  */
 
-static _RECVFROM(recvfrom_raw)
+static _RECVMSG(recvmsg_raw)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
+  struct sockaddr		*addr;
   struct net_packet_s		*packet;
   ssize_t			sz;
   struct net_header_s		*nethdr;
+
+  if (flags & MSG_OOB || flags & MSG_TRUNC)
+    {
+      fd->error = EOPNOTSUPP;
+      return -1;
+    }
+
+  if (message == NULL)
+    {
+      fd->error = EINVAL;
+      return -1;
+    }
 
   /* try to grab a packet */
  again:
@@ -399,10 +434,12 @@ static _RECVFROM(recvfrom_raw)
       goto again;
     }
 
+  addr = message->msg_name;
+
   /* fill the address if required */
   if (addr != NULL)
     {
-      if (socket_addr_in(fd, &packet->sADDR, addr, addr_len, htons(pv->proto)))
+      if (socket_addr_in(fd, &packet->sADDR, addr, &message->msg_namelen, htons(pv->proto)))
 	{
 	  packet_obj_refdrop(packet);
 	  return -1;
@@ -413,29 +450,27 @@ static _RECVFROM(recvfrom_raw)
   if (pv->header)
     {
       nethdr = &packet->header[packet->stage - 1];
-      sz = nethdr[1].size - nethdr->size;
-      if (sz > n)
-	{
-	  sz = n;
-	  memcpy(buf, nethdr->data, n);
-	}
-      else
-	{
-	  uint8_t	subsz;
-
-	  memcpy(buf, nethdr->data, sz);
-	  subsz = nethdr[1].size;
-	  if (sz + subsz > n)
-	    subsz = n - sz;
-	  memcpy(buf, nethdr[1].data, subsz);
-	  sz += subsz;
-	}
+      /* XXX */
     }
   else
     {
+      size_t	i;
+      size_t	chunksz;
+
       nethdr = &packet->header[packet->stage];
-      sz = nethdr->size > n ? n : nethdr->size;
-      memcpy(buf, nethdr->data, sz);
+      for (i = 0, sz = 0; i < message->msg_iovlen; i++, sz += chunksz)
+	{
+	  chunksz = message->msg_iov[i].iov_len;
+	  if (sz + chunksz > nethdr->size)
+	    {
+	      chunksz = nethdr->size - sz;
+	      memcpy(message->msg_iov[i].iov_base, nethdr->data + sz, chunksz);
+	      sz += chunksz;
+	      break;
+	    }
+	  else
+	    memcpy(message->msg_iov[i].iov_base, nethdr->data + sz, chunksz);
+	}
     }
 
   /* drop the packet */
@@ -629,8 +664,8 @@ const struct socket_api_s	raw_socket =
     .getsockname = getsockname_raw,
     .connect = connect_raw,
     .getpeername = getpeername_raw,
-    .sendto = sendto_raw,
-    .recvfrom = recvfrom_raw,
+    .sendmsg = sendmsg_raw,
+    .recvmsg = recvmsg_raw,
     .getsockopt = getsockopt_raw,
     .setsockopt = setsockopt_raw,
     .listen = listen_raw,
@@ -690,7 +725,7 @@ void		sock_raw_signal(struct net_if_s		*interface,
 		  {
 		    struct icmphdr	*icmp;
 
-		    icmp = nethdr->data;
+		    icmp = (struct icmphdr *)nethdr->data;
 		    if (pv->icmp_mask & (1 << icmp->type))
 		      CONTAINER_FOREACH_CONTINUE;
 		  }

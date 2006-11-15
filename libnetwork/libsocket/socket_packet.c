@@ -34,8 +34,6 @@
 #include <semaphore.h>
 #include <timer.h>
 
-static _RECVFROM(recvfrom_packet);
-
 socket_table_root_t	pf_packet = CONTAINER_ROOT_INITIALIZER(socket_table, DLIST, NOLOCK);
 
 /*
@@ -128,16 +126,24 @@ static _GETSOCKNAME(getsockname_packet)
 }
 
 /*
- * Send some data specifiyng explicitely the destination.
+ * Send a message
  */
 
-static _SENDTO(sendto_packet)
+static _SENDMSG(sendmsg_packet)
 {
   struct socket_packet_pv_s	*pv = (struct socket_packet_pv_s *)fd->pv;
-  struct sockaddr_ll		*sll = (struct sockaddr_ll *)addr;
+  struct sockaddr_ll		*sll;
   struct net_packet_s		*packet;
   struct net_if_s		*interface;
   struct net_header_s		*nethdr;
+  size_t			n;
+  size_t			i;
+
+  if (flags & MSG_OOB)
+    {
+      fd->error = EOPNOTSUPP;
+      return -1;
+    }
 
   if (fd->shutdown == SHUT_WR || fd->shutdown == SHUT_RDWR)
     {
@@ -145,7 +151,16 @@ static _SENDTO(sendto_packet)
       return -1;
     }
 
-  if ((sll == NULL && !pv->header) || addr_len < sizeof (struct sockaddr_ll) ||
+  if (message == NULL)
+    {
+      fd->error = EINVAL;
+      return -1;
+    }
+
+  /* check provided address */
+  sll = (struct sockaddr_ll *)message->msg_name;
+
+  if ((sll == NULL && !pv->header) || message->msg_namelen < sizeof (struct sockaddr_ll) ||
       sll->sll_family != AF_PACKET)
     {
       fd->error = (sll == NULL ? EDESTADDRREQ : EINVAL);
@@ -161,6 +176,10 @@ static _SENDTO(sendto_packet)
   /* retrieve the interface from the if index */
   interface = if_get_by_index(sll->sll_ifindex);
 
+  /* compute packet total size */
+  for (i = 0, n = 0; i < message->msg_iovlen; i++)
+    n += message->msg_iov[i].iov_len;
+
   if (pv->header)
     {
       /* alloc a buffer to copy the packet content */
@@ -172,7 +191,8 @@ static _SENDTO(sendto_packet)
 	}
 
       /* set the packet content */
-      memcpy(packet->packet, buf, n);
+      for (i = 0, n = 0; i < message->msg_iovlen; i++, n += message->msg_iov[i].iov_len)
+	memcpy(packet->packet + n, message->msg_iov[i].iov_base, message->msg_iov[i].iov_len);
       nethdr = &packet->header[0];
       nethdr->data = packet->packet;
       nethdr->size = n;
@@ -210,7 +230,8 @@ static _SENDTO(sendto_packet)
       nethdr->data = next;
       nethdr->size = n;
       nethdr[1].data = NULL;
-      memcpy(next, buf, n);
+      for (i = 0, n = 0; i < message->msg_iovlen; i++, n += message->msg_iov[i].iov_len)
+	memcpy(next + n, message->msg_iov[i].iov_base, message->msg_iov[i].iov_len);
       packet->header[packet->stage + 1].data = NULL;
       packet->MAClen = sll->sll_halen;
       packet->tMAC = sll->sll_addr;
@@ -223,16 +244,30 @@ static _SENDTO(sendto_packet)
 }
 
 /*
- * Receive some data and get the source address.
+ * Receive some data as a message.
  */
 
-static _RECVFROM(recvfrom_packet)
+static _RECVMSG(recvmsg_packet)
 {
   struct socket_packet_pv_s	*pv = (struct socket_packet_pv_s *)fd->pv;
   struct net_packet_s		*packet;
-  struct sockaddr_ll		*sll = (struct sockaddr_ll *)addr;
+  struct sockaddr_ll		*sll;
   ssize_t			sz;
   struct net_header_s		*nethdr;
+
+  if (flags & MSG_OOB)
+    {
+      fd->error = EOPNOTSUPP;
+      return -1;
+    }
+
+  if (message == NULL)
+    {
+      fd->error = EINVAL;
+      return -1;
+    }
+
+  sll = (struct sockaddr_ll *)message->msg_name;
 
   /* try to grab a packet */
  again:
@@ -277,7 +312,7 @@ static _RECVFROM(recvfrom_packet)
   /* fill the address if required */
   if (sll != NULL)
     {
-      if (*addr_len < sizeof (struct sockaddr_ll))
+      if (message->msg_namelen < sizeof (struct sockaddr_ll))
 	{
 	  fd->error = ENOMEM;
 	  packet_obj_refdrop(packet);
@@ -287,7 +322,7 @@ static _RECVFROM(recvfrom_packet)
       sll->sll_family = AF_PACKET;
       sll->sll_protocol = htons(packet->proto);
       sll->sll_ifindex = packet->interface->index;
-      sll->sll_hatype = ARPHRD_ETHER; /* XXX */
+      sll->sll_hatype = packet->interface->type;
       sll->sll_halen = packet->MAClen;
       memcpy(sll->sll_addr, packet->sMAC, packet->MAClen);
       if (!memcmp(packet->interface->mac, packet->tMAC, packet->MAClen))
@@ -297,32 +332,36 @@ static _RECVFROM(recvfrom_packet)
       else
 	sll->sll_pkttype = PACKET_OTHERHOST;
 
-      *addr_len = sizeof (struct sockaddr_ll);
+      message->msg_namelen = sizeof (struct sockaddr_ll);
     }
 
   /* copy the data */
   if (pv->header)
     {
-      ssize_t	header_sz;
-
-      nethdr = &packet->header[0];
-      header_sz = nethdr->size - nethdr[1].size;
-      if (header_sz > n)
-	{
-	  header_sz = n;
-	  sz = 0;
-	}
-      else
-	sz = nethdr->size > n ? n : nethdr->size;
-      memcpy(buf, nethdr->data, header_sz);
-      if (sz)
-	memcpy(buf + header_sz, nethdr[1].data, sz - header_sz);
+      /* XXX */
     }
   else
     {
+      size_t	i;
+      size_t	chunksz;
+
       nethdr = &packet->header[packet->stage];
-      sz = nethdr->size > n ? n : nethdr->size;
-      memcpy(buf, nethdr->data, sz);
+      for (i = 0, sz = 0; i < message->msg_iovlen; i++, sz += chunksz)
+	{
+	  chunksz = message->msg_iov[i].iov_len;
+	  if (sz + chunksz > nethdr->size)
+	    {
+	      chunksz = nethdr->size - sz;
+	      memcpy(message->msg_iov[i].iov_base, nethdr->data + sz, chunksz);
+	      sz += chunksz;
+	      break;
+	    }
+	  else
+	    memcpy(message->msg_iov[i].iov_base, nethdr->data + sz, chunksz);
+	}
+
+      if (flags & MSG_TRUNC)
+	sz = nethdr->size;
     }
 
   /* drop the packet */
@@ -461,8 +500,8 @@ const struct socket_api_s	packet_socket =
     .getsockname = getsockname_packet,
     .connect = connect_packet,
     .getpeername = getpeername_packet,
-    .sendto = sendto_packet,
-    .recvfrom = recvfrom_packet,
+    .sendmsg = sendmsg_packet,
+    .recvmsg = recvmsg_packet,
     .getsockopt = getsockopt_packet,
     .setsockopt = setsockopt_packet,
     .listen = listen_packet,

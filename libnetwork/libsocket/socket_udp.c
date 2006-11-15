@@ -167,11 +167,42 @@ static _GETPEERNAME(getpeername_udp)
  * Send some data specifiyng explicitely the destination.
  */
 
-static _SENDTO(sendto_udp)
+static _SENDMSG(sendmsg_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
+  struct sockaddr		*addr;
   error_t			err;
+  uint8_t			*buf;
+  size_t			n;
+  size_t			i;
 
+  if (message == NULL)
+    {
+      fd->error = EINVAL;
+      return -1;
+    }
+
+  addr = message->msg_name;
+
+  /* build the packet */
+  if (message->msg_iovlen == 1)
+    {
+      buf = message->msg_iov[0].iov_base;
+      n = message->msg_iov[0].iov_len;
+    }
+  else
+    {
+      for (i = 0, n = 0; i < message->msg_iovlen; i++)
+	n += message->msg_iov[i].iov_len;
+
+      if ((buf = mem_alloc(n, MEM_SCOPE_NETWORK)) == NULL)
+	{
+	  fd->error = ENOMEM;
+	  return -1;
+	}
+    }
+
+  /* send it */
   if (addr == NULL)
     {
       err = udp_send(pv->desc, NULL, buf, n);
@@ -180,11 +211,18 @@ static _SENDTO(sendto_udp)
     {
       struct net_udp_addr_s	remote;
 
-      if (socket_in_addr(fd, &remote.address, addr, addr_len, &remote.port))
-	return -1;
+      if (socket_in_addr(fd, &remote.address, addr, message->msg_namelen, &remote.port))
+	{
+	  if (message->msg_iovlen != 1)
+	    mem_free(buf);
+	  return -1;
+	}
 
       err = udp_send(pv->desc, &remote, buf, n);
     }
+
+  if (message->msg_iovlen != 1)
+    mem_free(buf);
 
   if (err)
     {
@@ -199,7 +237,7 @@ static _SENDTO(sendto_udp)
  * Receive some data and get the source address.
  */
 
-static _RECVFROM(recvfrom_udp)
+static _RECVMSG(recvmsg_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
   /* XXX */
@@ -213,8 +251,19 @@ static _RECVFROM(recvfrom_udp)
 static _GETSOCKOPT(getsockopt_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-  /* XXX */
-  return -1;
+
+  switch (level)
+    {
+      case SOL_SOCKET:
+	return getsockopt_socket(fd, optname, optval, optlen);
+      case SOL_IP:
+	return getsockopt_inet(fd, optname, optval, optlen);
+      default:
+	fd->error = ENOPROTOOPT;
+	return -1;
+    }
+
+  return 0;
 }
 
 /*
@@ -224,7 +273,19 @@ static _GETSOCKOPT(getsockopt_udp)
 static _SETSOCKOPT(setsockopt_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-  return -1;
+
+  switch (level)
+    {
+      case SOL_SOCKET:
+	return setsockopt_socket(fd, optname, optval, optlen);
+      case SOL_IP:
+	return setsockopt_inet(fd, optname, optval, optlen);
+      default:
+	fd->error = ENOPROTOOPT;
+	return -1;
+    }
+
+  return 0;
 }
 
 /*
@@ -266,8 +327,8 @@ const struct socket_api_s	udp_socket =
     .getsockname = getsockname_udp,
     .connect = connect_udp,
     .getpeername = getpeername_udp,
-    .sendto = sendto_udp,
-    .recvfrom = recvfrom_udp,
+    .sendmsg = sendmsg_udp,
+    .recvmsg = recvmsg_udp,
     .getsockopt = getsockopt_udp,
     .setsockopt = setsockopt_udp,
     .listen = listen_udp,

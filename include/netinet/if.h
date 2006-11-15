@@ -26,6 +26,7 @@
 #include <hexo/device.h>
 #include <netinet/protos.h>
 #include <netinet/packet.h>
+#include <netinet/arp.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
@@ -52,7 +53,7 @@
 
 typedef uint_fast8_t	net_if_type_t;
 
-#define IF_ETHERNET	0
+#define IF_ETHERNET	ARPHRD_ETHER
 
 /*
  * An interface.
@@ -66,6 +67,7 @@ struct					net_if_s
   const uint8_t				*mac;
   uint_fast16_t				mtu;
   net_protos_root_t			protocols;
+  uint_fast16_t				type;
 
   /* statistics */
   uint_fast64_t				rx_bytes;
