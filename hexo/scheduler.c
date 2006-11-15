@@ -59,7 +59,7 @@ static CONTEXT_ENTRY(sched_context_idle)
       cpu_interrupt_disable();
       sched_queue_wrlock(root);
 
-      if ((next = __sched_candidate_noidle(root)))
+      if ((next = __sched_candidate_noidle(root)) != NULL)
 	  context_switch_to(&next->context);
 
       sched_queue_unlock(root);
