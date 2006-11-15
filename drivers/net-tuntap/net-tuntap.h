@@ -34,6 +34,8 @@ DEV_INIT(net_tuntap_init);
 DEV_CLEANUP(net_tuntap_cleanup);
 DEVNET_PREPAREPKT(net_tuntap_preparepkt);
 DEVNET_SENDPKT(net_tuntap_sendpkt);
+DEVNET_SETOPT(net_tuntap_setopt);
+DEVNET_GETOPT(net_tuntap_getopt);
 
 #ifndef CONFIG_STATIC_DRIVERS
 extern const struct driver_s	net_tuntap_drv;

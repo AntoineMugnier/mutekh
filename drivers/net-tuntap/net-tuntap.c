@@ -26,8 +26,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arch/hexo/unistd.h>
-#include <arch/hexo/net.h>
 
 #include <hexo/types.h>
 
@@ -41,6 +39,8 @@
 #include <semaphore.h>
 
 #include <netinet/if.h>
+
+#include <arch/hexo/emu_syscalls.h>
 
 #include "net-tuntap.h"
 #include "net-tuntap-private.h"
@@ -61,6 +61,8 @@ const struct driver_s	net_tuntap_drv =
   .f.net = {
     .f_preparepkt	= net_tuntap_preparepkt,
     .f_sendpkt		= net_tuntap_sendpkt,
+    .f_setopt		= net_tuntap_setopt,
+    .f_getopt		= net_tuntap_getopt,
   }
 };
 #endif
@@ -116,9 +118,10 @@ static void	net_tuntap_push(struct device_s	*dev,
 
   packet->stage++;
 
-  packet_queue_lock_pushback(&pv->rcvqueue, packet);
+  if (packet_queue_lock_pushback(&pv->rcvqueue, packet))
+    sem_post(&pv->rcvsem);
 
-  sem_post(&pv->rcvsem);
+  packet_obj_refdrop(packet);
 }
 
 /*
@@ -135,11 +138,11 @@ void	*net_tuntap_recv(void *p)
 
   while (1)
     {
-      size = read(pv->fd, buff, sizeof (buff));
+      size = (size_t)emu_do_syscall(EMU_SYSCALL_READ, 3, pv->fd, buff, sizeof (buff));
 
       if (size > 0)
 	{
-	  ptr = malloc(size);
+	  ptr = mem_alloc(size, MEM_SCOPE_NETWORK);
 	  memcpy(ptr, buff, size);
 
 	  net_tuntap_push(dev, ptr, size);
@@ -156,7 +159,7 @@ DEV_INIT(net_tuntap_init)
   struct net_tuntap_context_s	*pv;
   struct net_dispatch_s		*dispatch;
   pthread_t			th;
-  int				tun;
+  int_fast32_t			tun;
   struct ifreq			ifr;
   const int			true = 1;
 
@@ -179,12 +182,9 @@ DEV_INIT(net_tuntap_init)
   /* setup some containers */
   packet_queue_lock_init(&pv->rcvqueue);
 
-  /* register as a net device */
-  pv->interface = if_register(dev, IF_ETHERNET, pv->mac, ETHERMTU);
-
   /* create tun */
   memset(&ifr, 0, sizeof(ifr));
-  if ((tun = open("/dev/net/tun", O_RDWR)) == -1)
+  if ((tun = (int_fast32_t)emu_do_syscall(EMU_SYSCALL_OPEN, 2, "/dev/net/tun", O_RDWR)) == -1)
     {
       printf("tuntap: cannot open /dev/net/tun\n");
 
@@ -196,7 +196,7 @@ DEV_INIT(net_tuntap_init)
   memset(ifr.ifr_name, 0, sizeof(ifr.ifr_name));
   sprintf(ifr.ifr_name, "tap%d", tap_id++);
   printf(" using %s\n", ifr.ifr_name);
-  if(ioctl(tun, TUNSETIFF, (void *) &ifr) < 0)
+  if((int_fast32_t)emu_do_syscall(EMU_SYSCALL_IOCTL, 3, tun, TUNSETIFF, (void *) &ifr) < 0)
     {
       printf("tuntap: cannot add tap interface\n");
 
@@ -208,7 +208,7 @@ DEV_INIT(net_tuntap_init)
   ioctl(pv->fd, TUNSETNOCSUM, &true);
 
   /* get mac */
-  if ((tun = socket(PF_INET, SOCK_DGRAM, 0)) == -1)
+  if ((tun = (int_fast32_t)emu_do_syscall(EMU_SYSCALL_SOCKET, 3, PF_INET, SOCK_DGRAM, 0)) == -1)
     {
       printf("tuntap: cannot create socket\n");
 
@@ -216,7 +216,7 @@ DEV_INIT(net_tuntap_init)
 
       return -1;
     }
-  if (ioctl(tun, SIOCGIFHWADDR, (void *) &ifr) < 0)
+  if ((int_fast32_t)emu_do_syscall(EMU_SYSCALL_IOCTL, 3, tun, SIOCGIFHWADDR, (void *) &ifr) < 0)
     {
       printf("tuntap: cannot get MAC address\n");
 
@@ -227,6 +227,9 @@ DEV_INIT(net_tuntap_init)
   memcpy(pv->mac, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 
   printf("HW addr: %P\n", pv->mac, ETH_ALEN);
+
+  /* register as a net device */
+  pv->interface = if_register(dev, IF_ETHERNET, pv->mac, ETHERMTU);
 
   /* start dispatch thread */
   if (sem_init(&pv->rcvsem, 0, 0))
@@ -327,10 +330,51 @@ DEVNET_SENDPKT(net_tuntap_sendpkt)
   /* take lock */
   lock_spin_irq(&pv->lock);
 
-  write(pv->fd, buff, offs);
+  emu_do_syscall(EMU_SYSCALL_WRITE, 3, pv->fd, buff, offs);
 
   /* release lock */
   lock_release_irq(&pv->lock);
 
   packet_obj_refdrop(packet);
+}
+
+/*
+ * Setup driver level options.
+ */
+
+DEVNET_SETOPT(net_tuntap_setopt)
+{
+  struct net_ne2000_context_s	*pv = dev->drv_pv;
+
+  switch (option)
+    {
+      case DEV_NET_OPT_PROMISC:
+	/* XXX promisc */
+	break;
+      default:
+	return -1;
+    }
+
+  return 0;
+}
+
+/*
+ * Get driver level options / info.
+ */
+
+DEVNET_GETOPT(net_tuntap_getopt)
+{
+  switch (option)
+    {
+      case DEV_NET_OPT_BCAST:
+	if (*len < ETH_ALEN)
+	  return -1;
+	memcpy(value, "\xff\xff\xff\xff\xff\xff", ETH_ALEN);
+	*len = ETH_ALEN;
+	break;
+      default:
+	return -1;
+    }
+
+  return 0;
 }

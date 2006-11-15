@@ -23,6 +23,6 @@
 #define CPU_PACKET_H_
 
 //#define HAS_CPU_PACKET_CHECKSUM
-#define HAS_CPU_PACKET_MEMCPY
+//#define HAS_CPU_PACKET_MEMCPY
 
 #endif

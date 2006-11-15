@@ -103,7 +103,9 @@ cpu_interrupt_process(void)
   __asm__ volatile (
 		    "sti\n"
 		    "nop\n"
-		    );
+		    :
+		    :
+		    : "memory");
 }
 
 static inline void
@@ -151,7 +153,10 @@ cpu_interrupt_getstate(void)
 static inline void
 cpu_interrupt_wait(void)
 {
-  __asm__ volatile ("hlt");
+  __asm__ volatile ("hlt"
+		    :
+		    :
+		    : "memory");
 }
 
 #endif

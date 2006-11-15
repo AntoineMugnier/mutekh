@@ -29,6 +29,7 @@
 /* FIXME linux x86 specific */
 
 #include "arch/emu/include/hexo/syscalls_nums.hdef"
+#include "arch/emu/include/hexo/syscalls_args.hdef"
 
 #ifdef CONFIG_CPU_X86_EMU
 

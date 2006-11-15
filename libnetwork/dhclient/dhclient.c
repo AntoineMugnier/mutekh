@@ -542,7 +542,7 @@ error_t			dhcp_client(const char	*ifname)
   if_config(interface->index, IF_SET, &null, &null);
   route.interface = if_get_by_name(ifname);
   IPV4_ADDR_SET(route.target, 0x0);
-  IPV4_ADDR_SET(route.mask, 0xffffffff);
+  IPV4_ADDR_SET(route.mask, 0x0);
   route.type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
   route_add(&route);
 

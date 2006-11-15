@@ -289,7 +289,6 @@ void *net_up(void *p)
   return NULL;
 }
 
-
 /*
  * test main.
  */

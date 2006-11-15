@@ -27,8 +27,6 @@
 #include <hexo/device.h>
 #include <hexo/driver.h>
 
-int errno;
-
 #if defined(CONFIG_MUTEK_CONSOLE)
 extern struct device_s *tty_dev;
 #endif

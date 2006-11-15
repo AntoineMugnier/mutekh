@@ -26,7 +26,6 @@
  * Compute Internet checksum.
  */
 
-#if 0
 uint16_t		packet_checksum(const void	*data,
 					size_t		size)
 {
@@ -73,7 +72,6 @@ uint16_t		packet_checksum(const void	*data,
 
   return result;
 }
-#endif
 
 /*
  * Memcpy and compute Internet checksum.
