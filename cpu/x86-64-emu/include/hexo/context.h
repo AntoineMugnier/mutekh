@@ -29,49 +29,18 @@ struct cpu_context_s
 {
 };
 
-__asm__ (
-	 ".macro PUSHA64	\n"
-	 "push %rax		\n"
-	 "push %rbx		\n"
-	 "push %rcx		\n"
-	 "push %rdx		\n"
-	 "push %rsi		\n"
-	 "push %rdi		\n"
-	 "push %rbp		\n"
-	 "push %r8		\n"
-	 "push %r9		\n"
-	 "push %r10		\n"
-	 "push %r11		\n"
-	 "push %r12		\n"
-	 "push %r13		\n"
-	 "push %r14		\n"
-	 "push %r15		\n"
-	 ".endm			\n"
-	 );
-
-__asm__ (
-	 ".macro POPA64		\n"
-	 "pop %r15		\n"
-	 "pop %r14		\n"
-	 "pop %r13		\n"
-	 "pop %r12		\n"
-	 "pop %r11		\n"
-	 "pop %r10		\n"
-	 "pop %r9		\n"
-	 "pop %r8		\n"
-	 "pop %rbp		\n"
-	 "pop %rdi		\n"
-	 "pop %rsi		\n"
-	 "pop %rdx		\n"
-	 "pop %rcx		\n"
-	 "pop %rbx		\n"
-	 "pop %rax		\n"
-	 ".endm			\n"
-	 );
-
 static inline void
 cpu_context_switch(struct context_s *old, struct context_s *new)
 {
+  register reg_t tmp0 asm("rbx");
+  register reg_t tmp1 asm("r12");
+  register reg_t tmp2 asm("r13");
+
+  /* Note: gcc save and restore registers for us because all registers
+     are marked clobbered in the asm statement. This will allow gcc to
+     decide which registers must be saved so that we don't need to
+     save _all_ registers ourself */
+
   asm volatile (
 		/* save execution pointer */
 #ifdef CONFIG_COMPILE_PIC
@@ -79,31 +48,38 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	jmp	2f		\n"
 		"1:				\n"
 #else
-		"	pushq	2f		\n"
+		"	pushl	2f		\n"
 #endif
 		/* save flags */
 		"	pushf			\n"
 //		"	cli			\n" /* FIXME */
-		/* save general purpose registers on stack */
-		"	PUSHA64			\n"
 		/* save context local storage on stack */
 		"	push	(%2)		\n"
 		/* switch stack pointer */
-		"	movq	%%rsp, %0	\n"
-		"	movq	%1, %%rsp	\n"
+		"	movq	%%rsp, (%0)	\n"
+		"	movq	(%1), %%rsp	\n"
 		/* restore tls */
 		"	pop	(%2)		\n"
-		/* restore general purpose registers */
-		"	POPA64			\n"
 		/* restore flags */
 		"	popf			\n"
 		/* restore execution pointer */
 		"	retq			\n"
 		"2:				\n"
-		: "=m,m" (old->stack_ptr)
-		: "r,m" (new->stack_ptr)
-		, "r,r" (CPU_LOCAL_ADDR(__cpu_context_data_base))
+
+		/* these input registers will be clobbered */
+		: "=r" (tmp0)
+		, "=r" (tmp1)
+		, "=r" (tmp2)
+
+		/* input args */
+		: "0" (&old->stack_ptr)
+		, "1" (&new->stack_ptr)
+		, "2" (CPU_LOCAL_ADDR(__cpu_context_data_base))
+
+		/* remaining registers will be clobbered too */
 		: "memory"
+		, "%rax", /* "%rbx", */ "%rcx", "%rdx", "%rbp", "%rsi", "%rdi"
+		, "%r8", "%r9", "%r10", "%r11", /* "%r12", */ /*"%r13", */ "%r14", "%r15"
 		);
 }
 
@@ -115,8 +91,6 @@ cpu_context_jumpto(struct context_s *new)
 		"	movq	%0, %%rsp	\n"
 		/* restore tls */
 		"	pop	(%1)		\n"
-		/* restore general purpose registers */
-		"	POPA64			\n"
  		/* restore flags */
 		"	popf			\n"
 		/* restore execution pointer */
