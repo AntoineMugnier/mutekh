@@ -26,19 +26,24 @@
 
 #define ARCH_SEGMENT_H_
 
+#include <assert.h>
+
 #include "hexo/types.h"
 #include "hexo/alloc.h"
 #include "string.h"
 
-/* cpu template segment load address defined in ld script*/
-extern __ldscript_symbol_t __cpu_data_start, __cpu_data_end;
-
 /* System global heap memory */
 extern __ldscript_symbol_t __system_heap_start;
+
+#ifdef CONFIG_SMP
+/* cpu template segment load address defined in ld script*/
+extern __ldscript_symbol_t __cpu_data_start, __cpu_data_end;
+#endif
 
 static inline void *
 arch_cpudata_alloc(void)
 {
+#ifdef CONFIG_SMP
   void			*cls;
 
   /* allocate memory and copy from template */
@@ -48,6 +53,10 @@ arch_cpudata_alloc(void)
     }
 
   return cls;
+#else
+  assert(0);
+  return NULL;
+#endif
 }
 
 /* context template segment load address defined in ld script*/

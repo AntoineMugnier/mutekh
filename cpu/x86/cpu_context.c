@@ -41,6 +41,11 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   /* push execution pointer */
   *--context->stack_ptr = (uintptr_t)entry;	/* EIP */
 
+  /* initial frame pointer */
+#ifdef CONFIG_COMPILE_FRAMEPTR
+  *--context->stack_ptr = (reg_t)NULL;
+#endif
+
   /* push default flags */
   *--context->stack_ptr = 0x00000046;	/* EFLAGS */
 

@@ -32,9 +32,7 @@ struct cpu_context_s
 static inline void
 cpu_context_switch(struct context_s *old, struct context_s *new)
 {
-  register reg_t tmp0 asm("rbx");
-  register reg_t tmp1 asm("r12");
-  register reg_t tmp2 asm("r13");
+  register reg_t	tmp0, tmp1, tmp2;
 
   /* Note: gcc save and restore registers for us because all registers
      are marked clobbered in the asm statement. This will allow gcc to
@@ -50,6 +48,10 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 #else
 		"	pushl	2f		\n"
 #endif
+#ifdef CONFIG_COMPILE_FRAMEPTR
+		/* save frame pointer */
+		"	push	%%rbp		\n"
+#endif
 		/* save flags */
 		"	pushf			\n"
 //		"	cli			\n" /* FIXME */
@@ -62,14 +64,18 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	pop	(%2)		\n"
 		/* restore flags */
 		"	popf			\n"
+#ifdef CONFIG_COMPILE_FRAMEPTR
+		/* restore frame pointer */
+		"	pop	%%rbp		\n"
+#endif
 		/* restore execution pointer */
 		"	retq			\n"
 		"2:				\n"
 
 		/* these input registers will be clobbered */
-		: "=r" (tmp0)
-		, "=r" (tmp1)
-		, "=r" (tmp2)
+		: "=a" (tmp0)
+		, "=b" (tmp1)
+		, "=c" (tmp2)
 
 		/* input args */
 		: "0" (&old->stack_ptr)
@@ -78,8 +84,8 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 
 		/* remaining registers will be clobbered too */
 		: "memory"
-		, "%rax", /* "%rbx", */ "%rcx", "%rdx", "%rbp", "%rsi", "%rdi"
-		, "%r8", "%r9", "%r10", "%r11", /* "%r12", */ /*"%r13", */ "%r14", "%r15"
+		, /* "%rax"*, */ /* "%rbx", */ /* "%rcx", */ "%rdx", "%rbp", "%rsi", "%rdi"
+		, "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15"
 		);
 }
 
@@ -93,6 +99,10 @@ cpu_context_jumpto(struct context_s *new)
 		"	pop	(%1)		\n"
  		/* restore flags */
 		"	popf			\n"
+#ifdef CONFIG_COMPILE_FRAMEPTR
+		/* restore frame pointer */
+		"	pop	%%rbp		\n"
+#endif
 		/* restore execution pointer */
 		"	retq			\n"
 		:
@@ -107,6 +117,9 @@ cpu_context_set_stack(uintptr_t stack, void *jumpto)
 {
   asm volatile (
 		"	movq	%0, %%rsp	\n"
+#ifdef CONFIG_COMPILE_FRAMEPTR
+		"	xorq	%%rbp, %%rbp	\n"
+#endif
 		"	jmpq	*%1		\n"
 		:
 		: "r,m" (stack), "r,r" (jumpto)

@@ -55,6 +55,7 @@ arch_cpudata_alloc(void)
   return cls;
 #else
   assert(0);
+  return NULL;
 #endif
 }
 

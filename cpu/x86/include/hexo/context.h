@@ -46,6 +46,10 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 #else
 		"	pushl	2f		\n"
 #endif
+#ifdef CONFIG_COMPILE_FRAMEPTR
+		/* save frame pointer */
+		"	push	%%ebp		\n"
+#endif
 		/* save flags */
 		"	pushf			\n"
 		"	cli			\n"
@@ -58,6 +62,10 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	pop	%%gs		\n"
 		/* restore flags */
 		"	popf			\n"
+#ifdef CONFIG_COMPILE_FRAMEPTR
+		/* restore frame pointer */
+		"	pop	%%ebp		\n"
+#endif
 		/* restore execution pointer */
 		"	ret			\n"
 		"2:				\n"
@@ -87,6 +95,10 @@ cpu_context_jumpto(struct context_s *new)
 		"	pop	%%gs		\n"
 		/* restore flags */
 		"	popf			\n"
+#ifdef CONFIG_COMPILE_FRAMEPTR
+		/* restore frame pointer */
+		"	pop	%%ebp		\n"
+#endif
 		/* restore execution pointer */
 		"	ret			\n"
 		:
@@ -100,6 +112,9 @@ cpu_context_set_stack(uintptr_t stack, void *jumpto)
 {
   asm volatile (
 		"	movl	%0, %%esp	\n"
+#ifdef CONFIG_COMPILE_FRAMEPTR
+		"	xorl	%%ebp, %%ebp	\n"
+#endif
 		"	jmpl	*%1		\n"
 		:
 		: "r,m" (stack), "r,r" (jumpto)
