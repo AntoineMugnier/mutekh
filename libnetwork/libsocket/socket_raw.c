@@ -459,9 +459,9 @@ static _GETSOCKOPT(getsockopt_raw)
       case SOL_IP:
 	if (optname == IP_HDRINCL)
 	  {
-	    int			*enabled;
+	    int_fast32_t	*enabled;
 
-	    if (*optlen < sizeof (int))
+	    if (*optlen < sizeof (int_fast32_t))
 	      {
 		fd->error = EINVAL;
 		return -1;
@@ -470,7 +470,7 @@ static _GETSOCKOPT(getsockopt_raw)
 	    enabled = optval;
 	    *enabled = pv->header;
 
-	    *optlen = sizeof (int);
+	    *optlen = sizeof (int_fast32_t);
 	  }
 	else
 	  return getsockopt_inet(fd, optname, optval, optlen);
@@ -495,7 +495,7 @@ static _GETSOCKOPT(getsockopt_raw)
 	    filt = optval;
 	    filt->data = pv->icmp_mask;
 
-	    *optlen = sizeof (int);
+	    *optlen = sizeof (struct icmp_filter);
 	    break;
 	  }
       default:
@@ -534,9 +534,9 @@ static _SETSOCKOPT(setsockopt_raw)
       case SOL_IP:
 	if (optname == IP_HDRINCL)
 	  {
-	    const int		*enable;
+	    const int_fast32_t	*enable;
 
-	    if (optlen < sizeof (int))
+	    if (optlen < sizeof (int_fast32_t))
 	      {
 		fd->error = EINVAL;
 		return -1;
@@ -559,7 +559,7 @@ static _SETSOCKOPT(setsockopt_raw)
 		return -1;
 	      }
 
-	    if (optlen < sizeof (int))
+	    if (optlen < sizeof (struct icmp_filter))
 	      {
 		fd->error = EINVAL;
 		return -1;

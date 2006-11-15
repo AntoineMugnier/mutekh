@@ -148,8 +148,9 @@
 
 #define ICMP_FILTER		1
 
-struct icmp_filter {
-	uint32_t		data;
+struct		icmp_filter
+{
+  uint32_t	data;
 };
 
 /* socklen type */
@@ -169,15 +170,15 @@ struct ip_mreqn
   {
     struct in_addr imr_multiaddr;	/* IP multicast address of group */
     struct in_addr imr_address;		/* local IP address of interface */
-    int	imr_ifindex;			/* Interface index */
+    int_fast32_t	imr_ifindex;			/* Interface index */
   };
 
 /* Structure used for IP_PKTINFO.  */
-struct in_pktinfo
+struct			in_pktinfo
   {
-    int ipi_ifindex;			/* Interface index  */
-    struct in_addr ipi_spec_dst;	/* Routing destination address  */
-    struct in_addr ipi_addr;		/* Header destination address  */
+    int_fast32_t	ipi_ifindex;			/* Interface index  */
+    struct in_addr	ipi_spec_dst;	/* Routing destination address  */
+    struct in_addr	ipi_addr;		/* Header destination address  */
   };
 
 /* I/O vector is used for messages */
@@ -200,7 +201,7 @@ struct msghdr
     void *msg_control;		/* Ancillary data (eg BSD filedesc passing). */
     size_t msg_controllen;	/* Ancillary data buffer length.  */
 
-    int msg_flags;		/* Flags on received message.  */
+    int_fast32_t msg_flags;		/* Flags on received message.  */
   };
 
 /* Structure used for storage of ancillary data object information.  */
@@ -208,29 +209,29 @@ struct cmsghdr
   {
     size_t cmsg_len;		/* Length of data in cmsg_data plus length
 				   of cmsghdr structure.  */
-    int cmsg_level;		/* Originating protocol.  */
-    int cmsg_type;		/* Protocol specific type.  */
+    int_fast32_t cmsg_level;		/* Originating protocol.  */
+    int_fast32_t cmsg_type;		/* Protocol specific type.  */
   };
 
-#define CMSG_DATA(cmsg) ((unsigned char *) ((struct cmsghdr *) (cmsg) + 1))
+#define CMSG_DATA(cmsg) ((uint8_t *) ((struct cmsghdr *) (cmsg) + 1))
 
 /* for PF_PACKET */
 struct sockaddr_pkt
 {
-	unsigned short spkt_family;
-	unsigned char spkt_device[14];
-	unsigned short spkt_protocol;
+	uint_fast16_t spkt_family;
+	uint8_t spkt_device[14];
+	uint_fast16_t spkt_protocol;
 };
 
 struct sockaddr_ll
 {
-	unsigned short	sll_family;
-	unsigned short	sll_protocol;
-	int		sll_ifindex;
-	unsigned short	sll_hatype;
-	unsigned char	sll_pkttype;
-	unsigned char	sll_halen;
-	unsigned char	sll_addr[8];
+	uint_fast16_t	sll_family;
+	uint_fast16_t	sll_protocol;
+	int_fast32_t	sll_ifindex;
+	uint_fast16_t	sll_hatype;
+	uint8_t	sll_pkttype;
+	uint8_t	sll_halen;
+	uint8_t	sll_addr[8];
 };
 
 /* Packet types */
@@ -244,12 +245,12 @@ struct sockaddr_ll
 #define PACKET_DROP_MEMBERSHIP		2
 #define PACKET_RECV_OUTPUT		3
 
-struct packet_mreq
+struct		packet_mreq
 {
-	int		mr_ifindex;
-	unsigned short	mr_type;
-	unsigned short	mr_alen;
-	unsigned char	mr_address[8];
+  int_fast32_t	mr_ifindex;
+  uint_fast16_t	mr_type;
+  uint_fast16_t	mr_alen;
+  uint8_t	mr_address[8];
 };
 
 #define PACKET_MR_MULTICAST	0
@@ -321,41 +322,41 @@ typedef struct socket_s *socket_t;
  * Socket API prototypes.
  */
 
-#define _SOCKET(f)	error_t (f)(socket_t	fd,	\
-				    int		domain,	\
-				    int		type,	\
-				    int		protocol)
+#define _SOCKET(f)	error_t (f)(socket_t		fd,	\
+				    int_fast32_t	domain,	\
+				    int_fast32_t	type,	\
+				    int_fast32_t	protocol)
 
-#define _BIND(f)	int (f)(socket_t	fd,	\
-				struct sockaddr	*addr,	\
-				socklen_t	len)
+#define _BIND(f)	int_fast32_t (f)(socket_t		fd,	\
+					 struct sockaddr	*addr,	\
+					 socklen_t		len)
 
-#define _GETSOCKNAME(f)	int (f)(socket_t	fd,	\
-				struct sockaddr	*addr,	\
-				socklen_t	*len)
+#define _GETSOCKNAME(f)	int_fast32_t (f)(socket_t		fd,	\
+					 struct sockaddr	*addr,	\
+					 socklen_t		*len)
 
-#define _CONNECT(f)	int (f)(socket_t	fd,	\
-				struct sockaddr	*addr,	\
-				socklen_t	len)
+#define _CONNECT(f)	int_fast32_t (f)(socket_t		fd,	\
+					 struct sockaddr	*addr,	\
+					 socklen_t		len)
 
-#define _GETPEERNAME(f)	int (f)(socket_t	fd,	\
-				struct sockaddr	*addr,	\
-				socklen_t	*len)
+#define _GETPEERNAME(f)	int_fast32_t (f)(socket_t		fd,	\
+					 struct sockaddr	*addr,	\
+					 socklen_t		*len)
 
-#define _SEND(f)	ssize_t (f)(socket_t	fd,	\
-				    const void	*buf,	\
-				    size_t	n,	\
-				    int		flags)
+#define _SEND(f)	ssize_t (f)(socket_t		fd,	\
+				    const void		*buf,	\
+				    size_t		n,	\
+				    int_fast32_t	flags)
 
-#define _RECV(f)	ssize_t (f)(socket_t	fd,	\
-				    void	*buf,	\
-				    size_t	n,	\
-				    int		flags)
+#define _RECV(f)	ssize_t (f)(socket_t		fd,	\
+				    void		*buf,	\
+				    size_t		n,	\
+				    int_fast32_t	flags)
 
 #define _SENDTO(f)	ssize_t (f)(socket_t		fd,		\
 				    const void		*buf,		\
 				    size_t		n,		\
-				    int			flags,		\
+				    int_fast32_t	flags,		\
 				    struct sockaddr	*addr,		\
 				    socklen_t		addr_len,	\
 				    const struct msghdr	*message)
@@ -363,14 +364,14 @@ typedef struct socket_s *socket_t;
 #define _SENDTO_LIB(f)	ssize_t (f)(socket_t		fd,		\
 				    const void		*buf,		\
 				    size_t		n,		\
-				    int			flags,		\
+				    int_fast32_t	flags,		\
 				    struct sockaddr	*addr,		\
 				    socklen_t		addr_len)
 
 #define _RECVFROM(f)	ssize_t (f)(socket_t		fd,		\
 				    void		*buf,		\
 				    size_t		n,		\
-				    int			flags,		\
+				    int_fast32_t	flags,		\
 				    struct sockaddr	*addr,		\
 				    socklen_t		*addr_len,	\
 				    struct msghdr	*message)
@@ -378,39 +379,39 @@ typedef struct socket_s *socket_t;
 #define _RECVFROM_LIB(f) ssize_t (f)(socket_t		fd,		\
 				    void		*buf,		\
 				    size_t		n,		\
-				    int			flags,		\
+				    int_fast32_t	flags,		\
 				    struct sockaddr	*addr,		\
 				    socklen_t		*addr_len)
 
 #define _SENDMSG(f)	ssize_t (f)(socket_t		fd,		\
 				    const struct msghdr	*message,	\
-				    int			flags)
+				    int_fast32_t	flags)
 
 #define _RECVMSG(f)	ssize_t (f)(socket_t		fd,		\
 				    struct msghdr	*message,	\
-				    int			flags)
+				    int_fast32_t	flags)
 
-#define _GETSOCKOPT(f)	int (f)(socket_t	fd,		\
-				int		level,		\
-				int		optname,	\
-				void		*optval,	\
-				socklen_t	*optlen)
+#define _GETSOCKOPT(f)	int_fast32_t (f)(socket_t	fd,		\
+					 int_fast32_t	level,		\
+					 int_fast32_t	optname,	\
+					 void		*optval,	\
+					 socklen_t	*optlen)
 
-#define _SETSOCKOPT(f)	int (f)(socket_t	fd,		\
-				int		level,		\
-				int		optname,	\
-				const void	*optval,	\
-				socklen_t	optlen)
+#define _SETSOCKOPT(f)	int_fast32_t (f)(socket_t	fd,		\
+					 int_fast32_t	level,		\
+					 int_fast32_t	optname,	\
+					 const void	*optval,	\
+					 socklen_t	optlen)
 
-#define _LISTEN(f)	int (f)(socket_t	fd,	\
-				int		n)
+#define _LISTEN(f)	int_fast32_t (f)(socket_t	fd,	\
+					 int_fast32_t	n)
 
-#define _ACCEPT(f)	int (f)(socket_t	fd,		\
-				struct sockaddr	*addr,		\
-				socklen_t	*addr_len)
+#define _ACCEPT(f)	int_fast32_t (f)(socket_t		fd,		\
+					 struct sockaddr	*addr,		\
+					 socklen_t		*addr_len)
 
-#define _SHUTDOWN(f)	int (f)(socket_t	fd,	\
-				int		how)
+#define _SHUTDOWN(f)	int_fast32_t (f)(socket_t	fd,	\
+					 int_fast32_t	how)
 
 typedef _SOCKET(_socket_t);
 typedef _BIND(_bind_t);
@@ -455,22 +456,22 @@ struct			socket_api_s
 
 _RECVMSG(recvmsg);
 _SENDMSG(sendmsg);
-int getsockopt_socket(socket_t	fd,
-		      int	optname,
-		      void	*optval,
-		      socklen_t	*optlen);
-int setsockopt_socket(socket_t		fd,
-		      int		optname,
-		      const void	*optval,
-		      socklen_t		optlen);
-int setsockopt_inet(socket_t	fd,
-		    int		optname,
-		    const void	*optval,
-		    socklen_t	optlen);
-int getsockopt_inet(socket_t	fd,
-		    int		optname,
-		    void	*optval,
-		    socklen_t	*optlen);
+int_fast32_t getsockopt_socket(socket_t		fd,
+			       int_fast32_t	optname,
+			       void		*optval,
+			       socklen_t	*optlen);
+int_fast32_t setsockopt_socket(socket_t		fd,
+			       int_fast32_t	optname,
+			       const void	*optval,
+			       socklen_t	optlen);
+int_fast32_t setsockopt_inet(socket_t		fd,
+			     int_fast32_t	optname,
+			     const void		*optval,
+			     socklen_t		optlen);
+int_fast32_t getsockopt_inet(socket_t		fd,
+			     int_fast32_t	optname,
+			     void		*optval,
+			     socklen_t		*optlen);
 _SHUTDOWN(shutdown_socket);
 
 /*
@@ -500,8 +501,8 @@ extern const struct socket_api_s	raw_socket;
 struct				socket_s
 {
   const struct socket_api_s	*f;
-  int				type;
-  int				shutdown;
+  int_fast32_t			type;
+  int_fast32_t			shutdown;
   error_t			error;
   bool_t			broadcast;
   bool_t			keepalive;

@@ -26,7 +26,7 @@
 #define SOCKET_HEXO_H
 
 /* Create a new socket */
-socket_t			socket(int domain, int type, int protocol);
+socket_t	socket(int_fast32_t domain, int_fast32_t type, int_fast32_t protocol);
 
 /* Give the socket FD the local address ADDR (which is LEN bytes long).  */
 static inline __attribute__((always_inline)) _BIND(bind)

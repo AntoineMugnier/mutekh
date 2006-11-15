@@ -28,8 +28,6 @@ struct			socket_udp_pv_s
 {
   struct net_udp_desc_s	*desc;
   uint_fast32_t		family;
-
-  int			shutdown;
 };
 
 #endif

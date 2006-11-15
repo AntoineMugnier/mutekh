@@ -46,7 +46,6 @@ static _SOCKET(socket_udp)
   struct socket_udp_pv_s	*pv;
   pv = fd->pv = mem_alloc(sizeof (struct socket_udp_pv_s), MEM_SCOPE_NETWORK);
   pv->desc = NULL;
-  pv->shutdown = -1;
 
   switch (domain)
     {
@@ -236,21 +235,11 @@ static _SHUTDOWN(shutdown_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
 
-  if (how != SHUT_RDWR && how != SHUT_RD && how != SHUT_WR)
-    {
-      fd->error = EINVAL;
-      return -1;
-    }
-
-  /* check combinations */
-  if (how == SHUT_RDWR || (pv->shutdown == SHUT_RD && how == SHUT_WR) ||
-      (pv->shutdown == SHUT_WR && how == SHUT_RD))
-    pv->shutdown = SHUT_RDWR;
-  else
-    pv->shutdown = how;
+  if (shutdown_socket(fd, how))
+    return -1;
 
   /* close the descriptor if needed */
-  if (pv->desc != NULL && pv->shutdown == SHUT_RDWR)
+  if (pv->desc != NULL && fd->shutdown == SHUT_RDWR)
     {
       udp_close(pv->desc);
       pv->desc = NULL;

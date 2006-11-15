@@ -184,32 +184,33 @@ static TIMER_CALLBACK(profiling)
 }
 #endif
 
+ sem_t sem;
+
 void *toto(void *p)
 {
   printf("wait...");
-  sem_wait(p);
+  //sem_wait(&sem);
   printf("ok\n");
 }
 
 void *net_up(void *p)
 {
   pthread_t th;
-  sem_t sem;
 
-#ifdef CONFIG_NETWORK
-
-#if 0
+#if 1
   sem_init(&sem, 0, 0);
 
-  pthread_create(&th, NULL, toto, &sem);
+  //pthread_create(&th, NULL, toto, NULL);
 
   int i;
-  for (i = 0; i < 1000000000; i++)
+  for (i = 0; 0 && i < 1000000000; i++)
     ;
 
   printf("post\n");
-  sem_post(&sem);
+  // sem_post(&sem);
 #endif
+
+#ifdef CONFIG_NETWORK
 
   if_up("eth0");
   if_up("eth1");
@@ -308,11 +309,11 @@ int_fast8_t		_main()
   /*
    * Enable AC (on linux sim)
    */
-
+#if 0
   asm volatile("	pushf						\n"
 	       "	orl	$0x40000, (%esp)			\n"
 	       "	popf						\n");
-
+#endif
 
   pthread_create(&th, NULL, net_up, NULL);
 

@@ -24,7 +24,7 @@
 /* Create a new socket of type TYPE in domain DOMAIN, using
    protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
    Returns a file descriptor for the new socket, or NULL for errors.  */
-socket_t			socket(int domain, int type, int protocol)
+socket_t			socket(int_fast32_t domain, int_fast32_t type, int_fast32_t protocol)
 {
   const struct socket_api_s	*api;
   socket_t			sock;
@@ -186,10 +186,10 @@ _RECVMSG(recvmsg)
  * Setsock opt, SOL_SOCKET level.
  */
 
-int setsockopt_socket(socket_t		fd,
-		      int		optname,
-		      const void	*optval,
-		      socklen_t		optlen)
+int_fast32_t setsockopt_socket(socket_t		fd,
+			       int_fast32_t	optname,
+			       const void	*optval,
+			       socklen_t	optlen)
 {
   switch (optname)
     {
@@ -226,9 +226,9 @@ int setsockopt_socket(socket_t		fd,
       /* allow sending/receiving broadcast */
       case SO_BROADCAST:
 	{
-	  const int		*enable;
+	  const int_fast32_t	*enable;
 
-	  if (optlen < sizeof (int))
+	  if (optlen < sizeof (int_fast32_t))
 	    {
 	      fd->error = EINVAL;
 	      return -1;
@@ -241,9 +241,9 @@ int setsockopt_socket(socket_t		fd,
       /* allow keepalive packets */
       case SO_KEEPALIVE:
 	{
-	  const int		*enable;
+	  const int_fast32_t	*enable;
 
-	  if (optlen < sizeof (int))
+	  if (optlen < sizeof (int_fast32_t))
 	    {
 	      fd->error = EINVAL;
 	      return -1;
@@ -265,8 +265,8 @@ int setsockopt_socket(socket_t		fd,
  * Getsock opt, SOL_SOCKET level.
  */
 
-int getsockopt_socket(socket_t	fd,
-		      int	optname,
+int_fast32_t getsockopt_socket(socket_t	fd,
+		      int_fast32_t	optname,
 		      void	*optval,
 		      socklen_t	*optlen)
 {
@@ -311,9 +311,9 @@ int getsockopt_socket(socket_t	fd,
       /* broadcast enabled */
       case SO_BROADCAST:
 	{
-	  int			*enabled;
+	  int_fast32_t	*enabled;
 
-	  if (*optlen < sizeof (int))
+	  if (*optlen < sizeof (int_fast32_t))
 	    {
 	      fd->error = EINVAL;
 	      return -1;
@@ -322,15 +322,15 @@ int getsockopt_socket(socket_t	fd,
 	  enabled = optval;
 	  *enabled = fd->broadcast;
 
-	  *optlen = sizeof (int);
+	  *optlen = sizeof (int_fast32_t);
 	}
 	break;
       /* keepalive enabled */
       case SO_KEEPALIVE:
 	{
-	  int			*enabled;
+	  int_fast32_t	*enabled;
 
-	  if (*optlen < sizeof (int))
+	  if (*optlen < sizeof (int_fast32_t))
 	    {
 	      fd->error = EINVAL;
 	      return -1;
@@ -339,15 +339,15 @@ int getsockopt_socket(socket_t	fd,
 	  enabled = optval;
 	  *enabled = fd->keepalive;
 
-	  *optlen = sizeof (int);
+	  *optlen = sizeof (int_fast32_t);
 	}
 	break;
       /* socket type */
       case SO_TYPE:
 	{
-	  int			*type;
+	  int_fast32_t	*type;
 
-	  if (*optlen < sizeof (int))
+	  if (*optlen < sizeof (int_fast32_t))
 	    {
 	      fd->error = EINVAL;
 	      return -1;
@@ -356,15 +356,15 @@ int getsockopt_socket(socket_t	fd,
 	  type = optval;
 	  *type = fd->type;
 
-	  *optlen = sizeof (int);
+	  *optlen = sizeof (int_fast32_t);
 	}
 	break;
       /* socket last error */
       case SO_ERROR:
 	{
-	  int			*error;
+	  int_fast32_t	*error;
 
-	  if (*optlen < sizeof (int))
+	  if (*optlen < sizeof (int_fast32_t))
 	    {
 	      fd->error = EINVAL;
 	      return -1;
@@ -373,7 +373,7 @@ int getsockopt_socket(socket_t	fd,
 	  error = optval;
 	  *error = fd->error;
 
-	  *optlen = sizeof (int);
+	  *optlen = sizeof (int_fast32_t);
 	}
 	break;
       default:
@@ -410,10 +410,10 @@ _SHUTDOWN(shutdown_socket)
  * Setsock opt, SOL_IP level.
  */
 
-int setsockopt_inet(socket_t	fd,
-		    int		optname,
-		    const void	*optval,
-		    socklen_t	optlen)
+int_fast32_t setsockopt_inet(socket_t		fd,
+			     int_fast32_t	optname,
+			     const void		*optval,
+			     socklen_t		optlen)
 {
   switch (optname)
     {
@@ -430,10 +430,10 @@ int setsockopt_inet(socket_t	fd,
  * Getsock opt, SOL_SOCKET level.
  */
 
-int getsockopt_inet(socket_t	fd,
-		    int		optname,
-		    void	*optval,
-		    socklen_t	*optlen)
+int_fast32_t getsockopt_inet(socket_t		fd,
+			     int_fast32_t	optname,
+			     void		*optval,
+			     socklen_t		*optlen)
 {
   switch (optname)
     {

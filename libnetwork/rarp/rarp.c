@@ -38,7 +38,7 @@ error_t			rarp_client(const char	*ifname)
   socket_t		sock;
   struct net_if_s	*interface;
   ssize_t		sz;
-  int32_t		one = 1;
+  bool_t		one = 1;
   struct timeval	tv;
 
   /* create a PF_PACKET socket */
@@ -56,7 +56,7 @@ error_t			rarp_client(const char	*ifname)
   if (bind(sock, (struct sockaddr *)&addr, sizeof (struct sockaddr_ll)) < 0)
     goto leave;
 
-  if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &one, sizeof (int)) < 0)
+  if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &one, sizeof (bool_t)) < 0)
     goto leave;
 
   tv.tv_usec = 0;
