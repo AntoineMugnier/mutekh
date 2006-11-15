@@ -32,7 +32,7 @@ struct cpu_context_s
 static inline void
 cpu_context_switch(struct context_s *old, struct context_s *new)
 {
-  reg_t	tmp0, tmp1, tmp2;
+  register reg_t	tmp0, tmp1, tmp2;
 
   /* Note: gcc save and restore registers for us because all registers
      are marked clobbered in the asm statement. This will allow gcc to
