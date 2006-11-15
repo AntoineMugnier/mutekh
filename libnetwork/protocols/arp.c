@@ -401,6 +401,11 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
       return pv_ip->interface->mac;
     }
 
+  if (ip == 0xffffffff)
+    {
+      return "\xff\xff\xff\xff\xff\xff";
+    }
+
   if ((arp_entry = arp_table_lookup(&pv->table, ip)) != NULL &&
       timer_get_tick(&timer_ms) - arp_entry->timestamp < ARP_ENTRY_TIMEOUT)
     {

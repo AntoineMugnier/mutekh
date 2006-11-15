@@ -127,6 +127,7 @@ static void	ne2000_send(struct device_s	*dev)
 	fragsz = nethdr[i].size;
       else
 	fragsz = nethdr[i].size - nethdr[i + 1].size;
+
       /* write each chunk after the previous one */
       ne2000_dma_do_write(dev, nethdr[i].data, fragsz);
     }

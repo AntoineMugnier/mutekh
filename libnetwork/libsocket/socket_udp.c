@@ -72,6 +72,7 @@ static _BIND(bind_udp)
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
   struct net_udp_addr_s		local;
   error_t			err;
+  net_port_t			port;
 
   if (addr->sa_family != pv->family)
     {
@@ -79,8 +80,10 @@ static _BIND(bind_udp)
       return -1;
     }
 
-  if (socket_in_addr(fd, &local.address, addr, len, &local.port))
+  if (socket_in_addr(fd, &local.address, addr, len, &port))
     return -1;
+
+  local.port = ntohs(port);
 
   err = udp_bind(&pv->desc, &local, socket_recv_callback, pv);
 
@@ -122,6 +125,7 @@ static _CONNECT(connect_udp)
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
   struct net_udp_addr_s		remote;
   error_t			err;
+  net_port_t			port;
 
   if (addr->sa_family != pv->family)
     {
@@ -129,8 +133,10 @@ static _CONNECT(connect_udp)
       return -1;
     }
 
-  if (socket_in_addr(fd, &remote.address, addr, len, &remote.port))
+  if (socket_in_addr(fd, &remote.address, addr, len, &port))
     return -1;
+
+  remote.port = ntohs(port);
 
   err = udp_connect(&pv->desc, &remote);
 
@@ -210,13 +216,16 @@ static _SENDMSG(sendmsg_udp)
   else
     {
       struct net_udp_addr_s	remote;
+      net_port_t		port;
 
-      if (socket_in_addr(fd, &remote.address, addr, message->msg_namelen, &remote.port))
+      if (socket_in_addr(fd, &remote.address, addr, message->msg_namelen, &port))
 	{
 	  if (message->msg_iovlen != 1)
 	    mem_free(buf);
 	  return -1;
 	}
+
+      remote.port = ntohs(port);
 
       err = udp_send(pv->desc, &remote, buf, n);
     }

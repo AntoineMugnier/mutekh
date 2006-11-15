@@ -25,6 +25,7 @@
  */
 
 #include <hexo/error.h>
+#include <hexo/endian.h>
 
 #include <netinet/if.h>
 #include <netinet/in.h>
@@ -89,8 +90,7 @@ static bool_t		dhcp_ip_is_free(struct net_if_s	*interface,
   addr_sll.sll_halen = ETH_ALEN;
   memcpy(addr_sll.sll_addr, "\xff\xff\xff\xff\xff\xff", ETH_ALEN);
 
-  if (sendto(sock, &arp, sizeof (struct ether_arp), 0, (struct sockaddr *)&addr_sll, sizeof (struct sockaddr_ll)) !=
-      sizeof (struct ether_arp))
+  if (sendto(sock, &arp, sizeof (struct ether_arp), 0, (struct sockaddr *)&addr_sll, sizeof (struct sockaddr_ll)) < 0)
     goto leave;
 
   t = timer_get_tick(&timer_ms);
@@ -415,7 +415,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		  /* compute lease time */
 		  opt = dhcp_get_opt(dhcp, DHCP_LEASE);
 		  if (opt != NULL)
-		    lease->delay = ((*(uint32_t *)opt->data) / 2) * 1000;
+		    lease->delay = ((endian_be32(*(uint32_t *)opt->data)) / 2) * 1000;
 		  else
 		    lease->delay = DHCP_DFL_LEASE;
 
@@ -437,10 +437,35 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		      else if (IN_CLASSC(dhcp->yiaddr))
 			IPV4_ADDR_SET(mask, IN_CLASSC_NET);
 		    }
-		  printf("dhclient: attributed %P netmask %P\n", &addr.addr.ipv4, 4, &mask.addr.ipv4, 4);
+		  printf("dhclient:\n  attributed %u.%u.%u.%u netmask %u.%u.%u.%u\n",
+			 (addr.addr.ipv4 >> 0) & 0xff, (addr.addr.ipv4 >> 8) & 0xff,
+			 (addr.addr.ipv4 >> 16) & 0xff, (addr.addr.ipv4 >> 24) & 0xff,
+			 (mask.addr.ipv4 >> 0) & 0xff, (mask.addr.ipv4 >> 8) & 0xff,
+			 (mask.addr.ipv4 >> 16) & 0xff, (mask.addr.ipv4 >> 24) & 0xff);
 		  if_config(interface->index, IF_SET, &addr, &mask);
 
-		  /* configure default route XXX */
+		  printf("  lease time: %u seconds\n", lease->delay / 1000);
+		  if ((opt = dhcp_get_opt(dhcp, DHCP_HOSTNAME)) != NULL)
+		    {
+		      char	name[opt->len + 1];
+
+		      memcpy(name, opt->data, opt->len);
+		      name[opt->len] = 0;
+		      printf("  hostname: %s\n", name);
+		    }
+
+		  if ((opt = dhcp_get_opt(dhcp, DHCP_ROUTER)) != NULL)
+		    {
+		      uint32_t	*gateway;
+
+		      gateway = (uint32_t *)opt->data;
+
+		      printf("  gateway: %u.%u.%u.%u\n",
+			     (*gateway >> 0) & 0xff, (*gateway >> 8) & 0xff,
+			     (*gateway >> 16) & 0xff, (*gateway >> 24) & 0xff);
+
+		      /* configure default route XXX */
+		    }
 
 		  /* we've got an address :-)) */
 		  free(packet);

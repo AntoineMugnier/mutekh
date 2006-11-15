@@ -174,7 +174,11 @@ static _SENDMSG(sendmsg_packet)
     }
 
   /* retrieve the interface from the if index */
-  interface = if_get_by_index(sll->sll_ifindex);
+  if ((interface = if_get_by_index(sll->sll_ifindex)) == NULL)
+    {
+      fd->error = EINVAL;
+      return -1;
+    }
 
   /* compute packet total size */
   for (i = 0, n = 0; i < message->msg_iovlen; i++)
