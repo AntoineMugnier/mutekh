@@ -30,6 +30,13 @@ struct cpu_context_s
 static inline void
 cpu_context_switch(struct context_s *old, struct context_s *new)
 {
+  reg_t	tmp0, tmp1;
+
+  /* Note: gcc save and restore registers for us because all registers
+     are marked clobbered in the asm statement. This will allow gcc to
+     decide which registers must be saved so that we don't need to
+     save _all_ registers ourself */
+
   asm volatile (
 		/* save execution pointer */
 #ifdef CONFIG_COMPILE_PIC
@@ -42,25 +49,31 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		/* save flags */
 		"	pushf			\n"
 		"	cli			\n"
-		/* save general purpose registers on stack */
-		"	pusha			\n"
 		/* save context local storage on stack */
 		"	push	%%gs		\n"
 		/* switch stack pointer */
-		"	movl	%%esp, %0	\n"
-		"	movl	%1, %%esp	\n"
+		"	movl	%%esp, (%0)	\n"
+		"	movl	(%1), %%esp	\n"
 		/* restore tls */
 		"	pop	%%gs		\n"
-		/* restore general purpose registers */
-		"	popa			\n"
 		/* restore flags */
 		"	popf			\n"
 		/* restore execution pointer */
 		"	ret			\n"
 		"2:				\n"
-		: "=m,m" (old->stack_ptr)
-		:  "r,m" (new->stack_ptr)
+
+		/* these input registers will be clobbered */
+		: "=b" (tmp0)
+		, "=S" (tmp1)
+
+		/* input args */
+		: "0" (&old->stack_ptr)
+		, "1" (&new->stack_ptr)
+
+		/* remaining registers will be clobbered too */
 		: "memory"
+		, "%eax", /* "%ebx", */ "%ecx", "%edx"
+		, /* "%esi", */ "%edi", "%ebp"
 		);
 }
 
@@ -72,8 +85,6 @@ cpu_context_jumpto(struct context_s *new)
 		"	movl	%0, %%esp	\n"
 		/* restore tls */
 		"	pop	%%gs		\n"
-		/* restore general purpose registers */
-		"	popa			\n"
 		/* restore flags */
 		"	popf			\n"
 		/* restore execution pointer */
