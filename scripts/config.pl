@@ -851,7 +851,9 @@ sub tokens_list
 
 	next if ($$opt{nodefine} and not ($param_h{list} eq "all"));
 
-	printf("  * %-40s (%s)\n", $name, $$opt{location});
+	printf(" %s  %-40s (%s)\n",
+	       $$opt{value} ne "undefined" ? "+" : " ",
+	       $name, $$opt{location});
     }
 }
 
