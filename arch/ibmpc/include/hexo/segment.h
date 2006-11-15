@@ -26,19 +26,24 @@
 
 #define ARCH_SEGMENT_H_
 
+#include <assert.h>
+
 #include "hexo/types.h"
 #include "hexo/alloc.h"
 #include "string.h"
 
-/* cpu template segment load address defined in ld script*/
-extern __ldscript_symbol_t __cpu_data_start, __cpu_data_end;
-
 /* System global heap memory */
 extern __ldscript_symbol_t __system_heap_start;
+
+#ifdef CONFIG_SMP
+/* cpu template segment load address defined in ld script*/
+extern __ldscript_symbol_t __cpu_data_start, __cpu_data_end;
+#endif
 
 static inline void *
 arch_cpudata_alloc(void)
 {
+#ifdef CONFIG_SMP
   void			*cls;
 
   /* allocate memory and copy from template */
@@ -48,6 +53,9 @@ arch_cpudata_alloc(void)
     }
 
   return cls;
+#else
+  assert(0);
+#endif
 }
 
 /* context template segment load address defined in ld script*/
@@ -59,7 +67,7 @@ arch_contextdata_alloc(void)
   void			*tls;
 
   /* allocate memory and copy from template */
-  if ((tls = mem_alloc((char*)&__cpu_data_end - (char*)&__cpu_data_start, MEM_SCOPE_SYS)))
+  if ((tls = mem_alloc((char*)&__context_data_end - (char*)&__context_data_start, MEM_SCOPE_SYS)))
     {
       memcpy(tls, (char*)&__context_data_start, (char*)&__context_data_end - (char*)&__context_data_start);
     }
@@ -73,9 +81,6 @@ arch_contextdata_free(void *ptr)
   mem_free(ptr);
 }
 
-
-
-
 static inline void *
 arch_contextstack_alloc(size_t size)
 {
@@ -87,8 +92,6 @@ arch_contextstack_free(void *ptr)
 {
   mem_free(ptr);
 }
-
-
 
 #endif
 

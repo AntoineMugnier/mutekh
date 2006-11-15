@@ -64,8 +64,10 @@ cpu_global_init(void)
   for (i = ARCH_GDT_FIRST_ALLOC; i < ARCH_GDT_SIZE; i++)
     gdt[i].seg.available = 1;
 
+#ifdef CONFIG_SMP
   /* copy boot section below 1Mb for slave CPUs bootup */
   memcpy((void*)ARCH_SMP_BOOT_ADDR, (char*)&__boot_start, (char*)&__boot_end - (char*)&__boot_start);
+#endif
 
   return 0;
 }
@@ -119,8 +121,10 @@ cpu_x86_segdesc_free(cpu_x86_segsel_t sel)
 
 struct cpu_cld_s
 {
+#ifdef CONFIG_SMP
   /* pointer to CPU local storage */
   void				*cpu_local_storage;
+#endif
   /* CPU id */
   uint32_t			id;
   /* CPU Interrupt descriptor table */
@@ -145,9 +149,11 @@ static void cpu_x86_init_apic(uint32_t cpu_id)
 
 struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
 {
-  struct cpu_cld_s	*cld;
+#ifdef CONFIG_SMP
   void			*cls;
-  uint16_t			cls_sel;
+  uint16_t		cls_sel;
+#endif
+  struct cpu_cld_s	*cld;
   uint_fast16_t		i;
 
   /* set GDT pointer */
@@ -163,6 +169,7 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
 
   /* setup cpu local storage */
 
+#ifdef CONFIG_SMP
   if (!(cls = arch_cpudata_alloc()))
     goto err_cls;
 
@@ -173,6 +180,9 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
 
   cpu_x86_datasegfs_use(cls_sel, 0);
 
+  CPU_LOCAL_SET(__cpu_data_base, cls);
+#endif
+
   /* activate defined segments */
 
   cpu_x86_dataseg_use(ARCH_GDT_DATA_INDEX, 0);
@@ -180,7 +190,6 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
   cpu_x86_codeseg_use(ARCH_GDT_CODE_INDEX, 0);
 
   CPU_LOCAL_SET(cpu_cld, cld);
-  CPU_LOCAL_SET(__cpu_data_base, cls);
 
   /* fill IDT with exceptions entry points */
 
@@ -220,7 +229,9 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
   return cld;
 
  err_cls_seg:
+#ifdef CONFIG_SMP
   mem_free(cls);
+#endif
  err_cls:
   mem_free(cld);
  err_cld:
@@ -231,7 +242,7 @@ void cpu_start_other_cpu(void)
 {
 #ifdef CONFIG_SMP
   struct cpu_x86_apic_s	*apic = cpu_apic_get_regaddr();
-  uint32_t			i;
+  uint32_t		i;
 
   /* broadcast an INIT IPI to other CPU */
   cpu_mem_write_32((uintptr_t)&apic->icr_0_31, 0x000c4500);

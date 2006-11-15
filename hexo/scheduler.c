@@ -22,7 +22,7 @@ __sched_candidate(sched_queue_root_t *root)
 {
   struct sched_context_s	*next;
 
-  if (!(next = __sched_candidate_noidle(root)))
+  if ((next = __sched_candidate_noidle(root)) == NULL)
     next = CPU_LOCAL_ADDR(sched_idle);
 
   return next;

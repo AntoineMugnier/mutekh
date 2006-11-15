@@ -69,7 +69,7 @@
 # define CPU_LOCAL
 
 /** cpu local storage variable assignement */
-# define CPU_LOCAL_SET(n, v)  (n) = (v)
+# define CPU_LOCAL_SET(n, v)  ((n) = (v))
 
 /** cpu local storage variable read access */
 # define CPU_LOCAL_GET(n)    (n)
