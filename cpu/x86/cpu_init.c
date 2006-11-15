@@ -181,8 +181,6 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
   cpu_x86_datasegfs_use(cls_sel, 0);
 
   CPU_LOCAL_SET(__cpu_data_base, cls);
-#else
-  cpu_x86_datasegfs_use(ARCH_GDT_DATA_INDEX, 0);
 #endif
 
   /* activate defined segments */

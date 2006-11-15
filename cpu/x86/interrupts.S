@@ -36,6 +36,11 @@
 
 #define ENTRY_ALIGN	16
 
+#ifdef CONFIG_SMP
+# define CLS_SEG	%fs:
+#else
+# define CLS_SEG
+#endif
 
 /** interruption entry point template */
 #define PUT_ENTRY(n, lbl)			\
@@ -48,7 +53,7 @@
 #define PUT_TAIL(callback, lbl)			\
 lbl:						; \
 	pushl	%eax				; \
-	call	%fs: *(callback)		; \
+	call	CLS_SEG *(callback)		; \
 	add	$4, %esp			; \
 	popa					; \
 	iret
@@ -63,7 +68,7 @@ lbl:						; \
 	pushl	%ebx				; \
 	pushl	40(%esp)			; \
 	pushl	%eax				; \
-	call	%fs: *(callback)		; \
+	call	CLS_SEG *(callback)		; \
 	add	$20, %esp			; \
 	popa					; \
 	iret
@@ -78,7 +83,7 @@ lbl:						; \
 	pushl	%ebx				; \
 	pushl	44(%esp)			; \
 	pushl	%eax				; \
-	call	%fs: *(callback)		; \
+	call	CLS_SEG *(callback)		; \
 	add	$24, %esp			; \
 	popa					; \
 	iret

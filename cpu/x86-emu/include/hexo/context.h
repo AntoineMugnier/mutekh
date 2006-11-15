@@ -63,6 +63,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		: "=m,m" (old->stack_ptr)
 		: "r,m" (new->stack_ptr)
 		, "r,r" (CPU_LOCAL_ADDR(__cpu_context_data_base))
+		: "memory"
 		);
 }
 

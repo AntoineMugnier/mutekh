@@ -36,7 +36,7 @@
 #define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
 
 /** context local storage variable assignement from different context */
-#define CONTEXT_LOCAL_FOREIGN_SET(tls, n, v) { __asm__ ("mov %0, (%1,%2)" : : "r" ((typeof(n))v), "r" (&n), "r" (tls)) ; }
+#define CONTEXT_LOCAL_FOREIGN_SET(tls, n, v) { __asm__ ("mov %0, (%1,%2)" : : "r" ((typeof(n))v), "r" (&n), "r" (tls) : "memory") ; }
 
 /** context local storage variable assignement */
 #define CONTEXT_LOCAL_SET(n, v)  { __asm__ ("mov %1, %%gs:%0" : "=m" (n) : "r" ((typeof(n))v)); }

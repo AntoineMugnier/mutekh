@@ -50,11 +50,20 @@ static CONTEXT_ENTRY(sched_context_idle)
     {
       struct sched_context_s	*next;
 
-      cpu_interrupt_process();
+      cpu_interrupt_enable();
+
+      /* do not wait if several cpus are running because context may
+	 be put in running queue by an other cpu with no interrupt */
 #if !defined(CONFIG_SMP) || defined(CONFIG_HEXO_IPI)
       /* CPU sleep waiting for interrupts */
       cpu_interrupt_wait();
 #endif
+
+      /* Let enough time for pending interrupts to execute and assume
+	 memory is clobbered to force scheduler root queue
+	 reloading after interrupts execution. */
+      cpu_interrupt_process();
+
       /* try to switch to next context */
       cpu_interrupt_disable();
       sched_queue_wrlock(root);

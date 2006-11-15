@@ -102,10 +102,16 @@ cpu_interrupt_process(void)
 {
   __asm__ volatile (
 		    "sti\n"
+    /* nop is required here to let enough time for pending interrupts
+       to execute on some processors */
 		    "nop\n"
 		    :
 		    :
-		    : "memory");
+    /* memory clobber is important here as cpu_interrupt_process()
+       will let pending intterupts change global variables checked in
+       a function loop (scheduler root queue for instance) */
+		    : "memory"
+		    );
 }
 
 static inline void
@@ -153,10 +159,7 @@ cpu_interrupt_getstate(void)
 static inline void
 cpu_interrupt_wait(void)
 {
-  __asm__ volatile ("hlt"
-		    :
-		    :
-		    : "memory");
+  __asm__ volatile ("hlt");
 }
 
 #endif

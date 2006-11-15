@@ -60,6 +60,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"2:				\n"
 		: "=m,m" (old->stack_ptr)
 		:  "r,m" (new->stack_ptr)
+		: "memory"
 		);
 }
 

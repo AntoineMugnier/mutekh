@@ -336,6 +336,7 @@ cpu_x86_dataseg_use(uint_fast16_t index, uint_fast8_t rpl)
 		    "movw	%0, %%es\n"
 		    :
 		    : "r" (val)
+		    : "memory"
 		    );
 }
 
@@ -348,6 +349,7 @@ cpu_x86_datasegfs_use(uint_fast16_t index, uint_fast8_t rpl)
 		    "movw	%0, %%fs\n"
 		    :
 		    : "r" (val)
+		    : "memory"
 		    );
 }
 
@@ -361,6 +363,7 @@ cpu_x86_dataseggs_use(uint_fast16_t index, uint_fast8_t rpl)
 		    "movw	%0, %%gs\n"
 		    :
 		    : "r" (val)
+		    : "memory"
 		    );
 }
 
@@ -380,6 +383,7 @@ cpu_x86_stackseg_use(uint_fast16_t index, uint_fast8_t rpl)
 		    "movw	%0, %%ss\n"
 		    :
 		    : "r" (val)
+		    : "memory"
 		    );
 }
 
@@ -410,6 +414,7 @@ cpu_x86_codeseg_use(uint_fast16_t index, uint_fast8_t rpl)
 		    : "=r" (offset)
 		    , "=m" (desc.offset)
 		    : "m" (desc)
+		    : "memory"
 		    );
 }
 

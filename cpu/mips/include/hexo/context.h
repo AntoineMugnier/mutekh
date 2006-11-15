@@ -96,6 +96,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 #else
 # error Mips ABI support missing in context.h
 #endif
+		, "memory"
 		);
 }
 
