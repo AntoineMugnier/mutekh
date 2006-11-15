@@ -1,0 +1,36 @@
+
+#define EMU_CPP(x) x
+
+/*
+ * mmap syscalls arguments
+ */
+
+#include <asm/mman.h>
+
+EMU_CPP(#define) EMU_PROT_READ		PROT_READ
+EMU_CPP(#define) EMU_PROT_WRITE		PROT_WRITE
+EMU_CPP(#define) EMU_PROT_EEMU_CPPEC	PROT_EEMU_CPPEC
+EMU_CPP(#define) EMU_PROT_NONE		PROT_NONE
+
+EMU_CPP(#define) EMU_MAP_SHARED		MAP_SHARED
+EMU_CPP(#define) EMU_MAP_PRIVATE	MAP_PRIVATE
+EMU_CPP(#define) EMU_MAP_FIEMU_CPPED	MAP_FIEMU_CPPED
+EMU_CPP(#define) EMU_MAP_ANONYMOUS	MAP_ANONYMOUS
+EMU_CPP(#define) EMU_MAP_FILE		MAP_FILE
+
+/*
+ * open syscalls arguments
+ */
+
+#include <asm/fcntl.h>
+
+EMU_CPP(#define) EMU_O_RDONLY		O_RDONLY
+EMU_CPP(#define) EMU_O_WRONLY		O_WRONLY
+EMU_CPP(#define) EMU_O_RDWR		O_RDWR
+
+/*
+ * ioctl/tuntap syscalls arguments
+ */
+
+#include <linux/if_tun.h>
+

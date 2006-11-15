@@ -56,7 +56,7 @@ INCS=-nostdinc -D__MUTEK__ \
 %.hdef:
 	@echo '    CPP     $@'
 	mkdir -p $(BUILD_DIR)/$(@D)
-	$(CPP) $(SRC_DIR)/$(patsubst %.hdef,%.def,$@) > $(BUILD_DIR)/$@
+	$(CPP) $(SRC_DIR)/$(patsubst %.hdef,%.def,$@) | grep '#define' > $(BUILD_DIR)/$@
 
 subdirs-lists = $(foreach name,$(subdirs),$(patsubst %,$(BUILD_DIR)$(H)/%.list,$(name)/.$(name)))
 CC=$(CPUTOOLS)gcc
