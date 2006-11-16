@@ -110,7 +110,7 @@ static _GETSOCKNAME(getsockname_udp)
       return -1;
     }
 
-  if (socket_addr_in(fd, &pv->desc->address.address, addr, len, htons(pv->desc->address.port)))
+  if (socket_addr_in(fd, &pv->desc->address, addr, len, htons(pv->desc->port)))
     return -1;
 
   return 0;

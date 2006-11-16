@@ -50,8 +50,8 @@
 
 static udp_desc_root_t	descriptors = CONTAINER_ROOT_INITIALIZER(udp_desc, HASHLIST, NOLOCK);
 
-CONTAINER_FUNC(static inline, udp_desc, HASHLIST, udp_desc, NOLOCK, address);
-CONTAINER_KEY_FUNC(static inline, udp_desc, HASHLIST, udp_desc, NOLOCK, address);
+CONTAINER_FUNC(static inline, udp_desc, HASHLIST, udp_desc, NOLOCK, port);
+CONTAINER_KEY_FUNC(static inline, udp_desc, HASHLIST, udp_desc, NOLOCK, port);
 
 /*
  * Descriptors contructor and destructor.
@@ -140,7 +140,8 @@ error_t			udp_bind(struct net_udp_desc_s	**desc,
   d->bound = 1;
   d->callback = callback;
   d->pv = pv;
-  memcpy(&d->address, local, sizeof (struct net_udp_addr_s));
+  d->port = local->port; /* XXX check availability */
+  memcpy(&d->address, &local->address, sizeof (struct net_addr_s));
   if (!udp_desc_push(&descriptors, d))
     {
       udp_desc_obj_refdrop(d);
@@ -198,7 +199,7 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
 
   /* select a port */
   if (desc != NULL && desc->bound)
-    local_port = desc->address.port;
+    local_port = desc->port;
   else
     {
       local_port = UDP_TEMP_PORT_BASE + (rand() % UDP_TEMP_PORT_RANGE);
@@ -245,17 +246,31 @@ void			libudp_signal(struct net_packet_s	*packet,
 				      struct udphdr		*hdr)
 {
   struct net_udp_desc_s	*desc;
-  struct net_udp_addr_s	local;
   struct net_udp_addr_s	remote;
   uint8_t		*buff;
   uint_fast16_t		size;
+  net_port_t		port;
 
   /* build local address descriptor */
-  memcpy(&local.address, &packet->tADDR, sizeof (struct net_addr_s));
-  local.port = hdr->dest;
+  port = hdr->dest;
 
   /* do we have a callback to handle the packet */
-  if ((desc = udp_desc_lookup(&descriptors, (void *)&local)) == NULL)
+  for (desc = udp_desc_lookup(&descriptors, port);
+       desc != NULL;
+       desc = udp_desc_lookup_next(&descriptors, desc, port))
+    {
+      if (packet->tADDR.family == addr_ipv4)
+	{
+	  if (packet->tADDR.addr.ipv4 == desc->address.addr.ipv4 ||
+	      desc->address.addr.ipv4 == INADDR_ANY)
+	    break;
+	}
+      else
+	assert(!"bouh");
+    }
+
+  /* port unreachable */
+  if (desc == NULL)
     {
       packet->stage -= 2;
 
@@ -294,18 +309,25 @@ void		libudp_destroy(void)
 NET_SIGNAL_ERROR(libudp_signal_error)
 {
   struct net_udp_desc_s	*desc;
-  struct net_udp_addr_s	local;
-
-  memcpy(&local.address, address, sizeof (struct net_addr_s));
-  local.port = port;
 
   /* do we have a callback to handle the error */
-  if ((desc = udp_desc_lookup(&descriptors, (void *)&local)) != NULL)
+  for (desc = udp_desc_lookup(&descriptors, port);
+       desc != NULL;
+       desc = udp_desc_lookup_next(&descriptors, desc, port))
     {
-      if (desc->callback_error != NULL)
+      if (address->family == addr_ipv4)
 	{
-	  desc->callback_error(desc, error, desc->pv_error);
+	  if (address->addr.ipv4 == desc->address.addr.ipv4 ||
+	      desc->address.addr.ipv4 == INADDR_ANY)
+	    break;
 	}
+      else
+	assert(!"bouh");
+    }
+
+  if (desc != NULL && desc->callback_error != NULL)
+    {
+      desc->callback_error(desc, error, desc->pv_error);
     }
 }
 

@@ -64,8 +64,10 @@
 
 #define MOUNT_NULL	0
 #define MOUNT_MOUNT	1
+#define MOUNT_DUMP	2
 #define MOUNT_UMOUNT	3
 #define MOUNT_UMOUNTALL	4
+#define MOUNT_EXPORT	5
 
 /*
  * nfsd calls
@@ -97,6 +99,14 @@
 #define FHSIZE	32
 
 typedef uint8_t nfs_handle_t[FHSIZE];
+
+/*
+ * Misc.
+ */
+
+#define MAXNAMLEN	255
+#define MAXPATHLEN	1024
+#define MAXDATA		8192
 
 /*
  * NFS file types.
@@ -156,6 +166,7 @@ CONTAINER_KEY_TYPE(rpcb, SCALAR, id);
 
 struct			nfs_s
 {
+  struct net_udp_desc_s	*conn;
   struct net_udp_addr_s	local;
   struct net_addr_s	address;	/* server address */
   struct net_udp_addr_s	portmap;	/* portmap server address */
@@ -181,7 +192,17 @@ struct			nfs_auth_s
   uint32_t		aux_gid;
   uint32_t		verifier;
   uint32_t		verif_len;
-};
+} __attribute__((packed));
+
+/*
+ * NFS time value.
+ */
+
+struct			nfs_timeval_s
+{
+  uint32_t		tv_sec;
+  uint32_t		tv_usec;
+} __attribute__((packed));
 
 /*
  * NFS file attributes
@@ -200,10 +221,126 @@ struct			nfs_attr_s
   uint32_t		blocks;
   uint32_t		fsid;
   uint32_t		fileid;
-  uint64_t		atime;
-  uint64_t		mtime;
-  uint64_t		ctime;
-};
+  struct nfs_timeval_s	atime;
+  struct nfs_timeval_s	mtime;
+  struct nfs_timeval_s	ctime;
+} __attribute__((packed));
+
+/*
+ * NFS file attributes (user)
+ */
+
+struct			nfs_user_attr_s
+{
+  uint32_t		mode;
+  uint32_t		uid;
+  uint32_t		gid;
+  uint32_t		size;
+  struct nfs_timeval_s	atime;
+  struct nfs_timeval_s	mtime;
+} __attribute__((packed));
+
+/*
+ * NFS status with handle and attributes
+ */
+
+struct			nfs_handle_attr_s
+{
+  nfs_handle_t		handle;
+  struct nfs_attr_s	attr;
+} __attribute__((packed));
+
+/*
+ * NFS status with attributes and data
+ */
+
+struct			nfs_attr_data_s
+{
+  struct nfs_attr_s	attr;
+  uint32_t		len;
+  uint8_t		data[1];
+} __attribute__((packed));
+
+/*
+ * NFS stat filesystem
+ */
+
+struct			nfs_statfs_s
+{
+  uint32_t		transfer_unit;
+  uint32_t		block_size;
+  uint32_t		blocks;
+  uint32_t		blocks_free;
+  uint32_t		blocks_avail;
+} __attribute__((packed));
+
+/*
+ * NFS status union
+ */
+
+struct				nfs_status_s
+{
+  uint32_t			status;
+  union
+  {
+    struct nfs_attr_s		attr;
+    nfs_handle_t		handle;
+    struct nfs_attr_data_s	attr_data;
+    struct nfs_handle_attr_s	handle_attr;
+    struct nfs_statfs_s		statfs;
+    uint8_t			data[1];
+  } u;
+} __attribute__((packed));
+
+/*
+ * NFS directory operation
+ */
+
+struct			nfs_dirop_s
+{
+  uint32_t		path_len;
+  uint8_t		path[1];
+} __attribute__((packed));
+
+/*
+ * NFS read request
+ */
+
+struct			nfs_read_s
+{
+  uint32_t		offset;
+  uint32_t		count;
+  uint32_t		__unused;
+} __attribute__((packed));
+
+/*
+ * NFS write request
+ */
+
+struct			nfs_write_s
+{
+  uint32_t		offset;
+  uint32_t		count;
+  uint32_t		__unused;
+  uint8_t		data[1];
+} __attribute__((packed));
+
+/*
+ * NFS request with handle
+ */
+
+struct				nfs_request_handle_s
+{
+  nfs_handle_t			handle;
+  union
+  {
+    struct nfs_user_attr_s	sattr;
+    struct nfs_dirop_s		dirop;
+    struct nfs_read_s		read;
+  } u;
+} __attribute__((packed));
+
+/* XXX Create, link, slink, readdir */
 
 /*
  * RPC call.
@@ -217,7 +354,7 @@ struct			rpc_call_s
   uint32_t		prog;
   uint32_t		vers;
   uint32_t		proc;
-};
+} __attribute__((packed));
 
 /*
  * RPC reply.
@@ -231,7 +368,7 @@ struct			rpc_reply_s
   uint32_t		verifier;
   uint32_t		v2;
   uint32_t		astatus;
-};
+} __attribute__((packed));
 
 /*
  * Prototypes.
@@ -239,19 +376,43 @@ struct			rpc_reply_s
 
 error_t		nfs_init(struct nfs_s	*server);
 void		nfs_destroy(struct nfs_s	*server);
+
+/* mount and umount operations */
 error_t		nfs_mount(struct nfs_s	*server,
 			  char		*path,
 			  nfs_handle_t	root);
-error_t		nfs_umount(struct nfs_s	*server);
-ssize_t		nfs_read(struct nfs_s	*server,
-			 nfs_handle_t	handle,
-			 void		*data,
-			 off_t		offset,
-			 size_t		size);
+error_t		nfs_umount(struct nfs_s	*server,
+			   char		*path);
+error_t		nfs_umount_all(struct nfs_s	*server);
+
+/* lookup &é attributes */
 error_t		nfs_lookup(struct nfs_s		*server,
 			   char			*path,
 			   nfs_handle_t		directory,
 			   nfs_handle_t		handle,
 			   struct nfs_attr_s	*stat);
+error_t		nfs_getattr(struct nfs_s	*server,
+			    nfs_handle_t	handle,
+			    struct nfs_attr_s	*stat);
+error_t		nfs_setattr(struct nfs_s		*server,
+			    nfs_handle_t		handle,
+			    struct nfs_user_attr_s	*stat,
+			    struct nfs_attr_s		*after);
+
+/* read/write operations */
+ssize_t		nfs_read(struct nfs_s	*server,
+			 nfs_handle_t	handle,
+			 void		*data,
+			 off_t		offset,
+			 size_t		size);
+
+/* file creation, removing, renaming, links */
+
+/* readdir */
+
+/* statfs */
+error_t		nfs_statfs(struct nfs_s		*server,
+			   nfs_handle_t		root,
+			   struct nfs_statfs_s	*stats);
 
 #endif

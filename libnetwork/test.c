@@ -119,13 +119,22 @@ void			*nfs_test(void *p)
 
   memset(&nfs, 0, sizeof (nfs));
   IPV4_ADDR_SET(nfs.address, 0x0a02026d);
-  IPV4_ADDR_SET(nfs.local.address, 0x0a0202f0);
   nfs_init(&nfs);
 
   printf("mountd port: %u\nnfsd port: %u\n", ntohs(nfs.mountd.port), ntohs(nfs.nfsd.port));
 
   if (!nfs_mount(&nfs, "/home/buck/export", root))
     {
+      struct nfs_statfs_s	fs;
+
+      if (!nfs_statfs(&nfs, root, &fs))
+	{
+	  printf(" NFS transfer unit: %u bytes/request\n", fs.transfer_unit);
+	  printf(" NFS filesystem: %u Mb total, %u Mb free\n",
+		 (uint32_t)(((uint64_t)fs.blocks * fs.block_size) / 1048576),
+		 (uint32_t)(((uint64_t)fs.blocks_free * fs.block_size) / 1048576));
+	}
+
       if (!nfs_lookup(&nfs, "test", root, test, NULL))
 	{
 	  char buf[1024];
@@ -135,7 +144,7 @@ void			*nfs_test(void *p)
 	  printf("read(%d): %P\n", read, buf, read);
 	}
 
-      nfs_umount(&nfs);
+      nfs_umount(&nfs, "/home/buck/export");
     }
 
   nfs_destroy(&nfs);
@@ -268,7 +277,7 @@ void *net_up(void *p)
   pthread_create(&th, NULL, tcp_test, NULL);
 #endif
 
-#if 0
+#ifdef CONFIG_NETWORK_NFS
   pthread_create(&th, NULL, nfs_test, NULL);
 #endif
 

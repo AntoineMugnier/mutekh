@@ -84,7 +84,8 @@ OBJECT_TYPE(udp_desc_obj, REFCOUNT, struct net_udp_desc_s); /* XXX no refcount *
 struct					net_udp_desc_s
 {
   /* local address of the descriptor */
-  struct net_udp_addr_s			address;
+  net_port_t				port;
+  struct net_addr_s			address;
   bool_t				connected;
   bool_t				bound;
 
@@ -111,7 +112,7 @@ OBJECT_DESTRUCTOR(udp_desc_obj);
 OBJECT_FUNC(static inline, udp_desc_obj, REFCOUNT, udp_desc_obj, obj_entry);
 
 CONTAINER_TYPE(udp_desc, HASHLIST, struct net_udp_desc_s, NOLOCK, udp_desc_obj, list_entry, 64);
-CONTAINER_KEY_TYPE(udp_desc, AGGREGATE, address);
+CONTAINER_KEY_TYPE(udp_desc, SCALAR, port);
 
 /*
  * Prototypes
