@@ -21,6 +21,43 @@
 
 #include <netinet/socket.h>
 
+/*
+ * Shortcut macro to get an option verifying user arguments.
+ */
+
+#define GETOPT(_type_,_code_)									\
+  {												\
+    _type_	*val;										\
+												\
+    if (*optlen < sizeof (_type_))								\
+      {												\
+	fd->error = EINVAL;									\
+	return -1;										\
+      }												\
+												\
+    val = optval;										\
+    _code_											\
+    *optlen = sizeof (_type_);									\
+  }
+
+/*
+ * Shortcut macro to set an option.
+ */
+
+#define SETOPT(_type_,_code_)									\
+  {												\
+    _type_	*val;										\
+												\
+    if (optlen < sizeof (_type_))								\
+      {												\
+	fd->error = EINVAL;									\
+	return -1;										\
+      }												\
+    												\
+    val = optval;										\
+    _code_											\
+  }
+
 /* Create a new socket of type TYPE in domain DOMAIN, using
    protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
    Returns a file descriptor for the new socket, or NULL for errors.  */
@@ -98,6 +135,7 @@ socket_t			socket(int_fast32_t domain, int_fast32_t type, int_fast32_t protocol)
   sock->keepalive = 0;
   sock->recv_timeout = 0;
   sock->send_timeout = 0;
+  sock->linger = 0;
   sock->f = api;
   api->socket(sock, domain, type, protocol);
   return sock;
@@ -195,63 +233,41 @@ int_fast32_t setsockopt_socket(socket_t		fd,
     {
       /* recv timeout */
       case SO_RCVTIMEO:
+	SETOPT(const struct timeval,
 	{
-	  const struct timeval	*tv;
-
-	  if (optlen < sizeof (struct timeval))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  tv = optval;
-	  fd->recv_timeout = tv->tv_sec * 1000 + tv->tv_usec / 1000;
-	}
+	  fd->recv_timeout = val->tv_sec * 1000 + val->tv_usec / 1000;
+	});
 	break;
       /* send timeout */
       case SO_SNDTIMEO:
+	SETOPT(const struct timeval,
 	{
-	  const struct timeval	*tv;
-
-	  if (optlen < sizeof (struct timeval))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  tv = optval;
-	  fd->send_timeout = tv->tv_sec * 1000 + tv->tv_usec / 1000;
-	}
+	  fd->send_timeout = val->tv_sec * 1000 + val->tv_usec / 1000;
+	});
 	break;
       /* allow sending/receiving broadcast */
       case SO_BROADCAST:
+	SETOPT(const bool_t,
 	{
-	  const bool_t	*enable;
-
-	  if (optlen < sizeof (bool_t))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  enable = optval;
-	  fd->broadcast = *enable;
-	}
+	  fd->broadcast = *val;
+	});
 	break;
       /* allow keepalive packets */
       case SO_KEEPALIVE:
+	SETOPT(const bool_t,
 	{
-	  const bool_t	*enable;
-
-	  if (optlen < sizeof (bool_t))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  enable = optval;
-	  fd->keepalive = *enable;
-	}
+	  fd->keepalive = *val;
+	});
+	break;
+      /* linger timeout */
+      case SO_LINGER:
+	SETOPT(const struct linger,
+	{
+	  if (val->l_onoff)
+	    fd->linger = val->l_linger;
+	  else
+	    fd->linger = 0;
+	});
 	break;
       default:
 	fd->error = ENOPROTOOPT;
@@ -274,107 +290,55 @@ int_fast32_t getsockopt_socket(socket_t	fd,
     {
       /* recv timeout */
       case SO_RCVTIMEO:
+	GETOPT(struct timeval,
 	{
-	  struct timeval	*tv;
-
-	  if (*optlen < sizeof (struct timeval))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  tv = optval;
-	  tv->tv_usec = (fd->recv_timeout % 1000) * 1000;
-	  tv->tv_sec = fd->recv_timeout / 1000;
-
-	  *optlen = sizeof (struct timeval);
-	}
+	  val->tv_usec = (fd->recv_timeout % 1000) * 1000;
+	  val->tv_sec = fd->recv_timeout / 1000;
+	});
 	break;
       /* send timeout */
       case SO_SNDTIMEO:
+	GETOPT(struct timeval,
 	{
-	  struct timeval	*tv;
-
-	  if (*optlen < sizeof (struct timeval))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  tv = optval;
-	  tv->tv_usec = (fd->send_timeout % 1000) * 1000;
-	  tv->tv_sec = fd->send_timeout / 1000;
-
-	  *optlen = sizeof (struct timeval);
-	}
+	  val->tv_usec = (fd->send_timeout % 1000) * 1000;
+	  val->tv_sec = fd->send_timeout / 1000;
+	});
 	break;
       /* broadcast enabled */
       case SO_BROADCAST:
+	GETOPT(bool_t,
 	{
-	  bool_t	*enabled;
-
-	  if (*optlen < sizeof (bool_t))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  enabled = optval;
-	  *enabled = fd->broadcast;
-
-	  *optlen = sizeof (bool_t);
-	}
+	  *val = fd->broadcast;
+	});
 	break;
       /* keepalive enabled */
       case SO_KEEPALIVE:
+	GETOPT(bool_t,
 	{
-	  bool_t	*enabled;
-
-	  if (*optlen < sizeof (bool_t))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  enabled = optval;
-	  *enabled = fd->keepalive;
-
-	  *optlen = sizeof (bool_t);
-	}
+	  *val = fd->keepalive;
+	});
 	break;
       /* socket type */
       case SO_TYPE:
+	GETOPT(int_fast32_t,
 	{
-	  int_fast32_t	*type;
-
-	  if (*optlen < sizeof (int_fast32_t))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  type = optval;
-	  *type = fd->type;
-
-	  *optlen = sizeof (int_fast32_t);
-	}
+	  *val = fd->type;
+	});
 	break;
       /* socket last error */
       case SO_ERROR:
+	GETOPT(int_fast32_t,
 	{
-	  int_fast32_t	*error;
-
-	  if (*optlen < sizeof (int_fast32_t))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  error = optval;
-	  *error = fd->error;
-
-	  *optlen = sizeof (int_fast32_t);
-	}
+	  *val = fd->error;
+	});
+	break;
+      /* linger timeout */
+      case SO_LINGER:
+	GETOPT(struct linger,
+	{
+	  val->l_onoff = !!fd->linger;
+	  val->l_linger = fd->linger;
+	});
 	break;
       default:
 	fd->error = ENOPROTOOPT;

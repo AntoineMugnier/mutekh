@@ -39,6 +39,18 @@
 static socket_table_root_t	sock_raw = CONTAINER_ROOT_INITIALIZER(socket_table, DLIST, NOLOCK);
 
 /*
+ * Receive timeout callback.
+ */
+
+static TIMER_CALLBACK(recv_timeout)
+{
+  socket_t			fd = (socket_t)pv;
+  struct socket_raw_pv_s	*pv_packet = (struct socket_raw_pv_s *)fd->pv;
+
+  sem_post(&pv_packet->recv_sem);
+}
+
+/*
  * Create a RAW socket. Allocate private data.
  */
 
@@ -395,6 +407,9 @@ static _RECVMSG(recvmsg_raw)
   struct net_packet_s		*packet;
   ssize_t			sz;
   struct net_header_s		*nethdr;
+  timer_delay_t			start;
+  struct timer_event_s		timeout;
+  bool_t			timeout_started = 0;
 
   if (flags & MSG_OOB || flags & MSG_TRUNC)
     {
@@ -407,6 +422,8 @@ static _RECVMSG(recvmsg_raw)
       fd->error = EINVAL;
       return -1;
     }
+
+  start = timer_get_tick(&timer_ms);
 
   /* try to grab a packet */
  again:
@@ -429,10 +446,30 @@ static _RECVMSG(recvmsg_raw)
 	  return -1;
 	}
 
+      /* if there is a receive timeout, start a timer */
+      if (!timeout_started && fd->recv_timeout)
+	{
+	  timeout.callback = recv_timeout;
+	  timeout.delay = fd->recv_timeout;
+	  timeout.pv = fd;
+	  timeout_started = 1;
+	  timer_add_event(&timer_ms, &timeout);
+	}
+
       sem_wait(&pv->recv_sem);
+
+      /* has timeout expired ? */
+      if (timeout_started)
+	if (timer_get_tick(&timer_ms) - start >= (fd->recv_timeout * 5) / 6)
+	  {
+	    fd->error = EAGAIN;
+	    return -1;
+	  }
 
       goto again;
     }
+
+  timer_cancel_event(&timeout, 0);
 
   addr = message->msg_name;
 

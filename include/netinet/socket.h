@@ -267,6 +267,11 @@ struct timeval {
 	suseconds_t	tv_usec;	/* microseconds */
 };
 
+struct linger {
+  bool_t	l_onoff;
+  timer_delay_t	l_linger;
+};
+
 /* The following constants should be used for the second parameter of
    `shutdown'.  */
 #define SHUT_RD		0	/* No more receptions.  */
@@ -491,6 +496,7 @@ struct				socket_s
   bool_t			keepalive;
   timer_delay_t			recv_timeout;
   timer_delay_t			send_timeout;
+  timer_delay_t			linger;
   void				*pv;
 
   CONTAINER_ENTRY_TYPE(DLIST)	list_entry;

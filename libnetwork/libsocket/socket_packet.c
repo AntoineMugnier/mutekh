@@ -37,6 +37,18 @@
 socket_table_root_t	pf_packet = CONTAINER_ROOT_INITIALIZER(socket_table, DLIST, NOLOCK);
 
 /*
+ * Receive timeout callback.
+ */
+
+static TIMER_CALLBACK(recv_timeout)
+{
+  socket_t			fd = (socket_t)pv;
+  struct socket_packet_pv_s	*pv_packet = (struct socket_packet_pv_s *)fd->pv;
+
+  sem_post(&pv_packet->recv_sem);
+}
+
+/*
  * Create a PACKET socket. Allocate private data.
  */
 
@@ -258,6 +270,9 @@ static _RECVMSG(recvmsg_packet)
   struct sockaddr_ll		*sll;
   ssize_t			sz;
   struct net_header_s		*nethdr;
+  timer_delay_t			start;
+  struct timer_event_s		timeout;
+  bool_t			timeout_started = 0;
 
   if (flags & MSG_OOB)
     {
@@ -272,6 +287,8 @@ static _RECVMSG(recvmsg_packet)
     }
 
   sll = (struct sockaddr_ll *)message->msg_name;
+
+  start = timer_get_tick(&timer_ms);
 
   /* try to grab a packet */
  again:
@@ -288,8 +305,6 @@ static _RECVMSG(recvmsg_packet)
 
   if (packet == NULL)
     {
-      struct timer_event_s	timeout;
-
       if (flags & MSG_DONTWAIT)
 	{
 	  fd->error = EAGAIN;
@@ -297,21 +312,30 @@ static _RECVMSG(recvmsg_packet)
 	}
 
       /* if there is a receive timeout, start a timer */
-#if 0
-      if (pv->recv_timeout)
+      if (!timeout_started && fd->recv_timeout)
 	{
 	  timeout.callback = recv_timeout;
-	  timeout.delay = pv->recv_timeout;
-
-	  timer_add_event(&timer_ms, &timeout); /* XXX */
+	  timeout.delay = fd->recv_timeout;
+	  timeout.pv = fd;
+	  timeout_started = 1;
+	  timer_add_event(&timer_ms, &timeout);
 	}
-#endif
 
       /* wait */
       sem_wait(&pv->recv_sem);
 
+      /* has timeout expired ? */
+      if (timeout_started)
+	if (timer_get_tick(&timer_ms) - start >= (fd->recv_timeout * 5) / 6)
+	  {
+	    fd->error = EAGAIN;
+	    return -1;
+	  }
+
       goto again;
     }
+
+  timer_cancel_event(&timeout, 0);
 
   /* fill the address if required */
   if (sll != NULL)
