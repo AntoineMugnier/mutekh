@@ -21,28 +21,32 @@
 
 /*
 
+    %config CONFIG_HEXO_MEMALLOC_ALGO
+    desc Enable use of memory allocation algorithm.
+    desc Incremental memory allocation without freeing is performed if this token is undefined.
+    default defined
+    require CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
+    single CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
+    %config end
+
     %config CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT
     desc select memory allocation algorithm first fit
+    parent CONFIG_HEXO_MEMALLOC_ALGO
     default defined
-    exclude CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
     %config end
 
     %config CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
     desc select memory allocation algorithm best fit
+    parent CONFIG_HEXO_MEMALLOC_ALGO
     default undefined
-    exclude CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT
-    %config end
-
-    %config CONFIG_HEXO_MEMALLOC_ALGO_META
-    desc	meta configuration token used to impose requirements
-    default	defined
-    flags	mandatory noexport nodefine
-    require	CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
     %config end
 
 */
 
 #include <hexo/alloc.h>
+#include <string.h>
+
+#ifdef CONFIG_HEXO_MEMALLOC_ALGO
 
 CONTAINER_FUNC(static inline, alloc_list, DLIST, alloc_list, NOLOCK, list_entry);
 
@@ -82,8 +86,6 @@ mem_alloc_region_cadidate(struct mem_alloc_region_s *region, size_t size)
   return best;
 }
 
-#else
-# error no memory allocation algorithm selected in config.h
 #endif
 
 
@@ -234,6 +236,60 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
   alloc_list_push(&region->root, hdr);
 }
 
+
+
+
+
+/************************************************************************/
+
+#else /* !CONFIG_HEXO_MEMALLOC_ALGO */
+
+void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
+{
+  void	*res, *next;
+
+  lock_spin(&region->lock);
+
+  res = region->next;
+
+#ifdef CONFIG_HEXO_MEMALLOC_DEBUG
+  memset(res, 0x5a, size);
+#endif  
+
+  next = (uint8_t*)region->next + size;
+
+  if (next > region->last)
+    res = NULL;
+
+  region->next = next;
+
+  lock_release(&region->lock);
+
+  return res;
+}
+
+void mem_alloc_region_push(void *address)
+{
+  /* no free() ! */
+}
+
+void mem_alloc_region_init(struct mem_alloc_region_s *region,
+			   void *address, void *end)
+{
+  lock_init(&region->lock);
+
+  region->next = address;
+  region->last = end;
+}
+
+#endif /* CONFIG_HEXO_MEMALLOC_ALGO */
+
+
+
+
+
+/************************************************************************/
+
 error_t mem_alloc_stats(struct mem_alloc_region_s *region,
 			size_t *alloc_blocks,
 			size_t *free_size,
@@ -255,4 +311,5 @@ error_t mem_alloc_stats(struct mem_alloc_region_s *region,
   return -ENOTSUP;
 #endif
 }
+
 

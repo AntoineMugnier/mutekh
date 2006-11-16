@@ -226,12 +226,12 @@ void sched_global_init(void)
 
 /*
 
-%config CONFIG_HEXO_SCHED_IDLE_STACK_SIZE
-desc Size of the stack allocated for idle scheduler context.
-desc Stack size is specified in stack words count.
-default 256
-flags mandatory
-%config end
+    %config CONFIG_HEXO_SCHED_IDLE_STACK_SIZE
+    desc Size of the stack allocated for idle scheduler context.
+    desc Stack size is specified in stack words count.
+    parent CONFIG_HEXO_SCHED
+    default 256
+    %config end
 
 */
 

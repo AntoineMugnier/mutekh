@@ -26,10 +26,11 @@
 #include <hexo/types.h>
 #include <stdarg.h>
 
-/* FIXME linux x86 specific */
-
 #include "arch/emu/include/hexo/syscalls_nums.hdef"
 #include "arch/emu/include/hexo/syscalls_args.hdef"
+
+
+/* FIXME linux specific ? */
 
 #ifdef CONFIG_CPU_X86_EMU
 
@@ -113,18 +114,7 @@ emu_do_syscall(uint_fast16_t id, size_t argc, ...)
   return res;
 }
 
-/******************************* mmap syscall */
-
-#define PROT_READ		0x1
-#define PROT_WRITE		0x2
-#define PROT_EXEC		0x4
-
-#define MAP_PRIVATE		0x02
-#define MAP_ANONYMOUS		0x20
-
-#define MAP_FAILED		((void *)-1)
-
-/******************************* other syscalls */
+#define EMU_MAP_FAILED ((void*)-1)
 
 #endif
 

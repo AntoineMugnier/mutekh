@@ -26,6 +26,8 @@
 #include <hexo/lock.h>
 #include <hexo/alloc.h>
 
+#include <arch/hexo/emu_syscalls.h>
+
 struct cpu_cld_s	*cpu_cld[1];
 
 /* architecture specific init function */
@@ -61,7 +63,7 @@ void arch_init()
     }
 #endif
 
-  assert(!"mutek_main*() should not return");
+  emu_do_syscall(EMU_SYSCALL_EXIT, 0);  
 }
 
 void arch_start_other_cpu(void)

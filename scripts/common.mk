@@ -57,6 +57,8 @@ INCS=-nostdinc -D__MUTEK__ \
 	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -c \
 		$(SRC_DIR)/$(H)/$(<F) -o $(BUILD_DIR)/$(H)/$@
 
+# FIXME cpp -MG do not produce the same dep (w and w/o full path) if
+# file is present or not a compile time
 %.hdef:
 	@echo '    CPP     $@'
 	mkdir -p $(BUILD_DIR)/$(@D)
@@ -76,7 +78,7 @@ OBJDUMP=$(CPUTOOLS)objdump
 print_dir:
 	test -z '$(objs)' || echo $$'\n --------  $(H)  --------'
 
-.PHONY: $(subdirs-lists) $(target)
+.PHONY: $(subdirs-lists) $(target) print_dir clean_sub clean kernel
 
 $(BUILD_DIR)$(H)/.$(DIR).list: print_dir $(objs) $(subdirs-lists) $(SRC_DIR)/$(H)/Makefile
 	cat /dev/null $(filter %.list,$^) > $@

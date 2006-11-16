@@ -27,17 +27,18 @@
     default 0x20
     %config end
 
+    %config CONFIG_HEXO_MEMALLOC_DEBUG
+    desc When enabled all allocated and freed memory blocks will filled be with 0x5a and 0xa5 bytes
+    %config end
+
     %config CONFIG_HEXO_MEMALLOC_STATS
     desc keep stats about allocated blocks count and size
-    default defined
+    depend CONFIG_HEXO_MEMALLOC_ALGO
     %config end
 
     %config CONFIG_HEXO_MEMALLOC_SIGNED
     desc When enabled all memory block headers will include a special magic value
-    %config end
-
-    %config CONFIG_HEXO_MEMALLOC_DEBUG
-    desc When enabled all allocated and freed memory blocks will filled be with 0x5a and 0xa5 bytes
+    depend CONFIG_HEXO_MEMALLOC_ALGO
     %config end
 
 */
@@ -50,10 +51,13 @@
 #include <hexo/lock.h>
 #include <hexo/endian.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_dlist.h>
 
 /***************** Memory allocatable region management ******************/
+
+#ifdef CONFIG_HEXO_MEMALLOC_ALGO
+
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_dlist.h>
 
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
 # define MEMALLOC_SIGNATURE	0x3a1b2ce1
@@ -91,6 +95,28 @@ struct mem_alloc_region_s
 #endif
 };
 
+
+
+
+
+#else /* CONFIG_HEXO_MEMALLOC_ALGO */
+
+static const size_t	mem_hdr_size = 0;
+
+struct mem_alloc_region_s
+{
+  lock_t		lock;
+  void			*next;
+  void			*last;
+};
+
+#endif /* CONFIG_HEXO_MEMALLOC_ALGO */
+
+
+
+
+
+
 void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size);
 
 void mem_alloc_region_push(void *address);
@@ -103,6 +129,11 @@ error_t mem_alloc_stats(struct mem_alloc_region_s *region,
 			size_t *free_size,
 			size_t *free_blocks);
 
+
+
+
+
+
 /***************** Memory allocation interface ******************/
 
 /** set default allocatable region */
@@ -113,7 +144,7 @@ mem_alloc_set_default(struct mem_alloc_region_s *region);
 static inline void *
 mem_alloc(size_t size, struct mem_alloc_region_s *region)
 {
-  struct mem_alloc_header_s	*hdr;
+  void *hdr;
 
   size = mem_hdr_size + ALIGN_VALUE_UP(size, CONFIG_HEXO_MEMALLOC_ALIGN);
   hdr = mem_alloc_region_pop(region, size);
@@ -123,7 +154,7 @@ mem_alloc(size_t size, struct mem_alloc_region_s *region)
 /** free allocated memory block */
 static inline void mem_free(void *ptr)
 {
-  struct mem_alloc_header_s	*hdr = (void*)((uint8_t*)ptr - mem_hdr_size);
+  void *hdr = (void*)((uint8_t*)ptr - mem_hdr_size);
 
   mem_alloc_region_push(hdr);
 }
@@ -131,7 +162,16 @@ static inline void mem_free(void *ptr)
 /** initialize memory subsystem. found in arch/name/mem_alloc.c */
 void mem_init(void);
 
+
+
+
+
 #include <arch/hexo/alloc.h>
+
+
+
+
+
 
 #ifndef MEM_SCOPE_CPU
 # define MEM_SCOPE_CPU		MEM_SCOPE_SYS

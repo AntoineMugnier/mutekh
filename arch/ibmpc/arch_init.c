@@ -97,6 +97,9 @@ void arch_init()
       mutek_main_smp();
     }
 #endif
+
+  while (1)
+    ;
 }
 
 void arch_start_other_cpu(void)

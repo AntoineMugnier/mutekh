@@ -570,6 +570,5 @@ pthread_setcanceltype(int_fast8_t type, int_fast8_t *oldtype)
 #endif /* CONFIG_PTHREAD_CANCEL */
 
 #endif
-
 #endif
 

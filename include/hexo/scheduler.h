@@ -21,14 +21,21 @@
 
 /*
 
+    %config CONFIG_HEXO_SCHED
+    desc Hexo scheduler feature is enabled
+    default defined
+    require CONFIG_HEXO_SCHED_IDLE_STACK_SIZE
+    %config end
+
     %config CONFIG_HEXO_SCHED_PREEMPT
     desc Scheduler is preemptiv
-    default undefined
+    parent CONFIG_HEXO_SCHED
     depend CONFIG_DRIVER_TIMER
     %config end
 
     %config CONFIG_HEXO_SCHED_MIGRATION
     desc Scheduler algorithm use permanent context migration among available processors
+    parent CONFIG_HEXO_SCHED
     default defined
     %config end
 
@@ -36,6 +43,10 @@
 
 #ifndef __HEXO_SCHEDULER_H__
 #define __HEXO_SCHEDULER_H__
+
+#ifndef CONFIG_HEXO_SCHED
+# warning hexo scheduler is not enabled in configuration file
+#else
 
 #include "context.h"
 
@@ -109,5 +120,6 @@ void sched_global_init(void);
 /** scheduler intialization, must be called for each processor */
 void sched_cpu_init(void);
 
+#endif
 #endif
 

@@ -22,8 +22,9 @@
 /*
 
     %config CONFIG_ARCH_EMU_MEMORY
-    desc Set the amount of memory to emulate in megabytes
-    default 16
+    desc Set the amount of memory to emulate in bytes
+    parent CONFIG_ARCH_EMU
+    default 16777216
     %config end
 
 */
@@ -43,14 +44,14 @@ void mem_init(void)
   void	*mem_end;
 
   mem_start = (void*)emu_do_syscall(EMU_SYSCALL_MMAP, 6, NULL, 
-				    CONFIG_ARCH_EMU_MEMORY * 1048576,
-				    PROT_READ | PROT_WRITE | PROT_EXEC,
-				    MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+				    CONFIG_ARCH_EMU_MEMORY,
+				    EMU_PROT_READ | EMU_PROT_WRITE | EMU_PROT_EXEC,
+				    EMU_MAP_PRIVATE | EMU_MAP_ANONYMOUS, 0, 0);
 
-  if (mem_start == MAP_FAILED)
-    emu_do_syscall(EMU_SYSCALL_EXIT, 0);
+  if (mem_start == EMU_MAP_FAILED)
+    emu_do_syscall(EMU_SYSCALL_EXIT, 1);
 
-  mem_end = (uint8_t *)mem_start + CONFIG_ARCH_EMU_MEMORY * 1048576;
+  mem_end = (uint8_t *)mem_start + CONFIG_ARCH_EMU_MEMORY;
 
   mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_HEXO_MEMALLOC_ALIGN);
   mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_HEXO_MEMALLOC_ALIGN);

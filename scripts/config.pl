@@ -99,6 +99,15 @@ sub cmd_depend
     push(@{$$opts{depend}}, "@args");
 }
 
+# add weak dependency
+
+sub cmd_parent
+{
+    my ($location, $opts, @args) = @_;
+
+    push(@{$$opts{parent}}, "@args");
+}
+
 # add definition
 
 sub cmd_provide
@@ -179,6 +188,7 @@ my %config_cmd =
  "exclude" => \&cmd_exclude,
  "default" => \&cmd_default,
  "depend" => \&cmd_depend,
+ "parent" => \&cmd_parent,
  "flags" => \&cmd_flags,
  "require" => \&cmd_require,
  "single" => \&cmd_single,
@@ -253,6 +263,7 @@ sub process_file
 		    $$opts{location} = "$file:$lnum";
 		    $$opts{name} = $name;
 		    $$opts{depend} = [];
+		    $$opts{parent} = [];
 		    $$opts{require} = [];
 		    $$opts{single} = [];
 		    $$opts{desc} = [];
@@ -335,14 +346,14 @@ my %depend_cache;
 sub process_config_depend
 {
     my $res = 1;
-    my ($orig) = @_;
+    my ($orig, $deptype, $weakdep) = @_;
 
-    if (defined $depend_cache{$orig})
+    if (defined $depend_cache{$$orig{name}.$deptype})
     {
-	return $depend_cache{$orig};
+	return $depend_cache{$$orig{name}.$deptype};
     }
 
-    foreach my $dep_and (@{$$orig{depend}})
+    foreach my $dep_and (@{$$orig{$deptype}})
     {
 	my @deps_and = split(/\s+/, $dep_and);
  	my $flag = 0;
@@ -355,7 +366,7 @@ sub process_config_depend
 	    {
 		if ($$opt{value} ne "undefined")
 		{
-		    $flag += process_config_depend($opt);
+		    $flag += process_config_depend($opt, $deptype, $weakdep);
 		}
 	    }
 	    else
@@ -367,28 +378,31 @@ sub process_config_depend
 	# return 0 if dependency not ok
 	if (not $flag)
 	{
-	    warning($$orig{vlocation}.": `".$$orig{name}."' token will be undefined ".
-		    "due to unmet dependencies; dependencies list is: ",
-		    @deps_and) if (not $$orig{nowarn});
-
-	    if (my $fb = $$orig{fallback})
+	    if (not $weakdep)
 	    {
-		$fb =~ /^([^\s=]+)=?([^\s]*)$/;
-		my $dep = $1;
-		my $val = $2 ? $2 : "defined";
-		my $opt = $config_opts{$dep};
+		warning($$orig{vlocation}.": `".$$orig{name}."' token will be undefined ".
+			"due to unmet dependencies; dependencies list is: ",
+			@deps_and);
 
-		if ($opt)
+		if (my $fb = $$orig{fallback})
 		{
-		    if ($$opt{value} eq "undefined")
+		    $fb =~ /^([^\s=]+)=?([^\s]*)$/;
+		    my $dep = $1;
+		    my $val = $2 ? $2 : "defined";
+		    my $opt = $config_opts{$dep};
+
+		    if ($opt)
 		    {
-			warning("using `".$fb."' as fall-back definition for `".$$orig{name}."'.");
-			$$opt{value} = $val;
-			process_config_provide($opt);
-		    }
-		    else
-		    {
-			warning("`".$dep."' fall-back token for `".$$orig{name}."' has already been defined, good.");
+			if ($$opt{value} eq "undefined")
+			{
+			    warning("using `".$fb."' as fall-back definition for `".$$orig{name}."'.");
+			    $$opt{value} = $val;
+			    process_config_provide($opt);
+			}
+			else
+			{
+			    warning("`".$dep."' fall-back token for `".$$orig{name}."' has already been defined, good.");
+			}
 		    }
 		}
 	    }
@@ -397,7 +411,7 @@ sub process_config_depend
 	}
     }
 
-    return ($depend_cache{$orig} = $res);
+    return ($depend_cache{$$orig{name}.$deptype} = $res);
 }
 
 ##
@@ -689,7 +703,8 @@ sub check_config
 	{
 	    if ($$opt{value} ne "undefined")
 	    {
-		if (not process_config_depend($opt))
+		if ((not process_config_depend($opt, "depend", 0)) or
+		    (not process_config_depend($opt, "parent", 1)))
 		{
 		    $$opt{value} = "undefined";
 		    process_config_unprovide($opt);
@@ -774,6 +789,10 @@ sub read_myconfig
 
 	close(FILE);
     }
+    else
+    {
+	error("unable to open/read `".$file."' configuration input file");
+    }
 }
 
 sub write_header
@@ -842,19 +861,32 @@ sub write_makefile
 
 sub tokens_list
 {
-    printf("    %-40s %s \n", "Configuration token name", "Declare location");
-    print ("="x79, "\n");
+    printf("\n    %-40s %s \n", "Configuration token name", "Declare location");
+    print ("="x79, "\n\n");
 
     foreach my $name (sort keys %config_opts)
     {
 	my $opt = $config_opts{$name};
+	my $attr;
 
 	next if ($$opt{nodefine} and not ($param_h{list} eq "all"));
 
-	printf(" %s  %-40s (%s)\n",
-	       $$opt{value} ne "undefined" ? "+" : " ",
-	       $name, $$opt{location});
+	if ($$opt{value} eq "undefined") {
+	    $attr = " ";
+	} elsif ($$opt{provided_count}) {
+	    $attr = "p";
+	} elsif ($$opt{mandatory}) {
+	    $attr = "m";
+	} elsif ($$opt{value} ne "defined") {
+	    $attr = "v";
+	} else {
+	    $attr = "+";
+	}
+
+	printf(" %s  %-40s (%s)\n", $attr, $name, $$opt{location});
     }
+
+    print("\n    (+) defined, (p) provided, (m) mandatory, (v) value.\n\n");
 }
 
 sub tokens_info
@@ -864,7 +896,7 @@ sub tokens_info
 
     if (not $opt)
     {
-	print "No `".$name." token declared\n";
+	print "No `".$name."' token declared\n";
 	return;
     }
 
@@ -888,7 +920,7 @@ sub tokens_info
 
     printf("
   declared at   :  %s
-  defined  at   :  %s
+  assigned at   :  %s
   default value :  %s
   current value :  %s
 ", $$opt{location}, $$opt{vlocation},
@@ -1001,18 +1033,19 @@ Usage: config.pl [options]
     exit 1 if $err_flag;
 
     read_myconfig($param_h{input});
-    exit 1 if $err_flag;
 
     set_config();
 
     if ($param_h{list})
     {
+	check_config();
 	tokens_list();
 	return;
     }
 
     if ($param_h{info})
     {
+	check_config();
 	set_provided_by();
 	tokens_info($param_h{info});
 	return;
@@ -1020,6 +1053,8 @@ Usage: config.pl [options]
 
     if ($param_h{header} or $param_h{makefile} or $param_h{check})
     {
+	exit 1 if $err_flag;
+
 	check_config();
 	exit 1 if $err_flag;
 

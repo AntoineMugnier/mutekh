@@ -5,8 +5,11 @@ alloc.o											\
 intconv.o										\
 printf.o										\
 rand.o											\
-sem.o											\
 timer.o
+
+ifeq ($(CONFIG_LIBC_SEMAPHORE), defined)
+objs += sem.o
+endif
 
 clean:
 
