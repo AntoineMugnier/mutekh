@@ -13,9 +13,6 @@
   - a coder integralement
   - gerer les trucs fun genre bridging
 
-* lwNFS
-  - adapter la nouvelle API UDP
-
 * libsocket
   - sockopt sur socket IP
 

@@ -107,6 +107,7 @@ typedef uint8_t nfs_handle_t[FHSIZE];
 #define MAXNAMLEN	255
 #define MAXPATHLEN	1024
 #define MAXDATA		8192
+#define NFS_COOKIESIZE	4
 
 /*
  * NFS file types.
@@ -275,6 +276,17 @@ struct			nfs_statfs_s
 } __attribute__((packed));
 
 /*
+ * NFS dir entry
+ */
+
+struct			nfs_dirent_s
+{
+  uint32_t		fileid;
+  uint32_t		len;
+  char			data[1];
+} __attribute__((packed));
+
+/*
  * NFS status union
  */
 
@@ -319,10 +331,23 @@ struct			nfs_read_s
 
 struct			nfs_write_s
 {
+  uint32_t		__unused1;
   uint32_t		offset;
+  uint32_t		__unused2;
   uint32_t		count;
-  uint32_t		__unused;
   uint8_t		data[1];
+} __attribute__((packed));
+
+/*
+ * NFS readdir
+ */
+
+typedef uint8_t nfs_cookie_t[NFS_COOKIESIZE];
+
+struct			nfs_readdir_s
+{
+  nfs_cookie_t		cookie;
+  uint32_t		count;
 } __attribute__((packed));
 
 /*
@@ -337,10 +362,10 @@ struct				nfs_request_handle_s
     struct nfs_user_attr_s	sattr;
     struct nfs_dirop_s		dirop;
     struct nfs_read_s		read;
+    struct nfs_write_s		write;
+    struct nfs_readdir_s	readdir;
   } u;
 } __attribute__((packed));
-
-/* XXX Create, link, slink, readdir */
 
 /*
  * RPC call.
@@ -379,25 +404,24 @@ void		nfs_destroy(struct nfs_s	*server);
 
 /* mount and umount operations */
 error_t		nfs_mount(struct nfs_s	*server,
-			  char		*path,
+			  const char	*path,
 			  nfs_handle_t	root);
 error_t		nfs_umount(struct nfs_s	*server,
-			   char		*path);
+			   const char	*path);
 error_t		nfs_umount_all(struct nfs_s	*server);
 
-/* lookup &é attributes */
+/* lookup & attributes */
 error_t		nfs_lookup(struct nfs_s		*server,
-			   char			*path,
+			   const char		*path,
 			   nfs_handle_t		directory,
 			   nfs_handle_t		handle,
 			   struct nfs_attr_s	*stat);
 error_t		nfs_getattr(struct nfs_s	*server,
 			    nfs_handle_t	handle,
 			    struct nfs_attr_s	*stat);
-error_t		nfs_setattr(struct nfs_s		*server,
-			    nfs_handle_t		handle,
-			    struct nfs_user_attr_s	*stat,
-			    struct nfs_attr_s		*after);
+error_t		nfs_setattr(struct nfs_s	*server,
+			    nfs_handle_t	handle,
+			    struct nfs_attr_s	*stat);
 
 /* read/write operations */
 ssize_t		nfs_read(struct nfs_s	*server,
@@ -406,9 +430,69 @@ ssize_t		nfs_read(struct nfs_s	*server,
 			 off_t		offset,
 			 size_t		size);
 
+ssize_t		nfs_write(struct nfs_s	*server,
+			  nfs_handle_t	handle,
+			  void		*data,
+			  off_t		offset,
+			  size_t	size);
+
 /* file creation, removing, renaming, links */
+error_t		nfs_create(struct nfs_s		*server,
+			   nfs_handle_t		directory,
+			   const char		*name,
+			   struct nfs_attr_s	*stat,
+			   nfs_handle_t		created,
+			   bool_t		is_dir);
+
+static inline error_t nfs_creat(struct nfs_s		*server,
+				nfs_handle_t		directory,
+				const char		*name,
+				struct nfs_attr_s	*stat,
+				nfs_handle_t		created)
+{
+  return nfs_create(server, directory, name, stat, created, 0);
+}
+
+static inline error_t nfs_mkdir(struct nfs_s		*server,
+				nfs_handle_t		directory,
+				const char		*name,
+				struct nfs_attr_s	*stat,
+				nfs_handle_t		created)
+{
+  return nfs_create(server, directory, name, stat, created, 1);
+}
+
+error_t		nfs_remove(struct nfs_s		*server,
+			   nfs_handle_t		directory,
+			   const char		*name,
+			   bool_t		is_dir);
+
+static inline error_t nfs_unlink(struct nfs_s	*server,
+				 nfs_handle_t	directory,
+				 const char	*name)
+{
+  return nfs_remove(server, directory, name, 0);
+}
+
+static inline error_t nfs_rmdir(struct nfs_s	*server,
+				nfs_handle_t	directory,
+				const char	*name)
+{
+  return nfs_remove(server, directory, name, 1);
+}
+
+/* XXX readlink, link, symlink */
 
 /* readdir */
+#define NFS_READDIR_CB(f)	bool_t	(f)(const char	*filename,	\
+					    void	*pv)
+
+typedef NFS_READDIR_CB(nfs_readdir_t);
+
+error_t		nfs_readdir(struct nfs_s	*server,
+			    nfs_handle_t	directory,
+			    nfs_readdir_t	callback,
+			    void		*pv);
 
 /* statfs */
 error_t		nfs_statfs(struct nfs_s		*server,

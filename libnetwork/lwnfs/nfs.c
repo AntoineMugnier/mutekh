@@ -19,18 +19,8 @@
 
 */
 
-#include <hexo/types.h>
-#include <netinet/in.h>
-#include <netinet/udp.h>
-
-#include <netinet/nfs.h>
-
-#include <semaphore.h>
-#include <timer.h>
-
 /*
- * NFS version 2 lightweight implementation
- * Multithreaded and read-only support
+ * NFS version 2 lightweight client (with multithreading)
  *
  * Supported NFS operations:
  *
@@ -42,8 +32,29 @@
  *  + LOOKUP: get handle to a file
  *  + READ: read data from a file
  *  + STATFS: general information on filesystem
+ *  + CREATE: create a file
+ *  + REMOVE: remove a file
+ *  + MKDIR: make a directory
+ *  + RMDIR: remove a directory
+ *  + WRITE: write data to a file
  *
+ * Coming soon:
+ *
+ *  + READLINK: follow a symbolic link
+ *  + RENAME: rename a file
+ *  + LINK: create a hard link
+ *  + SYMLINK: create a symbolic link
+ *  + READDIR: read directory content
  */
+
+#include <hexo/types.h>
+#include <netinet/in.h>
+#include <netinet/udp.h>
+
+#include <netinet/nfs.h>
+
+#include <semaphore.h>
+#include <timer.h>
 
 CONTAINER_FUNC(static inline, rpcb, HASHLIST, rpcb, NOLOCK, id);
 CONTAINER_KEY_FUNC(static inline, rpcb, HASHLIST, rpcb, NOLOCK, id);
@@ -94,12 +105,23 @@ UDP_CALLBACK(rpc_callback)
 
 static inline void	attr_endian(struct nfs_attr_s	*attr)
 {
-
-}
-
-static inline void	sattr_endian(struct nfs_user_attr_s	*attr)
-{
-
+  attr->ftype = ntohl(attr->ftype);
+  attr->mode = ntohl(attr->mode);
+  attr->nlink = ntohl(attr->nlink);
+  attr->uid = ntohl(attr->uid);
+  attr->gid = ntohl(attr->gid);
+  attr->size = ntohl(attr->size);
+  attr->blocksize = ntohl(attr->blocksize);
+  attr->rdev = ntohl(attr->rdev);
+  attr->blocks = ntohl(attr->blocks);
+  attr->fsid = ntohl(attr->fsid);
+  attr->fileid = ntohl(attr->fileid);
+  attr->atime.tv_sec = ntohl(attr->atime.tv_sec);
+  attr->atime.tv_usec = ntohl(attr->atime.tv_usec);
+  attr->ctime.tv_sec = ntohl(attr->ctime.tv_sec);
+  attr->ctime.tv_usec = ntohl(attr->ctime.tv_usec);
+  attr->mtime.tv_sec = ntohl(attr->mtime.tv_sec);
+  attr->mtime.tv_usec = ntohl(attr->mtime.tv_usec);
 }
 
 static inline void	stat_endian(struct nfs_statfs_s	*stat)
@@ -378,7 +400,7 @@ static error_t		nfs_mountd(struct nfs_s	*server,
  */
 
 error_t			nfs_mount(struct nfs_s	*server,
-				  char		*path,
+				  const char	*path,
 				  nfs_handle_t	root)
 {
   struct nfs_dirop_s	*dir;
@@ -429,7 +451,7 @@ error_t			nfs_mount(struct nfs_s	*server,
  */
 
 error_t			nfs_umount(struct nfs_s	*server,
-				   char		*path)
+				   const char	*path)
 {
   struct nfs_dirop_s	*dir;
   struct rpc_reply_s	*reply;
@@ -542,7 +564,7 @@ ssize_t				nfs_read(struct nfs_s	*server,
   if ((req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
     return -ENOMEM;
 
-  /* copy root & path to the export */
+  /* copy handle & read info */
   memcpy(req->handle, handle, sizeof (nfs_handle_t));
   req->u.read.offset = htonl(offset);
   req->u.read.count = htonl(size);
@@ -559,7 +581,10 @@ ssize_t				nfs_read(struct nfs_s	*server,
 
   if (sz < sizeof (uint32_t) || (err = status->status) != NFS_OK ||
       sz < sizeof (struct nfs_attr_s) + 2 * sizeof (uint32_t))
-    goto leave;
+    {
+      mem_free(reply);
+      return err ? ntohl(err) : -EINVAL;
+    }
 
   /* copy data */
   if ((sz = status->u.attr_data.len))
@@ -570,18 +595,66 @@ ssize_t				nfs_read(struct nfs_s	*server,
 
   mem_free(reply);
   return sz;
-
- leave:
-  mem_free(reply);
-  return err ? err : -EINVAL;
 }
+
+/*
+ * Write data to a file.
+ */
+
+ssize_t		nfs_write(struct nfs_s	*server,
+			  nfs_handle_t	handle,
+			  void		*data,
+			  off_t		offset,
+			  size_t	size)
+{
+  struct nfs_request_handle_s	*req;
+  struct rpc_reply_s		*reply;
+  struct nfs_status_s		*status;
+  size_t			sz;
+  error_t			err;
+
+  /* XXX check size */
+
+  /* allocate packet for the request */
+  sz = sizeof (nfs_handle_t) + sizeof (struct nfs_write_s) - 1 + size;
+  if ((req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
+    return -ENOMEM;
+
+  /* copy handle & write info */
+  memcpy(req->handle, handle, sizeof (nfs_handle_t));
+  req->u.write.offset = htonl(offset);
+  req->u.write.count = htonl(size);
+  req->u.write.__unused1 = req->u.write.__unused2 = 0;
+  /* copy data */
+  memcpy(req->u.write.data, data, size);
+
+  /* call mountd */
+  err = nfs_nfsd(server, req, &sz, NFS_WRITE, (void *)&reply);
+  mem_free(req);
+
+  if (err)
+    return err;
+
+  status = (struct nfs_status_s *)(reply + 1);
+
+  if (sz < sizeof (uint32_t) || (err = status->status) != NFS_OK ||
+      sz < sizeof (struct nfs_attr_s) + 2 * sizeof (uint32_t))
+    {
+      mem_free(reply);
+      return err ? ntohl(err) : -EINVAL;
+    }
+
+  mem_free(reply);
+  return size;
+}
+
 
 /*
  * Look for a file.
  */
 
 error_t				nfs_lookup(struct nfs_s		*server,
-					   char			*path,
+					   const char		*path,
 					   nfs_handle_t		directory,
 					   nfs_handle_t		handle,
 					   struct nfs_attr_s	*stat)
@@ -617,7 +690,10 @@ error_t				nfs_lookup(struct nfs_s		*server,
 
   if (sz < sizeof (uint32_t) || (err = status->status) != NFS_OK ||
       sz < sizeof (uint32_t) + sizeof (struct nfs_attr_s) + sizeof (nfs_handle_t))
-    goto leave;
+    {
+      mem_free(reply);
+      return err ? ntohl(err) : -EINVAL;
+    }
 
   /* copy stat if neeeded */
   if (stat != NULL)
@@ -631,10 +707,6 @@ error_t				nfs_lookup(struct nfs_s		*server,
 
   mem_free(reply);
   return 0;
-
- leave:
-  mem_free(reply);
-  return err ? err : -EINVAL;
 }
 
 /*
@@ -668,21 +740,18 @@ error_t				nfs_statfs(struct nfs_s		*server,
 
   status = (struct nfs_status_s *)(reply + 1);
 
-  printf("%P\n", status, sizeof (uint32_t) + sizeof (struct nfs_statfs_s));
-
   if (sz < sizeof (uint32_t) || (err = status->status) != NFS_OK ||
       sz < sizeof (uint32_t) + sizeof (struct nfs_statfs_s))
-    goto leave;
+    {
+      mem_free(reply);
+      return err ? ntohl(err) : -EINVAL;
+    }
 
   memcpy(stats, &status->u.statfs, sizeof (struct nfs_statfs_s));
   stat_endian(stats);
 
   mem_free(reply);
   return 0;
-
- leave:
-  mem_free(reply);
-  return err ? err : -EINVAL;
 }
 
 /*
@@ -704,7 +773,7 @@ error_t				nfs_getattr(struct nfs_s	*server,
   if ((req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
     return -ENOMEM;
 
-  /* copy root & path to the entity */
+  /* copy handle */
   memcpy(req->handle, handle, sizeof (nfs_handle_t));
 
   /* call mountd */
@@ -718,27 +787,25 @@ error_t				nfs_getattr(struct nfs_s	*server,
 
   if (sz < sizeof (uint32_t) || (err = status->status) != NFS_OK ||
       sz < sizeof (uint32_t) + sizeof (struct nfs_attr_s))
-    goto leave;
+    {
+      mem_free(reply);
+      return err ? ntohl(err) : -EINVAL;
+    }
 
   memcpy(stat, &status->u.attr, sizeof (struct nfs_attr_s));
   attr_endian(stat);
 
   mem_free(reply);
   return 0;
-
- leave:
-  mem_free(reply);
-  return err ? err : -EINVAL;
 }
 
 /*
  * Set attributes of a file
  */
 
-error_t				nfs_setattr(struct nfs_s		*server,
-					    nfs_handle_t		handle,
-					    struct nfs_user_attr_s	*stat,
-					    struct nfs_attr_s		*after)
+error_t				nfs_setattr(struct nfs_s	*server,
+					    nfs_handle_t	handle,
+					    struct nfs_attr_s	*stat)
 {
   struct nfs_request_handle_s	*req;
   struct rpc_reply_s		*reply;
@@ -751,10 +818,16 @@ error_t				nfs_setattr(struct nfs_s		*server,
   if ((req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
     return -ENOMEM;
 
-  /* copy root & path to the entity */
+  /* copy handle & attributes */
   memcpy(req->handle, handle, sizeof (nfs_handle_t));
-  sattr_endian(stat);
-  memcpy(&req->u.sattr, stat, sizeof (struct nfs_user_attr_s));
+  req->u.sattr.mode = htonl(stat->mode);
+  req->u.sattr.uid = htonl(stat->uid);
+  req->u.sattr.gid = htonl(stat->gid);
+  req->u.sattr.size = htonl(stat->size);
+  req->u.sattr.atime.tv_sec = htonl(stat->atime.tv_sec);
+  req->u.sattr.atime.tv_usec = htonl(stat->atime.tv_usec);
+  req->u.sattr.mtime.tv_sec = htonl(stat->mtime.tv_sec);
+  req->u.sattr.mtime.tv_usec = htonl(stat->mtime.tv_usec);
 
   /* call mountd */
   err = nfs_nfsd(server, req, &sz, NFS_SETATTR, (void *)&reply);
@@ -767,14 +840,222 @@ error_t				nfs_setattr(struct nfs_s		*server,
 
   if (sz < sizeof (uint32_t) || (err = status->status) != NFS_OK ||
       sz < sizeof (uint32_t) + sizeof (struct nfs_attr_s))
-    goto leave;
+    {
+      mem_free(reply);
+      return err ? ntohl(err) : -EINVAL;
+    }
 
   memcpy(stat, &status->u.attr, sizeof (struct nfs_attr_s));
+  attr_endian(stat);
 
   mem_free(reply);
   return 0;
+}
 
- leave:
+/*
+ * Create a new file or directory (specifying some attributes).
+ */
+
+error_t				nfs_create(struct nfs_s		*server,
+					   nfs_handle_t		directory,
+					   const char		*name,
+					   struct nfs_attr_s	*stat,
+					   nfs_handle_t		created,
+					   bool_t		is_dir)
+{
+  struct nfs_request_handle_s	*req;
+  struct nfs_user_attr_s	*sattr;
+  struct rpc_reply_s		*reply;
+  struct nfs_status_s		*status;
+  size_t			sz;
+  error_t			err;
+  size_t			path_len;
+
+  path_len = strlen(name);
+
+  /* allocate packet for the request */
+  sz = sizeof (nfs_handle_t) + sizeof (uint32_t) + ALIGN_VALUE_UP(path_len, 4) +
+    sizeof (struct nfs_user_attr_s);
+  if ((req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
+    return -ENOMEM;
+
+  /* copy root & path to the entity */
+  memcpy(req->handle, directory, sizeof (nfs_handle_t));
+  memcpy(req->u.dirop.path, name, path_len);
+  req->u.dirop.path[path_len] = 0;
+  req->u.dirop.path_len = htonl(path_len);
+  path_len = ALIGN_VALUE_UP(path_len, 4);
+  /* setup attributes */
+  sattr = (struct nfs_user_attr_s *)(req->u.dirop.path + path_len);
+  if (stat != NULL)
+    {
+      sattr->mode = htonl(stat->mode);
+      sattr->uid = htonl(stat->uid);
+      sattr->gid = htonl(stat->gid);
+      sattr->size = htonl(stat->size);
+      sattr->atime.tv_sec = htonl(stat->atime.tv_sec);
+      sattr->atime.tv_usec = htonl(stat->atime.tv_usec);
+      sattr->mtime.tv_sec = htonl(stat->mtime.tv_sec);
+      sattr->mtime.tv_usec = htonl(stat->mtime.tv_usec);
+    }
+  else
+    {
+      uint32_t	ignore = htonl(-1);
+
+      sattr->mode = ignore;
+      sattr->uid = ignore;
+      sattr->gid = ignore;
+      sattr->size = ignore;
+      sattr->atime.tv_sec = ignore;
+      sattr->atime.tv_usec = ignore;
+      sattr->mtime.tv_sec = ignore;
+      sattr->mtime.tv_usec = ignore;
+    }
+
+  /* call mountd */
+  err = nfs_nfsd(server, req, &sz, is_dir ? NFS_MKDIR : NFS_CREATE, (void *)&reply);
+  mem_free(req);
+
+  if (err)
+    return err;
+
+  status = (struct nfs_status_s *)(reply + 1);
+
+  if (sz < sizeof (uint32_t) || (err = status->status) != NFS_OK ||
+      sz < sizeof (uint32_t) + sizeof (struct nfs_attr_s) + sizeof (nfs_handle_t))
+    {
+      mem_free(reply);
+      return err ? ntohl(err) : -EINVAL;
+    }
+
+  /* copy stat if neeeded */
+  if (stat != NULL)
+    {
+      memcpy(stat, &status->u.handle_attr.attr, sizeof (struct nfs_attr_s));
+      attr_endian(stat);
+    }
+
+  /* copy handle */
+  memcpy(created, status->u.handle_attr.handle, sizeof (nfs_handle_t));
+
   mem_free(reply);
-  return err ? err : -EINVAL;
+  return 0;
+}
+
+/*
+ * Remove a file or directory
+ */
+
+error_t		nfs_remove(struct nfs_s		*server,
+			   nfs_handle_t		directory,
+			   const char		*name,
+			   bool_t		is_dir)
+{
+  struct nfs_request_handle_s	*req;
+  struct rpc_reply_s		*reply;
+  struct nfs_status_s		*status;
+  size_t			sz;
+  error_t			err;
+  size_t			path_len;
+
+  path_len = strlen(name);
+
+  /* allocate packet for the request */
+  sz = sizeof (nfs_handle_t) + sizeof (uint32_t) + ALIGN_VALUE_UP(path_len, 4);
+  if ((req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
+    return -ENOMEM;
+
+  /* copy root & path to the entity */
+  memcpy(req->handle, directory, sizeof (nfs_handle_t));
+  req->u.dirop.path_len = htonl(path_len);
+  memcpy(req->u.dirop.path, name, path_len);
+  req->u.dirop.path[path_len] = 0;
+
+  /* call mountd */
+  err = nfs_nfsd(server, req, &sz, is_dir ? NFS_RMDIR : NFS_REMOVE, (void *)&reply);
+  mem_free(req);
+
+  if (err)
+    return err;
+
+  status = (struct nfs_status_s *)(reply + 1);
+
+  if (sz < sizeof (uint32_t) || (err = status->status) != NFS_OK)
+    {
+      mem_free(reply);
+      return err ? ntohl(err) : -EINVAL;
+    }
+
+  mem_free(reply);
+  return 0;
+}
+
+/*
+ * Readdir lists the contents of a directory.
+ */
+
+error_t		nfs_readdir(struct nfs_s	*server,
+			    nfs_handle_t	directory,
+			    nfs_readdir_t	callback,
+			    void		*pv)
+{
+  struct nfs_request_handle_s	*req;
+  struct rpc_reply_s		*reply;
+  struct nfs_status_s		*status;
+  size_t			sz;
+  error_t			err;
+
+  /* allocate packet for the request */
+  sz = sizeof (nfs_handle_t) + sizeof (nfs_cookie_t) + sizeof (uint32_t);
+  if ((req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
+    return -ENOMEM;
+
+  /* copy handle */
+  memcpy(req->handle, directory, sizeof (nfs_handle_t));
+
+  while (1)
+    {
+      struct nfs_dirent_s	*ent;
+      char			filename[MAXNAMLEN];
+      uint32_t			*eof;
+
+      /* call mountd */
+      err = nfs_nfsd(server, req, &sz, NFS_READDIR, (void *)&reply);
+
+      if (err)
+	{
+	  mem_free(req);
+	  return err;
+	}
+
+      status = (struct nfs_status_s *)(reply + 1);
+
+      if (sz < sizeof (uint32_t) || (err = status->status) != NFS_OK ||
+	  sz < sizeof (uint32_t) + sizeof (uint32_t))
+	{
+	  mem_free(reply);
+	  mem_free(req);
+	  return err ? ntohl(err) : -EINVAL;
+	}
+
+      eof = (uint32_t *)status->u.data;
+
+      /* list entries */
+      for (ent = (struct nfs_dirent_s *)(eof + 1);
+	   !*eof ;
+	   ent = (struct nfs_dirent_s *)(eof + 1))
+	{
+	  memcpy(filename, ent->data, ent->len);
+	  filename[ent->len] = 0;
+	  if (callback(filename, pv))
+	    break;
+	  eof = (uint32_t *)(&ent->data[ALIGN_VALUE_UP(ent->len, 4)]);
+	}
+
+      /* XXX more ? */
+    }
+
+  mem_free(req);
+  mem_free(reply);
+  return 0;
 }

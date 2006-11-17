@@ -110,12 +110,20 @@ void			*err_test(void *p)
 #endif
 
 #ifdef CONFIG_NETWORK_NFS
+NFS_READDIR_CB(rdir)
+{
+  printf("  %s\n", filename);
+
+  return 0;
+}
+
 void			*nfs_test(void *p)
 {
 
   struct nfs_s	nfs;
   nfs_handle_t	root;
-  nfs_handle_t	test;
+  nfs_handle_t	test, test_dir;
+  struct nfs_attr_s attr;
 
   memset(&nfs, 0, sizeof (nfs));
   IPV4_ADDR_SET(nfs.address, 0x0a02026d);
@@ -130,9 +138,10 @@ void			*nfs_test(void *p)
       if (!nfs_statfs(&nfs, root, &fs))
 	{
 	  printf(" NFS transfer unit: %u bytes/request\n", fs.transfer_unit);
-	  printf(" NFS filesystem: %u Mb total, %u Mb free\n",
+	  printf(" NFS filesystem: %u Mb total, %u Mb free, %u Mb quota\n",
 		 (uint32_t)(((uint64_t)fs.blocks * fs.block_size) / 1048576),
-		 (uint32_t)(((uint64_t)fs.blocks_free * fs.block_size) / 1048576));
+		 (uint32_t)(((uint64_t)fs.blocks_free * fs.block_size) / 1048576),
+		 (uint32_t)(((uint64_t)fs.blocks_avail * fs.block_size) / 1048576));
 	}
 
       if (!nfs_lookup(&nfs, "test", root, test, NULL))
@@ -142,7 +151,34 @@ void			*nfs_test(void *p)
 
 	  read = nfs_read(&nfs, test, buf, 0, 1024);
 	  printf("read(%d): %P\n", read, buf, read);
+
+	  buf[4] = (((buf[4] - 'a') + 1) % 26) + 'a';
+	  printf("wrote %d\n", nfs_write(&nfs, test, buf, 0, read));
+
+	  read = nfs_read(&nfs, test, buf, 0, 1024);
+	  printf("read(%d): %P\n", read, buf, read);
 	}
+
+      printf("remove: %d\n", nfs_unlink(&nfs, root, "new_file"));
+
+      memset(&attr, 0xff, sizeof (struct nfs_attr_s));
+      attr.uid = 500;
+      attr.gid = 500;
+      attr.mode = 0644;
+      printf("create: %d\n", nfs_creat(&nfs, root, "new_file", &attr, test));
+
+      memset(&attr, 0xff, sizeof (struct nfs_attr_s));
+      attr.uid = 500;
+      attr.gid = 500;
+      attr.mode = 0755;
+      printf("mkdir: %d\n", nfs_mkdir(&nfs, root, "new_dir", &attr, test_dir));
+      memset(&attr, 0xff, sizeof (struct nfs_attr_s));
+      attr.uid = 500;
+      attr.gid = 500;
+      attr.mode = 0644;
+      printf("create: %d\n", nfs_creat(&nfs, test_dir, "new_file_in_dir", &attr, test));
+
+      nfs_readdir(&nfs, root, rdir, NULL);
 
       nfs_umount(&nfs, "/home/buck/export");
     }
