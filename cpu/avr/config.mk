@@ -1,0 +1,3 @@
+CPUCFLAGS=
+CPUTOOLS=avr-
+

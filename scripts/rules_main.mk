@@ -24,7 +24,8 @@ include $(SRC_DIR)/scripts/common.mk
 kernel: $(target)
 
 $(target): $(BUILD_DIR)/config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript $(LIBAPP)
-	@echo '    LD      $@'
+	echo $$'\n ------------------------'
+	echo '    LD      $@'
 	$(LD) $(LDFLAGS) $(ARCHLDFLAGS) \
 		-q $$(cat /dev/null $(filter %.list,$^)) \
 		$(filter %.o,$^) $(filter %.a,$^) \
