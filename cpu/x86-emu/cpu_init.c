@@ -58,6 +58,7 @@ struct cpu_cld_s
 
 void tracer_entry(struct cpu_cld_s *cld)
 {
+  reg_t		regs[EMU_PTRACE_FRAME_SIZE];
   int32_t	status;
 
   emu_do_syscall(EMU_SYSCALL_PTRACE, 4,
@@ -68,8 +69,10 @@ void tracer_entry(struct cpu_cld_s *cld)
 		 cld->worker_pid, &status, 0);
 
   emu_do_syscall(EMU_SYSCALL_PTRACE, 4,
-		 EMU_PTRACE_CONT,
-		 cld->worker_pid, 0, 0);
+		 EMU_PTRACE_GETREGS,
+		 cld->worker_pid, 0, &regs);
+
+  printf("EIP %p\n", regs[EMU_PTRACE_EIP]);
 
   emu_do_syscall(EMU_SYSCALL_PTRACE, 4,
 		 EMU_PTRACE_CONT,
