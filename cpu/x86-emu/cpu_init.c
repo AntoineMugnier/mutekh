@@ -47,23 +47,80 @@ struct cpu_cld_s
   /* CPU id */
   uint32_t			id;
   /* PID of the worker unix process */
-  uint32_t			worker_pid;
+  int32_t			worker_pid;
   /* PID of the unix process used to perform ptrace ops */
-  uint32_t			tracer_pid;
+  int32_t			tracer_pid;
 };
 
 //static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
 
+#define TRACER_STACK_SIZE	65535
+
+void tracer_entry(struct cpu_cld_s *cld)
+{
+  int32_t	status;
+
+  emu_do_syscall(EMU_SYSCALL_PTRACE, 4,
+		 EMU_PTRACE_ATTACH,
+		 cld->worker_pid, 0, 0);
+
+  emu_do_syscall(EMU_SYSCALL_WAITPID, 3,
+		 cld->worker_pid, &status, 0);
+
+  emu_do_syscall(EMU_SYSCALL_PTRACE, 4,
+		 EMU_PTRACE_CONT,
+		 cld->worker_pid, 0, 0);
+
+  emu_do_syscall(EMU_SYSCALL_PTRACE, 4,
+		 EMU_PTRACE_CONT,
+		 cld->worker_pid, 0, 0);
+
+  while (1);
+}
+
 struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
 {
   struct cpu_cld_s	*cld;
+  reg_t			*tracer_stack;
   //void			*cls;
 
   if (!(cld = mem_alloc(sizeof (struct cpu_cld_s), MEM_SCOPE_SYS)))
     return NULL;
 
+  /* allocate memory for tracer process stack */
+  tracer_stack = (void*)emu_do_syscall(EMU_SYSCALL_MMAP, 6, NULL, TRACER_STACK_SIZE * sizeof(reg_t),
+				       EMU_PROT_READ | EMU_PROT_WRITE,
+				       EMU_MAP_PRIVATE | EMU_MAP_ANONYMOUS, 0, 0);
+
+  tracer_stack += TRACER_STACK_SIZE;
+
+  *--tracer_stack = (reg_t)cld;
+
+  if (tracer_stack == EMU_MAP_FAILED)
+    return NULL;
+
   cld->id = cpu_id;
-  cld->worker_pid = EMU_SYSCALL_GETPID;
+
+  cld->worker_pid = emu_do_syscall(EMU_SYSCALL_GETPID, 0);
+
+  /* FIXME registers may be clobbered by syscall */
+  asm volatile (
+		"	int $0x80		\n"
+		"	test %0, %0		\n"
+		"	jnz 1f			\n"
+#ifdef CONFIG_COMPILE_FRAMEPTR
+		"	xorl	%%ebp, %%ebp	\n"
+#endif
+		"	call	tracer_entry	\n"
+		"1:				\n"
+		: "=a" (cld->tracer_pid)
+		: "a" (EMU_SYSCALL_CLONE)
+		, "b" (EMU_CLONE_PARENT | EMU_CLONE_FS | EMU_CLONE_FILES | EMU_CLONE_VM)
+		, "c" (tracer_stack)
+		);
+
+  if (cld->tracer_pid < 0)
+    return NULL;
 
 #if defined(CONFIG_DEBUG)
   /* enable alignment check */

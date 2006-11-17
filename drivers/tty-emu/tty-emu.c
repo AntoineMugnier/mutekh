@@ -38,7 +38,7 @@
 
 DEVCHAR_READ(tty_emu_read)
 {
-  return emu_do_syscall(EMU_SYSCALL_READ, 3, 1, data, size);
+  return emu_do_syscall(EMU_SYSCALL_READ, 3, 0, data, size);
 }
 
 /*

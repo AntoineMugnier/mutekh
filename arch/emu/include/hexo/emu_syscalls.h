@@ -39,6 +39,7 @@ emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 {
   reg_t		res;
 
+  /* FIXME registers may be clobbered by syscall */
   if (argc < 6)
     {
       asm volatile ("int $0x80\n"
