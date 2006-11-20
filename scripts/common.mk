@@ -44,7 +44,7 @@ INCS=-nostdinc -D__MUTEK__ \
 	-I$(SRC_DIR)/include \
 	-I$(BUILD_DIR)/include \
 	-I$(BUILD_DIR) \
-	-include $(BUILD_DIR)/config.h
+	-include $(BUILD_DIR)/.config.h
 
 %.o: %.S
 	@echo '    AS      $@'
@@ -57,12 +57,15 @@ INCS=-nostdinc -D__MUTEK__ \
 	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -c \
 		$(SRC_DIR)/$(H)/$(<F) -o $(BUILD_DIR)/$(H)/$@
 
-# FIXME cpp -MG do not produce the same dep (w and w/o full path) if
+# cpp -MG do not produce the same dep (w and w/o full path) if
 # file is present or not a compile time
-%.hdef:
+%.hdef: %.def
 	@echo '    CPP     $@'
-	mkdir -p $(BUILD_DIR)/$(@D)
-	$(CPP) $(SRC_DIR)/$(patsubst %.hdef,%.def,$@) | grep '#define' > $(BUILD_DIR)/$@
+	mkdir -p $(BUILD_DIR)/$(subst $(BUILD_DIR),,$(@D))
+	$(CPP) $(SRC_DIR)/$(subst $(BUILD_DIR),,$<) | grep '#define' > $(BUILD_DIR)/$(subst $(BUILD_DIR),,$@)
+
+% : %.m4
+	m4 $<
 
 subdirs-lists = $(foreach name,$(subdirs),$(patsubst %,$(BUILD_DIR)$(H)/%.list,$(name)/.$(name)))
 CC=$(CPUTOOLS)gcc

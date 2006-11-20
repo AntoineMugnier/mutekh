@@ -1,5 +1,5 @@
 
-include $(BUILD_DIR)/config.mk
+include $(BUILD_DIR)/.config.mk
 
 default: $(BUILD_DIR)/arch/current $(BUILD_DIR)/cpu/current
 	mkdir -p $(BUILD_DIR)/include

@@ -617,6 +617,26 @@ sub set_provided_by
 }
 
 ##
+## replace token names in values by value
+##
+
+sub preprocess_values
+{
+    foreach my $opt (values %config_opts)
+    {
+	my $value = $$opt{value};
+	my $token;
+
+	while  ($token = $config_opts{$value})
+	{
+	    $value = $$token{value};
+	}
+
+	$$opt{value} = $value;
+    }
+}
+
+##
 ## sets token values
 ##
 
@@ -859,6 +879,27 @@ sub write_makefile
     }
 }
 
+sub write_m4
+{
+    my ($file) = @_;
+
+    if (open(FILE, ">".$file))
+    {
+	foreach my $opt (values %config_opts)
+	{
+	    next if $$opt{noexport} or $$opt{nomakefile};
+
+	    print FILE "m4_define(".$$opt{name}.", `".$$opt{value}."')\n";
+	}
+
+	close(FILE);
+    }
+    else
+    {
+	error(" unable to open `$file' to write configuration");
+    }
+}
+
 sub tokens_list
 {
     printf("\n    %-40s %s \n", "Configuration token name", "Declare location");
@@ -1020,6 +1061,7 @@ Usage: config.pl [options]
 
 	--header=file    Output configuration header in `file'.
 	--makefile=file  Output configuration makefile variables in `file'.
+	--m4=file        Output configuration m4 macro definitions in `file'.
 
 	--check          Check configuration constraints without output.
 	--list[=all]     Display configuration tokens list.
@@ -1035,6 +1077,7 @@ Usage: config.pl [options]
     read_myconfig($param_h{input});
 
     set_config();
+    preprocess_values();
 
     if ($param_h{list})
     {
@@ -1051,7 +1094,8 @@ Usage: config.pl [options]
 	return;
     }
 
-    if ($param_h{header} or $param_h{makefile} or $param_h{check})
+    if ($param_h{header} or $param_h{makefile} or
+	$param_h{m4} or $param_h{check})
     {
 	exit 1 if $err_flag;
 
@@ -1060,6 +1104,7 @@ Usage: config.pl [options]
 
 	write_header($param_h{header}) if $param_h{header};
 	write_makefile($param_h{makefile}) if $param_h{makefile};
+	write_m4($param_h{m4}) if $param_h{m4};
 	return;
     }
 

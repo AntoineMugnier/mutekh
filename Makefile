@@ -34,13 +34,14 @@ kernel: config $(BUILD_DIR)
 $(BUILD_DIR):
 	mkdir -p $@
 
-$(BUILD_DIR)/config.mk $(BUILD_DIR)/config.h: $(CONF)
+$(BUILD_DIR)/.config.mk $(BUILD_DIR)/.config.m4 $(BUILD_DIR)/.config.h: $(CONF)
 	perl $(SRC_DIR)/scripts/config.pl	\
 		--input=$(CONF)			\
-		--header=$(BUILD_DIR)/config.h	\
-		--makefile=$(BUILD_DIR)/config.mk
+		--m4=$(BUILD_DIR)/.config.m4	\
+		--header=$(BUILD_DIR)/.config.h	\
+		--makefile=$(BUILD_DIR)/.config.mk
 
-config: $(BUILD_DIR) $(BUILD_DIR)/config.mk $(BUILD_DIR)/config.h
+config: $(BUILD_DIR) $(BUILD_DIR)/.config.mk $(BUILD_DIR)/.config.m4 $(BUILD_DIR)/.config.h
 	$(MAKE) -f $(SRC_DIR)/scripts/rules_links.mk
 
 checkconfig:
@@ -76,7 +77,7 @@ clean_sub:
 
 clean: clean_sub
 	rm -f $(BUILD_DIR)/cpu/current $(BUILD_DIR)/arch/current
-	rm -f $(BUILD_DIR)/config.h $(BUILD_DIR)/config.mk
+	rm -f $(BUILD_DIR)/.config.*
 
 re: clean kernel
 

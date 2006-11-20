@@ -16,7 +16,7 @@
 #     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 #
 
--include $(BUILD_DIR)/config.mk
+-include $(BUILD_DIR)/.config.mk
 include $(SRC_DIR)$(H)/Makefile
 
 -include $(BUILD_DIR)/arch/current/config.mk

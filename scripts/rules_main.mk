@@ -3,7 +3,7 @@ LDFLAGS=
 
 -include $(BUILD_DIR)/arch/current/config.mk
 -include $(BUILD_DIR)/cpu/current/config.mk
--include $(BUILD_DIR)/config.mk
+-include $(BUILD_DIR)/.config.mk
 
 target = kernel-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME).out
 
@@ -23,7 +23,7 @@ include $(SRC_DIR)/scripts/common.mk
 
 kernel: $(target)
 
-$(target): $(BUILD_DIR)/config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript $(LIBAPP)
+$(target): $(BUILD_DIR)/.config.h $(objs) $(subdirs-lists) $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript $(LIBAPP)
 	echo $$'\n ------------------------'
 	echo '    LD      $@'
 	$(LD) $(LDFLAGS) $(ARCHLDFLAGS) \

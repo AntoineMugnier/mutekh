@@ -16,11 +16,11 @@
 #     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 #
 
-include $(BUILD_DIR)/config.mk
+include $(BUILD_DIR)/.config.mk
 include $(SRC_DIR)$(H)/Makefile
 -include depend.mk
 
-VPATH = $(SRC_DIR)$(H)
+VPATH = $(SRC_DIR) $(SRC_DIR)$(H)
 
 deps = $(patsubst %.o,.%.deps,$(objs))
 
