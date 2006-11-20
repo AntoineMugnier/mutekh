@@ -30,6 +30,9 @@
 static inline bool_t
 cpu_atomic_inc(volatile atomic_int_t *a)
 {
+  (*a)++;
+
+  return *a ? 1 : 0;
 }
 
 // #define HAS_CPU_ATOMIC_DEC
@@ -37,6 +40,9 @@ cpu_atomic_inc(volatile atomic_int_t *a)
 static inline bool_t
 cpu_atomic_dec(volatile atomic_int_t *a)
 {
+  (*a)--;
+
+  return *a ? 1 : 0;
 }
 
 // #define HAS_CPU_ATOMIC_TESTSET
@@ -44,6 +50,11 @@ cpu_atomic_dec(volatile atomic_int_t *a)
 static inline bool_t
 cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
 {
+  atomic_int_t	old = *a;
+
+  *a |= (1 << n);
+
+  return (old & (1 << n)) ? 1 : 0;
 }
 
 // #define HAS_CPU_ATOMIC_WAITSET
@@ -51,6 +62,8 @@ cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
 {
+  while (!(*a & (1 << n)))
+    ;
 }
 
 // #define HAS_CPU_ATOMIC_TESTCLR
@@ -58,6 +71,11 @@ cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
 static inline bool_t
 cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
 {
+  atomic_int_t	old = *a;
+
+  *a &= ~(1 << n);
+
+  return (old & (1 << n)) ? 1 : 0;
 }
 
 // #define HAS_CPU_ATOMIC_WAITCLR
@@ -65,6 +83,8 @@ cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
 {
+  while ((*a & (1 << n)))
+    ;
 }
 
 //#define HAS_CPU_ATOMIC_SET
@@ -72,6 +92,7 @@ cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
 {
+  *a |= (1 << n);
 }
 
 // #define HAS_CPU_ATOMIC_CLR
@@ -79,6 +100,7 @@ cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
 {
+  *a &= ~(1 << n);
 }
 
 //#define HAS_CPU_ATOMIC_TEST
@@ -86,6 +108,7 @@ cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
 static inline bool_t
 cpu_atomic_bit_test(volatile atomic_int_t *a, uint_fast8_t n)
 {
+  return (*a & (1 << n)) ? 1 : 0;
 }
 
 #endif

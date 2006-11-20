@@ -1,0 +1,1 @@
+../../../common/include/hexo/segment_nosmp.h

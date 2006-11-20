@@ -60,7 +60,7 @@ arch_cpudata_alloc(void)
 }
 
 /* context template segment load address defined in ld script*/
-extern struct __segstart_dummy_type_s __context_data_start, __context_data_end;
+extern __ldscript_symbol_t __context_data_start, __context_data_end;
 
 static inline void *
 arch_contextdata_alloc(void)
