@@ -85,7 +85,7 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
 {
   struct cpu_cld_s	*cld;
   reg_t			*tracer_stack;
-  //void			*cls;
+  //void		*cls;
 
   if (!(cld = mem_alloc(sizeof (struct cpu_cld_s), MEM_SCOPE_SYS)))
     return NULL;

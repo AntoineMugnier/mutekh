@@ -910,7 +910,11 @@ sub tokens_list
 	my $opt = $config_opts{$name};
 	my $attr;
 
-	next if ($$opt{nodefine} and not ($param_h{list} eq "all"));
+	if (not ($param_h{list} eq "all"))
+	{
+	    next if ($$opt{nodefine});
+	    next if ($$opt{value} eq "undefined" and @{$$opt{parent}});
+	}
 
 	if ($$opt{value} eq "undefined") {
 	    $attr = " ";

@@ -68,7 +68,7 @@ helpconfig:
 	echo -e "Please set the CONF variable to use an alternative"
 	echo -e "file or provide the missing file.\n"
 	echo -e "Available configuration options can be displayed"
-	echo -e "with 'make listconfig'.\n"
+	echo -e "with 'make listconfig' and 'make listallconfig'.\n"
 	echo -e "Informations about a specific configuration token"
 	echo -e "can be displayed with 'make showconfig TOKEN=...'.\n"
 
