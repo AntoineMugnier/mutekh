@@ -127,6 +127,8 @@ void			*nfs_test(void *p)
 
   memset(&nfs, 0, sizeof (nfs));
   IPV4_ADDR_SET(nfs.address, 0x0a02026d);
+  nfs.uid = 500;
+  nfs.gid = 500;
   nfs_init(&nfs);
 
   printf("mountd port: %u\nnfsd port: %u\n", ntohs(nfs.mountd.port), ntohs(nfs.nfsd.port));

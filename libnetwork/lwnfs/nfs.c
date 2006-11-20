@@ -520,8 +520,8 @@ static error_t		nfs_nfsd(struct nfs_s	*server,
   auth->cred_len = htonl(20);
   auth->timestamp = 0;
   auth->hostname_len = 0;
-  auth->uid = 0;
-  auth->gid = 0;
+  auth->uid = htonl(server->uid);
+  auth->gid = htonl(server->gid);
   auth->aux_gid = 0;
   auth->verifier = 0;
   auth->verif_len = 0;
@@ -623,8 +623,8 @@ ssize_t		nfs_write(struct nfs_s	*server,
   /* copy handle & write info */
   memcpy(req->handle, handle, sizeof (nfs_handle_t));
   req->u.write.offset = htonl(offset);
-  req->u.write.count = htonl(size);
-  req->u.write.__unused1 = req->u.write.__unused2 = 0;
+  req->u.write.count = req->u.write.count2 = htonl(size);
+  req->u.write.__unused = 0;
   /* copy data */
   memcpy(req->u.write.data, data, size);
 
@@ -1004,6 +1004,7 @@ error_t		nfs_readdir(struct nfs_s	*server,
   struct nfs_status_s		*status;
   size_t			sz;
   error_t			err;
+  nfs_cookie_t			cookie;
 
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t) + sizeof (nfs_cookie_t) + sizeof (uint32_t);
@@ -1012,6 +1013,8 @@ error_t		nfs_readdir(struct nfs_s	*server,
 
   /* copy handle */
   memcpy(req->handle, directory, sizeof (nfs_handle_t));
+  memset(req->u.readdir.cookie, 0, sizeof (nfs_cookie_t));
+  req->u.readdir.count = htonl(4096);
 
   while (1)
     {
@@ -1038,21 +1041,32 @@ error_t		nfs_readdir(struct nfs_s	*server,
 	  return err ? ntohl(err) : -EINVAL;
 	}
 
+      printf("%P\n", status, sz - sizeof (struct nfs_status_s));
       eof = (uint32_t *)status->u.data;
+      printf("%p, %d\n", eof, *eof);
 
       /* list entries */
       for (ent = (struct nfs_dirent_s *)(eof + 1);
-	   !*eof ;
+	   *eof;
 	   ent = (struct nfs_dirent_s *)(eof + 1))
 	{
+	  ent->len = ntohl(ent->len);
+	  printf("len %u\n", ent->len);
 	  memcpy(filename, ent->data, ent->len);
 	  filename[ent->len] = 0;
+	  printf("filename = %s\n", filename);
 	  if (callback(filename, pv))
 	    break;
-	  eof = (uint32_t *)(&ent->data[ALIGN_VALUE_UP(ent->len, 4)]);
+	  eof = (uint32_t *)(&ent->data[2 * sizeof (uint32_t) + ALIGN_VALUE_UP(ent->len, 4)]);
+	  printf("%p, %d\n", eof, *eof);
 	}
 
-      /* XXX more ? */
+      eof++;
+
+      if (*eof)
+	break;
+
+      memcpy(req->u.readdir.cookie, ent, sizeof (nfs_cookie_t));
     }
 
   mem_free(req);

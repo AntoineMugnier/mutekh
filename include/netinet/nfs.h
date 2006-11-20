@@ -174,6 +174,8 @@ struct			nfs_s
   struct net_udp_addr_s	mountd;		/* mountd server address */
   struct net_udp_addr_s	nfsd;		/* nfsd server address */
   uint_fast32_t		rpc_id;		/* rpc sequence id */
+  uint_fast32_t		uid;
+  uint_fast32_t		gid;
 
   rpcb_root_t		rpc_blocks;
 };
@@ -331,10 +333,10 @@ struct			nfs_read_s
 
 struct			nfs_write_s
 {
-  uint32_t		__unused1;
+  uint32_t		__unused;
   uint32_t		offset;
-  uint32_t		__unused2;
   uint32_t		count;
+  uint32_t		count2;
   uint8_t		data[1];
 } __attribute__((packed));
 
