@@ -48,9 +48,9 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	push	r0				\n"
 		/* switch stack pointer */
 		"	in	r0, 0x3d			\n"
-		"	st	Z, r0				\n"
+		"	st	Z+, r0				\n"
 		"	in	r0, 0x3e			\n"
-		"	std	Z + 1, r0			\n"
+		"	st	Z, r0				\n"
 		"	out	0x3d, %A1			\n"
 		"	out	0x3e, %B1			\n"
 		/* restore tls */
@@ -90,9 +90,9 @@ cpu_context_jumpto(struct context_s *new)
 		"	out	0x3e, %B0			\n"
 		/* restore tls */
 		"	pop	r0				\n"
-		"	lds	__cpu_context_data_base, r0	\n"
+		"	sts	__cpu_context_data_base, r0	\n"
 		"	pop	r0				\n"
-		"	lds	__cpu_context_data_base + 1, r0	\n"
+		"	sts	__cpu_context_data_base + 1, r0	\n"
 		/* restore flags */
 		"	pop	r0				\n"
 		"	out	0x3f, r0			\n"

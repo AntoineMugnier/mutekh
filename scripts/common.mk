@@ -19,7 +19,13 @@
 export SRC_DIR
 export BUILD_DIR
 
-CFLAGS=	-fno-builtin -Wall
+VPATH = $(SRC_DIR) $(BUILD_DIR)
+
+CFLAGS=	-fno-builtin -Wall 
+
+ifeq ($(CONFIG_COMPILE_SAVETEMPS), defined)
+CFLAGS += -save-temps
+endif
 
 ifeq ($(CONFIG_COMPILE_DEBUG), defined)
 CFLAGS += -O0 -gstabs #-ggdb
@@ -54,22 +60,22 @@ INCS=-nostdinc -D__MUTEK__ \
 %.o: %.c
 	@echo '    CC      $@'
 	mkdir -p $(BUILD_DIR)/$(H)
-	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -c \
+	cd $(BUILD_DIR)/$(H) ; $(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -c \
 		$(SRC_DIR)/$(H)/$(<F) -o $(BUILD_DIR)/$(H)/$@
 
-# cpp -MG do not produce the same dep (w and w/o full path) if
-# file is present or not a compile time
 %.hdef: %.def
-	@echo '    CPP     $@'
-	mkdir -p $(BUILD_DIR)/$(subst $(BUILD_DIR),,$(@D))
-	$(CPP) $(SRC_DIR)/$(subst $(BUILD_DIR),,$<) | grep '#define' > $(BUILD_DIR)/$(subst $(BUILD_DIR),,$@)
+	@echo ' HOST CPP   $(@F)'
+	mkdir -p $(BUILD_DIR)/$(@D)
+	$(HOSTCPP) $(SRC_DIR)/$< | grep '#define' > $(BUILD_DIR)/$@
 
-% : %.m4
-	m4 $<
+%: %.m4
+	@echo '    M4      $(@F)'
+	cat $(BUILD_DIR)/.config.m4 $(SRC_DIR)/$< | m4 -P > $(BUILD_DIR)/$@
 
 subdirs-lists = $(foreach name,$(subdirs),$(patsubst %,$(BUILD_DIR)$(H)/%.list,$(name)/.$(name)))
 CC=$(CPUTOOLS)gcc
 CPP=$(CPUTOOLS)cpp
+HOSTCPP=$(CPP)
 LD=$(CPUTOOLS)ld
 AR=$(CPUTOOLS)ar
 AS=$(CPUTOOLS)as
@@ -91,18 +97,18 @@ $(BUILD_DIR)$(H)/.$(DIR).list: print_dir $(objs) $(subdirs-lists) $(SRC_DIR)/$(H
 
 define recurse
 
-$(BUILD_DIR)$(H)/$(1)/.$(1).list: $$(SRC_DIR)/$$(H)/$(1)/Makefile
+$(BUILD_DIR)$(H)/$(1)/.$(1).list:
 	mkdir -p $(BUILD_DIR)$(H)/$(1)
 	rm -f $$@
-	$$(MAKE) -C $(1) -f $$(SRC_DIR)/scripts/rules_subdir.mk $$@ DIR=$(1) H="$$(H)/$(1)"
+	$$(MAKE) -C $(SRC_DIR) -f $$(SRC_DIR)/scripts/rules_subdir.mk $$@ DIR=$(1) H="$$(H)/$(1)"
 
 endef
 
 clean_sub:
 	echo " CLEAN      $(H)"
-	cd $(BUILD_DIR)$(H)/ && rm -f depend.mk .*.deps $(objs) $(subdirs-lists)
+	cd $(BUILD_DIR)$(H)/ && rm -f depend.mk .*.deps *.i *.s *.o .*.list $(clean)
 	for i in $(subdirs) ; do \
-		$(MAKE) -i -C $$i -f $(SRC_DIR)/scripts/rules_clean.mk H="$(H)/$$i" clean_sub clean; \
+		$(MAKE) -i -C $$i -f $(SRC_DIR)/scripts/rules_clean.mk H="$(H)/$$i" clean_sub; \
 	done
 
 $(eval $(foreach dirname,$(subdirs),$(call recurse,$(dirname))))

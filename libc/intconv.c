@@ -149,16 +149,17 @@ __INTCONV_STRTOTYPE_UNSIGNED	(strto_uintl32, uint_fast32_t, strto_uintl32);
 __INTCONV_STRTOTYPE_SIGNED	(strto_intl32,  int_fast32_t,  strto_uintl32);
 __INTCONV_ATOTYPE		(ato_intl32,    int_fast32_t,  strto_uintl32);
 
-
+#if CONFIG_COMPILE_SIZEOF_INT >= 4
 __INTCONV_STRTOTYPE_POST	(strto_uintl64, uint_fast64_t);
 __INTCONV_STRTOTYPE_UNSIGNED	(strto_uintl64, uint_fast64_t, strto_uintl64);
 __INTCONV_STRTOTYPE_SIGNED	(strto_intl64,  int_fast64_t,  strto_uintl64);
 __INTCONV_ATOTYPE		(ato_intl64,    int_fast64_t,  strto_uintl64);
+#endif
 
 /********************* deprecated standard functions */
 
 int_fast32_t
-strtol(const char *nptr, char **endptr, int_fast8_t base)
+strtol(const char *nptr, char **endptr, int_fast8_t base);
 __attribute__ ((weak, alias("strto_intl32")));
 
 uint_fast32_t

@@ -11,5 +11,4 @@ ifeq ($(CONFIG_LIBC_SEMAPHORE), defined)
 objs += sem.o
 endif
 
-clean:
 

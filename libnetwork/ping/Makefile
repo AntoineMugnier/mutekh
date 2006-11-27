@@ -1,4 +1,3 @@
 objs += ping.o
 
-clean:
 

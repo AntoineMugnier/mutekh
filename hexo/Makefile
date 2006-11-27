@@ -12,5 +12,4 @@ ifeq ($(CONFIG_HEXO_SCHED), defined)
 objs += scheduler.o
 endif
 
-clean:
 

@@ -1,4 +1,3 @@
 objs += libtcp.o
 
-clean:
 

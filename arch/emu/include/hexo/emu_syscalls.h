@@ -98,7 +98,7 @@ emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
   return res;
 }
 
-#elif
+#else
 # error emu_do_syscall_va not available for this processor type
 #endif
 

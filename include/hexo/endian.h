@@ -10,7 +10,6 @@
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     General Public License for more details.
-
     You should have received a copy of the GNU General Public License
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
@@ -91,7 +90,7 @@ static inline uint64_t endian_swap64(uint64_t x)
  *		Endian dependent words access functions
  */
 
-# if defined (CPU_ENDIAN_ISBIG)
+# if defined (CONFIG_CPU_ENDIAN_BIG)
 
 #  define endian_be16(x)	(x)
 #  define endian_be32(x)	(x)
@@ -100,7 +99,7 @@ static inline uint64_t endian_swap64(uint64_t x)
 #  define endian_le32(x)	endian_swap32(x)
 #  define endian_le64(x)	endian_swap64(x)
 
-# elif defined (CPU_ENDIAN_ISLITTLE)
+# elif defined (CONFIG_CPU_ENDIAN_LITTLE)
 
 #  define endian_le16(x)	(x)
 #  define endian_le32(x)	(x)
@@ -142,9 +141,9 @@ static inline uint64_t endian_swap64(uint64_t x)
 #define __ENDIAN_ARGS(b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15, b16, ...)    \
 			       b01; b02; b03; b04; b05; b06; b07; b08; b09; b10; b11; b12; b13; b14; b15; b16;
 
-# if defined (CPU_ENDIAN_ISBIG)
+# if defined (CONFIG_CPU_ENDIAN_BIG)
 #  define ENDIAN_BITFIELD(...)	__ENDIAN_ARGS(__VA_ARGS__,,,,,,,,,,,,,,,)
-# elif defined (CPU_ENDIAN_ISLITTLE)
+# elif defined (CONFIG_CPU_ENDIAN_LITTLE)
 #  define ENDIAN_BITFIELD(...)	__ENDIAN_REVERSE_ARGS(__VA_ARGS__,,,,,,,,,,,,,,,)
 # else
 #  error No bitfield endian mode defined in cpu/hexo/endian.h

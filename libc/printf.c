@@ -204,7 +204,7 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
     switch (typesize)
       {
       case 1:
-	val = va_arg(ap, int_fast8_t);
+	val = va_arg(ap, __compiler_sint_t);
 	break;
 
       case 2:

@@ -5,5 +5,4 @@ objs += cond.o
 objs += rwlock.o
 objs += barrier.o
 
-clean:
 

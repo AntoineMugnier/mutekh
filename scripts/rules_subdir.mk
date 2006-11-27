@@ -18,9 +18,7 @@
 
 include $(BUILD_DIR)/.config.mk
 include $(SRC_DIR)$(H)/Makefile
--include depend.mk
-
-VPATH = $(SRC_DIR) $(SRC_DIR)$(H)
+-include $(BUILD_DIR)$(H)/depend.mk
 
 deps = $(patsubst %.o,.%.deps,$(objs))
 
@@ -28,17 +26,21 @@ include $(BUILD_DIR)/arch/current/config.mk
 include $(BUILD_DIR)/cpu/current/config.mk
 include $(SRC_DIR)/scripts/common.mk
 
-depend.mk: $(deps)
+VPATH += $(SRC_DIR)$(H)
+
+DEPINC=	-include $(BUILD_DIR)/.config.h -I include
+
+%depend.mk: $(deps)
 	@echo '    DEP     depend.mk'
-	cat /dev/null $(patsubst .%.deps, $(BUILD_DIR)/$(H)/.%.deps,$^) > $(BUILD_DIR)/$(H)/$@
+	cat /dev/null $(patsubst .%.deps, $(BUILD_DIR)/$(H)/.%.deps,$^) > $@
 
 .%.deps: %.S
 	@echo '    DEP     $(<F)'
 	mkdir -p $(BUILD_DIR)/$(H)
-	$(CPP) $(CFLAGS) $(INCS) -M -MG -MF $(BUILD_DIR)/$(H)/$@ $<
+	$(CPP) $(CFLAGS) $(DEPINC) -M -MG -MF $(BUILD_DIR)/$(H)/$@ $<
 
 .%.deps: %.c
 	@echo '    DEP     $(<F)'
 	mkdir -p $(BUILD_DIR)/$(H)
-	$(CPP) $(CFLAGS) $(INCS) -M -MG -MF $(BUILD_DIR)/$(H)/$@ $<
+	$(CPP) $(CFLAGS) $(DEPINC) -M -MG -MF $(BUILD_DIR)/$(H)/$@ $<
 

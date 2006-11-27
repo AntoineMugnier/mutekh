@@ -35,5 +35,4 @@ ifeq ($(CONFIG_NETWORK_DHCLIENT), defined)
  subdirs += dhclient
 endif
 
-clean:
 

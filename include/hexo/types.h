@@ -27,7 +27,11 @@
 typedef unsigned char		uint8_t;
 
 /** base interger type, 16 bits unsigned int */
+#if CONFIG_COMPILE_SIZEOF_INT == 2
+typedef unsigned int		uint16_t;
+#else
 typedef unsigned short		uint16_t;
+#endif
 
 /** base interger type, 32 bits unsigned int */
 #if CONFIG_COMPILE_SIZEOF_INT == 2
@@ -43,7 +47,11 @@ typedef unsigned long long	uint64_t;
 typedef signed char		int8_t;
 
 /** base interger type, 16 bits signed int */
+#if CONFIG_COMPILE_SIZEOF_INT == 2
+typedef signed int		int16_t;
+#else
 typedef signed short		int16_t;
+#endif
 
 /** base interger type, 32 bits signed int */
 #if CONFIG_COMPILE_SIZEOF_INT == 2
@@ -61,6 +69,17 @@ typedef signed long long	int64_t;
 /* type used to prevent ld script symbols from being placed in
    .sdata section */
 typedef struct __ldscript_symbol_s __ldscript_symbol_t;
+
+/* compiler native integer types defined for compiler type dependant
+ special cases */
+
+typedef signed short	__compiler_sshort_t;
+typedef signed int	__compiler_sint_t;
+typedef signed long	__compiler_slong_t;
+
+typedef unsigned short	__compiler_ushort_t;
+typedef unsigned int	__compiler_uint_t;
+typedef unsigned long	__compiler_ulong_t;
 
 #ifdef __MUTEK__
 /** prevent use of compiler native short type,

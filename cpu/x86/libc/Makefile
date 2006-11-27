@@ -1,5 +1,4 @@
 
 objs = string.o
 
-clean:
 

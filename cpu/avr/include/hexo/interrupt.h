@@ -135,11 +135,15 @@ cpu_interrupt_getstate(void)
 static inline void
 cpu_interrupt_wait(void)
 {
+  reg_t	tmp;
+
   __asm__ volatile (
-		    "in		r0, 0x35	\n"
-		    "ori	r0, 0x40	\n"
-		    "out	0x35, r0	\n"
+		    "in		%0, 0x35	\n"
+		    "ori	%0, 0x40	\n"
+		    "out	0x35, %0	\n"
 		    "sleep			\n"
+#warning should use r > 15
+		    : "=r" (tmp)
 		    );
 }
 

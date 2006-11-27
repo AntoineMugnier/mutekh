@@ -1,4 +1,3 @@
 objs += nfs.o
 
-clean:
 

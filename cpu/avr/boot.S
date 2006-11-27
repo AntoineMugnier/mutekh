@@ -20,7 +20,7 @@
 */
 
 .section        .boot,"ax",@progbits
-
+.global cpu_boot
 cpu_boot:
 
 	rjmp	1f
@@ -60,9 +60,9 @@ cpu_boot:
 1:
 
 	/* setup stack pointer */
-	ldi	r16, hi8(CONFIG_ARCH_SIMPLE_RAM_ADDR + CONFIG_ARCH_SIMPLE_RAM_SIZE - 1)
+	ldi	r16, hi8(__system_heap_end)
 	out	0x3e, r16
-	ldi	r16, lo8(CONFIG_ARCH_SIMPLE_RAM_ADDR + CONFIG_ARCH_SIMPLE_RAM_SIZE - 1)
+	ldi	r16, lo8(__system_heap_end)
 	out	0x3d, r16
 
 	/* clear r1 register */
