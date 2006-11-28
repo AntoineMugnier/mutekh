@@ -70,8 +70,8 @@ struct					net_if_s
   uint_fast16_t				type;
 
   /* statistics */
-  uint_fast64_t				rx_bytes;
-  uint_fast64_t				tx_bytes;
+  uint_fast32_t				rx_bytes;
+  uint_fast32_t				tx_bytes;
   uint_fast32_t				rx_packets;
   uint_fast32_t				tx_packets;
 
@@ -114,7 +114,7 @@ inline uint8_t	*if_preparepkt(struct net_if_s		*interface,
 void	if_sendpkt(struct net_if_s	*interface,
 		   struct net_packet_s	*packet,
 		   net_proto_id_t	proto);
-void	if_stats(const char	*name);
+void	if_dump(const char	*name);
 struct net_if_s	*if_get_by_name(const char	*name);
 struct net_if_s	*if_get_by_index(int32_t	index);
 

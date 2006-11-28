@@ -275,6 +275,8 @@ void *net_up(void *p)
   dhcp_client("eth0");
 #endif
 
+  if_dump("eth0");
+
   route_dump();
 
 #if 0

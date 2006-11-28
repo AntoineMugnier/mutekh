@@ -25,12 +25,6 @@
 #include <netinet/if.h>
 #include <netinet/ip.h>
 
-#define EXTRACT_IPV4(Addr)		\
-  (Addr.addr.ipv4 >> 0) & 0xff,		\
-  (Addr.addr.ipv4 >> 8) & 0xff,		\
-  (Addr.addr.ipv4 >> 16) & 0xff,	\
-  (Addr.addr.ipv4 >> 24) & 0xff
-
 CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK);
 
 static route_table_root_t	route_table = CONTAINER_ROOT_INITIALIZER(route_table, DLIST, NOLOCK);
@@ -164,12 +158,21 @@ void			route_del(struct net_route_s	*route)
   route_table_remove(&route_table, route);
 }
 
+static void		spc(uint_fast8_t	i)
+{
+  for (; i > 0; i--)
+    printf(" ");
+}
+
 /*
  * Dump the route table.
  */
 
 void			route_dump(void)
 {
+  uint_fast8_t		i;
+
+  printf("Target            Gateway           Mask              Interface\n");
 
   /* look into the route table */
   CONTAINER_FOREACH(route_table, DLIST, NOLOCK, &route_table,
@@ -177,14 +180,16 @@ void			route_dump(void)
     switch (item->target.family)
       {
 	case addr_ipv4:
+	  i = printf("%u.%u.%u.%u", EXTRACT_IPV4(item->target.addr.ipv4));
+	  spc(18 - i);
 	  if (item->is_routed)
-	    printf("%u.%u.%u.%u %u.%u.%u.%u %u.%u.%u.%u %s\n",
-		   EXTRACT_IPV4(item->target), EXTRACT_IPV4(item->router),
-		   EXTRACT_IPV4(item->mask), item->interface->name);
+	    i = printf("%u.%u.%u.%u", EXTRACT_IPV4(item->router.addr.ipv4));
 	  else
-	    printf("%u.%u.%u.%u * %u.%u.%u.%u %s\n",
-		   EXTRACT_IPV4(item->target), EXTRACT_IPV4(item->mask),
-		   item->interface->name);
+	    i = 0;
+	  spc(18 - i);
+	  i = printf("%u.%u.%u.%u", EXTRACT_IPV4(item->mask.addr.ipv4));
+	  spc(18 - i);
+	  printf("%s\n", item->interface->name);
 	  break;
 	default:
 	  printf("Entry of unsupported type.\n");

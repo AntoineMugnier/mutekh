@@ -268,19 +268,43 @@ void			if_sendpkt(struct net_if_s	*interface,
     dev_net_sendpkt(interface->dev, packet, proto);
 }
 
+static void		spc(uint_fast8_t	i)
+{
+  for (; i > 0; i--)
+    printf(" ");
+}
+
 /*
- * Dump statistics.
+ * Dump interface(s)
  */
 
-void			if_stats(const char	*name)
+void			if_dump(const char	*name)
 {
   struct net_if_s	*interface;
+  uint_fast8_t		i;
 
   if ((interface = net_if_lookup(&net_interfaces, name)))
     {
-      printf("%s statistics:\n", name);
+      struct net_proto_s	*ad;
 
-      printf("%Lu bytes sent (%u packets), %Lu bytes received (%u packets)\n",
+      i = printf("%s");
+      spc(6 - i);
+      printf("HWaddr %02x:%02x:%02x:%02x:%02x:%02x\n", interface->mac[0], interface->mac[1],
+	     interface->mac[2], interface->mac[3], interface->mac[4], interface->mac[5]);
+      /* XXX this is IPv4 code */
+      for (ad = net_protos_lookup(&interface->protocols, ETHERTYPE_IP);
+	   ad != NULL;
+	   ad = net_protos_lookup_next(&interface->protocols, ad, ETHERTYPE_IP))
+	{
+	  struct net_pv_ip_s	*ipv4 = (struct net_pv_ip_s *)ad->pv;
+
+	  spc(6);
+	  printf("inet addr %u.%u.%u.%u mask %u.%u.%u.%u broadcast %u.%u.%u.%u\n",
+		 EXTRACT_IPV4(ipv4->addr), EXTRACT_IPV4(ipv4->mask),
+		 EXTRACT_IPV4(ipv4->addr | (0xffffffff & ~ipv4->mask)));
+	}
+      spc(6);
+      printf("%u bytes sent (%u packets), %u bytes received (%u packets)\n",
 	     interface->tx_bytes, interface->tx_packets,
 	     interface->rx_bytes, interface->rx_packets);
     }
