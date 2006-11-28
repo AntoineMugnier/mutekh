@@ -72,6 +72,10 @@ INCS=-nostdinc -D__MUTEK__ \
 	@echo '    M4      $(@F)'
 	cat $(BUILD_DIR)/.config.m4 $(SRC_DIR)/$< | m4 -P > $(BUILD_DIR)/$@
 
+%: %.cpp
+	@echo '    CPP     $(@F)'
+	$(CPP) $(INCS) $(SRC_DIR)/$< -P -o $(BUILD_DIR)/$@
+
 subdirs-lists = $(foreach name,$(subdirs),$(patsubst %,$(BUILD_DIR)$(H)/%.list,$(name)/.$(name)))
 CC=$(CPUTOOLS)gcc
 CPP=$(CPUTOOLS)cpp

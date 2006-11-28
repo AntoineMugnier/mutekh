@@ -1,3 +1,4 @@
-CPUCFLAGS=
+CPUCFLAGS=-Dmain=main_
 CPUTOOLS=avr-
+TARGET_EXT=hex
 

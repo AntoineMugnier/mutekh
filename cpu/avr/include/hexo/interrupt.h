@@ -142,8 +142,7 @@ cpu_interrupt_wait(void)
 		    "ori	%0, 0x40	\n"
 		    "out	0x35, %0	\n"
 		    "sleep			\n"
-#warning should use r > 15
-		    : "=r" (tmp)
+		    : "=d" (tmp)
 		    );
 }
 

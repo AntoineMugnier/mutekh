@@ -54,7 +54,7 @@ arch_contextdata_alloc(void)
   /* allocate memory and copy from template */
   if ((tls = mem_alloc((char*)&__context_data_end - (char*)&__context_data_start, MEM_SCOPE_SYS)))
     {
-      memcpy(tls, (char*)&__context_data_start, (char*)&__context_data_end - (char*)&__context_data_start);
+      memcpy_from_code(tls, (char*)&__context_data_start, (char*)&__context_data_end - (char*)&__context_data_start);
     }
 
   return tls;

@@ -108,6 +108,15 @@ memmove(void *dst, const void *src, size_t size)
 
 /********************************/
 
+#ifndef HAS_CPU_MEMCPY_FROM_CODE
+inline void * memcpy_from_code (void *dst, const void *src, size_t n)
+{
+  return memcpy(dst, src, n);
+}
+#endif
+
+/********************************/
+
 #ifndef HAS_CPU_STRLEN
 #undef strlen
 inline size_t strlen(const char *s)

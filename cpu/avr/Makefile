@@ -3,6 +3,6 @@ objs =											\
 boot.o											\
 libgcc.o										\
 cpu_init.o										\
-cpu_context.o
-
+cpu_context.o										\
+memcpy_from_code.o
 

@@ -28,94 +28,34 @@ along with this program; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA. */
 
-.section        .boot,"ax",@progbits
-.global cpu_boot
-cpu_boot:
+#include <string.h>
 
-	rjmp	1f
-
-	reti
-	reti
-	reti
-	reti
-	reti
-	reti
-	reti
-	reti
-
-	reti
-	reti
-	reti
-	reti
-	reti
-	reti
-	reti
-	reti
-
-	reti
-	reti
-	reti
-	reti
-	reti
-	reti
-	reti
-	reti
-
-	reti
-	reti
-	reti
-	reti
-
-1:
-
-	/* setup stack pointer */
-	ldi	r16, hi8(__system_heap_end)
-	out	0x3e, r16
-	ldi	r16, lo8(__system_heap_end)
-	out	0x3d, r16
-
-	/* clear r1 register */
-	clr	r1
-
-	/* copy data from rom */
-	ldi	r17, hi8(__data_end)
-	ldi	r26, lo8(__data_start)
-	ldi	r27, hi8(__data_start)
-	ldi	r30, lo8(__data_load_start)
-	ldi	r31, hi8(__data_load_start)
-	rjmp	.do_copy_data_start
-.do_copy_data_loop:
+void *
+memcpy_from_code (void *dst, const void *src, size_t n)
+{
+  asm volatile (
+		"rjmp	2f			\n"
+		"1:				\n"
 #if defined (__AVR_ENHANCED__)
-	lpm	r0, Z+
+		"lpm	r0, Z+			\n"
 #else
-	lpm
-	adiw	r30, 1
+		"lpm				\n"
+		"adiw	r30, 1			\n"
 #endif
-	st	X+, r0
-.do_copy_data_start:
-	cpi	r26, lo8(__data_end)
-	cpc	r27, r17
-	brne	.do_copy_data_loop
+		"st	X+, r0			\n"
+		"2:				\n"		
+		"sbiw	%2, 1			\n"
+		"brne	1b			\n"
 
-	/* clear bss */
-	ldi	r17, hi8(__bss_end)
-	ldi	r26, lo8(__bss_start)
-	ldi	r27, hi8(__bss_start)
-	rjmp	.do_clear_bss_start
-.do_clear_bss_loop:
-	st	X+, r1
-.do_clear_bss_start:
-	cpi	r26, lo8(__bss_end)
-	cpc	r27, r17
-	brne	.do_clear_bss_loop
+		: "=z" (src)
+		, "=x" (dst)
+		, "=w" (n)
 
-	/* call arch_init function */
-	rcall	arch_init
+		: "0" (src)
+		, "1" (dst)
+		, "2" (n)
+		);		
 
-	/* stop processor execution */
-	cli
-	in	r16, 0x35
-	ori	r16, 0x40
-	out	0x35, r16
-	sleep
+  return dst;
+}
 

@@ -158,6 +158,8 @@ __INTCONV_ATOTYPE		(ato_intl64,    int_fast64_t,  strto_uintl64);
 
 /********************* deprecated standard functions */
 
+#if 0
+
 int_fast32_t
 strtol(const char *nptr, char **endptr, int_fast8_t base)
 __attribute__ ((weak, alias("strto_intl32")));
@@ -185,4 +187,6 @@ __attribute__ ((weak, alias("strto_uintl64")));
 int_fast64_t
 atoll(const char *nptr)
 __attribute__ ((weak, alias("ato_intl64")));
+
+#endif
 

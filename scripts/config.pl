@@ -627,9 +627,22 @@ sub preprocess_values
 	my $value = $$opt{value};
 	my $token;
 
+	# replace configuration token names by values
+
 	while  ($token = $config_opts{$value})
 	{
 	    $value = $$token{value};
+	}
+
+	# normalize numerical value
+
+	if ($value =~ /^0x[0-9a-fA-F]+$/)
+	{
+	    $value = sprintf "0x%x", hex $value;
+	} elsif ($value =~ /^0[0-7]+$/) {
+	    $value = sprintf "0x%x", oct $value;
+	} elsif ($value =~ /^\d+$/) {
+	    $value = sprintf "0x%x", $value;
 	}
 
 	$$opt{value} = $value;
