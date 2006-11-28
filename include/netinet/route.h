@@ -23,8 +23,10 @@
 #define NETINET_ROUTE_H
 
 #include <hexo/types.h>
+#include <hexo/error.h>
 
 #include <hexo/gpct_platform_hexo.h>
+#include <gpct/object_refcount.h>
 #include <gpct/cont_dlist.h>
 
 #include <netinet/packet.h>
@@ -32,42 +34,42 @@
 struct net_if_s;
 
 /*
- * Specify if a route entry is for a network or a specific host.
- */
-
-#define ROUTETYPE_NET		1
-#define ROUTETYPE_HOST		2
-#define ROUTETYPE_DIRECT	4
-#define ROUTETYPE_INDIRECT	8
-
-/*
  * Structure defining a route.
  */
+
+OBJECT_TYPE(route_obj, REFCOUNT, struct net_route_s);
 
 struct				net_route_s
 {
   struct net_if_s		*interface;
   struct net_proto_s		*addressing;
   struct net_addr_s		target;
-  uint_fast8_t			type;
+  bool_t			is_routed;
   struct net_addr_s		mask;
   struct net_addr_s		router;
-  uint_fast16_t			flags;
+  bool_t			invalidated;
 
+  route_obj_entry_t		obj_entry;
   CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
 };
+
+OBJECT_CONSTRUCTOR(route_obj);
+OBJECT_DESTRUCTOR(route_obj);
+OBJECT_FUNC(static inline, route_obj, REFCOUNT, route_obj, obj_entry);
 
 /*
  * Route table container.
  */
 
-CONTAINER_TYPE(route_table, DLIST, struct net_route_s, NOLOCK, NOOBJ, list_entry);
+CONTAINER_TYPE(route_table, DLIST, struct net_route_s, NOLOCK, route_obj, list_entry);
 
 /*
  * Prototypes
  */
 
-void			route_add(struct net_route_s	*route);
+error_t			route_add(struct net_route_s	*route);
 struct net_route_s	*route_get(struct net_addr_s	*addr);
+void			route_del(struct net_route_s	*route);
+void			route_dump(void);
 
 #endif

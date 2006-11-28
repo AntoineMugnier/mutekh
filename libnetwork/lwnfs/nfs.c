@@ -557,6 +557,7 @@ ssize_t				nfs_read(struct nfs_s	*server,
   struct rpc_reply_s		*reply;
   struct nfs_status_s		*status;
   size_t			sz;
+  size_t			sz2;
   error_t			err;
 
   /* allocate packet for the request */
@@ -587,14 +588,17 @@ ssize_t				nfs_read(struct nfs_s	*server,
     }
 
   /* copy data */
-  if ((sz = status->u.attr_data.len))
+  if ((sz2 = status->u.attr_data.len))
     {
-      sz = ntohl(sz);
-      memcpy(data, status->u.attr_data.data, sz);
+      sz2 = ntohl(sz2);
+      sz -= sizeof (struct nfs_attr_s) + 2 * sizeof (uint32_t);
+      if (sz < sz2)
+	sz2 = sz;
+      memcpy(data, status->u.attr_data.data, sz2);
     }
 
   mem_free(reply);
-  return sz;
+  return sz2;
 }
 
 /*
@@ -1004,7 +1008,7 @@ error_t		nfs_readdir(struct nfs_s	*server,
   struct nfs_status_s		*status;
   size_t			sz;
   error_t			err;
-  nfs_cookie_t			cookie;
+  uint8_t			*cookie;
 
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t) + sizeof (nfs_cookie_t) + sizeof (uint32_t);
@@ -1041,32 +1045,41 @@ error_t		nfs_readdir(struct nfs_s	*server,
 	  return err ? ntohl(err) : -EINVAL;
 	}
 
-      printf("%P\n", status, sz - sizeof (struct nfs_status_s));
       eof = (uint32_t *)status->u.data;
-      printf("%p, %d\n", eof, *eof);
+      sz -= 2 * sizeof (uint32_t);
 
       /* list entries */
       for (ent = (struct nfs_dirent_s *)(eof + 1);
 	   *eof;
 	   ent = (struct nfs_dirent_s *)(eof + 1))
 	{
+	  if (sz < 3 * sizeof (uint32_t) + sizeof (nfs_cookie_t))
+	    {
+	      eof = NULL;
+	      break;
+	    }
+
 	  ent->len = ntohl(ent->len);
-	  printf("len %u\n", ent->len);
 	  memcpy(filename, ent->data, ent->len);
 	  filename[ent->len] = 0;
-	  printf("filename = %s\n", filename);
 	  if (callback(filename, pv))
 	    break;
-	  eof = (uint32_t *)(&ent->data[2 * sizeof (uint32_t) + ALIGN_VALUE_UP(ent->len, 4)]);
-	  printf("%p, %d\n", eof, *eof);
+	  cookie = (uint8_t *)(&ent->data[ALIGN_VALUE_UP(ent->len, 4)]);
+	  eof = (uint32_t *)(cookie + sizeof (nfs_cookie_t));
+	  sz -= ((uint8_t *)eof - (uint8_t *)ent) + sizeof (uint32_t);
 	}
 
-      eof++;
+      if (eof != NULL)
+	{
+	  eof++;
 
-      if (*eof)
+	  if (*eof)
+	    break;
+
+	  memcpy(req->u.readdir.cookie, ent, sizeof (nfs_cookie_t));
+	}
+      else
 	break;
-
-      memcpy(req->u.readdir.cookie, ent, sizeof (nfs_cookie_t));
     }
 
   mem_free(req);

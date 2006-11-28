@@ -83,7 +83,7 @@ static bool_t		dhcp_ip_is_free(struct net_if_s	*interface,
   arp.ea_hdr.ar_pln = 4;
   arp.ea_hdr.ar_op = htons(ARPOP_REQUEST);
   memcpy(arp.arp_sha, interface->mac, ETH_ALEN);
-  arp.arp_spa = 0;
+  endian_32_na_store(&arp.arp_spa, 0);
   arp.arp_tpa = ip;
 
   /* send the request */
@@ -279,8 +279,6 @@ static error_t		dhcp_packet(struct net_if_s	*interface,
 
   if (type != DHCPDISCOVER)
     {
-      uint32_t	*addr;
-
       /* if not a discovery packet, include requested ip and destination server */
       packet->siaddr = serv;
       packet->yiaddr = ip;
@@ -288,15 +286,13 @@ static error_t		dhcp_packet(struct net_if_s	*interface,
       opt = (void *)raw;
       opt->code = DHCP_REQIP;
       opt->len = 4;
-      addr = (uint32_t *)opt->data;
-      *addr = ip;
+      endian_32_na_store(opt->data, ip);
       raw += 6;
 
       opt = (void *)raw;
       opt->code = DHCP_SERVER;
       opt->len = 4;
-      addr = (uint32_t *)opt->data;
-      *addr = serv;
+      endian_32_na_store(opt->data, serv);
       raw += 6;
     }
 
@@ -404,6 +400,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		break;
 	      case DHCPACK:
 		{
+		  struct net_route_s	*route;
 		  struct net_addr_s	addr;
 		  struct net_addr_s	mask;
 
@@ -415,7 +412,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		  /* compute lease time */
 		  opt = dhcp_get_opt(dhcp, DHCP_LEASE);
 		  if (opt != NULL)
-		    lease->delay = ((endian_be32(*(uint32_t *)opt->data)) / 2) * 1000;
+		    lease->delay = (endian_be32_na_load(opt->data) / 2) * 1000;
 		  else
 		    lease->delay = DHCP_DFL_LEASE;
 
@@ -427,7 +424,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		  /* if netmask is present, use it, otherwise guess it */
 		  opt = dhcp_get_opt(dhcp, DHCP_NETMASK);
 		  if (opt != NULL)
-		    IPV4_ADDR_SET(mask, *(uint32_t *)opt->data);
+		    IPV4_ADDR_SET(mask, endian_32_na_load(opt->data));
 		  else
 		    {
 		      if (IN_CLASSA(dhcp->yiaddr))
@@ -456,15 +453,35 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 
 		  if ((opt = dhcp_get_opt(dhcp, DHCP_ROUTER)) != NULL)
 		    {
-		      uint32_t	*gateway;
+		      struct net_route_s	*def;
+		      uint32_t			gateway;
 
-		      gateway = (uint32_t *)opt->data;
+		      gateway = endian_32_na_load(opt->data);
 
 		      printf("  gateway: %u.%u.%u.%u\n",
-			     (*gateway >> 0) & 0xff, (*gateway >> 8) & 0xff,
-			     (*gateway >> 16) & 0xff, (*gateway >> 24) & 0xff);
+			     (gateway >> 0) & 0xff, (gateway >> 8) & 0xff,
+			     (gateway >> 16) & 0xff, (gateway >> 24) & 0xff);
 
-		      /* configure default route XXX */
+		      /* configure default route */
+		      if ((def = mem_alloc(sizeof (struct net_route_s *), MEM_SCOPE_NETWORK)) != NULL)
+			{
+			  def->interface = interface;
+			  IPV4_ADDR_SET(def->target, 0x0);
+			  IPV4_ADDR_SET(def->mask, 0x0);
+			  def->is_routed = 1;
+			  IPV4_ADDR_SET(def->router, gateway);
+			  route_add(def);
+			}
+		    }
+
+		  /* configure default route */
+		  if ((route = mem_alloc(sizeof (struct net_route_s *), MEM_SCOPE_NETWORK)) != NULL)
+		    {
+		      route->interface = interface;
+		      IPV4_ADDR_SET(route->target, addr.addr.ipv4 & mask.addr.ipv4);
+		      memcpy(&route->mask, &mask, sizeof (struct net_addr_s));
+		      route->is_routed = 0;
+		      route_add(route);
 		    }
 
 		  /* we've got an address :-)) */
@@ -568,7 +585,7 @@ error_t			dhcp_client(const char	*ifname)
   route.interface = if_get_by_name(ifname);
   IPV4_ADDR_SET(route.target, 0x0);
   IPV4_ADDR_SET(route.mask, 0x0);
-  route.type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
+  route.is_routed = 0;
   route_add(&route);
 
   /* create sockets */
@@ -592,6 +609,8 @@ error_t			dhcp_client(const char	*ifname)
       timer_add_event(&timer_ms, timer);
     }
 
+  route_del(&route);
+
   shutdown(sock, SHUT_RDWR);
   shutdown(sock_packet, SHUT_RDWR);
 
@@ -601,6 +620,8 @@ error_t			dhcp_client(const char	*ifname)
   printf("dhclient: error, leaving\n");
 
   free(lease);
+
+  route_del(&route);
 
   if (sock != NULL)
     shutdown(sock, SHUT_RDWR);

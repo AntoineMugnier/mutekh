@@ -437,6 +437,7 @@ NET_PUSHPKT(ip_pushpkt)
 	      /* route the packet */
 	      net_debug("routing to host %P\n", &packet->tADDR.addr.ipv4, 4);
 	      ip_route(packet, route_entry);
+	      route_obj_refdrop(route_entry);
 	    }
 	  else
 	    {
@@ -720,6 +721,8 @@ NET_SENDPKT(ip_send)
       if (!error)
 	ip_send_fragment(protocol, interface, hdr, packet, route_entry, 0, offs, total - offs, 1);
 
+      route_obj_refdrop(route_entry);
+
       return ;
     }
 
@@ -737,9 +740,10 @@ NET_SENDPKT(ip_send)
   if (ip_delivery(interface, protocol, packet->tADDR.addr.ipv4) == IP_DELIVERY_INDIRECT)
     {
 #ifdef CONFIG_NETWORK_FORWARDING
-      if ((route_entry = route_get(&packet->tADDR)))
+      if ((route_entry = route_get(&packet->tADDR)) != NULL)
 	{
 	  ip_route(packet, route_entry);
+	  route_obj_refdrop(route_entry);
 	}
       else
 	{
@@ -867,7 +871,7 @@ void		ip_route(struct net_packet_s	*packet,
   endian_16_na_store(&hdr->check, check + (check >> 16));
 
   /* direct or indirect delivery */
-  if (route->type & ROUTETYPE_DIRECT)
+  if (route->is_routed)
     {
       net_debug("local delivery on %s\n", interface->name);
 

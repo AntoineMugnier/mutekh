@@ -91,7 +91,10 @@ error_t			udp_connect(struct net_udp_desc_s	**desc,
   if (*desc == NULL)
     {
       if ((*desc = udp_desc_obj_new(NULL)) == NULL)
-	return -ENOMEM;
+	{
+	  route_obj_refdrop(route);
+	  return -ENOMEM;
+	}
       (*desc)->bound = 0;
       (*desc)->checksum = 1;
       (*desc)->callback_error = NULL;
@@ -170,6 +173,7 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
   struct net_packet_s	*packet;
   uint_fast16_t		local_port;
   uint8_t		*dest;
+  bool_t		drop_route = 0;
 
   /* find a route to the remote host */
   if (desc == NULL)
@@ -179,6 +183,7 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
 
       if ((route = route_get(&remote->address)) == NULL)
 	return -EHOSTUNREACH;
+      drop_route = 1;
     }
   else
     {
@@ -194,6 +199,7 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
 	{
 	  if ((route = route_get(&remote->address)) == NULL)
 	    return -EHOSTUNREACH;
+	  drop_route = 1;
 	}
     }
 
@@ -207,12 +213,12 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
 
   /* prepare the packet */
   if ((packet = packet_obj_new(NULL)) == NULL)
-    return -ENOMEM;
+    goto err_mem;
   if ((dest = udp_preparepkt(route->interface, route->addressing, packet, size, 0)) == NULL)
     {
       packet_obj_refdrop(packet);
 
-      return -ENOMEM;
+      goto err_mem;
     }
 
   /* copy data into the packet */
@@ -224,7 +230,16 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
   /* send UDP packet */
   udp_sendpkt(route->interface, route->addressing, packet, local_port, remote->port, desc->checksum);
 
+  if (drop_route)
+    route_obj_refdrop(route);
+
   return 0;
+
+ err_mem:
+  if (drop_route)
+    route_obj_refdrop(route);
+
+  return -ENOMEM;
 }
 
 /*
@@ -235,6 +250,9 @@ void			udp_close(struct net_udp_desc_s		*desc)
 {
   if (desc->bound)
     udp_desc_remove(&descriptors, desc);
+
+  if (desc->connected)
+    route_obj_refdrop(desc->route);
 }
 
 /*

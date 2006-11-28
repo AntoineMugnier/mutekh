@@ -25,22 +25,61 @@
 #include <netinet/if.h>
 #include <netinet/ip.h>
 
+#define EXTRACT_IPV4(Addr)		\
+  (Addr.addr.ipv4 >> 0) & 0xff,		\
+  (Addr.addr.ipv4 >> 8) & 0xff,		\
+  (Addr.addr.ipv4 >> 16) & 0xff,	\
+  (Addr.addr.ipv4 >> 24) & 0xff
+
 CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK);
 
 static route_table_root_t	route_table = CONTAINER_ROOT_INITIALIZER(route_table, DLIST, NOLOCK);
 
 /*
+ * Route object constructor.
+ */
+
+OBJECT_CONSTRUCTOR(route_obj)
+{
+  struct net_route_s	*route;
+  struct net_addr_s	*target = (struct net_addr_s *)param;
+  struct net_addr_s	*mask = va_arg(ap, struct net_addr_s *);
+  struct net_if_s	*interface = va_arg(ap, struct net_if_s *);
+
+  if ((route = mem_alloc(sizeof (struct net_route_s), MEM_SCOPE_NETWORK)) == NULL)
+    return NULL;
+
+  route_obj_init(route);
+  memcpy(&route->target, target, sizeof (struct net_addr_s));
+  memcpy(&route->mask, mask, sizeof (struct net_addr_s));
+  route->interface = interface;
+  route->is_routed = 0;
+  route->invalidated = 0;
+
+  return route;
+}
+
+/*
+ * Route object destructor.
+ */
+
+OBJECT_DESTRUCTOR(route_obj)
+{
+  mem_free(obj);
+}
+
+/*
  * Add a route entry.
  */
 
-void			route_add(struct net_route_s	*route)
+error_t			route_add(struct net_route_s	*route)
 {
   struct net_addr_s	*target;
   struct net_addr_s	*mask;
   struct net_proto_s	*item;
   net_proto_id_t	id;
 
-  if (route->type & ROUTETYPE_DIRECT)
+  if (!route->is_routed)
     {
       /* direct route: we use the target address to determine which
 	 addressing module to use */
@@ -63,39 +102,93 @@ void			route_add(struct net_route_s	*route)
     {
       if (item->desc->f.addressing->matchaddr(item, NULL, target, mask))
 	{
+	  struct net_route_s	*rt;
+	  struct net_route_s	*prec;
+
 	  route->addressing = item;
-	  route_table_push(&route_table, route);
-	  return ;
+
+	  /* push the route into the routing table */
+	  /* the table is sorted by netmask order descendent */
+	  for (prec = NULL, rt = route_table_head(&route_table);
+	       rt != NULL;
+	       prec = rt, rt = route_table_next(&route_table, rt))
+	    {
+	      if (route->mask.family == addr_ipv4)
+		{
+		  if (rt->mask.addr.ipv4 <= route->mask.addr.ipv4)
+		    break;
+		}
+	      else
+		assert(0);
+	    }
+
+	  if (prec == NULL)
+	    return route_table_push(&route_table, route);
+	  else
+	    return route_table_insert_post(&route_table, prec, route);
 	}
     }
-  /* XXX return */
+
+  return -1;
 }
 
 /*
  * Get the route to an host.
  */
 
-
 struct net_route_s	*route_get(struct net_addr_s	*addr)
 {
-  /* look into the route table XXX must sort it with netmask */
+  /* look into the route table */
   CONTAINER_FOREACH(route_table, DLIST, NOLOCK, &route_table,
   {
     struct net_proto_s	*addressing = item->addressing;
 
-    /* an entry for a single host */
-    if (item->type == ROUTETYPE_HOST)
+    if (addressing->desc->f.addressing->matchaddr(addressing, &item->target, addr, &item->mask))
       {
-	if (addressing->desc->f.addressing->matchaddr(addressing, &item->target, addr, NULL))
-	  return item;
-      }
-    else /* an entry for a subnet */
-      {
-	if (addressing->desc->f.addressing->matchaddr(addressing, &item->target, addr, &item->mask))
-	  return item;
+	route_obj_refnew(item);
+	return item;
       }
   });
 
   return NULL;
 }
 
+/*
+ * Remove a route.
+ */
+
+void			route_del(struct net_route_s	*route)
+{
+  /* invalidate the route */
+  route->invalidated = 1;
+  route_table_remove(&route_table, route);
+}
+
+/*
+ * Dump the route table.
+ */
+
+void			route_dump(void)
+{
+
+  /* look into the route table */
+  CONTAINER_FOREACH(route_table, DLIST, NOLOCK, &route_table,
+  {
+    switch (item->target.family)
+      {
+	case addr_ipv4:
+	  if (item->is_routed)
+	    printf("%u.%u.%u.%u %u.%u.%u.%u %u.%u.%u.%u %s\n",
+		   EXTRACT_IPV4(item->target), EXTRACT_IPV4(item->router),
+		   EXTRACT_IPV4(item->mask), item->interface->name);
+	  else
+	    printf("%u.%u.%u.%u * %u.%u.%u.%u %s\n",
+		   EXTRACT_IPV4(item->target), EXTRACT_IPV4(item->mask),
+		   item->interface->name);
+	  break;
+	default:
+	  printf("Entry of unsupported type.\n");
+	  break;
+      }
+  });
+}

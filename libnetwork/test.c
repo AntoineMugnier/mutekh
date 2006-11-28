@@ -93,7 +93,7 @@ void			*tcp_test(void *p)
 }
 #endif
 
-#if !defined(CONFIG_NETWORK_UDP)
+#if 0
 #include "test_server.c"
 
 void			*err_test(void *p)
@@ -261,15 +261,23 @@ void *net_up(void *p)
 
   if_up("eth0");
   if_up("eth1");
+  //  if_up("eth2");
+  //  if_up("eth3");
 
 #ifdef CONFIG_NETWORK_RARP
   rarp_client("eth0");
+  rarp_client("eth1");
+  //  rarp_client("eth2");
+  //  rarp_client("eth3");
 #endif
 
 #ifdef CONFIG_NETWORK_DHCLIENT
   dhcp_client("eth0");
 #endif
 
+  route_dump();
+
+#if 0
   struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
 
@@ -289,6 +297,7 @@ void *net_up(void *p)
   IPV4_ADDR_SET(route->mask, 0xffffff00);
   route->type = ROUTETYPE_NET | ROUTETYPE_DIRECT;
   route_add(route);
+#endif
 
 #ifdef CONFIG_NETWORK_PING
   struct net_addr_s	addr;

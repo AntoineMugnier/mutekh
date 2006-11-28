@@ -196,6 +196,12 @@ static _CONNECT(connect_raw)
   struct net_addr_s		dest;
   struct net_route_s		*route;
 
+  if (pv->connected)
+    {
+      fd->error = EISCONN;
+      return -1;
+    }
+
   if (addr->sa_family != pv->family)
     {
       fd->error = EAFNOSUPPORT;
@@ -212,8 +218,7 @@ static _CONNECT(connect_raw)
     }
 
   memcpy(&pv->remote, &dest, sizeof (struct net_addr_s));
-  pv->interface = route->interface;
-  pv->addressing = route->addressing;
+  pv->route = route;
   pv->connected = 1;
 
   return 0;
@@ -251,6 +256,7 @@ static _SENDMSG(sendmsg_raw)
   struct net_if_s		*interface;
   struct net_proto_s		*addressing;
   struct net_header_s		*nethdr;
+  struct net_route_s		*route = NULL;
   uint8_t			*p;
   size_t			i;
   size_t			n;
@@ -311,15 +317,19 @@ static _SENDMSG(sendmsg_raw)
   /* now, deduce the source */
   if (pv->connected)
     {
+      if (pv->route->invalidated)
+	{
+	  fd->error = EPIPE;
+	  return -1;
+	}
+
       /* simply read the pv info */
-      interface = pv->interface;
-      addressing = pv->addressing;
+      interface = pv->route->interface;
+      addressing = pv->route->addressing;
     }
   else
     {
       /* otherwise, determine the route */
-      struct net_route_s	*route;
-
       if ((route = route_get(&packet->tADDR)) == NULL)
 	{
 	  packet_obj_refdrop(packet);
@@ -341,7 +351,7 @@ static _SENDMSG(sendmsg_raw)
 	{
 	  packet_obj_refdrop(packet);
 	  fd->error = ENOMEM;
-	  return -1;
+	  goto error;
 	}
     }
   else
@@ -350,7 +360,7 @@ static _SENDMSG(sendmsg_raw)
 	{
 	  packet_obj_refdrop(packet);
 	  fd->error = ENOMEM;
-	  return -1;
+	  goto error;
 	}
     }
   nethdr = &packet->header[packet->stage];
@@ -393,7 +403,16 @@ static _SENDMSG(sendmsg_raw)
   packet->stage--;
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, pv->proto);
 
+  if (route != NULL)
+    route_obj_refdrop(route);
+
   return n;
+
+ error:
+  if (route != NULL)
+    route_obj_refdrop(route);
+
+  return -1;
 }
 
 /*
@@ -599,7 +618,8 @@ static _SETSOCKOPT(setsockopt_raw)
 		return -1;
 	      }
 
-	    pv->interface = interface;
+	    pv->local_interface = interface;
+	    pv->any = 0;
 	  }
 	else
 	  return setsockopt_socket(fd, optname, optval, optlen);
@@ -675,9 +695,12 @@ static _SHUTDOWN(shutdown_raw)
 	}
 
       if (fd->shutdown == SHUT_RDWR)
-	socket_table_remove(&sock_raw, fd);
+	{
+	  socket_table_remove(&sock_raw, fd);
 
-      /* XXX should mem_free here */
+	  if (pv->connected)
+	    route_obj_refdrop(pv->route);
+	}
     }
 
   return 0;
@@ -745,7 +768,7 @@ void		sock_raw_signal(struct net_if_s		*interface,
     if (item->shutdown == SHUT_RD || item->shutdown == SHUT_RDWR)
       CONTAINER_FOREACH_CONTINUE;
 
-    if (pv->any || addressing->desc->f.addressing->matchaddr(addressing, &packet->tADDR, &pv->local, NULL) || pv->interface == interface)
+    if (pv->any || addressing->desc->f.addressing->matchaddr(addressing, &packet->tADDR, &pv->local, NULL) || pv->local_interface == interface)
       {
 	if (pv->proto == protocol || pv->proto == IPPROTO_RAW)
 	  {

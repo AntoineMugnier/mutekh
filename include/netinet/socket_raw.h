@@ -24,7 +24,7 @@
 
 #include <netinet/packet.h>
 #include <netinet/protos.h>
-#include <netinet/if.h>
+#include <netinet/route.h>
 #include <netinet/socket.h>
 
 #include <semaphore.h>
@@ -40,8 +40,8 @@ struct				socket_raw_pv_s
   struct net_addr_s		remote;
   bool_t			any;
   bool_t			connected;
-  struct net_if_s		*interface;
-  struct net_proto_s		*addressing;
+  struct net_route_s		*route;
+  struct net_if_s		*local_interface;
 
   packet_queue_root_t		recv_q;
   sem_t				recv_sem;

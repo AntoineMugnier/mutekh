@@ -58,6 +58,9 @@ typedef int_fast8_t		error_t;
 /** value out of range */
 #define ERANGE		10
 
+/** broken pipe */
+#define EPIPE		32
+
 /** address in use */
 #define EADDRINUSE	40
 
@@ -81,6 +84,9 @@ typedef int_fast8_t		error_t;
 
 /** address family not supported by protocol */
 #define EAFNOSUPPORT	97
+
+/** transport endpoint is already connected */
+#define EISCONN		106
 
 /** transport endpoint not connected */
 #define ENOTCONN	107

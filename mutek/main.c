@@ -265,12 +265,24 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #endif
 
 #if defined(CONFIG_DRIVER_NET_NE2000)
-  static struct device_s net_isawd;
+#if 0
+  /* driver for the D-Link DE200-TP */
+  static struct device_s net_dlink_200tp;
 
-  device_init(&net_isawd);
-  net_isawd.addr[0] = 0x320;
-  net_isawd.irq = 3;
-  net_ne2000_init(&net_isawd, &icu_dev);
+  device_init(&net_dlink_200tp);
+  net_dlink_200tp.addr[0] = 0x320;
+  net_dlink_200tp.irq = 5;
+  net_ne2000_init(&net_dlink_200tp, &icu_dev);
+#endif
+#if 0
+  /* driver for the UMC9008 */
+  static struct device_s net_umc_9008;
+
+  device_init(&net_umc_9008);
+  net_umc_9008.addr[0] = 0x300;
+  net_umc_9008.irq = 3;
+  net_ne2000_init(&net_umc_9008, &icu_dev);
+#endif
 # endif
 
   arch_start_other_cpu(); /* let other CPUs enter main_smp() */

@@ -62,6 +62,7 @@
 static const struct devenum_ident_s	net_ne2000_ids[] =
   {
     { .vendor = 0x10ec, .device = 0x8029 },	/* Realtek 8029 */
+    { .vendor = 0x10ec, .device = 0x8028 },	/* Realtek 8029 */
     { .vendor = 0x1050, .device = 0x0940 },	/* Winbond 89C940 */
     { .vendor = 0x1050, .device = 0x5a5a },	/* Winbond 89C940F */
     { .vendor = 0x8c4a, .device = 0x1980 },	/* Winbond 89C940 (bad ROM) */
@@ -116,6 +117,8 @@ static void	ne2000_send(struct device_s	*dev)
 
   /* reset the tries counter */
   pv->send_tries = 0;
+
+  net_debug("%s: send !\n", pv->interface->name);
 
   /* initialize writing */
   ne2000_dma_init_write(dev, pv->tx_buf << 8, size);
@@ -250,11 +253,15 @@ static void	ne2000_push(struct device_s	*dev,
 DEV_IRQ(net_ne2000_irq)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
-  uint_fast8_t			tx_serviced = 0;
+  bool_t			tx_serviced = 0;
+  bool_t			aborted = 0;
   uint_fast8_t			isr;
+  uint_fast8_t			max_svc = 0;
 
   /* lock the device */
   lock_spin(&pv->lock);
+
+  net_debug("%s: irq!\n", pv->interface->name);
 
   /* select register bank 0 */
   ne2000_page(dev, NE2000_P0);
@@ -263,6 +270,10 @@ DEV_IRQ(net_ne2000_irq)
      until all the bits in ISR are reset */
   while ((isr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_ISR)))
     {
+      if (max_svc++ > 6)
+	break;
+      net_debug("  isr = %x\n", isr);
+
      /* remote DMA completed */
       if (isr & NE2000_RDC)
 	{
@@ -300,7 +311,7 @@ DEV_IRQ(net_ne2000_irq)
 	    {
 	      /* set the interrupt flags as "transmitted without error",
 		 so the next queued packet can be sent */
-	      isr &= NE2000_PTX;
+	      aborted = 1;
 	    }
 	  else
 	    {
@@ -310,7 +321,7 @@ DEV_IRQ(net_ne2000_irq)
 	}
 
       /* packet transmitted */
-      if (isr & NE2000_PTX)
+      if (isr & NE2000_PTX || aborted)
 	{
 	  struct net_packet_s	*wait;
 
@@ -332,6 +343,7 @@ DEV_IRQ(net_ne2000_irq)
 		pv->current = NULL;
 
 	      tx_serviced = 1;
+	      aborted = 0;
 	    }
 	}
 
@@ -342,7 +354,7 @@ DEV_IRQ(net_ne2000_irq)
 	  uint_fast8_t	resend = 0;
 	  uint_fast16_t	total;
 
-	  printf("%s: recovery from overflow\n", pv->interface->name);
+	  net_debug("%s: recovery from overflow\n", pv->interface->name);
 
 	  /* save the NIC state */
 	  cr = cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD);
