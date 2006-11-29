@@ -21,7 +21,7 @@ export BUILD_DIR
 
 VPATH = $(SRC_DIR) $(BUILD_DIR)
 
-CFLAGS=	-fno-builtin -Wall 
+CFLAGS=	-fno-builtin -Wall
 
 ifeq ($(CONFIG_COMPILE_SAVETEMPS), defined)
 CFLAGS += -save-temps
@@ -55,7 +55,7 @@ INCS=-nostdinc -D__MUTEK__ \
 %.o: %.S
 	@echo '    AS      $@'
 	mkdir -p $(BUILD_DIR)/$(H)
-	$(CPP) $(INCS) $(SRC_DIR)/$(H)/$(<F) | $(AS) -o $(BUILD_DIR)/$(H)/$@
+	$(CPP) $(INCS) $(SRC_DIR)/$(H)/$(<F) | $(AS) $(CPUASFLAGS) -o $(BUILD_DIR)/$(H)/$@
 
 %.o: %.c
 	@echo '    CC      $@'
