@@ -68,11 +68,11 @@ INCS=-nostdinc -D__MUTEK__ \
 	mkdir -p $(BUILD_DIR)/$(@D)
 	$(HOSTCPP) $(SRC_DIR)/$< | grep '#define' > $(BUILD_DIR)/$@
 
-%: %.m4
+%: %.m4 $(BUILD_DIR)/.config.m4
 	@echo '    M4      $(@F)'
 	cat $(BUILD_DIR)/.config.m4 $(SRC_DIR)/$< | m4 -P > $(BUILD_DIR)/$@
 
-%: %.cpp
+%: %.cpp $(BUILD_DIR)/.config.h
 	@echo '    CPP     $(@F)'
 	$(CPP) $(INCS) $(SRC_DIR)/$< -P -o $(BUILD_DIR)/$@
 

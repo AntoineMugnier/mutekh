@@ -118,4 +118,4 @@ cpu_boot:
 	ori	r16, 0x40
 	out	0x35, r16
 	sleep
-
+1:	rjmp 1b

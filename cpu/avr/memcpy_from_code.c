@@ -33,28 +33,23 @@ Boston, MA 02111-1307, USA. */
 void *
 memcpy_from_code (void *dst, const void *src, size_t n)
 {
-  asm volatile (
-		"rjmp	2f			\n"
-		"1:				\n"
+
+  while (n--)
+    asm volatile (
 #if defined (__AVR_ENHANCED__)
-		"lpm	r0, Z+			\n"
+		  "lpm	r0, Z+			\n"
 #else
-		"lpm				\n"
-		"adiw	r30, 1			\n"
+		  "lpm				\n"
+		  "adiw	r30, 1			\n"
 #endif
-		"st	X+, r0			\n"
-		"2:				\n"		
-		"sbiw	%2, 1			\n"
-		"brne	1b			\n"
+		  "st	X+, r0			\n"
 
-		: "=z" (src)
-		, "=x" (dst)
-		, "=w" (n)
+		  : "=z" (src)
+		  , "=x" (dst)
 
-		: "0" (src)
-		, "1" (dst)
-		, "2" (n)
-		);		
+		  : "0" (src)
+		  , "1" (dst)
+		  );
 
   return dst;
 }

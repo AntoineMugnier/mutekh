@@ -162,6 +162,13 @@ sub cmd_require
     push(@{$$opts{require}}, "@args");
 }
 
+sub cmd_suggest
+{
+    my ($location, $opts, @args) = @_;
+
+    push(@{$$opts{suggest}}, "@args");
+}
+
 sub cmd_single
 {
     my ($location, $opts, @args) = @_;
@@ -192,6 +199,7 @@ my %config_cmd =
  "flags" => \&cmd_flags,
  "require" => \&cmd_require,
  "single" => \&cmd_single,
+ "suggest" => \&cmd_suggest,
  "fallback" => \&cmd_fallback,
  "provide" => \&cmd_provide,
  "desc" => \&cmd_desc,
@@ -265,6 +273,7 @@ sub process_file
 		    $$opts{depend} = [];
 		    $$opts{parent} = [];
 		    $$opts{require} = [];
+		    $$opts{suggest} = [];
 		    $$opts{single} = [];
 		    $$opts{desc} = [];
 		    $$opts{provide} = [];
@@ -486,6 +495,50 @@ sub process_config_require
 }
 
 ##
+## checks suggestion list of a defined token
+##
+
+sub process_config_suggest
+{
+    my ($orig) = @_;
+
+    foreach my $dep_and (@{$$orig{suggest}})
+    {
+	my @deps_and = split(/\s+/, $dep_and);
+ 	my $flag = 0;
+
+	foreach my $rule (@deps_and)
+	{
+	    $rule =~ /^([^\s=]+)=?([^\s]*)$/;
+	    my $dep = $1;
+	    my $val = $2;
+
+	    my $opt = $config_opts{$dep};
+
+	    if ($opt)
+	    {
+		if ((not $val and ($$opt{value} ne "undefined")) or
+		    ($val and $$opt{value} eq $val))
+		{
+		    $flag = 1;
+		}
+	    }
+	    else
+	    {
+		warning($$orig{location}.": `".$$orig{name}."' suggests undeclared token `".$dep."', ignored.");
+	    }
+	}
+
+	if (not $flag)
+	{
+	    warning($$orig{vlocation}.": `".$$orig{name}."' token is defined ".
+		    "and suggests this configuration: ",
+		    @deps_and);
+	}
+    }
+}
+
+##
 ## process single definition constraints and add to exclude lists
 ##
 
@@ -636,14 +689,14 @@ sub preprocess_values
 
 	# normalize numerical value
 
-	if ($value =~ /^0x[0-9a-fA-F]+$/)
-	{
-	    $value = sprintf "0x%x", hex $value;
-	} elsif ($value =~ /^0[0-7]+$/) {
-	    $value = sprintf "0x%x", oct $value;
-	} elsif ($value =~ /^\d+$/) {
-	    $value = sprintf "0x%x", $value;
-	}
+# 	if ($value =~ /^0x[0-9a-fA-F]+$/)
+# 	{
+# 	    $value = sprintf "0x%x", hex $value;
+# 	} elsif ($value =~ /^0[0-7]+$/) {
+# 	    $value = sprintf "0x%x", oct $value;
+# 	} elsif ($value =~ /^\d+$/) {
+# 	    $value = sprintf "0x%x", $value;
+# 	}
 
 	$$opt{value} = $value;
     }
@@ -766,6 +819,7 @@ sub check_config
 	if ($$opt{value} ne "undefined")
 	{
 	    process_config_require($opt);
+	    process_config_suggest($opt);
 	}
 
 	if ($$opt{mandatory} and ($$opt{value} eq "undefined"))
@@ -1003,6 +1057,17 @@ sub tokens_info
     if (my @list = @{$$opt{require}})
     {
 	print "\n  require :\n\n";
+
+	foreach my $dep_and (@list)
+	{
+	    print text80(join(" or ", split(/\s+/, $dep_and)),
+			 "      ", "    * ")."\n";
+	}
+    }
+
+    if (my @list = @{$$opt{suggest}})
+    {
+	print "\n  suggest :\n\n";
 
 	foreach my $dep_and (@list)
 	{

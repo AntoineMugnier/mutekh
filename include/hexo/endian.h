@@ -258,11 +258,16 @@ static inline uint64_t endian_swap64(uint64_t x)
 /* return true if value is aligned */
 #define IS_ALIGNED(x, b)	!(((uintptr_t)x) & ((b) - 1))
 
-/* align value on the next power of two */
-#define ALIGN_VALUE_UP(x, b)	((((x) - 1) | ((b) - 1)) + 1)
+/* do not use aligment code if b==1 at comilation time. */
+#define __ALIGN_CONSTANT(x, b, A) (__builtin_constant_p(b) ? ((b) == 1 ? (x) : A(x, b)) : A(x, b))
 
 /* align value on the next power of two */
-#define ALIGN_VALUE_LOW(x, b)	((x) & ~((b) - 1))
+#define __ALIGN_VALUE_UP(x, b)	((((x) - 1) | ((b) - 1)) + 1)
+#define ALIGN_VALUE_UP(x, b)	__ALIGN_CONSTANT(x, b, __ALIGN_VALUE_UP)
+
+/* align value on the next power of two */
+#define __ALIGN_VALUE_LOW(x, b)	((x) & ~((b) - 1))
+#define ALIGN_VALUE_LOW(x, b)	__ALIGN_CONSTANT(x, b, __ALIGN_VALUE_LOW)
 
 /* align address on the next power of two */
 #define ALIGN_ADDRESS_UP(x, b)	((void*)ALIGN_VALUE_UP((uintptr_t)(x), (b)))

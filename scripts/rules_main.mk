@@ -33,7 +33,7 @@ $(target).o: $(BUILD_DIR)/.config.h $(objs) $(subdirs-lists) $(LIBAPP)
 
 $(target).out: $(BUILD_DIR)/.config.h $(objs) $(subdirs-lists) arch/$(CONFIG_ARCH_NAME)/ldscript $(LIBAPP)
 	echo '    LD      $@'
-	$(LD) $(LDFLAGS) $(ARCHLDFLAGS) \
+	$(LD) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		-q $$(cat /dev/null $(filter %.list,$^)) \
 		$(filter %.o,$^) $(filter %.a,$^) \
 		-T $(BUILD_DIR)/arch/$(CONFIG_ARCH_NAME)/ldscript \
@@ -42,6 +42,10 @@ $(target).out: $(BUILD_DIR)/.config.h $(objs) $(subdirs-lists) arch/$(CONFIG_ARC
 $(target).hex: $(target).out
 	echo 'OBJCOPY HEX $@'
 	$(OBJCOPY) -j .text -j .data -j .boot -j .contextdata -O ihex $(BUILD_DIR)/$< $(BUILD_DIR)/$@
+
+$(target).bin: $(target).out
+	echo 'OBJCOPY HEX $@'
+	$(OBJCOPY) -j .text -j .data -j .boot -j .contextdata -O binary $(BUILD_DIR)/$< $(BUILD_DIR)/$@
 
 clean:
 	rm -f $(BUILD_DIR)/$(target)

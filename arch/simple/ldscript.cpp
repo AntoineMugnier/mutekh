@@ -29,7 +29,7 @@ SECTIONS
 #endif
 
 	.data CONFIG_ARCH_SIMPLE_RAM_ADDR :
-	  /*		AT ( LOADADDR(.text) + SIZEOF(.text) )*/
+		AT ( LOADADDR(.text) + SIZEOF(.text) )
 		{
 			__cpu_context_data_base = . ;
 			LONG(0) ; /* fixme sizeof */
@@ -52,8 +52,8 @@ SECTIONS
 	__system_heap_end = CONFIG_ARCH_SIMPLE_RAM_ADDR + CONFIG_ARCH_SIMPLE_RAM_SIZE - 1;
 
 	/* Task local data section */
- 	.contextdata /*0x0*/ :
-	  /*		AT( __data_load_end )*/
+ 	.contextdata 0x0 :
+		AT( __data_load_end )
 		{
 			/* first word contains pointer to contextdata section */
 			__context_data_base = . ;
@@ -65,7 +65,7 @@ SECTIONS
 	__context_data_start = LOADADDR(.contextdata);
 	__context_data_end = LOADADDR(.contextdata) + SIZEOF(.contextdata);
 
-	.bss /*__data_end */:
+	.bss __data_end :
 		{ *(.bss*) }
 
 	__bss_start = ADDR(.bss);
