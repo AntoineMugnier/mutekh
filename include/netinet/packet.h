@@ -152,10 +152,10 @@ struct			net_addr_s
   })
 
 #define EXTRACT_IPV4(Addr)	\
-  ((Addr) >> 0) & 0xff,		\
-  ((Addr) >> 8) & 0xff,		\
+  ((Addr) >> 24) & 0xff,	\
   ((Addr) >> 16) & 0xff,	\
-  ((Addr) >> 24) & 0xff
+  ((Addr) >> 8) & 0xff,		\
+  ((Addr) >> 0) & 0xff
 
 /*
  * This structure defines a packet.

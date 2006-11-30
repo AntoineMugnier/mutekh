@@ -315,7 +315,7 @@ static _SHUTDOWN(shutdown_udp)
       pv->desc = NULL;
     }
 
-  return -1;
+  return 0;
 }
 
 /*

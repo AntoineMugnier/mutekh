@@ -84,7 +84,7 @@ static bool_t		dhcp_ip_is_free(struct net_if_s	*interface,
   arp.ea_hdr.ar_op = htons(ARPOP_REQUEST);
   memcpy(arp.arp_sha, interface->mac, ETH_ALEN);
   endian_32_na_store(&arp.arp_spa, 0);
-  arp.arp_tpa = ip;
+  arp.arp_tpa = htonl(ip);
 
   /* send the request */
   addr_sll.sll_halen = ETH_ALEN;
@@ -246,7 +246,7 @@ static error_t		dhcp_packet(struct net_if_s	*interface,
 
   /* init and send a DHCPDISCOVER */
   broadcast.sin_family = AF_INET;
-  broadcast.sin_addr.s_addr = serv;
+  broadcast.sin_addr.s_addr = htonl(serv);
   broadcast.sin_port = htons(BOOTP_SERVER_PORT);
 
   if ((packet = malloc(interface->mtu)) == NULL)
@@ -280,19 +280,19 @@ static error_t		dhcp_packet(struct net_if_s	*interface,
   if (type != DHCPDISCOVER)
     {
       /* if not a discovery packet, include requested ip and destination server */
-      packet->siaddr = serv;
-      packet->yiaddr = ip;
+      packet->siaddr = htonl(serv);
+      packet->yiaddr = htonl(ip);
 
       opt = (void *)raw;
       opt->code = DHCP_REQIP;
       opt->len = 4;
-      endian_32_na_store(opt->data, ip);
+      endian_be32_na_store(opt->data, ip);
       raw += 6;
 
       opt = (void *)raw;
       opt->code = DHCP_SERVER;
       opt->len = 4;
-      endian_32_na_store(opt->data, serv);
+      endian_be32_na_store(opt->data, serv);
       raw += 6;
     }
 
@@ -374,40 +374,54 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 	  switch (opt->data[0])
 	    {
 	      case DHCPOFFER:
-		printf("dhclient: received DHCPOFFER from %u.%u.%u.%u\n",
-		       (dhcp->siaddr >> 0) & 0xFF, (dhcp->siaddr >> 8) & 0xFF,
-		       (dhcp->siaddr >> 16) & 0xFF, (dhcp->siaddr >> 24) & 0xFF);
+		{
+		  uint_fast32_t	yaddr;
+		  uint_fast32_t	saddr;
 
-		printf("dhclient: offered %u.%u.%u.%u ... ",
-		       (dhcp->yiaddr >> 0) & 0xFF, (dhcp->yiaddr >> 8) & 0xFF,
-		       (dhcp->yiaddr >> 16) & 0xFF, (dhcp->yiaddr >> 24) & 0xFF);
+		  saddr = htonl(dhcp->siaddr);
+		  yaddr = htonl(dhcp->yiaddr);
 
-		/* if the IP is free, take the offer */
-		if (!requested && dhcp_ip_is_free(interface, dhcp->yiaddr))
-		  {
-		    printf("is free. Accepting.\n");
+		  printf("dhclient: received DHCPOFFER from %u.%u.%u.%u\n",
+			 EXTRACT_IPV4(saddr));
+		  printf("dhclient: offered %u.%u.%u.%u ... ",
+			 EXTRACT_IPV4(yaddr));
 
-		    /* send DHCPREQUEST */
-		    requested = !dhcp_packet(interface, DHCPREQUEST, dhcp->yiaddr, dhcp->siaddr, sock);
-		  }
-		else /* otherwise, decline the offer */
-		  {
-		    printf("is not free. Declining.\n");
+		  /* if the IP is free, take the offer */
+		  if (!requested && dhcp_ip_is_free(interface, yaddr))
+		    {
+		      printf("is free. Accepting.\n");
 
-		    /* send DHCPDECLINE */
-		    dhcp_packet(interface, DHCPDECLINE, dhcp->yiaddr, dhcp->siaddr, sock);
-		  }
+		      /* send DHCPREQUEST */
+		      requested = !dhcp_packet(interface, DHCPREQUEST, yaddr, saddr, sock);
+		    }
+		  else /* otherwise, decline the offer */
+		    {
+		      printf("is not free. Declining.\n");
+
+		      /* send DHCPDECLINE */
+		      dhcp_packet(interface, DHCPDECLINE, yaddr, saddr, sock);
+		    }
+		}
 		break;
 	      case DHCPACK:
 		{
 		  struct net_route_s	*route;
 		  struct net_addr_s	addr;
 		  struct net_addr_s	mask;
+		  struct net_addr_s	target;
+
+		  /* is it address renewal */
+		  if (lease->delay)
+		    {
+		      printf("dhclient: renewal succeeded.\n");
+		      free(packet);
+		      return 0;
+		    }
 
 		  printf("dhclient: end of negociation.\n");
 
-		  lease->serv = dhcp->siaddr;
-		  lease->ip = dhcp->yiaddr;
+		  lease->serv = ntohl(dhcp->siaddr);
+		  lease->ip = ntohl(dhcp->yiaddr);
 
 		  /* compute lease time */
 		  opt = dhcp_get_opt(dhcp, DHCP_LEASE);
@@ -417,28 +431,23 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		    lease->delay = DHCP_DFL_LEASE;
 
 		  /* configure IP */
-		  IPV4_ADDR_SET(addr, 0);
-		  if_config(interface->index, IF_DEL, &addr, &addr);
-		  IPV4_ADDR_SET(addr, dhcp->yiaddr);
+		  IPV4_ADDR_SET(addr, lease->ip);
 
 		  /* if netmask is present, use it, otherwise guess it */
 		  opt = dhcp_get_opt(dhcp, DHCP_NETMASK);
 		  if (opt != NULL)
-		    IPV4_ADDR_SET(mask, endian_32_na_load(opt->data));
+		    IPV4_ADDR_SET(mask, endian_be32_na_load(opt->data));
 		  else
 		    {
-		      if (IN_CLASSA(dhcp->yiaddr))
+		      if (IN_CLASSA(lease->ip))
 			IPV4_ADDR_SET(mask, IN_CLASSA_NET);
-		      else if (IN_CLASSB(dhcp->yiaddr))
+		      else if (IN_CLASSB(lease->ip))
 			IPV4_ADDR_SET(mask, IN_CLASSB_NET);
-		      else if (IN_CLASSC(dhcp->yiaddr))
+		      else if (IN_CLASSC(lease->ip))
 			IPV4_ADDR_SET(mask, IN_CLASSC_NET);
 		    }
-		  printf("dhclient:\n  attributed %u.%u.%u.%u netmask %u.%u.%u.%u\n",
-			 (addr.addr.ipv4 >> 0) & 0xff, (addr.addr.ipv4 >> 8) & 0xff,
-			 (addr.addr.ipv4 >> 16) & 0xff, (addr.addr.ipv4 >> 24) & 0xff,
-			 (mask.addr.ipv4 >> 0) & 0xff, (mask.addr.ipv4 >> 8) & 0xff,
-			 (mask.addr.ipv4 >> 16) & 0xff, (mask.addr.ipv4 >> 24) & 0xff);
+		  printf("dhclient:\n  assigned %u.%u.%u.%u netmask %u.%u.%u.%u\n",
+			 EXTRACT_IPV4(addr.addr.ipv4), EXTRACT_IPV4(mask.addr.ipv4));
 		  if_config(interface->index, IF_SET, &addr, &mask);
 
 		  printf("  lease time: %u seconds\n", lease->delay / 1000);
@@ -454,34 +463,32 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		  if ((opt = dhcp_get_opt(dhcp, DHCP_ROUTER)) != NULL)
 		    {
 		      struct net_route_s	*def;
+		      struct net_addr_s		null;
 		      uint32_t			gateway;
 
-		      gateway = endian_32_na_load(opt->data);
+		      gateway = endian_be32_na_load(opt->data);
 
 		      printf("  gateway: %u.%u.%u.%u\n",
-			     (gateway >> 0) & 0xff, (gateway >> 8) & 0xff,
-			     (gateway >> 16) & 0xff, (gateway >> 24) & 0xff);
+			     EXTRACT_IPV4(gateway));
 
 		      /* configure default route */
-		      if ((def = mem_alloc(sizeof (struct net_route_s *), MEM_SCOPE_NETWORK)) != NULL)
+		      IPV4_ADDR_SET(null, 0x0);
+		      if ((def = route_obj_new(&null, &null, interface)) != NULL)
 			{
-			  def->interface = interface;
-			  IPV4_ADDR_SET(def->target, 0x0);
-			  IPV4_ADDR_SET(def->mask, 0x0);
 			  def->is_routed = 1;
 			  IPV4_ADDR_SET(def->router, gateway);
 			  route_add(def);
+			  route_obj_refdrop(def);
 			}
 		    }
 
 		  /* configure default route */
-		  if ((route = mem_alloc(sizeof (struct net_route_s *), MEM_SCOPE_NETWORK)) != NULL)
+		  IPV4_ADDR_SET(target, addr.addr.ipv4 & mask.addr.ipv4);
+		  if ((route = route_obj_new(&target, &mask, interface)) != NULL)
 		    {
-		      route->interface = interface;
-		      IPV4_ADDR_SET(route->target, addr.addr.ipv4 & mask.addr.ipv4);
-		      memcpy(&route->mask, &mask, sizeof (struct net_addr_s));
 		      route->is_routed = 0;
 		      route_add(route);
+		      route_obj_refdrop(route);
 		    }
 
 		  /* we've got an address :-)) */
@@ -516,6 +523,8 @@ static TIMER_CALLBACK(dhcp_renew)
   socket_t		sock_packet = NULL;
   uint_fast8_t		i;
 
+  printf("dhclient: initiating renewal ...\n");
+
   /* create sockets */
   if (dhcp_init(lease->interface, &sock, &sock_packet))
     goto leave;
@@ -528,13 +537,17 @@ static TIMER_CALLBACK(dhcp_renew)
 
       /* wait answer */
       if (!dhcp_request(lease->interface, sock, sock_packet, lease))
-	break;
+	{
+	  printf("dhclient: renewal succeeded.\n");
+	  break;
+	}
     }
 
   /* critical error, panic */
   if (i == 12)
     {
       /* best solution is to restart from the beginning... */
+      printf("dhclient: renewal failed.\n");
 
       /* discover DHCP servers */
       if (dhcp_packet(lease->interface, DHCPDISCOVER, 0, INADDR_BROADCAST, sock))
@@ -569,7 +582,7 @@ error_t			dhcp_client(const char	*ifname)
   socket_t		sock_packet = NULL;
   struct net_if_s	*interface;
   struct net_addr_s	null;
-  struct net_route_s	route;
+  struct net_route_s	*route = NULL;
 
   if ((interface = if_get_by_name(ifname)) == NULL)
     return -1;
@@ -578,15 +591,14 @@ error_t			dhcp_client(const char	*ifname)
     return -1;
 
   lease->interface = interface;
+  lease->delay = 0;
 
   /* ifconfig 0.0.0.0 */
   IPV4_ADDR_SET(null, 0);
   if_config(interface->index, IF_SET, &null, &null);
-  route.interface = if_get_by_name(ifname);
-  IPV4_ADDR_SET(route.target, 0x0);
-  IPV4_ADDR_SET(route.mask, 0x0);
-  route.is_routed = 0;
-  route_add(&route);
+  if ((route = route_obj_new(&null, &null, interface)) == NULL)
+    goto leave;
+  route_add(route);
 
   /* create sockets */
   if (dhcp_init(interface, &sock, &sock_packet))
@@ -609,7 +621,8 @@ error_t			dhcp_client(const char	*ifname)
       timer_add_event(&timer_ms, timer);
     }
 
-  route_del(&route);
+  route_del(route);
+  route_obj_refdrop(route);
 
   shutdown(sock, SHUT_RDWR);
   shutdown(sock_packet, SHUT_RDWR);
@@ -621,7 +634,11 @@ error_t			dhcp_client(const char	*ifname)
 
   free(lease);
 
-  route_del(&route);
+  if (route != NULL)
+    {
+      route_del(route);
+      route_obj_refdrop(route);
+    }
 
   if (sock != NULL)
     shutdown(sock, SHUT_RDWR);

@@ -30,6 +30,7 @@
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
+#include <gpct/object_refcount.h>
 
 /*
  * Misc.
@@ -59,6 +60,8 @@ typedef uint_fast8_t	net_if_type_t;
  * An interface.
  */
 
+OBJECT_TYPE(net_if_obj, REFCOUNT, struct net_if_s);
+
 struct					net_if_s
 {
   char					name[IFNAME_MAX_LEN];
@@ -75,14 +78,19 @@ struct					net_if_s
   uint_fast32_t				rx_packets;
   uint_fast32_t				tx_packets;
 
+  net_if_obj_entry_t			obj_entry;
   CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
+
+OBJECT_CONSTRUCTOR(net_if_obj);
+OBJECT_DESTRUCTOR(net_if_obj);
+OBJECT_FUNC(static inline, net_if_obj, REFCOUNT, net_if_obj, obj_entry);
 
 /*
  * Interface container types.
  */
 
-CONTAINER_TYPE(net_if, HASHLIST, struct net_if_s, NOLOCK, NOOBJ, list_entry, 4);
+CONTAINER_TYPE(net_if, HASHLIST, struct net_if_s, NOLOCK, net_if_obj, list_entry, 4);
 CONTAINER_KEY_TYPE(net_if, STRING, name);
 
 /*

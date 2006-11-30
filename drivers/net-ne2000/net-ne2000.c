@@ -479,7 +479,15 @@ DEV_INIT(net_ne2000_init)
   packet_queue_lock_init(&pv->rcvqueue);
 
   /* register as a net device */
-  pv->interface = if_register(dev, IF_ETHERNET, pv->mac, ETHERMTU);
+  pv->interface = NULL;
+  if ((pv->interface = if_register(dev, IF_ETHERNET, pv->mac, ETHERMTU)) == NULL)
+    {
+      printf("ne2000: cannot register interface\n");
+
+      net_ne2000_cleanup(dev);
+
+      return -1;
+    }
 
   /* start dispatch thread */
   if (sem_init(&pv->rcvsem, 0, 0))
@@ -529,7 +537,8 @@ DEV_CLEANUP(net_ne2000_cleanup)
   struct net_ne2000_context_s	*pv = dev->drv_pv;
 
   /* unregister the device */
-  if_unregister(pv->interface);
+  if (pv->interface != NULL)
+    if_unregister(pv->interface);
 
   /* destroy the packet scheduled for sending if necessary */
   if (pv->current)

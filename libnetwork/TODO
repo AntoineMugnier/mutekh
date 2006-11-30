@@ -3,22 +3,17 @@
 * libsocket
   - finir sockets UDP
 
-* route
-  - gestion par objets refcount
-  - faire une version light avec liste triée
-
 * if
-  - a coder integralement
-  - gerer les trucs fun genre bridging
-
-* libsocket
-  - sockopt sur socket IP
+  - a finir
 
 * TCP
   - a finir
 
 * libsocket
   - sockets TCP
+
+* libsocket
+  - sockopt sur socket IP
 
 * route
   - faire avec un arbre comme a dit Alex

@@ -56,6 +56,53 @@ static uint_fast8_t	ifid = 0;
 static uint_fast8_t	ethid = 0;
 
 /*
+ * Interface object constructor.
+ */
+
+OBJECT_CONSTRUCTOR(net_if_obj)
+{
+  struct net_if_s	*interface;
+  struct device_s	*dev = param;
+  net_if_type_t		type = va_arg(ap, net_if_type_t);
+  uint8_t		*mac = va_arg(ap, uint8_t *);
+  uint_fast16_t		mtu = va_arg(ap, uint_fast16_t);
+
+  if ((interface = mem_alloc(sizeof (struct net_if_s), MEM_SCOPE_NETWORK)) == NULL)
+    return NULL;
+
+  /* initialize the object */
+  net_if_obj_init(interface);
+  interface->dev = dev;
+  interface->mac = mac;
+  interface->mtu = mtu;
+  interface->type = type;
+  interface->rx_bytes = interface->rx_packets = interface->tx_bytes = interface->tx_packets = 0;
+  net_protos_init(&interface->protocols);
+
+  /* choose a funky name for the interface */
+  if (type == IF_ETHERNET)
+    sprintf(interface->name, "eth%d", ethid++);
+  else
+    sprintf(interface->name, "if%d", ifid);
+  ifid++;
+  interface->index = ifid;
+
+  return interface;
+}
+
+/*
+ * Interface object destructor
+ */
+
+OBJECT_DESTRUCTOR(net_if_obj)
+{
+  printf(" === net_if drop === \n");
+
+  net_protos_destroy(&obj->protocols);
+  mem_free(obj);
+}
+
+/*
  * Register a new interface.
  */
 
@@ -64,36 +111,27 @@ struct net_if_s	*if_register(struct device_s	*dev,
 			     uint8_t		*mac,
 			     uint_fast16_t	mtu)
 {
+#ifdef CONFIG_NETWORK_UDP
   struct net_proto_s				*udp;
+#endif
+#ifdef CONFIG_NETWORK_TCP
   struct net_proto_s				*tcp;
+#endif
   struct net_if_s				*interface;
 
   /* create new device node */
-  interface = mem_alloc(sizeof (struct net_if_s), MEM_SCOPE_SYS);
-  interface->rx_bytes = interface->rx_packets = interface->tx_bytes = interface->tx_packets = 0;
-  net_protos_init(&interface->protocols);
+  if ((interface = net_if_obj_new(dev, type, mac, mtu)) == NULL)
+    return NULL;
 
   /* initialize standard protocols for the device */
 #ifdef CONFIG_NETWORK_UDP
-  udp = net_alloc_proto(&udp_protocol);
-  if_register_proto(interface, udp);
+  if ((udp = net_proto_obj_new(NULL, &udp_protocol)) != NULL)
+    if_register_proto(interface, udp);
 #endif
 #ifdef CONFIG_NETWORK_TCP
-  tcp = net_alloc_proto(&tcp_protocol);
-  if_register_proto(interface, tcp);
+  if ((tcp = net_proto_obj_new(NULL, &tcp_protocol)) != NULL)
+    if_register_proto(interface, tcp);
 #endif
-
-  /* copy properties and name the interface */
-  interface->dev = dev;
-  interface->mac = mac;
-  interface->mtu = mtu;
-  interface->type = type;
-  if (type == IF_ETHERNET)
-    sprintf(interface->name, "eth%d", ethid++);
-  else
-    sprintf(interface->name, "if%d", ifid);
-  ifid++;
-  interface->index = ifid;
 
   /* add to the interface list */
   net_if_push(&net_interfaces, interface);
@@ -109,8 +147,8 @@ struct net_if_s	*if_register(struct device_s	*dev,
 
 void			if_unregister(struct net_if_s	*interface)
 {
-  /* XXX if_unregister */
-
+  net_if_remove(&net_interfaces, interface);
+  net_if_obj_refdrop(interface);
 }
 
 /*
@@ -132,6 +170,8 @@ void			if_up(char*		name, ...)
       printf("Bringing up interface %s\n", name);
 
       /* XXX */
+
+      net_if_obj_refdrop(interface);
     }
 
   va_end(va);
@@ -151,11 +191,30 @@ void			if_down(char*		name, ...)
       dev = interface->dev;
 
       /* XXX if_down */
+
+      net_if_obj_refdrop(interface);
     }
 }
 
 /*
- * Configure an interface.
+ * Cleanup an IPv4 protocol set (includes ARP & ICMPv4).
+ */
+
+static void		if_destroy_ipv4(net_protos_root_t	*protos,
+					struct net_proto_s	*ipv4)
+{
+  struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ipv4->pv;
+
+  net_protos_remove(protos, pv->arp);
+  net_proto_obj_refdrop(pv->arp);
+  net_protos_remove(protos, pv->icmp);
+  net_proto_obj_refdrop(pv->icmp);
+  net_protos_remove(protos, ipv4);
+  net_proto_obj_refdrop(ipv4);
+}
+
+/*
+ * Configure an interface. XXX is shit
  */
 
 error_t			if_config(int_fast32_t		ifindex,
@@ -167,22 +226,69 @@ error_t			if_config(int_fast32_t		ifindex,
   struct net_proto_s	*ip;
   struct net_proto_s	*arp;
   struct net_proto_s	*icmp;
+  error_t		err = -1;
+
+  if (interface == NULL)
+    return err;
 
 #ifdef CONFIG_NETWORK_IPV4
   if (address->family == addr_ipv4)
     {
-      ip = net_alloc_proto(&ip_protocol);
-      arp = net_alloc_proto(&arp_protocol);
-      icmp = net_alloc_proto(&icmp_protocol);
-      if_register_proto(interface, arp);
-      if_register_proto(interface, icmp);
-      if_register_proto(interface, ip, arp, icmp, IPV4_ADDR_GET(*address), IPV4_ADDR_GET(*mask));
+      if (action == IF_SET)
+	{
+	  struct net_proto_s	*prev = NULL;
 
-      return 0;
+	  /* remove all other IPv4 modules */
+	  NET_FOREACH_PROTO(&interface->protocols, ETHERTYPE_IP,
+	  {
+	    if (prev != NULL)
+	      if_destroy_ipv4(&interface->protocols, prev);
+	    prev = item;
+	  });
+	  if (prev != NULL)
+	    if_destroy_ipv4(&interface->protocols, prev);
+	}
+
+      if (action == IF_SET || action == IF_ADD)
+	{
+	  /* add new set of protocols for IPv4 */
+	  if ((ip = net_proto_obj_new(NULL, &ip_protocol)) == NULL)
+	    return err;
+	  if ((arp = net_proto_obj_new(NULL, &arp_protocol)) == NULL)
+	    {
+	      net_proto_obj_refdrop(ip);
+	      return err;
+	    }
+	  if ((icmp = net_proto_obj_new(NULL, &icmp_protocol)) == NULL)
+	    {
+	      net_proto_obj_refdrop(ip);
+	      net_proto_obj_refdrop(arp);
+	      return err;
+	    }
+	  if_register_proto(interface, arp);
+	  if_register_proto(interface, icmp);
+	  if_register_proto(interface, ip, arp, icmp, IPV4_ADDR_GET(*address), IPV4_ADDR_GET(*mask));
+
+	  err = 0;
+	}
+      else
+	{
+	  /* look for the protocol to remove and remove it */
+	  NET_FOREACH_PROTO(&interface->protocols, ETHERTYPE_IP,
+	  {
+	    if (item->desc->f.addressing->matchaddr(item, address, NULL, NULL))
+	      {
+		if_destroy_ipv4(&interface->protocols, item);
+		NET_FOREACH_PROTO_BREAK;
+	      }
+	  });
+	}
     }
 #endif
 
-  return -1;
+  net_if_obj_refdrop(interface);
+
+  return err;
 }
 
 /*
@@ -214,8 +320,6 @@ void			if_register_proto(struct net_if_s	*interface,
 void			if_pushpkt(struct net_if_s	*interface,
 				   struct net_packet_s	*packet)
 {
-  struct net_proto_s	*item;
-
   interface->rx_bytes += packet->header[0].size;
   interface->rx_packets++;
 
@@ -226,12 +330,10 @@ void			if_pushpkt(struct net_if_s	*interface,
 #endif
 
   /* lookup to all modules matching the protocol  */
-  for (item = net_protos_lookup(&interface->protocols, packet->proto);
-       item != NULL;
-       item = net_protos_lookup_next(&interface->protocols, item, packet->proto))
-    {
+  NET_FOREACH_PROTO(&interface->protocols, packet->proto,
+  {
       item->desc->pushpkt(interface, packet, item);
-    }
+  });
 }
 
 /*
@@ -259,6 +361,7 @@ void			if_sendpkt(struct net_if_s	*interface,
 
   if (!memcmp(interface->mac, packet->tMAC, packet->MAClen))
     {
+      printf("loop\n");
       /* XXX c'est mal poli on passe devant tout le monde */
       packet->proto = proto;
       packet->stage++;
@@ -307,6 +410,8 @@ void			if_dump(const char	*name)
       printf("%u bytes sent (%u packets), %u bytes received (%u packets)\n",
 	     interface->tx_bytes, interface->tx_packets,
 	     interface->rx_bytes, interface->rx_packets);
+
+      net_if_obj_refdrop(interface);
     }
 }
 

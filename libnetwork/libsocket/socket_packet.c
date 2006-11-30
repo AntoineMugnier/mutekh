@@ -207,7 +207,7 @@ static _SENDMSG(sendmsg_packet)
 	}
 
       /* set the packet content */
-      for (i = 0, n = 0; i < message->msg_iovlen; i++, n += message->msg_iov[i].iov_len)
+      for (i = 0, n = 0; i < message->msg_iovlen; n += message->msg_iov[i].iov_len, i++)
 	memcpy(packet->packet + n, message->msg_iov[i].iov_base, message->msg_iov[i].iov_len);
       nethdr = &packet->header[0];
       nethdr->data = packet->packet;
@@ -246,7 +246,7 @@ static _SENDMSG(sendmsg_packet)
       nethdr->data = next;
       nethdr->size = n;
       nethdr[1].data = NULL;
-      for (i = 0, n = 0; i < message->msg_iovlen; i++, n += message->msg_iov[i].iov_len)
+      for (i = 0, n = 0; i < message->msg_iovlen; n += message->msg_iov[i].iov_len, i++)
 	memcpy(next + n, message->msg_iov[i].iov_base, message->msg_iov[i].iov_len);
       packet->header[packet->stage + 1].data = NULL;
       packet->MAClen = sll->sll_halen;

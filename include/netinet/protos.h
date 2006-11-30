@@ -28,6 +28,7 @@
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_hashlist.h>
+#include <gpct/object_refcount.h>
 
 struct net_if_s;
 struct net_packet_s;
@@ -189,19 +190,27 @@ struct					net_proto_desc_s
   size_t				pv_size;
 };
 
+OBJECT_TYPE(net_proto_obj, REFCOUNT, struct net_proto_s);
+
 struct					net_proto_s
 {
   const struct net_proto_desc_s		*desc;	/* protocol descriptor */
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
   net_proto_id_t			id;	/* protocol identifier */
   struct net_proto_pv_s			*pv;	/* private data */
+
+  net_proto_obj_entry_t			obj_entry;
+  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
+
+OBJECT_CONSTRUCTOR(net_proto_obj);
+OBJECT_DESTRUCTOR(net_proto_obj);
+OBJECT_FUNC(static inline, net_proto_obj, REFCOUNT, net_proto_obj, obj_entry);
 
 /*
  * Container type for protocols list.
  */
 
-CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, NOLOCK, NOOBJ, list_entry, 8);
+CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, NOLOCK, net_proto_obj, list_entry, 8);
 CONTAINER_KEY_TYPE(net_protos, SCALAR, id);
 
 /*
@@ -212,25 +221,32 @@ CONTAINER_FUNC(static inline, net_protos, HASHLIST, net_protos, NOLOCK, id);
 CONTAINER_KEY_FUNC(static inline, net_protos, HASHLIST, net_protos, NOLOCK, id);
 
 /*
- * Allocate a new protocol node.
+ * Foreach
  */
 
-static inline struct net_proto_s	*net_alloc_proto(const struct net_proto_desc_s	*desc)
-{
-  struct net_proto_s			*proto;
+#define NET_FOREACH_PROTO(Protocols,Id,Code)							\
+  {												\
+    struct net_proto_s	*item;									\
+												\
+    for (item = net_protos_lookup((Protocols), (Id));						\
+	 item != NULL;										\
+	 )											\
+      {												\
+	struct net_proto_s	*__item;							\
+												\
+	Code;											\
+												\
+	__item = item;										\
+	item = net_protos_lookup_next((Protocols), item, (Id));					\
+	net_proto_obj_refdrop(__item);								\
+      }												\
+  }
 
-  proto = mem_alloc(sizeof (struct net_proto_s) + desc->pv_size,
-		    MEM_SCOPE_CONTEXT);
-
-  proto->desc = desc;
-  proto->id = desc->id;
-  if (desc->pv_size)
-    proto->pv = (void *)(proto + 1);
-  else
-    proto->pv = NULL;
-
-  return proto;
-}
+#define NET_FOREACH_PROTO_BREAK									\
+  {												\
+    net_proto_obj_refdrop(item);								\
+    break;											\
+  }
 
 #endif
 

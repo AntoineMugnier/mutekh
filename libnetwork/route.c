@@ -46,7 +46,9 @@ OBJECT_CONSTRUCTOR(route_obj)
   route_obj_init(route);
   memcpy(&route->target, target, sizeof (struct net_addr_s));
   memcpy(&route->mask, mask, sizeof (struct net_addr_s));
+  net_if_obj_refnew(interface);
   route->interface = interface;
+  route->addressing = NULL;
   route->is_routed = 0;
   route->invalidated = 0;
 
@@ -59,6 +61,11 @@ OBJECT_CONSTRUCTOR(route_obj)
 
 OBJECT_DESTRUCTOR(route_obj)
 {
+  printf(" === route drop === \n");
+
+  net_if_obj_refdrop(obj->interface);
+  if (obj->addressing != NULL)
+    net_proto_obj_refdrop(obj->addressing);
   mem_free(obj);
 }
 
@@ -72,6 +79,10 @@ error_t			route_add(struct net_route_s	*route)
   struct net_addr_s	*mask;
   struct net_proto_s	*item;
   net_proto_id_t	id;
+
+  /* re-adding a route is not permitted */
+  if (route->invalidated || route->addressing != NULL)
+    return -1;
 
   if (!route->is_routed)
     {
@@ -99,6 +110,7 @@ error_t			route_add(struct net_route_s	*route)
 	  struct net_route_s	*rt;
 	  struct net_route_s	*prec;
 
+	  net_proto_obj_refnew(item);
 	  route->addressing = item;
 
 	  /* push the route into the routing table */
@@ -117,9 +129,9 @@ error_t			route_add(struct net_route_s	*route)
 	    }
 
 	  if (prec == NULL)
-	    return route_table_push(&route_table, route);
+	    return !route_table_push(&route_table, route);
 	  else
-	    return route_table_insert_post(&route_table, prec, route);
+	    return !route_table_insert_post(&route_table, prec, route);
 	}
     }
 
@@ -180,7 +192,10 @@ void			route_dump(void)
     switch (item->target.family)
       {
 	case addr_ipv4:
-	  i = printf("%u.%u.%u.%u", EXTRACT_IPV4(item->target.addr.ipv4));
+	  if (item->target.addr.ipv4)
+	    i = printf("%u.%u.%u.%u", EXTRACT_IPV4(item->target.addr.ipv4));
+	  else
+	    i = printf("default");
 	  spc(18 - i);
 	  if (item->is_routed)
 	    i = printf("%u.%u.%u.%u", EXTRACT_IPV4(item->router.addr.ipv4));

@@ -369,7 +369,7 @@ static _SENDMSG(sendmsg_raw)
   nethdr[1].data = NULL;
 
   /* copy the buffer into the packet */
-  for (i = 0, n = 0; i < message->msg_iovlen; i++, n += message->msg_iov[i].iov_len)
+  for (i = 0, n = 0; i < message->msg_iovlen; n += message->msg_iov[i].iov_len, i++)
     memcpy(p + n, message->msg_iov[i].iov_base, message->msg_iov[i].iov_len);
 
   /* adjust some IP header fields */
