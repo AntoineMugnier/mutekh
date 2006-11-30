@@ -11,4 +11,11 @@ ifeq ($(CONFIG_LIBC_SEMAPHORE), defined)
 objs += sem.o
 endif
 
+ifeq ($(CONFIG_LIBC_STREAM), defined)
+objs += stream.o
+endif
+
+ifeq ($(CONFIG_LIBC_STREAM_STD), defined)
+objs += stream_std.o
+endif
 

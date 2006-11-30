@@ -226,7 +226,7 @@ sub process_file
 	{
 	    $lnum++;
 
-	    next if ($line =~ /^\s*$/);
+	    next if ($line =~ /^[ \t]*(\#.*)?$/);
 
 	    # catch %config blocks start and end
 

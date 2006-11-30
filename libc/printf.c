@@ -45,6 +45,18 @@ typedef intptr_t __printf_int_t;
 
 #define PRINTF_INT_BUFFER_LEN	20
 
+#ifdef CONFIG_LIBC_STREAM
+
+static inline void
+__printf_out_stream(void *ctx, const char *str, size_t offset, size_t len)
+{
+  FILE *stream = ctx;
+
+  fwrite(str, len, 1, stream);
+}
+
+#endif
+
 struct __printf_str_s
 {
   size_t	size;
@@ -401,4 +413,25 @@ ssize_t sprintf(char *str, const char *format, ...)
 
   return res;
 }
+
+#ifdef CONFIG_LIBC_STREAM
+
+inline ssize_t vfprintf(FILE *stream, const char *format, va_list ap)
+{
+  return __printf_arg(stream, __printf_out_stream, format, ap);
+}
+
+ssize_t fprintf(FILE *stream, const char *format, ...)
+{
+  ssize_t	res;
+  va_list	ap;
+
+  va_start(ap, format);
+  res = vfprintf(stream, format, ap);
+  va_end(ap);
+
+  return res;  
+}
+
+#endif
 

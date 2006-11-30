@@ -23,6 +23,8 @@
 #define STDIO_H_
 
 #include <hexo/types.h>
+#include <hexo/error.h>
+
 #include <stdarg.h>
 
 int_fast8_t putchar(char c);
@@ -44,6 +46,73 @@ ssize_t scanf(const char *format, ...);
 ssize_t sscanf(const char *str, const char *format, ...);
 ssize_t vscanf(const char *format, va_list ap);
 ssize_t vsscanf(const char *str, const char *format, va_list ap);
+
+#ifdef CONFIG_LIBC_STREAM
+
+enum stream_lastmode_e
+  {
+    STREAM_LAST_NONE, STREAM_LAST_READ, STREAM_LAST_WRITE
+  };
+
+enum stream_whence_e
+  {
+    SEEK_SET, SEEK_END, SEEK_CUR
+  };
+
+# define EOF			-1
+
+typedef void *			fd_t;
+typedef int16_t			mode_t;
+typedef int32_t			fpos_t;
+
+struct				stream_ops_s
+{
+  fd_t (*open)(const char *name, const char *mode);
+  ssize_t (*write)(fd_t fd, const void *buffer, size_t count);
+  ssize_t (*read)(fd_t fd, void *buffer, size_t count);
+  error_t (*close)(fd_t fd);
+  off_t	(*lseek)(fd_t fd, off_t offset, enum stream_whence_e whence);
+  bool_t (*readable)(fd_t fd);
+  bool_t (*writable)(fd_t fd);
+};
+
+extern const struct stream_ops_s	*stream_fops;
+
+struct				file_s
+{
+  const struct stream_ops_s	*ops;
+  fd_t				fd;
+  uint8_t			*buffer;
+  size_t			length;
+  size_t			buf_size;
+  enum stream_lastmode_e	last;
+};
+
+typedef struct file_s		FILE;
+
+extern FILE * const stdin;
+extern FILE * const stdout;
+extern FILE * const stderr;
+
+FILE *fopen(const char *path, const char *mode);
+error_t fclose(FILE *stream);
+uint_fast16_t fputc(unsigned char c, FILE *stream);
+uint_fast16_t fgetc(FILE *stream);
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+char *fgets(char *str, size_t size, FILE *stream);
+error_t fputs(const char *str, FILE *stream);
+error_t fseek(FILE *stream, fpos_t offset, enum stream_whence_e whence);
+fpos_t ftell(FILE *stream);
+void rewind(FILE *stream);
+error_t fgetpos(FILE *stream, fpos_t *pos);
+error_t fsetpos(FILE *stream, const fpos_t *pos);
+error_t fflush(FILE *stream);
+error_t fpurge(FILE *stream);
+ssize_t vfprintf(FILE *stream, const char *format, va_list ap);
+ssize_t fprintf(FILE *stream, const char *format, ...);
+
+#endif /* CONFIG_LIBC_STREAM */
 
 #endif
 

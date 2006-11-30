@@ -31,21 +31,21 @@
 #include <hexo/cpu.h>
 #include <hexo/scheduler.h>
 
-#include <../drivers/uart-8250/uart-8250.h>
-#include <../drivers/tty-vga/tty-vga.h>
-#include <../drivers/tty-soclib/tty-soclib.h>
-#include <../drivers/tty-emu/tty-emu.h>
-#include <../drivers/icu-8259/icu-8259.h>
-#include <../drivers/icu-soclib/icu-soclib.h>
-#include <../drivers/timer-soclib/timer-soclib.h>
-#include <../drivers/timer-8253/timer-8253.h>
-#include <../drivers/timer-emu/timer-emu.h>
-#include <../drivers/input-8042/input-8042.h>
-#include <../drivers/fb-vga/fb-vga.h>
-#include <../drivers/enum-pci/enum-pci.h>
-#include <../drivers/enum-isapnp/enum-isapnp.h>
-#include <../drivers/net-ne2000/net-ne2000.h>
-#include <../drivers/net-3c900/net-3c900.h>
+#include <drivers/uart-8250/uart-8250.h>
+#include <drivers/tty-vga/tty-vga.h>
+#include <drivers/tty-soclib/tty-soclib.h>
+#include <drivers/tty-emu/tty-emu.h>
+#include <drivers/icu-8259/icu-8259.h>
+#include <drivers/icu-soclib/icu-soclib.h>
+#include <drivers/timer-soclib/timer-soclib.h>
+#include <drivers/timer-8253/timer-8253.h>
+#include <drivers/timer-emu/timer-emu.h>
+#include <drivers/input-8042/input-8042.h>
+#include <drivers/fb-vga/fb-vga.h>
+#include <drivers/enum-pci/enum-pci.h>
+#include <drivers/enum-isapnp/enum-isapnp.h>
+#include <drivers/net-ne2000/net-ne2000.h>
+#include <drivers/net-3c900/net-3c900.h>
 
 #include <hexo/device.h>
 #include <hexo/driver.h>
@@ -87,6 +87,10 @@ struct timer_s	timer_ms;
 extern const uint8_t mutek_logo_320x200[320*200];
 #endif
 
+#if defined(CONFIG_DRIVER_ICU)
+struct device_s icu_dev;
+#endif
+
 #if defined(CONFIG_DRIVER_TIMER)
 DEVTIMER_CALLBACK(timer_callback)
 {
@@ -111,7 +115,6 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   /********* ICU init ******************************** */
 
 #if defined(CONFIG_DRIVER_ICU)
-  static struct device_s icu_dev;
 
   device_init(&icu_dev);
 # if defined(CONFIG_DRIVER_ICU_8259)
@@ -133,10 +136,10 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
   device_init(&uart_dev);
 # if defined(CONFIG_DRIVER_CHAR_UART8250)
-  tty_uart_dev.addr[UART_8250_ADDR] = 0x03f8;
-  tty_uart_dev.irq = 4;
-  uart_8250_init(&tty_uart_dev, &icu_dev);
-  DEV_ICU_BIND(&icu_dev, &tty_uart_dev);
+  uart_dev.addr[UART_8250_ADDR] = 0x03f8;
+  uart_dev.irq = 4;
+  uart_8250_init(&uart_dev, &icu_dev);
+  DEV_ICU_BIND(&icu_dev, &uart_dev);
 # else
 #  warning CONFIG_DRIVER_UART case not handled in mutek_main()
 # endif
@@ -179,7 +182,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #if defined(CONFIG_MUTEK_CONSOLE)
 # if defined(CONFIG_DRIVER_TTY)
   tty_dev = &tty_con_dev;
-# elif defined(CONFIG_DRIVER_TTY)
+# elif defined(CONFIG_DRIVER_UART)
   tty_dev = &uart_dev;
 # endif
 #endif
@@ -235,9 +238,9 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # if defined(CONFIG_DRIVER_FB_VGA)
   fb_vga_init(&fb_dev, &icu_dev);
   fb_vga_setmode(&fb_dev, 320, 200, 8, FB_PACK_INDEX);
-  uint8_t *p = (void*)fb_vga_getbuffer(&fb_dev, 0);
 #  if defined(CONFIG_MUTEK_LOGO)
-   memcpy(p, mutek_logo_320x200, 64000);
+  uint8_t *p = (void*)fb_vga_getbuffer(&fb_dev, 0);
+  memcpy(p, mutek_logo_320x200, 64000);
 #  endif
 # else
 #  warning CONFIG_DRIVER_FB case not handled in mutek_main()

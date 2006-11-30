@@ -28,8 +28,6 @@
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_bitmap.h>
 
-#define INPUT_8042_KEYCOUNT	128
-
 CONTAINER_TYPE(input_state, BITMAP, uint32_t, NOLOCK, NOOBJ, INPUT_8042_KEYCOUNT);
 CONTAINER_FUNC(static inline, input_state, BITMAP, input_state, NOLOCK);
 

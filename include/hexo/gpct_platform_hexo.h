@@ -27,6 +27,9 @@
 
 #define GPCT_CONFIG_NOPLATFORM
 
+#define GPCT_ULONG	__compiler_ulong_t
+#define GPCT_ULONGLONG	__compiler_ulonglong_t
+
 typedef bool_t		gpct_bool_t;
 typedef	error_t		gpct_error_t;
 typedef atomic_t	gpct_atomic_t;

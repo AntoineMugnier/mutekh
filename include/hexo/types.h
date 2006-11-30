@@ -73,13 +73,15 @@ typedef struct __ldscript_symbol_s __ldscript_symbol_t;
 /* compiler native integer types defined for compiler type dependant
  special cases */
 
-typedef signed short	__compiler_sshort_t;
-typedef signed int	__compiler_sint_t;
-typedef signed long	__compiler_slong_t;
+typedef signed short		__compiler_sshort_t;
+typedef signed int		__compiler_sint_t;
+typedef signed long		__compiler_slong_t;
+typedef signed long long	__compiler_slonglong_t;
 
-typedef unsigned short	__compiler_ushort_t;
-typedef unsigned int	__compiler_uint_t;
-typedef unsigned long	__compiler_ulong_t;
+typedef unsigned short		__compiler_ushort_t;
+typedef unsigned int		__compiler_uint_t;
+typedef unsigned long		__compiler_ulong_t;
+typedef unsigned long long	__compiler_ulonglong_t;
 
 #ifdef __MUTEK__
 /** prevent use of compiler native short type,
