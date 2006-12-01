@@ -1,8 +1,8 @@
 
 PHDRS
 {
-  boot PT_LOAD ;
-  mem PT_LOAD ;
+  boot PT_LOAD AT(0x00100000);
+  mem PT_LOAD AT(0x0010000c);
 }
 
 SECTIONS
@@ -12,11 +12,13 @@ SECTIONS
 
 	.multiboot : { *(.multiboot*) } : boot
 
-	.boot : { *(.boot*) }
+	. = 0x0010000c;
+
+	.boot : { *(.boot*) } : mem
 	__boot_start = LOADADDR(.boot);
 	__boot_end = LOADADDR(.boot) + SIZEOF(.boot);
 
-	.text : { *(.text*) } : mem
+	.text : { *(.text*) }
 	.bss : { *(.bss*) }
 	.data :
 		{

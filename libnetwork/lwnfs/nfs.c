@@ -560,6 +560,9 @@ ssize_t				nfs_read(struct nfs_s	*server,
   size_t			sz2;
   error_t			err;
 
+  if (size > 4096)
+    size = 4096;
+
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t) + sizeof (struct nfs_read_s);
   if ((req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
@@ -617,7 +620,8 @@ ssize_t		nfs_write(struct nfs_s	*server,
   size_t			sz;
   error_t			err;
 
-  /* XXX check size */
+  if (size > 4096)
+    size = 4096;
 
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t) + sizeof (struct nfs_write_s) - 1 + size;
