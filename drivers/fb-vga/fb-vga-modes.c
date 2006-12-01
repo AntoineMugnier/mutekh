@@ -119,7 +119,7 @@ static void fb_vga_palette(void)
       /* setup gray palette */
       cpu_io_write_8(FB_VGA_PEL_D, i/4);
       cpu_io_write_8(FB_VGA_PEL_D, i/4);
-      cpu_io_write_8(FB_VGA_PEL_D, i/4);      
+      cpu_io_write_8(FB_VGA_PEL_D, i/4);
     }
 }
 
@@ -211,7 +211,7 @@ DEVFB_SETMODE(fb_vga_setmode)
 	  (m->bpp == bpp) && (m->packing == packing))
 	{
 	  pv->mode = m;
-	  return fb_vga_setmode_(m);	
+	  return fb_vga_setmode_(m);
 	}
     }
 
@@ -230,3 +230,18 @@ DEVFB_FLIPPAGE(fb_vga_flippage)
   return 0;
 }
 
+DEVFB_SETPALETTE(fb_vga_setpalette)
+{
+  uint_fast16_t	i;
+
+  /* Setup palette */
+  cpu_io_write_8(FB_VGA_PEL_IW, 0);
+
+  for (i = 0; i < 256; i++)
+    {
+      /* setup each channel */
+      cpu_io_write_8(FB_VGA_PEL_D, pal[i].r);
+      cpu_io_write_8(FB_VGA_PEL_D, pal[i].g);
+      cpu_io_write_8(FB_VGA_PEL_D, pal[i].b);
+    }
+}

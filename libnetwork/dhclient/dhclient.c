@@ -482,7 +482,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 			}
 		    }
 
-		  /* configure default route */
+		  /* configure interface route */
 		  IPV4_ADDR_SET(target, addr.addr.ipv4 & mask.addr.ipv4);
 		  if ((route = route_obj_new(&target, &mask, interface)) != NULL)
 		    {

@@ -24,13 +24,6 @@ include $(SRC_DIR)/scripts/common.mk
 
 kernel: $(target).$(TARGET_EXT)
 
-$(target).o: $(BUILD_DIR)/.config.h $(objs) $(subdirs-lists) $(LIBAPP)
-	echo '    LD      $@'
-	$(LD) -r $$(cat /dev/null $(filter %.list,$^)) \
-		$(filter %.o,$^) $(filter %.a,$^) \
-		-T /usr/avr/lib/ldscripts/avr5.x \
-		-o $(BUILD_DIR)/$@
-
 $(target).out: $(BUILD_DIR)/.config.h $(objs) $(subdirs-lists) arch/$(CONFIG_ARCH_NAME)/ldscript $(LIBAPP)
 	echo '    LD      $@'
 	$(LD) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \

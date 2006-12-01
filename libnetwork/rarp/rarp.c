@@ -106,6 +106,8 @@ error_t			rarp_client(const char	*ifname)
 	  uint_fast32_t		mask;
 	  struct net_addr_s	v4_addr;
 	  struct net_addr_s	v4_mask;
+	  struct net_route_s	*route;
+	  struct net_addr_s	target;
 
 	  /* guess netmask */
 	  if (IN_CLASSA(ip))
@@ -119,6 +121,14 @@ error_t			rarp_client(const char	*ifname)
 	  IPV4_ADDR_SET(v4_addr, ip);
 	  IPV4_ADDR_SET(v4_mask, mask);
 	  if_config(interface->index, IF_SET, &v4_addr, &v4_mask);
+	  /* configure interface route */
+	  IPV4_ADDR_SET(target, v4_addr.addr.ipv4 & v4_mask.addr.ipv4);
+	  if ((route = route_obj_new(&target, &v4_mask, interface)) != NULL)
+	    {
+	      route->is_routed = 0;
+	      route_add(route);
+	      route_obj_refdrop(route);
+	    }
 	  printf("Assigned IP: %P, netmask: %P\n", &ip, 4, &mask, 4);
 	  break;
 	}
