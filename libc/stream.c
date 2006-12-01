@@ -29,7 +29,7 @@ error_t	fclose(FILE *stream)
 {
   error_t	err;
 
-  err = fflush(stream);
+  err =  stream->rwflush(stream);
   err |= stream->ops->close(stream->fd);
 
   free(stream);
