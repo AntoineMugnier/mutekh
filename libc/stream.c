@@ -14,7 +14,7 @@ require CONFIG_LIBC_STREAM_BUFFER_SIZE
 %config CONFIG_LIBC_STREAM_BUFFER_SIZE
 desc C library default buffer size for streams
 parent CONFIG_LIBC_STREAM
-default 64
+default 1024
 %config end
 
 */
