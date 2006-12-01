@@ -118,6 +118,7 @@ error_t fflush(FILE *stream);
 error_t fpurge(FILE *stream);
 ssize_t vfprintf(FILE *stream, const char *format, va_list ap);
 ssize_t fprintf(FILE *stream, const char *format, ...);
+int	feof(FILE *stream);
 
 #endif /* CONFIG_LIBC_STREAM */
 

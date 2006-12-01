@@ -360,3 +360,17 @@ FILE	*fopen(const char *path, const char *mode)
   return NULL;
 }
 
+int	feof(FILE *stream)
+{
+  off_t	end;
+  int	res = 0;
+
+  end = stream->ops->lseek(stream->fd, 0, SEEK_END);
+
+  if (stream->pos >= end)
+    res = 1;
+
+  stream->ops->lseek(stream->fd, stream->pos, SEEK_SET);
+
+  return res;
+}
