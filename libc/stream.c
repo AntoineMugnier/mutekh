@@ -23,6 +23,8 @@ const struct stream_ops_s	*stream_fops;
 
 /************************************************************************/
 
+CONTAINER_FUNC(static inline, stream_fifo, RING, stream_fifo, NOLOCK);
+
 error_t	fclose(FILE *stream)
 {
   error_t	err;
@@ -30,7 +32,6 @@ error_t	fclose(FILE *stream)
   err = fflush(stream);
   err |= stream->ops->close(stream->fd);
 
-  free(stream->buffer);
   free(stream);
 
   return (err);
@@ -38,163 +39,189 @@ error_t	fclose(FILE *stream)
 
 static error_t	write_flush(FILE *stream)
 {
-  ssize_t	err;
+  uint8_t	local[CONFIG_LIBC_STREAM_BUFFER_SIZE];
+  size_t	size = stream_fifo_pop_array(&stream->fifo_write, local, CONFIG_LIBC_STREAM_BUFFER_SIZE);
+  ssize_t	res;
 
-  if (stream->length)
+  /* write data from buffer */
+  do
     {
-      err = stream->ops->write(stream->fd, stream->buffer, stream->length);
+      res = stream->ops->write(stream->fd, local, size);
 
-      if (err < stream->length)
-	return -1;
+      if (res < 0)
+	return res;
 
-      stream->length = 0;
+      size -= res;
     }
+  while (size);
 
   return 0;
 }
 
-static size_t	buffered_read(size_t size, FILE *stream, char **ptr)
+static error_t	read_flush(FILE *stream)
 {
-  ssize_t	tmp;
-  size_t	pos;
-  size_t	init_size;
+  stream->ops->lseek(stream->fd, stream->pos, SEEK_CUR);
 
-  init_size = size;
+  stream_fifo_clear(&stream->fifo_read);
 
-  if (!stream->length)
-    {
-      if ((tmp = stream->ops->read(stream->fd, stream->buffer, stream->buf_size) < 0))
-	return -1;
-
-      stream->length = tmp;
-      pos = 0;
-    }
-  else
-    pos = stream->buf_size - stream->length;
-
-  while (stream->length && size)
-    {
-      *(*ptr)++ = stream->buffer[pos++];
-      stream->length--;
-      size--;
-    }
-
-  return (init_size - size);
+  return 0;
 }
 
-static error_t	buffered_write(size_t size, FILE *stream, const char *ptr)
+static error_t	no_flush(FILE *stream)
 {
-  intptr_t i = 0;
+  return 0;
+}
 
-  if (size >= stream->buf_size)
+static ssize_t	buffered_read(size_t size_, FILE *stream, uint8_t *ptr)
+{
+  uint8_t	local[CONFIG_LIBC_STREAM_BUFFER_SIZE];
+  ssize_t	res, local_size;
+  size_t	size = size_;
+
+  if (!stream->ops->readable(stream->fd))
+    return -1;
+
+  stream->rwflush = &read_flush;
+
+  /* get data from buffer */
+  res = stream_fifo_pop_array(&stream->fifo_read, ptr, size);
+  size -= res;
+  ptr += res;
+
+  /* read more data directly from fd */
+  while (size > CONFIG_LIBC_STREAM_BUFFER_SIZE)
     {
-      if (write_flush(stream))
-	return -1;
+      res = stream->ops->read(stream->fd, ptr, CONFIG_LIBC_STREAM_BUFFER_SIZE);
 
-      while (size >= stream->buf_size)
+      if (res < 0)
+	return res;
+
+      if (res == 0)
+	break;
+
+      size -= res;
+      ptr += res;
+    }
+
+  /* read remaining data in local buffer and dispatch */
+  for (local_size = 0; size > 0; )
+    {
+      res = stream->ops->read(stream->fd, local + local_size,
+			      CONFIG_LIBC_STREAM_BUFFER_SIZE - local_size);
+
+      if (res < 0)
+	return res;
+
+      if (res == 0)
+	break;
+
+      local_size += res;
+
+      /* if enough data, dispatch */
+      if (local_size >= size)
 	{
-	  if (stream->ops->write(stream->fd, ptr, stream->buf_size) < stream->buf_size)
-	    return -1;
-
-	  ptr += stream->buf_size;
-	  size -= stream->buf_size;
+	  memcpy(ptr, local, size);
+	  stream_fifo_pushback_array(&stream->fifo_read, local + size, local_size - size);
+	  break;
 	}
     }
 
-  while (size)
-    {
-      if ((stream->length >= stream->buf_size) && write_flush(stream))
-	return -1;
+  stream->pos += size_;
 
-      stream->buffer[stream->length++] = ptr[i++];
-      size--;
+  return size_ - size;
+}
+
+static error_t	buffered_write(size_t size_, FILE *stream, const uint8_t *ptr)
+{
+  size_t	size = size_;
+
+  if (!stream->ops->writable(stream->fd))
+    return -1;
+
+  stream->rwflush = &write_flush;
+
+  /* check to see if all data can be put in buffer */
+  if (stream_fifo_count(&stream->fifo_write) + size <= CONFIG_LIBC_STREAM_BUFFER_SIZE)
+    {
+      stream_fifo_pushback_array(&stream->fifo_write, ptr, size);
     }
+  else
+    {
+      ssize_t	res;
+
+      /* write all data present in buffer */
+      write_flush(stream);
+
+      /* write data directly to device if greater than buffer */
+      while (size > CONFIG_LIBC_STREAM_BUFFER_SIZE)
+	{
+	  res = stream->ops->write(stream->fd, ptr, size);
+
+	  if (res < 0)
+	    return res;
+
+	  size -= res;
+	  ptr += res;
+	}
+
+      /* fill buffer with remaining data */
+      stream_fifo_pushback_array(&stream->fifo_write, ptr, size);
+    }
+
+  stream->pos += size_;
 
   return 0;
 }
 
 error_t	fflush(FILE *stream)
 {
-  error_t		err;
-
   assert(stream != NULL);
 
-  switch (stream->last)
-    {
-    case (STREAM_LAST_READ):
-      err = stream->ops->lseek(stream->fd, -stream->length, SEEK_CUR);
-      stream->length = 0;
-
-      if (err < 0)
-	return (EOF);
-      break;
-
-    case (STREAM_LAST_WRITE):
-      return (write_flush(stream));
-
-    default:
-      break;
-    }
-
-  return 0;
+  return write_flush(stream);
 }
 
 error_t	fpurge(FILE *stream)
 {
-  stream->length = 0;
-
-  return 0;
+  return read_flush(stream);
 }
 
-size_t		fread(void *ptr, size_t size,
-		      size_t nmemb, FILE *stream)
+size_t	fread(void *ptr_, size_t size,
+	      size_t nmemb, FILE *stream)
 {
-  size_t	rsize;
-  size_t	tmp;
-  size_t	red;
-  char		*ptr_;
+  uint8_t	*ptr = ptr_;
+  size_t	i;
 
-  ptr_ = ptr;
-  red = 0;
-
-  if (stream->last != STREAM_LAST_READ)
+  for (i = 0; i < nmemb; i++)
     {
-      fflush(stream);
-      stream->last = STREAM_LAST_READ;
-    }
-
-  rsize = size * nmemb;
-
-  while (1)
-    {
-      red += (tmp = buffered_read(rsize, stream, &ptr_));
-
-      if (tmp < 0)
-	return -1;
-
-      if (!(rsize -= tmp) || (!tmp))
+      if (buffered_read(size, stream, ptr) <= 0)
 	break;
+
+      ptr += size;
     }
 
-  return (red / size);
+  return i;
 }
 
-size_t	fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
+size_t	fwrite(const void *ptr_, size_t size, size_t nmemb, FILE *stream)
 {
-  if (stream->last != STREAM_LAST_WRITE)
+  uint8_t	*ptr = ptr_;
+  size_t	i;
+
+  for (i = 0; i < nmemb; i++)
     {
-      fflush(stream);
-      stream->last = STREAM_LAST_WRITE;
+      if (buffered_write(size, stream, ptr))
+	break;
+
+      ptr += size;
     }
 
-  if (buffered_write(size * nmemb, stream, ptr))
-    return -1;
-
-  return (nmemb);
+  return i;
 }
 
-error_t fseek(FILE *stream, fpos_t offset, enum stream_whence_e whence)
+inline error_t fseek(FILE *stream, fpos_t offset, enum stream_whence_e whence)
 {
+  stream->rwflush(stream);
+
   if (stream->ops->lseek(stream->fd, offset, whence) >= 0)
     return 0;
   else
@@ -203,73 +230,61 @@ error_t fseek(FILE *stream, fpos_t offset, enum stream_whence_e whence)
 
 fpos_t ftell(FILE *stream)
 {
-  return (stream->ops->lseek(stream->fd, 0, SEEK_CUR));
+  return stream->pos;
 }
 
 void rewind(FILE *stream)
 {
-  stream->ops->lseek(stream->fd, 0, SEEK_SET);
+  fseek(stream, 0, SEEK_SET);
 }
 
 error_t fgetpos(FILE *stream, fpos_t *pos)
 {
-  if ((*pos = stream->ops->lseek(stream->fd, 0, SEEK_CUR)) >= 0)
-    return 0;
-  else
-    return (EOF);
+  *pos = stream->pos;
+  return 0;
 }
 
 error_t	fsetpos(FILE *stream, const fpos_t *pos)
 {
-  if (stream->ops->lseek(stream->fd, *pos, SEEK_SET) >= 0)
-    return 0;
-  else
-    return (EOF);
+  return fseek(stream, *pos, SEEK_SET);
 }
 
 uint_fast16_t fgetc(FILE *stream)
 {
   unsigned char	res;
-  size_t res2;
 
-  res2 = fread(&res, 1, 1, stream);
-
-  if (res2 > 0)
-    return res;
-  else
+  if (buffered_read(1, stream, &res) <= 0)
     return EOF;
+  else
+    return res;
 }
 
-char	*fgets(char *str, size_t size, FILE *stream)
+char	*fgets(char *str_, size_t size, FILE *stream)
 {
-  char c;
-  bool_t done = 0;
-  size_t len = 0;
+  uint8_t	res;
+  char	*str = str_;
+  char	*ret = NULL;
 
-  while (--size && (c != '\n'))
+  while (size-- > 1)
     {
-      len = fread(&c, 1, 1, stream);
+      if (buffered_read(1, stream, &res))
+	break;
 
-      if (len <= 0)
-	{
-	  if (!done || (len < 0))
-	    return NULL;
-	  else
-	    break;
-	}
+      *str++ = res;
+      ret = str_;
 
-      *str++ = c;
-      done = 1;
+      if (res == '\n')
+	break;
     }
 
   *str = 0;
 
-  return (str);
+  return ret;
 }
 
 uint_fast16_t fputc(unsigned char c, FILE *stream)
 {
-  if (fwrite(&c, 1, 1, stream) < 1)
+  if (buffered_write(1, stream, &c))
     return EOF;
 
   return (c);
@@ -277,10 +292,8 @@ uint_fast16_t fputc(unsigned char c, FILE *stream)
 
 error_t	fputs(const char *str, FILE *stream)
 {
-  return (fwrite(str, strlen(str), 1, stream) > 0 ? 1 : EOF);
+  return (buffered_write(strlen(str), stream, str));
 }
-
-#if 0
 
 static mode_t	open_mode(const char *str)
 {
@@ -318,32 +331,29 @@ static mode_t	open_mode(const char *str)
   return (mode);
 }
 
-#endif
-
 FILE	*fopen(const char *path, const char *mode)
 {
-  FILE	*stream;
+  FILE		*stream;
+  mode_t	flags;
+
+  if ((flags = open_mode(mode)) < 0)
+    goto err;
 
   if (!(stream = malloc(sizeof (FILE))))
     goto err;
 
   stream->ops = stream_fops;
-  stream->buf_size = CONFIG_LIBC_STREAM_BUFFER_SIZE;
 
-  stream->buffer = malloc(stream->buf_size);
-  if (!(stream->buffer))
+  if (!(stream->fd = stream->ops->open(path, flags)))
     goto err_1;
 
-  if (!(stream->fd = stream->ops->open(path, mode)))
-    goto err_2;
-
-  stream->length = 0;
-  stream->last = STREAM_LAST_NONE;
+  stream->rwflush = &no_flush;
+  stream->pos = stream->ops->lseek(stream->fd, 0, SEEK_CUR);
+  stream_fifo_init(&stream->fifo_read);
+  stream_fifo_init(&stream->fifo_write);
 
   return (stream);
 
- err_2:
-  free(stream->buffer);
  err_1:
   free(stream);
  err:

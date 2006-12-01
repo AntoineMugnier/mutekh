@@ -19,54 +19,14 @@ default defined
 
 extern struct device_s *tty_dev;
 
-static ssize_t	tty_read(fd_t fd, void *buffer_, size_t count)
+static ssize_t	tty_read(fd_t fd, void *buffer, size_t count)
 {
-  uint8_t	*buffer = buffer_;
-  ssize_t	res = 0;
-
-  while (count > 0)
-    {
-      ssize_t	err;
-
-      err = dev_char_read(tty_dev, buffer, count);
-
-      if (err < 0)
-	break;
-
-      if (err > 0)
-	{
-	  count -= err;
-	  buffer += err;
-	  res += err;
-	}
-    }
-
-  return res;  
+  return dev_char_read(tty_dev, buffer, count);
 }
 
-static ssize_t	tty_write(fd_t fd, const void *buffer_, size_t count)
+static ssize_t	tty_write(fd_t fd, const void *buffer, size_t count)
 {
-  const uint8_t	*buffer = buffer_;
-  ssize_t	res = 0;
-
-  while (count > 0)
-    {
-      ssize_t	err;
-
-      err = dev_char_write(tty_dev, buffer, count);
-
-      if (err < 0)
-	break;
-
-      if (err > 0)
-	{
-	  count -= err;
-	  buffer += err;
-	  res += err;
-	}
-    }
-
-  return res;  
+  return dev_char_write(tty_dev, buffer, count);
 }
 
 static error_t	empty_close(fd_t fd)
@@ -89,6 +49,11 @@ static bool_t	false_able(fd_t fd)
   return 0;
 }
 
+static error_t	no_flush(FILE *stream)
+{
+  return 0;
+}
+
 /****************************************** stdin */
 
 static const struct stream_ops_s stdin_ops =
@@ -105,9 +70,7 @@ static uint8_t stdin_buffer[CONFIG_LIBC_STREAM_BUFFER_SIZE];
 static struct file_s stdin_file =
 {
   .ops = &stdin_ops,
-  .length = 0,
-  .buffer = stdin_buffer,
-  .last = STREAM_LAST_NONE,
+  .rwflush = &no_flush,
 };
 
 FILE * const stdin = &stdin_file;
@@ -128,9 +91,7 @@ static uint8_t stdout_buffer[CONFIG_LIBC_STREAM_BUFFER_SIZE];
 static struct file_s stdout_file =
 {
   .ops = &stdout_ops,
-  .length = 0,
-  .buffer = stdout_buffer,
-  .last = STREAM_LAST_NONE,
+  .rwflush = &no_flush,
 };
 
 FILE * const stdout = &stdout_file;

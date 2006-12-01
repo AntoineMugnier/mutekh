@@ -32,7 +32,7 @@
 #ifndef __ASSERT_H_
 #define __ASSERT_H_
 
-#include <stdio.h>
+ssize_t printf(const char *format, ...);
 
 static inline void
 __assert_fail(const char *file,

@@ -25,6 +25,9 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_ring.h>
+
 #include <stdarg.h>
 
 int_fast8_t putchar(char c);
@@ -49,15 +52,19 @@ ssize_t vsscanf(const char *str, const char *format, va_list ap);
 
 #ifdef CONFIG_LIBC_STREAM
 
-enum stream_lastmode_e
-  {
-    STREAM_LAST_NONE, STREAM_LAST_READ, STREAM_LAST_WRITE
-  };
+#define O_RDONLY	0x01
+#define O_WRONLY	0x02
+#define O_RDWR		0x03
+#define O_CREAT		0x10
+#define O_TRUNC		0x20
+#define O_APPEND	0x40
 
 enum stream_whence_e
   {
     SEEK_SET, SEEK_END, SEEK_CUR
   };
+
+CONTAINER_TYPE(stream_fifo, RING, uint8_t, NOLOCK, NOOBJ, CONFIG_LIBC_STREAM_BUFFER_SIZE);
 
 # define EOF			-1
 
@@ -67,7 +74,7 @@ typedef int32_t			fpos_t;
 
 struct				stream_ops_s
 {
-  fd_t (*open)(const char *name, const char *mode);
+  fd_t (*open)(const char *name, mode_t mode);
   ssize_t (*write)(fd_t fd, const void *buffer, size_t count);
   ssize_t (*read)(fd_t fd, void *buffer, size_t count);
   error_t (*close)(fd_t fd);
@@ -82,10 +89,10 @@ struct				file_s
 {
   const struct stream_ops_s	*ops;
   fd_t				fd;
-  uint8_t			*buffer;
-  size_t			length;
-  size_t			buf_size;
-  enum stream_lastmode_e	last;
+  stream_fifo_root_t		fifo_read;
+  stream_fifo_root_t		fifo_write;
+  fpos_t			pos;
+  error_t			(*rwflush)(struct file_s *stream);
 };
 
 typedef struct file_s		FILE;
