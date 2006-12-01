@@ -14,7 +14,7 @@ require CONFIG_LIBC_STREAM_BUFFER_SIZE
 %config CONFIG_LIBC_STREAM_BUFFER_SIZE
 desc C library default buffer size for streams
 parent CONFIG_LIBC_STREAM
-default 8192
+default 64
 %config end
 
 */
@@ -122,11 +122,12 @@ static ssize_t	buffered_read(size_t size_, FILE *stream, uint8_t *ptr)
 	{
 	  memcpy(ptr, local, size);
 	  stream_fifo_pushback_array(&stream->fifo_read, local + size, local_size - size);
+	  size = 0;
 	  break;
 	}
     }
 
-  stream->pos += size_;
+  stream->pos += size_ - size;
 
   return size_ - size;
 }
@@ -267,10 +268,10 @@ char	*fgets(char *str_, size_t size, FILE *stream)
 
   while (size-- > 1)
     {
-      if (buffered_read(1, stream, &res))
+      if (buffered_read(1, stream, str) <= 0)
 	break;
 
-      *str++ = res;
+      str++;
       ret = str_;
 
       if (res == '\n')
