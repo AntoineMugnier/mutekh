@@ -60,7 +60,9 @@ static error_t	write_flush(FILE *stream)
 
 static error_t	read_flush(FILE *stream)
 {
-  stream->ops->lseek(stream->fd, stream->pos, SEEK_CUR);
+  printf("%s: %u\n", __func__, stream->pos);
+
+  stream->ops->lseek(stream->fd, stream->pos, SEEK_SET);
 
   stream_fifo_clear(&stream->fifo_read);
 
@@ -128,6 +130,7 @@ static ssize_t	buffered_read(size_t size_, FILE *stream, uint8_t *ptr)
     }
 
   stream->pos += size_ - size;
+  printf("%s: %u\n", __func__, stream->pos);
 
   return size_ - size;
 }
@@ -361,6 +364,7 @@ FILE	*fopen(const char *path, const char *mode)
   return NULL;
 }
 
+/* FIXME c'est nimp */
 bool_t	feof(FILE *stream)
 {
   off_t		end;
@@ -375,3 +379,4 @@ bool_t	feof(FILE *stream)
 
   return res;
 }
+
