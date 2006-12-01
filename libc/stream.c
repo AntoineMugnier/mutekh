@@ -144,7 +144,7 @@ static error_t	buffered_write(size_t size_, FILE *stream, const uint8_t *ptr)
   /* check to see if all data can be put in buffer */
   if (stream_fifo_count(&stream->fifo_write) + size <= CONFIG_LIBC_STREAM_BUFFER_SIZE)
     {
-      stream_fifo_pushback_array(&stream->fifo_write, ptr, size);
+      stream_fifo_pushback_array(&stream->fifo_write, (uint8_t*)ptr, size);
     }
   else
     {
@@ -166,7 +166,7 @@ static error_t	buffered_write(size_t size_, FILE *stream, const uint8_t *ptr)
 	}
 
       /* fill buffer with remaining data */
-      stream_fifo_pushback_array(&stream->fifo_write, ptr, size);
+      stream_fifo_pushback_array(&stream->fifo_write, (uint8_t*)ptr, size);
     }
 
   stream->pos += size_;
@@ -205,7 +205,7 @@ size_t	fread(void *ptr_, size_t size,
 
 size_t	fwrite(const void *ptr_, size_t size, size_t nmemb, FILE *stream)
 {
-  uint8_t	*ptr = ptr_;
+  const uint8_t	*ptr = ptr_;
   size_t	i;
 
   for (i = 0; i < nmemb; i++)
@@ -268,10 +268,10 @@ char	*fgets(char *str_, size_t size, FILE *stream)
 
   while (size-- > 1)
     {
-      if (buffered_read(1, stream, str) <= 0)
+      if ((res = buffered_read(1, stream, &res)) <= 0)
 	break;
 
-      str++;
+      *str++ = res;
       ret = str_;
 
       if (res == '\n')
@@ -293,7 +293,7 @@ uint_fast16_t fputc(unsigned char c, FILE *stream)
 
 error_t	fputs(const char *str, FILE *stream)
 {
-  return (buffered_write(strlen(str), stream, str));
+  return (buffered_write(strlen(str), stream, (uint8_t*)str));
 }
 
 static uint_fast8_t	open_mode(const char *str)
@@ -361,10 +361,10 @@ FILE	*fopen(const char *path, const char *mode)
   return NULL;
 }
 
-int	feof(FILE *stream)
+bool_t	feof(FILE *stream)
 {
-  off_t	end;
-  int	res = 0;
+  off_t		end;
+  bool_t	res = 0;
 
   end = stream->ops->lseek(stream->fd, 0, SEEK_END);
 
