@@ -296,9 +296,9 @@ error_t	fputs(const char *str, FILE *stream)
   return (buffered_write(strlen(str), stream, str));
 }
 
-static mode_t	open_mode(const char *str)
+static uint_fast8_t	open_mode(const char *str)
 {
-  mode_t	mode = 0666;
+  uint_fast8_t	mode = 0;
 
   while (*str)
     {
@@ -335,7 +335,7 @@ static mode_t	open_mode(const char *str)
 FILE	*fopen(const char *path, const char *mode)
 {
   FILE		*stream;
-  mode_t	flags;
+  uint_fast8_t	flags;
 
   if ((flags = open_mode(mode)) < 0)
     goto err;

@@ -74,7 +74,7 @@ typedef int32_t			fpos_t;
 
 struct				stream_ops_s
 {
-  fd_t (*open)(const char *name, mode_t mode);
+  fd_t (*open)(const char *name, uint_fast8_t mode);
   ssize_t (*write)(fd_t fd, const void *buffer, size_t count);
   ssize_t (*read)(fd_t fd, void *buffer, size_t count);
   error_t (*close)(fd_t fd);
