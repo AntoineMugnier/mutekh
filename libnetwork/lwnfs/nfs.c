@@ -37,6 +37,7 @@
  *  + MKDIR: make a directory
  *  + RMDIR: remove a directory
  *  + WRITE: write data to a file
+ *  + READDIR: read directory content
  *
  * Coming soon:
  *
@@ -44,7 +45,6 @@
  *  + RENAME: rename a file
  *  + LINK: create a hard link
  *  + SYMLINK: create a symbolic link
- *  + READDIR: read directory content
  */
 
 #include <hexo/types.h>

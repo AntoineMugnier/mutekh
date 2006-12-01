@@ -88,33 +88,48 @@ char *  __attribute__ ((pure))
 strstr(const char *haystack, const char *needle);
 #define strstr __builtin_strstr
 
-/*
+void *  __attribute__ ((pure))
+memchr(const void *s, int_fast8_t c, size_t n);
 
-int_fast8_t memccmp(const void *s1, const void *s2, int_fast8_t c, size_t n) __attribute__ ((pure));
-void *memccpy(void *dest, const void *src, int_fast8_t c, size_t n);
+int_fast8_t __attribute__ ((pure))
+strcasecmp(const char* s1, const char* s2);
 
-void* memchr(const void *s, int_fast8_t c, size_t n) __attribute__ ((pure));
-void* memrchr(const void *s, int_fast8_t c, size_t n) __attribute__ ((pure));
-
-void *memmem(const void *haystack, size_t haystacklen, const void *needle, size_t needlelen);
+int_fast8_t __attribute__ ((pure))
+strncasecmp(const char* s1, const char* s2, size_t len);
 
 char *
 strncpy(char *dest, const char *src, size_t n);
+#define strncpy __builtin_strncpy
 
 int_fast8_t __attribute__ ((pure))
 strncmp(const char *s1, const char *s2, size_t n);
+#define strncmp __builtin_strncmp
+
+void *
+memccpy(void *dst, const void *src, int_fast8_t c, size_t count);
 
 char *
-strncat(char *dest, const char *src, size_t n);
-
-char * __attribute__ ((pure))
-strrchr(const char *s, int_fast8_t c);
+strtok_r(char *s, const char *delim, char **ptrptr);
 
 size_t
 strspn(const char *s, const char *_accept);
 
 size_t
 strcspn(const char *s, const char *reject);
+
+/*
+
+int_fast8_t memccmp(const void *s1, const void *s2, int_fast8_t c, size_t n) __attribute__ ((pure));
+
+void* memrchr(const void *s, int_fast8_t c, size_t n) __attribute__ ((pure));
+
+void *memmem(const void *haystack, size_t haystacklen, const void *needle, size_t needlelen);
+
+char *
+strncat(char *dest, const char *src, size_t n);
+
+char * __attribute__ ((pure))
+strrchr(const char *s, int_fast8_t c);
 
 char *
 strpbrk(const char *s, const char *_accept);

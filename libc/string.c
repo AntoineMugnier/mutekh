@@ -250,3 +250,232 @@ inline char *strstr(const char *haystack, const char *needle)
 }
 #endif
 
+/********************************/
+
+#ifndef HAS_CPU_MEMCHR
+#undef memchr
+inline void * memchr(const void *s, int_fast8_t c, size_t n)
+{
+  const unsigned char *pc = (unsigned char *)s;
+
+  for (; n--; pc++)
+    if (*pc == c)
+      return ((void *)pc);
+
+  return 0;
+}
+#endif
+
+/********************************/
+
+#define __unlikely(foo) (foo)
+#define __likely(foo) (foo)
+
+#ifndef HAS_CPU_STRCASECMP
+#undef strcasecmp
+inline int_fast8_t strcasecmp(const char* s1, const char* s2)
+{
+    register uint_fast32_t	x2;
+    register uint_fast32_t	x1;
+
+    while (1)
+      {
+        x2 = *s2 - 'A';
+	if (__unlikely(x2 < 26u))
+	  x2 += 32;
+
+        x1 = *s1 - 'A';
+	if (__unlikely(x1 < 26u))
+	  x1 += 32;
+
+	s1++;
+	s2++;
+
+        if (__unlikely(x2 != x1))
+	  break;
+
+        if (__unlikely(x1 == (uint32_t)-'A'))
+	  break;
+      }
+
+    return x1 - x2;
+}
+#endif
+
+/********************************/
+
+#ifndef HAS_CPU_STRNCASECMP
+#undef strncasecmp
+inline int_fast8_t strncasecmp(const char* s1, const char* s2, size_t len)
+{
+    register uint_fast32_t	x2;
+    register uint_fast32_t	x1;
+    register const char*	end = s1 + len;
+
+    while (1)
+      {
+        if (__unlikely(s1 >= end))
+	  return 0;
+
+        x2 = *s2 - 'A';
+	if (__unlikely(x2 < 26u))
+	  x2 += 32;
+
+        x1 = *s1 - 'A';
+	if (__unlikely(x1 < 26u))
+	  x1 += 32;
+
+	s1++;
+	s2++;
+
+	if (__unlikely(x2 != x1))
+            break;
+
+        if (__unlikely(x1 == (uint32_t)-'A'))
+            break;
+    }
+
+    return x1 - x2;
+}
+#endif
+
+/********************************/
+
+#ifndef HAS_CPU_MEMCCPY
+#undef memccpy
+inline void *memccpy(void *dst, const void *src, int_fast8_t c, size_t count)
+{
+  char		*a = dst;
+  const char	*b = src;
+
+  while (count--)
+    {
+      *a++ = *b;
+      if (*b == c)
+	{
+	  return (void *)a;
+	}
+      b++;
+    }
+
+  return 0;
+}
+#endif
+
+/********************************/
+
+#ifndef HAS_CPU_STRNCPY
+#undef strncpy
+inline char *strncpy(char *dest, const char *src, size_t n)
+{
+  memccpy(dest,src,0,n);
+
+  if (n)
+    dest[n - 1] = 0;
+
+  return dest;
+}
+#endif
+
+/********************************/
+
+#ifndef HAS_CPU_STRNCMP
+#undef strncmp
+inline int_fast8_t strncmp(const char *s1, const char *s2, size_t n)
+{
+  register const unsigned char* a = (const unsigned char *)s1;
+  register const unsigned char* b = (const unsigned char *)s2;
+  register const unsigned char* fini = a + n;
+
+  while (a < fini)
+    {
+      register int_fast8_t res = *a - *b;
+
+      if (res)
+	return res;
+
+      if (!*a)
+	return 0;
+
+      ++a;
+      ++b;
+    }
+
+  return 0;
+}
+#endif
+
+/********************************/
+
+#ifndef HAS_CPU_STRTOK_R
+#undef strtok_r
+char *strtok_r(char *s, const char *delim, char **ptrptr)
+{
+  char *tmp = 0;
+
+  if (s == 0)
+    s = *ptrptr;
+
+  s += strspn(s, delim);
+
+  if (__likely(*s))
+    {
+      tmp = s;
+      s += strcspn(s, delim);
+      if (__likely(*s))
+	*s++ = 0;
+    }
+
+  *ptrptr = s;
+  return tmp;
+}
+#endif
+
+/********************************/
+
+#ifndef HAS_CPU_STRSPN
+#undef strspn
+size_t strspn(const char *s, const char *accept)
+{
+  size_t l = 0;
+  size_t a = 1, i, al = strlen(accept);
+
+  while((a) && (*s))
+    {
+      for(a = i = 0; (!a) && (i < al); i++)
+	if (*s == accept[i])
+	  a = 1;
+
+      if (a)
+	l++;
+
+      s++;
+    }
+
+  return l;
+}
+#endif
+
+/********************************/
+
+#ifndef HAS_CPU_STRCSPN
+#undef strcspn
+size_t strcspn(const char *s, const char *reject)
+{
+  size_t l = 0;
+  size_t a = 1, i, al = strlen(reject);
+
+  while((a) && (*s))
+    {
+      for(i = 0; (a) && (i < al); i++)
+	if (*s == reject[i])
+	  a = 0;
+
+      if (a)
+	l++;
+      s++;
+    }
+
+  return l;
+}
+#endif
