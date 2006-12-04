@@ -242,8 +242,10 @@ static error_t		do_rpc(struct nfs_s	*server,
 
   mem_free(pkt);
 
-  *data = rpcb.data;
+  *data = mem_alloc(rpcb.size, MEM_SCOPE_SYS);
   *size = rpcb.size;
+  memcpy(*data, rpcb.data, *size);
+  mem_free(reply);
 
   return 0;
 }
@@ -574,7 +576,7 @@ ssize_t				nfs_read(struct nfs_s	*server,
   req->u.read.count = htonl(size);
   req->u.read.__unused = 0;
 
-  /* call mountd */
+  /* call nfsd */
   err = nfs_nfsd(server, req, &sz, NFS_READ, (void *)&reply);
   mem_free(req);
 
@@ -597,6 +599,8 @@ ssize_t				nfs_read(struct nfs_s	*server,
       sz -= sizeof (struct nfs_attr_s) + 2 * sizeof (uint32_t);
       if (sz < sz2)
 	sz2 = sz;
+      if (sz2 > size)
+	sz2 = size;
       memcpy(data, status->u.attr_data.data, sz2);
     }
 
@@ -624,7 +628,7 @@ ssize_t		nfs_write(struct nfs_s	*server,
     size = 4096;
 
   /* allocate packet for the request */
-  sz = sizeof (nfs_handle_t) + sizeof (struct nfs_write_s) - 1 + size;
+  sz = sizeof (nfs_handle_t) + sizeof (struct nfs_write_s) + size;
   if ((req = mem_alloc(sz, MEM_SCOPE_CONTEXT)) == NULL)
     return -ENOMEM;
 
@@ -636,7 +640,7 @@ ssize_t		nfs_write(struct nfs_s	*server,
   /* copy data */
   memcpy(req->u.write.data, data, size);
 
-  /* call mountd */
+  /* call nfsd */
   err = nfs_nfsd(server, req, &sz, NFS_WRITE, (void *)&reply);
   mem_free(req);
 
@@ -687,7 +691,7 @@ error_t				nfs_lookup(struct nfs_s		*server,
   memcpy(req->u.dirop.path, path, path_len);
   req->u.dirop.path[path_len] = 0;
 
-  /* call mountd */
+  /* call nfsd */
   err = nfs_nfsd(server, req, &sz, NFS_LOOKUP, (void *)&reply);
   mem_free(req);
 
@@ -739,7 +743,7 @@ error_t				nfs_statfs(struct nfs_s		*server,
   /* copy root & path to the entity */
   memcpy(req->handle, root, sizeof (nfs_handle_t));
 
-  /* call mountd */
+  /* call nfsd */
   err = nfs_nfsd(server, req, &sz, NFS_STATFS, (void *)&reply);
   mem_free(req);
 
@@ -784,7 +788,7 @@ error_t				nfs_getattr(struct nfs_s	*server,
   /* copy handle */
   memcpy(req->handle, handle, sizeof (nfs_handle_t));
 
-  /* call mountd */
+  /* call nfsd */
   err = nfs_nfsd(server, req, &sz, NFS_GETATTR, (void *)&reply);
   mem_free(req);
 
@@ -837,7 +841,7 @@ error_t				nfs_setattr(struct nfs_s	*server,
   req->u.sattr.mtime.tv_sec = htonl(stat->mtime.tv_sec);
   req->u.sattr.mtime.tv_usec = htonl(stat->mtime.tv_usec);
 
-  /* call mountd */
+  /* call nfsd */
   err = nfs_nfsd(server, req, &sz, NFS_SETATTR, (void *)&reply);
   mem_free(req);
 
@@ -920,7 +924,7 @@ error_t				nfs_create(struct nfs_s		*server,
       sattr->mtime.tv_usec = ignore;
     }
 
-  /* call mountd */
+  /* call nfsd */
   err = nfs_nfsd(server, req, &sz, is_dir ? NFS_MKDIR : NFS_CREATE, (void *)&reply);
   mem_free(req);
 
@@ -979,7 +983,7 @@ error_t		nfs_remove(struct nfs_s		*server,
   memcpy(req->u.dirop.path, name, path_len);
   req->u.dirop.path[path_len] = 0;
 
-  /* call mountd */
+  /* call nfsd */
   err = nfs_nfsd(server, req, &sz, is_dir ? NFS_RMDIR : NFS_REMOVE, (void *)&reply);
   mem_free(req);
 
@@ -1030,7 +1034,7 @@ error_t		nfs_readdir(struct nfs_s	*server,
       char			filename[MAXNAMLEN];
       uint32_t			*eof;
 
-      /* call mountd */
+      /* call nfsd */
       err = nfs_nfsd(server, req, &sz, NFS_READDIR, (void *)&reply);
 
       if (err)
