@@ -186,7 +186,7 @@ mem_alloc(size_t size, struct mem_alloc_region_s *region)
 /** free allocated memory block */
 static inline void mem_free(void *ptr)
 {
-  void *hdr = (void*)((uint8_t*)ptr
+  struct mem_alloc_header_s *hdr = (void*)((uint8_t*)ptr
 		      - mem_hdr_size
 #ifdef CONFIG_HEXO_MEMALLOC_GUARD
 		      - CONFIG_HEXO_MEMALLOC_GUARD_SIZE
@@ -195,6 +195,27 @@ static inline void mem_free(void *ptr)
 
   mem_alloc_region_push(hdr);
 }
+
+
+#ifdef CONFIG_HEXO_MEMALLOC_ALGO
+
+static inline size_t mem_alloc_getsize(void *ptr)
+{
+  struct mem_alloc_header_s *hdr = (void*)((uint8_t*)ptr
+		      - mem_hdr_size
+#ifdef CONFIG_HEXO_MEMALLOC_GUARD
+		      - CONFIG_HEXO_MEMALLOC_GUARD_SIZE
+#endif
+		      );
+
+  return hdr->size
+#ifdef CONFIG_HEXO_MEMALLOC_GUARD
+    - CONFIG_HEXO_MEMALLOC_GUARD_SIZE * 2
+#endif
+    - mem_hdr_size;
+}
+
+#endif
 
 /** initialize memory subsystem. found in arch/name/mem_alloc.c */
 void mem_init(void);
