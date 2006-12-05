@@ -177,6 +177,10 @@ void mem_alloc_region_push(void *address)
 #ifdef CONFIG_HEXO_MEMALLOC_STATS
 	  region->free_blocks--;
 #endif
+
+#ifdef CONFIG_HEXO_MEMALLOC_DEBUG
+	  memset(next, 0xa5, mem_hdr_size);
+#endif
 	}
     }
 
@@ -197,6 +201,9 @@ void mem_alloc_region_push(void *address)
 #endif
 #ifdef CONFIG_HEXO_MEMALLOC_STATS
 	  region->free_blocks--;
+#endif
+#ifdef CONFIG_HEXO_MEMALLOC_DEBUG
+	  memset(hdr, 0xa5, mem_hdr_size);
 #endif
 	}
     }
