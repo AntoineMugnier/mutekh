@@ -39,5 +39,14 @@ mem_alloc_set_default(struct mem_alloc_region_s *region)
   assert(region == &mem_region_ram);
 }
 
+#ifdef CONFIG_HEXO_MEMALLOC_GUARD
+
+static inline bool_t mem_guard_check(void)
+{
+  return mem_alloc_region_guard_check(&mem_region_ram);
+}
+
+#endif
+
 #endif
 

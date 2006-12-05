@@ -41,6 +41,25 @@
     depend CONFIG_HEXO_MEMALLOC_ALGO
     %config end
 
+    %config CONFIG_HEXO_MEMALLOC_GUARD
+    desc Add a guard zone before and after each allocated block.
+    desc All guard zone content can be check with the mem_guard_check() function to detect bad memory write access.
+    depend CONFIG_HEXO_MEMALLOC_ALGO
+    depend CONFIG_HEXO_MEMALLOC_DEBUG
+    require CONFIG_HEXO_MEMALLOC_GUARD_SIZE
+    %config end
+
+    %config CONFIG_HEXO_MEMALLOC_GUARD_SIZE
+    desc Memory allocation debug guard zone size in bytes.
+    parent CONFIG_HEXO_MEMALLOC_GUARD
+    default 256
+    %config end
+
+    %config CONFIG_HEXO_MEMALLOC_GUARD_INSTRUMENT
+    desc Automatically check guard zone on all function calls and returns.
+    parent CONFIG_HEXO_MEMALLOC_GUARD
+    depend CONFIG_COMPILE_INSTRUMENT
+    %config end
 */
 
 
@@ -81,7 +100,7 @@ static const size_t	mem_hdr_size = ALIGN_VALUE_UP(sizeof (struct mem_alloc_heade
 
 CONTAINER_TYPE(alloc_list, DLIST, struct mem_alloc_header_s, NOLOCK, NOOBJ, list_entry);
 
-#define MEMALLOC_SPLIT_SIZE	(2 * sizeof (struct mem_alloc_header_s) + 16)
+#define MEMALLOC_SPLIT_SIZE	(2 * mem_hdr_size + 16)
 
 /** memory region handler */
 struct mem_alloc_region_s
@@ -129,6 +148,7 @@ error_t mem_alloc_stats(struct mem_alloc_region_s *region,
 			size_t *free_size,
 			size_t *free_blocks);
 
+bool_t mem_alloc_region_guard_check(struct mem_alloc_region_s *region);
 
 
 
@@ -146,15 +166,31 @@ mem_alloc(size_t size, struct mem_alloc_region_s *region)
 {
   void *hdr;
 
-  size = mem_hdr_size + ALIGN_VALUE_UP(size, CONFIG_HEXO_MEMALLOC_ALIGN);
+  size = mem_hdr_size
+#ifdef CONFIG_HEXO_MEMALLOC_GUARD
+    + CONFIG_HEXO_MEMALLOC_GUARD_SIZE * 2
+#endif
+    + ALIGN_VALUE_UP(size, CONFIG_HEXO_MEMALLOC_ALIGN);
+
   hdr = mem_alloc_region_pop(region, size);
-  return hdr != NULL ? (uint8_t*)hdr + mem_hdr_size : NULL;
+
+  return hdr != NULL
+    ? (uint8_t*)hdr + mem_hdr_size
+#ifdef CONFIG_HEXO_MEMALLOC_GUARD
+    + CONFIG_HEXO_MEMALLOC_GUARD_SIZE
+#endif
+    : NULL;
 }
 
 /** free allocated memory block */
 static inline void mem_free(void *ptr)
 {
-  void *hdr = (void*)((uint8_t*)ptr - mem_hdr_size);
+  void *hdr = (void*)((uint8_t*)ptr
+		      - mem_hdr_size
+#ifdef CONFIG_HEXO_MEMALLOC_GUARD
+		      - CONFIG_HEXO_MEMALLOC_GUARD_SIZE
+#endif
+		      );
 
   mem_alloc_region_push(hdr);
 }
@@ -162,9 +198,7 @@ static inline void mem_free(void *ptr)
 /** initialize memory subsystem. found in arch/name/mem_alloc.c */
 void mem_init(void);
 
-
-
-
+static bool_t mem_guard_check(void);
 
 #include <arch/hexo/alloc.h>
 

@@ -141,7 +141,7 @@ void mem_alloc_region_push(void *address)
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   lock_spin(&region->lock);
 
-  assert(hdr->size >= sizeof(*hdr));
+  assert(hdr->size >= mem_hdr_size);
 
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
   assert(hdr->signature == MEMALLOC_SIGNATURE);
@@ -150,7 +150,7 @@ void mem_alloc_region_push(void *address)
   hdr->is_free = 1;
 
 #ifdef CONFIG_HEXO_MEMALLOC_DEBUG
-  memset(hdr + 1, 0xa5, hdr->size - sizeof(*hdr));
+  memset(hdr + 1, 0xa5, hdr->size - mem_hdr_size);
 #endif
 
 #ifdef CONFIG_HEXO_MEMALLOC_STATS
@@ -213,6 +213,10 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
 
   /* init region struct */
 
+#ifdef CONFIG_HEXO_MEMALLOC_DEBUG
+  memset(hdr, 0xa5, size);
+#endif
+
   lock_init(&region->lock);
   alloc_list_init(&region->root);
 
@@ -224,7 +228,7 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
 
   /* push initial block */
 
-  assert(size > sizeof(*hdr));
+  assert(size > mem_hdr_size);
 
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
   hdr->signature = MEMALLOC_SIGNATURE;
@@ -236,8 +240,59 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
   alloc_list_push(&region->root, hdr);
 }
 
+#ifdef CONFIG_HEXO_MEMALLOC_GUARD
 
+bool_t mem_alloc_chk(const char *str, uint8_t *data, uint8_t value)
+{
+  uintptr_t	i;
+  bool_t	res = 0;
 
+  for (i = 0; i < CONFIG_HEXO_MEMALLOC_GUARD_SIZE; i++)
+    {
+      if (data[i] != value)
+	{
+	  printf("%s: value mismatch at block %p offset %p: %02x\n", str, data, i, data[i]);
+	  res = 1;
+	}
+    }
+
+  return res;
+}
+
+bool_t mem_alloc_region_guard_check(struct mem_alloc_region_s *region)
+{
+  bool_t	res = 0;
+
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  lock_spin(&region->lock);
+
+  CONTAINER_FOREACH(alloc_list, DLIST, NOLOCK, &region->root,
+  {
+    if (item->is_free)
+      {
+	uint8_t		*data = (void*)(item + 1);
+
+	if (mem_alloc_chk("alloc free", data, 0xa5))
+	  res = 1;
+      }
+    else
+      {
+	uint8_t		*pre = ((uint8_t*)item) + mem_hdr_size;
+	uint8_t		*post = ((uint8_t*)item) + item->size - CONFIG_HEXO_MEMALLOC_GUARD_SIZE;
+
+	if (mem_alloc_chk("alloc pre ", pre, 0x5a) |
+	    mem_alloc_chk("alloc post", post, 0x5a))
+	  res = 1;
+      }
+  });
+
+  lock_release(&region->lock);
+  CPU_INTERRUPT_RESTORESTATE;
+
+  return res;
+}
+
+#endif
 
 
 /************************************************************************/

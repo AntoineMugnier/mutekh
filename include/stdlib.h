@@ -109,5 +109,13 @@ __rand_type_t rand(void);
 __rand_type_t rand_r(__rand_type_t *seedp);
 void srand(__rand_type_t seed);
 
+/******************** abort */
+
+static inline void abort(void)
+{
+  while (1)
+    ;
+}
+
 #endif
 

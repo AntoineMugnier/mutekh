@@ -345,7 +345,8 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
   printf("CPU %i is up and running.\n", cpu_id());
 
 #if defined(CONFIG_COMPILE_INSTRUMENT)
-  hexo_instrument_trace(1);
+  //  hexo_instrument_trace(1);
+  hexo_instrument_alloc_guard(1);
 #endif
 
   if (cpu_id() == 0)
