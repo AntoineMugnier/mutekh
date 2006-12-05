@@ -46,6 +46,7 @@
     desc All guard zone content can be check with the mem_guard_check() function to detect bad memory write access.
     depend CONFIG_HEXO_MEMALLOC_ALGO
     depend CONFIG_HEXO_MEMALLOC_DEBUG
+    suggest CONFIG_HEXO_MEMALLOC_ALIGN=1
     require CONFIG_HEXO_MEMALLOC_GUARD_SIZE
     %config end
 
