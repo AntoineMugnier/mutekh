@@ -122,7 +122,7 @@ __printf_hexdump(char *buf, const uint8_t *val, size_t len)
 #endif
 
 static ssize_t
-__printf_arg(void *ctx, __printf_out_t * const fcn, 
+__printf_arg(void *ctx, __printf_out_t * const fcn,
 	     const char *format, va_list ap)
 {
   size_t	offset = 0;
@@ -310,7 +310,7 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 	/* hexdump data buffer */
 
 #ifdef CONFIG_LIBC_PRINTF_EXT
-      case ('P'):	
+      case ('P'):
 	len = va_arg(ap, size_t);
 	buf = __builtin_alloca(len * 3);
 	len = __printf_hexdump(buf, (uint8_t*)val, len);
@@ -430,7 +430,7 @@ ssize_t fprintf(FILE *stream, const char *format, ...)
   res = vfprintf(stream, format, ap);
   va_end(ap);
 
-  return res;  
+  return res;
 }
 
 #endif

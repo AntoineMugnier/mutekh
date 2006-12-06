@@ -299,39 +299,21 @@ inline int_fast8_t strncasecmp(const char* s1, const char* s2, size_t len)
 
 /********************************/
 
-#ifndef HAS_CPU_MEMCCPY
-#undef memccpy
-inline void *memccpy(void *dst, const void *src, int_fast8_t c, size_t count)
-{
-  char		*a = dst;
-  const char	*b = src;
-
-  while (count--)
-    {
-      *a++ = *b;
-      if (*b == c)
-	{
-	  return (void *)a;
-	}
-      b++;
-    }
-
-  return 0;
-}
-#endif
-
-/********************************/
-
 #ifndef HAS_CPU_STRNCPY
 #undef strncpy
 inline char *strncpy(char *dest, const char *src, size_t n)
 {
-  memccpy(dest,src,0,n);
+  char	*tmp;
 
+  tmp = dest;
+  while (*src && n)
+    {
+      *dest++ = *src++;
+      n--;
+    }
   if (n)
-    dest[n - 1] = 0;
-
-  return dest;
+    *dest = 0;
+  return (tmp);
 }
 #endif
 

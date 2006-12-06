@@ -105,9 +105,6 @@ int_fast8_t __attribute__ ((pure))
 strncmp(const char *s1, const char *s2, size_t n);
 #define strncmp __builtin_strncmp
 
-void *
-memccpy(void *dst, const void *src, int_fast8_t c, size_t count);
-
 char *
 strtok_r(char *s, const char *delim, char **ptrptr);
 
