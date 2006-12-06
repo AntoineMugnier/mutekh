@@ -62,12 +62,13 @@ lbl:						; \
 #define PUT_TAIL_EX(callback, lbl)		\
 lbl:						; \
 	lea	44(%esp), %ebx			; \
-	pushl	%ebx				; \
-	pushl	%esp				; \
+	pushl	%ebx				; /* stackptr */ \
+	lea	4(%esp), %ebx			; \
+	pushl	%ebx				; /* regtable */ \
 	movl	%cr2, %ebx			; \
-	pushl	%ebx				; \
-	pushl	40(%esp)			; \
-	pushl	%eax				; \
+	pushl	%ebx				; /* dataptr */ \
+	pushl	44(%esp)			; /* execptr */ \
+	pushl	%eax				; /* type */ \
 	call	CLS_SEG *(callback)		; \
 	add	$20, %esp			; \
 	popa					; \
@@ -77,12 +78,13 @@ lbl:						; \
 #define PUT_TAIL_EX_ERR(callback, lbl)		\
 lbl:						; \
 	lea	48(%esp), %ebx			; \
-	pushl	%ebx				; \
-	pushl	%esp				; \
+	pushl	%ebx				; /* stackptr */ \
+	lea	4(%esp), %ebx			; \
+	pushl	%ebx				; /* regtable */ \
 	mov	%cr2, %ebx			; \
-	pushl	%ebx				; \
-	pushl	44(%esp)			; \
-	pushl	%eax				; \
+	pushl	%ebx				; /* dataptr */ \
+	pushl	48(%esp)			; /* execptr */ \
+	pushl	%eax				; /* type */ \
 	call	CLS_SEG *(callback)		; \
 	add	$24, %esp			; \
 	popa					; \

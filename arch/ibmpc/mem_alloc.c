@@ -19,7 +19,7 @@
 
 */
 
-
+#include <assert.h>
 #include <hexo/alloc.h>
 #include <hexo/segment.h>
 #include <hexo/lock.h>

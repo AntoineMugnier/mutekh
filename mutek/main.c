@@ -307,7 +307,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   lock_spin(&fault_lock);
 
   printf("CPU Fault: cpuid(%u) faultid(%u)\n", cpu_id(), type);
-  printf("Execution pointer: %p\n", execptr);
+  printf("Execution pointer: %p, Bad address (if any): %p\n", execptr, dataptr);
   puts("Registers:");
 
   for (i = 0; i < CPU_GPREG_COUNT; i++)
