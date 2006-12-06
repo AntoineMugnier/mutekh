@@ -255,6 +255,14 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 
       case ('d'):
       case ('i'):
+#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+	/* FIXME precision should not be handled this way with %d %i */
+	if (padding[1])
+	  {
+	    zeropad = 1;
+	    padding[0] = padding[1];
+	  }
+#endif
 	if (val < 0)
 	  {
 	    val = -val;
@@ -268,6 +276,14 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 	/* decimal unsigned integer */
 
       case ('u'):
+#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+	/* FIXME precision should not be handled this way with %u */
+	if (padding[1])
+	  {
+	    zeropad = 1;
+	    padding[0] = padding[1];
+	  }
+#endif
 	len = __printf_putint(buf_, val, "0123456789", 10);
 	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
 	break;
@@ -340,9 +356,9 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 	goto printf_state_main;
       }
 
+#ifndef CONFIG_LIBC_PRINTF_SIMPLE
     size_t padlen = __MAX((ssize_t)(padding[0] - len), 0);
 
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
     if (!rightpad)
       {
 	for (; padlen; padlen--) /* FIXME suboptimal */
