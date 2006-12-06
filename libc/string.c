@@ -276,10 +276,20 @@ inline void * memchr(const void *s, int_fast8_t c, size_t n)
 #undef strcasecmp
 inline int_fast8_t strcasecmp(const char* s1, const char* s2)
 {
-  while (*s1 && tolower(*s1) == tolower(*s2))
-    s1++, s2++;
+    register uint32_t  x2;
+    register uint32_t  x1;
 
-  return (*s1 - *s2);
+    while (1) {
+        x2 = *s2 - 'A'; if (__unlikely(x2 < 26u)) x2 += 32;
+        x1 = *s1 - 'A'; if (__unlikely(x1 < 26u)) x1 += 32;
+	s1++; s2++;
+        if ( __unlikely(x2 != x1) )
+            break;
+        if ( __unlikely(x1 == (uint32_t)-'A') )
+            break;
+    }
+
+    return x1 - x2;
 }
 #endif
 
@@ -289,21 +299,49 @@ inline int_fast8_t strcasecmp(const char* s1, const char* s2)
 #undef strncasecmp
 inline int_fast8_t strncasecmp(const char* s1, const char* s2, size_t len)
 {
-  /* FIXME */
-  while (len-- && *s1 && tolower(*s1) == tolower(*s2))
-    s1++, s2++;
+    register uint32_t  x2;
+    register uint32_t  x1;
+    register const char*   end = s1 + len;
 
-  return (*s1 - *s2);
+    while (1) {
+        if ( __unlikely(s1 >= end) )
+            return 0;
+        x2 = *s2 - 'A'; if (__unlikely(x2 < 26u)) x2 += 32;
+        x1 = *s1 - 'A'; if (__unlikely(x1 < 26u)) x1 += 32;
+	s1++; s2++;
+        if ( __unlikely(x2 != x1) )
+            break;
+        if ( __unlikely(x1 == (uint32_t)-'A') )
+            break;
+    }
+
+    return x1 - x2;
 }
 #endif
 
 /********************************/
 
+void *memccpy(void *dst, const void *src, int c, size_t count)
+{
+  char *a = dst;
+  const char *b = src;
+  while (count--)
+  {
+    *a++ = *b;
+    if (*b==c)
+    {
+      return (void *)a;
+    }
+    b++;
+  }
+  return 0;
+}
+
 #ifndef HAS_CPU_STRNCPY
 #undef strncpy
 inline char *strncpy(char *dest, const char *src, size_t n)
 {
-  char	*tmp;
+  char *tmp;
 
   tmp = dest;
 
@@ -317,6 +355,11 @@ inline char *strncpy(char *dest, const char *src, size_t n)
     *dest++ = 0;
 
   return (tmp);
+#if 0
+  memset(dest,0,n);
+  memccpy(dest,src,0,n);
+  return dest;
+#endif
 }
 #endif
 
