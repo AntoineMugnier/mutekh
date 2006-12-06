@@ -100,6 +100,9 @@ static _BIND(bind_packet)
     }
 
   pv->interface = interface->index;
+
+  net_if_obj_refdrop(interface);
+
   pv->proto = ntohs(sll->sll_protocol);
 
   return 0;
@@ -201,6 +204,7 @@ static _SENDMSG(sendmsg_packet)
       /* alloc a buffer to copy the packet content */
       if ((packet->packet = mem_alloc(n, MEM_SCOPE_NETWORK)) == NULL)
 	{
+	  net_if_obj_refdrop(interface);
 	  packet_obj_refdrop(packet);
 	  fd->error = ENOMEM;
 	  return -1;
@@ -228,6 +232,7 @@ static _SENDMSG(sendmsg_packet)
       /* is broadcast allowed */
       if (!fd->broadcast && !memcmp(bcast, sll->sll_addr, maclen))
 	{
+	  net_if_obj_refdrop(interface);
 	  packet_obj_refdrop(packet);
 	  fd->error = EINVAL;
 	  return -1;
@@ -236,6 +241,7 @@ static _SENDMSG(sendmsg_packet)
       /* prepare the packet */
       if ((next = if_preparepkt(interface, packet, n, 0)) == NULL)
 	{
+	  net_if_obj_refdrop(interface);
 	  packet_obj_refdrop(packet);
 	  fd->error = ENOMEM;
 	  return -1;
@@ -255,6 +261,9 @@ static _SENDMSG(sendmsg_packet)
       /* send to the driver */
       if_sendpkt(interface, packet, ntohs(sll->sll_protocol));
     }
+
+  packet_obj_refdrop(packet);
+  net_if_obj_refdrop(interface);
 
   return n;
 }
@@ -438,6 +447,7 @@ static _SETSOCKOPT(setsockopt_packet)
 		    return -1;
 		  }
 		dev_net_setopt(interface->dev, DEV_NET_OPT_PROMISC, &enabled, sizeof (bool_t));
+		net_if_obj_refdrop(interface);
 	      }
 	      break;
 	    /* other options not supported (multicast) */
@@ -491,6 +501,7 @@ static _SHUTDOWN(shutdown_packet)
 
       /* drop all waiting packets */
       packet_queue_lock_clear(&pv->recv_q);
+      packet_queue_lock_destroy(&pv->recv_q);
 
       sem_getvalue(&pv->recv_sem, &val);
       while (val < 0)

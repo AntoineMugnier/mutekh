@@ -21,7 +21,7 @@ calloc(size_t nmemb, size_t size)
   return ptr;
 }
 
-void 
+void
 free(void *ptr)
 {
   mem_free(ptr);
@@ -30,6 +30,21 @@ free(void *ptr)
 void *
 realloc(void *ptr, size_t size)
 {
-  return 0;			/* FIXME */
+  size_t	oldsize;
+  void		*p;
+
+  if (ptr == NULL)
+    return malloc(size);
+
+  oldsize = mem_alloc_getsize(ptr);
+
+  if (oldsize >= size)
+    return ptr;
+
+  p = malloc(size);
+  memcpy(p, ptr, oldsize);
+
+  free(ptr);
+  return p;
 }
 

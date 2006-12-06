@@ -77,6 +77,7 @@ OBJECT_CONSTRUCTOR(net_if_obj)
   interface->mtu = mtu;
   interface->type = type;
   interface->rx_bytes = interface->rx_packets = interface->tx_bytes = interface->tx_packets = 0;
+  interface->state = NET_IF_STATE_DOWN;
   net_protos_init(&interface->protocols);
 
   /* choose a funky name for the interface */
@@ -87,6 +88,10 @@ OBJECT_CONSTRUCTOR(net_if_obj)
   ifid++;
   interface->index = ifid;
 
+#ifdef CONFIG_NETWORK_PROFILING
+  netobj_new[NETWORK_PROFILING_IF]++;
+#endif
+
   return interface;
 }
 
@@ -96,10 +101,13 @@ OBJECT_CONSTRUCTOR(net_if_obj)
 
 OBJECT_DESTRUCTOR(net_if_obj)
 {
-  printf(" === net_if drop === \n");
-
+  net_protos_clear(&obj->protocols);
   net_protos_destroy(&obj->protocols);
   mem_free(obj);
+
+#ifdef CONFIG_NETWORK_PROFILING
+  netobj_del[NETWORK_PROFILING_IF]++;
+#endif
 }
 
 /*
@@ -127,10 +135,12 @@ struct net_if_s	*if_register(struct device_s	*dev,
 #ifdef CONFIG_NETWORK_UDP
   if ((udp = net_proto_obj_new(NULL, &udp_protocol)) != NULL)
     if_register_proto(interface, udp);
+  net_proto_obj_refdrop(udp);
 #endif
 #ifdef CONFIG_NETWORK_TCP
   if ((tcp = net_proto_obj_new(NULL, &tcp_protocol)) != NULL)
     if_register_proto(interface, tcp);
+  net_proto_obj_refdrop(tcp);
 #endif
 
   /* add to the interface list */
@@ -147,6 +157,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
 
 void			if_unregister(struct net_if_s	*interface)
 {
+  route_flush(interface);
   net_if_remove(&net_interfaces, interface);
   net_if_obj_refdrop(interface);
 }
@@ -155,47 +166,37 @@ void			if_unregister(struct net_if_s	*interface)
  * Bring an interface up.
  */
 
-void			if_up(char*		name, ...)
+void			if_up(char*		name)
 {
-  struct device_s	*dev;
   struct net_if_s	*interface;
-  va_list		va;
-
-  va_start(va, name);
 
   if ((interface = net_if_lookup(&net_interfaces, name)))
     {
-      dev = interface->dev;
-
       printf("Bringing up interface %s\n", name);
 
-      /* XXX */
+      interface->state = NET_IF_STATE_UP;
 
       net_if_obj_refdrop(interface);
     }
-
-  va_end(va);
 }
 
 /*
  * Bring an interface down.
  */
 
-void			if_down(char*		name, ...)
+void			if_down(char*		name)
 {
-  struct device_s	*dev;
   struct net_if_s	*interface;
 
   if ((interface = net_if_lookup(&net_interfaces, name)))
     {
-      dev = interface->dev;
-
-      /* XXX if_down */
+      interface->state = NET_IF_STATE_DOWN;
 
       net_if_obj_refdrop(interface);
     }
 }
 
+#ifdef CONFIG_NETWORK_IPV4
 /*
  * Cleanup an IPv4 protocol set (includes ARP & ICMPv4).
  */
@@ -206,15 +207,13 @@ static void		if_destroy_ipv4(net_protos_root_t	*protos,
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)ipv4->pv;
 
   net_protos_remove(protos, pv->arp);
-  net_proto_obj_refdrop(pv->arp);
   net_protos_remove(protos, pv->icmp);
-  net_proto_obj_refdrop(pv->icmp);
   net_protos_remove(protos, ipv4);
-  net_proto_obj_refdrop(ipv4);
 }
+#endif
 
 /*
- * Configure an interface. XXX is shit
+ * Configure an interface.
  */
 
 error_t			if_config(int_fast32_t		ifindex,
@@ -228,7 +227,7 @@ error_t			if_config(int_fast32_t		ifindex,
   struct net_proto_s	*icmp;
   error_t		err = -1;
 
-  if (interface == NULL)
+  if (interface == NULL || interface->state != NET_IF_STATE_UP)
     return err;
 
 #ifdef CONFIG_NETWORK_IPV4
@@ -269,6 +268,9 @@ error_t			if_config(int_fast32_t		ifindex,
 	  if_register_proto(interface, icmp);
 	  if_register_proto(interface, ip, arp, icmp, IPV4_ADDR_GET(*address), IPV4_ADDR_GET(*mask));
 
+	  net_proto_obj_refdrop(ip);
+	  net_proto_obj_refdrop(arp);
+	  net_proto_obj_refdrop(icmp);
 	  err = 0;
 	}
       else
@@ -304,7 +306,7 @@ void			if_register_proto(struct net_if_s	*interface,
   va_start(va, proto);
 
   /* call the protocol constructor */
-  if (proto->desc->initproto)
+  if (proto->desc->initproto != NULL)
     proto->desc->initproto(interface, proto, va);
 
   /* insert in the protocol list */
@@ -320,6 +322,9 @@ void			if_register_proto(struct net_if_s	*interface,
 void			if_pushpkt(struct net_if_s	*interface,
 				   struct net_packet_s	*packet)
 {
+  if (interface->state != NET_IF_STATE_UP)
+    return;
+
   interface->rx_bytes += packet->header[0].size;
   interface->rx_packets++;
 
@@ -356,12 +361,14 @@ void			if_sendpkt(struct net_if_s	*interface,
 				   struct net_packet_s	*packet,
 				   net_proto_id_t	proto)
 {
+  if (interface->state != NET_IF_STATE_UP)
+    return;
+
   interface->tx_bytes += packet->header[0].size;
   interface->tx_packets++;
 
   if (!memcmp(interface->mac, packet->tMAC, packet->MAClen))
     {
-      printf("loop\n");
       /* XXX c'est mal poli on passe devant tout le monde */
       packet->proto = proto;
       packet->stage++;
@@ -386,26 +393,23 @@ void			if_dump(const char	*name)
   struct net_if_s	*interface;
   uint_fast8_t		i;
 
-  if ((interface = net_if_lookup(&net_interfaces, name)))
+  if ((interface = net_if_lookup(&net_interfaces, name)) && interface->state == NET_IF_STATE_UP)
     {
-      struct net_proto_s	*ad;
-
-      i = printf("%s");
+      i = printf("%s", name);
       spc(6 - i);
       printf("HWaddr %02x:%02x:%02x:%02x:%02x:%02x\n", interface->mac[0], interface->mac[1],
 	     interface->mac[2], interface->mac[3], interface->mac[4], interface->mac[5]);
-      /* XXX this is IPv4 code */
-      for (ad = net_protos_lookup(&interface->protocols, ETHERTYPE_IP);
-	   ad != NULL;
-	   ad = net_protos_lookup_next(&interface->protocols, ad, ETHERTYPE_IP))
-	{
-	  struct net_pv_ip_s	*ipv4 = (struct net_pv_ip_s *)ad->pv;
+#ifdef CONFIG_NETWORK_IPV4
+	  NET_FOREACH_PROTO(&interface->protocols, ETHERTYPE_IP,
+	  {
+	    struct net_pv_ip_s	*ipv4 = (struct net_pv_ip_s *)item->pv;
 
-	  spc(6);
-	  printf("inet addr %u.%u.%u.%u mask %u.%u.%u.%u broadcast %u.%u.%u.%u\n",
-		 EXTRACT_IPV4(ipv4->addr), EXTRACT_IPV4(ipv4->mask),
-		 EXTRACT_IPV4(ipv4->addr | (0xffffffff & ~ipv4->mask)));
-	}
+	    spc(6);
+	    printf("inet addr %u.%u.%u.%u mask %u.%u.%u.%u broadcast %u.%u.%u.%u\n",
+		   EXTRACT_IPV4(ipv4->addr), EXTRACT_IPV4(ipv4->mask),
+		   EXTRACT_IPV4(ipv4->addr | (0xffffffff & ~ipv4->mask)));
+	  });
+#endif
       spc(6);
       printf("%u bytes sent (%u packets), %u bytes received (%u packets)\n",
 	     interface->tx_bytes, interface->tx_packets,

@@ -56,6 +56,7 @@ struct				net_ne2000_context_s
   uint_fast8_t			send_tries;
   packet_queue_root_t		rcvqueue;
   struct net_packet_s		*current;
+  struct device_s		*icudev;
 
   uint8_t			mac[ETH_ALEN];
   struct net_if_s		*interface;

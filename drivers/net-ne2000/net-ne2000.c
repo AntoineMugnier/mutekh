@@ -523,6 +523,8 @@ DEV_INIT(net_ne2000_init)
     }
 
   /* bind to ICU */
+  device_obj_refnew(icudev);
+  pv->icudev = icudev;
   DEV_ICU_BIND(icudev, dev);
 
   return 0;
@@ -535,6 +537,10 @@ DEV_INIT(net_ne2000_init)
 DEV_CLEANUP(net_ne2000_cleanup)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
+
+  /* disable IRQ */
+  DEV_ICU_UNBIND(pv->icudev, dev);
+  device_obj_refdrop(pv->icudev);
 
   /* unregister the device */
   if (pv->interface != NULL)
@@ -553,6 +559,7 @@ DEV_CLEANUP(net_ne2000_cleanup)
   /* terminate the dispatch thread */
   pv->run = 0;
   sem_post(&pv->rcvsem);
+  sem_wait(&pv->rcvsem);
 
   /* destroy the receive semaphore */
   sem_destroy(&pv->rcvsem);

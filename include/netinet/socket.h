@@ -259,6 +259,7 @@ struct		packet_mreq
 
 #include <timer.h>
 
+#if 1
 typedef timer_delay_t	time_t;
 typedef timer_delay_t	suseconds_t;
 
@@ -266,6 +267,7 @@ struct timeval {
 	time_t		tv_sec;		/* seconds */
 	suseconds_t	tv_usec;	/* microseconds */
 };
+#endif
 
 struct linger {
   bool_t	l_onoff;

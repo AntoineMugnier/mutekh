@@ -75,7 +75,7 @@ typedef DEV_INIT(dev_init_t);
 #define DEV_CLEANUP(n)	void    (n) (struct device_s *dev)
 
 /** Common device class cleanup() methode shortcut */
-#define dev_cleanup(dev, ...) (dev)->drv->f_cleanup(dev, __VA_ARGS__ )
+#define dev_cleanup(dev) (dev)->drv->f_cleanup(dev)
 
 /** Common device class cleanup() function type. Free all ressources
     allocated with the init() function.

@@ -104,7 +104,7 @@ struct		ether_arp
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
-#include <gpct/object_refcount.h>
+#include <gpct/object_simple.h>
 
 #include <timer.h>
 
@@ -144,7 +144,7 @@ struct					arp_resolution_s
  * ARP table entry.
  */
 
-OBJECT_TYPE(arp_entry_obj, REFCOUNT, struct arp_entry_s); /* XXX no refcount */
+OBJECT_TYPE(arp_entry_obj, SIMPLE, struct arp_entry_s);
 
 struct					arp_entry_s
 {
@@ -160,13 +160,13 @@ struct					arp_entry_s
 
 OBJECT_CONSTRUCTOR(arp_entry_obj);
 OBJECT_DESTRUCTOR(arp_entry_obj);
-OBJECT_FUNC(static inline, arp_entry_obj, REFCOUNT, arp_entry_obj, obj_entry);
+OBJECT_FUNC(static inline, arp_entry_obj, SIMPLE, arp_entry_obj, obj_entry);
 
 /*
  * ARP table types.
  */
 
-CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, arp_entry_obj, list_entry, 64);
+CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, NOOBJ, list_entry, 64);
 CONTAINER_KEY_TYPE(arp_table, SCALAR, ip);
 
 /*

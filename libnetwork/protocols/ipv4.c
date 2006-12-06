@@ -200,7 +200,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   /* the unique identifier of the packet is the concatenation of the
      source address and the packet id */
   memcpy(id, &packet->sADDR.addr.ipv4, 4);
-  memcpy(&id[3], &hdr->id, 2);
+  memcpy(id + 4, &hdr->id, 2);
 
   /* extract some useful fields */
   fragment = net_be16_load(hdr->fragment);
@@ -508,7 +508,10 @@ NET_PUSHPKT(ip_pushpkt)
   sock_raw_signal(interface, protocol, packet, proto);
 #endif
   if ((p = net_protos_lookup(&interface->protocols, proto)))
-    p->desc->pushpkt(interface, packet, p);
+    {
+      p->desc->pushpkt(interface, packet, p);
+      net_proto_obj_refdrop(p);
+    }
   else
     pv->icmp->desc->f.control->errormsg(packet, ERROR_PROTO_UNREACHABLE);
 }
@@ -721,7 +724,10 @@ NET_SENDPKT(ip_send)
       if (!error)
 	ip_send_fragment(protocol, interface, hdr, packet, route_entry, 0, offs, total - offs, 1);
 
-      route_obj_refdrop(route_entry);
+#ifdef CONFIG_NETWORK_FORWARDING
+      if (route_entry != NULL)
+	route_obj_refdrop(route_entry);
+#endif
 
       return ;
     }

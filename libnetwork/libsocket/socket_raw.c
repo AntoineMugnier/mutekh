@@ -149,12 +149,18 @@ static _BIND(bind_raw)
       CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
       {
 	interface = item;
-	for (addressing = net_protos_lookup(&interface->protocols, id);
-	     addressing != NULL;
-	     addressing = net_protos_lookup_next(&interface->protocols, addressing, id))
-	  if (addressing->desc->f.addressing->matchaddr(addressing, &address, NULL, NULL))
-	    goto ok;
+	NET_FOREACH_PROTO(&interface->protocols, id,
+	{
+	  addressing = item;
 
+	  if (addressing->desc->f.addressing->matchaddr(addressing, &address, NULL, NULL))
+	    NET_FOREACH_PROTO_BREAK;
+
+	  addressing = NULL;
+	});
+
+	if (addressing != NULL)
+	  CONTAINER_FOREACH_BREAK;
       });
 
     ok:
@@ -700,6 +706,9 @@ static _SHUTDOWN(shutdown_raw)
 
 	  if (pv->connected)
 	    route_obj_refdrop(pv->route);
+
+	  if (pv->local_interface != NULL)
+	    net_if_obj_refdrop(pv->local_interface);
 	}
     }
 

@@ -69,6 +69,7 @@ CONTAINER_TYPE(route_table, DLIST, struct net_route_s, NOLOCK, route_obj, list_e
 
 error_t			route_add(struct net_route_s	*route);
 struct net_route_s	*route_get(struct net_addr_s	*addr);
+void			route_flush(struct net_if_s	*interface);
 void			route_del(struct net_route_s	*route);
 void			route_dump(void);
 

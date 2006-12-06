@@ -22,6 +22,7 @@
 #include <hexo/types.h>
 #include <hexo/alloc.h>
 
+#include <netinet/packet.h>
 #include <netinet/protos.h>
 
 /*
@@ -36,12 +37,17 @@ OBJECT_CONSTRUCTOR(net_proto_obj)
   if ((proto = mem_alloc(sizeof (struct net_proto_s) + desc->pv_size, MEM_SCOPE_CONTEXT)) == NULL)
     return NULL;
 
+  net_proto_obj_init(proto);
   proto->desc = desc;
   proto->id = desc->id;
   if (desc->pv_size)
     proto->pv = (void *)(proto + 1);
   else
     proto->pv = NULL;
+
+#ifdef CONFIG_NETWORK_PROFILING
+  netobj_new[NETWORK_PROFILING_PROTO]++;
+#endif
 
   return proto;
 }
@@ -52,7 +58,12 @@ OBJECT_CONSTRUCTOR(net_proto_obj)
 
 OBJECT_DESTRUCTOR(net_proto_obj)
 {
-  printf(" === net_proto drop === \n");
+  if (obj->desc->destroyproto != NULL)
+    obj->desc->destroyproto(obj);
 
   mem_free(obj);
+
+#ifdef CONFIG_NETWORK_PROFILING
+  netobj_del[NETWORK_PROFILING_PROTO]++;
+#endif
 }

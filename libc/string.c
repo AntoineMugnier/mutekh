@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h> /* FIXME */
 
 /********************************/
 
@@ -275,30 +276,10 @@ inline void * memchr(const void *s, int_fast8_t c, size_t n)
 #undef strcasecmp
 inline int_fast8_t strcasecmp(const char* s1, const char* s2)
 {
-    register uint_fast32_t	x2;
-    register uint_fast32_t	x1;
+  while (*s1 && toupper(*s1) == toupper(*s2))
+    s1++, s2++;
 
-    while (1)
-      {
-        x2 = *s2 - 'A';
-	if (__unlikely(x2 < 26u))
-	  x2 += 32;
-
-        x1 = *s1 - 'A';
-	if (__unlikely(x1 < 26u))
-	  x1 += 32;
-
-	s1++;
-	s2++;
-
-        if (__unlikely(x2 != x1))
-	  break;
-
-        if (__unlikely(x1 == (uint32_t)-'A'))
-	  break;
-      }
-
-    return x1 - x2;
+  return (toupper(*s1) - toupper(*s2));
 }
 #endif
 
@@ -308,34 +289,11 @@ inline int_fast8_t strcasecmp(const char* s1, const char* s2)
 #undef strncasecmp
 inline int_fast8_t strncasecmp(const char* s1, const char* s2, size_t len)
 {
-    register uint_fast32_t	x2;
-    register uint_fast32_t	x1;
-    register const char*	end = s1 + len;
+  /* FIXME */
+  while (len-- && *s1 && toupper(*s1) == toupper(*s2))
+    s1++, s2++;
 
-    while (1)
-      {
-        if (__unlikely(s1 >= end))
-	  return 0;
-
-        x2 = *s2 - 'A';
-	if (__unlikely(x2 < 26u))
-	  x2 += 32;
-
-        x1 = *s1 - 'A';
-	if (__unlikely(x1 < 26u))
-	  x1 += 32;
-
-	s1++;
-	s2++;
-
-	if (__unlikely(x2 != x1))
-            break;
-
-        if (__unlikely(x1 == (uint32_t)-'A'))
-            break;
-    }
-
-    return x1 - x2;
+  return (toupper(*s1) - toupper(*s2));
 }
 #endif
 

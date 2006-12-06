@@ -134,6 +134,7 @@ error_t			rarp_client(const char	*ifname)
 	}
     }
 
+  net_if_obj_refdrop(interface);
   shutdown(sock, SHUT_RDWR);
 
   return 0;
@@ -141,6 +142,7 @@ error_t			rarp_client(const char	*ifname)
  leave:
   printf("rarp: error\n");
 
+  net_if_obj_refdrop(interface);
   shutdown(sock, SHUT_RDWR);
 
   return -1;

@@ -229,6 +229,7 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
 
   /* send UDP packet */
   udp_sendpkt(route->interface, route->addressing, packet, local_port, remote->port, desc->checksum);
+  packet_obj_refdrop(packet);
 
   if (drop_route)
     route_obj_refdrop(route);

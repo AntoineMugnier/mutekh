@@ -22,6 +22,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <hexo/device.h>
+#include <hexo/device/input.h>
+#include <hexo/driver.h>
+
+#include <../drivers/input-8042/input-8042.h>
 
 #include <netinet/if.h>
 #include <netinet/in.h>
@@ -229,6 +234,34 @@ static TIMER_CALLBACK(profiling)
   netprofile_show();
   timer_add_event(&timer_ms, timer);
 }
+
+extern struct device_s keyboard_dev;
+
+static DEVINPUT_CALLBACK(chiche)
+{
+  switch (id)
+    {
+      case INPUT_8042_KEY_S:
+	netprofile_show();
+	break;
+      case INPUT_8042_KEY_Q:
+	{
+	  if_down("eth0");
+
+	  struct net_if_s *iface = if_get_by_name("eth0");
+
+	  dev_cleanup(iface->dev);
+
+	  net_if_obj_refdrop(iface);
+
+	  netprofile_show();
+
+	  printf("\\o/\n");
+	}
+	break;
+    }
+
+}
 #endif
 
  sem_t sem;
@@ -243,6 +276,8 @@ void *toto(void *p)
 void *net_up(void *p)
 {
   pthread_t th;
+
+  dev_input_setcallback(&keyboard_dev, DEVINPUT_EVENT_BUTTON_UP, DEVINPUT_CTRLID_ALL, chiche, NULL);
 
 #if 0
   sem_init(&sem, 0, 0);
@@ -260,13 +295,14 @@ void *net_up(void *p)
 #ifdef CONFIG_NETWORK
 
   if_up("eth0");
-  if_up("eth1");
+  //  if_up("eth1");
+
   //  if_up("eth2");
   //  if_up("eth3");
 
 #ifdef CONFIG_NETWORK_RARP
   rarp_client("eth0");
-  rarp_client("eth1");
+  //  rarp_client("eth1");
   //  rarp_client("eth2");
   //  rarp_client("eth3");
 #endif
@@ -341,7 +377,7 @@ void *net_up(void *p)
   prof.pv = NULL;
   prof.callback = profiling;
 
-  timer_add_event(&timer_ms, &prof);
+  //  timer_add_event(&timer_ms, &prof);
 #endif
 #endif
   return NULL;

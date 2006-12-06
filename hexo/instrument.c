@@ -61,14 +61,14 @@ void __cyg_profile_func_exit  (void *this_fn,
 void
 hexo_instrument_trace(bool_t state)
 {
-  hexo_instrument_trace_flag = state;  
+  hexo_instrument_trace_flag = state;
 }
 
 void
 hexo_instrument_alloc_guard(bool_t state)
 {
 #ifdef CONFIG_HEXO_MEMALLOC_GUARD_INSTRUMENT
-  hexo_instrument_trace_flag = state;  
+   hexo_instrument_memalloc_guard = state;
 #endif
 }
 

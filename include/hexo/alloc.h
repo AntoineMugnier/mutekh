@@ -220,7 +220,9 @@ static inline size_t mem_alloc_getsize(void *ptr)
 /** initialize memory subsystem. found in arch/name/mem_alloc.c */
 void mem_init(void);
 
-static bool_t mem_guard_check(void);
+#ifdef CONFIG_HEXO_MEMALLOC_GUARD
+static bool_t mem_guard_check(void) __attribute__((unused));
+#endif
 
 #include <arch/hexo/alloc.h>
 

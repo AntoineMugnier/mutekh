@@ -52,6 +52,10 @@ OBJECT_CONSTRUCTOR(route_obj)
   route->is_routed = 0;
   route->invalidated = 0;
 
+#ifdef CONFIG_NETWORK_PROFILING
+  netobj_new[NETWORK_PROFILING_ROUTE]++;
+#endif
+
   return route;
 }
 
@@ -61,12 +65,14 @@ OBJECT_CONSTRUCTOR(route_obj)
 
 OBJECT_DESTRUCTOR(route_obj)
 {
-  printf(" === route drop === \n");
-
   net_if_obj_refdrop(obj->interface);
   if (obj->addressing != NULL)
     net_proto_obj_refdrop(obj->addressing);
   mem_free(obj);
+
+#ifdef CONFIG_NETWORK_PROFILING
+  netobj_del[NETWORK_PROFILING_ROUTE]++;
+#endif
 }
 
 /*
@@ -77,8 +83,8 @@ error_t			route_add(struct net_route_s	*route)
 {
   struct net_addr_s	*target;
   struct net_addr_s	*mask;
-  struct net_proto_s	*item;
   net_proto_id_t	id;
+  error_t		err = -1;
 
   /* re-adding a route is not permitted */
   if (route->invalidated || route->addressing != NULL)
@@ -101,41 +107,41 @@ error_t			route_add(struct net_route_s	*route)
   id = target->family;
 
   /* look throught all the matching addressing protocols */
-  for (item = net_protos_lookup(&route->interface->protocols, id);
-       item != NULL;
-       item = net_protos_lookup_next(&route->interface->protocols, item, id))
-    {
-      if (item->desc->f.addressing->matchaddr(item, NULL, target, mask))
-	{
-	  struct net_route_s	*rt;
-	  struct net_route_s	*prec;
+  NET_FOREACH_PROTO(&route->interface->protocols, id,
+  {
+    if (item->desc->f.addressing->matchaddr(item, NULL, target, mask))
+      {
+	struct net_route_s	*rt;
+	struct net_route_s	*prec;
 
-	  net_proto_obj_refnew(item);
-	  route->addressing = item;
+	net_proto_obj_refnew(item);
+	route->addressing = item;
 
-	  /* push the route into the routing table */
-	  /* the table is sorted by netmask order descendent */
-	  for (prec = NULL, rt = route_table_head(&route_table);
-	       rt != NULL;
-	       prec = rt, rt = route_table_next(&route_table, rt))
-	    {
-	      if (route->mask.family == addr_ipv4)
-		{
-		  if (rt->mask.addr.ipv4 <= route->mask.addr.ipv4)
-		    break;
-		}
-	      else
-		assert(0);
-	    }
+	/* push the route into the routing table */
+	/* the table is sorted by netmask order descendent */
+	for (prec = NULL, rt = route_table_head(&route_table);
+	     rt != NULL;
+	     prec = rt, rt = route_table_next(&route_table, rt))
+	  {
+	    if (route->mask.family == addr_ipv4)
+	      {
+		if (rt->mask.addr.ipv4 <= route->mask.addr.ipv4)
+		  break;
+	      }
+	    else
+	      assert(0);
+	  }
 
-	  if (prec == NULL)
-	    return !route_table_push(&route_table, route);
-	  else
-	    return !route_table_insert_post(&route_table, prec, route);
-	}
-    }
+	if (prec == NULL)
+	  err = -(!route_table_push(&route_table, route));
+	else
+	  err = -(!route_table_insert_post(&route_table, prec, route));
 
-  return -1;
+	NET_FOREACH_PROTO_BREAK;
+      }
+  });
+
+  return err;
 }
 
 /*
@@ -144,6 +150,8 @@ error_t			route_add(struct net_route_s	*route)
 
 struct net_route_s	*route_get(struct net_addr_s	*addr)
 {
+  struct net_route_s	*ret = NULL;
+
   /* look into the route table */
   CONTAINER_FOREACH(route_table, DLIST, NOLOCK, &route_table,
   {
@@ -152,11 +160,37 @@ struct net_route_s	*route_get(struct net_addr_s	*addr)
     if (addressing->desc->f.addressing->matchaddr(addressing, &item->target, addr, &item->mask))
       {
 	route_obj_refnew(item);
-	return item;
+	ret = item;
+	CONTAINER_FOREACH_BREAK;
       }
   });
 
-  return NULL;
+  return ret;
+}
+
+/*
+ * Flush routes for a given interface
+ */
+
+void			route_flush(struct net_if_s	*interface)
+{
+  struct net_route_s	*prev = NULL;
+
+  /* look into the route table */
+  CONTAINER_FOREACH(route_table, DLIST, NOLOCK, &route_table,
+  {
+    if (prev != NULL)
+      {
+	route_del(prev);
+	prev = NULL;
+      }
+
+    if (item->interface == interface)
+      prev = item;
+  });
+
+  if (prev != NULL)
+    route_del(prev);
 }
 
 /*

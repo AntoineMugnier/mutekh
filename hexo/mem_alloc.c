@@ -316,7 +316,7 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
 
 #ifdef CONFIG_HEXO_MEMALLOC_DEBUG
   memset(res, 0x5a, size);
-#endif  
+#endif
 
   next = (uint8_t*)region->next + size;
 
@@ -366,7 +366,7 @@ error_t mem_alloc_stats(struct mem_alloc_region_s *region,
     *free_size = region->free_size;
 
   if (free_blocks)
-    *free_blocks = region->free_blocks;    
+    *free_blocks = region->free_blocks;
 
   return 0;
 #else

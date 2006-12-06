@@ -1,16 +1,21 @@
 (dans l'ordre)
 
+* dhclient
+  - faire un thread + stop
+
 * libsocket
   - finir sockets UDP
-
-* if
-  - a finir
 
 * TCP
   - a finir
 
 * libsocket
   - sockets TCP
+
+* general
+  - verifier l'alignement des acces memoire
+  - voir les locks un peu partout
+  - taille de packet > taille max
 
 * libsocket
   - sockopt sur socket IP
@@ -26,8 +31,3 @@
 
 * IP
   - idee de nipo: dans le routage avec fragmentation, calculer taille optimale
-
-* general
-  - verifier l'alignement des acces memoire
-  - voir les locks un peu partout
-  - taille de packet > taille max

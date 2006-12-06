@@ -46,6 +46,13 @@
 #define IF_ADD	1
 #define IF_DEL	2
 
+/*
+ * If state
+ */
+
+#define NET_IF_STATE_DOWN	0
+#define NET_IF_STATE_UP		1
+
 #include <netinet/route.h>
 
 /*
@@ -71,6 +78,7 @@ struct					net_if_s
   uint_fast16_t				mtu;
   net_protos_root_t			protocols;
   uint_fast16_t				type;
+  uint_fast8_t				state;
 
   /* statistics */
   uint_fast32_t				rx_bytes;
@@ -103,8 +111,8 @@ struct net_if_s	*if_register(struct device_s	*dev,
 			     uint_fast16_t	mtu);
 void	if_unregister(struct net_if_s	*interface);
 
-void	if_up(char*	name, ...);
-void	if_down(char*	name, ...);
+void	if_up(char*	name);
+void	if_down(char*	name);
 error_t	if_config(int_fast32_t		ifindex,
 		  uint_fast8_t		action,
 		  struct net_addr_s	*address,

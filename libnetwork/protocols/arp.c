@@ -78,9 +78,28 @@ NET_INITPROTO(arp_init)
 NET_DESTROYPROTO(arp_destroy)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)proto->pv;
+  struct arp_entry_s	*to_remove = NULL;
 
+  /* clear timeout */
   timer_cancel_event(&pv->stale_timeout, 0);
-  arp_table_clear(&pv->table);
+  /* remove all items in the arp table */
+  CONTAINER_FOREACH(arp_table, HASHLIST, NOLOCK, &pv->table,
+  {
+    /* remove previous item */
+    if (to_remove != NULL)
+      {
+	arp_table_remove(&pv->table, to_remove);
+	arp_entry_obj_delete(to_remove);
+      }
+    to_remove = item;
+  });
+
+  /* particular case handling */
+  if (to_remove != NULL)
+    {
+      arp_table_remove(&pv->table, to_remove);
+      arp_entry_obj_delete(to_remove);
+    }
   arp_table_destroy(&pv->table);
 }
 
@@ -247,7 +266,6 @@ NET_PUSHPKT(arp_pushpkt)
       case ARPOP_REQUEST:
 	{
 	  uint_fast32_t		requested;
-	  struct net_proto_s	*item;
 	  struct net_addr_s	addr;
 
 	  requested = net_be32_load(hdr->arp_tpa);
@@ -255,20 +273,18 @@ NET_PUSHPKT(arp_pushpkt)
 	  IPV4_ADDR_SET(addr, requested);
 
 	  /* loop thru IP modules bound to interface */
-	  for (item = net_protos_lookup(&interface->protocols, ETHERTYPE_IP);
-	       item != NULL;
-	       item = net_protos_lookup_next(&interface->protocols, item, ETHERTYPE_IP))
-	    {
-	      if (item->desc->f.addressing->matchaddr(item, NULL, &addr, NULL))
-		{
-		  /* force adding the entry */
-		  arp_update_table(protocol, net_be32_load(hdr->arp_spa),
-				   hdr->arp_sha, ARP_TABLE_DEFAULT);
-		  arp_reply(interface, item, packet);
-		  requested = 0;
-		  break;
-		}
-	    }
+	  NET_FOREACH_PROTO(&interface->protocols, ETHERTYPE_IP,
+	  {
+	    if (item->desc->f.addressing->matchaddr(item, NULL, &addr, NULL))
+	      {
+		/* force adding the entry */
+		arp_update_table(protocol, net_be32_load(hdr->arp_spa),
+				 hdr->arp_sha, ARP_TABLE_DEFAULT);
+		arp_reply(interface, item, packet);
+		requested = 0;
+		NET_FOREACH_PROTO_BREAK;
+	      }
+	  });
 
 	  /* try to update the cache */
 	  if (requested)
@@ -367,6 +383,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 
 	      /* send the packet */
 	      if_sendpkt(arp_entry->resolution->interface, waiting, ETHERTYPE_IP);
+	      packet_obj_refdrop(waiting);
 	    }
 
 	  /* clear the resolution structure */
@@ -499,7 +516,7 @@ TIMER_CALLBACK(arp_timeout)
 	}
 
       /* free the arp entry */
-      arp_entry_obj_refdrop(entry);
+      arp_entry_obj_delete(entry);
     }
 }
 
@@ -520,7 +537,7 @@ TIMER_CALLBACK(arp_stale_timeout)
       {
 	net_debug("Clearing stale entry %P\n", &to_remove->ip, 4);
 	arp_table_remove(&pv_arp->table, to_remove);
-	arp_entry_obj_refdrop(to_remove);
+	arp_entry_obj_delete(to_remove);
 	to_remove = NULL;
       }
 
@@ -536,7 +553,7 @@ TIMER_CALLBACK(arp_stale_timeout)
     {
       net_debug("Clearing stale entry %P\n", &to_remove->ip, 4);
       arp_table_remove(&pv_arp->table, to_remove);
-      arp_entry_obj_refdrop(to_remove);
+      arp_entry_obj_delete(to_remove);
     }
 
   /* schedule the timer again */

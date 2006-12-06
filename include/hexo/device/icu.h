@@ -63,7 +63,7 @@ typedef DEVICU_SETHNDL(devicu_sethndl_t);
 #define dev_icu_sethndl(dev, ...) (dev)->drv->f.icu.f_sethndl(dev, __VA_ARGS__ )
 
 
-/** bind an to this icu irq for an already configured device */
+/** bind a device to this icu irq for an already configured device */
 #define DEV_ICU_BIND(icu_dev, dev)						\
 {										\
   if ((dev)->drv->f_irq)								\
@@ -88,6 +88,15 @@ typedef DEVICU_DELHNDL(devicu_delhndl_t);
 #define dev_icu_delhndl(dev, ...) (dev)->drv->f.icu.f_delhndl(dev, __VA_ARGS__ )
 
 
+/** unbind icu irq for a device */
+#define DEV_ICU_UNBIND(icu_dev, dev)						\
+{										\
+  if ((dev)->drv->f_irq)							\
+    {										\
+      dev_icu_delhndl((icu_dev), (dev)->drv->f_irq);				\
+      dev_icu_enable((icu_dev), (dev)->irq, 0);					\
+    }										\
+}
 
 
 /** ICU device class methodes */

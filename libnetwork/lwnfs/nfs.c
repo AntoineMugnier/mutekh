@@ -242,10 +242,8 @@ static error_t		do_rpc(struct nfs_s	*server,
 
   mem_free(pkt);
 
-  *data = mem_alloc(rpcb.size, MEM_SCOPE_SYS);
+  *data = rpcb.data;
   *size = rpcb.size;
-  memcpy(*data, rpcb.data, *size);
-  mem_free(reply);
 
   return 0;
 }
@@ -420,7 +418,8 @@ error_t			nfs_mount(struct nfs_s	*server,
 
   /* copy path to the export */
   dir->path_len = htonl(path_len);
-  dir->path[path_len] = 0;
+  if (path_len & 3)
+    dir->path[path_len] = 0;
   memcpy(dir->path, path, path_len);
 
   /* call mountd */
@@ -469,7 +468,8 @@ error_t			nfs_umount(struct nfs_s	*server,
 
   /* copy path to the export */
   dir->path_len = htonl(path_len);
-  dir->path[path_len] = 0;
+  if (path_len & 3)
+    dir->path[path_len] = 0;
   memcpy(dir->path, path, path_len);
 
   /* call mountd */
@@ -689,7 +689,8 @@ error_t				nfs_lookup(struct nfs_s		*server,
   memcpy(req->handle, directory, sizeof (nfs_handle_t));
   req->u.dirop.path_len = htonl(path_len);
   memcpy(req->u.dirop.path, path, path_len);
-  req->u.dirop.path[path_len] = 0;
+  if (path_len & 3)
+    req->u.dirop.path[path_len] = 0;
 
   /* call nfsd */
   err = nfs_nfsd(server, req, &sz, NFS_LOOKUP, (void *)&reply);
@@ -894,7 +895,8 @@ error_t				nfs_create(struct nfs_s		*server,
   /* copy root & path to the entity */
   memcpy(req->handle, directory, sizeof (nfs_handle_t));
   memcpy(req->u.dirop.path, name, path_len);
-  req->u.dirop.path[path_len] = 0;
+  if (path_len & 3)
+    req->u.dirop.path[path_len] = 0;
   req->u.dirop.path_len = htonl(path_len);
   path_len = ALIGN_VALUE_UP(path_len, 4);
   /* setup attributes */
@@ -981,7 +983,8 @@ error_t		nfs_remove(struct nfs_s		*server,
   memcpy(req->handle, directory, sizeof (nfs_handle_t));
   req->u.dirop.path_len = htonl(path_len);
   memcpy(req->u.dirop.path, name, path_len);
-  req->u.dirop.path[path_len] = 0;
+  if (path_len & 3)
+    req->u.dirop.path[path_len] = 0;
 
   /* call nfsd */
   err = nfs_nfsd(server, req, &sz, is_dir ? NFS_RMDIR : NFS_REMOVE, (void *)&reply);

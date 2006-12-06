@@ -181,10 +181,15 @@ void				*packet_dispatch(void	*data)
 
   mem_free(data);
 
-  while (*run)
+  net_if_obj_refnew(interface);
+
+  while (1)
     {
       /* wait for a packet */
       sem_wait(sem);
+
+      if (!*run)
+	break;
 
       /* retreive the incoming packet */
       packet = packet_queue_lock_pop(root);
@@ -198,6 +203,10 @@ void				*packet_dispatch(void	*data)
 	}
     }
 
+  net_if_obj_refdrop(interface);
+
+  sem_post(sem);
+
   return NULL;
 }
 
@@ -209,9 +218,16 @@ void				*packet_dispatch(void	*data)
 void				netprofile_show(void)
 {
   uint_fast8_t			i;
+  char				*label[NETWORK_PROFILING_NB_OBJS];
+
+  label[NETWORK_PROFILING_IF] = "net_if";
+  label[NETWORK_PROFILING_PROTO] = "net_proto";
+  label[NETWORK_PROFILING_ROUTE] = "net_route";
+  label[NETWORK_PROFILING_PACKET] = "net_packet";
+  label[NETWORK_PROFILING_ARP_ENTRY] = "arp_entry";
+  label[NETWORK_PROFILING_FRAGMENT] = "ip_fragment";
 
   for (i = 0; i < NETWORK_PROFILING_NB_OBJS; i++)
-    printf("%s%u / %u", i != 0 ? " - " : "", netobj_new[i], netobj_del[i]);
-  printf("\n");
+    printf("%s: %u new %u del\n", label[i], netobj_new[i], netobj_del[i]);
 }
 #endif
