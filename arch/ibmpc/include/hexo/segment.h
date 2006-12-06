@@ -59,6 +59,16 @@ arch_cpudata_alloc(void)
 #endif
 }
 
+static inline size_t
+arch_cpudata_size(void)
+{
+#ifdef CONFIG_SMP
+  return (char*)&__cpu_data_end - (char*)&__cpu_data_start;
+#else
+  return 0;
+#endif
+}
+
 /* context template segment load address defined in ld script*/
 extern __ldscript_symbol_t __context_data_start, __context_data_end;
 
@@ -74,6 +84,12 @@ arch_contextdata_alloc(void)
     }
 
   return tls;
+}
+
+static inline size_t
+arch_contextdata_size(void)
+{
+  return (char*)&__context_data_end - (char*)&__context_data_start;
 }
 
 static inline void

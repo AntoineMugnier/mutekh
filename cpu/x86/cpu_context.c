@@ -1,6 +1,7 @@
 
 #include <hexo/error.h>
 #include <hexo/context.h>
+#include <hexo/segment.h>
 
 #include <cpu/hexo/pmode.h>
 
@@ -10,7 +11,9 @@ cpu_context_bootstrap(struct context_s *context)
   cpu_x86_segsel_t	tls_seg;
 
   /* get a new segment descriptor for tls */
-  if (!(tls_seg = cpu_x86_segment_alloc((uintptr_t)context->tls, 0xffffffff, CPU_X86_SEG_DATA_UP_RW)))
+  if (!(tls_seg = cpu_x86_segment_alloc((uintptr_t)context->tls,
+					arch_contextdata_size(),
+					CPU_X86_SEG_DATA_UP_RW)))
     return -ENOMEM;
 
   /* load current tls segment */
@@ -27,7 +30,9 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   cpu_x86_segsel_t	tls_seg;
 
   /* get a new segment descriptor for tls */
-  if (!(tls_seg = cpu_x86_segment_alloc((uintptr_t)context->tls, 0xffffffff, CPU_X86_SEG_DATA_UP_RW)))
+  if (!(tls_seg = cpu_x86_segment_alloc((uintptr_t)context->tls,
+					arch_contextdata_size(),
+					CPU_X86_SEG_DATA_UP_RW)))
     return -ENOMEM;
 
   CONTEXT_LOCAL_FOREIGN_SET(context->tls, __context_data_base, context->tls);

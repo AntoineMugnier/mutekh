@@ -51,7 +51,7 @@ void mem_init(void)
   if (mem_start == EMU_MAP_FAILED)
     emu_do_syscall(EMU_SYSCALL_EXIT, 1);
 
-  mem_end = (uint8_t *)mem_start + CONFIG_ARCH_EMU_MEMORY;
+  mem_end = (uint8_t*)mem_start + CONFIG_ARCH_EMU_MEMORY;
 
   mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_HEXO_MEMALLOC_ALIGN);
   mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_HEXO_MEMALLOC_ALIGN);

@@ -27,6 +27,8 @@
 
 struct mem_alloc_region_s mem_region_ram;
 
+#ifndef CONFIG_ARCH_IBMPC_MEMORY
+
 static void *
 mem_ibmpc_memsize_probe(void *start)
 {
@@ -52,13 +54,21 @@ mem_ibmpc_memsize_probe(void *start)
   return (void*)x;
 }
 
+#endif
+
 void mem_init(void)
 {
-  void	*mem_end = mem_ibmpc_memsize_probe(&__system_heap_start);
   void	*mem_start = (uint8_t*)&__system_heap_start;
+#ifdef CONFIG_ARCH_IBMPC_MEMORY
+  void	*mem_end = (uint8_t*)CONFIG_ARCH_IBMPC_MEMORY;
+#else
+  void	*mem_end = mem_ibmpc_memsize_probe(&__system_heap_start);
+#endif
 
   mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_HEXO_MEMALLOC_ALIGN);
   mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_HEXO_MEMALLOC_ALIGN);
+
+  assert(mem_end > mem_start);
 
   mem_alloc_region_init(&mem_region_ram, mem_start, mem_end);
 }

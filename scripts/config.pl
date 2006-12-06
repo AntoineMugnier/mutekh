@@ -980,7 +980,21 @@ sub tokens_list
 	if (not ($param_h{list} eq "all"))
 	{
 	    next if ($$opt{nodefine});
-	    next if ($$opt{value} eq "undefined" and @{$$opt{parent}});
+
+	    # hide entry if all parents are disabled
+	    if (my @list = @{$$opt{parent}})
+	    {
+		my	$flag = 0;
+
+		foreach my $n (@list)
+		{
+		    my $o = $config_opts{$n};
+		
+		    $flag = 1 if ($$o{value} ne "undefined");
+		}
+
+		next if (not $flag);
+	    }
 	}
 
 	if ($$opt{value} eq "undefined") {

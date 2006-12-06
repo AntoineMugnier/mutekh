@@ -44,6 +44,12 @@ static lock_t				gdt_lock;
 /** CPU Global descriptor table */
 static union cpu_x86_desc_s		*gdt;
 
+#ifdef CONFIG_ARCH_IBMPC_MEMORY_SEGLIMIT
+#define ARCH_IBMPC_SEGLIMIT	CONFIG_ARCH_IBMPC_MEMORY
+#else
+#define ARCH_IBMPC_SEGLIMIT	0xffffffff
+#endif
+
 error_t
 cpu_global_init(void)
 {
@@ -55,10 +61,10 @@ cpu_global_init(void)
   lock_init(&gdt_lock);
 
   cpu_x86_seg_setup(&gdt[ARCH_GDT_CODE_INDEX].seg, 0,
-		    0xffffffff, CPU_X86_SEG_EXEC_NC_R, 0, 1);
+		    ARCH_IBMPC_SEGLIMIT, CPU_X86_SEG_EXEC_NC_R, 0, 1);
 
   cpu_x86_seg_setup(&gdt[ARCH_GDT_DATA_INDEX].seg, 0,
-		    0xffffffff, CPU_X86_SEG_DATA_UP_RW, 0, 1);
+		    ARCH_IBMPC_SEGLIMIT, CPU_X86_SEG_DATA_UP_RW, 0, 1);
 
   /* mark all other GDT entries available */
   for (i = ARCH_GDT_FIRST_ALLOC; i < ARCH_GDT_SIZE; i++)
@@ -175,7 +181,9 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
 
   cld->cpu_local_storage = cls;
 
-  if (!(cls_sel = cpu_x86_segment_alloc((uintptr_t)cls, 0xffffffff, CPU_X86_SEG_DATA_UP_RW)))
+  if (!(cls_sel = cpu_x86_segment_alloc((uintptr_t)cls,
+					arch_cpudata_size(),
+					CPU_X86_SEG_DATA_UP_RW)))
     goto err_cls_seg;
 
   cpu_x86_datasegfs_use(cls_sel, 0);
