@@ -307,7 +307,7 @@ inline char *strncpy(char *dest, const char *src, size_t n)
 
   tmp = dest;
 
-  while (n && *str)
+  while (n && *src)
     {
       *dest++ = *src++;
       n--;
