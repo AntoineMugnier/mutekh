@@ -276,10 +276,10 @@ inline void * memchr(const void *s, int_fast8_t c, size_t n)
 #undef strcasecmp
 inline int_fast8_t strcasecmp(const char* s1, const char* s2)
 {
-  while (*s1 && toupper(*s1) == toupper(*s2))
+  while (*s1 && tolower(*s1) == tolower(*s2))
     s1++, s2++;
 
-  return (toupper(*s1) - toupper(*s2));
+  return (*s1 - *s2);
 }
 #endif
 
@@ -290,10 +290,10 @@ inline int_fast8_t strcasecmp(const char* s1, const char* s2)
 inline int_fast8_t strncasecmp(const char* s1, const char* s2, size_t len)
 {
   /* FIXME */
-  while (len-- && *s1 && toupper(*s1) == toupper(*s2))
+  while (len-- && *s1 && tolower(*s1) == tolower(*s2))
     s1++, s2++;
 
-  return (toupper(*s1) - toupper(*s2));
+  return (*s1 - *s2);
 }
 #endif
 
