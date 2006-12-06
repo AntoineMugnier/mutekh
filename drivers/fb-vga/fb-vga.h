@@ -40,6 +40,7 @@ DEV_CLEANUP(fb_vga_cleanup);
 DEVFB_SETMODE(fb_vga_setmode);
 DEVFB_GETBUFFER(fb_vga_getbuffer);
 DEVFB_FLIPPAGE(fb_vga_flippage);
+DEVFB_SETPALETTE(fb_vga_setpalette);
 
 #endif
 

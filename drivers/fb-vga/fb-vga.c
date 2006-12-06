@@ -69,6 +69,7 @@ const struct driver_s	fb_vga_drv =
     .f_setmode		= fb_vga_setmode,
     .f_getbuffer	= fb_vga_getbuffer,
     .f_flippage		= fb_vga_flippage,
+    .f_setpalette	= fb_vga_setpalette,
   }
 };
 #endif

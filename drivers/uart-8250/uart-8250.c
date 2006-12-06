@@ -149,7 +149,14 @@ DEV_INIT(uart_8250_init)
   tty_fifo_init(&pv->read_fifo);
 
   pv->line_mode = UART_8250_LCR_8BITS | UART_8250_LCR_PARNO | UART_8250_LCR_1STOP;
+
+#if 0
+  // 9600 baud
   pv->line_speed = 0x000c;
+#else
+  // 9600 baud
+  pv->line_speed = 0x0001;
+#endif
 
   cpu_io_write_8(dev->addr[0] + UART_8250_LCR, 0);
 

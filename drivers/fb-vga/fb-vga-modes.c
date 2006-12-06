@@ -189,7 +189,6 @@ static error_t fb_vga_setmode_(const struct fb_vga_mode_s *mode)
   fb_vga_palette();
 
   /* Turn screen on */
-
 #ifndef CONFIG_FB_VGA_EGA
   cpu_io_write_8(FB_VGA_SEQ_I, 0x01);
   cpu_io_write_8(FB_VGA_SEQ_D, cpu_io_read_8(FB_VGA_SEQ_D) & 0xDF);
