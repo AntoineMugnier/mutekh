@@ -127,8 +127,8 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 {
   size_t	offset = 0;
 #ifndef CONFIG_LIBC_PRINTF_SIMPLE
-  uint_fast8_t	typesize;
-  ssize_t	padding;
+  uint_fast8_t	typesize, padindex;
+  ssize_t	padding[2];
   bool_t	zeropad, rightpad;
 #endif
 
@@ -157,7 +157,8 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 
  printf_state_modifier:
 #ifndef CONFIG_LIBC_PRINTF_SIMPLE
-  padding = 0;
+  padindex = 0;
+  padding[0] = 0;
   zeropad = rightpad = 0;
   typesize = sizeof(int_fast8_t);
 #endif
@@ -178,12 +179,16 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 	  break;
 
 	case '0':
-	  if (!padding)
+	  if (!padding[padindex])
 	    zeropad = 1;
 
 	case '1' ... '9':
-	  padding = padding * 10 + *format++ - '0';
+	  padding[padindex] = padding[padindex] * 10 + *format++ - '0';
 	  break;
+
+	case '.':
+	  padindex ^= 1;
+	  padding[padindex] = 0;
 
 	case 'l':
 	  typesize *= 2;
@@ -274,7 +279,7 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 	fcn(ctx, "0x", offset, 2);
 	offset += 2;
 	zeropad = 1;
-	padding = sizeof(void*) * 2;
+	padding[0] = sizeof(void*) * 2;
 	rightpad = 0;
 #endif
 
@@ -303,6 +308,10 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 	len = strlen((char*)val);
 	buf = (char*)val;
 #ifndef CONFIG_LIBC_PRINTF_SIMPLE
+	/* precision on %s limit string len */
+	if (padding[1] > 0)
+	  len = __MIN(len, padding[1]);
+
 	zeropad = 0;
 #endif
 	break;
@@ -331,20 +340,25 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 	goto printf_state_main;
       }
 
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
-    padding = __MAX((ssize_t)(padding - len), 0);
+    size_t padlen = __MAX((ssize_t)(padding[0] - len), 0);
 
+#ifndef CONFIG_LIBC_PRINTF_SIMPLE
     if (!rightpad)
-      for (; padding; padding--)
-	fcn(ctx, zeropad ? "0" : " ", offset++, 1);
+      {
+	for (; padlen; padlen--) /* FIXME suboptimal */
+	  fcn(ctx, zeropad ? "0" : " ", offset++, 1);
+      }
 #endif
 
     fcn(ctx, buf, offset, len);
     offset += len;
 
 #ifndef CONFIG_LIBC_PRINTF_SIMPLE
-    while (padding--)
-      fcn(ctx, " ", offset++, 1);
+    if (rightpad)
+    {
+      while (padlen--)
+	fcn(ctx, " ", offset++, 1);
+    }
 #endif
   }
   goto printf_state_main;
