@@ -128,7 +128,7 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
   size_t	offset = 0;
 #ifndef CONFIG_LIBC_PRINTF_SIMPLE
   uint_fast8_t	typesize, padindex;
-  ssize_t	padding[2];
+  ssize_t	padding[2] = { 0 };
   bool_t	zeropad, rightpad;
 #endif
 
@@ -158,7 +158,6 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
  printf_state_modifier:
 #ifndef CONFIG_LIBC_PRINTF_SIMPLE
   padindex = 0;
-  padding[0] = 0;
   zeropad = rightpad = 0;
   typesize = sizeof(int_fast8_t);
 #endif
@@ -188,7 +187,6 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 
 	case '.':
 	  padindex ^= 1;
-	  padding[padindex] = 0;
 
 	case 'l':
 	  typesize *= 2;
