@@ -31,6 +31,10 @@
 #include <gpct/cont_ring.h>
 #include <hexo/gpct_lock_hexo.h>
 
+#if defined(CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD) || defined(CONFIG_DRIVER_CHAR_VGATTY_ANSI)
+# define DRIVER_CHAR_VGATTY_HAS_FIFO
+#endif
+
 /**************************************************************/
 
 /*
@@ -62,7 +66,10 @@ typedef volatile struct vga_text_char_s * vga_text_buf_t;
  */
 
 typedef void tty_vga_char_process_t (struct device_s *dev, uint8_t c);
+
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD
 typedef void tty_vga_key_process_t  (struct device_s *dev, uint8_t scancode);
+#endif
 
 CONTAINER_TYPE(tty_fifo, RING, uint8_t, HEXO_SPIN_IRQ, NOOBJ, 32);
 CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo, HEXO_SPIN_IRQ);
@@ -79,15 +86,19 @@ struct tty_vga_context_s
   /* function used to process next char */
   tty_vga_char_process_t	*process;
 
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD
   /* function used to process next scancode byte */
   tty_vga_key_process_t		*scancode;
 
+  uint_fast8_t			key_state;
+#endif
+
+#ifdef DRIVER_CHAR_VGATTY_HAS_FIFO
   /* tty input char fifo */
   tty_fifo_root_t		read_fifo;
+#endif
 
   lock_t			lock;
-
-  uint_fast8_t			key_state;
 
 #ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
   uint_fast8_t			xsave, ysave;
@@ -107,10 +118,12 @@ struct tty_vga_context_s
 #define VGA_KS_ALT	0x20
 #define VGA_KS_ALTGR	0x40
 
-void tty_vga_process_default(struct device_s *dev, uint8_t c);
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD
 
 void tty_vga_scancode_default(struct device_s *dev, uint8_t scancode);
 void tty_vga_scancode_led(struct device_s *dev, uint8_t scancode);
+
+#endif
 
 void tty_vga_reset(struct device_s *dev);
 
@@ -128,6 +141,8 @@ void tty_vga_scroll_down(struct device_s *dev, uint_fast8_t count);
 void tty_vga_scroll_up(struct device_s *dev, uint_fast8_t count);
 
 void tty_vga_ansi_insert(struct device_s *dev);
+
+void tty_vga_process_default(struct device_s *dev, uint8_t c);
 
 #ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
 void tty_vga_process_ansi(struct device_s *dev, uint8_t c);

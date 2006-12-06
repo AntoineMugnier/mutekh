@@ -394,12 +394,16 @@ tty_vga_process_default(struct device_s *dev, uint8_t c)
 
 DEVCHAR_READ(tty_vga_read)
 {
+#ifdef DRIVER_CHAR_VGATTY_HAS_FIFO
   struct tty_vga_context_s	*pv = dev->drv_pv;
   size_t			res;
 
   res = tty_fifo_pop_array(&pv->read_fifo, data, size);
 
   return res;
+#else
+  return 0;
+#endif
 }
 
 /* 
@@ -432,7 +436,9 @@ DEV_CLEANUP(tty_vga_cleanup)
 {
   struct tty_vga_context_s	*pv = dev->drv_pv;
 
+#ifdef DRIVER_CHAR_VGATTY_HAS_FIFO
   tty_fifo_destroy(&pv->read_fifo);
+#endif
   lock_destroy(&pv->lock);
 
   mem_free(pv);
@@ -447,7 +453,9 @@ const struct driver_s	tty_vga_drv =
 {
   .f_init		= tty_vga_init,
   .f_cleanup		= tty_vga_cleanup,
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD
   .f_irq		= tty_vga_irq,
+#endif
   .f.chr = {
     .f_read		= tty_vga_read,
     .f_write		= tty_vga_write,
@@ -473,8 +481,10 @@ DEV_INIT(tty_vga_init)
 
   dev->drv_pv = pv;
 
+#ifdef DRIVER_CHAR_VGATTY_HAS_FIFO
   /* init tty input fifo */
   tty_fifo_init(&pv->read_fifo);
+#endif
 
   /* set parser automata initial state */
   pv->process = &tty_vga_process_default;
@@ -482,10 +492,12 @@ DEV_INIT(tty_vga_init)
   /* reset terminal */
   tty_vga_reset(dev);
 
+#ifdef CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD
   /* setup keyboard leds */
   pv->key_state = VGA_KS_SCROLL;
   pv->scancode = &tty_vga_scancode_led;
   cpu_io_write_8(0x60, 0xed);
+#endif
 
   return 0;
 }
