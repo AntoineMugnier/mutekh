@@ -306,10 +306,16 @@ inline char *strncpy(char *dest, const char *src, size_t n)
   char	*tmp;
 
   tmp = dest;
-  while (*src && n--)
-    *dest++ = *src++;
-  if (n)
-    *dest = 0;
+
+  while (n && *str)
+    {
+      *dest++ = *src++;
+      n--;
+    }
+
+  while (n--)
+    *dest++ = 0;
+
   return (tmp);
 }
 #endif
