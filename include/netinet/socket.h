@@ -25,6 +25,8 @@
 #include <netinet/sockaddr.h>
 #include <netinet/in.h>
 #include <hexo/alloc.h>
+#include <semaphore.h>
+#include <timer.h>
 
 /* Types of sockets.  */
 #define SOCK_STREAM	1	/* Sequenced, reliable, connection-based
@@ -443,45 +445,6 @@ struct			socket_api_s
 };
 
 /*
- * Common operations.
- */
-
-int_fast32_t getsockopt_socket(socket_t		fd,
-			       int_fast32_t	optname,
-			       void		*optval,
-			       socklen_t	*optlen);
-int_fast32_t setsockopt_socket(socket_t		fd,
-			       int_fast32_t	optname,
-			       const void	*optval,
-			       socklen_t	optlen);
-int_fast32_t setsockopt_inet(socket_t		fd,
-			     int_fast32_t	optname,
-			     const void		*optval,
-			     socklen_t		optlen);
-int_fast32_t getsockopt_inet(socket_t		fd,
-			     int_fast32_t	optname,
-			     void		*optval,
-			     socklen_t		*optlen);
-_SHUTDOWN(shutdown_socket);
-
-/*
- * Dispatch structure instances.
- */
-
-#ifdef CONFIG_NETWORK_UDP
-extern const struct socket_api_s	udp_socket;
-#endif
-#ifdef CONFIG_NETWORK_TDP
-extern const struct socket_api_s	tcp_socket;
-#endif
-#ifdef CONFIG_NETWORK_SOCKET_PACKET
-extern const struct socket_api_s	packet_socket;
-#endif
-#ifdef CONFIG_NETWORK_SOCKET_RAW
-extern const struct socket_api_s	raw_socket;
-#endif
-
-/*
  * A socket.
  */
 
@@ -508,78 +471,5 @@ CONTAINER_TYPE(socket_table, DLIST, struct socket_s, NOLOCK, NOOBJ, list_entry);
 CONTAINER_FUNC(static inline, socket_table, DLIST, socket_table, NOLOCK);
 
 #include "socket_hexo.h"
-
-/*
- * Address conversion.
- */
-
-static inline error_t	socket_in_addr(struct socket_s		*fd,
-				       struct net_addr_s	*a,
-				       struct sockaddr		*addr,
-				       socklen_t		len,
-				       uint_fast16_t		*port)
-{
-  switch (addr->sa_family)
-    {
-      case AF_INET:
-	{
-	  struct sockaddr_in	*in;
-
-	  in = (struct sockaddr_in *)addr;
-
-	  if (len < sizeof (struct sockaddr_in))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  IPV4_ADDR_SET(*a, ntohl(in->sin_addr.s_addr));
-	  if (port != NULL)
-	    *port = ntohs(in->sin_port);
-	}
-	break;
-      case AF_INET6:
-	/* IPV6 */
-      default:
-	fd->error = EAFNOSUPPORT;
-	return -1;
-    }
-
-  return 0;
-}
-
-static inline error_t	socket_addr_in(struct socket_s		*fd,
-				       struct net_addr_s	*a,
-				       struct sockaddr		*addr,
-				       socklen_t		*len,
-				       uint_fast16_t		port)
-{
-  switch (a->family)
-    {
-      case addr_ipv4:
-	{
-	  struct sockaddr_in	*in = (struct sockaddr_in *)addr;
-
-	  if (*len < sizeof (struct sockaddr_in))
-	    {
-	      fd->error = EINVAL;
-	      return -1;
-	    }
-
-	  /* fill the address structure */
-	  in->sin_family = AF_INET;
-	  in->sin_port = port;
-	  in->sin_addr.s_addr = htonl(IPV4_ADDR_GET(*a));
-
-	  *len = sizeof (struct sockaddr_in);
-	}
-	break;
-      default:
-	fd->error = EAFNOSUPPORT;
-	return -1;
-    }
-
-  return 0;
-}
 
 #endif

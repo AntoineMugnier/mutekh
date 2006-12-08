@@ -123,6 +123,8 @@ struct sockaddr_in
 
 */
 
+#include <hexo/error.h>
+
 static inline uint32_t htonl(uint32_t x)
 {
   return endian_be32(x);
@@ -142,6 +144,8 @@ static inline uint16_t ntohs(uint16_t x)
 {
   return endian_be16(x);
 }
+
+error_t inet_aton(const char *cp, struct in_addr *inp);
 
 #endif
 

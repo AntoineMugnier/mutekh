@@ -25,6 +25,7 @@
 
 #include <netinet/packet.h>
 #include <netinet/socket.h>
+#include <netinet/socket_internals.h>
 #include <netinet/socket_packet.h>
 #include <netinet/if.h>
 #include <netinet/arp.h>
@@ -154,7 +155,7 @@ static _SENDMSG(sendmsg_packet)
   size_t			n;
   size_t			i;
 
-  if (flags & MSG_OOB)
+  if (flags & (MSG_OOB | MSG_EOR | MSG_DONTROUTE | MSG_CONFIRM))
     {
       fd->error = EOPNOTSUPP;
       return -1;
@@ -279,11 +280,8 @@ static _RECVMSG(recvmsg_packet)
   struct sockaddr_ll		*sll;
   ssize_t			sz;
   struct net_header_s		*nethdr;
-  timer_delay_t			start;
-  struct timer_event_s		timeout;
-  bool_t			timeout_started = 0;
 
-  if (flags & MSG_OOB)
+  if (flags & (MSG_OOB | MSG_ERRQUEUE))
     {
       fd->error = EOPNOTSUPP;
       return -1;
@@ -295,56 +293,11 @@ static _RECVMSG(recvmsg_packet)
       return -1;
     }
 
+  /* grab a packet */
+  if ((packet = socket_grab_packet(fd, flags, recv_timeout, &pv->recv_q, &pv->recv_sem)) == NULL)
+    return -1;
+
   sll = (struct sockaddr_ll *)message->msg_name;
-
-  start = timer_get_tick(&timer_ms);
-
-  /* try to grab a packet */
- again:
-  if (fd->shutdown == SHUT_RD || fd->shutdown == SHUT_RDWR)
-    {
-      fd->error = ESHUTDOWN;
-      return -1;
-    }
-
-  if (flags & MSG_PEEK)
-    packet = packet_queue_lock_head(&pv->recv_q);
-  else
-    packet = packet_queue_lock_pop(&pv->recv_q);
-
-  if (packet == NULL)
-    {
-      if (flags & MSG_DONTWAIT)
-	{
-	  fd->error = EAGAIN;
-	  return -1;
-	}
-
-      /* if there is a receive timeout, start a timer */
-      if (!timeout_started && fd->recv_timeout)
-	{
-	  timeout.callback = recv_timeout;
-	  timeout.delay = fd->recv_timeout;
-	  timeout.pv = fd;
-	  timeout_started = 1;
-	  timer_add_event(&timer_ms, &timeout);
-	}
-
-      /* wait */
-      sem_wait(&pv->recv_sem);
-
-      /* has timeout expired ? */
-      if (timeout_started)
-	if (timer_get_tick(&timer_ms) - start >= (fd->recv_timeout * 5) / 6)
-	  {
-	    fd->error = EAGAIN;
-	    return -1;
-	  }
-
-      goto again;
-    }
-
-  timer_cancel_event(&timeout, 0);
 
   /* fill the address if required */
   if (sll != NULL)
@@ -532,7 +485,7 @@ static _GETPEERNAME(getpeername_packet) { fd->error = EOPNOTSUPP; return -1; }
  * Socket API for PACKET sockets.
  */
 
-const struct socket_api_s	packet_socket =
+const struct socket_api_s	packet_socket_dispatch =
   {
     .socket = socket_packet,
     .bind = bind_packet,

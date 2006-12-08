@@ -21,6 +21,7 @@
 
 #include <netinet/packet.h>
 #include <netinet/socket.h>
+#include <netinet/socket_internals.h>
 #include <netinet/socket_udp.h>
 #include <netinet/libudp.h>
 #include <netinet/udp.h>
@@ -29,12 +30,49 @@
 
 static UDP_CALLBACK(socket_recv_callback)
 {
+  socket_t			fd = (socket_t)pv;
+  struct socket_udp_pv_s	*pv_udp = (struct socket_udp_pv_s *)fd->pv;
+  struct net_buffer_s		*buffer;
+  bool_t			is_bcast;
 
+  /* check for broadcasting XXX this is not a full check */
+  switch (remote->address.family)
+    {
+      case addr_ipv4:
+	is_bcast = remote->address.addr.ipv4 == 0xffffffff;
+	break;
+      default:
+	/* IPV6 */
+	is_bcast = 0;
+	break;
+    }
+  if (!fd->broadcast && is_bcast)
+    return;
+
+  /* push the incoming buffer to the socket lib */
+  if ((buffer = mem_alloc(sizeof (struct net_buffer_s), MEM_SCOPE_NETWORK)) != NULL)
+    {
+      buffer->data = data;
+      buffer->size = size;
+      memcpy(&buffer->address, &remote->address, sizeof (struct net_addr_s));
+      buffer->port = remote->port;
+
+      if (buffer_queue_lock_pushback(&pv_udp->recv_q, buffer))
+	sem_post(&pv_udp->recv_sem);
+    }
 }
 
 static UDP_ERROR_CALLBACK(socket_err_callback)
 {
+  /* XXX */
+}
 
+static TIMER_CALLBACK(recv_timeout)
+{
+  socket_t			fd = (socket_t)pv;
+  struct socket_udp_pv_s	*pv_udp = (struct socket_udp_pv_s *)fd->pv;
+
+  sem_post(&pv_udp->recv_sem);
 }
 
 /*
@@ -59,6 +97,9 @@ static _SOCKET(socket_udp)
 	mem_free(pv);
 	return -EPFNOSUPPORT;
     }
+
+  sem_init(&pv->recv_sem, 0, 0);
+  buffer_queue_lock_init(&pv->recv_q);
 
   return 0;
 }
@@ -85,7 +126,7 @@ static _BIND(bind_udp)
 
   local.port = ntohs(port);
 
-  err = udp_bind(&pv->desc, &local, socket_recv_callback, pv);
+  err = udp_bind(&pv->desc, &local, socket_recv_callback, fd);
 
   if (err)
     {
@@ -182,6 +223,18 @@ static _SENDMSG(sendmsg_udp)
   size_t			n;
   size_t			i;
 
+  if (flags & (MSG_OOB | MSG_EOR | MSG_CONFIRM))
+    {
+      fd->error = EOPNOTSUPP;
+      return -1;
+    }
+
+  if (fd->shutdown == SHUT_WR || fd->shutdown == SHUT_RDWR)
+    {
+      fd->error = ESHUTDOWN;
+      return -1;
+    }
+
   if (message == NULL)
     {
       fd->error = EINVAL;
@@ -211,6 +264,16 @@ static _SENDMSG(sendmsg_udp)
   /* send it */
   if (addr == NULL)
     {
+      /* check if routing is allowed */
+      if (flags & MSG_DONTROUTE && pv->desc->connected)
+	{
+	  if (pv->desc->route->is_routed)
+	    {
+	      fd->error = EHOSTUNREACH;
+	      return -1;
+	    }
+	}
+
       err = udp_send(pv->desc, NULL, buf, n);
     }
   else
@@ -226,6 +289,8 @@ static _SENDMSG(sendmsg_udp)
 	}
 
       remote.port = ntohs(port);
+
+      /* XXX check don't route */
 
       err = udp_send(pv->desc, &remote, buf, n);
     }
@@ -249,8 +314,59 @@ static _SENDMSG(sendmsg_udp)
 static _RECVMSG(recvmsg_udp)
 {
   struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-  /* XXX */
-  return -1;
+  struct sockaddr		*addr;
+  struct net_buffer_s		*buffer;
+  size_t			sz;
+  size_t			i;
+  size_t			chunksz;
+  uint8_t			*data;
+  size_t			size;
+
+  if (flags & (MSG_OOB | MSG_WAITALL))
+    {
+      fd->error = EOPNOTSUPP;
+      return -1;
+    }
+
+  if (message == NULL)
+    {
+      fd->error = EINVAL;
+      return -1;
+    }
+
+  /* grab a packet */
+  if ((buffer = socket_grab_buffer(fd, flags, recv_timeout, &pv->recv_q, &pv->recv_sem)) == NULL)
+    return -1;
+
+  addr = message->msg_name;
+
+  /* fill the address if required */
+  if (addr != NULL)
+    {
+      if (socket_addr_in(fd, &buffer->address, addr, &message->msg_namelen, htons(buffer->port)))
+	{
+	  mem_free(buffer);
+	  return -1;
+	}
+    }
+
+  /* copy data */
+  data = buffer->data;
+  size = buffer->size;
+  for (i = 0, sz = 0; sz < size && i < message->msg_iovlen; i++, sz += chunksz)
+    {
+      chunksz = message->msg_iov[i].iov_len;
+      if (sz + chunksz > size)
+	chunksz = size - sz;
+      memcpy(message->msg_iov[i].iov_base, data + sz, chunksz);
+    }
+
+  mem_free(buffer);
+
+  if (flags & MSG_TRUNC)
+    sz = size;
+
+  return sz;
 }
 
 /*
@@ -259,8 +375,6 @@ static _RECVMSG(recvmsg_udp)
 
 static _GETSOCKOPT(getsockopt_udp)
 {
-  struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-
   switch (level)
     {
       case SOL_SOCKET:
@@ -281,8 +395,6 @@ static _GETSOCKOPT(getsockopt_udp)
 
 static _SETSOCKOPT(setsockopt_udp)
 {
-  struct socket_udp_pv_s	*pv = (struct socket_udp_pv_s *)fd->pv;
-
   switch (level)
     {
       case SOL_SOCKET:
@@ -329,7 +441,7 @@ static _ACCEPT(accept_udp) { return -1; }
  * Socket API for UDP datagrams.
  */
 
-const struct socket_api_s	udp_socket =
+const struct socket_api_s	udp_socket_dispatch =
   {
     .socket = socket_udp,
     .bind = bind_udp,

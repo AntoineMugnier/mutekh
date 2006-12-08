@@ -1,4 +1,4 @@
-objs += socket.o
+objs += socket.o inet.o
 
 ifeq ($(CONFIG_NETWORK_UDP), defined)
   objs += socket_udp.o

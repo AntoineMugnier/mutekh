@@ -24,6 +24,7 @@ LIBAPP=default.o
 
 export SRC_DIR
 export BUILD_DIR
+export LIBAPP
 MAKEFLAGS = -s
 
 kernel: config $(BUILD_DIR)

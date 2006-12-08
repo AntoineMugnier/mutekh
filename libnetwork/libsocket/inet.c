@@ -19,27 +19,45 @@
 
 */
 
-#ifndef NETINET_SOCKET_UDP_H
-#define NETINET_SOCKET_UDP_H
+#include <hexo/error.h>
 
-#include <netinet/libudp.h>
-#include <netinet/packet.h>
-#include <netinet/protos.h>
 #include <netinet/socket.h>
-#include <netinet/socket_internals.h>
+#include <netinet/in.h>
 
-#include <semaphore.h>
-
-struct			socket_udp_pv_s
+error_t		inet_aton(const char *cp, struct in_addr *inp)
 {
-  struct net_udp_desc_s	*desc;
-  uint_fast32_t		family;
+  char		*p;
+  uint_fast8_t	i;
+  uint_fast32_t	ip = 0;
 
-  net_port_t		recv_port;
-  buffer_queue_root_t	recv_q;
-  sem_t			recv_sem;
-  void			*recv_data;
-  size_t		recv_size;
-};
+  i = strto_uintl8(cp, &p, 10);
+  if (*p != '.')
+    return 0;
 
-#endif
+  ip = i << 24;
+
+  p++;
+  i = strto_uintl8(p, &p, 10);
+  if (*p != '.')
+    return 0;
+
+  ip |= (i << 16);
+
+  p++;
+  i = strto_uintl8(p, &p, 10);
+  if (*p != '.')
+    return 0;
+
+  ip |= (i << 8);
+
+  p++;
+  i = strto_uintl8(p, &p, 10);
+  if (*p != 0)
+    return 0;
+
+  ip |= i;
+
+  inp->s_addr = htonl(ip);
+
+  return 1;
+}

@@ -8,8 +8,6 @@
 
 * TCP
   - a finir
-
-* libsocket
   - sockets TCP
 
 * general
@@ -28,6 +26,3 @@
 
 * ARP
   - gestion des doublons
-
-* IP
-  - idee de nipo: dans le routage avec fragmentation, calculer taille optimale

@@ -20,6 +20,9 @@
 */
 
 #include <netinet/socket.h>
+#include <netinet/socket_internals.h>
+#include <semaphore.h>
+#include <timer.h>
 
 /*
  * Shortcut macro to get an option verifying user arguments.
@@ -80,7 +83,7 @@ socket_t			socket(int_fast32_t domain, int_fast32_t type, int_fast32_t protocol)
 		  /* UDP is the default DGRAM protocol */
 		  case IPPROTO_UDP:
 		  case 0:
-		    api = &udp_socket;
+		    api = &udp_socket_dispatch;
 		    break;
 #endif
 		  default:
@@ -95,7 +98,7 @@ socket_t			socket(int_fast32_t domain, int_fast32_t type, int_fast32_t protocol)
 		  /* UDP is the default STREAM protocol */
 		  case IPPROTO_TCP:
 		  case 0:
-		    api = &tcp_socket;
+		    api = &tcp_socket_dispatch;
 		    break;
 #endif
 		  default:
@@ -106,7 +109,7 @@ socket_t			socket(int_fast32_t domain, int_fast32_t type, int_fast32_t protocol)
 #ifdef CONFIG_NETWORK_SOCKET_RAW
 	    /* Raw packets to a given protocol */
 	    case SOCK_RAW:
-	      api = &raw_socket;
+	      api = &raw_socket_dispatch;
 	      break;
 #endif
 	    default:
@@ -117,7 +120,7 @@ socket_t			socket(int_fast32_t domain, int_fast32_t type, int_fast32_t protocol)
 #ifdef CONFIG_NETWORK_SOCKET_PACKET
       /* Packet sockets, used to write Layer 2 protocols */
       case PF_PACKET:
-	api = &packet_socket;
+	api = &packet_socket_dispatch;
 	break;
 #endif
       default:
@@ -408,4 +411,136 @@ int_fast32_t getsockopt_inet(socket_t		fd,
     }
 
   return 0;
+}
+
+/*
+ * Packet grabbing
+ */
+
+struct net_packet_s	*socket_grab_packet(socket_t			fd,
+					    int_fast32_t		flags,
+					    timer_event_callback_t	*recv_timeout,
+					    packet_queue_root_t		*recv_q,
+					    sem_t			*recv_sem)
+{
+  struct net_packet_s		*packet;
+  timer_delay_t			start;
+  struct timer_event_s		timeout;
+  bool_t			timeout_started = 0;
+
+  start = timer_get_tick(&timer_ms);
+
+  /* try to grab a packet */
+ again:
+  if (fd->shutdown == SHUT_RD || fd->shutdown == SHUT_RDWR)
+    {
+      fd->error = ESHUTDOWN;
+      return NULL;
+    }
+
+  if (flags & MSG_PEEK)
+    packet = packet_queue_lock_head(recv_q);
+  else
+    packet = packet_queue_lock_pop(recv_q);
+
+  if (packet == NULL)
+    {
+      if (flags & MSG_DONTWAIT)
+	{
+	  fd->error = EAGAIN;
+	  return NULL;
+	}
+
+      /* if there is a receive timeout, start a timer */
+      if (!timeout_started && fd->recv_timeout)
+	{
+	  timeout.callback = recv_timeout;
+	  timeout.delay = fd->recv_timeout;
+	  timeout.pv = fd;
+	  timeout_started = 1;
+	  timer_add_event(&timer_ms, &timeout);
+	}
+
+      sem_wait(recv_sem);
+
+      /* has timeout expired ? */
+      if (timeout_started)
+	if (timer_get_tick(&timer_ms) - start >= (fd->recv_timeout * 5) / 6)
+	  {
+	    fd->error = EAGAIN;
+	    return NULL;
+	  }
+
+      goto again;
+    }
+
+  timer_cancel_event(&timeout, 0);
+
+  return packet;
+}
+
+/*
+ * Buffer grabbing
+ */
+
+struct net_buffer_s	*socket_grab_buffer(socket_t			fd,
+					    int_fast32_t		flags,
+					    timer_event_callback_t	*recv_timeout,
+					    buffer_queue_root_t		*recv_q,
+					    sem_t			*recv_sem)
+{
+  struct net_buffer_s		*buffer;
+  timer_delay_t			start;
+  struct timer_event_s		timeout;
+  bool_t			timeout_started = 0;
+
+  start = timer_get_tick(&timer_ms);
+
+  /* try to grab a buffer */
+ again:
+  if (fd->shutdown == SHUT_RD || fd->shutdown == SHUT_RDWR)
+    {
+      fd->error = ESHUTDOWN;
+      return NULL;
+    }
+
+  if (flags & MSG_PEEK)
+    buffer = buffer_queue_lock_head(recv_q);
+  else
+    buffer = buffer_queue_lock_pop(recv_q);
+
+  if (buffer == NULL)
+    {
+      if (flags & MSG_DONTWAIT)
+	{
+	  fd->error = EAGAIN;
+	  return NULL;
+	}
+
+      /* if there is a receive timeout, start a timer */
+      if (!timeout_started && fd->recv_timeout)
+	{
+	  timeout.callback = recv_timeout;
+	  timeout.delay = fd->recv_timeout;
+	  timeout.pv = fd;
+	  timeout_started = 1;
+	  timer_add_event(&timer_ms, &timeout);
+	}
+
+      sem_wait(recv_sem);
+
+      /* has timeout expired ? */
+      if (timeout_started)
+	if (timer_get_tick(&timer_ms) - start >= (fd->recv_timeout * 5) / 6)
+	  {
+	    fd->error = EAGAIN;
+	    return NULL;
+	  }
+
+      goto again;
+    }
+
+  timer_cancel_event(&timeout, 0);
+
+  return buffer;
 }

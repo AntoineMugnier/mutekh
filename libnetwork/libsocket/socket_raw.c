@@ -25,6 +25,7 @@
 
 #include <netinet/packet.h>
 #include <netinet/socket.h>
+#include <netinet/socket_internals.h>
 #include <netinet/socket_raw.h>
 #include <netinet/if.h>
 #include <netinet/ip.h>
@@ -267,7 +268,7 @@ static _SENDMSG(sendmsg_raw)
   size_t			i;
   size_t			n;
 
-  if (flags & MSG_OOB || flags & MSG_TRUNC)
+  if (flags & (MSG_OOB | MSG_EOR | MSG_TRUNC | MSG_PEEK | MSG_CONFIRM))
     {
       fd->error = EOPNOTSUPP;
       return -1;
@@ -329,6 +330,14 @@ static _SENDMSG(sendmsg_raw)
 	  return -1;
 	}
 
+      /* check is routing is allowed */
+      if ((flags & MSG_DONTROUTE) && route->is_routed)
+	{
+	  packet_obj_refdrop(packet);
+	  fd->error = EHOSTUNREACH;
+	  return -1;
+	}
+
       /* simply read the pv info */
       interface = pv->route->interface;
       addressing = pv->route->addressing;
@@ -342,6 +351,15 @@ static _SENDMSG(sendmsg_raw)
 	  fd->error = EHOSTUNREACH;
 	  return -1;
 	}
+
+      /* check is routing is allowed */
+      if ((flags & MSG_DONTROUTE) && route->is_routed)
+	{
+	  packet_obj_refdrop(packet);
+	  fd->error = EHOSTUNREACH;
+	  return -1;
+	}
+
       interface = route->interface;
       addressing = route->addressing;
     }
@@ -432,11 +450,8 @@ static _RECVMSG(recvmsg_raw)
   struct net_packet_s		*packet;
   ssize_t			sz;
   struct net_header_s		*nethdr;
-  timer_delay_t			start;
-  struct timer_event_s		timeout;
-  bool_t			timeout_started = 0;
 
-  if (flags & MSG_OOB || flags & MSG_TRUNC)
+  if (flags & (MSG_OOB | MSG_TRUNC))
     {
       fd->error = EOPNOTSUPP;
       return -1;
@@ -448,53 +463,9 @@ static _RECVMSG(recvmsg_raw)
       return -1;
     }
 
-  start = timer_get_tick(&timer_ms);
-
-  /* try to grab a packet */
- again:
-  if (fd->shutdown == SHUT_RD || fd->shutdown == SHUT_RDWR)
-    {
-      fd->error = ESHUTDOWN;
-      return -1;
-    }
-
-  if (flags & MSG_PEEK)
-    packet = packet_queue_lock_head(&pv->recv_q);
-  else
-    packet = packet_queue_lock_pop(&pv->recv_q);
-
-  if (packet == NULL)
-    {
-      if (flags & MSG_DONTWAIT)
-	{
-	  fd->error = EAGAIN;
-	  return -1;
-	}
-
-      /* if there is a receive timeout, start a timer */
-      if (!timeout_started && fd->recv_timeout)
-	{
-	  timeout.callback = recv_timeout;
-	  timeout.delay = fd->recv_timeout;
-	  timeout.pv = fd;
-	  timeout_started = 1;
-	  timer_add_event(&timer_ms, &timeout);
-	}
-
-      sem_wait(&pv->recv_sem);
-
-      /* has timeout expired ? */
-      if (timeout_started)
-	if (timer_get_tick(&timer_ms) - start >= (fd->recv_timeout * 5) / 6)
-	  {
-	    fd->error = EAGAIN;
-	    return -1;
-	  }
-
-      goto again;
-    }
-
-  timer_cancel_event(&timeout, 0);
+  /* grab an incoming packet */
+  if ((packet = socket_grab_packet(fd, flags, recv_timeout, &pv->recv_q, &pv->recv_sem)) == NULL)
+    return -1;
 
   addr = message->msg_name;
 
@@ -726,7 +697,7 @@ static _ACCEPT(accept_raw) { fd->error = EOPNOTSUPP; return -1; }
  * Socket API for RAW sockets.
  */
 
-const struct socket_api_s	raw_socket =
+const struct socket_api_s	raw_socket_dispatch =
   {
     .socket = socket_raw,
     .bind = bind_raw,
