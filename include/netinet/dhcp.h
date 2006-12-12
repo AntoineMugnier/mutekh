@@ -76,6 +76,7 @@
 
 #include <netinet/if.h>
 #include <timer.h>
+#include <semaphore.h>
 
 /*
  * DHCP lease info.
@@ -87,6 +88,9 @@ struct			dhcp_lease_s
   timer_delay_t		delay;
   uint_fast32_t		serv;
   uint_fast32_t		ip;
+  struct timer_event_s	*timer;
+  sem_t			sem;
+  bool_t		exit;
 };
 
 /*

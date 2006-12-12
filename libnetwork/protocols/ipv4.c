@@ -174,7 +174,7 @@ static inline	uint_fast8_t	ip_delivery(struct net_if_s	*interface,
   struct net_pv_ip_s		*pv = (struct net_pv_ip_s *)ip->pv;
 
   /* masked destination address must be equal to masked local address */
-  if ((addr & pv->mask) == (pv->addr & pv->mask))
+  if ((addr & pv->mask) == (pv->addr & pv->mask) || addr == 0xffffffff)
     return IP_DELIVERY_DIRECT;
   else
     return IP_DELIVERY_INDIRECT;

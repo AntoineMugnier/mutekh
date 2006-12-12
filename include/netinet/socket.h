@@ -21,7 +21,9 @@
 #define NETINET_SOCKET_H
 
 #include <hexo/types.h>
+#ifdef __MUTEK__
 #include <netinet/packet.h>
+#endif
 #include <netinet/sockaddr.h>
 #include <netinet/in.h>
 #include <hexo/alloc.h>

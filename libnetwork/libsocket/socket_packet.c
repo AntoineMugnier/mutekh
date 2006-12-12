@@ -302,6 +302,9 @@ static _RECVMSG(recvmsg_packet)
   /* fill the address if required */
   if (sll != NULL)
     {
+      uint8_t	bcast[8];
+      size_t	maclen = 8;
+
       if (message->msg_namelen < sizeof (struct sockaddr_ll))
 	{
 	  fd->error = ENOMEM;
@@ -317,7 +320,8 @@ static _RECVMSG(recvmsg_packet)
       memcpy(sll->sll_addr, packet->sMAC, packet->MAClen);
       if (!memcmp(packet->interface->mac, packet->tMAC, packet->MAClen))
 	sll->sll_pkttype = PACKET_HOST;
-      else if (!memcmp("\xff\xff\xff\xff\xff\xff\xff\xff", packet->tMAC, packet->MAClen))
+      else if (!dev_net_getopt(packet->interface->dev, DEV_NET_OPT_BCAST, bcast, &maclen) &&
+	       !memcmp(bcast, packet->tMAC, maclen))
 	sll->sll_pkttype = PACKET_BROADCAST;
       else
 	sll->sll_pkttype = PACKET_OTHERHOST;
@@ -328,14 +332,15 @@ static _RECVMSG(recvmsg_packet)
   /* copy the data */
   if (pv->header)
     {
-      /* XXX */
+      /* XXX code this */
+      assert(0);
     }
   else
     {
       size_t	i;
       size_t	chunksz;
 
-      nethdr = &packet->header[packet->stage];
+      nethdr = &packet->header[1];
       for (i = 0, sz = 0; i < message->msg_iovlen; i++, sz += chunksz)
 	{
 	  chunksz = message->msg_iov[i].iov_len;
@@ -454,7 +459,6 @@ static _SHUTDOWN(shutdown_packet)
 
       /* drop all waiting packets */
       packet_queue_lock_clear(&pv->recv_q);
-      packet_queue_lock_destroy(&pv->recv_q);
 
       sem_getvalue(&pv->recv_sem, &val);
       while (val < 0)
@@ -464,9 +468,15 @@ static _SHUTDOWN(shutdown_packet)
 	}
 
       if (fd->shutdown == SHUT_RDWR)
-	socket_table_remove(&pf_packet, fd);
+	{
+	  socket_table_remove(&pf_packet, fd);
+	  sem_destroy(&pv->recv_sem);
+	  packet_queue_lock_destroy(&pv->recv_q);
 
-      /* XXX should mem_free here */
+	  /* free the socket */
+	  mem_free(pv);
+	  mem_free(fd);
+	}
     }
 
   return 0;

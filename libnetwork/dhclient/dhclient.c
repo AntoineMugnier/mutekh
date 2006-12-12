@@ -39,6 +39,8 @@
 
 #include <stdlib.h>
 #include <timer.h>
+#include <pthread.h>
+#include <semaphore.h>
 
 /*
  * This function broadcasts an ARP request to ensure an IP address is
@@ -111,6 +113,8 @@ static bool_t		dhcp_ip_is_free(struct net_if_s	*interface,
 	break;
     }
 
+  shutdown(sock, SHUT_RDWR);
+
   return 1;
 
  leave:
@@ -135,18 +139,16 @@ static struct dhcphdr	*dhcp_is_for_me(struct net_if_s	*interface,
 
   /* get IP header */
   ip = (struct iphdr *)packet;
-  if (ip->protocol != IPPROTO_UDP || ip->tot_len < sizeof (struct dhcphdr) + sizeof (struct udphdr))
+  if (ip->protocol != IPPROTO_UDP || ntohs(ip->tot_len) < sizeof (struct dhcphdr) + sizeof (struct udphdr))
     return NULL;
 
   /* get UDP header */
   udp = (struct udphdr *)((uint8_t*)packet + ip->ihl * 4);
-
   if (ntohs(udp->dest) != BOOTP_CLIENT_PORT || ntohs(udp->len) < sizeof (struct dhcphdr))
     return NULL;
 
   /* get DHCP header */
   dhcp = (struct dhcphdr *)(udp + 1);
-
   if (dhcp->op == BOOTREPLY && dhcp->xid == (uintptr_t)sock &&
       !memcmp(dhcp->magic, "\x63\x82\x53\x63", 4))
     {
@@ -413,7 +415,6 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		  /* is it address renewal */
 		  if (lease->delay)
 		    {
-		      printf("dhclient: renewal succeeded.\n");
 		      free(packet);
 		      return 0;
 		    }
@@ -429,6 +430,8 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		    lease->delay = (endian_be32_na_load(opt->data) / 2) * 1000;
 		  else
 		    lease->delay = DHCP_DFL_LEASE;
+
+		  lease->delay = 10000; /* XXX for debug */
 
 		  /* configure IP */
 		  IPV4_ADDR_SET(addr, lease->ip);
@@ -449,6 +452,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		  printf("dhclient:\n  assigned %u.%u.%u.%u netmask %u.%u.%u.%u\n",
 			 EXTRACT_IPV4(addr.addr.ipv4), EXTRACT_IPV4(mask.addr.ipv4));
 		  if_config(interface->index, IF_SET, &addr, &mask);
+		  route_flush(interface);
 
 		  printf("  lease time: %u seconds\n", lease->delay / 1000);
 		  if ((opt = dhcp_get_opt(dhcp, DHCP_HOSTNAME)) != NULL)
@@ -519,54 +523,95 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 static TIMER_CALLBACK(dhcp_renew)
 {
   struct dhcp_lease_s	*lease = (struct dhcp_lease_s *)pv;
+
+  /* initiate renewal */
+  sem_post(&lease->sem);
+}
+
+static void	*dhcp_renew_th(void	*pv)
+{
+  struct dhcp_lease_s	*lease = (struct dhcp_lease_s *)pv;
   socket_t		sock = NULL;
   socket_t		sock_packet = NULL;
   uint_fast8_t		i;
+  struct net_addr_s	null;
 
-  printf("dhclient: initiating renewal ...\n");
-
-  /* create sockets */
-  if (dhcp_init(lease->interface, &sock, &sock_packet))
-    goto leave;
-
-  /* try to renew (12 times is about 2 min) */
-  for (i = 0; i < 12; i++)
+  while (1)
     {
-      /* send a DHCPREQUEST */
-      dhcp_packet(lease->interface, DHCPREQUEST, lease->ip, lease->serv, sock);
+      sem_wait(&lease->sem);
 
-      /* wait answer */
-      if (!dhcp_request(lease->interface, sock, sock_packet, lease))
+      if (lease->exit)
+	break;
+
+      printf("dhclient: initiating renewal ...\n");
+
+      /* create sockets */
+      if (dhcp_init(lease->interface, &sock, &sock_packet))
+	goto leave;
+
+      /* try to renew (12 times is about 2 min) */
+      for (i = 12; i < 12; i++) /* XXX for debug */
 	{
-	  printf("dhclient: renewal succeeded.\n");
-	  break;
+	  /* send a DHCPREQUEST */
+	  dhcp_packet(lease->interface, DHCPREQUEST, lease->ip, lease->serv, sock);
+
+	  /* wait answer */
+	  if (!dhcp_request(lease->interface, sock, sock_packet, lease))
+	    {
+	      printf("dhclient: renewal succeeded.\n");
+
+	      /* start the timer again */
+	      timer_add_event(&timer_ms, lease->timer);
+
+	      break;
+	    }
 	}
+
+      /* critical error, panic */
+      if (i == 12)
+	{
+	  /* best solution is to restart from the beginning... */
+	  printf("dhclient: renewal failed.\n");
+
+	  /* discover DHCP servers */
+	  if (dhcp_packet(lease->interface, DHCPDISCOVER, 0, INADDR_BROADCAST, sock))
+	    goto leave;
+
+	  /* answer DHCP offers */
+	  lease->delay = 0;
+	  if (dhcp_request(lease->interface, sock, sock_packet, lease))
+	    goto leave;
+
+	  /* start the timer again */
+	  timer_add_event(&timer_ms, lease->timer);
+
+	  if_dump("eth0");
+	  route_dump();
+	}
+
+    leave:
+
+      if (sock != NULL)
+	shutdown(sock, SHUT_RDWR);
+      if (sock_packet != NULL)
+	shutdown(sock_packet, SHUT_RDWR);
     }
 
-  /* critical error, panic */
-  if (i == 12)
-    {
-      /* best solution is to restart from the beginning... */
-      printf("dhclient: renewal failed.\n");
+  printf("dhclient: exiting.\n");
 
-      /* discover DHCP servers */
-      if (dhcp_packet(lease->interface, DHCPDISCOVER, 0, INADDR_BROADCAST, sock))
-	goto leave;
+  /* bring interface down */
+  IPV4_ADDR_SET(null, 0);
+  if_config(lease->interface->index, IF_SET, &null, &null);
+  route_flush(lease->interface);
+  if_down("eth0");
 
-      /* answer DHCP offers */
-      if (dhcp_request(lease->interface, sock, sock_packet, lease))
-	goto leave;
-    }
+  /* release objects */
+  timer_cancel_event(lease->timer, 0);
+  mem_free(lease->timer);
+  sem_destroy(&lease->sem);
+  mem_free(lease);
 
- leave:
-
-  if (sock != NULL)
-    shutdown(sock, SHUT_RDWR);
-  if (sock_packet != NULL)
-    shutdown(sock_packet, SHUT_RDWR);
-
-  /* start the timer again */
-  timer_add_event(&timer_ms, timer);
+  return NULL;
 }
 
 /*
@@ -583,6 +628,7 @@ error_t			dhcp_client(const char	*ifname)
   struct net_if_s	*interface;
   struct net_addr_s	null;
   struct net_route_s	*route = NULL;
+  pthread_t		th;
 
   if ((interface = if_get_by_name(ifname)) == NULL)
     return -1;
@@ -599,6 +645,7 @@ error_t			dhcp_client(const char	*ifname)
   if ((route = route_obj_new(&null, &null, interface)) == NULL)
     goto leave;
   route_add(route);
+  route_obj_refdrop(route);
 
   /* create sockets */
   if (dhcp_init(interface, &sock, &sock_packet))
@@ -612,17 +659,20 @@ error_t			dhcp_client(const char	*ifname)
   if (dhcp_request(interface, sock, sock_packet, lease))
     goto leave;
 
+  /* start DHCP renew thread */
+  lease->exit = 0;
+  sem_init(&lease->sem, 0, 0);
+  pthread_create(&th, NULL, dhcp_renew_th, lease);
+
   /* start DHCP renew timer */
   if ((timer = malloc(sizeof (struct timer_event_s))) != NULL)
     {
+      lease->timer = timer;
       timer->callback = dhcp_renew;
       timer->delay = lease->delay;
       timer->pv = lease;
       timer_add_event(&timer_ms, timer);
     }
-
-  route_del(route);
-  route_obj_refdrop(route);
 
   shutdown(sock, SHUT_RDWR);
   shutdown(sock_packet, SHUT_RDWR);

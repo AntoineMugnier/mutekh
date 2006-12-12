@@ -274,6 +274,8 @@ static _SENDMSG(sendmsg_udp)
 	    }
 	}
 
+      /* XXX SO_BROADCAST */
+
       err = udp_send(pv->desc, NULL, buf, n);
     }
   else
@@ -421,10 +423,13 @@ static _SHUTDOWN(shutdown_udp)
     return -1;
 
   /* close the descriptor if needed */
-  if (pv->desc != NULL && fd->shutdown == SHUT_RDWR)
+  if (fd->shutdown == SHUT_RDWR)
     {
-      udp_close(pv->desc);
-      pv->desc = NULL;
+      if (pv->desc != NULL)
+	udp_close(pv->desc);
+
+      mem_free(pv);
+      mem_free(fd);
     }
 
   return 0;

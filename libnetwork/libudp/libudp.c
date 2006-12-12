@@ -158,6 +158,45 @@ error_t			udp_bind(struct net_udp_desc_s	**desc,
 }
 
 /*
+ * Send an UDP packet through a given interface.
+ */
+
+static inline bool_t udp_send_if(struct net_udp_desc_s	*desc,
+				 struct net_udp_addr_s	*remote,
+				 struct net_if_s	*interface,
+				 struct net_proto_s	*addressing,
+				 uint_fast16_t		local_port,
+				 const void		*data,
+				 size_t			size)
+{
+  struct net_packet_s	*packet;
+  uint8_t		*dest;
+
+  /* prepare the packet */
+  if ((packet = packet_obj_new(NULL)) == NULL)
+    return -ENOMEM;
+  if ((dest = udp_preparepkt(interface, addressing, packet, size, 0)) == NULL)
+    {
+      packet_obj_refdrop(packet);
+
+      return -ENOMEM;
+    }
+
+  /* copy data into the packet */
+  memcpy(dest, data, size);
+
+  /* setup destination address */
+  memcpy(&packet->tADDR, &remote->address, sizeof (struct net_addr_s));
+
+  /* send UDP packet */
+  udp_sendpkt(interface, addressing, packet, local_port, remote->port,
+	      (desc != NULL ? desc->checksum : 1));
+  packet_obj_refdrop(packet);
+
+  return 1;
+}
+
+/*
  * Send an UDP packet.
  *
  * If desc is NULL, a temporary descriptor is created, used, and removed.
@@ -169,37 +208,57 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
 				 const void			*data,
 				 size_t				size)
 {
-  struct net_route_s	*route;
-  struct net_packet_s	*packet;
+  struct net_if_s	*interface;
+  struct net_route_s	*route = NULL;
   uint_fast16_t		local_port;
-  uint8_t		*dest;
   bool_t		drop_route = 0;
+  bool_t		global_bcast = 0;
+  error_t		err = 0;
+
+  /* handle global broadcast */
+  if (remote != NULL)
+    {
+      switch (remote->address.family)
+	{
+	  case addr_ipv4:
+	    global_bcast = (remote->address.addr.ipv4 == 0xffffffff);
+	    break;
+	  default:
+	    assert(0);
+	    /* IPV6 */
+	}
+    }
 
   /* find a route to the remote host */
-  if (desc == NULL)
+  if (!global_bcast)
     {
-      if (remote == NULL)
-	return -EDESTADDRREQ;
-
-      if ((route = route_get(&remote->address)) == NULL)
-	return -EHOSTUNREACH;
-      drop_route = 1;
-    }
-  else
-    {
-      if (remote == NULL)
+      if (desc == NULL)
 	{
-	  if (!desc->connected)
+	  if (remote == NULL)
 	    return -EDESTADDRREQ;
 
-	  remote = &desc->remote;
-	  route = desc->route;
+	  if ((route = route_get(&remote->address)) == NULL)
+	    return -EHOSTUNREACH;
+
+	  drop_route = 1;
 	}
       else
 	{
-	  if ((route = route_get(&remote->address)) == NULL)
-	    return -EHOSTUNREACH;
-	  drop_route = 1;
+	  if (remote == NULL)
+	    {
+	      if (!desc->connected)
+		return -EDESTADDRREQ;
+
+	      remote = &desc->remote;
+	      route = desc->route;
+	    }
+	  else
+	    {
+	      if ((route = route_get(&remote->address)) == NULL)
+		return -EHOSTUNREACH;
+
+	      drop_route = 1;
+	    }
 	}
     }
 
@@ -211,36 +270,24 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
       local_port = UDP_TEMP_PORT_BASE + (rand() % UDP_TEMP_PORT_RANGE);
     }
 
-  /* prepare the packet */
-  if ((packet = packet_obj_new(NULL)) == NULL)
-    goto err_mem;
-  if ((dest = udp_preparepkt(route->interface, route->addressing, packet, size, 0)) == NULL)
+  if (global_bcast)
     {
-      packet_obj_refdrop(packet);
-
-      goto err_mem;
+      CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
+      {
+	interface = item;
+	NET_FOREACH_PROTO(&interface->protocols, remote->address.family,
+	{
+	  udp_send_if(desc, remote, interface, item, local_port, data, size);
+	});
+      });
     }
-
-  /* copy data into the packet */
-  memcpy(dest, data, size);
-
-  /* setup destination address */
-  memcpy(&packet->tADDR, &remote->address, sizeof (struct net_addr_s));
-
-  /* send UDP packet */
-  udp_sendpkt(route->interface, route->addressing, packet, local_port, remote->port, desc->checksum);
-  packet_obj_refdrop(packet);
+  else
+    err = udp_send_if(desc, remote, route->interface, route->addressing, local_port, data, size);
 
   if (drop_route)
     route_obj_refdrop(route);
 
-  return 0;
-
- err_mem:
-  if (drop_route)
-    route_obj_refdrop(route);
-
-  return -ENOMEM;
+  return err;
 }
 
 /*
@@ -301,7 +348,7 @@ void			libudp_signal(struct net_packet_s	*packet,
   memcpy(&remote.address, &packet->sADDR, sizeof (struct net_addr_s));
   remote.port = hdr->source;
 
-  /* copy the packet */
+  /* copy the packet XXX ou pas ? */
   size = net_be16_load(hdr->len) - sizeof (struct udphdr);
   if ((buff = mem_alloc(size, MEM_SCOPE_NETWORK)) == NULL)
     return;

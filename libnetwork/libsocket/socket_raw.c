@@ -164,7 +164,6 @@ static _BIND(bind_raw)
 	  CONTAINER_FOREACH_BREAK;
       });
 
-    ok:
       if (interface == NULL || addressing == NULL)
 	{
 	  fd->error = EADDRNOTAVAIL;
@@ -252,128 +251,36 @@ static _GETPEERNAME(getpeername_raw)
 }
 
 /*
- * Send a message
+ * Send a message from a given interface
  */
 
-static _SENDMSG(sendmsg_raw)
+static inline bool_t sendmsg_if(socket_t		fd,
+				struct net_if_s		*interface,
+				struct net_proto_s	*addressing,
+				const struct msghdr	*message,
+				struct net_addr_s	*dest,
+				size_t			packetlen)
 {
   struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
-  struct sockaddr		*addr;
   struct net_packet_s		*packet;
-  struct net_if_s		*interface;
-  struct net_proto_s		*addressing;
   struct net_header_s		*nethdr;
-  struct net_route_s		*route = NULL;
   uint8_t			*p;
   size_t			i;
-  size_t			n;
-
-  if (flags & (MSG_OOB | MSG_EOR | MSG_TRUNC | MSG_PEEK | MSG_CONFIRM))
-    {
-      fd->error = EOPNOTSUPP;
-      return -1;
-    }
-
-  if (fd->shutdown == SHUT_WR || fd->shutdown == SHUT_RDWR)
-    {
-      fd->error = ESHUTDOWN;
-      return -1;
-    }
-
-  if (message == NULL)
-    {
-      fd->error = EINVAL;
-      return -1;
-    }
+  size_t			n = packetlen;
 
   if ((packet = packet_obj_new(NULL)) == NULL)
     {
       fd->error = ENOMEM;
-      return -1;
+      goto error;
     }
 
-  addr = message->msg_name;
-
-  /* determine endpoint */
-  if (addr == NULL)
-    {
-      if (!pv->connected)
-	{
-	  packet_obj_refdrop(packet);
-	  fd->error = EDESTADDRREQ;
-	  return -1;
-	}
-
-      memcpy(&packet->tADDR, &pv->remote, sizeof (struct net_addr_s));
-    }
-  else
-    {
-      if (addr->sa_family != pv->family)
-	{
-	  fd->error = EAFNOSUPPORT;
-	  return -1;
-	}
-
-      if (socket_in_addr(fd, &packet->tADDR, addr, message->msg_namelen, NULL))
-	{
-	  packet_obj_refdrop(packet);
-	  return -1;
-	}
-    }
-
-  /* now, deduce the source */
-  if (pv->connected)
-    {
-      if (pv->route->invalidated)
-	{
-	  fd->error = EPIPE;
-	  return -1;
-	}
-
-      /* check is routing is allowed */
-      if ((flags & MSG_DONTROUTE) && route->is_routed)
-	{
-	  packet_obj_refdrop(packet);
-	  fd->error = EHOSTUNREACH;
-	  return -1;
-	}
-
-      /* simply read the pv info */
-      interface = pv->route->interface;
-      addressing = pv->route->addressing;
-    }
-  else
-    {
-      /* otherwise, determine the route */
-      if ((route = route_get(&packet->tADDR)) == NULL)
-	{
-	  packet_obj_refdrop(packet);
-	  fd->error = EHOSTUNREACH;
-	  return -1;
-	}
-
-      /* check is routing is allowed */
-      if ((flags & MSG_DONTROUTE) && route->is_routed)
-	{
-	  packet_obj_refdrop(packet);
-	  fd->error = EHOSTUNREACH;
-	  return -1;
-	}
-
-      interface = route->interface;
-      addressing = route->addressing;
-    }
-
-  /* compute buffer length */
-  for (i = 0, n = 0; i < message->msg_iovlen; i++)
-    n += message->msg_iov[i].iov_len;
+  memcpy(&packet->tADDR, dest, sizeof (struct net_addr_s));
 
   /* prepare the packet */
   if (pv->header)
     {
       if ((p = if_preparepkt(interface, packet, n, 0)) == NULL)
 	{
-	  packet_obj_refdrop(packet);
 	  fd->error = ENOMEM;
 	  goto error;
 	}
@@ -382,7 +289,6 @@ static _SENDMSG(sendmsg_raw)
     {
       if ((p = addressing->desc->preparepkt(interface, packet, n, 0)) == NULL)
 	{
-	  packet_obj_refdrop(packet);
 	  fd->error = ENOMEM;
 	  goto error;
 	}
@@ -426,6 +332,179 @@ static _SENDMSG(sendmsg_raw)
   /* send the packet */
   packet->stage--;
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, pv->proto);
+
+  packet_obj_refdrop(packet);
+  return 1;
+
+ error:
+  packet_obj_refdrop(packet);
+  return 0;
+}
+
+/*
+ * Send a message
+ */
+
+static _SENDMSG(sendmsg_raw)
+{
+  struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)fd->pv;
+  struct sockaddr		*addr;
+  struct net_addr_s		dest;
+  struct net_if_s		*interface = NULL;
+  struct net_proto_s		*addressing= NULL;
+  struct net_route_s		*route = NULL;
+  size_t			i;
+  size_t			n;
+  bool_t			global_bcast = 0;
+
+  if (flags & (MSG_OOB | MSG_EOR | MSG_TRUNC | MSG_PEEK | MSG_CONFIRM))
+    {
+      fd->error = EOPNOTSUPP;
+      return -1;
+    }
+
+  if (fd->shutdown == SHUT_WR || fd->shutdown == SHUT_RDWR)
+    {
+      fd->error = ESHUTDOWN;
+      return -1;
+    }
+
+  if (message == NULL)
+    {
+      fd->error = EINVAL;
+      return -1;
+    }
+
+  addr = message->msg_name;
+
+  /* determine endpoint */
+  if (addr == NULL)
+    {
+      if (!pv->connected)
+	{
+	  fd->error = EDESTADDRREQ;
+	  return -1;
+	}
+
+      memcpy(&dest, &pv->remote, sizeof (struct net_addr_s));
+    }
+  else
+    {
+      if (addr->sa_family != pv->family)
+	{
+	  fd->error = EAFNOSUPPORT;
+	  return -1;
+	}
+
+      if (socket_in_addr(fd, &dest, addr, message->msg_namelen, NULL))
+	{
+	  return -1;
+	}
+    }
+
+  /* now, deduce the source */
+  if (pv->connected)
+    {
+      if (pv->route->invalidated)
+	{
+	  fd->error = EPIPE;
+	  return -1;
+	}
+
+      if (addr != NULL && memcmp(&pv->remote, &dest, sizeof (struct net_addr_s)))
+	{
+	  fd->error = EISCONN;
+	  return -1;
+	}
+
+      /* check if routing is allowed */
+      if ((flags & MSG_DONTROUTE) && route->is_routed)
+	{
+	  fd->error = EHOSTUNREACH;
+	  return -1;
+	}
+
+      /* simply read the pv info */
+      route = pv->route;
+      interface = pv->route->interface;
+      addressing = pv->route->addressing;
+    }
+  else
+    {
+      switch (dest.family)
+	{
+	  case addr_ipv4:
+	    global_bcast = (dest.addr.ipv4 == 0xffffffff);
+	    break;
+	  default:
+	    assert(0);
+	    /* IPV6 */
+	}
+
+      if (!global_bcast)
+	{
+	  /* otherwise, determine the route */
+	  if ((route = route_get(&dest)) == NULL)
+	    {
+	      fd->error = EHOSTUNREACH;
+	      return -1;
+	    }
+
+	  /* check is routing is allowed */
+	  if ((flags & MSG_DONTROUTE) && route->is_routed)
+	    {
+	      fd->error = EHOSTUNREACH;
+	      return -1;
+	    }
+
+	  interface = route->interface;
+	  addressing = route->addressing;
+	}
+    }
+
+  /* check if broadcasting is allowed */
+  if (!fd->broadcast)
+    switch(route->target.family)
+      {
+	case addr_ipv4:
+	  {
+	    struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)route->addressing->pv;
+
+	    if (global_bcast || (dest.addr.ipv4 & ~pv_ip->mask) == ~pv_ip->mask)
+	      {
+		fd->error = EADDRNOTAVAIL;
+		goto error;
+	      }
+	  }
+	  break;
+	  /* IPV6 */
+      }
+
+  /* compute buffer length */
+  for (i = 0, n = 0; i < message->msg_iovlen; i++)
+    n += message->msg_iov[i].iov_len;
+
+  if (global_bcast)
+    {
+      CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
+      {
+	interface = item;
+	NET_FOREACH_PROTO(&interface->protocols, dest.family,
+	{
+	  addressing = item;
+
+	  sendmsg_if(fd, interface, addressing, message, &dest, n);
+	});
+      });
+    }
+  else
+    {
+      assert(interface != NULL);
+      assert(addressing != NULL);
+
+      if (!sendmsg_if(fd, interface, addressing, message, &dest, n))
+	goto error;
+    }
 
   if (route != NULL)
     route_obj_refdrop(route);
@@ -482,7 +561,7 @@ static _RECVMSG(recvmsg_raw)
   /* copy the data */
   if (pv->header)
     {
-      nethdr = &packet->header[packet->stage - 1];
+      nethdr = &packet->header[2];
       /* XXX */
     }
   else
@@ -490,7 +569,7 @@ static _RECVMSG(recvmsg_raw)
       size_t	i;
       size_t	chunksz;
 
-      nethdr = &packet->header[packet->stage];
+      nethdr = &packet->header[2];
       for (i = 0, sz = 0; i < message->msg_iovlen; i++, sz += chunksz)
 	{
 	  chunksz = message->msg_iov[i].iov_len;
@@ -671,15 +750,21 @@ static _SHUTDOWN(shutdown_raw)
 	  sem_getvalue(&pv->recv_sem, &val);
 	}
 
+      /* close the socket */
       if (fd->shutdown == SHUT_RDWR)
 	{
 	  socket_table_remove(&sock_raw, fd);
+	  sem_destroy(&pv->recv_sem);
+	  packet_queue_lock_destroy(&pv->recv_q);
 
 	  if (pv->connected)
 	    route_obj_refdrop(pv->route);
 
 	  if (pv->local_interface != NULL)
 	    net_if_obj_refdrop(pv->local_interface);
+
+	  mem_free(pv);
+	  mem_free(socket);
 	}
     }
 
@@ -760,7 +845,7 @@ void		sock_raw_signal(struct net_if_s		*interface,
 	      {
 		struct net_header_s	*nethdr;
 
-		nethdr = &packet->header[packet->stage];
+		nethdr = &packet->header[3];
 		if (nethdr->size >= sizeof (struct icmphdr))
 		  {
 		    struct icmphdr	*icmp;
