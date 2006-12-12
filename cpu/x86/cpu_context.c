@@ -51,7 +51,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   *--context->stack_ptr = (reg_t)NULL;
 #endif
 
-  /* push default flags */
+  /* push default flags, interrupts are disabled */
   *--context->stack_ptr = 0x00000046;	/* EFLAGS */
 
   /* push tls segment index */

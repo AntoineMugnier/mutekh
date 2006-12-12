@@ -47,7 +47,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   /* fake entry point */
   *--context->stack_ptr = (uintptr_t)&__mips_context_entry;
 
-  /* status register */
+  /* status register, interrupts are disabled */
   *--context->stack_ptr = 0x0000ff00;
 
   /* context local storage address */

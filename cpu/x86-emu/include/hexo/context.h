@@ -85,7 +85,8 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		/* remaining registers will be clobbered too */
 		: "memory"
 		, "%eax", /* "%ebx", */ "%ecx", "%edx"
-		, /* "%esi", */ /* "%edi", */ "%ebp"
+		/* "%esi", */ /* "%edi", */
+		, "%ebp"
 		);
 }
 

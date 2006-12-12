@@ -128,7 +128,7 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
   size_t	offset = 0;
 #ifndef CONFIG_LIBC_PRINTF_SIMPLE
   uint_fast8_t	typesize, padindex;
-  ssize_t	padding[2] = { 0 };
+  ssize_t	padding[2];
   bool_t	zeropad, rightpad;
 #endif
 
@@ -159,6 +159,7 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 #ifndef CONFIG_LIBC_PRINTF_SIMPLE
   padindex = 0;
   zeropad = rightpad = 0;
+  padding[0] = padding[1] = 0;
   typesize = sizeof(int_fast8_t);
 #endif
 
@@ -178,7 +179,7 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 	  break;
 
 	case '0':
-	  if (!padding[padindex])
+	  if (!padindex && !padding[padindex])
 	    zeropad = 1;
 
 	case '1' ... '9':
@@ -318,20 +319,26 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 
 	/* string */
 
-      case ('s'):
-	len = strlen((char*)val);
-	buf = (char*)val;
+      case ('s'): {
+	char	*str = (char*)val;
 #ifndef CONFIG_LIBC_PRINTF_SIMPLE
-	/* precision on %s limit string len */
-	if (padding[1] > 0)
-	  len = __MIN(len, padding[1]);
+	size_t	maxlen;
 
 	zeropad = 0;
+
+	if ((maxlen = padding[1]))
+	  while (maxlen-- && *str)
+	    str++;
+	else
 #endif
-	break;
+	  while (*str++)
+	    ;
+
+	len = str - (char*)val;
+	buf = (char*)val;
+      }	break;
 
 	/* hexdump data buffer */
-
 #ifdef CONFIG_LIBC_PRINTF_EXT
       case ('P'):
 	len = va_arg(ap, size_t);
@@ -359,7 +366,7 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 
     if (!rightpad)
       {
-	for (; padlen; padlen--) /* FIXME suboptimal */
+	while (padlen--)
 	  fcn(ctx, zeropad ? "0" : " ", offset++, 1);
       }
 #endif

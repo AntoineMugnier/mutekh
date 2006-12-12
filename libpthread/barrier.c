@@ -51,7 +51,7 @@ error_t pthread_barrier_wait(pthread_barrier_t *barrier)
 
   if (barrier->count == 1)
     {
-      while (sched_wake(&barrier->wait))
+      while (sched_wake(&barrier->wait) != NULL)
 	barrier->count++;
       sched_queue_unlock(&barrier->wait);
       res = PTHREAD_BARRIER_SERIAL_THREAD;

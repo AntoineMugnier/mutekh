@@ -66,7 +66,7 @@ CONTAINER_TYPE(sched_queue, __SCHED_CONTAINER_ALGO, struct sched_context_s
 CONTAINER_FUNC(static inline, sched_queue, __SCHED_CONTAINER_ALGO, sched_queue, HEXO_SPIN, list_entry);
 CONTAINER_FUNC(static inline, sched_queue, __SCHED_CONTAINER_ALGO, sched_queue_nolock, NOLOCK, list_entry);
 
-/** lock main scheduler queue. Must be used before context exit */
+/** lock main scheduler queue. */
 void sched_lock(void);
 
 /** release main scheduler queue. Must be used after thread entry */

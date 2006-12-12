@@ -118,7 +118,7 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
 	  enum_pv->devid = pci_confreg_read(bus, dv, fn, PCI_CONFREG_DEVID);
 	  enum_pv->class = pci_confreg_read(bus, dv, fn, PCI_CONFREG_CLASS);
 
-	  printf("PCI device %04x:%04x class %x06x, device %p\n",
+	  printf("PCI device %04x:%04x class %06x, device %p\n",
 		 vendor, enum_pv->devid, enum_pv->class, new);
 
 	  for ((index = 0, regaddr = PCI_CONFREG_ADDRESS_0);

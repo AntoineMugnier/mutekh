@@ -39,7 +39,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   *--context->stack_ptr = (reg_t)CPU_AVR_LO8(__avr_context_entry);
 
   /* push default flags */
-  *--context->stack_ptr = 0x80;	/* SREG with INT enabled */
+  *--context->stack_ptr = 0x00;	/* SREG with INT disabled */
 
   /* push tls address */
   *--context->stack_ptr = (reg_t)CPU_AVR_HI8(context->tls);
