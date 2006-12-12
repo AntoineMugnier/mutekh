@@ -1,11 +1,5 @@
 (dans l'ordre)
 
-* dhclient
-  - faire un thread + stop
-
-* libsocket
-  - finir sockets UDP
-
 * TCP
   - a finir
   - sockets TCP

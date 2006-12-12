@@ -738,7 +738,7 @@ static _SHUTDOWN(shutdown_raw)
   /* end all the recv with errors */
   if (fd->shutdown == SHUT_RDWR || fd->shutdown == SHUT_RD)
     {
-      uint_fast8_t		val;
+      __sem_count_t		val;
 
       /* drop all waiting packets */
       packet_queue_lock_clear(&pv->recv_q);

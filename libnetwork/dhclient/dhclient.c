@@ -431,8 +431,6 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		  else
 		    lease->delay = DHCP_DFL_LEASE;
 
-		  lease->delay = 10000; /* XXX for debug */
-
 		  /* configure IP */
 		  IPV4_ADDR_SET(addr, lease->ip);
 
@@ -550,7 +548,7 @@ static void	*dhcp_renew_th(void	*pv)
 	goto leave;
 
       /* try to renew (12 times is about 2 min) */
-      for (i = 12; i < 12; i++) /* XXX for debug */
+      for (i = 0; i < 12; i++)
 	{
 	  /* send a DHCPREQUEST */
 	  dhcp_packet(lease->interface, DHCPREQUEST, lease->ip, lease->serv, sock);
@@ -685,10 +683,8 @@ error_t			dhcp_client(const char	*ifname)
   free(lease);
 
   if (route != NULL)
-    {
-      route_del(route);
-      route_obj_refdrop(route);
-    }
+    route_del(route);
+  if_config(interface->index, IF_DEL, &null, NULL);
 
   if (sock != NULL)
     shutdown(sock, SHUT_RDWR);

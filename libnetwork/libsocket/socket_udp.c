@@ -347,6 +347,7 @@ static _RECVMSG(recvmsg_udp)
     {
       if (socket_addr_in(fd, &buffer->address, addr, &message->msg_namelen, htons(buffer->port)))
 	{
+	  mem_free(buffer->data);
 	  mem_free(buffer);
 	  return -1;
 	}
@@ -360,9 +361,11 @@ static _RECVMSG(recvmsg_udp)
       chunksz = message->msg_iov[i].iov_len;
       if (sz + chunksz > size)
 	chunksz = size - sz;
+      printf("rcv %u\n", chunksz);
       memcpy(message->msg_iov[i].iov_base, data + sz, chunksz);
     }
 
+  mem_free(buffer->data);
   mem_free(buffer);
 
   if (flags & MSG_TRUNC)
