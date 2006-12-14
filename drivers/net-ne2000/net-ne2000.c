@@ -512,7 +512,7 @@ DEV_INIT(net_ne2000_init)
   pv->run = 1;
   dispatch->running = &pv->run;
 
-  if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch)) /* XXX */
+  if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch)) /* XXX prefer context rather than pthreads */
     {
       printf("ne2000: cannot start dispatch thread\n");
 

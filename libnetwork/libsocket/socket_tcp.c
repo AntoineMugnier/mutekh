@@ -21,3 +21,22 @@
 
 #include <netinet/socket.h>
 
+/*
+ * Socket API for UDP datagrams.
+ */
+
+const struct socket_api_s	tcp_socket_dispatch =
+  {
+    .socket = NULL,
+    .bind = NULL,
+    .getsockname = NULL,
+    .connect = NULL,
+    .getpeername = NULL,
+    .sendmsg = NULL,
+    .recvmsg = NULL,
+    .getsockopt = NULL,
+    .setsockopt = NULL,
+    .listen = NULL,
+    .accept = NULL,
+    .shutdown = NULL
+  };

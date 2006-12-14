@@ -45,24 +45,19 @@
 #include <timer.h>
 
 #ifdef CONFIG_NETWORK_TCP
-void			connection_close(struct net_tcp_session_s *session,
-					 void			  *ptr)
+static TCP_CLOSE(connection_close)
 {
   printf("%p closed\n", session);
 }
 
-void			data_arrival(struct net_tcp_session_s	*session,
-				     void			*data,
-				     size_t			size,
-				     void			*ptr)
+static TCP_RECEIVE(data_arrival)
 {
-  //  printf("%p received %P\n", session, data, size);
+  printf("%p received %P\n", session, data, size);
 
   //tcp_send(session, ptr, strlen(ptr));
 }
 
-void			after_connect(struct net_tcp_session_s	*session,
-				      void			*ptr)
+static TCP_CONNECT(after_connect)
 {
   char			req[] = "GET /icons/apache_pb2.gif HTTP/1.1\r\nHost: 10.2.2.37\r\nConnection: Keep-Alive\r\n\r\n";
 
@@ -85,14 +80,12 @@ void			after_connect(struct net_tcp_session_s	*session,
 
 void			*tcp_test(void *p)
 {
-  struct net_tcp_addr_s local;
   struct net_tcp_addr_s remote;
 
-  IPV4_ADDR_SET(local.address, 0x0a0202f0);
   IPV4_ADDR_SET(remote.address, 0x0a02026d);
   remote.port = htons(80);
 
-  tcp_open(&local, &remote, after_connect, NULL);
+  tcp_open(&remote, after_connect, NULL);
 
   return NULL;
 }
@@ -362,7 +355,7 @@ void *net_up(void *p)
   pthread_create(&th, NULL, err_test, NULL);
 #endif
 
-#if 0
+#ifdef CONFIG_NETWORK_TCP
   pthread_create(&th, NULL, tcp_test, NULL);
 #endif
 

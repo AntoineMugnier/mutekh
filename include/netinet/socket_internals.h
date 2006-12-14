@@ -85,7 +85,7 @@ _SHUTDOWN(shutdown_socket);
 #ifdef CONFIG_NETWORK_UDP
 extern const struct socket_api_s	udp_socket_dispatch;
 #endif
-#ifdef CONFIG_NETWORK_TDP
+#ifdef CONFIG_NETWORK_TCP
 extern const struct socket_api_s	tcp_socket_dispatch;
 #endif
 #ifdef CONFIG_NETWORK_SOCKET_PACKET

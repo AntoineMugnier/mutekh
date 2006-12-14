@@ -144,7 +144,16 @@ struct net_if_s	*if_register(struct device_s	*dev,
 #endif
 
   /* add to the interface list */
-  net_if_push(&net_interfaces, interface);
+  if (!net_if_push(&net_interfaces, interface))
+    {
+#ifdef CONFIG_NETWORK_UDP
+      net_protos_remove(&interface->protocols, udp);
+#endif
+#ifdef CONFIG_NETWORK_TCP
+      net_protos_remove(&interface->protocols, tcp);
+#endif
+      return NULL;
+    }
 
   printf("Registered new interface %s (MTU = %u)\n", interface->name, interface->mtu);
 

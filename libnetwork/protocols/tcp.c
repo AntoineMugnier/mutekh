@@ -35,9 +35,6 @@
 
 #include <stdio.h>
 
-#undef net_debug
-#define net_debug printf
-
 /*
  * Structures for declaring the protocol's properties & interface.
  */
@@ -111,10 +108,12 @@ uint8_t			*tcp_preparepkt(struct net_if_s		*interface,
   uint8_t		*next;
 
 #ifdef CONFIG_NETWORK_AUTOALIGN
-  next = addressing->desc->preparepkt(interface, packet, sizeof (struct tcphdr) + size, 2);
+  if ((next = addressing->desc->preparepkt(interface, packet, sizeof (struct tcphdr) + size, 2)) == NULL)
+    return NULL;
   next = ALIGN_ADDRESS_UP(next, 4);
 #else
-  next = addressing->desc->preparepkt(interface, packet, sizeof (struct tcphdr) + size, 0);
+  if ((next = addressing->desc->preparepkt(interface, packet, sizeof (struct tcphdr) + size, 0)) == NULL)
+    return NULL;
 #endif
 
   nethdr = &packet->header[packet->stage];
@@ -134,16 +133,22 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
 			    uint_fast8_t		operation)
 {
   struct net_packet_s	*packet;
-  struct net_proto_s	*addressing = session->addressing;
-  struct net_if_s	*interface = session->interface;
+  struct net_proto_s	*addressing = session->route->addressing;
+  struct net_if_s	*interface = session->route->interface;
   struct net_header_s	*nethdr;
   struct tcphdr		*hdr;
   uint_fast32_t		check;
 
-  packet = packet_obj_new(NULL);
+  if ((packet = packet_obj_new(NULL)) == NULL)
+    return;
 
   /* prepare the packet */
-  tcp_preparepkt(interface, addressing, packet, (operation == TCP_SYN || operation == TCP_SYN_ACK) ? 4 : 0, 0);
+  if (tcp_preparepkt(interface, addressing, packet, (operation == TCP_SYN || operation == TCP_SYN_ACK) ? 4 : 0, 0) == NULL)
+    {
+      /* out of memory */
+      packet_obj_refdrop(packet);
+      return;
+    }
   nethdr = &packet->header[packet->stage];
   hdr = (struct tcphdr *)nethdr->data;
   hdr->th_x2 = 0;
@@ -222,6 +227,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   packet->stage--;
   /* send the packet to IP */
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_TCP);
+  packet_obj_refdrop(packet);
 }
 
 /*
@@ -234,24 +240,29 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
 			 uint_fast8_t			flags)
 {
   struct net_packet_s	*packet;
-  struct net_proto_s	*addressing = session->addressing;
-  struct net_if_s	*interface = session->interface;
+  struct net_proto_s	*addressing = session->route->addressing;
+  struct net_if_s	*interface = session->route->interface;
   uint8_t		*dest;
   struct net_header_s	*nethdr;
   struct tcphdr		*hdr;
   uint_fast32_t		check;
 
-  packet = packet_obj_new(NULL);
+  if ((packet = packet_obj_new(NULL)) == NULL)
+    return;
 
   /* prepare the packet */
-  dest = tcp_preparepkt(interface, addressing, packet, size, 0);
+  if ((dest = tcp_preparepkt(interface, addressing, packet, size, 0)) == NULL)
+    {
+      /* no more memory */
+      packet_obj_refdrop(packet);
+      return;
+    }
   nethdr = &packet->header[packet->stage];
   hdr = (struct tcphdr *)nethdr->data;
   hdr->th_x2 = 0;
 
   /* setup the targeted address */
-  memcpy(&packet->tADDR, &session->remote.address,
-	 sizeof (struct net_addr_s));
+  memcpy(&packet->tADDR, &session->remote.address, sizeof (struct net_addr_s));
   net_16_store(hdr->th_sport, session->local.port);
   net_16_store(hdr->th_dport, session->remote.port);
 
@@ -276,5 +287,6 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   packet->stage--;
   /* send the packet to IP */
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_TCP);
+  packet_obj_refdrop(packet);
 }
 

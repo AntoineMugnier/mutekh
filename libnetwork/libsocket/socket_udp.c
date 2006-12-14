@@ -52,7 +52,12 @@ static UDP_CALLBACK(socket_recv_callback)
   /* push the incoming buffer to the socket lib */
   if ((buffer = mem_alloc(sizeof (struct net_buffer_s), MEM_SCOPE_NETWORK)) != NULL)
     {
-      buffer->data = data;
+      if ((buffer->data = mem_alloc(size, MEM_SCOPE_NETWORK)) == NULL)
+	{
+	  mem_free(buffer);
+	  return;
+	}
+      memcpy(buffer->data, data, size);
       buffer->size = size;
       memcpy(&buffer->address, &remote->address, sizeof (struct net_addr_s));
       buffer->port = remote->port;

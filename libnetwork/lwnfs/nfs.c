@@ -88,7 +88,10 @@ UDP_CALLBACK(rpc_callback)
 
   if ((rpcb = rpcb_lookup(&server->rpc_blocks, id)) != NULL)
     {
-      rpcb->data = data;
+      /* duplicate the buffer */
+      if ((rpcb->data = mem_alloc(size, MEM_SCOPE_NETWORK)) == NULL)
+	return;
+      memcpy(rpcb->data, data, size);
       rpcb->size = size;
 
       /* cancel the timeout */
@@ -173,7 +176,11 @@ static error_t		do_rpc(struct nfs_s	*server,
   /* fill RPC block */
   sem_init(&rpcb.sem, 0, 0);
   rpcb.data = NULL;
-  rpcb_push(&server->rpc_blocks, &rpcb);
+  if (!rpcb_push(&server->rpc_blocks, &rpcb))
+    {
+      mem_free(pkt);
+      return -ENOMEM;
+    }
 
  retry:
 
@@ -205,7 +212,13 @@ static error_t		do_rpc(struct nfs_s	*server,
   rpcb.timeout.delay = RPC_TIMEOUT;
   rpcb.timeout.callback = rpc_timeout;
   rpcb.timeout.pv = &rpcb;
-  timer_add_event(&timer_ms, &rpcb.timeout);
+  if (timer_add_event(&timer_ms, &rpcb.timeout))
+    {
+      rpcb_remove(&server->rpc_blocks, &rpcb);
+      mem_free(pkt);
+
+      return -ENOMEM;
+    }
 
   /* wait reply */
   sem_wait(&rpcb.sem);

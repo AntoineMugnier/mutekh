@@ -60,7 +60,7 @@ struct	net_udp_addr_s
 
 #define UDP_CALLBACK(f)	void (f)(struct net_udp_desc_s	*desc,		\
 				 struct net_udp_addr_s	*remote,	\
-				 void			*data,		\
+				 const void		*data,		\
 				 size_t			size,		\
 				 void			*pv)
 typedef UDP_CALLBACK(udp_callback_t);

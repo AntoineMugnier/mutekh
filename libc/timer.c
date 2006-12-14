@@ -41,6 +41,7 @@ error_t			timer_add_event(struct timer_s		*timer,
 {
   struct timer_event_s	*e;
   timer_delay_t		t;
+  error_t		err = 0;
 
   event->timer = timer;
 
@@ -54,9 +55,9 @@ error_t			timer_add_event(struct timer_s		*timer,
        e = timer_next(&timer->root, e))
     ;
   if (e == NULL)
-    timer_pushback(&timer->root, event);
+    err = !timer_pushback(&timer->root, event);
   else
-    timer_insert_pre(&timer->root, e, event);
+    err = !timer_insert_pre(&timer->root, e, event);
 
   return 0;
 }

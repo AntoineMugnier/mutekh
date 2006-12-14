@@ -23,6 +23,7 @@
  * User interface to TCP transport layer.
  *
  * TODO
+ *  - out-of-order
  *  - Nagle's (bufferisation)
  *  - Window + Clark's (evitement du SWS)
  *  - Karn's & RTT (retransmission)
@@ -37,6 +38,7 @@
 
 #include <netinet/packet.h>
 #include <netinet/protos.h>
+#include <netinet/ip.h>
 #include <netinet/if.h>
 #include <netinet/in.h>
 #include <netinet/ether.h>
@@ -63,45 +65,106 @@ CONTAINER_KEY_FUNC(static inline, tcp_session, HASHLIST, tcp_session, NOLOCK, re
 static tcp_session_root_t	sessions = CONTAINER_ROOT_INITIALIZER(tcp_session, HASHLIST, NOLOCK);
 
 /*
+ * Session objects
+ */
+
+OBJECT_CONSTRUCTOR(tcp_session_obj)
+{
+  struct net_tcp_session_s	*obj;
+
+  if ((obj = mem_alloc(sizeof (struct net_tcp_session_s), MEM_SCOPE_NETWORK)) == NULL)
+    return NULL;
+
+  tcp_session_obj_init(obj);
+
+  obj->route = NULL;
+
+  return obj;
+}
+
+OBJECT_DESTRUCTOR(tcp_session_obj)
+{
+  if (obj->route != NULL)
+    route_obj_refdrop(obj->route);
+
+  mem_free(obj);
+}
+
+/*
+ * Close timeout.
+ */
+
+static TIMER_CALLBACK(tcp_close_session)
+{
+  struct net_tcp_session_s	*session = (struct net_tcp_session_s *)pv;
+
+  tcp_session_remove(&sessions, session);
+  tcp_session_obj_delete(session);
+
+  net_debug("session deleted\n");
+
+  mem_free(timer);
+}
+
+static void	tcp_close_timeout(struct net_tcp_session_s	*session)
+{
+  struct timer_event_s	*timer;
+
+  if ((timer = mem_alloc(sizeof (struct timer_event_s), MEM_SCOPE_NETWORK)) == NULL)
+    goto err;
+  /* setup a timer */
+  timer->callback = tcp_close_session;
+  timer->pv = session;
+  timer->delay = 2 * TCP_MSL;
+  if (timer_add_event(&timer_ms, timer))
+    goto err;
+
+  return;
+
+ err:
+  /* not enough memory to reserve a timer, delete the session immediately */
+  tcp_session_remove(&sessions, session);
+  tcp_session_obj_delete(session);
+}
+
+/*
  * LibTCP user interface.
  */
+
+/* on error */
+static TIMER_CALLBACK(tcp_connect_error)
+{
+  struct net_tcp_session_s	*session = (struct net_tcp_session_s *)pv;
+
+  /* set error state */
+  session->state = TCP_STATE_ERROR;
+
+  /* callback to report the error */
+  session->connect(session, session->connect_data);
+
+  tcp_close_timeout(session);
+}
 
 /*
  * Open a new TCP connection.
  */
 
-int_fast8_t			tcp_open(struct net_tcp_addr_s	*local,
-					 struct net_tcp_addr_s	*remote,
+error_t				tcp_open(struct net_tcp_addr_s	*remote,
 					 tcp_connect_t		callback,
 					 void			*ptr)
 {
   struct net_tcp_session_s	*session;
-  struct net_if_s		*interface = NULL;
-  struct net_proto_s		*addressing = NULL;
-  net_proto_id_t		id;
+  struct net_route_s		*route;
+  struct timer_event_s		*timer;
 
-  /* look for the good IP module */
-  id = local->address.family;
-  CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
-  {
-    interface = item;
-    for (addressing = net_protos_lookup(&interface->protocols, id);
-	 addressing != NULL;
-	 addressing = net_protos_lookup_next(&interface->protocols, addressing, id))
-      if (addressing->desc->f.addressing->matchaddr(addressing, &local->address, NULL, NULL))
-	goto ok;
-
-  });
-
- ok:
-
-  if (interface == NULL || addressing == NULL)
-    return -1;
+  /* check for a route */
+  if ((route = route_get(&remote->address)) == NULL)
+    return -EHOSTUNREACH;
 
   /* create session instance */
-  session = mem_alloc(sizeof (struct net_tcp_session_s), MEM_SCOPE_SYS);
-  session->interface = interface;
-  session->addressing = addressing;
+  if ((session = tcp_session_obj_new(NULL)) == NULL)
+    return -ENOMEM;
+  session->route = route;
 
   session->connect = callback;
   session->connect_data = ptr;
@@ -110,29 +173,57 @@ int_fast8_t			tcp_open(struct net_tcp_addr_s	*local,
   session->accept = NULL;
 
   /* choose a local port */
-  local->port = 1024 + (timer_get_tick(&timer_ms) % 32768) ; /* XXX choose me better! */
-  memcpy(&session->local, local, sizeof (struct net_tcp_addr_s));
+  switch (remote->address.family)
+    {
+      case addr_ipv4:
+	{
+	  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)session->route->addressing->pv;
+
+	  session->local.port = 1024 + (timer_get_tick(&timer_ms) % 32768) ; /* XXX choose me better */
+	  /* XXX check availability */
+	  IPV4_ADDR_SET(session->local.address, pv_ip->addr);
+	}
+	break;
+      default:
+	assert(0); 	/* IPV6 */
+	break;
+    }
+
   memcpy(&session->remote, remote, sizeof (struct net_tcp_addr_s));
 
   session->curr_seq = timer_get_tick(&timer_ms);
   session->send_win = TCP_DFL_WINDOW;
   session->send_mss = TCP_MSS;
 
-  session->recv_mss = interface->mtu - TCP_HEADERS_LEN;
+  session->recv_mss = route->interface->mtu - TCP_HEADERS_LEN;
 
   /* enter SYN sent mode, waiting for SYN ACK */
   session->state = TCP_STATE_SYN_SENT;
 
   /* push the new session into the hashlist */
-  tcp_session_push(&sessions, session);
-
-  /* XXX timeout here */
+  if (!tcp_session_push(&sessions, session))
+    goto err2;
 
   /* send the SYN packet */
   tcp_send_controlpkt(session, TCP_SYN);
   net_debug("<- SYN\n");
 
+  /* setup a connection timeout */
+  if ((timer = mem_alloc(sizeof (struct timer_event_s), MEM_SCOPE_NETWORK)) == NULL)
+    goto err;
+  timer->callback = tcp_connect_error;
+  timer->pv = session;
+  timer->delay = TCP_CONNECTION_TIMEOUT;
+  if (timer_add_event(&timer_ms, timer))
+    goto err;
+
   return 0;
+
+ err:
+  tcp_session_remove(&sessions, session);
+ err2:
+  tcp_session_obj_delete(session);
+  return -ENOMEM;
 }
 
 /*
@@ -169,9 +260,7 @@ void			tcp_close(struct net_tcp_session_s	*session)
 	session->close(session, session->close_data);
 
       /* closing on error, just remove the session */
-
-      tcp_session_remove(&sessions, session);
-      mem_free(session);
+      tcp_close_timeout(session);
     }
 }
 
@@ -316,9 +405,8 @@ static void			libtcp_open(struct net_tcp_session_s	*session,
       tcp_send_controlpkt(session, TCP_SYN_ACK);
 
       /* create a new session */
-      new = mem_alloc(sizeof (struct net_tcp_session_s), MEM_SCOPE_SYS);
-      new->interface = session->interface;
-      new->addressing = session->addressing;
+      if ((new = tcp_session_obj_new(NULL)) == NULL)
+	return;
 
       /* XXX fill me */
 
@@ -354,8 +442,7 @@ static void			libtcp_close(struct net_tcp_session_s	*session,
 	/* callback to report the error */
 	session->connect(session, session->connect_data);
 
-	tcp_session_remove(&sessions, session);
-	mem_free(session);
+	tcp_close_timeout(session);
 	break;
       case TCP_STATE_FIN_WAIT1: /* it is a FIN acknowlegment */
 	/* goto CLOSING */
@@ -387,8 +474,7 @@ static void			libtcp_close(struct net_tcp_session_s	*session,
 	  session->close(session, session->close_data);
 
 	/* delete session */
-	tcp_session_remove(&sessions, session);
-	mem_free(session);
+	tcp_close_timeout(session);
 	break;
       default:
 	/* otherwise, it is a FIN request */
@@ -410,8 +496,7 @@ static void			libtcp_close(struct net_tcp_session_s	*session,
 	    if (session->close != NULL)
 	      session->close(session, session->close_data);
 
-	    tcp_session_remove(&sessions, session);
-	    mem_free(session);
+	    tcp_close_timeout(session);
 	  }
 	else /* otherwise, wait for the remaining operations and change state */
 	  session->state = TCP_STATE_CLOSE_WAIT;
@@ -498,7 +583,7 @@ void				libtcp_push(struct net_packet_s	*packet,
 	}
     }
 
-  /* check for FIn flag */
+  /* check for FIN flag */
   if (hdr->th_flags & TH_FIN)
     libtcp_close(session, packet, hdr);
 }
@@ -509,5 +594,5 @@ void				libtcp_push(struct net_packet_s	*packet,
 
 NET_SIGNAL_ERROR(libtcp_signal_error)
 {
-
+  /* XXX */
 }

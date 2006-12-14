@@ -48,10 +48,10 @@
  * The descriptors set.
  */
 
-static udp_desc_root_t	descriptors = CONTAINER_ROOT_INITIALIZER(udp_desc, HASHLIST, NOLOCK);
-
 CONTAINER_FUNC(static inline, udp_desc, HASHLIST, udp_desc, NOLOCK, port);
 CONTAINER_KEY_FUNC(static inline, udp_desc, HASHLIST, udp_desc, NOLOCK, port);
+
+static udp_desc_root_t	descriptors = CONTAINER_ROOT_INITIALIZER(udp_desc, HASHLIST, NOLOCK);
 
 /*
  * Descriptors contructor and destructor.
@@ -313,8 +313,6 @@ void			libudp_signal(struct net_packet_s	*packet,
 {
   struct net_udp_desc_s	*desc;
   struct net_udp_addr_s	remote;
-  uint8_t		*buff;
-  uint_fast16_t		size;
   net_port_t		port;
 
   /* build local address descriptor */
@@ -348,14 +346,9 @@ void			libudp_signal(struct net_packet_s	*packet,
   memcpy(&remote.address, &packet->sADDR, sizeof (struct net_addr_s));
   remote.port = hdr->source;
 
-  /* copy the packet XXX ou pas ? */
-  size = net_be16_load(hdr->len) - sizeof (struct udphdr);
-  if ((buff = mem_alloc(size, MEM_SCOPE_NETWORK)) == NULL)
-    return;
-  memcpy(buff, packet->header[packet->stage].data, size);
-
   /* callback */
-  desc->callback(desc, &remote, buff, size, desc->pv);
+  desc->callback(desc, &remote, packet->header[packet->stage].data,
+		 net_be16_load(hdr->len) - sizeof (struct udphdr), desc->pv);
 }
 
 /*

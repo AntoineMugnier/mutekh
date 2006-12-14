@@ -25,8 +25,26 @@
 #include <netinet/protos.h>
 #include <netinet/packet.h>
 
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_hashlist.h>
+#include <gpct/object_simple.h>
+
+/*
+ * A few constants
+ */
+
+#define TCP_CONNECTION_TIMEOUT	10	/* seconds */
+
+/*
+ * Forward decls.
+ */
+
 struct tcphdr;
 struct net_tcp_session_s;
+
+/*
+ * A TCP endpoint
+ */
 
 struct	net_tcp_addr_s
 {
@@ -34,15 +52,19 @@ struct	net_tcp_addr_s
   uint_fast16_t		port;
 };
 
-#define TCP_CONNECT(f)	void (f)(struct net_tcp_session_s *session,	\
-				 void			*ptr)
+/*
+ * Callbacks
+ */
+
+#define TCP_CONNECT(f)	void (f)(struct net_tcp_session_s	*session,	\
+				 void				*ptr)
 
 typedef TCP_CONNECT(tcp_connect_t);
 
-#define TCP_RECEIVE(f)	void (f)(struct net_tcp_session_s *session,	\
-				 void			*data,		\
-				 size_t			size,		\
-				 void			*ptr)
+#define TCP_RECEIVE(f)	void (f)(struct net_tcp_session_s	*session,	\
+				 const void			*data,		\
+				 size_t				size,		\
+				 void				*ptr)
 
 typedef TCP_RECEIVE(tcp_receive_t);
 
@@ -57,10 +79,59 @@ typedef TCP_CLOSE(tcp_close_t);
 
 typedef TCP_ACCEPT(tcp_accept_t);
 
-int_fast8_t	tcp_open(struct net_tcp_addr_s	*local,
-			 struct net_tcp_addr_s	*remote,
-			 tcp_connect_t		callback,
-			 void			*ptr);
+/*
+ * This structure defines a TCP session.
+ */
+
+OBJECT_TYPE(tcp_session_obj, SIMPLE, struct net_tcp_session_s);
+
+struct					net_tcp_session_s
+{
+  struct net_route_s			*route;
+  struct net_tcp_addr_s			local;
+  struct net_tcp_addr_s			remote;
+
+  uint_fast32_t				curr_seq;
+  uint_fast32_t				to_ack;
+  uint_fast16_t				send_win;
+  uint_fast16_t				send_mss;
+  uint_fast32_t				recv_seq;
+  uint_fast16_t				recv_win;
+  uint_fast16_t				recv_mss;
+
+  tcp_connect_t				*connect;
+  void					*connect_data;
+  tcp_receive_t				*receive;
+  void					*receive_data;
+  tcp_close_t				*close;
+  void					*close_data;
+  tcp_accept_t				*accept;
+  void					*accept_data;
+
+  uint_fast8_t				state;
+
+  tcp_session_obj_entry_t		obj_entry;
+  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+};
+
+OBJECT_CONSTRUCTOR(tcp_session_obj);
+OBJECT_DESTRUCTOR(tcp_session_obj);
+OBJECT_FUNC(static inline, tcp_session_obj, SIMPLE, tcp_session_obj, obj_entry);
+
+/*
+ * Container types for tcp session list.
+ */
+
+CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, NOOBJ, list_entry, 64);
+CONTAINER_KEY_TYPE(tcp_session, AGGREGATE, remote);
+
+/*
+ * Prototypes
+ */
+
+error_t	tcp_open(struct net_tcp_addr_s	*remote,
+		 tcp_connect_t		callback,
+		 void			*ptr);
 
 void	tcp_close(struct net_tcp_session_s	*session);
 

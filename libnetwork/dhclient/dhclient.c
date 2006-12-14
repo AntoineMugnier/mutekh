@@ -559,7 +559,8 @@ static void	*dhcp_renew_th(void	*pv)
 	      printf("dhclient: renewal succeeded.\n");
 
 	      /* start the timer again */
-	      timer_add_event(&timer_ms, lease->timer);
+	      if (timer_add_event(&timer_ms, lease->timer))
+		goto err;
 
 	      break;
 	    }
@@ -581,7 +582,8 @@ static void	*dhcp_renew_th(void	*pv)
 	    goto leave;
 
 	  /* start the timer again */
-	  timer_add_event(&timer_ms, lease->timer);
+	  if (timer_add_event(&timer_ms, lease->timer))
+	    goto err;
 
 	  if_dump("eth0");
 	  route_dump();
@@ -596,6 +598,13 @@ static void	*dhcp_renew_th(void	*pv)
     }
 
   printf("dhclient: exiting.\n");
+
+  goto exit;
+
+ err:
+  printf("dhclient: unknown error, exiting.\n");
+
+ exit:
 
   /* bring interface down */
   IPV4_ADDR_SET(null, 0);
@@ -663,13 +672,22 @@ error_t			dhcp_client(const char	*ifname)
   pthread_create(&th, NULL, dhcp_renew_th, lease);
 
   /* start DHCP renew timer */
-  if ((timer = malloc(sizeof (struct timer_event_s))) != NULL)
+  if ((timer = malloc(sizeof (struct timer_event_s))) == NULL)
+    {
+      lease->exit = 1;
+      sem_post(&lease->sem);
+    }
+  else
     {
       lease->timer = timer;
       timer->callback = dhcp_renew;
       timer->delay = lease->delay;
       timer->pv = lease;
-      timer_add_event(&timer_ms, timer);
+      if (timer_add_event(&timer_ms, timer))
+	{
+	  lease->exit = 1;
+	  sem_post(&lease->sem);
+	}
     }
 
   shutdown(sock, SHUT_RDWR);

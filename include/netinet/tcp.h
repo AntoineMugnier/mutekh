@@ -77,6 +77,8 @@ struct		tcphdr
 
 #define TCP_MAX_WINSHIFT	14	/* maximum window shift */
 
+#define TCP_MSL			30000	/* ms, see RFC */
+
 /*
     This file is part of MutekH.
 
@@ -143,46 +145,6 @@ struct		tcphdr
 #define TCP_SYN_ACK	1
 #define TCP_ACK		2
 #define TCP_FIN		3
-
-/*
- * This structure defines a TCP session.
- */
-
-struct					net_tcp_session_s
-{
-  struct net_if_s			*interface;
-  struct net_proto_s			*addressing;
-  struct net_tcp_addr_s			local;
-  struct net_tcp_addr_s			remote;
-
-  uint_fast32_t				curr_seq;
-  uint_fast32_t				to_ack;
-  uint_fast16_t				send_win;
-  uint_fast16_t				send_mss;
-  uint_fast32_t				recv_seq;
-  uint_fast16_t				recv_win;
-  uint_fast16_t				recv_mss;
-
-  tcp_connect_t				*connect;
-  void					*connect_data;
-  tcp_receive_t				*receive;
-  void					*receive_data;
-  tcp_close_t				*close;
-  void					*close_data;
-  tcp_accept_t				*accept;
-  void					*accept_data;
-
-  uint_fast8_t				state;
-
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
-};
-
-/*
- * Container types for tcp session list.
- */
-
-CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, NOOBJ, list_entry, 64);
-CONTAINER_KEY_TYPE(tcp_session, AGGREGATE, remote);
 
 /*
  * Prototypes
