@@ -84,6 +84,11 @@ struct driver_s
     /** network devices */
     struct dev_class_net_s	net;
 #endif
+
+#ifdef __DEVICE_SOUND_H__
+    /** sound devices */
+    struct dev_class_sound_s	sound;
+#endif
   } f;
 };
 

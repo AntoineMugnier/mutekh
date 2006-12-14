@@ -63,4 +63,7 @@ ifeq ($(CONFIG_DRIVER_INPUT_8042), defined)
  subdirs += input-8042
 endif
 
+ifeq ($(CONFIG_DRIVER_SOUND_SB16), defined)
+ subdirs += sound-sb16
+endif
 

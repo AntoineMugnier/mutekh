@@ -221,7 +221,7 @@ static inline size_t mem_alloc_getsize(void *ptr)
 void mem_init(void);
 
 #ifdef CONFIG_HEXO_MEMALLOC_GUARD
-static bool_t mem_guard_check(void) __attribute__((unused));
+static inline bool_t mem_guard_check(void) __attribute__((unused));
 #endif
 
 #include <arch/hexo/alloc.h>
