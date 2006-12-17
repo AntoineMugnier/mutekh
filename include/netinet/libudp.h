@@ -29,7 +29,7 @@
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
-#include <gpct/object_refcount.h>
+#include <gpct/object_simple.h>
 
 /*
  * Temporary ports boundaries.
@@ -79,7 +79,7 @@ typedef UDP_ERROR_CALLBACK(udp_error_callback_t);
  * Connection descriptors container.
  */
 
-OBJECT_TYPE(udp_desc_obj, REFCOUNT, struct net_udp_desc_s); /* XXX no refcount */
+OBJECT_TYPE(udp_desc_obj, SIMPLE, struct net_udp_desc_s);
 
 struct					net_udp_desc_s
 {
@@ -109,9 +109,9 @@ struct					net_udp_desc_s
 
 OBJECT_CONSTRUCTOR(udp_desc_obj);
 OBJECT_DESTRUCTOR(udp_desc_obj);
-OBJECT_FUNC(static inline, udp_desc_obj, REFCOUNT, udp_desc_obj, obj_entry);
+OBJECT_FUNC(static inline, udp_desc_obj, SIMPLE, udp_desc_obj, obj_entry);
 
-CONTAINER_TYPE(udp_desc, HASHLIST, struct net_udp_desc_s, NOLOCK, udp_desc_obj, list_entry, 64);
+CONTAINER_TYPE(udp_desc, HASHLIST, struct net_udp_desc_s, NOLOCK, NOOBJ, list_entry, 64);
 CONTAINER_KEY_TYPE(udp_desc, SCALAR, port);
 
 /*

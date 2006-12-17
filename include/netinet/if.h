@@ -118,7 +118,7 @@ error_t	if_config(int_fast32_t		ifindex,
 		  struct net_addr_s	*address,
 		  struct net_addr_s	*mask);
 
-void	if_register_proto(struct net_if_s	*interface,
+error_t	if_register_proto(struct net_if_s	*interface,
 			  struct net_proto_s	*proto,
 			  ...);
 void	if_pushpkt(struct net_if_s	*interface,

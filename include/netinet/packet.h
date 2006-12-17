@@ -210,6 +210,7 @@ struct				net_dispatch_s
  * The packet object.
  */
 
+struct net_packet_s	*packet_dup(struct net_packet_s	*orig);
 uint16_t		packet_checksum(const void	*data,
 					size_t		size);
 uint16_t		packet_memcpy(void		*dst,

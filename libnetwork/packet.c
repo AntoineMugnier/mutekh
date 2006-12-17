@@ -156,6 +156,7 @@ uint16_t		packet_memcpy(void		*dst,
 
 struct net_packet_s		*packet_dup(struct net_packet_s	*orig)
 {
+  packet_obj_refnew(orig);
   return orig; /* XXX */
 }
 

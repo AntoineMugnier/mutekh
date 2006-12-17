@@ -23,6 +23,7 @@
 #define NETINET_PROTOS_H_
 
 #include <hexo/types.h>
+#include <hexo/error.h>
 #include <hexo/alloc.h>
 
 #include <hexo/gpct_platform_hexo.h>
@@ -77,9 +78,9 @@ typedef NET_PREPAREPKT(net_preparepkt_t);
  * Prototype of the function used to initialize private data.
  */
 
-#define NET_INITPROTO(f)	void (f)(struct net_if_s	*interface, \
-					 struct net_proto_s	*proto,	    \
-					 va_list		va)
+#define NET_INITPROTO(f)	error_t (f)(struct net_if_s	*interface,	\
+					    struct net_proto_s	*proto,		\
+					    va_list		va)
 
 typedef NET_INITPROTO(net_initproto_t);
 

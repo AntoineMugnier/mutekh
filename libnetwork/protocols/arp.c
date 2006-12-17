@@ -64,11 +64,17 @@ NET_INITPROTO(arp_init)
 {
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)proto->pv;
 
-  arp_table_init(&pv->table);
+  if (arp_table_init(&pv->table))
+    return -1;
   pv->stale_timeout.callback = arp_stale_timeout;
   pv->stale_timeout.pv = pv;
   pv->stale_timeout.delay = ARP_STALE_TIMEOUT;
-  timer_add_event(&timer_ms, &pv->stale_timeout);
+  if (timer_add_event(&timer_ms, &pv->stale_timeout))
+    {
+      arp_table_destroy(&pv->table);
+      return -1;
+    }
+  return 0;
 }
 
 /*
@@ -208,7 +214,7 @@ static inline void	arp_reply(struct net_if_s		*interface,
   struct ether_arp	*hdr;
   struct net_header_s	*nethdr;
 
-  packet_obj_refnew(packet); /* XXX dup */
+  packet = packet_dup(packet);
 
   /* get the header */
   nethdr = &packet->header[packet->stage];
@@ -359,7 +365,10 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 	return NULL;
       arp_entry->resolution = NULL;
       if (!arp_table_push(&pv->table, arp_entry))
-	return NULL;
+	{
+	  arp_entry_obj_delete(arp_entry);
+	  return NULL;
+	}
     }
 
   /* fill the significant fields */
@@ -486,6 +495,8 @@ TIMER_CALLBACK(arp_timeout)
 {
   struct arp_entry_s		*entry = (struct arp_entry_s *)pv;
   struct arp_resolution_s	*res = entry->resolution;
+  struct net_packet_s		*waiting;
+  struct net_pv_arp_s		*pv_arp = (struct net_pv_arp_s *)res->arp->pv;
 
   net_debug("ARP timeout\n");
 
@@ -495,29 +506,25 @@ TIMER_CALLBACK(arp_timeout)
       arp_request(res->interface, res->addressing, entry->ip);
 
       /* set another timeout */
-      timer_add_event(&timer_ms, timer);
+      if (!timer_add_event(&timer_ms, timer))
+	return;
     }
-  else
+
+  /* otherwise, error */
+  net_debug("ARP error\n");
+
+  /* delete the entry */
+  arp_table_remove(&pv_arp->table, entry);
+
+  /* delete the queued packets and send errors */
+  while ((waiting = packet_queue_pop(&res->wait)))
     {
-      struct net_packet_s	*waiting;
-      struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)res->arp->pv;
-
-      /* otherwise, error */
-      net_debug("ARP error\n");
-
-      /* delete the entry */
-      arp_table_remove(&pv->table, entry);
-
-      /* delete the queued packets and send errors */
-      while ((waiting = packet_queue_pop(&res->wait)))
-	{
-	  res->addressing->desc->f.addressing->errormsg(waiting, ERROR_HOST_UNREACHABLE);
-	  packet_obj_refdrop(waiting);
-	}
-
-      /* free the arp entry */
-      arp_entry_obj_delete(entry);
+      res->addressing->desc->f.addressing->errormsg(waiting, ERROR_HOST_UNREACHABLE);
+      packet_obj_refdrop(waiting);
     }
+
+  /* free the arp entry */
+  arp_entry_obj_delete(entry);
 }
 
 /*

@@ -92,8 +92,11 @@ NET_INITPROTO(ip_init)
   pv->icmp = icmp;
   pv->addr = ip;
   pv->mask = mask;
-  ip_packet_init(&pv->fragments);
+  if (ip_packet_init(&pv->fragments))
+    return -1;
   pv->id_seq = 1;
+
+  return 0;
 }
 
 /*
@@ -103,8 +106,27 @@ NET_INITPROTO(ip_init)
 NET_DESTROYPROTO(ip_destroy)
 {
   struct net_pv_ip_s	*pv = (struct net_pv_ip_s *)proto->pv;
+  struct ip_packet_s	*to_remove = NULL;
 
-  ip_packet_clear(&pv->fragments);
+  /* remove all items in the reassembly table */
+  CONTAINER_FOREACH(ip_packet, HASHLIST, NOLOCK, &pv->fragments,
+  {
+    /* remove previous item */
+    if (to_remove != NULL)
+      {
+	ip_packet_remove(&pv->fragments, to_remove);
+	fragment_obj_delete(to_remove);
+      }
+    to_remove = item;
+  });
+
+  /* particular case handling */
+  if (to_remove != NULL)
+    {
+      ip_packet_remove(&pv->fragments, to_remove);
+      fragment_obj_delete(to_remove);
+    }
+
   ip_packet_destroy(&pv->fragments);
 }
 
@@ -130,13 +152,24 @@ OBJECT_CONSTRUCTOR(fragment_obj)
   frag->received = 0;
   frag->addressing = param;
   memcpy(frag->id, id, 6);
-  packet_queue_init(&frag->packets);
+  if (packet_queue_init(&frag->packets))
+    {
+      mem_free(frag);
+
+      return NULL;
+    }
 
   /* start timeout timer */
   frag->timeout.callback = ip_fragment_timeout;
   frag->timeout.pv = (void *)frag;
   frag->timeout.delay = IP_REASSEMBLY_TIMEOUT;
-  timer_add_event(&timer_ms, &frag->timeout);
+  if (timer_add_event(&timer_ms, &frag->timeout))
+    {
+      packet_queue_destroy(&frag->packets);
+      mem_free(frag);
+
+      return NULL;
+    }
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_new[NETWORK_PROFILING_FRAGMENT]++;
@@ -217,7 +250,10 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	return 0;
 
       if (!ip_packet_push(&pv->fragments, p))
-	return 0;
+	{
+	  fragment_obj_delete(p);
+	  return 0;
+	}
     }
 
   p->received += datasz;
@@ -252,7 +288,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       if ((data = mem_alloc(total + headers_len + 3, MEM_SCOPE_NETWORK)) == NULL)
 	{
 	  /* memory exhausted, clear the packet */
-	  fragment_obj_refdrop(p);
+	  fragment_obj_delete(p);
 
 	  return 0;
 	}
@@ -301,7 +337,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 
 	      /* delete all the packets */
 	      packet_obj_refdrop(frag);
-	      fragment_obj_refdrop(p);
+	      fragment_obj_delete(p);
 
 	      return 0;
 	    }
@@ -314,7 +350,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	}
 
       /* release memory */
-      fragment_obj_refdrop(p);
+      fragment_obj_delete(p);
 
       /* update nethdr. first, we need to determine the real size of
 	 each chunks. then we must update the pointers to the
@@ -362,7 +398,7 @@ TIMER_CALLBACK(ip_fragment_timeout)
     }
 
   /* delete all the fragments */
-  fragment_obj_refdrop(p);
+  fragment_obj_delete(p);
 }
 
 /*

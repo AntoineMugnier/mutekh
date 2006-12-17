@@ -587,6 +587,9 @@ DEVNET_PREPAREPKT(net_ne2000_preparepkt)
   uint_fast16_t			total = 0;
   uint8_t			*buff;
 
+  if (size > ETHERMTU)
+    return NULL;
+
 #ifdef CONFIG_DRIVER_NET_NE2000_FRAGMENT
   total = sizeof (struct ether_header) + size + 2 + max_padding;
 #else

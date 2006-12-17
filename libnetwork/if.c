@@ -78,7 +78,12 @@ OBJECT_CONSTRUCTOR(net_if_obj)
   interface->type = type;
   interface->rx_bytes = interface->rx_packets = interface->tx_bytes = interface->tx_packets = 0;
   interface->state = NET_IF_STATE_DOWN;
-  net_protos_init(&interface->protocols);
+  if (net_protos_init(&interface->protocols))
+    {
+      mem_free(interface);
+
+      return NULL;
+    }
 
   /* choose a funky name for the interface */
   if (type == IF_ETHERNET)
@@ -147,11 +152,14 @@ struct net_if_s	*if_register(struct device_s	*dev,
   if (!net_if_push(&net_interfaces, interface))
     {
 #ifdef CONFIG_NETWORK_UDP
-      net_protos_remove(&interface->protocols, udp);
+      if (udp != NULL)
+	net_protos_remove(&interface->protocols, udp);
 #endif
 #ifdef CONFIG_NETWORK_TCP
-      net_protos_remove(&interface->protocols, tcp);
+      if (tcp != NULL)
+	net_protos_remove(&interface->protocols, tcp);
 #endif
+      net_if_obj_refdrop(interface);
       return NULL;
     }
 
@@ -273,9 +281,11 @@ error_t			if_config(int_fast32_t		ifindex,
 	      net_proto_obj_refdrop(arp);
 	      return err;
 	    }
-	  if_register_proto(interface, arp);
-	  if_register_proto(interface, icmp);
-	  if_register_proto(interface, ip, arp, icmp, IPV4_ADDR_GET(*address), IPV4_ADDR_GET(*mask));
+	  /* if one of these fails, the refdrop will clean the memory */
+	  if (if_register_proto(interface, arp))
+	    if (if_register_proto(interface, icmp))
+	      if_register_proto(interface, ip, arp, icmp, IPV4_ADDR_GET(*address),
+				IPV4_ADDR_GET(*mask));
 
 	  net_proto_obj_refdrop(ip);
 	  net_proto_obj_refdrop(arp);
@@ -306,7 +316,7 @@ error_t			if_config(int_fast32_t		ifindex,
  * Register a new protocol.
  */
 
-void			if_register_proto(struct net_if_s	*interface,
+error_t			if_register_proto(struct net_if_s	*interface,
 					  struct net_proto_s	*proto,
 					  ...)
 {
@@ -316,12 +326,23 @@ void			if_register_proto(struct net_if_s	*interface,
 
   /* call the protocol constructor */
   if (proto->desc->initproto != NULL)
-    proto->desc->initproto(interface, proto, va);
+    if (proto->desc->initproto(interface, proto, va))
+      {
+	va_end(va);
+
+	return -1;
+      }
 
   /* insert in the protocol list */
-  net_protos_push(&interface->protocols, proto);
+  if (!net_protos_push(&interface->protocols, proto))
+    {
+      va_end(va);
+
+      return -1;
+    }
 
   va_end(va);
+  return 0;
 }
 
 /*
@@ -445,8 +466,7 @@ struct net_if_s	*if_get_by_index(int_fast32_t	index)
 {
   char	name[10];
 
-  /* XXX */
-  sprintf(name, "eth%d", index - 1);
+  sprintf(name, "eth%d", index - 1); /* XXX un peu l'arrache quand meme :-) */
   return if_get_by_name(name);
 }
 

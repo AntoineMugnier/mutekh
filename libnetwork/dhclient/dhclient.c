@@ -160,16 +160,19 @@ static struct dhcphdr	*dhcp_is_for_me(struct net_if_s	*interface,
 }
 
 /*
- * This function browses the DHCP options to find a given value. XXX check overflow
+ * This function browses the DHCP options to find a given value.
  */
 
 static struct dhcp_opt_s	*dhcp_get_opt(struct dhcphdr	*dhcp,
+					      uint8_t		*endptr,
 					      uint8_t		opt)
 {
   struct dhcp_opt_s		*p = (struct dhcp_opt_s *)(dhcp + 1);
 
   while (p->code != DHCP_END && p->code != opt)
     {
+      if (p >= endptr || &p->len >= endptr)
+	return NULL;
       p = (struct dhcp_opt_s *)((uint8_t *)p + 2 + p->len);
     }
 
@@ -356,6 +359,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
   struct dhcp_opt_s	*opt;
   bool_t		requested = 0;
   timer_delay_t		t;
+  uint8_t		*endptr;
 
   if ((packet = malloc(interface->mtu)) == NULL)
     return -1;
@@ -368,9 +372,11 @@ static error_t		dhcp_request(struct net_if_s	*interface,
       if (timer_get_tick(&timer_ms) - t > DHCP_TIMEOUT * 1000)
 	break;
 
+      endptr = packet + sz;
+
       if ((dhcp = dhcp_is_for_me(interface, packet, sock)) != NULL)
 	{
-	  if ((opt = dhcp_get_opt(dhcp, DHCP_MSG)) == NULL)
+	  if ((opt = dhcp_get_opt(dhcp, endptr, DHCP_MSG)) == NULL)
 	    continue;
 
 	  switch (opt->data[0])
@@ -425,7 +431,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		  lease->ip = ntohl(dhcp->yiaddr);
 
 		  /* compute lease time */
-		  opt = dhcp_get_opt(dhcp, DHCP_LEASE);
+		  opt = dhcp_get_opt(dhcp, endptr, DHCP_LEASE);
 		  if (opt != NULL)
 		    lease->delay = (endian_be32_na_load(opt->data) / 2) * 1000;
 		  else
@@ -435,7 +441,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		  IPV4_ADDR_SET(addr, lease->ip);
 
 		  /* if netmask is present, use it, otherwise guess it */
-		  opt = dhcp_get_opt(dhcp, DHCP_NETMASK);
+		  opt = dhcp_get_opt(dhcp, endptr, DHCP_NETMASK);
 		  if (opt != NULL)
 		    IPV4_ADDR_SET(mask, endian_be32_na_load(opt->data));
 		  else
@@ -453,7 +459,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		  route_flush(interface);
 
 		  printf("  lease time: %u seconds\n", lease->delay / 1000);
-		  if ((opt = dhcp_get_opt(dhcp, DHCP_HOSTNAME)) != NULL)
+		  if ((opt = dhcp_get_opt(dhcp, endptr, DHCP_HOSTNAME)) != NULL)
 		    {
 		      char	name[opt->len + 1];
 
@@ -462,7 +468,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		      printf("  hostname: %s\n", name);
 		    }
 
-		  if ((opt = dhcp_get_opt(dhcp, DHCP_ROUTER)) != NULL)
+		  if ((opt = dhcp_get_opt(dhcp, endptr, DHCP_ROUTER)) != NULL)
 		    {
 		      struct net_route_s	*def;
 		      struct net_addr_s		null;

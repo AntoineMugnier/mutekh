@@ -147,7 +147,7 @@ error_t			udp_bind(struct net_udp_desc_s	**desc,
   memcpy(&d->address, &local->address, sizeof (struct net_addr_s));
   if (!udp_desc_push(&descriptors, d))
     {
-      udp_desc_obj_refdrop(d);
+      udp_desc_obj_delete(d);
       return -ENOMEM;
     }
 
@@ -301,6 +301,8 @@ void			udp_close(struct net_udp_desc_s		*desc)
 
   if (desc->connected)
     route_obj_refdrop(desc->route);
+
+  udp_desc_obj_delete(desc);
 }
 
 /*
@@ -357,7 +359,26 @@ void			libudp_signal(struct net_packet_s	*packet,
 
 void		libudp_destroy(void)
 {
-  udp_desc_clear(&descriptors);
+  struct net_udp_desc_s	*to_remove = NULL;
+
+  /* remove all opened descriptors */
+  CONTAINER_FOREACH(udp_desc, HASHLIST, NOLOCK, &descriptors,
+  {
+    /* remove previous item */
+    if (to_remove != NULL)
+      {
+	udp_desc_remove(&descriptors, to_remove);
+	udp_desc_obj_delete(to_remove);
+      }
+    to_remove = item;
+  });
+
+  /* particular case handling */
+  if (to_remove != NULL)
+    {
+      udp_desc_remove(&descriptors, to_remove);
+      udp_desc_obj_delete(to_remove);
+    }
 }
 
 /*
