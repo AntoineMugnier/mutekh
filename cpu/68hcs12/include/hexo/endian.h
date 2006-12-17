@@ -23,13 +23,12 @@
 #error This file can not be included directly
 #else
 
-#define __CPU_ENDIAN_H_
+#define CPU_ENDIAN_H_
 
-/** 68hc12 CPU is 8 bits, we don't care about endianness  */
-#undef CPU_ENDIAN_ISBIG
-#define CPU_ENDIAN_ISLITTLE
+#define CPU_ENDIAN_ISBIG
+#undef CPU_ENDIAN_ISLITTLE
 
-/** don't care about alignment */
+/** unaligned access can be used */
 #define CPU_NATIVE_NONALIGNED_ACCESS
 
 #endif

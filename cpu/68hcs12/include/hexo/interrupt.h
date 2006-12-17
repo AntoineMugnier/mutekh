@@ -52,42 +52,68 @@ cpu_interrupt_sys_sethandler(cpu_interrupt_handler_t *hndl)
 static inline void
 cpu_interrupt_disable(void)
 {
+  __asm__ volatile ("sei");
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
+  __asm__ volatile ("cli");
 }
 
 static inline void
 cpu_interrupt_process(void)
 {
+  __asm__ volatile ("nop"
+		    :
+		    :
+		    : "memory");
 }
 
 static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
+  reg_t	r;
+
+  __asm__ volatile ("tpa"
+		    : "=a" (r));
+  *state = r & 0x10;
 }
 
 static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
+  cpu_interrupt_savestate(state);
+  cpu_interrupt_disable();
 }
 
 static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
+  if (!state)
+    cpu_interrupt_enable();
+  else
+    cpu_interrupt_disable();
 }
 
 static inline bool_t
 cpu_interrupt_getstate(void)
 {
-  return 0;
+  reg_t	r;
+
+  __asm__ volatile ("tpa"
+		    : "=a" (r));
+
+  return !!(r & 0x10);
 }
 
 static inline void
 cpu_interrupt_wait(void)
 {
+  __asm__ volatile ("wai"
+		    :
+		    :
+		    : "memory");
 }
 
 #endif
