@@ -116,6 +116,7 @@ NET_DESTROYPROTO(ip_destroy)
       {
 	ip_packet_remove(&pv->fragments, to_remove);
 	fragment_obj_delete(to_remove);
+	to_remove = NULL;
       }
     to_remove = item;
   });

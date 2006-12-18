@@ -50,20 +50,22 @@ static UDP_CALLBACK(socket_recv_callback)
     return;
 
   /* push the incoming buffer to the socket lib */
-  if ((buffer = mem_alloc(sizeof (struct net_buffer_s), MEM_SCOPE_NETWORK)) != NULL)
+  if ((buffer = mem_alloc(sizeof (struct net_buffer_s) + size, MEM_SCOPE_NETWORK)) != NULL)
     {
-      if ((buffer->data = mem_alloc(size, MEM_SCOPE_NETWORK)) == NULL)
-	{
-	  mem_free(buffer);
-	  return;
-	}
+      buffer->data = (void *)(buffer + 1);
       memcpy(buffer->data, data, size);
       buffer->size = size;
       memcpy(&buffer->address, &remote->address, sizeof (struct net_addr_s));
       buffer->port = remote->port;
 
+
       if (buffer_queue_lock_pushback(&pv_udp->recv_q, buffer))
-	sem_post(&pv_udp->recv_sem);
+	{
+	  printf("push %p\n", buffer);
+	  sem_post(&pv_udp->recv_sem);
+	}
+      else
+	mem_free(buffer);
     }
 }
 
@@ -352,7 +354,6 @@ static _RECVMSG(recvmsg_udp)
     {
       if (socket_addr_in(fd, &buffer->address, addr, &message->msg_namelen, htons(buffer->port)))
 	{
-	  mem_free(buffer->data);
 	  mem_free(buffer);
 	  return -1;
 	}
@@ -370,7 +371,6 @@ static _RECVMSG(recvmsg_udp)
       memcpy(message->msg_iov[i].iov_base, data + sz, chunksz);
     }
 
-  mem_free(buffer->data);
   mem_free(buffer);
 
   if (flags & MSG_TRUNC)

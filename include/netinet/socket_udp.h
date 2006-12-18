@@ -38,8 +38,6 @@ struct			socket_udp_pv_s
   net_port_t		recv_port;
   buffer_queue_root_t	recv_q;
   sem_t			recv_sem;
-  void			*recv_data;
-  size_t		recv_size;
 };
 
 #endif

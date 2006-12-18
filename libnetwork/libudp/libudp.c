@@ -369,6 +369,7 @@ void		libudp_destroy(void)
       {
 	udp_desc_remove(&descriptors, to_remove);
 	udp_desc_obj_delete(to_remove);
+	to_remove = NULL;
       }
     to_remove = item;
   });

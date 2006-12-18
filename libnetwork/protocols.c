@@ -40,6 +40,7 @@ OBJECT_CONSTRUCTOR(net_proto_obj)
   net_proto_obj_init(proto);
   proto->desc = desc;
   proto->id = desc->id;
+  proto->initialized = 0;
   if (desc->pv_size)
     proto->pv = (void *)(proto + 1);
   else
@@ -58,7 +59,7 @@ OBJECT_CONSTRUCTOR(net_proto_obj)
 
 OBJECT_DESTRUCTOR(net_proto_obj)
 {
-  if (obj->desc->destroyproto != NULL)
+  if (obj->desc->destroyproto != NULL && obj->initialized)
     obj->desc->destroyproto(obj);
 
   mem_free(obj);

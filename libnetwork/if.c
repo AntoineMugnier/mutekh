@@ -244,8 +244,11 @@ error_t			if_config(int_fast32_t		ifindex,
   struct net_proto_s	*icmp;
   error_t		err = -1;
 
-  if (interface == NULL || interface->state != NET_IF_STATE_UP)
-    return err;
+  if (interface == NULL)
+    return -1;
+
+  if (interface->state != NET_IF_STATE_UP)
+    goto leave;
 
 #ifdef CONFIG_NETWORK_IPV4
   if (address->family == addr_ipv4)
@@ -269,28 +272,38 @@ error_t			if_config(int_fast32_t		ifindex,
 	{
 	  /* add new set of protocols for IPv4 */
 	  if ((ip = net_proto_obj_new(NULL, &ip_protocol)) == NULL)
-	    return err;
+	    {
+	      net_if_obj_refdrop(interface);
+	      return err;
+	    }
 	  if ((arp = net_proto_obj_new(NULL, &arp_protocol)) == NULL)
 	    {
+	      net_if_obj_refdrop(interface);
 	      net_proto_obj_refdrop(ip);
 	      return err;
 	    }
 	  if ((icmp = net_proto_obj_new(NULL, &icmp_protocol)) == NULL)
 	    {
+	      net_if_obj_refdrop(interface);
 	      net_proto_obj_refdrop(ip);
 	      net_proto_obj_refdrop(arp);
 	      return err;
 	    }
+
+	  err = 0;
 	  /* if one of these fails, the refdrop will clean the memory */
 	  if (if_register_proto(interface, arp))
+	    err = -1;
+	  else
 	    if (if_register_proto(interface, icmp))
-	      if_register_proto(interface, ip, arp, icmp, IPV4_ADDR_GET(*address),
-				IPV4_ADDR_GET(*mask));
+	      err = -1;
+	    else
+	      err = if_register_proto(interface, ip, arp, icmp, IPV4_ADDR_GET(*address),
+				      IPV4_ADDR_GET(*mask));
 
 	  net_proto_obj_refdrop(ip);
 	  net_proto_obj_refdrop(arp);
 	  net_proto_obj_refdrop(icmp);
-	  err = 0;
 	}
       else
 	{
@@ -306,6 +319,8 @@ error_t			if_config(int_fast32_t		ifindex,
 	}
     }
 #endif
+
+ leave:
 
   net_if_obj_refdrop(interface);
 
@@ -326,22 +341,22 @@ error_t			if_register_proto(struct net_if_s	*interface,
 
   /* call the protocol constructor */
   if (proto->desc->initproto != NULL)
-    if (proto->desc->initproto(interface, proto, va))
-      {
-	va_end(va);
-
-	return -1;
-      }
-
-  /* insert in the protocol list */
-  if (!net_protos_push(&interface->protocols, proto))
     {
-      va_end(va);
+      if (proto->desc->initproto(interface, proto, va))
+	{
+	  va_end(va);
 
-      return -1;
+	  return -1;
+	}
+      proto->initialized = 1;
     }
 
   va_end(va);
+
+  /* insert in the protocol list */
+  if (!net_protos_push(&interface->protocols, proto))
+    return -1;
+
   return 0;
 }
 
@@ -367,7 +382,7 @@ void			if_pushpkt(struct net_if_s	*interface,
   /* lookup to all modules matching the protocol  */
   NET_FOREACH_PROTO(&interface->protocols, packet->proto,
   {
-      item->desc->pushpkt(interface, packet, item);
+    item->desc->pushpkt(interface, packet, item);
   });
 }
 

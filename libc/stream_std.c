@@ -12,6 +12,7 @@
 %config CONFIG_LIBC_STREAM_STD
 desc Enable support for stdin, stdout and stderr through tty device
 parent CONFIG_LIBC_STREAM
+depend CONFIG_MUTEK_CONSOLE
 default defined
 %config end
 

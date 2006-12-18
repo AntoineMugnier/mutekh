@@ -120,7 +120,8 @@ error_t			rarp_client(const char	*ifname)
 	  /* set the new address */
 	  IPV4_ADDR_SET(v4_addr, ip);
 	  IPV4_ADDR_SET(v4_mask, mask);
-	  if_config(interface->index, IF_SET, &v4_addr, &v4_mask);
+	  if (if_config(interface->index, IF_SET, &v4_addr, &v4_mask))
+	    goto leave;
 	  /* configure interface route */
 	  IPV4_ADDR_SET(target, v4_addr.addr.ipv4 & v4_mask.addr.ipv4);
 	  if ((route = route_obj_new(&target, &v4_mask, interface)) != NULL)

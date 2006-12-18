@@ -474,7 +474,8 @@ struct net_packet_s	*socket_grab_packet(socket_t			fd,
       goto again;
     }
 
-  timer_cancel_event(&timeout, 0);
+  if (timeout_started)
+    timer_cancel_event(&timeout, 0);
 
   return packet;
 }
@@ -540,7 +541,10 @@ struct net_buffer_s	*socket_grab_buffer(socket_t			fd,
       goto again;
     }
 
-  timer_cancel_event(&timeout, 0);
+  printf("grabbed %p\n", buffer);
+
+  if (timeout_started)
+    timer_cancel_event(&timeout, 0);
 
   return buffer;
 }

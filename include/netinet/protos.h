@@ -198,6 +198,7 @@ struct					net_proto_s
   const struct net_proto_desc_s		*desc;	/* protocol descriptor */
   net_proto_id_t			id;	/* protocol identifier */
   struct net_proto_pv_s			*pv;	/* private data */
+  bool_t				initialized;
 
   net_proto_obj_entry_t			obj_entry;
   CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;

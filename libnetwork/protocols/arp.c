@@ -96,6 +96,7 @@ NET_DESTROYPROTO(arp_destroy)
       {
 	arp_table_remove(&pv->table, to_remove);
 	arp_entry_obj_delete(to_remove);
+	to_remove = NULL;
       }
     to_remove = item;
   });

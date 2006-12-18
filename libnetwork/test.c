@@ -228,7 +228,7 @@ static TIMER_CALLBACK(profiling)
   timer_add_event(&timer_ms, timer);
 }
 
-#if 0
+#if 1
 extern struct device_s keyboard_dev;
 
 static DEVINPUT_CALLBACK(chiche)
@@ -272,7 +272,7 @@ void *net_up(void *p)
 {
   pthread_t th;
 
-#if 0
+#if 1
   dev_input_setcallback(&keyboard_dev, DEVINPUT_EVENT_BUTTON_UP, DEVINPUT_CTRLID_ALL, chiche, NULL);
 #endif
 
