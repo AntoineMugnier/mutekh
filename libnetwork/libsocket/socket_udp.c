@@ -58,12 +58,8 @@ static UDP_CALLBACK(socket_recv_callback)
       memcpy(&buffer->address, &remote->address, sizeof (struct net_addr_s));
       buffer->port = remote->port;
 
-
       if (buffer_queue_lock_pushback(&pv_udp->recv_q, buffer))
-	{
-	  printf("push %p\n", buffer);
-	  sem_post(&pv_udp->recv_sem);
-	}
+	sem_post(&pv_udp->recv_sem);
       else
 	mem_free(buffer);
     }
@@ -367,11 +363,10 @@ static _RECVMSG(recvmsg_udp)
       chunksz = message->msg_iov[i].iov_len;
       if (sz + chunksz > size)
 	chunksz = size - sz;
-      printf("rcv %u\n", chunksz);
       memcpy(message->msg_iov[i].iov_base, data + sz, chunksz);
     }
 
-  mem_free(buffer);
+  //  mem_free(buffer); /* XXX */
 
   if (flags & MSG_TRUNC)
     sz = size;

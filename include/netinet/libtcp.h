@@ -34,6 +34,8 @@
  */
 
 #define TCP_CONNECTION_TIMEOUT	10	/* seconds */
+#define TCP_RTO_FACTOR		2	/* XXX should be a float 1.3 < x < 2 */
+#define TCP_BACKOFF_FACTOR	2	/* Karn's backoff factor */
 
 /*
  * Forward decls.
@@ -91,6 +93,7 @@ struct					net_tcp_session_s
   struct net_tcp_addr_s			local;
   struct net_tcp_addr_s			remote;
 
+  /* sequence, acks and windows */
   uint_fast32_t				curr_seq;
   uint_fast32_t				to_ack;
   uint_fast16_t				send_win;
@@ -99,6 +102,13 @@ struct					net_tcp_session_s
   uint_fast16_t				recv_win;
   uint_fast16_t				recv_mss;
 
+  /* send & receive buffer */
+  uint8_t				*recv_buffer;
+  uint_fast16_t				recv_offset;
+  uint8_t				*send_buffer;
+  uint_fast16_t				send_offset;
+
+  /* callbacks */
   tcp_connect_t				*connect;
   void					*connect_data;
   tcp_receive_t				*receive;
@@ -107,6 +117,11 @@ struct					net_tcp_session_s
   void					*close_data;
   tcp_accept_t				*accept;
   void					*accept_data;
+
+  /* rtt & other variables */
+  timer_delay_t				srtt;
+  bool_t				backoff;
+  timer_delay_t				last_ack;
 
   uint_fast8_t				state;
 

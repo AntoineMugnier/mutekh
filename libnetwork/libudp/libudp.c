@@ -21,6 +21,8 @@
 
 /*
  * User interface to UDP transport layer.
+ *
+ * XXX bind + connect => cas connect tt court, mettre en listen
  */
 
 #include <hexo/types.h>
@@ -151,8 +153,7 @@ error_t			udp_bind(struct net_udp_desc_s	**desc,
       return -ENOMEM;
     }
 
-  if (desc != NULL)
-    *desc = d;
+  *desc = d;
 
   return 0;
 }
@@ -174,12 +175,12 @@ static inline bool_t udp_send_if(struct net_udp_desc_s	*desc,
 
   /* prepare the packet */
   if ((packet = packet_obj_new(NULL)) == NULL)
-    return -ENOMEM;
+    return 0;
   if ((dest = udp_preparepkt(interface, addressing, packet, size, 0)) == NULL)
     {
       packet_obj_refdrop(packet);
 
-      return -ENOMEM;
+      return 0;
     }
 
   /* copy data into the packet */
@@ -282,7 +283,7 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
       });
     }
   else
-    err = udp_send_if(desc, remote, route->interface, route->addressing, local_port, data, size);
+    err = !udp_send_if(desc, remote, route->interface, route->addressing, local_port, data, size);
 
   if (drop_route)
     route_obj_refdrop(route);

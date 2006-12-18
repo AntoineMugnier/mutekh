@@ -228,7 +228,7 @@ static TIMER_CALLBACK(profiling)
   timer_add_event(&timer_ms, timer);
 }
 
-#if 1
+#if 0
 extern struct device_s keyboard_dev;
 
 static DEVINPUT_CALLBACK(chiche)
@@ -272,7 +272,7 @@ void *net_up(void *p)
 {
   pthread_t th;
 
-#if 1
+#if 0
   dev_input_setcallback(&keyboard_dev, DEVINPUT_EVENT_BUTTON_UP, DEVINPUT_CTRLID_ALL, chiche, NULL);
 #endif
 
@@ -311,6 +311,9 @@ void *net_up(void *p)
   if_dump("eth0");
 
   route_dump();
+
+  while(1)
+    pthread_yield();
 
 #if 0
   struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);

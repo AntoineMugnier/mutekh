@@ -541,8 +541,6 @@ struct net_buffer_s	*socket_grab_buffer(socket_t			fd,
       goto again;
     }
 
-  printf("grabbed %p\n", buffer);
-
   if (timeout_started)
     timer_cancel_event(&timeout, 0);
 
