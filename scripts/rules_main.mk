@@ -7,7 +7,7 @@ TARGET_SECTIONS=.text .data .boot .contextdata
 
 target = kernel-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME)
 
-MODULES += libc hexo mutek
+MODULES += libc hexo mutek gpct
 
 ifeq ($(CONFIG_NETWORK), defined)
  MODULES += libnetwork
