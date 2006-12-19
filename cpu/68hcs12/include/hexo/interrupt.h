@@ -75,8 +75,11 @@ cpu_interrupt_savestate(reg_t *state)
 {
   reg_t	r;
 
-  __asm__ volatile ("tpa"
-		    : "=a" (r));
+  __asm__ volatile ("tpa	\n"
+		    "tfr a,%0	"
+		    : "=r" (r)
+		    :
+		    : "a");
   *state = r & 0x10;
 }
 

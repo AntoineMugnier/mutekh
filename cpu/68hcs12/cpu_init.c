@@ -19,8 +19,13 @@
 
 */
 
+#include <hexo/interrupt.h>
 #include <hexo/types.h>
 #include <hexo/error.h>
+
+CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
+CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;
+CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_sys_handler;
 
 error_t
 cpu_global_init(void)

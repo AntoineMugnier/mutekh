@@ -39,6 +39,7 @@ cpu_isbootstrap(void)
 typedef uint32_t cpu_cycle_t;
 
 static inline cpu_cycle_t
+__attribute__ ((deprecated))
 cpu_cycle_count(void)
 {
   return 0;
