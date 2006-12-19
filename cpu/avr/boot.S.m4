@@ -114,7 +114,7 @@ __irq_entry_default:
 	brne	.do_clear_bss_loop
 
 	/* call arch_init function */
-	rcall	arch_init
+	call	arch_init
 
 	/* stop processor execution */
 	cli
