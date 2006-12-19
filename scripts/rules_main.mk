@@ -7,7 +7,7 @@ TARGET_SECTIONS=.text .data .boot .contextdata
 
 target = kernel-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME)
 
-MODULES += libc
+MODULES += libc hexo mutek
 
 ifeq ($(CONFIG_NETWORK), defined)
  MODULES += libnetwork
@@ -17,7 +17,7 @@ ifeq ($(CONFIG_PTHREAD), defined)
  MODULES += libpthread
 endif
 
-subdirs = $(MODULES) arch cpu drivers hexo mutek
+subdirs = $(MODULES) arch cpu drivers
 
 objs =
 

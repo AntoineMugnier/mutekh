@@ -90,6 +90,10 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
   if (!(cld = mem_alloc(sizeof (struct cpu_cld_s), MEM_SCOPE_SYS)))
     return NULL;
 
+  cld->id = cpu_id;
+
+#if 0
+
   /* allocate memory for tracer process stack */
   tracer_stack = (void*)emu_do_syscall(EMU_SYSCALL_MMAP, 6, NULL, TRACER_STACK_SIZE * sizeof(reg_t),
 				       EMU_PROT_READ | EMU_PROT_WRITE,
@@ -101,8 +105,6 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
 
   if (tracer_stack == EMU_MAP_FAILED)
     return NULL;
-
-  cld->id = cpu_id;
 
   cld->worker_pid = emu_do_syscall(EMU_SYSCALL_GETPID, 0);
 
@@ -124,6 +126,8 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
 
   if (cld->tracer_pid < 0)
     return NULL;
+
+#endif
 
 #if defined(CONFIG_DEBUG)
   /* enable alignment check */
