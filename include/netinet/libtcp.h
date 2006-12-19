@@ -103,6 +103,8 @@ struct					net_tcp_session_s
   uint_fast16_t				recv_mss;
 
   /* send & receive buffer */
+  tcp_segment_queue_root_t		oos;		/* out-of-segment queue */
+  tcp_segment_queue_root_t		unacked;	/* send but unacked queue */
   uint8_t				*recv_buffer;
   uint_fast16_t				recv_offset;
   uint8_t				*send_buffer;
@@ -119,9 +121,11 @@ struct					net_tcp_session_s
   void					*accept_data;
 
   /* rtt & other variables */
-  timer_delay_t				srtt;
-  bool_t				backoff;
-  timer_delay_t				last_ack;
+  timer_delay_t				srtt;		/* smoothed round-trip time */
+  bool_t				backoff;	/* Karn's backoff enabled */
+  timer_delay_t				last_ack_time;	/* last ACK time */
+  uint_fast32_t				last_ack;	/* last ACK value */
+  uint_fast8_t				dup_acks;	/* number of duplicate ACKs */
 
   uint_fast8_t				state;
 
@@ -163,7 +167,7 @@ void	tcp_on_accept(struct net_tcp_session_s	*session,
 		      void			*ptr);
 
 void	tcp_send(struct net_tcp_session_s	*session,
-		 void				*data,
+		 uint8_t			*data,
 		 size_t				size);
 
 void	libtcp_push(struct net_packet_s	*packet,
