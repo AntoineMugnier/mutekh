@@ -23,12 +23,20 @@
 #include <netinet/protos.h>
 #include <netinet/if.h>
 
-#include <netinet/ip.h>
-#include <netinet/arp.h>
-#include <netinet/icmp.h>
-#include <netinet/udp.h>
-#include <netinet/tcp.h>
-#include <netinet/libsocket.h>
+#ifdef CONFIG_NETWORK_IPV4
+# include <netinet/ip.h>
+# include <netinet/arp.h>
+# include <netinet/icmp.h>
+#endif
+#ifdef CONFIG_NETWORK_UDP
+# include <netinet/udp.h>
+#endif
+#ifdef CONFIG_NETWORK_TCP
+# include <netinet/tcp.h>
+#endif
+#ifdef CONFIG_NETWORK_SOCKET
+# include <netinet/libsocket.h>
+#endif
 
 #include <hexo/device/net.h>
 #include <hexo/device.h>

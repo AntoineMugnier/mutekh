@@ -22,6 +22,10 @@
 #ifndef NETINET_LIBTCP_H
 #define NETINET_LIBTCP_H
 
+#ifndef CONFIG_NETWORK_TCP
+# warning TCP support is not enabled in configuration file
+#else
+
 #include <netinet/protos.h>
 #include <netinet/packet.h>
 

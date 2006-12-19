@@ -30,12 +30,22 @@
 
 #include <netinet/if.h>
 #include <netinet/in.h>
-#include <netinet/libudp.h>
-#include <netinet/libtcp.h>
-#include <netinet/tcp.h>
-#include <netinet/nfs.h>
-#include <netinet/ping.h>
-#include <netinet/socket.h>
+#ifdef CONFIG_NETWORK_UDP
+# include <netinet/libudp.h>
+#endif
+#ifdef CONFIG_NETWORK_TCP
+# include <netinet/libtcp.h>
+# include <netinet/tcp.h>
+#endif
+#ifdef CONFIG_NETWORK_NFS
+# include <netinet/nfs.h>
+#endif
+#ifdef CONFIG_NETWORK_PING
+# include <netinet/ping.h>
+#endif
+#ifdef CONFIG_NETWORK_SOCKET
+# include <netinet/socket.h>
+#endif
 
 #include <stdio.h>
 #include <string.h>

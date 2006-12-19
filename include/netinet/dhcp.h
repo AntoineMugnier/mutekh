@@ -22,6 +22,10 @@
 #ifndef NETINET_DHCP_H
 #define NETINET_DHCP_H
 
+#ifndef CONFIG_NETWORK_DHCLIENT
+# warning DHCP client support is not enabled in configuration file
+#else
+
 #include <hexo/types.h>
 
 /*

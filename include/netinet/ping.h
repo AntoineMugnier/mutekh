@@ -22,6 +22,10 @@
 #ifndef NETINET_PING_H
 # define NETINET_PING_H
 
+# ifndef CONFIG_NETWORK_PING
+#  warning PING support is not enabled in configuration file
+# else
+
 # include <hexo/types.h>
 # include <timer.h>
 # include <netinet/packet.h>

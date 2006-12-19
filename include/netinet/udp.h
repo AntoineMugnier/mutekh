@@ -22,6 +22,10 @@
 #ifndef NETINET_UDP_H_
 #define NETINET_UDP_H_
 
+#ifndef CONFIG_NETWORK_UDP
+# warning UDP support is not enabled in configuration file
+#else
+
 #include <hexo/types.h>
 
 /* The UDP packet header */

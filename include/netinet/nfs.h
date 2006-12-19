@@ -22,6 +22,10 @@
 #ifndef NETINET_NFS_H_
 #define NETINET_NFS_H_
 
+#ifndef CONFIG_NETWORK_NFS
+# warning NFS support is not enabled in configuration file
+#else
+
 #include <hexo/types.h>
 #include <netinet/libudp.h>
 #include <hexo/gpct_platform_hexo.h>

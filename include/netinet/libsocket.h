@@ -22,6 +22,10 @@
 #ifndef NETINET_LIBSOCKET_H
 #define NETINET_LIBSOCKET_H
 
+#ifndef CONFIG_NETWORK_SOCKET
+# warning Socket support is not enabled in configuration file
+#else
+
 #include <netinet/protos.h>
 #include <netinet/packet.h>
 #include <netinet/if.h>

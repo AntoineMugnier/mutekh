@@ -32,6 +32,10 @@
 #ifndef NETINET_TCP_H_
 #define NETINET_TCP_H_
 
+#ifndef CONFIG_NETWORK_TCP
+# warning TCP support is not enabled in configuration file
+#else
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 
