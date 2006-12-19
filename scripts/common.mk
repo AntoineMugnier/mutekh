@@ -116,7 +116,12 @@ define recurse
 $(BUILD_DIR)/$(H)$(1)/.$(1).list:
 	mkdir -p $(BUILD_DIR)/$(H)$(1)
 	rm -f $$@
-	$$(MAKE) -f $$(SRC_DIR)/scripts/rules_subdir.mk $$@ DIR=$(1) H="$$(addsuffix /,$$(H)$(1))"
+	if test -f $(SRC_DIR)/$(H)$(1)/Makefile ; then			\
+		$$(MAKE) -f $$(SRC_DIR)/scripts/rules_subdir.mk		\
+			$$@ DIR=$(1) H="$$(addsuffix /,$$(H)$(1))" ;	\
+	else								\
+		touch $$@ ;						\
+	fi
 
 endef
 
