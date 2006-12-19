@@ -29,9 +29,13 @@
 #include <netinet/in.h>
 #include <netinet/packet.h>
 #include <netinet/protos.h>
+#ifdef CONFIG_NETWORK_UDP
 #include <netinet/libudp.h>
+#endif
+#ifdef CONFIG_NETWORK_TCP
 #include <netinet/libtcp.h>
 #include <netinet/tcp.h>
+#endif
 
 #include <netinet/if.h>
 

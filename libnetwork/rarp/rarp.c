@@ -130,7 +130,7 @@ error_t			rarp_client(const char	*ifname)
 	      route_add(route);
 	      route_obj_refdrop(route);
 	    }
-	  printf("Assigned IP: %P, netmask: %P\n", &ip, 4, &mask, 4);
+	  printf("Assigned IP: %d.%d.%d.%d, netmask: %d.%d.%d.%d\n", EXTRACT_IPV4(ip), EXTRACT_IPV4(mask));
 	  break;
 	}
     }

@@ -344,7 +344,15 @@ static TIMER_CALLBACK(tcp_retransmission)
 
 static error_t		tcp_enqueue_send_buffer(struct net_tcp_session_s	*session)
 {
+  struct net_tcp_seg_s	*seg;
 
+  seg = mem_alloc(sizeof (struct net_tcp_seg_s), MEM_SCOPE_NETWORK);
+
+  seg->data = session->send_buffer;
+  seg->size = session->send_offset;
+  seg->session = session;
+
+  tcp_segment_queue_push(&session->to_send, seg);
 }
 
 /*

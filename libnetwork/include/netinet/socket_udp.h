@@ -22,6 +22,10 @@
 #ifndef NETINET_SOCKET_UDP_H
 #define NETINET_SOCKET_UDP_H
 
+#ifndef CONFIG_NETWORK_UDP
+# warning UDP support is not enabled in configuration file
+#endif
+
 #include <netinet/libudp.h>
 #include <netinet/packet.h>
 #include <netinet/protos.h>

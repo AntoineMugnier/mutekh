@@ -22,6 +22,10 @@
 #ifndef NETINET_SOCKET_RAW_H
 #define NETINET_SOCKET_RAW_H
 
+#ifndef CONFIG_NETWORK_SOCKET_RAW
+# warning Socket support is not enabled in configuration file
+#endif
+
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 #include <netinet/route.h>

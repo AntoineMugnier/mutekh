@@ -34,7 +34,7 @@
 
 #ifndef CONFIG_NETWORK_TCP
 # warning TCP support is not enabled in configuration file
-#else
+#endif
 
 #include <hexo/types.h>
 #include <hexo/endian.h>

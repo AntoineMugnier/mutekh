@@ -24,7 +24,7 @@
 
 #ifndef CONFIG_NETWORK_DHCLIENT
 # warning DHCP client support is not enabled in configuration file
-#else
+#endif
 
 #include <hexo/types.h>
 

@@ -24,7 +24,7 @@
 
 #ifndef CONFIG_NETWORK_NFS
 # warning NFS support is not enabled in configuration file
-#else
+#endif
 
 #include <hexo/types.h>
 #include <netinet/libudp.h>

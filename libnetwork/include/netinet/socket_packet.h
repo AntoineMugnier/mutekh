@@ -22,6 +22,10 @@
 #ifndef NETINET_SOCKET_PACKET_H
 #define NETINET_SOCKET_PACKET_H
 
+#ifndef CONFIG_NETWORK_SOCKET_PACKET
+# warning Socket support is not enabled in configuration file
+#endif
+
 #include <netinet/packet.h>
 #include <netinet/protos.h>
 #include <netinet/if.h>

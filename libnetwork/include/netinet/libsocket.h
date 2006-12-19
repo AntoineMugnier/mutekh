@@ -24,7 +24,7 @@
 
 #ifndef CONFIG_NETWORK_SOCKET
 # warning Socket support is not enabled in configuration file
-#else
+#endif
 
 #include <netinet/protos.h>
 #include <netinet/packet.h>

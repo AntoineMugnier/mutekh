@@ -24,14 +24,16 @@
 
 #ifndef CONFIG_NETWORK_TCP
 # warning TCP support is not enabled in configuration file
-#else
+#endif
 
 #include <netinet/protos.h>
 #include <netinet/packet.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
+#include <gpct/cont_dlist.h>
 #include <gpct/object_simple.h>
+#include <timer.h>
 
 /*
  * A few constants
@@ -84,6 +86,24 @@ typedef TCP_CLOSE(tcp_close_t);
 				 void			*ptr)
 
 typedef TCP_ACCEPT(tcp_accept_t);
+
+/*
+ * TCP segments and segment queues.
+ */
+
+struct					net_tcp_seg_s
+{
+  void					*data;
+  size_t				size;
+  uint_fast32_t				seq;
+  struct net_tcp_seg_s			*session;
+
+  CONTAINER_ENTRY_TYPE(DLIST)		list_entry;
+
+  timer_event_t				timeout;
+};
+
+CONTAINER_TYPE(tcp_segment, DLIST, struct net_tcp_seg_s, NOLOCK, NOOBJ, list_entry);
 
 /*
  * This structure defines a TCP session.

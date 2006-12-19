@@ -24,7 +24,7 @@
 
 # ifndef CONFIG_NETWORK_PING
 #  warning PING support is not enabled in configuration file
-# else
+# endif
 
 # include <hexo/types.h>
 # include <timer.h>

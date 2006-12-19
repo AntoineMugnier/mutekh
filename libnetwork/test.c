@@ -323,7 +323,8 @@ void *net_up(void *p)
   route_dump();
 
   while(1)
-    pthread_yield();
+    //    pthread_yield();
+    ;
 
 #if 0
   struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);

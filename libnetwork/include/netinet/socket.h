@@ -20,6 +20,10 @@
 #ifndef NETINET_SOCKET_H
 #define NETINET_SOCKET_H
 
+#ifndef CONFIG_NETWORK_SOCKET
+# warning Socket support is not enabled in configuration file
+#endif
+
 #include <hexo/types.h>
 #ifdef __MUTEK__
 #include <netinet/packet.h>
