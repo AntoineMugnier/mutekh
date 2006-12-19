@@ -54,7 +54,7 @@ Boston, MA 02111-1307, USA.  */
 	.section .text.libgcc, "ax", @progbits
 
 	.macro	mov_l  r_dest, r_src
-#if defined (__AVR_ENHANCED__)
+#if defined (CONFIG_CPU_AVR_ENHANCED)
 	movw	\r_dest, \r_src
 #else
 	mov	\r_dest, \r_src
@@ -62,7 +62,7 @@ Boston, MA 02111-1307, USA.  */
 	.endm
 
 	.macro	mov_h  r_dest, r_src
-#if defined (__AVR_ENHANCED__)
+#if defined (CONFIG_CPU_AVR_ENHANCED)
 	; empty
 #else
 	mov	\r_dest, \r_src
@@ -70,7 +70,7 @@ Boston, MA 02111-1307, USA.  */
 	.endm
 
 /* Note: mulqi3, mulhi3 are open-coded on the enhanced core.  */
-#if !defined (__AVR_ENHANCED__)
+#if !defined (CONFIG_CPU_AVR_ENHANCED)
 /*******************************************************
                Multiplication  8 x 8
 *******************************************************/
@@ -185,7 +185,7 @@ __mulhi3_exit:
 
 .endfunc
 #endif /* defined (L_mulhi3) */
-#endif /* !defined (__AVR_ENHANCED__) */
+#endif /* !defined (CONFIG_CPU_AVR_ENHANCED) */
 
 #if defined (L_mulhisi3)
 #ifdef CONFIG_COMPILE_COLLECT
@@ -252,7 +252,7 @@ __umulhisi3:
 	.global	__mulsi3
 	.func	__mulsi3
 __mulsi3:
-#if defined (__AVR_ENHANCED__)
+#if defined (CONFIG_CPU_AVR_ENHANCED)
 	mul	r_arg1L, r_arg2L
 	movw	r_resL, r0
 	mul	r_arg1H, r_arg2H
@@ -316,7 +316,7 @@ __mulsi3_exit:
 	mov	r_arg1H,r_resH
 	mov	r_arg1L,r_resL
 	ret
-#endif /* !defined (__AVR_ENHANCED__) */
+#endif /* !defined (CONFIG_CPU_AVR_ENHANCED) */
 #undef r_arg1L 
 #undef r_arg1H 
 #undef r_arg1HL
@@ -697,7 +697,7 @@ __tablejump2__:
 	rol	r31
 	.global __tablejump__
 __tablejump__:
-#if defined (__AVR_ENHANCED__)
+#if defined (CONFIG_CPU_AVR_ENHANCED)
 	lpm	__tmp_reg__, Z+
 	lpm	r31, Z
 	mov	r30, __tmp_reg__

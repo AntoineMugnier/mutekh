@@ -17,30 +17,38 @@
 #
 
 include $(BUILD_DIR)/.config.mk
-include $(SRC_DIR)$(H)/Makefile
--include $(BUILD_DIR)$(H)/depend.mk
+include $(SRC_DIR)/$(H)Makefile
 
-deps = $(patsubst %.o,.%.deps,$(objs))
+objs_ = $(addprefix $(H), $(objs))
 
-include $(BUILD_DIR)/arch/current/config.mk
-include $(BUILD_DIR)/cpu/current/config.mk
+-include $(BUILD_DIR)/$(H)depend.mk
+
+deps = $(foreach i, $(objs_), $(dir $(i)).$(notdir $(basename $(i))).deps)
+
+include $(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/config.mk
+include $(SRC_DIR)/cpu/$(CONFIG_CPU_NAME)/config.mk
 include $(SRC_DIR)/scripts/common.mk
 
-VPATH += $(SRC_DIR)$(H)
+VPATH += $(SRC_DIR)/$(H)
 
-DEPINC=	-include $(BUILD_DIR)/.config.h -I include
+DEPINC=	-nostdinc -D__MUTEK__ \
+	-I include \
+	$(foreach mod,$(MODULES), -I $(mod)/include) \
+	-I arch/$(CONFIG_ARCH_NAME)/include \
+	-I cpu/$(CONFIG_CPU_NAME)/include \
+	-include $(BUILD_DIR)/.config.h
 
 %depend.mk: $(deps)
 	@echo '    DEP     depend.mk'
-	cat /dev/null $(patsubst .%.deps, $(BUILD_DIR)/$(H)/.%.deps,$^) > $@
+	cat /dev/null $(addprefix $(BUILD_DIR)/,$^) > $@
 
 .%.deps: %.S
 	@echo '    DEP     $(<F)'
 	mkdir -p $(BUILD_DIR)/$(H)
-	$(CPP) $(CFLAGS) $(DEPINC) -M -MG -MF $(BUILD_DIR)/$(H)/$@ $<
+	$(CPP) $(CFLAGS) $(DEPINC) -M -MG -MT $(basename $<).o -MF $(BUILD_DIR)/$@ $<
 
 .%.deps: %.c
 	@echo '    DEP     $(<F)'
 	mkdir -p $(BUILD_DIR)/$(H)
-	$(CPP) $(CFLAGS) $(DEPINC) -M -MG -MF $(BUILD_DIR)/$(H)/$@ $<
+	$(CPP) $(CFLAGS) $(DEPINC) -M -MG -MT $(basename $<).o -MF $(BUILD_DIR)/$@ $<
 

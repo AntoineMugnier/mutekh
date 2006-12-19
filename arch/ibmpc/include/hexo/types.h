@@ -1,1 +1,0 @@
-../../../common/include/hexo/types_arch32.h

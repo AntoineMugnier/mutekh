@@ -25,40 +25,40 @@ LIBAPP=default.o
 export SRC_DIR
 export BUILD_DIR
 export LIBAPP
+export MODULES
 MAKEFLAGS = -s
 
 kernel: config $(BUILD_DIR)
 	echo "Using '$(CONF)' configuration file."
 	echo "Using '$(LIBAPP)' application library or object file."
-	$(MAKE) -C $(BUILD_DIR) -f $(SRC_DIR)/scripts/rules_main.mk kernel
+	$(MAKE) -C $(SRC_DIR) -f $(SRC_DIR)/scripts/rules_main.mk kernel
 
 $(BUILD_DIR):
 	mkdir -p $@
 
 $(BUILD_DIR)/.config.mk $(BUILD_DIR)/.config.m4 $(BUILD_DIR)/.config.h: $(CONF)
-	perl $(SRC_DIR)/scripts/config.pl	\
-		--input=$(CONF)			\
-		--m4=$(BUILD_DIR)/.config.m4	\
-		--header=$(BUILD_DIR)/.config.h	\
+	cd $(SRC_DIR) ; perl $(SRC_DIR)/scripts/config.pl	\
+		--input=$(CONF)					\
+		--m4=$(BUILD_DIR)/.config.m4			\
+		--header=$(BUILD_DIR)/.config.h			\
 		--makefile=$(BUILD_DIR)/.config.mk
 
 config: $(BUILD_DIR) $(BUILD_DIR)/.config.mk $(BUILD_DIR)/.config.m4 $(BUILD_DIR)/.config.h
-	$(MAKE) -f $(SRC_DIR)/scripts/rules_links.mk
 
 checkconfig:
-	perl $(SRC_DIR)/scripts/config.pl	\
+	cd $(SRC_DIR) ; perl $(SRC_DIR)/scripts/config.pl	\
 		--input=$(CONF) --check
 
 listconfig:
-	perl $(SRC_DIR)/scripts/config.pl	\
+	cd $(SRC_DIR) ; perl $(SRC_DIR)/scripts/config.pl	\
 		--input=$(CONF) --list
 
 listallconfig:
-	perl $(SRC_DIR)/scripts/config.pl	\
+	cd $(SRC_DIR) ; perl $(SRC_DIR)/scripts/config.pl	\
 		--input=$(CONF) --list=all
 
 showconfig:
-	perl $(SRC_DIR)/scripts/config.pl	\
+	cd $(SRC_DIR) ; perl $(SRC_DIR)/scripts/config.pl	\
 		--input=$(CONF) --info=$(TOKEN)
 
 $(CONF):
@@ -74,10 +74,9 @@ helpconfig:
 	echo -e "can be displayed with 'make showconfig TOKEN=...'.\n"
 
 clean_sub:
-	$(MAKE) -f $(SRC_DIR)/scripts/rules_main.mk clean clean_sub
+	$(MAKE) -C $(SRC_DIR) -f $(SRC_DIR)/scripts/rules_main.mk clean clean_sub
 
 clean: clean_sub
-	rm -f $(BUILD_DIR)/cpu/current $(BUILD_DIR)/arch/current
 	rm -f $(BUILD_DIR)/.config.*
 
 re: clean kernel

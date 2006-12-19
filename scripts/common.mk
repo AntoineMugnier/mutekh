@@ -18,6 +18,7 @@
 
 export SRC_DIR
 export BUILD_DIR
+export MODULES
 
 VPATH = $(SRC_DIR) $(BUILD_DIR)
 
@@ -48,35 +49,46 @@ endif
 
 INCS=-nostdinc -D__MUTEK__ \
 	-I$(SRC_DIR)/include \
-	-I$(BUILD_DIR)/include \
+	$(foreach mod,$(MODULES), -I $(SRC_DIR)/$(mod)/include) \
+	-I$(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/include \
+	-I$(SRC_DIR)/cpu/$(CONFIG_CPU_NAME)/include \
 	-I$(BUILD_DIR) \
+	-I$(SRC_DIR) \
 	-include $(BUILD_DIR)/.config.h
 
+.SUFFIXES:
+
 %.o: %.S
-	@echo '    AS      $@'
+	@echo '    AS      $(@F)'
 	mkdir -p $(BUILD_DIR)/$(H)
-	$(CPP) $(INCS) $(SRC_DIR)/$(H)/$(<F) | $(AS) $(CPUASFLAGS) -o $(BUILD_DIR)/$(H)/$@
+	$(CPP) $(INCS) $(SRC_DIR)/$< | $(AS) $(CPUASFLAGS) -o $(BUILD_DIR)/$@
 
 %.o: %.c
-	@echo '    CC      $@'
+	@echo '    CC      $(@F)'
 	mkdir -p $(BUILD_DIR)/$(H)
+        # cd is usefull here when gcc is used with -save-temps
 	cd $(BUILD_DIR)/$(H) ; $(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -c \
-		$(SRC_DIR)/$(H)/$(<F) -o $(BUILD_DIR)/$(H)/$@
+		$(SRC_DIR)/$< -o $(BUILD_DIR)/$@
 
-%.hdef: %.def
+# Extract HOST defined macros and inject values in a new header file.
+# This is used by emultaion platform to get correct syscall numbers and args
+%.h: %.def
 	@echo ' HOST CPP   $(@F)'
 	mkdir -p $(BUILD_DIR)/$(@D)
 	$(HOSTCPP) $(SRC_DIR)/$< | grep '#define' > $(BUILD_DIR)/$@
 
-%: %.m4 $(BUILD_DIR)/.config.m4
+# m4 preprocessed files
+%:: %.m4 $(BUILD_DIR)/.config.m4
 	@echo '    M4      $(@F)'
-	cat $(BUILD_DIR)/.config.m4 $(SRC_DIR)/$< | m4 -P > $(BUILD_DIR)/$@
+	cat $(SRC_DIR)/scripts/global.m4 $(BUILD_DIR)/.config.m4 \
+		$(SRC_DIR)/$< | m4 -P > $(BUILD_DIR)/$@
 
-%: %.cpp $(BUILD_DIR)/.config.h
+# cpp preprocessed files
+%:: %.cpp $(BUILD_DIR)/.config.h
 	@echo '    CPP     $(@F)'
 	$(CPP) $(INCS) $(SRC_DIR)/$< -P -o $(BUILD_DIR)/$@
 
-subdirs-lists = $(foreach name,$(subdirs),$(patsubst %,$(BUILD_DIR)$(H)/%.list,$(name)/.$(name)))
+subdirs-lists = $(foreach name,$(subdirs),$(patsubst %,$(BUILD_DIR)/$(H)%.list,$(name)/.$(name)))
 CC=$(CPUTOOLS)gcc
 CPP=$(CPUTOOLS)cpp
 HOSTCPP=$(CPP)
@@ -93,27 +105,27 @@ print_dir:
 
 .PHONY: $(subdirs-lists) $(target) print_dir clean_sub clean kernel
 
-$(BUILD_DIR)$(H)/.$(DIR).list: print_dir $(objs) $(subdirs-lists) $(SRC_DIR)/$(H)/Makefile
+$(BUILD_DIR)/$(H).$(DIR).list: print_dir $(objs_) $(subdirs-lists) $(SRC_DIR)/$(H)/Makefile
 	cat /dev/null $(filter %.list,$^) > $@
-	for obj in $(objs) ; do \
-		echo $(BUILD_DIR)$(H)/$${obj} >> $@ ; \
+	for obj in $(objs_) ; do \
+		echo $(BUILD_DIR)/$${obj} >> $@ ; \
 	done
 
 define recurse
 
-$(BUILD_DIR)$(H)/$(1)/.$(1).list:
-	mkdir -p $(BUILD_DIR)$(H)/$(1)
+$(BUILD_DIR)/$(H)$(1)/.$(1).list:
+	mkdir -p $(BUILD_DIR)/$(H)$(1)
 	rm -f $$@
-	$$(MAKE) -C $(SRC_DIR) -f $$(SRC_DIR)/scripts/rules_subdir.mk $$@ DIR=$(1) H="$$(H)/$(1)"
+	$$(MAKE) -f $$(SRC_DIR)/scripts/rules_subdir.mk $$@ DIR=$(1) H="$$(addsuffix /,$$(H)$(1))"
 
 endef
 
+$(eval $(foreach dirname,$(subdirs),$(call recurse,$(dirname))))
+
 clean_sub:
 	echo " CLEAN      $(H)"
-	cd $(BUILD_DIR)$(H)/ && rm -f depend.mk .*.deps *.i *.s *.o .*.list $(clean)
+	cd $(BUILD_DIR)/$(H)/ && rm -f depend.mk .*.deps *.i *.s *.o .*.list $(clean)
 	for i in $(subdirs) ; do \
-		$(MAKE) -i -C $$i -f $(SRC_DIR)/scripts/rules_clean.mk H="$(H)/$$i" clean_sub; \
+		$(MAKE) -i -f $(SRC_DIR)/scripts/rules_clean.mk H="$(addsuffix /,$(H)$$i)" clean_sub; \
 	done
-
-$(eval $(foreach dirname,$(subdirs),$(call recurse,$(dirname))))
 

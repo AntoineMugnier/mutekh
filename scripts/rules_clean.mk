@@ -17,7 +17,7 @@
 #
 
 -include $(BUILD_DIR)/.config.mk
-include $(SRC_DIR)$(H)/Makefile
+include $(SRC_DIR)/$(H)/Makefile
 
 -include $(BUILD_DIR)/arch/current/config.mk
 -include $(BUILD_DIR)/cpu/current/config.mk

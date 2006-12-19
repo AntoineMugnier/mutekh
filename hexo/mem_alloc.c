@@ -56,7 +56,7 @@ CONTAINER_FUNC(static inline, alloc_list, DLIST, alloc_list, NOLOCK, list_entry)
 /* FIRST FIT allocation algorithm */
 
 static inline struct mem_alloc_header_s *
-mem_alloc_region_cadidate(struct mem_alloc_region_s *region, size_t size)
+mem_alloc_region_candidate(struct mem_alloc_region_s *region, size_t size)
 {
   CONTAINER_FOREACH(alloc_list, DLIST, NOLOCK, &region->root,
   {
@@ -72,7 +72,7 @@ mem_alloc_region_cadidate(struct mem_alloc_region_s *region, size_t size)
 /* BEST FIT allocation algorithm */
 
 static inline struct mem_alloc_header_s *
-mem_alloc_region_cadidate(struct mem_alloc_region_s *region, size_t size)
+mem_alloc_region_candidate(struct mem_alloc_region_s *region, size_t size)
 {
   struct mem_alloc_header_s	*best = NULL;
 
@@ -97,7 +97,7 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
   lock_spin(&region->lock);
 
   /* find suitable free block */
-  if ((hdr = mem_alloc_region_cadidate(region, size)))
+  if ((hdr = mem_alloc_region_candidate(region, size)))
     {
       hdr->is_free = 0;
 
