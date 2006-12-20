@@ -322,10 +322,6 @@ void *net_up(void *p)
 
   route_dump();
 
-  while(1)
-    //    pthread_yield();
-    ;
-
 #if 0
   struct net_route_s *route = mem_alloc(sizeof(struct net_route_s), MEM_SCOPE_SYS);
 
@@ -418,6 +414,8 @@ int_fast8_t		_main()
 	       "	orl	$0x40000, (%esp)			\n"
 	       "	popf						\n");
 #endif
+
+  asm volatile("finit");
 
   pthread_create(&th, NULL, net_up, NULL);
 

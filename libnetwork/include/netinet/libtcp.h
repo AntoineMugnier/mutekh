@@ -39,9 +39,12 @@
  * A few constants
  */
 
-#define TCP_CONNECTION_TIMEOUT	10	/* seconds */
-#define TCP_RTO_FACTOR		2	/* XXX should be a float 1.3 < x < 2 */
+#define TCP_CONNECTION_TIMEOUT	10000	/* milliseconds */
+#define TCP_RTO_FACTOR		1.5f	/* RTO computation factor */
 #define TCP_BACKOFF_FACTOR	2	/* Karn's backoff factor */
+#define TCP_RTT_FACTOR		0.125f	/* RTT weight factor */
+#define TCP_RTO_MIN		1000	/* milliseconds */
+#define TCP_RTO_MAX		10000	/* milliseconds */
 
 /*
  * Forward decls.
@@ -96,14 +99,25 @@ struct					net_tcp_seg_s
   void					*data;
   size_t				size;
   uint_fast32_t				seq;
-  struct net_tcp_seg_s			*session;
 
   CONTAINER_ENTRY_TYPE(DLIST)		list_entry;
 
-  timer_event_t				timeout;
+  union
+  {
+    struct
+    {
+      struct net_tcp_session_s		*session;
+      struct timer_event_s		timeout;
+    }					send;
+    struct
+    {
+      struct net_packet_s		*packet;
+      bool_t				push;
+    }					recv;
+  }					u;
 };
 
-CONTAINER_TYPE(tcp_segment, DLIST, struct net_tcp_seg_s, NOLOCK, NOOBJ, list_entry);
+CONTAINER_TYPE(tcp_segment_queue, DLIST, struct net_tcp_seg_s, HEXO_SPIN_IRQ, NOOBJ, list_entry);
 
 /*
  * This structure defines a TCP session.
@@ -129,6 +143,7 @@ struct					net_tcp_session_s
   /* send & receive buffer */
   tcp_segment_queue_root_t		oos;		/* out-of-segment queue */
   tcp_segment_queue_root_t		unacked;	/* send but unacked queue */
+  tcp_segment_queue_root_t		unsent;		/* unsent segments queue */
   uint8_t				*recv_buffer;
   uint_fast16_t				recv_offset;
   uint8_t				*send_buffer;
@@ -190,8 +205,8 @@ void	tcp_on_accept(struct net_tcp_session_s	*session,
 		      tcp_accept_t		*callback,
 		      void			*ptr);
 
-void	tcp_send(struct net_tcp_session_s	*session,
-		 uint8_t			*data,
+error_t	tcp_send(struct net_tcp_session_s	*session,
+		 const uint8_t			*data,
 		 size_t				size);
 
 void	libtcp_push(struct net_packet_s	*packet,
