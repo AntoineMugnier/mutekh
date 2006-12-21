@@ -19,27 +19,19 @@
 
 */
 
-#include <hexo/types.h>
-#include <hexo/error.h>
-#include <hexo/context.h>
+#ifndef DRIVER_ICU_MC9S12NE64_H_
+#define DRIVER_ICU_MC9S12NE64_H_
 
-error_t
-cpu_context_bootstrap(struct context_s *context)
-{
-  asm ("bgnd"); /* XXX */
+#include <hexo/device/icu.h>
+#include <hexo/device.h>
 
-  return 0;
-}
+/* icu device functions */
 
-error_t
-cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
-{
-  asm ("bgnd"); /* XXX */
+DEV_INIT(icu_mc9s12ne64_init);
+DEVICU_ENABLE(icu_mc9s12ne64_enable);
+DEVICU_SETHNDL(icu_mc9s12ne64_sethndl);
+DEVICU_DELHNDL(icu_mc9s12ne64_delhndl);
+DEV_CLEANUP(icu_mc9s12ne64_cleanup);
 
-  return 0;
-}
+#endif
 
-void
-cpu_context_destroy(struct context_s *context)
-{
-}

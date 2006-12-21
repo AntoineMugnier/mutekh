@@ -19,27 +19,28 @@
 
 */
 
+#ifndef UART_MC9S12NE64_PRIVATE_H_
+#define UART_MC9S12NE64_PRIVATE_H_
+
 #include <hexo/types.h>
-#include <hexo/error.h>
-#include <hexo/context.h>
+#include <hexo/lock.h>
 
-error_t
-cpu_context_bootstrap(struct context_s *context)
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_ring.h>
+#include <hexo/gpct_lock_hexo.h>
+
+CONTAINER_TYPE(tty_fifo, RING, uint8_t, HEXO_SPIN_IRQ, NOOBJ, 128);
+CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo, HEXO_SPIN_IRQ);
+CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_noirq, HEXO_SPIN);
+CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_nolock, NOLOCK);
+
+struct uart_mc9s12ne64_context_s
 {
-  asm ("bgnd"); /* XXX */
+  /* tty input char fifo */
+  tty_fifo_root_t			read_fifo;
 
-  return 0;
-}
+  lock_t				lock;
+};
 
-error_t
-cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
-{
-  asm ("bgnd"); /* XXX */
+#endif
 
-  return 0;
-}
-
-void
-cpu_context_destroy(struct context_s *context)
-{
-}

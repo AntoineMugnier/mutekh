@@ -28,9 +28,6 @@
 \name:
  .endm
 
-
-
- .sect .text
  .sect .softregs
  .globl _.tmp
  .globl _.z,_.xy
@@ -45,7 +42,7 @@ _.xy: .dc.w 1; .type _.xy,@object ; .size _.xy,2
  .globl _.frame
 _.frame: .dc.w 1; .type _.frame,@object ; .size _.frame,2
 
-
+ .sect .text
 
  declare ___adddi3
 

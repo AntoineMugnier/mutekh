@@ -22,10 +22,17 @@
 #include <hexo/interrupt.h>
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <string.h>
 
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_sys_handler;
+
+extern __ldscript_symbol_t __data_start;
+extern __ldscript_symbol_t __data_end;
+extern __ldscript_symbol_t __data_load_start;
+extern __ldscript_symbol_t __bss_start;
+extern __ldscript_symbol_t __bss_end;
 
 error_t
 cpu_global_init(void)
@@ -45,4 +52,10 @@ void cpu_start_other_cpu(void)
 uint_fast8_t cpu_id(void)
 {
   return 0;
+}
+
+void init_data_and_bss(void)
+{
+  memcpy((char *)&__data_start, (char *)&__data_load_start, (char *)&__data_end - (char *)&__data_start);
+  memset((char *)&__bss_start, 0, (char *)&__bss_end - (char *)&__bss_start);
 }

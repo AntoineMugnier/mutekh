@@ -19,33 +19,19 @@
 
 */
 
-#if !defined(CONTEXT_H_) || defined(CPU_CONTEXT_H_)
-#error This file can not be included directly
-#else
+#ifndef DRIVER_UART_MC9S12NE64_H_
+#define DRIVER_UART_MC9S12NEy64_H_
 
-struct cpu_context_s
-{
-};
+#include <hexo/device/char.h>
+#include <hexo/device.h>
 
-static inline void
-cpu_context_switch(struct context_s *old, struct context_s *new)
-{
+/* tty device functions */
 
-}
-
-static inline void
-__attribute__((always_inline, noreturn))
-cpu_context_jumpto(struct context_s *new)
-{
-
-}
-
-static inline void
-__attribute__((always_inline, noreturn))
-cpu_context_set_stack(uintptr_t stack, void *jumpto)
-{
-
-}
+DEV_IRQ(uart_mc9s12ne64_irq);
+DEV_INIT(uart_mc9s12ne64_init);
+DEV_CLEANUP(uart_mc9s12ne64_cleanup);
+DEVCHAR_READ(uart_mc9s12ne64_read);
+DEVCHAR_WRITE(uart_mc9s12ne64_write);
 
 #endif
 

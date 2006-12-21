@@ -1,5 +1,5 @@
 
 CPUCFLAGS=-m68hcs12 -mshort
 CPUTOOLS=m6811-elf-
-ARCHLDFLAGS=-mm68hc12elf
+ARCHLDFLAGS=
 CPUASFLAGS=-m68hcs12 -mshort

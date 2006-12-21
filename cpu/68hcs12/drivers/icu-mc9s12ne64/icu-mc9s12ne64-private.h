@@ -19,27 +19,22 @@
 
 */
 
-#include <hexo/types.h>
-#include <hexo/error.h>
-#include <hexo/context.h>
+#ifndef __ICU_MC9S12NE64_PRIVATE_H_
+#define __ICU_MC9S12NE64_PRIVATE_H_
 
-error_t
-cpu_context_bootstrap(struct context_s *context)
+#include <hexo/device.h>
+
+struct		icu_mc9s12ne64_handler_s
 {
-  asm ("bgnd"); /* XXX */
+  dev_irq_t	*hndl;
+  void		*data;
+};
 
-  return 0;
-}
-
-error_t
-cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
+struct					icu_mc9s12ne64_private_s
 {
-  asm ("bgnd"); /* XXX */
+  struct icu_mc9s12ne64_handler_s	table[CPU_MAX_INTERRUPTS];
+  struct device_s			*dev;
+};
 
-  return 0;
-}
+#endif
 
-void
-cpu_context_destroy(struct context_s *context)
-{
-}
