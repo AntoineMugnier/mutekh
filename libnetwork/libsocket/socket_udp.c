@@ -85,7 +85,9 @@ static TIMER_CALLBACK(recv_timeout)
 static _SOCKET(socket_udp)
 {
   struct socket_udp_pv_s	*pv;
-  pv = fd->pv = mem_alloc(sizeof (struct socket_udp_pv_s), MEM_SCOPE_NETWORK);
+
+  if ((pv = fd->pv = mem_alloc(sizeof (struct socket_udp_pv_s), MEM_SCOPE_NETWORK)) == NULL)
+    return -ENOMEM;
   pv->desc = NULL;
 
   switch (domain)
