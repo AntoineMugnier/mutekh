@@ -48,6 +48,7 @@
 #include <netinet/libtcp.h>
 
 #include <timer.h>
+#include <stdlib.h>
 
 #undef net_debug
 #define net_debug printf
@@ -86,6 +87,7 @@ OBJECT_CONSTRUCTOR(tcp_session_obj)
 
   obj->route = NULL;
   tcp_segment_queue_init(&obj->unacked);
+  tcp_segment_queue_init(&obj->unsent);
   tcp_segment_queue_init(&obj->oos);
 
   return obj;
@@ -141,6 +143,9 @@ static void	tcp_close_timeout(struct net_tcp_session_s	*session)
 {
   struct timer_event_s	*timer;
 
+  /* cancel periodical timer */
+  timer_cancel_event(&session->period, 0);
+
   if ((timer = mem_alloc(sizeof (struct timer_event_s), MEM_SCOPE_NETWORK)) == NULL)
     goto err;
   /* setup a timer */
@@ -186,7 +191,6 @@ error_t				tcp_open(struct net_tcp_addr_s	*remote,
 {
   struct net_tcp_session_s	*session;
   struct net_route_s		*route;
-  struct timer_event_s		*timer;
 
   /* check for a route */
   if ((route = route_get(&remote->address)) == NULL)
@@ -203,7 +207,8 @@ error_t				tcp_open(struct net_tcp_addr_s	*remote,
   session->close = NULL;
   session->accept = NULL;
   session->backoff = 0;
-  session->srtt = 0;
+  session->srtt = TCP_RTO_MIN;
+  session->acked = 0;
 
   /* choose a local port */
   switch (remote->address.family)
@@ -212,7 +217,7 @@ error_t				tcp_open(struct net_tcp_addr_s	*remote,
 	{
 	  struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)session->route->addressing->pv;
 
-	  session->local.port = 1024 + (timer_get_tick(&timer_ms) % 32768) ; /* XXX choose me better */
+	  session->local.port = 1024 + (rand() % 32768) ; /* XXX choose me better */
 	  /* XXX check availability */
 	  IPV4_ADDR_SET(session->local.address, pv_ip->addr);
 	}
@@ -224,10 +229,11 @@ error_t				tcp_open(struct net_tcp_addr_s	*remote,
 
   memcpy(&session->remote, remote, sizeof (struct net_tcp_addr_s));
 
-  session->curr_seq = timer_get_tick(&timer_ms);
+  session->curr_seq = rand();
   session->send_win = TCP_DFL_WINDOW;
   if ((session->recv_buffer = mem_alloc(session->send_win, MEM_SCOPE_NETWORK)) == NULL)
     goto err2;
+  session->recv_offset = 0;
   session->send_mss = TCP_MSS;
 
   session->recv_mss = route->interface->mtu - TCP_HEADERS_LEN;
@@ -244,12 +250,10 @@ error_t				tcp_open(struct net_tcp_addr_s	*remote,
   net_debug("<- SYN\n");
 
   /* setup a connection timeout */
-  if ((timer = mem_alloc(sizeof (struct timer_event_s), MEM_SCOPE_NETWORK)) == NULL)
-    goto err;
-  timer->callback = tcp_connect_error;
-  timer->pv = session;
-  timer->delay = TCP_CONNECTION_TIMEOUT;
-  if (timer_add_event(&timer_ms, timer))
+  session->period.callback = tcp_connect_error;
+  session->period.pv = session;
+  session->period.delay = TCP_CONNECTION_TIMEOUT;
+  if (timer_add_event(&timer_ms, &session->period))
     goto err;
 
   return 0;
@@ -392,7 +396,12 @@ static error_t		tcp_enqueue_send_buffer(struct net_tcp_session_s	*session)
 
   tcp_segment_queue_push(&session->unsent, seg);
 
-  printf("queueing a new segment of data (size = %u)\n", seg->size);
+  net_debug("queueing a new segment of data (size = %u)\n", seg->size);
+
+  /* allocate a new buffer */
+  session->send_offset = 0;
+  if ((session->send_buffer = mem_alloc(session->send_mss, MEM_SCOPE_NETWORK)) == NULL)
+    return -ENOMEM;
 
   return 0;
 }
@@ -409,44 +418,66 @@ static void		tcp_do_send(struct net_tcp_session_s	*session)
   /* is there a waiting segment ? */
   if ((seg = tcp_segment_queue_pop(&session->unsent)) == NULL)
     {
-      /* no, so just send a control packet (ACK) */
-      tcp_send_controlpkt(session, TCP_ACK);
-      net_debug("<- ACK\n");
+      /* look at the send buffer */
+      if (session->send_buffer != NULL && session->send_offset != 0)
+	{
+	  tcp_enqueue_send_buffer(session);
+	  seg = tcp_segment_queue_pop(&session->unsent);
+	}
+      else
+	/* no, so just send a control packet (ACK) */
+	if (session->to_ack != session->acked)
+	  {
+	    tcp_send_controlpkt(session, TCP_ACK);
+	    net_debug("<- ACK\n");
+	    return;
+	  }
     }
-  else
-    {
-      /* enough space in receiver's window ? */
-      if (session->recv_win < session->recv_mss)
-	return;
 
-      /* send the data packet */
-      tcp_send_datapkt(session, seg->data, seg->size, TH_PUSH);
-      net_debug("<- ACK + data (size = %u)\n", seg->size);
+  /* enough space in receiver's window ? */
+  if (session->recv_win < session->recv_mss)
+    return;
 
-      /* increment the sequence number */
-      seg->seq = (session->curr_seq += seg->size);
+  /* send the data packet */
+  tcp_send_datapkt(session, seg->data, seg->size, TH_PUSH);
+  net_debug("<- ACK + data (size = %u)\n", seg->size);
 
-      /* retransmission timeout */
-      rto = TCP_RTO_FACTOR * session->srtt;
-      if (rto > TCP_RTO_MAX)
-	rto = TCP_RTO_MAX;
-      if (rto < TCP_RTO_MIN)
-	rto = TCP_RTO_MIN;
+  /* increment the sequence number */
+  seg->seq = session->curr_seq;
+  session->curr_seq += seg->size;
 
-      if (session->backoff)
-	rto *= TCP_BACKOFF_FACTOR;
+  /* retransmission timeout */
+  rto = TCP_RTO_FACTOR * session->srtt;
+  if (rto > TCP_RTO_MAX)
+    rto = TCP_RTO_MAX;
+  if (rto < TCP_RTO_MIN)
+    rto = TCP_RTO_MIN;
 
-      net_debug("  RTO = %u\n", rto);
+  if (session->backoff)
+    rto *= TCP_BACKOFF_FACTOR;
+
+  net_debug("  RTO = %u\n", rto);
 
       /* add timer */
-      seg->u.send.timeout.callback = tcp_retransmission;
-      seg->u.send.timeout.pv = seg;
-      seg->u.send.timeout.delay = rto;
-      timer_add_event(&timer_ms, &seg->u.send.timeout);
+  seg->u.send.timeout.callback = tcp_retransmission;
+  seg->u.send.timeout.pv = seg;
+  seg->u.send.timeout.delay = rto;
+  timer_add_event(&timer_ms, &seg->u.send.timeout);
 
-      /* push into unacked queue */
-      insert_segment(&session->unacked, seg);
-    }
+  /* push into unacked queue */
+  insert_segment(&session->unacked, seg);
+}
+
+/*
+ * TCP periodical poll timer
+ */
+
+static TIMER_CALLBACK(tcp_period)
+{
+  struct net_tcp_session_s	*session = (struct net_tcp_session_s *)pv;
+
+  if (session->state == TCP_STATE_ESTABLISHED)
+    tcp_do_send(session);
 }
 
 /*
@@ -492,11 +523,6 @@ error_t			tcp_send(struct net_tcp_session_s	*session,
 	{
 	  /* enqueue the packet in the send queue */
 	  tcp_enqueue_send_buffer(session);
-
-	  /* allocate a new buffer */
-	  session->send_offset = 0;
-	  if ((session->send_buffer = mem_alloc(session->send_mss, MEM_SCOPE_NETWORK)) == NULL)
-	    return -ENOMEM;
 	}
     }
 
@@ -538,14 +564,18 @@ static void			libtcp_open(struct net_tcp_session_s	*session,
 	  /* ok, connection aknowleged */
 	  session->state = TCP_STATE_ESTABLISHED;
 
+	  /* cancel timeout */
+	  timer_cancel_event(&session->period, 0);
+
 	  /* get the sender seq & win */
 	  session->recv_seq = net_be32_load(hdr->th_seq);
 	  session->recv_win = net_be16_load(hdr->th_win);
-	  session->last_ack = net_be16_load(hdr->th_ack);
+	  session->last_ack = net_be32_load(hdr->th_ack);
+	  net_debug("last_ack = %u\n", session->last_ack);
 	  session->last_ack_time = timer_get_tick(&timer_ms);
 	  session->dup_acks = 1;
-	  session->send_buffer = mem_alloc(session->send_mss, MEM_SCOPE_NETWORK);
-	  /* XXX error checking */
+	  session->send_buffer = NULL;
+	  session->send_offset = 0;
 
 	  /* increment seq and set ack */
 	  session->to_ack = session->recv_seq + 1;
@@ -560,6 +590,12 @@ static void			libtcp_open(struct net_tcp_session_s	*session,
 	  tcp_send_controlpkt(session, TCP_ACK);
 
 	  callback(session, ptr);
+
+	  /* start periodical timeout */
+	  session->period.delay = TCP_POLL_PERIOD;
+	  session->period.callback = tcp_period;
+	  session->period.pv = session;
+	  timer_add_event(&timer_ms, &session->period);
 	}
       else
 	{
@@ -702,6 +738,8 @@ static inline void		tcp_push_data(struct net_tcp_session_s	*session,
   uint_fast16_t			chunksz;
   register uint_fast16_t	sz1;
 
+  net_debug("-> %u bytes of data\n", length);
+
   for (i = 0; i < length; )
     {
       /* push the data into the receive buffer */
@@ -718,11 +756,16 @@ static inline void		tcp_push_data(struct net_tcp_session_s	*session,
       /* deliver data to application */
       if (push || session->send_win == 0)
 	{
+	  if (push)
+	    net_debug("  PUSH flag present\n");
+	  else
+	    net_debug("  Buffer is full, pushing to application\n");
+
 	  if (session->receive != NULL)
 	    session->receive(session, data, length, session->receive_data);
 
 	  /* update window */
-	  session->send_win = 0; /* XXX SWS avoidment (Clark) */
+	  session->send_win = TCP_DFL_WINDOW; /* XXX SWS avoidment (Clark) */
 	  session->recv_offset = 0;
 	}
     }
@@ -738,11 +781,15 @@ static void			tcp_acknowledge(struct net_tcp_session_s	*session)
   struct net_tcp_seg_s		*seg;
 
   /* look into the unacked queue for segment to acknowledge */
-  while ((seg = tcp_segment_queue_head(&session->unacked)) == NULL)
+  while ((seg = tcp_segment_queue_head(&session->unacked)) != NULL)
     {
-      if (session->last_ack > seg->seq + seg->size)
+      //      net_debug("%u >= %u + %u\n", session->last_ack, seg->seq, seg->size);
+
+      if (session->last_ack >= seg->seq + seg->size)
 	{
 	  timer_delay_t	rtt;
+
+	  net_debug("  Acknowledging segment %u\n", seg->seq);
 
 	  /* we can remove it */
 	  tcp_segment_queue_pop(&session->unacked);
@@ -752,6 +799,7 @@ static void			tcp_acknowledge(struct net_tcp_session_s	*session)
 	    {
 	      rtt = timer_get_tick(&timer_ms) - seg->u.send.timeout.start;
 	      session->srtt = (1 - TCP_RTT_FACTOR) * session->srtt + TCP_RTT_FACTOR * rtt;
+	      net_debug("Adjusting SRTT to %u ms\n", session->srtt);
 	    }
 
 	  /* cancel associated timer */
@@ -777,7 +825,7 @@ void				libtcp_push(struct net_packet_s	*packet,
   struct net_tcp_seg_s		*seg;
   size_t			length;
   uint_fast32_t			seq;
-  uint_fast16_t			curr_ack;
+  uint_fast32_t			curr_ack;
   bool_t			force_ack = 0;
 
   /* look for the corresponding session */
@@ -792,12 +840,15 @@ void				libtcp_push(struct net_packet_s	*packet,
   nethdr = &packet->header[packet->stage];
   length = nethdr->size - hdr->th_off * 4;
 
-  /* check for out-of-segment packet */
   seq = net_be32_load(hdr->th_seq);
-  if (seq > session->to_ack)
+
+  /* check for out-of-segment packet */
+  if (session->state == TCP_STATE_ESTABLISHED && seq > session->to_ack)
     {
       /* the packet is out-of-segment */
       uint8_t			*data = (nethdr->data + hdr->th_off * 4);
+
+      net_debug("-> out-of-segment data (SEQ = %u)\n", seq);
 
       seg = mem_alloc(sizeof (struct net_tcp_seg_s), MEM_SCOPE_NETWORK); /* XXX opt malloc size */
       seg->data = data;
@@ -821,8 +872,11 @@ void				libtcp_push(struct net_packet_s	*packet,
   session->to_ack = session->recv_seq + length;
 
   /* update ack and dup_acks */
-  curr_ack = net_be16_load(hdr->th_ack);
-  if (session->last_ack == curr_ack)
+  curr_ack = net_be32_load(hdr->th_ack);
+
+  net_debug("curr_ack = %u\n", curr_ack);
+
+  if (session->state == TCP_STATE_ESTABLISHED && session->last_ack == curr_ack)
     {
       if (++session->dup_acks == 3)
 	{
@@ -831,6 +885,8 @@ void				libtcp_push(struct net_packet_s	*packet,
     }
   else
     {
+      net_debug("last_ack = %u\n", curr_ack);
+
       session->last_ack = curr_ack;
       session->dup_acks = 1;
     }
@@ -875,6 +931,8 @@ void				libtcp_push(struct net_packet_s	*packet,
 	      uint_fast16_t	offset;
 	      uint_fast16_t	size;
 
+	      net_debug("  Pushing-in an out-of-segment packet (SEQ = %u)\n", seg->seq);
+
 	      /* remove it */
 	      tcp_segment_queue_pop(&session->oos);
 
@@ -906,7 +964,7 @@ void				libtcp_push(struct net_packet_s	*packet,
 	}
 
       /* if needed, send a control packet to acknowledge */
-      if (force_ack || !(hdr->th_flags & TH_FIN))
+      if (force_ack && !(hdr->th_flags & TH_FIN))
 	{
 	  tcp_send_controlpkt(session, TCP_ACK);
 	  net_debug("<- ACK\n");

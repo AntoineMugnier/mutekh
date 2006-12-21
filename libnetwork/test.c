@@ -62,7 +62,7 @@ static TCP_CLOSE(connection_close)
 
 static TCP_RECEIVE(data_arrival)
 {
-  printf("%p received %P\n", session, data, size);
+  printf("%u received\n", size);// %P\n", session, data, size);
 
   //tcp_send(session, ptr, strlen(ptr));
 }
@@ -278,9 +278,13 @@ void *toto(void *p)
   printf("ok\n");
 }
 
+#include <hexo/cpu.h>
+
 void *net_up(void *p)
 {
   pthread_t th;
+
+  srand(cpu_cycle_count());
 
 #if 0
   dev_input_setcallback(&keyboard_dev, DEVINPUT_EVENT_BUTTON_UP, DEVINPUT_CTRLID_ALL, chiche, NULL);

@@ -225,6 +225,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   net_16_store(hdr->th_sum, ~check);
 
   packet->stage--;
+  session->acked = session->to_ack;
   /* send the packet to IP */
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_TCP);
   packet_obj_refdrop(packet);
@@ -285,6 +286,7 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   net_16_store(hdr->th_sum, ~check);
 
   packet->stage--;
+  session->acked = session->to_ack;
   /* send the packet to IP */
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_TCP);
   packet_obj_refdrop(packet);

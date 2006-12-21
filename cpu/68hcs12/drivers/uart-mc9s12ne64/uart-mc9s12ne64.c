@@ -19,6 +19,7 @@
 
 */
 
+#include <MC9S12NE64.h>
 #include <hexo/types.h>
 
 #include <hexo/device/char.h>
@@ -63,10 +64,13 @@ DEVCHAR_WRITE(uart_mc9s12ne64_write)
   for (i = 0; i < size; i++)
     /* process each char */
     {
-      if (!(cpu_io_read_8(dev->addr[0] + SCISR1) & SCISR1_TDRE))
+      if (!SCI0SR1_TDRE)
 	break;
 
-      cpu_mem_write_8(dev->addr[0] + SCIDRL, data[i]);
+      SCI0DRL = data[i];
+  DDRG = 0x03;
+  PTG = 0x02;
+
     }
 
   lock_release_irq(&pv->lock);
@@ -95,13 +99,16 @@ DEV_CLEANUP(uart_mc9s12ne64_cleanup)
 
 DEV_IRQ(uart_mc9s12ne64_irq)
 {
-  struct uart_mc9s12ne64_context_s*pv = dev->drv_pv;
+  struct uart_mc9s12ne64_context_s	*pv = dev->drv_pv;
 
-  if (!(cpu_mem_read_8(dev->addr[0] + SCISR1) & SCISR1_RDRF))
+  DDRG = 0x03;
+  PTG = 0x01;
+
+  if (!SCI0SR1_RDRF)
     return 0;
 
-  while (cpu_mem_read_8(dev->addr[0] + SCISR1) & SCISR1_RDRF)
-    tty_fifo_noirq_pushback(&pv->read_fifo, cpu_mem_read_8(dev->addr[0] + SCIDRL));
+  while (SCI0SR1_RDRF)
+    tty_fifo_noirq_pushback(&pv->read_fifo, SCI0DRL);
 
   return 1;
 }
@@ -144,11 +151,15 @@ DEV_INIT(uart_mc9s12ne64_init)
   /* init tty input fifo */
   tty_fifo_init(&pv->read_fifo);
 
-  /* init SCI */
-  cpu_mem_write8(dev->addr[0] + SCICR1, 0);
-  cpu_mem_write8(dev->addr[0] + SCICR2, SCICR2_RE | SCICR2_TE | SCICR2_RIE);
+  /* init SCI0 */
+  SCI0BD_IREN = 0;
+  SCI0BD_TNP = 0;
   /* XXX baud rate */
+  _SCI0BD.Overlap_STR.SCI0BDLSTR.Byte = 13;
 
+
+  SCI0CR1 = 0;
+  SCI0CR2 = SCI0CR2_RE_MASK | SCI0CR2_TE_MASK | SCI0CR2_RIE_MASK;
   return 0;
 }
 

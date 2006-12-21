@@ -27,6 +27,9 @@
 
 #include "hexo/local.h"
 
+/** max interrupt line handled by the CPU */
+#define CPU_MAX_INTERRUPTS		64
+
 extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
 extern CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;
 extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_sys_handler;

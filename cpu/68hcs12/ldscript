@@ -1,3 +1,7 @@
+OUTPUT_FORMAT("elf32-m68hc12", "elf32-m68hc12",
+              "elf32-m68hc12")
+OUTPUT_ARCH(m68hc12)
+
 SECTIONS
    {
         .softregs __bss_end :
@@ -8,8 +12,8 @@ SECTIONS
         __softregs_start = ADDR(.softregs);
         __softregs_end = ADDR(.softregs) + SIZEOF(.softregs);
 
-        .vectors 0xF000 :
+        .vectors 0xf740 :
 	    {
-		*(.vectors)
+		*(.vectors*)
 	    }
    }

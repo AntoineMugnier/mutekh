@@ -151,7 +151,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # elif defined(CONFIG_DRIVER_CHAR_MC9S12NE64)
   uart_dev.irq = 20;
   uart_mc9s12ne64_init(&uart_dev, &icu_dev);
-  DEV_ICU_BIND(&icu_dev, &uart_dev);
+  //  DEV_ICU_BIND(&icu_dev, &uart_dev);
 # else
 #  warning CONFIG_DRIVER_UART case not handled in mutek_main()
 # endif

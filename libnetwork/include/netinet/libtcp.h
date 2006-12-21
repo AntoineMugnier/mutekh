@@ -40,6 +40,7 @@
  */
 
 #define TCP_CONNECTION_TIMEOUT	10000	/* milliseconds */
+#define TCP_POLL_PERIOD		200	/* milliseconds */
 #define TCP_RTO_FACTOR		1.5f	/* RTO computation factor */
 #define TCP_BACKOFF_FACTOR	2	/* Karn's backoff factor */
 #define TCP_RTT_FACTOR		0.125f	/* RTT weight factor */
@@ -134,6 +135,7 @@ struct					net_tcp_session_s
   /* sequence, acks and windows */
   uint_fast32_t				curr_seq;
   uint_fast32_t				to_ack;
+  uint_fast32_t				acked;
   uint_fast16_t				send_win;
   uint_fast16_t				send_mss;
   uint_fast32_t				recv_seq;
@@ -148,6 +150,7 @@ struct					net_tcp_session_s
   uint_fast16_t				recv_offset;
   uint8_t				*send_buffer;
   uint_fast16_t				send_offset;
+  struct timer_event_s			period;
 
   /* callbacks */
   tcp_connect_t				*connect;
