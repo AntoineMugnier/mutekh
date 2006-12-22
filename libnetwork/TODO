@@ -1,8 +1,10 @@
 (dans l'ordre)
 
 * TCP
-  - a finir
+  - a finir de tester
   - sockets TCP
+
+* lo
 
 * general
   - verifier l'alignement des acces memoire

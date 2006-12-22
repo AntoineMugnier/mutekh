@@ -643,8 +643,8 @@ static _GETSOCKOPT(getsockopt_raw)
 	    filt->data = pv->icmp_mask;
 
 	    *optlen = sizeof (struct icmp_filter);
-	    break;
 	  }
+	break;
       default:
 	fd->error = ENOPROTOOPT;
 	return -1;
@@ -679,6 +679,7 @@ static _SETSOCKOPT(setsockopt_raw)
 	  }
 	else
 	  return setsockopt_socket(fd, optname, optval, optlen);
+	break;
       case SOL_IP:
 	if (optname == IP_HDRINCL)
 	  {
@@ -716,6 +717,7 @@ static _SETSOCKOPT(setsockopt_raw)
 	    filt = optval;
 	    pv->icmp_mask = filt->data;
 	  }
+	break;
       default:
 	fd->error = ENOPROTOOPT;
 	return -1;
@@ -764,7 +766,7 @@ static _SHUTDOWN(shutdown_raw)
 	    net_if_obj_refdrop(pv->local_interface);
 
 	  mem_free(pv);
-	  mem_free(socket);
+	  mem_free(fd);
 	}
     }
 

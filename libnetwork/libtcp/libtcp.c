@@ -350,7 +350,7 @@ static TIMER_CALLBACK(tcp_retransmission)
   uint_fast16_t			size;
   uint_fast16_t			offset;
 
-  if (seg->seq + seg->size < session->last_ack)
+  if (seg->seq + seg->size <= session->last_ack)
     {
       /* segment has already been ACKed, no need to retransmit */
       mem_free(seg->data);

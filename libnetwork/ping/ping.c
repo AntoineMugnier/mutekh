@@ -101,7 +101,6 @@ error_t			ping(struct net_addr_s	*host,
 
   /* filter incoming ICMP responses */
   filt.data = ~(ICMP_ECHOREPLY | ICMP_DEST_UNREACH | ICMP_TIME_EXCEEDED);
-
   if (setsockopt(sock, SOL_RAW, ICMP_FILTER, &filt, sizeof (struct icmp_filter)) < 0)
     {
       shutdown(sock, SHUT_RDWR);
