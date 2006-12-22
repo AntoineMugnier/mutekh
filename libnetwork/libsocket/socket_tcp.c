@@ -27,7 +27,7 @@
 #include <netinet/tcp.h>
 
 #include <hexo/alloc.h>
-
+#if 0
 /*
  * Create a TCP socket. Allocate private data.
  */
@@ -379,7 +379,7 @@ static _SHUTDOWN(shutdown_tcp)
 
   return 0;
 }
-
+#endif
 /*
  * Socket API for TCP sessions.
  */

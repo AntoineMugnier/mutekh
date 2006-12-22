@@ -36,9 +36,10 @@
 
 struct			socket_tcp_pv_s
 {
-  struct net_tcp_session_s	*desc;
+  struct net_tcp_session_s	*session;
   uint_fast32_t		family;
 
+  bool_t connected;
   net_port_t		recv_port;
   buffer_queue_root_t	recv_q;
   sem_t			recv_sem;
