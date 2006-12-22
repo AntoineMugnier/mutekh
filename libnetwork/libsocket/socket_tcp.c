@@ -19,7 +19,14 @@
 
 */
 
+#include <netinet/packet.h>
 #include <netinet/socket.h>
+#include <netinet/socket_internals.h>
+#include <netinet/socket_tcp.h>
+#include <netinet/libtcp.h>
+#include <netinet/tcp.h>
+
+#include <hexo/alloc.h>
 
 /*
  * Create a TCP socket. Allocate private data.
