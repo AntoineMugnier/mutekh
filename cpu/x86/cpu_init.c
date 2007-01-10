@@ -36,6 +36,11 @@ CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_sys_handler;
 
+/** pointer to cpu local storage itself */
+CPU_LOCAL void *__cpu_data_base;
+/** pointer to context local storage itself */
+CONTEXT_LOCAL void *__context_data_base;
+
 /* CPU Local Descriptor structure */
 
 /** gdt table lock */

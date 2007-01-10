@@ -24,6 +24,9 @@
 
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
 
+/** pointer to context local storage in cpu local storage */
+CPU_LOCAL void *__cpu_context_data_base;
+
 error_t
 cpu_global_init(void)
 {

@@ -33,14 +33,6 @@ SECTIONS
 	/* CPU local data section */
 	.cpudata  0x0 : AT( LOADADDR(.data) + SIZEOF(.data) )
 		{
-			/* first word contains pointer to cpudata section */
-			__cpu_data_base = . ;
-			LONG(0) ;
-
-			/* second word contains pointer to contextdata section */
-			__cpu_context_data_base = . ;
-			LONG(0) ;
-
 			*(.cpudata*)
 		}
 
@@ -50,10 +42,6 @@ SECTIONS
 	/* Task local data section */
  	.contextdata 0x0 : AT( __cpu_data_end )
 		{
-			/* first word contains pointer to contextdata section */
-			__context_data_base = . ;
-			LONG(0) ;
-
 			*(.contextdata*)
 		}
 

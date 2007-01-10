@@ -45,7 +45,7 @@
 #define CONTEXT_LOCAL_GET(n)    ({ typeof(n) _val_; __asm__ ("mov %%gs:%1, %0" : "=r" (_val_) : "m" (n)); _val_; })
 
 /** get address of context local object */
-#define CONTEXT_LOCAL_ADDR(n)   ({ typeof(n) *_ptr_ = &(n); __asm__ ("addl %%gs:0, %0" : "=r" (_ptr_) : "0" (_ptr_)) ; _ptr_; })
+#define CONTEXT_LOCAL_ADDR(n)   ({ typeof(n) *_ptr_ = &(n); __asm__ ("addl %%gs:__context_data_base, %0" : "=r" (_ptr_) : "0" (_ptr_)) ; _ptr_; })
 
 /************************************************************************/
 
@@ -61,7 +61,7 @@
 # define CPU_LOCAL_GET(n)    ({ typeof(n) _val_; __asm__ ("mov %%fs:%1, %0" : "=r" (_val_) : "m" (n)); _val_; })
 
 /** get address of cpu local object */
-# define CPU_LOCAL_ADDR(n)   ({ typeof(n) *_ptr_ = &(n); __asm__ ("addl %%fs:0, %0" : "=r" (_ptr_) : "0" (_ptr_)); _ptr_; })
+# define CPU_LOCAL_ADDR(n)   ({ typeof(n) *_ptr_ = &(n); __asm__ ("addl %%fs:__cpu_data_base, %0" : "=r" (_ptr_) : "0" (_ptr_)); _ptr_; })
 
 #else
 
@@ -78,6 +78,11 @@
 # define CPU_LOCAL_ADDR(n)   (&(n))
 
 #endif /* !CONFIG_SMP */
+
+/** pointer to cpu local storage itself */
+extern CPU_LOCAL void *__cpu_data_base;
+/** pointer to context local storage itself */
+extern CONTEXT_LOCAL void *__context_data_base;
 
 #endif
 

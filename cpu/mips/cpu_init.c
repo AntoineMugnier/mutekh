@@ -30,6 +30,11 @@ CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_sys_handler;
 
+/** pointer to context local storage in cpu local storage */
+CPU_LOCAL void *__cpu_context_data_base;
+
+static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
+
 /* CPU Local Descriptor structure */
 
 error_t
@@ -45,8 +50,6 @@ struct cpu_cld_s
   /* CPU id */
   uint_fast8_t			id;
 };
-
-static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
 
 struct cpu_cld_s *
 cpu_init(uint_fast8_t cpu_id)
@@ -68,11 +71,12 @@ cpu_init(uint_fast8_t cpu_id)
 
   cld->cpu_local_storage = cls;
 
+#ifdef CONFIG_SMP
   /* set cpu local storage register base pointer */
   asm volatile("move $27, %0" : : "r" (cls));
+#endif
 
   CPU_LOCAL_SET(cpu_cld, cld);
-  CPU_LOCAL_SET(__cpu_data_base, cls);
 
   return cld;
 

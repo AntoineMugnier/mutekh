@@ -25,14 +25,8 @@
 
 #include "cpu/hexo/local.h"
 
-/** pointer to cpu local storage itself */
-extern CPU_LOCAL void *__cpu_data_base;
-
 /** pointer to context local storage in cpu local storage */
 extern CPU_LOCAL void *__cpu_context_data_base;
-
-/** pointer to context local storage itself */
-extern CONTEXT_LOCAL void *__context_data_base;
 
 /** cpu architecture local storage type attribute */
 #ifdef CONFIG_SMP

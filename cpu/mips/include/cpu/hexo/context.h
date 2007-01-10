@@ -32,7 +32,7 @@ struct cpu_context_s
 static inline void
 cpu_context_switch(struct context_s *old, struct context_s *new)
 {
-  void	*unused1, *unused2;
+  void	*unused1, *unused2, *unused3;
 
   asm volatile (
 		".set push			\n"
@@ -50,7 +50,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	la	$1,	2f		\n"
 		"	sw	$1,	2*4($sp)	\n"
 #endif
-		"	lw	$15,	4($27)		\n"
+		"	lw	$15,	(%2)		\n"
 		/* save status */
 		"	mfc0	$1,	$12		\n"
 		"	sw	$1,	1*4($sp)	\n"
@@ -70,17 +70,23 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	mtc0	$1,	$12		\n"
 		/* restore execution pointer */
 		"	lw	$1,	2*4($sp)	\n"
-		"	sw	$15,	4($27)		\n"
+		"	sw	$15,	(%2)		\n"
 		"	addiu	$sp,	3*4		\n"
 		"	jr	$1			\n"
 		"2:					\n"
 		".set pop				\n"
-		: "=r" (unused1), "=r" (unused2)
-		:  "0" (&old->stack_ptr), "1" (&new->stack_ptr)
+		: "=r" (unused1)
+		, "=r" (unused2)
+		, "=r" (unused3)
+
+		: "0" (&old->stack_ptr)
+		, "1" (&new->stack_ptr)
+		, "2" (CPU_LOCAL_ADDR(__cpu_context_data_base))
+
 #if defined(CONFIG_CPU_MIPS_ABI_O32) || defined(CONFIG_CPU_MIPS_ABI_O64)
 		/* These GP registers will be saved by the compiler */
 		: "$2", "$3"	/* return values */
-		, /*"$4", "$5",*/  "$6",  "$7" /* arguments. r4 and r5 are left for asm input */
+		, /*"$4", "$5",  "$6",*/  "$7" /* arguments. r4 to r6 are left for asm input */
 		, "$8",  "$9",  "$10",  "$11", "$12",  "$13",  "$14",  "$15" /* temp */
 		, "$16", "$17", "$18", "$19", "$20", "$21", "$22", "$23", "$30" /* saved accros function call */
 		, "$24", "$25"	/* temp */
@@ -88,7 +94,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 #elif defined(CONFIG_CPU_MIPS_ABI_N32) || defined(CONFIG_CPU_MIPS_ABI_N64)
 		/* These GP registers will be saved by the compiler */
 		: "$2", "$3",	/* FIXME add more registers */
-		, /* "$4", "$5",*/ "$6",  "$7",  "$8",  "$9",  "$10",  "$11", /* arguments. r4 and r5 are left for asm input */
+		, /* "$4", "$5", "$6",*/  "$7",  "$8",  "$9",  "$10",  "$11", /* arguments. r4 to r6 are left for asm input */
 		, "$12",  "$13",  "$14",  "$15" /* temp */
 		, "$16", "$17", "$18", "$19", "$20", "$21", "$22", "$23", "$30" /* saved accros function call */
 		, "$24", "$25"	/* temp */
@@ -114,6 +120,7 @@ cpu_context_jumpto(struct context_s *new)
 		"	mtc0	$1,	$12		\n"
 		/* restore execution pointer */
 		"	lw	$1,	2*4($sp)	\n"
+		FIXME $27
 		"	sw	$15,	4($27)		\n"
 		"	addiu	$sp,	3*4		\n"
 		"	jr	$1			\n"
