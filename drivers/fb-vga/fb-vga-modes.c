@@ -21,6 +21,8 @@
 
 */
 
+#include <stdlib.h>
+
 #include <hexo/device/fb.h>
 
 #include <hexo/types.h>
@@ -236,7 +238,7 @@ DEVFB_SETPALETTE(fb_vga_setpalette)
   /* Setup palette */
   cpu_io_write_8(FB_VGA_PEL_IW, 0);
 
-  for (i = 0; i < 256; i++)
+  for (i = 0; i < __MIN(256, count); i++)
     {
       /* setup each channel */
       cpu_io_write_8(FB_VGA_PEL_D, pal[i].r);

@@ -130,7 +130,10 @@ $(eval $(foreach dirname,$(subdirs),$(call recurse,$(dirname))))
 clean_sub:
 	echo " CLEAN      $(H)"
 	cd $(BUILD_DIR)/$(H)/ && rm -f depend.mk .*.deps *.i *.s *.o .*.list $(clean)
-	for i in $(subdirs) ; do \
-		$(MAKE) -i -f $(SRC_DIR)/scripts/rules_clean.mk H="$(addsuffix /,$(H)$$i)" clean_sub; \
+	for i in $(subdirs) ; do					\
+		if test -f $(SRC_DIR)/$(H)$$i/Makefile ; then		\
+			$(MAKE) -i -f $(SRC_DIR)/scripts/rules_clean.mk	\
+				H="$(addsuffix /,$(H)$$i)" clean_sub ;	\
+		fi ;							\
 	done
 

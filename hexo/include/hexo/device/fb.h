@@ -106,7 +106,7 @@ typedef DEVFB_FLIPPAGE(devfb_flippage_t);
 
 
 /** Fb device class setpalette() function tempate. */
-#define DEVFB_SETPALETTE(n)	void  (n) (struct device_s *dev, struct fb_pal_s *pal)
+#define DEVFB_SETPALETTE(n)	void  (n) (struct device_s *dev, struct fb_pal_s *pal, size_t count)
 
 /**
     Fb device class setpalette() function type.
@@ -114,6 +114,7 @@ typedef DEVFB_FLIPPAGE(devfb_flippage_t);
 
     @param dev pointer to device descriptor
     @param pal the new palette
+    @param count number of element in palette
     @return error code
 */
 typedef DEVFB_SETPALETTE(devfb_setpalette_t);

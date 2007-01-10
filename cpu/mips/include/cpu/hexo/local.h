@@ -34,6 +34,8 @@
 
 #ifdef CONFIG_SMP
 
+# define CPU_LOCAL	__attribute__((section (".cpudata")))
+
 /** cpu local storage variable assignement */
 # define CPU_LOCAL_SET(n, v)				\
 {							\
@@ -83,6 +85,8 @@
 })
 
 #else
+
+# define CPU_LOCAL
 
 /** cpu local storage variable assignement */
 # define CPU_LOCAL_SET(n, v)  (n) = (v)

@@ -93,7 +93,7 @@ asm(
     "	addiu	$7,	$sp,	0			\n" /* register table on stack */
     "	addiu	$8,	$sp,				\n" /* stack pointer */
 
-fixme calling convention !
+    //fixme calling convention !
 
 #if defined(CONFIG_CPU_MIPS_ABI_O32) || defined(CONFIG_CPU_MIPS_ABI_O64)
     "	sw	$8,	4*4($sp)			\n"

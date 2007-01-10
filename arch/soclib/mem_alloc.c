@@ -23,7 +23,8 @@
 #include <hexo/alloc.h>
 #include <hexo/segment.h>
 
-#include "dsx_addresses.h"
+extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
+extern __ldscript_symbol_t __system_cached_heap_start, __system_cached_heap_end;
 
 struct mem_alloc_region_s mem_region_system;
 
@@ -43,18 +44,27 @@ void mem_init(void)
 {
 #if defined(CONFIG_SMP)
   mem_alloc_region_init(&mem_region_cpu,
-			(uint8_t*)DSX_SEGMENT_HEAP_C_ADDR,
-			(uint8_t*)DSX_SEGMENT_HEAP_C_ADDR + DSX_SEGMENT_HEAP_C_SIZE
+			&__system_cached_heap_start,
+			&__system_cached_heap_end
+			);
+
+  mem_alloc_region_init(&mem_region_system,
+			&__system_uncached_heap_start,
+			&__system_uncached_heap_end
+			);
+#else
+  mem_alloc_region_init(&mem_region_system,
+			&__system_cached_heap_start,
+			&__system_cached_heap_end
 			);
 #endif
 
-  mem_alloc_region_init(&mem_region_system,
-			(uint8_t*)DSX_SEGMENT_HEAP_U_ADDR,
-			(uint8_t*)DSX_SEGMENT_HEAP_U_ADDR + DSX_SEGMENT_HEAP_U_SIZE
-			);
-
-#if defined(CONFIG_SMP) || defined(CONFIG_CLUSTER)
+#if defined(CONFIG_SMP)
   mem_region_default = &mem_region_system;
+#endif
+
+#if defined(CONFIG_CLUSTER)
+# error FIXME CONFIG_CLUSTER
 #endif
 }
 

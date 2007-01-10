@@ -24,8 +24,10 @@
 #include <hexo/init.h>
 #include <hexo/lock.h>
 #include <hexo/cpu.h>
+#include <hexo/alloc.h>
 
-uintptr_t __ramlock_base = 0x00c00004;
+extern __ldscript_symbol_t __ramlock_base_start;
+uintptr_t __ramlock_base = (uintptr_t)&__ramlock_base_start;
 
 #ifdef CONFIG_SMP
 static uint_fast8_t	cpu_count = 1;
@@ -47,7 +49,6 @@ void arch_init()
     /* First CPU */
     {
       lock_init(&__atomic_arch_lock);
-
       lock_init(&cpu_init_lock);
 
 #endif

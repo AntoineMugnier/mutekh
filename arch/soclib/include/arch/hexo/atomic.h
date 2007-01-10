@@ -29,7 +29,9 @@
 
 #include <hexo/lock.h>
 
+#ifdef CONFIG_SMP
 extern lock_t __atomic_arch_lock;
+#endif
 
 struct arch_atomic_s
 {
@@ -38,18 +40,26 @@ struct arch_atomic_s
 
 static inline  void atomic_set(atomic_t *a, atomic_int_t value)
 {
+#ifdef CONFIG_SMP
   lock_spin_irq(&__atomic_arch_lock);
+#endif
   a->value = value;
+#ifdef CONFIG_SMP
   lock_release_irq(&__atomic_arch_lock);
+#endif
 }
 
 static inline  atomic_int_t atomic_get(atomic_t *a)
 {
   atomic_int_t	res;
 
+#ifdef CONFIG_SMP
   lock_spin_irq(&__atomic_arch_lock);
+#endif
   res = a->value;
+#ifdef CONFIG_SMP
   lock_release_irq(&__atomic_arch_lock);
+#endif
 
   return res;
 }
@@ -58,9 +68,13 @@ static inline  bool_t atomic_inc(atomic_t *a)
 {
   atomic_int_t	res;
 
+#ifdef CONFIG_SMP
   lock_spin_irq(&__atomic_arch_lock);
+#endif
   res = ++a->value;
+#ifdef CONFIG_SMP
   lock_release_irq(&__atomic_arch_lock);
+#endif
 
   return res;
 }
@@ -69,18 +83,26 @@ static inline  bool_t atomic_dec(atomic_t *a)
 {
   atomic_int_t	res;
 
+#ifdef CONFIG_SMP
   lock_spin_irq(&__atomic_arch_lock);
+#endif
   res = --a->value;
+#ifdef CONFIG_SMP
   lock_release_irq(&__atomic_arch_lock);
+#endif
 
   return res;
 }
 
 static inline  void atomic_bit_set(atomic_t *a, uint_fast8_t n)
 {
+#ifdef CONFIG_SMP
   lock_spin_irq(&__atomic_arch_lock);
+#endif
   a->value |= 1 << n;
+#ifdef CONFIG_SMP
   lock_release_irq(&__atomic_arch_lock);
+#endif
 }
 
 static inline  bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n)
@@ -88,19 +110,27 @@ static inline  bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n)
   bool_t		res;
   const atomic_int_t	bit = 1 << n;
 
+#ifdef CONFIG_SMP
   lock_spin_irq(&__atomic_arch_lock);
+#endif
   res = a->value & bit ? 1 : 0;
   a->value |= bit;
+#ifdef CONFIG_SMP
   lock_release_irq(&__atomic_arch_lock);
+#endif
 
   return res;
 }
 
 static inline  void atomic_bit_clr(atomic_t *a, uint_fast8_t n)
 {
+#ifdef CONFIG_SMP
   lock_spin_irq(&__atomic_arch_lock);
+#endif
   a->value &= ~(1 << n);
+#ifdef CONFIG_SMP
   lock_release_irq(&__atomic_arch_lock);
+#endif
 }
 
 static inline  bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n)
@@ -108,10 +138,14 @@ static inline  bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n)
   bool_t		res;
   const atomic_int_t	bit = 1 << n;
 
+#ifdef CONFIG_SMP
   lock_spin_irq(&__atomic_arch_lock);
+#endif
   res = a->value & bit ? 1 : 0;
   a->value &= ~bit;
+#ifdef CONFIG_SMP
   lock_release_irq(&__atomic_arch_lock);
+#endif
 
   return res;
 }
@@ -121,9 +155,13 @@ static inline  bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n)
   bool_t		res;
   const atomic_int_t	bit = 1 << n;
 
+#ifdef CONFIG_SMP
   lock_spin_irq(&__atomic_arch_lock);
+#endif
   res = a->value & bit ? 1 : 0;
+#ifdef CONFIG_SMP
   lock_release_irq(&__atomic_arch_lock);
+#endif
 
   return res;
 }

@@ -42,6 +42,10 @@ extern struct mem_alloc_region_s mem_region_cluster;
 # define MEM_SCOPE_CLUSTER	(&mem_region_cluster)
 #endif
 
+#if defined(CONFIG_CLUSTER)
+# error FIXME CONFIG_CLUSTER
+#endif
+
 /** allocated memory scope is context local */
 #if defined(CONFIG_HEXO_SCHED_MIGRATION) && !defined(CONFIG_CPU_CACHE_COHERENCY)
 # define MEM_SCOPE_CONTEXT	MEM_SCOPE_SYS
@@ -59,7 +63,11 @@ extern struct mem_alloc_region_s *mem_region_default;
 static inline void
 mem_alloc_set_default(struct mem_alloc_region_s *region)
 {
+#if defined(CONFIG_SMP) || defined(CONFIG_CLUSTER)
   mem_region_default = region;
+#else
+  assert(region == &mem_region_system);
+#endif
 }
 
 #endif

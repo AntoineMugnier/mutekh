@@ -120,13 +120,13 @@ cpu_context_jumpto(struct context_s *new)
 		"	mtc0	$1,	$12		\n"
 		/* restore execution pointer */
 		"	lw	$1,	2*4($sp)	\n"
-		FIXME $27
-		"	sw	$15,	4($27)		\n"
+		"	sw	$15,	(%1)		\n"
 		"	addiu	$sp,	3*4		\n"
 		"	jr	$1			\n"
 		".set pop				\n"
 		:
 		: "r" (new->stack_ptr)
+		, "r" (CPU_LOCAL_ADDR(__cpu_context_data_base))
 		);
 }
 
