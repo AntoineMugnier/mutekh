@@ -34,11 +34,15 @@ asm(
     "							\n"
     /* get CPU id and adjust stack */
     "							\n"
-    "la         $sp,	0x002ff0f0			\n"
     "mfc0	$8,	$15				\n"
+    "la         $sp,	__system_uncached_heap_end - 16	\n"
     "andi	$8,	$8,	0x000003ff		\n"
-    "sll	$8,	$8,	10			\n"
-    "addu	$sp,	$8,	$sp			\n"
+
+    "1: bne	$0,	$8,	1b			\n"
+    "nop						\n"
+
+    //    "sll	$8,	$8,	10			\n"
+    //    "subu	$sp,	$8,	$sp			\n"
     "							\n"
     /* setup global data pointer */
     "la	   $gp,   _gp					\n"
