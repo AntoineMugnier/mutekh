@@ -81,7 +81,7 @@ INCS=-nostdinc -D__MUTEK__ \
 %:: %.m4 $(BUILD_DIR)/.config.m4
 	@echo '    M4      $(@F)'
 	cat $(SRC_DIR)/scripts/global.m4 $(BUILD_DIR)/.config.m4 \
-		$(SRC_DIR)/$< | m4 -P > $(BUILD_DIR)/$@
+		$(SRC_DIR)/$< | m4 $(filter -I%,$(INCS)) -P > $(BUILD_DIR)/$@
 
 # cpp preprocessed files
 %:: %.cpp $(BUILD_DIR)/.config.h
