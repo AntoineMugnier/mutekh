@@ -74,19 +74,19 @@ pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   sched_queue_wrlock(&cond->wait);
 
-  if (pthread_mutex_unlock(mutex))
-#ifdef CONFIG_PTHREAD_CHECK
-    {
-      sched_queue_unlock(&cond->wait);
-      res = EINVAL;
-    }
-  else
-#endif
+  if (!pthread_mutex_unlock(mutex))
     {
       sched_wait_unlock(&cond->wait);
 
       pthread_mutex_lock(mutex);
     }
+#ifdef CONFIG_PTHREAD_CHECK
+  else
+    {
+      sched_queue_unlock(&cond->wait);
+      res = EINVAL;
+    }
+#endif
 
   CPU_INTERRUPT_RESTORESTATE;
 
