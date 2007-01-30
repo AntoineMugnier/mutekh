@@ -81,6 +81,47 @@ sub warning
     print text80($msg.$tlist, "        ", "warning ")."\n";
 }
 
+sub check_rule
+{
+    my ($orig, $rule) = @_;
+
+    $rule =~ /^([^\s=<>]+)([=<>]*)([^\s]*)$/;
+    my $dep = $1;
+    my $op = $2;
+    my $val = $3;
+
+    my $opt = $config_opts{$dep};
+
+    if (not $opt)
+    {
+	warning($$orig{location}.": `".$$orig{name}."' refers to undeclared token `".$dep."', ignored.");
+	return 0;
+    }
+
+    if (not $op)
+    {
+	return 1 if ($$opt{value} ne "undefined");
+    }
+    elsif ($op eq "=")
+    {
+	return 1 if ($$opt{value} eq $val);
+    }
+    elsif  ($op eq ">")
+    {
+	return 1 if ($$opt{value} > $val);
+    }
+    elsif  ($op eq "<")
+    {
+	return 1 if ($$opt{value} < $val);
+    }
+    else
+    {
+	error($$orig{location}.": bad operator in assertion for `".$$opt{name}."' token");
+    }
+
+    return 0;
+}
+
 # set description
 
 sub cmd_desc
@@ -182,7 +223,7 @@ sub cmd_fallback
 
     if (defined $$opts{fallback})
     {
-	error($location.": fallback token already declared for `".$$opts{name}." token'");
+	error($location.": fallback token already declared for `".$$opts{name}."' token");
     }
     else
     {
@@ -465,24 +506,7 @@ sub process_config_require
 
 	foreach my $rule (@deps_and)
 	{
-	    $rule =~ /^([^\s=]+)=?([^\s]*)$/;
-	    my $dep = $1;
-	    my $val = $2;
-
-	    my $opt = $config_opts{$dep};
-
-	    if ($opt)
-	    {
-		if ((not $val and ($$opt{value} ne "undefined")) or
-		    ($val and $$opt{value} eq $val))
-		{
-		    $flag = 1;
-		}
-	    }
-	    else
-	    {
-		warning($$orig{location}.": `".$$orig{name}."' requires undeclared token `".$dep."', ignored.");
-	    }
+	    $flag = 1 if (check_rule($orig, $rule));
 	}
 
 	if (not $flag)
@@ -509,24 +533,7 @@ sub process_config_suggest
 
 	foreach my $rule (@deps_and)
 	{
-	    $rule =~ /^([^\s=]+)=?([^\s]*)$/;
-	    my $dep = $1;
-	    my $val = $2;
-
-	    my $opt = $config_opts{$dep};
-
-	    if ($opt)
-	    {
-		if ((not $val and ($$opt{value} ne "undefined")) or
-		    ($val and $$opt{value} eq $val))
-		{
-		    $flag = 1;
-		}
-	    }
-	    else
-	    {
-		warning($$orig{location}.": `".$$orig{name}."' suggests undeclared token `".$dep."', ignored.");
-	    }
+	    $flag = 1 if (check_rule($orig, $rule));
 	}
 
 	if (not $flag)

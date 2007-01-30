@@ -28,7 +28,7 @@
 
 #include <arch/hexo/emu_syscalls.h>
 
-struct cpu_cld_s	*cpu_cld[1];
+struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
 
 /* architecture specific init function */
 void arch_init()
@@ -43,7 +43,7 @@ void arch_init()
       cpu_global_init();
 
       /* configure first CPU */
-      cpu_cld[0] = cpu_init(0);
+      cpu_cld_list[0] = cpu_init(0);
 
       /* run mutek_main() */
       mutek_main(0, 0);
@@ -70,7 +70,7 @@ void arch_start_other_cpu(void)
 {
 }
 
-inline uint_fast8_t arch_get_cpu_count(void)
+cpu_id_t arch_get_cpu_count(void)
 {
 #ifdef CONFIG_SMP
   return cpu_count;

@@ -9,6 +9,10 @@ CONTEXT_LOCAL struct sched_context_s *sched_cur;
 /* processor idle context */
 CPU_LOCAL struct sched_context_s sched_idle;
 
+/************************************************************************/
+
+#if defined (CONFIG_HEXO_SCHED_MIGRATION)
+
 /* return next scheduler candidate */
 static inline struct sched_context_s *
 __sched_candidate_noidle(sched_queue_root_t *root)
@@ -36,6 +40,54 @@ __sched_root(void)
 {
   return &sched_root;
 }
+
+static inline sched_queue_root_t *
+__sched_root_cpu(cpu_id_t cpu)
+{
+  return &sched_root;
+}
+
+/************************************************************************/
+
+#elif defined (CONFIG_HEXO_SCHED_ALGO_STATIC)
+
+/* return next scheduler candidate */
+static inline struct sched_context_s *
+__sched_candidate_noidle(sched_queue_root_t *root)
+{
+  return sched_queue_nolock_pop(root);
+}
+
+/* return next scheduler candidate */
+static inline struct sched_context_s *
+__sched_candidate(sched_queue_root_t *root)
+{
+  struct sched_context_s	*next;
+
+  if ((next = __sched_candidate_noidle(root)) == NULL)
+    next = CPU_LOCAL_ADDR(sched_idle);
+
+  return next;
+}
+
+/* scheduler root */
+static CPU_LOCAL sched_queue_root_t	sched_root;
+
+static inline sched_queue_root_t *
+__sched_root(void)
+{
+  return CPU_LOCAL_ADDR(sched_root);
+}
+
+static inline sched_queue_root_t *
+__sched_root_cpu(cpu_id_t cpu)
+{
+  return CPU_LOCAL_FOREIGN_ADDR(cpu, sched_root);
+}
+
+#endif
+
+/************************************************************************/
 
 /* idle context runtime */
 static CONTEXT_ENTRY(sched_context_idle)
@@ -187,7 +239,26 @@ void sched_context_start(struct sched_context_s *sched_ctx)
 {
   assert(!cpu_interrupt_getstate());
 
+#if !defined(CONFIG_HEXO_SCHED_AFFINITY)
+# if defined (CONFIG_HEXO_SCHED_ALGO_STATIC)
+  static cpu_id_t	next_cpu = 0;
+
+  sched_queue_pushback(__sched_root_cpu(next_cpu++ % cpu_count()), sched_ctx);
+# else
   sched_queue_pushback(__sched_root(), sched_ctx);
+#endif
+
+#else
+
+# if defined (CONFIG_HEXO_SCHED_ALGO_STATIC)
+  sched_queue_pushback(__sched_root_cpu(sched_ctx->cpu), sched_ctx);
+# endif
+
+# if defined (CONFIG_HEXO_SCHED_MIGRATION)
+  sched_queue_pushback(__sched_root(), sched_ctx);
+#endif
+
+#endif
 }
 
 /* Must be called with interrupts disabled */
@@ -241,4 +312,79 @@ void sched_cpu_init(void)
 
   context_init(&idle->context, CONFIG_HEXO_SCHED_IDLE_STACK_SIZE, sched_context_idle, 0);
 }
+
+#if !defined(CONFIG_HEXO_SCHED_AFFINITY)
+
+/** scheduler context will run on this cpu */
+void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
+{
+}
+
+/** scheduler context will not run on this cpu */
+void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu)
+{
+}
+
+/** scheduler context will run on a single cpu */
+void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu)
+{
+}
+
+/** scheduler context will run on all cpu */
+void sched_affinity_all(struct sched_context_s *sched_ctx)
+{
+}
+
+#else
+# if defined (CONFIG_HEXO_SCHED_MIGRATION)
+/** scheduler context will run on this cpu */
+void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
+{
+}
+
+/** scheduler context will not run on this cpu */
+void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu)
+{
+}
+
+/** scheduler context will run on a single cpu */
+void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu)
+{
+}
+
+/** scheduler context will run on all cpu */
+void sched_affinity_all(struct sched_context_s *sched_ctx)
+{
+}
+
+# endif
+
+# if defined (CONFIG_HEXO_SCHED_ALGO_STATIC)
+/** scheduler context will run on this cpu */
+void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
+{
+  assert(cpu < cpu_count());
+
+  sched_ctx->cpu = cpu;
+}
+
+/** scheduler context will not run on this cpu */
+void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu)
+{
+}
+
+/** scheduler context will run on a single cpu */
+void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu)
+{
+  sched_affinity_add(sched_ctx, cpu);
+}
+
+/** scheduler context will run on all cpu */
+void sched_affinity_all(struct sched_context_s *sched_ctx)
+{
+}
+
+# endif
+
+#endif
 

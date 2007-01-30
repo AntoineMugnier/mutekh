@@ -54,6 +54,12 @@
 /** cpu local storage type attribute */
 # define CPU_LOCAL	__attribute__((section (".cpudata")))
 
+/** context local storage variable assignement from different context */
+#define CPU_LOCAL_FOREIGN_SET(cpuid, n, v) { __asm__ ("mov %0, (%1,%2)" : : "r" ((typeof(n))v), "r" (&n), "r" (cls) : "memory") ; }
+
+/** context local storage variable assignement from different context */
+#define CPU_LOCAL_FOREIGN_ADDR(cpuid, n) { __asm__ ("mov %0, (%1,%2)" : : "r" ((typeof(n))v), "r" (&n), "r" (cls) : "memory") ; }
+
 /** cpu local storage variable assignement */
 # define CPU_LOCAL_SET(n, v)  { __asm__ ("mov %1, %%fs:%0" : "=m" (n) : "r" ((typeof(n))v)); }
 

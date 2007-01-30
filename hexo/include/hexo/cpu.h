@@ -27,6 +27,8 @@
 /** Cpu Local Descriptor pointer type */
 struct cpu_cld_s;
 
+extern struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
+
 /** init system wide cpu data */
 error_t cpu_global_init(void);
 
@@ -34,16 +36,19 @@ error_t cpu_global_init(void);
 void cpu_start_other_cpu(void);
 
 /** Setup CPU specific data */
-struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id);
+struct cpu_cld_s *cpu_init(cpu_id_t cpu_id);
+
+/** get cpu local storage */
+static inline void *cpu_get_cls(cpu_id_t cpu_id);
 
 /** return CPU id number, only available after arch_init() */
-uint_fast8_t cpu_id(void);
+cpu_id_t cpu_id(void);
 
 /** return true if bootstap processor */
 static inline bool_t cpu_isbootstrap(void);
 
 /** return total cpus count */
-uint_fast8_t arch_get_cpu_count(void);
+cpu_id_t arch_get_cpu_count(void);
 
 /** unlock non first CPUs so that they can enter main_smp() */
 void arch_start_other_cpu(void);

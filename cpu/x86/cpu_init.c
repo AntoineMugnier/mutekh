@@ -27,6 +27,7 @@
 #include <hexo/iospace.h>
 #include <hexo/lock.h>
 #include <hexo/segment.h>
+#include <hexo/cpu.h>
 
 #include <cpu/hexo/pmode.h>
 #include <cpu/hexo/apic.h>
@@ -130,18 +131,6 @@ cpu_x86_segdesc_free(cpu_x86_segsel_t sel)
   lock_release(&gdt_lock);  
 }
 
-struct cpu_cld_s
-{
-#ifdef CONFIG_SMP
-  /* pointer to CPU local storage */
-  void				*cpu_local_storage;
-#endif
-  /* CPU id */
-  uint32_t			id;
-  /* CPU Interrupt descriptor table */
-  struct cpu_x86_gatedesc_s	idt[CPU_MAX_INTERRUPTS];
-};
-
 static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
 
 static void cpu_x86_init_apic(uint32_t cpu_id)
@@ -158,7 +147,7 @@ static void cpu_x86_init_apic(uint32_t cpu_id)
   cpu_mem_write_32((uintptr_t)&apic->spurious_int, i);
 }
 
-struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
+struct cpu_cld_s *cpu_init(cpu_id_t cpu_id)
 {
 #ifdef CONFIG_SMP
   void			*cls;
@@ -241,12 +230,12 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
 
   return cld;
 
- err_cls_seg:
 #ifdef CONFIG_SMP
+ err_cls_seg:
   mem_free(cls);
-#endif
  err_cls:
   mem_free(cld);
+#endif
  err_cld:
   return NULL;
 }
@@ -276,7 +265,7 @@ void cpu_start_other_cpu(void)
 #endif
 }
 
-uint_fast8_t cpu_id(void)
+cpu_id_t cpu_id(void)
 {
 #ifdef CONFIG_SMP
   struct cpu_cld_s	*cld = CPU_LOCAL_GET(cpu_cld);

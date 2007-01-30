@@ -25,6 +25,8 @@
     desc Hexo scheduler feature is enabled
     default defined
     require CONFIG_HEXO_SCHED_IDLE_STACK_SIZE
+    require CONFIG_HEXO_SCHED_MIGRATION CONFIG_HEXO_SCHED_ALGO_STATIC
+    single  CONFIG_HEXO_SCHED_MIGRATION CONFIG_HEXO_SCHED_ALGO_STATIC
     %config end
 
     %config CONFIG_HEXO_SCHED_PREEMPT
@@ -37,6 +39,19 @@
     desc Scheduler algorithm use permanent context migration among available processors
     parent CONFIG_HEXO_SCHED
     default defined
+    %config end
+
+    %config CONFIG_HEXO_SCHED_ALGO_STATIC
+    desc Scheduler algorithm use per cpu context list
+    parent CONFIG_HEXO_SCHED
+    default undefined
+    %config end
+
+    %config CONFIG_HEXO_SCHED_AFFINITY
+    desc Handle context cpu affininty
+    parent CONFIG_HEXO_SCHED
+    default undefined
+    depend CONFIG_SMP
     %config end
 
 */
@@ -61,6 +76,15 @@ CONTAINER_TYPE(sched_queue, __SCHED_CONTAINER_ALGO, struct sched_context_s
   struct context_s	context;
   sched_queue_entry_t	list_entry;
   void			*private;
+
+#if defined (CONFIG_HEXO_SCHED_MIGRATION) && defined(CONFIG_HEXO_SCHED_AFFINITY)
+  cpu_bitmap_t		cpu_map;
+#endif
+
+#if defined (CONFIG_HEXO_SCHED_ALGO_STATIC) && defined(CONFIG_HEXO_SCHED_AFFINITY)
+  cpu_id_t		cpu;
+#endif
+
 }, HEXO_SPIN_IRQ, NOOBJ, list_entry);
 
 CONTAINER_FUNC(static inline, sched_queue, __SCHED_CONTAINER_ALGO, sched_queue, HEXO_SPIN, list_entry);
@@ -119,6 +143,18 @@ void sched_global_init(void);
 
 /** scheduler intialization, must be called for each processor */
 void sched_cpu_init(void);
+
+/** scheduler context will run on this cpu */
+void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu);
+
+/** scheduler context will not run on this cpu */
+void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu);
+
+/** scheduler context will run on a single cpu */
+void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu);
+
+/** scheduler context will run on all cpu */
+void sched_affinity_all(struct sched_context_s *sched_ctx);
 
 #endif
 #endif
