@@ -31,15 +31,14 @@ uintptr_t __ramlock_base = (uintptr_t)&__ramlock_base_start;
 
 #ifdef CONFIG_SMP
 static uint_fast8_t	cpu_count = 1;
-struct cpu_cld_s	*cpu_cld[256];
 volatile bool_t		cpu_init_flag = 0;
 volatile bool_t		cpu_start_flag = 0;
 static lock_t		cpu_init_lock;	/* cpu intialization lock */
 /* integer atomic operations global spin lock */
 lock_t			__atomic_arch_lock;
-#else
-struct cpu_cld_s	*cpu_cld[1];
 #endif
+
+struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
 
 /* architecture specific init function */
 void arch_init() 
@@ -59,7 +58,7 @@ void arch_init()
       cpu_global_init();
 
       /* configure first CPU */
-      cpu_cld[0] = cpu_init(0);
+      cpu_cld_list[0] = cpu_init(0);
 
 #ifdef CONFIG_SMP
       /* send reset/init signal to other CPUs */
@@ -107,7 +106,7 @@ void arch_start_other_cpu(void)
 #endif
 }
 
-inline uint_fast8_t arch_get_cpu_count(void)
+inline cpu_id_t arch_get_cpu_count(void)
 {
 #ifdef CONFIG_SMP
   return cpu_count;

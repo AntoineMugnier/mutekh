@@ -23,6 +23,7 @@
 #include <hexo/alloc.h>
 #include <hexo/init.h>
 #include <hexo/segment.h>
+#include <hexo/cpu.h>
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
 
@@ -43,16 +44,8 @@ cpu_global_init(void)
   return 0;
 }
 
-struct cpu_cld_s
-{
-  /* pointer to CPU local storage */
-  void				*cpu_local_storage;
-  /* CPU id */
-  uint_fast8_t			id;
-};
-
 struct cpu_cld_s *
-cpu_init(uint_fast8_t cpu_id)
+cpu_init(cpu_id_t cpu_id)
 {
   struct cpu_cld_s	*cld;
   void			*cls;
@@ -96,7 +89,7 @@ void cpu_start_other_cpu(void)
 #endif
 }
 
-uint_fast8_t cpu_id(void)
+cpu_id_t cpu_id(void)
 {
   struct cpu_cld_s	*cld = CPU_LOCAL_GET(cpu_cld);
 

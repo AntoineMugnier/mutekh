@@ -84,13 +84,5 @@ struct cpu_cld_s
   struct cpu_x86_gatedesc_s	idt[CPU_MAX_INTERRUPTS];
 };
 
-static inline void *cpu_get_cls(cpu_id_t cpu_id)
-{
-#ifdef CONFIG_SMP
-  return cpu_cld_list[cpu_id]->cpu_local_storage;
-#endif
-  return NULL;
-}
-
 #endif
 

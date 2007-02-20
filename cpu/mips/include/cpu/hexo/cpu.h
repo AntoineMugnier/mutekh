@@ -25,6 +25,14 @@
 
 #define CPU_CPU_H_
 
+struct cpu_cld_s
+{
+  /* pointer to CPU local storage */
+  void				*cpu_local_storage;
+  /* CPU id */
+  uint_fast8_t			id;
+};
+
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	32
 

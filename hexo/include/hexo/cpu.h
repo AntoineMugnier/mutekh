@@ -57,5 +57,13 @@ void arch_start_other_cpu(void);
 
 cpu_cycle_t cpu_cycle_count(void);
 
+static inline void *cpu_get_cls(cpu_id_t cpu_id)
+{
+#ifdef CONFIG_SMP
+  return cpu_cld_list[cpu_id]->cpu_local_storage;
+#endif
+  return NULL;
+}
+
 #endif
 
