@@ -24,7 +24,8 @@ calloc(size_t nmemb, size_t size)
 void
 free(void *ptr)
 {
-  mem_free(ptr);
+  if (ptr != NULL)
+    mem_free(ptr);
 }
 
 void *

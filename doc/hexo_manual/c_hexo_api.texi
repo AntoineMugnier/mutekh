@@ -21,7 +21,6 @@
 
 @node Memory allocation, Processor and context local data, Spinlocks, Hexo API
 @section  Memory allocation
- Hexo API
 @c alloc.h segment.h
 @include c_hexo_api/memory_allocation.texi
 

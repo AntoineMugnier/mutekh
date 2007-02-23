@@ -68,6 +68,10 @@ char *
 strcat(char *dest, const char *src);
 #define strcat __builtin_strcat
 
+char *
+strncat(char *dest, const char *src, size_t n);
+#define strncat __builtin_strncat
+
 char * __attribute__ ((pure))
 strchr(const char *s, int_fast8_t c);
 #define strchr __builtin_strchr
@@ -75,6 +79,13 @@ strchr(const char *s, int_fast8_t c);
 int_fast8_t __attribute__ ((pure))
 strcmp(const char *s1, const char *s2);
 #define strcmp __builtin_strcmp
+
+static inline int_fast8_t
+__attribute__ ((deprecated,pure))
+strcoll(const char *s1, const char *s2)
+{
+  return strcmp(s1, s2);
+}
 
 char *
 strcpy(char *dest, const char *src);

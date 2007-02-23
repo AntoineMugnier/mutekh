@@ -17,6 +17,10 @@ ifeq ($(CONFIG_PTHREAD), defined)
  MODULES += libpthread
 endif
 
+ifeq ($(CONFIG_LUA), defined)
+ MODULES += liblua
+endif
+
 subdirs = $(MODULES) arch cpu drivers
 
 objs =

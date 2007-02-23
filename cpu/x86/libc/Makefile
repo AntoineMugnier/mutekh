@@ -1,4 +1,4 @@
 
-objs = string.o
+objs = string.o setjmp.o
 
 

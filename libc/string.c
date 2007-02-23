@@ -152,6 +152,33 @@ inline char* strcat(char *s, const char *t)
   return dest;
 }
 #endif
+/********************************/
+
+#ifndef HAS_CPU_STRNCAT
+#undef strncat
+
+#warning bad size check
+
+inline char* strncat(char *s, const char *t, size_t n)
+{
+  char	*dest = s;
+  char	*end = s + n;
+
+  s += strlen(s);
+
+  while (s < n)
+    {
+      if (!(*s = *t))
+	break;
+      s++;
+      t++;
+    }
+
+  *s = '\0';
+
+  return dest;
+}
+#endif
 
 /********************************/
 

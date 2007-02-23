@@ -111,11 +111,37 @@ void srand(__rand_type_t seed);
 
 /******************** abort */
 
-static inline void abort(void)
+static inline void
+__attribute__ ((deprecated))
+abort(void)
 {
   while (1)
     ;
 }
+
+/******************* exit */
+
+#define EXIT_SUCCESS	0
+#define EXIT_FAILURE	-1
+
+static inline void
+__attribute__ ((deprecated))
+exit(int status)
+{
+  abort();
+}
+
+/****************** abs */
+
+#if 0
+int abs(int j);
+long int labs(long int j);
+long long int llabs(long long int j);
+#endif
+
+#define abs(x) ({ const typeof(x) __x = (x); __x < 0 ? -__x : __x; })
+#define labs abs
+#define llabs abs
 
 #endif
 
