@@ -397,23 +397,13 @@ cpu_x86_stackseg_use(uint_fast16_t index, uint_fast8_t rpl)
 static inline void
 cpu_x86_codeseg_use(uint_fast16_t index, uint_fast8_t rpl)
 {
-  struct cpu_x86_seg_offset_s	desc = { .seg = (index << 3) | rpl };
-  uint32_t				offset;
-
-  /* long jump to SEG:OFFSET must be used here to load code segment
-     register. OFFSET must be adjusted to point on ljmp next
-     instruction */
-
   __asm__ volatile (
-		    "call	1f		\n" /* push current EIP register */
-		    "1:				\n"
-		    "popl	%0		\n" /* get EIP to have position independant code */
-		    "leal	12(%0),	%0	\n" /* adjust to point after ljmp */
-		    "movl	%0,	%1	\n" /* update offset in jump descriptor */
-		    "ljmp	*%2		\n" /* do the long jump */
-		    : "=r" (offset)
-		    , "=m" (desc.offset)
-		    : "m" (desc)
+		    "pushl %0		\n"
+		    "pushl $1f		\n"
+		    "lret		\n"
+		    "1:			\n"
+		    :
+		    : "r" ((index << 3) | rpl)
 		    : "memory"
 		    );
 }
