@@ -3,9 +3,9 @@ Hexo provides C99 scalar C types for use in higher level
 libraries. These integer types are defined in the
 @code{<hexo/types.h>} header file.
 
-Use of standard integer C types is deprecated (except for the
-@code{char} type). Standard integer C types can not be used to
-properly write code portable to different processors.
+Use of standard integer C types is deprecated in the MutekH project
+(except for the @code{char} type). Standard integer C types can not be
+used to properly write code portable to different processors.
 
 C99 integer types must be used to ensure all integer variables and
 fields are properly chosen to handle the right value range:
