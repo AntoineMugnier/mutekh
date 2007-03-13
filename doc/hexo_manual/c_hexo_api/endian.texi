@@ -1,5 +1,4 @@
 
-
 Hexo provided a set of inline functions and macros to perform bytes
 swaping, endian dependent and non aligned memory access. These
 features are available through the @code{<hexo/endian.h>} header file.
