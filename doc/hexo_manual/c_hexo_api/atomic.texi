@@ -10,7 +10,8 @@ operations on the current platform. Atomic operations are performed
 using best available mechanism: direct processor atomic operations or
 spin lock protected conventional integer access.
 
-The following type and functions must be used to perform atomic
+The following types and functions located in the
+@code{<hexo/atomic.h>} header file must be used to perform atomic
 integer operations:
 
 @itemize

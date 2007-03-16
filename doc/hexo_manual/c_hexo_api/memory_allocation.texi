@@ -1,0 +1,77 @@
+
+@menu
+* General purpose memory allocation::           Allocate and free memory blocks
+* Memory regions::                              Control allocated blocks placement
+@end menu
+
+@node General purpose memory allocation, Memory regions, Memory allocation
+@subsection General purpose memory allocation
+
+The general purpose memory allocation interface provide by Hexo allows
+allocation of memory blocks for common programming tasks. These
+features are similar to the @code{malloc()} functions family with
+optional memory region selection mechanism. Memory allocation and
+freeing can be perform with the following functions:
+
+@itemize
+
+@item @code{void *mem_alloc(size_t size, struct mem_alloc_region_s *region)}
+      allocates a block of memory of the requested size in the specified memory
+      region. A set of macro must be used to allocate memory on standard region.
+      This function is equivalent to @code{malloc()} when called with the
+      @code{MEM_SCOPE_DEFAULT} macro as second parameters. @xref{Memory regions} for details.
+
+@item @code{void mem_free(void *ptr)} frees a block of memory.
+
+@item @code{size_t mem_alloc_getsize(void *ptr)} returns the size of
+      an allocated memory block.
+
+@item @code{void mem_alloc_set_default(struct mem_alloc_region_s *region)} changes
+      the default memory allocation scope. @xref{Memory regions} for details.
+
+Standards functions @code{calloc()}, @code{malloc()},  @code{free()} and 
+@code{realloc()} functions found in @code{<stdlib.h>} use the above functions.
+
+@end itemize
+
+@node Memory regions,  , General purpose memory allocation, Memory allocation
+@subsection Memory regions
+
+Hexo allow control of allocated memory blocks placement in
+memory. Memory address space is split in regions, this allow placement
+of allocated memory blocks in different location like global system
+memory area, cpu local memory area, ... Available regions may vary
+depending on current platform and Hexo configuration.
+
+A set of macros are defined to allow placement of allocated memory
+blocks in the right region. Each macro defined a different memory
+scope. Macro definitions may change to allow transparent fall back to
+other memory region when the requested scope is not available.
+
+Here is a list of default memory scope macros:
+
+@itemize
+@item The @code{MEM_SCOPE_SYSTEM} macro must be used when memory block must be
+      accessed from all processors in the system.
+
+@item The @code{MEM_SCOPE_CLUSTER} macro must be used when memory block will be
+      accessed from all processors of the current cluster only. This is
+      equivalent to @code{MEM_SCOPE_SYSTEM} when cluster support is disabled.
+
+@item The @code{MEM_SCOPE_CPU} macro must be used when memory block will be
+      accessed from the current processor only. This is equivalent to
+      @code{MEM_SCOPE_SYSTEM} when multiprocessor support is disabled.
+
+@item The @code{MEM_SCOPE_CONTEXT} macro must be used when memory block will be
+      accessed from the current running context only. This may be equivalent to
+      @code{MEM_SCOPE_CPU}, @code{MEM_SCOPE_CLUSTER} or @code{MEM_SCOPE_SYSTEM}
+      depending on cache coherency mechanism and scheduler context migration
+      configuration.
+
+@item The @code{MEM_SCOPE_DEFAULT} macro selects the default memory scope. The
+      default allocation scope can be changed with the
+      @code{void mem_alloc_set_default(struct mem_alloc_region_s *region)} function.
+      This allow control of memory allocation policy in generic library code.
+
+@end itemize
+

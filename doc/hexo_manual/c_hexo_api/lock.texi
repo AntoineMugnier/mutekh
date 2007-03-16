@@ -1,0 +1,51 @@
+
+Spin locks depends on processor and platform features like atomic
+operations does. @xref{Atomic integer access}.
+
+Hexo provides a set of functions to perform spin locking operations
+using available mechanisms. All locking functions presented here
+do not perfom any operation when hexo is configured for single
+processor.
+
+The following types and functions located in the
+@code{<hexo/lock.h>} header file must be used to perform spin locking
+operations:
+
+@itemize
+@item @code{lock_t} type must be used to declare a spin lock object.
+
+@item @code{error_t lock_init(lock_t *lock)} initializes a spin lock object.
+
+@item @code{void lock_destroy(lock_t *lock)} frees resources associated
+      with a spin lock object.
+
+@item @code{bool_t lock_try(lock_t *lock)} tries to lock a spin lock object.
+      This functions returns true if lock was busy.
+
+@item @code{void lock_spin(struct arch_lock_s *lock)} enters a wait loop
+      and returns when the spin lock object has been locked.
+
+@item @code{void lock_release(lock_t *lock)} release the spin lock object
+      locked with lock_spin().
+
+@item @code{bool_t lock_state(lock_t *lock)} reads current state of spin
+      lock object. Returns true if lock is busy.
+
+@item @code{lock_spin_irq(lock_t *lock)} save and disable processor interrupts
+      state and acts the same way as @code{lock_spin()}. You may consider using
+      the @code{LOCK_SPIN_IRQ(lock)} macro instead which produce faster code.
+
+@item @code{void lock_release_irq(lock_t *lock)} acts the same way as
+      @code{lock_release()} and restore previous processor interruptions state.
+
+@item @code{LOCK_SPIN_IRQ(lock)} macro save and disable processor interrupts
+      state and call @code{lock_spin()}. Interrupts state is
+      saved in a local variable and may be stored in a register by the compiler.
+      This macro starts a new C block and must be balanced with the
+      @code{LOCK_RELEASE_IRQ(lock)} macro.
+
+@item @code{LOCK_RELEASE_IRQ(lock)} calls @code{lock_release()} and restore
+      interrupts state. See @code{LOCK_SPIN_IRQ(lock)}.
+
+@end itemize
+

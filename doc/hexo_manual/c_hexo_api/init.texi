@@ -13,14 +13,15 @@ described here:
       running processor and jump to the @code{arch_init()} function.
 
 @item @code{void arch_init()} is the first C function executed by a
-      running processor. It is located in the platform specific code part.
-      The first processor must call
-      @code{cpu_global_init()}, initialize itself with the @code{cpu_init()}
-      function and call @code{mutek_main()}. All other running processors
-      must processed to their own initialization by calling
-      @code{cpu_init()} and enter a wait loop. When the first processor
-      later call @code{arch_start_other_cpu()} from @code{mutek_main()},
-      all other processors will be unlocked and enter the @code{mutek_main_smp()} function.
+      running processor. It is located in the platform specific code
+      part.  The first processor must call @code{cpu_global_init()},
+      initialize itself with the @code{cpu_init()} function and call
+      @code{mutek_main()}. All other running processors must processed to
+      their own initialization by calling @code{cpu_init()} and enter a wait
+      loop. When the first processor later call
+      @code{arch_start_other_cpu()} from @code{mutek_main()}, all other
+      processors will be unlocked and enter the @code{mutek_main_smp()}
+      function.
 
 @item @code{void cpu_start_other_cpu(void)} may be called from the @code{arch_init()}
       function to let other processors boot. This may be needed on
