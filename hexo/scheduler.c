@@ -82,6 +82,7 @@ __sched_root(void)
 static inline sched_queue_root_t *
 __sched_root_cpu(cpu_id_t cpu)
 {
+#error check CPU_LOCAL_FOREIGN_ADDR implem
   return CPU_LOCAL_FOREIGN_ADDR(cpu, sched_root);
 }
 

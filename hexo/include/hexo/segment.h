@@ -23,6 +23,8 @@
 #ifndef SEGMENT_H_
 #define SEGMENT_H_
 
+#include "types.h"
+
 /** allocate and setup cpu local storage memory */
 static void * arch_cpudata_alloc(void);
 

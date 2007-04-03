@@ -50,12 +50,6 @@ static lock_t				gdt_lock;
 /** CPU Global descriptor table */
 static union cpu_x86_desc_s		*gdt;
 
-#ifdef CONFIG_ARCH_IBMPC_MEMORY_SEGLIMIT
-#define ARCH_IBMPC_SEGLIMIT	CONFIG_ARCH_IBMPC_MEMORY
-#else
-#define ARCH_IBMPC_SEGLIMIT	0xffffffff
-#endif
-
 error_t
 cpu_global_init(void)
 {
@@ -67,10 +61,10 @@ cpu_global_init(void)
   lock_init(&gdt_lock);
 
   cpu_x86_seg_setup(&gdt[ARCH_GDT_CODE_INDEX].seg, 0,
-		    ARCH_IBMPC_SEGLIMIT, CPU_X86_SEG_EXEC_NC_R, 0, 1);
+		    0xffffffff, CPU_X86_SEG_EXEC_NC_R, 0, 1);
 
   cpu_x86_seg_setup(&gdt[ARCH_GDT_DATA_INDEX].seg, 0,
-		    ARCH_IBMPC_SEGLIMIT, CPU_X86_SEG_DATA_UP_RW, 0, 1);
+		    0xffffffff, CPU_X86_SEG_DATA_UP_RW, 0, 1);
 
   /* mark all other GDT entries available */
   for (i = ARCH_GDT_FIRST_ALLOC; i < ARCH_GDT_SIZE; i++)
@@ -259,7 +253,7 @@ void cpu_start_other_cpu(void)
   /* 200 us delay */
   for (i = 0; i < 80000; i++)
     asm volatile ("nop\n");
- 
+
   /* broadcast an SIPI IPI to other CPU */
   cpu_mem_write_32((uintptr_t)&apic->icr_0_31, 0x000c4611);
 #endif

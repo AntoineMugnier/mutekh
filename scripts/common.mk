@@ -101,7 +101,7 @@ OBJDUMP=$(CPUTOOLS)objdump
 #MAKEFLAGS += -s
 
 print_dir:
-	test -z '$(objs)' || echo $$'\n --------  $(H)  --------'
+	test -z '$(objs)' || (echo ; echo '--------  $(H)  --------')
 
 .PHONY: $(subdirs-lists) $(target) print_dir clean_sub clean kernel
 

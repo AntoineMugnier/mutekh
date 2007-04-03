@@ -258,7 +258,7 @@ static inline uint64_t endian_swap64(uint64_t x)
 /* return true if value is aligned */
 #define IS_ALIGNED(x, b)	!(((uintptr_t)x) & ((b) - 1))
 
-/* do not use aligment code if b==1 at comilation time. */
+/* do not use aligment code if b==1 at compilation time. */
 #define __ALIGN_CONSTANT(x, b, A) (__builtin_constant_p(b) ? ((b) == 1 ? (x) : A(x, b)) : A(x, b))
 
 /* align value on the next power of two */

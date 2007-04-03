@@ -126,9 +126,10 @@ abort(void)
 
 static inline void
 __attribute__ ((deprecated))
-exit(int status)
+exit(uint_fast8_t status)
 {
-  abort();
+  while (1)
+    ;
 }
 
 /****************** abs */

@@ -81,7 +81,7 @@ static bool_t cpu_interrupt_getstate(void);
 
 /** enable interrupts and give a change to pending requests to
     execute. This function must be used to avoid the "sti; cli"
-    syndrome which makes iterrupts execution impossible on some
+    syndrome which makes interrupts execution impossible on some
     procesors. Memory is marked as clobbered by this function 
     to force global variable reload after interrupts processing. */
 static void cpu_interrupt_process(void);

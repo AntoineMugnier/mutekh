@@ -37,20 +37,20 @@ flags mandatory nodefine
 typedef reg_t jmp_buf[CONFIG_LIBC_SETJMP_REG_COUNT + 1]; /* last value is setjump return value */
 typedef jmp_buf sigjmp_buf;
 
-int setjmp(jmp_buf env);
+reg_t setjmp(jmp_buf env);
 
-static inline int
+static inline reg_t
 __attribute__ ((deprecated))
-sigsetjmp(sigjmp_buf env, int savesigs)
+sigsetjmp(sigjmp_buf env, reg_t savesigs)
 {
   setjmp(env);
 }
 
-void longjmp(jmp_buf env, int val);
+void longjmp(jmp_buf env, reg_t val);
 
 static inline void
 __attribute__ ((deprecated))
-siglongjmp(sigjmp_buf env, int val)
+siglongjmp(sigjmp_buf env, reg_t val)
 {
   longjmp(env, val);
 }

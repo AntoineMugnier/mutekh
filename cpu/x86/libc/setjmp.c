@@ -1,7 +1,7 @@
 
 #include <setjmp.h>
 
-int setjmp(jmp_buf env)
+reg_t setjmp(jmp_buf env)
 {
   register reg_t	ret;
 
@@ -47,7 +47,7 @@ int setjmp(jmp_buf env)
   return ret;
 }
 
-void longjmp(jmp_buf env, int val)
+void longjmp(jmp_buf env, reg_t val)
 {
   asm volatile(
 	       /* set return value */
