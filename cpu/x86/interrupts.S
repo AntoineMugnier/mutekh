@@ -49,46 +49,14 @@
 	mov	$0x##n, %eax			; \
 	jmp	lbl##f
 
-/** interruption callback */
-#define PUT_TAIL(callback, lbl)			\
-lbl:						; \
-	pushl	%eax				; \
-	call	CLS_SEG *(callback)		; \
-	add	$4, %esp			; \
-	popa					; \
-	iret
+/** syscakk callback */
+#define PUT_TAIL_SYS(lbl)			\
 
-/** interruption callback */
+/** exception callback */
 #define PUT_TAIL_EX(callback, lbl)		\
-lbl:						; \
-	lea	44(%esp), %ebx			; \
-	pushl	%ebx				; /* stackptr */ \
-	lea	4(%esp), %ebx			; \
-	pushl	%ebx				; /* regtable */ \
-	movl	%cr2, %ebx			; \
-	pushl	%ebx				; /* dataptr */ \
-	pushl	44(%esp)			; /* execptr */ \
-	pushl	%eax				; /* type */ \
-	call	CLS_SEG *(callback)		; \
-	add	$20, %esp			; \
-	popa					; \
-	iret
 
 /** exception with error code callback */
 #define PUT_TAIL_EX_ERR(callback, lbl)		\
-lbl:						; \
-	lea	48(%esp), %ebx			; \
-	pushl	%ebx				; /* stackptr */ \
-	lea	4(%esp), %ebx			; \
-	pushl	%ebx				; /* regtable */ \
-	mov	%cr2, %ebx			; \
-	pushl	%ebx				; /* dataptr */ \
-	pushl	48(%esp)			; /* execptr */ \
-	pushl	%eax				; /* type */ \
-	call	CLS_SEG *(callback)		; \
-	add	$24, %esp			; \
-	popa					; \
-	iret
 
 .text
 
@@ -127,8 +95,34 @@ PUT_ENTRY(1c, 1)
 PUT_ENTRY(1d, 1)
 PUT_ENTRY(1e, 1)
 PUT_ENTRY(1f, 1)
-PUT_TAIL_EX(cpu_interrupt_ex_handler, 1)
-PUT_TAIL_EX_ERR(cpu_interrupt_ex_handler, 2)
+
+1:
+	lea	44(%esp), %ebx
+	pushl	%ebx				; /* stackptr */
+	lea	4(%esp), %ebx
+	pushl	%ebx				; /* regtable */
+	movl	%cr2, %ebx
+	pushl	%ebx				; /* dataptr */
+	pushl	44(%esp)			; /* execptr */
+	pushl	%eax				; /* type */
+	call	CLS_SEG *(cpu_exception_handler)
+	add	$20, %esp
+	popa
+	iret
+
+2:
+	lea	48(%esp), %ebx
+	pushl	%ebx				; /* stackptr */
+	lea	4(%esp), %ebx
+	pushl	%ebx				; /* regtable */
+	mov	%cr2, %ebx
+	pushl	%ebx				; /* dataptr */
+	pushl	48(%esp)			; /* execptr */
+	pushl	%eax				; /* type */
+	call	CLS_SEG *(cpu_exception_handler)
+	add	$24, %esp
+	popa
+	iret
 
 .globl x86_interrupt_hw_entry
 .align ENTRY_ALIGN
@@ -229,7 +223,13 @@ PUT_ENTRY(5c, 1)
 PUT_ENTRY(5d, 1)
 PUT_ENTRY(5e, 1)
 PUT_ENTRY(5f, 1)
-PUT_TAIL(cpu_interrupt_hw_handler, 1)
+
+1:
+	pushl	%eax
+	call	CLS_SEG *(cpu_interrupt_handler)
+	add	$4, %esp
+	popa
+	iret
 
 .globl x86_interrupt_sys_entry
 .align ENTRY_ALIGN
@@ -362,5 +362,11 @@ PUT_ENTRY(7c, 1)
 PUT_ENTRY(7d, 1)
 PUT_ENTRY(7e, 1)
 PUT_ENTRY(7f, 1)
-PUT_TAIL(cpu_interrupt_sys_handler, 1)
+1:
+	pushl	%esp				; /* regtable */
+	pushl	%eax				; /* number */
+	call	%gs: *(cpu_syscall_handler)
+	add	$8, %esp
+	popa
+	iret
 

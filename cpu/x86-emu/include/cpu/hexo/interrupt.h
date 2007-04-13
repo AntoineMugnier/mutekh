@@ -36,26 +36,19 @@
 
 extern volatile CPU_LOCAL bool_t cpu_irq_state;
 
-extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
-extern CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;
-extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_sys_handler;
+extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
+extern CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
 static inline void
-cpu_interrupt_hw_sethandler(cpu_interrupt_handler_t *hndl)
+cpu_interrupt_sethandler(cpu_interrupt_handler_t *hndl)
 {
-  CPU_LOCAL_SET(cpu_interrupt_hw_handler, hndl);
+  CPU_LOCAL_SET(cpu_interrupt_handler, hndl);
 }
 
 static inline void
-cpu_interrupt_ex_sethandler(cpu_exception_handler_t *hndl)
+cpu_exception_sethandler(cpu_exception_handler_t *hndl)
 {
-  CPU_LOCAL_SET(cpu_interrupt_ex_handler, hndl);
-}
-
-static inline void
-cpu_interrupt_sys_sethandler(cpu_interrupt_handler_t *hndl)
-{
-  CPU_LOCAL_SET(cpu_interrupt_sys_handler, hndl);
+  CPU_LOCAL_SET(cpu_exception_handler, hndl);
 }
 
 static inline void

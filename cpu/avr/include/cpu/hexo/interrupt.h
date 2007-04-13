@@ -34,23 +34,17 @@
 
 #include "hexo/local.h"
 
-extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
+extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
 
 static inline void
-cpu_interrupt_hw_sethandler(cpu_interrupt_handler_t *hndl)
+cpu_interrupt_sethandler(cpu_interrupt_handler_t *hndl)
 {
-  CPU_LOCAL_SET(cpu_interrupt_hw_handler, hndl);
+  CPU_LOCAL_SET(cpu_interrupt_handler, hndl);
 }
 
 static inline void
 __attribute__ ((deprecated))
-cpu_interrupt_ex_sethandler(cpu_exception_handler_t *hndl)
-{
-}
-
-static inline void
-__attribute__ ((deprecated))
-cpu_interrupt_sys_sethandler(cpu_interrupt_handler_t *hndl)
+cpu_exception_sethandler(cpu_exception_handler_t *hndl)
 {
 }
 

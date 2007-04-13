@@ -37,7 +37,7 @@
 /* high level handlers */
 void	exception_handler(uint8_t	id)
 {
-  CPU_LOCAL_GET(cpu_interrupt_ex_handler)(id, 0, 0, NULL, NULL);
+  CPU_LOCAL_GET(cpu_exception_handler)(id, 0, 0, NULL, NULL);
 }
 
 /* prehandlers */
@@ -52,12 +52,12 @@ MK_VECTOR(3, exception_handler);
 /* high level handlers */
 void	interrupt_handler(uint8_t	id)
 {
-  CPU_LOCAL_GET(cpu_interrupt_hw_handler)(id);
+  CPU_LOCAL_GET(cpu_interrupt_handler)(id);
 }
 
 void	syscall_handler(uint8_t	id)
 {
-  CPU_LOCAL_GET(cpu_interrupt_sys_handler)(id);
+  CPU_LOCAL_GET(cpu_syscall_handler)(id);
 }
 
 /* prehandlers */

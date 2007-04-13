@@ -7,6 +7,9 @@
 /** pointer to current context */
 CONTEXT_LOCAL struct context_s *context_cur;
 
+/** syscall handler for current context */
+CONTEXT_LOCAL cpu_syscall_handler_t  *cpu_syscall_handler;
+
 /** init a context object using current execution context */
 error_t
 context_bootstrap(struct context_s *context)

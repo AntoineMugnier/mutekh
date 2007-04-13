@@ -34,6 +34,8 @@
 
 #include "types.h"
 
+/************************************************************ hw irq */
+
 /** CPU interrupt handler function template */
 #define CPU_INTERRUPT_HANDLER(n) void (n) (uint_fast8_t irq)
 
@@ -44,27 +46,8 @@
 */
 typedef CPU_INTERRUPT_HANDLER(cpu_interrupt_handler_t);
 
-
-/** CPU exception handler function template */
-#define CPU_EXCEPTION_HANDLER(n) void (n) (uint_fast8_t type, uintptr_t execptr, \
-					   uintptr_t dataptr, reg_t *regtable, \
-					   reg_t *stackptr)
-/**
-   CPU exception handler function type.
-
-   @param type exception ID
-   @param execptr faulty instruction pointer
-   @param dataptr faulty memory access pointer
-*/
-typedef CPU_EXCEPTION_HANDLER(cpu_exception_handler_t);
-
-
 /** Set hardware interrupt handler for the current cpu */
-static void cpu_interrupt_hw_sethandler(cpu_interrupt_handler_t *hndl);
-/** Set exception interrupt handler for the current cpu */
-static void cpu_interrupt_ex_sethandler(cpu_exception_handler_t *hndl);
-/** Set exception interrupt handler for the current cpu */
-static void cpu_interrupt_sys_sethandler(cpu_interrupt_handler_t *hndl);
+static void cpu_interrupt_sethandler(cpu_interrupt_handler_t *hndl);
 
 /** Disable all maskable interrupts for the current cpu */
 static void cpu_interrupt_disable(void);
@@ -102,6 +85,62 @@ static void cpu_interrupt_wait(void);
 #define CPU_INTERRUPT_RESTORESTATE				\
   cpu_interrupt_restorestate(&__interrupt_state);		\
 }
+
+
+/************************************************************ exceptions */
+
+/** CPU exception handler function template */
+#define CPU_EXCEPTION_HANDLER(n) void (n) (uint_fast8_t type, uintptr_t execptr, \
+					   uintptr_t dataptr, reg_t *regtable, \
+					   reg_t *stackptr)
+/**
+   CPU exception handler function type.
+
+   @param type exception ID
+   @param execptr faulty instruction pointer
+   @param dataptr faulty memory access pointer
+*/
+typedef CPU_EXCEPTION_HANDLER(cpu_exception_handler_t);
+
+
+/** Set exception interrupt handler for the current cpu */
+static void cpu_exception_sethandler(cpu_exception_handler_t *hndl);
+
+
+
+/************************************************************ syscalls */
+
+#include <hexo/context.h>
+
+/** CPU syscall handler function template */
+#define CPU_SYSCALL_HANDLER(n) void (n) (uint_fast8_t number, reg_t *regtable)
+
+/**
+   CPU syscall handler function type.
+
+   @param irq interrupt line number
+*/
+typedef CPU_SYSCALL_HANDLER(cpu_syscall_handler_t);
+
+extern CONTEXT_LOCAL cpu_syscall_handler_t  *cpu_syscall_handler;
+
+/** Set syscall interrupt handler for the current _context_ */
+static inline void
+cpu_syscall_sethandler(cpu_interrupt_handler_t *hndl)
+{
+  CONTEXT_LOCAL_SET(cpu_syscall_handler, hndl);
+}
+
+/** Set syscall interrupt handler for a given context */
+static inline void
+cpu_syscall_sethandler_ctx(struct context_s *context,
+				     cpu_syscall_handler_t *hndl)
+{
+  CONTEXT_LOCAL_FOREIGN_SET(context->tls, cpu_syscall_handler, hndl);
+}
+
+
+/************************************************************/
 
 #include "cpu/hexo/interrupt.h"
 

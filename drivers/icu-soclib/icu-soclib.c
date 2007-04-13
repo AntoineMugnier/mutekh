@@ -107,7 +107,7 @@ DEV_INIT(icu_soclib_init)
 
       cpu_mem_write_32(dev->addr[0] + ICU_SOCLIB_REG_IER_CLR, -1);
 
-      cpu_interrupt_hw_sethandler(icu_soclib_cpu_handler);
+      cpu_interrupt_sethandler(icu_soclib_cpu_handler);
 
       return 0;
     }

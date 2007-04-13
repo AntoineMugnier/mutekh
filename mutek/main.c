@@ -360,7 +360,7 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
     }
 
   lock_init(&fault_lock);
-  cpu_interrupt_ex_sethandler(fault_handler);
+  cpu_exception_sethandler(fault_handler);
 
   printf("CPU %i is up and running.\n", cpu_id());
 

@@ -27,9 +27,8 @@
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
 
-CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_hw_handler;
-CPU_LOCAL cpu_exception_handler_t  *cpu_interrupt_ex_handler;
-CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_sys_handler;
+CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
+CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
 /** pointer to context local storage in cpu local storage */
 CPU_LOCAL void *__cpu_context_data_base;

@@ -135,7 +135,7 @@ DEV_INIT(icu_8259_init)
       dev->drv_pv = pv;
       pv->dev = dev;
 
-      cpu_interrupt_hw_sethandler(icu_8259_cpu_handler);
+      cpu_interrupt_sethandler(icu_8259_cpu_handler);
 
       pic_8259_init(dev->addr[ICU_ADDR_MASTER], dev->addr[ICU_ADDR_SLAVE], CPU_HWINT_VECTOR);
 

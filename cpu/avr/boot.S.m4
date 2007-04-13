@@ -51,8 +51,8 @@ __irq_entry_default:
 	in	r29, 0x3e
 	ldd	r24, Y+5
 
-	lds	r30, cpu_interrupt_hw_handler
-	lds	r31, cpu_interrupt_hw_handler + 1
+	lds	r30, cpu_interrupt_handler
+	lds	r31, cpu_interrupt_handler + 1
 
 	icall
 

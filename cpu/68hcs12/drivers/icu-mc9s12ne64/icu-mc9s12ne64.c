@@ -99,7 +99,7 @@ DEV_INIT(icu_mc9s12ne64_init)
       dev->drv_pv = pv;
       pv->dev = dev;
 
-      cpu_interrupt_hw_sethandler(icu_mc9s12ne64_cpu_handler);
+      cpu_interrupt_sethandler(icu_mc9s12ne64_cpu_handler);
 
       return 0;
     }

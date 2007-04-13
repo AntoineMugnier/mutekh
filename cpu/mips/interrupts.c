@@ -98,7 +98,7 @@ asm(
 #if defined(CONFIG_CPU_MIPS_ABI_O32) || defined(CONFIG_CPU_MIPS_ABI_O64)
     "	sw	$8,	4*4($sp)			\n"
 #endif
-    "	lw	$1,	cpu_interrupt_ex_handler($27)	\n"
+    "	lw	$1,	cpu_exception_handler($27)	\n"
     "	jalr	$1					\n"
 
     "	j	return					\n"
@@ -108,7 +108,7 @@ asm(
     **************************************************************/
     "interrupt_sys:					\n"
 
-    "	lw	$1,	cpu_interrupt_sys_handler($27)	\n"
+    "	lw	$1,	cpu_syscall_handler($27)	\n"
     "	jalr	$1					\n"
 
     "	j	return_val				\n"
@@ -121,7 +121,7 @@ asm(
     "	srl	$4,	$1,	8			\n"
     "	andi	$4,	$4,	0xff			\n"
 
-    "	lw	$1,	cpu_interrupt_hw_handler($27)	\n"
+    "	lw	$1,	cpu_interrupt_handler($27)	\n"
     "	jalr	$1					\n"
 
     /************************************************************/
