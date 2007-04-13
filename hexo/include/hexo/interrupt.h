@@ -126,7 +126,7 @@ extern CONTEXT_LOCAL cpu_syscall_handler_t  *cpu_syscall_handler;
 
 /** Set syscall interrupt handler for the current _context_ */
 static inline void
-cpu_syscall_sethandler(cpu_interrupt_handler_t *hndl)
+cpu_syscall_sethandler(cpu_syscall_handler_t *hndl)
 {
   CONTEXT_LOCAL_SET(cpu_syscall_handler, hndl);
 }
@@ -134,7 +134,7 @@ cpu_syscall_sethandler(cpu_interrupt_handler_t *hndl)
 /** Set syscall interrupt handler for a given context */
 static inline void
 cpu_syscall_sethandler_ctx(struct context_s *context,
-				     cpu_syscall_handler_t *hndl)
+			   cpu_syscall_handler_t *hndl)
 {
   CONTEXT_LOCAL_FOREIGN_SET(context->tls, cpu_syscall_handler, hndl);
 }
