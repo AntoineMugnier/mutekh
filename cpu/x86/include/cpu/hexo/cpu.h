@@ -34,6 +34,15 @@
 
 #define CPU_GPREG_NAMES { "edi", "esi", "ebp", "esp", "ebx", "edx", "ecx", "eax" }
 
+#define CPU_GPREG_EDI	0
+#define CPU_GPREG_ESI	1
+#define CPU_GPREG_EBP	2
+#define CPU_GPREG_ESP	3
+#define CPU_GPREG_EBX	4
+#define CPU_GPREG_EDX	5
+#define CPU_GPREG_ECX	6
+#define CPU_GPREG_EAX	7
+		
 /**
    x86 apic boot strap processor (BSP)
    @return true if processor is the bootstrap processor
