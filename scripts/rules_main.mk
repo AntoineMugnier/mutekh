@@ -17,6 +17,10 @@ ifeq ($(CONFIG_PTHREAD), defined)
  MODULES += libpthread
 endif
 
+ifeq ($(CONFIG_UNIX), defined)
+ MODULES += libunix
+endif
+
 ifeq ($(CONFIG_LUA), defined)
  MODULES += liblua
 endif
