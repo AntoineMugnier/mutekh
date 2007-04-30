@@ -33,21 +33,63 @@
 typedef bool_t		gpct_bool_t;
 typedef	error_t		gpct_error_t;
 typedef atomic_t	gpct_atomic_t;
+typedef atomic_int_t	gpct_atomic_int_t;
 
 /* static value init */
-#define gpct_ATOMIC_INITIALIZER(v)	ATOMIC_INITIALIZER(v)
+#define GPCT_ATOMIC_INITIALIZER(v)	ATOMIC_INITIALIZER(v)
 
-/* set atomic value */
-#define	gpct_atomic_set(a, v)	atomic_set(a, v)
+static inline void gpct_atomic_init(gpct_atomic_t *a)
+{
+}
 
-/* get atomic value */
-#define gpct_atomic_get(a)		atomic_get(a)
+static inline void gpct_atomic_destroy(gpct_atomic_t *a)
+{
+}
 
-/* increment atomic value return true if not 0 */
-#define gpct_atomic_inc(a)		atomic_inc(a)
+static inline void gpct_atomic_set(gpct_atomic_t *a, gpct_atomic_int_t v)
+{
+  atomic_set(a, v);
+}
 
-/* decrement atomic value return true if not 0 */
-#define gpct_atomic_dec(a)		atomic_dec(a)
+static inline gpct_atomic_int_t gpct_atomic_get(gpct_atomic_t *a)
+{
+  return atomic_get(a);
+}
+
+static inline gpct_bool_t gpct_atomic_inc(gpct_atomic_t *a)
+{
+  return atomic_inc(a);
+}
+
+static inline gpct_bool_t gpct_atomic_dec(gpct_atomic_t *a)
+{
+  return atomic_dec(a);
+}
+
+static inline gpct_bool_t gpct_atomic_bit_test(gpct_atomic_t *a, uint_fast8_t n)
+{
+  return atomic_bit_test(a, n);
+}
+
+static inline gpct_bool_t gpct_atomic_bit_test_set(gpct_atomic_t *a, uint_fast8_t n)
+{
+  return atomic_bit_testset(a, n);
+}
+
+static inline gpct_bool_t gpct_atomic_bit_test_clr(gpct_atomic_t *a, uint_fast8_t n)
+{
+  return atomic_bit_testclr(a, n);
+}
+
+static inline void gpct_atomic_bit_clr(gpct_atomic_t *a, uint_fast8_t n)
+{
+  return atomic_bit_clr(a, n);
+}
+
+static inline void gpct_atomic_bit_set(gpct_atomic_t *a, uint_fast8_t n)
+{
+  return atomic_bit_set(a, n);
+}
 
 #endif
 

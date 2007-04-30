@@ -28,8 +28,8 @@
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_bitmap.h>
 
-CONTAINER_TYPE(input_state, BITMAP, uint32_t, NOLOCK, NOOBJ, INPUT_8042_KEYCOUNT);
-CONTAINER_FUNC(static inline, input_state, BITMAP, input_state, NOLOCK);
+CONTAINER_TYPE(input_state, BITMAP, uint32_t, INPUT_8042_KEYCOUNT);
+CONTAINER_FUNC(input_state, BITMAP, static inline, input_state);
 
 struct input_8042_context_s;
 

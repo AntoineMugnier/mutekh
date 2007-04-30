@@ -43,7 +43,7 @@ DEVENUM_REGISTER(enum_isapnp_register)
   size_t			count = 0;
 
   /* walk through all devices */
-  CONTAINER_FOREACH(device_list, DLIST, HEXO_SPIN, &dev->children,
+  CONTAINER_FOREACH(device_list, CLIST, HEXO_SPIN, &dev->children,
   {
     struct enum_pv_isapnp_s		*enum_pv = item->enum_pv;
     uint_fast8_t			i;

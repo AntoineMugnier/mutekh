@@ -27,7 +27,7 @@
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/object_refcount.h>
-#include <gpct/cont_dlist.h>
+#include <gpct/cont_clist.h>
 
 #include <netinet/packet.h>
 
@@ -50,7 +50,7 @@ struct				net_route_s
   bool_t			invalidated;
 
   route_obj_entry_t		obj_entry;
-  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
+  CONTAINER_ENTRY_TYPE(CLIST)	list_entry;
 };
 
 OBJECT_CONSTRUCTOR(route_obj);
@@ -61,7 +61,7 @@ OBJECT_FUNC(static inline, route_obj, REFCOUNT, route_obj, obj_entry);
  * Route table container.
  */
 
-CONTAINER_TYPE(route_table, DLIST, struct net_route_s, NOLOCK, route_obj, list_entry);
+CONTAINER_TYPE(route_table, CLIST, struct net_route_s, NOLOCK, route_obj, list_entry);
 
 /*
  * Prototypes

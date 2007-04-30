@@ -48,7 +48,7 @@
 
 #ifdef CONFIG_HEXO_MEMALLOC_ALGO
 
-CONTAINER_FUNC(static inline, alloc_list, DLIST, alloc_list, NOLOCK, list_entry);
+CONTAINER_FUNC(alloc_list, CLIST, static inline, alloc_list, list_entry);
 
 
 #if defined(CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT)
@@ -58,7 +58,7 @@ CONTAINER_FUNC(static inline, alloc_list, DLIST, alloc_list, NOLOCK, list_entry)
 static inline struct mem_alloc_header_s *
 mem_alloc_region_candidate(struct mem_alloc_region_s *region, size_t size)
 {
-  CONTAINER_FOREACH(alloc_list, DLIST, NOLOCK, &region->root,
+  CONTAINER_FOREACH(alloc_list, CLIST, &region->root,
   {
     if (item->is_free && item->size >= size)
       return item;
@@ -76,7 +76,7 @@ mem_alloc_region_candidate(struct mem_alloc_region_s *region, size_t size)
 {
   struct mem_alloc_header_s	*best = NULL;
 
-  CONTAINER_FOREACH(alloc_list, DLIST, NOLOCK, &region->root,
+  CONTAINER_FOREACH(alloc_list, CLIST, &region->root,
   {
     if (item->is_free && item->size >= size &&
 	((best == NULL) || (best->size > item->size)))
@@ -273,7 +273,7 @@ bool_t mem_alloc_region_guard_check(struct mem_alloc_region_s *region)
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   lock_spin(&region->lock);
 
-  CONTAINER_FOREACH(alloc_list, DLIST, NOLOCK, &region->root,
+  CONTAINER_FOREACH(alloc_list, CLIST, &region->root,
   {
     if (item->is_free)
       {

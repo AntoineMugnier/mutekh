@@ -37,11 +37,11 @@ struct				net_buffer_s
   struct net_addr_s		address;
   net_port_t			port;
 
-  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
+  CONTAINER_ENTRY_TYPE(CLIST)	list_entry;
 };
 
-CONTAINER_TYPE(buffer_queue, DLIST, struct net_buffer_s, HEXO_SPIN_IRQ, NOOBJ, list_entry);
-CONTAINER_FUNC(static inline, buffer_queue, DLIST, buffer_queue_lock, HEXO_SPIN_IRQ);
+CONTAINER_TYPE(buffer_queue, CLIST, struct net_buffer_s, HEXO_SPIN_IRQ, NOOBJ, list_entry);
+CONTAINER_FUNC(static inline, buffer_queue, CLIST, buffer_queue_lock, HEXO_SPIN_IRQ);
 
 /*
  * Common operations.

@@ -34,7 +34,7 @@
 #include <netinet/if.h>
 
 #include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_dlist.h>
+#include <gpct/cont_clist.h>
 
 /*
  * private data of a ne2000 network device

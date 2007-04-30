@@ -25,9 +25,9 @@
 #include <netinet/if.h>
 #include <netinet/ip.h>
 
-CONTAINER_FUNC(static inline, route_table, DLIST, route_table, NOLOCK);
+CONTAINER_FUNC(static inline, route_table, CLIST, route_table, NOLOCK);
 
-static route_table_root_t	route_table = CONTAINER_ROOT_INITIALIZER(route_table, DLIST, NOLOCK);
+static route_table_root_t	route_table = CONTAINER_ROOT_INITIALIZER(route_table, CLIST, NOLOCK);
 
 /*
  * Route object constructor.
@@ -153,7 +153,7 @@ struct net_route_s	*route_get(struct net_addr_s	*addr)
   struct net_route_s	*ret = NULL;
 
   /* look into the route table */
-  CONTAINER_FOREACH(route_table, DLIST, NOLOCK, &route_table,
+  CONTAINER_FOREACH(route_table, CLIST, NOLOCK, &route_table,
   {
     struct net_proto_s	*addressing = item->addressing;
 
@@ -177,7 +177,7 @@ void			route_flush(struct net_if_s	*interface)
   struct net_route_s	*prev = NULL;
 
   /* look into the route table */
-  CONTAINER_FOREACH(route_table, DLIST, NOLOCK, &route_table,
+  CONTAINER_FOREACH(route_table, CLIST, NOLOCK, &route_table,
   {
     if (prev != NULL)
       {
@@ -221,7 +221,7 @@ void			route_dump(void)
   printf("Target            Gateway           Mask              Interface\n");
 
   /* look into the route table */
-  CONTAINER_FOREACH(route_table, DLIST, NOLOCK, &route_table,
+  CONTAINER_FOREACH(route_table, CLIST, NOLOCK, &route_table,
   {
     switch (item->target.family)
       {

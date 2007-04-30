@@ -37,10 +37,12 @@
  * Private vgz tty device context
  */
 
-CONTAINER_TYPE(tty_fifo, RING, uint8_t, HEXO_SPIN_IRQ, NOOBJ, 128);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo, HEXO_SPIN_IRQ);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_noirq, HEXO_SPIN);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_nolock, NOLOCK);
+#define CONTAINER_LOCK_tty_fifo HEXO_SPIN_IRQ
+
+CONTAINER_TYPE(tty_fifo, RING, uint8_t, 32);
+CONTAINER_FUNC_LOCK(tty_fifo, RING, static inline, tty_fifo, HEXO_SPIN_IRQ);
+CONTAINER_FUNC_LOCK(tty_fifo, RING, static inline, tty_fifo_noirq, HEXO_SPIN);
+CONTAINER_FUNC_NOLOCK(tty_fifo, RING, static inline, tty_fifo_nolock);
 
 struct tty_soclib_context_s
 {

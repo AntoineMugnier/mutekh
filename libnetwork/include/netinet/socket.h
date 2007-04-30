@@ -455,7 +455,7 @@ struct			socket_api_s
  */
 
 #include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_dlist.h>
+#include <gpct/cont_clist.h>
 
 struct				socket_s
 {
@@ -470,11 +470,11 @@ struct				socket_s
   timer_delay_t			linger;
   void				*pv;
 
-  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
+  CONTAINER_ENTRY_TYPE(CLIST)	list_entry;
 };
 
-CONTAINER_TYPE(socket_table, DLIST, struct socket_s, NOLOCK, NOOBJ, list_entry);
-CONTAINER_FUNC(static inline, socket_table, DLIST, socket_table, NOLOCK);
+CONTAINER_TYPE(socket_table, CLIST, struct socket_s, NOLOCK, NOOBJ, list_entry);
+CONTAINER_FUNC(static inline, socket_table, CLIST, socket_table, NOLOCK);
 
 #include "socket_hexo.h"
 

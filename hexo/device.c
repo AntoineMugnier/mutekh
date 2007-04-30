@@ -25,7 +25,7 @@
 
 #ifdef CONFIG_HEXO_DEVICE_TREE
 
-CONTAINER_FUNC(inline, device_list, DLIST, device_list, HEXO_SPIN);
+CONTAINER_FUNC(device_list, CLIST, inline, device_list);
 
 OBJECT_CONSTRUCTOR(device_obj)
 {
@@ -61,7 +61,7 @@ device_register(struct device_s *dev,
 void
 device_dump_list(struct device_s *root)
 {
-  CONTAINER_FOREACH(device_list, DLIST, HEXO_SPIN, &root->children,
+  CONTAINER_FOREACH(device_list, CLIST, &root->children,
   {
     printf("device %p\n", item);
   });

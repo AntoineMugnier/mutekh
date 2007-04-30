@@ -108,7 +108,7 @@ struct		net_header_s
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/object_refcount.h>
-#include <gpct/cont_dlist.h>
+#include <gpct/cont_clist.h>
 #include <gpct/cont_slist.h>
 
 #include <netinet/protos.h>
@@ -179,7 +179,7 @@ struct				net_packet_s
   uint_fast16_t			proto;		/* level 2 protocol id */
 
   packet_obj_entry_t		obj_entry;
-  CONTAINER_ENTRY_TYPE(DLIST)	queue_entry;
+  CONTAINER_ENTRY_TYPE(CLIST)	queue_entry;
 };
 
 OBJECT_CONSTRUCTOR(packet_obj);
@@ -190,7 +190,7 @@ OBJECT_FUNC(static inline, packet_obj, REFCOUNT, packet_obj, obj_entry);
  * Packet list.
  */
 
-CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, HEXO_SPIN_IRQ, packet_obj, queue_entry);
+CONTAINER_TYPE(packet_queue, CLIST, struct net_packet_s, HEXO_SPIN_IRQ, packet_obj, queue_entry);
 
 /*
  * Used to give info to the dispatch thread.

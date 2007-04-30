@@ -71,10 +71,12 @@ typedef void tty_vga_char_process_t (struct device_s *dev, uint8_t c);
 typedef void tty_vga_key_process_t  (struct device_s *dev, uint8_t scancode);
 #endif
 
-CONTAINER_TYPE(tty_fifo, RING, uint8_t, HEXO_SPIN_IRQ, NOOBJ, 32);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo, HEXO_SPIN_IRQ);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_noirq, HEXO_SPIN);
-CONTAINER_FUNC(static inline, tty_fifo, RING, tty_fifo_nolock, NOLOCK);
+#define CONTAINER_LOCK_tty_fifo HEXO_SPIN_IRQ
+
+CONTAINER_TYPE(tty_fifo, RING, uint8_t, 32);
+CONTAINER_FUNC_LOCK(tty_fifo, RING, static inline, tty_fifo, HEXO_SPIN_IRQ);
+CONTAINER_FUNC_LOCK(tty_fifo, RING, static inline, tty_fifo_noirq, HEXO_SPIN);
+CONTAINER_FUNC_NOLOCK(tty_fifo, RING, static inline, tty_fifo_nolock);
 
 #define VGA_TTY_MAX_ANSI_PARAMS		4
 

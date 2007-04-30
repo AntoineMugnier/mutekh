@@ -164,8 +164,8 @@ struct net_packet_s		*packet_dup(struct net_packet_s	*orig)
  * packet queue functions.
  */
 
-CONTAINER_FUNC(inline, packet_queue, DLIST, packet_queue, NOLOCK);
-CONTAINER_FUNC(inline, packet_queue, DLIST, packet_queue_lock, HEXO_SPIN_IRQ);
+CONTAINER_FUNC(inline, packet_queue, CLIST, packet_queue, NOLOCK);
+CONTAINER_FUNC(inline, packet_queue, CLIST, packet_queue_lock, HEXO_SPIN_IRQ);
 
 /*
  * packet dispatching thread.

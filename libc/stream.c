@@ -23,7 +23,7 @@ const struct stream_ops_s	*stream_fops;
 
 /************************************************************************/
 
-CONTAINER_FUNC(static inline, stream_fifo, RING, stream_fifo, NOLOCK);
+CONTAINER_FUNC(stream_fifo, RING, static inline, stream_fifo);
 
 error_t	fclose(FILE *stream)
 {

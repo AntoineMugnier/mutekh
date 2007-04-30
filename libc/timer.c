@@ -19,18 +19,15 @@
 
 */
 
-/* enable orhpan checking in this file */
-#define GPCT_ORPHAN_CHECK
-
 #include <timer.h>
 #include <hexo/types.h>
 #include <hexo/error.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_blist.h> /* XXX change to b-list */
+#include <gpct/cont_clist.h> /* XXX change to b-list */
 
-CONTAINER_FUNC(inline, timer, DLIST, timer, HEXO_SPIN);
+CONTAINER_FUNC(timer, CLIST, inline, timer);
 
 /*
  * add a delay timer.
@@ -49,6 +46,7 @@ error_t			timer_add_event(struct timer_s		*timer,
   t = event->start = timer->ticks;
   t += event->delay;
 
+  /* FIXME use gpct insert ascend */
   /* insert the timer in the list (sorted) */
   for (e = timer_head(&timer->root);
        e != NULL && t > e->start + e->delay;

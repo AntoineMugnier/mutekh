@@ -27,7 +27,7 @@
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_dlist.h>
+#include <gpct/cont_clist.h>
 
 struct timer_event_s;
 
@@ -58,14 +58,17 @@ struct				timer_event_s
   timer_delay_t			start;
   timer_delay_t			delay;
 
-  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
+  CONTAINER_ENTRY_TYPE(CLIST)	list_entry;
 };
 
 /*
  * container type for timer list.
  */
 
-CONTAINER_TYPE(timer, DLIST, struct timer_event_s, HEXO_SPIN, NOOBJ, list_entry);
+#define CONTAINER_LOCK_timer HEXO_SPIN
+#define CONTAINER_ORPHAN_CHK_timer
+
+CONTAINER_TYPE(timer, CLIST, struct timer_event_s, list_entry);
 
 /*
  * this structure declares a timer list.
@@ -89,7 +92,7 @@ void	timer_inc_ticks(struct timer_s		*timer,
 			timer_delay_t		ticks);
 inline timer_delay_t	timer_get_tick(struct timer_s		*timer);
 
-CONTAINER_PROTOTYPE(inline, timer, timer);
+CONTAINER_PROTOTYPE(timer, inline, timer);
 
 #ifdef CONFIG_MUTEK_TIMERMS
 extern struct timer_s	timer_ms;

@@ -64,7 +64,7 @@ enum stream_whence_e
     SEEK_SET, SEEK_END, SEEK_CUR
   };
 
-CONTAINER_TYPE(stream_fifo, RING, uint8_t, NOLOCK, NOOBJ, CONFIG_LIBC_STREAM_BUFFER_SIZE);
+CONTAINER_TYPE(stream_fifo, RING, uint8_t, CONFIG_LIBC_STREAM_BUFFER_SIZE);
 
 # define EOF			-1
 

@@ -77,7 +77,7 @@
 #ifdef CONFIG_HEXO_MEMALLOC_ALGO
 
 #include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_dlist.h>
+#include <gpct/cont_clist.h>
 
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
 # define MEMALLOC_SIGNATURE	0x3a1b2ce1
@@ -93,13 +93,13 @@ struct mem_alloc_header_s
   uint8_t			is_free;
   /* block size including header */
   uintptr_t			size;
-  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
+  CONTAINER_ENTRY_TYPE(CLIST)	list_entry;
 };
 
 static const size_t	mem_hdr_size = ALIGN_VALUE_UP(sizeof (struct mem_alloc_header_s),
 						      CONFIG_HEXO_MEMALLOC_ALIGN);
 
-CONTAINER_TYPE(alloc_list, DLIST, struct mem_alloc_header_s, NOLOCK, NOOBJ, list_entry);
+CONTAINER_TYPE(alloc_list, CLIST, struct mem_alloc_header_s, list_entry);
 
 #define MEMALLOC_SPLIT_SIZE	(2 * mem_hdr_size + 16)
 

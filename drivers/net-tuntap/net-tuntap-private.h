@@ -33,7 +33,7 @@
 #include <netinet/if.h>
 
 #include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_dlist.h>
+#include <gpct/cont_clist.h>
 
 struct				net_tuntap_context_s
 {

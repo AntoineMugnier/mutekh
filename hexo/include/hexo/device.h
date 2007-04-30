@@ -96,19 +96,23 @@ typedef DEV_CLEANUP(dev_cleanup_t);
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_dlist.h>
+#include <gpct/cont_clist.h>
 #include <gpct/object_refcount.h>
 
 OBJECT_TYPE(device_obj, REFCOUNT, struct device_s);
 
-OBJECT_PROTOTYPE(static inline, device_obj, device_obj);
+OBJECT_PROTOTYPE(device_obj, static inline, device_obj);
 
 #endif
 
 /** device object structure */
 
 #ifdef CONFIG_HEXO_DEVICE_TREE
-CONTAINER_TYPE(device_list, DLIST,
+
+#define CONTAINER_LOCK_device_list HEXO_SPIN
+#define CONTAINER_OBJ_device_list device_obj
+
+CONTAINER_TYPE(device_list, CLIST,
 #endif
 struct device_s
 {
@@ -140,7 +144,7 @@ struct device_s
 
 }
 #ifdef CONFIG_HEXO_DEVICE_TREE
-, HEXO_SPIN, device_obj, list_entry)
+, list_entry)
 #endif
 ;
 
@@ -152,9 +156,9 @@ struct device_s
 OBJECT_CONSTRUCTOR(device_obj);
 OBJECT_DESTRUCTOR(device_obj);
 
-OBJECT_FUNC(static inline, device_obj, REFCOUNT, device_obj, obj_entry);
+OBJECT_FUNC(device_obj, REFCOUNT, static inline, device_obj, obj_entry);
 
-CONTAINER_PROTOTYPE(inline, device_list, device_list);
+CONTAINER_PROTOTYPE(device_list, inline, device_list);
 
 error_t device_register(struct device_s *dev,
 			struct device_s *parent,
@@ -168,7 +172,7 @@ void device_init(struct device_s *dev);
 #ifdef CONFIG_HEXO_DEVICE_TREE
 #define DEVICE_INITIALIZER							\
 {										\
-  .children = CONTAINER_ROOT_INITIALIZER(device_list, DLIST, HEXO_SPIN),	\
+  .children = CONTAINER_ROOT_INITIALIZER(device_list, CLIST),			\
   .obj_entry = OBJECT_INITIALIZER(device_obj, REFCOUNT)				\
 }
 #else

@@ -31,7 +31,7 @@
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>
-#include <gpct/cont_dlist.h>
+#include <gpct/cont_clist.h>
 #include <gpct/object_simple.h>
 #include <timer.h>
 
@@ -101,7 +101,7 @@ struct					net_tcp_seg_s
   size_t				size;
   uint_fast32_t				seq;
 
-  CONTAINER_ENTRY_TYPE(DLIST)		list_entry;
+  CONTAINER_ENTRY_TYPE(CLIST)		list_entry;
 
   union
   {
@@ -118,7 +118,7 @@ struct					net_tcp_seg_s
   }					u;
 };
 
-CONTAINER_TYPE(tcp_segment_queue, DLIST, struct net_tcp_seg_s, HEXO_SPIN_IRQ, NOOBJ, list_entry);
+CONTAINER_TYPE(tcp_segment_queue, CLIST, struct net_tcp_seg_s, HEXO_SPIN_IRQ, NOOBJ, list_entry);
 
 /*
  * This structure defines a TCP session.

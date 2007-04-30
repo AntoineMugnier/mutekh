@@ -64,7 +64,7 @@ CONTAINER_KEY_FUNC(static inline, tcp_session, HASHLIST, tcp_session, NOLOCK, re
  * Segment queues
  */
 
-CONTAINER_FUNC(static inline, tcp_segment_queue, DLIST, tcp_segment_queue, HEXO_SPIN_IRQ);
+CONTAINER_FUNC(static inline, tcp_segment_queue, CLIST, tcp_segment_queue, HEXO_SPIN_IRQ);
 
 /*
  * TCP session list.

@@ -67,11 +67,11 @@
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_dlist.h>
+#include <gpct/cont_clist.h>
 
-#define __SCHED_CONTAINER_ALGO		DLIST
+#define CONTAINER_LOCK_sched_queue HEXO_SPIN
 
-CONTAINER_TYPE(sched_queue, __SCHED_CONTAINER_ALGO, struct sched_context_s
+CONTAINER_TYPE(sched_queue, CLIST, struct sched_context_s
 {
   struct context_s	context;
   sched_queue_entry_t	list_entry;
@@ -85,10 +85,10 @@ CONTAINER_TYPE(sched_queue, __SCHED_CONTAINER_ALGO, struct sched_context_s
   cpu_id_t		cpu;
 #endif
 
-}, HEXO_SPIN_IRQ, NOOBJ, list_entry);
+}, list_entry);
 
-CONTAINER_FUNC(static inline, sched_queue, __SCHED_CONTAINER_ALGO, sched_queue, HEXO_SPIN, list_entry);
-CONTAINER_FUNC(static inline, sched_queue, __SCHED_CONTAINER_ALGO, sched_queue_nolock, NOLOCK, list_entry);
+CONTAINER_FUNC       (sched_queue, CLIST, static inline, sched_queue, list_entry);
+CONTAINER_FUNC_NOLOCK(sched_queue, CLIST, static inline, sched_queue_nolock, list_entry);
 
 /** lock main scheduler queue. */
 void sched_lock(void);
