@@ -21,6 +21,10 @@ ifeq ($(CONFIG_UNIX), defined)
  MODULES += libunix
 endif
 
+ifeq ($(CONFIG_VFS), defined)
+ MODULES += libVFS
+endif
+
 ifeq ($(CONFIG_LUA), defined)
  MODULES += liblua
 endif

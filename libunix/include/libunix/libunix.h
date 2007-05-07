@@ -1,4 +1,4 @@
 #include <hexo/error.h>
 #include <hexo/types.h>
 
-error_t libunix_init(void);
+struct unix_process_s *libunix_init(void);

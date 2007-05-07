@@ -8,7 +8,9 @@
 
 static CONTEXT_ENTRY(pv_unix_init)
 {
-      puts("starting init process\n");
+  puts("starting init process\n");
+  sched_unlock();
+
   while(1)
     {
       /* ... */
@@ -16,10 +18,14 @@ static CONTEXT_ENTRY(pv_unix_init)
     }
 }
 
-error_t libunix_init(void)
-{
-  struct unix_process_s *ps_init = unix_create_process(pv_unix_init, 4096);
-  unix_start_process(ps_init);
+//extern unix_ps_hash_root_t unix_ps_hash_g;
 
-  return 0;
+struct unix_process_s *libunix_init(void)
+{
+  struct unix_process_s *ps_init;
+
+  unix_phash_init(&unix_ps_hash_g);
+  ps_init = unix_create_process(NULL, pv_unix_init, 4096);
+  unix_start_process(ps_init);
+  return ps_init;
 }
