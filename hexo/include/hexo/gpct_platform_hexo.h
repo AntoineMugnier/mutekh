@@ -34,6 +34,8 @@ typedef bool_t		gpct_bool_t;
 typedef	error_t		gpct_error_t;
 typedef atomic_t	gpct_atomic_t;
 typedef atomic_int_t	gpct_atomic_int_t;
+typedef size_t		gpct_index_t;
+typedef ssize_t		gpct_sindex_t;
 
 /* static value init */
 #define GPCT_ATOMIC_INITIALIZER(v)	ATOMIC_INITIALIZER(v)

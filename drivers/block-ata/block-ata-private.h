@@ -19,55 +19,16 @@
 
 */
 
-#include <hexo/device.h>
-#include <hexo/error.h>
-#include <hexo/alloc.h>
+#ifndef BLOCK_ATA_PRIVATE_H_
+#define BLOCK_ATA_PRIVATE_H_
 
-#ifdef CONFIG_HEXO_DEVICE_TREE
+#include <hexo/types.h>
+#include <hexo/lock.h>
 
-CONTAINER_FUNC(device_list, CLIST, inline, device_list);
-
-OBJECT_CONSTRUCTOR(device_obj)
+struct block_ata_context_s
 {
-  device_list_init(&obj->children);
-
-  return 0;
-}
-
-OBJECT_DESTRUCTOR(device_obj)
-{
-}
-
-error_t
-device_register(struct device_s *dev,
-		struct device_s *parent,
-		void *enum_pv)
-{
-  dev->parent = device_obj_refnew(parent);
-  dev->enum_pv = enum_pv;
-
-  device_list_push(&parent->children, dev);
-
-  return 0;
-}
-
-void
-device_dump_list(struct device_s *root)
-{
-  CONTAINER_FOREACH(device_list, CLIST, &root->children,
-  {
-    printf("device %p\n", item);
-  });
-}
+  lock_t		lock;
+};
 
 #endif
-
-void
-device_init(struct device_s *dev)
-{
-#ifdef CONFIG_HEXO_DEVICE_TREE
-  va_list ap;
-  device_obj_construct(dev, NULL, ap);
-#endif
-}
 

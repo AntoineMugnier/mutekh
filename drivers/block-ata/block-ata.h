@@ -19,55 +19,17 @@
 
 */
 
+#ifndef DRIVER_BLOCK_ATA_H_
+#define DRIVER_BLOCK_ATA_H_
+
+#include <hexo/device/block.h>
 #include <hexo/device.h>
-#include <hexo/error.h>
-#include <hexo/alloc.h>
 
-#ifdef CONFIG_HEXO_DEVICE_TREE
-
-CONTAINER_FUNC(device_list, CLIST, inline, device_list);
-
-OBJECT_CONSTRUCTOR(device_obj)
-{
-  device_list_init(&obj->children);
-
-  return 0;
-}
-
-OBJECT_DESTRUCTOR(device_obj)
-{
-}
-
-error_t
-device_register(struct device_s *dev,
-		struct device_s *parent,
-		void *enum_pv)
-{
-  dev->parent = device_obj_refnew(parent);
-  dev->enum_pv = enum_pv;
-
-  device_list_push(&parent->children, dev);
-
-  return 0;
-}
-
-void
-device_dump_list(struct device_s *root)
-{
-  CONTAINER_FOREACH(device_list, CLIST, &root->children,
-  {
-    printf("device %p\n", item);
-  });
-}
+DEV_IRQ(block_ata_irq);
+DEV_INIT(block_ata_init);
+DEV_CLEANUP(block_ata_cleanup);
+DEVBLOCK_READ(block_ata_read);
+DEVBLOCK_WRITE(block_ata_write);
 
 #endif
-
-void
-device_init(struct device_s *dev)
-{
-#ifdef CONFIG_HEXO_DEVICE_TREE
-  va_list ap;
-  device_obj_construct(dev, NULL, ap);
-#endif
-}
 

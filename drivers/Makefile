@@ -67,3 +67,7 @@ ifeq ($(CONFIG_DRIVER_SOUND_SB16), defined)
  subdirs += sound-sb16
 endif
 
+ifeq ($(CONFIG_DRIVER_BLOCK_ATA), defined)
+ subdirs += block-ata
+endif
+

@@ -89,6 +89,11 @@ struct driver_s
     /** sound devices */
     struct dev_class_sound_s	sound;
 #endif
+
+#ifdef __DEVICE_BLOCK_H__
+    /** sound devices */
+    struct dev_class_block_s	blk;
+#endif
   } f;
 };
 

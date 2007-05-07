@@ -107,7 +107,7 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
   if (!vendor || vendor == 0xffff)
     return -ENOENT;
 
-  if ((new = device_obj_new(0)))
+  if ((new = device_obj_new(NULL)))
     {
       if ((enum_pv = mem_alloc(sizeof (*enum_pv), MEM_SCOPE_SYS)))
 	{
