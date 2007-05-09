@@ -1,4 +1,4 @@
 
-objs = block-ata.o
+objs = block-ramdisk.o
 
 
