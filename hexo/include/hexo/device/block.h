@@ -32,7 +32,7 @@ typedef uint32_t dev_block_lba_t;
 
 /** Block device read callback */
 #define DEVBLOCK_READCALLBACK(n) void (n) (struct device_s *dev, void *pvdata, \
-					   dev_block_lba_t count, uint8_t const * const * data);
+					   dev_block_lba_t count, uint8_t const * const * data)
 
 /**
    Block device read callback function type. This function is called
@@ -72,7 +72,7 @@ typedef DEVBLOCK_READ(devblock_read_t);
 
 
 /** Block device write callback */
-#define DEVBLOCK_WRITECALLBACK(n) void (n) (struct device_s *dev, dev_block_lba_t count, void *pvdata);
+#define DEVBLOCK_WRITECALLBACK(n) void (n) (struct device_s *dev, dev_block_lba_t count, void *pvdata)
 
 /**
    Block device write callback function type. This function is called
