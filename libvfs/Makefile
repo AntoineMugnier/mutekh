@@ -1,5 +1,5 @@
 objs =			\
-libVFS_init.o		\
-libVFS.o		\
+libvfs_init.o		\
+libvfs.o		\
 node.o
 

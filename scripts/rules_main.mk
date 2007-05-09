@@ -22,7 +22,7 @@ ifeq ($(CONFIG_UNIX), defined)
 endif
 
 ifeq ($(CONFIG_VFS), defined)
- MODULES += libVFS
+ MODULES += libvfs
 endif
 
 ifeq ($(CONFIG_LUA), defined)

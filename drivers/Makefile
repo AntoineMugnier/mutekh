@@ -71,3 +71,7 @@ ifeq ($(CONFIG_DRIVER_BLOCK_ATA), defined)
  subdirs += block-ata
 endif
 
+ifeq ($(CONFIG_DRIVER_BLOCK_RAMDISK), defined)
+ subdirs += block-ramdisk
+endif
+
