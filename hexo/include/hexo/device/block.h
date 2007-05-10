@@ -24,34 +24,23 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <hexo/gpct_platform_hexo.h>
+#include <hexo/gpct_lock_hexo.h>
+#include <gpct/cont_clist.h>
 
 struct device_s;
 struct driver_s;
 
 typedef uint32_t dev_block_lba_t;
+struct dev_block_rq_s;
 
-CONTAINER_TYPE(dev_blk_queue, CLIST,
-struct dev_block_rq_s
-{  
-  dev_block_lba_t		lba;	/* lba */
-  size_t			count;	/* block count */
-  void				*pvdata; /* pv data for callback */
-  devblock_readcallback_t	*cback; /* callback function */
-  uint8_t			**data; /* table of pointer to data blocks */
-  error_t			error; /* error code */
-
-  dev_blk_queue_entry_t		queue_entry; /* used by driver to enqueue resquests */
-}, queue_entry);
-
-CONTAINER_FUNC(dev_blk_queue, CLIST, static inline, dev_blk_queue);
-
-/** Block device read callback */
-#define DEVBLOCK_READCALLBACK(n) void (n) (struct device_s *dev, \
-					   const struct dev_block_rq_s *rq, \
-					   size_t count)
+/** Block device read/write callback */
+#define DEVBLOCK_CALLBACK(n) void (n) (struct device_s *dev, \
+				       const struct dev_block_rq_s *rq, \
+				       size_t count)
 
 /**
-   Block device read callback function type. This function is called
+   Block device read callback function. This function is called
    for each group of blocks read. It may be called several times,
    count must be used to detect read operation end.
 
@@ -63,8 +52,41 @@ CONTAINER_FUNC(dev_blk_queue, CLIST, static inline, dev_blk_queue);
 	  rq->error is updated.
    @param count number of blocks buffer read
    @param data table of pointers to each read block data
+
+
+   Block device write callback function type. This function is called
+   when a requested write operation completes. This function will be
+   called only once per write operation.
+
+   @param dev pointer to device descriptor
+   @param rq pointer to request data. rq->count field is
+          updated with remaining blocks to write. rq->lba is
+	  advanced to next block address.
+	  rq->error is updated.
+   @param err error code
 */
-typedef DEVBLOCK_READCALLBACK(devblock_readcallback_t);
+typedef DEVBLOCK_CALLBACK(devblock_callback_t);
+
+
+
+
+CONTAINER_TYPE(dev_blk_queue, CLIST,
+struct dev_block_rq_s
+{  
+  dev_block_lba_t		lba;	/* lba */
+  size_t			count;	/* block count */
+  devblock_callback_t		*callback; /* callback function */
+  void				*pvdata; /* pv data for callback */
+  uint8_t			**data; /* table of pointer to data blocks */
+  error_t			error; /* error code set by driver */
+
+  dev_blk_queue_entry_t		queue_entry; /* used by driver to enqueue resquests */
+}, queue_entry);
+
+CONTAINER_FUNC(dev_blk_queue, CLIST, static inline, dev_blk_queue);
+
+
+
 
 /** Block device class read() function tempate. */
 #define DEVBLOCK_READ(n)	void (n) (struct device_s *dev,	\
@@ -88,25 +110,6 @@ typedef DEVBLOCK_READ(devblock_read_t);
 
 
 
-
-/** Block device write callback */
-#define DEVBLOCK_WRITECALLBACK(n) void (n) (struct device_s *dev, \
-					    const struct dev_block_rq_s *rq)
-
-/**
-   Block device write callback function type. This function is called
-   when a requested write operation completes. This function will be
-   called only once per write operation.
-
-   @param dev pointer to device descriptor
-   @param rq pointer to request data. rq->count field is
-          updated with remaining blocks to write. rq->lba is
-	  advanced to next block address.
-	  rq->error is updated.
-   @param err error code
-*/
-typedef DEVBLOCK_WRITECALLBACK(devblock_writecallback_t);
-
 /** Block device class write() function tempate. */
 #define DEVBLOCK_WRITE(n)	void (n) (struct device_s *dev, \
 					  struct dev_block_rq_s *rq)
@@ -125,6 +128,7 @@ typedef DEVBLOCK_WRITECALLBACK(devblock_writecallback_t);
 */
 
 typedef DEVBLOCK_WRITE(devblock_write_t);
+
 
 
 struct dev_block_params_s
