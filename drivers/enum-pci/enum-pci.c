@@ -54,14 +54,21 @@ DEVENUM_REGISTER(enum_pci_register)
       continue;
 
     /* walk through all possible ids for this driver */
-    for (i = 0; (id = drv->id_table + i)->vendor != 0; i++)
+    for (i = 0; (id = drv->id_table + i)->type != 0; i++)
       {
+	if (id->type != DEVENUM_TYPE_PCI)
+	  continue;
+
 	if ((id->vendor != ENUM_ID_PCI_WILDCARD) &&
 	    (id->vendor != enum_pv->vendor))
 	  continue;
 
 	if ((id->device != ENUM_ID_PCI_WILDCARD) &&
 	    (id->device != enum_pv->devid))
+	  continue;
+
+	if ((id->class != ENUM_ID_PCI_WILDCARD) &&
+	    (id->class != enum_pv->class))
 	  continue;
 
 	/* call driver device init function, use same icu as PCI
@@ -116,7 +123,7 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
 
 	  enum_pv->vendor = vendor;
 	  enum_pv->devid = pci_confreg_read(bus, dv, fn, PCI_CONFREG_DEVID);
-	  enum_pv->class = pci_confreg_read(bus, dv, fn, PCI_CONFREG_CLASS);
+	  enum_pv->class = (pci_confreg_read(bus, dv, fn, PCI_CONFREG_CLASS) & 0x00ffff00) >> 8;
 
 	  printf("PCI device %04x:%04x class %06x, device %p\n",
 		 vendor, enum_pv->devid, enum_pv->class, new);

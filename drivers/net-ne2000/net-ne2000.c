@@ -61,17 +61,17 @@
 
 static const struct devenum_ident_s	net_ne2000_ids[] =
   {
-    { .vendor = 0x10ec, .device = 0x8029 },	/* Realtek 8029 */
-    { .vendor = 0x10ec, .device = 0x8028 },	/* Realtek 8029 */
-    { .vendor = 0x1050, .device = 0x0940 },	/* Winbond 89C940 */
-    { .vendor = 0x1050, .device = 0x5a5a },	/* Winbond 89C940F */
-    { .vendor = 0x8c4a, .device = 0x1980 },	/* Winbond 89C940 (bad ROM) */
-    { .vendor = 0x11f6, .device = 0x1401 },	/* Compex ReadyLink 2000 */
-    { .vendor = 0x8e2e, .device = 0x3000 },	/* KTI ET32P2 */
-    { .vendor = 0x4a14, .device = 0x5000 },	/* NetVin NV5000SC */
-    { .vendor = 0x12c3, .device = 0x0058 },	/* HolTek HT80232 */
-    { .vendor = 0x1106, .device = 0x0926 },	/* Via 86C926 */
-    { .vendor = 0x10bd, .device = 0x0e34 },	/* SureCom NE34 */
+    { .type = DEVENUM_TYPE_PCI, .vendor = 0x10ec, .device = 0x8029, .class = -1 },	/* Realtek 8029 */
+    { .type = DEVENUM_TYPE_PCI, .vendor = 0x10ec, .device = 0x8028, .class = -1 },	/* Realtek 8029 */
+    { .type = DEVENUM_TYPE_PCI, .vendor = 0x1050, .device = 0x0940, .class = -1 },	/* Winbond 89C940 */
+    { .type = DEVENUM_TYPE_PCI, .vendor = 0x1050, .device = 0x5a5a, .class = -1 },	/* Winbond 89C940F */
+    { .type = DEVENUM_TYPE_PCI, .vendor = 0x8c4a, .device = 0x1980, .class = -1 },	/* Winbond 89C940 (bad ROM) */
+    { .type = DEVENUM_TYPE_PCI, .vendor = 0x11f6, .device = 0x1401, .class = -1 },	/* Compex ReadyLink 2000 */
+    { .type = DEVENUM_TYPE_PCI, .vendor = 0x8e2e, .device = 0x3000, .class = -1 },	/* KTI ET32P2 */
+    { .type = DEVENUM_TYPE_PCI, .vendor = 0x4a14, .device = 0x5000, .class = -1 },	/* NetVin NV5000SC */
+    { .type = DEVENUM_TYPE_PCI, .vendor = 0x12c3, .device = 0x0058, .class = -1 },	/* HolTek HT80232 */
+    { .type = DEVENUM_TYPE_PCI, .vendor = 0x1106, .device = 0x0926, .class = -1 },	/* Via 86C926 */
+    { .type = DEVENUM_TYPE_PCI, .vendor = 0x10bd, .device = 0x0e34, .class = -1 },	/* SureCom NE34 */
     { 0 }
   };
 #endif

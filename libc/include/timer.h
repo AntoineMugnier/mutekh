@@ -98,5 +98,16 @@ CONTAINER_PROTOTYPE(timer, inline, timer);
 extern struct timer_s	timer_ms;
 #endif
 
+#define TIMER_BUSY_WAIT(timer, delay, cond)			\
+({								\
+  bool_t _res;							\
+  timer_delay_t t = timer_get_tick(timer);			\
+								\
+  while ((_res = (cond)) && (delay > timer_get_tick(timer) - t)) \
+    ;								\
+								\
+  _res;								\
+})
+
 #endif
 

@@ -25,11 +25,12 @@
 #include <hexo/device/block.h>
 #include <hexo/device.h>
 
-DEV_IRQ(block_ata_irq);
-DEV_INIT(block_ata_init);
-DEV_CLEANUP(block_ata_cleanup);
-DEVBLOCK_READ(block_ata_read);
-DEVBLOCK_WRITE(block_ata_write);
+DEV_INIT(controller_ata_init);
+DEV_CLEANUP(controller_ata_cleanup);
+DEV_IRQ(controller_ata_irq);
+
+DEVBLOCK_READ(drive_ata_read);
+DEVBLOCK_WRITE(drive_ata_write);
 
 #endif
 

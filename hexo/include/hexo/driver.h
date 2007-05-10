@@ -26,12 +26,17 @@
 #include <hexo/error.h>
 #include <hexo/device.h>
 
+#define DEVENUM_TYPE_PCI 0x01
+#define DEVENUM_TYPE_ATA 0x02
+
 /** device structure identification informations. wildcard values are
     enum driver dependent */
 struct devenum_ident_s
 {
-  uint_fast16_t		vendor;
-  uint_fast16_t		device;
+  uint8_t		type;
+  uint16_t		vendor;
+  uint16_t		device;
+  uint32_t		class;
 };
 
 /** device driver object structure */

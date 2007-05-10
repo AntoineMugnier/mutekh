@@ -30,9 +30,25 @@ struct driver_s;
 
 typedef uint32_t dev_block_lba_t;
 
+CONTAINER_TYPE(dev_blk_queue, CLIST,
+struct dev_block_rq_s
+{  
+  dev_block_lba_t		lba;	/* lba */
+  size_t			count;	/* block count */
+  void				*pvdata; /* pv data for callback */
+  devblock_readcallback_t	*cback; /* callback function */
+  uint8_t			**data; /* table of pointer to data blocks */
+  error_t			error; /* error code */
+
+  dev_blk_queue_entry_t		queue_entry; /* used by driver to enqueue resquests */
+}, queue_entry);
+
+CONTAINER_FUNC(dev_blk_queue, CLIST, static inline, dev_blk_queue);
+
 /** Block device read callback */
-#define DEVBLOCK_READCALLBACK(n) void (n) (struct device_s *dev, void *pvdata, \
-					   dev_block_lba_t count, uint8_t const * const * data)
+#define DEVBLOCK_READCALLBACK(n) void (n) (struct device_s *dev, \
+					   const struct dev_block_rq_s *rq, \
+					   size_t count)
 
 /**
    Block device read callback function type. This function is called
@@ -40,16 +56,19 @@ typedef uint32_t dev_block_lba_t;
    count must be used to detect read operation end.
 
    @param dev pointer to device descriptor
-   @param pvdata pointer to private data
-   @param count number of blocks read
-   @param data table of pointers to each block data in memory. NULL indicate read error and terminate the read operation.
+   @param rq pointer to request data. rq->count field is
+          updated with remaining blocks to read. rq->lba is
+	  advanced to next unread block address. rq->data is
+	  updated to point to internal driver data buffers.
+	  rq->error is updated.
+   @param count number of blocks buffer read
+   @param data table of pointers to each read block data
 */
 typedef DEVBLOCK_READCALLBACK(devblock_readcallback_t);
 
 /** Block device class read() function tempate. */
-#define DEVBLOCK_READ(n)	error_t (n) (struct device_s *dev,			\
-					  dev_block_lba_t lba, dev_block_lba_t count,		\
-					  void *pvdata, devblock_readcallback_t *cback)
+#define DEVBLOCK_READ(n)	void (n) (struct device_s *dev,	\
+					  struct dev_block_rq_s *rq)
 
 /** Block device class read() methode shortcut */
 
@@ -58,11 +77,10 @@ typedef DEVBLOCK_READCALLBACK(devblock_readcallback_t);
    Block device class read() function type. Read count data blocks
    from the device.
 
+   @param rq pointer to request data. lba, count and
+          callback field must be intialized. the data
+	  field will be provided by driver on callback.
    @param dev pointer to device descriptor
-   @param lba first block number to read
-   @param count number of blocks to read
-   @param pvdata pointer to private data passed to callback
-   @param cback read callback
    @param size max data read bytes count
 */
 typedef DEVBLOCK_READ(devblock_read_t);
@@ -72,7 +90,8 @@ typedef DEVBLOCK_READ(devblock_read_t);
 
 
 /** Block device write callback */
-#define DEVBLOCK_WRITECALLBACK(n) void (n) (struct device_s *dev, dev_block_lba_t count, void *pvdata)
+#define DEVBLOCK_WRITECALLBACK(n) void (n) (struct device_s *dev, \
+					    const struct dev_block_rq_s *rq)
 
 /**
    Block device write callback function type. This function is called
@@ -80,16 +99,18 @@ typedef DEVBLOCK_READ(devblock_read_t);
    called only once per write operation.
 
    @param dev pointer to device descriptor
-   @param count indicates wrote blocks count
-   @param pvdata pointer to private data
+   @param rq pointer to request data. rq->count field is
+          updated with remaining blocks to write. rq->lba is
+	  advanced to next block address.
+	  rq->error is updated.
+   @param err error code
 */
 typedef DEVBLOCK_WRITECALLBACK(devblock_writecallback_t);
 
 /** Block device class write() function tempate. */
-#define DEVBLOCK_WRITE(n)	error_t (n) (struct device_s *dev,			\
-					     dev_block_lba_t lba, dev_block_lba_t count,		\
-					     uint8_t const * const * data,		\
-					     void *pvdata, devblock_writecallback_t *cback)
+#define DEVBLOCK_WRITE(n)	void (n) (struct device_s *dev, \
+					  struct dev_block_rq_s *rq)
+
 
 /** Block device class write() methode shortcut */
 
@@ -99,11 +120,8 @@ typedef DEVBLOCK_WRITECALLBACK(devblock_writecallback_t);
    from the device.
 
    @param dev pointer to device descriptor
-   @param lba first block number to write
-   @param count number of blocks to write
-   @param data table of pointers to each block data in memory
-   @param pvdata pointer to private data passed to callback
-   @param cback write callback, may be NULL
+   @param rq pointer to request data. lba, count, data and
+          callback field must be intialized.
 */
 
 typedef DEVBLOCK_WRITE(devblock_write_t);

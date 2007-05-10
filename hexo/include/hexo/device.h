@@ -164,6 +164,8 @@ error_t device_register(struct device_s *dev,
 			struct device_s *parent,
 			void *enum_pv);
 
+error_t device_unregister(struct device_s *dev);
+
 void device_dump_list(struct device_s *root);
 void device_init(struct device_s *dev);
 

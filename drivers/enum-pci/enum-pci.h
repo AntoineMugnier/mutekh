@@ -33,7 +33,7 @@ DEV_INIT(enum_pci_init);
 
 /* PCI device identification object */
 
-#define ENUM_ID_PCI_WILDCARD	0xffff
+#define ENUM_ID_PCI_WILDCARD	0xffffffff
 
 #endif
 

@@ -20,6 +20,7 @@
 */
 
 #include <hexo/device.h>
+#include <hexo/driver.h>
 #include <hexo/error.h>
 #include <hexo/alloc.h>
 
@@ -36,6 +37,7 @@ OBJECT_CONSTRUCTOR(device_obj)
 
 OBJECT_DESTRUCTOR(device_obj)
 {
+  dev_cleanup(obj);
 }
 
 error_t

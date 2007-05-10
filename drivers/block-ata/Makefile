@@ -1,4 +1,2 @@
 
-objs = block-ramdisk.o
-
-
+objs = drive-ata.o controller-ata.o
