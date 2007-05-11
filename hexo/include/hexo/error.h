@@ -97,5 +97,8 @@ typedef int_fast8_t		error_t;
 /** no route to host */
 #define EHOSTUNREACH	113
 
+/** end of file */
+#define EEOF		120
+
 #endif
 
