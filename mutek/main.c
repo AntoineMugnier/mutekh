@@ -141,6 +141,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # endif
 #endif
 
+  cpu_interrupt_enable();
+
   /********* TTY init ******************************** */
 
 #if defined(CONFIG_DRIVER_UART)
@@ -370,8 +372,11 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 #endif
 
   if (cpu_id() == 0)
-    main(0, 0);
+    {
+      main(0, 0);
+    }
 
+  cpu_interrupt_disable();
 #if defined(CONFIG_HEXO_SCHED)
   sched_lock();
   sched_context_exit();

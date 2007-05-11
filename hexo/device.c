@@ -48,7 +48,7 @@ device_register(struct device_s *dev,
   dev->parent = device_obj_refnew(parent);
   dev->enum_pv = enum_pv;
 
-  device_list_push(&parent->children, dev);
+  device_list_pushback(&parent->children, dev);
 
   return 0;
 }
@@ -71,5 +71,21 @@ device_init(struct device_s *dev)
   va_list ap;
   device_obj_construct(dev, NULL, ap);
 #endif
+}
+
+struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i)
+{
+  struct device_s *res = NULL;
+
+  CONTAINER_FOREACH(device_list, CLIST, &dev->children,
+  {
+    if (i-- == 0)
+      {
+	res = item;
+	break;
+      }
+  });
+
+  return res;
 }
 

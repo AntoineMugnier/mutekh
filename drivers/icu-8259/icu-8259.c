@@ -97,7 +97,10 @@ static CPU_INTERRUPT_HANDLER(icu_8259_cpu_handler)
 			  pv->dev->addr[ICU_ADDR_SLAVE], irq - 8);
 
   /* call interrupt handler */
-  h->hndl(h->data);
+  if (h->hndl)
+    h->hndl(h->data);
+  else
+    printf("lost interrupt %i\n", irq);
 }
 
 DEV_CLEANUP(icu_8259_cleanup)
@@ -131,9 +134,14 @@ DEV_INIT(icu_8259_init)
 
   if ((pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS))) /* FIXME allocation scope ? */
     {
+      uint_fast8_t i;
+
       CPU_LOCAL_SET(icu_8259_pv, pv);
       dev->drv_pv = pv;
       pv->dev = dev;
+
+      for (i = 0; i < CPU_MAX_INTERRUPTS; i++)
+	pv->table[i].hndl = NULL;
 
       cpu_interrupt_sethandler(icu_8259_cpu_handler);
 

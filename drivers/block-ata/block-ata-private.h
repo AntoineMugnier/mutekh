@@ -148,25 +148,46 @@ struct drive_ata_context_s
 {
   struct ata_indent_s	ident;
   struct dev_block_params_s drv_params;
-  bool_t		slave;
   uint8_t		devhead_reg;
+  dev_blk_queue_root_t	queue;
+  size_t		ata_sec_count; /* sector count of current ata operation */
+  size_t		blk_counter; /* number of block sucessfully processed */
+};
+
+#define DRIVE_ATA_START_FUNC(n) void (n) (struct device_s *dev, struct dev_block_rq_s *rq)
+typedef DRIVE_ATA_START_FUNC(drive_ata_start_func_t);
+#define DRIVE_ATA_IRQ_FUNC(n) bool_t (n) (struct device_s *dev)
+typedef DRIVE_ATA_IRQ_FUNC(drive_ata_irq_func_t);
+
+struct drive_ata_oper_s
+{
+  /* this function is called on irq */
+  drive_ata_irq_func_t *irq;
+  /* this function is called to start operation on idle device */
+  drive_ata_start_func_t *start;
 };
 
 struct controller_ata_context_s
 {
   struct device_s	*drive[2];
-
   lock_t		lock;
 };
 
 bool_t controller_ata_waitbusy(struct device_s *dev);
 error_t drive_ata_init(struct device_s *dev, bool_t slave);
+bool_t drive_ata_try_irq(struct device_s *dev);
 DEV_CLEANUP(drive_ata_cleanup);
 
 static inline void
 controller_ata_reg_w8(struct device_s *dev, uint8_t reg, uint8_t data)
 {
   cpu_io_write_8(dev->addr[0] + reg, data);
+}
+
+static inline void
+controller_ata_rega_w8(struct device_s *dev, uint8_t reg, uint8_t data)
+{
+  cpu_io_write_8(dev->addr[1] + reg, data);
 }
 
 static inline uint8_t
@@ -183,6 +204,26 @@ controller_ata_reg_r16(struct device_s *dev, uint8_t reg)
 
 static inline void
 controller_ata_data_read16(struct device_s *dev, void *data)
+{
+  uint16_t *d = data;
+  uint_fast16_t i;
+
+  for (i = 0; i < 256; i++)
+    d[i] = cpu_io_read_16(dev->addr[0] + ATA_REG_DATA);
+}
+
+static inline void
+controller_ata_data_write16(struct device_s *dev, void *const data)
+{
+  uint16_t *d = data;
+  uint_fast16_t i;
+
+  for (i = 0; i < 256; i++)
+    cpu_io_write_16(dev->addr[0] + ATA_REG_DATA, d[i]);
+}
+
+static inline void
+controller_ata_data_swapread16(struct device_s *dev, void *data)
 {
   uint16_t *d = data;
   uint_fast16_t i;

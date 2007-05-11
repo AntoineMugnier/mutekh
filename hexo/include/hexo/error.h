@@ -58,6 +58,12 @@ typedef int_fast8_t		error_t;
 /** value out of range */
 #define ERANGE		10
 
+/** io error */
+#define EIO		11
+
+/** end of data */
+#define EEOF		12
+
 /** broken pipe */
 #define EPIPE		32
 
@@ -96,9 +102,6 @@ typedef int_fast8_t		error_t;
 
 /** no route to host */
 #define EHOSTUNREACH	113
-
-/** end of file */
-#define EEOF		120
 
 #endif
 

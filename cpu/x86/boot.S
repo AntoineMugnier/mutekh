@@ -86,7 +86,7 @@ cpu_boot:
 	mov	0x20(%eax), %eax /* read local apic ID */
 	shrl	$24, %eax
 	/* change stack offset depending on CPU id */
-	shll	$10, %eax
+	shll	$12, %eax
 	add	$0x0001fffc, %eax
 	mov	%eax, %esp
 	xor	%ebp, %ebp

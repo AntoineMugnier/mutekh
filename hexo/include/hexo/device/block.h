@@ -49,8 +49,9 @@ struct dev_block_rq_s;
           updated with remaining blocks to read. rq->lba is
 	  advanced to next unread block address. rq->data is
 	  updated to point to internal driver data buffers.
-	  rq->error is updated.
-   @param count number of blocks buffer read
+	  rq->error is updated. rq->error error code (EEOF indicate
+	  last disk block has been reached even if no error occured).
+   @param count number of valid blocks in data pointer table
    @param data table of pointers to each read block data
 
 
@@ -61,9 +62,11 @@ struct dev_block_rq_s;
    @param dev pointer to device descriptor
    @param rq pointer to request data. rq->count field is
           updated with remaining blocks to write. rq->lba is
-	  advanced to next block address.
-	  rq->error is updated.
-   @param err error code
+	  advanced to next block address. rq->data is
+	  advanced to the next block buffer. rq->error is updated.
+	  rq->error error code (EEOF indicate last disk block has been
+	  reached even if no error occured).
+   @param count number of successfully written blocks
 */
 typedef DEVBLOCK_CALLBACK(devblock_callback_t);
 
@@ -80,6 +83,7 @@ struct dev_block_rq_s
   uint8_t			**data; /* table of pointer to data blocks */
   error_t			error; /* error code set by driver */
 
+  void				*drvdata; /* driver private data */
   dev_blk_queue_entry_t		queue_entry; /* used by driver to enqueue resquests */
 }, queue_entry);
 

@@ -55,7 +55,20 @@ DEV_CLEANUP(controller_ata_cleanup)
 
 DEV_IRQ(controller_ata_irq)
 {
-  return 1;
+  struct controller_ata_context_s *pv = dev->drv_pv;
+  bool_t res = 0;
+
+  lock_spin(&pv->lock);
+
+  if (pv->drive[0] != NULL)
+    res |= drive_ata_try_irq(pv->drive[0]);
+
+  if (pv->drive[1] != NULL)
+    res |= drive_ata_try_irq(pv->drive[1]);
+
+  lock_release(&pv->lock);
+
+  return res;
 }
 
 #ifndef CONFIG_STATIC_DRIVERS
@@ -77,6 +90,7 @@ const struct driver_s	controller_ata_drv =
 #ifdef CONFIG_DRIVER_ENUM_PCI
   .id_table		= controller_ata_ids,
 #endif
+  .f_irq		= controller_ata_irq,
   .f_init		= controller_ata_init,
   .f_cleanup		= controller_ata_cleanup,
 };
@@ -142,9 +156,7 @@ DEV_INIT(controller_ata_init)
     return -1;
 
   lock_init(&pv->lock);
-  pv->drive[0] = NULL;
-  pv->drive[1] = NULL;
-
+  pv->drive[0] = pv->drive[1] = NULL;
   dev->drv_pv = pv;
 
   /* reset master and slave drives */
@@ -159,9 +171,6 @@ DEV_INIT(controller_ata_init)
   controller_ata_detect(dev, 0);
   /* try to detect slave */
   controller_ata_detect(dev, 1);
-
-  cpu_io_write_8(dev->addr[1] + ATA_REG_DEVICE_CONTROL,
-		 ATA_DEVCTRL_RESERVED_HIGH);
 
   return 0;
 }

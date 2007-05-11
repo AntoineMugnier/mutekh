@@ -167,6 +167,7 @@ error_t device_register(struct device_s *dev,
 error_t device_unregister(struct device_s *dev);
 
 void device_dump_list(struct device_s *root);
+struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i);
 void device_init(struct device_s *dev);
 
 #endif /* !CONFIG_HEXO_DEVICE_TREE */
