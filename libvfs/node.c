@@ -3,40 +3,13 @@
 #include <hexo/alloc.h>
 #include <vfs/vfs.h>
 
-static inline void pv_vfs_append_child(struct vfs_node_s *parent, struct vfs_node_s *node)
-{
-  if (parent->children)
-    parent->last_child->next = node;
-  else
-    parent->children = node;
-  parent->last_child = node;
-}
-
-static inline void pv_vfs_remove_child(struct vfs_node_s *parent, struct vfs_node_s *node)
-{
-  struct vfs_node_s *tmp;
-
-  for (tmp = parent->children; tmp; tmp = tmp->next)
-    {
-      if (tmp->next == node)
-	{
-	  tmp->next = node->next;
-	  if (!node->next)
-	    parent->last_child = tmp;
-	  return;
-	}
-    }
-}
-
 static inline struct vfs_node_s *pv_vfs_lookup_child(struct vfs_node_s *node, char *name)
 {
-  struct vfs_node_s *tmp;
-
-  for (tmp = node->children; tmp; tmp = tmp->next)
-    {
-      if (!strcmp(tmp->file->name, name))
-	  return tmp;
-    }
+  CONTAINER_FOREACH(vfs_node_list, CLIST, &node->children,
+  {
+    if (!strcmp(item->file->name, name))
+      return item;
+  });
   return NULL;
 }
 
@@ -44,7 +17,8 @@ static inline void pv_vfs_delete_node(struct vfs_node_s *node)
 {
   if (node->parent)
     {
-      pv_vfs_remove_child(node->parent, node);
+      vfs_node_func_remove(&node->parent->children, node);
+      vfs_node_func_destroy(&node->children);
       mem_free(node);
     }
 }
@@ -95,9 +69,11 @@ static inline struct vfs_node_s *pv_vfs_create_node(struct vfs_node_s *parent, c
 	  node->file = file;
 	  node->parent = parent;
 	  node->fs_inst = parent->fs_inst;
-	  pv_vfs_append_child(node->parent, node);
-	  pv_vfs_increase_node_weight(node);
 
+	  vfs_node_func_init(&node->children);
+	  vfs_node_func_push(&parent->children, node);
+
+	  pv_vfs_increase_node_weight(node);
 	  return node;
 	}
     }
@@ -127,9 +103,6 @@ void vfs_dbg_print_node(char *str, struct vfs_node_s *node)
   printf("file:\t(0x%08x) %s\n", node->file, node->file->name);
   printf("fs_int:\t(0x%08x)\n", node->fs_inst);
   printf("parent:\t(0x%08x)\n", node->parent);
-  printf("next:\t(0x%08x)\n", node->next);
   printf("refcnt:\t%d\n", node->refcount);
-  printf("childn:\t(0x%08x)\n", node->children);
-  printf("lastch:\t(0x%08x)\n", node->last_child);
   printf("-end-node---\n");
 }

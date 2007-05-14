@@ -4,7 +4,7 @@
 
 #define DIR_DELIMITER '/'
 
-void pv_vfs_print_path(uint_fast16_t pos, struct vfs_node_s *node)
+static void vfs_pv_print_path(uint_fast16_t pos, struct vfs_node_s *node)
 {
   struct vfs_node_s *tmp;
   static uint_fast8_t ok = 0;
@@ -20,20 +20,23 @@ void pv_vfs_print_path(uint_fast16_t pos, struct vfs_node_s *node)
     }
 
   printf("/%s", node->file->name);
-  for (tmp = node->children; tmp; tmp = tmp->next)
-    pv_vfs_print_path(offset, tmp);
-  if (!node->children && (ok = 1))
+
+  CONTAINER_FOREACH(vfs_node_list, CLIST, &node->children,
+  {
+    vfs_pv_print_path(offset, item);
+  });
+
+  if (vfs_node_func_isempty(&node->children) && (ok = 1))
     printf("\n");
 }
 
 void vfs_debug_tree(void)
 {
-  pv_vfs_print_path(0, &vfs_root_g);
+  vfs_pv_print_path(0, &vfs_root_g);
 }
 
 static inline struct vfs_node_s *vfs_get_root_node(void)
 {
-  printf("rootnode: %s\n", vfs_root_g.file->name);
   return &vfs_root_g;
 }
 

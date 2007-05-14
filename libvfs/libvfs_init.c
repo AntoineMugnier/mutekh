@@ -55,6 +55,8 @@ error_t vfs_init(void)
   vfs_root_g.refcount = 2;
   vfs_root_g.file = fs->get_file_info(NULL, "/");
   vfs_root_g.fs_inst = fs_inst;
-  vfs_dbg_print_node("vfs_root_g", &vfs_root_g);
+
+  vfs_node_func_init(&vfs_root_g.children);
+  //  vfs_dbg_print_node("vfs_root_g", &vfs_root_g);
   return 0;
 }

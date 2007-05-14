@@ -1,6 +1,12 @@
 #include <hexo/error.h>
 #include <hexo/types.h>
 
+#include <hexo/gpct_platform_hexo.h>
+#include <hexo/gpct_lock_hexo.h>
+
+#include <gpct/cont_clist.h>
+
+
 struct fs_file_s
 {
   char			*name;
@@ -25,18 +31,20 @@ struct vfs_fs_inst_s
   /* ... */
 };
 
-struct vfs_node_s
+//CONTAINER_PROTOTYPE(vfs_node_list, static, vfs_node_func);
+
+CONTAINER_TYPE(vfs_node_list, CLIST, struct vfs_node_s
 {
-  uint_fast32_t		type;
-  struct fs_file_s	*file;
-  struct vfs_fs_inst_s	*fs_inst;
-  struct vfs_node_s	*parent;
-  struct vfs_node_s	*next;
-  uint_fast8_t		refcount;
-  struct vfs_node_s	*children;
-  struct vfs_node_s	*last_child;
-  /* ... */
-};
+  CONTAINER_ENTRY_TYPE(CLIST)	list_entry;
+  uint_fast32_t			type;
+  struct fs_file_s		*file;
+  struct vfs_fs_inst_s		*fs_inst;
+  struct vfs_node_s		*parent;
+  uint_fast8_t			refcount;
+  vfs_node_list_root_t		children;
+}, list_entry);
+
+CONTAINER_FUNC(vfs_node_list, CLIST, static inline, vfs_node_func);
 
 extern struct vfs_node_s vfs_root_g;
 
