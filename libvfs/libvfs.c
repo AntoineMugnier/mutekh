@@ -30,6 +30,11 @@ static void vfs_pv_print_path(uint_fast16_t pos, struct vfs_node_s *node)
     printf("\n");
 }
 
+/*
+** vfs-debug_tree
+**
+*/
+
 void vfs_debug_tree(void)
 {
   vfs_pv_print_path(0, &vfs_root_g);
@@ -47,11 +52,35 @@ static inline struct vfs_node_s *get_cwd_node()
 }
 */
 
-void vfs_parse(char *str)
+/*
+** vfs_parse: automates the vfs cache updates.
+**
+** params
+** ------
+** @param str	string pointer to a path name.
+** @param ec	error code.
+**
+** description
+** -----------
+** Tokenize the given path.
+** for each token, checks if there is a corresponding entry in the vfs cache.
+** if not, it tries to create a node object for that token, and updates the cache.
+** (see definition of vfs_get_node).
+**
+** return types
+** ------------
+** on success:	pointer to the last token's node, ec = 0.
+** on error:	pointer to the last valid node, ec = error code.
+**
+** 
+*/
+
+struct vfs_node_s *vfs_parse(char *str, error_t *ec)
 {
   uint_fast16_t i = 0;
   char *ps;
   struct vfs_node_s *target;
+  struct vfs_node_s *tmp;
 
   if (str[0] == DIR_DELIMITER)
     {
@@ -74,10 +103,25 @@ void vfs_parse(char *str)
         {
           for (;str[i] == DIR_DELIMITER; str[i++] = 0)
             ;
-          target = vfs_get_node(target, ps);
-          ps = &str[i];
+	  tmp = target;
+          if ((target = vfs_get_node(target, ps)))
+	    ps = &str[i];
+	  else
+	    {
+	      *ec = 1;
+	      return tmp;
+	    }
         }
     }
   if (*ps)
-    target = vfs_get_node(target, ps);
+    {
+      tmp = target;
+      if ((target = vfs_get_node(target, ps)) == NULL)
+	{
+	  *ec = 1;
+	  return tmp;
+	}
+    }
+  *ec = 0;
+  return target;
 }

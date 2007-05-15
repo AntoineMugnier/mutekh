@@ -31,17 +31,15 @@ struct vfs_fs_inst_s
   /* ... */
 };
 
-//CONTAINER_PROTOTYPE(vfs_node_list, static, vfs_node_func);
-
 CONTAINER_TYPE(vfs_node_list, CLIST, struct vfs_node_s
 {
   CONTAINER_ENTRY_TYPE(CLIST)	list_entry;
-  uint_fast32_t			type;
-  struct fs_file_s		*file;
-  struct vfs_fs_inst_s		*fs_inst;
-  struct vfs_node_s		*parent;
-  uint_fast8_t			refcount;
-  vfs_node_list_root_t		children;
+  uint_fast32_t			type;		/* type of the node */
+  struct fs_file_s		*file;		/* ptr to a file handle */
+  struct vfs_fs_inst_s		*fs_inst;	/* ptr to the file system instance */
+  struct vfs_node_s		*parent;	/* ptr to parent node */
+  uint_fast8_t			refcount;	/* nuber of references for the node */
+  vfs_node_list_root_t		children;	/* children list */
 }, list_entry);
 
 CONTAINER_FUNC(vfs_node_list, CLIST, static inline, vfs_node_func);
@@ -53,7 +51,7 @@ struct vfs_node_s *vfs_get_node(struct vfs_node_s *parent, char *name);
 void vfs_dbg_print_node(char *str, struct vfs_node_s *node);
 
 /* libVFS.c */
-void vfs_parse(char *str);
+struct vfs_node_s *vfs_parse(char *str, error_t *ec);
 void vfs_debug_tree(void);
 
 /* libVFS_init.c */

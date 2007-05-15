@@ -80,18 +80,32 @@ static inline struct vfs_node_s *pv_vfs_create_node(struct vfs_node_s *parent, c
   return NULL;
 }
 
+/*
+** vfs_get_node: assuming a valid parent, tries to find a corresponding
+**		 node for a file name.
+**
+** params
+** ------
+** @param parent	pointer to the parent node.
+** @param name		string pointer to a file name.
+**
+** description
+** -----------
+** If the file isn't already on the node cache, tries to associate the
+** filename with a new cache entry.
+**
+** return types
+** ------------
+** on success:	pointer to the vfs node of the file.
+** on error:	NULL.
+*/
+
 inline struct vfs_node_s *vfs_get_node(struct vfs_node_s *parent, char *name)
 {
   struct vfs_node_s *node;
 
   if (!(node = pv_vfs_lookup_child(parent, name)))
-    {
-      if ((node = pv_vfs_create_node(parent, name)))
-	{
-	  return node;
-	}
-      return NULL;
-    }
+    node = pv_vfs_create_node(parent, name);
   return node;
 }
 
