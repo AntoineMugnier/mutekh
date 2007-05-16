@@ -26,7 +26,6 @@
 #include <hexo/types.h>
 #include <hexo/local.h>
 #include <hexo/error.h>
-#include <hexo/cpu.h>
 
 /** cpu specific context structure */
 struct cpu_context_s;
@@ -93,7 +92,7 @@ static inline void context_switch_to(struct context_s *context)
 
   assert(cur != context);
 
-  printf("(C %i, %p)", cpu_id(), context);
+  printf("(C %p)", context);
 
   cpu_context_switch(cur, context);
 }
