@@ -90,6 +90,13 @@ CONTAINER_TYPE(sched_queue, CLIST, struct sched_context_s
 CONTAINER_FUNC       (sched_queue, CLIST, static inline, sched_queue, list_entry);
 CONTAINER_FUNC_NOLOCK(sched_queue, CLIST, static inline, sched_queue_nolock, list_entry);
 
+extern CONTEXT_LOCAL struct sched_context_s *sched_cur;
+
+static inline struct sched_context_s * sched_get_current(void)
+{
+  return CONTEXT_LOCAL_GET(sched_cur);
+}
+
 /** lock main scheduler queue. */
 void sched_lock(void);
 

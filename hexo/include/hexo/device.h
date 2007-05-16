@@ -123,6 +123,9 @@ struct device_s
 
 #endif
 
+  /** general purpose device lock */
+  lock_t			lock;
+
   /** pointer to device driver private data if any */
   void				*drv_pv;
 

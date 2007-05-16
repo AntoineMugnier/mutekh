@@ -1,8 +1,9 @@
 
-objs =											\
-context.o										\
-mem_alloc.o										\
-device.o
+objs =						\
+context.o					\
+mem_alloc.o					\
+device.o					\
+device_block.o
 
 ifeq ($(CONFIG_HEXO_VMEM), defined)
 objs += vmem_paddr.o

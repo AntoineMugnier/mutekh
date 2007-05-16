@@ -57,7 +57,14 @@ static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 
 static inline void arch_lock_spin(struct arch_lock_s *lock)
 {
+#ifdef CONFIG_DEBUG_SPINLOCK_LIMIT
+  uint32_t deadline = CONFIG_DEBUG_SPINLOCK_LIMIT;
+
+  while (cpu_atomic_bit_testset(&lock->a, 0))
+    assert(deadline-- > 0);
+#else
   cpu_atomic_bit_waitset(&lock->a, 0);
+#endif
 }
 
 static inline bool_t arch_lock_state(struct arch_lock_s *lock)

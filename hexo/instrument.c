@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <hexo/alloc.h>
+#include <hexo/cpu.h>
+#include <hexo/lock.h>
 
 void __cyg_profile_func_enter (void *this_fn,
 			       void *call_site);
@@ -16,6 +18,8 @@ static bool_t hexo_instrument_trace_flag = 0;
 static bool_t hexo_instrument_memalloc_guard = 0;
 #endif
 
+static lock_t hexo_instrument_lock = LOCK_INITIALIZER;
+
 __attribute__ ((no_instrument_function))
 void __cyg_profile_func_enter (void *this_fn,
 			       void *call_site)
@@ -23,7 +27,9 @@ void __cyg_profile_func_enter (void *this_fn,
   if (hexo_instrument_trace_flag)
     {
       hexo_instrument_trace_flag = 0;
-      printf(">>>>> [f:%p]   Called from [f:%p]\n", this_fn, call_site);
+      lock_spin(&hexo_instrument_lock);
+      printf(">>>>> cpu(%i) [f:%p]   Called from [f:%p]\n", cpu_id(), this_fn, call_site);
+      lock_release(&hexo_instrument_lock);
       hexo_instrument_trace_flag = 1;
     }
 
@@ -53,7 +59,9 @@ void __cyg_profile_func_exit  (void *this_fn,
   if (hexo_instrument_trace_flag)
     {
       hexo_instrument_trace_flag = 0;
+      lock_spin(&hexo_instrument_lock);
       printf("  <<< [f:%p]   Called from [f:%p]\n", this_fn, call_site);
+      lock_release(&hexo_instrument_lock);
       hexo_instrument_trace_flag = 1;
     }
 }

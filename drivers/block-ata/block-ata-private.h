@@ -170,7 +170,6 @@ struct drive_ata_oper_s
 struct controller_ata_context_s
 {
   struct device_s	*drive[2];
-  lock_t		lock;
 };
 
 bool_t controller_ata_waitbusy(struct device_s *dev);

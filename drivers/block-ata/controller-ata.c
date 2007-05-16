@@ -44,8 +44,6 @@ DEV_CLEANUP(controller_ata_cleanup)
 {
   struct controller_ata_context_s	*pv = dev->drv_pv;
 
-  lock_destroy(&pv->lock);
-
   mem_free(pv);
 }
 
@@ -58,7 +56,7 @@ DEV_IRQ(controller_ata_irq)
   struct controller_ata_context_s *pv = dev->drv_pv;
   bool_t res = 0;
 
-  lock_spin(&pv->lock);
+  lock_spin(&dev->lock);
 
   if (pv->drive[0] != NULL)
     res |= drive_ata_try_irq(pv->drive[0]);
@@ -66,7 +64,7 @@ DEV_IRQ(controller_ata_irq)
   if (pv->drive[1] != NULL)
     res |= drive_ata_try_irq(pv->drive[1]);
 
-  lock_release(&pv->lock);
+  lock_release(&dev->lock);
 
   return res;
 }
@@ -155,7 +153,6 @@ DEV_INIT(controller_ata_init)
   if (!pv)
     return -1;
 
-  lock_init(&pv->lock);
   pv->drive[0] = pv->drive[1] = NULL;
   dev->drv_pv = pv;
 

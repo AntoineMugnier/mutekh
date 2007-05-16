@@ -40,9 +40,11 @@ struct dev_block_rq_s;
 				       size_t count)
 
 /**
-   Block device read callback function. This function is called
-   for each group of blocks read. It may be called several times,
-   count must be used to detect read operation end.
+   Block device read callback function. This function is called for
+   each group of blocks read. It may be called several times, count
+   and rq->error must be used to detect read operation end. The device
+   lock is held when call back function is called asynchronously from
+   interrupt handler.
 
    @param dev pointer to device descriptor
    @param rq pointer to request data. rq->count field is
@@ -57,7 +59,8 @@ struct dev_block_rq_s;
 
    Block device write callback function type. This function is called
    when a requested write operation completes. This function will be
-   called only once per write operation.
+   called only once per write operation. The device lock is held when
+   call back function is called asynchronously from interrupt handler.
 
    @param dev pointer to device descriptor
    @param rq pointer to request data. rq->count field is
@@ -147,7 +150,7 @@ struct dev_block_params_s
 
 /** Block device class getparams() methode shortcut */
 
-#define dev_block_getparams(dev)->drv->f.blk.f_getparams(dev)
+#define dev_block_getparams(dev) (dev)->drv->f.blk.f_getparams(dev)
 
 /**
    Block device class getparams() function type.
@@ -166,6 +169,24 @@ struct dev_class_block_s
   devblock_write_t		*f_write;
   devblock_getparams_t		*f_getparams;
 };
+
+
+/** Synchronous helper read function. This function use the scheduler
+    api to put current context in wait state. This function spin in a
+    wait loop waiting for read to complete when scheduler is disabled.
+
+    lba, count and _data_ field of request must be initialized.
+*/
+error_t dev_block_wait_read(struct device_s *dev, struct dev_block_rq_s *rq);
+
+/** Synchronous helper write function. This function use the scheduler
+    api to put current context in wait state. This function spin in a
+    wait loop waiting for read to complete when scheduler is disabled
+
+    lba, count and data field of request must be initialized.
+*/
+error_t dev_block_wait_write(struct device_s *dev, struct dev_block_rq_s *rq);
+
 
 #endif
 

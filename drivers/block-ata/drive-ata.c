@@ -94,11 +94,9 @@ drive_ata_unlocked_callback(struct device_s *dev,
 			    const struct dev_block_rq_s *rq,
 			    size_t count)
 {
-  struct controller_ata_context_s *cpv = dev->parent->drv_pv;
-
-  lock_release(&cpv->lock);
+  lock_release(&dev->parent->lock);
   rq->callback(dev, rq, count);
-  lock_spin(&cpv->lock);
+  lock_spin(&dev->parent->lock);
 }
 
 /* 
@@ -191,7 +189,7 @@ DEVBLOCK_READ(drive_ata_read)
   struct controller_ata_context_s *cpv = dev->parent->drv_pv;
   struct drive_ata_context_s *dpv = dev->drv_pv;
 
-  LOCK_SPIN_IRQ(&cpv->lock);
+  LOCK_SPIN_IRQ(&dev->parent->lock);
 
   if (rq->lba >= dpv->drv_params.blk_count)
     {
@@ -207,7 +205,7 @@ DEVBLOCK_READ(drive_ata_read)
       drive_ata_rq_start(dev, rq);
     }
 
-  LOCK_RELEASE_IRQ(&cpv->lock);
+  LOCK_RELEASE_IRQ(&dev->parent->lock);
 }
 
 /* 
@@ -301,7 +299,7 @@ DEVBLOCK_WRITE(drive_ata_write)
   struct controller_ata_context_s *cpv = dev->parent->drv_pv;
   struct drive_ata_context_s *dpv = dev->drv_pv;
 
-  LOCK_SPIN_IRQ(&cpv->lock);
+  LOCK_SPIN_IRQ(&dev->parent->lock);
 
   if (rq->lba >= dpv->drv_params.blk_count)
     {
@@ -318,7 +316,7 @@ DEVBLOCK_WRITE(drive_ata_write)
       drive_ata_rq_start(dev, rq);
     }
 
-  LOCK_RELEASE_IRQ(&cpv->lock);
+  LOCK_RELEASE_IRQ(&dev->parent->lock);
 }
 
 /* 

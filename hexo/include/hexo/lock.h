@@ -19,6 +19,14 @@
 
 */
 
+/*
+
+%config CONFIG_DEBUG_SPINLOCK_LIMIT
+desc Enable 32bits deadline counter for spinlocks and assert() counter never reach 0
+%config end
+
+*/
+
 #ifndef LOCK_H_
 #define LOCK_H_
 

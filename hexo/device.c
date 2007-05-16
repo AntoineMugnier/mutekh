@@ -31,6 +31,7 @@ CONTAINER_FUNC(device_list, CLIST, inline, device_list);
 OBJECT_CONSTRUCTOR(device_obj)
 {
   device_list_init(&obj->children);
+  lock_init(&obj->lock);
 
   return 0;
 }
@@ -38,6 +39,8 @@ OBJECT_CONSTRUCTOR(device_obj)
 OBJECT_DESTRUCTOR(device_obj)
 {
   dev_cleanup(obj);
+  device_list_destroy(&obj->children);
+  lock_destroy(&obj->lock);
 }
 
 error_t
@@ -71,6 +74,7 @@ device_init(struct device_s *dev)
   va_list ap;
   device_obj_construct(dev, NULL, ap);
 #endif
+  lock_init(&dev->lock);
 }
 
 struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i)
