@@ -32,6 +32,7 @@
 #include <hexo/interrupt.h>
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "block-ramdisk.h"
 #include "block-ramdisk-private.h"
@@ -178,27 +179,29 @@ DEV_INIT(block_ramdisk_init)
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
 
   if (!pv)
-    return -1;
+    goto err;
 
-  pv->params.blk_size = 512;
-  pv->params.blk_sh_size = 9;
-  pv->params.blk_count = 2048 * 4; // 4 Mo. Ramdisk
+  pv->params.blk_size = CONFIG_DRIVER_BLOCK_RAMDISK_BLOCKSIZE;
+  pv->params.blk_sh_size = ffsl(CONFIG_DRIVER_BLOCK_RAMDISK_BLOCKSIZE) - 1;
+  pv->params.blk_count = CONFIG_DRIVER_BLOCK_RAMDISK_SIZE;
 
-  {
-    size_t sz = pv->params.blk_size * pv->params.blk_count;
-    dev_block_lba_t c;
+  size_t sz = pv->params.blk_size * pv->params.blk_count;
+  dev_block_lba_t c;
 
-    pv->mem = mem_alloc(sz, MEM_SCOPE_SYS);
-    if (!pv->mem)
-      {
-	mem_free(pv);
-	return -1;
-      }
-    for (c = 0; c < pv->params.blk_count; c++)
-      memset(pv->mem + (c << pv->params.blk_sh_size), c & 0xFF, pv->params.blk_size);
-  }
+  if ((pv->mem = mem_alloc(sz, MEM_SCOPE_SYS)) == NULL)
+    goto err_pv;
+
+  for (c = 0; c < pv->params.blk_count; c++)
+    memset(pv->mem + (c << pv->params.blk_sh_size), c & 0xFF, pv->params.blk_size);
+
   lock_init(&pv->lock);
 
   dev->drv_pv = pv;
   return 0;
+
+ err_pv:
+  mem_free(pv);
+ err:
+  return -1;
 }
+
