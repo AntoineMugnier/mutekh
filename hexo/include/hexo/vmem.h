@@ -43,6 +43,11 @@ parent CONFIG_HEXO_VMEM
 default 0x40000000
 %config end
 
+%config CONFIG_HEXO_VMEM_INITIAL
+desc Size of initial memory reserved for kernel use
+default 0x00800000
+%config end
+
 */
 
 
@@ -52,6 +57,7 @@ default 0x40000000
 
 #include "types.h"
 #include "error.h"
+#include "local.h"
 
 struct vmem_context_s;
 struct vmem_page_s;
@@ -66,8 +72,19 @@ typedef uint8_t vmem_pageattr_t;
 #define VMEM_PAGE_ATTR_ACCESSED 0x40
 #define VMEM_PAGE_ATTR_PRESENT 0x80
 
-/* switch to virtual memory mode by enabling mmu, identity */
-void vmem_enable(uintptr_t start, uintptr_t end);
+extern CPU_LOCAL struct vmem_context_s *vmem_context_cur;
+
+/* get current memory context */
+static inline struct vmem_context_s * vmem_context_get(void)
+{
+  return CPU_LOCAL_GET(vmem_context_cur);
+}
+
+/* initialize virtual memory strucutres */
+void vmem_global_init(void);
+
+/* switch to virtual memory mode by enabling mmu */
+void vmem_cpu_init(void);
 
 /* create a memory context and initialize context object */
 error_t vmem_context_init(struct vmem_context_s *ctx);
@@ -76,39 +93,38 @@ error_t vmem_context_init(struct vmem_context_s *ctx);
 void vmem_context_switch_to(struct vmem_context_s *ctx);
 
 /* destroy a memory context */
-void vmem_context_destroy(struct vmem_context_s *ctx);
+void vmem_context_destroy(void);
 
-/* get all page attributes */
+/* get all page attributes, return 0 if page does not exist */
 vmem_pageattr_t
-vmem_vpage_get_attr(struct vmem_context_s *ctx,
-		   uintptr_t vaddr);
+vmem_vpage_get_attr(uintptr_t vaddr);
 
 /* update all page attributes, may flush tlb */
 error_t
-vmem_vpage_update_attr(struct vmem_context_s *ctx, uintptr_t vaddr,
-		       vmem_pageattr_t attr);
+vmem_vpage_update_attr(uintptr_t vaddr, vmem_pageattr_t attr);
 
-/* set page attributes (or), may flush tlb */
+/* set (logical or) and clear (logical nand) page attributes, may flush tlb */
 error_t
-vmem_vpage_set_attr(struct vmem_context_s *ctx, uintptr_t vaddr,
-		    vmem_pageattr_t attr);
+vmem_vpage_mask_attr(uintptr_t vaddr, vmem_pageattr_t setmask, vmem_pageattr_t clrmask);
 
-/* clear page attributes (and not), may flush tlb */
-error_t
-vmem_vpage_clr_attr(struct vmem_context_s *ctx, uintptr_t vaddr,
-		    vmem_pageattr_t attr);
-
-/* get virtual page physical address */
-uintptr_t vmem_vpage_get_paddr(struct vmem_context_s *ctx,
-			       uintptr_t vaddr);
+/* get virtual page physical address, virtual page must exist */
+uintptr_t vmem_vpage_get_paddr(uintptr_t vaddr);
 
 /* map a physical page to a virtual page, may flush tlb */
-error_t vmem_vpage_map(struct vmem_context_s *ctx,
-		       uintptr_t vaddr, uintptr_t paddr);
+error_t vmem_vpage_map(uintptr_t vaddr, uintptr_t paddr);
+
+/* map a physical address range somewhere in kernel space and return
+   its address or 0 on error, may flush tlb  */
+uintptr_t vmem_vpage_io_map(uintptr_t paddr, size_t size);
+
+/* allocate virtual page memory in kernel page space, may flush tlb */
+void * vmem_vpage_kalloc();
+
+/* free a kernel virtual page */
+void vmem_vpage_kfree(void *vaddr);
 
 /* umap a virtual page, may flush tlb */
-void vmem_vpage_umap(struct vmem_context_s *ctx,
-		     uintptr_t vaddr);
+void vmem_vpage_umap(uintptr_t vaddr);
 
 /***********************************************************************
  *  physical page allocator
@@ -124,6 +140,8 @@ error_t vmem_ppage_alloc(uintptr_t *paddr);
 error_t vmem_ppage_reserve(uintptr_t paddr, uintptr_t paddr_end);
 uintptr_t vmem_ppage_refnew(uintptr_t paddr);
 void vmem_ppage_refdrop(uintptr_t paddr);
+
+#include "cpu/hexo/vmem.h"
 
 #endif
 

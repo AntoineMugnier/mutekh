@@ -54,15 +54,21 @@ DEV_CLEANUP(controller_ata_cleanup)
 DEV_IRQ(controller_ata_irq)
 {
   struct controller_ata_context_s *pv = dev->drv_pv;
-  bool_t res = 0;
+  bool_t res;
 
   lock_spin(&dev->lock);
 
-  if (pv->drive[0] != NULL)
-    res |= drive_ata_try_irq(pv->drive[0]);
+  //  do
+    {
+      res = 0;
 
-  if (pv->drive[1] != NULL)
-    res |= drive_ata_try_irq(pv->drive[1]);
+      if (pv->drive[0] != NULL)
+	res |= drive_ata_try_irq(pv->drive[0]);
+
+      if (pv->drive[1] != NULL)
+	res |= drive_ata_try_irq(pv->drive[1]);
+    }
+  //  while (res);
 
   lock_release(&dev->lock);
 

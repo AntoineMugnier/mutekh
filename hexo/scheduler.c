@@ -122,7 +122,10 @@ static CONTEXT_ENTRY(sched_context_idle)
       sched_queue_wrlock(root);
 
       if ((next = __sched_candidate_noidle(root)) != NULL)
+	{
 	  context_switch_to(&next->context);
+	  //	  printf("(c%i idle)", cpu_id());
+	}
 
       sched_queue_unlock(root);
     }

@@ -92,8 +92,6 @@ static inline void context_switch_to(struct context_s *context)
 
   assert(cur != context);
 
-  printf("(C %p)", context);
-
   cpu_context_switch(cur, context);
 }
 

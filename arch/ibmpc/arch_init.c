@@ -66,6 +66,9 @@ void arch_init()
       /* configure first CPU */
       cpu_cld_list[0] = cpu_init(0);
 
+      vmem_global_init();
+      vmem_cpu_init();
+
       /* send reset/init signal to other CPUs */
 #ifdef CONFIG_SMP
       lock_try(&cpu_start_lock);
@@ -87,6 +90,8 @@ void arch_init()
       cpu_count++;
 
       lock_release(&cpu_init_lock);
+
+      vmem_cpu_init();
 
       /* wait for start signal */
       while (lock_state(&cpu_start_lock))

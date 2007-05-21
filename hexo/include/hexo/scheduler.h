@@ -92,7 +92,8 @@ CONTAINER_FUNC_NOLOCK(sched_queue, CLIST, static inline, sched_queue_nolock, lis
 
 extern CONTEXT_LOCAL struct sched_context_s *sched_cur;
 
-static inline struct sched_context_s * sched_get_current(void)
+static inline struct sched_context_s *
+sched_get_current(void)
 {
   return CONTEXT_LOCAL_GET(sched_cur);
 }

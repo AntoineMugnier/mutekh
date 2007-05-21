@@ -83,16 +83,14 @@ error_t vmem_ppage_alloc(uintptr_t *paddr)
   struct vmem_page_region_s *r = &vmem_region;
   struct vmem_ppage_desc_s *t;
   error_t res = -ENOMEM;
-  uint_fast32_t p;
 
   LOCK_SPIN_IRQ(&r->lock);  
 
   if (r->free_count > 0)
     {
       t = r->table + r->free_head;
-
+      *paddr = r->paddr + r->free_head * CONFIG_HEXO_VMEM_PAGESIZE;
       r->free_head = t->value;
-      *paddr = r->paddr + p * CONFIG_HEXO_VMEM_PAGESIZE;
       t->is_free = 0;
       t->value = 1;		/* intial refcount is 1 */
       r->free_count--;
@@ -100,6 +98,8 @@ error_t vmem_ppage_alloc(uintptr_t *paddr)
     }
 
   LOCK_RELEASE_IRQ(&r->lock);  
+
+  printf("ppage alloc %i %p\n", res, *paddr);
 
   return res;
 }

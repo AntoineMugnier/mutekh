@@ -65,12 +65,18 @@ static void drive_ata_rq_end(struct device_s *dev)
 
   dev_blk_queue_pop(&dpv->queue);
 
-  if ((rq = dev_blk_queue_head(&dpv->queue)) == NULL)
-    return;
-
-  op = rq->drvdata;
-  dpv->blk_counter = 0;
-  op->start(dev, rq);
+  if ((rq = dev_blk_queue_head(&dpv->queue)) != NULL)
+    {
+      op = rq->drvdata;
+      dpv->blk_counter = 0;
+      op->start(dev, rq);
+    }
+  else
+    {
+      /* drive goes idle, select other drive to give a chance to interrupt */
+      controller_ata_reg_w8(dev->parent, ATA_REG_DRVHEAD,
+			    (dpv->devhead_reg ^ ATA_DRVHEAD_SLAVE) & ATA_DRVHEAD_SLAVE);
+    }
 }
 
 /* try irq */
@@ -83,7 +89,7 @@ bool_t drive_ata_try_irq(struct device_s *dev)
     {
       struct drive_ata_oper_s *op = rq->drvdata;
 
-      return op->irq(dev);
+      return op->irq(dev, rq);
     }
 
   return 0;
@@ -112,12 +118,14 @@ static DRIVE_ATA_START_FUNC(drive_ata_read_start)
   dpv->ata_sec_count = __MIN(256, rq->count);
 
   controller_ata_reg_w8(parent, ATA_REG_DRVHEAD, dpv->devhead_reg | (lba >> 24));
+
   controller_ata_reg_w8(parent, ATA_REG_CYLINDER_HIGH, lba >> 16);
   controller_ata_reg_w8(parent, ATA_REG_CYLINDER_LOW, lba >> 8);
   controller_ata_reg_w8(parent, ATA_REG_SECTOR_NUMBER, lba);
   controller_ata_reg_w8(parent, ATA_REG_SECTOR_COUNT, dpv->ata_sec_count);
 
   controller_ata_reg_w8(parent, ATA_REG_COMMAND, ATA_CMD_READ_SECTORS);
+
 }
 
 static DRIVE_ATA_IRQ_FUNC(drive_ata_read_irq)
@@ -130,46 +138,44 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_read_irq)
 
   status = controller_ata_reg_r8(dev->parent, ATA_REG_STATUS);
 
-  if (status & ATA_STATUS_READY)
+  if (status & ATA_STATUS_ERROR)
     {
-      struct dev_block_rq_s *rq = dev_blk_queue_head(&dpv->queue);
+      rq->error = EIO;
+      drive_ata_unlocked_callback(dev, rq, 0);
 
-      if (status & ATA_STATUS_ERROR)
+      drive_ata_rq_end(dev);
+      assert(0);
+      return 1;
+    }
+
+  if (status & ATA_STATUS_DATA_RQ)
+    {
+      uint8_t data[512];
+      uint8_t *dataptr = data;
+
+      controller_ata_data_read16(dev->parent, data);
+
+      rq->data = &dataptr;
+      rq->lba++;
+      rq->count--;
+      rq->error = 0;
+      dpv->ata_sec_count--;
+
+      if (rq->lba == dpv->drv_params.blk_count)
+	rq->error = EEOF;	    
+
+      drive_ata_unlocked_callback(dev, rq, 1);
+
+      if (rq->count == 0)
 	{
-	  rq->error = EIO;
-	  drive_ata_unlocked_callback(dev, rq, 0);
-
 	  drive_ata_rq_end(dev);
 	}
       else
 	{
-	  uint8_t data[512];
-	  uint8_t *dataptr = data;
+	  if (dpv->ata_sec_count > 0)
+	    return 1;
 
-	  controller_ata_data_read16(dev->parent, data);
-
-	  rq->data = &dataptr;
-	  rq->lba++;
-	  rq->count--;
-	  rq->error = 0;
-	  dpv->ata_sec_count--;
-
-	  if (rq->lba == dpv->drv_params.blk_count)
-	    rq->error = EEOF;	    
-
-	  drive_ata_unlocked_callback(dev, rq, 1);
-
-	  if (rq->count == 0)
-	    {
-	      drive_ata_rq_end(dev);
-	    }
-	  else
-	    {
-	      if (dpv->ata_sec_count > 0)
-		return 1;
-
-	      drive_ata_read_start(dev, rq);
-	    }
+	  drive_ata_read_start(dev, rq);
 	}
 
       return 1;
@@ -246,8 +252,6 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_write_irq)
 
   if (!(status & ATA_STATUS_BUSY))
     {
-      struct dev_block_rq_s *rq = dev_blk_queue_head(&dpv->queue);
-
       if (status & ATA_STATUS_ERROR)
 	{
 	  rq->error = EIO;
