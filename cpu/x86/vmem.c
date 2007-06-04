@@ -1,21 +1,12 @@
 
 #include <hexo/vmem.h>
 #include <hexo/local.h>
+#include <hexo/endian.h>
 #include <string.h>
 #include <assert.h>
 
 VMEM_X86_ALIGN cpu_x86_page_entry_t vmem_k_pagedir[1024];
 VMEM_X86_ALIGN cpu_x86_page_entry_t vmem_k_mirror[1024];
-
-struct vmem_context_s
-{
-  cpu_x86_page_entry_t	*pagedir; /* page directory */
-  cpu_x86_page_entry_t	*mirror; /* page table mirroring page directory */
-  uintptr_t		pagedir_paddr; /* page directory physical address */
-  uint_fast16_t		k_count; /* kernel entries count */
-  uintptr_t		v_next;	/* next virtual page to allocate */
-};
-
 VMEM_X86_ALIGN struct vmem_context_s vmem_k_context;
 
 /* next virtual page to allocate on kernel page space */
@@ -74,18 +65,39 @@ void vmem_cpu_init()
 		);
 }
 
+static void vmem_x86_update_k_context(struct vmem_context_s *ctx)
+{
+  uint_fast16_t diff;
+
+  if ((diff = vmem_k_context.k_count - ctx->k_count))
+    {
+      /* copy kernel part pagedir to context pagedir */
+      memcpy(ctx->pagedir + ctx->k_count,
+	     vmem_k_context.pagedir + ctx->k_count,
+	     diff * sizeof(struct cpu_x86_pagetable_entry_s));
+
+      memcpy(ctx->mirror + ctx->k_count,
+	     vmem_k_context.mirror + ctx->k_count,
+	     diff * sizeof(struct cpu_x86_page4k_entry_s));
+
+      printf("updating context %i %i %P\n", diff, ctx->k_count, ctx->pagedir, diff * 4);
+
+      ctx->k_count += diff;
+    }
+}
+
 error_t vmem_context_init(struct vmem_context_s *ctx)
 {
   cpu_x86_page_entry_t	*pagedir, *mirror;
 
-  if (!(pagedir = vmem_vpage_kalloc()))
+  if ((pagedir = vmem_vpage_kalloc()) == NULL)
     goto err;
 
-  if (!(mirror = vmem_vpage_kalloc()))
+  if ((mirror = vmem_vpage_kalloc()) == NULL)
     goto err2;
 
-  memset(ctx->pagedir, 0, VMEM_X86_PAGESIZE);
-  memset(ctx->mirror, 0, VMEM_X86_PAGESIZE);
+  memset(pagedir, 0, VMEM_X86_PAGESIZE);
+  memset(mirror, 0, VMEM_X86_PAGESIZE);
 
   uint32_t mirror_paddr = vmem_vpage_get_paddr((uintptr_t)mirror);
   uint32_t pagedir_paddr = vmem_vpage_get_paddr((uintptr_t)pagedir);
@@ -105,6 +117,8 @@ error_t vmem_context_init(struct vmem_context_s *ctx)
   mirror[VMEM_MIRROR_PDE].p4k.writable = 1;
   mirror[VMEM_MIRROR_PDE].p4k.address = mirror_paddr >> 12;
 
+  vmem_x86_update_k_context(ctx);
+
   return 0;
 
  err2:
@@ -113,7 +127,8 @@ error_t vmem_context_init(struct vmem_context_s *ctx)
   return -ENOMEM;
 }
 
-struct cpu_x86_page4k_entry_s *vmem_x86_get_vpage_entry(uint_fast16_t pde, uint_fast16_t pte)
+static inline struct cpu_x86_page4k_entry_s *
+vmem_x86_get_vpage_entry(uint_fast16_t pde, uint_fast16_t pte)
 {
   return (void*)(uintptr_t)(VMEM_MIRROR_ADDR | (pde << 12) | (pte << 2));
 }
@@ -143,21 +158,9 @@ void vmem_context_destroy(void)
 
 void vmem_context_switch_to(struct vmem_context_s *ctx)
 {
-  uint_fast16_t diff;
+  vmem_x86_update_k_context(ctx);
 
-  if ((diff = vmem_k_context.k_count - ctx->k_count))
-    {
-      /* copy kernel part pagedir to context pagedir */
-      memcpy(ctx->pagedir + ctx->k_count,
-	     vmem_k_context.pagedir + ctx->k_count,
-	     diff * sizeof(struct cpu_x86_pagetable_entry_s));
-
-      memcpy(ctx->mirror + ctx->k_count,
-	     vmem_k_context.mirror + ctx->k_count,
-	     diff * sizeof(struct cpu_x86_page4k_entry_s));
-
-      ctx->k_count += diff;
-    }
+  printf("switch to ctx %p pd %p pdphys %p\n", ctx, ctx->pagedir, ctx->pagedir_paddr);
 
   vmem_x86_set_pagedir(ctx->pagedir_paddr);
 
@@ -201,8 +204,8 @@ vmem_x86_alloc_pagetable(uintptr_t vaddr)
 
   if (vaddr < CONFIG_HEXO_VMEM_USERLIMIT)
     {
-      if (ctx->k_count < i)
-	ctx->k_count = i;
+      if (ctx->k_count <= i)
+	ctx->k_count = i + 1;
 
       if (ctx != &vmem_k_context)
 	{
@@ -287,6 +290,65 @@ vmem_pageattr_t vmem_vpage_get_attr(uintptr_t vaddr)
   return attr;
 }
 
+error_t vmem_vpage_set(uintptr_t vaddr, uintptr_t paddr, vmem_pageattr_t attr)
+{
+  struct cpu_x86_page4k_entry_s *e = vmem_x86_alloc_vpage(vaddr);
+
+  if (e == NULL)
+    return -ENOMEM;
+
+  assert((paddr & 0x3ff) == 0);
+  e->address = paddr >> 12;
+
+  e->present = (attr & VMEM_PAGE_ATTR_PRESENT) ? 1 : 0;
+  e->writable = (attr & VMEM_PAGE_ATTR_W) ? 1 : 0;
+  e->userlevel = (attr & VMEM_PAGE_ATTR_USERLEVEL) ? 1 : 0;
+  e->dirty = (attr & VMEM_PAGE_ATTR_DIRTY) ? 1 : 0;
+  e->accessed = (attr & VMEM_PAGE_ATTR_ACCESSED) ? 1 : 0;
+  e->nocache = (attr & VMEM_PAGE_ATTR_CACHED) ? 0 : 1;
+
+  return 0;
+}
+
+/* set (logical or) and clear (logical nand) page attributes, may flush tlb */
+void vmem_vpage_mask_attr(uintptr_t vaddr, vmem_pageattr_t setmask, vmem_pageattr_t clrmask)
+{
+  struct cpu_x86_page4k_entry_s *e = vmem_x86_get_vpage(vaddr);
+
+  assert(e != NULL);
+  assert((setmask & clrmask) == 0);
+
+  if (setmask & VMEM_PAGE_ATTR_PRESENT)
+    e->present = 1;
+  if (clrmask & VMEM_PAGE_ATTR_PRESENT)
+    e->present = 0;
+
+  if (setmask & VMEM_PAGE_ATTR_W)
+    e->writable = 1;
+  if (clrmask & VMEM_PAGE_ATTR_W)
+    e->writable = 0;
+
+  if (setmask & VMEM_PAGE_ATTR_USERLEVEL)
+    e->userlevel = 1;
+  if (clrmask & VMEM_PAGE_ATTR_USERLEVEL)
+    e->userlevel = 0;
+
+  if (setmask & VMEM_PAGE_ATTR_DIRTY)
+    e->dirty = 1;
+  if (clrmask & VMEM_PAGE_ATTR_DIRTY)
+    e->dirty = 0;
+
+  if (setmask & VMEM_PAGE_ATTR_ACCESSED)
+    e->accessed = 1;
+  if (clrmask & VMEM_PAGE_ATTR_ACCESSED)
+    e->accessed = 0;
+
+  if (setmask & VMEM_PAGE_ATTR_CACHED)
+    e->nocache = 0;
+  if (clrmask & VMEM_PAGE_ATTR_CACHED)
+    e->nocache = 1;
+}
+
 uintptr_t vmem_vpage_get_paddr(uintptr_t vaddr)
 {
   struct cpu_x86_page4k_entry_s *e = vmem_x86_get_vpage(vaddr);
@@ -296,12 +358,14 @@ uintptr_t vmem_vpage_get_paddr(uintptr_t vaddr)
   return e->address << 12;
 }
 
+
 void * vmem_vpage_kalloc()
 {
   uintptr_t paddr;
   uintptr_t vaddr;
 
-  vaddr = vmem_k_context.v_next += VMEM_X86_PAGESIZE;
+  vaddr = vmem_k_context.v_next;
+  vmem_k_context.v_next += VMEM_X86_PAGESIZE;
 
   struct cpu_x86_page4k_entry_s *e = vmem_x86_alloc_vpage(vaddr);
 
@@ -313,6 +377,8 @@ void * vmem_vpage_kalloc()
   /* allocate a new physical page for page table */
   if (vmem_ppage_alloc(&paddr))
     return NULL;
+
+  printf("kpage entry %p\n", e);
 
   e->present = 1;
   e->writable = 1;
@@ -330,9 +396,32 @@ void vmem_vpage_kfree(void *vaddr)
 
 uintptr_t vmem_vpage_io_map(uintptr_t paddr, size_t size)
 {
-  union cpu_x86_page_entry_s *pd;
+  uintptr_t vaddr, res;
 
   if (paddr + size <= CONFIG_HEXO_VMEM_INITIAL)
     return paddr;
+
+  size = ALIGN_VALUE_UP(size, VMEM_X86_PAGESIZE);
+
+  res = vaddr = vmem_k_context.v_next;
+  vmem_k_context.v_next += size;
+
+  while (size)
+    {
+      struct cpu_x86_page4k_entry_s *e = vmem_x86_alloc_vpage(vaddr);
+
+      assert(e != NULL);	/* FIXME */
+
+      e->present = 1;
+      e->writable = 1;
+      e->address = paddr >> 12;
+
+      paddr += VMEM_X86_PAGESIZE;
+      vaddr += VMEM_X86_PAGESIZE;
+      size -= VMEM_X86_PAGESIZE;
+    }
+
+  return res;
 }
+
 

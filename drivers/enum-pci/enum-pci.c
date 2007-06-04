@@ -73,7 +73,7 @@ DEVENUM_REGISTER(enum_pci_register)
 
 	/* call driver device init function, use same icu as PCI
 	   enumerator parent device */
-	if (!drv->f_init(item, dev->icudev))
+	if (!drv->f_init(item, dev->icudev, NULL))
 	  {
 	    count++;
 	  }

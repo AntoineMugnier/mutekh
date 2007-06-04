@@ -48,11 +48,9 @@ struct dev_block_rq_s;
 
    @param dev pointer to device descriptor
    @param rq pointer to request data. rq->count field is
-          updated with remaining blocks to read. rq->lba is
-	  advanced to next unread block address. rq->data is
-	  updated to point to internal driver data buffers.
-	  rq->error is updated. rq->error error code (EEOF indicate
-	  last disk block has been reached even if no error occured).
+          updated with remaining blocks to read. rq->lba is undefined.
+	  rq->data is updated to point to internal driver data buffers.
+	  rq->error is updated. rq->error error code.
    @param count number of valid blocks in data pointer table
    @param data table of pointers to each read block data
 
@@ -64,11 +62,8 @@ struct dev_block_rq_s;
 
    @param dev pointer to device descriptor
    @param rq pointer to request data. rq->count field is
-          updated with remaining blocks to write. rq->lba is
-	  advanced to next block address. rq->data is
-	  advanced to the next block buffer. rq->error is updated.
-	  rq->error error code (EEOF indicate last disk block has been
-	  reached even if no error occured).
+          updated with remaining blocks to write. rq->lba is undefined.
+	  rq->data is advanced to the next block buffer. rq->error is updated.
    @param count number of successfully written blocks
 */
 typedef DEVBLOCK_CALLBACK(devblock_callback_t);
@@ -173,11 +168,19 @@ struct dev_class_block_s
 
 /** Synchronous helper read function. This function use the scheduler
     api to put current context in wait state. This function spin in a
-    wait loop waiting for read to complete when scheduler is disabled.
+    loop waiting for read operation to complete when scheduler is
+    disabled.
 
     lba, count and _data_ field of request must be initialized.
 */
 error_t dev_block_wait_read(struct device_s *dev, struct dev_block_rq_s *rq);
+
+/** Synchronous helper read function. This function spin in a loop
+    waiting for read operation to complete.
+
+    lba, count and _data_ field of request must be initialized.
+*/
+error_t dev_block_lock_read(struct device_s *dev, struct dev_block_rq_s *rq);
 
 /** Synchronous helper write function. This function use the scheduler
     api to put current context in wait state. This function spin in a

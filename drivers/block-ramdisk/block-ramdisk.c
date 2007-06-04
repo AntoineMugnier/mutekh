@@ -49,28 +49,19 @@ DEVBLOCK_READ(block_ramdisk_read)
   struct dev_block_params_s *p = &pv->params;
   dev_block_lba_t lba = rq->lba;
 
-  if (lba < p->blk_count)
+  if (lba + count <= p->blk_count)
     {
       dev_block_lba_t count = rq->count;
-      size_t c;
       uint8_t *data[count];
       dev_block_lba_t b;
 
-      if (lba + count > p->blk_count)
-	{
-	  c = p->blk_count - lba;
-	  rq->error = EEOF;
-	}
-      else
-	c = count;
-
-      for (b = 0; b < c; b++)
+      for (b = 0; b < count; b++)
 	data[b] = pv->mem + ((lba + b) << p->blk_sh_size);
 
-      rq->count -= c;
-      rq->lba += c;
+      rq->count -= count;
+      rq->lba += count;
       rq->data = data;
-      rq->callback(dev, rq, c);
+      rq->callback(dev, rq, count);
     }
   else
     {
@@ -89,27 +80,17 @@ DEVBLOCK_WRITE(block_ramdisk_write)
   struct dev_block_params_s *p = &pv->params;
   dev_block_lba_t lba = rq->lba;
 
-  if (lba < p->blk_count)
+  if (lba + count <= p->blk_count)
     {
       dev_block_lba_t count = rq->count;
-      size_t c;
       dev_block_lba_t b;
 
-      if (lba + count > p->blk_count)
-	{
-	  c = p->blk_count - lba;
-	  rq->error = EEOF;
-	}
-      else
-	c = count;
-
-
-      for (b = 0; b < c; b++)
+      for (b = 0; b < count; b++)
 	memcpy(pv->mem + ((lba + b) << p->blk_sh_size), rq->data[b], p->blk_size);
 
-      rq->count -= c;
-      rq->lba += c;
-      rq->callback(dev, rq, c);
+      rq->count -= count;
+      rq->lba += count;
+      rq->callback(dev, rq, count);
     }
   else
     {

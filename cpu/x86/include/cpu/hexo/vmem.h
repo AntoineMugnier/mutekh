@@ -113,6 +113,15 @@ union cpu_x86_page_entry_s
 
 typedef union cpu_x86_page_entry_s cpu_x86_page_entry_t;
 
+struct vmem_context_s
+{
+  cpu_x86_page_entry_t	*pagedir; /* page directory */
+  cpu_x86_page_entry_t	*mirror; /* page table mirroring page directory */
+  uintptr_t		pagedir_paddr; /* page directory physical address */
+  uint_fast16_t		k_count; /* kernel entries count */
+  uintptr_t		v_next;	/* next virtual page to allocate */
+};
+
 static inline void
 vmem_x86_set_pagedir(uintptr_t paddr)
 {

@@ -47,6 +47,7 @@ struct driver_s
 {
   const struct devenum_ident_s	*id_table;
 
+  dev_create_t			*f_create;
   dev_init_t			*f_init;
   dev_cleanup_t			*f_cleanup;
   dev_irq_t			*f_irq;

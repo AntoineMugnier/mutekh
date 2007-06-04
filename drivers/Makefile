@@ -75,3 +75,7 @@ ifeq ($(CONFIG_DRIVER_BLOCK_RAMDISK), defined)
  subdirs += block-ramdisk
 endif
 
+ifeq ($(CONFIG_DRIVER_BLOCK_PARTITION), defined)
+ subdirs += block-partition
+endif
+

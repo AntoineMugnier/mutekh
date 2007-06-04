@@ -105,10 +105,50 @@ error_t dev_block_wait_read(struct device_s *dev, struct dev_block_rq_s *rq)
 
   assert(cpu_interrupt_getstate());
 
-  while (status.done)
+  while (!status.done)
     ;
 
 #endif
+
+  rq->data = data;
+
+  return rq->error;
+}
+
+
+
+static DEVBLOCK_CALLBACK(dev_block_syncl_read)
+{
+  struct dev_block_wait_rq_s *status = rq->pvdata;
+  size_t	i;
+
+  for (i = 0; i < count; i++)
+    memcpy(status->data[i], rq->data[i], status->block_size);
+
+  status->data += count;
+
+  if (rq->error || rq->count == 0)
+    status->done = 1;
+}
+
+error_t dev_block_lock_read(struct device_s *dev, struct dev_block_rq_s *rq)
+{
+  struct dev_block_wait_rq_s status;
+  uint8_t **data;
+
+  status.done = 0;
+  status.ctx = NULL;
+  status.data = data = rq->data;
+  status.block_size = dev_block_getparams(dev)->blk_size;
+  rq->pvdata = &status;
+  rq->callback = dev_block_syncl_read;
+
+  dev_block_read(dev, rq);
+
+  assert(cpu_interrupt_getstate());
+
+  while (!status.done)
+    ;
 
   rq->data = data;
 
@@ -156,7 +196,7 @@ error_t dev_block_wait_write(struct device_s *dev, struct dev_block_rq_s *rq)
 
   assert(cpu_interrupt_getstate());
 
-  while (status.done)
+  while (!status.done)
     ;
 
 #endif

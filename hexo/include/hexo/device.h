@@ -39,7 +39,7 @@ struct driver_s;
 #include <hexo/error.h>
 
 
-/** Common class irq() function tempate. */
+/** Common class irq() function template. */
 #define DEV_IRQ(n)	bool_t (n) (struct device_s *dev)
 
 /** Common device class irq() function type. Must be called on
@@ -53,17 +53,38 @@ typedef DEV_IRQ(dev_irq_t);
 
 
 
-/** Common class init() function tempate. */
-#define DEV_INIT(n)	error_t (n) (struct device_s *dev, struct device_s *icudev)
+/** Common class create() function template. */
+#define DEV_CREATE(n)	error_t (n) (struct device_s *parent, void *params)
+
+/** Common device class create() methode shortcut */
+#define dev_create(param) (dev)->drv->f_create(param)
+
+/** Common device class create() function. This function must be used
+    to create new virtual devices if driver support this.
+
+    * @param parent parent device for new virtual devices if any.
+    * @param params driver dependent parameters, NULL if none
+    * @return negative error code, or number of created devices on success.
+    */
+typedef DEV_CREATE(dev_create_t);
+
+
+
+
+/** Common class init() function template. */
+#define DEV_INIT(n)	error_t (n) (struct device_s *dev, struct device_s *icudev, void *params)
 
 /** Common device class init() methode shortcut */
-#define dev_init(dev) (dev)->drv->f_init(dev)
+#define dev_init(...) (dev)->drv->f_init(__VA_ARGS__)
 
-/** Common device class init() function type. Must be called before
-    using any other functions on the device. This function will
-    allocate device private data.
+/** Common device class init() function type. This function will init
+    the hardware device and must be called before using any other
+    functions on the device. This function will allocate device
+    private data.
 
     * @param dev pointer to device descriptor
+    * @param icudev pointer to associated interrupt controller device
+    * @param params driver dependent parameters, NULL if none
     * @return negative error code, 0 on succes
     */
 typedef DEV_INIT(dev_init_t);
@@ -71,7 +92,7 @@ typedef DEV_INIT(dev_init_t);
 
 
 
-/** Common device class cleanup() function tempate. */
+/** Common device class cleanup() function template. */
 #define DEV_CLEANUP(n)	void    (n) (struct device_s *dev)
 
 /** Common device class cleanup() methode shortcut */

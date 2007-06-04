@@ -161,9 +161,6 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_read_irq)
       rq->error = 0;
       dpv->ata_sec_count--;
 
-      if (rq->lba == dpv->drv_params.blk_count)
-	rq->error = EEOF;	    
-
       drive_ata_unlocked_callback(dev, rq, 1);
 
       if (rq->count == 0)
@@ -197,16 +194,13 @@ DEVBLOCK_READ(drive_ata_read)
 
   LOCK_SPIN_IRQ(&dev->parent->lock);
 
-  if (rq->lba >= dpv->drv_params.blk_count)
+  if (rq->lba + rq->count > dpv->drv_params.blk_count)
     {
       rq->error = ERANGE;
       drive_ata_unlocked_callback(dev, rq, 0);
     }
   else
     {
-      if (rq->lba + rq->count > dpv->drv_params.blk_count)
-	rq->count = dpv->drv_params.blk_count - rq->lba;
-
       rq->drvdata = (void*)&drive_ata_read_oper;
       drive_ata_rq_start(dev, rq);
     }
@@ -271,9 +265,6 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_write_irq)
 	    {
 	      rq->error = 0;
 
-	      if (rq->lba == dpv->drv_params.blk_count)
-		rq->error = EEOF;
-
 	      drive_ata_unlocked_callback(dev, rq, dpv->blk_counter);
 	      drive_ata_rq_end(dev);
 	    }
@@ -305,18 +296,14 @@ DEVBLOCK_WRITE(drive_ata_write)
 
   LOCK_SPIN_IRQ(&dev->parent->lock);
 
-  if (rq->lba >= dpv->drv_params.blk_count)
+  if (rq->lba + rq->count > dpv->drv_params.blk_count)
     {
       rq->error = ERANGE;
       drive_ata_unlocked_callback(dev, rq, 0);
     }
   else
     {
-      if (rq->lba + rq->count > dpv->drv_params.blk_count)
-	rq->count = dpv->drv_params.blk_count - rq->lba;
-
       rq->drvdata = (void*)&drive_ata_write_oper;
-
       drive_ata_rq_start(dev, rq);
     }
 
