@@ -132,10 +132,10 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
 #endif
 
 #if defined(CONFIG_CPU_X86_ALIGNCHECK)
-  /* enable alignment check */
-  asm volatile("	pushf						\n"
-	       "	orl	$0x40000, (%esp)			\n"
-	       "	popf						\n");
+   /* enable alignment check */
+    asm volatile("	pushf						\n"
+  	       "	orl	$0x40000, (%esp)			\n"
+  	       "	popf						\n");
 #endif
 
   return cld;

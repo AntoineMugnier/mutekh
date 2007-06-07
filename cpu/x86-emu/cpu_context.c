@@ -29,7 +29,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 #endif
 
   /* push default flags */
-#if defined(CONFIG_DEBUG)
+#if defined(CONFIG_CPU_X86_ALIGNCHECK)
   *--context->stack_ptr = 0x00040246;	/* EFLAGS with alignment chk */
 #else
   *--context->stack_ptr = 0x00000246;	/* EFLAGS */

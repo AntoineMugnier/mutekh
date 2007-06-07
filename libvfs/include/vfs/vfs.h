@@ -1,58 +1,79 @@
+#ifndef __VFS_H_
+#define __VFS_H_
+
 #include <hexo/error.h>
 #include <hexo/types.h>
-
+#include <hexo/device.h>
+#include <hexo/fs.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 
 #include <gpct/cont_clist.h>
 
-
-struct fs_file_s
+struct vfs_handle_s
 {
-  char			*name;
-};
-
-struct vfs_fs_s
-{
-  struct fs_file_s	*(*get_file_info)(struct fs_file_s *parent, char *name);
-  int_fast32_t		(*open)();
-  void			(*close)();
-  int_fast32_t		(*read)();
-  int_fast32_t		(*write)();
+  struct fs_handle_s	handle;
+  //  struct vfs_node_s *node;
   /* ... */
 };
 
-struct vfs_fs_inst_s
+struct vfs_drv_s
 {
-  struct vfs_node_s	*mpoint;
-  struct vfs_fs_s	*drv;
-  struct vfs_node_s	*tmp_chld;
-  struct vfs_fs_inst_s	*tmp_fs_inst;
+  error_t	(*get_entity_info)(struct fs_disk_context_s *disk_context,
+				   struct fs_entity_s *parent,
+				   struct fs_entity_s *file,
+				   char *fname);
+
+  error_t	(*get_root_info)(struct fs_disk_context_s *disk_context,
+				 struct fs_entity_s *file);
+
+  struct fs_disk_context_s *(*context_create)(struct device_s *device);
+
+  error_t	(*context_destroy)(struct fs_disk_context_s *disk_context);
   /* ... */
+};
+
+struct vfs_context_s
+{
+  struct fs_disk_context_s	*dsk;
+  const struct vfs_drv_s	*drv;
+  struct vfs_node_s		*mpoint;
+  struct vfs_node_s		*tmp_chld;
+  struct vfs_context_s		*tmp_ctx;
 };
 
 CONTAINER_TYPE(vfs_node_list, CLIST, struct vfs_node_s
 {
-  CONTAINER_ENTRY_TYPE(CLIST)	list_entry;
-  uint_fast32_t			type;		/* type of the node */
-  struct fs_file_s		*file;		/* ptr to a file handle */
-  struct vfs_fs_inst_s		*fs_inst;	/* ptr to the file system instance */
+  struct fs_entity_s		ent;		/* the filesystem entity itself */
+  vfs_node_list_entry_t		list_entry;
+  struct vfs_context_s		*ctx;		/* ptr to the file system instance */
   struct vfs_node_s		*parent;	/* ptr to parent node */
-  uint_fast8_t			refcount;	/* nuber of references for the node */
   vfs_node_list_root_t		children;	/* children list */
-}, list_entry);
+} , list_entry);
 
 CONTAINER_FUNC(vfs_node_list, CLIST, static inline, vfs_node_func);
 
-extern struct vfs_node_s vfs_root_g;
-
 /* node.c */
-struct vfs_node_s *vfs_get_node(struct vfs_node_s *parent, char *name);
-void vfs_dbg_print_node(char *str, struct vfs_node_s *node);
+struct vfs_node_s *vfs_get_node(struct vfs_node_s *parent,
+				char *name);
 
-/* libVFS.c */
-struct vfs_node_s *vfs_parse(char *str, error_t *ec);
-void vfs_debug_tree(void);
+/* libvfs.c */
+struct vfs_node_s *vfs_load(struct vfs_node_s *root_node,
+			    char *tpath[],
+			    error_t *ec);
+
+/* toolkit.c */
+void vfs_debug_tree(struct vfs_node_s *root_node);
+uint16_t vfs_tok_count(char *path, char token);
+void vfs_tokenize_path(char *path, char *t[], char token);
 
 /* libVFS_init.c */
-error_t vfs_init(void);
+error_t vfs_init(struct vfs_node_s *root,
+		 const struct vfs_drv_s *drv,
+		 struct device_s *device);
+
+/* vfs_open.c */
+
+/* vfs_stat.c */
+
+#endif

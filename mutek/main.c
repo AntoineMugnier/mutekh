@@ -31,21 +31,21 @@
 #include <hexo/cpu.h>
 #include <hexo/scheduler.h>
 
-#include <drivers/uart-8250/uart-8250.h>
-#include <drivers/tty-vga/tty-vga.h>
-#include <drivers/tty-soclib/tty-soclib.h>
-#include <drivers/tty-emu/tty-emu.h>
-#include <drivers/icu-8259/icu-8259.h>
-#include <drivers/icu-soclib/icu-soclib.h>
-#include <drivers/timer-soclib/timer-soclib.h>
-#include <drivers/timer-8253/timer-8253.h>
-#include <drivers/timer-emu/timer-emu.h>
-#include <drivers/input-8042/input-8042.h>
-#include <drivers/fb-vga/fb-vga.h>
-#include <drivers/enum-pci/enum-pci.h>
-#include <drivers/enum-isapnp/enum-isapnp.h>
-#include <drivers/net-ne2000/net-ne2000.h>
-#include <drivers/net-3c900/net-3c900.h>
+#include <drivers/device/uart-8250/uart-8250.h>
+#include <drivers/device/tty-vga/tty-vga.h>
+#include <drivers/device/tty-soclib/tty-soclib.h>
+#include <drivers/device/tty-emu/tty-emu.h>
+#include <drivers/device/icu-8259/icu-8259.h>
+#include <drivers/device/icu-soclib/icu-soclib.h>
+#include <drivers/device/timer-soclib/timer-soclib.h>
+#include <drivers/device/timer-8253/timer-8253.h>
+#include <drivers/device/timer-emu/timer-emu.h>
+#include <drivers/device/input-8042/input-8042.h>
+#include <drivers/device/fb-vga/fb-vga.h>
+#include <drivers/device/enum-pci/enum-pci.h>
+#include <drivers/device/enum-isapnp/enum-isapnp.h>
+#include <drivers/device/net-ne2000/net-ne2000.h>
+#include <drivers/device/net-3c900/net-3c900.h>
 #include <cpu/68hcs12/drivers/icu-mc9s12ne64/icu-mc9s12ne64.h>
 #include <cpu/68hcs12/drivers/uart-mc9s12ne64/uart-mc9s12ne64.h>
 

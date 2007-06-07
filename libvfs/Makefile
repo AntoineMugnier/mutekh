@@ -1,5 +1,5 @@
 objs =			\
 libvfs_init.o		\
 libvfs.o		\
-node.o
-
+node.o			\
+toolkit.o

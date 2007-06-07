@@ -76,10 +76,11 @@ error_t dev_block_wait_read(struct device_s *dev, struct dev_block_rq_s *rq)
   status.block_size = dev_block_getparams(dev)->blk_size;
   rq->pvdata = &status;
   rq->callback = dev_block_sync_read;
-
-#ifdef CONFIG_HEXO_SCHED
+  rq->error = 0;
 
   dev_block_read(dev, rq);
+
+#ifdef CONFIG_HEXO_SCHED
 
   /* ensure callback doesn't occur here */
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -100,8 +101,6 @@ error_t dev_block_wait_read(struct device_s *dev, struct dev_block_rq_s *rq)
   CPU_INTERRUPT_RESTORESTATE;
 
 #else
-
-  dev_block_read(dev, rq);
 
   assert(cpu_interrupt_getstate());
 
@@ -162,10 +161,15 @@ static DEVBLOCK_CALLBACK(dev_block_sync_write)
   struct dev_block_wait_rq_s *status = rq->pvdata;
 
 #ifdef CONFIG_HEXO_SCHED
-  sched_context_start(status->ctx);
-#endif
+  LOCK_SPIN_IRQ(&dev->lock);
 
+  if (status->ctx != NULL)
+    sched_context_start(status->ctx);
+#endif
   status->done = 1;
+#ifdef CONFIG_HEXO_SCHED
+  LOCK_RELEASE_IRQ(&dev->lock);
+#endif
 }
 
 error_t dev_block_wait_write(struct device_s *dev, struct dev_block_rq_s *rq)
@@ -173,26 +177,34 @@ error_t dev_block_wait_write(struct device_s *dev, struct dev_block_rq_s *rq)
   struct dev_block_wait_rq_s status;
 
   status.done = 0;
+  status.ctx = NULL;
   rq->pvdata = &status;
   rq->callback = dev_block_sync_write;
+  rq->error = 0;
+
+  dev_block_write(dev, rq);
 
 #ifdef CONFIG_HEXO_SCHED
 
-  status.ctx = sched_get_current();
-
-  dev_block_write(dev, rq);
-
   /* ensure callback doesn't occur here */
-  LOCK_SPIN_IRQ(&dev->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+
+  lock_spin(&dev->lock);
 
   if (!status.done)
-    sched_context_stop();
+    {
+      status.ctx = sched_get_current();
+      lock_release(&dev->lock);
+      sched_context_stop();
+    }
+  else
+    {
+      lock_release(&dev->lock);
+    }
 
-  LOCK_RELEASE_IRQ(&dev->lock);
+  CPU_INTERRUPT_RESTORESTATE;
 
 #else
-
-  dev_block_write(dev, rq);
 
   assert(cpu_interrupt_getstate());
 
