@@ -48,10 +48,11 @@ DEVBLOCK_READ(block_ramdisk_read)
   struct block_ramdisk_context_s *pv = dev->drv_pv;
   struct dev_block_params_s *p = &pv->params;
   dev_block_lba_t lba = rq->lba;
+  dev_block_lba_t count = rq->count;
 
   if (lba + count <= p->blk_count)
     {
-      dev_block_lba_t count = rq->count;
+
       uint8_t *data[count];
       dev_block_lba_t b;
 
@@ -79,10 +80,10 @@ DEVBLOCK_WRITE(block_ramdisk_write)
   struct block_ramdisk_context_s *pv = dev->drv_pv;
   struct dev_block_params_s *p = &pv->params;
   dev_block_lba_t lba = rq->lba;
-
+  dev_block_lba_t count = rq->count;
+  
   if (lba + count <= p->blk_count)
     {
-      dev_block_lba_t count = rq->count;
       dev_block_lba_t b;
 
       for (b = 0; b < count; b++)
