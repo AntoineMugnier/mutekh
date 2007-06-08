@@ -23,6 +23,8 @@
 #error This file can not be included directly
 #else
 
+#include <arch/hexo/specific.h>
+
 struct cpu_context_s
 {
 };
@@ -53,6 +55,11 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		/* save flags */
 		"	pushf			\n"
 		"	cli			\n"
+#if 0
+		/* save page directory pointer */
+		"	movl	%%cr3, %%eax	\n"
+		"	pushl	%%eax		\n"
+#endif
 		/* save context local storage on stack */
 		"	push	%%gs		\n"
 		/* switch stack pointer */
@@ -60,6 +67,14 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	movl	(%1), %%esp	\n"
 		/* restore tls */
 		"	pop	%%gs		\n"
+#if 0
+		/* restore page directory pointer */
+		"	popl	%%edx		\n"
+		"	cmpl	%%edx, %%eax	\n" /* avoid useless TLB flush */
+		"	jz	3f		\n"
+		"	movl	%%edx, %%cr3	\n"
+		"3:				\n"
+#endif
 		/* restore flags */
 		"	popf			\n"
 #ifdef CONFIG_COMPILE_FRAMEPTR
@@ -93,6 +108,11 @@ cpu_context_jumpto(struct context_s *new)
 		"	movl	%0, %%esp	\n"
 		/* restore tls */
 		"	pop	%%gs		\n"
+#if 0
+		/* restore page directory pointer */
+		"	popl	%%edx		\n"
+		"	movl	%%edx, %%cr3	\n"
+#endif
 		/* restore flags */
 		"	popf			\n"
 #ifdef CONFIG_COMPILE_FRAMEPTR
@@ -104,11 +124,13 @@ cpu_context_jumpto(struct context_s *new)
 		:
 		: "r" (new->stack_ptr)
 		);
+
+  while (1);
 }
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_context_set_stack(uintptr_t stack, void *jumpto)
+cpu_context_set(uintptr_t stack, void *jumpto)
 {
   asm volatile (
 		"	movl	%0, %%esp	\n"
@@ -119,6 +141,35 @@ cpu_context_set_stack(uintptr_t stack, void *jumpto)
 		:
 		: "r,m" (stack), "r,r" (jumpto)
 		);
+
+  while (1);
+}
+
+static inline void
+__attribute__((always_inline, noreturn))
+cpu_context_set_user(uintptr_t kstack, uintptr_t ustack, uintptr_t jumpto)
+{
+  asm volatile (
+#ifdef CONFIG_CPU_X86_SYSENTER
+		"sysexit		\n"
+		:
+		: "c" (ustack)
+		, "d" (jumpto)
+#else
+		"pushl %0		\n" /* SS */
+		"pushl %1		\n" /* ESP */
+		"pushl %2		\n" /* CS */
+		"pushl %3		\n" /* EIP */
+		"lret			\n"
+		:
+		: "r" ((ARCH_GDT_USER_DATA_INDEX << 3) | 3)
+		, "r" (ustack)
+		, "r" ((ARCH_GDT_USER_CODE_INDEX << 3) | 3)
+		, "r" (jumpto)
+#endif
+		);
+
+  while (1);
 }
 
 #endif

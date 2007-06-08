@@ -22,7 +22,7 @@ export MODULES
 
 VPATH = $(SRC_DIR) $(BUILD_DIR)
 
-CFLAGS=	-fno-builtin -Wall
+CFLAGS=	-fno-builtin -Wall -fno-stack-protector
 
 ifeq ($(CONFIG_COMPILE_SAVETEMPS), defined)
 CFLAGS += -save-temps

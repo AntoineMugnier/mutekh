@@ -19,14 +19,16 @@
 
 */
 
-#ifndef CPU_X86_MMU_HH_
-#define CPU_X86_MMU_HH_
+#if !defined(VMEM_H_) || defined(CPU_X86_VMEM_H_)
+#error This file can not be included directly
+#else
+
+#define CPU_X86_VMEM_H_
 
 #include <hexo/types.h>
 
-
 #define VMEM_X86_PAGESIZE 0x1000
-#define VMEM_USERLIMIT_PDE (CONFIG_HEXO_VMEM_USERLIMIT >> 22)
+#define VMEM_USERLIMIT_PDE (CONFIG_HEXO_VMEM_START >> 22)
 #define VMEM_INITIAL_PDE (CONFIG_HEXO_VMEM_INITIAL >> 22)
 
 #define VMEM_KERNEL_START_PDE 0
@@ -39,7 +41,7 @@
 #define VMEM_USER_END_PDE 1022
 
 #define VMEM_USER_START_ADDR (VMEM_USER_START_PDE * 0x400000)
-//#define VMEM_USER_END_ADDR 0xffbfffff
+#define VMEM_USER_END_ADDR 0xffbfffff
 
 #define VMEM_MIRROR_PDE 1023
 #define VMEM_MIRROR_ADDR 0xffc00000
@@ -125,9 +127,16 @@ struct vmem_context_s
 static inline void
 vmem_x86_set_pagedir(uintptr_t paddr)
 {
-  asm volatile ("orl $0x08, %0		\n" /* pagedir caching is write through */
-		"movl %0, %%cr3		\n"
+  reg_t tmp;
+
+  asm volatile ("	orl	$0x08, %0	\n" /* pagedir caching is write through */
+		"	movl	%%cr3, %1	\n"
+		"	cmpl	%0, %1		\n" /* avoid useless TLB flush */
+		"	je	1f		\n"
+		"	movl	%0, %%cr3	\n"
+		"1:				\n"
 		: "=r" (paddr)
+		, "=r" (tmp)
 		: "0" (paddr)
 		);
 }

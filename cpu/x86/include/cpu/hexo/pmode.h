@@ -398,8 +398,8 @@ static inline void
 cpu_x86_codeseg_use(uint_fast16_t index, uint_fast8_t rpl)
 {
   __asm__ volatile (
-		    "pushl %0		\n"
-		    "pushl $1f		\n"
+		    "pushl %0		\n" /* CS */
+		    "pushl $1f		\n" /* EIP */
 		    "lret		\n"
 		    "1:			\n"
 		    :
@@ -408,7 +408,22 @@ cpu_x86_codeseg_use(uint_fast16_t index, uint_fast8_t rpl)
 		    );
 }
 
-/**************************************/
+/**
+   Setup current TSS segment
+
+   @param index segment descriptor index in GDT
+*/
+
+static inline void
+cpu_x86_taskseg_use(uint_fast16_t index)
+{
+  __asm__ volatile ("ltr %0		\n"
+		    :
+		    : "r,m" ((uint16_t)(index << 3))
+		    );
+}
+
+#define CPU_X86_SEG_SEL(index, rpl) (((index) << 3) | rpl)
 
 /**
    allocate a descriptor in GDT and setup a segment
@@ -425,6 +440,39 @@ cpu_x86_segsel_t cpu_x86_segment_alloc(uintptr_t addr,
  */
 
 void cpu_x86_segdesc_free(cpu_x86_segsel_t sel);
+
+/**************************************/
+
+struct cpu_x86_tss_s
+{
+  uint16_t	link, res0;
+
+  uint32_t	esp0;
+  uint16_t	ss0, res1;
+
+  uint32_t	esp1;
+  uint16_t	ss1, res2;
+
+  uint32_t	esp2;
+  uint16_t	ss2, res3;
+
+  uint32_t	cr3;
+  uint32_t	eip;
+  uint32_t	eflags;
+  uint32_t	eax, ecx, edx, ebx, esp, ebp, esi, edi;
+
+  uint16_t	es, res4;
+  uint16_t	cs, res5;
+  uint16_t	ss, res6;
+  uint16_t	ds, res7;
+  uint16_t	fs, res8;
+  uint16_t	gs, res9;
+  uint16_t	ldt, res10;
+
+  uint16_t	trap;
+  uint16_t	iomap;
+} __attribute__ ((packed));
+
 
 #endif
 

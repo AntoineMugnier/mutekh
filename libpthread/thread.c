@@ -131,7 +131,7 @@ pthread_exit(void *retval)
   sched_lock();
 
   /* setup temp stack memory and jump to __pthread_cleanup() */
-  cpu_context_set_stack((uintptr_t)(tmp_stack - 1) + sizeof(tmp_stack),
+  cpu_context_set((uintptr_t)(tmp_stack - 1) + sizeof(tmp_stack),
 		     __pthread_cleanup);
 }
 

@@ -31,6 +31,7 @@
 
 #include <cpu/hexo/pmode.h>
 #include <cpu/hexo/apic.h>
+#include <cpu/hexo/msr.h>
 #include <arch/hexo/specific.h>
 
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
@@ -62,8 +63,14 @@ cpu_global_init(void)
   cpu_x86_seg_setup(&gdt[ARCH_GDT_CODE_INDEX].seg, 0,
 		    0xffffffff, CPU_X86_SEG_EXEC_NC_R, 0, 1);
 
+  cpu_x86_seg_setup(&gdt[ARCH_GDT_USER_CODE_INDEX].seg, 0,
+		    0xffffffff, CPU_X86_SEG_EXEC_NC_R, 3, 1);
+
   cpu_x86_seg_setup(&gdt[ARCH_GDT_DATA_INDEX].seg, 0,
 		    0xffffffff, CPU_X86_SEG_DATA_UP_RW, 0, 1);
+
+  cpu_x86_seg_setup(&gdt[ARCH_GDT_USER_DATA_INDEX].seg, 0,
+		    0xffffffff, CPU_X86_SEG_DATA_UP_RW, 3, 1);
 
   /* mark all other GDT entries available */
   for (i = ARCH_GDT_FIRST_ALLOC; i < ARCH_GDT_SIZE; i++)
@@ -146,6 +153,10 @@ struct cpu_cld_s *cpu_init(cpu_id_t cpu_id)
   void			*cls;
   uint16_t		cls_sel;
 #endif
+#ifdef CONFIG_HEXO_VMEM
+  struct cpu_x86_tss_s *tss;
+  uint16_t		tss_sel;
+#endif
   struct cpu_cld_s	*cld;
   uint_fast16_t		i;
 
@@ -178,11 +189,36 @@ struct cpu_cld_s *cpu_init(cpu_id_t cpu_id)
   CPU_LOCAL_SET(__cpu_data_base, cls);
 #endif
 
+#ifdef CONFIG_HEXO_VMEM
+
+  if (!(tss = mem_alloc(sizeof (struct cpu_x86_tss_s), MEM_SCOPE_SYS)))
+    goto err_tss;
+
+  memset(tss, 0, sizeof(*tss));
+
+  tss->ss0 = ARCH_GDT_DATA_INDEX << 3;
+  tss->esp0 = 0x8000;
+
+  cld->tss = tss;
+
+  if (!(tss_sel = cpu_x86_segment_alloc((uintptr_t)tss,
+					sizeof(*tss),
+					CPU_X86_SEG_CONTEXT32)))
+    goto err_tss_seg;
+
+  cpu_x86_taskseg_use(tss_sel);
+
+#endif
+
   /* activate defined segments */
 
-  cpu_x86_dataseg_use(ARCH_GDT_DATA_INDEX, 0);
+  cpu_x86_dataseg_use(ARCH_GDT_USER_DATA_INDEX, 0);
   cpu_x86_stackseg_use(ARCH_GDT_DATA_INDEX, 0);
   cpu_x86_codeseg_use(ARCH_GDT_CODE_INDEX, 0);
+
+#ifdef CONFIG_CPU_X86_SYSENTER
+  cpu_x86_write_msr(SYSENTER_CS_MSR, CPU_X86_SEG_SEL(ARCH_GDT_CODE_INDEX, 0));
+#endif
 
   CPU_LOCAL_SET(cpu_cld, cld);
 
@@ -216,19 +252,25 @@ struct cpu_cld_s *cpu_init(cpu_id_t cpu_id)
 
       cpu_x86_gate_setup(cld->idt + i + CPU_SYSCALL_VECTOR,
 			 ARCH_GDT_CODE_INDEX, entry,
-			 CPU_X86_GATE_INT32, 0, 0);
+			 CPU_X86_GATE_INT32, 3, 0);
     }
 
   cpu_x86_set_idt(cld->idt, CPU_MAX_INTERRUPTS);
 
   return cld;
 
+#ifdef CONFIG_HEXO_VMEM
+ err_tss_seg:
+  mem_free(tss);
+ err_tss:
+#endif
 #ifdef CONFIG_SMP
+  cpu_x86_segdesc_free(cls_sel);
  err_cls_seg:
   mem_free(cls);
  err_cls:
-  mem_free(cld);
 #endif
+  mem_free(cld);
  err_cld:
   return NULL;
 }

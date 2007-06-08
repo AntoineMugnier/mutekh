@@ -65,6 +65,11 @@ void vmem_cpu_init()
 		);
 }
 
+struct vmem_context_s * vmem_get_kernel_context()
+{
+  return &vmem_k_context;
+}
+
 static void vmem_x86_update_k_context(struct vmem_context_s *ctx)
 {
   uint_fast16_t diff;
@@ -193,6 +198,7 @@ vmem_x86_alloc_pagetable(uintptr_t vaddr)
 
   pte->present = 1;
   pte->writable = 1;
+  pte->userlevel = vaddr >= CONFIG_HEXO_VMEM_START;
   pte->address = paddr >> 12;
 
   p4k->present = 1;
@@ -202,7 +208,7 @@ vmem_x86_alloc_pagetable(uintptr_t vaddr)
   /* clear page table */
   memset(vmem_x86_get_vpage_entry(i, 0), 0, VMEM_X86_PAGESIZE);
 
-  if (vaddr < CONFIG_HEXO_VMEM_USERLIMIT)
+  if (vaddr < CONFIG_HEXO_VMEM_START)
     {
       if (ctx->k_count <= i)
 	ctx->k_count = i + 1;
@@ -227,7 +233,7 @@ vmem_x86_get_vpage(uintptr_t vaddr)
   /* get pointer to appropiate pagedir. We must point to the real up
      to date kernel page directory here as we want to test the present
      bit ourself, we can't rely on update on exception mechanism. */
-  if (vaddr < CONFIG_HEXO_VMEM_USERLIMIT)
+  if (vaddr < CONFIG_HEXO_VMEM_START)
     pd = vmem_k_pagedir;
   else
     pd = vmem_context_get()->pagedir;
@@ -248,7 +254,7 @@ vmem_x86_alloc_vpage(uintptr_t vaddr)
 
   printf("enter %s(%p)\n", __func__, vaddr);
 
-  if (vaddr < CONFIG_HEXO_VMEM_USERLIMIT)
+  if (vaddr < CONFIG_HEXO_VMEM_START)
     pd = vmem_k_pagedir;
   else
     pd = vmem_context_get()->pagedir;
@@ -283,8 +289,8 @@ vmem_pageattr_t vmem_vpage_get_attr(uintptr_t vaddr)
       if (e->accessed)
 	attr |= VMEM_PAGE_ATTR_ACCESSED;
 
-      if (!e->nocache)
-	attr |= VMEM_PAGE_ATTR_CACHED;
+      if (e->nocache)
+	attr |= VMEM_PAGE_ATTR_NOCACHE;
     }
 
   return attr;
@@ -305,7 +311,7 @@ error_t vmem_vpage_set(uintptr_t vaddr, uintptr_t paddr, vmem_pageattr_t attr)
   e->userlevel = (attr & VMEM_PAGE_ATTR_USERLEVEL) ? 1 : 0;
   e->dirty = (attr & VMEM_PAGE_ATTR_DIRTY) ? 1 : 0;
   e->accessed = (attr & VMEM_PAGE_ATTR_ACCESSED) ? 1 : 0;
-  e->nocache = (attr & VMEM_PAGE_ATTR_CACHED) ? 0 : 1;
+  e->nocache = (attr & VMEM_PAGE_ATTR_NOCACHE) ? 1 : 0;
 
   return 0;
 }
@@ -343,10 +349,10 @@ void vmem_vpage_mask_attr(uintptr_t vaddr, vmem_pageattr_t setmask, vmem_pageatt
   if (clrmask & VMEM_PAGE_ATTR_ACCESSED)
     e->accessed = 0;
 
-  if (setmask & VMEM_PAGE_ATTR_CACHED)
-    e->nocache = 0;
-  if (clrmask & VMEM_PAGE_ATTR_CACHED)
+  if (setmask & VMEM_PAGE_ATTR_NOCACHE)
     e->nocache = 1;
+  if (clrmask & VMEM_PAGE_ATTR_NOCACHE)
+    e->nocache = 0;
 }
 
 uintptr_t vmem_vpage_get_paddr(uintptr_t vaddr)

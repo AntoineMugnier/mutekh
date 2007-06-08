@@ -58,6 +58,9 @@ struct unix_syscall_s unix_syscall_table[] =
 
 CPU_SYSCALL_HANDLER(unix_syscall_handler)
 {
+  puts("yala");
+  return;
+
   if (regtable[CPU_GPREG_EAX] < UNIX_SYSCALLTABLE_SIZE)
     {
       struct unix_syscall_s *f = &unix_syscall_table[regtable[CPU_GPREG_EAX]];

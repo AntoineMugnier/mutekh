@@ -65,6 +65,10 @@ context_init(struct context_s *context, size_t stack_size, context_entry_t *entr
       return res;
     }
 
+#ifdef CONFIG_HEXO_VMEM
+  context->vmem = vmem_get_kernel_context();
+#endif
+
   return 0;
 }
 

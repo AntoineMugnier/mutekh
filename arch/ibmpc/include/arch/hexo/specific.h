@@ -41,11 +41,17 @@ extern __ldscript_symbol_t __boot_start, __boot_end;
 /** index of the data segment descriptor in GDT */
 #define ARCH_GDT_DATA_INDEX	2
 
+/** index of the user level code segment descriptor in GDT */
+#define ARCH_GDT_USER_CODE_INDEX	3
+
+/** index of the user level data segment descriptor in GDT */
+#define ARCH_GDT_USER_DATA_INDEX	4
+
 /** index of the cpu local storage segment */
-#define ARCH_GDT_CPUDATA_INDEX	3
+#define ARCH_GDT_CPUDATA_INDEX	5
 
 /** First GDT available descriptor */
-#define ARCH_GDT_FIRST_ALLOC	4
+#define ARCH_GDT_FIRST_ALLOC	6
 
 /** size of the Globale Descriptor Table for x86 CPU */
 #define ARCH_GDT_SIZE		256

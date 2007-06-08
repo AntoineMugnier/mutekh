@@ -45,6 +45,10 @@ struct devenum_ident_s
 
 struct driver_s
 {
+  /* device class */
+  enum device_class_e		class;
+
+  /* device identifier table for detection (optional) */
   const struct devenum_ident_s	*id_table;
 
   dev_create_t			*f_create;

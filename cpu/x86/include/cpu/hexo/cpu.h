@@ -87,6 +87,9 @@ struct cpu_cld_s
   /* pointer to CPU local storage */
   void				*cpu_local_storage;
 #endif
+#ifdef CONFIG_HEXO_VMEM
+  volatile struct cpu_x86_tss_s	*tss;
+#endif
   /* CPU id */
   uint32_t			id;
   /* CPU Interrupt descriptor table */

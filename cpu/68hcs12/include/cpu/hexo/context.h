@@ -65,7 +65,7 @@ cpu_context_jumpto(struct context_s *new)
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_context_set_stack(uintptr_t stack, void *jumpto)
+cpu_context_set(uintptr_t stack, void *jumpto)
 {
   asm ("bgnd"); /* XXX */
 }

@@ -26,6 +26,7 @@
 #include <hexo/types.h>
 #include <hexo/local.h>
 #include <hexo/error.h>
+#include <hexo/vmem.h>
 
 /** cpu specific context structure */
 struct cpu_context_s;
@@ -44,6 +45,10 @@ struct context_s
 
   /* current stack pointer value */
   reg_t			*stack_ptr;
+
+#ifdef CONFIG_HEXO_VMEM
+  struct vmem_context_s	*vmem;
+#endif
 };
 
 /** context entry point function prototype */
@@ -58,7 +63,10 @@ static void cpu_context_switch(struct context_s *old, struct context_s *new);
 static void cpu_context_jumpto(struct context_s *new);
 
 /** set new stack pointer and jump to a new function */
-static void cpu_context_set_stack(uintptr_t stack, void *jumpto);
+static void cpu_context_set(uintptr_t stack, void *jumpto);
+
+/** set kernel stack, user stack pointer and jump to a new function in user mode */
+static void cpu_context_set_user(uintptr_t kstack, uintptr_t ustack, uintptr_t jumpto);
 
 /** associate context and cpu current execution state */
 error_t cpu_context_bootstrap(struct context_s *context);
@@ -92,6 +100,10 @@ static inline void context_switch_to(struct context_s *context)
 
   assert(cur != context);
 
+#ifdef CONFIG_HEXO_VMEM
+  vmem_context_switch_to(context->vmem);
+#endif
+
   cpu_context_switch(cur, context);
 }
 
@@ -100,6 +112,10 @@ static inline void
 __attribute__((noreturn))
 context_jump_to(struct context_s *context)
 {
+#ifdef CONFIG_HEXO_VMEM
+  vmem_context_switch_to(context->vmem);
+#endif
+
   cpu_context_jumpto(context);
 }
 

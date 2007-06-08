@@ -1,4 +1,11 @@
+
+#ifndef LIBUNIX_H_
+#define LIBUNIX_H_
+
 #include <hexo/error.h>
 #include <hexo/types.h>
 
-struct unix_process_s *libunix_init(void);
+void libunix_init(void);
+
+#endif
+

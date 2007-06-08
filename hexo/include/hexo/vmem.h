@@ -22,6 +22,10 @@
 #ifndef VMEM_H_
 #define VMEM_H_
 
+#ifndef CONFIG_HEXO_VMEM
+# warning Virtual memory support is not enabled in configuration file
+#else
+
 /*
 
 %config CONFIG_HEXO_VMEM
@@ -37,10 +41,16 @@ parent CONFIG_HEXO_VMEM
 default 4096
 %config end
 
-%config CONFIG_HEXO_VMEM_USERLIMIT
-desc Virtual memory minimal user accessible address
+%config CONFIG_HEXO_VMEM_START
+desc Virtual memory minimal user accessible start address
 parent CONFIG_HEXO_VMEM
 default 0x40000000
+%config end
+
+%config CONFIG_HEXO_VMEM_END
+desc Virtual memory minimal user accessible end address
+parent CONFIG_HEXO_VMEM
+default 0xc0000000
 %config end
 
 %config CONFIG_HEXO_VMEM_INITIAL
@@ -66,7 +76,7 @@ typedef uint8_t vmem_pageattr_t;
 #define VMEM_PAGE_ATTR_R 0x01
 #define VMEM_PAGE_ATTR_W 0x02
 #define VMEM_PAGE_ATTR_X 0x04
-#define VMEM_PAGE_ATTR_CACHED 0x08
+#define VMEM_PAGE_ATTR_NOCACHE 0x08
 #define VMEM_PAGE_ATTR_USERLEVEL 0x10
 #define VMEM_PAGE_ATTR_DIRTY 0x20
 #define VMEM_PAGE_ATTR_ACCESSED 0x40
@@ -88,6 +98,9 @@ void vmem_global_init(void);
 
 /* switch to virtual memory mode by enabling mmu */
 void vmem_cpu_init(void);
+
+/* get kernel context */
+struct vmem_context_s * vmem_get_kernel_context();
 
 /* create a memory context and initialize context object */
 error_t vmem_context_init(struct vmem_context_s *ctx);
@@ -143,7 +156,9 @@ error_t vmem_ppage_reserve(uintptr_t paddr, uintptr_t paddr_end);
 uintptr_t vmem_ppage_refnew(uintptr_t paddr);
 void vmem_ppage_refdrop(uintptr_t paddr);
 
-#include "cpu/hexo/vmem.h"
+#include <cpu/hexo/vmem.h>
+
+#endif
 
 #endif
 

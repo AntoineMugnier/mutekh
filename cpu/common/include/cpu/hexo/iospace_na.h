@@ -19,11 +19,11 @@
 
 */
 
-#include <assert.h>
-
 #if !defined(IOSPACE_H_) || defined(CPU_IOSPACE_H_)
 #error This file can not be included directly
 #else
+
+#include <assert.h>
 
 #define CPU_IOSPACE_H_
 
