@@ -206,6 +206,7 @@ isapnp_enum_probe(struct device_s *dev)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	enum_isapnp_drv =
 {
+  .class		= device_class_enum,
   .f_init		= enum_isapnp_init,
   .f_cleanup		= enum_isapnp_cleanup,
   .f.denum = {

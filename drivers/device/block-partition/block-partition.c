@@ -31,7 +31,7 @@
 #include <hexo/interrupt.h>
 
 #include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
+#include <gpct/cont_array.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -141,8 +141,8 @@ struct block_partition_list_s
   uint8_t		type;
 };
 
-CONTAINER_TYPE(block_partition_list, RING, struct block_partition_list_s, 8 /*CONFIG_DRIVER_BLOCK_PARTITION_MAXCOUNT*/);
-CONTAINER_FUNC(block_partition_list, RING, static inline, block_partition_list);
+CONTAINER_TYPE(block_partition_list, ARRAY, struct block_partition_list_s, CONFIG_DRIVER_BLOCK_PARTITION_MAXCOUNT);
+CONTAINER_FUNC(block_partition_list, ARRAY, static inline, block_partition_list);
 
 static void block_partition_parse_extended(struct device_s *parent,
 					   dev_block_lba_t last,
@@ -254,6 +254,9 @@ DEV_CREATE(block_partition_create)
   if (parent == NULL)
     return 0;
 
+  if (parent->drv == NULL || parent->drv->class != device_class_block)
+    return 0;
+
   bp = dev_block_getparams(parent);
 
   if (bp->blk_size != 512)
@@ -268,8 +271,9 @@ DEV_CREATE(block_partition_create)
 
   block_partition_parse(parent, bp->blk_count, &list);
 
-  CONTAINER_FOREACH(block_partition_list, RING, &list, 
+  CONTAINER_FOREACH(block_partition_list, ARRAY, &list, 
   {
+    /* FIXME check overlap and size here */
     block_partition_new(parent, item.type, item.lba, item.size);
   });
 
@@ -282,8 +286,9 @@ DEV_CREATE(block_partition_create)
 
 
 #ifndef CONFIG_STATIC_DRIVERS
-const struct driver_s	block_partition_drv =
+const struct driver_s block_partition_drv =
 {
+  .class		= device_class_block,
   .f_create		= block_partition_create,
   .f_cleanup		= block_partition_cleanup,
   .f.blk = {

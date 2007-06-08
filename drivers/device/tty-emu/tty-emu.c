@@ -65,6 +65,7 @@ DEV_CLEANUP(tty_emu_cleanup)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	tty_emu_drv =
 {
+  .class		= device_class_char,
   .f_init		= tty_emu_init,
   .f_cleanup		= tty_emu_cleanup,
   .f_irq		= NULL,

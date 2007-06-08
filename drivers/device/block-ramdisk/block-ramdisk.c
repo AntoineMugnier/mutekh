@@ -138,6 +138,7 @@ DEV_IRQ(block_ramdisk_irq)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	block_ramdisk_drv =
 {
+  .class		= device_class_block,
   .f_init		= block_ramdisk_init,
   .f_cleanup		= block_ramdisk_cleanup,
   .f_irq		= block_ramdisk_irq,

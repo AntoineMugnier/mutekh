@@ -80,6 +80,7 @@ DEV_CLEANUP(icu_soclib_cleanup)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	icu_soclib_drv =
 {
+  .class		= device_class_icu,
   .f_init		= icu_soclib_init,
   .f_cleanup		= icu_soclib_cleanup,
   .f.icu = {

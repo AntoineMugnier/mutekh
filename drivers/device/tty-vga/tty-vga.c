@@ -451,6 +451,7 @@ DEV_CLEANUP(tty_vga_cleanup)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	tty_vga_drv =
 {
+  .class		= device_class_char,
   .f_init		= tty_vga_init,
   .f_cleanup		= tty_vga_cleanup,
 #ifdef CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD

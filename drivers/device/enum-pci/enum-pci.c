@@ -224,6 +224,7 @@ pci_enum_probe(struct device_s *dev)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	enum_pci_drv =
 {
+  .class		= device_class_enum,
   .f_init		= enum_pci_init,
   .f_cleanup		= enum_pci_cleanup,
   .f.denum = {

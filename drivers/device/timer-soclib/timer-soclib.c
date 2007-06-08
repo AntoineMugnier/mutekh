@@ -149,6 +149,7 @@ DEV_CLEANUP(timer_soclib_cleanup)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	timer_soclib_drv =
 {
+  .class		= device_class_timer,
   .f_init		= timer_soclib_init,
   .f_cleanup		= timer_soclib_cleanup,
   .f_irq		= timer_soclib_irq,

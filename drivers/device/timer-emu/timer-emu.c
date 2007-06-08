@@ -96,6 +96,7 @@ DEV_CLEANUP(timer_emu_cleanup)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	timer_emu_drv =
 {
+  .class		= device_class_timer,
   .f_init		= timer_emu_init,
   .f_cleanup		= timer_emu_cleanup,
   .f_irq		= NULL,

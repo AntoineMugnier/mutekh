@@ -53,8 +53,8 @@
 
 const struct driver_s	net_tuntap_drv =
 {
+  .class		= device_class_net,
   .id_table		= NULL,
-
   .f_init		= net_tuntap_init,
   .f_cleanup		= net_tuntap_cleanup,
   .f_irq		= net_tuntap_irq,

@@ -63,6 +63,7 @@ DEV_CLEANUP(sound_sb16_cleanup)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	sound_sb16_drv =
 {
+  .class		= device_class_sound,
   .f_init		= sound_sb16_init,
   .f_cleanup		= sound_sb16_cleanup,
   .f_irq		= sound_sb16_irq,

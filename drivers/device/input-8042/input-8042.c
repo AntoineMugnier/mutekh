@@ -346,6 +346,7 @@ DEV_CLEANUP(input_8042_cleanup)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	input_8042_drv =
 {
+  .class		= device_class_input,
   .f_init		= input_8042_init,
   .f_cleanup		= input_8042_cleanup,
   .f_irq		= input_8042_irq,

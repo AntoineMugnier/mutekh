@@ -117,6 +117,7 @@ DEV_IRQ(uart_8250_irq)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	uart_8250_drv =
 {
+  .class		= device_class_char,
   .f_init		= uart_8250_init,
   .f_cleanup		= uart_8250_cleanup,
   .f_irq		= uart_8250_irq,

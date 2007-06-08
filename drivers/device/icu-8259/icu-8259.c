@@ -114,6 +114,7 @@ DEV_CLEANUP(icu_8259_cleanup)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	icu_8259_drv =
 {
+  .class		= device_class_icu,
   .f_init		= icu_8259_init,
   .f_cleanup		= icu_8259_cleanup,
   .f.icu = {

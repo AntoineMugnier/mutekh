@@ -38,6 +38,21 @@ struct driver_s;
 #include <hexo/types.h>
 #include <hexo/error.h>
 
+enum device_class_e
+  {
+    device_class_none = 0,
+
+    device_class_block,
+    device_class_char,
+    device_class_enum,
+    device_class_fb,
+    device_class_icu,
+    device_class_input,
+    device_class_net,
+    device_class_sound,
+    device_class_timer,
+  };
+
 
 /** Common class irq() function template. */
 #define DEV_IRQ(n)	bool_t (n) (struct device_s *dev)

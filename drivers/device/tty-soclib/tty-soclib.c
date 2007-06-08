@@ -102,6 +102,7 @@ DEV_IRQ(tty_soclib_irq)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	tty_soclib_drv =
 {
+  .class		= device_class_char,
   .f_init		= tty_soclib_init,
   .f_cleanup		= tty_soclib_cleanup,
   .f_irq		= tty_soclib_irq,

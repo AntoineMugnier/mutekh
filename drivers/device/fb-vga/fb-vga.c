@@ -63,6 +63,7 @@ DEVFB_GETBUFFER(fb_vga_getbuffer)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	fb_vga_drv =
 {
+  .class		= device_class_fb,
   .f_init		= fb_vga_init,
   .f_cleanup		= fb_vga_cleanup,
   .f.fb = {

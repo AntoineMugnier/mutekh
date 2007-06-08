@@ -82,10 +82,10 @@ static const struct devenum_ident_s	net_ne2000_ids[] =
 
 const struct driver_s	net_ne2000_drv =
 {
+  .class		= device_class_net,
 #ifdef CONFIG_DRIVER_ENUM_PCI
   .id_table		= net_ne2000_ids,
 #endif
-
   .f_init		= net_ne2000_init,
   .f_cleanup		= net_ne2000_cleanup,
   .f_irq		= net_ne2000_irq,

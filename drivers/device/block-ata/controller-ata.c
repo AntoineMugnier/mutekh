@@ -91,6 +91,7 @@ static const struct devenum_ident_s	controller_ata_ids[] =
 
 const struct driver_s	controller_ata_drv =
 {
+  .class		= device_class_enum,
 #ifdef CONFIG_DRIVER_ENUM_PCI
   .id_table		= controller_ata_ids,
 #endif

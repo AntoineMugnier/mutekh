@@ -340,6 +340,7 @@ DEV_CLEANUP(drive_ata_cleanup)
 
 const struct driver_s	drive_ata_drv =
 {
+  .class		= device_class_block,
   .f_cleanup		= drive_ata_cleanup,
   .f.blk = {
     .f_read		= drive_ata_read,

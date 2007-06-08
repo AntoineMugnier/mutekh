@@ -126,6 +126,7 @@ DEV_CLEANUP(timer_8253_cleanup)
 #ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	timer_8253_drv =
 {
+  .class		= device_class_timer,
   .f_init		= timer_8253_init,
   .f_cleanup		= timer_8253_cleanup,
   .f_irq		= timer_8253_irq,

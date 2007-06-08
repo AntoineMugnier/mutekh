@@ -69,6 +69,7 @@ static const struct devenum_ident_s	net_3c900_ids[] =
 
 const struct driver_s	net_3c900_drv =
 {
+  .class		= device_class_net,
   .id_table		= net_3c900_ids,
 
   .f_init		= net_3c900_init,
