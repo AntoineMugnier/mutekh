@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <hexo/alloc.h>
-#include <vfs/vfat/vfat.h>
+#include "vfat.h"
 
 void vfat_tk_dump_bpb(struct vfat_bpb_s *bpb)
 {

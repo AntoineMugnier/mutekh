@@ -11,7 +11,7 @@ static inline struct vfs_node_s *vfs_lookup_child(struct vfs_node_s *node,
   CONTAINER_FOREACH(vfs_node_list, CLIST, &node->children,
   {
     if (!strcmp(item->ent.name, name))
-      return item;
+      return item;		/* new ref node */
   });
   return NULL;
 }
@@ -34,6 +34,7 @@ static inline struct vfs_node_s *vfs_create_node(struct vfs_node_s *parent,
   struct fs_entity_s ent;
   error_t e;
 
+  memset(&ent, 0x0, sizeof(ent));
   e = parent->ctx->drv->get_entity_info(parent->ctx->dsk,
 					&parent->ent,
 					&ent,
@@ -42,9 +43,9 @@ static inline struct vfs_node_s *vfs_create_node(struct vfs_node_s *parent,
     {
       struct vfs_node_s *node = mem_alloc(sizeof(*node), MEM_SCOPE_SYS);
 
-      //      memset(node, 0x0, sizeof(*node));
+      memset(node, 0x0, sizeof(*node));
 
-      node->parent = parent;
+      node->parent = parent;	/* new ref on parent */
       node->ctx = parent->ctx;
 
       vfs_node_func_init(&node->children);
@@ -54,7 +55,7 @@ static inline struct vfs_node_s *vfs_create_node(struct vfs_node_s *parent,
 
       return node;
     }
-
+  /* created node refcount = 1 */
   return NULL;
 }
 
@@ -85,6 +86,7 @@ struct vfs_node_s *vfs_get_node(struct vfs_node_s *parent, char *name)
   struct vfs_node_s *node;
 
   if (!(node = vfs_lookup_child(parent, name)))
-    node = vfs_create_node(parent, name);
-  return node;
+      node = vfs_create_node(parent, name);
+
+  return node;	/* caller has node ownership */
 }

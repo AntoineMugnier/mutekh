@@ -50,7 +50,7 @@ uint16_t vfs_tok_count(char *path, char token)
 void vfs_tokenize_path(char *path, char *t[], char token)
 {
   uint16_t idx = 1;
-  char *p = (*p == token) ? path + 1 : path;
+  char *p = (*path == token) ? path + 1 : path;
 
   t[0] = p;
 
@@ -60,4 +60,13 @@ void vfs_tokenize_path(char *path, char *t[], char token)
       t[idx++] = ++p;
     }
   t[idx] = 0;
+}
+
+void vfs_print_node(struct vfs_node_s *node)
+{
+  assert (node != NULL);
+
+  printf("name:\t%s\n", node->ent.name);
+  printf("flags:\t%p\n", node->ent.flags);
+  printf("size:\t%p\n", node->ent.size);
 }

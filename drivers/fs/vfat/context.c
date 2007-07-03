@@ -2,7 +2,8 @@
 #include <string.h>
 #include <hexo/alloc.h>
 #include <hexo/endian.h>
-#include <vfs/vfat/vfat.h>
+#include "vfat.h"
+#include "vfat_private.h"
 
 static inline error_t vfat_context_init(struct vfat_disk_context_s *ctx)
 {
@@ -42,16 +43,10 @@ static inline error_t vfat_context_init(struct vfat_disk_context_s *ctx)
   ctx->rootdir_first_cluster = endian_le32_na_load(&bpb->BPB_RootClus);
   ctx->bytes_per_cluster = ctx->bytes_per_sector * ctx->sectors_per_cluster;
 
-  printf("---\n");
-  vfat_tk_dump_bpb(bpb);
-  printf("---\n");
-  vfat_tk_dump_context(ctx);
-  printf("\n");
-
   return 0;
 }
 
-struct fs_disk_context_s *vfat_context_create(struct device_s *device)
+VFS_EXPORT struct fs_disk_context_s *vfat_context_create(struct device_s *device)
 {
   struct vfat_disk_context_s *ctx;
 
@@ -68,7 +63,7 @@ struct fs_disk_context_s *vfat_context_create(struct device_s *device)
   return ((struct fs_disk_context_s *)ctx);
 }
 
-error_t vfat_context_destroy(struct fs_disk_context_s *disk_context)
+VFS_EXPORT error_t vfat_context_destroy(struct fs_disk_context_s *disk_context)
 {
   struct vfat_disk_context_s *ctx = (struct vfat_disk_context_s *)disk_context;
 

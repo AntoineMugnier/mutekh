@@ -1,7 +1,7 @@
 #ifndef __VFAT_H__
 #define __VFAT_H__
 
-#include <drivers/device/block-ramdisk/block-ramdisk.h>
+#include <drivers/device/block/ramdisk/block-ramdisk.h>
 #include <hexo/device/block.h>
 #include <hexo/device.h>
 #include <hexo/driver.h>
@@ -10,6 +10,8 @@
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_clist.h>
+
+#define VFS_EXPORT
 
 typedef uint32_t vfat_cluster_t;
 
@@ -63,13 +65,13 @@ struct vfat_DirEntry_s
 struct vfat_LongDirEntry_s
 {
   uint8_t	LDIR_Ord;
-  uint8_t	LDIR_Name1[10];
+  uint16_t	LDIR_Name1[5];
   uint8_t	LDIR_Attr;
   uint8_t	LDIR_Type;
   uint8_t	LDIR_Chksum;
-  uint8_t	LDIR_Name2[12];
+  uint16_t	LDIR_Name2[6];
   uint16_t	LDIR_FstClusLO;
-  uint32_t	LDIR_Name3;
+  uint16_t	LDIR_Name3[2];
 } __attribute__ ((packed));
 
 #define VFAT_ATTR_READ_ONLY	0x01
@@ -80,10 +82,7 @@ struct vfat_LongDirEntry_s
 #define VFAT_ATTR_ARCHIVE	0x20
 #define VFAT_ATTR_LONG_NAME	0x0F
 
-
-
-
-/* 
+/*
    vfat_disk_context_s extends the basic fs_disk_context_s structure
    and holds vfat specific datas retreived from the partition boot block.
 */
@@ -91,36 +90,32 @@ struct vfat_disk_context_s
 {
   struct fs_disk_context_s	fs;
   dev_block_lba_t		fat_begin_lba;
-  uint16_t			bytes_per_sector; /* should be 512 */
-  uint32_t			bytes_per_cluster;
+  uint_fast16_t			bytes_per_sector; /* should be 512 */
+  uint_fast32_t			bytes_per_cluster;
   dev_block_lba_t		cluster_begin_lba;
-  uint32_t			sectors_per_cluster; /* [1,2,4 ... 4096]*/
+  uint_fast16_t			sectors_per_cluster; /* [1,2,4 ... 4096]*/
   vfat_cluster_t		rootdir_first_cluster;
 };
 
 /*
-  vfat_ent_dir_s are used to store directory informations in
-  a fs_entity_s structure,
-  They can be accessed throu the fs_entity_s::pv pointer,
-  providing fs_entity_s::flags has FS_ENT_DIRECTORY set.
+  vfat_handle_s
 */
-
-struct vfat_ent_dir_s
+struct vfat_handle_s
 {
   vfat_cluster_t		clus_idx;
   vfat_cluster_t		next_cluster;
   size_t			clus_offset;
+#ifdef CONFIG_DRIVER_VFAT_BLOCK_CACHE
+  uint8_t			*cluster;
+#endif
 };
 
 /*
-  vfat_ent_dir_s are used to store directory informations in
-  a fs_entity_s structure,
-  They can be accessed throu the fs_entity_s::pv pointer,
-  providing fs_entity_s::flags has FS_ENT_FILE set.
+  vfat_entity_s
 */
-struct vfat_ent_file_s
+struct vfat_entity_s
 {
-  vfat_cluster_t		clus_idx;
+  vfat_cluster_t		clus_idx; // First cluster ID
 };
 
 #define VFAT_CLUS_TO_BLK(dev, clus_offset) ((clus_offset - 2) * dev->sectors_per_cluster)
@@ -135,23 +130,58 @@ error_t vfat_tk_init_ramdisk(struct device_s *device);
 void vfat_tk_dump_context(struct vfat_disk_context_s *dsk_ctx);
 void vfat_tk_dump_bpb(struct vfat_bpb_s *bpb);
 
-/* access.c */
+/* entity.c */
 error_t vfat_get_root_info(struct fs_disk_context_s *disk_context,
-			   struct fs_entity_s *file);
+			   struct fs_entity_s *entity);
 
 error_t vfat_get_entity_info(struct fs_disk_context_s *disk_context,
 			     struct fs_entity_s *parent,
-			     struct fs_entity_s *file,
-			     char *fname);
+			     struct fs_entity_s *entity,
+			     char *name);
 
+error_t vfat_init_entity(struct fs_entity_s *entity);
+error_t vfat_destroy_entity(struct fs_entity_s *entity);
+
+/* handle.c */
+error_t vfat_init_handle(struct fs_disk_context_s *disk_context,
+			 struct fs_handle_s *handle,
+			 struct fs_entity_s *entity);
+
+void vfat_release_handle(struct fs_handle_s *handle);
+
+/* directory.c */
+error_t vfat_find_first_file(struct fs_disk_context_s *disk_context,
+			     struct fs_handle_s *parent,
+			     struct fs_entity_s *entity,
+			     char *filename);
+
+error_t vfat_find_next_file(struct fs_disk_context_s *disk_context,
+			    struct fs_handle_s *parent,
+			    struct fs_entity_s *entity,
+			    char *filename);
+
+/* VFS stuff */
 #ifdef CONFIG_VFS
 #include <vfs/vfs.h>
 static const struct vfs_drv_s vfs_vfat_drv = 
   {
-    .get_entity_info = vfat_get_entity_info,
-    .get_root_info = vfat_get_root_info,
-    .context_create = vfat_context_create,
-    .context_destroy = vfat_context_destroy,
+    /* entity */
+    .get_root_info	=	vfat_get_root_info,
+    .get_entity_info	=	vfat_get_entity_info,
+    .init_entity	=	vfat_init_entity,
+    .destroy_entity	=	vfat_destroy_entity,
+
+    /* directory */
+    .find_first_file	=	vfat_find_first_file,
+    .find_next_file	=	vfat_find_next_file,
+
+    /* context */
+    .context_create	=	vfat_context_create,
+    .context_destroy	=	vfat_context_destroy,
+
+    /* handle */
+    .init_handle	=	vfat_init_handle,
+    .release_handle	=	vfat_release_handle,
   };
 #endif
 

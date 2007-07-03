@@ -1,5 +1,6 @@
 #include <hexo/alloc.h>
 #include <vfs/vfs.h>
+#include <stdlib.h>
 
 error_t vfs_init(struct vfs_node_s *root,
 		 const struct vfs_drv_s *drv,

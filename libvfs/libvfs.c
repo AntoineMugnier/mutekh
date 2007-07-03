@@ -28,19 +28,33 @@ struct vfs_node_s *vfs_load(struct vfs_node_s *root_node,
 			    error_t *ec)
 {
   struct vfs_node_s *target = root_node;
-  struct vfs_node_s *tmp;
   uint16_t idx;
 
   *ec = 0;
+
+  /* get reference on root */
+  if (*(tpath[0]) == 0)
+    {
+      /* no path given, return root */
+      printf("no path given, returning root node ...\n");
+      return root_node;
+    }
+
   for (idx = 0; tpath[idx]; idx++)
     {
-      if ((target = vfs_get_node(target, tpath[idx])) == NULL)
+      struct vfs_node_s *next;
+
+      next = vfs_get_node(target, tpath[idx]);
+
+      /* drop ref on target */
+
+      target = next;
+
+      if (next == NULL)
 	{
 	  *ec = idx;
-	  goto end;
+	  return NULL;
 	}
-      tmp = target;
     }
- end:
-  return tmp;
+  return target;	/* caller has node ownership */
 }

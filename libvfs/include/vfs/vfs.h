@@ -9,27 +9,49 @@
 #include <hexo/gpct_lock_hexo.h>
 
 #include <gpct/cont_clist.h>
+#include <gpct/object_refcount.h>
 
 struct vfs_handle_s
 {
-  struct fs_handle_s	handle;
-  //  struct vfs_node_s *node;
+  struct fs_handle_s	fs;
   /* ... */
 };
 
 struct vfs_drv_s
 {
-  error_t	(*get_entity_info)(struct fs_disk_context_s *disk_context,
-				   struct fs_entity_s *parent,
-				   struct fs_entity_s *file,
-				   char *fname);
+  /* entity */
+  error_t (*get_root_info)(struct fs_disk_context_s *disk_context,
+			   struct fs_entity_s *entity);
 
-  error_t	(*get_root_info)(struct fs_disk_context_s *disk_context,
-				 struct fs_entity_s *file);
+  error_t (*get_entity_info)(struct fs_disk_context_s *disk_context,
+			     struct fs_entity_s *parent,
+			     struct fs_entity_s *entity,
+			     char *filename);
 
+  error_t (*init_entity)(struct fs_entity_s *entity);
+  error_t (*destroy_entity)(struct fs_entity_s *entity);
+
+  /* directory */
+  error_t (*find_first_file)(struct fs_disk_context_s *disk_context,
+			     struct fs_handle_s *parent,
+			     struct fs_entity_s *entity,
+			     char *filename);
+
+  error_t (*find_next_file)(struct fs_disk_context_s *disk_context,
+			    struct fs_handle_s *parent,
+			    struct fs_entity_s *entity,
+			    char *filename);
+
+  /* context */
   struct fs_disk_context_s *(*context_create)(struct device_s *device);
+  error_t (*context_destroy)(struct fs_disk_context_s *disk_context);
 
-  error_t	(*context_destroy)(struct fs_disk_context_s *disk_context);
+  /* handle */
+  error_t (*init_handle)(struct fs_disk_context_s *disk_context,
+			 struct fs_handle_s *handle,
+			 struct fs_entity_s *entity);
+
+  void (*release_handle)(struct fs_handle_s *handle);
   /* ... */
 };
 
@@ -66,6 +88,7 @@ struct vfs_node_s *vfs_load(struct vfs_node_s *root_node,
 void vfs_debug_tree(struct vfs_node_s *root_node);
 uint16_t vfs_tok_count(char *path, char token);
 void vfs_tokenize_path(char *path, char *t[], char token);
+void vfs_print_node(struct vfs_node_s *node);
 
 /* libVFS_init.c */
 error_t vfs_init(struct vfs_node_s *root,
@@ -73,6 +96,24 @@ error_t vfs_init(struct vfs_node_s *root,
 		 struct device_s *device);
 
 /* vfs_open.c */
+struct vfs_handle_s *vfs_open(struct vfs_node_s *root_node,
+			      char *path,
+			      uint_fast16_t mode);
+
+struct vfs_handle_s *vfs_opendir(struct vfs_node_s *root_node,
+				 char *path,
+				 uint_fast16_t mode);
+
+error_t vfs_close(struct vfs_handle_s *handle);
+error_t vfs_closedir(struct vfs_handle_s *handle);
+
+error_t vfs_find_first_file(struct vfs_handle_s *direntry,
+			    struct fs_entity_s *entity,
+			    char *filename);
+
+error_t vfs_find_next_file(struct vfs_handle_s *direntry,
+			   struct fs_entity_s *entity,
+			   char *filename);
 
 /* vfs_stat.c */
 
