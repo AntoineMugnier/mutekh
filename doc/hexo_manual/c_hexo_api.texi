@@ -57,5 +57,5 @@
 @page
 @node Contexts scheduler,  , Execution contexts management, Hexo API
 @section Contexts scheduler
-@include c_hexo_api/sheduler.texi
+@include c_hexo_api/scheduler.texi
 
