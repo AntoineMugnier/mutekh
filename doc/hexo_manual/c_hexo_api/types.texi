@@ -1,4 +1,7 @@
 
+@cindex integer types
+@cindex C99 types
+
 Hexo provides C99 scalar C types for use in higher level
 libraries. These integer types are defined in the
 @code{<hexo/types.h>} header file.
@@ -34,6 +37,8 @@ is less than word width: @code{uint_fast8_t, uint_fast16_t,
 uint_fast32_t, uint_fast64_t, int_fast8_t, int_fast16_t, int_fast32_t,
 int_fast64_t}.
 
+@tindex atomic_int_t
+@tindex reg_t
 Other processor dependant integer types are defined:
 @itemize
 @item @code{uintptr_t}, @code{intptr_t} and @code{ptrdiff_t} match pointer type width.
@@ -41,6 +46,8 @@ Other processor dependant integer types are defined:
 @item @code{reg_t} is unsigned and match processor register word width.
 @end itemize
 
+@tindex bool_t
+@tindex cpu_id_t
 The following integer types are platform dependant:
 @itemize
 @item @code{size_t}, @code{ssize_t}, @code{off_t}, @code{uintmax_t}, @code{intmax_t} standard type are provided.
@@ -53,6 +60,9 @@ Compiler native type can still be used with care using these types:
 __compiler_slonglong_t, __compiler_ushort_t, __compiler_uint_t,
 __compiler_ulong_t, __compiler_ulonglong_t}. These types are needed
 when using the @code{va_arg} family macros.
+
+@findex __MINOF_TYPE
+@findex __MAXOF_TYPE
 
 Maximum and minimum integer value of an integer type can be expressed
 with the @code{__MINOF_TYPE(}@emph{type}@code{)} and

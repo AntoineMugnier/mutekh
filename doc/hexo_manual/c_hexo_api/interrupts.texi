@@ -1,5 +1,5 @@
 
-Processor events like intterupts, execeptions and system calls are
+Processor events like interrupts, exceptions and system calls are
 handled by Hexo through a processor independent API. This API provides
 a set of functions and types to declare, change event handlers and
 manage interrupts state.
@@ -8,53 +8,73 @@ Three function prototypes are defined for interrupts, exceptions and
 syscalls handlers:
 
 @itemize
-@item @code{CPU_INTERRUPT_HANDLER(n) void (n) (uint_fast8_t irq)} prototype macro
+@findex CPU_INTERRUPT_HANDLER
+@tindex cpu_interrupt_handler_t
+@item @code{#define CPU_INTERRUPT_HANDLER(n) void (n) (uint_fast8_t irq)} prototype macro
       is defined along with @code{typedef CPU_INTERRUPT_HANDLER(cpu_interrupt_handler_t)}
 
+@findex CPU_EXCEPTION_HANDLER
+@tindex cpu_exception_handler_t
 @item @code{#define CPU_EXCEPTION_HANDLER(n) void (n) (uint_fast8_t type, uintptr_t execptr,
                                            uintptr_t dataptr, reg_t *regtable,
                                            reg_t *stackptr)}  prototype macro
       is defined along with @code{typedef CPU_EXCEPTION_HANDLER(cpu_exception_handler_t)}
 
-@item @code{CPU_SYSCALL_HANDLER} not defined yet.
+@findex CPU_SYSCALL_HANDLER
+@tindex cpu_syscall_handler_t
+@item @code{#define CPU_SYSCALL_HANDLER(n) void (n) (uint_fast8_t number, reg_t *regtable)} prototype macro
+      is defined along with @code{typedef CPU_SYSCALL_HANDLER(cpu_syscall_handler_t)}
 @end itemize
 
 Three functions allows change of the current handler on the local processor:
 
 @itemize
+@findex cpu_interrupt_sethandler
 @item @code{void cpu_interrupt_sethandler(cpu_interrupt_handler_t *hndl)} must be used
-      to set or replace the current hardware interrupts handler.
+      to set or replace the interrupts handler for the current processor.
+@findex cpu_exception_sethandler
 @item @code{void cpu_exception_sethandler(cpu_exception_handler_t *hndl)} must be used
-      to set or replace the current processor exception handler.
-@item @code{void cpu_interrupt_sys_sethandler(cpu_interrupt_handler_t *hndl)} must be used
-      to set or replace the current processor system calls handler.
+      to set or replace the exception handler for the current processor.
+@findex cpu_syscall_sethandler
+@item @code{void cpu_syscall_sethandler(cpu_interrupt_handler_t *hndl)} must be used
+      to set or replace the system calls handler for the current context.
 @end itemize
 
 Standard hardware interrupts management functions are provided:
 
 @itemize
+@findex cpu_interrupt_disable
 @item @code{void cpu_interrupt_disable(void)} disables hardware interrupts.
+@findex cpu_interrupt_enable
 @item @code{void cpu_interrupt_enable(void)} enables hardware interrupts.
+@findex cpu_interrupt_savestate
 @item @code{void cpu_interrupt_savestate(reg_t *state)} saves current interrupts state.
+@findex cpu_interrupt_savestate_disable
 @item @code{void cpu_interrupt_savestate_disable(reg_t *state)} saves current interrupts state and disable interrupts.
+@findex cpu_interrupt_restorestate
 @item @code{void cpu_interrupt_restorestate(const reg_t *state)} restores previously saved interrupts state.
+@findex cpu_interrupt_getstate
 @item @code{bool_t cpu_interrupt_getstate(void)} get current interrupts activation state.
+@findex CPU_INTERRUPT_SAVESTATE_DISABLE
 @item @code{CPU_INTERRUPT_SAVESTATE_DISABLE} macro saves current interrupts state and disable interrupts.
       This macro starts a new C block and should be balanced wit the @code{CPU_INTERRUPT_RESTORESTATE} macro.
+@findex CPU_INTERRUPT_RESTORESTATE
 @item @code{CPU_INTERRUPT_RESTORESTATE} restores interrupts state previously saved with the @code{CPU_INTERRUPT_SAVESTATE_DISABLE} macro.
 @end itemize
 
 Other interrupts related functions are also provided:
 
 @itemize
+@findex cpu_interrupt_process
 @item @code{void cpu_interrupt_process(void)} may be used in the scheduler loop
       to let hardware interrupts execute. This function enable interrupts and
       give a change to pending requests to execute. This function must be used
-      to avoid the ``sti; cli'' syndrome which makes interrupts execution impossible
+      to avoid the ``sti; cli'' issue which makes interrupts execution impossible
       on some procesors. Memory is marked as clobbered by this function to force
       global variable reload after interrupts processing.
 
-@item @code{void cpu_interrupt_wait(void)} enter interrupt wait state if supported
+@findex cpu_interrupt_wait
+@item @code{void cpu_interrupt_wait(void)} enters interrupt wait state if supported
       by the processor, may return immediately if unsupported.
 
 @end itemize

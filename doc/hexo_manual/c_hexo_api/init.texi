@@ -7,11 +7,13 @@ described here:
 
 @itemize
 
+@findex cpu_boot
 @item @code{void cpu_boot()} is the first function executed by a
       running processor. It is located in the processor specific code
       part. This function must setup an unique temporary stack space for the
       running processor and jump to the @code{arch_init()} function.
 
+@findex arch_init
 @item @code{void arch_init()} is the first C function executed by a
       running processor. It is located in the platform specific code
       part.  The first processor must call @code{cpu_global_init()},
@@ -23,23 +25,28 @@ described here:
       processors will be unlocked and enter the @code{mutek_main_smp()}
       function.
 
+@findex cpu_start_other_cpu
 @item @code{void cpu_start_other_cpu(void)} may be called from the @code{arch_init()}
       function to let other processors boot. This may be needed on
       some system were not all processors start execution on system reset.
 
+@findex cpu_global_init
 @item @code{error_t cpu_global_init(void)} must be called only once to initialize
       data specific to a processor architecture when needed.
 
-@item @code{struct cpu_cld_s *cpu_init(cpu_id_t cpu_id)} must be called once by each
-      running processor. This function perform processor specific
-      initialization and allocated a processor local storage and descriptor
+@findex cpu_init
+@item @code{struct cpu_cld_s *cpu_init(void)} must be called once by each
+      running processor. This function performs processor specific
+      initialization and allocates a processor local storage and descriptor
       for each processor.
 
+@findex mutek_main
 @item @code{int_fast8_t mutek_main(int_fast8_t argc, char **argv)} is the
       mutek kernel initialization function. It is located in the mutek common
       code part.  It should contain all peripherals and drivers
       initialization. It is executed by the first processor only.
 
+@findex mutek_main_smp
 @item @code{void mutek_main_smp(void)} is the mutek main function. It is executed
       by all processors. This function setup processors exception
       handler and jump into the scheduler execution loop. The application
@@ -48,6 +55,7 @@ described here:
       execution contexts and return to let the first processor execute scheduler
       contexts.
 
+@findex arch_start_other_cpu
 @item @code{void arch_start_other_cpu(void)} must be called by the first first
       processor to let other processors enter the @code{mutek_main_smp()} function.
 

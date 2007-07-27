@@ -1,7 +1,7 @@
 
 It is sometime useful to have a C Global variables which is local to
-the current processor or local to the current running context. This mean all
-processors or all context on the system will own an instance of such
+the current processor or local to the current running context. This means all
+processors or all contexts on the system will own an instance of such
 a variable.
 
 Hexo enables declaration and access to such language global,
@@ -11,15 +11,19 @@ variable with a set of macros.
 Processor local variables can be accessed with the following macros:
 
 @itemize
+@findex CPU_LOCAL
 @item The @code{CPU_LOCAL} must be used as a prefix for processor
       local variables declaration.
 
+@findex CPU_LOCAL_SET
 @item The @code{CPU_LOCAL_SET(var, value)} must be used to set
       the value of a processor local variable.
 
+@findex CPU_LOCAL_GET
 @item The @code{CPU_LOCAL_GET(var)} returns the value of a processor
       local variable.
 
+@findex CPU_LOCAL_ADDR
 @item The @code{CPU_LOCAL_ADDR(var)} returns the address of a processor
       local variable.
 
@@ -31,20 +35,25 @@ multiprocessor support is disabled in Hexo configuration.
 Context local variables can be accessed with the following macros:
 
 @itemize
+@findex CONTEXT_LOCAL
 @item The @code{CONTEXT_LOCAL} must be used as a prefix for context
       local variables declaration.
 
+@findex CONTEXT_LOCAL_SET
 @item The @code{CONTEXT_LOCAL_SET(var, value)} must be used to set
       the value of a context local variable.
 
+@findex CONTEXT_LOCAL_GET
 @item The @code{CONTEXT_LOCAL_GET(var)} returns the value of a context
       local variable.
 
+@findex CONTEXT_LOCAL_ADDR
 @item The @code{CONTEXT_LOCAL_ADDR(var)} returns the address of a context
       local variable.
 
+@findex CONTEXT_LOCAL_FOREIGN_SET
 @item The @code{CONTEXT_LOCAL_FOREIGN_SET(tls, var, value)} set the
-      address of a context local variable which is not in the current context.
+      address of a context local variable which is not in the current context. The task local storage (@code{tls}) pointer must be provided.
 
 @end itemize
 

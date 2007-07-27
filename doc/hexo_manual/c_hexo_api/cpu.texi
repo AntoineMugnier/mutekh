@@ -1,0 +1,22 @@
+
+Miscellaneous processor related functions are available in the
+@code{<hexo/cpu.h>} header file.
+
+These functions include:
+
+@itemize
+@item Processor related intialization functions presented in @xref{System startup}.
+@findex cpu_get_cls
+@item @code{void *cpu_get_cls(cpu_id_t cpu_id)} function returns the processor local storage pointer.
+@findex cpu_id
+@tindex cpu_id_t
+@item @code{cpu_id_t cpu_id(void)} function returns the processor id.
+@findex cpu_isbootstrap
+@item @code{bool_t cpu_isbootstrap(void)} function can be used to check if code is running on the bootstrap processor.
+@findex arch_get_cpu_count
+@item @code{cpu_id_t arch_get_cpu_count(void)} function returns the total processor count.
+@findex cpu_cycle_count
+@tindex cpu_cycle_t
+@item @code{cpu_cycle_t cpu_cycle_count()} function returns the processor time stamp counter if available.
+@end itemize
+

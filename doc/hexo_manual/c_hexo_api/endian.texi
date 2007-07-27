@@ -17,10 +17,14 @@ constant values when used with compilation time constants.}
 @node Word access, Bitfield decalaration, , Endian and alignment
 @subsection Word access
 
-The Hexo API includes some function to access words with a specific byte order.
+The Hexo API includes some functions to access words with a specific byte order.
 
 The following functions can be used to perform unconditional bytes swaping:
 
+@cindex Word swap
+@findex endian_swap16
+@findex endian_swap32
+@findex endian_swap64
 @itemize
 @item @code{static inline uint16_t endian_swap16(uint16_t x);}
 @item @code{static inline uint32_t endian_swap32(uint32_t x);}
@@ -29,6 +33,13 @@ The following functions can be used to perform unconditional bytes swaping:
 
 The following macros can be used to access big or little endian words data:
 
+@cindex Endian word access
+@findex endian_be16
+@findex endian_be32
+@findex endian_be64
+@findex endian_le16
+@findex endian_le32
+@findex endian_le64
 @itemize
 @item @code{endian_be16(x)}
 @item @code{endian_be32(x)}
@@ -41,6 +52,8 @@ The following macros can be used to access big or little endian words data:
 @node Bitfield decalaration, Non-aligned memory access, Word access, Endian and alignment
 @subsection Bitfield decalaration
 
+@findex ENDIAN_BITFIELD
+@cindex Bitfields declaration
 Bitfield can be declared trough the @code{ENDIAN_BITFIELD()} macro in the
 direct (big endian) order. bit field declaration order will be swaped
 on little endian machines. See example below:
@@ -62,8 +75,14 @@ struct my_data_s
 @node Non-aligned memory access, Addresses and values alignment, Bitfield decalaration, Endian and alignment
 @subsection Non-aligned memory access
 
-Non aligned memory access can be performed with the following macros:
+Non aligned memory accesses can be performed with the following macros:
 
+@findex endian_16_na_load
+@findex endian_32_na_load
+@findex endian_64_na_load
+@findex endian_16_na_store
+@findex endian_32_na_store
+@findex endian_64_na_store
 @itemize
 @item @code{endian_16_na_load(address)}
 @item @code{endian_32_na_load(address)}
@@ -76,6 +95,18 @@ Non aligned memory access can be performed with the following macros:
 Endian dependent non aligned memory access memory access can be
 performed with the following macros:
 
+@findex endian_le16_na_load
+@findex endian_le32_na_load
+@findex endian_le64_na_load
+@findex endian_le16_na_store
+@findex endian_le32_na_store
+@findex endian_le64_na_store
+@findex endian_be16_na_load
+@findex endian_be32_na_load
+@findex endian_be64_na_load
+@findex endian_be16_na_store
+@findex endian_be32_na_store
+@findex endian_be64_na_store
 @itemize
 @item @code{endian_le16_na_load(address)}
 @item @code{endian_le32_na_load(address)}
@@ -94,13 +125,19 @@ performed with the following macros:
 @node Addresses and values alignment,  , Non-aligned memory access, Endian and alignment
 @subsection Addresses and values alignment
 
+@findex ALIGN_ISPOWTWO
 Value @code{x} can be checked for equality with a power of 2 with the
 @code{ALIGN_ISPOWTWO(x)} macro.
 
+@findex IS_ALIGNED
 Value @code{x} can be checked for alignment on a boundary @code{b}
 with the @code{IS_ALIGNED(x, b)} macro provided that @code{b} is a
 power of 2.
 
+@findex ALIGN_VALUE_UP
+@findex ALIGN_VALUE_LOW
+@findex ALIGN_ADDRESS_UP
+@findex ALIGN_ADDRESS_LOW
 Values and addresses can be aligned on the lower or upper boundaries
 with the @code{ALIGN_VALUE_UP(x, b)}, @code{ALIGN_VALUE_LOW(x, b)},
 @code{ALIGN_ADDRESS_UP(x, b)} and @code{ALIGN_ADDRESS_LOW(x, b)}

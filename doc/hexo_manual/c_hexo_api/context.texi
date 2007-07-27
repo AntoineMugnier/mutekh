@@ -1,0 +1,87 @@
+
+Hexo provides a simple way to save and restore execution
+contexts. Execution context management functions are
+available in the @code{<hexo/context.h>} header file.
+
+Any execution context can be saved and restored from a @code{struct
+context_s} object using the following functions:
+
+@itemize
+
+@tindex struct context_s
+
+@tindex context_entry_t
+@findex CONTEXT_ENTRY
+@item @code{#define CONTEXT_ENTRY(n) void (n) (void *param)} prototype macro
+      is defined along with @code{typedef CONTEXT_ENTRY(context_entry_t)}
+      to help defining execution context entry point functions.
+
+@findex context_bootstrap
+@item @code{error_t context_bootstrap(struct context_s *context)} function
+intializes a context object and defines it as the currently running
+context. This functions can be used on system startup to setup an
+initial context.
+
+@findex context_init
+@item @code{error_t context_init(struct context_s *context, size_t stack_size, context_entry_t *entry, void *param)}
+function creates a new execution context. New context stack size,
+entry point and entry function parameter must be provided.
+
+@findex context_destroy
+@item @code{void context_destroy(struct context_s *context)} function
+destroys an existing execution context by freeing its stack and
+associated resources.
+
+@findex context_switch_to
+@item @code{void context_switch_to(struct context_s *context)} function
+saves the current processor state in associated context object and
+restores processor state from specified execution context.
+
+@findex context_jump_to
+@item @code{void context_jump_to(struct context_s *context)} function
+restores processor state from the specified execution context without
+saving the current processor.
+
+@findex context_current
+@item @code{struct context_s * context_current(void)} function returns
+a pointer to the current context object.
+
+@end itemize
+
+@subsubheading Example
+
+This example show how to write a simple program with 2 execution contexts
+@code{A} and @code{B} switching from one to the other.
+
+@verbatim
+#include <hexo/context.h>
+
+struct context_s a, b;
+
+static CONTEXT_ENTRY(a_entry)
+{
+  while (1)
+    {
+      puts(param);
+      context_switch_to(&b);
+    }
+}
+
+static CONTEXT_ENTRY(b_entry)
+{
+  while (1)
+    {
+      puts(param);
+      context_switch_to(&a);
+    }
+}
+
+int main()
+{
+  context_init(&a, 128, a_entry, "A");
+  context_init(&b, 128, b_entry, "B");
+
+  context_jump_to(&a);
+}
+@end verbatim
+

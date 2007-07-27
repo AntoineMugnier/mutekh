@@ -1,5 +1,4 @@
 
-@page
 @node System startup, Integer types, , Hexo API
 @section System startup
 @include c_hexo_api/init.texi
@@ -10,17 +9,17 @@
 @include c_hexo_api/types.texi
 
 @page
-@node Endian and alignment, Atomic integer access, Integer types, Hexo API
+@node Endian and alignment, Atomic memory access, Integer types, Hexo API
 @section Endian and alignment
 @include c_hexo_api/endian.texi
 
 @page
-@node Atomic integer access, Spinlocks, System startup, Hexo API
-@section Atomic integer access
+@node Atomic memory access, Spinlocks, System startup, Hexo API
+@section Atomic memory access
 @include c_hexo_api/atomic.texi
 
 @page
-@node Spinlocks, Memory allocation, Atomic integer access, Hexo API
+@node Spinlocks, Memory allocation, Atomic memory access, Hexo API
 @section Spinlocks
 @include c_hexo_api/lock.texi
 
@@ -41,22 +40,22 @@
 @include c_hexo_api/iospace.texi
 
 @page
-@node Processor events,  Processor specific features, IO Space access, Hexo API
+@node Processor events,  Miscellaneous processor functions, IO Space access, Hexo API
 @section Processor events
 @include c_hexo_api/interrupts.texi
 
 @page
-@node Processor specific features, Running contexts management, Processor events, Hexo API
-@section Processor specific features
+@node Miscellaneous processor functions, Execution contexts management, Processor events, Hexo API
+@section Miscellaneous processor functions
 @include c_hexo_api/cpu.texi
 
 @page
-@node Running contexts management, Generic contexts scheduler,  Processor specific features, Hexo API
-@section Running contexts management
+@node Execution contexts management, Contexts scheduler,  Miscellaneous processor functions, Hexo API
+@section Execution contexts management
 @include c_hexo_api/context.texi
 
 @page
-@node Generic contexts scheduler,  , Running contexts management, Hexo API
-@section Generic contexts scheduler
+@node Contexts scheduler,  , Execution contexts management, Hexo API
+@section Contexts scheduler
 @include c_hexo_api/sheduler.texi
 

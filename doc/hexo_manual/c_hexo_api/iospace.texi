@@ -5,6 +5,8 @@ of functions to handle this difference.
 
 The first set of function can be used to perform memory access to peripherals:
 
+@findex cpu_mem_write_*
+@findex cpu_mem_read_*
 @itemize
 @item @code{static void cpu_mem_write_8(uintptr_t addr, uint8_t data);}
 @item @code{static uint8_t cpu_mem_read_8(uintptr_t addr);}
@@ -19,6 +21,8 @@ The first set of function can be used to perform memory access to peripherals:
 A second set of function is provided for processor which relies on
 specific address space to access peripherals:
 
+@findex cpu_io_write_*
+@findex cpu_io_read_*
 @itemize
 @item @code{static void cpu_io_write_8(uintptr_t addr, uint8_t data);}
 @item @code{static uint8_t cpu_io_read_8(uintptr_t addr);}
