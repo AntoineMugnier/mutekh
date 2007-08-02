@@ -31,6 +31,7 @@
  */
 
 #define GPCT_LOCK_HEXO_SPIN_INITIALIZER	LOCK_INITIALIZER
+#define gpct_lock_HEXO_SPIN_initializer	LOCK_INITIALIZER
 
 typedef lock_t gpct_lock_HEXO_SPIN_type_t;
 
@@ -69,6 +70,7 @@ gpct_lock_HEXO_SPIN_unlock(lock_t *lock)
  */
 
 #define GPCT_LOCK_HEXO_SPIN_IRQ_INITIALIZER	LOCK_INITIALIZER
+#define gpct_lock_HEXO_SPIN_IRQ_initializer	LOCK_INITIALIZER
 
 typedef lock_t gpct_lock_HEXO_SPIN_IRQ_type_t;
 

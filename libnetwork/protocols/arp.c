@@ -38,8 +38,8 @@
  * ARP table functions.
  */
 
-CONTAINER_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, ip);
-CONTAINER_KEY_FUNC(static inline, arp_table, HASHLIST, arp_table, NOLOCK, ip);
+CONTAINER_FUNC_NOLOCK(arp_table, HASHLIST, static inline, arp_table, ip);
+CONTAINER_KEY_FUNC(arp_table, HASHLIST, static inline, arp_table, ip);
 
 /*
  * Structures for declaring the protocol's properties & interface.
@@ -89,7 +89,7 @@ NET_DESTROYPROTO(arp_destroy)
   /* clear timeout */
   timer_cancel_event(&pv->stale_timeout, 0);
   /* remove all items in the arp table */
-  CONTAINER_FOREACH(arp_table, HASHLIST, NOLOCK, &pv->table,
+  CONTAINER_FOREACH(arp_table, HASHLIST, &pv->table,
   {
     /* remove previous item */
     if (to_remove != NULL)
@@ -116,23 +116,17 @@ NET_DESTROYPROTO(arp_destroy)
 
 OBJECT_CONSTRUCTOR(arp_entry_obj)
 {
-  struct arp_entry_s	*entry;
   uint_fast32_t		ip = va_arg(ap, uint_fast32_t);
 
   assert(ip != 0 && ip != 0xffffffff && ip != 0x7f000001);
 
-  if ((entry = mem_alloc(sizeof (struct arp_entry_s), MEM_SCOPE_NETWORK)) == NULL)
-    return NULL;
-
-  arp_entry_obj_init(entry);
-
-  entry->ip = ip;
+  obj->ip = ip;
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_new[NETWORK_PROFILING_ARP_ENTRY]++;
 #endif
 
-  return entry;
+  return 0;
 }
 
 /*
@@ -151,8 +145,6 @@ OBJECT_DESTRUCTOR(arp_entry_obj)
 
       mem_free(obj->resolution);
     }
-
-  mem_free(obj);
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_del[NETWORK_PROFILING_ARP_ENTRY]++;
@@ -538,7 +530,7 @@ TIMER_CALLBACK(arp_stale_timeout)
   timer_delay_t		t = timer_get_tick(&timer_ms);
   struct arp_entry_s	*to_remove = NULL;
 
-  CONTAINER_FOREACH(arp_table, HASHLIST, NOLOCK, &pv_arp->table,
+  CONTAINER_FOREACH(arp_table, HASHLIST, &pv_arp->table,
   {
     /* remove previously marked item */
     if (to_remove != NULL)

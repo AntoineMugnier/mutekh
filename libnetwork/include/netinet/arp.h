@@ -160,13 +160,14 @@ struct					arp_entry_s
 
 OBJECT_CONSTRUCTOR(arp_entry_obj);
 OBJECT_DESTRUCTOR(arp_entry_obj);
-OBJECT_FUNC(static inline, arp_entry_obj, SIMPLE, arp_entry_obj, obj_entry);
+OBJECT_FUNC(arp_entry_obj, SIMPLE, static inline, arp_entry_obj, obj_entry);
 
 /*
  * ARP table types.
  */
 
-CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, NOLOCK, NOOBJ, list_entry, 64);
+#define CONTAINER_LOCK_arp_table	HEXO_SPIN
+CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, list_entry, 64);
 CONTAINER_KEY_TYPE(arp_table, SCALAR, ip);
 
 /*

@@ -39,6 +39,7 @@
 #include <hexo/types.h>
 #include <hexo/alloc.h>
 #include <hexo/endian.h>
+#include <hexo/lock.h>
 #include <string.h>
 
 /*
@@ -108,8 +109,7 @@ struct		net_header_s
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/object_refcount.h>
-#include <gpct/cont_clist.h>
-#include <gpct/cont_slist.h>
+#include <gpct/cont_dlist.h>
 
 #include <netinet/protos.h>
 #include <netinet/ether.h>
@@ -179,18 +179,20 @@ struct				net_packet_s
   uint_fast16_t			proto;		/* level 2 protocol id */
 
   packet_obj_entry_t		obj_entry;
-  CONTAINER_ENTRY_TYPE(CLIST)	queue_entry;
+  CONTAINER_ENTRY_TYPE(DLIST)	queue_entry;
 };
 
 OBJECT_CONSTRUCTOR(packet_obj);
 OBJECT_DESTRUCTOR(packet_obj);
-OBJECT_FUNC(static inline, packet_obj, REFCOUNT, packet_obj, obj_entry);
+OBJECT_FUNC(packet_obj, REFCOUNT, static inline, packet_obj, obj_entry);
 
 /*
  * Packet list.
  */
 
-CONTAINER_TYPE(packet_queue, CLIST, struct net_packet_s, HEXO_SPIN_IRQ, packet_obj, queue_entry);
+#define CONTAINER_OBJ_packet_queue	packet_obj
+#define CONTAINER_LOCK_packet_queue	HEXO_SPIN_IRQ
+CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, queue_entry);
 
 /*
  * Used to give info to the dispatch thread.
@@ -218,8 +220,8 @@ uint16_t		packet_memcpy(void		*dst,
 				      size_t		size);
 void			*packet_dispatch(void	*data);
 
-CONTAINER_PROTOTYPE(inline, packet_queue, packet_queue);
-CONTAINER_PROTOTYPE(inline, packet_queue, packet_queue_lock);
+CONTAINER_PROTOTYPE(packet_queue, inline, packet_queue);
+CONTAINER_PROTOTYPE(packet_queue, inline, packet_queue_lock);
 
 /*
  * Profiling info.

@@ -182,13 +182,14 @@ struct					ip_packet_s
 
 OBJECT_CONSTRUCTOR(fragment_obj);
 OBJECT_DESTRUCTOR(fragment_obj);
-OBJECT_FUNC(static inline, fragment_obj, SIMPLE, fragment_obj, obj_entry);
+OBJECT_FUNC(fragment_obj, SIMPLE, static inline, fragment_obj, obj_entry);
 
 /*
  * Fragments list.
  */
 
-CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, NOLOCK, NOOBJ, list_entry, 64);
+#define CONTAINER_LOCK_ip_packet	HEXO_SPIN
+CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, list_entry, 64);
 CONTAINER_KEY_TYPE(ip_packet, BLOB, id, 6);
 
 /*

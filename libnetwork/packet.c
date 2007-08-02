@@ -40,22 +40,16 @@ uint_fast32_t	netobj_del[NETWORK_PROFILING_NB_OBJS] = { 0, 0, 0 };
 
 OBJECT_CONSTRUCTOR(packet_obj)
 {
-  struct net_packet_s		*packet;
-
-  if ((packet = mem_alloc(sizeof (struct net_packet_s), MEM_SCOPE_NETWORK)) == NULL)
-    return NULL;
-  memset(packet->header, 0, sizeof (packet->header));
-  packet->parent = NULL;
-  packet->stage = 0;
-  packet->packet = NULL;
-
-  packet_obj_init(packet);
+  memset(obj->header, 0, sizeof (obj->header));
+  obj->parent = NULL;
+  obj->stage = 0;
+  obj->packet = NULL;
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_new[NETWORK_PROFILING_PACKET]++;
 #endif
 
-  return packet;
+  return 0;
 }
 
 /*
@@ -71,8 +65,6 @@ OBJECT_DESTRUCTOR(packet_obj)
   /* if the packet has data, free it */
   if (obj->packet)
     mem_free(obj->packet);
-
-  mem_free(obj);
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_del[NETWORK_PROFILING_PACKET]++;
@@ -164,8 +156,8 @@ struct net_packet_s		*packet_dup(struct net_packet_s	*orig)
  * packet queue functions.
  */
 
-CONTAINER_FUNC(inline, packet_queue, CLIST, packet_queue, NOLOCK);
-CONTAINER_FUNC(inline, packet_queue, CLIST, packet_queue_lock, HEXO_SPIN_IRQ);
+CONTAINER_FUNC_NOLOCK(packet_queue, DLIST, inline, packet_queue);
+CONTAINER_FUNC_LOCK(packet_queue, DLIST, inline, packet_queue_lock, HEXO_SPIN_IRQ);
 
 /*
  * packet dispatching thread.

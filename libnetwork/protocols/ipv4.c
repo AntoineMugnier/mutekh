@@ -44,8 +44,8 @@
  * Fragment lists.
  */
 
-CONTAINER_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, id);
-CONTAINER_KEY_FUNC(static inline, ip_packet, HASHLIST, ip_packet, NOLOCK, id);
+CONTAINER_FUNC_NOLOCK(ip_packet, HASHLIST, static inline, ip_packet, id);
+CONTAINER_KEY_FUNC(ip_packet, HASHLIST, static inline, ip_packet, id);
 
 /*
  * Structures for declaring the protocol's properties & interface.
@@ -109,7 +109,7 @@ NET_DESTROYPROTO(ip_destroy)
   struct ip_packet_s	*to_remove = NULL;
 
   /* remove all items in the reassembly table */
-  CONTAINER_FOREACH(ip_packet, HASHLIST, NOLOCK, &pv->fragments,
+  CONTAINER_FOREACH(ip_packet, HASHLIST, &pv->fragments,
   {
     /* remove previous item */
     if (to_remove != NULL)
@@ -137,46 +137,36 @@ NET_DESTROYPROTO(ip_destroy)
 
 OBJECT_CONSTRUCTOR(fragment_obj)
 {
-  struct ip_packet_s	*frag;
+  struct net_proto_s	*addressing = va_arg(ap, struct net_proto_s *);
   uint8_t		*id = va_arg(ap, uint8_t *);
 
-  assert(param != NULL);
+  assert(addressing != NULL);
   assert(id != NULL);
 
-  if ((frag = mem_alloc(sizeof (struct ip_packet_s), MEM_SCOPE_NETWORK)) == NULL)
-    return NULL;
-
-  fragment_obj_init(frag);
-
   /* setup critical fields */
-  frag->size = 0;
-  frag->received = 0;
-  frag->addressing = param;
-  memcpy(frag->id, id, 6);
-  if (packet_queue_init(&frag->packets))
-    {
-      mem_free(frag);
-
-      return NULL;
-    }
+  obj->size = 0;
+  obj->received = 0;
+  obj->addressing = addressing;
+  memcpy(obj->id, id, 6);
+  if (packet_queue_init(&obj->packets))
+    return -1;
 
   /* start timeout timer */
-  frag->timeout.callback = ip_fragment_timeout;
-  frag->timeout.pv = (void *)frag;
-  frag->timeout.delay = IP_REASSEMBLY_TIMEOUT;
-  if (timer_add_event(&timer_ms, &frag->timeout))
+  obj->timeout.callback = ip_fragment_timeout;
+  obj->timeout.pv = (void *)obj;
+  obj->timeout.delay = IP_REASSEMBLY_TIMEOUT;
+  if (timer_add_event(&timer_ms, &obj->timeout))
     {
-      packet_queue_destroy(&frag->packets);
-      mem_free(frag);
+      packet_queue_destroy(&obj->packets);
 
-      return NULL;
+      return -1;
     }
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_new[NETWORK_PROFILING_FRAGMENT]++;
 #endif
 
-  return frag;
+  return 0;
 }
 
 /*
@@ -189,8 +179,6 @@ OBJECT_DESTRUCTOR(fragment_obj)
 
   packet_queue_clear(&obj->packets);
   packet_queue_destroy(&obj->packets);
-
-  mem_free(obj);
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_del[NETWORK_PROFILING_FRAGMENT]++;
@@ -247,7 +235,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   if ((p = ip_packet_lookup(&pv->fragments, id)) == NULL)
     {
       /* initialize the reassembly structure */
-      if ((p = fragment_obj_new(ip, id)) == NULL)
+      if ((p = fragment_obj_new(NULL, ip, id)) == NULL)
 	return 0;
 
       if (!ip_packet_push(&pv->fragments, p))
@@ -299,8 +287,12 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       memcpy(data, packet->packet, headers_len);
 
       /* update final packet flags & total length */
-      endian_16_na_store(&((struct iphdr *)nethdr[-1].data)->fragment, 0);
-      endian_16_na_store(&((struct iphdr *)nethdr[-1].data)->tot_len, total);
+      /* XXX */
+      /*      endian_16_na_store(&((struct iphdr *)nethdr[-1].data)->fragment, 0);
+	      endian_16_na_store(&((struct iphdr *)nethdr[-1].data)->tot_len, total);*/
+      ((struct iphdr *)nethdr[-1].data)->fragment = 0;
+      ((struct iphdr *)nethdr[-1].data)->tot_len = total;
+
 
       /* copy current packet to its position */
 #ifdef CONFIG_NETWORK_AUTOALIGN

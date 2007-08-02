@@ -31,26 +31,24 @@
 
 OBJECT_CONSTRUCTOR(net_proto_obj)
 {
-  struct net_proto_s			*proto;
   const struct net_proto_desc_s		*desc = va_arg(ap, const struct net_proto_desc_s *);
 
-  if ((proto = mem_alloc(sizeof (struct net_proto_s) + desc->pv_size, MEM_SCOPE_CONTEXT)) == NULL)
-    return NULL;
-
-  net_proto_obj_init(proto);
-  proto->desc = desc;
-  proto->id = desc->id;
-  proto->initialized = 0;
+  obj->desc = desc;
+  obj->id = desc->id;
+  obj->initialized = 0;
   if (desc->pv_size)
-    proto->pv = (void *)(proto + 1);
+    {
+      if ((obj->pv = mem_alloc(desc->pv_size, MEM_SCOPE_CONTEXT)) == NULL)
+	return -1;
+    }
   else
-    proto->pv = NULL;
+    obj->pv = NULL;
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_new[NETWORK_PROFILING_PROTO]++;
 #endif
 
-  return proto;
+  return 0;
 }
 
 /*
@@ -61,8 +59,6 @@ OBJECT_DESTRUCTOR(net_proto_obj)
 {
   if (obj->desc->destroyproto != NULL && obj->initialized)
     obj->desc->destroyproto(obj);
-
-  mem_free(obj);
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_del[NETWORK_PROFILING_PROTO]++;

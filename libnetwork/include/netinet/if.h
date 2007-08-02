@@ -29,6 +29,7 @@
 #include <netinet/arp.h>
 
 #include <hexo/gpct_platform_hexo.h>
+#include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/object_refcount.h>
 
@@ -92,13 +93,15 @@ struct					net_if_s
 
 OBJECT_CONSTRUCTOR(net_if_obj);
 OBJECT_DESTRUCTOR(net_if_obj);
-OBJECT_FUNC(static inline, net_if_obj, REFCOUNT, net_if_obj, obj_entry);
+OBJECT_FUNC(net_if_obj, REFCOUNT, static inline, net_if_obj, obj_entry);
 
 /*
  * Interface container types.
  */
 
-CONTAINER_TYPE(net_if, HASHLIST, struct net_if_s, NOLOCK, net_if_obj, list_entry, 4);
+#define CONTAINER_OBJ_net_if		net_if_obj
+#define CONTAINER_LOCK_net_if		HEXO_SPIN
+CONTAINER_TYPE(net_if, HASHLIST, struct net_if_s, list_entry, 4);
 CONTAINER_KEY_TYPE(net_if, STRING, name);
 
 /*

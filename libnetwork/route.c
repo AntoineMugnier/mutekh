@@ -25,9 +25,9 @@
 #include <netinet/if.h>
 #include <netinet/ip.h>
 
-CONTAINER_FUNC(static inline, route_table, CLIST, route_table, NOLOCK);
+CONTAINER_FUNC(route_table, DLIST, static inline, route_table);
 
-static route_table_root_t	route_table = CONTAINER_ROOT_INITIALIZER(route_table, CLIST, NOLOCK);
+static route_table_root_t	route_table = CONTAINER_ROOT_INITIALIZER(route_table, DLIST);
 
 /*
  * Route object constructor.
@@ -35,28 +35,23 @@ static route_table_root_t	route_table = CONTAINER_ROOT_INITIALIZER(route_table, 
 
 OBJECT_CONSTRUCTOR(route_obj)
 {
-  struct net_route_s	*route;
-  struct net_addr_s	*target = (struct net_addr_s *)param;
+  struct net_addr_s	*target = va_arg(ap, struct net_addr_s *);
   struct net_addr_s	*mask = va_arg(ap, struct net_addr_s *);
   struct net_if_s	*interface = va_arg(ap, struct net_if_s *);
 
-  if ((route = mem_alloc(sizeof (struct net_route_s), MEM_SCOPE_NETWORK)) == NULL)
-    return NULL;
-
-  route_obj_init(route);
-  memcpy(&route->target, target, sizeof (struct net_addr_s));
-  memcpy(&route->mask, mask, sizeof (struct net_addr_s));
+  memcpy(&obj->target, target, sizeof (struct net_addr_s));
+  memcpy(&obj->mask, mask, sizeof (struct net_addr_s));
   net_if_obj_refnew(interface);
-  route->interface = interface;
-  route->addressing = NULL;
-  route->is_routed = 0;
-  route->invalidated = 0;
+  obj->interface = interface;
+  obj->addressing = NULL;
+  obj->is_routed = 0;
+  obj->invalidated = 0;
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_new[NETWORK_PROFILING_ROUTE]++;
 #endif
 
-  return route;
+  return 0;
 }
 
 /*
@@ -68,7 +63,6 @@ OBJECT_DESTRUCTOR(route_obj)
   net_if_obj_refdrop(obj->interface);
   if (obj->addressing != NULL)
     net_proto_obj_refdrop(obj->addressing);
-  mem_free(obj);
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_del[NETWORK_PROFILING_ROUTE]++;
@@ -153,7 +147,7 @@ struct net_route_s	*route_get(struct net_addr_s	*addr)
   struct net_route_s	*ret = NULL;
 
   /* look into the route table */
-  CONTAINER_FOREACH(route_table, CLIST, NOLOCK, &route_table,
+  CONTAINER_FOREACH(route_table, DLIST, &route_table,
   {
     struct net_proto_s	*addressing = item->addressing;
 
@@ -177,7 +171,7 @@ void			route_flush(struct net_if_s	*interface)
   struct net_route_s	*prev = NULL;
 
   /* look into the route table */
-  CONTAINER_FOREACH(route_table, CLIST, NOLOCK, &route_table,
+  CONTAINER_FOREACH(route_table, DLIST, &route_table,
   {
     if (prev != NULL)
       {
@@ -221,7 +215,7 @@ void			route_dump(void)
   printf("Target            Gateway           Mask              Interface\n");
 
   /* look into the route table */
-  CONTAINER_FOREACH(route_table, CLIST, NOLOCK, &route_table,
+  CONTAINER_FOREACH(route_table, DLIST, &route_table,
   {
     switch (item->target.family)
       {

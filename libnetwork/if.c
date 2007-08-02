@@ -52,14 +52,14 @@
  * Functions for the interface container.
  */
 
-CONTAINER_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, name);
-CONTAINER_KEY_FUNC(static inline, net_if, HASHLIST, net_if, NOLOCK, name);
+CONTAINER_FUNC(net_if, HASHLIST, static inline, net_if, name);
+CONTAINER_KEY_FUNC(net_if, HASHLIST, static inline, net_if, name);
 
 /*
  * Some local variables.
  */
 
-net_if_root_t		net_interfaces = CONTAINER_ROOT_INITIALIZER(net_if, HASHLIST, NOLOCK);
+net_if_root_t		net_interfaces = CONTAINER_ROOT_INITIALIZER(net_if, HASHLIST);
 static uint_fast8_t	ifid = 0;
 static uint_fast8_t	ethid = 0;
 
@@ -69,43 +69,34 @@ static uint_fast8_t	ethid = 0;
 
 OBJECT_CONSTRUCTOR(net_if_obj)
 {
-  struct net_if_s	*interface;
-  struct device_s	*dev = param;
+  struct device_s	*dev = va_arg(ap, struct device_s *);
   net_if_type_t		type = va_arg(ap, net_if_type_t);
   uint8_t		*mac = va_arg(ap, uint8_t *);
   uint_fast16_t		mtu = va_arg(ap, uint_fast16_t);
 
-  if ((interface = mem_alloc(sizeof (struct net_if_s), MEM_SCOPE_NETWORK)) == NULL)
-    return NULL;
-
   /* initialize the object */
-  net_if_obj_init(interface);
-  interface->dev = dev;
-  interface->mac = mac;
-  interface->mtu = mtu;
-  interface->type = type;
-  interface->rx_bytes = interface->rx_packets = interface->tx_bytes = interface->tx_packets = 0;
-  interface->state = NET_IF_STATE_DOWN;
-  if (net_protos_init(&interface->protocols))
-    {
-      mem_free(interface);
-
-      return NULL;
-    }
+  obj->dev = dev;
+  obj->mac = mac;
+  obj->mtu = mtu;
+  obj->type = type;
+  obj->rx_bytes = obj->rx_packets = obj->tx_bytes = obj->tx_packets = 0;
+  obj->state = NET_IF_STATE_DOWN;
+  if (net_protos_init(&obj->protocols))
+    return -1;
 
   /* choose a funky name for the interface */
   if (type == IF_ETHERNET)
-    sprintf(interface->name, "eth%d", ethid++);
+    sprintf(obj->name, "eth%d", ethid++);
   else
-    sprintf(interface->name, "if%d", ifid);
+    sprintf(obj->name, "if%d", ifid);
   ifid++;
-  interface->index = ifid;
+  obj->index = ifid;
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_new[NETWORK_PROFILING_IF]++;
 #endif
 
-  return interface;
+  return 0;
 }
 
 /*
@@ -116,7 +107,6 @@ OBJECT_DESTRUCTOR(net_if_obj)
 {
   net_protos_clear(&obj->protocols);
   net_protos_destroy(&obj->protocols);
-  mem_free(obj);
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_del[NETWORK_PROFILING_IF]++;
@@ -141,7 +131,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
   struct net_if_s				*interface;
 
   /* create new device node */
-  if ((interface = net_if_obj_new(dev, type, mac, mtu)) == NULL)
+  if ((interface = net_if_obj_new(NULL, dev, type, mac, mtu)) == NULL)
     return NULL;
 
   /* initialize standard protocols for the device */

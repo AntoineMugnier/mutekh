@@ -206,21 +206,22 @@ struct					net_proto_s
 
 OBJECT_CONSTRUCTOR(net_proto_obj);
 OBJECT_DESTRUCTOR(net_proto_obj);
-OBJECT_FUNC(static inline, net_proto_obj, REFCOUNT, net_proto_obj, obj_entry);
+OBJECT_FUNC(net_proto_obj, REFCOUNT, static inline, net_proto_obj, obj_entry);
 
 /*
  * Container type for protocols list.
  */
 
-CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, NOLOCK, net_proto_obj, list_entry, 8);
+#define CONTAINER_OBJ_net_protos	net_proto_obj
+CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, list_entry, 8);
 CONTAINER_KEY_TYPE(net_protos, SCALAR, id);
 
 /*
  * Container functions.
  */
 
-CONTAINER_FUNC(static inline, net_protos, HASHLIST, net_protos, NOLOCK, id);
-CONTAINER_KEY_FUNC(static inline, net_protos, HASHLIST, net_protos, NOLOCK, id);
+CONTAINER_FUNC(net_protos, HASHLIST, static inline, net_protos, id);
+CONTAINER_KEY_FUNC(net_protos, HASHLIST, static inline, net_protos, id);
 
 /*
  * Foreach
