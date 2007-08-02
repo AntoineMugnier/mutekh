@@ -37,7 +37,7 @@
 
 #include <semaphore.h>
 
-static socket_table_root_t	sock_raw = CONTAINER_ROOT_INITIALIZER(socket_table, CLIST, NOLOCK);
+static socket_table_root_t	sock_raw = CONTAINER_ROOT_INITIALIZER(socket_table, DLIST);
 
 /*
  * Receive timeout callback.
@@ -147,7 +147,7 @@ static _BIND(bind_raw)
   if (!any)
     {
       /* look for address validity */
-      CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
+      CONTAINER_FOREACH(net_if, HASHLIST, &net_interfaces,
       {
 	interface = item;
 	NET_FOREACH_PROTO(&interface->protocols, id,
@@ -486,7 +486,7 @@ static _SENDMSG(sendmsg_raw)
 
   if (global_bcast)
     {
-      CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
+      CONTAINER_FOREACH(net_if, HASHLIST, &net_interfaces,
       {
 	interface = item;
 	NET_FOREACH_PROTO(&interface->protocols, dest.family,
@@ -828,7 +828,7 @@ void		sock_raw_signal(struct net_if_s		*interface,
     }
 
   /* deliver packet to all sockets matching interface and protocol id */
-  CONTAINER_FOREACH(socket_table, CLIST, NOLOCK, &sock_raw,
+  CONTAINER_FOREACH(socket_table, DLIST, &sock_raw,
   {
     struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)item->pv;
 

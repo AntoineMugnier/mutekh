@@ -287,12 +287,8 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       memcpy(data, packet->packet, headers_len);
 
       /* update final packet flags & total length */
-      /* XXX */
-      /*      endian_16_na_store(&((struct iphdr *)nethdr[-1].data)->fragment, 0);
-	      endian_16_na_store(&((struct iphdr *)nethdr[-1].data)->tot_len, total);*/
-      ((struct iphdr *)nethdr[-1].data)->fragment = 0;
-      ((struct iphdr *)nethdr[-1].data)->tot_len = total;
-
+      endian_16_na_store(&((struct iphdr *)nethdr[-1].data)->fragment, 0);
+      endian_16_na_store(&((struct iphdr *)nethdr[-1].data)->tot_len, total);
 
       /* copy current packet to its position */
 #ifdef CONFIG_NETWORK_AUTOALIGN

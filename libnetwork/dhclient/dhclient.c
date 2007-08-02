@@ -481,7 +481,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 
 		      /* configure default route */
 		      IPV4_ADDR_SET(null, 0x0);
-		      if ((def = route_obj_new(&null, &null, interface)) != NULL)
+		      if ((def = route_obj_new(NULL, &null, &null, interface)) != NULL)
 			{
 			  def->is_routed = 1;
 			  IPV4_ADDR_SET(def->router, gateway);
@@ -492,7 +492,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 
 		  /* configure interface route */
 		  IPV4_ADDR_SET(target, addr.addr.ipv4 & mask.addr.ipv4);
-		  if ((route = route_obj_new(&target, &mask, interface)) != NULL)
+		  if ((route = route_obj_new(NULL, &target, &mask, interface)) != NULL)
 		    {
 		      route->is_routed = 0;
 		      route_add(route);
@@ -655,7 +655,7 @@ error_t			dhcp_client(const char	*ifname)
   /* ifconfig 0.0.0.0 */
   IPV4_ADDR_SET(null, 0);
   if_config(interface->index, IF_SET, &null, &null);
-  if ((route = route_obj_new(&null, &null, interface)) == NULL)
+  if ((route = route_obj_new(NULL, &null, &null, interface)) == NULL)
     goto leave;
   route_add(route);
   route_obj_refdrop(route);

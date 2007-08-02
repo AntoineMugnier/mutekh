@@ -162,7 +162,7 @@ struct					rpcb_s
   CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
 
-CONTAINER_TYPE(rpcb, HASHLIST, struct rpcb_s, NOLOCK, NOOBJ, list_entry, 64);
+CONTAINER_TYPE(rpcb, HASHLIST, struct rpcb_s, list_entry, 64);
 CONTAINER_KEY_TYPE(rpcb, SCALAR, id);
 
 /*

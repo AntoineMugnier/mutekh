@@ -35,7 +35,7 @@
 #include <semaphore.h>
 #include <timer.h>
 
-socket_table_root_t	pf_packet = CONTAINER_ROOT_INITIALIZER(socket_table, CLIST, NOLOCK);
+socket_table_root_t	pf_packet = CONTAINER_ROOT_INITIALIZER(socket_table, DLIST);
 
 /*
  * Receive timeout callback.
@@ -528,7 +528,7 @@ void		pf_packet_signal(struct net_if_s	*interface,
   is_bcast = !memcmp(packet->tMAC, bcast, maclen);
 
   /* deliver packet to all sockets matching interface and protocol id */
-  CONTAINER_FOREACH(socket_table, CLIST, NOLOCK, &pf_packet,
+  CONTAINER_FOREACH(socket_table, DLIST, &pf_packet,
   {
     struct socket_packet_pv_s	*pv = (struct socket_packet_pv_s *)item->pv;
 

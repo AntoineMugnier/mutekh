@@ -50,10 +50,10 @@
  * The descriptors set.
  */
 
-CONTAINER_FUNC(static inline, udp_desc, HASHLIST, udp_desc, NOLOCK, port);
-CONTAINER_KEY_FUNC(static inline, udp_desc, HASHLIST, udp_desc, NOLOCK, port);
+CONTAINER_FUNC(udp_desc, HASHLIST, static inline, udp_desc, port);
+CONTAINER_KEY_FUNC(udp_desc, HASHLIST, static inline, udp_desc, port);
 
-static udp_desc_root_t	descriptors = CONTAINER_ROOT_INITIALIZER(udp_desc, HASHLIST, NOLOCK);
+static udp_desc_root_t	descriptors = CONTAINER_ROOT_INITIALIZER(udp_desc, HASHLIST);
 
 /*
  * Descriptors contructor and destructor.
@@ -61,19 +61,11 @@ static udp_desc_root_t	descriptors = CONTAINER_ROOT_INITIALIZER(udp_desc, HASHLI
 
 OBJECT_CONSTRUCTOR(udp_desc_obj)
 {
-  struct net_udp_desc_s	*obj;
-
-  if ((obj = mem_alloc(sizeof (struct net_udp_desc_s), MEM_SCOPE_NETWORK)) == NULL)
-    return NULL;
-
-  udp_desc_obj_init(obj);
-
-  return obj;
+  return 0;
 }
 
 OBJECT_DESTRUCTOR(udp_desc_obj)
 {
-  mem_free(obj);
 }
 
 /*
@@ -273,7 +265,7 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
 
   if (global_bcast)
     {
-      CONTAINER_FOREACH(net_if, HASHLIST, NOLOCK, &net_interfaces,
+      CONTAINER_FOREACH(net_if, HASHLIST, &net_interfaces,
       {
 	interface = item;
 	NET_FOREACH_PROTO(&interface->protocols, remote->address.family,
@@ -363,7 +355,7 @@ void		libudp_destroy(void)
   struct net_udp_desc_s	*to_remove = NULL;
 
   /* remove all opened descriptors */
-  CONTAINER_FOREACH(udp_desc, HASHLIST, NOLOCK, &descriptors,
+  CONTAINER_FOREACH(udp_desc, HASHLIST, &descriptors,
   {
     /* remove previous item */
     if (to_remove != NULL)

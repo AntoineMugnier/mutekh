@@ -88,6 +88,11 @@
 # define net_64_store(a, v)		endian_64_na_store(&a, v)
 #endif
 
+/* XXX todo ! */
+
+#define endian_16_na_store(p,v)		(*(uint16_t*)p = v);
+#define endian_32_na_store(p,v)		(*(uint32_t*)p = v);
+
 /*
  * Maximum number of stages in our stack.
  */

@@ -124,7 +124,7 @@ error_t			rarp_client(const char	*ifname)
 	    goto leave;
 	  /* configure interface route */
 	  IPV4_ADDR_SET(target, v4_addr.addr.ipv4 & v4_mask.addr.ipv4);
-	  if ((route = route_obj_new(&target, &v4_mask, interface)) != NULL)
+	  if ((route = route_obj_new(NULL, &target, &v4_mask, interface)) != NULL)
 	    {
 	      route->is_routed = 0;
 	      route_add(route);

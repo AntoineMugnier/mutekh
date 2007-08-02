@@ -56,8 +56,8 @@
 #include <semaphore.h>
 #include <timer.h>
 
-CONTAINER_FUNC(static inline, rpcb, HASHLIST, rpcb, NOLOCK, id);
-CONTAINER_KEY_FUNC(static inline, rpcb, HASHLIST, rpcb, NOLOCK, id);
+CONTAINER_FUNC(rpcb, HASHLIST, static inline, rpcb, id);
+CONTAINER_KEY_FUNC(rpcb, HASHLIST, static inline, rpcb, id);
 
 /*
  * RPC timeout.
