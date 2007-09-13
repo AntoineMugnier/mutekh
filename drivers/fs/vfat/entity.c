@@ -11,7 +11,7 @@ VFS_EXPORT error_t vfat_get_root_info(struct fs_disk_context_s *disk_context,
   uint8_t cluster[ctx->bytes_per_cluster];
 
   if (vfat_read_cluster(ctx, ctx->rootdir_first_cluster, cluster))
-    return -1;
+    return FS_ERROR_BADBLK;
 
   struct vfat_DirEntry_s *dirent = (struct vfat_DirEntry_s *)cluster;
 
@@ -27,11 +27,12 @@ VFS_EXPORT error_t vfat_get_root_info(struct fs_disk_context_s *disk_context,
 	{
 	  e->clus_idx = ctx->rootdir_first_cluster;
 	  entity->pv = (void *)e;
-	  return 0;
+
+	  return FS_OK;
 	}
-      return -3;
+      return FS_ERROR_ALLOC;
     }
-  return -2;
+  return FS_ERROR;
 }
 
 struct vfat_entity_s *vfat_entity_alloc_vfat_info(struct fs_entity_s *entity)
@@ -61,7 +62,7 @@ error_t vfat_setup_entity(struct fs_entity_s *entity,
       entity->size = endian_le32_na_load(&dirent->DIR_FileSize);
       entity->flags |= FS_ENT_FILE;
     }
-  return 0;
+  return FS_OK;
 }
 
 error_t vfat_destroy_entity(struct fs_entity_s *entity)
@@ -99,7 +100,7 @@ VFS_EXPORT error_t vfat_get_entity_info(struct fs_disk_context_s *disk_context,
 #endif
 
   if (vfat_get_next_entry(ctx, &hdir, &dirent, filename, cluster) < 0)
-    return -1;
+    return FS_ERROR;
 
   do
     {
@@ -107,11 +108,11 @@ VFS_EXPORT error_t vfat_get_entity_info(struct fs_disk_context_s *disk_context,
 	goto entry_found;
     }
   while(vfat_get_next_entry(ctx, &hdir, &dirent, filename, cluster) >= 0);
-  return -2;
+  return FS_ERROR;
 
  entry_found:
   if (vfat_entity_alloc_vfat_info(entity) == NULL)
-    return (-3);
+    return FS_ERROR_ALLOC;
 
   return (vfat_setup_entity(entity, dirent, filename));
 }

@@ -11,8 +11,6 @@
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_clist.h>
 
-#define VFS_EXPORT
-
 typedef uint32_t vfat_cluster_t;
 
 struct vfat_bpb_s
@@ -90,6 +88,8 @@ struct vfat_disk_context_s
 {
   struct fs_disk_context_s	fs;
   dev_block_lba_t		fat_begin_lba;
+  uint_fast32_t			fat_blk_count;
+  uint8_t			*fat_map;
   uint_fast16_t			bytes_per_sector; /* should be 512 */
   uint_fast32_t			bytes_per_cluster;
   dev_block_lba_t		cluster_begin_lba;
@@ -102,11 +102,11 @@ struct vfat_disk_context_s
 */
 struct vfat_handle_s
 {
-  vfat_cluster_t		clus_idx;
-  vfat_cluster_t		next_cluster;
-  size_t			clus_offset;
+  vfat_cluster_t	clus_idx;	/* current cluster index */
+  vfat_cluster_t	next_cluster;	/* next cluster in chain (index) */
+  size_t		clus_offset;	/* offset in cluster (bytes) */
 #ifdef CONFIG_DRIVER_VFAT_BLOCK_CACHE
-  uint8_t			*cluster;
+  uint8_t		*cluster;	/* cluster buffer (optional) */
 #endif
 };
 
@@ -160,7 +160,15 @@ error_t vfat_find_next_file(struct fs_disk_context_s *disk_context,
 			    struct fs_entity_s *entity,
 			    char *filename);
 
+/* access.c */
+error_t vfat_read(struct fs_disk_context_s *disk_context,
+		  struct fs_handle_s *handle,
+		  uint8_t *buffer,
+		  uint32_t size);
+
 /* VFS stuff */
+#define VFS_EXPORT
+
 #ifdef CONFIG_VFS
 #include <vfs/vfs.h>
 static const struct vfs_drv_s vfs_vfat_drv = 
@@ -182,6 +190,9 @@ static const struct vfs_drv_s vfs_vfat_drv =
     /* handle */
     .init_handle	=	vfat_init_handle,
     .release_handle	=	vfat_release_handle,
+
+    /* io */
+    .read		=	vfat_read,
   };
 #endif
 

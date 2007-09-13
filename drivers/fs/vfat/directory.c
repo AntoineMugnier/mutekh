@@ -177,11 +177,10 @@ VFS_EXPORT error_t vfat_find_next_file(struct fs_disk_context_s *disk_context,
 			  &dirent,
 			  filename,
 			  cluster) < 0)
-    return 0;
+    return FS_ERROR;
 
   if (entity != NULL)
-    {
       vfat_setup_fake_entity(entity, dirent, filename);
-    }
-  return 1;
+
+  return FS_OK;
 }

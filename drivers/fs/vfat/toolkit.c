@@ -45,7 +45,7 @@ void vfat_tk_dump_context(struct vfat_disk_context_s *dsk_dev)
 
 extern char vfat_image[];
 asm ("vfat_image:");
-asm (".incbin \"/dsk/l1/misc/ballabri/FAT.img\"");
+asm (".incbin \"/dsk/l1/misc/FAT.img\"");
 
 static inline error_t pv_vfat_init_ramdisk_image(struct device_s *device,
 					  uint16_t blk_sz,
@@ -93,3 +93,4 @@ error_t vfat_tk_init_ramdisk(struct device_s *device)
 {
   return (pv_vfat_init_ramdisk_image(device, 512, 65536));
 }
+

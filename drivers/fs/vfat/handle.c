@@ -1,9 +1,9 @@
 #include <hexo/alloc.h>
 #include "vfat.h"
 
-error_t vfat_init_handle(struct fs_disk_context_s *disk_context,
-			 struct fs_handle_s *handle,
-			 struct fs_entity_s *entity)
+VFS_EXPORT error_t vfat_init_handle(struct fs_disk_context_s *disk_context,
+				    struct fs_handle_s *handle,
+				    struct fs_entity_s *entity)
 {
   struct vfat_disk_context_s *ctx = (struct vfat_disk_context_s *)disk_context;
   struct vfat_handle_s *h;
@@ -12,24 +12,25 @@ error_t vfat_init_handle(struct fs_disk_context_s *disk_context,
   if (h != NULL)
     {
       h->clus_idx = ((struct vfat_entity_s *)(entity->pv))->clus_idx;
-      h->clus_offset = ctx->bytes_per_cluster;
+      //      h->clus_offset = ctx->bytes_per_cluster;
       h->next_cluster = h->clus_idx;
+      h->clus_offset = 0;
 
 #ifdef CONFIG_DRIVER_VFAT_BLOCK_CACHE
       h->cluster = mem_alloc(ctx->bytes_per_cluster, MEM_SCOPE_SYS);
       if (h->cluster == NULL)
 	{
 	  mem_free(h);
-	  return -5;
+	  return FS_ERROR_ALLOC;
 	}
 #endif
       handle->pv = (void *)h;
-      return 0;
+      return FS_OK;
     }
-  return -4;
+  return FS_ERROR_ALLOC;
 }
 
-void vfat_release_handle(struct fs_handle_s *handle)
+VFS_EXPORT void vfat_release_handle(struct fs_handle_s *handle)
 {
 #ifdef CONFIG_DRIVER_VFAT_BLOCK_CACHE
   mem_free(((struct vfat_handle_s *)(handle->pv))->cluster);
