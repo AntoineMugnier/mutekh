@@ -52,6 +52,12 @@ struct vfs_drv_s
 			 struct fs_entity_s *entity);
 
   void (*release_handle)(struct fs_handle_s *handle);
+
+  /* IO */
+  error_t (*read)(struct fs_disk_context_s *disk_context,
+		  struct fs_handle_s *handle,
+		  uint8_t *buffer,
+		  uint32_t size);
   /* ... */
 };
 
@@ -115,6 +121,9 @@ error_t vfs_find_next_file(struct vfs_handle_s *direntry,
 			   struct fs_entity_s *entity,
 			   char *filename);
 
-/* vfs_stat.c */
+/* vfs_read.c */
+error_t vfs_read(struct vfs_handle_s *handle,
+		 uint8_t *buffer,
+		 uint32_t size);
 
 #endif
