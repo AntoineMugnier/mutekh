@@ -32,6 +32,9 @@ struct vfs_node_s *vfs_load(struct vfs_node_s *root_node,
 
   *ec = 0;
 
+  // refnew on taget
+  vfs_node_obj_func_refnew(target);
+
   /* get reference on root */
   if (*(tpath[0]) == 0)
     {
@@ -46,7 +49,8 @@ struct vfs_node_s *vfs_load(struct vfs_node_s *root_node,
 
       next = vfs_get_node(target, tpath[idx]);
 
-      /* drop ref on target */
+      // drop ref on target
+      vfs_node_obj_func_refdrop(target);
 
       target = next;
 

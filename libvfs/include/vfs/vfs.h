@@ -70,9 +70,14 @@ struct vfs_context_s
   struct vfs_context_s		*tmp_ctx;
 };
 
+OBJECT_TYPE(vfs_node_obj, REFCOUNT, struct vfs_node_s);
+OBJECT_PROTOTYPE(vfs_node_obj, static inline, vfs_node_obj_func);
+
+
 CONTAINER_TYPE(vfs_node_list, CLIST, struct vfs_node_s
 {
   struct fs_entity_s		ent;		/* the filesystem entity itself */
+  vfs_node_obj_entry_t		obj_entry;
   vfs_node_list_entry_t		list_entry;
   struct vfs_context_s		*ctx;		/* ptr to the file system instance */
   struct vfs_node_s		*parent;	/* ptr to parent node */
@@ -80,6 +85,31 @@ CONTAINER_TYPE(vfs_node_list, CLIST, struct vfs_node_s
 } , list_entry);
 
 CONTAINER_FUNC(vfs_node_list, CLIST, static inline, vfs_node_func);
+
+
+static OBJECT_CONSTRUCTOR(vfs_node_obj)
+{
+  obj->parent = va_arg(ap, struct vfs_node_s *);
+  obj->ctx = va_arg(ap, struct vfs_context_s *);
+  struct fs_entity_s *ent = va_arg(ap, struct fs_entity_s *);
+
+  if (ent != NULL)
+    memcpy(&obj->ent, ent, sizeof(*ent));
+
+  vfs_node_func_init(&obj->children);
+
+  return 0;
+};
+
+static OBJECT_DESTRUCTOR(vfs_node_obj)
+{
+  assert(obj->parent != NULL);
+
+  vfs_node_func_remove(&obj->parent->children, obj);
+  vfs_node_func_destroy(&obj->children);
+};
+
+OBJECT_FUNC(vfs_node_obj, REFCOUNT, static inline, vfs_node_obj_func, obj_entry);
 
 /* node.c */
 struct vfs_node_s *vfs_get_node(struct vfs_node_s *parent,

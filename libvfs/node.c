@@ -11,20 +11,36 @@ static inline struct vfs_node_s *vfs_lookup_child(struct vfs_node_s *node,
   CONTAINER_FOREACH(vfs_node_list, CLIST, &node->children,
   {
     if (!strcmp(item->ent.name, name))
-      return item;		/* new ref node */
+      {
+	// new refnew on node
+	vfs_node_obj_func_refnew(item);
+	return item;
+      }
   });
   return NULL;
 }
+/*
+static OBJECT_DESTRUCTOR(vfs_node_obj)
+{
+  assert(obj->parent != NULL);
 
+  vfs_node_func_remove(&obj->parent->children, obj);
+  vfs_node_func_destroy(&obj->children);
+
+  return 0;
+}
+*/
+
+/*
 static inline void vfs_delete_node(struct vfs_node_s *node)
 {
-  assert(node->parent != NULL);
+assert(node->parent != NULL);
 
-  vfs_node_func_remove(&node->parent->children, node);
-  vfs_node_func_destroy(&node->children);
-  mem_free(node);
+vfs_node_func_remove(&node->parent->children, node);
+vfs_node_func_destroy(&node->children);
+mem_free(node);
 }
-
+*/
 static inline struct vfs_node_s *vfs_create_node(struct vfs_node_s *parent,
 						 char *name)
 {
@@ -41,24 +57,41 @@ static inline struct vfs_node_s *vfs_create_node(struct vfs_node_s *parent,
 					name);
   if (!e)
     {
-      struct vfs_node_s *node = mem_alloc(sizeof(*node), MEM_SCOPE_SYS);
+      struct vfs_node_s *node = vfs_node_obj_func_new(NULL, parent, parent->ctx, &ent);
+      /*
+	struct vfs_node_s *node = mem_alloc(sizeof(*node), MEM_SCOPE_SYS);
 
-      memset(node, 0x0, sizeof(*node));
+	memset(node, 0x0, sizeof(*node));
 
-      node->parent = parent;	/* new ref on parent */
-      node->ctx = parent->ctx;
+	node->parent = parent;	// new ref on parent
+	node->ctx = parent->ctx;
 
-      vfs_node_func_init(&node->children);
+	vfs_node_func_init(&node->children);
+	vfs_node_func_push(&parent->children, node);
+
+	memcpy(&node->ent, &ent, sizeof(ent));
+      */
       vfs_node_func_push(&parent->children, node);
-
-      memcpy(&node->ent, &ent, sizeof(ent));
-
       return node;
     }
   /* created node refcount = 1 */
   return NULL;
 }
 
+/*
+static OBJECT_CONSTRUCTOR(vfs_node_obj)
+{
+  obj->parent = va_arg(ap, struct vfs_node_s *);
+  obj->ctx = va_arg(ap, struct vfs_context_s *);
+  struct fs_entity_s *ent = va_arg(ap, struct fs_entity_s *);
+  if (ent != NULL)
+    memcpy(&obj->ent, ent, sizeof(*ent));
+
+  vfs_node_func_init(&obj->children);
+
+  return 0;
+}
+*/
 /*
 ** vfs_get_node: assuming a valid parent, tries to find a corresponding
 **		 node for a file name.

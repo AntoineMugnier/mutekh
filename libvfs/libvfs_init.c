@@ -15,7 +15,7 @@ error_t vfs_init(struct vfs_node_s *root,
   if (ctx == NULL)
     return -1;
 
-  memset(root, 0x0, sizeof(*root));
+  //  memset(root, 0x0, sizeof(*root));
   memset(ctx, 0x0, sizeof(*ctx));
 
   ctx->dsk = drv->context_create(device);
@@ -24,7 +24,8 @@ error_t vfs_init(struct vfs_node_s *root,
   ctx->mpoint = root;
   ctx->drv = drv;
 
-  root->ctx = ctx;
+  //  root->ctx = ctx;
+  vfs_node_obj_func_new(root, NULL, ctx, NULL);
 
   e = drv->get_root_info(ctx->dsk, &root->ent);
   assert(e == 0);

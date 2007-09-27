@@ -13,7 +13,9 @@ static inline struct vfs_handle_s *vfs_get_handle(struct vfs_node_s *node)
 
       if (node->ctx->drv->init_handle(node->ctx->dsk, &handle->fs, &node->ent) == 0)
 	{
-	  /* refup on node */
+	  // refnew on node
+	  vfs_node_obj_func_refnew(node);
+
 	  return handle;
 	}
       mem_free(handle);
@@ -30,9 +32,8 @@ static inline void vfs_release_handle(struct vfs_handle_s *handle)
   node->ctx->drv->release_handle(&handle->fs);
   mem_free(handle);
 
-  /*
-    refdrop on node, and call node destructor if needed
-  */
+  // refdrop on node
+  vfs_node_obj_func_refdrop(node);
 }
 
 struct vfs_handle_s *vfs_open(struct vfs_node_s *root_node,
