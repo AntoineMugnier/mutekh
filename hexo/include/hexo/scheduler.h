@@ -112,7 +112,7 @@ void sched_context_init(struct sched_context_s *sched_ctx);
 /* Must be called with interrupts disabled */
 void sched_context_switch(void);
 
-/** switch to next context without saving current context. current
+/** jump to next context without saving current context. current
     context will be lost. Must be called with interrupts disabled and
     main sched queue locked */
 void sched_context_exit(void);

@@ -26,8 +26,10 @@
 #define CPU_CPU_H_
 
 #include <hexo/interrupt.h>
+#include <hexo/iospace.h>
 
 #include "pmode.h"
+#include "apic.h"
 
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	8
@@ -86,6 +88,7 @@ struct cpu_cld_s
 #ifdef CONFIG_SMP
   /* pointer to CPU local storage */
   void				*cpu_local_storage;
+  cpu_x86_segsel_t		cls_seg_sel;
 #endif
 #ifdef CONFIG_HEXO_VMEM
   volatile struct cpu_x86_tss_s	*tss;
@@ -93,8 +96,28 @@ struct cpu_cld_s
   /* CPU id */
   uint32_t			id;
   /* CPU Interrupt descriptor table */
-  struct cpu_x86_gatedesc_s	idt[CPU_MAX_INTERRUPTS];
 };
+
+extern struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
+
+cpu_id_t cpu_id(void)
+{
+#ifdef CONFIG_SMP
+  cpu_x86_apic_t *apic = cpu_apic_get_regaddr();
+
+  return cpu_mem_read_32((uintptr_t)&apic->lapic_id) >> 24;
+#else
+  return 0;
+#endif
+}
+
+static inline void *cpu_get_cls(cpu_id_t cpu_id)
+{
+#ifdef CONFIG_SMP
+  return cpu_cld_list[cpu_id]->cpu_local_storage;
+#endif
+  return NULL;
+}
 
 #endif
 

@@ -13,22 +13,18 @@ cpu_context_bootstrap(struct context_s *context)
 
 
 
-/* fake context entry point, pop entry function param and entry
-   function address from stack and perform jump to real entry
-   function.  We need to do this to pass an argument to the context
-   entry function through register. */
-void __mips_context_entry(void);
+/* fake context entry point, pop entry function param and entry function
+   address from stack and perform jump to real entry function.  We
+   need to do this to pass an argument to the context entry function. */
+void __ppc_context_entry(void);
 
 asm(
-    ".set push			\n"
-    ".set noreorder		\n"
-    ".set noat			\n"
-    "__mips_context_entry:		\n"
-    "	lw	$4,	0($sp)	\n" /* entry function param */
-    "	lw	$1,	4($sp)	\n" /* entry function address */
-    "	jr	$1		\n"
-    "	addiu	$sp,	2*4	\n"
-    ".set pop			\n"
+    "__ppc_context_entry:		\n"
+    "	lwz	4, 0(1)	\n" /* entry function param */
+    "	lwz	0, 4(1)	\n" /* entry function address */
+    "	addi	1, 1, 2*4		\n"
+    "	mtctr	0			\n"
+    "	bctrl				\n"
     );
 
 
@@ -43,10 +39,12 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   *--context->stack_ptr = (uintptr_t)param;
 
   /* fake entry point */
-  *--context->stack_ptr = (uintptr_t)&__mips_context_entry;
+  *--context->stack_ptr = (uintptr_t)&__ppc_context_entry;
 
-  /* status register, interrupts are disabled */
-  *--context->stack_ptr = 0x0000ff00;
+  context->stack_ptr -= 3;	/* r14, r15, r16 */
+
+  /* msr, interrupts are disabled */
+  *--context->stack_ptr = 0;
 
   /* context local storage address */
   *--context->stack_ptr = (uintptr_t)context->tls;

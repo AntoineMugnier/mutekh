@@ -96,7 +96,7 @@ void context_destroy(struct context_s *context);
 /** switch to a given context */
 static inline void context_switch_to(struct context_s *context)
 {
-  struct context_s		*cur = CONTEXT_LOCAL_GET(context_cur);
+  struct context_s *cur = CONTEXT_LOCAL_GET(context_cur);
 
   assert(cur != context);
 

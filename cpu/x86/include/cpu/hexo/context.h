@@ -23,8 +23,6 @@
 #error This file can not be included directly
 #else
 
-#include <arch/hexo/specific.h>
-
 struct cpu_context_s
 {
 };

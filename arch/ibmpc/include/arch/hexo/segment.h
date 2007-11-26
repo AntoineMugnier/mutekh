@@ -40,6 +40,10 @@ extern __ldscript_symbol_t __system_heap_start;
 extern __ldscript_symbol_t __cpu_data_start, __cpu_data_end;
 #endif
 
+/* boot section address in memory */
+extern __ldscript_symbol_t __boot_start, __boot_end;
+
+
 static inline void *
 arch_cpudata_alloc(void)
 {

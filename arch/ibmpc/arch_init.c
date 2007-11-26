@@ -39,12 +39,9 @@ struct multiboot_header_s multiboot_header =
 };
 
 #ifdef CONFIG_SMP
-static uint_fast8_t	cpu_count = 1;
 static lock_t		cpu_init_lock;	/* cpu intialization lock */
 static lock_t		cpu_start_lock;	/* cpu wait for start lock */
 #endif
-
-struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
 
 /* architecture specific init function */
 void arch_init() 
@@ -64,10 +61,12 @@ void arch_init()
       cpu_global_init();
 
       /* configure first CPU */
-      cpu_cld_list[0] = cpu_init(0);
+      cpu_init();
 
+#ifdef CONFIG_HEXO_VMEM
       vmem_global_init();
       vmem_cpu_init();
+#endif
 
       /* send reset/init signal to other CPUs */
 #ifdef CONFIG_SMP
@@ -86,12 +85,13 @@ void arch_init()
 
       lock_spin(&cpu_init_lock);
 
-      cpu_cld_list[cpu_count] = cpu_init(cpu_count);
-      cpu_count++;
+      cpu_init();
 
       lock_release(&cpu_init_lock);
 
+#ifdef CONFIG_HEXO_VMEM
       vmem_cpu_init();
+#endif
 
       /* wait for start signal */
       while (lock_state(&cpu_start_lock))
@@ -113,12 +113,4 @@ void arch_start_other_cpu(void)
 #endif
 }
 
-inline cpu_id_t arch_get_cpu_count(void)
-{
-#ifdef CONFIG_SMP
-  return cpu_count;
-#else
-  return 1;
-#endif
-}
 

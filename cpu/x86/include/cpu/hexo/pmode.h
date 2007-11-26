@@ -423,25 +423,6 @@ cpu_x86_taskseg_use(uint_fast16_t index)
 		    );
 }
 
-#define CPU_X86_SEG_SEL(index, rpl) (((index) << 3) | rpl)
-
-/**
-   allocate a descriptor in GDT and setup a segment
-   @param addr segement base address
-   @param type segement type
-   @return segment selector in GDT, 0 if none available
-*/
-
-cpu_x86_segsel_t cpu_x86_segment_alloc(uintptr_t addr,
-				       uint32_t size, uint_fast8_t type);
-
-/**
-   free a segment descriptor in GDT
- */
-
-void cpu_x86_segdesc_free(cpu_x86_segsel_t sel);
-
-/**************************************/
 
 struct cpu_x86_tss_s
 {
@@ -474,5 +455,47 @@ struct cpu_x86_tss_s
 } __attribute__ ((packed));
 
 
+
+/** index of the mandatory GDT null descriptor */
+#define ARCH_GDT_NULL		0
+
+/** index of the code segment descriptor in GDT */
+#define ARCH_GDT_CODE_INDEX	1
+
+/** index of the data segment descriptor in GDT */
+#define ARCH_GDT_DATA_INDEX	2
+
+/** index of the user level code segment descriptor in GDT */
+#define ARCH_GDT_USER_CODE_INDEX	3
+
+/** index of the user level data segment descriptor in GDT */
+#define ARCH_GDT_USER_DATA_INDEX	4
+
+/** First GDT available descriptor */
+#define ARCH_GDT_FIRST_ALLOC	5
+
+/** size of the Globale Descriptor Table for x86 CPU */
+#define ARCH_GDT_SIZE		256
+
+
+#define CPU_X86_SEG_SEL(index, rpl) (((index) << 3) | rpl)
+
+/**
+   allocate a descriptor in GDT and setup a segment
+   @param addr segement base address
+   @param type segement type
+   @return segment selector in GDT, 0 if none available
+*/
+
+cpu_x86_segsel_t cpu_x86_segment_alloc(uintptr_t addr,
+				       uint32_t size, uint_fast8_t type);
+
+/**
+   free a segment descriptor in GDT
+ */
+
+void cpu_x86_segdesc_free(cpu_x86_segsel_t sel);
+
+/**************************************/
 #endif
 

@@ -32,7 +32,6 @@
 #include <cpu/hexo/pmode.h>
 #include <cpu/hexo/apic.h>
 #include <cpu/hexo/msr.h>
-#include <arch/hexo/specific.h>
 
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
@@ -44,11 +43,15 @@ CONTEXT_LOCAL void *__context_data_base;
 
 /* CPU Local Descriptor structure */
 
+struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
+
+static struct cpu_x86_gatedesc_s cpu_idt[CPU_MAX_INTERRUPTS];
+
 /** gdt table lock */
-static lock_t				gdt_lock;
+static lock_t		gdt_lock;
 
 /** CPU Global descriptor table */
-static union cpu_x86_desc_s		*gdt;
+static union cpu_x86_desc_s *gdt;
 
 error_t
 cpu_global_init(void)
@@ -75,6 +78,39 @@ cpu_global_init(void)
   /* mark all other GDT entries available */
   for (i = ARCH_GDT_FIRST_ALLOC; i < ARCH_GDT_SIZE; i++)
     gdt[i].seg.available = 1;
+
+  /* fill IDT with exceptions entry points */
+
+  for (i = 0; i < CPU_EXCEPT_VECTOR_COUNT; i++)
+    {
+      uintptr_t	entry = ((uintptr_t)&x86_interrupt_ex_entry) + i * CPU_INTERRUPT_ENTRY_ALIGN;
+
+      cpu_x86_gate_setup(cpu_idt + i + CPU_EXCEPT_VECTOR,
+			 ARCH_GDT_CODE_INDEX, entry,
+			 CPU_X86_GATE_INT32, 0, 0);
+    }
+
+  /* fill IDT with hardware interrupts entry points */
+
+  for (i = 0; i < CPU_HWINT_VECTOR_COUNT; i++)
+    {
+      uintptr_t	entry = ((uintptr_t)&x86_interrupt_hw_entry) + i * CPU_INTERRUPT_ENTRY_ALIGN;
+
+      cpu_x86_gate_setup(cpu_idt + i + CPU_HWINT_VECTOR,
+			 ARCH_GDT_CODE_INDEX, entry,
+			 CPU_X86_GATE_INT32, 0, 0);
+    }
+
+  /* fill IDT with syscall entry points */
+
+  for (i = 0; i < CPU_SYSCALL_VECTOR_COUNT; i++)
+    {
+      uintptr_t	entry = ((uintptr_t)&x86_interrupt_sys_entry) + i * CPU_INTERRUPT_ENTRY_ALIGN;
+
+      cpu_x86_gate_setup(cpu_idt + i + CPU_SYSCALL_VECTOR,
+			 ARCH_GDT_CODE_INDEX, entry,
+			 CPU_X86_GATE_INT32, 3, 0);
+    }
 
 #ifdef CONFIG_SMP
   /* copy boot section below 1Mb for slave CPUs bootup */
@@ -133,13 +169,15 @@ cpu_x86_segdesc_free(cpu_x86_segsel_t sel)
 
 static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
 
-static void cpu_x86_init_apic(uint32_t cpu_id)
+static void cpu_x86_init_apic()
 {
-  struct cpu_x86_apic_s	*apic = cpu_apic_get_regaddr();
-  uint32_t			i;
+  cpu_x86_apic_t *apic = (void*)ARCH_SMP_LOCAL_APICADDR;
+  uint32_t i;
 
+  /* relocate APIC */
+  cpu_apic_set_regaddr(apic);
   /* update local APIC id */
-  cpu_mem_write_32((uintptr_t)&apic->lapic_id, cpu_id << 24);
+  //  cpu_mem_write_32((uintptr_t)&apic->lapic_id, cpu_id << 24);
 
   /* enable CPU local APIC */
   i = cpu_mem_read_32((uintptr_t)&apic->spurious_int);
@@ -147,7 +185,7 @@ static void cpu_x86_init_apic(uint32_t cpu_id)
   cpu_mem_write_32((uintptr_t)&apic->spurious_int, i);
 }
 
-struct cpu_cld_s *cpu_init(cpu_id_t cpu_id)
+struct cpu_cld_s *cpu_init(void)
 {
 #ifdef CONFIG_SMP
   void			*cls;
@@ -158,18 +196,25 @@ struct cpu_cld_s *cpu_init(cpu_id_t cpu_id)
   uint16_t		tss_sel;
 #endif
   struct cpu_cld_s	*cld;
-  uint_fast16_t		i;
+  uint_fast16_t		id = cpu_id();
+
+  if (id >= CONFIG_CPU_MAXCOUNT)
+    return NULL;
 
   /* set GDT pointer */
   cpu_x86_set_gdt(gdt, ARCH_GDT_SIZE);
 
+  /* set IDT pointer */
+  cpu_x86_set_idt(cpu_idt, CPU_MAX_INTERRUPTS);
+
   /* enable and initialize x86 APIC */
-  cpu_x86_init_apic(cpu_id);
+  cpu_x86_init_apic();
 
   if (!(cld = mem_alloc(sizeof (struct cpu_cld_s), MEM_SCOPE_SYS)))
     goto err_cld;
 
-  cld->id = cpu_id;
+  cld->id = id;
+  cpu_cld_list[id] = cld;
 
   /* setup cpu local storage */
 
@@ -184,8 +229,8 @@ struct cpu_cld_s *cpu_init(cpu_id_t cpu_id)
 					CPU_X86_SEG_DATA_UP_RW)))
     goto err_cls_seg;
 
+  cld->cls_seg_sel = cls_sel;
   cpu_x86_datasegfs_use(cls_sel, 0);
-
   CPU_LOCAL_SET(__cpu_data_base, cls);
 #endif
 
@@ -197,7 +242,7 @@ struct cpu_cld_s *cpu_init(cpu_id_t cpu_id)
   memset(tss, 0, sizeof(*tss));
 
   tss->ss0 = ARCH_GDT_DATA_INDEX << 3;
-  tss->esp0 = 0x8000;
+  tss->esp0 = 0x8000;		/* FIXME */
 
   cld->tss = tss;
 
@@ -222,41 +267,6 @@ struct cpu_cld_s *cpu_init(cpu_id_t cpu_id)
 
   CPU_LOCAL_SET(cpu_cld, cld);
 
-  /* fill IDT with exceptions entry points */
-
-  for (i = 0; i < CPU_EXCEPT_VECTOR_COUNT; i++)
-    {
-      uintptr_t	entry = ((uintptr_t)&x86_interrupt_ex_entry) + i * CPU_INTERRUPT_ENTRY_ALIGN;
-
-      cpu_x86_gate_setup(cld->idt + i + CPU_EXCEPT_VECTOR,
-			 ARCH_GDT_CODE_INDEX, entry,
-			 CPU_X86_GATE_INT32, 0, 0);
-    }
-
-  /* fill IDT with hardware interrupts entry points */
-
-  for (i = 0; i < CPU_HWINT_VECTOR_COUNT; i++)
-    {
-      uintptr_t	entry = ((uintptr_t)&x86_interrupt_hw_entry) + i * CPU_INTERRUPT_ENTRY_ALIGN;
-
-      cpu_x86_gate_setup(cld->idt + i + CPU_HWINT_VECTOR,
-			 ARCH_GDT_CODE_INDEX, entry,
-			 CPU_X86_GATE_INT32, 0, 0);
-    }
-
-  /* fill IDT with syscall entry points */
-
-  for (i = 0; i < CPU_SYSCALL_VECTOR_COUNT; i++)
-    {
-      uintptr_t	entry = ((uintptr_t)&x86_interrupt_sys_entry) + i * CPU_INTERRUPT_ENTRY_ALIGN;
-
-      cpu_x86_gate_setup(cld->idt + i + CPU_SYSCALL_VECTOR,
-			 ARCH_GDT_CODE_INDEX, entry,
-			 CPU_X86_GATE_INT32, 3, 0);
-    }
-
-  cpu_x86_set_idt(cld->idt, CPU_MAX_INTERRUPTS);
-
   return cld;
 
 #ifdef CONFIG_HEXO_VMEM
@@ -278,7 +288,7 @@ struct cpu_cld_s *cpu_init(cpu_id_t cpu_id)
 void cpu_start_other_cpu(void)
 {
 #ifdef CONFIG_SMP
-  struct cpu_x86_apic_s	*apic = cpu_apic_get_regaddr();
+  cpu_x86_apic_t	*apic = cpu_apic_get_regaddr();
   uint32_t		i;
 
   /* broadcast an INIT IPI to other CPU */
@@ -288,26 +298,19 @@ void cpu_start_other_cpu(void)
   for (i = 0; i < 4000000; i++)
     asm volatile ("nop\n");
 
+  assert((ARCH_SMP_BOOT_ADDR & 0xfff00fff) == 0);
+
+  uint32_t icr_value = 0x000c4600 | (ARCH_SMP_BOOT_ADDR >> 12);
+
   /* broadcast an SIPI IPI to other CPU */
-  cpu_mem_write_32((uintptr_t)&apic->icr_0_31, 0x000c4611);
+  cpu_mem_write_32((uintptr_t)&apic->icr_0_31, icr_value);
 
   /* 200 us delay */
   for (i = 0; i < 80000; i++)
     asm volatile ("nop\n");
 
   /* broadcast an SIPI IPI to other CPU */
-  cpu_mem_write_32((uintptr_t)&apic->icr_0_31, 0x000c4611);
-#endif
-}
-
-cpu_id_t cpu_id(void)
-{
-#ifdef CONFIG_SMP
-  struct cpu_cld_s	*cld = CPU_LOCAL_GET(cpu_cld);
-
-  return cld->id;
-#else
-  return 0;
+  cpu_mem_write_32((uintptr_t)&apic->icr_0_31, icr_value);
 #endif
 }
 

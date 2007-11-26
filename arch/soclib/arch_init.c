@@ -58,7 +58,7 @@ void arch_init()
       cpu_global_init();
 
       /* configure first CPU */
-      cpu_cld_list[0] = cpu_init(0);
+      cpu_init();
 
 #ifdef CONFIG_SMP
       /* send reset/init signal to other CPUs */
@@ -80,8 +80,7 @@ void arch_init()
       /* configure other CPUs */
       lock_spin(&cpu_init_lock);
 
-      cpu_cld[cpu_count] = cpu_init(cpu_count);
-      cpu_count++;
+      cpu_init();
 
       lock_release(&cpu_init_lock);
 

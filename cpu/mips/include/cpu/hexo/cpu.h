@@ -27,17 +27,21 @@
 
 struct cpu_cld_s
 {
+#ifdef CONFIG_SMP
   /* pointer to CPU local storage */
   void				*cpu_local_storage;
+#endif
   /* CPU id */
   uint_fast8_t			id;
 };
 
+extern struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
+
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	32
 
-static inline bool_t
-cpu_isbootstrap(void)
+static inline cpu_id_t
+cpu_id(void)
 {
   reg_t		reg;
 
@@ -46,7 +50,13 @@ cpu_isbootstrap(void)
 		: "=r" (reg)
 		);
 
-  return (reg & 0x000003ff) == 0;
+  return reg & 0x000003ff;
+}
+
+static inline bool_t
+cpu_isbootstrap(void)
+{
+  return cpu_id() == 0;
 }
 
 /**

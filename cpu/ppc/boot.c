@@ -19,38 +19,41 @@
 
 */
 
-#ifndef __CPU_H_
-#define __CPU_H_
+asm(
+    ".section        .boot,\"ax\",@progbits		\n"
 
-#include "types.h"
+    ".globl cpu_boot					\n"
+    "cpu_boot:						\n"
 
-/** init system wide cpu data */
-error_t cpu_global_init(void);
+    /* get CPU id and adjust stack */
+    "lis	9, __system_uncached_heap_end - 8@ha    \n"
+    "la		1, __system_uncached_heap_end - 8@l(9)  \n"
+    "mfdcr	29,0					\n"
 
-/** send hardware reset/init signal to non first CPUs */
-void cpu_start_other_cpu(void);
-
-/** Setup CPU specific data */
-struct cpu_cld_s *cpu_init(void);
-
-/** get cpu local storage */
-static void *cpu_get_cls(cpu_id_t cpu_id);
-
-/** return CPU id number */
-static cpu_id_t cpu_id(void);
-
-/** return true if bootstap processor */
-static bool_t cpu_isbootstrap(void);
-
-/** return total cpus count */
-cpu_id_t arch_get_cpu_count(void);
-
-/** unlock non first CPUs so that they can enter main_smp() */
-void arch_start_other_cpu(void);
-
-#include "cpu/hexo/cpu.h"
-
-cpu_cycle_t cpu_cycle_count(void);
-
+#ifndef CONFIG_SMP
+    "1:							\n"
+    "cmpi	0, 0, 29, 0				\n"
+    "bne	0, 1b					\n"
 #endif
+
+    "rlwinm	3,29,12,0,19				\n"
+    "add	1,3,1					\n"
+
+    //    "sll	$8,	$8,	10			\n"
+    //    "subu	$sp,	$8,	$sp			\n"
+    "							\n"
+    /* setup global data pointer */
+    "lis	13, _gp@ha				\n"
+    "la		13, _gp@l(13)				\n"
+
+    /* jumpto arch_init function */
+
+    "lis	3, arch_init@ha				\n"
+    "la         3, arch_init@l(3)			\n"
+    "mtctr      3					\n"
+    "bctr						\n"
+
+    ".org 60						\n"
+    "b		cpu_boot				\n"
+    );
 

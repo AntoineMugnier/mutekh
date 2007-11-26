@@ -23,7 +23,7 @@
 #define VMEM_H_
 
 #ifndef CONFIG_HEXO_VMEM
-# warning Virtual memory support is not enabled in configuration file
+//# warning Virtual memory support is not enabled in configuration file
 #else
 
 /*

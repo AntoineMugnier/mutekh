@@ -38,8 +38,10 @@ asm(
     "la         $sp,	__system_uncached_heap_end - 16	\n"
     "andi	$8,	$8,	0x000003ff		\n"
 
+#ifndef CONFIG_SMP
     "1: bne	$0,	$8,	1b			\n"
     "nop						\n"
+#endif
 
     //    "sll	$8,	$8,	10			\n"
     //    "subu	$sp,	$8,	$sp			\n"

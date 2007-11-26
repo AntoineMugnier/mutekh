@@ -22,6 +22,8 @@
 #ifndef CPU_APIC_H_
 #define CPU_APIC_H_
 
+#include "msr.h"
+
 /** x86 apic register structure */
 
 typedef union
@@ -32,7 +34,7 @@ typedef union
 
 /** x86 apic mapped memory registers */
 
-struct cpu_x86_apic_s
+typedef volatile struct
 {
   /* 0000 */
   cpu_x86_apic_reg_t	res0000;
@@ -84,24 +86,23 @@ struct cpu_x86_apic_s
   cpu_x86_apic_reg_t	res03d0;
   cpu_x86_apic_reg_t	timer_divide;	/* Divide Configuration Register */
   cpu_x86_apic_reg_t	res03f0;
-} __attribute__ ((packed));
+} __attribute__ ((packed)) cpu_x86_apic_t;
 
 /**
    x86 apic mapped memory registers address
    @return current apic register address
 */
 
-static inline struct cpu_x86_apic_s *
+static inline cpu_x86_apic_t *
 cpu_apic_get_regaddr(void)
 {
-  uint64_t	msr;
+  return (void*)(uint32_t)(cpu_x86_read_msr(IA32_APIC_BASE_MSR) & 0xfffff000);
+}
 
-  asm ("rdmsr\n"
-       : "=A" (msr)
-       : "c" (0x1b)
-       );
-
-  return (struct cpu_x86_apic_s*)(uintptr_t)(msr & 0xfffff000);
+static inline void
+cpu_apic_set_regaddr(cpu_x86_apic_t *addr)
+{
+  cpu_x86_write_msr(IA32_APIC_BASE_MSR, (uintptr_t)addr);
 }
 
 /**
@@ -121,6 +122,13 @@ cpu_apic_isenabled(void)
 
   return msr & 0x800 ? 1 : 0;
 }
+
+/** local apic address */
+#define ARCH_SMP_LOCAL_APICADDR	0x0001000
+
+/** CPU specific boot address for x86 SMP bootup sequence */
+#define ARCH_SMP_BOOT_ADDR	0x0002000
+
 
 #endif
 
