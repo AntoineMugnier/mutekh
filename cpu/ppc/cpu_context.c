@@ -20,7 +20,7 @@ void __ppc_context_entry(void);
 
 asm(
     "__ppc_context_entry:		\n"
-    "	lwz	4, 0(1)	\n" /* entry function param */
+    "	lwz	3, 0(1)	\n" /* entry function param */
     "	lwz	0, 4(1)	\n" /* entry function address */
     "	addi	1, 1, 2*4		\n"
     "	mtctr	0			\n"
@@ -41,7 +41,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   /* fake entry point */
   *--context->stack_ptr = (uintptr_t)&__ppc_context_entry;
 
-  context->stack_ptr -= 3;	/* r14, r15, r16 */
+  context->stack_ptr -= 4;	/* r14, r15, r30, r31 */
 
   /* msr, interrupts are disabled */
   *--context->stack_ptr = 0;

@@ -39,7 +39,7 @@
 /** cpu local storage variable assignement */
 # define CPU_LOCAL_SET(n, v)				\
 {							\
-  __asm__ (						\
+  asm volatile (					\
 	   ".set push\n"				\
 	   ".set noat\n"				\
 	   "	addu	$1,	%0,	$27	\n"	\
@@ -57,7 +57,7 @@
 ({							\
   typeof(n) _val_;					\
 							\
-  __asm__ (						\
+  asm (							\
 	   ".set push\n"				\
 	   ".set noat\n"				\
 	   "	addu	$1,	%1,	$27	\n"	\
@@ -75,7 +75,7 @@
 ({							\
   typeof(n) *_ptr_;					\
 							\
-  __asm__ (						\
+  asm (							\
 	   "addu	%0,	$27,	%1	\n"	\
 	   : "=r" (_ptr_)				\
 	   : "r" (&n)					\

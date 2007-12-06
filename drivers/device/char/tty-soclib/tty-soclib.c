@@ -57,7 +57,7 @@ DEVCHAR_WRITE(tty_soclib_write)
   size_t		i;
 
   for (i = 0; i < size; i++)
-    cpu_mem_write_32(dev->addr[0] + TTY_SOCLIB_REG_WRITE, data[i]);
+    cpu_mem_write_32(dev->addr[0] + TTY_SOCLIB_REG_WRITE, endian_le32(data[i]));
 
   return size;
 }

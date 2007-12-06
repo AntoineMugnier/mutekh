@@ -66,7 +66,7 @@ struct cpu_cld_s * cpu_init(void)
   cld->cpu_local_storage = cls;
 
   /* set cpu local storage register base pointer */
-  asm volatile("mtspr 5, %0" : : "r" (cls));
+  asm volatile("mtspr 0x115, %0" : : "r" (cls)); /* SPRG5 is cls */
 #endif
 
   CPU_LOCAL_SET(cpu_cld, cld);
