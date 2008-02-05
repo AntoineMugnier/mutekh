@@ -139,12 +139,11 @@ cpu_context_set(uintptr_t stack, void *jumpto)
   while (1);
 }
 
-static inline
-void cpu_context_set_user(uintptr_t kstack, uintptr_t ustack, uintptr_t jumpto)
+static inline void
+__attribute__((always_inline, noreturn))
+cpu_context_set_user(uintptr_t kstack, uintptr_t ustack, uintptr_t jumpto)
 {
-  /* FIXME not supported on ppc */
-  while (1)
-    ;
+  assert(!"not supported yet");
 }
 
 #endif

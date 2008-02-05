@@ -68,10 +68,6 @@ char *
 strcat(char *dest, const char *src);
 #define strcat __builtin_strcat
 
-char *
-strncat(char *dest, const char *src, size_t n);
-#define strncat __builtin_strncat
-
 char * __attribute__ ((pure))
 strchr(const char *s, int_fast8_t c);
 #define strchr __builtin_strchr
@@ -132,9 +128,6 @@ int_fast8_t memccmp(const void *s1, const void *s2, int_fast8_t c, size_t n) __a
 void* memrchr(const void *s, int_fast8_t c, size_t n) __attribute__ ((pure));
 
 void *memmem(const void *haystack, size_t haystacklen, const void *needle, size_t needlelen);
-
-char *
-strncat(char *dest, const char *src, size_t n);
 
 char * __attribute__ ((pure))
 strrchr(const char *s, int_fast8_t c);

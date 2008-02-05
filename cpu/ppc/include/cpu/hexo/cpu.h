@@ -88,5 +88,13 @@ cpu_trap()
   asm volatile ("trap");
 }
 
+static inline void *cpu_get_cls(cpu_id_t cpu_id)
+{
+#ifdef CONFIG_SMP
+  return cpu_cld_list[cpu_id]->cpu_local_storage;
+#endif
+  return NULL;
+}
+
 #endif
 

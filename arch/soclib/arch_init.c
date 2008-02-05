@@ -26,6 +26,7 @@
 #include <hexo/lock.h>
 #include <hexo/cpu.h>
 #include <hexo/alloc.h>
+#include <hexo/scheduler.h>
 
 extern __ldscript_symbol_t __ramlock_base_start;
 uintptr_t __ramlock_base = (uintptr_t)&__ramlock_base_start;

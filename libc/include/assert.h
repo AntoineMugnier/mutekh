@@ -34,7 +34,7 @@
 
 ssize_t printf(const char *format, ...);
 
-static void abort(void);
+static inline void abort(void);
 
 static inline void
 __assert_fail(const char *file,

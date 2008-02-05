@@ -155,5 +155,12 @@ cpu_context_set(uintptr_t stack, void *jumpto)
     ;
 }
 
+static inline void
+__attribute__((always_inline, noreturn))
+cpu_context_set_user(uintptr_t kstack, uintptr_t ustack, uintptr_t jumpto)
+{
+  assert(!"not supported yet");
+}
+
 #endif
 

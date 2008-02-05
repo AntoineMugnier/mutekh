@@ -154,34 +154,6 @@ inline char* strcat(char *s, const char *t)
 #endif
 /********************************/
 
-#ifndef HAS_CPU_STRNCAT
-#undef strncat
-
-#warning bad size check
-
-inline char* strncat(char *s, const char *t, size_t n)
-{
-  char	*dest = s;
-  char	*end = s + n;
-
-  s += strlen(s);
-
-  while (s < n)
-    {
-      if (!(*s = *t))
-	break;
-      s++;
-      t++;
-    }
-
-  *s = '\0';
-
-  return dest;
-}
-#endif
-
-/********************************/
-
 #ifndef HAS_CPU_STRCHR
 #undef strchr
 inline char *strchr(const char *t, int_fast8_t c)
@@ -348,7 +320,7 @@ inline int_fast8_t strncasecmp(const char* s1, const char* s2, size_t len)
 
 /********************************/
 
-void *memccpy(void *dst, const void *src, int c, size_t count)
+void *memccpy(void *dst, const void *src, char c, size_t count)
 {
   char *a = dst;
   const char *b = src;
