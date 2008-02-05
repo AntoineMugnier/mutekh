@@ -23,6 +23,7 @@
 #define __CPU_H_
 
 #include "types.h"
+#include "error.h"
 
 /** init system wide cpu data */
 error_t cpu_global_init(void);
@@ -51,6 +52,9 @@ void arch_start_other_cpu(void);
 #include "cpu/hexo/cpu.h"
 
 cpu_cycle_t cpu_cycle_count(void);
+
+/* cpu trap instruction */
+void cpu_trap();
 
 #endif
 

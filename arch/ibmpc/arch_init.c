@@ -74,6 +74,11 @@ void arch_init()
       cpu_start_other_cpu();
 #endif
 
+#if defined(CONFIG_HEXO_SCHED)
+      sched_global_init();
+      sched_cpu_init();
+#endif
+
       /* run mutek_main() */
       mutek_main(0, 0);
 #ifdef CONFIG_SMP
@@ -96,6 +101,10 @@ void arch_init()
       /* wait for start signal */
       while (lock_state(&cpu_start_lock))
 	;
+
+#if defined(CONFIG_HEXO_SCHED)
+      sched_cpu_init();
+#endif
 
       /* run mutek_main_smp() */
       mutek_main_smp();

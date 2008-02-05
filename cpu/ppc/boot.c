@@ -31,13 +31,14 @@ asm(
     "mfdcr	29,0					\n"
 
 #ifndef CONFIG_SMP
+    /* only first CPU is allowed to boot */
+    "cmpwi	cr0, 29, 0				\n"
     "1:							\n"
-    "cmpi	0, 0, 29, 0				\n"
-    "bne	0, 1b					\n"
+    "bne	cr0, 1b					\n"
 #endif
 
     "rlwinm	3,29,12,0,19				\n"
-    "add	1,3,1					\n"
+    "sub	1,1,3					\n"
 
     //    "sll	$8,	$8,	10			\n"
     //    "subu	$sp,	$8,	$sp			\n"

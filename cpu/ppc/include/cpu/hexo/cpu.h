@@ -46,7 +46,7 @@ cpu_id(void)
   reg_t		reg;
 
   asm volatile (
-		"mfdcr %0, 0"	/* FIXME soclib specific */
+		"mfdcr %0, 0"
 		: "=r" (reg)
 		);
 
@@ -74,12 +74,18 @@ cpu_cycle_count(void)
 {
   uint32_t      result;
 
-  asm volatile(
-	       "mftbl %0"
-	       : "=r" (result)
-	       );
+  asm volatile (
+		"mftbl %0"
+		: "=r" (result)
+		);
 
   return result;
+}
+
+static inline void
+cpu_trap()
+{
+  asm volatile ("trap");
 }
 
 #endif

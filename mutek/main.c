@@ -117,10 +117,6 @@ DEVTIMER_CALLBACK(timer_callback)
 
 int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
-#if defined(CONFIG_HEXO_SCHED)
-  sched_global_init();
-  sched_cpu_init();
-#endif
 
   /********* ICU init ******************************** */
 
@@ -354,13 +350,6 @@ int_fast8_t main(int_fast8_t argc, char **argv);
 
 void mutek_main_smp(void)  /* ALL CPUs execute this function */
 {
-  if (!cpu_isbootstrap())
-    {
-#if defined(CONFIG_HEXO_SCHED)
-      sched_cpu_init();
-#endif
-    }
-
   lock_init(&fault_lock);
   cpu_exception_sethandler(fault_handler);
 

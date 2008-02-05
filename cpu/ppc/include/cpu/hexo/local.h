@@ -43,7 +43,7 @@
 {							\
   reg_t tmp;						\
 							\
-  volatile asm (					\
+  asm volatile (					\
 	   "	mfspr	%0, 0x105		\n"	\
 	   "	stwx	%2, %1, %0		\n"	\
 	   : "=&r" (tmp)				\

@@ -30,35 +30,37 @@
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	8
 
-/**
-   boot strap processor test
-   @return true if processor is the bootstrap processor
-*/
+static cpu_id_t cpu_id(void)
+{
+#ifdef CONFIG_SMP
+# error not supported
+#else
+  return 0;
+#endif  
+}
 
 static inline bool_t
 cpu_isbootstrap(void)
 {
 #ifdef CONFIG_SMP
-  assert(!"not supported"); /* FIXME */
+# error not supported
 #endif
   return 1;
 }
 
-/**
-   cpu cycle touner type
-*/
-
 typedef uint64_t cpu_cycle_t;
-
-/**
-   cpu cycle counter read function
-*/
 
 static inline cpu_cycle_t
 cpu_cycle_count(void)
 {
   assert(!"not supported"); /* FIXME */
   return 0;
+}
+
+static inline
+void cpu_trap()
+{
+  asm volatile ("int3");
 }
 
 #endif

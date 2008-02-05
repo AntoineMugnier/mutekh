@@ -29,15 +29,40 @@
 
 #define CPU_ATOMIC_H_
 
-//#define HAS_CPU_ATOMIC_INC
-//#define HAS_CPU_ATOMIC_DEC
-//#define HAS_CPU_ATOMIC_TESTSET
-//#define HAS_CPU_ATOMIC_WAITSET
-//#define HAS_CPU_ATOMIC_TESTCLR
-//#define HAS_CPU_ATOMIC_WAITCLR
-//#define HAS_CPU_ATOMIC_SET
-//#define HAS_CPU_ATOMIC_CLR
-//#define HAS_CPU_ATOMIC_TEST
+#define HAS_CPU_ATOMIC_INC
+
+#if 0
+static inline bool_t
+cpu_atomic_inc(volatile atomic_int_t *a)
+{
+  reg_t tmp;
+
+  asm volatile
+    (
+     "1:			\n"
+     "	lwarx	%0,0,%2         \n"
+     "	addic	%0,%0,1		\n"
+     "  stwcx.	%0,0,%2		\n"
+     "	bne	1b		\n"
+     : "=&r" (t), "=m" (a)
+     : "r" (&a), "m" (a)
+     : "cc"
+     );
+
+  return zero;
+}
+
+#define HAS_CPU_ATOMIC_DEC
+
+#define HAS_CPU_ATOMIC_TESTSET
+#define HAS_CPU_ATOMIC_WAITSET
+#define HAS_CPU_ATOMIC_TESTCLR
+#define HAS_CPU_ATOMIC_WAITCLR
+#define HAS_CPU_ATOMIC_SET
+#define HAS_CPU_ATOMIC_CLR
+#define HAS_CPU_ATOMIC_TEST
+
+#endif
 
 #endif
 

@@ -325,7 +325,9 @@ void sched_cpu_init(void)
 {
   struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);
 
-  context_init(&idle->context, CONFIG_HEXO_SCHED_IDLE_STACK_SIZE, sched_context_idle, 0);
+  int res = context_init(&idle->context, CONFIG_HEXO_SCHED_IDLE_STACK_SIZE, sched_context_idle, 0);
+
+  assert(res != 0);
 }
 
 #if !defined(CONFIG_HEXO_SCHED_AFFINITY)

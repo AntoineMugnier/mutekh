@@ -23,6 +23,7 @@
 #define STDLIB_H_
 
 #include <hexo/types.h>
+#include <hexo/cpu.h>
 
 /********************* memory allocation */
 
@@ -112,9 +113,10 @@ void srand(__rand_type_t seed);
 /******************** abort */
 
 static inline void
-__attribute__ ((deprecated))
 abort(void)
 {
+  cpu_trap();
+
   while (1)
     ;
 }

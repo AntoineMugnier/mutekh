@@ -58,6 +58,12 @@ static inline void arch_lock_destroy(struct arch_lock_s *lock)
 
 static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 {
+#if 0
+  uint_fast8_t t;
+  for (t = 0; t < 30; t++)
+    asm volatile("nop");
+#endif
+
   return cpu_mem_read_32(lock->ramlock);
 }
 

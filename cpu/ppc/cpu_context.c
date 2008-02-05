@@ -41,7 +41,10 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   /* fake entry point */
   *--context->stack_ptr = (uintptr_t)&__ppc_context_entry;
 
-  context->stack_ptr -= 4;	/* r14, r15, r30, r31 */
+  /* r14, r15, r30, r31 */
+  context->stack_ptr -= 2;
+  *--context->stack_ptr = 0;
+  *--context->stack_ptr = 0;
 
   /* msr, interrupts are disabled */
   *--context->stack_ptr = 0;

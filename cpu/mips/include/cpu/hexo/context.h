@@ -40,17 +40,19 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		//		".set noreorder			\n"
 #ifdef CONFIG_COMPILE_PIC
 		/* save execution pointer based on current PC */
-		"	addiu	$sp, 	-3*4		\n"
+		"	addiu	$sp, 	-4*4		\n"
 		"	bal	1f			\n"
 		"	b	2f			\n"
-		"1:	sw	$31,	2*4($sp)	\n"
+		"1:	sw	$31,	3*4($sp)	\n"
 #else
 		/* save execution pointer based on static label address */
-		"	addiu	$sp, 	-5*4		\n"
+		"	addiu	$sp, 	-4*4		\n"
 		"	la	$1,	2f		\n"
-		"	sw	$1,	2*4($sp)	\n"
+		"	sw	$1,	3*4($sp)	\n"
 #endif
 		"	lw	$15,	(%2)		\n"
+		/* save frame pointer */
+		"	sw	$30,	2*4($sp)	\n"
 		/* save status */
 		"	mfc0	$1,	$12		\n"
 		"	sw	$1,	1*4($sp)	\n"
@@ -68,10 +70,12 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	lw	$1,	1*4($sp)	\n"
 		"	lw	$15,	0*4($sp)	\n"
 		"	mtc0	$1,	$12		\n"
+		/* restore frame pointer */
+		"	lw	$30,	2*4($sp)	\n"
 		/* restore execution pointer */
-		"	lw	$1,	2*4($sp)	\n"
+		"	lw	$1,	3*4($sp)	\n"
 		"	sw	$15,	(%2)		\n"
-		"	addiu	$sp,	3*4		\n"
+		"	addiu	$sp,	4*4		\n"
 		"	jr	$1			\n"
 		"2:					\n"
 		".set pop				\n"
@@ -118,16 +122,21 @@ cpu_context_jumpto(struct context_s *new)
 		"	lw	$1,	1*4($sp)	\n"
 		"	lw	$15,	0*4($sp)	\n"
 		"	mtc0	$1,	$12		\n"
+		/* restore frame pointer */
+		"	lw	$30,	2*4($sp)	\n"
 		/* restore execution pointer */
-		"	lw	$1,	2*4($sp)	\n"
+		"	lw	$1,	3*4($sp)	\n"
 		"	sw	$15,	(%1)		\n"
-		"	addiu	$sp,	3*4		\n"
+		"	addiu	$sp,	4*4		\n"
 		"	jr	$1			\n"
 		".set pop				\n"
 		:
 		: "r" (new->stack_ptr)
 		, "r" (CPU_LOCAL_ADDR(__cpu_context_data_base))
 		);
+
+  while (1)
+    ;
 }
 
 static inline void
@@ -141,6 +150,9 @@ cpu_context_set(uintptr_t stack, void *jumpto)
 		: "r" (stack)
 		, "r" (jumpto)
 		);
+
+  while (1)
+    ;
 }
 
 #endif

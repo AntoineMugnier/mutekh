@@ -82,5 +82,11 @@ cpu_cycle_count(void)
   return result;
 }
 
+static inline void
+cpu_trap()
+{
+  asm volatile ("break 0");
+}
+
 #endif
 

@@ -19,6 +19,7 @@
 
 */
 
+#include <assert.h>
 
 #include <hexo/types.h>
 #include <hexo/init.h>
@@ -65,6 +66,11 @@ void arch_init()
       cpu_init_flag = 1;
 #endif
 
+#if defined(CONFIG_HEXO_SCHED)
+      sched_global_init();
+      sched_cpu_init();
+#endif
+
       /* run mutek_main() */
       mutek_main(0, 0);
 #ifdef CONFIG_SMP
@@ -72,10 +78,10 @@ void arch_init()
   else
     /* Other CPUs */
     {
+      assert(cpu_id() < CONFIG_CPU_MAXCOUNT);
+
       while (cpu_init_flag == 0)
 	;
-
-      //      *((char*)0x00000000) = 1;
 
       /* configure other CPUs */
       lock_spin(&cpu_init_lock);
@@ -90,6 +96,11 @@ void arch_init()
 	;
 
       /* run mutek_main_smp() */
+
+#if defined(CONFIG_HEXO_SCHED)
+      sched_cpu_init();
+#endif
+
       mutek_main_smp();
     }
 #endif

@@ -34,6 +34,8 @@
 
 ssize_t printf(const char *format, ...);
 
+static void abort(void);
+
 static inline void
 __assert_fail(const char *file,
 	      uint_fast16_t line,
@@ -42,8 +44,7 @@ __assert_fail(const char *file,
 {
   printf("Assertion failed at %s:%u:%s(): (%s) is false\n", file, line, func, expr);
 
-  while (1)
-    ;
+  abort();
 }
 
 #ifdef NDEBUG
