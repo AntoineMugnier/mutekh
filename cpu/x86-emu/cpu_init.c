@@ -38,26 +38,14 @@ CPU_LOCAL void *__cpu_context_data_base;
 /* cpu interrupts state */
 volatile CPU_LOCAL bool_t cpu_irq_state = 0;
 
-struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
 static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
+struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
 
 error_t
 cpu_global_init(void)
 {
   return 0;
 }
-
-struct cpu_cld_s
-{
-  /* CPU id */
-  uint32_t			id;
-  /* PID of the worker unix process */
-  int32_t			worker_pid;
-  /* PID of the unix process used to perform ptrace ops */
-  int32_t			tracer_pid;
-};
-
-//static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
 
 #define TRACER_STACK_SIZE	65535
 

@@ -95,12 +95,11 @@ struct cpu_cld_s
 #endif
   /* CPU id */
   uint32_t			id;
-  /* CPU Interrupt descriptor table */
 };
 
 extern struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
 
-cpu_id_t cpu_id(void)
+static inline cpu_id_t cpu_id(void)
 {
 #ifdef CONFIG_SMP
   cpu_x86_apic_t *apic = cpu_apic_get_regaddr();
@@ -109,6 +108,12 @@ cpu_id_t cpu_id(void)
 #else
   return 0;
 #endif
+}
+
+static inline void
+cpu_trap()
+{
+  asm volatile ("int3");
 }
 
 static inline void *cpu_get_cls(cpu_id_t cpu_id)

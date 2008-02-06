@@ -327,7 +327,7 @@ void sched_cpu_init(void)
 
   error_t res = context_init(&idle->context, CONFIG_HEXO_SCHED_IDLE_STACK_SIZE, sched_context_idle, 0);
 
-  assert(res != 0);
+  assert(res == 0);
 }
 
 #if !defined(CONFIG_HEXO_SCHED_AFFINITY)

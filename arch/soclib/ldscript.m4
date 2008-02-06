@@ -1,5 +1,5 @@
 
-m4_include(dsx_addresses.ldscript)
+m4_include(soclib_addresses.ldscript.m4)
 
 /*
 PHDRS

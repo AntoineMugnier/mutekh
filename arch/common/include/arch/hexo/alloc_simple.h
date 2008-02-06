@@ -25,8 +25,6 @@
 
 #define ARCH_ALLOC_H_
 
-#include <assert.h>
-
 extern struct mem_alloc_region_s mem_region_ram;
 
 /** allocated memory scope is system global */
@@ -36,7 +34,6 @@ extern struct mem_alloc_region_s mem_region_ram;
 static inline void
 mem_alloc_set_default(struct mem_alloc_region_s *region)
 {
-  assert(region == &mem_region_ram);
 }
 
 #ifdef CONFIG_HEXO_MEMALLOC_GUARD

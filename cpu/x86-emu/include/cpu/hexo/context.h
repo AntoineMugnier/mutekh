@@ -24,6 +24,7 @@
 #else
 
 #include <hexo/local.h>
+#include <hexo/cpu.h>
 
 struct cpu_context_s
 {
@@ -110,6 +111,9 @@ cpu_context_jumpto(struct context_s *new)
 		: "r" (new->stack_ptr)
 		, "r" (CPU_LOCAL_ADDR(__cpu_context_data_base))
 		);
+
+  while (1)
+    ;
 }
 
 static inline void
@@ -125,6 +129,18 @@ cpu_context_set(uintptr_t stack, void *jumpto)
 		:
 		: "r,m" (stack), "r,r" (jumpto)
 		);
+
+  while (1)
+    ;
+}
+
+static inline void
+__attribute__((always_inline, noreturn))
+cpu_context_set_user(uintptr_t kstack, uintptr_t ustack, uintptr_t jumpto)
+{
+  cpu_trap();			/* not supported */
+  while (1)
+    ;
 }
 
 #endif

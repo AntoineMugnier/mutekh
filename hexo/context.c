@@ -3,6 +3,7 @@
 #include <hexo/context.h>
 #include <hexo/local.h>
 #include <hexo/segment.h>
+#include <hexo/interrupt.h>
 
 /** pointer to current context */
 CONTEXT_LOCAL struct context_s *context_cur;
@@ -81,5 +82,12 @@ context_destroy(struct context_s *context)
 
   if (context->stack)
     arch_contextstack_free(context->stack);
+}
+
+void
+cpu_syscall_sethandler_ctx(struct context_s *context,
+			   cpu_syscall_handler_t *hndl)
+{
+  CONTEXT_LOCAL_FOREIGN_SET(context->tls, cpu_syscall_handler, hndl);
 }
 

@@ -26,7 +26,7 @@
 
 #define ARCH_SEGMENT_H_
 
-#include <assert.h>
+#include <hexo/cpu.h>
 
 #include "hexo/types.h"
 #include "hexo/alloc.h"
@@ -58,7 +58,7 @@ arch_cpudata_alloc(void)
 
   return cls;
 #else
-  assert(0);
+  cpu_trap();
   return NULL;
 #endif
 }

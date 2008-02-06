@@ -22,7 +22,6 @@
 #ifndef CONTEXT_H_
 #define CONTEXT_H_
 
-#include <assert.h>
 #include <hexo/types.h>
 #include <hexo/local.h>
 #include <hexo/error.h>
@@ -98,7 +97,10 @@ static inline void context_switch_to(struct context_s *context)
 {
   struct context_s *cur = CONTEXT_LOCAL_GET(context_cur);
 
-  assert(cur != context);
+#if 0
+  if (cur == context)
+    cpu_trap();
+#endif
 
 #ifdef CONFIG_HEXO_VMEM
   vmem_context_switch_to(context->vmem);

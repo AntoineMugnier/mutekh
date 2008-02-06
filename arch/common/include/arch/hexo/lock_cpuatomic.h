@@ -29,6 +29,7 @@
 
 #define ARCH_LOCK_H_
 
+#include <assert.h>
 #include "hexo/atomic.h"
 
 #define ARCH_HAS_ATOMIC

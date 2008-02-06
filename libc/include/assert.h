@@ -27,14 +27,13 @@
 
 */
 
-#include <hexo/types.h>
-
 #ifndef __ASSERT_H_
 #define __ASSERT_H_
 
-ssize_t printf(const char *format, ...);
+#include <hexo/types.h>
+#include <hexo/cpu.h>
 
-static inline void abort(void);
+ssize_t printf(const char *format, ...);
 
 static inline void
 __assert_fail(const char *file,
@@ -44,7 +43,10 @@ __assert_fail(const char *file,
 {
   printf("Assertion failed at %s:%u:%s(): (%s) is false\n", file, line, func, expr);
 
-  abort();
+  cpu_trap();
+
+  while (1)
+    ;
 }
 
 #ifdef NDEBUG

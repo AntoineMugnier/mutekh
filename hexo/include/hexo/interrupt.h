@@ -32,6 +32,7 @@
 #ifndef INTERRUPT_H_
 #define INTERRUPT_H_
 
+#include "local.h"
 #include "types.h"
 
 /************************************************************ hw irq */
@@ -131,14 +132,12 @@ cpu_syscall_sethandler(cpu_syscall_handler_t *hndl)
   CONTEXT_LOCAL_SET(cpu_syscall_handler, hndl);
 }
 
-/** Set syscall interrupt handler for a given context */
-static inline void
-cpu_syscall_sethandler_ctx(struct context_s *context,
-			   cpu_syscall_handler_t *hndl)
-{
-  CONTEXT_LOCAL_FOREIGN_SET(context->tls, cpu_syscall_handler, hndl);
-}
+struct context_s;
 
+/** Set syscall interrupt handler for a given context */
+void
+cpu_syscall_sethandler_ctx(struct context_s *context,
+			   cpu_syscall_handler_t *hndl);
 
 /************************************************************/
 

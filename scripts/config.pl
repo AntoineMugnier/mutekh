@@ -974,6 +974,27 @@ sub write_m4
     }
 }
 
+sub write_py
+{
+    my ($file) = @_;
+
+    if (open(FILE, ">".$file))
+    {
+	foreach my $opt (values %config_opts)
+	{
+	    next if $$opt{noexport} or $$opt{nomakefile};
+
+	    print FILE $$opt{name}." = '".$$opt{value}."'\n";
+	}
+
+	close(FILE);
+    }
+    else
+    {
+	error(" unable to open `$file' to write configuration");
+    }
+}
+
 sub tokens_list
 {
     printf("\n    %-40s %s \n", "Configuration token name", "Declare location");
@@ -1208,6 +1229,7 @@ Usage: config.pl [options]
 	write_header($param_h{header}) if $param_h{header};
 	write_makefile($param_h{makefile}) if $param_h{makefile};
 	write_m4($param_h{m4}) if $param_h{m4};
+	write_py($param_h{python}) if $param_h{python};
 	return;
     }
 

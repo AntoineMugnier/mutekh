@@ -29,7 +29,7 @@
 
 #define ARCH_LOCK_H_
 
-#include <assert.h>
+#include <hexo/cpu.h>
 
 struct		arch_lock_s
 {
@@ -39,35 +39,35 @@ struct		arch_lock_s
 
 static inline error_t arch_lock_init(struct arch_lock_s *lock)
 {
-  assert(!"not available");
+  cpu_trap();
   return 0;
 }
 
 static inline void arch_lock_destroy(struct arch_lock_s *lock)
 {
-  assert(!"not available");
+  cpu_trap();
 }
 
 static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 {
-  assert(!"not available");
+  cpu_trap();
   return 0;
 }
 
 static inline void arch_lock_spin(struct arch_lock_s *lock)
 {
-  assert(!"not available");
+  cpu_trap();
 }
 
 static inline bool_t arch_lock_state(struct arch_lock_s *lock)
 {
-  assert(!"not available");
+  cpu_trap();
   return 0;
 }
 
 static inline void arch_lock_release(struct arch_lock_s *lock)
 {
-  assert(!"not available");
+  cpu_trap();
 }
 
 #endif

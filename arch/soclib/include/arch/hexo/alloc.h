@@ -65,8 +65,6 @@ mem_alloc_set_default(struct mem_alloc_region_s *region)
 {
 #if defined(CONFIG_SMP) || defined(CONFIG_CLUSTER)
   mem_region_default = region;
-#else
-  assert(region == &mem_region_system);
 #endif
 }
 

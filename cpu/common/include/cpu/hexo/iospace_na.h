@@ -23,46 +23,46 @@
 #error This file can not be included directly
 #else
 
-#include <assert.h>
+#include <hexo/cpu.h>
 
 #define CPU_IOSPACE_H_
 
 static inline void
 cpu_io_write_8(uintptr_t addr, uint8_t data)
 {
-  assert(!"not available");
+  cpu_trap();
 }
 
 static inline uint8_t
 cpu_io_read_8(uintptr_t addr)
 {
-  assert(!"not available");
+  cpu_trap();
   return 0;
 }
 
 static inline void
 cpu_io_write_16(uintptr_t addr, uint16_t data)
 {
-  assert(!"not available");
+  cpu_trap();
 }
 
 static inline uint16_t
 cpu_io_read_16(uintptr_t addr)
 {
-  assert(!"not available");
+  cpu_trap();
   return 0;
 }
 
 static inline void
 cpu_io_write_32(uintptr_t addr, uint32_t data)
 {
-  assert(!"not available");
+  cpu_trap();
 }
 
 static inline uint32_t
 cpu_io_read_32(uintptr_t addr)
 {
-  assert(!"not available");
+  cpu_trap();
   return 0;
 }
 
@@ -71,39 +71,39 @@ cpu_io_read_32(uintptr_t addr)
 static inline void
 cpu_mem_write_8(uintptr_t addr, uint8_t data)
 {
-  assert(!"not available");
+  cpu_trap();
 }
 
 static inline uint8_t
 cpu_mem_read_8(uintptr_t addr)
 {
-  assert(!"not available");
+  cpu_trap();
   return 0;
 }
 
 static inline void
 cpu_mem_write_16(uintptr_t addr, uint16_t data)
 {
-  assert(!"not available");
+  cpu_trap();
 }
 
 static inline uint16_t
 cpu_mem_read_16(uintptr_t addr)
 {
-  assert(!"not available");
+  cpu_trap();
   return 0;
 }
 
 static inline void
 cpu_mem_write_32(uintptr_t addr, uint32_t data)
 {
-  assert(!"not available");
+  cpu_trap();
 }
 
 static inline uint32_t
 cpu_mem_read_32(uintptr_t addr)
 {
-  assert(!"not available");
+  cpu_trap();
   return 0;
 }
 

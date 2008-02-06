@@ -23,6 +23,7 @@
 #error This file can not be included directly
 #else
 
+#include <hexo/cpu.h>
 #include "cpu/hexo/specific.h"
 
 struct cpu_context_s
@@ -159,7 +160,10 @@ static inline void
 __attribute__((always_inline, noreturn))
 cpu_context_set_user(uintptr_t kstack, uintptr_t ustack, uintptr_t jumpto)
 {
-  assert(!"not supported yet");
+  cpu_trap();			/* not supported */
+
+  while (1)
+    ;
 }
 
 #endif

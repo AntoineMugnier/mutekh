@@ -39,6 +39,7 @@ $(BUILD_DIR):
 $(BUILD_DIR)/.config.mk $(BUILD_DIR)/.config.m4 $(BUILD_DIR)/.config.h: $(CONF)
 	cd $(SRC_DIR) ; perl $(SRC_DIR)/scripts/config.pl	\
 		--input=$(CONF)					\
+		--python=$(BUILD_DIR)/.config.py		\
 		--m4=$(BUILD_DIR)/.config.m4			\
 		--header=$(BUILD_DIR)/.config.h			\
 		--makefile=$(BUILD_DIR)/.config.mk

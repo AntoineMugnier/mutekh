@@ -25,8 +25,6 @@
 
 #define CPU_CPU_H_
 
-#include <assert.h>
-
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	16
 
@@ -39,7 +37,7 @@ static inline bool_t
 cpu_isbootstrap(void)
 {
 #ifdef CONFIG_SMP
-  assert(!"not supported"); /* FIXME */
+  cpu_trap();			/* not supported */
 #endif
   return 1;
 }
@@ -57,7 +55,7 @@ typedef uint64_t cpu_cycle_t;
 static inline cpu_cycle_t
 cpu_cycle_count(void)
 {
-  assert(!"not supported"); /* FIXME */
+  cpu_trap();			/* not supported */
   return 0;
 }
 

@@ -62,7 +62,7 @@
 #endif
 
 #ifdef CONFIG_ARCH_SOCLIB
-#include <dsx_addresses.h>
+#include <soclib_addresses.h>
 #endif
 
 #if defined(CONFIG_MUTEK_CONSOLE)

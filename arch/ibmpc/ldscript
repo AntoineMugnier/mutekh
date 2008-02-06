@@ -2,6 +2,7 @@
 PHDRS
 {
   boot PT_LOAD AT(0x00100000);
+  local PT_LOAD;
   mem PT_LOAD AT(0x0010000c);
 }
 
@@ -19,7 +20,6 @@ SECTIONS
 	__boot_end = LOADADDR(.boot) + SIZEOF(.boot);
 
 	.text : { *(.text*) }
-	.bss : { *(.bss*) }
 	.data :
 		{
 			/* global variables and const data section */
@@ -30,11 +30,13 @@ SECTIONS
 			*(.cpuarchdata*)
 		}
 
+	.bss : { *(.bss*) }
+
 	/* CPU local data section */
-	.cpudata  0x0 : AT( LOADADDR(.data) + SIZEOF(.data) )
+	.cpudata  0x0 : AT( LOADADDR(.bss) + SIZEOF(.bss) )
 		{
 			*(.cpudata*)
-		}
+		} : local
 
 	__cpu_data_start = LOADADDR(.cpudata);
 	__cpu_data_end = LOADADDR(.cpudata) + SIZEOF(.cpudata);
