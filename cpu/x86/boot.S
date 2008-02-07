@@ -82,9 +82,17 @@ cpu_boot:
 	/* get CPU id */
 	mov	$0x1b, %ecx
 	rdmsr
+
+#ifndef CONFIG_SMP
+	1:
+	test	$0x100, %eax
+	jz 1b
+#endif
+
 	andl	$0xfffff000, %eax /* get local APIC base address */
 	mov	0x20(%eax), %eax /* read local apic ID */
 	shrl	$24, %eax
+
 	/* change stack offset depending on CPU id */
 	shll	$13, %eax
 	add	$0x0001fffc, %eax

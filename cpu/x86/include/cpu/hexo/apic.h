@@ -102,7 +102,9 @@ cpu_apic_get_regaddr(void)
 static inline void
 cpu_apic_set_regaddr(cpu_x86_apic_t *addr)
 {
-  cpu_x86_write_msr(IA32_APIC_BASE_MSR, (uintptr_t)addr);
+  uint64_t x = cpu_x86_read_msr(IA32_APIC_BASE_MSR);
+
+  cpu_x86_write_msr(IA32_APIC_BASE_MSR, (x & 0xfff) | (uint32_t)addr);
 }
 
 /**
@@ -113,21 +115,14 @@ cpu_apic_set_regaddr(cpu_x86_apic_t *addr)
 static inline bool_t
 cpu_apic_isenabled(void)
 {
-  uint64_t	msr;
-
-  asm ("rdmsr\n"
-       : "=A" (msr)
-       : "c" (0x1b)
-       );
-
-  return msr & 0x800 ? 1 : 0;
+  return cpu_x86_read_msr(IA32_APIC_BASE_MSR) & 0x800 ? 1 : 0;
 }
 
 /** local apic address */
-#define ARCH_SMP_LOCAL_APICADDR	0x0001000
+#define ARCH_SMP_LOCAL_APICADDR	0xfee00000
 
 /** CPU specific boot address for x86 SMP bootup sequence */
-#define ARCH_SMP_BOOT_ADDR	0x0002000
+#define ARCH_SMP_BOOT_ADDR	0x00002000
 
 
 #endif

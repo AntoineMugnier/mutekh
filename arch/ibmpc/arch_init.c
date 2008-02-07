@@ -90,7 +90,8 @@ void arch_init()
 
       lock_spin(&cpu_init_lock);
 
-      cpu_init();
+      if (cpu_init() == NULL)
+	return;
 
       lock_release(&cpu_init_lock);
 
@@ -110,9 +111,6 @@ void arch_init()
       mutek_main_smp();
     }
 #endif
-
-  while (1)
-    ;
 }
 
 void arch_start_other_cpu(void)
