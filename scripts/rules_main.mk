@@ -7,29 +7,9 @@ TARGET_SECTIONS=.text .data .boot .contextdata
 
 target = kernel-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME)
 
-MODULES += libc hexo mutek gpct
+CONFIG_MODULES += libc hexo mutek gpct
 
-ifeq ($(CONFIG_NETWORK), defined)
- MODULES += libnetwork
-endif
-
-ifeq ($(CONFIG_PTHREAD), defined)
- MODULES += libpthread
-endif
-
-ifeq ($(CONFIG_UNIX), defined)
- MODULES += libunix
-endif
-
-ifeq ($(CONFIG_VFS), defined)
- MODULES += libvfs
-endif
-
-ifeq ($(CONFIG_LUA), defined)
- MODULES += liblua
-endif
-
-subdirs = $(MODULES) arch cpu drivers
+subdirs = $(CONFIG_MODULES) arch cpu drivers
 
 objs =
 

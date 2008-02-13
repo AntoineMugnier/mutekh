@@ -333,6 +333,13 @@ sub process_file
 	    if ($state)
 	    {
 		$line =~ s/^\s*//g;
+
+		while ($line =~ /%(\w+)/)
+		{
+		    my $text = $ENV{$1};
+		    $line =~ s/%$1/$text/g;
+		}
+
 		my @line_l = split(/\s+/, $line);
 
 		# get pointer on function for command
@@ -371,6 +378,8 @@ sub explore
     {
 	# remove leading ./ from path
 	$ent =~ s/^\.\///;
+
+	$ENV{CONFIGPATH} = $dir;
 
 	if ((-d $ent) && (! -l $ent))
 	{
@@ -588,6 +597,14 @@ sub process_config_provide
 	my $val = $2 ? $2 : "defined";
 	my $opt = $config_opts{$dep};
 
+	my $concat = 0;
+
+	if ($val =~ /^\+(.*)/)
+	{
+	    $val = $1;
+	    $concat = 1;
+	}
+
 	if ($val eq "undefined")
 	{
 	    error($$orig{location}.": `".$$orig{name}."' token provides `".
@@ -604,7 +621,12 @@ sub process_config_provide
 	    }
 	    else
 	    {
-		if ($val ne $$opt{value})
+		# if value start with a '+' it must be concatened
+		if ($concat)
+		{
+		    $$opt{value} .= " " . $val;
+		}
+		elsif ($val ne $$opt{value})
 		{
 		    error($$orig{location}.": `".$$orig{name}."' token provides ".
 			  "already defined token `".$dep."' with a different value;".
@@ -639,15 +661,21 @@ sub process_config_unprovide
 
     foreach my $rule (@{$$orig{provide}})
     {
-	$rule =~ /^([^\s=]+)/;
+	$rule =~ /^([^\s=]+)=?([^\s]*)$/;
 	my $dep = $1;
+	my $val = $2;
 	my $opt = $config_opts{$dep};
 
 	if ($opt)
 	{
 	    $$opt{provided_count}--;
 
-	    if ($$opt{provided_count} < 1)
+	    # if value start with a '+' it must be deleted from string
+	    if ($val =~ /^\+(.*)/)
+	    {
+		$$opt{value} =~ s/\b$1\b//;
+	    }
+	    elsif ($$opt{provided_count} < 1)
 	    {
 		$$opt{value} = "undefined";
 	    }
@@ -1191,11 +1219,20 @@ Usage: config.pl [options]
 	--list[=all]     Display configuration tokens list.
 	--info=token     Display informations about `token'.
 
+	--path=dir[:dir] Set list of directories to explore, default is \$PWD
 ";
 	return;
     }
 
-    explore(".");
+    if ($param_h{path})
+    {
+	explore($_) foreach (split(/:/, $param_h{path}))
+    }
+    else
+    {
+	explore($ENV{PWD});
+    }
+
     exit 1 if $err_flag;
 
     read_myconfig($param_h{input});

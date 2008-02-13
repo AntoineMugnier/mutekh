@@ -33,7 +33,7 @@ VPATH += $(SRC_DIR)/$(H)
 
 DEPINC=	-nostdinc -D__MUTEK__ \
 	-I include \
-	$(foreach mod,$(MODULES), -I $(mod)/include) \
+	$(foreach mod,$(CONFIG_MODULES), -I $(mod)/include) \
 	-I arch/$(CONFIG_ARCH_NAME)/include \
 	-I cpu/$(CONFIG_CPU_NAME)/include \
 	-include $(BUILD_DIR)/.config.h

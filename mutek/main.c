@@ -115,6 +115,8 @@ DEVTIMER_CALLBACK(timer_callback)
 }
 #endif
 
+#ifdef CONFIG_MUTEK_MAIN
+
 int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
 
@@ -371,4 +373,6 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
   sched_context_exit();
 #endif
 }
+
+#endif
 

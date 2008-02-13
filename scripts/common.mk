@@ -18,7 +18,7 @@
 
 export SRC_DIR
 export BUILD_DIR
-export MODULES
+export CONFIG_MODULES
 
 VPATH = $(SRC_DIR) $(BUILD_DIR)
 
@@ -49,7 +49,7 @@ endif
 
 INCS=-nostdinc -D__MUTEK__ \
 	-I$(SRC_DIR)/include \
-	$(foreach mod,$(MODULES), -I $(SRC_DIR)/$(mod)/include) \
+	$(foreach mod,$(CONFIG_MODULES), -I $(SRC_DIR)/$(mod)/include) \
 	-I$(SRC_DIR)/arch/$(CONFIG_ARCH_NAME)/include \
 	-I$(SRC_DIR)/cpu/$(CONFIG_CPU_NAME)/include \
 	-I$(BUILD_DIR) \
