@@ -11,3 +11,4 @@ endif
 
 subdirs = libc libnetwork
 
+copy = ldscript

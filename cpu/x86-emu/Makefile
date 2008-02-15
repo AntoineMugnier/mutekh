@@ -5,4 +5,4 @@ cpu_context.o
 
 subdirs = libc
 
-
+copy = ldscript

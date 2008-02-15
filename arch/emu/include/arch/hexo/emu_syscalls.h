@@ -26,8 +26,8 @@
 #include <hexo/types.h>
 #include <stdarg.h>
 
-#include "arch/emu/include/arch/hexo/syscalls_nums.h"
-#include "arch/emu/include/arch/hexo/syscalls_args.h"
+#include "arch/hexo/syscalls_nums.h"
+#include "arch/hexo/syscalls_args.h"
 
 /* FIXME linux specific ? */
 

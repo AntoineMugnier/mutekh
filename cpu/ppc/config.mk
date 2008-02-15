@@ -1,2 +1,2 @@
 CPUCFLAGS=
-CPUTOOLS=ppc-unknown-elf-
+CPUTOOLS=powerpc-unknown-elf-

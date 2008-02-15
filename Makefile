@@ -16,69 +16,47 @@
 #     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 #
 
-BASE_PWD:=$(PWD)
-BUILD_DIR=$(BASE_PWD)
-SRC_DIR=$(BASE_PWD)
+BUILD_DIR?=$(PWD)
+CONF_DIR?=$(BUILD_DIR)
+MUTEK_SRC_DIR=$(SRC_DIR)
+ifeq ($(MUTEK_SRC_DIR),)
+MUTEK_SRC_DIR:=$(PWD)
+endif
+CURRENT_DIR:=$(PWD)
 CONF=myconfig
 LIBAPP=default.o
 
-export SRC_DIR
+export MUTEK_SRC_DIR
 export BUILD_DIR
+export CONF_DIR
+export CURRENT_DIR
 export LIBAPP
 export MODULES
 MAKEFLAGS = -s
 
-kernel: config $(BUILD_DIR)
+kernel: config $(BUILD_DIR) $(CONF_DIR)
 	echo "Using '$(CONF)' configuration file."
 	echo "Using '$(LIBAPP)' application library or object file."
-	$(MAKE) -C $(SRC_DIR) -f $(SRC_DIR)/scripts/rules_main.mk kernel
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk kernel
+
+include $(MUTEK_SRC_DIR)/scripts/config.mk
+
+ifneq ($(BUILD_DIR),$(CONF_DIR))
 
 $(BUILD_DIR):
 	mkdir -p $@
 
-$(BUILD_DIR)/.config.mk $(BUILD_DIR)/.config.m4 $(BUILD_DIR)/.config.h: $(CONF)
-	cd $(SRC_DIR) ; perl $(SRC_DIR)/scripts/config.pl	\
-		--input=$(CONF)					\
-		--python=$(BUILD_DIR)/.config.py		\
-		--m4=$(BUILD_DIR)/.config.m4			\
-		--header=$(BUILD_DIR)/.config.h			\
-		--makefile=$(BUILD_DIR)/.config.mk
+endif
 
-config: $(BUILD_DIR) $(BUILD_DIR)/.config.mk $(BUILD_DIR)/.config.m4 $(BUILD_DIR)/.config.h
+cflags:
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@
 
-checkconfig:
-	cd $(SRC_DIR) ; perl $(SRC_DIR)/scripts/config.pl	\
-		--input=$(CONF) --check
+show_paths:
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@
 
-listconfig:
-	cd $(SRC_DIR) ; perl $(SRC_DIR)/scripts/config.pl	\
-		--input=$(CONF) --list
-
-listallconfig:
-	cd $(SRC_DIR) ; perl $(SRC_DIR)/scripts/config.pl	\
-		--input=$(CONF) --list=all
-
-showconfig:
-	cd $(SRC_DIR) ; perl $(SRC_DIR)/scripts/config.pl	\
-		--input=$(CONF) --info=$(TOKEN)
-
-$(CONF):
-	test -f $(CONF) || ( make helpconfig ; false )
-
-helpconfig:
-	echo -e "The \`$(CONF)' source configuration file is missing."
-	echo -e "Please set the CONF variable to use an alternative"
-	echo -e "file or provide the missing file.\n"
-	echo -e "Available configuration options can be displayed"
-	echo -e "with 'make listconfig' and 'make listallconfig'.\n"
-	echo -e "Informations about a specific configuration token"
-	echo -e "can be displayed with 'make showconfig TOKEN=...'.\n"
-
-clean_sub:
-	$(MAKE) -C $(SRC_DIR) -f $(SRC_DIR)/scripts/rules_main.mk clean clean_sub
-
-clean: clean_sub
-	rm -f $(BUILD_DIR)/.config.*
+clean:
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@
+	rm -f $(CONF_DIR)/.config.*
 
 re: clean kernel
 
