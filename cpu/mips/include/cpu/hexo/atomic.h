@@ -29,15 +29,163 @@
 
 #define CPU_ATOMIC_H_
 
-//#define HAS_CPU_ATOMIC_INC
-//#define HAS_CPU_ATOMIC_DEC
-//#define HAS_CPU_ATOMIC_TESTSET
-//#define HAS_CPU_ATOMIC_WAITSET
-//#define HAS_CPU_ATOMIC_TESTCLR
-//#define HAS_CPU_ATOMIC_WAITCLR
-//#define HAS_CPU_ATOMIC_SET
-//#define HAS_CPU_ATOMIC_CLR
-//#define HAS_CPU_ATOMIC_TEST
+#define HAS_CPU_ATOMIC_INC
+
+static inline bool_t
+cpu_atomic_inc(volatile atomic_int_t *a)
+{
+  reg_t  result, temp;
+
+  asm volatile(
+	       "1:     ll      %1, %2		     \n"
+	       "       addiu   %0, %1, 1             \n"
+	       "       sc      %0, %2                \n"
+	       "       beqz    %0, 1b                \n"
+	       : "=&r" (temp), "=&r" (result), "=m" (*a)
+	       : "m" (*a)
+	       );
+
+  return result + 1 != 0;
+}
+
+#define HAS_CPU_ATOMIC_DEC
+
+static inline bool_t
+cpu_atomic_dec(volatile atomic_int_t *a)
+{
+  reg_t  result, temp;
+
+  asm volatile (
+		"1:     ll      %1, %2		     \n"
+		"       addiu   %0, %1, -1            \n"
+		"       sc      %0, %2                \n"
+		"       beqz    %0, 1b                \n"
+		: "=&r" (temp), "=&r" (result), "=m" (*a)
+		: "m" (*a)
+		);
+
+  return result - 1 != 0;
+}
+
+#define HAS_CPU_ATOMIC_TESTSET
+
+static inline bool_t
+cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
+{
+  reg_t mask = 1 << n;
+  reg_t result, temp, temp2;
+
+  asm volatile (".set push			     \n"
+		".set noreorder			     \n"
+		"1:     ll      %1, %2		     \n"
+		"       and     %3, %1, %5           \n"
+		"       bnez    %3, 2f               \n"
+		"       or      %0, %1, %5	     \n"
+		"       sc      %0, %2               \n"
+		".set pop			     \n"
+		"       beqz    %0, 1b               \n"
+		"2:				     \n"
+		: "=&r" (temp), "=&r" (temp2), "=m" (*a), "=&r" (result)
+		: "m" (*a), "r" (mask)
+		);
+
+  return result != 0;
+}
+
+#define HAS_CPU_ATOMIC_WAITSET
+
+static inline void
+cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
+{
+  reg_t mask = 1 << n;
+  reg_t temp, temp2;
+
+  asm volatile (".set push			     \n"
+		".set noreorder			     \n"
+		"1:     ll      %1, %2		     \n"
+		"       and     %0, %1, %4           \n"
+		"       bnez    %0, 1b               \n"
+		"       or      %0, %1, %4	     \n"
+		"       sc      %0, %2               \n"
+		".set pop			     \n"
+		"       beqz    %0, 1b               \n"
+		"2:				     \n"
+		: "=&r" (temp), "=&r" (temp2), "=m" (*a)
+		: "m" (*a), "r" (mask)
+		);
+}
+
+#define HAS_CPU_ATOMIC_TESTCLR
+
+static inline bool_t
+cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
+{
+  reg_t mask = 1 << n;
+  reg_t result, temp, temp2;
+
+  asm volatile (".set push			     \n"
+		".set noreorder			     \n"
+		"1:     ll      %1, %2		     \n"
+		"       and     %3, %1, %5           \n"
+		"       beqz    %3, 2f               \n"
+		"       xor     %0, %1, %5	     \n"
+		"       sc      %0, %2               \n"
+		".set pop			     \n"
+		"       beqz    %0, 1b               \n"
+		"2:				     \n"
+		: "=&r" (temp), "=&r" (temp2), "=m" (*a), "=&r" (result)
+		: "m" (*a), "r" (mask)
+		);
+
+  return result != 0;
+}
+
+#define HAS_CPU_ATOMIC_WAITCLR
+
+static inline void
+cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
+{
+  reg_t mask = 1 << n;
+  reg_t temp, temp2;
+
+  asm volatile (".set push			     \n"
+		".set noreorder			     \n"
+		"1:     ll      %1, %2		     \n"
+		"       and     %0, %1, %4           \n"
+		"       beqz    %0, 1b               \n"
+		"       xor     %0, %1, %4	     \n"
+		"       sc      %0, %2               \n"
+		".set pop			     \n"
+		"       beqz    %0, 1b               \n"
+		"2:				     \n"
+		: "=&r" (temp), "=&r" (temp2), "=m" (*a)
+		: "m" (*a), "r" (mask)
+		);
+}
+
+#define HAS_CPU_ATOMIC_SET
+
+static inline void
+cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
+{
+  *a |= 1 << n;
+}
+
+#define HAS_CPU_ATOMIC_CLR
+
+static inline void
+cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
+{
+  *a &= ~(1 << n);
+}
+
+#define HAS_CPU_ATOMIC_TEST
+
+static inline bool_t
+cpu_atomic_bit_test(volatile atomic_int_t *a, uint_fast8_t n)
+{
+  return (*a & (1 << n)) == 0;
+}
 
 #endif
 
