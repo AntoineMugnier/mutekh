@@ -21,6 +21,8 @@
 #
 
 use strict;
+use Cwd;
+use File::Basename;
 
 my %config_opts;
 my $err_flag = 0;
@@ -251,9 +253,19 @@ my %config_cmd =
 ## parses source and configuration files and process %config blocks
 ##
 
+my %processed;
+
 sub process_file
 {
     my ($file) = @_;
+
+    # skip already processed files
+    $file = Cwd::realpath($file);
+
+    return if ($processed{$file});
+    $processed{$file} = 1;
+
+    # process file
 
     if (open(FILE, "< ".$file))
     {
@@ -295,13 +307,13 @@ sub process_file
 		    if ($state)
 		    {
 			error("$file:$lnum: unexpected `%config', previous `".
-			      $name."' block not terminated");
+			      $1."' block not terminated");
 			$state = 0;
 		    }
 
 		    if ($opts = $config_opts{$1})
 		    {
-			error("$file:$lnum: `".$name."' block already declared ".
+			error("$file:$lnum: `".$1."' block already declared ".
 			      "at `".$$opts{location}."'");
 			next;
 		    }
@@ -379,8 +391,6 @@ sub explore
 	# remove leading ./ from path
 	$ent =~ s/^\.\///;
 
-	$ENV{CONFIGPATH} = $dir;
-
 	if ((-d $ent) && (! -l $ent))
 	{
 	    explore($ent);
@@ -389,6 +399,7 @@ sub explore
 	{
 	    if (($ent =~ /\.c$/) || ($ent =~ /\.h$/) || ($ent =~ /\.config$/))
 	    {
+		$ENV{CONFIGPATH} = dirname(Cwd::realpath($ent));
 		process_file($ent);
 	    }
 	}
@@ -868,6 +879,8 @@ sub read_myconfig
 {
     my ($file) = @_;
 
+    $ENV{CONFIGPATH} = dirname(Cwd::realpath($file));
+
     if (open(FILE, "<".$file))
     {
 	my $lnum = 0;
@@ -878,6 +891,12 @@ sub read_myconfig
 
 	    # skip empty lines and comment lines
 	    next if ($line =~ /^[ \t]*(\#.*)?$/);
+
+	    while ($line =~ /%(\w+)/)
+	    {
+		my $text = $ENV{$1};
+		$line =~ s/%$1/$text/g;
+	    }
 
 	    if ($line =~ /^\s*([^\s]+)\s+([^\s]*)/)
 	    {

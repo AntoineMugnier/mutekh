@@ -45,7 +45,7 @@ LISTS=$(foreach mn,$(MODULE_NAMES),$($(mn)_OBJ_DIR)/obj.list)
 
 include $(MUTEK_SRC_DIR)/scripts/cflags.mk
 
-show_paths:
+showpaths:
 	@echo MUTEK_SRC_DIR $(MUTEK_SRC_DIR)
 	@echo BUILD_DIR $(BUILD_DIR)
 	@echo CONF_DIR $(CONF_DIR)
@@ -77,8 +77,7 @@ clean:
 
 $(KERNEL_FILE): $(CONF_DIR)/.config.h $(LISTS) \
 		$(arch_OBJ_DIR)/ldscript \
-		$(cpu_OBJ_DIR)/ldscript \
-		$(LIBAPP)
+		$(cpu_OBJ_DIR)/ldscript
 	echo '    LD      $@'
 	$(LD) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		-q $$(cat /dev/null $(filter %.list,$^)) \

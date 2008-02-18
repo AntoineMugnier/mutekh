@@ -24,19 +24,16 @@ MUTEK_SRC_DIR:=$(PWD)
 endif
 CURRENT_DIR:=$(PWD)
 CONF=myconfig
-LIBAPP=default.o
 
 export MUTEK_SRC_DIR
 export BUILD_DIR
 export CONF_DIR
 export CURRENT_DIR
-export LIBAPP
 export MODULES
 MAKEFLAGS = -s
 
 kernel: config $(BUILD_DIR) $(CONF_DIR)
 	echo "Using '$(CONF)' configuration file."
-	echo "Using '$(LIBAPP)' application library or object file."
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk kernel
 
 include $(MUTEK_SRC_DIR)/scripts/config.mk
@@ -51,7 +48,7 @@ endif
 cflags:
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@
 
-show_paths:
+showpaths: config
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@
 
 clean:
