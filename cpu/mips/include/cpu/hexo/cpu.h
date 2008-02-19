@@ -23,6 +23,8 @@
 #error This file can not be included directly
 #else
 
+#include <hexo/endian.h>
+
 #define CPU_CPU_H_
 
 struct cpu_cld_s
@@ -94,6 +96,30 @@ static inline void *cpu_get_cls(cpu_id_t cpu_id)
   return cpu_cld_list[cpu_id]->cpu_local_storage;
 #endif
   return NULL;
+}
+
+static inline void cpu_dcache_invld(void *ptr)
+{
+  asm volatile (
+#ifdef CONFIG_ARCH_SOCLIB
+		" lw $0, (%0)"
+		: : "r" (ptr)
+#else
+		" cache %0, %1"
+		: : "i" (0x11) , "R" (*(uint8_t*)(ptr))
+#endif
+		: "memory"
+		);
+}
+
+static inline void cpu_dcache_invld_buf(void *ptr, size_t size)
+{
+  uint8_t *ptr_;
+
+  for (ptr_ = ALIGN_ADDRESS_LOW(ptr, CONFIG_CPU_CACHE_LINE);
+       ptr_ < (uint8_t*)ptr + size;
+       ptr_ += CONFIG_CPU_CACHE_LINE)
+    cpu_dcache_invld(ptr_);
 }
 
 #endif

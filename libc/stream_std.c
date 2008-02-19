@@ -7,16 +7,26 @@
 #include <hexo/device.h>
 #include <hexo/driver.h>
 
+#if defined(CONFIG_MUTEK_CONSOLE)
 extern struct device_s *tty_dev;
+#endif
 
 static ssize_t	tty_read(fd_t fd, void *buffer, size_t count)
 {
+#if defined(CONFIG_MUTEK_CONSOLE)
   return dev_char_read(tty_dev, buffer, count);
+#else
+  return 0;
+#endif
 }
 
 static ssize_t	tty_write(fd_t fd, const void *buffer, size_t count)
 {
+#if defined(CONFIG_MUTEK_CONSOLE)
   return dev_char_write(tty_dev, buffer, count);
+#else
+  return 0;
+#endif
 }
 
 static error_t	empty_close(fd_t fd)

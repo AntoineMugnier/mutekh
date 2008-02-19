@@ -53,8 +53,15 @@ void arch_start_other_cpu(void);
 
 cpu_cycle_t cpu_cycle_count(void);
 
-/* cpu trap instruction */
+/** cpu trap instruction */
 void cpu_trap();
+
+/** invalidate the cpu data cache containing this address */
+static void cpu_dcache_invld(void *ptr);
+
+/** invalidate all the cpu data cache lines within given range.
+    size is in bytes. */
+static void cpu_dcache_invld_buf(void *ptr, size_t size);
 
 #endif
 
