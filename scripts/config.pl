@@ -70,7 +70,7 @@ sub error
     my ($msg, @list) = @_;
     my $tlist = join(", ", @list) if (@list);
 
-    print text80($msg.$tlist, "      ", "error ")."\n";
+    print STDERR text80($msg.$tlist, "      ", "error ")."\n";
 
     $err_flag = 1;
 }
@@ -80,7 +80,7 @@ sub warning
     my ($msg, @list) = @_;
     my $tlist = join(", ", @list) if (@list);
 
-    print text80($msg.$tlist, "        ", "warning ")."\n";
+    print STDERR text80($msg.$tlist, "        ", "warning ")."\n";
 }
 
 sub check_rule
