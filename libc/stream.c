@@ -4,21 +4,6 @@
 #include <assert.h>
 #include <string.h>
 
-/*
-
-%config CONFIG_LIBC_STREAM
-desc enable C library file streaming functions (fopen, fclose, ...)
-require CONFIG_LIBC_STREAM_BUFFER_SIZE
-%config end
-
-%config CONFIG_LIBC_STREAM_BUFFER_SIZE
-desc C library default buffer size for streams
-parent CONFIG_LIBC_STREAM
-default 1024
-%config end
-
-*/
-
 const struct stream_ops_s	*stream_fops;
 
 /************************************************************************/

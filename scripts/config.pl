@@ -397,7 +397,7 @@ sub explore
 	}
 	else
 	{
-	    if (($ent =~ /\.c$/) || ($ent =~ /\.h$/) || ($ent =~ /\.config$/))
+	    if ($ent =~ /\.config$/)
 	    {
 		$ENV{CONFIGPATH} = dirname(Cwd::realpath($ent));
 		process_file($ent);

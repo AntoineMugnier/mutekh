@@ -25,15 +25,6 @@
 
 #include <hexo/types.h>
 
-/*
-
-%config CONFIG_LIBC_SETJMP_REG_COUNT
-desc Specify register count to allocate in setjmp env structure
-flags mandatory nodefine
-%config end
-
-*/
-
 typedef reg_t jmp_buf[CONFIG_LIBC_SETJMP_REG_COUNT + 1]; /* last value is setjump return value */
 typedef jmp_buf sigjmp_buf;
 

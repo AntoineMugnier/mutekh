@@ -19,30 +19,6 @@
 
 */
 
-/*
-
-    %config CONFIG_HEXO_MEMALLOC_ALGO
-    desc Enable use of memory allocation algorithm.
-    desc Incremental memory allocation without freeing is performed if this token is undefined.
-    default defined
-    require CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
-    single CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
-    %config end
-
-    %config CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT
-    desc select memory allocation algorithm first fit
-    parent CONFIG_HEXO_MEMALLOC_ALGO
-    default defined
-    %config end
-
-    %config CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT
-    desc select memory allocation algorithm best fit
-    parent CONFIG_HEXO_MEMALLOC_ALGO
-    default undefined
-    %config end
-
-*/
-
 #include <hexo/alloc.h>
 #include <string.h>
 

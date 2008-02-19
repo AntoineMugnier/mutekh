@@ -19,16 +19,6 @@
 
 */
 
-/*
-
-    %config CONFIG_DRIVER_NET_NE2000_FRAGMENT
-    desc NE2000 driver option: use fragmenation
-    parent CONFIG_DRIVER_NET_NE2000
-    default defined
-    %config end
-
-*/
-
 #include <hexo/types.h>
 
 #include <hexo/device/icu.h>

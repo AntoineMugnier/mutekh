@@ -19,16 +19,6 @@
 
 */
 
-/*
-
-    %config CONFIG_ARCH_EMU_MEMORY
-    desc Set the amount of memory to emulate in bytes
-    parent CONFIG_ARCH_EMU
-    default 16777216
-    %config end
-
-*/
-
 #include <hexo/alloc.h>
 #include <hexo/segment.h>
 #include <hexo/lock.h>

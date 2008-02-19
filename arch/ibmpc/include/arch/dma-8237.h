@@ -6,15 +6,6 @@
 # warning CONFIG_ARCH_IBMPC_DMA configuration token is disabled
 #else
 
-/*
-
-%config CONFIG_ARCH_IBMPC_DMA
-desc support 8237 dma controller found in IBM PCs
-parent CONFIG_ARCH_IBMPC
-%config end
-
-*/
-
 /********************* */
 #define DMA8237_ADDR_8BITS_REG(c)	(0x00 + (c) * 2)
 #define DMA8237_ADDR_16BITS_REG(c)	(0xc0 + (c) * 4 - 16)

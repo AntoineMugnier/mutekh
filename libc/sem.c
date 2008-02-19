@@ -19,14 +19,6 @@
 
 */
 
-/*
-    %config CONFIG_LIBC_SEMAPHORE
-    desc libc semaphore feature enabled
-    default defined
-    depend CONFIG_HEXO_SCHED
-    %config end
-*/
-
 #include <hexo/scheduler.h>
 #include <hexo/error.h>
 

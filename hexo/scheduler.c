@@ -310,17 +310,6 @@ void sched_global_init(void)
   sched_queue_init(__sched_root());
 }
 
-/*
-
-    %config CONFIG_HEXO_SCHED_IDLE_STACK_SIZE
-    desc Size of the stack allocated for idle scheduler context.
-    desc Stack size is specified in stack words count.
-    parent CONFIG_HEXO_SCHED
-    default 256
-    %config end
-
-*/
-
 void sched_cpu_init(void)
 {
   struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);

@@ -19,51 +19,6 @@
 
 */
 
-/*
-
-    %config CONFIG_HEXO_MEMALLOC_ALIGN
-    desc Memory allocation block address alignment
-    flags mandatory
-    default 0x20
-    %config end
-
-    %config CONFIG_HEXO_MEMALLOC_DEBUG
-    desc When enabled all allocated and freed memory blocks will filled be with 0x5a and 0xa5 bytes
-    %config end
-
-    %config CONFIG_HEXO_MEMALLOC_STATS
-    desc keep stats about allocated blocks count and size
-    depend CONFIG_HEXO_MEMALLOC_ALGO
-    %config end
-
-    %config CONFIG_HEXO_MEMALLOC_SIGNED
-    desc When enabled all memory block headers will include a special magic value
-    depend CONFIG_HEXO_MEMALLOC_ALGO
-    %config end
-
-    %config CONFIG_HEXO_MEMALLOC_GUARD
-    desc Add a guard zone before and after each allocated block.
-    desc All guard zone content can be check with the mem_guard_check() function to detect bad memory write access.
-    depend CONFIG_HEXO_MEMALLOC_ALGO
-    depend CONFIG_HEXO_MEMALLOC_DEBUG
-    suggest CONFIG_HEXO_MEMALLOC_ALIGN=1
-    require CONFIG_HEXO_MEMALLOC_GUARD_SIZE
-    %config end
-
-    %config CONFIG_HEXO_MEMALLOC_GUARD_SIZE
-    desc Memory allocation debug guard zone size in bytes.
-    parent CONFIG_HEXO_MEMALLOC_GUARD
-    default 256
-    %config end
-
-    %config CONFIG_HEXO_MEMALLOC_GUARD_INSTRUMENT
-    desc Automatically check guard zone on all function calls and returns.
-    parent CONFIG_HEXO_MEMALLOC_GUARD
-    depend CONFIG_COMPILE_INSTRUMENT
-    %config end
-*/
-
-
 #ifndef ALLOC_H_
 #define ALLOC_H_
 

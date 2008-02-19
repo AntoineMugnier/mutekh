@@ -19,16 +19,6 @@
 
 */
 
-/*
-
-	%config CONFIG_NETWORK_PACKET_ASM
-	desc A processor specific packet.h header is available.
-	default undefined
-	flags nodefine
-	%config end
-
-*/
-
 #ifndef NETINET_PACKET_H_
 #define NETINET_PACKET_H_
 

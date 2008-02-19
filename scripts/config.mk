@@ -32,7 +32,7 @@ $(CONF_TMP_BASE).m4 $(CONF_TMP_BASE).mk $(CONF_TMP_BASE).py $(CONF_TMP_BASE).h: 
 		--header=$(CONF_TMP_BASE).h			\
 		--makefile=$(CONF_TMP_BASE).mk
 
-config: $(CONF_DIR) $(CONF_DIR)/.config.mk $(CONF_DIR)/.config.m4 $(CONF_DIR)/.config.h
+config: $(CONF_DIR) $(CONF_DIR)/.config.mk $(CONF_DIR)/.config.py $(CONF_DIR)/.config.m4 $(CONF_DIR)/.config.h
 
 checkconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\

@@ -19,16 +19,6 @@
 
 */
 
-/*
-
-    %config CONFIG_HEXO_DEVICE_TREE
-    desc Have all device nodes sorted in a tree form
-    default defined
-    %config end
-
-*/
-
-
 #ifndef __DEVICE_H__
 #define __DEVICE_H__
 

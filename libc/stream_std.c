@@ -7,17 +7,6 @@
 #include <hexo/device.h>
 #include <hexo/driver.h>
 
-/*
-
-%config CONFIG_LIBC_STREAM_STD
-desc Enable support for stdin, stdout and stderr through tty device
-parent CONFIG_LIBC_STREAM
-depend CONFIG_MUTEK_CONSOLE
-default defined
-%config end
-
-*/
-
 extern struct device_s *tty_dev;
 
 static ssize_t	tty_read(fd_t fd, void *buffer, size_t count)

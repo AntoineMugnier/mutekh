@@ -19,43 +19,6 @@
 
 */
 
-/*
-
-    %config CONFIG_HEXO_SCHED
-    desc Hexo scheduler feature is enabled
-    default defined
-    require CONFIG_HEXO_SCHED_IDLE_STACK_SIZE
-    require CONFIG_HEXO_SCHED_MIGRATION CONFIG_HEXO_SCHED_ALGO_STATIC
-    single  CONFIG_HEXO_SCHED_MIGRATION CONFIG_HEXO_SCHED_ALGO_STATIC
-    %config end
-
-    %config CONFIG_HEXO_SCHED_PREEMPT
-    desc Scheduler is preemptiv
-    parent CONFIG_HEXO_SCHED
-    depend CONFIG_DRIVER_TIMER
-    %config end
-
-    %config CONFIG_HEXO_SCHED_MIGRATION
-    desc Scheduler algorithm use permanent context migration among available processors
-    parent CONFIG_HEXO_SCHED
-    default defined
-    %config end
-
-    %config CONFIG_HEXO_SCHED_ALGO_STATIC
-    desc Scheduler algorithm use per cpu context list
-    parent CONFIG_HEXO_SCHED
-    default undefined
-    %config end
-
-    %config CONFIG_HEXO_SCHED_AFFINITY
-    desc Handle context cpu affininty
-    parent CONFIG_HEXO_SCHED
-    default undefined
-    depend CONFIG_SMP
-    %config end
-
-*/
-
 #ifndef __HEXO_SCHEDULER_H__
 #define __HEXO_SCHEDULER_H__
 

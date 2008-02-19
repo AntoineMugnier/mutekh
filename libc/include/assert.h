@@ -19,14 +19,6 @@
 
 */
 
-/*
-
-    %config CONFIG_LIBC_ASSERT
-    desc Enable assert() support
-    %config end
-
-*/
-
 #ifndef __ASSERT_H_
 #define __ASSERT_H_
 

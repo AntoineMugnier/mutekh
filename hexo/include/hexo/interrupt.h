@@ -19,16 +19,6 @@
 
 */
 
-
-/*
-
-    %config CONFIG_HEXO_IPI
-    desc Inter processor interrupts support
-    depend CONFIG_SMP
-    %config end
-
-*/
-
 #ifndef INTERRUPT_H_
 #define INTERRUPT_H_
 

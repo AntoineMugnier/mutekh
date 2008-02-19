@@ -21,17 +21,6 @@
 
 */
 
-/*
-
-	%config CONFIG_LIBC_STRING_ASM
-	desc A processor specific libc string.h header
-	desc is available.
-	default undefined
-	flags nodefine
-	%config end
-
-*/
-
 #ifndef STRING_H_
 #define STRING_H_
 

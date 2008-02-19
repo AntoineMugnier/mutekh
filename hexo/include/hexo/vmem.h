@@ -26,41 +26,6 @@
 //# warning Virtual memory support is not enabled in configuration file
 #else
 
-/*
-
-%config CONFIG_HEXO_VMEM
-desc Enable virtual memory support
-default undefined
-require CONFIG_HEXO_VMEM_PAGESIZE
-require CONFIG_ARCH_IBMPC
-%config end
-
-%config CONFIG_HEXO_VMEM_PAGESIZE
-desc Virtual memory physical page size
-parent CONFIG_HEXO_VMEM
-default 4096
-%config end
-
-%config CONFIG_HEXO_VMEM_START
-desc Virtual memory minimal user accessible start address
-parent CONFIG_HEXO_VMEM
-default 0x40000000
-%config end
-
-%config CONFIG_HEXO_VMEM_END
-desc Virtual memory minimal user accessible end address
-parent CONFIG_HEXO_VMEM
-default 0xc0000000
-%config end
-
-%config CONFIG_HEXO_VMEM_INITIAL
-desc Size of initial memory reserved for kernel use
-default 0x00800000
-%config end
-
-*/
-
-
 /***********************************************************************
  *  main virtual memory interface
  */
