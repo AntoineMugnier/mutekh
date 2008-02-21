@@ -28,8 +28,10 @@
 #include <hexo/alloc.h>
 #include <hexo/scheduler.h>
 
+#if CONFIG_ARCH_SOCLIB_RAMLOCK
 extern __ldscript_symbol_t __ramlock_base_start;
 uintptr_t __ramlock_base = (uintptr_t)&__ramlock_base_start;
+#endif
 
 #ifdef CONFIG_SMP
 static uint_fast8_t	cpu_count = 1;
