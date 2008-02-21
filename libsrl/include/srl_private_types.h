@@ -43,16 +43,18 @@ typedef struct srl_abstract_task_s {
 	srl_task_func_t *bootstrap;
 	srl_task_func_t *func;
 	void *args;
+	void *stack;
 	size_t stack_size;
 	struct sched_context_s context;
 } srl_task_s;
 
-#define SRL_TASK_INITIALIZER(b, f, s, a)								   \
+#define SRL_TASK_INITIALIZER(b, f, ss, s, a)							   \
 	{																   \
 		.bootstrap = (srl_task_func_t *)b,							   \
 		.func = (srl_task_func_t *)f,								   \
 		.args = (void*)a,											   \
-		.stack_size = s,											   \
+		.stack = (void*)s,											   \
+		.stack_size = ss,										       \
 	}
 
 struct srl_abstract_cpustate_s __attribute__((deprecated));

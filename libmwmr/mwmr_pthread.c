@@ -37,7 +37,7 @@ void mwmr_read( mwmr_t fifo, void *mem, size_t len )
     pthread_yield();
 }
 
-void mwmr_write( mwmr_t fifo, void *mem, size_t len )
+void mwmr_write( mwmr_t fifo, const void *mem, size_t len )
 {
     unsigned int put = 0;
     uint8_t *ptr = (uint8_t *)mem;
@@ -97,7 +97,7 @@ ssize_t mwmr_try_read( mwmr_t fifo, void *mem, size_t len )
     return got;
 }
 
-ssize_t mwmr_try_write( mwmr_t fifo, void *mem, size_t len )
+ssize_t mwmr_try_write( mwmr_t fifo, const void *mem, size_t len )
 {
     unsigned int put = 0;
     uint8_t *ptr = (uint8_t *)mem;

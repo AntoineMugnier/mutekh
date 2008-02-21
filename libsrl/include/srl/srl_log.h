@@ -14,6 +14,8 @@
 #ifndef SRL_LOG_H_
 #define SRL_LOG_H_
 
+#if CONFIG_LIBC_STREAM_STD
+
 #include <stdio.h>
 
 enum __srl_verbosity {
@@ -42,5 +44,17 @@ enum __srl_verbosity {
         }                                                           \
     } while(0)
 
+#else /* CONFIG_LIBC_STREAM_STD */
+
+#define srl_log( l, c ) do {} while(0)
+#define srl_log_printf( l, c... ) do {} while(0)
+
+#define srl_assert(expr) \
+	do {				 \
+		if ( ! (expr) )	 \
+			while(1);	 \
+	} while (0)
+
+#endif /* CONFIG_LIBC_STREAM_STD */
 
 #endif

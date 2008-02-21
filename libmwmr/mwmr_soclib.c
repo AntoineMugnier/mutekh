@@ -96,7 +96,7 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 	mwmr_unlock( &status->lock );
 }
 
-void mwmr_write( mwmr_t *fifo, void *_ptr, size_t lensw )
+void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
     soclib_mwmr_status_s *const status = &fifo->status;
@@ -169,7 +169,7 @@ size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 	return done;
 }
 
-size_t mwmr_try_write( mwmr_t *fifo, void *_ptr, size_t lensw )
+size_t mwmr_try_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
 	size_t done = 0;

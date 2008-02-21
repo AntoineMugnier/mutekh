@@ -23,19 +23,19 @@ static inline void srl_mwmr_read( srl_mwmr_t mwmr, void *buffer, size_t size )
 	mwmr_read( mwmr, buffer, size );
 }
 
-static inline void srl_mwmr_write( srl_mwmr_t mwmr, const void *buffer, size_t size );
+static inline void srl_mwmr_write( srl_mwmr_t mwmr, const void *buffer, size_t size )
 {
 	mwmr_write( mwmr, buffer, size );
 }
 
 static inline size_t srl_mwmr_try_read( srl_mwmr_t mwmr, void *buffer, size_t size )
 {
-	mwmr_try_read( mwmr, buffer, size );
+	return mwmr_try_read( mwmr, buffer, size );
 }
 
-static inline size_t srl_mwmr_try_write( srl_mwmr_t mwmr, const void *buffer, size_t size );
+static inline size_t srl_mwmr_try_write( srl_mwmr_t mwmr, const void *buffer, size_t size )
 {
-	mwmr_try_write( mwmr, buffer, size );
+	return mwmr_try_write( mwmr, buffer, size );
 }
 
 static inline void srl_mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,

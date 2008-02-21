@@ -60,9 +60,9 @@ void mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 #endif
 
 void mwmr_read( mwmr_t*, void *, size_t );
-void mwmr_write( mwmr_t*, void *, size_t );
+void mwmr_write( mwmr_t*, const void *, size_t );
 
 size_t mwmr_try_read( mwmr_t*, void *, size_t );
-size_t mwmr_try_write( mwmr_t*, void *, size_t );
+size_t mwmr_try_write( mwmr_t*, const void *, size_t );
 
 #endif
