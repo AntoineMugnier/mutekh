@@ -75,11 +75,20 @@ clean:
 		-f $(MUTEK_SRC_DIR)/scripts/local.mk \
 		obj.list
 
-$(KERNEL_FILE): $(CONF_DIR)/.config.h $(LISTS) \
+$(target).out: $(CONF_DIR)/.config.m4 $(LISTS) \
 		$(arch_OBJ_DIR)/ldscript \
 		$(cpu_OBJ_DIR)/ldscript
 	echo '    LD      $@'
 	$(LD) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
+		-q $$(cat /dev/null $(filter %.list,$^)) \
+		$(filter %.o,$^) $(filter %.a,$^) \
+		$(addprefix -T ,$(filter %ldscript,$^)) \
+		-o $(BUILD_DIR)/$@
+
+$(target).o: $(CONF_DIR)/.config.m4 $(LISTS)
+	echo '    LD      $@'
+	$(LD) -r \
+		$(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		-q $$(cat /dev/null $(filter %.list,$^)) \
 		$(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \

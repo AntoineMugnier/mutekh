@@ -63,6 +63,20 @@ INCS=-nostdinc -D__MUTEK__ \
 	-include $(CONF_DIR)/.config.h
 
 cflags:
-	echo $(INCS)
+	@echo $(INCS)
+
+TARGET_MK=flags.mk
+
+mkmf: $(TARGET_MK)
+
+$(TARGET_MK):
+	@> $@
+	@echo 'CC=$(CC)' >> $@
+	@echo 'LD=$(LD)' >> $@
+	@echo 'AR=$(AR)' >> $@
+	@echo 'AS=$(AS)' >> $@
+	@echo 'OBJCOPY=$(OBJCOPY)' >> $@
+	@echo 'OBJDUMP=$(OBJDUMP)' >> $@
+	@echo 'CFLAGS=$(INCS)' >> $@
 
 .SUFFIXES:

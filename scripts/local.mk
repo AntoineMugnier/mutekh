@@ -4,7 +4,7 @@ include $(CONF_DIR)/.config.mk
 $(SRC_DIR)/Makefile:
 	@true
 
-DEPS=$(objs:.o=.deps)
+DEPS=$(filter %.deps,$(objs:.o=.deps))
 
 VPATH= . $(SRC_DIR)
 
