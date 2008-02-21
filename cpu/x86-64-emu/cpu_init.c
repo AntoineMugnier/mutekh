@@ -37,31 +37,27 @@ CPU_LOCAL void *__cpu_context_data_base;
 /* cpu interrupts state */
 volatile CPU_LOCAL bool_t cpu_irq_state = 0;
 
+static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
+struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
+
 error_t
 cpu_global_init(void)
 {
   return 0;
 }
 
-struct cpu_cld_s
-{
-  /* CPU id */
-  uint32_t			id;
-};
-
 static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
 
-struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
+struct cpu_cld_s *cpu_init(void)
 {
   struct cpu_cld_s	*cld;
-  void			*cls;
-  uint16_t			cls_sel;
-  uint_fast16_t		i;
+  uint_fast16_t		id = cpu_id();
 
   if (!(cld = mem_alloc(sizeof (struct cpu_cld_s), MEM_SCOPE_SYS)))
     return NULL;
 
   cld->id = cpu_id;
+  cpu_cld_list[id] = cld;
 
 #if defined(CONFIG_DEBUG)
   /* enable alignment check */
@@ -70,21 +66,12 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
 	       "	popf						\n");
 #endif
 
+  CPU_LOCAL_SET(cpu_cld, cld);
+
   return cld;
 }
 
 void cpu_start_other_cpu(void)
 {
-}
-
-uint_fast8_t cpu_id(void)
-{
-#ifdef CONFIG_SMP
-  struct cpu_cld_s	*cld = CPU_LOCAL_GET(cpu_cld);
-
-  return cld->id;
-#else
-  return 0;
-#endif
 }
 

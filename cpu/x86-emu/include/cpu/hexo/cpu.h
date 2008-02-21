@@ -31,7 +31,7 @@
 static inline cpu_id_t cpu_id(void)
 {
 #ifdef CONFIG_SMP
-# error not supported
+  cpu_trap();			/* not supported */
 #else
   return 0;
 #endif  
@@ -41,18 +41,18 @@ static inline bool_t
 cpu_isbootstrap(void)
 {
 #ifdef CONFIG_SMP
-# error not supported
+  cpu_trap();			/* not supported */
 #endif
   return 1;
 }
-
-typedef uint64_t cpu_cycle_t;
 
 static inline
 void cpu_trap()
 {
   asm volatile ("int3");
 }
+
+typedef uint64_t cpu_cycle_t;
 
 static inline cpu_cycle_t
 cpu_cycle_count(void)

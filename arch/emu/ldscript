@@ -7,7 +7,7 @@ PHDRS
 
 SECTIONS
    {
-	.text 0x80100000 : AT( 0x80100000 ) { *(.text*) } : mem
+	.text 0x40100000 : AT( 0x40100000 ) { *(.text*) } : mem
 
 	.data :
 		{
