@@ -9,7 +9,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include <mwmr.h>
+#include <mwmr/mwmr.h>
 
 void mwmr_read( mwmr_t fifo, void *mem, size_t len )
 {

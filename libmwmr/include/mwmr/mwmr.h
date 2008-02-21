@@ -9,6 +9,10 @@
 #ifndef MWMR_H_
 #define MWMR_H_
 
+typedef struct mwmr_s mwmr_t;
+
+#if defined CONFIG_MWMR_PTHREAD
+
 struct mwmr_s {
 	size_t width;
 	size_t depth;
@@ -36,10 +40,29 @@ struct mwmr_s {
 		.usage = 0,										   \
 	}
 
-void mwmr_read( mwmr_s*, void *, size_t );
-void mwmr_write( mwmr_s*, void *, size_t );
+#elif defined CONFIG_MWMR_SOCLIB
 
-ssize_t mwmr_try_read( mwmr_s*, void *, size_t );
-ssize_t mwmr_try_write( mwmr_s*, void *, size_t );
+#include <soclib/mwmr_controller.h>
+
+struct mwmr_s {
+	size_t width;
+	size_t depth;
+	size_t gdepth;
+	void *buffer;
+	soclib_mwmr_status_s status;
+};
+
+void mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
+				   size_t no, const mwmr_t* mwmr );
+
+#else
+# error No valid MWMR implementation
+#endif
+
+void mwmr_read( mwmr_t*, void *, size_t );
+void mwmr_write( mwmr_t*, void *, size_t );
+
+size_t mwmr_try_read( mwmr_t*, void *, size_t );
+size_t mwmr_try_write( mwmr_t*, void *, size_t );
 
 #endif
