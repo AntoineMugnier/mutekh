@@ -14,7 +14,7 @@
 #ifndef SRL_LOG_H_
 #define SRL_LOG_H_
 
-#if CONFIG_LIBC_STREAM_STD
+#ifdef CONFIG_MUTEK_CONSOLE
 
 #include <stdio.h>
 
@@ -26,12 +26,12 @@ enum __srl_verbosity {
 };
 
 #define srl_log( l, c ) do {										   \
-		if (VERB_##l >= SRL_VERBOSITY)								   \
+		if (VERB_##l <= SRL_VERBOSITY)								   \
 			puts( c );												   \
 	} while (0)
 
 #define srl_log_printf( l, c... ) do {								   \
-		if (VERB_##l >= SRL_VERBOSITY)								   \
+		if (VERB_##l <= SRL_VERBOSITY)								   \
 			printf( c );											   \
 	} while (0)
 
@@ -44,7 +44,9 @@ enum __srl_verbosity {
         }                                                           \
     } while(0)
 
-#else /* CONFIG_LIBC_STREAM_STD */
+#else /* CONFIG_MUTEK_CONSOLE */
+
+#warning No SRL log output
 
 #define srl_log( l, c ) do {} while(0)
 #define srl_log_printf( l, c... ) do {} while(0)
@@ -55,6 +57,6 @@ enum __srl_verbosity {
 			while(1);	 \
 	} while (0)
 
-#endif /* CONFIG_LIBC_STREAM_STD */
+#endif /* CONFIG_MUTEK_CONSOLE */
 
 #endif

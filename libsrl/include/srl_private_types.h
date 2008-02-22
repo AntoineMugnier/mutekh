@@ -61,7 +61,7 @@ typedef struct srl_abstract_task_s {
 		.func = (srl_task_func_t *)f,								   \
 		.args = (void*)a,											   \
 		.stack = (void*)s,											   \
-		.stack_size = ss,										       \
+		.stack_size = ss / sizeof(reg_t),						   \
 	}
 
 struct srl_abstract_cpustate_s __attribute__((deprecated));

@@ -6,8 +6,8 @@
 
 #define BASE_ADDR_OF(id)											   \
 	({																   \
-		extern __ldscript_symbol_t _dsx_##id##_base_addr;			   \
-		_dsx_##id##_base_addr;										   \
+		extern __ldscript_symbol_t _dsx_##id##_region_begin;		   \
+		(void*)&_dsx_##id##_region_begin;								   \
 	})
 
 #define srl_busy_cycles(n) do{}while(0)

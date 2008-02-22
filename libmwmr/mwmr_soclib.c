@@ -47,7 +47,16 @@ uint32_t mwmr_status( void *coproc, size_t no )
 
 static inline void mwmr_lock( uint32_t *lock )
 {
+#if 0
+	while (cpu_atomic_bit_testset((atomic_int_t*)lock, 0)) {
+		printf("Didnt got the lock, switching\n");
+		cpu_interrupt_disable();
+		sched_context_switch();
+		cpu_interrupt_enable();
+	}
+#else
 	cpu_atomic_bit_waitset((atomic_int_t*)lock, 0);
+#endif
 }
 
 static inline uint32_t mwmr_try_lock( uint32_t *lock )
@@ -63,13 +72,14 @@ static inline void mwmr_unlock( uint32_t *lock )
 void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
-    soclib_mwmr_status_s *const status = fifo->status;
+    volatile soclib_mwmr_status_s *const status = fifo->status;
 
 	mwmr_lock( &status->lock );
     while ( lensw ) {
         size_t len;
         while (status->usage < fifo->width) {
             mwmr_unlock( &status->lock );
+			printf("Not enough data for read, switching\n");
 			cpu_interrupt_disable();
 			sched_context_switch();
 			cpu_interrupt_enable();
@@ -94,18 +104,20 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
         }
     }
 	mwmr_unlock( &status->lock );
+	printf("Successful read\n");
 }
 
 void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
-    soclib_mwmr_status_s *const status = fifo->status;
+    volatile soclib_mwmr_status_s *const status = fifo->status;
 
 	mwmr_lock( &status->lock );
     while ( lensw ) {
         size_t len;
         while (status->usage >= fifo->gdepth) {
             mwmr_unlock( &status->lock );
+			printf("Not enough room for write, switching\n");
 			cpu_interrupt_disable();
 			sched_context_switch();
 			cpu_interrupt_enable();
@@ -130,13 +142,14 @@ void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
         }
     }
 	mwmr_unlock( &status->lock );
+	printf("Successful write\n");
 }
 
 size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
 	size_t done = 0;
-    soclib_mwmr_status_s *const status = fifo->status;
+    volatile soclib_mwmr_status_s *const status = fifo->status;
 
 	if ( mwmr_try_lock( &status->lock ) )
 		return done;
@@ -173,7 +186,7 @@ size_t mwmr_try_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
 	size_t done = 0;
-    soclib_mwmr_status_s *const status = fifo->status;
+    volatile soclib_mwmr_status_s *const status = fifo->status;
 
 	if ( mwmr_try_lock( &status->lock ) )
 		return done;
