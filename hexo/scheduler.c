@@ -22,6 +22,7 @@
 #include <hexo/scheduler.h>
 #include <hexo/init.h>
 #include <hexo/local.h>
+#include <hexo/segment.h>
 
 /* processor current scheduler context */
 CONTEXT_LOCAL struct sched_context_s *sched_cur;
@@ -310,9 +311,16 @@ void sched_global_init(void)
 void sched_cpu_init(void)
 {
   struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);
+  reg_t *stack;
+  error_t err;
 
-  if (context_init(&idle->context, CONFIG_HEXO_SCHED_IDLE_STACK_SIZE, sched_context_idle, 0))
-    abort();
+  stack = arch_contextstack_alloc(CONFIG_HEXO_SCHED_IDLE_STACK_SIZE * sizeof(reg_t));
+
+  assert(stack != NULL);
+
+  err = context_init(&idle->context, stack, CONFIG_HEXO_SCHED_IDLE_STACK_SIZE, sched_context_idle, 0);
+
+  assert(err == 0);
 
 #if defined (CONFIG_HEXO_SCHED_STATIC)
   sched_queue_init(__sched_root());

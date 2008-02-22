@@ -38,22 +38,20 @@ context_bootstrap(struct context_s *context)
 
 /** init a context object allocating a new context */
 error_t
-context_init(struct context_s *context, size_t stack_size, context_entry_t *entry, void *param)
+context_init(struct context_s *context,
+	     reg_t *stack_buf, size_t stack_size,
+	     context_entry_t *entry, void *param)
 {
   error_t	res;
 
   /* allocate context local storage memory */
   if (!(context->tls = arch_contextdata_alloc()))
-    return -ENOMEM;
+    return ENOMEM;
 
   CONTEXT_LOCAL_TLS_SET(context->tls, context_cur, context);
 
-  /* allocate context stack memory */
-  if (!(context->stack = arch_contextstack_alloc(stack_size * sizeof(reg_t))))
-    {
-      arch_contextdata_free(context->tls);
-      return -ENOMEM;      
-    }
+    /* allocate context stack memory */
+  context->stack = stack_buf;
 
   /* initial stack pointer address */
   context->stack_ptr = context->stack + stack_size - 1;
@@ -62,7 +60,6 @@ context_init(struct context_s *context, size_t stack_size, context_entry_t *entr
   if ((res = cpu_context_init(context, entry, param)))
     {
       arch_contextdata_free(context->tls);
-      arch_contextstack_free(context->stack);
       return res;
     }
 
@@ -74,14 +71,13 @@ context_init(struct context_s *context, size_t stack_size, context_entry_t *entr
 }
 
 /** free ressource associated with a context */
-void
+reg_t *
 context_destroy(struct context_s *context)
 {
   cpu_context_destroy(context);
   arch_contextdata_free(context->tls);
 
-  if (context->stack)
-    arch_contextstack_free(context->stack);
+  return context->stack;
 }
 
 void

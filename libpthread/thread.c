@@ -22,10 +22,12 @@
 #include <stdio.h>
 #include <pthread.h>
 
+#include <hexo/error.h>
 #include <hexo/alloc.h>
 #include <hexo/local.h>
 #include <hexo/types.h>
 #include <hexo/scheduler.h>
+#include <hexo/segment.h>
 
 /** pointer to current thread */
 CONTEXT_LOCAL pthread_t __pthread_current;
@@ -53,7 +55,8 @@ __pthread_cleanup(void)
   struct pthread_s *thread = pthread_self();
 
   /* cleanup current context */
-  context_destroy(&thread->sched_ctx.context);
+  arch_contextstack_free(context_destroy(&thread->sched_ctx.context));
+
   sched_queue_destroy(&thread->joined);
 
   /* free thread structure */
@@ -241,18 +244,28 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
 {
   struct pthread_s	*thread;
   error_t		res;
+  reg_t			*stack;
 
   thread = mem_alloc(sizeof (struct pthread_s), MEM_SCOPE_SYS);
 
   if (!thread)
     return ENOMEM;
 
+  stack = arch_contextstack_alloc(CONFIG_HEXO_SCHED_IDLE_STACK_SIZE * sizeof(reg_t));
+
+  if (stack == NULL)
+    {
+      mem_free(thread);
+      return ENOMEM;
+    }
+
   /* setup context for new thread */
-  res = context_init(&thread->sched_ctx.context, CONFIG_PTHREAD_STACK_SIZE, pthread_context_entry, thread);
+  res = context_init(&thread->sched_ctx.context, stack, CONFIG_PTHREAD_STACK_SIZE, pthread_context_entry, thread);
 
   if (res)
     {
       mem_free(thread);
+      arch_contextstack_free(stack);
       return res;
     }
 
