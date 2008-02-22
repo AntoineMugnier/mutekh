@@ -34,7 +34,11 @@ asm(
 
     /* get CPU id and adjust stack */
 
+#if __mips >= 32
+    "mfc0	$8,	$15, 1			\n"
+#else
     "mfc0	$8,	$15				\n"
+#endif
     "la         $sp,	__system_uncached_heap_end - 16	\n"
     "andi	$8,	$8,	0x000003ff		\n"
 

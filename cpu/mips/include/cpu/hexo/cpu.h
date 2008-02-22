@@ -49,7 +49,7 @@ cpu_mips_mfc0(const uint8_t id, const uint8_t sel)
 
   asm volatile (
 #if __mips >= 32 
-		"mfc0	%0,	$%1	$%2	\n"
+		"mfc0	%0,	$%1, %2	\n"
 #else
 		"mfc0	%0,	$%1		\n"
 #endif

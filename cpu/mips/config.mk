@@ -1,4 +1,4 @@
-CPUCFLAGS=-mips2 -mno-branch-likely
+CPUCFLAGS=-mips32 -mno-branch-likely
 
 ifeq ($(CONFIG_CPU_ENDIAN_LITTLE), defined)
 CPUTOOLS=mipsel-unknown-elf-
