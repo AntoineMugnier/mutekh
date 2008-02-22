@@ -42,26 +42,36 @@ extern struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	32
 
-static inline reg_t
-cpu_mips_mfc0(const uint8_t id, const uint8_t sel)
-{
-  reg_t		reg;
-
-  asm volatile (
 #if __mips >= 32 
-		"mfc0	%0,	$%1, %2	\n"
+
+#define cpu_mips_mfc0(id, sel)			\
+({						\
+  reg_t _reg;					\
+						\
+  asm volatile ("mfc0	%0,	$%1, %2	\n"	\
+		: "=r" (_reg)			\
+		: "i" (id)			\
+		, "i" (sel)			\
+		);				\
+						\
+  _reg;						\
+})
+
 #else
-		"mfc0	%0,	$%1		\n"
-#endif
-		: "=r" (reg)
-		: "i" (id)
-#if __mips >= 32 
-		, "i" (sel)
-#endif
-		);
 
-  return reg;
-}
+#define cpu_mips_mfc0(id, sel)			\
+({						\
+  reg_t _reg;					\
+						\
+  asm volatile ("mfc0	%0,	$%1 \n"		\
+		: "=r" (_reg)			\
+		: "i" (id)			\
+		);				\
+						\
+  _reg;						\
+})
+
+#endif
 
 static inline cpu_id_t
 cpu_id(void)
