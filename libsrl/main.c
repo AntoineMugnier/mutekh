@@ -69,9 +69,12 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 
 extern srl_cpudesc_s **desc;
 
-static void srl_run_task( void *task_ )
+static CONTEXT_ENTRY(srl_run_task)
 {
-	srl_task_s *task = task_;
+	srl_task_s *task = param;
+	sched_unlock();
+	cpu_interrupt_enable();
+
 	for (;;) {
 		task->func( task->args );
 	}
@@ -91,10 +94,15 @@ void mutek_main_smp(void)
 	  size_t i;
 	  for ( i=0; i<cur->ntasks; ++i ) {
 		  srl_task_s *task = cur->task_list[i];
+
+		  if ( task->bootstrap )
+			  task->bootstrap(task->args);
 		  
 		  context_init( &task->context.context,
-						task->stack, task->stack_size, srl_run_task, task );
+						task->stack, task->stack_size,
+						srl_run_task, task );
 		  sched_context_init( &task->context );
+		  sched_affinity_single( &task->context, cpu_id() );
 		  sched_context_start( &task->context );
 	  }
   }

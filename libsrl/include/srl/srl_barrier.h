@@ -23,10 +23,7 @@ static inline void srl_barrier_wait( srl_barrier_t barrier )
 
 #else
 
-void srl_barrier_wait( srl_barrier_t barrier )
-{
-
-}
+void srl_barrier_wait( srl_barrier_t barrier );
 
 #endif
 
