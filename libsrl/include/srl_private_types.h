@@ -11,7 +11,14 @@
 
 #include <srl/srl_lock.h>
 
+#include <mwmr/mwmr.h>
 #include <soclib/mwmr_controller.h>
+
+typedef struct mwmr_s srl_mwmr_s;
+typedef soclib_mwmr_status_s srl_mwmr_status_s;
+
+#define SRL_MWMR_INITIALIZER MWMR_INITIALIZER
+#define SRL_MWMR_STATUS_INITIALIZER SOCLIB_MWMR_STATUS_INITIALIZER
 
 #define SRL_CONST_INITIALIZER(x) x
 

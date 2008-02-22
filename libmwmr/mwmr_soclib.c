@@ -26,7 +26,7 @@ mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 {
 	soclib_io_set( coproc, MWMR_CONFIG_FIFO_WAY, way );
 	soclib_io_set( coproc, MWMR_CONFIG_FIFO_NO, no );
-	soclib_io_set( coproc, MWMR_CONFIG_STATUS_ADDR, &mwmr->status );
+	soclib_io_set( coproc, MWMR_CONFIG_STATUS_ADDR, mwmr->status );
 	soclib_io_set( coproc, MWMR_CONFIG_DEPTH, mwmr->gdepth );
 	soclib_io_set( coproc, MWMR_CONFIG_WIDTH, mwmr->width );
 	soclib_io_set( coproc, MWMR_CONFIG_BUFFER_ADDR, mwmr->buffer );
@@ -63,7 +63,7 @@ static inline void mwmr_unlock( uint32_t *lock )
 void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
-    soclib_mwmr_status_s *const status = &fifo->status;
+    soclib_mwmr_status_s *const status = fifo->status;
 
 	mwmr_lock( &status->lock );
     while ( lensw ) {
@@ -99,7 +99,7 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
-    soclib_mwmr_status_s *const status = &fifo->status;
+    soclib_mwmr_status_s *const status = fifo->status;
 
 	mwmr_lock( &status->lock );
     while ( lensw ) {
@@ -136,7 +136,7 @@ size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
 	size_t done = 0;
-    soclib_mwmr_status_s *const status = &fifo->status;
+    soclib_mwmr_status_s *const status = fifo->status;
 
 	if ( mwmr_try_lock( &status->lock ) )
 		return done;
@@ -173,7 +173,7 @@ size_t mwmr_try_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
 	size_t done = 0;
-    soclib_mwmr_status_s *const status = &fifo->status;
+    soclib_mwmr_status_s *const status = fifo->status;
 
 	if ( mwmr_try_lock( &status->lock ) )
 		return done;

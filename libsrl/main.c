@@ -67,7 +67,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   while (1);
 }
 
-extern srl_cpudesc_s **desc;
+extern srl_cpudesc_s **cpu_desc_list;
 
 static CONTEXT_ENTRY(srl_run_task)
 {
@@ -90,7 +90,7 @@ void mutek_main_smp(void)
   cpu_interrupt_disable();
 
   {
-	  srl_cpudesc_s *cur = desc[cpu_id()];
+	  srl_cpudesc_s *cur = cpu_desc_list[cpu_id()];
 	  size_t i;
 	  for ( i=0; i<cur->ntasks; ++i ) {
 		  srl_task_s *task = cur->task_list[i];

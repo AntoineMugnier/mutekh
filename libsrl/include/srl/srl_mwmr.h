@@ -17,6 +17,7 @@
 #include <mwmr/mwmr.h>
 #include <soclib/mwmr_controller.h>
 #include <hexo/endian.h>
+#include "srl_log.h"
 
 static inline void srl_mwmr_read( srl_mwmr_t mwmr, void *buffer, size_t size )
 {
@@ -47,14 +48,14 @@ static inline void srl_mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 static inline uint32_t srl_mwmr_status( void *coproc, size_t no )
 {
 	uint32_t *c = coproc;
-	assert(no < MWMR_IOREG_MAX);
+	srl_assert(no < MWMR_IOREG_MAX);
 	return endian_le32(c[no]);
 }
 
 static inline void srl_mwmr_config( void *coproc, size_t no, uint32_t value )
 {
 	uint32_t *c = coproc;
-	assert(no < MWMR_IOREG_MAX);
+	srl_assert(no < MWMR_IOREG_MAX);
 	c[no] = endian_le32(value);
 }
 

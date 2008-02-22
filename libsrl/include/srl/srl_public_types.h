@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <hexo/types.h>
+#include <hexo/lock.h>
 #include <mwmr/mwmr.h>
 
 typedef uint32_t srl_const_t;

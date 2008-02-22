@@ -49,12 +49,20 @@ struct mwmr_s {
 	size_t depth;
 	size_t gdepth;
 	void *buffer;
-	soclib_mwmr_status_s status;
+	soclib_mwmr_status_s *status;
 };
 
 void mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 				   size_t no, const mwmr_t* mwmr );
 
+#define MWMR_INITIALIZER(w, d, b, st)						   \
+	{														   \
+		.width = w,											   \
+		.depth = d,											   \
+		.gdepth = (w)*(d),									   \
+		.buffer = (void*)b,									   \
+		.status = st			       \
+	}
 #else
 # error No valid MWMR implementation
 #endif
