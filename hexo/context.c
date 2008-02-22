@@ -21,7 +21,7 @@ context_bootstrap(struct context_s *context)
   if (!(context->tls = arch_contextdata_alloc()))
     return -ENOMEM;
 
-  CONTEXT_LOCAL_FOREIGN_SET(context->tls, context_cur, context);
+  CONTEXT_LOCAL_TLS_SET(context->tls, context_cur, context);
 
   /* FIXME ? initial stack space will never be freed */
   context->stack = NULL;
@@ -46,7 +46,7 @@ context_init(struct context_s *context, size_t stack_size, context_entry_t *entr
   if (!(context->tls = arch_contextdata_alloc()))
     return -ENOMEM;
 
-  CONTEXT_LOCAL_FOREIGN_SET(context->tls, context_cur, context);
+  CONTEXT_LOCAL_TLS_SET(context->tls, context_cur, context);
 
   /* allocate context stack memory */
   if (!(context->stack = arch_contextstack_alloc(stack_size * sizeof(reg_t))))
@@ -88,6 +88,6 @@ void
 cpu_syscall_sethandler_ctx(struct context_s *context,
 			   cpu_syscall_handler_t *hndl)
 {
-  CONTEXT_LOCAL_FOREIGN_SET(context->tls, cpu_syscall_handler, hndl);
+  CONTEXT_LOCAL_TLS_SET(context->tls, cpu_syscall_handler, hndl);
 }
 

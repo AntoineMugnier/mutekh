@@ -56,6 +56,7 @@ struct cpu_cld_s * cpu_init(void)
     goto err_cld;
 
   cld->id = cpu_id();
+  cpu_cld_list[cld->id] = cld;
 
 #ifdef CONFIG_SMP
   /* setup cpu local storage */

@@ -34,43 +34,9 @@
 
 #ifdef CONFIG_SMP
 
+# undef CPU_LOCAL
 # define CPU_LOCAL	__attribute__((section (".cpudata")))
 
-/** cpu local storage variable assignement */
-# define CPU_LOCAL_SET(n, v)				\
-{							\
-  asm volatile (					\
-	   ".set push\n"				\
-	   ".set noat\n"				\
-	   "	addu	$1,	%0,	$27	\n"	\
-	   "	sw	%1,	($1)		\n"	\
-	   ".set pop\n"					\
-	   :						\
-	   : "r" (&n)					\
-	   , "r" ((typeof(n))v)				\
-	   : "memory"					\
-	   );						\
-}
-
-/** cpu local storage variable read access */
-# define CPU_LOCAL_GET(n)				\
-({							\
-  typeof(n) _val_;					\
-							\
-  asm (							\
-	   ".set push\n"				\
-	   ".set noat\n"				\
-	   "	addu	$1,	%1,	$27	\n"	\
-	   "	lw	%0,	($1)		\n"	\
-	   ".set pop\n"					\
-	   : "=r" (_val_)				\
-	   : "r" (&n)					\
-	   );						\
-							\
-  _val_;						\
-})
-
-/** get address of cpu local object */
 # define CPU_LOCAL_ADDR(n)				\
 ({							\
   typeof(n) *_ptr_;					\
@@ -84,18 +50,17 @@
   _ptr_;						\
 })
 
-#else
-
-# define CPU_LOCAL
-
-/** cpu local storage variable assignement */
-# define CPU_LOCAL_SET(n, v)  (n) = (v)
-
-/** cpu local storage variable read access */
-# define CPU_LOCAL_GET(n)    (n)
-
-/** get address of cpu local object */
-# define CPU_LOCAL_ADDR(n)   (&(n))
+#define CPU_GET_CLS()					\
+({							\
+  uintptr_t _ptr_;					\
+							\
+  asm (							\
+	   "addu	%0,	$27,	$0	\n"	\
+	   : "=r" (_ptr_)				\
+	   );						\
+							\
+  _ptr_;						\
+})
 
 #endif /* !CONFIG_SMP */
 
@@ -104,17 +69,10 @@
 /** context local storage type attribute */
 #define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
 
-/** context local storage variable assignement from different context */
-#define CONTEXT_LOCAL_FOREIGN_SET(tls, n, v)	({ *(typeof(n)*)((uintptr_t)(tls) + (uintptr_t)&(n)) = (v); })
+/** pointer to context local storage in cpu local storage */
+extern CPU_LOCAL void *__cpu_context_data_base;
 
-/** context local storage variable assignement */
-#define CONTEXT_LOCAL_SET(n, v)	({ *(typeof(n)*)((uintptr_t)(CPU_LOCAL_GET(__cpu_context_data_base)) + (uintptr_t)&(n)) = (v); })
-
-/** context local storage variable read access */
-#define CONTEXT_LOCAL_GET(n) 	({ *(typeof(n)*)((uintptr_t)(CPU_LOCAL_GET(__cpu_context_data_base)) + (uintptr_t)&(n)); })
-
-/** get address of context local object */
-#define CONTEXT_LOCAL_ADDR(n)	({ (void*)((uintptr_t)(CPU_LOCAL_GET(__cpu_context_data_base)) + (uintptr_t)&(n)); })
+#define CONTEXT_GET_TLS() ((uintptr_t)CPU_LOCAL_GET(__cpu_context_data_base))
 
 #endif
 

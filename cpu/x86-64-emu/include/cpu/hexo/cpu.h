@@ -80,5 +80,17 @@ static inline void *cpu_get_cls(cpu_id_t cpu_id)
   return NULL;
 }
 
+static inline void cpu_dcache_invld(void *ptr)
+{
+#ifndef CONFIG_CPU_CACHE_COHERENCY
+# error
+#endif
+}
+
+static inline size_t cpu_dcache_line_size()
+{
+  return 0;
+}
+
 #endif
 

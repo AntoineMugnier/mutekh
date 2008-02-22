@@ -271,5 +271,15 @@ static inline uint64_t endian_swap64(uint64_t x)
 /* align address on the next power of two */
 #define ALIGN_ADDRESS_LOW(x, b)	((void*)ALIGN_VALUE_LOW((uintptr_t)(x), (b)))
 
+/***********************************************************************
+ *		Bits extraction macro
+ */
+
+#define BIT_EXTRACT(v, index) ((v) & (1 << (index)))
+
+#define BITS_EXTRACT_FC(v, first, count) (((v) >> (first)) & ((1 << (count)) - 1))
+
+#define BITS_EXTRACT_FL(v, first, last) BITS_EXTRACT_FC(v, first, (last) - (first) + 1)
+
 #endif
 

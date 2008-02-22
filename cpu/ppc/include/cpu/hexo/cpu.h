@@ -96,5 +96,20 @@ static inline void *cpu_get_cls(cpu_id_t cpu_id)
   return NULL;
 }
 
+static inline void cpu_dcache_invld(void *ptr)
+{
+  asm volatile (
+		"dcbi 0, %0"
+		:
+		: "r" (ptr)
+		: "memory"
+		);
+}
+
+static inline size_t cpu_dcache_line_size()
+{
+  return CONFIG_CPU_CACHE_LINE;
+}
+
 #endif
 

@@ -32,56 +32,26 @@
 
 /************************************************************************/
 
-/** context local storage type attribute */
 #define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
 
-/** context local storage variable assignement from different context */
-#define CONTEXT_LOCAL_FOREIGN_SET(tls, n, v) { __asm__ ("mov %0, (%1,%2)" : : "r" ((typeof(n))v), "r" (&n), "r" (tls) : "memory") ; }
-
-/** context local storage variable assignement */
 #define CONTEXT_LOCAL_SET(n, v)  { __asm__ ("mov %1, %%gs:%0" : "=m" (n) : "r" ((typeof(n))v)); }
 
-/** context local storage variable read access */
 #define CONTEXT_LOCAL_GET(n)    ({ typeof(n) _val_; __asm__ ("mov %%gs:%1, %0" : "=r" (_val_) : "m" (n)); _val_; })
 
-/** get address of context local object */
-#define CONTEXT_LOCAL_ADDR(n)   ({ typeof(n) *_ptr_ = &(n); __asm__ ("addl %%gs:__context_data_base, %0" : "=r" (_ptr_) : "0" (_ptr_)) ; _ptr_; })
+#define CONTEXT_GET_TLS()   ({ uintptr_t _ptr_; __asm__ ("movl %%gs:__context_data_base, %0" : "=r" (_ptr_)) ; _ptr_; })
 
 /************************************************************************/
 
 #ifdef CONFIG_SMP
 
-/** cpu local storage type attribute */
+# undef CPU_LOCAL
 # define CPU_LOCAL	__attribute__((section (".cpudata")))
 
-/** context local storage variable assignement from different context */
-#define CPU_LOCAL_FOREIGN_SET(cpuid, n, v) { __asm__ ("mov %0, (%1,%2)" : : "r" ((typeof(n))v), "r" (&n), "r" (cls) : "memory") ; }
-
-/** context local storage variable assignement from different context */
-#define CPU_LOCAL_FOREIGN_ADDR(cpuid, n) { __asm__ ("mov %0, (%1,%2)" : : "r" ((typeof(n))v), "r" (&n), "r" (cls) : "memory") ; }
-
-/** cpu local storage variable assignement */
 # define CPU_LOCAL_SET(n, v)  { __asm__ ("mov %1, %%fs:%0" : "=m" (n) : "r" ((typeof(n))v)); }
 
-/** cpu local storage variable read access */
 # define CPU_LOCAL_GET(n)    ({ typeof(n) _val_; __asm__ ("mov %%fs:%1, %0" : "=r" (_val_) : "m" (n)); _val_; })
 
-/** get address of cpu local object */
-# define CPU_LOCAL_ADDR(n)   ({ typeof(n) *_ptr_ = &(n); __asm__ ("addl %%fs:__cpu_data_base, %0" : "=r" (_ptr_) : "0" (_ptr_)); _ptr_; })
-
-#else
-
-/** cpu local storage type attribute */
-# define CPU_LOCAL
-
-/** cpu local storage variable assignement */
-# define CPU_LOCAL_SET(n, v)  ((n) = (v))
-
-/** cpu local storage variable read access */
-# define CPU_LOCAL_GET(n)    (n)
-
-/** get address of cpu local object */
-# define CPU_LOCAL_ADDR(n)   (&(n))
+# define CPU_GET_CLS()   ({ uintptr_t _ptr_; __asm__ ("movl %%fs:__cpu_data_base, %0" : "=r" (_ptr_)); _ptr_; })
 
 #endif /* !CONFIG_SMP */
 

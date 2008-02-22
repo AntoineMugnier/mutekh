@@ -56,12 +56,15 @@ cpu_cycle_t cpu_cycle_count(void);
 /** cpu trap instruction */
 void cpu_trap();
 
-/** invalidate the cpu data cache containing this address */
+/** get cpu cache line size, return 0 if no dcache */
+static size_t cpu_dcache_line_size();
+
+/** invalidate the cpu data cache line containing this address */
 static void cpu_dcache_invld(void *ptr);
 
 /** invalidate all the cpu data cache lines within given range.
     size is in bytes. */
-static void cpu_dcache_invld_buf(void *ptr, size_t size);
+void cpu_dcache_invld_buf(void *ptr, size_t size);
 
 #endif
 

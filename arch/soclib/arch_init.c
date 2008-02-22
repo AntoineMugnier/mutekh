@@ -28,7 +28,7 @@
 #include <hexo/alloc.h>
 #include <hexo/scheduler.h>
 
-#if CONFIG_ARCH_SOCLIB_RAMLOCK
+#ifdef CONFIG_ARCH_SOCLIB_RAMLOCK
 extern __ldscript_symbol_t __ramlock_base_start;
 uintptr_t __ramlock_base = (uintptr_t)&__ramlock_base_start;
 #endif

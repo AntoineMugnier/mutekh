@@ -32,6 +32,15 @@
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_clist.h>
 
+struct sched_context_s;
+
+/** scheduler context candidate checking function */
+#define SCHED_CANDIDATE_FCN(n) bool_t (n)(struct sched_context_s *sched_ctx)
+
+/** scheduler context candidate checking function type */
+typedef SCHED_CANDIDATE_FCN(sched_candidate_fcn_t);
+
+
 #define CONTAINER_LOCK_sched_queue HEXO_SPIN
 
 CONTAINER_TYPE(sched_queue, CLIST, struct sched_context_s
@@ -40,14 +49,17 @@ CONTAINER_TYPE(sched_queue, CLIST, struct sched_context_s
   sched_queue_entry_t	list_entry;
   void			*private;
 
-#if defined (CONFIG_HEXO_SCHED_MIGRATION) && defined(CONFIG_HEXO_SCHED_AFFINITY)
+#ifdef CONFIG_HEXO_SCHED_MIGRATION_AFFINITY
   cpu_bitmap_t		cpu_map;
 #endif
 
-#if defined (CONFIG_HEXO_SCHED_ALGO_STATIC) && defined(CONFIG_HEXO_SCHED_AFFINITY)
-  cpu_id_t		cpu;
+#ifdef CONFIG_HEXO_SCHED_STATIC
+  sched_queue_root_t	*cpu_queue;
 #endif
 
+#ifdef CONFIG_HEXO_SCHED_CANDIDATE_FCN
+  sched_candidate_fcn_t	*is_candidate;
+#endif
 }, list_entry);
 
 CONTAINER_FUNC       (sched_queue, CLIST, static inline, sched_queue, list_entry);
@@ -126,6 +138,9 @@ void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu);
 
 /** scheduler context will run on all cpu */
 void sched_affinity_all(struct sched_context_s *sched_ctx);
+
+/** setup a scheduler context candidate checking function */
+void sched_context_candidate_fcn(struct sched_context_s *sched_ctx, sched_candidate_fcn_t *fcn);
 
 #endif
 #endif

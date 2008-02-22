@@ -1,3 +1,23 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+
+*/
 
 #include <hexo/scheduler.h>
 #include <hexo/init.h>
@@ -9,15 +29,26 @@ CONTEXT_LOCAL struct sched_context_s *sched_cur;
 /* processor idle context */
 CPU_LOCAL struct sched_context_s sched_idle;
 
-/************************************************************************/
-
-#if defined (CONFIG_HEXO_SCHED_MIGRATION)
-
 /* return next scheduler candidate */
-static inline struct sched_context_s *
+static struct sched_context_s *
 __sched_candidate_noidle(sched_queue_root_t *root)
 {
+#ifdef CONFIG_HEXO_SCHED_CANDIDATE_FCN
+  struct sched_context_s *c = NULL;
+
+  CONTAINER_FOREACH_NOLOCK(sched_queue, CLIST, root, {
+    if (item->is_candidate == NULL || item->is_candidate(item))
+      {
+	sched_queue_nolock_remove(root, item);
+	c = item;
+	CONTAINER_FOREACH_BREAK;
+      }
+  });
+
+  return c;
+#else
   return sched_queue_nolock_pop(root);
+#endif
 }
 
 /* return next scheduler candidate */
@@ -32,58 +63,46 @@ __sched_candidate(sched_queue_root_t *root)
   return next;
 }
 
+/************************************************************************/
+
+#if defined (CONFIG_HEXO_SCHED_MIGRATION)
+
 /* scheduler root */
 static sched_queue_root_t	sched_root;
 
+/* return scheduler root */
 static inline sched_queue_root_t *
 __sched_root(void)
 {
   return &sched_root;
 }
 
+/* return scheduler root attached to a given context */
 static inline sched_queue_root_t *
-__sched_root_cpu(cpu_id_t cpu)
+__sched_ctx_root(struct sched_context_s *sched_ctx)
 {
   return &sched_root;
 }
 
 /************************************************************************/
 
-#elif defined (CONFIG_HEXO_SCHED_ALGO_STATIC)
-
-/* return next scheduler candidate */
-static inline struct sched_context_s *
-__sched_candidate_noidle(sched_queue_root_t *root)
-{
-  return sched_queue_nolock_pop(root);
-}
-
-/* return next scheduler candidate */
-static inline struct sched_context_s *
-__sched_candidate(sched_queue_root_t *root)
-{
-  struct sched_context_s	*next;
-
-  if ((next = __sched_candidate_noidle(root)) == NULL)
-    next = CPU_LOCAL_ADDR(sched_idle);
-
-  return next;
-}
+#elif defined (CONFIG_HEXO_SCHED_STATIC)
 
 /* scheduler root */
 static CPU_LOCAL sched_queue_root_t	sched_root;
 
+/* return scheduler root */
 static inline sched_queue_root_t *
 __sched_root(void)
 {
   return CPU_LOCAL_ADDR(sched_root);
 }
 
+/* return scheduler root attached to a given context */
 static inline sched_queue_root_t *
-__sched_root_cpu(cpu_id_t cpu)
+__sched_ctx_root(struct sched_context_s *sched_ctx)
 {
-#error check CPU_LOCAL_FOREIGN_ADDR implem
-  return CPU_LOCAL_FOREIGN_ADDR(cpu, sched_root);
+  return sched_ctx->cpu_queue;
 }
 
 #endif
@@ -131,20 +150,24 @@ static CONTEXT_ENTRY(sched_context_idle)
     }
 }
 
+/************************************************************************/
+
 /* Switch to next context available in the root queue. This function
    returns if no other context is available, controle is passed
    back to current context rather than Idle context. Must be called
    with interrupts disabled */
-static inline
-void __sched_pushback_switch(sched_queue_root_t *root)
+void sched_context_switch(void)
 {
-  struct sched_context_s	*next;
+  sched_queue_root_t *root = __sched_root();
+  struct sched_context_s *next;
 
-  /* push context back in running queue */
+  assert(!cpu_interrupt_getstate());
+
   sched_queue_wrlock(root);
 
   if ((next = __sched_candidate_noidle(root)))
     {
+      /* push context back in running queue */
       sched_queue_nolock_pushback(root, CONTEXT_LOCAL_GET(sched_cur));
       context_switch_to(&next->context);
     }
@@ -152,32 +175,16 @@ void __sched_pushback_switch(sched_queue_root_t *root)
   sched_queue_unlock(root);
 }
 
-static inline
-void __sched_context_exit(sched_queue_root_t *root)
-{
-  struct sched_context_s	*next;
-
-  /* get next running context */
-  next = __sched_candidate(root);
-  context_jump_to(&next->context);
-}
-
-/************************************************************************/
-
-/* Must be called with interrupts disabled */
-void sched_context_switch(void)
-{
-  assert(!cpu_interrupt_getstate());
-
-  __sched_pushback_switch(__sched_root());
-}
-
 /* Must be called with interrupts disabled and sched locked */
 void sched_context_exit(void)
 {
   assert(!cpu_interrupt_getstate());
 
-  __sched_context_exit(__sched_root());
+  struct sched_context_s	*next;
+
+  /* get next running context */
+  next = __sched_candidate(__sched_root());
+  context_jump_to(&next->context);
 }
 
 void sched_lock(void)
@@ -197,37 +204,25 @@ void sched_unlock(void)
 void sched_context_init(struct sched_context_s *sched_ctx)
 {
   /* set sched_cur context local variable */
-  CONTEXT_LOCAL_FOREIGN_SET(sched_ctx->context.tls,
+  CONTEXT_LOCAL_TLS_SET(sched_ctx->context.tls,
 			    sched_cur, sched_ctx);
+
+#if defined (CONFIG_HEXO_SCHED_STATIC)
+  sched_ctx->cpu_queue = __sched_root();
+#endif
+
+#ifdef CONFIG_HEXO_SCHED_CANDIDATE_FCN
+  sched_ctx->is_candidate = NULL;
+#endif
+
 }
 
 /* Must be called with interrupts disabled */
 void sched_context_start(struct sched_context_s *sched_ctx)
 {
-  sched_queue_root_t *root;
-
   assert(!cpu_interrupt_getstate());
 
-#if !defined(CONFIG_HEXO_SCHED_AFFINITY)
-
-# if defined (CONFIG_HEXO_SCHED_ALGO_STATIC)
-  static cpu_id_t	next_cpu = 0;
-  root = __sched_root_cpu(next_cpu++ % cpu_count());
-# else
-  root = __sched_root();
-# endif
-
-#else
-
-# if defined (CONFIG_HEXO_SCHED_ALGO_STATIC)
-  root = __sched_root_cpu(sched_ctx->cpu);
-# elif defined (CONFIG_HEXO_SCHED_MIGRATION)
-  root = __sched_root();
-# endif
-
-#endif
-
-  sched_queue_pushback(root, sched_ctx);
+  sched_queue_pushback(__sched_ctx_root(sched_ctx), sched_ctx);
 }
 
 /* push current context in the 'queue', unlock it and switch to next
@@ -300,97 +295,87 @@ struct sched_context_s *sched_wake(sched_queue_root_t *queue)
   assert(!cpu_interrupt_getstate());
 
   if ((sched_ctx = sched_queue_nolock_pop(queue)))
-    sched_queue_pushback(__sched_root(), sched_ctx);
+    sched_queue_pushback(__sched_ctx_root(sched_ctx), sched_ctx);
 
   return sched_ctx;
 }
 
 void sched_global_init(void)
 {
+#if defined (CONFIG_HEXO_SCHED_MIGRATION)
   sched_queue_init(__sched_root());
+#endif
 }
 
 void sched_cpu_init(void)
 {
   struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);
 
-  error_t res = context_init(&idle->context, CONFIG_HEXO_SCHED_IDLE_STACK_SIZE, sched_context_idle, 0);
+  if (context_init(&idle->context, CONFIG_HEXO_SCHED_IDLE_STACK_SIZE, sched_context_idle, 0))
+    abort();
 
-  assert(res == 0);
+#if defined (CONFIG_HEXO_SCHED_STATIC)
+  sched_queue_init(__sched_root());
+#endif
 }
 
-#if !defined(CONFIG_HEXO_SCHED_AFFINITY)
+#ifdef CONFIG_HEXO_SCHED_MIGRATION
 
-/** scheduler context will run on this cpu */
 void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
-}
-
-/** scheduler context will not run on this cpu */
-void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu)
-{
-}
-
-/** scheduler context will run on a single cpu */
-void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu)
-{
-}
-
-/** scheduler context will run on all cpu */
-void sched_affinity_all(struct sched_context_s *sched_ctx)
-{
-}
-
-#else
-# if defined (CONFIG_HEXO_SCHED_MIGRATION)
-/** scheduler context will run on this cpu */
-void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
-{
-}
-
-/** scheduler context will not run on this cpu */
-void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu)
-{
-}
-
-/** scheduler context will run on a single cpu */
-void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu)
-{
-}
-
-/** scheduler context will run on all cpu */
-void sched_affinity_all(struct sched_context_s *sched_ctx)
-{
-}
-
+# ifndef CONFIG_HEXO_SCHED_MIGRATION_AFFINITY
 # endif
-
-# if defined (CONFIG_HEXO_SCHED_ALGO_STATIC)
-/** scheduler context will run on this cpu */
-void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
-{
-  assert(cpu < cpu_count());
-
-  sched_ctx->cpu = cpu;
 }
 
-/** scheduler context will not run on this cpu */
+void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu)
+{
+# ifndef CONFIG_HEXO_SCHED_MIGRATION_AFFINITY
+# endif
+}
+
+void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu)
+{
+# ifndef CONFIG_HEXO_SCHED_MIGRATION_AFFINITY
+# endif
+}
+
+void sched_affinity_all(struct sched_context_s *sched_ctx)
+{
+# ifndef CONFIG_HEXO_SCHED_MIGRATION_AFFINITY
+# endif
+}
+
+#endif
+
+#ifdef CONFIG_HEXO_SCHED_STATIC
+
+void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
+{
+  sched_ctx->cpu_queue = CPU_LOCAL_ID_ADDR(cpu, sched_root);
+}
+
 void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
 }
 
-/** scheduler context will run on a single cpu */
 void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
   sched_affinity_add(sched_ctx, cpu);
 }
 
-/** scheduler context will run on all cpu */
 void sched_affinity_all(struct sched_context_s *sched_ctx)
 {
 }
 
-# endif
-
 #endif
+
+void sched_context_candidate_fcn(struct sched_context_s *sched_ctx,
+				 sched_candidate_fcn_t *fcn)
+{
+#ifdef CONFIG_HEXO_SCHED_CANDIDATE_FCN
+  sched_ctx->is_candidate = fcn;
+#else
+  abort();
+#endif
+}
 

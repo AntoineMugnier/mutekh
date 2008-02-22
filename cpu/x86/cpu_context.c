@@ -35,7 +35,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 					CPU_X86_SEG_DATA_UP_RW)))
     return -ENOMEM;
 
-  CONTEXT_LOCAL_FOREIGN_SET(context->tls, __context_data_base, context->tls);
+  CONTEXT_LOCAL_TLS_SET(context->tls, __context_data_base, context->tls);
 
   /* push param */
   *--context->stack_ptr = (uintptr_t)param;

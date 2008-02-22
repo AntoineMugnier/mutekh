@@ -42,17 +42,31 @@ extern struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	32
 
-static inline cpu_id_t
-cpu_id(void)
+static inline reg_t
+cpu_mips_mfc0(const uint8_t id, const uint8_t sel)
 {
   reg_t		reg;
 
   asm volatile (
-		"mfc0	%0,	$15		\n"
+#if __mips >= 32 
+		"mfc0	%0,	$%1	$%2	\n"
+#else
+		"mfc0	%0,	$%1		\n"
+#endif
 		: "=r" (reg)
+		: "i" (id)
+#if __mips >= 32 
+		, "i" (sel)
+#endif
 		);
 
-  return reg & 0x000003ff;
+  return reg;
+}
+
+static inline cpu_id_t
+cpu_id(void)
+{
+  return cpu_mips_mfc0(15, 1) & 0x000003ff;
 }
 
 static inline bool_t
@@ -74,14 +88,7 @@ typedef uint32_t cpu_cycle_t;
 static inline cpu_cycle_t
 cpu_cycle_count(void)
 {
-  uint32_t      result;
-
-  asm volatile(
-	       "mfc0	%0, $9"
-	       : "=r" (result)
-	       );
-
-  return result;
+  return cpu_mips_mfc0(9, 0);
 }
 
 static inline void
@@ -112,14 +119,19 @@ static inline void cpu_dcache_invld(void *ptr)
 		);
 }
 
-static inline void cpu_dcache_invld_buf(void *ptr, size_t size)
+static inline size_t cpu_dcache_line_size()
 {
-  uint8_t *ptr_;
+  reg_t r = cpu_mips_mfc0(16, 1);
 
-  for (ptr_ = ALIGN_ADDRESS_LOW(ptr, CONFIG_CPU_CACHE_LINE);
-       ptr_ < (uint8_t*)ptr + size;
-       ptr_ += CONFIG_CPU_CACHE_LINE)
-    cpu_dcache_invld(ptr_);
+  if (BIT_EXTRACT(r, 31))
+    {
+      r = BITS_EXTRACT_FL(r, 10, 12);
+
+      if (r)
+	return 2 << r;
+    }
+
+  return 0;
 }
 
 #endif

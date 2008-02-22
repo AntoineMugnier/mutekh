@@ -51,8 +51,8 @@ Context local variables can be accessed with the following macros:
 @item The @code{CONTEXT_LOCAL_ADDR(var)} returns the address of a context
       local variable.
 
-@findex CONTEXT_LOCAL_FOREIGN_SET
-@item The @code{CONTEXT_LOCAL_FOREIGN_SET(tls, var, value)} set the
+@findex CONTEXT_LOCAL_TLS_SET
+@item The @code{CONTEXT_LOCAL_TLS_SET(tls, var, value)} set the
       address of a context local variable which is not in the current context. The task local storage (@code{tls}) pointer must be provided.
 
 @end itemize

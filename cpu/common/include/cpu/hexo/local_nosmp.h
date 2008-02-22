@@ -37,33 +37,15 @@
 # error SMP not supported here
 #endif
 
-# define CPU_LOCAL
-
-/** cpu local storage variable assignement */
-# define CPU_LOCAL_SET(n, v)  (n) = (v)
-
-/** cpu local storage variable read access */
-# define CPU_LOCAL_GET(n)    (n)
-
-/** get address of cpu local object */
-# define CPU_LOCAL_ADDR(n)   (&(n))
-
 /************************************************************************/
 
 /** context local storage type attribute */
 #define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
 
-/** context local storage variable assignement from different context */
-#define CONTEXT_LOCAL_FOREIGN_SET(tls, n, v)	({ *(typeof(n)*)((uintptr_t)(tls) + (uintptr_t)&(n)) = (v); })
+/** pointer to context local storage in cpu local storage */
+extern void *__cpu_context_data_base;
 
-/** context local storage variable assignement */
-#define CONTEXT_LOCAL_SET(n, v)	({ *(typeof(n)*)((uintptr_t)(CPU_LOCAL_GET(__cpu_context_data_base)) + (uintptr_t)&(n)) = (v); })
-
-/** context local storage variable read access */
-#define CONTEXT_LOCAL_GET(n) 	({ *(typeof(n)*)((uintptr_t)(CPU_LOCAL_GET(__cpu_context_data_base)) + (uintptr_t)&(n)); })
-
-/** get address of context local object */
-#define CONTEXT_LOCAL_ADDR(n)	({ (void*)((uintptr_t)(CPU_LOCAL_GET(__cpu_context_data_base)) + (uintptr_t)&(n)); })
+#define CONTEXT_GET_TLS() ((uintptr_t)__cpu_context_data_base)
 
 #endif
 
