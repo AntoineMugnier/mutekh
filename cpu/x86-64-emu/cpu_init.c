@@ -56,7 +56,7 @@ struct cpu_cld_s *cpu_init(void)
   if (!(cld = mem_alloc(sizeof (struct cpu_cld_s), MEM_SCOPE_SYS)))
     return NULL;
 
-  cld->id = cpu_id;
+  cld->id = id;
   cpu_cld_list[id] = cld;
 
 #if defined(CONFIG_DEBUG)
