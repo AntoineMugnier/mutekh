@@ -14,6 +14,7 @@
 #ifndef SRL_LOCK_H_
 #define SRL_LOCK_H_
 
+#ifndef CONFIG_PTHREAD
 #include <hexo/lock.h>
 
 static inline void srl_lock_lock( srl_lock_t lock )
@@ -30,5 +31,25 @@ static inline uint32_t srl_lock_try_lock( srl_lock_t lock )
 {
 	return lock_try(lock);
 }
+
+#else
+#include <pthread.h>
+
+static inline void srl_lock_lock( srl_lock_t lock )
+{
+	pthread_mutex_lock(lock);
+}
+
+static inline void srl_lock_unlock( srl_lock_t lock )
+{
+	pthread_mutex_unlock(lock);
+}
+
+static inline uint32_t srl_lock_try_lock( srl_lock_t lock )
+{
+	return pthread_mutex_try_lock(lock);
+}
+
+#endif /* CONFIG_PTHREAD */
 
 #endif

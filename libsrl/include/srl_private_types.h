@@ -22,13 +22,15 @@ typedef soclib_mwmr_status_s srl_mwmr_status_s;
 
 #define SRL_CONST_INITIALIZER(x) x
 
-#define SRL_LOCK_INITIALIZER() LOCK_INITIALIZER
-
 #ifdef CONFIG_PTHREAD
+
+#define SRL_LOCK_INITIALIZER() PTHREAD_MUTEX_INITIALIZER
 
 # define SRL_BARRIER_INITIALIZER PTHREAD_BARRIER_INITIALIZER
 
-#else /* CONFIG_PTHREAD */
+#else /* not CONFIG_PTHREAD */
+
+#define SRL_LOCK_INITIALIZER() LOCK_INITIALIZER
 
 typedef struct srl_barrier_s
 {
@@ -52,7 +54,13 @@ typedef struct srl_abstract_task_s {
 	void *args;
 	void *stack;
 	size_t stack_size;
+#ifdef CONFIG_PTHREAD
+	pthread_t pthread;
+#else /* not CONFIG_PTHREAD */
 	struct sched_context_s context;
+	uint32_t wait_val;
+	uint32_t *wait_addr;
+#endif
 } srl_task_s;
 
 #define SRL_TASK_INITIALIZER(b, f, ss, s, a)							   \
