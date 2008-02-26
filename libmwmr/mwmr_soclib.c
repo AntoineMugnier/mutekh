@@ -77,6 +77,7 @@ typedef struct {
 static inline void rehash_status( mwmr_t *fifo, local_mwmr_status_t *status )
 {
 	volatile soclib_mwmr_status_s *fstatus = fifo->status;
+	cpu_dcache_invld_buf(fstatus, sizeof(*fstatus));
 	status->usage = fstatus->usage;
 	status->wptr = fstatus->wptr;
 	status->rptr = fstatus->rptr;
@@ -120,6 +121,7 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
                 len = (fifo->gdepth - status.rptr);
             len = min(len, lensw);
 			sptr = &((uint8_t*)fifo->buffer)[status.rptr];
+			cpu_dcache_invld_buf(sptr, len);
             memcpy( ptr, sptr, len );
             status.rptr += len;
             if ( status.rptr == fifo->gdepth )
