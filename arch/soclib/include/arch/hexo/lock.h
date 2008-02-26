@@ -101,6 +101,9 @@ static inline bool_t arch_lock_state(struct arch_lock_s *lock)
  **************************************************************/
 
 #include "hexo/atomic.h"
+#ifdef CONFIG_DEBUG_SPINLOCK_LIMIT
+#include <assert.h>
+#endif
 
 #define ARCH_HAS_ATOMIC
 
