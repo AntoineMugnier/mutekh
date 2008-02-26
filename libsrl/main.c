@@ -87,12 +87,19 @@ static CONTEXT_ENTRY(srl_run_task)
 	}
 }
 
+static void print_cpu_info()
+{
+	printf("CPU %i is up and running\n"
+		   "DCache: %d bytes/line\n",
+		   cpu_id(), cpu_dcache_line_size());
+}
+
 void mutek_main_smp(void)
 {
   lock_init(&fault_lock);
   cpu_exception_sethandler(fault_handler);
 
-  printf("CPU %i is up and running.\n", cpu_id());
+  print_cpu_info();
 
   cpu_interrupt_disable();
 
