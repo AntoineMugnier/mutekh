@@ -47,7 +47,7 @@ static inline void srl_lock_unlock( srl_lock_t lock )
 
 static inline uint32_t srl_lock_try_lock( srl_lock_t lock )
 {
-	return pthread_mutex_try_lock(lock);
+	return pthread_mutex_trylock(lock);
 }
 
 #endif /* CONFIG_PTHREAD */

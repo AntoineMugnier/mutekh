@@ -12,8 +12,10 @@
 #include <mwmr/mwmr.h>
 #include <soclib/mwmr_controller.h>
 
-#ifdef CONFIG_SRL
+#if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
 #include <srl/srl_sched_wait.h>
+#elif defined(CONFIG_PTHREAD)
+#include <pthread.h>
 #endif
 
 
@@ -54,12 +56,13 @@ uint32_t mwmr_status( void *coproc, size_t no )
 
 static inline void mwmr_lock( uint32_t *lock )
 {
-#ifdef CONFIG_SRL
+#if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
 	while (cpu_atomic_bit_testset((atomic_int_t*)lock, 0)) {
 		srl_sched_wait_eq(lock, 0);
-		cpu_interrupt_disable();
-		sched_context_switch();
-		cpu_interrupt_enable();
+	}
+#elif defined(CONFIG_PTHREAD)
+	while (cpu_atomic_bit_testset((atomic_int_t*)lock, 0)) {
+		pthread_yield();
 	}
 #else
 	cpu_atomic_bit_waitset((atomic_int_t*)lock, 0);
@@ -112,8 +115,10 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 		while ( status.usage < fifo->width ) {
 			writeback_status( fifo, &status );
             mwmr_unlock( &fifo->status->lock );
-#ifdef CONFIG_SRL
+#if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
 			srl_sched_wait_ge(&fifo->status->usage, fifo->width);
+#elif defined(CONFIG_PTHREAD)
+			pthread_yield();
 #else
 			cpu_interrupt_disable();
 			sched_context_switch();
@@ -158,8 +163,10 @@ void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
         while (status.usage >= fifo->gdepth) {
 			writeback_status( fifo, &status );
             mwmr_unlock( &fifo->status->lock );
-#ifdef CONFIG_SRL
+#if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
 			srl_sched_wait_lt(&fifo->status->usage, fifo->gdepth-fifo->width);
+#elif defined(CONFIG_PTHREAD)
+			pthread_yield();
 #else
 			cpu_interrupt_disable();
 			sched_context_switch();

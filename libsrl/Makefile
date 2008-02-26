@@ -1,6 +1,6 @@
 
-objs = main.o sched_wait.o
+objs = main.o
 
 ifeq ($(CONFIG_PTHREAD),undefined)
-objs += barrier.o
+objs += barrier.o sched_wait.o
 endif
