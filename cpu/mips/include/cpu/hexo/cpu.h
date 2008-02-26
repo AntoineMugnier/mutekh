@@ -131,14 +131,15 @@ static inline void cpu_dcache_invld(void *ptr)
 
 static inline size_t cpu_dcache_line_size()
 {
-  reg_t r = cpu_mips_mfc0(16, 1);
+  reg_t r0 = cpu_mips_mfc0(16, 0);
+  reg_t r1 = cpu_mips_mfc0(16, 1);
 
-  if (BIT_EXTRACT(r, 31))
+  if (BIT_EXTRACT(r0, 31))
     {
-      r = BITS_EXTRACT_FL(r, 10, 12);
+      r1 = BITS_EXTRACT_FL(r1, 10, 12);
 
-      if (r)
-	return 2 << r;
+      if (r1)
+	return 2 << r1;
     }
 
   return 0;
