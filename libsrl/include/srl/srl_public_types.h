@@ -11,11 +11,11 @@ typedef uint32_t srl_const_t;
 
 typedef void *srl_buffer_t;
 
-struct srl_memspace_s {
+typedef struct srl_memspace_s {
 	srl_buffer_t buffer;
 	uint32_t size;
-};
-typedef struct srl_memspace_s *srl_memspace_t;
+} srl_memspace_s;
+typedef srl_memspace_s *srl_memspace_t;
 
 typedef mwmr_t *srl_mwmr_t;
 

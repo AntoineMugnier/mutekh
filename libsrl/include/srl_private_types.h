@@ -78,6 +78,12 @@ struct srl_abstract_cpustate_s {
 	int boo;
 };
 
+#define SRL_MEMSPACE_INITIALIZER( b, s ) \
+{\
+	.buffer = b,\
+		 .size = s,\
+		 }
+
 #define SRL_CPUSTATE_INITIALIZER()									   \
 	{																   \
 		.boo = 0,													   \
