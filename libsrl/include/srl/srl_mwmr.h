@@ -17,6 +17,7 @@
 #include <mwmr/mwmr.h>
 #include <soclib/mwmr_controller.h>
 #include <hexo/endian.h>
+#include <assert.h>
 
 static inline void srl_mwmr_read( srl_mwmr_t mwmr, void *buffer, size_t size )
 {
