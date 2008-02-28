@@ -353,6 +353,12 @@ void sched_affinity_all(struct sched_context_s *sched_ctx)
 # endif
 }
 
+void sched_affinity_clear(struct sched_context_s *sched_ctx)
+{
+# ifndef CONFIG_HEXO_SCHED_MIGRATION_AFFINITY
+# endif
+}
+
 #endif
 
 #ifdef CONFIG_HEXO_SCHED_STATIC
@@ -372,6 +378,10 @@ void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 }
 
 void sched_affinity_all(struct sched_context_s *sched_ctx)
+{
+}
+
+void sched_affinity_clear(struct sched_context_s *sched_ctx)
 {
 }
 

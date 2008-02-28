@@ -283,6 +283,15 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   thread->cancelasync = PTHREAD_CANCEL_DEFERRED;
 #endif
 
+  if (!(attr->flags & _PTHREAD_ATTRFLAG_AFFINITY))
+    {
+      cpu_id_t i;
+
+      sched_affinity_clear(&thread->sched_ctx);
+      for (i = 0; i < attr->cpucount; i++)
+	sched_affinity_add(&thread->sched_ctx, attr->cpulist[i]);
+    }
+
   *thread_ = thread;
 
   /* add new thread runnable threads list */
@@ -290,6 +299,33 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   sched_context_start(&thread->sched_ctx);
   CPU_INTERRUPT_RESTORESTATE;
 
+  return 0;
+}
+
+error_t pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu)
+{
+  if (!(attr->flags & _PTHREAD_ATTRFLAG_AFFINITY))
+    {
+      attr->flags |= _PTHREAD_ATTRFLAG_AFFINITY;
+      attr->cpucount = 0;
+    }
+
+  if (attr->cpucount >= CONFIG_CPU_MAXCOUNT)
+    return ENOMEM;
+
+  attr->cpulist[attr->cpucount++] = cpu;
+
+  return 0;
+}
+
+error_t pthread_attr_destroy(pthread_attr_t *attr)
+{
+  return 0;
+}
+
+error_t pthread_attr_init(pthread_attr_t *attr)
+{
+  attr->flags = 0;
   return 0;
 }
 

@@ -139,6 +139,9 @@ void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu);
 /** scheduler context will run on all cpu */
 void sched_affinity_all(struct sched_context_s *sched_ctx);
 
+/** scheduler context will run on all cpu */
+void sched_affinity_clear(struct sched_context_s *sched_ctx);
+
 /** setup a scheduler context candidate checking function */
 void sched_context_candidate_fcn(struct sched_context_s *sched_ctx, sched_candidate_fcn_t *fcn);
 

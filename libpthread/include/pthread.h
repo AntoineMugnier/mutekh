@@ -98,11 +98,27 @@ struct pthread_s
   pthread_start_routine_t	*start_routine;
 };
 
+#define _PTHREAD_ATTRFLAG_AFFINITY	0x01
+
 /** pthread attributes structure */
 struct pthread_attr_s
 {
+  uint8_t flags;
+  cpu_id_t cpucount;
+  cpu_id_t cpulist[CONFIG_CPU_MAXCOUNT];
 };
 
+/** create a new pthread attribute */
+error_t
+pthread_attr_init(pthread_attr_t *attr);
+
+/** destroy a new pthread attribute */
+error_t
+pthread_attr_destroy(pthread_attr_t *attr);
+
+/** add a cpu affinity attribute */
+error_t
+pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu);
 
 /** create a new pthread */
 error_t
