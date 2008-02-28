@@ -252,12 +252,15 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   if (!thread)
     return ENOMEM;
 
-  if (attr->flags & _PTHREAD_ATTRFLAG_STACK)
+  /* find a stack buffer */
+#ifdef CONFIG_PTHREAD_ATTRIBUTES
+  if (attr && attr->flags & _PTHREAD_ATTRFLAG_STACK)
     {
       stack_size = attr->stack_size;
       stack = attr->stack_buf;
     }
   else
+#endif
     {
       stack_size = CONFIG_PTHREAD_STACK_SIZE;
       stack = arch_contextstack_alloc(stack_size * sizeof(reg_t));
@@ -294,14 +297,17 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   thread->cancelasync = PTHREAD_CANCEL_DEFERRED;
 #endif
 
-  if (!(attr->flags & _PTHREAD_ATTRFLAG_AFFINITY))
+#ifdef CONFIG_PTHREAD_ATTRIBUTES
+  /* add cpu affinity */
+  if (attr && attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
     {
       cpu_id_t i;
 
-      sched_affinity_clear(&thread->sched_ctx);
-      for (i = 0; i < attr->cpucount; i++)
+      sched_affinity_single(&thread->sched_ctx, attr->cpulist[0]);
+      for (i = 1; i < attr->cpucount; i++)
 	sched_affinity_add(&thread->sched_ctx, attr->cpulist[i]);
     }
+#endif
 
   *thread_ = thread;
 
@@ -313,6 +319,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   return 0;
 }
 
+#ifdef CONFIG_PTHREAD_ATTRIBUTES
 error_t pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu)
 {
   if (!(attr->flags & _PTHREAD_ATTRFLAG_AFFINITY))
@@ -348,4 +355,6 @@ error_t pthread_attr_stack(pthread_attr_t *attr, reg_t *stack_buf, size_t stack_
 
   return 0;
 }
+
+#endif
 

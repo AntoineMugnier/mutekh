@@ -104,11 +104,13 @@ struct pthread_s
 /** pthread attributes structure */
 struct pthread_attr_s
 {
+#ifdef CONFIG_PTHREAD_ATTRIBUTES
   uint8_t flags;
   cpu_id_t cpucount;
   cpu_id_t cpulist[CONFIG_CPU_MAXCOUNT];
   reg_t *stack_buf;
   size_t stack_size;
+#endif
 };
 
 /** create a new pthread attribute */
@@ -123,6 +125,7 @@ pthread_attr_destroy(pthread_attr_t *attr);
 error_t
 pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu);
 
+/** set stack buffer attribute */
 error_t
 pthread_attr_stack(pthread_attr_t *attr, reg_t *stack_buf, size_t stack_size);
 
