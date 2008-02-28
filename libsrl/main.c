@@ -17,6 +17,13 @@
 struct device_s *tty_dev;
 static struct device_s tty_con_dev;
 extern __ldscript_symbol_t _dsx_tty_address;
+
+lock_t srl_log_lock;
+
+#ifndef SRL_VERBOSITY
+#define SRL_VERBOSITY VERB_NONE
+#endif
+
 #endif
 
 void hw_init();
@@ -31,9 +38,11 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)
 	tty_dev = &tty_con_dev;
 #endif
 
-	printf("HW Init... ");
+	srl_log_printf(NONE, "HW Init... ");
 	hw_init();
-	printf("Done\n");
+	srl_log_printf(NONE, "Done\n");
+
+	lock_init(&srl_log_lock);
 
 	arch_start_other_cpu();
 
@@ -80,7 +89,7 @@ static void *srl_run_task( void* param )
 {
 	srl_task_s *task = param;
 
-	printf("Running %p", task);
+	srl_log_printf(NONE, "Pthread Running %p on cpu %d\n", task, cpu_id());
 	for (;;) {
 		task->func( task->args );
 	}
@@ -92,7 +101,7 @@ static CONTEXT_ENTRY(srl_run_task)
 	sched_unlock();
 	cpu_interrupt_enable();
 
-	printf("Running %p", task);
+	srl_log_printf(NONE, "Sched Running %p on cpu %d\n", task, cpu_id());
 	for (;;) {
 		task->func( task->args );
 	}
@@ -101,7 +110,7 @@ static CONTEXT_ENTRY(srl_run_task)
 
 static void print_cpu_info()
 {
-	printf("CPU %i is up and running\n"
+	srl_log_printf(NONE, "CPU %i is up and running\n"
 		   "DCache: %d bytes/line\n",
 		   cpu_id(), cpu_dcache_line_size());
 }
@@ -119,7 +128,7 @@ void mutek_main_smp(void)
 	  srl_cpudesc_s *cur = cpu_desc_list[cpu_id()];
 	  size_t i;
 
-	  printf("Bootstrapping cpu %d: %d tasks\n", cpu_id(), cur->ntasks);
+	  srl_log_printf(NONE, "Bootstrapping cpu %d: %d tasks\n", cpu_id(), cur->ntasks);
 	  for ( i=0; i<cur->ntasks; ++i ) {
 		  srl_task_s *task = cur->task_list[i];
 
@@ -129,7 +138,12 @@ void mutek_main_smp(void)
 
 		  if ( task->func ) {
 #ifdef CONFIG_PTHREAD
-			  pthread_create( &task->pthread, NULL, srl_run_task, task );
+			  pthread_attr_t attr;
+			  pthread_attr_init(&attr);
+			  pthread_attr_affinity(&attr, cpu_id());
+			  pthread_attr_stack(&attr, task->stack, task->stack_size);
+			  pthread_create( &task->pthread, &attr, srl_run_task, task );
+			  pthread_attr_destroy(&attr);
 #else
 			  context_init( &task->context.context,
 							task->stack, task->stack_size,

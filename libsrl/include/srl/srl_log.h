@@ -16,6 +16,7 @@
 
 #ifdef CONFIG_MUTEK_CONSOLE
 
+#include <hexo/lock.h>
 #include <stdio.h>
 
 enum __srl_verbosity {
@@ -25,14 +26,22 @@ enum __srl_verbosity {
     VERB_MAX,
 };
 
+extern lock_t srl_log_lock;
+
 #define srl_log( l, c ) do {										   \
-		if (VERB_##l <= SRL_VERBOSITY)								   \
+		if (VERB_##l <= SRL_VERBOSITY) {							   \
+			lock_spin(&srl_log_lock);								   \
 			puts( c );												   \
+			lock_release(&srl_log_lock);							   \
+		}															   \
 	} while (0)
 
 #define srl_log_printf( l, c... ) do {								   \
-		if (VERB_##l <= SRL_VERBOSITY)								   \
+		if (VERB_##l <= SRL_VERBOSITY) {							   \
+			lock_spin(&srl_log_lock);								   \
 			printf( c );											   \
+			lock_release(&srl_log_lock);							   \
+		}															   \
 	} while (0)
 
 #define srl_assert(expr)                                           \
