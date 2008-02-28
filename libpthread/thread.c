@@ -245,22 +245,33 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   struct pthread_s	*thread;
   error_t		res;
   reg_t			*stack;
+  size_t		stack_size;
 
   thread = mem_alloc(sizeof (struct pthread_s), MEM_SCOPE_SYS);
 
   if (!thread)
     return ENOMEM;
 
-  stack = arch_contextstack_alloc(CONFIG_HEXO_SCHED_IDLE_STACK_SIZE * sizeof(reg_t));
-
-  if (stack == NULL)
+  if (attr->flags & _PTHREAD_ATTRFLAG_STACK)
     {
-      mem_free(thread);
-      return ENOMEM;
+      stack_size = attr->stack_size;
+      stack = attr->stack_buf;
+    }
+  else
+    {
+      stack_size = CONFIG_PTHREAD_STACK_SIZE;
+      stack = arch_contextstack_alloc(stack_size * sizeof(reg_t));
+
+      if (stack == NULL)
+	{
+	  mem_free(thread);
+	  return ENOMEM;
+	}
     }
 
   /* setup context for new thread */
-  res = context_init(&thread->sched_ctx.context, stack, CONFIG_PTHREAD_STACK_SIZE, pthread_context_entry, thread);
+  res = context_init(&thread->sched_ctx.context, stack,
+		     stack_size, pthread_context_entry, thread);
 
   if (res)
     {
@@ -326,6 +337,15 @@ error_t pthread_attr_destroy(pthread_attr_t *attr)
 error_t pthread_attr_init(pthread_attr_t *attr)
 {
   attr->flags = 0;
+  return 0;
+}
+
+error_t pthread_attr_stack(pthread_attr_t *attr, reg_t *stack_buf, size_t stack_size)
+{
+  attr->flags |= _PTHREAD_ATTRFLAG_STACK;
+  attr->stack_buf = stack_buf;
+  attr->stack_size = stack_size;
+
   return 0;
 }
 

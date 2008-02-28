@@ -99,6 +99,7 @@ struct pthread_s
 };
 
 #define _PTHREAD_ATTRFLAG_AFFINITY	0x01
+#define _PTHREAD_ATTRFLAG_STACK		0x02
 
 /** pthread attributes structure */
 struct pthread_attr_s
@@ -106,6 +107,8 @@ struct pthread_attr_s
   uint8_t flags;
   cpu_id_t cpucount;
   cpu_id_t cpulist[CONFIG_CPU_MAXCOUNT];
+  reg_t *stack_buf;
+  size_t stack_size;
 };
 
 /** create a new pthread attribute */
@@ -119,6 +122,9 @@ pthread_attr_destroy(pthread_attr_t *attr);
 /** add a cpu affinity attribute */
 error_t
 pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu);
+
+error_t
+pthread_attr_stack(pthread_attr_t *attr, reg_t *stack_buf, size_t stack_size);
 
 /** create a new pthread */
 error_t
