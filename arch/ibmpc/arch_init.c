@@ -55,10 +55,9 @@ void arch_init()
 
 #endif
 
-      mem_init();
-
-      /* configure system wide cpu data */
       cpu_global_init();
+
+      mem_init();
 
       /* configure first CPU */
       cpu_init();

@@ -76,6 +76,7 @@
 
 .globl cpu_boot
 cpu_boot:
+	cli
 	movl	%cr0,		%eax
 	andl	$0x9fffffff,	%eax /* enable normal cache mode */
 	movl	%eax,		%cr0

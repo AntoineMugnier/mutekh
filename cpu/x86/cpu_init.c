@@ -51,15 +51,12 @@ static struct cpu_x86_gatedesc_s cpu_idt[CPU_MAX_INTERRUPTS];
 static lock_t		gdt_lock;
 
 /** CPU Global descriptor table */
-static union cpu_x86_desc_s *gdt;
+union cpu_x86_desc_s gdt[ARCH_GDT_SIZE];
 
 error_t
 cpu_global_init(void)
 {
   uint_fast16_t	i;
-
-  if (!(gdt = mem_alloc(ARCH_GDT_SIZE * sizeof (union cpu_x86_desc_s), MEM_SCOPE_SYS)))
-    return -1;
 
   lock_init(&gdt_lock);
 
@@ -169,6 +166,7 @@ cpu_x86_segdesc_free(cpu_x86_segsel_t sel)
 
 static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
 
+#ifdef CONFIG_SMP
 static void cpu_x86_init_apic()
 {
   cpu_x86_apic_t *apic = (void*)ARCH_SMP_LOCAL_APICADDR;
@@ -184,6 +182,7 @@ static void cpu_x86_init_apic()
   i |= 0x100;
   cpu_mem_write_32((uintptr_t)&apic->spurious_int, i);
 }
+#endif
 
 struct cpu_cld_s *cpu_init(void)
 {
@@ -208,7 +207,10 @@ struct cpu_cld_s *cpu_init(void)
   cpu_x86_set_idt(cpu_idt, CPU_MAX_INTERRUPTS);
 
   /* enable and initialize x86 APIC */
+
+#ifdef CONFIG_SMP
   cpu_x86_init_apic();
+#endif
 
   if (!(cld = mem_alloc(sizeof (struct cpu_cld_s), MEM_SCOPE_SYS)))
     goto err_cld;
