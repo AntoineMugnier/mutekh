@@ -164,7 +164,7 @@ void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 			writeback_status( fifo, &status );
             mwmr_unlock( &fifo->status->lock );
 #if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
-			srl_sched_wait_lt(&fifo->status->usage, fifo->gdepth-fifo->width);
+			srl_sched_wait_le(&fifo->status->usage, fifo->gdepth-fifo->width);
 #elif defined(CONFIG_PTHREAD)
 			pthread_yield();
 #else
