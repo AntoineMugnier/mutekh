@@ -89,7 +89,7 @@ static void *srl_run_task( void* param )
 {
 	srl_task_s *task = param;
 
-	srl_log_printf(NONE, "Pthread Running %p on cpu %d\n", task, cpu_id());
+	srl_log_printf(NONE, "Pthread Running %s on cpu %d\n", task->name, cpu_id());
 	for (;;) {
 		task->func( task->args );
 	}
@@ -101,7 +101,7 @@ static CONTEXT_ENTRY(srl_run_task)
 	sched_unlock();
 	cpu_interrupt_enable();
 
-	srl_log_printf(NONE, "Sched Running %p on cpu %d\n", task, cpu_id());
+	srl_log_printf(NONE, "Sched Running %s on cpu %d\n", task->name, cpu_id());
 	for (;;) {
 		task->func( task->args );
 	}

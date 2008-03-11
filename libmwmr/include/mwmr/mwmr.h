@@ -23,21 +23,23 @@ struct mwmr_s {
 	pthread_cond_t nfull;
 	uint8_t *rptr, *wptr, *end;
 	size_t usage;
+	const char *const name;
 };
 
-#define MWMR_INITIALIZER(w, d, b)						   \
+#define MWMR_INITIALIZER(w, d, b, n)							   \
 	{														   \
 		.width = w,											   \
 		.depth = d,											   \
 		.gdepth = (w)*(d),									   \
 		.buffer = (void*)b,									   \
-		.lock = PTHREAD_MUTEX_INITIALIZER,				   \
-		.nempty = PTHREAD_COND_INITIALIZER,				   \
-		.nfull = PTHREAD_COND_INITIALIZER,				   \
+		.lock = PTHREAD_MUTEX_INITIALIZER,				       \
+		.nempty = PTHREAD_COND_INITIALIZER,				       \
+		.nfull = PTHREAD_COND_INITIALIZER,				       \
 		.rptr = (void*)b,									   \
 		.wptr = (void*)b,									   \
-		.end = (uint8_t*)b+(w)*(d),						   \
-		.usage = 0,										   \
+		.end = (uint8_t*)b+(w)*(d),						       \
+		.usage = 0,										       \
+		.name = n,											   \
 	}
 
 #elif defined CONFIG_MWMR_SOCLIB
@@ -50,18 +52,20 @@ struct mwmr_s {
 	size_t gdepth;
 	void *buffer;
 	soclib_mwmr_status_s *status;
+	const char *const name;
 };
 
 void mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 				   size_t no, const mwmr_t* mwmr );
 
-#define MWMR_INITIALIZER(w, d, b, st)						   \
+#define MWMR_INITIALIZER(w, d, b, st, n)						   \
 	{														   \
 		.width = w,											   \
 		.depth = d,											   \
 		.gdepth = (w)*(d),									   \
 		.buffer = (void*)b,									   \
-		.status = st			       \
+		.status = st,									   	   \
+		.name = n,											   \
 	}
 #else
 # error No valid MWMR implementation

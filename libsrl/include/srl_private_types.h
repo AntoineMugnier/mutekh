@@ -54,6 +54,7 @@ typedef struct srl_abstract_task_s {
 	void *args;
 	void *stack;
 	size_t stack_size;
+	const char *name;
 #ifdef CONFIG_PTHREAD
 	pthread_t pthread;
 #else /* not CONFIG_PTHREAD */
@@ -63,13 +64,14 @@ typedef struct srl_abstract_task_s {
 #endif
 } srl_task_s;
 
-#define SRL_TASK_INITIALIZER(b, f, ss, s, a)							   \
+#define SRL_TASK_INITIALIZER(b, f, ss, s, a, n)						   \
 	{																   \
 		.bootstrap = (srl_task_func_t *)b,							   \
 		.func = (srl_task_func_t *)f,								   \
 		.args = (void*)a,											   \
 		.stack = (void*)s,											   \
 		.stack_size = ss / sizeof(reg_t),						   \
+		.name = n,											   \
 	}
 
 struct srl_abstract_cpustate_s __attribute__((deprecated));
