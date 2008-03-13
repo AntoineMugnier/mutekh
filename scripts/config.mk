@@ -1,5 +1,5 @@
 
-CONF_TMP_BASE:=$(shell mktemp)
+CONF_TMP_BASE:=$(shell mktemp /tmp/mutekh_config.XXXXXX)
 CONF_EXTS = py m4 h mk
 
 $(CONF_DIR):
