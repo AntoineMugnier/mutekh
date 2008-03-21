@@ -58,7 +58,7 @@ static inline void mwmr_lock( uint32_t *lock )
 {
 #if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
 	while (cpu_atomic_bit_testset((atomic_int_t*)lock, 0)) {
-		srl_sched_wait_eq(lock, 0);
+		srl_sched_wait_eq_le(lock, 0);
 	}
 #elif defined(CONFIG_PTHREAD)
 	while (cpu_atomic_bit_testset((atomic_int_t*)lock, 0)) {
@@ -87,9 +87,9 @@ static inline void rehash_status( mwmr_t *fifo, local_mwmr_status_t *status )
 {
 	volatile soclib_mwmr_status_s *fstatus = fifo->status;
 	cpu_dcache_invld_buf(fstatus, sizeof(*fstatus));
-	status->usage = fstatus->usage;
-	status->wptr = fstatus->wptr;
-	status->rptr = fstatus->rptr;
+	status->usage = endian_le32(fstatus->usage);
+	status->wptr = endian_le32(fstatus->wptr);
+	status->rptr = endian_le32(fstatus->rptr);
 	status->modified = 0;
 }
 
@@ -98,9 +98,9 @@ static inline void writeback_status( mwmr_t *fifo, local_mwmr_status_t *status )
 	volatile soclib_mwmr_status_s *fstatus = fifo->status;
 	if ( !status->modified )
 		return;
-	fstatus->usage = status->usage;
-	fstatus->wptr = status->wptr;
-	fstatus->rptr = status->rptr;
+	fstatus->usage = endian_le32(status->usage);
+	fstatus->wptr = endian_le32(status->wptr);
+	fstatus->rptr = endian_le32(status->rptr);
 }
 
 void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
@@ -116,7 +116,7 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 			writeback_status( fifo, &status );
             mwmr_unlock( &fifo->status->lock );
 #if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
-			srl_sched_wait_ge(&fifo->status->usage, fifo->width);
+			srl_sched_wait_ge_le(&fifo->status->usage, fifo->width);
 #elif defined(CONFIG_PTHREAD)
 			pthread_yield();
 #else
@@ -164,7 +164,7 @@ void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 			writeback_status( fifo, &status );
             mwmr_unlock( &fifo->status->lock );
 #if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
-			srl_sched_wait_le(&fifo->status->usage, fifo->gdepth-fifo->width);
+			srl_sched_wait_le_le(&fifo->status->usage, fifo->gdepth-fifo->width);
 #elif defined(CONFIG_PTHREAD)
 			pthread_yield();
 #else
@@ -202,35 +202,32 @@ size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
 	size_t done = 0;
-    volatile soclib_mwmr_status_s *const status = fifo->status;
+    local_mwmr_status_t status;
 
 	if ( mwmr_try_lock( &fifo->status->lock ) )
 		return done;
-    while ( lensw ) {
+	rehash_status( fifo, &status );
+	while ( lensw && status.usage >= fifo->width ) {
         size_t len;
-        if (status->usage == 0) {
-            mwmr_unlock( &fifo->status->lock );
-			return done;
-        }
-        while ( lensw && status->usage >= fifo->width ) {
-			void *sptr;
+		void *sptr;
 
-            if ( status->rptr < status->wptr )
-                len = status->usage;
-            else
-                len = (fifo->gdepth - status->rptr);
-            len = min(len, lensw);
-			sptr = &((uint8_t*)fifo->buffer)[status->rptr];
-            memcpy( ptr, sptr, len );
-            status->rptr += len;
-            if ( status->rptr == fifo->gdepth )
-                status->rptr = 0;
-            ptr += len;
-            status->usage -= len;
-            lensw -= len;
-			done += len;
-        }
-    }
+		if ( status.rptr < status.wptr )
+			len = status.usage;
+		else
+			len = (fifo->gdepth - status.rptr);
+		len = min(len, lensw);
+		sptr = &((uint8_t*)fifo->buffer)[status.rptr];
+		memcpy( ptr, sptr, len );
+		status.rptr += len;
+		if ( status.rptr == fifo->gdepth )
+			status.rptr = 0;
+		ptr += len;
+		status.usage -= len;
+		lensw -= len;
+		done += len;
+		status.modified = 1;
+	}
+	writeback_status( fifo, &status );
 	mwmr_unlock( &fifo->status->lock );
 	return done;
 }
@@ -239,35 +236,32 @@ size_t mwmr_try_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
 	size_t done = 0;
-    volatile soclib_mwmr_status_s *const status = fifo->status;
+    local_mwmr_status_t status;
 
 	if ( mwmr_try_lock( &fifo->status->lock ) )
 		return done;
-    while ( lensw ) {
+	rehash_status( fifo, &status );
+	while ( lensw && status.usage < fifo->gdepth ) {
         size_t len;
-        while (status->usage >= fifo->gdepth) {
-            mwmr_unlock( &fifo->status->lock );
-			return done;
-        }
-        while ( lensw && status->usage < fifo->gdepth ) {
-			void *dptr;
+		void *dptr;
 
-            if ( status->rptr <= status->wptr )
-                len = (fifo->gdepth - status->wptr);
-            else
-                len = fifo->gdepth - status->usage;
-            len = min(len, lensw);
-			dptr = &((uint8_t*)fifo->buffer)[status->wptr];
-            memcpy( dptr, ptr, len );
-            status->wptr += len;
-            if ( status->wptr == fifo->gdepth )
-                status->wptr = 0;
-            ptr += len;
-            status->usage += len;
-            lensw -= len;
-			done += len;
-        }
+		if ( status.rptr <= status.wptr )
+			len = (fifo->gdepth - status.wptr);
+		else
+			len = fifo->gdepth - status.usage;
+		len = min(len, lensw);
+		dptr = &((uint8_t*)fifo->buffer)[status.wptr];
+		memcpy( dptr, ptr, len );
+		status.wptr += len;
+		if ( status.wptr == fifo->gdepth )
+			status.wptr = 0;
+		ptr += len;
+		status.usage += len;
+		lensw -= len;
+		done += len;
+		status.modified = 1;
     }
+	writeback_status( fifo, &status );
 	mwmr_unlock( &fifo->status->lock );
 	return done;
 }
