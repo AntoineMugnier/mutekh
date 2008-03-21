@@ -25,7 +25,7 @@
 
 #define __CPU_ENDIAN_H_
 
-/** x86 CPU is little endian */
+/** PPC CPU is big endian */
 #define CPU_ENDIAN_ISBIG
 #undef CPU_ENDIAN_ISLITTLE
 
