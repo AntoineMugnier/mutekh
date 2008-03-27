@@ -7,6 +7,12 @@ TARGET_SECTIONS=.text .data .boot .contextdata
 
 KERNEL_FILE=$(target).$(TARGET_EXT)
 
+LINKING=1
+ifeq ($(TARGET_EXT),o)
+LINKING=0
+endif
+export LINKING
+
 BASE_MODULES = libc hexo mutek gpct drivers
 
 -include $(CONF_DIR)/.config.mk
