@@ -317,8 +317,8 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 	    str++;
 	else
 #endif
-	  while (*str++)
-	    ;
+	  while (*str)
+	    str++;
 
 	len = str - (char*)val;
 	buf = (char*)val;
