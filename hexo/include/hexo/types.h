@@ -108,8 +108,16 @@ typedef long _dont_use_native_long_type_t __attribute__ ((deprecated));
 /** return min integer value for a type */
 #define __MAXOF_TYPE(t)        ((typeof(t))(((typeof(t))-1) < 0 ? ~(((typeof(t))1) << sizeof(typeof(t)) * 8 - 1) : -1))
 
+#ifndef __cplusplus
+
 /** NULL pointer definition */
 #define NULL	((void*)0)
+
+#else
+
+#define NULL 0
+
+#endif
 
 #endif
 
