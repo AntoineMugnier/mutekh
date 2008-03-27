@@ -65,6 +65,7 @@ extern CPU_LOCAL FILE *cpu_tty;
 
 #define srl_log( l, c ) do {} while(0)
 #define srl_log_printf( l, c... ) do {} while(0)
+#define cpu_printf( c... ) do {} while(0)
 
 #define srl_assert(expr) \
 	do {				 \
