@@ -23,4 +23,8 @@ DECLARE_WAIT(be, gt, >)
 
 #undef DECLARE_WAIT
 
+typedef int srl_callback_t( uint32_t val );
+
+void srl_sched_wait_priv( srl_callback_t *cb, uint32_t val );
+
 #endif

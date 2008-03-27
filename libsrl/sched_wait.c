@@ -1,3 +1,24 @@
+/*
+ * This file is part of MutekH.
+ * 
+ * MutekH is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; version 2.1 of the License.
+ * 
+ * MutekH is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with MutekH; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301 USA
+ *
+ * Copyright (c) UPMC, Lip6, SoC
+ *         Nicolas Pouillon <nipo@ssji.net>, 2008
+ */
+
 #include <stddef.h>
 #include <hexo/endian.h>
 #include <hexo/scheduler.h>
@@ -28,12 +49,32 @@ static inline srl_task_s *context_to_srl_task( struct sched_context_s *ctx )
         srl_task_s *current = context_to_srl_task(sched_get_current()); \
         current->wait_val = val;                                        \
         current->wait_addr = addr;                                      \
-        sched_context_candidate_fcn(&current->context, wait_##name##endianness##_f); \
         cpu_interrupt_disable();                                        \
+        sched_context_candidate_fcn(&current->context, wait_##name##endianness##_f); \
         sched_context_switch();                                         \
-        cpu_interrupt_enable();                                         \
         sched_context_candidate_fcn(&current->context, NULL);           \
+        cpu_interrupt_enable();                                         \
     }
+
+static SCHED_CANDIDATE_FCN(wait_priv)
+{
+	srl_task_s *task = context_to_srl_task(sched_ctx);
+	srl_callback_t *cb = task->wait_addr;
+
+	return cb(task->wait_val);
+}
+
+void srl_sched_wait_priv( srl_callback_t *cb, uint32_t val )
+{
+	srl_task_s *current = context_to_srl_task(sched_get_current());
+	current->wait_val = val;
+	current->wait_addr = cb;
+	cpu_interrupt_disable();
+	sched_context_candidate_fcn(&current->context, wait_priv);
+	sched_context_switch();
+	sched_context_candidate_fcn(&current->context, NULL);
+	cpu_interrupt_enable();
+}
 
 DECLARE_WAIT(le, eq, ==)
 DECLARE_WAIT(le, ne, !=)

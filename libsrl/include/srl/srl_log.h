@@ -19,6 +19,10 @@
 #include <hexo/lock.h>
 #include <stdio.h>
 
+#ifndef SRL_VERBOSITY
+#define SRL_VERBOSITY VERB_NONE
+#endif
+
 enum __srl_verbosity {
     VERB_NONE,
     VERB_TRACE,
@@ -26,21 +30,18 @@ enum __srl_verbosity {
     VERB_MAX,
 };
 
-extern lock_t srl_log_lock;
+extern CONTEXT_LOCAL FILE *context_tty;
+extern CPU_LOCAL FILE *cpu_tty;
 
 #define srl_log( l, c ) do {										   \
 		if (VERB_##l <= SRL_VERBOSITY) {							   \
-			lock_spin(&srl_log_lock);								   \
-			puts( c );												   \
-			lock_release(&srl_log_lock);							   \
+			fputs( c, CONTEXT_LOCAL_GET(context_tty) );									   \
 		}															   \
 	} while (0)
 
 #define srl_log_printf( l, c... ) do {								   \
 		if (VERB_##l <= SRL_VERBOSITY) {							   \
-			lock_spin(&srl_log_lock);								   \
-			printf( c );											   \
-			lock_release(&srl_log_lock);							   \
+			fprintf( CONTEXT_LOCAL_GET(context_tty), c );									   \
 		}															   \
 	} while (0)
 
@@ -52,6 +53,11 @@ extern lock_t srl_log_lock;
             exit(2);                                                \
         }                                                           \
     } while(0)
+
+#define cpu_printf( c... ) do {					\
+		fprintf( CPU_LOCAL_GET(cpu_tty), c );	\
+	} while (0)
+
 
 #else /* CONFIG_MUTEK_CONSOLE */
 
