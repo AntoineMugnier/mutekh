@@ -1,4 +1,19 @@
 /*
+ * This file is part of MutekH.
+ * 
+ * MutekH is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; version 2.1 of the License.
+ * 
+ * MutekH is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with MutekH; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301 USA
  *
  * Copyright (c) UPMC, Lip6, SoC
  *         Nicolas Pouillon <nipo@ssji.net>, 2008
@@ -15,6 +30,8 @@
 
 #if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
 #include <srl/srl_sched_wait.h>
+#include <srl/srl_log.h>
+#define SRL_VERBOSITY VERB_DEBUG
 #elif defined(CONFIG_PTHREAD)
 #include <pthread.h>
 #endif
@@ -109,6 +126,11 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 	uint8_t *ptr = _ptr;
 	local_mwmr_status_t status;
 
+#ifdef CONFIG_MWMR_INSTRUMENTATION
+	size_t tot = lensw/fifo->width;
+	uint32_t access_begin = cpu_cycle_count();
+#endif
+
 	mwmr_lock( &fifo->status->lock );
 	rehash_status( fifo, &status );
     while ( lensw ) {
@@ -149,6 +171,13 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
         }
     }
 	writeback_status( fifo, &status );
+
+#ifdef CONFIG_MWMR_INSTRUMENTATION
+	cpu_dcache_invld_buf(fifo, sizeof(*fifo));
+	fifo->n_read += tot;
+	fifo->time_read += cpu_cycle_count()-access_begin;
+#endif
+
 	mwmr_unlock( &fifo->status->lock );
 }
 
@@ -156,6 +185,11 @@ void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
     local_mwmr_status_t status;
+
+#ifdef CONFIG_MWMR_INSTRUMENTATION
+	size_t tot = lensw/fifo->width;
+	uint32_t access_begin = cpu_cycle_count();
+#endif
 
 	mwmr_lock( &fifo->status->lock );
 	rehash_status( fifo, &status );
@@ -196,6 +230,13 @@ void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
         }
     }
 	writeback_status( fifo, &status );
+
+#ifdef CONFIG_MWMR_INSTRUMENTATION
+	cpu_dcache_invld_buf(fifo, sizeof(*fifo));
+	fifo->n_write += tot;
+	fifo->time_write += cpu_cycle_count()-access_begin;
+#endif
+
 	mwmr_unlock( &fifo->status->lock );
 }
 
@@ -204,6 +245,9 @@ size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 	uint8_t *ptr = _ptr;
 	size_t done = 0;
     local_mwmr_status_t status;
+#ifdef CONFIG_MWMR_INSTRUMENTATION
+	uint32_t access_begin = cpu_cycle_count();
+#endif
 
 	if ( mwmr_try_lock( &fifo->status->lock ) )
 		return done;
@@ -230,6 +274,11 @@ size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 	}
 	writeback_status( fifo, &status );
 	mwmr_unlock( &fifo->status->lock );
+#ifdef CONFIG_MWMR_INSTRUMENTATION
+	cpu_dcache_invld_buf(fifo, sizeof(*fifo));
+	fifo->n_read += done/fifo->width;
+	fifo->time_read += cpu_cycle_count()-access_begin;
+#endif
 	return done;
 }
 
@@ -238,6 +287,9 @@ size_t mwmr_try_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 	uint8_t *ptr = _ptr;
 	size_t done = 0;
     local_mwmr_status_t status;
+#ifdef CONFIG_MWMR_INSTRUMENTATION
+	uint32_t access_begin = cpu_cycle_count();
+#endif
 
 	if ( mwmr_try_lock( &fifo->status->lock ) )
 		return done;
@@ -263,6 +315,35 @@ size_t mwmr_try_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 		status.modified = 1;
     }
 	writeback_status( fifo, &status );
+#ifdef CONFIG_MWMR_INSTRUMENTATION
+	cpu_dcache_invld_buf(fifo, sizeof(*fifo));
+	fifo->n_write += done/fifo->width;
+	fifo->time_write += cpu_cycle_count()-access_begin;
+#endif
 	mwmr_unlock( &fifo->status->lock );
 	return done;
 }
+
+#ifdef CONFIG_MWMR_INSTRUMENTATION
+void mwmr_dump_stats( const mwmr_t *mwmr )
+{
+	cpu_dcache_invld_buf(mwmr, sizeof(*mwmr));
+	if ( mwmr->n_read )
+		srl_log_printf(NONE, "read,%s,%d,%d,%d\n",
+					   mwmr->name, cpu_cycle_count(),
+					   mwmr->time_read, mwmr->n_read );
+	if ( mwmr->n_write )
+		srl_log_printf(NONE, "write,%s,%d,%d,%d\n",
+					   mwmr->name, cpu_cycle_count(),
+					   mwmr->time_write, mwmr->n_write );
+}
+
+void mwmr_clear_stats( mwmr_t *mwmr )
+{
+	cpu_dcache_invld_buf(mwmr, sizeof(*mwmr));
+	mwmr->time_read =
+		mwmr->n_read =
+		mwmr->time_write =
+		mwmr->n_write = 0;
+}
+#endif

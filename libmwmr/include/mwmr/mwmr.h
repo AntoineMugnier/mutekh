@@ -53,6 +53,12 @@ struct mwmr_s {
 	void *buffer;
 	soclib_mwmr_status_s *status;
 	const char *const name;
+#ifdef CONFIG_MWMR_INSTRUMENTATION
+	uint32_t n_read;
+	uint32_t n_write;
+	uint32_t time_read;
+	uint32_t time_write;
+#endif
 };
 
 void mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
@@ -67,6 +73,12 @@ void mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 		.status = st,									   	   \
 		.name = n,											   \
 	}
+
+#ifdef CONFIG_MWMR_INSTRUMENTATION
+void mwmr_dump_stats( const mwmr_t *mwmr );
+void mwmr_clear_stats( mwmr_t *mwmr );
+#endif
+
 #else
 # error No valid MWMR implementation
 #endif
