@@ -207,7 +207,7 @@ size_t	fwrite(const void *ptr_, size_t size, size_t nmemb, FILE *stream)
   return i;
 }
 
-inline error_t fseek(FILE *stream, fpos_t offset, enum stream_whence_e whence)
+inline error_t fseek(FILE *stream, fpos_t offset, int_fast8_t whence)
 {
   stream->rwflush(stream);
 

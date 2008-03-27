@@ -109,7 +109,7 @@ size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 char *fgets(char *str, size_t size, FILE *stream);
 error_t fputs(const char *str, FILE *stream);
-error_t fseek(FILE *stream, fpos_t offset, enum stream_whence_e whence);
+error_t fseek(FILE *stream, fpos_t offset, int_fast8_t whence);
 fpos_t ftell(FILE *stream);
 void rewind(FILE *stream);
 error_t fgetpos(FILE *stream, fpos_t *pos);
