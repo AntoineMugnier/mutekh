@@ -121,6 +121,7 @@ void mutek_main_smp(void)
 
   srl_cpudesc_s *cur = cpu_desc_list[cpu_id()];
   srl_console_init_cpu(cur->tty_addr);
+  srl_console_init_task(cur->tty_addr);
 
   print_cpu_info();
 
