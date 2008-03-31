@@ -87,10 +87,17 @@ static void *srl_run_task( void* param )
 	srl_task_s *task = param;
 	srl_console_init_task(task->tty_addr);
 
-	srl_log_printf(NONE, "Pthread Running %s on cpu %d\n", task->name, cpu_id());
-	for (;;) {
-		task->func( task->args );
+	srl_log_printf(NONE, "Sched Bootstrapping %s on cpu %d\n", task->name, cpu_id());
+
+	if ( task->bootstrap ) {
+		task->bootstrap(task->args);
 	}
+
+	srl_log_printf(NONE, "Pthread Running %s on cpu %d\n", task->name, cpu_id());
+	if ( task->func )
+		for (;;) {
+			task->func( task->args );
+		}
 }
 #else
 static CONTEXT_ENTRY(srl_run_task)
@@ -100,10 +107,17 @@ static CONTEXT_ENTRY(srl_run_task)
 	sched_unlock();
 	cpu_interrupt_enable();
 
-	srl_log_printf(NONE, "Sched Running %s on cpu %d\n", task->name, cpu_id());
-	for (;;) {
-		task->func( task->args );
+	srl_log_printf(NONE, "Sched Bootstrapping %s on cpu %d\n", task->name, cpu_id());
+
+	if ( task->bootstrap ) {
+		task->bootstrap(task->args);
 	}
+
+	srl_log_printf(NONE, "Sched Running %s on cpu %d\n", task->name, cpu_id());
+	if ( task->func )
+		for (;;) {
+			task->func( task->args );
+		}
 }
 #endif
 
@@ -121,7 +135,6 @@ void mutek_main_smp(void)
 
   srl_cpudesc_s *cur = cpu_desc_list[cpu_id()];
   srl_console_init_cpu(cur->tty_addr);
-  srl_console_init_task(cur->tty_addr);
 
   print_cpu_info();
 
@@ -134,27 +147,21 @@ void mutek_main_smp(void)
 	  for ( i=0; i<cur->ntasks; ++i ) {
 		  srl_task_s *task = cur->task_list[i];
 
-		  if ( task->bootstrap ) {
-			  task->bootstrap(task->args);
-		  }
-
-		  if ( task->func ) {
 #ifdef CONFIG_PTHREAD
-			  pthread_attr_t attr;
-			  pthread_attr_init(&attr);
-			  pthread_attr_affinity(&attr, cpu_id());
-			  pthread_attr_stack(&attr, task->stack, task->stack_size);
-			  pthread_create( &task->pthread, &attr, srl_run_task, task );
-			  pthread_attr_destroy(&attr);
+		  pthread_attr_t attr;
+		  pthread_attr_init(&attr);
+		  pthread_attr_affinity(&attr, cpu_id());
+		  pthread_attr_stack(&attr, task->stack, task->stack_size);
+		  pthread_create( &task->pthread, &attr, srl_run_task, task );
+		  pthread_attr_destroy(&attr);
 #else
-			  context_init( &task->context.context,
-							task->stack, task->stack_size,
-							srl_run_task, task );
-			  sched_context_init( &task->context );
-			  sched_affinity_single( &task->context, cpu_id() );
-			  sched_context_start( &task->context );
+		  context_init( &task->context.context,
+						task->stack, task->stack_size,
+						srl_run_task, task );
+		  sched_context_init( &task->context );
+		  sched_affinity_single( &task->context, cpu_id() );
+		  sched_context_start( &task->context );
 #endif
-		  }
 	  }
   }
 
