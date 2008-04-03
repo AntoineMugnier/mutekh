@@ -54,7 +54,7 @@ cflags: config
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@
 
 mkmf: config
-	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ TARGET_MK=$(TARGET_MK)
 
 showpaths: config
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@
