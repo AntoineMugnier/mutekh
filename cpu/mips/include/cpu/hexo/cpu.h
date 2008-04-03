@@ -42,6 +42,33 @@ extern struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	32
 
+#define CPU_GPREG_NAMES {											   \
+"pc", "at", "v0", "v1", "a0", "a1", "a2", "a3",						   \
+"t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",						   \
+"s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",						   \
+"t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra",						   \
+}
+
+#define CPU_FAULT_COUNT 16
+#define CPU_FAULT_NAMES {											   \
+"Interrupt",														   \
+"TLB Modification",													   \
+"TLB Load error",													   \
+"TLB Store error",													   \
+"Address error (Load)",												   \
+"Address error (Store)",											   \
+"Instruction bus error",											   \
+"Data bus error",													   \
+"Syscall",															   \
+"Break point",														   \
+"Reserved instruction",												   \
+"Coproc unusable",													   \
+"Overflow",															   \
+"Trap",																   \
+"Reserved exception",												   \
+"Floating point",													   \
+}
+
 #if __mips >= 32 
 
 #define cpu_mips_mfc0(id, sel)			\
