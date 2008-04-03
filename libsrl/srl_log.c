@@ -28,7 +28,11 @@
 #include <hexo/device.h>
 #include <hexo/driver.h>
 
-#ifdef CONFIG_DRIVER_CHAR_SOCLIBTTY
+#ifdef CONFIG_MUTEK_CONSOLE
+
+#ifdef CONFIG_LIBC_STREAM
+
+CONTAINER_FUNC(stream_fifo, RING, static inline, stream_fifo);
 
 static ssize_t	tty_read(fd_t fd, void *buffer, size_t count)
 {
@@ -91,7 +95,6 @@ static const struct stream_ops_s blackhole_ops =
 };
 
 struct tty_state {
-	uint8_t stdin_buffer[CONFIG_LIBC_STREAM_BUFFER_SIZE];
 	struct file_s file;
 	struct device_s device;
 };
@@ -106,9 +109,6 @@ static struct file_s null_file =
 
 struct device_s *tty_dev;
 static struct tty_state _state[CONFIG_SRL_NTTY];
-
-extern __ldscript_symbol_t _dsx_tty_address;
-extern __ldscript_symbol_t _dsx_tty_no;
 
 CPU_LOCAL FILE *cpu_tty;
 CONTEXT_LOCAL FILE *context_tty;
@@ -131,6 +131,8 @@ static FILE *init_tty(void *addr)
 			st->device.addr[0] = addr;
 			st->device.irq = 1;
 			tty_soclib_init(&st->device, NULL, NULL);
+			stream_fifo_init(&st->file.fifo_read);
+			stream_fifo_init(&st->file.fifo_write);
 			st->file.ops = &tty_ops;
 			st->file.rwflush = &no_flush;
 			st->file.fd = &st->device;
@@ -140,16 +142,16 @@ static FILE *init_tty(void *addr)
 	return &null_file;
 }
 
-void srl_console_init()
+void srl_console_init(void *addr)
 {
 	size_t i;
-	uint32_t *tty = (uint32_t*)&_dsx_tty_address;
-	uint32_t *addr = tty+TTY_SPAN*((size_t)&_dsx_tty_no);
+
+	stream_fifo_init(&null_file.fifo_read);
+	stream_fifo_init(&null_file.fifo_write);
 
 	memset( &_state[0], 0, sizeof(_state[0])*CONFIG_SRL_NTTY );
 
 	tcg_tty = NULL;
-	assert(addr);
 	tcg_tty = init_tty(addr);
 
 	tty_dev = &_state[0].device;
@@ -165,9 +167,35 @@ void srl_console_init_task(void *addr)
 	CONTEXT_LOCAL_SET(context_tty, init_tty(addr));
 }
 
-#else
+#else // not CONFIG_LIBC_STREAM
 
-void srl_console_init()
+#include "soclib/tty.h"
+
+static struct device_s device;
+struct device_s *tty_dev;
+
+void srl_console_init(void *addr)
+{
+	device_init(&device);
+	device.addr[0] = addr;
+	device.irq = 1;
+	tty_soclib_init(&device, NULL, NULL);
+	tty_dev = &device;
+}
+
+void srl_console_init_cpu(void *addr)
+{
+}
+
+void srl_console_init_task(void *addr)
+{
+}
+
+#endif // end CONFIG_LIBC_STREAM
+
+#else // not CONFIG_MUTEK_CONSOLE
+
+void srl_console_init(void *addr)
 {
 }
 

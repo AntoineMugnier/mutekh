@@ -22,15 +22,15 @@
 #include <hexo/scheduler.h>
 #include <hexo/error.h>
 #include <assert.h>
+#include <srl/srl_sched_wait.h>
 #include <srl/srl_public_types.h>
 #include <srl_private_types.h>
 
 void srl_barrier_wait(srl_barrier_t barrier)
 {
+#if 0
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
 	sched_queue_wrlock(&barrier->wait);
-
-	assert(barrier->count >= 1);
 
 	if (barrier->count == 1)
     {
@@ -45,5 +45,20 @@ void srl_barrier_wait(srl_barrier_t barrier)
     }
 
 	CPU_INTERRUPT_RESTORESTATE;
+#else
+	lock_spin(&barrier->lock);
+	cpu_dcache_invld_buf(barrier, sizeof(*barrier));
+
+	if (barrier->count == 1) {
+		barrier->count = barrier->max;
+		++(barrier->serial);
+		lock_release(&barrier->lock);
+	} else {
+		uint32_t ser = barrier->serial;
+		--(barrier->count);
+		lock_release(&barrier->lock);
+		srl_sched_wait_ne_cpu(&barrier->serial, ser);
+	}
+#endif
 }
 

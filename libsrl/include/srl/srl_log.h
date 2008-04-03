@@ -30,6 +30,8 @@ enum __srl_verbosity {
     VERB_MAX,
 };
 
+#ifdef CONFIG_LIBC_STREAM
+
 extern CONTEXT_LOCAL FILE *context_tty;
 extern CPU_LOCAL FILE *cpu_tty;
 
@@ -45,6 +47,30 @@ extern CPU_LOCAL FILE *cpu_tty;
 		}															   \
 	} while (0)
 
+#define cpu_printf( c... ) do {					\
+		fprintf( CPU_LOCAL_GET(cpu_tty), c );	\
+	} while (0)
+
+#else // else CONFIG_LIBC_STREAM
+
+#define srl_log( l, c ) do {										   \
+		if (VERB_##l <= SRL_VERBOSITY) {							   \
+			puts( c );									   \
+		}															   \
+	} while (0)
+
+#define srl_log_printf( l, c... ) do {								   \
+		if (VERB_##l <= SRL_VERBOSITY) {							   \
+			printf( c );									   \
+		}															   \
+	} while (0)
+
+#define cpu_printf( c... ) do {					\
+		printf( c );	\
+	} while (0)
+
+#endif // end CONFIG_LIBC_STREAM
+
 #define srl_assert(expr)                                           \
     do {                                                            \
         if ( ! (expr) ) {                                           \
@@ -53,11 +79,6 @@ extern CPU_LOCAL FILE *cpu_tty;
             exit(2);                                                \
         }                                                           \
     } while(0)
-
-#define cpu_printf( c... ) do {					\
-		fprintf( CPU_LOCAL_GET(cpu_tty), c );	\
-	} while (0)
-
 
 #else /* CONFIG_MUTEK_CONSOLE */
 

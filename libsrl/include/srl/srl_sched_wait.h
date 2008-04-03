@@ -21,6 +21,13 @@ DECLARE_WAIT(be, ge, >=)
 DECLARE_WAIT(be, lt, <)
 DECLARE_WAIT(be, gt, >)
 
+DECLARE_WAIT(cpu, eq, ==)
+DECLARE_WAIT(cpu, ne, !=)
+DECLARE_WAIT(cpu, le, <=)
+DECLARE_WAIT(cpu, ge, >=)
+DECLARE_WAIT(cpu, lt, <)
+DECLARE_WAIT(cpu, gt, >)
+
 #undef DECLARE_WAIT
 
 typedef int srl_callback_t( uint32_t val );

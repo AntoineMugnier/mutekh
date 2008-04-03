@@ -22,14 +22,16 @@
 #ifndef SRL_PRIVATE_TYPES_H
 #define SRL_PRIVATE_TYPES_H
 
+#include <hexo/scheduler.h>
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <hexo/lock.h>
-#include <hexo/scheduler.h>
 #include <srl/srl_public_types.h>
 #include <stdint.h>
 
+#include <hexo/lock.h>
+
 #include <srl/srl_lock.h>
+#include <hexo/context.h>
 
 #include <mwmr/mwmr.h>
 #include <soclib/mwmr_controller.h>
@@ -47,6 +49,7 @@ typedef soclib_mwmr_status_s srl_mwmr_status_s;
 
 #define SRL_LOCK_INITIALIZER() PTHREAD_MUTEX_INITIALIZER
 
+typedef pthread_barrier_t srl_barrier_s;
 # define SRL_BARRIER_INITIALIZER PTHREAD_BARRIER_INITIALIZER
 
 #else /* not CONFIG_PTHREAD */
@@ -55,16 +58,34 @@ typedef soclib_mwmr_status_s srl_mwmr_status_s;
 
 typedef struct srl_barrier_s
 {
-  int_fast8_t count;
+	const int_fast8_t max;
+	int_fast8_t count;
+#if 0
   /** blocked threads waiting for read */
-  sched_queue_root_t wait;
+	sched_queue_root_t wait;
+#else
+	lock_t lock;
+	volatile uint32_t serial;
+	
+#endif
 } srl_barrier_s;
 
+#if 0
 # define SRL_BARRIER_INITIALIZER(n)										\
 	{																	\
-		.wait = CONTAINER_ROOT_INITIALIZER(sched_queue, __SCHED_CONTAINER_ALGO, HEXO_SPIN),	\
+		.wait = CONTAINER_ROOT_INITIALIZER(sched_queue, CLIST),	\
 		.count = (n),												\
+		.max = (n),												\
 	}
+#else
+# define SRL_BARRIER_INITIALIZER(n)										\
+	{																	\
+		.serial = 0, \
+		.count = (n),												\
+		.max = (n),												\
+		.lock = LOCK_INITIALIZER, \
+	}
+#endif
 
 #endif /* CONFIG_PTHREAD */
 
@@ -86,15 +107,15 @@ typedef struct srl_abstract_task_s {
 	void *tty_addr;
 } srl_task_s;
 
-#define SRL_TASK_INITIALIZER(b, f, ss, s, a, n, ttya, ttyn)			   \
-	{																   \
-		.bootstrap = (srl_task_func_t *)b,							   \
-		.func = (srl_task_func_t *)f,								   \
-		.args = (void*)a,											   \
-		.stack = (void*)s,											   \
-		.stack_size = ss / sizeof(reg_t),						   \
-		.name = n,											   \
-		.tty_addr = (uint32_t*)ttya+TTY_SPAN*ttyn,						   \
+#define SRL_TASK_INITIALIZER(b, f, ss, s, a, n, ttya, ttyn)	\
+	{														\
+		.bootstrap = (srl_task_func_t *)b,					\
+		.func = (srl_task_func_t *)f,						\
+		.args = (void*)a,									\
+		.stack = (void*)s,									\
+		.stack_size = ss / sizeof(reg_t),					\
+		.name = n,											\
+		.tty_addr = (uint32_t*)ttya+TTY_SPAN*ttyn,			\
 	}
 
 #define SRL_MEMSPACE_INITIALIZER( b, s ) \
@@ -110,11 +131,31 @@ struct srl_abstract_cpudesc_s {
 	void *tty_addr;
 };
 
-#define SRL_CPUDESC_INITIALIZER(nt, tl, ttya, ttyn)				   \
-	{																   \
-		.ntasks = nt,												   \
-		.task_list = tl,										       \
-		.tty_addr = (uint32_t*)ttya+TTY_SPAN*ttyn,						   \
+#define SRL_CPUDESC_INITIALIZER(nt, tl, ttya, ttyn)	\
+	{												\
+		.ntasks = nt,								\
+		.task_list = tl,							\
+		.tty_addr = (uint32_t*)ttya+TTY_SPAN*ttyn,	\
+	}
+
+typedef struct srl_abstract_appdesc_s srl_appdesc_s;
+struct srl_abstract_appdesc_s {
+	const size_t ntasks;
+	srl_barrier_s start;
+	srl_mwmr_s **mwmr;
+	srl_cpudesc_s **cpu;
+	srl_task_s **task;
+	void *tty_addr;
+};
+
+#define SRL_APPDESC_INITIALIZER(nt, cl, ml, tl, ttya, ttyn)	   \
+	{														   \
+		.ntasks = nt,										   \
+		.cpu = cl,										       \
+		.mwmr = ml,										       \
+		.task = tl,										       \
+		.start = SRL_BARRIER_INITIALIZER(nt),				   \
+		.tty_addr = (uint32_t*)ttya+TTY_SPAN*ttyn,			   \
 	}
 
 #endif

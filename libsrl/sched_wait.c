@@ -32,6 +32,8 @@ static inline srl_task_s *context_to_srl_task( struct sched_context_s *ctx )
     return (srl_task_s *)p;
 }
 
+#define endian_cpu32(x) (x)
+
 #define DECLARE_WAIT(endianness, name, cmp)								\
                                                                         \
     static SCHED_CANDIDATE_FCN(wait_##name##endianness##_f)				\
@@ -44,16 +46,16 @@ static inline srl_task_s *context_to_srl_task( struct sched_context_s *ctx )
                                                                         \
     void srl_sched_wait_##name##_##endianness( uint32_t*addr, uint32_t val )           \
     {                                                                   \
-        if ( endian_##endianness##32(*addr) cmp val )					\
-            return;                                                     \
-        srl_task_s *current = context_to_srl_task(sched_get_current()); \
-        current->wait_val = val;                                        \
-        current->wait_addr = addr;                                      \
-        cpu_interrupt_disable();                                        \
-        sched_context_candidate_fcn(&current->context, wait_##name##endianness##_f); \
-        sched_context_switch();                                         \
-        sched_context_candidate_fcn(&current->context, NULL);           \
-        cpu_interrupt_enable();                                         \
+        while ( ! ( endian_##endianness##32(*addr) cmp val ) ) {					\
+          srl_task_s *current = context_to_srl_task(sched_get_current()); \
+          current->wait_val = val;                                        \
+          current->wait_addr = addr;                                      \
+          cpu_interrupt_disable();                                        \
+          sched_context_candidate_fcn(&current->context, wait_##name##endianness##_f); \
+          sched_context_switch();                                         \
+          sched_context_candidate_fcn(&current->context, NULL);           \
+          cpu_interrupt_enable();                                         \
+		} \
     }
 
 static SCHED_CANDIDATE_FCN(wait_priv)
@@ -89,3 +91,10 @@ DECLARE_WAIT(be, le, <=)
 DECLARE_WAIT(be, ge, >=)
 DECLARE_WAIT(be, lt, <)
 DECLARE_WAIT(be, gt, >)
+
+DECLARE_WAIT(cpu, eq, ==)
+DECLARE_WAIT(cpu, ne, !=)
+DECLARE_WAIT(cpu, le, <=)
+DECLARE_WAIT(cpu, ge, >=)
+DECLARE_WAIT(cpu, lt, <)
+DECLARE_WAIT(cpu, gt, >)
