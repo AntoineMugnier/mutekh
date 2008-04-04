@@ -34,28 +34,28 @@ static inline srl_task_s *context_to_srl_task( struct sched_context_s *ctx )
 
 #define endian_cpu32(x) (x)
 
-#define DECLARE_WAIT(endianness, name, cmp)								\
-                                                                        \
-    static SCHED_CANDIDATE_FCN(wait_##name##endianness##_f)				\
-    {                                                                   \
-        srl_task_s *task = context_to_srl_task(sched_ctx);              \
-                                                                        \
-        cpu_dcache_invld(task->wait_addr);                              \
-        return (endian_##endianness##32(*task->wait_addr) cmp task->wait_val); \
-    }                                                                   \
-                                                                        \
-    void srl_sched_wait_##name##_##endianness( uint32_t*addr, uint32_t val )           \
-    {                                                                   \
-        while ( ! ( endian_##endianness##32(*addr) cmp val ) ) {					\
-          srl_task_s *current = context_to_srl_task(sched_get_current()); \
-          current->wait_val = val;                                        \
-          current->wait_addr = addr;                                      \
-          cpu_interrupt_disable();                                        \
-          sched_context_candidate_fcn(&current->context, wait_##name##endianness##_f); \
-          sched_context_switch();                                         \
-          sched_context_candidate_fcn(&current->context, NULL);           \
-          cpu_interrupt_enable();                                         \
-		} \
+#define DECLARE_WAIT(endianness, name, cmp)												\
+																						\
+    static SCHED_CANDIDATE_FCN(wait_##name##endianness##_f)								\
+    {																					\
+        srl_task_s *task = context_to_srl_task(sched_ctx);								\
+																						\
+        cpu_dcache_invld(task->wait_addr);												\
+        return (endian_##endianness##32(*task->wait_addr) cmp task->wait_val);			\
+    }																					\
+																						\
+    void srl_sched_wait_##name##_##endianness( uint32_t*addr, uint32_t val )			\
+    {																					\
+        if ( endian_##endianness##32(*addr) cmp val )									\
+			return;																		\
+        srl_task_s *current = context_to_srl_task(sched_get_current());					\
+        current->wait_val = val;														\
+        current->wait_addr = addr;														\
+        cpu_interrupt_disable();														\
+        sched_context_candidate_fcn(&current->context, wait_##name##endianness##_f);	\
+		sched_context_switch();														\
+        sched_context_candidate_fcn(&current->context, NULL);							\
+        cpu_interrupt_enable();															\
     }
 
 static SCHED_CANDIDATE_FCN(wait_priv)
