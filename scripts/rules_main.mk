@@ -85,7 +85,7 @@ $(target).out: $(CONF_DIR)/.config.m4 $(LISTS) \
 		$(arch_OBJ_DIR)/ldscript \
 		$(cpu_OBJ_DIR)/ldscript
 	echo '    LD      $@'
-	$(LD) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
+	$(LD) $(LINK_LDFLAGS) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		-q $$(cat /dev/null $(filter %.list,$^)) \
 		$(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \

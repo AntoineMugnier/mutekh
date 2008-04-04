@@ -28,16 +28,16 @@ AS=$(CPUTOOLS)as
 OBJCOPY=$(CPUTOOLS)objcopy
 OBJDUMP=$(CPUTOOLS)objdump
 
-CFLAGS=	-fno-builtin -Wall -fno-stack-protector
+CFLAGS=	-fno-builtin -Wall #-fno-stack-protector
 
 ifeq ($(CONFIG_COMPILE_SAVETEMPS), defined)
 CFLAGS += -save-temps
 endif
 
 ifeq ($(CONFIG_COMPILE_DEBUG), defined)
-CFLAGS += -O0 -gstabs #-ggdb
+CFLAGS += -O0 -ggdb
 else
-CFLAGS += -O2
+CFLAGS += -O2 -g
 endif
 
 ifeq ($(CONFIG_COMPILE_FRAMEPTR), undefined)
@@ -46,7 +46,7 @@ endif
 
 ifeq ($(CONFIG_COMPILE_COLLECT), defined)
 CFLAGS += -ffunction-sections -fdata-sections
-LDFLAGS += --gc-sections
+LINK_LDFLAGS += --gc-sections
 endif
 
 ifeq ($(CONFIG_COMPILE_INSTRUMENT), defined)
@@ -65,7 +65,9 @@ INCS=-nostdinc -D__MUTEK__ \
 cflags:
 	@echo $(INCS)
 
+ifeq ($(TARGET_MK),)
 TARGET_MK=flags.mk
+endif
 
 mkmf: $(TARGET_MK)
 
