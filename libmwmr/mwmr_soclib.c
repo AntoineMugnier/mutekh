@@ -29,11 +29,13 @@
 #include <soclib/mwmr_controller.h>
 
 #if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
-#include <srl/srl_sched_wait.h>
-#include <srl/srl_log.h>
-#define SRL_VERBOSITY VERB_DEBUG
+# include <srl/srl_sched_wait.h>
+# include <srl/srl_log.h>
+# ifndef SRL_VERBOSITY
+#  define SRL_VERBOSITY VERB_DEBUG
+# endif
 #elif defined(CONFIG_PTHREAD)
-#include <pthread.h>
+# include <pthread.h>
 #endif
 
 
