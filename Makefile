@@ -35,7 +35,10 @@ export BUILD_DIR
 export CONF_DIR
 export CURRENT_DIR
 export MODULES
+
+ifneq ($(VERBOSE),1)
 MAKEFLAGS = -s
+endif
 
 kernel: config $(BUILD_DIR) $(CONF_DIR)
 	echo "Using '$(CONF)' configuration file."
