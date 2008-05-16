@@ -44,18 +44,23 @@ inline void * memset(void * dst, int_fast8_t s, size_t count)
 
 #ifndef HAS_CPU_MEMCPY
 #undef memcpy
-inline void * memcpy (void *dst, const void *src, size_t n)
+void *memcpy( void *_dst, const void *_src, size_t size )
 {
-  void	*res = dst;
-  uint8_t	*c1, *c2;
+	uint32_t *dst = _dst;
+	const uint32_t *src = _src;
+	if ( ! ((uintptr_t)dst & 3) && ! ((uintptr_t)src & 3) )
+		while (size > 3) {
+			*dst++ = *src++;
+			size -= 4;
+		}
 
-  c1 = (uint8_t*)dst;
-  c2 = (uint8_t*)src;
+	uint8_t *cdst = (int8_t*)dst;
+	uint8_t *csrc = (int8_t*)src;
 
-  while (n--)
-    *c1++ = *c2++;
-
-  return (res);
+	while (size--) {
+		*cdst++ = *csrc++;
+	}
+	return _dst;
 }
 #endif
 
