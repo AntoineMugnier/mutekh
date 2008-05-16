@@ -92,25 +92,28 @@ static reg_t	tmp_stack[64];
 void
 pthread_exit(void *retval)
 {
-  struct pthread_s	*thread = pthread_self();
+  struct pthread_s	*this = pthread_self();
 
   /* remove thread from runnable list */
   cpu_interrupt_disable();
-  sched_queue_wrlock(&thread->joined);
+  sched_queue_wrlock(&this->joined);
 
 #ifdef CONFIG_PTHREAD_JOIN
-  if (!thread->detached)
+  if (!this->detached)
     {
-      if (sched_queue_nolock_isempty(&thread->joined))
-	/* thread not joined yet */
+      struct pthread_s *joined_thread = NULL;
+      joined_thread = sched_queue_nolock_head(&this->joined)->private;
+
+      if(joined_thread == NULL)
+      /* thread not joined yet */
 	{
 	  /* mark thread as joinable */
-	  thread->joinable = 1;
+	  this->joinable = 1;
 
-	  thread->joined_retval = retval;
+	  this->joined_retval = retval;
 
 	  /* do not release irq yet, thread must not be interrupted before its end */
-	  sched_queue_unlock(&thread->joined);
+	  sched_queue_unlock(&this->joined);
 
 	  /* stop thread, waiting for pthread_join or pthread_detach */
 	  sched_context_stop();
@@ -118,15 +121,10 @@ pthread_exit(void *retval)
       else
 	/* thread already joined */
 	{
-	  struct sched_context_s	*ctx;
+	  joined_thread->joined_retval = retval;
 
-	  /* wake up joined threads */
-	  while ((ctx = sched_wake(&thread->joined)))
-	    {
-	      struct pthread_s	*thread = ctx->private;
-
-	      thread->joined_retval = retval;
-	    }
+	  /* wake up joined thread */
+	  sched_wake(&this->joined);
 	}
     }
 #endif /* CONFIG_PTHREAD_JOIN */
@@ -171,10 +169,17 @@ pthread_join(pthread_t thread, void **value_ptr)
       }
     else
       {
-	/* wait for thread termination */
-	sched_wait_unlock(&thread->joined);
-
-	*value_ptr = pthread_self()->joined_retval;
+	if(!sched_queue_nolock_isempty(&thread->joined))
+	{
+	  sched_queue_unlock(&thread->joined);
+	  res=EINVAL;
+	}
+	else
+	{
+	  /* wait for thread termination */
+	  sched_wait_unlock(&thread->joined);
+	  *value_ptr = pthread_self()->joined_retval;
+	}
       }
   }
 
@@ -301,11 +306,14 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   /* add cpu affinity */
   if (attr && attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
     {
-      cpu_id_t i;
-
       sched_affinity_single(&thread->sched_ctx, attr->cpulist[0]);
+      
+#ifdef CONFIG_HEXO_SCHED_MIGRATION
+      cpu_id_t i;
       for (i = 1; i < attr->cpucount; i++)
 	sched_affinity_add(&thread->sched_ctx, attr->cpulist[i]);
+#endif
+
     }
 #endif
 
@@ -329,9 +337,15 @@ error_t pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu)
     }
 
   if (attr->cpucount >= CONFIG_CPU_MAXCOUNT)
-    return ENOMEM;
+    return ENOME;
 
+#ifdef CONFIG_HEXO_SCHED_MIGRATION
   attr->cpulist[attr->cpucount++] = cpu;
+#endif
+
+#ifdef CONFIG_HEXO_SCHED_STATIC
+  attr->cpulist[0] = cpu;
+#endif
 
   return 0;
 }
