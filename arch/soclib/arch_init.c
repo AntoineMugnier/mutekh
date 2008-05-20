@@ -42,8 +42,6 @@ static lock_t		cpu_init_lock;	/* cpu intialization lock */
 lock_t			__atomic_arch_lock;
 #endif
 
-struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
-
 /* architecture specific init function */
 void arch_init() 
 {
