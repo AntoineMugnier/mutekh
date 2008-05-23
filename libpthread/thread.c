@@ -337,7 +337,7 @@ error_t pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu)
     }
 
   if (attr->cpucount >= CONFIG_CPU_MAXCOUNT)
-    return ENOME;
+    return ENOMEM;
 
 #ifdef CONFIG_HEXO_SCHED_MIGRATION
   attr->cpulist[attr->cpucount++] = cpu;
