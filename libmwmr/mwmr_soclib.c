@@ -57,6 +57,9 @@ mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 	c[MWMR_CONFIG_STATUS_ADDR] = endian_le32((uintptr_t)mwmr->status);
 	c[MWMR_CONFIG_DEPTH] = endian_le32(mwmr->gdepth);
 	c[MWMR_CONFIG_BUFFER_ADDR] = endian_le32((uintptr_t)mwmr->buffer);
+#ifdef CONFIG_MWMR_USE_RAMLOCKS
+	c[MWMR_CONFIG_LOCK_ADDR] = endian_le32((uintptr_t)mwmr->lock);
+#endif
 	c[MWMR_CONFIG_RUNNING] = endian_le32(1);
 }
 
@@ -74,29 +77,48 @@ uint32_t mwmr_status( void *coproc, size_t no )
 	return endian_le32(c[no]);
 }
 
-static inline void mwmr_lock( uint32_t *lock )
+static inline void mwmr_lock( mwmr_t *fifo )
 {
 #if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
-	while (cpu_atomic_bit_testset((atomic_int_t*)lock, 0)) {
-		srl_sched_wait_eq_le(lock, 0);
+#ifdef CONFIG_MWMR_USE_RAMLOCKS
+	while (*((volatile uint32_t *)fifo->lock) != 0) {
+		cpu_interrupt_disable();
+		sched_context_switch();
+		cpu_interrupt_enable();
 	}
+#else
+	while (cpu_atomic_bit_testset((atomic_int_t*)&fifo->status->lock, 0)) {
+/* 		cpu_interrupt_disable(); */
+/* 		sched_context_switch(); */
+/* 		cpu_interrupt_enable(); */
+		srl_sched_wait_eq_le(&fifo->status->lock, 0);
+	}
+#endif
 #elif defined(CONFIG_PTHREAD)
-	while (cpu_atomic_bit_testset((atomic_int_t*)lock, 0)) {
+	while (cpu_atomic_bit_testset((atomic_int_t*)&fifo->status->lock, 0)) {
 		pthread_yield();
 	}
 #else
-	cpu_atomic_bit_waitset((atomic_int_t*)lock, 0);
+	cpu_atomic_bit_waitset((atomic_int_t*)&fifo->status->lock, 0);
 #endif
 }
 
-static inline uint32_t mwmr_try_lock( uint32_t *lock )
+static inline uint32_t mwmr_try_lock( mwmr_t *fifo )
 {
-	return cpu_atomic_bit_testset((atomic_int_t*)lock, 0);
+#ifdef CONFIG_MWMR_USE_RAMLOCKS
+	return !!*((volatile uint32_t *)fifo->lock);
+#else
+	return cpu_atomic_bit_testset((atomic_int_t*)&fifo->status->lock, 0);
+#endif
 }
 
-static inline void mwmr_unlock( uint32_t *lock )
+static inline void mwmr_unlock( mwmr_t *fifo )
 {
-	*lock = 0;
+#ifdef CONFIG_MWMR_USE_RAMLOCKS
+	*((volatile uint32_t *)fifo->lock) = 0;
+#else
+	*&fifo->status->lock = 0;
+#endif
 }
 
 typedef struct {
@@ -107,10 +129,11 @@ static inline void rehash_status( mwmr_t *fifo, local_mwmr_status_t *status )
 {
 	volatile soclib_mwmr_status_s *fstatus = fifo->status;
 	cpu_dcache_invld_buf(fstatus, sizeof(*fstatus));
-	status->usage = endian_le32(fstatus->usage);
-	status->wptr = endian_le32(fstatus->wptr);
-	status->rptr = endian_le32(fstatus->rptr);
+	status->usage = endian_le32(*(volatile uint32_t *)&fstatus->usage);
+	status->wptr =  endian_le32(*(volatile uint32_t *)&fstatus->wptr);
+	status->rptr =  endian_le32(*(volatile uint32_t *)&fstatus->rptr);
 	status->modified = 0;
+//	srl_log_printf(NONE,"%s %d %d %d/%d\n", fifo->name, status->rptr, status->wptr, status->usage, fifo->gdepth);
 }
 
 static inline void writeback_status( mwmr_t *fifo, local_mwmr_status_t *status )
@@ -118,9 +141,9 @@ static inline void writeback_status( mwmr_t *fifo, local_mwmr_status_t *status )
 	volatile soclib_mwmr_status_s *fstatus = fifo->status;
 	if ( !status->modified )
 		return;
-	fstatus->usage = endian_le32(status->usage);
-	fstatus->wptr = endian_le32(status->wptr);
-	fstatus->rptr = endian_le32(status->rptr);
+	*(volatile uint32_t *)&fstatus->usage = endian_le32(status->usage);
+	*(volatile uint32_t *)&fstatus->wptr = endian_le32(status->wptr);
+	*(volatile uint32_t *)&fstatus->rptr = endian_le32(status->rptr);
 }
 
 void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
@@ -133,13 +156,13 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 	uint32_t access_begin = cpu_cycle_count();
 #endif
 
-	mwmr_lock( &fifo->status->lock );
+	mwmr_lock( fifo );
 	rehash_status( fifo, &status );
     while ( lensw ) {
         size_t len;
 		while ( status.usage < fifo->width ) {
 			writeback_status( fifo, &status );
-            mwmr_unlock( &fifo->status->lock );
+            mwmr_unlock( fifo );
 #if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
 			srl_sched_wait_ge_le(&fifo->status->usage, fifo->width);
 #elif defined(CONFIG_PTHREAD)
@@ -149,7 +172,7 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 			sched_context_switch();
 			cpu_interrupt_enable();
 #endif
-            mwmr_lock( &fifo->status->lock );
+            mwmr_lock( fifo );
 			rehash_status( fifo, &status );
         }
         while ( lensw && status.usage >= fifo->width ) {
@@ -180,7 +203,7 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 	fifo->time_read += cpu_cycle_count()-access_begin;
 #endif
 
-	mwmr_unlock( &fifo->status->lock );
+	mwmr_unlock( fifo );
 }
 
 void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
@@ -193,13 +216,13 @@ void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 	uint32_t access_begin = cpu_cycle_count();
 #endif
 
-	mwmr_lock( &fifo->status->lock );
+	mwmr_lock( fifo );
 	rehash_status( fifo, &status );
     while ( lensw ) {
         size_t len;
         while (status.usage >= fifo->gdepth) {
 			writeback_status( fifo, &status );
-            mwmr_unlock( &fifo->status->lock );
+            mwmr_unlock( fifo );
 #if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
 			srl_sched_wait_le_le(&fifo->status->usage, fifo->gdepth-fifo->width);
 #elif defined(CONFIG_PTHREAD)
@@ -209,7 +232,7 @@ void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 			sched_context_switch();
 			cpu_interrupt_enable();
 #endif
-            mwmr_lock( &fifo->status->lock );
+            mwmr_lock( fifo );
 			rehash_status( fifo, &status );
         }
         while ( lensw && status.usage < fifo->gdepth ) {
@@ -239,7 +262,7 @@ void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 	fifo->time_write += cpu_cycle_count()-access_begin;
 #endif
 
-	mwmr_unlock( &fifo->status->lock );
+	mwmr_unlock( fifo );
 }
 
 size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
@@ -251,7 +274,7 @@ size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 	uint32_t access_begin = cpu_cycle_count();
 #endif
 
-	if ( mwmr_try_lock( &fifo->status->lock ) )
+	if ( mwmr_try_lock( fifo ) )
 		return done;
 	rehash_status( fifo, &status );
 	while ( lensw && status.usage >= fifo->width ) {
@@ -275,7 +298,7 @@ size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 		status.modified = 1;
 	}
 	writeback_status( fifo, &status );
-	mwmr_unlock( &fifo->status->lock );
+	mwmr_unlock( fifo );
 #ifdef CONFIG_MWMR_INSTRUMENTATION
 	cpu_dcache_invld_buf(fifo, sizeof(*fifo));
 	fifo->n_read += done/fifo->width;
@@ -293,7 +316,7 @@ size_t mwmr_try_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 	uint32_t access_begin = cpu_cycle_count();
 #endif
 
-	if ( mwmr_try_lock( &fifo->status->lock ) )
+	if ( mwmr_try_lock( fifo ) )
 		return done;
 	rehash_status( fifo, &status );
 	while ( lensw && status.usage < fifo->gdepth ) {
@@ -322,7 +345,7 @@ size_t mwmr_try_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 	fifo->n_write += done/fifo->width;
 	fifo->time_write += cpu_cycle_count()-access_begin;
 #endif
-	mwmr_unlock( &fifo->status->lock );
+	mwmr_unlock( fifo );
 	return done;
 }
 

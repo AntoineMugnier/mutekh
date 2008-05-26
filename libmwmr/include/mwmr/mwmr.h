@@ -26,7 +26,10 @@ struct mwmr_s {
 	const char *const name;
 };
 
-#define MWMR_INITIALIZER(w, d, b, n)							   \
+typedef struct {} srl_mwmr_lock_t;
+#define MWMR_LOCK_INITIALIZER {}
+
+#define MWMR_INITIALIZER(w, d, b, st, n, l)					   \
 	{														   \
 		.width = w,											   \
 		.depth = d,											   \
@@ -46,6 +49,11 @@ struct mwmr_s {
 
 #include <soclib/mwmr_controller.h>
 
+#ifdef CONFIG_MWMR_USE_RAMLOCKS
+typedef volatile uint32_t srl_mwmr_lock_t;
+#define MWMR_LOCK_INITIALIZER 0
+#endif
+
 struct mwmr_s {
 	size_t width;
 	size_t depth;
@@ -59,12 +67,32 @@ struct mwmr_s {
 	uint32_t time_read;
 	uint32_t time_write;
 #endif
+#ifdef CONFIG_MWMR_USE_RAMLOCKS
+	volatile srl_mwmr_lock_t *lock;
+#endif
 };
 
 void mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 				   size_t no, const mwmr_t* mwmr );
 
-#define MWMR_INITIALIZER(w, d, b, st, n)						   \
+#ifdef CONFIG_MWMR_USE_RAMLOCKS
+
+# define MWMR_INITIALIZER(w, d, b, st, n, l)				   \
+	{														   \
+		.width = w,											   \
+		.depth = d,											   \
+		.gdepth = (w)*(d),									   \
+		.buffer = (void*)b,									   \
+		.status = st,									   	   \
+		.name = n,											   \
+		.lock = l,											   \
+	}
+#else
+
+typedef struct {} srl_mwmr_lock_t;
+#define MWMR_LOCK_INITIALIZER {}
+
+# define MWMR_INITIALIZER(w, d, b, st, n, l)				   \
 	{														   \
 		.width = w,											   \
 		.depth = d,											   \
@@ -73,6 +101,7 @@ void mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 		.status = st,									   	   \
 		.name = n,											   \
 	}
+#endif
 
 #ifdef CONFIG_MWMR_INSTRUMENTATION
 void mwmr_dump_stats( const mwmr_t *mwmr );
