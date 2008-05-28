@@ -225,21 +225,21 @@ extern CPUARCH_LOCAL pthread_mutexattr_t __pthread_mutex_attr_recursive;
 /** normal mutex object static initializer */
 # define PTHREAD_MUTEX_INITIALIZER						       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, CLIST), \
+    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
     .attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_normal)			       \
   }
 
 /** recurvive mutex object static initializer */
 # define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP					       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, CLIST), \
+    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
     .attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_recursive)			       \
   }
 
 /** error checking mutex object static initializer */
 # define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP				       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, CLIST), \
+    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
     .attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_errorcheck)			       \
   }
 
@@ -248,7 +248,7 @@ extern CPUARCH_LOCAL pthread_mutexattr_t __pthread_mutex_attr_recursive;
 /** normal mutex object static initializer */
 # define PTHREAD_MUTEX_INITIALIZER						       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, CLIST), \
+    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
   }
 
 #endif
@@ -369,7 +369,7 @@ pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 /** normal cond object static initializer */
 # define PTHREAD_COND_INITIALIZER						       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, CLIST), \
+    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
   }
 
 /************************************************************************
@@ -417,8 +417,8 @@ pthread_rwlock_unlock(pthread_rwlock_t *rwlock);
 /** normal rwlock object static initializer */
 # define PTHREAD_RWLOCK_INITIALIZER							  \
   {											  \
-    .wait_rd = CONTAINER_ROOT_INITIALIZER(sched_queue, CLIST), \
-    .wait_wr = CONTAINER_ROOT_INITIALIZER(sched_queue, CLIST), \
+    .wait_rd = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
+    .wait_wr = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
   }
 
 /************************************************************************
@@ -448,7 +448,7 @@ error_t pthread_barrier_wait(pthread_barrier_t *barrier);
 /** normal rwlock object static initializer */
 # define PTHREAD_BARRIER_INITIALIZER(n)							  \
   {											  \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, CLIST),	  \
+    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),	  \
     .count = (n),									  \
   }
 
