@@ -79,27 +79,31 @@ uint32_t mwmr_status( void *coproc, size_t no )
 
 static inline void mwmr_lock( mwmr_t *fifo )
 {
-#if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
 	while (*((volatile uint32_t *)fifo->lock) != 0) {
+# if defined(CONFIG_PTHREAD)
+		pthread_yield();
+# else
 		cpu_interrupt_disable();
 		sched_context_switch();
 		cpu_interrupt_enable();
+# endif
 	}
 #else
+# if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
 	while (cpu_atomic_bit_testset((atomic_int_t*)&fifo->status->lock, 0)) {
 /* 		cpu_interrupt_disable(); */
 /* 		sched_context_switch(); */
 /* 		cpu_interrupt_enable(); */
 		srl_sched_wait_eq_le(&fifo->status->lock, 0);
 	}
-#endif
-#elif defined(CONFIG_PTHREAD)
+# elif defined(CONFIG_PTHREAD)
 	while (cpu_atomic_bit_testset((atomic_int_t*)&fifo->status->lock, 0)) {
 		pthread_yield();
 	}
-#else
+# else
 	cpu_atomic_bit_waitset((atomic_int_t*)&fifo->status->lock, 0);
+# endif
 #endif
 }
 
