@@ -30,7 +30,7 @@
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_clist.h>
+#include <gpct/cont_dlist.h>
 
 struct sched_context_s;
 
@@ -43,7 +43,7 @@ typedef SCHED_CANDIDATE_FCN(sched_candidate_fcn_t);
 
 #define CONTAINER_LOCK_sched_queue HEXO_SPIN
 
-CONTAINER_TYPE(sched_queue, CLIST, struct sched_context_s
+CONTAINER_TYPE(sched_queue, DLIST, struct sched_context_s
 {
   struct context_s	context;
   sched_queue_entry_t	list_entry;
@@ -62,8 +62,8 @@ CONTAINER_TYPE(sched_queue, CLIST, struct sched_context_s
 #endif
 }, list_entry);
 
-CONTAINER_FUNC       (sched_queue, CLIST, static inline, sched_queue, list_entry);
-CONTAINER_FUNC_NOLOCK(sched_queue, CLIST, static inline, sched_queue_nolock, list_entry);
+CONTAINER_FUNC       (sched_queue, DLIST, static inline, sched_queue, list_entry);
+CONTAINER_FUNC_NOLOCK(sched_queue, DLIST, static inline, sched_queue_nolock, list_entry);
 
 extern CONTEXT_LOCAL struct sched_context_s *sched_cur;
 

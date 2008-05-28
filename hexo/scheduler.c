@@ -37,7 +37,7 @@ __sched_candidate_noidle(sched_queue_root_t *root)
 #ifdef CONFIG_HEXO_SCHED_CANDIDATE_FCN
   struct sched_context_s *c = NULL;
 
-  CONTAINER_FOREACH_NOLOCK(sched_queue, CLIST, root, {
+  CONTAINER_FOREACH_NOLOCK(sched_queue, DLIST, root, {
     if (item->is_candidate == NULL || item->is_candidate(item))
       {
 	sched_queue_nolock_remove(root, item);
