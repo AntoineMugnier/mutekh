@@ -14,6 +14,8 @@
 #define srl_dcache_flush_addr cpu_dcache_invld
 #define srl_dcache_flush_zone cpu_dcache_invld_buf
 
+void srl_sleep_cycles( uint32_t n );
+
 static inline uint32_t srl_cycle_count()
 {
 	return cpu_cycle_count();

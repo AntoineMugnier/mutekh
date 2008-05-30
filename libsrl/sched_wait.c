@@ -24,6 +24,7 @@
 #include <hexo/scheduler.h>
 #include <srl_private_types.h>
 #include <srl/srl_sched_wait.h>
+#include <srl/srl_hw_helpers.h>
 
 static inline srl_task_s *context_to_srl_task( struct sched_context_s *ctx )
 {
@@ -98,3 +99,17 @@ DECLARE_WAIT(cpu, le, <=)
 DECLARE_WAIT(cpu, ge, >=)
 DECLARE_WAIT(cpu, lt, <)
 DECLARE_WAIT(cpu, gt, >)
+
+static int next_run( uint32_t date )
+{
+	return srl_cycle_count() > date;
+}
+
+void srl_sleep_cycles( uint32_t n )
+{
+	uint32_t next_run_to = srl_cycle_count()+n;
+
+	while(srl_cycle_count()<next_run_to)
+		srl_sched_wait_priv(next_run, next_run_to);
+}
+
