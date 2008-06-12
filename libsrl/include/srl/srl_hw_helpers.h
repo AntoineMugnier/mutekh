@@ -3,6 +3,7 @@
 
 #include <hexo/types.h>
 #include <hexo/cpu.h>
+#include <stdlib.h>
 
 #define BASE_ADDR_OF(id)											   \
 	({																   \
@@ -19,6 +20,11 @@ void srl_sleep_cycles( uint32_t n );
 static inline uint32_t srl_cycle_count()
 {
 	return cpu_cycle_count();
+}
+
+static inline void srl_abort()
+{
+	abort();
 }
 
 #endif

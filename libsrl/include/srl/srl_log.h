@@ -76,7 +76,7 @@ extern CPU_LOCAL FILE *cpu_tty;
         if ( ! (expr) ) {                                           \
             srl_log_printf( NONE, "assertion (%s) failed on %s:%d !\n",  \
                              #expr, __FILE__, __LINE__ );           \
-            exit(2);                                                \
+            abort();												\
         }                                                           \
     } while(0)
 
@@ -91,7 +91,7 @@ extern CPU_LOCAL FILE *cpu_tty;
 #define srl_assert(expr) \
 	do {				 \
 		if ( ! (expr) )	 \
-			while(1);	 \
+			abort();	 \
 	} while (0)
 
 #endif /* CONFIG_MUTEK_CONSOLE */
