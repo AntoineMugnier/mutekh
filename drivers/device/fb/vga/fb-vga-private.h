@@ -24,7 +24,7 @@
 #define FB_VGA_PRIVATE_H_
 
 #include <hexo/types.h>
-#include <hexo/driver.h>
+#include <device/driver.h>
 #include <hexo/lock.h>
 #include <hexo/error.h>
 

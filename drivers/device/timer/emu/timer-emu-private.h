@@ -22,7 +22,7 @@
 #ifndef __TIMER_EMU_PRIVATE_H_
 #define __TIMER_EMU_PRIVATE_H_
 
-#include <hexo/device/timer.h>
+#include <device/timer.h>
 
 #define TIMER_EMU_IDCOUNT	16
 

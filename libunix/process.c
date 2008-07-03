@@ -35,6 +35,8 @@ static CONTEXT_ENTRY(unix_context_entry)
 
   printf("YUHUUUUUU !!!!\n");
 
+  vmem_context_switch_to(&ps->vmem);
+
   uint8_t *code = CONFIG_UNIX_START_VADDR;
 
   *code++ = 0xcd;
@@ -73,7 +75,6 @@ struct unix_process_s *unix_create_process(struct unix_process_s *parent)
 
   /* setup virtual memory context */
   vmem_context_init(&ps->vmem);
-  vmem_context_switch_to(&ps->vmem);
   ps->ctx.context.vmem = &ps->vmem;
 
   /* setup syscall handler */

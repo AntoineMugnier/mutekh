@@ -22,7 +22,7 @@
 #ifndef __TIMER_SOCLIB_PRIVATE_H_
 #define __TIMER_SOCLIB_PRIVATE_H_
 
-#include <hexo/device/timer.h>
+#include <device/timer.h>
 #include <hexo/device.h>
 
 /* timer device registers addresses */

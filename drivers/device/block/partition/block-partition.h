@@ -22,7 +22,7 @@
 #ifndef DRIVER_BLOCK_PARTITION_H_
 #define DRIVER_BLOCK_PARTITION_H_
 
-#include <hexo/device/block.h>
+#include <device/block.h>
 #include <hexo/device.h>
 
 DEV_CREATE(block_partition_create);

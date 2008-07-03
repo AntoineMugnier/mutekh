@@ -22,7 +22,7 @@
 #ifndef DRIVER_BLOCK_ATA_H_
 #define DRIVER_BLOCK_ATA_H_
 
-#include <hexo/device/block.h>
+#include <device/block.h>
 #include <hexo/device.h>
 
 DEV_INIT(controller_ata_init);

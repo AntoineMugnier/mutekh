@@ -22,7 +22,7 @@
 #ifndef NETINET_IF_H
 #define NETINET_IF_H
 
-#include <hexo/device/net.h>
+#include <device/net.h>
 #include <hexo/device.h>
 #include <netinet/protos.h>
 #include <netinet/packet.h>

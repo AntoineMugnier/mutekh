@@ -22,9 +22,9 @@
 
 #include <hexo/types.h>
 
-#include <hexo/device/char.h>
+#include <device/char.h>
 #include <hexo/device.h>
-#include <hexo/driver.h>
+#include <device/driver.h>
 
 #include <hexo/iospace.h>
 #include <hexo/alloc.h>

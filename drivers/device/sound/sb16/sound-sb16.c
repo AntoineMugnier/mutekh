@@ -22,9 +22,9 @@
 
 #include <hexo/types.h>
 
-#include <hexo/device/sound.h>
+#include <device/sound.h>
 #include <hexo/device.h>
-#include <hexo/driver.h>
+#include <device/driver.h>
 #include <hexo/alloc.h>
 
 #include <arch/dma-8237.h>

@@ -23,10 +23,10 @@
 
 #include <hexo/types.h>
 
-#include <hexo/device/char.h>
+#include <device/char.h>
 #include <drivers/device/char/tty-soclib/tty-soclib.h>
 #include <hexo/device.h>
-#include <hexo/driver.h>
+#include <device/driver.h>
 
 #ifdef CONFIG_MUTEK_CONSOLE
 

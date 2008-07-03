@@ -1,4 +1,6 @@
 
+objs = device_block.o
+
 ifeq ($(CONFIG_DRIVER_BLOCK_ATA), defined)
  subdirs += ata
 endif

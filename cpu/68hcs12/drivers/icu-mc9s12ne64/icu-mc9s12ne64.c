@@ -21,9 +21,9 @@
 
 #include <hexo/types.h>
 
-#include <hexo/device/icu.h>
+#include <device/icu.h>
 #include <hexo/device.h>
-#include <hexo/driver.h>
+#include <device/driver.h>
 
 #include <hexo/alloc.h>
 #include <hexo/interrupt.h>

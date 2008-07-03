@@ -22,7 +22,7 @@
 #ifndef DRIVER_ICU_MC9S12NE64_H_
 #define DRIVER_ICU_MC9S12NE64_H_
 
-#include <hexo/device/icu.h>
+#include <device/icu.h>
 #include <hexo/device.h>
 
 /* icu device functions */

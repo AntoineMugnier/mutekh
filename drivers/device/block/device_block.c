@@ -22,8 +22,8 @@
 */
 
 #include <hexo/device.h>
-#include <hexo/device/block.h>
-#include <hexo/driver.h>
+#include <device/block.h>
+#include <device/driver.h>
 
 #ifdef CONFIG_HEXO_SCHED
 # include <hexo/scheduler.h>

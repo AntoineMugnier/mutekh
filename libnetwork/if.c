@@ -38,9 +38,9 @@
 # include <netinet/libsocket.h>
 #endif
 
-#include <hexo/device/net.h>
+#include <device/net.h>
 #include <hexo/device.h>
-#include <hexo/driver.h>
+#include <device/driver.h>
 
 #include <stdio.h>
 

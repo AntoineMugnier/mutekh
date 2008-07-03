@@ -23,9 +23,9 @@
 
 #include <hexo/types.h>
 
-#include <hexo/device/char.h>
+#include <device/char.h>
 #include <hexo/device.h>
-#include <hexo/driver.h>
+#include <device/driver.h>
 
 #if defined(CONFIG_MUTEK_CONSOLE)
 extern struct device_s *tty_dev;

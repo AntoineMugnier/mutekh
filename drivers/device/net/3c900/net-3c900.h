@@ -22,7 +22,7 @@
 #ifndef DRIVER_NET_3C900_H_
 #define DRIVER_NET_3C900_H_
 
-#include <hexo/device/net.h>
+#include <device/net.h>
 #include <hexo/device.h>
 
 DEV_IRQ(net_3c900_irq);

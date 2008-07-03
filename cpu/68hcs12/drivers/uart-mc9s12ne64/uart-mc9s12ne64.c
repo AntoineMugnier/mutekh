@@ -22,9 +22,9 @@
 #include <MC9S12NE64.h>
 #include <hexo/types.h>
 
-#include <hexo/device/char.h>
+#include <device/char.h>
 #include <hexo/device.h>
-#include <hexo/driver.h>
+#include <device/driver.h>
 
 #include <hexo/alloc.h>
 #include <hexo/lock.h>

@@ -50,7 +50,7 @@
 #include <cpu/68hcs12/drivers/uart-mc9s12ne64/uart-mc9s12ne64.h>
 
 #include <hexo/device.h>
-#include <hexo/driver.h>
+#include <device/driver.h>
 
 #include <string.h>
 #include <stdio.h>

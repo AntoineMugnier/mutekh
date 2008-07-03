@@ -22,7 +22,7 @@
 #ifndef DRIVER_TTY_EMU_H_
 #define DRIVER_TTY_EMU_H_
 
-#include <hexo/device/char.h>
+#include <device/char.h>
 #include <hexo/device.h>
 
 /* tty device functions */

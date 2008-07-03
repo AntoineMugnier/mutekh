@@ -23,7 +23,7 @@
 #ifndef DRIVER_ICU_soclib_H_
 #define DRIVER_ICU_soclib_H_
 
-#include <hexo/device/icu.h>
+#include <device/icu.h>
 #include <hexo/device.h>
 
 /* devices addresses slots */

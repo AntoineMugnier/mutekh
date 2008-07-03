@@ -20,7 +20,7 @@
 */
 
 #include <hexo/device.h>
-#include <hexo/driver.h>
+#include <device/driver.h>
 #include <hexo/error.h>
 #include <hexo/alloc.h>
 

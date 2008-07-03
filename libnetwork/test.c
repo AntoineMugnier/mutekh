@@ -23,8 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <hexo/device.h>
-#include <hexo/device/input.h>
-#include <hexo/driver.h>
+#include <device/input.h>
+#include <device/driver.h>
 
 #include <../drivers/input-8042/input-8042.h>
 

@@ -2,9 +2,9 @@
 #define __VFAT_H__
 
 #include <drivers/device/block/ramdisk/block-ramdisk.h>
-#include <hexo/device/block.h>
+#include <device/block.h>
 #include <hexo/device.h>
-#include <hexo/driver.h>
+#include <device/driver.h>
 #include <hexo/fs.h>
 
 #include <hexo/gpct_platform_hexo.h>

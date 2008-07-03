@@ -20,8 +20,8 @@
 */
 
 #include <hexo/device.h>
-#include <hexo/device/net.h>
-#include <hexo/driver.h>
+#include <device/net.h>
+#include <device/driver.h>
 
 #include <netinet/packet.h>
 #include <netinet/socket.h>

@@ -2,7 +2,7 @@
 #ifndef DRIVER_SOUND_SB16_H_
 #define DRIVER_SOUND_SB16_H_
 
-#include <hexo/device/sound.h>
+#include <device/sound.h>
 #include <hexo/device.h>
 
 #define SOUND_SB16_ADDR	0

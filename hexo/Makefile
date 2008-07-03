@@ -3,8 +3,7 @@ objs =						\
 cpu.o						\
 context.o					\
 mem_alloc.o					\
-device.o					\
-device_block.o
+device.o
 
 ifeq ($(CONFIG_HEXO_VMEM), defined)
 objs += vmem_paddr.o
