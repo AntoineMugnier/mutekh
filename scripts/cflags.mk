@@ -28,7 +28,7 @@ AS=$(CPUTOOLS)as
 OBJCOPY=$(CPUTOOLS)objcopy
 OBJDUMP=$(CPUTOOLS)objdump
 
-CFLAGS=	-fno-builtin -Wall -fno-stack-protector
+CFLAGS=	-fno-builtin -Wall #-fno-stack-protector
 
 ifeq ($(CONFIG_COMPILE_SAVETEMPS), defined)
 CFLAGS += -save-temps
