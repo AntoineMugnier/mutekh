@@ -22,6 +22,8 @@
 asm(
     ".section        .excep,\"ax\",@progbits			\n"
 
+	".space 0x180    \n"
+
     ".globl mips_interrupt_entry				\n"
     "mips_interrupt_entry:					\n"
     ".set push							\n"

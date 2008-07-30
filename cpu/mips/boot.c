@@ -29,8 +29,15 @@ asm(
     ".set noreorder					\n"
 
     /* set up IT disable and kernel mode */
-    "li        $8,   0x0000FF00  			\n"
+#if __mips >= 32
+    "mfc0      $8,	$12         			\n"
+//    "ori       $8,   0x00000000  			\n"
+    "andi      $8,   0x0000ffff  			\n"
     "mtc0      $8,	$12         			\n"
+#else
+    "li        $8,   0x00000000  			\n"
+    "mtc0      $8,	$12         			\n"
+#endif
 
     /* get CPU id and adjust stack */
 

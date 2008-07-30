@@ -62,6 +62,7 @@ cpu_interrupt_disable(void)
 		    ".set reorder		\n"
 #if (CONFIG_CPU_MIPS_VERSION >= 322)
 		    "di				\n"
+		    "ehb			\n"
 #else
 		    "mfc0	$1,	$12	\n"
 		    "ori	$1,	0x1	\n"
@@ -83,6 +84,7 @@ cpu_interrupt_enable(void)
 		    ".set reorder		\n"
 #if (CONFIG_CPU_MIPS_VERSION >= 322)
 		    "ei				\n"
+		    "ehb			\n"
 #else
 		    "mfc0	$1,	$12	\n"
 		    "ori	$1,	1	\n"
@@ -101,6 +103,7 @@ cpu_interrupt_process(void)
 		    ".set reorder		\n"
 #if (CONFIG_CPU_MIPS_VERSION >= 322)
 		    "ei				\n"
+		    "ehb			\n"
 #else
 		    "mfc0	$1,	$12	\n"
 		    "ori	$1,	1	\n"
@@ -129,6 +132,10 @@ static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
   __asm__ volatile (
+#if (CONFIG_CPU_MIPS_VERSION >= 322)
+		    "di	%0			\n"
+		    "ehb			\n"
+#else
 		    ".set push				\n"
 		    ".set noat				\n"
 		    ".set reorder			\n"
@@ -139,6 +146,7 @@ cpu_interrupt_savestate_disable(reg_t *state)
 		    "mtc0	$1,	$12		\n"
 		    "MTC0_WAIT				\n"
 		    ".set pop				\n"
+#endif
 		    : "=r" (*state)
 		    );
 }
@@ -148,6 +156,9 @@ cpu_interrupt_restorestate(const reg_t *state)
 {
   __asm__ volatile (
 		    "mtc0	%0,	$12		\n"
+#if (CONFIG_CPU_MIPS_VERSION >= 322)
+		    "ehb			\n"
+#endif
 		    :
 		    : "r" (*state)
 		    );

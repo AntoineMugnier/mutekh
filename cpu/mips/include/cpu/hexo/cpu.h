@@ -145,12 +145,16 @@ static inline void *cpu_get_cls(cpu_id_t cpu_id)
 static inline void cpu_dcache_invld(void *ptr)
 {
   asm volatile (
-#ifdef CONFIG_ARCH_SOCLIB
-		" lw $0, (%0)"
-		: : "r" (ptr)
-#else
+#if __mips >= 32
 		" cache %0, %1"
 		: : "i" (0x11) , "R" (*(uint8_t*)(ptr))
+#else
+# ifdef CONFIG_ARCH_SOCLIB
+		" lw $0, (%0)"
+		: : "r" (ptr)
+# else
+		"nop"::
+# endif
 #endif
 		: "memory"
 		);
@@ -169,7 +173,7 @@ static inline size_t cpu_dcache_line_size()
 	return 2 << r1;
     }
 
-  return 0;
+  return 8;
 }
 
 #endif

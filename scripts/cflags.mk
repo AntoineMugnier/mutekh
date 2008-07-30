@@ -63,7 +63,7 @@ INCS=-nostdinc -D__MUTEK__ \
 	-include $(CONF_DIR)/.config.h
 
 cflags:
-	@echo $(INCS)
+	@echo $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS)
 
 ifeq ($(TARGET_MK),)
 TARGET_MK=flags.mk
@@ -79,6 +79,7 @@ $(TARGET_MK):
 	@echo 'AS=$(AS)' >> $@
 	@echo 'OBJCOPY=$(OBJCOPY)' >> $@
 	@echo 'OBJDUMP=$(OBJDUMP)' >> $@
-	@echo 'CFLAGS=$(INCS)' >> $@
+	@echo 'CFLAGS=$(INCS) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS)' >> $@
+	@echo 'INCS=$(INCS)' >> $@
 
 .SUFFIXES:
