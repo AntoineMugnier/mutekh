@@ -103,10 +103,10 @@ typedef long _dont_use_native_long_type_t __attribute__ ((deprecated));
 /* integer types MAX and MIN values */
 
 /** return max integer value for a type */
-#define __MINOF_TYPE(t)        ((typeof(t))(((typeof(t))-1) < 0 ?  (((typeof(t))1) << sizeof(typeof(t)) * 8 - 1) :  0))
+#define __MINOF_TYPE(t)        ((typeof(t))(((typeof(t))-1) < 0 ?  (((typeof(t))1) << (sizeof(typeof(t)) * 8 - 1)) :  0))
 
 /** return min integer value for a type */
-#define __MAXOF_TYPE(t)        ((typeof(t))(((typeof(t))-1) < 0 ? ~(((typeof(t))1) << sizeof(typeof(t)) * 8 - 1) : -1))
+#define __MAXOF_TYPE(t)        ((typeof(t))(((typeof(t))-1) < 0 ? ~(((typeof(t))1) << (sizeof(typeof(t)) * 8 - 1)) : -1))
 
 #ifndef __cplusplus
 

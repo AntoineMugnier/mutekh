@@ -120,7 +120,6 @@ context_jump_to(struct context_s *context)
 #ifdef CONFIG_HEXO_VMEM
   vmem_context_switch_to(context->vmem);
 #endif
-
   cpu_context_jumpto(context);
 }
 
