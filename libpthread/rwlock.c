@@ -19,175 +19,47 @@
 
 */
 
-#include <hexo/scheduler.h>
-#include <hexo/error.h>
 #include <pthread.h>
 
 error_t
 pthread_rwlock_destroy(pthread_rwlock_t *rwlock)
 {
-  sched_queue_destroy(&rwlock->wait_rd);
-  sched_queue_destroy(&rwlock->wait_wr);
-
-  return 0;
+  return rwlock_destroy((struct rwlock_s *) rwlock);
 }
 
 error_t
 pthread_rwlock_init(pthread_rwlock_t *rwlock,
 		    const pthread_rwlockattr_t *attr)
 {
-  rwlock->count = 0;
-
-  if (!sched_queue_init(&rwlock->wait_rd))
-    {
-      if (!sched_queue_init(&rwlock->wait_wr))
-	return 0;
-
-      sched_queue_destroy(&rwlock->wait_rd);      
-    }
-
-  return -ENOMEM;
+  return rwlock_init((struct rwlock_s *) rwlock);
 }
 
 error_t
 pthread_rwlock_rdlock(pthread_rwlock_t *rwlock)
 {
-  CPU_INTERRUPT_SAVESTATE_DISABLE;
-  sched_queue_wrlock(&rwlock->wait_wr);
-
-  /* check write locked or write lock pending */
-  if (rwlock->count < 0 || !sched_queue_isempty(&rwlock->wait_wr))
-    {
-      sched_queue_wrlock(&rwlock->wait_rd);
-      sched_queue_unlock(&rwlock->wait_wr);
-      /* add current thread in read wait queue */
-      sched_wait_unlock(&rwlock->wait_rd);
-    }
-  else
-    {
-      /* mark rwlock as used */
-      rwlock->count++;
-      sched_queue_unlock(&rwlock->wait_wr);
-    }
-
-  CPU_INTERRUPT_RESTORESTATE;
-
-  return 0;
+  return rwlock_rdlock((struct rwlock_s *) rwlock);
 }
 
 error_t
 pthread_rwlock_tryrdlock(pthread_rwlock_t *rwlock)
 {
-  error_t	res = 0;
-
-  CPU_INTERRUPT_SAVESTATE_DISABLE;
-  sched_queue_wrlock(&rwlock->wait_wr);
-
-  /* check write locked or write lock pending */
-  if (rwlock->count < 0 || !sched_queue_isempty(&rwlock->wait_wr))
-    res = -EBUSY;
-  else
-    rwlock->count++;
-
-  sched_queue_unlock(&rwlock->wait_wr);
-  CPU_INTERRUPT_RESTORESTATE;
-
-  return res;
+  return rwlock_tryrdlock((struct rwlock_s *) rwlock);
 }
 
 error_t
 pthread_rwlock_wrlock(pthread_rwlock_t *rwlock)
 {
-  CPU_INTERRUPT_SAVESTATE_DISABLE;
-  sched_queue_wrlock(&rwlock->wait_wr);
-
-  /* check locked */
-  if (rwlock->count != 0)
-    {
-      /* add current thread in write wait queue */
-      sched_wait_unlock(&rwlock->wait_wr);
-    }
-  else
-    {
-      /* mark rwlock as write locked */
-      rwlock->count--;
-      sched_queue_unlock(&rwlock->wait_wr);
-    }
-
-  CPU_INTERRUPT_RESTORESTATE;
-
-  return 0;
+  return rwlock_wrlock((struct rwlock_s *) rwlock);
 }
 
 error_t
 pthread_rwlock_trywrlock(pthread_rwlock_t *rwlock)
 {
-  error_t	res = 0;
-
-  CPU_INTERRUPT_SAVESTATE_DISABLE;
-  sched_queue_wrlock(&rwlock->wait_wr);
-
-  /* check locked */
-  if (rwlock->count != 0)
-    res = -EBUSY;
-  else
-    rwlock->count--;
-
-  sched_queue_unlock(&rwlock->wait_wr);
-  CPU_INTERRUPT_RESTORESTATE;
-
-  return 0;
+  return rwlock_trywrlock((struct rwlock_s *) rwlock);
 }
 
 error_t
 pthread_rwlock_unlock(pthread_rwlock_t *rwlock)
 {
-  error_t	res = 0;
-
-  CPU_INTERRUPT_SAVESTATE_DISABLE;
-  sched_queue_wrlock(&rwlock->wait_wr);
-
-  switch (rwlock->count)
-    {
-      /* read locked once */
-    case 1:
-      /* write locked */
-    case -1:
-
-      rwlock->count = 0;
-      /* we are unlocked here */
-
-      /* try to wake 1 pending write thread */
-      if (sched_wake(&rwlock->wait_wr))
-	{
-	  rwlock->count--;
-	  break;
-	}
-
-      /* wake all pending read threads */
-      sched_queue_wrlock(&rwlock->wait_rd);
-      while (sched_wake(&rwlock->wait_rd))
-	rwlock->count++;
-      sched_queue_unlock(&rwlock->wait_rd);
-
-      break;
-
-#ifdef CONFIG_PTHREAD_CHECK
-      /* already unlocked */
-    case 0:
-      res = -EPERM;
-      break;
-#endif
-
-      /* read locked mutiple times */
-    default:
-      rwlock->count--;
-      break;
-    }
-
-  sched_queue_unlock(&rwlock->wait_wr);
-  CPU_INTERRUPT_RESTORESTATE;
-
-  return res;
+  return rwlock_unlock((struct rwlock_s *) rwlock);
 }
-

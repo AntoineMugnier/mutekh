@@ -30,6 +30,7 @@
 #include <hexo/error.h>
 #include <hexo/local.h>
 #include <hexo/lock.h>
+#include <hexo/rwlock.h>
 #include <hexo/context.h>
 #include <hexo/scheduler.h>
 #include <hexo/interrupt.h>
@@ -376,22 +377,10 @@ pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 		PThread RWLock related public API
 ************************************************************************/
 
+struct rwlock_s;
+
 typedef struct pthread_rwlockattr_s pthread_rwlockattr_t;
-
-/** mutex object structure */
-typedef struct				pthread_rwlock_s
-{
-  /** mutex counter
-      == 0: free
-      < 0 : write locked
-      > 0 : read locked */
-  int_fast8_t				count;
-
-  /** blocked threads waiting for read */
-  sched_queue_root_t			wait_rd;
-  /** blocked threads waiting for write */
-  sched_queue_root_t			wait_wr;
-}					pthread_rwlock_t;
+typedef struct rwlock_s pthread_rwlock_t;
 
 error_t
 pthread_rwlock_destroy(pthread_rwlock_t *rwlock);
