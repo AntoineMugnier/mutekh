@@ -23,6 +23,7 @@
 #include <hexo/init.h>
 #include <hexo/local.h>
 #include <hexo/segment.h>
+#include <hexo/rwlock.h>
 
 /* processor current scheduler context */
 CONTEXT_LOCAL struct sched_context_s *sched_cur;
@@ -262,6 +263,46 @@ void sched_wait_unlock2(sched_queue_root_t *queue, lock_t *lock)
   sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
   lock_release(lock);
 
+  /* get next running context */
+  sched_queue_wrlock(root);
+  next = __sched_candidate(root);
+  context_switch_to(&next->context);
+  sched_queue_unlock(root);
+}
+
+
+/* push current context in the 'queue' ignoring queue lock, unlock the
+   given scheduler queue and switch to next context available in the 'root'
+   queue. Must be called with interrupts disabled */
+void sched_wait_unlock3(sched_queue_root_t *queue, sched_queue_root_t *queue_to_release)
+{
+  sched_queue_root_t *root = __sched_root();
+  struct sched_context_s *next;
+  assert(!cpu_interrupt_getstate());
+  
+  sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
+  sched_queue_unlock(queue_to_release);
+ 
+  /* get next running context */
+  sched_queue_wrlock(root);
+  next = __sched_candidate(root);
+  context_switch_to(&next->context);
+  sched_queue_unlock(root);
+}
+
+
+/* push current context in the 'queue' ignoring queue lock, unlock the
+   given rwlock and switch to next context available in the 'root'
+   queue. Must be called with interrupts disabled */
+void sched_wait_unlock4(sched_queue_root_t *queue, struct rwlock_s *rwlock)
+{
+  sched_queue_root_t *root = __sched_root();
+  struct sched_context_s *next;
+  assert(!cpu_interrupt_getstate());
+  
+  sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
+  rwlock_unlock(rwlock);
+ 
   /* get next running context */
   sched_queue_wrlock(root);
   next = __sched_candidate(root);
