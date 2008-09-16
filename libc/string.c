@@ -179,6 +179,28 @@ inline char *strchr(const char *t, int_fast8_t c)
   return (char*)t;
 }
 #endif
+/********************************/
+
+
+#ifndef HAS_CPU_STRCHR
+#undef strrchr
+inline char *strrchr(const char *t, int_fast8_t c)
+{
+  char  ch = c;
+  char *last = (char *)0;
+
+  while (1)
+    {
+      if (__builtin_expect(*t == ch, 0))
+	last = (char *)t;
+      if (__builtin_expect(!*t, 0))
+        break;
+      t++;
+    }
+
+  return last;
+}
+#endif
 
 /********************************/
 

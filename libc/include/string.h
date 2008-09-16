@@ -61,6 +61,12 @@ char * __attribute__ ((pure))
 strchr(const char *s, int_fast8_t c);
 #define strchr __builtin_strchr
 
+
+char * __attribute__ ((pure))
+strrchr(const char *s, int_fast8_t c);
+#define strrchr __builtin_strrchr
+
+
 int_fast8_t __attribute__ ((pure))
 strcmp(const char *s1, const char *s2);
 #define strcmp __builtin_strcmp
