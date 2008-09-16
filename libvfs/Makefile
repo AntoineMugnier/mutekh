@@ -1,7 +1,8 @@
 objs =			\
-libvfs_init.o		\
-libvfs.o		\
+buffer_cache.o		\
 node.o			\
-toolkit.o		\
-vfs_open.o		\
-vfs_read.o
+node_freelist.o		\
+file_freelist.o		\
+libvfs.o		\
+libvfs_init.o
+

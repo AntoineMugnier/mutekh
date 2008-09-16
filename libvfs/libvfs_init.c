@@ -1,36 +1,95 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    UPMC / LIP6 / SOC (c) 2008
+    Copyright Ghassan Almaless <ghassan.almaless@gmail.com>
+*/
+
 #include <hexo/alloc.h>
 #include <vfs/vfs.h>
-#include <stdlib.h>
+#include <vfs/vfs-private.h>
+#include <drivers/fs/vfat/vfat.h>
 
-error_t vfs_init(struct vfs_node_s *root,
-		 const struct vfs_drv_s *drv,
-		 struct device_s *device)
+#ifdef CONFIG_DRIVER_FS_PIPE
+#include <drivers/fs/pipe/pipe.h>
+#endif
+
+#define BC_BUFFER_SIZE       512
+#define BC_ENTRIES_NR         1
+#define BC_BUFFERS_PER_ENTRY  2
+
+static struct vfs_node_s __vfs_root;
+struct vfs_node_s *vfs_root = &__vfs_root;
+
+VFS_INIT(vfs_init)
 {
+  struct vfs_context_op_s * ctx_op[] = {0,(struct vfs_context_op_s *)&vfat_ctx_op};
+  struct vfs_context_s *ctx;
+  error_t err;
+  
   assert(root != NULL);
-  assert(drv != NULL);
+  assert(device != NULL);
+  
+  if(fs_type != VFS_VFAT_TYPE)
+  {
+    printf("vfs_init: invaild fs_type value, this VFS version support only VFAT file system as root file system\n");
+    return -VFS_EINVAL;
+  }
 
-  error_t e;
-  struct vfs_context_s *ctx = mem_alloc(sizeof(*ctx), MEM_SCOPE_SYS);
+  memset(vfs_root,0,sizeof(*vfs_root));
 
-  if (ctx == NULL)
-    return -1;
+  if((err=bc_init(&bc,&freelist,BC_ENTRIES_NR,BC_BUFFERS_PER_ENTRY,BC_BUFFER_SIZE,bc_default_hash)))
+  {
+    printf("error while initialzing bufferCache :%d\n",err);
+    return err;
+  }
 
-  //  memset(root, 0x0, sizeof(*root));
-  memset(ctx, 0x0, sizeof(*ctx));
+  if((ctx = mem_alloc(sizeof(*ctx), MEM_SCOPE_SYS)) == NULL)
+    return -VFS_ENOMEM;
 
-  ctx->dsk = drv->context_create(device);
-  assert(ctx->dsk != NULL);
+  err = 0;
 
-  ctx->mpoint = root;
-  ctx->drv = drv;
+  ctx->ctx_type = fs_type;
+  ctx->ctx_dev = device;
 
-  //  root->ctx = ctx;
-  vfs_node_obj_func_new(root, NULL, ctx, NULL);
+  if((err=ctx_op[fs_type]->create(ctx)))
+    return err;
 
-  e = drv->get_root_info(ctx->dsk, &root->ent);
-  assert(e == 0);
+  if((err=vfs_node_init(ctx,vfs_root)))
+    return err;
 
-  vfs_node_func_init(&root->children);
+  if((err=ctx_op[fs_type]->read_root(ctx,vfs_root)))
+    return err;
 
-  return 0;
+  if((err=vfs_node_freelist_init(ctx,node_nr)))
+    return err;
+
+  if((err=vfs_file_freelist_init(file_nr)))
+    return err;
+
+#ifdef CONFIG_DRIVER_FS_PIPE
+  if((vfs_pipe_ctx = mem_alloc(sizeof(*vfs_pipe_ctx), MEM_SCOPE_SYS)) == NULL)
+    return -VFS_ENOMEM;
+  
+  memset(vfs_pipe_ctx,0,sizeof(*vfs_pipe_ctx));
+  pipe_ctx_op.create(vfs_pipe_ctx);
+#endif
+
+  vfs_node_up(vfs_root);
+  *root = vfs_root;
+  return err;
 }
