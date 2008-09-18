@@ -29,8 +29,8 @@
 #endif
 
 #define BC_BUFFER_SIZE       512
-#define BC_ENTRIES_NR         1
-#define BC_BUFFERS_PER_ENTRY  2
+#define BC_ENTRIES_NR         20
+#define BC_BUFFERS_PER_ENTRY  3
 
 static struct vfs_node_s __vfs_root;
 struct vfs_node_s *vfs_root = &__vfs_root;
