@@ -85,8 +85,6 @@ static void vmem_x86_update_k_context(struct vmem_context_s *ctx)
 	     vmem_k_context.mirror + ctx->k_count,
 	     diff * sizeof(struct cpu_x86_page4k_entry_s));
 
-      printf("updating context %i %i %P\n", diff, ctx->k_count, ctx->pagedir, diff * 4);
-
       ctx->k_count += diff;
     }
 }
@@ -165,8 +163,6 @@ void vmem_context_switch_to(struct vmem_context_s *ctx)
 {
   vmem_x86_update_k_context(ctx);
 
-  printf("switch to ctx %p pd %p pdphys %p\n", ctx, ctx->pagedir, ctx->pagedir_paddr);
-
   vmem_x86_set_pagedir(ctx->pagedir_paddr);
 
   CPU_LOCAL_SET(vmem_context_cur, ctx);
@@ -180,8 +176,6 @@ vmem_x86_alloc_pagetable(uintptr_t vaddr)
   struct cpu_x86_page4k_entry_s *p4k;
   uintptr_t paddr;
   uint_fast16_t i = vaddr >> 22;
-
-  printf("enter %s(%p)\n", __func__, vaddr);
 
   assert(i <= VMEM_USER_END_PDE);
   assert(i >= VMEM_INITIAL_PDE);
@@ -251,8 +245,6 @@ static struct cpu_x86_page4k_entry_s *
 vmem_x86_alloc_vpage(uintptr_t vaddr)
 {
   union cpu_x86_page_entry_s *pd;
-
-  printf("enter %s(%p)\n", __func__, vaddr);
 
   if (vaddr < CONFIG_HEXO_VMEM_START)
     pd = vmem_k_pagedir;
@@ -375,16 +367,12 @@ void * vmem_vpage_kalloc()
 
   struct cpu_x86_page4k_entry_s *e = vmem_x86_alloc_vpage(vaddr);
 
-  printf("e %p\n", e);
-
   if (e == NULL)
     return NULL;
 
   /* allocate a new physical page for page table */
   if (vmem_ppage_alloc(&paddr))
     return NULL;
-
-  printf("kpage entry %p\n", e);
 
   e->present = 1;
   e->writable = 1;
