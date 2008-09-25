@@ -182,7 +182,7 @@ error_t			ping(struct net_addr_s	*host,
 
 		  if (t < stat->min)
 		    stat->min = t;
-		  else if (t > stat->max)
+		  if (t > stat->max)
 		    stat->max = t;
 		  stat->avg += t;
 

@@ -85,7 +85,7 @@ static bool_t		dhcp_ip_is_free(struct net_if_s	*interface,
   arp.ea_hdr.ar_pln = 4;
   arp.ea_hdr.ar_op = htons(ARPOP_REQUEST);
   memcpy(arp.arp_sha, interface->mac, ETH_ALEN);
-  endian_32_na_store(&arp.arp_spa, 0);
+  endian_be32_na_store(&arp.arp_spa, 0);
   arp.arp_tpa = htonl(ip);
 
   /* send the request */
@@ -171,7 +171,7 @@ static struct dhcp_opt_s	*dhcp_get_opt(struct dhcphdr	*dhcp,
 
   while (p->code != DHCP_END && p->code != opt)
     {
-      if (p >= endptr || &p->len >= endptr)
+      if ((uint8_t *)p >= endptr || (uint8_t *)&p->len >= endptr)
 	return NULL;
       p = (struct dhcp_opt_s *)((uint8_t *)p + 2 + p->len);
     }
@@ -269,7 +269,8 @@ static error_t		dhcp_packet(struct net_if_s	*interface,
   memcpy(packet->chaddr, interface->mac, ETH_ALEN);
 
   /* fill DHCP options */
-  opt = raw = (void *)(packet + 1);
+  raw = (void *)(packet + 1);
+  opt = (struct dhcp_opt_s *)raw;
   opt->code = DHCP_MSG;
   opt->len = 1;
   opt->data[0] = type;

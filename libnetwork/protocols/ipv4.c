@@ -24,6 +24,8 @@
  *
  */
 
+#include <hexo/endian.h>
+
 #include <netinet/ip.h>
 #include <netinet/icmp.h>
 #include <netinet/arp.h>
@@ -287,8 +289,8 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       memcpy(data, packet->packet, headers_len);
 
       /* update final packet flags & total length */
-      endian_16_na_store(&((struct iphdr *)nethdr[-1].data)->fragment, 0);
-      endian_16_na_store(&((struct iphdr *)nethdr[-1].data)->tot_len, total);
+      net_16_store(((struct iphdr *)nethdr[-1].data)->fragment, 0);
+      net_16_store(((struct iphdr *)nethdr[-1].data)->tot_len, total);
 
       /* copy current packet to its position */
 #ifdef CONFIG_NETWORK_AUTOALIGN
@@ -899,7 +901,7 @@ void		ip_route(struct net_packet_s	*packet,
   /* recompute checksum (in fact, incrementally adjust it) */
   hdr->ttl--;
   check = net_16_load(hdr->check) + 1;
-  endian_16_na_store(&hdr->check, check + (check >> 16));
+  net_16_store(hdr->check, check + (check >> 16));
 
   /* direct or indirect delivery */
   if (route->is_routed)

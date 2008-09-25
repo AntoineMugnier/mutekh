@@ -139,6 +139,8 @@ static _BIND(bind_udp)
       return -1;
     }
 
+  pv->desc->callback_error = socket_err_callback;
+
   return 0;
 }
 
@@ -191,6 +193,8 @@ static _CONNECT(connect_udp)
       fd->error = -err;
       return -1;
     }
+
+  pv->desc->callback_error = socket_err_callback;
 
   return 0;
 }

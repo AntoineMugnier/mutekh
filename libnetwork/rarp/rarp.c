@@ -76,7 +76,7 @@ error_t			rarp_client(const char	*ifname)
 
   memcpy(arp.arp_sha, interface->mac, ETH_ALEN);
   memcpy(arp.arp_tha, interface->mac, ETH_ALEN);
-  endian_32_na_store(&arp.arp_spa, 0);
+  endian_be32_na_store(&arp.arp_spa, 0);
   arp.arp_tpa = 0;
 
   /* send the request */

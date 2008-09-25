@@ -422,7 +422,7 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
 
   if (ip == 0xffffffff)
     {
-      return "\xff\xff\xff\xff\xff\xff";
+      return (uint8_t *)"\xff\xff\xff\xff\xff\xff";
     }
 
   if ((arp_entry = arp_table_lookup(&pv->table, ip)) != NULL &&

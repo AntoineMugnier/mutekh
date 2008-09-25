@@ -22,3 +22,7 @@
 
 * ARP
   - gestion des doublons
+
+* refaire un RARP lightweight integre a la stack
+
+* refaire marcher tuntap sur l'archi EMU

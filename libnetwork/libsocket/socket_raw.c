@@ -81,6 +81,7 @@ static _SOCKET(socket_raw)
     }
   pv->proto = protocol;
   pv->icmp_mask = 0;
+  pv->local_interface = NULL;
   sem_init(&pv->recv_sem, 0, 0);
   packet_queue_lock_init(&pv->recv_q);
 
@@ -506,13 +507,13 @@ static _SENDMSG(sendmsg_raw)
 	goto error;
     }
 
-  if (route != NULL)
+  if (route != NULL && !pv->connected)
     route_obj_refdrop(route);
 
   return n;
 
  error:
-  if (route != NULL)
+  if (route != NULL && pv->connected)
     route_obj_refdrop(route);
 
   return -1;

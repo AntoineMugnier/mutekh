@@ -139,8 +139,8 @@ static bool_t			ne2000_rx(struct device_s	*dev,
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
   struct ne2000_header_s	hdr;
-  uint_fast16_t			next;
-  uint_fast16_t			curr;
+  uint_fast16_t			next = 0;
+  uint_fast16_t			curr = 0;
   uint_fast16_t			dma;
   uint8_t			*buf;
 
