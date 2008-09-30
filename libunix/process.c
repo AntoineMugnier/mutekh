@@ -60,54 +60,62 @@ static CONTEXT_ENTRY(unix_context_entry)
 
 struct unix_process_s *unix_create_process(struct unix_process_s *parent)
 {
-  struct unix_process_s *ps;
-  uintptr_t stack_page;
+    struct unix_process_s *ps;
+    uintptr_t stack_page;
 
-  if ((ps = mem_alloc(sizeof(*ps), MEM_SCOPE_SYS)) == NULL)
-    goto err;
+    if ((ps = mem_alloc(sizeof(*ps), MEM_SCOPE_SYS)) == NULL)
+	goto err;
 
-  if (vmem_ppage_alloc(&stack_page))
-    goto err_ps;
+    if (vmem_ppage_alloc(&stack_page))
+	goto err_ps;
 
-  /* setup scheduler context */
-  context_init(&ps->ctx.context, CONFIG_UNIX_KSTACK_SIZE, unix_context_entry, NULL);
-  sched_context_init(&ps->ctx);
+#ifdef CONFIG_UNIX_DEBUG
+    printf("Creating unix process ");
+#endif
 
-  /* setup virtual memory context */
-  vmem_context_init(&ps->vmem);
-  ps->ctx.context.vmem = &ps->vmem;
+    /* setup scheduler context */
+    context_init(&ps->ctx.context, &ps->stack_vaddr_start, CONFIG_UNIX_KSTACK_SIZE, unix_context_entry, NULL);
+    sched_context_init(&ps->ctx);
 
-  /* setup syscall handler */
-  cpu_syscall_sethandler_ctx(&ps->ctx.context, unix_syscall_handler);
+    /* setup virtual memory context */
+    vmem_context_init(&ps->vmem);
+    ps->ctx.context.vmem = &ps->vmem;
 
-  /* user stack */
-  ps->stack_vaddr_start = CONFIG_UNIX_STACK_VADDR - CONFIG_HEXO_VMEM_PAGESIZE;
-  ps->stack_vaddr_end = CONFIG_UNIX_STACK_VADDR;
+    /* setup syscall handler */
+    cpu_syscall_sethandler_ctx(&ps->ctx.context, unix_syscall_handler);
 
-  vmem_vpage_set(ps->stack_vaddr_start, stack_page,
-		 VMEM_PAGE_ATTR_RW | VMEM_PAGE_ATTR_USERLEVEL |
-		 VMEM_PAGE_ATTR_PRESENT);
+    /* user stack */
+    ps->stack_vaddr_start = CONFIG_UNIX_STACK_VADDR - CONFIG_HEXO_VMEM_PAGESIZE;
+    ps->stack_vaddr_end = CONFIG_UNIX_STACK_VADDR;
 
-  vmem_vpage_set(CONFIG_UNIX_START_VADDR, stack_page,
-		 VMEM_PAGE_ATTR_RW | VMEM_PAGE_ATTR_USERLEVEL |
-		 VMEM_PAGE_ATTR_PRESENT);
+    vmem_vpage_set(ps->stack_vaddr_start, stack_page,
+		   VMEM_PAGE_ATTR_RW | VMEM_PAGE_ATTR_USERLEVEL |
+		   VMEM_PAGE_ATTR_PRESENT);
 
-  /* add in process list */
-  ps->parent = parent;
-  ps->pid = pv_get_next_pid();
+    vmem_vpage_set(CONFIG_UNIX_START_VADDR, stack_page,
+		   VMEM_PAGE_ATTR_RW | VMEM_PAGE_ATTR_USERLEVEL |
+		   VMEM_PAGE_ATTR_PRESENT);
 
-  unix_plist_init(&ps->children);
-  unix_phash_push(&unix_ps_hash_g, ps);
+    /* add in process list */
+    ps->parent = parent;
+    ps->pid = pv_get_next_pid();
 
-  if (parent)
-    unix_plist_push(&parent->children, ps);
+#ifdef CONFIG_UNIX_DEBUG
+    printf("(pid=%i)\n", ps->pid);
+#endif
 
-  return ps;
+    unix_plist_init(&ps->children);
+    unix_phash_push(&unix_ps_hash_g, ps);
 
- err_ps:
-  mem_free(ps);
- err:
-  return NULL;
+    if (parent)
+	unix_plist_push(&parent->children, ps);
+
+    return ps;
+
+err_ps:
+    mem_free(ps);
+err:
+    return NULL;
 }
 
 void unix_start_process(struct unix_process_s *ps)

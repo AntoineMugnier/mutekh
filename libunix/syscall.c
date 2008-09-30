@@ -7,6 +7,10 @@
 #include <stdio.h>
 
 #include <libunix/syscall.h>
+#include <libunix/libunix.h>
+#include <libunix/process.h>
+
+extern struct unix_process_s *unix_process_current;
 
 reg_t unix_sys_invalid(void)
 {
@@ -16,17 +20,33 @@ reg_t unix_sys_invalid(void)
 
 reg_t unix_sys_fork(void)
 {
-  puts("fork\n");
-  return 0;
+    struct unix_process_s *ps_child;
+    struct unix_process_s *ps_parent;
+
+#ifdef CONFIG_UNIX_DEBUG
+    puts("fork\n");
+#endif
+
+    CONTEXT_LOCAL_SET(unix_process_current, ps_parent);
+
+    ps_child = unix_create_process(ps_parent);
+
+    memcpy(&(ps_child->stack_vaddr_start),
+	   &(ps_parent->stack_vaddr_start),
+	   abs(ps_child->stack_vaddr_end - ps_child->stack_vaddr_start));
+
+    unix_start_process(ps_child);
+
+    return 0;
 }
 
 reg_t unix_sys_execve(const char *filename, char *const argv [], char *const envp[])
 {
-  puts("execve\n");
-  return 0;
+    puts("execve\n");
+    return 0;
 }
 
-struct unix_syscall_s unix_syscall_table[] = 
+struct unix_syscall_s unix_syscall_table[] =
   {
     { .argc = 0, .call = unix_sys_invalid },
     { .argc = 0, .call = unix_sys_fork },
@@ -42,7 +62,7 @@ struct unix_syscall_s unix_syscall_table[] =
   3->edx
   4->esi
   5->edi
-  
+
   argc == 6:
   ptr->ebx
 */

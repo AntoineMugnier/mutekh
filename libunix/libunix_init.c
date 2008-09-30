@@ -8,7 +8,7 @@
 
 struct unix_process_s *ps_init;
 
-//extern unix_ps_hash_root_t unix_ps_hash_g;
+extern unix_ps_hash_root_t unix_ps_hash_g;
 
 void libunix_init(void)
 {
