@@ -10,6 +10,60 @@
 #include <libunix/libunix.h>
 #include <libunix/process.h>
 
+/*
+
+exit
+fork
+read
+write
+open
+close
+waitpid
+creat
+link
+unlink
+execve
+chdir
+time
+mknod
+chmod
+lchmod
+stat
+lseek
+getpid
+mount
+setuid
+getuid
+stime
+ptrace
+alarm
+nice
+sync
+kill
+setgid
+getgid
+umount
+setpgid
+umask
+chroot
+dup2
+getppid
+setpgrp
+setsid
+sigaction
+symlink
+lstat
+readdir
+mmap
+munmap
+clone
+chown
+getcwd
+vfork
+
+*/
+
+
 extern struct unix_process_s *unix_process_current;
 
 reg_t unix_sys_invalid(void)
