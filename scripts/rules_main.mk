@@ -1,7 +1,7 @@
 
 LDFLAGS=
 target = kernel-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME)
-TARGET_EXT=out
+TARGET_EXT ?= out
 
 TARGET_SECTIONS=.text .data .boot .contextdata
 

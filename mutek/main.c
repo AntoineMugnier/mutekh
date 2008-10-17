@@ -320,6 +320,7 @@ static lock_t fault_lock;
 static CPU_EXCEPTION_HANDLER(fault_handler)
 {
   int_fast8_t		i;
+  reg_t			*sp = (reg_t*)stackptr;
 #ifdef CPU_GPREG_NAMES
   const char		*reg_names[] = CPU_GPREG_NAMES;
 #endif
@@ -337,14 +338,15 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
     printf("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
 
-  puts("Stack top:");
+  printf("Stack top (%p):\n", stackptr);
 
-  for (i = 0; i < 8; i++)
-    printf("%p%c", stackptr[i], (i + 1) % 4 ? ' ' : '\n');
+  for (i = 0; i < 12; i++)
+    printf("%p%c", sp[i], (i + 1) % 4 ? ' ' : '\n');
 
   lock_release(&fault_lock);
 
-  while (1);
+  while (1)
+    ;
 }
 
 /** application main function */

@@ -36,7 +36,8 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 
   asm volatile (
 		"	addi	1, 1, -7*4		\n"
-#ifndef CONFIG_COMPILE_PIC_
+#ifndef CONFIG_COMPILE_PIC
+#warning To be tested
 		/* save execution pointer based on current PC */
 		"	bl	1f			\n"
 		"	b	2f			\n"

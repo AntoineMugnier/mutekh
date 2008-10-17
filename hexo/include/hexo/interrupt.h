@@ -83,13 +83,15 @@ static void cpu_interrupt_wait(void);
 /** CPU exception handler function template */
 #define CPU_EXCEPTION_HANDLER(n) void (n) (uint_fast8_t type, uintptr_t execptr, \
 					   uintptr_t dataptr, reg_t *regtable, \
-					   reg_t *stackptr)
+					   uintptr_t stackptr)
 /**
    CPU exception handler function type.
 
    @param type exception ID
    @param execptr faulty instruction pointer
    @param dataptr faulty memory access pointer
+   @param regtable register table
+   @param stackptr value of stack pointer
 */
 typedef CPU_EXCEPTION_HANDLER(cpu_exception_handler_t);
 

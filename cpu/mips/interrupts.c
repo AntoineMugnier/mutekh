@@ -62,18 +62,15 @@ asm(
 
     "	sw	$8,	0*4($sp)		        \n" /* EPC reg */
 
+    "	addiu	$11,	$sp,	4*32			\n" /* stack pointer */
+    "	sw	$11,	29*4($sp)			\n"
+
     "	andi	$9,	$1,	0x3c			\n" /* extract cause */
-    "	beq	$9,	$0,	interrupt_hw		\n"
+
     "	li	$10,	32				\n"
     "	beq	$9,	$10,	interrupt_sys		\n"
 
-    /*************************************************************
-		exception handling
-    **************************************************************/
-
-    "interrupt_ex:					\n"
-
-    /* add missing registers in reg table */
+    /* save extra register for int/except only */
     "	sw	$16,	16*4($sp)		        \n"
     "	sw	$17,	17*4($sp)		        \n"
     "	sw	$18,	18*4($sp)		        \n"
@@ -85,23 +82,27 @@ asm(
     "	sw	$26,	26*4($sp)		        \n"
     "	sw	$27,	27*4($sp)		        \n"
     "	sw	$28,	28*4($sp)		        \n"
-    "	sw	$29,	29*4($sp)		        \n"
     "	sw	$30,	30*4($sp)		        \n"
+
+    "	beq	$9,	$0,	interrupt_hw		\n"
+
+    /*************************************************************
+		exception handling
+    **************************************************************/
+
+    "interrupt_ex:					\n"
 
     /* exception function arguments */
     "	srl	$4,	$9,	2			\n" /* adjust cause arg */
     "	move	$5,	$8				\n" /* execution pointer */
     "	mfc0	$6,	$8				\n" /* bad address if any */
     "	addiu	$7,	$sp,	0			\n" /* register table on stack */
-    "	addiu	$8,	$sp,				\n" /* stack pointer */
 
-    //fixme calling convention !
-
-#if defined(CONFIG_CPU_MIPS_ABI_O32) || defined(CONFIG_CPU_MIPS_ABI_O64)
-    "	sw	$8,	4*4($sp)			\n"
-#endif
+    "	addiu	$sp,	$sp,	-5*4			\n"
+    "	sw	$11,	4*4($sp)			\n"
     "	lw	$1,	cpu_exception_handler($27)	\n"
     "	jalr	$1					\n"
+    "	addiu	$sp,	$sp,	5*4			\n"
 
     "	j	return					\n"
 
@@ -110,8 +111,10 @@ asm(
     **************************************************************/
     "interrupt_sys:					\n"
 
+    "	addiu	$sp,	$sp,	-4*4			\n"
     "	lw	$1,	cpu_syscall_handler($27)	\n"
     "	jalr	$1					\n"
+    "	addiu	$sp,	$sp,	4*4			\n"
 
     "	j	return_val				\n"
 
@@ -123,13 +126,28 @@ asm(
     "	srl	$4,	$1,	8			\n"
     "	andi	$4,	$4,	0xff			\n"
 
+    "	addiu	$sp,	$sp,	-4*4			\n"
     "	lw	$1,	cpu_interrupt_handler($27)	\n"
     "	jalr	$1					\n"
+    "	addiu	$sp,	$sp,	4*4			\n"
 
     /************************************************************/
 
     /* restore registers */
     "return:						\n"
+    "	lw	$16,	 16*4($sp)		        \n"
+    "	lw	$17,	 17*4($sp)		        \n"
+    "	lw	$18,	 18*4($sp)		        \n"
+    "	lw	$19,	 19*4($sp)		        \n"
+    "	lw	$20,	 20*4($sp)		        \n"
+    "	lw	$21,	 21*4($sp)		        \n"
+    "	lw	$22,	 22*4($sp)		        \n"
+    "	lw	$23,	 23*4($sp)		        \n"
+    "	lw	$26,	 26*4($sp)		        \n"
+    "	lw	$27,	 27*4($sp)		        \n"
+    "	lw	$28,	 28*4($sp)		        \n"
+    "	lw	$30,	 30*4($sp)		        \n"
+
     "	lw	$2,	 2*4($sp)		        \n"
     "	lw	$3,	 3*4($sp)		        \n"
 
@@ -157,7 +175,8 @@ asm(
 
     "	lw	$31,	31*4($sp)		        \n"
 
-    "	addu	$sp,	4*32				\n"
+    "	lw	$sp,	29*4($sp)		        \n"
+//    "	addu	$sp,	4*32				\n"
 
     ".set noreorder					\n"
     "	jr	$26					\n"
