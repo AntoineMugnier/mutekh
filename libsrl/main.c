@@ -72,7 +72,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   puts("Stack top:");
 
   for (i = 0; i < 8; i++)
-    printf("%p%c", stackptr[i], (i + 1) % 4 ? ' ' : '\n');
+	  printf("%p%c", ((uint32_t*)stackptr)[i], (i + 1) % 4 ? ' ' : '\n');
 
   lock_release(&fault_lock);
 
