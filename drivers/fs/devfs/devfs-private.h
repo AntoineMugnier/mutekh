@@ -19,40 +19,52 @@
     Copyright Sylvain Leroy <sylvain.leroy@unmondelibre.fr>
 */
 
-#include <stdlib.h>
-#include <string.h>
-#include <hexo/alloc.h>
-#include <hexo/endian.h>
+#ifndef __DEVFS_PRIVATE_H__
+#define __DEVFS_PRIVATE_H__
+
+#include <hexo/types.h>
 #include <vfs/vfs.h>
-#include <vfs/buffer_cache.h>
-#include "devfs.h"
 
+/*
 
+needed nodes :
+tty
+null
+zero
+random
+urandom
+stdin
+stdout
+stderr
 
-VFS_CREATE_CONTEXT(devfs_create_context)
+ */
+
+enum devfs_e{
+    DEVFS_CHAR,
+    DEVFS_BLOCK,
+    DEVFS_LINK,
+    DEVFS_DIR
+};
+
+struct devfs_context_s
 {
-    context->ctx_type = VFS_DEVICE_TYPE; // check it, VFS_DEVFS_TYPE;
-    context->ctx_op = (struct vfs_context_op_s *) &devfs_ctx_op;
-    context->ctx_node_op = (struct vfs_node_op_s *) &devfs_n_op;
-    context->ctx_file_op = (struct vfs_file_op_s *) &devfs_f_op;
-    context->ctx_pv = NULL;
-    return 0;
-}
+    char*		name;
+};
 
-
-VFS_DESTROY_CONTEXT(devfs_destroy_context)
+struct devfs_node_s
 {
-  return 0;
-}
+    devfs_e		type; // character, block, link, directory, ...
+    char*		name;
+    uint_fast16_t	flags;
+/*     sched_queue_root_t	wr_wait; */
+/*     sched_queue_root_t	rd_wait; */
+/*     struct rwlock_s	lock; */
+/*     struct bc_buffer_s*	buffer; */
+};
 
-
-VFS_READ_ROOT(devfs_read_root)
+struct devfs_file_s
 {
-  return 0;
-}
+    char*		name;
+};
 
-
-VFS_WRITE_ROOT(devfs_write_root)
-{
-  return 0;
-}
+#endif /* __DEVFS_PRIVATE_H__ */

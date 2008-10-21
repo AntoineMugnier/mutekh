@@ -20,10 +20,12 @@
 */
 
 #include <hexo/alloc.h>
-//#include <vfs/buffer_cache.h>
 #include "devfs.h"
 
-
+/*
+** param	struct vfs_node_s *node
+** return	error_t
+*/
 VFS_INIT_NODE(devfs_init_node)
 {
     struct devfs_node_s *node_info;
@@ -43,7 +45,10 @@ VFS_INIT_NODE(devfs_init_node)
     return 0;
 }
 
-
+/*
+** param	struct vfs_node_s *node
+** return	error_t
+*/
 VFS_RELEASE_NODE(devfs_release_node)
 {
     if(node->n_pv == NULL)
@@ -52,31 +57,45 @@ VFS_RELEASE_NODE(devfs_release_node)
 #if VFAT_DEBUG
     printf("+++++ devfs_release_node: freeing devfs_node_info\n");
 #endif
-
     mem_free(node->n_pv);
     node->n_pv = NULL;
 
     return 0;
 }
 
-
+/*
+** param	struct vfs_node_s *parent
+** param	struct vfs_node_s *node
+** return	error_t
+*/
 VFS_CREATE_NODE(devfs_create_node)
 {
     return 0;
 }
 
-
+/*
+** param	struct vfs_node_s *parent
+** param	struct vfs_node_s *node
+** return	error_t
+*/
 VFS_LOOKUP_NODE(devfs_lookup_node)
 {
     return 0;
 }
 
-
+/*
+** param	struct vfs_node_s *node
+** return	error_t
+*/
 VFS_WRITE_NODE(devfs_write_node)
 {
     return 0;
 }
 
+/*
+** param	struct vfs_node_s *node
+** return	error_t
+*/
 VFS_UNLINK_NODE(devfs_unlink_node)
 {
     return 0;

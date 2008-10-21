@@ -23,48 +23,16 @@
 #define __DEVFS_H__
 
 #include <hexo/types.h>
-#include <hexo/scheduler.h>
-#include <hexo/lock.h>
 #include <vfs/vfs.h>
-#include <vfs/buffer_cache.h>
 
 #define DEVFS_DEBUG 0
 
-/*
-  # add an inode in /dev
-  devfs_register(type_t type);
-  # remove an inode in /dev
-  devfs_unregister();
 
-needed nodes :
-tty
-null
-zero
-random
-urandom
-stdin
-stdout
-stderr
-
- */
-
-enum devfs_e{
-DEVFS_CHAR;
-DEVFS_BLOCK;
-DEVFS_LINK;
-DEVFS_DIR
-};
-
-struct devfs_node_s
-{
-    devfs_e		type; // character, block, link, directory, ...
-    char*		name;
-    uint_fast16_t	flags;
-    sched_queue_root_t	wr_wait;
-    sched_queue_root_t	rd_wait;
-    struct rwlock_s	lock;
-    struct bc_buffer_s*	buffer;
-};
+// add an inode in /dev
+error_t	devfs_register(char*	name,
+		       type_t	type);
+// remove an inode in /dev
+error_t	devfs_unregister(char*	name);
 
 
 VFS_CREATE_CONTEXT(devfs_create_context);
