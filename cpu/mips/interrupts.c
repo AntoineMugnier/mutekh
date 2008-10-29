@@ -112,9 +112,13 @@ asm(
     "interrupt_sys:					\n"
 
     "	addiu	$sp,	$sp,	-4*4			\n"
-    "	lw	$1,	cpu_syscall_handler($27)	\n"
+    "	lw	$11,	__cpu_context_data_base($27)	\n"
+    "	lw	$1,	    cpu_syscall_handler($11)	\n"
     "	jalr	$1					\n"
     "	addiu	$sp,	$sp,	4*4			\n"
+    "	lw	$8,	    0*4($sp)		        \n" /* EPC reg */
+    "   addiu $8, 4                 \n" /* increment epc for not doing the syscall again */
+    "	sw	$8,	    0*4($sp)		        \n"
 
     "	j	return_val				\n"
 
