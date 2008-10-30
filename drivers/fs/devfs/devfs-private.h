@@ -28,43 +28,48 @@
 /*
 
 needed nodes :
-tty
 null
 zero
 random
 urandom
-stdin
-stdout
-stderr
+tty
+- stdin
+- stdout
+- stderr
 
  */
 
-enum devfs_e{
-    DEVFS_CHAR,
-    DEVFS_BLOCK,
-    DEVFS_LINK,
-    DEVFS_DIR
+enum devfs_type_e{
+  devfs_char,
+  devfs_block,
+  devfs_link,
+  devfs_dir
 };
 
 struct devfs_context_s
 {
-    char*		name;
+  char*		name;
 };
 
 struct devfs_node_s
 {
-    devfs_e		type; // character, block, link, directory, ...
-    char*		name;
-    uint_fast16_t	flags;
-/*     sched_queue_root_t	wr_wait; */
-/*     sched_queue_root_t	rd_wait; */
-/*     struct rwlock_s	lock; */
-/*     struct bc_buffer_s*	buffer; */
+  enum devfs_type_e	type; // character, block, link, directory, ...
+  char*			name;
+  uint_fast16_t		flags;
+  // only directories need children
+  // like /dev
+  // must use GPCT to have linked list
+  // Should work somehow else
+  struct devfs_node_s	*child[10];
+  /*     sched_queue_root_t	wr_wait; */
+  /*     sched_queue_root_t	rd_wait; */
+  /*     struct rwlock_s	lock; */
+  /*     struct bc_buffer_s*	buffer; */
 };
 
 struct devfs_file_s
 {
-    char*		name;
+  char*		name;
 };
 
 #endif /* __DEVFS_PRIVATE_H__ */

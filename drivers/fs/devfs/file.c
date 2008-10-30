@@ -32,24 +32,24 @@ VFS_READ_FILE(devfs_read)
 {
     size_t	s = 0;
 
-#if DEVFS_DEBUG
-    printf("++++ devfs_read started, asked size %d\n", size);
-#endif
+/* #if DEVFS_DEBUG */
+/*     printf("++++ devfs_read started, asked size %d\n", size); */
+/* #endif */
 
-    if (file->f_node->n_attr & VFS_FIFO)
-	return -EINVAL;
+/*     if (file->f_node->n_attr & VFS_FIFO) */
+/* 	return -EINVAL; */
 
-    if (size == 0)
-	return 0;
+/*     if (size == 0) */
+/* 	return 0; */
 
-    if (node->n_pv->type == DEVFS_CHAR)
-    {
-#if DEVFS_DEBUG
-	printf("++++ devfs_read on type char\n");
-#endif
-	if ((s = dev_char_read(*(struct device) file, buffer, size)) < 0)
-	    return EIO;
-    }
+/*     if (node->n_pv->type == DEVFS_CHAR) */
+/*     { */
+/* #if DEVFS_DEBUG */
+/* 	printf("++++ devfs_read on type char\n"); */
+/* #endif */
+/* 	if ((s = dev_char_read(*(struct device) file, buffer, size)) < 0) */
+/* 	    return EIO; */
+/*     } */
     return s;
 }
 
@@ -57,18 +57,18 @@ VFS_WRITE_FILE(devfs_write)
 {
     size_t	s = 0;
 
-#if DEVFS_DEBUG
-    printf("++++ devfs_write started, asked size %d\n", size);
-#endif
+/* #if DEVFS_DEBUG */
+/*     printf("++++ devfs_write started, asked size %d\n", size); */
+/* #endif */
 
-    if (node->n_pv->type == DEVFS_CHAR)
-    {
-#if DEVFS_DEBUG
-	printf("++++ devfs_write on type char\n");
-#endif
-	if ((s = dev_char_write(*(struct device) file, buffer, size)) < 0)
-	    return EIO;
-    }
+/*     if (node->n_pv->type == DEVFS_CHAR) */
+/*     { */
+/* #if DEVFS_DEBUG */
+/* 	printf("++++ devfs_write on type char\n"); */
+/* #endif */
+/* 	if ((s = dev_char_write(*(struct device) file, buffer, size)) < 0) */
+/* 	    return EIO; */
+/*     } */
     return s;
 }
 

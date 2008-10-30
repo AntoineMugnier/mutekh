@@ -64,6 +64,7 @@
 #define VFS_ARCHIVE          0x00000008
 #define VFS_PIPE             0x00000010
 #define VFS_FIFO             0x00000020
+#define VFS_DEVICE           0x00000040
 
 #define VFS_O_PIPE           0x00010000
 #define VFS_O_FIFO           0x00030000

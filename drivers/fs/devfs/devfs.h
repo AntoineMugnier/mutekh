@@ -24,15 +24,25 @@
 
 #include <hexo/types.h>
 #include <vfs/vfs.h>
+#include "devfs-private.h"
 
 #define DEVFS_DEBUG 0
 
 
-// add an inode in /dev
-error_t	devfs_register(char*	name,
-		       type_t	type);
-// remove an inode in /dev
+/**
+ ** add an inode in /dev
+ */
+error_t	devfs_register(char*			name,
+		       enum devfs_type_e	type);
+/**
+ ** remove an inode in /dev
+ */
 error_t	devfs_unregister(char*	name);
+
+/**
+ ** initialisation of the devfs
+ */
+error_t	devfs_init(struct vfs_node_s	*root);
 
 
 VFS_CREATE_CONTEXT(devfs_create_context);
@@ -71,7 +81,6 @@ static const struct vfs_node_op_s devfs_n_op =
     .release = devfs_release_node,
     .unlink = devfs_unlink_node
   };
-
 static const struct vfs_file_op_s devfs_f_op =
   {
     .open = devfs_open,

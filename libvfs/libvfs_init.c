@@ -28,6 +28,10 @@
 #include <drivers/fs/pipe/pipe.h>
 #endif
 
+#ifdef CONFIG_DRIVER_FS_DEV
+#include <drivers/fs/devfs/devfs.h>
+#endif
+
 #define BC_BUFFER_SIZE       512
 #define BC_ENTRIES_NR         20
 #define BC_BUFFERS_PER_ENTRY  3
@@ -45,18 +49,18 @@ VFS_INIT(vfs_init)
   assert(device != NULL);
   
   if(fs_type != VFS_VFAT_TYPE)
-  {
-    printf("vfs_init: invaild fs_type value, this VFS version support only VFAT file system as root file system\n");
-    return -VFS_EINVAL;
-  }
+    {
+      printf("vfs_init: invaild fs_type value, this VFS version support only VFAT file system as root file system\n");
+      return -VFS_EINVAL;
+    }
 
   memset(vfs_root,0,sizeof(*vfs_root));
 
   if((err=bc_init(&bc,&freelist,BC_ENTRIES_NR,BC_BUFFERS_PER_ENTRY,BC_BUFFER_SIZE,bc_default_hash)))
-  {
-    printf("error while initialzing bufferCache :%d\n",err);
-    return err;
-  }
+    {
+      printf("error while initialzing bufferCache :%d\n",err);
+      return err;
+    }
 
   if((ctx = mem_alloc(sizeof(*ctx), MEM_SCOPE_SYS)) == NULL)
     return -VFS_ENOMEM;
@@ -91,5 +95,8 @@ VFS_INIT(vfs_init)
 
   vfs_node_up(vfs_root);
   *root = vfs_root;
+
+  devfs_init(vfs_root);
+
   return err;
 }

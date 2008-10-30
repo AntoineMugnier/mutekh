@@ -28,15 +28,19 @@
 #include "devfs.h"
 
 
+/**
+ ** param	struct vfs_context_s *context
+ ** return	error_t
+ */
 
 VFS_CREATE_CONTEXT(devfs_create_context)
 {
-    context->ctx_type = VFS_DEVICE_TYPE; // check it, VFS_DEVFS_TYPE;
-    context->ctx_op = (struct vfs_context_op_s *) &devfs_ctx_op;
-    context->ctx_node_op = (struct vfs_node_op_s *) &devfs_n_op;
-    context->ctx_file_op = (struct vfs_file_op_s *) &devfs_f_op;
-    context->ctx_pv = NULL;
-    return 0;
+  // fullfill struct devfs_ctx_s
+  // meaning : vfs_context_s->n_pv
+
+  context->ctx_pv = NULL;
+
+  return 0;
 }
 
 

@@ -1,1 +1,4 @@
-objs = context.o node.o file.o
+objs =	devfs.o		\
+	context.o	\
+	node.o		\
+	file.o
