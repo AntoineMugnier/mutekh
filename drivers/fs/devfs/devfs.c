@@ -35,25 +35,78 @@ error_t	devfs_unregister(char*	name)
   return 0;
 }
 
+
+static inline error_t devfs_new_node(struct vfs_node_s	*dev_node,
+				     char*		name,
+				     uint_fast32_t	flags)
+{
+  struct vfs_node_s	*new_node;
+
+#ifdef CONFIG_DEVFS_DEBUG
+  printf("devfs_new_node: Creating Node %s\n", name);
+#endif
+
+  // Get node from the freelist
+  if ((new_node = vfs_node_freelist_get(dev_node->n_ctx)) == NULL)
+    return VFS_EUNKNOWN;
+
+  // Naming the new node
+  strcpy(new_node->n_name, name);
+
+  // Add node in children list "n_children" in parent's node
+  vfs_node_list_push(&dev_node->n_children, &new_node);
+
+  // Fullfill node_pv (also n_attr in VFS (optionnale))
+  new_node->n_op->create(dev_node, new_node);
+
+  return 0;
+}
+
+  /* VFS_NODE_LOAD(n) */
+  /*   error_t (n) (struct vfs_node_s *root,	\ */
+  /* 	       char **path,		\ */
+  /* 	       uint_fast32_t flags,	\ */
+  /* 	       bool_t isAbsolutePath,	\ */
+  /* 	       struct vfs_node_s **node) */
+
+
 error_t	devfs_init(struct vfs_node_s	*root)
 {
   struct vfs_context_s	*devfs_ctx;
   struct vfs_node_s	*dev_node;
   struct vfs_node_s	*new_node;
-  uint_fast32_t		flags;
-  //  char			*dirs_ptr[1] = "dev";
+  char			*dev_name;
   error_t		err;
+  uint_fast32_t		flags;
   bool_t		isAbsolutePath = 0;
 
-  VFS_SET(flags, VFS_O_CREATE | VFS_O_EXCL);
+  //////////////////////////////////////////////////
+
+#ifdef CONFIG_DEVFS_DEBUG
+  printf("devfs_init: Setting up /dev Node\n");
+  printf("devfs_init: Initializing context for DevFS (/dev)\n");
+#endif
 
   // Allocating memory for parent context
   if((devfs_ctx = mem_alloc(sizeof(*devfs_ctx), MEM_SCOPE_SYS)) == NULL)
     return -VFS_ENOMEM;
+  // Allocating memory for /dev name
+  if((dev_name = mem_alloc(sizeof(char) * 4, MEM_SCOPE_SYS)) == NULL)
+    return -VFS_ENOMEM;
 
-  // Initializing context for DevFS (/dev)
-  if ((err = vfs_node_load(root, "dev", flags, isAbsolutePath, &dev_node)))
+  // Naming the new node
+  strcpy(dev_name, "dev");
+
+  // Setting up flags
+  VFS_SET(flags, VFS_O_CREATE | VFS_O_EXCL);
+
+  printf("dev_name is : %s\n", dev_name);
+  printf("dev_node is : %p\n", dev_node);
+
+  if ((err = vfs_node_load(root, &dev_name, flags, isAbsolutePath, &dev_node)))
     return err;
+
+  printf("--\n PASSING IT\n--\n");
 
   devfs_ctx->ctx_type = VFS_DEVICE_TYPE;
   devfs_ctx->ctx_dev = NULL;
@@ -64,35 +117,19 @@ error_t	devfs_init(struct vfs_node_s	*root)
   // Set private field in vfs_context_s
   devfs_ctx_op.create(devfs_ctx);
 
-  ///////////////////
-  // Creating Node //
-  ///////////////////
+#ifdef CONFIG_DEVFS_DEBUG
+  printf("devfs_init: Creating Node\n");
+#endif
 
-  // Get node from the freelist
-  new_node = vfs_node_freelist_get(devfs_ctx);
+  //////////////////////////////////////////////////
 
-  // Naming the new node
-  strcpy(new_node->n_name, "tty");
+  devfs_new_node(dev_node, flags, "tty");
 
-  // Add node in children list "n_children" in parent's node
-  vfs_freeList_push(&dev_node->n_children, &new_node);
+  //////////////////////////////////////////////////
 
-  // Fullfill node_pv (also n_attr in VFS (optionnale))
-  new_node->n_op->create(dev_node, new_node);
-
-  ///////////////////
-
-
-/* VFS_NODE_LOAD(n) */
-/*   error_t (n) (struct vfs_node_s *root,	\ */
-/* 	       char **path,		\ */
-/* 	       uint_fast32_t flags,	\ */
-/* 	       bool_t isAbsolutePath,	\ */
-/* 	       struct vfs_node_s **node) */
-
-  // Creating new needed nodes
-  vfs_node_load(root, "zero", flags, 0, &dev_node);
-  vfs_node_load(root, "null", flags, 0, &dev_node);
+#ifdef CONFIG_DEVFS_DEBUG
+  printf("devfs_init: DevFS Initialized\n");
+#endif
 
   return 0;
 }

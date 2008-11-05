@@ -26,8 +26,6 @@
 #include <vfs/vfs.h>
 #include "devfs-private.h"
 
-#define DEVFS_DEBUG 0
-
 
 /**
  ** add an inode in /dev

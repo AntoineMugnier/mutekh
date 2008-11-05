@@ -36,7 +36,7 @@ VFS_INIT_NODE(devfs_init_node)
   if((node_info = mem_alloc(sizeof(*node_info), MEM_SCOPE_SYS)) == NULL)
     return VFS_ENOMEM;
 
-#if DEVFS_DEBUG
+#ifdef CONFIG_DEVFS_DEBUG
   printf("init_devfs: node_info allocated\n");
 #endif
 
@@ -54,7 +54,7 @@ VFS_RELEASE_NODE(devfs_release_node)
   if(node->n_pv == NULL)
     return 0;
 
-#if DEVFS_DEBUG
+#ifdef CONFIG_DEVFS_DEBUG
   printf("+++++ devfs_release_node: freeing devfs_node_info\n");
 #endif
   mem_free(node->n_pv);
@@ -73,7 +73,7 @@ VFS_CREATE_NODE(devfs_create_node)
   uint_fast16_t		i = 0;
   struct devfs_node_s	*parent_pv = parent->n_pv;
 
-#if DEVFS_DEBUG
+#ifdef CONFIG_DEVFS_DEBUG
   printf("+++++ devfs_create_node: creating devfs_node\n");
 #endif
 
