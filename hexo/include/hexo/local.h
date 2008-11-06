@@ -31,7 +31,7 @@
 
 #ifdef CONFIG_SMP
 
-extern struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
+extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
 # ifndef CPU_LOCAL_SET
 #  define CPU_LOCAL_SET(n, v) { *CPU_LOCAL_ADDR(n) = (v); }
@@ -61,7 +61,7 @@ extern struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
 
 /** get address of cpu local object for given cpuid */
 # ifndef CPU_LOCAL_ID_ADDR
-#  define CPU_LOCAL_ID_ADDR(cpuid, n) CPU_LOCAL_CLS_ADDR(cpu_cld_list[(cpuid)]->cpu_local_storage, n)
+#  define CPU_LOCAL_ID_ADDR(cpuid, n) CPU_LOCAL_CLS_ADDR(cpu_local_storage[(cpuid)], n)
 # endif
 
 #else

@@ -1,9 +1,13 @@
 
 #include <hexo/error.h>
+#include <hexo/local.h>
 #include <hexo/context.h>
 #include <hexo/segment.h>
+#include <hexo/interrupt.h>
 
 #include <cpu/hexo/pmode.h>
+
+CPU_LOCAL cpu_x86_segsel_t *cpu_tls_seg = 0;
 
 error_t
 cpu_context_bootstrap(struct context_s *context)
@@ -54,9 +58,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   /* push default flags, interrupts are disabled */
   *--context->stack_ptr = 0x00000046;	/* EFLAGS */
 
-#if 0
-  VMEM
-#endif
+  // FIXME VMEM
 
   /* push tls segment index */
   *--context->stack_ptr = tls_seg << 3;	/* GS */
@@ -72,4 +74,59 @@ cpu_context_destroy(struct context_s *context)
   /* free tls segment descriptor */
   cpu_x86_segdesc_free((uint16_t)stack[0]);
 }
+
+# if defined(CONFIG_CPU_USER)
+
+void __attribute__((noreturn))
+cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,
+		     user_entry_t *entry, void *param)
+{
+  reg_t *us = (reg_t*)ustack;
+
+  cpu_interrupt_disable();
+
+  /* push param */
+  *--us = param;
+  /* push fake return address */
+  *--us = 0;
+
+  CPU_LOCAL_ADDR(cpu_tss)->esp0 = kstack;
+#  ifdef CONFIG_CPU_X86_SYSENTER
+  cpu_x86_write_msr(SYSENTER_ESP_MSR, kstack);
+#  endif
+
+  asm volatile (
+		"movl	%0, %%ds	\n"
+		"movl	%0, %%es	\n"
+		"movl	%0, %%fs	\n"
+		"movl	%0, %%gs	\n"
+#  ifdef CONFIG_CPU_X86_SYSENTER
+		"pushl	%3		\n" /* EFLAGS */
+		"popf			\n"
+		"sysexit		\n"
+		:
+		: "r" ((ARCH_GDT_USER_DATA_INDEX << 3) | 3)
+		, "c" (us)
+		, "d" (entry)
+#  else
+		"pushl %0		\n" /* SS */
+		"pushl %1		\n" /* ESP */
+		"pushl %4		\n" /* EFLAGS */
+		"pushl %2		\n" /* CS */
+		"pushl %3		\n" /* EIP */
+		"iret			\n"
+		:
+		: "r" ((ARCH_GDT_USER_DATA_INDEX << 3) | 3)
+		, "r" (us)
+		, "r" ((ARCH_GDT_USER_CODE_INDEX << 3) | 3)
+		, "r" (entry)
+#  endif
+		, "i" (0x0)	/* FIXME enable interrupts */
+		);
+
+  while (1)
+    ;
+}
+
+#endif
 

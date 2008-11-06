@@ -43,9 +43,16 @@ CONTEXT_LOCAL void *__context_data_base;
 
 /* CPU Local Descriptor structure */
 
-struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
-
 static struct cpu_x86_gatedesc_s cpu_idt[CPU_MAX_INTERRUPTS];
+
+#ifdef CONFIG_SMP
+void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
+cpu_x86_segsel_t cpu_local_storage_seg[CONFIG_CPU_MAXCOUNT];
+#endif
+
+#ifdef CONFIG_CPU_USER
+volatile CPU_LOCAL struct cpu_x86_tss_s cpu_tss;
+#endif
 
 /** gdt table lock */
 static lock_t		gdt_lock;
@@ -63,14 +70,18 @@ cpu_global_init(void)
   cpu_x86_seg_setup(&gdt[ARCH_GDT_CODE_INDEX].seg, 0,
 		    0xffffffff, CPU_X86_SEG_EXEC_NC_R, 0, 1);
 
+#ifdef CONFIG_CPU_USER
   cpu_x86_seg_setup(&gdt[ARCH_GDT_USER_CODE_INDEX].seg, 0,
 		    0xffffffff, CPU_X86_SEG_EXEC_NC_R, 3, 1);
+#endif
 
   cpu_x86_seg_setup(&gdt[ARCH_GDT_DATA_INDEX].seg, 0,
 		    0xffffffff, CPU_X86_SEG_DATA_UP_RW, 0, 1);
 
+#ifdef CONFIG_CPU_USER
   cpu_x86_seg_setup(&gdt[ARCH_GDT_USER_DATA_INDEX].seg, 0,
 		    0xffffffff, CPU_X86_SEG_DATA_UP_RW, 3, 1);
+#endif
 
   /* mark all other GDT entries available */
   for (i = ARCH_GDT_FIRST_ALLOC; i < ARCH_GDT_SIZE; i++)
@@ -164,8 +175,6 @@ cpu_x86_segdesc_free(cpu_x86_segsel_t sel)
   lock_release(&gdt_lock);  
 }
 
-static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
-
 #ifdef CONFIG_SMP
 static void cpu_x86_init_apic()
 {
@@ -184,21 +193,15 @@ static void cpu_x86_init_apic()
 }
 #endif
 
-struct cpu_cld_s *cpu_init(void)
+void cpu_init(void)
 {
-#ifdef CONFIG_SMP
-  void			*cls;
-  uint16_t		cls_sel;
-#endif
-#ifdef CONFIG_HEXO_VMEM
-  struct cpu_x86_tss_s *tss;
-  uint16_t		tss_sel;
-#endif
-  struct cpu_cld_s	*cld;
   uint_fast16_t		id = cpu_id();
 
   if (id >= CONFIG_CPU_MAXCOUNT)
-    return NULL;
+    {
+      asm volatile ("cli \n"
+		    "hlt \n");
+    }
 
   /* set GDT pointer */
   cpu_x86_set_gdt(gdt, ARCH_GDT_SIZE);
@@ -206,85 +209,70 @@ struct cpu_cld_s *cpu_init(void)
   /* set IDT pointer */
   cpu_x86_set_idt(cpu_idt, CPU_MAX_INTERRUPTS);
 
-  /* enable and initialize x86 APIC */
+  /* activate defined segments */
+  cpu_x86_dataseg_use(ARCH_GDT_DATA_INDEX, 0);
+  cpu_x86_stackseg_use(ARCH_GDT_DATA_INDEX, 0);
+  cpu_x86_codeseg_use(ARCH_GDT_CODE_INDEX, 0);
 
 #ifdef CONFIG_SMP
+  /* enable and initialize x86 APIC */
   cpu_x86_init_apic();
 #endif
-
-  if (!(cld = mem_alloc(sizeof (struct cpu_cld_s), MEM_SCOPE_SYS)))
-    goto err_cld;
-
-  cld->id = id;
-  cpu_cld_list[id] = cld;
 
   /* setup cpu local storage */
 
 #ifdef CONFIG_SMP
+  void			*cls;
+  uint16_t		cls_sel;
+
   if (!(cls = arch_cpudata_alloc()))
     goto err_cls;
 
-  cld->cpu_local_storage = cls;
+  cpu_local_storage[id] = cls;
 
   if (!(cls_sel = cpu_x86_segment_alloc((uintptr_t)cls,
 					arch_cpudata_size(),
 					CPU_X86_SEG_DATA_UP_RW)))
     goto err_cls_seg;
 
-  cld->cls_seg_sel = cls_sel;
+  cpu_local_storage_seg[id] = cls_sel;
   cpu_x86_datasegfs_use(cls_sel, 0);
   CPU_LOCAL_SET(__cpu_data_base, cls);
 #endif
 
-#ifdef CONFIG_HEXO_VMEM
+#ifdef CONFIG_CPU_USER
 
-  if (!(tss = mem_alloc(sizeof (struct cpu_x86_tss_s), MEM_SCOPE_SYS)))
-    goto err_tss;
+  uint16_t		tss_sel;
+  struct cpu_x86_tss_s *tss = CPU_LOCAL_ADDR(cpu_tss);
 
-  memset(tss, 0, sizeof(*tss));
+  memset(tss, 0, sizeof(struct cpu_x86_tss_s));
 
   tss->ss0 = ARCH_GDT_DATA_INDEX << 3;
-  tss->esp0 = 0x8000;		/* FIXME */
 
-  cld->tss = tss;
-
-  if (!(tss_sel = cpu_x86_segment_alloc((uintptr_t)tss,
-					sizeof(*tss),
-					CPU_X86_SEG_CONTEXT32)))
+  if (!(tss_sel = cpu_x86_segment_alloc((uintptr_t)tss, sizeof(*tss), CPU_X86_SEG_CONTEXT32)))
     goto err_tss_seg;
 
   cpu_x86_taskseg_use(tss_sel);
 
-#endif
-
-  /* activate defined segments */
-
-  cpu_x86_dataseg_use(ARCH_GDT_USER_DATA_INDEX, 0);
-  cpu_x86_stackseg_use(ARCH_GDT_DATA_INDEX, 0);
-  cpu_x86_codeseg_use(ARCH_GDT_CODE_INDEX, 0);
-
-#ifdef CONFIG_CPU_X86_SYSENTER
+# ifdef CONFIG_CPU_X86_SYSENTER
   cpu_x86_write_msr(SYSENTER_CS_MSR, CPU_X86_SEG_SEL(ARCH_GDT_CODE_INDEX, 0));
+  cpu_x86_write_msr(SYSENTER_EIP_MSR, x86_interrupt_sys_enter);
+# endif
+
 #endif
 
-  CPU_LOCAL_SET(cpu_cld, cld);
+  return;
 
-  return cld;
-
-#ifdef CONFIG_HEXO_VMEM
  err_tss_seg:
-  mem_free(tss);
- err_tss:
-#endif
 #ifdef CONFIG_SMP
   cpu_x86_segdesc_free(cls_sel);
- err_cls_seg:
-  mem_free(cls);
- err_cls:
 #endif
-  mem_free(cld);
- err_cld:
-  return NULL;
+ err_cls_seg:
+#ifdef CONFIG_SMP
+  mem_free(cls);
+#endif
+ err_cls:
+  ;
 }
 
 void cpu_start_other_cpu(void)

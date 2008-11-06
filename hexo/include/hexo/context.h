@@ -64,9 +64,6 @@ static void cpu_context_jumpto(struct context_s *new);
 /** set new stack pointer and jump to a new function */
 static void cpu_context_set(uintptr_t stack, void *jumpto);
 
-/** set kernel stack, user stack pointer and jump to a new function in user mode */
-static void cpu_context_set_user(uintptr_t kstack, uintptr_t ustack, uintptr_t jumpto);
-
 /** associate context and cpu current execution state */
 error_t cpu_context_bootstrap(struct context_s *context);
 
@@ -76,6 +73,19 @@ error_t cpu_context_init(struct context_s *context, context_entry_t *entry, void
 /** cleanup context */
 void cpu_context_destroy(struct context_s *context);
 
+
+#if defined(CONFIG_CPU_USER)
+
+/** user entry point function prototype */
+#define USER_ENTRY(n) void (n) (void *param)
+/** user entry point function type */
+typedef USER_ENTRY(user_entry_t);
+
+/** set kernel stack, user stack pointer and jump to a new function in user mode */
+void cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,
+			  user_entry_t *entry, void *param);
+
+#endif
 
 
 #include "cpu/hexo/context.h"

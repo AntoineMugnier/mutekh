@@ -27,6 +27,12 @@ struct cpu_context_s
 {
 };
 
+#ifdef CONFIG_SMP
+# define CLS_SEG	"%%fs:"
+#else
+# define CLS_SEG
+#endif
+
 static inline void
 cpu_context_switch(struct context_s *old, struct context_s *new)
 {
@@ -65,6 +71,8 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	movl	(%1), %%esp	\n"
 		/* restore tls */
 		"	pop	%%gs		\n"
+		"	mov	%%gs, %%eax	\n"
+		"	mov	%%eax, " CLS_SEG " (cpu_tls_seg) 	\n"
 #if 0
 		/* restore page directory pointer */
 		"	popl	%%edx		\n"
@@ -106,6 +114,8 @@ cpu_context_jumpto(struct context_s *new)
 		"	movl	%0, %%esp	\n"
 		/* restore tls */
 		"	pop	%%gs		\n"
+		"	mov	%%gs, %%eax	\n"
+		"	mov	%%eax, " CLS_SEG " (cpu_tls_seg) 	\n"
 #if 0
 		/* restore page directory pointer */
 		"	popl	%%edx		\n"
@@ -143,32 +153,13 @@ cpu_context_set(uintptr_t stack, void *jumpto)
   while (1);
 }
 
-static inline void
-__attribute__((always_inline, noreturn))
-cpu_context_set_user(uintptr_t kstack, uintptr_t ustack, uintptr_t jumpto)
-{
-  asm volatile (
-#ifdef CONFIG_CPU_X86_SYSENTER
-		"sysexit		\n"
-		:
-		: "c" (ustack)
-		, "d" (jumpto)
-#else
-		"pushl %0		\n" /* SS */
-		"pushl %1		\n" /* ESP */
-		"pushl %2		\n" /* CS */
-		"pushl %3		\n" /* EIP */
-		"lret			\n"
-		:
-		: "r" ((ARCH_GDT_USER_DATA_INDEX << 3) | 3)
-		, "r" (ustack)
-		, "r" ((ARCH_GDT_USER_CODE_INDEX << 3) | 3)
-		, "r" (jumpto)
-#endif
-		);
+# if defined(CONFIG_CPU_USER)
 
-  while (1);
-}
+void __attribute__((noreturn))
+cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,
+		     user_entry_t *entry, void *param);
+
+# endif
 
 #endif
 

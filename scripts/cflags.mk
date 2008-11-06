@@ -28,7 +28,7 @@ AS=$(CPUTOOLS)as
 OBJCOPY=$(CPUTOOLS)objcopy
 OBJDUMP=$(CPUTOOLS)objdump
 
-CFLAGS=	-fno-builtin -Wall #-fno-stack-protector
+CFLAGS=	-nostdlib -fno-builtin -Wall
 
 ifeq ($(CONFIG_COMPILE_SAVETEMPS), defined)
 CFLAGS += -save-temps
@@ -37,7 +37,7 @@ endif
 ifeq ($(CONFIG_COMPILE_DEBUG), defined)
 CFLAGS += -O0 -ggdb
 else
-CFLAGS += -O2 -g
+CFLAGS += -O2
 endif
 
 ifeq ($(CONFIG_COMPILE_FRAMEPTR), undefined)

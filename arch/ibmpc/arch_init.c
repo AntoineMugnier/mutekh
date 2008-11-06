@@ -89,8 +89,7 @@ void arch_init()
 
       lock_spin(&cpu_init_lock);
 
-      if (cpu_init() == NULL)
-	return;
+      cpu_init();
 
       lock_release(&cpu_init_lock);
 

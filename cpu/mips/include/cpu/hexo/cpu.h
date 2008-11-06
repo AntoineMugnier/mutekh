@@ -27,17 +27,9 @@
 
 #define CPU_CPU_H_
 
-struct cpu_cld_s
-{
 #ifdef CONFIG_SMP
-  /* pointer to CPU local storage */
-  void				*cpu_local_storage;
+extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
-  /* CPU id */
-  uint_fast8_t			id;
-};
-
-extern struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
 
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	32
@@ -137,7 +129,7 @@ cpu_trap()
 static inline void *cpu_get_cls(cpu_id_t cpu_id)
 {
 #ifdef CONFIG_SMP
-  return cpu_cld_list[cpu_id]->cpu_local_storage;
+  return cpu_local_storage[cpu_id];
 #endif
   return NULL;
 }

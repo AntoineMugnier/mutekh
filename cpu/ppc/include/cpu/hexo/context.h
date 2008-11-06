@@ -142,12 +142,17 @@ cpu_context_set(uintptr_t stack, void *jumpto)
   while (1);
 }
 
-static inline void
-__attribute__((always_inline, noreturn))
-cpu_context_set_user(uintptr_t kstack, uintptr_t ustack, uintptr_t jumpto)
-{
-  cpu_trap();			/* FIXME not supported */
-}
+# if defined(CONFIG_CPU_USER)
+
+/** kernel stack pointer value on user entry */
+extern CONTEXT_LOCAL uintptr_t context_kstack;
+
+void
+__attribute__((noreturn))
+cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,
+		     user_entry_t *entry, void *param);
+
+# endif
 
 #endif
 

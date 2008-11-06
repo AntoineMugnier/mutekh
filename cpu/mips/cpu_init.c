@@ -33,7 +33,9 @@ CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 /** pointer to context local storage in cpu local storage */
 CPU_LOCAL void *__cpu_context_data_base;
 
-struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
+#ifdef CONFIG_SMP
+void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
+#endif
 
 /* CPU Local Descriptor structure */
 
@@ -43,44 +45,20 @@ cpu_global_init(void)
   return 0;
 }
 
-static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
-
-struct cpu_cld_s * cpu_init(void)
+void cpu_init(void)
 {
-  struct cpu_cld_s	*cld;
+#ifdef CONFIG_SMP
   void			*cls;
 
-  /* setup cpu local descriptor */
-
-  if (!(cld = mem_alloc(sizeof (struct cpu_cld_s), MEM_SCOPE_SYS)))
-    goto err_cld;
-
-  cld->id = cpu_id();
-  cpu_cld_list[cld->id] = cld;
-
-#ifdef CONFIG_SMP
   /* setup cpu local storage */
 
-  if (!(cls = arch_cpudata_alloc()))
-    goto err_cls;
+  cls = arch_cpudata_alloc();
 
-  cld->cpu_local_storage = cls;
+  cpu_local_storage[cpu_id()] = cls;
 
   /* set cpu local storage register base pointer */
   asm volatile("move $27, %0" : : "r" (cls));
 #endif
-
-  CPU_LOCAL_SET(cpu_cld, cld);
-
-  return cld;
-
-#if 0
-  mem_free(cls);
-#endif
- err_cls:
-  mem_free(cld);
- err_cld:
-  return NULL;
 }
 
 void cpu_start_other_cpu(void)

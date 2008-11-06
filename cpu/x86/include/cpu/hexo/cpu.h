@@ -27,6 +27,7 @@
 
 #include <hexo/interrupt.h>
 #include <hexo/iospace.h>
+#include <hexo/local.h>
 
 #include "pmode.h"
 #include "apic.h"
@@ -83,21 +84,15 @@ cpu_cycle_count(void)
   return (low | ((uint64_t)high << 32));
 }
 
-struct cpu_cld_s
-{
 #ifdef CONFIG_SMP
-  /* pointer to CPU local storage */
-  void				*cpu_local_storage;
-  cpu_x86_segsel_t		cls_seg_sel;
+extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
+extern cpu_x86_segsel_t cpu_local_storage_seg[CONFIG_CPU_MAXCOUNT];
+extern CPU_LOCAL cpu_x86_segsel_t *cpu_tls_seg;
 #endif
-#ifdef CONFIG_HEXO_VMEM
-  volatile struct cpu_x86_tss_s	*tss;
-#endif
-  /* CPU id */
-  uint32_t			id;
-};
 
-extern struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
+#ifdef CONFIG_CPU_USER
+extern volatile CPU_LOCAL struct cpu_x86_tss_s cpu_tss;
+#endif
 
 static inline cpu_id_t cpu_id(void)
 {
@@ -119,7 +114,7 @@ cpu_trap()
 static inline void *cpu_get_cls(cpu_id_t cpu_id)
 {
 #ifdef CONFIG_SMP
-  return cpu_cld_list[cpu_id]->cpu_local_storage;
+  return cpu_local_storage[cpu_id];
 #endif
   return NULL;
 }

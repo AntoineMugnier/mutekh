@@ -61,6 +61,7 @@ extern CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 void x86_interrupt_hw_entry(void);
 void x86_interrupt_ex_entry(void);
 void x86_interrupt_sys_entry(void);
+void x86_interrupt_sys_enter(void);
 
 static inline void
 cpu_interrupt_sethandler(cpu_interrupt_handler_t *hndl)

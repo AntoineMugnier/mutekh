@@ -32,7 +32,7 @@ error_t cpu_global_init(void);
 void cpu_start_other_cpu(void);
 
 /** Setup CPU specific data */
-struct cpu_cld_s *cpu_init(void);
+void cpu_init(void);
 
 /** get cpu local storage */
 static void *cpu_get_cls(cpu_id_t cpu_id);

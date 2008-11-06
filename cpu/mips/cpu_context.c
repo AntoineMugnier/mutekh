@@ -1,6 +1,11 @@
 
 #include <hexo/error.h>
 #include <hexo/context.h>
+#include <hexo/interrupt.h>
+
+#if defined(CONFIG_CPU_USER)
+CONTEXT_LOCAL uintptr_t context_kstack;
+#endif
 
 error_t
 cpu_context_bootstrap(struct context_s *context)
@@ -27,7 +32,7 @@ asm(
     "	lw	$4,	0($sp)	\n" /* entry function param */
     "	lw	$1,	4($sp)	\n" /* entry function address */
     "	jr	$1		\n"
-    "	addiu	$sp,	2*4	\n"
+    "	addiu	$sp,	-2*4	\n"
     ".set pop			\n"
     );
 
@@ -66,4 +71,40 @@ cpu_context_destroy(struct context_s *context)
   reg_t		*stack = (reg_t*)context->stack_ptr;
 #endif
 }
+
+# if defined(CONFIG_CPU_USER)
+
+void __attribute__((noreturn))
+cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,
+		     user_entry_t *entry, void *param)
+{
+  cpu_interrupt_disable();
+
+  CONTEXT_LOCAL_SET(context_kstack, kstack);
+
+  asm volatile (
+		".set push				\n"
+		".set noat				\n"
+		/* set stack */
+		"	move	$sp,	%0              \n"
+                /* set arg */
+                "	move    $4,     %2		\n"
+                "	addiu   $sp,    -4*4		\n"
+                /* set previous state as user */
+                "	mfc0    $7,     $12		\n"
+                "	ori     $7,     0xC		\n"
+                "	mtc0    $7,     $12		\n"
+                /* "restore" user mode and jump */
+                ".set noreorder				\n"
+                "	jr          %1			\n"
+                "	rfe				\n"
+                ".set pop				\n"
+                :
+                : "r" (ustack)
+                , "r" (entry)
+                , "r" (param)
+                );
+}
+
+#endif
 

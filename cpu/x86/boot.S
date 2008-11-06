@@ -80,22 +80,33 @@ cpu_boot:
 	movl	%cr0,		%eax
 	andl	$0x9fffffff,	%eax /* enable normal cache mode */
 	movl	%eax,		%cr0
+
 	/* get CPU id */
 	mov	$0x1b, %ecx
 	rdmsr
 
 #ifndef CONFIG_SMP
-	1:
-	test	$0x100, %eax
-	jz 1b
+	test	$0x100, %eax	; /* is bootstrap ? */
+	jnz 1f
+	hlt
+1:
 #endif
 
+#ifdef CONFIG_SMP
 	andl	$0xfffff000, %eax /* get local APIC base address */
 	mov	0x20(%eax), %eax /* read local apic ID */
 	shrl	$24, %eax
 
+	cmpl	$CONFIG_CPU_MAXCOUNT, %eax
+	jl 1f
+	hlt
+1:	
 	/* change stack offset depending on CPU id */
 	shll	$13, %eax
+#else
+	mov	$0, %eax
+#endif
+
 	add	$0x0001fffc, %eax
 	mov	%eax, %esp
 	xor	%ebp, %ebp
