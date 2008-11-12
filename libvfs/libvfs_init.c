@@ -96,7 +96,10 @@ VFS_INIT(vfs_init)
   vfs_node_up(vfs_root);
   *root = vfs_root;
 
+#ifdef CONFIG_DRIVER_FS_DEV
+  // Initialize devfs
   devfs_init(vfs_root);
+#endif
 
   return err;
 }

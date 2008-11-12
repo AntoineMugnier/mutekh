@@ -48,28 +48,16 @@ enum devfs_type_e{
 
 struct devfs_context_s
 {
-  char*		name;
 };
 
 struct devfs_node_s
 {
-  enum devfs_type_e	type; // character, block, link, directory, ...
-  char*			name;
-  uint_fast16_t		flags;
-  // only directories need children
-  // like /dev
-  // must use GPCT to have linked list
-  // Should work somehow else
-  struct devfs_node_s	*child[10];
-  /*     sched_queue_root_t	wr_wait; */
-  /*     sched_queue_root_t	rd_wait; */
-  /*     struct rwlock_s	lock; */
-  /*     struct bc_buffer_s*	buffer; */
+  enum devfs_type_e	type;
+  struct device_s	*device;
 };
 
 struct devfs_file_s
 {
-  char*		name;
 };
 
 #endif /* __DEVFS_PRIVATE_H__ */

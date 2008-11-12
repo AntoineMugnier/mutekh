@@ -253,7 +253,7 @@ VFS_LOOKUP_NODE(vfat_lookup_node)
   parent_info = parent->n_pv;
   node_info = node->n_pv;
   err = 0;
-  
+
   if(!(parent_info->flags & VFAT_ATTR_DIRECTORY))
     return VFS_ENOTDIR;
   

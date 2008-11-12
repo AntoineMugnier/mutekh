@@ -74,30 +74,33 @@ reg_t unix_sys_invalid(void)
 
 reg_t unix_sys_fork(void)
 {
-    struct unix_process_s *ps_child;
-    struct unix_process_s *ps_parent;
+  struct unix_process_s *ps_child;
+  struct unix_process_s *ps_parent;
 
 #ifdef CONFIG_UNIX_DEBUG
-    puts("fork\n");
+  puts("fork\n");
 #endif
 
-    CONTEXT_LOCAL_SET(unix_process_current, ps_parent);
+  /*     CONTEXT_LOCAL_SET(unix_process_current, ps_parent); */
 
-    ps_child = unix_create_process(ps_parent);
+  /*     ps_child = unix_create_process(ps_parent); */
 
-    memcpy(&(ps_child->stack_vaddr_start),
-	   &(ps_parent->stack_vaddr_start),
-	   abs(ps_child->stack_vaddr_end - ps_child->stack_vaddr_start));
+  /*     memcpy(&(ps_child->stack_vaddr_start), */
+  /* 	   &(ps_parent->stack_vaddr_start), */
+  /* 	   abs(ps_child->stack_vaddr_end - ps_child->stack_vaddr_start)); */
 
-    unix_start_process(ps_child);
+  /*     unix_start_process(ps_child); */
 
-    return 0;
+  return 0;
 }
 
 reg_t unix_sys_execve(const char *filename, char *const argv [], char *const envp[])
 {
-    puts("execve\n");
-    return 0;
+#ifdef CONFIG_UNIX_DEBUG
+  puts("execve\n");
+#endif
+
+  return 0;
 }
 
 struct unix_syscall_s unix_syscall_table[] =

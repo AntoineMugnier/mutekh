@@ -28,20 +28,20 @@
 */
 VFS_INIT_NODE(devfs_init_node)
 {
-  struct devfs_node_s *node_info;
+  struct devfs_node_s *node_pv;
 
   /*     if(node->n_pv != NULL) */
   /* 	return VFS_EUNKNOWN; */
 
-  if((node_info = mem_alloc(sizeof(*node_info), MEM_SCOPE_SYS)) == NULL)
+  if((node_pv = mem_alloc(sizeof(*node_pv), MEM_SCOPE_SYS)) == NULL)
     return VFS_ENOMEM;
 
 #ifdef CONFIG_DEVFS_DEBUG
-  printf("init_devfs: node_info allocated\n");
+  printf("init_devfs: node_pv allocated\n");
 #endif
 
-  memset(node_info, 0, sizeof(*node_info));
-  node->n_pv = (void *) node_info;
+  memset(node_pv, 0, sizeof(*node_pv));
+  node->n_pv = (void *) node_pv;
   return 0;
 }
 
@@ -55,7 +55,7 @@ VFS_RELEASE_NODE(devfs_release_node)
     return 0;
 
 #ifdef CONFIG_DEVFS_DEBUG
-  printf("+++++ devfs_release_node: freeing devfs_node_info\n");
+  printf("+++++ devfs_release_node: freeing devfs_node_pv\n");
 #endif
   mem_free(node->n_pv);
   node->n_pv = NULL;
@@ -70,18 +70,11 @@ VFS_RELEASE_NODE(devfs_release_node)
 */
 VFS_CREATE_NODE(devfs_create_node)
 {
-  uint_fast16_t		i = 0;
   struct devfs_node_s	*parent_pv = parent->n_pv;
 
 #ifdef CONFIG_DEVFS_DEBUG
   printf("+++++ devfs_create_node: creating devfs_node\n");
 #endif
-
-  for (; parent_pv->child[i] != NULL && i < 10; ++i)
-    continue;
-
-  if (i < 10)
-    parent_pv->child[i]->name = node->n_name;
 
   return 0;
 }
@@ -93,22 +86,10 @@ VFS_CREATE_NODE(devfs_create_node)
 */
 VFS_LOOKUP_NODE(devfs_lookup_node)
 {
-  uint_fast16_t		i = 0;
   struct devfs_node_s	*parent_pv = parent->n_pv;
   struct devfs_node_s	*node_pv = node->n_pv;
 
-  for (;
-       parent_pv->child[i] != NULL
-	 && i < 10
-	 && strcmp(node_pv->name,
-		   parent_pv->child[i]->name);
-       ++i)
-    continue;
-
-  if (i < 10)
-    return 0;
-
-  return 1;
+  return 0;
 }
 
 /*

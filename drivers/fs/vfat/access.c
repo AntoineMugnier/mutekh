@@ -434,13 +434,14 @@ error_t vfat_locate_entry(struct vfat_entry_request_s *rq)
     {
       dir = buffers[sector]->content;
       for(entry=0; entry < entries_nr; entry ++)
-      {	
+      {
 	if(dir[entry].DIR_Name[0] == 0x00)
 	{
 	  bc_release_buffer(&bc,&freelist,&request,0);
 	  return VFS_NOT_FOUND;
 	}
-	
+
+	// 0xE5 = long entry
 	if(dir[entry].DIR_Name[0] == 0xE5)
 	  continue;
 	

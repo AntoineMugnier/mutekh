@@ -118,11 +118,14 @@ VFS_NODE_CREATE(vfs_node_create)
   
   node->n_attr = (isLast) ? flags & 0x0000FFFF : VFS_DIR;
 
+  // Look if node already exists
   err=node->n_op->lookup(parent,node);
-  
-  if(err != VFS_NOT_FOUND)
+
+  // Other error than found/not found
+  if((err != VFS_NOT_FOUND) && (err != VFS_FOUND))
     return -err;
 
+  // Node found
   if((err == VFS_FOUND) && (flags & VFS_O_EXCL) && (flags & VFS_O_CREATE) && (isLast))
     return -VFS_EEXIST;
 
@@ -130,7 +133,8 @@ VFS_NODE_CREATE(vfs_node_create)
   printf("node %s, found ? %d, isLast ? %d, VFS_O_CREATE ? %d, VFS_FIFO? %d\n",
 	 node->n_name,err, isLast,flags & VFS_O_CREATE, node->n_attr & VFS_FIFO);
 #endif
-  
+
+  // Node not found
   if((err == VFS_NOT_FOUND) && (flags & VFS_O_CREATE) && (isLast))
   {
     if((err=node->n_op->create(parent,node)))

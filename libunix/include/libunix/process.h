@@ -25,6 +25,10 @@ CONTAINER_TYPE(unix_ps_list, CLIST, struct unix_process_s
 
   uintptr_t				stack_vaddr_start;
   uintptr_t				stack_vaddr_end;
+  uintptr_t				heap_vaddr_start;
+  uintptr_t				heap_vaddr_end;
+  uintptr_t				data_vaddr_start;
+  uintptr_t				data_vaddr_end;
 }, list_entry);
 
 CONTAINER_FUNC(unix_ps_list, CLIST, static inline, unix_plist);
