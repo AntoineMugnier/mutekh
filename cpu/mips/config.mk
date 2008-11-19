@@ -22,11 +22,13 @@ ifeq ($(CONFIG_CPU_MIPS_VERSION), 1)
 CPUCFLAGS=-mips1 -mno-branch-likely
 endif
 
-ifeq ($(CONFIG_CPU_ENDIAN_LITTLE), defined)
 CPUTOOLS=mipsel-unknown-elf-
+
+ifeq ($(CONFIG_CPU_ENDIAN_LITTLE), defined)
+CPUFLAGS+= -EL
 endif
 
 ifeq ($(CONFIG_CPU_ENDIAN_BIG), defined)
-CPUTOOLS=mips-unknown-elf-
+CPUFLAGS+= -EB
 endif
 
