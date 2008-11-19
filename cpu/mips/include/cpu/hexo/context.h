@@ -93,7 +93,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		: "$2", "$3"	/* return values */
 		, /*"$4", "$5",  "$6",*/  "$7" /* arguments. r4 to r6 are left for asm input */
 		, "$8",  "$9",  "$10",  "$11", "$12",  "$13",  "$14",  "$15" /* temp */
-		, "$16", "$17", "$18", "$19", "$20", "$21", "$22", "$23", "$30" /* saved accros function call */
+		, "$16", "$17", "$18", "$19", "$20", "$21", "$22", "$23" /* saved accros function call */
 		, "$24", "$25"	/* temp */
 		, "$31"		/* return value */
 #elif defined(CONFIG_CPU_MIPS_ABI_N32) || defined(CONFIG_CPU_MIPS_ABI_N64)
@@ -101,7 +101,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		: "$2", "$3",	/* FIXME add more registers */
 		, /* "$4", "$5", "$6",*/  "$7",  "$8",  "$9",  "$10",  "$11", /* arguments. r4 to r6 are left for asm input */
 		, "$12",  "$13",  "$14",  "$15" /* temp */
-		, "$16", "$17", "$18", "$19", "$20", "$21", "$22", "$23", "$30" /* saved accros function call */
+		, "$16", "$17", "$18", "$19", "$20", "$21", "$22", "$23" /* saved accros function call */
 		, "$24", "$25"	/* temp */
 		, "$31"		/* return value */
 #else
