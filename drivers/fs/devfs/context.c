@@ -35,11 +35,6 @@
 
 VFS_CREATE_CONTEXT(devfs_create_context)
 {
-  // fullfill struct devfs_ctx_s
-  // meaning : vfs_context_s->n_pv
-
-  context->ctx_pv = NULL;
-
   return 0;
 }
 

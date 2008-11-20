@@ -70,7 +70,7 @@ VFS_RELEASE_NODE(devfs_release_node)
 */
 VFS_CREATE_NODE(devfs_create_node)
 {
-  struct devfs_node_s	*parent_pv = parent->n_pv;
+/*   struct devfs_node_s	*parent_pv = parent->n_pv; */
 
 #ifdef CONFIG_DEVFS_DEBUG
   printf("+++++ devfs_create_node: creating devfs_node\n");
@@ -86,8 +86,8 @@ VFS_CREATE_NODE(devfs_create_node)
 */
 VFS_LOOKUP_NODE(devfs_lookup_node)
 {
-  struct devfs_node_s	*parent_pv = parent->n_pv;
-  struct devfs_node_s	*node_pv = node->n_pv;
+/*   struct devfs_node_s	*parent_pv = parent->n_pv; */
+/*   struct devfs_node_s	*node_pv = node->n_pv; */
 
   return 0;
 }
@@ -107,5 +107,18 @@ VFS_WRITE_NODE(devfs_write_node)
 */
 VFS_UNLINK_NODE(devfs_unlink_node)
 {
-    return 0;
+/*   struct vfs_node_s	*tmp_node; */
+
+#ifdef CONFIG_DEVFS_DEBUG
+  printf("+++++ devfs_create_node: creating devfs_node\n");
+#endif
+  
+  // Get node from children list "n_children" in parent's node
+/*   if ((tmp_node = vfs_node_list_get(&vfs_dev_node->n_children)) == NULL) */
+/*     return VFS_EUNKNOW; */
+
+  // Set back node in freelist
+/*   vfs_node_list_push(&dev_node->n_freelist, tmp_node); */
+
+  return 0;
 }

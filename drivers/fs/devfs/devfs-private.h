@@ -24,40 +24,39 @@
 
 #include <hexo/types.h>
 #include <vfs/vfs.h>
+#include <gpct/cont_hashlist.h>
 
-/*
 
-needed nodes :
-null
-zero
-random
-urandom
-tty
-- stdin
-- stdout
-- stderr
+/* values for  devfs_node_s->type; */
+#define DEVFS_DIR		0x00
+#define DEVFS_CHAR		0x01
+#define DEVFS_BLOCK		0x02
 
- */
-
-enum devfs_type_e{
-  devfs_char,
-  devfs_block,
-  devfs_link,
-  devfs_dir
-};
-
-struct devfs_context_s
-{
-};
 
 struct devfs_node_s
 {
-  enum devfs_type_e	type;
-  struct device_s	*device;
+  CONTAINER_ENTRY_TYPE(HASHLIST)        hash_entry;
+  struct device_s			*device;
+  const char				*name;
+  uint_fast8_t				type;
+};
+
+CONTAINER_TYPE    (devfs_hash, HASHLIST, struct devfs_node_s, hash_entry, 11);
+CONTAINER_KEY_TYPE(devfs_hash, STRING, name);
+
+CONTAINER_FUNC    (devfs_hash, HASHLIST, static, devfs_hash_, name);
+CONTAINER_KEY_FUNC(devfs_hash, HASHLIST, static, devfs_hash_, name);
+
+struct devfs_context_s
+{
+  devfs_hash_root_t	hash;
 };
 
 struct devfs_file_s
 {
 };
+
+// Should not be used !
+//struct vfs_node_s	*vfs_dev_node;
 
 #endif /* __DEVFS_PRIVATE_H__ */

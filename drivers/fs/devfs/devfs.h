@@ -28,19 +28,32 @@
 
 
 /**
+ ** initialisation of the devfs
+ */
+struct devfs_context_s	*devfs_init();
+
+/**
+ ** mounting the devfs
+ */
+error_t	devfs_mount(struct devfs_context_s	*ctx,
+		    const char			*mount_point);
+
+/**
  ** add an inode in /dev
  */
-error_t	devfs_register(char*			name,
-		       enum devfs_type_e	type);
+struct devfs_node_s	*devfs_register(struct devfs_context_s	*ctx,
+					const char		*name,
+					struct device_s		*device,
+					uint_fast8_t		type);
 /**
  ** remove an inode in /dev
  */
-error_t	devfs_unregister(char*	name);
+error_t	devfs_unregister(struct devfs_node_s	*dnode);
 
 /**
- ** initialisation of the devfs
+ ** removing the devfs
  */
-error_t	devfs_init(struct vfs_node_s	*root);
+error_t	devfs_destroy(struct devfs_context_s	*ctx);
 
 
 VFS_CREATE_CONTEXT(devfs_create_context);
