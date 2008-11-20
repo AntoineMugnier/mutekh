@@ -27,7 +27,12 @@
 #include <gpct/cont_hashlist.h>
 
 
-/* values for  devfs_node_s->type; */
+// Return code
+#define DEVFS_OK		0
+#define DEVFS_ERR		1
+
+
+// Values for  devfs_node_s->type;
 #define DEVFS_DIR		0x00
 #define DEVFS_CHAR		0x01
 #define DEVFS_BLOCK		0x02
@@ -44,8 +49,8 @@ struct devfs_node_s
 CONTAINER_TYPE    (devfs_hash, HASHLIST, struct devfs_node_s, hash_entry, 11);
 CONTAINER_KEY_TYPE(devfs_hash, STRING, name);
 
-CONTAINER_FUNC    (devfs_hash, HASHLIST, static, devfs_hash_, name);
-CONTAINER_KEY_FUNC(devfs_hash, HASHLIST, static, devfs_hash_, name);
+CONTAINER_FUNC    (devfs_hash, HASHLIST, static, devfs_hashfunc, name);
+CONTAINER_KEY_FUNC(devfs_hash, HASHLIST, static, devfs_hashfunc, name);
 
 struct devfs_context_s
 {

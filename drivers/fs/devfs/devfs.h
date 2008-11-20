@@ -39,16 +39,17 @@ error_t	devfs_mount(struct devfs_context_s	*ctx,
 		    const char			*mount_point);
 
 /**
- ** add an inode in /dev
+ ** add an inode to /dev
  */
 struct devfs_node_s	*devfs_register(struct devfs_context_s	*ctx,
 					const char		*name,
 					struct device_s		*device,
 					uint_fast8_t		type);
 /**
- ** remove an inode in /dev
+ ** remove an inode from /dev
  */
-error_t	devfs_unregister(struct devfs_node_s	*dnode);
+error_t	devfs_unregister(struct devfs_context_s	*ctx,
+			 struct devfs_node_s	*dnode);
 
 /**
  ** removing the devfs
