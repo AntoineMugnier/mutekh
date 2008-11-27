@@ -39,6 +39,17 @@
 static struct vfs_node_s __vfs_root;
 struct vfs_node_s *vfs_root = &__vfs_root;
 
+/**
+ **
+ ** params struct device_s	*device
+ ** params ??????????
+ ** params ??????????
+ ** params struct vfs_node_s	*root
+ **
+ ** return error_t
+ **
+ **/
+
 VFS_INIT(vfs_init)
 {
   struct vfs_context_op_s * ctx_op[] = {0,(struct vfs_context_op_s *)&vfat_ctx_op};
@@ -96,10 +107,10 @@ VFS_INIT(vfs_init)
   vfs_node_up(vfs_root);
   *root = vfs_root;
 
-#ifdef CONFIG_DRIVER_FS_DEV
-  // Initialize devfs
-  devfs_init(vfs_root);
-#endif
-
   return err;
+}
+
+struct vfs_node_s	*vfs_get_root()
+{
+  return vfs_root;
 }

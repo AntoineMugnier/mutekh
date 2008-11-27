@@ -28,20 +28,20 @@
 */
 VFS_INIT_NODE(devfs_init_node)
 {
-  struct devfs_node_s *node_pv;
+/*   struct devfs_node_s *node_pv; */
 
-  /*     if(node->n_pv != NULL) */
-  /* 	return VFS_EUNKNOWN; */
+/*   /\*     if(node->n_pv != NULL) *\/ */
+/*   /\* 	return VFS_EUNKNOWN; *\/ */
 
-  if((node_pv = mem_alloc(sizeof(*node_pv), MEM_SCOPE_SYS)) == NULL)
-    return VFS_ENOMEM;
+/*   if((node_pv = mem_alloc(sizeof(*node_pv), MEM_SCOPE_SYS)) == NULL) */
+/*     return VFS_ENOMEM; */
 
 #ifdef CONFIG_DEVFS_DEBUG
   printf("init_devfs: node_pv allocated\n");
 #endif
 
-  memset(node_pv, 0, sizeof(*node_pv));
-  node->n_pv = (void *) node_pv;
+/*   memset(node_pv, 0, sizeof(*node_pv)); */
+/*   node->n_pv = (void *) node_pv; */
   return 0;
 }
 
@@ -51,14 +51,14 @@ VFS_INIT_NODE(devfs_init_node)
 */
 VFS_RELEASE_NODE(devfs_release_node)
 {
-  if(node->n_pv == NULL)
-    return 0;
+/*   if(node->n_pv == NULL) */
+/*     return 0; */
 
 #ifdef CONFIG_DEVFS_DEBUG
   printf("+++++ devfs_release_node: freeing devfs_node_pv\n");
 #endif
-  mem_free(node->n_pv);
-  node->n_pv = NULL;
+/*   mem_free(node->n_pv); */
+/*   node->n_pv = NULL; */
 
   return 0;
 }

@@ -31,6 +31,8 @@
 #include <hexo/cpu.h>
 #include <hexo/scheduler.h>
 
+//#include <hexo/instrument.h>
+
 #include <drivers/device/char/uart-8250/uart-8250.h>
 #include <drivers/device/char/tty-vga/tty-vga.h>
 #include <drivers/device/char/tty-soclib/tty-soclib.h>
@@ -51,6 +53,8 @@
 
 #include <hexo/device.h>
 #include <device/driver.h>
+
+#include <drivers/fs/devfs/devfs.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -307,6 +311,38 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #ifdef CONFIG_ARCH_IBMPC_DMA
   dma_8237_init();
 #endif
+
+#ifdef CONFIG_VFS
+  struct vfs_node_s *root;
+  struct device_s *drv0;
+  extern struct device_s icu_dev;
+  static struct device_s ata;
+
+  //hexo_instrument_trace(1);
+
+  // Initialize ATA driver
+  device_init(&ata);
+
+  ata.addr[0] = 0x1f0;
+  ata.addr[1] = 0x3f0;
+  ata.irq = 14;
+
+  controller_ata_init(&ata, &icu_dev, NULL);
+  DEV_ICU_BIND(&icu_dev, &ata);
+
+  drv0 = device_get_child(&ata, 0);
+
+  // Initialize VFS
+  vfs_init(drv0,1,10,10,&root);
+
+
+#ifdef CONFIG_DRIVER_FS_DEV
+
+  // Initialize devFS
+  devfs_init(root, "/dev");
+  
+#endif /* End DevFS */
+#endif /* End VFS */
 
   arch_start_other_cpu(); /* let other CPUs enter main_smp() */
 

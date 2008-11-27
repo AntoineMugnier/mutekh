@@ -19,12 +19,7 @@
     Copyright Sylvain Leroy <sylvain.leroy@unmondelibre.fr>
 */
 
-#include <stdlib.h>
-#include <string.h>
 #include <hexo/alloc.h>
-#include <hexo/endian.h>
-#include <vfs/vfs.h>
-#include <vfs/buffer_cache.h>
 #include "devfs.h"
 
 
@@ -35,6 +30,25 @@
 
 VFS_CREATE_CONTEXT(devfs_create_context)
 {
+  struct devfs_context_s	*ctx = NULL;
+
+#ifdef CONFIG_DEVFS_DEBUG
+  printf("devfs_create_context: Initializing DevFS context\n");
+#endif
+
+  if ((ctx = mem_alloc(sizeof(struct devfs_context_s), MEM_SCOPE_SYS)) == NULL)
+    return -VFS_ENOMEM;
+
+  // Set private field in vfs_context_s
+  context->ctx_pv = ctx;
+
+  
+#ifdef CONFIG_DEVFS_DEBUG
+  printf("devfs_create_context: Initializing intern Hash Table\n");
+#endif
+
+  devfs_hashfunc_init(&(ctx->hash));
+
   return 0;
 }
 
@@ -47,11 +61,13 @@ VFS_DESTROY_CONTEXT(devfs_destroy_context)
 
 VFS_READ_ROOT(devfs_read_root)
 {
+  printf("devfs_read_root: This function should not be called\n");
   return 0;
 }
 
 
 VFS_WRITE_ROOT(devfs_write_root)
 {
+  printf("devfs_write_root: This function should not be called\n");
   return 0;
 }

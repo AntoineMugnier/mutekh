@@ -29,14 +29,16 @@
 
 /**
  ** initialisation of the devfs
+ ** WARNING : mount_point must be absolute!!!
  */
-struct devfs_context_s	*devfs_init();
+error_t	devfs_init(struct vfs_node_s	*root,
+		   const char		*mount_point);
 
-/**
- ** mounting the devfs
- */
-error_t	devfs_mount(struct devfs_context_s	*ctx,
-		    const char			*mount_point);
+/* /\** */
+/*  ** mounting the devfs */
+/*  *\/ */
+/* error_t	devfs_mount(struct devfs_context_s	*ctx, */
+/* 		    const char			*mount_point); */
 
 /**
  ** add an inode to /dev

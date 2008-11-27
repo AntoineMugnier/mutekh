@@ -37,7 +37,7 @@
 #define VFS_MAX_FILE_NUMBER      80
 
 
-#define VFS_DEBUG            0
+#define VFS_DEBUG            10
 
 #define VFS_FOUND            0
 #define VFS_NOT_FOUND        1
@@ -353,5 +353,9 @@ VFS_CLOSE_DIR(vfs_closedir);
 
 VFS_PIPE_OPEN(vfs_pipe);
 VFS_MKFIFO(vfs_mkfifo);
+
+
+// Used for devFS to always have root_node pointer
+struct vfs_node_s	*vfs_get_root();
 
 #endif
