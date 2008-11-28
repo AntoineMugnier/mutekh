@@ -41,6 +41,7 @@ static inline error_t vfat_context_init(struct vfat_context_s *ctx)
   rq.lba = 0;
   rq.count = 1;
   rq.data = data;
+  rq.error = 0;
 
   if (dev_block_lock_read(ctx->dev, &rq))
     {
