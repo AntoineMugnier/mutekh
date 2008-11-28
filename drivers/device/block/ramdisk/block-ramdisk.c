@@ -158,7 +158,7 @@ DEV_INIT(block_ramdisk_init)
   dev->drv = &block_ramdisk_drv;
 #endif
 
-  /* alocate private driver data */
+  /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
 
   if (!pv)
@@ -171,11 +171,19 @@ DEV_INIT(block_ramdisk_init)
   size_t sz = pv->params.blk_size * pv->params.blk_count;
   dev_block_lba_t c;
 
-  if ((pv->mem = mem_alloc(sz, MEM_SCOPE_SYS)) == NULL)
-    goto err_pv;
+  /* if a ramdisk already exists, take its address */
+  if (params)
+  {
+      pv->mem = params;
+  } 
+  else 
+  {
+      if ((pv->mem = mem_alloc(sz, MEM_SCOPE_SYS)) == NULL)
+          goto err_pv;
 
-  for (c = 0; c < pv->params.blk_count; c++)
-    memset(pv->mem + (c << pv->params.blk_sh_size), c & 0xFF, pv->params.blk_size);
+      for (c = 0; c < pv->params.blk_count; c++)
+          memset(pv->mem + (c << pv->params.blk_sh_size), c & 0xFF, pv->params.blk_size);
+  }
 
   lock_init(&pv->lock);
 
