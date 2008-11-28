@@ -101,7 +101,7 @@ VFS_OPEN(vfs_open)
   return 0;
 
  VFS_OPEN_ERROR:
-#ifdef VFS_DEBUG
+#ifdef CONFIG_VFS_DEBUG
   printf("vfs_open : error while doing open, code %d\n",err);
 #endif
   rwlock_wrlock(&vfs_node_freelist.lock);
@@ -158,11 +158,11 @@ VFS_PIPE_OPEN(vfs_pipe)
 
   VFS_SET(node->n_attr,VFS_PIPE);
 
-#ifdef VFS_DEBUG
+#ifdef CONFIG_VFS_DEBUG
   printf("vfs_pipe: got a node, do n_op->init(node)\n");
 #endif
   
-#ifdef VFS_DEBUG
+#ifdef CONFIG_VFS_DEBUG
   printf("vfs_pipe: do n_op->init(node) OK\n");
 #endif
 
@@ -246,7 +246,7 @@ VFS_UNLINK(vfs_unlink)
 
   isAbsolutePath = (pathname[0] == '/') ? 1 : 0 ;
 
-#if VFS_DEBUG
+#ifdef CONFIG_VFS_DEBUG
   printf("vfs_unlink started\n");
 #endif
   if((err = vfs_node_load(cwd,dirs_ptr, flags, isAbsolutePath, &node)))
@@ -262,7 +262,7 @@ VFS_UNLINK(vfs_unlink)
   {
     VFS_SET(parent->n_state,VFS_INLOAD);
     vfs_node_list_remove(&parent->n_children, node);
-#if VFS_DEBUG
+#ifdef CONFIG_VFS_DEBUG
     printf("vfs_unlink: parent's (%s) state is seted to INLOAD, node %s  detached from his fathor list\n",
 	   parent->n_name,node->n_name);
 #endif
@@ -270,7 +270,7 @@ VFS_UNLINK(vfs_unlink)
 
     if((err=parent->n_op->unlink(node)))
       goto VFS_UNLINK_ERROR;
-#if VFS_DEBUG
+#ifdef CONFIG_VFS_DEBUG
     printf("vfs_unlink: node %s has been removed from it's parent children list");
 #endif
     rwlock_wrlock(&vfs_node_freelist.lock);

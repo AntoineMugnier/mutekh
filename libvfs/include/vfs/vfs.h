@@ -36,9 +36,6 @@
 #define VFS_MAX_NODE_NUMBER      40
 #define VFS_MAX_FILE_NUMBER      80
 
-
-#define VFS_DEBUG            10
-
 #define VFS_FOUND            0
 #define VFS_NOT_FOUND        1
 #define VFS_ENOMEM           2

@@ -26,10 +26,6 @@
 #include <hexo/lock.h>
 #include <hexo/scheduler.h>
 
-#define BC_DEBUG 0
-#define BC_INSTRUMENT 1
-
-
 #define BC_BUSY          1
 #define BC_DELAYED_WRITE 2
 #define BC_VALID         4

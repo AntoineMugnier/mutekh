@@ -91,7 +91,7 @@ VFS_FILE_FREELIST_GET(vfs_file_freelist_get)
     lock_release_irq(&vfs_file_freelist.lock);
     return NULL;
   }
-#if VFS_DEBUG
+#ifdef CONFIG_VFS_DEBUG
   printf("vfs_file_freelist_get: got a new file\n");
 #endif
   //  print_file(file);
@@ -100,18 +100,18 @@ VFS_FILE_FREELIST_GET(vfs_file_freelist_get)
   
   if(file->f_op != node->n_ctx->ctx_file_op)
   {
-#if VFS_DEBUG
+#ifdef CONFIG_VFS_DEBUG
   printf("vfs_file_freelist_get: file_op is not vaild\n");
 #endif
     if(file->f_op != NULL)
     {
       if(file->f_op->release(file))
 	return NULL;
-#if VFS_DEBUG
+#ifdef CONFIG_VFS_DEBUG
   printf("vfs_file_freelist_get: release file private structure\n");
 #endif
     }
-#if VFS_DEBUG
+#ifdef CONFIG_VFS_DEBUG
   printf("vfs_file_freelist_get: set file_op to node's context file_op\n");
 #endif
     file->f_op = node->n_ctx->ctx_file_op;

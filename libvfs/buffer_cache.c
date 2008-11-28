@@ -26,7 +26,7 @@
 struct buffer_cache_s bc;
 struct bc_freelist_s freelist;
 
-#if BC_INSTRUMENT
+#ifdef CONFIG_BC_INSTRUMENT
 uint_fast32_t dw_count;
 uint_fast32_t hit_count;
 uint_fast32_t miss_count;
@@ -99,7 +99,7 @@ error_t bc_init(struct buffer_cache_s *bc,
       current->content = mem_alloc(sizeof(uint8_t) * buffer_size, MEM_SCOPE_SYS);
       
       if(current->content == NULL)
-	return ENOMEM;
+          return ENOMEM;
       
       pred->hash_next = current;
       current->hash_pred = pred;
@@ -133,14 +133,14 @@ static struct bc_buffer_s* bc_find(struct buffer_cache_s *bc,
   struct bc_buffer_s *current=bc->entries[index].head;
 
   if((current == NULL) || ((current->key1 == key1) && (current->key2 == key2))){
-#if BC_DEBUG > 1
+#ifdef CONFIG_BC_DEBUG
     if(current!=NULL)
       printf("bc_find: found buffer key1 %d, key2 %d\n",key1,key2);
 #endif
     return current;
   }
 
-#if BC_DEBUG > 1
+#ifdef CONFIG_BC_DEBUG
   printf("bc_find: first buffer key1 %d, key2 %d\n",current->key1,current->key2);
 #endif
 
@@ -185,7 +185,7 @@ static struct bc_buffer_s* bc_hash_unlink(struct buffer_cache_s *bc,
   
   if((buffer == head)&&(head->hash_next == head))
   {
-#if BC_DEBUG > 1
+#ifdef CONFIG_BC_DEBUG
     printf("bc_hash_unlink: buffer %d is last element in the queue %d\n",
 	   buffer->key2,index);
 #endif
@@ -220,7 +220,7 @@ static struct bc_buffer_s* bc_freelist_link(struct bc_freelist_s *freelist,
   if(head == NULL)
   {
     
-#if BC_DEBUG > 1
+#ifdef CONFIG_BC_DEBUG
     printf("bc_freelist_link: buffer %d is put in head of list\n",
 	   buffer->key2);
 #endif
@@ -336,13 +336,13 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
   while( i < count)
   {
     index = bc->bc_hash(bc,key1,key2); 
-#if BC_DEBUG > 1
+#ifdef CONFIG_BC_DEBUG
     printf("bc_get_buffer: i %d, count %d, index %d, key1 %d, key2 %d\n",
 	   i,count,index, key1,key2);
 #endif
     if((buffer=bc_find(bc,index,key1,key2)) == NULL)
     { 
-#if BC_DEBUG > 1
+#ifdef CONFIG_BC_DEBUG
       printf("bc_get_buffer: buffer not found in the cache\n");
 #endif
       if((buffer=bc_freelist_get(freelist)) == NULL)
@@ -374,10 +374,10 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
 	  request->count = i + 1;
 	  return NULL;
 	}
-#if BC_INSTRUMENT
+#ifdef CONFIG_BC_INSTRUMENT
 	dw_count ++;
 #endif
-#if BC_DEBUG
+#ifdef CONFIG_BC_DEBUG
 	printf(">>> Delayed write %d\n",buffer->key2);
 #endif
 	
@@ -398,11 +398,11 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
       
       CLEAR_BUFFER(buffer->state,BC_VALID);
       request->buffers[i] = buffer;
-#if BC_INSTRUMENT
+#ifdef CONFIG_BC_INSTRUMENT
       miss_count ++;
 #endif
 
-#if BC_DEBUG
+#ifdef CONFIG_BC_DEBUG
       printf(">> MISS %d\n",key2);
 #endif
       i++; key2++;
@@ -411,7 +411,7 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
    
     if(IS_BUFFER(buffer->state,BC_BUSY))
     {
-#if BC_INSTRUMENT
+#ifdef CONFIG_BC_INSTRUMENT
       wait_count ++;
 #endif
       sched_wait_unlock3(&buffer->wait,&freelist->wait); /* --> */
@@ -420,11 +420,11 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
     }
     
     SET_BUFFER(buffer->state,BC_BUSY);
-#if BC_INSTRUMENT
+#ifdef CONFIG_BC_INSTRUMENT
     hit_count ++;
 #endif
 
-#if BC_DEBUG
+#ifdef CONFIG_BC_DEBUG
     printf(">> Hit %d, D_W %s\n",key2,(IS_BUFFER(buffer->state,BC_DELAYED_WRITE)) ? "Yes" : "No");
 #endif
     bc_freelist_unlink(freelist,buffer);
@@ -459,7 +459,7 @@ struct bc_request_s* bc_release_buffer(struct buffer_cache_s *bc,
   for(i=0; i < request->count; i++)
   {
     buffer= request->buffers[i];
-#if BC_DEBUG > 1
+#ifdef CONFIG_BC_DEBUG
     printf("bc_release_buffer: i %d, count %d, key1 %d, key2 %d\n",
 	   i,request->count,buffer->key1,buffer->key2);
 #endif
@@ -508,7 +508,7 @@ void bc_sync(struct buffer_cache_s *bc, struct bc_freelist_s *freelist)
       {
 	if(IS_BUFFER(current->state, BC_DELAYED_WRITE))
 	{
-#if BC_INSTRUMENT
+#ifdef CONFIG_BC_INSTRUMENT
 	  sync_count ++;
 #endif
 	  printf(">>>>> Sync: %dn",current->key2);
@@ -531,7 +531,7 @@ void bc_sync(struct buffer_cache_s *bc, struct bc_freelist_s *freelist)
   }
   sched_queue_unlock(&freelist->wait);     /* --> */
     
-#if BC_INSTRUMENT
+#ifdef CONFIG_BC_INSTRUMENT
   if(count)
     printf(">> Sync: %d blk, average latency %d cycles\n",count, tm_total/count);
 #endif 

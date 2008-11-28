@@ -22,6 +22,7 @@
 #include <hexo/alloc.h>
 #include <vfs/vfs.h>
 #include <vfs/vfs-private.h>
+#include <vfs/buffer_cache.h>
 #include <drivers/fs/vfat/vfat.h>
 
 #ifdef CONFIG_DRIVER_FS_PIPE
