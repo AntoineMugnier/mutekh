@@ -141,6 +141,7 @@ error_t dev_block_lock_read(struct device_s *dev, struct dev_block_rq_s *rq)
   status.block_size = dev_block_getparams(dev)->blk_size;
   rq->pvdata = &status;
   rq->callback = dev_block_syncl_read;
+  rq->error = 0;
 
   dev_block_read(dev, rq);
 
