@@ -63,6 +63,7 @@ error_t	devfs_init(struct vfs_node_s	*root,
   error_t			err = 0;
   uint_fast32_t			flags = 0;
   struct vfs_file_s		*file = NULL;
+  struct vfs_node_s		*dev_node = NULL;
 
   assert(mount_point != NULL);
   assert(root != NULL);
@@ -86,16 +87,16 @@ error_t	devfs_init(struct vfs_node_s	*root,
   VFS_SET(flags, VFS_O_DIRECTORY | VFS_O_EXCL | VFS_DIR);
 
   // Checking the mount_point (/dev) node
-  if ((err = vfs_open(root, mount_point, flags, (uint_fast16_t) flags, &file)))
+  if ((err = vfs_open(root, "/DEV", flags, (uint_fast16_t) flags, &file)))
     {
       printf("devfs_init: %s doesn't seem to exist in filesystem, abording\n", mount_point);
       return err;
     }
   vfs_close(file);
 
-/*   if ((err = vfs_node_load(root, mount_point, flags, isAbsolutePath, &dev_node))) */
+/*   if ((err = vfs_node_load(root, "/DEV", flags, 1, &dev_node))) */
 /*     { */
-/*       printf("/dev does not exist in root filesystem, abording\n"); */
+/*       printf("devfs_init: error from vfs_node_load, abording\n"); */
 /*       return err; */
 /*     } */
 

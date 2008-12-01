@@ -42,7 +42,7 @@ VFS_CREATE_CONTEXT(devfs_create_context)
   // Set private field in vfs_context_s
   context->ctx_pv = ctx;
 
-  
+
 #ifdef CONFIG_DEVFS_DEBUG
   printf("devfs_create_context: Initializing intern Hash Table\n");
 #endif
@@ -55,6 +55,19 @@ VFS_CREATE_CONTEXT(devfs_create_context)
 
 VFS_DESTROY_CONTEXT(devfs_destroy_context)
 {
+
+#ifdef CONFIG_DEVFS_DEBUG
+  printf("devfs_create_context: Initializing intern Hash Table\n");
+#endif
+
+  //devfs_hashfunc_destroy(context->ctx_pv.hash);
+
+#ifdef CONFIG_DEVFS_DEBUG
+  printf("devfs_create_context: Initializing DevFS context\n");
+#endif
+
+  mem_free(context->ctx_pv);
+
   return 0;
 }
 

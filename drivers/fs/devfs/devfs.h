@@ -28,17 +28,11 @@
 
 
 /**
- ** initialisation of the devfs
+ ** initialisation and mount of the devfs
  ** WARNING : mount_point must be absolute!!!
  */
 error_t	devfs_init(struct vfs_node_s	*root,
 		   const char		*mount_point);
-
-/* /\** */
-/*  ** mounting the devfs */
-/*  *\/ */
-/* error_t	devfs_mount(struct devfs_context_s	*ctx, */
-/* 		    const char			*mount_point); */
 
 /**
  ** add an inode to /dev
@@ -54,7 +48,7 @@ error_t	devfs_unregister(struct devfs_context_s	*ctx,
 			 struct devfs_node_s	*dnode);
 
 /**
- ** removing the devfs
+ ** umount the devfs
  */
 error_t	devfs_destroy(struct devfs_context_s	*ctx);
 
