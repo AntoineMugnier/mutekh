@@ -13,3 +13,7 @@ ifeq ($(CONFIG_DRIVER_BLOCK_PARTITION), defined)
  subdirs += partition
 endif
 
+ifeq ($(CONFIG_DRIVER_BLOCK_SOCLIB), defined)
+ subdirs += soclib
+endif
+
