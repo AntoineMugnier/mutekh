@@ -100,6 +100,10 @@ void sched_context_start(struct sched_context_s *sched_ctx);
     be called with interrupts disabled */
 void sched_context_stop(void);
 
+/** switch to next context without pushing current context back. Must
+    be called with interrupts disabled */
+void sched_context_stop_unlock(lock_t *lock);
+
 /** lock context queue */
 error_t sched_queue_lock(sched_queue_root_t *queue);
 

@@ -329,6 +329,22 @@ void sched_context_stop(void)
   sched_queue_unlock(root);
 }
 
+/* Same as sched_context_stop but unlock given spinlock before switching */
+void sched_context_stop_unlock(lock_t *lock)
+{
+  sched_queue_root_t *root = __sched_root();
+  struct sched_context_s *next;
+
+  assert(!cpu_interrupt_getstate());
+
+  /* get next running context */
+  sched_queue_wrlock(root);
+  lock_release(lock);
+  next = __sched_candidate(root);
+  context_switch_to(&next->context);
+  sched_queue_unlock(root);
+}
+
 /* Must be called with interrupts disabled and queue locked */
 struct sched_context_s *sched_wake(sched_queue_root_t *queue)
 {
