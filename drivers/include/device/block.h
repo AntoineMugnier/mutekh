@@ -41,30 +41,16 @@ struct dev_block_rq_s;
 
 /**
    Block device read callback function. This function is called for
-   each group of blocks read. It may be called several times, count
-   and rq->error must be used to detect read operation end. The device
-   lock is held when call back function is called asynchronously from
-   interrupt handler.
+   each group of blocks read. It may be called several times, rq->count
+   and rq->error must be used to detect operation end. The device
+   lock is held when call back function is called.
 
    @param dev pointer to device descriptor
    @param rq pointer to request data. rq->count field is
-          updated with remaining blocks to read. rq->lba is undefined.
-	  rq->data is updated to point to internal driver data buffers.
-	  rq->error is updated. rq->error error code.
-   @param count number of valid blocks in data pointer table
-   @param data table of pointers to each read block data
-
-
-   Block device write callback function type. This function is called
-   when a requested write operation completes. This function will be
-   called only once per write operation. The device lock is held when
-   call back function is called asynchronously from interrupt handler.
-
-   @param dev pointer to device descriptor
-   @param rq pointer to request data. rq->count field is
-          updated with remaining blocks to write. rq->lba is undefined.
+          updated with remaining blocks to process. rq->lba is undefined.
 	  rq->data is advanced to the next block buffer. rq->error is updated.
-   @param count number of successfully written blocks
+   @param count number of processed blocks
+   @param data table of pointers to each block data
 */
 typedef DEVBLOCK_CALLBACK(devblock_callback_t);
 
@@ -82,7 +68,7 @@ struct dev_block_rq_s
   error_t			error; /* error code set by driver */
 
   void				*drvdata; /* driver private data */
-  dev_blk_queue_entry_t		queue_entry; /* used by driver to enqueue resquests */
+  dev_blk_queue_entry_t		queue_entry; /* used by driver to enqueue requests */
 }, queue_entry);
 
 CONTAINER_FUNC(dev_blk_queue, CLIST, static inline, dev_blk_queue);
@@ -101,9 +87,8 @@ CONTAINER_FUNC(dev_blk_queue, CLIST, static inline, dev_blk_queue);
    Block device class read() function type. Read count data blocks
    from the device.
 
-   @param rq pointer to request data. lba, count and
-          callback field must be intialized. the data
-	  field will be provided by driver on callback.
+   @param rq pointer to request data. lba, count, data and
+          callback field must be intialized.
    @param dev pointer to device descriptor
    @param size max data read bytes count
 */
@@ -135,9 +120,8 @@ typedef DEVBLOCK_WRITE(devblock_write_t);
 
 struct dev_block_params_s
 {
-  size_t		blk_size;	/* size of a single block, must be power of 2 */
-  uint_fast8_t		blk_sh_size;  /* log2 size of a single block */
-  dev_block_lba_t	blk_count;    /* device blocks count */
+  size_t		blk_size;	/* size of a single block */
+  dev_block_lba_t	blk_count;	/* device blocks count */
 };
 
 /** Block device class getparams() function tempate. */
@@ -171,14 +155,16 @@ struct dev_class_block_s
     loop waiting for read operation to complete when scheduler is
     disabled.
 
-    lba, count and _data_ field of request must be initialized.
+    lba, count and data field of request must be initialized.
+    data field is preserved.
 */
 error_t dev_block_wait_read(struct device_s *dev, struct dev_block_rq_s *rq);
 
 /** Synchronous helper read function. This function spin in a loop
     waiting for read operation to complete.
 
-    lba, count and _data_ field of request must be initialized.
+    lba, count and data field of request must be initialized.
+    data field is preserved.
 */
 error_t dev_block_lock_read(struct device_s *dev, struct dev_block_rq_s *rq);
 

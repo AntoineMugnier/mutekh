@@ -50,18 +50,19 @@ DEVBLOCK_READ(block_ramdisk_read)
   dev_block_lba_t lba = rq->lba;
   dev_block_lba_t count = rq->count;
 
+  lock_spin(&dev->lock);
+
   if (lba + count <= p->blk_count)
     {
-
       uint8_t *data[count];
       dev_block_lba_t b;
 
       for (b = 0; b < count; b++)
-	data[b] = pv->mem + ((lba + b) << p->blk_sh_size);
+	memcpy(rq->data[b], pv->mem + ((lba + b) * p->blk_size), p->blk_size);
 
+      rq->error = 0;
       rq->count -= count;
       rq->lba += count;
-      rq->data = data;
       rq->callback(dev, rq, count);
     }
   else
@@ -69,6 +70,8 @@ DEVBLOCK_READ(block_ramdisk_read)
       rq->error = ERANGE;
       rq->callback(dev, rq, 0);
     }
+
+  lock_release(&dev->lock);
 }
 
 /* 
@@ -82,13 +85,16 @@ DEVBLOCK_WRITE(block_ramdisk_write)
   dev_block_lba_t lba = rq->lba;
   dev_block_lba_t count = rq->count;
   
+  lock_spin(&dev->lock);
+
   if (lba + count <= p->blk_count)
     {
       dev_block_lba_t b;
 
       for (b = 0; b < count; b++)
-	memcpy(pv->mem + ((lba + b) << p->blk_sh_size), rq->data[b], p->blk_size);
+	memcpy(pv->mem + ((lba + b) * p->blk_size), rq->data[b], p->blk_size);
 
+      rq->error = 0;
       rq->count -= count;
       rq->lba += count;
       rq->callback(dev, rq, count);
@@ -98,6 +104,8 @@ DEVBLOCK_WRITE(block_ramdisk_write)
       rq->error = ERANGE;
       rq->callback(dev, rq, 0);
     }
+
+  lock_release(&dev->lock);
 }
 
 /* 
@@ -117,18 +125,8 @@ DEV_CLEANUP(block_ramdisk_cleanup)
 {
   struct block_ramdisk_context_s	*pv = dev->drv_pv;
 
-  lock_destroy(&pv->lock);
   mem_free(pv->mem);
   mem_free(pv);
-}
-
-/*
- * IRQ handler
- */
-
-DEV_IRQ(block_ramdisk_irq)
-{
-  return 1;
 }
 
 /* 
@@ -141,7 +139,7 @@ const struct driver_s	block_ramdisk_drv =
   .class		= device_class_block,
   .f_init		= block_ramdisk_init,
   .f_cleanup		= block_ramdisk_cleanup,
-  .f_irq		= block_ramdisk_irq,
+  .f_irq		= DEVICE_IRQ_INVALID,
   .f.blk = {
     .f_read		= block_ramdisk_read,
     .f_write		= block_ramdisk_write,
@@ -165,7 +163,6 @@ DEV_INIT(block_ramdisk_init)
     goto err;
 
   pv->params.blk_size = CONFIG_DRIVER_BLOCK_RAMDISK_BLOCKSIZE;
-  pv->params.blk_sh_size = ffsl(CONFIG_DRIVER_BLOCK_RAMDISK_BLOCKSIZE) - 1;
   pv->params.blk_count = CONFIG_DRIVER_BLOCK_RAMDISK_SIZE;
 
   size_t sz = pv->params.blk_size * pv->params.blk_count;
@@ -182,10 +179,8 @@ DEV_INIT(block_ramdisk_init)
           goto err_pv;
 
       for (c = 0; c < pv->params.blk_count; c++)
-          memset(pv->mem + (c << pv->params.blk_sh_size), c & 0xFF, pv->params.blk_size);
+          memset(pv->mem + (c * pv->params.blk_size), c & 0xFF, pv->params.blk_size);
   }
-
-  lock_init(&pv->lock);
 
   dev->drv_pv = pv;
   return 0;

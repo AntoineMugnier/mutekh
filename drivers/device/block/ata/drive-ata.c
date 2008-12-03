@@ -51,7 +51,6 @@ static void drive_ata_rq_start(struct device_s *dev,
   if (idle)
     {
       struct drive_ata_oper_s *op = rq->drvdata;
-      dpv->blk_counter = 0;
       op->start(dev, rq);
     }
 }
@@ -68,7 +67,6 @@ static void drive_ata_rq_end(struct device_s *dev)
   if ((rq = dev_blk_queue_head(&dpv->queue)) != NULL)
     {
       op = rq->drvdata;
-      dpv->blk_counter = 0;
       op->start(dev, rq);
     }
   else
@@ -93,16 +91,6 @@ bool_t drive_ata_try_irq(struct device_s *dev)
     }
 
   return 0;
-}
-
-static inline void 
-drive_ata_unlocked_callback(struct device_s *dev,
-			    const struct dev_block_rq_s *rq,
-			    size_t count)
-{
-  lock_release(&dev->parent->lock);
-  rq->callback(dev, rq, count);
-  lock_spin(&dev->parent->lock);
 }
 
 /* 
@@ -141,27 +129,23 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_read_irq)
   if (status & ATA_STATUS_ERROR)
     {
       rq->error = EIO;
-      drive_ata_unlocked_callback(dev, rq, 0);
+      rq->callback(dev, rq, 0);
 
       drive_ata_rq_end(dev);
-      assert(0);
       return 1;
     }
 
   if (status & ATA_STATUS_DATA_RQ)
     {
-      uint8_t data[512];
-      uint8_t *dataptr = data;
+      controller_ata_data_read16(dev->parent, *rq->data);
 
-      controller_ata_data_read16(dev->parent, data);
-
-      rq->data = &dataptr;
       rq->lba++;
       rq->count--;
+      rq->data++;
       rq->error = 0;
       dpv->ata_sec_count--;
 
-      drive_ata_unlocked_callback(dev, rq, 1);
+      rq->callback(dev, rq, 1);
 
       if (rq->count == 0)
 	{
@@ -169,10 +153,8 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_read_irq)
 	}
       else
 	{
-	  if (dpv->ata_sec_count > 0)
-	    return 1;
-
-	  drive_ata_read_start(dev, rq);
+	  if (dpv->ata_sec_count == 0)
+	    drive_ata_read_start(dev, rq);
 	}
 
       return 1;
@@ -197,7 +179,7 @@ DEVBLOCK_READ(drive_ata_read)
   if (rq->lba + rq->count > dpv->drv_params.blk_count)
     {
       rq->error = ERANGE;
-      drive_ata_unlocked_callback(dev, rq, 0);
+      rq->callback(dev, rq, 0);
     }
   else
     {
@@ -249,23 +231,22 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_write_irq)
       if (status & ATA_STATUS_ERROR)
 	{
 	  rq->error = EIO;
-	  drive_ata_unlocked_callback(dev, rq, dpv->blk_counter);
+	  rq->callback(dev, rq, 0);
 
 	  drive_ata_rq_end(dev);
 	}
       else
 	{
-	  dpv->blk_counter++;
 	  rq->lba++;
 	  rq->count--;
 	  rq->data++;
+	  rq->error = 0;
 	  dpv->ata_sec_count--;
+
+	  rq->callback(dev, rq, 1);
 
 	  if (rq->count == 0)
 	    {
-	      rq->error = 0;
-
-	      drive_ata_unlocked_callback(dev, rq, dpv->blk_counter);
 	      drive_ata_rq_end(dev);
 	    }
 	  else
@@ -299,7 +280,7 @@ DEVBLOCK_WRITE(drive_ata_write)
   if (rq->lba + rq->count > dpv->drv_params.blk_count)
     {
       rq->error = ERANGE;
-      drive_ata_unlocked_callback(dev, rq, 0);
+      rq->callback(dev, rq, 0);
     }
   else
     {
@@ -376,11 +357,12 @@ error_t drive_ata_init(struct device_s *dev, bool_t slave)
   controller_ata_data_swapread16(dev->parent, &pv->ident);
 
   /* does not support CHS mode yet */
-  assert(!pv->ident.lba_supported);
+  if (pv->ident.lba_supported)
+    return 1;
+
   pv->devhead_reg |= ATA_DRVHEAD_LBA;
 
   pv->drv_params.blk_size = 512;
-  pv->drv_params.blk_sh_size = 9;
   pv->drv_params.blk_count =
     endian_be16(pv->ident.lba_count_low)
     | (endian_be16(pv->ident.lba_count_high) << 16);

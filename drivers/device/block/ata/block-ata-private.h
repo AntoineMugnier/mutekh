@@ -151,7 +151,6 @@ struct drive_ata_context_s
   uint8_t		devhead_reg;
   dev_blk_queue_root_t	queue;
   size_t		ata_sec_count; /* sector count of current ata operation */
-  size_t		blk_counter; /* number of block sucessfully processed */
 };
 
 #define DRIVE_ATA_START_FUNC(n) void (n) (struct device_s *dev, struct dev_block_rq_s *rq)

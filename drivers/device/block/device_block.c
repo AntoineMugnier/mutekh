@@ -33,34 +33,26 @@
 struct dev_block_wait_rq_s
 {
 #ifdef CONFIG_HEXO_SCHED
-  volatile struct sched_context_s *ctx;
+  lock_t lock;
+  struct sched_context_s *ctx;
 #endif
-  volatile bool_t	done;
-  size_t		block_size;
-  uint8_t		**data;	/* target data */
+  volatile bool_t done;
 };
 
 static DEVBLOCK_CALLBACK(dev_block_sync_read)
 {
   struct dev_block_wait_rq_s *status = rq->pvdata;
-  size_t	i;
-
-  for (i = 0; i < count; i++)
-    memcpy(status->data[i], rq->data[i], status->block_size);
-
-  status->data += count;
 
   if (rq->error || rq->count == 0)
     {
 #ifdef CONFIG_HEXO_SCHED
-      LOCK_SPIN_IRQ(&dev->lock);
-
+      lock_spin(&status->lock);
       if (status->ctx != NULL)
 	sched_context_start(status->ctx);
 #endif
       status->done = 1;
 #ifdef CONFIG_HEXO_SCHED
-      LOCK_RELEASE_IRQ(&dev->lock);
+      lock_release(&status->lock);
 #endif
     }
 }
@@ -70,10 +62,11 @@ error_t dev_block_wait_read(struct device_s *dev, struct dev_block_rq_s *rq)
   struct dev_block_wait_rq_s status;
   uint8_t **data;
 
-  status.done = 0;
+#ifdef CONFIG_HEXO_SCHED
+  lock_init(&status.lock);
   status.ctx = NULL;
-  status.data = data = rq->data;
-  status.block_size = dev_block_getparams(dev)->blk_size;
+#endif
+  status.done = 0;
   rq->pvdata = &status;
   rq->callback = dev_block_sync_read;
   rq->error = 0;
@@ -83,22 +76,21 @@ error_t dev_block_wait_read(struct device_s *dev, struct dev_block_rq_s *rq)
 #ifdef CONFIG_HEXO_SCHED
 
   /* ensure callback doesn't occur here */
-  CPU_INTERRUPT_SAVESTATE_DISABLE;
 
-  lock_spin(&dev->lock);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  lock_spin(&status.lock);
 
   if (!status.done)
     {
       status.ctx = sched_get_current();
-      lock_release(&dev->lock);
-      sched_context_stop();
+      sched_context_stop_unlock(&status.lock);
     }
   else
-    {
-      lock_release(&dev->lock);
-    }
+    lock_release(&status.lock);
 
   CPU_INTERRUPT_RESTORESTATE;
+
+  lock_destroy(&status.lock);
 
 #else
 
@@ -119,12 +111,6 @@ error_t dev_block_wait_read(struct device_s *dev, struct dev_block_rq_s *rq)
 static DEVBLOCK_CALLBACK(dev_block_syncl_read)
 {
   struct dev_block_wait_rq_s *status = rq->pvdata;
-  size_t	i;
-
-  for (i = 0; i < count; i++)
-    memcpy(status->data[i], rq->data[i], status->block_size);
-
-  status->data += count;
 
   if (rq->error || rq->count == 0)
     status->done = 1;
@@ -136,9 +122,6 @@ error_t dev_block_lock_read(struct device_s *dev, struct dev_block_rq_s *rq)
   uint8_t **data;
 
   status.done = 0;
-  status.ctx = NULL;
-  status.data = data = rq->data;
-  status.block_size = dev_block_getparams(dev)->blk_size;
   rq->pvdata = &status;
   rq->callback = dev_block_syncl_read;
   rq->error = 0;
@@ -161,24 +144,29 @@ static DEVBLOCK_CALLBACK(dev_block_sync_write)
 {
   struct dev_block_wait_rq_s *status = rq->pvdata;
 
+  if (rq->error || rq->count == 0)
+    {
 #ifdef CONFIG_HEXO_SCHED
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (status->ctx != NULL)
-    sched_context_start(status->ctx);
+      lock_spin(&status->lock);
+      if (status->ctx != NULL)
+	sched_context_start(status->ctx);
 #endif
-  status->done = 1;
+      status->done = 1;
 #ifdef CONFIG_HEXO_SCHED
-  LOCK_RELEASE_IRQ(&dev->lock);
+      lock_release(&status->lock);
 #endif
+    }
 }
 
 error_t dev_block_wait_write(struct device_s *dev, struct dev_block_rq_s *rq)
 {
   struct dev_block_wait_rq_s status;
 
-  status.done = 0;
+#ifdef CONFIG_HEXO_SCHED
+  lock_init(&status.lock);
   status.ctx = NULL;
+#endif
+  status.done = 0;
   rq->pvdata = &status;
   rq->callback = dev_block_sync_write;
   rq->error = 0;
@@ -189,21 +177,19 @@ error_t dev_block_wait_write(struct device_s *dev, struct dev_block_rq_s *rq)
 
   /* ensure callback doesn't occur here */
   CPU_INTERRUPT_SAVESTATE_DISABLE;
-
-  lock_spin(&dev->lock);
+  lock_spin(&status.lock);
 
   if (!status.done)
     {
       status.ctx = sched_get_current();
-      lock_release(&dev->lock);
-      sched_context_stop();
+      sched_context_stop_unlock(&status.lock);
     }
   else
-    {
-      lock_release(&dev->lock);
-    }
+    lock_release(&status.lock);
 
   CPU_INTERRUPT_RESTORESTATE;
+
+  lock_destroy(&status.lock);
 
 #else
 

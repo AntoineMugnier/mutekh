@@ -54,8 +54,6 @@
 #include <hexo/device.h>
 #include <device/driver.h>
 
-#include <drivers/fs/devfs/devfs.h>
-
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

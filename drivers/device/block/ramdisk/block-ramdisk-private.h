@@ -29,7 +29,6 @@ struct block_ramdisk_context_s
 {
   uint8_t		*mem;
   struct dev_block_params_s params;
-  lock_t		lock;
 };
 
 #endif
