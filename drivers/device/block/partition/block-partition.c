@@ -124,7 +124,6 @@ void block_partition_new(struct device_s *parent,
 	  pv->first = lba;
 
 	  pv->drv_params.blk_size = 512;
-	  pv->drv_params.blk_sh_size = 9;
 	  pv->drv_params.blk_count = size;
 
 	  device_register(new, parent, NULL);
