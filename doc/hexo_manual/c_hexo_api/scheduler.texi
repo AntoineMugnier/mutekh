@@ -3,7 +3,7 @@ Hexo provides an execution context scheduler which can be used to
 write higher level thread, task, process... related APIs.
 
 Context scheduler functions are available in the
-@code{<hexo/scheduler.h>} header file.
+@code{<mutek/scheduler.h>} header file.
 
 The Hexo scheduler handles @code{struct sched_context_s}
 objects. These objects can be put in the main running queue or can be
@@ -108,7 +108,7 @@ earlier if other processors are present.
 
 @verbatim
 #include <hexo/context.h>
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 
 struct sched_context_s a, b, c;
 

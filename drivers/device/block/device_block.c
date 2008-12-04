@@ -25,14 +25,14 @@
 #include <device/block.h>
 #include <device/driver.h>
 
-#ifdef CONFIG_HEXO_SCHED
-# include <hexo/scheduler.h>
+#ifdef CONFIG_MUTEK_SCHEDULER
+# include <mutek/scheduler.h>
 # include <hexo/lock.h>
 #endif
 
 struct dev_block_wait_rq_s
 {
-#ifdef CONFIG_HEXO_SCHED
+#ifdef CONFIG_MUTEK_SCHEDULER
   lock_t lock;
   struct sched_context_s *ctx;
 #endif
@@ -45,13 +45,13 @@ static DEVBLOCK_CALLBACK(dev_block_sync_read)
 
   if (rq->error || rq->count == 0)
     {
-#ifdef CONFIG_HEXO_SCHED
+#ifdef CONFIG_MUTEK_SCHEDULER
       lock_spin(&status->lock);
       if (status->ctx != NULL)
 	sched_context_start(status->ctx);
 #endif
       status->done = 1;
-#ifdef CONFIG_HEXO_SCHED
+#ifdef CONFIG_MUTEK_SCHEDULER
       lock_release(&status->lock);
 #endif
     }
@@ -62,7 +62,7 @@ error_t dev_block_wait_read(struct device_s *dev, struct dev_block_rq_s *rq)
   struct dev_block_wait_rq_s status;
   uint8_t **data;
 
-#ifdef CONFIG_HEXO_SCHED
+#ifdef CONFIG_MUTEK_SCHEDULER
   lock_init(&status.lock);
   status.ctx = NULL;
 #endif
@@ -73,7 +73,7 @@ error_t dev_block_wait_read(struct device_s *dev, struct dev_block_rq_s *rq)
 
   dev_block_read(dev, rq);
 
-#ifdef CONFIG_HEXO_SCHED
+#ifdef CONFIG_MUTEK_SCHEDULER
 
   /* ensure callback doesn't occur here */
 
@@ -146,13 +146,13 @@ static DEVBLOCK_CALLBACK(dev_block_sync_write)
 
   if (rq->error || rq->count == 0)
     {
-#ifdef CONFIG_HEXO_SCHED
+#ifdef CONFIG_MUTEK_SCHEDULER
       lock_spin(&status->lock);
       if (status->ctx != NULL)
 	sched_context_start(status->ctx);
 #endif
       status->done = 1;
-#ifdef CONFIG_HEXO_SCHED
+#ifdef CONFIG_MUTEK_SCHEDULER
       lock_release(&status->lock);
 #endif
     }
@@ -162,7 +162,7 @@ error_t dev_block_wait_write(struct device_s *dev, struct dev_block_rq_s *rq)
 {
   struct dev_block_wait_rq_s status;
 
-#ifdef CONFIG_HEXO_SCHED
+#ifdef CONFIG_MUTEK_SCHEDULER
   lock_init(&status.lock);
   status.ctx = NULL;
 #endif
@@ -173,7 +173,7 @@ error_t dev_block_wait_write(struct device_s *dev, struct dev_block_rq_s *rq)
 
   dev_block_write(dev, rq);
 
-#ifdef CONFIG_HEXO_SCHED
+#ifdef CONFIG_MUTEK_SCHEDULER
 
   /* ensure callback doesn't occur here */
   CPU_INTERRUPT_SAVESTATE_DISABLE;

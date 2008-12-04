@@ -2,7 +2,7 @@
 #include <hexo/error.h>
 #include <hexo/types.h>
 #include <hexo/context.h>
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 #include <hexo/vmem.h>
 
 #include <hexo/gpct_platform_hexo.h>

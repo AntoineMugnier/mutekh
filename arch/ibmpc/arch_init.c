@@ -73,7 +73,7 @@ void arch_init()
       cpu_start_other_cpu();
 #endif
 
-#if defined(CONFIG_HEXO_SCHED)
+#if defined(CONFIG_MUTEK_SCHEDULER)
       sched_global_init();
       sched_cpu_init();
 #endif
@@ -101,7 +101,7 @@ void arch_init()
       while (lock_state(&cpu_start_lock))
 	;
 
-#if defined(CONFIG_HEXO_SCHED)
+#if defined(CONFIG_MUTEK_SCHEDULER)
       sched_cpu_init();
 #endif
 

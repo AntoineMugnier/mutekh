@@ -26,7 +26,7 @@
 #include <hexo/alloc.h>
 #include <hexo/local.h>
 #include <hexo/types.h>
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 #include <hexo/segment.h>
 
 /** pointer to current thread */
@@ -308,7 +308,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
     {
       sched_affinity_single(&thread->sched_ctx, attr->cpulist[0]);
       
-#ifdef CONFIG_HEXO_SCHED_MIGRATION
+#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
       cpu_id_t i;
       for (i = 1; i < attr->cpucount; i++)
 	sched_affinity_add(&thread->sched_ctx, attr->cpulist[i]);
@@ -339,11 +339,11 @@ error_t pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu)
   if (attr->cpucount >= CONFIG_CPU_MAXCOUNT)
     return ENOMEM;
 
-#ifdef CONFIG_HEXO_SCHED_MIGRATION
+#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
   attr->cpulist[attr->cpucount++] = cpu;
 #endif
 
-#ifdef CONFIG_HEXO_SCHED_STATIC
+#ifdef CONFIG_MUTEK_SCHEDULER_STATIC
   attr->cpulist[0] = cpu;
 #endif
 

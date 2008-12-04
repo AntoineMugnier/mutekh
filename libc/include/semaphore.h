@@ -22,7 +22,7 @@
 #ifndef SEMAPHORE_H_
 #define SEMAPHORE_H_
 
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 
 typedef uint_fast8_t			__sem_count_t;
 

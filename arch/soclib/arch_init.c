@@ -26,7 +26,7 @@
 #include <hexo/lock.h>
 #include <hexo/cpu.h>
 #include <hexo/alloc.h>
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 
 #ifdef CONFIG_ARCH_SOCLIB_RAMLOCK
 extern __ldscript_symbol_t __ramlock_base_start;
@@ -67,7 +67,7 @@ void arch_init()
       cpu_init_flag = 1;
 #endif
 
-#if defined(CONFIG_HEXO_SCHED)
+#if defined(CONFIG_MUTEK_SCHEDULER)
       sched_global_init();
       sched_cpu_init();
 #endif
@@ -98,7 +98,7 @@ void arch_init()
 
       /* run mutek_main_smp() */
 
-#if defined(CONFIG_HEXO_SCHED)
+#if defined(CONFIG_MUTEK_SCHEDULER)
       sched_cpu_init();
 #endif
 

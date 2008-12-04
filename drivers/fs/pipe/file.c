@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <hexo/alloc.h>
-#include <hexo/rwlock.h>
+#include <mutek/rwlock.h>
 #include "pipe.h"
 
 
@@ -60,7 +60,7 @@ VFS_OPEN_FILE(pipe_open)
     printf("pipe_open: going to wait for at least one writer\n");
 #endif
     CPU_INTERRUPT_SAVESTATE_DISABLE;
-    sched_wait_unlock4(&file->f_node->n_wait, &file->f_node->n_lock);
+    sched_wait_callback(&file->f_node->n_wait, (sched_wait_cb_t*)rwlock_unlock, &file->f_node->n_lock);
     CPU_INTERRUPT_RESTORESTATE;
     rwlock_wrlock(&file->f_node->n_lock);
   }
@@ -71,7 +71,7 @@ VFS_OPEN_FILE(pipe_open)
     printf("pipe_open: going to wait for at least one reader\n");
 #endif
     CPU_INTERRUPT_SAVESTATE_DISABLE;
-    sched_wait_unlock4(&file->f_node->n_wait, &file->f_node->n_lock);
+    sched_wait_callback(&file->f_node->n_wait, (sched_wait_cb_t*)rwlock_unlock, &file->f_node->n_lock);
     CPU_INTERRUPT_RESTORESTATE;
     rwlock_wrlock(&file->f_node->n_lock);
   }
@@ -132,7 +132,7 @@ VFS_READ_FILE(pipe_read)
     while(!node_info->status)
     {
       CPU_INTERRUPT_SAVESTATE_DISABLE;
-      sched_wait_unlock4(&node_info->rd_wait,&node_info->lock);
+      sched_wait_callback(&node_info->rd_wait, (sched_wait_cb_t*)rwlock_unlock, &node_info->lock);
       CPU_INTERRUPT_RESTORESTATE;
     
       rwlock_wrlock(&node_info->lock);
@@ -198,7 +198,7 @@ VFS_WRITE_FILE(pipe_write)
     while(node_info->status >= pipe_size)
     {
       CPU_INTERRUPT_SAVESTATE_DISABLE;
-      sched_wait_unlock4(&node_info->wr_wait,&node_info->lock);
+      sched_wait_callback(&node_info->wr_wait, (sched_wait_cb_t*)rwlock_unlock, &node_info->lock);
       CPU_INTERRUPT_RESTORESTATE;
       
       rwlock_wrlock(&node_info->lock);

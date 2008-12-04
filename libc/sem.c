@@ -19,7 +19,7 @@
 
 */
 
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 #include <hexo/error.h>
 
 #include <semaphore.h>

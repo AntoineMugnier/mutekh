@@ -23,7 +23,7 @@
 #include <string.h>
 #include <hexo/alloc.h>
 #include <hexo/lock.h>
-#include <hexo/rwlock.h>
+#include <mutek/rwlock.h>
 #include <vfs/vfs.h>
 #include <vfs/vfs-private.h>
 

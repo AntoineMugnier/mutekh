@@ -19,15 +19,14 @@
 
 */
 
-#ifndef __HEXO_SCHEDULER_H__
-#define __HEXO_SCHEDULER_H__
+#ifndef MUTEK_SCHEDULER_H_
+#define MUTEK_SCHEDULER_H_
 
-#ifndef CONFIG_HEXO_SCHED
+#ifndef CONFIG_MUTEK_SCHEDULER
 # warning hexo scheduler is not enabled in configuration file
 #else
 
-#include "context.h"
-
+#include <hexo/context.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_dlist.h>
@@ -49,15 +48,15 @@ CONTAINER_TYPE(sched_queue, DLIST, struct sched_context_s
   sched_queue_entry_t	list_entry;
   void			*private;
 
-#ifdef CONFIG_HEXO_SCHED_MIGRATION_AFFINITY
+#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
   cpu_bitmap_t		cpu_map;
 #endif
 
-#ifdef CONFIG_HEXO_SCHED_STATIC
+#ifdef CONFIG_MUTEK_SCHEDULER_STATIC
   sched_queue_root_t	*cpu_queue;
 #endif
 
-#ifdef CONFIG_HEXO_SCHED_CANDIDATE_FCN
+#ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
   sched_candidate_fcn_t	*is_candidate;
 #endif
 }, list_entry);
@@ -117,9 +116,15 @@ error_t sched_queue_init(sched_queue_root_t *queue);
 void sched_queue_destroy(sched_queue_root_t *queue);
 
 /** add current context on the wait queue, unlock queue and switch to
-    next context */
-/* Must be called with interrupts disabled */
+    next context. Must be called with interrupts disabled */
 void sched_wait_unlock(sched_queue_root_t *queue);
+
+typedef void (sched_wait_cb_t)(void *ctx);
+
+/** add current context on the wait queue, invoke callback and switch to
+    next context. Must be called with interrupts disabled */
+void sched_wait_callback(sched_queue_root_t *queue,
+			 sched_wait_cb_t *callback, void *ctx);
 
 /** wake a context from this queue */
 /* Must be called with interrupts disabled */

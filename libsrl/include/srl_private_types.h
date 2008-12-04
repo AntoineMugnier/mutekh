@@ -22,7 +22,7 @@
 #ifndef SRL_PRIVATE_TYPES_H
 #define SRL_PRIVATE_TYPES_H
 
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <srl/srl_public_types.h>

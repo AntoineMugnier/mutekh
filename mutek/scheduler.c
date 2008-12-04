@@ -19,11 +19,10 @@
 
 */
 
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 #include <hexo/init.h>
 #include <hexo/local.h>
 #include <hexo/segment.h>
-#include <hexo/rwlock.h>
 
 /* processor current scheduler context */
 CONTEXT_LOCAL struct sched_context_s *sched_cur;
@@ -35,7 +34,7 @@ CPU_LOCAL struct sched_context_s sched_idle;
 static struct sched_context_s *
 __sched_candidate_noidle(sched_queue_root_t *root)
 {
-#ifdef CONFIG_HEXO_SCHED_CANDIDATE_FCN
+#ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
   struct sched_context_s *c = NULL;
 
   CONTAINER_FOREACH_NOLOCK(sched_queue, DLIST, root, {
@@ -67,7 +66,7 @@ __sched_candidate(sched_queue_root_t *root)
 
 /************************************************************************/
 
-#if defined (CONFIG_HEXO_SCHED_MIGRATION)
+#if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
 
 /* scheduler root */
 static sched_queue_root_t	sched_root;
@@ -88,7 +87,7 @@ __sched_ctx_root(struct sched_context_s *sched_ctx)
 
 /************************************************************************/
 
-#elif defined (CONFIG_HEXO_SCHED_STATIC)
+#elif defined (CONFIG_MUTEK_SCHEDULER_STATIC)
 
 /* scheduler root */
 static CPU_LOCAL sched_queue_root_t	sched_root;
@@ -209,11 +208,11 @@ void sched_context_init(struct sched_context_s *sched_ctx)
   CONTEXT_LOCAL_TLS_SET(sched_ctx->context.tls,
 			    sched_cur, sched_ctx);
 
-#if defined (CONFIG_HEXO_SCHED_STATIC)
+#if defined (CONFIG_MUTEK_SCHEDULER_STATIC)
   sched_ctx->cpu_queue = __sched_root();
 #endif
 
-#ifdef CONFIG_HEXO_SCHED_CANDIDATE_FCN
+#ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
   sched_ctx->is_candidate = NULL;
 #endif
 
@@ -225,6 +224,25 @@ void sched_context_start(struct sched_context_s *sched_ctx)
   assert(!cpu_interrupt_getstate());
 
   sched_queue_pushback(__sched_ctx_root(sched_ctx), sched_ctx);
+}
+
+void sched_wait_callback(sched_queue_root_t *queue,
+		         void (*callback)(void *ctx), void *ctx)
+{
+  sched_queue_root_t *root = __sched_root();
+  struct sched_context_s *next;
+
+  assert(!cpu_interrupt_getstate());
+
+  /* add current context to queue, assume dont need lock */
+  sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
+  callback(ctx);
+
+  /* get next running context */
+  sched_queue_wrlock(root);
+  next = __sched_candidate(root);
+  context_switch_to(&next->context);
+  sched_queue_unlock(root);
 }
 
 /* push current context in the 'queue', unlock it and switch to next
@@ -247,69 +265,6 @@ void sched_wait_unlock(sched_queue_root_t *queue)
   context_switch_to(&next->context);
   sched_queue_unlock(root);
 }
-
-
-/* push current context in the 'queue' ignoring queue lock, unlock the
-   given lock and switch to next context available in the 'root'
-   queue. Must be called with interrupts disabled */
-void sched_wait_unlock2(sched_queue_root_t *queue, lock_t *lock)
-{
-  sched_queue_root_t *root = __sched_root();
-  struct sched_context_s *next;
-
-  assert(!cpu_interrupt_getstate());
-
-  /* add current context to queue, assume queue is already locked */
-  sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
-  lock_release(lock);
-
-  /* get next running context */
-  sched_queue_wrlock(root);
-  next = __sched_candidate(root);
-  context_switch_to(&next->context);
-  sched_queue_unlock(root);
-}
-
-
-/* push current context in the 'queue' ignoring queue lock, unlock the
-   given scheduler queue and switch to next context available in the 'root'
-   queue. Must be called with interrupts disabled */
-void sched_wait_unlock3(sched_queue_root_t *queue, sched_queue_root_t *queue_to_release)
-{
-  sched_queue_root_t *root = __sched_root();
-  struct sched_context_s *next;
-  assert(!cpu_interrupt_getstate());
-  
-  sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
-  sched_queue_unlock(queue_to_release);
- 
-  /* get next running context */
-  sched_queue_wrlock(root);
-  next = __sched_candidate(root);
-  context_switch_to(&next->context);
-  sched_queue_unlock(root);
-}
-
-
-/* push current context in the 'queue' ignoring queue lock, unlock the
-   given rwlock and switch to next context available in the 'root'
-   queue. Must be called with interrupts disabled */
-void sched_wait_unlock4(sched_queue_root_t *queue, struct rwlock_s *rwlock)
-{
-  sched_queue_root_t *root = __sched_root();
-  struct sched_context_s *next;
-  assert(!cpu_interrupt_getstate());
-  
-  sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
-  rwlock_unlock(rwlock);
- 
-  /* get next running context */
-  sched_queue_wrlock(root);
-  next = __sched_candidate(root);
-  context_switch_to(&next->context);
-  sched_queue_unlock(root);
-}
-
 
 /* Switch to next context available in the 'root' queue, do not put
    current context in any queue. Idle context may be selected if no
@@ -360,7 +315,7 @@ struct sched_context_s *sched_wake(sched_queue_root_t *queue)
 
 void sched_global_init(void)
 {
-#if defined (CONFIG_HEXO_SCHED_MIGRATION)
+#if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
   sched_queue_init(__sched_root());
 #endif
 }
@@ -371,54 +326,54 @@ void sched_cpu_init(void)
   reg_t *stack;
   error_t err;
 
-  stack = arch_contextstack_alloc(CONFIG_HEXO_SCHED_IDLE_STACK_SIZE * sizeof(reg_t));
+  stack = arch_contextstack_alloc(CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE * sizeof(reg_t));
 
   assert(stack != NULL);
 
-  err = context_init(&idle->context, stack, CONFIG_HEXO_SCHED_IDLE_STACK_SIZE, sched_context_idle, 0);
+  err = context_init(&idle->context, stack, CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE, sched_context_idle, 0);
 
   assert(err == 0);
 
-#if defined (CONFIG_HEXO_SCHED_STATIC)
+#if defined (CONFIG_MUTEK_SCHEDULER_STATIC)
   sched_queue_init(__sched_root());
 #endif
 }
 
-#ifdef CONFIG_HEXO_SCHED_MIGRATION
+#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
 
 void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
-# ifndef CONFIG_HEXO_SCHED_MIGRATION_AFFINITY
+# ifndef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
 # endif
 }
 
 void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
-# ifndef CONFIG_HEXO_SCHED_MIGRATION_AFFINITY
+# ifndef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
 # endif
 }
 
 void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
-# ifndef CONFIG_HEXO_SCHED_MIGRATION_AFFINITY
+# ifndef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
 # endif
 }
 
 void sched_affinity_all(struct sched_context_s *sched_ctx)
 {
-# ifndef CONFIG_HEXO_SCHED_MIGRATION_AFFINITY
+# ifndef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
 # endif
 }
 
 void sched_affinity_clear(struct sched_context_s *sched_ctx)
 {
-# ifndef CONFIG_HEXO_SCHED_MIGRATION_AFFINITY
+# ifndef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
 # endif
 }
 
 #endif
 
-#ifdef CONFIG_HEXO_SCHED_STATIC
+#ifdef CONFIG_MUTEK_SCHEDULER_STATIC
 
 void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
@@ -447,7 +402,7 @@ void sched_affinity_clear(struct sched_context_s *sched_ctx)
 void sched_context_candidate_fcn(struct sched_context_s *sched_ctx,
 				 sched_candidate_fcn_t *fcn)
 {
-#ifdef CONFIG_HEXO_SCHED_CANDIDATE_FCN
+#ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
   sched_ctx->is_candidate = fcn;
 #else
   abort();

@@ -19,8 +19,7 @@
 
 */
 
-#include <hexo/rwlock.h>
-
+#include <mutek/rwlock.h>
 
 error_t
 rwlock_destroy(struct rwlock_s *rwlock)

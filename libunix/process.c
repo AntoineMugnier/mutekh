@@ -5,7 +5,7 @@
 #include <hexo/types.h>
 #include <hexo/context.h>
 #include <hexo/alloc.h>
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 #include <hexo/interrupt.h>
 #include <hexo/vmem.h>
 

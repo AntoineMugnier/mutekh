@@ -414,7 +414,7 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
 #ifdef CONFIG_BC_INSTRUMENT
       wait_count ++;
 #endif
-      sched_wait_unlock3(&buffer->wait,&freelist->wait); /* --> */
+      sched_wait_callback(&buffer->wait, (sched_wait_cb_t*)sched_queue_unlock, &freelist->wait); /* --> */
       sched_queue_wrlock(&freelist->wait);     /* <-- */
       continue;
     }

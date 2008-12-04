@@ -30,9 +30,9 @@
 #include <hexo/error.h>
 #include <hexo/local.h>
 #include <hexo/lock.h>
-#include <hexo/rwlock.h>
 #include <hexo/context.h>
-#include <hexo/scheduler.h>
+#include <mutek/rwlock.h>
+#include <mutek/scheduler.h>
 #include <hexo/interrupt.h>
 
 #include <hexo/gpct_platform_hexo.h>
@@ -382,33 +382,51 @@ struct rwlock_s;
 typedef struct pthread_rwlockattr_s pthread_rwlockattr_t;
 typedef struct rwlock_s pthread_rwlock_t;
 
-error_t
-pthread_rwlock_destroy(pthread_rwlock_t *rwlock);
+static inline error_t
+pthread_rwlock_destroy(pthread_rwlock_t *rwlock)
+{
+  return rwlock_destroy(rwlock);
+}
 
-error_t
-pthread_rwlock_init(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr);
+static inline error_t
+pthread_rwlock_init(pthread_rwlock_t *rwlock,
+		    const pthread_rwlockattr_t *attr)
+{
+  return rwlock_init(rwlock);
+}
 
-error_t
-pthread_rwlock_rdlock(pthread_rwlock_t *rwlock);
+static inline error_t
+pthread_rwlock_rdlock(pthread_rwlock_t *rwlock)
+{
+  return rwlock_rdlock(rwlock);
+}
 
-error_t
-pthread_rwlock_wrlock(pthread_rwlock_t *rwlock);
+static inline error_t
+pthread_rwlock_tryrdlock(pthread_rwlock_t *rwlock)
+{
+  return rwlock_tryrdlock(rwlock);
+}
 
-error_t
-pthread_rwlock_tryrdlock(pthread_rwlock_t *rwlock);
+static inline error_t
+pthread_rwlock_wrlock(pthread_rwlock_t *rwlock)
+{
+  return rwlock_wrlock(rwlock);
+}
 
-error_t
-pthread_rwlock_trywrlock(pthread_rwlock_t *rwlock);
+static inline error_t
+pthread_rwlock_trywrlock(pthread_rwlock_t *rwlock)
+{
+  return rwlock_trywrlock(rwlock);
+}
 
-error_t
-pthread_rwlock_unlock(pthread_rwlock_t *rwlock);
+static inline error_t
+pthread_rwlock_unlock(pthread_rwlock_t *rwlock)
+{
+  return rwlock_unlock(rwlock);
+}
 
 /** normal rwlock object static initializer */
-# define PTHREAD_RWLOCK_INITIALIZER							  \
-  {											  \
-    .wait_rd = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
-    .wait_wr = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
-  }
+# define PTHREAD_RWLOCK_INITIALIZER RWLOCK_INITIALIZER
 
 /************************************************************************
 		PThread barrier related public API

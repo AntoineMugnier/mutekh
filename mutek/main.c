@@ -29,7 +29,7 @@
 #include <hexo/lock.h>
 #include <hexo/context.h>
 #include <hexo/cpu.h>
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 
 //#include <hexo/instrument.h>
 
@@ -107,7 +107,7 @@ struct device_s icu_dev;
 DEVTIMER_CALLBACK(timer_callback)
 {
   //  printf("timer callback\n");
-# if defined(CONFIG_HEXO_SCHED_PREEMPT)
+# if defined(CONFIG_MUTEK_SCHEDULER_PREEMPT)
   sched_context_switch();
 # endif
 
@@ -372,7 +372,7 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
     }
 
   cpu_interrupt_disable();
-#if defined(CONFIG_HEXO_SCHED)
+#if defined(CONFIG_MUTEK_SCHEDULER)
   sched_lock();
   sched_context_exit();
 #endif

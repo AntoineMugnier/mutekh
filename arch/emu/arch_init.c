@@ -47,7 +47,7 @@ void arch_init()
       /* configure first CPU */
       cpu_init();
 
-#if defined(CONFIG_HEXO_SCHED)
+#if defined(CONFIG_MUTEK_SCHEDULER)
       sched_global_init();
       sched_cpu_init();
 #endif
@@ -67,7 +67,7 @@ void arch_init()
 
       /* run mutek_main_smp() */
 
-#if defined(CONFIG_HEXO_SCHED)
+#if defined(CONFIG_MUTEK_SCHEDULER)
       sched_cpu_init();
 #endif
 

@@ -25,8 +25,8 @@
 #include <hexo/error.h>
 #include <hexo/types.h>
 #include <hexo/device.h>
-#include <hexo/scheduler.h>
-#include <hexo/rwlock.h>
+#include <mutek/scheduler.h>
+#include <mutek/rwlock.h>
 #include <hexo/atomic.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_clist.h>

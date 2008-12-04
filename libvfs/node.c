@@ -232,7 +232,7 @@ VFS_NODE_LOAD(vfs_node_load)
       printf("node %s is inload\n",child->n_name);
 #endif
       CPU_INTERRUPT_SAVESTATE_DISABLE;
-      sched_wait_unlock4(&child->n_wait,&vfs_node_freelist.lock);
+      sched_wait_callback(&child->n_wait, (sched_wait_cb_t*)rwlock_unlock, &vfs_node_freelist.lock);
       CPU_INTERRUPT_RESTORESTATE;
       rwlock_wrlock(&vfs_node_freelist.lock);
 

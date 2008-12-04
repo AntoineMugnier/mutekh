@@ -23,7 +23,7 @@
 #define __PIPE_H__
 
 #include <hexo/types.h>
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 #include <hexo/lock.h>
 #include <vfs/vfs.h>
 #include <vfs/buffer_cache.h>

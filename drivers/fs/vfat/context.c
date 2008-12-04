@@ -22,7 +22,7 @@
 #include <device/block.h>
 #include <device/driver.h>
 #include <hexo/alloc.h>
-#include <hexo/rwlock.h>
+#include <mutek/rwlock.h>
 #include <vfs/buffer_cache.h>
 #include "vfat.h"
 #include "vfat-private.h"

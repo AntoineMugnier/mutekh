@@ -19,7 +19,7 @@
  *         Nicolas Pouillon <nipo@ssji.net>, 2008
  */
 
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 #include <hexo/types.h>
 #include <hexo/atomic.h>
 #include <hexo/endian.h>

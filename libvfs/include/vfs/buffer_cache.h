@@ -24,7 +24,7 @@
 
 #include <hexo/error.h>
 #include <hexo/lock.h>
-#include <hexo/scheduler.h>
+#include <mutek/scheduler.h>
 
 #define BC_BUSY          1
 #define BC_DELAYED_WRITE 2
