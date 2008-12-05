@@ -57,9 +57,9 @@ struct bc_request_s* vfat_read_sectors(struct vfat_context_s *ctx,
 #endif
     if(!(IS_BUFFER(request->buffers[i]->state,BC_VALID)))
     {
-      #if VFAT_DEBUG
-      printf("-->> reading blk %d..",first_sector + i);
-      #endif
+#ifdef CONFIG_VFAT_DEBUG
+      printf("-->> reading blk %d..", first_sector + i);
+#endif
 
       rq.lba = first_sector + i;
       rq.count = 1;
@@ -73,16 +73,16 @@ struct bc_request_s* vfat_read_sectors(struct vfat_context_s *ctx,
       if(dev_block_wait_read(ctx->dev, &rq))
 	goto VFAT_READ_CLUSTER_ERROR;
       
-      #if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
       printf("..OK\n");
-      #endif
+#endif
     }
   }
    
   return request;
   
  VFAT_READ_CLUSTER_ERROR:
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("I/O Error accured when reading/writing sectors starting at #%d\n",first_sector);
 #endif
   bc_release_buffer(&bc,&freelist,request,1);
@@ -106,7 +106,7 @@ error_t vfat_write_sector(struct vfat_context_s *ctx,
     goto VFAT_WRITE_SECTOR_ERROR;
 
   memcpy(buffers[0]->content, content, ctx->bytes_per_sector);
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("'''' write sector %d, ''''\n",sector);
 #endif
 #if VFAT_INSTRUMENT
@@ -141,7 +141,7 @@ error_t vfat_clear_cluster(struct vfat_context_s *ctx,
   for(i=0; i< request.count; i++)
   {
     memset(buffers[i]->content, 0, ctx->bytes_per_sector);
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
     printf("'''' write sector %d, ''''\n",first_sector + i);
 #endif
 #if VFAT_INSTRUMENT
@@ -176,7 +176,7 @@ error_t vfat_query_fat(struct vfat_context_s *ctx,
   next_cluster = 0;
 
   lba =  ctx->fat_begin_lba + ((cluster_index *4) / sector_size);
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("Query FAT at %d lba to get next cluster of %d\n", lba, cluster_index);
 #endif
  
@@ -187,7 +187,7 @@ error_t vfat_query_fat(struct vfat_context_s *ctx,
   next_cluster = sector[cluster_index % (sector_size /4)] & 0x0FFFFFFF;
   bc_release_buffer(&bc,&freelist,&request,0);
 
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("next cluster for %d is %d\n", cluster_index, next_cluster);
 #endif 
 
@@ -222,12 +222,12 @@ error_t vfat_alloc_fat_entry(struct vfat_context_s *ctx,
     
   for(sector = last_allocated_sector; (sector < ctx->fat_blk_count) && (!found); sector ++)
   {
-#if VFAT_DEBUG > 1
+#ifdef CONFIG_VFAT_DEBUG
     printf("alloc_fat_entry: sector %d\n",sector);
 #endif
     if(vfat_read_sectors(ctx, &request, sector, 1) == NULL)
     {
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
       printf("alloc_fat: error reading sector %d\n", sector);
 #endif
       err = -VFS_IO_ERR;
@@ -236,7 +236,7 @@ error_t vfat_alloc_fat_entry(struct vfat_context_s *ctx,
     buffer = buffers[0]->content;
     for(index = last_allocated_index; index < (sector_size/4); index ++)
     {
-#if VFAT_DEBUG > 1
+#ifdef CONFIG_VFAT_DEBUG
       printf("alloc_fat_entry: index %d\n",index);
 #endif
       if((buffer[index] & 0x0FFFFFFF) == 0x00000000)
@@ -257,7 +257,7 @@ error_t vfat_alloc_fat_entry(struct vfat_context_s *ctx,
 	}
 	ctx->last_allocated_index = (index + 1) % (sector_size/4);
 	index += (sector - ctx->fat_begin_lba) * (sector_size/4);
-#if VFAT_DEBUG > 1
+#ifdef CONFIG_VFAT_DEBUG
 	printf("alloc_fat_entry: found: cluster %d\n",index);
 #endif
 	*new_cluster = index;
@@ -277,7 +277,7 @@ error_t vfat_alloc_fat_entry(struct vfat_context_s *ctx,
     sector = VFAT_CONVERT_CLUSTER(ctx,*new_cluster);
     err = vfat_clear_cluster(ctx,sector);
   }
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("alloc_entry: new_cluster %d, hasError ? %d\n",*new_cluster,err);
 #endif
   return err;
@@ -307,7 +307,7 @@ error_t vfat_extend_cluster(struct vfat_context_s *ctx,
   lba = ctx->fat_begin_lba + ((current_cluster *4) / sector_size);
   if(vfat_read_sectors(ctx, &request, lba, 1) == NULL)
     return -1;
-#if VFAT_DEBUG  
+#ifdef CONFIG_VFAT_DEBUG  
   printf("extendig cluster %d\n",current_cluster);
 #endif
   buffer = buffers[0]->content;
@@ -317,7 +317,7 @@ error_t vfat_extend_cluster(struct vfat_context_s *ctx,
     buffer[current_cluster % (sector_size/4)]= *next_cluster;
   else
   {
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
     printf("extend_cluster: %d already extended !\n",current_cluster);
     printf("extend cluster: freeing %d\n",*next_cluster);
 #endif
@@ -335,7 +335,7 @@ error_t vfat_extend_cluster(struct vfat_context_s *ctx,
   SET_BUFFER(buffers[0]->state, BC_DELAYED_WRITE);
   bc_release_buffer(&bc,&freelist,&request,0);
 
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("cluster %d's FAT entry is set to %d, FAT's sector %d is set as delayed write\n",
 	 current_cluster,*next_cluster,lba);
   printf("allocated cluster %d for asked cluster %d\n",*next_cluster,current_cluster);
@@ -359,7 +359,7 @@ error_t vfat_free_fat_entry(struct vfat_context_s *ctx, vfat_cluster_t start_clu
   request.buffers = buffers;
   current_index = start_cluster;
 
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("vfat_free_fat_entry: freeling fat entries starting by %d\n",start_cluster);
 #endif
 
@@ -367,7 +367,7 @@ error_t vfat_free_fat_entry(struct vfat_context_s *ctx, vfat_cluster_t start_clu
   while((current_index > 0) && (current_index < 0x0FFFFFF7))
   {
     lba =  ctx->fat_begin_lba + ((current_index *4) / sector_size);
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
     printf("query FAT at %d lba to get next cluster index of %d\n", 
 	   lba, current_index);
 #endif
@@ -384,7 +384,7 @@ error_t vfat_free_fat_entry(struct vfat_context_s *ctx, vfat_cluster_t start_clu
 #endif
     bc_release_buffer(&bc,&freelist,&request,0);
 
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
     printf("content of %d is set to 0, next cluster in the list is %d\n", 
 	   current_index, next_index);
 #endif
@@ -419,7 +419,7 @@ error_t vfat_locate_entry(struct vfat_entry_request_s *rq)
   entries_nr = ctx->bytes_per_sector / sizeof(struct vfat_DirEntry_s);
   found = 0;
 
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("vfat_locate_entry started: node %s\n",rq->entry_name);
 #endif
 
@@ -480,7 +480,7 @@ error_t vfat_locate_entry(struct vfat_entry_request_s *rq)
     
     current_cluster = next_cluster;
   }
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("found %d\n",found);
 #endif
   return (found) ? VFS_FOUND : VFS_NOT_FOUND;

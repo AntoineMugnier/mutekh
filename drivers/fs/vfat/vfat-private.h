@@ -22,7 +22,6 @@
 #ifndef __VFAT_PRIVATE_H__
 #define __VFAT_PRIVATE_H__
 
-#define VFAT_DEBUG 0
 #define VFAT_INSTRUMENT 1
 
 struct vfat_bpb_s

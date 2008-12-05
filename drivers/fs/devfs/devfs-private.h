@@ -25,7 +25,7 @@
 #include <hexo/types.h>
 #include <vfs/vfs.h>
 #include <gpct/cont_hashlist.h>
-
+#include <vfs/vfs-private.h>
 
 // Return code
 #define DEVFS_OK		0
@@ -36,6 +36,10 @@
 #define DEVFS_DIR		0x00
 #define DEVFS_CHAR		0x01
 #define DEVFS_BLOCK		0x02
+
+
+// temporary stuff
+#define DEVFS_MOUNT_POINT	"/DEV"
 
 
 struct devfs_node_s
@@ -59,9 +63,45 @@ struct devfs_context_s
 
 struct devfs_file_s
 {
+  struct vfs_node_s	*node;
 };
 
-// Should not be used !
-//struct vfs_node_s	*vfs_dev_node;
+////////////////////////////////////////////////////
+
+// Used to get DevFS context from anywhere
+static inline struct devfs_context_s	*devfs_get_ctx()
+{
+  struct vfs_node_s		*dev_node = NULL;
+
+  //get node to acces n_ctx field
+  dev_node = vfs_node_lookup(vfs_get_root(), DEVFS_MOUNT_POINT);
+
+  return ((struct devfs_context_s*) dev_node->n_ctx);
+}
+
+// Used to get DevFS node from anywhere
+static inline struct vfs_node_s	*devfs_get_node()
+{
+  struct vfs_node_s		*dev_node = NULL;
+  char				*t = NULL;
+
+  if ((t = strrchr(DEVFS_MOUNT_POINT, '/')))
+    {  
+      if ((dev_node = vfs_node_lookup(vfs_get_root(), ++t)) == NULL)
+	return NULL;
+      else
+	return (dev_node);
+    }
+  else
+    {
+      //get node to acces n_ctx field
+      if ((dev_node = vfs_node_lookup(vfs_get_root(), "DEV")) == NULL)
+	return NULL;
+      else
+	return (dev_node);
+    }
+}
+
+////////////////////////////////////////////////////
 
 #endif /* __DEVFS_PRIVATE_H__ */

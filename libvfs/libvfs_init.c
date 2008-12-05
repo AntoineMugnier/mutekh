@@ -33,6 +33,10 @@
 #include <drivers/fs/devfs/devfs.h>
 #endif
 
+
+#include <hexo/instrument.h>
+
+
 #define BC_BUFFER_SIZE       512
 #define BC_ENTRIES_NR         20
 #define BC_BUFFERS_PER_ENTRY  3
@@ -56,7 +60,7 @@ VFS_INIT(vfs_init)
   struct vfs_context_op_s * ctx_op[] = {0,(struct vfs_context_op_s *)&vfat_ctx_op};
   struct vfs_context_s *ctx;
   error_t err;
-  
+
   assert(root != NULL);
   assert(device != NULL);
   

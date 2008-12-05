@@ -20,7 +20,7 @@
 */
 
 #include <hexo/alloc.h>
-#include "devfs-private.h"
+#include "devfs.h"
 
 /*
 ** param	struct vfs_node_s *node
@@ -28,20 +28,10 @@
 */
 VFS_INIT_NODE(devfs_init_node)
 {
-/*   struct devfs_node_s *node_pv; */
-
-/*   /\*     if(node->n_pv != NULL) *\/ */
-/*   /\* 	return VFS_EUNKNOWN; *\/ */
-
-/*   if((node_pv = mem_alloc(sizeof(*node_pv), MEM_SCOPE_SYS)) == NULL) */
-/*     return VFS_ENOMEM; */
-
 #ifdef CONFIG_DEVFS_DEBUG
-  printf("init_devfs: node_pv allocated\n");
+  printf("devfs_init_node: you shoud not see that\n");
 #endif
 
-/*   memset(node_pv, 0, sizeof(*node_pv)); */
-/*   node->n_pv = (void *) node_pv; */
   return 0;
 }
 
@@ -51,14 +41,9 @@ VFS_INIT_NODE(devfs_init_node)
 */
 VFS_RELEASE_NODE(devfs_release_node)
 {
-/*   if(node->n_pv == NULL) */
-/*     return 0; */
-
 #ifdef CONFIG_DEVFS_DEBUG
-  printf("+++++ devfs_release_node: freeing devfs_node_pv\n");
+  printf("devfs_release_node: you shoud not see that\n");
 #endif
-/*   mem_free(node->n_pv); */
-/*   node->n_pv = NULL; */
 
   return 0;
 }
@@ -70,10 +55,8 @@ VFS_RELEASE_NODE(devfs_release_node)
 */
 VFS_CREATE_NODE(devfs_create_node)
 {
-/*   struct devfs_node_s	*parent_pv = parent->n_pv; */
-
 #ifdef CONFIG_DEVFS_DEBUG
-  printf("+++++ devfs_create_node: creating devfs_node\n");
+  printf("devfs_create_node: trying to create %s\n", node->n_name);
 #endif
 
   return 0;
@@ -86,10 +69,24 @@ VFS_CREATE_NODE(devfs_create_node)
 */
 VFS_LOOKUP_NODE(devfs_lookup_node)
 {
-/*   struct devfs_node_s	*parent_pv = parent->n_pv; */
-/*   struct devfs_node_s	*node_pv = node->n_pv; */
+  struct devfs_context_s	*ctx = NULL;
+  struct devfs_node_s		*new_node = NULL;
 
-  return 0;
+
+#ifdef CONFIG_DEVFS_DEBUG
+  printf("devfs_lookup_node: lookup for %s\n", node->n_name);
+#endif
+
+  ctx = devfs_get_ctx();
+
+  if ((new_node = devfs_hashfunc_lookup(&(ctx->hash), node->n_name)) == NULL)
+      return DEVFS_ERR;
+
+#ifdef CONFIG_DEVFS_DEBUG
+  printf("devfs_lookup_node: %s found\n", node->n_name);
+#endif
+
+  return DEVFS_OK;
 }
 
 /*
@@ -98,6 +95,10 @@ VFS_LOOKUP_NODE(devfs_lookup_node)
 */
 VFS_WRITE_NODE(devfs_write_node)
 {
+#ifdef CONFIG_DEVFS_DEBUG
+  printf("devfs_write_node: you shoud not see that\n");
+#endif
+
     return 0;
 }
 
@@ -107,18 +108,9 @@ VFS_WRITE_NODE(devfs_write_node)
 */
 VFS_UNLINK_NODE(devfs_unlink_node)
 {
-/*   struct vfs_node_s	*tmp_node; */
-
 #ifdef CONFIG_DEVFS_DEBUG
-  printf("+++++ devfs_create_node: creating devfs_node\n");
+  printf("devfs_unlink_node: you shoud not see that\n");
 #endif
-  
-  // Get node from children list "n_children" in parent's node
-/*   if ((tmp_node = vfs_node_list_get(&vfs_dev_node->n_children)) == NULL) */
-/*     return VFS_EUNKNOW; */
-
-  // Set back node in freelist
-/*   vfs_node_list_push(&dev_node->n_freelist, tmp_node); */
 
   return 0;
 }

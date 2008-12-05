@@ -77,7 +77,7 @@ static inline error_t vfat_context_init(struct vfat_context_s *ctx)
   ctx->last_allocated_sector = ctx->fat_begin_lba;
   ctx->last_allocated_index = 2;
   
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("\tbegin_lba %d\n \
           blk_count %d\n \
           cluster_begin_lba %d\n \
@@ -146,12 +146,12 @@ VFS_READ_ROOT(vfat_read_root)
   ctx = (struct vfat_context_s *)context->ctx_pv;
   request.buffers = buffers;
   sector = VFAT_CONVERT_CLUSTER(ctx,ctx->rootdir_first_cluster);
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("get root info : asking for blk %d\n", sector);
 #endif
   if(vfat_read_sectors(ctx, &request, sector,1) == NULL)
     return VFS_IO_ERR;
-  
+
   attr=((struct vfat_DirEntry_s *)buffers[0]->content)->DIR_Attr;
   bc_release_buffer(&bc,&freelist,&request,0);
   

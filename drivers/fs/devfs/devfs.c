@@ -26,47 +26,18 @@
 #include <drivers/fs/devfs/devfs-private.h>
 #include <assert.h>
 
-////////////////////////////////////////////////////////
-
-/* static inline char	*devfs_get_name(const char*	name) */
-/* { */
-/*   char	*node_name; */
-/*   int	i; */
-/*   int	j = 0; */
-
-/*   assert(name != NULL); */
-
-/*   // go to end of line */
-/*   for (i = 0; name[i] != '\0'; ++i) */
-/*     if (name[i] == '/' && name[i + 1] != '\0') */
-/*       j = i; */
-
-/*   // count last name's size */
-/*   for (i = 1; name[j + i] != '\0' && name[j + i] != '/'; ++i) */
-/*     continue; */
-
-/*   if ((node_name = mem_alloc(sizeof(char) * (i + 1), MEM_SCOPE_SYS)) == NULL) */
-/*     return NULL; */
-
-/*   strncpy(node_name, &(name[j + 1]), i); */
-/*   node_name[i + 1] = '\0'; */
-
-/*   return node_name; */
-/* } */
 
 ////////////////////////////////////////////////////////
 
-error_t	devfs_init(struct vfs_node_s	*root,
-		   const char		*mount_point)
+error_t	devfs_init(const char		*mount_point)
 {
-  struct vfs_context_s		*vfs_ctx = NULL;
+  struct vfs_context_s		*devfs_ctx = NULL;
+  struct vfs_node_s		*dev_node = NULL;
   error_t			err = 0;
   uint_fast32_t			flags = 0;
   struct vfs_file_s		*file = NULL;
-  struct vfs_node_s		*dev_node = NULL;
 
   assert(mount_point != NULL);
-  assert(root != NULL);
 
 #ifdef CONFIG_DEVFS_DEBUG
   printf("devfs_init: Mounting DevFS in %s\n", mount_point);
@@ -79,35 +50,40 @@ error_t	devfs_init(struct vfs_node_s	*root,
       return DEVFS_ERR;
     }
 
-  // Allocating memory for parent context
-  if((vfs_ctx = mem_alloc(sizeof(struct vfs_context_s), MEM_SCOPE_SYS)) == NULL)
-    return -VFS_ENOMEM;
-
   // Setting up flags
   VFS_SET(flags, VFS_O_DIRECTORY | VFS_O_EXCL | VFS_DIR);
 
   // Checking the mount_point (/dev) node
-  if ((err = vfs_open(root, "/DEV", flags, (uint_fast16_t) flags, &file)))
+  if ((err = vfs_open(vfs_get_root(), DEVFS_MOUNT_POINT, flags, (uint_fast16_t) flags, &file)))
     {
       printf("devfs_init: %s doesn't seem to exist in filesystem, abording\n", mount_point);
       return err;
     }
   vfs_close(file);
 
-/*   if ((err = vfs_node_load(root, "/DEV", flags, 1, &dev_node))) */
-/*     { */
-/*       printf("devfs_init: error from vfs_node_load, abording\n"); */
-/*       return err; */
-/*     } */
+  // Allocating memory for parent context
+  if((devfs_ctx = mem_alloc(sizeof(struct vfs_context_s), MEM_SCOPE_SYS)) == NULL)
+    return -VFS_ENOMEM;
 
   // Setting up vfs_context_s
-  vfs_ctx->ctx_type = VFS_DEVICE_TYPE;
-  vfs_ctx->ctx_dev = NULL;
-  vfs_ctx->ctx_op = (struct vfs_context_op_s *) &devfs_ctx_op;
-  vfs_ctx->ctx_node_op = (struct vfs_node_op_s *) &devfs_n_op;
-  vfs_ctx->ctx_file_op = (struct vfs_file_op_s *) &devfs_f_op;
+  devfs_ctx->ctx_type = VFS_DEVICE_TYPE;
+  devfs_ctx->ctx_dev = NULL;
+  devfs_ctx->ctx_op = (struct vfs_context_op_s *) &devfs_ctx_op;
+  devfs_ctx->ctx_node_op = (struct vfs_node_op_s *) &devfs_n_op;
+  devfs_ctx->ctx_file_op = (struct vfs_file_op_s *) &devfs_f_op;
 
-  vfs_ctx->ctx_op->create(vfs_ctx);
+  // create intern stuff
+  devfs_ctx->ctx_op->create(devfs_ctx);
+
+  // get /dev node from root filesystem
+  dev_node = devfs_get_node();
+  
+  if (dev_node == NULL)
+    printf("devfs_init: lookup failed\n");
+  
+
+  // change context type of mount_point to DevFS
+  dev_node->n_ctx = devfs_ctx;
 
 #ifdef CONFIG_DEVFS_DEBUG
   printf("devfs_init: DevFS Initialized\n");
@@ -118,25 +94,31 @@ error_t	devfs_init(struct vfs_node_s	*root,
 
 ////////////////////////////////////////////////////////
 
-struct devfs_node_s *devfs_register(struct devfs_context_s	*ctx,
-				    const char			*name,
+struct devfs_node_s *devfs_register(const char			*name,
 				    struct device_s		*device,
 				    uint_fast8_t		type)
 {
-  uint_fast32_t		flags;
-  struct devfs_node_s	*new_node;
-  struct vfs_file_s	*file;
-  char			*path_name;
+  struct devfs_context_s	*ctx = NULL;
+  struct devfs_node_s		*new_node = NULL;
+/*   struct vfs_node_s		*dev_node = NULL; */
+/*   struct vfs_file_s		*file = NULL; */
+/*   char				*path_name = NULL; */
+  uint_fast32_t			flags = 0;
 
 #ifdef CONFIG_DEVFS_DEBUG
   printf("devfs_register: Registering device node %s\n", name);
 #endif
 
+  ctx = devfs_get_ctx();
+
   // Does node already exist?
   if (devfs_hashfunc_lookup(&(ctx->hash), name) != NULL)
-    return NULL;
+    {
+      printf("devfs_register: %s already in use, please give it another name\n", name);
+      return NULL;
+    }
 
-  // Setting up flags for VFS and checking if asked devide node
+  // Setting up flags for VFS and checking if asked device node
   // type is an existing one
   switch(type)
     {
@@ -166,25 +148,32 @@ struct devfs_node_s *devfs_register(struct devfs_context_s	*ctx,
   // Adding node to hash list
   devfs_hashfunc_push(&(ctx->hash), new_node);
 
-  // Adding VFS node
-  if((path_name = mem_alloc(sizeof(char) * (strlen(name) + 6), MEM_SCOPE_SYS)) == NULL)
-    return NULL;
+/*   // Creating VFS node */
+/*   if((path_name = mem_alloc(sizeof(char) * (strlen(name) + strlen(DEVFS_MOUNT_POINT)), MEM_SCOPE_SYS)) == NULL) */
+/*     return NULL; */
 
-  strncpy(path_name, "/dev/", 6);
-  strcat(path_name, name);
+/*   strncpy(path_name, DEVFS_MOUNT_POINT, strlen(DEVFS_MOUNT_POINT) + 1); */
+/*   strcat(path_name, name); */
 
-  ////
-  //// Need to be checked because NULL is passed
-  //// whereas struct vfs_node_s* root should be
-  ////
-  if ((vfs_open(NULL, path_name, flags, (uint_fast16_t) flags, &file)))
-    return NULL;
+/*   // get /dev node from root filesystem */
+/*   dev_node = devfs_get_node(); */
 
-  vfs_close(file);
+/*   //get node to acces n_ctx field */
+/*   if (dev_node == NULL) */
+/*     printf("devfs_register: Could not find device node in filesystem\n"); */
+/*   else */
+/*     printf("devfs_register: device node find in filesystem\n"); */
 
-  /* devfs_init_node(vfs_node); */
-/*   devfs_create_node(dev_node, new_node); */
+/*   // Adding VFS node */
+/*   if ((vfs_open(dev_node, name, flags, (uint_fast16_t) flags, &file))) */
+/*     return NULL; */
 
+/* #ifdef CONFIG_DEVFS_DEBUG */
+/*   printf("devfs_register: Adding node %s\n", name); */
+/* #endif */
+
+/*   mem_free(path_name); */
+/*   vfs_close(file); */
 
   return new_node;
 }
@@ -204,7 +193,7 @@ error_t	devfs_unregister(struct devfs_context_s	*ctx,
     return DEVFS_ERR;
 
   // Removing node from hash list
-  devfs_hashfunc_remove(&(ctx->hash), dnode->name);
+/*   devfs_hashfunc_remove(&(ctx->hash), dnode->name); */
 
   // Cleaning up the mess
   devfs_release_node( (struct vfs_node_s*) dnode);
@@ -212,6 +201,8 @@ error_t	devfs_unregister(struct devfs_context_s	*ctx,
 
   return DEVFS_OK;
 }
+
+////////////////////////////////////////////////////////
 
 error_t	devfs_destroy(struct devfs_context_s	*ctx)
 {

@@ -67,13 +67,13 @@ static inline void vfat_convert_name(char *str1, char *str2)
 VFS_INIT_NODE(vfat_init_node)
 {
   struct vfat_node_s *node_info;
-  
+
   if(node->n_type != VFS_VFAT_TYPE)
     return EINVAL;
-  
+
   if((node_info = mem_alloc(sizeof(*node_info), MEM_SCOPE_SYS)) == NULL)
     return VFS_ENOMEM;
-  
+
   memset(node_info, 0, sizeof(*node_info));
   node->n_pv = (void *) node_info;
   return 0;
@@ -85,18 +85,18 @@ VFS_RELEASE_NODE(vfat_release_node)
   if(node->n_pv == NULL)
     return 0;
 
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("+++++ vfat_release_node: freeing vfat_node_info\n");
 #endif
   mem_free(node->n_pv);
   node->n_pv = NULL;
- 
+
   return 0;
 }
 
 
 VFS_CREATE_NODE(vfat_create_node)
-{ 
+{
   struct vfat_node_s *node_info;
   struct vfat_node_s *parent_info;
   struct vfat_context_s *ctx;
@@ -123,11 +123,11 @@ VFS_CREATE_NODE(vfat_create_node)
   next_cluster = 0;
   request.buffers = buffers;
 
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("vfat_create_node started, node to be create %s, it's parent %s, sector size %d\n",
 	 node->n_name,parent->n_name,sector_size);
 #endif
-  
+
   if(node->n_type != VFS_VFAT_TYPE)
     return VFS_EINVAL;
 
@@ -146,7 +146,7 @@ VFS_CREATE_NODE(vfat_create_node)
   while(1)
   {
     current_sector = VFAT_CONVERT_CLUSTER(ctx,current_cluster);
-#if VFAT_DEBUG > 1
+#ifdef CONFIG_VFAT_DEBUG
     printf("vfat_create_node: current sector %d, cluster %d, parent node %s\n",
 	   current_sector,current_cluster,parent->n_name);
 #endif
@@ -159,7 +159,7 @@ VFS_CREATE_NODE(vfat_create_node)
       dir = buffers[sector]->content;
       for(entry=0; entry < entries_nr; entry ++)
 	if((dir[entry].DIR_Name[0] == 0x00) || (dir[entry].DIR_Name[0] == 0xE5)){
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
 	  printf("create: found entry %d in sector %d where current cluster is %d and cluster's sector is %d, name[0] %d\n",
 		 entry,current_sector,current_cluster,sector, dir[entry].DIR_Name[0]);
 #endif
@@ -178,32 +178,32 @@ VFS_CREATE_NODE(vfat_create_node)
 
   if(vfat_extend_cluster(ctx, current_cluster, &next_cluster))
     return VFS_EUNKNOWN;       /* FIXME: we should free next_cluster */
-  
+
   if(next_cluster == 0)
-    return VFS_EUNKNOWN;    	
-  
+    return VFS_EUNKNOWN;
+
   current_sector = VFAT_CONVERT_CLUSTER(ctx, next_cluster);
-  
+
   if(vfat_read_sectors(ctx, &request, current_sector, ctx->sectors_per_cluster) == NULL)
     return VFS_IO_ERR;          /* FIXME: we should free next_cluster */
-  
+
   for(sector=0; sector < ctx->sectors_per_cluster; sector ++)
   {
     memset(buffers[sector]->content, 0, sector_size);
     SET_BUFFER(buffers[sector]->state, BC_DELAYED_WRITE);
 
-#if VFAT_INSTRUMENT
+#ifdef VFAT_INSTRUMENT
     wr_count ++;
 #endif
   }
-  
+
   dir = buffers[0]->content;
   entry = 0;
   sector = 0;
 
  FREE_ENTRY_FOUND:
   vfat_convert_name(node->n_name,(char *)dir[entry].DIR_Name);  /* FIXME: name may be long */
-  
+
   dir[entry].DIR_FstClusHI = new_cluster >> 16;
   dir[entry].DIR_FstClusLO = new_cluster & 0xFFFF;
   dir[entry].DIR_FileSize = 0;
@@ -215,15 +215,15 @@ VFS_CREATE_NODE(vfat_create_node)
   }
   if((node->n_attr & VFS_SYS) || (node->n_attr & VFS_FIFO))
     dir[entry].DIR_Attr |= VFAT_ATTR_SYSTEM;
-  
-  if(node->n_attr & VFS_ARCHIVE) 
+
+  if(node->n_attr & VFS_ARCHIVE)
     dir[entry].DIR_Attr |= VFAT_ATTR_ARCHIVE;
-  
+
   if((node->n_attr & VFS_RD_ONLY) || (node->n_attr & VFS_FIFO))
     dir[entry].DIR_Attr |= VFAT_ATTR_READ_ONLY;
-  
+
   SET_BUFFER(buffers[sector]->state, BC_DELAYED_WRITE);
-#if VFAT_INSTRUMENT
+#ifdef VFAT_INSTRUMENT
     wr_count ++;
 #endif
   bc_release_buffer(&bc,&freelist,&request,0);
@@ -232,7 +232,7 @@ VFS_CREATE_NODE(vfat_create_node)
   node_info->node_cluster = new_cluster;
   node_info->entry_sector = sector + current_sector;
   node_info->entry_index = entry;
-  
+
   node->n_pv = (void *) node_info;
   return 0;
 }
@@ -256,14 +256,14 @@ VFS_LOOKUP_NODE(vfat_lookup_node)
 
   if(!(parent_info->flags & VFAT_ATTR_DIRECTORY))
     return VFS_ENOTDIR;
-  
+
   rq.ctx = ctx;
   rq.parent_cluster = parent_info->node_cluster;
   rq.entry_name = node->n_name;
   rq.entry = &dir;
   rq.entry_sector = &entry_sector;
   rq.entry_index = &entry_index;
-  
+
   if((err=vfat_locate_entry(&rq)))
     return err;
 
@@ -301,7 +301,7 @@ VFS_WRITE_NODE(vfat_write_node)
   vfat_sector_t entry_sector;
   uint_fast16_t entry;
 
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("write node %s started\n",node->n_name);
 #endif
 
@@ -313,20 +313,20 @@ VFS_WRITE_NODE(vfat_write_node)
 
   if(node->n_type != VFS_VFAT_TYPE)
     return VFS_EINVAL;
-  
+
   if(vfat_read_sectors(ctx, &request, entry_sector, 1) == NULL)
     return VFS_IO_ERR;
-  
+
   dir = buffers[0]->content;
 
   if(node->n_attr & VFS_DIR) dir[entry].DIR_Attr |= VFAT_ATTR_DIRECTORY;
   if(node->n_attr & VFS_SYS) dir[entry].DIR_Attr |= VFAT_ATTR_SYSTEM;
   if(node->n_attr & VFS_ARCHIVE) dir[entry].DIR_Attr |= VFAT_ATTR_ARCHIVE;
   if(node->n_attr & VFS_RD_ONLY) dir[entry].DIR_Attr |= VFAT_ATTR_READ_ONLY;
-  
+
   dir[entry].DIR_FileSize = node->n_size;
   SET_BUFFER(buffers[0]->state, BC_DELAYED_WRITE);
-#if VFAT_INSTRUMENT
+#ifdef VFAT_INSTRUMENT
     wr_count ++;
 #endif
   bc_release_buffer(&bc,&freelist,&request,0);
@@ -348,7 +348,7 @@ VFS_UNLINK_NODE(vfat_unlink_node)
   vfat_sector_t entry_index;
   error_t err;
 
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
   printf("vfat_unlink node %s started, n_links %d, n_count %d\n",
 	 node->n_name,node->n_links,node->n_count);
 #endif
@@ -362,21 +362,21 @@ VFS_UNLINK_NODE(vfat_unlink_node)
 
   if((node->n_count) && (node->n_attr & VFS_FIFO) && (node->n_op != &vfat_n_op))
   {
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
     printf("vfat_unlink: node is a fifo, locating it in it's parent directory\n");
 #endif
-    
+
     rq.ctx = ctx;
     rq.parent_cluster = parent_info->node_cluster;
     rq.entry_name = node->n_name;
     rq.entry = NULL;
     rq.entry_sector = &entry_sector;
     rq.entry_index = &entry_index;
-   
+
     if((err=vfat_locate_entry(&rq)))
       return err;
 
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
     printf("vfat_unlink: node located at sector %d, entry %d\n",entry_sector,entry_index);
 #endif
   }
@@ -387,19 +387,19 @@ VFS_UNLINK_NODE(vfat_unlink_node)
   }
 
   if(node->n_count)
-  {  
+  {
     if(vfat_read_sectors(ctx, &request, entry_sector, 1) == NULL)
       return VFS_IO_ERR;
-  
+
     dir = buffers[0]->content;
-  
+
     dir[entry_index].DIR_Name[0] = 0xE5;
     SET_BUFFER(buffers[0]->state, BC_DELAYED_WRITE);
 
 #if VFAT_INSTRUMENT
     wr_count ++;
 #endif
-#if VFAT_DEBUG
+#ifdef CONFIG_VFAT_DEBUG
     printf("sector %d is set to delayed write\n",entry_sector);
 #endif
     bc_release_buffer(&bc,&freelist,&request,0);

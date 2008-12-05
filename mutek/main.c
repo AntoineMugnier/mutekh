@@ -31,8 +31,6 @@
 #include <hexo/cpu.h>
 #include <mutek/scheduler.h>
 
-//#include <hexo/instrument.h>
-
 #include <drivers/device/char/uart-8250/uart-8250.h>
 #include <drivers/device/char/tty-vga/tty-vga.h>
 #include <drivers/device/char/tty-soclib/tty-soclib.h>

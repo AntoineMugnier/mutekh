@@ -31,14 +31,12 @@
  ** initialisation and mount of the devfs
  ** WARNING : mount_point must be absolute!!!
  */
-error_t	devfs_init(struct vfs_node_s	*root,
-		   const char		*mount_point);
+error_t	devfs_init(const char		*mount_point);
 
 /**
  ** add an inode to /dev
  */
-struct devfs_node_s	*devfs_register(struct devfs_context_s	*ctx,
-					const char		*name,
+struct devfs_node_s	*devfs_register(const char		*name,
 					struct device_s		*device,
 					uint_fast8_t		type);
 /**

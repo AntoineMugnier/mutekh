@@ -101,7 +101,7 @@ VFS_FILE_FREELIST_GET(vfs_file_freelist_get)
   if(file->f_op != node->n_ctx->ctx_file_op)
   {
 #ifdef CONFIG_VFS_DEBUG
-  printf("vfs_file_freelist_get: file_op is not vaild\n");
+  printf("vfs_file_freelist_get: file_op is not valid\n");
 #endif
     if(file->f_op != NULL)
     {
