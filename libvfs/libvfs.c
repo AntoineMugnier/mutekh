@@ -390,7 +390,9 @@ VFS_READDIR(vfs_readdir)
   err = 0;
   
   if(!(VFS_IS(file->f_flags, VFS_O_DIRECTORY))){
+#ifdef CONFIG_VFS_DEBUG
     printf("here!!\n");
+#endif
     return -VFS_EBADF;
   }
 

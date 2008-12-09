@@ -30,6 +30,7 @@
 // Return code
 #define DEVFS_OK		0
 #define DEVFS_ERR		1
+#define DEVFS_DIREMPTY		14 // to match VFS_EODIR
 
 
 // Values for  devfs_node_s->type;
@@ -50,7 +51,7 @@ struct devfs_node_s
   uint_fast8_t				type;
 };
 
-CONTAINER_TYPE    (devfs_hash, HASHLIST, struct devfs_node_s, hash_entry, 11);
+CONTAINER_TYPE    (devfs_hash, HASHLIST, struct devfs_node_s, hash_entry, 111);
 CONTAINER_KEY_TYPE(devfs_hash, STRING, name);
 
 CONTAINER_FUNC    (devfs_hash, HASHLIST, static, devfs_hashfunc, name);
@@ -64,6 +65,7 @@ struct devfs_context_s
 struct devfs_file_s
 {
   struct vfs_node_s	*node;
+  struct devfs_node_s	*current_node; // used for readdir()
 };
 
 ////////////////////////////////////////////////////
@@ -74,10 +76,13 @@ static inline struct devfs_context_s	*devfs_get_ctx()
   struct vfs_node_s		*dev_node = NULL;
 
   //get node to acces n_ctx field
-  dev_node = vfs_node_lookup(vfs_get_root(), DEVFS_MOUNT_POINT);
+  if ((dev_node = vfs_node_lookup(vfs_get_root(), "DEV")) == NULL)
+    return NULL;
 
-  return ((struct devfs_context_s*) dev_node->n_ctx);
+  return (dev_node->n_ctx->ctx_pv);
 }
+
+////////////////////////////////////////////////////
 
 // Used to get DevFS node from anywhere
 static inline struct vfs_node_s	*devfs_get_node()

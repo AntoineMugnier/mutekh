@@ -71,6 +71,7 @@ error_t	devfs_init(const char		*mount_point)
   devfs_ctx->ctx_op = (struct vfs_context_op_s *) &devfs_ctx_op;
   devfs_ctx->ctx_node_op = (struct vfs_node_op_s *) &devfs_n_op;
   devfs_ctx->ctx_file_op = (struct vfs_file_op_s *) &devfs_f_op;
+  devfs_ctx->ctx_pv = NULL;
 
   // create intern stuff
   devfs_ctx->ctx_op->create(devfs_ctx);
@@ -100,16 +101,22 @@ struct devfs_node_s *devfs_register(const char			*name,
 {
   struct devfs_context_s	*ctx = NULL;
   struct devfs_node_s		*new_node = NULL;
-/*   struct vfs_node_s		*dev_node = NULL; */
-/*   struct vfs_file_s		*file = NULL; */
-/*   char				*path_name = NULL; */
-  uint_fast32_t			flags = 0;
+  /*   struct vfs_node_s		*dev_node = NULL; */
+  /*   struct vfs_file_s		*file = NULL; */
+  /*   char				*path_name = NULL; */
+  /*   uint_fast32_t			flags = 0; */
 
 #ifdef CONFIG_DEVFS_DEBUG
   printf("devfs_register: Registering device node %s\n", name);
 #endif
 
-  ctx = devfs_get_ctx();
+  if ((ctx = devfs_get_ctx()) == NULL)
+    {
+#ifdef CONFIG_DEVFS_DEBUG
+      printf("devfs_register: Could not get devfs context\n");
+#endif
+      return NULL;
+    }
 
   // Does node already exist?
   if (devfs_hashfunc_lookup(&(ctx->hash), name) != NULL)
@@ -118,23 +125,23 @@ struct devfs_node_s *devfs_register(const char			*name,
       return NULL;
     }
 
-  // Setting up flags for VFS and checking if asked device node
-  // type is an existing one
-  switch(type)
-    {
-    case DEVFS_DIR :
-      VFS_SET(flags, VFS_O_DIRECTORY | VFS_O_CREATE | VFS_O_EXCL | VFS_DIR);
-      break;
+  /*   // Setting up flags for VFS and checking if asked device node */
+  /*   // type is an existing one */
+  /*   switch(type) */
+  /*     { */
+  /*     case DEVFS_DIR : */
+  /*       VFS_SET(flags, VFS_O_DIRECTORY | VFS_O_CREATE | VFS_O_EXCL | VFS_DIR); */
+  /*       break; */
 
-    case DEVFS_CHAR :
-    case DEVFS_BLOCK :
-      VFS_SET(flags, VFS_O_DIRECTORY | VFS_O_CREATE | VFS_O_EXCL | VFS_DEVICE);
-      break;
+  /*     case DEVFS_CHAR : */
+  /*     case DEVFS_BLOCK : */
+  /*       VFS_SET(flags, VFS_O_DIRECTORY | VFS_O_CREATE | VFS_O_EXCL | VFS_DEVICE); */
+  /*       break; */
 
-    default :
-      // Bad device type
-      return NULL;
-    }
+  /*     default : */
+  /*       // Bad device type */
+  /*       return NULL; */
+  /*     } */
 
   // Allocating for a new DevFS node
   if((new_node = mem_alloc(sizeof(struct devfs_node_s), MEM_SCOPE_SYS)) == NULL)
@@ -146,34 +153,19 @@ struct devfs_node_s *devfs_register(const char			*name,
   new_node->device = device;
 
   // Adding node to hash list
-  devfs_hashfunc_push(&(ctx->hash), new_node);
+  if ((devfs_hashfunc_push(&(ctx->hash), new_node)) == 0)
+    {
+#ifdef CONFIG_DEVFS_DEBUG
+      printf("devfs_register: Could not push %s in hash table. Check Hash table.\n");
+#endif
+      return NULL;
+    }
 
-/*   // Creating VFS node */
-/*   if((path_name = mem_alloc(sizeof(char) * (strlen(name) + strlen(DEVFS_MOUNT_POINT)), MEM_SCOPE_SYS)) == NULL) */
-/*     return NULL; */
-
-/*   strncpy(path_name, DEVFS_MOUNT_POINT, strlen(DEVFS_MOUNT_POINT) + 1); */
-/*   strcat(path_name, name); */
-
-/*   // get /dev node from root filesystem */
-/*   dev_node = devfs_get_node(); */
-
-/*   //get node to acces n_ctx field */
-/*   if (dev_node == NULL) */
-/*     printf("devfs_register: Could not find device node in filesystem\n"); */
-/*   else */
-/*     printf("devfs_register: device node find in filesystem\n"); */
-
-/*   // Adding VFS node */
-/*   if ((vfs_open(dev_node, name, flags, (uint_fast16_t) flags, &file))) */
-/*     return NULL; */
-
-/* #ifdef CONFIG_DEVFS_DEBUG */
-/*   printf("devfs_register: Adding node %s\n", name); */
-/* #endif */
-
-/*   mem_free(path_name); */
-/*   vfs_close(file); */
+#ifdef CONFIG_DEVFS_DEBUG
+/*   CONTAINER_FOREACH(devfs_hash, HASHLIST, &ctx->hash,{ */
+/*     printf("devfs_register: inside hash table is node %s\n", item->name); */
+/*   }); */
+#endif
 
   return new_node;
 }

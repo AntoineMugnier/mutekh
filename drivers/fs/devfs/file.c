@@ -20,8 +20,13 @@
 */
 
 #include <hexo/alloc.h>
+#include <device/char.h>
+#include <device/block.h>
+#include <device/driver.h>
+
 #include "devfs-private.h"
 #include "devfs.h"
+
 
 /*
 ** param	struct vfs_node_s *node
@@ -47,6 +52,10 @@ VFS_OPEN_FILE(devfs_open)
       if (devfs_hashfunc_lookup(&(ctx->hash), node->n_name) == NULL)
 	return DEVFS_ERR;
     }
+#ifdef CONFIG_DEVFS_DEBUG
+  else
+    printf("devfs_open_file: /dev is asked\n");
+#endif
 
   // Allocating for a new DevFS file
   if((file_pv = mem_alloc(sizeof(struct devfs_file_s), MEM_SCOPE_SYS)) == NULL)
@@ -55,6 +64,10 @@ VFS_OPEN_FILE(devfs_open)
   // struct devfs_file_s only keep a struct vfs_node_s
   // to access files
   file_pv->node = node;
+  file_pv->current_node = NULL;
+
+  // relink devfs_file_s to vfs_file_s
+  file->f_pv = file_pv;
 
   return DEVFS_OK;
 }
@@ -67,30 +80,37 @@ VFS_OPEN_FILE(devfs_open)
 */
 VFS_READ_FILE(devfs_read)
 {
-  size_t	s = 0;
+  struct devfs_file_s	*file_pv = file->f_pv;
+  struct devfs_node_s	*node = file_pv->node->n_pv;
+  size_t		s = 0;
 
 #ifdef CONFIG_DEVFS_DEBUG
-  printf("devfs_read_file: you should not see that\n");
+  printf("devfs_read_file: starting reading %d bytes in %s\n", size, node->name);
 #endif
 
-  /* #if DEVFS_DEBUG */
-  /*     printf("++++ devfs_read started, asked size %d\n", size); */
-  /* #endif */
+  if (size == 0)
+    return 0;
 
-  /*     if (file->f_node->n_attr & VFS_FIFO) */
-  /* 	return -EINVAL; */
+  switch(node->type)
+    {
+    case DEVFS_DIR :
+      break;
 
-  /*     if (size == 0) */
-  /* 	return 0; */
+    case DEVFS_CHAR :
+      if ((s = dev_char_read(node->device, buffer, size)) < 0)
+	return EIO;
+      break;
 
-  /*     if (node->n_pv->type == DEVFS_CHAR) */
-  /*     { */
-  /* #if DEVFS_DEBUG */
-  /* 	printf("++++ devfs_read on type char\n"); */
-  /* #endif */
-  /* 	if ((s = dev_char_read(*(struct device) file, buffer, size)) < 0) */
-  /* 	    return EIO; */
-  /*     } */
+    case DEVFS_BLOCK :
+/*       if ((s = dev_block_read(node->device, buffer, size)) < 0) */
+/*       	return EIO; */
+      break;
+
+    default :
+      // Bad device type
+      return -DEVFS_ERR;
+    }
+
   return s;
 }
 
@@ -102,25 +122,38 @@ VFS_READ_FILE(devfs_read)
 */
 VFS_WRITE_FILE(devfs_write)
 {
-    size_t	s = 0;
+  struct devfs_file_s	*file_pv = file->f_pv;
+  struct devfs_node_s	*node = file_pv->node->n_pv;
+  size_t		s = 0;
 
 #ifdef CONFIG_DEVFS_DEBUG
-  printf("devfs_write_file: you should not see that\n");
+  printf("devfs_write_file: starting writing %d bytes in %s\n", size, node->name);
 #endif
 
-/* #if DEVFS_DEBUG */
-/*     printf("++++ devfs_write started, asked size %d\n", size); */
-/* #endif */
+  if (size == 0)
+    return 0;
 
-/*     if (node->n_pv->type == DEVFS_CHAR) */
-/*     { */
-/* #if DEVFS_DEBUG */
-/* 	printf("++++ devfs_write on type char\n"); */
-/* #endif */
-/* 	if ((s = dev_char_write(*(struct device) file, buffer, size)) < 0) */
-/* 	    return EIO; */
-/*     } */
-    return s;
+  switch(node->type)
+    {
+    case DEVFS_DIR :
+      break;
+
+    case DEVFS_CHAR :
+      if ((s = dev_char_write(node->device, buffer, size)) < 0)
+	return EIO;
+      break;
+
+    case DEVFS_BLOCK :
+/*       if ((s = dev_block_write (node->device, buffer, size)) < 0) */
+/* 	return EIO; */
+      break;
+
+    default :
+      // Bad device type
+      return -DEVFS_ERR;
+    }
+
+  return s;
 }
 
 /*
@@ -157,46 +190,39 @@ VFS_RELEASE_FILE(devfs_release)
 VFS_READ_DIR(devfs_readdir)
 {
   struct devfs_context_s	*ctx = NULL;
-  struct devfs_node_s		*new_node = NULL;
   struct devfs_file_s		*file_pv = file->f_pv;
-  const char			*cur_name;
-
 
 #ifdef CONFIG_DEVFS_DEBUG
   printf("devfs_read_dir: reading directory %s\n", file_pv->node->n_name);
+  printf("devfs_read_dir: from file %s\n", dirent->d_name);
 #endif
 
   ctx = devfs_get_ctx();
 
   // Is that the first entering for dirent?
-  if ((devfs_hashfunc_lookup(&(ctx->hash), dirent->d_name)) == NULL)
+  if (file_pv->current_node == NULL)
     {
-      // Get the head
-      // NOT WORKING
-      if ((cur_name = devfs_hashfunc_head(&(ctx->hash))) == NULL)
-	{
-#ifdef CONFIG_DEVFS_DEBUG
-	  printf("devfs_read_dir: HERE in %s\n", dirent->d_name);
-#endif
-	  return DEVFS_ERR;
-	}
-
-      strcpy(dirent->d_name, cur_name);
+      // get the head of the hash table
+      if ((file_pv->current_node = devfs_hashfunc_head(&(ctx->hash))) == NULL)
+	return DEVFS_DIREMPTY; // dir is empty
 
       // Fill fields
-      new_node = devfs_hashfunc_lookup(&(ctx->hash), dirent->d_name);
-      dirent->d_size = 666; // Change it to what you need/want
-      dirent->d_type = new_node->type;
+      strncpy(dirent->d_name, file_pv->current_node->name, VFS_MAX_NAME_LENGTH);
+      dirent->d_size = 0;
+      dirent->d_type = file_pv->current_node->type;
 
       return DEVFS_OK;
     }
   else
     // Get next node from the hash table
-    if ((cur_name = devfs_hashfunc_next(&(ctx->hash), dirent->d_name)) == NULL)
-      return DEVFS_ERR;
+    if ((file_pv->current_node = devfs_hashfunc_next(&(ctx->hash), file_pv->current_node)) == NULL)
+      return DEVFS_DIREMPTY; // End of dir
     else
       {
-	strcpy(dirent->d_name, cur_name);
+	strncpy(dirent->d_name, file_pv->current_node->name, VFS_MAX_NAME_LENGTH);
+	dirent->d_size = 0;
+	dirent->d_type = file_pv->current_node->type;
+
 	return DEVFS_OK;
       }
 }
