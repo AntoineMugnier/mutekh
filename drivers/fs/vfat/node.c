@@ -85,7 +85,7 @@ VFS_RELEASE_NODE(vfat_release_node)
   if(node->n_pv == NULL)
     return 0;
 
-#ifdef CONFIG_VFAT_DEBUG
+#ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
   printf("+++++ vfat_release_node: freeing vfat_node_info\n");
 #endif
   mem_free(node->n_pv);
@@ -123,7 +123,7 @@ VFS_CREATE_NODE(vfat_create_node)
   next_cluster = 0;
   request.buffers = buffers;
 
-#ifdef CONFIG_VFAT_DEBUG
+#ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
   printf("vfat_create_node started, node to be create %s, it's parent %s, sector size %d\n",
 	 node->n_name,parent->n_name,sector_size);
 #endif
@@ -146,7 +146,7 @@ VFS_CREATE_NODE(vfat_create_node)
   while(1)
   {
     current_sector = VFAT_CONVERT_CLUSTER(ctx,current_cluster);
-#ifdef CONFIG_VFAT_DEBUG
+#ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
     printf("vfat_create_node: current sector %d, cluster %d, parent node %s\n",
 	   current_sector,current_cluster,parent->n_name);
 #endif
@@ -159,7 +159,7 @@ VFS_CREATE_NODE(vfat_create_node)
       dir = buffers[sector]->content;
       for(entry=0; entry < entries_nr; entry ++)
 	if((dir[entry].DIR_Name[0] == 0x00) || (dir[entry].DIR_Name[0] == 0xE5)){
-#ifdef CONFIG_VFAT_DEBUG
+#ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
 	  printf("create: found entry %d in sector %d where current cluster is %d and cluster's sector is %d, name[0] %d\n",
 		 entry,current_sector,current_cluster,sector, dir[entry].DIR_Name[0]);
 #endif
@@ -192,7 +192,7 @@ VFS_CREATE_NODE(vfat_create_node)
     memset(buffers[sector]->content, 0, sector_size);
     SET_BUFFER(buffers[sector]->state, BC_DELAYED_WRITE);
 
-#ifdef VFAT_INSTRUMENT
+#ifdef CONFIG_DRIVER_FS_VFAT_INSTRUMENT
     wr_count ++;
 #endif
   }
@@ -223,7 +223,7 @@ VFS_CREATE_NODE(vfat_create_node)
     dir[entry].DIR_Attr |= VFAT_ATTR_READ_ONLY;
 
   SET_BUFFER(buffers[sector]->state, BC_DELAYED_WRITE);
-#ifdef VFAT_INSTRUMENT
+#ifdef CONFIG_DRIVER_FS_VFAT_INSTRUMENT
     wr_count ++;
 #endif
   bc_release_buffer(&bc,&freelist,&request,0);
@@ -301,7 +301,7 @@ VFS_WRITE_NODE(vfat_write_node)
   vfat_sector_t entry_sector;
   uint_fast16_t entry;
 
-#ifdef CONFIG_VFAT_DEBUG
+#ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
   printf("write node %s started\n",node->n_name);
 #endif
 
@@ -326,7 +326,7 @@ VFS_WRITE_NODE(vfat_write_node)
 
   dir[entry].DIR_FileSize = node->n_size;
   SET_BUFFER(buffers[0]->state, BC_DELAYED_WRITE);
-#ifdef VFAT_INSTRUMENT
+#ifdef CONFIG_DRIVER_FS_VFAT_INSTRUMENT
     wr_count ++;
 #endif
   bc_release_buffer(&bc,&freelist,&request,0);
@@ -348,7 +348,7 @@ VFS_UNLINK_NODE(vfat_unlink_node)
   vfat_sector_t entry_index;
   error_t err;
 
-#ifdef CONFIG_VFAT_DEBUG
+#ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
   printf("vfat_unlink node %s started, n_links %d, n_count %d\n",
 	 node->n_name,node->n_links,node->n_count);
 #endif
@@ -362,7 +362,7 @@ VFS_UNLINK_NODE(vfat_unlink_node)
 
   if((node->n_count) && (node->n_attr & VFS_FIFO) && (node->n_op != &vfat_n_op))
   {
-#ifdef CONFIG_VFAT_DEBUG
+#ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
     printf("vfat_unlink: node is a fifo, locating it in it's parent directory\n");
 #endif
 
@@ -376,7 +376,7 @@ VFS_UNLINK_NODE(vfat_unlink_node)
     if((err=vfat_locate_entry(&rq)))
       return err;
 
-#ifdef CONFIG_VFAT_DEBUG
+#ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
     printf("vfat_unlink: node located at sector %d, entry %d\n",entry_sector,entry_index);
 #endif
   }
@@ -399,7 +399,7 @@ VFS_UNLINK_NODE(vfat_unlink_node)
 #ifdef CONFIG_DRIVER_FS_VFAT_INSTRUMENT
     wr_count ++;
 #endif
-#ifdef CONFIG_VFAT_DEBUG
+#ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
     printf("sector %d is set to delayed write\n",entry_sector);
 #endif
     bc_release_buffer(&bc,&freelist,&request,0);

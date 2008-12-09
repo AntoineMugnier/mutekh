@@ -33,10 +33,6 @@
 #include <drivers/fs/devfs/devfs.h>
 #endif
 
-
-#include <hexo/instrument.h>
-
-
 #define BC_BUFFER_SIZE       512
 #define BC_ENTRIES_NR         20
 #define BC_BUFFERS_PER_ENTRY  3

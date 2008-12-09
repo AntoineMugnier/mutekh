@@ -22,8 +22,6 @@
 #ifndef __VFAT_PRIVATE_H__
 #define __VFAT_PRIVATE_H__
 
-#define VFAT_INSTRUMENT 1
-
 struct vfat_bpb_s
 {
   uint8_t	BS_jmpBoot[3];
