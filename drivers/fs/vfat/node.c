@@ -396,7 +396,7 @@ VFS_UNLINK_NODE(vfat_unlink_node)
     dir[entry_index].DIR_Name[0] = 0xE5;
     SET_BUFFER(buffers[0]->state, BC_DELAYED_WRITE);
 
-#if VFAT_INSTRUMENT
+#ifdef CONFIG_DRIVER_FS_VFAT_INSTRUMENT
     wr_count ++;
 #endif
 #ifdef CONFIG_VFAT_DEBUG

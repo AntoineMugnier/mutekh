@@ -166,7 +166,7 @@ error_t vfat_free_fat_entry(struct vfat_context_s *ctx,
 inline void vfat_getshortname(char *from, char *to);
 
 
-#if VFAT_INSTRUMENT
+#ifdef CONFIG_DRIVER_FS_VFAT_INSTRUMENT
 extern uint_fast32_t blk_rd_count;
 extern uint_fast32_t rd_count;
 extern uint_fast32_t wr_count;
