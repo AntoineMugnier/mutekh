@@ -54,8 +54,8 @@ struct devfs_node_s
 CONTAINER_TYPE    (devfs_hash, HASHLIST, struct devfs_node_s, hash_entry, 111);
 CONTAINER_KEY_TYPE(devfs_hash, STRING, name);
 
-CONTAINER_FUNC    (devfs_hash, HASHLIST, static, devfs_hashfunc, name);
-CONTAINER_KEY_FUNC(devfs_hash, HASHLIST, static, devfs_hashfunc, name);
+CONTAINER_FUNC    (devfs_hash, HASHLIST, static inline, devfs_hashfunc, name);
+CONTAINER_KEY_FUNC(devfs_hash, HASHLIST, static inline, devfs_hashfunc, name);
 
 struct devfs_context_s
 {

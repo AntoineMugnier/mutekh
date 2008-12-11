@@ -30,36 +30,23 @@
 // Return code
 #define NFS_OK		0
 #define NFS_ERR		1
-#define NFS_DIREMPTY		14 // to match VFS_EODIR
-
-
-// Values for  nfs_node_s->type;
-/* #define NFS_DIR		0x00 */
-
+#define NFS_DIREMPTY	14 // to match VFS_EODIR
 
 struct nfs_node_s
 {
-/*   CONTAINER_ENTRY_TYPE(HASHLIST)        hash_entry; */
-/*   struct device_s			*device; */
-/*   const char				*name; */
-/*   uint_fast8_t				type; */
 };
-
-/* CONTAINER_TYPE    (nfs_hash, HASHLIST, struct nfs_node_s, hash_entry, 111); */
-/* CONTAINER_KEY_TYPE(nfs_hash, STRING, name); */
-
-/* CONTAINER_FUNC    (nfs_hash, HASHLIST, static, nfs_hashfunc, name); */
-/* CONTAINER_KEY_FUNC(nfs_hash, HASHLIST, static, nfs_hashfunc, name); */
 
 struct nfs_context_s
 {
-/*   nfs_hash_root_t	hash; */
+  struct nfs_s	*server;
+  nfs_handle_t	root;
 };
 
 struct nfs_file_s
 {
-/*   struct vfs_node_s	*node; */
-/*   struct nfs_node_s	*current_node; // used for readdir() */
+  struct vfs_node_s	*node;
+  struct nfs_attr_s	*stat
+  nfs_handle_t		handle;
 };
 
 ////////////////////////////////////////////////////

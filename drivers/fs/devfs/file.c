@@ -21,7 +21,7 @@
 
 #include <hexo/alloc.h>
 #include <device/char.h>
-#include <device/block.h>
+/* #include <device/block.h> */
 #include <device/driver.h>
 
 #include "devfs-private.h"

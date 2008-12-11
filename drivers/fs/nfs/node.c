@@ -20,16 +20,16 @@
 */
 
 #include <hexo/alloc.h>
-#include "devfs.h"
+#include <nfs.h>
 
 /*
 ** param	struct vfs_node_s *node
 ** return	error_t
 */
-VFS_INIT_NODE(devfs_init_node)
+VFS_INIT_NODE(nfs_init_node)
 {
-#ifdef CONFIG_DEVFS_DEBUG
-  printf("devfs_init_node: you shoud not see that\n");
+#ifdef CONFIG_NFS_DEBUG
+  printf("nfs_init_node: you shoud not see that\n");
 #endif
 
   return 0;
@@ -39,24 +39,10 @@ VFS_INIT_NODE(devfs_init_node)
 ** param	struct vfs_node_s *node
 ** return	error_t
 */
-VFS_RELEASE_NODE(devfs_release_node)
+VFS_RELEASE_NODE(nfs_release_node)
 {
-#ifdef CONFIG_DEVFS_DEBUG
-  printf("devfs_release_node: you shoud not see that\n");
-#endif
-
-  return 0;
-}
-
-/*
-** param	struct vfs_node_s *parent
-** param	struct vfs_node_s *node
-** return	error_t
-*/
-VFS_CREATE_NODE(devfs_create_node)
-{
-#ifdef CONFIG_DEVFS_DEBUG
-  printf("devfs_create_node: trying to create %s\n", node->n_name);
+#ifdef CONFIG_NFS_DEBUG
+  printf("nfs_release_node: you shoud not see that\n");
 #endif
 
   return 0;
@@ -67,36 +53,41 @@ VFS_CREATE_NODE(devfs_create_node)
 ** param	struct vfs_node_s *node
 ** return	error_t
 */
-VFS_LOOKUP_NODE(devfs_lookup_node)
+VFS_CREATE_NODE(nfs_create_node)
 {
-  struct devfs_context_s	*ctx = NULL;
-  struct devfs_node_s		*new_node = NULL;
-
-
-#ifdef CONFIG_DEVFS_DEBUG
-  printf("devfs_lookup_node: lookup for %s\n", node->n_name);
+#ifdef CONFIG_NFS_DEBUG
+  printf("nfs_create_node: you shoud not see that\n");
 #endif
 
-  ctx = devfs_get_ctx();
+  return 0;
+}
 
-  if ((new_node = devfs_hashfunc_lookup(&(ctx->hash), node->n_name)) == NULL)
-      return DEVFS_ERR;
+/*
+** param	struct vfs_node_s *parent
+** param	struct vfs_node_s *node
+** return	error_t
+*/
+VFS_LOOKUP_NODE(nfs_lookup_node)
+{
+/* error_t		nfs_lookup(struct nfs_s		*server, */
+/* 			   const char		*path, */
+/* 			   nfs_handle_t		directory, */
+/* 			   nfs_handle_t		handle, */
+/* 			   struct nfs_attr_s	*stat); */
 
-#ifdef CONFIG_DEVFS_DEBUG
-  printf("devfs_lookup_node: %s found\n", node->n_name);
-#endif
+  nfs_lookup();
 
-  return DEVFS_OK;
+  return NFS_OK;
 }
 
 /*
 ** param	struct vfs_node_s *node
 ** return	error_t
 */
-VFS_WRITE_NODE(devfs_write_node)
+VFS_WRITE_NODE(nfs_write_node)
 {
-#ifdef CONFIG_DEVFS_DEBUG
-  printf("devfs_write_node: you shoud not see that\n");
+#ifdef CONFIG_NFS_DEBUG
+  printf("nfs_write_node: you shoud not see that\n");
 #endif
 
     return 0;
@@ -106,10 +97,10 @@ VFS_WRITE_NODE(devfs_write_node)
 ** param	struct vfs_node_s *node
 ** return	error_t
 */
-VFS_UNLINK_NODE(devfs_unlink_node)
+VFS_UNLINK_NODE(nfs_unlink_node)
 {
-#ifdef CONFIG_DEVFS_DEBUG
-  printf("devfs_unlink_node: you shoud not see that\n");
+#ifdef CONFIG_NFS_DEBUG
+  printf("nfs_unlink_node: you shoud not see that\n");
 #endif
 
   return 0;
