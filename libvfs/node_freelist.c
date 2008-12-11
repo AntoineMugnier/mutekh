@@ -85,7 +85,8 @@ VFS_NODE_FREELIST_GET(vfs_node_freelist_get)
     return NULL;
 
   node = item->node;
-  vfs_node_list_remove(&node->n_parent->n_children,node);
+  if (node->n_parent)
+    vfs_node_list_remove(&node->n_parent->n_children,node);
 
   node->n_state = 0;
   node->n_attr = 0;
