@@ -88,7 +88,7 @@ DEVBLOCK_READ(block_soclib_read)
 
   if (lba + count <= p->blk_count)
     {
-      rq->drvdata = (void*)BLOCK_SOCLIB_OP_WRITE;
+      rq->drvdata = (void*)BLOCK_SOCLIB_OP_READ;
       block_soclib_rq_start(dev, rq);
     }
   else
@@ -115,7 +115,7 @@ DEVBLOCK_WRITE(block_soclib_write)
 
   if (lba + count <= p->blk_count)
     {
-      rq->drvdata = (void*)BLOCK_SOCLIB_OP_READ;
+      rq->drvdata = (void*)BLOCK_SOCLIB_OP_WRITE;
       block_soclib_rq_start(dev, rq);
     }
   else

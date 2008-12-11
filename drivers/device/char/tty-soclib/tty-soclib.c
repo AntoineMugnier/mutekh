@@ -90,7 +90,7 @@ DEV_IRQ(tty_soclib_irq)
   /* add character to driver fifo */
   tty_fifo_noirq_pushback(&pv->read_fifo, c);
 
-  printf("tty input %02x\n", c);
+  //printf("tty input %02x\n", c);
 
   return 0;
 }
