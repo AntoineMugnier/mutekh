@@ -347,7 +347,9 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
 #endif
       if((buffer=bc_freelist_get(freelist)) == NULL)
       {
+#ifdef CONFIG_BC_DEBUG
 	printf("going to sleep, no more free buffers\n");
+#endif
 	sched_wait_unlock(&freelist->wait);       /* --> */
 	sched_queue_wrlock(&freelist->wait);      /* <-- */
 	continue;
@@ -489,15 +491,19 @@ void bc_sync(struct buffer_cache_s *bc, struct bc_freelist_s *freelist)
   struct dev_block_rq_s rq;
   struct bc_buffer_s *current=NULL;
   uint_fast16_t i;
+#ifdef CONFIG_BC_INSTRUMENT
   uint_fast32_t tm_tmp;
   uint_fast32_t tm_now;
   uint_fast32_t count;
   uint_fast32_t tm_total;
+#endif
   uint8_t *data[1];
  
+#ifdef CONFIG_BC_INSTRUMENT
   tm_total = 0;
   count = 0;
   tm_tmp = tm_now = 0;
+#endif
 
   sched_queue_wrlock(&freelist->wait);      /* <-- */
   for(i=0; i< bc->entries_number; i++)
@@ -509,21 +515,31 @@ void bc_sync(struct buffer_cache_s *bc, struct bc_freelist_s *freelist)
 	if(IS_BUFFER(current->state, BC_DELAYED_WRITE))
 	{
 #ifdef CONFIG_BC_INSTRUMENT
-	  sync_count ++;
+	  printf(">>>>> Sync: %d",current->key2);
+#else
+# ifdef CONFIG_BC_DEBUG  
+	  printf(">>>>> Sync: %d\n",current->key2);
+# endif
 #endif
-	  printf(">>>>> Sync: %dn",current->key2);
 	  rq.lba = current->key2;
 	  rq.count = 1;
 	  rq.data = data;
 	  data[0] = current->content;
+#ifdef CONFIG_BC_INSTRUMENT
+	  sync_count ++;
 	  tm_tmp = cpu_cycle_count();
+#endif
 	  if(dev_block_wait_write((struct device_s *)current->key1, &rq))
 	    printf("bc_sync: I/O error while writing bloc %d\n",current->key2);
+#ifdef CONFIG_BC_INSTRUMENT
 	  tm_now = cpu_cycle_count() - tm_tmp;
 	  tm_tmp = tm_now;
 	  tm_total += tm_now;
 	  count ++;
-	  printf(" ,tm_stamp %d\n",tm_now);
+#endif
+#ifdef CONFIG_BC_INSTRUMENT
+	  printf(", tm_stamp %d\n",tm_now);
+#endif
 	}
 	current = current->hash_next;
       }while(current != bc->entries[i].head);
