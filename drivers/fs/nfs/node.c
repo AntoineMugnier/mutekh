@@ -20,7 +20,8 @@
 */
 
 #include <hexo/alloc.h>
-#include <nfs.h>
+#include "nfs.h"
+#include "nfs-private.h"
 
 /*
 ** param	struct vfs_node_s *node
@@ -74,8 +75,6 @@ VFS_LOOKUP_NODE(nfs_lookup_node)
 /* 			   nfs_handle_t		directory, */
 /* 			   nfs_handle_t		handle, */
 /* 			   struct nfs_attr_s	*stat); */
-
-  nfs_lookup();
 
   return NFS_OK;
 }

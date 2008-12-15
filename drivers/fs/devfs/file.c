@@ -38,7 +38,7 @@ VFS_OPEN_FILE(devfs_open)
   struct devfs_context_s	*ctx = NULL;
   struct devfs_file_s		*file_pv = file->f_pv;
 
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_open_file: trying to open %s\n", node->n_name);
 #endif
 
@@ -52,7 +52,7 @@ VFS_OPEN_FILE(devfs_open)
       if (devfs_hashfunc_lookup(&(ctx->hash), node->n_name) == NULL)
 	return DEVFS_ERR;
     }
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   else
     printf("devfs_open_file: /dev is asked\n");
 #endif
@@ -84,7 +84,7 @@ VFS_READ_FILE(devfs_read)
   struct devfs_node_s	*node = file_pv->node->n_pv;
   size_t		s = 0;
 
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_read_file: starting reading %d bytes in %s\n", size, node->name);
 #endif
 
@@ -126,7 +126,7 @@ VFS_WRITE_FILE(devfs_write)
   struct devfs_node_s	*node = file_pv->node->n_pv;
   size_t		s = 0;
 
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_write_file: starting writing %d bytes in %s\n", size, node->name);
 #endif
 
@@ -162,7 +162,7 @@ VFS_WRITE_FILE(devfs_write)
 */
 VFS_LSEEK_FILE(devfs_lseek)
 {
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_lseek_file: you shoud not see that\n");
 #endif
 
@@ -175,7 +175,7 @@ VFS_LSEEK_FILE(devfs_lseek)
 */
 VFS_RELEASE_FILE(devfs_release)
 {
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_release_file: you shoud not see that\n");
 #endif
 
@@ -192,7 +192,7 @@ VFS_READ_DIR(devfs_readdir)
   struct devfs_context_s	*ctx = NULL;
   struct devfs_file_s		*file_pv = file->f_pv;
 
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_read_dir: reading directory %s\n", file_pv->node->n_name);
   printf("devfs_read_dir: from file %s\n", dirent->d_name);
 #endif

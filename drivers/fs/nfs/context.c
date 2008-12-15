@@ -20,7 +20,9 @@
 */
 
 #include <hexo/alloc.h>
-#include "devfs.h"
+#include <vfs/vfs.h>
+#include "nfs.h"
+#include "nfs-private.h"
 
 
 /**
@@ -28,27 +30,33 @@
  ** return	error_t
  */
 
-VFS_CREATE_CONTEXT(devfs_create_context)
+VFS_CREATE_CONTEXT(nfs_create_context)
 {
+  // Allocating memory for parent context
+  if((context->ctx_pv = mem_alloc(sizeof(struct nfs_context_s), MEM_SCOPE_SYS)) == NULL)
+    return -VFS_ENOMEM;
+
+  return NFS_OK;
+}
+
+
+VFS_DESTROY_CONTEXT(nfs_destroy_context)
+{
+  mem_free(context);
+
+  return NFS_OK;
+}
+
+
+VFS_READ_ROOT(nfs_read_root)
+{
+  printf("nfs_read_root: This function should not be called\n");
   return 0;
 }
 
 
-VFS_DESTROY_CONTEXT(devfs_destroy_context)
+VFS_WRITE_ROOT(nfs_write_root)
 {
-  return 0;
-}
-
-
-VFS_READ_ROOT(devfs_read_root)
-{
-  printf("devfs_read_root: This function should not be called\n");
-  return 0;
-}
-
-
-VFS_WRITE_ROOT(devfs_write_root)
-{
-  printf("devfs_write_root: This function should not be called\n");
+  printf("nfs_write_root: This function should not be called\n");
   return 0;
 }

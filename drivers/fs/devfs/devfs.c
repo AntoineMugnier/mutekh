@@ -39,7 +39,7 @@ error_t	devfs_init(const char		*mount_point)
 
   assert(mount_point != NULL);
 
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_init: Mounting DevFS in %s\n", mount_point);
 #endif
 
@@ -86,7 +86,7 @@ error_t	devfs_init(const char		*mount_point)
   // change context type of mount_point to DevFS
   dev_node->n_ctx = devfs_ctx;
 
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_init: DevFS Initialized\n");
 #endif
 
@@ -106,13 +106,13 @@ struct devfs_node_s *devfs_register(const char			*name,
   /*   char				*path_name = NULL; */
   /*   uint_fast32_t			flags = 0; */
 
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_register: Registering device node %s\n", name);
 #endif
 
   if ((ctx = devfs_get_ctx()) == NULL)
     {
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
       printf("devfs_register: Could not get devfs context\n");
 #endif
       return NULL;
@@ -155,13 +155,13 @@ struct devfs_node_s *devfs_register(const char			*name,
   // Adding node to hash list
   if ((devfs_hashfunc_push(&(ctx->hash), new_node)) == 0)
     {
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
       printf("devfs_register: Could not push %s in hash table. Check Hash table.\n");
 #endif
       return NULL;
     }
 
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
 /*   CONTAINER_FOREACH(devfs_hash, HASHLIST, &ctx->hash,{ */
 /*     printf("devfs_register: inside hash table is node %s\n", item->name); */
 /*   }); */
@@ -176,7 +176,7 @@ error_t	devfs_unregister(struct devfs_context_s	*ctx,
 			 struct devfs_node_s	*dnode)
 {
 
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_unregister: Unregistering device node %s\n", dnode->name);
 #endif
 
@@ -199,7 +199,7 @@ error_t	devfs_unregister(struct devfs_context_s	*ctx,
 error_t	devfs_destroy(struct devfs_context_s	*ctx)
 {
 
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_destroy: Destroying devFS context \n");
 #endif
 

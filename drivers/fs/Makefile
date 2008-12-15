@@ -9,3 +9,7 @@ endif
 ifeq ($(CONFIG_DRIVER_FS_DEV), defined)
  subdirs += devfs
 endif
+
+ifeq ($(CONFIG_DRIVER_FS_NFS), defined)
+ subdirs += nfs
+endif

@@ -28,7 +28,7 @@
 */
 VFS_INIT_NODE(devfs_init_node)
 {
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_init_node: you shoud not see that\n");
 #endif
 
@@ -41,7 +41,7 @@ VFS_INIT_NODE(devfs_init_node)
 */
 VFS_RELEASE_NODE(devfs_release_node)
 {
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_release_node: you shoud not see that\n");
 #endif
 
@@ -55,7 +55,7 @@ VFS_RELEASE_NODE(devfs_release_node)
 */
 VFS_CREATE_NODE(devfs_create_node)
 {
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_create_node: trying to create %s\n", node->n_name);
 #endif
 
@@ -73,7 +73,7 @@ VFS_LOOKUP_NODE(devfs_lookup_node)
   struct devfs_node_s		*new_node = NULL;
 
 
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_lookup_node: lookup for %s\n", node->n_name);
 #endif
 
@@ -82,7 +82,7 @@ VFS_LOOKUP_NODE(devfs_lookup_node)
   if ((new_node = devfs_hashfunc_lookup(&(ctx->hash), node->n_name)) == NULL)
       return DEVFS_ERR;
 
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_lookup_node: %s found\n", node->n_name);
 #endif
 
@@ -95,7 +95,7 @@ VFS_LOOKUP_NODE(devfs_lookup_node)
 */
 VFS_WRITE_NODE(devfs_write_node)
 {
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_write_node: you shoud not see that\n");
 #endif
 
@@ -108,7 +108,7 @@ VFS_WRITE_NODE(devfs_write_node)
 */
 VFS_UNLINK_NODE(devfs_unlink_node)
 {
-#ifdef CONFIG_DEVFS_DEBUG
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_unlink_node: you shoud not see that\n");
 #endif
 

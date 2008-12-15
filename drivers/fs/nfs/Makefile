@@ -1,3 +1,4 @@
-objs =	context.o	\
+objs =	nfs.o		\
+	context.o	\
 	node.o		\
 	file.o
