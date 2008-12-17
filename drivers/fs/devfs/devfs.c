@@ -35,7 +35,8 @@ error_t	devfs_init(const char		*mount_point)
   struct vfs_node_s		*dev_node = NULL;
   error_t			err = 0;
   uint_fast32_t			flags = 0;
-  struct vfs_file_s		*file = NULL;
+  char				*dirs_ptr[vfs_dir_count(mount_point) + 1];
+  bool_t			isAbsolutePath = 1;
 
   assert(mount_point != NULL);
 
@@ -50,16 +51,26 @@ error_t	devfs_init(const char		*mount_point)
       return DEVFS_ERR;
     }
 
+  // translate from char* to char**
+  vfs_split_path(mount_point, dirs_ptr);
+
   // Setting up flags
   VFS_SET(flags, VFS_O_DIRECTORY | VFS_O_EXCL | VFS_DIR);
 
-  // Checking the mount_point (/dev) node
-  if ((err = vfs_open(vfs_get_root(), DEVFS_MOUNT_POINT, flags, (uint_fast16_t) flags, &file)))
+  // Get the node if existing
+  if((err = vfs_node_load(vfs_get_root(), dirs_ptr, flags, isAbsolutePath, &dev_node)))
     {
       printf("devfs_init: %s doesn't seem to exist in filesystem, abording\n", mount_point);
       return err;
     }
-  vfs_close(file);
+
+/*   // Checking the mount_point (/dev) node */
+/*   if ((err = vfs_open(vfs_get_root(), mount_point, flags, (uint_fast16_t) flags, &file))) */
+/*     { */
+/*       printf("devfs_init: %s doesn't seem to exist in filesystem, abording\n", mount_point); */
+/*       return err; */
+/*     } */
+/*   vfs_close(file); */
 
   // Allocating memory for parent context
   if((devfs_ctx = mem_alloc(sizeof(struct vfs_context_s), MEM_SCOPE_SYS)) == NULL)
@@ -74,13 +85,14 @@ error_t	devfs_init(const char		*mount_point)
   devfs_ctx->ctx_pv = NULL;
 
   // create intern stuff
-  devfs_ctx->ctx_op->create(devfs_ctx);
+  if (devfs_ctx->ctx_op->create(devfs_ctx))
+    return DEVFS_ERR;
 
-  // get /dev node from root filesystem
-  dev_node = devfs_get_node();
+/*   // get /dev node from root filesystem */
+/*   dev_node = devfs_get_node(); */
   
-  if (dev_node == NULL)
-    printf("devfs_init: lookup failed\n");
+/*   if (dev_node == NULL) */
+/*     printf("devfs_init: lookup failed\n"); */
   
 
   // change context type of mount_point to DevFS
@@ -198,7 +210,6 @@ error_t	devfs_unregister(struct devfs_context_s	*ctx,
 
 error_t	devfs_destroy(struct devfs_context_s	*ctx)
 {
-
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_destroy: Destroying devFS context \n");
 #endif

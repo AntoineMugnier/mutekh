@@ -32,6 +32,10 @@
 
 VFS_CREATE_CONTEXT(nfs_create_context)
 {
+#ifdef CONFIG_DRIVER_FS_NFS_DEBUG
+  printf("nfs_create_context : Allocating private stuff\n");
+#endif
+
   // Allocating memory for parent context
   if((context->ctx_pv = mem_alloc(sizeof(struct nfs_context_s), MEM_SCOPE_SYS)) == NULL)
     return -VFS_ENOMEM;
@@ -40,9 +44,17 @@ VFS_CREATE_CONTEXT(nfs_create_context)
 }
 
 
+/**
+ ** param	struct vfs_context_s *context
+ ** return	error_t
+ */ 
 VFS_DESTROY_CONTEXT(nfs_destroy_context)
 {
-  mem_free(context);
+#ifdef CONFIG_DRIVER_FS_NFS_DEBUG
+  printf("nfs_destroy_context : Freeing private stuff\n");
+#endif
+
+  mem_free(context->ctx_pv);
 
   return NFS_OK;
 }
@@ -50,13 +62,19 @@ VFS_DESTROY_CONTEXT(nfs_destroy_context)
 
 VFS_READ_ROOT(nfs_read_root)
 {
+#ifdef CONFIG_DRIVER_FS_NFS_DEBUG
   printf("nfs_read_root: This function should not be called\n");
+#endif
+
   return 0;
 }
 
 
 VFS_WRITE_ROOT(nfs_write_root)
 {
+#ifdef CONFIG_DRIVER_FS_NFS_DEBUG
   printf("nfs_write_root: This function should not be called\n");
+#endif
+
   return 0;
 }

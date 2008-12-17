@@ -23,6 +23,14 @@
 #define __VFS_PRIVATE_H_
 
 
+///
+
+uint_fast8_t vfs_dir_count(char *path);
+
+void vfs_split_path(char *path, char **dirs);
+
+///
+
 #define VFS_NODE_FREELIST_INIT(n) error_t (n) (struct vfs_context_s *ctx,\
 					  uint_fast8_t length)
 

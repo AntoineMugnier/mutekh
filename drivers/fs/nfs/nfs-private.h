@@ -51,17 +51,17 @@ struct nfs_file_s
 
 ////////////////////////////////////////////////////
 
-// Used to get Nfs context from anywhere
-static inline struct nfs_context_s	*nfs_get_ctx(const char	*mount_point)
-{
-  struct vfs_node_s		*dev_node = NULL;
+/* // Used to get Nfs context from anywhere */
+/* static inline struct nfs_context_s	*nfs_get_ctx(const char	*mount_point) */
+/* { */
+/*   struct vfs_node_s		*dev_node = NULL; */
 
-  //get node to acces n_ctx field
-  if ((dev_node = vfs_node_lookup(vfs_get_root(), mount_point)) == NULL)
-    return NULL;
+/*   //get node to acces n_ctx field */
+/*   if ((dev_node = vfs_node_lookup(vfs_get_root(), (char*) mount_point)) == NULL) */
+/*     return NULL; */
 
-  return (dev_node->n_ctx->ctx_pv);
-}
+/*   return (dev_node->n_ctx->ctx_pv); */
+/* } */
 
 /* //////////////////////////////////////////////////// */
 

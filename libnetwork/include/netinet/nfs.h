@@ -405,50 +405,50 @@ struct			rpc_reply_s
  * Prototypes.
  */
 
-error_t		nfs_init(struct nfs_s	*server);
-void		nfs_destroy(struct nfs_s	*server);
+error_t		net_nfs_init(struct nfs_s	*server);
+void		net_nfs_destroy(struct nfs_s	*server);
 
 /* mount and umount operations */
-error_t		nfs_mount(struct nfs_s	*server,
-			  const char	*path,
-			  nfs_handle_t	root);
-error_t		nfs_umount(struct nfs_s	*server,
-			   const char	*path);
-error_t		nfs_umount_all(struct nfs_s	*server);
+error_t		net_nfs_mount(struct nfs_s	*server,
+			      const char	*path,
+			      nfs_handle_t	root);
+error_t		net_nfs_umount(struct nfs_s	*server,
+			       const char	*path);
+error_t		net_nfs_umount_all(struct nfs_s	*server);
 
 /* lookup & attributes */
-error_t		nfs_lookup(struct nfs_s		*server,
-			   const char		*path,
-			   nfs_handle_t		directory,
-			   nfs_handle_t		handle,
-			   struct nfs_attr_s	*stat);
-error_t		nfs_getattr(struct nfs_s	*server,
-			    nfs_handle_t	handle,
-			    struct nfs_attr_s	*stat);
-error_t		nfs_setattr(struct nfs_s	*server,
-			    nfs_handle_t	handle,
-			    struct nfs_attr_s	*stat);
+error_t		net_nfs_lookup(struct nfs_s		*server,
+			       const char		*path,
+			       nfs_handle_t		directory,
+			       nfs_handle_t		handle,
+			       struct nfs_attr_s	*stat);
+error_t		net_nfs_getattr(struct nfs_s		*server,
+				nfs_handle_t		handle,
+				struct nfs_attr_s	*stat);
+error_t		net_nfs_setattr(struct nfs_s		*server,
+				nfs_handle_t		handle,
+				struct nfs_attr_s	*stat);
 
 /* read/write operations */
-ssize_t		nfs_read(struct nfs_s	*server,
-			 nfs_handle_t	handle,
-			 void		*data,
-			 off_t		offset,
-			 size_t		size);
+ssize_t		net_nfs_read(struct nfs_s	*server,
+			     nfs_handle_t	handle,
+			     void		*data,
+			     off_t		offset,
+			     size_t		size);
 
-ssize_t		nfs_write(struct nfs_s	*server,
-			  nfs_handle_t	handle,
-			  void		*data,
-			  off_t		offset,
-			  size_t	size);
+ssize_t		net_nfs_write(struct nfs_s	*server,
+			      nfs_handle_t	handle,
+			      void		*data,
+			      off_t		offset,
+			      size_t		size);
 
 /* file creation, removing, renaming, links */
-error_t		nfs_create(struct nfs_s		*server,
-			   nfs_handle_t		directory,
-			   const char		*name,
-			   struct nfs_attr_s	*stat,
-			   nfs_handle_t		created,
-			   bool_t		is_dir);
+error_t		net_nfs_create(struct nfs_s		*server,
+			       nfs_handle_t		directory,
+			       const char		*name,
+			       struct nfs_attr_s	*stat,
+			       nfs_handle_t		created,
+			       bool_t			is_dir);
 
 static inline error_t nfs_creat(struct nfs_s		*server,
 				nfs_handle_t		directory,
@@ -456,7 +456,7 @@ static inline error_t nfs_creat(struct nfs_s		*server,
 				struct nfs_attr_s	*stat,
 				nfs_handle_t		created)
 {
-  return nfs_create(server, directory, name, stat, created, 0);
+  return net_nfs_create(server, directory, name, stat, created, 0);
 }
 
 static inline error_t nfs_mkdir(struct nfs_s		*server,
@@ -465,26 +465,26 @@ static inline error_t nfs_mkdir(struct nfs_s		*server,
 				struct nfs_attr_s	*stat,
 				nfs_handle_t		created)
 {
-  return nfs_create(server, directory, name, stat, created, 1);
+  return net_nfs_create(server, directory, name, stat, created, 1);
 }
 
-error_t		nfs_remove(struct nfs_s		*server,
-			   nfs_handle_t		directory,
-			   const char		*name,
-			   bool_t		is_dir);
+error_t		net_nfs_remove(struct nfs_s		*server,
+			       nfs_handle_t		directory,
+			       const char		*name,
+			       bool_t			is_dir);
 
 static inline error_t nfs_unlink(struct nfs_s	*server,
 				 nfs_handle_t	directory,
 				 const char	*name)
 {
-  return nfs_remove(server, directory, name, 0);
+  return net_nfs_remove(server, directory, name, 0);
 }
 
 static inline error_t nfs_rmdir(struct nfs_s	*server,
 				nfs_handle_t	directory,
 				const char	*name)
 {
-  return nfs_remove(server, directory, name, 1);
+  return net_nfs_remove(server, directory, name, 1);
 }
 
 /* XXX readlink, link, symlink */
@@ -495,14 +495,14 @@ static inline error_t nfs_rmdir(struct nfs_s	*server,
 
 typedef NFS_READDIR_CB(nfs_readdir_t);
 
-error_t		nfs_readdir(struct nfs_s	*server,
-			    nfs_handle_t	directory,
-			    nfs_readdir_t	callback,
-			    void		*pv);
+error_t		net_nfs_readdir(struct nfs_s	*server,
+				nfs_handle_t	directory,
+				nfs_readdir_t	callback,
+				void		*pv);
 
 /* statfs */
-error_t		nfs_statfs(struct nfs_s		*server,
-			   nfs_handle_t		root,
-			   struct nfs_statfs_s	*stats);
+error_t		net_nfs_statfs(struct nfs_s		*server,
+			       nfs_handle_t		root,
+			       struct nfs_statfs_s	*stats);
 
 #endif

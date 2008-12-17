@@ -265,7 +265,7 @@ static error_t		do_rpc(struct nfs_s	*server,
  * Initialize NFS connection by identifing remote ports using portmap.
  */
 
-error_t		nfs_init(struct nfs_s	*server)
+error_t		net_nfs_init(struct nfs_s	*server)
 {
   static struct
   {
@@ -352,9 +352,9 @@ error_t		nfs_init(struct nfs_s	*server)
  * Close a NFS connection, unmounting all exports.
  */
 
-void			nfs_destroy(struct nfs_s	*server)
+void			net_nfs_destroy(struct nfs_s	*server)
 {
-  nfs_umount_all(server);
+  net_nfs_umount_all(server);
 
   udp_close(server->conn);
   rpcb_destroy(&server->rpc_blocks);
@@ -364,11 +364,11 @@ void			nfs_destroy(struct nfs_s	*server)
  * RPC to mount deamon
  */
 
-static error_t		nfs_mountd(struct nfs_s	*server,
-				   void		*call,
-				   size_t	*size,
-				   uint32_t	action,
-				   void		**reply)
+static error_t		net_nfs_mountd(struct nfs_s	*server,
+				       void		*call,
+				       size_t		*size,
+				       uint32_t		action,
+				       void		**reply)
 {
   struct nfs_auth_s	*auth;
   void			*buf;
@@ -412,9 +412,9 @@ static error_t		nfs_mountd(struct nfs_s	*server,
  * Mount an export.
  */
 
-error_t			nfs_mount(struct nfs_s	*server,
-				  const char	*path,
-				  nfs_handle_t	root)
+error_t			net_nfs_mount(struct nfs_s	*server,
+				      const char	*path,
+				      nfs_handle_t	root)
 {
   struct nfs_dirop_s	*dir;
   struct nfs_status_s	*stat;
@@ -436,7 +436,7 @@ error_t			nfs_mount(struct nfs_s	*server,
   memcpy(dir->path, path, path_len);
 
   /* call mountd */
-  err = nfs_mountd(server, dir, &sz, MOUNT_MOUNT, (void *)&reply);
+  err = net_nfs_mountd(server, dir, &sz, MOUNT_MOUNT, (void *)&reply);
   mem_free(dir);
 
   if (err)
@@ -464,8 +464,8 @@ error_t			nfs_mount(struct nfs_s	*server,
  * Unmount an export.
  */
 
-error_t			nfs_umount(struct nfs_s	*server,
-				   const char	*path)
+error_t			net_nfs_umount(struct nfs_s	*server,
+				       const char	*path)
 {
   struct nfs_dirop_s	*dir;
   struct rpc_reply_s	*reply;
@@ -486,7 +486,7 @@ error_t			nfs_umount(struct nfs_s	*server,
   memcpy(dir->path, path, path_len);
 
   /* call mountd */
-  err = nfs_mountd(server, dir, &sz, MOUNT_UMOUNT, (void *)&reply);
+  err = net_nfs_mountd(server, dir, &sz, MOUNT_UMOUNT, (void *)&reply);
 
   mem_free(dir);
   mem_free(reply);
@@ -498,12 +498,12 @@ error_t			nfs_umount(struct nfs_s	*server,
  * Unmount the mounted exports.
  */
 
-error_t		nfs_umount_all(struct nfs_s	*server)
+error_t		net_nfs_umount_all(struct nfs_s	*server)
 {
   struct rpc_reply_s	*reply;
   size_t		sz = 0;
 
-  nfs_mountd(server, NULL, &sz, MOUNT_UMOUNTALL, (void *)&reply);
+  net_nfs_mountd(server, NULL, &sz, MOUNT_UMOUNTALL, (void *)&reply);
 
   mem_free(reply);
 
@@ -514,11 +514,11 @@ error_t		nfs_umount_all(struct nfs_s	*server)
  * RPC to nfs daemon
  */
 
-static error_t		nfs_nfsd(struct nfs_s	*server,
-				 void		*call,
-				 size_t		*size,
-				 uint32_t	action,
-				 void		**reply)
+static error_t		net_nfs_nfsd(struct nfs_s	*server,
+				     void		*call,
+				     size_t		*size,
+				     uint32_t		action,
+				     void		**reply)
 {
   struct nfs_auth_s	*auth;
   void			*buf;
@@ -562,11 +562,11 @@ static error_t		nfs_nfsd(struct nfs_s	*server,
  * Read data from a file.
  */
 
-ssize_t				nfs_read(struct nfs_s	*server,
-					 nfs_handle_t	handle,
-					 void		*data,
-					 off_t		offset,
-					 size_t		size)
+ssize_t				net_nfs_read(struct nfs_s	*server,
+					     nfs_handle_t	handle,
+					     void		*data,
+					     off_t		offset,
+					     size_t		size)
 {
   struct nfs_request_handle_s	*req;
   struct rpc_reply_s		*reply;
@@ -590,7 +590,7 @@ ssize_t				nfs_read(struct nfs_s	*server,
   req->u.read.__unused = 0;
 
   /* call nfsd */
-  err = nfs_nfsd(server, req, &sz, NFS_READ, (void *)&reply);
+  err = net_nfs_nfsd(server, req, &sz, NFS_READ, (void *)&reply);
   mem_free(req);
 
   if (err)
@@ -625,11 +625,11 @@ ssize_t				nfs_read(struct nfs_s	*server,
  * Write data to a file.
  */
 
-ssize_t		nfs_write(struct nfs_s	*server,
-			  nfs_handle_t	handle,
-			  void		*data,
-			  off_t		offset,
-			  size_t	size)
+ssize_t		net_nfs_write(struct nfs_s	*server,
+			      nfs_handle_t	handle,
+			      void		*data,
+			      off_t		offset,
+			      size_t		size)
 {
   struct nfs_request_handle_s	*req;
   struct rpc_reply_s		*reply;
@@ -654,7 +654,7 @@ ssize_t		nfs_write(struct nfs_s	*server,
   memcpy(req->u.write.data, data, size);
 
   /* call nfsd */
-  err = nfs_nfsd(server, req, &sz, NFS_WRITE, (void *)&reply);
+  err = net_nfs_nfsd(server, req, &sz, NFS_WRITE, (void *)&reply);
   mem_free(req);
 
   if (err)
@@ -678,11 +678,11 @@ ssize_t		nfs_write(struct nfs_s	*server,
  * Look for a file.
  */
 
-error_t				nfs_lookup(struct nfs_s		*server,
-					   const char		*path,
-					   nfs_handle_t		directory,
-					   nfs_handle_t		handle,
-					   struct nfs_attr_s	*stat)
+error_t				net_nfs_lookup(struct nfs_s		*server,
+					       const char		*path,
+					       nfs_handle_t		directory,
+					       nfs_handle_t		handle,
+					       struct nfs_attr_s	*stat)
 {
   struct nfs_request_handle_s	*req;
   struct rpc_reply_s		*reply;
@@ -706,7 +706,7 @@ error_t				nfs_lookup(struct nfs_s		*server,
     req->u.dirop.path[path_len] = 0;
 
   /* call nfsd */
-  err = nfs_nfsd(server, req, &sz, NFS_LOOKUP, (void *)&reply);
+  err = net_nfs_nfsd(server, req, &sz, NFS_LOOKUP, (void *)&reply);
   mem_free(req);
 
   if (err)
@@ -739,9 +739,9 @@ error_t				nfs_lookup(struct nfs_s		*server,
  * Get filesystem statistics
  */
 
-error_t				nfs_statfs(struct nfs_s		*server,
-					   nfs_handle_t		root,
-					   struct nfs_statfs_s	*stats)
+error_t				net_nfs_statfs(struct nfs_s		*server,
+					       nfs_handle_t		root,
+					       struct nfs_statfs_s	*stats)
 {
   struct nfs_request_handle_s	*req;
   struct rpc_reply_s		*reply;
@@ -758,7 +758,7 @@ error_t				nfs_statfs(struct nfs_s		*server,
   memcpy(req->handle, root, sizeof (nfs_handle_t));
 
   /* call nfsd */
-  err = nfs_nfsd(server, req, &sz, NFS_STATFS, (void *)&reply);
+  err = net_nfs_nfsd(server, req, &sz, NFS_STATFS, (void *)&reply);
   mem_free(req);
 
   if (err)
@@ -784,9 +784,9 @@ error_t				nfs_statfs(struct nfs_s		*server,
  * Get attributes of a file
  */
 
-error_t				nfs_getattr(struct nfs_s	*server,
-					    nfs_handle_t	handle,
-					    struct nfs_attr_s	*stat)
+error_t				net_nfs_getattr(struct nfs_s		*server,
+						nfs_handle_t		handle,
+						struct nfs_attr_s	*stat)
 {
   struct nfs_request_handle_s	*req;
   struct rpc_reply_s		*reply;
@@ -803,7 +803,7 @@ error_t				nfs_getattr(struct nfs_s	*server,
   memcpy(req->handle, handle, sizeof (nfs_handle_t));
 
   /* call nfsd */
-  err = nfs_nfsd(server, req, &sz, NFS_GETATTR, (void *)&reply);
+  err = net_nfs_nfsd(server, req, &sz, NFS_GETATTR, (void *)&reply);
   mem_free(req);
 
   if (err)
@@ -829,9 +829,9 @@ error_t				nfs_getattr(struct nfs_s	*server,
  * Set attributes of a file
  */
 
-error_t				nfs_setattr(struct nfs_s	*server,
-					    nfs_handle_t	handle,
-					    struct nfs_attr_s	*stat)
+error_t				net_nfs_setattr(struct nfs_s		*server,
+						nfs_handle_t		handle,
+						struct nfs_attr_s	*stat)
 {
   struct nfs_request_handle_s	*req;
   struct rpc_reply_s		*reply;
@@ -856,7 +856,7 @@ error_t				nfs_setattr(struct nfs_s	*server,
   req->u.sattr.mtime.tv_usec = htonl(stat->mtime.tv_usec);
 
   /* call nfsd */
-  err = nfs_nfsd(server, req, &sz, NFS_SETATTR, (void *)&reply);
+  err = net_nfs_nfsd(server, req, &sz, NFS_SETATTR, (void *)&reply);
   mem_free(req);
 
   if (err)
@@ -882,12 +882,12 @@ error_t				nfs_setattr(struct nfs_s	*server,
  * Create a new file or directory (specifying some attributes).
  */
 
-error_t				nfs_create(struct nfs_s		*server,
-					   nfs_handle_t		directory,
-					   const char		*name,
-					   struct nfs_attr_s	*stat,
-					   nfs_handle_t		created,
-					   bool_t		is_dir)
+error_t				net_nfs_create(struct nfs_s		*server,
+					       nfs_handle_t		directory,
+					       const char		*name,
+					       struct nfs_attr_s	*stat,
+					       nfs_handle_t		created,
+					       bool_t			is_dir)
 {
   struct nfs_request_handle_s	*req;
   struct nfs_user_attr_s	*sattr;
@@ -940,7 +940,7 @@ error_t				nfs_create(struct nfs_s		*server,
     }
 
   /* call nfsd */
-  err = nfs_nfsd(server, req, &sz, is_dir ? NFS_MKDIR : NFS_CREATE, (void *)&reply);
+  err = net_nfs_nfsd(server, req, &sz, is_dir ? NFS_MKDIR : NFS_CREATE, (void *)&reply);
   mem_free(req);
 
   if (err)
@@ -973,10 +973,10 @@ error_t				nfs_create(struct nfs_s		*server,
  * Remove a file or directory
  */
 
-error_t		nfs_remove(struct nfs_s		*server,
-			   nfs_handle_t		directory,
-			   const char		*name,
-			   bool_t		is_dir)
+error_t		net_nfs_remove(struct nfs_s		*server,
+			       nfs_handle_t		directory,
+			       const char		*name,
+			       bool_t			is_dir)
 {
   struct nfs_request_handle_s	*req;
   struct rpc_reply_s		*reply;
@@ -1000,7 +1000,7 @@ error_t		nfs_remove(struct nfs_s		*server,
     req->u.dirop.path[path_len] = 0;
 
   /* call nfsd */
-  err = nfs_nfsd(server, req, &sz, is_dir ? NFS_RMDIR : NFS_REMOVE, (void *)&reply);
+  err = net_nfs_nfsd(server, req, &sz, is_dir ? NFS_RMDIR : NFS_REMOVE, (void *)&reply);
   mem_free(req);
 
   if (err)
@@ -1022,10 +1022,10 @@ error_t		nfs_remove(struct nfs_s		*server,
  * Readdir lists the contents of a directory.
  */
 
-error_t		nfs_readdir(struct nfs_s	*server,
-			    nfs_handle_t	directory,
-			    nfs_readdir_t	callback,
-			    void		*pv)
+error_t		net_nfs_readdir(struct nfs_s	*server,
+				nfs_handle_t	directory,
+				nfs_readdir_t	callback,
+				void		*pv)
 {
   struct nfs_request_handle_s	*req;
   struct rpc_reply_s		*reply;
@@ -1051,7 +1051,7 @@ error_t		nfs_readdir(struct nfs_s	*server,
       uint32_t			*eof;
 
       /* call nfsd */
-      err = nfs_nfsd(server, req, &sz, NFS_READDIR, (void *)&reply);
+      err = net_nfs_nfsd(server, req, &sz, NFS_READDIR, (void *)&reply);
 
       if (err)
 	{

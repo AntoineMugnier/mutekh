@@ -27,7 +27,7 @@
 struct vfs_context_s *vfs_pipe_ctx;
 #endif
 
-static uint_fast8_t vfs_dir_count(char *path)
+uint_fast8_t vfs_dir_count(char *path)
 {
   uint_fast8_t count = 0;
   char *path_ptr = path;
@@ -42,7 +42,7 @@ static uint_fast8_t vfs_dir_count(char *path)
 }
 
 
-static void vfs_split_path(char *path, char **dirs)
+void vfs_split_path(char *path, char **dirs)
 {
   uint_fast8_t i=0;
   char *path_ptr = path;

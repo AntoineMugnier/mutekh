@@ -77,11 +77,11 @@ VFS_OPEN_FILE(nfs_open)
 ** param	size_t			size
 ** return	error_t
 */
-/* VFS_READ_FILE(nfs_read) */
-/* { */
+VFS_READ_FILE(nfs_read)
+{
 /*   struct nfs_file_s	*file_pv = file->f_pv; */
 /*   struct nfs_node_s	*node = file_pv->node->n_pv; */
-/*   size_t		s = 0; */
+  size_t		s = 0;
 
 /* #ifdef CONFIG_NFS_DEBUG */
 /*   printf("nfs_read_file: starting reading %d bytes in %s\n", size, node->name); */
@@ -110,8 +110,8 @@ VFS_OPEN_FILE(nfs_open)
 /*       return -NFS_ERR; */
 /*     } */
 
-/*   return s; */
-/* } */
+  return s;
+}
 
 /*
 ** param	struct vfs_file_s	*file
@@ -119,11 +119,11 @@ VFS_OPEN_FILE(nfs_open)
 ** param	size_t			size
 ** return	error_t
 */
-/* VFS_WRITE_FILE(nfs_write) */
-/* { */
+VFS_WRITE_FILE(nfs_write)
+{
 /*   struct nfs_file_s	*file_pv = file->f_pv; */
 /*   struct nfs_node_s	*node = file_pv->node->n_pv; */
-/*   size_t		s = 0; */
+  size_t		s = 0;
 
 /* #ifdef CONFIG_NFS_DEBUG */
 /*   printf("nfs_write_file: starting writing %d bytes in %s\n", size, node->name); */
@@ -152,8 +152,8 @@ VFS_OPEN_FILE(nfs_open)
 /*       return -NFS_ERR; */
 /*     } */
 
-/*   return s; */
-/* } */
+  return s;
+}
 
 /*
 ** param	struct vfs_file_s	*file
@@ -186,8 +186,8 @@ VFS_RELEASE_FILE(nfs_release)
 ** param	struct vfs_dirent_s	*dirent
 ** return	error_t
 */
-/* VFS_READ_DIR(nfs_readdir) */
-/* { */
+VFS_READ_DIR(nfs_readdir)
+{
 /*   struct nfs_context_s	*ctx = NULL; */
 /*   struct nfs_file_s		*file_pv = file->f_pv; */
 
@@ -222,6 +222,6 @@ VFS_RELEASE_FILE(nfs_release)
 /* 	dirent->d_size = 0; */
 /* 	dirent->d_type = file_pv->current_node->type; */
 
-/* 	return NFS_OK; */
+	return NFS_OK;
 /*       } */
-/* } */
+}

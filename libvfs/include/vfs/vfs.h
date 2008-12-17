@@ -78,6 +78,7 @@
 #define VFS_VFAT_TYPE        1
 #define VFS_PIPE_TYPE        2
 #define VFS_DEVICE_TYPE      4
+#define VFS_NFS_TYPE         8
 
 #define VFS_SEEK_SET         0
 #define VFS_SEEK_CUR         1
