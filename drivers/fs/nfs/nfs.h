@@ -33,7 +33,7 @@
 ** return error code (0 = OK, other = KO)
 */
 error_t	nfs_mount(const char		*mount_point,
-		  uint_fast32_t	server_ip);
+		  uint_fast32_t		server_ip);
 
 /*
 ** brief unmount the NFS mounted in "mount_point"

@@ -76,7 +76,7 @@ static inline struct devfs_context_s	*devfs_get_ctx()
   struct vfs_node_s		*dev_node = NULL;
 
   //get node to acces n_ctx field
-  if ((dev_node = vfs_node_lookup(vfs_get_root(), "DEV")) == NULL)
+  if ((dev_node = vfs_node_lookup(vfs_get_root(), "dev")) == NULL)
     return NULL;
 
   return (dev_node->n_ctx->ctx_pv);

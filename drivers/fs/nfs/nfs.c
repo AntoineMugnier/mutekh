@@ -89,10 +89,12 @@ error_t	nfs_mount(const char		*mount_point,
   //////////////
 
   /* Init NFS */
-  memset(&nfs_pv->server, 0, sizeof (nfs_pv->server));
+  memset(nfs_pv->server, 0, sizeof (struct nfs_s));
   IPV4_ADDR_SET(nfs_pv->server->address, server_ip);
+  printf("ethertype : %d\n", ETHERTYPE_IP);
   nfs_pv->server->uid = 500;
   nfs_pv->server->gid = 500;
+
   net_nfs_init(nfs_pv->server);
 
   if (net_nfs_mount(nfs_pv->server, mount_point, nfs_pv->root))

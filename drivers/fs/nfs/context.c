@@ -32,13 +32,21 @@
 
 VFS_CREATE_CONTEXT(nfs_create_context)
 {
+  struct nfs_context_s *nfs_pv = NULL;
+
 #ifdef CONFIG_DRIVER_FS_NFS_DEBUG
   printf("nfs_create_context : Allocating private stuff\n");
 #endif
 
   // Allocating memory for parent context
-  if((context->ctx_pv = mem_alloc(sizeof(struct nfs_context_s), MEM_SCOPE_SYS)) == NULL)
+  if((nfs_pv = mem_alloc(sizeof(struct nfs_context_s), MEM_SCOPE_SYS)) == NULL)
     return -VFS_ENOMEM;
+
+  if((nfs_pv->server = mem_alloc(sizeof(struct nfs_s), MEM_SCOPE_SYS)) == NULL)
+    return -VFS_ENOMEM;
+
+  // Link private struct to context private field
+  context->ctx_pv = nfs_pv;
 
   return NFS_OK;
 }
@@ -47,13 +55,16 @@ VFS_CREATE_CONTEXT(nfs_create_context)
 /**
  ** param	struct vfs_context_s *context
  ** return	error_t
- */ 
+ */
 VFS_DESTROY_CONTEXT(nfs_destroy_context)
 {
+  struct nfs_context_s *nfs_pv = context->ctx_pv;
+
 #ifdef CONFIG_DRIVER_FS_NFS_DEBUG
   printf("nfs_destroy_context : Freeing private stuff\n");
 #endif
 
+  mem_free(nfs_pv->server);
   mem_free(context->ctx_pv);
 
   return NFS_OK;
