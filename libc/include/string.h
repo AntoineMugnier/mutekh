@@ -57,6 +57,10 @@ char *
 strcat(char *dest, const char *src);
 #define strcat __builtin_strcat
 
+char *
+strncat(char *dest, const char *src, size_t n);
+#define strncat __builtin_strncat
+
 char * __attribute__ ((pure))
 strchr(const char *s, int_fast8_t c);
 #define strchr __builtin_strchr

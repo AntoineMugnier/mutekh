@@ -157,6 +157,31 @@ inline char* strcat(char *s, const char *t)
   return dest;
 }
 #endif
+
+/********************************/
+
+#ifndef HAS_CPU_STRNCAT
+#undef strncat
+inline char *strncat(char *dst, const char *src, size_t n)
+{
+  /* source freebsd libc */
+  if (n != 0) {
+    char *d = dst;
+    const char *s = src;
+
+    while (*d != 0)
+      d++;
+    do {
+      if ((*d = *s++) == 0)
+	break;
+      d++;
+    } while (--n != 0);
+    *d = 0;
+  }
+  return (dst);
+}
+#endif
+
 /********************************/
 
 #ifndef HAS_CPU_STRCHR
