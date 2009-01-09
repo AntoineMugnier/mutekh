@@ -1,4 +1,6 @@
 
+objs += device_char.o
+
 ifeq ($(CONFIG_DRIVER_CHAR_SOCLIBTTY), defined)
  subdirs += tty-soclib
 endif

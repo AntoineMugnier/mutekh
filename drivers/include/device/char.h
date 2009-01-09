@@ -76,6 +76,13 @@ struct dev_class_char_s
   devchar_write_t		*f_write;
 };
 
+/** Synchronous helper read function. This function spin in a loop
+    waiting for read operation to complete. */
+error_t dev_char_wait_read(struct device_s *dev, uint8_t *data, size_t size);
+
+/** Synchronous helper write function. This function spin in a loop
+    waiting for write operation to complete. */
+error_t dev_char_wait_write(struct device_s *dev, const uint8_t *data, size_t size);
 
 #endif
 
