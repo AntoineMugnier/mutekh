@@ -38,7 +38,7 @@ cpu_atomic_inc(volatile atomic_int_t *a)
 
   asm volatile ("lock incl	%0	\n"
 		"setnz		%1	\n"
-		: "=m" (*a), "=r" (zero)
+		: "=m" (*a), "=q" (zero)
 		);
 
   return zero;
@@ -53,7 +53,7 @@ cpu_atomic_dec(volatile atomic_int_t *a)
 
   asm volatile ("lock decl	%0	\n"
 		"setnz		%1	\n"
-		: "=m" (*a), "=r" (zero)
+		: "=m" (*a), "=q" (zero)
 		);
 
   return zero;
@@ -68,7 +68,7 @@ cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
 
   asm volatile ("lock bts	%2, %0	\n"
 		"setc		%1	\n"
-		: "=m,m" (*a), "=r,r" (isset)
+		: "=m,m" (*a), "=q,q" (isset)
 		: "r,I" (n)
 		);
 
@@ -96,7 +96,7 @@ cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
 
   asm volatile ("lock btr	%2, %0	\n"
 		"setc		%1	\n"
-		: "=m,m" (*a), "=r,r" (isset)
+		: "=m,m" (*a), "=q,q" (isset)
 		: "r,I" (n)
 		);
 
@@ -147,7 +147,7 @@ cpu_atomic_bit_test(volatile atomic_int_t *a, uint_fast8_t n)
 
   asm volatile ("bt		%2, %1	\n"
 		"setc		%0	\n"
-		: "=r,r" (isset), "=m,m" (*a)
+		: "=q,q" (isset), "=m,m" (*a)
 		: "r,I" (n)
 		);
 
