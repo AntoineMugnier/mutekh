@@ -130,7 +130,9 @@ error_t getline_history_init(struct term_behavior_s *bhv,
     return TERM_RET_INVALID;
 
   bhv->keyevent[TERM_KEY_UP] = bhv_key_history_prev;
+  bhv->keyevent[TERM_KEY_DLE] = bhv_key_history_prev;
   bhv->keyevent[TERM_KEY_DOWN] = bhv_key_history_next;
+  bhv->keyevent[TERM_KEY_SO] = bhv_key_history_next;
   bhv->keyevent[TERM_KEY_DC2] = bhv_key_history_rsearch;
   bhv->keyevent[TERM_KEY_DC3] = bhv_key_history_search;
   bhv->keyevent[TERM_KEY_RETURN] = bhv_key_history_valid;
