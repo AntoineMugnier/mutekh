@@ -26,7 +26,8 @@
   CONFIG_DRIVER_ICU_SOCLIB
 
 # Libs
-  CONFIG_LIBTERMUI
+  CONFIG_LIBLUA
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/libtermui_getline:%CONFIGPATH
+  CONFIG_MODULES examples/lua:%CONFIGPATH
+
