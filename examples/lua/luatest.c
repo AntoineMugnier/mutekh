@@ -7,18 +7,18 @@ int cmd_print(lua_State *st)
 {
   unsigned int	i;
 
-  for (i = 1; i <= lua_gettop(ls); i++)
+  for (i = 1; i <= lua_gettop(st); i++)
     {
-      switch (lua_type(ls, i))
+      switch (lua_type(st, i))
 	{
 	case LUA_TNUMBER:
-	  printf("(lua num %i)\n", lua_tonumber(ls, i));
+	  printf("(lua num %i)\n", lua_tonumber(st, i));
 	  break;
 	case LUA_TSTRING:
-	  printf("(lua str %s)\n", lua_tostring(ls, i));
+	  printf("(lua str %s)\n", lua_tostring(st, i));
 	  break;
 	default:
-	  printf("(lua type %i)\n", lua_type(ls, i));
+	  printf("(lua type %i)\n", lua_type(st, i));
 	}
     }
 
