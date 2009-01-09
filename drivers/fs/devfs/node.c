@@ -42,7 +42,7 @@ VFS_INIT_NODE(devfs_init_node)
 VFS_RELEASE_NODE(devfs_release_node)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_release_node: you shoud not see that\n");
+  printf("devfs_release_node: releasing...\n");
 #endif
 
   return 0;
@@ -109,7 +109,7 @@ VFS_WRITE_NODE(devfs_write_node)
 VFS_UNLINK_NODE(devfs_unlink_node)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_unlink_node: you shoud not see that\n");
+  printf("devfs_unlink_node: unlinking...\n");
 #endif
 
   return 0;

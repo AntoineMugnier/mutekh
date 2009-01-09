@@ -47,7 +47,7 @@ error_t	devfs_init(const char		*mount_point)
   // Some check
   if (mount_point[0] != '/')
     {
-      printf("devfs_init: mount_point must be absolute, abording\n");
+      printf("devfs_init: mount_point must be absolute, aborting\n");
       return DEVFS_ERR;
     }
 
@@ -60,7 +60,7 @@ error_t	devfs_init(const char		*mount_point)
   // Get the node if existing
   if((err = vfs_node_load(vfs_get_root(), dirs_ptr, flags, isAbsolutePath, &dev_node)))
     {
-      printf("devfs_init: %s doesn't seem to exist in filesystem, abording\n", mount_point);
+      printf("devfs_init: %s doesn't seem to exist in filesystem, aborting\n", mount_point);
       return err;
     }
 
@@ -97,6 +97,9 @@ error_t	devfs_init(const char		*mount_point)
 
   // change context type of mount_point to DevFS
   dev_node->n_ctx = devfs_ctx;
+
+  // Set it for futur accesses
+  devfs_set_root(dev_node);
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_init: DevFS Initialized\n");
@@ -184,39 +187,106 @@ struct devfs_node_s *devfs_register(const char			*name,
 
 ////////////////////////////////////////////////////////
 
-error_t	devfs_unregister(struct devfs_context_s	*ctx,
-			 struct devfs_node_s	*dnode)
+error_t	devfs_unregister(const char		*name)
 {
+  struct devfs_context_s	*ctx = NULL;
+  struct devfs_node_s		*node = NULL;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_unregister: Unregistering device node %s\n", dnode->name);
+  printf("devfs_unregister: Unregistering device node %s\n", name);
 #endif
 
+  if ((ctx = devfs_get_ctx()) == NULL)
+    {
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
+      printf("devfs_unregister: Could not get devfs context\n");
+#endif
+      return DEVFS_ERR;
+    }
+
   // Does node already exist?
-  if (devfs_hashfunc_lookup(&(ctx->hash), dnode->name) != NULL)
-    return DEVFS_ERR;
+  if ((node = devfs_hashfunc_lookup(&(ctx->hash), name)) == NULL)
+    {
+      printf("devfs_unregister: %s doesn't exist\n", name);
+      return DEVFS_ERR;
+    }
 
   // Removing node from hash list
-/*   devfs_hashfunc_remove(&(ctx->hash), dnode->name); */
+  if (devfs_hashfunc_remove(&(ctx->hash), node) != 0)
+    {
+      printf("devfs_unregister: %s couldn't be removed\n", name);
+      return DEVFS_ERR;
+    }
 
   // Cleaning up the mess
-  devfs_release_node( (struct vfs_node_s*) dnode);
-  devfs_unlink_node( (struct vfs_node_s*) dnode);
+  // But it is useless to call them because
+  // they are hard coded up there
+/*   devfs_release_node( (struct vfs_node_s*) node); */
+/*   devfs_unlink_node( (struct vfs_node_s*) node); */
+
+
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
+  printf("devfs_unregister: All OK for %s\n", name);
+#endif
 
   return DEVFS_OK;
 }
 
 ////////////////////////////////////////////////////////
 
-error_t	devfs_destroy(struct devfs_context_s	*ctx)
+error_t	devfs_destroy(const char		*mount_point)
 {
+  struct vfs_node_s		*node = NULL;
+  struct devfs_context_s	*devfs_pv = NULL;
+  char				*dirs_ptr[vfs_dir_count(mount_point) + 1];
+  bool_t			isAbsolutePath = 1;
+  error_t			err = 0;
+  uint_fast32_t			flags = 0;
+
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_destroy: Destroying devFS context \n");
 #endif
 
-  devfs_hashfunc_destroy(&(ctx->hash));
+  // Some check
+  if (mount_point[0] != '/')
+    {
+      printf("devfs_destroy : mount_point must be absolute, aborting\n");
+      return DEVFS_ERR;
+    }
 
-  mem_free(ctx);
+  // translate from char* to char**
+  vfs_split_path(mount_point, dirs_ptr);
+
+  // Setting up flags
+  VFS_SET(flags, VFS_O_DIRECTORY | VFS_O_EXCL | VFS_DIR);
+
+  // Get the node if existing
+  if((err = vfs_node_load(vfs_get_root(), dirs_ptr, flags, isAbsolutePath, &node)))
+    return err;
+
+  // downcount node refcount
+  // Twice because of (mount + umount) vfs_node_load()
+  rwlock_wrlock(&vfs_node_freelist.lock);
+  vfs_node_down(node);// first countdown
+  rwlock_unlock(&vfs_node_freelist.lock);
+
+  if (node->n_count > 1)
+    {
+      printf("devfs_destroy : FileSystem busy");
+      return DEVFS_ERR;
+    }
+  else
+    {
+      rwlock_wrlock(&vfs_node_freelist.lock);
+      vfs_node_down(node);// second countdown
+      rwlock_unlock(&vfs_node_freelist.lock);
+
+      // Get the private context field
+      devfs_pv = node->n_ctx->ctx_pv;
+
+      // from VFS
+      devfs_destroy_context(node->n_ctx);
+    }
 
   return DEVFS_OK;
 }

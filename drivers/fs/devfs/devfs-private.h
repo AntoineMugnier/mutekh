@@ -39,10 +39,11 @@
 #define DEVFS_BLOCK		0x02
 
 
-// temporary stuff
-#define DEVFS_MOUNT_POINT	"/DEV"
+// global variable :'(
+struct vfs_node_s	*dev_root;
 
 
+// Structures
 struct devfs_node_s
 {
   CONTAINER_ENTRY_TYPE(HASHLIST)        hash_entry;
@@ -60,6 +61,7 @@ CONTAINER_KEY_FUNC(devfs_hash, HASHLIST, static inline, devfs_hashfunc, name);
 struct devfs_context_s
 {
   devfs_hash_root_t	hash;
+  struct vfs_node_s	*root;
 };
 
 struct devfs_file_s
@@ -70,41 +72,59 @@ struct devfs_file_s
 
 ////////////////////////////////////////////////////
 
+static inline void devfs_set_root(struct vfs_node_s	*root)
+{
+  dev_root = root;
+}
+
 // Used to get DevFS context from anywhere
 static inline struct devfs_context_s	*devfs_get_ctx()
 {
-  struct vfs_node_s		*dev_node = NULL;
+/*   struct vfs_node_s		*dev_node = NULL; */
+/*   char				*dirs_ptr[vfs_dir_count(mount_point) + 1]; */
 
-  //get node to acces n_ctx field
-  if ((dev_node = vfs_node_lookup(vfs_get_root(), "dev")) == NULL)
-    return NULL;
+  // Get the node if existing
+/*   if ((vfs_node_load(vfs_get_root(), dirs_ptr, 0, 1, &dev_node))) */
+/*     return NULL; */
 
-  return (dev_node->n_ctx->ctx_pv);
+  // downcount the refcount
+/*   rwlock_wrlock(&vfs_node_freelist.lock); */
+/*   vfs_node_down(node);// second countdown */
+/*   rwlock_unlock(&vfs_node_freelist.lock); */
+
+  /*   //get node to acces n_ctx field */
+  /*   if ((dev_node = vfs_node_lookup(vfs_get_root(), "dev")) == NULL) */
+  /*     return NULL; */
+
+/*   return (dev_node->n_ctx->ctx_pv); */
+  return (dev_root->n_ctx->ctx_pv);
 }
 
 ////////////////////////////////////////////////////
 
 // Used to get DevFS node from anywhere
-static inline struct vfs_node_s	*devfs_get_node()
+static inline struct vfs_node_s	*devfs_get_root_node()
 {
-  struct vfs_node_s		*dev_node = NULL;
-  char				*t = NULL;
+/*   struct vfs_node_s		*dev_node = NULL; */
+/*   char				*t = NULL; */
 
-  if ((t = strrchr(DEVFS_MOUNT_POINT, '/')))
-    {  
-      if ((dev_node = vfs_node_lookup(vfs_get_root(), ++t)) == NULL)
-	return NULL;
-      else
-	return (dev_node);
-    }
-  else
-    {
-      //get node to acces n_ctx field
-      if ((dev_node = vfs_node_lookup(vfs_get_root(), "DEV")) == NULL)
-	return NULL;
-      else
-	return (dev_node);
-    }
+/*   if ((t = strrchr(DEVFS_MOUNT_POINT, '/'))) */
+/*     {   */
+/*       if ((dev_node = vfs_node_lookup(vfs_get_root(), ++t)) == NULL) */
+/* 	return NULL; */
+/*       else */
+/* 	return (dev_node); */
+/*     } */
+/*   else */
+/*     { */
+/*       //get node to acces n_ctx field */
+/*       if ((dev_node = vfs_node_lookup(vfs_get_root(), "dev")) == NULL) */
+/* 	return NULL; */
+/*       else */
+/* 	return (dev_node); */
+/*     } */
+
+  return (dev_root);
 }
 
 ////////////////////////////////////////////////////

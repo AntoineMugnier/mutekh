@@ -54,12 +54,13 @@ VFS_CREATE_CONTEXT(devfs_create_context)
 
 VFS_DESTROY_CONTEXT(devfs_destroy_context)
 {
+  struct devfs_context_s	*dev_ctx = context->ctx_pv;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_create_context: Initializing intern Hash Table\n");
 #endif
 
-  //devfs_hashfunc_destroy(context->ctx_pv.hash);
+  devfs_hashfunc_destroy(&dev_ctx->hash);
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_create_context: Initializing DevFS context\n");

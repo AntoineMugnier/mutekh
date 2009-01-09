@@ -42,13 +42,12 @@ struct devfs_node_s	*devfs_register(const char		*name,
 /**
  ** remove an inode from /dev
  */
-error_t	devfs_unregister(struct devfs_context_s	*ctx,
-			 struct devfs_node_s	*dnode);
+error_t	devfs_unregister(const char		*name);
 
 /**
  ** umount the devfs
  */
-error_t	devfs_destroy(struct devfs_context_s	*ctx);
+error_t	devfs_destroy(const char		*mount_point);
 
 
 VFS_CREATE_CONTEXT(devfs_create_context);

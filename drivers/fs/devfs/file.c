@@ -37,13 +37,13 @@ VFS_OPEN_FILE(devfs_open)
 {
   struct devfs_context_s	*ctx = NULL;
   struct devfs_file_s		*file_pv = file->f_pv;
-
+  
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_open_file: trying to open %s\n", node->n_name);
 #endif
 
   // Is asking device node or /dev/* node?
-  if (strcmp(node->n_name, "DEV"))
+  if (node != devfs_get_root_node())
     {
       // Getting DevFS context
       ctx = devfs_get_ctx();
@@ -54,7 +54,7 @@ VFS_OPEN_FILE(devfs_open)
     }
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   else
-    printf("devfs_open_file: /dev is asked\n");
+    printf("devfs_open_file: DevFS root is asked\n");
 #endif
 
   // Allocating for a new DevFS file
@@ -194,7 +194,6 @@ VFS_READ_DIR(devfs_readdir)
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_read_dir: reading directory %s\n", file_pv->node->n_name);
-  printf("devfs_read_dir: from file %s\n", dirent->d_name);
 #endif
 
   ctx = devfs_get_ctx();
@@ -216,7 +215,10 @@ VFS_READ_DIR(devfs_readdir)
   else
     // Get next node from the hash table
     if ((file_pv->current_node = devfs_hashfunc_next(&(ctx->hash), file_pv->current_node)) == NULL)
-      return DEVFS_DIREMPTY; // End of dir
+      {
+	memset(dirent, '\0', sizeof(struct vfs_dirent_s));
+	return DEVFS_DIREMPTY; // End of dir
+      }
     else
       {
 	strncpy(dirent->d_name, file_pv->current_node->name, VFS_MAX_NAME_LENGTH);
