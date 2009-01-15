@@ -206,7 +206,9 @@ void sched_context_init(struct sched_context_s *sched_ctx)
 {
   /* set sched_cur context local variable */
   CONTEXT_LOCAL_TLS_SET(sched_ctx->context.tls,
-			    sched_cur, sched_ctx);
+			sched_cur, sched_ctx);
+
+  sched_ctx->private = NULL;
 
 #if defined (CONFIG_MUTEK_SCHEDULER_STATIC)
   sched_ctx->cpu_queue = __sched_root();

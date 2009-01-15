@@ -69,6 +69,10 @@
 struct device_s *tty_dev;
 #endif
 
+#if defined(CONFIG_DRIVER_UART)
+struct device_s uart_dev;
+#endif
+
 #if defined(CONFIG_DRIVER_FB)
 struct device_s fb_dev;
 #endif
@@ -117,8 +121,14 @@ DEVTIMER_CALLBACK(timer_callback)
 
 #ifdef CONFIG_MUTEK_MAIN
 
+static struct sched_context_s main_ctx;
+
 int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
+#if defined(CONFIG_MUTEK_SCHEDULER)
+  context_bootstrap(&main_ctx.context);
+  sched_context_init(&main_ctx);
+#endif
 
   /********* ICU init ******************************** */
 
@@ -144,8 +154,6 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   /********* TTY init ******************************** */
 
 #if defined(CONFIG_DRIVER_UART)
-  static struct device_s uart_dev;
-
   device_init(&uart_dev);
 # if defined(CONFIG_DRIVER_CHAR_UART8250)
   uart_dev.addr[UART_8250_ADDR] = 0x03f8;
@@ -364,16 +372,25 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
   //  hexo_instrument_alloc_guard(1);
 #endif
 
-  if (cpu_id() == 0)
+  if (cpu_isbootstrap())
     {
+      cpu_interrupt_enable();
       main(0, 0);
-    }
-
-  cpu_interrupt_disable();
+      cpu_interrupt_disable();
 #if defined(CONFIG_MUTEK_SCHEDULER)
-  sched_lock();
-  sched_context_exit();
+      context_destroy(&main_ctx.context);
+      sched_lock();
+      sched_context_exit();
 #endif
+    }
+  else
+    {
+      cpu_interrupt_disable();
+#if defined(CONFIG_MUTEK_SCHEDULER)
+      sched_lock();
+      sched_context_exit();
+#endif
+    }
 }
 
 #endif
