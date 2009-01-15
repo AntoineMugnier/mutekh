@@ -392,40 +392,74 @@ tty_vga_process_default(struct device_s *dev, uint8_t c)
  * device read operation
  */
 
-DEVCHAR_READ(tty_vga_read)
-{
 #ifdef DRIVER_CHAR_VGATTY_HAS_FIFO
-  struct tty_vga_context_s	*pv = dev->drv_pv;
-  size_t			res;
-
-  res = tty_fifo_pop_array(&pv->read_fifo, data, size);
-
-  return res;
-#else
-  return 0;
-#endif
-}
-
-/* 
- * device write operation
- */
-
-DEVCHAR_WRITE(tty_vga_write)
+void tty_vga_try_read(struct device_s *dev)
 {
   struct tty_vga_context_s	*pv = dev->drv_pv;
-  uint_fast16_t			i;
+  struct dev_char_rq_s		*rq;
 
-  lock_spin_irq(&pv->lock);
+  while ((rq = dev_char_queue_head(&pv->read_q)))
+    {
+      size_t size = tty_fifo_pop_array(&pv->read_fifo, rq->data, rq->size);
 
-  for (i = 0; i < size; i++)
-    /* process each char */
-    pv->process(dev, data[i]);
+      if (!size)
+	break;
 
-  tty_vga_updatecursor(dev);
+      rq->size -= size;
+      rq->error = 0;
 
-  lock_release_irq(&pv->lock);
+      if (rq->callback(dev, rq, size) || rq->size == 0)
+	dev_char_queue_remove(&pv->read_q, rq);
+      else
+	rq->data += size;
+    }
+}
+#endif
 
-  return size;
+DEVCHAR_REQUEST(tty_vga_request)
+{
+  struct tty_vga_context_s	*pv = dev->drv_pv;
+
+  assert(rq->size);
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  switch (rq->type)
+    {
+    case DEV_CHAR_READ: {
+#ifdef DRIVER_CHAR_VGATTY_HAS_FIFO
+      bool_t empty;
+
+      empty = dev_char_queue_isempty(&pv->read_q);
+      dev_char_queue_pushback(&pv->read_q, rq);
+      if (empty)
+	tty_vga_try_read(dev);
+#else
+      rq->error = EEOF;
+      rq->callback(dev, rq, 0);
+#endif
+      break;
+    }
+
+    case DEV_CHAR_WRITE: {
+      size_t	i;
+      size_t	size = rq->size;
+
+      for (i = 0; i < rq->size; i++)
+	pv->process(dev, rq->data[i]);
+
+      tty_vga_updatecursor(dev);
+
+      rq->size = 0;
+      rq->error = 0;
+      rq->callback(dev, rq, size);
+
+      break;
+    }
+
+    }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 /* 
@@ -438,8 +472,8 @@ DEV_CLEANUP(tty_vga_cleanup)
 
 #ifdef DRIVER_CHAR_VGATTY_HAS_FIFO
   tty_fifo_destroy(&pv->read_fifo);
+  dev_char_queue_destroy(&pv->read_q);
 #endif
-  lock_destroy(&pv->lock);
 
   mem_free(pv);
 }
@@ -458,8 +492,7 @@ const struct driver_s	tty_vga_drv =
   .f_irq		= tty_vga_irq,
 #endif
   .f.chr = {
-    .f_read		= tty_vga_read,
-    .f_write		= tty_vga_write,
+    .f_request		= tty_vga_request,
   }
 };
 #endif
@@ -478,12 +511,10 @@ DEV_INIT(tty_vga_init)
   if (!pv)
     return -1;
 
-  lock_init(&pv->lock);
-
   dev->drv_pv = pv;
 
 #ifdef DRIVER_CHAR_VGATTY_HAS_FIFO
-  /* init tty input fifo */
+  dev_char_queue_init(&pv->read_q);
   tty_fifo_init(&pv->read_fifo);
 #endif
 

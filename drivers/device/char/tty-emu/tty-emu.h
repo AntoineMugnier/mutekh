@@ -29,8 +29,7 @@
 
 DEV_INIT(tty_emu_init);
 DEV_CLEANUP(tty_emu_cleanup);
-DEVCHAR_READ(tty_emu_read);
-DEVCHAR_WRITE(tty_emu_write);
+DEVCHAR_REQUEST(tty_emu_request);
 
 #endif
 

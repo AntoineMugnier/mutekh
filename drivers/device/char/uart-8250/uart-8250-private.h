@@ -25,26 +25,13 @@
 #include <hexo/types.h>
 #include <hexo/lock.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
-#include <hexo/gpct_lock_hexo.h>
-
-#define CONTAINER_LOCK_tty_fifo HEXO_SPIN_IRQ
-
-CONTAINER_TYPE(tty_fifo, RING, uint8_t, 128);
-CONTAINER_FUNC_LOCK(tty_fifo, RING, static inline, tty_fifo, HEXO_SPIN_IRQ);
-CONTAINER_FUNC_LOCK(tty_fifo, RING, static inline, tty_fifo_noirq, HEXO_SPIN);
-CONTAINER_FUNC_NOLOCK(tty_fifo, RING, static inline, tty_fifo_nolock);
-
 struct uart_8250_context_s
 {
   uint8_t				line_mode;
   uint16_t				line_speed;
 
-  /* tty input char fifo */
-  tty_fifo_root_t			read_fifo;
-
-  lock_t				lock;
+  dev_char_queue_root_t	read_q;
+  dev_char_queue_root_t	write_q;
 };
 
 #endif

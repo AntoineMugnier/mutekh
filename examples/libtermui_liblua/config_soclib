@@ -1,5 +1,5 @@
 # Application license
-  CONFIG_LICENSE_APP_LGPL
+  CONFIG_LICENSE_APP_GPL
 
 # Platform types
   CONFIG_ARCH_SOCLIB

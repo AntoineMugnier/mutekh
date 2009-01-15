@@ -28,7 +28,6 @@
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_ring.h>
-#include <hexo/gpct_lock_hexo.h>
 
 
 /**************************************************************/
@@ -37,16 +36,13 @@
  * Private vgz tty device context
  */
 
-#define CONTAINER_LOCK_tty_fifo HEXO_SPIN_IRQ
-
 CONTAINER_TYPE(tty_fifo, RING, uint8_t, 32);
-CONTAINER_FUNC_LOCK(tty_fifo, RING, static inline, tty_fifo, HEXO_SPIN_IRQ);
-CONTAINER_FUNC_LOCK(tty_fifo, RING, static inline, tty_fifo_noirq, HEXO_SPIN);
-CONTAINER_FUNC_NOLOCK(tty_fifo, RING, static inline, tty_fifo_nolock);
+CONTAINER_FUNC(tty_fifo, RING, static inline, tty_fifo);
 
 struct tty_soclib_context_s
 {
-  /* tty input char fifo */
+  /* tty input request queue and char fifo */
+  dev_char_queue_root_t		read_q;
   tty_fifo_root_t		read_fifo;
 };
 

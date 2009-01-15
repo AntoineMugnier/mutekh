@@ -71,12 +71,8 @@ typedef void tty_vga_char_process_t (struct device_s *dev, uint8_t c);
 typedef void tty_vga_key_process_t  (struct device_s *dev, uint8_t scancode);
 #endif
 
-#define CONTAINER_LOCK_tty_fifo HEXO_SPIN_IRQ
-
 CONTAINER_TYPE(tty_fifo, RING, uint8_t, 32);
-CONTAINER_FUNC_LOCK(tty_fifo, RING, static inline, tty_fifo, HEXO_SPIN_IRQ);
-CONTAINER_FUNC_LOCK(tty_fifo, RING, static inline, tty_fifo_noirq, HEXO_SPIN);
-CONTAINER_FUNC_NOLOCK(tty_fifo, RING, static inline, tty_fifo_nolock);
+CONTAINER_FUNC(tty_fifo, RING, static inline, tty_fifo);
 
 #define VGA_TTY_MAX_ANSI_PARAMS		4
 
@@ -96,11 +92,10 @@ struct tty_vga_context_s
 #endif
 
 #ifdef DRIVER_CHAR_VGATTY_HAS_FIFO
-  /* tty input char fifo */
+  /* tty input request queue and char fifo */
+  dev_char_queue_root_t		read_q;
   tty_fifo_root_t		read_fifo;
 #endif
-
-  lock_t			lock;
 
 #ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
   uint_fast8_t			xsave, ysave;
@@ -126,6 +121,8 @@ void tty_vga_scancode_default(struct device_s *dev, uint8_t scancode);
 void tty_vga_scancode_led(struct device_s *dev, uint8_t scancode);
 
 #endif
+
+void tty_vga_try_read(struct device_s *dev);
 
 void tty_vga_reset(struct device_s *dev);
 

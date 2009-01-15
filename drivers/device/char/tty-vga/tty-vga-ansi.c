@@ -38,14 +38,14 @@
  * put ansi reponse data on device read fifo
  */
 
-#define VGA_TTY_ANSI_PUTSTR(fifo, str) tty_fifo_nolock_pushback_array(fifo, (uint8_t*)str, sizeof(str) - 1)
+#define VGA_TTY_ANSI_PUTSTR(fifo, str) tty_fifo_pushback_array(fifo, (uint8_t*)str, sizeof(str) - 1)
 
 static void
 tty_vga_ansi_putint(tty_fifo_root_t *fifo, uint_fast8_t n)
 {
   if (n > 10)
     tty_vga_ansi_putint(fifo, n / 10);
-  tty_fifo_nolock_pushback(fifo, (n % 10) + '0');
+  tty_fifo_pushback(fifo, (n % 10) + '0');
 }
 
 /* 
@@ -214,14 +214,10 @@ tty_vga_process_ansi_bracket(struct device_s *dev, uint8_t c)
       return;
 
     case ('c'):			/* Query Device Code, report as vt102*/
-      tty_fifo_wrlock(&pv->read_fifo);
       VGA_TTY_ANSI_PUTSTR(&pv->read_fifo, "\x1b[?6c");
-      tty_fifo_unlock(&pv->read_fifo);
       break;
 
     case ('n'):
-
-      tty_fifo_wrlock(&pv->read_fifo);
 
       switch (pv->ansi_param[0])
 	{
@@ -237,8 +233,6 @@ tty_vga_process_ansi_bracket(struct device_s *dev, uint8_t c)
 	  VGA_TTY_ANSI_PUTSTR(&pv->read_fifo, "R");
 	  break;
 	}
-
-      tty_fifo_unlock(&pv->read_fifo);
 
       break;
 

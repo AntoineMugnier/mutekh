@@ -30,8 +30,7 @@
 DEV_IRQ(tty_soclib_irq);
 DEV_INIT(tty_soclib_init);
 DEV_CLEANUP(tty_soclib_cleanup);
-DEVCHAR_READ(tty_soclib_read);
-DEVCHAR_WRITE(tty_soclib_write);
+DEVCHAR_REQUEST(tty_soclib_request);
 
 #endif
 

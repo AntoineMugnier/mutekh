@@ -25,31 +25,134 @@
 #include <device/char.h>
 #include <device/driver.h>
 
-/* FIXME develop and use asynchronous char device API */
-error_t dev_char_wait_read(struct device_s *dev, uint8_t *data, size_t size)
+#ifdef CONFIG_MUTEK_SCHEDULER
+# include <mutek/scheduler.h>
+# include <hexo/lock.h>
+#endif
+
+
+struct dev_char_wait_rq_s
 {
-  ssize_t res;
+#ifdef CONFIG_MUTEK_SCHEDULER
+  lock_t lock;
+  struct sched_context_s *ctx;
+#endif
+  volatile bool_t done;
+};
 
-  do
-    {
-      res = dev_char_read(dev, data, size);
-    }
-  while (res == 0);
 
-  return res;
+static DEVCHAR_CALLBACK(dev_char_syncl_read)
+{
+  struct dev_char_wait_rq_s *status = rq->pvdata;
+  status->done = 1;
+  return 1;
 }
 
-/* FIXME develop and use asynchronous char device API */
-error_t dev_char_wait_write(struct device_s *dev, const uint8_t *data, size_t size)
+static ssize_t dev_char_lock_request(struct device_s *dev, uint8_t *data,
+				     size_t size, enum dev_char_rq_type_e type)
 {
-  ssize_t res;
+  struct dev_char_rq_s rq;
+  struct dev_char_wait_rq_s status;
 
-  do
+  status.done = 0;
+  rq.type = type;
+  rq.pvdata = &status;
+  rq.callback = dev_char_syncl_read;
+  rq.error = 0;
+  rq.data = data;
+  rq.size = size;
+
+  dev_char_request(dev, &rq);
+
+  assert(cpu_interrupt_getstate());
+
+  while (!status.done)
+    ;
+
+  assert(rq.error >= 0);
+  return rq.error ? -rq.error : size - rq.size;
+}
+
+
+#ifdef CONFIG_MUTEK_SCHEDULER
+static DEVCHAR_CALLBACK(dev_char_sync_read)
+{
+  struct dev_char_wait_rq_s *status = rq->pvdata;
+
+  lock_spin(&status->lock);
+  if (status->ctx != NULL)
+    sched_context_start(status->ctx);
+  status->done = 1;
+  lock_release(&status->lock);
+
+  return 1;
+}
+
+static ssize_t dev_char_wait_request(struct device_s *dev, uint8_t *data,
+				     size_t size, enum dev_char_rq_type_e type)
+{
+  struct dev_char_rq_s rq;
+  struct dev_char_wait_rq_s status;
+
+  lock_init(&status.lock);
+  status.ctx = NULL;
+  status.done = 0;
+  rq.type = type;
+  rq.pvdata = &status;
+  rq.callback = dev_char_sync_read;
+  rq.error = 0;
+  rq.data = data;
+  rq.size = size;
+
+  dev_char_request(dev, &rq);
+
+  /* ensure callback doesn't occur here */
+
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  lock_spin(&status.lock);
+
+  if (!status.done)
     {
-      res = dev_char_write(dev, data, size);
+      status.ctx = sched_get_current();
+      sched_context_stop_unlock(&status.lock);
     }
-  while (res == 0);
+  else
+    lock_release(&status.lock);
 
-  return res;
+  CPU_INTERRUPT_RESTORESTATE;
+  lock_destroy(&status.lock);
+
+  assert(rq.error >= 0);
+  return rq.error ? -rq.error : size - rq.size;
+
+}
+#endif
+
+ssize_t dev_char_wait_read(struct device_s *dev, uint8_t *data, size_t size)
+{
+#ifdef CONFIG_MUTEK_SCHEDULER
+  return dev_char_wait_request(dev, data, size, DEV_CHAR_READ);
+#else
+  return dev_char_lock_request(dev, data, size, DEV_CHAR_READ);
+#endif
+}
+
+ssize_t dev_char_lock_read(struct device_s *dev, uint8_t *data, size_t size)
+{
+  return dev_char_lock_request(dev, data, size, DEV_CHAR_READ);
+}
+
+ssize_t dev_char_wait_write(struct device_s *dev, const uint8_t *data, size_t size)
+{
+#ifdef CONFIG_MUTEK_SCHEDULER
+  return dev_char_wait_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE);
+#else
+  return dev_char_lock_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE);
+#endif
+}
+
+ssize_t dev_char_lock_write(struct device_s *dev, const uint8_t *data, size_t size)
+{
+  return dev_char_lock_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE);
 }
 

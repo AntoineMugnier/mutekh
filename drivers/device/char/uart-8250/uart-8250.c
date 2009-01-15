@@ -37,45 +37,92 @@
 
 #include "8250.h"
 
-/**************************************************************/
 
-/* 
- * device read operation
- */
-
-DEVCHAR_READ(uart_8250_read)
+static void uart_8250_try_read(struct device_s *dev)
 {
-  struct uart_8250_context_s	*pv = dev->drv_pv;
-  size_t			res;
+  struct uart_8250_context_s *pv = dev->drv_pv;
+  struct dev_char_rq_s *rq;
 
-  res = tty_fifo_pop_array(&pv->read_fifo, data, size);
+  while ((rq = dev_char_queue_head(&pv->read_q)))
+    {
+      size_t size = 0;
 
-  return res;
+      assert(rq->size);
+
+      while (size < rq->size && cpu_io_read_8(dev->addr[0] + UART_8250_IIR) & UART_8250_IIR_RX)
+	{
+	  rq->data[size] = cpu_io_read_8(dev->addr[0] + UART_8250_RBR);
+	  size++;
+	}
+
+      if (!size)
+	return;
+
+      rq->size -= size;
+      rq->error = 0;
+
+      if (rq->callback(dev, rq, size) || rq->size == 0)
+	dev_char_queue_remove(&pv->read_q, rq);
+      else
+	rq->data += size;
+    }
 }
 
-/* 
- * device write operation
- */
+static void uart_8250_try_write(struct device_s *dev)
+{
+  struct uart_8250_context_s *pv = dev->drv_pv;
+  struct dev_char_rq_s *rq;
 
-DEVCHAR_WRITE(uart_8250_write)
+  while ((rq = dev_char_queue_head(&pv->write_q)))
+    {
+      size_t size = 0;
+
+      assert(rq->size);
+
+      while (size < rq->size && cpu_io_read_8(dev->addr[0] + UART_8250_IIR) & UART_8250_IIR_TX)
+	{
+	  cpu_io_write_8(dev->addr[0] + UART_8250_THR, rq->data[size]);
+	  size++;
+	}
+
+      if (!size)
+	return;
+
+      rq->size -= size;
+      rq->error = 0;
+
+      if (rq->callback(dev, rq, size) || rq->size == 0)
+	dev_char_queue_remove(&pv->write_q, rq);
+      else
+	rq->data += size;
+    }
+}
+
+DEVCHAR_REQUEST(uart_8250_request)
 {
   struct uart_8250_context_s	*pv = dev->drv_pv;
-  uint_fast16_t			i;
+  bool_t empty;
 
-  lock_spin_irq(&pv->lock);
+  LOCK_SPIN_IRQ(&dev->lock);
 
-  for (i = 0; i < size; i++)
-    /* process each char */
+  switch (rq->type)
     {
-      if (!(cpu_io_read_8(dev->addr[0] + UART_8250_LSR) & UART_8250_LSR_TXEMPTY))
-	break;
+    case DEV_CHAR_READ:
+      empty = dev_char_queue_isempty(&pv->read_q);
+      dev_char_queue_pushback(&pv->read_q, rq);
+      if (empty)
+	uart_8250_try_read(dev);
+      break;
 
-      cpu_io_write_8(dev->addr[0] + UART_8250_THR, data[i]);
+    case DEV_CHAR_WRITE:
+      empty = dev_char_queue_isempty(&pv->write_q);
+      dev_char_queue_pushback(&pv->write_q, rq);
+      if (empty)
+	uart_8250_try_write(dev);
+      break;
     }
 
-  lock_release_irq(&pv->lock);
-
-  return i;
+  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 /* 
@@ -86,10 +133,8 @@ DEV_CLEANUP(uart_8250_cleanup)
 {
   struct uart_8250_context_s	*pv = dev->drv_pv;
 
-  tty_fifo_destroy(&pv->read_fifo);
-
-  lock_destroy(&pv->lock);
-
+  dev_char_queue_destroy(&pv->read_q);
+  dev_char_queue_destroy(&pv->write_q);
   mem_free(pv);
 }
 
@@ -99,15 +144,22 @@ DEV_CLEANUP(uart_8250_cleanup)
 
 DEV_IRQ(uart_8250_irq)
 {
-  struct uart_8250_context_s*pv = dev->drv_pv;
+  struct uart_8250_context_s *pv = dev->drv_pv;
+  struct dev_char_rq_s *rq;
+  bool_t done = 0;
 
-  if (cpu_io_read_8(dev->addr[0] + UART_8250_IIR) & UART_8250_IIR_NOPENDING)
-    return 0;
+  lock_spin(&dev->lock);
 
-  while (cpu_io_read_8(dev->addr[0] + UART_8250_IIR) & UART_8250_IIR_RX)
-    tty_fifo_noirq_pushback(&pv->read_fifo, cpu_io_read_8(dev->addr[0] + UART_8250_RBR));
+  while (!(cpu_io_read_8(dev->addr[0] + UART_8250_IIR) & UART_8250_IIR_NOPENDING))
+    {
+      done = 1;
+      uart_8250_try_read(dev);
+      uart_8250_try_write(dev);
+    }
 
-  return 1;
+  lock_release(&dev->lock);
+
+  return done;
 }
 
 /* 
@@ -122,8 +174,7 @@ const struct driver_s	uart_8250_drv =
   .f_cleanup		= uart_8250_cleanup,
   .f_irq		= uart_8250_irq,
   .f.chr = {
-    .f_read		= uart_8250_read,
-    .f_write		= uart_8250_write,
+    .f_request		= uart_8250_request,
   }
 };
 #endif
@@ -142,15 +193,12 @@ DEV_INIT(uart_8250_init)
   if (!pv)
     return -1;
 
-  lock_init(&pv->lock);
+  dev_char_queue_init(&pv->read_q);
+  dev_char_queue_init(&pv->write_q);
 
   dev->drv_pv = pv;
 
-  /* init tty input fifo */
-  tty_fifo_init(&pv->read_fifo);
-
   pv->line_mode = UART_8250_LCR_8BITS | UART_8250_LCR_PARNO | UART_8250_LCR_1STOP;
-
 
   /*
   rate div dll dlm
@@ -178,7 +226,7 @@ DEV_INIT(uart_8250_init)
 
   cpu_io_write_8(dev->addr[0] + UART_8250_LCR, 0);
 
-  cpu_io_write_8(dev->addr[0] + UART_8250_IER, UART_8250_IER_RX);
+  cpu_io_write_8(dev->addr[0] + UART_8250_IER, UART_8250_IER_RX | UART_8250_IER_TX);
 
   cpu_io_write_8(dev->addr[0] + UART_8250_FCR, UART_8250_FCR_FIFO | UART_8250_FCR_CLRRX | UART_8250_FCR_CLRTX);
   cpu_io_write_8(dev->addr[0] + UART_8250_FCR, UART_8250_FCR_FIFO);

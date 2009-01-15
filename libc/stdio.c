@@ -42,14 +42,11 @@ void __puts(const char *s, size_t len)
     {
       ssize_t	res;
 
-      res = dev_char_write(tty_dev, (uint8_t*)s, len);
+      res = dev_char_lock_write(tty_dev, (uint8_t*)s, len);
 
-      if (res > 0)
-	{
-	  len -= res;
-	  s += res;
-	  /* pthread_yield(); */
-	}
+      len -= res;
+      s += res;
+      /* pthread_yield(); */
     }
 #endif
   //  lock_release(&stdio_lock);
@@ -58,10 +55,8 @@ void __puts(const char *s, size_t len)
 inline int_fast8_t putchar(char c)
 {
 #if defined(CONFIG_MUTEK_CONSOLE)
-  while (dev_char_write(tty_dev, (uint8_t*)&c, 1) != 1)
-    ;
+  dev_char_lock_write(tty_dev, (uint8_t*)&c, 1);
 #endif
-
   return c;
 }
 

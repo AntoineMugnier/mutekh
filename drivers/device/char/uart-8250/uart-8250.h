@@ -34,8 +34,7 @@
 DEV_IRQ(uart_8250_irq);
 DEV_INIT(uart_8250_init);
 DEV_CLEANUP(uart_8250_cleanup);
-DEVCHAR_READ(uart_8250_read);
-DEVCHAR_WRITE(uart_8250_write);
+DEVCHAR_REQUEST(uart_8250_request);
 
 #endif
 

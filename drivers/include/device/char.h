@@ -24,65 +24,108 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_clist.h>
 
 struct device_s;
 struct driver_s;
+struct dev_char_rq_s;
 
-/** Char device class read() function tempate. */
-#define DEVCHAR_READ(n)	ssize_t  (n) (struct device_s *dev, uint8_t *data, size_t size)
+/** Char device read/write callback */
+#define DEVCHAR_CALLBACK(n) bool_t (n) (struct device_s *dev, \
+				        const struct dev_char_rq_s *rq, \
+				        size_t size)
 
-/** Char device class read() methode shortcut */
-
-#define dev_char_read(dev, ...) (dev)->drv->f.chr.f_read(dev, __VA_ARGS__ )
 /**
-   Char device class read() function type.  Read bytes data from the
-   device. Should not block if unable to read more bytes.
-    
+   Char device read/write callback. This function is called for each
+   chunk of available data. It may be called several times, rq->size
+   != 0 and rq->error must be used to detect operation end. Operation
+   is aborted if call back function return true. The device lock is
+   held when call back function is called.
+
    @param dev pointer to device descriptor
-   @param data pointer to data buffer
-   @param size max data read bytes count
-   @return data bytes count read from the device or negative error code
+   @param rq pointer to request data. rq->size field is updated to \
+          remaining data bytes. rq->data is advanced after callback.\
+	  rq->error is updated.
+   @param size amount of data bytes read.
 */
-typedef DEVCHAR_READ(devchar_read_t);
+typedef DEVCHAR_CALLBACK(devchar_callback_t);
+
+enum dev_char_rq_type_e
+  {
+    DEV_CHAR_READ, DEV_CHAR_WRITE,
+  };
+
+CONTAINER_TYPE(dev_char_queue, CLIST,
+struct dev_char_rq_s
+{
+  enum dev_char_rq_type_e	type;
+  size_t			size;	/* char count */
+  devchar_callback_t		*callback; /* callback function */
+  void				*pvdata; /* pv data for callback */
+  uint8_t			*data; /* chars */
+  error_t			error; /* error code set by driver */
+
+  void				*drvdata; /* driver private data */
+  dev_char_queue_entry_t	queue_entry; /* used by driver to enqueue requests */
+}, queue_entry);
+
+CONTAINER_FUNC(dev_char_queue, CLIST, static inline, dev_char_queue);
 
 
+/** Char device class request() function tempate. */
+#define DEVCHAR_REQUEST(n)	void  (n) (struct device_s *dev, struct dev_char_rq_s *rq)
 
+/** Char device class request() methode shortcut */
+#define dev_char_request(dev, ...) (dev)->drv->f.chr.f_request(dev, __VA_ARGS__ )
 
-/** Char device class write() function tempate. */
-#define DEVCHAR_WRITE(n)	ssize_t  (n) (struct device_s *dev, const uint8_t *data, size_t size)
+/**
+   Char device class request() function type. Enqueue a read or write request.
 
-/** 
-    Char device class write() function type.  Write bytes data to the
-    device. Return number of bytes written. Should not block if unable
-    to write more bytes.
-
-    @param dev pointer to device descriptor
-    @param data pointer to read only data buffer
-    @param size data bytes count
-    @return data bytes count written to the device or negative error code
+   @param dev pointer to device descriptor
+   @param rq pointer to request. data, size and callback, field must be intialized.
 */
-typedef DEVCHAR_WRITE(devchar_write_t);
-
-/** Char device class write() methode shortcut */
-#define dev_char_write(dev, ...) (dev)->drv->f.chr.f_write(dev, __VA_ARGS__ )
-
-
+typedef DEVCHAR_REQUEST(devchar_request_t);
 
 
 /** Char device class methodes */
 struct dev_class_char_s
 {
-  devchar_read_t		*f_read;
-  devchar_write_t		*f_write;
+  devchar_request_t		*f_request;
 };
 
+
+/** Synchronous helper read function. This function use the scheduler
+    api to put current context in wait state if no data is available
+    from device yet. This function spin in a loop waiting for read
+    operation to complete when scheduler is disabled.
+
+    @returns processed bytes count or negative error code.
+*/
+ssize_t dev_char_wait_read(struct device_s *dev, uint8_t *data, size_t size);
+
 /** Synchronous helper read function. This function spin in a loop
-    waiting for read operation to complete. */
-error_t dev_char_wait_read(struct device_s *dev, uint8_t *data, size_t size);
+    waiting for read operation to complete.
+
+    @returns processed bytes count or negative error code.
+*/
+ssize_t dev_char_lock_read(struct device_s *dev, uint8_t *data, size_t size);
+
+/** Synchronous helper write function. This function use the scheduler
+    api to put current context in wait state if no data is available
+    from device yet. This function spin in a loop waiting for write
+    operation to complete when scheduler is disabled.
+
+    @returns processed bytes count or negative error code.
+*/
+ssize_t dev_char_wait_write(struct device_s *dev, const uint8_t *data, size_t size);
 
 /** Synchronous helper write function. This function spin in a loop
-    waiting for write operation to complete. */
-error_t dev_char_wait_write(struct device_s *dev, const uint8_t *data, size_t size);
+    waiting for write operation to complete.
+
+    @returns processed bytes count or negative error code.
+*/
+ssize_t dev_char_lock_write(struct device_s *dev, const uint8_t *data, size_t size);
 
 #endif
 

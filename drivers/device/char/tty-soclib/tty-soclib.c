@@ -34,32 +34,65 @@
 #define TTY_SOCLIB_REG_STATUS	4
 #define TTY_SOCLIB_REG_READ	8
 
-/* 
- * device read operation
- */
-
-DEVCHAR_READ(tty_soclib_read)
+void tty_soclib_try_read(struct device_s *dev)
 {
   struct tty_soclib_context_s	*pv = dev->drv_pv;
-  size_t			res;
+  struct dev_char_rq_s		*rq;
 
-  res = tty_fifo_pop_array(&pv->read_fifo, data, size);
+  while ((rq = dev_char_queue_head(&pv->read_q)))
+    {
+      size_t size = tty_fifo_pop_array(&pv->read_fifo, rq->data, rq->size);
 
-  return res;
+      if (!size)
+	break;
+
+      rq->size -= size;
+      rq->error = 0;
+
+      if (rq->callback(dev, rq, size) || rq->size == 0)
+	dev_char_queue_remove(&pv->read_q, rq);
+      else
+	rq->data += size;
+    }
 }
 
-/* 
- * device write operation
- */
-
-DEVCHAR_WRITE(tty_soclib_write)
+DEVCHAR_REQUEST(tty_soclib_request)
 {
-  size_t		i;
+  struct tty_soclib_context_s	*pv = dev->drv_pv;
 
-  for (i = 0; i < size; i++)
-    cpu_mem_write_32(dev->addr[0] + TTY_SOCLIB_REG_WRITE, endian_le32(data[i]));
+  assert(rq->size);
 
-  return size;
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  switch (rq->type)
+    {
+    case DEV_CHAR_READ: {
+      bool_t empty;
+
+      empty = dev_char_queue_isempty(&pv->read_q);
+      dev_char_queue_pushback(&pv->read_q, rq);
+      if (empty)
+	tty_soclib_try_read(dev);
+      break;
+    }
+
+    case DEV_CHAR_WRITE: {
+      size_t i;
+      size_t size = rq->size;
+
+      for (i = 0; i < rq->size; i++)
+	cpu_mem_write_32(dev->addr[0] + TTY_SOCLIB_REG_WRITE, endian_le32(rq->data[i]));
+
+      rq->size = 0;
+      rq->error = 0;
+      rq->callback(dev, rq, size);
+
+      break;
+    }
+
+    }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
 }
 
 /* 
@@ -71,6 +104,7 @@ DEV_CLEANUP(tty_soclib_cleanup)
   struct tty_soclib_context_s	*pv = dev->drv_pv;
 
   tty_fifo_destroy(&pv->read_fifo);
+  dev_char_queue_destroy(&pv->read_q);
 
   mem_free(pv);
 }
@@ -81,18 +115,21 @@ DEV_CLEANUP(tty_soclib_cleanup)
 
 DEV_IRQ(tty_soclib_irq)
 {
-  struct tty_soclib_context_s	*pv = dev->drv_pv;
-  uint8_t	c;
+  struct tty_soclib_context_s *pv = dev->drv_pv;
+  uint8_t c;
+
+  lock_spin(&dev->lock);
 
   /* get character from tty */
   c = cpu_mem_read_8(dev->addr[0] + TTY_SOCLIB_REG_READ);
-
   /* add character to driver fifo */
-  tty_fifo_noirq_pushback(&pv->read_fifo, c);
+  tty_fifo_pushback(&pv->read_fifo, c);
 
-  //printf("tty input %02x\n", c);
+  tty_soclib_try_read(dev);
 
-  return 0;
+  lock_release(&dev->lock);
+
+  return 1;
 }
 
 /* 
@@ -107,8 +144,7 @@ const struct driver_s	tty_soclib_drv =
   .f_cleanup		= tty_soclib_cleanup,
   .f_irq		= tty_soclib_irq,
   .f.chr = {
-    .f_read		= tty_soclib_read,
-    .f_write		= tty_soclib_write,
+    .f_request		= tty_soclib_request,
   }
 };
 #endif
@@ -129,7 +165,7 @@ DEV_INIT(tty_soclib_init)
 
   dev->drv_pv = pv;
 
-  /* init tty input fifo */
+  dev_char_queue_init(&pv->read_q);
   tty_fifo_init(&pv->read_fifo);
 
   return 0;

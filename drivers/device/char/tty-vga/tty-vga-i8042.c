@@ -217,14 +217,14 @@ static void tty_vga_keycode_make(struct device_s *dev,
 	str = k->ctrl;
 
       if ((pv->key_state & VGA_KS_ALT) && str)
-	tty_fifo_noirq_pushback(&pv->read_fifo, 0x1b);
+	tty_fifo_pushback(&pv->read_fifo, 0x1b);
 
       if (str)
-	tty_fifo_noirq_pushback_array(&pv->read_fifo, (uint8_t*)str, strlen(str));
+	tty_fifo_pushback_array(&pv->read_fifo, (uint8_t*)str, strlen(str));
 
 #ifdef CONFIG_DRIVER_CHAR_VGATTY_ANSI
       if (*str == 13 && pv->nlmode) /* CR LF in newline mode */
-	tty_fifo_noirq_pushback(&pv->read_fifo, 10);
+	tty_fifo_pushback(&pv->read_fifo, 10);
 #endif
     }
 }
@@ -271,7 +271,7 @@ DEV_IRQ(tty_vga_irq)
   struct tty_vga_context_s	*pv = dev->drv_pv;
   bool_t			res = 0;
 
-  lock_spin(&pv->lock);
+  lock_spin(&dev->lock);
 
   while (cpu_io_read_8(0x64) & 0x01)
     {
@@ -282,7 +282,10 @@ DEV_IRQ(tty_vga_irq)
       res = 1;
     }
 
-  lock_release(&pv->lock);
+  if (res)
+    tty_vga_try_read(dev);
+
+  lock_release(&dev->lock);
 
   return res;
 }

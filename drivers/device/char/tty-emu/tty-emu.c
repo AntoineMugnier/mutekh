@@ -36,18 +36,46 @@
  * device read operation
  */
 
-DEVCHAR_READ(tty_emu_read)
+DEVCHAR_REQUEST(tty_emu_request)
 {
-  return emu_do_syscall(EMU_SYSCALL_READ, 3, 0, data, size);
-}
+  reg_t fd;
+  reg_t id;
 
-/*
- * device write operation
- */
+  assert(rq->size);
 
-DEVCHAR_WRITE(tty_emu_write)
-{
-  return emu_do_syscall(EMU_SYSCALL_WRITE, 3, 1, data, size);
+  switch (rq->type)
+    {
+    case DEV_CHAR_READ:
+      fd = 0;
+      id = EMU_SYSCALL_READ;
+      break;
+    case DEV_CHAR_WRITE:
+      fd = 1;
+      id = EMU_SYSCALL_WRITE;
+      break;
+    default:
+      return;
+    }
+
+  while (1)
+    {
+      ssize_t size = emu_do_syscall(id, 3, fd, rq->data, rq->size);
+
+      if (size == 0)
+	rq->error = EEOF;
+      else if (size < 0)
+	rq->error = EIO;
+      else
+	{
+	  rq->size -= size;
+	  rq->error = 0;
+	}
+
+      if (rq->callback(dev, rq, size) || rq->size == 0 || rq->error)
+	return;
+
+      rq->data += size;
+    }
 }
 
 /*
@@ -70,8 +98,7 @@ const struct driver_s	tty_emu_drv =
   .f_cleanup		= tty_emu_cleanup,
   .f_irq		= NULL,
   .f.chr = {
-    .f_read		= tty_emu_read,
-    .f_write		= tty_emu_write,
+    .f_request		= tty_emu_request,
   }
 };
 #endif
