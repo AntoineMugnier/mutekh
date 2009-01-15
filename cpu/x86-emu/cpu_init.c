@@ -38,9 +38,6 @@ CPU_LOCAL void *__cpu_context_data_base;
 /* cpu interrupts state */
 volatile CPU_LOCAL bool_t cpu_irq_state = 0;
 
-static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
-struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
-
 error_t
 cpu_global_init(void)
 {
@@ -74,20 +71,10 @@ void tracer_entry(struct cpu_cld_s *cld)
   while (1);
 }
 
-struct cpu_cld_s *cpu_init(void)
+void cpu_init(void)
 {
-  struct cpu_cld_s	*cld;
-  reg_t			*tracer_stack;
-  //void		*cls;
-  uint_fast16_t		id = cpu_id();
-
-  if (!(cld = mem_alloc(sizeof (struct cpu_cld_s), MEM_SCOPE_SYS)))
-    return NULL;
-
-  cld->id = id;
-  cpu_cld_list[id] = cld;
-
 #if 0
+  reg_t			*tracer_stack;
 
   /* allocate memory for tracer process stack */
   tracer_stack = (void*)emu_do_syscall(EMU_SYSCALL_MMAP, 6, NULL, TRACER_STACK_SIZE * sizeof(reg_t),
@@ -108,9 +95,9 @@ struct cpu_cld_s *cpu_init(void)
 		"	int $0x80		\n"
 		"	test %0, %0		\n"
 		"	jnz 1f			\n"
-#ifdef CONFIG_COMPILE_FRAMEPTR
+# ifdef CONFIG_COMPILE_FRAMEPTR
 		"	xorl	%%ebp, %%ebp	\n"
-#endif
+# endif
 		"	call	tracer_entry	\n"
 		"1:				\n"
 		: "=a" (cld->tracer_pid)
@@ -130,10 +117,6 @@ struct cpu_cld_s *cpu_init(void)
   	       "	orl	$0x40000, (%esp)			\n"
   	       "	popf						\n");
 #endif
-
-  CPU_LOCAL_SET(cpu_cld, cld);
-
-  return cld;
 }
 
 void cpu_start_other_cpu(void)
