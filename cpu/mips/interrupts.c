@@ -245,9 +245,13 @@ asm(
 
     "	lw	$sp,	29*4($sp)		        \n" /* restore user stack */
 
+# if __mips >= 32 
+    "	eret						\n"
+# else
     ".set noreorder					\n"
     "	jr	$26					\n"
     "	rfe						\n"
+# endif
 
     ".set pop						\n"
     );
