@@ -291,6 +291,7 @@ size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 			len = (fifo->gdepth - status.rptr);
 		len = min(len, lensw);
 		sptr = &((uint8_t*)fifo->buffer)[status.rptr];
+		cpu_dcache_invld_buf(sptr, len);
 		memcpy( ptr, sptr, len );
 		status.rptr += len;
 		if ( status.rptr == fifo->gdepth )
