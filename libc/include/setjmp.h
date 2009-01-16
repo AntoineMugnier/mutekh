@@ -23,9 +23,11 @@
 #ifndef SETJMP_H_
 #define SETJMP_H_
 
+#include <hexo/cpu.h>
 #include <hexo/types.h>
 
-typedef reg_t jmp_buf[CONFIG_LIBC_SETJMP_REG_COUNT + 1]; /* last value is setjump return value */
+/* last values are pc reg and setjump return value */
+typedef reg_t jmp_buf[CPU_GPREG_COUNT + 1 + 1]; 
 typedef jmp_buf sigjmp_buf;
 
 reg_t setjmp(jmp_buf env);

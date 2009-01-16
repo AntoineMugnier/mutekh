@@ -327,6 +327,7 @@ getline_edit_init(struct term_behavior_s *bhv)
     bhv->keyevent[k] = bhv_key_ascii;
 
   bhv->keyevent[TERM_KEY_RETURN] = bhv_key_valid;
+  bhv->keyevent[TERM_KEY_LF] = bhv_key_valid;
   bhv->keyevent[TERM_KEY_EOT] = bhv_key_eof;
 
   if (term_move(bhv->tm, term_dir_right, 0) != TERM_RET_OK)

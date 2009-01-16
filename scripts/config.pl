@@ -1233,6 +1233,7 @@ Usage: config.pl [options]
 	--header=file    Output configuration header in `file'.
 	--makefile=file  Output configuration makefile variables in `file'.
 	--m4=file        Output configuration m4 macro definitions in `file'.
+	--python=file    Output configuration python definitions in `file'.
 
 	--check          Check configuration constraints without output.
 	--list[=all]     Display configuration tokens list.
