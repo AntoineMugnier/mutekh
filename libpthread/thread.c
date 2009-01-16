@@ -101,7 +101,7 @@ pthread_exit(void *retval)
 #ifdef CONFIG_PTHREAD_JOIN
   if (!this->detached)
     {
-      struct sched_context_s *joined_thread = this->joined;
+      pthread_t joined_thread = this->joined;
 
       if(joined_thread == NULL)
       /* thread not joined yet */
@@ -120,7 +120,7 @@ pthread_exit(void *retval)
 	  joined_thread->joined_retval = retval;
 
 	  /* wake up joined thread */
-	  sched_context_start(this->joined);
+	  sched_context_start(&joined_thread->sched_ctx);
 	  lock_release(&this->lock);
 	}
     }
@@ -174,7 +174,7 @@ pthread_join(pthread_t thread, void **value_ptr)
 	else
 	{
 	  /* register current thread into target thread's descriptor */
-	  thread->joined = sched_get_current();
+	  thread->joined = pthread_self();
 	  
 	  /* wait for thread termination */
 	  sched_context_stop_unlock(&thread->lock);

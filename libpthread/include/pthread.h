@@ -72,6 +72,7 @@ void __pthread_switch(void);
 
 struct pthread_s
 {
+  lock_t lock;
   /** context */
   struct sched_context_s	sched_ctx;
 
@@ -82,8 +83,8 @@ struct pthread_s
   bool_t			joinable:1;
 
   /** pointer to thread waiting for termination */
-  //sched_queue_root_t		joined;
-  struct sched_context_s        joined;
+  struct pthread_s              *joined;
+
   /** joined thread exit value */
   void				*joined_retval;
 #endif
