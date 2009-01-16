@@ -82,7 +82,8 @@ struct pthread_s
   bool_t			joinable:1;
 
   /** pointer to thread waiting for termination */
-  sched_queue_root_t		joined;
+  //sched_queue_root_t		joined;
+  struct sched_context_s        joined;
   /** joined thread exit value */
   void				*joined_retval;
 #endif

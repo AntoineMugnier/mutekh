@@ -57,7 +57,7 @@ __pthread_cleanup(void)
   /* cleanup current context */
   arch_contextstack_free(context_destroy(&thread->sched_ctx.context));
 
-  sched_queue_destroy(&thread->joined);
+  lock_destroy(&thread->lock);
 
   /* free thread structure */
   mem_free(thread);
@@ -96,13 +96,12 @@ pthread_exit(void *retval)
 
   /* remove thread from runnable list */
   cpu_interrupt_disable();
-  sched_queue_wrlock(&this->joined);
+  lock_spin(&this->lock);
 
 #ifdef CONFIG_PTHREAD_JOIN
   if (!this->detached)
     {
-      struct pthread_s *joined_thread = NULL;
-      joined_thread = sched_queue_nolock_head(&this->joined)->private;
+      struct sched_context_s *joined_thread = this->joined;
 
       if(joined_thread == NULL)
       /* thread not joined yet */
@@ -112,11 +111,8 @@ pthread_exit(void *retval)
 
 	  this->joined_retval = retval;
 
-	  /* do not release irq yet, thread must not be interrupted before its end */
-	  sched_queue_unlock(&this->joined);
-
 	  /* stop thread, waiting for pthread_join or pthread_detach */
-	  sched_context_stop();
+	  sched_context_stop_unlock(&this->lock);
 	}
       else
 	/* thread already joined */
@@ -124,7 +120,8 @@ pthread_exit(void *retval)
 	  joined_thread->joined_retval = retval;
 
 	  /* wake up joined thread */
-	  sched_wake(&this->joined);
+	  sched_context_start(this->joined);
+	  lock_release(&this->lock);
 	}
     }
 #endif /* CONFIG_PTHREAD_JOIN */
@@ -147,12 +144,12 @@ pthread_join(pthread_t thread, void **value_ptr)
   error_t	res = 0;
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
-  sched_queue_wrlock(&thread->joined);
+  lock_spin(&thread->lock);
 
 # ifdef CONFIG_PTHREAD_CHECK
   if (thread->detached)
     {
-      sched_queue_unlock(&thread->joined);
+      lock_release(&thread->lock);
       res = EINVAL;
     }
   else
@@ -165,19 +162,24 @@ pthread_join(pthread_t thread, void **value_ptr)
 	/* wake up terminated thread waiting for join */
 	sched_context_start(&thread->sched_ctx);
 
-	sched_queue_unlock(&thread->joined);
+	lock_release(&thread->lock);
       }
     else
       {
-	if(!sched_queue_nolock_isempty(&thread->joined))
+	if(thread->joined)
 	{
-	  sched_queue_unlock(&thread->joined);
+	  lock_release(&thread->lock);
 	  res=EINVAL;
 	}
 	else
 	{
+	  /* register current thread into target thread's descriptor */
+	  thread->joined = sched_get_current();
+	  
 	  /* wait for thread termination */
-	  sched_wait_unlock(&thread->joined);
+	  sched_context_stop_unlock(&thread->lock);
+	  
+	  /* get joined thread's exit value */
 	  *value_ptr = pthread_self()->joined_retval;
 	}
       }
@@ -196,14 +198,11 @@ pthread_detach(pthread_t thread)
 {
   error_t	res = 0;
 
-  sched_queue_wrlock(&thread->joined);
+  lock_spin_irq(&thread->lock);
 
 # ifdef CONFIG_PTHREAD_CHECK
   if (thread->detached)
-    {
-      sched_queue_unlock(&thread->joined);
       res = EINVAL;
-    }
   else
 # endif
     {
@@ -211,10 +210,9 @@ pthread_detach(pthread_t thread)
 
       if (thread->joinable)
 	sched_context_start(&thread->sched_ctx);
-
-      sched_queue_unlock(&thread->joined);
     }
 
+  lock_release_irq(&thread->lock);
   return res;
 }
 
@@ -257,6 +255,12 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   if (!thread)
     return ENOMEM;
 
+  if (lock_init(&thread->lock))
+    {
+      mem_free(thread);
+      return ENOMEM;
+    }
+
   /* find a stack buffer */
 #ifdef CONFIG_PTHREAD_ATTRIBUTES
   if (attr && attr->flags & _PTHREAD_ATTRFLAG_STACK)
@@ -291,7 +295,6 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   sched_context_init(&thread->sched_ctx);
   thread->sched_ctx.private = thread;
 
-  sched_queue_init(&thread->joined);
   thread->start_routine = start_routine;
   thread->arg = arg;
   thread->joinable = 0;
