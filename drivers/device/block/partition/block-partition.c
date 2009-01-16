@@ -132,7 +132,7 @@ static void block_partition_parse_extended(struct device_s *parent,
     {
       data[0] = (uint8_t*)&t;
 
-      if (dev_block_lock_read(parent, data, next_lba, 1))
+      if (dev_block_spin_read(parent, data, next_lba, 1))
 	return;
 
       if (endian_le16_na_load(&t.signature) != 0xaa55)
@@ -169,7 +169,7 @@ static void block_partition_parse(struct device_s *parent,
 
   data[0] = (uint8_t*)&t;
 
-  if (dev_block_lock_read(parent, data, 0, 1))
+  if (dev_block_spin_read(parent, data, 0, 1))
     {
       printf("partition table read error\n");
       return;

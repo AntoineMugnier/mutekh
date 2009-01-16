@@ -42,7 +42,7 @@ void __puts(const char *s, size_t len)
     {
       ssize_t	res;
 
-      res = dev_char_lock_write(tty_dev, (uint8_t*)s, len);
+      res = dev_char_spin_write(tty_dev, (uint8_t*)s, len);
 
       len -= res;
       s += res;
@@ -55,7 +55,7 @@ void __puts(const char *s, size_t len)
 inline int_fast8_t putchar(char c)
 {
 #if defined(CONFIG_MUTEK_CONSOLE)
-  dev_char_lock_write(tty_dev, (uint8_t*)&c, 1);
+  dev_char_spin_write(tty_dev, (uint8_t*)&c, 1);
 #endif
   return c;
 }

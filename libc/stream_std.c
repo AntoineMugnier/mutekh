@@ -14,7 +14,7 @@ extern struct device_s *tty_dev;
 static ssize_t	tty_read(fd_t fd, void *buffer, size_t count)
 {
 #if defined(CONFIG_MUTEK_CONSOLE)
-  return dev_char_lock_read(tty_dev, buffer, count);
+  return dev_char_spin_read(tty_dev, buffer, count);
 #else
   return 0;
 #endif
@@ -23,7 +23,7 @@ static ssize_t	tty_read(fd_t fd, void *buffer, size_t count)
 static ssize_t	tty_write(fd_t fd, const void *buffer, size_t count)
 {
 #if defined(CONFIG_MUTEK_CONSOLE)
-  return dev_char_lock_write(tty_dev, buffer, count);
+  return dev_char_spin_write(tty_dev, buffer, count);
 #else
   return 0;
 #endif

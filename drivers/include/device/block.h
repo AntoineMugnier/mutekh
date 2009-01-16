@@ -132,26 +132,26 @@ struct dev_class_block_s
 /** Synchronous helper read function. This function use the scheduler
     api to put current context in wait state if no data is available
     from device yet. This function is equivalent to
-    dev_block_lock_read() when scheduler is disabled.
+    dev_block_spin_read() when scheduler is disabled.
 */
 error_t dev_block_wait_read(struct device_s *dev, uint8_t **data, dev_block_lba_t lba, size_t count);
 
 /** Synchronous helper read function. This function spin in a loop
     waiting for read operation to complete.
 */
-error_t dev_block_lock_read(struct device_s *dev, uint8_t **data, dev_block_lba_t lba, size_t count);
+error_t dev_block_spin_read(struct device_s *dev, uint8_t **data, dev_block_lba_t lba, size_t count);
 
 /** Synchronous helper write function. This function use the scheduler
     api to put current context in wait state if no data is available
     from device yet. This function is equivalent to
-    dev_block_lock_write() when scheduler is disabled.
+    dev_block_spin_write() when scheduler is disabled.
 */
 error_t dev_block_wait_write(struct device_s *dev, uint8_t **data, dev_block_lba_t lba, size_t count);
 
 /** Synchronous helper write function. This function spin in a loop
     waiting for write operation to complete.
 */
-error_t dev_block_lock_write(struct device_s *dev, uint8_t **data, dev_block_lba_t lba, size_t count);
+error_t dev_block_spin_write(struct device_s *dev, uint8_t **data, dev_block_lba_t lba, size_t count);
 
 
 #endif

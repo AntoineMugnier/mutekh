@@ -138,7 +138,7 @@ error_t dev_block_wait_read(struct device_s *dev, uint8_t **data,
 #endif
 }
 
-error_t dev_block_lock_read(struct device_s *dev, uint8_t **data,
+error_t dev_block_spin_read(struct device_s *dev, uint8_t **data,
 			    dev_block_lba_t lba, size_t count)
 {
   return dev_block_lock_request(dev, data, lba, count, DEV_BLOCK_READ);
@@ -154,7 +154,7 @@ error_t dev_block_wait_write(struct device_s *dev, uint8_t **data,
 #endif
 }
 
-error_t dev_block_lock_write(struct device_s *dev, uint8_t **data,
+error_t dev_block_spin_write(struct device_s *dev, uint8_t **data,
 			     dev_block_lba_t lba, size_t count)
 {
   return dev_block_lock_request(dev, data, lba, count, DEV_BLOCK_WRITE);

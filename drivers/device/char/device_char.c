@@ -137,7 +137,7 @@ ssize_t dev_char_wait_read(struct device_s *dev, uint8_t *data, size_t size)
 #endif
 }
 
-ssize_t dev_char_lock_read(struct device_s *dev, uint8_t *data, size_t size)
+ssize_t dev_char_spin_read(struct device_s *dev, uint8_t *data, size_t size)
 {
   return dev_char_lock_request(dev, data, size, DEV_CHAR_READ);
 }
@@ -151,7 +151,7 @@ ssize_t dev_char_wait_write(struct device_s *dev, const uint8_t *data, size_t si
 #endif
 }
 
-ssize_t dev_char_lock_write(struct device_s *dev, const uint8_t *data, size_t size)
+ssize_t dev_char_spin_write(struct device_s *dev, const uint8_t *data, size_t size)
 {
   return dev_char_lock_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE);
 }
