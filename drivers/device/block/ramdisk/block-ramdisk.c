@@ -40,10 +40,10 @@
 /**************************************************************/
 
 /* 
- * device read operation
+ * device read/write request
  */
 
-DEVBLOCK_READ(block_ramdisk_read)
+DEVBLOCK_REQUEST(block_ramdisk_request)
 {
   struct block_ramdisk_context_s *pv = dev->drv_pv;
   struct dev_block_params_s *p = &pv->params;
@@ -54,45 +54,20 @@ DEVBLOCK_READ(block_ramdisk_read)
 
   if (lba + count <= p->blk_count)
     {
-      uint8_t *data[count];
       dev_block_lba_t b;
 
-      for (b = 0; b < count; b++)
-	memcpy(rq->data[b], pv->mem + ((lba + b) * p->blk_size), p->blk_size);
+      switch (rq->type)
+	{
+	case DEV_BLOCK_READ:
+	  for (b = 0; b < count; b++)
+	    memcpy(rq->data[b], pv->mem + ((lba + b) * p->blk_size), p->blk_size);
+	  break;
 
-      rq->error = 0;
-      rq->count -= count;
-      rq->lba += count;
-      rq->callback(dev, rq, count);
-    }
-  else
-    {
-      rq->error = ERANGE;
-      rq->callback(dev, rq, 0);
-    }
-
-  lock_release(&dev->lock);
-}
-
-/* 
- * device write operation
- */
-
-DEVBLOCK_WRITE(block_ramdisk_write)
-{
-  struct block_ramdisk_context_s *pv = dev->drv_pv;
-  struct dev_block_params_s *p = &pv->params;
-  dev_block_lba_t lba = rq->lba;
-  dev_block_lba_t count = rq->count;
-  
-  lock_spin(&dev->lock);
-
-  if (lba + count <= p->blk_count)
-    {
-      dev_block_lba_t b;
-
-      for (b = 0; b < count; b++)
-	memcpy(pv->mem + ((lba + b) * p->blk_size), rq->data[b], p->blk_size);
+	case DEV_BLOCK_WRITE:
+	  for (b = 0; b < count; b++)
+	    memcpy(pv->mem + ((lba + b) * p->blk_size), rq->data[b], p->blk_size);
+	  break;
+	}
 
       rq->error = 0;
       rq->count -= count;
@@ -141,8 +116,7 @@ const struct driver_s	block_ramdisk_drv =
   .f_cleanup		= block_ramdisk_cleanup,
   .f_irq		= DEVICE_IRQ_INVALID,
   .f.blk = {
-    .f_read		= block_ramdisk_read,
-    .f_write		= block_ramdisk_write,
+    .f_request		= block_ramdisk_request,
     .f_getparams	= block_ramdisk_getparams,
   }
 };

@@ -28,8 +28,7 @@
 DEV_IRQ(block_soclib_irq);
 DEV_INIT(block_soclib_init);
 DEV_CLEANUP(block_soclib_cleanup);
-DEVBLOCK_READ(block_soclib_read);
-DEVBLOCK_WRITE(block_soclib_write);
+DEVBLOCK_REQUEST(block_soclib_request);
 
 #endif
 

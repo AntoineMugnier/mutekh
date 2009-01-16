@@ -163,33 +163,6 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_read_irq)
   return 0;
 }
 
-const struct drive_ata_oper_s drive_ata_read_oper =
-  {
-    .irq = drive_ata_read_irq,
-    .start = drive_ata_read_start,
-  };
-
-DEVBLOCK_READ(drive_ata_read)
-{
-  struct controller_ata_context_s *cpv = dev->parent->drv_pv;
-  struct drive_ata_context_s *dpv = dev->drv_pv;
-
-  LOCK_SPIN_IRQ(&dev->parent->lock);
-
-  if (rq->lba + rq->count > dpv->drv_params.blk_count)
-    {
-      rq->error = ERANGE;
-      rq->callback(dev, rq, 0);
-    }
-  else
-    {
-      rq->drvdata = (void*)&drive_ata_read_oper;
-      drive_ata_rq_start(dev, rq);
-    }
-
-  LOCK_RELEASE_IRQ(&dev->parent->lock);
-}
-
 /* 
  * device write operation
  */
@@ -264,13 +237,19 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_write_irq)
   return 0;
 }
 
-const struct drive_ata_oper_s drive_ata_write_oper =
+static const struct drive_ata_oper_s drive_ata_write_oper =
   {
     .irq = drive_ata_write_irq,
     .start = drive_ata_write_start,
   };
 
-DEVBLOCK_WRITE(drive_ata_write)
+static const struct drive_ata_oper_s drive_ata_read_oper =
+  {
+    .irq = drive_ata_read_irq,
+    .start = drive_ata_read_start,
+  };
+
+DEVBLOCK_REQUEST(drive_ata_request)
 {
   struct controller_ata_context_s *cpv = dev->parent->drv_pv;
   struct drive_ata_context_s *dpv = dev->drv_pv;
@@ -284,7 +263,16 @@ DEVBLOCK_WRITE(drive_ata_write)
     }
   else
     {
-      rq->drvdata = (void*)&drive_ata_write_oper;
+      switch (rq->type)
+	{
+	case DEV_BLOCK_READ:
+	  rq->drvdata = (void*)&drive_ata_read_oper;
+	  break;
+	case DEV_BLOCK_WRITE:
+	  rq->drvdata = (void*)&drive_ata_write_oper;
+	  break;
+	}
+
       drive_ata_rq_start(dev, rq);
     }
 
@@ -324,8 +312,7 @@ const struct driver_s	drive_ata_drv =
   .class		= device_class_block,
   .f_cleanup		= drive_ata_cleanup,
   .f.blk = {
-    .f_read		= drive_ata_read,
-    .f_write		= drive_ata_write,
+    .f_request		= drive_ata_request,
     .f_getparams	= drive_ata_getparams,
   }
 };

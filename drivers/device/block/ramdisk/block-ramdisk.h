@@ -28,8 +28,7 @@
 DEV_IRQ(block_ramdisk_irq);
 DEV_INIT(block_ramdisk_init);
 DEV_CLEANUP(block_ramdisk_cleanup);
-DEVBLOCK_READ(block_ramdisk_read);
-DEVBLOCK_WRITE(block_ramdisk_write);
+DEVBLOCK_REQUEST(block_ramdisk_request);
 
 #endif
 

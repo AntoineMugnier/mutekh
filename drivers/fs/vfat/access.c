@@ -39,7 +39,6 @@ struct bc_request_s* vfat_read_sectors(struct vfat_context_s *ctx,
 				       vfat_sector_t first_sector,
 				       uint_fast8_t count)
 {
-  struct dev_block_rq_s rq;
   uint8_t *data[1];
   uint_fast32_t i;
  
@@ -61,18 +60,15 @@ struct bc_request_s* vfat_read_sectors(struct vfat_context_s *ctx,
       printf("-->> reading blk %d..", first_sector + i);
 #endif
 
-      rq.lba = first_sector + i;
-      rq.count = 1;
-      rq.data = data;
       data[0] = request->buffers[i]->content;
       
 #ifdef CONFIG_DRIVER_FS_VFAT_INSTRUMENT
     blk_rd_count ++;
 #endif
 
-      if(dev_block_wait_read(ctx->dev, &rq))
+      if(dev_block_wait_read(ctx->dev, data, first_sector + i, 1))
 	goto VFAT_READ_CLUSTER_ERROR;
-      
+
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
       printf("..OK\n");
 #endif

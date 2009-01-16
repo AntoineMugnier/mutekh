@@ -77,7 +77,7 @@ static void block_soclib_rq_end(struct device_s *dev)
  * device read operation
  */
 
-DEVBLOCK_READ(block_soclib_read)
+DEVBLOCK_REQUEST(block_soclib_request)
 {
   struct block_soclib_context_s *pv = dev->drv_pv;
   struct dev_block_params_s *p = &pv->params;
@@ -88,34 +88,16 @@ DEVBLOCK_READ(block_soclib_read)
 
   if (lba + count <= p->blk_count)
     {
-      rq->drvdata = (void*)BLOCK_SOCLIB_OP_READ;
-      block_soclib_rq_start(dev, rq);
-    }
-  else
-    {
-      rq->error = ERANGE;
-      rq->callback(dev, rq, 0);
-    }
+       switch (rq->type)
+	{
+	case DEV_BLOCK_READ:
+	  rq->drvdata = (void*)BLOCK_SOCLIB_OP_READ;
+	  break;
+	case DEV_BLOCK_WRITE:
+	  rq->drvdata = (void*)BLOCK_SOCLIB_OP_WRITE;
+	  break;
+	}
 
-  LOCK_RELEASE_IRQ(&dev->lock);
-}
-
-/* 
- * device write operation
- */
-
-DEVBLOCK_WRITE(block_soclib_write)
-{
-  struct block_soclib_context_s *pv = dev->drv_pv;
-  struct dev_block_params_s *p = &pv->params;
-  dev_block_lba_t lba = rq->lba;
-  dev_block_lba_t count = rq->count;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (lba + count <= p->blk_count)
-    {
-      rq->drvdata = (void*)BLOCK_SOCLIB_OP_WRITE;
       block_soclib_rq_start(dev, rq);
     }
   else
@@ -213,8 +195,7 @@ const struct driver_s	block_soclib_drv =
   .f_cleanup		= block_soclib_cleanup,
   .f_irq		= block_soclib_irq,
   .f.blk = {
-    .f_read		= block_soclib_read,
-    .f_write		= block_soclib_write,
+    .f_request		= block_soclib_request,
     .f_getparams	= block_soclib_getparams,
   }
 };

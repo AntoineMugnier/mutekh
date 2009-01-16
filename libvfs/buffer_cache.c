@@ -313,7 +313,6 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
   assert(request != NULL);
 
   struct bc_buffer_s *buffer;
-  struct dev_block_rq_s rq;
   uint8_t *data[1];
   uint_fast16_t index; 
   reg_t interrupt_state;
@@ -366,12 +365,9 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
 	request->buffers[i] = buffer;
 	CLEAR_BUFFER(buffer->state,BC_DELAYED_WRITE);
 
-	rq.lba = buffer->key2;
-	rq.count = 1;
-	rq.data = data;
 	data[0] = buffer->content;
-	
-	if(dev_block_wait_write((struct device_s *)buffer->key1, &rq))
+
+	if(dev_block_wait_write((struct device_s *)buffer->key1, data, buffer->key2, 1))
 	{
 	  request->count = i + 1;
 	  return NULL;
@@ -488,7 +484,6 @@ struct bc_request_s* bc_release_buffer(struct buffer_cache_s *bc,
 
 void bc_sync(struct buffer_cache_s *bc, struct bc_freelist_s *freelist)
 {
-  struct dev_block_rq_s rq;
   struct bc_buffer_s *current=NULL;
   uint_fast16_t i;
 #ifdef CONFIG_BC_INSTRUMENT
@@ -521,15 +516,12 @@ void bc_sync(struct buffer_cache_s *bc, struct bc_freelist_s *freelist)
 	  printf(">>>>> Sync: %d\n",current->key2);
 # endif
 #endif
-	  rq.lba = current->key2;
-	  rq.count = 1;
-	  rq.data = data;
 	  data[0] = current->content;
 #ifdef CONFIG_BC_INSTRUMENT
 	  sync_count ++;
 	  tm_tmp = cpu_cycle_count();
 #endif
-	  if(dev_block_wait_write((struct device_s *)current->key1, &rq))
+	  if(dev_block_wait_write((struct device_s *)current->key1, data, current->key2, 1))
 	    printf("bc_sync: I/O error while writing bloc %d\n",current->key2);
 #ifdef CONFIG_BC_INSTRUMENT
 	  tm_now = cpu_cycle_count() - tm_tmp;

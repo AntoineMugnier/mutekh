@@ -15,25 +15,10 @@ struct device_s *drv[2];
 extern struct device_s icu_dev;
 struct device_s ata;
 
-static void
-start_read_rq(struct dev_block_rq_s *rq,
-	      struct device_s *drive,
-	      dev_block_lba_t lba,
-	      size_t count,
-	      uint8_t **data)
-{
-  if (drive == NULL)
-    return;
-
-  rq->lba = lba;
-  rq->count = count;
-  rq->data = data;
-  dev_block_wait_read(drive, rq);
-}
 
 static CONTEXT_ENTRY(a_entry)
 {
-  int i = -1;
+  ssize_t i = -1;
   sched_unlock();
 
   //  hexo_instrument_trace(1);
@@ -44,7 +29,6 @@ static CONTEXT_ENTRY(a_entry)
       uint8_t	*data[2];
       //uint_fast8_t d = rand() % 2;
       dev_block_lba_t l = ((rand() % 45) << 16) + rand() % 65535;
-      struct dev_block_rq_s rq;
 
       printf("(START d%i c%i %s %p)", 1, cpu_id(), param, &sched_get_current()->context);
 
@@ -53,7 +37,7 @@ static CONTEXT_ENTRY(a_entry)
       data[0] = _data;
       data[1] = _data + 512;
 
-      start_read_rq(&rq, drv[0], l, 2, data);
+      dev_block_wait_read(drv[0], data, l, 2);
 
       cpu_interrupt_disable();
 

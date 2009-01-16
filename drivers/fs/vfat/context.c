@@ -33,16 +33,12 @@ static inline error_t vfat_context_init(struct vfat_context_s *ctx)
 {
   size_t blk_sz = dev_block_getparams(ctx->dev)->blk_size;
   struct vfat_bpb_s *bpb;
-  struct dev_block_rq_s rq;
   uint8_t *data[1];
   uint8_t d[blk_sz];
 
   data[0] = d;
-  rq.lba = 0;
-  rq.count = 1;
-  rq.data = data;
 
-  if (dev_block_lock_read(ctx->dev, &rq))
+  if (dev_block_lock_read(ctx->dev, data, 0, 1))
     {
       printf("VFAT drv error: IO error, couldn't read bpb for device.\n");
       return -1;

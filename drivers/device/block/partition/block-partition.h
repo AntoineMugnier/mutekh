@@ -27,8 +27,7 @@
 
 DEV_CREATE(block_partition_create);
 DEV_CLEANUP(block_partition_cleanup);
-DEVBLOCK_READ(block_partition_read);
-DEVBLOCK_WRITE(block_partition_write);
+DEVBLOCK_REQUEST(block_partition_request);
 
 #endif
 

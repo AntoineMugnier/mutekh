@@ -28,9 +28,8 @@
 DEV_INIT(controller_ata_init);
 DEV_CLEANUP(controller_ata_cleanup);
 DEV_IRQ(controller_ata_irq);
-
-DEVBLOCK_READ(drive_ata_read);
-DEVBLOCK_WRITE(drive_ata_write);
+DEVBLOCK_REQUEST(drive_ata_request);
+DEVBLOCK_GETPARAMS(drive_ata_getparams);
 
 #endif
 

@@ -41,11 +41,7 @@
 
 /**************************************************************/
 
-/* 
- * device read operation
- */
-
-DEVBLOCK_READ(block_partition_read)
+DEVBLOCK_REQUEST(block_partition_request)
 {
   struct block_partition_context_s	*pv = dev->drv_pv;
 
@@ -57,27 +53,7 @@ DEVBLOCK_READ(block_partition_read)
   else
     {
       rq->lba += pv->first;
-      dev_block_read(dev->parent, rq);
-    }
-}
-
-/* 
- * device write operation
- */
-
-DEVBLOCK_WRITE(block_partition_write)
-{
-  struct block_partition_context_s	*pv = dev->drv_pv;
-
-  if (rq->lba + rq->count > pv->drv_params.blk_count)
-    {
-      rq->error = ERANGE;
-      rq->callback(dev, rq, 0);
-    }
-  else
-    {
-      rq->lba += pv->first;
-      dev_block_write(dev->parent, rq);
+      dev_block_request(dev->parent, rq);
     }
 }
 
@@ -148,19 +124,15 @@ static void block_partition_parse_extended(struct device_s *parent,
 					   block_partition_list_root_t *list,
 					   dev_block_lba_t lba)
 {
-  struct dev_block_rq_s rq;
   struct partition_table_s t;
   dev_block_lba_t next_lba = lba;
   uint8_t *data[1];
 
   while (1)
     {
-      rq.lba = next_lba;
-      rq.count = 1;
       data[0] = (uint8_t*)&t;
-      rq.data = data;
 
-      if (dev_block_lock_read(parent, &rq))
+      if (dev_block_lock_read(parent, data, next_lba, 1))
 	return;
 
       if (endian_le16_na_load(&t.signature) != 0xaa55)
@@ -195,12 +167,9 @@ static void block_partition_parse(struct device_s *parent,
   uint8_t *data[1];
   uint_fast8_t i;
 
-  rq.lba = 0;
-  rq.count = 1;
   data[0] = (uint8_t*)&t;
-  rq.data = data;
 
-  if (dev_block_lock_read(parent, &rq))
+  if (dev_block_lock_read(parent, data, 0, 1))
     {
       printf("partition table read error\n");
       return;
@@ -291,8 +260,7 @@ const struct driver_s block_partition_drv =
   .f_create		= block_partition_create,
   .f_cleanup		= block_partition_cleanup,
   .f.blk = {
-    .f_read		= block_partition_read,
-    .f_write		= block_partition_write,
+    .f_request		= block_partition_request,
     .f_getparams	= block_partition_getparams,
   }
 };
