@@ -358,7 +358,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 }
 
 /** application main function */
-int_fast8_t main(int_fast8_t argc, char **argv);
+int_fast8_t main(size_t argc, char **argv);
 
 void mutek_main_smp(void)  /* ALL CPUs execute this function */
 {

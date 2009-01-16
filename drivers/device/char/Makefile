@@ -17,3 +17,15 @@ ifeq ($(CONFIG_DRIVER_CHAR_UART8250), defined)
  subdirs += uart-8250
 endif
 
+ifeq ($(CONFIG_DRIVER_CHAR_RANDOM), defined)
+ subdirs += random
+endif
+
+ifeq ($(CONFIG_DRIVER_CHAR_ZERO), defined)
+ subdirs += zero
+endif
+
+ifeq ($(CONFIG_DRIVER_CHAR_NULL), defined)
+ subdirs += null
+endif
+

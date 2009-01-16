@@ -20,30 +20,19 @@
 */
 
 
-#ifndef TTY_SOCLIB_PRIVATE_H_
-#define TTY_SOCLIB_PRIVATE_H_
+#ifndef RANDOM_CHAR_PRIVATE_H_
+#define RANDOM_CHAR_PRIVATE_H_
 
 #include <hexo/types.h>
 #include <hexo/device.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
-
+#include "arc4.h"
 
 /**************************************************************/
 
-/*
- * Private vgz tty device context
- */
-
-CONTAINER_TYPE(tty_fifo, RING, uint8_t, 32);
-CONTAINER_FUNC(tty_fifo, RING, static inline, tty_fifo);
-
-struct tty_soclib_context_s
+struct random_context_s
 {
-  /* tty input request queue and char fifo */
-  dev_char_queue_root_t		read_q;
-  tty_fifo_root_t		read_fifo;
+  arc4_S_t arc4_state;
 };
 
 #endif

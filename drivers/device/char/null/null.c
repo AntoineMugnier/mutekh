@@ -19,32 +19,70 @@
 
 */
 
-
-#ifndef TTY_SOCLIB_PRIVATE_H_
-#define TTY_SOCLIB_PRIVATE_H_
+#include "null.h"
 
 #include <hexo/types.h>
 #include <hexo/device.h>
+#include <device/driver.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
+DEVCHAR_REQUEST(dev_null_request)
+{
+  switch (rq->type)
+    {
+      /* Get EOF error */
+    case DEV_CHAR_READ: {
 
+      rq->error = EEOF;
+      rq->callback(dev, rq, 0);
 
-/**************************************************************/
+      break;
+    }
 
-/*
- * Private vgz tty device context
+      /* Eat everything */
+    case DEV_CHAR_WRITE: {
+      size_t size = rq->size;
+
+      rq->size = 0;
+      rq->error = 0;
+
+      rq->callback(dev, rq, size);
+      break;
+    }
+
+    }
+
+}
+
+/* 
+ * device close operation
  */
 
-CONTAINER_TYPE(tty_fifo, RING, uint8_t, 32);
-CONTAINER_FUNC(tty_fifo, RING, static inline, tty_fifo);
-
-struct tty_soclib_context_s
+DEV_CLEANUP(dev_null_cleanup)
 {
-  /* tty input request queue and char fifo */
-  dev_char_queue_root_t		read_q;
-  tty_fifo_root_t		read_fifo;
-};
+}
 
+/* 
+ * device open operation
+ */
+
+#ifndef CONFIG_STATIC_DRIVERS
+const struct driver_s	dev_null_drv =
+{
+  .class		= device_class_char,
+  .f_init		= dev_null_init,
+  .f_cleanup		= dev_null_cleanup,
+  .f.chr = {
+    .f_request		= dev_null_request,
+  }
+};
 #endif
+
+DEV_INIT(dev_null_init)
+{
+#ifndef CONFIG_STATIC_DRIVERS
+  dev->drv = &dev_null_drv;
+#endif
+
+  return 0;
+}
 
