@@ -36,12 +36,12 @@ CONTAINER_FUNC(stream_fifo, RING, static inline, stream_fifo);
 
 static ssize_t	tty_read(fd_t fd, void *buffer, size_t count)
 {
-	return dev_char_read((struct device_s *)fd, buffer, count);
+	return dev_char_spin_read((struct device_s *)fd, buffer, count);
 }
 
 static ssize_t	tty_write(fd_t fd, const void *buffer, size_t count)
 {
-  return dev_char_write((struct device_s *)fd, buffer, count);
+  return dev_char_spin_write((struct device_s *)fd, buffer, count);
 }
 
 static ssize_t	empty_io(fd_t fd, const void *buffer, size_t count)
