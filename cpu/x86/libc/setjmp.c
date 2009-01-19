@@ -69,6 +69,9 @@ reg_t setjmp(jmp_buf env)
 
 void longjmp(jmp_buf env, reg_t val)
 {
+    /* val must not be zero */
+    val = (!val) ? 1 : val;
+
   asm volatile(
 	       /* set return value */
 	       "movl	%1, 36(%0)	\n"
