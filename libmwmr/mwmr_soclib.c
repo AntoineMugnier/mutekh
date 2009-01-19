@@ -57,6 +57,7 @@ mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 	c[MWMR_CONFIG_STATUS_ADDR] = endian_le32((uintptr_t)mwmr->status);
 	c[MWMR_CONFIG_DEPTH] = endian_le32(mwmr->gdepth);
 	c[MWMR_CONFIG_BUFFER_ADDR] = endian_le32((uintptr_t)mwmr->buffer);
+	c[MWMR_CONFIG_WIDTH] = endian_le32((uintptr_t)mwmr->width);
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
 	c[MWMR_CONFIG_LOCK_ADDR] = endian_le32((uintptr_t)mwmr->lock);
 #endif
