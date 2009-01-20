@@ -256,7 +256,7 @@ char	*fgets(char *str_, size_t size, FILE *stream)
 
   while (size-- > 1)
     {
-      if ((res = buffered_read(1, stream, &res)) <= 0)
+      if (buffered_read(1, stream, &res) <= 0)
 	break;
 
       *str++ = res;

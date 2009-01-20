@@ -81,8 +81,8 @@
 #define VFS_NFS_TYPE         8
 
 #define VFS_SEEK_SET         0
-#define VFS_SEEK_CUR         1
-#define VFS_SEEK_END         2
+#define VFS_SEEK_END         1
+#define VFS_SEEK_CUR         2
 
 #define VFS_FREE             1
 #define VFS_VAILD            2
