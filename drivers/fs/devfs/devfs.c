@@ -64,14 +64,6 @@ error_t	devfs_init(const char		*mount_point)
       return err;
     }
 
-/*   // Checking the mount_point (/dev) node */
-/*   if ((err = vfs_open(vfs_get_root(), mount_point, flags, (uint_fast16_t) flags, &file))) */
-/*     { */
-/*       printf("devfs_init: %s doesn't seem to exist in filesystem, abording\n", mount_point); */
-/*       return err; */
-/*     } */
-/*   vfs_close(file); */
-
   // Allocating memory for parent context
   if((devfs_ctx = mem_alloc(sizeof(struct vfs_context_s), MEM_SCOPE_SYS)) == NULL)
     return -VFS_ENOMEM;
@@ -87,13 +79,6 @@ error_t	devfs_init(const char		*mount_point)
   // create intern stuff
   if (devfs_ctx->ctx_op->create(devfs_ctx))
     return DEVFS_ERR;
-
-/*   // get /dev node from root filesystem */
-/*   dev_node = devfs_get_node(); */
-  
-/*   if (dev_node == NULL) */
-/*     printf("devfs_init: lookup failed\n"); */
-  
 
   // change context type of mount_point to DevFS
   dev_node->n_ctx = devfs_ctx;
@@ -116,10 +101,6 @@ struct devfs_node_s *devfs_register(const char			*name,
 {
   struct devfs_context_s	*ctx = NULL;
   struct devfs_node_s		*new_node = NULL;
-  /*   struct vfs_node_s		*dev_node = NULL; */
-  /*   struct vfs_file_s		*file = NULL; */
-  /*   char				*path_name = NULL; */
-  /*   uint_fast32_t			flags = 0; */
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_register: Registering device node %s\n", name);
@@ -140,32 +121,18 @@ struct devfs_node_s *devfs_register(const char			*name,
       return NULL;
     }
 
-  /*   // Setting up flags for VFS and checking if asked device node */
-  /*   // type is an existing one */
-  /*   switch(type) */
-  /*     { */
-  /*     case DEVFS_DIR : */
-  /*       VFS_SET(flags, VFS_O_DIRECTORY | VFS_O_CREATE | VFS_O_EXCL | VFS_DIR); */
-  /*       break; */
-
-  /*     case DEVFS_CHAR : */
-  /*     case DEVFS_BLOCK : */
-  /*       VFS_SET(flags, VFS_O_DIRECTORY | VFS_O_CREATE | VFS_O_EXCL | VFS_DEVICE); */
-  /*       break; */
-
-  /*     default : */
-  /*       // Bad device type */
-  /*       return NULL; */
-  /*     } */
-
   // Allocating for a new DevFS node
   if((new_node = mem_alloc(sizeof(struct devfs_node_s), MEM_SCOPE_SYS)) == NULL)
     return NULL;
+
+  memset(new_node, 0, sizeof(struct devfs_node_s));
 
   // Setting up the new node
   new_node->name = name;
   new_node->type = type;
   new_node->device = device;
+
+  printf("devfs_read_file: type is : 0x%x and node->type is : 0x%x\n", type, new_node->type);
 
   // Adding node to hash list
   if ((devfs_hashfunc_push(&(ctx->hash), new_node)) == 0)
@@ -175,12 +142,6 @@ struct devfs_node_s *devfs_register(const char			*name,
 #endif
       return NULL;
     }
-
-#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-/*   CONTAINER_FOREACH(devfs_hash, HASHLIST, &ctx->hash,{ */
-/*     printf("devfs_register: inside hash table is node %s\n", item->name); */
-/*   }); */
-#endif
 
   return new_node;
 }

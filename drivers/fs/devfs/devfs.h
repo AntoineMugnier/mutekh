@@ -26,6 +26,11 @@
 #include <vfs/vfs.h>
 #include "devfs-private.h"
 
+// Public define
+// Values for  devfs_node_s->type;
+#define DEVFS_DIR		0x00
+#define DEVFS_CHAR		0x01
+#define DEVFS_BLOCK		0x02
 
 /**
  ** initialisation and mount of the devfs

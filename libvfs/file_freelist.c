@@ -92,12 +92,13 @@ VFS_FILE_FREELIST_GET(vfs_file_freelist_get)
     return NULL;
   }
 #ifdef CONFIG_VFS_DEBUG
-  printf("vfs_file_freelist_get: got a new file\n");
+  // this debug makes an infinite loop in assert() :-S
+  //  printf("vfs_file_freelist_get: got a new file\n");
 #endif
   //  print_file(file);
   vfs_file_list_push(&vfs_file_list,file);
   lock_release_irq(&vfs_file_freelist.lock);
-  
+
   if(file->f_op != node->n_ctx->ctx_file_op)
   {
 #ifdef CONFIG_VFS_DEBUG

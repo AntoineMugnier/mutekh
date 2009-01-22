@@ -37,7 +37,7 @@ VFS_OPEN_FILE(devfs_open)
 {
   struct devfs_context_s	*ctx = NULL;
   struct devfs_file_s		*file_pv = file->f_pv;
-  
+
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   printf("devfs_open_file: trying to open %s\n", node->n_name);
 #endif
@@ -69,6 +69,9 @@ VFS_OPEN_FILE(devfs_open)
   // relink devfs_file_s to vfs_file_s
   file->f_pv = file_pv;
 
+  // Setting up flags
+  VFS_SET(file->f_flags, VFS_O_DEVICE);
+
   return DEVFS_OK;
 }
 
@@ -80,30 +83,51 @@ VFS_OPEN_FILE(devfs_open)
 */
 VFS_READ_FILE(devfs_read)
 {
-  struct devfs_file_s	*file_pv = file->f_pv;
-  struct devfs_node_s	*node = file_pv->node->n_pv;
-  size_t		s = 0;
+  struct devfs_file_s		*file_pv = file->f_pv;
+  struct devfs_node_s		*node_pv = file_pv->node->n_pv;
+  struct devfs_context_s	*ctx = NULL;
+  size_t			s = 0;
+
+  // Getting DevFS context
+  ctx = devfs_get_ctx();
+
+  // Getting back node's private field
+  if ((node_pv = devfs_hashfunc_lookup(&(ctx->hash), file_pv->node->n_name)) == NULL)
+    return -DEVFS_ERR;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_read_file: starting reading %d bytes in %s\n", size, node->name);
+  printf("devfs_read_file: starting reading %d bytes in %s\n", size, file_pv->node->n_name);
 #endif
 
   if (size == 0)
     return 0;
 
-  switch(node->type)
+  switch(node_pv->type)
     {
     case DEVFS_DIR :
       break;
 
     case DEVFS_CHAR :
-      if ((s = dev_char_read(node->device, buffer, size)) < 0)
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
+      printf("trying to read on char device\n");
+#endif
+      if ((s = dev_char_wait_read(node_pv->device, buffer, size)) < 0)
 	return EIO;
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
+      printf("devfs_read : size returned : %d\n", s);
+#endif
       break;
 
     case DEVFS_BLOCK :
-/*       if ((s = dev_block_read(node->device, buffer, size)) < 0) */
-/*       	return EIO; */
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
+      printf("trying to read on char device\n");
+      printf("file->f_offset value : %d\n", file->f_offset);
+#endif
+/*       if ((s = dev_block_wait_read(node_pv->device, buffer, file->f_offset, size)) < 0) */
+/* 	return EIO; */
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
+      printf("devfs_read : size returned : %d\n", s);
+#endif
       break;
 
     default :
@@ -122,30 +146,38 @@ VFS_READ_FILE(devfs_read)
 */
 VFS_WRITE_FILE(devfs_write)
 {
-  struct devfs_file_s	*file_pv = file->f_pv;
-  struct devfs_node_s	*node = file_pv->node->n_pv;
-  size_t		s = 0;
+  struct devfs_file_s		*file_pv = file->f_pv;
+  struct devfs_node_s		*node_pv = file_pv->node->n_pv;
+  struct devfs_context_s	*ctx = NULL;
+  size_t			s = 0;
+
+  // Getting DevFS context
+  ctx = devfs_get_ctx();
+
+  // Getting back node's private field
+  if ((node_pv = devfs_hashfunc_lookup(&(ctx->hash), file_pv->node->n_name)) == NULL)
+    return -DEVFS_ERR;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_write_file: starting writing %d bytes in %s\n", size, node->name);
+  printf("devfs_write_file: starting writing %d bytes in %s\n", size, file_pv->node->n_name);
 #endif
 
   if (size == 0)
     return 0;
 
-  switch(node->type)
+  switch(node_pv->type)
     {
     case DEVFS_DIR :
       break;
 
     case DEVFS_CHAR :
-      if ((s = dev_char_write(node->device, buffer, size)) < 0)
+      if ((s = dev_char_wait_write(node_pv->device, buffer, size)) < 0)
 	return EIO;
       break;
 
     case DEVFS_BLOCK :
-/*       if ((s = dev_block_write (node->device, buffer, size)) < 0) */
-/* 	return EIO; */
+      if ((s = dev_block_wait_write (node_pv->device, buffer, file->f_offset, size)) < 0)
+	return EIO;
       break;
 
     default :

@@ -33,12 +33,6 @@
 #define DEVFS_DIREMPTY		14 // to match VFS_EODIR
 
 
-// Values for  devfs_node_s->type;
-#define DEVFS_DIR		0x00
-#define DEVFS_CHAR		0x01
-#define DEVFS_BLOCK		0x02
-
-
 // global variable :'(
 struct vfs_node_s	*dev_root;
 
@@ -80,23 +74,6 @@ static inline void devfs_set_root(struct vfs_node_s	*root)
 // Used to get DevFS context from anywhere
 static inline struct devfs_context_s	*devfs_get_ctx()
 {
-/*   struct vfs_node_s		*dev_node = NULL; */
-/*   char				*dirs_ptr[vfs_dir_count(mount_point) + 1]; */
-
-  // Get the node if existing
-/*   if ((vfs_node_load(vfs_get_root(), dirs_ptr, 0, 1, &dev_node))) */
-/*     return NULL; */
-
-  // downcount the refcount
-/*   rwlock_wrlock(&vfs_node_freelist.lock); */
-/*   vfs_node_down(node);// second countdown */
-/*   rwlock_unlock(&vfs_node_freelist.lock); */
-
-  /*   //get node to acces n_ctx field */
-  /*   if ((dev_node = vfs_node_lookup(vfs_get_root(), "dev")) == NULL) */
-  /*     return NULL; */
-
-/*   return (dev_node->n_ctx->ctx_pv); */
   return (dev_root->n_ctx->ctx_pv);
 }
 
@@ -105,25 +82,6 @@ static inline struct devfs_context_s	*devfs_get_ctx()
 // Used to get DevFS node from anywhere
 static inline struct vfs_node_s	*devfs_get_root_node()
 {
-/*   struct vfs_node_s		*dev_node = NULL; */
-/*   char				*t = NULL; */
-
-/*   if ((t = strrchr(DEVFS_MOUNT_POINT, '/'))) */
-/*     {   */
-/*       if ((dev_node = vfs_node_lookup(vfs_get_root(), ++t)) == NULL) */
-/* 	return NULL; */
-/*       else */
-/* 	return (dev_node); */
-/*     } */
-/*   else */
-/*     { */
-/*       //get node to acces n_ctx field */
-/*       if ((dev_node = vfs_node_lookup(vfs_get_root(), "dev")) == NULL) */
-/* 	return NULL; */
-/*       else */
-/* 	return (dev_node); */
-/*     } */
-
   return (dev_root);
 }
 
