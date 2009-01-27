@@ -132,8 +132,6 @@ struct devfs_node_s *devfs_register(const char			*name,
   new_node->type = type;
   new_node->device = device;
 
-  printf("devfs_read_file: type is : 0x%x and node->type is : 0x%x\n", type, new_node->type);
-
   // Adding node to hash list
   if ((devfs_hashfunc_push(&(ctx->hash), new_node)) == 0)
     {

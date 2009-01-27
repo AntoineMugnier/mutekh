@@ -1,0 +1,22 @@
+
+# Program license
+  CONFIG_LICENSE_APP_GPL
+
+# Platform types
+  CONFIG_ARCH_EMU
+
+# Processor
+  CONFIG_CPU_X86_EMU
+
+# Code generation
+  CONFIG_DEBUG undefined
+  CONFIG_COMPILE_DEBUG undefined
+
+# Mutek features
+  CONFIG_MUTEK_CONSOLE
+
+# Device drivers
+  CONFIG_DRIVER_CHAR_EMUTTY
+
+# New source code module to be compiled
+  CONFIG_MODULES examples/nfs:%CONFIGPATH

@@ -131,5 +131,11 @@ struct			dhcphdr
   uint8_t		magic[4];
 } __attribute__((packed));
 
+/*
+ * DHCP exported functions
+ */
+
+error_t			dhcp_client(const char	*ifname);
+
 #endif
 

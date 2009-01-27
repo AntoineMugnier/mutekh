@@ -36,8 +36,9 @@
 // global variable :'(
 struct vfs_node_s	*dev_root;
 
+////////////////////////////////////////////////////
 
-// Structures
+// Structures for DevFS Node handling
 struct devfs_node_s
 {
   CONTAINER_ENTRY_TYPE(HASHLIST)        hash_entry;
@@ -46,18 +47,21 @@ struct devfs_node_s
   uint_fast8_t				type;
 };
 
+// GPCT hash table generate functions
 CONTAINER_TYPE    (devfs_hash, HASHLIST, struct devfs_node_s, hash_entry, 111);
 CONTAINER_KEY_TYPE(devfs_hash, STRING, name);
 
 CONTAINER_FUNC    (devfs_hash, HASHLIST, static inline, devfs_hashfunc, name);
 CONTAINER_KEY_FUNC(devfs_hash, HASHLIST, static inline, devfs_hashfunc, name);
 
+// Structure for DevFS context
 struct devfs_context_s
 {
   devfs_hash_root_t	hash;
   struct vfs_node_s	*root;
 };
 
+// Structure for DevFS File handling
 struct devfs_file_s
 {
   struct vfs_node_s	*node;
@@ -66,12 +70,19 @@ struct devfs_file_s
 
 ////////////////////////////////////////////////////
 
+/**
+ ** \brief	Used to set DevFS context from anywhere
+ ** \return	-
+ */
 static inline void devfs_set_root(struct vfs_node_s	*root)
 {
   dev_root = root;
 }
 
-// Used to get DevFS context from anywhere
+/**
+ ** \brief	Used to get DevFS context from anywhere
+ ** \return	global DevFS context
+ */
 static inline struct devfs_context_s	*devfs_get_ctx()
 {
   return (dev_root->n_ctx->ctx_pv);
@@ -79,7 +90,11 @@ static inline struct devfs_context_s	*devfs_get_ctx()
 
 ////////////////////////////////////////////////////
 
-// Used to get DevFS node from anywhere
+
+/**
+ ** \brief	Used to get DevFS root node from anywhere
+ ** \return	global DevFS root node
+ */
 static inline struct vfs_node_s	*devfs_get_root_node()
 {
   return (dev_root);

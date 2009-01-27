@@ -29,15 +29,15 @@
 VFS_NODE_INIT(vfs_node_init)
 {
   error_t err = 0;
-  
+
   memset(node,0,sizeof(*node));
-  
+
   if((err=sched_queue_init(&node->n_wait)))
     return err;
 
   if((err=rwlock_init(&node->n_lock)))
     return err;
-  
+
   node->n_count = 1;
   node->n_op = ctx->ctx_node_op;
   node->n_ctx = ctx;
@@ -45,11 +45,11 @@ VFS_NODE_INIT(vfs_node_init)
 
   if((err=vfs_node_list_init(&node->n_children)))
     return err;
-  
+
   if((err=sched_queue_init(&node->n_wait)))
     return err;
-  
-  node->n_entry.node = node;  
+
+  node->n_entry.node = node;
   return (node->n_op->init(node));
 }
 
@@ -65,7 +65,7 @@ VFS_NODE_LOOKUP(vfs_node_lookup)
 
   if(isDotDot && (node == vfs_root))
     return node;
-  
+
   if(isDotDot)
     return node->n_parent;
 
@@ -115,7 +115,7 @@ VFS_NODE_DOWN(vfs_node_down)
 VFS_NODE_CREATE(vfs_node_create)
 {
   error_t err = 0;
-  
+
   node->n_attr = (isLast) ? flags & 0x0000FFFF : VFS_DIR;
 
   // Look if node already exists
@@ -150,7 +150,7 @@ VFS_NODE_CREATE(vfs_node_create)
 #endif
     if((err=node->n_op->write(node)))
       return -err;
-    
+
     if((err=node->n_op->release(node)))
       return -err;
 
@@ -171,7 +171,7 @@ VFS_NODE_LOAD(vfs_node_load)
   uint_fast8_t i;
   bool_t isLast;
   error_t err = 0;
-  
+
   if((isAbsolutePath))
   {
 #ifdef CONFIG_VFS_DEBUG
@@ -185,12 +185,12 @@ VFS_NODE_LOAD(vfs_node_load)
 #ifdef CONFIG_VFS_DEBUG
   printf("current_parent %s\n",current_parent->n_name);
 #endif
-  
+
   rwlock_wrlock(&vfs_node_freelist.lock);
   vfs_node_up(current_parent);
 
   for(i=0; path[i] != NULL; i++)
-  { 
+  {
     isLast = (path[i+1] == NULL) ? 1 : 0;
     if((child = vfs_node_lookup(current_parent,path[i])) == NULL)
     {
@@ -207,7 +207,7 @@ VFS_NODE_LOAD(vfs_node_load)
       printf("going to physical load of %s\n",child->n_name);
 #endif
       err=vfs_node_create(current_parent, flags, isLast,child);
-      
+
       rwlock_wrlock(&vfs_node_freelist.lock);
       VFS_CLEAR(child->n_state,VFS_INLOAD);
       if(err)
@@ -242,7 +242,7 @@ VFS_NODE_LOAD(vfs_node_load)
 	goto VFS_NODE_LOAD_ERROR;
       }
     }
-    
+
 
     if(isLast && ((flags & VFS_DIR) != (child->n_attr & VFS_DIR)))
     {
@@ -251,7 +251,7 @@ VFS_NODE_LOAD(vfs_node_load)
 	vfs_node_freelist_add(child,1);
       goto VFS_NODE_LOAD_ERROR;
     }
-    
+
 
     if((flags & VFS_O_EXCL) && (flags & VFS_O_CREATE) && isLast)
     {
@@ -275,18 +275,18 @@ VFS_NODE_LOAD(vfs_node_load)
 #endif
       vfs_node_down(current_parent);
     }
-    
+
   VFS_NODE_LOAD_CONTINUE:
-    vfs_node_up(child);   
+    vfs_node_up(child);
     rwlock_unlock(&vfs_node_freelist.lock);
     current_parent = child;
     rwlock_wrlock(&vfs_node_freelist.lock);
   }
-  
+
   rwlock_unlock(&vfs_node_freelist.lock);
   *node = child;
   return 0;
-  
+
  VFS_NODE_LOAD_ERROR:
   vfs_node_down(current_parent);
   rwlock_unlock(&vfs_node_freelist.lock);

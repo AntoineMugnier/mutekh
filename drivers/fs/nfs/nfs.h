@@ -25,22 +25,18 @@
 #include <vfs/vfs.h>
 
 /*
-** brief mount a NFS in "mount_point" linked to "server_ip"
-**
-** param location to mount the NFS in the VFS
-** param to which server it should be linked
-**
-** return error code (0 = OK, other = KO)
+** \brief mount a NFS in "mount_point" linked to "server_ip"
+** \param location to mount the NFS in the VFS
+** \param to which server it should be linked
+** \return error code (0 = OK, other = KO)
 */
 error_t	nfs_mount(const char		*mount_point,
 		  uint_fast32_t		server_ip);
 
 /*
-** brief unmount the NFS mounted in "mount_point"
-**
-** param location of the mounted NFS that must be unmounted
-**
-** return error code (0 = OK, other = KO)
+** \brief unmount the NFS mounted in "mount_point"
+** \param location of the mounted NFS that must be unmounted
+** \return error code (0 = OK, other = KO)
 */
 error_t	nfs_umount(const char		*mount_point);
 

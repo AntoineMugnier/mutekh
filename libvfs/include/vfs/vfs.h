@@ -36,6 +36,7 @@
 #define VFS_MAX_NODE_NUMBER      40
 #define VFS_MAX_FILE_NUMBER      80
 
+// Return Values
 #define VFS_FOUND            0
 #define VFS_NOT_FOUND        1
 #define VFS_ENOMEM           2
@@ -55,6 +56,7 @@
 #define VFS_EPIPE            16
 #define VFS_ENOTEMPTY        17
 
+// Mode
 #define VFS_DIR              0x00000001
 #define VFS_RD_ONLY          0x00000002
 #define VFS_SYS              0x00000004
@@ -63,6 +65,7 @@
 #define VFS_FIFO             0x00000020
 #define VFS_DEVICE	     0x00000040
 
+// Flags
 #define VFS_O_PIPE           0x00010000
 #define VFS_O_FIFO           0x00030000
 #define VFS_O_DIRECTORY      0x00040000
@@ -74,18 +77,22 @@
 #define VFS_O_EXCL           0x00800000
 #define VFS_O_UNLINK         0x01000000
 #define VFS_O_MOUNTPOINT     0X02000000
+#define VFS_O_DEVICE	     0x04000000
 
+// Context Type
 #define VFS_VFAT_TYPE        1
 #define VFS_PIPE_TYPE        2
 #define VFS_DEVICE_TYPE      4
 #define VFS_NFS_TYPE         8
 
+// ??? maybe used in open/read/write ???
 #define VFS_SEEK_SET         0
 #define VFS_SEEK_END         1
 #define VFS_SEEK_CUR         2
 
+// Buffer cache ???
 #define VFS_FREE             1
-#define VFS_VAILD            2
+#define VFS_VAILD            2 //??? VALID ???
 #define VFS_INLOAD           4
 #define VFS_DIRTY            8
 

@@ -24,10 +24,10 @@
 
 
 /**
- ** param	struct vfs_context_s *context
- ** return	error_t
+ ** \brief	Context initialization
+ ** \param	struct vfs_context_s *context
+ ** \return	error_t
  */
-
 VFS_CREATE_CONTEXT(devfs_create_context)
 {
   struct devfs_context_s	*ctx = NULL;
@@ -51,7 +51,11 @@ VFS_CREATE_CONTEXT(devfs_create_context)
   return 0;
 }
 
-
+/**
+ ** \brief	Context destruction
+ ** \param	struct vfs_context_s *context
+ ** \return	error_t
+ */
 VFS_DESTROY_CONTEXT(devfs_destroy_context)
 {
   struct devfs_context_s	*dev_ctx = context->ctx_pv;
@@ -71,14 +75,24 @@ VFS_DESTROY_CONTEXT(devfs_destroy_context)
   return 0;
 }
 
-
+/**
+ ** \brief	Not used
+ ** \param	struct vfs_context_s	*context
+ ** \param	struct vfs_node_s	*root
+ ** \return	error_t
+ */
 VFS_READ_ROOT(devfs_read_root)
 {
   printf("devfs_read_root: This function should not be called\n");
   return 0;
 }
 
-
+/**
+ ** \brief	Not used
+ ** \param	struct vfs_context_s	*context
+ ** \param	struct vfs_node_s	*root
+ ** \return	error_t
+ */
 VFS_WRITE_ROOT(devfs_write_root)
 {
   printf("devfs_write_root: This function should not be called\n");

@@ -33,24 +33,34 @@
 #define DEVFS_BLOCK		0x02
 
 /**
- ** initialisation and mount of the devfs
- ** WARNING : mount_point must be absolute!!!
+ ** \brief	initialisation and mount of the devfs
+ ** \param	mount_point for the DevFS
+ ** \return	error value
  */
 error_t	devfs_init(const char		*mount_point);
 
 /**
- ** add an inode to /dev
+ ** \brief	add an inode to /dev
+ ** \param	name of the node in the FS
+ ** \param	structure of the device
+ ** \param	type if : DEVFS_CHAR or DEVFS_BLOCK
+ ** \return	structure of the node registered
  */
 struct devfs_node_s	*devfs_register(const char		*name,
 					struct device_s		*device,
 					uint_fast8_t		type);
+
 /**
- ** remove an inode from /dev
+ ** \brief	remove an inode from /dev
+ ** \param	name of the node to unregister
+ ** \return	error value
  */
 error_t	devfs_unregister(const char		*name);
 
 /**
- ** umount the devfs
+ ** \brief	umount the devfs
+ ** \param	path to the already mounted DevFS
+ ** \return	error value
  */
 error_t	devfs_destroy(const char		*mount_point);
 

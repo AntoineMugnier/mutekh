@@ -65,6 +65,11 @@ void vfs_split_path(char *path, char **dirs)
   dirs[i] = NULL;
 }
 
+/* VFS_OPEN(n)  error_t (n) (struct vfs_node_s *cwd,	\ */
+/* 			  char *path,			\ */
+/* 			  uint_fast32_t flags,		\ */
+/* 			  uint_fast16_t mode,		\ */
+/* 			  struct vfs_file_s **file) */
 VFS_OPEN(vfs_open)
 {
   struct vfs_node_s *node;
@@ -402,6 +407,9 @@ VFS_READDIR(vfs_readdir)
   return -err;
 }
 
+/* VFS_READ(n)  ssize_t (n) (struct vfs_file_s *file,	\ */
+/* 			  uint8_t *buffer,		\ */
+/* 			  size_t count) */
 VFS_READ(vfs_read)
 {
   size_t available_size;
@@ -421,6 +429,9 @@ VFS_READ(vfs_read)
   size_to_read = (count >= available_size) ?  available_size : count;
 #ifdef CONFIG_DRIVER_FS_PIPE
   size_to_read = (VFS_IS(file->f_flags,VFS_O_PIPE)) ? count : size_to_read;
+#endif
+#ifdef CONFIG_DRIVER_FS_DEV
+  size_to_read = (VFS_IS(file->f_flags, VFS_O_DEVICE)) ? count : size_to_read;
 #endif
 
   if((size = file->f_op->read(file,buffer,size_to_read)) < 0)

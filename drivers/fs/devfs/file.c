@@ -21,18 +21,19 @@
 
 #include <hexo/alloc.h>
 #include <device/char.h>
-/* #include <device/block.h> */
+#include <device/block.h>
 #include <device/driver.h>
 
 #include "devfs-private.h"
 #include "devfs.h"
 
 
-/*
-** param	struct vfs_node_s *node
-** param	struct vfs_file_s *file
-** return	error_t
-*/
+/**
+ ** \brief	open a device in a file structure
+ ** \param	struct vfs_node_s *node
+ ** \param	struct vfs_file_s *file
+ ** \return	error_t
+ */
 VFS_OPEN_FILE(devfs_open)
 {
   struct devfs_context_s	*ctx = NULL;
@@ -75,12 +76,13 @@ VFS_OPEN_FILE(devfs_open)
   return DEVFS_OK;
 }
 
-/*
-** param	struct vfs_file_s	*file
-** param	uint8_t			*buffer
-** param	size_t			size
-** return	error_t
-*/
+/**
+ ** \brief	read on a device (char or block)
+ ** \param	struct vfs_file_s	*file
+ ** \param	uint8_t			*buffer
+ ** \param	size_t			size
+ ** \return	error_t
+ */
 VFS_READ_FILE(devfs_read)
 {
   struct devfs_file_s		*file_pv = file->f_pv;
@@ -109,25 +111,18 @@ VFS_READ_FILE(devfs_read)
 
     case DEVFS_CHAR :
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-      printf("trying to read on char device\n");
+      printf("devfs_read_file: trying to read on char device\n");
 #endif
       if ((s = dev_char_wait_read(node_pv->device, buffer, size)) < 0)
 	return EIO;
-#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-      printf("devfs_read : size returned : %d\n", s);
-#endif
       break;
 
     case DEVFS_BLOCK :
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-      printf("trying to read on char device\n");
-      printf("file->f_offset value : %d\n", file->f_offset);
+      printf("devfs_read_file: trying to read on block device\n");
 #endif
-/*       if ((s = dev_block_wait_read(node_pv->device, buffer, file->f_offset, size)) < 0) */
-/* 	return EIO; */
-#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-      printf("devfs_read : size returned : %d\n", s);
-#endif
+      if ((s = dev_block_wait_read(node_pv->device, &buffer, file->f_offset, size)) < 0)
+	return EIO;
       break;
 
     default :
@@ -135,15 +130,20 @@ VFS_READ_FILE(devfs_read)
       return -DEVFS_ERR;
     }
 
+#ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
+      printf("devfs_read_file: size returned : %d\n", s);
+#endif
+
   return s;
 }
 
-/*
-** param	struct vfs_file_s	*file
-** param	uint8_t			*buffer
-** param	size_t			size
-** return	error_t
-*/
+/**
+ ** \brief	write on a device (char or block)
+ ** \param	struct vfs_file_s	*file
+ ** \param	uint8_t			*buffer
+ ** \param	size_t			size
+ ** \return	error_t
+ */
 VFS_WRITE_FILE(devfs_write)
 {
   struct devfs_file_s		*file_pv = file->f_pv;
@@ -176,7 +176,7 @@ VFS_WRITE_FILE(devfs_write)
       break;
 
     case DEVFS_BLOCK :
-      if ((s = dev_block_wait_write (node_pv->device, buffer, file->f_offset, size)) < 0)
+      if ((s = dev_block_wait_write (node_pv->device, &buffer, file->f_offset, size)) < 0)
 	return EIO;
       break;
 
@@ -188,10 +188,11 @@ VFS_WRITE_FILE(devfs_write)
   return s;
 }
 
-/*
-** param	struct vfs_file_s	*file
-** return	error_t
-*/
+/**
+ ** \brief	not used
+ ** \param	struct vfs_file_s	*file
+ ** \return	error_t
+ */
 VFS_LSEEK_FILE(devfs_lseek)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
@@ -201,10 +202,11 @@ VFS_LSEEK_FILE(devfs_lseek)
   return 0;
 }
 
-/*
-** param	struct vfs_file_s	*file
-** return	error_t
-*/
+/**
+ ** \brief	not used
+ ** \param	struct vfs_file_s	*file
+ ** \return	error_t
+ */
 VFS_RELEASE_FILE(devfs_release)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
@@ -214,11 +216,12 @@ VFS_RELEASE_FILE(devfs_release)
   return 0;
 }
 
-/*
-** param	struct vfs_file_s	*file
-** param	struct vfs_dirent_s	*dirent
-** return	error_t
-*/
+/**
+ ** \brief	not read a directory from the DevFS
+ ** \param	struct vfs_file_s	*file
+ ** \param	struct vfs_dirent_s	*dirent
+ ** \return	error_t
+ */
 VFS_READ_DIR(devfs_readdir)
 {
   struct devfs_context_s	*ctx = NULL;
