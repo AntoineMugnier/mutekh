@@ -80,7 +80,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 		".set pop				\n"
 		:
 		: "r" (context->stack)
-		, "r" (context->stack_ptr)
+		, "r" (context->stack_ptr - context->stack)
 		, "r" (&context->stack_ptr) /* id */
 		);
 #endif
