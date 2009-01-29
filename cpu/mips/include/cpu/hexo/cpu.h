@@ -95,7 +95,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 static inline cpu_id_t
 cpu_id(void)
 {
-  return cpu_mips_mfc0(15, 1) & 0x000003ff;
+	return (reg_t)cpu_mips_mfc0(15, 1) & (reg_t)0x000003ff;
 }
 
 static inline bool_t

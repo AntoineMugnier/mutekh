@@ -3,6 +3,10 @@
 #include <hexo/context.h>
 #include <hexo/interrupt.h>
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/mem_checker.h>
+#endif
+
 #if defined(CONFIG_CPU_USER)
 CONTEXT_LOCAL uintptr_t context_kstack;
 #endif
@@ -12,6 +16,26 @@ cpu_context_bootstrap(struct context_s *context)
 {
   /* set context local storage base pointer */
   CPU_LOCAL_SET(__cpu_context_data_base, context->tls);
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+   asm volatile (
+		".set push			\n"
+		".set noat			\n"
+		"li	$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
+		"sw	$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+		 /* clone context */
+		"sw	$0,	" ASM_STR(SOCLIB_MC_R1) "($0) \n"
+		"sw	%0,	" ASM_STR(SOCLIB_MC_CTX_CHANGE) "($0) \n"
+		 /* set as current context */
+		"sw	%0,	" ASM_STR(SOCLIB_MC_CTX_SET) "($0) \n"
+
+		"sw	$0,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+		".set pop				\n"
+		 :
+		 : "r" (&context->stack_ptr) /* id */
+		 , "r" (cpu_id())
+		 );
+#endif
 
   return 0;
 }
@@ -43,6 +67,24 @@ asm(
 error_t
 cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 {
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  asm volatile (
+		".set push			\n"
+		".set noat			\n"
+		"li	$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
+		"sw	$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+		"sw	%0,	" ASM_STR(SOCLIB_MC_R1) "($0) \n"
+		"sw	%1,	" ASM_STR(SOCLIB_MC_R2) "($0) \n"
+		"sw	%2,	" ASM_STR(SOCLIB_MC_CTX_CREATE) "($0) \n"
+		"sw	$0,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+		".set pop				\n"
+		:
+		: "r" (context->stack)
+		, "r" (context->stack_ptr)
+		, "r" (&context->stack_ptr) /* id */
+		);
+#endif
+
   /* push entry function address and param arg */
   *--context->stack_ptr = (uintptr_t)entry;
   *--context->stack_ptr = (uintptr_t)param;
@@ -67,6 +109,19 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 void
 cpu_context_destroy(struct context_s *context)
 {
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  asm volatile (
+		".set push			\n"
+		".set noat			\n"
+		"li	$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
+		"sw	$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+		"sw	%0,	" ASM_STR(SOCLIB_MC_CTX_DELETE) "($0) \n"
+		"sw	$0,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+		".set pop				\n"
+		:
+		: "r" (&context->stack_ptr)
+		);
+#endif
 #if 0
   reg_t		*stack = (reg_t*)context->stack_ptr;
 #endif

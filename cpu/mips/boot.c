@@ -19,6 +19,10 @@
 
 */
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/mem_checker.h>
+#endif
+
 asm(
     ".section        .boot,\"ax\",@progbits		\n"
 
@@ -42,19 +46,41 @@ asm(
     /* get CPU id and adjust stack */
 
 #if __mips >= 32
-    "mfc0	$8,	$15, 1			\n"
+    "mfc0	$9,	$15, 1			\n"
 #else
-    "mfc0	$8,	$15				\n"
+    "mfc0	$9,	$15				\n"
 #endif
     "la         $sp,	__system_uncached_heap_end - 16	\n"
-    "andi	$8,	$8,	0x000003ff		\n"
+    "andi	$9,	$9,	0x000003ff		\n"
 
 #ifndef CONFIG_SMP
-    "1: bne	$0,	$8,	1b			\n"
+    "1: bne	$0,	$9,	1b			\n"
     "nop						\n"
 #else
-    "sll	$8,	$8,	10			\n"
+    "sll	$8,	$9,	10			\n"
     "subu	$sp,	$sp,	$8			\n"
+#endif
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+    ".set push			\n"
+    ".set noat			\n"
+    "addiu	$8,	$0,	-1024+16		\n"
+    "li		$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
+    "sw		$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+
+    "sw		$8,	" ASM_STR(SOCLIB_MC_R1) "($0) \n"
+    "addiu	$8,	$sp,	16			\n"
+    "sw		$8,	" ASM_STR(SOCLIB_MC_R2) "($0) \n"
+    "sw		$9,	" ASM_STR(SOCLIB_MC_CTX_CREATE) "($0) \n"
+    "sw		$9,	" ASM_STR(SOCLIB_MC_CTX_SET) "($0) \n"
+    "ori	$1,	$0,	" ASM_STR(SOCLIB_MC_CHECK_SP+SOCLIB_MC_CHECK_INIT) " \n"
+# ifdef CONFIG_COMPILE_FRAMEPTR
+    "ori	$1,	$1,	" ASM_STR(SOCLIB_MC_CHECK_FP) " \n"
+# endif
+    "sw		$1,	" ASM_STR(SOCLIB_MC_ENABLE) "($0) \n"
+
+    "sw		$0,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+    ".set pop						\n"
 #endif
 
     /* setup global data pointer */

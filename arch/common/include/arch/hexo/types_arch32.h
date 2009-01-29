@@ -41,7 +41,7 @@ typedef uint64_t	uintmax_t;
 /** biggest signed integer type available */
 typedef uint64_t	intmax_t;
 /** cpu integer id */
-typedef uint8_t		cpu_id_t;
+typedef uint16_t		cpu_id_t;
 
 #endif
 

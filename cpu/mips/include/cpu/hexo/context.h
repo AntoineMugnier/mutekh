@@ -26,6 +26,10 @@
 #include <hexo/cpu.h>
 #include "cpu/hexo/specific.h"
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/mem_checker.h>
+#endif
+
 struct cpu_context_s
 {
 };
@@ -66,7 +70,17 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	sw	$15,	0*4($sp)	\n"
 		/* switch stack pointer */
 		"	sw	$sp,	(%0)		\n"
-		"	lw	$sp,	(%1)		\n"
+		"	lw	$15,	(%1)		\n"
+#ifdef CONFIG_SOCLIB_MEMCHECK
+			/* let memchecker know about context switch */
+		"	li	$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
+		"	sw	$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+		"	sw	%1,	" ASM_STR(SOCLIB_MC_CTX_SET) "($0) \n"
+#endif
+		"	move	$sp,	$15		\n"
+#ifdef CONFIG_SOCLIB_MEMCHECK
+		"	sw	$0,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+#endif
 		/* restore status & tls */
 		"	lw	$1,	1*4($sp)	\n"
 		"	lw	$15,	0*4($sp)	\n"
@@ -118,7 +132,16 @@ cpu_context_jumpto(struct context_s *new)
   asm volatile (
 		".set push			\n"
 		".set noat			\n"
-		"	move	$sp,	%0		\n"
+		"	lw	$15,	(%0)		\n"
+#ifdef CONFIG_SOCLIB_MEMCHECK
+		"	li	$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
+		"	sw	$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+		"	sw	%0,	" ASM_STR(SOCLIB_MC_CTX_SET) "($0) \n"
+#endif
+		"	move	$sp,	$15		\n"
+#ifdef CONFIG_SOCLIB_MEMCHECK
+		"	sw	$0,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+#endif
 		/* restore status & tls */
 		"	lw	$1,	1*4($sp)	\n"
 		"	lw	$15,	0*4($sp)	\n"
@@ -132,7 +155,7 @@ cpu_context_jumpto(struct context_s *new)
 		"	jr	$1			\n"
 		".set pop				\n"
 		:
-		: "r" (new->stack_ptr)
+		: "r" (&new->stack_ptr)
 		, "r" (CPU_LOCAL_ADDR(__cpu_context_data_base))
 		);
 
