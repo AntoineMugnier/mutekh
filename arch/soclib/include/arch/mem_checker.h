@@ -1,17 +1,6 @@
 
 
 
-        ISS_MEMCHECKER_MEMORY_REGION_UPDATE, // r1 = base, r2 = size, val = new_state
-
-        ISS_MEMCHECKER_ENABLED_CHECKS,
-        
-        ISS_MEMCHECKER_REGISTER_MAX,
-};
-
-#define ISS_MEMCHECKER_REGION_FREE 1
-#define ISS_MEMCHECKER_REGION_ALLOC 2
-*/
-
 /** Magic value must be stored here to enable other registers. 0 must
     be stored to exit magix state. */
 #define SOCLIB_MC_MAGIC (CONFIG_SOCLIB_MEMCHECK_ADDRESS + 0)

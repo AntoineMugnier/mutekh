@@ -95,31 +95,6 @@ cpu_interrupt_enable(void)
 }
 
 static inline void
-cpu_interrupt_process(void)
-{
-  __asm__ volatile (
-		    ".set push			\n"
-		    ".set noat			\n"
-		    ".set reorder		\n"
-#if (CONFIG_CPU_MIPS_VERSION >= 322)
-		    "ei				\n"
-		    "ehb			\n"
-#else
-		    "mfc0	$1,	$12	\n"
-		    "ori	$1,	1	\n"
-		    "mtc0	$1,	$12	\n"
-#endif
-		    ".set pop			\n"
-		    :
-		    :
-    /* memory clobber is important here as cpu_interrupt_process()
-       will let pending intterupts change global variables checked in
-       a function loop (scheduler root queue for instance) */
-		    : "memory"
-		    );
-}
-
-static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
   __asm__ volatile (
