@@ -116,7 +116,7 @@ typedef struct srl_abstract_task_s {
 		.func = (srl_task_func_t *)f,						\
 		.args = (void*)a,									\
 		.stack = (void*)s,									\
-		.stack_size = ss / sizeof(reg_t),					\
+		.stack_size = ss,									\
 		.name = n,											\
 		.tty_addr = (uint32_t*)ttya+TTY_SPAN*ttyn,			\
 	}
