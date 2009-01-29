@@ -22,6 +22,8 @@ asm(
 error_t
 cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 {
+  context->stack_ptr = (reg_t*)context->stack_end - 1;
+
   /* push entry function address and param arg */
   *--context->stack_ptr = (reg_t)entry;
   *--context->stack_ptr = (reg_t)param;

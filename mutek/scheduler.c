@@ -325,14 +325,16 @@ void sched_global_init(void)
 void sched_cpu_init(void)
 {
   struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);
-  reg_t *stack;
+  uint8_t *stack;
   error_t err;
 
-  stack = arch_contextstack_alloc(CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE * sizeof(reg_t));
+  stack = arch_contextstack_alloc(CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE);
 
   assert(stack != NULL);
 
-  err = context_init(&idle->context, stack, CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE, sched_context_idle, 0);
+  err = context_init(&idle->context, stack,
+		     stack + CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE,
+		     sched_context_idle, 0);
 
   assert(err == 0);
 

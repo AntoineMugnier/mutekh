@@ -41,6 +41,8 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 
   CONTEXT_LOCAL_TLS_SET(context->tls, __context_data_base, context->tls);
 
+  context->stack_ptr = (reg_t*)context->stack_end - 1;
+
   /* push param */
   *--context->stack_ptr = (uintptr_t)param;
 

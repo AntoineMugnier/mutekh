@@ -39,8 +39,9 @@ struct context_s
   /* context local storage address */
   void			*tls;
 
-  /* stack memory address */
-  reg_t			*stack;
+  /* stack memory address range */
+  void			*stack_start;
+  void			*stack_end;
 
   /* current stack pointer value */
   reg_t			*stack_ptr;
@@ -98,7 +99,7 @@ error_t context_bootstrap(struct context_s *context);
 
 /** init a context object allocating a new context */
 error_t context_init(struct context_s *context,
-		     reg_t *stack_buf, size_t stack_size,
+		     void *stack_start, void *stack_end,
 		     context_entry_t *entry, void *param);
 
 /** free ressource associated with a context and return a pointer to

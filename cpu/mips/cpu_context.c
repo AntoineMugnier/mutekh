@@ -79,11 +79,13 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 		"sw	$0,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
 		".set pop				\n"
 		:
-		: "r" (context->stack)
-		, "r" (context->stack_ptr - context->stack)
+		: "r" (context->stack_start)
+		, "r" (context->stack_end - context->stack_start)
 		, "r" (&context->stack_ptr) /* id */
 		);
 #endif
+
+  context->stack_ptr = (reg_t*)context->stack_end - 5;
 
   /* push entry function address and param arg */
   *--context->stack_ptr = (uintptr_t)entry;

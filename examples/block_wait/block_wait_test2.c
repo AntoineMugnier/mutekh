@@ -68,15 +68,15 @@ int main()
   //  drv[1] = device_get_child(&ata, 1);
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
-  context_init(&a.context, stack_bufa, 10240, a_entry, "A");
+  context_init(&a.context, stack_bufa, stack_bufa + 10240, a_entry, "A");
   sched_context_init(&a);
   sched_context_start(&a);
 
-  context_init(&b.context, stack_bufb, 10240, a_entry, "B");
+  context_init(&b.context, stack_bufb, stack_bufb + 10240, a_entry, "B");
   sched_context_init(&b);
   sched_context_start(&b);
 
-  context_init(&c.context, stack_bufc, 10240, a_entry, "C");
+  context_init(&c.context, stack_bufc, stack_bufc + 10240, a_entry, "C");
   sched_context_init(&c);
   sched_context_start(&c);
   CPU_INTERRUPT_RESTORESTATE;

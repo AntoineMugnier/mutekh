@@ -130,7 +130,7 @@ static void srl_task_init(srl_task_s *task)
 {
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
 	context_init( &task->context.context,
-				  task->stack, task->stack_size,
+				  task->stack, (uint8_t*)task->stack + task->stack_size,
 				  srl_run_task, task );
 	sched_context_init( &task->context );
 	sched_affinity_single( &task->context, cpu_id() );

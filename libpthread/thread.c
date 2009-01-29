@@ -247,7 +247,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
 {
   struct pthread_s	*thread;
   error_t		res;
-  reg_t			*stack;
+  uint8_t		*stack;
   size_t		stack_size;
 
   thread = mem_alloc(sizeof (struct pthread_s), MEM_SCOPE_SYS);
@@ -272,7 +272,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
 #endif
     {
       stack_size = CONFIG_PTHREAD_STACK_SIZE;
-      stack = arch_contextstack_alloc(stack_size * sizeof(reg_t));
+      stack = arch_contextstack_alloc(stack_size);
 
       if (stack == NULL)
 	{
@@ -283,7 +283,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
 
   /* setup context for new thread */
   res = context_init(&thread->sched_ctx.context, stack,
-		     stack_size, pthread_context_entry, thread);
+		     stack + stack_size, pthread_context_entry, thread);
 
   if (res)
     {
@@ -364,7 +364,7 @@ error_t pthread_attr_init(pthread_attr_t *attr)
   return 0;
 }
 
-error_t pthread_attr_stack(pthread_attr_t *attr, reg_t *stack_buf, size_t stack_size)
+error_t pthread_attr_stack(pthread_attr_t *attr, void *stack_buf, size_t stack_size)
 {
   attr->flags |= _PTHREAD_ATTRFLAG_STACK;
   attr->stack_buf = stack_buf;

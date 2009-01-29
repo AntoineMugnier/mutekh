@@ -74,7 +74,10 @@ struct unix_process_s *unix_create_process(struct unix_process_s *parent)
 #endif
 
     /* setup scheduler context */
-    context_init(&ps->ctx.context, &ps->stack_vaddr_start, CONFIG_UNIX_KSTACK_SIZE, unix_context_entry, NULL);
+    context_init(&ps->ctx.context,
+		 ps->stack_vaddr_start,
+		 ps->stack_vaddr_start + CONFIG_UNIX_KSTACK_SIZE,
+		 unix_context_entry, NULL);
     sched_context_init(&ps->ctx);
 
     /* setup virtual memory context */

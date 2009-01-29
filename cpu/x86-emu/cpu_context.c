@@ -14,6 +14,8 @@ cpu_context_bootstrap(struct context_s *context)
 error_t
 cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 {
+  context->stack_ptr = (reg_t*)context->stack_end - 1;
+
   /* push param */
   *--context->stack_ptr = (uintptr_t)param;
 

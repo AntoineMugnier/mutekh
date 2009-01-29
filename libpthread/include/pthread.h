@@ -111,7 +111,7 @@ struct pthread_attr_s
   uint8_t flags;
   cpu_id_t cpucount;
   cpu_id_t cpulist[CONFIG_CPU_MAXCOUNT];
-  reg_t *stack_buf;
+  void *stack_buf;
   size_t stack_size;
 #endif
 };
@@ -130,7 +130,7 @@ pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu);
 
 /** set stack buffer attribute */
 error_t
-pthread_attr_stack(pthread_attr_t *attr, reg_t *stack_buf, size_t stack_size);
+pthread_attr_stack(pthread_attr_t *attr, void *stack_buf, size_t stack_size);
 
 /** create a new pthread */
 error_t

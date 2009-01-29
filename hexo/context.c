@@ -23,8 +23,8 @@ context_bootstrap(struct context_s *context)
 
   CONTEXT_LOCAL_TLS_SET(context->tls, context_cur, context);
 
-  /* FIXME ? initial stack space will never be freed */
-  context->stack = NULL;
+  /* initial stack space will never be freed ! */
+  context->stack_end = context->stack_start = NULL;
 
   /* setup cpu specific context data */
   if ((res = cpu_context_bootstrap(context)))
@@ -39,7 +39,7 @@ context_bootstrap(struct context_s *context)
 /** init a context object allocating a new context */
 error_t
 context_init(struct context_s *context,
-	     reg_t *stack_buf, size_t stack_size,
+	     void *stack_start, void *stack_end,
 	     context_entry_t *entry, void *param)
 {
   error_t	res;
@@ -50,11 +50,10 @@ context_init(struct context_s *context,
 
   CONTEXT_LOCAL_TLS_SET(context->tls, context_cur, context);
 
-    /* allocate context stack memory */
-  context->stack = stack_buf;
+  assert(stack_end > stack_start);
 
-  /* initial stack pointer address */
-  context->stack_ptr = context->stack + stack_size - 1;
+  context->stack_start = stack_start;
+  context->stack_end = stack_end;
 
   /* setup cpu specific context data */
   if ((res = cpu_context_init(context, entry, param)))
@@ -77,7 +76,7 @@ context_destroy(struct context_s *context)
   cpu_context_destroy(context);
   arch_contextdata_free(context->tls);
 
-  return context->stack;
+  return context->stack_start;
 }
 
 void
