@@ -82,8 +82,8 @@ void
 cpu_context_destroy(struct context_s *context)
 {
 #ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_delete_ctx((uint32_t)&context->stack_ptr);
   soclib_mem_check_disable(SOCLIB_MC_CHECK_SPFP);
+  soclib_mem_check_delete_ctx((uint32_t)&context->stack_ptr);
 #endif
 #if 0
   reg_t		*stack = (reg_t*)context->stack_ptr;
