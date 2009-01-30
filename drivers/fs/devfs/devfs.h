@@ -64,25 +64,135 @@ error_t	devfs_unregister(const char		*name);
  */
 error_t	devfs_destroy(const char		*mount_point);
 
+////////////////////////////////////////////////////////////////
 
+/**
+ ** \brief	Context initialization
+ ** \param	struct vfs_context_s *context
+ ** \return	error_t
+ */
 VFS_CREATE_CONTEXT(devfs_create_context);
+
+/**
+ ** \brief	Context destruction
+ ** \param	struct vfs_context_s *context
+ ** \return	error_t
+ */
 VFS_DESTROY_CONTEXT(devfs_destroy_context);
+
+/**
+ ** \brief	Not used
+ ** \param	struct vfs_context_s	*context
+ ** \param	struct vfs_node_s	*root
+ ** \return	error_t
+ */
 VFS_READ_ROOT(devfs_read_root);
+
+/**
+ ** \brief	Not used
+ ** \param	struct vfs_context_s	*context
+ ** \param	struct vfs_node_s	*root
+ ** \return	error_t
+ */
 VFS_WRITE_ROOT(devfs_write_root);
 
+////////////////////////////////////////////////////////////////
+
+/**
+ ** \brief	Initialize a node (not used)
+ ** \param	struct vfs_node_s *node
+ ** \return	error_t
+ */
 VFS_INIT_NODE(devfs_init_node);
+
+/**
+ ** \brief	Create a node (not used)
+ ** \param	struct vfs_node_s *parent
+ ** \param	struct vfs_node_s *node
+ ** \return	error_t
+ */
 VFS_CREATE_NODE(devfs_create_node);
+
+/**
+ ** \brief	lookup for a node
+ ** \param	struct vfs_node_s *parent
+ ** \param	struct vfs_node_s *node
+ ** \return	error_t
+ */
 VFS_LOOKUP_NODE(devfs_lookup_node);
+
+/**
+ ** \brief	Not used (not used)
+ ** \param	struct vfs_node_s *node
+ ** \return	error_t
+ */
 VFS_WRITE_NODE(devfs_write_node);
+
+/**
+ ** \brief	Release a node (not used)
+ ** \param	struct vfs_node_s *node
+ ** \return	error_t
+ */
 VFS_RELEASE_NODE(devfs_release_node);
+
+/**
+ ** \brief	unlink a node (not used)
+ ** \param	struct vfs_node_s *node
+ ** \return	error_t
+ */
 VFS_UNLINK_NODE(devfs_unlink_node);
 
+////////////////////////////////////////////////////////////////
+
+/**
+ ** \brief	open a device in a file structure
+ ** \param	struct vfs_node_s *node
+ ** \param	struct vfs_file_s *file
+ ** \return	error_t
+ */
 VFS_OPEN_FILE(devfs_open);
+
+/**
+ ** \brief	read on a device (char or block)
+ ** \param	struct vfs_file_s	*file
+ ** \param	uint8_t			*buffer
+ ** \param	size_t			size
+ ** \return	error_t
+ */
 VFS_READ_FILE(devfs_read);
+
+/**
+ ** \brief	write on a device (char or block)
+ ** \param	struct vfs_file_s	*file
+ ** \param	uint8_t			*buffer
+ ** \param	size_t			size
+ ** \return	error_t
+ */
 VFS_WRITE_FILE(devfs_write);
+
+/**
+ ** \brief	not used
+ ** \param	struct vfs_file_s	*file
+ ** \return	error_t
+ */
 VFS_LSEEK_FILE(devfs_lseek);
+
+/**
+ ** \brief	not used
+ ** \param	struct vfs_file_s	*file
+ ** \return	error_t
+ */
 VFS_RELEASE_FILE(devfs_release);
+
+/**
+ ** \brief	not read a directory from the DevFS
+ ** \param	struct vfs_file_s	*file
+ ** \param	struct vfs_dirent_s	*dirent
+ ** \return	error_t
+ */
 VFS_READ_DIR(devfs_readdir);
+
+////////////////////////////////////////////////////////////////
 
 static const struct vfs_context_op_s devfs_ctx_op =
   {

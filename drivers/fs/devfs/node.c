@@ -22,11 +22,6 @@
 #include <hexo/alloc.h>
 #include "devfs.h"
 
-/**
- ** \brief	Initialize a node (not used)
- ** \param	struct vfs_node_s *node
- ** \return	error_t
- */
 VFS_INIT_NODE(devfs_init_node)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
@@ -36,12 +31,6 @@ VFS_INIT_NODE(devfs_init_node)
   return 0;
 }
 
-/**
- ** \brief	Create a node (not used)
- ** \param	struct vfs_node_s *parent
- ** \param	struct vfs_node_s *node
- ** \return	error_t
- */
 VFS_CREATE_NODE(devfs_create_node)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
@@ -51,12 +40,6 @@ VFS_CREATE_NODE(devfs_create_node)
   return 0;
 }
 
-/**
- ** \brief	lookup for a node
- ** \param	struct vfs_node_s *parent
- ** \param	struct vfs_node_s *node
- ** \return	error_t
- */
 VFS_LOOKUP_NODE(devfs_lookup_node)
 {
   struct devfs_context_s	*ctx = NULL;
@@ -79,11 +62,6 @@ VFS_LOOKUP_NODE(devfs_lookup_node)
   return DEVFS_OK;
 }
 
-/**
- ** \brief	Not used (not used)
- ** \param	struct vfs_node_s *node
- ** \return	error_t
- */
 VFS_WRITE_NODE(devfs_write_node)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
@@ -93,11 +71,6 @@ VFS_WRITE_NODE(devfs_write_node)
     return 0;
 }
 
-/**
- ** \brief	Release a node (not used)
- ** \param	struct vfs_node_s *node
- ** \return	error_t
- */
 VFS_RELEASE_NODE(devfs_release_node)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
@@ -107,11 +80,6 @@ VFS_RELEASE_NODE(devfs_release_node)
   return 0;
 }
 
-/**
- ** \brief	unlink a node (not used)
- ** \param	struct vfs_node_s *node
- ** \return	error_t
- */
 VFS_UNLINK_NODE(devfs_unlink_node)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG

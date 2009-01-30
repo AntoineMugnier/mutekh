@@ -27,18 +27,24 @@
 #include <gpct/cont_hashlist.h>
 #include <vfs/vfs-private.h>
 
-// Return code
+/**
+ ** \brief	Return code
+ */
 #define DEVFS_OK		0
 #define DEVFS_ERR		1
 #define DEVFS_DIREMPTY		14 // to match VFS_EODIR
 
 
-// global variable :'(
+/**
+ ** \brief	global variable :'(
+ */
 struct vfs_node_s	*dev_root;
 
 ////////////////////////////////////////////////////
 
-// Structures for DevFS Node handling
+/**
+ ** \brief	Structures for DevFS Node handling
+ */
 struct devfs_node_s
 {
   CONTAINER_ENTRY_TYPE(HASHLIST)        hash_entry;
@@ -47,21 +53,27 @@ struct devfs_node_s
   uint_fast8_t				type;
 };
 
-// GPCT hash table generate functions
+/**
+ ** \brief	GPCT hash table generate functions
+ */
 CONTAINER_TYPE    (devfs_hash, HASHLIST, struct devfs_node_s, hash_entry, 111);
 CONTAINER_KEY_TYPE(devfs_hash, STRING, name);
 
 CONTAINER_FUNC    (devfs_hash, HASHLIST, static inline, devfs_hashfunc, name);
 CONTAINER_KEY_FUNC(devfs_hash, HASHLIST, static inline, devfs_hashfunc, name);
 
-// Structure for DevFS context
+/**
+ ** \brief	Structure for DevFS context
+ */
 struct devfs_context_s
 {
   devfs_hash_root_t	hash;
   struct vfs_node_s	*root;
 };
 
-// Structure for DevFS File handling
+/**
+ ** \brief	Structure for DevFS File handling
+ */
 struct devfs_file_s
 {
   struct vfs_node_s	*node;
