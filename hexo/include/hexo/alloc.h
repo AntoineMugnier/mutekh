@@ -26,6 +26,9 @@
 #include <hexo/lock.h>
 #include <hexo/endian.h>
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+#include <arch/mem_checker.h>
+#endif
 
 /***************** Memory allocatable region management ******************/
 
@@ -156,6 +159,13 @@ static inline void mem_free(void *ptr)
 
 static inline size_t mem_alloc_getsize(void *ptr)
 {
+  size_t result;
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
+#endif
+
   struct mem_alloc_header_s *hdr = (void*)((uint8_t*)ptr
 		      - mem_hdr_size
 #ifdef CONFIG_HEXO_MEMALLOC_GUARD
@@ -163,11 +173,18 @@ static inline size_t mem_alloc_getsize(void *ptr)
 #endif
 		      );
 
-  return hdr->size
+  result = hdr->size
 #ifdef CONFIG_HEXO_MEMALLOC_GUARD
     - CONFIG_HEXO_MEMALLOC_GUARD_SIZE * 2
 #endif
     - mem_hdr_size;
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  soclib_mem_check_enable(SOCLIB_MC_CHECK_REGIONS);
+  CPU_INTERRUPT_RESTORESTATE;
+#endif
+
+  return result;
 }
 
 #endif

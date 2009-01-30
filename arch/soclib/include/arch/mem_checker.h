@@ -1,5 +1,6 @@
 
-
+#ifndef SOCLIB_MEM_CHECKER_H_
+#define SOCLIB_MEM_CHECKER_H_
 
 /** Magic value must be stored here to enable other registers. 0 must
     be stored to exit magix state. */
@@ -48,4 +49,71 @@
 
 #define ASM_STR_(x) #x
 #define ASM_STR(x) ASM_STR_(x)
+
+#include <hexo/iospace.h>
+#include <hexo/interrupt.h>
+
+static inline __attribute__ ((always_inline)) void
+soclib_mem_check_change_id(uint32_t old_id, uint32_t new_id)
+{
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
+  cpu_mem_write_32(SOCLIB_MC_R1, old_id);
+  cpu_mem_write_32(SOCLIB_MC_CTX_CHANGE, new_id);
+  cpu_mem_write_32(SOCLIB_MC_CTX_SET, new_id);
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  CPU_INTERRUPT_RESTORESTATE;
+}
+
+static inline __attribute__ ((always_inline)) void
+soclib_mem_check_create_ctx(uint32_t ctx_id, void *stack_start, void *stack_end)
+{
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
+  cpu_mem_write_32(SOCLIB_MC_R1, (uint32_t)stack_start);
+  cpu_mem_write_32(SOCLIB_MC_R2, (uint32_t)(stack_end - stack_start));
+  cpu_mem_write_32(SOCLIB_MC_CTX_CREATE, ctx_id);
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  CPU_INTERRUPT_RESTORESTATE;
+}
+
+static inline __attribute__ ((always_inline)) void
+soclib_mem_check_delete_ctx(uint32_t ctx_id)
+{
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
+  cpu_mem_write_32(SOCLIB_MC_CTX_DELETE, ctx_id);
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  CPU_INTERRUPT_RESTORESTATE;
+}
+
+static inline __attribute__ ((always_inline)) void
+soclib_mem_check_region_status(void *region, size_t size, uint32_t status)
+{
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
+  cpu_mem_write_32(SOCLIB_MC_R1, (uint32_t)region);
+  cpu_mem_write_32(SOCLIB_MC_R2, size);
+  cpu_mem_write_32(SOCLIB_MC_REGION_UPDATE, status);
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  CPU_INTERRUPT_RESTORESTATE;
+}
+
+static inline __attribute__ ((always_inline)) void
+soclib_mem_check_disable(uint32_t flags)
+{
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
+  cpu_mem_write_32(SOCLIB_MC_DISABLE, flags);
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+}
+
+static inline __attribute__ ((always_inline)) void
+soclib_mem_check_enable(uint32_t flags)
+{
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
+  cpu_mem_write_32(SOCLIB_MC_ENABLE, flags);
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+}
+
+#endif
 

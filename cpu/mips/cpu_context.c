@@ -18,28 +18,11 @@ cpu_context_bootstrap(struct context_s *context)
   CPU_LOCAL_SET(__cpu_context_data_base, context->tls);
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-   asm volatile (
-		".set push			\n"
-		".set noat			\n"
-		"li	$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
-		"sw	$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
-		 /* clone context */
-		"sw	$0,	" ASM_STR(SOCLIB_MC_R1) "($0) \n"
-		"sw	%0,	" ASM_STR(SOCLIB_MC_CTX_CHANGE) "($0) \n"
-		 /* set as current context */
-		"sw	%0,	" ASM_STR(SOCLIB_MC_CTX_SET) "($0) \n"
-
-		"sw	$0,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
-		".set pop				\n"
-		 :
-		 : "r" (&context->stack_ptr) /* id */
-		 , "r" (cpu_id())
-		 );
+  soclib_mem_check_change_id(cpu_id(), (uint32_t)&context->stack_ptr);
 #endif
 
   return 0;
 }
-
 
 
 /* fake context entry point, pop entry function param and entry
@@ -68,21 +51,8 @@ error_t
 cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 {
 #ifdef CONFIG_SOCLIB_MEMCHECK
-  asm volatile (
-		".set push			\n"
-		".set noat			\n"
-		"li	$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
-		"sw	$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
-		"sw	%0,	" ASM_STR(SOCLIB_MC_R1) "($0) \n"
-		"sw	%1,	" ASM_STR(SOCLIB_MC_R2) "($0) \n"
-		"sw	%2,	" ASM_STR(SOCLIB_MC_CTX_CREATE) "($0) \n"
-		"sw	$0,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
-		".set pop				\n"
-		:
-		: "r" (context->stack_start)
-		, "r" (context->stack_end - context->stack_start)
-		, "r" (&context->stack_ptr) /* id */
-		);
+  soclib_mem_check_create_ctx((uint32_t)&context->stack_ptr,
+			      context->stack_start, context->stack_end);
 #endif
 
   context->stack_ptr = (reg_t*)context->stack_end - 5;
@@ -112,17 +82,7 @@ void
 cpu_context_destroy(struct context_s *context)
 {
 #ifdef CONFIG_SOCLIB_MEMCHECK
-  asm volatile (
-		".set push			\n"
-		".set noat			\n"
-		"li	$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
-		"sw	$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
-		"sw	%0,	" ASM_STR(SOCLIB_MC_CTX_DELETE) "($0) \n"
-		"sw	$0,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
-		".set pop				\n"
-		:
-		: "r" (&context->stack_ptr)
-		);
+  soclib_mem_check_delete_ctx((uint32_t)&context->stack_ptr);
 #endif
 #if 0
   reg_t		*stack = (reg_t*)context->stack_ptr;

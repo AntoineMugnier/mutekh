@@ -24,7 +24,6 @@
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
 #include <arch/mem_checker.h>
-#include <hexo/iospace.h>
 #endif
 
 #ifdef CONFIG_HEXO_MEMALLOC_ALGO
@@ -78,9 +77,7 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
   lock_spin(&region->lock);
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
-  cpu_mem_write_32(SOCLIB_MC_DISABLE, SOCLIB_MC_CHECK_REGIONS);
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
 #endif
 
   /* find suitable free block */
@@ -115,19 +112,13 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
 #endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-      cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
-      cpu_mem_write_32(SOCLIB_MC_R1, (uint32_t)(hdr + 1));
-      cpu_mem_write_32(SOCLIB_MC_R2, hdr->size - sizeof(*hdr));
-      cpu_mem_write_32(SOCLIB_MC_REGION_UPDATE, SOCLIB_MC_REGION_ALLOC);
-      cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+      soclib_mem_check_region_status(hdr + 1, hdr->size - sizeof(*hdr), SOCLIB_MC_REGION_ALLOC);
 #endif
 
     }
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
-  cpu_mem_write_32(SOCLIB_MC_ENABLE, SOCLIB_MC_CHECK_REGIONS);
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  soclib_mem_check_enable(SOCLIB_MC_CHECK_REGIONS);
 #endif
 
   lock_release(&region->lock);
@@ -145,9 +136,7 @@ void mem_alloc_region_push(void *address)
   lock_spin(&region->lock);
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
-  cpu_mem_write_32(SOCLIB_MC_DISABLE, SOCLIB_MC_CHECK_REGIONS);
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
 #endif
 
   assert(hdr->size >= mem_hdr_size);
@@ -163,11 +152,7 @@ void mem_alloc_region_push(void *address)
 #endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
-  cpu_mem_write_32(SOCLIB_MC_R1, (uint32_t)(hdr + 1));
-  cpu_mem_write_32(SOCLIB_MC_R2, hdr->size - sizeof(*hdr));
-  cpu_mem_write_32(SOCLIB_MC_REGION_UPDATE, SOCLIB_MC_REGION_FREE);
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  soclib_mem_check_region_status(hdr + 1, hdr->size - sizeof(*hdr), SOCLIB_MC_REGION_FREE);
 #endif
 
 #ifdef CONFIG_HEXO_MEMALLOC_STATS
@@ -226,9 +211,7 @@ void mem_alloc_region_push(void *address)
     }
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
-  cpu_mem_write_32(SOCLIB_MC_ENABLE, SOCLIB_MC_CHECK_REGIONS);
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  soclib_mem_check_enable(SOCLIB_MC_CHECK_REGIONS);
 #endif
 
   lock_release(&region->lock);
@@ -241,15 +224,10 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
   struct mem_alloc_header_s	*hdr = start;
   size_t			size = (uint8_t*)end - (uint8_t*)start;
 
-  CPU_INTERRUPT_SAVESTATE_DISABLE;
-
 #ifdef CONFIG_SOCLIB_MEMCHECK
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
-  cpu_mem_write_32(SOCLIB_MC_DISABLE, SOCLIB_MC_CHECK_REGIONS);
-  cpu_mem_write_32(SOCLIB_MC_R1, (uint32_t)start);
-  cpu_mem_write_32(SOCLIB_MC_R2, size);
-  cpu_mem_write_32(SOCLIB_MC_REGION_UPDATE, SOCLIB_MC_REGION_FREE);
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
+  soclib_mem_check_region_status(start, size, SOCLIB_MC_REGION_FREE);
 #elif defined( CONFIG_HEXO_MEMALLOC_DEBUG )
   memset(hdr, 0xa5, size);
 #endif
@@ -279,13 +257,12 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
   alloc_list_push(&region->root, hdr);
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
-  cpu_mem_write_32(SOCLIB_MC_ENABLE, SOCLIB_MC_CHECK_REGIONS);
-  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
+  CPU_INTERRUPT_RESTORESTATE;
 #endif
 
-  CPU_INTERRUPT_RESTORESTATE;
 }
+
 
 #ifdef CONFIG_HEXO_MEMALLOC_GUARD
 
