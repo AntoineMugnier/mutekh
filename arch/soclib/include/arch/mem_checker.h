@@ -47,6 +47,12 @@
 /** Memory allocation status must be checked */
 # define SOCLIB_MC_CHECK_REGIONS 8
 
+# ifdef CONFIG_COMPILE_FRAMEPTR
+#  define SOCLIB_MC_CHECK_SPFP 3
+# else
+#  define SOCLIB_MC_CHECK_SPFP 1
+# endif
+
 #define ASM_STR_(x) #x
 #define ASM_STR(x) ASM_STR_(x)
 

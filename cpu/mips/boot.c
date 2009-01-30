@@ -73,10 +73,7 @@ asm(
     "sw		$8,	" ASM_STR(SOCLIB_MC_R2) "($0) \n"
     "sw		$9,	" ASM_STR(SOCLIB_MC_CTX_CREATE) "($0) \n"
     "sw		$9,	" ASM_STR(SOCLIB_MC_CTX_SET) "($0) \n"
-    "ori	$1,	$0,	" ASM_STR(SOCLIB_MC_CHECK_SP+SOCLIB_MC_CHECK_INIT) " \n"
-# ifdef CONFIG_COMPILE_FRAMEPTR
-    "ori	$1,	$1,	" ASM_STR(SOCLIB_MC_CHECK_FP) " \n"
-# endif
+    "ori	$1,	$0,	" ASM_STR(SOCLIB_MC_CHECK_SPFP+SOCLIB_MC_CHECK_INIT) " \n"
     "sw		$1,	" ASM_STR(SOCLIB_MC_ENABLE) "($0) \n"
 
     "sw		$0,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"

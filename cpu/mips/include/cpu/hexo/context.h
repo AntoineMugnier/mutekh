@@ -76,6 +76,8 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	li	$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
 		"	sw	$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
 		"	sw	%1,	" ASM_STR(SOCLIB_MC_CTX_SET) "($0) \n"
+		"	ori	$1,	$0,	" ASM_STR(SOCLIB_MC_CHECK_SPFP) " \n"
+		"	sw	$1,	" ASM_STR(SOCLIB_MC_ENABLE) "($0) \n"
 #endif
 		"	move	$sp,	$15		\n"
 #ifdef CONFIG_SOCLIB_MEMCHECK
@@ -137,6 +139,8 @@ cpu_context_jumpto(struct context_s *new)
 		"	li	$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
 		"	sw	$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
 		"	sw	%0,	" ASM_STR(SOCLIB_MC_CTX_SET) "($0) \n"
+		"	ori	$1,	$0,	" ASM_STR(SOCLIB_MC_CHECK_SPFP) " \n"
+		"	sw	$1,	" ASM_STR(SOCLIB_MC_ENABLE) "($0) \n"
 #endif
 		"	move	$sp,	$15		\n"
 #ifdef CONFIG_SOCLIB_MEMCHECK
