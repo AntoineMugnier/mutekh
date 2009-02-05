@@ -29,6 +29,10 @@
 #include <srl.h>
 #include <srl_private_types.h>
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+#include <arch/mem_checker.h>
+#endif
+
 void hw_init();
 void srl_console_init(void *addr);
 void srl_console_init_cpu(void *addr);
@@ -109,6 +113,9 @@ static void srl_task_init(srl_task_s *task)
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_affinity(&attr, cpu_id());
+#ifdef CONFIG_SOCLIB_MEMCHECK
+	soclib_mem_check_region_status(task->stack, task->stack_size, SOCLIB_MC_REGION_ALLOC);
+#endif
 	pthread_attr_stack(&attr, task->stack, task->stack_size);
 	pthread_create( &task->pthread, &attr, srl_run_task, task );
 	pthread_attr_destroy(&attr);
@@ -129,6 +136,9 @@ static CONTEXT_ENTRY(srl_run_task)
 static void srl_task_init(srl_task_s *task)
 {
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
+#ifdef CONFIG_SOCLIB_MEMCHECK
+	soclib_mem_check_region_status(task->stack, task->stack_size, SOCLIB_MC_REGION_ALLOC);
+#endif
 	context_init( &task->context.context,
 				  task->stack, (uint8_t*)task->stack + task->stack_size,
 				  srl_run_task, task );
