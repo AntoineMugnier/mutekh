@@ -64,13 +64,14 @@ asm(
 #ifdef CONFIG_SOCLIB_MEMCHECK
     ".set push			\n"
     ".set noat			\n"
-    "addiu	$8,	$0,	-1024+16		\n"
+    "addiu	$8,	$0,	1024		\n"
     "li		$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
     "sw		$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
 
-    "sw		$8,	" ASM_STR(SOCLIB_MC_R1) "($0) \n"
-    "addiu	$8,	$sp,	16			\n"
     "sw		$8,	" ASM_STR(SOCLIB_MC_R2) "($0) \n"
+    "subu	$8,	$sp,	$8			\n"
+    "addiu	$8,	$8,		16			\n"
+    "sw		$8,	" ASM_STR(SOCLIB_MC_R1) "($0) \n"
     "sw		$9,	" ASM_STR(SOCLIB_MC_CTX_CREATE) "($0) \n"
     "sw		$9,	" ASM_STR(SOCLIB_MC_CTX_SET) "($0) \n"
     "ori	$1,	$0,	" ASM_STR(SOCLIB_MC_CHECK_SPFP+SOCLIB_MC_CHECK_INIT) " \n"
