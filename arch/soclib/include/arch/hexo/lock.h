@@ -116,7 +116,7 @@ struct		arch_lock_s
 
 static inline error_t arch_lock_init(struct arch_lock_s *lock)
 {
-  cpu_atomic_bit_clr(&lock->a, 0);
+  lock->a = 0;
   return 0;
 }
 

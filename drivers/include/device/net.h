@@ -78,7 +78,7 @@ typedef DEVNET_SENDPKT(devnet_sendpkt_t);
     Set an option.
 
     @param dev pointer to device descriptor
-    @param option to set
+    @param option option to set
     @param value value for the option
     @param len length of value
     @return error code
