@@ -365,6 +365,8 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
   lock_init(&fault_lock);
   cpu_exception_sethandler(fault_handler);
 
+  cpu_interrupt_enable();
+
   printf("CPU %i is up and running.\n", cpu_id());
 
 #if defined(CONFIG_COMPILE_INSTRUMENT)
@@ -374,7 +376,6 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 
   if (cpu_isbootstrap())
     {
-      cpu_interrupt_enable();
       main(0, 0);
       cpu_interrupt_disable();
 #if defined(CONFIG_MUTEK_SCHEDULER)
