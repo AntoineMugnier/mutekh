@@ -49,7 +49,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 #else
 		"	pushl	2f		\n"
 #endif
-#ifdef CONFIG_COMPILE_FRAMEPTR
+#if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
 		/* save frame pointer */
 		"	push	%%ebp		\n"
 #endif
@@ -65,7 +65,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	pop	(%2)		\n"
 		/* restore flags */
 		"	popf			\n"
-#ifdef CONFIG_COMPILE_FRAMEPTR
+#if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
 		/* restore frame pointer */
 		"	pop	%%ebp		\n"
 #endif
@@ -87,7 +87,9 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		: "memory"
 		, "%eax", /* "%ebx", */ "%ecx", "%edx"
 		/* "%esi", */ /* "%edi", */
+#if !(defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__))
 		, "%ebp"
+#endif
 		);
 }
 
@@ -101,7 +103,7 @@ cpu_context_jumpto(struct context_s *new)
 		"	pop	(%1)		\n"
  		/* restore flags */
 		"	popf			\n"
-#ifdef CONFIG_COMPILE_FRAMEPTR
+#if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
 		/* restore frame pointer */
 		"	pop	%%ebp		\n"
 #endif
@@ -122,7 +124,7 @@ cpu_context_set(uintptr_t stack, void *jumpto)
 {
   asm volatile (
 		"	movl	%0, %%esp	\n"
-#ifdef CONFIG_COMPILE_FRAMEPTR
+#if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
 		"	xorl	%%ebp, %%ebp	\n"
 #endif
 		"	jmpl	*%1		\n"
