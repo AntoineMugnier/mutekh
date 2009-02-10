@@ -1,0 +1,24 @@
+
+# Application license
+  CONFIG_LICENSE_APP_LGPL
+
+# Platform types
+  CONFIG_ARCH_SOCLIB
+
+# Processor types, Mips little endian with multiprocessor support up to 4 cpus
+  CONFIG_CPU_MIPS
+  CONFIG_CPU_MIPS_VERSION 32
+  CONFIG_CPU_ENDIAN_LITTLE
+  CONFIG_SMP
+  CONFIG_CPU_MAXCOUNT 4
+
+# Mutek features
+  CONFIG_PTHREAD
+  CONFIG_MUTEK_CONSOLE
+
+# Device drivers
+  CONFIG_DRIVER_CHAR_SOCLIBTTY
+  CONFIG_DRIVER_ICU_SOCLIB
+
+# New source code module to be compiled
+  CONFIG_MODULES examples/hello:%CONFIGPATH
