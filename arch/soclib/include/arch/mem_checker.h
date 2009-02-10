@@ -11,7 +11,7 @@
 /** Data register 1, depends on action performed */
 #define SOCLIB_MC_R1 (CONFIG_SOCLIB_MEMCHECK_ADDRESS + 4)
 
-/** Data register 1, depends on action performed */
+/** Data register 2, depends on action performed */
 #define SOCLIB_MC_R2 (CONFIG_SOCLIB_MEMCHECK_ADDRESS + 8)
 
 /** Creates a new context: R1 = base, R2 = size, value = id */
@@ -111,6 +111,7 @@ soclib_mem_check_disable(uint32_t flags)
   cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
   cpu_mem_write_32(SOCLIB_MC_DISABLE, flags);
   cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  __asm__ __volatile__("" ::: "memory");
 }
 
 static inline __attribute__ ((always_inline)) void
@@ -119,6 +120,7 @@ soclib_mem_check_enable(uint32_t flags)
   cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
   cpu_mem_write_32(SOCLIB_MC_ENABLE, flags);
   cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  __asm__ __volatile__("" ::: "memory");
 }
 
 #endif

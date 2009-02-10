@@ -130,14 +130,15 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
 void mem_alloc_region_push(void *address)
 {
   struct mem_alloc_header_s	*hdr = address, *next, *prev;
-  struct mem_alloc_region_s	*region = hdr->region;
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
-  lock_spin(&region->lock);
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
   soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
 #endif
+
+  struct mem_alloc_region_s	*region = hdr->region;
+  lock_spin(&region->lock);
 
   assert(hdr->size >= mem_hdr_size);
 
