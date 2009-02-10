@@ -25,30 +25,21 @@
 #include <hexo/types.h>
 #include <hexo/cpu.h>
 
-ssize_t printf(const char *format, ...);
-
-static inline void
-__assert_fail(const char *file,
-	      uint_fast16_t line,
-	      const char *func,
-	      const char *expr)
-{
-  printf("Assertion failed at %s:%u:%s(): (%s) is false\n", file, line, func, expr);
-
-  cpu_trap();
-
-  while (1)
-    ;
-}
-
 #ifdef NDEBUG
 # warning NDEBUG is deprecated here, use CONFIG_LIBC_ASSERT or CONFIG_DEBUG
 #endif
 
 #if defined(CONFIG_LIBC_ASSERT)
-#define assert(expr) ((void) ((expr) ? 0 : __assert_fail(__FILE__, __LINE__, __func__, #expr)))
+
+void
+__assert_fail(const char *file,
+			  uint_fast16_t line,
+			  const char *func,
+			  const char *expr);
+
+# define assert(expr) ((void) ((expr) ? 0 : __assert_fail(__FILE__, __LINE__, __func__, #expr)))
 #else
-#define assert(expr) ((void) 0)
+# define assert(expr) ((void) 0)
 #endif
 
 #endif
