@@ -32,8 +32,6 @@
 # define SOCLIB_MC_REGION_FREE 1
 /** Allocatable region state is allocated */
 # define SOCLIB_MC_REGION_ALLOC 2
-/** Reserved for global stack */
-# define SOCLIB_MC_REGION_NONALLOC_STACK 4
 
 /** Set enabled checks */
 #define SOCLIB_MC_ENABLE (CONFIG_SOCLIB_MEMCHECK_ADDRESS + 32)
