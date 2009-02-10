@@ -61,6 +61,10 @@ asm(
     "subu	$sp,	$sp,	$8			\n"
 #endif
 
+#if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
+	"or     $fp, $sp, $0			\n"
+#endif
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
     ".set push			\n"
     ".set noat			\n"

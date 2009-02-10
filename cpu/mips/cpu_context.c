@@ -65,7 +65,11 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   *--context->stack_ptr = (uintptr_t)&__mips_context_entry;
 
   /* frame pointer */
-  *--context->stack_ptr = 0x00000000;
+#if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
+  *--context->stack_ptr = (reg_t*)context->stack_end - 5;
+#else
+  *--context->stack_ptr = 0;
+#endif
 
   /* status register, interrupts are disabled */
   *--context->stack_ptr = 0x0000ff00;

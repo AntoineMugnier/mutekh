@@ -47,7 +47,7 @@
 /** Memory allocation status must be checked */
 # define SOCLIB_MC_CHECK_REGIONS 8
 
-# ifdef CONFIG_COMPILE_FRAMEPTR
+# if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
 #  define SOCLIB_MC_CHECK_SPFP 3
 # else
 #  define SOCLIB_MC_CHECK_SPFP 1
