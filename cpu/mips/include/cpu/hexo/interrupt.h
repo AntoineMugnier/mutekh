@@ -170,6 +170,21 @@ cpu_interrupt_getstate(void)
   return state & 0x01;
 }
 
+static inline bool_t
+cpu_is_interruptible(void)
+{
+  reg_t		state;
+
+  __asm__ volatile (
+		    "mfc0	%0,	$12		\n"
+		    : "=r" (state)
+		    );
+
+  // erl and exl masks interrupts
+  return ( ! (state & 0x6)
+		   && (state & 0x1) );
+}
+
 static inline void
 cpu_interrupt_wait(void)
 {

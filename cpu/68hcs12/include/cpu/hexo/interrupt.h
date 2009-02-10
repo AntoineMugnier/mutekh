@@ -106,6 +106,12 @@ cpu_interrupt_getstate(void)
   return !!(r & 0x10);
 }
 
+static inline bool_t
+cpu_is_interruptible(void)
+{
+	return cpu_interrupt_getstate();
+}
+
 static inline void
 cpu_interrupt_wait(void)
 {

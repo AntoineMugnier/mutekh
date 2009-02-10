@@ -35,9 +35,11 @@ asm(
     /* set up IT disable and kernel mode */
 #if __mips >= 32
     "mfc0      $8,	$12         			\n"
-//    "ori       $8,   0x00000000  			\n"
-    "andi      $8,   0x0000ffff  			\n"
+    "ori      $8, $0,  0x0000fc00  			\n"
     "mtc0      $8,	$12         			\n"
+# if __mips > 32
+    "ehb         			\n"
+# endif
 #else
     "li        $8,   0x00000000  			\n"
     "mtc0      $8,	$12         			\n"

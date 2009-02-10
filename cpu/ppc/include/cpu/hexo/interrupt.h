@@ -138,6 +138,12 @@ cpu_interrupt_getstate(void)
   return state & 0x8000 ? 1 : 0;
 }
 
+static inline bool_t
+cpu_is_interruptible(void)
+{
+	return cpu_interrupt_getstate();
+}
+
 static inline void
 cpu_interrupt_wait(void)
 {

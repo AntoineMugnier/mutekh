@@ -36,7 +36,7 @@ CONTEXT_LOCAL pthread_t __pthread_current;
 void
 __pthread_switch(void)
 {
-  assert(cpu_interrupt_getstate());
+  assert(cpu_is_interruptible());
 
 #ifdef CONFIG_PTHREAD_CANCEL
   if (pthread_self()->cancelasync)

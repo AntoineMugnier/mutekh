@@ -95,6 +95,12 @@ cpu_interrupt_getstate(void)
   return CPU_LOCAL_GET(cpu_irq_state);
 }
 
+static inline bool_t
+cpu_is_interruptible(void)
+{
+	return cpu_interrupt_getstate();
+}
+
 static inline void
 cpu_interrupt_wait(void)
 {

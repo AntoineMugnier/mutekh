@@ -52,6 +52,8 @@ static void inline cpu_interrupt_savestate_disable(reg_t *state);
 static void inline cpu_interrupt_restorestate(const reg_t *state);
 /** read current interrupts state as boolean */
 static bool_t inline cpu_interrupt_getstate(void);
+/** tell whether cpu is interruptible */
+static bool_t inline cpu_is_interruptible(void);
 
 /** enable interrupts and give a change to pending requests to
     execute. This function must be used to avoid the "sti; cli"

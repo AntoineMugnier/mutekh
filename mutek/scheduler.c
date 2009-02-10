@@ -162,7 +162,7 @@ void sched_context_switch(void)
   sched_queue_root_t *root = __sched_root();
   struct sched_context_s *next;
 
-  assert(!cpu_interrupt_getstate());
+  assert(!cpu_is_interruptible());
 
   sched_queue_wrlock(root);
 
@@ -179,7 +179,7 @@ void sched_context_switch(void)
 /* Must be called with interrupts disabled and sched locked */
 void sched_context_exit(void)
 {
-  assert(!cpu_interrupt_getstate());
+  assert(!cpu_is_interruptible());
 
   struct sched_context_s	*next;
 
@@ -190,14 +190,14 @@ void sched_context_exit(void)
 
 void sched_lock(void)
 {
-  assert(!cpu_interrupt_getstate());
+  assert(!cpu_is_interruptible());
 
   sched_queue_wrlock(__sched_root());
 }
 
 void sched_unlock(void)
 {
-  assert(!cpu_interrupt_getstate());
+  assert(!cpu_is_interruptible());
 
   sched_queue_unlock(__sched_root());
 }
@@ -223,7 +223,7 @@ void sched_context_init(struct sched_context_s *sched_ctx)
 /* Must be called with interrupts disabled */
 void sched_context_start(struct sched_context_s *sched_ctx)
 {
-  assert(!cpu_interrupt_getstate());
+  assert(!cpu_is_interruptible());
 
   sched_queue_pushback(__sched_ctx_root(sched_ctx), sched_ctx);
 }
@@ -234,7 +234,7 @@ void sched_wait_callback(sched_queue_root_t *queue,
   sched_queue_root_t *root = __sched_root();
   struct sched_context_s *next;
 
-  assert(!cpu_interrupt_getstate());
+  assert(!cpu_is_interruptible());
 
   /* add current context to queue, assume dont need lock */
   sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
@@ -255,7 +255,7 @@ void sched_wait_unlock(sched_queue_root_t *queue)
   sched_queue_root_t *root = __sched_root();
   struct sched_context_s *next;
 
-  assert(!cpu_interrupt_getstate());
+  assert(!cpu_is_interruptible());
 
   /* add current context to queue, assume queue is already locked */
   sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
@@ -277,7 +277,7 @@ void sched_context_stop(void)
   sched_queue_root_t *root = __sched_root();
   struct sched_context_s *next;
 
-  assert(!cpu_interrupt_getstate());
+  assert(!cpu_is_interruptible());
 
   /* get next running context */
   sched_queue_wrlock(root);
@@ -292,7 +292,7 @@ void sched_context_stop_unlock(lock_t *lock)
   sched_queue_root_t *root = __sched_root();
   struct sched_context_s *next;
 
-  assert(!cpu_interrupt_getstate());
+  assert(!cpu_is_interruptible());
 
   /* get next running context */
   sched_queue_wrlock(root);
@@ -307,7 +307,7 @@ struct sched_context_s *sched_wake(sched_queue_root_t *queue)
 {
   struct sched_context_s	*sched_ctx;
 
-  assert(!cpu_interrupt_getstate());
+  assert(!cpu_is_interruptible());
 
   if ((sched_ctx = sched_queue_nolock_pop(queue)))
     sched_queue_pushback(__sched_ctx_root(sched_ctx), sched_ctx);

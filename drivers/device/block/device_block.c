@@ -65,7 +65,7 @@ static error_t dev_block_lock_request(struct device_s *dev, uint8_t **data,
 
   dev_block_request(dev, &rq);
 
-  assert(cpu_interrupt_getstate());
+  assert(cpu_is_interruptible());
 
   while (!status.done)
     ;

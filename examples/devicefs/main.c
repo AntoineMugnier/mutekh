@@ -115,7 +115,7 @@ void* thread_func(void *arg)
 int main()
 {
   cpu_interrupt_enable();
-  assert(cpu_interrupt_getstate());
+  assert(cpu_is_interruptible());
 
   device_init(&ata);
 
