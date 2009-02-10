@@ -80,8 +80,11 @@ static DEVCHAR_CALLBACK(dev_char_sync_read)
   struct dev_char_wait_rq_s *status = rq->pvdata;
 
   lock_spin(&status->lock);
-  if (status->ctx != NULL)
-    sched_context_start(status->ctx);
+  if (status->ctx != NULL) {
+	  CPU_INTERRUPT_SAVESTATE_DISABLE;
+	  sched_context_start(status->ctx);
+	  CPU_INTERRUPT_RESTORESTATE;
+  }
   status->done = 1;
   lock_release(&status->lock);
 
