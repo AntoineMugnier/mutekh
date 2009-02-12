@@ -297,6 +297,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
 
   thread->start_routine = start_routine;
   thread->arg = arg;
+  thread->joined = NULL;
   thread->joinable = 0;
   thread->detached = 0;
 #ifdef CONFIG_PTHREAD_CANCEL
