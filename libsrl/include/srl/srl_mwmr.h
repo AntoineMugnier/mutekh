@@ -15,7 +15,6 @@
 #define SRL_MWMR_H_
 
 #include <mwmr/mwmr.h>
-#include <soclib/mwmr_controller.h>
 #include <hexo/endian.h>
 #include <assert.h>
 
