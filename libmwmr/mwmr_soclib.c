@@ -26,7 +26,6 @@
 #include <hexo/interrupt.h>
 #include <string.h>
 #include <mwmr/mwmr.h>
-#include <soclib/mwmr_controller.h>
 
 #if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
 # include <srl/srl_sched_wait.h>
@@ -37,7 +36,6 @@
 #elif defined(CONFIG_PTHREAD)
 # include <pthread.h>
 #endif
-
 
 static inline size_t min(size_t a, size_t b)
 {

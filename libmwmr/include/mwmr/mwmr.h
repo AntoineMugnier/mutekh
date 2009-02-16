@@ -47,7 +47,11 @@ typedef struct {} srl_mwmr_lock_t;
 
 #elif defined CONFIG_MWMR_SOCLIB
 
-#include <soclib/mwmr_controller.h>
+# ifdef CONFIG_MWMR_LOCKFREE
+#  include <soclib/mwmr_controller_lf.h>
+# else
+#  include <soclib/mwmr_controller.h>
+# endif
 
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
 typedef volatile uint32_t srl_mwmr_lock_t;
