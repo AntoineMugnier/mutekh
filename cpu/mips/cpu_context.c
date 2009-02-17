@@ -39,7 +39,7 @@ asm(
     "	lw	$4,	0($sp)	\n" /* entry function param */
     "	lw	$1,	4($sp)	\n" /* entry function address */
     "	jr	$1		\n"
-    "	addiu	$sp,	-2*4	\n"
+    "	addiu	$sp,	2*4	\n"
     ".set pop			\n"
     );
 
