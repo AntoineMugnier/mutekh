@@ -58,6 +58,15 @@ static error_t	no_flush(FILE *stream)
 {
   return 0;
 }
+static error_t	rw_flush(FILE *stream)
+{
+    error_t err;
+    if ((err = write_flush(stream)) != 0)
+        return err;
+    if ((err = read_flush(stream)) != 0)
+        return err;
+    return 0;
+}
 
 static ssize_t	buffered_read(size_t size_, FILE *stream, uint8_t *ptr)
 {
@@ -211,7 +220,7 @@ inline error_t fseek(FILE *stream, fpos_t offset, int_fast8_t whence)
 {
   stream->rwflush(stream);
 
-  if (stream->ops->lseek(stream->fd, offset, whence) >= 0)
+  if ((stream->pos = stream->ops->lseek(stream->fd, offset, whence)) >= 0)
     return 0;
   else
     return (EOF);
@@ -336,7 +345,8 @@ FILE	*fopen(const char *path, const char *mode)
   if (!(stream->fd = stream->ops->open(path, flags)))
     goto err_1;
 
-  stream->rwflush = &no_flush;
+  //stream->rwflush = &no_flush;
+  stream->rwflush = &rw_flush;
   stream->pos = stream->ops->lseek(stream->fd, 0, SEEK_CUR);
   stream_fifo_init(&stream->fifo_read);
   stream_fifo_init(&stream->fifo_write);
