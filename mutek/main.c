@@ -324,6 +324,16 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 }
 
 static lock_t fault_lock;
+static const char *const fault_names[32] = {
+    "Int",      "Mod",  "TLBL",     "TLBS",
+    "AdEL",     "AdES", "IBE",      "DBE",
+    "Sys",      "Bp",   "RI",       "CpU", 
+    "Ov",       "Tr",   "-",        "FPE",
+    "-",        "-",    "C2E",      "-",
+    "-",        "-",    "MDMX",     "WATCH",
+    "MCheck",   "-",    "-",        "-",
+    "-",        "-",    "CacheErr", "-"
+};
 
 static CPU_EXCEPTION_HANDLER(fault_handler)
 {
@@ -335,7 +345,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 
   lock_spin(&fault_lock);
 
-  printf("CPU Fault: cpuid(%u) faultid(%u)\n", cpu_id(), type);
+  printf("CPU Fault: cpuid(%u) faultid(%u-%s)\n", cpu_id(), type, fault_names[type]);
   printf("Execution pointer: %p, Bad address (if any): %p\n", execptr, dataptr);
   puts("Registers:");
 
