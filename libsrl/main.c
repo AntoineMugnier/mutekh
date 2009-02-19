@@ -29,6 +29,10 @@
 #include <srl.h>
 #include <srl_private_types.h>
 
+#if CONFIG_SOCLIB_MEMCHECKER
+# include "soclib/mem_checker.h"
+#endif
+
 void hw_init();
 void srl_console_init(void *addr);
 void srl_console_init_cpu(void *addr);
@@ -159,6 +163,9 @@ void mutek_main_smp(void)
 	srl_cpu_init(app_desc.cpu[cpu_id()]);
 	
 	sched_lock();
+#if CONFIG_SOCLIB_MEMCHECKER
+	soclib_mem_check_delete_ctx(cpu_id())
+#endif
 	sched_context_exit();
 }
 
