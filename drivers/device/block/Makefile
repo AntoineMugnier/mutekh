@@ -17,3 +17,7 @@ ifeq ($(CONFIG_DRIVER_BLOCK_SOCLIB), defined)
  subdirs += soclib
 endif
 
+ifeq ($(CONFIG_DRIVER_BLOCK_EMU), defined)
+ subdirs += file-emu
+endif
+

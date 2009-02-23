@@ -17,4 +17,5 @@ X(#define EMU_SYSCALL_IOCTL	__NR_ioctl)
 X(#define EMU_SYSCALL_SOCKET	__NR_socket)
 X(#define EMU_SYSCALL_WAITPID	__NR_waitpid)
 X(#define EMU_SYSCALL_PTRACE	__NR_ptrace)
+X(#define EMU_SYSCALL_LSEEK	__NR_lseek)
 

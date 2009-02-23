@@ -26,81 +26,74 @@
 #include <hexo/device.h>
 #include <device/driver.h>
 
-#include <hexo/iospace.h>
 #include <hexo/alloc.h>
-#include <hexo/lock.h>
-#include <hexo/interrupt.h>
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
-#include "block-ramdisk.h"
-#include "block-ramdisk-private.h"
+#include <arch/hexo/emu_syscalls.h>
+
+#include "block-file-emu.h"
+#include "block-file-emu-private.h"
 
 /**************************************************************/
 
-/* 
- * device read/write request
- */
-
-DEVBLOCK_REQUEST(block_ramdisk_request)
+DEVBLOCK_REQUEST(block_file_emu_request)
 {
-  struct block_ramdisk_context_s *pv = dev->drv_pv;
+  struct block_file_emu_context_s *pv = dev->drv_pv;
   struct dev_block_params_s *p = &pv->params;
   dev_block_lba_t lba = rq->lba;
   dev_block_lba_t count = rq->count;
-
-  lock_spin(&dev->lock);
 
   if (lba + count <= p->blk_count)
     {
       size_t b;
 
+      emu_do_syscall(EMU_SYSCALL_LSEEK, 3, pv->fd, lba * p->blk_size, EMU_SEEK_SET);
+
       switch (rq->type)
 	{
 	case DEV_BLOCK_READ:
 	  for (b = 0; b < count; b++)
-	    memcpy(rq->data[b], pv->mem + ((lba + b) * p->blk_size), p->blk_size);
+	    emu_do_syscall(EMU_SYSCALL_READ, 3, pv->fd, rq->data[b], p->blk_size);
 	  break;
-
 	case DEV_BLOCK_WRITE:
 	  for (b = 0; b < count; b++)
-	    memcpy(pv->mem + ((lba + b) * p->blk_size), rq->data[b], p->blk_size);
+	    emu_do_syscall(EMU_SYSCALL_WRITE, 3, pv->fd, rq->data[b], p->blk_size);
 	  break;
 	}
 
-      rq->error = 0;
-      rq->count -= count;
-      rq->lba += count;
-      rq->callback(dev, rq, count);
+       rq->error = 0;
+       rq->count -= count;
+       rq->lba += count;
+       rq->callback(dev, rq, count);
     }
   else
     {
       rq->error = ERANGE;
       rq->callback(dev, rq, 0);
     }
-
-  lock_release(&dev->lock);
 }
 
 /* 
  * device params
  */
 
-DEVBLOCK_GETPARAMS(block_ramdisk_getparams)
+DEVBLOCK_GETPARAMS(block_file_emu_getparams)
 {
-  return &(((struct block_ramdisk_context_s *)(dev->drv_pv))->params);
+  return &(((struct block_file_emu_context_s *)(dev->drv_pv))->params);
 }
 
 /* 
  * device close operation
  */
 
-DEV_CLEANUP(block_ramdisk_cleanup)
+DEV_CLEANUP(block_file_emu_cleanup)
 {
-  struct block_ramdisk_context_s	*pv = dev->drv_pv;
+  struct block_file_emu_context_s	*pv = dev->drv_pv;
 
-  mem_free(pv->mem);
+  emu_do_syscall(EMU_SYSCALL_CLOSE, 1, pv->fd);
   mem_free(pv);
 }
 
@@ -109,25 +102,24 @@ DEV_CLEANUP(block_ramdisk_cleanup)
  */
 
 #ifndef CONFIG_STATIC_DRIVERS
-const struct driver_s	block_ramdisk_drv =
+const struct driver_s	block_file_emu_drv =
 {
   .class		= device_class_block,
-  .f_init		= block_ramdisk_init,
-  .f_cleanup		= block_ramdisk_cleanup,
-  .f_irq		= DEVICE_IRQ_INVALID,
+  .f_init		= block_file_emu_init,
+  .f_cleanup		= block_file_emu_cleanup,
   .f.blk = {
-    .f_request		= block_ramdisk_request,
-    .f_getparams	= block_ramdisk_getparams,
+    .f_request		= block_file_emu_request,
+    .f_getparams	= block_file_emu_getparams,
   }
 };
 #endif
 
-DEV_INIT(block_ramdisk_init)
+DEV_INIT(block_file_emu_init)
 {
-  struct block_ramdisk_context_s	*pv;
+  struct block_file_emu_context_s	*pv;
 
 #ifndef CONFIG_STATIC_DRIVERS
-  dev->drv = &block_ramdisk_drv;
+  dev->drv = &block_file_emu_drv;
 #endif
 
   /* allocate private driver data */
@@ -136,25 +128,22 @@ DEV_INIT(block_ramdisk_init)
   if (!pv)
     goto err;
 
-  pv->params.blk_size = CONFIG_DRIVER_BLOCK_RAMDISK_BLOCKSIZE;
-  pv->params.blk_count = CONFIG_DRIVER_BLOCK_RAMDISK_SIZE;
+  assert(params);
 
-  size_t sz = pv->params.blk_size * pv->params.blk_count;
-  dev_block_lba_t c;
+  pv->fd = emu_do_syscall(EMU_SYSCALL_OPEN, 2, params, EMU_O_RDONLY);
 
-  /* if a ramdisk already exists, take its address */
-  if (params)
-  {
-      pv->mem = params;
-  } 
-  else 
-  {
-      if ((pv->mem = mem_alloc(sz, MEM_SCOPE_SYS)) == NULL)
-          goto err_pv;
+  if (pv->fd < 0)
+    {
+      printf("Unable to open device file %s\n", params);
+      goto err_pv;
+    }
 
-      for (c = 0; c < pv->params.blk_count; c++)
-          memset(pv->mem + (c * pv->params.blk_size), c & 0xFF, pv->params.blk_size);
-  }
+  size_t off = emu_do_syscall(EMU_SYSCALL_LSEEK, 3, pv->fd, 0, EMU_SEEK_END);
+
+  pv->params.blk_size = CONFIG_DRIVER_BLOCK_EMU_BLOCKSIZE;
+  pv->params.blk_count = off / CONFIG_DRIVER_BLOCK_EMU_BLOCKSIZE;
+
+  printf("Emu block device : %u sectors\n", pv->params.blk_count);
 
   dev->drv_pv = pv;
   return 0;
