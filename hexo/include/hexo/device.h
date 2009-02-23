@@ -80,7 +80,7 @@ typedef DEV_CREATE(dev_create_t);
 #define DEV_INIT(n)	error_t (n) (struct device_s *dev, struct device_s *icudev, void *params)
 
 /** Common device class init() methode shortcut */
-#define dev_init(...) (dev)->drv->f_init(__VA_ARGS__)
+#define dev_init(dev, ...) (dev)->drv->f_init(dev, __VA_ARGS__)
 
 /** Common device class init() function type. This function will init
     the hardware device and must be called before using any other

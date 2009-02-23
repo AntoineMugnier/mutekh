@@ -78,7 +78,7 @@ void cpu_init(void)
 
   /* allocate memory for tracer process stack */
   tracer_stack = (void*)emu_do_syscall(EMU_SYSCALL_MMAP, 6, NULL, TRACER_STACK_SIZE * sizeof(reg_t),
-				       EMU_PROT_READ | EMU_PROT_WRITE,
+				       EMU_PROT_READ | EMU_PROT_WRITE | EMU_PROT_EXEC,
 				       EMU_MAP_PRIVATE | EMU_MAP_ANONYMOUS, 0, 0);
 
   tracer_stack += TRACER_STACK_SIZE;

@@ -48,6 +48,7 @@ DEVBLOCK_REQUEST(block_file_emu_request)
 
   if (lba + count <= p->blk_count)
     {
+      reg_t id;
       size_t b;
 
       emu_do_syscall(EMU_SYSCALL_LSEEK, 3, pv->fd, lba * p->blk_size, EMU_SEEK_SET);
@@ -55,14 +56,15 @@ DEVBLOCK_REQUEST(block_file_emu_request)
       switch (rq->type)
 	{
 	case DEV_BLOCK_READ:
-	  for (b = 0; b < count; b++)
-	    emu_do_syscall(EMU_SYSCALL_READ, 3, pv->fd, rq->data[b], p->blk_size);
+	  id = EMU_SYSCALL_READ;
 	  break;
 	case DEV_BLOCK_WRITE:
-	  for (b = 0; b < count; b++)
-	    emu_do_syscall(EMU_SYSCALL_WRITE, 3, pv->fd, rq->data[b], p->blk_size);
+	  id = EMU_SYSCALL_WRITE;
 	  break;
 	}
+
+      for (b = 0; b < count; b++)
+	emu_do_syscall(id, 3, pv->fd, rq->data[b], p->blk_size);
 
        rq->error = 0;
        rq->count -= count;
