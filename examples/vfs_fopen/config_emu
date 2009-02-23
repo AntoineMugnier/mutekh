@@ -1,0 +1,28 @@
+
+# Program license
+  CONFIG_LICENSE_APP_GPL
+
+# Platform types
+  CONFIG_ARCH_EMU
+
+# Processor
+  CONFIG_CPU_X86_EMU
+
+# Code generation
+  CONFIG_DEBUG undefined
+  CONFIG_COMPILE_DEBUG undefined
+
+# Mutek features
+  CONFIG_MUTEK_CONSOLE
+  CONFIG_VFS
+  CONFIG_PTHREAD
+  CONFIG_DRIVER_FS_VFAT
+  CONFIG_LIBC_STREAM
+  CONFIG_LIBC_STREAM_VFS
+
+# Device drivers
+  CONFIG_DRIVER_CHAR_EMUTTY
+  CONFIG_DRIVER_BLOCK_EMU
+
+# New source code module to be compiled
+  CONFIG_MODULES examples/vfs_fopen:%CONFIGPATH
