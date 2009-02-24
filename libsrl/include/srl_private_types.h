@@ -128,8 +128,8 @@ typedef struct srl_abstract_task_s {
 
 typedef struct srl_abstract_cpudesc_s srl_cpudesc_s;
 struct srl_abstract_cpudesc_s {
-	size_t ntasks;
-	srl_task_s **task_list;
+	const size_t ntasks;
+	const srl_task_s * const *task_list;
 	void *tty_addr;
 };
 
@@ -143,20 +143,20 @@ struct srl_abstract_cpudesc_s {
 typedef struct srl_abstract_appdesc_s srl_appdesc_s;
 struct srl_abstract_appdesc_s {
 	const size_t ntasks;
-	srl_barrier_s start;
-	srl_mwmr_s **mwmr;
-	srl_cpudesc_s **cpu;
-	srl_task_s **task;
+	srl_barrier_s *start;
+	const srl_mwmr_s * const *mwmr;
+	const srl_cpudesc_s * const *cpu;
+	const srl_task_s * const *task;
 	void *tty_addr;
 };
 
-#define SRL_APPDESC_INITIALIZER(nt, cl, ml, tl, ttya, ttyn)	   \
+#define SRL_APPDESC_INITIALIZER(nt, cl, ml, tl, sb, ttya, ttyn) \
 	{														   \
 		.ntasks = nt,										   \
 		.cpu = cl,										       \
 		.mwmr = ml,										       \
 		.task = tl,										       \
-		.start = SRL_BARRIER_INITIALIZER(nt),				   \
+		.start = sb,										   \
 		.tty_addr = (uint32_t*)ttya+TTY_SPAN*ttyn,			   \
 	}
 

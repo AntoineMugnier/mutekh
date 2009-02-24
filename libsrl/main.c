@@ -38,8 +38,8 @@ void srl_console_init(void *addr);
 void srl_console_init_cpu(void *addr);
 void srl_console_init_task(void *addr);
 
-extern srl_appdesc_s app_desc;
-static lock_t fault_lock;
+extern const srl_appdesc_s app_desc;
+lock_t fault_lock;
 
 static CPU_EXCEPTION_HANDLER(fault_handler)
 {
@@ -56,6 +56,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   static const char		*reg_names[] = CPU_GPREG_NAMES;
 #endif
 
+  cpu_interrupt_enable();
   lock_spin(&fault_lock);
 
 #if defined(CPU_FAULT_COUNT) && defined(CPU_FAULT_NAMES)
@@ -64,7 +65,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   printk("CPU Fault: cpuid(%u) faultid(%u)\n", cpu_id(), type);
 #endif
   printk("Execution pointer: %p, Bad address (if any): %p\n", execptr, dataptr);
-  puts("Registers:");
+  printk("Registers:");
 
   for (i = 0; i < CPU_GPREG_COUNT; i++)
 #ifdef CPU_GPREG_NAMES
@@ -73,12 +74,13 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
     printk("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
 
-  puts("Stack top:");
+  printk("Stack top:");
 
   for (i = 0; i < 8; i++)
 	  printk("%p%c", ((uint32_t*)stackptr)[i], (i + 1) % 4 ? ' ' : '\n');
 
   lock_release(&fault_lock);
+  cpu_interrupt_disable();
 
   while (1);
 }
@@ -90,7 +92,7 @@ static void srl_task_run(srl_task_s *task)
 		task->bootstrap(task->args);
 	}
 
-	srl_barrier_wait(&app_desc.start);
+	srl_barrier_wait(app_desc.start);
 	srl_log_printf(NONE, "Running %s\n", task->name);
 	if ( task->func )
 		for (;;) {
@@ -108,7 +110,7 @@ static void *srl_run_task( void* param )
 	return NULL;
 }
 
-static void srl_task_init(srl_task_s *task)
+static void srl_task_init(const srl_task_s *task)
 {
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
@@ -130,7 +132,7 @@ static CONTEXT_ENTRY(srl_run_task)
 	sched_context_exit();
 }
 
-static void srl_task_init(srl_task_s *task)
+static void srl_task_init(const srl_task_s *task)
 {
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
 	context_init( &task->context.context,
@@ -144,15 +146,16 @@ static void srl_task_init(srl_task_s *task)
 
 #endif
 
-static void srl_cpu_init(srl_cpudesc_s *cpu)
+static void srl_cpu_init(const srl_cpudesc_s *cpu)
 {
 	size_t i;
+	cpu_interrupt_enable();
 	srl_console_init_cpu(cpu->tty_addr);
 
-	cpu_printf("CPU %i is up and running\n"
-			   "DCache: %d bytes/line\n",
-			   cpu_id(), cpu_dcache_line_size());
-	cpu_printf("Bootstrapping cpu %d: %d tasks\n", cpu_id(), cpu->ntasks);
+/* 	cpu_printf("CPU %i is up and running\n" */
+/* 			   "DCache: %d bytes/line\n", */
+/* 			   cpu_id(), cpu_dcache_line_size()); */
+//	cpu_printf("Bootstrapping cpu %d: %d tasks\n", cpu_id(), cpu->ntasks);
 	for ( i=0; i<cpu->ntasks; ++i )
 		srl_task_init(cpu->task_list[i]);
 }
@@ -162,6 +165,7 @@ void mutek_main_smp(void)
 	cpu_exception_sethandler(fault_handler);
 	srl_cpu_init(app_desc.cpu[cpu_id()]);
 	
+	cpu_interrupt_disable();
 	sched_lock();
 #if CONFIG_SOCLIB_MEMCHECKER
 	soclib_mem_check_delete_ctx(cpu_id())
