@@ -129,6 +129,11 @@ static inline int_fast16_t getchar()
   return fgetc(stdin);
 }
 
+static inline int_fast16_t putchar(int_fast16_t c)
+{
+  return fputc(c, stdout);
+}
+
 static inline ssize_t vprintf(const char *format, va_list ap)
 {
   return vfprintf(stdout, format, ap);
@@ -167,11 +172,6 @@ static inline int_fast16_t getc(FILE *stream)
 static inline int_fast16_t putc(int_fast16_t c, FILE *stream)
 {
   return fputc(c, stream);
-}
-
-static inline int_fast16_t putchar(int_fast16_t c)
-{
-  return fputc(c, stdout);
 }
 
 /** internal stream buffered read function.
