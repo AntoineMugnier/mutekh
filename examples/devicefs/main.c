@@ -34,21 +34,21 @@ void* thread_func(void *arg)
 
   if ((drv0 = device_get_child(&ata, 0)) == NULL)
     {
-      printf("Couldn't find first disk on system\n");
+      printk("Couldn't find first disk on system\n");
       while (1)
 	continue;
     }
 
   if (block_partition_create(drv0, 0) == 0)
     {
-      printf("Couldn't find partition\n");
+      printk("Couldn't find partition\n");
       while (1)
 	continue;
     }
 
   if ((part1 = device_get_child(drv0, 0)) == NULL)
     {
-      printf("Couldn't find first partition on disk\n");
+      printk("Couldn't find first partition on disk\n");
       while (1)
 	continue;
     }
@@ -57,12 +57,12 @@ void* thread_func(void *arg)
 
   // Initialize VFS
   if ((err = vfs_init(part1, 1, 10, 10, &root))){
-    printf("error while initializing VFSLib: %d\n",err);
+    printk("error while initializing VFSLib: %d\n",err);
     while (1)
       continue;
   }
   else
-    printf("OK initializing VFSLib\n");
+    printk("OK initializing VFSLib\n");
 
 #ifdef CONFIG_DRIVER_FS_DEV
 
@@ -105,7 +105,7 @@ void* thread_func(void *arg)
 
   bc_dump(&bc);
   bc_sync(&bc,&freelist);
-  printf("Finished\n");
+  printk("Finished\n");
   while(1) pthread_yield();
   return NULL;
 }
@@ -128,15 +128,15 @@ int main()
 
   int i;
   for(i=0;i<NR_THREADS;i++){
-    printf("main: creating thread %d\n",i);
+    printk("main: creating thread %d\n",i);
 
     if(pthread_create(&task[i],NULL,thread_func,(void *) i)){
-      printf("error creating thread number: %d\n",i);
+      printk("error creating thread number: %d\n",i);
       while(1);
     }
   }
 
-  printf("LEAVE\n");
+  printk("LEAVE\n");
   return 0;
 }
 

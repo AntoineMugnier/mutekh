@@ -23,12 +23,12 @@ int_fast8_t main(size_t argc, char **argv)
   memset(buf, 0x55, sizeof(buf));
 
   dev_char_wait_read(&null_dev, buf, sizeof(buf));
-  printf("%P\n", buf, sizeof(buf));
+  printk("%P\n", buf, sizeof(buf));
 
   dev_char_wait_read(&zero_dev, buf, sizeof(buf));
-  printf("%P\n", buf, sizeof(buf));
+  printk("%P\n", buf, sizeof(buf));
 
   dev_char_wait_read(&random_dev, buf, sizeof(buf));
-  printf("%P\n", buf, sizeof(buf));
+  printk("%P\n", buf, sizeof(buf));
 }
 

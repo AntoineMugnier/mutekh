@@ -9,7 +9,7 @@ void *f(void *param)
   while (1)
     { 
       pthread_mutex_lock(&m);
-      printf("(%i) %s", cpu_id(), param);
+      printk("(%i) %s", cpu_id(), param);
       pthread_mutex_unlock(&m);
       pthread_yield();
     }

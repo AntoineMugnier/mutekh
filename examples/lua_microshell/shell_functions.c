@@ -36,14 +36,14 @@ int ls(lua_State *st)
 
     if (vfs_opendir(vfs_root_term, pathname, 0, &dir))
     {
-        printf("no such file or directory\n");
+        printk("no such file or directory\n");
         return -1;
     }
 
     while (!vfs_readdir(dir, &dirent))
-        printf("%s  ", dirent.d_name);
+        printk("%s  ", dirent.d_name);
 
-    printf("\n");
+    printk("\n");
 
     vfs_closedir(dir);
 
@@ -72,17 +72,17 @@ int cat(lua_State *st)
 
                     if ((f = fopen(pathname, "r")) == NULL)
                     {
-                        printf("No such file %s\n", pathname);
+                        printk("No such file %s\n", pathname);
                         break;
                     }
                     while (fgets(buffer, sizeof(buffer), f))
-                        printf("%s", buffer);
+                        printk("%s", buffer);
 
                     fclose(f);
                     break;
                 }
             default:
-                printf("bad argument\n");
+                printk("bad argument\n");
                 break;
         }
     }
@@ -100,7 +100,7 @@ int cd(lua_State *st)
     int err = vfs_chdir(pathname, vfs_root_term, &vfs_root_term);
     if(err)
     {
-        printf("no such file or directory\n");
+        printk("no such file or directory\n");
         return -1;
     }
 
@@ -114,7 +114,7 @@ int pwd(lua_State *st)
     memset(pathname, 0, 128);
     compute_name(vfs_root_term, pathname);
 
-    printf("%s\n", pathname);
+    printk("%s\n", pathname);
 
     return 0;
 }

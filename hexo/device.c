@@ -61,7 +61,7 @@ device_dump_list(struct device_s *root)
 {
   CONTAINER_FOREACH(device_list, CLIST, &root->children,
   {
-    printf("device %p\n", item);
+    printk("device %p\n", item);
   });
 }
 

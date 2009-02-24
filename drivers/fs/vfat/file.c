@@ -65,7 +65,7 @@ VFS_READ_FILE(vfat_read)
   int_fast32_t bytes_left;
 
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG   
-  printf("++++ vfat_read started, asked size %d\n", size);
+  printk("++++ vfat_read started, asked size %d\n", size);
 #endif
 
   if(file->f_node->n_attr & VFS_FIFO)
@@ -108,7 +108,7 @@ VFS_READ_FILE(vfat_read)
       return -VFS_IO_ERR;
 
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG   
-    printf("vfat_read: cluster %d, sector %d, current_sector %d, i %d, count %d, cluster_offset %d\n",
+    printk("vfat_read: cluster %d, sector %d, current_sector %d, i %d, count %d, cluster_offset %d\n",
 	   current_cluster, first_sector, current_sector, i , count,current_cluster_offset);
 #endif
     i = 0;
@@ -123,7 +123,7 @@ VFS_READ_FILE(vfat_read)
 	memcpy(pbuff, pread, bytes_left);
 
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG   
-	printf("size >= bytes_left, bytes_left %d, size %d\n",bytes_left,size);
+	printk("size >= bytes_left, bytes_left %d, size %d\n",bytes_left,size);
 #endif
 	pbuff += bytes_left;
 	size -= bytes_left;
@@ -135,7 +135,7 @@ VFS_READ_FILE(vfat_read)
 	memcpy(pbuff, pread, size);
 	
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG   
-	printf("size < bytes_left, bytest_left %d, size %d\n",bytes_left,size);
+	printk("size < bytes_left, bytest_left %d, size %d\n",bytes_left,size);
 #endif
 	current_cluster_offset += size;
 	size = 0;
@@ -202,14 +202,14 @@ VFS_WRITE_FILE(vfat_write)
 
 
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-  printf("++ write started for cluster %d, size %d\n",current_cluster,size);
+  printk("++ write started for cluster %d, size %d\n",current_cluster,size);
 #endif
 
 
   while (size > 0)
   {
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-    printf("main loop, start cluster : %d, current size %d, current_offset %d\n", 
+    printk("main loop, start cluster : %d, current size %d, current_offset %d\n", 
 	   current_cluster,size,current_cluster_offset);
 #endif
     if(current_cluster_offset >= ctx->bytes_per_cluster)
@@ -237,18 +237,18 @@ VFS_WRITE_FILE(vfat_write)
     sector_offset = current_cluster_offset % sector_size;
 
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-    printf("current_sector %d, sector_offset %d, size %d\n",current_sector,sector_offset,size);
+    printk("current_sector %d, sector_offset %d, size %d\n",current_sector,sector_offset,size);
 #endif
     if((sector_offset == 0) && (size >= sector_size))
     {
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-      printf("writing complet blk\n");
+      printk("writing complet blk\n");
 #endif
       if(vfat_write_sector(ctx,current_sector,pbuff))
 	return -VFS_IO_ERR;
 	
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-      printf("written complet blk\n");
+      printk("written complet blk\n");
 #endif
       size -= sector_size;
       pbuff += sector_size;
@@ -270,7 +270,7 @@ VFS_WRITE_FILE(vfat_write)
     if(size >= bytes_left)
     {
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-      printf("size >= bytes_left, size %d, writing %d bytes\n",size,bytes_left);
+      printk("size >= bytes_left, size %d, writing %d bytes\n",size,bytes_left);
 #endif
       memcpy(pwrite,pbuff, bytes_left);
       pbuff += bytes_left;
@@ -280,7 +280,7 @@ VFS_WRITE_FILE(vfat_write)
     else
     {
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-      printf("size < bytes_left, bytes_left %d, writing %d bytes\n",bytes_left,size);
+      printk("size < bytes_left, bytes_left %d, writing %d bytes\n",bytes_left,size);
 #endif
       memcpy(pwrite, pbuff, size);
       current_cluster_offset += size;
@@ -293,7 +293,7 @@ VFS_WRITE_FILE(vfat_write)
   file_info->current_cluster = current_cluster;
   file_info->current_offset = current_cluster_offset;
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-  printf("end of write function : written %d\n",asked_size - size);
+  printk("end of write function : written %d\n",asked_size - size);
 #endif
   return asked_size - size;
 }
@@ -319,12 +319,12 @@ VFS_LSEEK_FILE(vfat_lseek)
   current_cluster = file_info->node_cluster;
   next_cluster = 0;
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-  printf("lseek started, clus rank %d\n",cluster_rank);
+  printk("lseek started, clus rank %d\n",cluster_rank);
 #endif
   for(i=0; i < cluster_rank; i++)
   {
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-    printf("lssek: loop %d/%d\n",i,cluster_rank);
+    printk("lssek: loop %d/%d\n",i,cluster_rank);
 #endif
     if(vfat_query_fat(ctx, current_cluster,&next_cluster)) 
       return -VFS_IO_ERR;  
@@ -401,7 +401,7 @@ VFS_READ_DIR(vfat_readdir)
       return VFS_IO_ERR;
     
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-    printf("vfat_readdir: sector %d, offset %d, cluster %d, offset %d\n",
+    printk("vfat_readdir: sector %d, offset %d, cluster %d, offset %d\n",
 	   sector,current_offset,current_cluster,cluster_offset);
 #endif
     current_sector = buffers[0]->content;
@@ -410,23 +410,23 @@ VFS_READ_DIR(vfat_readdir)
     
     if(dir.DIR_Name[0] == 0x00){
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-      printf("vfat_readdir: entries termination found (0x00)\n");
+      printk("vfat_readdir: entries termination found (0x00)\n");
 #endif
       goto VFS_READ_DIR_EODIR;
     }
     if(dir.DIR_Name[0] == 0xE5){
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-      printf("entry was freeed previously\n");
+      printk("entry was freeed previously\n");
       vfat_getshortname((char*)dir.DIR_Name,dirent->d_name);
-      printf("it was %s\n",dirent->d_name);
+      printk("it was %s\n",dirent->d_name);
 #endif
       goto VFS_READ_DIR_NEXT;
     }
     if(dir.DIR_Attr == 0x0F){
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-      printf("this entry is a long one\n");
+      printk("this entry is a long one\n");
       vfat_getshortname((char*)dir.DIR_Name,dirent->d_name);
-      printf("trying to read it's name %s\n",dirent->d_name);
+      printk("trying to read it's name %s\n",dirent->d_name);
 #endif
       goto VFS_READ_DIR_NEXT;
     }

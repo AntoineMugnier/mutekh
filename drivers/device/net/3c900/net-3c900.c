@@ -41,7 +41,7 @@ DEV_IRQ(net_3c900_irq)
 
 DEV_INIT(net_3c900_init)
 {
-  printf("3com 3c900 driver init on device %p\n", dev);
+  printk("3com 3c900 driver init on device %p\n", dev);
 
   return 0;
 }

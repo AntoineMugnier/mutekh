@@ -138,13 +138,13 @@ VFS_NODE_FREELIST_UNLINK(vfs_node_freelist_unlink)
 
 void vfs_print_node_freelist()
 {
-  printf("vfs_freelist: [");
+  printk("vfs_freelist: [");
   uint8_t i=0;
   CONTAINER_FOREACH_NOLOCK(vfs_freeList,CLIST,&vfs_node_freelist.root,
   {
     i++;
     if(item->node != NULL)
-      printf("%s, ",item->node->n_name);
+      printk("%s, ",item->node->n_name);
   });
-  printf("\b\b] %d elements\n",i);
+  printk("\b\b] %d elements\n",i);
 }

@@ -125,7 +125,7 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
 	  enum_pv->devid = pci_confreg_read(bus, dv, fn, PCI_CONFREG_DEVID);
 	  enum_pv->class = (pci_confreg_read(bus, dv, fn, PCI_CONFREG_CLASS) & 0x00ffff00) >> 8;
 
-	  printf("PCI device %04x:%04x class %06x, device %p\n",
+	  printk("PCI device %04x:%04x class %06x, device %p\n",
 		 vendor, enum_pv->devid, enum_pv->class, new);
 
 	  for ((index = 0, regaddr = PCI_CONFREG_ADDRESS_0);
@@ -146,13 +146,13 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
 		/* get IO base address */
 		{
 		  new->addr[index] = PCI_CONFREG_ADDRESS_IO(reg);
-		  printf("  PCI IO base    : 0x%04x\n", new->addr[index]);
+		  printk("  PCI IO base    : 0x%04x\n", new->addr[index]);
 		}
 	      else if (PCI_CONFREG_ADDRESS_IS_MEM32(reg))
 		/* get memory 32 base address */
 		{
 		  new->addr[index] = PCI_CONFREG_ADDRESS_MEM32(reg);
-		  printf("  PCI mem32 base : 0x%p\n", new->addr[index]);
+		  printk("  PCI mem32 base : 0x%p\n", new->addr[index]);
 		}
 	      else if (PCI_CONFREG_ADDRESS_IS_MEM64(reg))
 		/* get memory 64 base address */
@@ -163,7 +163,7 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
 		  assert(regaddr <= PCI_CONFREG_ADDRESS_5);
 		  high = pci_confreg_read(bus, dv, fn, regaddr);
 		  new->addr[index] = PCI_CONFREG_ADDRESS_MEM64(reg, high);
-		  printf("  PCI mem64 base : 0x%p\n", new->addr[index]);
+		  printk("  PCI mem64 base : 0x%p\n", new->addr[index]);
 		}
 	    }
 
@@ -175,7 +175,7 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
 
 	    if (reg != 0xff)
 	      {
-		printf("  PCI irq : %u\n", reg);
+		printk("  PCI irq : %u\n", reg);
 		new->irq = reg;
 	      }
 	    else

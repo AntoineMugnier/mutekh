@@ -93,7 +93,7 @@ VFS_FILE_FREELIST_GET(vfs_file_freelist_get)
   }
 #ifdef CONFIG_VFS_DEBUG
   // this debug makes an infinite loop in assert() :-S
-  //  printf("vfs_file_freelist_get: got a new file\n");
+  //  printk("vfs_file_freelist_get: got a new file\n");
 #endif
   //  print_file(file);
   vfs_file_list_push(&vfs_file_list,file);
@@ -102,18 +102,18 @@ VFS_FILE_FREELIST_GET(vfs_file_freelist_get)
   if(file->f_op != node->n_ctx->ctx_file_op)
   {
 #ifdef CONFIG_VFS_DEBUG
-  printf("vfs_file_freelist_get: file_op is not valid\n");
+  printk("vfs_file_freelist_get: file_op is not valid\n");
 #endif
     if(file->f_op != NULL)
     {
       if(file->f_op->release(file))
 	return NULL;
 #ifdef CONFIG_VFS_DEBUG
-  printf("vfs_file_freelist_get: release file private structure\n");
+  printk("vfs_file_freelist_get: release file private structure\n");
 #endif
     }
 #ifdef CONFIG_VFS_DEBUG
-  printf("vfs_file_freelist_get: set file_op to node's context file_op\n");
+  printk("vfs_file_freelist_get: set file_op to node's context file_op\n");
 #endif
     file->f_op = node->n_ctx->ctx_file_op;
   }
@@ -128,12 +128,12 @@ VFS_FILE_FREELIST_GET(vfs_file_freelist_get)
 
 void vfs_print_file_freelist()
 {
-  printf("vfs_file_freelist: [");
+  printk("vfs_file_freelist: [");
   uint8_t i=0;
   CONTAINER_FOREACH_NOLOCK(vfs_file_list,CLIST,&vfs_file_freelist.root,
   {
     i++;
 
   });
-  printf("\b\b] %d elements\n",i);
+  printk("\b\b] %d elements\n",i);
 }

@@ -28,7 +28,7 @@ void __cyg_profile_func_enter (void *this_fn,
     {
       hexo_instrument_trace_flag = 0;
       lock_spin(&hexo_instrument_lock);
-      printf(">>>>> cpu(%i) [f:%p]   Called from [f:%p]\n", cpu_id(), this_fn, call_site);
+      printk(">>>>> cpu(%i) [f:%p]   Called from [f:%p]\n", cpu_id(), this_fn, call_site);
       lock_release(&hexo_instrument_lock);
       hexo_instrument_trace_flag = 1;
     }
@@ -36,7 +36,7 @@ void __cyg_profile_func_enter (void *this_fn,
 #ifdef CONFIG_HEXO_MEMALLOC_GUARD_INSTRUMENT
   if (hexo_instrument_memalloc_guard && mem_guard_check())
     {
-      printf("Memory guard check failed on function call [f:%p] called from [f:%p]",
+      printk("Memory guard check failed on function call [f:%p] called from [f:%p]",
 	     this_fn, call_site);
       abort();
     }
@@ -50,7 +50,7 @@ void __cyg_profile_func_exit  (void *this_fn,
 #ifdef CONFIG_HEXO_MEMALLOC_GUARD_INSTRUMENT
   if (hexo_instrument_memalloc_guard && mem_guard_check())
     {
-      printf("Memory guard check failed on function return [f:%p] called from [f:%p]",
+      printk("Memory guard check failed on function return [f:%p] called from [f:%p]",
 	     this_fn, call_site);
       abort();
     }
@@ -60,7 +60,7 @@ void __cyg_profile_func_exit  (void *this_fn,
     {
       hexo_instrument_trace_flag = 0;
       lock_spin(&hexo_instrument_lock);
-      printf("  <<< [f:%p]   Called from [f:%p]\n", this_fn, call_site);
+      printk("  <<< [f:%p]   Called from [f:%p]\n", this_fn, call_site);
       lock_release(&hexo_instrument_lock);
       hexo_instrument_trace_flag = 1;
     }

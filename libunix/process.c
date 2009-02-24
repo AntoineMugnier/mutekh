@@ -33,7 +33,7 @@ static CONTEXT_ENTRY(unix_context_entry)
 
   CONTEXT_LOCAL_SET(unix_process_current, ps);
 
-  printf("YUHUUUUUU !!!!\n");
+  printk("YUHUUUUUU !!!!\n");
 
   vmem_context_switch_to(&ps->vmem);
 
@@ -51,7 +51,7 @@ static CONTEXT_ENTRY(unix_context_entry)
   *code++ = 0x0b;
 #endif
 
-  printf("YUHAAAAAA !!!!\n");
+  printk("YUHAAAAAA !!!!\n");
 
   sched_unlock();
   cpu_interrupt_enable();
@@ -70,7 +70,7 @@ struct unix_process_s *unix_create_process(struct unix_process_s *parent)
 	goto err_ps;
 
 #ifdef CONFIG_UNIX_DEBUG
-    printf("Creating unix process ");
+    printk("Creating unix process ");
 #endif
 
     /* setup scheduler context */
@@ -104,7 +104,7 @@ struct unix_process_s *unix_create_process(struct unix_process_s *parent)
     ps->pid = pv_get_next_pid();
 
 #ifdef CONFIG_UNIX_DEBUG
-    printf("(pid=%i)\n", ps->pid);
+    printk("(pid=%i)\n", ps->pid);
 #endif
 
     unix_plist_init(&ps->children);

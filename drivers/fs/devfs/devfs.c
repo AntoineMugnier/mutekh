@@ -41,13 +41,13 @@ error_t	devfs_init(const char		*mount_point)
   assert(mount_point != NULL);
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_init: Mounting DevFS in %s\n", mount_point);
+  printk("devfs_init: Mounting DevFS in %s\n", mount_point);
 #endif
 
   // Some check
   if (mount_point[0] != '/')
     {
-      printf("devfs_init: mount_point must be absolute, aborting\n");
+      printk("devfs_init: mount_point must be absolute, aborting\n");
       return DEVFS_ERR;
     }
 
@@ -60,7 +60,7 @@ error_t	devfs_init(const char		*mount_point)
   // Get the node if existing
   if((err = vfs_node_load(vfs_get_root(), dirs_ptr, flags, isAbsolutePath, &dev_node)))
     {
-      printf("devfs_init: %s doesn't seem to exist in filesystem, aborting\n", mount_point);
+      printk("devfs_init: %s doesn't seem to exist in filesystem, aborting\n", mount_point);
       return err;
     }
 
@@ -87,7 +87,7 @@ error_t	devfs_init(const char		*mount_point)
   devfs_set_root(dev_node);
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_init: DevFS Initialized\n");
+  printk("devfs_init: DevFS Initialized\n");
 #endif
 
   return DEVFS_OK;
@@ -103,13 +103,13 @@ struct devfs_node_s *devfs_register(const char			*name,
   struct devfs_node_s		*new_node = NULL;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_register: Registering device node %s\n", name);
+  printk("devfs_register: Registering device node %s\n", name);
 #endif
 
   if ((ctx = devfs_get_ctx()) == NULL)
     {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-      printf("devfs_register: Could not get devfs context\n");
+      printk("devfs_register: Could not get devfs context\n");
 #endif
       return NULL;
     }
@@ -117,7 +117,7 @@ struct devfs_node_s *devfs_register(const char			*name,
   // Does node already exist?
   if (devfs_hashfunc_lookup(&(ctx->hash), name) != NULL)
     {
-      printf("devfs_register: %s already in use, please give it another name\n", name);
+      printk("devfs_register: %s already in use, please give it another name\n", name);
       return NULL;
     }
 
@@ -136,7 +136,7 @@ struct devfs_node_s *devfs_register(const char			*name,
   if ((devfs_hashfunc_push(&(ctx->hash), new_node)) == 0)
     {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-      printf("devfs_register: Could not push %s in hash table. Check Hash table.\n");
+      printk("devfs_register: Could not push %s in hash table. Check Hash table.\n");
 #endif
       return NULL;
     }
@@ -152,13 +152,13 @@ error_t	devfs_unregister(const char		*name)
   struct devfs_node_s		*node = NULL;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_unregister: Unregistering device node %s\n", name);
+  printk("devfs_unregister: Unregistering device node %s\n", name);
 #endif
 
   if ((ctx = devfs_get_ctx()) == NULL)
     {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-      printf("devfs_unregister: Could not get devfs context\n");
+      printk("devfs_unregister: Could not get devfs context\n");
 #endif
       return DEVFS_ERR;
     }
@@ -166,14 +166,14 @@ error_t	devfs_unregister(const char		*name)
   // Does node already exist?
   if ((node = devfs_hashfunc_lookup(&(ctx->hash), name)) == NULL)
     {
-      printf("devfs_unregister: %s doesn't exist\n", name);
+      printk("devfs_unregister: %s doesn't exist\n", name);
       return DEVFS_ERR;
     }
 
   // Removing node from hash list
   if (devfs_hashfunc_remove(&(ctx->hash), node) != 0)
     {
-      printf("devfs_unregister: %s couldn't be removed\n", name);
+      printk("devfs_unregister: %s couldn't be removed\n", name);
       return DEVFS_ERR;
     }
 
@@ -185,7 +185,7 @@ error_t	devfs_unregister(const char		*name)
 
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_unregister: All OK for %s\n", name);
+  printk("devfs_unregister: All OK for %s\n", name);
 #endif
 
   return DEVFS_OK;
@@ -203,13 +203,13 @@ error_t	devfs_destroy(const char		*mount_point)
   uint_fast32_t			flags = 0;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_destroy: Destroying devFS context \n");
+  printk("devfs_destroy: Destroying devFS context \n");
 #endif
 
   // Some check
   if (mount_point[0] != '/')
     {
-      printf("devfs_destroy : mount_point must be absolute, aborting\n");
+      printk("devfs_destroy : mount_point must be absolute, aborting\n");
       return DEVFS_ERR;
     }
 
@@ -231,7 +231,7 @@ error_t	devfs_destroy(const char		*mount_point)
 
   if (node->n_count > 1)
     {
-      printf("devfs_destroy : FileSystem busy");
+      printk("devfs_destroy : FileSystem busy");
       return DEVFS_ERR;
     }
   else

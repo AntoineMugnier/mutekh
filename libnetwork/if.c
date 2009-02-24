@@ -161,7 +161,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
       return NULL;
     }
 
-  printf("Registered new interface %s (MTU = %u)\n", interface->name, interface->mtu);
+  printk("Registered new interface %s (MTU = %u)\n", interface->name, interface->mtu);
 
   return interface;
 }
@@ -187,7 +187,7 @@ void			if_up(char*		name)
 
   if ((interface = net_if_lookup(&net_interfaces, name)))
     {
-      printf("Bringing up interface %s\n", name);
+      printk("Bringing up interface %s\n", name);
 
       interface->state = NET_IF_STATE_UP;
 
@@ -424,7 +424,7 @@ void			if_sendpkt(struct net_if_s	*interface,
 static void		spc(uint_fast8_t	i)
 {
   for (; i > 0; i--)
-    printf(" ");
+    printk(" ");
 }
 
 /*
@@ -438,9 +438,9 @@ void			if_dump(const char	*name)
 
   if ((interface = net_if_lookup(&net_interfaces, name)) && interface->state == NET_IF_STATE_UP)
     {
-      i = printf("%s", name);
+      i = printk("%s", name);
       spc(6 - i);
-      printf("HWaddr %02x:%02x:%02x:%02x:%02x:%02x\n", interface->mac[0], interface->mac[1],
+      printk("HWaddr %02x:%02x:%02x:%02x:%02x:%02x\n", interface->mac[0], interface->mac[1],
 	     interface->mac[2], interface->mac[3], interface->mac[4], interface->mac[5]);
 #ifdef CONFIG_NETWORK_IPV4
 	  NET_FOREACH_PROTO(&interface->protocols, ETHERTYPE_IP,
@@ -448,13 +448,13 @@ void			if_dump(const char	*name)
 	    struct net_pv_ip_s	*ipv4 = (struct net_pv_ip_s *)item->pv;
 
 	    spc(6);
-	    printf("inet addr %u.%u.%u.%u mask %u.%u.%u.%u broadcast %u.%u.%u.%u\n",
+	    printk("inet addr %u.%u.%u.%u mask %u.%u.%u.%u broadcast %u.%u.%u.%u\n",
 		   EXTRACT_IPV4(ipv4->addr), EXTRACT_IPV4(ipv4->mask),
 		   EXTRACT_IPV4(ipv4->addr | (0xffffffff & ~ipv4->mask)));
 	  });
 #endif
       spc(6);
-      printf("%u bytes sent (%u packets), %u bytes received (%u packets)\n",
+      printk("%u bytes sent (%u packets), %u bytes received (%u packets)\n",
 	     interface->tx_bytes, interface->tx_packets,
 	     interface->rx_bytes, interface->rx_packets);
 

@@ -41,24 +41,29 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra",						   \
 }
 
-#define CPU_FAULT_COUNT 16
-#define CPU_FAULT_NAMES {											   \
-"Interrupt",														   \
-"TLB Modification",													   \
-"TLB Load error",													   \
-"TLB Store error",													   \
-"Address error (Load)",												   \
-"Address error (Store)",											   \
-"Instruction bus error",											   \
-"Data bus error",													   \
-"Syscall",															   \
-"Break point",														   \
-"Reserved instruction",												   \
-"Coproc unusable",													   \
-"Overflow",															   \
-"Trap",																   \
-"Reserved exception",												   \
-"Floating point",													   \
+#define CPU_FAULT_COUNT 32
+
+#define CPU_FAULT_NAMES {			\
+"Interrupt",					\
+"TLB Modification",				\
+"TLB Load error",				\
+"TLB Store error",				\
+"Address error (Load)",				\
+"Address error (Store)",			\
+"Instruction bus error",			\
+"Data bus error",				\
+"Syscall",					\
+"Break point",					\
+"Reserved instruction",				\
+"Coproc unusable",				\
+"Overflow",					\
+"Trap",						\
+"Reserved",					\
+"Floating point",				\
+    "-",        "-",    "C2E",      "-",	\
+    "-",        "-",    "MDMX",     "WATCH",	\
+    "MCheck",   "-",    "-",        "-",	\
+    "-",        "-",    "CacheErr", "-"		\
 }
 
 #if __mips >= 32 

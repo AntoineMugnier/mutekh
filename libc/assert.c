@@ -4,7 +4,7 @@
 
 #if defined(CONFIG_LIBC_ASSERT)
 
-ssize_t printf(const char *format, ...);
+ssize_t printk(const char *format, ...);
 
 void
 __assert_fail(const char *file,
@@ -12,7 +12,7 @@ __assert_fail(const char *file,
 			  const char *func,
 			  const char *expr)
 {
-  printf("Assertion failed at %s:%u:%s(): (%s) is false\n", file, line, func, expr);
+  printk("Assertion failed at %s:%u:%s(): (%s) is false\n", file, line, func, expr);
 
   cpu_trap();
 

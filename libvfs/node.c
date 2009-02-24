@@ -83,7 +83,7 @@ VFS_NODE_UP(vfs_node_up)
   node->n_count ++;
 
 #ifdef CONFIG_VFS_DEBUG
-  printf("+++++++ UP NODE %s, %d +++++\n",node->n_name,node->n_count);
+  printk("+++++++ UP NODE %s, %d +++++\n",node->n_name,node->n_count);
 #endif
 }
 
@@ -92,7 +92,7 @@ VFS_NODE_DOWN(vfs_node_down)
   while(node!= NULL)
   {
 #ifdef CONFIG_VFS_DEBUG
-    printf("+++++++ DOWN NODE %s, %d ++++++\n",node->n_name,node->n_count -1);
+    printk("+++++++ DOWN NODE %s, %d ++++++\n",node->n_name,node->n_count -1);
 #endif
 
     if((--node->n_count)) break;
@@ -130,7 +130,7 @@ VFS_NODE_CREATE(vfs_node_create)
     return -VFS_EEXIST;
 
 #ifdef CONFIG_VFS_DEBUG
-  printf("node %s, found ? %d, isLast ? %d, VFS_O_CREATE ? %d, VFS_FIFO? %d\n",
+  printk("node %s, found ? %d, isLast ? %d, VFS_O_CREATE ? %d, VFS_FIFO? %d\n",
 	 node->n_name,err, isLast,flags & VFS_O_CREATE, node->n_attr & VFS_FIFO);
 #endif
 
@@ -146,7 +146,7 @@ VFS_NODE_CREATE(vfs_node_create)
   if(VFS_IS(node->n_attr,VFS_FIFO) && (!(VFS_IS(flags,VFS_O_UNLINK))))
   {
 #ifdef CONFIG_VFS_DEBUG
-    printf("node %s, is a fifo. releasing it",node->n_name);
+    printk("node %s, is a fifo. releasing it",node->n_name);
 #endif
     if((err=node->n_op->write(node)))
       return -err;
@@ -175,7 +175,7 @@ VFS_NODE_LOAD(vfs_node_load)
   if((isAbsolutePath))
   {
 #ifdef CONFIG_VFS_DEBUG
-    printf("path is absolute, cwd != root\n");
+    printk("path is absolute, cwd != root\n");
 #endif
     current_parent = vfs_root;
   }
@@ -183,7 +183,7 @@ VFS_NODE_LOAD(vfs_node_load)
     current_parent = root;
 
 #ifdef CONFIG_VFS_DEBUG
-  printf("current_parent %s\n",current_parent->n_name);
+  printk("current_parent %s\n",current_parent->n_name);
 #endif
 
   rwlock_wrlock(&vfs_node_freelist.lock);
@@ -204,7 +204,7 @@ VFS_NODE_LOAD(vfs_node_load)
       vfs_node_list_push(&current_parent->n_children, child);
       rwlock_unlock(&vfs_node_freelist.lock);
 #ifdef CONFIG_VFS_DEBUG
-      printf("going to physical load of %s\n",child->n_name);
+      printk("going to physical load of %s\n",child->n_name);
 #endif
       err=vfs_node_create(current_parent, flags, isLast,child);
 
@@ -229,7 +229,7 @@ VFS_NODE_LOAD(vfs_node_load)
     if(VFS_IS(child->n_state,VFS_INLOAD))
     {
 #ifdef CONFIG_VFS_DEBUG
-      printf("node %s is inload\n",child->n_name);
+      printk("node %s is inload\n",child->n_name);
 #endif
       CPU_INTERRUPT_SAVESTATE_DISABLE;
       sched_wait_callback(&child->n_wait, (sched_wait_cb_t*)rwlock_unlock, &vfs_node_freelist.lock);
@@ -264,14 +264,14 @@ VFS_NODE_LOAD(vfs_node_load)
     if(VFS_IS(child->n_state,VFS_FREE))
     {
 #ifdef CONFIG_VFS_DEBUG
-      printf("child %s is in the node_freelist\n",child->n_name);
+      printk("child %s is in the node_freelist\n",child->n_name);
 #endif
       vfs_node_freelist_unlink(child);
     }
     else
     {
 #ifdef CONFIG_VFS_DEBUG
-      printf("node was in use\n");
+      printk("node was in use\n");
 #endif
       vfs_node_down(current_parent);
     }
@@ -291,7 +291,7 @@ VFS_NODE_LOAD(vfs_node_load)
   vfs_node_down(current_parent);
   rwlock_unlock(&vfs_node_freelist.lock);
 #ifdef CONFIG_VFS_DEBUG
-  printf("vfs_load: error while creating/loading in-core node %s\n",path[i]);
+  printk("vfs_load: error while creating/loading in-core node %s\n",path[i]);
 #endif
   return err;
 }

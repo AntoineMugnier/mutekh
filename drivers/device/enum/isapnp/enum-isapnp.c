@@ -187,13 +187,13 @@ isapnp_enum_probe(struct device_s *dev)
       isapnp_write(ISAPNP_REG_CSN_SET, count);
       udelay(250);
 
-      printf("ISA PnP device found: %P\n", serialid.data, sizeof(serialid.data));
+      printk("ISA PnP device found: %P\n", serialid.data, sizeof(serialid.data));
 
     }
 
  end:
 
-  printf("last invalid ISA PnP  id: %P\n", serialid.data, sizeof(serialid.data));
+  printk("last invalid ISA PnP  id: %P\n", serialid.data, sizeof(serialid.data));
 
   return 0;
 }

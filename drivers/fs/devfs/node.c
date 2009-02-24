@@ -25,7 +25,7 @@
 VFS_INIT_NODE(devfs_init_node)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_init_node: you shoud not see that\n");
+  printk("devfs_init_node: you shoud not see that\n");
 #endif
 
   return 0;
@@ -34,7 +34,7 @@ VFS_INIT_NODE(devfs_init_node)
 VFS_CREATE_NODE(devfs_create_node)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_create_node: trying to create %s\n", node->n_name);
+  printk("devfs_create_node: trying to create %s\n", node->n_name);
 #endif
 
   return 0;
@@ -47,7 +47,7 @@ VFS_LOOKUP_NODE(devfs_lookup_node)
 
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_lookup_node: lookup for %s\n", node->n_name);
+  printk("devfs_lookup_node: lookup for %s\n", node->n_name);
 #endif
 
   ctx = devfs_get_ctx();
@@ -56,7 +56,7 @@ VFS_LOOKUP_NODE(devfs_lookup_node)
       return DEVFS_ERR;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_lookup_node: %s found\n", node->n_name);
+  printk("devfs_lookup_node: %s found\n", node->n_name);
 #endif
 
   return DEVFS_OK;
@@ -65,7 +65,7 @@ VFS_LOOKUP_NODE(devfs_lookup_node)
 VFS_WRITE_NODE(devfs_write_node)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_write_node: you shoud not see that\n");
+  printk("devfs_write_node: you shoud not see that\n");
 #endif
 
     return 0;
@@ -74,7 +74,7 @@ VFS_WRITE_NODE(devfs_write_node)
 VFS_RELEASE_NODE(devfs_release_node)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_release_node: releasing...\n");
+  printk("devfs_release_node: releasing...\n");
 #endif
 
   return 0;
@@ -83,7 +83,7 @@ VFS_RELEASE_NODE(devfs_release_node)
 VFS_UNLINK_NODE(devfs_unlink_node)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_unlink_node: unlinking...\n");
+  printk("devfs_unlink_node: unlinking...\n");
 #endif
 
   return 0;

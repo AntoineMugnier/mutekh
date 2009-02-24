@@ -99,7 +99,7 @@ error_t vmem_ppage_alloc(uintptr_t *paddr)
 
   LOCK_RELEASE_IRQ(&r->lock);  
 
-  printf("ppage alloc %i %p\n", res, *paddr);
+  printk("ppage alloc %i %p\n", res, *paddr);
 
   return res;
 }

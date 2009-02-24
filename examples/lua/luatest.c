@@ -12,13 +12,13 @@ int cmd_print(lua_State *st)
       switch (lua_type(st, i))
 	{
 	case LUA_TNUMBER:
-	  printf("(lua num %i)\n", lua_tonumber(st, i));
+	  printk("(lua num %i)\n", lua_tonumber(st, i));
 	  break;
 	case LUA_TSTRING:
-	  printf("(lua str %s)\n", lua_tostring(st, i));
+	  printk("(lua str %s)\n", lua_tostring(st, i));
 	  break;
 	default:
-	  printf("(lua type %i)\n", lua_type(st, i));
+	  printk("(lua type %i)\n", lua_type(st, i));
 	}
     }
 

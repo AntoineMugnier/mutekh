@@ -62,7 +62,7 @@ VFS_INIT(vfs_init)
   
   if(fs_type != VFS_VFAT_TYPE)
     {
-      printf("vfs_init: invaild fs_type value, this VFS version support only VFAT file system as root file system\n");
+      printk("vfs_init: invaild fs_type value, this VFS version support only VFAT file system as root file system\n");
       return -VFS_EINVAL;
     }
 
@@ -70,7 +70,7 @@ VFS_INIT(vfs_init)
 
   if((err=bc_init(&bc,&freelist,BC_ENTRIES_NR,BC_BUFFERS_PER_ENTRY,BC_BUFFER_SIZE,bc_default_hash)))
     {
-      printf("error while initialzing bufferCache :%d\n",err);
+      printk("error while initialzing bufferCache :%d\n",err);
       return err;
     }
 

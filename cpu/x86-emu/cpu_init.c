@@ -62,7 +62,7 @@ void tracer_entry(struct cpu_cld_s *cld)
 		 EMU_PTRACE_GETREGS,
 		 cld->worker_pid, 0, &regs);
 
-  printf("EIP %p\n", regs[EMU_PTRACE_EIP]);
+  printk("EIP %p\n", regs[EMU_PTRACE_EIP]);
 
   emu_do_syscall(EMU_SYSCALL_PTRACE, 4,
 		 EMU_PTRACE_CONT,

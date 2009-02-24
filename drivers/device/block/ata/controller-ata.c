@@ -140,7 +140,7 @@ void controller_ata_detect(struct device_s *dev, bool_t slave)
       if (cpu_io_read_8(dev->addr[0] + ATA_REG_CYLINDER_LOW) == ATA_ATAPI_LOW_SIGN &&
 	  cpu_io_read_8(dev->addr[0] + ATA_REG_CYLINDER_HIGH) == ATA_ATAPI_HIGH_SIGN)
 	{
-	  printf ("ATAPI drive found\n");
+	  printk ("ATAPI drive found\n");
 	  return;
 	}
     }

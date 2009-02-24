@@ -332,7 +332,7 @@ static error_t		dhcp_packet(struct net_if_s	*interface,
     }
 
   if (str != NULL)
-    printf("dhclient: sending %s...\n", str);
+    printk("dhclient: sending %s...\n", str);
 
   if (sendto(sock, packet, packet_len, 0, (struct sockaddr *)&broadcast,
 	     sizeof (struct sockaddr_in)) < 0)
@@ -390,22 +390,22 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		  saddr = htonl(dhcp->siaddr);
 		  yaddr = htonl(dhcp->yiaddr);
 
-		  printf("dhclient: received DHCPOFFER from %u.%u.%u.%u\n",
+		  printk("dhclient: received DHCPOFFER from %u.%u.%u.%u\n",
 			 EXTRACT_IPV4(saddr));
-		  printf("dhclient: offered %u.%u.%u.%u ... ",
+		  printk("dhclient: offered %u.%u.%u.%u ... ",
 			 EXTRACT_IPV4(yaddr));
 
 		  /* if the IP is free, take the offer */
 		  if (!requested && dhcp_ip_is_free(interface, yaddr))
 		    {
-		      printf("is free. Accepting.\n");
+		      printk("is free. Accepting.\n");
 
 		      /* send DHCPREQUEST */
 		      requested = !dhcp_packet(interface, DHCPREQUEST, yaddr, saddr, sock);
 		    }
 		  else /* otherwise, decline the offer */
 		    {
-		      printf("is not free. Declining.\n");
+		      printk("is not free. Declining.\n");
 
 		      /* send DHCPDECLINE */
 		      dhcp_packet(interface, DHCPDECLINE, yaddr, saddr, sock);
@@ -426,7 +426,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		      return 0;
 		    }
 
-		  printf("dhclient: end of negociation.\n");
+		  printk("dhclient: end of negociation.\n");
 
 		  lease->serv = ntohl(dhcp->siaddr);
 		  lease->ip = ntohl(dhcp->yiaddr);
@@ -454,19 +454,19 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		      else if (IN_CLASSC(lease->ip))
 			IPV4_ADDR_SET(mask, IN_CLASSC_NET);
 		    }
-		  printf("dhclient:\n  assigned %u.%u.%u.%u netmask %u.%u.%u.%u\n",
+		  printk("dhclient:\n  assigned %u.%u.%u.%u netmask %u.%u.%u.%u\n",
 			 EXTRACT_IPV4(addr.addr.ipv4), EXTRACT_IPV4(mask.addr.ipv4));
 		  if_config(interface->index, IF_SET, &addr, &mask);
 		  route_flush(interface);
 
-		  printf("  lease time: %u seconds\n", lease->delay / 1000);
+		  printk("  lease time: %u seconds\n", lease->delay / 1000);
 		  if ((opt = dhcp_get_opt(dhcp, endptr, DHCP_HOSTNAME)) != NULL)
 		    {
 		      char	name[opt->len + 1];
 
 		      memcpy(name, opt->data, opt->len);
 		      name[opt->len] = 0;
-		      printf("  hostname: %s\n", name);
+		      printk("  hostname: %s\n", name);
 		    }
 
 		  if ((opt = dhcp_get_opt(dhcp, endptr, DHCP_ROUTER)) != NULL)
@@ -477,7 +477,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 
 		      gateway = endian_be32_na_load(opt->data);
 
-		      printf("  gateway: %u.%u.%u.%u\n",
+		      printk("  gateway: %u.%u.%u.%u\n",
 			     EXTRACT_IPV4(gateway));
 
 		      /* configure default route */
@@ -507,7 +507,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		break;
 	      case DHCPNACK:
 		/* error during attribution */
-		printf("dhclient: error.\n");
+		printk("dhclient: error.\n");
 		requested = 0;
 		break;
 	      default:
@@ -548,7 +548,7 @@ static void	*dhcp_renew_th(void	*pv)
       if (lease->exit)
 	break;
 
-      printf("dhclient: initiating renewal ...\n");
+      printk("dhclient: initiating renewal ...\n");
 
       /* create sockets */
       if (dhcp_init(lease->interface, &sock, &sock_packet))
@@ -563,7 +563,7 @@ static void	*dhcp_renew_th(void	*pv)
 	  /* wait answer */
 	  if (!dhcp_request(lease->interface, sock, sock_packet, lease))
 	    {
-	      printf("dhclient: renewal succeeded.\n");
+	      printk("dhclient: renewal succeeded.\n");
 
 	      /* start the timer again */
 	      if (timer_add_event(&timer_ms, lease->timer))
@@ -577,7 +577,7 @@ static void	*dhcp_renew_th(void	*pv)
       if (i == 12)
 	{
 	  /* best solution is to restart from the beginning... */
-	  printf("dhclient: renewal failed.\n");
+	  printk("dhclient: renewal failed.\n");
 
 	  /* discover DHCP servers */
 	  if (dhcp_packet(lease->interface, DHCPDISCOVER, 0, INADDR_BROADCAST, sock))
@@ -604,12 +604,12 @@ static void	*dhcp_renew_th(void	*pv)
 	shutdown(sock_packet, SHUT_RDWR);
     }
 
-  printf("dhclient: exiting.\n");
+  printk("dhclient: exiting.\n");
 
   goto exit;
 
  err:
-  printf("dhclient: unknown error, exiting.\n");
+  printk("dhclient: unknown error, exiting.\n");
 
  exit:
 
@@ -703,7 +703,7 @@ error_t			dhcp_client(const char	*ifname)
   return 0;
 
  leave:
-  printf("dhclient: error, leaving\n");
+  printk("dhclient: error, leaving\n");
 
   free(lease);
 

@@ -51,7 +51,7 @@
 #include <stdlib.h>
 
 #undef net_debug
-#define net_debug printf
+#define net_debug printk
 
 /*
  * Session container.

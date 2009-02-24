@@ -136,7 +136,7 @@ DEV_INIT(block_file_emu_init)
 
   if (pv->fd < 0)
     {
-      printf("Unable to open device file %s\n", params);
+      printk("Unable to open device file %s\n", params);
       goto err_pv;
     }
 
@@ -145,7 +145,7 @@ DEV_INIT(block_file_emu_init)
   pv->params.blk_size = CONFIG_DRIVER_BLOCK_EMU_BLOCKSIZE;
   pv->params.blk_count = off / CONFIG_DRIVER_BLOCK_EMU_BLOCKSIZE;
 
-  printf("Emu block device : %u sectors\n", pv->params.blk_count);
+  printk("Emu block device : %u sectors\n", pv->params.blk_count);
 
   dev->drv_pv = pv;
   return 0;

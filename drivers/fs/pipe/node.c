@@ -39,7 +39,7 @@ VFS_INIT_NODE(pipe_init_node)
     return VFS_ENOMEM;
 
 #if PIPE_DEBUG
-  printf("init_pipe: node_info allocated\n");
+  printk("init_pipe: node_info allocated\n");
 #endif
 
   request.key1 = (key_t) node_info;
@@ -52,7 +52,7 @@ VFS_INIT_NODE(pipe_init_node)
   }
 
 #if PIPE_DEBUG
-  printf("init_pipe: bc_buffer has been allocated\n");
+  printk("init_pipe: bc_buffer has been allocated\n");
 #endif
 
   memset(node_info, 0, sizeof(*node_info));
@@ -78,7 +78,7 @@ VFS_RELEASE_NODE(pipe_release_node)
   if(node_info == NULL)
     return 0;
 #if PIPE_DEBUG
-  printf("++++++ release_pipe started ++++ \n");
+  printk("++++++ release_pipe started ++++ \n");
 #endif
   rwlock_destroy(&node_info->lock);
   sched_queue_destroy(&node_info->wr_wait);

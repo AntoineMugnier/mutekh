@@ -167,7 +167,7 @@ DEV_INIT(net_tuntap_init)
   dev->drv = &net_tuntap_drv;
 #endif
 
-  printf("tuntap driver init on device %p\n", dev);
+  printk("tuntap driver init on device %p\n", dev);
 
   /* driver private data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
@@ -186,7 +186,7 @@ DEV_INIT(net_tuntap_init)
   memset(&ifr, 0, sizeof(ifr));
   if ((tun = (int_fast32_t)emu_do_syscall(EMU_SYSCALL_OPEN, 2, "/dev/net/tun", O_RDWR)) == -1)
     {
-      printf("tuntap: cannot open /dev/net/tun\n");
+      printk("tuntap: cannot open /dev/net/tun\n");
 
       net_tuntap_cleanup(dev);
 
@@ -195,10 +195,10 @@ DEV_INIT(net_tuntap_init)
   ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
   memset(ifr.ifr_name, 0, sizeof(ifr.ifr_name));
   sprintf(ifr.ifr_name, "tap%d", tap_id++);
-  printf(" using %s\n", ifr.ifr_name);
+  printk(" using %s\n", ifr.ifr_name);
   if((int_fast32_t)emu_do_syscall(EMU_SYSCALL_IOCTL, 3, tun, TUNSETIFF, (void *) &ifr) < 0)
     {
-      printf("tuntap: cannot add tap interface\n");
+      printk("tuntap: cannot add tap interface\n");
 
       net_tuntap_cleanup(dev);
 
@@ -210,7 +210,7 @@ DEV_INIT(net_tuntap_init)
   /* get mac */
   if ((tun = (int_fast32_t)emu_do_syscall(EMU_SYSCALL_SOCKET, 3, PF_INET, SOCK_DGRAM, 0)) == -1)
     {
-      printf("tuntap: cannot create socket\n");
+      printk("tuntap: cannot create socket\n");
 
       net_tuntap_cleanup(dev);
 
@@ -218,7 +218,7 @@ DEV_INIT(net_tuntap_init)
     }
   if ((int_fast32_t)emu_do_syscall(EMU_SYSCALL_IOCTL, 3, tun, SIOCGIFHWADDR, (void *) &ifr) < 0)
     {
-      printf("tuntap: cannot get MAC address\n");
+      printk("tuntap: cannot get MAC address\n");
 
       net_tuntap_cleanup(dev);
 
@@ -226,7 +226,7 @@ DEV_INIT(net_tuntap_init)
     }
   memcpy(pv->mac, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 
-  printf("HW addr: %P\n", pv->mac, ETH_ALEN);
+  printk("HW addr: %P\n", pv->mac, ETH_ALEN);
 
   /* register as a net device */
   pv->interface = if_register(dev, IF_ETHERNET, pv->mac, ETHERMTU);
@@ -234,7 +234,7 @@ DEV_INIT(net_tuntap_init)
   /* start dispatch thread */
   if (sem_init(&pv->rcvsem, 0, 0))
     {
-      printf("tuntap: cannot init dispatch semaphore\n");
+      printk("tuntap: cannot init dispatch semaphore\n");
 
       net_tuntap_cleanup(dev);
 
@@ -250,7 +250,7 @@ DEV_INIT(net_tuntap_init)
   if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch) ||
       pthread_create(&th, NULL, net_tuntap_recv, dev))
     {
-      printf("tuntap: cannot start dispatch thread\n");
+      printk("tuntap: cannot start dispatch thread\n");
 
       mem_free(dispatch);
       net_tuntap_cleanup(dev);

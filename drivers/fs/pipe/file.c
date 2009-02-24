@@ -29,27 +29,27 @@
 VFS_OPEN_FILE(pipe_open)
 {
 #if PIPE_DEBUG
-  printf("pipe_open: opinign file in RD_ONLY ? %d\n", 
+  printk("pipe_open: opinign file in RD_ONLY ? %d\n", 
 	 VFS_IS(file->f_flags,VFS_O_RDONLY));
 #endif
 
   rwlock_wrlock(&file->f_node->n_lock);
 
 #if PIPE_DEBUG
-  printf("pipe_open: node %s locked\n",file->f_node->n_name);
+  printk("pipe_open: node %s locked\n",file->f_node->n_name);
 #endif
 
   if(VFS_IS(file->f_flags, VFS_O_RDONLY)){
     file->f_node->n_readers ++;
 #if PIPE_DEBUG
-    printf("pipe_open: node %s readers is now %d\n",
+    printk("pipe_open: node %s readers is now %d\n",
 	   file->f_node->n_name,file->f_node->n_readers);
 #endif
   }
   if(VFS_IS(file->f_flags, VFS_O_WRONLY)){
     file->f_node->n_writers ++;
 #if PIPE_DEBUG
-    printf("pipe_open: node %s writers is now %d\n",
+    printk("pipe_open: node %s writers is now %d\n",
 	   file->f_node->n_name,file->f_node->n_writers);
 #endif
   }
@@ -57,7 +57,7 @@ VFS_OPEN_FILE(pipe_open)
   while((VFS_IS(file->f_flags, VFS_O_RDONLY)) && (!file->f_node->n_writers))
   {
 #if PIPE_DEBUG
-    printf("pipe_open: going to wait for at least one writer\n");
+    printk("pipe_open: going to wait for at least one writer\n");
 #endif
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     sched_wait_callback(&file->f_node->n_wait, (sched_wait_cb_t*)rwlock_unlock, &file->f_node->n_lock);
@@ -68,7 +68,7 @@ VFS_OPEN_FILE(pipe_open)
   while((VFS_IS(file->f_flags, VFS_O_WRONLY)) && (!file->f_node->n_readers))
   {
 #if PIPE_DEBUG
-    printf("pipe_open: going to wait for at least one reader\n");
+    printk("pipe_open: going to wait for at least one reader\n");
 #endif
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     sched_wait_callback(&file->f_node->n_wait, (sched_wait_cb_t*)rwlock_unlock, &file->f_node->n_lock);
@@ -77,7 +77,7 @@ VFS_OPEN_FILE(pipe_open)
   }
 
 #if PIPE_DEBUG
-    printf("pipe_open: waking up all waitig \"process\"\n");
+    printk("pipe_open: waking up all waitig \"process\"\n");
 #endif
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -87,7 +87,7 @@ VFS_OPEN_FILE(pipe_open)
   rwlock_unlock(&file->f_node->n_lock);
   VFS_SET(file->f_flags, VFS_O_FIFO);
 #if PIPE_DEBUG
-  printf("pipe_open: node %s unlocked, f_flags %d\n",
+  printk("pipe_open: node %s unlocked, f_flags %d\n",
 	 file->f_node->n_name,file->f_flags);
 #endif
   return 0;
@@ -109,7 +109,7 @@ VFS_READ_FILE(pipe_read)
     return 0;
 
 #if PIPE_DEBUG
-  printf("pipe_read: there is at least on writer, trying to read %d byets\n",size);
+  printk("pipe_read: there is at least on writer, trying to read %d byets\n",size);
 #endif
 
   rwlock_unlock(&file->f_node->n_lock);
@@ -121,7 +121,7 @@ VFS_READ_FILE(pipe_read)
   asked_size = size;
 
 #if PIPE_DEBUG
-  printf("pipe_read: pipe info :\npipe_size %d\nstatus %d\npRead %d\npWrite %d\n",
+  printk("pipe_read: pipe info :\npipe_size %d\nstatus %d\npRead %d\npWrite %d\n",
 	 pipe_size, node_info->status, node_info->pRead, node_info->pWrite);
 #endif
   

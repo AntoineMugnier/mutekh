@@ -59,24 +59,24 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   lock_spin(&fault_lock);
 
 #if defined(CPU_FAULT_COUNT) && defined(CPU_FAULT_NAMES)
-  printf("CPU Fault: cpuid(%u) faultid(%s)\n", cpu_id(), fault_name);
+  printk("CPU Fault: cpuid(%u) faultid(%s)\n", cpu_id(), fault_name);
 #else
-  printf("CPU Fault: cpuid(%u) faultid(%u)\n", cpu_id(), type);
+  printk("CPU Fault: cpuid(%u) faultid(%u)\n", cpu_id(), type);
 #endif
-  printf("Execution pointer: %p, Bad address (if any): %p\n", execptr, dataptr);
+  printk("Execution pointer: %p, Bad address (if any): %p\n", execptr, dataptr);
   puts("Registers:");
 
   for (i = 0; i < CPU_GPREG_COUNT; i++)
 #ifdef CPU_GPREG_NAMES
-    printf("%s=%p%c", reg_names[i], regtable[i], (i + 1) % 4 ? ' ' : '\n');
+    printk("%s=%p%c", reg_names[i], regtable[i], (i + 1) % 4 ? ' ' : '\n');
 #else
-    printf("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
+    printk("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
 
   puts("Stack top:");
 
   for (i = 0; i < 8; i++)
-	  printf("%p%c", ((uint32_t*)stackptr)[i], (i + 1) % 4 ? ' ' : '\n');
+	  printk("%p%c", ((uint32_t*)stackptr)[i], (i + 1) % 4 ? ' ' : '\n');
 
   lock_release(&fault_lock);
 

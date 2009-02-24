@@ -100,7 +100,7 @@ static CPU_INTERRUPT_HANDLER(icu_8259_cpu_handler)
   if (h->hndl)
     h->hndl(h->data);
   else
-    printf("lost interrupt %i\n", irq);
+    printk("lost interrupt %i\n", irq);
 }
 
 DEV_CLEANUP(icu_8259_cleanup)

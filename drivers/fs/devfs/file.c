@@ -34,7 +34,7 @@ VFS_OPEN_FILE(devfs_open)
   struct devfs_file_s		*file_pv = file->f_pv;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_open_file: trying to open %s\n", node->n_name);
+  printk("devfs_open_file: trying to open %s\n", node->n_name);
 #endif
 
   // Is asking device node or /dev/* node?
@@ -49,7 +49,7 @@ VFS_OPEN_FILE(devfs_open)
     }
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
   else
-    printf("devfs_open_file: DevFS root is asked\n");
+    printk("devfs_open_file: DevFS root is asked\n");
 #endif
 
   // Allocating for a new DevFS file
@@ -85,7 +85,7 @@ VFS_READ_FILE(devfs_read)
     return -DEVFS_ERR;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_read_file: starting reading %d bytes in %s\n", size, file_pv->node->n_name);
+  printk("devfs_read_file: starting reading %d bytes in %s\n", size, file_pv->node->n_name);
 #endif
 
   if (size == 0)
@@ -98,7 +98,7 @@ VFS_READ_FILE(devfs_read)
 
     case DEVFS_CHAR :
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-      printf("devfs_read_file: trying to read on char device\n");
+      printk("devfs_read_file: trying to read on char device\n");
 #endif
       if ((s = dev_char_wait_read(node_pv->device, buffer, size)) < 0)
 	return EIO;
@@ -106,7 +106,7 @@ VFS_READ_FILE(devfs_read)
 
     case DEVFS_BLOCK :
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-      printf("devfs_read_file: trying to read on block device\n");
+      printk("devfs_read_file: trying to read on block device\n");
 #endif
       if ((s = dev_block_wait_read(node_pv->device, &buffer, file->f_offset, size)) < 0)
 	return EIO;
@@ -118,7 +118,7 @@ VFS_READ_FILE(devfs_read)
     }
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-      printf("devfs_read_file: size returned : %d\n", s);
+      printk("devfs_read_file: size returned : %d\n", s);
 #endif
 
   return s;
@@ -139,7 +139,7 @@ VFS_WRITE_FILE(devfs_write)
     return -DEVFS_ERR;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_write_file: starting writing %d bytes in %s\n", size, file_pv->node->n_name);
+  printk("devfs_write_file: starting writing %d bytes in %s\n", size, file_pv->node->n_name);
 #endif
 
   if (size == 0)
@@ -171,7 +171,7 @@ VFS_WRITE_FILE(devfs_write)
 VFS_LSEEK_FILE(devfs_lseek)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_lseek_file: you shoud not see that\n");
+  printk("devfs_lseek_file: you shoud not see that\n");
 #endif
 
   return 0;
@@ -180,7 +180,7 @@ VFS_LSEEK_FILE(devfs_lseek)
 VFS_RELEASE_FILE(devfs_release)
 {
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_release_file: you shoud not see that\n");
+  printk("devfs_release_file: you shoud not see that\n");
 #endif
 
   return 0;
@@ -192,7 +192,7 @@ VFS_READ_DIR(devfs_readdir)
   struct devfs_file_s		*file_pv = file->f_pv;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_read_dir: reading directory %s\n", file_pv->node->n_name);
+  printk("devfs_read_dir: reading directory %s\n", file_pv->node->n_name);
 #endif
 
   ctx = devfs_get_ctx();

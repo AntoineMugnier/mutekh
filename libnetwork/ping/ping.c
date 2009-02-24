@@ -117,7 +117,7 @@ error_t			ping(struct net_addr_s	*host,
       return -1;
     }
 
-  printf("PING %u.%u.%u.%u %u bytes of data.\n", addr.sin_addr.s_addr & 0xff,
+  printk("PING %u.%u.%u.%u %u bytes of data.\n", addr.sin_addr.s_addr & 0xff,
 	 (addr.sin_addr.s_addr >> 8) & 0xff, (addr.sin_addr.s_addr >> 16) & 0xff,
 	 (addr.sin_addr.s_addr >> 24) & 0xff, size);
 
@@ -144,7 +144,7 @@ error_t			ping(struct net_addr_s	*host,
       sent = send(sock, buf1, tot, 0);
 
       if (sent != tot)
-	printf("Error (sent = %d)\n", sent);
+	printk("Error (sent = %d)\n", sent);
 
       /* start timeout */
       timeout = timer_get_tick(&timer_ms);
@@ -168,7 +168,7 @@ error_t			ping(struct net_addr_s	*host,
 		  /* check size */
 		  if (recvd != tot)
 		    {
-		      printf("Reply %d bytes (instead of %d)\n", recvd, tot);
+		      printk("Reply %d bytes (instead of %d)\n", recvd, tot);
 		      break;
 		    }
 
@@ -176,7 +176,7 @@ error_t			ping(struct net_addr_s	*host,
 		  for (i = 0; i < size - sizeof (timer_delay_t); i++)
 		    if (buf2[sizeof (struct icmphdr) + sizeof (timer_delay_t) + i] != 32 + i % 96)
 		      {
-			printf("Reply %d bytes with incorrect data\n", recvd);
+			printk("Reply %d bytes with incorrect data\n", recvd);
 			break;
 		      }
 
@@ -186,7 +186,7 @@ error_t			ping(struct net_addr_s	*host,
 		    stat->max = t;
 		  stat->avg += t;
 
-		  printf("Reply %d bytes from %u.%u.%u.%u: seq=%d time=%u ms\n", recvd,
+		  printk("Reply %d bytes from %u.%u.%u.%u: seq=%d time=%u ms\n", recvd,
 			 addr.sin_addr.s_addr & 0xff, (addr.sin_addr.s_addr >> 8) & 0xff,
 			 (addr.sin_addr.s_addr >> 16) & 0xff, (addr.sin_addr.s_addr >> 24) & 0xff,
 			 ntohs(hdr->un.echo.sequence), t);
@@ -201,20 +201,20 @@ error_t			ping(struct net_addr_s	*host,
 			switch (hdr->code)
 			  {
 			    case ICMP_NET_UNREACH:
-			      printf("Reply: Network unreachable\n");
+			      printk("Reply: Network unreachable\n");
 			      break;
 			    case ICMP_HOST_UNREACH:
-			      printf("Reply: Host unreachable\n");
+			      printk("Reply: Host unreachable\n");
 			      break;
 			    case ICMP_PROT_UNREACH:
-			      printf("Reply: Protocol unreachable\n");
+			      printk("Reply: Protocol unreachable\n");
 			      break;
 			    case ICMP_FRAG_NEEDED:
-			      printf("Reply: Cannot fragment (Next HOP MTU = %u)\n",
+			      printk("Reply: Cannot fragment (Next HOP MTU = %u)\n",
 				     ntohs(hdr->un.frag.mtu));
 			      break;
 			    default:
-			      printf("Reply: Destination unreachable\n");
+			      printk("Reply: Destination unreachable\n");
 			      break;
 			  }
 			break;
@@ -222,18 +222,18 @@ error_t			ping(struct net_addr_s	*host,
 			switch (hdr->code)
 			  {
 			    case ICMP_EXC_TTL:
-			      printf("Reply: Timeout (ttl has reached 0)\n");
+			      printk("Reply: Timeout (ttl has reached 0)\n");
 			      break;
 			    case ICMP_EXC_FRAGTIME:
-			      printf("Reply: Reassembly timeout\n");
+			      printk("Reply: Reassembly timeout\n");
 			      break;
 			    default:
-			      printf("Reply: Timeout\n");
+			      printk("Reply: Timeout\n");
 			      break;
 			  }
 			break;
 		      default:
-			printf("Reply: unknown error\n");
+			printk("Reply: unknown error\n");
 			break;
 		    }
 		  stat->error++;
@@ -245,7 +245,7 @@ error_t			ping(struct net_addr_s	*host,
 	  if ((timer_get_tick(&timer_ms) - timeout) >= PING_TIMEOUT)
 	    {
 	      stat->lost++;
-	      printf("No reply\n");
+	      printk("No reply\n");
 	      break;
 	    }
 	}

@@ -242,7 +242,7 @@ void	netprofile_show(void);
 #define MEM_SCOPE_NETWORK	MEM_SCOPE_SYS
 
 /*
- * Disable log messages. Replace by a printf.
+ * Disable log messages. Replace by a printk.
  */
 
 #define net_debug(...)

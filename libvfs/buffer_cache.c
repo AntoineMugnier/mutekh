@@ -135,13 +135,13 @@ static struct bc_buffer_s* bc_find(struct buffer_cache_s *bc,
   if((current == NULL) || ((current->key1 == key1) && (current->key2 == key2))){
 #ifdef CONFIG_BC_DEBUG
     if(current!=NULL)
-      printf("bc_find: found buffer key1 %d, key2 %d\n",key1,key2);
+      printk("bc_find: found buffer key1 %d, key2 %d\n",key1,key2);
 #endif
     return current;
   }
 
 #ifdef CONFIG_BC_DEBUG
-  printf("bc_find: first buffer key1 %d, key2 %d\n",current->key1,current->key2);
+  printk("bc_find: first buffer key1 %d, key2 %d\n",current->key1,current->key2);
 #endif
 
   for(current = current->hash_next; current != bc->entries[index].head; current = current->hash_next)
@@ -186,7 +186,7 @@ static struct bc_buffer_s* bc_hash_unlink(struct buffer_cache_s *bc,
   if((buffer == head)&&(head->hash_next == head))
   {
 #ifdef CONFIG_BC_DEBUG
-    printf("bc_hash_unlink: buffer %d is last element in the queue %d\n",
+    printk("bc_hash_unlink: buffer %d is last element in the queue %d\n",
 	   buffer->key2,index);
 #endif
 
@@ -221,7 +221,7 @@ static struct bc_buffer_s* bc_freelist_link(struct bc_freelist_s *freelist,
   {
     
 #ifdef CONFIG_BC_DEBUG
-    printf("bc_freelist_link: buffer %d is put in head of list\n",
+    printk("bc_freelist_link: buffer %d is put in head of list\n",
 	   buffer->key2);
 #endif
 
@@ -336,18 +336,18 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
   {
     index = bc->bc_hash(bc,key1,key2); 
 #ifdef CONFIG_BC_DEBUG
-    printf("bc_get_buffer: i %d, count %d, index %d, key1 %d, key2 %d\n",
+    printk("bc_get_buffer: i %d, count %d, index %d, key1 %d, key2 %d\n",
 	   i,count,index, key1,key2);
 #endif
     if((buffer=bc_find(bc,index,key1,key2)) == NULL)
     { 
 #ifdef CONFIG_BC_DEBUG
-      printf("bc_get_buffer: buffer not found in the cache\n");
+      printk("bc_get_buffer: buffer not found in the cache\n");
 #endif
       if((buffer=bc_freelist_get(freelist)) == NULL)
       {
 #ifdef CONFIG_BC_DEBUG
-	printf("going to sleep, no more free buffers\n");
+	printk("going to sleep, no more free buffers\n");
 #endif
 	sched_wait_unlock(&freelist->wait);       /* --> */
 	sched_queue_wrlock(&freelist->wait);      /* <-- */
@@ -376,7 +376,7 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
 	dw_count ++;
 #endif
 #ifdef CONFIG_BC_DEBUG
-	printf(">>> Delayed write %d\n",buffer->key2);
+	printk(">>> Delayed write %d\n",buffer->key2);
 #endif
 	
 	sched_queue_wrlock(&freelist->wait);     /* <-- */
@@ -401,7 +401,7 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
 #endif
 
 #ifdef CONFIG_BC_DEBUG
-      printf(">> MISS %d\n",key2);
+      printk(">> MISS %d\n",key2);
 #endif
       i++; key2++;
       continue;
@@ -423,7 +423,7 @@ struct bc_request_s* bc_get_buffer(struct buffer_cache_s *bc,
 #endif
 
 #ifdef CONFIG_BC_DEBUG
-    printf(">> Hit %d, D_W %s\n",key2,(IS_BUFFER(buffer->state,BC_DELAYED_WRITE)) ? "Yes" : "No");
+    printk(">> Hit %d, D_W %s\n",key2,(IS_BUFFER(buffer->state,BC_DELAYED_WRITE)) ? "Yes" : "No");
 #endif
     bc_freelist_unlink(freelist,buffer);
   
@@ -458,7 +458,7 @@ struct bc_request_s* bc_release_buffer(struct buffer_cache_s *bc,
   {
     buffer= request->buffers[i];
 #ifdef CONFIG_BC_DEBUG
-    printf("bc_release_buffer: i %d, count %d, key1 %d, key2 %d\n",
+    printk("bc_release_buffer: i %d, count %d, key1 %d, key2 %d\n",
 	   i,request->count,buffer->key1,buffer->key2);
 #endif
     assert(IS_BUFFER(buffer->state, BC_BUSY));
@@ -510,10 +510,10 @@ void bc_sync(struct buffer_cache_s *bc, struct bc_freelist_s *freelist)
 	if(IS_BUFFER(current->state, BC_DELAYED_WRITE))
 	{
 #ifdef CONFIG_BC_INSTRUMENT
-	  printf(">>>>> Sync: %d",current->key2);
+	  printk(">>>>> Sync: %d",current->key2);
 #else
 # ifdef CONFIG_BC_DEBUG  
-	  printf(">>>>> Sync: %d\n",current->key2);
+	  printk(">>>>> Sync: %d\n",current->key2);
 # endif
 #endif
 	  data[0] = current->content;
@@ -522,7 +522,7 @@ void bc_sync(struct buffer_cache_s *bc, struct bc_freelist_s *freelist)
 	  tm_tmp = cpu_cycle_count();
 #endif
 	  if(dev_block_wait_write((struct device_s *)current->key1, data, current->key2, 1))
-	    printf("bc_sync: I/O error while writing bloc %d\n",current->key2);
+	    printk("bc_sync: I/O error while writing bloc %d\n",current->key2);
 #ifdef CONFIG_BC_INSTRUMENT
 	  tm_now = cpu_cycle_count() - tm_tmp;
 	  tm_tmp = tm_now;
@@ -530,7 +530,7 @@ void bc_sync(struct buffer_cache_s *bc, struct bc_freelist_s *freelist)
 	  count ++;
 #endif
 #ifdef CONFIG_BC_INSTRUMENT
-	  printf(", tm_stamp %d\n",tm_now);
+	  printk(", tm_stamp %d\n",tm_now);
 #endif
 	}
 	current = current->hash_next;
@@ -541,7 +541,7 @@ void bc_sync(struct buffer_cache_s *bc, struct bc_freelist_s *freelist)
     
 #ifdef CONFIG_BC_INSTRUMENT
   if(count)
-    printf(">> Sync: %d blk, average latency %d cycles\n",count, tm_total/count);
+    printk(">> Sync: %d blk, average latency %d cycles\n",count, tm_total/count);
 #endif 
 }
 
@@ -555,15 +555,15 @@ void bc_dump(struct buffer_cache_s *bc)
   for(i=0; i< bc->entries_number; i++)
   {
     if((current = bc->entries[i].head) != NULL){
-      printf("keys in entry #%d are [%d,",i,current->key2);
+      printk("keys in entry #%d are [%d,",i,current->key2);
       for(current = current->hash_next; current != bc->entries[i].head; current = current->hash_next)
-	printf("%d,",current->key2);
-      printf("\b]\n");
+	printk("%d,",current->key2);
+      printk("\b]\n");
     }
     else
-      printf("keys in entry %d are empty\n",i);
+      printk("keys in entry %d are empty\n",i);
   }
-  printf("\n");
+  printk("\n");
 }
 
 
@@ -573,18 +573,18 @@ void bc_dump2(struct bc_freelist_s *freelist)
   
   int8_t i=0;
   current = freelist->head;
-  if(current == NULL) {printf("[empty]\n"); return;}
+  if(current == NULL) {printk("[empty]\n"); return;}
 
-  printf("[(%d,%d),",current->index,current->key2);
+  printk("[(%d,%d),",current->index,current->key2);
   for(current = current->freelist_next; current != freelist->head; current = current->freelist_next)
     {
-      printf("(%d,%d),",current->index,current->key2);
+      printk("(%d,%d),",current->index,current->key2);
               if(i== 60)
 	break;
       i++;
       
     }
-  printf("\b]\n");
+  printk("\b]\n");
 }
 
 
@@ -592,12 +592,12 @@ void bc_dump3(struct bc_freelist_s *freelist)
 {
   struct bc_buffer_s *current=NULL;
 
-  if(freelist->head == NULL) {printf("[empty]\n"); return;}
+  if(freelist->head == NULL) {printk("[empty]\n"); return;}
 
-  printf("[");
+  printk("[");
   
   for(current = freelist->head->freelist_pred; current != freelist->head; current = current->freelist_pred)
-    printf("%d,",current->key2);
+    printk("%d,",current->key2);
 
-  printf("%d]\n",freelist->head->key2);
+  printk("%d]\n",freelist->head->key2);
 }

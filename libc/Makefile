@@ -1,5 +1,4 @@
 objs = 											\
-stdio.o											\
 string.o										\
 alloc.o											\
 intconv.o										\
@@ -21,9 +20,5 @@ endif
 
 ifeq ($(CONFIG_LIBC_STREAM_STD), defined)
 objs += stream_std.o
-endif
-
-ifeq ($(CONFIG_LIBC_STREAM_VFS), defined)
-objs += stream_vfs.o
 endif
 

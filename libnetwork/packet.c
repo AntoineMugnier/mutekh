@@ -221,6 +221,6 @@ void				netprofile_show(void)
   label[NETWORK_PROFILING_FRAGMENT] = "ip_fragment";
 
   for (i = 0; i < NETWORK_PROFILING_NB_OBJS; i++)
-    printf("%s: %u new %u del\n", label[i], netobj_new[i], netobj_del[i]);
+    printk("%s: %u new %u del\n", label[i], netobj_new[i], netobj_del[i]);
 }
 #endif

@@ -88,10 +88,10 @@ void* shell(void *param)
     struct term_behavior_s	*bhv;
     lua_State			*luast;
 
-    printf("init vfs... ");
+    printk("init vfs... ");
     vfs_init(&bd_dev, VFS_VFAT_TYPE, 20, 20, &vfs_root_term);
     stream_fops = &vfs_ops;
-    printf("ok\n");
+    printk("ok\n");
 
     /* create lua state */
     luast = lua_newstate(l_alloc, NULL);

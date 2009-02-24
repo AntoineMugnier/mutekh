@@ -30,7 +30,7 @@ static CONTEXT_ENTRY(a_entry)
       //uint_fast8_t d = rand() % 2;
       dev_block_lba_t l = ((rand() % 45) << 16) + rand() % 65535;
 
-      printf("(START d%i c%i %s %p)", 1, cpu_id(), param, &sched_get_current()->context);
+      printk("(START d%i c%i %s %p)", 1, cpu_id(), param, &sched_get_current()->context);
 
       cpu_interrupt_enable();
 
@@ -41,7 +41,7 @@ static CONTEXT_ENTRY(a_entry)
 
       cpu_interrupt_disable();
 
-      printf("(DATA c%i %s %P)", cpu_id(), param, data[0], 2);
+      printk("(DATA c%i %s %P)", cpu_id(), param, data[0], 2);
 
       sched_context_switch();
     }

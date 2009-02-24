@@ -276,7 +276,7 @@ bool_t mem_alloc_chk(const char *str, uint8_t *data, uint8_t value)
     {
       if (data[i] != value)
 	{
-	  printf("%s: value mismatch at block %p offset %p: %02x\n", str, data, i, data[i]);
+	  printk("%s: value mismatch at block %p offset %p: %02x\n", str, data, i, data[i]);
 	  res = 1;
 	}
     }

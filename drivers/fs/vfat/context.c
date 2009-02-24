@@ -40,7 +40,7 @@ static inline error_t vfat_context_init(struct vfat_context_s *ctx)
 
   if (dev_block_spin_read(ctx->dev, data, 0, 1))
     {
-      printf("VFAT drv error: IO error, couldn't read bpb for device.\n");
+      printk("VFAT drv error: IO error, couldn't read bpb for device.\n");
       return -1;
     }
 
@@ -53,11 +53,11 @@ static inline error_t vfat_context_init(struct vfat_context_s *ctx)
 
   if (blk_sz != (ctx->bytes_per_sector = endian_le16_na_load(&bpb->BPB_BytsPerSec)))
     {
-      printf("block size is %d\n",blk_sz);
-      printf("++%P++", bpb,512);
-      printf("VFAT drv error: bpb/device block size mismatch.\n");
+      printk("block size is %d\n",blk_sz);
+      printk("++%P++", bpb,512);
+      printk("VFAT drv error: bpb/device block size mismatch.\n");
 
-      printf("++++");
+      printk("++++");
       while(1);
       return -1;
     }
@@ -74,7 +74,7 @@ static inline error_t vfat_context_init(struct vfat_context_s *ctx)
   ctx->last_allocated_index = 2;
   
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-  printf("\tbegin_lba %d\n \
+  printk("\tbegin_lba %d\n \
           blk_count %d\n \
           cluster_begin_lba %d\n \
           sectors_per_cluster %d\n \
@@ -83,7 +83,7 @@ static inline error_t vfat_context_init(struct vfat_context_s *ctx)
 	 ctx->cluster_begin_lba, ctx->sectors_per_cluster,
 	 ctx->rootdir_first_cluster, ctx->bytes_per_cluster);
 
-  printf("context_init: last allocated sector %d, last allocated index %d\n",
+  printk("context_init: last allocated sector %d, last allocated index %d\n",
 	 ctx->last_allocated_sector, ctx->last_allocated_index);
 #endif
 
@@ -105,7 +105,7 @@ VFS_CREATE_CONTEXT(vfat_create_context)
 
   if ((err = vfat_context_init(vfat_ctx)))
   {
-    printf("+++ ERROR INITIALIZING VFAT CONTEXT err %d+++\n",err);
+    printk("+++ ERROR INITIALIZING VFAT CONTEXT err %d+++\n",err);
     mem_free(vfat_ctx);
     rwlock_destroy(&vfat_ctx->lock);
     return VFS_EUNKNOWN;
@@ -143,7 +143,7 @@ VFS_READ_ROOT(vfat_read_root)
   request.buffers = buffers;
   sector = VFAT_CONVERT_CLUSTER(ctx,ctx->rootdir_first_cluster);
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
-  printf("get root info : asking for blk %d\n", sector);
+  printk("get root info : asking for blk %d\n", sector);
 #endif
   if(vfat_read_sectors(ctx, &request, sector,1) == NULL)
     return VFS_IO_ERR;

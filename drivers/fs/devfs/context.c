@@ -28,7 +28,7 @@ VFS_CREATE_CONTEXT(devfs_create_context)
   struct devfs_context_s	*ctx = NULL;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_create_context: Initializing DevFS context\n");
+  printk("devfs_create_context: Initializing DevFS context\n");
 #endif
 
   if ((ctx = mem_alloc(sizeof(struct devfs_context_s), MEM_SCOPE_SYS)) == NULL)
@@ -38,7 +38,7 @@ VFS_CREATE_CONTEXT(devfs_create_context)
   context->ctx_pv = ctx;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_create_context: Initializing intern Hash Table\n");
+  printk("devfs_create_context: Initializing intern Hash Table\n");
 #endif
 
   devfs_hashfunc_init(&(ctx->hash));
@@ -51,13 +51,13 @@ VFS_DESTROY_CONTEXT(devfs_destroy_context)
   struct devfs_context_s	*dev_ctx = context->ctx_pv;
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_create_context: Initializing intern Hash Table\n");
+  printk("devfs_create_context: Initializing intern Hash Table\n");
 #endif
 
   devfs_hashfunc_destroy(&dev_ctx->hash);
 
 #ifdef CONFIG_DRIVER_FS_DEVFS_DEBUG
-  printf("devfs_create_context: Initializing DevFS context\n");
+  printk("devfs_create_context: Initializing DevFS context\n");
 #endif
 
   mem_free(context->ctx_pv);
@@ -67,12 +67,12 @@ VFS_DESTROY_CONTEXT(devfs_destroy_context)
 
 VFS_READ_ROOT(devfs_read_root)
 {
-  printf("devfs_read_root: This function should not be called\n");
+  printk("devfs_read_root: This function should not be called\n");
   return 0;
 }
 
 VFS_WRITE_ROOT(devfs_write_root)
 {
-  printf("devfs_write_root: This function should not be called\n");
+  printk("devfs_write_root: This function should not be called\n");
   return 0;
 }

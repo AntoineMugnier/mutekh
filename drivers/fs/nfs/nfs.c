@@ -44,13 +44,13 @@ error_t	nfs_mount(const char		*mount_point,
   assert(mount_point != NULL);
 
 #ifdef CONFIG_DRIVER_FS_NFS_DEBUG
-  printf("nfs_mount : Mounting NFS in %s\n", mount_point);
+  printk("nfs_mount : Mounting NFS in %s\n", mount_point);
 #endif
 
   // Some check
   if (mount_point[0] != '/')
     {
-      printf("nfs_mount : mount_point must be absolute, abording\n");
+      printk("nfs_mount : mount_point must be absolute, abording\n");
       return NFS_ERR;
     }
 
@@ -63,7 +63,7 @@ error_t	nfs_mount(const char		*mount_point,
   // Get the node if existing
   if((err = vfs_node_load(vfs_get_root(), dirs_ptr, flags, isAbsolutePath, &node)))
     {
-      printf("nfs_init: %s doesn't seem to exist in filesystem, abording\n", mount_point);
+      printk("nfs_init: %s doesn't seem to exist in filesystem, abording\n", mount_point);
       return err;
     }
 
@@ -96,13 +96,13 @@ error_t	nfs_mount(const char		*mount_point,
 
   if (net_nfs_init(nfs_pv->server) == -1)
     {
-      printf("nfs_mount : cannot initialize nfs\n");
+      printk("nfs_mount : cannot initialize nfs\n");
       return NFS_ERR;
     }
 
   if (net_nfs_mount(nfs_pv->server, mount_point, nfs_pv->root))
     {
-      printf("nfs_mount : cannot mount nfs\n");
+      printk("nfs_mount : cannot mount nfs\n");
       return NFS_ERR;
     }
 
@@ -112,7 +112,7 @@ error_t	nfs_mount(const char		*mount_point,
   node->n_ctx = nfs_ctx;
 
 #ifdef CONFIG_DRIVER_FS_NFS_DEBUG
-  printf("nfs_mount : NFS Initialized\n");
+  printk("nfs_mount : NFS Initialized\n");
 #endif
 
   return NFS_OK;
@@ -130,13 +130,13 @@ error_t	nfs_umount(const char		*mount_point)
   uint_fast32_t			flags = 0;
 
 #ifdef CONFIG_DRIVER_FS_NFS_DEBUG
-  printf("nfs_umount : umounting NFS\n");
+  printk("nfs_umount : umounting NFS\n");
 #endif
 
   // Some check
   if (mount_point[0] != '/')
     {
-      printf("nfs_umount : mount_point must be absolute, aborting\n");
+      printk("nfs_umount : mount_point must be absolute, aborting\n");
       return NFS_ERR;
     }
 
@@ -158,7 +158,7 @@ error_t	nfs_umount(const char		*mount_point)
 
   if (node->n_count > 1)
     {
-      printf("nfs_umount : FileSystem busy");
+      printk("nfs_umount : FileSystem busy");
       return NFS_ERR;
     }
   else

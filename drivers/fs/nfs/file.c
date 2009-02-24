@@ -38,7 +38,7 @@ VFS_OPEN_FILE(nfs_open)
 /*   struct nfs_file_s	*file_pv = file->f_pv; */
 
 /* #ifdef CONFIG_NFS_DEBUG */
-/*   printf("nfs_open_file: trying to open %s\n", node->n_name); */
+/*   printk("nfs_open_file: trying to open %s\n", node->n_name); */
 /* #endif */
 
 /* /\*   // Is asking device node or /dev/\\* node? *\/ */
@@ -53,7 +53,7 @@ VFS_OPEN_FILE(nfs_open)
 /* /\*     } *\/ */
 /* /\* #ifdef CONFIG_NFS_DEBUG *\/ */
 /* /\*   else *\/ */
-/* /\*     printf("nfs_open_file: /dev is asked\n"); *\/ */
+/* /\*     printk("nfs_open_file: /dev is asked\n"); *\/ */
 /* /\* #endif *\/ */
 
 /*   // Allocating for a new Nfs file */
@@ -84,7 +84,7 @@ VFS_READ_FILE(nfs_read)
   size_t		s = 0;
 
 /* #ifdef CONFIG_NFS_DEBUG */
-/*   printf("nfs_read_file: starting reading %d bytes in %s\n", size, node->name); */
+/*   printk("nfs_read_file: starting reading %d bytes in %s\n", size, node->name); */
 /* #endif */
 
 /*   if (size == 0) */
@@ -126,7 +126,7 @@ VFS_WRITE_FILE(nfs_write)
   size_t		s = 0;
 
 /* #ifdef CONFIG_NFS_DEBUG */
-/*   printf("nfs_write_file: starting writing %d bytes in %s\n", size, node->name); */
+/*   printk("nfs_write_file: starting writing %d bytes in %s\n", size, node->name); */
 /* #endif */
 
 /*   if (size == 0) */
@@ -162,7 +162,7 @@ VFS_WRITE_FILE(nfs_write)
 VFS_LSEEK_FILE(nfs_lseek)
 {
 #ifdef CONFIG_NFS_DEBUG
-  printf("nfs_lseek_file: you shoud not see that\n");
+  printk("nfs_lseek_file: you shoud not see that\n");
 #endif
 
   return 0;
@@ -175,7 +175,7 @@ VFS_LSEEK_FILE(nfs_lseek)
 VFS_RELEASE_FILE(nfs_release)
 {
 #ifdef CONFIG_NFS_DEBUG
-  printf("nfs_release_file: you shoud not see that\n");
+  printk("nfs_release_file: you shoud not see that\n");
 #endif
 
   return 0;
@@ -192,8 +192,8 @@ VFS_READ_DIR(nfs_readdir)
 /*   struct nfs_file_s		*file_pv = file->f_pv; */
 
 /* #ifdef CONFIG_NFS_DEBUG */
-/*   printf("nfs_read_dir: reading directory %s\n", file_pv->node->n_name); */
-/*   printf("nfs_read_dir: from file %s\n", dirent->d_name); */
+/*   printk("nfs_read_dir: reading directory %s\n", file_pv->node->n_name); */
+/*   printk("nfs_read_dir: from file %s\n", dirent->d_name); */
 /* #endif */
 
 /*   ctx = nfs_get_ctx(); */

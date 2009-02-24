@@ -234,7 +234,7 @@ static error_t		do_rpc(struct nfs_s	*server,
 	goto retry;
       else
 	{
-	  printf("RPC timeout\n");
+	  printk("RPC timeout\n");
 
 	  rpcb_remove(&server->rpc_blocks, &rpcb);
 	  mem_free(pkt);

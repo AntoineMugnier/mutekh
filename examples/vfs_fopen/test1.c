@@ -18,40 +18,44 @@ pthread_t a;
 
 void* cat(void* arg)
 {
-#if defined(CONFIG_LIBC_STREAM_VFS)
+#if defined(CONFIG_VFS_LIBC_STREAM)
     printf("init vfs... ");
     if (vfs_init(&bd_dev, VFS_VFAT_TYPE, 20, 20, &vfs_root) != 0)
     {
         printf("not ok\n");
         abort();
     }
-    stream_fops = &vfs_ops;
+
+    fopen_setops(&vfs_ops);
+
     printf("ok\n");
 #endif
 
     FILE* f;
-    uint8_t buffer[10];
+    uint8_t buffer[100];
 
     if ((f = fopen(arg, "r")) == NULL)
     {
         printf("Can't open file %s\n", arg);
         abort();
     }
-#if 1
+#if 0
     while (fgets(buffer, sizeof(buffer), f))
-        printf("%s", buffer);
+      fputs(buffer, stdout);
+    fflush(stdout);
 #else
-    while (fread(buffer, sizeof(uint8_t), 10, f))
+    while (!feof(f))
     {
-        size_t i;
-        for (i = 0; i < 10; i++)
-            printf("%x", buffer[i]);
+      fread(buffer, sizeof(uint8_t), 10, f);
+      size_t i;
+      for (i = 0; i < 10; i++)
+	printf("%c", buffer[i]);
     }
 #endif
 
     fclose(f);
 
-    printf("bye...\n");
+    fprintf(stderr, "bye...\nbye");
 }
 
 int main()

@@ -437,7 +437,7 @@ DEV_INIT(net_ne2000_init)
   dev->drv = &net_ne2000_drv;
 #endif
 
-  printf("ne2000 driver init on device %p\n", dev);
+  printk("ne2000 driver init on device %p\n", dev);
 
   /* driver private data */
   pv = mem_alloc(sizeof (struct net_ne2000_context_s), MEM_SCOPE_SYS);
@@ -459,9 +459,9 @@ DEV_INIT(net_ne2000_init)
       return -1;
     }
 
-  printf("ne2000: detected a %s ne2000 device with %d kb\n",
+  printk("ne2000: detected a %s ne2000 device with %d kb\n",
 	 pv->io_16 ? "16 bits" : "8 bits", pv->mem << 8);
-  printf("ne2000: MAC is %P\n", pv->mac, ETH_ALEN);
+  printk("ne2000: MAC is %P\n", pv->mac, ETH_ALEN);
   ne2000_init(dev);
 
   /* setup some containers */
@@ -472,7 +472,7 @@ DEV_INIT(net_ne2000_init)
   pv->interface = NULL;
   if ((pv->interface = if_register(dev, IF_ETHERNET, pv->mac, ETHERMTU)) == NULL)
     {
-      printf("ne2000: cannot register interface\n");
+      printk("ne2000: cannot register interface\n");
 
       net_ne2000_cleanup(dev);
 
@@ -482,7 +482,7 @@ DEV_INIT(net_ne2000_init)
   /* start dispatch thread */
   if (sem_init(&pv->rcvsem, 0, 0))
     {
-      printf("ne2000: cannot init dispatch semaphore\n");
+      printk("ne2000: cannot init dispatch semaphore\n");
 
       net_ne2000_cleanup(dev);
 
@@ -490,7 +490,7 @@ DEV_INIT(net_ne2000_init)
     }
   if ((dispatch = mem_alloc(sizeof (struct net_dispatch_s), MEM_SCOPE_SYS)) == NULL)
     {
-      printf("ne2000: cannot init dispatch structure\n");
+      printk("ne2000: cannot init dispatch structure\n");
 
       net_ne2000_cleanup(dev);
 
@@ -504,7 +504,7 @@ DEV_INIT(net_ne2000_init)
 
   if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch)) /* XXX prefer context rather than pthreads */
     {
-      printf("ne2000: cannot start dispatch thread\n");
+      printk("ne2000: cannot start dispatch thread\n");
 
       mem_free(dispatch);
       net_ne2000_cleanup(dev);
@@ -675,7 +675,7 @@ DEVNET_SETOPT(net_ne2000_setopt)
 	    rcr |= NE2000_PROMISCUOUS;
 	  else
 	    rcr &= ~NE2000_PROMISCUOUS;
-	  printf("%s: %s promiscuous mode\n", pv->interface->name, *val ? "entering" : "leaving");
+	  printk("%s: %s promiscuous mode\n", pv->interface->name, *val ? "entering" : "leaving");
 	  ne2000_page(dev, NE2000_P0);
 	  cpu_io_write_8(dev->addr[NET_NE2000_ADDR] + NE2000_RCR, rcr);
 	}

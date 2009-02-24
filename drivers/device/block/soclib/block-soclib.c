@@ -222,7 +222,7 @@ DEV_INIT(block_soclib_init)
 
   cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_IRQ_ENABLE, 1);
 
-  printf("Soclib block device : %u sectors\n",
+  printk("Soclib block device : %u sectors\n",
 	 pv->params.blk_count);
 
   dev->drv_pv = pv;

@@ -93,13 +93,11 @@ static fd_t vfs_fopen(const char *name, uint_fast8_t mode)
 static ssize_t vfs_fwrite(fd_t fd, const void *buffer, size_t count)
 {
     return vfs_write((struct vfs_file_s*)fd, buffer, count);
-    
 }
 
 static ssize_t vfs_fread(fd_t fd, void *buffer, size_t count)
 {
     return vfs_read((struct vfs_file_s*)fd, buffer, count);
-    
 }
 
 static error_t vfs_fclose(fd_t fd)
@@ -131,3 +129,4 @@ const struct stream_ops_s vfs_ops =
     .readable   = &true_able,
     .writable   = &true_able,
 };
+

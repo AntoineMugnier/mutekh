@@ -108,7 +108,7 @@ struct device_s icu_dev;
 #if defined(CONFIG_DRIVER_TIMER)
 DEVTIMER_CALLBACK(timer_callback)
 {
-  //  printf("timer callback\n");
+  //  printk("timer callback\n");
 # if defined(CONFIG_MUTEK_SCHEDULER_PREEMPT)
   sched_context_switch();
 # endif
@@ -271,7 +271,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # endif
 #endif
 
-  puts("MutekH is alive.");
+  printk("MutekH is alive.\n");
 
 #if defined(CONFIG_DRIVER_ENUM_PCI)
   device_init(&enum_pci);
@@ -324,16 +324,6 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 }
 
 static lock_t fault_lock;
-static const char *const fault_names[32] = {
-    "Int",      "Mod",  "TLBL",     "TLBS",
-    "AdEL",     "AdES", "IBE",      "DBE",
-    "Sys",      "Bp",   "RI",       "CpU", 
-    "Ov",       "Tr",   "-",        "FPE",
-    "-",        "-",    "C2E",      "-",
-    "-",        "-",    "MDMX",     "WATCH",
-    "MCheck",   "-",    "-",        "-",
-    "-",        "-",    "CacheErr", "-"
-};
 
 static CPU_EXCEPTION_HANDLER(fault_handler)
 {
@@ -343,23 +333,31 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   const char		*reg_names[] = CPU_GPREG_NAMES;
 #endif
 
+#ifdef CPU_FAULT_NAMES
+  static const char *const fault_names[CPU_FAULT_COUNT] = CPU_FAULT_NAMES;
+  const char *name = type < CPU_FAULT_COUNT ? fault_names[type] : "unknown";
+#else
+  const char *name = "unknown";
+#endif
+
   lock_spin(&fault_lock);
 
-  printf("CPU Fault: cpuid(%u) faultid(%u-%s)\n", cpu_id(), type, fault_names[type]);
-  printf("Execution pointer: %p, Bad address (if any): %p\n", execptr, dataptr);
-  puts("Registers:");
+  printk("CPU Fault: cpuid(%u) faultid(%u-%s)\n", cpu_id(), type, name);
+  printk("Execution pointer: %p, Bad address (if any): %p\n"
+	 "Registers:"
+	 , execptr, dataptr);
 
   for (i = 0; i < CPU_GPREG_COUNT; i++)
 #ifdef CPU_GPREG_NAMES
-    printf("%s=%p%c", reg_names[i], regtable[i], (i + 1) % 4 ? ' ' : '\n');
+    printk("%s=%p%c", reg_names[i], regtable[i], (i + 1) % 4 ? ' ' : '\n');
 #else
-    printf("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
+    printk("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
 
-  printf("Stack top (%p):\n", stackptr);
+  printk("Stack top (%p):\n", stackptr);
 
   for (i = 0; i < 12; i++)
-    printf("%p%c", sp[i], (i + 1) % 4 ? ' ' : '\n');
+    printk("%p%c", sp[i], (i + 1) % 4 ? ' ' : '\n');
 
   lock_release(&fault_lock);
 
@@ -377,7 +375,7 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 
   cpu_interrupt_enable();
 
-  printf("CPU %i is up and running.\n", cpu_id());
+  printk("CPU %i is up and running.\n", cpu_id());
 
 #if defined(CONFIG_COMPILE_INSTRUMENT)
   //  hexo_instrument_trace(1);

@@ -107,7 +107,7 @@ VFS_OPEN(vfs_open)
 
  VFS_OPEN_ERROR:
 #ifdef CONFIG_VFS_DEBUG
-  printf("vfs_open : error while doing open, code %d\n",err);
+  printk("vfs_open : error while doing open, code %d\n",err);
 #endif
   rwlock_wrlock(&vfs_node_freelist.lock);
   vfs_node_down(node);
@@ -164,11 +164,11 @@ VFS_PIPE_OPEN(vfs_pipe)
   VFS_SET(node->n_attr,VFS_PIPE);
 
 #ifdef CONFIG_VFS_DEBUG
-  printf("vfs_pipe: got a node, do n_op->init(node)\n");
+  printk("vfs_pipe: got a node, do n_op->init(node)\n");
 #endif
   
 #ifdef CONFIG_VFS_DEBUG
-  printf("vfs_pipe: do n_op->init(node) OK\n");
+  printk("vfs_pipe: do n_op->init(node) OK\n");
 #endif
 
   vfs_node_up(node);
@@ -252,7 +252,7 @@ VFS_UNLINK(vfs_unlink)
   isAbsolutePath = (pathname[0] == '/') ? 1 : 0 ;
 
 #ifdef CONFIG_VFS_DEBUG
-  printf("vfs_unlink started\n");
+  printk("vfs_unlink started\n");
 #endif
   if((err = vfs_node_load(cwd,dirs_ptr, flags, isAbsolutePath, &node)))
     return err;
@@ -268,7 +268,7 @@ VFS_UNLINK(vfs_unlink)
     VFS_SET(parent->n_state,VFS_INLOAD);
     vfs_node_list_remove(&parent->n_children, node);
 #ifdef CONFIG_VFS_DEBUG
-    printf("vfs_unlink: parent's (%s) state is seted to INLOAD, node %s  detached from his fathor list\n",
+    printk("vfs_unlink: parent's (%s) state is seted to INLOAD, node %s  detached from his fathor list\n",
 	   parent->n_name,node->n_name);
 #endif
     rwlock_unlock(&vfs_node_freelist.lock);
@@ -276,7 +276,7 @@ VFS_UNLINK(vfs_unlink)
     if((err=parent->n_op->unlink(node)))
       goto VFS_UNLINK_ERROR;
 #ifdef CONFIG_VFS_DEBUG
-    printf("vfs_unlink: node %s has been removed from it's parent children list");
+    printk("vfs_unlink: node %s has been removed from it's parent children list");
 #endif
     rwlock_wrlock(&vfs_node_freelist.lock);
     VFS_CLEAR(parent->n_state,VFS_INLOAD);
@@ -396,7 +396,7 @@ VFS_READDIR(vfs_readdir)
   
   if(!(VFS_IS(file->f_flags, VFS_O_DIRECTORY))){
 #ifdef CONFIG_VFS_DEBUG
-    printf("here!!\n");
+    printk("here!!\n");
 #endif
     return -VFS_EBADF;
   }

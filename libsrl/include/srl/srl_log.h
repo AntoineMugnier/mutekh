@@ -61,12 +61,12 @@ extern CPU_LOCAL FILE *cpu_tty;
 
 #define srl_log_printf( l, c... ) do {								   \
 		if (VERB_##l <= SRL_VERBOSITY) {							   \
-			printf( c );									   \
+			printk( c );									   \
 		}															   \
 	} while (0)
 
 #define cpu_printf( c... ) do {					\
-		printf( c );	\
+		printk( c );	\
 	} while (0)
 
 #endif // end CONFIG_LIBC_STREAM

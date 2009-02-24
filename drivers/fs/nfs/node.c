@@ -30,7 +30,7 @@
 VFS_INIT_NODE(nfs_init_node)
 {
 #ifdef CONFIG_NFS_DEBUG
-  printf("nfs_init_node: you shoud not see that\n");
+  printk("nfs_init_node: you shoud not see that\n");
 #endif
 
   return 0;
@@ -43,7 +43,7 @@ VFS_INIT_NODE(nfs_init_node)
 VFS_RELEASE_NODE(nfs_release_node)
 {
 #ifdef CONFIG_NFS_DEBUG
-  printf("nfs_release_node: you shoud not see that\n");
+  printk("nfs_release_node: you shoud not see that\n");
 #endif
 
   return 0;
@@ -57,7 +57,7 @@ VFS_RELEASE_NODE(nfs_release_node)
 VFS_CREATE_NODE(nfs_create_node)
 {
 #ifdef CONFIG_NFS_DEBUG
-  printf("nfs_create_node: you shoud not see that\n");
+  printk("nfs_create_node: you shoud not see that\n");
 #endif
 
   return 0;
@@ -86,7 +86,7 @@ VFS_LOOKUP_NODE(nfs_lookup_node)
 VFS_WRITE_NODE(nfs_write_node)
 {
 #ifdef CONFIG_NFS_DEBUG
-  printf("nfs_write_node: you shoud not see that\n");
+  printk("nfs_write_node: you shoud not see that\n");
 #endif
 
     return 0;
@@ -99,7 +99,7 @@ VFS_WRITE_NODE(nfs_write_node)
 VFS_UNLINK_NODE(nfs_unlink_node)
 {
 #ifdef CONFIG_NFS_DEBUG
-  printf("nfs_unlink_node: you shoud not see that\n");
+  printk("nfs_unlink_node: you shoud not see that\n");
 #endif
 
   return 0;

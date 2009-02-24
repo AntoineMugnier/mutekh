@@ -93,7 +93,7 @@ void block_partition_new(struct device_s *parent,
 
       if (pv != NULL)
 	{
-	  printf("Partition (%02x) start: %u size: %u\n", type, lba, size);
+	  printk("Partition (%02x) start: %u size: %u\n", type, lba, size);
 	  new->drv_pv = pv;
 	  new->irq = DEVICE_IRQ_INVALID;
 	  new->drv = &block_partition_drv;
@@ -171,13 +171,13 @@ static void block_partition_parse(struct device_s *parent,
 
   if (dev_block_spin_read(parent, data, 0, 1))
     {
-      printf("partition table read error\n");
+      printk("partition table read error\n");
       return;
     }
 
   if (endian_le16_na_load(&t.signature) != 0xaa55)
     {
-      printf("bad partition table signature\n");
+      printk("bad partition table signature\n");
       return;
     }
 
@@ -229,7 +229,7 @@ DEV_CREATE(block_partition_create)
 
   if (bp->blk_size != 512)
     {
-      printf("unable to read partition table, block size != 512\n");
+      printk("unable to read partition table, block size != 512\n");
       return 0;
     }
 

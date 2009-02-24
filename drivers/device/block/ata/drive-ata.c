@@ -354,7 +354,7 @@ error_t drive_ata_init(struct device_s *dev, bool_t slave)
     endian_be16(pv->ident.lba_count_low)
     | (endian_be16(pv->ident.lba_count_high) << 16);
 
-  printf("ATA drive : %u sectors : %.40s\n",
+  printk("ATA drive : %u sectors : %.40s\n",
 	 pv->drv_params.blk_count, pv->ident.model_name);
 
   dev_blk_queue_init(&pv->queue);
