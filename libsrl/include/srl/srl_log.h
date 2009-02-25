@@ -55,7 +55,7 @@ extern CPU_LOCAL FILE *cpu_tty;
 
 #define srl_log( l, c ) do {										   \
 		if (VERB_##l <= SRL_VERBOSITY) {							   \
-			puts( c );									   \
+			printk( c );									   \
 		}															   \
 	} while (0)
 
