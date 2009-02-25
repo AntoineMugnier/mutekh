@@ -46,7 +46,15 @@
 /** pointer to context local storage in cpu local storage */
 extern CPU_LOCAL void *__cpu_context_data_base;
 
-#define CONTEXT_GET_TLS() ((uintptr_t)CPU_LOCAL_GET(__cpu_context_data_base))
+/* We do not have VMA to 0 for context local sections on this
+   architecture because it causes some loading problems with linux
+   exec loader (when /proc/sys/vm/mmap_min_addr is set).  Instead we
+   subtract the __context_data_start to the TLS address here. */
+
+extern __ldscript_symbol_t __context_data_start;
+#define CONTEXT_GET_TLS() ((uintptr_t)CPU_LOCAL_GET(__cpu_context_data_base) - (uintptr_t)&__context_data_start)
+#define CONTEXT_LOCAL_TLS_SET(tls, n, v) { *(typeof(n)*)((uintptr_t)(tls) - (uintptr_t)&__context_data_start + (uintptr_t)&(n)) = (v); }
+#define CONTEXT_LOCAL_TLS_GET(tls, n) 	({ *(typeof(n)*)((uintptr_t)(tls) - (uintptr_t)&__context_data_start + (uintptr_t)&(n)); })
 
 #endif
 
