@@ -47,7 +47,7 @@
 #include <netinet/tcp.h>
 #include <netinet/libtcp.h>
 
-#include <timer.h>
+#include <mutek/timer.h>
 #include <stdlib.h>
 
 #undef net_debug

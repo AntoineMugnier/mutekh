@@ -18,7 +18,7 @@
 
 #include "lauxlib.h"
 #include "lobject.h"
-#include "lua.h"
+#include <lua/lua.h>
 #include "lualib.h"
 
 

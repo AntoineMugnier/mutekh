@@ -29,7 +29,7 @@
 #include <hexo/iospace.h>
 #include <hexo/alloc.h>
 #include <hexo/lock.h>
-#include <timer.h>
+#include <mutek/timer.h>
 
 #include "block-ata.h"
 #include "block-ata-private.h"

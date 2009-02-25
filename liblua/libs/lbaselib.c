@@ -14,12 +14,9 @@
 #define lbaselib_c
 #define LUA_LIB
 
-#include "lua.h"
-
-#include "lauxlib.h"
-#include "lualib.h"
-
-
+#include <lua/lua.h>
+#include <lua/lauxlib.h>
+#include <lua/lualib.h>
 
 
 /*
@@ -41,11 +38,11 @@ static int luaB_print (lua_State *L) {
     if (s == NULL)
       return luaL_error(L, LUA_QL("tostring") " must return a string to "
                            LUA_QL("print"));
-    if (i>1) fputs("\t", stdout);
-    fputs(s, stdout);
+    if (i>1) printk("\t");
+    printk("%s", s);
     lua_pop(L, 1);  /* pop result */
   }
-  fputs("\n", stdout);
+  printk("\n");
   return 0;
 }
 
@@ -281,12 +278,14 @@ static int luaB_loadstring (lua_State *L) {
   return load_aux(L, luaL_loadbuffer(L, s, l, chunkname));
 }
 
+#ifdef CONFIG_LIBC_STREAM
 
 static int luaB_loadfile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
   return load_aux(L, luaL_loadfile(L, fname));
 }
 
+#endif
 
 /*
 ** Reader for generic `load' function: `lua_load' uses the
@@ -321,6 +320,7 @@ static int luaB_load (lua_State *L) {
   return load_aux(L, status);
 }
 
+#ifdef CONFIG_LIBC_STREAM
 
 static int luaB_dofile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
@@ -330,6 +330,7 @@ static int luaB_dofile (lua_State *L) {
   return lua_gettop(L) - n;
 }
 
+#endif
 
 static int luaB_assert (lua_State *L) {
   luaL_checkany(L, 1);
@@ -445,12 +446,16 @@ static int luaB_newproxy (lua_State *L) {
 static const luaL_Reg base_funcs[] = {
   {"assert", luaB_assert},
   {"collectgarbage", luaB_collectgarbage},
+#ifdef CONFIG_LIBC_STREAM
   {"dofile", luaB_dofile},
+#endif
   {"error", luaB_error},
   {"gcinfo", luaB_gcinfo},
   {"getfenv", luaB_getfenv},
   {"getmetatable", luaB_getmetatable},
+#ifdef CONFIG_LIBC_STREAM
   {"loadfile", luaB_loadfile},
+#endif
   {"load", luaB_load},
   {"loadstring", luaB_loadstring},
   {"next", luaB_next},

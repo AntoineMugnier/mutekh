@@ -12,11 +12,9 @@
 #define ldblib_c
 #define LUA_LIB
 
-#include "lua.h"
-
-#include "lauxlib.h"
-#include "lualib.h"
-
+#include <lua/lua.h>
+#include <lua/lauxlib.h>
+#include <lua/lualib.h>
 
 
 static int db_getregistry (lua_State *L) {
@@ -297,6 +295,7 @@ static int db_gethook (lua_State *L) {
   return 3;
 }
 
+#ifdef CONFIG_LIBC_STREAM_STD
 
 static int db_debug (lua_State *L) {
   for (;;) {
@@ -314,6 +313,7 @@ static int db_debug (lua_State *L) {
   }
 }
 
+#endif
 
 #define LEVELS1	12	/* size of the first part of the stack */
 #define LEVELS2	10	/* size of the second part of the stack */
@@ -372,7 +372,9 @@ static int db_errorfb (lua_State *L) {
 
 
 static const luaL_Reg dblib[] = {
+#ifdef CONFIG_LIBC_STREAM_STD
   {"debug", db_debug},
+#endif
   {"getfenv", db_getfenv},
   {"gethook", db_gethook},
   {"getinfo", db_getinfo},

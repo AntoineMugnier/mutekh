@@ -137,7 +137,7 @@ struct iphdr {
 #include <gpct/cont_hashlist.h>
 #include <gpct/object_simple.h>
 
-#include <timer.h>
+#include <mutek/timer.h>
 
 #define IP_DELIVERY_DIRECT	0
 #define IP_DELIVERY_INDIRECT	1

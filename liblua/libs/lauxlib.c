@@ -20,9 +20,8 @@
 #define lauxlib_c
 #define LUA_LIB
 
-#include "lua.h"
-
-#include "lauxlib.h"
+#include <lua/lua.h>
+#include <lua/lauxlib.h>
 
 
 #define FREELIST_REF	0	/* free list of references */
@@ -519,6 +518,8 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
 ** =======================================================
 */
 
+#ifdef CONFIG_LIBC_STREAM
+
 typedef struct LoadF {
   int extraline;
   FILE *f;
@@ -590,6 +591,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   return status;
 }
 
+#endif
 
 typedef struct LoadS {
   const char *s;
@@ -639,8 +641,8 @@ static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 
 static int panic (lua_State *L) {
   (void)L;  /* to avoid warnings */
-  fprintf(stderr, "PANIC: unprotected error in call to Lua API (%s)\n",
-                   lua_tostring(L, -1));
+  printk("PANIC: unprotected error in call to Lua API (%s)\n",
+	 lua_tostring(L, -1));
   return 0;
 }
 

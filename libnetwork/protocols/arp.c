@@ -32,7 +32,7 @@
 #include <netinet/if.h>
 
 #include <stdio.h>
-#include <timer.h>
+#include <mutek/timer.h>
 
 /*
  * ARP table functions.

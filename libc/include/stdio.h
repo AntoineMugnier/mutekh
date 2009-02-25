@@ -46,6 +46,8 @@ ssize_t vsscanf(const char *str, const char *format, va_list ap);
 
 #ifdef CONFIG_LIBC_STREAM
 
+#define BUFSIZ		CONFIG_LIBC_STREAM_BUFFER_SIZE
+
 #define O_RDONLY	0x01
 #define O_WRONLY	0x02
 #define O_RDWR		0x03

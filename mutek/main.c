@@ -55,7 +55,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <timer.h>
+#include <mutek/timer.h>
 
 #ifdef CONFIG_ARCH_IBMPC_DMA
 #include <arch/dma-8237.h>

@@ -27,7 +27,7 @@
 # endif
 
 # include <hexo/types.h>
-# include <timer.h>
+# include <mutek/timer.h>
 # include <netinet/packet.h>
 
 # define PING_INTERVAL	200	// ms

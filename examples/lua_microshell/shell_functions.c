@@ -1,5 +1,6 @@
+
 #include <stdio.h>
-#include <lua.h>
+#include <lua/lua.h>
 #include <vfs/vfs.h>
 
 extern struct vfs_node_s *vfs_root_term;

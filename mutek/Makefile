@@ -1,5 +1,5 @@
 
-objs = 
+objs = timer.o
 
 ifeq ($(CONFIG_MUTEK_MAIN), defined)
  objs += main.o

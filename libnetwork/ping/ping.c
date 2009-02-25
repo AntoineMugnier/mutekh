@@ -31,7 +31,7 @@
 #include <netinet/socket.h>
 
 #include <limits.h>
-#include <timer.h>
+#include <mutek/timer.h>
 
 #include <netinet/ping.h>
 

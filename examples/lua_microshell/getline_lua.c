@@ -13,7 +13,8 @@
 #include <drivers/device/block/soclib/block-soclib.h>
 
 #include <vfs/vfs.h>
-#include <lua.h>
+#include <lua/lauxlib.h>
+#include <lua/lua.h>
 
 #include <termui/term.h>
 #include <termui/getline.h>
@@ -44,44 +45,6 @@ static GETLINE_FCN_PROMPT(prompt)
     return term_printf(tm, "[lua:%s] ", vfs_root_term->n_name);
 }
 
-static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize)
-{
-    void	*p;
-
-    (void)ud;
-    (void)osize;
-    if (nsize == 0) {
-        free(ptr);
-        p = NULL;
-    }
-    else
-        p = realloc(ptr, nsize);
-
-    return p;
-}
-
-typedef struct LoadS {
-    const char *s;
-    size_t size;
-} LoadS;
-
-static const char *getS (lua_State *L, void *ud, size_t *size) {
-    LoadS *ls = (LoadS *)ud;
-    (void)L;
-    if (ls->size == 0) return NULL;
-    *size = ls->size;
-    ls->size = 0;
-    return ls->s;
-}
-
-int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
-        const char *name) {
-    LoadS ls;
-    ls.s = buff;
-    ls.size = size;
-    return lua_load(L, getS, &ls, name);
-}
-
 void* shell(void *param)
 {
     struct term_s			*tm;
@@ -90,11 +53,11 @@ void* shell(void *param)
 
     printk("init vfs... ");
     vfs_init(&bd_dev, VFS_VFAT_TYPE, 20, 20, &vfs_root_term);
-    stream_fops = &vfs_ops;
+    fopen_setops(&vfs_ops);
     printk("ok\n");
 
     /* create lua state */
-    luast = lua_newstate(l_alloc, NULL);
+    luast = luaL_newstate();
 
     lua_register(luast, "ls", ls);
     lua_register(luast, "cat", cat);

@@ -120,6 +120,9 @@ strspn(const char *s, const char *_accept);
 size_t
 strcspn(const char *s, const char *reject);
 
+char *
+strpbrk(const char *s1, const char *s2);
+
 /*
 
 int_fast8_t memccmp(const void *s1, const void *s2, int_fast8_t c, size_t n) __attribute__ ((pure));
@@ -172,6 +175,8 @@ int_fast8_t ffsl(uint32_t i);
 
 int_fast8_t ffsll(uint64_t i);
 #define ffsll	__builtin_ffsll
+
+char *strerror(error_t errnum);
 
 #endif
 

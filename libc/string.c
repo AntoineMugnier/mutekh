@@ -516,3 +516,23 @@ size_t strcspn(const char *s, const char *reject)
   return l;
 }
 #endif
+
+/********************************/
+
+#ifndef HAS_CPU_STRPBRK
+#undef strpbrk
+char *strpbrk(const char *s1, const char *s2)
+{
+  const char *scanp;
+  size_t c, sc;
+
+  while ((c = *s1++) != 0) {
+    for (scanp = s2; (sc = *scanp++);)
+      if (sc == c)
+	return ((char *)(s1 - 1));
+  }
+  return NULL;
+}
+
+#endif
+

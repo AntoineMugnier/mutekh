@@ -16,16 +16,14 @@
 
     Copyright 2006, Alexandre Becoulet <alexandre.becoulet@free.fr>
 
-*/
+    Completion handler for libtermui
 
-/*
- * This example show how to write a line completion handler
- */
+*/
 
 #include <string.h>
 #include <ctype.h>
 
-#include <lua.h>
+#include <lua/lua.h>
 
 #include <termui/term.h>
 #include <termui/bhv.h>

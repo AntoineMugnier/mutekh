@@ -30,7 +30,7 @@
 #include <hexo/segment.h>
 
 /** pointer to current thread */
-CONTEXT_LOCAL pthread_t __pthread_current;
+CONTEXT_LOCAL pthread_t __pthread_current = NULL;
 
 /** switch to next thread */
 void
@@ -175,7 +175,8 @@ pthread_join(pthread_t thread, void **value_ptr)
 	{
 	  /* register current thread into target thread's descriptor */
 	  thread->joined = pthread_self();
-	  
+	  assert(thread->joined && "Can not call pthread_join from non pthread context");
+
 	  /* wait for thread termination */
 	  sched_context_stop_unlock(&thread->lock);
 	  

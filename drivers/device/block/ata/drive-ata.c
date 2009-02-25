@@ -31,7 +31,7 @@
 #include <hexo/alloc.h>
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
-#include <timer.h>
+#include <mutek/timer.h>
 
 #include "block-ata.h"
 

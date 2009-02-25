@@ -22,7 +22,7 @@
 #include <netinet/socket.h>
 #include <netinet/socket_internals.h>
 #include <semaphore.h>
-#include <timer.h>
+#include <mutek/timer.h>
 
 /*
  * Shortcut macro to get an option verifying user arguments.

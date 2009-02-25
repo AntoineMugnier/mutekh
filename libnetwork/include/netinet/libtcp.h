@@ -33,7 +33,7 @@
 #include <gpct/cont_hashlist.h>
 #include <gpct/cont_clist.h>
 #include <gpct/object_simple.h>
-#include <timer.h>
+#include <mutek/timer.h>
 
 /*
  * A few constants

@@ -106,7 +106,7 @@ struct		ether_arp
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/object_simple.h>
 
-#include <timer.h>
+#include <mutek/timer.h>
 
 /*
  * Request timeout and retry count

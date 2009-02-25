@@ -19,7 +19,7 @@
 
 */
 
-#include <timer.h>
+#include <mutek/timer.h>
 #include <hexo/types.h>
 #include <hexo/error.h>
 

@@ -33,7 +33,7 @@
 #include <gpct/cont_hashlist.h>
 
 #include <semaphore.h>
-#include <timer.h>
+#include <mutek/timer.h>
 
 /*
  * RPC timeout.

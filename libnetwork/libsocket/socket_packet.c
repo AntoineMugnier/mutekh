@@ -33,7 +33,7 @@
 #include <hexo/alloc.h>
 
 #include <semaphore.h>
-#include <timer.h>
+#include <mutek/timer.h>
 
 socket_table_root_t	pf_packet = CONTAINER_ROOT_INITIALIZER(socket_table, DLIST);
 

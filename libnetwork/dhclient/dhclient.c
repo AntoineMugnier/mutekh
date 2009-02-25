@@ -38,7 +38,7 @@
 #include <netinet/packet.h>
 
 #include <stdlib.h>
-#include <timer.h>
+#include <mutek/timer.h>
 #include <pthread.h>
 #include <semaphore.h>
 

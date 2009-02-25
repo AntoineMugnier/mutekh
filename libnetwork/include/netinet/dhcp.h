@@ -79,7 +79,7 @@
 #define DHCP_DFL_LEASE	120000 /* 2 minutes */
 
 #include <netinet/if.h>
-#include <timer.h>
+#include <mutek/timer.h>
 #include <semaphore.h>
 
 /*

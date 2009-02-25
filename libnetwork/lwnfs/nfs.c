@@ -54,7 +54,7 @@
 #include <netinet/nfs.h>
 
 #include <semaphore.h>
-#include <timer.h>
+#include <mutek/timer.h>
 
 CONTAINER_FUNC(rpcb, HASHLIST, static inline, rpcb, id);
 CONTAINER_KEY_FUNC(rpcb, HASHLIST, static inline, rpcb, id);

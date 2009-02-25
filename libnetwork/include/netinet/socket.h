@@ -32,7 +32,7 @@
 #include <netinet/in.h>
 #include <hexo/alloc.h>
 #include <semaphore.h>
-#include <timer.h>
+#include <mutek/timer.h>
 
 /* Types of sockets.  */
 #define SOCK_STREAM	1	/* Sequenced, reliable, connection-based
@@ -265,7 +265,7 @@ struct		packet_mreq
 #define PACKET_MR_PROMISC	1
 #define PACKET_MR_ALLMULTI	2
 
-#include <timer.h>
+#include <mutek/timer.h>
 
 #if 1
 typedef timer_delay_t	time_t;

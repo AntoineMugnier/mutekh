@@ -23,7 +23,8 @@
  * with lua script interpreter.
  */
 
-#include <lua.h>
+#include <lua/lauxlib.h>
+#include <lua/lua.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -61,44 +62,6 @@ int cmd_print(lua_State *st)
   return 0;
 }
 
-static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize)
-{
-  void	*p;
-
-  (void)ud;
-  (void)osize;
-  if (nsize == 0) {
-    free(ptr);
-    p = NULL;
-  }
-  else
-    p = realloc(ptr, nsize);
-
-  return p;
-}
-
-typedef struct LoadS {
-  const char *s;
-  size_t size;
-} LoadS;
-
-static const char *getS (lua_State *L, void *ud, size_t *size) {
-  LoadS *ls = (LoadS *)ud;
-  (void)L;
-  if (ls->size == 0) return NULL;
-  *size = ls->size;
-  ls->size = 0;
-  return ls->s;
-}
-
-int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
-		     const char *name) {
-  LoadS ls;
-  ls.s = buff;
-  ls.size = size;
-  return lua_load(L, getS, &ls, name);
-}
-
 extern struct device_s *tty_dev;
 
 int main()
@@ -108,8 +71,8 @@ int main()
   lua_State			*luast;
 
   /* create lua state */
-  luast = lua_newstate(l_alloc, NULL);
-  //  luaL_openlibs(luast);
+  luast = luaL_newstate();
+  luaL_openlibs(luast);
 
   lua_pushstring(luast, "print");
   lua_pushcfunction(luast, cmd_print);
