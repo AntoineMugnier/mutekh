@@ -32,5 +32,5 @@ ifeq ($(CONFIG_CPU_ENDIAN_BIG), defined)
 CPUCFLAGS+= -EB
 endif
 
-CPUCFLAGS+=-mno-gpopt -G0
+CPUCFLAGS+=-mno-gopt -G0
 
