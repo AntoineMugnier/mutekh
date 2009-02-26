@@ -545,6 +545,28 @@ ssize_t vfs_lseek (struct vfs_file_s * file, size_t offset, uint_fast32_t whence
 
 error_t vfs_stat (struct vfs_node_s *cwd, char *pathname, struct vfs_stat_s *stat)
 {
-  return -1;
+  struct vfs_node_s *node;
+  uint_fast32_t flags;
+  error_t err;
+  char str[VFS_MAX_NAME_LENGTH * VFS_MAX_PATH_DEPTH + 1];
+  char *dirs_ptr[vfs_dir_count(pathname) + 1];
+  bool_t isAbsolutePath;
+  
+  err = 0;
+  strcpy(str,pathname);
+  vfs_split_path(str,dirs_ptr);
+  
+  isAbsolutePath = (pathname[0] == '/') ? 1 : 0 ;
+  if((err = vfs_node_load(cwd,dirs_ptr, VFS_O_RDONLY, isAbsolutePath, &node)))
+    return err;
+
+  stat->size = node->n_size;
+  stat->attr = node->n_attr;
+
+  rwlock_wrlock(&vfs_node_freelist.lock);
+  vfs_node_down(node);
+  rwlock_unlock(&vfs_node_freelist.lock);
+
+  return 0;
 }
 

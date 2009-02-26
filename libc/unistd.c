@@ -152,12 +152,23 @@ error_t close(fd_t fd)
 
 #ifdef CONFIG_VFS
 
-error_t stat(const char *path, struct stat *buf)
+/* FIXME */
+error_t stat(const char *path, struct stat *st)
 {
-  struct vfs_stat_s st;
+  struct vfs_stat_s vst;
 
-  return vfs_stat(vfs_get_root(), path, &st);
-  /* FIXME */
+  if (vfs_stat(vfs_get_root(), path, &vst))
+    return -1;
+
+  memset(st, 0, sizeof(*st));
+  st->st_size = vst.size;
+
+  if (vst.attr & VFS_DIR)
+    st->st_mode |= S_IFDIR;
+  else
+    st->st_mode |= S_IFREG;
+
+  return 0;
 }
 
 error_t lstat(const char *path, struct stat *buf)

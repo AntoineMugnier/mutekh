@@ -56,9 +56,9 @@
 #define VFS_EPIPE            16
 #define VFS_ENOTEMPTY        17
 
-// Mode
-typedef uint_fast16_t vfs_mode_t;
+typedef uint_fast32_t vfs_open_flags_t;
 
+// Node type Flags
 #define VFS_DIR              0x00000001
 #define VFS_RD_ONLY          0x00000002
 #define VFS_SYS              0x00000004
@@ -66,10 +66,7 @@ typedef uint_fast16_t vfs_mode_t;
 #define VFS_PIPE             0x00000010
 #define VFS_FIFO             0x00000020
 #define VFS_DEVICE	     0x00000040
-
-// Flags
-typedef uint_fast32_t vfs_open_flags_t;
-
+// Operation Flags
 #define VFS_O_PIPE           0x00010000
 #define VFS_O_FIFO           0x00030000
 #define VFS_O_DIRECTORY      0x00040000
@@ -103,6 +100,8 @@ typedef uint_fast32_t vfs_open_flags_t;
 #define VFS_SET(state,flag)    (state) |= (flag)
 #define VFS_IS(state,flag)     (state) & (flag)
 #define VFS_CLEAR(state,flag)  (state) &= ~(flag)
+
+typedef uint_fast16_t vfs_mode_t;
 
 struct vfs_node_s;
 struct vfs_node_op_s;
@@ -311,6 +310,8 @@ error_t vfs_mkfifo (struct vfs_node_s * cwd, char *pathname, vfs_mode_t mode);
 
 struct vfs_stat_s
 {
+  size_t size;
+  uint_fast16_t attr;
 };
 
 error_t vfs_stat (struct vfs_node_s *cwd, char *pathname, struct vfs_stat_s *stat);
