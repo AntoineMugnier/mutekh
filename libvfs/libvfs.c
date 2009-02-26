@@ -70,7 +70,10 @@ void vfs_split_path(char *path, char **dirs)
 /* 			  uint_fast32_t flags,		\ */
 /* 			  uint_fast16_t mode,		\ */
 /* 			  struct vfs_file_s **file) */
-VFS_OPEN(vfs_open)
+
+error_t vfs_open (struct vfs_node_s * cwd, char *path,
+		  vfs_open_flags_t flags, vfs_mode_t mode,
+		  struct vfs_file_s ** file)
 {
   struct vfs_node_s *node;
   struct vfs_file_s *file_ptr;
@@ -118,7 +121,8 @@ VFS_OPEN(vfs_open)
   return err;
 }
 
-VFS_CHDIR(vfs_chdir)
+
+error_t vfs_chdir (struct vfs_node_s * cwd, char *pathname, struct vfs_node_s ** new_cwd)
 {
   struct vfs_node_s *node;
   uint_fast32_t flags;
@@ -146,7 +150,8 @@ VFS_CHDIR(vfs_chdir)
   return 0;
 }
 
-VFS_PIPE_OPEN(vfs_pipe)
+
+error_t vfs_pipe (struct vfs_file_s * pipefd[2])
 {
 #ifdef CONFIG_DRIVER_FS_PIPE
   struct vfs_node_s *node;
@@ -204,7 +209,7 @@ VFS_PIPE_OPEN(vfs_pipe)
 }
 
 
-VFS_MKFIFO(vfs_mkfifo)
+error_t vfs_mkfifo (struct vfs_node_s * cwd, char *pathname, vfs_mode_t mode)
 {
 #ifdef CONFIG_DRIVER_FS_PIPE
   struct vfs_node_s *node;
@@ -234,7 +239,7 @@ VFS_MKFIFO(vfs_mkfifo)
 }
 
 
-VFS_UNLINK(vfs_unlink)
+error_t vfs_unlink (struct vfs_node_s * cwd, char *pathname)
 {
   struct vfs_node_s *node;
   struct vfs_node_s *parent;
@@ -310,7 +315,7 @@ VFS_UNLINK(vfs_unlink)
 }
 
 
-VFS_CLOSE(vfs_close)
+error_t vfs_close (struct vfs_file_s * file)
 {
   uint_fast8_t count;
   
@@ -342,22 +347,15 @@ VFS_CLOSE(vfs_close)
   return 0;
 }
 
-VFS_CLOSE_DIR(vfs_closedir)
+error_t vfs_closedir (struct vfs_file_s * file)
 {
   if(!(VFS_IS(file->f_flags, VFS_O_DIRECTORY)))
     return -VFS_EBADF;
-  
+
   return vfs_close(file);
 }
 
-VFS_CREATE(vfs_create)
-{
-  flags &= 0xFFF80000;
-  VFS_SET(flags,VFS_O_CREATE);
-  return vfs_open(cwd,path,flags,mode,file);
-}
-
-VFS_MKDIR(vfs_mkdir)
+error_t vfs_mkdir (struct vfs_node_s * cwd, char *pathname, vfs_mode_t mode)
 {
   struct vfs_file_s *file;
   uint_fast32_t flags;
@@ -372,7 +370,8 @@ VFS_MKDIR(vfs_mkdir)
   return vfs_close(file);
 }
 
-VFS_OPENDIR(vfs_opendir)
+error_t vfs_opendir (struct vfs_node_s * cwd, char *path,
+		     vfs_mode_t mode, struct vfs_file_s ** file)
 {
   error_t err;
   uint_fast32_t flags;
@@ -388,7 +387,7 @@ VFS_OPENDIR(vfs_opendir)
   return 0;
 }
 
-VFS_READDIR(vfs_readdir)
+error_t vfs_readdir (struct vfs_file_s * file, struct vfs_dirent_s * dirent)
 {
   error_t err;
   
@@ -410,7 +409,7 @@ VFS_READDIR(vfs_readdir)
 /* VFS_READ(n)  ssize_t (n) (struct vfs_file_s *file,	\ */
 /* 			  uint8_t *buffer,		\ */
 /* 			  size_t count) */
-VFS_READ(vfs_read)
+ssize_t vfs_read (struct vfs_file_s * file, uint8_t * buffer, size_t count)
 {
   size_t available_size;
   size_t size_to_read;
@@ -446,7 +445,7 @@ VFS_READ(vfs_read)
 }
 
 
-VFS_WRITE(vfs_write)
+ssize_t vfs_write (struct vfs_file_s * file, uint8_t * buffer, size_t count)
 {
   ssize_t size;
 
@@ -476,21 +475,23 @@ VFS_WRITE(vfs_write)
 }
 
 
-VFS_LSEEK(vfs_lseek)
+ssize_t vfs_lseek (struct vfs_file_s * file, size_t offset, uint_fast32_t whence)
 {
   size_t old_offset;
   uint64_t new_offset;
-  error_t err;
+  error_t err = 0;
   
   if(VFS_IS(file->f_flags,VFS_O_DIRECTORY))
     return -VFS_EBADF;
-    
-  err = 0;
-  old_offset = file->f_offset;
-  new_offset = file->f_offset;
- 
+
+  /* shortcut */
+  if (whence == VFS_SEEK_CUR && offset == 0)
+    return file->f_offset;
+
   rwlock_wrlock(&file->f_rwlock);
   rwlock_wrlock(&file->f_node->n_lock);
+
+  old_offset = new_offset = file->f_offset;
 
   switch(whence)
   {
@@ -530,9 +531,20 @@ VFS_LSEEK(vfs_lseek)
     file->f_node->n_size = (size_t)new_offset;
   
   VFS_SET(file->f_node->n_state,VFS_DIRTY);
-  
+
+  rwlock_unlock(&file->f_node->n_lock);
+  rwlock_unlock(&file->f_rwlock);
+  return new_offset;
+
  VFS_LSEEK_ERROR:
+  assert(err < 0);
   rwlock_unlock(&file->f_node->n_lock);
   rwlock_unlock(&file->f_rwlock);
   return err;  
 }
+
+error_t vfs_stat (struct vfs_node_s *cwd, char *pathname, struct vfs_stat_s *stat)
+{
+  return -1;
+}
+

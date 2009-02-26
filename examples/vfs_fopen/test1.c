@@ -20,13 +20,11 @@ void* cat(void* arg)
 {
 #if defined(CONFIG_VFS_LIBC_STREAM)
     printf("init vfs... ");
-    if (vfs_init(&bd_dev, VFS_VFAT_TYPE, 20, 20, &vfs_root) != 0)
+    if (vfs_init(&bd_dev, VFS_VFAT_TYPE, 20, 20, NULL) != 0)
     {
         printf("not ok\n");
         abort();
     }
-
-    fopen_setops(&vfs_ops);
 
     printf("ok\n");
 #endif

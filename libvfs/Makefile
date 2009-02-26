@@ -4,9 +4,6 @@ node.o			\
 node_freelist.o		\
 file_freelist.o		\
 libvfs.o		\
-libvfs_init.o
-
-ifeq ($(CONFIG_VFS_LIBC_STREAM), defined)
-objs += libc_stream_ops.o
-endif
+libvfs_init.o		\
+vfat_long_name_hack.o
 

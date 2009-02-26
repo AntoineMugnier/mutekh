@@ -248,7 +248,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # if defined(CONFIG_DRIVER_INPUT_8042)
   keyboard_dev.addr[0] = 0x60;
   keyboard_dev.irq = 1;
-  input_8042_init(&keyboard_dev, &icu_dev; NULL);
+  input_8042_init(&keyboard_dev, &icu_dev, NULL);
   DEV_ICU_BIND(&icu_dev, &keyboard_dev);
 # else
 #  warning CONFIG_DRIVER_KEYBOARD case not handled in mutek_main()

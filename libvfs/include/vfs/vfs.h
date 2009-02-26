@@ -57,6 +57,8 @@
 #define VFS_ENOTEMPTY        17
 
 // Mode
+typedef uint_fast16_t vfs_mode_t;
+
 #define VFS_DIR              0x00000001
 #define VFS_RD_ONLY          0x00000002
 #define VFS_SYS              0x00000004
@@ -66,6 +68,8 @@
 #define VFS_DEVICE	     0x00000040
 
 // Flags
+typedef uint_fast32_t vfs_open_flags_t;
+
 #define VFS_O_PIPE           0x00010000
 #define VFS_O_FIFO           0x00030000
 #define VFS_O_DIRECTORY      0x00040000
@@ -164,16 +168,14 @@ CONTAINER_TYPE(vfs_node_list, CLIST, struct vfs_node_s
 
 CONTAINER_FUNC(vfs_node_list, CLIST, static inline, vfs_node_list);
 
-extern struct vfs_node_s *vfs_root;
-
 CONTAINER_TYPE(vfs_file_list, CLIST, struct vfs_file_s
 {
   vfs_file_list_entry_t f_list_entry;
   lock_t f_lock;
   uint_fast8_t f_count;
   uint32_t f_offset;
-  uint_fast32_t f_flags;
-  uint_fast16_t f_mode;
+  vfs_open_flags_t f_flags;
+  vfs_mode_t f_mode;
   uint_fast32_t f_version;
   struct rwlock_s f_rwlock;
   struct vfs_node_s *f_node;
@@ -281,86 +283,39 @@ struct vfs_file_op_s
   vfs_release_file_t *release;
 };
 
-#define VFS_INIT(n)  error_t (n) (struct device_s *device,	\
-				  uint_fast8_t fs_type,         \
-				  uint_fast8_t node_nr,		\
-				  uint_fast16_t file_nr,	\
-				  struct vfs_node_s **root)
+error_t vfs_init (struct device_s * device, uint_fast8_t fs_type,
+		  uint_fast8_t node_nr, uint_fast16_t file_nr,
+		  struct vfs_node_s ** root);
 
-#define VFS_CREATE(n) error_t (n)(struct vfs_node_s *cwd,	\
-				  char *path,			\
-				  uint_fast32_t flags,		\
-				  uint_fast16_t mode,		\
-				  struct vfs_file_s **file) 
+error_t vfs_open (struct vfs_node_s * cwd, char *path,
+		  vfs_open_flags_t flags, vfs_mode_t mode,
+		  struct vfs_file_s ** file);
 
+ssize_t vfs_read (struct vfs_file_s * file, uint8_t * buffer, size_t count);
+ssize_t vfs_write (struct vfs_file_s * file, uint8_t * buffer, size_t count);
+ssize_t vfs_lseek (struct vfs_file_s * file, size_t offset, uint_fast32_t whence);
+error_t vfs_close (struct vfs_file_s * file);
 
-#define VFS_OPEN(n)  error_t (n) (struct vfs_node_s *cwd,	\
-				  char *path,			\
-				  uint_fast32_t flags,		\
-				  uint_fast16_t mode,		\
-				  struct vfs_file_s **file)
+error_t vfs_unlink (struct vfs_node_s * cwd, char *pathname);
 
-#define VFS_READ(n)  ssize_t (n) (struct vfs_file_s *file,	\
-				  uint8_t *buffer,		\
-				  size_t count)
+error_t vfs_opendir (struct vfs_node_s * cwd, char *path,
+		     vfs_mode_t mode, struct vfs_file_s ** file);
+error_t vfs_readdir (struct vfs_file_s * file, struct vfs_dirent_s * dirent);
+error_t vfs_closedir (struct vfs_file_s * file);
 
-#define VFS_WRITE(n) ssize_t (n) (struct vfs_file_s *file,	\
-				  uint8_t *buffer,		\
-				  size_t count)
+error_t vfs_mkdir (struct vfs_node_s * cwd, char *pathname, vfs_mode_t mode);
+error_t vfs_chdir (struct vfs_node_s * cwd, char *pathname, struct vfs_node_s ** new_cwd);
 
-#define VFS_LSEEK(n) error_t (n) (struct vfs_file_s *file,	\
-				  size_t offset,		\
-				  uint_fast32_t whence)
+error_t vfs_pipe (struct vfs_file_s * pipefd[2]);
+error_t vfs_mkfifo (struct vfs_node_s * cwd, char *pathname, vfs_mode_t mode);
 
-#define VFS_CLOSE(n) error_t (n) (struct vfs_file_s *file)
+struct vfs_stat_s
+{
+};
 
-#define VFS_UNLINK(n) error_t (n) (struct vfs_node_s *cwd,	\
-				   char *pathname)
-
-#define VFS_OPENDIR(n) error_t (n) (struct vfs_node_s *cwd,	\
-				    char *path,			\
-				    uint_fast16_t mode,		\
-				    struct vfs_file_s **file)
-
-#define VFS_READDIR(n) error_t (n) (struct vfs_file_s *file,	\
-				    struct vfs_dirent_s *dirent)
-
-#define VFS_MKDIR(n)   error_t (n) (struct vfs_node_s *cwd,	\
-				    char *pathname,		\
-				    uint_fast16_t mode)
-
-#define VFS_CHDIR(n) error_t (n) (char *pathname,		\
-				  struct vfs_node_s *cwd,	\
-				  struct vfs_node_s **new_cwd)
-
-#define VFS_CLOSE_DIR(n) error_t (n) (struct vfs_file_s *file)
-
-#define VFS_PIPE_OPEN(n)   error_t (n) (struct vfs_file_s *pipefd[2])
-
-#define VFS_MKFIFO(n)      error_t (n) (struct vfs_node_s *cwd,		\
-					char *pathname,			\
-					uint_fast16_t mode)
-
-
-VFS_INIT(vfs_init);
-VFS_OPEN(vfs_open);
-VFS_READ(vfs_read);
-VFS_WRITE(vfs_write);
-VFS_LSEEK(vfs_lseek);
-VFS_CLOSE(vfs_close);
-VFS_UNLINK(vfs_unlink);
-
-VFS_OPENDIR(vfs_opendir);
-VFS_READDIR(vfs_readdir);
-VFS_MKDIR(vfs_mkdir);
-VFS_CHDIR(vfs_chdir);
-VFS_CLOSE_DIR(vfs_closedir);
-
-VFS_PIPE_OPEN(vfs_pipe);
-VFS_MKFIFO(vfs_mkfifo);
-
+error_t vfs_stat (struct vfs_node_s *cwd, char *pathname, struct vfs_stat_s *stat);
 
 // Used for devFS to always have root_node pointer
-struct vfs_node_s	*vfs_get_root();
+struct vfs_node_s * vfs_get_root();
 
 #endif

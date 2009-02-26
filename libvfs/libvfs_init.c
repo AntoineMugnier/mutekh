@@ -38,7 +38,7 @@
 #define BC_BUFFERS_PER_ENTRY  3
 
 static struct vfs_node_s __vfs_root;
-struct vfs_node_s *vfs_root = &__vfs_root;
+static struct vfs_node_s *vfs_root = &__vfs_root;
 
 /**
  **
@@ -51,7 +51,9 @@ struct vfs_node_s *vfs_root = &__vfs_root;
  **
  **/
 
-VFS_INIT(vfs_init)
+error_t vfs_init (struct device_s * device, uint_fast8_t fs_type,
+		  uint_fast8_t node_nr, uint_fast16_t file_nr,
+		  struct vfs_node_s ** root)
 {
   struct vfs_context_op_s * ctx_op[] = {0,(struct vfs_context_op_s *)&vfat_ctx_op};
   struct vfs_context_s *ctx;
@@ -106,7 +108,9 @@ VFS_INIT(vfs_init)
 #endif
 
   vfs_node_up(vfs_root);
-  *root = vfs_root;
+
+  if (root)
+    *root = vfs_root;
 
   return err;
 }
@@ -115,3 +119,4 @@ struct vfs_node_s	*vfs_get_root()
 {
   return vfs_root;
 }
+

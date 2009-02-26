@@ -63,7 +63,7 @@ VFS_NODE_LOOKUP(vfs_node_lookup)
 
   isDotDot = ((name[0] == '.') && (name[1] == '.')) ? 1 : 0;
 
-  if(isDotDot && (node == vfs_root))
+  if(isDotDot && (node == vfs_get_root()))
     return node;
 
   if(isDotDot)
@@ -177,7 +177,7 @@ VFS_NODE_LOAD(vfs_node_load)
 #ifdef CONFIG_VFS_DEBUG
     printk("path is absolute, cwd != root\n");
 #endif
-    current_parent = vfs_root;
+    current_parent = vfs_get_root();
   }
   else
     current_parent = root;

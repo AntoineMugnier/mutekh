@@ -518,7 +518,7 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
 ** =======================================================
 */
 
-#ifdef CONFIG_LIBC_STREAM
+#ifdef HAVE_FOPEN
 
 typedef struct LoadF {
   int extraline;

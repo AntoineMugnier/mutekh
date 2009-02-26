@@ -53,7 +53,6 @@ void* shell(void *param)
 
     printk("init vfs... ");
     vfs_init(&bd_dev, VFS_VFAT_TYPE, 20, 20, &vfs_root_term);
-    fopen_setops(&vfs_ops);
     printk("ok\n");
 
     /* create lua state */

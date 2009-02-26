@@ -126,13 +126,13 @@ abort(void)
 #define EXIT_SUCCESS	0
 #define EXIT_FAILURE	-1
 
-static inline void
+void
 __attribute__ ((deprecated))
-exit(uint_fast8_t status)
-{
-  while (1)
-    ;
-}
+exit(uint_fast8_t status);
+
+error_t
+__attribute__ ((deprecated))
+atexit(void (*function)(void));
 
 /****************** abs */
 

@@ -83,7 +83,7 @@ typedef unsigned int		__compiler_uint_t;
 typedef unsigned long		__compiler_ulong_t;
 typedef unsigned long long	__compiler_ulonglong_t;
 
-#ifdef __MUTEK__
+#ifdef CONFIG_HEXO_INTTYPES_DEPRECATED
 /** prevent use of compiler native short type,
     int_fast*_t and uint_fast*_t types are prefered */
 typedef short _dont_use_native_short_type_t __attribute__ ((deprecated));
