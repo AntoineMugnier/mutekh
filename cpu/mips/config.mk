@@ -25,12 +25,12 @@ endif
 CPUTOOLS=mipsel-unknown-elf-
 
 ifeq ($(CONFIG_CPU_ENDIAN_LITTLE), defined)
-CPUFLAGS+= -EL
+CPUCFLAGS+= -EL
 endif
 
 ifeq ($(CONFIG_CPU_ENDIAN_BIG), defined)
-CPUFLAGS+= -EB
+CPUCFLAGS+= -EB
 endif
 
-CPUFLAGS=-mno-gpopt -G0
+CPUCFLAGS+=-mno-gpopt -G0
 
