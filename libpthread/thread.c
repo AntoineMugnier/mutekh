@@ -157,7 +157,8 @@ pthread_join(pthread_t thread, void **value_ptr)
   {
     if (thread->joinable)
       {
-	*value_ptr = thread->joined_retval;
+          if (value_ptr)
+              *value_ptr = thread->joined_retval;
 
 	/* wake up terminated thread waiting for join */
 	sched_context_start(&thread->sched_ctx);
@@ -181,7 +182,8 @@ pthread_join(pthread_t thread, void **value_ptr)
 	  sched_context_stop_unlock(&thread->lock);
 	  
 	  /* get joined thread's exit value */
-	  *value_ptr = pthread_self()->joined_retval;
+      if (value_ptr)
+          *value_ptr = pthread_self()->joined_retval;
 	}
       }
   }
