@@ -64,7 +64,7 @@ include $(MUTEK_SRC_DIR)/scripts/cflags.mk
 
 %.o: %.c
 	@echo '    CC      $(PPRINT_DIR)/$@'
-	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -c \
+	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) $($@_CFLAGS) $(DIR_CFLAGS) -c \
 		$< -o $@
 
 # Extract HOST defined macros and inject values in a new header file.
