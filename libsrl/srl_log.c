@@ -32,41 +32,36 @@
 
 #ifdef CONFIG_LIBC_STREAM
 
-CONTAINER_FUNC(stream_fifo, RING, static inline, stream_fifo);
+#include <fileops.h>
 
-static ssize_t	tty_read(fd_t fd, void *buffer, size_t count)
+static FILEOPS_READ(tty_read)
 {
-	return dev_char_spin_read((struct device_s *)fd, buffer, count);
+	return dev_char_spin_read((struct device_s *)file, buffer, count);
 }
 
-static ssize_t	tty_write(fd_t fd, const void *buffer, size_t count)
+static FILEOPS_WRITE(tty_write)
 {
-  return dev_char_spin_write((struct device_s *)fd, buffer, count);
+  return dev_char_spin_write((struct device_s *)file, buffer, count);
 }
 
-static ssize_t	empty_io(fd_t fd, const void *buffer, size_t count)
+static FILEOPS_READ(empty_read)
 {
 	return count;
 }
 
-static error_t	empty_close(fd_t fd)
+static FILEOPS_WRITE(empty_write)
+{
+	return count;
+}
+
+static FILEOPS_CLOSE(empty_close)
 {
   return -1;
 }
 
-static off_t	empty_lseek(fd_t fd, off_t offset, enum seek_whence_e whence)
+static FILEOPS_LSEEK(empty_lseek)
 {
   return -1;
-}
-
-static bool_t	true_able(fd_t fd)
-{
-  return 1;
-}
-
-static bool_t	false_able(fd_t fd)
-{
-  return 0;
 }
 
 static error_t	no_flush(FILE *stream)
@@ -74,24 +69,20 @@ static error_t	no_flush(FILE *stream)
   return 0;
 }
 
-static const struct stream_ops_s tty_ops =
+static const struct fileops_s tty_ops =
 {
   .read = &tty_read,
   .write = &tty_write,
   .close = &empty_close,
   .lseek = &empty_lseek,
-  .readable = true_able,
-  .writable = true_able,
 };
 
-static const struct stream_ops_s blackhole_ops =
+static const struct fileops_s blackhole_ops =
 {
-  .read = &empty_io,
-  .write = &empty_io,
+  .read = &empty_read,
+  .write = &empty_write,
   .close = &empty_close,
   .lseek = &empty_lseek,
-  .readable = true_able,
-  .writable = true_able,
 };
 
 struct tty_state {
@@ -131,11 +122,9 @@ static FILE *init_tty(void *addr)
 			st->device.addr[0] = addr;
 			st->device.irq = 1;
 			tty_soclib_init(&st->device, NULL, NULL);
-			stream_fifo_init(&st->file.fifo_read);
-			stream_fifo_init(&st->file.fifo_write);
+			__stdio_stream_init(&st->file);
 			st->file.ops = &tty_ops;
-			st->file.rwflush = &no_flush;
-			st->file.fd = &st->device;
+			st->file.hndl = &st->device;
 			return &st->file;
 		}
 	}
@@ -144,10 +133,7 @@ static FILE *init_tty(void *addr)
 
 void srl_console_init(void *addr)
 {
-	size_t i;
-
-	stream_fifo_init(&null_file.fifo_read);
-	stream_fifo_init(&null_file.fifo_write);
+	__stdio_stream_init(&null_file);
 
 	memset( &_state[0], 0, sizeof(_state[0])*CONFIG_SRL_NTTY );
 
