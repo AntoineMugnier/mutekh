@@ -387,6 +387,18 @@ error_t setvbuf(FILE *stream, char *buf, enum stdio_buf_mode_e mode, size_t size
 
 /* ************************************************** */
 
+void __stdio_stream_init(FILE *file)
+{
+  file->rwflush = &__stdio_no_flush;
+  stream_fifo_init(&file->fifo_read);
+  stream_fifo_init(&file->fifo_write);
+
+  file->pos = 0;
+  file->buf_mode = _IONBF;
+  file->error = 0;
+  file->eof = 0;
+}
+
 #ifdef CONFIG_VFS
 
 static vfs_open_flags_t	open_flags(const char *str)
@@ -449,14 +461,10 @@ FILE *fopen(const char *path, const char *mode)
   if (vfs_open(vfs_get_root(), path, flags, 0644, &file->hndl))
     goto err_1;
 
-  file->rwflush = &__stdio_no_flush;
-  stream_fifo_init(&file->fifo_read);
-  stream_fifo_init(&file->fifo_write);
+  __stdio_stream_init(file);
 
   file->pos = vfs_lseek(file->hndl, 0, SEEK_CUR);
   file->buf_mode = _IOFBF;
-  file->error = 0;
-  file->eof = 0;
 
   return (file);
 

@@ -103,6 +103,8 @@ error_t	__stdio_read(size_t size_, FILE *file, uint8_t *ptr);
 */
 error_t __stdio_write(size_t size_, FILE *file, const uint8_t *ptr);
 
+void __stdio_stream_init(FILE *stream);
+
 #ifdef CONFIG_VFS
 # define HAVE_FOPEN
 FILE *fopen(const char *path, const char *mode);
