@@ -54,7 +54,7 @@ static error_t	empty_close(fd_t fd)
   return -1;
 }
 
-static off_t	empty_lseek(fd_t fd, off_t offset, enum stream_whence_e whence)
+static off_t	empty_lseek(fd_t fd, off_t offset, enum seek_whence_e whence)
 {
   return -1;
 }
