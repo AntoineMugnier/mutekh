@@ -37,9 +37,6 @@ CPU_LOCAL void *__cpu_context_data_base;
 /* cpu interrupts state */
 volatile CPU_LOCAL bool_t cpu_irq_state = 0;
 
-static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
-struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
-
 error_t
 cpu_global_init(void)
 {
@@ -48,27 +45,8 @@ cpu_global_init(void)
 
 static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
 
-struct cpu_cld_s *cpu_init(void)
+void cpu_init(void)
 {
-  struct cpu_cld_s	*cld;
-  uint_fast16_t		id = cpu_id();
-
-  if (!(cld = mem_alloc(sizeof (struct cpu_cld_s), MEM_SCOPE_SYS)))
-    return NULL;
-
-  cld->id = id;
-  cpu_cld_list[id] = cld;
-
-#if defined(CONFIG_DEBUG)
-  /* enable alignment check */
-  asm volatile("	pushf						\n"
-	       "	orl	$0x40000, (%rsp)			\n"
-	       "	popf						\n");
-#endif
-
-  CPU_LOCAL_SET(cpu_cld, cld);
-
-  return cld;
 }
 
 void cpu_start_other_cpu(void)
