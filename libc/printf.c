@@ -186,6 +186,8 @@ __printf_arg(void *ctx, __printf_out_t * const fcn,
 
 	case '.':
 	  padindex ^= 1;
+	  format++;
+	  break;
 
 	case 'l':
 	  typesize *= 2;
