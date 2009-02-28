@@ -89,7 +89,7 @@ $(target).out: $(CONF_DIR)/.config.m4 $(LISTS) \
 		-q $$(cat /dev/null $(filter %.list,$^)) \
 		$(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \
-		-o $(BUILD_DIR)/$@ `$(CC) -print-libgcc-file-name`
+		-o $(BUILD_DIR)/$@ `$(CC) $(CFLAGS) -print-libgcc-file-name`
 
 $(target).o: $(CONF_DIR)/.config.m4 $(LISTS)
 	echo '    LD      $@'
@@ -98,7 +98,7 @@ $(target).o: $(CONF_DIR)/.config.m4 $(LISTS)
 		-q $$(cat /dev/null $(filter %.list,$^)) \
 		$(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \
-		-o $(BUILD_DIR)/$@ `$(CC) -print-libgcc-file-name`
+		-o $(BUILD_DIR)/$@ `$(CC) $(CFLAGS) -print-libgcc-file-name`
 
 $(target).hex: $(KERNEL_FILE)
 	echo 'OBJCOPY HEX $@'
