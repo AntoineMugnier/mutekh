@@ -44,8 +44,8 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"1:	mflr	0			\n"
 #else
 		/* save execution pointer based on static label address */
-		"	lis	0, 2f@ha		\n"
-		"	la	0, 2f@l(0)		\n"
+		"	lis	0, 2f@h			\n"
+		"	ori	0, 0, 2f@l		\n"
 #endif
 		"	stw	0, 6*4(1)		\n"
 		/* save r30, r31, r14, r15 */
@@ -66,7 +66,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	stw	0, 0*4(1)		\n"
 		/* switch stack pointer */
 		"	stw	1, 0(%0)		\n"
-		"	lwz	1, 0(%1)			\n"
+		"	lwz	1, 0(%1)		\n"
 		/* restore status & tls */
 		"	lwz	0, 0*4(1)		\n"
 		"	mtspr	0x114, 0		\n" /* SPRG4 is tls */
