@@ -66,6 +66,7 @@ _rtld_parse_relocations(const dynobj_desc_t *dynobj, const dynobj_desc_t *root_d
 		switch (reloc_type)
         {
             case R_386_NONE:
+                _rtld_debug("(R_386_NONE)\n");
                 break;
 
             case R_386_32:

@@ -141,8 +141,56 @@ error_t
 _rtld_parse_relocations(const dynobj_desc_t *dynobj, const dynobj_desc_t *root_dynobj, 
 		const elf_reloc_t *rel, const size_t relsize)
 {
-	/* FIXME: not implemented yet */
-	return 0;
+	const elf_reloc_t *rel_entry;
+	const elf_reloc_t *rel_end;
+    
+    _rtld_debug("_rtld_parse_relocations\n");
+
+    /* relsize is in bytes */
+	rel_end = (const elf_reloc_t*)((const char*)rel + relsize);
+
+	for (rel_entry = rel; rel_entry < rel_end; rel_entry++)
+	{
+        elf_addr_t *where;
+        reg_t reloc_type;
+
+        size_t sym_index;
+		const elf_sym_t *sym;
+
+        sym_index = ELF_R_SYM(rel_entry->r_info);
+        sym = dynobj->symtab + sym_index;
+
+		_rtld_debug("\trelocate symbol \"%s\": ", dynobj->strtab + sym->st_name);
+
+		where = (elf_addr_t*) (dynobj->relocbase + rel_entry->r_offset);
+        reloc_type = ELF_R_TYPE(rel_entry->r_info);
+
+		switch (reloc_type)
+        {
+            case R_MIPS_NONE:
+                _rtld_debug("(R_MIPS_NONE)\n");
+                break;
+
+            case R_MIPS_REL32:
+                _rtld_debug("(R_MIPS_REL32) from @%p", *where);
+                if (sym_index)
+                {
+                    if (sym_index < dynobj->mips_gotsym)
+                        *where += sym->st_value + dynobj->relocbase;
+                    else
+                        *where += dynobj->got[sym_index + dynobj->mips_local_gotno - dynobj->mips_gotsym];
+                } else
+                    *where += dynobj->relocbase;
+                _rtld_debug(" to @%p\n", *where);
+                break;
+
+            default:
+                _rtld_debug("\tunsupported relocation type %d\n", reloc_type);
+                return -1;
+        }
+    }
+
+    return 0;
 }
 
 // Local Variables:
