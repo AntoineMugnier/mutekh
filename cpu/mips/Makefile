@@ -7,5 +7,5 @@ cpu_context.o
 
 copy = ldscript
 
-subdirs = libc
+subdirs = libc librtld
 

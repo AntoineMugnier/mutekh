@@ -9,6 +9,6 @@ ifeq ($(CONFIG_HEXO_VMEM), defined)
 objs += vmem.o
 endif
 
-subdirs = libc libnetwork
+subdirs = libc libnetwork librtld
 
 copy = ldscript

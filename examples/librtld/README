@@ -1,0 +1,15 @@
+This example works for mips/soclib and emu, according to the config file used.
+Use the img_?.bin according to your arch.
+
+For both arch, the img.bin contains the following files:
+a.x
+b.x
+c.x
+libc.so
+
+You can test the runtime loader with those commands:
+
+[lua:/] exec("A.X","a1") /* launch funtion a1 of program A.X */
+[lua:/] exec("A.X","a2") /* launch funtion a2 of program A.X */
+[lua:/] exec("B.X","b")
+[lua:/] exec("C.X","c")

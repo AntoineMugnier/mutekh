@@ -16,43 +16,43 @@
  *  - blablabla.b -> BLABLAB~1.B
  *  - blabla.blabla -> BLABLA.BLA
  *
- *  ! This function processes directly the 
- *  string argument.
+ *  This function expect 'new' to be a table of at least 13 char (8+1+3+1).
  */
-void touppershortname(char* path)
+void touppershortname(char* new, const char* path)
 {
     /* sanity check */
     assert(path != NULL);
     if (*path == 0) return;
 
-    char *p = path;
+    const char *p = path;
+    char *n = new;
     char *delim;
     delim = strchr(path, '.');
 
     size_t i;
 
     /* process the body name */
-    for (i = 0; i < 8 && *p && (p != delim); i++, p++)
+    for (i = 0; i < 8 && *p && (p != delim); i++, p++, n++)
     {
         if ((delim - path) > 8 && i >= 6)
         {
             if (i == 6)
-                *p = '~';
+                *n = '~';
             else
-                *p = '1';
+                *n = '1';
         }
         else
-            *p = toupper(*p);
+            *n = toupper(*p);
     }
 
     /* process the extension if there is one */
     if (delim)
     {
-        for (i = 0; i < 3 && *delim; i++, delim++, p++)
-            *p = toupper(*delim);
+        for (i = 0; i < 3 && *delim; i++, delim++, p++, n++)
+            *n = toupper(*delim);
     }
 
     /* end of string */
-    *p = 0;
+    *n = 0;
 }
 
