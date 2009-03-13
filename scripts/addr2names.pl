@@ -15,6 +15,7 @@ if (not @ARGV)
 }
 
 my $binary = @ARGV[0];
+my %corr;
 
 if (not -f $binary)
 {
@@ -26,7 +27,13 @@ foreach my $line(<STDIN>)
     while ($line =~ /f:(0x[0-9A-Fa-f]+)/)
     {
 	my $addr = $1;
-	my $ref = `echo $addr | addr2line -f -s -e $binary`;
+	my $ref = $corr{ $addr };
+
+	unless ( defined $ref ) { 
+		$ref = `echo $addr | @ARGV[1] -f -s -e $binary`;
+		$corr{$addr} = $ref;
+	} 
+
 	$ref =~ s/\n/ /g;
 	$ref = sprintf("%-48s", $ref);
 
