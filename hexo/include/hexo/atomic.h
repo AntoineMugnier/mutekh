@@ -144,12 +144,33 @@ static bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n);
 static bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n);
 
 /**
+   compare memory to old and replace with new if they are the same
+   @return true if exchanged
+*/
+static bool_t atomic_compare_and_swap(
+	volatile atomic_int_t *a, atomic_int_t old, atomic_int_t new);
+
+/**
    static atomic value initializer
 
 #define ATOMIC_INITIALIZER(n)
 */
 
 #include "arch/hexo/atomic.h"
+
+#if __GNUC__ >= 4
+
+static inline bool_t
+atomic_compare_and_swap(volatile atomic_int_t *a, atomic_int_t old, atomic_int_t new)
+{
+# if defined(HAS_CPU_ATOMIC_COMPARE_AND_SWAP)
+	return cpu_atomic_compare_and_swap(a, old, new);
+# else
+	return __sync_bool_compare_and_swap(a, old, new);
+# endif
+}
+
+#endif // GNUC 4
 
 #endif
 
