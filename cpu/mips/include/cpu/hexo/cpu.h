@@ -81,6 +81,17 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
   _reg;						\
 })
 
+#define cpu_mips_mtc0(id, sel, val)										   \
+({						\
+  reg_t _reg = val;					\
+						\
+  asm volatile ("mtc0	%0,	$%1, %2	\n"	\
+				:: "r" (_reg)			\
+				, "i" (id)		\
+		, "i" (sel)			\
+		);				\
+})
+
 #else
 
 #define cpu_mips_mfc0(id, sel)			\
@@ -93,6 +104,16 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 		);				\
 						\
   _reg;						\
+})
+
+#define cpu_mips_mtc0(id, sel, val)										   \
+({						\
+  reg_t _reg = val;					\
+						\
+  asm volatile ("mtc0	%0,	$%1 \n"		\
+				:: "r" (_reg)			\
+				, "i" (id)				\
+		);				\
 })
 
 #endif
