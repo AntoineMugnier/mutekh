@@ -10,4 +10,3 @@ else
 objs += mwmr_soclib.o
 endif
 endif
-
