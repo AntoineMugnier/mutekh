@@ -59,6 +59,12 @@ SECTIONS
 	__context_data_start = LOADADDR(.contextdata);
 	__context_data_end = LOADADDR(.contextdata) + SIZEOF(.contextdata);
 
+	/* GOT section */
+ 	.got2 :
+		{
+			*(.got2)
+		}
+
 	__system_uncached_heap_start = __context_data_end;
 	__system_uncached_heap_end = dsx_segment_data_uncached_end;
 
