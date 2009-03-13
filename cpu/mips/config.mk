@@ -26,10 +26,12 @@ CPUTOOLS=mipsel-unknown-elf-
 
 ifeq ($(CONFIG_CPU_ENDIAN_LITTLE), defined)
 CPUCFLAGS+= -EL
+CPULDFLAGS+= -EL
 endif
 
 ifeq ($(CONFIG_CPU_ENDIAN_BIG), defined)
 CPUCFLAGS+= -EB
+CPULDFLAGS+= -EB
 endif
 
 CPUCFLAGS+= -G0
