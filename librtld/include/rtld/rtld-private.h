@@ -52,9 +52,14 @@
 #define _RTLD_PRIVATE_H_
 
 #include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
+#include <gpct/cont_dlist.h>
 
 #include <rtld/rtld-types.h>
+#include <cpu/tls.h>
+
+/*
+ * Utils
+ */
 
 #if defined(CONFIG_LIBRTLD_DEBUG)
 # define _rtld_debug printk
@@ -62,17 +67,20 @@
 # define _rtld_debug(...)
 #endif
 
-#define NB_LOAD_SEGMENTS 2
-
 /*
  * Dynamic object descriptor.
  */
+
+#define RTLD_TEXT_SEG    0
+#define RTLD_DATA_SEG    1
+#define RTLD_TLS_SEG     2
+
 typedef struct dynobj_desc_s
 {
     /* 
      * Misc informations 
      */
-    char            *pathname;  /* Pathname of underlying file (%) */
+    unsigned char   *pathname;  /* Pathname of underlying file (%) */
     uint_fast32_t   refcount;
     bool_t          program;    /* True if this is a program/kernel (contrary to a shared lib)*/
     bool_t          symbolic;   /* True if generated with "-Bsymbolic" */
@@ -87,9 +95,10 @@ typedef struct dynobj_desc_s
     elf_addr_t  vaddrbase;  /* Base address in shared object file */
     ptrdiff_t   relocbase;  /* Relocation constant = mapbase - vaddrbase (can be negative)*/
 
-    const elf_dyn_t     *dynamic;   /* Dynamic section */
-    const elf_phdr_t    *phdr;      /* Program header table if it is mapped, else NULL */
-    size_t              phsize;     /* Size of program header in bytes */
+    const elf_dyn_t *dynamic;   /* Dynamic section */
+    elf_phdr_t      *phdr;      /* Program header table if it is mapped, else NULL */
+    size_t          phnum;      /* Number of program header entries */
+    size_t          nseg[3];    /* corresponding entries number in program header (for text, data and tls) */
 
     elf_addr_t  entrypoint;    /* Entry point */
 
@@ -103,9 +112,9 @@ typedef struct dynobj_desc_s
     const elf_reloc_t   *pltrel;    /* PLT relocation entries */
     size_t              pltrelsize; /* Size in bytes of PLT relocation info */
 
-    const elf_sym_t *symtab;    /* Symbol table */
-    const char      *strtab;    /* String table */
-    size_t          strsize;    /* Size in bytes of string table */
+    const elf_sym_t     *symtab;    /* Symbol table */
+    const unsigned char *strtab;    /* String table */
+    size_t              strsize;    /* Size in bytes of string table */
 
 #if defined(CONFIG_CPU_MIPS)
     size_t  mips_gotsym;
@@ -124,16 +133,29 @@ typedef struct dynobj_desc_s
     void (*init)(void); /* Initialization function to call */
     void (*fini)(void); /* Termination function to call */
 
-    /* gpct pointer to next in chained list */
-    CONTAINER_ENTRY_TYPE(CLIST)	list_entry;
-} dynobj_desc_t;
+    /*
+     * Relative to TLS
+     */
+    size_t  tls_modid;      /* Index of TLS if any (0 otherwise) */
+    size_t  tls_max_modid;  /* Max TLS index in the dep chain (including the object) */
+    size_t  tls_nb_modid;   /* Number of dependencies that uses tls (including the object) */
 
-CONTAINER_TYPE(dynobj_list, CLIST, dynobj_desc_t, list_entry);
-CONTAINER_FUNC(dynobj_list, CLIST, static inline, dynobj_list, list_entry);
+    /* Only for program object */
+    size_t  *tls_offset_shobj;  /* offset values of the data for the program and for each dependency */
+    size_t  tls_total_size;     /* total size of tls area for that program (tcb+data+dtv) */
+
+    /* gpct pointer for double-linked list */
+    /* we are forced to have dlist since link order is important */
+    CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
+} dynobj_desc_t;
 
 /*
  * Internal structures
  */
+
+CONTAINER_TYPE(dynobj_list, DLIST, dynobj_desc_t, list_entry);
+CONTAINER_FUNC(dynobj_list, DLIST, static inline, dynobj_list, list_entry);
+
 struct user_dynobj_s
 {
     dynobj_list_root_t prg_root;    /* List of user programs */
@@ -151,15 +173,16 @@ struct kernel_dynobj_s
 
 /* elf */
 error_t
-_elf_load_file(const char *pathname,
+_elf_load_file(const unsigned char *pathname,
         dynobj_desc_t *dynobj);
     
 /* rtld */
 error_t
-_rtld_load_dynobj(const char *pathname,
+_rtld_load_dynobj(const unsigned char *pathname,
         dynobj_list_root_t *list_prg,
         dynobj_list_root_t *list_dep,
-        dynobj_desc_t **dynobj);
+        dynobj_desc_t **dynobj,
+        uintptr_t *threadpointer);
 
 error_t
 _rtld_lookup_sym(const elf_sym_t *ref_sym, const dynobj_desc_t *ref_dynobj,
@@ -168,7 +191,7 @@ _rtld_lookup_sym(const elf_sym_t *ref_sym, const dynobj_desc_t *ref_dynobj,
        uint_fast8_t type_class);
 
 const elf_sym_t*
-_rtld_lookup_sym_dynobj(const char *name, const reg_t hash, const dynobj_desc_t *dynobj, uint_fast8_t type_class);
+_rtld_lookup_sym_dynobj(const unsigned char *name, const reg_t hash, const dynobj_desc_t *dynobj, uint_fast8_t type_class);
 
 const dynobj_desc_t*
 _rtld_lookup_ref(const dynobj_desc_t *dynobj,
@@ -176,6 +199,13 @@ _rtld_lookup_ref(const dynobj_desc_t *dynobj,
 
 reg_t
 _rtld_elf_hash(const unsigned char *name);
+
+/* tls */
+size_t
+_rtld_tls_new_modid(void);
+
+error_t
+_rtld_tls_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer);
 
 /*
  * Include CPU dependent stuff relative to rtld

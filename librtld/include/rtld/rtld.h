@@ -41,10 +41,11 @@ error_t rtld_user_init (void);
  * @param pathname Pathname of the program file
  * @param entrypoint Address of the entrypoint 
  * 					 (to be given as start address for context creation)
+ * @param threadpointer Address of the tls area
  * @param handle Handle on the program object
  * @return error_t Error code if any
  */
-error_t rtld_user_dlopen (const char *pathname, uintptr_t *entrypoint, void **handle);
+error_t rtld_user_dlopen (const unsigned char *pathname, uintptr_t *entrypoint, uintptr_t *threadpointer, void **handle);
 
 /* Retrieve a symbol from an user program
  *
@@ -53,7 +54,7 @@ error_t rtld_user_dlopen (const char *pathname, uintptr_t *entrypoint, void **ha
  * @param sym Handle on the symbol (address where the symbol is loaded)
  * @return error_t Error code if any
  */
-error_t rtld_user_dlsym (const void *handle, const char *name, void **sym);
+error_t rtld_user_dlsym (const void *handle, const unsigned char *name, void **sym);
 
 /* Close an user program
  *
@@ -79,7 +80,7 @@ error_t rtld_user_dlclose (const void *handle);
  * @param pathname Pathname of the kernel image file (optional)
  * @return error_t Error code if any
  */
-error_t rtld_kernel_init (const char *pathname);
+error_t rtld_kernel_init (const unsigned char *pathname);
 
 /* Load an kernel library from a file
  *
@@ -87,7 +88,7 @@ error_t rtld_kernel_init (const char *pathname);
  * @param handle Handle on the program object
  * @return error_t Error code if any
  */
-error_t rtld_kernel_dlopen (const char *pathname, void **handle);
+error_t rtld_kernel_dlopen (const unsigned char *pathname, void **handle);
 
 /* Retrieve a symbol from a kernel library
  *
@@ -96,7 +97,7 @@ error_t rtld_kernel_dlopen (const char *pathname, void **handle);
  * @param sym Handle on the symbol (address where the symbol is loaded)
  * @return error_t Error code if any
  */
-error_t rtld_kernel_dlsym (const void *handle, const char *name, void **sym);
+error_t rtld_kernel_dlsym (const void *handle, const unsigned char *name, void **sym);
 
 /* Close a kernel library
  *

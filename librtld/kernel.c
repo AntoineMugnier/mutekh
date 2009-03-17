@@ -28,7 +28,7 @@
 #include <rtld/rtld.h>
 #include <rtld/rtld-private.h>
 
-error_t rtld_kernel_init (const char *pathname)
+error_t rtld_kernel_init (const unsigned char *pathname)
 {
 	_rtld_debug("rtld_kernel_init\n");
 
@@ -37,14 +37,14 @@ error_t rtld_kernel_init (const char *pathname)
     return 0;
 }
 
-error_t rtld_kernel_dlopen (const char *pathname, void **handle)
+error_t rtld_kernel_dlopen (const unsigned char *pathname, void **handle)
 {
 	_rtld_debug("rtld_kernel_dlopen\n");
 
     return 0;
 }
 
-error_t rtld_kernel_dlsym (const void *handle, const char *name, void **sym)
+error_t rtld_kernel_dlsym (const void *handle, const unsigned char *name, void **sym)
 {
 	_rtld_debug("rtld_kernel_dlsym\n");
 

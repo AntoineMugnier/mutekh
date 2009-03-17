@@ -57,7 +57,7 @@
 
 #include <rtld/rtld-private.h>
 
-static error_t _rtld_partial_load_dynobj(const char *pathname, 
+static error_t _rtld_partial_load_dynobj(const unsigned char *pathname, 
         dynobj_list_root_t *list_dynobj, 
         dynobj_list_root_t *list_dep, 
         dynobj_desc_t **dynobj);
@@ -117,7 +117,7 @@ _rtld_elf_hash(const unsigned char *name)
  * @return bool_t Was there a match?
  */
 static bool_t
-_rtld_check_match_sym(const elf_sym_t *sym, const char *sym_name, const char *name, uint_fast8_t type_class)
+_rtld_check_match_sym(const elf_sym_t *sym, const unsigned char *sym_name, const unsigned char *name, uint_fast8_t type_class)
 {
     _rtld_debug("_rtld_check_match_sym\n");
     _rtld_debug("\tchecking match with symbol \"%s\"\n", sym_name);
@@ -127,23 +127,24 @@ _rtld_check_match_sym(const elf_sym_t *sym, const char *sym_name, const char *na
         /* undefined symbol itself */
         return 0;
 
-    if (sym->st_value == 0)
-        /* No value */
+    if (sym->st_value == 0 && ELF_ST_TYPE(sym->st_info) != STT_TLS)
+        /* No value (accepted for TLS, since offset cannot be null */
         return 0;
 
     if (ELF_ST_TYPE(sym->st_info) > STT_FUNC
-            && ELF_ST_TYPE(sym->st_info) != STT_COMMON)
+            && ELF_ST_TYPE(sym->st_info) != STT_COMMON
+            && ELF_ST_TYPE(sym->st_info) != STT_TLS)
         /* Ignore all but STT_NOTYPE, STT_OBJECT, STT_FUNC
-         * and STT_COMMON entries since these are no
+         * and STT_COMMON entries (and STT_TLS) since these are no
          * code/data definitions
          */
         return 0;
 
-    if (strcmp(sym_name, name) != 0)
+    if (strcmp((char*)sym_name, (char*)name) != 0)
         return 0;
 
-    _rtld_debug("\t\tmatch!\n");
     /* This is the matching symbol */
+    _rtld_debug("\t\tmatch!\n");
     return 1;
 }
 
@@ -156,7 +157,7 @@ _rtld_check_match_sym(const elf_sym_t *sym, const char *sym_name, const char *na
  * @return elf_sym_t The reference to the symbol if found, NULL otherwise
  */
 const elf_sym_t*
-_rtld_lookup_sym_dynobj(const char *name, const reg_t hash, const dynobj_desc_t *dynobj, uint_fast8_t type_class)
+_rtld_lookup_sym_dynobj(const unsigned char *name, const reg_t hash, const dynobj_desc_t *dynobj, uint_fast8_t type_class)
 {
     _rtld_debug("_rtld_lookup_sym_dynobj\n");
 
@@ -168,7 +169,7 @@ _rtld_lookup_sym_dynobj(const char *name, const reg_t hash, const dynobj_desc_t 
     for(; sym_idx != STN_UNDEF; sym_idx = dynobj->chains[sym_idx])
     {
         const elf_sym_t *sym;
-        const char *sym_name;
+        const unsigned char *sym_name;
 
         /* find the symbol in the symbol table */
         assert(sym_idx < dynobj->nchains);
@@ -214,7 +215,7 @@ _rtld_lookup_sym_chain(const elf_sym_t *ref_sym, const dynobj_desc_t *ref_dynobj
        uint_fast8_t type_class)
 {
     const elf_sym_t *sym;
-    const char *sym_name;
+    const unsigned char *sym_name;
     reg_t sym_hash;
 
     _rtld_debug("_rtld_lookup_sym_chain\n");
@@ -299,7 +300,7 @@ _rtld_lookup_sym(const elf_sym_t *ref_sym, const dynobj_desc_t *ref_dynobj,
        uint_fast8_t type_class)
 {
     const elf_sym_t *sym;
-    const char *sym_name;
+    const unsigned char *sym_name;
     reg_t sym_hash;
 
     _rtld_debug("_rtld_lookup_sym\n");
@@ -443,7 +444,7 @@ _rtld_load_dependencies(dynobj_desc_t *dynobj,
                 assert(ndep_shobj < dynobj->ndep_shobj);
 
                 /* find the pathname of the dependency */
-                const char *dep_name = dynobj->strtab + dynp->d_un.d_val;
+                const unsigned char *dep_name = dynobj->strtab + dynp->d_un.d_val;
                 dynobj_desc_t *dep_dynobj;
 
                 _rtld_debug("\tload dependency named \"%s\"\n", dep_name);
@@ -452,6 +453,17 @@ _rtld_load_dependencies(dynobj_desc_t *dynobj,
                 if (_rtld_partial_load_dynobj(dep_name, list_dep, list_dep, &dep_dynobj) != 0)
                     return -1;
 
+                _rtld_debug("\tfinished loading dependency named \"%s\"\n", dep_name);
+
+                /* if the dependency uses TLS */
+                if (dep_dynobj->tls_nb_modid)
+                {
+                    dynobj->tls_nb_modid++;
+                    if (dep_dynobj->tls_max_modid > dynobj->tls_max_modid)
+                        dynobj->tls_max_modid = dep_dynobj->tls_max_modid;
+                    _rtld_debug("\tdependency has tls; %d tls for object and max modid is %d\n", dynobj->tls_nb_modid, dynobj->tls_max_modid);
+                }
+                /* add to the dependencies table */
                 dynobj->dep_shobj[ndep_shobj] = dep_dynobj;
                 ndep_shobj++;
                 break;
@@ -526,7 +538,7 @@ _rtld_process_dynamic(dynobj_desc_t *dynobj)
                 assert(dynp->d_un.d_val == sizeof(elf_sym_t));
                 break;
             case DT_STRTAB:
-                dynobj->strtab = (const char *)(dynobj->relocbase + dynp->d_un.d_ptr);
+                dynobj->strtab = (const unsigned char *)(dynobj->relocbase + dynp->d_un.d_ptr);
                 break;
             case DT_STRSZ:
                 dynobj->strsize = dynp->d_un.d_val;
@@ -578,6 +590,19 @@ _rtld_process_dynamic(dynobj_desc_t *dynobj)
                 _rtld_debug("\t\tignored!\n");
                 break;
 
+            case DT_FLAGS:
+                if (dynp->d_un.d_val & DF_STATIC_TLS)
+                {
+                    if (dynobj->program)
+                        _rtld_debug("\t\tStatic model for TLS is used for this executable\n");
+                    else
+                    {
+                        _rtld_debug("\t\tStatic model for TLS is not supported!\n");
+                        return -1;
+                    }
+                }
+                break;
+
 #if defined(CONFIG_CPU_MIPS)
             case DT_MIPS_GOTSYM:
                 dynobj->mips_gotsym = dynp->d_un.d_val;
@@ -619,11 +644,12 @@ _rtld_process_dynamic(dynobj_desc_t *dynobj)
 static const dynobj_desc_t*
 _rtld_lookup_addr(const uintptr_t addr, dynobj_list_root_t *list)
 {
-#define END_SYM "_end"
+#define END_SYM (unsigned char*)"_end"
+
     _rtld_debug("_rtld_lookup_addr\n");
     _rtld_debug("\tlook up for dynobj at addr %0x\n", addr);
 
-    CONTAINER_FOREACH(dynobj_list, CLIST, list,
+    CONTAINER_FOREACH(dynobj_list, DLIST, list,
     {
         const elf_sym_t *end_sym;
 
@@ -641,6 +667,7 @@ _rtld_lookup_addr(const uintptr_t addr, dynobj_list_root_t *list)
 
     _rtld_debug("\tnot found\n");
     return NULL;
+
 #undef END_SYM
 }
 
@@ -656,7 +683,7 @@ _rtld_lookup_ref(const dynobj_desc_t *dynobj,
 {
     _rtld_debug("_rtld_lookup_ref\n");
 
-    CONTAINER_FOREACH(dynobj_list, CLIST, list_lookup,
+    CONTAINER_FOREACH(dynobj_list, DLIST, list_lookup,
     {
         if (dynobj == item)
         {
@@ -676,22 +703,22 @@ _rtld_lookup_ref(const dynobj_desc_t *dynobj,
  * @return dynobj_desc_t Return the found object if any
  */
 static const dynobj_desc_t*
-_rtld_lookup_name(const char *pathname, 
+_rtld_lookup_name(const unsigned char *pathname, 
         dynobj_list_root_t *list_lookup) 
 {
 #ifdef CONFIG_RTLD_VFSNAME_HACK
-    char dynobj_name[13];
+    unsigned char dynobj_name[13];
     touppershortname(dynobj_name, pathname);
 #else
-    char *dynobj_name=pathname;
+    unsigned char *dynobj_name=pathname;
 #endif
 
     _rtld_debug("_rtld_lookup_name\n");
     _rtld_debug("\tlooking up for \"%s\" object\n", dynobj_name);
 
-    CONTAINER_FOREACH(dynobj_list, CLIST, list_lookup,
+    CONTAINER_FOREACH(dynobj_list, DLIST, list_lookup,
     {
-        if (strcmp(dynobj_name, item->pathname) == 0)
+        if (strcmp((char*)dynobj_name, (char*)item->pathname) == 0)
         {
             _rtld_debug("\tfound\n");
             return item;
@@ -713,7 +740,7 @@ _rtld_lookup_name(const char *pathname,
  * @return error_t Error code if any
  */
 static error_t
-_rtld_partial_load_dynobj(const char *pathname, 
+_rtld_partial_load_dynobj(const unsigned char *pathname, 
         dynobj_list_root_t *list_dynobj, 
         dynobj_list_root_t *list_dep, 
         dynobj_desc_t **dynobj)
@@ -734,8 +761,8 @@ _rtld_partial_load_dynobj(const char *pathname,
         if (_elf_load_file(pathname, new_dynobj) != 0)
             goto err;
 
-        /* add the new dynobj to add list */
-        dynobj_list_push(list_dynobj, new_dynobj);
+        /* add the new dynobj at the end of add list */
+        dynobj_list_pushback(list_dynobj, new_dynobj);
 
         if (_rtld_process_dynamic(new_dynobj) != 0)
             goto err;
@@ -766,13 +793,15 @@ err:
  * @param list_prg List of objects to add or look up the program into
  * @param list_dep List of objects to look up the dependencies into
  * @param dynobj To be set with the reference of the loaded object 
+ * @param threadpointer Address to be set with the begin of the tls area
  * @return error_t Error code if any
  */
 error_t
-_rtld_load_dynobj(const char *pathname, 
+_rtld_load_dynobj(const unsigned char *pathname, 
         dynobj_list_root_t *list_prg, 
         dynobj_list_root_t *list_dep, 
-        dynobj_desc_t **dynobj)
+        dynobj_desc_t **dynobj,
+        uintptr_t *threadpointer)
 {
     dynobj_desc_t *new_dynobj;
 
@@ -782,6 +811,13 @@ _rtld_load_dynobj(const char *pathname,
     if (_rtld_partial_load_dynobj(pathname, list_prg, list_dep, &new_dynobj) != 0)
     {
         _rtld_debug("\tcould not load \"%s\"\n", pathname);
+        goto err;
+    }
+
+    /* tls management */
+    if (_rtld_tls_dynobj(new_dynobj, threadpointer) != 0)
+    {
+        _rtld_debug("\tcould not manage tls for \"%s\"\n", pathname);
         goto err;
     }
 

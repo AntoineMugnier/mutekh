@@ -46,7 +46,7 @@
    Copyright (c) UPMC, Lip6, STMicroelectronics
     Joel Porquet <joel.porquet@lip6.fr>, 2009
 
-   Based on uClibc
+   Based on uClibc, and glibc
 */
 
 
@@ -84,17 +84,19 @@ _rtld_mips_global_got_relocations (const dynobj_desc_t *dynobj, const dynobj_des
 
 		_rtld_debug("\trelocate global symbol \"%s\"\n", dynobj->strtab + ref_sym->st_name);
 
+        /*
+         * ! Apparently, no TLS management in there !
+         */
+
 		if (ref_sym->st_shndx == SHN_UNDEF)
 		{
-			{
-				if (_rtld_lookup_sym(ref_sym, dynobj, &def_sym, &def_dynobj, root_dynobj, ELF_RTYPE_CLASS_PLT) != 0)
-					return -1;
+            if (_rtld_lookup_sym(ref_sym, dynobj, &def_sym, &def_dynobj, root_dynobj, ELF_RTYPE_CLASS_PLT) != 0)
+                return -1;
 
-				_rtld_debug("\trelocate symbol \"%s\": ", dynobj->strtab + ref_sym->st_name);
-                _rtld_debug("from @%p", *got_entry);
-				*got_entry = def_sym->st_value + def_dynobj->relocbase;
-                _rtld_debug(" to @%p\n", *got_entry);
-			}
+            _rtld_debug("\trelocate symbol \"%s\": ", dynobj->strtab + ref_sym->st_name);
+            _rtld_debug("from %p", (void*)*got_entry);
+            *got_entry = def_sym->st_value + def_dynobj->relocbase;
+            _rtld_debug(" to %p\n", (void*)*got_entry);
 		}
 		else if (ref_sym->st_shndx == SHN_COMMON)
         {
@@ -102,17 +104,18 @@ _rtld_mips_global_got_relocations (const dynobj_desc_t *dynobj, const dynobj_des
 				return -1;
 
 			_rtld_debug("\trelocate symbol \"%s\": ", dynobj->strtab + ref_sym->st_name);
-			_rtld_debug("from @%p", *got_entry);
+			_rtld_debug("from %p", (void*)*got_entry);
 			*got_entry = def_sym->st_value + def_dynobj->relocbase;
-			_rtld_debug(" to @%p\n", *got_entry);
+			_rtld_debug(" to %p\n", (void*)*got_entry);
 		}
 		else if (ELF_ST_TYPE(ref_sym->st_info) == STT_SECTION)
         {
 			if (ref_sym->st_other == 0)
             {
 				_rtld_debug("\trelocate symbol \"%s\": ", dynobj->strtab + ref_sym->st_name);
-                _rtld_debug("from @%p to @%p\n", *got_entry, *got_entry + dynobj->relocbase);
+                _rtld_debug("from %p", (void*)*got_entry);
 				*got_entry += dynobj->relocbase;
+                _rtld_debug(" to %p\n", (void*)*got_entry);
             }
 		}
         else {
@@ -120,9 +123,9 @@ _rtld_mips_global_got_relocations (const dynobj_desc_t *dynobj, const dynobj_des
 				return -1;
 
 			_rtld_debug("\trelocate symbol \"%s\": ", dynobj->strtab + ref_sym->st_name);
-			_rtld_debug("from @%p", *got_entry);
+			_rtld_debug("from %p", (void*)*got_entry);
 			*got_entry = def_sym->st_value + def_dynobj->relocbase;
-			_rtld_debug(" to @%p\n", *got_entry);
+			_rtld_debug(" to %p\n", (void*)*got_entry);
 		}
 	}
 
@@ -155,12 +158,14 @@ _rtld_parse_relocations(const dynobj_desc_t *dynobj, const dynobj_desc_t *root_d
         reg_t reloc_type;
 
         size_t sym_index;
-		const elf_sym_t *sym;
+		const elf_sym_t *ref_sym;
+		const elf_sym_t *def_sym;
+		const dynobj_desc_t *def_dynobj;
 
         sym_index = ELF_R_SYM(rel_entry->r_info);
-        sym = dynobj->symtab + sym_index;
+        ref_sym = dynobj->symtab + sym_index;
 
-		_rtld_debug("\trelocate symbol \"%s\": ", dynobj->strtab + sym->st_name);
+		_rtld_debug("\trelocate symbol \"%s\": ", dynobj->strtab + ref_sym->st_name);
 
 		where = (elf_addr_t*) (dynobj->relocbase + rel_entry->r_offset);
         reloc_type = ELF_R_TYPE(rel_entry->r_info);
@@ -172,20 +177,68 @@ _rtld_parse_relocations(const dynobj_desc_t *dynobj, const dynobj_desc_t *root_d
                 break;
 
             case R_MIPS_REL32:
-                _rtld_debug("(R_MIPS_REL32) from @%p", *where);
+                _rtld_debug("(R_MIPS_REL32)\n\
+                        \tfrom %p", (void*)*where);
                 if (sym_index)
                 {
                     if (sym_index < dynobj->mips_gotsym)
-                        *where += sym->st_value + dynobj->relocbase;
+                        *where += ref_sym->st_value + dynobj->relocbase;
                     else
                         *where += dynobj->got[sym_index + dynobj->mips_local_gotno - dynobj->mips_gotsym];
                 } else
                     *where += dynobj->relocbase;
-                _rtld_debug(" to @%p\n", *where);
+                _rtld_debug(" to %p\n", (void*)*where);
+                break;
+
+            /* TLS management */
+            case R_MIPS_TLS_DTPMOD32:
+                {
+                    _rtld_debug("(R_MIPS_TLS_DTPMOD32)\n");
+                    /* according to mips guy on gcc-ml, when sym_index is null, it means we have a local-dynamic variable,
+                     * the variable comes then from the local object. Otherwise, let's search it in the chain.
+                     */
+                    if (sym_index)
+                    {
+                        if (_rtld_lookup_sym(ref_sym, dynobj, &def_sym, &def_dynobj, root_dynobj, elf_machine_type_class(reloc_type)) != 0)
+                            return -1;
+
+                        _rtld_debug("\tfrom %d", *where);
+                        *where = (elf_addr_t) (def_dynobj->tls_modid);
+                        _rtld_debug(" to %d\n", *where);
+                    } else {
+                        _rtld_debug("\tfrom %d", *where);
+                        *where = (elf_addr_t) (dynobj->tls_modid);
+                        _rtld_debug(" to %d\n", *where);
+                    }
+                }
+                break;
+
+            case R_MIPS_TLS_DTPREL32:
+                {
+                    _rtld_debug("(R_MIPS_TLS_DTPREL32)\n");
+                    if (_rtld_lookup_sym(ref_sym, dynobj, &def_sym, &def_dynobj, root_dynobj, elf_machine_type_class(reloc_type)) != 0)
+                        return -1;
+
+                    _rtld_debug("from %p", (void*)*where);
+                    *where = (elf_addr_t) (def_sym->st_value - TLS_DTP_OFFSET);
+                    _rtld_debug(" to %p\n", (void*)*where);
+                }
+                break;
+
+            case R_MIPS_TLS_TPREL32:
+                {
+                    _rtld_debug("(R_MIPS_TLS_TPREL32)\n");
+                    if (_rtld_lookup_sym(ref_sym, dynobj, &def_sym, &def_dynobj, root_dynobj, elf_machine_type_class(reloc_type)) != 0)
+                        return -1;
+
+                    _rtld_debug("from %p", (void*)*where);
+                    *where = (elf_addr_t) (root_dynobj->tls_offset_shobj[def_dynobj->tls_modid] + def_sym->st_value - TLS_TP_OFFSET);
+                    _rtld_debug(" to %p\n", (void*)*where);
+                }
                 break;
 
             default:
-                _rtld_debug("\tunsupported relocation type %d\n", reloc_type);
+                _rtld_debug("unsupported relocation type %d\n", reloc_type);
                 return -1;
         }
     }

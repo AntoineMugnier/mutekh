@@ -63,25 +63,22 @@
 
 /* Load ELF header, perform test and load Program Header
  *
- * @param f File description of the ELF file
- * @param phdr Pointer to be set on the Program Header
- * @param phnum To be set with the number of entries in the Program Header
- * @param entry_point To be set with the entrypoint of the ELF file
+ * @param file File descriptor on the ELF file
+ * @param dynobj Dynamic object
  * @return error_t Error code if any
  */
 static error_t 
-_elf_load_headers(FILE *f, elf_phdr_t **phdr, size_t *phnum, elf_addr_t *entry_point)
+_elf_load_headers(FILE *file, dynobj_desc_t *dynobj)
 {
     elf_ehdr_t *ehdr;
     uint8_t buf[ELF_HDR_SIZE];
-    ssize_t nitems;
 
     elf_phdr_t *p;
 
     _rtld_debug("_elf_load_headers\n");
 
     /* Get the elf header */
-    if ((nitems = fread(buf, sizeof(*buf), ELF_HDR_SIZE, f)) != ELF_HDR_SIZE) 
+    if (fread(buf, sizeof(*buf), ELF_HDR_SIZE, file) != ELF_HDR_SIZE) 
     {
         _rtld_debug("\tError while reading elf file\n");
         goto err;
@@ -132,16 +129,19 @@ _elf_load_headers(FILE *f, elf_phdr_t **phdr, size_t *phnum, elf_addr_t *entry_p
     /* Otherwise, let's read it from the file */
     else
     {
-        if (fseek(f, ehdr->e_phoff, SEEK_SET) != 0)
+        if (fseek(file, ehdr->e_phoff, SEEK_SET) != 0)
             goto err_mem;
 
-        if ((nitems = fread(p, ehdr->e_phentsize, ehdr->e_phnum, f)) != ehdr->e_phnum)
+        if (fread(p, ehdr->e_phentsize, ehdr->e_phnum, file) != ehdr->e_phnum)
             goto err_mem;
     }
 
-    *phdr = p;
-    *phnum = ehdr->e_phnum;
-    *entry_point = ehdr->e_entry;
+    /* we could retrieve phdr later via the text segment, but for DSO, 
+     * we don't have the information directly, so let's make that 
+     * generic: we keep the allocated phdr and ignore the phdr in text segment */
+    dynobj->phdr = p;
+    dynobj->phnum = ehdr->e_phnum;
+    dynobj->entrypoint = ehdr->e_entry;
 
     return 0;
 
@@ -153,14 +153,17 @@ err:
 
 /* Scan Program Header and get information
  *
- * @param phdr Pointer on the Program Header
- * @param phnum Number of entries in the Program Header
  * @param dynobj Dynamic object
- * @param nseg Table to store the entries of loadable sections (text, data, etc)
  * @return error_t Error code if any
  */
+#if defined(CONFIG_LIBRTLD_DEBUG)
+static const char* const _rtld_phdr_type_names[8] = {
+    "PT_NULL", "PT_LOAD", "PT_DYNAMIC", "PT_INTERP",
+    "PT_NOTE", "PT_SHLIB", "PT_PHDR", "PT_TLS"
+};
+#endif
 static error_t 
-_elf_scan_phdr(const elf_phdr_t *phdr, const size_t phnum, dynobj_desc_t *dynobj, size_t *nseg)
+_elf_scan_phdr(dynobj_desc_t *dynobj)
 {
     size_t i;
     size_t nsegs = 0;
@@ -168,34 +171,63 @@ _elf_scan_phdr(const elf_phdr_t *phdr, const size_t phnum, dynobj_desc_t *dynobj
     _rtld_debug("_elf_scan_phdr\n");
 
     /* Scan the program header, and save key information. */
-    for (i = 0; i < phnum; i++)
+    for (i = 0; i < dynobj->phnum; i++)
     {
-        switch (phdr[i].p_type)
+        elf_phdr_t *phdr_entry = &dynobj->phdr[i];
+
+        if (phdr_entry->p_type < 8)
+            _rtld_debug("\ttype \'%s\'\n", _rtld_phdr_type_names[phdr_entry->p_type]);
+        else
+            _rtld_debug("\ttype \'0x%x\'\n", phdr_entry->p_type);
+        switch (phdr_entry->p_type)
         {
             /* Program header segment */
             case PT_PHDR:
-                dynobj->phdr = (const elf_phdr_t*) phdr[i].p_vaddr;
-                dynobj->phsize = phdr[i].p_memsz;
+                /* let's skip it and keep our mallocated phdr */
+                /* too bad for memory consumption */
+                break;
+
+            case PT_INTERP:
+                /* It's the only way we can know it's a program and not a shared library that we are loading */
+                dynobj->program = 1;
                 break;
 
             /* Loadable segments */
             case PT_LOAD:
-                assert(nsegs < NB_LOAD_SEGMENTS); // text and data segments... TODO: soon TLS seg
-                assert(phdr[i].p_align >= CONFIG_LIBRTLD_PAGE_SIZE);
+                assert(nsegs < 2); // text and data segments
+                assert(phdr_entry->p_align >= CONFIG_LIBRTLD_PAGE_SIZE);
 
-                nseg[nsegs++] = i; /* just to remember which entries were PT_LOAD */
+                dynobj->nseg[nsegs++] = i; /* just to remember which entries were PT_LOAD */
+                break;
+
+            /* TLS segment */
+            case PT_TLS:
+                dynobj->nseg[RTLD_TLS_SEG] = i; /* just to remember which entries was PT_TLS */
+                if (dynobj->program)
+                    /* if tls is used, program always get the modid #1 */
+                    dynobj->tls_modid = 1;
+                else
+                    /* otherwise, we get a new modid */
+                    dynobj->tls_modid = _rtld_tls_new_modid();
+                dynobj->tls_nb_modid = 1;
+                dynobj->tls_max_modid = dynobj->tls_modid;
+                _rtld_debug("\t\tmodid = %d\n", dynobj->tls_modid);
                 break;
 
             /* Dynamic segment */
             case PT_DYNAMIC:
-                dynobj->dynamic = (const elf_dyn_t*) phdr[i].p_vaddr;
+                dynobj->dynamic = (const elf_dyn_t*) phdr_entry->p_vaddr;
+                break;
+
+            default:
+                _rtld_debug("\t\tignored entry\n");
                 break;
         }
     }
 
     if (dynobj->dynamic == NULL)
     {
-        _rtld_debug("\tloaded object is not dynamically-linked");
+        _rtld_debug("\terror: loaded object is not dynamically-linked");
         return -1;
     }
 
@@ -204,25 +236,21 @@ _elf_scan_phdr(const elf_phdr_t *phdr, const size_t phnum, dynobj_desc_t *dynobj
 
 /* Load loadable segments from the ELF file
  *
- * @param f File description of the ELF file
+ * @param file File descriptor on the ELF file
  * @param dynobj Dynamic object
- * @param phdr Pointer on the Program Header
- * @param nseg Table which contains the entries of loadable sections (text, data, etc) in the Program header
  * @return error_t Error code if any
  */
 static error_t 
-_elf_load_segments(FILE *f, dynobj_desc_t *dynobj, const elf_phdr_t *phdr, size_t *nseg)
+_elf_load_segments(FILE *file, dynobj_desc_t *dynobj)
 {
-    /* strongly assume text is segment 0 and data is segment 1 */
-#define text    nseg[0]
-#define data    nseg[1]
-
-    size_t nitems;
+#define text_seg    dynobj->phdr[dynobj->nseg[RTLD_TEXT_SEG]]
+#define data_seg    dynobj->phdr[dynobj->nseg[RTLD_DATA_SEG]]
 
     _rtld_debug("_elf_load_segments\n");
 
-    dynobj->vaddrbase  = ALIGN_VALUE_LOW(phdr[text].p_vaddr, CONFIG_LIBRTLD_PAGE_SIZE);
-    dynobj->mapsize = ALIGN_VALUE_UP(phdr[data].p_vaddr + phdr[data].p_memsz, CONFIG_LIBRTLD_PAGE_SIZE) - dynobj->vaddrbase;
+    dynobj->vaddrbase  = ALIGN_VALUE_LOW(text_seg.p_vaddr, CONFIG_LIBRTLD_PAGE_SIZE);
+    dynobj->mapsize = ALIGN_VALUE_UP(data_seg.p_vaddr + data_seg.p_memsz,
+            CONFIG_LIBRTLD_PAGE_SIZE) - dynobj->vaddrbase;
 
     /*
      * Allocate sufficient contiguous pages for the object and read the object
@@ -234,47 +262,49 @@ _elf_load_segments(FILE *f, dynobj_desc_t *dynobj, const elf_phdr_t *phdr, size_
         return -1;
     }
 
-    /* clear bss (at the end of data) */
-    memset((void*)(dynobj->mapbase + (phdr[data].p_vaddr - phdr[text].p_vaddr) + phdr[data].p_filesz), 
-                0, phdr[data].p_memsz - phdr[data].p_filesz);
-
     /*
-     * Read the text and data segments. The BSS is already cleared.
+     * Load the text segment in memory
      */
     _rtld_debug("\tload read-only segments (text, rodata, bss)\n");
-    fseek(f, phdr[text].p_offset, SEEK_SET);
-    if ((nitems = fread((void*)dynobj->mapbase, phdr[text].p_filesz, 1, f)) != 1) 
+    fseek(file, text_seg.p_offset, SEEK_SET);
+    if (fread((void*)dynobj->mapbase, text_seg.p_filesz, 1, file) != 1) 
     {
         _rtld_debug("\t\tcould not read text segment");
         goto err_alloc;
     }
 
+    /*
+     * Load the data segment in memory
+     */
     _rtld_debug("\tload read-write segments (data)\n");
-    fseek(f, phdr[data].p_offset, SEEK_SET);
-    if ((nitems = fread((void*)(dynobj->mapbase + (phdr[data].p_vaddr - phdr[text].p_vaddr)), 
-                        phdr[data].p_filesz, 1, f)) != 1)
+    fseek(file, data_seg.p_offset, SEEK_SET);
+    if (fread((void*)(dynobj->mapbase + (data_seg.p_vaddr - text_seg.p_vaddr)), 
+                        data_seg.p_filesz, 1, file) != 1)
     {
         _rtld_debug("\t\tcould not read data segment");
         goto err_alloc;
     }
 
+    /* clear bss (at the end of data) */
+    memset((void*)(dynobj->mapbase + (data_seg.p_vaddr - text_seg.p_vaddr) + data_seg.p_filesz), 
+                0, data_seg.p_memsz - data_seg.p_filesz);
+
+    /* relocation value */
     dynobj->relocbase = dynobj->mapbase - dynobj->vaddrbase;
-    dynobj->dynamic = (elf_addr_t)dynobj->dynamic + dynobj->relocbase;
 
+    /* relocate some stuffs */
+    dynobj->dynamic = (elf_dyn_t*)((elf_addr_t)dynobj->dynamic + dynobj->relocbase);
     if (dynobj->entrypoint != 0)
-        dynobj->entrypoint = (elf_addr_t)dynobj->entrypoint + dynobj->relocbase;
+        dynobj->entrypoint = dynobj->entrypoint + dynobj->relocbase;
 
-    if (dynobj->phdr != NULL)
-        dynobj->phdr = (elf_addr_t)dynobj->phdr + dynobj->relocbase;
-    
     _rtld_debug("\tobject map:\n");
-    _rtld_debug("\t\tmapbase: %p\n", dynobj->mapbase);
-    _rtld_debug("\t\tmapsize: 0x%x\n", dynobj->mapsize);
-    _rtld_debug("\t\tvaddrbase: %p\n", dynobj->vaddrbase);
-    _rtld_debug("\t\trelocbase: %p\n", dynobj->relocbase);
-    _rtld_debug("\t\tdynamic: %p\n", (elf_addr_t)dynobj->dynamic);
-    _rtld_debug("\t\tentrypoint: %p\n", (elf_addr_t)dynobj->entrypoint);
-    _rtld_debug("\t\tphdr: %p\n", (elf_addr_t)dynobj->phdr);
+    _rtld_debug("\t\tmapbase: %p\n",    (void*)dynobj->mapbase);
+    _rtld_debug("\t\tmapsize: 0x%x\n",  dynobj->mapsize);
+    _rtld_debug("\t\tvaddrbase: %p\n",  (void*)dynobj->vaddrbase);
+    _rtld_debug("\t\trelocbase: %p\n",  (void*)dynobj->relocbase);
+    _rtld_debug("\t\tdynamic: %p\n",    (void*)dynobj->dynamic);
+    _rtld_debug("\t\tentrypoint: %p\n", (void*)dynobj->entrypoint);
+    _rtld_debug("\t\tphdr: %p\n",       (void*)dynobj->phdr);
 
     return 0;
 
@@ -288,33 +318,25 @@ err_alloc:
 
 /* Process ELF headers (load and scan)
  *
- * @param f File description of the ELF file
+ * @param file File descriptor on the ELF file
  * @param dynobj Dynamic object
- * @param phdr Pointer to be set on the Program Header (careful: phdr will be allocated with malloc in this function)
- * @param nseg Table to store the entries of loadable sections (text, data, etc) in the Program header
  * @return error_t Error code if any
  */
 static error_t
-_elf_process_headers(const FILE *f, dynobj_desc_t *dynobj, elf_phdr_t **phdr, size_t nseg[NB_LOAD_SEGMENTS])
+_elf_process_headers(FILE *file, dynobj_desc_t *dynobj)
 {
-    elf_phdr_t *new_phdr;
-    size_t phnum;
-    elf_addr_t entrypoint;
-
     _rtld_debug("elf_process_headers\n");
 
-    if (_elf_load_headers(f, &new_phdr, &phnum, &entrypoint) != 0)
+    if (_elf_load_headers(file, dynobj) != 0)
         goto err;
 
-    if (_elf_scan_phdr(new_phdr, phnum, dynobj, nseg) != 0)
-        goto err;
-
-    dynobj->entrypoint = entrypoint;
-    dynobj->program = 1;
-    *phdr = new_phdr;
+    if (_elf_scan_phdr(dynobj) != 0)
+        goto err_mem;
 
     return 0;
 
+err_mem:
+    free(dynobj->phdr);
 err:
     return -1;
 }
@@ -326,7 +348,7 @@ err:
  * @return error_t Error code if any
  */
 error_t
-_elf_load_file(const char *pathname, dynobj_desc_t *dynobj)
+_elf_load_file(const unsigned char *pathname, dynobj_desc_t *dynobj)
 {
 #ifdef CONFIG_RTLD_VFSNAME_HACK
     char dynobj_name[13];
@@ -335,37 +357,32 @@ _elf_load_file(const char *pathname, dynobj_desc_t *dynobj)
     char *dynobj_name=pathname;
 #endif
 
-    FILE *f;
-
-    elf_phdr_t *phdr;
-    size_t nseg[NB_LOAD_SEGMENTS];
+    FILE* file;
 
     _rtld_debug("elf_load_file\n");
 
     _rtld_debug("\topen file \"%s\"\n", dynobj_name);
-    if ((f = fopen(dynobj_name, "r")) == NULL)
+    if ((file = fopen(dynobj_name, "r")) == NULL)
     {
         _rtld_debug("\t\tcannot open \"%s\"", dynobj_name);
         goto err_f;
     }
     dynobj->pathname = strdup(dynobj_name);
 
-    if (_elf_process_headers(f, dynobj, &phdr, nseg) != 0)
+    if (_elf_process_headers(file, dynobj) != 0)
+        goto err_f;
+
+    if (_elf_load_segments(file, dynobj) != 0)
         goto err_phdr;
 
-    if (_elf_load_segments(f, dynobj, phdr, nseg) != 0)
-        goto err_phdr;
-
-    /* clean up */
-    free(phdr);
-    fclose(f);
+    fclose(file);
 
     return 0;
 
 err_phdr:
-    free(phdr);
+    free(dynobj->phdr);
 err_f:
-    fclose(f);
+    fclose(file);
     return -1;
 }
 

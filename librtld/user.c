@@ -38,13 +38,13 @@ error_t rtld_user_init (void)
     return 0;
 }
 
-error_t rtld_user_dlopen (const char *pathname, uintptr_t *entrypoint, void **handle)
+error_t rtld_user_dlopen (const unsigned char *pathname, uintptr_t *entrypoint, uintptr_t *threadpointer, void **handle)
 {
     dynobj_desc_t *dynobj;
 
 	_rtld_debug("rtld_user_dlopen\n");
 
-	if (_rtld_load_dynobj(pathname, &user_dynobj_list.prg_root, &user_dynobj_list.shobj_root, &dynobj) != 0)
+	if (_rtld_load_dynobj(pathname, &user_dynobj_list.prg_root, &user_dynobj_list.shobj_root, &dynobj, threadpointer) != 0)
 		return -1;
 
     *entrypoint = dynobj->entrypoint;
@@ -53,7 +53,7 @@ error_t rtld_user_dlopen (const char *pathname, uintptr_t *entrypoint, void **ha
     return 0;
 }
 
-error_t rtld_user_dlsym (const void *handle, const char *name, void **sym)
+error_t rtld_user_dlsym (const void *handle, const unsigned char *name, void **sym)
 {
 	const dynobj_desc_t *dynobj = handle;
 	const elf_sym_t *dlsym;
@@ -65,13 +65,14 @@ error_t rtld_user_dlsym (const void *handle, const char *name, void **sym)
 		return -1;
 
 	/* look up the symbol in the program 
-     * (you must link your program with --export-dynamic if you want to access unreferrenced symbol) 
+     * (note that you should link your program with --export-dynamic 
+     * if you want to access unreferenced symbol) 
      */
 	if ((dlsym = _rtld_lookup_sym_dynobj(name, _rtld_elf_hash(name), dynobj, ELF_RTYPE_CLASS_PLT)) == NULL)
 		return -1;
 
 	/* relocate the symbol */
-	*sym = dlsym->st_value + dynobj->relocbase;
+	*sym = (void*)dlsym->st_value + dynobj->relocbase;
 
 	return 0;
 }
