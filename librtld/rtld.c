@@ -67,27 +67,12 @@ static error_t _rtld_partial_load_dynobj(const unsigned char *pathname,
  * @param name Name to be hashed
  * @return reg_t Hash of the name
  */
-#if 0
 reg_t
 _rtld_elf_hash(const unsigned char *name)
 {
-    reg_t hash = 0;
-    reg_t temp;
-
-    while (*name != '\0')
-    {
-        hash = (hash << 4) + *name++;
-        if ((temp = hash & 0xf0000000) != 0)
-            hash ^= temp >> 24;
-        hash &= ~temp;
-    }
-    return hash;
-}
-#else
-reg_t
-_rtld_elf_hash(const unsigned char *name)
-{
-    /* from uClibc */
+    /*
+     * from uClibc 
+     */
     reg_t hash=0;
     reg_t tmp;
 
@@ -106,7 +91,6 @@ _rtld_elf_hash(const unsigned char *name)
     }
     return hash;
 }
-#endif
 
 /* Check if a symbol matches with another
  *
@@ -122,13 +106,15 @@ _rtld_check_match_sym(const elf_sym_t *sym, const unsigned char *sym_name, const
     _rtld_debug("_rtld_check_match_sym\n");
     _rtld_debug("\tchecking match with symbol \"%s\"\n", sym_name);
 
-    /* from uClibc */
+    /*
+     * from uClibc and glibc
+     */
     if (type_class & (sym->st_shndx == SHN_UNDEF))
         /* undefined symbol itself */
         return 0;
 
     if (sym->st_value == 0 && ELF_ST_TYPE(sym->st_info) != STT_TLS)
-        /* No value (accepted for TLS, since offset cannot be null */
+        /* No value (accepted for TLS, since offset can be null) */
         return 0;
 
     if (ELF_ST_TYPE(sym->st_info) > STT_FUNC
@@ -179,18 +165,9 @@ _rtld_lookup_sym_dynobj(const unsigned char *name, const reg_t hash, const dynob
         assert(sym->st_name != 0);
         sym_name = dynobj->strtab + sym->st_name;
 
-#if 0 // OSKit method
-        if (strcmp(name, sym_name) == 0)
-            return ((sym->st_shndx != SHN_UNDEF)
-                    || (!in_plt
-                        && (sym->st_value != 0)
-                        && (ELF_ST_TYPE(sym->st_info) == STT_FUNC)))
-                ? sym : NULL;
-#else // uClic/glibc method
         /* do we have a match on this symbol? */
         if (_rtld_check_match_sym(sym, sym_name, name, type_class) != 0)
             return sym;
-#endif
     }
 
     /* nothing was found in this object */
@@ -597,7 +574,7 @@ _rtld_process_dynamic(dynobj_desc_t *dynobj)
                         _rtld_debug("\t\tStatic model for TLS is used for this executable\n");
                     else
                     {
-                        _rtld_debug("\t\tStatic model for TLS is not supported!\n");
+                        _rtld_debug("\t\tStatic model for TLS is not supported for shared libs!\n");
                         return -1;
                     }
                 }
