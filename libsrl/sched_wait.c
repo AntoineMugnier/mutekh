@@ -41,12 +41,13 @@ static inline srl_task_s *context_to_srl_task( struct sched_context_s *ctx )
     {																					\
         srl_task_s *task = context_to_srl_task(sched_ctx);								\
 																						\
-        cpu_dcache_invld(task->wait_addr);												\
+        cpu_dcache_invld((uint32_t*)task->wait_addr);							\
         return (endian_##endianness##32(*task->wait_addr) cmp task->wait_val);			\
     }																					\
 																						\
-    void srl_sched_wait_##name##_##endianness( uint32_t*addr, uint32_t val )			\
+    void srl_sched_wait_##name##_##endianness( volatile uint32_t*addr, uint32_t val )			\
     {																					\
+		cpu_dcache_invld((uint32_t*)addr);								\
         if ( endian_##endianness##32(*addr) cmp val )									\
 			return;																		\
         srl_task_s *current = context_to_srl_task(sched_get_current());					\

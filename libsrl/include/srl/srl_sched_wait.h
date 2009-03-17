@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define DECLARE_WAIT(endianness, name, cmp)								\
-	void srl_sched_wait_##name##_##endianness( uint32_t*addr, uint32_t val );
+	void srl_sched_wait_##name##_##endianness( volatile uint32_t*addr, uint32_t val );
 
 
 DECLARE_WAIT(le, eq, ==)

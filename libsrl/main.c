@@ -127,7 +127,9 @@ static CONTEXT_ENTRY(srl_run_task)
 	srl_task_s *task = param;
 	srl_console_init_task(task->tty_addr);
 	sched_unlock();
+	cpu_interrupt_enable();
 	srl_task_run(task);
+	cpu_interrupt_disable();
 	sched_lock();
 	sched_context_exit();
 }
