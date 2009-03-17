@@ -6,7 +6,7 @@
 
 ssize_t printk(const char *format, ...);
 
-bool_t failled = 0;
+static bool_t already_failed = 0;
 
 void
 __assert_fail(const char *file,
@@ -14,9 +14,9 @@ __assert_fail(const char *file,
 			  const char *func,
 			  const char *expr)
 {
-  if (!failled)
+  if (!already_failed)
     {
-      failled = 1;
+      already_failed = 1;
       printk("Assertion failed at %s:%u:%s(): (%s) is false\n", file, line, func, expr);
       cpu_trap();
       while (1)
