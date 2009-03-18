@@ -7,33 +7,13 @@
 
 //FIXME: add support for non contiguous memory segments
 
-struct vmem_page_region_s
-{
-  /* physical address of memory region */
-  uintptr_t			paddr;
-  /* memory region size */
-  size_t			size;
-  /* memory region page count */
-  size_t			count;
-  /* memory region free page count */
-  size_t			free_count;
-  /* first free page */
-  uint_fast32_t			free_head;
-  /* page allocation table */
-  uint_fast32_t			*table;
-
-  lock_t			lock;
-};
-
 #define VMEM_PPAGE_ISFREE(x) ((x) & 0x80000000)
 #define VMEM_PPAGE_VALUE(x) ((x) & 0x7fffffff)
 #define VMEM_PPAGE_SET(isfree, value) ((isfree << 31) | (value))
 
-static struct vmem_page_region_s vmem_region;
-
-error_t vmem_ppage_region_init(uintptr_t paddr, uintptr_t paddr_end)
+error_t vmem_ppage_region_init(struct vmem_page_region_s *r,
+			       uintptr_t paddr, uintptr_t paddr_end)
 {
-  struct vmem_page_region_s *r = &vmem_region;
   uint_fast32_t i;
 
   paddr = ALIGN_VALUE_UP(paddr, CONFIG_HEXO_MMU_PAGESIZE);
@@ -67,17 +47,14 @@ error_t vmem_ppage_region_init(uintptr_t paddr, uintptr_t paddr_end)
 }
 
 
-void vmem_ppage_region_destroy()
+void vmem_ppage_region_destroy(struct vmem_page_region_s *r)
 {
-  struct vmem_page_region_s *r = &vmem_region;
-
   mem_free(r->table);
   lock_destroy(&r->lock);  
 }
 
-error_t vmem_ppage_alloc(uintptr_t *paddr)
+error_t vmem_ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr)
 {
-  struct vmem_page_region_s *r = &vmem_region;
   uint_fast32_t *t;
   error_t res = -ENOMEM;
 
@@ -100,19 +77,17 @@ error_t vmem_ppage_alloc(uintptr_t *paddr)
   return res;
 }
 
-bool_t vmem_ppage_inrange(uintptr_t paddr)
+bool_t vmem_ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr)
 {
-  struct vmem_page_region_s *r = &vmem_region;
-
   assert(paddr % CONFIG_HEXO_MMU_PAGESIZE == 0);
 
   return ((paddr >= r->paddr) &&
 	  (paddr < r->paddr + r->count * CONFIG_HEXO_MMU_PAGESIZE));
 }
 
-error_t vmem_ppage_reserve(uintptr_t paddr, uintptr_t paddr_end)
+error_t vmem_ppage_reserve(struct vmem_page_region_s *r,
+			   uintptr_t paddr, uintptr_t paddr_end)
 {
-  struct vmem_page_region_s *r = &vmem_region;
   uint_fast32_t i, p;
   size_t size;
   error_t res = 0;
@@ -166,9 +141,8 @@ error_t vmem_ppage_reserve(uintptr_t paddr, uintptr_t paddr_end)
   return res;
 }
 
-uintptr_t vmem_ppage_refnew(uintptr_t paddr)
+uintptr_t vmem_ppage_refnew(struct vmem_page_region_s *r, uintptr_t paddr)
 {
-  struct vmem_page_region_s *r = &vmem_region;
   uint_fast32_t *t;
   uint_fast32_t p;
 
@@ -187,9 +161,8 @@ uintptr_t vmem_ppage_refnew(uintptr_t paddr)
   return paddr;
 }
 
-void vmem_ppage_refdrop(uintptr_t paddr)
+void vmem_ppage_refdrop(struct vmem_page_region_s *r, uintptr_t paddr)
 {
-  struct vmem_page_region_s *r = &vmem_region;
   uint_fast32_t *t;
   uint_fast32_t p;
 

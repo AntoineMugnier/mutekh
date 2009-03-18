@@ -33,17 +33,44 @@
  *  physical page allocator
  */
 
-struct vmem_ppage_desc_s;
-struct vmem_page_region_s;
+struct vmem_page_region_s
+{
+  /** physical address of memory region */
+  uintptr_t			paddr;
+  /** memory region size */
+  size_t			size;
+  /** memory region page count */
+  size_t			count;
+  /** memory region free page count */
+  size_t			free_count;
+  /** first free page */
+  uint_fast32_t			free_head;
+  /** page allocation table */
+  uint_fast32_t			*table;
 
-error_t vmem_ppage_region_init(uintptr_t paddr, uintptr_t paddr_end);
-void vmem_ppage_region_destroy();
+  lock_t			lock;
+};
 
-bool_t vmem_ppage_inrange(uintptr_t paddr);
-error_t vmem_ppage_alloc(uintptr_t *paddr);
-error_t vmem_ppage_reserve(uintptr_t paddr, uintptr_t paddr_end);
-uintptr_t vmem_ppage_refnew(uintptr_t paddr);
-void vmem_ppage_refdrop(uintptr_t paddr);
+/** Init a physical pages memory allocator region. */
+error_t vmem_ppage_region_init(struct vmem_page_region_s *r, uintptr_t paddr, uintptr_t paddr_end);
+
+/** Destroy a physical pages memory allocator region. */
+void vmem_ppage_region_destroy(struct vmem_page_region_s *r);
+
+/** Check if a physical address is in region range. */
+bool_t vmem_ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr);
+
+/** Allocate a free physical page in region and set paddr value. */
+error_t vmem_ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr);
+
+/** Try to reserve all pages in pysical address range. All pages must be free. */
+error_t vmem_ppage_reserve(struct vmem_page_region_s *r, uintptr_t paddr, uintptr_t paddr_end);
+
+/** Get a new reference to an already allocated physical page. */
+uintptr_t vmem_ppage_refnew(struct vmem_page_region_s *r, uintptr_t paddr);
+
+/** Drop a reference to an allocated physical page, page is marked as free if counter reach 0. */
+void vmem_ppage_refdrop(struct vmem_page_region_s *r, uintptr_t paddr);
 
 # endif
 
