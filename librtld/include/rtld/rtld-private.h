@@ -181,14 +181,13 @@ error_t
 _rtld_load_dynobj(const unsigned char *pathname,
         dynobj_list_root_t *list_prg,
         dynobj_list_root_t *list_dep,
-        dynobj_desc_t **dynobj,
-        uintptr_t *threadpointer);
+        dynobj_desc_t **dynobj);
 
 error_t
 _rtld_lookup_sym(const elf_sym_t *ref_sym, const dynobj_desc_t *ref_dynobj,
-       const elf_sym_t **def_sym, const dynobj_desc_t **def_dynobj,
-       const dynobj_desc_t *root_dynobj,
-       uint_fast8_t type_class);
+        const elf_sym_t **def_sym, const dynobj_desc_t **def_dynobj,
+        const dynobj_desc_t *root_dynobj,
+        uint_fast8_t type_class);
 
 const elf_sym_t*
 _rtld_lookup_sym_dynobj(const unsigned char *name, const reg_t hash, const dynobj_desc_t *dynobj, uint_fast8_t type_class);
@@ -202,10 +201,13 @@ _rtld_elf_hash(const unsigned char *name);
 
 /* tls */
 size_t
-_rtld_tls_new_modid(void);
+_tls_get_new_modid(void);
 
 error_t
-_rtld_tls_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer);
+_tls_load_dynobj(dynobj_desc_t *dynobj);
+
+error_t
+_tls_allocate_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer);
 
 /*
  * Include CPU dependent stuff relative to rtld

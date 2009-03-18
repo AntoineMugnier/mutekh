@@ -38,13 +38,13 @@ error_t rtld_user_init (void)
     return 0;
 }
 
-error_t rtld_user_dlopen (const unsigned char *pathname, uintptr_t *entrypoint, uintptr_t *threadpointer, void **handle)
+error_t rtld_user_dlopen (const unsigned char *pathname, uintptr_t *entrypoint, void **handle)
 {
     dynobj_desc_t *dynobj;
 
 	_rtld_debug("rtld_user_dlopen\n");
 
-	if (_rtld_load_dynobj(pathname, &user_dynobj_list.prg_root, &user_dynobj_list.shobj_root, &dynobj, threadpointer) != 0)
+	if (_rtld_load_dynobj(pathname, &user_dynobj_list.prg_root, &user_dynobj_list.shobj_root, &dynobj) != 0)
 		return -1;
 
     *entrypoint = dynobj->entrypoint;
@@ -53,7 +53,7 @@ error_t rtld_user_dlopen (const unsigned char *pathname, uintptr_t *entrypoint, 
     return 0;
 }
 
-error_t rtld_user_dlsym (const void *handle, const unsigned char *name, void **sym)
+error_t rtld_user_dlsym (const void *handle, const unsigned char *name, uintptr_t *sym)
 {
 	const dynobj_desc_t *dynobj = handle;
 	const elf_sym_t *dlsym;
@@ -73,6 +73,25 @@ error_t rtld_user_dlsym (const void *handle, const unsigned char *name, void **s
 
 	/* relocate the symbol */
 	*sym = (void*)dlsym->st_value + dynobj->relocbase;
+
+	return 0;
+}
+
+error_t rtld_user_dltls (const void *handle, uintptr_t *tls)
+{
+	const dynobj_desc_t *dynobj = handle;
+    uintptr_t tp;
+
+	_rtld_debug("rtld_user_dltls\n");
+
+	/* allows to access only loaded programs */
+	if (_rtld_lookup_ref(dynobj, &user_dynobj_list.prg_root) == NULL)
+		return -1;
+
+    if (_tls_allocate_dynobj(dynobj, &tp) != 0)
+        return -1;
+
+    *tls = tp;
 
 	return 0;
 }

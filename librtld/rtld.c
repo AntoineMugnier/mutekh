@@ -777,8 +777,7 @@ error_t
 _rtld_load_dynobj(const unsigned char *pathname, 
         dynobj_list_root_t *list_prg, 
         dynobj_list_root_t *list_dep, 
-        dynobj_desc_t **dynobj,
-        uintptr_t *threadpointer)
+        dynobj_desc_t **dynobj)
 {
     dynobj_desc_t *new_dynobj;
 
@@ -792,9 +791,9 @@ _rtld_load_dynobj(const unsigned char *pathname,
     }
 
     /* tls management */
-    if (_rtld_tls_dynobj(new_dynobj, threadpointer) != 0)
+    if (_tls_load_dynobj(new_dynobj) != 0)
     {
-        _rtld_debug("\tcould not manage tls for \"%s\"\n", pathname);
+        _rtld_debug("\tcould not load tls for \"%s\"\n", pathname);
         goto err;
     }
 

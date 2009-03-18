@@ -41,11 +41,10 @@ error_t rtld_user_init (void);
  * @param pathname Pathname of the program file
  * @param entrypoint Address of the entrypoint 
  * 					 (to be given as start address for context creation)
- * @param threadpointer Address of the tls area
  * @param handle Handle on the program object
  * @return error_t Error code if any
  */
-error_t rtld_user_dlopen (const unsigned char *pathname, uintptr_t *entrypoint, uintptr_t *threadpointer, void **handle);
+error_t rtld_user_dlopen (const unsigned char *pathname, uintptr_t *entrypoint, void **handle);
 
 /* Retrieve a symbol from an user program
  *
@@ -54,7 +53,16 @@ error_t rtld_user_dlopen (const unsigned char *pathname, uintptr_t *entrypoint, 
  * @param sym Handle on the symbol (address where the symbol is loaded)
  * @return error_t Error code if any
  */
-error_t rtld_user_dlsym (const void *handle, const unsigned char *name, void **sym);
+error_t rtld_user_dlsym (const void *handle, const unsigned char *name, uintptr_t *sym);
+
+/*
+ * Allocate a tls area for an user program. Note that the caller must take care of freeing this area.
+ *
+ * @param handle Handle on the program object
+ * @param tls Handle on the tls area
+ * @return error_t Error code if any
+ */
+error_t rtld_user_dltls (const void *handle, uintptr_t *tls);
 
 /* Close an user program
  *

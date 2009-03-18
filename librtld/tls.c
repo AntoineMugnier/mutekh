@@ -27,7 +27,7 @@
 
 /* Return a new modid 
  */
-size_t _rtld_tls_new_modid(void)
+size_t _tls_get_new_modid(void)
 {
     /* modid for shared library begins necessarily at 2:
      * 1 is always reserved for the program itself */
@@ -45,9 +45,9 @@ size_t _rtld_tls_new_modid(void)
  * @return void 
  */
 static void
-_rtld_tls_compute_offsets(dynobj_desc_t *dynobj, dynobj_desc_t *root_dynobj)
+_tls_compute_offsets(dynobj_desc_t *dynobj, dynobj_desc_t *root_dynobj)
 {
-    _rtld_debug("_rtld_tls_compute_offsets\n");
+    _rtld_debug("_tls_compute_offsets\n");
 
     size_t tls_offset;
 
@@ -80,7 +80,7 @@ _rtld_tls_compute_offsets(dynobj_desc_t *dynobj, dynobj_desc_t *root_dynobj)
     for (ndep_shobj = 0; ndep_shobj < dynobj->ndep_shobj; ndep_shobj++)
         /* recurse only if the dep or its deps have tls */
         if (dynobj->dep_shobj[ndep_shobj]->tls_nb_modid)
-            _rtld_tls_compute_offsets(dynobj->dep_shobj[ndep_shobj], root_dynobj);
+            _tls_compute_offsets(dynobj->dep_shobj[ndep_shobj], root_dynobj);
 }
 
 /* Recursively load tls image in tls area and set DTV fields accordingly
@@ -92,11 +92,11 @@ _rtld_tls_compute_offsets(dynobj_desc_t *dynobj, dynobj_desc_t *root_dynobj)
  * @return error_t Error code if any 
  */
 static error_t
-_rtld_tls_load_images(dynobj_desc_t *dynobj, dynobj_desc_t *root_dynobj, uintptr_t tp, tls_dtv_t *dtv)
+_tls_load_images(dynobj_desc_t *dynobj, dynobj_desc_t *root_dynobj, uintptr_t tp, tls_dtv_t *dtv)
 {
     FILE *file;
         
-    _rtld_debug("_rtld_tls_load_images\n");
+    _rtld_debug("_tls_load_images\n");
     assert(dynobj->tls_modid <= root_dynobj->tls_max_modid);
 
     /* if the dynobj has a TLS segment, load its image */
@@ -140,7 +140,7 @@ _rtld_tls_load_images(dynobj_desc_t *dynobj, dynobj_desc_t *root_dynobj, uintptr
     for (ndep_shobj = 0; ndep_shobj < dynobj->ndep_shobj; ndep_shobj++)
         /* recurse only if the dep or its deps have tls */
         if (dynobj->dep_shobj[ndep_shobj]->tls_nb_modid)
-            _rtld_tls_load_images(dynobj->dep_shobj[ndep_shobj], root_dynobj, tp, dtv);
+            _tls_load_images(dynobj->dep_shobj[ndep_shobj], root_dynobj, tp, dtv);
 
     return 0;
 
@@ -149,24 +149,23 @@ err_f:
     return -1;
 }
 
+/* Precompute the offset values for tls area
+ *
+ * @param dynobj Dynamic object
+ * @return error_t Error code if any 
+ */
 error_t
-_rtld_tls_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer)
+_tls_load_dynobj(dynobj_desc_t *dynobj)
 {
-    _rtld_debug("_rtld_tls_dynobj\n");
-
-    if (dynobj->tls_nb_modid == 0)
-    {
-        _rtld_debug("\tno tls\n");
-        return 0;
-    }
-    else if(threadpointer == NULL)
-    {
-        _rtld_debug("\tno threadpointer argument although tls is required for this program\n");
-        return -1;
-    }
+    _rtld_debug("_tls_load_dynobj\n");
 
     /* sanity check */
     assert(dynobj->tls_modid <= 1);
+    if (dynobj->tls_nb_modid == 0)
+    {
+        _rtld_debug("\tno tls for this program\n");
+        return 0;
+    }
 
     /* assume that if the object has been relocated, the tls computation has already been done */
     if (dynobj->relocated)
@@ -187,13 +186,37 @@ _rtld_tls_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer)
 #elif defined(TLS_TCB_AT_TP)
         /* not really necessary, calloc already set to 0 */
         dynobj->tls_total_size = 0;
+#else
+#error "TLS variant not defined for your cpu"
 #endif
-        _rtld_tls_compute_offsets(dynobj, dynobj);
+        _tls_compute_offsets(dynobj, dynobj);
 
         /* TLS_SIZE_POST_OFFSET should be equal to 0 but cpus such as mips don't respect variant I exactly */
         dynobj->tls_total_size += TLS_SIZE_POST_OFFSET;
 
         _rtld_debug("\ttls total size: 0x%x\n", dynobj->tls_total_size);
+    }
+
+    return 0;
+}
+
+/* Allocate a new tls area and fill it
+ *
+ * @param dynobj Dynamic object
+ * @param threadpointer Address to be set at tp (cpu dependent)
+ * @return error_t Error code if any 
+ */
+error_t
+_tls_allocate_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer)
+{
+    _rtld_debug("_tls_allocate_dynobj\n");
+
+    /* sanity check */
+    assert(dynobj->tls_modid <= 1);
+    if (dynobj->tls_nb_modid == 0)
+    {
+        _rtld_debug("\tno tls for this program\n");
+        return 0;
     }
 
     /* alloc a new tls area (and space for DTV) */
@@ -213,11 +236,11 @@ _rtld_tls_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer)
     tp = tls_area + dynobj->tls_total_size; /* tls_total_size does not include tcb */
     dtv = (tls_dtv_t*)(tp + sizeof(tls_tcb_t));
 #else
-#error "TLS variant is not defined"
+#error "TLS variant is not defined for your cpu"
 #endif
 
     /* fill the tls area with tlsimage for each modules */
-    if (_rtld_tls_load_images(dynobj, dynobj, tp, dtv) != 0)
+    if (_tls_load_images(dynobj, dynobj, tp, dtv) != 0)
     {
         _rtld_debug("\terror loading TLS images\n");
         goto err_mem;

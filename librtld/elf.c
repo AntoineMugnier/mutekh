@@ -208,7 +208,7 @@ _elf_scan_phdr(dynobj_desc_t *dynobj)
                     dynobj->tls_modid = 1;
                 else
                     /* otherwise, we get a new modid */
-                    dynobj->tls_modid = _rtld_tls_new_modid();
+                    dynobj->tls_modid = _tls_get_new_modid();
                 dynobj->tls_nb_modid = 1;
                 dynobj->tls_max_modid = dynobj->tls_modid;
                 _rtld_debug("\t\tmodid = %d\n", dynobj->tls_modid);
@@ -367,7 +367,7 @@ _elf_load_file(const unsigned char *pathname, dynobj_desc_t *dynobj)
         _rtld_debug("\t\tcannot open \"%s\"", dynobj_name);
         goto err_f;
     }
-    dynobj->pathname = strdup(dynobj_name);
+    dynobj->pathname = (unsigned char*)strdup(dynobj_name);
 
     if (_elf_process_headers(file, dynobj) != 0)
         goto err_f;
