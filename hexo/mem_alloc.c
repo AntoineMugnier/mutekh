@@ -68,6 +68,32 @@ mem_alloc_region_candidate(struct mem_alloc_region_s *region, size_t size)
 
 #endif
 
+#ifdef CONFIG_HEXO_MMU
+static inline struct mem_alloc_header_s *
+mem_alloc_region_extend(struct mem_alloc_region_s *region, size_t size)
+{
+  struct mem_alloc_header_s	*hdr = NULL;
+  
+  hdr = mmu_vpage_kalloc(size);
+  if(hdr)
+  {
+  hdr->size=size * CONFIG_HEXO_MMU_PAGESIZE;
+  hdr->region=region;
+  hdr->is_free=1;
+#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
+  hdr->signature = MEMALLOC_SIGNATURE;
+#endif
+
+  alloc_list_push(&region->root, hdr);
+ 
+#ifdef CONFIG_HEXO_MEMALLOC_STATS
+  region->free_size += ( size * CONFIG_HEXO_MMU_PAGESIZE );
+  region->free_blocks++;
+#endif
+  }
+  return hdr;
+}
+#endif
 
 void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
 {
@@ -81,7 +107,11 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
 #endif
 
   /* find suitable free block */
-  if ((hdr = mem_alloc_region_candidate(region, size)))
+  if ((hdr = mem_alloc_region_candidate(region, size)) 
+#ifdef CONFIG_HEXO_MMU
+  || (hdr = mem_alloc_region_extend(region, (size / CONFIG_HEXO_MMU_PAGESIZE) + 1))
+#endif
+)
     {
       hdr->is_free = 0;
 
@@ -162,7 +192,7 @@ void mem_alloc_region_push(void *address)
   region->free_blocks++;
 #endif
 
-  if ((next = alloc_list_next(&region->root, hdr)))
+  if ((next = alloc_list_next(&region->root, hdr)) == (void*)((uint8_t*)hdr + hdr->size))//next exist and next is contiguous with hdr
     {
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
       assert(next->signature == MEMALLOC_SIGNATURE);
@@ -187,7 +217,7 @@ void mem_alloc_region_push(void *address)
 	}
     }
 
-  if ((prev = alloc_list_prev(&region->root, hdr)))
+  if ((prev = alloc_list_prev(&region->root, hdr)) && ((void*)hdr == (void*)((uint8_t*)prev + prev->size)))//prev exist and prev is contiguous with hdr
     {
 #ifdef CONFIG_HEXO_MEMALLOC_SIGNED
       assert(prev->signature == MEMALLOC_SIGNATURE);
@@ -224,7 +254,7 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
 {
   struct mem_alloc_header_s	*hdr = start;
   size_t			size = (uint8_t*)end - (uint8_t*)start;
-
+  
 #ifdef CONFIG_SOCLIB_MEMCHECK
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
@@ -363,9 +393,6 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
 }
 
 #endif /* CONFIG_HEXO_MEMALLOC_ALGO */
-
-
-
 
 
 /************************************************************************/

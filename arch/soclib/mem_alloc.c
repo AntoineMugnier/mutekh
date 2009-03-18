@@ -40,9 +40,24 @@ struct mem_alloc_region_s mem_region_cluster;
 struct mem_alloc_region_s *mem_region_default;
 #endif
 
+
 void mem_init(void)
 {
 #if defined(CONFIG_SMP)
+
+#ifdef CONFIG_HEXO_MMU
+  	uint32_t t = (uint32_t)(&__system_uncached_heap_start);
+	mem_alloc_region_init(&mem_region_cpu,
+			(void*)t,
+			(void *)t+0x10000
+			);
+	
+  mem_alloc_region_init(&mem_region_system,
+			(void *)t+0x10000,
+			(void *)t+0x20000
+			);
+			
+#else
   mem_alloc_region_init(&mem_region_cpu,
 			&__system_cached_heap_start,
 			&__system_cached_heap_end
@@ -52,11 +67,24 @@ void mem_init(void)
 			&__system_uncached_heap_start,
 			&__system_uncached_heap_end
 			);
+#endif
+
+#else
+
+#ifdef CONFIG_HEXO_MMU
+  uint32_t t = (uint32_t)(&__system_uncached_heap_start);
+  mem_alloc_region_init(&mem_region_system,
+			(void*)t,
+			(void *)t+0xF000
+			);
+	
 #else
   mem_alloc_region_init(&mem_region_system,
 			&__system_cached_heap_start,
 			&__system_cached_heap_end
 			);
+#endif
+
 #endif
 
 #if defined(CONFIG_SMP)

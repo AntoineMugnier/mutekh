@@ -70,9 +70,9 @@ void mem_init(void)
 
   assert(mem_end > mem_start);
 
-#ifdef CONFIG_HEXO_VMEM
-  mem_alloc_region_init(&mem_region_ram, mem_start, CONFIG_HEXO_VMEM_INITIAL);
-  vmem_ppage_region_init(CONFIG_HEXO_VMEM_INITIAL, (uintptr_t)mem_end);
+#ifdef CONFIG_HEXO_MMU
+  mem_alloc_region_init(&mem_region_ram, mem_start, CONFIG_HEXO_MMU_INITIAL);
+  mmu_ppage_region_init(CONFIG_HEXO_MMU_INITIAL, (uintptr_t)mem_end);
 #else
   mem_alloc_region_init(&mem_region_ram, mem_start, mem_end);
 #endif

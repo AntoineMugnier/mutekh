@@ -25,7 +25,7 @@
 #include <hexo/types.h>
 #include <hexo/local.h>
 #include <hexo/error.h>
-#include <hexo/vmem.h>
+#include <hexo/mmu.h>
 
 /** cpu specific context structure */
 struct cpu_context_s;
@@ -46,8 +46,8 @@ struct context_s
   /* current stack pointer value */
   reg_t			*stack_ptr;
 
-#ifdef CONFIG_HEXO_VMEM
-  struct vmem_context_s	*vmem;
+#ifdef CONFIG_HEXO_MMU
+  struct mmu_context_s	*mmu;
 #endif
 };
 
@@ -116,8 +116,8 @@ static inline void context_switch_to(struct context_s *context)
     cpu_trap();
 #endif
 
-#ifdef CONFIG_HEXO_VMEM
-  vmem_context_switch_to(context->vmem);
+#ifdef CONFIG_HEXO_MMU
+  mmu_context_switch_to(context->mmu);
 #endif
 
   cpu_context_switch(cur, context);
@@ -128,8 +128,8 @@ static inline void
 __attribute__((noreturn))
 context_jump_to(struct context_s *context)
 {
-#ifdef CONFIG_HEXO_VMEM
-  vmem_context_switch_to(context->vmem);
+#ifdef CONFIG_HEXO_MMU
+  mmu_context_switch_to(context->mmu);
 #endif
   cpu_context_jumpto(context);
 }

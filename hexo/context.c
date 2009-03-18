@@ -62,8 +62,8 @@ context_init(struct context_s *context,
       return res;
     }
 
-#ifdef CONFIG_HEXO_VMEM
-  context->vmem = vmem_get_kernel_context();
+#ifdef CONFIG_HEXO_MMU
+  context->mmu = mmu_get_kernel_context();
 #endif
 
   return 0;

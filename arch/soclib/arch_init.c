@@ -27,10 +27,16 @@
 #include <hexo/cpu.h>
 #include <hexo/alloc.h>
 #include <mutek/scheduler.h>
+#include <mutek/vmem_palloc.h>
+#include <mutek/vmem_kalloc.h>
 
 #ifdef CONFIG_ARCH_SOCLIB_RAMLOCK
 extern __ldscript_symbol_t __ramlock_base_start;
 uintptr_t __ramlock_base = (uintptr_t)&__ramlock_base_start;
+#endif
+
+#ifdef CONFIG_HEXO_MMU
+extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
 #endif
 
 #ifdef CONFIG_SMP
@@ -54,13 +60,33 @@ void arch_init()
 
 #endif
 
-      mem_init();
-
       /* configure system wide cpu data */
       cpu_global_init();
 
+      mem_init();
+
+#ifdef CONFIG_HEXO_MMU
+	uint32_t t0=(uint32_t)(&__system_uncached_heap_start);//FIXME: pile?
+	uint32_t t1=(uint32_t)(&__system_uncached_heap_end);
+#ifdef CONFIG_SMP
+	t0+=0x20000;//pas touche a l'espace deja alloué pour la region system et la region cpu
+	t1-=0x4000;//pas touche au pile des proc
+#else
+	t0+=0x10000;//pas touche a l'espace deja alloué pour la region system
+	t1-=0x1000;//pas touche a la pile du proc
+#endif
+	
+	mmu_ppage_region_init(t0, t1); 
+	mmu_global_init(vmem_vpage_kalloc, vmem_ppage_alloc);
+
+#endif
+
       /* configure first CPU */
       cpu_init();
+
+#ifdef CONFIG_HEXO_MMU
+      mmu_cpu_init();
+#endif
 
 #ifdef CONFIG_SMP
       /* send reset/init signal to other CPUs */
@@ -86,7 +112,10 @@ void arch_init()
 
       /* configure other CPUs */
       lock_spin(&cpu_init_lock);
-
+      
+#ifdef CONFIG_HEXO_MMU
+      mmu_cpu_init();
+#endif      
       cpu_init();
 
       lock_release(&cpu_init_lock);

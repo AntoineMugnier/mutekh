@@ -56,6 +56,14 @@ SECTIONS
 			*(.contextdata*)
 		}
 
+	__segment_excep_start =  LOADADDR(.excep);
+	__segment_excep_end =  LOADADDR(.excep) + SIZEOF(.excep);
+
+	__segment_text_start =  LOADADDR(.text);
+	__segment_text_end =  LOADADDR(.text) + SIZEOF(.text);
+
+	__segment_data_uncached_start = dsx_segment_data_uncached_start;
+
 	__context_data_start = LOADADDR(.contextdata);
 	__context_data_end = LOADADDR(.contextdata) + SIZEOF(.contextdata);
 

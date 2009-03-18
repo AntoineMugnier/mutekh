@@ -19,35 +19,34 @@
 
 */
 
-#if !defined(VMEM_H_) || defined(CPU_X86_VMEM_H_)
+#if !defined(MMU_H_) || defined(CPU_X86_MMU_H_)
 #error This file can not be included directly
 #else
 
-#define CPU_X86_VMEM_H_
+#define CPU_X86_MMU_H_
 
 #include <hexo/types.h>
 
-#define VMEM_X86_PAGESIZE 0x1000
-#define VMEM_USERLIMIT_PDE (CONFIG_HEXO_VMEM_START >> 22)
-#define VMEM_INITIAL_PDE (CONFIG_HEXO_VMEM_INITIAL >> 22)
+#define MMU_USERLIMIT_PDE (CONFIG_HEXO_MMU_USER_START >> 22)
+#define MMU_INITIAL_PDE (CONFIG_HEXO_MMU_INITIAL >> 22)
 
-#define VMEM_KERNEL_START_PDE 0
-#define VMEM_KERNEL_END_PDE (VMEM_USERLIMIT_PDE - 1)
+#define MMU_KERNEL_START_PDE 0
+#define MMU_KERNEL_END_PDE (MMU_USERLIMIT_PDE - 1)
 
-#define VMEM_KERNEL_START_ADDR (VMEM_KERNEL_START_PDE * 0x400000)
-#define VMEM_KERNEL_END_ADDR (VMEM_KERNEL_END_PDE * 0x400000)
+#define MMU_KERNEL_START_ADDR (MMU_KERNEL_START_PDE * 0x400000)
+#define MMU_KERNEL_END_ADDR (MMU_KERNEL_END_PDE * 0x400000)
 
-#define VMEM_USER_START_PDE ((uintptr_t)VMEM_USERLIMIT_PDE)
-#define VMEM_USER_END_PDE 1022
+#define MMU_USER_START_PDE ((uintptr_t)MMU_USERLIMIT_PDE)
+#define MMU_USER_END_PDE 1022
 
-#define VMEM_USER_START_ADDR (VMEM_USER_START_PDE * 0x400000)
-#define VMEM_USER_END_ADDR 0xffbfffff
+#define MMU_USER_START_ADDR (MMU_USER_START_PDE * 0x400000)
+#define MMU_USER_END_ADDR 0xffbfffff
 
-#define VMEM_MIRROR_PDE 1023
-#define VMEM_MIRROR_ADDR 0xffc00000
+#define MMU_MIRROR_PDE 1023
+#define MMU_MIRROR_ADDR 0xffc00000
 
 
-#define VMEM_X86_ALIGN __attribute__ ((aligned (4096)))
+#define MMU_X86_ALIGN __attribute__ ((aligned (CONFIG_HEXO_MMU_PAGESIZE)))
 
 /* page table in directory */
 
@@ -115,17 +114,16 @@ union cpu_x86_page_entry_s
 
 typedef union cpu_x86_page_entry_s cpu_x86_page_entry_t;
 
-struct vmem_context_s
+struct mmu_context_s
 {
   cpu_x86_page_entry_t	*pagedir; /* page directory */
   cpu_x86_page_entry_t	*mirror; /* page table mirroring page directory */
   uintptr_t		pagedir_paddr; /* page directory physical address */
   uint_fast16_t		k_count; /* kernel entries count */
-  uintptr_t		v_next;	/* next virtual page to allocate */
 };
 
 static inline void
-vmem_x86_set_pagedir(uintptr_t paddr)
+mmu_x86_set_pagedir(uintptr_t paddr)
 {
   reg_t tmp;
 
@@ -142,7 +140,7 @@ vmem_x86_set_pagedir(uintptr_t paddr)
 }
 
 static inline union cpu_x86_page_entry_s *
-vmem_x86_get_pagedir(void)
+mmu_x86_get_pagedir(void)
 {
   void *pd;
 
@@ -155,7 +153,7 @@ vmem_x86_get_pagedir(void)
 }
 
 static inline void
-vmem_x86_invalidate_page(uintptr_t vaddr)
+mmu_x86_invalidate_page(uintptr_t vaddr)
 {
   asm volatile("invlpg (%0)	\n"
 	       :

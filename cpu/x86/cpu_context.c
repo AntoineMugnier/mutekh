@@ -60,7 +60,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   /* push default flags, interrupts are disabled */
   *--context->stack_ptr = 0x00000046;	/* EFLAGS */
 
-  // FIXME VMEM
+  // FIXME MMU
 
   /* push tls segment index */
   *--context->stack_ptr = tls_seg << 3;	/* GS */

@@ -88,7 +88,7 @@ struct unix_process_s *unix_create_process(struct unix_process_s *parent)
     cpu_syscall_sethandler_ctx(&ps->ctx.context, unix_syscall_handler);
 
     /* user stack */
-    ps->stack_vaddr_start = CONFIG_UNIX_STACK_VADDR - CONFIG_HEXO_VMEM_PAGESIZE;
+    ps->stack_vaddr_start = CONFIG_UNIX_STACK_VADDR - CONFIG_HEXO_MMU_PAGESIZE;
     ps->stack_vaddr_end = CONFIG_UNIX_STACK_VADDR;
 
     vmem_vpage_set(ps->stack_vaddr_start, stack_page,

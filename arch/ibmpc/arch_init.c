@@ -25,6 +25,8 @@
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
 #include <hexo/alloc.h>
+#include <mutek/vmem_palloc.h>
+#include <mutek/vmem_kalloc.h>
 
 #include "multiboot.h"
 
@@ -58,13 +60,14 @@ void arch_init()
       cpu_global_init();
 
       mem_init();
+#ifdef CONFIG_HEXO_MMU
+      mmu_global_init(vmem_vpage_kalloc, vmem_ppage_alloc);
+#endif
 
       /* configure first CPU */
       cpu_init();
-
-#ifdef CONFIG_HEXO_VMEM
-      vmem_global_init();
-      vmem_cpu_init();
+#ifdef CONFIG_HEXO_MMU
+      mmu_cpu_init();
 #endif
 
       /* send reset/init signal to other CPUs */
@@ -93,8 +96,8 @@ void arch_init()
 
       lock_release(&cpu_init_lock);
 
-#ifdef CONFIG_HEXO_VMEM
-      vmem_cpu_init();
+#ifdef CONFIG_HEXO_MMU
+      mmu_cpu_init();
 #endif
 
       /* wait for start signal */
