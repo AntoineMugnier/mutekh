@@ -66,6 +66,7 @@ __printf_out_str(void *ctx_, const char *str, size_t offset, size_t len)
     }
 }
 
+#ifdef CONFIG_DRIVER_TTY
 static inline void
 __printf_out_tty(void *ctx, const char *str, size_t offset, size_t len)
 {
@@ -79,6 +80,7 @@ __printf_out_tty(void *ctx, const char *str, size_t offset, size_t len)
       str += res;
     }
 }
+#endif
 
 static inline size_t
 __printf_putint(char *buf, __printf_int_t val,
@@ -415,6 +417,7 @@ ssize_t snprintf(char *str, size_t size, const char *format, ...)
   return res;
 }
 
+#ifdef CONFIG_DRIVER_TTY
 inline ssize_t vprintk(const char *format, va_list ap)
 {
   return __printf_arg(0, __printf_out_tty, format, ap);
@@ -431,6 +434,15 @@ ssize_t printk(const char *format, ...)
 
   return res;
 }
+#else
+inline ssize_t vprintk(const char *format, va_list ap)
+{
+}
+
+ssize_t printk(const char *format, ...)
+{
+}
+#endif
 
 inline ssize_t vsprintf(char *str, const char *format, va_list ap)
 {
