@@ -1,0 +1,9 @@
+
+@set doc_title {MutekH API reference manual}
+@set doc_author {Alexandre Becoulet}
+@set doc_logo {logo.svg}
+@set details_in_header
+@set show_decl_location
+@set no_cxx_classes
+@set show_type_keyword
+
