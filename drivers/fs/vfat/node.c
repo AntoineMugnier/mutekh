@@ -204,8 +204,8 @@ VFS_CREATE_NODE(vfat_create_node)
  FREE_ENTRY_FOUND:
   vfat_convert_name(node->n_name,(char *)dir[entry].DIR_Name);  /* FIXME: name may be long */
 
-  endian_le16_na_store(dir[entry].DIR_FstClusHI, new_cluster >> 16);
-  endian_le16_na_store(dir[entry].DIR_FstClusLO, new_cluster & 0xFFFF);
+  endian_le16_na_store(&dir[entry].DIR_FstClusHI, new_cluster >> 16);
+  endian_le16_na_store(&dir[entry].DIR_FstClusLO, new_cluster & 0xFFFF);
   dir[entry].DIR_FileSize = 0;
   dir[entry].DIR_Attr = 0;
   if(node->n_attr & VFS_DIR)
