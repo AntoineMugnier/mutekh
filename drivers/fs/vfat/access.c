@@ -180,7 +180,7 @@ error_t vfat_query_fat(struct vfat_context_s *ctx,
     return -1;
 
   sector = buffers[0]->content;
-  next_cluster = sector[cluster_index % (sector_size /4)] & 0x0FFFFFFF;
+  next_cluster = endian_le32_na_load(sector + (cluster_index % (sector_size /4))) & 0x0FFFFFFF;
   bc_release_buffer(&bc,&freelist,&request,0);
 
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
@@ -235,10 +235,10 @@ error_t vfat_alloc_fat_entry(struct vfat_context_s *ctx,
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
       printk("alloc_fat_entry: index %d\n",index);
 #endif
-      if((buffer[index] & 0x0FFFFFFF) == 0x00000000)
+      if((endian_le32_na_load(&buffer[index]) & 0x0FFFFFFF) == 0x00000000)
       {
 	found = 1;
-	buffer[index] = 0x0FFFFFF8;
+	endian_le32_na_store(&buffer[index], 0x0FFFFFF8);
 #ifdef CONFIG_DRIVER_FS_VFAT_INSTRUMENT
     wr_count ++;
 #endif
@@ -310,7 +310,7 @@ error_t vfat_extend_cluster(struct vfat_context_s *ctx,
   val = endian_le32_na_load(&buffer[current_cluster % (sector_size/4)]) & 0x0FFFFFFF;
 
   if( val >= 0x0FFFFFF8)
-    buffer[current_cluster % (sector_size/4)]= *next_cluster;
+    endian_le32_na_store(&buffer[current_cluster % (sector_size/4)], *next_cluster);
   else
   {
 #ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
@@ -372,7 +372,7 @@ error_t vfat_free_fat_entry(struct vfat_context_s *ctx, vfat_cluster_t start_clu
       return VFS_IO_ERR;
     
     sector = buffers[0]->content;
-    next_index = sector[current_index % (sector_size /4)] & 0x0FFFFFFF;
+    next_index = endian_le32_na_load(&sector[current_index % (sector_size /4)]) & 0x0FFFFFFF;
     sector[current_index % (sector_size /4)] = 0x00;
     SET_BUFFER(buffers[0]->state, BC_DELAYED_WRITE);
 #ifdef CONFIG_DRIVER_FS_VFAT_INSTRUMENT

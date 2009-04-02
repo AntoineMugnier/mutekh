@@ -204,8 +204,8 @@ VFS_CREATE_NODE(vfat_create_node)
  FREE_ENTRY_FOUND:
   vfat_convert_name(node->n_name,(char *)dir[entry].DIR_Name);  /* FIXME: name may be long */
 
-  dir[entry].DIR_FstClusHI = new_cluster >> 16;
-  dir[entry].DIR_FstClusLO = new_cluster & 0xFFFF;
+  endian_le16_na_store(dir[entry].DIR_FstClusHI, new_cluster >> 16);
+  endian_le16_na_store(dir[entry].DIR_FstClusLO, new_cluster & 0xFFFF);
   dir[entry].DIR_FileSize = 0;
   dir[entry].DIR_Attr = 0;
   if(node->n_attr & VFS_DIR)
@@ -324,7 +324,7 @@ VFS_WRITE_NODE(vfat_write_node)
   if(node->n_attr & VFS_ARCHIVE) dir[entry].DIR_Attr |= VFAT_ATTR_ARCHIVE;
   if(node->n_attr & VFS_RD_ONLY) dir[entry].DIR_Attr |= VFAT_ATTR_READ_ONLY;
 
-  dir[entry].DIR_FileSize = node->n_size;
+  endian_le32_na_store(&dir[entry].DIR_FileSize, node->n_size);
   SET_BUFFER(buffers[0]->state, BC_DELAYED_WRITE);
 #ifdef CONFIG_DRIVER_FS_VFAT_INSTRUMENT
     wr_count ++;
