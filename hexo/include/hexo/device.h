@@ -22,6 +22,12 @@
 #ifndef __DEVICE_H__
 #define __DEVICE_H__
 
+/**                                                                 
+ * @file                                                            
+ * @module{Hexo}                                                    
+ * @short Peripheral and device classes definitions                 
+ */                                                                 
+
 struct device_s;
 struct driver_s;
 

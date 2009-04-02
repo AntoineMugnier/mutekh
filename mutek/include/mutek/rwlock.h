@@ -22,6 +22,12 @@
 #ifndef RW_LOCK_H_
 #define RW_LOCK_H_
 
+/**
+ * @file
+ * @module{Mutek}
+ * @short General purpose read/write lock primitives
+ */
+
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/lock.h>

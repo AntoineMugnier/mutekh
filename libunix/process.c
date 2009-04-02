@@ -66,7 +66,7 @@ struct unix_process_s *unix_create_process(struct unix_process_s *parent)
     if ((ps = mem_alloc(sizeof(*ps), MEM_SCOPE_SYS)) == NULL)
 	goto err;
 
-    if (vmem_ppage_alloc(&stack_page))
+    if (ppage_alloc(&stack_page))
 	goto err_ps;
 
 #ifdef CONFIG_UNIX_DEBUG

@@ -19,6 +19,11 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Specific memory segments allocation functions
+ */
 
 #ifndef SEGMENT_H_
 #define SEGMENT_H_

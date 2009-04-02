@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Atomic memory operations primitives
+ */
+
 #ifndef ATOMIC_H_
 #define ATOMIC_H_
 

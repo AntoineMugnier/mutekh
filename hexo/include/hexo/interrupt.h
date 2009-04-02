@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Interrupts, exceptions and syscall events management
+ */
+
 #ifndef INTERRUPT_H_
 #define INTERRUPT_H_
 
@@ -38,33 +44,33 @@
 typedef CPU_INTERRUPT_HANDLER(cpu_interrupt_handler_t);
 
 /** Set hardware interrupt handler for the current cpu */
-static void inline cpu_interrupt_sethandler(cpu_interrupt_handler_t *hndl);
+static inline void cpu_interrupt_sethandler(cpu_interrupt_handler_t *hndl);
 
 /** Disable all maskable interrupts for the current cpu */
-static void inline cpu_interrupt_disable(void);
+static inline void cpu_interrupt_disable(void);
 /** Enable all maskable interrupts for the current cpu */
-static void inline cpu_interrupt_enable(void);
+static inline void cpu_interrupt_enable(void);
 /** Save interrupts enable state (may use stack) */
-static void inline cpu_interrupt_savestate(reg_t *state);
+static inline void cpu_interrupt_savestate(reg_t *state);
 /** Save interrupts enable state end disable interrupts */
-static void inline cpu_interrupt_savestate_disable(reg_t *state);
+static inline void cpu_interrupt_savestate_disable(reg_t *state);
 /** Restore interrupts enable state (may use stack) */
-static void inline cpu_interrupt_restorestate(const reg_t *state);
+static inline void cpu_interrupt_restorestate(const reg_t *state);
 /** read current interrupts state as boolean */
-static bool_t inline cpu_interrupt_getstate(void);
+static inline bool_t cpu_interrupt_getstate(void);
 /** tell whether cpu is interruptible */
-static bool_t inline cpu_is_interruptible(void);
+static inline bool_t cpu_is_interruptible(void);
 
 /** enable interrupts and give a change to pending requests to
     execute. This function must be used to avoid the "sti; cli"
     syndrome which makes interrupts execution impossible on some
     procesors. Memory is marked as clobbered by this function 
     to force global variable reload after interrupts processing. */
-static void inline cpu_interrupt_process(void);
+static inline void cpu_interrupt_process(void);
 
 /** enter interrupt wait state if supported, may return imediatly if
     unsupported */
-static void inline cpu_interrupt_wait(void);
+static inline void cpu_interrupt_wait(void);
 
 /** Save interrupts enable state end disable interrupts. This macro
     must be matched with the CPU_INTERRUPT_RESTORESTATE macro. */

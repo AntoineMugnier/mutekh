@@ -19,6 +19,11 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Standard integer types definitions
+ */
 
 #ifndef TYPES_H_
 #define TYPES_H_

@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Spinlock stuff
+ */
+
 #ifndef LOCK_H_
 #define LOCK_H_
 

@@ -8,6 +8,18 @@ the Free Software Foundation; with no Invariant Sections, no
 Front-Cover Texts, and no Back-Cover Texts.  A copy of the license is
 included in the section entitled @xref{GNU Free Documentation License}.
 
+@moduledef{Hexo}
+@short Processor and platform hardware abstraction layer
+@end group
+
+@moduledef{Mutek}
+@short Non hardware specific kernel code
+@end group
+
+@moduledef{C library}
+@short standard C library
+@end group
+
 @section PH {Table of contents}
 @insert toc
 @end section

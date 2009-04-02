@@ -22,6 +22,11 @@
 #ifndef STDLIB_H_
 #define STDLIB_H_
 
+/**
+ * @file
+ * @module{C library}
+ */
+
 #include <hexo/types.h>
 #include <hexo/cpu.h>
 
@@ -94,10 +99,10 @@ atoll(const char *nptr);
 
 /********************* misc */
 
-/** integer minimum value */
+/** Get integer minimum value */
 #define __MIN(a, b) ({ const typeof(a) __a = (a); const typeof(b) __b = (b); __b < __a ? __b : __a; })
 
-/** integer maximum value */
+/** Get integer maximum value */
 #define __MAX(a, b) ({ const typeof(a) __a = (a); const typeof(b) __b = (b); __b > __a ? __b : __a; })
 
 /******************** random */
@@ -123,7 +128,9 @@ abort(void)
 
 /******************* exit */
 
+/** standard EXIT_SUCCESS macro */
 #define EXIT_SUCCESS	0
+/** standard EXIT_FAILURE macro */
 #define EXIT_FAILURE	-1
 
 void
@@ -142,8 +149,11 @@ long int labs(long int j);
 long long int llabs(long long int j);
 #endif
 
+/** standard abs function */
 #define abs(x) ({ const typeof(x) __x = (x); __x < 0 ? -__x : __x; })
+/** standard labs function */
 #define labs abs
+/** standard llabs function */
 #define llabs abs
 
 #endif

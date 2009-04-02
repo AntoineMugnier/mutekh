@@ -19,6 +19,11 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short System initialization and statup functions
+ */
 
 #ifndef INIT_H_
 #define INIT_H_

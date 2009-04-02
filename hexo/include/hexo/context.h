@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Execution context management stuff
+ */
+
 #ifndef CONTEXT_H_
 #define CONTEXT_H_
 
@@ -33,17 +39,18 @@ struct cpu_context_s;
 /** context descriptor structure */
 struct context_s
 {
-  /* cpu specific context pointer if any */
+  /** cpu specific context pointer if any */
   struct cpu_context_s	*ccontext;
 
-  /* context local storage address */
+  /** context local storage address */
   void			*tls;
 
-  /* stack memory address range */
+  /** stack memory start address */
   void			*stack_start;
+  /** stack memory end address */
   void			*stack_end;
 
-  /* current stack pointer value */
+  /** current stack pointer value */
   reg_t			*stack_ptr;
 
 #ifdef CONFIG_HEXO_MMU

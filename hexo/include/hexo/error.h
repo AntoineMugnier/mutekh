@@ -19,6 +19,11 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Common error codes definitions
+ */
 
 #ifndef ERROR_H_
 #define ERROR_H_

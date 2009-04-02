@@ -135,12 +135,11 @@ mmu_vcache_get_pagedir(void)
   return pd;
 }
 
-static inline void//TODO: divisé en deux fonction, une pour chaque cache
+static inline void//TODO: divise en deux fonction, une pour chaque cache
 mmu_vcache_invalidate_page(uintptr_t vaddr)
 {
   cpu_mips_mtc2(vaddr,4,0);
   cpu_mips_mtc2(vaddr,5,0);
-  
 }
 
 #endif

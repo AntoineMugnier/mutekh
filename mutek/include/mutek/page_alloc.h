@@ -22,6 +22,12 @@
 #ifndef VMEM_PALLOC_H_
 #define VMEM_PALLOC_H_
 
+/**
+ * @file
+ * @module{Mutek}
+ * @short Physical pages allocator algorithms
+ */
+
 # ifndef CONFIG_VMEM_PHYS_ALLOC
 #  warning CONFIG_VMEM_PHYS_ALLOC is disabled !!!
 # else
@@ -52,25 +58,25 @@ struct vmem_page_region_s
 };
 
 /** Init a physical pages memory allocator region. */
-error_t vmem_ppage_region_init(struct vmem_page_region_s *r, uintptr_t paddr, uintptr_t paddr_end);
+error_t ppage_region_init(struct vmem_page_region_s *r, uintptr_t paddr, uintptr_t paddr_end);
 
 /** Destroy a physical pages memory allocator region. */
-void vmem_ppage_region_destroy(struct vmem_page_region_s *r);
+void ppage_region_destroy(struct vmem_page_region_s *r);
 
 /** Check if a physical address is in region range. */
-bool_t vmem_ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr);
+bool_t ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr);
 
 /** Allocate a free physical page in region and set paddr value. */
-error_t vmem_ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr);
+error_t ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr);
 
 /** Try to reserve all pages in pysical address range. All pages must be free. */
-error_t vmem_ppage_reserve(struct vmem_page_region_s *r, uintptr_t paddr, uintptr_t paddr_end);
+error_t ppage_reserve(struct vmem_page_region_s *r, uintptr_t paddr, uintptr_t paddr_end);
 
 /** Get a new reference to an already allocated physical page. */
-uintptr_t vmem_ppage_refnew(struct vmem_page_region_s *r, uintptr_t paddr);
+uintptr_t ppage_refnew(struct vmem_page_region_s *r, uintptr_t paddr);
 
 /** Drop a reference to an allocated physical page, page is marked as free if counter reach 0. */
-void vmem_ppage_refdrop(struct vmem_page_region_s *r, uintptr_t paddr);
+void ppage_refdrop(struct vmem_page_region_s *r, uintptr_t paddr);
 
 # endif
 

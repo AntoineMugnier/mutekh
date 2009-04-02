@@ -22,6 +22,11 @@
 #ifndef STDIO_H_
 #define STDIO_H_
 
+/**
+ * @file
+ * @module{C library}
+ */
+
 #include <hexo/types.h>
 #include <hexo/error.h>
 
@@ -64,10 +69,12 @@ ssize_t vsscanf(const char *str, const char *format, va_list ap);
 
 #ifdef CONFIG_LIBC_STREAM
 
+/** standard BUFSIZ macro */
 #define BUFSIZ		CONFIG_LIBC_STREAM_BUFFER_SIZE
 
 CONTAINER_TYPE(stream_fifo, RING, uint8_t, CONFIG_LIBC_STREAM_BUFFER_SIZE);
 
+/** standard EOF macro */
 # define EOF			-1
 
 typedef int32_t			fpos_t;

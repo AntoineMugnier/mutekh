@@ -22,6 +22,11 @@
 #ifndef UNISTD_H_
 #define UNISTD_H_
 
+/**
+ * @file
+ * @module{C library}
+ */
+
 #include <unistd.h>
 
 #endif

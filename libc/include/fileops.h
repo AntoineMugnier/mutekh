@@ -22,12 +22,21 @@
 #ifndef FILEOPS_H_
 #define FILEOPS_H_
 
+/**
+ * @file
+ * @module{C library}
+ */
+
 #include <hexo/types.h>
 #include <hexo/error.h>
 
+/** File operations read function prototype */
 #define FILEOPS_READ(n)  ssize_t (n) (void *file, uint8_t *buffer, size_t count)
+/** File operations write function prototype */
 #define FILEOPS_WRITE(n) ssize_t (n) (void *file, const uint8_t *buffer, size_t count)
+/** File operations lseek function prototype */
 #define FILEOPS_LSEEK(n) error_t (n) (void *file, size_t offset, enum seek_whence_e whence)
+/** File operations close function prototype */
 #define FILEOPS_CLOSE(n) error_t (n) (void *file)
 
 typedef FILEOPS_READ(fileops_read_t);

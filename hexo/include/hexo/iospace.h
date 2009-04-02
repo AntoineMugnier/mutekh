@@ -19,11 +19,10 @@
 
 */
 
-
 /**
-   @file
-
-   CPU dependant IO spaces access functions.
+ * @file
+ * @module{Hexo}
+ * @short Io and memory address spaces functions access
  */
 
 #ifndef IOSPACE_H_

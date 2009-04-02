@@ -22,7 +22,18 @@
 #ifndef LIMITS_H_
 #define LIMITS_H_
 
+/**
+ * @file
+ * @module{C library}
+ */
+
 #include <hexo/types.h>
+
+/**
+ * @multiple
+ * @showcontent
+ * This macro defines an integer type limit
+ */
 
 /* char type */
 

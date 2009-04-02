@@ -22,6 +22,12 @@
 #ifndef TIMER_H_
 #define TIMER_H_
 
+/**
+ * @file
+ * @module{Mutek}
+ * @short Kernel timer API
+ */
+
 #include <hexo/types.h>
 #include <hexo/error.h>
 

@@ -22,6 +22,12 @@
 #ifndef MUTEK_SCHEDULER_H_
 #define MUTEK_SCHEDULER_H_
 
+/**
+ * @file
+ * @module{Mutek}
+ * @short Kernel execution context scheduler
+ */
+
 #ifndef CONFIG_MUTEK_SCHEDULER
 # warning hexo scheduler is not enabled in configuration file
 #else
@@ -39,13 +45,12 @@ struct sched_context_s;
 /** scheduler context candidate checking function type */
 typedef SCHED_CANDIDATE_FCN(sched_candidate_fcn_t);
 
-
 #define CONTAINER_LOCK_sched_queue HEXO_SPIN
 
-CONTAINER_TYPE(sched_queue, DLIST, struct sched_context_s
+CONTAINER_TYPE	     (sched_queue, DLIST, struct sched_context_s
 {
   struct context_s	context;
-  sched_queue_entry_t	list_entry;
+  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
   void			*private;
 
 #ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY

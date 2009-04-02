@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Memory allocation stuff
+ */
+
 #ifndef ALLOC_H_
 #define ALLOC_H_
 

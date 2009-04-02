@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Memory Management Unit and memory contexts stuff
+ */
+
 #ifndef MMU_H_
 #define MMU_H_
 
@@ -60,10 +66,20 @@ static inline struct mmu_context_s * mmu_context_get(void)
 }
 
 #define MMU_VPAGE_ALLOCATOR(n) void    *(n)(size_t)
-#define MMU_PPAGE_ALLOCATOR(n) error_t *(n)(uintptr_t *paddr)
+#define MMU_PPAGE_ALLOCATOR(n) error_t (n)(struct vmem_page_region_s *r, uintptr_t *paddr)
+#define MMU_PPAGE_TO_REGION(n) struct vmem_page_region_s *(n)(uintptr_t paddr)
 
 typedef MMU_VPAGE_ALLOCATOR(mmu_vpage_allocator_t);
 typedef MMU_PPAGE_ALLOCATOR(mmu_ppage_allocator_t);
+typedef MMU_PPAGE_TO_REGION(mmu_ppage_to_region_t);
+
+struct mmu_vmem_ops_s
+{
+  void    *(kpage_alloc)(size_t);
+  mmu_vpage_allocator_t *vpage_alloc;
+  mmu_ppage_allocator_t *ppage_alloc;
+  mmu_ppage_to_region_t *ppage_region;
+};
 
 /* initialize virtual memory strucutres */
 void mmu_global_init(mmu_vpage_allocator_t *va, mmu_ppage_allocator_t *pa);

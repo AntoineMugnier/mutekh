@@ -18,6 +18,13 @@
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @internal
+ * @short Hexo specific platform definition for GPCT
+ */
+
 #ifndef __GPCT_PLATFORM_HEXO_H__
 #define __GPCT_PLATFORM_HEXO_H__
 

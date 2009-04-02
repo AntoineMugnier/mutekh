@@ -18,6 +18,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Integer values byte-swaping and endian stuff
+ */
+
 #ifndef __ENDIAN_H_
 #define __ENDIAN_H_
 

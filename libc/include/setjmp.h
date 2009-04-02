@@ -23,6 +23,11 @@
 #ifndef SETJMP_H_
 #define SETJMP_H_
 
+/**
+ * @file
+ * @module{C library}
+ */
+
 #include <hexo/cpu.h>
 #include <hexo/types.h>
 

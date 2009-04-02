@@ -19,6 +19,13 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @internal
+ * @short Hexo specific platform definition for GPCT
+ */
+
 #ifndef __TEMPLATE_LOCK_HEXO_H_
 #define __TEMPLATE_LOCK_HEXO_H_
 

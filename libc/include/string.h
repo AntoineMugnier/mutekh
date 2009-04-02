@@ -24,6 +24,11 @@
 #ifndef STRING_H_
 #define STRING_H_
 
+/**
+ * @file
+ * @module{C library}
+ */
+
 #include <hexo/types.h>
 #include <hexo/error.h>
 

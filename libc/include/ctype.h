@@ -24,6 +24,11 @@
 #ifndef CTYPE_H_
 #define CTYPE_H_
 
+/**
+ * @file
+ * @module{C library}
+ */
+
 #include <hexo/types.h>
 
 static inline bool_t

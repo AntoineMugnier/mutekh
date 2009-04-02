@@ -22,6 +22,11 @@
 #ifndef __ASSERT_H_
 #define __ASSERT_H_
 
+/**
+ * @file
+ * @module{C library}
+ */
+
 #include <hexo/types.h>
 #include <hexo/cpu.h>
 
@@ -37,8 +42,10 @@ __assert_fail(const char *file,
 			  const char *func,
 			  const char *expr);
 
+/** standard assert macro */
 # define assert(expr) ((void) ((expr) ? 0 : __assert_fail(__FILE__, __LINE__, __func__, #expr)))
 #else
+/** standard assert macro */
 # define assert(expr) ((void) 0)
 #endif
 

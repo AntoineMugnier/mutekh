@@ -22,9 +22,15 @@
 #ifndef VMEM_KALLOC_H_
 #define VMEM_KALLOC_H_
 
+/**
+ * @file
+ * @module{Mutek}
+ * @short Virtual memory kernel land page allocator API
+ */
+
 #include <hexo/types.h>
 #include <hexo/mmu.h>
-#include <mutek/vmem_palloc.h>
+#include <mutek/page_alloc.h>
 
 # ifndef CONFIG_VMEM_KERNEL_ALLOC
 #  warning CONFIG_VMEM_KERNEL_ALLOC is disabled !!!

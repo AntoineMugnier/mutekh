@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Startup and misc cpu related functions
+ */
+
 #ifndef __CPU_H_
 #define __CPU_H_
 

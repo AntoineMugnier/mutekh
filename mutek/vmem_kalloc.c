@@ -3,7 +3,7 @@
 #include <hexo/mmu.h>
 #include <hexo/endian.h>
 #include <mutek/vmem_kalloc.h>
-#include <mutek/vmem_palloc.h>
+#include <mutek/page_alloc.h>
 
 static uintptr_t next_v_page = CONFIG_HEXO_MMU_INITIAL_END;
 
@@ -18,12 +18,12 @@ void * vmem_vpage_kalloc(size_t count)
   next_v_page += CONFIG_HEXO_MMU_PAGESIZE;
 
   /* allocate a new physical page for page table */
-  if (vmem_ppage_alloc(&paddr))
+  if (ppage_alloc(&paddr))
     return NULL;
 
   if (mmu_vpage_set(vaddr, paddr, MMU_PAGE_ATTR_RWX | MMU_PAGE_ATTR_PRESENT))
     {
-      vmem_ppage_refdrop(paddr);
+      ppage_refdrop(paddr);
       return NULL;
     }
 
@@ -36,7 +36,7 @@ void vmem_vpage_kfree(void *vaddr, size_t count)
 
   assert(count == 1); 		/* FIXME !!! */
 
-  vmem_ppage_refdrop(paddr);
+  ppage_refdrop(paddr);
 }
 
 uintptr_t vmem_vpage_io_map(uintptr_t paddr, size_t size)

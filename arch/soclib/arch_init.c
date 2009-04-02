@@ -27,7 +27,7 @@
 #include <hexo/cpu.h>
 #include <hexo/alloc.h>
 #include <mutek/scheduler.h>
-#include <mutek/vmem_palloc.h>
+#include <mutek/page_alloc.h>
 #include <mutek/vmem_kalloc.h>
 
 #ifdef CONFIG_ARCH_SOCLIB_RAMLOCK
@@ -77,7 +77,7 @@ void arch_init()
 #endif
 	
 	mmu_ppage_region_init(t0, t1); 
-	mmu_global_init(vmem_vpage_kalloc, vmem_ppage_alloc);
+	mmu_global_init(vmem_vpage_kalloc, ppage_alloc);
 
 #endif
 

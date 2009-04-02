@@ -1,5 +1,5 @@
 
-#include <mutek/vmem_palloc.h>
+#include <mutek/page_alloc.h>
 
 #include <hexo/endian.h>
 #include <hexo/alloc.h>
@@ -11,7 +11,7 @@
 #define VMEM_PPAGE_VALUE(x) ((x) & 0x7fffffff)
 #define VMEM_PPAGE_SET(isfree, value) ((isfree << 31) | (value))
 
-error_t vmem_ppage_region_init(struct vmem_page_region_s *r,
+error_t ppage_region_init(struct vmem_page_region_s *r,
 			       uintptr_t paddr, uintptr_t paddr_end)
 {
   uint_fast32_t i;
@@ -47,13 +47,13 @@ error_t vmem_ppage_region_init(struct vmem_page_region_s *r,
 }
 
 
-void vmem_ppage_region_destroy(struct vmem_page_region_s *r)
+void ppage_region_destroy(struct vmem_page_region_s *r)
 {
   mem_free(r->table);
   lock_destroy(&r->lock);  
 }
 
-error_t vmem_ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr)
+error_t ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr)
 {
   uint_fast32_t *t;
   error_t res = -ENOMEM;
@@ -77,7 +77,7 @@ error_t vmem_ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr)
   return res;
 }
 
-bool_t vmem_ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr)
+bool_t ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr)
 {
   assert(paddr % CONFIG_HEXO_MMU_PAGESIZE == 0);
 
@@ -85,7 +85,7 @@ bool_t vmem_ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr)
 	  (paddr < r->paddr + r->count * CONFIG_HEXO_MMU_PAGESIZE));
 }
 
-error_t vmem_ppage_reserve(struct vmem_page_region_s *r,
+error_t ppage_reserve(struct vmem_page_region_s *r,
 			   uintptr_t paddr, uintptr_t paddr_end)
 {
   uint_fast32_t i, p;
@@ -141,14 +141,14 @@ error_t vmem_ppage_reserve(struct vmem_page_region_s *r,
   return res;
 }
 
-uintptr_t vmem_ppage_refnew(struct vmem_page_region_s *r, uintptr_t paddr)
+uintptr_t ppage_refnew(struct vmem_page_region_s *r, uintptr_t paddr)
 {
   uint_fast32_t *t;
   uint_fast32_t p;
 
   LOCK_SPIN_IRQ(&r->lock);
 
-  assert(vmem_ppage_inrange(paddr));
+  assert(ppage_inrange(paddr));
 
   p = (paddr - r->paddr) / CONFIG_HEXO_MMU_PAGESIZE;
   assert(p < r->count);
@@ -161,14 +161,14 @@ uintptr_t vmem_ppage_refnew(struct vmem_page_region_s *r, uintptr_t paddr)
   return paddr;
 }
 
-void vmem_ppage_refdrop(struct vmem_page_region_s *r, uintptr_t paddr)
+void ppage_refdrop(struct vmem_page_region_s *r, uintptr_t paddr)
 {
   uint_fast32_t *t;
   uint_fast32_t p;
 
   LOCK_SPIN_IRQ(&r->lock);
 
-  assert(vmem_ppage_inrange(paddr));
+  assert(ppage_inrange(paddr));
 
   p = (paddr - r->paddr) / CONFIG_HEXO_MMU_PAGESIZE;
   assert(p < r->count);

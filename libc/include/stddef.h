@@ -22,11 +22,18 @@
 #ifndef STDDEF_H_
 #define STDDEF_H_
 
+/**
+ * @file
+ * @module{C library}
+ */
+
 #include <hexo/types.h>
 
 #if (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 5))
+/** standard @tt offsetof macro */
 # define offsetof(t, f)	__builtin_offsetof(t, f)
 #else
+/** standard @tt offsetof macro */
 # define offsetof(t, f) ((size_t) &((t*)0)->f)
 #endif
 

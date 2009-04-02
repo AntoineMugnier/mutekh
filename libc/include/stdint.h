@@ -22,7 +22,18 @@
 #ifndef STDINT_H_
 #define STDINT_H_
 
+/**
+ * @file
+ * @module{C library}
+ */
+
 #include <hexo/types.h>
+
+/**
+ * @multiple
+ * @showcontent
+ * This macro defines an integer type limit
+ */
 
 #define INT8_MIN		__MINOF_TYPE(int8_t)
 #define INT16_MIN		__MINOF_TYPE(int16_t)

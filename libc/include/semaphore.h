@@ -22,19 +22,26 @@
 #ifndef SEMAPHORE_H_
 #define SEMAPHORE_H_
 
+/**
+ * @file
+ * @module{C library}
+ */
+
 #include <mutek/scheduler.h>
 
 typedef uint_fast8_t			__sem_count_t;
 
 /** mutex object structure */
-typedef struct				__sem_s
+struct				__sem_s
 {
   /** sem counter */
   __sem_count_t			count;
 
   /** blocked threads wait queue */
-  sched_queue_root_t			wait;
-}					sem_t;
+  sched_queue_root_t		wait;
+};
+
+typedef struct	__sem_s sem_t;
 
 error_t
 sem_init(sem_t *sem, bool_t pshared, __sem_count_t value);

@@ -19,6 +19,11 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Processor local and context local, language global variables features
+ */
 
 #ifndef LOCAL_H_
 #define LOCAL_H_
@@ -32,6 +37,10 @@
 #ifdef CONFIG_SMP
 
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
+
+# ifndef CPU_LOCAL
+#  define CPU_LOCAL
+# endif
 
 # ifndef CPU_LOCAL_SET
 #  define CPU_LOCAL_SET(n, v) { *CPU_LOCAL_ADDR(n) = (v); }
@@ -75,6 +84,10 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
 
 /************************************************************************/
+
+# ifndef CONTEXT_LOCAL
+#  define CONTEXT_LOCAL
+# endif
 
 /** context local storage variable assignement */
 #ifndef CONTEXT_LOCAL_SET
