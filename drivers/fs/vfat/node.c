@@ -205,7 +205,7 @@ VFS_CREATE_NODE(vfat_create_node)
   vfat_convert_name(node->n_name,(char *)dir[entry].DIR_Name);  /* FIXME: name may be long */
 
   dir[entry].DIR_FstClusHI = endian_le16(new_cluster >> 16);
-  endian_le16_na_store(&dir[entry].DIR_FstClusLO, new_cluster & 0xFFFF);
+  dir[entry].DIR_FstClusLO = endian_le16(new_cluster & 0xFFFF);
   dir[entry].DIR_FileSize = 0;
   dir[entry].DIR_Attr = 0;
   if(node->n_attr & VFS_DIR)
@@ -282,7 +282,7 @@ VFS_LOOKUP_NODE(vfat_lookup_node)
   node_info->flags = dir.DIR_Attr;
   node_info->parent_cluster = parent_info->node_cluster;
   node_info->node_cluster = endian_le16(dir.DIR_FstClusHI) << 16;
-  node_info->node_cluster |= (0x0000FFFF & endian_le16_na_load(&dir.DIR_FstClusLO));
+  node_info->node_cluster |= (0x0000FFFF & endian_le16(dir.DIR_FstClusLO));
   node_info->entry_sector = entry_sector;
   node_info->entry_index = entry_index;
   if((!node_info->node_cluster) && (node->n_attr & VFS_SYS) && (node->n_attr & VFS_RD_ONLY))
