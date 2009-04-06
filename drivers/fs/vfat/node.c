@@ -204,7 +204,7 @@ VFS_CREATE_NODE(vfat_create_node)
  FREE_ENTRY_FOUND:
   vfat_convert_name(node->n_name,(char *)dir[entry].DIR_Name);  /* FIXME: name may be long */
 
-  endian_le16_na_store(&dir[entry].DIR_FstClusHI, new_cluster >> 16);
+  dir[entry].DIR_FstClusHI = endian_le16(new_cluster >> 16);
   endian_le16_na_store(&dir[entry].DIR_FstClusLO, new_cluster & 0xFFFF);
   dir[entry].DIR_FileSize = 0;
   dir[entry].DIR_Attr = 0;
@@ -273,7 +273,7 @@ VFS_LOOKUP_NODE(vfat_lookup_node)
   if(dir.DIR_Attr & VFAT_ATTR_DIRECTORY)
     node->n_attr |= VFS_DIR;
   else
-    node->n_size = endian_le32_na_load(&dir.DIR_FileSize);
+    node->n_size = endian_le32(dir.DIR_FileSize);
 
   if(dir.DIR_Attr & VFAT_ATTR_SYSTEM)    node->n_attr |= VFS_SYS;
   if(dir.DIR_Attr & VFAT_ATTR_ARCHIVE)   node->n_attr |= VFS_ARCHIVE;
@@ -281,7 +281,7 @@ VFS_LOOKUP_NODE(vfat_lookup_node)
   node->n_links = 1;
   node_info->flags = dir.DIR_Attr;
   node_info->parent_cluster = parent_info->node_cluster;
-  node_info->node_cluster = endian_le16_na_load(&dir.DIR_FstClusHI) << 16;
+  node_info->node_cluster = endian_le16(dir.DIR_FstClusHI) << 16;
   node_info->node_cluster |= (0x0000FFFF & endian_le16_na_load(&dir.DIR_FstClusLO));
   node_info->entry_sector = entry_sector;
   node_info->entry_index = entry_index;
@@ -324,7 +324,7 @@ VFS_WRITE_NODE(vfat_write_node)
   if(node->n_attr & VFS_ARCHIVE) dir[entry].DIR_Attr |= VFAT_ATTR_ARCHIVE;
   if(node->n_attr & VFS_RD_ONLY) dir[entry].DIR_Attr |= VFAT_ATTR_READ_ONLY;
 
-  endian_le32_na_store(&dir[entry].DIR_FileSize, node->n_size);
+  dir[entry].DIR_FileSize = endian_le32(node->n_size);
   SET_BUFFER(buffers[0]->state, BC_DELAYED_WRITE);
 #ifdef CONFIG_DRIVER_FS_VFAT_INSTRUMENT
     wr_count ++;
