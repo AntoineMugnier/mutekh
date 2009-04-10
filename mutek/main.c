@@ -105,6 +105,10 @@ extern const uint8_t mutek_logo_320x200[320*200];
 struct device_s icu_dev;
 #endif
 
+#if defined(CONFIG_DRIVER_BLOCK)
+struct device_s bd_dev;
+#endif
+
 #if defined(CONFIG_DRIVER_TIMER)
 DEVTIMER_CALLBACK(timer_callback)
 {
@@ -208,6 +212,19 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   tty_dev = &tty_con_dev;
 # elif defined(CONFIG_DRIVER_UART)
   tty_dev = &uart_dev;
+# endif
+#endif
+
+  /********* Block device init ************************* */
+#if defined(CONFIG_DRIVER_BLOCK)
+# if defined(CONFIG_DRIVER_BLOCK_SOCLIB)
+  device_init(&bd_dev);
+  bd_dev.addr[0] = DSX_SEGMENT_BD_ADDR;
+  bd_dev.irq = 2; // 0 is timer and 1 is tty
+  block_soclib_init(&bd_dev, &icu_dev, NULL);
+  DEV_ICU_BIND(&icu_dev, &bd_dev);
+# else
+#  warning CONFIG_DRIVER_BLOCK case not handled in mutek_main()
 # endif
 #endif
 
