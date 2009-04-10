@@ -46,8 +46,6 @@
 #include <drivers/device/enum/isapnp/enum-isapnp.h>
 #include <drivers/device/net/ne2000/net-ne2000.h>
 #include <drivers/device/net/3c900/net-3c900.h>
-#include <cpu/68hcs12/drivers/icu-mc9s12ne64/icu-mc9s12ne64.h>
-#include <cpu/68hcs12/drivers/uart-mc9s12ne64/uart-mc9s12ne64.h>
 
 #include <hexo/device.h>
 #include <device/driver.h>
@@ -146,9 +144,6 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # elif defined(CONFIG_DRIVER_ICU_SOCLIB)
   icu_dev.addr[ICU_ADDR_MASTER] = DSX_SEGMENT_ICU_ADDR;
   icu_soclib_init(&icu_dev, NULL, NULL);
-# elif defined(CONFIG_DRIVER_ICU_MC9S12NE64)
-  icu_mc9s12ne64_init(&icu_dev, NULL, NULL);
-# else
 #  warning CONFIG_DRIVER_ICU case not handled in mutek_main()
 # endif
 #endif
@@ -164,10 +159,6 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   uart_dev.irq = 4;
   uart_8250_init(&uart_dev, &icu_dev, NULL);
   DEV_ICU_BIND(&icu_dev, &uart_dev);
-# elif defined(CONFIG_DRIVER_CHAR_MC9S12NE64)
-  uart_dev.irq = 20;
-  uart_mc9s12ne64_init(&uart_dev, &icu_dev, NULL);
-  //  DEV_ICU_BIND(&icu_dev, &uart_dev);
 # else
 #  warning CONFIG_DRIVER_UART case not handled in mutek_main()
 # endif
