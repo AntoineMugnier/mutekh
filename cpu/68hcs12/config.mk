@@ -1,5 +1,0 @@
-
-CPUCFLAGS=-m68hcs12 -mshort
-CPUTOOLS=m6811-elf-
-ARCHLDFLAGS=
-CPUASFLAGS=-m68hcs12 -mshort
