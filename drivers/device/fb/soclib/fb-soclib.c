@@ -57,24 +57,24 @@ DEVFB_SETMODE(fb_soclib_setmode)
 
 DEVFB_FLIPPAGE(fb_soclib_flippage)
 {
-  uint8_t *flip = dev->addr[0] + 320*200 + 256*3;
-
-  *flip = 0;
-
-  return 0;
+	uint8_t *flip = (uintptr_t)(dev->addr[0]) + 320*200 + 256*3;
+        
+	*flip = 0;
+  
+	return 0;
 }
 
 DEVFB_SETPALETTE(fb_soclib_setpalette)
 {
   uint_fast16_t	i;
-  uint8_t *palette = dev->addr[0] + 320*200;
+  uint8_t *palette = (uintptr_t)(dev->addr[0]) + 320*200;
 
   for (i = 0; i < __MIN(256, count); i++)
     {
       /* setup each channel */
-      cpu_mem_write_8(palette[i*3], pal[i].r);
-      cpu_mem_write_8(palette[i*3+1], pal[i].g);
-      cpu_mem_write_8(palette[i*3+2], pal[i].b);
+		palette[i*3] = pal[i].r<<2;
+		palette[i*3+1] = pal[i].g<<2;
+		palette[i*3+2] = pal[i].b<<2;
     }
 }
 
