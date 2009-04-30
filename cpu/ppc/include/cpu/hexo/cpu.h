@@ -32,6 +32,17 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	32
 
+#define CPU_FAULT_COUNT 6
+
+#define CPU_FAULT_NAMES {       \
+"Unknown",                      \
+"Program",                      \
+"Alignment",                    \
+"Machine check",                \
+"Data storage",                 \
+"Instruction storage",          \
+}
+
 static inline cpu_id_t
 cpu_id(void)
 {

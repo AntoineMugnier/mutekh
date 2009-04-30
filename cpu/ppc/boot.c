@@ -42,7 +42,15 @@ asm(
 
     //    "sll	$8,	$8,	10			\n"
     //    "subu	$sp,	$8,	$sp			\n"
-    "							\n"
+
+	"li    3, 0                      \n"
+	"mtmsr 3                         \n"
+
+	/* setup exception location */
+    "lis	13, _evpr_base@ha				\n"
+    "la		13, _evpr_base@l(13)				\n"
+	"mtevpr 13                              \n"
+
     /* setup global data pointer */
     "lis	13, _gp@ha				\n"
     "la		13, _gp@l(13)				\n"
@@ -54,7 +62,7 @@ asm(
     "mtctr      3					\n"
     "bctr						\n"
 
-    ".org 60						\n"
+    ".org 0x80-4						\n"
     "b		cpu_boot				\n"
     );
 

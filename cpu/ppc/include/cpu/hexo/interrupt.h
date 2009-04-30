@@ -58,10 +58,13 @@ cpu_interrupt_disable(void)
 
   asm volatile (
 		"mfmsr %0		\n\t"
-		"and %0, %0, %1		\n\t"
-		"mtmsr %0		\n\t"
 		: "=r" (tmp)
-		: "r" (~0x8000)
+	  );
+  tmp &= ~0x8000;
+  asm volatile (
+		"mtmsr %0		\n\t"
+		:
+		: "r" (tmp)
 		);
 }
 
@@ -72,9 +75,13 @@ cpu_interrupt_enable(void)
 
   asm volatile (
 		"mfmsr %0		\n\t"
-		"ori %0, %0, 0x8000	\n\t"
-		"mtmsr %0		\n\t"
 		: "=r" (tmp)
+	  );
+  tmp |= 0x8000;
+  asm volatile (
+		"mtmsr %0		\n\t"
+		:
+		: "r" (tmp)
 		);
 }
 
@@ -104,15 +111,16 @@ cpu_interrupt_savestate_disable(reg_t *state)
 {
   reg_t tmp;
 
-  __asm__ volatile (
-		    "mfmsr	%0		\n\t"
-		    "mr		%1, %0		\n\t"
-		    "and	%1, %1, %2	\n\t"
-		    "mtmsr	%1		\n\t"
-		    : "=&r" (*state)
-		    , "=&r" (tmp)
-		    : "r" (~0x8000)
-		    );
+  asm volatile (
+		"mfmsr %0		\n\t"
+		: "=r" (*state)
+	  );
+  tmp = *state & ~0x8000;
+  asm volatile (
+		"mtmsr %0		\n\t"
+		:
+		: "r" (tmp)
+		);
 }
 
 static inline void
