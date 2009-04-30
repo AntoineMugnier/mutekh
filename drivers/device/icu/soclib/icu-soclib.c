@@ -37,9 +37,9 @@ static CPU_LOCAL struct icu_soclib_private_s *icu_soclib_pv;
 DEVICU_ENABLE(icu_soclib_enable)
 {
   if (enable)
-    cpu_mem_write_32(dev->addr[0] + ICU_SOCLIB_REG_IER_SET, 1 << irq);
+	  cpu_mem_write_32(dev->addr[0] + ICU_SOCLIB_REG_IER_SET, endian_le32(1 << irq));
   else
-    cpu_mem_write_32(dev->addr[0] + ICU_SOCLIB_REG_IER_CLR, 1 << irq);
+	  cpu_mem_write_32(dev->addr[0] + ICU_SOCLIB_REG_IER_CLR, endian_le32(1 << irq));
 }
 
 DEVICU_SETHNDL(icu_soclib_sethndl)
@@ -64,7 +64,7 @@ static CPU_INTERRUPT_HANDLER(icu_soclib_cpu_handler)
   struct icu_soclib_private_s	*pv = CPU_LOCAL_GET(icu_soclib_pv);
   struct icu_soclib_handler_s	*h;
 
-  h = pv->table + cpu_mem_read_32(pv->dev->addr[0] + ICU_SOCLIB_REG_VECTOR);
+  h = pv->table + endian_le32(cpu_mem_read_32(pv->dev->addr[0] + ICU_SOCLIB_REG_VECTOR));
 
   /* call interrupt handler */
   h->hndl(h->data);
