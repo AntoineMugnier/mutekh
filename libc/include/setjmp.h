@@ -41,7 +41,7 @@ static inline reg_t
 __attribute__ ((deprecated))
 sigsetjmp(sigjmp_buf env, reg_t savesigs)
 {
-  setjmp(env);
+  return setjmp(env);
 }
 
 void longjmp(jmp_buf env, reg_t val);
