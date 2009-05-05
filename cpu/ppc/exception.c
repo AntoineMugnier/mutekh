@@ -70,7 +70,7 @@
 #else
 # define GET_HANDLER_ADDRESS(name, rd, rt)							   \
     "lis   " #rt ", " name "@ha           \n\t"						   \
-    "lwz   " #rd ", " name "(" #rt ")     \n\t"
+    "lwz   " #rd ", " name "@l(" #rt ")     \n\t"
 #endif
 
 
