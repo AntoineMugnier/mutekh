@@ -66,17 +66,12 @@ void arch_init()
       mem_init();
 
 #ifdef CONFIG_HEXO_MMU
-	uint32_t t0=(uint32_t)(&__system_uncached_heap_start);//FIXME: pile?
+	uint32_t t0=(uint32_t)(&__system_uncached_heap_start);
 	uint32_t t1=(uint32_t)(&__system_uncached_heap_end);
-#ifdef CONFIG_SMP
-	t0+=0x20000;//pas touche a l'espace deja alloué pour la region system et la region cpu
-	t1-=0x4000;//pas touche au pile des proc
-#else
-	t0+=0x10000;//pas touche a l'espace deja alloué pour la region system
-	t1-=0x1000;//pas touche a la pile du proc
-#endif
+	t0+=CONFIG_SOCLIB_VMEM_MALLOC_REGION_SIZE;
 	
-	mmu_ppage_region_init(t0, t1); 
+	
+	ppage_region_init(t0, t1); 
 	mmu_global_init(vmem_vpage_kalloc, ppage_alloc);
 
 #endif

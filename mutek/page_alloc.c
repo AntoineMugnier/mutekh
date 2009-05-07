@@ -5,8 +5,6 @@
 #include <hexo/alloc.h>
 #include <hexo/lock.h>
 
-//FIXME: add support for non contiguous memory segments
-
 #define VMEM_PPAGE_ISFREE(x) ((x) & 0x80000000)
 #define VMEM_PPAGE_VALUE(x) ((x) & 0x7fffffff)
 #define VMEM_PPAGE_SET(isfree, value) ((isfree << 31) | (value))
@@ -72,8 +70,6 @@ error_t ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr)
 
   LOCK_RELEASE_IRQ(&r->lock);  
 
-//  printf("ppage alloc %i %p\n", res, *paddr);
-
   return res;
 }
 
@@ -82,7 +78,7 @@ bool_t ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr)
   assert(paddr % CONFIG_HEXO_MMU_PAGESIZE == 0);
 
   return ((paddr >= r->paddr) &&
-	  (paddr < r->paddr + r->count * CONFIG_HEXO_MMU_PAGESIZE));
+	  (paddr < r->paddr + r->size));
 }
 
 error_t ppage_reserve(struct vmem_page_region_s *r,
@@ -131,9 +127,7 @@ error_t ppage_reserve(struct vmem_page_region_s *r,
 	    }
 	}
 
-
       r->free_count -= size;
-
       }
 
   LOCK_RELEASE_IRQ(&r->lock);  
@@ -146,18 +140,18 @@ uintptr_t ppage_refnew(struct vmem_page_region_s *r, uintptr_t paddr)
   uint_fast32_t *t;
   uint_fast32_t p;
 
-  LOCK_SPIN_IRQ(&r->lock);
+
 
   assert(ppage_inrange(paddr));
 
   p = (paddr - r->paddr) / CONFIG_HEXO_MMU_PAGESIZE;
-  assert(p < r->count);
   t = r->table + p;
-  assert(!t->is_free);
 
+  LOCK_SPIN_IRQ(&r->lock);
+  assert(!VMEM_PPAGE_ISFREE(*t));
   (*t)++;
-
-  LOCK_RELEASE_IRQ(&r->lock);  
+  LOCK_RELEASE_IRQ(&r->lock);
+  
   return paddr;
 }
 
@@ -166,13 +160,12 @@ void ppage_refdrop(struct vmem_page_region_s *r, uintptr_t paddr)
   uint_fast32_t *t;
   uint_fast32_t p;
 
-  LOCK_SPIN_IRQ(&r->lock);
-
   assert(ppage_inrange(paddr));
 
   p = (paddr - r->paddr) / CONFIG_HEXO_MMU_PAGESIZE;
-  assert(p < r->count);
   t = r->table + p;
+
+  LOCK_SPIN_IRQ(&r->lock);
   assert(!VMEM_PPAGE_ISFREE(*t));
   assert(*t > 0);
 

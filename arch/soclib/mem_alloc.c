@@ -46,17 +46,17 @@ void mem_init(void)
 #if defined(CONFIG_SMP)
 
 #ifdef CONFIG_HEXO_MMU
-  	uint32_t t = (uint32_t)(&__system_uncached_heap_start);
-	mem_alloc_region_init(&mem_region_cpu,
+  uint32_t t = (uint32_t)(&__system_uncached_heap_start);
+  mem_alloc_region_init(&mem_region_cpu,
 			(void*)t,
-			(void *)t+0x10000
+			(void *)t
 			);
-	
+  
   mem_alloc_region_init(&mem_region_system,
-			(void *)t+0x10000,
-			(void *)t+0x20000
+			(void *)t,
+			(void *)t+CONFIG_SOCLIB_VMEM_MALLOC_REGION_SIZE
 			);
-			
+  
 #else
   mem_alloc_region_init(&mem_region_cpu,
 			&__system_cached_heap_start,
@@ -75,9 +75,9 @@ void mem_init(void)
   uint32_t t = (uint32_t)(&__system_uncached_heap_start);
   mem_alloc_region_init(&mem_region_system,
 			(void*)t,
-			(void *)t+0xF000
+			(void *)t+CONFIG_SOCLIB_VMEM_MALLOC_REGION_SIZE
 			);
-	
+  
 #else
   mem_alloc_region_init(&mem_region_system,
 			&__system_cached_heap_start,
