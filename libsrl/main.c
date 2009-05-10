@@ -30,7 +30,7 @@
 #include <srl_private_types.h>
 
 #if CONFIG_SOCLIB_MEMCHECKER
-# include "soclib/mem_checker.h"
+# include "arch/mem_checker.h"
 #endif
 
 void hw_init();

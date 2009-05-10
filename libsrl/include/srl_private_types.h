@@ -34,7 +34,6 @@
 #include <hexo/context.h>
 
 #include <mwmr/mwmr.h>
-#include <soclib/tty.h>
 
 typedef struct mwmr_s srl_mwmr_s;
 typedef soclib_mwmr_status_s srl_mwmr_status_s;
@@ -117,7 +116,7 @@ typedef struct srl_abstract_task_s {
 		.stack = (void*)s,									\
 		.stack_size = ss,									\
 		.name = n,											\
-		.tty_addr = (uint32_t*)ttya+TTY_SPAN*ttyn,			\
+		.tty_addr = (uint32_t*)ttya+4*ttyn,			\
 	}
 
 #define SRL_MEMSPACE_INITIALIZER( b, s ) \
@@ -137,7 +136,7 @@ struct srl_abstract_cpudesc_s {
 	{												\
 		.ntasks = nt,								\
 		.task_list = tl,							\
-		.tty_addr = (uint32_t*)ttya+TTY_SPAN*ttyn,	\
+		.tty_addr = (uint32_t*)ttya+4*ttyn,	\
 	}
 
 typedef struct srl_abstract_appdesc_s srl_appdesc_s;
@@ -157,7 +156,7 @@ struct srl_abstract_appdesc_s {
 		.mwmr = ml,										       \
 		.task = tl,										       \
 		.start = sb,										   \
-		.tty_addr = (uint32_t*)ttya+TTY_SPAN*ttyn,			   \
+		.tty_addr = (uint32_t*)ttya+4*ttyn,			   \
 	}
 
 #endif

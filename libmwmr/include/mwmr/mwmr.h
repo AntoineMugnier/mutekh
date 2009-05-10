@@ -48,10 +48,71 @@ typedef struct {} srl_mwmr_lock_t;
 #elif defined CONFIG_MWMR_SOCLIB
 
 # ifdef CONFIG_MWMR_LOCKFREE
-#  include <soclib/mwmr_controller_lf.h>
-# else
-#  include <soclib/mwmr_controller.h>
-# endif
+
+enum SoclibMwmrRegisters {
+    MWMR_IOREG_MAX = 16,
+    MWMR_RESET = MWMR_IOREG_MAX,
+    MWMR_CONFIG_FIFO_WAY,
+    MWMR_CONFIG_FIFO_NO,
+    MWMR_CONFIG_STATUS_ADDR,
+    MWMR_CONFIG_DEPTH, // bytes
+    MWMR_CONFIG_BUFFER_ADDR,
+    MWMR_CONFIG_RUNNING,
+    MWMR_CONFIG_WIDTH, // bytes
+    MWMR_CONFIG_ENDIANNESS, // Write 0x11223344 here
+    MWMR_FIFO_FILL_STATUS,
+};
+
+enum SoclibMwmrWay {
+    MWMR_TO_COPROC,
+    MWMR_FROM_COPROC,
+};
+
+typedef struct
+{
+	uint32_t free_tail; // bytes
+	uint32_t free_head; // bytes
+	uint32_t free_size; // bytes
+
+	uint32_t data_tail; // bytes
+	uint32_t data_head; // bytes
+	uint32_t data_size; // bytes
+} soclib_mwmr_status_s;
+
+#define SOCLIB_MWMR_STATUS_INITIALIZER(w, d) {0,0,(w*d),0,0,0}
+
+# else /* not CONFIG_MWMR_LOCKFREE */
+
+enum SoclibMwmrRegisters {
+    MWMR_IOREG_MAX = 16,
+    MWMR_RESET = MWMR_IOREG_MAX,
+    MWMR_CONFIG_FIFO_WAY,
+    MWMR_CONFIG_FIFO_NO,
+    MWMR_CONFIG_STATUS_ADDR,
+    MWMR_CONFIG_DEPTH,
+    MWMR_CONFIG_BUFFER_ADDR,
+    MWMR_CONFIG_LOCK_ADDR,
+    MWMR_CONFIG_RUNNING,
+    MWMR_CONFIG_WIDTH,
+    MWMR_FIFO_FILL_STATUS,
+};
+
+enum SoclibMwmrWay {
+    MWMR_TO_COPROC,
+    MWMR_FROM_COPROC,
+};
+
+typedef struct
+{
+	uint32_t rptr;
+	uint32_t wptr;
+	uint32_t usage;
+	uint32_t lock;
+} soclib_mwmr_status_s;
+
+#define SOCLIB_MWMR_STATUS_INITIALIZER(w,d) {0,0,0,0}
+
+# endif /* CONFIG_MWMR_LOCKFREE */
 
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
 typedef volatile uint32_t srl_mwmr_lock_t;

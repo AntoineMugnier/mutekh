@@ -96,8 +96,6 @@ static struct file_s null_file =
 	.rwflush = &no_flush,
 };
 
-#include "soclib/tty.h"
-
 struct device_s *tty_dev;
 static struct tty_state _state[CONFIG_SRL_NTTY];
 
@@ -154,8 +152,6 @@ void srl_console_init_task(void *addr)
 }
 
 #else // not CONFIG_LIBC_STREAM
-
-#include "soclib/tty.h"
 
 static struct device_s device;
 struct device_s *tty_dev;
