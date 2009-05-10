@@ -2,11 +2,19 @@
 #include <hexo/error.h>
 #include <hexo/context.h>
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/mem_checker.h>
+#endif
+
 error_t
 cpu_context_bootstrap(struct context_s *context)
 {
   /* set context local storage base pointer */
   CPU_LOCAL_SET(__cpu_context_data_base, context->tls);
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  soclib_mem_check_change_id(cpu_id(), (uint32_t)&context->stack_ptr);
+#endif
 
   return 0;
 }
@@ -34,6 +42,11 @@ asm(
 error_t
 cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 {
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  soclib_mem_check_create_ctx((uint32_t)&context->stack_ptr,
+			      context->stack_start, context->stack_end);
+#endif
+
   context->stack_ptr = (reg_t*)context->stack_end - 1;
 
   /* push entry function address and param arg */

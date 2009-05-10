@@ -25,6 +25,10 @@
 
 #include <hexo/cpu.h>
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/mem_checker.h>
+#endif
+
 struct cpu_context_s
 {
 };
@@ -66,7 +70,21 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	stw	0, 0*4(1)		\n"
 		/* switch stack pointer */
 		"	stw	1, 0(%0)		\n"
+#ifdef CONFIG_SOCLIB_MEMCHECK
+			/* let memchecker know about context switch */
+		"	lis	0, (" ASM_STR(SOCLIB_MC_MAGIC_VAL) ")@h  \n"
+		"	ori 0,	0, (" ASM_STR(SOCLIB_MC_MAGIC_VAL) ")@l  \n"
+
+		"	stw	0,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
+		"	stw	%1,	" ASM_STR(SOCLIB_MC_CTX_SET) "(0) \n"
+		"	addi	0, 0,	" ASM_STR(SOCLIB_MC_CHECK_SPFP) " \n"
+		"	stw	0,	" ASM_STR(SOCLIB_MC_ENABLE) "(0) \n"
+#endif
 		"	lwz	1, 0(%1)		\n"
+#ifdef CONFIG_SOCLIB_MEMCHECK
+		"	addi 0, 0, 0                             \n"
+		"	stw	0,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
+#endif
 		/* restore status & tls */
 		"	lwz	0, 0*4(1)		\n"
 		"	mtspr	0x114, 0		\n" /* SPRG4 is tls */
@@ -105,7 +123,20 @@ __attribute__((always_inline, noreturn))
 cpu_context_jumpto(struct context_s *new)
 {
   asm volatile (
-		"	mr	1, %0			\n"
+#ifdef CONFIG_SOCLIB_MEMCHECK
+		"	lis	0, (" ASM_STR(SOCLIB_MC_MAGIC_VAL) ")@h  \n"
+		"	ori 0,	0, (" ASM_STR(SOCLIB_MC_MAGIC_VAL) ")@l  \n"
+
+		"	stw	0,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
+		"	stw	%0,	" ASM_STR(SOCLIB_MC_CTX_SET) "(0) \n"
+		"	addi	0, 0,	" ASM_STR(SOCLIB_MC_CHECK_SPFP) " \n"
+		"	stw	0,	" ASM_STR(SOCLIB_MC_ENABLE) "(0) \n"
+#endif
+		"	lwz	1, 0(%0)			\n"
+#ifdef CONFIG_SOCLIB_MEMCHECK
+		"	addi 0, 0, 0                             \n"
+		"	stw	0,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
+#endif
 		/* restore status & tls */
 		"	lwz	0, 0*4(1)		\n"
 		"	mtspr	0x114, 0		\n" /* SPRG4 is tls */
@@ -122,7 +153,8 @@ cpu_context_jumpto(struct context_s *new)
 		"	mtctr	0			\n"
 		"	bctrl				\n"
 		:
-		: "r" (new->stack_ptr)
+		: "r" (&new->stack_ptr)
+		: "r0"
 		);
   while (1);
 }

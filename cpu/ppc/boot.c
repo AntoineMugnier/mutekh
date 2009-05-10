@@ -19,6 +19,10 @@
 
 */
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/mem_checker.h>
+#endif
+
 asm(
     ".section        .boot,\"ax\",@progbits		\n"
 
@@ -40,9 +44,6 @@ asm(
     "rlwinm	3,29,12,0,19				\n"
     "sub	1,1,3					\n"
 
-    //    "sll	$8,	$8,	10			\n"
-    //    "subu	$sp,	$8,	$sp			\n"
-
 	"li    3, 0                      \n"
 	"mtmsr 3                         \n"
 
@@ -50,6 +51,26 @@ asm(
     "lis	13, _evpr_base@ha				\n"
     "la		13, _evpr_base@l(13)				\n"
 	"mtevpr 13                              \n"
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+    "addi	2,	0,	1024		\n"
+/*     "lis	0, hi(" ASM_STR(SOCLIB_MC_MAGIC_VAL) ") \n" */
+/*     "ori	0, 0, lo(" ASM_STR(SOCLIB_MC_MAGIC_VAL) ") \n" */
+	"lis	0, (" ASM_STR(SOCLIB_MC_MAGIC_VAL) ")@h  \n"
+	"ori 0,	0, (" ASM_STR(SOCLIB_MC_MAGIC_VAL) ")@l  \n"
+    "stw	0,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
+
+    "stw	2,	" ASM_STR(SOCLIB_MC_R2) "(0) \n"
+    "subf	2,	2,	1			\n"
+    "addi	2,	2,		8			\n"
+    "stw	2,	" ASM_STR(SOCLIB_MC_R1) "(0) \n"
+    "stw	29,	" ASM_STR(SOCLIB_MC_CTX_CREATE) "(0) \n"
+    "stw	29,	" ASM_STR(SOCLIB_MC_CTX_SET) "(0) \n"
+    "addi	0,	0,	" ASM_STR(SOCLIB_MC_CHECK_SPFP+SOCLIB_MC_CHECK_INIT) " \n"
+    "stw	0,	" ASM_STR(SOCLIB_MC_ENABLE) "(0) \n"
+
+    "stw	3,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
+#endif
 
     /* setup global data pointer */
     "lis	13, _gp@ha				\n"
