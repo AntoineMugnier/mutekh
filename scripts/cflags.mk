@@ -28,16 +28,14 @@ AS=$(CPUTOOLS)as
 OBJCOPY=$(CPUTOOLS)objcopy
 OBJDUMP=$(CPUTOOLS)objdump
 
-CFLAGS=	-nostdlib -fno-builtin -Wall
+CFLAGS=	-nostdlib -fno-builtin -Wall -O$(CONFIG_COMPILE_OPTIMIZE)
 
 ifeq ($(CONFIG_COMPILE_SAVETEMPS), defined)
 CFLAGS += -save-temps
 endif
 
 ifeq ($(CONFIG_COMPILE_DEBUG), defined)
-CFLAGS += -O0 -ggdb
-else
-CFLAGS += -O2
+CFLAGS += -ggdb
 endif
 
 ifeq ($(CONFIG_COMPILE_FRAMEPTR), undefined)
