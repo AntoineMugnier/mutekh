@@ -25,8 +25,30 @@
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
 #include <hexo/alloc.h>
-#include <mutek/page_alloc.h>
-#include <mutek/vmem_kalloc.h>
+
+
+#ifdef CONFIG_HEXO_MMU
+#include <hexo/mmu.h>
+
+#ifdef CONFIG_VMEM_PHYS_ALLOC
+MMU_PPAGE_ALLOCATOR(ppage_alloc);
+MMU_PPAGE_REFDROP(ppage_refdrop);
+//#include <mutek/page_alloc.h>
+#else /*CONFIG_VMEM_PHYS_ALLOC*/
+# error Add physical page allocator here
+#endif /*CONFIG_VMEM_PHYS_ALLOC*/
+
+
+#ifdef CONFIG_VMEM_KERNEL_ALLOC
+//#include <mutek/vmem_kalloc.h>
+MMU_VPAGE_ALLOCATOR(vmem_vpage_kalloc);
+MMU_VPAGE_FREE(vmem_vpage_kfree);
+
+#else /*CONFIG_VMEM_KERNEL_ALLOC*/
+# error Add kernel virtual memory allocator here 
+#endif /*CONFIG_VMEM_KERNEL_ALLOC*/
+
+#endif /*CONFIG_HEXO_MMU*/
 
 #include "multiboot.h"
 
@@ -60,9 +82,29 @@ void arch_init()
       cpu_global_init();
 
       mem_init();
+
 #ifdef CONFIG_HEXO_MMU
-      mmu_global_init(vmem_vpage_kalloc, ppage_alloc);
+
+#ifdef CONFIG_VMEM_PHYS_ALLOC
+      vmem_ops.ppage_alloc = &ppage_alloc;
+      vmem_ops.ppage_refdrop = &ppage_refdrop;
+      initial_ppage_region = (struct vmem_page_region_s *)ppage_initial_region_get();
+      ppage_region_init(initial_ppage_region ,CONFIG_HEXO_MMU_INITIAL_END, CONFIG_ARCH_IBMPC_MEMORY);
+#else
+# error Add physical page allocator init 
 #endif
+
+      mmu_global_init();
+
+#ifdef CONFIG_VMEM_KERNEL_ALLOC
+      vmem_ops.vpage_alloc = &vmem_vpage_kalloc;
+      vmem_ops.vpage_free = &vmem_vpage_kfree;
+      //	vmem_init(t0, t1);
+#else
+# error Add virtual kernel page allocator init 
+#endif
+
+#endif /*CONFIG_HEXO_MMU*/
 
       /* configure first CPU */
       cpu_init();

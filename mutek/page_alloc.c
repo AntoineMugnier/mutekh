@@ -9,6 +9,8 @@
 #define VMEM_PPAGE_VALUE(x) ((x) & 0x7fffffff)
 #define VMEM_PPAGE_SET(isfree, value) ((isfree << 31) | (value))
 
+struct vmem_page_region_s initial_region;
+
 error_t ppage_region_init(struct vmem_page_region_s *r,
 			       uintptr_t paddr, uintptr_t paddr_end)
 {
@@ -81,17 +83,19 @@ bool_t ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr)
 	  (paddr < r->paddr + r->size));
 }
 
-error_t ppage_reserve(struct vmem_page_region_s *r,
-			   uintptr_t paddr, uintptr_t paddr_end)
+error_t ppage_reserve(uintptr_t paddr, uintptr_t paddr_end)
 {
   uint_fast32_t i, p;
   size_t size;
   error_t res = 0;
-
+  struct vmem_page_region_s *r;
+    
   paddr = ALIGN_VALUE_UP(paddr, CONFIG_HEXO_MMU_PAGESIZE);
   paddr_end = ALIGN_VALUE_LOW(paddr_end, CONFIG_HEXO_MMU_PAGESIZE);
 
   assert(paddr_end > paddr);
+
+  r = ppage_to_region(paddr);
 
   size = (paddr_end - paddr) / CONFIG_HEXO_MMU_PAGESIZE;
 
@@ -135,14 +139,15 @@ error_t ppage_reserve(struct vmem_page_region_s *r,
   return res;
 }
 
-uintptr_t ppage_refnew(struct vmem_page_region_s *r, uintptr_t paddr)
+uintptr_t ppage_refnew(uintptr_t paddr)
 {
   uint_fast32_t *t;
   uint_fast32_t p;
 
+  struct vmem_page_region_s *r;
 
-
-  assert(ppage_inrange(paddr));
+  r = ppage_to_region(paddr);    
+  assert(ppage_inrange(r,paddr));
 
   p = (paddr - r->paddr) / CONFIG_HEXO_MMU_PAGESIZE;
   t = r->table + p;
@@ -155,13 +160,15 @@ uintptr_t ppage_refnew(struct vmem_page_region_s *r, uintptr_t paddr)
   return paddr;
 }
 
-void ppage_refdrop(struct vmem_page_region_s *r, uintptr_t paddr)
+void ppage_refdrop(uintptr_t paddr)
 {
   uint_fast32_t *t;
   uint_fast32_t p;
+  struct vmem_page_region_s *r;
 
-  assert(ppage_inrange(paddr));
-
+  r = ppage_to_region(paddr);  
+  assert(ppage_inrange(r,paddr));
+  
   p = (paddr - r->paddr) / CONFIG_HEXO_MMU_PAGESIZE;
   t = r->table + p;
 
@@ -179,3 +186,7 @@ void ppage_refdrop(struct vmem_page_region_s *r, uintptr_t paddr)
   LOCK_RELEASE_IRQ(&r->lock);  
 }
 
+struct vmem_page_region_s *ppage_initial_region_get() 
+{
+  return &initial_region;
+}

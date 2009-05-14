@@ -7,7 +7,7 @@
 
 static uintptr_t next_v_page = CONFIG_HEXO_MMU_INITIAL_END;
 
-void * vmem_vpage_kalloc(size_t count)
+void * vmem_vpage_kalloc(struct vmem_page_region_s *r, size_t count)
 {
   uintptr_t paddr;
   uintptr_t vaddr;
@@ -18,7 +18,7 @@ void * vmem_vpage_kalloc(size_t count)
   next_v_page += CONFIG_HEXO_MMU_PAGESIZE;
 
   /* allocate a new physical page for page table */
-  if (ppage_alloc(&paddr))
+  if (ppage_alloc(r, &paddr))
     return NULL;
 
   if (mmu_vpage_set(vaddr, paddr, MMU_PAGE_ATTR_RWX | MMU_PAGE_ATTR_PRESENT))
@@ -30,7 +30,7 @@ void * vmem_vpage_kalloc(size_t count)
   return (void*)vaddr;
 }
 
-void vmem_vpage_kfree(void *vaddr, size_t count)
+void vmem_vpage_kfree(struct vmem_page_region_s *r, void *vaddr, size_t count)
 {
   uintptr_t paddr = mmu_vpage_get_paddr((uintptr_t)vaddr);
 

@@ -41,7 +41,9 @@
 #include "local.h"
 
 struct mmu_context_s;
-//struct mmu_page_s;//FIXME: Sert à quoi?
+struct mmu_vmem_ops_s;
+struct vmem_page_region_s;
+
 typedef uint8_t mmu_pageattr_t;
 
 #define MMU_PAGE_ATTR_R 0x01
@@ -59,30 +61,41 @@ typedef uint8_t mmu_pageattr_t;
 
 extern CPU_LOCAL struct mmu_context_s *mmu_context_cur;
 
+extern struct mmu_vmem_ops_s vmem_ops;
+
+extern struct vmem_page_region_s *initial_ppage_region;
+
 /* get current memory context */
 static inline struct mmu_context_s * mmu_context_get(void)
 {
   return CPU_LOCAL_GET(mmu_context_cur);
 }
 
-#define MMU_VPAGE_ALLOCATOR(n) void    *(n)(size_t)
-#define MMU_PPAGE_ALLOCATOR(n) error_t (n)(struct vmem_page_region_s *r, uintptr_t *paddr)
-#define MMU_PPAGE_TO_REGION(n) struct vmem_page_region_s *(n)(uintptr_t paddr)
+
+#define MMU_VPAGE_ALLOCATOR(n) void    *(n)(struct vmem_page_region_s *, size_t)
+#define MMU_VPAGE_FREE(n) void (n)(void *, size_t )
+#define MMU_PPAGE_ALLOCATOR(n) error_t (n)(struct vmem_page_region_s *, uintptr_t *)
+#define MMU_PPAGE_TO_REGION(n) struct vmem_page_region_s *(n)(uintptr_t)
+#define MMU_PPAGE_REFDROP(n) void (n)(uintptr_t )
+
 
 typedef MMU_VPAGE_ALLOCATOR(mmu_vpage_allocator_t);
+typedef MMU_VPAGE_FREE(mmu_vpage_free_t);
 typedef MMU_PPAGE_ALLOCATOR(mmu_ppage_allocator_t);
 typedef MMU_PPAGE_TO_REGION(mmu_ppage_to_region_t);
+typedef MMU_PPAGE_REFDROP(mmu_ppage_refdrop_t);
 
 struct mmu_vmem_ops_s
 {
-  void    *(kpage_alloc)(size_t);
   mmu_vpage_allocator_t *vpage_alloc;
+  mmu_vpage_free_t *vpage_free;
   mmu_ppage_allocator_t *ppage_alloc;
   mmu_ppage_to_region_t *ppage_region;
+  mmu_ppage_refdrop_t *ppage_refdrop;
 };
 
-/* initialize virtual memory strucutres */
-void mmu_global_init(mmu_vpage_allocator_t *va, mmu_ppage_allocator_t *pa);
+/* initialize virtual memory structures */
+void mmu_global_init();
 
 /* switch to virtual memory mode by enabling mmu */
 void mmu_cpu_init(void);

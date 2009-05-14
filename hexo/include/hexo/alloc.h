@@ -205,10 +205,6 @@ static inline bool_t mem_guard_check(void) __attribute__((unused));
 #include <arch/hexo/alloc.h>
 
 
-
-
-
-
 #ifndef MEM_SCOPE_CPU
 # define MEM_SCOPE_CPU		MEM_SCOPE_SYS
 # if defined(CONFIG_SMP) && defined(CONFIG_CPU_CACHE) && !defined(CONFIG_CPU_CACHE_COHERENCY)

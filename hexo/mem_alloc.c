@@ -22,6 +22,10 @@
 #include <hexo/alloc.h>
 #include <string.h>
 
+#ifdef CONFIG_HEXO_MMU
+#include <hexo/mmu.h>
+#endif
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
 #include <arch/mem_checker.h>
 #endif
@@ -74,7 +78,7 @@ mem_alloc_region_extend(struct mem_alloc_region_s *region, size_t size)
 {
   struct mem_alloc_header_s	*hdr = NULL;
   
-  hdr = mmu_vpage_kalloc(size);
+  hdr = vmem_ops.vpage_alloc(initial_ppage_region, size);
   if(hdr)
   {
   hdr->size=size * CONFIG_HEXO_MMU_PAGESIZE;

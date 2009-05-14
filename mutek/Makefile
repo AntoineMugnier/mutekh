@@ -10,7 +10,7 @@ ifeq ($(CONFIG_MUTEK_LOGO), defined)
 endif
 
 ifeq ($(CONFIG_VMEM_PHYS_ALLOC), defined)
-objs += vmem_palloc.o
+objs += page_alloc.o
 endif
 
 ifeq ($(CONFIG_MUTEK_SCHEDULER), defined)

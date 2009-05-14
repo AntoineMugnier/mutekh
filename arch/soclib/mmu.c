@@ -87,7 +87,7 @@ void mmu_cpu_init()
 {
 #ifdef CONFIG_CPU_MIPS
   mmu_vcache_set_pagedir((uint32_t)mmu_k_context.pagedir_paddr);
-  cpu_mips_mtc2(3, 1, 0);
+  cpu_mips_mtc2(1, 0, 3);
 #else
 # error Add cpu mmu support here
 #endif
@@ -112,8 +112,6 @@ static void mmu_vcache_update_k_context(struct mmu_context_s *ctx)
       memcpy(ctx->mirror + ctx->k_count + MMU_KERNEL_START_PDE,
 	     mmu_k_context.mirror + ctx->k_count + MMU_KERNEL_START_PDE,
 	     diff * sizeof(struct cpu_vcache_page4k_entry_s));
-
-//      printf("updating context %i %i %P\n", diff, ctx->k_count, ctx->pagedir, diff * 4);
 
       ctx->k_count += diff;
     }
@@ -159,12 +157,12 @@ error_t mmu_context_init(struct mmu_context_s *ctx)
 }
 
 static inline struct cpu_vcache_page4k_entry_s *
-mmu_vcache_get_vpage_entry(uint_fast16_t pde, uint_fast16_t pte)//TODO:OK
+mmu_vcache_get_vpage_entry(uint_fast16_t pde, uint_fast16_t pte)
 {
   return (void*)(uintptr_t)(MMU_MIRROR_ADDR | (pde << 12) | (pte << 2));
 }
 
-void mmu_context_destroy(void)//TODO:ok
+void mmu_context_destroy(void)
 {
   struct mmu_context_s *ctx = mmu_context_get();
   uint_fast8_t i, j;
@@ -172,40 +170,38 @@ void mmu_context_destroy(void)//TODO:ok
   /* refrdop all physical pages mapped in context */
   for (i = MMU_USER_START_PDE; i <= MMU_USER_END_PDE; i++)
     if (ctx->pagedir[i].pte.entry_type)
-    {
-     for (j = 0; j < 1024; j++)
-	{
-	  struct cpu_vcache_page4k_entry_s *e = mmu_vcache_get_vpage_entry(i, j);
-
-	  if (e->entry_type)
-	    mmu_ppage_refdrop(e->address << 12);
-	}
-	 mmu_ppage_refdrop(ctx->pagedir[i].pte.address<<12);
-	 }
-
+      {
+	for (j = 0; j < 1024; j++)
+	  {
+	    struct cpu_vcache_page4k_entry_s *e = mmu_vcache_get_vpage_entry(i, j);
+	    
+	    if (e->entry_type)
+	      mmu_ppage_refdrop(e->address << 12);
+	  }
+	mmu_ppage_refdrop(ctx->pagedir[i].pte.address<<12);
+      }
+  
   /* switch to kernel context */
-  mmu_vcache_set_pagedir(mmu_k_context.pagedir_paddr);
+  mmu_context_switch_to(mmu_get_kernel_context());
 
   mmu_vpage_kfree(ctx->pagedir,1);
   mmu_vpage_kfree(ctx->mirror,1);
 }
 
-void mmu_context_switch_to(struct mmu_context_s *ctx)//TODO:OK
+void mmu_context_switch_to(struct mmu_context_s *ctx)
 {
   if(ctx!=mmu_context_get()){	
-	  if(ctx!=&mmu_k_context)
-	  mmu_vcache_update_k_context(ctx);
-
-//	  printf("switch to ctx %p pd %p pdphys %p\n", ctx, ctx->pagedir, ctx->pagedir_paddr);
-
-	  mmu_vcache_set_pagedir(ctx->pagedir_paddr);
-
-	  CPU_LOCAL_SET(mmu_context_cur, ctx);
+    if(ctx!=&mmu_k_context)
+      mmu_vcache_update_k_context(ctx);
+    
+    mmu_vcache_set_pagedir(ctx->pagedir_paddr);
+    
+    CPU_LOCAL_SET(mmu_context_cur, ctx);
   }
 }
 
 static error_t
-mmu_vcache_alloc_pagetable(uintptr_t vaddr)//FIXME: 
+mmu_vcache_alloc_pagetable(uintptr_t vaddr)
 {
   struct mmu_context_s *ctx;
   struct cpu_vcache_pagetable_entry_s *pte;
@@ -213,22 +209,14 @@ mmu_vcache_alloc_pagetable(uintptr_t vaddr)//FIXME:
   uintptr_t paddr;
   uint_fast16_t i = vaddr >> 22;
 
-//  printf("enter %s(%p)\n", __func__, vaddr);
-
-//  assert(i <= MMU_USER_END_PDE);//FIXME: Peut être à revoir dans le cas de soclib
-//  assert(i >= MMU_INITIAL_PDE);
-
   /* allocate a new physical page for page table */
   if (palloc(&paddr))
     return -ENOMEM;
-
-//	printf("%s step 1 pass\n",__func__);
 
   ctx = mmu_context_get();
   pte = (void*)(ctx->pagedir + i);
   p4k = (void*)(ctx->mirror + i);
 
-//	printf("%s step 2 pass\n",__func__);
   assert(!pte->entry_type);
 
   pte->entry_type =1;
@@ -240,12 +228,9 @@ mmu_vcache_alloc_pagetable(uintptr_t vaddr)//FIXME:
   p4k->writable = 1;
   p4k->address = paddr >> 12;
 
-//	printf("%s step 3 pass\n",__func__);
   /* clear page table */
-//   printf("mmu_vcache_get_vpage_entry(i,0) = %p\n",mmu_vcache_get_vpage_entry(i, 0));
   memset(mmu_vcache_get_vpage_entry(i, 0), 0, CONFIG_HEXO_MMU_PAGESIZE);
 
-//	printf("%s step 4 pass\n",__func__);
   if (vaddr >= MMU_KERNEL_START_ADDR)
     {
       if (ctx->k_count <= (i - MMU_KERNEL_START_PDE) )
@@ -259,13 +244,12 @@ mmu_vcache_alloc_pagetable(uintptr_t vaddr)//FIXME:
 	  mmu_k_context.k_count = ctx->k_count;
 	}
     }
-//	printf("%s step 5 pass\n",__func__);
 
   return 0;
 }
 
 static struct cpu_vcache_page4k_entry_s *
-mmu_vcache_get_vpage(uintptr_t vaddr)//TODO:OK
+mmu_vcache_get_vpage(uintptr_t vaddr)
 {
   union cpu_vcache_page_entry_s *pd;
 
@@ -287,32 +271,27 @@ mmu_vcache_get_vpage(uintptr_t vaddr)//TODO:OK
 }
 
 static struct cpu_vcache_page4k_entry_s *
-mmu_vcache_alloc_vpage(uintptr_t vaddr)//TODO: ok
+mmu_vcache_alloc_vpage(uintptr_t vaddr)
 {
   union cpu_vcache_page_entry_s *pd;
 
-//  printf("enter %s(%p)\n", __func__, vaddr);
 		
   if (vaddr >= (uintptr_t)MMU_KERNEL_START_ADDR)
-	{//printf("%s step 0 pass, if\n",__func__);			
-    pd = mmu_k_pagedir;
- }
+    {
+      pd = mmu_k_pagedir;
+    }
   else{
-	//printf("%s step 0 pass, else\n",__func__);
     pd = mmu_context_get()->pagedir;
-}
-	//printf("%s step 1 pass\n",__func__);
+  }
   pd += (vaddr >> 22);
-	//printf("%s step 2 pass\n",__func__);
-
+  
   if (!pd->pte.entry_type && mmu_vcache_alloc_pagetable(vaddr))
     return NULL;
-	//printf("%s step 3 pass\n",__func__);
-
+  
   return (void*)(uintptr_t)(MMU_MIRROR_ADDR | ((vaddr & 0xfffffc00) >> 10));
 }
 
-mmu_pageattr_t mmu_vpage_get_attr(uintptr_t vaddr)//TODO: Global -> modifier la macro correspondante
+mmu_pageattr_t mmu_vpage_get_attr(uintptr_t vaddr)
 {
   mmu_pageattr_t attr = 0;
   struct cpu_vcache_page4k_entry_s *e = mmu_vcache_get_vpage(vaddr);
@@ -344,9 +323,9 @@ mmu_pageattr_t mmu_vpage_get_attr(uintptr_t vaddr)//TODO: Global -> modifier la 
   return attr;
 }
 
-error_t mmu_vpage_set(uintptr_t vaddr, uintptr_t paddr, mmu_pageattr_t attr)//TODO:OK
+error_t mmu_vpage_set(uintptr_t vaddr, uintptr_t paddr, mmu_pageattr_t attr)
 {
-  struct cpu_vcache_page4k_entry_s *e = mmu_vcache_alloc_vpage(vaddr);//TODO: pourquoi juste les pages de 4k
+  struct cpu_vcache_page4k_entry_s *e = mmu_vcache_alloc_vpage(vaddr);
 
   if (e == NULL)
     return -ENOMEM;
@@ -366,7 +345,7 @@ error_t mmu_vpage_set(uintptr_t vaddr, uintptr_t paddr, mmu_pageattr_t attr)//TO
 }
 
 /* set (logical or) and clear (logical nand) page attributes, may flush tlb */
-void mmu_vpage_mask_attr(uintptr_t vaddr, mmu_pageattr_t setmask, mmu_pageattr_t clrmask)//TODO:OK
+void mmu_vpage_mask_attr(uintptr_t vaddr, mmu_pageattr_t setmask, mmu_pageattr_t clrmask)
 {
   struct cpu_vcache_page4k_entry_s *e = mmu_vcache_get_vpage(vaddr);
 
@@ -409,7 +388,7 @@ void mmu_vpage_mask_attr(uintptr_t vaddr, mmu_pageattr_t setmask, mmu_pageattr_t
     e->non_cacheable = 0;
 }
 
-uintptr_t mmu_vpage_get_paddr(uintptr_t vaddr)//TODO:OK
+uintptr_t mmu_vpage_get_paddr(uintptr_t vaddr)
 {
   struct cpu_vcache_page4k_entry_s *e = mmu_vcache_get_vpage(vaddr);
 

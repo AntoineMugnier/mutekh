@@ -34,6 +34,8 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <hexo/lock.h>
+#include <hexo/mmu.h>
 
 /*
  *  physical page allocator
@@ -57,6 +59,8 @@ struct vmem_page_region_s
   lock_t			lock;
 };
 
+extern struct vmem_page_region_s initial_region;
+
 /** Init a physical pages memory allocator region. */
 error_t ppage_region_init(struct vmem_page_region_s *r, uintptr_t paddr, uintptr_t paddr_end);
 
@@ -70,13 +74,23 @@ bool_t ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr);
 error_t ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr);
 
 /** Try to reserve all pages in pysical address range. All pages must be free. */
-error_t ppage_reserve(struct vmem_page_region_s *r, uintptr_t paddr, uintptr_t paddr_end);
+error_t ppage_reserve(uintptr_t paddr, uintptr_t paddr_end);
 
 /** Get a new reference to an already allocated physical page. */
-uintptr_t ppage_refnew(struct vmem_page_region_s *r, uintptr_t paddr);
+uintptr_t ppage_refnew( uintptr_t paddr);
 
 /** Drop a reference to an allocated physical page, page is marked as free if counter reach 0. */
-void ppage_refdrop(struct vmem_page_region_s *r, uintptr_t paddr);
+void ppage_refdrop( uintptr_t paddr);
+
+/** Return paddr's region*/
+static inline 
+struct vmem_page_region_s *ppage_to_region(uintptr_t paddr)
+{
+  return &initial_region;
+}
+
+/** Return the physical page allocator's initial region*/
+struct vmem_page_region_s *ppage_initial_region_get();
 
 # endif
 

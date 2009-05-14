@@ -45,10 +45,10 @@
 uintptr_t vmem_vpage_io_map(uintptr_t paddr, size_t byte_size);
 
 /* allocate virtual page memory in kernel page space, may flush tlb */
-void * vmem_vpage_kalloc(size_t count);
+void * vmem_vpage_kalloc(struct vmem_page_region_s *r, size_t count);
 
 /* free a kernel virtual page */
-void vmem_vpage_kfree(void *vaddr, size_t count);
+void vmem_vpage_kfree(struct vmem_page_region_s *r, void *vaddr, size_t count);
 
 # endif
 

@@ -27,8 +27,6 @@
 #include <hexo/cpu.h>
 #include <hexo/alloc.h>
 #include <mutek/scheduler.h>
-#include <mutek/page_alloc.h>
-#include <mutek/vmem_kalloc.h>
 
 #ifdef CONFIG_ARCH_SOCLIB_RAMLOCK
 extern __ldscript_symbol_t __ramlock_base_start;
@@ -37,6 +35,21 @@ uintptr_t __ramlock_base = (uintptr_t)&__ramlock_base_start;
 
 #ifdef CONFIG_HEXO_MMU
 extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
+
+#ifdef CONFIG_VMEM_PHYS_ALLOC
+#include <mutek/page_alloc.h>
+mmu_ppage_allocator_t ppage_alloc = &ppage_alloc;
+#else
+# error Add physical page allocator here
+#endif
+
+#ifdef CONFIG_VMEM_KERNEL_ALLOC
+#include <mutek/vmem_kalloc.h>
+mmu_vpage_allocator_t vmem_vpage_kalloc = &vmem_vpage_kalloc;
+#else
+# error Add kernel virtual memory allocator here 
+#endif
+
 #endif
 
 #ifdef CONFIG_SMP
@@ -70,9 +83,19 @@ void arch_init()
 	uint32_t t1=(uint32_t)(&__system_uncached_heap_end);
 	t0+=CONFIG_SOCLIB_VMEM_MALLOC_REGION_SIZE;
 	
+#ifdef CONFIG_VMEM_PHYS_ALLOC
+	ppage_region_init(t0, t1);
+#else
+# error Add physical page allocator init 
+#endif
 	
-	ppage_region_init(t0, t1); 
 	mmu_global_init(vmem_vpage_kalloc, ppage_alloc);
+
+#ifdef CONFIG_VMEM_KERNEL_ALLOC
+	//	vmem_init(t0, t1);
+#else
+# error Add virtual kernel page allocator init 
+#endif
 
 #endif
 
