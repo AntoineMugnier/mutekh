@@ -39,7 +39,7 @@ typedef int_fast32_t	off_t;
 /** biggest unsigned integer type available */
 typedef uint64_t	uintmax_t;
 /** biggest signed integer type available */
-typedef uint64_t	intmax_t;
+typedef int64_t		intmax_t;
 /** cpu integer id */
 typedef uint16_t	cpu_id_t;
 
