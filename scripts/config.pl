@@ -914,7 +914,7 @@ sub read_myconfig
 			      " it must be provided by defining other appropriate token(s) instead.");
 		    }
 
-		    if ($2)
+		    if (defined $2)
 		    {
 			$$opt{value} = $2;
 		    }
