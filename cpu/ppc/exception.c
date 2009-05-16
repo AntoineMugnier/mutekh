@@ -64,15 +64,17 @@
     "lwz  12, " #off "+4*10(" #n ")      \n\t"
 
 #ifdef CONFIG_SMP
-# define GET_HANDLER_ADDRESS(name, rd, rt)							   \
-	"mfspr " #rt ", 0x105                \n\t"						   \
+# define GET_HANDLER_ADDRESS(name, rd, rt, spr)						   \
+	"mfspr " #rt ", " #spr "                \n\t"					   \
     "lwz   " #rd ", " name "(" #rt ")    \n\t"
 #else
-# define GET_HANDLER_ADDRESS(name, rd, rt)							   \
+# define GET_HANDLER_ADDRESS(name, rd, rt, foo)						   \
     "lis   " #rt ", " name "@ha           \n\t"						   \
     "lwz   " #rd ", " name "@l(" #rt ")     \n\t"
 #endif
 
+# define GET_CPULOCAL_HANDLER_ADDRESS(name, rd, rt) GET_HANDLER_ADDRESS(name, rd, rt, 0x105)
+# define GET_CONTEXTLOCAL_HANDLER_ADDRESS(name, rd, rt) GET_HANDLER_ADDRESS(name, rd, rt, 0x104)
 
 #define HANDLE_EXCEPTION(eno, srr02)								   \
 	/* r1 -> @0 */													   \
@@ -92,7 +94,7 @@
 	"mfctr 0                               \n\t"					   \
     "stw   0, 4*20(1)                      \n\t"					   \
 																	   \
-	GET_HANDLER_ADDRESS("cpu_exception_handler", 0, 3)				   \
+	GET_CPULOCAL_HANDLER_ADDRESS("cpu_exception_handler", 0, 3)		   \
 	"mtctr 0                               \n\t"					   \
 																	   \
 	/* Put handler arguments: */									   \
@@ -187,7 +189,7 @@ asm(
 	"mfctr 0                               \n\t"
     "stw   0, 4*16(1)                      \n\t"
 
-	GET_HANDLER_ADDRESS("cpu_interrupt_handler", 0, 3)
+	GET_CPULOCAL_HANDLER_ADDRESS("cpu_interrupt_handler", 0, 3)
 	"mtctr 0                               \n\t"
 
 	/* interrupt line is 0 */
@@ -258,7 +260,7 @@ asm(
 	"mfctr 0                               \n\t"
     "stw   0, 4*14(1)                      \n\t"
 
-	GET_HANDLER_ADDRESS("cpu_syscall_handler", 0, 3)
+	GET_CONTEXTLOCAL_HANDLER_ADDRESS("cpu_syscall_handler", 0, 3)
 	"mtctr 0                               \n\t"
 	"bctrl                                 \n\t"
 

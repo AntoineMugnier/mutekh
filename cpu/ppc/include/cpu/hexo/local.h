@@ -60,6 +60,9 @@
 /** context local storage type attribute */
 #define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
 
+/** pointer to context local storage in cpu local storage */
+extern CPU_LOCAL void *__cpu_context_data_base;
+
 /** get address of cpu local object */
 # define CONTEXT_GET_TLS()				\
 ({							\
@@ -72,9 +75,6 @@
 							\
   _ptr_;						\
 })
-
-/** pointer to context local storage in cpu local storage */
-extern CPU_LOCAL void *__cpu_context_data_base;
 
 #endif
 
