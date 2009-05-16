@@ -898,7 +898,7 @@ sub read_myconfig
 		$line =~ s/%$1/$text/g;
 	    }
 
-	    if ($line =~ /^\s*([^\s]+)\s+([^\s]*)/)
+	    if ($line =~ /^\s*([^\s]+)\s+(\S+)?/)
 	    {
 		my $opt = $config_opts{$1};
 
