@@ -45,15 +45,15 @@ getline_insert(struct term_behavior_s *bhv,
 	return TERM_RET_INVALID;
     }
 
-  if (term_insstr(tm, str, len) != TERM_RET_OK)
+  if (!tail)
     {
       term_writestr(tm, str, len);
-
-      if (tail)
-	{
-	  term_writestr(tm, rl->cursor, tail);
-	  term_move(tm, term_dir_left, tail);
-	}
+    }
+  else if (term_insstr(tm, str, len) != TERM_RET_OK)
+    {
+      term_writestr(tm, str, len);
+      term_writestr(tm, rl->cursor, tail);
+      term_move(tm, term_dir_left, tail);
     }
 
   memmove(rl->cursor + len, rl->cursor, tail + 1);
