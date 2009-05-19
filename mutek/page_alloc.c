@@ -100,25 +100,24 @@ error_t ppage_contiguous_alloc(struct vmem_page_region_s *r, uintptr_t *paddr, s
   
 
    for (n = &r->free_head; c < size; )
-	{
-	  i = VMEM_PPAGE_VALUE(*n);
-
-	  if (i >= first && i < first + size)
-	    {
-	      *n = VMEM_PPAGE_VALUE(r->table[i]);
-	      r->table[i] = VMEM_PPAGE_SET(0, 1);
-	      c++;
-	    }
-	  else
-	    {
-	      n = &r->table[i];
-	    }
-	}
-
-      r->free_count -= size;
-      }
-
-  LOCK_RELEASE_IRQ(&r->lock);
+     {
+       i = VMEM_PPAGE_VALUE(*n);
+       
+       if (i >= first && i < first + size)
+	 {
+	   *n = VMEM_PPAGE_VALUE(r->table[i]);
+	   r->table[i] = VMEM_PPAGE_SET(0, 1);
+	   c++;
+	 }
+       else
+	 {
+	   n = &r->table[i];
+	 }
+     }
+   
+   r->free_count -= size;
+   
+   LOCK_RELEASE_IRQ(&r->lock);
 
   return 0;
  err:

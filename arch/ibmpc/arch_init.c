@@ -33,17 +33,14 @@
 #ifdef CONFIG_VMEM_PHYS_ALLOC
 MMU_PPAGE_ALLOCATOR(ppage_alloc);
 MMU_PPAGE_REFDROP(ppage_refdrop);
-//#include <mutek/page_alloc.h>
 #else /*CONFIG_VMEM_PHYS_ALLOC*/
 # error Add physical page allocator here
 #endif /*CONFIG_VMEM_PHYS_ALLOC*/
 
 
 #ifdef CONFIG_VMEM_KERNEL_ALLOC
-//#include <mutek/vmem_kalloc.h>
 MMU_VPAGE_ALLOCATOR(vmem_vpage_kalloc);
 MMU_VPAGE_FREE(vmem_vpage_kfree);
-
 #else /*CONFIG_VMEM_KERNEL_ALLOC*/
 # error Add kernel virtual memory allocator here 
 #endif /*CONFIG_VMEM_KERNEL_ALLOC*/

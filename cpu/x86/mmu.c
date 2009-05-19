@@ -165,11 +165,14 @@ void mmu_context_destroy(void)
 
 void mmu_context_switch_to(struct mmu_context_s *ctx)
 {
-  mmu_x86_update_k_context(ctx);
-
-  mmu_x86_set_pagedir(ctx->pagedir_paddr);
-
-  CPU_LOCAL_SET(mmu_context_cur, ctx);
+  if(ctx!=mmu_context_get()){	
+    if(ctx!=&mmu_k_context)
+      mmu_x86_update_k_context(ctx);
+    
+    mmu_x86_set_pagedir(ctx->pagedir_paddr);
+    
+    CPU_LOCAL_SET(mmu_context_cur, ctx);
+  }
 }
 
 static error_t

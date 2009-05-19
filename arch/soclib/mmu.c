@@ -2,7 +2,6 @@
 #include <hexo/mmu.h>
 #include <hexo/local.h>
 #include <hexo/endian.h>
-
 #include <string.h>
 #include <assert.h>
 
@@ -17,24 +16,21 @@ MMU_SOCLIB_ALIGN cpu_vcache_page_entry_t mmu_k_pagedir[1024];
 MMU_SOCLIB_ALIGN cpu_vcache_page_entry_t mmu_k_mirror[1024];
 MMU_SOCLIB_ALIGN struct mmu_context_s mmu_k_context;
 
-static struct cpu_vcache_page4k_entry_s * mmu_vcache_alloc_vpage(uintptr_t vaddr);
-static mmu_vpage_allocator_t *valloc;
-static mmu_ppage_allocator_t *palloc;
-
 CPU_LOCAL struct mmu_context_s *mmu_context_cur = &mmu_k_context;
+
+struct vmem_page_region_s *initial_ppage_region;
+
+struct mmu_vmem_ops_s vmem_ops;
 
 inline bool_t mmu_is_user_vaddr(uintptr_t vaddr)
 {
   return (vaddr >= CONFIG_HEXO_MMU_USER_START && vaddr < CONFIG_HEXO_MMU_USER_END);
 }
 
-void mmu_global_init(mmu_vpage_allocator_t *va, mmu_ppage_allocator_t *pa)
+void mmu_global_init()
 {
   uint_fast16_t	excep_pde,text_pde_s,uncached_pde_s,tty_pde,icu_pde,timer_pde;
   uint32_t t;
-
-  valloc = va;
-  palloc = pa;
 
   mmu_k_context.pagedir = mmu_k_pagedir;
   mmu_k_context.mirror = mmu_k_mirror;
@@ -121,10 +117,10 @@ error_t mmu_context_init(struct mmu_context_s *ctx)
 {
   cpu_vcache_page_entry_t	*pagedir, *mirror;
 
-  if ((pagedir = valloc(1)) == NULL)
+  if ((pagedir = vmem_ops.vpage_alloc(initial_ppage_region, 1)) == NULL)
     goto err;
 
-  if ((mirror = valloc(1)) == NULL)
+  if ((mirror = vmem_ops.vpage_alloc(initial_ppage_region, 1)) == NULL)
     goto err2;
 
   memset(pagedir, 0, CONFIG_HEXO_MMU_PAGESIZE);
@@ -151,7 +147,7 @@ error_t mmu_context_init(struct mmu_context_s *ctx)
   return 0;
 
  err2:
-  mmu_vpage_kfree(pagedir,1);
+  vmem_ops.vpage_free(pagedir,1);
  err:
   return -ENOMEM;
 }
@@ -176,16 +172,16 @@ void mmu_context_destroy(void)
 	    struct cpu_vcache_page4k_entry_s *e = mmu_vcache_get_vpage_entry(i, j);
 	    
 	    if (e->entry_type)
-	      mmu_ppage_refdrop(e->address << 12);
+	      vmem_ops.ppage_refdrop(e->address << 12);
 	  }
-	mmu_ppage_refdrop(ctx->pagedir[i].pte.address<<12);
+	vmem_ops.ppage_refdrop(ctx->pagedir[i].pte.address<<12);
       }
   
   /* switch to kernel context */
   mmu_context_switch_to(mmu_get_kernel_context());
 
-  mmu_vpage_kfree(ctx->pagedir,1);
-  mmu_vpage_kfree(ctx->mirror,1);
+  vmem_ops.vpage_free(ctx->pagedir,1);
+  vmem_ops.vpage_free(ctx->mirror,1);
 }
 
 void mmu_context_switch_to(struct mmu_context_s *ctx)
@@ -210,7 +206,7 @@ mmu_vcache_alloc_pagetable(uintptr_t vaddr)
   uint_fast16_t i = vaddr >> 22;
 
   /* allocate a new physical page for page table */
-  if (palloc(&paddr))
+  if (vmem_ops.ppage_alloc(initial_ppage_region, &paddr))
     return -ENOMEM;
 
   ctx = mmu_context_get();

@@ -28,10 +28,9 @@
 #include <hexo/types.h>
 #include <hexo/cpu.h>
 
-//TODO: retirer les macro inutiles
 
-#define MMU_USERLIMIT_PDE (CONFIG_HEXO_MMU_USER_START >> 22)//TODO: inutile?
-#define MMU_INITIAL_PDE (CONFIG_HEXO_MMU_INITIAL >> 22)//TODO: inutile?
+#define MMU_USERLIMIT_PDE (CONFIG_HEXO_MMU_USER_START >> 22)
+#define MMU_INITIAL_PDE (CONFIG_HEXO_MMU_INITIAL >> 22)
 
 #define MMU_KERNEL_START_PDE 512
 #define MMU_KERNEL_END_PDE 1020
@@ -59,7 +58,7 @@
 
 struct cpu_vcache_pagetable_entry_s
 {
-  ENDIAN_BITFIELD(	uint32_t  entry_type:2,//toujours egal à 01
+  ENDIAN_BITFIELD(	uint32_t  entry_type:2,
 			uint32_t  not_used:6,
 			uint32_t  address:24
 			);

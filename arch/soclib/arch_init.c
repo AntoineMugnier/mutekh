@@ -26,7 +26,6 @@
 #include <hexo/lock.h>
 #include <hexo/cpu.h>
 #include <hexo/alloc.h>
-#include <mutek/scheduler.h>
 
 #ifdef CONFIG_ARCH_SOCLIB_RAMLOCK
 extern __ldscript_symbol_t __ramlock_base_start;
@@ -35,22 +34,24 @@ uintptr_t __ramlock_base = (uintptr_t)&__ramlock_base_start;
 
 #ifdef CONFIG_HEXO_MMU
 extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
+#include <hexo/mmu.h>
 
 #ifdef CONFIG_VMEM_PHYS_ALLOC
-#include <mutek/page_alloc.h>
-mmu_ppage_allocator_t ppage_alloc = &ppage_alloc;
-#else
+MMU_PPAGE_ALLOCATOR(ppage_alloc);
+MMU_PPAGE_REFDROP(ppage_refdrop);
+#else /*CONFIG_VMEM_PHYS_ALLOC*/
 # error Add physical page allocator here
-#endif
+#endif /*CONFIG_VMEM_PHYS_ALLOC*/
+
 
 #ifdef CONFIG_VMEM_KERNEL_ALLOC
-#include <mutek/vmem_kalloc.h>
-mmu_vpage_allocator_t vmem_vpage_kalloc = &vmem_vpage_kalloc;
-#else
+MMU_VPAGE_ALLOCATOR(vmem_vpage_kalloc);
+MMU_VPAGE_FREE(vmem_vpage_kfree);
+#else /*CONFIG_VMEM_KERNEL_ALLOC*/
 # error Add kernel virtual memory allocator here 
-#endif
+#endif /*CONFIG_VMEM_KERNEL_ALLOC*/
 
-#endif
+#endif /*CONFIG_HEXO_MMU*/
 
 #ifdef CONFIG_SMP
 static uint_fast8_t	cpu_count = 1;
@@ -84,7 +85,10 @@ void arch_init()
 	t0+=CONFIG_SOCLIB_VMEM_MALLOC_REGION_SIZE;
 	
 #ifdef CONFIG_VMEM_PHYS_ALLOC
-	ppage_region_init(t0, t1);
+	vmem_ops.ppage_alloc = &ppage_alloc;
+	vmem_ops.ppage_refdrop = &ppage_refdrop;
+	initial_ppage_region = (struct vmem_page_region_s *)ppage_initial_region_get();
+	ppage_region_init(initial_ppage_region, t0, t1);
 #else
 # error Add physical page allocator init 
 #endif
@@ -92,6 +96,8 @@ void arch_init()
 	mmu_global_init(vmem_vpage_kalloc, ppage_alloc);
 
 #ifdef CONFIG_VMEM_KERNEL_ALLOC
+	vmem_ops.vpage_alloc = &vmem_vpage_kalloc;
+	vmem_ops.vpage_free = &vmem_vpage_kfree;
 	//	vmem_init(t0, t1);
 #else
 # error Add virtual kernel page allocator init 
