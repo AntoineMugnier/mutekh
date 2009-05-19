@@ -73,6 +73,9 @@ bool_t ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr);
 /** Allocate a free physical page in region and set paddr value. */
 error_t ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr);
 
+/** Allocate contiguous free physical pages and set paddr value to the first one */
+error_t ppage_contiguous_alloc(struct vmem_page_region_s *r, uintptr_t *paddr, size_t size);
+
 /** Try to reserve all pages in pysical address range. All pages must be free. */
 error_t ppage_reserve(uintptr_t paddr, uintptr_t paddr_end);
 

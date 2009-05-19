@@ -75,6 +75,56 @@ error_t ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr)
   return res;
 }
 
+error_t ppage_contiguous_alloc(struct vmem_page_region_s *r, uintptr_t *paddr, size_t size)
+{
+  uint_fast32_t i, first, count;
+  uint_fast32_t *n, c = 0;
+
+  if (size > r->free_count)
+    goto err;
+  
+  LOCK_SPIN_IRQ(&r->lock);
+  
+  first = r->free_head;
+  count = r->free_count;
+ beg:
+  for (i = first; i < first + size; i++)
+    if (!VMEM_PPAGE_ISFREE(r->table[i]))
+      {
+	count--;
+	if (size > count)
+	  goto err;
+	first = VMEM_PPAGE_VALUE( r->table[first] );
+	goto beg; 
+      }
+  
+
+   for (n = &r->free_head; c < size; )
+	{
+	  i = VMEM_PPAGE_VALUE(*n);
+
+	  if (i >= first && i < first + size)
+	    {
+	      *n = VMEM_PPAGE_VALUE(r->table[i]);
+	      r->table[i] = VMEM_PPAGE_SET(0, 1);
+	      c++;
+	    }
+	  else
+	    {
+	      n = &r->table[i];
+	    }
+	}
+
+      r->free_count -= size;
+      }
+
+  LOCK_RELEASE_IRQ(&r->lock);
+
+  return 0;
+ err:
+  return -ENOMEM;
+}
+
 bool_t ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr)
 {
   assert(paddr % CONFIG_HEXO_MMU_PAGESIZE == 0);
