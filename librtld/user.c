@@ -98,6 +98,7 @@ error_t rtld_user_dltls (const void *handle, uintptr_t *tls)
 
 error_t rtld_user_dlclose (const void *handle)
 {
+    //TODO
 	_rtld_debug("rtld_user_dlclose\n");
 
     return 0;

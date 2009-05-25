@@ -26,6 +26,13 @@
 #ifndef _MIPS_TLS_H
 #define _MIPS_TLS_H
 
+#include <hexo/cpu.h>
+
+/* check we have mips32 */
+#if __mips < 32
+# error "TLS only available from mips32 version"
+#endif
+
 /* Mips uses "variant I": the DTV pointer is allocated at the TP */
 /* However, not entirely true for mips: the TP points to the end of TCB, so DTV pointer is at tcb[-1].dtv */
 #define TLS_DTVP_AT_TP 1
@@ -52,5 +59,16 @@ typedef struct
 
 /* A pointer in DTV points to the begin of the corresponding TLS area + 0x8000 */
 #define TLS_DTP_OFFSET  0x8000
+
+/* Init the thread pointer register */
+static inline void tls_init_tp (uintptr_t tls_area)
+{
+    /* first, allows access to tp register for user mode */
+    reg_t hwrena = cpu_mips_mfc0(7, 0);
+    hwrena |= 0x20000000; // tls register is #29
+    cpu_mips_mtc0(7, 0, hwrena);
+    /* then, fill in the tp register */
+    cpu_mips_mtc0(4, 2, tls_area + TLS_TP_OFFSET);
+}
 
 #endif	/* _MIPS_TLS_H */

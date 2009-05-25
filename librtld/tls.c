@@ -222,6 +222,17 @@ _tls_allocate_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer)
     /* alloc a new tls area (and space for DTV) */
     size_t dtv_size = (dynobj->tls_max_modid+1) * sizeof(tls_dtv_t);
     uintptr_t tls_area;
+
+    /* This allocation will contain the TLS segment, and will be used 
+     * by the application.
+     *
+     * If possible, this segment should be protected with Read/Write ACL.
+     *
+     * This allocation can be performed in various ways:
+     *  - malloc if one expects no protection, use of user mode, etc
+     *  - vmem_alloc if one expects to use the mmu
+     *  - etc
+     */
     tls_area = (uintptr_t)calloc(1, dynobj->tls_total_size + dtv_size);
 
     _rtld_debug("\tcreate a tls_area for \"%s\" at %p of size 0x%x\n", dynobj->pathname,

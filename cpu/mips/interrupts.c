@@ -73,7 +73,12 @@ asm(
 
     /* save registers usefull to syscall */
     "1:							\n"
-    "	addu	$sp,	-4*32				\n"
+#if defined(CONFIG_LIBRTLD)
+    /* add room for hwrena and tls registers */
+    "   addu    $sp,    -4*34           \n"
+#else
+    "	addu	$sp,	-4*32		    \n"
+#endif
     "	sw	$26,	29*4($sp)			\n"
 
     "	sw	$4,	 4*4($sp)		        \n" /* Args regs */
@@ -93,6 +98,15 @@ asm(
     /* read & save EPC */
     "	mfc0	$5,	$14				\n"
     "	sw	$5,	0*4($sp)		        \n"
+
+#if defined(CONFIG_LIBRTLD)
+    /* read & save hwrena */
+    "	mfc0    $7, $7          \n"
+    "	sw      $7, 32*4($sp)   \n"
+    /* read & save tls */
+    "	mfc0    $7, $4, 2      \n"
+    "	sw      $7, 33*4($sp)   \n"
+#endif
 
     "	li	$7,	32				\n"
     "	beq	$6,	$7,	interrupt_sys		\n"
@@ -239,6 +253,15 @@ asm(
 
     "	lw	$2,	 2*4($sp)		        \n" /* Syscall return value */
     "	lw	$3,	 3*4($sp)		        \n" /* Syscall return value */
+
+#if defined(CONFIG_LIBRTLD)
+    /* reload hwrena */
+    "	lw      $31, 32*4($sp)   \n"
+    "	mtc0    $31, $7          \n"
+    /* reload tls */
+    "	lw      $31, 33*4($sp)   \n"
+    "	mtc0    $31, $4, 2      \n"
+#endif
 
     "	lw	$28,	 28*4($sp)		        \n" /* restore user GP */
     "	lw	$31,	31*4($sp)		        \n" /* restore return address */

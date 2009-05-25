@@ -39,6 +39,7 @@ error_t rtld_kernel_init (const unsigned char *pathname)
 
 error_t rtld_kernel_dlopen (const unsigned char *pathname, void **handle)
 {
+    //TODO
 	_rtld_debug("rtld_kernel_dlopen\n");
 
     return 0;
@@ -46,6 +47,7 @@ error_t rtld_kernel_dlopen (const unsigned char *pathname, void **handle)
 
 error_t rtld_kernel_dlsym (const void *handle, const unsigned char *name, void **sym)
 {
+    //TODO
 	_rtld_debug("rtld_kernel_dlsym\n");
 
 	return 0;
@@ -53,6 +55,7 @@ error_t rtld_kernel_dlsym (const void *handle, const unsigned char *name, void *
 
 error_t rtld_kernel_dlclose (const void *handle)
 {
+    //TODO
 	_rtld_debug("rtld_kernel_dlclose\n");
 
     return 0;

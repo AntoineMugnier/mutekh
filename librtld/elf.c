@@ -256,6 +256,18 @@ _elf_load_segments(FILE *file, dynobj_desc_t *dynobj)
      * Allocate sufficient contiguous pages for the object and read the object
      * into it. This will form the base for relocation.
      */
+    /* This allocation will contain the code and data segments, and will be used 
+     * by the application.
+     *
+     * If possible, code segment should be protected with Read and Write ACL while
+     * data segment should be protected with Read only ACL (the data segment should 
+     * only contain the GOT which should not change after the RTLD updates it).
+     *
+     * This allocation can be performed in various ways:
+     *  - malloc if one expects no protection, use of user mode, etc
+     *  - vmem_alloc if one expects to use the mmu
+     *  - etc
+     */
     if ((dynobj->mapbase = (uintptr_t)malloc(dynobj->mapsize)) == (uintptr_t)NULL)
     {
         _rtld_debug("\tcould not allocate %x bytes\n", dynobj->mapsize);
