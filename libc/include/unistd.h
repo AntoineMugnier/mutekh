@@ -47,6 +47,9 @@ enum open_flags_e
     O_APPEND	= 0x40,
   };
 
+#define HAVE_CREAT
+fd_t creat(const char *pathname, mode_t mode);
+
 #define HAVE_OPEN
 fd_t open(const char *pathname, enum open_flags_e flags, /* mode_t mode */...);
 

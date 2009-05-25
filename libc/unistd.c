@@ -60,6 +60,11 @@ static const struct fileops_s open_fops =
   .close = (fileops_close_t*)vfs_close,
 };
 
+inline fd_t creat(const char *pathname, mode_t mode)
+{
+    return open(pathname, O_CREAT|O_WRONLY|O_TRUNC, mode);
+}
+
 static enum open_flags_e flags_to_vfs(const vfs_open_flags_t mode)
 {
   vfs_open_flags_t flags = 0;
