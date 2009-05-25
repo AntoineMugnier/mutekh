@@ -274,6 +274,9 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   uint8_t *p = (void*)fb_vga_getbuffer(&fb_dev, 0);
   memcpy(p, mutek_logo_320x200, 64000);
 #  endif
+# elif defined(CONFIG_DRIVER_FB_SOCLIB)
+  fb_dev.addr[0] = DSX_SEGMENT_FB_ADDR;
+  fb_soclib_init(&fb_dev, NULL, NULL);
 # else
 #  warning CONFIG_DRIVER_FB case not handled in mutek_main()
 # endif
@@ -360,6 +363,9 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
     printk("%s=%p%c", reg_names[i], regtable[i], (i + 1) % 4 ? ' ' : '\n');
 #else
     printk("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
+#endif
+#if defined(CONFIG_LIBRTLD)
+    printk("hwrena=%p tls=%p\n", regtable[CPU_GPREG_COUNT], regtable[CPU_GPREG_COUNT+1]);
 #endif
 
   printk("Stack top (%p):\n", stackptr);
