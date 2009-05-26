@@ -34,18 +34,18 @@
 static inline bool_t
 cpu_atomic_inc(volatile atomic_int_t *a)
 {
-  reg_t  result, temp;
+    reg_t  result, tmp;
 
-  asm volatile(
-	       "1:     ll      %1, %2		     \n"
-	       "       addiu   %0, %1, 1             \n"
-	       "       sc      %0, %2                \n"
-	       "       beqz    %0, 1b                \n"
-	       : "=&r" (temp), "=&r" (result), "=m" (*a)
-	       : "m" (*a)
-	       );
+    asm volatile(
+        "1:     ll      %[result], %[atomic]      \n"
+        "       addiu   %[tmp], %[result], 1      \n"
+        "       sc      %[tmp], %[atomic]         \n"
+        "       beqz    %[tmp], 1b                \n"
+        : [tmp] "=&r" (tmp), [result] "=&r" (result)
+        , [atomic] "+m" (*a)
+        );
 
-  return result + 1 != 0;
+    return result + 1 != 0;
 }
 
 #define HAS_CPU_ATOMIC_DEC
@@ -53,18 +53,18 @@ cpu_atomic_inc(volatile atomic_int_t *a)
 static inline bool_t
 cpu_atomic_dec(volatile atomic_int_t *a)
 {
-  reg_t  result, temp;
+    reg_t  result, tmp;
 
-  asm volatile (
-		"1:     ll      %1, %2		     \n"
-		"       addiu   %0, %1, -1            \n"
-		"       sc      %0, %2                \n"
-		"       beqz    %0, 1b                \n"
-		: "=&r" (temp), "=&r" (result), "=m" (*a)
-		: "m" (*a)
-		);
+    asm volatile (
+        "1:     ll      %[result], %[atomic]      \n"
+        "       addiu   %[tmp], %[result], -1     \n"
+        "       sc      %[tmp], %[atomic]         \n"
+        "       beqz    %[tmp], 1b                \n"
+        : [tmp] "=&r" (tmp), [result] "=&r" (result)
+        , [atomic] "+m" (*a)
+        );
 
-  return result - 1 != 0;
+    return result - 1 != 0;
 }
 
 #define HAS_CPU_ATOMIC_TESTSET
@@ -72,24 +72,26 @@ cpu_atomic_dec(volatile atomic_int_t *a)
 static inline bool_t
 cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
 {
-  reg_t mask = 1 << n;
-  reg_t result, temp, temp2;
+    reg_t mask = 1 << n;
+    reg_t result, tmp, loaded;
 
-  asm volatile (".set push			     \n"
-		".set noreorder			     \n"
-		"1:     ll      %1, %2		     \n"
-		"       and     %3, %1, %5           \n"
-		"       bnez    %3, 2f               \n"
-		"       or      %0, %1, %5	     \n"
-		"       sc      %0, %2               \n"
-		".set pop			     \n"
-		"       beqz    %0, 1b               \n"
-		"2:				     \n"
-		: "=&r" (temp), "=&r" (temp2), "=m" (*a), "=&r" (result)
-		: "m" (*a), "r" (mask)
-		);
+    asm volatile (
+        ".set push                                   \n"
+        ".set noreorder                              \n"
+        "1:     ll      %[loaded], %[atomic]         \n"
+        "       and     %[result], %[loaded], %[mask]\n"
+        "       bnez    %[result], 2f                \n"
+        "       or      %[tmp], %[loaded], %[mask]   \n"
+        "       sc      %[tmp], %[atomic]            \n"
+        ".set pop                                    \n"
+        "       beqz    %[tmp], 1b                   \n"
+        "2:                                          \n"
+        : [tmp] "=&r" (tmp), [loaded] "=&r" (loaded)
+        , [atomic] "+m" (*a), [result] "=&r" (result)
+        : [mask] "r" (mask)
+        );
 
-  return result != 0;
+    return result != 0;
 }
 
 #define HAS_CPU_ATOMIC_WAITSET
@@ -97,22 +99,24 @@ cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
 {
-  reg_t mask = 1 << n;
-  reg_t temp, temp2;
+    reg_t mask = 1 << n;
+    reg_t tmp, loaded;
 
-  asm volatile (".set push			     \n"
-		".set noreorder			     \n"
-		"1:     ll      %1, %2		     \n"
-		"       and     %0, %1, %4           \n"
-		"       bnez    %0, 1b               \n"
-		"       or      %0, %1, %4	     \n"
-		"       sc      %0, %2               \n"
-		".set pop			     \n"
-		"       beqz    %0, 1b               \n"
-		"2:				     \n"
-		: "=&r" (temp), "=&r" (temp2), "=m" (*a)
-		: "m" (*a), "r" (mask)
-		);
+    asm volatile(
+        ".set push                                  \n"
+        ".set noreorder                             \n"
+        "1:     ll      %[loaded], %[atomic]        \n"
+        "       and     %[tmp], %[loaded], %[mask]  \n"
+        "       bnez    %[tmp], 1b                  \n"
+        "       or      %[tmp], %[loaded], %[mask]  \n"
+        "       sc      %[tmp], %[atomic]           \n"
+        ".set pop                                   \n"
+        "       beqz    %[tmp], 1b                  \n"
+        "2:                                         \n"
+        : [tmp] "=&r" (tmp), [loaded] "=&r" (loaded)
+        , [atomic] "+m" (*a)
+        : [mask] "r" (mask)
+        );
 }
 
 #define HAS_CPU_ATOMIC_TESTCLR
@@ -120,24 +124,26 @@ cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
 static inline bool_t
 cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
 {
-  reg_t mask = 1 << n;
-  reg_t result, temp, temp2;
+    reg_t mask = 1 << n;
+    reg_t result, tmp, loaded;
 
-  asm volatile (".set push			     \n"
-		".set noreorder			     \n"
-		"1:     ll      %1, %2		     \n"
-		"       and     %3, %1, %5           \n"
-		"       beqz    %3, 2f               \n"
-		"       xor     %0, %1, %5	     \n"
-		"       sc      %0, %2               \n"
-		".set pop			     \n"
-		"       beqz    %0, 1b               \n"
-		"2:				     \n"
-		: "=&r" (temp), "=&r" (temp2), "=m" (*a), "=&r" (result)
-		: "m" (*a), "r" (mask)
-		);
+    asm volatile(
+        ".set push                                    \n"
+        ".set noreorder                               \n"
+        "1:     ll      %[loaded], %[atomic]          \n"
+        "       and     %[result], %[loaded], %[mask] \n"
+        "       beqz    %[result], 2f                 \n"
+        "       xor     %[tmp], %[loaded], %[mask]    \n"
+        "       sc      %[tmp], %[atomic]             \n"
+        ".set pop                                     \n"
+        "       beqz    %[tmp], 1b                    \n"
+        "2:                                           \n"
+        : [tmp] "=&r" (tmp), [loaded] "=&r" (loaded)
+        , [atomic] "+m" (*a), [result] "=&r" (result)
+        : [mask] "r" (mask)
+        );
 
-  return result != 0;
+    return result != 0;
 }
 
 #define HAS_CPU_ATOMIC_WAITCLR
@@ -145,22 +151,24 @@ cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
 {
-  reg_t mask = 1 << n;
-  reg_t temp, temp2;
+    reg_t mask = 1 << n;
+    reg_t tmp, loaded;
 
-  asm volatile (".set push			     \n"
-		".set noreorder			     \n"
-		"1:     ll      %1, %2		     \n"
-		"       and     %0, %1, %4           \n"
-		"       beqz    %0, 1b               \n"
-		"       xor     %0, %1, %4	     \n"
-		"       sc      %0, %2               \n"
-		".set pop			     \n"
-		"       beqz    %0, 1b               \n"
-		"2:				     \n"
-		: "=&r" (temp), "=&r" (temp2), "=m" (*a)
-		: "m" (*a), "r" (mask)
-		);
+    asm volatile(
+        ".set push                                 \n"
+        ".set noreorder                            \n"
+        "1:     ll      %[loaded], %[atomic]       \n"
+        "       and     %[tmp], %[loaded], %[mask] \n"
+        "       beqz    %[tmp], 1b                 \n"
+        "       xor     %[tmp], %[loaded], %[mask] \n"
+        "       sc      %[tmp], %[atomic]          \n"
+        ".set pop                                  \n"
+        "       beqz    %[tmp], 1b                 \n"
+        "2:                                        \n"
+        : [tmp] "=&r" (tmp), [loaded] "=&r" (loaded)
+        , [atomic] "+m" (*a)
+        : [mask] "r" (mask)
+        );
 }
 
 #define HAS_CPU_ATOMIC_SET
@@ -168,7 +176,20 @@ cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
 {
-  *a |= 1 << n;
+    reg_t mask = 1 << n;
+    reg_t tmp;
+
+    asm volatile(
+        ".set push                              \n"
+        ".set noreorder                         \n"
+        "1:     ll      %[tmp], %[atomic]       \n"
+        "       or      %[tmp], %[tmp], %[mask] \n"
+        "       sc      %[tmp], %[atomic]       \n"
+        ".set pop                               \n"
+        "       beqz    %[tmp], 1b              \n"
+        : [tmp] "=&r" (tmp), [atomic] "+m" (*a)
+        : [mask] "r" (mask)
+        );
 }
 
 #define HAS_CPU_ATOMIC_CLR
@@ -176,15 +197,20 @@ cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
 {
-  *a &= ~(1 << n);
-}
+    reg_t mask = ~(1 << n);
+    reg_t tmp;
 
-#define HAS_CPU_ATOMIC_TEST
-
-static inline bool_t
-cpu_atomic_bit_test(volatile atomic_int_t *a, uint_fast8_t n)
-{
-  return (*a & (1 << n)) == 0;
+    asm volatile(
+        ".set push                              \n"
+        ".set noreorder                         \n"
+        "1:     ll      %[tmp], %[atomic]       \n"
+        "       and     %[tmp], %[tmp], %[mask] \n"
+        "       sc      %[tmp], %[atomic]       \n"
+        ".set pop                               \n"
+        "       beqz    %[tmp], 1b              \n"
+        : [tmp] "=&r" (tmp), [atomic] "+m" (*a)
+        : [mask] "r" (mask)
+        );
 }
 
 #endif
