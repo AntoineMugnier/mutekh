@@ -47,11 +47,6 @@ asm(
 	"li    3, 0                      \n"
 	"mtmsr 3                         \n"
 
-	/* setup exception location */
-    "lis	13, _evpr_base@ha				\n"
-    "la		13, _evpr_base@l(13)				\n"
-	"mtevpr 13                              \n"
-
 #ifdef CONFIG_SOCLIB_MEMCHECK
     "addi	2,	0,	1024		\n"
 /*     "lis	0, hi(" ASM_STR(SOCLIB_MC_MAGIC_VAL) ") \n" */

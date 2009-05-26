@@ -27,6 +27,8 @@
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
 
+extern __ldscript_symbol_t _evpr_base;
+
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
@@ -56,6 +58,8 @@ void cpu_init(void)
   /* set cpu local storage register base pointer */
   asm volatile("mtspr 0x115, %0" : : "r" (cls)); /* SPRG5 is cls */
 #endif
+
+  asm volatile("mtevpr %0" : : "r"(&_evpr_base));
 }
 
 void cpu_start_other_cpu(void)
