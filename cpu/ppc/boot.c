@@ -24,7 +24,7 @@
 #endif
 
 asm(
-    ".section        .boot,\"ax\",@progbits		\n"
+    ".section        .text,\"ax\",@progbits		\n"
 
     ".globl cpu_boot					\n"
     "cpu_boot:						\n"
@@ -77,8 +77,19 @@ asm(
     "la         3, arch_init@l(3)			\n"
     "mtctr      3					\n"
     "bctr						\n"
+    );
 
-    ".org 0x80-4						\n"
-    "b		cpu_boot				\n"
+asm(
+    ".section        .boot,\"ax\",@progbits     \n"
+
+    ".globl cpu_boot_pointer    \n\t"
+    "cpu_boot_pointer:          \n\t"
+    ".org 0x80-4*5              \n\t"
+	"1:                         \n\t"
+    "lis    3, cpu_boot@ha      \n\t"
+    "la     3, cpu_boot@l(3)    \n\t"
+    "mtctr  3                   \n\t"
+    "bctr                       \n\t"
+    "b      1b                  \n\t"
     );
 
