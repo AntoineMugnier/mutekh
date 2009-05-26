@@ -138,21 +138,5 @@ cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
 		);
 }
 
-#define HAS_CPU_ATOMIC_TEST
-
-static inline bool_t
-cpu_atomic_bit_test(volatile atomic_int_t *a, uint_fast8_t n)
-{
-  uint8_t		isset;
-
-  asm volatile ("bt		%2, %1	\n"
-		"setc		%0	\n"
-		: "=q,q" (isset), "=m,m" (*a)
-		: "r,I" (n)
-		);
-
-  return isset;
-}
-
 #endif
 

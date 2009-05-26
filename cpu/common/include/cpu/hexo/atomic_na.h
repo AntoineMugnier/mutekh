@@ -103,13 +103,5 @@ cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
   *a &= ~(1 << n);
 }
 
-//#define HAS_CPU_ATOMIC_TEST
-
-static inline bool_t
-cpu_atomic_bit_test(volatile atomic_int_t *a, uint_fast8_t n)
-{
-  return (*a & (1 << n)) ? 1 : 0;
-}
-
 #endif
 

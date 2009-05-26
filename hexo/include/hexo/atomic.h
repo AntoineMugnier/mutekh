@@ -83,12 +83,6 @@ static bool_t cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n);
 /** atomicaly wait for bit set and clear it */
 static void cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n);
 
-/**
-   test bit in memory
-   @return 0 if bit is cleared.
-*/
-static bool_t cpu_atomic_bit_test(volatile atomic_int_t *a, uint_fast8_t n);
-
 #endif
 
 #include "cpu/hexo/atomic.h"

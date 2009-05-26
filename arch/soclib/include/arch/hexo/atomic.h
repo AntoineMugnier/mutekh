@@ -227,7 +227,7 @@ static inline bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n)
 
 static inline bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n)
 {
-  return cpu_atomic_bit_test(&a->value, n);
+  return ((1 << n) & a->value) != 0;
 }
 
 #endif
