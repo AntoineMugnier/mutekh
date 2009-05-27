@@ -83,5 +83,6 @@ $(TARGET_MK):
 	@echo 'OBJDUMP=$(OBJDUMP)' >> $@
 	@echo 'CFLAGS=$(INCS) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS)' >> $@
 	@echo 'INCS=$(INCS)' >> $@
+	@echo 'LDFLAGS=$(LINK_LDFLAGS) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS)' >> $@
 
 .SUFFIXES:
