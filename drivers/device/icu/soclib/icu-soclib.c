@@ -77,7 +77,6 @@ DEV_CLEANUP(icu_soclib_cleanup)
   mem_free(pv);
 }
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	icu_soclib_drv =
 {
   .class		= device_class_icu,
@@ -90,15 +89,11 @@ const struct driver_s	icu_soclib_drv =
   }
 };
 
-#endif
-
 DEV_INIT(icu_soclib_init)
 {
   struct icu_soclib_private_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &icu_soclib_drv;
-#endif
 
   if ((pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS))) /* FIXME allocation scope ? */
     {

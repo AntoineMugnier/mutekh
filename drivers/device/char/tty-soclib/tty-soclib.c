@@ -136,7 +136,6 @@ DEV_IRQ(tty_soclib_irq)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	tty_soclib_drv =
 {
   .class		= device_class_char,
@@ -147,15 +146,12 @@ const struct driver_s	tty_soclib_drv =
     .f_request		= tty_soclib_request,
   }
 };
-#endif
 
 DEV_INIT(tty_soclib_init)
 {
   struct tty_soclib_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &tty_soclib_drv;
-#endif
 
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

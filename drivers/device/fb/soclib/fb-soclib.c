@@ -82,7 +82,6 @@ DEVFB_SETPALETTE(fb_soclib_setpalette)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	fb_soclib_drv =
 {
   .class		= device_class_fb,
@@ -95,15 +94,12 @@ const struct driver_s	fb_soclib_drv =
     .f_setpalette	= fb_soclib_setpalette,
   }
 };
-#endif
 
 DEV_INIT(fb_soclib_init)
 {
   struct fb_soclib_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &fb_soclib_drv;
-#endif
 
   /* alocate private driver data */
 #if 0

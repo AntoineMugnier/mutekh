@@ -68,7 +68,6 @@ DEV_CLEANUP(dev_zero_cleanup)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	dev_zero_drv =
 {
   .class		= device_class_char,
@@ -78,13 +77,10 @@ const struct driver_s	dev_zero_drv =
     .f_request		= dev_zero_request,
   }
 };
-#endif
 
 DEV_INIT(dev_zero_init)
 {
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &dev_zero_drv;
-#endif
 
   return 0;
 }

@@ -146,7 +146,6 @@ DEV_CLEANUP(timer_soclib_cleanup)
   mem_free(pv);
 }
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	timer_soclib_drv =
 {
   .class		= device_class_timer,
@@ -160,7 +159,6 @@ const struct driver_s	timer_soclib_drv =
     .f_getvalue		= timer_soclib_getvalue,
   }
 };
-#endif
 
 /* 
  * device open operation
@@ -170,9 +168,7 @@ DEV_INIT(timer_soclib_init)
 {
   struct timer_soclib_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &timer_soclib_drv;
-#endif
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

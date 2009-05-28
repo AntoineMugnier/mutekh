@@ -148,12 +148,8 @@ CONTAINER_TYPE(device_list, CLIST,
 #endif
 struct device_s
 {
-#ifndef CONFIG_STATIC_DRIVERS
-
   const struct driver_s		*drv;
   struct device_s		*icudev;
-
-#endif
 
   /** general purpose device lock */
   lock_t			lock;

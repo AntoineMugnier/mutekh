@@ -60,7 +60,6 @@ DEVFB_GETBUFFER(fb_vga_getbuffer)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	fb_vga_drv =
 {
   .class		= device_class_fb,
@@ -73,15 +72,12 @@ const struct driver_s	fb_vga_drv =
     .f_setpalette	= fb_vga_setpalette,
   }
 };
-#endif
 
 DEV_INIT(fb_vga_init)
 {
   struct fb_vga_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &fb_vga_drv;
-#endif
 
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

@@ -45,8 +45,6 @@
 #include "net-tuntap.h"
 #include "net-tuntap-private.h"
 
-#ifndef CONFIG_STATIC_DRIVERS
-
 /*
  * Driver operations vector.
  */
@@ -65,7 +63,6 @@ const struct driver_s	net_tuntap_drv =
     .f_getopt		= net_tuntap_getopt,
   }
 };
-#endif
 
 static uint32_t	tap_id = 0;
 
@@ -163,9 +160,7 @@ DEV_INIT(net_tuntap_init)
   struct ifreq			ifr;
   const int			true = 1;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &net_tuntap_drv;
-#endif
 
   printk("tuntap driver init on device %p\n", dev);
 

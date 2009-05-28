@@ -221,7 +221,6 @@ pci_enum_probe(struct device_s *dev)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	enum_pci_drv =
 {
   .class		= device_class_enum,
@@ -231,16 +230,13 @@ const struct driver_s	enum_pci_drv =
     .f_register		= enum_pci_register,
   }
 };
-#endif
 
 DEV_INIT(enum_pci_init)
 {
   struct enum_pci_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &enum_pci_drv;
   dev->icudev = icudev;
-#endif
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

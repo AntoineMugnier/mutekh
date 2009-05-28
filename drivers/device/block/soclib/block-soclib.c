@@ -187,7 +187,6 @@ DEV_IRQ(block_soclib_irq)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	block_soclib_drv =
 {
   .class		= device_class_block,
@@ -199,15 +198,12 @@ const struct driver_s	block_soclib_drv =
     .f_getparams	= block_soclib_getparams,
   }
 };
-#endif
 
 DEV_INIT(block_soclib_init)
 {
   struct block_soclib_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &block_soclib_drv;
-#endif
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

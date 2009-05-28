@@ -60,7 +60,6 @@ DEV_CLEANUP(sound_sb16_cleanup)
   mem_free(pv);
 }
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	sound_sb16_drv =
 {
   .class		= device_class_sound,
@@ -73,15 +72,12 @@ const struct driver_s	sound_sb16_drv =
     .f_mode		= sound_sb16_mode,
   }
 };
-#endif
 
 DEV_INIT(sound_sb16_init)
 {
   struct sound_sb16_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &sound_sb16_drv;
-#endif
 
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

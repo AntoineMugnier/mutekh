@@ -65,7 +65,6 @@ DEV_CLEANUP(dev_null_cleanup)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	dev_null_drv =
 {
   .class		= device_class_char,
@@ -75,13 +74,10 @@ const struct driver_s	dev_null_drv =
     .f_request		= dev_null_request,
   }
 };
-#endif
 
 DEV_INIT(dev_null_init)
 {
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &dev_null_drv;
-#endif
 
   return 0;
 }

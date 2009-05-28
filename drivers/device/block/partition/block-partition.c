@@ -253,7 +253,6 @@ DEV_CREATE(block_partition_create)
 }
 
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s block_partition_drv =
 {
   .class		= device_class_block,
@@ -264,5 +263,3 @@ const struct driver_s block_partition_drv =
     .f_getparams	= block_partition_getparams,
   }
 };
-#endif
-

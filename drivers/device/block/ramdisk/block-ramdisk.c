@@ -108,7 +108,6 @@ DEV_CLEANUP(block_ramdisk_cleanup)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	block_ramdisk_drv =
 {
   .class		= device_class_block,
@@ -120,15 +119,12 @@ const struct driver_s	block_ramdisk_drv =
     .f_getparams	= block_ramdisk_getparams,
   }
 };
-#endif
 
 DEV_INIT(block_ramdisk_init)
 {
   struct block_ramdisk_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &block_ramdisk_drv;
-#endif
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

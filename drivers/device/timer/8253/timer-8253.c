@@ -123,7 +123,6 @@ DEV_CLEANUP(timer_8253_cleanup)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	timer_8253_drv =
 {
   .class		= device_class_timer,
@@ -137,15 +136,12 @@ const struct driver_s	timer_8253_drv =
     .f_getvalue		= timer_8253_getvalue,
   }
 };
-#endif
 
 DEV_INIT(timer_8253_init)
 {
   struct timer_8253_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &timer_8253_drv;
-#endif
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

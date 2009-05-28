@@ -166,7 +166,6 @@ DEV_IRQ(uart_8250_irq)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	uart_8250_drv =
 {
   .class		= device_class_char,
@@ -177,15 +176,12 @@ const struct driver_s	uart_8250_drv =
     .f_request		= uart_8250_request,
   }
 };
-#endif
 
 DEV_INIT(uart_8250_init)
 {
   struct uart_8250_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &uart_8250_drv;
-#endif
 
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

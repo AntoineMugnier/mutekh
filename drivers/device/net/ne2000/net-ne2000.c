@@ -42,8 +42,6 @@
 #include "net-ne2000-private.h"
 #include "ne2000.h"
 
-#ifndef CONFIG_STATIC_DRIVERS
-
 #ifdef CONFIG_DRIVER_ENUM_PCI
 /*
  * PCI identifiers of compatible cards.
@@ -86,7 +84,6 @@ const struct driver_s	net_ne2000_drv =
     .f_getopt		= net_ne2000_getopt,
   }
 };
-#endif
 
 
 /*
@@ -433,9 +430,7 @@ DEV_INIT(net_ne2000_init)
   struct net_ne2000_context_s	*pv;
   struct net_dispatch_s		*dispatch;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &net_ne2000_drv;
-#endif
 
   printk("ne2000 driver init on device %p\n", dev);
 

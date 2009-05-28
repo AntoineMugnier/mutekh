@@ -93,7 +93,6 @@ DEV_CLEANUP(timer_emu_cleanup)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	timer_emu_drv =
 {
   .class		= device_class_timer,
@@ -107,15 +106,12 @@ const struct driver_s	timer_emu_drv =
     .f_getvalue		= timer_emu_getvalue,
   }
 };
-#endif
 
 DEV_INIT(timer_emu_init)
 {
   struct timer_emu_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &timer_emu_drv;
-#endif
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

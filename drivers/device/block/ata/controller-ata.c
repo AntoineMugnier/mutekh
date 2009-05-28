@@ -75,8 +75,6 @@ DEV_IRQ(controller_ata_irq)
   return res;
 }
 
-#ifndef CONFIG_STATIC_DRIVERS
-
 #ifdef CONFIG_DRIVER_ENUM_PCI
 /*
  * PCI identifiers of compatible cards.
@@ -99,7 +97,6 @@ const struct driver_s	controller_ata_drv =
   .f_init		= controller_ata_init,
   .f_cleanup		= controller_ata_cleanup,
 };
-#endif
 
 bool_t controller_ata_waitbusy(struct device_s *dev)
 {
@@ -150,9 +147,7 @@ DEV_INIT(controller_ata_init)
 {
   struct controller_ata_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &controller_ata_drv;
-#endif
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

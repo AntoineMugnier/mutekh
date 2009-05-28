@@ -89,7 +89,6 @@ DEV_CLEANUP(dev_random_cleanup)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	dev_random_drv =
 {
   .class		= device_class_char,
@@ -99,15 +98,12 @@ const struct driver_s	dev_random_drv =
     .f_request		= dev_random_request,
   }
 };
-#endif
 
 DEV_INIT(dev_random_init)
 {
   struct random_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &dev_random_drv;
-#endif
 
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

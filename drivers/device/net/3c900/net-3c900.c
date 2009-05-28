@@ -59,7 +59,6 @@ DEVNET_SENDPKT(net_3c900_sendpkt)
 {
 }
 
-#ifndef CONFIG_STATIC_DRIVERS
 static const struct devenum_ident_s	net_3c900_ids[] =
   {
     { .vendor = 0x10b7, .device = 0x9055, .class = -1 },
@@ -80,5 +79,4 @@ const struct driver_s	net_3c900_drv =
     .f_sendpkt		= net_3c900_sendpkt,
   }
 };
-#endif
 

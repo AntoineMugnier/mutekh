@@ -111,7 +111,6 @@ DEV_CLEANUP(icu_8259_cleanup)
 }
 
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	icu_8259_drv =
 {
   .class		= device_class_icu,
@@ -123,15 +122,12 @@ const struct driver_s	icu_8259_drv =
     .f_delhndl		= icu_8259_delhndl,
   }
 };
-#endif
 
 DEV_INIT(icu_8259_init)
 {
   struct icu_8259_private_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &icu_8259_drv;
-#endif
 
   if ((pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS))) /* FIXME allocation scope ? */
     {

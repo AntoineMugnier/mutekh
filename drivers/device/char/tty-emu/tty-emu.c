@@ -90,7 +90,6 @@ DEV_CLEANUP(tty_emu_cleanup)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	tty_emu_drv =
 {
   .class		= device_class_char,
@@ -101,13 +100,10 @@ const struct driver_s	tty_emu_drv =
     .f_request		= tty_emu_request,
   }
 };
-#endif
 
 DEV_INIT(tty_emu_init)
 {
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &tty_emu_drv;
-#endif
 
   return 0;
 }

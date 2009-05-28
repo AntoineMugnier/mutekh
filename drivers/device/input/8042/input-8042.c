@@ -343,7 +343,6 @@ DEV_CLEANUP(input_8042_cleanup)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	input_8042_drv =
 {
   .class		= device_class_input,
@@ -356,15 +355,12 @@ const struct driver_s	input_8042_drv =
     .f_setcallback	= input_8042_setcallback,
   }
 };
-#endif
 
 DEV_INIT(input_8042_init)
 {
   struct input_8042_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &input_8042_drv;
-#endif
 
 #if defined(CONFIG_ARCH_IBMPC)
   assert(dev->addr[0] == 0x60);

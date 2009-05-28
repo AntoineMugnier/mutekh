@@ -103,7 +103,6 @@ DEV_CLEANUP(block_file_emu_cleanup)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	block_file_emu_drv =
 {
   .class		= device_class_block,
@@ -114,15 +113,12 @@ const struct driver_s	block_file_emu_drv =
     .f_getparams	= block_file_emu_getparams,
   }
 };
-#endif
 
 DEV_INIT(block_file_emu_init)
 {
   struct block_file_emu_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &block_file_emu_drv;
-#endif
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

@@ -482,7 +482,6 @@ DEV_CLEANUP(tty_vga_cleanup)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
 const struct driver_s	tty_vga_drv =
 {
   .class		= device_class_char,
@@ -495,15 +494,12 @@ const struct driver_s	tty_vga_drv =
     .f_request		= tty_vga_request,
   }
 };
-#endif
 
 DEV_INIT(tty_vga_init)
 {
   struct tty_vga_context_s	*pv;
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &tty_vga_drv;
-#endif
 
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

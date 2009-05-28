@@ -305,8 +305,6 @@ DEV_CLEANUP(drive_ata_cleanup)
  * device open operation
  */
 
-#ifndef CONFIG_STATIC_DRIVERS
-
 const struct driver_s	drive_ata_drv =
 {
   .class		= device_class_block,
@@ -316,7 +314,6 @@ const struct driver_s	drive_ata_drv =
     .f_getparams	= drive_ata_getparams,
   }
 };
-#endif
 
 error_t drive_ata_init(struct device_s *dev, bool_t slave)
 {
@@ -363,9 +360,7 @@ error_t drive_ata_init(struct device_s *dev, bool_t slave)
   controller_ata_rega_w8(dev->parent, ATA_REG_DEVICE_CONTROL,
 			 ATA_DEVCTRL_RESERVED_HIGH);
 
-#ifndef CONFIG_STATIC_DRIVERS
   dev->drv = &drive_ata_drv;
-#endif
 
   return 0;
 }
