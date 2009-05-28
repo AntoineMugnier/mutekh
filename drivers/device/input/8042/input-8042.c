@@ -22,6 +22,7 @@
 
 #include <hexo/types.h>
 
+#include <device/icu.h>
 #include <device/input.h>
 #include <hexo/device.h>
 #include <device/driver.h>
@@ -335,6 +336,8 @@ DEV_CLEANUP(input_8042_cleanup)
 {
   struct input_8042_context_s	*pv = dev->drv_pv;
 
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+
   lock_destroy(&pv->lock);
   mem_free(pv);
 }
@@ -386,6 +389,8 @@ DEV_INIT(input_8042_init)
 
   pv->led_state = KEYB_8042_LED_NUM;
   input_8042_updateleds(dev);
+
+  DEV_ICU_BIND(dev->icudev, dev, dev->irq, input_8042_irq);
 
   return 0;
 }

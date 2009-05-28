@@ -71,9 +71,11 @@ DEVENUM_REGISTER(enum_pci_register)
 	    (id->class != enum_pv->class))
 	  continue;
 
+	item->icudev = dev->icudev;
+
 	/* call driver device init function, use same icu as PCI
 	   enumerator parent device */
-	if (!drv->f_init(item, dev->icudev, NULL))
+	if (!drv->f_init(item, NULL))
 	  {
 	    count++;
 	  }
@@ -236,7 +238,6 @@ DEV_INIT(enum_pci_init)
   struct enum_pci_context_s	*pv;
 
   dev->drv = &enum_pci_drv;
-  dev->icudev = icudev;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);

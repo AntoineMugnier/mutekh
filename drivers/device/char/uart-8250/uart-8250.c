@@ -22,6 +22,7 @@
 
 #include <hexo/types.h>
 
+#include <device/icu.h>
 #include <device/char.h>
 #include <hexo/device.h>
 #include <device/driver.h>
@@ -133,6 +134,8 @@ DEV_CLEANUP(uart_8250_cleanup)
 {
   struct uart_8250_context_s	*pv = dev->drv_pv;
 
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+
   dev_char_queue_destroy(&pv->read_q);
   dev_char_queue_destroy(&pv->write_q);
   mem_free(pv);
@@ -182,7 +185,7 @@ DEV_INIT(uart_8250_init)
   struct uart_8250_context_s	*pv;
 
   dev->drv = &uart_8250_drv;
-
+  
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
 
@@ -239,6 +242,8 @@ DEV_INIT(uart_8250_init)
   cpu_io_write_8(dev->addr[0] + UART_8250_DLM, pv->line_speed >> 8);
 
   cpu_io_write_8(dev->addr[0] + UART_8250_LCR, pv->line_mode);
+
+  DEV_ICU_BIND(dev->icudev, dev, dev->irq, uart_8250_irq);
 
   return 0;
 }

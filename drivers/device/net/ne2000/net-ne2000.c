@@ -508,9 +508,7 @@ DEV_INIT(net_ne2000_init)
     }
 
   /* bind to ICU */
-  device_obj_refnew(icudev);
-  pv->icudev = icudev;
-  DEV_ICU_BIND(icudev, dev);
+  DEV_ICU_BIND(dev->icudev, dev, dev->irq, net_ne2000_irq);
 
   return 0;
 }
@@ -524,8 +522,7 @@ DEV_CLEANUP(net_ne2000_cleanup)
   struct net_ne2000_context_s	*pv = dev->drv_pv;
 
   /* disable IRQ */
-  DEV_ICU_UNBIND(pv->icudev, dev);
-  device_obj_refdrop(pv->icudev);
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
 
   /* unregister the device */
   if (pv->interface != NULL)

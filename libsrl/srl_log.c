@@ -119,7 +119,7 @@ static FILE *init_tty(void *addr)
 			device_init(&st->device);
 			st->device.addr[0] = addr;
 			st->device.irq = 1;
-			tty_soclib_init(&st->device, NULL, NULL);
+			tty_soclib_init(&st->device, NULL);
 			__stdio_stream_init(&st->file);
 			st->file.ops = &tty_ops;
 			st->file.hndl = &st->device;

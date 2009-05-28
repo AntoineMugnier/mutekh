@@ -78,9 +78,9 @@ void* thread_func(void *arg)
   device_init(&zero_dev);
   device_init(&random_dev);
 
-  dev_null_init(&null_dev, NULL, NULL);
-  dev_zero_init(&zero_dev, NULL, NULL);
-  dev_random_init(&random_dev, NULL, NULL);
+  dev_null_init(&null_dev, NULL);
+  dev_zero_init(&zero_dev, NULL);
+  dev_random_init(&random_dev, NULL);
 
   // Create nodes
   devfs_register("tty", NULL, DEVFS_CHAR);
@@ -122,9 +122,9 @@ int main()
   ata.addr[0] = 0x1f0;
   ata.addr[1] = 0x3f0;
   ata.irq = 14;
+  ata.icudev = &icu_dev;
 
-  controller_ata_init(&ata, &icu_dev, NULL);
-  DEV_ICU_BIND(&icu_dev, &ata);
+  controller_ata_init(&ata, NULL);
 
   int i;
   for(i=0;i<NR_THREADS;i++){

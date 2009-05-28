@@ -83,7 +83,7 @@ typedef DEV_CREATE(dev_create_t);
 
 
 /** Common class init() function template. */
-#define DEV_INIT(n)	error_t (n) (struct device_s *dev, struct device_s *icudev, void *params)
+#define DEV_INIT(n)	error_t (n) (struct device_s *dev, void *params)
 
 /** Common device class init() methode shortcut */
 #define dev_init(dev, ...) (dev)->drv->f_init(dev, __VA_ARGS__)

@@ -42,6 +42,7 @@
 #include <drivers/device/timer/emu/timer-emu.h>
 #include <drivers/device/input/8042/input-8042.h>
 #include <drivers/device/fb/vga/fb-vga.h>
+#include <drivers/device/fb/soclib/fb-soclib.h>
 #include <drivers/device/enum/pci/enum-pci.h>
 #include <drivers/device/enum/isapnp/enum-isapnp.h>
 #include <drivers/device/net/ne2000/net-ne2000.h>
@@ -140,10 +141,10 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # if defined(CONFIG_DRIVER_ICU_8259)
   icu_dev.addr[ICU_ADDR_MASTER] = 0x0020;
   icu_dev.addr[ICU_ADDR_SLAVE] = 0x00a0;
-  icu_8259_init(&icu_dev, NULL, NULL);
+  icu_8259_init(&icu_dev, NULL);
 # elif defined(CONFIG_DRIVER_ICU_SOCLIB)
   icu_dev.addr[ICU_ADDR_MASTER] = DSX_SEGMENT_ICU_ADDR;
-  icu_soclib_init(&icu_dev, NULL, NULL);
+  icu_soclib_init(&icu_dev, NULL);
 #  warning CONFIG_DRIVER_ICU case not handled in mutek_main()
 # endif
 #endif
@@ -157,8 +158,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # if defined(CONFIG_DRIVER_CHAR_UART8250)
   uart_dev.addr[UART_8250_ADDR] = 0x03f8;
   uart_dev.irq = 4;
-  uart_8250_init(&uart_dev, &icu_dev, NULL);
-  DEV_ICU_BIND(&icu_dev, &uart_dev);
+  uart_dev.icudev = &icu_dev;
+  uart_8250_init(&uart_dev, NULL);
 # else
 #  warning CONFIG_DRIVER_UART case not handled in mutek_main()
 # endif
@@ -173,23 +174,23 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   tty_con_dev.addr[VGA_TTY_ADDR_BUFFER] = 0x000b8000;
   tty_con_dev.addr[VGA_TTY_ADDR_CRTC] = 0x03d4;
   tty_con_dev.irq = 1;
-  tty_vga_init(&tty_con_dev, &icu_dev, NULL);
+  tty_con_dev.icudev = &icu_dev;
+  tty_vga_init(&tty_con_dev, NULL);
 #  if defined(CONFIG_MUTEK_CONSOLE)
   tty_dev = &tty_con_dev;
 #  endif
-  DEV_ICU_BIND(&icu_dev, &tty_con_dev);
 # elif defined(CONFIG_DRIVER_CHAR_SOCLIBTTY)
   device_init(&tty_con_dev);
   tty_con_dev.addr[0] = DSX_SEGMENT_TTY_ADDR;
   tty_con_dev.irq = 1;
-  tty_soclib_init(&tty_con_dev, &icu_dev, NULL);
+  tty_con_dev.icudev = &icu_dev;
+  tty_soclib_init(&tty_con_dev, NULL);
 #  if defined(CONFIG_MUTEK_CONSOLE)
   tty_dev = &tty_con_dev;
 #  endif
-  DEV_ICU_BIND(&icu_dev, &tty_con_dev);
 # elif defined(CONFIG_DRIVER_CHAR_EMUTTY)
   device_init(&tty_con_dev);
-  tty_emu_init(&tty_con_dev, NULL, NULL);
+  tty_emu_init(&tty_con_dev, NULL);
 #  if defined(CONFIG_MUTEK_CONSOLE)
   tty_dev = &tty_con_dev;
 #  endif
@@ -212,8 +213,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   device_init(&bd_dev);
   bd_dev.addr[0] = DSX_SEGMENT_BD_ADDR;
   bd_dev.irq = 2; // 0 is timer and 1 is tty
-  block_soclib_init(&bd_dev, &icu_dev, NULL);
-  DEV_ICU_BIND(&icu_dev, &bd_dev);
+  bd_dev.icudev = &icu_dev;
+  block_soclib_init(&bd_dev, NULL);
 # else
 #  warning CONFIG_DRIVER_BLOCK case not handled in mutek_main()
 # endif
@@ -226,19 +227,19 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # if defined(CONFIG_DRIVER_TIMER_8253)
   timer_dev.addr[0] = 0x0040;
   timer_dev.irq = 0;
-  timer_8253_init(&timer_dev, &icu_dev, NULL);
+  timer_dev.icudev = &icu_dev;
+  timer_8253_init(&timer_dev, NULL);
   dev_timer_setperiod(&timer_dev, 0, 1193180 / 100);
-  DEV_ICU_BIND(&icu_dev, &timer_dev);
   dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 # elif defined(CONFIG_DRIVER_TIMER_SOCLIB)
   timer_dev.addr[0] = DSX_SEGMENT_TIMER_ADDR;
   timer_dev.irq = 0;
-  timer_soclib_init(&timer_dev, &icu_dev, NULL);
+  timer_dev.icudev = &icu_dev;
+  timer_soclib_init(&timer_dev, NULL);
   dev_timer_setperiod(&timer_dev, 0, 0xffff);
-  DEV_ICU_BIND(&icu_dev, &timer_dev);
   dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 # elif defined(CONFIG_DRIVER_TIMER_EMU)
-  timer_emu_init(&timer_dev, NULL, NULL);
+  timer_emu_init(&timer_dev, NULL);
   dev_timer_setperiod(&timer_dev, 0, 0xffff);
   dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 # else
@@ -256,8 +257,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # if defined(CONFIG_DRIVER_INPUT_8042)
   keyboard_dev.addr[0] = 0x60;
   keyboard_dev.irq = 1;
-  input_8042_init(&keyboard_dev, &icu_dev, NULL);
-  DEV_ICU_BIND(&icu_dev, &keyboard_dev);
+  keyboard_dev.icudev = &icu_dev;
+  input_8042_init(&keyboard_dev, NULL);
 # else
 #  warning CONFIG_DRIVER_KEYBOARD case not handled in mutek_main()
 # endif
@@ -268,7 +269,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #if defined(CONFIG_DRIVER_FB)
   device_init(&fb_dev);
 # if defined(CONFIG_DRIVER_FB_VGA)
-  fb_vga_init(&fb_dev, &icu_dev, NULL);
+  fb_vga_init(&fb_dev, NULL);
   fb_vga_setmode(&fb_dev, 320, 200, 8, FB_PACK_INDEX);
 #  if defined(CONFIG_MUTEK_LOGO)
   uint8_t *p = (void*)fb_vga_getbuffer(&fb_dev, 0);
@@ -276,7 +277,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #  endif
 # elif defined(CONFIG_DRIVER_FB_SOCLIB)
   fb_dev.addr[0] = DSX_SEGMENT_FB_ADDR;
-  fb_soclib_init(&fb_dev, NULL, NULL);
+  fb_soclib_init(&fb_dev, NULL);
 # else
 #  warning CONFIG_DRIVER_FB case not handled in mutek_main()
 # endif
@@ -286,12 +287,12 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
 #if defined(CONFIG_DRIVER_ENUM_PCI)
   device_init(&enum_pci);
-  enum_pci_init(&enum_pci, &icu_dev, NULL);
+  enum_pci_init(&enum_pci, NULL);
 #endif
 
 #if defined(CONFIG_DRIVER_ENUM_ISAPNP)
   device_init(&enum_isapnp);
-  enum_isapnp_init(&enum_isapnp, &icu_dev, NULL);
+  enum_isapnp_init(&enum_isapnp, NULL);
 #endif
 
 #if defined(CONFIG_DRIVER_ENUM_PCI) && defined(CONFIG_DRIVER_NET_3C900)
@@ -310,7 +311,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   device_init(&net_dlink_200tp);
   net_dlink_200tp.addr[0] = 0x320;
   net_dlink_200tp.irq = 5;
-  net_ne2000_init(&net_dlink_200tp, &icu_dev, NULL);
+  net_dlink_200tp.icudev = &icu_dev;
+  net_ne2000_init(&net_dlink_200tp, NULL);
 #endif
 #if 0
   /* driver for the UMC9008 */
@@ -319,7 +321,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   device_init(&net_umc_9008);
   net_umc_9008.addr[0] = 0x300;
   net_umc_9008.irq = 3;
-  net_ne2000_init(&net_umc_9008, &icu_dev, NULL);
+  net_umc_9008.icudev = &icu_dev;
+  net_ne2000_init(&net_umc_9008, NULL);
 #endif
 # endif
 

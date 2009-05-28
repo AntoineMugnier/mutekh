@@ -60,9 +60,9 @@ int main()
   ata.addr[0] = 0x1f0;
   ata.addr[1] = 0x3f0;
   ata.irq = 14;
+  ata.icudev = &icu_dev;
 
-  controller_ata_init(&ata, &icu_dev, NULL);
-  DEV_ICU_BIND(&icu_dev, &ata);
+  controller_ata_init(&ata, NULL);
 
   drv[0] = device_get_child(&ata, 0);
   //  drv[1] = device_get_child(&ata, 1);

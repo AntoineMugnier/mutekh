@@ -16,9 +16,9 @@ int_fast8_t main(size_t argc, char **argv)
   device_init(&zero_dev);
   device_init(&null_dev);
 
-  dev_random_init(&random_dev, NULL, NULL);
-  dev_null_init(&null_dev, NULL, NULL);
-  dev_zero_init(&zero_dev, NULL, NULL);
+  dev_random_init(&random_dev, NULL);
+  dev_null_init(&null_dev, NULL);
+  dev_zero_init(&zero_dev, NULL);
 
   memset(buf, 0x55, sizeof(buf));
 

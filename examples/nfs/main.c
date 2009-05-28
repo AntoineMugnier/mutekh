@@ -101,9 +101,9 @@ int main()
   ata.addr[0] = 0x1f0;
   ata.addr[1] = 0x3f0;
   ata.irq = 14;
+  ata.icudev = &icudev;
 
-  controller_ata_init(&ata, &icu_dev, NULL);
-  DEV_ICU_BIND(&icu_dev, &ata);
+  controller_ata_init(&ata, NULL);
 
   int i;
   for(i=0;i<NR_THREADS;i++){

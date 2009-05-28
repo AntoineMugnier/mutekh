@@ -182,7 +182,7 @@ void __pthread_dump_runqueue(void);
 typedef struct pthread_mutexattr_s pthread_mutexattr_t;
 
 /** mutex object structure */
-typedef struct				pthread_mutex_s
+struct				pthread_mutex_s
 {
   /** mutex counter */
   uint_fast8_t				count;
@@ -197,7 +197,9 @@ typedef struct				pthread_mutex_s
 
   /** blocked threads wait queue */
   sched_queue_root_t			wait;
-}					pthread_mutex_t;
+};
+
+typedef struct pthread_mutex_s pthread_mutex_t;
 
 #ifdef CONFIG_PTHREAD_MUTEX_ATTR
 
@@ -340,11 +342,13 @@ pthread_mutex_unlock(pthread_mutex_t *mutex)
 
 struct timespec;
 
-typedef struct pthread_cond_s
+struct pthread_cond_s
 {
   /** blocked threads wait queue */
   sched_queue_root_t		wait;
-} pthread_cond_t;
+};
+
+typedef struct pthread_cond_s pthread_cond_t;
 
 typedef struct pthread_condattr_s pthread_condattr_t;
 
@@ -437,12 +441,14 @@ pthread_rwlock_unlock(pthread_rwlock_t *rwlock)
 typedef struct pthread_barrierattr_s pthread_barrierattr_t;
 
 /** mutex object structure */
-typedef struct				pthread_barrier_s
+struct				pthread_barrier_s
 {
   int_fast8_t				count;
   /** blocked threads waiting for read */
   sched_queue_root_t			wait;
-}					pthread_barrier_t;
+};
+
+typedef struct pthread_barrier_s pthread_barrier_t;
 
 error_t pthread_barrier_destroy(pthread_barrier_t *barrier);
 

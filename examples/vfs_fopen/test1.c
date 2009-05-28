@@ -59,7 +59,7 @@ void* cat(void* arg)
 int main()
 {
     device_init(&bd_dev);
-    block_file_emu_init(&bd_dev, NULL, "img.bin");
+    block_file_emu_init(&bd_dev, "img.bin");
 
 #if 1
     pthread_create(&a, NULL, cat, "DESC.C");

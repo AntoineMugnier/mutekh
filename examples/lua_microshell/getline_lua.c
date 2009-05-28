@@ -145,8 +145,8 @@ int main()
     device_init(&bd_dev);
     bd_dev.addr[0] = 0x65200000;
     bd_dev.irq = 2;
-    block_soclib_init(&bd_dev, &icu_dev, NULL);
-    DEV_ICU_BIND(&icu_dev, &bd_dev);
+    db_dev.icudev = &icu_dev;
+    block_soclib_init(&bd_dev, NULL);
 
     pthread_create(&a, NULL, shell, NULL);
 }

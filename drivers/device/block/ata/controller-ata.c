@@ -23,6 +23,7 @@
 #include <hexo/types.h>
 
 #include <device/enum.h>
+#include <device/icu.h>
 #include <hexo/device.h>
 #include <device/driver.h>
 
@@ -43,6 +44,8 @@
 DEV_CLEANUP(controller_ata_cleanup)
 {
   struct controller_ata_context_s	*pv = dev->drv_pv;
+
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
 
   mem_free(pv);
 }
@@ -170,6 +173,8 @@ DEV_INIT(controller_ata_init)
   controller_ata_detect(dev, 0);
   /* try to detect slave */
   controller_ata_detect(dev, 1);
+
+  DEV_ICU_BIND(dev->icudev, dev, dev->irq, controller_ata_irq);
 
   return 0;
 }

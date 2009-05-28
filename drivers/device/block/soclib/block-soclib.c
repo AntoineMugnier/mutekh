@@ -25,6 +25,7 @@
 #include <device/block.h>
 #include <hexo/device.h>
 #include <device/driver.h>
+#include <device/icu.h>
 
 #include <hexo/iospace.h>
 #include <hexo/alloc.h>
@@ -126,6 +127,8 @@ DEV_CLEANUP(block_soclib_cleanup)
 {
   struct block_soclib_context_s	*pv = dev->drv_pv;
 
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+
   mem_free(pv);
 }
 
@@ -220,6 +223,8 @@ DEV_INIT(block_soclib_init)
 
   printk("Soclib block device : %u sectors\n",
 	 pv->params.blk_count);
+
+  DEV_ICU_BIND(dev->icudev, dev, dev->irq, block_soclib_irq);
 
   dev->drv_pv = pv;
   return 0;

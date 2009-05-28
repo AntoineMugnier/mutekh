@@ -72,6 +72,8 @@ DEVICU_SETHNDL(icu_8259_sethndl)
   struct icu_8259_private_s	*pv = dev->drv_pv;
   struct icu_8259_handler_s	*h = pv->table + irq;
 
+  device_obj_refnew(dev);
+
   h->hndl = hndl;
   h->data = data;
 
@@ -80,6 +82,8 @@ DEVICU_SETHNDL(icu_8259_sethndl)
 
 DEVICU_DELHNDL(icu_8259_delhndl)
 {
+  device_obj_refdrop(dev);
+
   /* FIXME */
   return 0;
 }

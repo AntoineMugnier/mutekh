@@ -162,10 +162,10 @@ int main()
 #if defined (CONFIG_ARCH_SOCLIB)
     bd_dev.addr[0] = 0x65200000;
     bd_dev.irq = 2;
-    block_soclib_init(&bd_dev, &icu_dev, NULL);
-    DEV_ICU_BIND(&icu_dev, &bd_dev);
+    bd_dev.icudev = &icu_dev;
+    block_soclib_init(&bd_dev, NULL);
 #elif defined (CONFIG_ARCH_EMU)
-    block_file_emu_init(&bd_dev, NULL, "img.bin");
+    block_file_emu_init(&bd_dev, "img.bin");
 #else
 #error "Your arch is not supported yet"
 #endif

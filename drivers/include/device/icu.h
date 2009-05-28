@@ -64,18 +64,15 @@ typedef DEVICU_SETHNDL(devicu_sethndl_t);
 
 
 /** bind a device to this icu irq for an already configured device */
-#define DEV_ICU_BIND(icu_dev, dev)						\
-{										\
-  if ((dev)->drv->f_irq)								\
-    {										\
-      dev_icu_sethndl((icu_dev), (dev)->irq, (dev)->drv->f_irq, (dev));		\
-      dev_icu_enable((icu_dev), (dev)->irq, 1);					\
-    }										\
-}
+#define DEV_ICU_BIND(icu_dev, dev, irq, callback)						\
+    do {																\
+		dev_icu_sethndl((icu_dev), (irq), (callback), (dev));			\
+		dev_icu_enable((icu_dev), (irq), 1);							\
+    } while(0)
 
 
 /** ICU device class delhndl() function template */
-#define DEVICU_DELHNDL(n)	error_t (n) (struct device_s *dev, dev_irq_t *hndl)
+#define DEVICU_DELHNDL(n)	error_t (n) (struct device_s *dev, uint_fast8_t irq)
 /** ICU device class delhndl() function type. Remove interrupt
     handler.
 
@@ -89,14 +86,11 @@ typedef DEVICU_DELHNDL(devicu_delhndl_t);
 
 
 /** unbind icu irq for a device */
-#define DEV_ICU_UNBIND(icu_dev, dev)						\
-{										\
-  if ((dev)->drv->f_irq)							\
-    {										\
-      dev_icu_delhndl((icu_dev), (dev)->drv->f_irq);				\
-      dev_icu_enable((icu_dev), (dev)->irq, 0);					\
-    }										\
-}
+#define DEV_ICU_UNBIND(icu_dev, dev, irq)								\
+	do {																\
+		dev_icu_delhndl((icu_dev), (irq));								\
+		dev_icu_enable((icu_dev), (irq), 0);							\
+    } while(0)
 
 
 /** ICU device class methodes */

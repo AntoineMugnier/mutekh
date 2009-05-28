@@ -59,9 +59,11 @@ DEVENUM_REGISTER(enum_isapnp_register)
 	if (id->vendor != enum_pv->vendor)
 	  continue;
 
+	item->icudev = dev->icudev;
+
 	/* call driver device init function, use same icu as PCI
 	   enumerator parent device */
-	if (!drv->f_init(item, dev->icudev))
+	if (!drv->f_init(item))
 	  {
 	    count++;
 	  }
@@ -218,7 +220,6 @@ DEV_INIT(enum_isapnp_init)
   struct enum_isapnp_context_s	*pv;
 
   dev->drv = &enum_isapnp_drv;
-  dev->icudev = icudev;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
