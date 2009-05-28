@@ -70,7 +70,7 @@ static inline void arch_lock_spin(struct arch_lock_s *lock)
 
 static inline bool_t arch_lock_state(struct arch_lock_s *lock)
 {
-  return atomic_bit_test(&lock->a, 0);
+  return lock->a & 1;
 }
 
 static inline void arch_lock_release(struct arch_lock_s *lock)
