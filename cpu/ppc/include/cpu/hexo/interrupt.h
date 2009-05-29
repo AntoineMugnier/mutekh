@@ -92,6 +92,9 @@ cpu_interrupt_process(void)
   __asm__ volatile ("nop"
 		    :
 		    :
+    /* memory clobber is important here as cpu_interrupt_process()
+       will let pending intterupts change global variables checked in
+       a function loop (scheduler root queue for instance) */
 		    : "memory"
 		    );
   cpu_interrupt_disable();
