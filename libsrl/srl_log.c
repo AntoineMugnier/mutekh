@@ -161,8 +161,9 @@ void srl_console_init(void *addr)
 {
 	device_init(&device);
 	device.addr[0] = addr;
-	device.irq = 1;
-	tty_soclib_init(&device, NULL, NULL);
+	device.irq = 0;
+	device.icudev = NULL;
+	tty_soclib_init(&device, NULL);
 	tty_dev = &device;
 }
 
