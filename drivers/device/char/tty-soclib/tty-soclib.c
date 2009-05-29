@@ -104,7 +104,8 @@ DEV_CLEANUP(tty_soclib_cleanup)
 {
   struct tty_soclib_context_s	*pv = dev->drv_pv;
 
-  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+  if ( dev->icudev )
+	  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
 
   tty_fifo_destroy(&pv->read_fifo);
   dev_char_queue_destroy(&pv->read_q);
@@ -167,7 +168,8 @@ DEV_INIT(tty_soclib_init)
   dev_char_queue_init(&pv->read_q);
   tty_fifo_init(&pv->read_fifo);
 
-  DEV_ICU_BIND(dev->icudev, dev, dev->irq, tty_soclib_irq);
+  if ( dev->icudev )
+	  DEV_ICU_BIND(dev->icudev, dev, dev->irq, tty_soclib_irq);
 
   return 0;
 }

@@ -118,7 +118,8 @@ static FILE *init_tty(void *addr)
 		if ( st->device.addr[0] == 0 ) {
 			device_init(&st->device);
 			st->device.addr[0] = addr;
-			st->device.irq = 1;
+			st->device.irq = 0;
+			st->device.icudev = NULL;
 			tty_soclib_init(&st->device, NULL);
 			__stdio_stream_init(&st->file);
 			st->file.ops = &tty_ops;
