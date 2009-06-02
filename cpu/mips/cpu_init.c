@@ -27,11 +27,19 @@
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
 
+#include <drivers/device/icu/mips/icu-mips.h>
+#include <hexo/device.h>
+#include <device/driver.h>
+
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
 /** pointer to context local storage in cpu local storage */
 CPU_LOCAL void *__cpu_context_data_base;
+
+#ifdef CONFIG_DRIVER_ICU_MIPS
+CPU_LOCAL struct device_s cpu_icu_dev;
+#endif
 
 #ifdef CONFIG_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
@@ -64,6 +72,11 @@ void cpu_init(void)
 
 #ifdef CONFIG_HEXO_MMU
   mmu_vpage_set(0x80000180, (uintptr_t)&__segment_excep_start, MMU_PAGE_ATTR_RX | MMU_PAGE_ATTR_PRESENT);
+#endif
+
+#ifdef CONFIG_DRIVER_ICU_MIPS
+  device_init(CPU_LOCAL_ADDR(cpu_icu_dev));
+  icu_mips_init(CPU_LOCAL_ADDR(cpu_icu_dev), NULL);
 #endif
 }
 

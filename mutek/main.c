@@ -144,6 +144,8 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   icu_8259_init(&icu_dev, NULL);
 # elif defined(CONFIG_DRIVER_ICU_SOCLIB)
   icu_dev.addr[ICU_ADDR_MASTER] = DSX_SEGMENT_ICU_ADDR;
+  icu_dev.irq = 0;
+  icu_dev.icudev = CPU_LOCAL_ADDR(cpu_icu_dev);
   icu_soclib_init(&icu_dev, NULL);
 #  warning CONFIG_DRIVER_ICU case not handled in mutek_main()
 # endif

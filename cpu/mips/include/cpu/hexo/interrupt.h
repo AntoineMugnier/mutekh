@@ -39,6 +39,11 @@
 extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
 extern CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
+#ifdef CONFIG_DRIVER_ICU_MIPS
+struct device_s;
+extern CPU_LOCAL struct device_s cpu_icu_dev;
+#endif
+
 void mips_interrupt_entry(void);
 
 static inline void

@@ -200,7 +200,7 @@ asm(
     **************************************************************/
     "interrupt_hw:					\n"
 
-    "	srl	$4,	$4,	8			\n" /* hw interrupt line id */
+    "	srl	$4,	$4,	10			\n" /* hw interrupt line id */
     "	andi	$4,	$4,	0xff			\n"
 
     "	addiu	$sp,	$sp,	-4*4			\n"

@@ -27,6 +27,10 @@
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
 
+#include <drivers/device/icu/ppc/icu-ppc.h>
+#include <hexo/device.h>
+#include <device/driver.h>
+
 extern __ldscript_symbol_t _evpr_base;
 
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
@@ -34,6 +38,10 @@ CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
 #ifdef CONFIG_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
+#endif
+
+#ifdef CONFIG_DRIVER_ICU_PPC
+CPU_LOCAL struct device_s cpu_icu_dev;
 #endif
 
 /* CPU Local Descriptor structure */
@@ -46,6 +54,8 @@ cpu_global_init(void)
 
 void cpu_init(void)
 {
+  asm volatile("mtevpr %0" : : "r"(&_evpr_base));
+
 #ifdef CONFIG_SMP
   void			*cls;
 
@@ -59,7 +69,11 @@ void cpu_init(void)
   asm volatile("mtspr 0x115, %0" : : "r" (cls)); /* SPRG5 is cls */
 #endif
 
-  asm volatile("mtevpr %0" : : "r"(&_evpr_base));
+#ifdef CONFIG_DRIVER_ICU_PPC
+  device_init(CPU_LOCAL_ADDR(cpu_icu_dev));
+  icu_ppc_init(CPU_LOCAL_ADDR(cpu_icu_dev), NULL);
+#endif
+
 }
 
 void cpu_start_other_cpu(void)

@@ -32,8 +32,6 @@
 #include <hexo/alloc.h>
 #include <hexo/interrupt.h>
 
-static CPU_LOCAL struct icu_soclib_private_s *icu_soclib_pv;
-
 DEVICU_ENABLE(icu_soclib_enable)
 {
   if (enable)
@@ -55,24 +53,32 @@ DEVICU_SETHNDL(icu_soclib_sethndl)
 
 DEVICU_DELHNDL(icu_soclib_delhndl)
 {
-  /* FIXME */
+  struct icu_soclib_private_s	*pv = dev->drv_pv;
+  struct icu_soclib_handler_s	*h = pv->table + irq;
+
+  h->hndl = NULL;
+  h->data = NULL;
+
   return 0;
 }
 
-static CPU_INTERRUPT_HANDLER(icu_soclib_cpu_handler)
+DEV_IRQ(icu_soclib_handler)
 {
-  struct icu_soclib_private_s	*pv = CPU_LOCAL_GET(icu_soclib_pv);
   struct icu_soclib_handler_s	*h;
+  struct icu_soclib_private_s	*pv = dev->drv_pv;
 
-  h = pv->table + endian_le32(cpu_mem_read_32(pv->dev->addr[0] + ICU_SOCLIB_REG_VECTOR));
+  uint32_t idx = cpu_mem_read_32(dev->addr[0] + ICU_SOCLIB_REG_VECTOR);
+  h = pv->table + endian_le32(idx);
 
   /* call interrupt handler */
-  h->hndl(h->data);
+  return h->hndl(h->data);
 }
 
 DEV_CLEANUP(icu_soclib_cleanup)
 {
   struct icu_soclib_private_s	*pv = dev->drv_pv;
+
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
 
   mem_free(pv);
 }
@@ -82,6 +88,7 @@ const struct driver_s	icu_soclib_drv =
   .class		= device_class_icu,
   .f_init		= icu_soclib_init,
   .f_cleanup		= icu_soclib_cleanup,
+  .f_irq            = icu_soclib_handler,
   .f.icu = {
     .f_enable		= icu_soclib_enable,
     .f_sethndl		= icu_soclib_sethndl,
@@ -97,14 +104,13 @@ DEV_INIT(icu_soclib_init)
 
   if ((pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS))) /* FIXME allocation scope ? */
     {
-      CPU_LOCAL_SET(icu_soclib_pv, pv);
       dev->drv_pv = pv;
       pv->dev = dev;
 
       cpu_mem_write_32(dev->addr[0] + ICU_SOCLIB_REG_IER_CLR, -1);
 
-      cpu_interrupt_sethandler(icu_soclib_cpu_handler);
-
+	  DEV_ICU_BIND(dev->icudev, dev, dev->irq, icu_soclib_handler);
+  
       return 0;
     }
 

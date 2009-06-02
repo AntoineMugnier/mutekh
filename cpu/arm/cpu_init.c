@@ -27,12 +27,20 @@
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
 
+#include <drivers/device/icu/arm/icu-arm.h>
+#include <hexo/device.h>
+#include <device/driver.h>
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
 # include <arch/mem_checker.h>
 #endif
 
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
+
+#ifdef CONFIG_DRIVER_ICU_ARM
+CPU_LOCAL struct device_s cpu_icu_dev;
+#endif
 
 struct arm_exception_context_s {
 	uint32_t user_pc;
@@ -94,6 +102,11 @@ void cpu_init(void)
 	__arm_exception_setup();
 #ifdef CONFIG_SOCLIB_MEMCHECK
 	soclib_mem_check_enable(SOCLIB_MC_CHECK_SPFP);
+#endif
+
+#ifdef CONFIG_DRIVER_ICU_ARM
+  device_init(CPU_LOCAL_ADDR(cpu_icu_dev));
+  icu_arm_init(CPU_LOCAL_ADDR(cpu_icu_dev), NULL);
 #endif
 }
 
