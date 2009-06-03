@@ -326,7 +326,7 @@ int_fast16_t fgetc(FILE *stream)
 
 int_fast16_t ungetc(int_fast16_t c, FILE *stream)
 {
-  return stream_fifo_pushback(&stream->fifo_read, c) ? c : EOF;
+  return stream_fifo_push(&stream->fifo_read, c) ? c : EOF;
 }
 
 char *fgets(char *str_, size_t size, FILE *stream)
