@@ -73,7 +73,7 @@ endif
 
 mkmf: $(TARGET_MK)
 
-$(TARGET_MK):
+$(TARGET_MK): $(CONF_DIR)/.config.mk
 	@> $@
 	@echo 'CC=$(CC)' >> $@
 	@echo 'LD=$(LD)' >> $@
