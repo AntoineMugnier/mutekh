@@ -24,8 +24,8 @@
 
 #include <device/block.h>
 #include <hexo/device.h>
-#include <device/driver.h>
 #include <device/icu.h>
+#include <device/driver.h>
 
 #include <hexo/iospace.h>
 #include <hexo/alloc.h>

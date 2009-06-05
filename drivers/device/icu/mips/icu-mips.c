@@ -66,6 +66,8 @@ DEVICU_DELHNDL(icu_mips_delhndl)
 
 	h->hndl = NULL;
 	h->data = NULL;
+
+	return 0;
 }
 
 static CPU_INTERRUPT_HANDLER(icu_mips_cpu_handler)
