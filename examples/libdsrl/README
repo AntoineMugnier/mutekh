@@ -1,0 +1,19 @@
+This example works for mips/soclib.
+The disk.img contains the following files:
+- libsrl.so
+- fb.x
+- fb.lua
+- split.x
+- split.lua
+- h264.x
+- h264.lua
+- fman.264
+
+The simulation platform should contain:
+- 5 ttys @ 0x0x00200000
+- 1 framebuffer @ 0x66200000
+
+You can test the dynamic srl library with those commands:
+
+[lua:/] t=dsrl.load_tcg("script.lua") /* script is one of the scripts furnished by disk.img */
+[lua:/] r=t:run()

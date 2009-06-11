@@ -52,7 +52,11 @@
     res;                                              \
 })
 
-#define RESOURCE_BUILD(resource) void build_##resource(lua_State *L, size_t ires, resource##_t *pres)
+#define RESOURCE_BUILD(resource) void build_##resource(lua_State *L, size_t ires, resource##_t **p)
+
+#define RESOURCE_ALLOC(resource)                                     \
+    resource##_t *res = (resource##_t*)malloc(sizeof(resource##_t)); \
+    *p = res                                                         \
 
 /* Barrier */
 RESOURCE_CHECK_FIELDS(dsrl_barrier)
@@ -64,11 +68,12 @@ RESOURCE_CHECK_FIELDS(dsrl_barrier)
 DSRL_RESOURCE(dsrl_barrier)
 RESOURCE_BUILD(dsrl_barrier)
 {
+    RESOURCE_ALLOC(dsrl_barrier);
     size_t n = GET_INTEGER_FIELD(max, ires);
-    pres->count = n;
-    pres->max = n;
-    pres->serial = 0;
-    pres->lock = 0; 
+    res->count = n;
+    res->max = n;
+    res->serial = 0;
+    res->lock = 0; 
 }
 /* Const */
 RESOURCE_CHECK_FIELDS(dsrl_const)
@@ -80,7 +85,7 @@ RESOURCE_CHECK_FIELDS(dsrl_const)
 DSRL_RESOURCE(dsrl_const)
 RESOURCE_BUILD(dsrl_const)
 {
-    pres = (dsrl_const_t*)GET_INTEGER_FIELD(value, ires);
+    *p = (dsrl_const_t*)GET_INTEGER_FIELD(value, ires);
 }
 /* Memspace */
 RESOURCE_CHECK_FIELDS(dsrl_memspace)
@@ -92,8 +97,9 @@ RESOURCE_CHECK_FIELDS(dsrl_memspace)
 DSRL_RESOURCE(dsrl_memspace)
 RESOURCE_BUILD(dsrl_memspace)
 {
-    pres->size = GET_INTEGER_FIELD(size, ires);
-    pres->buffer = (dsrl_buffer_t)malloc(sizeof(pres->size));
+    RESOURCE_ALLOC(dsrl_memspace);
+    res->size = GET_INTEGER_FIELD(size, ires);
+    res->buffer = (dsrl_buffer_t)malloc(res->size);
 }
 /* IOmemspace */
 RESOURCE_CHECK_FIELDS(dsrl_io_memspace)
@@ -106,31 +112,36 @@ RESOURCE_CHECK_FIELDS(dsrl_io_memspace)
 DSRL_RESOURCE(dsrl_io_memspace)
 RESOURCE_BUILD(dsrl_io_memspace)
 {
-    pres->size = GET_INTEGER_FIELD(size, ires);
-    pres->buffer = (dsrl_buffer_t)GET_INTEGER_FIELD(mmap, ires);
+    RESOURCE_ALLOC(dsrl_io_memspace);
+    res->size = GET_INTEGER_FIELD(size, ires);
+    res->buffer = (dsrl_buffer_t)GET_INTEGER_FIELD(mmap, ires);
 }
 /* File (this is not really part of original srl api...) */
 RESOURCE_CHECK_FIELDS(dsrl_file)
 {
     CHECK_EXTERNAL(ires);
     CHECK_FIELD(file, string, ires);
+    CHECK_FIELD(size, number, ires);
     return 0;
 }
 DSRL_RESOURCE(dsrl_file)
 RESOURCE_BUILD(dsrl_file)
 {
+    RESOURCE_ALLOC(dsrl_file);
     const char* filename = GET_STRING_FIELD(file, ires);
-    struct stat st;
-    if (stat(filename, &st) != 0)
-    {
-        lua_pushfstring(L, "`stat()' failed on file `%s'\n", filename);
-        lua_error(L);
-    }
-    pres->size = st.st_size;
-    pres->buffer = (dsrl_buffer_t)malloc(sizeof(pres->size));
+//    struct stat st;
+//    if (stat(filename, &st) != 0)
+//    {
+//        lua_pushfstring(L, "`stat()' failed on file `%s'\n", filename);
+//        lua_error(L);
+//    }
+//    _dsrl_debug("file is %d bytes\n", st.st_size);
+//    res->size = st.st_size;
+    res->size = GET_INTEGER_FIELD(size, ires);
+    res->buffer = (dsrl_buffer_t)malloc(res->size);
 
     FILE *f = fopen(filename, "r");
-    fread(pres->buffer, pres->size, 1, f);
+    fread(res->buffer, 1, res->size, f);
     fclose(f);
 }
 /* Mwmr */
@@ -144,18 +155,19 @@ RESOURCE_CHECK_FIELDS(dsrl_mwmr)
 DSRL_RESOURCE(dsrl_mwmr)
 RESOURCE_BUILD(dsrl_mwmr)
 {
-    pres->width = GET_INTEGER_FIELD(width, ires);
-    pres->depth = GET_INTEGER_FIELD(depth, ires);
-    size_t size = pres->width * pres->depth;
-    pres->gdepth = size;
-    pres->buffer = (dsrl_buffer_t)malloc(size);
+    RESOURCE_ALLOC(dsrl_mwmr);
+    res->width = GET_INTEGER_FIELD(width, ires);
+    res->depth = GET_INTEGER_FIELD(depth, ires);
+    size_t size = res->width * res->depth;
+    res->gdepth = size;
+    res->buffer = (dsrl_buffer_t)malloc(size);
 
-    pres->status.free_tail = 0;
-    pres->status.free_head = 0;
-    pres->status.free_size = size;
-    pres->status.data_tail = 0;
-    pres->status.data_head = 0;
-    pres->status.data_size = 0;
+    res->status.free_tail = 0;
+    res->status.free_head = 0;
+    res->status.free_size = size;
+    res->status.data_tail = 0;
+    res->status.data_head = 0;
+    res->status.data_size = 0;
 }
 
 /* Task */
@@ -280,11 +292,12 @@ static CONTEXT_ENTRY(dsrl_run_task)
 
 RESOURCE_BUILD(dsrl_task)
 {
-    pres->execname = GET_STRING_FIELD(exec, ires);
-    pres->funcname = GET_STRING_FIELD(func, ires);
+    RESOURCE_ALLOC(dsrl_task);
+    res->execname = GET_STRING_FIELD(exec, ires);
+    res->funcname = GET_STRING_FIELD(func, ires);
 
-    pres->cpuid  = GET_INTEGER_FIELD(cpuid, ires);
-    pres->tty = GET_INTEGER_FIELD(tty, ires);
+    res->cpuid  = GET_INTEGER_FIELD(cpuid, ires);
+    res->tty = GET_INTEGER_FIELD(tty, ires);
 
     size_t sstack = GET_INTEGER_FIELD(sstack, ires);
 
@@ -293,15 +306,15 @@ RESOURCE_BUILD(dsrl_task)
     /* args table is numerically indexed */
     size_t iargs = lua_gettop(L);
     size_t nargs = luaL_getn(L, iargs);
-    pres->nargs = nargs;
-    pres->args = (uintptr_t)malloc(nargs*sizeof(uintptr_t));
+    res->nargs = nargs;
+    res->args = (uintptr_t)malloc(nargs*sizeof(uintptr_t));
     size_t i;
     for (i=0; i<nargs; i++)
     {
         lua_rawgeti(L, iargs, i+1);
         size_t iarg = lua_gettop(L);
         lua_getfield(L, iarg, "addr");
-        pres->args[i] = lua_tointeger(L, -1);
+        res->args[i] = lua_tointeger(L, -1);
         lua_pop(L, 2);
     }
     /* pop the args table */
@@ -309,27 +322,27 @@ RESOURCE_BUILD(dsrl_task)
 
     /* load the exec in memory */
     _dsrl_debug("\tload exec in memory\n");
-    if (rtld_user_dlopen(pres->execname, &pres->entrypoint, &pres->handle) != 0)
-        luaL_error(L, "dlopen failed on %s", pres->execname);
-    if (rtld_user_dlsym(pres->handle, pres->funcname, &pres->func) != 0)
-        luaL_error(L, "dlsym failed on %s", pres->funcname);
+    if (rtld_user_dlopen(res->execname, &res->entrypoint, &res->handle) != 0)
+        luaL_error(L, "dlopen failed on %s", res->execname);
+    if (rtld_user_dlsym(res->handle, res->funcname, &res->func) != 0)
+        luaL_error(L, "dlsym failed on %s", res->funcname);
     else
-        _dsrl_debug("\tfunc is @%p\n", pres->func);
-    if (rtld_user_dltls(pres->handle, &pres->tls) != 0)
-        luaL_error(L, "dltls failed on %s", pres->execname);
+        _dsrl_debug("\tfunc is @%p\n", res->func);
+    if (rtld_user_dltls(res->handle, &res->tls) != 0)
+        luaL_error(L, "dltls failed on %s", res->execname);
     else
-        _dsrl_debug("\ttls is @%p\n", pres->tls);
+        _dsrl_debug("\ttls is @%p\n", res->tls);
 
     /* build the mutekH sched context */
     _dsrl_debug("\tBuild sched context\n");
     uint8_t *stack;
     stack = arch_contextstack_alloc(sstack);
 
-    context_init(&pres->context.context,
+    context_init(&res->context.context,
             stack, stack + sstack,
-            dsrl_run_task, pres);
-    sched_context_init(&pres->context);
-    sched_affinity_single(&pres->context, pres->cpuid);
+            dsrl_run_task, res);
+    sched_context_init(&res->context);
+    sched_affinity_single(&res->context, res->cpuid);
 }
 
 /*

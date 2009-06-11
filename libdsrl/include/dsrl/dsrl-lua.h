@@ -60,9 +60,9 @@
      }
 
 
-#define DSRL_RESOURCE_PROTO(resource)                                     \
-    void build_##resource(lua_State *L, size_t ires, resource##_t *pres); \
-    error_t check_##resource (lua_State *L, size_t index);                \
+#define DSRL_RESOURCE_PROTO(resource)                                   \
+    void build_##resource(lua_State *L, size_t ires, resource##_t **p); \
+    error_t check_##resource (lua_State *L, size_t index);              \
     int new_##resource (lua_State *L);
 
 DSRL_RESOURCE_PROTO(dsrl_const);

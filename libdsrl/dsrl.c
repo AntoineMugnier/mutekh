@@ -139,8 +139,7 @@ static int run_tcg (lua_State *L)
             if (lua_isnil(L, -1))                                                       \
             {                                                                           \
                 lua_pop(L, 1);                                                          \
-                resource = (resource##_t*)malloc(sizeof(resource##_t));                 \
-                build_##resource(L, iresource, resource);                               \
+                build_##resource(L, iresource, &resource);                              \
                 lua_pushinteger(L, (uintptr_t)resource);                                \
                 lua_setfield(L, iresource, "addr");                                     \
             } else {                                                                    \
