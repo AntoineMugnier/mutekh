@@ -13,4 +13,6 @@
 # define _dsrl_debug(...)
 #endif
 
+void check_lua_tcg (lua_State *L, int index);
+
 #endif

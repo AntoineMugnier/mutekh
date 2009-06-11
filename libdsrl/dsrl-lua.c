@@ -3,6 +3,21 @@
 #include <string.h>
 
 #include <dsrl/dsrl-lua.h>
+#include <hexo/segment.h>
+#include <rtld/rtld.h>
+#include <cpu/tls.h>
+
+/*
+ * checking utilities
+ */
+#define RESOURCE_CHECK_FIELDS(resource) error_t check_fields_##resource(lua_State *L, size_t ires)
+#define CHECK_EXTERNAL(ires)       \
+    lua_getfield(L, ires, "addr"); \
+    if (!lua_isnil(L, -1)){        \
+        lua_pop(L, 1);             \
+        return 0;                  \
+    }                              \
+    lua_pop(L, 1);
 
 #define CHECK_FIELD(field, type, ires)                                            \
     lua_getfield(L, ires, #field);                                                \
@@ -16,53 +31,153 @@
     }                                                                             \
     lua_pop(L, 1);
 
-#define RESOURCE_CHECK_FIELDS(resource) error_t check_fields_##resource(lua_State *L, size_t ires)
+/*
+ * building utilities
+ */
+#define GET_FIELD(field, type, ires)                  \
+({                                                    \
+    lua_getfield(L, ires, #field);                    \
+    lua_to##type(L, -1);                              \
+})
+#define GET_INTEGER_FIELD(field, ires)                \
+({                                                    \
+    size_t res = GET_FIELD(field, integer, ires);     \
+    lua_pop(L, 1);                                    \
+    res;                                              \
+})
+#define GET_STRING_FIELD(field, ires)                 \
+({                                                    \
+    const char *res = GET_FIELD(field, string, ires); \
+    lua_pop(L, 1);                                    \
+    res;                                              \
+})
+
+#define RESOURCE_BUILD(resource) void build_##resource(lua_State *L, size_t ires, resource##_t *pres)
 
 /* Barrier */
 RESOURCE_CHECK_FIELDS(dsrl_barrier)
 {
+    CHECK_EXTERNAL(ires);
     CHECK_FIELD(max, number, ires);
     return 0;
 }
 DSRL_RESOURCE(dsrl_barrier)
+RESOURCE_BUILD(dsrl_barrier)
+{
+    size_t n = GET_INTEGER_FIELD(max, ires);
+    pres->count = n;
+    pres->max = n;
+    pres->serial = 0;
+    pres->lock = 0; 
+}
+/* Const */
+RESOURCE_CHECK_FIELDS(dsrl_const)
+{
+    CHECK_EXTERNAL(ires);
+    CHECK_FIELD(value, number, ires);
+    return 0;
+}
+DSRL_RESOURCE(dsrl_const)
+RESOURCE_BUILD(dsrl_const)
+{
+    pres = (dsrl_const_t*)GET_INTEGER_FIELD(value, ires);
+}
 /* Memspace */
 RESOURCE_CHECK_FIELDS(dsrl_memspace)
 {
+    CHECK_EXTERNAL(ires);
     CHECK_FIELD(size, number, ires);
     return 0;
 }
 DSRL_RESOURCE(dsrl_memspace)
+RESOURCE_BUILD(dsrl_memspace)
+{
+    pres->size = GET_INTEGER_FIELD(size, ires);
+    pres->buffer = (dsrl_buffer_t)malloc(sizeof(pres->size));
+}
 /* IOmemspace */
 RESOURCE_CHECK_FIELDS(dsrl_io_memspace)
 {
+    CHECK_EXTERNAL(ires);
     CHECK_FIELD(size, number, ires);
-    CHECK_FIELD(addr, number, ires);
+    CHECK_FIELD(mmap, number, ires);
     return 0;
 }
 DSRL_RESOURCE(dsrl_io_memspace)
+RESOURCE_BUILD(dsrl_io_memspace)
+{
+    pres->size = GET_INTEGER_FIELD(size, ires);
+    pres->buffer = (dsrl_buffer_t)GET_INTEGER_FIELD(mmap, ires);
+}
 /* File (this is not really part of original srl api...) */
 RESOURCE_CHECK_FIELDS(dsrl_file)
 {
+    CHECK_EXTERNAL(ires);
     CHECK_FIELD(file, string, ires);
     return 0;
 }
 DSRL_RESOURCE(dsrl_file)
+RESOURCE_BUILD(dsrl_file)
+{
+    const char* filename = GET_STRING_FIELD(file, ires);
+    struct stat st;
+    if (stat(filename, &st) != 0)
+    {
+        lua_pushfstring(L, "`stat()' failed on file `%s'\n", filename);
+        lua_error(L);
+    }
+    pres->size = st.st_size;
+    pres->buffer = (dsrl_buffer_t)malloc(sizeof(pres->size));
+
+    FILE *f = fopen(filename, "r");
+    fread(pres->buffer, pres->size, 1, f);
+    fclose(f);
+}
 /* Mwmr */
 RESOURCE_CHECK_FIELDS(dsrl_mwmr)
 {
+    CHECK_EXTERNAL(ires);
     CHECK_FIELD(width, number, ires);
     CHECK_FIELD(depth, number, ires);
     return 0;
 }
 DSRL_RESOURCE(dsrl_mwmr)
-/* Const */
-RESOURCE_CHECK_FIELDS(dsrl_const)
+RESOURCE_BUILD(dsrl_mwmr)
 {
-    CHECK_FIELD(value, number, ires);
-    return 0;
+    pres->width = GET_INTEGER_FIELD(width, ires);
+    pres->depth = GET_INTEGER_FIELD(depth, ires);
+    size_t size = pres->width * pres->depth;
+    pres->gdepth = size;
+    pres->buffer = (dsrl_buffer_t)malloc(size);
+
+    pres->status.free_tail = 0;
+    pres->status.free_head = 0;
+    pres->status.free_size = size;
+    pres->status.data_tail = 0;
+    pres->status.data_head = 0;
+    pres->status.data_size = 0;
 }
-DSRL_RESOURCE(dsrl_const)
+
 /* Task */
+RESOURCE_CHECK_FIELDS(dsrl_task)
+{
+    CHECK_FIELD(exec, string, ires);
+    CHECK_FIELD(func, string, ires);
+    CHECK_FIELD(sstack, number, ires);
+    CHECK_FIELD(cpuid, number, ires);
+    CHECK_FIELD(tty, number, ires);
+    CHECK_FIELD(args, table, ires);
+
+    /* check the args table are dsrl resources */
+    lua_getfield(L, ires, "args");
+    /* args table is numerically indexed */
+    size_t iargs = lua_gettop(L);
+    size_t nargs = luaL_getn(L, iargs);
+    size_t i;
+    for (i=1; i<=nargs; i++)
+    {
+        lua_rawgeti(L, iargs, i);
+        size_t iarg = lua_gettop(L);
 
 #define CHECK_ARG(resource)                         \
     if (check_type_##resource(L, iarg) == 0)        \
@@ -84,26 +199,6 @@ DSRL_RESOURCE(dsrl_const)
     }                                               \
     lua_pop(L, 1); /* pop the error message */
 
-RESOURCE_CHECK_FIELDS(dsrl_task)
-{
-    CHECK_FIELD(exec, string, ires);
-    CHECK_FIELD(func, string, ires);
-    CHECK_FIELD(sstack, number, ires);
-    CHECK_FIELD(cpuid, number, ires);
-    CHECK_FIELD(tty, number, ires);
-    CHECK_FIELD(args, table, ires);
-
-    /* check the args table are dsrl resources */
-    lua_getfield(L, ires, "args");
-    /* args table is numerically indexed */
-    size_t iargs = lua_gettop(L);
-    size_t nargs = luaL_getn(L, iargs);
-    size_t i;
-    for (i=1; i<=nargs; i++)
-    {
-        lua_rawgeti(L, iargs, i);
-        size_t iarg = lua_gettop(L);
-
         CHECK_ARG(dsrl_const);
         CHECK_ARG(dsrl_barrier);
         CHECK_ARG(dsrl_file);
@@ -120,6 +215,126 @@ RESOURCE_CHECK_FIELDS(dsrl_task)
 }
 DSRL_RESOURCE(dsrl_task)
 
+static CONTEXT_ENTRY(dsrl_run_task)
+{
+    dsrl_task_t *task = param;
+
+    // set the syscall handler for the current CPU
+    // that's why migration should be forbidden
+    CPU_SYSCALL_HANDLER(dsrl_syscall_handler);
+    cpu_syscall_sethandler(dsrl_syscall_handler);
+
+    /* copy args on stack */
+    /* arg[0] = tty, arg[1] = func */
+    /* arg[i..n] = task_resources */
+    uintptr_t args[2 + task->nargs];
+    args[0] = task->tty;
+    args[1] = task->func;
+#if 0
+    memcpy(&args+2, &task->args, 4*task->nargs);
+#else
+    size_t i;
+    for (i = 0; i < task->nargs; i++)
+    {
+        args[i+2] = task->args[i];
+    }
+#endif
+
+    /* setup tls */
+    tls_init_tp(task->tls);
+
+    sched_unlock();
+    cpu_interrupt_enable();
+
+    /*
+     * Two ways of calling the thread:
+     *  - direct call in C: it means the thread must manage to become PIC
+     *  itself (via an asm routine)
+     *  - call with $25: the thread can begin directly with a C function,
+     *  expecting $25 to be set correctly
+     */
+#if 0
+    dsrl_func_t *f = task->entrypoint;
+    f(args);
+#else
+    asm volatile (
+            ".set push              \n"
+            ".set noat              \n"
+            ".set noreorder         \n"
+            "   move    $25,    %0  \n"
+            "   move    $4,     %1  \n"
+            "   jr      $25         \n"
+            ".set pop               \n"
+            :
+            : "r" (task->entrypoint)
+            , "r" (args)
+            );
+#endif
+
+
+    // should not happen (at least if previously we went in user mode)
+    cpu_interrupt_disable();
+    sched_lock();
+    sched_context_exit();
+}
+
+RESOURCE_BUILD(dsrl_task)
+{
+    pres->execname = GET_STRING_FIELD(exec, ires);
+    pres->funcname = GET_STRING_FIELD(func, ires);
+
+    pres->cpuid  = GET_INTEGER_FIELD(cpuid, ires);
+    pres->tty = GET_INTEGER_FIELD(tty, ires);
+
+    size_t sstack = GET_INTEGER_FIELD(sstack, ires);
+
+    /* Fill the args */
+    lua_getfield(L, ires, "args");
+    /* args table is numerically indexed */
+    size_t iargs = lua_gettop(L);
+    size_t nargs = luaL_getn(L, iargs);
+    pres->nargs = nargs;
+    pres->args = (uintptr_t)malloc(nargs*sizeof(uintptr_t));
+    size_t i;
+    for (i=0; i<nargs; i++)
+    {
+        lua_rawgeti(L, iargs, i+1);
+        size_t iarg = lua_gettop(L);
+        lua_getfield(L, iarg, "addr");
+        pres->args[i] = lua_tointeger(L, -1);
+        lua_pop(L, 2);
+    }
+    /* pop the args table */
+    lua_pop(L, 1);
+
+    /* load the exec in memory */
+    _dsrl_debug("\tload exec in memory\n");
+    if (rtld_user_dlopen(pres->execname, &pres->entrypoint, &pres->handle) != 0)
+        luaL_error(L, "dlopen failed on %s", pres->execname);
+    if (rtld_user_dlsym(pres->handle, pres->funcname, &pres->func) != 0)
+        luaL_error(L, "dlsym failed on %s", pres->funcname);
+    else
+        _dsrl_debug("\tfunc is @%p\n", pres->func);
+    if (rtld_user_dltls(pres->handle, &pres->tls) != 0)
+        luaL_error(L, "dltls failed on %s", pres->execname);
+    else
+        _dsrl_debug("\ttls is @%p\n", pres->tls);
+
+    /* build the mutekH sched context */
+    _dsrl_debug("\tBuild sched context\n");
+    uint8_t *stack;
+    stack = arch_contextstack_alloc(sstack);
+
+    context_init(&pres->context.context,
+            stack, stack + sstack,
+            dsrl_run_task, pres);
+    sched_context_init(&pres->context);
+    sched_affinity_single(&pres->context, pres->cpuid);
+}
+
+/*
+ * Register dsrl resources
+ */
 void luaopen_dsrl_resources(lua_State *L)
 {
 #define REGISTER_DSRL_RESOURCE(resource) createmeta_##resource(L)

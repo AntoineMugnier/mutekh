@@ -13,11 +13,11 @@
 /*
  * Wait syscall
  */
-static inline dsrl_task_t context_to_dsrl_task(struct sched_context_s *ctx)
+static inline dsrl_task_t* context_to_dsrl_task(struct sched_context_s *ctx)
 {
     uintptr_t p = (uintptr_t)ctx;
-    p -= offsetof(dsrl_task_s, context);
-    return (dsrl_task_t)p;
+    p -= offsetof(dsrl_task_t, context);
+    return (dsrl_task_t*)p;
 }
 
 #define DSRL_SCHED_WAIT(n) void (n)(volatile uint32_t *addr, uint32_t val)
@@ -26,10 +26,9 @@ typedef DSRL_SCHED_WAIT(sched_wait_fcn_t);
 #define endian_cpu32(x) (x)
 
 #define DECLARE_WAIT(endianness, name, cmp)                                          \
-                                                                                     \
     static SCHED_CANDIDATE_FCN(wait_##name##endianness##_f)                          \
     {                                                                                \
-        dsrl_task_t task = context_to_dsrl_task(sched_ctx);                          \
+        dsrl_task_t* task = context_to_dsrl_task(sched_ctx);                         \
                                                                                      \
         cpu_dcache_invld((void*)task->wait_addr);                                    \
         return (endian_##endianness##32(*(task->wait_addr)) cmp task->wait_val);     \
@@ -40,7 +39,7 @@ typedef DSRL_SCHED_WAIT(sched_wait_fcn_t);
         cpu_dcache_invld((void*)addr);                                               \
         if ( endian_##endianness##32(*addr) cmp val )                                \
             return;                                                                  \
-        dsrl_task_t current = context_to_dsrl_task(sched_get_current());             \
+        dsrl_task_t* current = context_to_dsrl_task(sched_get_current());            \
         current->wait_val = val;                                                     \
         current->wait_addr = addr;                                                   \
         cpu_interrupt_disable();                                                     \

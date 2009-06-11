@@ -1,16 +1,7 @@
 #ifndef _DSRL_LUA_H_
 #define _DSRL_LUA_H_
 
-#include <lua/lua.h>
-#include <lua/lauxlib.h>
-#include <lua/lualib.h>
-
 #include <dsrl/dsrl-private.h>
-
-static void lua_forbidden(lua_State *L)
-{
-    luaL_error(L, "forbidden operation!");
-}
 
 #define DSRL_RESOURCE(resource)                                      \
     static error_t check_type_##resource (lua_State *L, size_t ires) \
@@ -34,7 +25,7 @@ static void lua_forbidden(lua_State *L)
     }                                                                \
     int new_##resource (lua_State *L)                                \
     {                                                                \
-        check_tcg(L, 1);                                             \
+        check_lua_tcg(L, 1);                                         \
         lua_getfield(L, 1, #resource);                               \
         if (!lua_istable(L, -1)){                                    \
             lua_pop(L, 1);                                           \
@@ -47,10 +38,13 @@ static void lua_forbidden(lua_State *L)
         luaL_argcheck(L, lua_istable(L, 3), 3, "table expected");    \
         luaL_getmetatable(L, "lua."#resource);                       \
         lua_setmetatable(L, 3);                                      \
+        lua_pushvalue(L, 2);                                         \
+        lua_setfield(L, 3, "name");                                  \
         lua_pushvalue(L, 3);                                         \
         lua_setfield(L, 1, name);                                    \
         lua_pushvalue(L, 3);                                         \
-        lua_setfield(L, iresources, name);                           \
+        size_t i = luaL_getn(L, iresources);                         \
+        lua_rawseti(L, iresources, i+1);                             \
         return 1;                                                    \
     }                                                                \
     static void createmeta_##resource(lua_State *L)                  \
@@ -66,8 +60,9 @@ static void lua_forbidden(lua_State *L)
      }
 
 
-#define DSRL_RESOURCE_PROTO(resource)                      \
-    error_t check_##resource (lua_State *L, size_t index); \
+#define DSRL_RESOURCE_PROTO(resource)                                     \
+    void build_##resource(lua_State *L, size_t ires, resource##_t *pres); \
+    error_t check_##resource (lua_State *L, size_t index);                \
     int new_##resource (lua_State *L);
 
 DSRL_RESOURCE_PROTO(dsrl_const);
