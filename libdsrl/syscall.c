@@ -8,7 +8,6 @@
 #include <hexo/interrupt.h>
 #include <hexo/cpu.h>
 
-#include <dsrl/syscall.h>
 #include <dsrl/dsrl-private.h>
 
 /*
@@ -26,29 +25,29 @@ typedef DSRL_SCHED_WAIT(sched_wait_fcn_t);
 
 #define endian_cpu32(x) (x)
 
-#define DECLARE_WAIT(endianness, name, cmp)												\
-																						\
-    static SCHED_CANDIDATE_FCN(wait_##name##endianness##_f)								\
-    {																					\
-        dsrl_task_t task = context_to_dsrl_task(sched_ctx);								\
-																						\
-        cpu_dcache_invld((void*)task->wait_addr);										\
-        return (endian_##endianness##32(*(task->wait_addr)) cmp task->wait_val);		\
-    }																					\
-																						\
-    static DSRL_SCHED_WAIT(dsrl_sched_wait_##name##_##endianness)						\
-    {																					\
-		cpu_dcache_invld((void*)addr);													\
-        if ( endian_##endianness##32(*addr) cmp val )									\
-			return;																		\
-        dsrl_task_t current = context_to_dsrl_task(sched_get_current());				\
-        current->wait_val = val;														\
-        current->wait_addr = addr;														\
-        cpu_interrupt_disable();														\
-        sched_context_candidate_fcn(&current->context, wait_##name##endianness##_f);	\
-		sched_context_switch();															\
-        sched_context_candidate_fcn(&current->context, NULL);							\
-        cpu_interrupt_enable();															\
+#define DECLARE_WAIT(endianness, name, cmp)                                          \
+                                                                                     \
+    static SCHED_CANDIDATE_FCN(wait_##name##endianness##_f)                          \
+    {                                                                                \
+        dsrl_task_t task = context_to_dsrl_task(sched_ctx);                          \
+                                                                                     \
+        cpu_dcache_invld((void*)task->wait_addr);                                    \
+        return (endian_##endianness##32(*(task->wait_addr)) cmp task->wait_val);     \
+    }                                                                                \
+                                                                                     \
+    static DSRL_SCHED_WAIT(dsrl_sched_wait_##name##_##endianness)                    \
+    {                                                                                \
+        cpu_dcache_invld((void*)addr);                                               \
+        if ( endian_##endianness##32(*addr) cmp val )                                \
+            return;                                                                  \
+        dsrl_task_t current = context_to_dsrl_task(sched_get_current());             \
+        current->wait_val = val;                                                     \
+        current->wait_addr = addr;                                                   \
+        cpu_interrupt_disable();                                                     \
+        sched_context_candidate_fcn(&current->context, wait_##name##endianness##_f); \
+        sched_context_switch();                                                      \
+        sched_context_candidate_fcn(&current->context, NULL);                        \
+        cpu_interrupt_enable();                                                      \
     }
 
 DECLARE_WAIT(le, eq, ==)
@@ -72,46 +71,46 @@ DECLARE_WAIT(cpu, ge, >=)
 DECLARE_WAIT(cpu, lt, <)
 DECLARE_WAIT(cpu, gt, >)
 
-#define POINTER_WAIT(endianness, name)	dsrl_sched_wait_##name##_##endianness
+#define POINTER_WAIT(endianness, name)    dsrl_sched_wait_##name##_##endianness
 
 static sched_wait_fcn_t* const sched_wait_table[3][6] = 
 {
-	{
-		POINTER_WAIT(le, eq),
-		POINTER_WAIT(le, ne),
-		POINTER_WAIT(le, le),
-		POINTER_WAIT(le, ge),
-		POINTER_WAIT(le, lt),
-		POINTER_WAIT(le, gt)
-	}, {
-		POINTER_WAIT(be, eq),
-		POINTER_WAIT(be, ne),
-		POINTER_WAIT(be, le),
-		POINTER_WAIT(be, ge),
-		POINTER_WAIT(be, lt),
-		POINTER_WAIT(be, gt)
-	}, {
-		POINTER_WAIT(cpu, eq),
-		POINTER_WAIT(cpu, ne),
-		POINTER_WAIT(cpu, le),
-		POINTER_WAIT(cpu, ge),
-		POINTER_WAIT(cpu, lt),
-		POINTER_WAIT(cpu, gt)
-	}
+    {
+        POINTER_WAIT(le, eq),
+        POINTER_WAIT(le, ne),
+        POINTER_WAIT(le, le),
+        POINTER_WAIT(le, ge),
+        POINTER_WAIT(le, lt),
+        POINTER_WAIT(le, gt)
+    }, {
+        POINTER_WAIT(be, eq),
+        POINTER_WAIT(be, ne),
+        POINTER_WAIT(be, le),
+        POINTER_WAIT(be, ge),
+        POINTER_WAIT(be, lt),
+        POINTER_WAIT(be, gt)
+    }, {
+        POINTER_WAIT(cpu, eq),
+        POINTER_WAIT(cpu, ne),
+        POINTER_WAIT(cpu, le),
+        POINTER_WAIT(cpu, ge),
+        POINTER_WAIT(cpu, lt),
+        POINTER_WAIT(cpu, gt)
+    }
 };
 
 static reg_t dsrl_syscall_wait(size_t endianness, size_t name, volatile uint32_t *addr, uint32_t val)
 {
-	if ((endianness > 3) || (name > 6))
+    if ((endianness > 3) || (name > 6))
     {
         printk("bad parameters for wait syscall!\n");
-		return -1;
+        return -1;
     }
 
-	sched_wait_fcn_t *f = sched_wait_table[endianness][name];
-	f(addr, val);
+    sched_wait_fcn_t *f = sched_wait_table[endianness][name];
+    f(addr, val);
 
-	return 0;
+    return 0;
 }
 
 /* 
@@ -165,11 +164,11 @@ CPU_SYSCALL_HANDLER(dsrl_syscall_handler)
             regtable[2] = f->call();
             break;
         case 4:
-			regtable[2] = f->call(regtable[4],
-					regtable[5],
-					regtable[6],
-					regtable[7]);
-			break;
+            regtable[2] = f->call(regtable[4],
+                    regtable[5],
+                    regtable[6],
+                    regtable[7]);
+            break;
         default:
             regtable[2] = dsrl_syscall_table[0].call();
             break;

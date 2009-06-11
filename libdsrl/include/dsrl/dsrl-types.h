@@ -7,7 +7,6 @@
  * Task resource
  */
 typedef struct {
-    const char *name;
     /* dynamic loader */
     void *handle;
     uintptr_t entrypoint;
@@ -40,7 +39,6 @@ typedef dsrl_task_s* dsrl_task_t;
  */
 typedef void* dsrl_buffer_t;
 typedef struct {
-    const char *name;
     uint32_t size;
     dsrl_buffer_t buffer;
 } dsrl_memspace_s;
@@ -52,7 +50,6 @@ typedef dsrl_memspace_s* dsrl_io_memspace_t;
  * Barrier resource
  */
 typedef struct {
-    const char *name;
     int8_t max;
     int8_t count;
     volatile int32_t lock;
@@ -73,7 +70,6 @@ typedef struct {
 } soclib_mwmr_status_s;
 
 typedef struct {
-    const char *name;
     size_t width;
     size_t depth;
     size_t gdepth;
@@ -86,7 +82,6 @@ typedef dsrl_mwmr_s* dsrl_mwmr_t;
  * Const resource
  */
 typedef struct {
-    char *name;
     uint32_t val;
 } dsrl_const_s;
 typedef dsrl_const_s* dsrl_const_t;
