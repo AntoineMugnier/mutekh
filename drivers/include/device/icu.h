@@ -22,6 +22,10 @@
 #ifndef __DEVICE_ICU_H__
 #define __DEVICE_ICU_H__
 
+#ifdef __DRIVER_H__
+# error This header must not be included after "device/driver.h"
+#endif
+
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/device.h>

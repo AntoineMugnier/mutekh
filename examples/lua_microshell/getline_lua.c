@@ -1,16 +1,14 @@
-#include <drivers/device/icu/soclib/icu-soclib.h>
-
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <drivers/device/icu/soclib/icu-soclib.h>
+#include <drivers/device/block/soclib/block-soclib.h>
+
 #include <hexo/device.h>
 #include <device/driver.h>
 #include <hexo/interrupt.h>
-
-#include <drivers/device/icu/soclib/icu-soclib.h>
-#include <drivers/device/block/soclib/block-soclib.h>
 
 #include <vfs/vfs.h>
 #include <lua/lauxlib.h>
@@ -145,7 +143,7 @@ int main()
     device_init(&bd_dev);
     bd_dev.addr[0] = 0x65200000;
     bd_dev.irq = 2;
-    db_dev.icudev = &icu_dev;
+    bd_dev.icudev = &icu_dev;
     block_soclib_init(&bd_dev, NULL);
 
     pthread_create(&a, NULL, shell, NULL);

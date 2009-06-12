@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include <hexo/device.h>
-#include <device/driver.h>
+
 #if defined (CONFIG_ARCH_SOCLIB)
 #include <hexo/interrupt.h>
 
@@ -18,6 +18,8 @@
 #else
 #error "Your arch is not supported yet"
 #endif
+
+#include <device/driver.h>
 
 #include <vfs/vfs.h>
 #include <lua/lua.h>
