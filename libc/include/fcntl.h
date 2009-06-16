@@ -19,8 +19,8 @@
 
 */
 
-#ifndef UNISTD_H_
-#define UNISTD_H_
+#ifndef FCNTL_H_
+#define FCNTL_H_
 
 /**
  * @file
