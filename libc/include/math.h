@@ -1,0 +1,202 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Based on string.h from dietlibc-0.29 http://www.fefe.de/dietlibc/
+
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+
+*/
+
+#ifndef MATH_H_
+#define MATH_H_
+
+#define acoshf __builtin_acoshf
+#define acoshl __builtin_acoshl
+#define acosh __builtin_acosh
+#define asinhf __builtin_asinhf
+#define asinhl __builtin_asinhl
+#define asinh __builtin_asinh
+#define atanhf __builtin_atanhf
+#define atanhl __builtin_atanhl
+#define atanh __builtin_atanh
+#define cabsf __builtin_cabsf
+#define cabsl __builtin_cabsl
+#define cabs __builtin_cabs
+#define cacosf __builtin_cacosf
+#define cacoshf __builtin_cacoshf
+#define cacoshl __builtin_cacoshl
+#define cacosh __builtin_cacosh
+#define cacosl __builtin_cacosl
+#define cacos __builtin_cacos
+#define cargf __builtin_cargf
+#define cargl __builtin_cargl
+#define carg __builtin_carg
+#define casinf __builtin_casinf
+#define casinhf __builtin_casinhf
+#define casinhl __builtin_casinhl
+#define casinh __builtin_casinh
+#define casinl __builtin_casinl
+#define casin __builtin_casin
+#define catanf __builtin_catanf
+#define catanhf __builtin_catanhf
+#define catanhl __builtin_catanhl
+#define catanh __builtin_catanh
+#define catanl __builtin_catanl
+#define catan __builtin_catan
+#define cbrtf __builtin_cbrtf
+#define cbrtl __builtin_cbrtl
+#define cbrt __builtin_cbrt
+#define ccosf __builtin_ccosf
+#define ccoshf __builtin_ccoshf
+#define ccoshl __builtin_ccoshl
+#define ccosh __builtin_ccosh
+#define ccosl __builtin_ccosl
+#define ccos __builtin_ccos
+#define cexpf __builtin_cexpf
+#define cexpl __builtin_cexpl
+#define cexp __builtin_cexp
+#define cimagf __builtin_cimagf
+#define cimagl __builtin_cimagl
+#define cimag __builtin_cimag
+#define clogf __builtin_clogf
+#define clogl __builtin_clogl
+#define clog __builtin_clog
+#define conjf __builtin_conjf
+#define conjl __builtin_conjl
+#define conj __builtin_conj
+#define copysignf __builtin_copysignf
+#define copysignl __builtin_copysignl
+#define copysign __builtin_copysign
+#define cpowf __builtin_cpowf
+#define cpowl __builtin_cpowl
+#define cpow __builtin_cpow
+#define cprojf __builtin_cprojf
+#define cprojl __builtin_cprojl
+#define cproj __builtin_cproj
+#define crealf __builtin_crealf
+#define creall __builtin_creall
+#define creal __builtin_creal
+#define csinf __builtin_csinf
+#define csinhf __builtin_csinhf
+#define csinhl __builtin_csinhl
+#define csinh __builtin_csinh
+#define csinl __builtin_csinl
+#define csin __builtin_csin
+#define csqrtf __builtin_csqrtf
+#define csqrtl __builtin_csqrtl
+#define csqrt __builtin_csqrt
+#define ctanf __builtin_ctanf
+#define ctanhf __builtin_ctanhf
+#define ctanhl __builtin_ctanhl
+#define ctanh __builtin_ctanh
+#define ctanl __builtin_ctanl
+#define ctan __builtin_ctan
+#define erfcf __builtin_erfcf
+#define erfcl __builtin_erfcl
+#define erfc __builtin_erfc
+#define erff __builtin_erff
+#define erfl __builtin_erfl
+#define erf __builtin_erf
+#define exp2f __builtin_exp2f
+#define exp2l __builtin_exp2l
+#define exp2 __builtin_exp2
+#define expm1f __builtin_expm1f
+#define expm1l __builtin_expm1l
+#define expm1 __builtin_expm1
+#define fdimf __builtin_fdimf
+#define fdiml __builtin_fdiml
+#define fdim __builtin_fdim
+#define fmaf __builtin_fmaf
+#define fmal __builtin_fmal
+#define fmaxf __builtin_fmaxf
+#define fmaxl __builtin_fmaxl
+#define fmax __builtin_fmax
+#define fma __builtin_fma
+#define fminf __builtin_fminf
+#define fminl __builtin_fminl
+#define fmin __builtin_fmin
+#define hypotf __builtin_hypotf
+#define hypotl __builtin_hypotl
+#define hypot __builtin_hypot
+#define ilogbf __builtin_ilogbf
+#define ilogbl __builtin_ilogbl
+#define ilogb __builtin_ilogb
+#define imaxabs __builtin_imaxabs
+#define isblank __builtin_isblank
+#define iswblank __builtin_iswblank
+#define lgammaf __builtin_lgammaf
+#define lgammal __builtin_lgammal
+#define lgamma __builtin_lgamma
+#define llabs __builtin_llabs
+#define llrintf __builtin_llrintf
+#define llrintl __builtin_llrintl
+#define llrint __builtin_llrint
+#define llroundf __builtin_llroundf
+#define llroundl __builtin_llroundl
+#define llround __builtin_llround
+#define log1pf __builtin_log1pf
+#define log1pl __builtin_log1pl
+#define log1p __builtin_log1p
+#define log2f __builtin_log2f
+#define log2l __builtin_log2l
+#define log2 __builtin_log2
+#define logbf __builtin_logbf
+#define logbl __builtin_logbl
+#define logb __builtin_logb
+#define lrintf __builtin_lrintf
+#define lrintl __builtin_lrintl
+#define lrint __builtin_lrint
+#define lroundf __builtin_lroundf
+#define lroundl __builtin_lroundl
+#define lround __builtin_lround
+#define nearbyintf __builtin_nearbyintf
+#define nearbyintl __builtin_nearbyintl
+#define nearbyint __builtin_nearbyint
+#define nextafterf __builtin_nextafterf
+#define nextafterl __builtin_nextafterl
+#define nextafter __builtin_nextafter
+#define nexttowardf __builtin_nexttowardf
+#define nexttowardl __builtin_nexttowardl
+#define nexttoward __builtin_nexttoward
+#define remainderf __builtin_remainderf
+#define remainderl __builtin_remainderl
+#define remainder __builtin_remainder
+#define remquof __builtin_remquof
+#define remquol __builtin_remquol
+#define remquo __builtin_remquo
+#define rintf __builtin_rintf
+#define rintl __builtin_rintl
+#define rint __builtin_rint
+#define roundf __builtin_roundf
+#define roundl __builtin_roundl
+#define round __builtin_round
+#define scalblnf __builtin_scalblnf
+#define scalblnl __builtin_scalblnl
+#define scalbln __builtin_scalbln
+#define scalbnf __builtin_scalbnf
+#define scalbnl __builtin_scalbnl
+#define scalbn __builtin_scalbn
+#define snprintf __builtin_snprintf
+#define tgammaf __builtin_tgammaf
+#define tgammal __builtin_tgammal
+#define tgamma __builtin_tgamma
+#define truncf __builtin_truncf
+#define truncl __builtin_truncl
+#define trunc __builtin_trunc
+
+#endif
+
