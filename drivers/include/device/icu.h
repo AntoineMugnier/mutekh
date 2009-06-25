@@ -89,6 +89,14 @@ typedef DEVICU_DELHNDL(devicu_delhndl_t);
 #define dev_icu_delhndl(dev, ...) (dev)->drv->f.icu.f_delhndl(dev, __VA_ARGS__ )
 
 
+/** ICU device class sendipi() function template */
+#define DEVICU_SENDIPI(n)	error_t (n) (struct device_s *dev, void *cpu_icu_identifier)
+/** ICU device class sendipi() function type. send an ipi to specified processor. */
+typedef DEVICU_SENDIPI(devicu_sendipi_t);
+/** ICU device class sendipi() function shortcut */
+#define dev_icu_sendipi(dev, ...) (dev)->drv->f.icu.f_sendipi(dev, __VA_ARGS__ )
+
+
 /** unbind icu irq for a device */
 #define DEV_ICU_UNBIND(icu_dev, dev, irq)								\
 	do {																\
@@ -104,8 +112,8 @@ struct dev_class_icu_s
   devicu_enable_t			*f_enable;
   devicu_sethndl_t			*f_sethndl;
   devicu_delhndl_t			*f_delhndl;
+  devicu_sendipi_t			*f_sendipi;
 };
-
 
 #endif
 

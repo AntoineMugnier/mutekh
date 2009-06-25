@@ -56,6 +56,11 @@ device_register(struct device_s *dev,
   return 0;
 }
 
+error_t device_unregister(struct device_s *dev)
+{
+  return -1; 			/* FIXME */
+}
+
 void
 device_dump_list(struct device_s *root)
 {

@@ -182,6 +182,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)
 	hw_init();
 
 	lock_init(&fault_lock);
+	lock_init(&app_desc.start->lock);
 
 	arch_start_other_cpu();
 	mutek_main_smp();

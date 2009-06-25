@@ -38,6 +38,10 @@
 
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
+# ifndef CPU_GET_CLS_ID
+#  define CPU_GET_CLS_ID(cpuid) cpu_local_storage[(cpuid)]
+# endif
+
 # ifndef CPU_LOCAL
 #  define CPU_LOCAL
 # endif
@@ -70,7 +74,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
 /** get address of cpu local object for given cpuid */
 # ifndef CPU_LOCAL_ID_ADDR
-#  define CPU_LOCAL_ID_ADDR(cpuid, n) CPU_LOCAL_CLS_ADDR(cpu_local_storage[(cpuid)], n)
+#  define CPU_LOCAL_ID_ADDR(cpuid, n) CPU_LOCAL_CLS_ADDR(CPU_GET_CLS_ID(cpuid), n)
 # endif
 
 #else

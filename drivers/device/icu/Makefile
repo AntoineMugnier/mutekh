@@ -4,7 +4,11 @@ ifeq ($(CONFIG_DRIVER_ICU_8259), defined)
 endif
 
 ifeq ($(CONFIG_DRIVER_ICU_SOCLIB), defined)
- subdirs += soclib
+ subdirs += soclib-icu
+endif
+
+ifeq ($(CONFIG_DRIVER_ICU_SOCLIB_XICU), defined)
+ subdirs += soclib-xicu
 endif
 
 ifeq ($(CONFIG_DRIVER_ICU_MIPS), defined)
@@ -18,4 +22,3 @@ endif
 ifeq ($(CONFIG_DRIVER_ICU_ARM), defined)
  subdirs += arm
 endif
-

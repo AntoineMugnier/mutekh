@@ -58,7 +58,7 @@ CONTAINER_TYPE	     (sched_queue, DLIST, struct sched_context_s
 #endif
 
 #ifdef CONFIG_MUTEK_SCHEDULER_STATIC
-  sched_queue_root_t	*cpu_queue;
+  void *cpu_cls;
 #endif
 
 #ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN

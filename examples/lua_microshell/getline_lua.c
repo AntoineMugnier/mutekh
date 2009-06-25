@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <drivers/device/icu/soclib/icu-soclib.h>
+#include <drivers/device/icu/soclib-icu/icu-soclib.h>
 #include <drivers/device/block/soclib/block-soclib.h>
 
 #include <hexo/device.h>
@@ -123,8 +123,6 @@ void* shell(void *param)
         }
 
         lua_pop(luast, lua_gettop(luast) - oldtop + 1);
-
-        //term_printf(tm, "\n");
     }
 
     lua_close(luast);

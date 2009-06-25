@@ -24,6 +24,7 @@
 #include "icu-mips-private.h"
 
 #include <string.h>
+#include <stdio.h>
 
 #include <hexo/types.h>
 #include <hexo/device.h>

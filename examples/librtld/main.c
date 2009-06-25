@@ -1,5 +1,5 @@
 #if defined (CONFIG_ARCH_SOCLIB)
-#include <drivers/device/icu/soclib/icu-soclib.h>
+#include <drivers/device/icu/soclib-icu/icu-soclib.h>
 #endif
 #include <stdio.h>
 #include <pthread.h>
@@ -11,7 +11,7 @@
 #if defined (CONFIG_ARCH_SOCLIB)
 #include <hexo/interrupt.h>
 
-#include <drivers/device/icu/soclib/icu-soclib.h>
+#include <drivers/device/icu/soclib-icu/icu-soclib.h>
 #include <drivers/device/block/soclib/block-soclib.h>
 #elif defined (CONFIG_ARCH_EMU)
 #include <drivers/device/block/file-emu/block-file-emu.h>

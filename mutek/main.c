@@ -36,7 +36,8 @@
 #include <drivers/device/char/tty-soclib/tty-soclib.h>
 #include <drivers/device/char/tty-emu/tty-emu.h>
 #include <drivers/device/icu/8259/icu-8259.h>
-#include <drivers/device/icu/soclib/icu-soclib.h>
+#include <drivers/device/icu/soclib-icu/icu-soclib.h>
+#include <drivers/device/icu/soclib-xicu/xicu-soclib.h>
 #include <drivers/device/timer/soclib/timer-soclib.h>
 #include <drivers/device/timer/8253/timer-8253.h>
 #include <drivers/device/timer/emu/timer-emu.h>
@@ -147,6 +148,17 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
   icu_dev.irq = 0;
   icu_dev.icudev = CPU_LOCAL_ADDR(cpu_icu_dev);
   icu_soclib_init(&icu_dev, NULL);
+# elif defined(CONFIG_DRIVER_ICU_SOCLIB_XICU)
+  icu_dev.addr[XICU_ADDR_MASTER] = DSX_SEGMENT_XICU_ADDR;
+  icu_dev.addr[XICU_OUT_INDEX] = cpu_id();
+  icu_dev.irq = 0;
+  icu_dev.icudev = CPU_LOCAL_ADDR(cpu_icu_dev);
+  {
+ 	  struct soclib_xicu_param_s params = {
+ 		  .output_line_no = cpu_id(),
+ 	  };
+ 	  xicu_soclib_init(&icu_dev, &params);
+  }
 # else
 #  error CONFIG_DRIVER_ICU case not handled in mutek_main()
 # endif
@@ -185,7 +197,13 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 # elif defined(CONFIG_DRIVER_CHAR_SOCLIBTTY)
   device_init(&tty_con_dev);
   tty_con_dev.addr[0] = DSX_SEGMENT_TTY_ADDR;
+#  if defined(CONFIG_DRIVER_ICU_SOCLIB)
   tty_con_dev.irq = 1;
+#  elif defined(CONFIG_DRIVER_ICU_SOCLIB_XICU)
+  tty_con_dev.irq = 0;
+#  else
+#   error No ICU
+#  endif
   tty_con_dev.icudev = &icu_dev;
   tty_soclib_init(&tty_con_dev, NULL);
 #  if defined(CONFIG_MUTEK_CONSOLE)
@@ -388,6 +406,10 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 /** application main function */
 int_fast8_t main(size_t argc, char **argv);
 
+# if defined(CONFIG_DRIVER_ICU_SOCLIB_XICU) && defined(CONFIG_SMP)
+struct device_s icu_dev_2[CONFIG_CPU_MAXCOUNT];
+# endif
+
 void mutek_main_smp(void)  /* ALL CPUs execute this function */
 {
   lock_init(&fault_lock);
@@ -415,6 +437,22 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
   else
     {
       cpu_interrupt_disable();
+
+# if defined(CONFIG_DRIVER_ICU_SOCLIB_XICU)
+	  {
+		  struct device_s *icu_dev = &icu_dev_2[cpu_id()];
+		  device_init(icu_dev);
+		  icu_dev->addr[XICU_ADDR_MASTER] = DSX_SEGMENT_XICU_ADDR;
+		  icu_dev->addr[XICU_OUT_INDEX] = cpu_id();
+		  icu_dev->irq = 0;
+		  icu_dev->icudev = CPU_LOCAL_ADDR(cpu_icu_dev);
+		  struct soclib_xicu_param_s params = {
+			  .output_line_no = cpu_id(),
+		  };
+		  xicu_soclib_init(icu_dev, &params);
+	  }
+# endif
+
 #if defined(CONFIG_MUTEK_SCHEDULER)
       sched_lock();
       sched_context_exit();

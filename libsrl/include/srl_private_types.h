@@ -84,7 +84,6 @@ typedef struct srl_barrier_s
 		.serial = 0, \
 		.count = (n),												\
 		.max = (n),												\
-		.lock = LOCK_INITIALIZER, \
 	}
 #endif
 

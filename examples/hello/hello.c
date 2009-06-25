@@ -17,7 +17,7 @@ void *f(void *param)
 int main()
 {
   pthread_mutex_init(&m, NULL);
-  pthread_create(&a, NULL, f, "Hello ");
-  pthread_create(&b, NULL, f, "World\n");
+  pthread_create(&a, NULL, f, "Hello world\n");
+  pthread_create(&b, NULL, f, "Hello world\n");
 }
 
