@@ -61,7 +61,7 @@
  * Utils
  */
 
-#if defined(CONFIG_LIBRTLD_DEBUG)
+#if defined(CONFIG_RTLD_DEBUG)
 # define _rtld_debug printk
 #else
 # define _rtld_debug(...)

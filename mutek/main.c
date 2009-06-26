@@ -388,7 +388,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 #else
     printk("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
-#if defined(CONFIG_LIBRTLD)
+#if defined(CONFIG_RTLD)
     printk("hwrena=%p tls=%p\n", regtable[CPU_GPREG_COUNT], regtable[CPU_GPREG_COUNT+1]);
 #endif
 

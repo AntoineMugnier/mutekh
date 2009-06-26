@@ -459,7 +459,7 @@ _rtld_load_dependencies(dynobj_desc_t *dynobj,
  * @param dynobj Object to process
  * @return error_t Error code if any
  */
-#if defined(CONFIG_LIBRTLD_DEBUG)
+#if defined(CONFIG_RTLD_DEBUG)
 static const char* const _rtld_dyn_tag_names[24] = {
     "DT_NULL", "DT_NEEDED", "DT_PLTRELSZ", "DT_PLTGOT",
     "DT_HASH", "DT_STRTAB", "DT_SYMTAB", "DT_RELA",

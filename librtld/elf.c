@@ -55,6 +55,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <hexo/alloc.h>
 #include <hexo/endian.h>
 
 #include <rtld/rtld-private.h>
@@ -156,7 +157,7 @@ err:
  * @param dynobj Dynamic object
  * @return error_t Error code if any
  */
-#if defined(CONFIG_LIBRTLD_DEBUG)
+#if defined(CONFIG_RTLD_DEBUG)
 static const char* const _rtld_phdr_type_names[8] = {
     "PT_NULL", "PT_LOAD", "PT_DYNAMIC", "PT_INTERP",
     "PT_NOTE", "PT_SHLIB", "PT_PHDR", "PT_TLS"
@@ -195,7 +196,7 @@ _elf_scan_phdr(dynobj_desc_t *dynobj)
             /* Loadable segments */
             case PT_LOAD:
                 assert(nsegs < 2); // text and data segments
-                assert(phdr_entry->p_align >= CONFIG_LIBRTLD_PAGE_SIZE);
+                assert(phdr_entry->p_align == CONFIG_RTLD_PAGESIZE); // dont want to manage exotic sizes
 
                 dynobj->nseg[nsegs++] = i; /* just to remember which entries were PT_LOAD */
                 break;
@@ -248,27 +249,24 @@ _elf_load_segments(FILE *file, dynobj_desc_t *dynobj)
 
     _rtld_debug("_elf_load_segments\n");
 
-    dynobj->vaddrbase  = ALIGN_VALUE_LOW(text_seg.p_vaddr, CONFIG_LIBRTLD_PAGE_SIZE);
+    dynobj->vaddrbase  = ALIGN_VALUE_LOW(text_seg.p_vaddr, CONFIG_RTLD_PAGESIZE);
     dynobj->mapsize = ALIGN_VALUE_UP(data_seg.p_vaddr + data_seg.p_memsz,
-            CONFIG_LIBRTLD_PAGE_SIZE) - dynobj->vaddrbase;
+            CONFIG_RTLD_PAGESIZE) - dynobj->vaddrbase;
 
     /*
      * Allocate sufficient contiguous pages for the object and read the object
      * into it. This will form the base for relocation.
-     */
-    /* This allocation will contain the code and data segments, and will be used 
-     * by the application.
      *
-     * If possible, code segment should be protected with Read and Write ACL while
-     * data segment should be protected with Read only ACL (the data segment should 
-     * only contain the GOT which should not change after the RTLD updates it).
-     *
-     * This allocation can be performed in various ways:
+     * This allocation will contain the code and data segments, and will be used
+     * by the application. It can be performed in various ways:
      *  - malloc if one expects no protection, use of user mode, etc
+     *    - since text and data should be read-only, we can put them in cached
+     *      memory to improve performance
      *  - vmem_alloc if one expects to use the mmu
      *  - etc
      */
-    if ((dynobj->mapbase = (uintptr_t)malloc(dynobj->mapsize)) == (uintptr_t)NULL)
+    if ((dynobj->mapbase = (uintptr_t)mem_alloc(dynobj->mapsize, MEM_SCOPE_CPU))
+            == (uintptr_t)NULL)
     {
         _rtld_debug("\tcould not allocate %x bytes\n", dynobj->mapsize);
         return -1;

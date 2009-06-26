@@ -1,5 +1,5 @@
 
-ifeq ($(CONFIG_LIBRTLD), defined)
+ifeq ($(CONFIG_RTLD), defined)
   objs = reloc.o
 endif
 

@@ -32,7 +32,9 @@
  * User program management
  */
 
-/* Initialize the internal rtld library for user purpose
+/* 
+ * Initialize the internal rtld library for user purpose
+ * Warning: you have to call this function only once (not for each uses)
  */
 error_t rtld_user_init (void);
 
@@ -71,6 +73,8 @@ error_t rtld_user_dltls (const void *handle, uintptr_t *tls);
  */
 error_t rtld_user_dlclose (const void *handle);
 
+
+#if defined (CONFIG_RTLD_KERNEL)
 
 /* 
  * Kernel program management
@@ -113,6 +117,8 @@ error_t rtld_kernel_dlsym (const void *handle, const unsigned char *name, void *
  * @return error_t Error code if any
  */
 error_t rtld_kernel_dlclose (const void *handle);
+
+#endif
 
 #endif /* _RTLD_H_ */
 
