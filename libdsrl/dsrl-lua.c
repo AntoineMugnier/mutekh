@@ -259,30 +259,12 @@ static CONTEXT_ENTRY(dsrl_run_task)
     cpu_interrupt_enable();
 
     /*
-     * Two ways of calling the thread:
-     *  - direct call in C: it means the thread must manage to become PIC
+     *  direct call in C: it means the thread must manage to become PIC
      *  itself (via an asm routine)
-     *  - call with $25: the thread can begin directly with a C function,
-     *  expecting $25 to be set correctly
      */
-#if 0
+    typedef void* dsrl_func_t (void*);
     dsrl_func_t *f = task->entrypoint;
     f(args);
-#else
-    asm volatile (
-            ".set push              \n"
-            ".set noat              \n"
-            ".set noreorder         \n"
-            "   move    $25,    %0  \n"
-            "   move    $4,     %1  \n"
-            "   jr      $25         \n"
-            ".set pop               \n"
-            :
-            : "r" (task->entrypoint)
-            , "r" (args)
-            );
-#endif
-
 
     // should not happen (at least if previously we went in user mode)
     cpu_interrupt_disable();
