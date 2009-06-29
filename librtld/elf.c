@@ -196,7 +196,7 @@ _elf_scan_phdr(dynobj_desc_t *dynobj)
             /* Loadable segments */
             case PT_LOAD:
                 assert(nsegs < 2); // text and data segments
-                assert(phdr_entry->p_align == CONFIG_RTLD_PAGESIZE); // dont want to manage exotic sizes
+                assert(phdr_entry->p_align == CONFIG_HEXO_MMU_PAGESIZE); // dont want to manage exotic sizes
 
                 dynobj->nseg[nsegs++] = i; /* just to remember which entries were PT_LOAD */
                 break;
@@ -249,9 +249,9 @@ _elf_load_segments(FILE *file, dynobj_desc_t *dynobj)
 
     _rtld_debug("_elf_load_segments\n");
 
-    dynobj->vaddrbase  = ALIGN_VALUE_LOW(text_seg.p_vaddr, CONFIG_RTLD_PAGESIZE);
+    dynobj->vaddrbase  = ALIGN_VALUE_LOW(text_seg.p_vaddr, CONFIG_HEXO_MMU_PAGESIZE);
     dynobj->mapsize = ALIGN_VALUE_UP(data_seg.p_vaddr + data_seg.p_memsz,
-            CONFIG_RTLD_PAGESIZE) - dynobj->vaddrbase;
+            CONFIG_HEXO_MMU_PAGESIZE) - dynobj->vaddrbase;
 
     /*
      * Allocate sufficient contiguous pages for the object and read the object
