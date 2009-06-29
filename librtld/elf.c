@@ -250,7 +250,7 @@ _elf_load_segments(FILE *file, dynobj_desc_t *dynobj)
     _rtld_debug("_elf_load_segments\n");
 
     dynobj->vaddrbase  = ALIGN_VALUE_LOW(text_seg.p_vaddr, CONFIG_HEXO_MMU_PAGESIZE);
-    dynobj->mapsize = ALIGN_VALUE_UP(data_seg.p_vaddr + data_seg.p_memsz,
+    dynobj->map.size = ALIGN_VALUE_UP(data_seg.p_vaddr + data_seg.p_memsz,
             CONFIG_HEXO_MMU_PAGESIZE) - dynobj->vaddrbase;
 
     /*
@@ -265,10 +265,10 @@ _elf_load_segments(FILE *file, dynobj_desc_t *dynobj)
      *  - vmem_alloc if one expects to use the mmu
      *  - etc
      */
-    if ((dynobj->mapbase = (uintptr_t)mem_alloc(dynobj->mapsize, MEM_SCOPE_CPU))
+    if ((dynobj->map.base = (uintptr_t)mem_alloc(dynobj->map.size, MEM_SCOPE_CPU))
             == (uintptr_t)NULL)
     {
-        _rtld_debug("\tcould not allocate %x bytes\n", dynobj->mapsize);
+        _rtld_debug("\tcould not allocate %x bytes\n", dynobj->map.size);
         return -1;
     }
 
@@ -277,7 +277,7 @@ _elf_load_segments(FILE *file, dynobj_desc_t *dynobj)
      */
     _rtld_debug("\tload read-only segments (text, rodata, bss)\n");
     fseek(file, text_seg.p_offset, SEEK_SET);
-    if (fread((void*)dynobj->mapbase, text_seg.p_filesz, 1, file) != 1) 
+    if (fread((void*)dynobj->map.base, text_seg.p_filesz, 1, file) != 1) 
     {
         _rtld_debug("\t\tcould not read text segment");
         goto err_alloc;
@@ -288,7 +288,7 @@ _elf_load_segments(FILE *file, dynobj_desc_t *dynobj)
      */
     _rtld_debug("\tload read-write segments (data)\n");
     fseek(file, data_seg.p_offset, SEEK_SET);
-    if (fread((void*)(dynobj->mapbase + (data_seg.p_vaddr - text_seg.p_vaddr)), 
+    if (fread((void*)(dynobj->map.base + (data_seg.p_vaddr - text_seg.p_vaddr)), 
                         data_seg.p_filesz, 1, file) != 1)
     {
         _rtld_debug("\t\tcould not read data segment");
@@ -296,11 +296,11 @@ _elf_load_segments(FILE *file, dynobj_desc_t *dynobj)
     }
 
     /* clear bss (at the end of data) */
-    memset((void*)(dynobj->mapbase + (data_seg.p_vaddr - text_seg.p_vaddr) + data_seg.p_filesz), 
+    memset((void*)(dynobj->map.base + (data_seg.p_vaddr - text_seg.p_vaddr) + data_seg.p_filesz), 
                 0, data_seg.p_memsz - data_seg.p_filesz);
 
     /* relocation value */
-    dynobj->relocbase = dynobj->mapbase - dynobj->vaddrbase;
+    dynobj->relocbase = dynobj->map.base - dynobj->vaddrbase;
 
     /* relocate some stuffs */
     dynobj->dynamic = (elf_dyn_t*)((elf_addr_t)dynobj->dynamic + dynobj->relocbase);
@@ -308,8 +308,8 @@ _elf_load_segments(FILE *file, dynobj_desc_t *dynobj)
         dynobj->entrypoint = dynobj->entrypoint + dynobj->relocbase;
 
     _rtld_debug("\tobject map:\n");
-    _rtld_debug("\t\tmapbase: %p\n",    (void*)dynobj->mapbase);
-    _rtld_debug("\t\tmapsize: 0x%x\n",  dynobj->mapsize);
+    _rtld_debug("\t\tmapbase: %p\n",    (void*)dynobj->map.base);
+    _rtld_debug("\t\tmapsize: 0x%x\n",  dynobj->map.size);
     _rtld_debug("\t\tvaddrbase: %p\n",  (void*)dynobj->vaddrbase);
     _rtld_debug("\t\trelocbase: %p\n",  (void*)dynobj->relocbase);
     _rtld_debug("\t\tdynamic: %p\n",    (void*)dynobj->dynamic);
@@ -319,7 +319,7 @@ _elf_load_segments(FILE *file, dynobj_desc_t *dynobj)
     return 0;
 
 err_alloc:
-    free((void*)dynobj->mapbase);
+    free((void*)dynobj->map.base);
     return -1;
 
 #undef text_seg

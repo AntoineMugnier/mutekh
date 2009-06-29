@@ -253,7 +253,7 @@ static CONTEXT_ENTRY(dsrl_run_task)
 #endif
 
     /* setup tls */
-    tls_init_tp(task->tls);
+    tls_init_tp(task->tp);
 
     sched_unlock();
     cpu_interrupt_enable();
@@ -306,11 +306,14 @@ RESOURCE_BUILD(dsrl_task)
     _dsrl_debug("\tload exec in memory\n");
     if (rtld_user_dlopen(res->execname, &res->entrypoint, &res->handle) != 0)
         luaL_error(L, "dlopen failed on %s", res->execname);
+
     if (rtld_user_dlsym(res->handle, res->funcname, &res->func) != 0)
         luaL_error(L, "dlsym failed on %s", res->funcname);
     else
         _dsrl_debug("\tfunc is @%p\n", res->func);
-    if (rtld_user_dltls(res->handle, &res->tls) != 0)
+
+    res->tls = NULL;
+    if (rtld_user_dltls(res->handle, &res->tls, &res->tp) != 0)
         luaL_error(L, "dltls failed on %s", res->execname);
     else
         _dsrl_debug("\ttls is @%p\n", res->tls);

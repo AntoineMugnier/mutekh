@@ -409,6 +409,7 @@ _rtld_load_dependencies(dynobj_desc_t *dynobj,
 
     /* allocate a pointer array to dependencies */
     dynobj->dep_shobj = (dynobj_desc_t**)malloc(dynobj->ndep_shobj*sizeof(dynobj_desc_t*));
+    dynobj->map.deps = (rtld_map_t**)malloc(dynobj->ndep_shobj*sizeof(rtld_map_t*));
 
     ndep_shobj = 0;
     /* second pass on the dynamic section but just for dependencies */
@@ -442,6 +443,7 @@ _rtld_load_dependencies(dynobj_desc_t *dynobj,
                 }
                 /* add to the dependencies table */
                 dynobj->dep_shobj[ndep_shobj] = dep_dynobj;
+                dynobj->map.deps[ndep_shobj] = &dep_dynobj->map;
                 ndep_shobj++;
                 break;
 
@@ -630,7 +632,7 @@ _rtld_lookup_addr(const uintptr_t addr, dynobj_list_root_t *list)
     {
         const elf_sym_t *end_sym;
 
-        if (addr < item->mapbase)
+        if (addr < item->map.base)
             CONTAINER_FOREACH_CONTINUE;
         if ((end_sym = _rtld_lookup_sym_dynobj(END_SYM, _rtld_elf_hash(END_SYM), item, ELF_RTYPE_CLASS_PLT)) != NULL)
         {

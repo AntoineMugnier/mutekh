@@ -23,14 +23,21 @@
 #ifndef _RTLD_H_
 #define _RTLD_H_
 
+#include <hexo/types.h>
+#include <hexo/error.h>
+
 /* 
  * Public API 
  */
 
-
 /* 
  * User program management
  */
+typedef struct rtld_map_s {
+    uintptr_t   base;
+    size_t      size;
+    struct rtld_map_s   **deps;
+} rtld_map_t;
 
 /* 
  * Initialize the internal rtld library for user purpose
@@ -58,13 +65,20 @@ error_t rtld_user_dlopen (const unsigned char *pathname, uintptr_t *entrypoint, 
 error_t rtld_user_dlsym (const void *handle, const unsigned char *name, uintptr_t *sym);
 
 /*
- * Allocate a tls area for an user program. Note that the caller must take care of freeing this area.
+ * Create a tls area for an user program.
+ * Note that the caller must take care of freeing this area.
  *
  * @param handle Handle on the program object
- * @param tls Handle on the tls area
+ * @param tls Tls area (allocate one if NULL)
+ * @param threadpointer Threadpointer for the cpu
  * @return error_t Error code if any
  */
-error_t rtld_user_dltls (const void *handle, uintptr_t *tls);
+error_t rtld_user_dltls (const void *handle, uintptr_t *tls, uintptr_t *threadpointer);
+
+/* get the size of the tls area for a given object */
+error_t rtld_user_tls_size (const void *handle, size_t *size);
+/* get the list of the objects mapping */
+error_t rtld_user_dl_map (const void* handle, rtld_map_t **maplist);
 
 /* Close an user program
  *

@@ -23,6 +23,7 @@ typedef struct {
     uintptr_t entrypoint;
     uintptr_t func;
     uintptr_t tls;
+    uintptr_t tp;
 
     /* Sched wait syscall */
     volatile uint32_t *wait_addr;

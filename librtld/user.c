@@ -77,10 +77,9 @@ error_t rtld_user_dlsym (const void *handle, const unsigned char *name, uintptr_
 	return 0;
 }
 
-error_t rtld_user_dltls (const void *handle, uintptr_t *tls)
+error_t rtld_user_dltls (const void *handle, uintptr_t *tls, uintptr_t *threadpointer)
 {
 	const dynobj_desc_t *dynobj = handle;
-    uintptr_t tp;
 
 	_rtld_debug("rtld_user_dltls\n");
 
@@ -88,12 +87,29 @@ error_t rtld_user_dltls (const void *handle, uintptr_t *tls)
 	if (_rtld_lookup_ref(dynobj, &user_dynobj_list.prg_root) == NULL)
 		return -1;
 
-    if (_tls_allocate_dynobj(dynobj, &tp) != 0)
+    /* allocate area if NULL */
+    if (*tls == NULL && _tls_allocate_dynobj(dynobj, tls) != 0)
         return -1;
 
-    *tls = tp;
+    if (_tls_init_dynobj(dynobj, *tls, threadpointer) != 0)
+        return -1;
 
 	return 0;
+}
+error_t rtld_user_tls_size (const void *handle, size_t *size)
+{
+	const dynobj_desc_t *dynobj = handle;
+
+	_rtld_debug("rtld_user_tls_size\n");
+
+	/* allows to access only loaded programs */
+	if (_rtld_lookup_ref(dynobj, &user_dynobj_list.prg_root) == NULL)
+		return -1;
+
+    if (_tls_dynobj_size(dynobj, size) != 0)
+        return -1;
+
+    return 0;
 }
 
 error_t rtld_user_dlclose (const void *handle)

@@ -54,6 +54,7 @@
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_dlist.h>
 
+#include <rtld/rtld.h>
 #include <rtld/rtld-types.h>
 #include <cpu/tls.h>
 
@@ -89,8 +90,7 @@ typedef struct dynobj_desc_s
     /*
      * Relative to elf loading
      */
-    uintptr_t   mapbase;    /* Base address of mapped region */
-    size_t      mapsize;    /* Size of mapped region in bytes */
+    rtld_map_t  map;        /* Memory mapping of the object */
 
     elf_addr_t  vaddrbase;  /* Base address in shared object file */
     ptrdiff_t   relocbase;  /* Relocation constant = mapbase - vaddrbase (can be negative)*/
@@ -200,14 +200,11 @@ reg_t
 _rtld_elf_hash(const unsigned char *name);
 
 /* tls */
-size_t
-_tls_get_new_modid(void);
-
-error_t
-_tls_load_dynobj(dynobj_desc_t *dynobj);
-
-error_t
-_tls_allocate_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer);
+size_t  _tls_get_new_modid(void);
+error_t _tls_load_dynobj(dynobj_desc_t *dynobj);
+error_t _tls_dynobj_size(const dynobj_desc_t *dynobj, size_t *size);
+error_t _tls_init_dynobj(const dynobj_desc_t *dynobj, uintptr_t tls, uintptr_t *threadpointer);
+error_t _tls_allocate_dynobj(const dynobj_desc_t *dynobj, uintptr_t *tls);
 
 /*
  * Include CPU dependent stuff relative to rtld

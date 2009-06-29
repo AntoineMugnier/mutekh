@@ -200,17 +200,8 @@ _tls_load_dynobj(dynobj_desc_t *dynobj)
     return 0;
 }
 
-/* Allocate a new tls area and fill it
- *
- * @param dynobj Dynamic object
- * @param threadpointer Address to be set at tp (cpu dependent)
- * @return error_t Error code if any 
- */
-error_t
-_tls_allocate_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer)
+error_t _tls_dynobj_size(const dynobj_desc_t *dynobj, size_t *size)
 {
-    _rtld_debug("_tls_allocate_dynobj\n");
-
     /* sanity check */
     assert(dynobj->tls_modid <= 1);
     if (dynobj->tls_nb_modid == 0)
@@ -219,32 +210,23 @@ _tls_allocate_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer)
         return 0;
     }
 
-    /* alloc a new tls area (and space for DTV) */
     size_t dtv_size = (dynobj->tls_max_modid+1) * sizeof(tls_dtv_t);
-    uintptr_t tls_area;
 
-    /* This allocation will contain the TLS segment, and will be used 
-     * by the application.
-     *
-     * If possible, this segment should be protected with Read/Write ACL.
-     *
-     * This allocation can be performed in various ways:
-     *  - malloc if one expects no protection, use of user mode, etc
-     *  - vmem_alloc if one expects to use the mmu
-     *  - etc
-     */
-    tls_area = (uintptr_t)calloc(1, dynobj->tls_total_size + dtv_size);
+    *size = dynobj->tls_total_size + dtv_size;
 
-    _rtld_debug("\tcreate a tls_area for \"%s\" at %p of size 0x%x\n", dynobj->pathname,
-            (void*)tls_area, dynobj->tls_total_size + dtv_size);
+    return 0;
+}
+
+error_t _tls_init_dynobj(const dynobj_desc_t *dynobj, uintptr_t tls, uintptr_t *threadpointer)
+{
 
     uintptr_t tp;
     tls_dtv_t *dtv;
 #if defined(TLS_DTVP_AT_TP)
-    tp = tls_area + TLS_TCB_OFFSET; /* some cpu as mips, don't respect variant I exactly */
-    dtv = (tls_dtv_t*)(tls_area + dynobj->tls_total_size); /* tls_total_size does include tcb */
+    tp = tls + TLS_TCB_OFFSET; /* some cpu as mips, don't respect variant I exactly */
+    dtv = (tls_dtv_t*)(tls + dynobj->tls_total_size); /* tls_total_size does include tcb */
 #elif defined(TLS_TCB_AT_TP)
-    tp = tls_area + dynobj->tls_total_size; /* tls_total_size does not include tcb */
+    tp = tls + dynobj->tls_total_size; /* tls_total_size does not include tcb */
     dtv = (tls_dtv_t*)(tp + sizeof(tls_tcb_t));
 #else
 #error "TLS variant is not defined for your cpu"
@@ -261,7 +243,7 @@ _tls_allocate_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer)
     dtv[0].counter = dynobj->tls_max_modid;
 
     /* set the DTV pointer in TCB */
-    tls_tcb_t *tcb = (tls_tcb_t*)tls_area;
+    tls_tcb_t *tcb = (tls_tcb_t*)tls;
     tcb->dtvp = dtv;
 
     _rtld_debug("\treturn threadpointer %p\n", (void*)tp);
@@ -271,8 +253,40 @@ _tls_allocate_dynobj(dynobj_desc_t *dynobj, uintptr_t *threadpointer)
     return 0;
 
 err_mem:
-    free((void*)tls_area);
+    free((void*)tls);
     return -1;
+}
+
+/* Allocate a new tls area and fill it
+ *
+ * @param dynobj Dynamic object
+ * @param tls Address of the tls area
+ * @return error_t Error code if any 
+ */
+error_t
+_tls_allocate_dynobj(const dynobj_desc_t *dynobj, uintptr_t *tls)
+{
+    _rtld_debug("_tls_allocate_dynobj\n");
+
+    /* sanity check */
+    assert(dynobj->tls_modid <= 1);
+    if (dynobj->tls_nb_modid == 0)
+    {
+        _rtld_debug("\tno tls for this program\n");
+        return 0;
+    }
+
+    uintptr_t tls_area;
+    size_t tls_size;
+    _tls_dynobj_size(dynobj, &tls_size);
+
+    tls_area = (uintptr_t)calloc(1, tls_size);
+
+    _rtld_debug("\tcreated a tls_area for \"%s\" at %p of size 0x%x\n", dynobj->pathname,
+            (void*)tls_area, tls_size);
+
+    *tls = tls_area;
+    return 0;
 }
 
 // Local Variables:
