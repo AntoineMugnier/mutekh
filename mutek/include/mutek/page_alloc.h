@@ -35,7 +35,6 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/lock.h>
-#include <hexo/mmu.h>
 
 /*
  *  physical page allocator
