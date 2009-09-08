@@ -198,5 +198,74 @@
 #define truncl __builtin_truncl
 #define trunc __builtin_trunc
 
+#define acosf __builtin_acosf
+#define acosl __builtin_acosl
+#define asinf __builtin_asinf
+#define asinl __builtin_asinl
+#define atan2f __builtin_atan2f
+#define atan2l __builtin_atan2l
+#define atanf __builtin_atanf
+#define atanl __builtin_atanl
+#define ceilf __builtin_ceilf
+#define ceill __builtin_ceill
+#define cosf __builtin_cosf
+#define coshf __builtin_coshf
+#define coshl __builtin_coshl
+#define cosl __builtin_cosl
+#define expf __builtin_expf
+#define expl __builtin_expl
+#define fabsf __builtin_fabsf
+#define fabsl __builtin_fabsl
+#define floorf __builtin_floorf
+#define floorl __builtin_floorl
+#define fmodf __builtin_fmodf
+#define fmodl __builtin_fmodl
+#define frexpf __builtin_frexpf
+#define frexpl __builtin_frexpl
+#define ldexpf __builtin_ldexpf
+#define ldexpl __builtin_ldexpl
+#define log10f __builtin_log10f
+#define log10l __builtin_log10l
+#define logf __builtin_logf
+#define logl __builtin_logl
+#define modfl __builtin_modfl
+#define modf __builtin_modf
+#define powf __builtin_powf
+#define powl __builtin_powl
+#define sinf __builtin_sinf
+#define sinhf __builtin_sinhf
+#define sinhl __builtin_sinhl
+#define sinl __builtin_sinl
+#define sqrtf __builtin_sqrtf
+#define sqrtl __builtin_sqrtl
+#define tanf __builtin_tanf
+#define tanhf __builtin_tanhf
+#define tanhl __builtin_tanhl
+#define tanl __builtin_tanl
+
+#define acos __builtin_acos
+#define asin __builtin_asin
+#define atan2 __builtin_atan2
+#define atan __builtin_atan
+#define ceil __builtin_ceil
+#define cosh __builtin_cosh
+#define cos __builtin_cos
+#define exp __builtin_exp
+#define fabs __builtin_fabs
+#define floor __builtin_floor
+#define fmod __builtin_fmod
+#define ldexp __builtin_ldexp
+#define log10 __builtin_log10
+#define log __builtin_log
+#define modf __builtin_modf
+#define pow __builtin_pow
+#define sinh __builtin_sinh
+#define sin __builtin_sin
+#define sqrt __builtin_sqrt
+
+double sqrt(double x);
+float sqrtf(float x);
+long double sqrtl(long double x);
+
 #endif
 
