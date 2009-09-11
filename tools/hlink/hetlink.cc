@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 	      hsec = i->second;
 	      hsec->ref_count_++;	      
 	    }
-
+#if 0
 	  // find all section area covered by a symbol
 	  typedef dpp::interval_set<uint32_t> is_t;
 	  is_t is;
@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 
 	  if (S->get_type() != elfpp::SHT_NOBITS)
 	      memset(S->get_content(), 0xaa, S->get_size());
-
+#endif
 	  // find or create new het-symbols
 	  FOREACH(s, S->get_symbol_table())
 	    {
