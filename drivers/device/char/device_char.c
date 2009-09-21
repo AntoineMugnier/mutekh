@@ -41,15 +41,27 @@ struct dev_char_wait_rq_s
 };
 
 
-static DEVCHAR_CALLBACK(dev_char_syncl_read)
+static DEVCHAR_CALLBACK(dev_char_lock_request_cb)
 {
   struct dev_char_wait_rq_s *status = rq->pvdata;
   status->done = 1;
   return 1;
 }
 
+static DEVCHAR_CALLBACK(dev_char_lock_request_whole_cb)
+{
+  struct dev_char_wait_rq_s *status = rq->pvdata;
+
+  if ( rq->size == 0 || rq->error ) {
+	  status->done = 1;
+	  return 1;
+  }
+  return 0;
+}
+
 static ssize_t dev_char_lock_request(struct device_s *dev, uint8_t *data,
-				     size_t size, enum dev_char_rq_type_e type)
+									 size_t size, enum dev_char_rq_type_e type,
+									 devchar_callback_t		*callback)
 {
   struct dev_char_rq_s rq;
   struct dev_char_wait_rq_s status;
@@ -57,7 +69,7 @@ static ssize_t dev_char_lock_request(struct device_s *dev, uint8_t *data,
   status.done = 0;
   rq.type = type;
   rq.pvdata = &status;
-  rq.callback = dev_char_syncl_read;
+  rq.callback = callback;
   rq.error = 0;
   rq.data = data;
   rq.size = size;
@@ -75,7 +87,7 @@ static ssize_t dev_char_lock_request(struct device_s *dev, uint8_t *data,
 
 
 #ifdef CONFIG_MUTEK_SCHEDULER
-static DEVCHAR_CALLBACK(dev_char_sync_read)
+static DEVCHAR_CALLBACK(dev_char_wait_request_cb)
 {
   struct dev_char_wait_rq_s *status = rq->pvdata;
 
@@ -88,8 +100,24 @@ static DEVCHAR_CALLBACK(dev_char_sync_read)
   return 1;
 }
 
+static DEVCHAR_CALLBACK(dev_char_wait_request_whole_cb)
+{
+  struct dev_char_wait_rq_s *status = rq->pvdata;
+
+  if ( rq->size == 0 || rq->error ) {
+	  lock_spin(&status->lock);
+	  if (status->ctx != NULL)
+		  sched_context_start(status->ctx);
+	  status->done = 1;
+	  lock_release(&status->lock);
+	  return 1;
+  }
+  return 0;
+}
+
 static ssize_t dev_char_wait_request(struct device_s *dev, uint8_t *data,
-				     size_t size, enum dev_char_rq_type_e type)
+									 size_t size, enum dev_char_rq_type_e type,
+									 devchar_callback_t		*callback)
 {
   struct dev_char_rq_s rq;
   struct dev_char_wait_rq_s status;
@@ -99,7 +127,7 @@ static ssize_t dev_char_wait_request(struct device_s *dev, uint8_t *data,
   status.done = 0;
   rq.type = type;
   rq.pvdata = &status;
-  rq.callback = dev_char_sync_read;
+  rq.callback = callback;
   rq.error = 0;
   rq.data = data;
   rq.size = size;
@@ -128,31 +156,34 @@ static ssize_t dev_char_wait_request(struct device_s *dev, uint8_t *data,
 }
 #endif
 
+
+
+
 ssize_t dev_char_wait_read(struct device_s *dev, uint8_t *data, size_t size)
 {
 #ifdef CONFIG_MUTEK_SCHEDULER
-  return dev_char_wait_request(dev, data, size, DEV_CHAR_READ);
+	return dev_char_wait_request(dev, data, size, DEV_CHAR_READ, dev_char_wait_request_cb);
 #else
-  return dev_char_lock_request(dev, data, size, DEV_CHAR_READ);
+	return dev_char_lock_request(dev, data, size, DEV_CHAR_READ, dev_char_lock_request_cb);
 #endif
 }
 
 ssize_t dev_char_spin_read(struct device_s *dev, uint8_t *data, size_t size)
 {
-  return dev_char_lock_request(dev, data, size, DEV_CHAR_READ);
+	return dev_char_lock_request(dev, data, size, DEV_CHAR_READ, dev_char_lock_request_cb);
 }
 
 ssize_t dev_char_wait_write(struct device_s *dev, const uint8_t *data, size_t size)
 {
 #ifdef CONFIG_MUTEK_SCHEDULER
-  return dev_char_wait_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE);
+	return dev_char_wait_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE, dev_char_wait_request_whole_cb);
 #else
-  return dev_char_lock_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE);
+	return dev_char_lock_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE, dev_char_lock_request_whole_cb);
 #endif
 }
 
 ssize_t dev_char_spin_write(struct device_s *dev, const uint8_t *data, size_t size)
 {
-  return dev_char_lock_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE);
+	return dev_char_lock_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE, dev_char_lock_request_whole_cb);
 }
 
