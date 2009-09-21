@@ -22,6 +22,8 @@
 #include <hexo/cpu.h>
 #include <hexo/endian.h>
 
+#if defined(CONFIG_CPU_CACHE)
+
 void cpu_dcache_invld_buf(void *ptr, size_t size)
 {
   size_t ls = cpu_dcache_line_size();
@@ -37,3 +39,4 @@ void cpu_dcache_invld_buf(void *ptr, size_t size)
     }
 }
 
+#endif

@@ -68,9 +68,18 @@ static size_t cpu_dcache_line_size();
 /** invalidate the cpu data cache line containing this address */
 static void cpu_dcache_invld(void *ptr);
 
+# if defined(CONFIG_CPU_CACHE)
+
 /** invalidate all the cpu data cache lines within given range.
     size is in bytes. */
 void cpu_dcache_invld_buf(void *ptr, size_t size);
+
+# else
+
+static inline void cpu_dcache_invld_buf(void *ptr, size_t size)
+{}
+
+# endif
 
 #endif
 
