@@ -33,6 +33,24 @@
 			  "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23", \
 			  "r24", "r25", "r26", "r27", "r28", "r29", "r30", "r31" }
 
+static inline cpu_id_t
+cpu_id(void)
+{
+	return 0;
+}
+
+static inline void *cpu_get_cls(cpu_id_t cpu_id)
+{
+	return NULL;
+}
+
+static inline void
+cpu_trap()
+{
+	for(;;)
+		;
+}
+
 /**
    @return true if processor is the bootstrap processor
 */
@@ -59,6 +77,17 @@ __attribute__ ((deprecated))
 cpu_cycle_count(void)
 {
   return 0;
+}
+
+/** get cpu cache line size, return 0 if no dcache */
+static inline size_t cpu_dcache_line_size()
+{
+	return 0;
+}
+
+/** invalidate the cpu data cache line containing this address */
+static inline void cpu_dcache_invld(void *ptr)
+{
 }
 
 #endif

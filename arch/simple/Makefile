@@ -3,5 +3,10 @@ objs =											\
 arch_init.o										\
 mem_alloc.o
 
-clean = ldscript
+
+ifeq ($(CONFIG_CPU_AVR),defined)
+subdirs+=atmega
+endif
+
+meta = ldscript
 

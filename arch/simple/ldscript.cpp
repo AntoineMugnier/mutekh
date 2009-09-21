@@ -1,77 +1,66 @@
+MEMORY
+{
+	mem_rom (RXAL)   : ORIGIN = CONFIG_ARCH_SIMPLE_ROM_ADDR, LENGTH = CONFIG_ARCH_SIMPLE_ROM_SIZE
+    mem_ram (RWA)    : ORIGIN = CONFIG_ARCH_SIMPLE_RAM_ADDR, LENGTH = CONFIG_ARCH_SIMPLE_RAM_SIZE
+}
 
 SECTIONS
-   {
-	.text CONFIG_ARCH_SIMPLE_ROM_ADDR :
-		{
-#if (CONFIG_ARCH_SIMPLE_ROM_ADDR >= CONFIG_ARCH_SIMPLE_RESET_ADDR) && (CONFIG_ARCH_SIMPLE_ROM_ADDR + CONFIG_ARCH_SIMPLE_ROM_SIZE / 2 > CONFIG_ARCH_SIMPLE_RESET_ADDR)
-# define BOOT_ADDED
-			*(.boot*)
-			*(.text*)
-			*(.progmem*)
-#elif CONFIG_ARCH_SIMPLE_ROM_ADDR + CONFIG_ARCH_SIMPLE_ROM_SIZE > CONFIG_ARCH_SIMPLE_RESET_ADDR
-# define BOOT_ADDED
-			*(.text*)
-			*(.progmem*)
-			. = CONFIG_ARCH_SIMPLE_RESET_ADDR
-			*(.boot*)
-#else
-# define BOOT_ADDED
-			*(.text*)
-			*(.progmem*)
-#endif
-		}
-
-#ifndef BOOT_ADDED
-	.boot CONFIG_ARCH_SIMPLE_RESET_ADDR :
-		{
-			*(.boot*)
-		}
+{
+#if CONFIG_ARCH_SIMPLE_RESET_ADDR == CONFIG_ARCH_SIMPLE_ROM_ADDR
+	.boot : {
+		*(.boot*)
+		*(.init*)
+	} > mem_rom
 #endif
 
-	.data CONFIG_ARCH_SIMPLE_RAM_ADDR :
-		AT ( LOADADDR(.text) + SIZEOF(.text) )
-		{
-			__cpu_context_data_base = . ;
-			LONG(0) ; /* fixme sizeof */
+	.text : {
+			*(.boot*)
+			*(.text*)
+			*(.progmem*)
+	} > mem_rom
 
-			/* global variables and const data section */
-			*(.data*)
-			*(.rodata*)
+	.data : {
+		/* global variables and const data section */
+		__data_start = .;
+		*(.sdata*)
+		*(.data*)
+		*(.rodata*)
+		*(.common*)
 
-			/* data depending on cpu architecture (fonction pointer variables, ...) */
-			*(.cpuarchdata*)
-		}
+		/* data depending on cpu architecture (fonction pointer variables, ...) */
+		*(.cpuarchdata*)
+		__data_end = .;
+	} > mem_ram AT> mem_rom
 
-	__data_load_start = LOADADDR(.data);
-	__data_load_end = LOADADDR(.data) + SIZEOF(.data);
-
-	__data_start = ADDR(.data);
-	__data_end = ADDR(.data) + SIZEOF(.data);
-
-	__system_heap_start = .;
-	__system_heap_end = CONFIG_ARCH_SIMPLE_RAM_ADDR + CONFIG_ARCH_SIMPLE_RAM_SIZE - 1;
-
-	/* Task local data section */
  	.contextdata 0x0 :
-		AT( __data_load_end )
-		{
-			/* first word contains pointer to contextdata section */
-			__context_data_base = . ;
-			LONG(0) ; /* fixme sizeof */
+	{
+		*(.contextdata*)
+	} AT> mem_rom
 
-			*(.contextdata*)
-		}
+#if CONFIG_ARCH_SIMPLE_RESET_ADDR != CONFIG_ARCH_SIMPLE_ROM_ADDR
+	.boot CONFIG_ARCH_SIMPLE_RESET_ADDR : {
+		*(.boot*)
+		*(.init*)
+	} > mem_rom
+#endif
+
+	.bss __data_end : {
+		__bss_start = .;
+		*(.bss*)
+		*(.sbss*)
+		*(COMMON)
+		__bss_end = .;
+	} > mem_ram
+
+	__system_heap_start = __bss_end;
+	__system_heap_end = ORIGIN(mem_ram) + LENGTH(mem_ram) - 4;
 
 	__context_data_start = LOADADDR(.contextdata);
 	__context_data_end = LOADADDR(.contextdata) + SIZEOF(.contextdata);
 
-	.bss __data_end :
-		{ *(.bss*) }
-
-	__bss_start = ADDR(.bss);
-	__bss_end = ADDR(.bss) + SIZEOF(.bss);
-
-   }
+	__data_load_start = LOADADDR(.data);
+	__data_load_end = LOADADDR(.data) + SIZEOF(.data);
+}
 
 ENTRY(cpu_boot)
 

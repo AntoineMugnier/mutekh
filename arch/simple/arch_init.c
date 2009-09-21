@@ -25,16 +25,45 @@
 #include <hexo/lock.h>
 #include <hexo/alloc.h>
 
+#if defined(CONFIG_MUTEK_SCHEDULER)
+#include <mutek/scheduler.h>
+#endif
+
+#include <string.h>
+
+#ifdef CONFIG_ARCH_SIMPLE_COPY_DATA
+extern __ldscript_symbol_t __bss_start;
+extern __ldscript_symbol_t __bss_end;
+extern __ldscript_symbol_t __data_start;
+extern __ldscript_symbol_t __data_load_start;
+extern __ldscript_symbol_t __data_load_end;
+#endif
+
+void arch_specific_init();
+
 /* architecture specific init function */
 void arch_init() 
 {
-  mem_init();
+#ifdef CONFIG_ARCH_SIMPLE_COPY_DATA
+	memcpy_from_code((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
+	memset((uint8_t*)&__bss_start, 0, (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
+#endif
+
+  /* Configure arch-specific things */
+  arch_specific_init();
 
   /* configure system wide cpu data */
   cpu_global_init();
 
+  mem_init();
+
   /* configure first CPU */
-  cpu_init(0);
+  cpu_init();
+
+#if defined(CONFIG_MUTEK_SCHEDULER)
+  sched_global_init();
+  sched_cpu_init();
+#endif
 
   /* run mutek_main() */
   mutek_main(0, 0);
@@ -47,7 +76,7 @@ void arch_start_other_cpu(void)
 {
 }
 
-inline uint_fast8_t arch_get_cpu_count(void)
+inline cpu_id_t arch_get_cpu_count(void)
 {
   return 1;
 }

@@ -81,38 +81,6 @@ __irq_entry_default:
 	/* clear r1 register */
 	clr	r1
 
-	/* copy data from rom */
-	ldi	r17, hi8(__data_end)
-	ldi	r26, lo8(__data_start)
-	ldi	r27, hi8(__data_start)
-	ldi	r30, lo8(__data_load_start)
-	ldi	r31, hi8(__data_load_start)
-	rjmp	.do_copy_data_start
-.do_copy_data_loop:
-#if defined (CONFIG_CPU_AVR_ENHANCED)
-	lpm	r0, Z+
-#else
-	lpm
-	adiw	r30, 1
-#endif
-	st	X+, r0
-.do_copy_data_start:
-	cpi	r26, lo8(__data_end)
-	cpc	r27, r17
-	brne	.do_copy_data_loop
-
-	/* clear bss */
-	ldi	r17, hi8(__bss_end)
-	ldi	r26, lo8(__bss_start)
-	ldi	r27, hi8(__bss_start)
-	rjmp	.do_clear_bss_start
-.do_clear_bss_loop:
-	st	X+, r1
-.do_clear_bss_start:
-	cpi	r26, lo8(__bss_end)
-	cpc	r27, r17
-	brne	.do_clear_bss_loop
-
 	/* call arch_init function */
 	call	arch_init
 
