@@ -24,6 +24,8 @@
 #include <hexo/error.h>
 #include <hexo/alloc.h>
 
+#include <mutek/printk.h>
+
 #ifdef CONFIG_HEXO_DEVICE_TREE
 
 CONTAINER_FUNC(device_list, CLIST, inline, device_list);
