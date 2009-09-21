@@ -1,5 +1,10 @@
 
 objs = timer.o
+objs += printf_arg.o
+
+ifeq ($(CONFIG_MUTEK_PRINTK), defined)
+objs += printk.o
+endif
 
 ifeq ($(CONFIG_MUTEK_MAIN), defined)
  objs += main.o
