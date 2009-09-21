@@ -1239,6 +1239,8 @@ Usage: config.pl [options]
 	--list[=all]     Display configuration tokens list.
 	--info=token     Display informations about `token'.
 
+	--arch-cpu       Output arch-cpu couple
+
 	--path=dir[:dir] Set list of directories to explore, default is \$PWD
 ";
 	return;
@@ -1272,6 +1274,16 @@ Usage: config.pl [options]
 	check_config();
 	set_provided_by();
 	tokens_info($param_h{info});
+	return;
+    }
+
+    if ($param_h{arch_cpu})
+    {
+	check_config();
+	set_provided_by();
+	my $arch = $config_opts{CONFIG_ARCH_NAME};
+	my $cpu = $config_opts{CONFIG_CPU_NAME};
+	print $$arch{value}."-".$$cpu{value}."\n";
 	return;
     }
 

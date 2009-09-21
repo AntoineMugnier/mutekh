@@ -19,7 +19,7 @@
 -include $(arch_SRC_DIR)/config.mk
 -include $(cpu_SRC_DIR)/config.mk
 
-CC=$(CPUTOOLS)gcc
+CC=$(CCACHE) $(CPUTOOLS)gcc
 CPP=$(CPUTOOLS)cpp
 HOSTCPP=$(CPP)
 LD=$(CPUTOOLS)ld

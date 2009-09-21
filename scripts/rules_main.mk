@@ -1,3 +1,7 @@
+TARGET_COUPLE:=$(shell \
+	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
+		--path=$(MUTEK_SRC_DIR):$(CURRENT_DIR) \
+		--input=$(CONF) --arch-cpu)
 
 LDFLAGS=
 target = kernel-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME)
@@ -15,12 +19,21 @@ export LINKING
 
 BASE_MODULES = libc hexo mutek gpct drivers
 
+CONF_DIR=$(BUILD_DIR)
+#/obj-$(TARGET_COUPLE)
+
+include $(MUTEK_SRC_DIR)/scripts/config.mk
+
 -include $(CONF_DIR)/.config.mk
 
 MODULES = $(CONFIG_MODULES) $(foreach mod,$(BASE_MODULES),$(mod):$(MUTEK_SRC_DIR)/$(mod))
 
 # filter module names
 MODULE_NAMES := $(foreach modwd,$(MODULES),$(shell echo $(modwd) | cut -d: -f1))
+
+TARGET_OBJECT_LIST:=
+DEP_FILE_LIST:=
+CLEAN_FILE_LIST:=
 
 export MODULE_NAMES
 
@@ -31,13 +44,7 @@ export MODULE_NAMES
 define declare_module_dir
 
 $(1)_SRC_DIR:=$(2)
-$(1)_OBJ_DIR:=$(BUILD_DIR)/$(1)/obj-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME)
-
-export $(1)_SRC_DIR
-export $(1)_OBJ_DIR
-
-$(BUILD_DIR)/$(1)/obj-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME)/obj.list: LIST_SRC_DIR=$(realpath $(2))
-$(BUILD_DIR)/$(1)/obj-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME)/obj.list: LIST_OBJ_DIR=$(BUILD_DIR)/$(1)/obj-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME)
+$(1)_OBJ_DIR:=$(BUILD_DIR)/obj-$(TARGET_COUPLE)/$(1)
 
 endef
 
@@ -45,11 +52,23 @@ $(eval \
 $(foreach modwd,$(MODULES),\
 $(call declare_module_dir,$(shell echo $(modwd) | cut -d: -f1),$(shell echo $(modwd) | cut -d: -f2))))
 
-LISTS=$(foreach mn,$(MODULE_NAMES),$($(mn)_OBJ_DIR)/obj.list)
-
-# Ok, ended with horrible things
-
 include $(MUTEK_SRC_DIR)/scripts/cflags.mk
+include $(MUTEK_SRC_DIR)/scripts/local.mk
+
+$(eval \
+$(foreach modwd,$(MODULE_NAMES),\
+$(call scan_local_makefile,$($(modwd)_SRC_DIR),$($(modwd)_OBJ_DIR))))
+
+ifneq ($(CLEANING),1)
+-include $(DEP_FILE_LIST)
+endif
+
+all: kernel
+
+objs:
+	echo "TARGET_OBJECT_LIST = $(TARGET_OBJECT_LIST)"
+	echo "DEP_FILE_LIST = $(DEP_FILE_LIST)"
+	echo "CLEAN_FILE_LIST = $(CLEAN_FILE_LIST)"
 
 showpaths:
 	@echo MUTEK_SRC_DIR $(MUTEK_SRC_DIR)
@@ -69,41 +88,48 @@ FORCE:
 kernel: $(KERNEL_FILE)
 
 clean:
-	rm -f $(KERNEL_FILE)
+	rm -f $(KERNEL_FILE) $(TARGET_OBJECT_LIST)
 	rm -rf $(foreach mn,$(MODULE_NAMES),$($(mn)_OBJ_DIR))
+	rm -f $(CONFIG_FILES)
 
-%/obj.list: FORCE
-	mkdir -p "$(LIST_OBJ_DIR)"
-	$(MAKE) \
-		-C $(LIST_OBJ_DIR) \
-		SRC_DIR=$(LIST_SRC_DIR) \
-		OBJ_DIR=$(LIST_OBJ_DIR) \
-		-f $(MUTEK_SRC_DIR)/scripts/local.mk \
-		obj.list
-
-$(target).out: $(CONF_DIR)/.config.m4 $(LISTS) \
+ifeq ($(CONFIG_ARCH_SIMPLE),defined)
+WL=-Wl,
+$(target).out: $(CONF_DIR)/.config.m4 $(TARGET_OBJECT_LIST) \
 		$(arch_OBJ_DIR)/ldscript \
-		$(cpu_OBJ_DIR)/ldscript
-	echo '    LD      $@'
-	$(LD) $(LINK_LDFLAGS) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
-		-q $$(cat /dev/null $(filter %.list,$^)) \
+		$(cpu_OBJ_DIR)/ldscript \
+	    FORCE
+	echo '    LDL     $@'
+	$(CC) $(addprefix $(WL),$(LINK_LDFLAGS) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS)) \
+		$(CFLAGS) $(CPUCFLAGS) \
 		$(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \
 		-o $(BUILD_DIR)/$@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name`
+else
+$(target).out: $(CONF_DIR)/.config.m4 $(TARGET_OBJECT_LIST) \
+		$(arch_OBJ_DIR)/ldscript \
+		$(cpu_OBJ_DIR)/ldscript \
+	    FORCE
+	echo '    LD      $@'
+	$(LD) $(LINK_LDFLAGS) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
+		-q $(filter %.o,$^) $(filter %.a,$^) \
+		$(addprefix -T ,$(filter %ldscript,$^)) \
+		-o $(BUILD_DIR)/$@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name`
+endif
 
-$(target).o: $(CONF_DIR)/.config.m4 $(LISTS)
+$(target).o: $(CONF_DIR)/.config.m4 $(TARGET_OBJECT_LIST) \
+	    FORCE
 	echo '    LD      $@'
 	$(LD) -r \
 		$(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
-		-q $$(cat /dev/null $(filter %.list,$^)) \
-		$(filter %.o,$^) $(filter %.a,$^) \
+		-q $(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \
 		-o $(BUILD_DIR)/$@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name`
 
-$(target).hex: $(KERNEL_FILE)
+
+$(target).hex: $(target).out
 	echo 'OBJCOPY HEX $@'
 	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) -O ihex $(BUILD_DIR)/$< $(BUILD_DIR)/$@
 
-$(target).bin: $(KERNEL_FILE)
+$(target).bin: $(target).out
 	echo 'OBJCOPY BIN $@'
 	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) -O binary $(BUILD_DIR)/$< $(BUILD_DIR)/$@

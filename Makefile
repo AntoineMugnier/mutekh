@@ -19,9 +19,6 @@
 ifndef BUILD_DIR
 BUILD_DIR:=$(PWD)
 endif
-ifeq ($(CONF_DIR),)
-CONF_DIR=$(BUILD_DIR)
-endif
 ifdef SRC_DIR
 MUTEK_SRC_DIR:=$(SRC_DIR)
 else
@@ -40,34 +37,21 @@ ifneq ($(VERBOSE),1)
 MAKEFLAGS = -s
 endif
 
-kernel: config $(BUILD_DIR) $(CONF_DIR)
-	echo "Using '$(CONF)' configuration file."
-	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk kernel
+CONF_DIR:=$(shell mktemp /tmp/mutekh_config.XXXXXX)
 
-include $(MUTEK_SRC_DIR)/scripts/config.mk
+all: kernel
 
-ifneq ($(BUILD_DIR),$(CONF_DIR))
-
-$(BUILD_DIR):
-	mkdir -p $@
-
-endif
-
-cflags: config
-	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@
+.PHONY: FORCE
 
 mkmf: config
-	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ TARGET_MK=$(TARGET_MK)
-
-showpaths: config
-	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ TARGET_MK=$(TARGET_MK) MAKEFLAGS=$(MAKEFLAGS)
 
 clean:
-	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@
-	rm -f $(CONF_DIR)/.config.*
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ CLEANING=1 MAKEFLAGS=$(MAKEFLAGS)
+	-rm -f $(CONF_DIR)/.config.* 2>/dev/null
 
-re: clean kernel
+FORCE::
+	@true
 
-.PHONY : kernel re clean clean_sub \
-	helpconfig showconfig listconfig listallconfig config
-
+config showpaths kernel cflags: FORCE
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ MAKEFLAGS=$(MAKEFLAGS)

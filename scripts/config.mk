@@ -2,6 +2,9 @@
 CONF_TMP_BASE:=$(shell mktemp /tmp/mutekh_config.XXXXXX)
 CONF_EXTS = py m4 h mk
 
+CONFIG_TMP_FILES=$(addprefix $(CONF_TMP_BASE),$(CONF_EXTS))
+CONFIG_FILES=$(addprefix $(CONF_DIR)/.config.,$(CONF_EXTS))
+
 $(CONF_DIR):
 	mkdir -p $@
 
@@ -10,20 +13,28 @@ define do_conf
 
 $(CONF_DIR)/.config.$(1): $$(CONF_TMP_BASE).$(1)
 	diff -q $$@ $$< || cp $$< $$@
-	rm -f $$<
 
 endef
 
 $(eval $(foreach e,$(CONF_EXTS),$(call do_conf,$(e))))
 endif
 
+ifeq (0,1)
 
 $(CONF_DIR)/.config.%: $(CONF_TMP_BASE).%
-	(diff -q $@ $< || cp $< $@ ) 2>&1 > /dev/null
-	rm -f $<
+	@if [ -r "$@" ] ; then \
+		if diff -q $@ $< 2>/dev/null ; then \
+			echo "  CONF OK   $@" ; \
+		else \
+			echo "  CONF RE   $@" ; \
+			cp $< $@ ; \
+		fi ; \
+	else \
+		echo "  CONF      $@" ; \
+		cp $< $@ ; \
+	fi
 
-
-$(CONF_TMP_BASE).m4 $(CONF_TMP_BASE).mk $(CONF_TMP_BASE).py $(CONF_TMP_BASE).h: $(CONF)
+$(CONFIG_TMP_FILES): $(CONF)
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--path=$(MUTEK_SRC_DIR):$(CURRENT_DIR) \
 		--input=$(CONF)					\
@@ -32,7 +43,20 @@ $(CONF_TMP_BASE).m4 $(CONF_TMP_BASE).mk $(CONF_TMP_BASE).py $(CONF_TMP_BASE).h: 
 		--header=$(CONF_TMP_BASE).h			\
 		--makefile=$(CONF_TMP_BASE).mk
 
-config: $(CONF_DIR) $(CONF_DIR)/.config.mk $(CONF_DIR)/.config.py $(CONF_DIR)/.config.m4 $(CONF_DIR)/.config.h
+else
+
+$(CONFIG_FILES): $(CONF) $(MUTEK_SRC_DIR)/scripts/config.pl
+	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
+		--path=$(MUTEK_SRC_DIR):$(CURRENT_DIR) \
+		--input=$(CONF)					\
+		--python=$(CONF_DIR)/.config.py		\
+		--m4=$(CONF_DIR)/.config.m4			\
+		--header=$(CONF_DIR)/.config.h			\
+		--makefile=$(CONF_DIR)/.config.mk
+
+endif
+
+config: $(CONF_DIR) $(CONFIG_FILES)
 
 checkconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
