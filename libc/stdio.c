@@ -336,7 +336,7 @@ char *fgets(char *str_, size_t size, FILE *stream)
 
   while (size-- > 1)
     {
-      error_t res = __stdio_read(1, stream, str);
+	  error_t res = __stdio_read(1, stream, (uint8_t*)str);
 
       if (res == 0)
 	break;

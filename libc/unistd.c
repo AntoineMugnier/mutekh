@@ -20,6 +20,8 @@ CONTAINER_FUNC(fdarray, DARRAY, static, fdarray);
 
 static fdarray_root_t fd_array;
 
+#ifdef CONFIG_VFS
+
 static fd_t fd_new(fdarray_root_t *fda)
 {
   fdarray_index_t i;
@@ -31,10 +33,10 @@ static fd_t fd_new(fdarray_root_t *fda)
   return fdarray_alloc(fda);
 }
 
+#endif
+
 static struct fd_entry_s * fd_get(fdarray_root_t *fda, fd_t fd)
 {
-  struct fd_entry_s *e;
-
   if (fd > fdarray_count(fda))
     return NULL;
 

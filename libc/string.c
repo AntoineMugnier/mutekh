@@ -54,8 +54,8 @@ void *memcpy( void *_dst, const void *_src, size_t size )
 			size -= 4;
 		}
 
-	uint8_t *cdst = (int8_t*)dst;
-	uint8_t *csrc = (int8_t*)src;
+	uint8_t *cdst = (uint8_t*)dst;
+	uint8_t *csrc = (uint8_t*)src;
 
 	while (size--) {
 		*cdst++ = *csrc++;

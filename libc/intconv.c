@@ -176,6 +176,7 @@ int_fast32_t
 atol(const char *nptr)
 __attribute__ ((weak, alias("ato_intl32")));
 
+#if !defined(CONFIG_CPU_AVR)
 int_fast32_t
 strtoll(const char *nptr, char **endptr, int_fast8_t base)
 __attribute__ ((weak, alias("strto_intl64")));
@@ -187,6 +188,7 @@ __attribute__ ((weak, alias("strto_uintl64")));
 int_fast64_t
 atoll(const char *nptr)
 __attribute__ ((weak, alias("ato_intl64")));
+#endif
 
 #endif
 
