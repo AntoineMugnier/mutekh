@@ -46,7 +46,7 @@ all: kernel
 mkmf: config
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ TARGET_MK=$(TARGET_MK) MAKEFLAGS=$(MAKEFLAGS)
 
-listconfig:
+listconfig showconfig:
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/config.mk $@
 
 clean:
