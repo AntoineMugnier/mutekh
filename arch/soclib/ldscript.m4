@@ -78,8 +78,6 @@ SECTIONS
 
 	__system_cached_heap_start = dsx_segment_data_cached_start;
 	__system_cached_heap_end = dsx_segment_data_cached_end;
-
-	__ramlock_base_start = dsx_segment_sem_start;
    }
 
 ENTRY(cpu_boot)
