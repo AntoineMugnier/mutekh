@@ -60,7 +60,16 @@ $(foreach modwd,$(MODULE_NAMES),\
 $(call scan_local_makefile,$($(modwd)_SRC_DIR),$($(modwd)_OBJ_DIR))))
 
 ifneq ($(CLEANING),1)
--include $(DEP_FILE_LIST)
+define do_inc_dep
+ifeq ($(wildcard $(1)),$(1))
+include $(1)
+endif
+
+endef
+
+$(eval \
+$(foreach depfile,$(DEP_FILE_LIST),\
+$(call do_inc_dep,$(depfile))))
 endif
 
 all: kernel

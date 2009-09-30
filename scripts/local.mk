@@ -28,13 +28,11 @@ $(3)/$(1): $(2)/$(1:.o=.S)
 	@echo '    AS      $$@'
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; \
+	$(CC) $(CFLAGS) $(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
+	cd $(3) ; \
 	$(CPP) $(INCS) $$< | $(AS) $(CPUASFLAGS) -o $$@
 
 $(3)/$(1:.o=.deps): $(2)/$(1:.o=.S)
-	@echo '    DEP     $$@'
-	test -d $(3) || mkdir -p $(3)
-	cd $(3) ; \
-	$(CC) $(CFLAGS) $(DEPINC) -M -MT $(3)/$(1) -MF $$@ $$<
 
 else
 
@@ -44,15 +42,11 @@ $(3)/$(1): $(2)/$(1:.o=.c) $(CONF_DIR)/.config.h
 	@echo '    CC      $$@'
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; \
+	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+		-M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
+	cd $(3) ; \
 	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) $($(1)_CFLAGS) $(DIR_CFLAGS) -c \
 		$$< -o $$@
-
-$(3)/$(1:.o=.deps): $(2)/$(1:.o=.c) $(CONF_DIR)/.config.h
-	@echo '    DEP     $$@'
-	test -d $(3) || mkdir -p $(3)
-	cd $(3) ; \
-	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
-		-M -MT $(3)/$(1) -MF $$@ $$<
 
 endif
 
