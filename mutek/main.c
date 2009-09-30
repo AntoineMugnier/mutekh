@@ -56,6 +56,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mutek/timer.h>
+#include <mutek/printk.h>
 
 #ifdef CONFIG_ARCH_IBMPC_DMA
 #include <arch/dma-8237.h>
@@ -126,6 +127,21 @@ DEVTIMER_CALLBACK(timer_callback)
 #ifdef CONFIG_MUTEK_MAIN
 
 static struct sched_context_s main_ctx;
+
+#ifdef CONFIG_MUTEK_CONSOLE
+static inline PRINTF_OUTPUT_FUNC(__printf_out_tty)
+{
+  while (len > 0)
+    {
+		ssize_t	res = dev_char_spin_write((struct device_s *)ctx, (uint8_t*)str, len);
+
+      if (res < 0)
+	break;
+      len -= res;
+      str += res;
+    }
+}
+#endif
 
 int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
@@ -221,12 +237,14 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #endif
 
 #if defined(CONFIG_MUTEK_CONSOLE)
-# if defined(CONFIG_DRIVER_TTY)
-  tty_dev = &tty_con_dev;
-# elif defined(CONFIG_DRIVER_UART)
-  tty_dev = &uart_dev;
+# if defined(CONFIG_DRIVER_UART)
+	printk_set_output(__printf_out_tty, &uart_dev);
+# elif defined(CONFIG_DRIVER_TTY)
+	printk_set_output(__printf_out_tty, &tty_con_dev);
+# else
+#  error I would like an output for my console
 # endif
-#endif
+# endif
 
   /********* Block device init ************************* */
 #if defined(CONFIG_DRIVER_BLOCK)
