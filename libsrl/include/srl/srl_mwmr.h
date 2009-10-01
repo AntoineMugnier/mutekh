@@ -38,12 +38,7 @@ static inline size_t srl_mwmr_try_write( srl_mwmr_t mwmr, const void *buffer, si
 	return mwmr_try_write( mwmr, buffer, size );
 }
 
-static inline void srl_mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
-									 size_t no, const srl_mwmr_t mwmr )
-{
-	mwmr_hw_init(coproc, way, no, mwmr);
-}
-
+# if defined(CONFIG_MWMR_SOCLIB)
 static inline uint32_t srl_mwmr_status( void *coproc, size_t no )
 {
 	uint32_t *c = coproc;
@@ -57,5 +52,16 @@ static inline void srl_mwmr_config( void *coproc, size_t no, uint32_t value )
 	assert(no < MWMR_IOREG_MAX);
 	c[no] = endian_le32(value);
 }
+# else
+static inline uint32_t srl_mwmr_status( void *coproc, size_t no )
+{
+	return 0;
+}
+
+static inline void srl_mwmr_config( void *coproc, size_t no, uint32_t value )
+{
+}
+
+# endif
 
 #endif

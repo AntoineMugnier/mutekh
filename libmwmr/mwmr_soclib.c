@@ -47,7 +47,7 @@ static inline size_t min(size_t a, size_t b)
 
 void
 mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
-			  size_t no, const mwmr_t* mwmr )
+			  size_t no, const struct mwmr_s* mwmr )
 {
 	volatile uint32_t *c = coproc;
 	c[MWMR_CONFIG_FIFO_WAY] = endian_le32(way);
@@ -76,7 +76,7 @@ uint32_t mwmr_status( void *coproc, size_t no )
 	return endian_le32(c[no]);
 }
 
-static inline void mwmr_lock( mwmr_t *fifo )
+static inline void mwmr_lock( struct mwmr_s *fifo )
 {
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
 	while (*((volatile uint32_t *)fifo->lock) != 0) {
@@ -106,7 +106,7 @@ static inline void mwmr_lock( mwmr_t *fifo )
 #endif
 }
 
-static inline uint32_t mwmr_try_lock( mwmr_t *fifo )
+static inline uint32_t mwmr_try_lock( struct mwmr_s *fifo )
 {
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
 	return !!*((volatile uint32_t *)fifo->lock);
@@ -115,7 +115,7 @@ static inline uint32_t mwmr_try_lock( mwmr_t *fifo )
 #endif
 }
 
-static inline void mwmr_unlock( mwmr_t *fifo )
+static inline void mwmr_unlock( struct mwmr_s *fifo )
 {
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
 	*((volatile uint32_t *)fifo->lock) = 0;
@@ -128,9 +128,9 @@ typedef struct {
 	uint32_t usage, wptr, rptr, modified;
 } local_mwmr_status_t;
 
-static inline void rehash_status( mwmr_t *fifo, local_mwmr_status_t *status )
+static inline void rehash_status( struct mwmr_s *fifo, local_mwmr_status_t *status )
 {
-	volatile soclib_mwmr_status_s *fstatus = fifo->status;
+	volatile struct mwmr_status_s *fstatus = fifo->status;
 	cpu_dcache_invld_buf(fstatus, sizeof(*fstatus));
 	status->usage = endian_le32(*(volatile uint32_t *)&fstatus->usage);
 	status->wptr =  endian_le32(*(volatile uint32_t *)&fstatus->wptr);
@@ -139,9 +139,9 @@ static inline void rehash_status( mwmr_t *fifo, local_mwmr_status_t *status )
 //	srl_log_printf(NONE,"%s %d %d %d/%d\n", fifo->name, status->rptr, status->wptr, status->usage, fifo->gdepth);
 }
 
-static inline void writeback_status( mwmr_t *fifo, local_mwmr_status_t *status )
+static inline void writeback_status( struct mwmr_s *fifo, local_mwmr_status_t *status )
 {
-	volatile soclib_mwmr_status_s *fstatus = fifo->status;
+	volatile struct mwmr_status_s *fstatus = fifo->status;
 	if ( !status->modified )
 		return;
 	*(volatile uint32_t *)&fstatus->usage = endian_le32(status->usage);
@@ -149,7 +149,7 @@ static inline void writeback_status( mwmr_t *fifo, local_mwmr_status_t *status )
 	*(volatile uint32_t *)&fstatus->rptr = endian_le32(status->rptr);
 }
 
-void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
+void mwmr_read( struct mwmr_s *fifo, void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
 	local_mwmr_status_t status;
@@ -209,7 +209,7 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 	mwmr_unlock( fifo );
 }
 
-void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
+void mwmr_write( struct mwmr_s *fifo, const void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
     local_mwmr_status_t status;
@@ -268,7 +268,7 @@ void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 	mwmr_unlock( fifo );
 }
 
-size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
+size_t mwmr_try_read( struct mwmr_s *fifo, void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
 	size_t done = 0;
@@ -311,7 +311,7 @@ size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 	return done;
 }
 
-size_t mwmr_try_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
+size_t mwmr_try_write( struct mwmr_s *fifo, const void *_ptr, size_t lensw )
 {
 	uint8_t *ptr = _ptr;
 	size_t done = 0;
@@ -354,7 +354,7 @@ size_t mwmr_try_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 }
 
 #ifdef CONFIG_MWMR_INSTRUMENTATION
-void mwmr_dump_stats( const mwmr_t *mwmr )
+void mwmr_dump_stats( const struct mwmr_s *mwmr )
 {
 	cpu_dcache_invld_buf(mwmr, sizeof(*mwmr));
 	if ( mwmr->n_read )
@@ -367,7 +367,7 @@ void mwmr_dump_stats( const mwmr_t *mwmr )
 					   mwmr->time_write, mwmr->n_write );
 }
 
-void mwmr_clear_stats( mwmr_t *mwmr )
+void mwmr_clear_stats( struct mwmr_s *mwmr )
 {
 	cpu_dcache_invld_buf(mwmr, sizeof(*mwmr));
 	mwmr->time_read =

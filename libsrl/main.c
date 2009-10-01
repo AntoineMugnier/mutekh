@@ -33,11 +33,6 @@
 # include "arch/mem_checker.h"
 #endif
 
-void hw_init();
-void srl_console_init(void *addr);
-void srl_console_init_cpu(void *addr);
-void srl_console_init_task(void *addr);
-
 extern const srl_appdesc_s app_desc;
 lock_t fault_lock;
 
@@ -60,24 +55,24 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   lock_spin(&fault_lock);
 
 #if defined(CPU_FAULT_COUNT) && defined(CPU_FAULT_NAMES)
-  printk("CPU Fault: cpuid(%u) faultid(%s)\n", cpu_id(), fault_name);
+  _cpu_printf("CPU Fault: cpuid(%u) faultid(%s)\n", cpu_id(), fault_name);
 #else
-  printk("CPU Fault: cpuid(%u) faultid(%u)\n", cpu_id(), type);
+  _cpu_printf("CPU Fault: cpuid(%u) faultid(%u)\n", cpu_id(), type);
 #endif
-  printk("Execution pointer: %p, Bad address (if any): %p\n", execptr, dataptr);
-  printk("Registers:");
+  _cpu_printf("Execution pointer: %p, Bad address (if any): %p\n", execptr, dataptr);
+  _cpu_printf("Registers:");
 
   for (i = 0; i < CPU_GPREG_COUNT; i++)
 #ifdef CPU_GPREG_NAMES
-    printk("%s=%p%c", reg_names[i], regtable[i], (i + 1) % 4 ? ' ' : '\n');
+    _cpu_printf("%s=%p%c", reg_names[i], regtable[i], (i + 1) % 4 ? ' ' : '\n');
 #else
-    printk("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
+    _cpu_printf("%p%c", regtable[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
 
-  printk("Stack top:");
+  _cpu_printf("Stack top:");
 
   for (i = 0; i < 8; i++)
-	  printk("%p%c", ((uint32_t*)stackptr)[i], (i + 1) % 4 ? ' ' : '\n');
+	  _cpu_printf("%p%c", ((uint32_t*)stackptr)[i], (i + 1) % 4 ? ' ' : '\n');
 
   lock_release(&fault_lock);
   cpu_interrupt_disable();
@@ -110,7 +105,7 @@ static void *srl_run_task( void* param )
 	return NULL;
 }
 
-static void srl_task_init(const srl_task_s *task)
+static void srl_task_init(srl_task_s *task)
 {
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
@@ -134,7 +129,7 @@ static CONTEXT_ENTRY(srl_run_task)
 	sched_context_exit();
 }
 
-static void srl_task_init(const srl_task_s *task)
+static void srl_task_init(srl_task_s *task)
 {
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
 	context_init( &task->context.context,
@@ -161,6 +156,12 @@ static void srl_cpu_init(const srl_cpudesc_s *cpu)
 	for ( i=0; i<cpu->ntasks; ++i )
 		srl_task_init(cpu->task_list[i]);
 }
+
+#if !defined(CONFIG_MUTEK_MAIN)
+
+void srl_console_init_cpu(void *addr);
+void srl_console_init_task(void *addr);
+void srl_console_init(void *addr);
 
 void mutek_main_smp(void)
 {
@@ -190,3 +191,35 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)
 	mutek_main_smp();
 	return 0;
 }
+
+#else /* has mutek_main() */
+
+int main()
+{
+	lock_init(&fault_lock);
+#ifndef CONFIG_PTHREAD
+	lock_init(&app_desc.start->lock);
+
+/* 	{ */
+/* 		srl_mwmr_t *mwmr = app_desc.mwmr; */
+/* 		while (*mwmr ) { */
+/* 			mwmr_init(*mwmr); */
+/* 			mwmr++; */
+/* 		} */
+/* 	} */
+
+#endif
+
+	cpu_exception_sethandler(fault_handler);
+	srl_cpu_init(app_desc.cpu[0]);
+
+	cpu_interrupt_disable();
+	sched_lock();
+#if CONFIG_SOCLIB_MEMCHECKER
+	soclib_mem_check_delete_ctx(cpu_id())
+#endif
+	sched_context_exit();
+	return 0;
+}
+
+#endif

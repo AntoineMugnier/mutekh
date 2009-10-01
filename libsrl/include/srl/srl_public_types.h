@@ -17,7 +17,7 @@ typedef struct srl_memspace_s {
 } srl_memspace_s;
 typedef srl_memspace_s *srl_memspace_t;
 
-typedef mwmr_t *srl_mwmr_t;
+typedef struct mwmr_s *srl_mwmr_t;
 
 #ifdef CONFIG_PTHREAD
 #include <pthread.h>

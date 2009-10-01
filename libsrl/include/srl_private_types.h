@@ -36,13 +36,17 @@
 #include <mwmr/mwmr.h>
 
 typedef struct mwmr_s srl_mwmr_s;
-typedef soclib_mwmr_status_s srl_mwmr_status_s;
+typedef struct mwmr_status_s srl_mwmr_status_s;
 
 #define SRL_MWMR_INITIALIZER MWMR_INITIALIZER
-#define SRL_MWMR_STATUS_INITIALIZER(w,d) SOCLIB_MWMR_STATUS_INITIALIZER(w,d)
 #define SRL_MWMR_LOCK_INITIALIZER MWMR_LOCK_INITIALIZER
+#define SRL_MWMR_STATUS_INITIALIZER MWMR_STATUS_INITIALIZER
 
 #define SRL_CONST_INITIALIZER(x) x
+
+#if MWMR_USE_SEPARATE_LOCKS
+#define SRL_MWMR_USE_SEPARATE_LOCKS
+#endif
 
 #ifdef CONFIG_PTHREAD
 

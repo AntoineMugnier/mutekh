@@ -9,124 +9,147 @@
 #include <string.h>
 #include <assert.h>
 
+#include <hexo/types.h>
 #include <mwmr/mwmr.h>
 
-void mwmr_read( mwmr_t fifo, void *mem, size_t len )
+void mwmr_read( struct mwmr_s *fifo, void *mem, size_t len )
 {
-    unsigned int got = 0;
+	struct mwmr_status_s *state = fifo->status;
+    size_t got = 0;
     uint8_t *ptr = (uint8_t *)mem;
+
+//  hexo_instrument_trace(0);
 
     assert ( len % fifo->width == 0 );
 
-    pthread_mutex_lock( &(fifo->lock) );
+    pthread_mutex_lock( &(state->lock) );
     while ( got < len ) {
-        while ( ! fifo->usage ) {
-            pthread_cond_wait( &(fifo->nempty), &(fifo->lock) );
+        while ( ! state->usage ) {
+            pthread_cond_wait( &(state->nempty), &(state->lock) );
         }
-        memcpy( ptr, fifo->rptr, fifo->width );
-        fifo->rptr += fifo->width;
-        if ( fifo->rptr == fifo->end )
-            fifo->rptr = fifo->buffer;
-        fifo->usage -= fifo->width;
-        pthread_cond_signal( &(fifo->nfull) );
+        memcpy( ptr, fifo->buffer + state->rptr, fifo->width );
+        state->rptr += fifo->width;
+        if ( state->rptr == fifo->gdepth )
+            state->rptr = 0;
+        state->usage -= fifo->width;
+		assert( state->rptr < fifo->gdepth );
+		assert( state->usage <= fifo->gdepth );
+        pthread_cond_signal( &(state->nfull) );
         got += fifo->width;
         ptr += fifo->width;
     }
-    pthread_mutex_unlock( &(fifo->lock) );
-    pthread_cond_signal( &(fifo->nfull) );
+    pthread_mutex_unlock( &(state->lock) );
+    pthread_cond_signal( &(state->nfull) );
     pthread_yield();
+
+//  hexo_instrument_trace(1);
 }
 
-void mwmr_write( mwmr_t fifo, const void *mem, size_t len )
+void mwmr_write( struct mwmr_s *fifo, const void *mem, size_t len )
 {
-    unsigned int put = 0;
+	struct mwmr_status_s *state = fifo->status;
+    size_t put = 0;
     uint8_t *ptr = (uint8_t *)mem;
+
+//  hexo_instrument_trace(0);
 
     assert ( len % fifo->width == 0 );
 
-    pthread_mutex_lock( &(fifo->lock) );
+    pthread_mutex_lock( &(state->lock) );
     while ( put < len ) {
-        while ( fifo->usage == fifo->depth ) {
-            pthread_cond_wait( &(fifo->nfull), &(fifo->lock) );
+        while ( state->usage == fifo->gdepth ) {
+            pthread_cond_wait( &(state->nfull), &(state->lock) );
         }
-        memcpy( fifo->wptr, ptr, fifo->width );
-        fifo->wptr += fifo->width;
-        if ( fifo->wptr == fifo->end )
-            fifo->wptr = fifo->buffer;
-        fifo->usage += fifo->width;
-        pthread_cond_signal( &(fifo->nempty) );
+        memcpy( fifo->buffer + state->wptr, ptr, fifo->width );
+        state->wptr += fifo->width;
+        if ( state->wptr == fifo->gdepth )
+            state->wptr = 0;
+        state->usage += fifo->width;
+		assert( state->wptr < fifo->gdepth );
+		assert( state->usage <= fifo->gdepth );
+        pthread_cond_signal( &(state->nempty) );
         put += fifo->width;
         ptr += fifo->width;
     }
-    pthread_mutex_unlock( &(fifo->lock) );
-    pthread_cond_signal( &(fifo->nempty) );
+    pthread_mutex_unlock( &(state->lock) );
+    pthread_cond_signal( &(state->nempty) );
 
     pthread_yield();
+//	hexo_instrument_trace(1);
 }
 
-ssize_t mwmr_try_read( mwmr_t fifo, void *mem, size_t len )
+size_t mwmr_try_read( struct mwmr_s *fifo, void *mem, size_t len )
 {
-    unsigned int got = 0;
+	struct mwmr_status_s *state = fifo->status;
+    size_t got = 0;
     uint8_t *ptr = (uint8_t *)mem;
 
     assert ( len % fifo->width == 0 );
 
-    if ( pthread_mutex_trylock( &(fifo->lock) ) ) {
+    if ( pthread_mutex_trylock( &(state->lock) ) ) {
         return 0;
     }
     
     while ( got < len ) {
-        if ( ! fifo->usage ) {
-            pthread_mutex_unlock( &(fifo->lock) );
-            pthread_cond_signal( &(fifo->nfull) );
+        if ( ! state->usage ) {
+            pthread_mutex_unlock( &(state->lock) );
+            pthread_cond_signal( &(state->nfull) );
             return got;
         }
-        memcpy( ptr, fifo->rptr, fifo->width );
-        fifo->rptr += fifo->width;
-        if ( fifo->rptr == fifo->end )
-            fifo->rptr = fifo->buffer;
-        fifo->usage -= fifo->width;
+        memcpy( ptr, fifo->buffer + state->rptr, fifo->width );
+        state->rptr += fifo->width;
+        if ( state->rptr == fifo->gdepth )
+            state->rptr = 0;
+        state->usage -= fifo->width;
         got += fifo->width;
         ptr += fifo->width;
     }
-    pthread_mutex_unlock( &(fifo->lock) );
-    pthread_cond_signal( &(fifo->nfull) );
+    pthread_mutex_unlock( &(state->lock) );
+    pthread_cond_signal( &(state->nfull) );
 
     pthread_yield();
 
     return got;
 }
 
-ssize_t mwmr_try_write( mwmr_t fifo, const void *mem, size_t len )
+size_t mwmr_try_write( struct mwmr_s *fifo, const void *mem, size_t len )
 {
-    unsigned int put = 0;
+	struct mwmr_status_s *state = fifo->status;
+    size_t put = 0;
     uint8_t *ptr = (uint8_t *)mem;
 
     assert( len % fifo->width == 0 );
 
-    if ( pthread_mutex_trylock( &(fifo->lock) ) ) {
+    if ( pthread_mutex_trylock( &(state->lock) ) ) {
         return 0;
     }
 
     while ( put < len ) {
-        if ( fifo->usage == fifo->depth ) {
-            pthread_mutex_unlock( &(fifo->lock) );
-            pthread_cond_signal( &(fifo->nempty) );
+        if ( state->usage == fifo->gdepth ) {
+            pthread_mutex_unlock( &(state->lock) );
+            pthread_cond_signal( &(state->nempty) );
             return put;
         }
-        memcpy( fifo->wptr, ptr, fifo->width );
-        fifo->wptr += fifo->width;
-        if ( fifo->wptr == fifo->end )
-            fifo->wptr = fifo->buffer;
-        fifo->usage += fifo->width;
+        memcpy( fifo->buffer + state->wptr, ptr, fifo->width );
+        state->wptr += fifo->width;
+        if ( state->wptr == fifo->gdepth )
+            state->wptr = 0;
+        state->usage += fifo->width;
         put += fifo->width;
         ptr += fifo->width;
     }
-    pthread_mutex_unlock( &(fifo->lock) );
-    pthread_cond_signal( &(fifo->nempty) );
+    pthread_mutex_unlock( &(state->lock) );
+    pthread_cond_signal( &(state->nempty) );
 
     pthread_yield();
 
     return put;
 }
 
+void mwmr_init( struct mwmr_s *fifo )
+{
+	struct mwmr_status_s *state = fifo->status;
+	pthread_cond_init(&state->nempty, NULL);
+	pthread_cond_init(&state->nfull, NULL);
+	pthread_mutex_init(&state->lock, NULL);
+}
