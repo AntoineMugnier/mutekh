@@ -11,10 +11,16 @@
 #include <mutek/scheduler.h>
 
 struct sched_context_s a, b, c;
+
+#if defined(CONFIG_ARCH_IBMPC)
 struct device_s *drv[2];
 extern struct device_s icu_dev;
 struct device_s ata;
 
+#elif defined(CONFIG_ARCH_SIMPLE)
+extern struct device_s bd_dev;
+struct device_s *drv[1];
+#endif
 
 static CONTEXT_ENTRY(a_entry)
 {
@@ -25,23 +31,23 @@ static CONTEXT_ENTRY(a_entry)
 
   while (i--)
     {
-      uint8_t	_data[1024];
+      uint8_t	_data[512];
       uint8_t	*data[2];
       //uint_fast8_t d = rand() % 2;
       dev_block_lba_t l = ((rand() % 45) << 16) + rand() % 65535;
 
-      printk("(START d%i c%i %s %p)", 1, cpu_id(), param, &sched_get_current()->context);
-
       cpu_interrupt_enable();
 
+      printf("(START d%i c%i %s %p)", 1, cpu_id(), param, &sched_get_current()->context);
+
       data[0] = _data;
-      data[1] = _data + 512;
+      data[1] = _data;
 
       dev_block_wait_read(drv[0], data, l, 2);
 
-      cpu_interrupt_disable();
+      printf("(DATA c%i %s %P)", cpu_id(), param, data[0], 2);
 
-      printk("(DATA c%i %s %P)", cpu_id(), param, data[0], 2);
+      cpu_interrupt_disable();
 
       sched_context_switch();
     }
@@ -51,6 +57,7 @@ static CONTEXT_ENTRY(a_entry)
 
 int main()
 {
+#if defined(CONFIG_ARCH_IBMPC)
   static reg_t stack_bufa[10240];
   static reg_t stack_bufb[10240];
   static reg_t stack_bufc[10240];
@@ -80,6 +87,32 @@ int main()
   sched_context_init(&c);
   sched_context_start(&c);
   CPU_INTERRUPT_RESTORESTATE;
+
+#elif defined(CONFIG_ARCH_SIMPLE)
+
+  static char stack_bufa[1024];
+  static char stack_bufb[1024];
+  static char stack_bufc[1024];
+
+  drv[0] = &bd_dev;
+
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  context_init(&a.context, stack_bufa, stack_bufa + 1024, a_entry, "A");
+  sched_context_init(&a);
+  sched_context_start(&a);
+
+  context_init(&b.context, stack_bufb, stack_bufb + 1024, a_entry, "B");
+  sched_context_init(&b);
+  sched_context_start(&b);
+
+  context_init(&c.context, stack_bufc, stack_bufc + 1024, a_entry, "C");
+  sched_context_init(&c);
+  sched_context_start(&c);
+  CPU_INTERRUPT_RESTORESTATE;
+
+#else
+# error Kapoueh
+#endif
 
   return 0;
 }

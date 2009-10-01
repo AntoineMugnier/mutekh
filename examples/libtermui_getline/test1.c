@@ -4,7 +4,7 @@
 
 #include <pthread.h>
 
-extern struct device_s *tty_dev;
+extern struct device_s *console_dev;
 
 pthread_t a;
 
@@ -19,7 +19,7 @@ void *f(void *param)
   struct term_behavior_s	*bhv;
 
   /* initialize terminal */
-  if (!(tm = term_alloc(tty_dev, tty_dev, NULL)))
+  if (!(tm = term_alloc(console_dev, console_dev, NULL)))
     abort();
 
   /* set capabilities */

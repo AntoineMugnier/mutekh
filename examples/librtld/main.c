@@ -37,7 +37,7 @@ struct device_s bd_dev;
 
 struct vfs_node_s *vfs_root_term;
 
-extern struct device_s *tty_dev;
+extern struct device_s *console_dev;
 
 pthread_t a;
 
@@ -82,7 +82,7 @@ void* shell(void *param)
     lua_register(luast, "exec", exec);
 
     /* initialize terminal */
-    if (!(tm = term_alloc(tty_dev, tty_dev, luast)))
+    if (!(tm = term_alloc(console_dev, console_dev, luast)))
         return -1;
 
     /* set capabilities */

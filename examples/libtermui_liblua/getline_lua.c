@@ -40,29 +40,7 @@ static GETLINE_FCN_PROMPT(prompt)
   return term_printf(tm, "[%31Alua%A] ");
 }
 
-int cmd_print(lua_State *st)
-{
-  unsigned int	i;
-
-  for (i = 1; i <= lua_gettop(st); i++)
-    {
-      switch (lua_type(st, i))
-	{
-	case LUA_TNUMBER:
-	  printk("(lua num %i)\n", lua_tonumber(st, i));
-	  break;
-	case LUA_TSTRING:
-	  printk("(lua str %s)\n", lua_tostring(st, i));
-	  break;
-	default:
-	  printk("(lua type %i)\n", lua_type(st, i));
-	}
-    }
-
-  return 0;
-}
-
-extern struct device_s *tty_dev;
+extern struct device_s *console_dev;
 
 int main()
 {
@@ -74,12 +52,8 @@ int main()
   luast = luaL_newstate();
   luaL_openlibs(luast);
 
-  lua_pushstring(luast, "print");
-  lua_pushcfunction(luast, cmd_print);
-  lua_settable(luast, LUA_GLOBALSINDEX);
-
   /* initialize terminal */
-  if (!(tm = term_alloc(tty_dev, tty_dev, luast)))
+  if (!(tm = term_alloc(console_dev, console_dev, luast)))
     return -1;
 
   /* set capabilities */

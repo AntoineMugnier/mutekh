@@ -34,7 +34,7 @@
 extern struct device_s icu_dev;
 #endif
 extern struct device_s bd_dev;
-extern struct device_s *tty_dev;
+extern struct device_s *console_dev;
 
 struct vfs_node_s *vfs_root_term;
 
@@ -73,7 +73,7 @@ void* shell(void *param)
     luaopen_dsrl(luast);
 
     /* initialize terminal */
-    if (!(tm = term_alloc(tty_dev, tty_dev, luast)))
+    if (!(tm = term_alloc(console_dev, console_dev, luast)))
         return -1;
 
     /* set capabilities */

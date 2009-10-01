@@ -5,6 +5,7 @@
 
 #include <drivers/device/icu/soclib-icu/icu-soclib.h>
 #include <drivers/device/block/soclib/block-soclib.h>
+#include <drivers/device/block/partition/block-partition.h>
 
 #include <hexo/device.h>
 #include <device/driver.h>
@@ -19,9 +20,11 @@
 
 extern struct device_s icu_dev;
 
-struct device_s bd_dev;
+extern struct device_s bd_dev;
 
-extern struct device_s *tty_dev;
+struct device_s * part_dev;
+
+extern struct device_s *console_dev;
 
 struct vfs_node_s *vfs_root_term;
 
@@ -50,7 +53,7 @@ void* shell(void *param)
     lua_State			*luast;
 
     printk("init vfs... ");
-    vfs_init(&bd_dev, VFS_VFAT_TYPE, 20, 20, &vfs_root_term);
+    vfs_init(part_dev, VFS_VFAT_TYPE, 20, 20, &vfs_root_term);
     printk("ok\n");
 
     /* create lua state */
@@ -62,7 +65,7 @@ void* shell(void *param)
     lua_register(luast, "pwd", pwd);
 
     /* initialize terminal */
-    if (!(tm = term_alloc(tty_dev, tty_dev, luast)))
+    if (!(tm = term_alloc(console_dev, console_dev, luast)))
         return -1;
 
     /* set capabilities */
@@ -136,13 +139,35 @@ void* shell(void *param)
     return 0;
 }
 
+
+void do_block_hexdump(struct device_s *bd, size_t lba)
+{
+	const struct dev_block_params_s *params = dev_block_getparams(bd);
+	
+	uint8_t block[params->blk_size];
+	uint8_t *blocks[1] = {block};
+
+	error_t err = dev_block_wait_read(bd, blocks, lba, 1);
+	if ( err ) {
+		printf("Error reading LBA %x, %d\r\n", lba, err);
+	} else {
+		size_t i;
+		printf("LBA %x, read ok\r\n", lba);
+		for ( i=0; i<params->blk_size; i+=16 )
+			printf(" %p: %P\r\n", (void*)(uintptr_t)i, &block[i], 16);
+	}
+}
+
+
 int main()
 {
-    device_init(&bd_dev);
-    bd_dev.addr[0] = 0x65200000;
-    bd_dev.irq = 2;
-    bd_dev.icudev = &icu_dev;
-    block_soclib_init(&bd_dev, NULL);
+	if ( block_partition_create(&bd_dev, 0) > 0 ) {
+		part_dev = device_get_child(&bd_dev, 0);
+	} else {
+		part_dev = &bd_dev;
+	}
+
+	do_block_hexdump(part_dev, 0);
 
     pthread_create(&a, NULL, shell, NULL);
 }

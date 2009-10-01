@@ -24,7 +24,11 @@ struct vfs_node_s *root;
 struct vfs_node_s *ms_n_cwd;
 
 static pthread_t task[NR_THREADS];
+#if defined(CONFIG_ARCH_IBMPC)
 static struct device_s ata;
+#else
+extern struct device_s bd_dev;
+#endif
 
 void* thread_func(void *arg)
 {
@@ -32,12 +36,16 @@ void* thread_func(void *arg)
   struct device_s *drv0 = NULL;
   struct device_s *part1 = NULL;
 
+#if defined(CONFIG_ARCH_IBMPC)
   if ((drv0 = device_get_child(&ata, 0)) == NULL)
     {
       printk("Couldn't find first disk on system\n");
       while (1)
 	continue;
     }
+#else
+  drv0 = &bd_dev;
+#endif
 
   if (block_partition_create(drv0, 0) == 0)
     {
@@ -117,6 +125,7 @@ int main()
   cpu_interrupt_enable();
   assert(cpu_is_interruptible());
 
+#if defined(CONFIG_ARCH_IBMPC)
   device_init(&ata);
 
   ata.addr[0] = 0x1f0;
@@ -125,6 +134,7 @@ int main()
   ata.icudev = &icu_dev;
 
   controller_ata_init(&ata, NULL);
+#endif
 
   int i;
   for(i=0;i<NR_THREADS;i++){
