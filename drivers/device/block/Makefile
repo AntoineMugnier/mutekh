@@ -21,3 +21,6 @@ ifeq ($(CONFIG_DRIVER_BLOCK_EMU), defined)
  subdirs += file-emu
 endif
 
+ifeq ($(CONFIG_DRIVER_BLOCK_SD_MMC), defined)
+ subdirs += sd-mmc
+endif
