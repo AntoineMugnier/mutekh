@@ -20,6 +20,21 @@ define declare_obj
 
 #$( # info  ======== declare_obj, $(1), $(2), $(3))
 
+ifeq ($(wildcard $(2)/$(1:.o=.S.m4)),$(2)/$(1:.o=.S.m4))
+
+#$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be M4+ASM file)
+
+$(3)/$(1): $(2)/$(1:.o=.S.m4)
+	@echo '   M4+AS    $$@'
+	test -d $(3) || mkdir -p $(3)
+	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(CONF_DIR)/.config.m4 \
+		$$< | m4 $$(filter -I%,$$(INCS)) -P > $$(@:.o=.S)
+	cd $(3) ; \
+	$(CC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$(@:.o=.S)
+	cd $(3) ; \
+	$(CPP) $$(INCS) $$(@:.o=.S) | $(AS) $$(CPUASFLAGS) -o $$@
+
+else
 ifeq ($(wildcard $(2)/$(1:.o=.S)),$(2)/$(1:.o=.S))
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be ASM file)
@@ -28,11 +43,9 @@ $(3)/$(1): $(2)/$(1:.o=.S)
 	@echo '    AS      $$@'
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; \
-	$(CC) $(CFLAGS) $(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
+	$(CC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
 	cd $(3) ; \
-	$(CPP) $(INCS) $$< | $(AS) $(CPUASFLAGS) -o $$@
-
-$(3)/$(1:.o=.deps): $(2)/$(1:.o=.S)
+	$(CPP) $$(INCS) $$< | $(AS) $$(CPUASFLAGS) -o $$@
 
 else
 
@@ -45,9 +58,10 @@ $(3)/$(1): $(2)/$(1:.o=.c) $(CONF_DIR)/.config.h
 	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		-M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
 	cd $(3) ; \
-	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) $($(1)_CFLAGS) $(DIR_CFLAGS) -c \
+	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $($(1)_CFLAGS) $(DIR_CFLAGS) -c \
 		$$< -o $$@
 
+endif
 endif
 
 endef
@@ -85,7 +99,7 @@ ifeq ($(wildcard $(2)/$(1).cpp),$(2)/$(1).cpp)
 $(3)/$(1): $(2)/$(1).cpp $(CONF_DIR)/.config.h
 	@echo '    CPP     $$@'
 	test -d $(3) || mkdir -p $(3)
-	$(CC) -E $(INCS) -P -x c - < $$< > $$@
+	$(CC) -E $$(INCS) -P -x c - < $$< > $$@
 
 else
 
@@ -94,7 +108,7 @@ $(3)/$(1): $(2)/$(1).m4 $(CONF_DIR)/.config.m4
 	@echo '    M4      $$@'
 	test -d $(3) || mkdir -p $(3)
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(CONF_DIR)/.config.m4 \
-		$$< | m4 $(filter -I%,$(INCS)) -P > $$@
+		$$< | m4 $$(filter -I%,$$(INCS)) -P > $$@
 
 endif
 

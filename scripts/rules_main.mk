@@ -24,7 +24,7 @@ CONF_DIR=$(BUILD_DIR)
 
 include $(MUTEK_SRC_DIR)/scripts/config.mk
 
--include $(CONF_DIR)/.config.mk
+include $(CONF_DIR)/.config.mk
 
 MODULES = $(CONFIG_MODULES) $(foreach mod,$(BASE_MODULES),$(mod):$(MUTEK_SRC_DIR)/$(mod))
 

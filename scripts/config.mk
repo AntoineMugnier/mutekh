@@ -1,4 +1,5 @@
 
+CONF_PATH:=$(MUTEK_SRC_DIR):$(CURRENT_DIR)
 CONF_TMP_BASE:=$(shell mktemp /tmp/mutekh_config.XXXXXX)
 CONF_EXTS = py m4 h mk
 
@@ -35,8 +36,9 @@ $(CONF_DIR)/.config.%: $(CONF_TMP_BASE).%
 	fi
 
 $(CONFIG_TMP_FILES): $(CONF)
+	@test -d $(CONF_DIR) || mkdir -p $(CONF_DIR)
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(MUTEK_SRC_DIR):$(CURRENT_DIR) \
+		--path=$(CONF_PATH) \
 		--input=$(CONF)					\
 		--python=$(CONF_TMP_BASE).py		\
 		--m4=$(CONF_TMP_BASE).m4			\
@@ -46,8 +48,9 @@ $(CONFIG_TMP_FILES): $(CONF)
 else
 
 $(CONFIG_FILES): $(CONF) $(MUTEK_SRC_DIR)/scripts/config.pl
+	@test -d $(CONF_DIR) || mkdir -p $(CONF_DIR)
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(MUTEK_SRC_DIR):$(CURRENT_DIR) \
+		--path=$(CONF_PATH) \
 		--input=$(CONF)					\
 		--python=$(CONF_DIR)/.config.py		\
 		--m4=$(CONF_DIR)/.config.m4			\
@@ -60,22 +63,22 @@ config: $(CONF_DIR) $(CONFIG_FILES)
 
 checkconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(MUTEK_SRC_DIR):$(CURRENT_DIR) \
+		--path=$(CONF_PATH) \
 		--input=$(CONF) --check
 
 listconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(MUTEK_SRC_DIR):$(CURRENT_DIR) \
+		--path=$(CONF_PATH) \
 		--input=$(CONF) --list
 
 listallconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(MUTEK_SRC_DIR):$(CURRENT_DIR) \
+		--path=$(CONF_PATH) \
 		--input=$(CONF) --list=all
 
 showconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(MUTEK_SRC_DIR):$(CURRENT_DIR) \
+		--path=$(CONF_PATH) \
 		--input=$(CONF) --info=$(TOKEN)
 
 $(CONF):
