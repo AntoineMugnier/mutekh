@@ -369,13 +369,6 @@ error_t	fputs(const char *str, FILE *stream)
   return __stdio_write(strlen(str), stream, (uint8_t*)str) ? EOF : 0;
 }
 
-error_t puts(const char *str)
-{
-  if (fputs(str, stdout))
-    return EOF;
-  return fputc('\n', stdout) < 0 ? EOF : 0;
-}
-
 /* ************************************************** */
 
 error_t setvbuf(FILE *stream, char *buf, enum stdio_buf_mode_e mode, size_t size)

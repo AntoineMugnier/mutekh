@@ -36,13 +36,6 @@
 #include <stdarg.h>
 #include <unistd.h>
 
-#define HAVE_PRINTK
-ssize_t printk(const char *format, ...)
-__attribute__ ((format (printf, 1, 2)));
-
-#define HAVE_VPRINTK
-ssize_t vprintk(const char *format, va_list ap);
-
 #define HAVE_SPRINTF
 ssize_t sprintf(char *str, const char *format, ...);
 

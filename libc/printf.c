@@ -133,6 +133,13 @@ ssize_t printf(const char *format, ...)
 
   return res;
 }
+
+error_t puts(const char *str)
+{
+  if (fputs(str, stdout))
+    return EOF;
+  return fputc('\n', stdout) < 0 ? EOF : 0;
+}
 # endif
 
 #endif
