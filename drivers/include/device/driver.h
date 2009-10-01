@@ -41,7 +41,7 @@ struct devenum_ident_s
 
 /** device driver object structure */
 
-#define DRV_MAX_FUNC_COUNT	4
+#define DRV_MAX_FUNC_COUNT	6
 
 struct driver_s
 {
@@ -60,12 +60,11 @@ struct driver_s
     void			*ptrs[DRV_MAX_FUNC_COUNT];
 
 #ifdef __DEVICE_CHAR_H__
-    /** char devices */
     struct dev_class_char_s	chr;
 #endif
 
 #ifdef __DEVICE_ICU_H__
-    /** icu devices */
+    /** interrupt controller devices */
     struct dev_class_icu_s	icu;
 #endif
 
@@ -74,14 +73,11 @@ struct driver_s
     struct dev_class_fb_s	fb;
 #endif
 
-
 #ifdef __DEVICE_TIMER_H__
-    /** timer devices */
     struct dev_class_timer_s	timer;
 #endif
 
 #ifdef __DEVICE_INPUT_H__
-    /** input devices */
     struct dev_class_input_s	input;
 #endif
 
@@ -91,18 +87,31 @@ struct driver_s
 #endif
 
 #ifdef __DEVICE_NET_H__
-    /** network devices */
     struct dev_class_net_s	net;
 #endif
 
 #ifdef __DEVICE_SOUND_H__
-    /** sound devices */
     struct dev_class_sound_s	sound;
 #endif
 
 #ifdef __DEVICE_BLOCK_H__
-    /** sound devices */
     struct dev_class_block_s	blk;
+#endif
+
+#ifdef __DEVICE_SPI_H__
+    struct dev_class_spi_s	spi;
+#endif
+
+#ifdef __DEVICE_LCD_H__
+    struct dev_class_lcd_s	lcd;
+#endif
+
+#ifdef __DEVICE_GPIO_H__
+    struct dev_class_gpio_s	gpio;
+#endif
+
+#ifdef __DEVICE_I2C_H__
+    struct dev_class_i2c_s	i2c;
 #endif
   } f;
 };

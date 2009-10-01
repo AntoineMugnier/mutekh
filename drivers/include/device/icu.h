@@ -49,6 +49,21 @@ typedef DEVICU_ENABLE(devicu_enable_t);
 #define dev_icu_enable(dev, ...) (dev)->drv->f.icu.f_enable(dev, __VA_ARGS__ )
 
 
+/** ICU device class set_flags() function template */
+#define DEVICU_SET_FLAGS(n)	void (n) (struct device_s *dev, uint_fast8_t irq, uint32_t flags)
+
+/** ICU device class set_flags() function type. Set interrupt line flags
+
+    * @param dev pointer to device descriptor
+    * @param irq icu interrupt line number
+    * @param flags, icu-specific
+    */
+typedef DEVICU_SET_FLAGS(devicu_set_flags_t);
+
+/** ICU device class set_flags() function shortcut */
+#define dev_icu_set_flags(dev, ...) (dev)->drv->f.icu.f_set_flags(dev, __VA_ARGS__ )
+
+
 
 
 /** ICU device class sethndl() function template */
@@ -100,8 +115,8 @@ typedef DEVICU_SENDIPI(devicu_sendipi_t);
 /** unbind icu irq for a device */
 #define DEV_ICU_UNBIND(icu_dev, dev, irq)								\
 	do {																\
-		dev_icu_delhndl((icu_dev), (irq));								\
 		dev_icu_enable((icu_dev), (irq), 0);							\
+		dev_icu_delhndl((icu_dev), (irq));								\
     } while(0)
 
 
@@ -110,6 +125,7 @@ typedef DEVICU_SENDIPI(devicu_sendipi_t);
 struct dev_class_icu_s
 {
   devicu_enable_t			*f_enable;
+  devicu_set_flags_t		*f_set_flags;
   devicu_sethndl_t			*f_sethndl;
   devicu_delhndl_t			*f_delhndl;
   devicu_sendipi_t			*f_sendipi;

@@ -41,7 +41,7 @@ struct driver_s;
 /** id of a control (button or axe) for an input device */
 typedef uint_fast8_t devinput_ctrlid_t;
 /** control value type. This can be a simple boolean value for button,
-    a position or a move offset for an axis controle */
+    a position or a move offset for an axis control */
 typedef uint_fast16_t devinput_value_t;
 
 struct devinput_info_s

@@ -47,6 +47,10 @@ enum device_class_e
     device_class_net,
     device_class_sound,
     device_class_timer,
+    device_class_spi,
+    device_class_lcd,
+    device_class_gpio,
+    device_class_i2c,
   };
 
 
