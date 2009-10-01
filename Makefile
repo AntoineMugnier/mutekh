@@ -17,14 +17,14 @@
 #
 
 ifndef BUILD_DIR
-BUILD_DIR:=$(PWD)
+BUILD_DIR:=$(shell pwd)
 endif
 ifdef SRC_DIR
 MUTEK_SRC_DIR:=$(SRC_DIR)
 else
-MUTEK_SRC_DIR:=$(PWD)
+MUTEK_SRC_DIR:=$(shell pwd)
 endif
-CURRENT_DIR:=$(PWD)
+CURRENT_DIR:=$(shell pwd)
 CONF=myconfig
 
 export MUTEK_SRC_DIR

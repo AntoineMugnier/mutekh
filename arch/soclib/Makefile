@@ -3,6 +3,10 @@ objs = 											\
 arch_init.o										\
 mem_alloc.o
 
+ifneq ($(CONFIG_SRL_SOCLIB),defined)
+objs += hw_init.o
+endif
+
 ifeq ($(CONFIG_HEXO_MMU), defined)
 objs += mmu.o
 endif

@@ -10,17 +10,17 @@
 #include <device/driver.h>
 
 #if defined(CONFIG_MUTEK_CONSOLE)
-extern struct device_s *tty_dev;
+extern struct device_s *console_dev;
 #endif
 
 static FILEOPS_READ(tty_read)
 {
-  return dev_char_wait_read(tty_dev, buffer, count);
+  return dev_char_wait_read(console_dev, buffer, count);
 }
 
 static FILEOPS_WRITE(tty_write)
 {
-  return dev_char_wait_write(tty_dev, buffer, count);
+  return dev_char_wait_write(console_dev, buffer, count);
 }
 
 static error_t	no_flush(FILE *stream)
