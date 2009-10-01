@@ -13,6 +13,14 @@ ifeq ($(CONFIG_DRIVER_CHAR_EMUTTY), defined)
  subdirs += tty-emu
 endif
 
+ifeq ($(CONFIG_DRIVER_CHAR_US6089C_UART), defined)
+ subdirs += uart-us6089c
+endif
+
+ifeq ($(CONFIG_DRIVER_CHAR_SAM7DBGU), defined)
+ subdirs += dbgu-sam7
+endif
+
 ifeq ($(CONFIG_DRIVER_CHAR_UART8250), defined)
  subdirs += uart-8250
 endif

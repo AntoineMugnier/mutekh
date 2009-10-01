@@ -22,3 +22,7 @@ endif
 ifeq ($(CONFIG_DRIVER_ICU_ARM), defined)
  subdirs += arm
 endif
+
+ifeq ($(CONFIG_DRIVER_ICU_SAM7), defined)
+ subdirs += sam7
+endif

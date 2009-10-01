@@ -21,6 +21,7 @@
 
 
 #include <hexo/types.h>
+#include <device/char.h>
 #include <hexo/device.h>
 #include <device/driver.h>
 
