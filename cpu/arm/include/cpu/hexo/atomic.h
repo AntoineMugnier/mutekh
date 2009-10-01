@@ -27,6 +27,8 @@
 #error This file can not be included directly
 #else
 
+#if defined(CONFIG_SMP)
+
 #define CPU_ATOMIC_H_
 
 #define HAS_CPU_ATOMIC_INC
@@ -212,5 +214,10 @@ cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
 	return tmp != 0;
 }
 
+#else /* SMP */
+
+#include "cpu/common/include/cpu/hexo/atomic_na.h"
+
 #endif
 
+#endif

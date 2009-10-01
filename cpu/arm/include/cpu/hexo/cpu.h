@@ -54,9 +54,16 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 static inline cpu_id_t
 cpu_id(void)
 {
+#if defined(__ARM_ARCH_6K__)
 	uint32_t ret;
 	asm volatile("mrc  p15,0,%0,c0,c0,5":"=r"(ret));
 	return ret;
+#else
+# ifdef CONFIG_SMP
+#  error Cant compile SMP code without cpuid support
+# endif
+	return 0;
+#endif
 }
 
 static inline bool_t
@@ -78,9 +85,17 @@ typedef uint32_t cpu_cycle_t;
 static inline cpu_cycle_t
 cpu_cycle_count(void)
 {
+#if defined(__ARM_ARCH_6K__)
 	uint32_t ret;
 	asm("mrc  p15,0,%0,c15,c12,1":"=r"(ret));
 	return ret;
+#elif defined(__ARM_ARCH_4T__)
+	/* who cares ? */
+	return 0;
+#else
+# warning No CPU cycle counter
+	return 0;
+#endif
 }
 
 static inline void
@@ -99,15 +114,21 @@ static inline void *cpu_get_cls(cpu_id_t cpu_id)
 
 static inline void cpu_dcache_invld(void *ptr)
 {
+#if defined(CONFIG_CPU_CACHE)
 	asm("mcr p15, 0, %0, c7, c6, 1"::"r"(ptr));
+#endif
 }
 
 static inline size_t cpu_dcache_line_size()
 {
+#if defined(CONFIG_CPU_CACHE)
 	uint32_t ret;
 	asm("mrc p15, 0, %0, c0, c0, 1":"=r"(ret));
 
 	return (((ret >> 12) & 0x3) + 3) << 1;
+#else
+	return 16;
+#endif
 }
 
 #endif

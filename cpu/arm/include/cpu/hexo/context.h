@@ -30,6 +30,10 @@
 # include <arch/mem_checker.h>
 #endif
 
+#if !defined(CONFIG_CPU_ARM_TLS_IN_C15)
+extern CPU_LOCAL void *__cpu_context_data_base;
+#endif
+
 struct cpu_context_s
 {
 };
@@ -51,7 +55,12 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 	asm volatile (
 		"adr  r12, 1f                      \n\t"
 		"mrs  r3, cpsr                     \n\t"
+#if defined(CONFIG_CPU_ARM_TLS_IN_C15)
 		"mrc  p15,0,r2,c13,c0,4            \n\t"
+#else
+		"ldr  r2, 2f                       \n\t"
+		"ldr  r2, [r2]                     \n\t"
+#endif
 		"push {r2, r3, r11, r12}           \n\t"
 		"str  sp, [%0]                     \n\t"
 #ifdef CONFIG_SOCLIB_MEMCHECK
@@ -69,9 +78,16 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"str  r2, [r3, #(" ASM_STR(SOCLIB_MC_MAGIC) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
 #endif
 		"pop  {r2, r3, r11, r12}           \n\t"
-		"mcr  p15,0,r2,c13,c0,4            \n\t"
 		"msr  cpsr, r3                     \n\t"
+#if defined(CONFIG_CPU_ARM_TLS_IN_C15)
+		"mcr  p15,0,r2,c13,c0,4            \n\t"
 		"bx   r12                          \n\t"
+#else
+		"ldr  r3, 2f                       \n\t"
+		"str  r2, [r3]                     \n\t"
+		"bx   r12                          \n\t"
+		"2: .word __cpu_context_data_base  \n\t"
+#endif
 		"1:                                \n\t"
 		: 
 		: "r"(old_addr), "r"(new_addr)
@@ -107,8 +123,13 @@ cpu_context_jumpto(struct context_s *new)
 		"str  r2, [r3, #(" ASM_STR(SOCLIB_MC_MAGIC) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
 #endif
 		"pop  {r2, r3, r11, r12}           \n\t"
-		"mcr  p15,0,r2,c13,c0,4            \n\t"
 		"msr  cpsr, r3                     \n\t"
+#if defined(CONFIG_CPU_ARM_TLS_IN_C15)
+		"mcr  p15,0,r2,c13,c0,4            \n\t"
+#else
+		"ldr  r3, =__cpu_context_data_base     \n\t"
+		"str  r2, [r3]                     \n\t"
+#endif
 		"bx   r12                          \n\t"
 		:
 		: "r"(new_addr)

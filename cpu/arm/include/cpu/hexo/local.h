@@ -31,14 +31,16 @@
 
 #define CPU_LOCAL_H_
 
+#if defined(CONFIG_CPU_ARM_TLS_IN_C15)
+
 /************************************************************************/
 
-#ifdef CONFIG_SMP
+# ifdef CONFIG_SMP
 
-# undef CPU_LOCAL
-# define CPU_LOCAL	__attribute__((section (".cpudata")))
+#  undef CPU_LOCAL
+#  define CPU_LOCAL	__attribute__((section (".cpudata")))
 
-#define CPU_GET_CLS()												   \
+# define CPU_GET_CLS()												   \
 	({																   \
 		uintptr_t _ptr_;											   \
 																	   \
@@ -50,15 +52,15 @@
 		_ptr_;														   \
 	})
 
-#endif /* !CONFIG_SMP */
+# endif /* !CONFIG_SMP */
 
 /************************************************************************/
 
 /** context local storage type attribute */
-#define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
+# define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
 
 /** get address of cpu local object */
-#define CONTEXT_GET_TLS()											   \
+# define CONTEXT_GET_TLS()											   \
 	({																   \
 		uintptr_t _ptr_;											   \
 																	   \
@@ -69,6 +71,28 @@
 																	   \
 		_ptr_;														   \
 	})
+
+
+#else /* not CONFIG_CPU_ARM_TLS_IN_C15 */
+
+# ifdef CONFIG_SMP
+/*
+ * We could support not having dedicated registers with an indirection
+ * through a global table and cpuid(), but for now, we'll be lazy
+ * without proper need for it.
+ */
+#  error No SMP supported without TLS registers in c0
+# endif
+
+# define CPU_LOCAL
+# define CPU_GET_TLS() ((uintptr_t)0)
+
+extern CPU_LOCAL void *__cpu_context_data_base;
+
+# define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
+# define CONTEXT_GET_TLS() ((uintptr_t)__cpu_context_data_base)
+
+#endif /* end CONFIG_CPU_ARM_TLS_IN_C15 */
 
 #endif
 

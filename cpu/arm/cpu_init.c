@@ -35,12 +35,14 @@
 # include <arch/mem_checker.h>
 #endif
 
-CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
-CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
-
 #ifdef CONFIG_DRIVER_ICU_ARM
+CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
 CPU_LOCAL struct device_s cpu_icu_dev;
+#else
+static uint8_t irq_stack[128];
 #endif
+
+CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
 struct arm_exception_context_s {
 	uint32_t user_pc;
@@ -54,7 +56,7 @@ void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
 struct arm_exception_context_s arm_exception_context[CONFIG_CPU_MAXCOUNT][3];
 
-#define arm_setup_exception_context(context, psr_mode)				   \
+#define arm_setup_exception_stack(context, psr_mode)				   \
 	asm volatile(													   \
 		"mrs  r2, cpsr            \n\t"								   \
 		"bic  r3, r2, #0x1f       \n\t"								   \
@@ -71,20 +73,37 @@ struct arm_exception_context_s arm_exception_context[CONFIG_CPU_MAXCOUNT][3];
 error_t
 cpu_global_init(void)
 {
+
   return 0;
 }
 
 static void __arm_exception_setup()
 {
+#ifdef CONFIG_SOCLIB_MEMCHECK
+	soclib_mem_check_disable(SOCLIB_MC_CHECK_SPFP);
+#endif
+
 	struct arm_exception_context_s *cpu_context = arm_exception_context[cpu_id()];
-	arm_setup_exception_context(&cpu_context[0], 0x12); // IRQ
-	arm_setup_exception_context(&cpu_context[1], 0x17); // Abort
-	arm_setup_exception_context(&cpu_context[2], 0x1b); // Undef
+#ifndef CONFIG_DRIVER_ICU_ARM
+	arm_setup_exception_stack(irq_stack+sizeof(irq_stack)-4, 0x12);
+#else
+	arm_setup_exception_stack(&cpu_context[0], 0x12); // IRQ
+#endif
+	arm_setup_exception_stack(&cpu_context[1], 0x17); // Abort
+	arm_setup_exception_stack(&cpu_context[2], 0x1b); // Undef
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+	soclib_mem_check_enable(SOCLIB_MC_CHECK_SPFP);
+#endif
 }
 
 void cpu_init(void)
 {
 #ifdef CONFIG_SMP
+# if !defined(CONFIG_CPU_ARM_TLS_IN_C15)
+#  error SMP and TLS unsupported
+# endif
+
 	void			*cls;
 
 	/* setup cpu local storage */
@@ -92,17 +111,10 @@ void cpu_init(void)
 		
 	cpu_local_storage[cpu_id()] = cls;
 		
-	asm volatile ("mcr p15,0,%0,c13,c0,3"
-				  : : "r" (cls));
+	asm volatile ("mcr p15,0,%0,c13,c0,3":: "r" (cls));
 #endif
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-	soclib_mem_check_disable(SOCLIB_MC_CHECK_SPFP);
-#endif
 	__arm_exception_setup();
-#ifdef CONFIG_SOCLIB_MEMCHECK
-	soclib_mem_check_enable(SOCLIB_MC_CHECK_SPFP);
-#endif
 
 #ifdef CONFIG_DRIVER_ICU_ARM
   device_init(CPU_LOCAL_ADDR(cpu_icu_dev));

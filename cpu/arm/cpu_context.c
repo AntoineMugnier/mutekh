@@ -7,17 +7,25 @@
 # include <arch/mem_checker.h>
 #endif
 
+#if !defined(CONFIG_CPU_ARM_TLS_IN_C15)
+CPU_LOCAL void *__cpu_context_data_base;
+#endif
+
 error_t
 cpu_context_bootstrap(struct context_s *context)
 {
   /* set context local storage register base pointer */
-  asm volatile ("mcr p15,0,%0,c13,c0,4" : : "r" (context->tls));
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_change_id(cpu_id(), (uint32_t)&context->stack_ptr);
+#if defined(CONFIG_CPU_ARM_TLS_IN_C15)
+	asm volatile ("mcr p15,0,%0,c13,c0,4" : : "r" (context->tls));
+#else
+	__cpu_context_data_base = context->tls;
 #endif
 
-  return 0;
+#ifdef CONFIG_SOCLIB_MEMCHECK
+	soclib_mem_check_change_id(cpu_id(), (uint32_t)&context->stack_ptr);
+#endif
+
+	return 0;
 }
 
 

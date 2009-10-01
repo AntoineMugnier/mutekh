@@ -16,6 +16,7 @@
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+    Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2009
 
 */
 
@@ -59,10 +60,10 @@ asm(
 	".type   arm_boot, %function   \n\t"
 	"arm_boot:                     \n\t"
 	"mrc  p15,0,r4,c0,c0,5       \n\t"
-#ifndef CONFIG_SMP
+# ifndef CONFIG_SMP
     "cmp	r4,	#0   			\n\t"
     "1: bne	1b			        \n\t"
-#endif
+# endif
 
 	// Allocate 1K stacks
 	"lsl  r5, r4, #10            \n\t"

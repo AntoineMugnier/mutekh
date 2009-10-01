@@ -150,9 +150,13 @@ cpu_is_interruptible(void)
 static inline void
 cpu_interrupt_wait(void)
 {
+#if defined(__ARM_ARCH_6K__)
 	asm volatile(
 		"mcr p15, 0, %0, c7, c0, 4"
 		:: "r" (0) );
+#else
+	/**/
+#endif
 }
 
 #endif
