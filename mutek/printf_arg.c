@@ -25,7 +25,7 @@ __printf_putint(char *buf, __printf_int_t val,
   return PRINTF_INT_BUFFER_LEN - i;
 }
 
-#ifdef CONFIG_LIBC_PRINTF_EXT
+#ifdef CONFIG_PRINTF_ARG_EXT
 static size_t
 __printf_hexdump(char *buf, const uint8_t *val, size_t len)
 {
@@ -52,7 +52,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
 	     const char *format, va_list ap)
 {
   size_t	offset = 0;
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
   uint_fast8_t	typesize, padindex;
   ssize_t	padding[2];
   bool_t	zeropad, rightpad;
@@ -82,7 +82,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
   return offset;
 
  printf_state_modifier:
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
   padindex = 0;
   zeropad = rightpad = 0;
   padding[0] = padding[1] = 0;
@@ -98,7 +98,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
 	  goto printf_state_main;
 	}
 
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
 	case '-':
 	  rightpad = 1;
 	  format++;
@@ -125,8 +125,8 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
 
 	case 's':
 	case 'p':
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
-# ifdef CONFIG_LIBC_PRINTF_EXT
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
+# ifdef CONFIG_PRINTF_ARG_EXT
 	case 'S':
 	case 'P':
 # endif
@@ -144,7 +144,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
     char		buf_[PRINTF_INT_BUFFER_LEN];
     size_t		len;
 
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
     switch (typesize)
       {
       case 1:
@@ -182,7 +182,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
 
       case ('d'):
       case ('i'):
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
 	/* FIXME precision should not be handled this way with %d %i */
 	if (padding[1])
 	  {
@@ -203,7 +203,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
 	/* decimal unsigned integer */
 
       case ('u'):
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
 	/* FIXME precision should not be handled this way with %u */
 	if (padding[1])
 	  {
@@ -217,7 +217,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
 
 	/* hexadecimal unsigned integer */
 
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
       case ('p'):
 	fcn(ctx, "0x", offset, 2);
 	offset += 2;
@@ -227,7 +227,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
 #endif
 
       case ('X'):
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
 	len = __printf_putint(buf_, val, "0123456789ABCDEF", 16);
 	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
 	break;
@@ -249,7 +249,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
 
       case ('s'): {
 	char	*str = (char*)val;
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
 	size_t	maxlen;
 
 	zeropad = 0;
@@ -267,7 +267,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
       }	break;
 
 	/* hexdump data buffer */
-#ifdef CONFIG_LIBC_PRINTF_EXT
+#ifdef CONFIG_PRINTF_ARG_EXT
       case ('P'):
 	len = va_arg(ap, size_t);
 	buf = __builtin_alloca(len * 3);
@@ -279,7 +279,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
       case ('S'):
 	len = va_arg(ap, size_t);
 	buf = (char*)val;
-# ifndef CONFIG_LIBC_PRINTF_SIMPLE
+# ifndef CONFIG_PRINTF_ARG_SIMPLE
 	zeropad = 0;
 # endif
 	break;
@@ -289,7 +289,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
 	goto printf_state_main;
       }
 
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
     size_t padlen = __MAX((ssize_t)(padding[0] - len), 0);
 
     if (!rightpad)
@@ -302,7 +302,7 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
     fcn(ctx, buf, offset, len);
     offset += len;
 
-#ifndef CONFIG_LIBC_PRINTF_SIMPLE
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
     if (rightpad)
     {
       while (padlen--)
