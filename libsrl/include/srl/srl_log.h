@@ -14,10 +14,6 @@
 #ifndef SRL_LOG_H_
 #define SRL_LOG_H_
 
-#ifndef SRL_VERBOSITY
-#define SRL_VERBOSITY VERB_NONE
-#endif
-
 enum __srl_verbosity {
     VERB_NONE,
     VERB_TRACE,
@@ -40,14 +36,17 @@ void _cpu_printf(const char *, ...);
 # define srl_console_init(x...)
 #endif
 
+#define GET_VERB_(x,y) x##y
+#define GET_VERB(x) GET_VERB_(VERB_,x)
+
 #define srl_log( l, c ) do {										   \
-		if (VERB_##l <= SRL_VERBOSITY) {							   \
+		if (GET_VERB(l) <= GET_VERB(CONFIG_SRL_VERBOSITY)) {		   \
 			_srl_log( c );											   \
 		}															   \
 	} while (0)
 
 #define srl_log_printf( l, c... ) do {								   \
-		if (VERB_##l <= SRL_VERBOSITY) {							   \
+		if (GET_VERB(l) <= GET_VERB(CONFIG_SRL_VERBOSITY)) {		   \
 			_srl_log_printf( c );									   \
 		}															   \
 	} while (0)
