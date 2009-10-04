@@ -58,3 +58,9 @@ FORCE::
 
 config showpaths kernel cflags: FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ MAKEFLAGS=$(MAKEFLAGS)
+
+kernel-postlink:  FORCE
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ MAKEFLAGS=$(MAKEFLAGS) POST_LDSCRIPT=$(POST_LDSCRIPT) POST_TARGET=$(POST_TARGET)
+
+kernel-het: 
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/heterogeneous.mk $@ MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF)

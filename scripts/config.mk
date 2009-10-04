@@ -66,6 +66,11 @@ checkconfig:
 		--path=$(CONF_PATH) \
 		--input=$(CONF) --check
 
+couple:
+	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
+		--path=$(CONF_PATH) \
+		--input=$(CONF) --arch-cpu
+
 listconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--path=$(CONF_PATH) \
