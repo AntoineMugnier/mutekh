@@ -56,6 +56,7 @@ $(3)/$(1): $(2)/$(1:.o=.c) $(CONF_DIR)/.config.h
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; \
 	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+		$($(1)_CFLAGS) $(DIR_CFLAGS) \
 		-M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
 	cd $(3) ; \
 	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $($(1)_CFLAGS) $(DIR_CFLAGS) -c \
