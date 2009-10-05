@@ -14,7 +14,7 @@ endef
 $(eval $(foreach c,$(CONFS),$(call decl_conf,$(c))))
 
 PRE_OBJS=$(foreach couple,$(COUPLES),$(BUILD_DIR)/kernel-$(couple).pre.o)
-HET_OBLS=$(foreach couple,$(COUPLES),$(BUILD_DIR)/kernel-$(couple).pre.o.het.o)
+HET_OBJS=$(foreach couple,$(COUPLES),$(BUILD_DIR)/kernel-$(couple).pre.o.het.o)
 HET_KERNELS=$(foreach couple,$(COUPLES),$(BUILD_DIR)/kernel-$(couple).het.out)
 
 kernel-het: $(HET_KERNELS)
