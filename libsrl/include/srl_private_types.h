@@ -44,7 +44,7 @@ typedef struct mwmr_status_s srl_mwmr_status_s;
 
 #define SRL_CONST_INITIALIZER(x) x
 
-#if MWMR_USE_SEPARATE_LOCKS
+#if defined(MWMR_USE_SEPARATE_LOCKS)
 #define SRL_MWMR_USE_SEPARATE_LOCKS
 #endif
 
