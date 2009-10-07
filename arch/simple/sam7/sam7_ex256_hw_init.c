@@ -44,6 +44,19 @@ static void set_gpio(
 	dev_gpio_assign_to_peripheral(pio, gpio, dev);
 }
 
+static inline PRINTF_OUTPUT_FUNC(__printf_out_tty)
+{
+  while (len > 0)
+    {
+		ssize_t	res = dev_char_spin_write((struct device_s *)ctx, (uint8_t*)str, len);
+
+      if (res < 0)
+	break;
+      len -= res;
+      str += res;
+    }
+}
+
 void arch_specific_hw_init()
 {
 	AT91C_BASE_PMC->PMC_PCER = 1 << AT91C_ID_FIQ;
@@ -89,6 +102,9 @@ void arch_specific_hw_init()
 	uart_us6089c_init(&uart_dev, NULL);
 
 	console_dev = &uart_dev;
+#if !(defined(CONFIG_DRIVER_CHAR_SAM7DBGU) && defined(CONFIG_MUTEK_CONSOLE))
+	printk_set_output(__printf_out_tty, console_dev);
+#endif
 
 	// spi0
 	set_gpio(&dev_gpio_pioa, 16, 1, GPIO_WAY_INPUT);  // miso
