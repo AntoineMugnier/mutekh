@@ -4,6 +4,7 @@
 
 # Platform types
   CONFIG_ARCH_EMU
+  CONFIG_ARCH_EMU_LINUX
 
 # Processor
   CONFIG_CPU_X86_EMU
