@@ -1,3 +1,4 @@
+/* -*- c -*- */
 
 #define EMU_CPP(x) x
 
@@ -5,7 +6,11 @@
  * mmap syscalls arguments
  */
 
-#include <asm/mman.h>
+#if defined(CONFIG_ARCH_EMU_LINUX)
+# include <asm/mman.h>
+#elif defined(CONFIG_ARCH_EMU_DARWIN)
+# include <sys/mman.h>
+#endif
 
 EMU_CPP(#define) EMU_PROT_READ		PROT_READ
 EMU_CPP(#define) EMU_PROT_WRITE		PROT_WRITE
@@ -15,14 +20,22 @@ EMU_CPP(#define) EMU_PROT_NONE		PROT_NONE
 EMU_CPP(#define) EMU_MAP_SHARED		MAP_SHARED
 EMU_CPP(#define) EMU_MAP_PRIVATE	MAP_PRIVATE
 EMU_CPP(#define) EMU_MAP_FIXED		MAP_FIXED
+#if defined(CONFIG_ARCH_EMU_LINUX)
 EMU_CPP(#define) EMU_MAP_ANONYMOUS	MAP_ANONYMOUS
+#elif defined(CONFIG_ARCH_EMU_DARWIN)
+EMU_CPP(#define) EMU_MAP_ANONYMOUS	MAP_ANON
+#endif
 EMU_CPP(#define) EMU_MAP_FILE		MAP_FILE
 
 /*
  * open syscalls arguments
  */
 
-#include <asm/fcntl.h>
+#if defined(CONFIG_ARCH_EMU_LINUX)
+# include <asm/fcntl.h>
+#elif defined(CONFIG_ARCH_EMU_DARWIN)
+# include <sys/fcntl.h>
+#endif
 
 EMU_CPP(#define) EMU_O_RDONLY		O_RDONLY
 EMU_CPP(#define) EMU_O_WRONLY		O_WRONLY
@@ -32,8 +45,12 @@ EMU_CPP(#define) EMU_O_RDWR		O_RDWR
  * lseek syscalls arguments
  */
 
-#include <sys/types.h>
-#include <unistd.h>
+#if defined(CONFIG_ARCH_EMU_LINUX)
+# include <sys/types.h>
+# include <unistd.h>
+#elif defined(CONFIG_ARCH_EMU_DARWIN)
+/* fcntl defined them... */
+#endif
 
 EMU_CPP(#define) EMU_SEEK_SET		SEEK_SET
 EMU_CPP(#define) EMU_SEEK_CUR		SEEK_CUR
@@ -43,13 +60,17 @@ EMU_CPP(#define) EMU_SEEK_END		SEEK_END
  * ioctl/tuntap syscalls arguments
  */
 
+#if defined(CONFIG_ARCH_EMU_LINUX)
 #include <linux/if_tun.h>
+#endif
 
 /*
  * clone syscall arguments
  */
 
-#include <sched.h>
+#if defined(CONFIG_ARCH_EMU_LINUX)
+
+# include <sched.h>
 
 EMU_CPP(#define) EMU_CLONE_PARENT		CLONE_PARENT
 EMU_CPP(#define) EMU_CLONE_FS			CLONE_FS
@@ -65,11 +86,15 @@ EMU_CPP(#define) EMU_CLONE_PARENT_SETTID	CLONE_PARENT_SETTID
 EMU_CPP(#define) EMU_CLONE_CHILD_SETTID		CLONE_CHILD_SETTID
 EMU_CPP(#define) EMU_CLONE_CHILD_CLEARTID	CLONE_CHILD_CLEARTID
 
+#endif
+
 /*
  * ptrace syscall arguments
  */
 
-#include <linux/ptrace.h>
+#if defined(CONFIG_ARCH_EMU_LINUX)
+
+# include <linux/ptrace.h>
 
 EMU_CPP(#define) EMU_PTRACE_ATTACH		PTRACE_ATTACH
 EMU_CPP(#define) EMU_PTRACE_CONT		PTRACE_CONT
@@ -97,3 +122,4 @@ EMU_CPP(#define) EMU_PTRACE_UESP	UESP
 EMU_CPP(#define) EMU_PTRACE_SS		SS   
 EMU_CPP(#define) EMU_PTRACE_FRAME_SIZE	FRAME_SIZE 
 
+#endif

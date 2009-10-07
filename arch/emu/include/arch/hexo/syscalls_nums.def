@@ -1,21 +1,33 @@
-
-#include <asm/unistd.h>
+/* -*- c -*- */
 
 #define X(x)	x
+#ifdef __APPLE__
+# define __SYSCALL_NAME(x,y) X(x/**/y)
+#else
+# define __SYSCALL_NAME(x,y) X(x##y)
+#endif
 
-X(#define EMU_SYSCALL_GETPID	__NR_getpid)
-X(#define EMU_SYSCALL_MMAP	__NR_mmap)
-X(#define EMU_SYSCALL_READ	__NR_read)
-X(#define EMU_SYSCALL_WRITE	__NR_write)
-X(#define EMU_SYSCALL_EXIT	__NR_exit)
-X(#define EMU_SYSCALL_CLONE	__NR_clone)
-X(#define EMU_SYSCALL_OPEN	__NR_open)
-X(#define EMU_SYSCALL_READ	__NR_read)
-X(#define EMU_SYSCALL_WRITE	__NR_write)
-X(#define EMU_SYSCALL_CLOSE	__NR_close)
-X(#define EMU_SYSCALL_IOCTL	__NR_ioctl)
-X(#define EMU_SYSCALL_SOCKET	__NR_socket)
-X(#define EMU_SYSCALL_WAITPID	__NR_waitpid)
-X(#define EMU_SYSCALL_PTRACE	__NR_ptrace)
-X(#define EMU_SYSCALL_LSEEK	__NR_lseek)
+#if defined(CONFIG_ARCH_EMU_LINUX)
+# include <asm/unistd.h>
+# define SYSCALL_NAME(x) __SYSCALL_NAME(__NR_,x)
+#elif defined(CONFIG_ARCH_EMU_DARWIN)
+# include <sys/syscall.h>
+# define SYSCALL_NAME(x) __SYSCALL_NAME(SYS_,x)
+#endif
+
+X(#define) EMU_SYSCALL_GETPID   SYSCALL_NAME(getpid)
+X(#define) EMU_SYSCALL_MMAP     SYSCALL_NAME(mmap)
+X(#define) EMU_SYSCALL_READ     SYSCALL_NAME(read)
+X(#define) EMU_SYSCALL_WRITE    SYSCALL_NAME(write)
+X(#define) EMU_SYSCALL_EXIT     SYSCALL_NAME(exit)
+X(#define) EMU_SYSCALL_CLONE    SYSCALL_NAME(clone)
+X(#define) EMU_SYSCALL_OPEN     SYSCALL_NAME(open)
+X(#define) EMU_SYSCALL_READ     SYSCALL_NAME(read)
+X(#define) EMU_SYSCALL_WRITE    SYSCALL_NAME(write)
+X(#define) EMU_SYSCALL_CLOSE    SYSCALL_NAME(close)
+X(#define) EMU_SYSCALL_IOCTL    SYSCALL_NAME(ioctl)
+X(#define) EMU_SYSCALL_SOCKET   SYSCALL_NAME(socket)
+X(#define) EMU_SYSCALL_WAITPID  SYSCALL_NAME(waitpid)
+X(#define) EMU_SYSCALL_PTRACE   SYSCALL_NAME(ptrace)
+X(#define) EMU_SYSCALL_LSEEK    SYSCALL_NAME(lseek)
 

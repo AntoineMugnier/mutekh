@@ -29,9 +29,10 @@
 #include "arch/hexo/syscalls_nums.h"
 #include "arch/hexo/syscalls_args.h"
 
-/* FIXME linux specific ? */
 
-#ifdef CONFIG_CPU_X86_EMU
+#if defined(CONFIG_ARCH_EMU_LINUX)
+
+# if defined(CONFIG_CPU_X86_EMU)
 
 static inline reg_t
 emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
@@ -69,7 +70,7 @@ emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
   return res;
 }
 
-#elif defined (CONFIG_CPU_X86_64_EMU)
+# elif defined (CONFIG_CPU_X86_64_EMU)
 
 static inline reg_t
 emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
@@ -97,9 +98,41 @@ emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
   return res;
 }
 
+# else
+#  error emu_do_syscall_va not available for this processor type
+# endif
+
+#elif defined(CONFIG_ARCH_EMU_DARWIN)
+
+# if defined(CONFIG_CPU_X86_EMU)
+
+static inline reg_t
+emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
+{
+	register reg_t res;
+
+	register uint_fast8_t i;
+	reg_t params[argc+1];
+
+	for (i = 0; i < argc; i++)
+		params[i+1] = va_arg(ap, reg_t);
+
+	asm volatile (
+		"int $0x80\n"
+		: "=a" (res)
+		: "a" (id), "r" (params)
+		);
+	return res;
+}
+
+# else
+#  error CPU not supported
+# endif
+
 #else
-# error emu_do_syscall_va not available for this processor type
+# error arch not supported
 #endif
+
 
 static inline reg_t
 emu_do_syscall(uint_fast16_t id, size_t argc, ...)

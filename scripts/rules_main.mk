@@ -33,6 +33,8 @@ MODULES = $(CONFIG_MODULES) $(foreach mod,$(BASE_MODULES),$(mod):$(MUTEK_SRC_DIR
 # filter module names
 MODULE_NAMES := $(foreach modwd,$(MODULES),$(shell echo $(modwd) | cut -d: -f1))
 
+META_OBJECT_LIST:=
+COPY_OBJECT_LIST:=
 TARGET_OBJECT_LIST:=
 DEP_FILE_LIST:=
 CLEAN_FILE_LIST:=
@@ -74,7 +76,20 @@ $(foreach depfile,$(DEP_FILE_LIST),\
 $(call do_inc_dep,$(depfile))))
 endif
 
+#define obj_add_dep
+#
+#$(1): $(COPY_OBJECT_LIST) \
+#		$(META_OBJECT_LIST) \
+#
+#endef
+
 TARGET_OBJECT_LIST:=$(filter %.o,$(TARGET_OBJECT_LIST))
+META_OBJECT_LIST:=$(filter-out %ldscript,$(META_OBJECT_LIST))
+COPY_OBJECT_LIST:=$(filter-out %ldscript,$(COPY_OBJECT_LIST))
+
+#$(eval \
+#$(foreach obj,$(TARGET_OBJECT_LIST),\
+#$(call obj_add_dep,$(obj))))
 
 all: kernel
 
@@ -111,9 +126,12 @@ clean:
 FINAL_LINK_TARGET?=$(BUILD_DIR)/$(target).out
 FINAL_LINK_SOURCE?=$(BUILD_DIR)/$(target).o
 
-ifeq ($(CONFIG_ARCH_SIMPLE),defined)
+ifeq ($(LD_NO_Q),1)
 WL=-Wl,
-$(BUILD_DIR)/$(target).out: $(CONF_DIR)/.config.m4 $(TARGET_OBJECT_LIST) \
+$(BUILD_DIR)/$(target).out: $(CONF_DIR)/.config.m4 \
+		$(COPY_OBJECT_LIST) \
+		$(META_OBJECT_LIST) \
+		$(TARGET_OBJECT_LIST) \
 		$(arch_OBJ_DIR)/ldscript \
 		$(cpu_OBJ_DIR)/ldscript \
 	    FORCE
@@ -137,7 +155,10 @@ endif
 
 final_link: $(FINAL_LINK_TARGET)
 
-$(BUILD_DIR)/$(target).o: $(CONF_DIR)/.config.m4 $(TARGET_OBJECT_LIST) \
+$(BUILD_DIR)/$(target).o: $(CONF_DIR)/.config.m4 \
+		$(COPY_OBJECT_LIST) \
+		$(META_OBJECT_LIST) \
+        $(TARGET_OBJECT_LIST) \
 	    FORCE
 	echo '    LD o    $@'
 	$(LD) -r \

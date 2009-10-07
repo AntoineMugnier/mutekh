@@ -30,7 +30,7 @@ $(3)/$(1): $(2)/$(1:.o=.S.m4)
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(CONF_DIR)/.config.m4 \
 		$$< | m4 $$(filter -I%,$$(INCS)) -P > $$(@:.o=.S)
 	cd $(3) ; \
-	$(CC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$(@:.o=.S)
+	$(DEPCC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$(@:.o=.S)
 	cd $(3) ; \
 	$(CPP) $$(INCS) $$(@:.o=.S) | $(AS) $$(CPUASFLAGS) -o $$@
 
@@ -43,7 +43,7 @@ $(3)/$(1): $(2)/$(1:.o=.S)
 	@echo '    AS      $$@'
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; \
-	$(CC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
+	$(DEPCC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
 	cd $(3) ; \
 	$(CPP) $$(INCS) $$< | $(AS) $$(CPUASFLAGS) -o $$@
 
@@ -55,7 +55,7 @@ $(3)/$(1): $(2)/$(1:.o=.c) $(CONF_DIR)/.config.h
 	@echo '    CC      $$@'
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; \
-	$(CC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+	$(DEPCC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CFLAGS) $(DIR_CFLAGS) \
 		-M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
 	cd $(3) ; \
@@ -79,7 +79,9 @@ define declare_meta_h
 $(3)/$(1): $(2)/$(1:.h=.def)
 	@echo ' HOST CPP   $$@'
 	test -d $(3) || mkdir -p $(3)
-	$(HOSTCPP) $(2)/$(1:.h=.def) | grep '#define' > $(3)/$(1)
+	cat $(CONF_DIR)/.config.h $(2)/$(1:.h=.def) | \
+		$(HOSTCPP) $(HOSTCPPFLAGS) > $(3)/$(1).tmp
+	grep '#define' < $(3)/$(1).tmp > $(3)/$(1)
 
 endef
 
@@ -139,7 +141,9 @@ subdirs:=
 
 #$$( # info  OBJS=$$(objs))
 
-TARGET_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(copy) $$(meta))
+TARGET_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs))
+COPY_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(copy))
+META_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(meta))
 DEP_FILE_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(filter %.deps,$$(objs:.o=.deps)))
 CLEAN_FILE_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(copy) $$(meta))
 

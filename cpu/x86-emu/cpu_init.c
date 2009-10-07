@@ -46,6 +46,7 @@ cpu_global_init(void)
 
 #define TRACER_STACK_SIZE	65535
 
+#if 0
 void tracer_entry(struct cpu_cld_s *cld)
 {
   reg_t		regs[EMU_PTRACE_FRAME_SIZE];
@@ -68,8 +69,10 @@ void tracer_entry(struct cpu_cld_s *cld)
 		 EMU_PTRACE_CONT,
 		 cld->worker_pid, 0, 0);
 
+
   while (1);
 }
+#endif
 
 void cpu_init(void)
 {
