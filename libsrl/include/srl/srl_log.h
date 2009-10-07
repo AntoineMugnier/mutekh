@@ -28,9 +28,20 @@ void _cpu_printf(const char *, ...);
 #else
 # include <stdio.h>
 
-# define _srl_log(x) printf("%s", x)
-# define _srl_log_printf(x...) printf(x)
-# define _cpu_printf(x...) printf(x)
+# if defined(CONFIG_LIBC_STREAM_STD)
+#  define _srl_log(x) printf("%s", x)
+#  define _srl_log_printf(x...) printf(x)
+#  define _cpu_printf(x...) printk(x)
+# elif defined(CONFIG_MUTEK_CONSOLE)
+#  define _srl_log(x) printk("%s", x)
+#  define _srl_log_printf(x...) printk(x)
+#  define _cpu_printf(x...) printk(x)
+# else
+#  warning No srl_log backend available
+#  define _srl_log(x) do{}while(0)
+#  define _srl_log_printf(x...) do{}while(0)
+#  define _cpu_printf(x...) do{}while(0)
+# endif
 # define srl_console_init_task(x...)
 # define srl_console_init_cpu(x...)
 # define srl_console_init(x...)
