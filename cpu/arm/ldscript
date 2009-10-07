@@ -1,1 +1,1 @@
-ENTRY(arm_vectors)
+ENTRY(cpu_boot)

@@ -27,6 +27,8 @@ asm(
         ".section        .boot,\"ax\",@progbits                                            \n"
 
         ".globl cpu_boot                                                                   \n"
+        ".func cpu_boot				    \n\t"
+        ".type   cpu_boot, %function    \n\t"
         "cpu_boot:                                                                         \n"
 
         ".set push                                                                         \n"
@@ -105,6 +107,8 @@ asm(
 #endif
 
         ".set pop                                                                          \n"
+	".size   cpu_boot, .-cpu_boot   \n\t"
+	".endfunc \n\t"
 );
 
 // Local Variables:

@@ -34,10 +34,10 @@
 asm(
     ".section        .boot,\"ax\"	\n"
 
-    ".globl arm_vectors				\n\t"
-    ".func arm_vectors				    \n\t"
-	".type   arm_vectors, %function    \n\t"
-	"arm_vectors:                      \n\t"
+    ".globl cpu_boot				\n\t"
+    ".func cpu_boot				    \n\t"
+	".type   cpu_boot, %function    \n\t"
+	"cpu_boot:                      \n\t"
 	"ldr pc, =arm_boot                     \n\t"
 	"ldr pc, =arm_c_exc_undef                \n\t"
 
@@ -51,7 +51,7 @@ asm(
 	"nop                                   \n\t"
 	"ldr pc, =arm_c_irq_handler           \n\t"
 	"ldr pc, =arm_c_fiq_handler           \n\t"
-	".size   arm_vectors, .-arm_vectors   \n\t"
+	".size   cpu_boot, .-cpu_boot   \n\t"
 	".endfunc \n\t"
 
     ".globl arm_boot				  \n\t"

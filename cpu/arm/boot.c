@@ -42,9 +42,10 @@
 asm(
     ".section        .boot,\"ax\"			\n"
 
-    ".globl arm_vectors				\n\t"
-	".type   arm_vectors, %function \n\t"
-	"arm_vectors:                   \n\t"
+    ".globl cpu_boot				\n\t"
+	".func cpu_boot				    \n\t"
+	".type   cpu_boot, %function \n\t"
+	"cpu_boot:                   \n\t"
 	"b arm_boot                     \n\t"
 	"b arm_exc_undef                \n\t"
 	"b arm_exc_swi                  \n\t"
@@ -54,9 +55,11 @@ asm(
 	"b arm_exc_irq                  \n\t"
 	// We dont like FIQ. Therefore, we'll return straight.
 	"subs pc, r14, #4               \n\t"
-	".size   arm_vectors, .-arm_vectors\n\t"
+	".size   cpu_boot, .-cpu_boot\n\t"
+	".endfunc \n\t"
 
     ".globl arm_boot				\n\t"
+	".func arm_boot				    \n\t"
 	".type   arm_boot, %function   \n\t"
 	"arm_boot:                     \n\t"
 	"mrc  p15,0,r4,c0,c0,5       \n\t"
@@ -94,6 +97,7 @@ asm(
 	"ldr  r12, =arch_init             \n\t"
 	"bx   r12                         \n\t"
 	".size   arm_boot, .-arm_boot     \n\t"
+	".endfunc \n\t"
 
 	".globl arm_hw_interrupt_proxy    \n\t"
 	".type   arm_hw_interrupt_proxy, %function   \n\t"
