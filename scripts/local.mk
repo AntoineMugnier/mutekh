@@ -123,6 +123,7 @@ endef
 define scan_local_makefile
 
 LOCAL_SRC_DIR:=$(1)
+srcdir:=$(1)
 LOCAL_OBJ_DIR:=$(2)
 LOCAL_PPRINT_DIR:=$$(subst $(PWD)/,,$$(LOCAL_OBJ_DIR))
 
