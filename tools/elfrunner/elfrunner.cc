@@ -38,8 +38,9 @@ int main(int argc, char **argv)
 			return 1;
 		}
 		assert( ret == (void*)addr );
+		memset(addr, 0, size);
 		lseek(fd, offset, SEEK_SET);
-		read(fd, addr, size);
+		read(fd, addr, seg.get_file_size());
 		mprotect(addr, size, flags);
 	}
 
