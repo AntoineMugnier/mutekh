@@ -11,7 +11,7 @@
 
 struct fd_entry_s
 {
-  struct fileops_s *ops;
+  const struct fileops_s *ops;
   void *hndl;
 };
 
@@ -19,8 +19,6 @@ CONTAINER_TYPE(fdarray, DARRAY, struct fd_entry_s, 1, 256)
 CONTAINER_FUNC(fdarray, DARRAY, static, fdarray);
 
 static fdarray_root_t fd_array;
-
-#ifdef CONFIG_VFS
 
 static fd_t fd_new(fdarray_root_t *fda)
 {
@@ -33,8 +31,6 @@ static fd_t fd_new(fdarray_root_t *fda)
   return fdarray_alloc(fda);
 }
 
-#endif
-
 static struct fd_entry_s * fd_get(fdarray_root_t *fda, fd_t fd)
 {
   if (fd > fdarray_count(fda))
@@ -46,6 +42,17 @@ static struct fd_entry_s * fd_get(fdarray_root_t *fda, fd_t fd)
 static void fd_free(fdarray_root_t *fda, struct fd_entry_s *e)
 {
   e->hndl = NULL;
+}
+
+fd_t fd_add(const struct fileops_s *ops, void *hndl)
+{
+	fd_t fd = fd_new(&fd_array);
+	struct fd_entry_s *e = fd_get(&fd_array, fd);
+
+	e->ops = ops;
+	e->hndl = hndl;
+
+	return fd;
 }
 
 /* **********************************************************************

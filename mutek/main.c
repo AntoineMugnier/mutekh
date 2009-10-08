@@ -91,6 +91,10 @@ void arch_hw_init();
 static struct sched_context_s main_ctx;
 #endif
 
+#if defined(CONFIG_LIBC_STREAM_STD)
+void stdio_in_out_err_init();
+#endif
+
 int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
 #if defined (CONFIG_MUTEK_SCHEDULER)
@@ -103,6 +107,10 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #if defined(CONFIG_MUTEK_CONSOLE)
 	assert(console_dev);
 	printk_set_output(__printf_out_tty, console_dev);
+#endif
+
+#if defined(CONFIG_LIBC_STREAM_STD)
+	stdio_in_out_err_init();
 #endif
 
     cpu_interrupt_enable();
@@ -192,7 +200,8 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 
   if (cpu_isbootstrap())
     {
-      main(0, 0);
+		const char * const argv = {"mutek", NULL};
+      main(1, argv);
       cpu_interrupt_disable();
 #if defined(CONFIG_MUTEK_SCHEDULER)
       context_destroy(&main_ctx.context);

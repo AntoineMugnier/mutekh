@@ -71,3 +71,23 @@ static struct file_s stderr_file =
 
 FILE * const stderr = &stderr_file;
 
+
+fd_t fd_add(const struct fileops_s *ops, void *hndl);
+
+static inline void _fd_add(const struct fileops_s *ops, void *hndl)
+{
+	fd_t fd = fd_add(ops, hndl);
+
+//	printk("New fd: %p, %d\n", hndl, fd);
+}
+
+void stdio_in_out_err_init()
+{
+	fd_t fd;
+	fd = fd_add(&stdin_ops, stdin);
+	assert(fd == 0);
+	fd = fd_add(&stdout_ops, stdout);
+	assert(fd == 1);
+	fd = fd_add(&stdout_ops, stderr);
+	assert(fd == 2);
+}
