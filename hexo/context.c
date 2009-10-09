@@ -33,6 +33,10 @@ context_bootstrap(struct context_s *context)
       return res;
     }
 
+#ifdef CONFIG_HEXO_MMU
+  context->mmu = mmu_get_kernel_context();
+#endif
+
   return 0;
 }
 

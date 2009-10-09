@@ -1,3 +1,23 @@
+/*                                                                                                                                                                                                             
+    This file is part of MutekH.                                                                                                                                                                               
+                                                                                                                                                                                                               
+    MutekH is free software; you can redistribute it and/or modify it                                                                                                                                          
+    under the terms of the GNU General Public License as published by                                                                                                                                          
+    the Free Software Foundation; either version 2 of the License, or                                                                                                                                          
+    (at your option) any later version.                                                                                                                                                                        
+                                                                                                                                                                                                               
+    MutekH is distributed in the hope that it will be useful, but                                                                                                                                              
+    WITHOUT ANY WARRANTY; without even the implied warranty of                                                                                                                                                 
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU                                                                                                                                          
+    General Public License for more details.                                                                                                                                                                   
+                                                                                                                                                                                                               
+    You should have received a copy of the GNU General Public License                                                                                                                                          
+    along with MutekH; if not, write to the Free Software Foundation,                                                                                                                                          
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA                                                                                                                                               
+                                                                                                                                                                                                               
+    Copyright Dimitri Refauvelet <dimitri.refauvelet@lip6.fr> (c) 2009
+                                                                                                                                                                                                               
+*/
 
 #include <assert.h>
 #include <hexo/mmu.h>
@@ -5,59 +25,79 @@
 #include <mutek/vmem_kalloc.h>
 #include <mutek/page_alloc.h>
 
-static uintptr_t next_v_page = CONFIG_HEXO_MMU_INITIAL_END;
 
-void * vmem_vpage_kalloc(struct vmem_page_region_s *r, size_t count)
+static uintptr_t next_v_page;
+
+void vpage_init()
 {
-  uintptr_t paddr;
-  uintptr_t vaddr;
+  next_v_page = mmu_global_init() * MMU_PAGESIZE * MMU_TABLE_ENTRY + MMU_KERNEL_START_ADDR;
+}
 
-  assert(count == 1); 		/* FIXME !!! */
+void * vpage_kalloc(struct vmem_page_region_s *r, size_t count)
+{
+  paddr_t paddr;
+  uintptr_t vaddr;
+  uint_fast16_t i, j;
 
   vaddr = next_v_page;
-  next_v_page += CONFIG_HEXO_MMU_PAGESIZE;
+  assert( count <= ( MMU_KERNEL_END_ADDR - vaddr ) / MMU_PAGESIZE );
 
-  /* allocate a new physical page for page table */
-  if (ppage_alloc(r, &paddr))
-    return NULL;
-
-  if (mmu_vpage_set(vaddr, paddr, MMU_PAGE_ATTR_RWX | MMU_PAGE_ATTR_PRESENT))
+  if( count == 1 )
     {
-      ppage_refdrop(paddr);
-      return NULL;
+      if( ppage_alloc(r, &paddr))
+	return NULL;
+    }
+  else
+    {
+      if( ppage_contiguous_alloc( r, &paddr, count ) )
+	return NULL;
+    }  
+  
+  for( i = 0 ; i < count ; i++ )
+    {
+      if (mmu_vpage_set(vaddr + i * MMU_PAGESIZE, paddr + i * MMU_PAGESIZE, MMU_PAGE_ATTR_RWX | MMU_PAGE_ATTR_PRESENT ) )
+	{
+	  for( j = 0 ; j < count ; j ++ )
+	    ppage_refdrop(paddr + j * MMU_PAGESIZE );
+	  return NULL;
+	}
     }
 
+  next_v_page += MMU_PAGESIZE * count;
+  
   return (void*)vaddr;
 }
 
-void vmem_vpage_kfree(struct vmem_page_region_s *r, void *vaddr, size_t count)
+void vpage_kfree(void *vaddr, size_t count)
 {
-  uintptr_t paddr = mmu_vpage_get_paddr((uintptr_t)vaddr);
+  paddr_t paddr = mmu_vpage_get_paddr((uintptr_t)vaddr);
+  uint_fast16_t i;
 
-  assert(count == 1); 		/* FIXME !!! */
-
-  ppage_refdrop(paddr);
+  for( i = 0 ; i < count ; i++ )
+    {
+      ppage_refdrop( paddr + i * MMU_PAGESIZE );
+      mmu_vpage_mask_attr( ( uintptr_t )vaddr + i * MMU_PAGESIZE, 0, MMU_PAGE_ATTR_PRESENT );
+    }
 }
 
-uintptr_t vmem_vpage_io_map(uintptr_t paddr, size_t size)
+uintptr_t vpage_io_map(paddr_t paddr, size_t size)
 {
   uintptr_t vaddr, res;
 
-  if (paddr >= CONFIG_HEXO_MMU_INITIAL_START && paddr + size <= CONFIG_HEXO_MMU_INITIAL_END)
-    return paddr;
-
-  size = ALIGN_VALUE_UP(size, CONFIG_HEXO_MMU_PAGESIZE);
+  size = ALIGN_VALUE_UP(size, MMU_PAGESIZE);
+  
+  assert( size <= MMU_KERNEL_END_ADDR - next_v_page );
 
   res = vaddr = next_v_page;
   next_v_page += size;
 
   while (size)
     {
-      mmu_vpage_set(vaddr, paddr, MMU_PAGE_ATTR_RW | MMU_PAGE_ATTR_PRESENT);
+      mmu_vpage_set(vaddr, paddr, MMU_PAGE_ATTR_RW | MMU_PAGE_ATTR_PRESENT | MMU_PAGE_ATTR_NOCACHE );
 
-      paddr += CONFIG_HEXO_MMU_PAGESIZE;
-      vaddr += CONFIG_HEXO_MMU_PAGESIZE;
-      size -= CONFIG_HEXO_MMU_PAGESIZE;
+      paddr += MMU_PAGESIZE;
+      vaddr += MMU_PAGESIZE;
+      size -= MMU_PAGESIZE;
     }
 
   return res;

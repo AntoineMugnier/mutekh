@@ -68,8 +68,20 @@ typedef signed int		int32_t;
 /** base interger type, 64 bits signed int */
 typedef signed long long	int64_t;
 
+
 #include "cpu/hexo/types.h"
 #include "arch/hexo/types.h"
+
+/** physical address type*/
+#if defined( CONFIG_HEXO_MMU_PADDR )
+# if CONFIG_HEXO_MMU_PADDR <= 32
+typedef uint32_t paddr_t;
+# else
+typedef uint64_t paddr_t;
+# endif
+#else
+typedef uintptr_t paddr_t;
+#endif //CONFIG_HEXO_MMU_PADDR
 
 /* type used to prevent ld script symbols from being placed in
    .sdata section */

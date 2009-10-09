@@ -15,7 +15,7 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+    Copyright Dimitri Refauvelet <dimitri.refauvelet@lip6.fr> (c) 2009
 
 */
 
@@ -43,7 +43,7 @@
 struct vmem_page_region_s
 {
   /** physical address of memory region */
-  uintptr_t			paddr;
+  paddr_t			paddr;
   /** memory region size */
   size_t			size;
   /** memory region page count */
@@ -61,35 +61,31 @@ struct vmem_page_region_s
 extern struct vmem_page_region_s initial_region;
 
 /** Init a physical pages memory allocator region. */
-error_t ppage_region_init(struct vmem_page_region_s *r, uintptr_t paddr, uintptr_t paddr_end);
+error_t ppage_region_init(struct vmem_page_region_s *r, paddr_t paddr, paddr_t paddr_end);
 
 /** Destroy a physical pages memory allocator region. */
 void ppage_region_destroy(struct vmem_page_region_s *r);
 
 /** Check if a physical address is in region range. */
-bool_t ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr);
+bool_t ppage_inrange(struct vmem_page_region_s *r, paddr_t paddr);
 
 /** Allocate a free physical page in region and set paddr value. */
-error_t ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr);
+error_t ppage_alloc(struct vmem_page_region_s *r, paddr_t *paddr);
 
 /** Allocate contiguous free physical pages and set paddr value to the first one */
-error_t ppage_contiguous_alloc(struct vmem_page_region_s *r, uintptr_t *paddr, size_t size);
+error_t ppage_contiguous_alloc(struct vmem_page_region_s *r, paddr_t *paddr, size_t size);
 
 /** Try to reserve all pages in pysical address range. All pages must be free. */
-error_t ppage_reserve(uintptr_t paddr, uintptr_t paddr_end);
+error_t ppage_reserve(paddr_t paddr, paddr_t paddr_end);
 
 /** Get a new reference to an already allocated physical page. */
-uintptr_t ppage_refnew( uintptr_t paddr);
+paddr_t ppage_refnew( paddr_t paddr);
 
 /** Drop a reference to an allocated physical page, page is marked as free if counter reach 0. */
-void ppage_refdrop( uintptr_t paddr);
+void ppage_refdrop( paddr_t paddr);
 
 /** Return paddr's region*/
-static inline 
-struct vmem_page_region_s *ppage_to_region(uintptr_t paddr)
-{
-  return &initial_region;
-}
+struct vmem_page_region_s *ppage_to_region(paddr_t paddr);
 
 /** Return the physical page allocator's initial region*/
 struct vmem_page_region_s *ppage_initial_region_get();

@@ -32,26 +32,15 @@ extern __ldscript_symbol_t __ramlock_base_start;
 uintptr_t __ramlock_base = (uintptr_t)&__ramlock_base_start;
 #endif
 
+/* #if defined(CONFIG_MUTEK_SCHEDULER) */
+/* void sched_global_init(void); */
+/* void sched_cpu_init(void); */
+/* #endif */
+
 #ifdef CONFIG_HEXO_MMU
 extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
 #include <hexo/mmu.h>
-
-#ifdef CONFIG_VMEM_PHYS_ALLOC
-MMU_PPAGE_ALLOCATOR(ppage_alloc);
-MMU_PPAGE_REFDROP(ppage_refdrop);
-#else /*CONFIG_VMEM_PHYS_ALLOC*/
-# error Add physical page allocator here
-#endif /*CONFIG_VMEM_PHYS_ALLOC*/
-
-
-#ifdef CONFIG_VMEM_KERNEL_ALLOC
-MMU_VPAGE_ALLOCATOR(vmem_vpage_kalloc);
-MMU_VPAGE_FREE(vmem_vpage_kfree);
-#else /*CONFIG_VMEM_KERNEL_ALLOC*/
-# error Add kernel virtual memory allocator here 
-#endif /*CONFIG_VMEM_KERNEL_ALLOC*/
-
-#endif /*CONFIG_HEXO_MMU*/
+#endif
 
 #ifdef CONFIG_SMP
 static uint_fast8_t cpu_count = 1;
@@ -85,25 +74,17 @@ void arch_init()
         t0+=CONFIG_SOCLIB_VMEM_MALLOC_REGION_SIZE;
 
 #ifdef CONFIG_VMEM_PHYS_ALLOC
-        vmem_ops.ppage_alloc = &ppage_alloc;
-        vmem_ops.ppage_refdrop = &ppage_refdrop;
-        initial_ppage_region = (struct vmem_page_region_s *)ppage_initial_region_get();
-        ppage_region_init(initial_ppage_region, t0, t1);
-#else
-# error Add physical page allocator init 
+        vmem_ppage_ops_init(&vmem_ops);
+        initial_ppage_region = vmem_ops.ppage_initial_region_get();
+        vmem_ops.ppage_region_init(initial_ppage_region, t0, t1);
 #endif
-
-        mmu_global_init(vmem_vpage_kalloc, ppage_alloc);
 
 #ifdef CONFIG_VMEM_KERNEL_ALLOC
-        vmem_ops.vpage_alloc = &vmem_vpage_kalloc;
-        vmem_ops.vpage_free = &vmem_vpage_kfree;
-        //    vmem_init(t0, t1);
-#else
-# error Add virtual kernel page allocator init 
+        vmem_vpage_ops_init(&vmem_ops);
+        vmem_ops.vpage_init();
 #endif
 
-#endif
+#endif /*CONFIG_HEXO_MMU*/
 
         /* configure first CPU */
         cpu_init();

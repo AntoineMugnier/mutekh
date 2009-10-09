@@ -205,6 +205,25 @@ void device_dump_list(struct device_s *root);
 struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i);
 void device_init(struct device_s *dev);
 
+#ifdef CONFIG_VMEM
+uintptr_t vpage_io_map(paddr_t paddr, size_t size);
+#endif
+
+static inline
+error_t device_mem_map(struct device_s *dev, uint_fast8_t mask)
+{
+#if defined( CONFIG_VMEM )
+  uint_fast8_t i;
+  for( i = 0 ; i < ( sizeof(uint_fast8_t) * 8 ) ; i++ )
+    {
+    if( mask & 0x1 )
+      dev->addr[ i ] = vpage_io_map( dev->addr[ i ], 1 );
+    mask >>= 1;
+    }
+#endif
+  return 0;
+}
+
 #endif /* !CONFIG_HEXO_DEVICE_TREE */
 
 #ifdef CONFIG_HEXO_DEVICE_TREE

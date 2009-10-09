@@ -99,7 +99,7 @@ const struct driver_s	icu_soclib_drv =
 DEV_INIT(icu_soclib_init)
 {
   struct icu_soclib_private_s	*pv;
-
+  device_mem_map( dev , ( 1 << ICU_ADDR_MASTER ) );
   dev->drv = &icu_soclib_drv;
 
   if ((pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS))) /* FIXME allocation scope ? */

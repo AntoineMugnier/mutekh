@@ -88,7 +88,7 @@ void mem_init(void)
 #endif
 
 #if defined(CONFIG_SMP)
-  mem_region_default = &mem_region_system;
+  mem_alloc_set_default(&mem_region_system);
 #endif
 
 #if defined(CONFIG_CLUSTER)

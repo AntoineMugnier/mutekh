@@ -15,8 +15,7 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
-
+    Copyright Dimitri Refauvelet <dimitri.refauvelet@lip6.fr> (c) 2009
 */
 
 #ifndef VMEM_KALLOC_H_
@@ -40,15 +39,18 @@
  * Kernel virtual space management
  */
 
+/* initialisation of virtual memory kernel allocator */
+void vpage_init();
+
 /* map a physical address range somewhere in kernel space and return
    its address or 0 on error, may flush tlb  */
-uintptr_t vmem_vpage_io_map(uintptr_t paddr, size_t byte_size);
+uintptr_t vpage_io_map(paddr_t paddr, size_t byte_size);
 
 /* allocate virtual page memory in kernel page space, may flush tlb */
-void * vmem_vpage_kalloc(struct vmem_page_region_s *r, size_t count);
+void * vpage_kalloc(struct vmem_page_region_s *r, size_t count);
 
 /* free a kernel virtual page */
-void vmem_vpage_kfree(struct vmem_page_region_s *r, void *vaddr, size_t count);
+void vpage_kfree(void *vaddr, size_t count);
 
 # endif
 

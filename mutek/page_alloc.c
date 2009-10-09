@@ -1,3 +1,23 @@
+/*                                                                                                                                                                                                             
+    This file is part of MutekH.                                                                                                                                                                               
+                                                                                                                                                                                                               
+    MutekH is free software; you can redistribute it and/or modify it                                                                                                                                          
+    under the terms of the GNU General Public License as published by                                                                                                                                          
+    the Free Software Foundation; either version 2 of the License, or                                                                                                                                          
+    (at your option) any later version.                                                                                                                                                                        
+                                                                                                                                                                                                               
+    MutekH is distributed in the hope that it will be useful, but                                                                                                                                              
+    WITHOUT ANY WARRANTY; without even the implied warranty of                                                                                                                                                 
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU                                                                                                                                          
+    General Public License for more details.                                                                                                                                                                   
+                                                                                                                                                                                                               
+    You should have received a copy of the GNU General Public License                                                                                                                                          
+    along with MutekH; if not, write to the Free Software Foundation,                                                                                                                                          
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA                                                                                                                                               
+                                                                                                                                                                                                               
+    Copyright Dimitri Refauvelet <dimitri.refauvelet@lip6.fr> (c) 2009
+                                                                                                                                                                                                               
+*/
 
 #include <mutek/page_alloc.h>
 
@@ -12,12 +32,12 @@
 struct vmem_page_region_s initial_region;
 
 error_t ppage_region_init(struct vmem_page_region_s *r,
-			       uintptr_t paddr, uintptr_t paddr_end)
+			       paddr_t paddr, paddr_t paddr_end)
 {
   uint_fast32_t i;
 
-  paddr = ALIGN_VALUE_UP(paddr, CONFIG_HEXO_MMU_PAGESIZE);
-  paddr_end = ALIGN_VALUE_LOW(paddr_end, CONFIG_HEXO_MMU_PAGESIZE);
+  paddr = ALIGN_VALUE_UP(paddr, MMU_PAGESIZE);
+  paddr_end = ALIGN_VALUE_LOW(paddr_end, MMU_PAGESIZE);
 
   assert(paddr_end > paddr);
 
@@ -26,7 +46,7 @@ error_t ppage_region_init(struct vmem_page_region_s *r,
 
   r->paddr = paddr;
   r->size = paddr_end - paddr;
-  r->free_count = r->count = r->size / CONFIG_HEXO_MMU_PAGESIZE;
+  r->free_count = r->count = r->size / MMU_PAGESIZE;
   r->free_head = 0;
   r->table = mem_alloc(r->count * sizeof (uint_fast32_t), MEM_SCOPE_SYS);
 
@@ -53,7 +73,7 @@ void ppage_region_destroy(struct vmem_page_region_s *r)
   lock_destroy(&r->lock);  
 }
 
-error_t ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr)
+error_t ppage_alloc(struct vmem_page_region_s *r, paddr_t *paddr)
 {
   uint_fast32_t *t;
   error_t res = -ENOMEM;
@@ -63,7 +83,7 @@ error_t ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr)
   if (r->free_count > 0)
     {
       t = r->table + r->free_head;
-      *paddr = r->paddr + r->free_head * CONFIG_HEXO_MMU_PAGESIZE;
+      *paddr = r->paddr + r->free_head * MMU_PAGESIZE;
       r->free_head = VMEM_PPAGE_VALUE(*t);
       *t = VMEM_PPAGE_SET(0, 1);		/* intial refcount is 1 */
       r->free_count--;
@@ -75,7 +95,7 @@ error_t ppage_alloc(struct vmem_page_region_s *r, uintptr_t *paddr)
   return res;
 }
 
-error_t ppage_contiguous_alloc(struct vmem_page_region_s *r, uintptr_t *paddr, size_t size)
+error_t ppage_contiguous_alloc(struct vmem_page_region_s *r, paddr_t *paddr, size_t size)
 {
   uint_fast32_t i, first, count;
   uint_fast32_t *n, c = 0;
@@ -119,38 +139,40 @@ error_t ppage_contiguous_alloc(struct vmem_page_region_s *r, uintptr_t *paddr, s
    
    LOCK_RELEASE_IRQ(&r->lock);
 
-  return 0;
+   *paddr = r->paddr + first * MMU_PAGESIZE;
+
+   return 0;
  err:
-  return -ENOMEM;
+   return -ENOMEM;
 }
 
-bool_t ppage_inrange(struct vmem_page_region_s *r, uintptr_t paddr)
+bool_t ppage_inrange(struct vmem_page_region_s *r, paddr_t paddr)
 {
-  assert(paddr % CONFIG_HEXO_MMU_PAGESIZE == 0);
+  //  assert(paddr % MMU_PAGESIZE == 0);
 
   return ((paddr >= r->paddr) &&
 	  (paddr < r->paddr + r->size));
 }
 
-error_t ppage_reserve(uintptr_t paddr, uintptr_t paddr_end)
+error_t ppage_reserve(paddr_t paddr, paddr_t paddr_end)
 {
   uint_fast32_t i, p;
   size_t size;
   error_t res = 0;
   struct vmem_page_region_s *r;
     
-  paddr = ALIGN_VALUE_UP(paddr, CONFIG_HEXO_MMU_PAGESIZE);
-  paddr_end = ALIGN_VALUE_LOW(paddr_end, CONFIG_HEXO_MMU_PAGESIZE);
+  paddr = ALIGN_VALUE_UP(paddr, MMU_PAGESIZE);
+  paddr_end = ALIGN_VALUE_LOW(paddr_end, MMU_PAGESIZE);
 
   assert(paddr_end > paddr);
 
   r = ppage_to_region(paddr);
 
-  size = (paddr_end - paddr) / CONFIG_HEXO_MMU_PAGESIZE;
+  size = (paddr_end - paddr) / MMU_PAGESIZE;
 
   LOCK_SPIN_IRQ(&r->lock);
 
-  p = (paddr - r->paddr) / CONFIG_HEXO_MMU_PAGESIZE;
+  p = (paddr - r->paddr) / MMU_PAGESIZE;
 
   /* check if all region is free */
   for (i = p; i < p + size; i++)
@@ -188,7 +210,7 @@ error_t ppage_reserve(uintptr_t paddr, uintptr_t paddr_end)
   return res;
 }
 
-uintptr_t ppage_refnew(uintptr_t paddr)
+paddr_t ppage_refnew(paddr_t paddr)
 {
   uint_fast32_t *t;
   uint_fast32_t p;
@@ -198,7 +220,7 @@ uintptr_t ppage_refnew(uintptr_t paddr)
   r = ppage_to_region(paddr);    
   assert(ppage_inrange(r,paddr));
 
-  p = (paddr - r->paddr) / CONFIG_HEXO_MMU_PAGESIZE;
+  p = (paddr - r->paddr) / MMU_PAGESIZE;
   t = r->table + p;
 
   LOCK_SPIN_IRQ(&r->lock);
@@ -209,7 +231,7 @@ uintptr_t ppage_refnew(uintptr_t paddr)
   return paddr;
 }
 
-void ppage_refdrop(uintptr_t paddr)
+void ppage_refdrop(paddr_t paddr)
 {
   uint_fast32_t *t;
   uint_fast32_t p;
@@ -218,7 +240,7 @@ void ppage_refdrop(uintptr_t paddr)
   r = ppage_to_region(paddr);  
   assert(ppage_inrange(r,paddr));
   
-  p = (paddr - r->paddr) / CONFIG_HEXO_MMU_PAGESIZE;
+  p = (paddr - r->paddr) / MMU_PAGESIZE;
   t = r->table + p;
 
   LOCK_SPIN_IRQ(&r->lock);
@@ -235,7 +257,14 @@ void ppage_refdrop(uintptr_t paddr)
   LOCK_RELEASE_IRQ(&r->lock);  
 }
 
+struct vmem_page_region_s *ppage_to_region(paddr_t paddr)
+{
+  return &initial_region;
+}
+
+
 struct vmem_page_region_s *ppage_initial_region_get() 
 {
   return &initial_region;
 }
+

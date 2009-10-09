@@ -157,7 +157,7 @@ const struct driver_s	tty_soclib_drv =
 DEV_INIT(tty_soclib_init)
 {
   struct tty_soclib_context_s	*pv;
-
+  device_mem_map( dev , 1 << 0 );
   dev->drv = &tty_soclib_drv;
 
   /* alocate private driver data */

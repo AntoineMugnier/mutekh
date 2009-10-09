@@ -138,7 +138,7 @@ const struct driver_s	xicu_soclib_drv =
 DEV_INIT(xicu_soclib_init)
 {
   struct xicu_soclib_private_s	*pv;
-
+  device_mem_map( dev , ( 1 << XICU_ADDR_MASTER ) );
   dev->drv = &xicu_soclib_drv;
 
   if (!(pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS)))

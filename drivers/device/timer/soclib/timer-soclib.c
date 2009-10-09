@@ -167,7 +167,7 @@ const struct driver_s	timer_soclib_drv =
 DEV_INIT(timer_soclib_init)
 {
   struct timer_soclib_context_s	*pv;
-
+  device_mem_map( dev , 1 << 0 );
   dev->drv = &timer_soclib_drv;
 
   /* allocate private driver data */

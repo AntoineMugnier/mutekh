@@ -81,13 +81,13 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
   _reg;						\
 })
 
-#define cpu_mips_mtc0(id, sel, val)										   \
+#define cpu_mips_mtc0(id, sel, val)		\
 ({						\
-  reg_t _reg = val;					\
+  reg_t _reg = val;				\
 						\
   asm volatile ("mtc0	%0,	$%1, %2	\n"	\
-				:: "r" (_reg)			\
-				, "i" (id)		\
+				:: "r" (_reg)	\
+				, "i" (id)	\
 		, "i" (sel)			\
 		);				\
 })
@@ -105,13 +105,13 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
   _reg;						\
 })
 
-#define cpu_mips_mtc2(id, sel, val)										   \
+#define cpu_mips_mtc2(id, sel, val)		\
 ({						\
-  reg_t _reg = val;					\
+  reg_t _reg = val;				\
 						\
   asm volatile ("mtc2	%0,	$%1, %2	\n"	\
-				:: "r" (_reg)			\
-				, "i" (id)		\
+				:: "r" (_reg)	\
+				, "i" (id)	\
 		, "i" (sel)			\
 		);				\
 })
@@ -133,11 +133,11 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
 #define cpu_mips_mtc0(id, sel, val)										   \
 ({						\
-  reg_t _reg = val;					\
+  reg_t _reg = val;				\
 						\
   asm volatile ("mtc0	%0,	$%1 \n"		\
-				:: "r" (_reg)			\
-				, "i" (id)				\
+				:: "r" (_reg)	\
+				, "i" (id)	\
 		);				\
 })
 
@@ -153,13 +153,13 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
   _reg;						\
 })
 
-#define cpu_mips_mtc2(id, sel, val)										   \
+#define cpu_mips_mtc2(id, sel, val)		\
 ({						\
-  reg_t _reg = val;					\
+  reg_t _reg = val;				\
 						\
   asm volatile ("mtc2	%0,	$%1 \n"		\
-				:: "r" (_reg)			\
-				, "i" (id)				\
+				:: "r" (_reg)	\
+				, "i" (id)	\
 		);				\
 })
 
