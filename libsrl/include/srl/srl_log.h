@@ -25,6 +25,9 @@ enum __srl_verbosity {
 void _srl_log(const char *);
 void _srl_log_printf(const char *, ...);
 void _cpu_printf(const char *, ...);
+void srl_console_init_task(void*);
+void srl_console_init_cpu(void*);
+void srl_console_init(void*);
 #else
 # include <stdio.h>
 

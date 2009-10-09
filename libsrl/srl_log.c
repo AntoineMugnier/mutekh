@@ -90,6 +90,14 @@ void srl_console_init(void *addr)
 	tcg_tty = addr;
 }
 
+void srl_console_init_cpu(void *addr)
+{
+}
+
+void srl_console_init_task(void *addr)
+{
+}
+
 void _srl_log(const char *str)
 {
 	srl_log_out(tcg_tty, str, 0, strlen(str));
