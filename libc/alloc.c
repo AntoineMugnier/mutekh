@@ -42,7 +42,10 @@ realloc(void *ptr, size_t size)
   if (oldsize >= size)
     return ptr;
 
-  p = malloc(size);
+  
+  if( ! (p = malloc(size)))
+    return NULL;
+
   memcpy(p, ptr, oldsize);
 
   free(ptr);
