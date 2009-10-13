@@ -159,7 +159,7 @@ void do_block_hexdump(struct device_s *bd, size_t lba)
 }
 
 
-int main()
+void app_start()
 {
 	if ( block_partition_create(&bd_dev, 0) > 0 ) {
 		part_dev = device_get_child(&bd_dev, 0);

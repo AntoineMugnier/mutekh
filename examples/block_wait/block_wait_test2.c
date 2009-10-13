@@ -55,7 +55,7 @@ static CONTEXT_ENTRY(a_entry)
   while(1);
 }
 
-int main()
+void app_start()
 {
 #if defined(CONFIG_ARCH_IBMPC)
   static reg_t stack_bufa[10240];
@@ -113,7 +113,5 @@ int main()
 #else
 # error Kapoueh
 #endif
-
-  return 0;
 }
 

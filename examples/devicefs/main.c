@@ -120,7 +120,7 @@ void* thread_func(void *arg)
 
 
 
-int main()
+void app_start()
 {
   cpu_interrupt_enable();
   assert(cpu_is_interruptible());
@@ -147,6 +147,5 @@ int main()
   }
 
   printk("LEAVE\n");
-  return 0;
 }
 

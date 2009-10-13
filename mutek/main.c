@@ -95,7 +95,7 @@ static struct sched_context_s main_ctx;
 void stdio_in_out_err_init();
 #endif
 
-int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
+int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
 #if defined (CONFIG_MUTEK_SCHEDULER)
 	context_bootstrap(&main_ctx.context);
@@ -131,7 +131,7 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
   cpu_interrupt_disable();
 
-  mutek_main_smp();
+  mutek_start_smp();
 
   return 0;
 }
@@ -182,9 +182,9 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 }
 
 /** application main function */
-int_fast8_t main(size_t argc, char **argv);
+void app_start();
 
-void mutek_main_smp(void)  /* ALL CPUs execute this function */
+void mutek_start_smp(void)  /* ALL CPUs execute this function */
 {
   lock_init(&fault_lock);
   cpu_exception_sethandler(fault_handler);
@@ -200,8 +200,7 @@ void mutek_main_smp(void)  /* ALL CPUs execute this function */
 
   if (cpu_isbootstrap())
     {
-		const char * const argv = {"mutek", NULL};
-      main(1, argv);
+      app_start();
       cpu_interrupt_disable();
 #if defined(CONFIG_MUTEK_SCHEDULER)
       context_destroy(&main_ctx.context);

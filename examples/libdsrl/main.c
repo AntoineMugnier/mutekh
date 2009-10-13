@@ -149,7 +149,7 @@ void* shell(void *param)
     return 0;
 }
 
-int main()
+void app_start()
 {
     pthread_create(&a, NULL, shell, NULL);
 }

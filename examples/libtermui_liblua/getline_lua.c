@@ -42,7 +42,7 @@ static GETLINE_FCN_PROMPT(prompt)
 
 extern struct device_s *console_dev;
 
-int main()
+void app_start()
 {
   struct term_s			*tm;
   struct term_behavior_s	*bhv;
@@ -54,7 +54,7 @@ int main()
 
   /* initialize terminal */
   if (!(tm = term_alloc(console_dev, console_dev, luast)))
-    return -1;
+    return;
 
   /* set capabilities */
   term_set(tm, "xterm");
@@ -63,7 +63,7 @@ int main()
 
   /* initialize getline behavior according to term capabilities */
   if (!(bhv = getline_alloc(tm, 256)))	/* max line len = 256 */
-    return -1;
+    return;
 
   getline_history_init(bhv, 64); /* 64 entries max */
   getline_complete_init(bhv, lua_complete);
@@ -111,7 +111,5 @@ int main()
 
   /* free resources and restore terminal attributes */
   term_free(tm);
-
-  return 0;
 }
 

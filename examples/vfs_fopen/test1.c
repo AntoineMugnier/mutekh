@@ -56,7 +56,7 @@ void* cat(void* arg)
     fprintf(stderr, "bye...\nbye");
 }
 
-int main()
+void app_start()
 {
     device_init(&bd_dev);
     block_file_emu_init(&bd_dev, "img.bin");

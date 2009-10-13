@@ -60,7 +60,7 @@ void *f(void *param)
     ;
 }
 
-int main()
+void app_start()
 {
   pthread_create(&a, NULL, f, "Hello World\n");
 }

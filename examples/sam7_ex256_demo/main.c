@@ -125,7 +125,7 @@ void* lua_main(void *unused)
 
 void *joystick_main(void *unused);
 
-int main()
+void app_start()
 {
 	cpu_interrupt_enable();
 
@@ -134,6 +134,4 @@ int main()
 
 	static pthread_t b;
 	pthread_create(&b, NULL, joystick_main, NULL);
-
-	return 0;
 }

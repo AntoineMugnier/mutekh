@@ -8,7 +8,7 @@
 
 struct device_s random_dev, zero_dev, null_dev;
 
-int_fast8_t main(size_t argc, char **argv)
+void app_start()
 {
   uint8_t buf[256];
 

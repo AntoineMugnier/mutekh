@@ -26,7 +26,7 @@ int cmd_print(lua_State *st)
   return 0;
 }
 
-int main()
+void app_start()
 {
   const char	*cmd = "for i = 1, 6, 1 do print (\"coucou\", i); end";
 

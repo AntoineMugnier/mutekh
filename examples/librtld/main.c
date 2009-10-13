@@ -83,7 +83,7 @@ void* shell(void *param)
 
     /* initialize terminal */
     if (!(tm = term_alloc(console_dev, console_dev, luast)))
-        return -1;
+        return;
 
     /* set capabilities */
     term_set(tm, "xterm");
@@ -98,7 +98,7 @@ void* shell(void *param)
 
     /* initialize getline behavior according to term capabilities */
     if (!(bhv = getline_alloc(tm, 256)))	/* max line len = 256 */
-        return -1;
+        return;
 
     getline_history_init(bhv, 64); /* 64 entries max */
     getline_complete_init(bhv, lua_complete);
@@ -154,11 +154,9 @@ void* shell(void *param)
 
     /* free resources and restore terminal attributes */
     term_free(tm);
-
-    return 0;
 }
 
-int main()
+void app_start()
 {
     device_init(&bd_dev);
 #if defined (CONFIG_ARCH_SOCLIB)

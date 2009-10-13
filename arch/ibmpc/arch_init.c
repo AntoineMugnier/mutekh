@@ -120,8 +120,8 @@ void arch_init()
       sched_cpu_init();
 #endif
 
-      /* run mutek_main() */
-      mutek_main(0, 0);
+      /* run mutek_start() */
+      mutek_start(0, 0);
 #ifdef CONFIG_SMP
     }
   else
@@ -147,8 +147,8 @@ void arch_init()
       sched_cpu_init();
 #endif
 
-      /* run mutek_main_smp() */
-      mutek_main_smp();
+      /* run mutek_start_smp() */
+      mutek_start_smp();
     }
 #endif
 }

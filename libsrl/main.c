@@ -163,7 +163,7 @@ void srl_console_init_cpu(void *addr);
 void srl_console_init_task(void *addr);
 void srl_console_init(void *addr);
 
-void mutek_main_smp(void)
+void mutek_start_smp(void)
 {
 	cpu_exception_sethandler(fault_handler);
 	srl_cpu_init(app_desc.cpu[cpu_id()]);
@@ -176,7 +176,7 @@ void mutek_main_smp(void)
 	sched_context_exit();
 }
 
-int_fast8_t mutek_main(int_fast8_t argc, char **argv)
+int_fast8_t mutek_start(int_fast8_t argc, char **argv)
 {
 	srl_console_init(app_desc.tty_addr);
 
@@ -188,13 +188,13 @@ int_fast8_t mutek_main(int_fast8_t argc, char **argv)
 #endif
 
 	arch_start_other_cpu();
-	mutek_main_smp();
+	mutek_start_smp();
 	return 0;
 }
 
-#else /* has mutek_main() */
+#else /* has mutek_start() */
 
-int main()
+void app_start()
 {
 	lock_init(&fault_lock);
 #ifndef CONFIG_PTHREAD
@@ -219,7 +219,6 @@ int main()
 	soclib_mem_check_delete_ctx(cpu_id())
 #endif
 	sched_context_exit();
-	return 0;
 }
 
 #endif

@@ -65,8 +65,8 @@ void arch_init()
   sched_cpu_init();
 #endif
 
-  /* run mutek_main() */
-  mutek_main(0, 0);
+  /* run mutek_start() */
+  mutek_start(0, 0);
 
   while (1)
     ;
