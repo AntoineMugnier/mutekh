@@ -93,7 +93,7 @@ void arch_hw_init()
 	icu_dev.addr[ICU_ADDR_SLAVE] = 0x00a0;
 	icu_8259_init(&icu_dev, NULL);
 # else
-#  error CONFIG_DRIVER_ICU case not handled in mutek_main()
+#  error CONFIG_DRIVER_ICU case not handled in hw_init()
 # endif
 #endif
 
@@ -107,7 +107,7 @@ void arch_hw_init()
 	uart_dev.icudev = &icu_dev;
 	uart_8250_init(&uart_dev, NULL);
 # else
-#  warning CONFIG_DRIVER_UART case not handled in mutek_main()
+#  warning CONFIG_DRIVER_UART case not handled in hw_init()
 # endif
 #endif
 
@@ -120,7 +120,7 @@ void arch_hw_init()
 	tty_dev.icudev = &icu_dev;
 	tty_vga_init(&tty_dev, NULL);
 # else
-#  warning CONFIG_DRIVER_TTY case not handled in mutek_main()
+#  warning CONFIG_DRIVER_TTY case not handled in hw_init()
 # endif
 #endif
 
@@ -134,7 +134,7 @@ void arch_hw_init()
 	timer_dev.icudev = &icu_dev;
 	timer_8253_init(&timer_dev, NULL);
 # else
-#  warning CONFIG_DRIVER_TIMER case not handled in mutek_main()
+#  warning CONFIG_DRIVER_TIMER case not handled in hw_init()
 # endif
 #endif
 
@@ -146,7 +146,7 @@ void arch_hw_init()
 	keyboard_dev.icudev = &icu_dev;
 	input_8042_init(&keyboard_dev, NULL);
 # else
-#  warning CONFIG_DRIVER_KEYBOARD case not handled in mutek_main()
+#  warning CONFIG_DRIVER_KEYBOARD case not handled in hw_init()
 # endif
 #endif
 
@@ -162,7 +162,7 @@ void arch_hw_init()
 	memcpy(p, mutek_logo_320x200, 64000);
 #  endif
 # else
-#  warning CONFIG_DRIVER_FB case not handled in mutek_main()
+#  warning CONFIG_DRIVER_FB case not handled in hw_init()
 # endif
 #endif
 

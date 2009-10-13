@@ -63,7 +63,7 @@ void arch_hw_init()
 # if defined(CONFIG_DRIVER_CHAR_EMUTTY)
 	tty_emu_init(&tty_dev, NULL);
 # else
-#  error CONFIG_DRIVER_TTY case not handled in mutek_main()
+#  error CONFIG_DRIVER_TTY case not handled in hw_init()
 # endif
 
 	console_dev = &tty_dev;
@@ -78,7 +78,7 @@ void arch_hw_init()
 	dev_timer_setperiod(&timer_dev, 0, 0xffff);
 	dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 # else
-#  warning CONFIG_DRIVER_TIMER case not handled in mutek_main()
+#  warning CONFIG_DRIVER_TIMER case not handled in hw_init()
 # endif
 #endif
 }
