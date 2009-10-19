@@ -18,15 +18,23 @@ endef
 
 define declare_obj
 
+DEP_FILE_LIST+=$(3)/$(1:.o=.deps)
+
 #$( # info  ======== declare_obj, $(1), $(2), $(3))
 
 ifeq ($(wildcard $(2)/$(1:.o=.S.m4)),$(2)/$(1:.o=.S.m4))
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be M4+ASM file)
 
-$(3)/$(1): $(2)/$(1:.o=.S.m4)
+DEP_FILE_LIST+=$(3)/$(1:.o=.m4.deps)
+
+$(3)/$(1): $(2)/$(1:.o=.S.m4) $(MUTEK_SRC_DIR)/scripts/global.m4 $(CONF_DIR)/.config.m4 $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py
 	@echo '   M4+AS    $$@'
 	test -d $(3) || mkdir -p $(3)
+	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(CONF_DIR)/.config.m4 \
+		$$< | m4 -s $$(filter -I%,$$(INCS)) -P | \
+		python $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py \
+		$$@ $$(filter -I%,$$(INCS)) > $$(@:.o=.m4.deps)
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(CONF_DIR)/.config.m4 \
 		$$< | m4 $$(filter -I%,$$(INCS)) -P > $$(@:.o=.S)
 	cd $(3) ; \
@@ -85,16 +93,13 @@ $(3)/$(1): $(2)/$(1:.h=.def)
 
 endef
 
-define declare_meta_m4
-
-endef
-
-
 ## declare_meta_cpp: file_name, src_dir, obj_dir
 
 define declare_meta_cpp
 
 #$( # info  ======== declare_meta_cpp, $(1), $(2), $(3))
+
+DEP_FILE_LIST+=$(3)/$(1).deps
 
 ifeq ($(wildcard $(2)/$(1).cpp),$(2)/$(1).cpp)
 
@@ -102,14 +107,19 @@ ifeq ($(wildcard $(2)/$(1).cpp),$(2)/$(1).cpp)
 $(3)/$(1): $(2)/$(1).cpp $(CONF_DIR)/.config.h
 	@echo '    CPP     $$@'
 	test -d $(3) || mkdir -p $(3)
+	$(DEPCC) -E -M -MF $$@.deps -MT $$@ $$(INCS) -P -x c $$<
 	$(CC) -E $$(INCS) -P -x c - < $$< > $$@
 
 else
 
 # m4 preprocessed files
-$(3)/$(1): $(2)/$(1).m4 $(CONF_DIR)/.config.m4
+$(3)/$(1): $(2)/$(1).m4 $(CONF_DIR)/.config.m4 $(MUTEK_SRC_DIR)/scripts/global.m4 $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py
 	@echo '    M4      $$@'
 	test -d $(3) || mkdir -p $(3)
+	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(CONF_DIR)/.config.m4 \
+		$$< | m4 -s $$(filter -I%,$$(INCS)) -P | \
+		python $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py \
+		$$@ $$(filter -I%,$$(INCS)) > $$@.deps
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(CONF_DIR)/.config.m4 \
 		$$< | m4 $$(filter -I%,$$(INCS)) -P > $$@
 
@@ -145,7 +155,6 @@ subdirs:=
 TARGET_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs))
 COPY_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(copy))
 META_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(meta))
-DEP_FILE_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(filter %.deps,$$(objs:.o=.deps)))
 CLEAN_FILE_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(copy) $$(meta))
 
 $$(LOCAL_OBJ_DIR):

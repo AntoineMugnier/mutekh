@@ -56,7 +56,7 @@ clean:
 FORCE::
 	@true
 
-config showpaths kernel cflags: FORCE
+config showpaths kernel cflags objs: FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ MAKEFLAGS=$(MAKEFLAGS)
 
 kernel-postlink:  FORCE
