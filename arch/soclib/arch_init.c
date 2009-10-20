@@ -123,6 +123,8 @@ void arch_init()
 #endif      
         cpu_init();
 
+        cpu_count++;
+
         lock_release(&cpu_init_lock);
 
         /* wait for start signal */
