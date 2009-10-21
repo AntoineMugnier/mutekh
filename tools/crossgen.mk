@@ -77,23 +77,27 @@ help:
 all: gcc binutils gdb
 
 .PRECIOUS: $(BINUTILS_TGZ) $(GCC_TGZ) $(GDB_TGZ)
+.DELETE_ON_ERROR: $(BINUTILS_STAMP)-wget $(GCC_STAMP)-wget $(GDB_STAMP)-wget \
+	$(BINUTILS_STAMP)-$(TARGET)-conf $(BINUTILS_STAMP)-$(TARGET)-build \
+	$(GCC_STAMP)-$(TARGET)-conf $(GCC_STAMP)-$(TARGET)-build \
+	$(GDB_STAMP)-$(TARGET)-conf $(GDB_STAMP)-$(TARGET)-build
 
 $(BINUTILS_STAMP)-wget:
-	touch $(BINUTILS_STAMP)-wget
+	touch $@
+	wget -c $(BINUTILS_URL) -O $(BINUTILS_TGZ)
 $(BINUTILS_TGZ): $(BINUTILS_STAMP)-wget
-	wget -c $(BINUTILS_URL) -O $@ || ( rm -f $(BINUTILS_STAMP)-wget ; false )
 	touch $@
 
 $(GCC_STAMP)-wget:
-	touch $(GCC_STAMP)-wget
+	touch $@
+	wget -c $(GCC_URL) -O $(GCC_TGZ)
 $(GCC_TGZ): $(GCC_STAMP)-wget
-	wget -c $(GCC_URL) -O $@ || ( rm -f $(GCC_STAMP)-wget ; false )
 	touch $@
 
 $(GDB_STAMP)-wget:
-	touch $(GDB_STAMP)-wget
+	touch $@
+	wget -c $(GDB_URL) -O $(GDB_TGZ)
 $(GDB_TGZ): $(GDB_STAMP)-wget
-	wget -c $(GDB_URL) -O $@ || ( rm -f $(GDB_STAMP)-wget ; false )
 	touch $@
 
 % : %.tar.bz2
@@ -102,13 +106,13 @@ $(GDB_TGZ): $(GDB_STAMP)-wget
 
 
 $(BINUTILS_STAMP)-$(TARGET)-conf:
+	touch $@
 	mkdir -p $(BINUTILS_BDIR)
 	( cd $(BINUTILS_BDIR) ; $(BINUTILS_DIR)/configure --prefix=$(PREFIX) --target=$(TARGET) --disable-checking --disable-werror $(BINUTILS_CONF) )
-	touch $@
 
 $(BINUTILS_STAMP)-$(TARGET)-build: $(BINUTILS_STAMP)-$(TARGET)-conf
-	make -C $(BINUTILS_BDIR)
 	touch $@
+	make -C $(BINUTILS_BDIR)
 
 $(PREFIX)/bin/$(TARGET)-as: $(BINUTILS_STAMP)-$(TARGET)-build
 	make -C $(BINUTILS_BDIR) install
@@ -118,13 +122,13 @@ binutils: $(BINUTILS_DIR) $(PREFIX)/bin/$(TARGET)-as
 
 
 $(GCC_STAMP)-$(TARGET)-conf:
+	touch $@
 	mkdir -p $(GCC_BDIR)
 	( cd $(GCC_BDIR) ; $(GCC_DIR)/configure --prefix=$(PREFIX) --target=$(TARGET) --disable-checking --disable-werror $(GCC_CONF) )
-	touch $@
 
 $(GCC_STAMP)-$(TARGET)-build: $(GCC_STAMP)-$(TARGET)-conf
-	make -C $(GCC_BDIR)
 	touch $@
+	make -C $(GCC_BDIR)
 
 $(PREFIX)/bin/$(TARGET)-gcc: $(GCC_STAMP)-$(TARGET)-build
 	make -C $(GCC_BDIR) install
@@ -134,13 +138,13 @@ gcc: binutils $(GCC_DIR) $(PREFIX)/bin/$(TARGET)-gcc
 
 
 $(GDB_STAMP)-$(TARGET)-conf:
+	touch $@
 	mkdir -p $(GDB_BDIR)
 	( cd $(GDB_BDIR) ; $(GDB_DIR)/configure --prefix=$(PREFIX) --target=$(TARGET) --disable-checking --disable-werror $(GDB_CONF) )
-	touch $@
 
 $(GDB_STAMP)-$(TARGET)-build: $(GDB_STAMP)-$(TARGET)-conf
-	make -C $(GDB_BDIR)
 	touch $@
+	make -C $(GDB_BDIR)
 
 $(PREFIX)/bin/$(TARGET)-gdb: $(GDB_STAMP)-$(TARGET)-build
 	make -C $(GDB_BDIR) install
