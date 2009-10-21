@@ -56,6 +56,21 @@ $(3)/$(1): $(2)/$(1:.o=.S)
 	$(CPP) $$(INCS) $$< | $(AS) $$(CPUASFLAGS) -o $$@
 
 else
+ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))
+
+#$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be a device-tree file)
+
+$(3)/$(1): $(2)/$(1:.o=.dts)
+	@echo ' DTC->C+CC  $$@'
+	test -d $(3) || mkdir -p $(3)
+	cd $(3) ; $(DTC) -O dtb -o - $$< | \
+		python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
+		-o $(3)/$(1:.o=.c) -n dt_blob_start -o $(3)/$(1:.o=.c) -
+	cd $(3) ; \
+	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $(DIR_CFLAGS) -c \
+		$(3)/$(1:.o=.c) -o $$@
+
+else
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be C file)
 
@@ -70,6 +85,7 @@ $(3)/$(1): $(2)/$(1:.o=.c) $(CONF_DIR)/.config.h
 	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $($(1)_CFLAGS) $(DIR_CFLAGS) -c \
 		$$< -o $$@
 
+endif
 endif
 endif
 
