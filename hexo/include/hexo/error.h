@@ -61,7 +61,7 @@ typedef int_fast8_t		error_t;
 #define EAGAIN		9
 
 /** value out of range */
-#define ERANGE		10
+//#define ERANGE		10
 
 /** io error */
 #define EIO		11
@@ -71,6 +71,14 @@ typedef int_fast8_t		error_t;
 
 /** broken pipe */
 #define EPIPE		32
+
+/** Math argument out of domain of func */
+#define EDOM        33
+/** Math result not representable */
+#define ERANGE      34
+
+/** Function not implemented */
+#define ENOSYS      38
 
 /** address in use */
 #define EADDRINUSE	40
