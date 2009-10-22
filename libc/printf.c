@@ -70,7 +70,8 @@ inline ssize_t vsnprintf(char *str, size_t size, const char *format, va_list ap)
   if (ctx.size > res)
     str[res] = '\0';
 
-  return res + 1;
+  /* don't count the trailing '\0' in the res */
+  return res;
 }
 
 ssize_t snprintf(char *str, size_t size, const char *format, ...)
