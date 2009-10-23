@@ -63,9 +63,9 @@ ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))
 $(3)/$(1): $(2)/$(1:.o=.dts)
 	@echo ' DTC->C+CC  $$@'
 	test -d $(3) || mkdir -p $(3)
-	cd $(3) ; $(DTC) -O dtb -o - $$< | \
-		python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
-		-o $(3)/$(1:.o=.c) -n dt_blob_start -o $(3)/$(1:.o=.c) -
+	cd $(3) ; $(DTC) -O dtb -o $(3)/$(1:.o=.blob) $$<
+	cd $(3) ; python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
+		-o $(3)/$(1:.o=.c) -n dt_blob_start $(3)/$(1:.o=.blob)
 	cd $(3) ; \
 	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $(DIR_CFLAGS) -c \
 		$(3)/$(1:.o=.c) -o $$@
