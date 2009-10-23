@@ -1,3 +1,22 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright (c) 2009, Nicolas Pouillon <nipo@ssji.net>
+*/
 
 #include <hexo/types.h>
 #include <hexo/error.h>
@@ -94,7 +113,7 @@ uint32_t fdt_writer_push_string(
 	return writer->end - writer->rst - len - 1;
 }
 
-void fdt_writer_node_attr(
+void fdt_writer_node_prop(
 	struct fdt_writer_s *writer,
 	const char *name,
 	void *data,
@@ -105,7 +124,7 @@ void fdt_writer_node_attr(
 		return;
 	}
 
-	*writer->struct_ptr++ = endian_be32(FDT_ATTR);
+	*writer->struct_ptr++ = endian_be32(FDT_PROP);
 	*writer->struct_ptr++ = endian_be32(len);
 	*writer->struct_ptr++ = endian_be32(fdt_writer_push_string(writer, name));
 	memcpy(writer->struct_ptr, data, len);

@@ -1,9 +1,30 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright (c) 2009, Nicolas Pouillon <nipo@ssji.net>
+*/
 
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/endian.h>
 
 #include <fdt/reader.h>
+
+#include <assert.h>
 
 #include <mutek/printk.h>
 
@@ -17,28 +38,17 @@ struct fdt_walker_state_s
 {
 	const void *blob;
 	const char *string_table;
+	const uint32_t *struct_base;
 	const uint32_t *ptr;
 };
 
-static bool_t nop()
-{
-	return 0;
-}
-
-static struct fdt_walker_s null_walker =
-{
-	.private = NULL,
-	.on_node_entry = (fdt_on_node_entry_func_t*)nop,
-	.on_node_leave = (fdt_on_node_leave_func_t*)nop,
-	.on_node_attr = (fdt_on_node_attr_func_t*)nop,
-};
-
-void fdt_skip_str(struct fdt_walker_state_s *state)
+const uint32_t *fdt_skip_str(const uint32_t *ptr)
 {
 	uint32_t data;
 	do {
-		data = endian_be32(*state->ptr++);
+		data = endian_be32(*ptr++);
 	} while (((data - 0x01010101) & 0x80808080) == 0);
+	return ptr;
 }
 
 /**
@@ -47,36 +57,65 @@ void fdt_skip_str(struct fdt_walker_state_s *state)
  */
 error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *walker)
 {
-	bool_t wanted = walker->on_node_entry(
-		walker->private, state, (const char*)state->ptr);
-
-	fdt_skip_str(state);
-
-	if ( !wanted )
-		walker = &null_walker;
+	size_t level = 0;
+	size_t min_level = 0;
+	char full_path[32] = "";
 
 	for (;;) {
 		uint32_t token = endian_be32(*state->ptr++);
 		switch ( token ) {
 		case FDT_NODE_START: {
-			error_t err = fdt_walk_node(state, walker);
-			if (err)
-				return err;
-			break;
-		}
-		case FDT_ATTR: {
-			struct fdt_attr_s *attr = (struct fdt_attr_s*)state->ptr;
-			state->ptr += (8 + endian_be32(attr->size) + 3) / 4;
-			walker->on_node_attr(
+			level++;
+
+//			printk("start level: %d, min_level: %d, %s\n", level, min_level, state->ptr);
+		
+			strncat(full_path, "/", 32);
+			strncat(full_path, (const char*)state->ptr, 32);
+
+			bool_t wanted = walker->on_node_entry(
 				walker->private,
 				state,
-				&state->string_table[endian_be32(attr->strid)],
-				attr->data,
-				endian_be32(attr->size));
+				full_path+1);
+			state->ptr = fdt_skip_str(state->ptr);
+			if ( !wanted )
+				min_level = level;
+			break;
+		}
+		case FDT_PROP: {
+			struct fdt_prop_s *prop = (struct fdt_prop_s*)state->ptr;
+
+//			printk("  prop %s %P\n",
+/* 				   &state->string_table[endian_be32(prop->strid)], */
+/* 				   prop->data, */
+/* 				   endian_be32(prop->size)); */
+
+			if ( level > min_level )
+				walker->on_node_prop(
+					walker->private,
+					state,
+					&state->string_table[endian_be32(prop->strid)],
+					prop->data,
+					endian_be32(prop->size));
+			state->ptr += (8 + endian_be32(prop->size) + 3) / 4;
 			break;
 		}
 		case FDT_NODE_END:
-			walker->on_node_leave(walker->private);
+/* 			printk("end level: %d, min_level: %d\n", level, min_level); */
+
+			if ( level > min_level )
+				walker->on_node_leave(walker->private);
+			
+			char *end = strrchr(full_path, '/');
+			assert(end);
+			*(end) = 0;
+			if ( min_level == --level )
+				min_level = 0;
+			if ( level == 0 )
+				return 0;
+			break;
+		case FDT_NOP:
+			break;
+		case FDT_END:
 			return 0;
 		default:
 			printk("Unhandled FDT Token: %x @ %p\n", token, (void*)state->ptr-state->blob);
@@ -85,13 +124,8 @@ error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *wal
 	}
 }
 
-error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker)
+static error_t fdt_check_header(const void *blob)
 {
-	struct fdt_walker_state_s state = {
-		.blob = blob,
-		.ptr = blob,
-	};
-
 	const struct fdt_header_s *header = blob;
 
 	if ( (uintptr_t)blob & 3 ) {
@@ -105,11 +139,29 @@ error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker)
 		return EINVAL;
 	}
 
+	return 0;
+}
+
+error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker)
+{
+	struct fdt_walker_state_s state = {
+		.blob = blob,
+		.ptr = blob,
+	};
+
+	const struct fdt_header_s *header = blob;
+	error_t err;
+
+	if ( (err = fdt_check_header(blob)) )
+		return err;
+
 /* 	printk("FDT magic OK, string table @ %p\n", endian_be32(header->off_dt_strings)); */
 /* 	printk("FDT magic OK, struct table @ %p\n", endian_be32(header->off_dt_struct)); */
 
 	state.string_table = (const char*)blob + endian_be32(header->off_dt_strings);
-	state.ptr = (void*)((uintptr_t)blob + endian_be32(header->off_dt_struct));
+	state.struct_base
+		= state.ptr
+		= (void*)((uintptr_t)blob + endian_be32(header->off_dt_struct));
 
 	struct fdt_mem_reserve_map_s *reserve_map =
 		(void*)((uintptr_t)blob + endian_be32(header->off_mem_rsvmap));
@@ -126,10 +178,77 @@ error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker)
 		return EINVAL;
 	}
 
-	while ( endian_be32(*state.ptr) == FDT_NODE_START ) {
-		state.ptr++;
-		fdt_walk_node(&state, walker);
-	}
+	return fdt_walk_node(&state, walker);
+}
 
-	return 0;
+uint32_t fdt_reader_get_struct_offset(struct fdt_walker_state_s *state)
+{
+	return (uintptr_t)state->ptr - (uintptr_t)state->struct_base - 4;
+}
+
+bool_t fdt_reader_has_prop(const struct fdt_walker_state_s *state,
+						   const char *propname,
+						   const void **propval, size_t *propsize)
+{
+	const uint32_t *ptr = fdt_skip_str(state->ptr);
+
+	for (;;) {
+		uint32_t token = endian_be32(*(ptr++));
+		switch (token) {
+		case FDT_PROP: {
+			struct fdt_prop_s *prop = (struct fdt_prop_s*)ptr;
+			const char *pname = &state->string_table[
+				endian_be32(prop->strid)];
+			if ( ! strcmp(propname, pname) ) {
+				*propval = prop->data;
+				*propsize = endian_be32(prop->size);
+				return 1;
+			}
+			ptr += (8 + endian_be32(prop->size) + 3) / 4;
+			break;
+		}
+		case FDT_END:
+		case FDT_NODE_END:
+		case FDT_NODE_START:
+			return 0;
+		case FDT_NOP:
+		default:
+			break;
+		}
+	}
+}
+
+error_t fdt_walk_blob_from(const void *blob, struct fdt_walker_s *walker, uint32_t offset)
+{
+	struct fdt_walker_state_s state = {
+		.blob = blob,
+		.ptr = blob,
+	};
+
+	const struct fdt_header_s *header = blob;
+	error_t err;
+
+	if ( (err = fdt_check_header(blob)) )
+		return err;
+
+	state.string_table = (const char*)blob + endian_be32(header->off_dt_strings);
+	state.struct_base
+		= (void*)((uintptr_t)blob + endian_be32(header->off_dt_struct));
+
+	state.ptr = state.struct_base + offset/4;
+
+	if ( endian_be32(*state.ptr) != FDT_NODE_START )
+		return EINVAL;
+
+	return fdt_walk_node(&state, walker);
+}
+
+size_t fdt_get_size(void *blob)
+{
+	const struct fdt_header_s *header = blob;
+
+	if ( fdt_check_header(blob) != 0 )
+		return 0;
+	
+	return endian_be32(header->totalsize);
 }

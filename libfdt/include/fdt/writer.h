@@ -30,7 +30,7 @@ error_t fdt_writer_init(
  * Add a reservation entry in the memory reservation map.
  *
  * All calls to this function should be done before beginning to build
- * the structure (nodes and attributes)
+ * the structure (nodes and propibutes)
  */
 void fdt_writer_add_mem_reservation(
 	struct fdt_writer_s *writer,
@@ -46,10 +46,10 @@ uint32_t fdt_writer_node_entry(
 	const char *name);
 
 /**
- * Pushes an attribute in the current node. The data will be copied in
+ * Pushes an propibute in the current node. The data will be copied in
  * the blob.
  */
-void fdt_writer_node_attr(
+void fdt_writer_node_prop(
 	struct fdt_writer_s *writer,
 	const char *name,
 	void *data,

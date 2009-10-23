@@ -7,39 +7,142 @@
 struct fdt_walker_s;
 struct fdt_walker_state_s;
 
+/**
+   on_node_entry prototype macro
+ */
 #define FDT_ON_NODE_ENTRY_FUNC(x) bool_t (x)(						   \
 		void *private,												   \
-		const struct fdt_walker_state_s *state,						   \
-		const char *name)
+		struct fdt_walker_state_s *state,							   \
+		const char *path)
 
+/**
+   on_node_leave prototype macro
+ */
 #define FDT_ON_NODE_LEAVE_FUNC(x) void (x)(void *private)
 
-#define FDT_ON_NODE_ATTR_FUNC(x) void (x)(							   \
+/**
+   on_node_prop prototype macro
+ */
+#define FDT_ON_NODE_PROP_FUNC(x) void (x)(							   \
 		void *private,												   \
-		const struct fdt_walker_state_s *state,						   \
+		struct fdt_walker_state_s *state,							   \
 		const char *name,											   \
 		const void *data,											   \
 		size_t datalen)
 
+/**
+   on_mem_reserve prototype macro
+ */
 #define FDT_ON_MEM_RESERVE_FUNC(x) void (x)(						   \
 		void *private,												   \
 		uint64_t addr,												   \
 		uint64_t size)
 
+/**
+   Type definition for entry in a new node. As nodes may be nested,
+   this function may be called many times in a row.
+
+   @param private private data provided in the fdt_walker_s
+   @param offset node offset from the beginning of the structure, this
+          can be used to resolve references
+   @param path full path of the node
+
+   @return whether user is interested in this node, its propibutes and
+           its subnodes.
+ */
 typedef FDT_ON_NODE_ENTRY_FUNC(fdt_on_node_entry_func_t);
+
+/**
+   Type definition for end of a node. As nodes may be nested, this
+   function may be called many times in a row.
+
+   @param private private data provided in the fdt_walker_s
+ */
 typedef FDT_ON_NODE_LEAVE_FUNC(fdt_on_node_leave_func_t);
-typedef FDT_ON_NODE_ATTR_FUNC(fdt_on_node_attr_func_t);
+
+/**
+   Type definition for function called on a node propibute. As
+   propibutes are inside nodes, on_node_entry has already be called
+   once when calling this function.
+
+   @param private private data provided in the fdt_walker_s
+   @param offset offset of the parameter in the structure
+   @param name name of the parameter
+   @param data pointer to raw data. User must take care of the meaning
+          by itself. If data contains numeric values, they are
+          stored bigendian.
+   @param datalen length of the data, in bytes
+ */
+typedef FDT_ON_NODE_PROP_FUNC(fdt_on_node_prop_func_t);
+
+/**
+   Type definition for function called on a memory reservation
+   node. Note values are always 64 bits for this type of nodes.
+
+   There is no endian adaptation to perform on the parameters.
+
+   @param private private data provided in the fdt_walker_s
+   @param addr base address of reservation
+   @param size size of reservation
+ */
 typedef FDT_ON_MEM_RESERVE_FUNC(fdt_on_mem_reserve_func_t);
 
+/**
+   Structure containing pointers to user-provided functions and
+   private data. All function pointers must be provided. Leaving a
+   NULL pointer to function will lead to unpredictable results.
+ */
 struct fdt_walker_s
 {
 	void *private;
 	fdt_on_node_entry_func_t *on_node_entry;
 	fdt_on_node_leave_func_t *on_node_leave;
-	fdt_on_node_attr_func_t *on_node_attr;
+	fdt_on_node_prop_func_t *on_node_prop;
 	fdt_on_mem_reserve_func_t *on_mem_reserve;
 };
 
+/**
+   Process a whole blob calling the provided functions when
+   needed. The blob contains its size in its own header.
+
+   @param blob Pointer to the FDT blob header
+   @param walker User-provided functions
+   @return Whether the parsing went well, to the end
+ */
 error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker);
+
+/**
+   Retrieves the structure offset for the current state.
+
+   This is not valid when walking through memory reservation.
+
+   @param state Internal state of the parser
+   @return The current token offset
+ */
+uint32_t fdt_reader_get_struct_offset(struct fdt_walker_state_s *state);
+
+/**
+   Retrieves the value of a property inside a node, if it exists.
+   Calling this function is only valid when inside a on_node_entry.
+
+   @param state Internal state of the parser
+   @param prop Property name to look for
+   @param propval return pointer to the property value, if found
+   @param propsize return size of property value, if found
+   @return 1 if the property has been found, 0 otherwise
+ */
+bool_t fdt_reader_has_prop(const struct fdt_walker_state_s *state,
+						   const char *propname,
+						   const void **propval, size_t *propsize);
+
+/**
+   Gets the complete size of a blob as told in its header.
+
+   @param blob a pointer to the start of a device tree blob
+   @return the total size of the blob, 0 if the blob is invalid
+ */
+size_t fdt_get_size(void *blob);
+
+error_t fdt_walk_blob_from(const void *blob, struct fdt_walker_s *walker, uint32_t offset);
 
 #endif
