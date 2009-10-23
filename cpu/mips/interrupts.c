@@ -22,8 +22,15 @@
 asm(
         ".section        .excep,\"ax\",@progbits         \n"
 
+        ".set push                                       \n"
+        ".set noreorder                                  \n"
         "   b       1f                                   \n"
+# if __mips >= 32
         ".space 0x17c                                    \n"
+#else
+        ".space 0x7c                                     \n"
+#endif
+        ".set pop                                        \n"
 
         ".globl mips_interrupt_entry                     \n"
         "mips_interrupt_entry:                           \n"
