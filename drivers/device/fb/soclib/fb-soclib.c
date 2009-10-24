@@ -82,9 +82,16 @@ DEVFB_SETPALETTE(fb_soclib_setpalette)
  * device open operation
  */
 
+static const struct devenum_ident_s	fb_soclib_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("soclib:fb"),
+	{ 0 }
+};
+
 const struct driver_s	fb_soclib_drv =
 {
   .class		= device_class_fb,
+  .id_table		= fb_soclib_ids,
   .f_init		= fb_soclib_init,
   .f_cleanup		= fb_soclib_cleanup,
   .f.fb = {
@@ -94,6 +101,8 @@ const struct driver_s	fb_soclib_drv =
     .f_setpalette	= fb_soclib_setpalette,
   }
 };
+
+REGISTER_DRIVER(fb_soclib_drv);
 
 DEV_INIT(fb_soclib_init)
 {

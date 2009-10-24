@@ -83,9 +83,16 @@ DEV_CLEANUP(icu_soclib_cleanup)
   mem_free(pv);
 }
 
+static const struct devenum_ident_s	icu_soclib_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("soclib:icu", 0, 0),
+	{ 0 }
+};
+
 const struct driver_s	icu_soclib_drv =
 {
   .class		= device_class_icu,
+  .id_table		= icu_soclib_ids,
   .f_init		= icu_soclib_init,
   .f_cleanup		= icu_soclib_cleanup,
   .f_irq            = icu_soclib_handler,
@@ -95,6 +102,8 @@ const struct driver_s	icu_soclib_drv =
     .f_delhndl		= icu_soclib_delhndl,
   }
 };
+
+REGISTER_DRIVER(icu_soclib_drv);
 
 DEV_INIT(icu_soclib_init)
 {

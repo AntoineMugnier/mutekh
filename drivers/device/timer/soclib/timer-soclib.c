@@ -146,9 +146,16 @@ DEV_CLEANUP(timer_soclib_cleanup)
   mem_free(pv);
 }
 
+static const struct devenum_ident_s	timer_soclib_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("soclib:timer", 0, 0),
+	{ 0 }
+};
+
 const struct driver_s	timer_soclib_drv =
 {
   .class		= device_class_timer,
+  .id_table		= timer_soclib_ids,
   .f_init		= timer_soclib_init,
   .f_cleanup		= timer_soclib_cleanup,
   .f_irq		= timer_soclib_irq,
@@ -159,6 +166,8 @@ const struct driver_s	timer_soclib_drv =
     .f_getvalue		= timer_soclib_getvalue,
   }
 };
+
+REGISTER_DRIVER(timer_soclib_drv);
 
 /* 
  * device open operation

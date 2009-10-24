@@ -122,9 +122,22 @@ DEV_CLEANUP(xicu_soclib_cleanup)
   mem_free(pv);
 }
 
+static const struct driver_param_binder_s xicu_param_binder[] =
+{
+	PARAM_BIND(struct soclib_xicu_param_s, output_line_no, PARAM_DATATYPE_INT),
+	{ 0 }
+};
+
+static const struct devenum_ident_s	xicu_soclib_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("soclib:xicu", sizeof(struct soclib_xicu_param_s), xicu_param_binder),
+	{ 0 }
+};
+
 const struct driver_s	xicu_soclib_drv =
 {
   .class		= device_class_icu,
+  .id_table		= xicu_soclib_ids,
   .f_init		= xicu_soclib_init,
   .f_cleanup		= xicu_soclib_cleanup,
   .f.icu = {
@@ -134,6 +147,8 @@ const struct driver_s	xicu_soclib_drv =
     .f_sendipi		= xicu_soclib_sendipi,
   }
 };
+
+REGISTER_DRIVER(xicu_soclib_drv);
 
 DEV_INIT(xicu_soclib_init)
 {

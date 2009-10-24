@@ -26,9 +26,42 @@
 #include <hexo/error.h>
 #include <hexo/device.h>
 
+
+#define PARAM_DATATYPE_INT 1
+#define PARAM_DATATYPE_DEVICE_PTR 2
+#define PARAM_DATATYPE_ADDR 3
+
+/**
+   A link from a device property and a field in the parameter
+   structure of a driver init()
+ */
+struct driver_param_binder_s
+{
+	const char *param_name;
+	uint16_t struct_offset;
+	uint8_t datatype;
+	uint8_t datalen;
+};
+
+/**
+   Helper macro to create an entry in a struct driver_param_binder_s
+
+   @param _struct_type full type name of the parameter structure type
+   @param _struct_entry field name in the parameter structure
+   @param _datatype type of the data chosen in the PARAM_DATATYPE_*
+ */
+#define PARAM_BIND(_struct_type, _struct_entry, _datatype)			    \
+	{																	\
+		.param_name = #_struct_entry,									\
+		.struct_offset = __builtin_offsetof(_struct_type, _struct_entry), \
+		.datatype = _datatype,										    \
+		.datalen = sizeof(((_struct_type *)0)->_struct_entry),		    \
+	}
+
 #define DEVENUM_TYPE_PCI 0x01
 #define DEVENUM_TYPE_ISA 0x02
 #define DEVENUM_TYPE_ATA 0x03
+#define DEVENUM_TYPE_FDTNAME 0x04
 
 /** device structure identification informations. wildcard values are
     enum driver dependent */
@@ -44,6 +77,11 @@ struct devenum_ident_s
 		struct {
 			uint16_t vendor;
 		} isa;
+		struct {
+			const char *name;
+			size_t param_size;
+			const struct driver_param_binder_s *binder;
+		} fdtname;
 		struct {
 			const char *str;
 		} ata;
@@ -83,6 +121,19 @@ struct devenum_ident_s
 #define DEVENUM_ATA_ENTRY(_str)							\
 	{ .type = DEVENUM_TYPE_ATA, { .ata = {				\
 				.str = _str } } }
+
+/**
+   Shortcut for creating a flat-device-tree entry in a static
+   devenum_ident_s array.
+
+   @param _name The string to match from the device-tree
+   @param _binder The data binder table pointer for the fdt to param conversion
+ */
+#define DEVENUM_FDTNAME_ENTRY(_name, _psize, _binder)	\
+	{ .type = DEVENUM_TYPE_FDTNAME, { .fdtname = {		\
+				.name = _name, .param_size = _psize,	\
+				.binder = _binder } } }
+
 
 /** device driver object structure */
 
@@ -199,6 +250,15 @@ struct driver_s *driver_get_matching_isa(
    @return A driver if found, NULL otherwise
  */
 struct driver_s *driver_get_matching_ata(
+	const char *name);
+
+/**
+   Try to get a driver registered with these characteristics
+
+   @param name Name of device_type in the FDT
+   @return A driver if found, NULL otherwise
+ */
+struct driver_s *driver_get_matching_fdtname(
 	const char *name);
 
 #endif

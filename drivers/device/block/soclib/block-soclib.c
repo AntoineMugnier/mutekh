@@ -190,9 +190,16 @@ DEV_IRQ(block_soclib_irq)
  * device open operation
  */
 
+static const struct devenum_ident_s	block_soclib_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("soclib:block_device"),
+	{ 0 }
+};
+
 const struct driver_s	block_soclib_drv =
 {
   .class		= device_class_block,
+  .id_table		= block_soclib_ids,
   .f_init		= block_soclib_init,
   .f_cleanup		= block_soclib_cleanup,
   .f_irq		= block_soclib_irq,
@@ -201,6 +208,8 @@ const struct driver_s	block_soclib_drv =
     .f_getparams	= block_soclib_getparams,
   }
 };
+
+REGISTER_DRIVER(block_soclib_drv);
 
 DEV_INIT(block_soclib_init)
 {

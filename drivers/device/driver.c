@@ -113,3 +113,30 @@ struct driver_s *driver_get_matching_ata(
 	}
 	return NULL;
 }
+
+
+struct driver_s *driver_get_matching_fdtname(
+	const char *name)
+{
+	const struct driver_s **drv = global_driver_registry;
+
+	while ( drv < global_driver_registry_end ) {
+		if ( !*drv )
+			continue;
+
+		const struct devenum_ident_s *ident = (*drv)->id_table;
+
+		if ( !ident )
+			continue;
+
+		for ( ; ident->type != 0; ident++ ) {
+			if ( (ident->type == DEVENUM_TYPE_FDTNAME)
+				 && !strcmp(ident->fdtname.name, name) ) {
+				return (struct driver_s *)*drv;
+			}
+		}
+		++drv;
+	}
+	return NULL;
+}
+

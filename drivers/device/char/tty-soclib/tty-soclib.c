@@ -143,9 +143,16 @@ DEV_IRQ(tty_soclib_irq)
  * device open operation
  */
 
+static const struct devenum_ident_s	tty_soclib_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("soclib:tty", 0, 0),
+	{ 0 }
+};
+
 const struct driver_s	tty_soclib_drv =
 {
   .class		= device_class_char,
+  .id_table		= tty_soclib_ids,
   .f_init		= tty_soclib_init,
   .f_cleanup		= tty_soclib_cleanup,
   .f_irq		= tty_soclib_irq,
@@ -153,6 +160,8 @@ const struct driver_s	tty_soclib_drv =
     .f_request		= tty_soclib_request,
   }
 };
+
+REGISTER_DRIVER(tty_soclib_drv);
 
 DEV_INIT(tty_soclib_init)
 {
