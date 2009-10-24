@@ -25,6 +25,9 @@ SECTIONS
 		*(.sdata*)
 		*(.data*)
 		*(.rodata*)
+		global_driver_registry = .;
+		*(.drivers)
+		global_driver_registry_end = .;
 		*(.common*)
 
 		/* data depending on cpu architecture (fonction pointer variables, ...) */

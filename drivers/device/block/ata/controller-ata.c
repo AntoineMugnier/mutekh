@@ -22,6 +22,9 @@
 
 #include <hexo/types.h>
 
+#include "block-ata.h"
+#include "block-ata-private.h"
+
 #include <device/enum.h>
 #include <device/icu.h>
 #include <hexo/device.h>
@@ -32,8 +35,6 @@
 #include <hexo/lock.h>
 #include <mutek/timer.h>
 
-#include "block-ata.h"
-#include "block-ata-private.h"
 
 /**************************************************************/
 
@@ -85,8 +86,8 @@ DEV_IRQ(controller_ata_irq)
 
 static const struct devenum_ident_s	controller_ata_ids[] =
   {
-    { .type = DEVENUM_TYPE_PCI, .vendor = -1, .device = -1, .class = 0x0101 },	/* PCI IDE controller */
-    { 0 },
+	  DEVENUM_PCI_ENTRY(-1, -1, 0x0101), /* PCI IDE controller */
+	  { 0 },
   };
 #endif
 

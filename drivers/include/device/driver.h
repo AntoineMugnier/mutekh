@@ -27,17 +27,62 @@
 #include <hexo/device.h>
 
 #define DEVENUM_TYPE_PCI 0x01
-#define DEVENUM_TYPE_ATA 0x02
+#define DEVENUM_TYPE_ISA 0x02
+#define DEVENUM_TYPE_ATA 0x03
 
 /** device structure identification informations. wildcard values are
     enum driver dependent */
 struct devenum_ident_s
 {
-  uint8_t		type;
-  uint16_t		vendor;
-  uint16_t		device;
-  uint32_t		class;
+	uint8_t type;
+	union {
+		struct {
+			uint16_t vendor;
+			uint16_t device;
+			uint32_t class;
+		} pci;
+		struct {
+			uint16_t vendor;
+		} isa;
+		struct {
+			const char *str;
+		} ata;
+	};
 };
+
+
+/**
+   Shortcut for creating a PCI entry in a static devenum_ident_s
+   array.
+
+   @param _vendor the vendor id to match, -1 for wildcard
+   @param _device the device id to match, -1 for wildcard
+   @param _class the class to match, -1 for wildcard
+ */
+#define DEVENUM_PCI_ENTRY(_vendor, _device, _class)		\
+	{ .type = DEVENUM_TYPE_PCI, { .pci = {				\
+				.vendor = _vendor, .device = _device,	\
+				.class = _class } } }
+
+/**
+   Shortcut for creating an ISA entry in a static devenum_ident_s
+   array.
+
+   @param _vendor the vendor id to match
+ */
+#define DEVENUM_ISA_ENTRY(_vendor)						\
+	{ .type = DEVENUM_TYPE_PCI, { .isa = {				\
+				.vendor = _vendor } } }
+
+/**
+   Shortcut for creating an ATA entry in a static devenum_ident_s
+   array.
+
+   @param _str the string to match from the device
+ */
+#define DEVENUM_ATA_ENTRY(_str)							\
+	{ .type = DEVENUM_TYPE_ATA, { .ata = {				\
+				.str = _str } } }
 
 /** device driver object structure */
 
@@ -116,5 +161,44 @@ struct driver_s
   } f;
 };
 
-#endif
+/**
+   Registers a driver (struct driver_s) in the global_driver_registry
+   table.
+ */
+#define REGISTER_DRIVER(name) \
+	const __attribute__((section (".drivers"))) \
+	const struct driver_s *name##_drv_ptr = &name
 
+
+/**
+   Try to get a driver registered with these characteristics
+
+   @param vendor Vendor of PCI device
+   @param vendor Device of PCI device
+   @param vendor Class of PCI device
+   @return A driver if found, NULL otherwise
+ */
+struct driver_s *driver_get_matching_pci(
+	uint16_t vendor,
+	uint16_t device,
+	uint32_t class);
+
+/**
+   Try to get a driver registered with these characteristics
+
+   @param vendor Vendor of ISA device
+   @return A driver if found, NULL otherwise
+ */
+struct driver_s *driver_get_matching_isa(
+	uint16_t vendor);
+
+/**
+   Try to get a driver registered with these characteristics
+
+   @param name Name of ata device
+   @return A driver if found, NULL otherwise
+ */
+struct driver_s *driver_get_matching_ata(
+	const char *name);
+
+#endif

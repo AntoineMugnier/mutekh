@@ -29,35 +29,29 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
-struct device_s;
-struct driver_s;
-
-/** Enum device class register() function tempate. */
-#define DEVENUM_REGISTER(n)	size_t (n) (struct device_s *dev,	\
-					    const struct driver_s *drv)
-
-
-/** Enum device class register() methode shortcut */
-
-#define dev_enum_register(dev, ...) (dev)->drv->f.denum.f_register(dev, __VA_ARGS__ )
 /**
-   Enum device class register() function type.
-   Try to bind a driver
+   Lookup function prototype macro
+ */
+#define DEVENUM_LOOKUP(x) struct device_s *(x)(struct device_s *dev, const char *path)
 
-   @param dev pointer to enumerator device descriptor
-   @param drv pointer pointer to driver to be used for matching devices
-   @return registered devices count
-*/
-typedef DEVENUM_REGISTER(devenum_register_t);
+/**
+   Lookup function prototype. Lookup a device inside an enumerated
+   device. The path parameter depends on the type of enumerator.
 
+   @param dev The device to lookup from
+   @param path The device to lookup for in dev
+   @return a pointer to the found device, or NULL
+ */
+typedef DEVENUM_LOOKUP(devenum_lookup_t);
 
+/**
+   Lookup function shortcut
+ */
+#define deve_num_lookup(dev, ...) (dev)->drv->f.denum.f_lookup(dev, __VA_ARGS__)
 
-/** Enum device class methodes */
 struct dev_class_enum_s
 {
-  devenum_register_t		*f_register;
+	devenum_lookup_t *f_lookup;
 };
 
-
 #endif
-

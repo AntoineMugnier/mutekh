@@ -27,9 +27,9 @@
 
 #include <stdint.h>
 
-DEVENUM_REGISTER(enum_pci_register);
 DEV_CLEANUP(enum_pci_cleanup);
 DEV_INIT(enum_pci_init);
+DEVENUM_LOOKUP(enum_pci_lookup);
 
 /* PCI device identification object */
 

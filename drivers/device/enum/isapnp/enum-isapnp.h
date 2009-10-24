@@ -27,9 +27,9 @@
 
 #include <stdint.h>
 
-DEVENUM_REGISTER(enum_isapnp_register);
 DEV_CLEANUP(enum_isapnp_cleanup);
 DEV_INIT(enum_isapnp_init);
+DEVENUM_LOOKUP(enum_isapnp_lookup);
 
 #endif
 

@@ -37,42 +37,30 @@
 
 /**************************************************************/
 
-DEVENUM_REGISTER(enum_isapnp_register)
+static void enum_isapnp_register_all(struct device_s *dev)
 {
   struct enum_isapnp_context_s	*pv = dev->drv_pv;
-  size_t			count = 0;
 
   /* walk through all devices */
   CONTAINER_FOREACH(device_list, CLIST, HEXO_SPIN, &dev->children,
   {
     struct enum_pv_isapnp_s		*enum_pv = item->enum_pv;
     uint_fast8_t			i;
-    const struct devenum_ident_s	*id;
 
     /* ignore already configured devices */
     if (item->drv != NULL)
       continue;
 
-    /* walk through all possible ids for this driver */
-    for (i = 0; (id = drv->id_table + i)->vendor != 0; i++)
-      {
-	if (id->vendor != enum_pv->vendor)
-	  continue;
+	struct driver_s *drv = driver_get_matching_isa(
+		enum_pv->vendor);
 
 	item->icudev = dev->icudev;
 
 	/* call driver device init function, use same icu as PCI
 	   enumerator parent device */
 	if (!drv->f_init(item))
-	  {
-	    count++;
-	  }
-
-	break;
-      }
+		continue;
   });
-
-  return count;
 }
 
 /*
@@ -211,7 +199,7 @@ const struct driver_s	enum_isapnp_drv =
   .f_init		= enum_isapnp_init,
   .f_cleanup		= enum_isapnp_cleanup,
   .f.denum = {
-    .f_register		= enum_isapnp_register,
+		.f_lookup = enum_isapnp_lookup,
   }
 };
 
@@ -232,7 +220,12 @@ DEV_INIT(enum_isapnp_init)
   dev->drv_pv = pv;
 
   isapnp_enum_probe(dev);
+  enum_isapnp_register_all(dev);
 
   return 0;
 }
 
+DEVENUM_LOOKUP(enum_isapnp_lookup)
+{
+	return NULL;
+}

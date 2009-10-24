@@ -25,6 +25,9 @@ SECTIONS
 			/* global variables and const data section */
 			*(.data*)
 			*(.rodata*)
+			global_driver_registry = .;
+			*(.drivers)
+			global_driver_registry_end = .;
 
 			/* data depending on cpu architecture (fonction pointer variables, ...) */
 			*(.cpuarchdata*)

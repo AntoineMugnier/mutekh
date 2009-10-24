@@ -37,54 +37,30 @@
 
 /**************************************************************/
 
-DEVENUM_REGISTER(enum_pci_register)
+static void enum_pci_register_all(struct device_s *dev)
 {
   struct enum_pci_context_s	*pv = dev->drv_pv;
-  size_t			count = 0;
 
   /* walk through all devices */
   CONTAINER_FOREACH(device_list, CLIST, &dev->children,
   {
     struct enum_pv_pci_s		*enum_pv = item->enum_pv;
     uint_fast8_t			i;
-    const struct devenum_ident_s	*id;
 
     /* ignore already configured devices */
     if (item->drv != NULL)
       continue;
 
-    /* walk through all possible ids for this driver */
-    for (i = 0; (id = drv->id_table + i)->type != 0; i++)
-      {
-	if (id->type != DEVENUM_TYPE_PCI)
-	  continue;
-
-	if ((id->vendor != ENUM_ID_PCI_WILDCARD) &&
-	    (id->vendor != enum_pv->vendor))
-	  continue;
-
-	if ((id->device != ENUM_ID_PCI_WILDCARD) &&
-	    (id->device != enum_pv->devid))
-	  continue;
-
-	if ((id->class != ENUM_ID_PCI_WILDCARD) &&
-	    (id->class != enum_pv->class))
-	  continue;
+	struct driver_s *drv = driver_get_matching_pci(
+		enum_pv->vendor, enum_pv->devid, enum_pv->class);
 
 	item->icudev = dev->icudev;
 
 	/* call driver device init function, use same icu as PCI
 	   enumerator parent device */
-	if (!drv->f_init(item, NULL))
-	  {
-	    count++;
-	  }
-
-	break;
-      }
+	if ( drv->f_init(item, NULL) == 0 )
+		continue;
   });
-
-  return count;
 }
 
 /*
@@ -218,6 +194,9 @@ pci_enum_probe(struct device_s *dev)
   return 0;
 }
 
+static void
+pci_enum_register_globals(struct device_s *dev)
+
 
 /*
  * device open operation
@@ -229,7 +208,7 @@ const struct driver_s	enum_pci_drv =
   .f_init		= enum_pci_init,
   .f_cleanup		= enum_pci_cleanup,
   .f.denum = {
-    .f_register		= enum_pci_register,
+    .f_lookup		= enum_pci_lookup,
   }
 };
 
@@ -250,7 +229,12 @@ DEV_INIT(enum_pci_init)
   dev->drv_pv = pv;
 
   pci_enum_probe(dev);
+  enum_pci_register_all(dev);
 
   return 0;
 }
 
+DEVENUM_LOOKUP(enum_pci_lookup)
+{
+	return NULL;
+}
