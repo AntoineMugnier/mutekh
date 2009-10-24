@@ -52,10 +52,8 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 #else
 		"	pushl	2f		\n"
 #endif
-#if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
 		/* save frame pointer */
 		"	push	%%ebp		\n"
-#endif
 		/* save flags */
 		"	pushf			\n"
 		"	cli			\n"
@@ -83,10 +81,8 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 #endif
 		/* restore flags */
 		"	popf			\n"
-#if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
 		/* restore frame pointer */
 		"	pop	%%ebp		\n"
-#endif
 		/* restore execution pointer */
 		"	ret			\n"
 		"2:				\n"
@@ -103,9 +99,6 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		: "memory"
 		, "%eax", /* "%ebx", */ "%ecx", "%edx"
 		, /* "%esi", */ "%edi"
-#if !(defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__))
-		, "%ebp"
-#endif
 		);
 }
 
