@@ -158,7 +158,7 @@ DEV_INIT(xicu_soclib_init)
   DEV_ICU_BIND(dev->icudev, dev, dev->irq, xicu_soclib_handler);
 
   CPU_LOCAL_SET(ipi_icu_dev, dev);
-  CPU_LOCAL_SET(ipi_cpu_id, ((struct soclib_xicu_param_s*)params)->output_line_no);
+  CPU_LOCAL_SET(ipi_cpu_id, (void*)(((struct soclib_xicu_param_s*)params)->output_line_no));
 
   cpu_mem_write_32(
 	  XICU_REG_ADDR(dev->addr[0],

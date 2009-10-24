@@ -33,6 +33,8 @@
 #include <hexo/alloc.h>
 #include <hexo/interrupt.h>
 
+#include <mutek/printk.h>
+
 DEVICU_ENABLE(icu_mips_enable)
 {
 	reg_t status = cpu_mips_mfc0(12, 0);

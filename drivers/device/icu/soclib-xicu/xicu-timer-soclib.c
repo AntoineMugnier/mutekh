@@ -29,6 +29,8 @@
 #include <device/driver.h>
 #include <hexo/iospace.h>
 
+#include <mutek/printk.h>
+
 /*
  * timer device callback setup
  */
