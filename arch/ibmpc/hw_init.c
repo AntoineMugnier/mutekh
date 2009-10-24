@@ -74,10 +74,6 @@ extern const uint8_t mutek_logo_320x200[320*200];
 struct device_s icu_dev;
 #endif
 
-#if defined(CONFIG_DRIVER_BLOCK)
-struct device_s bd_dev;
-#endif
-
 #ifdef CONFIG_MUTEK_CONSOLE
 extern struct device_s *console_dev;
 #endif
@@ -174,14 +170,6 @@ void arch_hw_init()
 #if defined(CONFIG_DRIVER_ENUM_ISAPNP)
 	device_init(&enum_isapnp);
 	enum_isapnp_init(&enum_isapnp, NULL);
-#endif
-
-#if defined(CONFIG_DRIVER_ENUM_PCI) && defined(CONFIG_DRIVER_NET_3C900)
-	dev_enum_register(&enum_pci, &net_3c900_drv);
-#endif
-
-#if defined(CONFIG_DRIVER_ENUM_PCI) && defined(CONFIG_DRIVER_NET_NE2000)
-	dev_enum_register(&enum_pci, &net_ne2000_drv);
 #endif
 
 #if defined(CONFIG_DRIVER_NET_NE2000)
