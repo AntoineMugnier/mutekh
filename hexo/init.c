@@ -15,38 +15,13 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
-
+	Copyright (c) Nicolas Pouillon, <nipo@ssji.net>, 2009
 */
 
-/**
- * @file
- * @module{Hexo}
- * @short System initialization and statup functions
- */
 
-#ifndef INIT_H_
-#define INIT_H_
-
-#include "types.h"
-#include "error.h"
-
-/** boot address, (located in cpu/current/boot.S) */
-void cpu_boot();
-
-/** plateform dependant entry point. (located in arch/current/arch_init.c) */
-void arch_init();
-
-/** Global initialization of Hexo, must be called after memory
- * initialization, before device initalization
- */
-void hexo_global_init();
-
-/** MutekH main function (located in main/main.c) */
-int_fast8_t mutek_start(int_fast8_t argc, char **argv);
-
-/** MutekH main function for non first CPU (located in main/main.c) */
-void mutek_start_smp(void);
-
+void hexo_global_init()
+{
+#ifdef CONFIG_HEXO_DEVICE_TREE
+	device_tree_init();
 #endif
-
+}

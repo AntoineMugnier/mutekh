@@ -1,6 +1,7 @@
 
 objs =						\
 cpu.o						\
+init.o						\
 context.o					\
 mem_alloc.o					\
 device.o					

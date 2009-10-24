@@ -28,18 +28,29 @@
 
 #ifdef CONFIG_HEXO_DEVICE_TREE
 
+struct device_s enum_root;
+
+void device_tree_init()
+{
+	device_init(&enum_root);
+	enum_root_init(&enum_root, NULL);
+}
+
 CONTAINER_FUNC(device_list, CLIST, inline, device_list);
 
 OBJECT_CONSTRUCTOR(device_obj)
 {
   device_list_init(&obj->children);
   lock_init(&obj->lock);
+  obj->parent = NULL;
+  device_register(obj, &enum_root, NULL);
 
   return 0;
 }
 
 OBJECT_DESTRUCTOR(device_obj)
 {
+  device_unregister(obj);
   dev_cleanup(obj);
   device_list_destroy(&obj->children);
   lock_destroy(&obj->lock);
@@ -50,17 +61,25 @@ device_register(struct device_s *dev,
 		struct device_s *parent,
 		void *enum_pv)
 {
-  dev->parent = device_obj_refnew(parent);
-  dev->enum_pv = enum_pv;
+	if ( dev->parent )
+		device_unregister(dev);
 
-  device_list_pushback(&parent->children, dev);
+	dev->parent = device_obj_refnew(parent);
+	dev->enum_pv = enum_pv;
 
-  return 0;
+	device_list_pushback(&parent->children, dev);
+
+	return 0;
 }
 
 error_t device_unregister(struct device_s *dev)
 {
-  return -1; 			/* FIXME */
+	assert(dev->parent);
+
+	device_list_remove(&dev->parent->children, dev);
+	device_obj_refdrop(dev->parent);
+
+	return 0;
 }
 
 void

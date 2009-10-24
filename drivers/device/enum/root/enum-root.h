@@ -15,38 +15,20 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
-
+    Copyright (c) 2009, Nicolas Pouillon <nipo@ssji.net>
 */
 
-/**
- * @file
- * @module{Hexo}
- * @short System initialization and statup functions
- */
+#ifndef __ENUM_ROOT_H_
+#define __ENUM_ROOT_H_
 
-#ifndef INIT_H_
-#define INIT_H_
+#include <device/enum.h>
+#include <hexo/device.h>
 
-#include "types.h"
-#include "error.h"
+#include <stdint.h>
 
-/** boot address, (located in cpu/current/boot.S) */
-void cpu_boot();
-
-/** plateform dependant entry point. (located in arch/current/arch_init.c) */
-void arch_init();
-
-/** Global initialization of Hexo, must be called after memory
- * initialization, before device initalization
- */
-void hexo_global_init();
-
-/** MutekH main function (located in main/main.c) */
-int_fast8_t mutek_start(int_fast8_t argc, char **argv);
-
-/** MutekH main function for non first CPU (located in main/main.c) */
-void mutek_start_smp(void);
+DEV_CLEANUP(enum_root_cleanup);
+DEV_INIT(enum_root_init);
+DEVENUM_LOOKUP(enum_root_lookup);
 
 #endif
 

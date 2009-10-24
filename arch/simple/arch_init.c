@@ -57,6 +57,8 @@ void arch_init()
 
   mem_init();
 
+  hexo_global_init();
+
   /* configure first CPU */
   cpu_init();
 

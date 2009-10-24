@@ -80,6 +80,8 @@ void arch_init()
 
       mem_init();
 
+	  hexo_global_init();
+
 #ifdef CONFIG_HEXO_MMU
 
 #ifdef CONFIG_VMEM_PHYS_ALLOC

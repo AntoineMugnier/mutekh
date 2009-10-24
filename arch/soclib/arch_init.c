@@ -68,6 +68,8 @@ void arch_init()
 
         mem_init();
 
+        hexo_global_init();
+
 #ifdef CONFIG_HEXO_MMU
         uint32_t t0=(uint32_t)(&__system_uncached_heap_start);
         uint32_t t1=(uint32_t)(&__system_uncached_heap_end);
