@@ -33,6 +33,8 @@ asm(
         ".set pop                                        \n"
 
         ".globl mips_interrupt_entry                     \n"
+        ".func mips_interrupt_entry                      \n"
+        ".type mips_interrupt_entry, %function           \n"
         "mips_interrupt_entry:                           \n"
         ".set push                                       \n"
         ".set noat                                       \n"
@@ -282,6 +284,8 @@ asm(
 # endif
 
         ".set pop                                        \n"
+		".endfunc                                        \n"
+        ".size mips_interrupt_entry, .-mips_interrupt_entry \n"
         );
 
         // Local Variables:

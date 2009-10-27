@@ -26,6 +26,8 @@ asm(
         ".set push				\n"
         ".set noat				\n"
         ".globl setjmp          \n"
+        ".func setjmp           \n"
+        ".type setjmp, %function\n"
         "setjmp:                \n"
         /* save gp registers */
         "sw     $16,    16*4($4)\n"
@@ -49,6 +51,8 @@ asm(
         "move   $2,     $0      \n"
         "jr     $ra             \n"
         ".set pop			    \n"
+		".endfunc               \n"
+        ".size setjmp, .-setjmp \n"
        );
 
 void longjmp(jmp_buf env, reg_t val);
@@ -56,6 +60,8 @@ asm(
         ".set push				\n"
         ".set noat				\n"
         ".globl longjmp         \n"
+        ".func longjmp          \n"
+        ".type longjmp, %function\n"
         "longjmp:               \n"
         /* restore gp registers */
         "lw     $16,    16*4($4)\n"
@@ -82,4 +88,6 @@ asm(
         "1:                     \n"
         "jr     $ra             \n"
         ".set pop               \n"
+		".endfunc               \n"
+        ".size longjmp, .-longjmp\n"
     );
