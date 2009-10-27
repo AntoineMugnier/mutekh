@@ -248,6 +248,14 @@ static inline uint64_t endian_swap64(uint64_t x)
 					 __ENDIAN_NAS_R(a, 7, __val, 0); __val; })
 
 
+
+# define __endian_16_na_load(a)		endian_le16(endian_le16_na_load(a))
+# define __endian_32_na_load(a)		endian_le32(endian_le32_na_load(a))
+# define __endian_64_na_load(a)		endian_le64(endian_le64_na_load(a))
+# define __endian_16_na_store(a, x)	endian_le16_na_store(a, endian_le16(x))
+# define __endian_32_na_store(a, x)	endian_le32_na_store(a, endian_le32(x))
+# define __endian_64_na_store(a, x)	endian_le64_na_store(a, endian_le64(x))
+
 #endif
 
 /***********************************************************************
