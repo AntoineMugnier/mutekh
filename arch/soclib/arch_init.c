@@ -128,6 +128,10 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 #if defined(CONFIG_ARCH_DEVICE_TREE)
         device_init(&fdt_enum_dev);
         enum_fdt_init(&fdt_enum_dev, device_tree);
+#elif defined(CONFIG_ARCH_HW_INIT_USER)
+        user_hw_init();
+#elif defined(CONFIG_ARCH_HW_INIT)
+# error CONFIG_ARCH_HW_INIT unsupported for SoCLib platforms
 #endif
 
 #if defined(CONFIG_MUTEK_SCHEDULER)

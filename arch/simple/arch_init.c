@@ -62,6 +62,14 @@ void arch_init()
   /* configure first CPU */
   cpu_init();
 
+#if defined(CONFIG_ARCH_HW_INIT_USER)
+  user_hw_init();
+#elif defined(CONFIG_ARCH_HW_INIT)
+  arch_hw_init();
+#else
+# error No supported hardware initialization
+#endif
+
 #if defined(CONFIG_MUTEK_SCHEDULER)
   sched_global_init();
   sched_cpu_init();
