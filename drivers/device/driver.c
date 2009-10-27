@@ -44,7 +44,7 @@ struct driver_s *driver_get_matching_pci(
 {
 	const struct driver_s **drv = global_driver_registry;
 
-	while ( drv < global_driver_registry_end ) {
+	for ( ; drv < global_driver_registry_end ; drv++ ) {
 		if ( !*drv )
 			continue;
 
@@ -60,7 +60,6 @@ struct driver_s *driver_get_matching_pci(
 				&& (ident->pci.class == class || class == -1) )
 				return (struct driver_s *)*drv;
 		}
-		++drv;
 	}
 	return NULL;
 }
@@ -70,7 +69,7 @@ struct driver_s *driver_get_matching_isa(
 {
 	const struct driver_s **drv = global_driver_registry;
 
-	while ( drv < global_driver_registry_end ) {
+	for ( ; drv < global_driver_registry_end ; drv++ ) {
 		if ( !*drv )
 			continue;
 
@@ -84,7 +83,6 @@ struct driver_s *driver_get_matching_isa(
 				&& (ident->isa.vendor == vendor) )
 				return (struct driver_s *)*drv;
 		}
-		++drv;
 	}
 	return NULL;
 }
@@ -95,7 +93,7 @@ struct driver_s *driver_get_matching_ata(
 {
 	const struct driver_s **drv = global_driver_registry;
 
-	while ( drv < global_driver_registry_end ) {
+	for ( ; drv < global_driver_registry_end ; drv++ ) {
 		if ( !*drv )
 			continue;
 
@@ -109,7 +107,6 @@ struct driver_s *driver_get_matching_ata(
 				 && !strcmp(ident->ata.str, name) )
 				return (struct driver_s *)*drv;
 		}
-		++drv;
 	}
 	return NULL;
 }
@@ -120,7 +117,7 @@ struct driver_s *driver_get_matching_fdtname(
 {
 	const struct driver_s **drv = global_driver_registry;
 
-	while ( drv < global_driver_registry_end ) {
+	for ( ; drv < global_driver_registry_end ; drv++ ) {
 		if ( !*drv )
 			continue;
 
@@ -135,7 +132,6 @@ struct driver_s *driver_get_matching_fdtname(
 				return (struct driver_s *)*drv;
 			}
 		}
-		++drv;
 	}
 	return NULL;
 }

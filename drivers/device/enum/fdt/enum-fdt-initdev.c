@@ -70,10 +70,27 @@ static void parse_reg( struct device_s *dev, const void *data, size_t datalen )
 	for ( i=0; i<DEVICE_MAX_ADDRSLOT; ++i ) {
 		if ( ptr > (void*)((uintptr_t)data+datalen) )
 			break;
-		ptr = parse_sized( pv->addr_cells, data,
+		ptr = parse_sized( pv->addr_cells, ptr,
 						   sizeof(dev->addr[i]), &dev->addr[i] );
-		ptr = parse_sized( pv->size_cells, data,
+		ptr = parse_sized( pv->size_cells, ptr,
 						   0, NULL );
+	}
+}
+
+static void parse_reg_size( struct device_s *dev, const void *data, size_t datalen )
+{
+	struct enum_pv_fdt_s *pv = dev->enum_pv;
+	uint_fast8_t i;
+	const void *ptr = data;
+
+	for ( i=0; i<DEVICE_MAX_ADDRSLOT; i+=2 ) {
+		if ( ptr > (void*)((uintptr_t)data+datalen) )
+			break;
+		ptr = parse_sized( pv->addr_cells, ptr,
+						   sizeof(*dev->addr), &dev->addr[i] );
+		ptr = parse_sized( pv->size_cells, ptr,
+						   sizeof(*dev->addr), &dev->addr[i+1] );
+		dev->addr[i+1] += dev->addr[i];
 	}
 }
 
@@ -97,10 +114,12 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 		else
 			priv->dev->icudev = NULL;
 
-		if ( fdt_reader_has_prop(state, "reg", &value, &len ) )
-			parse_reg( priv->dev, value, len );
-		else
-			priv->dev->irq = -1;
+		if ( fdt_reader_has_prop(state, "reg", &value, &len ) ) {
+			if ( !strcmp(enum_pv->device_type, "memory") )
+				parse_reg_size( priv->dev, value, len );
+			else
+				parse_reg( priv->dev, value, len );
+		}
 	}
 
 	/*
@@ -116,11 +135,17 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 	}
 
 	if ( binder ) {
+		dprintk("  has a binder\n");
 		for ( ; binder->param_name; binder++ ) {
 			const void *value = NULL;
 			size_t len;
+			dprintk("   considering parameter %s... ", binder->param_name);
 			if ( fdt_reader_has_prop(state, binder->param_name, &value, &len ) ) {
+				dprintk("%P\n", value, len);
 				switch (binder->datatype) {
+				case PARAM_DATATYPE_BOOL:
+					*(bool_t*)(priv->param + binder->struct_offset) = 1;
+					break;
 				case PARAM_DATATYPE_INT:
 					parse_sized( binder->datalen, value,
 								 binder->datalen, priv->param + binder->struct_offset );
@@ -137,12 +162,19 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 					break;
 				}
 			} else {
+				dprintk("no value\n");
+				switch (binder->datatype) {
+				case PARAM_DATATYPE_BOOL:
+					*(bool_t*)(priv->param + binder->struct_offset) = 0;
+					break;
+				default:
 #if 1
-				printk("  Warning: parameter %s not found for device %s, trying without\n", binder->param_name, enum_pv->device_path);
+					printk("  Warning: parameter %s not found for device %s, trying without\n", binder->param_name, enum_pv->device_path);
 #else
-				priv->err = ENOENT;
-				return 0;
+					priv->err = ENOENT;
+					return 0;
 #endif
+				}
 			}
 		}
 	}
@@ -161,7 +193,7 @@ error_t enum_fdt_use_drv(
 
 	assert(ident);
 
-	dprintk("Considering usage of driver %p for %s\n",
+	dprintk(" Considering usage of driver %p for %s\n",
 		   drv,
 		   enum_pv->device_path);
 
