@@ -71,7 +71,7 @@ asm(
 	// Allocate 1K stacks
 	"lsl  r5, r4, #10            \n\t"
 
-    "ldr  r13, =__system_uncached_heap_end-16   \n\t"
+    "ldr  r13, =__initial_stack-16   \n\t"
 	"subs r13, r13, r5                         \n\t"
 
 #ifdef CONFIG_SOCLIB_MEMCHECK

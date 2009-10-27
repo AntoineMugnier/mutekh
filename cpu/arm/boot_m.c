@@ -59,7 +59,7 @@ asm(
 	".type   arm_boot, %function      \n\t"
 	"arm_boot:                        \n\t"
 	/* set stack */
-    "ldr  r13, =__system_heap_end-16  \n\t"
+    "ldr  r13, =__initial_stack-16  \n\t"
 	/* jump to arch_init */
 	"ldr  pc, =arch_init              \n\t"
 	".size   arm_boot, .-arm_boot     \n\t"

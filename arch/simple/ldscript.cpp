@@ -8,15 +8,14 @@ SECTIONS
 {
 #if CONFIG_ARCH_SIMPLE_RESET_ADDR == CONFIG_ARCH_ROM_ADDR
 	.boot : {
-		*(.boot*)
-		*(.init*)
+		KEEP(*(.boot*))
 	} > mem_rom
 #endif
 
 	.text : {
-			*(.boot*)
-			*(.text*)
-			*(.progmem*)
+		*(.init*)
+		*(.text*)
+		*(.progmem*)
 	} > mem_rom
 
 	.data : {
@@ -26,7 +25,7 @@ SECTIONS
 		*(.data*)
 		*(.rodata*)
 		global_driver_registry = .;
-		*(.drivers)
+		KEEP(*(.drivers))
 		global_driver_registry_end = .;
 		*(.common*)
 
@@ -42,8 +41,7 @@ SECTIONS
 
 #if CONFIG_ARCH_SIMPLE_RESET_ADDR != CONFIG_ARCH_ROM_ADDR
 	.boot CONFIG_ARCH_SIMPLE_RESET_ADDR : {
-		*(.boot*)
-		*(.init*)
+		KEEP(*(.boot*))
 	} > mem_rom
 #endif
 
@@ -58,6 +56,8 @@ SECTIONS
 	__system_heap_start = __bss_end;
 	__system_heap_end = ORIGIN(mem_ram) + LENGTH(mem_ram) - 4;
 
+	__initial_stack = __system_heap_end;
+
 	__context_data_start = LOADADDR(.contextdata);
 	__context_data_end = LOADADDR(.contextdata) + SIZEOF(.contextdata);
 
@@ -65,5 +65,5 @@ SECTIONS
 	__data_load_end = LOADADDR(.data) + SIZEOF(.data);
 }
 
-ENTRY(cpu_boot)
+ENTRY(arch_init)
 
