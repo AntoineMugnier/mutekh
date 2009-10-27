@@ -54,9 +54,13 @@ cpu_global_init(void)
 }
 
 extern __ldscript_symbol_t  	__segment_excep_start;
+extern __ldscript_symbol_t __exception_base_ptr;
 
 void cpu_init(void)
 {
+  /* Set exception vector */
+	cpu_mips_mtc0(15, 1, (reg_t)&__exception_base_ptr);
+
 #ifdef CONFIG_SMP
   void			*cls;
 

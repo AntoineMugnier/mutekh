@@ -31,8 +31,6 @@
 #include <hexo/device.h>
 #include <device/driver.h>
 
-extern __ldscript_symbol_t _evpr_base;
-
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
@@ -44,6 +42,8 @@ void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 CPU_LOCAL struct device_s cpu_icu_dev;
 #endif
 
+extern __ldscript_symbol_t __exception_base_ptr;
+
 /* CPU Local Descriptor structure */
 
 error_t
@@ -54,7 +54,8 @@ cpu_global_init(void)
 
 void cpu_init(void)
 {
-  asm volatile("mtevpr %0" : : "r"(&_evpr_base));
+  /* Set exception vector */
+  asm volatile("mtevpr %0" : : "r"(&__exception_base_ptr));
 
 #ifdef CONFIG_SMP
   void			*cls;

@@ -90,6 +90,8 @@ asm(
         ".set pop                                                                          \n"
 #endif
 
+        "   la      $4, __exception_base_ptr                                               \n"
+        "   mtc0    $4, $15, 1                                                             \n"
 
         /* jumpto arch_init function */
         "   la      $8,     arch_init                                                      \n"

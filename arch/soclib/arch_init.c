@@ -27,6 +27,16 @@
 #include <hexo/cpu.h>
 #include <hexo/alloc.h>
 
+#include <mutek/scheduler.h>
+
+#ifdef CONFIG_DATA_FROM_ROM
+extern __ldscript_symbol_t __bss_start;
+extern __ldscript_symbol_t __bss_end;
+extern __ldscript_symbol_t __data_start;
+extern __ldscript_symbol_t __data_load_start;
+extern __ldscript_symbol_t __data_load_end;
+#endif
+
 #ifdef CONFIG_ARCH_SOCLIB_RAMLOCK
 extern __ldscript_symbol_t __ramlock_base_start;
 uintptr_t __ramlock_base = (uintptr_t)&__ramlock_base_start;
@@ -61,6 +71,10 @@ void arch_init()
         lock_init(&__atomic_arch_lock);
         lock_init(&cpu_init_lock);
 
+#endif
+#ifdef CONFIG_DATA_FROM_ROM
+        memcpy_from_code((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
+        memset((uint8_t*)&__bss_start, 0, (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
 #endif
 
         /* configure system wide cpu data */

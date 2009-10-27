@@ -31,7 +31,7 @@
 
 #include <string.h>
 
-#ifdef CONFIG_ARCH_SIMPLE_COPY_DATA
+#ifdef CONFIG_DATA_FROM_ROM
 extern __ldscript_symbol_t __bss_start;
 extern __ldscript_symbol_t __bss_end;
 extern __ldscript_symbol_t __data_start;
@@ -44,7 +44,7 @@ void arch_specific_init();
 /* architecture specific init function */
 void arch_init() 
 {
-#ifdef CONFIG_ARCH_SIMPLE_COPY_DATA
+#ifdef CONFIG_DATA_FROM_ROM
 	memcpy_from_code((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
 	memset((uint8_t*)&__bss_start, 0, (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
 #endif

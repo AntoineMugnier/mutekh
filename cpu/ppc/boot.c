@@ -71,11 +71,14 @@ asm(
     "lis	13, _gp@ha				\n"
     "la		13, _gp@l(13)				\n"
 
-    /* jumpto arch_init function */
+    "lis	2, __exception_base_ptr@ha	 \n"
+    "la     2, __exception_base_ptr@l(2) \n"
+    "mtevpr 2					\n"
 
-    "lis	3, arch_init@ha				\n"
-    "la         3, arch_init@l(3)			\n"
-    "mtctr      3					\n"
+    /* jumpto arch_init function */
+    "lis	2, arch_init@ha				\n"
+    "la         2, arch_init@l(2)			\n"
+    "mtctr      2					\n"
     "bctr						\n"
     );
 

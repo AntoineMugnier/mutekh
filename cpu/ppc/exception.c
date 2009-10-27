@@ -134,9 +134,6 @@
 asm(
     ".section        .excep,\"ax\",@progbits		\n"
 
-	".globl  _evpr_base             \n"
-	"_evpr_base:                    \n"
-
 	/* critical interrupt (critical, async) */
 	".org 0x100\n"
 

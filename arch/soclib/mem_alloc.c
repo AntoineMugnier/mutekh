@@ -24,7 +24,6 @@
 #include <hexo/segment.h>
 
 extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
-extern __ldscript_symbol_t __system_cached_heap_start, __system_cached_heap_end;
 
 struct mem_alloc_region_s mem_region_system;
 
@@ -58,11 +57,6 @@ void mem_init(void)
 			);
   
 #else
-  mem_alloc_region_init(&mem_region_cpu,
-			&__system_cached_heap_start,
-			&__system_cached_heap_end
-			);
-
   mem_alloc_region_init(&mem_region_system,
 			&__system_uncached_heap_start,
 			&__system_uncached_heap_end
@@ -80,8 +74,8 @@ void mem_init(void)
   
 #else
   mem_alloc_region_init(&mem_region_system,
-			&__system_cached_heap_start,
-			&__system_cached_heap_end
+			&__system_uncached_heap_start,
+			&__system_uncached_heap_end
 			);
 #endif
 
