@@ -90,9 +90,6 @@ asm(
         "   sw      $6,     6*4($sp)                     \n" /* Args regs */
         "   sw      $7,     7*4($sp)                     \n" /* Args regs */
 
-        "   sw      $gp,    28*4($sp)                    \n" /* Global pointer */
-        "   la      $gp,    _gp                          \n" /* restore kernel $gp */
-
         "   sw      $31,    31*4($sp)                    \n" /* Return address regs */
 
         /* read and extract cause */
@@ -144,6 +141,8 @@ asm(
 
         "   sw      $24,    24*4($sp)                    \n" /* Temp regs */
         "   sw      $25,    25*4($sp)                    \n" /* Temp regs */
+
+        "   sw      $28,    28*4($sp)                    \n" /* Save user GP */
 
         "   beq     $6,     $0,     interrupt_hw         \n"
 

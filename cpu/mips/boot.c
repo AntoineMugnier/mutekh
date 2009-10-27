@@ -90,8 +90,6 @@ asm(
         ".set pop                                                                          \n"
 #endif
 
-        /* setup global data pointer */
-        "   la      $gp,    _gp                                                            \n"
 
         /* jumpto arch_init function */
         "   la      $8,     arch_init                                                      \n"
