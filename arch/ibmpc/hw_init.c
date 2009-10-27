@@ -50,6 +50,10 @@ struct device_s uart_dev;
 struct device_s fb_dev;
 #endif
 
+#if defined(CONFIG_MUTEK_TIMER)
+extern struct device_s *timerms_dev;
+#endif
+
 #if defined(CONFIG_DRIVER_TIMER)
 struct device_s timer_dev;
 #endif
@@ -129,6 +133,7 @@ void arch_hw_init()
 	timer_dev.irq = 0;
 	timer_dev.icudev = &icu_dev;
 	timer_8253_init(&timer_dev, NULL);
+	timerms_dev = &timer_dev;
 # else
 #  warning CONFIG_DRIVER_TIMER case not handled in hw_init()
 # endif

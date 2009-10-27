@@ -47,6 +47,10 @@
 struct timer_s	timer_ms;
 #endif
 
+#if defined (CONFIG_MUTEK_TIMER)
+struct device_s *timerms_dev = NULL;
+#endif
+
 #if defined(CONFIG_DRIVER_TIMER)
 DEVTIMER_CALLBACK(timer_callback)
 {
@@ -63,7 +67,7 @@ DEVTIMER_CALLBACK(timer_callback)
 
 #ifdef CONFIG_MUTEK_MAIN
 #ifdef CONFIG_MUTEK_CONSOLE
-struct device_s *console_dev;
+struct device_s *console_dev = NULL;
 
 static inline PRINTF_OUTPUT_FUNC(__printf_out_tty)
 {
@@ -78,11 +82,6 @@ static inline PRINTF_OUTPUT_FUNC(__printf_out_tty)
     }
 }
 
-# if defined(CONFIG_DRIVER_UART)
-	extern struct device_s uart_dev;
-# elif defined(CONFIG_DRIVER_TTY)
-	extern struct device_s tty_dev;
-# endif
 #endif
 
 void arch_hw_init();
@@ -95,8 +94,15 @@ static struct sched_context_s main_ctx;
 void stdio_in_out_err_init();
 #endif
 
+static CPU_EXCEPTION_HANDLER(fault_handler);
+
+static lock_t fault_lock;
+
 int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
+	lock_init(&fault_lock);
+	cpu_exception_sethandler(fault_handler);
+
 #if defined (CONFIG_MUTEK_SCHEDULER)
 	context_bootstrap(&main_ctx.context);
 	sched_context_init(&main_ctx);
@@ -105,8 +111,8 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 	arch_hw_init();
 
 #if defined(CONFIG_MUTEK_CONSOLE)
-	assert(console_dev);
-	printk_set_output(__printf_out_tty, console_dev);
+	if ( console_dev )
+		printk_set_output(__printf_out_tty, console_dev);
 #endif
 
 #if defined(CONFIG_LIBC_STREAM_STD)
@@ -121,8 +127,8 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #endif
 
 #if defined (CONFIG_MUTEK_TIMER)
-	dev_timer_setperiod(&timer_dev, 0, 1193180 / 100);
-	dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
+	dev_timer_setperiod(timerms_dev, 0, 1193180 / 100);
+	dev_timer_setcallback(timerms_dev, 0, timer_callback, 0);
 #endif
 
   printk("MutekH is alive.\n");
@@ -135,8 +141,6 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
   return 0;
 }
-
-static lock_t fault_lock;
 
 static CPU_EXCEPTION_HANDLER(fault_handler)
 {
@@ -186,7 +190,6 @@ void app_start();
 
 void mutek_start_smp(void)  /* ALL CPUs execute this function */
 {
-  lock_init(&fault_lock);
   cpu_exception_sethandler(fault_handler);
 
   cpu_interrupt_enable();
