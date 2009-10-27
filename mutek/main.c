@@ -84,7 +84,9 @@ static inline PRINTF_OUTPUT_FUNC(__printf_out_tty)
 
 #endif
 
+#if defined(CONFIG_ARCH_HW_INIT)
 void arch_hw_init();
+#endif
 
 #if defined (CONFIG_MUTEK_SCHEDULER)
 static struct sched_context_s main_ctx;
@@ -108,7 +110,9 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 	sched_context_init(&main_ctx);
 #endif
 
+#if defined(CONFIG_ARCH_HW_INIT)
 	arch_hw_init();
+#endif
 
 #if defined(CONFIG_MUTEK_CONSOLE)
 	if ( console_dev )

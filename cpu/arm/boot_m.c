@@ -60,6 +60,16 @@ asm(
 	"arm_boot:                        \n\t"
 	/* set stack */
     "ldr  r13, =__initial_stack-16  \n\t"
+
+    /* Get the device tree and put it in first arg */
+#ifdef CONFIG_ARCH_DEVICE_TREE
+    "ldr  r0, =dt_blob_start          \n\t"
+#else
+    "mov  r0, #0                      \n\t"
+#endif
+    /* Put a 0 in second arg */
+    "mov  r1, #0                      \n\t"
+
 	/* jump to arch_init */
 	"ldr  pc, =arch_init              \n\t"
 	".size   arm_boot, .-arm_boot     \n\t"

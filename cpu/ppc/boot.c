@@ -71,6 +71,16 @@ asm(
     "lis	13, _gp@ha				\n"
     "la		13, _gp@l(13)				\n"
 
+    /* get device-tree and put it in arg[0] */
+#ifdef CONFIG_ARCH_DEVICE_TREE
+    "lis	3, dt_blob_start - 8@ha    \n"
+    "la		3, dt_blob_start - 8@l(3)  \n"
+#else
+    "la		3, 0                       \n"
+#endif
+    /* put a null in arg[1] */
+    "la		4, 0                       \n"
+
     "lis	2, __exception_base_ptr@ha	 \n"
     "la     2, __exception_base_ptr@l(2) \n"
     "mtevpr 2					\n"

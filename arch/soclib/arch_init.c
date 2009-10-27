@@ -21,6 +21,13 @@
 
 #include <assert.h>
 
+#if defined(CONFIG_ARCH_DEVICE_TREE)
+# include <drivers/device/enum/fdt/enum-fdt.h>
+# include <device/enum.h>
+# include <device/driver.h>
+# include <hexo/device.h>
+#endif
+
 #include <hexo/types.h>
 #include <hexo/init.h>
 #include <hexo/lock.h>
@@ -35,6 +42,10 @@ extern __ldscript_symbol_t __bss_end;
 extern __ldscript_symbol_t __data_start;
 extern __ldscript_symbol_t __data_load_start;
 extern __ldscript_symbol_t __data_load_end;
+#endif
+
+#if defined(CONFIG_ARCH_DEVICE_TREE)
+struct device_s fdt_enum_dev;
 #endif
 
 #ifdef CONFIG_ARCH_SOCLIB_RAMLOCK
@@ -62,7 +73,7 @@ lock_t              __atomic_arch_lock;
 #endif
 
 /* architecture specific init function */
-void arch_init() 
+void arch_init(void *device_tree, void *bootloader_pointer_table)
 {
 #ifdef CONFIG_SMP
     if (cpu_isbootstrap())    /* FIXME */
@@ -112,6 +123,11 @@ void arch_init()
 #ifdef CONFIG_SMP
         /* send reset/init signal to other CPUs */
         cpu_init_flag = 1;
+#endif
+
+#if defined(CONFIG_ARCH_DEVICE_TREE)
+        device_init(&fdt_enum_dev);
+        enum_fdt_init(&fdt_enum_dev, device_tree);
 #endif
 
 #if defined(CONFIG_MUTEK_SCHEDULER)

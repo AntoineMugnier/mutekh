@@ -93,6 +93,14 @@ asm(
     "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_MAGIC) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
 #endif
 
+    /* Get the device tree and put it in first arg */
+#ifdef CONFIG_ARCH_DEVICE_TREE
+    "ldr  r0, =dt_blob_start          \n\t"
+#else
+    "mov  r0, #0                      \n\t"
+#endif
+    /* Put a 0 in second arg */
+    "mov  r1, #0                      \n\t"
 
 	"ldr  r12, =arch_init             \n\t"
 	"bx   r12                         \n\t"

@@ -93,6 +93,16 @@ asm(
         "   la      $4, __exception_base_ptr                                               \n"
         "   mtc0    $4, $15, 1                                                             \n"
 
+        /* Get the device tree and put it in first arg */
+#ifdef CONFIG_ARCH_DEVICE_TREE
+        "   la      $4, dt_blob_start                                                      \n"
+#else
+        "   move    $4, $0                                                                 \n"
+#endif
+        /* Put a 0 in second arg */
+        "   move    $5, $0                                                                 \n"
+
+
         /* jumpto arch_init function */
         "   la      $8,     arch_init                                                      \n"
 #if __mips >= 32
