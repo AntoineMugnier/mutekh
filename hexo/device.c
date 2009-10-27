@@ -34,6 +34,8 @@ void device_tree_init()
 {
 	device_init(&enum_root);
 	enum_root_init(&enum_root, NULL);
+	/* Dont reference ourselves... */
+	device_list_remove(&enum_root.children, &enum_root);
 }
 
 CONTAINER_FUNC(device_list, CLIST, inline, device_list);
