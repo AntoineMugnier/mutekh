@@ -134,13 +134,14 @@ DEV_INIT(enum_fdt_init)
 
 	dprintk("registering drivers\n");
 	CONTAINER_FOREACH(device_list, CLIST, &dev->children, {
-			dprintk("registering driver for %d\n", item);
+			struct enum_pv_fdt_s *enum_pv = item->enum_pv;
+			dprintk("registering driver for %s\n", enum_pv->device_path);
 			enum_fdt_register_one(dev, item);
 		});
 
 	if ( pv->console_path ) {
 		struct device_s *cd = enum_fdt_lookup(dev, pv->console_path);
-		if ( cd ) {
+		if ( cd && cd->drv ) {
 			printk("Setting console device to node %s\n", pv->console_path);
 			console_dev = cd;
 		}
