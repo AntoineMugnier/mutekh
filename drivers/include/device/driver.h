@@ -30,6 +30,7 @@
 #define PARAM_DATATYPE_INT 1
 #define PARAM_DATATYPE_DEVICE_PTR 2
 #define PARAM_DATATYPE_ADDR 3
+#define PARAM_DATATYPE_BOOL 4
 
 /**
    A link from a device property and a field in the parameter
@@ -208,6 +209,10 @@ struct driver_s
 
 #ifdef __DEVICE_I2C_H__
     struct dev_class_i2c_s	i2c;
+#endif
+
+#ifdef __DEVICE_MEM_H__
+    struct dev_class_mem_s	mem;
 #endif
   } f;
 };

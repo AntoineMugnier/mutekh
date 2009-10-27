@@ -51,6 +51,7 @@ enum device_class_e
     device_class_lcd,
     device_class_gpio,
     device_class_i2c,
+    device_class_mem,
   };
 
 
