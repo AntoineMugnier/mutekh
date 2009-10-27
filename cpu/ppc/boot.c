@@ -30,8 +30,8 @@ asm(
     "cpu_boot:						\n"
 
     /* get CPU id and adjust stack */
-    "lis	9, __system_uncached_heap_end - 8@ha    \n"
-    "la		1, __system_uncached_heap_end - 8@l(9)  \n"
+    "lis	9, __initial_stack - 8@ha    \n"
+    "la		1, __initial_stack - 8@l(9)  \n"
     "mfdcr	29,0					\n"
 
 #ifndef CONFIG_SMP
