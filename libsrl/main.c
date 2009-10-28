@@ -180,8 +180,6 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)
 {
 	srl_console_init(app_desc.tty_addr);
 
-	hw_init();
-
 	lock_init(&fault_lock);
 #ifndef CONFIG_PTHREAD
 	lock_init(&app_desc.start->lock);
