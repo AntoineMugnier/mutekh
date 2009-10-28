@@ -40,13 +40,13 @@ cpu_atomic_inc(volatile atomic_int_t *a)
 
 	asm volatile(
 		"1:                   \n\t"
-		"ldrex   %[tmp], %[atomic]       \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
 		"add     %[tmp], %[tmp], #1   \n\t"
-		"strex   %[tmp2], %[tmp], %[atomic]   \n\t"
+		"strex   %[tmp2], %[tmp], [%[atomic]]   \n\t"
 		"tst     %[tmp2], #1       \n\t"
 		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [atomic] "+m" (*a)
-		:
+		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
+		: [atomic] "r" (a)
 		);
 
 	return tmp != 0;
@@ -61,13 +61,13 @@ cpu_atomic_dec(volatile atomic_int_t *a)
 
 	asm volatile(
 		"1:                   \n\t"
-		"ldrex   %[tmp], %[atomic]       \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
 		"sub     %[tmp], %[tmp], #1   \n\t"
-		"strex   %[tmp2], %[tmp], %[atomic]   \n\t"
+		"strex   %[tmp2], %[tmp], [%[atomic]]   \n\t"
 		"tst     %[tmp2], #1       \n\t"
 		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [atomic] "+m" (*a)
-		:
+		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
+		: [atomic] "r" (a)
 		);
 
 	return tmp != 0;
@@ -83,17 +83,17 @@ cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
 
 	asm volatile(
 		"1:                   \n\t"
-		"ldrex   %[tmp], %[atomic]       \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
 		"tst     %[tmp], %[mask]       \n\t"
 		"bne     2f           \n\t"
 		"orr     %[tmp2], %[tmp], %[mask]   \n\t"
-		"strex   %[tmp3], %[tmp2], %[atomic]   \n\t"
+		"strex   %[tmp3], %[tmp2], [%[atomic]]   \n\t"
 		"tst     %[tmp3], #1       \n\t"
 		"bne     1b           \n\t"
 		"2:                   \n\t"
 		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
-		, [atomic] "+m" (*a), [tmp3] "=&r"(tmp3)
-		: [mask] "r" (mask)
+		, [tmp3] "=&r"(tmp3), [clobber] "=m" (*a)
+		: [mask] "r" (mask), [atomic] "r" (a)
 		);
 
 	return tmp != 0;
@@ -109,16 +109,16 @@ cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
 
 	asm volatile(
 		"1:                   \n\t"
-		"ldrex   %[tmp], %[atomic]       \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
 		"tst     %[tmp], %[mask]       \n\t"
 		"bne     1b           \n\t"
 		"orr     %[tmp], %[tmp], %[mask]   \n\t"
-		"strex   %2, %[tmp], %[atomic]   \n\t"
+		"strex   %2, %[tmp], [%[atomic]]   \n\t"
 		"tst     %2, #1       \n\t"
 		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [atomic] "+m" (*a)
+		: [tmp] "=&r" (tmp), [clobber] "=m" (*a)
 		, [tmp2] "=&r" (tmp2)
-		: [mask] "r" (mask)
+		: [mask] "r" (mask), [atomic] "r" (a)
 		);
 }
 
@@ -132,17 +132,17 @@ cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
 
 	asm volatile(
 		"1:                   \n\t"
-		"ldrex   %[tmp], %[atomic]       \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
 		"tst     %[tmp], %[mask]       \n\t"
 		"beq     2f           \n\t"
 		"bic     %[tmp2], %[tmp], %[mask]   \n\t"
-		"strex   %[tmp3], %[tmp2], %[atomic]   \n\t"
+		"strex   %[tmp3], %[tmp2], [%[atomic]]   \n\t"
 		"tst     %[tmp3], #1       \n\t"
 		"bne     1b           \n\t"
 		"2:                   \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2)
-		, [atomic] "+m" (*a), [tmp3] "=&r"(tmp3)
-		: [mask] "r" (mask)
+		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
+		, [tmp3] "=&r"(tmp3)
+		: [mask] "r" (mask), [atomic] "r" (a)
 		);
 
 	return tmp != 0;
@@ -158,15 +158,15 @@ cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
 
 	asm volatile(
 		"1:                   \n\t"
-		"ldrex   %[tmp], %[atomic]       \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
 		"tst     %[tmp], %[mask]       \n\t"
 		"beq     1b           \n\t"
 		"bic     %[tmp], %[tmp], %[mask]   \n\t"
-		"strex   %2, %[tmp], %[atomic]   \n\t"
+		"strex   %2, %[tmp], [%[atomic]]   \n\t"
 		"tst     %2, #1       \n\t"
 		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [atomic] "+m" (*a), [tmp2] "=&r" (tmp2)
-		: [mask] "r" (mask)
+		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
+		: [mask] "r" (mask), [atomic] "r" (a)
 		);
 }
 
@@ -180,13 +180,13 @@ cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
 
 	asm volatile(
 		"1:                   \n\t"
-		"ldrex   %[tmp], %[atomic]       \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
 		"orr     %[tmp], %[tmp], %[mask]   \n\t"
-		"strex   %[tmp2], %[tmp], %[atomic]   \n\t"
+		"strex   %[tmp2], %[tmp], [%[atomic]]   \n\t"
 		"tst     %[tmp2], #1       \n\t"
 		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [atomic] "+m" (*a)
-		: [mask] "r" (mask)
+		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
+		: [mask] "r" (mask), [atomic] "r" (a)
 		);
 
 	return tmp != 0;
@@ -202,13 +202,13 @@ cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
 
 	asm volatile(
 		"1:                   \n\t"
-		"ldrex   %[tmp], %[atomic]       \n\t"
+		"ldrex   %[tmp], [%[atomic]]       \n\t"
 		"bic     %[tmp], %[tmp], %[mask]   \n\t"
-		"strex   %[tmp2], %[tmp], %[atomic]   \n\t"
+		"strex   %[tmp2], %[tmp], [%[atomic]]   \n\t"
 		"tst     %[tmp2], #1       \n\t"
 		"bne     1b           \n\t"
-		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [atomic] "+m" (*a)
-		: [mask] "r" (mask)
+		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
+		: [mask] "r" (mask), [atomic] "r" (a)
 		);
 
 	return tmp != 0;
