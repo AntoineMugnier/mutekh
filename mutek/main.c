@@ -43,12 +43,9 @@
 #include <mutek/timer.h>
 #include <mutek/printk.h>
 
-#if defined(CONFIG_MUTEK_TIMERMS)
-struct timer_s	timer_ms;
-#endif
-
-#if defined (CONFIG_MUTEK_TIMER)
+#if defined (CONFIG_MUTEK_TIMERMS)
 struct device_s *timerms_dev = NULL;
+struct timer_s timer_ms;
 #endif
 
 #if defined(CONFIG_DRIVER_TIMER)
@@ -122,7 +119,7 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 	timer_ms.ticks = 0;
 #endif
 
-#if defined (CONFIG_MUTEK_TIMER)
+#if defined (CONFIG_MUTEK_TIMERMS)
 	dev_timer_setperiod(timerms_dev, 0, 1193180 / 100);
 	dev_timer_setcallback(timerms_dev, 0, timer_callback, 0);
 #endif
