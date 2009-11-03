@@ -1,18 +1,13 @@
-CXX=g++
-CXXFLAGS=-m32 -Wall -I$(ELFPP)/elfpp -I$(ELFPP)
-ASFLAGS=-arch i386
-LDFLAGS=-L$(ELFPP)/.libs -m32 -lelfpp
+CFLAGS=-m32 -Wall
+LDFLAGS=-m32
 
 all: elfrunner
 
-elfrunner: elfrunner.o
-	$(CXX) -o $@ $^ $(LDFLAGS) $(CXXFLAGS)
+elfrunner: elfrunner.o elf.o
+	$(CC) -o $@ $^ $(LDFLAGS) $(CFLAGS)
 
-%.o: %.cc
-	$(CXX) -c -o $@ $< $(CXXFLAGS)
-
-%.o: %.s
-	$(AS) -o $@ $< $(ASFLAGS)
+%.o: %.c
+	$(CC) -c -o $@ $< $(CFLAGS)
 
 clean:
 	rm -f elfrunner *.o
