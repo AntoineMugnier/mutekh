@@ -4,7 +4,7 @@
 
 # Platform types
   CONFIG_ARCH_EMU
-  CONFIG_ARCH_EMU_LINUX
+CONFIG_ARCH_EMU_DARWIN
 
 # Processor types
   CONFIG_CPU_X86_EMU
@@ -21,5 +21,6 @@
 
 # New source code module to be compiled
   CONFIG_MODULES examples/hello:%CONFIGPATH
+
 
 CONFIG_CPU_RESET_HANDLER undefined

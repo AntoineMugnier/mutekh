@@ -54,13 +54,7 @@ void arch_init()
       sched_cpu_init();
 #endif
 
-#if defined(CONFIG_ARCH_HW_INIT_USER)
-	  user_hw_init();
-#elif defined(CONFIG_ARCH_HW_INIT)
 	  arch_hw_init();
-#else
-# error No supported hardware initialization
-#endif
 
       /* run mutek_start() */
       mutek_start(0, 0);
