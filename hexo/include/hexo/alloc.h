@@ -65,6 +65,7 @@ static const size_t	mem_hdr_size = ALIGN_VALUE_UP(sizeof (struct mem_alloc_heade
 						      CONFIG_HEXO_MEMALLOC_ALIGN);
 
 CONTAINER_TYPE(alloc_list, CLIST, struct mem_alloc_header_s, list_entry);
+CONTAINER_FUNC(alloc_list, CLIST, static inline, alloc_list, list_entry);
 
 #define MEMALLOC_SPLIT_SIZE	(2 * mem_hdr_size + 16)
 

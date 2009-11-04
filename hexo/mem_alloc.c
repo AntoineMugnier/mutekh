@@ -32,9 +32,6 @@
 
 #ifdef CONFIG_HEXO_MEMALLOC_ALGO
 
-CONTAINER_FUNC(alloc_list, CLIST, static inline, alloc_list, list_entry);
-
-
 #if defined(CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT)
 
 /* FIRST FIT allocation algorithm */
