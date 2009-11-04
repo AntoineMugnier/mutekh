@@ -172,7 +172,7 @@ cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
 
 #define HAS_CPU_ATOMIC_SET
 
-static inline bool_t
+static inline void
 cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
@@ -188,13 +188,11 @@ cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
 		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
 		: [mask] "r" (mask), [atomic] "r" (a)
 		);
-
-	return tmp != 0;
 }
 
 #define HAS_CPU_ATOMIC_CLR
 
-static inline bool_t
+static inline void
 cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
@@ -210,8 +208,6 @@ cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
 		: [tmp] "=&r" (tmp), [tmp2] "=&r" (tmp2), [clobber] "=m" (*a)
 		: [mask] "r" (mask), [atomic] "r" (a)
 		);
-
-	return tmp != 0;
 }
 
 #else /* SMP */
