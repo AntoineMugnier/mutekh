@@ -28,9 +28,7 @@
 #ifndef VMEM_H_
 #define VMEM_H_
 
-#ifndef CONFIG_VMEM
-#warning Virtual memory support is not enabled in configuration file 
-#else
+#if defined(CONFIG_VMEM)
 
 struct vmem_page_region_s;
 
