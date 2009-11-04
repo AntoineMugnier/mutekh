@@ -1001,10 +1001,8 @@ sub write_doc_header
 
 	    my $pwd = Cwd::realpath($ENV{PWD});
 	    my $loc = $$opt{location};
-	    my $vloc = $$opt{vlocation};
 
 	    $loc =~ s/^$pwd\///;
-	    $vloc =~ s/^$pwd\///;
 
 	    print FILE
 "/**
@@ -1015,7 +1013,6 @@ sub write_doc_header
 	    print FILE"
     \@list
      \@item Declared in \@sourcelink $loc.
-     \@item Value defined in \@sourcelink $vloc.
      \@item Default value is $$opt{default}.
     \@end list
 ";
@@ -1350,6 +1347,12 @@ Usage: config.pl [options]
 
     exit 1 if $err_flag;
 
+    if ($param_h{docheader})
+    {
+	write_doc_header($param_h{docheader});
+	return;
+    }
+
     read_myconfig($param_h{input});
 
     set_config();
@@ -1380,7 +1383,7 @@ Usage: config.pl [options]
 	return;
     }
 
-    if ($param_h{header} or $param_h{docheader} or $param_h{makefile} or
+    if ($param_h{header} or $param_h{makefile} or
 	$param_h{m4} or $param_h{check})
     {
 	exit 1 if $err_flag;
@@ -1389,14 +1392,11 @@ Usage: config.pl [options]
 	exit 1 if $err_flag;
 
 	write_header($param_h{header}) if $param_h{header};
-	write_doc_header($param_h{docheader}) if $param_h{docheader};
 	write_makefile($param_h{makefile}) if $param_h{makefile};
 	write_m4($param_h{m4}) if $param_h{m4};
 	write_py($param_h{python}) if $param_h{python};
 	return;
     }
-
-    warning " No action performed";
 }
 
 main;
