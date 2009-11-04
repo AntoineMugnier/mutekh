@@ -97,47 +97,48 @@ error_t ppage_alloc(struct vmem_page_region_s *r, paddr_t *paddr)
 
 error_t ppage_contiguous_alloc(struct vmem_page_region_s *r, paddr_t *paddr, size_t size)
 {
-  uint_fast32_t i, first, count;
-  uint_fast32_t *n, c = 0;
+    if (size > r->free_count)
+        goto err;
 
-  if (size > r->free_count)
-    goto err;
-  
-  LOCK_SPIN_IRQ(&r->lock);
-  
-  first = r->free_head;
-  count = r->free_count;
- beg:
-  for (i = first; i < first + size; i++)
-    if (!VMEM_PPAGE_ISFREE(r->table[i]))
-      {
-	count--;
-	if (size > count)
-	  goto err;
-	first = VMEM_PPAGE_VALUE( r->table[first] );
-	goto beg; 
-      }
-  
+    LOCK_SPIN_IRQ(&r->lock);
 
-   for (n = &r->free_head; c < size; )
-     {
-       i = VMEM_PPAGE_VALUE(*n);
-       
-       if (i >= first && i < first + size)
-	 {
-	   *n = VMEM_PPAGE_VALUE(r->table[i]);
-	   r->table[i] = VMEM_PPAGE_SET(0, 1);
-	   c++;
-	 }
-       else
-	 {
-	   n = &r->table[i];
-	 }
-     }
-   
-   r->free_count -= size;
-   
-   LOCK_RELEASE_IRQ(&r->lock);
+    uint_fast32_t i, first;
+    /* begin to search from index 0:
+     * cannot use free_head as start index since the freelist is not sorted.
+     */
+    first = 0;
+beg:
+    for (i = first; i < first + size; i++)
+        if (!VMEM_PPAGE_ISFREE(r->table[i]))
+        {
+            /* no more place after index i? */
+            if ((i+size) > r->count)
+                goto err;
+            /* search again from the page after */
+            first = i + 1;
+            goto beg;
+        }
+
+    uint_fast32_t *n, c = 0;
+    for (n = &r->free_head; c < size; )
+    {
+        uint_fast32_t i = VMEM_PPAGE_VALUE(*n);
+
+        if (i >= first && i < first + size)
+        {
+            *n = VMEM_PPAGE_VALUE(r->table[i]);
+            r->table[i] = VMEM_PPAGE_SET(0, 1);
+            c++;
+        }
+        else
+        {
+            n = &r->table[i];
+        }
+    }
+
+    r->free_count -= size;
+
+    LOCK_RELEASE_IRQ(&r->lock);
 
    *paddr = r->paddr + first * MMU_PAGESIZE;
 
