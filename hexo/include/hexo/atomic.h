@@ -106,7 +106,6 @@ static bool_t atomic_compare_and_swap(volatile atomic_int_t *a, atomic_int_t old
 
 #if __GNUC__ >= 4
 
-#warning must be moved away
 static inline bool_t
 atomic_compare_and_swap(volatile atomic_int_t *a, atomic_int_t old, atomic_int_t new)
 {
