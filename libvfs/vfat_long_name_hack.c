@@ -16,16 +16,16 @@
  *  - blablabla.b -> BLABLAB~1.B
  *  - blabla.blabla -> BLABLA.BLA
  *
- *  This function expect 'new' to be a table of at least 13 char (8+1+3+1).
+ *  This function expect 'newpath' to be a table of at least 13 char (8+1+3+1).
  */
-void touppershortname(char* new, const char* path)
+void touppershortname(char* newpath, const char* path)
 {
     /* sanity check */
     assert(path != NULL);
     if (*path == 0) return;
 
     const char *p = path;
-    char *n = new;
+    char *n = newpath;
     char *delim;
     delim = strchr(path, '.');
 

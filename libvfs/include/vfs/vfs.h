@@ -319,4 +319,6 @@ error_t vfs_stat (struct vfs_node_s *cwd, char *pathname, struct vfs_stat_s *sta
 // Used for devFS to always have root_node pointer
 struct vfs_node_s * vfs_get_root();
 
+void touppershortname(char* newpath, const char* path);
+
 #endif
