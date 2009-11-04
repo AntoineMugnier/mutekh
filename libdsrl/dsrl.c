@@ -53,6 +53,7 @@ static int load_tcg (lua_State *L)
     }
     /* check a tcg is on stack */
     check_lua_tcg(L, -1);
+    _dsrl_debug("\tdone\n");
     return 1;
 }
 
@@ -108,6 +109,8 @@ static int run_tcg (lua_State *L)
     check_tcg_resource(dsrl_mwmr);
     _dsrl_debug("checked standard resources.\n");
 
+    check_tcg_resource(dsrl_exec);
+    _dsrl_debug("checked exec resources.\n");
     check_tcg_resource(dsrl_task);
     _dsrl_debug("checked task resources.\n");
 
@@ -122,6 +125,12 @@ static int run_tcg (lua_State *L)
 
     _dsrl_debug("built dsrl_tcg userdata\n");
 
+    cpu_cycle_t cycle_count = -cpu_cycle_count();
+
+# define CREATE_RESOURCE(resource)\
+    build_##resource(L, iresource, &resource)
+
+# define CALLBACK_RESOURCE(addr, size)
 #define build_tcg_resource(resource)                                                    \
     lua_getfield(L, 1, #resource);                                                      \
     if (lua_istable(L, -1)){                                                            \
@@ -135,16 +144,21 @@ static int run_tcg (lua_State *L)
             lua_rawgeti(L, i##resource, i);                                             \
             size_t iresource = lua_gettop(L);                                           \
             resource##_t *resource;                                                     \
-            lua_getfield(L, iresource, "addr");                                         \
-            if (lua_isnil(L, -1))                                                       \
+            lua_getfield(L, iresource, "_addr");                                        \
+            lua_getfield(L, iresource, "_size");                                        \
+            if (lua_isnil(L, -1) || lua_isnil(L, -1))                                   \
             {                                                                           \
-                lua_pop(L, 1);                                                          \
-                build_##resource(L, iresource, &resource);                              \
+                lua_pop(L, 2);                                                          \
+                size_t _size = CREATE_RESOURCE(resource);                               \
                 lua_pushinteger(L, (uintptr_t)resource);                                \
-                lua_setfield(L, iresource, "addr");                                     \
+                lua_setfield(L, iresource, "_addr");                                    \
+                lua_pushinteger(L, _size);                                              \
+                lua_setfield(L, iresource, "_size");                                    \
             } else {                                                                    \
-                resource = (resource##_t*)lua_tointeger(L, -1);                         \
-                lua_pop(L, 1);                                                          \
+                size_t _size = (size_t)lua_tointeger(L, -1);                            \
+                resource = (resource##_t*)lua_tointeger(L, -2);                         \
+                lua_pop(L, 2);                                                          \
+                CALLBACK_RESOURCE(resource, _size);                                     \
             }                                                                           \
             lua_pop(L, 1);                                                              \
             dsrl_tcg->resource[i-1] = resource;                                         \
@@ -166,8 +180,13 @@ static int run_tcg (lua_State *L)
     _dsrl_debug("mwmr.\n");
     _dsrl_debug("built standard resources.\n");
 
+    build_tcg_resource(dsrl_exec);
+    _dsrl_debug("built exec resources.\n");
     build_tcg_resource(dsrl_task);
     _dsrl_debug("built task resources.\n");
+
+    cycle_count += cpu_cycle_count();
+    _dsrl_debug("run_tcg load cycles: %d\n", cycle_count);
 
     /* at last, launch the task */
     size_t itask;
@@ -182,7 +201,7 @@ static int run_tcg (lua_State *L)
 }
 static int gc_tcg (lua_State *L)
 {
-    _dsrl_debug("nothing yet...\n");
+    _dsrl_debug("gc_tcg: nothing yet...\n");
     /* TODO */
     return 0;
 }
@@ -218,13 +237,14 @@ static const luaL_Reg lua_tcglib_m[] = {
     {"file"         , new_dsrl_file},
     {"io_memspace"  , new_dsrl_io_memspace},
     {"mwmr"         , new_dsrl_mwmr},
+    {"exec"         , new_dsrl_exec},
     {"task"         , new_dsrl_task},
     {"run"          , run_tcg},
     {NULL           , NULL}
 };
 
 static const luaL_Reg run_tcglib_m[] = {
-    {"__gc" , gc_tcg},
+    //{"__gc" , gc_tcg},
     {NULL   , NULL}
 };
 

@@ -1,26 +1,33 @@
 #ifndef _DSRL_TYPES_H_
 #define _DSRL_TYPES_H_
 
+#include <hexo/types.h>
 #include <mutek/scheduler.h>
+
+#include <libelf/rtld.h>
+
+/*
+ * exec resource (rtld)
+ */
+typedef struct {
+    const char *execname;
+    struct dynobj_rtld_s *dynobj;
+} dsrl_exec_t;
 
 /*
  * Task resource
  */
 typedef struct {
-    const char *execname;
     const char *funcname;
     uintptr_t tty;
-    size_t cpuid;
-
-    uintptr_t *args;
-    size_t nargs;
+    cpu_id_t cpuid;
 
     /* Hexo context */
     struct sched_context_s context;
+    uintptr_t *args_ptr;
 
     /* dynamic loader */
-    void *handle;
-    uintptr_t entrypoint;
+    dsrl_exec_t *exec;
     uintptr_t func;
     uintptr_t tls;
     uintptr_t tp;
@@ -81,6 +88,7 @@ typedef struct dsrl_tcg_s{
 	dsrl_memspace_t **dsrl_memspace;
 	dsrl_memspace_t **dsrl_io_memspace;
 	dsrl_mwmr_t		**dsrl_mwmr;
+	dsrl_exec_t		**dsrl_exec;
 	dsrl_task_t		**dsrl_task;
 	size_t n_dsrl_barrier;
 	size_t n_dsrl_const;
@@ -88,6 +96,7 @@ typedef struct dsrl_tcg_s{
 	size_t n_dsrl_memspace;
 	size_t n_dsrl_io_memspace;
 	size_t n_dsrl_mwmr;
+	size_t n_dsrl_exec;
 	size_t n_dsrl_task;
 } dsrl_tcg_t;
 

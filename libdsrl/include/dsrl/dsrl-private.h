@@ -7,6 +7,8 @@
 
 #include <dsrl/dsrl-types.h>
 
+#include <mutek/printk.h>
+
 #if defined(CONFIG_LIBDSRL_DEBUG)
 # define _dsrl_debug printk
 #else

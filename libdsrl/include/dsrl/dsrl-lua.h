@@ -14,7 +14,7 @@
             }                                                        \
             lua_pop(L, 2);                                           \
         }                                                            \
-        lua_pushstring(L, "`lua."#resource"' expected");             \
+        lua_pushstring(L, "`lua."#resource"' required");             \
         return 1;                                                    \
     }                                                                \
     error_t check_##resource (lua_State *L, size_t ires)             \
@@ -60,9 +60,12 @@
      }
 
 
-#define DSRL_RESOURCE_PROTO(resource)                                   \
-    void build_##resource(lua_State *L, size_t ires, resource##_t **p); \
-    error_t check_##resource (lua_State *L, size_t index);              \
+# define BUILD_RESOURCE_PROTO(resource) \
+    size_t build_##resource(lua_State *L, size_t ires, resource##_t **p)
+
+#define DSRL_RESOURCE_PROTO(resource)                      \
+    BUILD_RESOURCE_PROTO(resource);                        \
+    error_t check_##resource (lua_State *L, size_t index); \
     int new_##resource (lua_State *L);
 
 DSRL_RESOURCE_PROTO(dsrl_const);
@@ -71,6 +74,7 @@ DSRL_RESOURCE_PROTO(dsrl_file);
 DSRL_RESOURCE_PROTO(dsrl_memspace);
 DSRL_RESOURCE_PROTO(dsrl_io_memspace);
 DSRL_RESOURCE_PROTO(dsrl_mwmr);
+DSRL_RESOURCE_PROTO(dsrl_exec);
 DSRL_RESOURCE_PROTO(dsrl_task);
 
 void luaopen_dsrl_resources(lua_State *L);
