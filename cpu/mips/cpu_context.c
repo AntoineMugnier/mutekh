@@ -56,6 +56,14 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
             context->stack_start, context->stack_end);
 #endif
 
+    /* FIXME?
+     * stack_end points to the first word after the end of the stack.
+     * substracting 5 words to it means that we let room for 4 words and the
+     * stack_ptr points on the 5th words (backward).
+     * since stack_ptr is first decremented before any store in the stack
+     * (*--context->stack_ptr), it means we will have 5 empty words.
+     * Mips ABI only requires 4 free words in the stack...
+     */
     context->stack_ptr = (reg_t*)context->stack_end - 5;
 
     /* push entry function address and param arg */
@@ -113,9 +121,16 @@ cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,
             /* entrypoint goes into epc */
             "   mtc0    $t9,    $14        \n"
             "   mfc0    $1,     $12        \n"
-            /* status.exl=1; status.ksu=10; status.ie=1 */
+            /* status.ksu=10; status.exl=1; status.ie=1 */
+#if 0
+            /* if supervisor mode is not implemented,
+             * ksu.0=R0="3rd bit of r_status" is ignored.
+             * No need to reset it then.
+             */
+            "   andi    $1,     0xFFFFFFF7 \n"
+#endif
             "   ori     $1,     0x00000013 \n"
-            "   mfc0    $1,     $12        \n"
+            "   mtc0    $1,     $12        \n"
             ".set noreorder                \n"
             /* switch to user mode at @EPC with interrupt enabled */
             "   eret                       \n"

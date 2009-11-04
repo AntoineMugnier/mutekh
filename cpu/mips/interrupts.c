@@ -79,11 +79,10 @@ asm(
 
         /* save registers usefull to syscall */
         "1:                                              \n"
-#if defined(CONFIG_RTLD)
-        /* add room for hwrena and tls registers */
-        "   addu    $sp,    -4*34                        \n"
-#else
         "   addu    $sp,    -4*32                        \n"
+#if defined(CONFIG_LIBELF_RTLD_TLS)
+        /* add room for hwrena and tls registers */
+        "   addu    $sp,    -4*2                         \n"
 #endif
         "   sw      $26,    29*4($sp)                    \n"
 
@@ -102,7 +101,7 @@ asm(
         "   mfc0    $5,     $14                          \n"
         "   sw      $5,     0*4($sp)                     \n"
 
-#if defined(CONFIG_RTLD)
+#if defined(CONFIG_LIBELF_RTLD_TLS)
         /* read & save hwrena */
         "   mfc0    $7,     $7                           \n"
         "   sw      $7,     32*4($sp)                    \n"
@@ -259,7 +258,7 @@ asm(
         "   lw      $2,     2*4($sp)                     \n" /* Syscall return value */
         "   lw      $3,     3*4($sp)                     \n" /* Syscall return value */
 
-#if defined(CONFIG_RTLD)
+#if defined(CONFIG_LIBELF_RTLD_TLS)
         /* reload hwrena */
         "   lw      $31,    32*4($sp)                    \n"
         "   mtc0    $31,    $7                           \n"
@@ -275,7 +274,7 @@ asm(
 
 # if __mips >= 32
         /* restore epc for eret */
-        "   mfc0    $26,    $14                          \n"
+        "   mtc0    $26,    $14                          \n"
         "   eret                                         \n"
 # else
         ".set noreorder                                  \n"
