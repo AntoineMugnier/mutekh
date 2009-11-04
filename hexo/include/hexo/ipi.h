@@ -59,7 +59,7 @@ CONTAINER_FUNC(ipi_queue, DLIST, static inline, ipi_queue);
    Send an ipi to given processor. Processor is identified using its
    cpu local storage pointer.
    @return zero if ipi was sent
-   @xsee CPU_LOCAL_ID_ADDR
+   @see #CPU_LOCAL_ID_ADDR
  */
 error_t ipi_post(void *cpu_cls);
 
@@ -69,7 +69,7 @@ error_t ipi_post(void *cpu_cls);
    cpu local storage pointer.
 
    @return zero if message was attached and ipi sent
-   @xsee CPU_LOCAL_ID_ADDR
+   @see #CPU_LOCAL_ID_ADDR
  */
 error_t ipi_post_rq(void *cpu_cls, struct ipi_request_s *rq);
 

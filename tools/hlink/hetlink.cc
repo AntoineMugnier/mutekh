@@ -95,45 +95,7 @@ int main(int argc, char **argv)
 	      hsec = i->second;
 	      hsec->ref_count_++;	      
 	    }
-#if 0
-	  // find all section area covered by a symbol
-	  typedef dpp::interval_set<uint32_t> is_t;
-	  is_t is;
 
-	  is |= is_t::interval_type(S->get_size(), (uint32_t)-1);
-
-	  FOREACH(s, S->get_symbol_table())
-	    {
-	      uint32_t val = s->second->get_value();
-	      size_t size = s->second->get_size();
-
-	      if (size)
-		is |= is_t::interval_type(val, val + size);
-	    }
-
-	  is = ~is;
-
-	  // create symbols for all orphan section areas in this object
-	  FOREACH(i, is)
-	    {
-	      static int nosym_id = 0;
-	      char name[32];
-	      sprintf(name, "nosym_%i", nosym_id++);
-	      std::cout << std::hex << "in section " << S->get_name() << " 0x" << i->low_bound() << " to 0x" << i->high_bound() << std::endl;
-	      elfpp::symbol *sym = new elfpp::symbol(name);
-
-	      sym->set_value(i->low_bound());
-	      sym->set_size(i->high_bound() - i->low_bound());
-	      sym->set_section(*S);
-	      S->add_symbol(*sym);
-
-	      if (S->get_type() != elfpp::SHT_NOBITS)
-		sym->set_content(S->get_content() + sym->get_value());
-	    }
-
-	  if (S->get_type() != elfpp::SHT_NOBITS)
-	      memset(S->get_content(), 0xaa, S->get_size());
-#endif
 	  // find or create new het-symbols
 	  FOREACH(s, S->get_symbol_table())
 	    {
@@ -187,7 +149,10 @@ int main(int argc, char **argv)
 	  FOREACH(Hs, HS->syms_)
 	    {
 	      FOREACH(s, Hs->second->symbols_)
-		(*s)->set_value(v);
+		{
+		  std::cout << " CAMEAU " << v << std::endl;
+		  (*s)->set_value(v);
+		}
 
 	      v += Hs->second->size_;
 	    }
@@ -205,7 +170,9 @@ int main(int argc, char **argv)
       FOREACH(Hs, HS->second->syms_)
 	{
 	  FOREACH(s, Hs->second->symbols_)
-	    (*s)->set_value(v);
+	    {
+	      (*s)->set_value(v);
+	    }
 
 	  v += Hs->second->size_;
 	}

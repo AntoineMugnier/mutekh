@@ -36,8 +36,10 @@ cpu_context_bootstrap(struct context_s *context)
 void __arm_context_entry(void);
 
 asm(
+    ".type __arm_context_entry, %function \n"
     "__arm_context_entry:		\n"
     "	pop {r0, pc}			\n"
+    ".size __arm_context_entry, .-__arm_context_entry \n"
     );
 
 

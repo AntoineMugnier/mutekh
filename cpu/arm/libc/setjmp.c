@@ -23,16 +23,19 @@
 
 reg_t setjmp(jmp_buf env);
 asm(
+	".type setjmp, %function \n"
 	".globl setjmp          \n\t"
 	"setjmp:                \n\t"
 	"stmia   r0, {r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, lr} \n\t"
 	"movs    r0, #0         \n\t"
 	"bx      lr             \n\t"
+	".size setjmp, .-setjmp \n\t"
 	);
 
 
 void longjmp(jmp_buf env, reg_t val);
 asm(
+	".type longjmp, %function \n"
 	".globl longjmp          \n\t"
 	"longjmp:                \n\t"
 	"mov    r2, r0           \n\t"
@@ -40,4 +43,5 @@ asm(
 	"movne  r0, r1           \n\t"
 	"moveq  r0, #1           \n\t"
 	"ldmia  r2, {r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, pc} \n\t"
+	".size longjmp, .-longjmp \n\t"
 	);
