@@ -14,6 +14,13 @@
 #ifndef SRL_LOG_H_
 #define SRL_LOG_H_
 
+/**
+ * @file
+ * @module{SRL}
+ * @short Debug messages
+ */
+
+/** @internal */
 enum __srl_verbosity {
     VERB_NONE,
     VERB_TRACE,
@@ -53,22 +60,43 @@ void srl_console_init(void*);
 #define GET_VERB_(x,y) x##y
 #define GET_VERB(x) GET_VERB_(VERB_,x)
 
+/**
+   @this prints a message if the current verbosity is sufficient.
+
+   @param l Minimal verbosity of the message
+   @param c Message to print
+ */
 #define srl_log( l, c ) do {										   \
 		if (GET_VERB(l) <= GET_VERB(CONFIG_SRL_VERBOSITY)) {		   \
 			_srl_log( c );											   \
 		}															   \
 	} while (0)
 
+/**
+   @this prints a message if the current verbosity is sufficient.
+
+   @param l Minimal verbosity of the message
+   @param c Message to print, with a printf-like syntax
+ */
 #define srl_log_printf( l, c... ) do {								   \
 		if (GET_VERB(l) <= GET_VERB(CONFIG_SRL_VERBOSITY)) {		   \
 			_srl_log_printf( c );									   \
 		}															   \
 	} while (0)
 
+/**
+   @this prints a message on the tty specified for the current
+   CPU. There is no verbosity condition.
+
+   @param c Message to print, with a printf-like syntax
+ */
 #define cpu_printf( c... ) do {					\
 		_cpu_printf( c );						\
 	} while (0)
 
+/**
+   @this is the same as @ref #assert.
+ */
 #define srl_assert(expr)												\
     do {																\
         if ( ! (expr) ) {												\

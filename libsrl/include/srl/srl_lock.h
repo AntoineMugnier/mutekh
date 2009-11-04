@@ -14,26 +14,49 @@
 #ifndef SRL_LOCK_H_
 #define SRL_LOCK_H_
 
-#ifndef CONFIG_PTHREAD
-#include <hexo/lock.h>
+/**
+ * @file
+ * @module{SRL}
+ * @short Lock operations
+ */
 
+#include <srl/srl_public_types.h>
+
+#ifndef CONFIG_PTHREAD
+
+/**
+   @this takes a lock.
+
+   @param lock The lock object
+ */
 static inline void srl_lock_lock( srl_lock_t lock )
 {
 	lock_spin(lock);
 }
 
+/**
+   @this releases a lock.
+
+   @param lock The lock object
+ */
 static inline void srl_lock_unlock( srl_lock_t lock )
 {
 	lock_release(lock);
 }
 
+/**
+   @this tries to take a lock. @this returns whether the lock was
+   actually taken.
+
+   @param lock The lock object
+   @return 0 if the lock was taken successfully
+ */
 static inline uint32_t srl_lock_try_lock( srl_lock_t lock )
 {
 	return lock_try(lock);
 }
 
 #else
-#include <pthread.h>
 
 static inline void srl_lock_lock( srl_lock_t lock )
 {

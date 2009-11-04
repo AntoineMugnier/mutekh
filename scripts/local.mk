@@ -143,6 +143,17 @@ endif
 
 endef
 
+define declare_doc_header
+
+MKDOC_ARGS += $(1)
+
+endef
+
+define declare_doc_files
+
+MKDOC_ARGS += $(2)/$(1)
+
+endef
 
 ## scan_local_makefile: src_dir, obj_dir
 
@@ -163,6 +174,8 @@ objs:=
 meta:=
 copy:=
 subdirs:=
+doc_headers:=
+doc_files:=
 
 -include $$(LOCAL_SRC_DIR)/Makefile
 
@@ -183,6 +196,16 @@ $$(eval $$(foreach tocopy,$$(copy),$$(call declare_copy,$$(tocopy),$$(LOCAL_SRC_
 $$(eval $$(foreach tometa,$$(filter %.h,$$(meta)),$$(call declare_meta_h,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
 $$(eval $$(foreach tometa,$$(filter-out %.h,$$(meta)),$$(call declare_meta_cpp,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
+
+$$(eval \
+$$(foreach h,$$(doc_headers),\
+$$(call declare_doc_header,$$(h))))
+
+$$(eval \
+$$(foreach f,$$(doc_files),\
+$$(call declare_doc_files,$$(f),$$(LOCAL_SRC_DIR))))
+
+# Beware this must be left last in calls
 
 $$(eval \
 $$(foreach m,$$(subdirs),\

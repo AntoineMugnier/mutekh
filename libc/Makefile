@@ -24,3 +24,7 @@ ifeq ($(CONFIG_LIBC_STREAM_STD), defined)
 objs += stdio_in_out_err.o
 endif
 
+doc_headers = \
+	sys/stat.h fileops.h ctype.h unistd.h	\
+	semaphore.h fcntl.h errno.h stdio.h math.h time.h stdarg.h	\
+	stddef.h stdint.h stdlib.h setjmp.h string.h assert.h limits.h

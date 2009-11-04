@@ -69,18 +69,5 @@ kernel-postlink:  FORCE
 kernel-het: 
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/heterogeneous.mk $@ MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF)
 
-
-include $(MUTEK_SRC_DIR)/doc/header_list.mk
-
-$(BUILD_DIR)/doc/config.h:
-	test -d $(BUILD_DIR)/doc || mkdir -p $(BUILD_DIR)/doc
-	$(MUTEK_SRC_DIR)/scripts/config.pl --input=$(CONF) --docheader=$@
-
-doc: $(BUILD_DIR)/doc/config.h
-	mkdoc $(MKDOCFLAGS) $(MUTEK_SRC_DIR)/doc/gpct.mkdoclib \
-	  -I $(MUTEK_SRC_DIR)/doc/include -I $(BUILD_DIR) doc/config.h \
-	  $(HEXO_HEADER) $(LIBC_HEADER) $(MUTEK_HEADER) $(CPU_HEADER) \
-	  $(ARCH_HEADER) $(PTHREAD_HEADER)
-
-.PHONY: doc
-
+doc: FORCE
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/doc.mk $@ MAKEFLAGS=$(MAKEFLAGS)

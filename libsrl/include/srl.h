@@ -1,6 +1,12 @@
 #ifndef SRL_H_
 #define SRL_H_
 
+/**
+   @file
+   @module{SRL}
+   @short SRL Api main header
+ */
+
 #include <srl/srl_public_types.h>
 
 #include <srl/srl_lock.h>

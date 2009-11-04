@@ -28,6 +28,10 @@
  @short standard C library
 @end group
 
+@moduledef{SRL}
+ @short MutekS API
+@end group
+
 @moduledef{Pthread library}
  @short POSIX threads library
 @end group

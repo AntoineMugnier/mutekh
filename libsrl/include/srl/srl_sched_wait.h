@@ -1,12 +1,35 @@
 #ifndef SRL_SCHED_WAIT_H
 #define SRL_SCHED_WAIT_H
 
+/**
+ * @file
+ * @module{SRL}
+ * @short Smart waiting tools
+ */
+
 #include <stdint.h>
 
 #define DECLARE_WAIT(endianness, name, cmp)								\
 	void srl_sched_wait_##name##_##endianness( volatile uint32_t*addr, uint32_t val );
 
+/**
+   @multiple
 
+   @this of the form
+
+   srl_sched_wait_CMP_END(addr, val)
+
+   where CMP can be eq, ne, le, ge, lt, or gt, and END can be le, be, or cpu.
+
+   They make the current task sleep until the valut pointed at addr
+   asserts the following test:
+   (*addr CMP val).
+
+   addr is taken with the END endianness (little, big, or the currrent cpu's one)
+
+   @param addr The address to poll
+   @param val The value to compare to
+*/
 DECLARE_WAIT(le, eq, ==)
 DECLARE_WAIT(le, ne, !=)
 DECLARE_WAIT(le, le, <=)
@@ -30,8 +53,14 @@ DECLARE_WAIT(cpu, gt, >)
 
 #undef DECLARE_WAIT
 
+/**
+ @internal
+*/
 typedef int8_t srl_callback_t( uint32_t val );
 
+/**
+ @internal
+*/
 void srl_sched_wait_priv( srl_callback_t *cb, uint32_t val );
 
 #endif
