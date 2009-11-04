@@ -9,6 +9,6 @@ ifeq ($(CONFIG_HEXO_MMU), defined)
 objs += mmu.o
 endif
 
-subdirs = libc libnetwork librtld
+subdirs = libc libnetwork libelf
 
 copy = ldscript

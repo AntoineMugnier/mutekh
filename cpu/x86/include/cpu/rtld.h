@@ -33,12 +33,6 @@
     ((((type) == R_386_JMP_SLOT) * ELF_RTYPE_CLASS_PLT) \
      | (((type) == R_386_COPY) * ELF_RTYPE_CLASS_COPY))
 
-#define INIT_GOT(MODULE)                                    \
-    do {                                                    \
-            /*MODULE->got[2] = (Elf_Addr) _rtld_bind_start;*/  \
-            /*MODULE->got[1] = (Elf_Addr) MODULE;*/         \
-    } while(0)
-
 #endif //_I386_RTLD_H_
 
 // Local Variables:
