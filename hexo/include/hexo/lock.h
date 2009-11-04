@@ -34,11 +34,17 @@
 
 struct arch_lock_s;
 
+/** @internal */
 static error_t arch_lock_init(struct arch_lock_s *lock);
+/** @internal */
 static void arch_lock_destroy(struct arch_lock_s *lock);
+/** @internal */
 static bool_t arch_lock_try(struct arch_lock_s *lock);
+/** @internal */
 static void arch_lock_spin(struct arch_lock_s *lock);
+/** @internal */
 static bool_t arch_lock_state(struct arch_lock_s *lock);
+/** @internal */
 static void arch_lock_release(struct arch_lock_s *lock);
 
 #include "arch/hexo/lock.h"
@@ -72,7 +78,7 @@ static inline error_t lock_init(lock_t *lock)
 }
 
 
-/** free lock ressources */
+/** @this frees lock ressources */
 static inline void lock_destroy(lock_t *lock)
 {
 #ifdef CONFIG_SMP
@@ -81,7 +87,7 @@ static inline void lock_destroy(lock_t *lock)
 }
 
 
-/** try to take lock */
+/** @this tries to take lock */
 static inline bool_t lock_try(lock_t *lock)
 {
 #ifdef CONFIG_SMP
@@ -92,7 +98,7 @@ static inline bool_t lock_try(lock_t *lock)
 }
 
 
-/** spin to take lock */
+/** @this spins to take lock */
 static inline void lock_spin(lock_t *lock)
 {
 #ifdef CONFIG_SMP
@@ -101,7 +107,7 @@ static inline void lock_spin(lock_t *lock)
 }
 
 
-/** return current lock state */
+/** @this returns the current lock state */
 static inline bool_t lock_state(lock_t *lock)
 {
 #ifdef CONFIG_SMP
@@ -112,8 +118,8 @@ static inline bool_t lock_state(lock_t *lock)
 }
 
 
-/** save interrupts state, disable interrupts, and spin to take lock */
-//__attribute__((deprecated))
+/** @this save interrupts state, disable interrupts, and spin to take lock.
+    Use of the @ref #LOCK_SPIN_IRQ macro is prefered. */
 static inline void lock_spin_irq(lock_t *lock)
 {
   reg_t		state;
@@ -124,7 +130,7 @@ static inline void lock_spin_irq(lock_t *lock)
 }
 
 
-/** save interrupts state, disable interrupts, and spin to take
+/** @this saves interrupts state, disables interrupts, and spins to take
     lock. This macro must be matched with the LOCK_RELEASE_IRQ macro.
     It is prefered over the lock_spin_irq() function because interrupt
     state may be saved in a register */
@@ -135,7 +141,7 @@ static inline void lock_spin_irq(lock_t *lock)
   lock_spin(lock);
 
 
-/** release lock */
+/** @this releases a lock */
 static inline void lock_release(lock_t *lock)
 {
 #ifdef CONFIG_SMP
@@ -144,8 +150,8 @@ static inline void lock_release(lock_t *lock)
 }
 
 
-/** release lock and restore previous interrupts state */
-//__attribute__((deprecated))
+/** @this releases a lock and restore previous interrupts state
+    Use of the @ref #LOCK_RELEASE_IRQ macro is prefered. */
 static inline void lock_release_irq(lock_t *lock)
 {
   reg_t		state = lock->irq_state;
@@ -155,7 +161,7 @@ static inline void lock_release_irq(lock_t *lock)
 }
 
 
-/** release lock and restore previous interrupts state. This macro
+/** @this releases a lock and restore previous interrupts state. This macro
     must be matched with the LOCK_SPIN_IRQ macro. It is prefered over
     the lock_release_irq() function because interrupt state may be
     saved in a register */

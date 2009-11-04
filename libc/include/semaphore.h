@@ -31,13 +31,13 @@
 
 typedef uint_fast8_t			__sem_count_t;
 
-/** mutex object structure */
+/** Semaphore object structure */
 struct				__sem_s
 {
   /** sem counter */
   __sem_count_t			count;
 
-  /** blocked threads wait queue */
+  /** blocked contexts wait queue */
   sched_queue_root_t		wait;
 };
 

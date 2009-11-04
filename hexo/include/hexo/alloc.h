@@ -60,6 +60,7 @@ struct mem_alloc_header_s
   CONTAINER_ENTRY_TYPE(CLIST)	list_entry;
 };
 
+/** @internal @this give the size of the memory allocation header */
 static const size_t	mem_hdr_size = ALIGN_VALUE_UP(sizeof (struct mem_alloc_header_s),
 						      CONFIG_HEXO_MEMALLOC_ALIGN);
 
@@ -67,7 +68,7 @@ CONTAINER_TYPE(alloc_list, CLIST, struct mem_alloc_header_s, list_entry);
 
 #define MEMALLOC_SPLIT_SIZE	(2 * mem_hdr_size + 16)
 
-/** memory region handler */
+/** @internal memory region handler */
 struct mem_alloc_region_s
 {
   lock_t		lock;
@@ -83,10 +84,11 @@ struct mem_alloc_region_s
 
 
 
-#else /* CONFIG_HEXO_MEMALLOC_ALGO */
+#else
 
 static const size_t	mem_hdr_size = 0;
 
+/** @internal memory region handler */
 struct mem_alloc_region_s
 {
   lock_t		lock;
@@ -94,25 +96,25 @@ struct mem_alloc_region_s
   void			*last;
 };
 
-#endif /* CONFIG_HEXO_MEMALLOC_ALGO */
+#endif
 
 
 
 
 
-
+/** @internal */
 void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size);
-
+/** @internal */
 void mem_alloc_region_push(void *address);
-
+/** @internal */
 void mem_alloc_region_init(struct mem_alloc_region_s *region,
 			   void *address, void *end);
-
+/** @internal */
 error_t mem_alloc_stats(struct mem_alloc_region_s *region,
 			size_t *alloc_blocks,
 			size_t *free_size,
 			size_t *free_blocks);
-
+/** @internal */
 bool_t mem_alloc_region_guard_check(struct mem_alloc_region_s *region);
 
 
@@ -199,6 +201,7 @@ static inline size_t mem_alloc_getsize(void *ptr)
 void mem_init(void);
 
 #ifdef CONFIG_HEXO_MEMALLOC_GUARD
+/** @this checks memory allocation structures consistency */
 static inline bool_t mem_guard_check(void) __attribute__((unused));
 #endif
 
@@ -206,6 +209,7 @@ static inline bool_t mem_guard_check(void) __attribute__((unused));
 
 
 #ifndef MEM_SCOPE_CPU
+/** @this specifies processor local memory allocation, when applicable. */
 # define MEM_SCOPE_CPU		MEM_SCOPE_SYS
 # if defined(CONFIG_SMP) && defined(CONFIG_CPU_CACHE) && !defined(CONFIG_CPU_CACHE_COHERENCY)
 #  warning No CPU local memory region is available, cache problems may occur
@@ -213,14 +217,18 @@ static inline bool_t mem_guard_check(void) __attribute__((unused));
 #endif
 
 #ifndef MEM_SCOPE_CLUSTER
+/** @this specifies cluster local memory allocation, when applicable. */
 # define MEM_SCOPE_CLUSTER	MEM_SCOPE_SYS
 #endif
 
 #ifndef MEM_SCOPE_CONTEXT
+/** @this specifies execution context local memory allocation. */
 # define MEM_SCOPE_CONTEXT	MEM_SCOPE_SYS
 #endif
 
 #ifndef MEM_SCOPE_DEFAULT
+/** @this specifies use of the current default allocation region.
+    @see mem_alloc_set_default */
 # define MEM_SCOPE_DEFAULT	MEM_SCOPE_SYS
 #endif
 

@@ -64,3 +64,17 @@ kernel-postlink:  FORCE
 
 kernel-het: 
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/heterogeneous.mk $@ MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF)
+
+
+include doc/header_list.mk
+
+doc/config.h:
+	scripts/config.pl --input=$(CONF) --docheader=$@
+
+doc: doc/config.h
+	mkdoc $(MKDOCFLAGS) doc/gpct.mkdoclib doc/config.h -I doc/include \
+	  $(HEXO_HEADER) $(LIBC_HEADER) $(MUTEK_HEADER) $(CPU_HEADER) \
+	  $(ARCH_HEADER) $(PTHREAD_HEADER)
+
+.PHONY: doc
+

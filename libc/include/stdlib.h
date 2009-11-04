@@ -144,9 +144,9 @@ atexit(void (*function)(void));
 /****************** abs */
 
 #if 0
-int abs(int j);
-long int labs(long int j);
-long long int llabs(long long int j);
+__compiler_sint_t abs(__compiler_sint_t j);
+__compiler_slong_t labs(__compiler_slong_t j);
+__compiler_slonglong_t llabs(__compiler_slonglong_t j);
 #endif
 
 /** standard abs function */

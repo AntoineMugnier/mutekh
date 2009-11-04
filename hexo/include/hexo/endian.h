@@ -41,12 +41,13 @@ static inline uint64_t cpu_endian_swap64(uint64_t x);
 
 #include "cpu/hexo/endian.h"
 
+/** @internal */
 static inline uint16_t __endian_swap16(uint16_t x)
 {
   return (x >> 8) | (x << 8);
 }
 
-/** swap bytes in 16 bits value */
+/** @this swaps bytes in 16 bits value */
 static inline uint16_t endian_swap16(uint16_t x)
 {
 # ifdef HAS_CPU_ENDIAN_SWAP16
@@ -56,6 +57,7 @@ static inline uint16_t endian_swap16(uint16_t x)
 # endif
 }
 
+/** @internal */
 static inline uint32_t __endian_swap32(uint32_t x)
 {
   return (((x >> 24) & 0x000000ff) |
@@ -64,7 +66,7 @@ static inline uint32_t __endian_swap32(uint32_t x)
 	  ((x << 24) & 0xff000000));
 }
 
-/** swap bytes in 32 bits value */
+/** @this swaps bytes in 32 bits value */
 static inline uint32_t endian_swap32(uint32_t x)
 {
 # ifdef HAS_CPU_ENDIAN_SWAP32
@@ -74,13 +76,14 @@ static inline uint32_t endian_swap32(uint32_t x)
 # endif
 }
 
+/** @internal */
 static inline uint64_t __endian_swap64(uint64_t x)
 {
   return (((uint64_t)endian_swap32(x      ) << 32) |
 	  ((uint64_t)endian_swap32(x >> 32)      ));
 }
 
-/** swap bytes in 64 bits value */
+/** @this swaps bytes in 64 bits value */
 static inline uint64_t endian_swap64(uint64_t x)
 {
 # ifdef HAS_CPU_ENDIAN_SWAP64
@@ -96,20 +99,32 @@ static inline uint64_t endian_swap64(uint64_t x)
 
 # if defined (CONFIG_CPU_ENDIAN_BIG)
 
+/** @this reads a big endian 16 bits value */
 #  define endian_be16(x)	(x)
+/** @this reads a big endian 32 bits value */
 #  define endian_be32(x)	(x)
+/** @this reads a big endian 64 bits value */
 #  define endian_be64(x)	(x)
+/** @this reads a little endian 16 bits value */
 #  define endian_le16(x)	endian_swap16(x)
+/** @this reads a little endian 32 bits value */
 #  define endian_le32(x)	endian_swap32(x)
+/** @this reads a little endian 64 bits value */
 #  define endian_le64(x)	endian_swap64(x)
 
 # elif defined (CONFIG_CPU_ENDIAN_LITTLE)
 
+/** @this reads a big endian 16 bits value */
 #  define endian_le16(x)	(x)
+/** @this reads a big endian 32 bits value */
 #  define endian_le32(x)	(x)
+/** @this reads a big endian 64 bits value */
 #  define endian_le64(x)	(x)
+/** @this reads a little endian 16 bits value */
 #  define endian_be16(x)	endian_swap16(x)
+/** @this reads a little endian 32 bits value */
 #  define endian_be32(x)	endian_swap32(x)
+/** @this reads a little endian 64 bits value */
 #  define endian_be64(x)	endian_swap64(x)
 
 # else
@@ -118,13 +133,24 @@ static inline uint64_t endian_swap64(uint64_t x)
 
 # endif
 
-/***********************************************************************
- *		Endian dependent bitfield declaration macro
+/** @internal */
+#define __ENDIAN_REVERSE_ARGS(b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15, b16, ...)    \
+			       b16; b15; b14; b13; b12; b11; b10; b09; b08; b07; b06; b05; b04; b03; b02; b01;
 
- Bitfield can be declared trough the ENDIAN_BITFIELD() macro in the
- direct (big endian) order. bit field declaration order will be swaped
+/** @internal */
+#define __ENDIAN_ARGS(b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15, b16, ...)    \
+			       b01; b02; b03; b04; b05; b06; b07; b08; b09; b10; b11; b12; b13; b14; b15; b16;
+# if defined (CONFIG_CPU_ENDIAN_BIG)
+
+/**
+ @multiple
+ Endian dependent bitfield declaration macro.
+
+ Bitfield can be declared trough the @ref #ENDIAN_BITFIELD macro in the
+ direct (big endian) order. Bitfield declaration order will be swaped
  on little endian machines. See example below:
 
+ @code
  struct my_data_s
  {
    ENDIAN_BITFIELD(uint32_t   a:8,
@@ -136,16 +162,9 @@ static inline uint64_t endian_swap64(uint64_t x)
                    uint32_t   e:16
                   );
  };
-
+ @end code
  */
 
-#define __ENDIAN_REVERSE_ARGS(b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15, b16, ...)    \
-			       b16; b15; b14; b13; b12; b11; b10; b09; b08; b07; b06; b05; b04; b03; b02; b01;
-
-#define __ENDIAN_ARGS(b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15, b16, ...)    \
-			       b01; b02; b03; b04; b05; b06; b07; b08; b09; b10; b11; b12; b13; b14; b15; b16;
-
-# if defined (CONFIG_CPU_ENDIAN_BIG)
 #  define ENDIAN_BITFIELD(...)	__ENDIAN_ARGS(__VA_ARGS__,,,,,,,,,,,,,,,)
 # elif defined (CONFIG_CPU_ENDIAN_LITTLE)
 #  define ENDIAN_BITFIELD(...)	__ENDIAN_REVERSE_ARGS(__VA_ARGS__,,,,,,,,,,,,,,,)
@@ -157,8 +176,8 @@ static inline uint64_t endian_swap64(uint64_t x)
  *		Non aligned access functions
  */
 
-#if defined (CPU_NONALIGNED_ACCESS) || defined (CPU_NATIVE_NONALIGNED_ACCESS)
-/* direct non aligned word width memory access */
+#if defined (CONFIG_CPU_NONALIGNED_ACCESS)
+/** @internal @multiple */
 # define __endian_16_na_load(a)		(*((uint16_t*)a))
 # define __endian_32_na_load(a)		(*((uint32_t*)a))
 # define __endian_64_na_load(a)		(*((uint64_t*)a))
@@ -166,7 +185,7 @@ static inline uint64_t endian_swap64(uint64_t x)
 # define __endian_32_na_store(a, x)	(*((uint32_t*)a) = (x))
 # define __endian_64_na_store(a, x)	(*((uint64_t*)a) = (x))
 
-/* direct non aligned word width memory access with endian perm */
+/** @multiple @this allows direct non aligned word width memory access with endian permutation */
 # define endian_le16_na_load(a)		endian_le16(__endian_16_na_load(a))
 # define endian_le32_na_load(a)		endian_le32(__endian_32_na_load(a))
 # define endian_le64_na_load(a)		endian_le64(__endian_64_na_load(a))
@@ -182,11 +201,12 @@ static inline uint64_t endian_swap64(uint64_t x)
 # define endian_be64_na_store(a, x)	__endian_64_na_store(a, endian_be64(x))
 
 #else
-/* indirect byte width memory access with endian perm */
 
+/** @internal @multiple */
 # define __ENDIAN_NAL_L(addr, index, shift)		(((uint8_t*)addr)[index] << shift)
 # define __ENDIAN_NAS_R(addr, index, value, shift)	(((uint8_t*)addr)[index] = (uint8_t)(value >> shift))
 
+/** @multiple @this allows memory access with endian permutation using multiple bytes access */
 # define endian_le16_na_load(a)		(__ENDIAN_NAL_L(a, 0, 0)  | __ENDIAN_NAL_L(a, 1, 8))
 
 # define endian_le32_na_load(a)		(__ENDIAN_NAL_L(a, 0, 0)  | __ENDIAN_NAL_L(a, 1, 8)  | \
@@ -248,7 +268,7 @@ static inline uint64_t endian_swap64(uint64_t x)
 					 __ENDIAN_NAS_R(a, 7, __val, 0); __val; })
 
 
-
+/** @multiple @internal */
 # define __endian_16_na_load(a)		endian_le16(endian_le16_na_load(a))
 # define __endian_32_na_load(a)		endian_le32(endian_le32_na_load(a))
 # define __endian_64_na_load(a)		endian_le64(endian_le64_na_load(a))
@@ -262,37 +282,42 @@ static inline uint64_t endian_swap64(uint64_t x)
  *		Address and values alignment
  */
 
-/* return true if value is a power of 2 */
+/** @this returns true if value is a power of 2 */
 #define ALIGN_ISPOWTWO(x)	!((x) & ((x) - 1))
 
-/* return true if value is aligned */
+/** @this returns true if value is aligned */
 #define IS_ALIGNED(x, b)	!(((uintptr_t)x) & ((b) - 1))
 
-/* do not use aligment code if b==1 at compilation time. */
+/** @internal @this does not use aligment code if b==1 at compilation time. */
 #define __ALIGN_CONSTANT(x, b, A) (__builtin_constant_p(b) ? ((b) == 1 ? (x) : A(x, b)) : A(x, b))
 
-/* align value on the next power of two */
+/** @internal */
 #define __ALIGN_VALUE_UP(x, b)	((((x) - 1) | ((b) - 1)) + 1)
+/** @this aligns value on the next power of two */
 #define ALIGN_VALUE_UP(x, b)	__ALIGN_CONSTANT(x, b, __ALIGN_VALUE_UP)
 
-/* align value on the next power of two */
+/** @internal */
 #define __ALIGN_VALUE_LOW(x, b)	((x) & ~((b) - 1))
+/** @this aligns value on the next power of two */
 #define ALIGN_VALUE_LOW(x, b)	__ALIGN_CONSTANT(x, b, __ALIGN_VALUE_LOW)
 
-/* align address on the next power of two */
+/** @this aligns address on the next power of two */
 #define ALIGN_ADDRESS_UP(x, b)	((void*)ALIGN_VALUE_UP((uintptr_t)(x), (b)))
 
-/* align address on the next power of two */
+/** @this aligns address on the next power of two */
 #define ALIGN_ADDRESS_LOW(x, b)	((void*)ALIGN_VALUE_LOW((uintptr_t)(x), (b)))
 
 /***********************************************************************
  *		Bits extraction macro
  */
 
+/** @this extracts bit at specified index */
 #define BIT_EXTRACT(v, index) ((v) & (1 << (index)))
 
+/** @this extracts count bits from specified index */
 #define BITS_EXTRACT_FC(v, first, count) (((v) >> (first)) & ((1 << (count)) - 1))
 
+/** @this extracts bits between specified first and last index */
 #define BITS_EXTRACT_FL(v, first, last) BITS_EXTRACT_FC(v, first, (last) - (first) + 1)
 
 #endif

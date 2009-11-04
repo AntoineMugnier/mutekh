@@ -1,28 +1,36 @@
 
 @insert title
 
-Copyright (c) @insert author.  Permission is granted to copy,
-distribute and/or modify this document under the terms of the GNU Free
-Documentation License, Version 1.2 or any later version published by
-the Free Software Foundation; with no Invariant Sections, no
-Front-Cover Texts, and no Back-Cover Texts.  A copy of the license is
-included in the section entitled @xref{GNU Free Documentation License}.
+@section TP {Copying this document} 
+ Copyright (c) Alexandre Becoulet 2009. Permission is granted to copy,
+ distribute and/or modify this document under the terms of the GNU Free
+ Documentation License, Version 1.3 or any later version published by
+ the Free Software Foundation; with no Invariant Sections, no
+ Front-Cover Texts, and no Back-Cover Texts.  A copy of the license is
+ included in the section entitled @xref{GNU Free Documentation License}.
+@end section
+
+@ifopt doc_format {html}
+ @section HP {Table of contents}
+  @insert toc
+ @end section
+@end group
 
 @moduledef{Hexo}
-@short Processor and platform hardware abstraction layer
+ @short Processor and platform hardware abstraction layer
 @end group
 
 @moduledef{Mutek}
-@short Non hardware specific kernel code
+ @short Non hardware specific kernel code
 @end group
 
 @moduledef{C library}
-@short standard C library
+ @short standard C library
 @end group
 
-@section PH {Table of contents}
-@insert toc
-@end section
+@moduledef{Pthread library}
+ @short POSIX threads library
+@end group
 
 @section TP {Modules documentation}
  @section TH {Modules list}
@@ -32,17 +40,37 @@ included in the section entitled @xref{GNU Free Documentation License}.
 @end section
 
 @section TP {Headers documentation}
- @section TH {Headers list}
+ @section T {Headers list}
   @insert headers_table
  @end section
- @insert all_headers_sections
+  @insert {NP} all_headers_sections
 @end section
 
-@section THP {All Globals}
+@section THP {Configuration tokens}
+ @insert {@doc/config.h} members_list
+ @section {Configuration tokens detail}
+  @insert {@doc/config.h} member_sections
+ @end section
+@end section
+
+@section TP {All Globals}
  @insert global_scope_doc
 @end section
 
+@section TP {Contributors}
+ @list
+  @item @b{Ghassan Almaless} (libvfs, vfat driver)
+  @item @b{Nicolas Ballabriga} (libvfs)
+  @item @b{Matthieu Bucchianeri} (libnetwork, device drivers, initial Doom port)
+  @item @b{Alexandre Becoulet} (hexo, mutek, ibmpc/x86 port, soclib/mips port, libc, libpthread, libtermui, device drivers...)
+  @item @b{Sylvain Leroy} (libvfs, libunix, fs drivers)
+  @item @b{Nicolas Pouillon} (libsrl, libmwmr, libfdt, ppc and arm ports, many hexo changes, device drivers...)
+  @item @b{Joel Porquet} (librtld, libdsrl, libtermui, many fixes...)
+  @item @b{Dimitri Refauvelet} (virtual memory and memory allocation in hexo/mutek)
+ @end list
+@end section
+
 @section TP {GNU Free Documentation License}
-@include license.txt
+ @include fdl-1.3.mkdoc
 @end section
 

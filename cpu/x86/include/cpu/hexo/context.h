@@ -119,10 +119,10 @@ cpu_context_jumpto(struct context_s *new)
 #endif
 		/* restore flags */
 		"	popf			\n"
-#if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
+
 		/* restore frame pointer */
 		"	pop	%%ebp		\n"
-#endif
+
 		/* restore execution pointer */
 		"	ret			\n"
 		:
@@ -138,9 +138,7 @@ cpu_context_set(uintptr_t stack, void *jumpto)
 {
   asm volatile (
 		"	movl	%0, %%esp	\n"
-#if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
 		"	xorl	%%ebp, %%ebp	\n"
-#endif
 		"	jmpl	*%1		\n"
 		:
 		: "r,m" (stack), "r,r" (jumpto)

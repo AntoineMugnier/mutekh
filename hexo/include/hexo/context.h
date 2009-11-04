@@ -20,9 +20,17 @@
 */
 
 /**
- * @file
- * @module{Hexo}
- * @short Execution context management stuff
+   @file
+   @module{Hexo}
+   @short Execution context management stuff
+
+   The @ref context_s data structure is used to store execution state
+   of a processor. Hexo provides some services associated with
+   execution contexts which allow managing processor states but does
+   not handle context scheduling directly.
+
+   Available execution context operations are mainly creation and
+   switch related.
  */
 
 #ifndef CONTEXT_H_
@@ -58,7 +66,7 @@ struct context_s
 #endif
 };
 
-/** context entry point function prototype */
+/** @showcontent Context entry point function prototype */
 #define CONTEXT_ENTRY(n) void (n) (void *param)
 /** context entry point function type */
 typedef CONTEXT_ENTRY(context_entry_t);
@@ -78,13 +86,13 @@ error_t cpu_context_bootstrap(struct context_s *context);
 /** Prepare context execution by setting up original stack values */
 error_t cpu_context_init(struct context_s *context, context_entry_t *entry, void *param);
 
-/** cleanup context */
+/** Context cleanup */
 void cpu_context_destroy(struct context_s *context);
 
 
 #if defined(CONFIG_CPU_USER)
 
-/** user entry point function prototype */
+/** @showcontent user entry point function prototype */
 #define USER_ENTRY(n) void (n) (void *param)
 /** user entry point function type */
 typedef USER_ENTRY(user_entry_t);

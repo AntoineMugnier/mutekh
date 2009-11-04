@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Hexo}
+ * @short Memory Management Unit and memory contexts stuff
+ */
+
 #ifndef VMEM_H_
 #define VMEM_H_
 

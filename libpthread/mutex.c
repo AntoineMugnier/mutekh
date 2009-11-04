@@ -89,7 +89,7 @@ __pthread_mutex_normal_unlock(pthread_mutex_t *mutex)
 
 #ifdef CONFIG_PTHREAD_MUTEX_ATTR
 
-CPUARCH_LOCAL pthread_mutexattr_t __pthread_mutex_attr_normal =
+pthread_mutexattr_t __pthread_mutex_attr_normal =
   {
     .type =
     {
@@ -198,7 +198,7 @@ __pthread_mutex_errorcheck_unlock(pthread_mutex_t *mutex)
   return 0;
 }
 
-CPUARCH_LOCAL pthread_mutexattr_t __pthread_mutex_attr_errorcheck =
+pthread_mutexattr_t __pthread_mutex_attr_errorcheck =
   {
     .type =
     {
@@ -279,7 +279,7 @@ __pthread_mutex_recursive_unlock(pthread_mutex_t *mutex)
   return 0;
 }
 
-CPUARCH_LOCAL pthread_mutexattr_t __pthread_mutex_attr_recursive =
+pthread_mutexattr_t __pthread_mutex_attr_recursive =
   {
     .type =
     {
@@ -306,7 +306,7 @@ pthread_mutex_init(pthread_mutex_t *mutex,
 #ifdef CONFIG_PTHREAD_MUTEX_ATTR
   /* default mutex attribute */
   if (!attr)
-    attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_normal);
+    attr = &__pthread_mutex_attr_normal;
 
   mutex->attr = attr;
 #endif
@@ -330,15 +330,15 @@ pthread_mutexattr_settype(pthread_mutexattr_t *attr, int_fast8_t type)
     {
     case PTHREAD_MUTEX_DEFAULT:
     case PTHREAD_MUTEX_NORMAL:
-      attr->type = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_normal)->type;
+      attr->type = __pthread_mutex_attr_normal.type;
       return 0;
 
     case PTHREAD_MUTEX_ERRORCHECK:
-      attr->type = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_errorcheck)->type;
+      attr->type = __pthread_mutex_attr_errorcheck.type;
       return 0;
 
     case PTHREAD_MUTEX_RECURSIVE:
-      attr->type = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_recursive)->type;
+      attr->type = __pthread_mutex_attr_recursive.type;
       return 0;
     }
 

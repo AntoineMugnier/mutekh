@@ -19,147 +19,94 @@
 
 */
 
-/**
- * @file
- * @module{Hexo}
- * @short Atomic memory operations primitives
- */
-
 #ifndef ATOMIC_H_
 #define ATOMIC_H_
 
 #include "types.h"
 
+/**
+  @file
+  @module{Hexo}
+  @short Atomic memory operations primitives
 
-
-
-/*
-  CPU atomic functions use standard integer values of type
-  atomic_int_t and provide bus locked access.
+  CPU atomic functions @tt cpu_atomic_* use standard integer values of type
+  @ref atomic_int_t and provide atomic access when available.
 
   Atomicity is not garanted if system architecture does not handle
-  atomic bus access. PLEASE CONSIDER USING arch atomic_t AND ATOMIC
-  FUNCTION INSTEAD in general case.
+  atomic bus access. Please consider using arch @ref atomic_t and @tt atomic_*
+  function instead in general case.
 
   Some CPU may have partial or missing atomic access capabilities,
-  please check for HAS_CPU_ATOMIC_* macro defined in
-  "cpu/hexo/atomic.h".
- */
+  please check for @tt HAS_CPU_ATOMIC_* macro defined in @ref @hexo/atomic.h header.
 
-#if 0
-/**
-   atomicaly increment value in memory.
-   @return 0 if new atomic value is 0.
-*/
-static bool_t cpu_atomic_inc(volatile atomic_int_t *a);
-
-/**
-   atomicaly decrement value in memory
-   @return 0 if new atomic value is 0.
-*/
-static bool_t cpu_atomic_dec(volatile atomic_int_t *a);
-
-/** set bit in memory */
-static void cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n);
-
-/**
-   atomicaly test and set bit in memory
-   @return 0 if bit was cleared before.
-*/
-static bool_t cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n);
-
-/** atomicaly wait (spin) for bit clear and set it */
-static void cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n);
-
-/** clear bit in memory */
-static void cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n);
-
-/**
-   atomicaly test and clear bit in memory
-   @return 0 if bit was cleared before.
- */
-static bool_t cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n);
-
-/** atomicaly wait for bit set and clear it */
-static void cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n);
-
-#endif
-
-#include "cpu/hexo/atomic.h"
-
-
-/*
   Arch atomic functions use architecture specific structures of type
-  atomic_t and provide locked access on atomic integer values. It may
+  @ref atomic_t and provide locked access on atomic integer values. It may
   use cpu atomic operations or additional spin lock depending on
   system archicture hardware capabilities. Use it for general purpose
   atomic values access.
  */
 
+#include "cpu/hexo/atomic.h"
+
+/** @multiple @internal */
+static bool_t cpu_atomic_inc(volatile atomic_int_t *a);
+static bool_t cpu_atomic_dec(volatile atomic_int_t *a);
+static bool_t cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n);
+static void cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n);
+static bool_t cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n);
+static void cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n);
+static void cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n);
+static void cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n);
+
+/** Atomic value type */
 typedef struct arch_atomic_s atomic_t;
 
-/** set atomic integer value */
+/** @this sets atomic integer value. The @ref %value parameter is useless. */
 static void atomic_set(atomic_t *a, atomic_int_t value);
 
-/**
-   get atomic integer value
-   @return integer value
-*/
+/** @this gets atomic integer value */
 static atomic_int_t atomic_get(atomic_t *a);
 
-/**
-   atomicaly increment integer value.
-   @return 0 if new atomic value is 0.
-*/
+/** @this atomicaly increments integer value.
+   @return 0 if new atomic value is 0. */
 static bool_t atomic_inc(atomic_t *a);
 
-/**
-   atomicaly decrement integer value
-   @return 0 if new atomic value is 0.
-*/
+/** @this atomicaly decrements integer value
+   @return 0 if new atomic value is 0. */
 static bool_t atomic_dec(atomic_t *a);
 
-/** atomicaly set bit in intger value */
+/** @this atomicaly sets bit in intger value */
 static void atomic_bit_set(atomic_t *a, uint_fast8_t n);
 
-/**
-   atomicaly test and set bit in integer value
-   @return 0 if bit was cleared before.
-*/
+/** @this atomicaly tests and sets bit in integer value
+   @return 0 if bit was cleared before. */
 static bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n);
 
-/** atomicaly clear bit in integer value */
+/** @this atomicaly clears bit in integer value */
 static void atomic_bit_clr(atomic_t *a, uint_fast8_t n);
 
-/**
-   atomicaly test and clear bit in integer value
-   @return 0 if bit was cleared before.
- */
+/** @this atomicaly tests and clears bit in integer value
+   @return 0 if bit was cleared before. */
 static bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n);
 
-/**
-   test bit in integer value
-   @return 0 if bit is cleared.
-*/
+/** @this tests bit in integer value
+   @return 0 if bit is cleared. */
 static bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n);
 
-/**
-   compare memory to old and replace with new if they are the same
-   @return true if exchanged
-*/
-static bool_t atomic_compare_and_swap(
-	volatile atomic_int_t *a, atomic_int_t old, atomic_int_t new);
+/** @this compares memory to old and replace with new if they are the same
+   @return true if exchanged */
+static bool_t atomic_compare_and_swap(volatile atomic_int_t *a, atomic_int_t old, atomic_int_t new);
 
-/**
-   static atomic value initializer
-
-#define ATOMIC_INITIALIZER(n)
-*/
+#if 0
+/** Static atomic value initializer */
+# define ATOMIC_INITIALIZER(n)	/* defined in implementation */
+#endif
 
 #include "arch/hexo/atomic.h"
 
 #if __GNUC__ >= 4
 
+#warning must be moved away
 static inline bool_t
 atomic_compare_and_swap(volatile atomic_int_t *a, atomic_int_t old, atomic_int_t new)
 {

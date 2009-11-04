@@ -28,6 +28,11 @@
 #ifndef MMU_H_
 #define MMU_H_
 
+#include "types.h"
+#include "error.h"
+#include "local.h"
+#include "vmem.h"
+
 #ifndef CONFIG_HEXO_MMU
 //# warning Virtual memory support is not enabled in configuration file
 #else
@@ -35,11 +40,6 @@
 /***********************************************************************
  *  main virtual memory interface
  */
-
-#include "types.h"
-#include "error.h"
-#include "local.h"
-#include "vmem.h"
 
 struct mmu_context_s;
 struct vmem_page_region_s;

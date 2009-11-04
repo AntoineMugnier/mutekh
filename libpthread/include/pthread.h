@@ -22,6 +22,11 @@
 #ifndef PTHREAD_H_
 #define PTHREAD_H_
 
+/**
+ * @file
+ * @module{Pthread library}
+ */
+
 #ifndef CONFIG_PTHREAD
 # warning pthread support is not enabled in configuration file
 #else
@@ -55,21 +60,20 @@ typedef struct pthread_attr_s pthread_attr_t;
 		PThread private objects
 ************************************************************************/
 
-/** pointer to current thread */
+/** @internal pointer to current thread */
 extern CONTEXT_LOCAL pthread_t __pthread_current;
 
-/** init pthread sub system and bootstrap initial thread */
+/** @internal init pthread sub system and bootstrap initial thread */
 void __pthread_bootstrap(void);
 
-/** switch to next thread */
+/** @internal switch to next thread */
 void __pthread_switch(void);
 
 /************************************************************************
 		PThread Thread related public API
 ************************************************************************/
 
-/** pthread descriptor structure */
-
+/** @internal pthread descriptor structure */
 struct pthread_s
 {
   lock_t lock;
@@ -104,7 +108,7 @@ struct pthread_s
 #define _PTHREAD_ATTRFLAG_AFFINITY	0x01
 #define _PTHREAD_ATTRFLAG_STACK		0x02
 
-/** pthread attributes structure */
+/** @internal pthread attributes structure */
 struct pthread_attr_s
 {
 #ifdef CONFIG_PTHREAD_ATTRIBUTES
@@ -116,44 +120,45 @@ struct pthread_attr_s
 #endif
 };
 
-/** create a new pthread attribute */
+/** @this creates a new pthread attribute */
 error_t
 pthread_attr_init(pthread_attr_t *attr);
 
-/** destroy a new pthread attribute */
+/** @this destroys a new pthread attribute */
 error_t
 pthread_attr_destroy(pthread_attr_t *attr);
 
-/** add a cpu affinity attribute */
+/** @this adds a cpu affinity attribute */
 error_t
 pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu);
 
-/** set stack buffer attribute */
+/** @this sets stack buffer attribute */
 error_t
 pthread_attr_stack(pthread_attr_t *attr, void *stack_buf, size_t stack_size);
 
-/** create a new pthread */
+/** @this creates a new pthread */
 error_t
 pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 	       pthread_start_routine_t *start_routine, void *arg);
 
-/** end pthread execution */
+/** @this ends pthread execution */
 void pthread_exit(void *retval);
 
-/** return current pthread */
+/** @this returns current pthread */
 static inline pthread_t
 pthread_self(void)
 {
   return CONTEXT_LOCAL_GET(__pthread_current);
 }
 
-/** switch to next thread */
+/** @this switchs to next thread */
 static inline void
 pthread_yield(void)
 {
   __pthread_switch();
 }
 
+/** @this compare two thread objects */
 static inline error_t
 pthread_equal(pthread_t t1, pthread_t t2)
 {
@@ -162,17 +167,17 @@ pthread_equal(pthread_t t1, pthread_t t2)
 
 #ifdef CONFIG_PTHREAD_JOIN
 
-/** detach pthread */
+/** @this detachs a pthread */
 error_t
 pthread_detach(pthread_t thread);
 
-/** wait for thread termination */
+/** @this waits for thread termination */
 error_t
 pthread_join(pthread_t thread, void **value_ptr);
 
 #endif
 
-/** display pthread current runqueue */
+/** @internal @this displays pthread current runqueue */
 void __pthread_dump_runqueue(void);
 
 /************************************************************************
@@ -181,7 +186,7 @@ void __pthread_dump_runqueue(void);
 
 typedef struct pthread_mutexattr_s pthread_mutexattr_t;
 
-/** mutex object structure */
+/** @internal Mutex object structure */
 struct				pthread_mutex_s
 {
   /** mutex counter */
@@ -203,10 +208,10 @@ typedef struct pthread_mutex_s pthread_mutex_t;
 
 #ifdef CONFIG_PTHREAD_MUTEX_ATTR
 
-/** mutex attributes structure */
+/** @internal mutex attributes structure */
 struct				pthread_mutexattr_s
 {
-  /** pointers to lock/trylock/unlock actions depends on type */
+  /** @internal pointers to lock/trylock/unlock actions depends on type */
   struct {
     error_t (*mutex_lock)	(pthread_mutex_t *mutex);
     error_t (*mutex_trylock)	(pthread_mutex_t *mutex);
@@ -214,43 +219,43 @@ struct				pthread_mutexattr_s
   }				type;
 };
 
-/** normal mutex type identifier */
+/** Normal mutex type identifier */
 # define PTHREAD_MUTEX_NORMAL		0
-/** error checking mutex type identifier */
+/** Error checking mutex type identifier */
 # define PTHREAD_MUTEX_ERRORCHECK	1
-/** recurvive mutex type identifier */
+/** Recurvive mutex type identifier */
 # define PTHREAD_MUTEX_RECURSIVE	2
-/** default mutex type identifier */
+/** Default mutex type identifier */
 # define PTHREAD_MUTEX_DEFAULT		3
 
-extern CPUARCH_LOCAL pthread_mutexattr_t __pthread_mutex_attr_normal;
-extern CPUARCH_LOCAL pthread_mutexattr_t __pthread_mutex_attr_errorcheck;
-extern CPUARCH_LOCAL pthread_mutexattr_t __pthread_mutex_attr_recursive;
+/** @multiple @internal */
+extern pthread_mutexattr_t __pthread_mutex_attr_normal;
+extern pthread_mutexattr_t __pthread_mutex_attr_errorcheck;
+extern pthread_mutexattr_t __pthread_mutex_attr_recursive;
 
-/** normal mutex object static initializer */
+/** @this is the normal mutex object static initializer */
 # define PTHREAD_MUTEX_INITIALIZER						       \
   {										       \
     .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
-    .attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_normal)			       \
+    .attr = &__pthread_mutex_attr_normal					       \
   }
 
-/** recurvive mutex object static initializer */
+/** @this is the recurvive mutex object static initializer */
 # define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP					       \
   {										       \
     .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
-    .attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_recursive)			       \
+    .attr = &__pthread_mutex_attr_recursive						\
   }
 
-/** error checking mutex object static initializer */
+/** @this is error checking mutex object static initializer */
 # define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP				       \
   {										       \
     .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
-    .attr = CPUARCH_LOCAL_ADDR(__pthread_mutex_attr_errorcheck)			       \
+    .attr = &__pthread_mutex_attr_errorcheck					       \
   }
 
 #else
 
-/** normal mutex object static initializer */
 # define PTHREAD_MUTEX_INITIALIZER						       \
   {										       \
     .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
@@ -258,79 +263,76 @@ extern CPUARCH_LOCAL pthread_mutexattr_t __pthread_mutex_attr_recursive;
 
 #endif
 
+/** @this initializes a mutex */
 error_t
 pthread_mutex_init(pthread_mutex_t *mutex,
 		   const pthread_mutexattr_t *attr);
 
+/** @this destroy a mutex */
 error_t
 pthread_mutex_destroy(pthread_mutex_t *mutex);
 
 #ifdef CONFIG_PTHREAD_MUTEX_ATTR
 
+/** @this takes a mutex */
 static inline error_t
 pthread_mutex_lock(pthread_mutex_t *mutex)
 {
   return mutex->attr->type.mutex_lock(mutex);
 }
 
+/** @this tries to take a mutex */
 static inline error_t
 pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
   return mutex->attr->type.mutex_trylock(mutex);
 }
 
+/** @this free a mutex */
 static inline error_t
 pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
   return mutex->attr->type.mutex_unlock(mutex);
 }
 
+/** @this sets the mutek type */
 error_t
 pthread_mutexattr_settype(pthread_mutexattr_t *attr, int_fast8_t type);
 
+/** @this initialize a mutex attribute object */
 static inline error_t
 pthread_mutexattr_init(pthread_mutexattr_t *attr)
 {
   return pthread_mutexattr_settype(attr, PTHREAD_MUTEX_DEFAULT);
 }
 
+/** @this destroy a mutex attribute object */
 static inline error_t
 pthread_mutexattr_destroy(pthread_mutexattr_t *attr)
 {
   return 0;
 }
 
-/*
-error_t pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type);
-error_t pthread_mutexattr_setprioceiling(pthread_mutexattr_t *attr, int);
-error_t pthread_mutexattr_setprotocol(pthread_mutexattr_t *attr, int);
-error_t pthread_mutexattr_setpshared(pthread_mutexattr_t *attr, int);
-error_t pthread_mutexattr_getprioceiling(const pthread_mutexattr_t *attr, int *);
-error_t pthread_mutexattr_getprotocol(const pthread_mutexattr_t *attr, int *);
-error_t pthread_mutexattr_getpshared(const pthread_mutexattr_t *attr, int *);
-*/
-
 #else /* !CONFIG_PTHREAD_MUTEX_ATTR */
-
-error_t __pthread_mutex_normal_lock(pthread_mutex_t *mutex);
-error_t __pthread_mutex_normal_trylock(pthread_mutex_t *mutex);
-error_t __pthread_mutex_normal_unlock(pthread_mutex_t *mutex);
 
 static inline error_t
 pthread_mutex_lock(pthread_mutex_t *mutex)
 {
+  error_t __pthread_mutex_normal_lock(pthread_mutex_t *mutex);
   return __pthread_mutex_normal_lock(mutex);
 }
 
 static inline error_t
 pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
+  error_t __pthread_mutex_normal_trylock(pthread_mutex_t *mutex);
   return __pthread_mutex_normal_trylock(mutex);
 }
 
 static inline error_t
 pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
+  error_t __pthread_mutex_normal_unlock(pthread_mutex_t *mutex);
   return __pthread_mutex_normal_unlock(mutex);
 }
 
@@ -342,6 +344,7 @@ pthread_mutex_unlock(pthread_mutex_t *mutex)
 
 struct timespec;
 
+/** @internal */
 struct pthread_cond_s
 {
   /** blocked threads wait queue */
@@ -383,6 +386,7 @@ pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 		PThread RWLock related public API
 ************************************************************************/
 
+/** @internal */
 struct rwlock_s;
 
 typedef struct pthread_rwlockattr_s pthread_rwlockattr_t;
@@ -440,7 +444,7 @@ pthread_rwlock_unlock(pthread_rwlock_t *rwlock)
 
 typedef struct pthread_barrierattr_s pthread_barrierattr_t;
 
-/** mutex object structure */
+/** @internal */
 struct				pthread_barrier_s
 {
   int_fast8_t				count;
@@ -458,6 +462,7 @@ error_t pthread_barrier_init(pthread_barrier_t *barrier,
 
 error_t pthread_barrier_wait(pthread_barrier_t *barrier);
 
+/** @this may be returned by @ref pthread_barrier_wait */
 #define PTHREAD_BARRIER_SERIAL_THREAD	-1
 
 /** normal rwlock object static initializer */
@@ -516,15 +521,18 @@ pthread_spin_unlock(pthread_spinlock_t *spinlock)
 /** canceled thread exit value */
 #define PTHREAD_CANCELED		((void*)-1)
 
+/** @multiple @this may be used with @ref pthread_setcancelstate */
 #define PTHREAD_CANCEL_DISABLE		0
 #define PTHREAD_CANCEL_ENABLE		1
 
+/** @multiple @this may be used with @ref pthread_setcanceltype */
 #define PTHREAD_CANCEL_DEFERRED		0
 #define PTHREAD_CANCEL_ASYNCHRONOUS	1
 
+/** @internal */
 typedef void __pthread_cleanup_fcn_t(void*);
 
-/** cancelation cleanup context */
+/** @internal cancelation cleanup context */
 struct __pthread_cleanup_s
 {
   __pthread_cleanup_fcn_t	*fcn;
@@ -533,9 +541,10 @@ struct __pthread_cleanup_s
   struct __pthread_cleanup_s	*prev;
 };
 
-/** cleanup context linked list */
+/** @internal cleanup context linked list */
 extern CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
 
+/** @this must be matched with @ref #pthread_cleanup_pop */
 #define pthread_cleanup_push(routine_, arg_)		\
 {							\
   reg_t				__irq_state;	\
@@ -553,6 +562,7 @@ extern CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
 							\
   cpu_interrupt_restorestate(&__irq_state);
 
+/** @this must be matched with @ref #pthread_cleanup_push */
 #define pthread_cleanup_pop(execute)				\
   cpu_interrupt_savestate_disable(&__irq_state);		\
 								\
@@ -564,6 +574,7 @@ extern CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
   cpu_interrupt_restorestate(&__irq_state);			\
 }
 
+/** @internal */
 void __pthread_cancel_self(void);
 
 static inline void
@@ -592,7 +603,6 @@ pthread_setcancelstate(int_fast8_t state, int_fast8_t *oldstate)
   return 0;
 }
 
-
 static inline int_fast8_t
 pthread_setcanceltype(int_fast8_t type, int_fast8_t *oldtype)
 {
@@ -605,7 +615,6 @@ pthread_setcanceltype(int_fast8_t type, int_fast8_t *oldtype)
 
   return 0;
 }
-
 
 #endif /* CONFIG_PTHREAD_CANCEL */
 

@@ -22,5 +22,6 @@
 # New source code module to be compiled
   CONFIG_MODULES examples/hello:%CONFIGPATH
 
+  CONFIG_CPU_RESET_HANDLER undefined
+  CONFIG_ARCH_HW_INIT
 
-CONFIG_CPU_RESET_HANDLER undefined
