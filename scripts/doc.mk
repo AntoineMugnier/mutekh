@@ -1,3 +1,5 @@
+CONF_DIR=$(BUILD_DIR)
+
 include $(MUTEK_SRC_DIR)/doc/header_list.mk
 
 include $(MUTEK_SRC_DIR)/scripts/discover.mk

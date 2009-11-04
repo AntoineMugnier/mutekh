@@ -19,6 +19,8 @@ LINKING=0
 endif
 export LINKING
 
+CONF_DIR=$(BUILD_DIR)
+
 include $(CONF_DIR)/.config.mk
 
 include $(MUTEK_SRC_DIR)/scripts/config.mk
@@ -73,8 +75,6 @@ showpaths:
 	@$(foreach mn,$(MODULE_NAMES),echo " " $(mn): $($(mn)_SRC_DIR); )
 	@echo Module build pahs:
 	@$(foreach mn,$(MODULE_NAMES),echo " " $(mn): $($(mn)_OBJ_DIR); )
-	@echo Documentation headers:
-	@$(foreach h,$(GLOBAL_DOC_HEADERS),echo " " $(h); )
 
 .PHONY: FORCE
 
