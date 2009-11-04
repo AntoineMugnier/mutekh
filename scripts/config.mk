@@ -1,5 +1,5 @@
 
-CONF_PATH:=$(MUTEK_SRC_DIR):$(CURRENT_DIR)
+CONF_PATH:=$(MUTEK_SRC_DIR):$(CURRENT_DIR):$(USER_DIR)
 CONF_TMP_BASE:=$(shell mktemp /tmp/mutekh_config.XXXXXX)
 CONF_EXTS = py m4 h mk
 

@@ -25,12 +25,16 @@ else
 MUTEK_SRC_DIR:=$(shell pwd)
 endif
 CURRENT_DIR:=$(shell pwd)
+ifndef USER_DIR
+USER_DIR:=$(CURRENT_DIR)
+endif
 CONF=myconfig
 
 export MUTEK_SRC_DIR
 export BUILD_DIR
 export CONF_DIR
 export CURRENT_DIR
+export USER_DIR
 export MODULES
 
 ifneq ($(VERBOSE),1)
