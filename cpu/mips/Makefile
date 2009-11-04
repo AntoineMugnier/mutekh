@@ -10,5 +10,5 @@ endif
 
 copy = ldscript
 
-subdirs = libc librtld
+subdirs = libc libelf
 

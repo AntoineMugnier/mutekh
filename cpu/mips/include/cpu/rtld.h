@@ -28,25 +28,6 @@
 /* MIPS does not have COPY relocs */
 #define ELF_NO_COPY_RELOCS
 
-#define INIT_GOT(MODULE)                                                \
-    do {                                                                \
-        uint32_t idx;  													\
-                                                                        \
-        /* Fill in first two GOT entries according to the ABI */        \
-        /* MODULE->got[0] = (Elf_Addr) _rtld_bind_start;*/              \
-        /* MODULE->got[1] = (Elf_Addr) MODULE;             */           \
-                                                                        \
-        /* Add load address displacement to all local GOT entries */    \
-        idx = 2;                                                        \
-        while (idx < MODULE->mips_local_gotno)                          \
-            MODULE->got[idx++] += (elf_addr_t) MODULE->relocbase;       \
-                                                                        \
-    } while (0)
-
-/* special for mips */
-error_t
-_rtld_mips_global_got_relocations (const dynobj_desc_t *dynobj, const dynobj_desc_t *root_dynobj);
-
 #endif //_MIPS_RTLD_H_
 
 // Local Variables:
