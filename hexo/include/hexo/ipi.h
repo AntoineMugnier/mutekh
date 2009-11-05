@@ -34,7 +34,7 @@
 
 #include "error.h"
 #include "local.h"
-#include "device.h"
+#include <device/device.h>
 
 #define IPI_MSG_FUNC(n) void (n)(void *private)
 

@@ -21,7 +21,7 @@
 
 #include <device/icu.h>
 #include <device/driver.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <hexo/ipi.h>
 
 static CPU_LOCAL ipi_queue_root_t ipi_fifo = CONTAINER_ROOT_INITIALIZER(ipi_queue, DLIST);
