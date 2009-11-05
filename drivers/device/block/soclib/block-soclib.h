@@ -23,7 +23,7 @@
 #define DRIVER_BLOCK_SOCLIB_H_
 
 #include <device/block.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 DEV_IRQ(block_soclib_irq);
 DEV_INIT(block_soclib_init);

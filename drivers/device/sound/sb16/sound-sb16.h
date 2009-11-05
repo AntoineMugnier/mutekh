@@ -3,7 +3,7 @@
 #define DRIVER_SOUND_SB16_H_
 
 #include <device/sound.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 #define SOUND_SB16_ADDR	0
 

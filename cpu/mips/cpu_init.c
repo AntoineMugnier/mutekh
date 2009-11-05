@@ -28,7 +28,7 @@
 #include <hexo/interrupt.h>
 
 #include <drivers/device/icu/mips/icu-mips.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;

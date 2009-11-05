@@ -24,7 +24,7 @@
 
 #include <device/gpio.h>
 #include <device/input.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 #define MT5F_LEFT 0
 #define MT5F_DOWN 1

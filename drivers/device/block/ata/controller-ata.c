@@ -27,7 +27,7 @@
 
 #include <device/enum.h>
 #include <device/icu.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include <hexo/iospace.h>

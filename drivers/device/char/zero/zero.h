@@ -23,7 +23,7 @@
 #define DRIVER_CHAR_ZERO_H_
 
 #include <device/char.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 DEV_INIT(dev_zero_init);
 DEV_CLEANUP(dev_zero_cleanup);

@@ -22,7 +22,7 @@
 #ifndef __ICU_8259_PRIVATE_H_
 #define __ICU_8259_PRIVATE_H_
 
-#include <hexo/device.h>
+#include <device/device.h>
 
 struct icu_8259_handler_s
 {

@@ -23,7 +23,7 @@
 #define DRIVER_BLOCK_RAMDISK_H_
 
 #include <device/block.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 DEV_IRQ(block_ramdisk_irq);
 DEV_INIT(block_ramdisk_init);

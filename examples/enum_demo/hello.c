@@ -3,7 +3,7 @@
 
 #if defined(CONFIG_HEXO_DEVICE_TREE)
 #include <device/enum.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 extern struct device_s enum_root;

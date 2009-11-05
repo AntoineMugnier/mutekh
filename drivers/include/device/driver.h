@@ -24,7 +24,7 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 
 #define PARAM_DATATYPE_INT 1

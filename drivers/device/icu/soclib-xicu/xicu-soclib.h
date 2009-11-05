@@ -25,7 +25,7 @@
 
 #include <device/timer.h>
 #include <device/icu.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 /* icu device functions */
 

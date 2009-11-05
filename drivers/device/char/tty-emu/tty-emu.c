@@ -23,7 +23,7 @@
 #include <hexo/types.h>
 
 #include <device/char.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include <arch/hexo/emu_syscalls.h>

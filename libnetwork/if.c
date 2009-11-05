@@ -39,7 +39,7 @@
 #endif
 
 #include <device/net.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include <stdio.h>

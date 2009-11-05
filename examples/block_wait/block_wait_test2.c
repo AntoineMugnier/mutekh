@@ -2,7 +2,7 @@
 #include <hexo/interrupt.h>
 #include <drivers/device/icu/8259/icu-8259.h>
 #include <drivers/device/block/ata/block-ata.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include <stdio.h>

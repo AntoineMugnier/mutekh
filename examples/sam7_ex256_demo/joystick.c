@@ -2,7 +2,7 @@
 #include <device/input.h>
 #include <device/gpio.h>
 #include <device/driver.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 # include <mutek/scheduler.h>
 # include <hexo/lock.h>

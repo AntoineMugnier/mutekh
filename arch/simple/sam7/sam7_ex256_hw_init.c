@@ -13,7 +13,7 @@
 #include <drivers/device/input/mt5-f/mt5-f.h>
 #include <drivers/device/block/sd-mmc/sd-mmc.h>
 
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include <mutek/printk.h>

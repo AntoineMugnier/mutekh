@@ -23,7 +23,7 @@
 #define DRIVER_TIMER_8253_H_
 
 #include <device/timer.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 /* timer device functions */
 

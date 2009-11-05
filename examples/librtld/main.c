@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <hexo/device.h>
+#include <device/device.h>
 
 #if defined (CONFIG_ARCH_SOCLIB)
 #include <hexo/interrupt.h>

@@ -31,7 +31,7 @@
 
 #include <device/icu.h>
 #include <device/net.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 #include <hexo/endian.h>
 

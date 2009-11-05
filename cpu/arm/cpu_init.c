@@ -28,7 +28,7 @@
 #include <hexo/interrupt.h>
 
 #include <drivers/device/icu/arm/icu-arm.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #ifdef CONFIG_SOCLIB_MEMCHECK

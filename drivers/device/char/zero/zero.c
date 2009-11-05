@@ -22,7 +22,7 @@
 #include "zero.h"
 
 #include <hexo/types.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 DEVCHAR_REQUEST(dev_zero_request)

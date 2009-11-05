@@ -23,7 +23,7 @@
 #define DRIVER_MEMORY_H_
 
 #include <device/mem.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 DEV_INIT(memory_init);
 DEV_CLEANUP(memory_cleanup);

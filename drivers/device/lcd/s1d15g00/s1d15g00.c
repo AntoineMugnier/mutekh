@@ -24,7 +24,7 @@
 #include <device/lcd.h>
 #include <device/spi.h>
 #include <device/gpio.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include <hexo/iospace.h>

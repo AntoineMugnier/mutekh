@@ -25,7 +25,7 @@
 #include <drivers/device/net/3c900/net-3c900.h>
 #include <drivers/device/lcd/s1d15g00/s1d15g00.h>
 
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include <string.h>

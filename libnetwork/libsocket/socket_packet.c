@@ -19,7 +19,7 @@
 
 */
 
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/net.h>
 #include <device/driver.h>
 

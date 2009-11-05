@@ -21,7 +21,7 @@
 
 */
 
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/i2c.h>
 #include <device/driver.h>
 

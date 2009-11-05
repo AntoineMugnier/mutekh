@@ -24,7 +24,7 @@
 #define TTY_SOCLIB_PRIVATE_H_
 
 #include <hexo/types.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_ring.h>

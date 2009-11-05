@@ -23,7 +23,7 @@
 #define DRIVER_I2C_TWI6061A_H_
 
 #include <device/i2c.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 DEV_INIT(i2c_twi6061a_init);
 DEV_CLEANUP(i2c_twi6061a_cleanup);

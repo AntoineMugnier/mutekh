@@ -23,7 +23,7 @@
 #define DRIVER_UART_US6089C_H_
 
 #include <device/char.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 /* uart device functions */
 

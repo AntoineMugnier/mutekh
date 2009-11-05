@@ -21,7 +21,7 @@
 #include <hexo/types.h>
 
 #include <device/mem.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include "memory.h"

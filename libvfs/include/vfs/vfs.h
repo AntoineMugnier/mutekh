@@ -24,7 +24,7 @@
 
 #include <hexo/error.h>
 #include <hexo/types.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <mutek/scheduler.h>
 #include <mutek/rwlock.h>
 #include <hexo/atomic.h>

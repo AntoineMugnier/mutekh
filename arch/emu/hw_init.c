@@ -34,7 +34,7 @@
 #include <drivers/device/char/tty-emu/tty-emu.h>
 #include <drivers/device/timer/emu/timer-emu.h>
 
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include <string.h>

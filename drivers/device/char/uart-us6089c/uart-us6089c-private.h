@@ -24,7 +24,7 @@
 #define UART_US6089C_PRIVATE_H_
 
 #include <hexo/types.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 #include <hexo/gpct_platform_hexo.h>
 

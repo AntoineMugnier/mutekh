@@ -34,7 +34,7 @@
 #include <device/char.h>
 #include <device/timer.h>
 
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include <string.h>

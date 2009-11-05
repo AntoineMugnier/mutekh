@@ -24,7 +24,7 @@
 #define DRIVER_ICU_PPC_H_
 
 #include <device/icu.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 /* icu device functions */
 

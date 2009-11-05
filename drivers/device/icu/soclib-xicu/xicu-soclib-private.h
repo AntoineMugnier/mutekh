@@ -25,7 +25,7 @@
 #define __XICU_soclib_PRIVATE_H_
 
 #include <device/icu.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 #define XICU_WTI_REG 0
 #define XICU_PTI_PER 1

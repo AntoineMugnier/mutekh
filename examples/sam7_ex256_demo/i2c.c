@@ -2,7 +2,7 @@
 #include <device/gpio.h>
 #include <device/i2c.h>
 #include <device/driver.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 #include <lua/lauxlib.h>
 #include <lua/lua.h>

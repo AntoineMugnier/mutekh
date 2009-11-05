@@ -23,7 +23,7 @@
 #define __TIMER_SOCLIB_PRIVATE_H_
 
 #include <device/timer.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 /* timer device registers addresses */
 #define TIMER_SOCLIB_REG_VALUE		0

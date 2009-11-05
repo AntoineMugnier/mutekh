@@ -2,7 +2,7 @@
 #include <hexo/interrupt.h>
 
 #include <drivers/device/icu/arm/icu-arm.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include "arch/sam7/at91sam7x256.h"

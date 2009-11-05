@@ -23,7 +23,7 @@
 #define __ICU_mips_PRIVATE_H_
 
 #include <device/icu.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 struct icu_mips_handler_s
 {

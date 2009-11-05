@@ -22,7 +22,7 @@
 #define __ENUM_FDT_H_
 
 #include <device/enum.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 #include <stdint.h>
 

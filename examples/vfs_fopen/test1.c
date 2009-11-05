@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <pthread.h>
 
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include <drivers/device/block/file-emu/block-file-emu.h>

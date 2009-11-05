@@ -21,7 +21,7 @@
 #ifndef TERM_UI_TERM_H_
 #define TERM_UI_TERM_H_
 
-#include <hexo/device.h>
+#include <device/device.h>
 
 typedef struct device_s * term_stream_t;
 

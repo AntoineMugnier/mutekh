@@ -24,7 +24,7 @@
 #define RANDOM_CHAR_PRIVATE_H_
 
 #include <hexo/types.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 #include "arc4.h"
 

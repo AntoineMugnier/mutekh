@@ -18,7 +18,7 @@
     Copyright (c) 2009, Nicolas Pouillon, <nipo@ssji.net>
 */
 
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 #include <hexo/error.h>
 #include <hexo/alloc.h>

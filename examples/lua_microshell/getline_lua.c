@@ -7,7 +7,7 @@
 #include <drivers/device/block/soclib/block-soclib.h>
 #include <drivers/device/block/partition/block-partition.h>
 
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 #include <hexo/interrupt.h>
 

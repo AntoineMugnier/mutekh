@@ -23,7 +23,7 @@
 #define DRIVER_TTY_SOCLIB_H_
 
 #include <device/char.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 /* tty device functions */
 

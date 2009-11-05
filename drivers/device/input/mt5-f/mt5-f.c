@@ -23,7 +23,7 @@
 
 #include <device/gpio.h>
 #include <device/input.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include <hexo/alloc.h>

@@ -25,7 +25,7 @@
 # include <drivers/device/enum/fdt/enum-fdt.h>
 # include <device/enum.h>
 # include <device/driver.h>
-# include <hexo/device.h>
+# include <device/device.h>
 #endif
 
 #include <hexo/types.h>

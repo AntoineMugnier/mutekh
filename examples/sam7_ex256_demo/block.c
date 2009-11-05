@@ -8,7 +8,7 @@
 #include <termui/getline.h>
 
 #include <device/block.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 extern struct device_s bd_dev;

@@ -28,7 +28,7 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 struct device_s;
 struct driver_s;

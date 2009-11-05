@@ -22,7 +22,7 @@
 #define TERM_PV_H_
 
 #include <device/char.h>
-#include <hexo/device.h>
+#include <device/device.h>
 #include <device/driver.h>
 
 #include <stdio.h>

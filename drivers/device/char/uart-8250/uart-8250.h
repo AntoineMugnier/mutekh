@@ -23,7 +23,7 @@
 #define DRIVER_UART_8250_H_
 
 #include <device/char.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 /* devices addresses slots */
 

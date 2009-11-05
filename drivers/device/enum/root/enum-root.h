@@ -22,7 +22,7 @@
 #define __ENUM_ROOT_H_
 
 #include <device/enum.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 #include <stdint.h>
 

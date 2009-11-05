@@ -23,7 +23,7 @@
 #define DRIVER_BLOCK_ATA_H_
 
 #include <device/block.h>
-#include <hexo/device.h>
+#include <device/device.h>
 
 DEV_INIT(controller_ata_init);
 DEV_CLEANUP(controller_ata_cleanup);
