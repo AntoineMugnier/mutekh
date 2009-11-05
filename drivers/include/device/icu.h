@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short Interrupt controller driver API
+ */
+
 #ifndef __DEVICE_ICU_H__
 #define __DEVICE_ICU_H__
 

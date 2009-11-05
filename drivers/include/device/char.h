@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short Character device driver API
+ */                                                                 
+
 #ifndef __DEVICE_CHAR_H__
 #define __DEVICE_CHAR_H__
 

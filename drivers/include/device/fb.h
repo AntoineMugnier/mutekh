@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short Frame buffer driver API
+ */
+
 #ifndef __DEVICE_FB_H__
 #define __DEVICE_FB_H__
 

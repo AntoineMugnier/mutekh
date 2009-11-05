@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short Enumerator driver API
+ */                                                                 
+
 #ifndef __DEVICE_ENUM_H__
 #define __DEVICE_ENUM_H__
 

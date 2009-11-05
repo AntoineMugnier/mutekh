@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short Network device driver API
+ */                                                                 
+
 #ifndef __DEVICE_NET_H__
 #define __DEVICE_NET_H__
 

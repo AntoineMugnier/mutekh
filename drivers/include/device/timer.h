@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short Timer device driver API
+ */
+
 #ifndef __DEVICE_TIMER_H__
 #define __DEVICE_TIMER_H__
 

@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short Event driven input device driver API
+ */
+
 #ifndef __DEVICE_INPUT_H__
 #define __DEVICE_INPUT_H__
 

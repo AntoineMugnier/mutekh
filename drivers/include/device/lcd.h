@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short Liquide cristal display driver API
+ */
+
 #ifndef __DEVICE_LCD_H__
 #define __DEVICE_LCD_H__
 

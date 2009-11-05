@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short Sound device driver API
+ */
+
 #ifndef __DEVICE_SOUND_H__
 #define __DEVICE_SOUND_H__
 

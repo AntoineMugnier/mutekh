@@ -18,6 +18,12 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2009
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short Memory device driver API
+ */
+
 #ifndef __DEVICE_MEM_H__
 #define __DEVICE_MEM_H__
 

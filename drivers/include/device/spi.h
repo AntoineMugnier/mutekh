@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short SPI bus device driver API
+ */
+
 #ifndef __DEVICE_SPI_H__
 #define __DEVICE_SPI_H__
 

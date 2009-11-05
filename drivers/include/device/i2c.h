@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short I2c bus driver API
+ */
+
 #ifndef __DEVICE_I2C_H__
 #define __DEVICE_I2C_H__
 

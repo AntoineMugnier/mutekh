@@ -26,6 +26,11 @@
  @order 99
 @end group
 
+@moduledef{Devices}
+ @short Hardware device driver classes API
+ @order 98
+@end group
+
 @moduledef{C library}
  @short Standard C library
  @order 90

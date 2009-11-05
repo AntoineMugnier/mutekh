@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short General purpose IO drievr API
+ */
+
 #ifndef __DEVICE_GPIO_H__
 #define __DEVICE_GPIO_H__
 

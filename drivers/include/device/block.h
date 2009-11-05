@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Devices}
+ * @short Block device driver API
+ */                                                                 
+
 #ifndef __DEVICE_BLOCK_H__
 #define __DEVICE_BLOCK_H__
 
