@@ -15,6 +15,7 @@ struct fdt_walker_state_s;
 
 /**
    on_node_entry prototype macro
+   @see fdt_on_node_entry_func_t
  */
 #define FDT_ON_NODE_ENTRY_FUNC(x) bool_t (x)(						   \
 		void *private,												   \
@@ -23,11 +24,13 @@ struct fdt_walker_state_s;
 
 /**
    on_node_leave prototype macro
+   @see fdt_on_node_leave_func_t
  */
 #define FDT_ON_NODE_LEAVE_FUNC(x) void (x)(void *private)
 
 /**
    on_node_prop prototype macro
+   @see fdt_on_node_prop_func_t
  */
 #define FDT_ON_NODE_PROP_FUNC(x) void (x)(							   \
 		void *private,												   \
@@ -38,6 +41,7 @@ struct fdt_walker_state_s;
 
 /**
    on_mem_reserve prototype macro
+   @see fdt_on_mem_reserve_func_t
  */
 #define FDT_ON_MEM_RESERVE_FUNC(x) void (x)(						   \
 		void *private,												   \
@@ -48,13 +52,13 @@ struct fdt_walker_state_s;
    Type definition for entry in a new node. As nodes may be nested,
    this function may be called many times in a row.
 
-   @param private private data provided in the fdt_walker_s
+   @param private private data provided in the @ref fdt_walker_s
    @param offset node offset from the beginning of the structure, this
           can be used to resolve references
    @param path full path of the node
-
    @return whether user is interested in this node, its properties and
            its subnodes.
+   @see #FDT_ON_NODE_ENTRY_FUNC
  */
 typedef FDT_ON_NODE_ENTRY_FUNC(fdt_on_node_entry_func_t);
 
@@ -62,7 +66,8 @@ typedef FDT_ON_NODE_ENTRY_FUNC(fdt_on_node_entry_func_t);
    Type definition for end of a node. As nodes may be nested, this
    function may be called many times in a row.
 
-   @param private private data provided in the fdt_walker_s
+   @param private private data provided in the @ref fdt_walker_s
+   @see #FDT_ON_NODE_LEAVE_FUNC
  */
 typedef FDT_ON_NODE_LEAVE_FUNC(fdt_on_node_leave_func_t);
 
@@ -71,13 +76,14 @@ typedef FDT_ON_NODE_LEAVE_FUNC(fdt_on_node_leave_func_t);
    properties are inside nodes, on_node_entry has already be called
    once when calling this function.
 
-   @param private private data provided in the fdt_walker_s
+   @param private private data provided in the @ref fdt_walker_s
    @param offset offset of the parameter in the structure
    @param name name of the parameter
    @param data pointer to raw data. User must take care of the meaning
           by itself. If data contains numeric values, they are
           stored bigendian.
    @param datalen length of the data, in bytes
+   @see #FDT_ON_NODE_PROP_FUNC
  */
 typedef FDT_ON_NODE_PROP_FUNC(fdt_on_node_prop_func_t);
 
@@ -87,9 +93,10 @@ typedef FDT_ON_NODE_PROP_FUNC(fdt_on_node_prop_func_t);
 
    There is no endian adaptation to perform on the parameters.
 
-   @param private private data provided in the fdt_walker_s
+   @param private private data provided in the @ref fdt_walker_s
    @param addr base address of reservation
    @param size size of reservation
+   @see #FDT_ON_MEM_RESERVE_FUNC
  */
 typedef FDT_ON_MEM_RESERVE_FUNC(fdt_on_mem_reserve_func_t);
 
@@ -101,11 +108,11 @@ typedef FDT_ON_MEM_RESERVE_FUNC(fdt_on_mem_reserve_func_t);
  */
 struct fdt_walker_s
 {
-	void *private; /** User-owned pointer, ignored by walker */
-	fdt_on_node_entry_func_t *on_node_entry; /** Function to call entering a node */
-	fdt_on_node_leave_func_t *on_node_leave; /** Function to call leaving a node */
-	fdt_on_node_prop_func_t *on_node_prop; /** Function to call for each property */
-	fdt_on_mem_reserve_func_t *on_mem_reserve; /** Function to call for each memory reservation map */
+  void *private; //< User-owned pointer, ignored by walker
+  fdt_on_node_entry_func_t *on_node_entry; //< Function to call entering a node
+  fdt_on_node_leave_func_t *on_node_leave; //< Function to call leaving a node
+  fdt_on_node_prop_func_t *on_node_prop; //< Function to call for each property
+  fdt_on_mem_reserve_func_t *on_mem_reserve; //< Function to call for each memory reservation map
 };
 
 /**
@@ -157,7 +164,7 @@ size_t fdt_get_size(void *blob);
    previously returned by @ref fdt_reader_get_struct_offset, and has
    no meaningful value outside this context.  This function will never
    walk the memory reservation nodes. The corresponding pointer in
-   walker may be NULL.
+   walker may be @ref NULL.
 
    @param blob Pointer to the FDT blob header
    @param walker User-provided functions
