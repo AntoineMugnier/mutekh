@@ -1,6 +1,12 @@
 #ifndef FDT_READ_H_
 #define FDT_READ_H_
 
+/**
+   @file
+   @module{FDT access library}
+   @short Read-only access to FDT blobs
+ */
+
 #include <hexo/types.h>
 #include <hexo/error.h>
 
@@ -94,15 +100,15 @@ typedef FDT_ON_MEM_RESERVE_FUNC(fdt_on_mem_reserve_func_t);
  */
 struct fdt_walker_s
 {
-	void *private;
-	fdt_on_node_entry_func_t *on_node_entry;
-	fdt_on_node_leave_func_t *on_node_leave;
-	fdt_on_node_prop_func_t *on_node_prop;
-	fdt_on_mem_reserve_func_t *on_mem_reserve;
+	void *private; /**< User-owned pointer, ignored by walker */
+	fdt_on_node_entry_func_t *on_node_entry; /**< Function to call entering a node */
+	fdt_on_node_leave_func_t *on_node_leave; /**< Function to call leaving a node */
+	fdt_on_node_prop_func_t *on_node_prop; /**< Function to call for each property */
+	fdt_on_mem_reserve_func_t *on_mem_reserve; /**< Function to call for each memory reservation map */
 };
 
 /**
-   Process a whole blob calling the provided functions when
+   @this processes a whole blob calling the provided functions when
    needed. The blob contains its size in its own header.
 
    @param blob Pointer to the FDT blob header
@@ -112,7 +118,7 @@ struct fdt_walker_s
 error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker);
 
 /**
-   Retrieves the structure offset for the current state.
+   @this retrieves the structure offset for the current state.
 
    This is not valid when walking through memory reservation.
 
@@ -122,8 +128,9 @@ error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker);
 uint32_t fdt_reader_get_struct_offset(struct fdt_walker_state_s *state);
 
 /**
-   Retrieves the value of a property inside a node, if it exists.
-   Calling this function is only valid when inside a on_node_entry.
+   @this retrieves the value of a property inside a node, if it
+   exists.  Calling this function is only valid when inside a
+   on_node_entry.
 
    @param state Internal state of the parser
    @param prop Property name to look for
@@ -136,13 +143,43 @@ bool_t fdt_reader_has_prop(const struct fdt_walker_state_s *state,
 						   const void **propval, size_t *propsize);
 
 /**
-   Gets the complete size of a blob as told in its header.
+   @this gets the complete size of a blob as told in its header.
 
    @param blob a pointer to the start of a device tree blob
    @return the total size of the blob, 0 if the blob is invalid
  */
 size_t fdt_get_size(void *blob);
 
-error_t fdt_walk_blob_from(const void *blob, struct fdt_walker_s *walker, uint32_t offset);
+/**
+   @this processes a blob calling the provided functions when needed,
+   only from the given offset in the blob. The offset must be a value
+   previously returned by @ref fdt_reader_get_struct_offset, and has
+   no meaningful value outside this context.  This function will never
+   walk the memory reservation nodes. The corresponding pointer in
+   walker may be NULL.
+
+   @param blob Pointer to the FDT blob header
+   @param walker User-provided functions
+   @param offset The subnode offset to walk
+   @return Whether the parsing went well, to the end
+ */
+error_t fdt_walk_blob_from(const void *blob,
+						   struct fdt_walker_s *walker,
+						   uint32_t offset);
+
+/**
+   @this retrieves a particular memory reservation entry from the
+   table.  This function does not check for bounds.  User can tell it
+   reached the last entry when *addr and *size are 0.
+
+   @param blob Pointer to the FDT blob header
+   @param resno Index of the memory reservation in the map, 0-indexed
+   @param addr Pointer @this must fill with the address of the
+   reservation
+   @param size Pointer @this must fill with the size of the
+   reservation
+ */
+void fdt_get_rsvmap(const void *blob, uint32_t resno,
+					uint64_t *addr, uint64_t *size);
 
 #endif

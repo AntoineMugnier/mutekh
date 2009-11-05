@@ -61,7 +61,7 @@ error_t fdt_writer_init(
 }
 
 
-void fdt_writer_add_mem_reservation(
+void fdt_writer_add_rsvmap(
 	struct fdt_writer_s *writer,
 	uint64_t addr,
 	uint64_t size)
