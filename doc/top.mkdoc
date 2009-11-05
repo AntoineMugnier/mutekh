@@ -32,6 +32,14 @@
  @short MutekS API
 @end group
 
+@moduledef{FDT access library}
+ @short Flattened device tree access library
+
+ This library offers a mid-level access to Flattened Device Tree blobs
+ without the need of dynamic memory allocation. This is mostly intended
+ for system initialization stage.
+@end group
+
 @moduledef{Pthread library}
  @short POSIX threads library
 @end group
