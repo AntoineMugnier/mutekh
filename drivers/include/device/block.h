@@ -124,7 +124,7 @@ struct dev_block_params_s
 /**
    Block device class getparams() function type.
 
-   @params dev pointer to device descriptor
+   @param dev pointer to device descriptor
    @return pointer to device parameters structure
 */
 typedef DEVBLOCK_GETPARAMS(devblock_getparams_t);
