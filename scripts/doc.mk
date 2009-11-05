@@ -18,7 +18,7 @@ doc: $(BUILD_DIR)/doc/config.h
 	  -I $(BUILD_DIR) doc/config.h \
 	  -I . \
 	  -I doc/include \
-	  $(MKDOC_ARGS) \
+	  $(subst $(MUTEK_SRC_DIR)/,,$(MKDOC_ARGS)) \
 	  $(CPU_HEADER) $(ARCH_HEADER)
 
 .PHONY: doc
