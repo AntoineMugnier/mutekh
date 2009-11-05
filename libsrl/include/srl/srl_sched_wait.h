@@ -13,7 +13,7 @@
 	void srl_sched_wait_##name##_##endianness( volatile uint32_t*addr, uint32_t val );
 
 /**
-   @multiple
+   @multiple{18}
 
    @this of the form
 
