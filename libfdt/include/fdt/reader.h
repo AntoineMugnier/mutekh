@@ -53,7 +53,7 @@ struct fdt_walker_state_s;
           can be used to resolve references
    @param path full path of the node
 
-   @return whether user is interested in this node, its propibutes and
+   @return whether user is interested in this node, its properties and
            its subnodes.
  */
 typedef FDT_ON_NODE_ENTRY_FUNC(fdt_on_node_entry_func_t);
@@ -67,8 +67,8 @@ typedef FDT_ON_NODE_ENTRY_FUNC(fdt_on_node_entry_func_t);
 typedef FDT_ON_NODE_LEAVE_FUNC(fdt_on_node_leave_func_t);
 
 /**
-   Type definition for function called on a node propibute. As
-   propibutes are inside nodes, on_node_entry has already be called
+   Type definition for function called on a node property. As
+   properties are inside nodes, on_node_entry has already be called
    once when calling this function.
 
    @param private private data provided in the fdt_walker_s
@@ -95,16 +95,17 @@ typedef FDT_ON_MEM_RESERVE_FUNC(fdt_on_mem_reserve_func_t);
 
 /**
    Structure containing pointers to user-provided functions and
-   private data. All function pointers must be provided. Leaving a
-   NULL pointer to function will lead to unpredictable results.
+   private data. When using @ref fdt_walk_blob with this structure,
+   all function pointers must be provided. Leaving a NULL pointer to
+   function will lead to unpredictable results.
  */
 struct fdt_walker_s
 {
-	void *private; /**< User-owned pointer, ignored by walker */
-	fdt_on_node_entry_func_t *on_node_entry; /**< Function to call entering a node */
-	fdt_on_node_leave_func_t *on_node_leave; /**< Function to call leaving a node */
-	fdt_on_node_prop_func_t *on_node_prop; /**< Function to call for each property */
-	fdt_on_mem_reserve_func_t *on_mem_reserve; /**< Function to call for each memory reservation map */
+	void *private; /** User-owned pointer, ignored by walker */
+	fdt_on_node_entry_func_t *on_node_entry; /** Function to call entering a node */
+	fdt_on_node_leave_func_t *on_node_leave; /** Function to call leaving a node */
+	fdt_on_node_prop_func_t *on_node_prop; /** Function to call for each property */
+	fdt_on_mem_reserve_func_t *on_mem_reserve; /** Function to call for each memory reservation map */
 };
 
 /**
@@ -113,7 +114,7 @@ struct fdt_walker_s
 
    @param blob Pointer to the FDT blob header
    @param walker User-provided functions
-   @return Whether the parsing went well, to the end
+   @return whether the parsing went well, to the end
  */
 error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker);
 
@@ -123,7 +124,7 @@ error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker);
    This is not valid when walking through memory reservation.
 
    @param state Internal state of the parser
-   @return The current token offset
+   @return the current token offset
  */
 uint32_t fdt_reader_get_struct_offset(struct fdt_walker_state_s *state);
 
@@ -161,7 +162,7 @@ size_t fdt_get_size(void *blob);
    @param blob Pointer to the FDT blob header
    @param walker User-provided functions
    @param offset The subnode offset to walk
-   @return Whether the parsing went well, to the end
+   @return whether the parsing went well, to the end
  */
 error_t fdt_walk_blob_from(const void *blob,
 						   struct fdt_walker_s *walker,
