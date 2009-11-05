@@ -22,10 +22,7 @@ export LINKING
 CONF_DIR=$(BUILD_DIR)
 
 include $(CONF_DIR)/.config.mk
-
 include $(MUTEK_SRC_DIR)/scripts/config.mk
-include $(MUTEK_SRC_DIR)/scripts/cflags.mk
-
 include $(MUTEK_SRC_DIR)/scripts/discover.mk
 
 ifneq ($(CLEANING),1)
