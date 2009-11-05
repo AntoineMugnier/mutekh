@@ -1,8 +1,8 @@
 
 doc_headers = device/block.h device/char.h device/device.h			\
-	device/driver.h device/enum.h device/fb.h device/gpio.h device/i2c.h	\
+	device/enum.h device/fb.h device/gpio.h device/i2c.h			\
 	device/icu.h device/input.h device/lcd.h device/mem.h device/net.h	\
-	device/sound.h device/spi.h device/timer.h
+	device/sound.h device/spi.h device/timer.h device/driver.h 
 
 subdirs = device fs
 

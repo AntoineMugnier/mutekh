@@ -50,15 +50,16 @@ struct dev_block_rq_s;
 
 /**
    Block device read callback function. This function is called for
-   each group of blocks read. It may be called several times, rq->count != 0
-   and rq->error must be used to detect operation end. The device
+   each group of blocks read. It may be called several times, @tt {rq->count != 0}
+   and @tt rq->error must be used to detect operation end. The device
    lock is held when call back function is called.
 
    @param dev pointer to device descriptor
-   @param rq pointer to request data. rq->count field is
-          updated with remaining blocks to process. rq->lba is undefined.
-	  rq->data is advanced to the next block buffer. rq->error is updated.
+   @param rq pointer to request data. @tt rq->count field is
+          updated with remaining blocks to process. @tt rq->lba is undefined.
+	  @tt rq->data is advanced to the next block buffer. @tt rq->error is updated.
    @param count number of processed blocks
+   @see #DEVBLOCK_CALLBACK
 */
 typedef DEVBLOCK_CALLBACK(devblock_callback_t);
 
@@ -95,13 +96,14 @@ CONTAINER_FUNC(dev_blk_queue, CLIST, static inline, dev_blk_queue);
 
 #define dev_block_request(dev, ...) (dev)->drv->f.blk.f_request(dev, __VA_ARGS__ )
 /**
-   Block device class request() function type. Request count data blocks
+   Block device request function type. Request count data blocks
    from the device.
 
-   @param rq pointer to request. lba, count, data and callback \
+   @param rq pointer to request. lba, count, data and callback
              field must be intialized.
    @param dev pointer to device descriptor
    @param size max data request bytes count
+   @see #DEVBLOCK_REQUEST
 */
 typedef DEVBLOCK_REQUEST(devblock_request_t);
 
@@ -122,10 +124,11 @@ struct dev_block_params_s
 #define dev_block_getparams(dev) (dev)->drv->f.blk.f_getparams(dev)
 
 /**
-   Block device class getparams() function type.
+   Block device getparams function type.
 
    @param dev pointer to device descriptor
    @return pointer to device parameters structure
+   @see #DEVBLOCK_GETPARAMS
 */
 typedef DEVBLOCK_GETPARAMS(devblock_getparams_t);
 
