@@ -11,26 +11,32 @@
  * ====================================================
  */
 
-#ifdef __STDC__
-#define	__P(p)	p
-#else
-#define	__P(p)	()
-#endif
+/**
+  @file
+  @module {Math library}
+  @short Fdlibm header
 
-/*
- * ANSI/POSIX
+  Developed at SunPro, a Sun Microsystems, Inc. business.
+  Permission to use, copy, modify, and distribute this
+  software is freely granted, provided that this notice 
+  is preserved.
  */
 
+#define	__P(p)	p
+
+/** @this is ANSI/POSIX */
 extern int signgam;
 
+/** @this defines exterm values */
 #define	MAXFLOAT	((float)3.40282346638528860e+38)
+#define	HUGE		MAXFLOAT
 
+/** @multiple @hidden */
 enum fdversion {fdlibm_ieee = -1, fdlibm_svid, fdlibm_xopen, fdlibm_posix};
-
 #define _LIB_VERSION_TYPE enum fdversion
 #define _LIB_VERSION _fdlib_version  
 
-/* if global variable _LIB_VERSION is not desirable, one may 
+/** @multiple @hidden if global variable _LIB_VERSION is not desirable, one may 
  * change the following to be a constant by: 
  *	#define _LIB_VERSION_TYPE const enum version
  * In that case, after one initializes the value _LIB_VERSION (see
@@ -44,6 +50,7 @@ extern  _LIB_VERSION_TYPE  _LIB_VERSION;
 #define _XOPEN_ fdlibm_xopen
 #define _POSIX_ fdlibm_posix
 
+/** @internal */
 struct exception {
 	int type;
 	char *name;
@@ -52,15 +59,10 @@ struct exception {
 	double retval;
 };
 
-#define	HUGE		MAXFLOAT
-
-/* 
- * set X_TLOSS = pi*2**52, which is possibly defined in <values.h>
- * (one may replace the following line by "#include <values.h>")
- */
-
+/** @this sets X_TLOSS to pi*2**52 */
 #define X_TLOSS		1.41484755040568800000e+16 
 
+/** @multiple */
 #define	DOMAIN		1
 #define	SING		2
 #define	OVERFLOW	3
@@ -68,8 +70,9 @@ struct exception {
 #define	TLOSS		5
 #define	PLOSS		6
 
-/*
- * ANSI/POSIX
+/**
+ * @multiple
+ * @this is an ANSI/POSIX math function
  */
 extern double acos __P((double));
 extern double asin __P((double));
@@ -127,35 +130,38 @@ extern double scalb __P((double, double));
 
 extern int matherr __P((struct exception *));
 
-/*
- * IEEE Test Vector
+/**
+ * @this is IEEE Test Vector
  */
 extern double significand __P((double));
 
-/*
- * Functions callable from C, intended to support IEEE arithmetic.
+/**
+ * @multiple
+ * @this is callable from C, intended to support IEEE arithmetic.
  */
 extern double copysign __P((double, double));
 extern int ilogb __P((double));
 extern double rint __P((double));
 extern double scalbn __P((double, int));
 
-/*
- * BSD math library entry points
+/**
+ * @multiple
+ * BSD math library entry point
  */
 extern double expm1 __P((double));
 extern double log1p __P((double));
 
-/*
- * Reentrant version of gamma & lgamma; passes signgam back by reference
- * as the second argument; user must allocate space for signgam.
+/**
+ * @multiple @this is a reentrant version of gamma & lgamma; passes
+ * signgam back by reference as the second argument; user must
+ * allocate space for signgam.
  */
 #ifdef _REENTRANT
 extern double gamma_r __P((double, int *));
 extern double lgamma_r __P((double, int *));
 #endif	/* _REENTRANT */
 
-/* ieee style elementary functions */
+/** @internal @multiple @this is an IEEE style elementary function */
 extern double __ieee754_sqrt __P((double));			
 extern double __ieee754_acos __P((double));			
 extern double __ieee754_acosh __P((double));			
@@ -188,7 +194,7 @@ extern double __ieee754_scalb __P((double,int));
 extern double __ieee754_scalb __P((double,double));
 #endif
 
-/* fdlibm kernel function */
+/** @internal @multiple @this is a fdlibm kernel function */
 extern double __kernel_standard __P((double,double,int));	
 extern double __kernel_sin __P((double,double,int));
 extern double __kernel_cos __P((double,double));

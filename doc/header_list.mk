@@ -1,5 +1,5 @@
 
-BASE_MODULES += libsrl libfdt libpthread
+BASE_MODULES += libsrl libfdt libpthread libm
 
 ARCH_HEADER= arch/hexo/alloc.h arch/hexo/atomic.h arch/hexo/lock.h	\
 	arch/hexo/segment.h arch/hexo/types.h

@@ -18,30 +18,46 @@
 
 @moduledef{Hexo}
  @short Processor and platform hardware abstraction layer
+ @order 100
 @end group
 
 @moduledef{Mutek}
  @short Non hardware specific kernel code
+ @order 99
 @end group
 
 @moduledef{C library}
- @short standard C library
+ @short Standard C library
+ @order 90
 @end group
 
-@moduledef{SRL}
- @short MutekS API
-@end group
-
-@moduledef{FDT access library}
- @short Flattened device tree access library
-
- This library offers a mid-level access to Flattened Device Tree blobs
- without the need of dynamic memory allocation. This is mostly intended
- for system initialization stage.
+@moduledef{Math library}
+ @short Standard math library
+ @order 89
 @end group
 
 @moduledef{Pthread library}
  @short POSIX threads library
+ @order 88
+@end group
+
+@moduledef{SRL}
+ @short MutekS API
+ This module implements the MutekS API,
+ mainly used by the DSX software.
+
+ See @url https://www-asim.lip6.fr/trac/dsx/
+
+@end group
+
+@moduledef{FDT access library}
+ @short Flattened device tree access library
+ This library offers a mid-level access to Flattened Device Tree blobs
+ without the need of dynamic memory allocation. This is mostly intended
+ for system initialization stage.
+
+ See @url https://www.mutek.fr/trac/mutekh/wiki/FlattenedDeviceTree
+
 @end group
 
 @section TP {Modules documentation}
