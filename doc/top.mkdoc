@@ -14,7 +14,7 @@
  @section HP {Table of contents}
   @insert toc
  @end section
-@end group
+@end ifopt
 
 @moduledef{Hexo}
  @short Processor and platform hardware abstraction layer
