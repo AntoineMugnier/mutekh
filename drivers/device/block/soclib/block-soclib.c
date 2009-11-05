@@ -192,7 +192,7 @@ DEV_IRQ(block_soclib_irq)
 
 static const struct devenum_ident_s	block_soclib_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("soclib:block_device"),
+	DEVENUM_FDTNAME_ENTRY("soclib:block_device", 0, 0),
 	{ 0 }
 };
 
