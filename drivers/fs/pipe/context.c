@@ -21,7 +21,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/endian.h>
 #include <vfs/vfs.h>
 #include <vfs/buffer_cache.h>

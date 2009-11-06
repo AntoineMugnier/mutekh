@@ -21,7 +21,7 @@
 
 #include <device/block.h>
 #include <device/driver.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <mutek/rwlock.h>
 #include <vfs/buffer_cache.h>
 #include "vfat.h"

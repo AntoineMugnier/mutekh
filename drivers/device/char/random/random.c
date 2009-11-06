@@ -25,7 +25,7 @@
 #include <hexo/types.h>
 #include <device/device.h>
 #include <device/driver.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 
 DEVCHAR_REQUEST(dev_random_request)
 {

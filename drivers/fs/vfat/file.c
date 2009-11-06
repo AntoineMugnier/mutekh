@@ -19,7 +19,7 @@
     Copyright Ghassan Almaless <ghassan.almaless@gmail.com>
 */
 
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <vfs/buffer_cache.h>
 #include "vfat.h"
 #include "vfat-private.h"

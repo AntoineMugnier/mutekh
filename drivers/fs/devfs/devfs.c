@@ -19,7 +19,7 @@
     Copyright Sylvain Leroy <sylvain.leroy@unmondelibre.fr>
 */
 
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <vfs/vfs.h>
 #include <vfs/vfs-private.h>
 #include <drivers/fs/devfs/devfs.h>
