@@ -29,7 +29,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 #include <hexo/iospace.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/interrupt.h>
 
 #include <mutek/printk.h>

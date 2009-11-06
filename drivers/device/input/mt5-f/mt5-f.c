@@ -26,7 +26,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 
 #include "mt5-f.h"
 #include "mt5-f-private.h"

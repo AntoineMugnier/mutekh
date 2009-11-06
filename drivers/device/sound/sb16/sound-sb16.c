@@ -25,7 +25,7 @@
 #include <device/sound.h>
 #include <device/device.h>
 #include <device/driver.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 
 #include <arch/dma-8237.h>
 

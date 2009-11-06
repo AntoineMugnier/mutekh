@@ -22,7 +22,7 @@
 #include <hexo/types.h>
 #include <device/device.h>
 #include <hexo/iospace.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/lock.h>
 #include <hexo/endian.h>
 #include <hexo/interrupt.h>

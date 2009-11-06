@@ -31,7 +31,7 @@
 #include <device/driver.h>
 
 #include <hexo/iospace.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/lock.h>
 #include <mutek/timer.h>
 

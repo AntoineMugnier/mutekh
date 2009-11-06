@@ -28,7 +28,7 @@
 #include <device/driver.h>
 
 #include <hexo/iospace.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <string.h>
 
 #include "fb-soclib.h"
