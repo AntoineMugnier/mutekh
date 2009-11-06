@@ -24,7 +24,7 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>

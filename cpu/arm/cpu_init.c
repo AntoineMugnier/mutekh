@@ -20,7 +20,7 @@
 */
 
 
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/init.h>
 #include <hexo/segment.h>
 #include <hexo/cpu.h>

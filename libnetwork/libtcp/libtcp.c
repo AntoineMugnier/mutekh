@@ -34,7 +34,7 @@
  */
 
 #include <hexo/types.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/cpu.h>
 
 #include <netinet/packet.h>

@@ -20,7 +20,7 @@
 */
 
 #include <hexo/types.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 
 #include <netinet/packet.h>
 #include <netinet/protos.h>

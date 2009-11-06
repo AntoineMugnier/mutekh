@@ -26,7 +26,7 @@
 #include <netinet/libudp.h>
 #include <netinet/udp.h>
 
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 
 static UDP_CALLBACK(socket_recv_callback)
 {

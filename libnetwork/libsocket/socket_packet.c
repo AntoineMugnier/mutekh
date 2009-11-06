@@ -30,7 +30,7 @@
 #include <netinet/if.h>
 #include <netinet/arp.h>
 
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 
 #include <semaphore.h>
 #include <mutek/timer.h>

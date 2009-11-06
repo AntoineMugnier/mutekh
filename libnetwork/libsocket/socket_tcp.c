@@ -26,7 +26,7 @@
 #include <netinet/libtcp.h>
 #include <netinet/tcp.h>
 
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #if 0
 /*
  * Create a TCP socket. Allocate private data.

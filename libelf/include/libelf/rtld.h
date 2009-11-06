@@ -20,6 +20,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Elf loader library}
+ * @short Elf loading with relocation
+ */
+
 #ifndef _RTLD_H_
 #define _RTLD_H_
 
@@ -105,14 +111,18 @@ CONTAINER_FUNC(dynobj_list, DLIST, static inline, dynobj_list, list_entry);
 /* 
  * Scanning callback
  */
-/** scan_chain() function template */
+/**
+ * scan_chain() function template
+ * @see rtld_scan_chain_t
+ */
 #define RTLD_SCAN_CHAIN(n) error_t (n) (const struct dynobj_rtld_s *dynobj, void *priv_data)
 /** scan_chain() function type. It allows the user to scan a chain of loaded
  * elf executables (starting from an application) and to perform an action for
  * on each scanned object.
  *
  * @param dynobj currently scanned elf object
- * @param priv_data user private data
+ * @param priv_data userprivate data
+ * @see #RTLD_SCAN_CHAIN
  */
 typedef RTLD_SCAN_CHAIN(rtld_scan_chain_t);
 

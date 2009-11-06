@@ -27,7 +27,7 @@
 #endif
 
 #include <hexo/types.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/endian.h>
 #include <hexo/lock.h>
 #include <string.h>

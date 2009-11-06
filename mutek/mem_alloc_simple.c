@@ -19,7 +19,7 @@
 
 */
 
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <string.h>
 
 #ifdef CONFIG_MUTEK_MEMALLOC_SIMPLE

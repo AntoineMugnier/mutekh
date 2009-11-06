@@ -22,7 +22,7 @@
 #include <mutek/page_alloc.h>
 
 #include <hexo/endian.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/lock.h>
 
 #define VMEM_PPAGE_ISFREE(x) ((x) & 0x80000000)

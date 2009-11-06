@@ -1,4 +1,8 @@
 
+doc_headers = mutek/mem_alloc.h mutek/page_alloc.h mutek/printf_arg.h	\
+	mutek/printk.h mutek/rwlock.h mutek/scheduler.h mutek/timer.h	\
+	mutek/vmem_kalloc.h
+
 objs = timer.o
 objs += printf_arg.o
 

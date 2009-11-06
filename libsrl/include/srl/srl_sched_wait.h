@@ -14,18 +14,21 @@
 
 /**
    @multiple{18}
+   @this is of the form:
 
-   @this of the form
-
+   @code
    srl_sched_wait_CMP_END(addr, val)
+   @end code
 
-   where CMP can be eq, ne, le, ge, lt, or gt, and END can be le, be, or cpu.
+   where @em CMP can be eq, ne, le, ge, lt, or gt, and @em END can be le, be, or cpu.
 
-   They make the current task sleep until the valut pointed at addr
+   They make the current task sleep until the valut pointed at @tt addr
    asserts the following test:
-   (*addr CMP val).
+   @code
+   (*addr CMP val)
+   @end code
 
-   addr is taken with the END endianness (little, big, or the currrent cpu's one)
+   @tt addr is taken with the END endianness (little, big, or the currrent cpu's one)
 
    @param addr The address to poll
    @param val The value to compare to
