@@ -25,7 +25,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 
 #include <string.h>
 
@@ -63,7 +63,7 @@ static FDT_ON_NODE_ENTRY_FUNC(creator_node_entry)
 	struct walker_node_info_s *parent = priv->node_info;
 
 	struct walker_node_info_s *node_info =
-		mem_alloc(sizeof(struct walker_node_info_s), MEM_SCOPE_SYS);
+		mem_alloc(sizeof(struct walker_node_info_s), mem_region_get_local(mem_scope_sys));
 
 	priv->node_info = node_info;
 	node_info->parent = parent;
@@ -88,7 +88,7 @@ static FDT_ON_NODE_ENTRY_FUNC(creator_node_entry)
 			node_info->where = IN_CPU;
 			node_info->new = NULL;
 		}
-		node_info->new_pv = mem_alloc(sizeof(struct enum_pv_fdt_s), MEM_SCOPE_SYS);
+		node_info->new_pv = mem_alloc(sizeof(struct enum_pv_fdt_s), mem_region_get_local(mem_scope_sys));
 		node_info->new_pv->offset = fdt_reader_get_struct_offset(state);
 		node_info->new_pv->device_type = devtype;
 		strncpy(node_info->new_pv->device_path, path, ENUM_FDT_PATH_MAXLEN);

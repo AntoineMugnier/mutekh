@@ -20,7 +20,7 @@
 */
 
 #include <hexo/types.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 
 #include <netinet/packet.h>
 #include <netinet/protos.h>
@@ -38,7 +38,7 @@ OBJECT_CONSTRUCTOR(net_proto_obj)
   obj->initialized = 0;
   if (desc->pv_size)
     {
-      if ((obj->pv = mem_alloc(desc->pv_size, MEM_SCOPE_CONTEXT)) == NULL)
+      if ((obj->pv = mem_alloc(desc->pv_size, mem_region_get_local(mem_scope_context))) == NULL)
 	return -1;
     }
   else

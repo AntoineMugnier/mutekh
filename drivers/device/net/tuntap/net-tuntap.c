@@ -139,7 +139,7 @@ void	*net_tuntap_recv(void *p)
 
       if (size > 0)
 	{
-	  ptr = mem_alloc(size, MEM_SCOPE_NETWORK);
+	  ptr = mem_alloc(size, mem_region_get_local(mem_scope_sys));
 	  memcpy(ptr, buff, size);
 
 	  net_tuntap_push(dev, ptr, size);
@@ -165,7 +165,7 @@ DEV_INIT(net_tuntap_init)
   printk("tuntap driver init on device %p\n", dev);
 
   /* driver private data */
-  pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
+  pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
 
   if (!pv)
     return -1;
@@ -235,7 +235,7 @@ DEV_INIT(net_tuntap_init)
 
       return -1;
     }
-  dispatch = mem_alloc(sizeof (struct net_dispatch_s), MEM_SCOPE_SYS);
+  dispatch = mem_alloc(sizeof (struct net_dispatch_s), mem_region_get_local(mem_scope_sys));
   dispatch->interface = pv->interface;
   dispatch->packets = &pv->rcvqueue;
   dispatch->sem = &pv->rcvsem;
@@ -273,7 +273,7 @@ DEVNET_PREPAREPKT(net_tuntap_preparepkt)
 
   total = sizeof (struct ether_header) + size;
 
-  buff = packet->packet = mem_alloc(total, MEM_SCOPE_CONTEXT);
+  buff = packet->packet = mem_alloc(total, mem_region_get_local(mem_scope_context));
 
   nethdr = &packet->header[0];
   nethdr->data = buff;

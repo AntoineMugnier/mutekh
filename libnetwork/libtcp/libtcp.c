@@ -34,7 +34,7 @@
  */
 
 #include <hexo/types.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/cpu.h>
 
 #include <netinet/packet.h>
@@ -80,7 +80,7 @@ OBJECT_CONSTRUCTOR(tcp_session_obj)
 {
   struct net_tcp_session_s	*obj;
 
-  if ((obj = mem_alloc(sizeof (struct net_tcp_session_s), MEM_SCOPE_NETWORK)) == NULL)
+  if ((obj = mem_alloc(sizeof (struct net_tcp_session_s), mem_region_get_local(mem_scope_sys))) == NULL)
     return NULL;
 
   tcp_session_obj_init(obj);
@@ -146,7 +146,7 @@ static void	tcp_close_timeout(struct net_tcp_session_s	*session)
   /* cancel periodical timer */
   timer_cancel_event(&session->period, 0);
 
-  if ((timer = mem_alloc(sizeof (struct timer_event_s), MEM_SCOPE_NETWORK)) == NULL)
+  if ((timer = mem_alloc(sizeof (struct timer_event_s), mem_region_get_local(mem_scope_sys))) == NULL)
     goto err;
   /* setup a timer */
   timer->callback = tcp_close_session;
@@ -231,7 +231,7 @@ error_t				tcp_open(struct net_tcp_addr_s	*remote,
 
   session->curr_seq = rand();
   session->send_win = TCP_DFL_WINDOW;
-  if ((session->recv_buffer = mem_alloc(session->send_win, MEM_SCOPE_NETWORK)) == NULL)
+  if ((session->recv_buffer = mem_alloc(session->send_win, mem_region_get_local(mem_scope_sys))) == NULL)
     goto err2;
   session->recv_offset = 0;
   session->send_mss = TCP_MSS;
@@ -387,7 +387,7 @@ static error_t		tcp_enqueue_send_buffer(struct net_tcp_session_s	*session)
 {
   struct net_tcp_seg_s	*seg;
 
-  if ((seg = mem_alloc(sizeof (struct net_tcp_seg_s), MEM_SCOPE_NETWORK)) == NULL)
+  if ((seg = mem_alloc(sizeof (struct net_tcp_seg_s), mem_region_get_local(mem_scope_sys))) == NULL)
     return -ENOMEM;
 
   seg->data = session->send_buffer;
@@ -400,7 +400,7 @@ static error_t		tcp_enqueue_send_buffer(struct net_tcp_session_s	*session)
 
   /* allocate a new buffer */
   session->send_offset = 0;
-  if ((session->send_buffer = mem_alloc(session->send_mss, MEM_SCOPE_NETWORK)) == NULL)
+  if ((session->send_buffer = mem_alloc(session->send_mss, mem_region_get_local(mem_scope_sys))) == NULL)
     return -ENOMEM;
 
   return 0;
@@ -497,7 +497,7 @@ error_t			tcp_send(struct net_tcp_session_s	*session,
   /* if no send buffer was allocated */
   if (session->send_buffer == NULL)
     {
-      if ((session->send_buffer = mem_alloc(session->send_mss, MEM_SCOPE_NETWORK)) == NULL)
+      if ((session->send_buffer = mem_alloc(session->send_mss, mem_region_get_local(mem_scope_sys))) == NULL)
 	return -ENOMEM;
     }
 
@@ -850,7 +850,7 @@ void				libtcp_push(struct net_packet_s	*packet,
 
       net_debug("-> out-of-segment data (SEQ = %u)\n", seq);
 
-      seg = mem_alloc(sizeof (struct net_tcp_seg_s), MEM_SCOPE_NETWORK); /* XXX opt malloc size */
+      seg = mem_alloc(sizeof (struct net_tcp_seg_s), mem_region_get_local(mem_scope_sys)); /* XXX opt malloc size */
       seg->data = data;
       seg->size = length;
       seg->seq = seq;

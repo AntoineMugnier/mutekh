@@ -2,7 +2,7 @@
 #include <hexo/types.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
 
@@ -14,8 +14,9 @@ void __cyg_profile_func_exit  (void *this_fn,
 
 static bool_t hexo_instrument_trace_flag = 0;
 
-#ifdef CONFIG_HEXO_MEMALLOC_GUARD_INSTRUMENT
+#ifdef CONFIG_MUTEK_MEMALLOC_GUARD_INSTRUMENT
 static bool_t hexo_instrument_memalloc_guard = 0;
+bool_t mem_guard_check(void) __attribute__((unused));
 #endif
 
 static lock_t hexo_instrument_lock = LOCK_INITIALIZER;
@@ -33,7 +34,7 @@ void __cyg_profile_func_enter (void *this_fn,
       hexo_instrument_trace_flag = 1;
     }
 
-#ifdef CONFIG_HEXO_MEMALLOC_GUARD_INSTRUMENT
+#ifdef CONFIG_MUTEK_MEMALLOC_GUARD_INSTRUMENT
   if (hexo_instrument_memalloc_guard && mem_guard_check())
     {
       printk("Memory guard check failed on function call [f:%p] called from [f:%p]",
@@ -47,7 +48,7 @@ __attribute__ ((no_instrument_function))
 void __cyg_profile_func_exit  (void *this_fn,
 			       void *call_site)
 {
-#ifdef CONFIG_HEXO_MEMALLOC_GUARD_INSTRUMENT
+#ifdef CONFIG_MUTEK_MEMALLOC_GUARD_INSTRUMENT
   if (hexo_instrument_memalloc_guard && mem_guard_check())
     {
       printk("Memory guard check failed on function return [f:%p] called from [f:%p]",
@@ -75,7 +76,7 @@ hexo_instrument_trace(bool_t state)
 void
 hexo_instrument_alloc_guard(bool_t state)
 {
-#ifdef CONFIG_HEXO_MEMALLOC_GUARD_INSTRUMENT
+#ifdef CONFIG_MUTEK_MEMALLOC_GUARD_INSTRUMENT
    hexo_instrument_memalloc_guard = state;
 #endif
 }

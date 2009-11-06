@@ -25,7 +25,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 

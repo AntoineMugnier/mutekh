@@ -28,7 +28,7 @@
 #include <device/driver.h>
 
 #include <hexo/iospace.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 #include <mutek/timer.h>
@@ -322,7 +322,7 @@ error_t drive_ata_init(struct device_s *dev, bool_t slave)
   assert(sizeof(struct ata_indent_s) == 512);
 
   /* allocate private driver data */
-  pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
+  pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
 
   if (!pv)
     return -1;

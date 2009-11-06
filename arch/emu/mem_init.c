@@ -19,14 +19,12 @@
 
 */
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/segment.h>
 #include <hexo/lock.h>
 #include <hexo/endian.h>
 
 #include <arch/hexo/emu_syscalls.h>
-
-struct mem_alloc_region_s mem_region_ram;
 
 void mem_init(void)
 {
@@ -43,9 +41,9 @@ void mem_init(void)
 
   mem_end = (uint8_t*)mem_start + CONFIG_ARCH_EMU_MEMORY;
 
-  mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_HEXO_MEMALLOC_ALIGN);
-  mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_HEXO_MEMALLOC_ALIGN);
+  mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_MUTEK_MEMALLOC_ALIGN);
 
-  mem_alloc_region_init(&mem_region_ram, mem_start, mem_end);
+  mem_alloc_region_init(mem_region_get_local(mem_scope_sys), mem_start, mem_end);
 }
 

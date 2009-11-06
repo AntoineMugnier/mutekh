@@ -21,7 +21,7 @@ freeing can be perform with the following functions:
       allocates a block of memory of the requested size in the specified memory
       region. A set of macro must be used to allocate memory on standard region.
       This function is equivalent to @code{malloc()} when called with the
-      @code{MEM_SCOPE_DEFAULT} macro as second parameters. @xref{Memory regions} for details.
+      @code{mem_region_get_local(mem_scope_default)} macro as second parameters. @xref{Memory regions} for details.
 
 @findex mem_free
 @item @code{void mem_free(void *ptr)} frees a block of memory.
@@ -59,29 +59,29 @@ other memory region when the requested scope is not available.
 Here is a list of default memory scope macros:
 
 @itemize
-@vindex MEM_SCOPE_SYSTEM
-@item The @code{MEM_SCOPE_SYSTEM} macro must be used when memory block must be
+@vindex mem_region_get_local(mem_scope_sys)TEM
+@item The @code{mem_region_get_local(mem_scope_sys)TEM} macro must be used when memory block must be
       accessed from all processors in the system.
 
-@vindex MEM_SCOPE_CLUSTER
-@item The @code{MEM_SCOPE_CLUSTER} macro must be used when memory block will be
+@vindex mem_region_get_local(mem_scope_cluster)
+@item The @code{mem_region_get_local(mem_scope_cluster)} macro must be used when memory block will be
       accessed from all processors of the current cluster only. This is
-      equivalent to @code{MEM_SCOPE_SYSTEM} when cluster support is disabled.
+      equivalent to @code{mem_region_get_local(mem_scope_sys)TEM} when cluster support is disabled.
 
-@vindex MEM_SCOPE_CPU
-@item The @code{MEM_SCOPE_CPU} macro must be used when memory block will be
+@vindex mem_region_get_local(mem_scope_cpu)
+@item The @code{mem_region_get_local(mem_scope_cpu)} macro must be used when memory block will be
       accessed from the current processor only. This is equivalent to
-      @code{MEM_SCOPE_SYSTEM} when multiprocessor support is disabled.
+      @code{mem_region_get_local(mem_scope_sys)TEM} when multiprocessor support is disabled.
 
-@vindex MEM_SCOPE_CONTEXT
-@item The @code{MEM_SCOPE_CONTEXT} macro must be used when memory block will be
+@vindex mem_region_get_local(mem_scope_context)
+@item The @code{mem_region_get_local(mem_scope_context)} macro must be used when memory block will be
       accessed from the current running context only. This may be equivalent to
-      @code{MEM_SCOPE_CPU}, @code{MEM_SCOPE_CLUSTER} or @code{MEM_SCOPE_SYSTEM}
+      @code{mem_region_get_local(mem_scope_cpu)}, @code{mem_region_get_local(mem_scope_cluster)} or @code{mem_region_get_local(mem_scope_sys)TEM}
       depending on cache coherency mechanism and scheduler context migration
       configuration.
 
-@vindex MEM_SCOPE_DEFAULT
-@item The @code{MEM_SCOPE_DEFAULT} macro selects the default memory scope. The
+@vindex mem_region_get_local(mem_scope_default)
+@item The @code{mem_region_get_local(mem_scope_default)} macro selects the default memory scope. The
       default allocation scope can be changed with the
       @code{void mem_alloc_set_default(struct mem_alloc_region_s *region)} function.
       This allow control of memory allocation policy in generic library code.

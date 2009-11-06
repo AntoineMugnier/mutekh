@@ -4,7 +4,7 @@
 #include <hexo/error.h>
 #include <hexo/types.h>
 #include <hexo/context.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <mutek/scheduler.h>
 #include <hexo/interrupt.h>
 #include <hexo/vmem.h>
@@ -63,7 +63,7 @@ struct unix_process_s *unix_create_process(struct unix_process_s *parent)
     struct unix_process_s *ps;
     uintptr_t stack_page;
 
-    if ((ps = mem_alloc(sizeof(*ps), MEM_SCOPE_SYS)) == NULL)
+    if ((ps = mem_alloc(sizeof(*ps), mem_region_get_local(mem_scope_sys))) == NULL)
 	goto err;
 
     if (ppage_alloc(&stack_page))

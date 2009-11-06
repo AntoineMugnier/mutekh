@@ -127,7 +127,7 @@ socket_t			socket(int_fast32_t domain, int_fast32_t type, int_fast32_t protocol)
 	//return -EPFNOSUPPORT;
 	return NULL;
     }
-  if ((sock = mem_alloc(sizeof (struct socket_s), MEM_SCOPE_NETWORK)) == NULL)
+  if ((sock = mem_alloc(sizeof (struct socket_s), mem_region_get_local(mem_scope_sys))) == NULL)
     //return -ENOMEM;
     return NULL;
   /* setup common fields to their defaults */
@@ -160,7 +160,7 @@ _SENDMSG(sendmsg)
     n += message->msg_iov[i].iov_len;
 
   /* allocate a buffer large enough */
-  if ((buf = mem_alloc(n, MEM_SCOPE_SYS)) == NULL)
+  if ((buf = mem_alloc(n, mem_region_get_local(mem_scope_sys))) == NULL)
     {
       fd->error = ENOMEM;
       return -1;
@@ -197,7 +197,7 @@ _RECVMSG(recvmsg)
     n += message->msg_iov[i].iov_len;
 
   /* allocate a buffer large enough */
-  if ((buf = mem_alloc(n, MEM_SCOPE_SYS)) == NULL)
+  if ((buf = mem_alloc(n, mem_region_get_local(mem_scope_sys))) == NULL)
     {
       fd->error = ENOMEM;
       return -1;

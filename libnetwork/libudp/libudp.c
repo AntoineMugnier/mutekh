@@ -26,7 +26,7 @@
  */
 
 #include <hexo/types.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/cpu.h>
 
 #include <netinet/packet.h>

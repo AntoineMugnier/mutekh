@@ -19,7 +19,7 @@
     Copyright Ghassan Almaless <ghassan.almaless@gmail.com>
 */
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <vfs/vfs.h>
 #include <vfs/vfs-private.h>
 

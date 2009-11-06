@@ -19,7 +19,7 @@
     Copyright Ghassan Almaless <ghassan.almaless@gmail.com>
 */
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <vfs/vfs.h>
 #include <vfs/vfs-private.h>
 #include <vfs/buffer_cache.h>
@@ -76,7 +76,7 @@ error_t vfs_init (struct device_s * device, uint_fast8_t fs_type,
       return err;
     }
 
-  if((ctx = mem_alloc(sizeof(*ctx), MEM_SCOPE_SYS)) == NULL)
+  if((ctx = mem_alloc(sizeof(*ctx), mem_region_get_local(mem_scope_sys))) == NULL)
     return -VFS_ENOMEM;
 
   err = 0;
@@ -100,7 +100,7 @@ error_t vfs_init (struct device_s * device, uint_fast8_t fs_type,
     return err;
 
 #ifdef CONFIG_DRIVER_FS_PIPE
-  if((vfs_pipe_ctx = mem_alloc(sizeof(*vfs_pipe_ctx), MEM_SCOPE_SYS)) == NULL)
+  if((vfs_pipe_ctx = mem_alloc(sizeof(*vfs_pipe_ctx), mem_region_get_local(mem_scope_sys))) == NULL)
     return -VFS_ENOMEM;
   
   memset(vfs_pipe_ctx,0,sizeof(*vfs_pipe_ctx));

@@ -27,7 +27,7 @@
 #include <device/driver.h>
 
 #include <hexo/iospace.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/interrupt.h>
 #include <hexo/error.h>
 
@@ -133,7 +133,7 @@ DEV_INIT(icu_8259_init)
 
   dev->drv = &icu_8259_drv;
 
-  if ((pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS))) /* FIXME allocation scope ? */
+  if ((pv = mem_alloc(sizeof (*pv), mem_region_get_local(mem_scope_sys)))) /* FIXME allocation scope ? */
     {
       uint_fast8_t i;
 

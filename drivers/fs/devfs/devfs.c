@@ -19,7 +19,7 @@
     Copyright Sylvain Leroy <sylvain.leroy@unmondelibre.fr>
 */
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <vfs/vfs.h>
 #include <vfs/vfs-private.h>
 #include <drivers/fs/devfs/devfs.h>
@@ -65,7 +65,7 @@ error_t	devfs_init(const char		*mount_point)
     }
 
   // Allocating memory for parent context
-  if((devfs_ctx = mem_alloc(sizeof(struct vfs_context_s), MEM_SCOPE_SYS)) == NULL)
+  if((devfs_ctx = mem_alloc(sizeof(struct vfs_context_s), mem_region_get_local(mem_scope_sys))) == NULL)
     return -VFS_ENOMEM;
 
   // Setting up vfs_context_s
@@ -122,7 +122,7 @@ struct devfs_node_s *devfs_register(const char			*name,
     }
 
   // Allocating for a new DevFS node
-  if((new_node = mem_alloc(sizeof(struct devfs_node_s), MEM_SCOPE_SYS)) == NULL)
+  if((new_node = mem_alloc(sizeof(struct devfs_node_s), mem_region_get_local(mem_scope_sys))) == NULL)
     return NULL;
 
   memset(new_node, 0, sizeof(struct devfs_node_s));

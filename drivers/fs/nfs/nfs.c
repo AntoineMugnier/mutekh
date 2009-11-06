@@ -19,7 +19,7 @@
     Copyright Sylvain Leroy <sylvain.leroy@unmondelibre.fr>
 */
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <vfs/vfs.h>
 #include <vfs/vfs-private.h>
 #include <netinet/nfs.h>
@@ -68,7 +68,7 @@ error_t	nfs_mount(const char		*mount_point,
     }
 
   // Allocating memory for parent context
-  if((nfs_ctx = mem_alloc(sizeof(struct vfs_context_s), MEM_SCOPE_SYS)) == NULL)
+  if((nfs_ctx = mem_alloc(sizeof(struct vfs_context_s), mem_region_get_local(mem_scope_sys))) == NULL)
     return -VFS_ENOMEM;
 
   // Setting up vfs_context_s

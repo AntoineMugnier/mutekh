@@ -24,7 +24,7 @@
 #include <hexo/init.h>
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 
 #include <arch/hexo/emu_syscalls.h>
 

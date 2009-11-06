@@ -21,7 +21,7 @@
 
 #include <device/block.h>
 #include <device/driver.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <mutek/rwlock.h>
 #include <vfs/buffer_cache.h>
 #include "vfat.h"
@@ -97,7 +97,7 @@ VFS_CREATE_CONTEXT(vfat_create_context)
 
   err = 0;
 
-  if ((vfat_ctx = mem_alloc(sizeof(*vfat_ctx), MEM_SCOPE_SYS)) == NULL)
+  if ((vfat_ctx = mem_alloc(sizeof(*vfat_ctx), mem_region_get_local(mem_scope_sys))) == NULL)
     return VFS_ENOMEM;
 
   vfat_ctx->dev = context->ctx_dev;

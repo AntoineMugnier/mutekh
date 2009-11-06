@@ -2,6 +2,14 @@
 objs = timer.o
 objs += printf_arg.o
 
+ifeq ($(CONFIG_MUTEK_MEMALLOC_SMART), defined)
+objs += mem_alloc_smart.o					
+endif
+
+ifeq ($(CONFIG_MUTEK_MEMALLOC_SIMPLE), defined)
+objs += mem_alloc_simple.o					
+endif
+
 ifeq ($(CONFIG_MUTEK_PRINTK), defined)
 objs += printk.o
 endif

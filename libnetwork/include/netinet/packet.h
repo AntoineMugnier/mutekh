@@ -27,7 +27,7 @@
 #endif
 
 #include <hexo/types.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/endian.h>
 #include <hexo/lock.h>
 #include <string.h>
@@ -239,7 +239,7 @@ extern uint_fast32_t	netobj_del[NETWORK_PROFILING_NB_OBJS];
 void	netprofile_show(void);
 #endif
 
-#define MEM_SCOPE_NETWORK	MEM_SCOPE_SYS
+#define mem_region_get_local(mem_scope_sys)	mem_region_get_local(mem_scope_sys)
 
 /*
  * Disable log messages. Replace by a printk.

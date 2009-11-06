@@ -16,40 +16,44 @@
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
-
+    Copyright Dimitri Refauvelet <dimitri.refauvelet@lip6.fr> (c) 2009
 */
 
+/**
+ * @file
+ * @module{Mutek}
+ * @short Memory allocation stuff
+ */
 
-#include <mem_alloc.h>
-#include <string.h>
-#include <hexo/interrupt.h>
-#include <hexo/init.h>
-#include <hexo/iospace.h>
+
+#ifndef MEM_ALLOC_H_ 
+#define MEM_ALLOC_H_
+
+#include <hexo/types.h>
+#include <hexo/error.h>
 #include <hexo/lock.h>
-#include <hexo/segment.h>
 
-CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
-CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
+struct mem_alloc_region_s;
 
-/** pointer to context local storage in cpu local storage */
-CPU_LOCAL void *__cpu_context_data_base;
+void *mem_alloc(size_t size, struct mem_alloc_region_s *region);
 
-/* cpu interrupts state */
-volatile CPU_LOCAL bool_t cpu_irq_state = 0;
+void mem_alloc_region_init(struct mem_alloc_region_s *region, void *address, void *end);
 
-error_t
-cpu_global_init(void)
-{
-  return 0;
-}
+void mem_free(void *ptr);
 
-static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
+size_t mem_alloc_getsize(void *ptr);
 
-void cpu_init(void)
-{
-}
+enum mem_scope_e
+  {
+    mem_scope_sys,
+    mem_scope_cluster,
+    mem_scope_context,
+    mem_scope_cpu,
+    mem_scope_default,
+  };
 
-void cpu_start_other_cpu(void)
-{
-}
 
+/** return the farless memory allocatable region, depending to the scope */
+struct mem_alloc_region_s *mem_region_get_local(enum mem_scope_e scope);
+
+#endif

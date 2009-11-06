@@ -28,7 +28,7 @@
 #include <device/driver.h>
 
 #include <hexo/iospace.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 
@@ -218,7 +218,7 @@ DEV_INIT(block_soclib_init)
   dev->drv = &block_soclib_drv;
 
   /* allocate private driver data */
-  pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
+  pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
 
   if (!pv)
     goto err;

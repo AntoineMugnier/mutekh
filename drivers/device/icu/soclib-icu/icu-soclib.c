@@ -29,7 +29,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 #include <hexo/iospace.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/interrupt.h>
 
 DEVICU_ENABLE(icu_soclib_enable)
@@ -111,7 +111,7 @@ DEV_INIT(icu_soclib_init)
   device_mem_map( dev , ( 1 << ICU_ADDR_MASTER ) );
   dev->drv = &icu_soclib_drv;
 
-  if ((pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS))) /* FIXME allocation scope ? */
+  if ((pv = mem_alloc(sizeof (*pv), mem_region_get_local(mem_scope_sys)))) /* FIXME allocation scope ? */
     {
       dev->drv_pv = pv;
       pv->dev = dev;

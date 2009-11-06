@@ -26,7 +26,7 @@
 #include <netinet/libudp.h>
 #include <netinet/udp.h>
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 
 static UDP_CALLBACK(socket_recv_callback)
 {
@@ -50,7 +50,7 @@ static UDP_CALLBACK(socket_recv_callback)
     return;
 
   /* push the incoming buffer to the socket lib */
-  if ((buffer = mem_alloc(sizeof (struct net_buffer_s) + size, MEM_SCOPE_NETWORK)) != NULL)
+  if ((buffer = mem_alloc(sizeof (struct net_buffer_s) + size, mem_region_get_local(mem_scope_sys))) != NULL)
     {
       buffer->data = (void *)(buffer + 1);
       memcpy(buffer->data, data, size);
@@ -86,7 +86,7 @@ static _SOCKET(socket_udp)
 {
   struct socket_udp_pv_s	*pv;
 
-  if ((pv = fd->pv = mem_alloc(sizeof (struct socket_udp_pv_s), MEM_SCOPE_NETWORK)) == NULL)
+  if ((pv = fd->pv = mem_alloc(sizeof (struct socket_udp_pv_s), mem_region_get_local(mem_scope_sys))) == NULL)
     return -ENOMEM;
   pv->desc = NULL;
 
@@ -263,7 +263,7 @@ static _SENDMSG(sendmsg_udp)
       for (i = 0, n = 0; i < message->msg_iovlen; i++)
 	n += message->msg_iov[i].iov_len;
 
-      if ((buf = mem_alloc(n, MEM_SCOPE_NETWORK)) == NULL)
+      if ((buf = mem_alloc(n, mem_region_get_local(mem_scope_sys))) == NULL)
 	{
 	  fd->error = ENOMEM;
 	  return -1;

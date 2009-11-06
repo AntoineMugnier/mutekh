@@ -19,7 +19,7 @@
     Copyright Sylvain Leroy <sylvain.leroy@unmondelibre.fr>
 */
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <device/char.h>
 /* #include <device/block.h> */
 #include <device/driver.h>
@@ -57,7 +57,7 @@ VFS_OPEN_FILE(nfs_open)
 /* /\* #endif *\/ */
 
 /*   // Allocating for a new Nfs file */
-/*   if((file_pv = mem_alloc(sizeof(struct nfs_file_s), MEM_SCOPE_SYS)) == NULL) */
+/*   if((file_pv = mem_alloc(sizeof(struct nfs_file_s), mem_region_get_local(mem_scope_sys))) == NULL) */
 /*     return NFS_ERR; */
 
 /*   // struct nfs_file_s only keep a struct vfs_node_s */

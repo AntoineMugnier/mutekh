@@ -16,11 +16,14 @@
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
-
+              Dimitri Refauvelet <dimitri.refauvelet@lip6.fr> (c) 2009
 */
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <string.h>
+#include <hexo/types.h>
+#include <hexo/lock.h>
+#include <hexo/endian.h>
 
 #ifdef CONFIG_HEXO_MMU
 #include <hexo/mmu.h>
@@ -30,9 +33,58 @@
 #include <arch/mem_checker.h>
 #endif
 
-#ifdef CONFIG_HEXO_MEMALLOC_ALGO
+#ifdef CONFIG_MUTEK_MEMALLOC_SMART
 
-#if defined(CONFIG_HEXO_MEMALLOC_ALGO_FIRSTFIT)
+/***************** Memory allocatable region management ******************/
+
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_clist.h>
+
+#ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
+# define MEMALLOC_SIGNATURE	0x3a1b2ce1
+#endif
+
+/** memory block header */
+struct mem_alloc_header_s
+{
+#ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
+  uint32_t			signature;
+#endif
+  struct mem_alloc_region_s	*region;
+  uint8_t			is_free;
+  /* block size including header */
+  uintptr_t			size;
+  CONTAINER_ENTRY_TYPE(CLIST)	list_entry;
+};
+
+static const size_t	mem_hdr_size = ALIGN_VALUE_UP(sizeof (struct mem_alloc_header_s),
+						      CONFIG_MUTEK_MEMALLOC_ALIGN);
+
+CONTAINER_TYPE(alloc_list, CLIST, struct mem_alloc_header_s, list_entry);
+
+#define MEMALLOC_SPLIT_SIZE	(2 * mem_hdr_size + 16)
+
+/** memory region handler */
+struct mem_alloc_region_s
+{
+  lock_t		lock;
+  alloc_list_root_t	root;
+#ifdef CONFIG_MUTEK_MEMALLOC_STATS
+  size_t		alloc_blocks;
+  size_t		free_size;
+  size_t		free_blocks;
+#endif
+};
+
+struct mem_alloc_region_s mem_region_system;
+
+/***************** Memory allocation interface ******************/
+
+
+CONTAINER_FUNC(alloc_list, CLIST, static inline, alloc_list, list_entry);
+
+
+#if defined(CONFIG_MUTEK_MEMALLOC_ALGO_FIRSTFIT)
 
 /* FIRST FIT allocation algorithm */
 
@@ -48,7 +100,7 @@ mem_alloc_region_candidate(struct mem_alloc_region_s *region, size_t size)
   return NULL;
 }
 
-#elif defined(CONFIG_HEXO_MEMALLOC_ALGO_BESTFIT)
+#elif defined(CONFIG_MUTEK_MEMALLOC_ALGO_BESTFIT)
 
 /* BEST FIT allocation algorithm */
 
@@ -78,18 +130,18 @@ mem_alloc_region_extend(struct mem_alloc_region_s *region, size_t size)
   hdr = vmem_ops.vpage_alloc(initial_ppage_region, size);
   if(hdr)
   {
-  hdr->size=size * CONFIG_HEXO_MMU_PAGESIZE;
-  hdr->region=region;
-  hdr->is_free=1;
-#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
-  hdr->signature = MEMALLOC_SIGNATURE;
+    hdr->size=size * CONFIG_HEXO_MMU_PAGESIZE;
+    hdr->region=region;
+    hdr->is_free=1;
+#ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
+    hdr->signature = MEMALLOC_SIGNATURE;
 #endif
-
-  alloc_list_push(&region->root, hdr);
- 
-#ifdef CONFIG_HEXO_MEMALLOC_STATS
-  region->free_size += ( size * CONFIG_HEXO_MMU_PAGESIZE );
-  region->free_blocks++;
+    
+    alloc_list_push(&region->root, hdr);
+    
+#ifdef CONFIG_MUTEK_MEMALLOC_STATS
+    region->free_size += ( size * CONFIG_HEXO_MMU_PAGESIZE );
+    region->free_blocks++;
 #endif
   }
   return hdr;
@@ -110,9 +162,9 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
   /* find suitable free block */
   if ((hdr = mem_alloc_region_candidate(region, size)) 
 #ifdef CONFIG_HEXO_MMU
-  || (hdr = mem_alloc_region_extend(region, (size / CONFIG_HEXO_MMU_PAGESIZE) + 1))
+      || (hdr = mem_alloc_region_extend(region, (size / CONFIG_HEXO_MMU_PAGESIZE) + 1))
 #endif
-)
+      )
     {
       hdr->is_free = 0;
 
@@ -122,7 +174,7 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
 	  struct mem_alloc_header_s	*next = (void*)((uint8_t*)hdr + size);
 
 
-#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
+#ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
 	  next->signature = MEMALLOC_SIGNATURE;
 #endif
 	  next->is_free = 1;
@@ -133,12 +185,12 @@ void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
 	  alloc_list_insert_post(&region->root, hdr, next);
 	}
 
-#ifdef CONFIG_HEXO_MEMALLOC_STATS
+#ifdef CONFIG_MUTEK_MEMALLOC_STATS
       region->free_size -= size;
       region->alloc_blocks++;
 #endif
 
-#ifdef CONFIG_HEXO_MEMALLOC_DEBUG
+#ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
       memset(hdr + 1, 0x5a, hdr->size - sizeof(*hdr));
 #endif
 
@@ -173,13 +225,13 @@ void mem_alloc_region_push(void *address)
 
   assert(hdr->size >= mem_hdr_size);
 
-#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
+#ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
   assert(hdr->signature == MEMALLOC_SIGNATURE);
 #endif
 
   hdr->is_free = 1;
 
-#ifdef CONFIG_HEXO_MEMALLOC_DEBUG
+#ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
   memset(hdr + 1, 0xa5, hdr->size - sizeof(*hdr));
 #endif
 
@@ -187,7 +239,7 @@ void mem_alloc_region_push(void *address)
   soclib_mem_check_region_status(hdr + 1, hdr->size - sizeof(*hdr), SOCLIB_MC_REGION_FREE);
 #endif
 
-#ifdef CONFIG_HEXO_MEMALLOC_STATS
+#ifdef CONFIG_MUTEK_MEMALLOC_STATS
   region->free_size += hdr->size;
   region->alloc_blocks--;
   region->free_blocks++;
@@ -195,7 +247,7 @@ void mem_alloc_region_push(void *address)
 
   if ((next = alloc_list_next(&region->root, hdr)) == (void*)((uint8_t*)hdr + hdr->size))//next exist and next is contiguous with hdr
     {
-#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
+#ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
       assert(next->signature == MEMALLOC_SIGNATURE);
 #endif
       assert((uint8_t*)next == (uint8_t*)hdr + hdr->size);
@@ -205,14 +257,14 @@ void mem_alloc_region_push(void *address)
 	{
 	  hdr->size += next->size;
 	  alloc_list_remove(&region->root, next);
-#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
+#ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
 	  next->signature = 0;
 #endif
-#ifdef CONFIG_HEXO_MEMALLOC_STATS
+#ifdef CONFIG_MUTEK_MEMALLOC_STATS
 	  region->free_blocks--;
 #endif
 
-#ifdef CONFIG_HEXO_MEMALLOC_DEBUG
+#ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
 	  memset(next, 0xa5, mem_hdr_size);
 #endif
 	}
@@ -220,7 +272,7 @@ void mem_alloc_region_push(void *address)
 
   if ((prev = alloc_list_prev(&region->root, hdr)) && ((void*)hdr == (void*)((uint8_t*)prev + prev->size)))//prev exist and prev is contiguous with hdr
     {
-#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
+#ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
       assert(prev->signature == MEMALLOC_SIGNATURE);
 #endif
       assert((uint8_t*)hdr == (uint8_t*)prev + prev->size);
@@ -230,13 +282,13 @@ void mem_alloc_region_push(void *address)
 	{
 	  prev->size += hdr->size;
 	  alloc_list_remove(&region->root, hdr);
-#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
+#ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
 	  hdr->signature = 0;
 #endif
-#ifdef CONFIG_HEXO_MEMALLOC_STATS
+#ifdef CONFIG_MUTEK_MEMALLOC_STATS
 	  region->free_blocks--;
 #endif
-#ifdef CONFIG_HEXO_MEMALLOC_DEBUG
+#ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
 	  memset(hdr, 0xa5, mem_hdr_size);
 #endif
 	}
@@ -260,7 +312,7 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
   soclib_mem_check_region_status(start, size, SOCLIB_MC_REGION_FREE);
-#elif defined( CONFIG_HEXO_MEMALLOC_DEBUG )
+#elif defined( CONFIG_MUTEK_MEMALLOC_DEBUG )
   memset(hdr, 0xa5, size);
 #endif
 
@@ -269,7 +321,7 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
   lock_init(&region->lock);
   alloc_list_init(&region->root);
 
-#ifdef CONFIG_HEXO_MEMALLOC_STATS
+#ifdef CONFIG_MUTEK_MEMALLOC_STATS
   region->alloc_blocks = 0;
   region->free_size = size;
   region->free_blocks = 1;
@@ -279,7 +331,7 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
 
   assert(size > mem_hdr_size);
 
-#ifdef CONFIG_HEXO_MEMALLOC_SIGNED
+#ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
   hdr->signature = MEMALLOC_SIGNATURE;
 #endif
   hdr->size = size;
@@ -296,14 +348,14 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
 }
 
 
-#ifdef CONFIG_HEXO_MEMALLOC_GUARD
+#ifdef CONFIG_MUTEK_MEMALLOC_GUARD
 
 bool_t mem_alloc_chk(const char *str, uint8_t *data, uint8_t value)
 {
   uintptr_t	i;
   bool_t	res = 0;
 
-  for (i = 0; i < CONFIG_HEXO_MEMALLOC_GUARD_SIZE; i++)
+  for (i = 0; i < CONFIG_MUTEK_MEMALLOC_GUARD_SIZE; i++)
     {
       if (data[i] != value)
 	{
@@ -334,7 +386,7 @@ bool_t mem_alloc_region_guard_check(struct mem_alloc_region_s *region)
     else
       {
 	uint8_t		*pre = ((uint8_t*)item) + mem_hdr_size;
-	uint8_t		*post = ((uint8_t*)item) + item->size - CONFIG_HEXO_MEMALLOC_GUARD_SIZE;
+	uint8_t		*post = ((uint8_t*)item) + item->size - CONFIG_MUTEK_MEMALLOC_GUARD_SIZE;
 
 	if (mem_alloc_chk("alloc pre ", pre, 0x5a) |
 	    mem_alloc_chk("alloc post", post, 0x5a))
@@ -350,60 +402,12 @@ bool_t mem_alloc_region_guard_check(struct mem_alloc_region_s *region)
 
 #endif
 
-
-/************************************************************************/
-
-#else /* !CONFIG_HEXO_MEMALLOC_ALGO */
-
-void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
-{
-  void	*res, *next;
-
-  lock_spin(&region->lock);
-
-  res = region->next;
-
-#ifdef CONFIG_HEXO_MEMALLOC_DEBUG
-  memset(res, 0x5a, size);
-#endif
-
-  next = (uint8_t*)region->next + size;
-
-  if (next > region->last)
-    res = NULL;
-
-  region->next = next;
-
-  lock_release(&region->lock);
-
-  return res;
-}
-
-void mem_alloc_region_push(void *address)
-{
-  /* no free() ! */
-}
-
-void mem_alloc_region_init(struct mem_alloc_region_s *region,
-			   void *address, void *end)
-{
-  lock_init(&region->lock);
-
-  region->next = address;
-  region->last = end;
-}
-
-#endif /* CONFIG_HEXO_MEMALLOC_ALGO */
-
-
-/************************************************************************/
-
 error_t mem_alloc_stats(struct mem_alloc_region_s *region,
 			size_t *alloc_blocks,
 			size_t *free_size,
 			size_t *free_blocks)
 {
-#ifdef CONFIG_HEXO_MEMALLOC_STATS
+#ifdef CONFIG_MUTEK_MEMALLOC_STATS
 
   if (alloc_blocks)
     *alloc_blocks = region->alloc_blocks;
@@ -420,4 +424,82 @@ error_t mem_alloc_stats(struct mem_alloc_region_s *region,
 #endif
 }
 
+/** allocate a new memory block in given region */
+void *mem_alloc(size_t size, struct mem_alloc_region_s *region)
+{
+  void *hdr;
 
+  size = mem_hdr_size
+#ifdef CONFIG_MUTEK_MEMALLOC_GUARD
+    + CONFIG_MUTEK_MEMALLOC_GUARD_SIZE * 2
+#endif
+    + ALIGN_VALUE_UP(size, CONFIG_MUTEK_MEMALLOC_ALIGN);
+
+  hdr = mem_alloc_region_pop(region, size);
+
+  return hdr != NULL
+    ? (uint8_t*)hdr + mem_hdr_size
+#ifdef CONFIG_MUTEK_MEMALLOC_GUARD
+    + CONFIG_MUTEK_MEMALLOC_GUARD_SIZE
+#endif
+    : NULL;
+}
+
+/** free allocated memory block */
+void mem_free(void *ptr)
+{
+  struct mem_alloc_header_s *hdr = (void*)((uint8_t*)ptr
+		      - mem_hdr_size
+#ifdef CONFIG_MUTEK_MEMALLOC_GUARD
+		      - CONFIG_MUTEK_MEMALLOC_GUARD_SIZE
+#endif
+		      );
+
+  mem_alloc_region_push(hdr);
+}
+
+size_t mem_alloc_getsize(void *ptr)
+{
+  size_t result;
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
+#endif
+
+  struct mem_alloc_header_s *hdr = (void*)((uint8_t*)ptr
+		      - mem_hdr_size
+#ifdef CONFIG_MUTEK_MEMALLOC_GUARD
+		      - CONFIG_MUTEK_MEMALLOC_GUARD_SIZE
+#endif
+		      );
+
+  result = hdr->size
+#ifdef CONFIG_MUTEK_MEMALLOC_GUARD
+    - CONFIG_MUTEK_MEMALLOC_GUARD_SIZE * 2
+#endif
+    - mem_hdr_size;
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  soclib_mem_check_enable(SOCLIB_MC_CHECK_REGIONS);
+  CPU_INTERRUPT_RESTORESTATE;
+#endif
+
+  return result;
+}
+
+struct mem_alloc_region_s *mem_region_get_local(enum mem_scope_e scope)
+{
+  switch( scope )
+    {
+    case mem_scope_sys:
+    case mem_scope_default:
+    case mem_scope_cluster:
+    case mem_scope_context:
+    case mem_scope_cpu:
+      return &mem_region_system;
+      break;
+    }
+}
+
+#endif

@@ -32,7 +32,7 @@
 #include <hexo/init.h>
 #include <hexo/lock.h>
 #include <hexo/cpu.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 
 #include <mutek/scheduler.h>
 
@@ -133,6 +133,8 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 #elif defined(CONFIG_ARCH_HW_INIT)
 # error CONFIG_ARCH_HW_INIT unsupported for SoCLib platforms
 #endif
+
+
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
         sched_global_init();

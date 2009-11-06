@@ -37,6 +37,9 @@ void cpu_boot();
 /** plateform dependant entry point. (located in arch/current/arch_init.c) */
 void arch_init();
 
+/** Memory initialization. initialize memory subsystem by creating the mem_region_get_local(mem_scope_sys) region. (located in arch/current/mem_init.c) */
+void mem_init();
+
 /** Global initialization of Hexo, must be called after memory
  * initialization, before device initalization
  */

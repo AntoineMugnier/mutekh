@@ -27,7 +27,7 @@
 #include <device/driver.h>
 
 #include <hexo/iospace.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 #include <stdlib.h>
@@ -210,7 +210,7 @@ DEV_INIT(enum_isapnp_init)
   dev->drv = &enum_isapnp_drv;
 
   /* allocate private driver data */
-  pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
+  pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
 
   if (!pv)
     return -1;

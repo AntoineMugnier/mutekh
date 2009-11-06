@@ -21,7 +21,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/lock.h>
 #include <mutek/rwlock.h>
 #include <vfs/vfs.h>
@@ -48,7 +48,7 @@ VFS_FILE_FREELIST_INIT(vfs_file_freelist_init)
 
   for(item=0; item < length; item ++)
   {
-    if((file=mem_alloc(sizeof(*file), MEM_SCOPE_SYS)) == NULL)
+    if((file=mem_alloc(sizeof(*file), mem_region_get_local(mem_scope_sys))) == NULL)
       return VFS_ENOMEM;
     
     memset(file, 0, sizeof(*file));

@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/endian.h>
 
 #include <libelf/elf.h>

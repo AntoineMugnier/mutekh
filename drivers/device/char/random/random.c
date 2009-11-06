@@ -25,7 +25,7 @@
 #include <hexo/types.h>
 #include <device/device.h>
 #include <device/driver.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 
 DEVCHAR_REQUEST(dev_random_request)
 {
@@ -106,7 +106,7 @@ DEV_INIT(dev_random_init)
   dev->drv = &dev_random_drv;
 
   /* alocate private driver data */
-  pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
+  pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
 
   if (!pv)
     return -1;

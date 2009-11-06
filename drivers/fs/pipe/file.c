@@ -21,7 +21,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <mutek/rwlock.h>
 #include "pipe.h"
 

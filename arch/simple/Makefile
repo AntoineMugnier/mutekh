@@ -1,7 +1,7 @@
 
 objs =											\
 arch_init.o										\
-mem_alloc.o \
+mem_init.o \
 hw_init.o
 
 ifeq ($(CONFIG_ARCH_SIMPLE_SAM7),defined)

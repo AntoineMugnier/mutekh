@@ -276,7 +276,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
       headers_len = (nethdr->data - packet->header[0].data);
 
       /* allocate a packet large enough */
-      if ((data = mem_alloc(total + headers_len + 3, MEM_SCOPE_NETWORK)) == NULL)
+      if ((data = mem_alloc(total + headers_len + 3, mem_region_get_local(mem_scope_sys))) == NULL)
 	{
 	  /* memory exhausted, clear the packet */
 	  fragment_obj_delete(p);

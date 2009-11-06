@@ -19,7 +19,7 @@
     Copyright Sylvain Leroy <sylvain.leroy@unmondelibre.fr>
 */
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include "devfs.h"
 
 
@@ -31,7 +31,7 @@ VFS_CREATE_CONTEXT(devfs_create_context)
   printk("devfs_create_context: Initializing DevFS context\n");
 #endif
 
-  if ((ctx = mem_alloc(sizeof(struct devfs_context_s), MEM_SCOPE_SYS)) == NULL)
+  if ((ctx = mem_alloc(sizeof(struct devfs_context_s), mem_region_get_local(mem_scope_sys))) == NULL)
     return -VFS_ENOMEM;
 
   // Set private field in vfs_context_s

@@ -25,7 +25,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 
@@ -97,7 +97,7 @@ static void *clone_blob( void *blob )
 	size_t size = fdt_get_size(blob);
 	if ( !size )
 		return 0;
-	void *b2 = mem_alloc(size, MEM_SCOPE_SYS);
+	void *b2 = mem_alloc(size, mem_region_get_local(mem_scope_sys));
 	if ( b2 )
 		memcpy(b2, blob, size);
 	return b2;
@@ -112,7 +112,7 @@ DEV_INIT(enum_fdt_init)
 	dev->drv = &enum_fdt_drv;
 
 	/* allocate private driver data */
-	pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
+	pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
 
 	if (!pv)
 		return -1;

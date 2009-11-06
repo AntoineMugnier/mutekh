@@ -29,7 +29,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 #include <hexo/iospace.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/interrupt.h>
 
 #include <mutek/printk.h>
@@ -169,7 +169,7 @@ DEV_INIT(icu_sam7_init)
 
 	dev->drv = &icu_sam7_drv;
 
-	pv = mem_alloc(sizeof(*pv), MEM_SCOPE_SYS);
+	pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
 	sam7_c_irq_dev = dev;
 
 	if ( pv == NULL )

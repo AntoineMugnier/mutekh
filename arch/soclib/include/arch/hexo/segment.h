@@ -27,7 +27,7 @@
 #define ARCH_SEGMENT_H_
 
 #include "hexo/types.h"
-#include "hexo/alloc.h"
+#include "mem_alloc.h"
 #include "string.h"
 
 /* cpu template segment load address defined in ld script*/
@@ -42,7 +42,7 @@ arch_cpudata_alloc(void)
   void			*cls;
 
   /* allocate memory and copy from template */
-  if ((cls = mem_alloc((char*)&__cpu_data_end - (char*)&__cpu_data_start, MEM_SCOPE_SYS)))
+  if ((cls = mem_alloc((char*)&__cpu_data_end - (char*)&__cpu_data_start, mem_region_get_local(mem_scope_sys))))
     {
       memcpy_from_code(cls, (char*)&__cpu_data_start, (char*)&__cpu_data_end - (char*)&__cpu_data_start);
     }
@@ -59,7 +59,7 @@ arch_contextdata_alloc(void)
   void			*tls;
 
   /* allocate memory and copy from template */
-  if ((tls = mem_alloc((char*)&__context_data_end - (char*)&__context_data_start, MEM_SCOPE_SYS)))
+  if ((tls = mem_alloc((char*)&__context_data_end - (char*)&__context_data_start, mem_region_get_local(mem_scope_sys))))
     {
       memcpy_from_code(tls, (char*)&__context_data_start, (char*)&__context_data_end - (char*)&__context_data_start);
     }
@@ -79,7 +79,7 @@ arch_contextdata_free(void *ptr)
 static inline void *
 arch_contextstack_alloc(size_t size)
 {
-  return mem_alloc(size, MEM_SCOPE_SYS);
+  return mem_alloc(size, mem_region_get_local(mem_scope_sys));
 }
 
 static inline void

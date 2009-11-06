@@ -24,7 +24,7 @@
 #include "xicu-soclib.h"
 #include "xicu-soclib-private.h"
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/iospace.h>
 #include <hexo/ipi.h>
 #include <device/driver.h>
@@ -156,7 +156,7 @@ DEV_INIT(xicu_soclib_init)
   device_mem_map( dev , ( 1 << XICU_ADDR_MASTER ) );
   dev->drv = &xicu_soclib_drv;
 
-  if (!(pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS)))
+  if (!(pv = mem_alloc(sizeof (*pv), mem_region_get_local(mem_scope_sys))))
     return -ENOMEM;
 
   dev->drv_pv = pv;

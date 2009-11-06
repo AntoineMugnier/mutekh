@@ -23,7 +23,7 @@
 #include <hexo/init.h>
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
 #include <mutek/scheduler.h>

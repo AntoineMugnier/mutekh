@@ -30,7 +30,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 #include <hexo/iospace.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/interrupt.h>
 
 #include <mutek/printk.h>
@@ -120,7 +120,7 @@ DEV_INIT(icu_mips_init)
 	dev->drv = &icu_mips_drv;
 
 	/* FIXME allocation scope ? */
-	pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS);
+	pv = mem_alloc(sizeof (*pv), mem_region_get_local(mem_scope_sys));
 
 	if ( pv == NULL )
 		goto memerr;

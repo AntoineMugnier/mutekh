@@ -20,7 +20,7 @@
 */
 
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <string.h>
 #include <hexo/interrupt.h>
 #include <hexo/init.h>

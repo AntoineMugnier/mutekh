@@ -33,7 +33,7 @@
 #include <netinet/route.h>
 #include <netinet/arp.h>
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 
 #include <semaphore.h>
 
@@ -59,7 +59,7 @@ static _SOCKET(socket_raw)
 {
   struct socket_raw_pv_s	*pv;
 
-  if ((pv = fd->pv = mem_alloc(sizeof (struct socket_raw_pv_s), MEM_SCOPE_NETWORK)) == NULL)
+  if ((pv = fd->pv = mem_alloc(sizeof (struct socket_raw_pv_s), mem_region_get_local(mem_scope_sys))) == NULL)
     return -ENOMEM;
 
   protocol = ntohs(protocol);

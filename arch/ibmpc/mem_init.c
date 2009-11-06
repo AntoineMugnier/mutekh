@@ -19,21 +19,62 @@
 
 */
 
-#include <hexo/alloc.h>
+#include <assert.h>
+#include <mem_alloc.h>
 #include <hexo/segment.h>
 #include <hexo/lock.h>
 #include <hexo/endian.h>
 
-struct mem_alloc_region_s mem_region_ram;
+
+#ifndef CONFIG_ARCH_IBMPC_MEMORY
+
+static void *
+mem_ibmpc_memsize_probe(void *start)
+{
+  volatile uint8_t	*x = ALIGN_ADDRESS_UP(start, 4096);
+  size_t		step = 4096;
+
+  while (1) {
+    x += step;
+    *x = 0x5a;
+    *x = ~*x;
+
+    if (*x == 0xa5)
+      continue;
+
+    x -= step;
+
+    if (step == 1)
+      break;
+
+    step /= 2;
+  }
+
+  return (void*)x;
+}
+
+#endif
 
 void mem_init(void)
 {
   void	*mem_start = (uint8_t*)&__system_heap_start;
-  void	*mem_end = (uint8_t*)&__system_heap_end;
+#ifdef CONFIG_ARCH_IBMPC_MEMORY
+  void	*mem_end = (uint8_t*)CONFIG_ARCH_IBMPC_MEMORY;
+#else
+  void	*mem_end = mem_ibmpc_memsize_probe(&__system_heap_start);
+#endif
 
-  mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_HEXO_MEMALLOC_ALIGN);
-  mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_HEXO_MEMALLOC_ALIGN);
+  mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_MUTEK_MEMALLOC_ALIGN);
 
-  mem_alloc_region_init(&mem_region_ram, mem_start, mem_end);
+  assert(mem_end > mem_start);
+
+#ifdef CONFIG_HEXO_MMU
+  mem_alloc_region_init(mem_region_get_local(mem_scope_sys)
+			, mem_start, CONFIG_HEXO_MMU_INITIAL_END);
+#else
+  mem_alloc_region_init(mem_region_get_local(mem_scope_sys)
+			, mem_start, mem_end);
+#endif
 }
 

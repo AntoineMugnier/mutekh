@@ -72,9 +72,9 @@
  * - skip shared param here, only cached
  */
 # define ALLOC_CACHED(resource, size) \
-    (resource##_t*)mem_alloc(size, MEM_SCOPE_CPU)
+    (resource##_t*)mem_alloc(size, mem_region_get_local(mem_scope_cpu))
 # define ALLOC_UNCACHED(resource, size) \
-    (resource##_t*)mem_alloc(size, MEM_SCOPE_SYS)
+    (resource##_t*)mem_alloc(size, mem_region_get_local(mem_scope_sys))
 
 # define RESOURCE_ALLOC(resource, add_size, ires)                         \
     resource##_t *res;                                                    \

@@ -19,7 +19,7 @@
     Copyright Sylvain Leroy <sylvain.leroy@unmondelibre.fr>
 */
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <vfs/vfs.h>
 #include "nfs.h"
 #include "nfs-private.h"
@@ -39,10 +39,10 @@ VFS_CREATE_CONTEXT(nfs_create_context)
 #endif
 
   // Allocating memory for parent context
-  if((nfs_pv = mem_alloc(sizeof(struct nfs_context_s), MEM_SCOPE_SYS)) == NULL)
+  if((nfs_pv = mem_alloc(sizeof(struct nfs_context_s), mem_region_get_local(mem_scope_sys))) == NULL)
     return -VFS_ENOMEM;
 
-  if((nfs_pv->server = mem_alloc(sizeof(struct nfs_s), MEM_SCOPE_SYS)) == NULL)
+  if((nfs_pv->server = mem_alloc(sizeof(struct nfs_s), mem_region_get_local(mem_scope_sys))) == NULL)
     return -VFS_ENOMEM;
 
   // Link private struct to context private field

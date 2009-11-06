@@ -20,7 +20,7 @@
 */
 
 
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/init.h>
 #include <hexo/segment.h>
 #include <hexo/cpu.h>
@@ -59,7 +59,7 @@ extern __ldscript_symbol_t __exception_base_ptr;
 void cpu_init(void)
 {
   /* Set exception vector */
-	cpu_mips_mtc0(15, 1, (reg_t)&__exception_base_ptr);
+  cpu_mips_mtc0(15, 1, (reg_t)&__exception_base_ptr);
 
 #ifdef CONFIG_SMP
   void			*cls;

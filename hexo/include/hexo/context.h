@@ -40,6 +40,7 @@
 #include <hexo/local.h>
 #include <hexo/error.h>
 #include <hexo/mmu.h>
+#include <assert.h> 
 
 /** cpu specific context structure */
 struct cpu_context_s;

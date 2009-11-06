@@ -62,10 +62,10 @@ error_t			ping(struct net_addr_s	*host,
   stat->min = UINT_MAX;
 
   /* allocate and create the message */
-  if ((buf1 = mem_alloc(size + sizeof (struct icmphdr), MEM_SCOPE_SYS)) == NULL)
+  if ((buf1 = mem_alloc(size + sizeof (struct icmphdr), mem_region_get_local(mem_scope_sys))) == NULL)
     return -1;
 
-  if ((buf2 = mem_alloc(size + sizeof (struct icmphdr), MEM_SCOPE_SYS)) == NULL)
+  if ((buf2 = mem_alloc(size + sizeof (struct icmphdr), mem_region_get_local(mem_scope_sys))) == NULL)
     {
       mem_free(buf1);
       return -1;
