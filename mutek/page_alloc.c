@@ -22,7 +22,7 @@
 #include <mutek/page_alloc.h>
 
 #include <hexo/endian.h>
-#include <hexo/alloc.h>
+#include <mem_alloc.h>
 #include <hexo/lock.h>
 
 #define VMEM_PPAGE_ISFREE(x) ((x) & 0x80000000)
@@ -48,7 +48,7 @@ error_t ppage_region_init(struct vmem_page_region_s *r,
   r->size = paddr_end - paddr;
   r->free_count = r->count = r->size / MMU_PAGESIZE;
   r->free_head = 0;
-  r->table = mem_alloc(r->count * sizeof (uint_fast32_t), MEM_SCOPE_SYS);
+  r->table = mem_alloc(r->count * sizeof (uint_fast32_t), mem_region_get_local(mem_scope_sys));
 
   if (!r->table)
     goto err_lock;

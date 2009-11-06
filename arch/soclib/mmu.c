@@ -176,8 +176,8 @@ error_t mmu_context_init(struct mmu_context_s *ctx, struct vmem_page_region_s *p
   if ((mirror = vmem_ops.vpage_alloc(ppage_region, MMU_MIRROR_PAGE_SIZE)) == NULL)
     goto err2;
 
-  memset(pagedir, 0, MMU_DIRECTORY_PAGE_SIZE * MMU_PAGESIZE);
-  memset(mirror, 0, MMU_MIRROR_PAGE_SIZE * MMU_PAGESIZE);
+  memset(pagedir, 0, MMU_DIRECTORY_PAGE_SIZE * CONFIG_HEXO_MMU_PAGESIZE);
+  memset(mirror, 0, MMU_MIRROR_PAGE_SIZE * CONFIG_HEXO_MMU_PAGESIZE);
 
   paddr_t mirror_paddr = mmu_vpage_get_paddr((uintptr_t)mirror);
   paddr_t pagedir_paddr = mmu_vpage_get_paddr((uintptr_t)pagedir);
@@ -288,7 +288,7 @@ mmu_vcache_alloc_pagetable(uintptr_t vaddr)
   p4k->address = MMU_PADDR_TO_PPN2( paddr );
 
   /* clear page table */
-  memset(mmu_vcache_get_vpage_entry(i, 0), 0, MMU_PAGESIZE);
+  memset(mmu_vcache_get_vpage_entry(i, 0), 0, CONFIG_HEXO_MMU_PAGESIZE);
 
   if (! mmu_is_user_vaddr( vaddr ) )
     {

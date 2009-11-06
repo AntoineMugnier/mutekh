@@ -30,7 +30,7 @@ static uintptr_t next_v_page;
 
 void vpage_init()
 {
-  next_v_page = mmu_global_init() * MMU_PAGESIZE * MMU_TABLE_ENTRY + MMU_KERNEL_START_ADDR;
+  next_v_page = mmu_global_init() * CONFIG_HEXO_MMU_PAGESIZE * MMU_TABLE_ENTRY + MMU_KERNEL_START_ADDR;
 }
 
 void * vpage_kalloc(struct vmem_page_region_s *r, size_t count)
@@ -38,9 +38,11 @@ void * vpage_kalloc(struct vmem_page_region_s *r, size_t count)
   paddr_t paddr;
   uintptr_t vaddr;
   uint_fast16_t i, j;
+  
+  printk("VKalloc with size=%d\n",count);
 
   vaddr = next_v_page;
-  assert( count <= ( MMU_KERNEL_END_ADDR - vaddr ) / MMU_PAGESIZE );
+  assert( count <= ( MMU_KERNEL_END_ADDR - vaddr ) / CONFIG_HEXO_MMU_PAGESIZE );
 
   if( count == 1 )
     {
@@ -55,15 +57,15 @@ void * vpage_kalloc(struct vmem_page_region_s *r, size_t count)
   
   for( i = 0 ; i < count ; i++ )
     {
-      if (mmu_vpage_set(vaddr + i * MMU_PAGESIZE, paddr + i * MMU_PAGESIZE, MMU_PAGE_ATTR_RWX | MMU_PAGE_ATTR_PRESENT ) )
+      if (mmu_vpage_set(vaddr + i * CONFIG_HEXO_MMU_PAGESIZE, paddr + i * CONFIG_HEXO_MMU_PAGESIZE, MMU_PAGE_ATTR_RWX | MMU_PAGE_ATTR_PRESENT ) )
 	{
 	  for( j = 0 ; j < count ; j ++ )
-	    ppage_refdrop(paddr + j * MMU_PAGESIZE );
+	    ppage_refdrop(paddr + j * CONFIG_HEXO_MMU_PAGESIZE );
 	  return NULL;
 	}
     }
 
-  next_v_page += MMU_PAGESIZE * count;
+  next_v_page += CONFIG_HEXO_MMU_PAGESIZE * count;
   
   return (void*)vaddr;
 }
@@ -75,8 +77,8 @@ void vpage_kfree(void *vaddr, size_t count)
 
   for( i = 0 ; i < count ; i++ )
     {
-      ppage_refdrop( paddr + i * MMU_PAGESIZE );
-      mmu_vpage_mask_attr( ( uintptr_t )vaddr + i * MMU_PAGESIZE, 0, MMU_PAGE_ATTR_PRESENT );
+      ppage_refdrop( paddr + i * CONFIG_HEXO_MMU_PAGESIZE );
+      mmu_vpage_mask_attr( ( uintptr_t )vaddr + i * CONFIG_HEXO_MMU_PAGESIZE, 0, MMU_PAGE_ATTR_PRESENT );
     }
 }
 
@@ -84,7 +86,7 @@ uintptr_t vpage_io_map(paddr_t paddr, size_t size)
 {
   uintptr_t vaddr, res;
 
-  size = ALIGN_VALUE_UP(size, MMU_PAGESIZE);
+  size = ALIGN_VALUE_UP(size, CONFIG_HEXO_MMU_PAGESIZE);
   
   assert( size <= MMU_KERNEL_END_ADDR - next_v_page );
 
@@ -95,9 +97,9 @@ uintptr_t vpage_io_map(paddr_t paddr, size_t size)
     {
       mmu_vpage_set(vaddr, paddr, MMU_PAGE_ATTR_RW | MMU_PAGE_ATTR_PRESENT | MMU_PAGE_ATTR_NOCACHE );
 
-      paddr += MMU_PAGESIZE;
-      vaddr += MMU_PAGESIZE;
-      size -= MMU_PAGESIZE;
+      paddr += CONFIG_HEXO_MMU_PAGESIZE;
+      vaddr += CONFIG_HEXO_MMU_PAGESIZE;
+      size -= CONFIG_HEXO_MMU_PAGESIZE;
     }
 
   return res;
