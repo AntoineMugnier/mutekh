@@ -22,7 +22,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 #include <hexo/error.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 
 #include <mutek/printk.h>
 

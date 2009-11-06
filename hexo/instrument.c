@@ -2,7 +2,7 @@
 #include <hexo/types.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
 

@@ -1,7 +1,7 @@
 
-BASE_MODULES += libsrl libfdt libpthread libm
+BASE_MODULES += libsrl libfdt libpthread libm libelf
 
-ARCH_HEADER= arch/mem_alloc.h arch/hexo/atomic.h arch/hexo/lock.h	\
+ARCH_HEADER= arch/hexo/atomic.h arch/hexo/lock.h	\
 	arch/hexo/segment.h arch/hexo/types.h
 
 CPU_HEADER= cpu/hexo/atomic.h cpu/hexo/iospace.h cpu/hexo/local.h	\

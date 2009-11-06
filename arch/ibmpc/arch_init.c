@@ -24,7 +24,7 @@
 #include <hexo/init.h>
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 
 
 #ifdef CONFIG_HEXO_MMU

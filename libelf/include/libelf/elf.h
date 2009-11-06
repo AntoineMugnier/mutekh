@@ -20,14 +20,15 @@
     
     Based on glibc
 */
-#ifndef _ELF_H_
-#define _ELF_H_
 
 /**
  * @file
  * @module{Elf loader library}
  * @short Elf loading management
  */
+
+#ifndef _ELF_H_
+#define _ELF_H_
 
 #include <libelf/elf-types.h>
 #include <cpu/elf.h>

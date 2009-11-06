@@ -29,7 +29,7 @@
 #include <hexo/cpu.h>
 
 #include "hexo/types.h"
-#include "mem_alloc.h"
+#include "mutek/mem_alloc.h"
 #include "string.h"
 
 /* System global heap memory */

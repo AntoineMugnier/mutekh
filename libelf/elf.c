@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/endian.h>
 
 #include <libelf/elf.h>

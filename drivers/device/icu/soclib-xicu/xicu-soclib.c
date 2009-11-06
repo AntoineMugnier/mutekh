@@ -24,7 +24,7 @@
 #include "xicu-soclib.h"
 #include "xicu-soclib-private.h"
 
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/iospace.h>
 #include <hexo/ipi.h>
 #include <device/driver.h>

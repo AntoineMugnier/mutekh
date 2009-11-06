@@ -20,7 +20,7 @@
 */
 
 
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 
 extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
 

@@ -16,6 +16,10 @@
  @end section
 @end ifopt
 
+@c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+@c Modules definitions
+@c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
 @moduledef{Hexo}
  @short Processor and platform hardware abstraction layer
  @order 100
@@ -52,7 +56,6 @@
  mainly used by the DSX software.
 
  See @url https://www-asim.lip6.fr/trac/dsx/
-
 @end group
 
 @moduledef{FDT access library}
@@ -62,8 +65,15 @@
  for system initialization stage.
 
  See @url https://www.mutek.fr/trac/mutekh/wiki/FlattenedDeviceTree
-
 @end group
+
+@moduledef{Elf loader library}
+ @short dynamic Elf object files loader
+@end group
+
+@c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+@c Plain Documentation
+@c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
 @section TP {Modules documentation}
  @section TH {Modules list}

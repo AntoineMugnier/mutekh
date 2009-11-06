@@ -23,7 +23,7 @@
 #include <pthread.h>
 
 #include <hexo/error.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/local.h>
 #include <hexo/types.h>
 #include <mutek/scheduler.h>

@@ -19,7 +19,7 @@
 
 */
 
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <hexo/segment.h>
 #include <hexo/lock.h>
 #include <hexo/endian.h>

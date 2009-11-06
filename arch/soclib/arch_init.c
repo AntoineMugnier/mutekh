@@ -32,7 +32,7 @@
 #include <hexo/init.h>
 #include <hexo/lock.h>
 #include <hexo/cpu.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 
 #include <mutek/scheduler.h>
 

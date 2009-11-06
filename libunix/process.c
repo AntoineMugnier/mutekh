@@ -4,7 +4,7 @@
 #include <hexo/error.h>
 #include <hexo/types.h>
 #include <hexo/context.h>
-#include <mem_alloc.h>
+#include <mutek/mem_alloc.h>
 #include <mutek/scheduler.h>
 #include <hexo/interrupt.h>
 #include <hexo/vmem.h>
