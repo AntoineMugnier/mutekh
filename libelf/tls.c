@@ -25,8 +25,6 @@
 
 #include <libelf/rtld.h>
 
-struct tls_alloc_ctxt_s tls_alloc_ctxt = { alloc_tls_default, NULL }; /* FIXME: may be CONTEXT_LOCAL */
-
 /* Return a new modid 
  */
 void _tls_set_modid(struct dynobj_rtld_s *dynobj)
@@ -266,51 +264,6 @@ error_t _tls_init_dynobj(const struct dynobj_rtld_s *dynobj, uintptr_t tls, uint
 err_mem:
     free((void*)tls);
     return -1;
-}
-
-LIBELF_ALLOC_TLS(alloc_tls_default)
-{
-    if ((*base = (uintptr_t)malloc(size)) == 0)
-    {
-        _libelf_debug(NONE, "user_alloc_tls_default failed to allocate memory\n");
-        return -1;
-    }
-    return 0;
-}
-
-/* Allocate a new tls area and fill it
- *
- * @param dynobj Dynamic object
- * @param tls Address of the tls area
- * @param priv_data Private data if you use a custom tls allocator
- * @return error_t Error code if any 
- */
-error_t
-_tls_allocate_dynobj(const struct dynobj_rtld_s *dynobj, uintptr_t *tls)
-{
-    _libelf_debug(DEBUG, "_tls_allocate_dynobj\n");
-
-    /* sanity check */
-    assert(dynobj->tls.modid <= 1);
-    if (dynobj->tls.nb_modid == 0)
-    {
-        _libelf_debug(DEBUG, "\tno tls for this program\n");
-        return 0;
-    }
-
-    size_t tls_size;
-    _tls_dynobj_size(dynobj, &tls_size);
-
-    if (tls_alloc_ctxt.fcn_alloc_tls(tls, tls_size, tls_alloc_ctxt.priv_data) != 0)
-    {
-        _libelf_debug(NONE, "\tfailed to allocate tls\n");
-        return -1;
-    }
-
-    _libelf_debug(TRACE, "\tcreated a tls_area for \"%s\" at %p of size 0x%x\n", dynobj->elf.pathname,
-            (void*)*tls, tls_size);
-
-    return 0;
 }
 
 // Local Variables:

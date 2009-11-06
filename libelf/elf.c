@@ -32,8 +32,6 @@
 # include <vfs/vfs.h>
 #endif
 
-struct segs_alloc_ctxt_s segs_alloc_ctxt = { alloc_segments_default, NULL }; /* FIXME: may be CONTEXT_LOCAL */
-
 #define ELF_HDR_SIZE 128 /* based on linux, the header should be less than 128bytes */
 
 /* Load ELF header, perform test and load Program Header
@@ -210,19 +208,6 @@ static error_t _elf_scan_phdr(struct obj_elf_s *elfobj)
     return 0;
 }
 
-#if defined (CONFIG_LIBELF_DYNAMIC)
-LIBELF_ALLOC_SEGMENTS(alloc_segments_default)
-{
-    size_t size = text_size + data_size;
-    if ((*base = (uintptr_t)malloc(size)) == 0)
-    {
-        _libelf_debug(NONE, "user_alloc_segments_default failed to allocated memory\n");
-        return -1;
-    }
-    return 0;
-}
-#endif
-
 /* Load loadable segments from the ELF file
  *
  * @param file File descriptor on the ELF file
@@ -241,10 +226,9 @@ static error_t _elf_load_segments(FILE *file, struct obj_elf_s *elfobj)
         - ALIGN_VALUE_LOW(elfobj->dataseg->p_vaddr, elfobj->dataseg->p_align);
 
 #if defined (CONFIG_LIBELF_DYNAMIC)
-    /* user callback to allocate sufficient CONTIGUOUS space for the code and data segments of
-     * the dynamic object.
-     */
-    if (segs_alloc_ctxt.fcn_alloc_segments(&elfobj->mapbase, text_size, data_size, segs_alloc_ctxt.priv_data) != 0)
+    /* default allocation by malloc */
+    size_t size = text_size + data_size;
+    if ((elfobj->mapbase = (uintptr_t)malloc(size)) == 0)
     {
         _libelf_debug(NONE, "\tfailed to allocate memory for elf loading\n");
         return -1;

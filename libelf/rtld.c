@@ -29,8 +29,6 @@
 # include <vfs/vfs.h>
 #endif
 
-struct segs_scan_ctxt_s segs_scan_ctxt = { NULL, NULL }; /* FIXME: may be CONTEXT_LOCAL */
-
 static error_t _rtld_partial_load_dynobj(struct dynobj_rtld_s **dynobj, const char *pathname,
         dynobj_list_root_t *list_dynobj, dynobj_list_root_t *list_dep);
 
@@ -538,11 +536,13 @@ _rtld_process_dynamic(struct dynobj_rtld_s *dynobj)
                 break;
 
             case DT_INIT:
-                dynobj->init = (void (*)(void))(dynobj->elf.relocbase + dynp->d_un.d_ptr);
+                //dynobj->init = (void (*)(void))(dynobj->elf.relocbase + dynp->d_un.d_ptr);
+                _libelf_debug(NONE, "\t\tDT_INIT ignored!\n");
                 break;
 
             case DT_FINI:
-                dynobj->fini = (void (*)(void))(dynobj->elf.relocbase + dynp->d_un.d_ptr);
+                //dynobj->fini = (void (*)(void))(dynobj->elf.relocbase + dynp->d_un.d_ptr);
+                _libelf_debug(NONE, "\t\tDT_FINI ignored!\n");
                 break;
 
             case DT_DEBUG:
@@ -742,13 +742,13 @@ err:
     return -1;
 }
 
-void _rtld_scan_segs (const struct dynobj_rtld_s *dynobj)
+void _rtld_scan_chain (const struct dynobj_rtld_s *dynobj, rtld_scan_chain_t *fcn, void *data)
 {
-    segs_scan_ctxt.fcn_scan_segs(dynobj->elf.mapbase, dynobj->elf.mapsize, segs_scan_ctxt.priv_data);
+    fcn(dynobj, data);
     /* recurse for the dependencies */
     size_t ndep_shobj;
     for (ndep_shobj = 0; ndep_shobj < dynobj->ndep_shobj; ndep_shobj++) {
-        _rtld_scan_segs(dynobj->dep_shobj[ndep_shobj]);
+        _rtld_scan_chain(dynobj->dep_shobj[ndep_shobj], fcn, data);
     }
 }
 
@@ -772,9 +772,6 @@ error_t _rtld_load_dynobj(struct dynobj_rtld_s **dynobj, const char *pathname,
         _libelf_debug(DEBUG, "\tcould not relocate \"%s\"\n", pathname);
         goto err;
     }
-    /* scan the chain with the user callback */
-    if (segs_scan_ctxt.fcn_scan_segs != NULL)
-        _rtld_scan_segs(*dynobj);
 
     return 0;
 err:

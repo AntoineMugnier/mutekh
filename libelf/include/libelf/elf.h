@@ -23,6 +23,12 @@
 #ifndef _ELF_H_
 #define _ELF_H_
 
+/**
+ * @file
+ * @module{Elf loader library}
+ * @short Elf loading management
+ */
+
 #include <libelf/elf-types.h>
 #include <cpu/elf.h>
 
@@ -107,63 +113,64 @@ typedef elf_rel_t elf_reloc_t;
 #define ELF_RTYPE_CLASS_PLT (0x1)
 
 /*
- * Elf object
+ * Internal structure
  */
+
+/** @internal elf object descriptor structure */
 struct obj_elf_s
 {
     /*
      * Misc informations
      */
-    char            *pathname;  /* Pathname of underlying file (%) */
-    bool_t          program;    /* True if this is a program/kernel (contrary to a shared lib)*/
+    /** pathname of underlying file */
+    char            *pathname;
+    /** indicates wether the object if a application or a shared library */
+    bool_t          program;
 
     /*
      * Relative to elf loading
      */
-    uintptr_t       mapbase;    /* Memory mapping of the object */
-    size_t          mapsize;    /* Total size (bytes) */
+    /** memory mapping of the object */
+    uintptr_t       mapbase;
+    /** total size of the memory mapping (in bytes) */
+    size_t          mapsize;
 
 #if defined (CONFIG_LIBELF_DYNAMIC)
-    elf_addr_t      vaddrbase;  /* Base address in shared object file */
-    ptrdiff_t       relocbase;  /* Relocation constant = mapbase - vaddrbase (can be negative)*/
+    /** virtual base address of the object */
+    elf_addr_t      vaddrbase;
+    /** relocation constant (= mapbase - vaddrbase) (can be negative)*/
+    ptrdiff_t       relocbase;
 
-    const elf_dyn_t *dynamic;   /* Dynamic section */
+    /** pointer on the dynamic section */
+    const elf_dyn_t *dynamic;
 #endif
-    elf_phdr_t      *phdr;      /* Program header table if it is mapped, else NULL */
-    size_t          phnum;      /* Number of program header entries */
-    elf_phdr_t      *textseg;   /* Pointer to text header in program header table */
-    elf_phdr_t      *dataseg;   /* Pointer to text header in program header table */
-    elf_phdr_t      *tlsseg;    /* Pointer to text header in program header table */
+    /** program header table if it is mapped, else NULL */
+    elf_phdr_t      *phdr;
+    /** number of entries in the program header table */
+    size_t          phnum;
+    /** pointer to text header in the program header table */
+    elf_phdr_t      *textseg;
+    /** pointer to data header in the program header table */
+    elf_phdr_t      *dataseg;
+    /** pointer to tls header in the program header table */
+    elf_phdr_t      *tlsseg;
 
-    elf_addr_t      entrypoint; /* Entry point */
+    /** entry point */
+    elf_addr_t      entrypoint;
 };
 
 
 /*
- * Function prototypes
+ * Function prototypes (API)
  */
 
+/** @this loads a elf object in memory 
+ *
+ * @param pathname Elf executable to load from a file system
+ * @param elfobj Pointer to a elf descriptor
+ * @return error code if any
+ */
 error_t elf_load_file(const char *pathname, struct obj_elf_s *elfobj);
-
-
-#if defined (CONFIG_LIBELF_DYNAMIC)
-/*
- * Allocation callback
- */
-
-#define LIBELF_ALLOC_SEGMENTS(n) error_t (n) (uintptr_t *base, size_t text_size, size_t data_size, void *priv_data)
-typedef LIBELF_ALLOC_SEGMENTS(libelf_alloc_segments_t);
-
-/* default allocation function (based on regular malloc) */
-LIBELF_ALLOC_SEGMENTS(alloc_segments_default);
-
-struct segs_alloc_ctxt_s
-{
-    libelf_alloc_segments_t *fcn_alloc_segments;
-    void *priv_data;
-};
-extern struct segs_alloc_ctxt_s segs_alloc_ctxt;
-#endif
 
 
 /*
@@ -172,6 +179,7 @@ extern struct segs_alloc_ctxt_s segs_alloc_ctxt;
 
 #include <mutek/printk.h>
 
+/** @internal */
 #ifndef CONFIG_LIBELF_DEBUG
 # define CONFIG_LIBELF_DEBUG VERB_NONE
 #endif
@@ -182,6 +190,12 @@ enum __rtld_verbosity {
     VERB_DEBUG,
 };
 
+/**
+ * @this prints a message if the current verbosity is sufficient.
+ *
+ * @param l Minimal verbosity of the message
+ * @param c Message to print
+ */
 #define _libelf_debug(l, c... )                \
     do {                                       \
         if (VERB_##l <= CONFIG_LIBELF_DEBUG) { \

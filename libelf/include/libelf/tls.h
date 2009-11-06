@@ -55,23 +55,6 @@ error_t _tls_init_dynobj(const struct dynobj_rtld_s *dynobj, uintptr_t tls, uint
 
 error_t _tls_allocate_dynobj(const struct dynobj_rtld_s *dynobj, uintptr_t *tls);
 
-/*
- * Allocation callback
- */
-
-#define LIBELF_ALLOC_TLS(n) error_t (n) (uintptr_t *base, size_t size, void *priv_data)
-typedef LIBELF_ALLOC_TLS(libelf_alloc_tls_t);
-
-/* default allocation function (based on regular malloc) */
-LIBELF_ALLOC_TLS(alloc_tls_default);
-
-struct tls_alloc_ctxt_s
-{
-    libelf_alloc_tls_t *fcn_alloc_tls;
-    void *priv_data;
-};
-extern struct tls_alloc_ctxt_s tls_alloc_ctxt;
-
 #endif /* _TLS_H_ */
 
 // Local Variables:

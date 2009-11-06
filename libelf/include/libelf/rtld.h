@@ -33,35 +33,40 @@
 #include <libelf/tls.h>
 
 /*
- * RTLD object
+ * Internal structure
  */
+
+/** @internal rtld object descriptor structure */
 struct dynobj_rtld_s
 {
-    /*
-     * Elf
-     */
+    /** elf descriptor structure */
     struct obj_elf_s elf;
 
-    /*
-     * Misc
-     */
-    uint_fast32_t   refcount;   /* number of uses of this object (FIXME: memory management in all rtld is total bullshit) */
-    bool_t          symbolic;   /* True if generated with "-Bsymbolic" */
-    bool_t          relocated;  /* True if the object is finished being loaded */
+    /** number of uses of this object (FIXME: memory management in all libelf is total bullshit) */
+    uint_fast32_t   refcount;
+    /** indicates wether the object was generated with "-Bsymbolic" */
+    bool_t          symbolic;
+    /** indicates wether the object has finished being loaded */
+    bool_t          relocated;
 
-    /*
-     * Relative to dynamic digest
-     */
-    elf_addr_t  *got;   /* GOT table */
+    /** pointer to the Global Offset Table */
+    elf_addr_t  *got;
 
-    const elf_reloc_t   *rel;       /* Relocation entries */
-    size_t              relsize;    /* Size in bytes of relocation info */
-    const elf_reloc_t   *pltrel;    /* PLT relocation entries */
-    size_t              pltrelsize; /* Size in bytes of PLT relocation info */
+    /** relocation entries */
+    const elf_reloc_t   *rel;
+    /** size of relocation info (in bytes) */
+    size_t              relsize;
+    /** PLT relocation entries */
+    const elf_reloc_t   *pltrel;
+    /** size of PLT relocation info (in bytes) */
+    size_t              pltrelsize;
 
-    const elf_sym_t     *symtab;    /* Symbol table */
-    const char          *strtab;    /* String table */
-    size_t              strsize;    /* Size in bytes of string table */
+    /** pointer to the symbol table */
+    const elf_sym_t     *symtab;
+    /** pointer to the string table */
+    const char          *strtab;
+    /** size of string table (in bytes) */
+    size_t              strsize;
 
 #if defined(CONFIG_CPU_MIPS)
     size_t  mips_gotsym;
@@ -69,61 +74,94 @@ struct dynobj_rtld_s
     size_t  mips_symtabno;
 #endif
 
-    const elf_addr_t    *buckets;   /* Hash table buckets array */
-    reg_t               nbuckets;   /* Number of buckets */
-    const elf_addr_t    *chains;    /* Hash table chain array */
-    reg_t               nchains;    /* Number of chains */
+    /** hash table buckets array */
+    const elf_addr_t    *buckets;
+    /** number of buckets */
+    reg_t               nbuckets;
+    /** hash table chain array */
+    const elf_addr_t    *chains;
+    /** number of chains */
+    reg_t               nchains;
 
-    struct dynobj_rtld_s    **dep_shobj;    /* Dependency table */
-    size_t                  ndep_shobj;     /* Number of dependencies */
-
-    void (*init)(void); /* Initialization function to call */
-    void (*fini)(void); /* Termination function to call */
+    /** dependency list */
+    struct dynobj_rtld_s    **dep_shobj;
+    /** number of dependencies */
+    size_t                  ndep_shobj;
 
 #if defined(CONFIG_LIBELF_RTLD_TLS)
+    /** tls descriptor structure */
     struct dynobj_tls_s tls;
 #endif
 
-    /* gpct pointer for double-linked list */
+    /** gpct pointer for double-linked list */
     /* we are forced to have dlist since link order is important */
     CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
 };
 
-/* List type for rtld objects */
+/** @internal List type for rtld objects */
 CONTAINER_TYPE(dynobj_list, DLIST, struct dynobj_rtld_s, list_entry);
 CONTAINER_FUNC(dynobj_list, DLIST, static inline, dynobj_list, list_entry);
 
 /* 
  * Scanning callback
  */
-#define LIBELF_SCAN_SEGS(n) error_t (n) (uintptr_t base, size_t size, void *priv_data)
-typedef LIBELF_SCAN_SEGS(libelf_scan_segments_t);
-
-struct segs_scan_ctxt_s
-{
-    libelf_scan_segments_t *fcn_scan_segs;
-    void *priv_data;
-};
-extern struct segs_scan_ctxt_s segs_scan_ctxt;
-
+/** scan_chain() function template */
+#define RTLD_SCAN_CHAIN(n) error_t (n) (const struct dynobj_rtld_s *dynobj, void *priv_data)
+/** scan_chain() function type. It allows the user to scan a chain of loaded
+ * elf executables (starting from an application) and to perform an action for
+ * on each scanned object.
+ *
+ * @param dynobj currently scanned elf object
+ * @param priv_data user private data
+ */
+typedef RTLD_SCAN_CHAIN(rtld_scan_chain_t);
 
 /* 
  * Functions prototypes
  */
 
+/** @this initializes internal lists */
 error_t rtld_init (void);
 
-error_t rtld_configure_callbacks (libelf_alloc_segments_t *alloc_segs,
-        libelf_alloc_tls_t *alloc_tls,
-        libelf_scan_segments_t *scan_segs,
-        void *priv_data);
-
+/** @this opens a elf executable
+ *
+ * @param dynobj pointer on the object descriptor (is allocated in the function)
+ * @param pathname pathname of the executable
+ * @return error code if any
+ */
 error_t rtld_open (struct dynobj_rtld_s **dynobj, const char *pathname);
 
+/** @this looks up for a symbol
+ *
+ * @param dynobj pointer on the object descriptor
+ * @param name name of the searched symbol
+ * @param sym pointer on the symbol if found (assigned in the function)
+ * @return error code if any
+ */
 error_t rtld_sym (const struct dynobj_rtld_s *dynobj, const char *name, uintptr_t *sym);
 
-error_t rtld_tls (const struct dynobj_rtld_s *dynobj, uintptr_t *tls, uintptr_t *threadpointer);
+/** @this retrieves the size of the required tls segment
+ *
+ * @param dynobj pointer on the object descriptor
+ * @param tls_size size of the required tls (assigned in the function)
+ * @return error code if any
+ */
+error_t rtld_tls_size (const struct dynobj_rtld_s *dynobj, size_t *tls_size);
 
+/** @this inits the tls segment
+ *
+ * @param dynobj pointer on the object descriptor
+ * @param tls pointer on the tls segment
+ * @param threadpointer pointer on the tls segment (TP version) (assigned in the function)
+ * @return error code if any
+ */
+error_t rtld_tls_init (const struct dynobj_rtld_s *dynobj, uintptr_t tls, uintptr_t *threadpointer);
+
+/** @this closes the object (not implemented)
+ *
+ * @param dynobj pointer on the object descriptor
+ * @return error code if any
+ */
 error_t rtld_close (const struct dynobj_rtld_s *dynobj);
 
 
