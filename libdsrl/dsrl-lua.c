@@ -225,16 +225,6 @@ RESOURCE_CHECK_FIELDS(dsrl_exec)
     return 0;
 }
 DSRL_RESOURCE(dsrl_exec)
-LIBELF_ALLOC_SEGMENTS(dsrl_alloc_segs)
-{
-    size_t size = text_size + data_size;
-    if ((*base = (uintptr_t)ALLOC_CACHED(uintptr, size)) == 0)
-    {
-        _dsrl_debug("dsrl_alloc_segs failed to allocated memory\n");
-        return -1;
-    }
-    return 0;
-}
 RESOURCE_BUILD(dsrl_exec)
 {
     /* exec is private to the kernel */
@@ -361,15 +351,6 @@ static CONTEXT_ENTRY(dsrl_run_task)
     sched_lock();
     sched_context_exit();
 }
-LIBELF_ALLOC_TLS(dsrl_alloc_tls)
-{
-    if ((*base = (uintptr_t)ALLOC_CACHED(uintptr, size)) == 0)
-    {
-        _libelf_debug(NONE, "dsrl_alloc_tls failed to allocate memory\n");
-        return -1;
-    }
-    return 0;
-}
 RESOURCE_BUILD(dsrl_task)
 {
     /* task is private to the kernel */
@@ -438,8 +419,14 @@ RESOURCE_BUILD(dsrl_task)
         _dsrl_debug("\tfunc is @%p\n", res->func);
     res->args_ptr[1] = res->func;
 
-    if (rtld_tls(res->exec->dynobj, &res->tls, &res->tp) != 0)
-        luaL_error(L, "dltls failed on %s", res->exec->execname);
+    size_t tls_size;
+    if (rtld_tls_size(res->exec->dynobj, &tls_size) != 0)
+        luaL_error(L, "rtld_tls_size failed on %s", res->exec->execname);
+    /* tls can be cached since it is thread local */
+    res->tls = (uintptr_t)ALLOC_CACHED(uintptr, tls_size);
+
+    if (rtld_tls_init(res->exec->dynobj, res->tls, &res->tp) != 0)
+        luaL_error(L, "rtld_tls_init failed on %s", res->exec->execname);
     else
         _dsrl_debug("\ttls is @%p and tp is @%p\n", res->tls, res->tp);
 
@@ -471,5 +458,4 @@ void luaopen_dsrl_resources(lua_State *L)
     REGISTER_DSRL_RESOURCE(dsrl_task);
 
     rtld_init();
-    rtld_configure_callbacks(dsrl_alloc_segs, dsrl_alloc_tls, NULL, NULL);
 }
