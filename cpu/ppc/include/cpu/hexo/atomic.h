@@ -42,7 +42,7 @@ cpu_atomic_inc(volatile atomic_int_t *a)
 		"  addi    %[tmp], %[tmp], 1     \n"
 		"  stwcx.  %[tmp], 0, %[atomic]  \n"
 		"  bne-    1b                    \n"
-		: [tmp] "=&r" (tmp), "=m" (*a)
+		: [tmp] "=&b" (tmp), "=m" (*a)
 		: [atomic] "r" (a)
 		);
 	
@@ -62,7 +62,7 @@ cpu_atomic_dec(volatile atomic_int_t *a)
 		"  addi    %[tmp], %[tmp], -1    \n"
 		"  stwcx.  %[tmp], 0, %[atomic]  \n"
 		"  bne-    1b                    \n"
-		: [tmp] "=&r" (tmp), "=m" (*a)
+		: [tmp] "=&b" (tmp), "=m" (*a)
 		: [atomic] "r" (a)
 		);
 	
