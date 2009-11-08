@@ -118,6 +118,15 @@ typedef DEVICU_SENDIPI(devicu_sendipi_t);
 #define dev_icu_sendipi(dev, ...) (dev)->drv->f.icu.f_sendipi(dev, __VA_ARGS__ )
 
 
+
+/** ICU device class setupipi() function template */
+#define DEVICU_SETUPIPI(n)	void * (n) (struct device_s *dev, uint_fast8_t ipi_no)
+/** ICU device class setupipi() function type. setup an ipi to specified processor. */
+typedef DEVICU_SETUPIPI(devicu_setupipi_t);
+/** ICU device class setupipi() function shortcut */
+#define dev_icu_setupipi(dev, ...) (dev)->drv->f.icu.f_setupipi(dev, __VA_ARGS__ )
+
+
 /** unbind icu irq for a device */
 #define DEV_ICU_UNBIND(icu_dev, dev, irq)								\
 	do {																\
@@ -135,6 +144,7 @@ struct dev_class_icu_s
   devicu_sethndl_t			*f_sethndl;
   devicu_delhndl_t			*f_delhndl;
   devicu_sendipi_t			*f_sendipi;
+  devicu_setupipi_t        *f_setupipi;
 };
 
 #endif
