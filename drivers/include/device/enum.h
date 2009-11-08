@@ -53,7 +53,7 @@ typedef DEVENUM_LOOKUP(devenum_lookup_t);
 /**
    Lookup function shortcut
  */
-#define deve_num_lookup(dev, ...) (dev)->drv->f.denum.f_lookup(dev, __VA_ARGS__)
+#define dev_enum_lookup(dev, ...) (dev)->drv->f.denum.f_lookup(dev, __VA_ARGS__)
 
 struct dev_class_enum_s
 {
