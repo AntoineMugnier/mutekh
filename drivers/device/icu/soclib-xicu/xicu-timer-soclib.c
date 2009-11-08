@@ -27,6 +27,7 @@
 
 #include <mutek/mem_alloc.h>
 #include <device/driver.h>
+#include <hexo/endian.h>
 #include <hexo/iospace.h>
 
 #include <mutek/printk.h>

@@ -33,6 +33,8 @@ DEV_INIT(xicu_soclib_init);
 DEVICU_ENABLE(xicu_soclib_enable);
 DEVICU_SETHNDL(xicu_soclib_sethndl);
 DEVICU_DELHNDL(xicu_soclib_delhndl);
+DEVICU_SENDIPI(xicu_soclib_sendipi);
+DEVICU_SETUPIPI(xicu_soclib_setupipi);
 DEV_CLEANUP(xicu_soclib_cleanup);
 
 DEVTIMER_SETCALLBACK(xicu_timer_soclib_setcallback);
@@ -43,8 +45,7 @@ DEVTIMER_GETVALUE(xicu_timer_soclib_getvalue);
 DEV_CLEANUP(xicu_timer_soclib_cleanup);
 DEV_INIT(xicu_timer_soclib_init);
 
-#define XICU_ADDR_MASTER 0
-#define XICU_OUT_INDEX 1
+#define XICU_IRQ_IPI 0x20
 
 struct soclib_xicu_param_s
 {

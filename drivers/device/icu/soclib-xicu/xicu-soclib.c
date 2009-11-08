@@ -26,6 +26,7 @@
 
 #include <mutek/mem_alloc.h>
 #include <hexo/iospace.h>
+#include <hexo/endian.h>
 #include <hexo/ipi.h>
 #include <device/driver.h>
 
@@ -33,17 +34,30 @@ DEVICU_ENABLE(xicu_soclib_enable)
 {
     struct xicu_soclib_private_s *pv = dev->drv_pv;
 
-	cpu_mem_write_32(
-		XICU_REG_ADDR(dev->addr[0],
-					  enable ? XICU_MSK_HWI_ENABLE : XICU_MSK_HWI_DISABLE,
-					  pv->output_line_no),
-		endian_le32(1 << irq));
+	if ( irq & XICU_IRQ_IPI ) {
+		cpu_mem_write_32(
+			XICU_REG_ADDR(dev->addr[0],
+						  enable ? XICU_MSK_HWI_ENABLE : XICU_MSK_HWI_DISABLE,
+						  pv->output_line_no),
+			endian_le32(1 << (irq & 0x1f)));
+	} else {
+		cpu_mem_write_32(
+			XICU_REG_ADDR(dev->addr[0],
+						  enable ? XICU_MSK_HWI_ENABLE : XICU_MSK_HWI_DISABLE,
+						  pv->output_line_no),
+			endian_le32(1 << (irq & 0x1f)));
+	}
 }
 
 DEVICU_SETHNDL(xicu_soclib_sethndl)
 {
     struct xicu_soclib_private_s *pv = dev->drv_pv;
-    struct xicu_soclib_handler_s *h = pv->hwi_handlers + irq;
+    struct xicu_soclib_handler_s *h;
+
+	if ( irq & XICU_IRQ_IPI )
+		h = pv->hwi_handlers + (irq & 0x1f);
+	else
+		h = pv->ipi_handlers + (irq & 0x1f);
 
     h->hndl = hndl;
     h->data = data;
@@ -54,7 +68,12 @@ DEVICU_SETHNDL(xicu_soclib_sethndl)
 DEVICU_DELHNDL(xicu_soclib_delhndl)
 {
     struct xicu_soclib_private_s *pv = dev->drv_pv;
-    struct xicu_soclib_handler_s *h = pv->hwi_handlers + irq;
+    struct xicu_soclib_handler_s *h;
+
+	if ( irq & XICU_IRQ_IPI )
+		h = pv->hwi_handlers + (irq & 0x1f);
+	else
+		h = pv->ipi_handlers + (irq & 0x1f);
 
     h->hndl = NULL;
     h->data = NULL;
@@ -75,11 +94,14 @@ DEV_IRQ(xicu_soclib_handler)
 	if ( XICU_PRIO_HAS_WTI(prio) ) {
 //		printk("xicu wti: %x\n", XICU_PRIO_WTI(prio));
 	
+		h = pv->ipi_handlers + XICU_PRIO_HWI(prio);
+
 		cpu_mem_read_32(XICU_REG_ADDR(dev->addr[0],
 									  XICU_WTI_REG,
-									  XICU_PRIO_WTI(prio)));
-		ipi_process_rq();
-		return 0;
+									  XICU_PRIO_HWI(prio)));
+    
+		/* call ipi handler */
+		return h->hndl(h->data);
 	}
 
 	if ( XICU_PRIO_HAS_HWI(prio) ) {
@@ -114,6 +136,15 @@ DEVICU_SENDIPI(xicu_soclib_sendipi)
 	return 0;
 }
 
+DEVICU_SETUPIPI(xicu_soclib_setupipi)
+{
+	struct xicu_soclib_private_s	*pv = dev->drv_pv;
+
+	xicu_soclib_sethndl(dev, XICU_IRQ_IPI | ipi_no, ipi_process_rq, NULL);
+
+	return (void*)(uintptr_t)ipi_no;
+}
+
 DEV_CLEANUP(xicu_soclib_cleanup)
 {
   struct xicu_soclib_private_s	*pv = dev->drv_pv;
@@ -145,6 +176,7 @@ const struct driver_s	xicu_soclib_drv =
     .f_sethndl		= xicu_soclib_sethndl,
     .f_delhndl		= xicu_soclib_delhndl,
     .f_sendipi		= xicu_soclib_sendipi,
+    .f_setupipi		= xicu_soclib_setupipi,
   }
 };
 
@@ -153,7 +185,7 @@ REGISTER_DRIVER(xicu_soclib_drv);
 DEV_INIT(xicu_soclib_init)
 {
   struct xicu_soclib_private_s	*pv;
-  device_mem_map( dev , ( 1 << XICU_ADDR_MASTER ) );
+  device_mem_map( dev , 1 );
   dev->drv = &xicu_soclib_drv;
 
   if (!(pv = mem_alloc(sizeof (*pv), mem_region_get_local(mem_scope_sys))))
@@ -161,6 +193,7 @@ DEV_INIT(xicu_soclib_init)
 
   dev->drv_pv = pv;
 
+  device_init(&pv->timer);
   pv->output_line_no = ((struct soclib_xicu_param_s*)params)->output_line_no;
   pv->timer.addr[0] = dev->addr[0];
   pv->timer.irq = 0;
@@ -171,15 +204,6 @@ DEV_INIT(xicu_soclib_init)
   device_register(&pv->timer, dev, NULL);
 
   DEV_ICU_BIND(dev->icudev, dev, dev->irq, xicu_soclib_handler);
-
-  CPU_LOCAL_SET(ipi_icu_dev, dev);
-  CPU_LOCAL_SET(ipi_cpu_id, (void*)(((struct soclib_xicu_param_s*)params)->output_line_no));
-
-  cpu_mem_write_32(
-	  XICU_REG_ADDR(dev->addr[0],
-					XICU_MSK_WTI_ENABLE,
-					pv->output_line_no),
-	  endian_le32(1 << pv->output_line_no));
 
   return 0;
 }

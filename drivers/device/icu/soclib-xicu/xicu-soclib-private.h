@@ -67,6 +67,7 @@ struct xicu_soclib_private_s
 {
 	struct device_s timer;
 	struct xicu_soclib_handler_s hwi_handlers[XICU_MAX_HWI];
+	struct xicu_soclib_handler_s ipi_handlers[XICU_MAX_HWI];
 	size_t output_line_no;
 };
 
