@@ -22,6 +22,7 @@
 #include <hexo/init.h>
 #include <hexo/types.h>
 #include <hexo/endian.h>
+#include <hexo/segment.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -93,6 +94,20 @@ static void srl_task_run(srl_task_s *task)
 		for (;;) {
 			task->func( task->args );
 		}
+}
+
+void user_hw_init()
+{
+	const srl_cpudesc_s * const *cpu;
+	uint_fast16_t cpuid;
+	
+	for ( cpu = app_desc.cpu, cpuid = 0;
+		  *cpu;
+		  ++cpu, ++cpuid ) {
+		cpu_local_storage[cpuid] = arch_cpudata_alloc();
+	}
+
+	hw_init();
 }
 
 #ifdef CONFIG_PTHREAD
