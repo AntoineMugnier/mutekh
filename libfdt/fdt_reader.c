@@ -243,6 +243,54 @@ error_t fdt_walk_blob_from(const void *blob, struct fdt_walker_s *walker, uint32
 	return fdt_walk_node(&state, walker);
 }
 
+error_t fdt_get_prop_at(const void *blob, uint32_t offset,
+						const char *propname,
+						const void **data, size_t *datasize)
+{
+	const struct fdt_header_s *header = blob;
+	const uint32_t *ptr = (void*)(
+		(uintptr_t)blob + offset + endian_be32(header->off_dt_struct));
+	const char *string_table = (const char*)blob + endian_be32(header->off_dt_strings);
+
+	ptr = fdt_skip_str(ptr);
+
+	for (;;) {
+		uint32_t token = endian_be32(*(ptr++));
+		switch (token) {
+		case FDT_PROP: {
+			struct fdt_prop_s *prop = (struct fdt_prop_s*)ptr;
+			const char *pname = &string_table[
+				endian_be32(prop->strid)];
+			if ( ! strcmp(propname, pname) ) {
+				*data = prop->data;
+				*datasize = endian_be32(prop->size);
+				return 1;
+			}
+			ptr += (8 + endian_be32(prop->size) + 3) / 4;
+			break;
+		}
+		case FDT_END:
+		case FDT_NODE_END:
+		case FDT_NODE_START:
+			return 0;
+		case FDT_NOP:
+		default:
+			break;
+		}
+	}
+}
+
+void fdt_get_rsvmap(const void *blob, uint32_t resno,
+					uint64_t *addr, uint64_t *size)
+{
+	const struct fdt_header_s *header = blob;
+	const struct fdt_mem_reserve_map_s *reserve_map =
+		(const void*)((uintptr_t)blob + endian_be32(header->off_mem_rsvmap));
+
+	*addr = endian_be64(reserve_map->addr);
+	*size = endian_be64(reserve_map->size);
+}
+
 size_t fdt_get_size(void *blob)
 {
 	const struct fdt_header_s *header = blob;
