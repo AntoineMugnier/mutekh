@@ -16,6 +16,7 @@
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2009
+    Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2009
 
 */
 
@@ -54,3 +55,13 @@ void ipi_process_rq()
     rq->func(rq->private);
 }
 
+void ipi_hook_cpu(void *cpu_cls,
+				  struct device_s *ipi_icudev,
+				  void *privdata)
+{
+	struct device_s **icu = CPU_LOCAL_CLS_ADDR(cpu_cls, ipi_icu_dev);
+	void ** priv = CPU_LOCAL_CLS_ADDR(cpu_cls, ipi_cpu_id);
+
+	*icu = ipi_icudev;
+	*priv = privdata;
+}

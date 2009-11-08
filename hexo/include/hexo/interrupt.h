@@ -37,7 +37,7 @@
     @see cpu_interrupt_handler_t
     @showcontent
 */
-#define CPU_INTERRUPT_HANDLER(n) void (n) (uint_fast8_t irq)
+#define CPU_INTERRUPT_HANDLER(n) void (n) (void *priv, uint_fast8_t irq)
 
 /** CPU interrupt handler function type.
 
@@ -47,7 +47,13 @@
 typedef CPU_INTERRUPT_HANDLER(cpu_interrupt_handler_t);
 
 /** @this sets the hardware interrupt handler for the current cpu */
-static inline void cpu_interrupt_sethandler(cpu_interrupt_handler_t *hndl);
+void cpu_interrupt_set_handler_func(cpu_interrupt_handler_t *handler,
+									void *priv);
+
+struct device_s;
+
+/** @this sets hardware interrupt handler device for the current cpu */
+void cpu_interrupt_set_handler_device(struct device_s *dev);
 
 /** @this disables all maskable interrupts for the current cpu */
 static inline void cpu_interrupt_disable();

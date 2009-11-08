@@ -61,7 +61,7 @@ DEVICU_DELHNDL(icu_ppc_delhndl)
 
 static CPU_INTERRUPT_HANDLER(icu_ppc_handler)
 {
-	struct device_s *dev = CPU_LOCAL_ADDR(cpu_icu_dev);
+	struct device_s *dev = priv;
 	struct icu_ppc_private_s	*pv = dev->drv_pv;
 	struct icu_ppc_handler_s	*h = pv->table;
 	
@@ -75,10 +75,18 @@ DEV_CLEANUP(icu_ppc_cleanup)
 {
 }
 
+static const struct devenum_ident_s	icu_ppc_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("cpu:ppc", 0, 0),
+	{ 0 }
+};
+
 const struct driver_s	icu_ppc_drv =
 {
 	.class		= device_class_icu,
+    .id_table   = icu_ppc_ids,
 	.f_init		= icu_ppc_init,
+	.f_irq      = icu_ppc_handler,
 	.f_cleanup		= icu_ppc_cleanup,
 	.f.icu = {
 		.f_enable		= icu_ppc_enable,
@@ -86,6 +94,8 @@ const struct driver_s	icu_ppc_drv =
 		.f_delhndl		= icu_ppc_delhndl,
 	}
 };
+
+REGISTER_DRIVER(icu_ppc_drv);
 
 DEV_INIT(icu_ppc_init)
 {
@@ -100,8 +110,6 @@ DEV_INIT(icu_ppc_init)
 		goto memerr;
 
 	dev->drv_pv = pv;
-
-	cpu_interrupt_sethandler(icu_ppc_handler);
 
 	return 0;
 

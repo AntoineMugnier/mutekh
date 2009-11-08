@@ -67,19 +67,15 @@ asm(
     "stw	3,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
 #endif
 
-    /* setup global data pointer */
-    "lis	13, _gp@ha				\n"
-    "la		13, _gp@l(13)				\n"
-
     /* get device-tree and put it in arg[0] */
 #ifdef CONFIG_ARCH_DEVICE_TREE
-    "lis	3, dt_blob_start - 8@ha    \n"
-    "la		3, dt_blob_start - 8@l(3)  \n"
+    "lis	3, dt_blob_start@ha    \n"
+    "la		3, dt_blob_start@l(3)  \n"
 #else
-    "la		3, 0                       \n"
+    "li		3, 0                       \n"
 #endif
     /* put a null in arg[1] */
-    "la		4, 0                       \n"
+    "li		4, 0                       \n"
 
     "lis	2, __exception_base_ptr@ha	 \n"
     "la     2, __exception_base_ptr@l(2) \n"
@@ -97,12 +93,12 @@ asm(
 
     ".globl cpu_boot_pointer    \n\t"
     "cpu_boot_pointer:          \n\t"
-    ".org 0x80-4*5              \n\t"
 	"1:                         \n\t"
     "lis    3, cpu_boot@ha      \n\t"
     "la     3, cpu_boot@l(3)    \n\t"
     "mtctr  3                   \n\t"
     "bctr                       \n\t"
+    ".org 0x80-4                \n\t"
     "b      1b                  \n\t"
     );
 

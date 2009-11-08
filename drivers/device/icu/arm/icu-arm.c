@@ -63,7 +63,7 @@ DEVICU_DELHNDL(icu_arm_delhndl)
 
 static CPU_INTERRUPT_HANDLER(icu_arm_handler)
 {
-	struct device_s *dev = CPU_LOCAL_ADDR(cpu_icu_dev);
+	struct device_s *dev = priv;
 	struct icu_arm_private_s	*pv = dev->drv_pv;
 	struct icu_arm_handler_s	*h = pv->table;
 	
@@ -77,10 +77,18 @@ DEV_CLEANUP(icu_arm_cleanup)
 {
 }
 
+static const struct devenum_ident_s	icu_arm_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("cpu:arm", 0, 0),
+	{ 0 }
+};
+
 const struct driver_s	icu_arm_drv =
 {
 	.class		= device_class_icu,
+    .id_table   = icu_arm_ids,
 	.f_init		= icu_arm_init,
+	.f_irq      = icu_arm_handler,
 	.f_cleanup		= icu_arm_cleanup,
 	.f.icu = {
 		.f_enable		= icu_arm_enable,
@@ -88,6 +96,8 @@ const struct driver_s	icu_arm_drv =
 		.f_delhndl		= icu_arm_delhndl,
 	}
 };
+
+REGISTER_DRIVER(icu_arm_drv);
 
 DEV_INIT(icu_arm_init)
 {
@@ -102,8 +112,6 @@ DEV_INIT(icu_arm_init)
 		goto memerr;
 
 	dev->drv_pv = pv;
-
-	cpu_interrupt_sethandler(icu_arm_handler);
 
 	return 0;
 

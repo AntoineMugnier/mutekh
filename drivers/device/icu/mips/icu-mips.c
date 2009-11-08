@@ -73,9 +73,9 @@ DEVICU_DELHNDL(icu_mips_delhndl)
 	return 0;
 }
 
-static CPU_INTERRUPT_HANDLER(icu_mips_cpu_handler)
+static CPU_INTERRUPT_HANDLER(icu_mips_handler)
 {
-	struct device_s *dev = CPU_LOCAL_ADDR(cpu_icu_dev);
+	struct device_s *dev = priv;
 	struct icu_mips_private_s	*pv = dev->drv_pv;
 	struct icu_mips_handler_s	*h;
 	uint32_t irq_no = __builtin_ctz(irq);
@@ -101,10 +101,18 @@ DEV_CLEANUP(icu_mips_cleanup)
 	cpu_mips_mtc0(12, 0, status);
 }
 
+static const struct devenum_ident_s	icu_mips_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("cpu:mips", 0, 0),
+	{ 0 }
+};
+
 const struct driver_s	icu_mips_drv =
 {
 	.class		= device_class_icu,
+    .id_table   = icu_mips_ids,
 	.f_init		= icu_mips_init,
+	.f_irq      = icu_mips_handler,
 	.f_cleanup		= icu_mips_cleanup,
 	.f.icu = {
 		.f_enable		= icu_mips_enable,
@@ -112,6 +120,8 @@ const struct driver_s	icu_mips_drv =
 		.f_delhndl		= icu_mips_delhndl,
 	}
 };
+
+REGISTER_DRIVER(icu_mips_drv);
 
 DEV_INIT(icu_mips_init)
 {
@@ -126,8 +136,6 @@ DEV_INIT(icu_mips_init)
 		goto memerr;
 
 	dev->drv_pv = pv;
-
-	cpu_interrupt_sethandler(icu_mips_cpu_handler);
 
 	return 0;
 

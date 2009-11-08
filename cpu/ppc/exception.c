@@ -189,8 +189,10 @@ asm(
 	GET_CPULOCAL_HANDLER_ADDRESS("cpu_interrupt_handler", 0, 3)
 	"mtctr 0                               \n\t"
 
+	GET_CPULOCAL_HANDLER_ADDRESS("cpu_interrupt_handler_arg", 3, 3)
+
 	/* interrupt line is 0 */
-	"li    3, 0                            \n\t"
+	"li    4, 0                            \n\t"
 
 	"bctrl                                 \n\t"
 

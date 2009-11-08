@@ -3,6 +3,7 @@ objs =						\
 cpu.o						\
 init.o						\
 context.o					\
+interrupt.o
 
 ifeq ($(CONFIG_COMPILE_INSTRUMENT), defined)
 objs += instrument.o

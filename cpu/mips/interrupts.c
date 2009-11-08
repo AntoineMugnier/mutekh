@@ -204,14 +204,16 @@ asm(
          **************************************************************/
         "interrupt_hw:                                   \n"
 
-        "   srl     $4,     $4,     10                   \n" /* hw interrupt line id */
-        "   andi    $4,     $4,     0xff                 \n"
+        "   srl     $5,     $5,     10                   \n" /* hw interrupt line id */
+        "   andi    $5,     $5,     0xff                 \n"
 
         "   addiu   $sp,    $sp,    -4*4                 \n"
 #ifdef CONFIG_SMP
         "   lw      $1,     cpu_interrupt_handler($27)   \n"
+        "   lw      $4,     cpu_interrupt_handler_arg($27)\n"
 #else
         "   lw      $1,     cpu_interrupt_handler        \n"
+        "   lw      $4,     cpu_interrupt_handler_arg    \n"
 #endif
         "   jalr    $1                                   \n"
         "   addiu   $sp,    $sp,    4*4                  \n"

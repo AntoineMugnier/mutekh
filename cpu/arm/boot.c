@@ -211,10 +211,11 @@ asm(
 	IMPLEMENT_EXC(
 		"exc_irq",
 		"push {r1, r2, r3, r12}   \n\t"
-		GET_CPULOCAL_HANDLER_ADDRESS("cpu_interrupt_handler", "r1", "r0")
-		"mov  r0, #0                      \n\t"
+		GET_CPULOCAL_HANDLER_ADDRESS("cpu_interrupt_handler_arg", "r0", "r1")
+		GET_CPULOCAL_HANDLER_ADDRESS("cpu_interrupt_handler", "r2", "r1")
+		"mov  r1, #0                      \n\t"
 		"mov  lr, pc                      \n\t"
-		"bx   r1                         \n\t"
+		"bx   r2                         \n\t"
 		"pop  {r1, r2, r3, r12}   \n\t",
 		4, 0x12)
 

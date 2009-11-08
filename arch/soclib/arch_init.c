@@ -113,28 +113,32 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 
 #endif /*CONFIG_HEXO_MMU*/
 
-        /* configure first CPU */
-        cpu_init();
-
 #ifdef CONFIG_HEXO_MMU
         mmu_cpu_init();
-#endif
-
-#ifdef CONFIG_SMP
-        /* send reset/init signal to other CPUs */
-        cpu_init_flag = 1;
 #endif
 
 #if defined(CONFIG_ARCH_DEVICE_TREE)
         device_init(&fdt_enum_dev);
         enum_fdt_init(&fdt_enum_dev, device_tree);
+        soclib_parse_fdt(device_tree, &fdt_enum_dev);
 #elif defined(CONFIG_ARCH_HW_INIT_USER)
         user_hw_init();
 #elif defined(CONFIG_ARCH_HW_INIT)
 # error CONFIG_ARCH_HW_INIT unsupported for SoCLib platforms
 #endif
 
+        /* configure first CPU */
+        cpu_init();
 
+#if defined(CONFIG_ARCH_DEVICE_TREE)
+        cpu_interrupt_set_handler_device(
+            enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id()));
+#endif
+
+#ifdef CONFIG_SMP
+        /* send reset/init signal to other CPUs */
+        cpu_init_flag = 1;
+#endif
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
         sched_global_init();
@@ -160,6 +164,11 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         mmu_cpu_init();
 #endif      
         cpu_init();
+
+#if defined(CONFIG_ARCH_DEVICE_TREE)
+        cpu_interrupt_set_handler_device(
+            enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id()));
+#endif
 
         cpu_count++;
 

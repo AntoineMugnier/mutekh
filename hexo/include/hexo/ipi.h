@@ -78,5 +78,16 @@ error_t ipi_post_rq(void *cpu_cls, struct ipi_request_s *rq);
  */
 void ipi_process_rq();
 
+/**
+   Setup a IPI device for a given CPU.
+
+   @param cpu_cls CPU's cls to hook up in
+   @param ipi_icudev Icudev handling the IPIs
+   @param privdata Icudev private data returned by @ref dev_icu_setupipi
+ */
+void ipi_hook_cpu(void *cpu_cls,
+				  struct device_s *ipi_icudev,
+				  void *privdata);
+
 #endif
 

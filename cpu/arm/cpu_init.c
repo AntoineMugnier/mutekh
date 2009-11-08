@@ -27,18 +27,11 @@
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
 
-#include <drivers/device/icu/arm/icu-arm.h>
-#include <device/device.h>
-#include <device/driver.h>
-
 #ifdef CONFIG_SOCLIB_MEMCHECK
 # include <arch/mem_checker.h>
 #endif
 
-#ifdef CONFIG_DRIVER_ICU_ARM
-CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
-CPU_LOCAL struct device_s cpu_icu_dev;
-#else
+#ifndef CONFIG_DRIVER_ICU_ARM
 static uint8_t irq_stack[128];
 #endif
 
@@ -106,20 +99,12 @@ void cpu_init(void)
 
 	void			*cls;
 
-	/* setup cpu local storage */
-	cls = arch_cpudata_alloc();
-		
-	cpu_local_storage[cpu_id()] = cls;
+	cls = cpu_local_storage[cpu_id()];
 		
 	asm volatile ("mcr p15,0,%0,c13,c0,3":: "r" (cls));
 #endif
 
 	__arm_exception_setup();
-
-#ifdef CONFIG_DRIVER_ICU_ARM
-  device_init(CPU_LOCAL_ADDR(cpu_icu_dev));
-  icu_arm_init(CPU_LOCAL_ADDR(cpu_icu_dev), NULL);
-#endif
 }
 
 void cpu_start_other_cpu(void)
