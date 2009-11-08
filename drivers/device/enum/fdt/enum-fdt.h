@@ -29,6 +29,7 @@
 DEV_CLEANUP(enum_fdt_cleanup);
 DEV_INIT(enum_fdt_init);
 DEVENUM_LOOKUP(enum_fdt_lookup);
+struct device_s *enum_fdt_icudev_for_cpuid(struct device_s *dev, cpu_id_t id);
 
 #endif
 

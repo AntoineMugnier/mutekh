@@ -70,9 +70,9 @@ static void parse_reg( struct device_s *dev, const void *data, size_t datalen )
 	for ( i=0; i<DEVICE_MAX_ADDRSLOT; ++i ) {
 		if ( ptr > (void*)((uintptr_t)data+datalen) )
 			break;
-		ptr = parse_sized( pv->addr_cells, ptr,
+		ptr = fdt_parse_sized( pv->addr_cells, ptr,
 						   sizeof(dev->addr[i]), &dev->addr[i] );
-		ptr = parse_sized( pv->size_cells, ptr,
+		ptr = fdt_parse_sized( pv->size_cells, ptr,
 						   0, NULL );
 	}
 }
@@ -86,9 +86,9 @@ static void parse_reg_size( struct device_s *dev, const void *data, size_t datal
 	for ( i=0; i<DEVICE_MAX_ADDRSLOT; i+=2 ) {
 		if ( ptr > (void*)((uintptr_t)data+datalen) )
 			break;
-		ptr = parse_sized( pv->addr_cells, ptr,
+		ptr = fdt_parse_sized( pv->addr_cells, ptr,
 						   sizeof(*dev->addr), &dev->addr[i] );
-		ptr = parse_sized( pv->size_cells, ptr,
+		ptr = fdt_parse_sized( pv->size_cells, ptr,
 						   sizeof(*dev->addr), &dev->addr[i+1] );
 		dev->addr[i+1] += dev->addr[i];
 	}
@@ -129,6 +129,7 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 		error_t err = 
 			enum_fdt_register_one(priv->enum_dev, priv->dev->icudev);
 		if (err) {
+			printk("lzkjeflzkjf %d\n", err);
 			priv->err = err;
 			return 0;
 		}
@@ -147,7 +148,7 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 					*(bool_t*)(priv->param + binder->struct_offset) = 1;
 					break;
 				case PARAM_DATATYPE_INT:
-					parse_sized( binder->datalen, value,
+					fdt_parse_sized( binder->datalen, value,
 								 binder->datalen, priv->param + binder->struct_offset );
 					break;
 				case PARAM_DATATYPE_DEVICE_PTR:
@@ -157,7 +158,7 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 							endian_be32(*(uint32_t*)value));
 					break;
 				case PARAM_DATATYPE_ADDR:
-					parse_sized( binder->datalen, value,
+					fdt_parse_sized( binder->datalen, value,
 								 binder->datalen, priv->param + binder->struct_offset );
 					break;
 				}

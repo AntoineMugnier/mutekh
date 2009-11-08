@@ -24,7 +24,7 @@
 
 #if 0
 #include <mutek/printk.h>
-#define dprintk(x...) printk(x)
+#define dprintk(x...) do{ printk(x); }while(0)
 #else
 #define dprintk(x...) do{}while(0)
 #endif
@@ -39,6 +39,13 @@ struct enum_pv_fdt_s
 	const char *device_type;
 	char device_path[ENUM_FDT_PATH_MAXLEN];
 	uint32_t offset;
+	union {
+		struct {
+			uint32_t cpuid;
+			const char *ipi_icudev;
+			uint32_t ipi_no;
+		};
+	};
 	uint8_t addr_cells;
 	uint8_t size_cells;
 }
@@ -64,38 +71,6 @@ error_t enum_fdt_use_drv(
 	struct driver_s *drv);
 
 
-
-
-static inline void* parse_sized( uint8_t cells, const void *data,
-								 uint8_t retval_size, void *retval )
-{
-	if ( retval && retval_size ) {
-		switch (cells) {
-		case 1:
-			switch (retval_size) {
-			case 4:
-				*(uint32_t*)retval = endian_be32(*(uint32_t*)data);
-				break;
-			case 8:
-				*(uint64_t*)retval = endian_be32(*(uint32_t*)data);
-				break;
-			}
-			break;
-		case 2:
-			switch (retval_size) {
-			case 4:
-				*(uint32_t*)retval = endian_be64(*(uint64_t*)data);
-				break;
-			case 8:
-				*(uint64_t*)retval = endian_be64(*(uint64_t*)data);
-				break;
-			}
-			break;
-		}
-	}
-
-	return (void*)((uintptr_t)data + cells * 4);
-}
 
 #endif
 

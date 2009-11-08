@@ -20,12 +20,15 @@
 
 
 #include <hexo/types.h>
+#include <mutek/mem_alloc.h>
+#include <hexo/local.h>
+#include <hexo/segment.h>
 
 #include <device/enum.h>
+#include <device/icu.h>
 #include <device/device.h>
 #include <device/driver.h>
 
-#include <mutek/mem_alloc.h>
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 
@@ -53,7 +56,7 @@ struct device_s *enum_fdt_lookup(struct device_s *dev, const char *path)
 	struct enum_fdt_context_s *pv = dev->drv_pv;
 
 	CONTAINER_FOREACH(fdt_node, CLIST, &pv->devices, {
-			dprintk("[node %s] ", item->device_path);
+			dprintk("[%s] ", item->device_path);
 			if ( !strcmp(item->device_path, path) )
 				return item->dev;
 		});
@@ -71,10 +74,30 @@ error_t enum_fdt_register_one(struct device_s *dev, struct device_s *item)
 
 	struct driver_s *drv = driver_get_matching_fdtname(enum_pv->device_type);
 
-	if ( drv == NULL )
+	if ( drv == NULL ) {
+		dprintk("No driver for %s\n", enum_pv->device_type);
 		return ENOTSUP;
+	}
 
 	return enum_fdt_use_drv(dev, item, drv);
+}
+
+struct device_s *
+enum_fdt_icudev_for_cpuid(struct device_s *dev, cpu_id_t id)
+{
+	struct enum_fdt_context_s *pv = dev->drv_pv;
+
+	dprintk("Looking up cpu icudev for cpuid %d... ", id);
+	CONTAINER_FOREACH(fdt_node, CLIST, &pv->devices, {
+			dprintk("[%s %s/%d] ", item->device_type, item->device_path, item->cpuid);
+			if ( !strncmp(item->device_type, "cpu:", 4)
+				 && item->cpuid == id ) {
+				dprintk("OK\n");
+				return item->dev;
+			}
+		});
+	dprintk("not found\n");
+	return NULL;
 }
 
 /*
@@ -138,14 +161,6 @@ DEV_INIT(enum_fdt_init)
 			dprintk(" registering driver for %s\n", enum_pv->device_path);
 			enum_fdt_register_one(dev, item);
 		});
-
-	if ( pv->console_path ) {
-		struct device_s *cd = enum_fdt_lookup(dev, pv->console_path);
-		if ( cd && cd->drv ) {
-			printk("Setting console device to node %s\n", pv->console_path);
-			console_dev = cd;
-		}
-	}
 
 	return 0;
 }

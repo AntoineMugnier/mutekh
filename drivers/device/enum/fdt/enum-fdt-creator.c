@@ -20,6 +20,7 @@
 
 
 #include <hexo/types.h>
+#include <hexo/endian.h>
 
 #include <device/enum.h>
 #include <device/device.h>
@@ -80,18 +81,23 @@ static FDT_ON_NODE_ENTRY_FUNC(creator_node_entry)
 	if ( fdt_reader_has_prop(state, "device_type", (const void**)&devtype, &devtypelen ) ) {
 		dprintk("  found a new %s device\n", devtype);
 
-		// Dont register cpu nodes as devices, but create
-		// an entry in our private data
-		if ( strcmp( devtype, "cpu" ) ) {
-			node_info->new = device_obj_new(NULL);
-		} else {
-			node_info->where = IN_CPU;
-			node_info->new = NULL;
-		}
+
+		node_info->new = device_obj_new(NULL);
 		node_info->new_pv = mem_alloc(sizeof(struct enum_pv_fdt_s), mem_region_get_local(mem_scope_sys));
 		node_info->new_pv->offset = fdt_reader_get_struct_offset(state);
 		node_info->new_pv->device_type = devtype;
 		strncpy(node_info->new_pv->device_path, path, ENUM_FDT_PATH_MAXLEN);
+
+		if ( !strcmp( devtype, "cpu" ) ) {
+			const char *icudevtype = NULL;
+			size_t icudevlen;
+
+			node_info->where = IN_CPU;
+			if ( fdt_reader_has_prop(state, "icudev_type",
+									 (const void**)&icudevtype, &icudevlen ) ) {
+				node_info->new_pv->device_type = icudevtype;
+			}
+		}
 	}
 
 	if ( parent ) {
@@ -131,8 +137,9 @@ static FDT_ON_NODE_LEAVE_FUNC(creator_node_leave)
 			   node_info->addr_cells,
 			   node_info->size_cells);
 
+		device_obj_refnew(node_info->new);
 		device_register(node_info->new, priv->dev, node_info->new_pv);
-		// TODO refdrop
+
 		dprintk(" ok\n");
 	}
 
@@ -148,7 +155,7 @@ static FDT_ON_NODE_PROP_FUNC(creator_node_prop)
 {
 	struct creator_state_s *priv = private;
 	struct enum_fdt_context_s *pv = priv->dev->drv_pv;
-	uint32_t cpuid;
+
 	if ( !strcmp( name, "#address-cells" ) )
 		priv->node_info->addr_cells = endian_be32(*(uint32_t*)data);
 	else if ( !strcmp( name, "#size-cells" ) )
@@ -156,21 +163,17 @@ static FDT_ON_NODE_PROP_FUNC(creator_node_prop)
 	else if ( priv->node_info->where == IN_CHOSEN && !strcmp( name, "console" ) )
 		pv->console_path = data;
 	else if ( priv->node_info->where == IN_CPU && !strcmp( name, "reg" ) ) {
-		void *cls;
-		dprintk("  reg: %d, %P\n", priv->node_info->addr_cells, data, datalen);
-		parse_sized( priv->node_info->addr_cells, data,
-					 sizeof(cpuid), &cpuid );
-		dprintk("  %s has cpuid %d",
-				priv->node_info->new_pv->device_path,
-				cpuid);
-		cls = cpu_local_storage[cpuid];
-		dprintk(", cls = %p", cls);
-		if ( cls )
-			priv->node_info->new_pv->dev = &CPU_LOCAL_CLS_GET(cls, cpu_icu_dev);
-		else
-			printk("Cant find a proper cpu icu dev for cpuid %d\n",
-				   cpuid);
-		dprintk(", dev = %p\n", priv->node_info->new_pv->dev);
+		uint32_t val;
+		fdt_parse_sized( priv->node_info->addr_cells, data,
+					 sizeof(val), &val );
+		priv->node_info->new_pv->cpuid = val;
+	} else if ( priv->node_info->where == IN_CPU && !strcmp( name, "ipi_dev" ) )
+		priv->node_info->new_pv->ipi_icudev = data;
+	else if ( priv->node_info->where == IN_CPU && !strcmp( name, "ipi_no" ) ) {
+		uint32_t val;
+		fdt_parse_sized( priv->node_info->addr_cells, data,
+					 sizeof(val), &val );
+		priv->node_info->new_pv->ipi_no = val;
 	}
 }
 
