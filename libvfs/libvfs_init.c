@@ -59,7 +59,6 @@ error_t vfs_init (struct device_s * device, uint_fast8_t fs_type,
   struct vfs_context_s *ctx;
   error_t err;
 
-  assert(root != NULL);
   assert(device != NULL);
   
   if(fs_type != VFS_VFAT_TYPE)
