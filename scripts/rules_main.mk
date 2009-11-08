@@ -36,6 +36,9 @@ endef
 $(eval \
 $(foreach depfile,$(DEP_FILE_LIST),\
 $(call do_inc_dep,$(depfile))))
+
+$(eval $(call do_inc_dep,$(CONF_DIR)/.config.deps))
+
 endif
 
 #define obj_add_dep

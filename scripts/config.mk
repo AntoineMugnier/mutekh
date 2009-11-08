@@ -1,7 +1,7 @@
 
 CONF_PATH:=$(MUTEK_SRC_DIR):$(CURRENT_DIR):$(USER_DIR)
 CONF_TMP_BASE:=$(shell mktemp /tmp/mutekh_config.XXXXXX)
-CONF_EXTS = py m4 h mk
+CONF_EXTS = py m4 h mk deps
 
 CONFIG_TMP_FILES=$(addprefix $(CONF_TMP_BASE),$(CONF_EXTS))
 CONFIG_FILES=$(addprefix $(CONF_DIR)/.config.,$(CONF_EXTS))
@@ -43,6 +43,7 @@ $(CONFIG_TMP_FILES): $(CONF)
 		--python=$(CONF_TMP_BASE).py		\
 		--m4=$(CONF_TMP_BASE).m4			\
 		--header=$(CONF_TMP_BASE).h			\
+		--depmakefile=$(CONF_TMP_BASE).deps			\
 		--makefile=$(CONF_TMP_BASE).mk
 
 else
@@ -55,6 +56,7 @@ $(CONFIG_FILES): $(CONF) $(MUTEK_SRC_DIR)/scripts/config.pl
 		--python=$(CONF_DIR)/.config.py		\
 		--m4=$(CONF_DIR)/.config.m4			\
 		--header=$(CONF_DIR)/.config.h			\
+		--depmakefile=$(CONF_DIR)/.config.deps			\
 		--makefile=$(CONF_DIR)/.config.mk
 
 endif
