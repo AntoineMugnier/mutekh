@@ -131,7 +131,7 @@ typedef struct {
 static inline void rehash_status( struct mwmr_s *fifo, local_mwmr_status_t *status )
 {
 	volatile struct mwmr_status_s *fstatus = fifo->status;
-	cpu_dcache_invld_buf(fstatus, sizeof(*fstatus));
+	cpu_dcache_invld_buf((void*)fstatus, sizeof(*fstatus));
 	status->usage = endian_le32(*(volatile uint32_t *)&fstatus->usage);
 	status->wptr =  endian_le32(*(volatile uint32_t *)&fstatus->wptr);
 	status->rptr =  endian_le32(*(volatile uint32_t *)&fstatus->rptr);
@@ -211,7 +211,7 @@ void mwmr_read( struct mwmr_s *fifo, void *_ptr, size_t lensw )
 
 void mwmr_write( struct mwmr_s *fifo, const void *_ptr, size_t lensw )
 {
-	uint8_t *ptr = _ptr;
+	const uint8_t *ptr = _ptr;
     local_mwmr_status_t status;
 
 #ifdef CONFIG_MWMR_INSTRUMENTATION
@@ -313,7 +313,7 @@ size_t mwmr_try_read( struct mwmr_s *fifo, void *_ptr, size_t lensw )
 
 size_t mwmr_try_write( struct mwmr_s *fifo, const void *_ptr, size_t lensw )
 {
-	uint8_t *ptr = _ptr;
+	const uint8_t *ptr = _ptr;
 	size_t done = 0;
     local_mwmr_status_t status;
 #ifdef CONFIG_MWMR_INSTRUMENTATION
