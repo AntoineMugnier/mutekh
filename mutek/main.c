@@ -68,6 +68,8 @@ struct device_s *console_dev = NULL;
 
 static inline PRINTF_OUTPUT_FUNC(__printf_out_tty)
 {
+	if ( !cpu_is_interruptible() )
+		return;
   while (len > 0)
     {
 		ssize_t	res = dev_char_spin_write((struct device_s *)ctx, (uint8_t*)str, len);
@@ -120,8 +122,12 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #endif
 
 #if defined (CONFIG_MUTEK_TIMERMS)
-	dev_timer_setperiod(timerms_dev, 0, 1193180 / 100);
-	dev_timer_setcallback(timerms_dev, 0, timer_callback, 0);
+	if ( timerms_dev ) {
+		dev_timer_setperiod(timerms_dev, 0, 1193180 / 100);
+		dev_timer_setcallback(timerms_dev, 0, timer_callback, 0);
+	} else {
+		printk("Warning: no timer device available !\n");
+	}
 #endif
 
   printk("MutekH is alive.\n");
