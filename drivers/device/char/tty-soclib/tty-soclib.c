@@ -25,6 +25,7 @@
 
 #include <device/icu.h>
 #include <hexo/types.h>
+#include <hexo/endian.h>
 #include <device/device.h>
 #include <device/driver.h>
 #include <hexo/iospace.h>

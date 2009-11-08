@@ -84,7 +84,7 @@ DEVFB_SETPALETTE(fb_soclib_setpalette)
 
 static const struct devenum_ident_s	fb_soclib_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("soclib:fb"),
+	DEVENUM_FDTNAME_ENTRY("soclib:fb", 0, 0),
 	{ 0 }
 };
 

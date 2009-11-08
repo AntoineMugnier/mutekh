@@ -100,7 +100,8 @@ DEV_CLEANUP(block_ramdisk_cleanup)
 {
   struct block_ramdisk_context_s	*pv = dev->drv_pv;
 
-  mem_free(pv->mem);
+  if (! dev->addr[0])
+	  mem_free(pv->mem);
   mem_free(pv);
 }
 
@@ -108,9 +109,16 @@ DEV_CLEANUP(block_ramdisk_cleanup)
  * device open operation
  */
 
+static const struct devenum_ident_s	block_ramdisk_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("ramdisk", 0, 0),
+	{ 0 }
+};
+
 const struct driver_s	block_ramdisk_drv =
 {
   .class		= device_class_block,
+  .id_table		= block_ramdisk_ids,
   .f_init		= block_ramdisk_init,
   .f_cleanup		= block_ramdisk_cleanup,
   .f_irq		= DEVICE_IRQ_INVALID,
@@ -119,6 +127,8 @@ const struct driver_s	block_ramdisk_drv =
     .f_getparams	= block_ramdisk_getparams,
   }
 };
+
+REGISTER_DRIVER(block_ramdisk_drv);
 
 DEV_INIT(block_ramdisk_init)
 {
@@ -139,9 +149,9 @@ DEV_INIT(block_ramdisk_init)
   dev_block_lba_t c;
 
   /* if a ramdisk already exists, take its address */
-  if (params)
+  if (dev->addr[0])
   {
-      pv->mem = params;
+      pv->mem = dev->addr[0];
   } 
   else 
   {
