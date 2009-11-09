@@ -30,6 +30,7 @@
 
 # define CPU_LOCAL
 
+#include <hexo/types.h>
 #include "cpu/hexo/local.h"
 
 /************************************************************************/
