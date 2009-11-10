@@ -7,7 +7,7 @@
 inline void *
 malloc(size_t size)
 {
-  return mem_alloc(size, mem_region_get_local(mem_scope_default));
+  return mem_alloc(size, (mem_scope_default));
 }
 
 void *

@@ -58,14 +58,14 @@ error_t bc_init(struct buffer_cache_s *bc,
   assert(freelist != NULL);
   assert(entries_number > 0);
   
-  if((entries=mem_alloc(sizeof(*entries) * entries_number, mem_region_get_local(mem_scope_sys))) == NULL)
+  if((entries=mem_alloc(sizeof(*entries) * entries_number, (mem_scope_sys))) == NULL)
     return ENOMEM;
   
   sched_queue_init(&freelist->wait);
 
   for(i=0;i<entries_number;i++)
   {
-    current = mem_alloc(sizeof(*current), mem_region_get_local(mem_scope_sys));
+    current = mem_alloc(sizeof(*current), (mem_scope_sys));
     if(current == NULL) return ENOMEM;
     
     current->key1 = -1;
@@ -73,7 +73,7 @@ error_t bc_init(struct buffer_cache_s *bc,
     INIT_BUFFER_STATE(current->state);
     current->index = i;
     sched_queue_init(&current->wait);
-    current->content = mem_alloc(sizeof(uint8_t) * buffer_size, mem_region_get_local(mem_scope_sys));
+    current->content = mem_alloc(sizeof(uint8_t) * buffer_size, (mem_scope_sys));
    
     if(current->content == NULL)
       return ENOMEM;
@@ -88,7 +88,7 @@ error_t bc_init(struct buffer_cache_s *bc,
     pred = current;
     for(j=1;j<buffers_per_entry;j++)
     {
-      current = mem_alloc(sizeof(struct bc_buffer_s), mem_region_get_local(mem_scope_sys));
+      current = mem_alloc(sizeof(struct bc_buffer_s), (mem_scope_sys));
       if(current == NULL) return ENOMEM;
 
       current->key1 = -1;
@@ -96,7 +96,7 @@ error_t bc_init(struct buffer_cache_s *bc,
       INIT_BUFFER_STATE(current->state);
       current->index = i;
       sched_queue_init(&current->wait);
-      current->content = mem_alloc(sizeof(uint8_t) * buffer_size, mem_region_get_local(mem_scope_sys));
+      current->content = mem_alloc(sizeof(uint8_t) * buffer_size, (mem_scope_sys));
       
       if(current->content == NULL)
           return ENOMEM;

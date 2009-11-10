@@ -71,7 +71,7 @@ VFS_INIT_NODE(vfat_init_node)
   if(node->n_type != VFS_VFAT_TYPE)
     return EINVAL;
 
-  if((node_info = mem_alloc(sizeof(*node_info), mem_region_get_local(mem_scope_sys))) == NULL)
+  if((node_info = mem_alloc(sizeof(*node_info), (mem_scope_sys))) == NULL)
     return VFS_ENOMEM;
 
   memset(node_info, 0, sizeof(*node_info));

@@ -144,7 +144,7 @@ DEV_INIT(timer_8253_init)
   dev->drv = &timer_8253_drv;
 
   /* allocate private driver data */
-  pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
+  pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
   if (!pv)
     return -1;

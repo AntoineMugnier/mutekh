@@ -29,13 +29,13 @@ void mem_init(void)
 #ifdef CONFIG_HEXO_MMU
   uint32_t t = (uint32_t)(&__system_uncached_heap_start);
   
-  mem_alloc_region_init(mem_region_get_local(mem_scope_sys),
+  mem_alloc_region_init( mem_region_get_scope(mem_scope_sys),
 			(void *)t,
 			(void *)t+CONFIG_SOCLIB_VMEM_MALLOC_REGION_SIZE
 			);
   
 #else
-  mem_alloc_region_init(mem_region_get_local(mem_scope_sys),
+  mem_alloc_region_init( mem_region_get_scope(mem_scope_sys),
 			&__system_uncached_heap_start,
 			&__system_uncached_heap_end
 			);

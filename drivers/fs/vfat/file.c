@@ -35,7 +35,7 @@ VFS_OPEN_FILE(vfat_open)
   file_info = file->f_pv;
   
   if(file_info == NULL)
-    if((file_info = mem_alloc(sizeof(*file_info), mem_region_get_local(mem_scope_sys))) == NULL)
+    if((file_info = mem_alloc(sizeof(*file_info), (mem_scope_sys))) == NULL)
       return VFS_ENOMEM;
 
   file_info->ctx = ctx;

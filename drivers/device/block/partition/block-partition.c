@@ -89,7 +89,7 @@ void block_partition_new(struct device_s *parent,
     {
       struct block_partition_context_s *pv;
 
-      pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
+      pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
       if (pv != NULL)
 	{

@@ -53,7 +53,7 @@ VFS_OPEN_FILE(devfs_open)
 #endif
 
   // Allocating for a new DevFS file
-  if((file_pv = mem_alloc(sizeof(struct devfs_file_s), mem_region_get_local(mem_scope_sys))) == NULL)
+  if((file_pv = mem_alloc(sizeof(struct devfs_file_s), (mem_scope_sys))) == NULL)
     return DEVFS_ERR;
 
   // struct devfs_file_s only keep a struct vfs_node_s

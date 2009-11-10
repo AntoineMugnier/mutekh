@@ -188,7 +188,7 @@ DEV_INIT(xicu_soclib_init)
   device_mem_map( dev , 1 );
   dev->drv = &xicu_soclib_drv;
 
-  if (!(pv = mem_alloc(sizeof (*pv), mem_region_get_local(mem_scope_sys))))
+  if (!(pv = mem_alloc(sizeof (*pv), (mem_scope_sys))))
     return -ENOMEM;
 
   dev->drv_pv = pv;

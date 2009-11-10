@@ -48,7 +48,7 @@ error_t ppage_region_init(struct vmem_page_region_s *r,
   r->size = paddr_end - paddr;
   r->free_count = r->count = r->size / MMU_PAGESIZE;
   r->free_head = 0;
-  r->table = mem_alloc(r->count * sizeof (uint_fast32_t), mem_region_get_local(mem_scope_sys));
+  r->table = mem_alloc(r->count * sizeof (uint_fast32_t), (mem_scope_sys));
 
   if (!r->table)
     goto err_lock;

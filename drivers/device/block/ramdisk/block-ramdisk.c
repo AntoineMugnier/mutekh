@@ -137,7 +137,7 @@ DEV_INIT(block_ramdisk_init)
   dev->drv = &block_ramdisk_drv;
 
   /* allocate private driver data */
-  pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
+  pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
   if (!pv)
     goto err;
@@ -155,7 +155,7 @@ DEV_INIT(block_ramdisk_init)
   } 
   else 
   {
-      if ((pv->mem = mem_alloc(sz, mem_region_get_local(mem_scope_sys))) == NULL)
+      if ((pv->mem = mem_alloc(sz, (mem_scope_sys))) == NULL)
           goto err_pv;
 
       for (c = 0; c < pv->params.blk_count; c++)

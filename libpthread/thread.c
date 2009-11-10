@@ -253,7 +253,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   uint8_t		*stack;
   size_t		stack_size;
 
-  thread = mem_alloc(sizeof (struct pthread_s), mem_region_get_local(mem_scope_sys));
+  thread = mem_alloc(sizeof (struct pthread_s), (mem_scope_sys));
 
   if (!thread)
     return ENOMEM;

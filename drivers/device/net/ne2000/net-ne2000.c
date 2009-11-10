@@ -162,7 +162,7 @@ static bool_t			ne2000_rx(struct device_s	*dev,
   *size = hdr.size - sizeof (struct ne2000_header_s);
 
 #ifdef CONFIG_DRIVER_NET_NE2000_FRAGMENT
-  if ((buf = *data = mem_alloc(*size + 2, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((buf = *data = mem_alloc(*size + 2, (mem_scope_context))) == NULL)
     return 0;
   ne2000_mem_read(dev, dma + sizeof (struct ne2000_header_s),
 		  buf, sizeof (struct ether_header));
@@ -171,7 +171,7 @@ static bool_t			ne2000_rx(struct device_s	*dev,
 		  buf + sizeof (struct ether_header) + 2,
 		  *size - sizeof (struct ether_header));
 #else
-  if ((buf = *data = mem_alloc(*size, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((buf = *data = mem_alloc(*size, (mem_scope_context))) == NULL)
     return 0;
   ne2000_mem_read(dev, dma + sizeof (struct ne2000_header_s),
 		  buf, *size);
@@ -435,7 +435,7 @@ DEV_INIT(net_ne2000_init)
   printk("ne2000 driver init on device %p\n", dev);
 
   /* driver private data */
-  pv = mem_alloc(sizeof (struct net_ne2000_context_s), mem_region_get_local(mem_scope_sys));
+  pv = mem_alloc(sizeof (struct net_ne2000_context_s), (mem_scope_sys));
 
   if (pv == NULL)
     return -1;
@@ -483,7 +483,7 @@ DEV_INIT(net_ne2000_init)
 
       return -1;
     }
-  if ((dispatch = mem_alloc(sizeof (struct net_dispatch_s), mem_region_get_local(mem_scope_sys))) == NULL)
+  if ((dispatch = mem_alloc(sizeof (struct net_dispatch_s), (mem_scope_sys))) == NULL)
     {
       printk("ne2000: cannot init dispatch structure\n");
 
@@ -578,7 +578,7 @@ DEVNET_PREPAREPKT(net_ne2000_preparepkt)
   total = sizeof (struct ether_header) + size;
 #endif
 
-  if ((buff = packet->packet = mem_alloc(total, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((buff = packet->packet = mem_alloc(total, (mem_scope_context))) == NULL)
     return NULL;
 
   nethdr = &packet->header[0];

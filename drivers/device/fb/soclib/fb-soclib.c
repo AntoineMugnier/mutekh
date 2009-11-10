@@ -112,7 +112,7 @@ DEV_INIT(fb_soclib_init)
 
   /* alocate private driver data */
 #if 0
-  pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
+  pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
   if (!pv)
     return -1;

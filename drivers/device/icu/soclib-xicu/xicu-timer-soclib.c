@@ -159,7 +159,7 @@ DEV_INIT(xicu_timer_soclib_init)
 	dev->drv = &xicu_timer_soclib_drv;
 
 	/* allocate private driver data */
-	pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
+	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
 	pv->output_line_no = ((struct soclib_xicu_param_s*)params)->output_line_no;
 

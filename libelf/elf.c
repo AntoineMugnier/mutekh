@@ -229,7 +229,7 @@ static error_t _elf_load_segments(FILE *file, struct obj_elf_s *elfobj)
     /* default allocation by malloc */
     size_t size = text_size + data_size;
     /* load in cached memory by default */
-    if ((elfobj->mapbase = (uintptr_t)mem_alloc(size, mem_region_get_local(mem_scope_cpu))) == 0)
+    if ((elfobj->mapbase = (uintptr_t)mem_alloc(size, (mem_scope_cpu))) == 0)
     {
         _libelf_debug(NONE, "\tfailed to allocate memory for elf loading\n");
         return -1;

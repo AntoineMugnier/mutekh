@@ -219,7 +219,7 @@ DEV_INIT(gpio_sam7_init)
 
 	registers->PIO_IDR = ~0;
 
-	pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
+	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
 	memset(pv, 0, sizeof(*pv));
 

@@ -120,7 +120,7 @@ static void *clone_blob( void *blob )
 	size_t size = fdt_get_size(blob);
 	if ( !size )
 		return 0;
-	void *b2 = mem_alloc(size, mem_region_get_local(mem_scope_sys));
+	void *b2 = mem_alloc(size, (mem_scope_sys));
 	if ( b2 )
 		memcpy(b2, blob, size);
 	return b2;
@@ -135,7 +135,7 @@ DEV_INIT(enum_fdt_init)
 	dev->drv = &enum_fdt_drv;
 
 	/* allocate private driver data */
-	pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
+	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
 	if (!pv)
 		return -1;

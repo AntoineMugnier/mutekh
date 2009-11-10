@@ -112,7 +112,7 @@ DEV_INIT(icu_soclib_init)
   device_mem_map( dev , ( 1 << ICU_ADDR_MASTER ) );
   dev->drv = &icu_soclib_drv;
 
-  if ((pv = mem_alloc(sizeof (*pv), mem_region_get_local(mem_scope_sys)))) /* FIXME allocation scope ? */
+  if ((pv = mem_alloc(sizeof (*pv), (mem_scope_sys)))) /* FIXME allocation scope ? */
     {
       dev->drv_pv = pv;
       pv->dev = dev;

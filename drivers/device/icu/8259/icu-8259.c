@@ -133,7 +133,7 @@ DEV_INIT(icu_8259_init)
 
   dev->drv = &icu_8259_drv;
 
-  if ((pv = mem_alloc(sizeof (*pv), mem_region_get_local(mem_scope_sys)))) /* FIXME allocation scope ? */
+  if ((pv = mem_alloc(sizeof (*pv), (mem_scope_sys)))) /* FIXME allocation scope ? */
     {
       uint_fast8_t i;
 

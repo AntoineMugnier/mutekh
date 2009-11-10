@@ -89,7 +89,7 @@ UDP_CALLBACK(rpc_callback)
   if ((rpcb = rpcb_lookup(&server->rpc_blocks, id)) != NULL)
     {
       /* duplicate the buffer */
-      if ((rpcb->data = mem_alloc(size, mem_region_get_local(mem_scope_sys))) == NULL)
+      if ((rpcb->data = mem_alloc(size, (mem_scope_sys))) == NULL)
 	return;
       memcpy(rpcb->data, data, size);
       rpcb->size = size;
@@ -157,7 +157,7 @@ static error_t		do_rpc(struct nfs_s	*server,
   uint_fast8_t		tries = 0;
 
   /* build the call packet */
-  if ((pkt = mem_alloc(sizeof (struct rpc_call_s) + sz, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((pkt = mem_alloc(sizeof (struct rpc_call_s) + sz, (mem_scope_context))) == NULL)
     return -ENOMEM;
   call = (struct rpc_call_s *)pkt;
 
@@ -375,7 +375,7 @@ static error_t		net_nfs_mountd(struct nfs_s	*server,
   void			*req;
 
   /* allocate packet for the request */
-  if ((buf = req = mem_alloc(sizeof (struct nfs_auth_s) + *size, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((buf = req = mem_alloc(sizeof (struct nfs_auth_s) + *size, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   auth = (struct nfs_auth_s *)req;
@@ -426,7 +426,7 @@ error_t			net_nfs_mount(struct nfs_s	*server,
   path_len = strlen(path);
   sz = sizeof(uint32_t) + ALIGN_VALUE_UP(path_len, 4);
 
-  if ((dir = mem_alloc(sz, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((dir = mem_alloc(sz, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   /* copy path to the export */
@@ -476,7 +476,7 @@ error_t			net_nfs_umount(struct nfs_s	*server,
   path_len = strlen(path);
   sz = sizeof(uint32_t) + ALIGN_VALUE_UP(path_len, 4);
 
-  if ((dir = mem_alloc(sz, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((dir = mem_alloc(sz, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   /* copy path to the export */
@@ -525,7 +525,7 @@ static error_t		net_nfs_nfsd(struct nfs_s	*server,
   void			*req;
 
   /* allocate packet for the request */
-  if ((buf = req = mem_alloc(sizeof (struct nfs_auth_s) + *size, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((buf = req = mem_alloc(sizeof (struct nfs_auth_s) + *size, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   auth = (struct nfs_auth_s *)req;
@@ -580,7 +580,7 @@ ssize_t				net_nfs_read(struct nfs_s	*server,
 
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t) + sizeof (struct nfs_read_s);
-  if ((req = mem_alloc(sz, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((req = mem_alloc(sz, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   /* copy handle & read info */
@@ -642,7 +642,7 @@ ssize_t		net_nfs_write(struct nfs_s	*server,
 
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t) + sizeof (struct nfs_write_s) + size;
-  if ((req = mem_alloc(sz, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((req = mem_alloc(sz, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   /* copy handle & write info */
@@ -695,7 +695,7 @@ error_t				net_nfs_lookup(struct nfs_s		*server,
 
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t) + sizeof (uint32_t) + ALIGN_VALUE_UP(path_len, 4);
-  if ((req = mem_alloc(sz, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((req = mem_alloc(sz, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   /* copy root & path to the entity */
@@ -751,7 +751,7 @@ error_t				net_nfs_statfs(struct nfs_s		*server,
 
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t);
-  if ((req = mem_alloc(sz, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((req = mem_alloc(sz, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   /* copy root & path to the entity */
@@ -796,7 +796,7 @@ error_t				net_nfs_getattr(struct nfs_s		*server,
 
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t);
-  if ((req = mem_alloc(sz, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((req = mem_alloc(sz, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   /* copy handle */
@@ -841,7 +841,7 @@ error_t				net_nfs_setattr(struct nfs_s		*server,
 
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t) + sizeof (struct nfs_user_attr_s);
-  if ((req = mem_alloc(sz, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((req = mem_alloc(sz, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   /* copy handle & attributes */
@@ -902,7 +902,7 @@ error_t				net_nfs_create(struct nfs_s		*server,
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t) + sizeof (uint32_t) + ALIGN_VALUE_UP(path_len, 4) +
     sizeof (struct nfs_user_attr_s);
-  if ((req = mem_alloc(sz, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((req = mem_alloc(sz, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   /* copy root & path to the entity */
@@ -989,7 +989,7 @@ error_t		net_nfs_remove(struct nfs_s		*server,
 
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t) + sizeof (uint32_t) + ALIGN_VALUE_UP(path_len, 4);
-  if ((req = mem_alloc(sz, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((req = mem_alloc(sz, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   /* copy root & path to the entity */
@@ -1036,7 +1036,7 @@ error_t		net_nfs_readdir(struct nfs_s	*server,
 
   /* allocate packet for the request */
   sz = sizeof (nfs_handle_t) + sizeof (nfs_cookie_t) + sizeof (uint32_t);
-  if ((req = mem_alloc(sz, mem_region_get_local(mem_scope_context))) == NULL)
+  if ((req = mem_alloc(sz, (mem_scope_context))) == NULL)
     return -ENOMEM;
 
   /* copy handle */

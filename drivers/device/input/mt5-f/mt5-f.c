@@ -111,7 +111,7 @@ DEV_INIT(dev_mt5f_init)
 
 	dev->drv = &mt5f_drv;
 
-	pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
+	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
 	if (!pv)
 		return -1;

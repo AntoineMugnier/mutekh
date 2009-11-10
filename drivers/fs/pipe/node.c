@@ -35,7 +35,7 @@ VFS_INIT_NODE(pipe_init_node)
   if(node->n_pv != NULL)
     return VFS_EUNKNOWN;
 
-  if((node_info = mem_alloc(sizeof(*node_info), mem_region_get_local(mem_scope_sys))) == NULL)
+  if((node_info = mem_alloc(sizeof(*node_info), (mem_scope_sys))) == NULL)
     return VFS_ENOMEM;
 
 #if PIPE_DEBUG

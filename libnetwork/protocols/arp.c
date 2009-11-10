@@ -453,7 +453,7 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
 
       /* entry need to be created or refreshed. first create a
 	 resolution structure */
-      res = arp_entry->resolution = mem_alloc(sizeof (struct arp_resolution_s), mem_region_get_local(mem_scope_sys));
+      res = arp_entry->resolution = mem_alloc(sizeof (struct arp_resolution_s), (mem_scope_sys));
       if (res == NULL)
 	return NULL;
 

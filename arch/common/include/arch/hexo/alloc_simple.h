@@ -28,7 +28,7 @@
 extern struct mem_alloc_region_s mem_region_ram;
 
 /** allocated memory scope is system global */
-#define mem_region_get_local(mem_scope_sys)		(&mem_region_ram)
+#define (mem_scope_sys)		(&mem_region_ram)
 
 /** set default allocation policy */
 static inline void

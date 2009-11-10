@@ -35,14 +35,6 @@
 
 struct mem_alloc_region_s;
 
-void *mem_alloc(size_t size, struct mem_alloc_region_s *region);
-
-void mem_alloc_region_init(struct mem_alloc_region_s *region, void *address, void *end);
-
-void mem_free(void *ptr);
-
-size_t mem_alloc_getsize(void *ptr);
-
 enum mem_scope_e
   {
     mem_scope_sys,
@@ -52,8 +44,30 @@ enum mem_scope_e
     mem_scope_default,
   };
 
+void mem_alloc_region_init(struct mem_alloc_region_s *region, void *address, void *end);
+
+void *mem_alloc(size_t size, enum mem_scope_e scope);
+
+void mem_free(void *ptr);
+
+void *mem_reserve(struct mem_alloc_region_s *region, void *start, size_t size);
+
+size_t mem_alloc_getsize(void *ptr);
+
+/*********************************/
 
 /** return the farless memory allocatable region, depending to the scope */
-struct mem_alloc_region_s *mem_region_get_local(enum mem_scope_e scope);
+struct mem_alloc_region_s *mem_region_get_scope(enum mem_scope_e scope);
+
+/** @this set the region corresponding to a scope */
+void mem_region_set_scope(enum mem_scope_e scope, struct mem_alloc_region_s *region);
+
+#if ( defined(CONFIG_HEXO_DEVICE_TREE) && defined(CONFIG_FDT) )
+/** initialize memory allocatable regions, exclude the sys region region. */
+void mem_region_init(struct device_s *root, void *blob);
+#endif
+
+/** create and initialize memory allocatable region. used by mem_regions_init. */
+struct mem_alloc_region_s *mem_region_create(uintptr_t start, uintptr_t end, bool_t cached); 
 
 #endif

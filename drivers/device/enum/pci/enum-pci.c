@@ -94,7 +94,7 @@ pci_enum_dev_probe(struct device_s *dev, uint8_t bus,
 
   if ((new = device_obj_new(NULL)))
     {
-      if ((enum_pv = mem_alloc(sizeof (*enum_pv), mem_region_get_local(mem_scope_sys))))
+      if ((enum_pv = mem_alloc(sizeof (*enum_pv), (mem_scope_sys))))
 	{
 	  uint_fast8_t		regaddr;
 	  uint_fast8_t		index;
@@ -219,7 +219,7 @@ DEV_INIT(enum_pci_init)
   dev->drv = &enum_pci_drv;
 
   /* allocate private driver data */
-  pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
+  pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
   if (!pv)
     return -1;

@@ -57,7 +57,7 @@ static _SOCKET(socket_packet)
 {
   struct socket_packet_pv_s	*pv;
 
-  if ((pv = fd->pv = mem_alloc(sizeof (struct socket_packet_pv_s), mem_region_get_local(mem_scope_sys))) == NULL)
+  if ((pv = fd->pv = mem_alloc(sizeof (struct socket_packet_pv_s), (mem_scope_sys))) == NULL)
     return -ENOMEM;
 
   /* setup private data */
@@ -203,7 +203,7 @@ static _SENDMSG(sendmsg_packet)
   if (pv->header)
     {
       /* alloc a buffer to copy the packet content */
-      if ((packet->packet = mem_alloc(n, mem_region_get_local(mem_scope_sys))) == NULL)
+      if ((packet->packet = mem_alloc(n, (mem_scope_sys))) == NULL)
 	{
 	  net_if_obj_refdrop(interface);
 	  packet_obj_refdrop(packet);

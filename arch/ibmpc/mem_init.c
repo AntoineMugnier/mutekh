@@ -70,10 +70,10 @@ void mem_init(void)
   assert(mem_end > mem_start);
 
 #ifdef CONFIG_HEXO_MMU
-  mem_alloc_region_init(mem_region_get_local(mem_scope_sys)
+  mem_alloc_region_init( mem_region_get_scope(mem_scope_sys)
 			, mem_start, CONFIG_HEXO_MMU_INITIAL_END);
 #else
-  mem_alloc_region_init(mem_region_get_local(mem_scope_sys)
+  mem_alloc_region_init( mem_region_get_scope(mem_scope_sys)
 			, mem_start, mem_end);
 #endif
 }

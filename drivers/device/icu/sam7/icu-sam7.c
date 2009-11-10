@@ -169,7 +169,7 @@ DEV_INIT(icu_sam7_init)
 
 	dev->drv = &icu_sam7_drv;
 
-	pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
+	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 	sam7_c_irq_dev = dev;
 
 	if ( pv == NULL )

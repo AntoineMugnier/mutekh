@@ -41,7 +41,7 @@ VFS_NODE_FREELIST_INIT(vfs_node_freelist_init)
 
   for(item=0; item < length; item ++)
   {
-    if((node=mem_alloc(sizeof(*node), mem_region_get_local(mem_scope_sys))) == NULL)
+    if((node=mem_alloc(sizeof(*node), (mem_scope_sys))) == NULL)
       return VFS_ENOMEM;
     
     if((err=vfs_node_init(ctx,node)))

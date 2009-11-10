@@ -68,7 +68,7 @@ error_t	nfs_mount(const char		*mount_point,
     }
 
   // Allocating memory for parent context
-  if((nfs_ctx = mem_alloc(sizeof(struct vfs_context_s), mem_region_get_local(mem_scope_sys))) == NULL)
+  if((nfs_ctx = mem_alloc(sizeof(struct vfs_context_s), (mem_scope_sys))) == NULL)
     return -VFS_ENOMEM;
 
   // Setting up vfs_context_s

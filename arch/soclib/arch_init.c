@@ -121,8 +121,14 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         device_init(&fdt_enum_dev);
         enum_fdt_init(&fdt_enum_dev, device_tree);
         soclib_parse_fdt(device_tree, &fdt_enum_dev);
+        mem_region_init(&fdt_enum_dev, device_tree);
 #elif defined(CONFIG_ARCH_HW_INIT_USER)
         user_hw_init();
+        mem_region_init(&fdt_enum_dev, device_tree);
+        //FIXME: remove and add a user mem_init in user_hw_init
+        //the init MUST init the scope_cluster, scope_context and scope_cpu.
+        //See simple example in mutek/mem_alloc_smart.c:662, function mem_region_init
+       
 #elif defined(CONFIG_ARCH_HW_INIT)
 # error CONFIG_ARCH_HW_INIT unsupported for SoCLib platforms
 #endif

@@ -33,6 +33,6 @@ void mem_init(void)
   mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_MUTEK_MEMALLOC_ALIGN);
   mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_MUTEK_MEMALLOC_ALIGN);
 
-  mem_alloc_region_init(mem_region_get_local(mem_scope_sys), mem_start, mem_end);
+  mem_alloc_region_init( mem_region_get_scope(mem_scope_sys), mem_start, mem_end);
 }
 

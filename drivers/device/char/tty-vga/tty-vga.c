@@ -507,7 +507,7 @@ DEV_INIT(tty_vga_init)
   dev->drv = &tty_vga_drv;
 
   /* alocate private driver data */
-  pv = mem_alloc(sizeof(*pv), mem_region_get_local(mem_scope_sys));
+  pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
   if (!pv)
     return -1;

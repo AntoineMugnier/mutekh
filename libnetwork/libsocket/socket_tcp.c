@@ -36,7 +36,7 @@ static _SOCKET(socket_tcp)
 {
   struct socket_tcp_pv_s	*pv;
 
-  if ((pv = fd->pv = mem_alloc(sizeof (struct socket_tcp_pv_s), mem_region_get_local(mem_scope_sys))) == NULL)
+  if ((pv = fd->pv = mem_alloc(sizeof (struct socket_tcp_pv_s), (mem_scope_sys))) == NULL)
     return -ENOMEM;
   pv->session = NULL;
 
@@ -213,7 +213,7 @@ static _SENDMSG(sendmsg_tcp)
       for (i = 0, n = 0; i < message->msg_iovlen; i++)
 	n += message->msg_iov[i].iov_len;
 
-      if ((buf = mem_alloc(n, mem_region_get_local(mem_scope_sys))) == NULL)
+      if ((buf = mem_alloc(n, (mem_scope_sys))) == NULL)
 	{
 	  fd->error = ENOMEM;
 	  return -1;
