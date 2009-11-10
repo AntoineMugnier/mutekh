@@ -91,6 +91,8 @@ void arch_hw_init()
 	icu_dev.addr[ICU_ADDR_MASTER] = 0x0020;
 	icu_dev.addr[ICU_ADDR_SLAVE] = 0x00a0;
 	icu_8259_init(&icu_dev, NULL);
+
+	cpu_interrupt_set_handler_device(&icu_dev);
 # else
 #  error CONFIG_DRIVER_ICU case not handled in hw_init()
 # endif

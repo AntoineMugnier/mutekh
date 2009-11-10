@@ -233,8 +233,10 @@ PUT_ENTRY(5f, 1)
 	call	x86_seg_restore
 #endif
 	pushl	%edi
+	movl    CLS_SEG (cpu_interrupt_handler_arg), %edi
+	pushl	%edi
 	call	CLS_SEG *(cpu_interrupt_handler)
-	add	$4, %esp
+	add	$8, %esp
 	jmp	x86_interrupt_end
 
 .globl x86_interrupt_sys_entry

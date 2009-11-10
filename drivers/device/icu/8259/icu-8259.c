@@ -37,8 +37,6 @@
 
 #include "8259.h"
 
-static CPU_LOCAL struct icu_8259_private_s *icu_8259_pv;
-
 DEVICU_ENABLE(icu_8259_enable)
 {
   uint8_t			mask;
@@ -90,7 +88,8 @@ DEVICU_DELHNDL(icu_8259_delhndl)
 
 static CPU_INTERRUPT_HANDLER(icu_8259_cpu_handler)
 {
-  struct icu_8259_private_s	*pv = CPU_LOCAL_GET(icu_8259_pv);
+  struct device_s *dev = priv;
+  struct icu_8259_private_s	*pv = dev->drv_pv;
   struct icu_8259_handler_s	*h = pv->table + irq;
 
   /* reset interrupt line status on icu */
@@ -119,6 +118,7 @@ const struct driver_s	icu_8259_drv =
 {
   .class		= device_class_icu,
   .f_init		= icu_8259_init,
+  .f_irq        = icu_8259_cpu_handler,
   .f_cleanup		= icu_8259_cleanup,
   .f.icu = {
     .f_enable		= icu_8259_enable,
@@ -137,7 +137,6 @@ DEV_INIT(icu_8259_init)
     {
       uint_fast8_t i;
 
-      CPU_LOCAL_SET(icu_8259_pv, pv);
       dev->drv_pv = pv;
       pv->dev = dev;
 
