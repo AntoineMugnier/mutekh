@@ -170,6 +170,12 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         mmu_cpu_init();
 #endif      
         cpu_init();
+        
+        //FIXME:init the scope in CPU BS
+        mem_region_set_scope(mem_scope_cluster,mem_region_get_scope(mem_scope_sys));
+        mem_region_set_scope(mem_scope_context,mem_region_get_scope(mem_scope_sys));
+        mem_region_set_scope(mem_scope_cpu,mem_region_get_scope(mem_scope_sys));
+
 
 #if defined(CONFIG_ARCH_DEVICE_TREE)
         cpu_interrupt_set_handler_device(

@@ -1,5 +1,7 @@
 /dts-v1/;
 
+/memreserve/ 0x62600000 0x00100000;
+
 / {
 	model = "MutekH_Tutorial";
 	compatible = "MutekH_Tutorial";
@@ -77,5 +79,7 @@
 		console = &{/tty@0};
 		timer = &{/timer@0};
 	};
+
+	
 
 };

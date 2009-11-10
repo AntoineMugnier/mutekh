@@ -588,57 +588,57 @@ void mem_region_init(struct device_s *root, void *blob)
   region_queue_init(&region_cached_list);
   region_queue_init(&region_uncached_list);
 
-  
   CONTAINER_FOREACH(device_list, CLIST, &root->children, {
       if (item->drv == NULL) CONTAINER_FOREACH_CONTINUE;
       if (item->drv->class == device_class_mem ){
 	dev_mem_get_info(item, &mem_info);
-	
+
 	struct mem_region_s *region_item;
 	region_item = mem_alloc( sizeof(struct mem_region_s), mem_scope_sys );
-	
-	/* looking for reserve memory space in the fdt: */
-
-	/* First pass: the border memory space*/	
-	uint64_t addr=0;
-	uint64_t size=0;
-	uint_fast16_t i=0;
-	fdt_get_rsvmap(blob, i++, &addr, &size);
-	
-	while( !( addr == 0 && size == 0 ) )
-	  {
-	    addr -= mem_hdr_size;
-	    size += mem_hdr_size;
-	    if( addr <= mem_info.base + mem_hdr_size + sizeof(struct mem_alloc_region_s) && addr+size > mem_info.base + mem_hdr_size + sizeof(struct mem_alloc_region_s) )
-	      {
-		if( addr + size >= mem_info.base + mem_info.size - ( mem_hdr_size + sizeof(struct mem_alloc_region_s) ) )
-		  CONTAINER_FOREACH_CONTINUE;		/*all the region is reserve*/
-		mem_info.size -= (addr + size) - mem_info.base;
-		mem_info.base = (addr + size);
-	      }
-	    else if( addr < (mem_info.base + mem_info.size)  && addr+size >= (mem_info.base + mem_info.size - ( mem_hdr_size + sizeof(struct mem_alloc_region_s) ) ) )
- 	      {
-		mem_info.size -= (mem_info.base + mem_info.size) - addr;
-	      }
-	    fdt_get_rsvmap(blob, i++, &addr, &size);
-	  }
-	
+	    
+	/* 	/\* looking for reserve memory space in the fdt: *\/ */
+	    
+	/* 	/\* First pass: the border memory space*\/	 */
+	/* 	uint64_t addr=0; */
+	/* 	uint64_t size=0; */
+	/* 	uint_fast16_t i=0; */
+	/* 	fdt_get_rsvmap(blob, i++, &addr, &size); */
+	    
+	/* 	while( !( addr == 0 && size == 0 ) ) */
+	/* 	  { */
+	/* 	    addr -= mem_hdr_size; */
+	/* 	    size += mem_hdr_size; */
+	/* 	    if( addr <= mem_info.base + mem_hdr_size + sizeof(struct mem_alloc_region_s) && addr+size > mem_info.base + mem_hdr_size + sizeof(struct mem_alloc_region_s) ) */
+	/* 	      { */
+	/* 		if( addr + size >= mem_info.base + mem_info.size - ( mem_hdr_size + sizeof(struct mem_alloc_region_s) ) ) */
+	/* 		  CONTAINER_FOREACH_CONTINUE;		/\*all the region is reserve*\/ */
+	/* 		mem_info.size -= (addr + size) - mem_info.base; */
+	/* 		mem_info.base = (addr + size); */
+	/* 	      } */
+	/* 	    else if( addr < (mem_info.base + mem_info.size)  && addr+size >= (mem_info.base + mem_info.size - ( mem_hdr_size + sizeof(struct mem_alloc_region_s) ) ) ) */
+	/*  	      { */
+	/* 		mem_info.size -= (mem_info.base + mem_info.size) - addr; */
+	/* 	      } */
+	/* 	    fdt_get_rsvmap(blob, i++, &addr, &size); */
+	/* 	  } */
+	    
 	/* when the start and the end is well know, create the memory region */
-	region_item->region = mem_region_create(mem_info.base, mem_info.base + mem_info.size, mem_info.flags & DEV_MEM_CACHED);
-	/* Second pass: the reserve memory space into the region*/
-	i = 0;
-	fdt_get_rsvmap(blob, i++, &addr, &size);
-	while( !( addr == 0 && size == 0 ) )
-	  {
-	    addr -= mem_hdr_size;
-	    size += mem_hdr_size;
-	    if( addr > mem_info.base && addr+size < mem_info.base+mem_info.size )
-	      {
-		mem_reserve( region_item->region , (void*)(uint32_t)addr, size); 
-	      }
-	    fdt_get_rsvmap(blob, i++, &addr, &size);
-	  }
-	
+	if(mem_info.base != CONFIG_RAM_ADDR) 
+	  region_item->region = mem_region_create(mem_info.base, mem_info.base + mem_info.size, mem_info.flags & DEV_MEM_CACHED);
+	/* 	/\* Second pass: the reserve memory space into the region*\/ */
+	/* 	i = 0; */
+	/* 	fdt_get_rsvmap(blob, i++, &addr, &size); */
+	/* 	while( !( addr == 0 && size == 0 ) ) */
+	/* 	  { */
+	/* 	    addr -= mem_hdr_size; */
+	/* 	    size += mem_hdr_size; */
+	/* 	    if( addr > mem_info.base && addr+size < mem_info.base+mem_info.size ) */
+	/* 	      { */
+	/* 		mem_reserve( region_item->region , (void*)(uint32_t)addr, size);  */
+	/* 	      } */
+	/* 	    fdt_get_rsvmap(blob, i++, &addr, &size); */
+	/* 	  } */
+	    
 	/* Add the region to the corresponding list*/
 	if(mem_info.flags & DEV_MEM_CACHED)
 	  region_queue_push(&region_cached_list, region_item);
