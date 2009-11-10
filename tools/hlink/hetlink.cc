@@ -8,6 +8,7 @@
 #include <map>
 #include <list>
 
+#include <stdio.h>
 #include <dpp/foreach>
 #include <dpp/interval_set>
 
@@ -43,7 +44,7 @@ typedef std::map<std::string, het_section_s *> het_sections_map_t;
 
 void error(const char *err)
 {
-  fprintf(stderr, "%s\n", err);
+  std::cerr << err << std::endl;
   exit(1);
 }
 
