@@ -32,9 +32,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   *--context->stack_ptr = (uintptr_t)&__x86_64_context_entry;
 
   /* initial frame pointer */
-#ifdef CONFIG_COMPILE_FRAMEPTR
   *--context->stack_ptr = (reg_t)NULL;
-#endif
 
   /* push default flags */
 #if defined(CONFIG_DEBUG)
