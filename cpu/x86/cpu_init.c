@@ -33,7 +33,6 @@
 #include <cpu/hexo/apic.h>
 #include <cpu/hexo/msr.h>
 
-CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
 /** pointer to cpu local storage itself */

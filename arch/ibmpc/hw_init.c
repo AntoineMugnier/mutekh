@@ -22,7 +22,6 @@
 #include <drivers/device/enum/pci/enum-pci.h>
 #include <drivers/device/enum/isapnp/enum-isapnp.h>
 #include <drivers/device/net/ne2000/net-ne2000.h>
-#include <drivers/device/net/3c900/net-3c900.h>
 #include <drivers/device/lcd/s1d15g00/s1d15g00.h>
 
 #include <device/device.h>

@@ -28,7 +28,7 @@ SECTIONS
 	.data :	 { *(.data*) } > mem_ram
 	.cpuarchdata : { *(.cpuarchdata*) } > mem_ram
 
-	__system_heap_start = __context_data_end;
+	__system_heap_start = ADDR(.cpuarchdata) + SIZEOF(.cpuarchdata);
 
 	__cpu_data_start = LOADADDR(.cpudata);
 	__cpu_data_end = LOADADDR(.cpudata) + SIZEOF(.cpudata);
