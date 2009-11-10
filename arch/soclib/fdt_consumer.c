@@ -157,7 +157,7 @@ static FDT_ON_NODE_PROP_FUNC(creator_node_prop)
 			}
 		}
 #endif
-#ifdef CONFIG_MUTEK_CONSOLE
+#ifdef CONFIG_VFS
 		if ( !strcmp(name, "root") ) {
 			struct device_s *cd = enum_fdt_lookup(priv->enum_dev, data);
 			if ( cd && cd->drv ) {
