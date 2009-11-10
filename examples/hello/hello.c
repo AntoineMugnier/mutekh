@@ -1,5 +1,6 @@
 
 #include <pthread.h>
+#include <mutek/printk.h>
 
 pthread_mutex_t m;
 pthread_t a, b;
