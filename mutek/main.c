@@ -43,9 +43,17 @@
 #include <mutek/timer.h>
 #include <mutek/printk.h>
 
+#if defined(CONFIG_VFS)
+# include <vfs/vfs.h>
+#endif
+
 #if defined (CONFIG_MUTEK_TIMERMS)
 struct device_s *timerms_dev = NULL;
 struct timer_s timer_ms;
+#endif
+
+#if defined(CONFIG_VFS)
+struct device_s *root_dev;
 #endif
 
 #if defined(CONFIG_DRIVER_TIMER)
@@ -126,7 +134,17 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 		dev_timer_setperiod(timerms_dev, 0, 1193180 / 100);
 		dev_timer_setcallback(timerms_dev, 0, timer_callback, 0);
 	} else {
-		printk("Warning: no timer device available !\n");
+		printk("Warning: no timer device available\n");
+	}
+#endif
+
+#if defined(CONFIG_VFS)
+	if ( root_dev ) {
+		if (vfs_init(root_dev, VFS_VFAT_TYPE, 20, 20, NULL) != 0) {
+			printf("Warning: error in VFS initialization\n");
+		}
+	} else {
+		printf("Warning: no rootfs device selected\n");
 	}
 #endif
 

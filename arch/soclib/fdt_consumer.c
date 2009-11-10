@@ -25,6 +25,10 @@
 extern struct device_s *console_dev;
 #endif
 
+#ifdef CONFIG_VFS
+extern struct device_s *root_dev;
+#endif
+
 #if defined (CONFIG_MUTEK_TIMERMS)
 extern struct device_s *timerms_dev;
 #endif
@@ -150,6 +154,15 @@ static FDT_ON_NODE_PROP_FUNC(creator_node_prop)
 			if ( cd && cd->drv ) {
 				dprintk("Setting timer device to node %s\n", data);
 				timerms_dev = cd;
+			}
+		}
+#endif
+#ifdef CONFIG_MUTEK_CONSOLE
+		if ( !strcmp(name, "root") ) {
+			struct device_s *cd = enum_fdt_lookup(priv->enum_dev, data);
+			if ( cd && cd->drv ) {
+				dprintk("Setting root device to node %s\n", data);
+				root_dev = cd;
 			}
 		}
 #endif
