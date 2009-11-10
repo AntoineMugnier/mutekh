@@ -590,7 +590,8 @@ void mem_region_init(struct device_s *root, void *blob)
 
   
   CONTAINER_FOREACH(device_list, CLIST, &root->children, {
-      if( item->drv->class == device_class_mem ){
+      if (item->drv == NULL) CONTAINER_FOREACH_CONTINUE;
+      if (item->drv->class == device_class_mem ){
 	dev_mem_get_info(item, &mem_info);
 	
 	struct mem_region_s *region_item;
