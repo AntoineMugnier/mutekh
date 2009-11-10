@@ -104,7 +104,7 @@ $(3)/$(1): $(2)/$(1:.h=.def)
 	@echo ' HOST CPP   $$@'
 	test -d $(3) || mkdir -p $(3)
 	cat $(CONF_DIR)/.config.h $(2)/$(1:.h=.def) | \
-		$(HOSTCPP) $(HOSTCPPFLAGS) > $(3)/$(1).tmp
+		$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) -E - > $(3)/$(1).tmp
 	grep '#define' < $(3)/$(1).tmp > $(3)/$(1)
 
 endef
