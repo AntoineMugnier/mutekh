@@ -20,6 +20,7 @@
 -include $(cpu_SRC_DIR)/config.mk
 
 CC=$(CCACHE) $(CPUTOOLS)gcc
+HOSTCC=gcc
 DEPCC?=$(CC)
 CPP=$(CPUTOOLS)cpp
 LD=$(CPUTOOLS)ld

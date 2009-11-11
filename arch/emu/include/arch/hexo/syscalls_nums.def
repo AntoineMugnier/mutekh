@@ -1,11 +1,7 @@
 /* -*- c -*- */
 
 #define X(x)	x
-#ifdef __APPLE__
-# define __SYSCALL_NAME(x,y) X(x/**/y)
-#else
-# define __SYSCALL_NAME(x,y) X(x##y)
-#endif
+#define __SYSCALL_NAME(x,y) X(x##y)
 
 #if defined(CONFIG_ARCH_EMU_LINUX)
 # include <asm/unistd.h>
