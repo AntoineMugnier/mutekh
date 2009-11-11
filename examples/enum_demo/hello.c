@@ -1,6 +1,10 @@
 
 #include <pthread.h>
 
+#if defined(CONFIG_ARCH_EMU)
+#include <arch/hexo/emu_syscalls.h>
+#endif
+
 #if defined(CONFIG_HEXO_DEVICE_TREE)
 #include <device/enum.h>
 #include <device/device.h>
@@ -33,5 +37,8 @@ void app_start()
 #endif
 
 	printk("Demo ended\n");
+#if defined(CONFIG_ARCH_EMU)
+	emu_do_syscall(EMU_SYSCALL_EXIT, 1, 0);
+#endif
 }
 
