@@ -44,7 +44,7 @@
 		tty_count = <1>;
 		reg = <0x90600000 0x10>;
 		icudev = &{/icu@0};
-		irq = <0>;
+		irq = <1>;
 	};
 
 	icu@0 {
@@ -59,7 +59,7 @@
 	    device_type = "soclib:timer";
 		reg = <0x01620000 0x10>;
 		icudev = &{/icu@0};
-		irq = <1>;
+		irq = <0>;
 	};
 
 	memory@0 {
