@@ -58,7 +58,7 @@ struct creator_state_s
 	struct walker_node_info_s *node_info;
 };
 
-static FDT_ON_NODE_ENTRY_FUNC(creator_node_entry)
+static FDT_ON_NODE_ENTRY_FUNC(enum_creator_node_entry)
 {
 	struct creator_state_s *priv = private;
 	struct walker_node_info_s *parent = priv->node_info;
@@ -110,7 +110,7 @@ static FDT_ON_NODE_ENTRY_FUNC(creator_node_entry)
 	return 1;
 }
 
-static FDT_ON_NODE_LEAVE_FUNC(creator_node_leave)
+static FDT_ON_NODE_LEAVE_FUNC(enum_creator_node_leave)
 {
 	struct creator_state_s *priv = private;
 	struct enum_fdt_context_s *pv = priv->dev->drv_pv;
@@ -151,7 +151,7 @@ static FDT_ON_NODE_LEAVE_FUNC(creator_node_leave)
 	mem_free(node_info);
 }
 
-static FDT_ON_NODE_PROP_FUNC(creator_node_prop)
+static FDT_ON_NODE_PROP_FUNC(enum_creator_node_prop)
 {
 	struct creator_state_s *priv = private;
 	struct enum_fdt_context_s *pv = priv->dev->drv_pv;
@@ -177,7 +177,7 @@ static FDT_ON_NODE_PROP_FUNC(creator_node_prop)
 	}
 }
 
-static FDT_ON_MEM_RESERVE_FUNC(creator_mem_reserve)
+static FDT_ON_MEM_RESERVE_FUNC(enum_creator_mem_reserve)
 {
 }
 
@@ -192,10 +192,10 @@ void enum_fdt_create_children(struct device_s *dev)
 
 	struct fdt_walker_s walker = {
 		.private = &priv,
-		.on_node_entry = creator_node_entry,
-		.on_node_leave = creator_node_leave,
-		.on_node_prop = creator_node_prop,
-		.on_mem_reserve = creator_mem_reserve,
+		.on_node_entry = enum_creator_node_entry,
+		.on_node_leave = enum_creator_node_leave,
+		.on_node_prop = enum_creator_node_prop,
+		.on_mem_reserve = enum_creator_mem_reserve,
 	};
 
 	dprintk("walking blob\n");
