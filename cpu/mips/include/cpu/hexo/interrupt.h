@@ -193,7 +193,7 @@ cpu_is_interruptible(void)
 static inline void
 cpu_interrupt_wait(void)
 {
-#if (CONFIG_CPU_MIPS_VERSION >= 322)
+#if (CONFIG_CPU_MIPS_VERSION >= 32)
   __asm__ volatile ("wait");
 #endif
 }
