@@ -94,9 +94,9 @@ struct het_section_s
 {
   std::string name_;
   het_symbols_map_t syms_;
+  unsigned int ref_count_;
   sec_alloc_t free_;		// space that can be used to relocate symbols
   char action_;
-  unsigned int ref_count_;
   std::list<elfpp::section*> sections_;
 
   het_section_s()
@@ -295,8 +295,8 @@ int main(int argc, char **argv)
 	    {
 	      het_symbol_s *hsym = &*hsym_->second;
 
-	      if (hsym->ref_count_ < 2)
-		DISPLAY(disp_verbose, "  " << hsym->name_ << " only present in one file");
+	      if (hsym->ref_count_ < het_objects.size())
+		DISPLAY(disp_verbose, "  " << hsym->name_ << " not present in all objects");
 
 	      DISPLAY(disp_debug, "  " << hsym->name_ << " moved to " << std::hex << v);
 	      FOREACH(s, hsym->symbols_)
@@ -324,8 +324,8 @@ int main(int argc, char **argv)
 	      uint8_t *content = NULL;
 	      DISPLAY(disp_debug, "  " << hsym->name_ << " moved to " << std::hex << v);
 
-	      if (hsym->ref_count_ < 2)
-		DISPLAY(disp_verbose, "  " << hsym->name_ << " only present in one file");
+	      if (hsym->ref_count_ < het_objects.size())
+		DISPLAY(disp_verbose, "  " << hsym->name_ << " not present in all objects");
 
 	      FOREACH(s, hsym->symbols_)
 		{

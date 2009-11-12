@@ -32,7 +32,7 @@ $(BUILD_DIR)/kernel-%.pre.o: FORCE
 
 $(HET_OBJS): $(PRE_OBJS) $(HETLINK_CONF) FORCE
 	echo '    HETLINK $@'
-	$(HETLINK) -v 3 -c $(MUTEK_SRC_DIR)/scripts/hetlink.conf $(PRE_OBJS)
+	$(HETLINK) -v 4 -c $(MUTEK_SRC_DIR)/scripts/hetlink.conf $(PRE_OBJS)
 
 $(BUILD_DIR)/kernel-%.het.out : $(BUILD_DIR)/kernel-%.pre.o.het.o
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
