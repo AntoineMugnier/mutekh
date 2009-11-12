@@ -239,8 +239,6 @@ extern uint_fast32_t	netobj_del[NETWORK_PROFILING_NB_OBJS];
 void	netprofile_show(void);
 #endif
 
-#define (mem_scope_sys)	(mem_scope_sys)
-
 /*
  * Disable log messages. Replace by a printk.
  */
