@@ -96,9 +96,7 @@
  @end section
 @end section
 
-@section TP {All Globals}
- @insert global_scope_doc
-@end section
+@insert global_scope_section
 
 @section TP {Contributors}
  @list
