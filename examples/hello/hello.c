@@ -10,11 +10,12 @@ void *f(void *param)
   while (1)
     { 
       pthread_mutex_lock(&m);
-      printk("(%i) %s", cpu_id(), param);
+      printk("(%s:%i) %s", cpu_type_name(), cpu_id(), param);
       pthread_mutex_unlock(&m);
       pthread_yield();
     }
 }
+
 void app_start()
 {
   pthread_mutex_init(&m, NULL);

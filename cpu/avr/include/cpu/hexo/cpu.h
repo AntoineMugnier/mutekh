@@ -33,6 +33,11 @@
 			  "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23", \
 			  "r24", "r25", "r26", "r27", "r28", "r29", "r30", "r31" }
 
+static inline const char *cpu_type_name(void)
+{
+  return "avr";
+}
+
 static inline cpu_id_t
 cpu_id(void)
 {

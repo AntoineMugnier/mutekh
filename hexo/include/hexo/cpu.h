@@ -46,6 +46,9 @@ static void *cpu_get_cls(cpu_id_t cpu_id);
 /** return CPU id number */
 static cpu_id_t cpu_id(void);
 
+/** return CPU architecture type name */
+static const char *cpu_type_name(void);
+
 /** return true if bootstap processor */
 static bool_t cpu_isbootstrap(void);
 

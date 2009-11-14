@@ -50,6 +50,11 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 "Instruction storage",          \
 }
 
+static inline const char *cpu_type_name(void)
+{
+  return "powerpc";
+}
+
 static inline cpu_id_t
 cpu_id(void)
 {

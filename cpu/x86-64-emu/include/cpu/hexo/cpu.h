@@ -28,6 +28,11 @@
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	16
 
+static inline const char *cpu_type_name(void)
+{
+  return "x86-64";
+}
+
 static inline cpu_id_t cpu_id(void)
 {
 #ifdef CONFIG_SMP
