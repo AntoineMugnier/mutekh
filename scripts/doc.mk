@@ -13,6 +13,8 @@ $(BUILD_DIR)/doc/config.h:
 doc: $(BUILD_DIR)/doc/config.h
 	cd $(MUTEK_SRC_DIR) ; \
 	mkdoc $(MKDOCFLAGS) doc/gpct.mkdoclib \
+	  --mkdoclib-create doc/html/mutek-api \
+	  --mkdoclib-url http://www.mutek.fr/www/mutekh_api/ \
 	  --output-path $(BUILD_DIR)/doc \
 	  --source-rev $(SVN_REV) \
 	  -I $(BUILD_DIR) doc/config.h \
