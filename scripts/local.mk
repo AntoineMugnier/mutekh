@@ -29,7 +29,7 @@ ifeq ($(wildcard $(2)/$(1:.o=.S.m4)),$(2)/$(1:.o=.S.m4))
 DEP_FILE_LIST+=$(3)/$(1:.o=.m4.deps)
 
 $(3)/$(1): $(2)/$(1:.o=.S.m4) $(MUTEK_SRC_DIR)/scripts/global.m4 $(CONF_DIR)/.config.m4 $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py
-	@echo '   M4+AS    $$@'
+	@echo '   M4+AS    ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(CONF_DIR)/.config.m4 \
 		$$< | m4 -s $$(filter -I%,$$(INCS)) -P | \
@@ -48,7 +48,7 @@ ifeq ($(wildcard $(2)/$(1:.o=.S)),$(2)/$(1:.o=.S))
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be ASM file)
 
 $(3)/$(1): $(2)/$(1:.o=.S)
-	@echo '    AS      $$@'
+	@echo '    AS      ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; \
 	$(DEPCC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
@@ -61,7 +61,7 @@ ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be a device-tree file)
 
 $(3)/$(1): $(2)/$(1:.o=.dts)
-	@echo ' DTC->C+CC  $$@'
+	@echo ' DTC->C+CC  ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; $(DTC) -O dtb -o $(3)/$(1:.o=.blob) $$<
 	cd $(3) ; python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
@@ -75,7 +75,7 @@ else
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be C file)
 
 $(3)/$(1): $(2)/$(1:.o=.c) $(CONF_DIR)/.config.h
-	@echo '    CC      $$@'
+	@echo '    CC      ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; \
 	$(DEPCC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
@@ -101,7 +101,7 @@ define declare_meta_h
 # Extract HOST defined macros and inject values in a new header file.
 # This is used by emultaion platform to get correct syscall numbers and args
 $(3)/$(1): $(2)/$(1:.h=.def)
-	@echo ' HOST CPP   $$@'
+	@echo ' HOST CPP   ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	cat $(CONF_DIR)/.config.h $(2)/$(1:.h=.def) | \
 		$(HOSTCC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) -E - > $(3)/$(1).tmp
@@ -121,7 +121,7 @@ ifeq ($(wildcard $(2)/$(1).cpp),$(2)/$(1).cpp)
 
 # cpp preprocessed files
 $(3)/$(1): $(2)/$(1).cpp $(CONF_DIR)/.config.h
-	@echo '    CPP     $$@'
+	@echo '    CPP     ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	$(DEPCC) -E -M -MF $$@.deps -MT $$@ $$(INCS) -P -x c $$<
 	$(CC) -E $$(INCS) -P -x c - < $$< > $$@
@@ -130,7 +130,7 @@ else
 
 # m4 preprocessed files
 $(3)/$(1): $(2)/$(1).m4 $(CONF_DIR)/.config.m4 $(MUTEK_SRC_DIR)/scripts/global.m4 $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py
-	@echo '    M4      $$@'
+	@echo '    M4      ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(CONF_DIR)/.config.m4 \
 		$$< | m4 -s $$(filter -I%,$$(INCS)) -P | \
