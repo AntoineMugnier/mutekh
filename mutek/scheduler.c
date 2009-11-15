@@ -250,7 +250,7 @@ void sched_context_init(struct sched_context_s *sched_ctx)
   sched_ctx->private = NULL;
 
 #if defined (CONFIG_MUTEK_SCHEDULER_STATIC)
-  sched_ctx->cpu_cls = CPU_GET_CLS();
+  sched_ctx->cpu_cls = (void*)CPU_GET_CLS();
 #endif
 
 #ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN

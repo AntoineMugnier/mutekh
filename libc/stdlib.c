@@ -1,6 +1,6 @@
 
 #include <stdlib.h>
-#include <stdio.h>
+#include <mutek/printk.h>
 
 void exit(uint_fast8_t status)
 {

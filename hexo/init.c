@@ -18,6 +18,7 @@
 	Copyright (c) Nicolas Pouillon, <nipo@ssji.net>, 2009
 */
 
+void device_tree_init();
 
 void hexo_global_init()
 {

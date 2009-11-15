@@ -31,6 +31,8 @@
 #include <hexo/interrupt.h>
 #include <hexo/error.h>
 
+#include <mutek/printk.h>
+
 #include "icu-8259.h"
 
 #include "icu-8259-private.h"
@@ -118,7 +120,7 @@ const struct driver_s	icu_8259_drv =
 {
   .class		= device_class_icu,
   .f_init		= icu_8259_init,
-  .f_irq        = icu_8259_cpu_handler,
+  .f_irq        = (dev_irq_t *)icu_8259_cpu_handler,
   .f_cleanup		= icu_8259_cleanup,
   .f.icu = {
     .f_enable		= icu_8259_enable,

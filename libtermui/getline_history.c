@@ -216,7 +216,6 @@ void getline_history_clear(struct term_behavior_s *bhv)
 void getline_history_cleanup(struct term_behavior_s *bhv)
 {
   struct getline_s	*rl = bhv->bhvctx;
-  int_fast16_t		i;
 
   getline_history_clear(bhv);
 

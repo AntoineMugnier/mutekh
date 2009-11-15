@@ -80,5 +80,5 @@ DEV_CLEANUP(enum_root_cleanup)
 
 DEVENUM_LOOKUP(enum_root_lookup)
 {
-	return device_get_child(dev, atoi(path));
+	return device_get_child(dev, ato_intl16(path));
 }

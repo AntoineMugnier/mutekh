@@ -138,9 +138,10 @@ DEVICU_SENDIPI(xicu_soclib_sendipi)
 
 DEVICU_SETUPIPI(xicu_soclib_setupipi)
 {
-	struct xicu_soclib_private_s	*pv = dev->drv_pv;
+//	struct xicu_soclib_private_s	*pv = dev->drv_pv;
 
-	xicu_soclib_sethndl(dev, XICU_IRQ_IPI | ipi_no, ipi_process_rq, NULL);
+	xicu_soclib_sethndl(dev, XICU_IRQ_IPI | ipi_no,
+						(dev_irq_t*)ipi_process_rq, NULL);
 
 	return (void*)(uintptr_t)ipi_no;
 }

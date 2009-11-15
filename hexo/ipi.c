@@ -36,7 +36,7 @@ error_t ipi_post(void *cpu_cls)
   if (!icu)
     return -EOPNOTSUPP;
 
-  dev_icu_sendipi(icu, *CPU_LOCAL_CLS_ADDR(cpu_cls, ipi_cpu_id));
+  return dev_icu_sendipi(icu, *CPU_LOCAL_CLS_ADDR(cpu_cls, ipi_cpu_id));
 }
 
 error_t ipi_post_rq(void *cpu_cls, struct ipi_request_s *rq)

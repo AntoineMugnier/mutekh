@@ -157,7 +157,8 @@ DEV_INIT(enum_fdt_init)
 
 	dprintk("registering drivers\n");
 	CONTAINER_FOREACH(device_list, CLIST, &dev->children, {
-			struct enum_pv_fdt_s *enum_pv = item->enum_pv;
+			struct enum_pv_fdt_s *enum_pv;
+			enum_pv = item->enum_pv;
 			dprintk(" registering driver for %s\n", enum_pv->device_path);
 			enum_fdt_register_one(dev, item);
 		});

@@ -26,6 +26,8 @@
 # include <device/enum.h>
 # include <device/driver.h>
 # include <device/device.h>
+
+void soclib_parse_fdt(void *dt, struct device_s *enum_dev);
 #endif
 
 #include <hexo/types.h>

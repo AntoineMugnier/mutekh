@@ -30,6 +30,7 @@
 #include <device/driver.h>
 #include <hexo/iospace.h>
 #include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
 #include <hexo/interrupt.h>
 
 DEVICU_ENABLE(icu_ppc_enable)
@@ -86,7 +87,7 @@ const struct driver_s	icu_ppc_drv =
 	.class		= device_class_icu,
     .id_table   = icu_ppc_ids,
 	.f_init		= icu_ppc_init,
-	.f_irq      = icu_ppc_handler,
+	.f_irq      = (dev_irq_t *)icu_ppc_handler,
 	.f_cleanup		= icu_ppc_cleanup,
 	.f.icu = {
 		.f_enable		= icu_ppc_enable,

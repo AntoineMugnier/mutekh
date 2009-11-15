@@ -33,6 +33,8 @@
 
 #include <fdt/reader.h>
 
+#include <mutek/printk.h>
+
 #include "enum-fdt.h"
 #include "enum-fdt-private.h"
 

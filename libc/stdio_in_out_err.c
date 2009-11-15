@@ -76,7 +76,8 @@ fd_t fd_add(const struct fileops_s *ops, void *hndl);
 
 static inline void _fd_add(const struct fileops_s *ops, void *hndl)
 {
-	fd_t fd = fd_add(ops, hndl);
+	fd_t fd;
+	fd = fd_add(ops, hndl);
 
 //	printk("New fd: %p, %d\n", hndl, fd);
 }

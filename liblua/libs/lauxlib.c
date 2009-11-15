@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <mutek/printk.h>
 
 /* This file uses only the official API of Lua.
 ** Any function declared here could be written as an application function.

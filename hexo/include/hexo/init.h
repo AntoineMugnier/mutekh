@@ -37,6 +37,14 @@ void cpu_boot();
 /** plateform dependant entry point. (located in arch/current/arch_init.c) */
 void arch_init();
 
+#if defined(CONFIG_ARCH_HW_INIT_USER)
+/** user-provided hardware initialization function, called by arch_init() */
+void user_hw_init();
+#elif defined(CONFIG_ARCH_HW_INIT)
+/** arch-provided hardware initialization function, called by arch_init() */
+void arch_hw_init();
+#endif
+
 /** Memory initialization. initialize memory subsystem by creating the (mem_scope_sys) region. (located in arch/current/mem_init.c) */
 void mem_init();
 

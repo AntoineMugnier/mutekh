@@ -25,6 +25,8 @@
 #include <device/device.h>
 #include <device/driver.h>
 
+#include <mutek/printk.h>
+
 CPU_LOCAL cpu_interrupt_handler_t *cpu_interrupt_handler;
 CPU_LOCAL void *cpu_interrupt_handler_arg;
 
@@ -34,7 +36,8 @@ void cpu_interrupt_set_handler_device(struct device_s *dev)
 		   cpu_id(), dev, dev->drv);
 	assert(dev && dev->drv);
 
-	CPU_LOCAL_SET(cpu_interrupt_handler, dev->drv->f_irq);
+	CPU_LOCAL_SET(cpu_interrupt_handler,
+				  (cpu_interrupt_handler_t *)dev->drv->f_irq);
 	CPU_LOCAL_SET(cpu_interrupt_handler_arg, dev);
 }
 
