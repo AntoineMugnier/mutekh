@@ -220,7 +220,8 @@ error_t __stdio_write(size_t size, FILE *stream, const uint8_t *ptr)
 	}
 
       /* fill buffer with remaining data */
-      stream_fifo_pushback_array(&stream->fifo_write, (const uint8_t*)ptr, size);
+      void *tmp = (void*)ptr;
+      stream_fifo_pushback_array(&stream->fifo_write, (stream_fifo_item_t*)tmp, size);
       stream->pos += size;
       stream->rwflush = &__stdio_write_flush;
     }
