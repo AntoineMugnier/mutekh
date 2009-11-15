@@ -78,7 +78,8 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_creator_node_entry)
 
 	const char *devtype = NULL;
 	size_t devtypelen;
-	if ( fdt_reader_has_prop(state, "device_type", (const void**)&devtype, &devtypelen ) ) {
+	const void **devtypeptr = (const void **)&devtype;
+	if ( fdt_reader_has_prop(state, "device_type", devtypeptr, &devtypelen ) ) {
 		dprintk("  found a new %s device\n", devtype);
 
 
@@ -91,10 +92,11 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_creator_node_entry)
 		if ( !strcmp( devtype, "cpu" ) ) {
 			const char *icudevtype = NULL;
 			size_t icudevlen;
+			const void **icudevtypeptr = (const void **)&icudevtype;
 
 			node_info->where = IN_CPU;
 			if ( fdt_reader_has_prop(state, "icudev_type",
-									 (const void**)&icudevtype, &icudevlen ) ) {
+									 icudevtypeptr, &icudevlen ) ) {
 				node_info->new_pv->device_type = icudevtype;
 			}
 		}
@@ -163,14 +165,14 @@ static FDT_ON_NODE_PROP_FUNC(enum_creator_node_prop)
 	else if ( priv->node_info->where == IN_CHOSEN && !strcmp( name, "console" ) )
 		pv->console_path = data;
 	else if ( priv->node_info->where == IN_CPU && !strcmp( name, "reg" ) ) {
-		uint32_t val;
+		uint32_t val = (uint32_t)-1;
 		fdt_parse_sized( priv->node_info->addr_cells, data,
 					 sizeof(val), &val );
 		priv->node_info->new_pv->cpuid = val;
 	} else if ( priv->node_info->where == IN_CPU && !strcmp( name, "ipi_dev" ) )
 		priv->node_info->new_pv->ipi_icudev = data;
 	else if ( priv->node_info->where == IN_CPU && !strcmp( name, "ipi_no" ) ) {
-		uint32_t val;
+		uint32_t val = (uint32_t)-1;
 		fdt_parse_sized( priv->node_info->addr_cells, data,
 					 sizeof(val), &val );
 		priv->node_info->new_pv->ipi_no = val;

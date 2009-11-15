@@ -55,9 +55,9 @@ struct driver_s *driver_get_matching_pci(
 
 		for ( ; ident->type != 0; ident++ ) {
 			if ( (ident->type == DEVENUM_TYPE_PCI)
-				&& (ident->pci.vendor == vendor || vendor == -1)
-				&& (ident->pci.device == device || device == -1)
-				&& (ident->pci.class == class || class == -1) )
+				 && (ident->pci.vendor == vendor || vendor == (uint16_t)-1)
+				 && (ident->pci.device == device || device == (uint16_t)-1)
+				 && (ident->pci.class == class || class == (uint32_t)-1) )
 				return (struct driver_s *)*drv;
 		}
 	}
