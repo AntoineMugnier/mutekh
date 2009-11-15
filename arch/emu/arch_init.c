@@ -25,6 +25,7 @@
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
 #include <mutek/mem_alloc.h>
+#include <mutek/scheduler.h>
 
 #include <arch/hexo/emu_syscalls.h>
 
