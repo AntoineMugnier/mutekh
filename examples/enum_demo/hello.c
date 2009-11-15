@@ -1,5 +1,6 @@
 
 #include <pthread.h>
+#include <mutek/printk.h>
 
 #if defined(CONFIG_ARCH_EMU)
 #include <arch/hexo/emu_syscalls.h>
