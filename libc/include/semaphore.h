@@ -27,39 +27,49 @@
  * @module{C library}
  */
 
-#include <mutek/scheduler.h>
+#include <mutek/semaphore.h>
 
-typedef uint_fast8_t			__sem_count_t;
+typedef struct semaphore_s sem_t;
 
-/** Semaphore object structure */
-struct				__sem_s
+static inline error_t
+sem_init(sem_t *sem, bool_t pshared, uint_fast8_t value)
 {
-  /** sem counter */
-  __sem_count_t			count;
+	return semaphore_init(sem, value);
+}
 
-  /** blocked contexts wait queue */
-  sched_queue_root_t		wait;
-};
+static inline error_t
+sem_wait(sem_t *sem)
+{
+	semaphore_wait(sem);
+	return 0;
+}
 
-typedef struct	__sem_s sem_t;
+static inline error_t
+sem_trywait(sem_t *sem)
+{
+	return semaphore_trywait(sem);
+}
 
-error_t
-sem_init(sem_t *sem, bool_t pshared, __sem_count_t value);
+static inline error_t
+sem_post(sem_t *sem)
+{
+	semaphore_post(sem);
+	return 0;
+}
 
-error_t
-sem_wait(sem_t *sem);
+static inline error_t
+sem_getvalue(sem_t *sem, uint_fast8_t *sval)
+{
+	semaphore_getvalue(sem, sval);
+	return 0;
+}
 
-error_t
-sem_trywait(sem_t *sem);
-
-error_t
-sem_post(sem_t *sem);
-
-error_t
-sem_getvalue(sem_t *sem, __sem_count_t *sval);
-
-error_t
-sem_destroy(sem_t *sem);
+static inline error_t
+sem_destroy(sem_t *sem)
+{
+	semaphore_destroy(sem);
+	return 0;
+}
 
 #endif
 

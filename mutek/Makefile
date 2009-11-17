@@ -36,7 +36,7 @@ objs += page_alloc.o
 endif
 
 ifeq ($(CONFIG_MUTEK_SCHEDULER), defined)
-objs += scheduler.o
+objs += scheduler.o semaphore.o
 endif
 
 ifeq ($(CONFIG_VMEM_KERNEL_ALLOC), defined)
