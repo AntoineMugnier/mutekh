@@ -56,7 +56,7 @@ struct timer_s timer_ms;
 struct device_s *root_dev;
 #endif
 
-#if defined(CONFIG_DRIVER_TIMER)
+#if defined(CONFIG_MUTEK_TIMERMS)
 DEVTIMER_CALLBACK(timer_callback)
 {
 	//  printk("timer callback\n");
@@ -64,9 +64,7 @@ DEVTIMER_CALLBACK(timer_callback)
 	sched_context_switch();
 # endif
 
-# if defined(CONFIG_MUTEK_TIMERMS)
 	timer_inc_ticks(&timer_ms, 10);
-# endif
 }
 #endif
 
@@ -127,9 +125,7 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #if defined (CONFIG_MUTEK_TIMERMS)
 	timer_init(&timer_ms.root);
 	timer_ms.ticks = 0;
-#endif
 
-#if defined (CONFIG_MUTEK_TIMERMS)
 	if ( timerms_dev ) {
 		dev_timer_setperiod(timerms_dev, 0, 1193180 / 100);
 		dev_timer_setcallback(timerms_dev, 0, timer_callback, 0);
