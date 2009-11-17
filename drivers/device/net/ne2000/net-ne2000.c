@@ -32,37 +32,35 @@
 #include <hexo/interrupt.h>
 #include <hexo/endian.h>
 
-#include <pthread.h>
-#include <semaphore.h>
+#include <mutek/printk.h>
 
 #include <netinet/if.h>
+#include <network/dispatch.h>
 
 #include "net-ne2000.h"
 
 #include "net-ne2000-private.h"
 #include "ne2000.h"
 
-#ifdef CONFIG_DRIVER_ENUM_PCI
 /*
  * PCI identifiers of compatible cards.
  */
 
 static const struct devenum_ident_s	net_ne2000_ids[] =
   {
-    { .type = DEVENUM_TYPE_PCI, .vendor = 0x10ec, .device = 0x8029, .class = -1 },	/* Realtek 8029 */
-    { .type = DEVENUM_TYPE_PCI, .vendor = 0x10ec, .device = 0x8028, .class = -1 },	/* Realtek 8029 */
-    { .type = DEVENUM_TYPE_PCI, .vendor = 0x1050, .device = 0x0940, .class = -1 },	/* Winbond 89C940 */
-    { .type = DEVENUM_TYPE_PCI, .vendor = 0x1050, .device = 0x5a5a, .class = -1 },	/* Winbond 89C940F */
-    { .type = DEVENUM_TYPE_PCI, .vendor = 0x8c4a, .device = 0x1980, .class = -1 },	/* Winbond 89C940 (bad ROM) */
-    { .type = DEVENUM_TYPE_PCI, .vendor = 0x11f6, .device = 0x1401, .class = -1 },	/* Compex ReadyLink 2000 */
-    { .type = DEVENUM_TYPE_PCI, .vendor = 0x8e2e, .device = 0x3000, .class = -1 },	/* KTI ET32P2 */
-    { .type = DEVENUM_TYPE_PCI, .vendor = 0x4a14, .device = 0x5000, .class = -1 },	/* NetVin NV5000SC */
-    { .type = DEVENUM_TYPE_PCI, .vendor = 0x12c3, .device = 0x0058, .class = -1 },	/* HolTek HT80232 */
-    { .type = DEVENUM_TYPE_PCI, .vendor = 0x1106, .device = 0x0926, .class = -1 },	/* Via 86C926 */
-    { .type = DEVENUM_TYPE_PCI, .vendor = 0x10bd, .device = 0x0e34, .class = -1 },	/* SureCom NE34 */
+    DEVENUM_PCI_ENTRY( 0x10ec, 0x8029, -1 ),	/* Realtek 8029 */
+    DEVENUM_PCI_ENTRY( 0x10ec, 0x8028, -1 ),	/* Realtek 8029 */
+    DEVENUM_PCI_ENTRY( 0x1050, 0x0940, -1 ),	/* Winbond 89C940 */
+    DEVENUM_PCI_ENTRY( 0x1050, 0x5a5a, -1 ),	/* Winbond 89C940F */
+    DEVENUM_PCI_ENTRY( 0x8c4a, 0x1980, -1 ),	/* Winbond 89C940 (bad ROM) */
+    DEVENUM_PCI_ENTRY( 0x11f6, 0x1401, -1 ),	/* Compex ReadyLink 2000 */
+    DEVENUM_PCI_ENTRY( 0x8e2e, 0x3000, -1 ),	/* KTI ET32P2 */
+    DEVENUM_PCI_ENTRY( 0x4a14, 0x5000, -1 ),	/* NetVin NV5000SC */
+    DEVENUM_PCI_ENTRY( 0x12c3, 0x0058, -1 ),	/* HolTek HT80232 */
+    DEVENUM_PCI_ENTRY( 0x1106, 0x0926, -1 ),	/* Via 86C926 */
+    DEVENUM_PCI_ENTRY( 0x10bd, 0x0e34, -1 ),	/* SureCom NE34 */
     { 0 }
   };
-#endif
 
 /*
  * Driver operations vector.
@@ -71,9 +69,7 @@ static const struct devenum_ident_s	net_ne2000_ids[] =
 const struct driver_s	net_ne2000_drv =
 {
   .class		= device_class_net,
-#ifdef CONFIG_DRIVER_ENUM_PCI
   .id_table		= net_ne2000_ids,
-#endif
   .f_init		= net_ne2000_init,
   .f_cleanup		= net_ne2000_cleanup,
   .f_irq		= net_ne2000_irq,
@@ -85,6 +81,7 @@ const struct driver_s	net_ne2000_drv =
   }
 };
 
+REGISTER_DRIVER(net_ne2000_drv);
 
 /*
  * prepare sending a packet.
@@ -227,8 +224,7 @@ static void	ne2000_push(struct device_s	*dev,
 
   packet->stage++;
 
-  if (packet_queue_lock_pushback(&pv->rcvqueue, packet))
-    sem_post(&pv->rcvsem);
+  network_dispatch_packet(pv->dispatch, packet);
 
   packet_obj_refdrop(packet);
 }
@@ -428,11 +424,13 @@ DEV_IRQ(net_ne2000_irq)
 DEV_INIT(net_ne2000_init)
 {
   struct net_ne2000_context_s	*pv;
-  struct net_dispatch_s		*dispatch;
+
+#ifdef CONFIG_COMPILE_INSTRUMENT
+  hexo_instrument_trace(1);
+#endif
+  printk("ne2000 driver init on device %p\n", dev);
 
   dev->drv = &net_ne2000_drv;
-
-  printk("ne2000 driver init on device %p\n", dev);
 
   /* driver private data */
   pv = mem_alloc(sizeof (struct net_ne2000_context_s), (mem_scope_sys));
@@ -449,6 +447,8 @@ DEV_INIT(net_ne2000_init)
   /* probe and init device */
   if (!ne2000_probe(dev))
     {
+      printk("ne2000: cannot find device\n");
+
       mem_free(pv);
 
       return -1;
@@ -461,11 +461,11 @@ DEV_INIT(net_ne2000_init)
 
   /* setup some containers */
   packet_queue_init(&pv->sendqueue);
-  packet_queue_lock_init(&pv->rcvqueue);
 
   /* register as a net device */
-  pv->interface = NULL;
-  if ((pv->interface = if_register(dev, IF_ETHERNET, pv->mac, ETHERMTU)) == NULL)
+  pv->interface = if_register(dev, IF_ETHERNET, pv->mac, ETHERMTU);
+
+  if ( pv->interface == NULL)
     {
       printk("ne2000: cannot register interface\n");
 
@@ -474,34 +474,15 @@ DEV_INIT(net_ne2000_init)
       return -1;
     }
 
+  printk("ne2000: interface %p\n", pv->interface);
+
+  pv->dispatch = network_dispatch_create(pv->interface);
+
   /* start dispatch thread */
-  if (sem_init(&pv->rcvsem, 0, 0))
+  if (pv->dispatch == NULL)
     {
-      printk("ne2000: cannot init dispatch semaphore\n");
+      printk("ne2000: cannot init dispatch\n");
 
-      net_ne2000_cleanup(dev);
-
-      return -1;
-    }
-  if ((dispatch = mem_alloc(sizeof (struct net_dispatch_s), (mem_scope_sys))) == NULL)
-    {
-      printk("ne2000: cannot init dispatch structure\n");
-
-      net_ne2000_cleanup(dev);
-
-      return -1;
-    }
-  dispatch->interface = pv->interface;
-  dispatch->packets = &pv->rcvqueue;
-  dispatch->sem = &pv->rcvsem;
-  pv->run = 1;
-  dispatch->running = &pv->run;
-
-  if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch)) /* XXX prefer context rather than pthreads */
-    {
-      printk("ne2000: cannot start dispatch thread\n");
-
-      mem_free(dispatch);
       net_ne2000_cleanup(dev);
 
       return -1;
@@ -509,6 +490,8 @@ DEV_INIT(net_ne2000_init)
 
   /* bind to ICU */
   DEV_ICU_BIND(dev->icudev, dev, dev->irq, net_ne2000_irq);
+
+//  hexo_instrument_trace(0);
 
   return 0;
 }
@@ -524,6 +507,10 @@ DEV_CLEANUP(net_ne2000_cleanup)
   /* disable IRQ */
   DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
 
+  /* terminate the dispatch thread */
+  if ( pv->dispatch )
+    network_dispatch_kill(pv->dispatch);
+
   /* unregister the device */
   if (pv->interface != NULL)
     if_unregister(pv->interface);
@@ -535,20 +522,8 @@ DEV_CLEANUP(net_ne2000_cleanup)
   /* empty the sendqueue */
   packet_queue_clear(&pv->sendqueue);
 
-  /* empty the receive queue */
-  packet_queue_clear(&pv->rcvqueue);
-
-  /* terminate the dispatch thread */
-  pv->run = 0;
-  sem_post(&pv->rcvsem);
-  sem_wait(&pv->rcvsem);
-
-  /* destroy the receive semaphore */
-  sem_destroy(&pv->rcvsem);
-
   /* destroy some containers */
   packet_queue_destroy(&pv->sendqueue);
-  packet_queue_lock_destroy(&pv->rcvqueue);
 
   /* turn the device off */
   ne2000_dma(dev, NE2000_DMA_ABRT);

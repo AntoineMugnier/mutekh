@@ -59,7 +59,7 @@ static UDP_CALLBACK(socket_recv_callback)
       buffer->port = remote->port;
 
       if (buffer_queue_lock_pushback(&pv_udp->recv_q, buffer))
-	sem_post(&pv_udp->recv_sem);
+	semaphore_post(&pv_udp->recv_sem);
       else
 	mem_free(buffer);
     }
@@ -75,7 +75,7 @@ static TIMER_CALLBACK(recv_timeout)
   socket_t			fd = (socket_t)pv;
   struct socket_udp_pv_s	*pv_udp = (struct socket_udp_pv_s *)fd->pv;
 
-  sem_post(&pv_udp->recv_sem);
+  semaphore_post(&pv_udp->recv_sem);
 }
 
 /*
@@ -103,7 +103,7 @@ static _SOCKET(socket_udp)
 	return -EPFNOSUPPORT;
     }
 
-  sem_init(&pv->recv_sem, 0, 0);
+  semaphore_init(&pv->recv_sem, 0);
   buffer_queue_lock_init(&pv->recv_q);
 
   return 0;

@@ -31,8 +31,9 @@
 #include <netinet/arp.h>
 
 #include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
 
-#include <semaphore.h>
+#include <mutek/semaphore.h>
 #include <mutek/timer.h>
 
 socket_table_root_t	pf_packet = CONTAINER_ROOT_INITIALIZER(socket_table, DLIST);
@@ -46,7 +47,7 @@ static TIMER_CALLBACK(recv_timeout)
   socket_t			fd = (socket_t)pv;
   struct socket_packet_pv_s	*pv_packet = (struct socket_packet_pv_s *)fd->pv;
 
-  sem_post(&pv_packet->recv_sem);
+  semaphore_post(&pv_packet->recv_sem);
 }
 
 /*
@@ -63,12 +64,12 @@ static _SOCKET(socket_packet)
   /* setup private data */
   pv->proto = ntohs(protocol);
   pv->interface = 0;
-  sem_init(&pv->recv_sem, 0, 0);
+  semaphore_init(&pv->recv_sem, 0);
   packet_queue_lock_init(&pv->recv_q);
   pv->header = (type == SOCK_RAW);
   if (!socket_table_push(&pf_packet, fd))
     {
-      sem_destroy(&pv->recv_sem);
+      semaphore_destroy(&pv->recv_sem);
       packet_queue_lock_destroy(&pv->recv_q);
       mem_free(pv);
       return -ENOMEM;
@@ -455,22 +456,22 @@ static _SHUTDOWN(shutdown_packet)
   /* end all the recv with errors */
   if (fd->shutdown == SHUT_RDWR || fd->shutdown == SHUT_RD)
     {
-      __sem_count_t		val;
+      semaphore_count_t		val;
 
       /* drop all waiting packets */
       packet_queue_lock_clear(&pv->recv_q);
 
-      sem_getvalue(&pv->recv_sem, &val);
+      semaphore_getvalue(&pv->recv_sem, &val);
       while (val < 0)
 	{
-	  sem_post(&pv->recv_sem);
-	  sem_getvalue(&pv->recv_sem, &val);
+	  semaphore_post(&pv->recv_sem);
+	  semaphore_getvalue(&pv->recv_sem, &val);
 	}
 
       if (fd->shutdown == SHUT_RDWR)
 	{
 	  socket_table_remove(&pf_packet, fd);
-	  sem_destroy(&pv->recv_sem);
+	  semaphore_destroy(&pv->recv_sem);
 	  packet_queue_lock_destroy(&pv->recv_q);
 
 	  /* free the socket */
@@ -543,7 +544,7 @@ void		pf_packet_signal(struct net_if_s	*interface,
 	      CONTAINER_FOREACH_CONTINUE;
 
 	    if (packet_queue_lock_pushback(&pv->recv_q, packet))
-	      sem_post(&pv->recv_sem);
+	      semaphore_post(&pv->recv_sem);
 	  }
       }
   });

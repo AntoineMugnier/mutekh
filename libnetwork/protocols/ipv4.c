@@ -38,9 +38,9 @@
 #include <netinet/route.h>
 #include <netinet/libsocket.h>
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <mutek/timer.h>
+#include <mutek/printk.h>
 
 /*
  * Fragment lists.

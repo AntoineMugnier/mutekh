@@ -27,6 +27,8 @@
 #include <hexo/error.h>
 #include <hexo/endian.h>
 
+#include <mutek/printk.h>
+
 #include <netinet/if.h>
 #include <netinet/in.h>
 #include <netinet/arp.h>

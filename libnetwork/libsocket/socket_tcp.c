@@ -53,7 +53,7 @@ static _SOCKET(socket_tcp)
 	return -EPFNOSUPPORT;
     }
 
-  sem_init(&pv->recv_sem, 0, 0);
+  semaphore_init(&pv->recv_sem, 0);
   buffer_queue_lock_init(&pv->recv_q);
 
   return 0;

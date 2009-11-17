@@ -42,7 +42,7 @@ struct			socket_tcp_pv_s
   bool_t connected;
   net_port_t		recv_port;
   buffer_queue_root_t	recv_q;
-  sem_t			recv_sem;
+  struct semaphore_s			recv_sem;
 };
 
 #endif

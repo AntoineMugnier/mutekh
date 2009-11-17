@@ -421,7 +421,7 @@ struct net_packet_s	*socket_grab_packet(socket_t			fd,
 					    int_fast32_t		flags,
 					    timer_event_callback_t	*recv_timeout,
 					    packet_queue_root_t		*recv_q,
-					    sem_t			*recv_sem)
+					    struct semaphore_s		*recv_sem)
 {
   struct net_packet_s		*packet;
   timer_delay_t			start;
@@ -461,7 +461,7 @@ struct net_packet_s	*socket_grab_packet(socket_t			fd,
 	  timer_add_event(&timer_ms, &timeout);
 	}
 
-      sem_wait(recv_sem);
+      semaphore_wait(recv_sem);
 
       /* has timeout expired ? */
       if (timeout_started)
@@ -488,7 +488,7 @@ struct net_buffer_s	*socket_grab_buffer(socket_t			fd,
 					    int_fast32_t		flags,
 					    timer_event_callback_t	*recv_timeout,
 					    buffer_queue_root_t		*recv_q,
-					    sem_t			*recv_sem)
+					    struct semaphore_s		*recv_sem)
 {
   struct net_buffer_s		*buffer;
   timer_delay_t			start;
@@ -528,7 +528,7 @@ struct net_buffer_s	*socket_grab_buffer(socket_t			fd,
 	  timer_add_event(&timer_ms, &timeout);
 	}
 
-      sem_wait(recv_sem);
+      semaphore_wait(recv_sem);
 
       /* has timeout expired ? */
       if (timeout_started)

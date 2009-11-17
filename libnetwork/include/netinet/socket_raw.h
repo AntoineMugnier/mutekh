@@ -48,7 +48,7 @@ struct				socket_raw_pv_s
   struct net_if_s		*local_interface;
 
   packet_queue_root_t		recv_q;
-  sem_t				recv_sem;
+  struct semaphore_s				recv_sem;
 };
 
 #endif

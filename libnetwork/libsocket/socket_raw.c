@@ -34,6 +34,7 @@
 #include <netinet/arp.h>
 
 #include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
 
 #include <semaphore.h>
 
@@ -48,7 +49,7 @@ static TIMER_CALLBACK(recv_timeout)
   socket_t			fd = (socket_t)pv;
   struct socket_raw_pv_s	*pv_packet = (struct socket_raw_pv_s *)fd->pv;
 
-  sem_post(&pv_packet->recv_sem);
+  semaphore_post(&pv_packet->recv_sem);
 }
 
 /*
@@ -82,14 +83,14 @@ static _SOCKET(socket_raw)
   pv->proto = protocol;
   pv->icmp_mask = 0;
   pv->local_interface = NULL;
-  sem_init(&pv->recv_sem, 0, 0);
+  semaphore_init(&pv->recv_sem, 0);
   packet_queue_lock_init(&pv->recv_q);
 
   /* determine if headers must be included or not */
   pv->header = (protocol == IPPROTO_RAW);
   if (!socket_table_push(&sock_raw, fd))
     {
-      sem_destroy(&pv->recv_sem);
+      semaphore_destroy(&pv->recv_sem);
       packet_queue_lock_destroy(&pv->recv_q);
       mem_free(pv);
       return -ENOMEM;
@@ -741,23 +742,23 @@ static _SHUTDOWN(shutdown_raw)
   /* end all the recv with errors */
   if (fd->shutdown == SHUT_RDWR || fd->shutdown == SHUT_RD)
     {
-      __sem_count_t		val;
+      semaphore_count_t		val;
 
       /* drop all waiting packets */
       packet_queue_lock_clear(&pv->recv_q);
 
-      sem_getvalue(&pv->recv_sem, &val);
+      semaphore_getvalue(&pv->recv_sem, &val);
       while (val < 0)
 	{
-	  sem_post(&pv->recv_sem);
-	  sem_getvalue(&pv->recv_sem, &val);
+	  semaphore_post(&pv->recv_sem);
+	  semaphore_getvalue(&pv->recv_sem, &val);
 	}
 
       /* close the socket */
       if (fd->shutdown == SHUT_RDWR)
 	{
 	  socket_table_remove(&sock_raw, fd);
-	  sem_destroy(&pv->recv_sem);
+	  semaphore_destroy(&pv->recv_sem);
 	  packet_queue_lock_destroy(&pv->recv_q);
 
 	  if (pv->connected)
@@ -860,7 +861,7 @@ void		sock_raw_signal(struct net_if_s		*interface,
 	      }
 
 	    if (packet_queue_lock_pushback(&pv->recv_q, packet))
-	      sem_post(&pv->recv_sem);
+	      semaphore_post(&pv->recv_sem);
 	  }
       }
   });

@@ -25,6 +25,8 @@
 #include <netinet/if.h>
 #include <netinet/ip.h>
 
+#include <mutek/printk.h>
+
 CONTAINER_FUNC(route_table, DLIST, static inline, route_table);
 
 static route_table_root_t	route_table = CONTAINER_ROOT_INITIALIZER(route_table, DLIST);

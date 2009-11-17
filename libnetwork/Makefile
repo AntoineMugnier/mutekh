@@ -1,5 +1,5 @@
 
-objs += protocols.o packet.o if.o route.o
+objs += protocols.o packet.o if.o route.o dispatch.o
 
 ifeq ($(CONFIG_NETWORK_FILTER), defined)
  objs += filter.o

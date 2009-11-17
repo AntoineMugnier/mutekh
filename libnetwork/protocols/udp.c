@@ -34,7 +34,7 @@
 
 #include <netinet/libudp.h>
 
-#include <stdio.h>
+#include <mutek/printk.h>
 
 /*
  * Structures for declaring the protocol's properties & interface.

@@ -37,10 +37,12 @@
 #include <netinet/socket.h>
 #include <netinet/packet.h>
 
+#include <mutek/printk.h>
+
 #include <stdlib.h>
 #include <mutek/timer.h>
-#include <pthread.h>
-#include <semaphore.h>
+#include <mutek/scheduler.h>
+#include <mutek/semaphore.h>
 
 /*
  * This function broadcasts an ARP request to ensure an IP address is
@@ -530,20 +532,23 @@ static TIMER_CALLBACK(dhcp_renew)
   struct dhcp_lease_s	*lease = (struct dhcp_lease_s *)pv;
 
   /* initiate renewal */
-  sem_post(&lease->sem);
+  semaphore_post(&lease->sem);
 }
 
-static void	*dhcp_renew_th(void	*pv)
+static CONTEXT_ENTRY(dhcp_renew_th)
 {
-  struct dhcp_lease_s	*lease = (struct dhcp_lease_s *)pv;
+  struct dhcp_lease_s	*lease = (struct dhcp_lease_s *)param;
   socket_t		sock = NULL;
   socket_t		sock_packet = NULL;
   uint_fast8_t		i;
   struct net_addr_s	null;
 
+  sched_unlock();
+  cpu_interrupt_enable();
+
   while (1)
     {
-      sem_wait(&lease->sem);
+      semaphore_wait(&lease->sem);
 
       if (lease->exit)
 	break;
@@ -622,10 +627,11 @@ static void	*dhcp_renew_th(void	*pv)
   /* release objects */
   timer_cancel_event(lease->timer, 0);
   mem_free(lease->timer);
-  sem_destroy(&lease->sem);
+  semaphore_destroy(&lease->sem);
   mem_free(lease);
 
-  return NULL;
+  sched_lock();
+  sched_context_exit();
 }
 
 /*
@@ -642,7 +648,6 @@ error_t			dhcp_client(const char	*ifname)
   struct net_if_s	*interface;
   struct net_addr_s	null;
   struct net_route_s	*route = NULL;
-  pthread_t		th;
 
   if ((interface = if_get_by_name(ifname)) == NULL)
     return -1;
@@ -675,14 +680,23 @@ error_t			dhcp_client(const char	*ifname)
 
   /* start DHCP renew thread */
   lease->exit = 0;
-  sem_init(&lease->sem, 0, 0);
-  pthread_create(&th, NULL, dhcp_renew_th, lease);
+  semaphore_init(&lease->sem, 0);
 
+  context_init( &lease->context.context,
+				lease->stack,
+				lease->stack + sizeof(lease->stack),
+				dhcp_renew_th,
+				lease );
+  sched_context_init( &lease->context );
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_context_start( &lease->context );
+  CPU_INTERRUPT_RESTORESTATE;
+  
   /* start DHCP renew timer */
   if ((timer = malloc(sizeof (struct timer_event_s))) == NULL)
     {
       lease->exit = 1;
-      sem_post(&lease->sem);
+      semaphore_post(&lease->sem);
     }
   else
     {
@@ -693,7 +707,7 @@ error_t			dhcp_client(const char	*ifname)
       if (timer_add_event(&timer_ms, timer))
 	{
 	  lease->exit = 1;
-	  sem_post(&lease->sem);
+	  semaphore_post(&lease->sem);
 	}
     }
 

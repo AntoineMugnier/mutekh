@@ -52,6 +52,7 @@
 #include <netinet/udp.h>
 
 #include <netinet/nfs.h>
+#include <mutek/printk.h>
 
 #include <semaphore.h>
 #include <mutek/timer.h>
@@ -70,7 +71,7 @@ TIMER_CALLBACK(rpc_timeout)
   if (rpcb->data == NULL)
     {
       /* wake up */
-      sem_post(&rpcb->sem);
+      semaphore_post(&rpcb->sem);
     }
 }
 
@@ -98,7 +99,7 @@ UDP_CALLBACK(rpc_callback)
       timer_cancel_event(&rpcb->timeout, 0);
 
       /* wake up */
-      sem_post(&rpcb->sem);
+      semaphore_post(&rpcb->sem);
     }
 }
 
@@ -174,7 +175,7 @@ static error_t		do_rpc(struct nfs_s	*server,
   memcpy(p, *data, sz);
 
   /* fill RPC block */
-  sem_init(&rpcb.sem, 0, 0);
+  semaphore_init(&rpcb.sem, 0);
   rpcb.data = NULL;
   if (!rpcb_push(&server->rpc_blocks, &rpcb))
     {
@@ -221,7 +222,7 @@ static error_t		do_rpc(struct nfs_s	*server,
     }
 
   /* wait reply */
-  sem_wait(&rpcb.sem);
+  semaphore_wait(&rpcb.sem);
 
   /* get reply */
   reply = (struct rpc_reply_s *)rpcb.data;

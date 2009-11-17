@@ -111,7 +111,7 @@ struct		net_header_s
 #include <netinet/protos.h>
 #include <netinet/ether.h>
 
-#include <semaphore.h>
+#include <mutek/semaphore.h>
 
 
 /*
@@ -192,20 +192,6 @@ OBJECT_FUNC(packet_obj, REFCOUNT, static inline, packet_obj, obj_entry);
 CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, queue_entry);
 
 /*
- * Used to give info to the dispatch thread.
- */
-
-struct device_s;
-
-struct				net_dispatch_s
-{
-  packet_queue_root_t		*packets;
-  struct net_if_s		*interface;
-  sem_t				*sem;
-  bool_t			*running;
-};
-
-/*
  * The packet object.
  */
 
@@ -243,7 +229,11 @@ void	netprofile_show(void);
  * Disable log messages. Replace by a printk.
  */
 
-#define net_debug(...)
+#if 0
+# define net_debug(...) printk(__VA_ARGS__)
+#else
+# define net_debug(...)
+#endif
 
 #endif
 

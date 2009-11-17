@@ -15,35 +15,24 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
-
+    Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2009
 */
 
-#ifndef DRIVERS_TUNTAP_PRIVATE_H
-#define DRIVERS_TUNTAP_PRIVATE_H
+#ifndef LIBNETWORK_DISPATCH_H_
+#define LIBNETWORK_DISPATCH_H_
 
 #include <hexo/types.h>
-#include <hexo/lock.h>
 
-#include <pthread.h>
+struct net_dispatch_s;
+struct net_packet_s;
+struct net_if_s;
 
-#include <netinet/packet.h>
-#include <netinet/ether.h>
-#include <netinet/protos.h>
-#include <netinet/if.h>
-
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
-
-struct				net_tuntap_context_s
-{
-  struct net_dispatch_s *dispatch;
-  lock_t			lock;
-  bool_t			run;
-
-  uint8_t			mac[ETH_ALEN];
-  struct net_if_s		*interface;
-  int				fd;
-};
+struct net_dispatch_s *network_dispatch_create(struct net_if_s *interface);
+void network_dispatch_kill(struct net_dispatch_s *dispatch);
+void network_dispatch_packet(struct net_dispatch_s *dispatch,
+							 struct net_packet_s *packet);
+void network_dispatch_data(struct net_dispatch_s *dispatch,
+						   void *data,
+						   uint_fast16_t size);
 
 #endif

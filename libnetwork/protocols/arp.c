@@ -31,8 +31,8 @@
 
 #include <netinet/if.h>
 
-#include <stdio.h>
 #include <mutek/timer.h>
+#include <mutek/printk.h>
 
 /*
  * ARP table functions.

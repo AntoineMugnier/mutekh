@@ -43,6 +43,7 @@
 #include <device/driver.h>
 
 #include <stdio.h>
+#include <mutek/printk.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>

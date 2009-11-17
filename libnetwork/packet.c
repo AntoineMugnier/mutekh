@@ -159,50 +159,6 @@ struct net_packet_s		*packet_dup(struct net_packet_s	*orig)
 CONTAINER_FUNC_NOLOCK(packet_queue, DLIST, inline, packet_queue);
 CONTAINER_FUNC_LOCK(packet_queue, DLIST, inline, packet_queue_lock, HEXO_SPIN_IRQ);
 
-/*
- * packet dispatching thread.
- */
-
-void				*packet_dispatch(void	*data)
-{
-  struct net_dispatch_s		*info = (struct net_dispatch_s *)data;
-  packet_queue_root_t		*root = info->packets;
-  struct net_if_s		*interface = info->interface;
-  sem_t				*sem = info->sem;
-  bool_t			*run = info->running;
-  struct net_packet_s		*packet;
-
-  mem_free(data);
-
-  net_if_obj_refnew(interface);
-
-  while (1)
-    {
-      /* wait for a packet */
-      sem_wait(sem);
-
-      if (!*run)
-	break;
-
-      /* retreive the incoming packet */
-      packet = packet_queue_lock_pop(root);
-      if (packet != NULL)
-	{
-	  /* dispatch to the interface */
-	  if_pushpkt(interface, packet);
-
-	  /* drop the packet */
-	  packet_obj_refdrop(packet);
-	}
-    }
-
-  net_if_obj_refdrop(interface);
-
-  sem_post(sem);
-
-  return NULL;
-}
-
 #ifdef CONFIG_NETWORK_PROFILING
 /*
  * Display network layer profiling info.

@@ -80,7 +80,8 @@
 
 #include <netinet/if.h>
 #include <mutek/timer.h>
-#include <semaphore.h>
+#include <mutek/scheduler.h>
+#include <mutek/semaphore.h>
 
 /*
  * DHCP lease info.
@@ -88,12 +89,14 @@
 
 struct			dhcp_lease_s
 {
+  struct sched_context_s context;
+  uint8_t stack[2000];
   struct net_if_s	*interface;
   timer_delay_t		delay;
   uint_fast32_t		serv;
   uint_fast32_t		ip;
   struct timer_event_s	*timer;
-  sem_t			sem;
+  struct semaphore_s			sem;
   bool_t		exit;
 };
 

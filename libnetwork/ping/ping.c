@@ -32,6 +32,7 @@
 
 #include <limits.h>
 #include <mutek/timer.h>
+#include <mutek/printk.h>
 
 #include <netinet/ping.h>
 

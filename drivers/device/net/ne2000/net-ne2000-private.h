@@ -50,11 +50,9 @@ struct				net_ne2000_context_s
   uint_fast16_t			mem;
 
   bool_t			run;
-  sem_t				rcvsem;
-  pthread_t			dispatch;
   packet_queue_root_t		sendqueue;
   uint_fast8_t			send_tries;
-  packet_queue_root_t		rcvqueue;
+  struct net_dispatch_s *dispatch;
   struct net_packet_s		*current;
   struct device_s		*icudev;
 

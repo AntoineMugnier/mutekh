@@ -157,7 +157,7 @@ struct					rpcb_s
   struct timer_event_s			timeout;
   void					*data;
   size_t				size;
-  sem_t					sem;
+  struct semaphore_s					sem;
 
   CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };

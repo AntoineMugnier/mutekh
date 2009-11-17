@@ -75,52 +75,6 @@ DEV_IRQ(net_tuntap_irq)
   return 1;
 }
 
-static void	net_tuntap_push(struct device_s	*dev,
-				uint8_t		*data,
-				uint_fast16_t	size)
-{
-  struct net_tuntap_context_s	*pv = (struct net_tuntap_context_s *)dev->drv_pv;
-
-  struct ether_header		*hdr;
-  struct net_packet_s		*packet;
-  struct net_header_s		*nethdr;
-
-  /* create a new packet object */
-  packet = packet_obj_new(NULL);
-  packet->packet = data;
-
-  nethdr = &packet->header[0];
-  nethdr->data = data;
-  nethdr->size = size;
-
-  /* get the good header */
-  hdr = (struct ether_header*)nethdr->data;
-
-  /* fill some info */
-  packet->MAClen = sizeof(struct ether_addr);
-  packet->sMAC = hdr->ether_shost;
-  packet->tMAC = hdr->ether_dhost;
-  packet->proto = net_be16_load(hdr->ether_type);
-
-  if (memcmp(packet->tMAC, pv->mac, ETH_ALEN) &&
-      memcmp(packet->tMAC, "\xff\xff\xff\xff\xff\xff", ETH_ALEN))
-    {
-      free(data);
-      return ;
-    }
-
-  /* prepare packet for next stage */
-  nethdr[1].data = data + sizeof(struct ether_header);
-  nethdr[1].size = size - sizeof(struct ether_header);
-
-  packet->stage++;
-
-  if (packet_queue_lock_pushback(&pv->rcvqueue, packet))
-    sem_post(&pv->rcvsem);
-
-  packet_obj_refdrop(packet);
-}
-
 /*
  * Packet receive thread.
  */
@@ -142,7 +96,7 @@ void	*net_tuntap_recv(void *p)
 	  ptr = mem_alloc(size, (mem_scope_sys));
 	  memcpy(ptr, buff, size);
 
-	  net_tuntap_push(dev, ptr, size);
+	  network_dispatch_data(pv->dispatch, ptr, size);
 	}
     }
 }
@@ -154,7 +108,6 @@ void	*net_tuntap_recv(void *p)
 DEV_INIT(net_tuntap_init)
 {
   struct net_tuntap_context_s	*pv;
-  struct net_dispatch_s		*dispatch;
   pthread_t			th;
   int_fast32_t			tun;
   struct ifreq			ifr;
@@ -173,9 +126,6 @@ DEV_INIT(net_tuntap_init)
   dev->drv_pv = pv;
 
   lock_init(&pv->lock);
-
-  /* setup some containers */
-  packet_queue_lock_init(&pv->rcvqueue);
 
   /* create tun */
   memset(&ifr, 0, sizeof(ifr));
@@ -227,31 +177,26 @@ DEV_INIT(net_tuntap_init)
   pv->interface = if_register(dev, IF_ETHERNET, pv->mac, ETHERMTU);
 
   /* start dispatch thread */
-  if (sem_init(&pv->rcvsem, 0, 0))
-    {
-      printk("tuntap: cannot init dispatch semaphore\n");
+  pv->dispatch = network_dispatch_create(pv->interface);
+ 
+  if (pv->dispatch == NULL)
+  {
+	  printk("tuntap: cannot init dispatch\n");
 
       net_tuntap_cleanup(dev);
 
       return -1;
-    }
-  dispatch = mem_alloc(sizeof (struct net_dispatch_s), (mem_scope_sys));
-  dispatch->interface = pv->interface;
-  dispatch->packets = &pv->rcvqueue;
-  dispatch->sem = &pv->rcvsem;
-  pv->run = 1;
-  dispatch->running = &pv->run;
+  }
 
-  if (pthread_create(&pv->dispatch, NULL, packet_dispatch, (void *)dispatch) ||
-      pthread_create(&th, NULL, net_tuntap_recv, dev))
-    {
-      printk("tuntap: cannot start dispatch thread\n");
-
-      mem_free(dispatch);
+  if (pthread_create(&th, NULL, net_tuntap_recv, dev))
+  {
+      printk("tuntap: cannot start reading thread\n");
+  
+      network_dispatch_kill(pv->dispatch);
       net_tuntap_cleanup(dev);
 
       return -1;
-    }
+  }
 
   return 0;
 }
@@ -262,6 +207,7 @@ DEV_INIT(net_tuntap_init)
 
 DEV_CLEANUP(net_tuntap_cleanup)
 {
+	network_dispatch_kill(pv->dispatch);
 }
 
 DEVNET_PREPAREPKT(net_tuntap_preparepkt)

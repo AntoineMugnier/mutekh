@@ -41,7 +41,7 @@ struct				socket_packet_pv_s
   error_t			error;
 
   packet_queue_root_t		recv_q;
-  sem_t				recv_sem;
+  struct semaphore_s				recv_sem;
 };
 
 #endif
