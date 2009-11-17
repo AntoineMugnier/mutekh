@@ -18,7 +18,7 @@ void mwmr_read( struct mwmr_s *fifo, void *mem, size_t len )
     size_t got = 0;
     uint8_t *ptr = (uint8_t *)mem;
 
-//  hexo_instrument_trace(0);
+//  mutek_instrument_trace(0);
 
     assert ( len % fifo->width == 0 );
 
@@ -42,7 +42,7 @@ void mwmr_read( struct mwmr_s *fifo, void *mem, size_t len )
     pthread_cond_signal( &(state->nfull) );
     pthread_yield();
 
-//  hexo_instrument_trace(1);
+//  mutek_instrument_trace(1);
 }
 
 void mwmr_write( struct mwmr_s *fifo, const void *mem, size_t len )
@@ -51,7 +51,7 @@ void mwmr_write( struct mwmr_s *fifo, const void *mem, size_t len )
     size_t put = 0;
     uint8_t *ptr = (uint8_t *)mem;
 
-//  hexo_instrument_trace(0);
+//  mutek_instrument_trace(0);
 
     assert ( len % fifo->width == 0 );
 
@@ -75,7 +75,7 @@ void mwmr_write( struct mwmr_s *fifo, const void *mem, size_t len )
     pthread_cond_signal( &(state->nempty) );
 
     pthread_yield();
-//	hexo_instrument_trace(1);
+//	mutek_instrument_trace(1);
 }
 
 size_t mwmr_try_read( struct mwmr_s *fifo, void *mem, size_t len )
