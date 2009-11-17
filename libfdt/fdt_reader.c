@@ -284,11 +284,15 @@ void fdt_get_rsvmap(const void *blob, uint32_t resno,
 					uint64_t *addr, uint64_t *size)
 {
 	const struct fdt_header_s *header = blob;
-	const struct fdt_mem_reserve_map_s *reserve_map =
+	const uint32_t *reserve_map =
 		(const void*)((uintptr_t)blob + endian_be32(header->off_mem_rsvmap));
 
-	*addr = endian_be64(reserve_map->addr);
-	*size = endian_be64(reserve_map->size);
+	reserve_map += resno*4;
+
+	*addr = (endian_be32(reserve_map[0]) << 32)
+	  | endian_be32(reserve_map[1]);
+	*size = (endian_be32(reserve_map[2]) << 32)
+	  | endian_be32(reserve_map[3]);
 }
 
 size_t fdt_get_size(void *blob)
