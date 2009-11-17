@@ -172,11 +172,13 @@ void arch_hw_init()
 
 #if defined(CONFIG_DRIVER_ENUM_PCI)
 	device_init(&enum_pci);
+	enum_pci.icudev = &icu_dev;
 	enum_pci_init(&enum_pci, NULL);
 #endif
 
 #if defined(CONFIG_DRIVER_ENUM_ISAPNP)
 	device_init(&enum_isapnp);
+	enum_usapnp.icudev = &icu_dev;
 	enum_isapnp_init(&enum_isapnp, NULL);
 #endif
 
