@@ -54,6 +54,9 @@ void *mem_reserve(struct mem_alloc_region_s *region, void *start, size_t size);
 
 size_t mem_alloc_getsize(void *ptr);
 
+struct mem_alloc_header_s *
+mem_alloc_region_extend(struct mem_alloc_region_s *region, void *start, size_t size);
+
 /*********************************/
 
 /** @this returns the farless memory allocatable region, depending to the scope */

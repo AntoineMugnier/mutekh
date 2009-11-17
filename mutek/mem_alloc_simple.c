@@ -103,7 +103,12 @@ struct mem_alloc_region_s *mem_region_get_scope(enum mem_scope_e scope)
 {
 }
 
-void mem_region_set_scope(enum mem_scope_e scope, struct mem_alloc_region_s *region);
+void mem_region_set_scope(enum mem_scope_e scope, struct mem_alloc_region_s *region)
+{
+}
+
+struct mem_alloc_header_s *
+mem_alloc_region_extend(struct mem_alloc_region_s *region, void *start, size_t size)
 {
 }
 

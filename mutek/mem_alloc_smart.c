@@ -75,16 +75,16 @@ mem_alloc_region_candidate(struct mem_alloc_region_s *region, size_t size)
 
 #endif
 
-#ifdef CONFIG_HEXO_MMU
-static inline struct mem_alloc_header_s *
-mem_alloc_region_extend(struct mem_alloc_region_s *region, size_t size)
+//FIXME: Using lock possibly
+struct mem_alloc_header_s *
+mem_alloc_region_extend(struct mem_alloc_region_s *region, void *start, size_t size)
 {
-  struct mem_alloc_header_s	*hdr = NULL;
+  struct mem_alloc_header_s *hdr = start;
+  assert( hdr != NULL );
   
-  hdr = vmem_ops.vpage_alloc(initial_ppage_region, size);
   if(hdr)
   {
-    hdr->size=size * CONFIG_HEXO_MMU_PAGESIZE;
+    hdr->size=size;
     hdr->region=region;
     hdr->is_free=1;
 #ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
@@ -99,6 +99,13 @@ mem_alloc_region_extend(struct mem_alloc_region_s *region, size_t size)
 #endif
   }
   return hdr;
+}
+
+#ifdef CONFIG_HEXO_MMU
+static inline struct mem_alloc_header_s *
+mmu_region_extend(struct mem_alloc_region_s *region, size_t size)
+{
+  return mem_alloc_region_extend(region, vmem_ops.vpage_alloc(initial_ppage_region, size), size * CONFIG_HEXO_MMU_PAGESIZE);
 }
 #endif
 

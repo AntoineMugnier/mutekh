@@ -72,10 +72,8 @@ void mem_region_init(struct device_s *root, void *blob)
 	dev_mem_get_info(item, &mem_info);
 
 	struct mem_region_s *region_item;
-	region_item = mem_alloc( sizeof(struct mem_region_s), mem_scope_sys );
-	
+
 	/* looking for reserve memory space in the fdt: */
-	
 	/* First pass: the border memory space*/
 	i=0;
 	fdt_get_rsvmap(blob, i, &addr, &size);	
@@ -87,7 +85,6 @@ void mem_region_init(struct device_s *root, void *blob)
 	      {
 		if( addr + size >= mem_info.base + mem_info.size - ( mem_hdr_size + sizeof(struct mem_alloc_region_s) ) )
 		  {/*all the region is reserve*/
-		    mem_free(region_item);
 		    printk("Memory region reserved at %x with a size of %x\n", mem_info.base, mem_info.size);
 		    CONTAINER_FOREACH_CONTINUE;
 		  }
@@ -101,9 +98,27 @@ void mem_region_init(struct device_s *root, void *blob)
 	    i++;
 	    fdt_get_rsvmap(blob, i, &addr, &size);
 	  }
-	
+
+	/* Check if data section, systeme scope and stack are in this region*/
+	if ( mem_info.base <= CONFIG_RAM_ADDR && mem_info.base + mem_info.size > CONFIG_RAM_ADDR)
+	  {
+	    if ( CONFIG_RAM_ADDR > mem_info.base + mem_hdr_size )
+	      {
+		printk("Extend system scope: add %d bytes which start at %x\n", CONFIG_RAM_ADDR - mem_info.base, mem_info.base);
+		mem_alloc_region_extend( mem_region_get_scope( mem_scope_sys ) , (void *)mem_info.base, CONFIG_RAM_ADDR - mem_info.base );
+	      }
+	    if ( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE < mem_info.base + mem_info.size - mem_hdr_size )
+	      {
+		printk("Extend system scope: add %d bytes which start at %x\n", ( mem_info.base + mem_info.size ) - ( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE ), ( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE ) );
+		mem_alloc_region_extend( mem_region_get_scope( mem_scope_sys ) , (void *)( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE ), ( mem_info.base + mem_info.size ) - ( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE ) );
+	      }
+	    CONTAINER_FOREACH_CONTINUE;
+	  }
+
 	/* when the start and the end is well know, create the memory region */
+	region_item = mem_alloc( sizeof(struct mem_region_s), mem_scope_sys );
 	region_item->region = mem_region_create(mem_info.base, mem_info.base + mem_info.size, mem_info.flags & DEV_MEM_CACHED);
+
 	printk("Memory region created at %x with a size of %x. ",mem_info.base, mem_info.size);
 	if (mem_info.flags & DEV_MEM_CACHED)
 	  printk("This region is cached\n");
