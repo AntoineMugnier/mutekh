@@ -262,7 +262,9 @@ void cpu_init(void)
 
   return;
 
+#ifdef CONFIG_CPU_USER
  err_tss_seg:
+#endif
 #ifdef CONFIG_SMP
   cpu_x86_segdesc_free(cls_sel);
 #endif
