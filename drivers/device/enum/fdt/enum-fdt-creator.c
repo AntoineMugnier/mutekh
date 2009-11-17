@@ -78,7 +78,7 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_creator_node_entry)
 
 	const char *devtype = NULL;
 	size_t devtypelen;
-	const void **devtypeptr = (const void **)&devtype;
+	const void **devtypeptr = &devtype;
 	if ( fdt_reader_has_prop(state, "device_type", devtypeptr, &devtypelen ) ) {
 		dprintk("  found a new %s device\n", devtype);
 
@@ -92,7 +92,7 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_creator_node_entry)
 		if ( !strcmp( devtype, "cpu" ) ) {
 			const char *icudevtype = NULL;
 			size_t icudevlen;
-			const void **icudevtypeptr = (const void **)&icudevtype;
+			const void **icudevtypeptr = &icudevtype;
 
 			node_info->where = IN_CPU;
 			if ( fdt_reader_has_prop(state, "icudev_type",
