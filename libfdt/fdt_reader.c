@@ -289,9 +289,9 @@ void fdt_get_rsvmap(const void *blob, uint32_t resno,
 
 	reserve_map += resno*4;
 
-	*addr = (endian_be32(reserve_map[0]) << 32)
+	*addr = ((uint64_t)endian_be32(reserve_map[0]) << 32)
 	  | endian_be32(reserve_map[1]);
-	*size = (endian_be32(reserve_map[2]) << 32)
+	*size = ((uint64_t)endian_be32(reserve_map[2]) << 32)
 	  | endian_be32(reserve_map[3]);
 }
 

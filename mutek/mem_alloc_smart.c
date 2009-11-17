@@ -534,7 +534,7 @@ void *mem_alloc(size_t size, enum mem_scope_e scope)
   region_queue_root_t *region_list;
   struct mem_region_s *region = get_local_item(scope, &region_list);
   struct mem_region_s *local = region;
-  
+
   void *hdr = NULL;
 
   size = mem_hdr_size
@@ -543,15 +543,20 @@ void *mem_alloc(size_t size, enum mem_scope_e scope)
 #endif
     + ALIGN_VALUE_UP(size, CONFIG_MUTEK_MEMALLOC_ALIGN);
   
-  hdr = mem_alloc_region_pop(region->region, size);
-  
-  while(hdr == NULL)
+  if (region != NULL)
     {
-      region = region_queue_next(&region_list, region);
-      if( region == local ) break;
       hdr = mem_alloc_region_pop(region->region, size);
-    }
   
+      while(hdr == NULL)
+	{
+	  region = region_queue_next(&region_list, region);
+	  if( region == local ) break;
+	  hdr = mem_alloc_region_pop(region->region, size);
+	}
+    }
+  else
+    hdr = mem_alloc_region_pop(mem_region_get_scope(mem_scope_sys), size);
+
   return hdr != NULL
     ? (uint8_t*)hdr + mem_hdr_size
 #ifdef CONFIG_MUTEK_MEMALLOC_GUARD

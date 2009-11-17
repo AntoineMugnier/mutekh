@@ -147,7 +147,6 @@ void mem_region_init(struct device_s *root, void *blob)
 
 #else
 
-# warning memory region allocator init cannot be use without fdt. define your memory region init in hw_user_init
 void mem_region_init()
 {
   mem_region_set_scope(mem_scope_cluster,&mem_region_system);
@@ -214,11 +213,6 @@ struct mem_region_s *get_local_item(enum mem_scope_e scope, region_queue_root_t 
 {
   switch( scope )
     {
-    case mem_scope_sys:
-    case mem_scope_default:
-      *region_list = NULL;
-      return NULL;
-      break;
     case mem_scope_cluster:
       *region_list = &region_uncached_list;
       return CPU_LOCAL_GET(uncached_region_queue);
@@ -228,5 +222,13 @@ struct mem_region_s *get_local_item(enum mem_scope_e scope, region_queue_root_t 
       *region_list = &region_cached_list;
       return CPU_LOCAL_GET(cached_region_queue);
       break;
+    case mem_scope_sys:
+    case mem_scope_default:
+    default: 
+      *region_list = NULL;
+      return NULL;
+      break;
+    
     }
+  
 }
