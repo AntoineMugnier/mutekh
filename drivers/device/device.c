@@ -97,20 +97,11 @@ device_dump_list(struct device_s *root)
 
 #endif
 
-/*
-  I'm tired of this warning about uninitialized ap, so please, GCC,
-  shut up.
- */
-#if defined(CONFIG_HEXO_DEVICE_TREE) && defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wuninitialized"
-#endif
-
 void
 device_init(struct device_s *dev)
 {
 #ifdef CONFIG_HEXO_DEVICE_TREE
-  va_list ap;
-  device_obj_construct(dev, NULL, ap);
+  device_obj_new(dev);
 #endif
   lock_init(&dev->lock);
 }
