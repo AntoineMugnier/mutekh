@@ -19,20 +19,18 @@
 
 */
 
-
-#include <hexo/types.h>
-
-#include <device/timer.h>
-#include <device/device.h>
-#include <device/driver.h>
-
-#include <hexo/iospace.h>
-#include <mutek/mem_alloc.h>
-#include <string.h>
+#include "timer-soclib.h"
 
 #include "timer-soclib-private.h"
 
-#include "timer-soclib.h"
+#include <device/icu.h>
+#include <hexo/types.h>
+#include <device/device.h>
+#include <device/driver.h>
+#include <hexo/iospace.h>
+#include <mutek/mem_alloc.h>
+#include <hexo/alloc.h>
+#include <hexo/interrupt.h>
 
 /*
  * timer device callback setup
@@ -188,6 +186,9 @@ DEV_INIT(timer_soclib_init)
   memset(pv, 0, sizeof(*pv));
 
   dev->drv_pv = pv;
+
+  if ( dev->icudev )
+      DEV_ICU_BIND(dev->icudev, dev, dev->irq, timer_soclib_irq);
 
   return 0;
 }
