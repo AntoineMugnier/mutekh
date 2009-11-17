@@ -72,7 +72,7 @@ error_t enum_fdt_register_one(struct device_s *dev, struct device_s *item)
 	if (item->drv != NULL)
 		return 0;
 
-	struct driver_s *drv = driver_get_matching_fdtname(enum_pv->device_type);
+	const struct driver_s *drv = driver_get_matching_fdtname(enum_pv->device_type);
 
 	if ( drv == NULL ) {
 		dprintk("No driver for %s\n", enum_pv->device_type);
