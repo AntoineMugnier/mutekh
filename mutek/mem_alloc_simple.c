@@ -89,8 +89,22 @@ void *mem_alloc(size_t size, struct mem_alloc_region_s *region)
 /** free allocated memory block */
 void mem_free(void *ptr)
 {
-
 }
 
+void mem_region_init()
+{
+}
+
+struct mem_alloc_region_s *mem_region_create(uintptr_t start, uintptr_t end, bool_t cached)
+{
+}
+
+struct mem_alloc_region_s *mem_region_get_scope(enum mem_scope_e scope)
+{
+}
+
+void mem_region_set_scope(enum mem_scope_e scope, struct mem_alloc_region_s *region);
+{
+}
 
 #endif

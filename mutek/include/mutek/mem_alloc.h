@@ -56,18 +56,20 @@ size_t mem_alloc_getsize(void *ptr);
 
 /*********************************/
 
-/** return the farless memory allocatable region, depending to the scope */
+/** @this returns the farless memory allocatable region, depending to the scope */
 struct mem_alloc_region_s *mem_region_get_scope(enum mem_scope_e scope);
 
-/** @this set the region corresponding to a scope */
+/** @this sets the region corresponding to a scope */
 void mem_region_set_scope(enum mem_scope_e scope, struct mem_alloc_region_s *region);
 
 #if ( defined(CONFIG_HEXO_DEVICE_TREE) && defined(CONFIG_FDT) )
-/** initialize memory allocatable regions, exclude the sys region region. */
+/** @this initializes memory allocatable regions, exclude the sys region region. */
 void mem_region_init(struct device_s *root, void *blob);
+#else
+void mem_region_init();
 #endif
 
-/** create and initialize memory allocatable region. used by mem_regions_init. */
+/** @this creates and initializes memory allocatable region. used by mem_regions_init. */
 struct mem_alloc_region_s *mem_region_create(uintptr_t start, uintptr_t end, bool_t cached); 
 
 #endif
