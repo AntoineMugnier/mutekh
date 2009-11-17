@@ -68,7 +68,7 @@ struct device_s *enum_fdt_lookup(struct device_s *dev, const char *path);
 error_t enum_fdt_use_drv(
 	struct device_s *enum_dev,
 	struct device_s *dev,
-	struct driver_s *drv);
+	const struct driver_s *drv);
 
 
 

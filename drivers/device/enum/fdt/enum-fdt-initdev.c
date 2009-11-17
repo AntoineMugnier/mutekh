@@ -188,7 +188,7 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 error_t enum_fdt_use_drv(
 	struct device_s *enum_dev,
 	struct device_s *dev,
-	struct driver_s *drv)
+	const struct driver_s *drv)
 {
 	struct enum_pv_fdt_s *enum_pv = dev->enum_pv;
 	struct enum_fdt_context_s *pv = enum_dev->drv_pv;
