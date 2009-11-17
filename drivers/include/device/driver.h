@@ -240,7 +240,7 @@ struct driver_s
    @param vendor Class of PCI device
    @return A driver if found, NULL otherwise
  */
-struct driver_s *driver_get_matching_pci(
+const struct driver_s *driver_get_matching_pci(
 	uint16_t vendor,
 	uint16_t device,
 	uint32_t class);
@@ -251,7 +251,7 @@ struct driver_s *driver_get_matching_pci(
    @param vendor Vendor of ISA device
    @return A driver if found, NULL otherwise
  */
-struct driver_s *driver_get_matching_isa(
+const struct driver_s *driver_get_matching_isa(
 	uint16_t vendor);
 
 /**
@@ -260,7 +260,7 @@ struct driver_s *driver_get_matching_isa(
    @param name Name of ata device
    @return A driver if found, NULL otherwise
  */
-struct driver_s *driver_get_matching_ata(
+const struct driver_s *driver_get_matching_ata(
 	const char *name);
 
 /**
@@ -269,7 +269,7 @@ struct driver_s *driver_get_matching_ata(
    @param name Name of device_type in the FDT
    @return A driver if found, NULL otherwise
  */
-struct driver_s *driver_get_matching_fdtname(
+const struct driver_s *driver_get_matching_fdtname(
 	const char *name);
 
 #endif
