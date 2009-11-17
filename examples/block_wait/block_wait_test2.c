@@ -27,7 +27,7 @@ static CONTEXT_ENTRY(a_entry)
   ssize_t i = -1;
   sched_unlock();
 
-  //  hexo_instrument_trace(1);
+  //  mutek_instrument_trace(1);
 
   while (i--)
     {
