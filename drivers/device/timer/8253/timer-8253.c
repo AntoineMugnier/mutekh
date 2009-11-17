@@ -23,6 +23,7 @@
 #include <hexo/types.h>
 
 #include <device/timer.h>
+#include <device/icu.h>
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -116,6 +117,8 @@ DEV_CLEANUP(timer_8253_cleanup)
 {
   struct timer_8253_context_s	*pv = dev->drv_pv;
 
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+
   mem_free(pv);
 }
 
@@ -152,6 +155,8 @@ DEV_INIT(timer_8253_init)
   memset(pv, 0, sizeof(*pv));
 
   dev->drv_pv = pv;
+
+  DEV_ICU_BIND(dev->icudev, dev, dev->irq, timer_8253_irq);
 
   return 0;
 }
