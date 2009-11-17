@@ -33,6 +33,8 @@
 #include <hexo/interrupt.h>
 #include <mutek/timer.h>
 
+#include <mutek/printk.h>
+
 #include "block-ata.h"
 
 #include "block-ata-private.h"
@@ -118,7 +120,7 @@ static DRIVE_ATA_START_FUNC(drive_ata_read_start)
 
 static DRIVE_ATA_IRQ_FUNC(drive_ata_read_irq)
 {
-  struct controller_ata_context_s*cpv = dev->parent->drv_pv;
+//  struct controller_ata_context_s*cpv = dev->parent->drv_pv;
   struct drive_ata_context_s	*dpv = dev->drv_pv;
   uint8_t status;
 
@@ -191,7 +193,7 @@ static DRIVE_ATA_START_FUNC(drive_ata_write_start)
 
 static DRIVE_ATA_IRQ_FUNC(drive_ata_write_irq)
 {
-  struct controller_ata_context_s*cpv = dev->parent->drv_pv;
+//  struct controller_ata_context_s*cpv = dev->parent->drv_pv;
   struct drive_ata_context_s	*dpv = dev->drv_pv;
   uint8_t status;
 
@@ -251,7 +253,7 @@ static const struct drive_ata_oper_s drive_ata_read_oper =
 
 DEVBLOCK_REQUEST(drive_ata_request)
 {
-  struct controller_ata_context_s *cpv = dev->parent->drv_pv;
+//  struct controller_ata_context_s *cpv = dev->parent->drv_pv;
   struct drive_ata_context_s *dpv = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->parent->lock);

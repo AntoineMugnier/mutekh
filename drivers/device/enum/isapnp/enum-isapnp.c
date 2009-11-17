@@ -54,12 +54,15 @@ static void enum_isapnp_register_all(struct device_s *dev)
 	struct driver_s *drv = driver_get_matching_isa(
 		enum_pv->vendor);
 
+	if (!drv)
+		CONTAINER_FOREACH_CONTINUE;
+
 	item->icudev = dev->icudev;
 
-	/* call driver device init function, use same icu as PCI
+	/* call driver device init function, use same icu as ISA
 	   enumerator parent device */
 	if (!drv->f_init(item))
-		continue;
+		CONTAINER_FOREACH_CONTINUE;
   });
 }
 

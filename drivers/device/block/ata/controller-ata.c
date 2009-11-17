@@ -35,6 +35,8 @@
 #include <hexo/lock.h>
 #include <mutek/timer.h>
 
+#include <mutek/printk.h>
+
 
 /**************************************************************/
 
@@ -79,7 +81,6 @@ DEV_IRQ(controller_ata_irq)
   return res;
 }
 
-#ifdef CONFIG_DRIVER_ENUM_PCI
 /*
  * PCI identifiers of compatible cards.
  */
@@ -89,18 +90,17 @@ static const struct devenum_ident_s	controller_ata_ids[] =
 	  DEVENUM_PCI_ENTRY(-1, -1, 0x0101), /* PCI IDE controller */
 	  { 0 },
   };
-#endif
 
 const struct driver_s	controller_ata_drv =
 {
   .class		= device_class_enum,
-#ifdef CONFIG_DRIVER_ENUM_PCI
   .id_table		= controller_ata_ids,
-#endif
   .f_irq		= controller_ata_irq,
   .f_init		= controller_ata_init,
   .f_cleanup		= controller_ata_cleanup,
 };
+
+//REGISTER_DRIVER(controller_ata_drv);
 
 bool_t controller_ata_waitbusy(struct device_s *dev)
 {
@@ -128,7 +128,7 @@ void controller_ata_new_atadrv(struct device_s *dev, bool_t slave)
 
 void controller_ata_detect(struct device_s *dev, bool_t slave)
 {
-  struct controller_ata_context_s	*pv = dev->drv_pv;
+//  struct controller_ata_context_s	*pv = dev->drv_pv;
 
   cpu_io_write_8(dev->addr[0] + ATA_REG_DRVHEAD,
 		 ATA_DRVHEAD_RESERVED_HIGH | (slave ? ATA_DRVHEAD_SLAVE : 0));

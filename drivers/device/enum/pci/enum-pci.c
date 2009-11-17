@@ -28,6 +28,7 @@
 
 #include <hexo/iospace.h>
 #include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 #include <stdlib.h>
@@ -39,27 +40,31 @@
 
 static void enum_pci_register_all(struct device_s *dev)
 {
-  struct enum_pci_context_s	*pv = dev->drv_pv;
+//  struct enum_pci_context_s	*pv = dev->drv_pv;
 
   /* walk through all devices */
   CONTAINER_FOREACH(device_list, CLIST, &dev->children,
   {
     struct enum_pv_pci_s		*enum_pv = item->enum_pv;
-    uint_fast8_t			i;
+//    uint_fast8_t			i;
 
     /* ignore already configured devices */
     if (item->drv != NULL)
       continue;
 
-	struct driver_s *drv = driver_get_matching_pci(
+	const struct driver_s *drv = driver_get_matching_pci(
 		enum_pv->vendor, enum_pv->devid, enum_pv->class);
+
+	if ( !drv )
+		CONTAINER_FOREACH_CONTINUE;
 
 	item->icudev = dev->icudev;
 
+	printk("device: %p driver: %p init: %p\n", item, drv, drv->f_init);
+
 	/* call driver device init function, use same icu as PCI
 	   enumerator parent device */
-	if ( drv->f_init(item, NULL) == 0 )
-		continue;
+	drv->f_init(item, NULL);
   });
 }
 
@@ -193,10 +198,6 @@ pci_enum_probe(struct device_s *dev)
 
   return 0;
 }
-
-static void
-pci_enum_register_globals(struct device_s *dev)
-
 
 /*
  * device open operation

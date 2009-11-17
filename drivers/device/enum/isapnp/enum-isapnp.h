@@ -19,8 +19,8 @@
 
 */
 
-#ifndef __ENUM_PCI_H_
-#define __ENUM_PCI_H_
+#ifndef __ENUM_ISAPNP_H_
+#define __ENUM_ISAPNP_H_
 
 #include <device/enum.h>
 #include <device/device.h>

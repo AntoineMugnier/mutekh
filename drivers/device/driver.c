@@ -37,7 +37,7 @@
 extern const struct driver_s * global_driver_registry[];
 extern const struct driver_s * global_driver_registry_end[];
 
-struct driver_s *driver_get_matching_pci(
+const struct driver_s *driver_get_matching_pci(
 	uint16_t vendor,
 	uint16_t device,
 	uint32_t class)
@@ -55,16 +55,16 @@ struct driver_s *driver_get_matching_pci(
 
 		for ( ; ident->type != 0; ident++ ) {
 			if ( (ident->type == DEVENUM_TYPE_PCI)
-				 && (ident->pci.vendor == vendor || vendor == (uint16_t)-1)
-				 && (ident->pci.device == device || device == (uint16_t)-1)
-				 && (ident->pci.class == class || class == (uint32_t)-1) )
-				return (struct driver_s *)*drv;
+				 && (ident->pci.vendor == vendor || ident->pci.vendor == (uint16_t)-1)
+				 && (ident->pci.device == device || ident->pci.device == (uint16_t)-1)
+				 && (ident->pci.class == class || ident->pci.class == (uint32_t)-1) )
+				return *drv;
 		}
 	}
 	return NULL;
 }
 
-struct driver_s *driver_get_matching_isa(
+const struct driver_s *driver_get_matching_isa(
 	uint16_t vendor)
 {
 	const struct driver_s **drv = global_driver_registry;
@@ -81,14 +81,14 @@ struct driver_s *driver_get_matching_isa(
 		for ( ; ident->type != 0; ident++ ) {
 			if ( (ident->type == DEVENUM_TYPE_ISA)
 				&& (ident->isa.vendor == vendor) )
-				return (struct driver_s *)*drv;
+				return *drv;
 		}
 	}
 	return NULL;
 }
 
 
-struct driver_s *driver_get_matching_ata(
+const struct driver_s *driver_get_matching_ata(
 	const char *name)
 {
 	const struct driver_s **drv = global_driver_registry;
@@ -105,14 +105,14 @@ struct driver_s *driver_get_matching_ata(
 		for ( ; ident->type != 0; ident++ ) {
 			if ( (ident->type == DEVENUM_TYPE_ATA)
 				 && !strcmp(ident->ata.str, name) )
-				return (struct driver_s *)*drv;
+				return *drv;
 		}
 	}
 	return NULL;
 }
 
 
-struct driver_s *driver_get_matching_fdtname(
+const struct driver_s *driver_get_matching_fdtname(
 	const char *name)
 {
 	const struct driver_s **drv = global_driver_registry;
@@ -129,7 +129,7 @@ struct driver_s *driver_get_matching_fdtname(
 		for ( ; ident->type != 0; ident++ ) {
 			if ( (ident->type == DEVENUM_TYPE_FDTNAME)
 				 && !strcmp(ident->fdtname.name, name) ) {
-				return (struct driver_s *)*drv;
+				return *drv;
 			}
 		}
 	}
