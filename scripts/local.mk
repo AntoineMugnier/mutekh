@@ -100,7 +100,7 @@ define declare_meta_h
 
 # Extract HOST defined macros and inject values in a new header file.
 # This is used by emultaion platform to get correct syscall numbers and args
-$(3)/$(1): $(2)/$(1:.h=.def)
+$(3)/$(1): $(2)/$(1:.h=.def) $(CONF_DIR)/.config.h
 	@echo ' HOST CPP   ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	cat $(CONF_DIR)/.config.h $(2)/$(1:.h=.def) | \
