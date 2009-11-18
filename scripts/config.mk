@@ -10,9 +10,9 @@ $(CONF_DIR):
 	mkdir -p $@
 
 $(CONF_DIR)/.config.%: $(CONF_TMP_BASE).%
-	@test -d $(CONF_DIR) || mkdir -p $(CONF_DIR)
-	@if [ -r "$@" ] ; then \
-		if diff -q $@ $< >& /dev/null ; then \
+	test -d $(CONF_DIR) || mkdir -p $(CONF_DIR)
+	if [ -r "$@" ] ; then \
+		if diff -q $@ $< 2>&1 > /dev/null ; then \
 			echo "  CONF OK   $@" ; \
 		else \
 			echo "  CONF RE   $@" ; \
