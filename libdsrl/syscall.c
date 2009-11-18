@@ -25,28 +25,27 @@ typedef DSRL_SCHED_WAIT(sched_wait_fcn_t);
 
 #define endian_cpu32(x) (x)
 
-#define DECLARE_WAIT(endianness, name, cmp)                                          \
-    static SCHED_CANDIDATE_FCN(wait_##name##endianness##_f)                          \
-    {                                                                                \
-        dsrl_task_t* task = context_to_dsrl_task(sched_ctx);                         \
-                                                                                     \
-        cpu_dcache_invld((void*)task->wait_addr);                                    \
-        return (endian_##endianness##32(*(task->wait_addr)) cmp task->wait_val);     \
-    }                                                                                \
-                                                                                     \
-    static DSRL_SCHED_WAIT(dsrl_sched_wait_##name##_##endianness)                    \
-    {                                                                                \
-        cpu_dcache_invld((void*)addr);                                               \
-        if ( endian_##endianness##32(*addr) cmp val )                                \
-            return;                                                                  \
-        dsrl_task_t* current = context_to_dsrl_task(sched_get_current());            \
-        current->wait_val = val;                                                     \
-        current->wait_addr = addr;                                                   \
-        cpu_interrupt_disable();                                                     \
-        sched_context_candidate_fcn(&current->context, wait_##name##endianness##_f); \
-        sched_context_switch();                                                      \
-        sched_context_candidate_fcn(&current->context, NULL);                        \
-        cpu_interrupt_enable();                                                      \
+#define DECLARE_WAIT(endianness, name, cmp)                                              \
+    static SCHED_CANDIDATE_FCN(wait_##name##endianness##_f)                              \
+    {                                                                                    \
+        dsrl_task_t* task = context_to_dsrl_task(sched_ctx);                             \
+                                                                                         \
+        cpu_dcache_invld((void*)task->wait_addr);                                        \
+        return (endian_##endianness##32(*(task->wait_addr)) cmp task->wait_val);         \
+    }                                                                                    \
+                                                                                         \
+    static DSRL_SCHED_WAIT(dsrl_sched_wait_##name##_##endianness)                        \
+    {                                                                                    \
+        dsrl_task_t* current = context_to_dsrl_task(sched_get_current());                \
+        current->wait_val = val;                                                         \
+        current->wait_addr = addr;                                                       \
+        while (!wait_##name##endianness##_f(&current->context)) {                        \
+            cpu_interrupt_disable();                                                     \
+            sched_context_candidate_fcn(&current->context, wait_##name##endianness##_f); \
+            sched_context_switch();                                                      \
+            sched_context_candidate_fcn(&current->context, NULL);                        \
+            cpu_interrupt_enable();                                                      \
+        }                                                                                \
     }
 
 DECLARE_WAIT(le, eq, ==)
