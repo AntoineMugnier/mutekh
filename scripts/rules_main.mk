@@ -27,8 +27,11 @@ include $(MUTEK_SRC_DIR)/scripts/discover.mk
 
 ifneq ($(CLEANING),1)
 define do_inc_dep
+
 ifeq ($(wildcard $(1)),$(1))
 include $(1)
+# else
+# $# $# (info $(1) not found)
 endif
 
 endef
@@ -83,7 +86,7 @@ FORCE:
 kernel: $(BUILD_DIR)/$(KERNEL_FILE)
 
 clean:
-	rm -f $(KERNEL_FILE) $(TARGET_OBJECT_LIST)
+	rm -f $(BUILD_DIR)/$(KERNEL_FILE) $(TARGET_OBJECT_LIST)
 	rm -rf $(foreach mn,$(MODULE_NAMES),$($(mn)_OBJ_DIR))
 	rm -f $(CONFIG_FILES)
 

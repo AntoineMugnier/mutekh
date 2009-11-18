@@ -1,30 +1,18 @@
 
 CONF_PATH:=$(MUTEK_SRC_DIR):$(CURRENT_DIR):$(USER_DIR)
 CONF_TMP_BASE:=$(shell mktemp /tmp/mutekh_config.XXXXXX)
-CONF_EXTS = py m4 h mk deps
+CONF_EXTS = py m4 h mk
 
-CONFIG_TMP_FILES=$(addprefix $(CONF_TMP_BASE),$(CONF_EXTS))
-CONFIG_FILES=$(addprefix $(CONF_DIR)/.config.,$(CONF_EXTS))
+CONFIG_TMP_FILES=$(addprefix $(CONF_TMP_BASE).,$(CONF_EXTS))
+CONFIG_FILES=$(addprefix $(CONF_DIR)/.config.,$(CONF_EXTS) deps)
 
 $(CONF_DIR):
 	mkdir -p $@
 
-ifeq (0,1)
-define do_conf
-
-$(CONF_DIR)/.config.$(1): $$(CONF_TMP_BASE).$(1)
-	diff -q $$@ $$< || cp $$< $$@
-
-endef
-
-$(eval $(foreach e,$(CONF_EXTS),$(call do_conf,$(e))))
-endif
-
-ifeq (0,1)
-
 $(CONF_DIR)/.config.%: $(CONF_TMP_BASE).%
+	@test -d $(CONF_DIR) || mkdir -p $(CONF_DIR)
 	@if [ -r "$@" ] ; then \
-		if diff -q $@ $< 2>/dev/null ; then \
+		if diff -q $@ $< >& /dev/null ; then \
 			echo "  CONF OK   $@" ; \
 		else \
 			echo "  CONF RE   $@" ; \
@@ -35,31 +23,22 @@ $(CONF_DIR)/.config.%: $(CONF_TMP_BASE).%
 		cp $< $@ ; \
 	fi
 
+# Here is a special case for the dependency file, this is because we
+# want to always create the deps file when reloading the
+# configuration, and we have a special handling in rules_main.mk for
+# deps, in order to avoid missing files and circular dependencies.
+# That means we can safely create the .deps directly in its final
+# place, and not go through the reconf thing.
+
 $(CONFIG_TMP_FILES): $(CONF)
-	@test -d $(CONF_DIR) || mkdir -p $(CONF_DIR)
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--path=$(CONF_PATH) \
 		--input=$(CONF)					\
 		--python=$(CONF_TMP_BASE).py		\
 		--m4=$(CONF_TMP_BASE).m4			\
 		--header=$(CONF_TMP_BASE).h			\
-		--depmakefile=$(CONF_TMP_BASE).deps			\
-		--makefile=$(CONF_TMP_BASE).mk
-
-else
-
-$(CONFIG_FILES): $(CONF) $(MUTEK_SRC_DIR)/scripts/config.pl
-	@test -d $(CONF_DIR) || mkdir -p $(CONF_DIR)
-	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(CONF_PATH) \
-		--input=$(CONF)					\
-		--python=$(CONF_DIR)/.config.py		\
-		--m4=$(CONF_DIR)/.config.m4			\
-		--header=$(CONF_DIR)/.config.h			\
 		--depmakefile=$(CONF_DIR)/.config.deps			\
-		--makefile=$(CONF_DIR)/.config.mk
-
-endif
+		--makefile=$(CONF_TMP_BASE).mk
 
 config: $(CONF_DIR) $(CONFIG_FILES)
 
