@@ -98,6 +98,7 @@ static void srl_task_run(srl_task_s *task)
 
 void user_hw_init()
 {
+#ifdef CONFIG_SMP
 	const srl_cpudesc_s * const *cpu;
 	uint_fast16_t cpuid;
 	
@@ -106,6 +107,7 @@ void user_hw_init()
 		  ++cpu, ++cpuid ) {
 		cpu_local_storage[cpuid] = arch_cpudata_alloc();
 	}
+#endif
 
 	hw_init();
 }
