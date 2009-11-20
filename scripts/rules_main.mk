@@ -44,20 +44,9 @@ $(eval $(call do_inc_dep,$(CONF_DIR)/.config.deps))
 
 endif
 
-#define obj_add_dep
-#
-#$(1): $(COPY_OBJECT_LIST) \
-#		$(META_OBJECT_LIST) \
-#
-#endef
-
 TARGET_OBJECT_LIST:=$(filter %.o,$(TARGET_OBJECT_LIST))
 META_OBJECT_LIST:=$(filter-out %ldscript,$(META_OBJECT_LIST))
 COPY_OBJECT_LIST:=$(filter-out %ldscript,$(COPY_OBJECT_LIST))
-
-#$(eval \
-#$(foreach obj,$(TARGET_OBJECT_LIST),\
-#$(call obj_add_dep,$(obj))))
 
 all: kernel
 
@@ -83,7 +72,7 @@ showpaths:
 
 FORCE:
 
-kernel: $(BUILD_DIR)/$(KERNEL_FILE)
+kernel: $(BUILD_DIR)/$(KERNEL_FILE) $(CONF_DIR)/.config.py
 
 clean:
 	rm -f $(BUILD_DIR)/$(KERNEL_FILE) $(TARGET_OBJECT_LIST)
