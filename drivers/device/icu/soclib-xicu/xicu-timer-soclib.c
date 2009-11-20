@@ -119,7 +119,7 @@ bool_t xicu_timer_soclib_irq(
 	if (handler->hndl)
 	    handler->hndl(handler->data);
 	else
-		printk("Xicu lost interrupt");
+		printk("Xicu_timer lost interrupt");
 	return 0;
 }
 
@@ -159,14 +159,11 @@ DEV_INIT(xicu_timer_soclib_init)
 	dev->drv = &xicu_timer_soclib_drv;
 
 	/* allocate private driver data */
-	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
+	if (!(pv = mem_alloc(sizeof (*pv), MEM_SCOPE_SYS)))
+		return -ENOMEM;
+	memset(pv, 0, sizeof(*pv));
 
 	pv->output_line_no = ((struct soclib_xicu_param_s*)params)->output_line_no;
-
-	if (!pv)
-		return -1;
-
-	memset(pv, 0, sizeof(*pv));
 
 	dev->drv_pv = pv;
 
