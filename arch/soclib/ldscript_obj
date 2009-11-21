@@ -1,0 +1,14 @@
+SECTIONS
+   {
+        .boot           0 :  { *(.boot*) }/* : boot*/
+        .excep          0 :  { *(.excep*) }/* : excep*/
+        .text           0 :  { *(.text*) }/* : mem*/
+        .sdata          0 :  { *(.sdata*) }
+        .sbss           0 :  { *(.sbss*) }
+        .bss            0 :  { *(.bss*) }
+        .data           0 :  { *(.data*) }
+        .rodata         0 :  { *(.rodata*) }
+        .cpudata        0 :  { *(.cpudata*) }
+        .cpuarchdata    0 :  { *(.cpuarchdata*) }
+        .contextdata    0 :  { *(.cputextdata*) }
+   }
