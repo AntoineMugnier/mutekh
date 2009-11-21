@@ -10,6 +10,10 @@ ifneq ($(CONFIG_CPU_ARM_ARCH),undefined)
 CPUCFLAGS+= -march=$(CONFIG_CPU_ARM_ARCH)
 endif
 
+ifeq ($(CONFIG_COMPILE_DEBUG), defined)
+CPUCFLAGS += -fno-dwarf2-cfi-asm
+endif
+
 ifeq ($(CONFIG_CPU_ARM_FPU),soft)
 CPUCFLAGS+=-msoft-float -mfloat-abi=softfp -mfpu=vfp
 CPUASFLAGS+= -mfpu=vfp
