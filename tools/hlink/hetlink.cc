@@ -1,4 +1,23 @@
+/*
+    This file is part of MutekH.
 
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2009
+
+*/
 
 #include <string.h>
 #include <stdlib.h>
@@ -239,7 +258,6 @@ int main(int argc, char **argv)
 		  hsym = new het_symbol_s;
 		  hsym->name_ = s.get_name();
 		  hsym->section_ = hsec;
-		  hsym->value_ = s.get_value();
 		  hsym->size_ = s.get_size();
 		  hsec->syms_.insert(het_symbols_map_t::value_type(hsym->name_, hsym));
 		}
@@ -318,15 +336,22 @@ int main(int argc, char **argv)
 
 	  FOREACH(hsym_, HS->syms_)
 	    {
+	      hsym_->second->value_ = v;
+	      v += std::max(hsym_->second->size_, (size_t)4);
+	    }
+
+	  FOREACH(S, HS->sections_)
+	    (*S)->set_size(v);
+
+	  FOREACH(hsym_, HS->syms_)
+	    {
 	      het_symbol_s *hsym = &*hsym_->second;
 
 	      ssize_t size = -1;
 	      uint8_t *content = NULL;
 	      DISPLAY(disp_debug, "  " << hsym->name_ << " moved to " << std::hex << v);
 
-	      if (hsym->ref_count_ < het_objects.size())
-		DISPLAY(disp_verbose, "  " << hsym->name_ << " not present in all objects");
-
+	      // Check that all symbols have coherent content and set equal section offset
 	      FOREACH(s, hsym->symbols_)
 		{
 		  DISPLAY(disp_debug, "    From " << (*s)->get_value());
@@ -347,14 +372,24 @@ int main(int argc, char **argv)
 			DISPLAY(disp_error, "  " << hsym->name_ << " has different values");
 		    }
 
-		  (*s)->set_value(v);
+		  (*s)->set_value(hsym->value_);
 		}
 
-	      v += std::max(hsym->size_, (size_t)4);
-	    }
+	      // Copy symbol content to all objects for symbols not present everywhere.
+	      // This ensures any single object can be used to load data sections.
+	      if (hsym->ref_count_ < het_objects.size())
+		{
+		  DISPLAY(disp_verbose, "  " << hsym->name_ << " not present in all objects");
 
-	  FOREACH(S, HS->sections_)
-	    (*S)->set_size(v);
+		  FOREACH(s, hsym->symbols_)
+		    if (!(*s)->get_mangling_relocs().empty())
+		      DISPLAY(disp_error, "  " << hsym->name_ << " variable with relocation not present in all objects");
+
+		  FOREACH(S, HS->sections_)
+		    if ((*S)->get_type() != elfpp::SHT_NOBITS)
+		      memcpy((*S)->get_content() + hsym->value_, content, size);
+		}
+	    }
 
 	  break;
 	}

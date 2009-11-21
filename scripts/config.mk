@@ -13,9 +13,9 @@ $(CONF_DIR)/.config.%: $(CONF_TMP_BASE).%
 	test -d $(CONF_DIR) || mkdir -p $(CONF_DIR)
 	if [ -r "$@" ] ; then \
 		if diff -q $@ $< 2>&1 > /dev/null ; then \
-			echo "  CONF OK   $@" ; \
+			echo "  CONF OK   " $(notdir $@) ; \
 		else \
-			echo "  CONF RE   $@" ; \
+			echo "  CONF RE   " $(notdir $@) ; \
 			cp $< $@ ; \
 		fi ; \
 	else \

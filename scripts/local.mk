@@ -84,7 +84,15 @@ $(3)/$(1): $(2)/$(1:.o=.c) $(CONF_DIR)/.config.h
 	cd $(3) ; \
 	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $($(1)_CFLAGS) $(DIR_CFLAGS) -c \
 		$$< -o $$@
-
+ifdef HETLINK
+	md5=$$(shell md5sum $$< | cut -c 1-8) ; \
+		rm -f $$@.static ; \
+		$(CPUTOOLS)nm $$@ | grep ' t ' | cut -c 12- | sort -u | while read i ; do echo "$$$${i} _$$$${md5}_$$$${i}" >> $$@.static ; done
+	if test -e $$@.static ; then \
+		echo '             renaming static symbols' ; \
+		$(CPUTOOLS)objcopy --redefine-syms=$$@.static $$@ ; \
+	fi
+endif
 endif
 endif
 endif

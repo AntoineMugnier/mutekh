@@ -17,6 +17,8 @@ PRE_OBJS=$(foreach couple,$(COUPLES),$(BUILD_DIR)/kernel-$(couple).pre.o)
 HET_OBJS=$(foreach couple,$(COUPLES),$(BUILD_DIR)/kernel-$(couple).pre.o.het.o)
 HET_KERNELS=$(foreach couple,$(COUPLES),$(BUILD_DIR)/kernel-$(couple).het.out)
 
+export HETLINK
+
 kernel-het: $(HET_KERNELS)
 	echo "TARGETS: $(TARGETS)"
 	echo "COUPLES: $(COUPLES)"
@@ -31,7 +33,7 @@ $(BUILD_DIR)/kernel-%.pre.o: FORCE
 		 kernel
 
 $(HET_OBJS): $(PRE_OBJS) $(HETLINK_CONF) FORCE
-	echo '    HETLINK $@'
+	echo '    HETLINK ' $(notdir $@)
 	$(HETLINK) -v 4 -c $(MUTEK_SRC_DIR)/scripts/hetlink.conf $(PRE_OBJS)
 
 $(BUILD_DIR)/kernel-%.het.out : $(BUILD_DIR)/kernel-%.pre.o.het.o
