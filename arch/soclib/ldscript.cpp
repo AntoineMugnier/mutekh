@@ -49,6 +49,11 @@ MEMORY
 #if !defined(mem_except)
 	mem_except (RXAL)  : ORIGIN = CONFIG_CPU_EXCEPTION_FIXED_ADDRESS, LENGTH = 0x1000
 #endif
+#ifdef CONFIG_HETROM_ADDR
+    mem_hetrom (RXAL): ORIGIN = CONFIG_HETROM_ADDR, LENGTH = CONFIG_HETROM_SIZE
+#else
+# define mem_hetrom mem_rom
+#endif
     mem_rom (RXAL): ORIGIN = CONFIG_ROM_ADDR, LENGTH = CONFIG_ROM_SIZE
     mem_ram (RWAL): ORIGIN = CONFIG_RAM_ADDR, LENGTH = CONFIG_RAM_SIZE
 }
@@ -64,7 +69,7 @@ SECTIONS
 	.text : {
 		*(.init*)
 		*(.text*)
-	} > mem_rom
+	} > mem_hetrom
 
 	.rodata : {
 			*(.rodata*)
