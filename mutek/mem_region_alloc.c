@@ -56,6 +56,14 @@ region_queue_root_t region_cached_list, region_uncached_list ;
 
 #include <fdt/reader.h>
 
+static inline setif(enum mem_scope_e scope, struct mem_region_s *region)
+{
+	if ( region )
+		mem_region_set_scope(scope, region->region);
+	else
+		mem_region_set_scope(scope, &mem_region_system);
+}
+
 void mem_region_init(struct device_s *root, void *blob)
 {
   struct dev_mem_info_s mem_info;
@@ -155,9 +163,9 @@ void mem_region_init(struct device_s *root, void *blob)
   
   /**/
   /*FIXME: add CLUSTER suport, test if a cached and a uncached regions exist*/  
-  mem_region_set_scope(mem_scope_cluster,region_queue_head(&region_uncached_list)->region );
-  mem_region_set_scope(mem_scope_context,region_queue_head(&region_cached_list)->region );
-  mem_region_set_scope(mem_scope_cpu,region_queue_head(&region_cached_list)->region );
+  setif(mem_scope_cluster, region_queue_head(&region_uncached_list));
+  setif(mem_scope_context, region_queue_head(&region_cached_list));
+  setif(mem_scope_cpu, region_queue_head(&region_cached_list));
 }
 
 #else
