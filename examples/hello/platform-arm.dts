@@ -64,13 +64,7 @@
 
 	memory@0 {
 		device_type = "memory";
-		cached;
-		memreg: reg = <0x61100000 0x00100000>;
-	};
-
-	memory@1 {
-		device_type = "memory";
-		memreg: reg = <0x62600000 0x00100000>;
+		memreg: reg = <0x71600000 0x00100000>;
 	};
 
 	chosen {
