@@ -5,7 +5,8 @@ COUPLES:=
 
 define decl_conf
 
-COUPLE:=$(shell $(MAKE) -s -f $(MUTEK_SRC_DIR)/scripts/config.mk couple CONF=$(1))
+# Ugly Make things to make this work when using make -[pnd]
+COUPLE:=$(shell unset MAKEFLAGS ; $(MAKE_COMMAND) -s -f $(MUTEK_SRC_DIR)/scripts/config.mk couple CONF=$(1))
 COUPLES+=$$(COUPLE)
 $$(COUPLE)_CONF:=$(1)
 
@@ -24,6 +25,7 @@ kernel-het: $(HET_KERNELS)
 	echo "COUPLES: $(COUPLES)"
 	echo "HET_KERNELS: $(HET_KERNELS)"
 	echo "PRE_OBJS: $(PRE_OBJS)"
+	echo "HET_OBJS: $(HET_OBJS)"
 
 $(BUILD_DIR)/kernel-%.pre.o: FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
@@ -32,7 +34,12 @@ $(BUILD_DIR)/kernel-%.pre.o: FORCE
 		 CONF_DIR=$(BUILD_DIR)/obj-$* \
 		 kernel
 
-$(HET_OBJS): $(PRE_OBJS) $(HETLINK_CONF) FORCE
+# We have to go through an unique target or the hetlink will be done
+# twice...
+
+$(HET_OBJS): __do_hetlink
+
+__do_hetlink : $(PRE_OBJS) $(HETLINK_CONF) FORCE
 	echo '    HETLINK ' $(notdir $@)
 	$(HETLINK) -v 4 -c $(MUTEK_SRC_DIR)/scripts/hetlink.conf $(PRE_OBJS)
 
