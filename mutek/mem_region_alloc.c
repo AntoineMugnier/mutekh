@@ -56,7 +56,7 @@ region_queue_root_t region_cached_list, region_uncached_list ;
 
 #include <fdt/reader.h>
 
-static inline setif(enum mem_scope_e scope, struct mem_region_s *region)
+static inline void setif(enum mem_scope_e scope, struct mem_region_s *region)
 {
 	if ( region )
 		mem_region_set_scope(scope, region->region);
