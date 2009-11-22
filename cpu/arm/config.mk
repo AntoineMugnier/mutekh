@@ -2,8 +2,10 @@ CPUCFLAGS= -fsigned-char
 CPULDFLAGS=
 CPUASFLAGS=
 
+CPUTOOLS=arm-unknown-elf-
+
 CPUTOOLS_GCC_VERSION:=$(shell \
-	(echo '((' ; $(CC) -dumpversion | sed -e 's:\.)\?:)*100+:g' ) \
+	(echo '((' ; $(CPUTOOLS)gcc -dumpversion | sed -e 's:\.)\?:)*100+:g' ) \
 	)
 CPUTOOLS_GCC_VERSION:=$(shell echo "$(CPUTOOLS_GCC_VERSION)" | bc -q)
 
@@ -28,8 +30,6 @@ ifeq ($(CONFIG_CPU_ARM_FPU),soft)
 CPUCFLAGS+=-msoft-float -mfloat-abi=softfp -mfpu=vfp
 CPUASFLAGS+= -mfpu=vfp
 endif
-
-CPUTOOLS=arm-unknown-elf-
 
 ifeq ($(CONFIG_CPU_ENDIAN_LITTLE), defined)
 CPUCFLAGS+= -mlittle-endian
