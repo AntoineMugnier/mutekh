@@ -205,6 +205,8 @@ META_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(meta))
 PRE_HEADER_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(pre_headers))
 CLEAN_FILE_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(copy) $$(meta))
 
+PRE_HEADER_LIST+=$$(filter %.h,$$(COPY_OBJECT_LIST))
+
 $$(LOCAL_OBJ_DIR):
 	mkdir -p $$@
 
