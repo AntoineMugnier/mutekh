@@ -1,67 +1,53 @@
-#include <hexo/interrupt.h>
+
+
+#include <device/enum.h>
+#include <drivers/device/enum/pci/enum-pci.h>
 #include <drivers/device/icu/8259/icu-8259.h>
-#include <drivers/device/block/ata/block-ata.h>
-#include <drivers/device/block/partition/block-partition.h>
+#include <netinet/dhcp.h>
+#include <netinet/if.h>
+#include <hexo/interrupt.h>
+#include <mutek/printk.h>
+#include <stdio.h>
+
 #include <device/device.h>
 #include <device/driver.h>
-#include <stdio.h>
-#include <vfs/vfs.h>
-#include <vfs/buffer_cache.h>
-#include <pthread.h>
 
-#ifdef CONFIG_DRIVER_FS_NFS
-#include <drivers/fs/nfs/nfs.h>
-#endif /* End NFS */
+//#include <drivers/fs/nfs/nfs.h>
 
-#define NR_THREADS  1
+extern struct device_s enum_root;
 
+static const char *device_class_str[] = {
+	"none", "block", "char", "enum", "fb", "icu", "input", "net",
+	"sound", "timer", "spi", "lcd", "gpio", "i2c", "mem",
+};
+
+static void dump_enumerator(struct device_s *root, uint_fast8_t prefix)
+{
+	uint_fast8_t i;
+	for (i=0; i<prefix; ++i)
+		printk(" ");
+	printk("device %p, type %s\n", root,
+		   root->drv ? device_class_str[root->drv->class] : "[undriven]");
+	CONTAINER_FOREACH(device_list, CLIST, &root->children, {
+			dump_enumerator(item, prefix+1);
+		});
+}
+
+extern struct device_s enum_pci;
 extern struct device_s icu_dev;
 
-struct vfs_node_s *root;
-struct vfs_node_s *ms_n_cwd;
-
-static pthread_t task[NR_THREADS];
-static struct device_s ata;
-
-void* thread_func(void *arg)
+void app_start()
 {
-  ssize_t err = 0;
-  struct device_s *drv0 = NULL;
-  struct device_s *part1 = NULL;
+  cpu_interrupt_enable();
+  assert(cpu_is_interruptible());
 
-  if ((drv0 = device_get_child(&ata, 0)) == NULL)
-    {
-      printk("Couldn't find first disk on system\n");
-      while (1)
-	continue;
-    }
+#if defined(CONFIG_DRIVER_ENUM_PCI)
+	device_init(&enum_pci);
+	enum_pci.icudev = &icu_dev;
+	enum_pci_init(&enum_pci, NULL);
+#endif
 
-  if (block_partition_create(drv0, 0) == 0)
-    {
-      printk("Couldn't find partition\n");
-      while (1)
-	continue;
-    }
-
-  if ((part1 = device_get_child(drv0, 0)) == NULL)
-    {
-      printk("Couldn't find first partition on disk\n");
-      while (1)
-	continue;
-    }
-
-#ifdef CONFIG_VFS
-
-  // Initialize VFS
-  if ((err = vfs_init(part1, 1, 10, 10, &root))){
-    printk("error while initializing VFSLib: %d\n",err);
-    while (1)
-      continue;
-  }
-  else
-    printk("OK initializing VFSLib\n");
-
-#ifdef CONFIG_DRIVER_FS_NFS
+  dump_enumerator(&enum_root, 0);
 
   if_up("eth0");
 
@@ -76,44 +62,8 @@ void* thread_func(void *arg)
   // Initialize NFS
   // to 192.168.1.237 -> 0xC0A801ED
   // to 10.0.2.2      -> 0x0A000202
-  if ((err = nfs_mount("/nfs", 0xC0A801ED)))
-    printk("error while initializing NFS: %d\n",err);
-
-#endif /* End NFS */
-#endif /* End VFS */
-
-  bc_dump(&bc);
-  bc_sync(&bc,&freelist);
-  printk("Finished\n");
-  while(1) pthread_yield();
-  return NULL;
-}
-
-
-
-void app_start()
-{
-  cpu_interrupt_enable();
-  assert(cpu_is_interruptible());
-
-  device_init(&ata);
-
-  ata.addr[0] = 0x1f0;
-  ata.addr[1] = 0x3f0;
-  ata.irq = 14;
-  ata.icudev = &icudev;
-
-  controller_ata_init(&ata, NULL);
-
-  int i;
-  for(i=0;i<NR_THREADS;i++){
-    printk("main: creating thread %d\n",i);
-
-    if(pthread_create(&task[i],NULL,thread_func,(void *) i)){
-      printk("error creating thread number: %d\n",i);
-      while(1);
-    }
-  }
+/*   if ((err = nfs_mount("/nfs", 0xC0A801ED))) */
+/*     printk("error while initializing NFS: %d\n",err); */
 
   printk("LEAVE\n");
 }

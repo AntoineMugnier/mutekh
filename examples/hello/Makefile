@@ -4,7 +4,7 @@ objs = hello.o
 ifeq ($(CONFIG_ARCH_SOCLIB),defined)
 
 ifeq ($(CONFIG_CPU_MIPS),defined)
-objs += platform-mips.o
+objs += platform-mips-coherent.o
 endif
 
 ifeq ($(CONFIG_CPU_PPC),defined)

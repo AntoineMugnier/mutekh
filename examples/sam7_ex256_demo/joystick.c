@@ -29,7 +29,7 @@ struct joy_event_s
 
 CONTAINER_FUNC(j_queue, CLIST, static inline, j_queue);
 
-static volatile j_queue_root_t j_list;
+static j_queue_root_t j_list;
 
 static DEVINPUT_CALLBACK(joystick_moved)
 {
