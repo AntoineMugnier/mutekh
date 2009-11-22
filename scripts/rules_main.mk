@@ -34,6 +34,8 @@ include $(1)
 # $# $# (info $(1) not found)
 endif
 
+ADDCONFIG := $(CONF_DIR)/.config.py
+
 endef
 
 $(eval \
@@ -50,10 +52,13 @@ COPY_OBJECT_LIST:=$(filter-out %ldscript,$(COPY_OBJECT_LIST))
 
 all: kernel
 
+do_pre_header_list: $(PRE_HEADER_LIST)
+
 objs:
 	echo "TARGET_OBJECT_LIST = $(TARGET_OBJECT_LIST)"
 	echo "DEP_FILE_LIST = $(DEP_FILE_LIST)"
 	echo "CLEAN_FILE_LIST = $(CLEAN_FILE_LIST)"
+	echo "PRE_HEADER_LIST = $(PRE_HEADER_LIST)"
 
 showpaths:
 	@echo MUTEK_SRC_DIR $(MUTEK_SRC_DIR)
@@ -72,7 +77,7 @@ showpaths:
 
 FORCE:
 
-kernel: $(BUILD_DIR)/$(KERNEL_FILE) $(CONF_DIR)/.config.py
+kernel: $(BUILD_DIR)/$(KERNEL_FILE) $(ADDCONFIG)
 
 clean:
 	rm -f $(BUILD_DIR)/$(KERNEL_FILE) $(TARGET_OBJECT_LIST)

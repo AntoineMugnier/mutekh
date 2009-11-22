@@ -7,7 +7,7 @@ define declare_copy
 
 $(3)/$(1): $(2)/$(1)
 	echo '    COPY    $$@ $$<'
-	test -d $(3) || mkdir -p $(3)
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
 	cp $$< $$@
 
 endef
@@ -47,7 +47,7 @@ ifeq ($(wildcard $(2)/$(1:.o=.S)),$(2)/$(1:.o=.S))
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be ASM file)
 
-$(3)/$(1): $(2)/$(1:.o=.S)
+$(3)/$(1): $(2)/$(1:.o=.S) do_pre_header_list
 	@echo '    AS      ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; \
@@ -74,7 +74,7 @@ else
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be C file)
 
-$(3)/$(1): $(2)/$(1:.o=.c) $(CONF_DIR)/.config.h
+$(3)/$(1): $(2)/$(1:.o=.c) $(CONF_DIR)/.config.h do_pre_header_list
 	@echo '    CC      ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; \
@@ -99,6 +99,15 @@ endif
 
 endef
 
+define declare_gpct_header
+
+$(3)/$(1): $(2)/$(1:.h=.t)
+#	@echo 'UNBACKSLASH ' $$(notdir $$@)
+	@mkdir -p $(dir $(3)/$(1).h)
+	cp $$< $$@
+	perl $(MUTEK_SRC_DIR)/gpct/gpct/utils/backslash.pl $$@
+
+endef
 
 ## declare_meta_h: file_name, src_dir, obj_dir
 
@@ -182,6 +191,7 @@ objs:=
 meta:=
 copy:=
 subdirs:=
+pre_headers:=
 doc_headers:=
 doc_files:=
 
@@ -192,6 +202,7 @@ doc_files:=
 TARGET_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs))
 COPY_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(copy))
 META_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(meta))
+PRE_HEADER_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(pre_headers))
 CLEAN_FILE_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(copy) $$(meta))
 
 $$(LOCAL_OBJ_DIR):
@@ -204,6 +215,8 @@ $$(eval $$(foreach tocopy,$$(copy),$$(call declare_copy,$$(tocopy),$$(LOCAL_SRC_
 $$(eval $$(foreach tometa,$$(filter %.h,$$(meta)),$$(call declare_meta_h,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
 $$(eval $$(foreach tometa,$$(filter-out %.h,$$(meta)),$$(call declare_meta_cpp,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
+
+$$(eval $$(foreach ph,$$(pre_headers),$$(call declare_gpct_header,$$(ph),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
 $$(eval \
 $$(foreach h,$$(doc_headers),\
