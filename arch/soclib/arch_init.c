@@ -42,6 +42,8 @@ void soclib_parse_fdt(void *dt, struct device_s *enum_dev);
 #include <mutek/printk.h>
 #include <mutek/scheduler.h>
 
+#include <string.h>
+
 #ifdef CONFIG_DATA_FROM_ROM
 extern __ldscript_symbol_t __bss_start;
 extern __ldscript_symbol_t __bss_end;
