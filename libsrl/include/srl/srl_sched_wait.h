@@ -9,22 +9,22 @@
 
 #include <stdint.h>
 
-#define DECLARE_WAIT(endian, name, cmp)				\
-/**									\
-   @this makes the current task sleep until the value pointed at @tt addr	\
-   asserts the following test:						\
-									\
-   @code								\
-   (*addr cmp val)							\
-   @end code								\
-									\
-   @tt addr is taken with the @b endian endianness.			\
-									\
-   @param addr The address to poll					\
-   @param val The value to compare to					\
-*/									\
-									\
-void srl_sched_wait_##name##_##endian( volatile uint32_t*addr, uint32_t val );
+#define DECLARE_WAIT(endian, name, cmp)                                       \
+/**                                                                           \
+   @this makes the current task sleep until the value pointed at @tt addr     \
+   asserts the following test:                                                \
+                                                                              \
+   @code                                                                      \
+   (*addr cmp val)                                                            \
+   @end code                                                                  \
+                                                                              \
+   @tt addr is taken with the @b endian endianness.                           \
+                                                                              \
+   @param addr The address to poll                                            \
+   @param val The value to compare to                                         \
+*/                                                                            \
+                                                                              \
+void srl_sched_wait_##name##_##endian( volatile void *addr, int32_t val );
 
 DECLARE_WAIT(le, eq, ==)
 DECLARE_WAIT(le, ne, !=)
