@@ -19,11 +19,15 @@
               Dimitri Refauvelet <dimitri.refauvelet@lip6.fr> (c) 2009
 */
 
+#ifndef _MEMALLOC_PRIV_H_
+#define _MEMALLOC_PRIV_H_
+
+#include <hexo/endian.h>
+
 #ifdef CONFIG_MUTEK_MEMALLOC_SMART
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_clist.h>
-#include <hexo/endian.h>
 
 #ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
 # define MEMALLOC_SIGNATURE	0x3a1b2ce1
@@ -79,4 +83,4 @@ struct mem_alloc_region_s
 
 struct mem_alloc_region_s mem_region_system;
 
-
+#endif
