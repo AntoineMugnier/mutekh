@@ -26,10 +26,14 @@
 #include <hexo/endian.h>
 #include "memalloc.h"
 
+# if defined(CONFIG_MUTEK_MEMALLOC_SMART)
+
 #include <gpct/cont_dlist.h>
 #include <device/device.h>
 #include <device/mem.h>
 #include <device/driver.h>
+
+
 
 struct mem_region_s
 {
@@ -52,7 +56,7 @@ CONTAINER_KEY_FUNC(region_queue, DLIST, static inline, region_queue_id, cluster_
 region_queue_root_t region_cached_list, region_uncached_list ;
 
 
-#if ( defined(CONFIG_DEVICE_TREE) && defined(CONFIG_FDT) )
+#if ( defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_FDT) )
 
 #include <fdt/reader.h>
 
@@ -85,11 +89,13 @@ void mem_region_init(struct device_s *root, void *blob)
 	/* First pass: the border memory space*/
 	i=0;
 	fdt_get_rsvmap(blob, i, &addr, &size);	
+	
 	while( ( addr != 0 || size != 0 ) )
 	  {
 	    addr -= mem_hdr_size;
 	    size += mem_hdr_size;
-	    if( addr <= mem_info.base + mem_hdr_size + sizeof(struct mem_alloc_region_s) && addr+size > mem_info.base + mem_hdr_size + sizeof(struct mem_alloc_region_s) )
+	    if( addr <= mem_info.base + mem_hdr_size + sizeof(struct mem_alloc_region_s) &&
+		addr+size > mem_info.base + mem_hdr_size + sizeof(struct mem_alloc_region_s) )
 	      {
 		if( addr + size >= mem_info.base + mem_info.size - ( mem_hdr_size + sizeof(struct mem_alloc_region_s) ) )
 		  {/*all the region is reserve*/
@@ -99,7 +105,8 @@ void mem_region_init(struct device_s *root, void *blob)
 		mem_info.size -= (addr + size) - mem_info.base;
 		mem_info.base = (addr + size);
 	      }
-	    else if( addr < (mem_info.base + mem_info.size)  && addr+size >= (mem_info.base + mem_info.size - ( mem_hdr_size + sizeof(struct mem_alloc_region_s) ) ) )
+	    else if( addr < (mem_info.base + mem_info.size)  &&
+		     addr+size >= (mem_info.base + mem_info.size - ( mem_hdr_size + sizeof(struct mem_alloc_region_s) ) ) )
 	      {
 		mem_info.size -= (mem_info.base + mem_info.size) - addr;
 	      }
@@ -108,24 +115,39 @@ void mem_region_init(struct device_s *root, void *blob)
 	  }
 
 	/* Check if data section, systeme scope and stack are in this region*/
-	if ( mem_info.base <= CONFIG_RAM_ADDR && mem_info.base + mem_info.size > CONFIG_RAM_ADDR)
+	if ( mem_info.base <= CONFIG_RAM_ADDR &&
+	     mem_info.base + mem_info.size > CONFIG_RAM_ADDR)
 	  {
 	    if ( CONFIG_RAM_ADDR > mem_info.base + mem_hdr_size )
 	      {
-		printk("Extend system scope: add %d bytes which start at %x\n", CONFIG_RAM_ADDR - mem_info.base, mem_info.base);
-		mem_alloc_region_extend( mem_region_get_scope( mem_scope_sys ) , (void *)mem_info.base, CONFIG_RAM_ADDR - mem_info.base );
+		printk("Extend system scope: add %d bytes which start at %x\n",
+		       CONFIG_RAM_ADDR - mem_info.base,
+		       mem_info.base);
+
+		mem_alloc_region_extend( mem_region_get_scope( mem_scope_sys ) ,
+					 (void *)mem_info.base,
+					 CONFIG_RAM_ADDR - mem_info.base );
 	      }
 	    if ( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE < mem_info.base + mem_info.size - mem_hdr_size )
 	      {
-		printk("Extend system scope: add %d bytes which start at %x\n", ( mem_info.base + mem_info.size ) - ( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE ), ( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE ) );
-		mem_alloc_region_extend( mem_region_get_scope( mem_scope_sys ) , (void *)( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE ), ( mem_info.base + mem_info.size ) - ( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE ) );
+		printk("Extend system scope: add %d bytes which start at %x\n",
+		       ( mem_info.base + mem_info.size ) - ( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE ),
+		       ( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE ) );
+
+		mem_alloc_region_extend( mem_region_get_scope( mem_scope_sys ) , 
+					 (void *)( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE ), 
+					 ( mem_info.base + mem_info.size ) - ( CONFIG_RAM_ADDR + CONFIG_RAM_SIZE ) );
 	      }
 	    CONTAINER_FOREACH_CONTINUE;
 	  }
 
+	/* looking for the clusterid in the topology*/
+	//TODO
 	/* when the start and the end is well know, create the memory region */
 	region_item = mem_alloc( sizeof(struct mem_region_s), mem_scope_sys );
-	region_item->region = mem_region_create(mem_info.base, mem_info.base + mem_info.size, mem_info.flags & DEV_MEM_CACHED);
+	region_item->region = mem_region_create(mem_info.base, 
+						mem_info.base + mem_info.size, 
+						mem_info.flags & DEV_MEM_CACHED);
 
 	printk("Memory region created at %x with a size of %x. ",mem_info.base, mem_info.size);
 	if (mem_info.flags & DEV_MEM_CACHED)
@@ -140,11 +162,15 @@ void mem_region_init(struct device_s *root, void *blob)
 	  {
 	    addr -= mem_hdr_size;
 	    size += mem_hdr_size;
-	    if( addr > mem_info.base && addr+size < mem_info.base+mem_info.size )
+	    if( addr > mem_info.base && 
+		addr+size < mem_info.base+mem_info.size )
 	      {
 		mem_reserve( region_item->region , (void*)(uint32_t)addr, size);
-		printk("Memory reservation at %x with a size of %x. ", (uint32_t)addr, (uint32_t)size);
-		printk("This reservation is done in the region %x\n", mem_info.base);
+		printk("Memory reservation at %x with a size of %x. ",
+		       (uint32_t)addr,
+		       (uint32_t)size);
+		printk("This reservation is done in the region %x\n",
+		       mem_info.base);
 	      }
 	    i++;
 	    fdt_get_rsvmap(blob, i, &addr, &size);
@@ -163,18 +189,29 @@ void mem_region_init(struct device_s *root, void *blob)
   
   /**/
   /*FIXME: add CLUSTER suport, test if a cached and a uncached regions exist*/  
-  setif(mem_scope_cluster, region_queue_head(&region_uncached_list));
-  setif(mem_scope_context, region_queue_head(&region_cached_list));
-  setif(mem_scope_cpu, region_queue_head(&region_cached_list));
-}
+  if ( region_queue_count(&region_uncached_list) >= 1 )
+    mem_region_set_scope(mem_scope_cluster,
+			 region_queue_head(&region_uncached_list)->region );
+  else
+    mem_region_set_scope( mem_scope_cluster, &mem_region_system );
 
-#else
+  if ( region_queue_count( &region_uncached_list ) >= 1 ) 
+    {
+      mem_region_set_scope(mem_scope_context,
+			   region_queue_head(&region_cached_list)->region );
+      mem_region_set_scope(mem_scope_cpu,
+			   region_queue_head(&region_cached_list)->region );
+    }
+  else
+    {
+      mem_region_set_scope( mem_scope_context, &mem_region_system );
+      mem_region_set_scope( mem_scope_cpu, &mem_region_system );
+    }
+  
+#if defined(CONFIG_SMP)
+  //FIXME: Set the scope for other cpus  
+#endif
 
-void mem_region_init()
-{
-  mem_region_set_scope(mem_scope_cluster,&mem_region_system);
-  mem_region_set_scope(mem_scope_context,&mem_region_system);
-  mem_region_set_scope(mem_scope_cpu,&mem_region_system);
 }
 
 #endif /*CONFIG_DEVICE_TREE*/
@@ -255,3 +292,25 @@ struct mem_region_s *get_local_item(enum mem_scope_e scope, region_queue_root_t 
     }
   
 }
+
+#else /*CONFIG_MUTEK_MEMALLOC_SMART*/
+
+void mem_region_init(struct device_s *root, void *blob)
+{
+}
+
+void mem_region_set_scope(enum mem_scope_e scope, struct mem_alloc_region_s *region)
+{
+}
+
+struct mem_alloc_region_s *mem_region_get_scope(enum mem_scope_e scope)
+{
+  return &mem_region_system;
+}
+
+struct mem_alloc_region_s *mem_region_create(uintptr_t start, uintptr_t end, bool_t cached)
+{
+  return NULL;
+}
+
+#endif /*CONFIG_MUTEK_MEMALLOC_SMART*/

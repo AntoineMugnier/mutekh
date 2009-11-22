@@ -35,7 +35,7 @@ void soclib_parse_fdt(void *dt, struct device_s *enum_dev);
 #include <hexo/lock.h>
 #include <hexo/cpu.h>
 #include <mutek/mem_alloc.h>
-
+#include <mutek/printk.h>
 #include <mutek/scheduler.h>
 
 #ifdef CONFIG_DATA_FROM_ROM
@@ -74,6 +74,14 @@ static lock_t       cpu_init_lock;    /* cpu intialization lock */
 lock_t              __atomic_arch_lock;
 #endif
 
+static inline PRINTF_OUTPUT_FUNC(__printf_out_tty)
+{
+  volatile char * dev = 0x90600000;
+  size_t i;
+  for (i=0; i<len; ++i )
+    *dev = str[i];
+}
+
 /* architecture specific init function */
 void arch_init(void *device_tree, void *bootloader_pointer_table)
 {
@@ -83,6 +91,8 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
     {
         lock_init(&__atomic_arch_lock);
         lock_init(&cpu_init_lock);
+
+		printk_set_output(__printf_out_tty, NULL);
 
 #endif
 #ifdef CONFIG_DATA_FROM_ROM
@@ -124,12 +134,9 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         enum_fdt_init(&fdt_enum_dev, device_tree);
         soclib_parse_fdt(device_tree, &fdt_enum_dev);
         mem_region_init(&fdt_enum_dev, device_tree);
+
 #elif defined(CONFIG_ARCH_HW_INIT_USER)
         user_hw_init();
-        //FIXME: remove and add a user mem_init in user_hw_init
-        //the init MUST init the scope_cluster, scope_context and scope_cpu.
-        //See simple example in mutek/mem_alloc_smart.c:662, function mem_region_init
-        //mem_region_init(&fdt_enum_dev, device_tree);
        
 #elif defined(CONFIG_ARCH_HW_INIT)
 # error CONFIG_ARCH_HW_INIT unsupported for SoCLib platforms

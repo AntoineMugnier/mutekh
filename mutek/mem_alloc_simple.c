@@ -21,21 +21,9 @@
 
 #include <mutek/mem_alloc.h>
 #include <string.h>
+#include "memalloc.h"
 
 #ifdef CONFIG_MUTEK_MEMALLOC_SIMPLE
-
-/***************** Memory allocatable region management ******************/
-
-static const size_t	mem_hdr_size = 0;
-
-struct mem_alloc_region_s
-{
-  lock_t		lock;
-  void			*next;
-  void			*last;
-};
-
-struct mem_alloc_region_s mem_region_system;
 
 /***************** Memory allocation interface ******************/
 
@@ -73,9 +61,12 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
 }
 
 /** allocate a new memory block in given region */
-void *mem_alloc(size_t size, struct mem_alloc_region_s *region)
+void *mem_alloc(size_t size, enum mem_scope_e scope)
 {
+  struct mem_alloc_region_s *region;
   void *hdr;
+
+  region = mem_region_get_scope(scope);
 
   size = mem_hdr_size
     + ALIGN_VALUE_UP(size, CONFIG_MUTEK_MEMALLOC_ALIGN);
@@ -91,24 +82,11 @@ void mem_free(void *ptr)
 {
 }
 
-void mem_region_init()
+size_t mem_alloc_getsize(void *ptr)
 {
 }
 
-struct mem_alloc_region_s *mem_region_create(uintptr_t start, uintptr_t end, bool_t cached)
-{
-}
-
-struct mem_alloc_region_s *mem_region_get_scope(enum mem_scope_e scope)
-{
-}
-
-void mem_region_set_scope(enum mem_scope_e scope, struct mem_alloc_region_s *region)
-{
-}
-
-struct mem_alloc_header_s *
-mem_alloc_region_extend(struct mem_alloc_region_s *region, void *start, size_t size)
+void *mem_reserve(struct mem_alloc_region_s *region, void *start, size_t size)
 {
 }
 

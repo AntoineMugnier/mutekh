@@ -60,6 +60,22 @@ struct mem_alloc_region_s
 #endif
 };
 
-struct mem_alloc_region_s mem_region_system;
+#else /*CONFIG_MUTEK_MEMALLOC_SMART*/ 
+
+/***************** Memory allocatable region management ******************/
+
+static const size_t	mem_hdr_size = 0;
+
+struct mem_alloc_region_s
+{
+  lock_t		lock;
+  void			*next;
+  void			*last;
+};
+
 
 #endif /*CONFIG_MUTEK_MEMALLOC_SMART*/
+
+struct mem_alloc_region_s mem_region_system;
+
+
