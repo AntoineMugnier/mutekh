@@ -30,6 +30,10 @@
 void soclib_parse_fdt(void *dt, struct device_s *enum_dev);
 #endif
 
+#if defined(CONFIG_SOCLIB_MEMCHECK)
+# include <arch/mem_checker.h>
+#endif
+
 #include <hexo/types.h>
 #include <hexo/init.h>
 #include <hexo/lock.h>
@@ -74,14 +78,6 @@ static lock_t       cpu_init_lock;    /* cpu intialization lock */
 lock_t              __atomic_arch_lock;
 #endif
 
-static inline PRINTF_OUTPUT_FUNC(__printf_out_tty)
-{
-  volatile char * dev = 0x90600000;
-  size_t i;
-  for (i=0; i<len; ++i )
-    *dev = str[i];
-}
-
 /* architecture specific init function */
 void arch_init(void *device_tree, void *bootloader_pointer_table)
 {
@@ -89,13 +85,21 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
     if (cpu_isbootstrap())    /* FIXME */
         /* First CPU */
     {
+        cpu_init_flag = 0;
+
         lock_init(&__atomic_arch_lock);
         lock_init(&cpu_init_lock);
 
-		printk_set_output(__printf_out_tty, NULL);
-
 #endif
 #ifdef CONFIG_DATA_FROM_ROM
+# if defined(CONFIG_SOCLIB_MEMCHECK)
+        soclib_mem_check_region_status((uint8_t*)&__data_start,
+                                       (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start,
+                                       SOCLIB_MC_REGION_ALLOC);
+        soclib_mem_check_region_status((uint8_t*)&__bss_start,
+                                       (uint8_t*)&__bss_end-(uint8_t*)&__bss_start,
+                                       SOCLIB_MC_REGION_ALLOC);
+# endif
         memcpy_from_code((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
         memset((uint8_t*)&__bss_start, 0, (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
 #endif
@@ -146,8 +150,9 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         cpu_init();
 
 #if defined(CONFIG_ARCH_DEVICE_TREE)
-        cpu_interrupt_set_handler_device(
-            enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id()));
+        struct device_s *icu = enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id());
+        if ( icu )
+            cpu_interrupt_set_handler_device(icu);
 #endif
 
 #ifdef CONFIG_SMP
@@ -187,8 +192,9 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 
 
 #if defined(CONFIG_ARCH_DEVICE_TREE)
-        cpu_interrupt_set_handler_device(
-            enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id()));
+        struct device_s *icu = enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id());
+        if ( icu )
+            cpu_interrupt_set_handler_device(icu);
 #endif
 
         cpu_count++;
