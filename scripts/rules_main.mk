@@ -52,7 +52,8 @@ COPY_OBJECT_LIST:=$(filter-out %ldscript,$(COPY_OBJECT_LIST))
 
 all: kernel
 
-do_pre_header_list: $(PRE_HEADER_LIST)
+$(BUILD_DIR)/.done_pre_header_list: $(PRE_HEADER_LIST)
+	@touch $@
 
 objs:
 	echo "TARGET_OBJECT_LIST = $(TARGET_OBJECT_LIST)"

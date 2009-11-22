@@ -47,7 +47,7 @@ ifeq ($(wildcard $(2)/$(1:.o=.S)),$(2)/$(1:.o=.S))
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be ASM file)
 
-$(3)/$(1): $(2)/$(1:.o=.S) do_pre_header_list
+$(3)/$(1): $(2)/$(1:.o=.S) $(BUILD_DIR)/.done_pre_header_list
 	@echo '    AS      ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; \
@@ -74,7 +74,7 @@ else
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be C file)
 
-$(3)/$(1): $(2)/$(1:.o=.c) $(CONF_DIR)/.config.h do_pre_header_list
+$(3)/$(1): $(2)/$(1:.o=.c) $(CONF_DIR)/.config.h $(BUILD_DIR)/.done_pre_header_list
 	@echo '    CC      ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; \
@@ -102,7 +102,7 @@ endef
 define declare_gpct_header
 
 $(3)/$(1): $(2)/$(1:.h=.t)
-	@echo 'UNBACKSLASH ' $$(notdir $$@)
+	@echo '  Backslash ' $$(notdir $$@)
 	@mkdir -p $(dir $(3)/$(1).h)
 	cp $$< $$@
 	perl $(MUTEK_SRC_DIR)/gpct/gpct/build/backslash.pl < $$< > $$@
