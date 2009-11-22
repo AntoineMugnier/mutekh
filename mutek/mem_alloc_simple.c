@@ -84,10 +84,12 @@ void mem_free(void *ptr)
 
 size_t mem_alloc_getsize(void *ptr)
 {
+  return NULL;
 }
 
 void *mem_reserve(struct mem_alloc_region_s *region, void *start, size_t size)
 {
+  return NULL;
 }
 
 #endif
