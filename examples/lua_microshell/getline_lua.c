@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <mutek/printk.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,26 +15,35 @@
 #include <lua/lauxlib.h>
 #include <lua/lua.h>
 
-#include <drivers/fs/ramfs/ramfs.h>
-
 #include <termui/term.h>
 #include <termui/getline.h>
 
-extern struct device_s * console_dev;
+extern struct device_s icu_dev;
 
-struct device_s * rootfs_dev;
+extern struct device_s bd_dev;
+
+struct device_s * part_dev;
+
+extern struct device_s *console_dev;
+
+struct vfs_node_s *vfs_root_term;
+
+extern struct stream_ops_s vfs_ops;
 
 pthread_t a;
 
-
-void init_shell(lua_State*);
+/* shell functions */
+int ls(lua_State*);
+int cat(lua_State*);
+int cd(lua_State*);
+int pwd(lua_State*);
 
 /* line completion handler found in getline_lua_complete.c */
 GETLINE_FCN_COMPLETE(lua_complete);
 
 static GETLINE_FCN_PROMPT(prompt)
 {
-    return term_printf(tm, "[lua:%s] ", vfs_get_cwd()->name);
+    return term_printf(tm, "[lua:%s] ", vfs_root_term->n_name);
 }
 
 void* shell(void *param)
@@ -45,23 +53,20 @@ void* shell(void *param)
     lua_State			*luast;
 
     printk("init vfs... ");
-//	fat_open(rootfs_dev, 0, &vfs_root);
-	struct vfs_mount_s *root_mount;
-	ramfs_open(NULL, 0, &root_mount);
-	vfs_set_root(root_mount->root);
-
+    vfs_init(part_dev, VFS_VFAT_TYPE, 20, 20, &vfs_root_term);
     printk("ok\n");
-
-	vfs_set_cwd(vfs_get_root());
 
     /* create lua state */
     luast = luaL_newstate();
 
-	init_shell(luast);
+    lua_register(luast, "ls", ls);
+    lua_register(luast, "cat", cat);
+    lua_register(luast, "cd", cd);
+    lua_register(luast, "pwd", pwd);
 
     /* initialize terminal */
     if (!(tm = term_alloc(console_dev, console_dev, luast)))
-        return NULL;
+        return -1;
 
     /* set capabilities */
     term_set(tm, "xterm");
@@ -76,7 +81,7 @@ void* shell(void *param)
 
     /* initialize getline behavior according to term capabilities */
     if (!(bhv = getline_alloc(tm, 256)))	/* max line len = 256 */
-        return NULL;
+        return -1;
 
     getline_history_init(bhv, 64); /* 64 entries max */
     getline_complete_init(bhv, lua_complete);
@@ -156,13 +161,13 @@ void do_block_hexdump(struct device_s *bd, size_t lba)
 
 void app_start()
 {
-/* 	if ( block_partition_create(&bd_dev, 0) > 0 ) { */
-/* 		part_dev = device_get_child(&bd_dev, 0); */
-/* 	} else { */
-/* 		part_dev = &bd_dev; */
-/* 	} */
+	if ( block_partition_create(&bd_dev, 0) > 0 ) {
+		part_dev = device_get_child(&bd_dev, 0);
+	} else {
+		part_dev = &bd_dev;
+	}
 
-/* 	do_block_hexdump(part_dev, 0); */
+	do_block_hexdump(part_dev, 0);
 
     pthread_create(&a, NULL, shell, NULL);
 }

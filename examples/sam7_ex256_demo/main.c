@@ -42,7 +42,6 @@ int cmd_print(lua_State *st)
 
 void term_lcd_init(lua_State *st);
 void term_block_init(lua_State *st);
-void net_init(lua_State *st);
 
 extern struct device_s *console_dev;
 
@@ -61,7 +60,6 @@ void* lua_main(void *unused)
   term_lcd_init(luast);
   term_i2c_init(luast);
   term_block_init(luast);
-  net_init(luast);
 
 
   /* initialize terminal */
