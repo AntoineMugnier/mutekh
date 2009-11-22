@@ -1,6 +1,13 @@
 
+# New source code module to be compiled
+  CONFIG_MODULES examples/lock_test:%CONFIGPATH
+
 # Program license
   CONFIG_LICENSE_APP_GPL
+
+# Code compilation options
+  CONFIG_COMPILE_DEBUG
+  CONFIG_LIBC_ASSERT
 
 # Platform types
   CONFIG_ARCH_IBMPC
@@ -14,18 +21,16 @@
 
 # Mutek features
   CONFIG_MUTEK_CONSOLE
+  CONFIG_MUTEK_SCHEDULER_MIGRATION
+  CONFIG_MUTEK_MEMALLOC_SMART
 
 # Device drivers
   CONFIG_DRIVER_CHAR_VGATTY
   CONFIG_DRIVER_ICU_8259
 
 # Libs
+  CONFIG_PTHREAD
 
-# New source code module to be compiled
-  CONFIG_MODULES examples/lock_test:%CONFIGPATH
+# Memory layout
+  CONFIG_CPU_RESET_HANDLER
 
-CONFIG_PTHREAD
-
-CONFIG_CPU_RESET_HANDLER
-
-CONFIG_LIBC_ASSERT
