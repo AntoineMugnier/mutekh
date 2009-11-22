@@ -102,10 +102,10 @@ endef
 define declare_gpct_header
 
 $(3)/$(1): $(2)/$(1:.h=.t)
-#	@echo 'UNBACKSLASH ' $$(notdir $$@)
+	@echo 'UNBACKSLASH ' $$(notdir $$@)
 	@mkdir -p $(dir $(3)/$(1).h)
 	cp $$< $$@
-	perl $(MUTEK_SRC_DIR)/gpct/gpct/utils/backslash.pl $$@
+	perl $(MUTEK_SRC_DIR)/gpct/gpct/build/backslash.pl < $$< > $$@
 
 endef
 
