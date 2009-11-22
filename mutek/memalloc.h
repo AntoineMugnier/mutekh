@@ -23,6 +23,7 @@
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_clist.h>
+#include <hexo/endian.h>
 
 #ifdef CONFIG_MUTEK_MEMALLOC_SIGNED
 # define MEMALLOC_SIGNATURE	0x3a1b2ce1
