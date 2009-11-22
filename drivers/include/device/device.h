@@ -129,7 +129,7 @@ typedef DEV_CLEANUP(dev_cleanup_t);
 #define DEVICE_MAX_ADDRSLOT	4
 
 
-#ifdef CONFIG_HEXO_DEVICE_TREE
+#ifdef CONFIG_DEVICE_TREE
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
@@ -144,7 +144,7 @@ OBJECT_PROTOTYPE(device_obj, static inline, device_obj);
 
 /** device object structure */
 
-#ifdef CONFIG_HEXO_DEVICE_TREE
+#ifdef CONFIG_DEVICE_TREE
 
 #define CONTAINER_LOCK_device_list HEXO_SPIN
 #define CONTAINER_OBJ_device_list device_obj
@@ -168,7 +168,7 @@ struct device_s
   /** device IO addresses table */
   uintptr_t			addr[DEVICE_MAX_ADDRSLOT];
 
-#ifdef CONFIG_HEXO_DEVICE_TREE
+#ifdef CONFIG_DEVICE_TREE
   /** pointer to device enumrator private data if any */
   void				*enum_pv;
 
@@ -176,10 +176,10 @@ struct device_s
   device_list_entry_t		list_entry;
   device_obj_entry_t		obj_entry;
   device_list_root_t		children;
-#endif /* !CONFIG_HEXO_DEVICE_TREE */
+#endif /* !CONFIG_DEVICE_TREE */
 
 }
-#ifdef CONFIG_HEXO_DEVICE_TREE
+#ifdef CONFIG_DEVICE_TREE
 , list_entry)
 #endif
 ;
@@ -187,7 +187,7 @@ struct device_s
 /* used when no irq line is present/available */
 #define DEVICE_IRQ_INVALID	-1
 
-#ifdef CONFIG_HEXO_DEVICE_TREE
+#ifdef CONFIG_DEVICE_TREE
 
 OBJECT_CONSTRUCTOR(device_obj);
 OBJECT_DESTRUCTOR(device_obj);
@@ -225,9 +225,9 @@ error_t device_mem_map(struct device_s *dev, uint_fast8_t mask)
   return 0;
 }
 
-#endif /* !CONFIG_HEXO_DEVICE_TREE */
+#endif /* !CONFIG_DEVICE_TREE */
 
-#ifdef CONFIG_HEXO_DEVICE_TREE
+#ifdef CONFIG_DEVICE_TREE
 #define DEVICE_INITIALIZER							\
 {										\
   .children = CONTAINER_ROOT_INITIALIZER(device_list, CLIST),			\

@@ -65,7 +65,7 @@ struct mem_alloc_region_s *mem_region_get_scope(enum mem_scope_e scope);
 /** @this sets the region corresponding to a scope */
 void mem_region_set_scope(enum mem_scope_e scope, struct mem_alloc_region_s *region);
 
-#if ( defined(CONFIG_HEXO_DEVICE_TREE) && defined(CONFIG_FDT) )
+#if ( defined(CONFIG_DEVICE_TREE) && defined(CONFIG_FDT) )
 /** @this initializes memory allocatable regions, exclude the sys region region. */
 void mem_region_init(struct device_s *root, void *blob);
 #else

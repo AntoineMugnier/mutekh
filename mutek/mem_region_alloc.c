@@ -52,7 +52,7 @@ CONTAINER_KEY_FUNC(region_queue, DLIST, static inline, region_queue_id, cluster_
 region_queue_root_t region_cached_list, region_uncached_list ;
 
 
-#if ( defined(CONFIG_HEXO_DEVICE_TREE) && defined(CONFIG_FDT) )
+#if ( defined(CONFIG_DEVICE_TREE) && defined(CONFIG_FDT) )
 
 #include <fdt/reader.h>
 
@@ -177,7 +177,7 @@ void mem_region_init()
   mem_region_set_scope(mem_scope_cpu,&mem_region_system);
 }
 
-#endif /*CONFIG_HEXO_DEVICE_TREE*/
+#endif /*CONFIG_DEVICE_TREE*/
 
 struct mem_alloc_region_s *mem_region_create(uintptr_t start, uintptr_t end, bool_t cached)
 {

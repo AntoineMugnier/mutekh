@@ -28,7 +28,7 @@
 
 #include <mutek/printk.h>
 
-#ifdef CONFIG_HEXO_DEVICE_TREE
+#ifdef CONFIG_DEVICE_TREE
 
 struct device_s enum_root;
 
@@ -100,7 +100,7 @@ device_dump_list(struct device_s *root)
 void
 device_init(struct device_s *dev)
 {
-#ifdef CONFIG_HEXO_DEVICE_TREE
+#ifdef CONFIG_DEVICE_TREE
   device_obj_new(dev);
 #endif
   lock_init(&dev->lock);

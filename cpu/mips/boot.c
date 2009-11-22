@@ -54,7 +54,7 @@ asm(
 #else
         "   mfc0    $9,     $15                                                            \n"
 #endif
-        "   la      $sp,    __system_uncached_heap_end - 16                                \n"
+        "   la      $sp,    __initial_stack - 16                                           \n"
         "   andi    $9,     $9,     0x000003ff                                             \n"
 
 #ifndef CONFIG_SMP

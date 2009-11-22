@@ -22,7 +22,7 @@ void device_tree_init();
 
 void hexo_global_init()
 {
-#ifdef CONFIG_HEXO_DEVICE_TREE
+#ifdef CONFIG_DEVICE_TREE
 	device_tree_init();
 #endif
 }
