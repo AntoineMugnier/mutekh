@@ -80,7 +80,7 @@ enum				stdio_buf_mode_e
 struct				file_s
 {
   const struct fileops_s	*ops;
-  void *			*hndl;
+  void *hndl;
 
   error_t			(*rwflush)(struct file_s *file);
   stream_fifo_root_t		fifo_read;
