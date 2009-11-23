@@ -27,6 +27,7 @@
 #include <device/driver.h>
 
 #include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
 
 #include <stdlib.h>
 #include <string.h>
