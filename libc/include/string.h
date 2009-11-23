@@ -181,7 +181,7 @@ int_fast8_t ffsl(uint32_t i);
 int_fast8_t ffsll(uint64_t i);
 #define ffsll	__builtin_ffsll
 
-char *strerror(error_t errnum);
+const char *strerror(error_t errnum);
 
 #endif
 
