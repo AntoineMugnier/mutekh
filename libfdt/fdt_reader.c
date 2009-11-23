@@ -119,7 +119,7 @@ error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *wal
 			return 0;
 		default:
 			printk("Unhandled FDT Token: %x @ %p\n", token, (void*)state->ptr-state->blob);
-			return EINVAL;
+			return -EINVAL;
 		}
 	}
 }
@@ -130,13 +130,13 @@ static error_t fdt_check_header(const void *blob)
 
 	if ( (uintptr_t)blob & 3 ) {
 		printk("Unaligned FDT: %p\n", blob);
-		return EINVAL;
+		return -EINVAL;
 	}
 
 	if ( endian_be32(header->magic) != FDT_MAGIC ) {
 		printk("FDT bad magic, expected %x, got %x\n",
 			   FDT_MAGIC, endian_be32(header->magic));
-		return EINVAL;
+		return -EINVAL;
 	}
 
 	return 0;
@@ -175,7 +175,7 @@ error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker)
 	if ( endian_be32(*state.ptr) != FDT_NODE_START ) {
 		printk("FDT bad token, expected %x, got %x\n",
 			   FDT_NODE_START, endian_be32(*state.ptr));
-		return EINVAL;
+		return -EINVAL;
 	}
 
 	return fdt_walk_node(&state, walker);
@@ -238,7 +238,7 @@ error_t fdt_walk_blob_from(const void *blob, struct fdt_walker_s *walker, uint32
 	state.ptr = state.struct_base + offset/4;
 
 	if ( endian_be32(*state.ptr) != FDT_NODE_START )
-		return EINVAL;
+		return -EINVAL;
 
 	return fdt_walk_node(&state, walker);
 }

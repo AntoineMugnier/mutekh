@@ -80,7 +80,7 @@ uint32_t fdt_writer_node_entry(
 	const char *name)
 {
 	if ( writer->err || (void*)writer->struct_ptr > (void*)writer->rst ) {
-		writer->err = ENOMEM;
+		writer->err = -ENOMEM;
 		return 0;
 	}
 
@@ -120,7 +120,7 @@ void fdt_writer_node_prop(
 	size_t len)
 {
 	if ( writer->err || (void*)writer->struct_ptr + 8 + len > (void*)writer->rst ) {
-		writer->err = ENOMEM;
+		writer->err = -ENOMEM;
 		return;
 	}
 
@@ -135,7 +135,7 @@ void fdt_writer_node_prop(
 void fdt_writer_node_leave(struct fdt_writer_s *writer)
 {
 	if ( writer->err || (void*)writer->struct_ptr > (void*)writer->rst ) {
-		writer->err = ENOMEM;
+		writer->err = -ENOMEM;
 		return;
 	}
 	*writer->struct_ptr++ = endian_be32(FDT_NODE_END);
