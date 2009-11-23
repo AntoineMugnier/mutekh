@@ -46,6 +46,8 @@ error_t			timer_add_event(struct timer_s		*timer,
   t = event->start = timer->ticks;
   t += event->delay;
 
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+
   /* FIXME use gpct insert ascend */
   /* insert the timer in the list (sorted) */
   for (e = timer_head(&timer->root);
@@ -57,7 +59,9 @@ error_t			timer_add_event(struct timer_s		*timer,
   else
     err = !timer_insert_pre(&timer->root, e, event);
 
-  return 0;
+  CPU_INTERRUPT_RESTORESTATE;
+
+  return err;
 }
 
 /*
@@ -67,9 +71,18 @@ error_t			timer_add_event(struct timer_s		*timer,
 error_t	timer_cancel_event(struct timer_event_s	*event,
 			   bool_t		callback)
 {
+  error_t err = 0;
+
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+
   /* remove the timer */
   if (timer_remove(&event->timer->root, event))
-    return -ENOENT;
+    err = -ENOENT;
+
+  CPU_INTERRUPT_RESTORESTATE;
+
+  if ( err )
+	  return err;
 
   /* perform the callback if requested by user */
   if (callback)
