@@ -15,29 +15,31 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2009
-
+    Copyright (c) 2009, Nicolas Pouillon, <nipo@ssji.net>
 */
 
-#ifndef __ICU_SAM7_PRIVATE_H_
-#define __ICU_SAM7_PRIVATE_H_
+#ifndef __PITC_6079A_PRIVATE_H_
+#define __PITC_6079A_PRIVATE_H_
 
-#include <device/icu.h>
+#include <device/timer.h>
 #include <device/device.h>
 
-struct icu_sam7_handler_s
+#define PITC_PITEN     (1<<24)
+#define PITC_PITIEN    (1<<25)
+#define PITC_CPIV_MASK (0xfffff)
+
+struct pitc_6079a_context_s
 {
-  dev_irq_t		*hndl;
-  void			*data;
+	devtimer_callback_t	*cb;
+	void			*pv;
 };
 
-#define ICU_SAM7_MAX_VECTOR	32
-
-struct icu_sam7_private_s
-{
-	struct icu_sam7_handler_s	table[ICU_SAM7_MAX_VECTOR+1];
-	uint_fast8_t virq_refcount;
+struct pitc_6079a_reg_s {
+	uint32_t mr;
+	uint32_t sr;
+	uint32_t vr;
+	uint32_t ir;
 };
+
 
 #endif
-

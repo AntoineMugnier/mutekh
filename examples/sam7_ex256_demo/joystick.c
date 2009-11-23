@@ -5,18 +5,20 @@
 #include <device/device.h>
 
 # include <mutek/scheduler.h>
-# include <hexo/lock.h>
+# include <mutek/semaphore.h>
 
 #include <stdio.h>
 
 #include <hexo/gpct_platform_hexo.h>
+#include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_clist.h>
 
 extern struct device_s dev_mt5f;
 extern struct device_s dev_gpio_piob;
 
-lock_t lock;
-struct sched_context_s * volatile ctx;
+struct semaphore_s sem;
+
+#define CONTAINER_LOCK_j_queue HEXO_SPIN
 
 CONTAINER_TYPE(j_queue, CLIST,
 struct joy_event_s
@@ -29,27 +31,20 @@ struct joy_event_s
 
 CONTAINER_FUNC(j_queue, CLIST, static inline, j_queue);
 
-static volatile j_queue_root_t j_list;
+static j_queue_root_t j_list;
 
 static DEVINPUT_CALLBACK(joystick_moved)
 {
-	lock_spin(&lock);
-
 	struct joy_event_s *n = malloc(sizeof(*n));
 	n->id = id;
 	n->new_val = value;
 	j_queue_pushback(&j_list, n);
 
-	if (ctx != NULL)
-		sched_context_start(ctx);
-	ctx = NULL;
-	lock_release(&lock);
+	semaphore_post(&sem);
 }
 
 static DEVGPIO_IRQ(button_pressed)
 {
-	lock_spin(&lock);
-
 	struct joy_event_s *n = malloc(sizeof(*n));
 	n->id = (uintptr_t)private;
 
@@ -65,10 +60,7 @@ static DEVGPIO_IRQ(button_pressed)
 
 	j_queue_pushback(&j_list, n);
 
-	if (ctx != NULL)
-		sched_context_start(ctx);
-	ctx = NULL;
-	lock_release(&lock);
+	semaphore_post(&sem);
 }
 
 const char *name[] = {
@@ -83,6 +75,8 @@ const char *name[] = {
 
 void *joystick_main(void *unused)
 {
+	semaphore_init(&sem, 0);
+
 	j_queue_init(&j_list);
 
 	dev_gpio_set_value(&dev_gpio_piob, 24, 1);
@@ -99,26 +93,9 @@ void *joystick_main(void *unused)
 	dev_input_setcallback(&dev_mt5f, DEVINPUT_CTRLID_ALL, 0, joystick_moved, NULL);
 
 	while (1) {
-		struct joy_event_s *n;
+		semaphore_wait(&sem);
 
-		CPU_INTERRUPT_SAVESTATE_DISABLE;
-		lock_spin(&lock);
-		n = j_queue_head(&j_list);
-
-		if ( !n ) {
-			ctx = sched_get_current();
-			sched_context_stop_unlock(&lock);
-			asm volatile("":::"memory");
-			lock_spin(&lock);
-		}
-		
-		n = j_queue_head(&j_list);
-
-		if ( n )
-			j_queue_remove(&j_list, n);
-
-		lock_release(&lock);
-		CPU_INTERRUPT_RESTORESTATE;
+		struct joy_event_s *n = j_queue_pop(&j_list);
 
 		if ( !n )
 			continue;

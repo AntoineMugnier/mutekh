@@ -13,6 +13,8 @@
 #include <drivers/device/input/mt5-f/mt5-f.h>
 #include <drivers/device/block/sd-mmc/sd-mmc.h>
 
+#include <drivers/device/timer/pitc_6079a/pitc_6079a.h>
+
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -30,8 +32,13 @@ struct device_s spi1_dev;
 struct device_s i2c_dev;
 struct device_s lcd_dev;
 struct device_s dev_mt5f;
+struct device_s pitc_dev;
 
-struct device_s *console_dev;
+extern struct device_s *console_dev;
+
+#if defined(CONFIG_MUTEK_TIMERMS)
+extern struct device_s *timerms_dev;
+#endif
 
 static void set_gpio(
 	struct device_s *pio,
@@ -203,5 +210,15 @@ void arch_specific_hw_init()
 		device_init(&bd_dev);
 		sd_mmc_init(&bd_dev, &params);
 	}
-	
+
+	// Timer
+	device_init(&pitc_dev);
+	pitc_dev.addr[0] = (uintptr_t)AT91C_BASE_PITC;
+	pitc_dev.irq = ICU_SAM7_ID_PITC;
+	pitc_dev.icudev = &icu_dev;
+	pitc_6079a_init(&pitc_dev, NULL);
+
+#if defined(CONFIG_MUTEK_TIMERMS)
+	timerms_dev = &pitc_dev;
+#endif
 }

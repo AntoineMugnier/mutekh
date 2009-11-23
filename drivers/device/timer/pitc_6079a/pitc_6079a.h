@@ -15,29 +15,24 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2009
-
+    Copyright (c) 2009, Nicolas Pouillon, <nipo@ssji.net>
 */
 
-#ifndef __ICU_SAM7_PRIVATE_H_
-#define __ICU_SAM7_PRIVATE_H_
+#ifndef DRIVER_PITC_6079A_H_
+#define DRIVER_PITC_6079A_H_
 
-#include <device/icu.h>
+#include <device/timer.h>
 #include <device/device.h>
 
-struct icu_sam7_handler_s
-{
-  dev_irq_t		*hndl;
-  void			*data;
-};
+/* timer device functions */
 
-#define ICU_SAM7_MAX_VECTOR	32
-
-struct icu_sam7_private_s
-{
-	struct icu_sam7_handler_s	table[ICU_SAM7_MAX_VECTOR+1];
-	uint_fast8_t virq_refcount;
-};
+DEVTIMER_SETCALLBACK(pitc_6079a_setcallback);
+DEVTIMER_SETPERIOD(pitc_6079a_setperiod);
+DEVTIMER_SETVALUE(pitc_6079a_setvalue);
+DEVTIMER_GETVALUE(pitc_6079a_getvalue);
+DEV_IRQ(pitc_6079a_irq);
+DEV_CLEANUP(pitc_6079a_cleanup);
+DEV_INIT(pitc_6079a_init);
 
 #endif
 

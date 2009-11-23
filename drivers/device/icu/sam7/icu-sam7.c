@@ -36,6 +36,24 @@
 
 #include "arch/sam7/at91sam7x256.h"
 
+static DEV_IRQ(icu_sam7_handle_sysctrl)
+{
+	struct icu_sam7_private_s	*pv = dev->drv_pv;
+	struct icu_sam7_handler_s	*h;
+
+	if ( *AT91C_PITC_PISR ) {
+		h = &pv->table[ICU_SAM7_ID_PITC];
+		goto found;
+	}
+
+	return 0;
+
+  found:
+	if (h && h->hndl)
+		return h->hndl(h->data);
+	return 0;
+}
+
 DEVICU_SET_FLAGS(icu_sam7_set_flags)
 {
 	AT91PS_AIC registers = (void*)dev->addr[0];
@@ -174,6 +192,8 @@ DEV_INIT(icu_sam7_init)
 
 	if ( pv == NULL )
 		goto memerr;
+	
+	pv->virq_refcount = 0;
 
 	registers->AIC_IDCR = (uint32_t)-1;
 	registers->AIC_ICCR = (uint32_t)-1;
@@ -190,6 +210,9 @@ DEV_INIT(icu_sam7_init)
 	pv->table[32].data = NULL;
 	registers->AIC_SPU = (uint32_t)(pv->table+32);
 //	registers->AIC_DCR = 1;
+
+	pv->table[1].hndl = icu_sam7_handle_sysctrl;
+	pv->table[1].data = dev;
 
 	dev->drv_pv = pv;
 
@@ -208,6 +231,15 @@ DEVICU_ENABLE(icu_sam7_enable)
 {
 	AT91PS_AIC registers = (void*)dev->addr[0];
 	struct icu_sam7_private_s	*pv = sam7_c_irq_dev->drv_pv;
+
+	if ( (1<<irq) & ICU_SAM7_SYSCTRL_VIRQS ) {
+		if ( enable )
+			pv->virq_refcount++;
+		else
+			pv->virq_refcount--;
+		enable = !!(pv->virq_refcount);
+		irq = 1;
+	}
 
 	if (enable) {
 		registers->AIC_IECR = 1 << irq;

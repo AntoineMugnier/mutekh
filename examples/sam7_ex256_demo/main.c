@@ -18,30 +18,14 @@ static GETLINE_FCN_PROMPT(prompt)
   return term_printf(tm, "[%31Alua%A] ");
 }
 
-int cmd_print(lua_State *st)
-{
-  unsigned int	i;
-
-  for (i = 1; i <= lua_gettop(st); i++)
-    {
-      switch (lua_type(st, i))
-	{
-	case LUA_TNUMBER:
-	  printf("(lua num %i)\n", lua_tonumber(st, i));
-	  break;
-	case LUA_TSTRING:
-	  printf("(lua str %s)\n", lua_tostring(st, i));
-	  break;
-	default:
-	  printf("(lua type %i)\n", lua_type(st, i));
-	}
-    }
-
-  return 0;
-}
-
 void term_lcd_init(lua_State *st);
 void term_block_init(lua_State *st);
+#if defined(CONFIG_NETWORK)
+void net_init(lua_State *st);
+#endif
+#if defined(CONFIG_MUTEK_TIMERMS)
+void term_timer_init(lua_State *st);
+#endif
 
 extern struct device_s *console_dev;
 
@@ -55,12 +39,15 @@ void* lua_main(void *unused)
   luast = luaL_newstate();
   luaL_openlibs(luast);
 
-  lua_register(luast, "print", cmd_print);
-
   term_lcd_init(luast);
   term_i2c_init(luast);
   term_block_init(luast);
-
+#if defined(CONFIG_NETWORK)
+  net_init(luast);
+#endif
+#if defined(CONFIG_MUTEK_TIMERMS)
+  term_timer_init(luast);
+#endif
 
   /* initialize terminal */
   if (!(tm = term_alloc(console_dev, console_dev, luast)))

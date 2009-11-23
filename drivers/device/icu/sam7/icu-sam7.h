@@ -35,5 +35,10 @@ DEVICU_SETHNDL(icu_sam7_sethndl);
 DEVICU_DELHNDL(icu_sam7_delhndl);
 DEV_CLEANUP(icu_sam7_cleanup);
 
+#define ICU_SAM7_ID_PITC 20
+
+#define ICU_SAM7_SYSCTRL_VIRQS \
+	(1<<ICU_SAM7_ID_PITC)
+
 #endif
 
