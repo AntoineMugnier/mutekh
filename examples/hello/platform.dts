@@ -51,8 +51,7 @@
 	    device_type = "soclib:tty";
 		tty_count = <1>;
 		reg = <0xd0200000 0x10>;
-		icudev = &{/xicu@0};
-		irq = <0>;
+		icudev = <&{/xicu@0} 0>;
 	};
 
 	xicu@0 {
@@ -60,8 +59,7 @@
 		input_count = <3>;
 		output_line_no = <0>;
 		reg = <0xd2200000 0x20>;
-		icudev = &{/cpus/Mips,32@0};
-		irq = <0>;
+		icudev = <&{/cpus/Mips,32@0} 0>;
 	};
 
 	xicu@1 {
@@ -69,8 +67,7 @@
 		input_count = <3>;
 		output_line_no = <1>;
 		reg = <0xd2200000 0x20>;
-		icudev = &{/cpus/Mips,32@0};
-		irq = <0>;
+		icudev = <&{/cpus/Mips,32@0} 0>;
 	};
 
 	xicu@2 {
@@ -78,8 +75,7 @@
 		input_count = <3>;
 		output_line_no = <2>;
 		reg = <0xd2200000 0x20>;
-		icudev = &{/cpus/Mips,32@0};
-		irq = <0>;
+		icudev = <&{/cpus/Mips,32@0} 0>;
 	};
 
 	xicu@3 {
@@ -87,8 +83,7 @@
 		input_count = <3>;
 		output_line_no = <3>;
 		reg = <0xd2200000 0x20>;
-		icudev = &{/cpus/Mips,32@0};
-		irq = <0>;
+		icudev = <&{/cpus/Mips,32@0} 0>;
 	};
 
 	memory@0 {

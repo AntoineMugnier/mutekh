@@ -43,23 +43,20 @@
 	    device_type = "soclib:tty";
 		tty_count = <1>;
 		reg = <0x90600000 0x10>;
-		icudev = &{/icu@0};
-		irq = <1>;
+		icudev = <&{/icu@0} 1>;
 	};
 
 	icu@0 {
 	    device_type = "soclib:icu";
 		input_count = <2>;
 		reg = <0x20600000 0x20>;
-		icudev = &{/cpus/Mips,32@0};
-		irq = <0>;
+		icudev = <&{/cpus/Mips,32@0} 0>;
 	};
 
 	timer@0 {
 	    device_type = "soclib:timer";
 		reg = <0x01620000 0x10>;
-		icudev = &{/icu@0};
-		irq = <0>;
+		icudev = <&{/icu@0} 0>;
 	};
 
 	memory@0 {
