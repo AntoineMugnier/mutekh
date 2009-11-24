@@ -167,14 +167,8 @@ static FDT_ON_NODE_PROP_FUNC(enum_creator_node_prop)
 		fdt_parse_sized( priv->node_info->addr_cells, data,
 					 sizeof(val), &val );
 		priv->node_info->new_pv->cpuid = val;
-	} else if ( priv->node_info->where == IN_CPU && !strcmp( name, "ipi_dev" ) )
-		priv->node_info->new_pv->ipi_icudev = data;
-	else if ( priv->node_info->where == IN_CPU && !strcmp( name, "ipi_no" ) ) {
-		uint32_t val = (uint32_t)-1;
-		fdt_parse_sized( priv->node_info->addr_cells, data,
-					 sizeof(val), &val );
-		priv->node_info->new_pv->ipi_no = val;
-	}
+	} else if ( !strcmp( name, "linux,phandle" ) )
+		priv->node_info->new_pv->phandle = endian_be32(*(uint32_t*)data);
 }
 
 static FDT_ON_MEM_RESERVE_FUNC(enum_creator_mem_reserve)

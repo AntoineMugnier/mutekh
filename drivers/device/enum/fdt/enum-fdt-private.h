@@ -39,11 +39,10 @@ struct enum_pv_fdt_s
 	const char *device_type;
 	char device_path[ENUM_FDT_PATH_MAXLEN];
 	uint32_t offset;
+	uint32_t phandle;
 	union {
 		struct {
 			uint32_t cpuid;
-			const char *ipi_icudev;
-			uint32_t ipi_no;
 		};
 	};
 	uint8_t addr_cells;

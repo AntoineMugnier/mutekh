@@ -51,6 +51,16 @@ struct device_s *enum_fdt_get_at_offset(struct device_s *dev, uint32_t offset)
 	return NULL;
 }
 
+struct device_s *enum_fdt_get_phandle(struct device_s *dev, uint32_t phandle)
+{
+	CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
+			struct enum_pv_fdt_s *enum_pv = item->enum_pv;
+			if ( enum_pv->phandle == phandle )
+				return item;
+		});
+	return NULL;
+}
+
 struct device_s *enum_fdt_lookup(struct device_s *dev, const char *path)
 {
 	struct enum_fdt_context_s *pv = dev->drv_pv;

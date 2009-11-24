@@ -170,11 +170,20 @@ static FDT_ON_NODE_PROP_FUNC(creator_node_prop)
 	case IN_CPU:
 #if defined(CONFIG_HEXO_IPI)
 		if ( !strcmp(name, "ipi_dev") ) {
+			printk("Warning: ipi_dev/ipi_no couple got deprecated in favor of ipi = <&{/dev} ipi_no>\n");
 			priv->ipi_dev = enum_fdt_lookup(priv->enum_dev, data);
 			dprintk("Getting ipi dev for cpu %d \"%s\": %p\n", priv->cpuid, data, priv->ipi_dev);
 		} else if ( !strcmp(name, "ipi_no") ) {
+			printk("Warning: ipi_dev/ipi_no couple got deprecated in favor of ipi = <&{/dev} ipi_no>\n");
 			fdt_parse_sized(1, data, sizeof(priv->ipi_no), &priv->ipi_no);
 			dprintk("Getting ipi no for cpu %d: %d\n", priv->cpuid, priv->ipi_no);
+		} else if ( !strcmp(name, "ipi") ) {
+			uint32_t phandle;
+			void *no;
+			no = fdt_parse_sized(1, data, sizeof(phandle), &phandle);
+			fdt_parse_sized(1, no, sizeof(&priv->ipi_no), &priv->ipi_no);
+			priv->ipi_dev = enum_fdt_get_phandle(priv->enum_dev, phandle);
+			dprintk("Getting ipi dev for cpu %d \"%s\": %p\n", priv->cpuid, data, priv->ipi_dev);
 		}
 #endif
 		break;

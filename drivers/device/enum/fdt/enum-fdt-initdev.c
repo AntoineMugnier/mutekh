@@ -106,15 +106,25 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 		const void *value = NULL;
 		size_t len;
 
-		if ( fdt_reader_has_prop(state, "irq", &value, &len ) )
-			priv->dev->irq = endian_be32(*(uint32_t*)value);
-		else
-			priv->dev->irq = -1;
-
-		if ( fdt_reader_has_prop(state, "icudev", &value, &len ) )
+		if ( fdt_reader_has_prop(state, "icudev", &value, &len ) ) {
+			printk("Warning: icudev/irq couple got deprecated in favor of irq = <&{/dev} irq_no>\n");
 			parse_icudev( priv->enum_dev, priv->dev, value, len );
-		else
+		} else
 			priv->dev->icudev = NULL;
+
+		if ( fdt_reader_has_prop(state, "irq", &value, &len ) ) {
+			if ( len > 4 ) {
+				// New mode = <phandle irq>
+				uint32_t phandle = endian_be32(*(uint32_t*)value);
+				priv->dev->irq = endian_be32(*((uint32_t*)value + 1));
+				fdt_parse_sized( 1, value, sizeof(phandle), &phandle );
+				priv->dev->icudev = enum_fdt_get_phandle(priv->enum_dev, phandle);
+			} else {
+				printk("Warning: icudev/irq couple got deprecated in favor of irq = <&{/dev} irq_no>\n");
+				priv->dev->irq = endian_be32(*(uint32_t*)value);
+			}
+		} else
+			priv->dev->irq = -1;
 
 		if ( fdt_reader_has_prop(state, "reg", &value, &len ) ) {
 			if ( !strcmp(enum_pv->device_type, "memory") )
@@ -142,7 +152,9 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 		for ( ; binder->param_name; binder++ ) {
 			const void *value = NULL;
 			size_t len;
-			dprintk("   considering parameter %s... ", binder->param_name);
+			dprintk("   considering parameter %s, type=%d, off=%d, size=%d... ",
+					binder->param_name, binder->datatype,
+					binder->struct_offset, binder->datalen);
 			if ( fdt_reader_has_prop(state, binder->param_name, &value, &len ) ) {
 				dprintk("%P\n", value, len);
 				switch (binder->datatype) {
@@ -150,17 +162,20 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 					*(bool_t*)(priv->param + binder->struct_offset) = 1;
 					break;
 				case PARAM_DATATYPE_INT:
-					fdt_parse_sized( binder->datalen, value,
+					fdt_parse_sized( 1, value,
 								 binder->datalen, priv->param + binder->struct_offset );
 					break;
 				case PARAM_DATATYPE_DEVICE_PTR:
+				{
+					struct device_s *ref = enum_fdt_lookup(priv->enum_dev, value);
+					if ( ! ref->drv )
+						enum_fdt_register_one(priv->enum_dev, ref);
 					*(struct device_s **)(priv->param + binder->struct_offset) =
-						enum_fdt_get_at_offset(
-							priv->enum_dev,
-							endian_be32(*(uint32_t*)value));
+						ref;
 					break;
+				}
 				case PARAM_DATATYPE_ADDR:
-					fdt_parse_sized( binder->datalen, value,
+					fdt_parse_sized( enum_pv->addr_cells, value,
 								 binder->datalen, priv->param + binder->struct_offset );
 					break;
 				}
@@ -232,21 +247,25 @@ error_t enum_fdt_use_drv(
 	const char *reason = "walking";
 	error_t err = fdt_walk_blob_from(pv->blob, &walker, enum_pv->offset);
 
+//	printk("end walk\n");
+
 	if ( !err ) {
 		reason = "inside";
 		err = priv.err;
 	}
 
 	if ( !err ) {
+		dprintk("Initializing device %s with driver %p, icu %p, irq: %d\n",
+				enum_pv->device_path,
+				drv, dev->icudev, dev->irq);
 		reason = "driver";
 		err = drv->f_init(dev, param);
 	}
-	printk("Initialization of device %s with driver %p %s %s: %d\n",
-		   enum_pv->device_path,
-		   drv,
-		   reason,
-		   err ? "failed" : "succeded",
-		   err);
+	if ( err )
+		printk("Initializing device %s with driver %p, icu %p, irq: %d failed in %s: %d\n",
+			   enum_pv->device_path,
+			   drv, dev->icudev, dev->irq,
+			   reason, err);
 	return err;
 }
 
