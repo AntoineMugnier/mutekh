@@ -57,36 +57,62 @@
 #define XICU_MAX_HWI 32
 #define XICU_MAX_PTI 32
 
-struct xicu_soclib_handler_s
+struct xicu_handler_s
 {
   dev_irq_t		*hndl;
   void			*data;
 };
 
-struct xicu_soclib_private_s
-{
-	struct device_s timer;
-	struct xicu_soclib_handler_s hwi_handlers[XICU_MAX_HWI];
-	struct xicu_soclib_handler_s ipi_handlers[XICU_MAX_HWI];
-	size_t output_line_no;
-};
-
-
-
-struct xicu_soclib_timer_handler_s
+struct timer_handler_s
 {
   devtimer_callback_t		*hndl;
   void			*data;
 };
 
-bool_t
-xicu_timer_soclib_irq(struct device_s *timer_dev, int_fast8_t no);
 
-struct xicu_soclib_timer_private_s
+struct xicu_root_private_s
 {
-	struct xicu_soclib_timer_handler_s pti_handlers[XICU_MAX_PTI];
-	size_t output_line_no;
+	size_t input_lines;
+	size_t ipis;
+	size_t timers;
+	struct xicu_handler_s *hwi_handlers;
+	struct xicu_handler_s *ipi_handlers;
+	struct timer_handler_s *timer_handlers;
 };
+
+struct xicu_filter_private_s
+{
+	size_t output;
+	struct device_s *parent;
+};
+
+void xicu_root_enable_hwi(struct device_s *dev,
+						  uint_fast8_t input_line,
+						  uint_fast8_t output_line,
+						  bool_t enable);
+
+void xicu_root_enable_ipi(struct device_s *dev,
+						  uint_fast8_t input_line,
+						  uint_fast8_t output_line,
+						  bool_t enable);
+
+error_t xicu_root_set_hwi_handler(struct device_s *dev,
+								  uint_fast8_t input_line,
+								  dev_irq_t *hndl,
+								  void *data);
+
+error_t xicu_root_set_ipi_handler(struct device_s *dev,
+								  uint_fast8_t input_line,
+								  dev_irq_t *hndl,
+								  void *data);
+
+bool_t xicu_root_handle_ipi(struct device_s *dev, uint_fast8_t ipi);
+
+bool_t xicu_root_handle_hwi(struct device_s *dev, uint_fast8_t id);
+
+bool_t xicu_root_handle_timer(struct device_s *dev, int_fast8_t id);
+
+#define XICU_IRQ_IPI 0x20
 
 #endif
 

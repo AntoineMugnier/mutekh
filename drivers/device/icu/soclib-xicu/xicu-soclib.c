@@ -25,187 +25,225 @@
 #include "xicu-soclib-private.h"
 
 #include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
 #include <hexo/iospace.h>
 #include <hexo/endian.h>
 #include <hexo/ipi.h>
 #include <device/driver.h>
 
-DEVICU_ENABLE(xicu_soclib_enable)
+DEVTIMER_SETCALLBACK(xicu_timer_setcallback)
 {
-    struct xicu_soclib_private_s *pv = dev->drv_pv;
+	struct xicu_root_private_s *pv = dev->drv_pv;
+	struct timer_handler_s *handler = &pv->timer_handlers[id];
 
-	if ( irq & XICU_IRQ_IPI ) {
-		cpu_mem_write_32(
-			XICU_REG_ADDR(dev->addr[0],
-						  enable ? XICU_MSK_HWI_ENABLE : XICU_MSK_HWI_DISABLE,
-						  pv->output_line_no),
-			endian_le32(1 << (irq & 0x1f)));
-	} else {
-		cpu_mem_write_32(
-			XICU_REG_ADDR(dev->addr[0],
-						  enable ? XICU_MSK_HWI_ENABLE : XICU_MSK_HWI_DISABLE,
-						  pv->output_line_no),
-			endian_le32(1 << (irq & 0x1f)));
-	}
-}
-
-DEVICU_SETHNDL(xicu_soclib_sethndl)
-{
-    struct xicu_soclib_private_s *pv = dev->drv_pv;
-    struct xicu_soclib_handler_s *h;
-
-	if ( irq & XICU_IRQ_IPI )
-		h = pv->hwi_handlers + (irq & 0x1f);
-	else
-		h = pv->ipi_handlers + (irq & 0x1f);
-
-    h->hndl = hndl;
-    h->data = data;
-
-    return 0;
-}
-
-DEVICU_DELHNDL(xicu_soclib_delhndl)
-{
-    struct xicu_soclib_private_s *pv = dev->drv_pv;
-    struct xicu_soclib_handler_s *h;
-
-	if ( irq & XICU_IRQ_IPI )
-		h = pv->hwi_handlers + (irq & 0x1f);
-	else
-		h = pv->ipi_handlers + (irq & 0x1f);
-
-    h->hndl = NULL;
-    h->data = NULL;
-
-    return 0;
-}
-
-DEV_IRQ(xicu_soclib_handler)
-{
-    struct xicu_soclib_handler_s *h;
-    struct xicu_soclib_private_s *pv = dev->drv_pv;
-
-    uint32_t prio = endian_le32(
-		cpu_mem_read_32(XICU_REG_ADDR(dev->addr[0],
-									  XICU_PRIO,
-									  pv->output_line_no)));
-
-	if ( XICU_PRIO_HAS_WTI(prio) ) {
-//		printk("xicu wti: %x\n", XICU_PRIO_WTI(prio));
-	
-		h = pv->ipi_handlers + XICU_PRIO_HWI(prio);
-
-		cpu_mem_read_32(XICU_REG_ADDR(dev->addr[0],
-									  XICU_WTI_REG,
-									  XICU_PRIO_HWI(prio)));
-    
-		/* call ipi handler */
-		return h->hndl(h->data);
-	}
-
-	if ( XICU_PRIO_HAS_HWI(prio) ) {
-//		printk("xicu hwi: %x\n", XICU_PRIO_HWI(prio));
-
-		h = pv->hwi_handlers + XICU_PRIO_HWI(prio);
-    
-		/* call interrupt handler */
-		return h->hndl(h->data);
-	}
-
-	if ( XICU_PRIO_HAS_PTI(prio) ) {
-//		printk("xicu pti: %x\n", XICU_PRIO_PTI(prio));
-
-		return xicu_timer_soclib_irq(&pv->timer, XICU_PRIO_PTI(prio));
-	}
-
-//	printk("xicu nothing\n");
-
+	handler->hndl = callback;
+	handler->data = private;
 	return 0;
 }
 
-DEVICU_SENDIPI(xicu_soclib_sendipi)
+DEVTIMER_SETPERIOD(xicu_timer_setperiod)
 {
-//	printk("xicu send ipi to %x\n", cpu_icu_identifier);
-
 	cpu_mem_write_32(
 		XICU_REG_ADDR(dev->addr[0],
-					  XICU_WTI_REG,
-					  ((uint32_t)cpu_icu_identifier) & 0x1f),
-		endian_le32((uint32_t)cpu_icu_identifier));
+					  XICU_PTI_PER,
+					  id),
+		endian_le32(period));
 	return 0;
 }
 
-DEVICU_SETUPIPI(xicu_soclib_setupipi)
+DEVTIMER_SETVALUE(xicu_timer_setvalue)
 {
-//	struct xicu_soclib_private_s	*pv = dev->drv_pv;
+	cpu_mem_write_32(
+		XICU_REG_ADDR(dev->addr[0],
+					  XICU_PTI_VAL,
+					  id),
+		endian_le32(value));
 
-	xicu_soclib_sethndl(dev, XICU_IRQ_IPI | ipi_no,
-						(dev_irq_t*)ipi_process_rq, NULL);
-
-	return (void*)(uintptr_t)ipi_no;
+	return 0;
 }
 
-DEV_CLEANUP(xicu_soclib_cleanup)
+DEVTIMER_GETVALUE(xicu_timer_getvalue)
 {
-  struct xicu_soclib_private_s	*pv = dev->drv_pv;
-
-  device_unregister(&pv->timer);
-  mem_free(pv);
+	return endian_le32(
+		cpu_mem_read_32(
+			XICU_REG_ADDR(dev->addr[0],
+						  XICU_PTI_VAL,
+						  id)));
 }
 
-static const struct driver_param_binder_s xicu_param_binder[] =
+
+/* private functions */
+
+void xicu_root_enable_hwi(struct device_s *dev,
+						  uint_fast8_t input_line,
+						  uint_fast8_t output_line,
+						  bool_t enable)
 {
-	PARAM_BIND(struct soclib_xicu_param_s, output_line_no, PARAM_DATATYPE_INT),
+	cpu_mem_write_32(
+		XICU_REG_ADDR(dev->addr[0],
+					  enable ? XICU_MSK_HWI_ENABLE : XICU_MSK_HWI_DISABLE,
+					  output_line),
+		endian_le32(1 << input_line));
+}
+
+void xicu_root_enable_ipi(struct device_s *dev,
+						  uint_fast8_t input_line,
+						  uint_fast8_t output_line,
+						  bool_t enable)
+{
+	cpu_mem_write_32(
+		XICU_REG_ADDR(dev->addr[0],
+					  enable ? XICU_MSK_WTI_ENABLE : XICU_MSK_WTI_DISABLE,
+					  output_line),
+		endian_le32(1 << input_line));
+}
+
+error_t xicu_root_set_hwi_handler(struct device_s *dev,
+								  uint_fast8_t input_line,
+								  dev_irq_t *hndl,
+								  void *data)
+{
+	struct xicu_root_private_s	*pv = dev->drv_pv;
+
+	if ( input_line >= pv->input_lines )
+		return -EINVAL;
+
+	pv->hwi_handlers[input_line].hndl = hndl;
+	pv->hwi_handlers[input_line].data = data;
+	return 0;
+}
+
+error_t xicu_root_set_ipi_handler(struct device_s *dev,
+								  uint_fast8_t input_line,
+								  dev_irq_t *hndl,
+								  void *data)
+{
+	struct xicu_root_private_s	*pv = dev->drv_pv;
+
+	if ( input_line >= pv->ipis )
+		return -EINVAL;
+
+	pv->ipi_handlers[input_line].hndl = hndl;
+	pv->ipi_handlers[input_line].data = data;
+	return 0;
+}
+
+bool_t xicu_root_handle_ipi(struct device_s *dev, uint_fast8_t ipi)
+{
+	struct xicu_root_private_s *pv = dev->drv_pv;
+	struct xicu_handler_s *handler = &pv->ipi_handlers[ipi];
+
+	cpu_mem_read_32(XICU_REG_ADDR(dev->addr[0],
+								  XICU_WTI_REG,
+								  ipi));
+
+	if (handler->hndl) {
+	    handler->hndl(handler->data);
+		return 0;
+	}
+	printk("XICU timer lost irq\n");
+	return 0;
+}
+
+bool_t xicu_root_handle_hwi(struct device_s *dev, uint_fast8_t id)
+{
+	struct xicu_root_private_s *pv = dev->drv_pv;
+	struct xicu_handler_s *handler = &pv->hwi_handlers[id];
+
+/* 	cpu_mem_read_32(XICU_REG_ADDR(timer_dev->addr[0], */
+/* 								  XICU_HWI_ACK, */
+/* 								  id)); */
+
+	if (handler->hndl) {
+	    handler->hndl(handler->data);
+		return 0;
+	}
+	printk("XICU timer lost irq\n");
+	return 0;
+}
+
+bool_t xicu_root_handle_timer(
+	struct device_s *dev, int_fast8_t id)
+{
+	struct xicu_root_private_s *pv = dev->drv_pv;
+	struct timer_handler_s *handler = &pv->timer_handlers[id];
+
+	cpu_mem_read_32(XICU_REG_ADDR(dev->addr[0],
+								  XICU_PTI_ACK,
+								  id));
+
+	if (handler->hndl) {
+	    handler->hndl(handler->data);
+		return 0;
+	}
+	printk("XICU timer lost interrupt\n");
+	return 0;
+}
+
+DEV_CLEANUP(xicu_root_cleanup)
+{
+	struct xicu_root_private_s	*pv = dev->drv_pv;
+
+	mem_free(pv);
+}
+
+static const struct driver_param_binder_s xicu_root_binder[] =
+{
+	PARAM_BIND(struct xicu_root_param_s, input_lines, PARAM_DATATYPE_INT),
+	PARAM_BIND(struct xicu_root_param_s, ipis, PARAM_DATATYPE_INT),
+	PARAM_BIND(struct xicu_root_param_s, timers, PARAM_DATATYPE_INT),
 	{ 0 }
 };
 
-static const struct devenum_ident_s	xicu_soclib_ids[] =
+static const struct devenum_ident_s	xicu_root_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("soclib:xicu", sizeof(struct soclib_xicu_param_s), xicu_param_binder),
+	DEVENUM_FDTNAME_ENTRY("soclib:xicu:root", sizeof(struct xicu_root_param_s), xicu_root_binder),
 	{ 0 }
 };
 
-const struct driver_s	xicu_soclib_drv =
+const struct driver_s	xicu_root_drv =
 {
-  .class		= device_class_icu,
-  .id_table		= xicu_soclib_ids,
-  .f_init		= xicu_soclib_init,
-  .f_cleanup		= xicu_soclib_cleanup,
-  .f.icu = {
-    .f_enable		= xicu_soclib_enable,
-    .f_sethndl		= xicu_soclib_sethndl,
-    .f_delhndl		= xicu_soclib_delhndl,
-    .f_sendipi		= xicu_soclib_sendipi,
-    .f_setupipi		= xicu_soclib_setupipi,
-  }
+	.class           = device_class_timer,
+	.id_table        = xicu_root_ids,
+	.f_init          = xicu_root_init,
+	.f_cleanup       = xicu_root_cleanup,
+	.f.timer = {
+		.f_setcallback	= xicu_timer_setcallback,
+		.f_setperiod	= xicu_timer_setperiod,
+		.f_setvalue		= xicu_timer_setvalue,
+		.f_getvalue		= xicu_timer_getvalue,
+	}
 };
 
-REGISTER_DRIVER(xicu_soclib_drv);
+REGISTER_DRIVER(xicu_root_drv);
 
-DEV_INIT(xicu_soclib_init)
+DEV_INIT(xicu_root_init)
 {
-  struct xicu_soclib_private_s	*pv;
-  device_mem_map( dev , 1 );
-  dev->drv = &xicu_soclib_drv;
+	struct xicu_root_param_s *param = params;
+	size_t priv_size = sizeof(struct xicu_root_private_s);
+	priv_size += (param->input_lines + param->ipis + param->timers)
+		* sizeof(struct xicu_handler_s);
 
-  if (!(pv = mem_alloc(sizeof (*pv), (mem_scope_sys))))
-    return -ENOMEM;
+	device_mem_map( dev , 1 );
+	dev->drv = &xicu_root_drv;
 
-  dev->drv_pv = pv;
+	struct xicu_root_private_s *pv = mem_alloc(priv_size, mem_scope_sys);
 
-  device_init(&pv->timer);
-  pv->output_line_no = ((struct soclib_xicu_param_s*)params)->output_line_no;
-  pv->timer.addr[0] = dev->addr[0];
-  pv->timer.irq = 0;
-  pv->timer.icudev = dev;
-  xicu_timer_soclib_init(&pv->timer, params);
+	if ( !pv )
+		return -ENOMEM;
 
-  /* register as a child device */
-  device_register(&pv->timer, dev, NULL);
+	memset(pv, 0, priv_size);
 
-  DEV_ICU_BIND(dev->icudev, dev, dev->irq, xicu_soclib_handler);
+	dev->drv_pv = pv;
 
-  return 0;
+	pv->input_lines = param->input_lines;
+	pv->ipis = param->ipis;
+	pv->timers = param->timers;
+
+	pv->hwi_handlers = (struct xicu_handler_s*)(pv+1);
+	pv->ipi_handlers = pv->hwi_handlers + pv->input_lines;
+	pv->timer_handlers = (struct timer_handler_s*)(pv->ipi_handlers + pv->ipis);
+
+	return 0;
 }
 

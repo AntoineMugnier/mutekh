@@ -16,7 +16,7 @@
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
-
+    Copyright (c) 2009, Nicolas Pouillon <nipo@ssji.net>
 */
 
 
@@ -27,29 +27,76 @@
 #include <device/icu.h>
 #include <device/device.h>
 
-/* icu device functions */
+/*
+  Xicu is a tricky device. It is a composite device with
+  * programmable timers
+  * IPI endpoints
+  * Hardware irq lines
+  * A multi-output ICU concentrating all these
 
-DEV_INIT(xicu_soclib_init);
-DEVICU_ENABLE(xicu_soclib_enable);
-DEVICU_SETHNDL(xicu_soclib_sethndl);
-DEVICU_DELHNDL(xicu_soclib_delhndl);
-DEVICU_SENDIPI(xicu_soclib_sendipi);
-DEVICU_SETUPIPI(xicu_soclib_setupipi);
-DEV_CLEANUP(xicu_soclib_cleanup);
+  In MutekH, devices must have only one output IRQ line, and devices
+  can only be one class at a time.  Hopefully, ICU class handles IPIs,
+  and there is actually one ICU per output line. So we'll have
+  (n_output_lines + 1) devices for handling the Xicu.
+  
+  There will be:
+  * 1 device in the timer class, handled by the code in xicu-soclib.c,
+    this device is the root of the Xicu code, and actually handles
+    all the IRQ routing;
+  * n_output_lines "filter" devices in the icu class handling the IRQ
+    routing for each output line, these devices actually rely on the
+    root.
 
-DEVTIMER_SETCALLBACK(xicu_timer_soclib_setcallback);
-DEVTIMER_SETPERIOD(xicu_timer_soclib_setperiod);
-DEVTIMER_SETVALUE(xicu_timer_soclib_setvalue);
-DEVTIMER_GETVALUE(xicu_timer_soclib_getvalue);
-//DEV_IRQ(xicu_timer_soclib_irq);
-DEV_CLEANUP(xicu_timer_soclib_cleanup);
-DEV_INIT(xicu_timer_soclib_init);
+  First device to initialize is the "root" (timer) one. It only needs
+  the following attributes:
+  * count of hardware irq lines
+  * count of timers
+  * count of IPI endpoints
+  * address of device
+  * (no ICU device is needed)
 
-#define XICU_IRQ_IPI 0x20
+  Then, initialize the "filter" devices. The following attributes are
+  needed:
+  * output line number in the xicu
+  * parent "root" device reference
+  * a valid icu device and irq
+  * (no address is needed)
+ */
 
-struct soclib_xicu_param_s
+/* root dev */
+
+DEV_CLEANUP(xicu_root_cleanup);
+DEV_INIT(xicu_root_init);
+
+struct xicu_root_param_s
 {
-	size_t output_line_no;
+	size_t input_lines;
+	size_t ipis;
+	size_t timers;
+};
+
+/* timer device functions */
+
+DEVTIMER_SETCALLBACK(xicu_timer_setcallback);
+DEVTIMER_SETPERIOD(xicu_timer_setperiod);
+DEVTIMER_SETVALUE(xicu_timer_setvalue);
+DEVTIMER_GETVALUE(xicu_timer_getvalue);
+
+/* icu (filter) device functions */
+
+DEV_INIT(xicu_filter_init);
+DEV_CLEANUP(xicu_filter_cleanup);
+
+DEVICU_ENABLE(xicu_filter_enable);
+DEVICU_SETHNDL(xicu_filter_sethndl);
+DEVICU_DELHNDL(xicu_filter_delhndl);
+DEVICU_SENDIPI(xicu_filter_sendipi);
+DEVICU_SETUPIPI(xicu_filter_setupipi);
+
+struct xicu_filter_param_s
+{
+	struct device_s *parent;
+	size_t output_line;
 };
 
 #endif

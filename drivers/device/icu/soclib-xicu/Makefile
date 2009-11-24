@@ -1,3 +1,3 @@
 
-objs = xicu-soclib.o xicu-timer-soclib.o
+objs = xicu-soclib.o xicu-soclib-filter.o
 
