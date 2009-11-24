@@ -58,7 +58,7 @@ const uint32_t *fdt_skip_str(const uint32_t *ptr)
 error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *walker)
 {
 	size_t level = 0;
-	size_t min_level = 0;
+	size_t max_level = 512;
 	char full_path[32] = "";
 
 	for (;;) {
@@ -67,18 +67,20 @@ error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *wal
 		case FDT_NODE_START: {
 			level++;
 
-//			printk("start level: %d, min_level: %d, %s\n", level, min_level, state->ptr);
+//			printk("start level: %d, max_level: %d, %s\n", level, max_level, state->ptr);
 		
 			strncat(full_path, "/", 32);
 			strncat(full_path, (const char*)state->ptr, 32);
 
-			bool_t wanted = walker->on_node_entry(
-				walker->private,
-				state,
-				full_path+1);
+			if ( level < max_level ) {
+				bool_t wanted = walker->on_node_entry(
+					walker->private,
+					state,
+					full_path+1);
+				if ( !wanted )
+					max_level = level;
+			}
 			state->ptr = fdt_skip_str(state->ptr);
-			if ( !wanted )
-				min_level = level;
 			break;
 		}
 		case FDT_PROP: {
@@ -89,7 +91,7 @@ error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *wal
 /* 				   prop->data, */
 /* 				   endian_be32(prop->size)); */
 
-			if ( level > min_level )
+			if ( level < max_level )
 				walker->on_node_prop(
 					walker->private,
 					state,
@@ -100,16 +102,21 @@ error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *wal
 			break;
 		}
 		case FDT_NODE_END:
-/* 			printk("end level: %d, min_level: %d\n", level, min_level); */
+//			printk("end level: %d, max_level: %d, %s\n", level, max_level, full_path);
 
-			if ( level > min_level )
+			if ( level < max_level - 1 )
 				walker->on_node_leave(walker->private);
 			
 			char *end = strrchr(full_path, '/');
 			assert(end);
 			*(end) = 0;
-			if ( min_level == --level )
-				min_level = 0;
+			if ( max_level == level-- ) {
+//				printk("Reverting cloak\n");
+				max_level = 512;
+			}
+
+//			printk(" post end level: %d, max_level: %d\n", level, max_level);
+
 			if ( level == 0 )
 				return 0;
 			break;
