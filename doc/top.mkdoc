@@ -45,9 +45,14 @@
  @order 89
 @end group
 
+@moduledef{Virtual File System}
+ @short Virtual file system library and file system drivers
+ @order 88
+@end group
+
 @moduledef{Pthread library}
  @short POSIX threads library
- @order 88
+ @order 87
 @end group
 
 @moduledef{SRL}
@@ -97,19 +102,6 @@
 @end section
 
 @insert global_scope_section
-
-@section TP {Contributors}
- @list
-  @item @b{Ghassan Almaless} (libvfs, vfat driver)
-  @item @b{Nicolas Ballabriga} (libvfs)
-  @item @b{Matthieu Bucchianeri} (libnetwork, device drivers, initial Doom port)
-  @item @b{Alexandre Becoulet} (hexo, mutek, ibmpc/x86 port, soclib/mips port, libc, libpthread, libtermui, device drivers...)
-  @item @b{Sylvain Leroy} (libvfs, libunix, fs drivers)
-  @item @b{Nicolas Pouillon} (libsrl, libmwmr, libfdt, ppc and arm ports, many hexo changes, device drivers...)
-  @item @b{Joel Porquet} (librtld, libdsrl, libtermui, many fixes...)
-  @item @b{Dimitri Refauvelet} (virtual memory and memory allocation in hexo/mutek)
- @end list
-@end section
 
 @section TP {GNU Free Documentation License}
  @include fdl-1.3.mkdoc
