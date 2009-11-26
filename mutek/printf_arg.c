@@ -217,6 +217,13 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
 
 	/* hexadecimal unsigned integer */
 
+      case ('X'):
+#ifndef CONFIG_PRINTF_ARG_SIMPLE
+	len = __printf_putint(buf_, val, "0123456789ABCDEF", 16);
+	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
+	break;
+#endif
+
 #ifndef CONFIG_PRINTF_ARG_SIMPLE
       case ('p'):
 	fcn(ctx, "0x", offset, 2);
@@ -224,13 +231,6 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
 	zeropad = 1;
 	padding[0] = sizeof(void*) * 2;
 	rightpad = 0;
-#endif
-
-      case ('X'):
-#ifndef CONFIG_PRINTF_ARG_SIMPLE
-	len = __printf_putint(buf_, val, "0123456789ABCDEF", 16);
-	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
-	break;
 #endif
 
       case ('x'):
