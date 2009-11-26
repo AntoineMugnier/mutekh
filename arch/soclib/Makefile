@@ -24,5 +24,3 @@ ifeq ($(LINKING),1)
 meta = ldscript
 
 endif
-
-ldscript: $(CURRENT_DIR)/soclib_addresses.ldscript.m4
