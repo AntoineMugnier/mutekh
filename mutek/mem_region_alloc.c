@@ -79,7 +79,10 @@ void mem_region_init(struct device_s *root, void *blob)
   region_queue_init(&region_uncached_list);
 
   CONTAINER_FOREACH(device_list, CLIST, &root->children, {
-      if (item->drv == NULL) CONTAINER_FOREACH_CONTINUE;
+
+      if (item->drv == NULL)
+	CONTAINER_FOREACH_CONTINUE;
+
       if (item->drv->class == device_class_mem ){
 	dev_mem_get_info(item, &mem_info);
 
@@ -239,6 +242,7 @@ void mem_region_set_scope(enum mem_scope_e scope, struct mem_alloc_region_s *reg
     case mem_scope_cluster:
       CPU_LOCAL_SET(local_uncached_region, region);
       break;
+
     case mem_scope_context:
     case mem_scope_cpu: 
       CPU_LOCAL_SET(local_cached_region, region);
@@ -255,11 +259,11 @@ struct mem_alloc_region_s *mem_region_get_scope(enum mem_scope_e scope)
     {
     case mem_scope_cluster:
       return CPU_LOCAL_GET(local_uncached_region);
-      break;
+
     case mem_scope_context:
     case mem_scope_cpu:
       return CPU_LOCAL_GET(local_cached_region);
-      break;
+
     case mem_scope_sys:
     case mem_scope_default:
     default:
@@ -276,18 +280,18 @@ struct mem_region_s *get_local_item(enum mem_scope_e scope, region_queue_root_t 
     case mem_scope_cluster:
       *region_list = &region_uncached_list;
       return CPU_LOCAL_GET(uncached_region_queue);
-      break;
+
     case mem_scope_context:
     case mem_scope_cpu:
       *region_list = &region_cached_list;
       return CPU_LOCAL_GET(cached_region_queue);
-      break;
+
     case mem_scope_sys:
     case mem_scope_default:
     default: 
       *region_list = NULL;
       return NULL;
-      break;
+
     
     }
   

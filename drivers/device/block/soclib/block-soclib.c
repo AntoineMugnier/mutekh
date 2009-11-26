@@ -29,6 +29,7 @@
 
 #include <hexo/iospace.h>
 #include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 
