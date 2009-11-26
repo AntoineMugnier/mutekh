@@ -102,8 +102,10 @@ void __sched_context_push(struct sched_context_s *sched_ctx)
 	sched_queue_pushback(&sched_root, sched_ctx);
 #if defined(CONFIG_HEXO_IPI)
 	struct sched_cls_item_s *idle = sched_cls_queue_pop(&cls_queue);
-	if ( idle )
+	if ( idle ) {
 		ipi_post(GET_CLS_FROM_ITEM(idle));
+		sched_cls_queue_pushback(&cls_queue, idle);
+	}
 #endif /* IPI */
 }
 
