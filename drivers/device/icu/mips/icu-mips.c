@@ -35,15 +35,36 @@
 
 #include <mutek/printk.h>
 
+void icu_mips_update(struct device_s *dev)
+{
+	/*
+	 * Prevent the Mips-specific code to be compiled on heterogeneous
+	 * builds.
+	 */
+#if defined(__mips)
+	struct icu_mips_private_s	*pv = dev->drv_pv;
+
+//	printk("ICU mips mask %x for cpu %d\n", pv->mask, cpu_id());
+
+	reg_t status = cpu_mips_mfc0(12, 0);
+	status = (status & 0xffff00ff) | ((uint32_t)pv->mask << 8);
+	cpu_mips_mtc0(12, 0, status);
+
+    pv->must_update = 0;
+#endif
+}
+
 DEVICU_ENABLE(icu_mips_enable)
 {
-	reg_t status = cpu_mips_mfc0(12, 0);
-	reg_t mask = 1 << (irq + 10);
+	struct icu_mips_private_s	*pv = dev->drv_pv;
+
+	reg_t mask = 1 << (irq + 2);
 	if (enable)
-		status |= mask;
+		pv->mask |= mask;
 	else
-		status &= ~mask;
-	cpu_mips_mtc0(12, 0, status);
+		pv->mask &= ~mask;
+
+    pv->must_update = 1;
 }
 
 DEVICU_SETHNDL(icu_mips_sethndl)
@@ -62,10 +83,9 @@ DEVICU_DELHNDL(icu_mips_delhndl)
 	struct icu_mips_private_s	*pv = dev->drv_pv;
 	struct icu_mips_handler_s	*h = pv->table + irq;
 
-	reg_t status = cpu_mips_mfc0(12, 0);
-	reg_t mask = 1 << (irq + 10);
-	assert( (mask & status) == 0 && "You should have disabled this interrupt already" );
-	(void)(mask&status);
+	reg_t mask = 1 << (irq + 2);
+	assert( (mask & pv->mask) == 0 && "You should have disabled this interrupt already" );
+	(void)(mask&pv->mask);
 
 	h->hndl = NULL;
 	h->data = NULL;
@@ -78,6 +98,8 @@ static CPU_INTERRUPT_HANDLER(icu_mips_handler)
 	struct device_s *dev = priv;
 	struct icu_mips_private_s	*pv = dev->drv_pv;
 	struct icu_mips_handler_s	*h;
+	if ( !irq )
+		return;
 	uint32_t irq_no = __builtin_ctz(irq);
 
 	if ( irq_no >= ICU_MIPS_MAX_VECTOR ) {
@@ -91,14 +113,16 @@ static CPU_INTERRUPT_HANDLER(icu_mips_handler)
 		h->hndl(h->data);
 	else
 		printk("Mips %d lost interrupt %i\n", cpu_id(), irq_no);
+
+    if ( pv->must_update )
+        icu_mips_update(dev);
 }
 
 DEV_CLEANUP(icu_mips_cleanup)
 {
-	reg_t status = cpu_mips_mfc0(12, 0);
-	reg_t mask = 0x3f << 10;
-	status &= ~mask;
-	cpu_mips_mtc0(12, 0, status);
+	struct icu_mips_private_s *pv = dev->drv_pv;
+
+    mem_free(pv);
 }
 
 static const struct devenum_ident_s	icu_mips_ids[] =
@@ -136,6 +160,10 @@ DEV_INIT(icu_mips_init)
 		goto memerr;
 
 	dev->drv_pv = pv;
+
+	memset(pv, 0, sizeof(*pv));
+
+    pv->must_update = 1;
 
 	return 0;
 

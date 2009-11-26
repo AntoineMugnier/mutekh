@@ -27,6 +27,14 @@
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
 
+#if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_ARCH_SOCLIB)
+# include <drivers/device/enum/fdt/enum-fdt.h>
+# include <drivers/device/icu/mips/icu-mips.h>
+# include <device/device.h>
+
+extern struct device_s fdt_enum_dev;
+#endif
+
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
 /** pointer to context local storage in cpu local storage */
@@ -60,6 +68,12 @@ void cpu_init(void)
 
   /* set cpu local storage register base pointer */
   asm volatile("move $27, %0" : : "r" (cls));
+#endif
+
+#if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_ARCH_SOCLIB)
+  struct device_s *icu = enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id());
+  if ( icu )
+	  icu_mips_update(icu);
 #endif
 
 /* #ifdef CONFIG_HEXO_MMU */

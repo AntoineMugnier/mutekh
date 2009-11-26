@@ -33,6 +33,7 @@ DEVICU_ENABLE(icu_mips_enable);
 DEVICU_SETHNDL(icu_mips_sethndl);
 DEVICU_DELHNDL(icu_mips_delhndl);
 DEV_CLEANUP(icu_mips_cleanup);
+void icu_mips_update(struct device_s *dev);
 
 #endif
 
