@@ -123,15 +123,26 @@ SECTIONS
 	__data_load_start = LOADADDR(.data);
 	__data_load_end = LOADADDR(.data) + SIZEOF(.data);
 
-	.bss : {
+// #if defined(CONFIG_HET_BUILD)
+//     /DISCARD/ : {
+// #else
+    .bss : {
 		__bss_start = ABSOLUTE(.);
+// #endif
 		*(.sbss*)
 		*(COMMON)
 		*(.common*)
 		*(.scommon*)
 		*(.bss*)
+// #if !defined(CONFIG_HET_BUILD)
 		__bss_end = ABSOLUTE(.);
 	} > mem_ram
+// #else
+//     }
+
+//     __bss_end = 0;
+//     __bss_start = 0;
+// #endif
 
 	__system_uncached_heap_start = .;
 	__system_uncached_heap_end = ORIGIN(mem_ram) + LENGTH(mem_ram);

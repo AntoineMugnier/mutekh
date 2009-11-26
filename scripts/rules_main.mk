@@ -108,7 +108,6 @@ else
 $(FINAL_LINK_TARGET): $(FINAL_LINK_SOURCE) FORCE \
 		$(arch_OBJ_DIR)/ldscript \
 		$(cpu_OBJ_DIR)/ldscript
-	@echo '    LD out  ' $(notdir $@)
 	$(LD) $(LINK_LDFLAGS) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		$< \
 		-T $(arch_OBJ_DIR)/ldscript \

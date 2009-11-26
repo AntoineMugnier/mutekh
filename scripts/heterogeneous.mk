@@ -28,6 +28,7 @@ kernel-het: $(HET_KERNELS)
 	echo "HET_OBJS: $(HET_OBJS)"
 
 $(BUILD_DIR)/kernel-%.pre.o: FORCE
+	@echo "PRE $@"
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
 		 MAKEFLAGS=$(MAKEFLAGS) CONF=$($(*)_CONF) \
 		 BUILD_DIR=$(BUILD_DIR) TARGET_EXT=pre.o \
@@ -37,13 +38,15 @@ $(BUILD_DIR)/kernel-%.pre.o: FORCE
 # We have to go through an unique target or the hetlink will be done
 # twice...
 
-$(HET_OBJS): __do_hetlink
+$(HET_OBJS): __do_hetlink FORCE
+
+.NOPARALLEL: __do_hetlink
 
 __do_hetlink : $(PRE_OBJS) $(HETLINK_CONF) FORCE
 	echo '    HETLINK ' $(notdir $@)
 	$(HETLINK) -v 4 -c $(MUTEK_SRC_DIR)/scripts/hetlink.conf $(PRE_OBJS)
 
-$(BUILD_DIR)/kernel-%.het.out : $(BUILD_DIR)/kernel-%.pre.o.het.o
+$(BUILD_DIR)/kernel-%.het.out : $(BUILD_DIR)/kernel-%.pre.o.het.o FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
 		 MAKEFLAGS=$(MAKEFLAGS) CONF=$($(*)_CONF) \
 		 BUILD_DIR=$(BUILD_DIR) \
