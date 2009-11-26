@@ -34,6 +34,10 @@ void soclib_parse_fdt(void *dt, struct device_s *enum_dev);
 # include <arch/mem_checker.h>
 #endif
 
+#if defined(CONFIG_SOCLIB_EARLY_CONSOLE)
+void soclib_early_console(uintptr_t addr);
+#endif
+
 #include <hexo/types.h>
 #include <hexo/init.h>
 #include <hexo/lock.h>
@@ -104,6 +108,10 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 # endif
         memcpy_from_code((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
         memset((uint8_t*)&__bss_start, 0, (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
+#endif
+
+#if defined(CONFIG_SOCLIB_EARLY_CONSOLE)
+        soclib_early_console(CONFIG_SOCLIB_EARLY_CONSOLE);
 #endif
 
         /* configure system wide cpu data */
