@@ -67,10 +67,12 @@ void __cyg_profile_func_exit  (void *this_fn,
     }
 }
 
-void
+bool_t
 mutek_instrument_trace(bool_t state)
 {
-  mutek_instrument_trace_flag = state;
+	bool_t old = hexo_instrument_trace_flag;
+	hexo_instrument_trace_flag = state;
+	return old;
 }
 
 void
