@@ -14,6 +14,8 @@
 
   # Libs
   CONFIG_PTHREAD
+  CONFIG_CPU_MAXCOUNT 4
+
 
 
 %include /dev/null		# absolute or relative to current file
@@ -35,7 +37,6 @@
 %else
 
   CONFIG_COMPILE_OPTIMIZE 2
-  CONFIG_CPU_MAXCOUNT 4
 
 
 
@@ -64,6 +65,7 @@
   CONFIG_CPU_X86_EMU
 
 
+
 %section ibmpc-x86
 
   CONFIG_ARCH_IBMPC
@@ -74,6 +76,7 @@
   CONFIG_DRIVER_ICU_8259
 
   CONFIG_CPU_RESET_HANDLER
+
 
 
 %section soclib-*
