@@ -134,16 +134,6 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 	}
 #endif
 
-#if defined(CONFIG_VFS)
-	if ( root_dev ) {
-		if (vfs_init(root_dev, VFS_VFAT_TYPE, 20, 20, NULL) != 0) {
-			printf("Warning: error in VFS initialization\n");
-		}
-	} else {
-		printf("Warning: no rootfs device selected\n");
-	}
-#endif
-
   printk("MutekH is alive.\n");
 
   arch_start_other_cpu(); /* let other CPUs enter main_smp() */
