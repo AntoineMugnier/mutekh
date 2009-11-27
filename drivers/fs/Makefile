@@ -1,15 +1,7 @@
-ifeq ($(CONFIG_DRIVER_FS_VFAT), defined)
- subdirs += vfat
+ifeq ($(CONFIG_DRIVER_FS_RAMFS), defined)
+ subdirs += ramfs
 endif
 
-ifeq ($(CONFIG_DRIVER_FS_PIPE), defined)
- subdirs += pipe
-endif
-
-ifeq ($(CONFIG_DRIVER_FS_DEV), defined)
- subdirs += devfs
-endif
-
-ifeq ($(CONFIG_DRIVER_FS_NFS), defined)
- subdirs += nfs
+ifeq ($(CONFIG_DRIVER_FS_FAT), defined)
+ subdirs += fat
 endif

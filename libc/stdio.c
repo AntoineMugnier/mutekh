@@ -1,13 +1,14 @@
 
 #include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 #include <fileops.h>
 
 #ifdef CONFIG_VFS
 #include <vfs/vfs.h>
+#include <vfs/file.h>
+#include <mutek/mem_alloc.h>
 #endif
 
 /***********************************************************************
@@ -311,7 +312,9 @@ error_t fseek(FILE *stream, fpos_t offset, int_fast8_t whence)
 
   stream->rwflush(stream);
 
-  if ((stream->pos = stream->ops->lseek(stream->hndl, offset, whence)) >= 0)
+  stream->pos = stream->ops->lseek(
+	  (struct vfs_file_s *)stream->hndl, offset, whence);
+  if (stream->pos >= 0)
     return 0;
   else
     return EOF;
@@ -393,37 +396,37 @@ void __stdio_stream_init(FILE *file)
   file->eof = 0;
 }
 
-#ifdef CONFIG_VFS
+#if defined(CONFIG_VFS)
 
-static vfs_open_flags_t	open_flags(const char *str)
+static enum vfs_open_flags_e	open_flags(const char *str)
 {
-  vfs_open_flags_t	flags = 0;
+  enum vfs_open_flags_e	flags = 0;
 
   while (*str)
     {
       switch (*str)
 	{
 	case ('r'):
-	  flags |= VFS_O_RDONLY;
+	  flags |= VFS_OPEN_READ;
 	  break;
 
 	case ('w'):
-	  flags |= VFS_O_WRONLY | VFS_O_CREATE;
+	  flags |= VFS_OPEN_WRITE | VFS_OPEN_CREATE;
 	  break;
 
 	case ('+'):
-	  flags |= VFS_O_RDWR;
+	  flags |= VFS_OPEN_READ | VFS_OPEN_WRITE;
 	  break;
 
 	case ('a'):
-	  flags |= O_WRONLY | VFS_O_APPEND;
+	  flags |= VFS_OPEN_WRITE | VFS_OPEN_APPEND;
 	  break;
 
 	case ('b'):
 	  break;
 
 	default:
-	  return -1;
+	  return 0;
 	}
       str++;
     }
@@ -433,40 +436,47 @@ static vfs_open_flags_t	open_flags(const char *str)
 
 static const struct fileops_s fopen_fops =
 {
-  .read = (fileops_read_t*)vfs_read,
-  .write = (fileops_write_t*)vfs_write,
-  .lseek = (fileops_lseek_t*)vfs_lseek,
-  .close = (fileops_close_t*)vfs_close,
+  .read = (fileops_read_t*)vfs_file_read,
+  .write = (fileops_write_t*)vfs_file_write,
+  .lseek = (fileops_lseek_t*)vfs_file_seek,
+  .close = (fileops_close_t*)vfs_file_close,
 };
 
 FILE *fopen(const char *path, const char *mode)
 {
-  FILE		*file;
-  uint_fast8_t	flags;
+  enum vfs_open_flags_e flags = open_flags(mode);
+  FILE *file = mem_alloc(sizeof(FILE), mem_scope_sys);
 
-  if ((flags = open_flags(mode)) < 0)
-    goto err;
-
-  if (!(file = malloc(sizeof (FILE))))
-    goto err;
+  if ( file == NULL ) {
+	  errno = ENOMEM;
+	  goto err;
+  }
 
   file->ops = &fopen_fops;
 
-  if (vfs_open(vfs_get_root(), path, flags, 0644, &file->hndl))
-    goto err_1;
+  struct vfs_file_s *hndl;
+  error_t error = vfs_open(vfs_get_root(),
+						   vfs_get_cwd(),
+						   path, flags, &hndl);
+
+  if (error) {
+	  errno = -error;
+	  goto err_1;
+  }
+  file->hndl = (void*)hndl;
 
   __stdio_stream_init(file);
 
-  file->pos = vfs_lseek(file->hndl, 0, SEEK_CUR);
+  file->pos = vfs_file_seek((struct vfs_file_s *)file->hndl,
+							0, SEEK_CUR);
   file->buf_mode = _IOFBF;
 
-  return (file);
+  return file;
 
  err_1:
-  free(file);
+  mem_free(file);
  err:
   return NULL;
 }
 
 #endif /* CONFIG_VFS */
-

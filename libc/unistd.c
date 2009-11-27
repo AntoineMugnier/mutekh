@@ -59,7 +59,7 @@ fd_t fd_add(const struct fileops_s *ops, void *hndl)
                   File descriptor oriented operations
    ********************************************************************** */
 
-#ifdef CONFIG_VFS
+#if defined(CONFIG_VFS) && 0
 
 static const struct fileops_s open_fops =
 {
@@ -112,11 +112,15 @@ fd_t open(const char *pathname, enum open_flags_e flags, ...)
       va_end(ap);
     }
 
-  if (vfs_open(vfs_get_root(), pathname, flags_to_vfs(flags), mode, &e->hndl))
+  struct vfs_file_s *hndl;
+  if (vfs_open(vfs_get_root(), vfs_get_pwd(),
+			   pathname, flags_to_vfs(flags), hndl))
     {
       fd_free(&fd_array, e);
       return -1;
     }
+
+  e->hndl = hndl;
 
   return fd;
 }
@@ -164,45 +168,51 @@ error_t close(fd_t fd)
                   VFS operations
    ********************************************************************** */
 
-#ifdef CONFIG_VFS
+#if defined(CONFIG_VFS)
 
-/* FIXME */
 error_t stat(const char *path, struct stat *st)
 {
   struct vfs_stat_s vst;
 
-  if (vfs_stat(vfs_get_root(), path, &vst))
+  if (vfs_stat(vfs_get_root(), vfs_get_cwd(),
+			   path, &vst))
     return -1;
 
   memset(st, 0, sizeof(*st));
   st->st_size = vst.size;
 
-  if (vst.attr & VFS_DIR)
-    st->st_mode |= S_IFDIR;
-  else
-    st->st_mode |= S_IFREG;
+  switch (vst.type) {
+  case VFS_NODE_DIR:
+	  st->st_mode |= S_IFDIR;
+	  break;
+  case VFS_NODE_FILE:
+	  st->st_mode |= S_IFREG;
+	  break;
+  }
 
   return 0;
 }
 
 error_t lstat(const char *path, struct stat *buf)
 {
-  return stat(path, buf);
+	return stat(path, buf);
 }
 
 error_t access(const char *pathname, enum access_perm_e mode)
 {
-  return 0;
+	return 0;
 }
 
 error_t remove(const char *pathname)
 {
-  return vfs_unlink(vfs_get_root(), pathname);
+	return ENOTSUP;
+//	return vfs_unlink(vfs_get_root(), pathname);
 }
 
 error_t mkdir(const char *pathname, mode_t mode)
 {
-  return vfs_mkdir(vfs_get_root(), pathname, mode);
+	return ENOTSUP;
+//	return vfs_mkdir(vfs_get_root(), pathname, mode);
 }
 
 #endif /* CONFIG_VFS */
