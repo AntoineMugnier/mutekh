@@ -303,7 +303,7 @@ OBJECT_DESTRUCTOR(vfs_node)
 	}
 
 	if ( obj->priv && obj->priv_deleter )
-		obj->priv_deleter(obj->priv);
+		obj->priv_deleter(obj);
 
 	vfs_printk(">");
 }
