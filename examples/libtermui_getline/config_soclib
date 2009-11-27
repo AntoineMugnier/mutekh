@@ -29,4 +29,4 @@
   CONFIG_LIBTERMUI
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/libtermui_getline:%CONFIGPATH
+  CONFIG_MODULES examples/libtermui_getline:$(CONFIGPATH)

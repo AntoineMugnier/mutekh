@@ -23,4 +23,4 @@
   CONFIG_DRIVER_CHAR_NULL
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/test_random:%CONFIGPATH
+  CONFIG_MODULES examples/test_random:$(CONFIGPATH)

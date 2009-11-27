@@ -19,5 +19,5 @@
   CONFIG_COMPILE_DEBUG
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/hello:%CONFIGPATH
+  CONFIG_MODULES examples/hello:$(CONFIGPATH)
 

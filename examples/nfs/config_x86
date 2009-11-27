@@ -54,5 +54,5 @@ CONFIG_NETWORK
 # Libs
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/devicefs:%CONFIGPATH
+  CONFIG_MODULES examples/devicefs:$(CONFIGPATH)
 

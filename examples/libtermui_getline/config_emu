@@ -16,5 +16,5 @@ CONFIG_DRIVER_CHAR_EMUTTY
 
 CONFIG_LIBTERMUI
 
-CONFIG_MODULES examples/libtermui_getline:%CONFIGPATH
+CONFIG_MODULES examples/libtermui_getline:$(CONFIGPATH)
 

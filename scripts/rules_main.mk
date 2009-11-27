@@ -3,7 +3,7 @@ POST_TARGET=__foo.out
 TARGET_COUPLE:=$(shell \
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 	--path=$(MUTEK_SRC_DIR):$(CURRENT_DIR):$(USER_DIR) \
-		--input=$(CONF) --arch-cpu)
+		--input=$(CONF) --build=$(BUILD) --arch-cpu)
 
 LDFLAGS=
 target = kernel-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME)

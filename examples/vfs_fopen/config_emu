@@ -26,4 +26,4 @@
   CONFIG_DRIVER_BLOCK_EMU
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/vfs_fopen:%CONFIGPATH
+  CONFIG_MODULES examples/vfs_fopen:$(CONFIGPATH)

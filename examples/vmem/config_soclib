@@ -31,4 +31,4 @@
   CONFIG_DRIVER_ICU_SOCLIB
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/vmem:%CONFIGPATH
+  CONFIG_MODULES examples/vmem:$(CONFIGPATH)

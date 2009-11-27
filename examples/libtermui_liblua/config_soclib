@@ -31,7 +31,7 @@
   CONFIG_LIBLUA
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/libtermui_liblua:%CONFIGPATH
+  CONFIG_MODULES examples/libtermui_liblua:$(CONFIGPATH)
 
 CONFIG_ROM_ADDR 0x60100000
 CONFIG_ROM_SIZE 0x00100000

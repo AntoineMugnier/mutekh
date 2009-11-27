@@ -38,34 +38,45 @@ $(CONFIG_TMP_FILES): $(CONF)
 		--m4=$(CONF_TMP_BASE).m4			\
 		--header=$(CONF_TMP_BASE).h			\
 		--depmakefile=$(CONF_DIR)/.config.deps			\
-		--makefile=$(CONF_TMP_BASE).mk
+		--makefile=$(CONF_TMP_BASE).mk		\
+		--build=$(BUILD)
 
 config: $(CONF_DIR) $(CONFIG_FILES)
 
 checkconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--path=$(CONF_PATH) \
-		--input=$(CONF) --check
+		--input=$(CONF) --check		\
+		--build=$(BUILD)
+
 
 couple:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--path=$(CONF_PATH) \
-		--input=$(CONF) --arch-cpu
+		--input=$(CONF) --arch-cpu		\
+		--build=$(BUILD)
+
 
 listconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--path=$(CONF_PATH) \
-		--input=$(CONF) --list
+		--input=$(CONF) --list		\
+		--build=$(BUILD)
+
 
 listallconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--path=$(CONF_PATH) \
-		--input=$(CONF) --list=all
+		--input=$(CONF) --list=all		\
+		--build=$(BUILD)
+
 
 showconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--path=$(CONF_PATH) \
-		--input=$(CONF) --info=$(TOKEN)
+		--input=$(CONF) --info=$(TOKEN)		\
+		--build=$(BUILD)
+
 
 $(CONF):
 	test -f $(CONF) || ( $(MAKE) helpconfig -f $(MUTEK_SRC_DIR)/Makefile ; false )
