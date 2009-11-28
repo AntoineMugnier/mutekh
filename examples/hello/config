@@ -24,7 +24,7 @@
 
 %section default		# default build section name
 
-  %error Missing build configuration name, please specify BUILD=xxx
+  %error Missing build configuration section names, please specify BUILD=xxx
 
 
 
@@ -40,7 +40,29 @@
 
 
 
+%section emu-linux-*
+  %types hostos
+
+  CONFIG_ARCH_EMU_LINUX
+
+%section emu-darwin-*
+  %types hostos
+
+  CONFIG_ARCH_EMU_DARWIN
+
+%section emu-*-x86_64
+  %types cpu
+
+  CONFIG_CPU_X86_64_EMU
+
+%section emu-*-x86
+  %types cpu
+
+  CONFIG_CPU_X86_EMU
+
 %section emu-*-*
+  %requiretypes hostos
+  %types architecture
 
   CONFIG_ARCH_EMU
 
@@ -48,25 +70,10 @@
   CONFIG_DRIVER_CHAR_EMUTTY
   CONFIG_CPU_RESET_HANDLER undefined
 
-%section emu-linux-*
-
-  CONFIG_ARCH_EMU_LINUX
-
-%section emu-darwin-*
-
-  CONFIG_ARCH_EMU_DARWIN
-
-%section emu-*-x86_64
-
-  CONFIG_CPU_X86_64_EMU
-
-%section emu-*-x86
-
-  CONFIG_CPU_X86_EMU
-
 
 
 %section ibmpc-x86
+  %types architecture cpu
 
   CONFIG_ARCH_IBMPC
   CONFIG_CPU_X86
@@ -80,6 +87,7 @@
 
 
 %section soclib-*
+  %types architecture
 
   # Platform types
   CONFIG_ARCH_SOCLIB
@@ -106,18 +114,24 @@
   CONFIG_FDT
   CONFIG_DRIVER_ENUM_FDT
 
-%section soclib-mipsel
+%section soclib-mipsel soclib-mips
+  %types cpu
 
   CONFIG_CPU_MIPS
   CONFIG_CPU_MIPS_VERSION 32
   CONFIG_CPU_ENDIAN_LITTLE
 
 %section soclib-arm
+  %types cpu
 
   CONFIG_CPU_ARM
   CONFIG_CPU_ARM_SOCLIB
 
-%section soclib-ppc
+%section soclib-ppc soclib-powerpc
+  %types cpu
 
   CONFIG_CPU_PPC
+
+%common
+  %requiretypes architecture cpu
 
