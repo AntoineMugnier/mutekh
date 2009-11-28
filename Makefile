@@ -30,6 +30,7 @@ USER_DIR:=$(CURRENT_DIR)
 endif
 CONF=myconfig
 
+export BUILD?=default
 BUILD_DIR:=$(abspath $(BUILD_DIR))
 MUTEK_SRC_DIR:=$(abspath $(MUTEK_SRC_DIR))
 CONF:=$(abspath $(CONF))

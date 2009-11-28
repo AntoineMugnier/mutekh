@@ -6,7 +6,7 @@ define declare_copy
 #$( # info  ======== declare_copy, $(1), $(2), $(3))
 
 $(3)/$(1): $(2)/$(1)
-	echo '    COPY    $$@ $$<'
+	echo '    COPY    ' $$(notdir $$@)
 	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
 	cp $$< $$@
 

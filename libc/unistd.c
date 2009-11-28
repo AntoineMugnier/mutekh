@@ -74,9 +74,9 @@ inline fd_t creat(const char *pathname, mode_t mode)
     return open(pathname, O_CREAT|O_WRONLY|O_TRUNC, mode);
 }
 
-static enum open_flags_e flags_to_vfs(const vfs_open_flags_t mode)
+static enum open_flags_e flags_to_vfs(const enum vfs_open_flags_e mode)
 {
-  vfs_open_flags_t flags = 0;
+  enum vfs_open_flags_e flags = 0;
 
   if (mode & O_RDONLY)
     flags |= VFS_O_RDONLY;

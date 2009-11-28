@@ -46,4 +46,4 @@
   #CONFIG_COMPILE_SAVETEMPS
 
 # New source code module to be compiled
-  CONFIG_MODULES src:%CONFIGPATH
+  CONFIG_MODULES src:$(CONFIGPATH)

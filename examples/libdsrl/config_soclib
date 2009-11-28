@@ -65,4 +65,4 @@
   CONFIG_LIBDSRL_DEBUG
 
 # New source code module to be compiled
-  CONFIG_MODULES src:%CONFIGPATH
+  CONFIG_MODULES src:$(CONFIGPATH)

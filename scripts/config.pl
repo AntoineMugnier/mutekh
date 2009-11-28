@@ -31,6 +31,7 @@ my $err_flag = 0;
 
 my %param_h = (
 	       "input" => "myconfig",
+	       "build" => "default",
 	       );
 
 sub text80
@@ -38,7 +39,8 @@ sub text80
     my ($msg, $prefix, $firstprefix) = @_;
     my $res;
     my $len;
-    my $maxlen = 80 - length($prefix);
+    my $tw = $ENV{COLUMNS} || 80;
+    my $maxlen = $tw - length($prefix);
 
     $firstprefix = $prefix if (not defined $firstprefix);
 
@@ -150,7 +152,7 @@ sub cmd_parent
 {
     my ($location, $opts, @args) = @_;
 
-    push(@{$$opts{parent}}, "@args");
+    push(@{$$opts{parent}}, @args);
 }
 
 # add definition
@@ -355,12 +357,7 @@ sub process_file
 	    if ($state)
 	    {
 		$line =~ s/^\s*//g;
-
-		while ($line =~ /%(\w+)/)
-		{
-		    my $text = $ENV{$1};
-		    $line =~ s/%$1/$text/g;
-		}
+		$line =~ s/\$\((\w+)\)/$ENV{$1}/ge;
 
 		my @line_l = split(/\s+/, $line);
 
@@ -427,14 +424,14 @@ my %depend_cache;
 sub process_config_depend
 {
     my $res = 1;
-    my ($orig, $deptype, $weakdep) = @_;
+    my ( $orig ) = @_;
 
-    if (defined $depend_cache{$$orig{name}.$deptype})
+    if (defined $depend_cache{$$orig{name}."depend"})
     {
-	return $depend_cache{$$orig{name}.$deptype};
+	return $depend_cache{$$orig{name}."depend"};
     }
 
-    foreach my $dep_and (@{$$orig{$deptype}})
+    foreach my $dep_and (@{$$orig{depend}})
     {
 	my @deps_and = split(/\s+/, $dep_and);
  	my $flag = 0;
@@ -447,7 +444,7 @@ sub process_config_depend
 	    {
 		if ($$opt{value} ne "undefined")
 		{
-		    $flag += process_config_depend($opt, $deptype, $weakdep);
+		    $flag += process_config_depend($opt);
 		}
 	    }
 	    else
@@ -459,8 +456,6 @@ sub process_config_depend
 	# return 0 if dependency not ok
 	if (not $flag)
 	{
-	    if (not $weakdep)
-	    {
 		warning($$orig{vlocation}.": `".$$orig{name}."' token will be undefined ".
 			"due to unmet dependencies; dependencies list is: ",
 			@deps_and);
@@ -486,13 +481,53 @@ sub process_config_depend
 			}
 		    }
 		}
-	    }
 
 	    $res = 0;
 	}
     }
 
-    return ($depend_cache{$$orig{name}.$deptype} = $res);
+    $depend_cache{$$orig{name}."depend"} = $res;
+
+    return $res;
+}
+
+##
+## at least one parent must be defined
+##
+
+sub process_config_parent
+{
+    my $res = 1;
+    my ($orig) = @_;
+
+    if (defined $depend_cache{$$orig{name}."parent"})
+    {
+	return $depend_cache{$$orig{name}."parent"};
+    }
+
+    foreach my $dep (@{$$orig{parent}})
+    {
+	my $opt = $config_opts{$dep};
+	$res = 0;
+
+	if ($opt)
+	{
+	    if ($$opt{value} ne "undefined")
+	    {
+		$res = process_config_parent($opt);
+	    }
+	}
+	else
+	{
+	    warning($$orig{location}.": `".$$orig{name}."' has undeclared parent token `".$dep."', ignored.");
+	}
+
+	last if $res;
+    }
+
+    $depend_cache{$$orig{name}."parent"} = $res;
+
+    return $res;
 }
 
 ##
@@ -846,8 +881,8 @@ sub check_config
 	{
 	    if ($$opt{value} ne "undefined")
 	    {
-		if ((not process_config_depend($opt, "depend", 0)) or
-		    (not process_config_depend($opt, "parent", 1)))
+		if (not process_config_depend($opt) or
+		    not process_config_parent($opt))
 		{
 		    $$opt{value} = "undefined";
 		    process_config_unprovide($opt);
@@ -888,13 +923,16 @@ sub check_config
 
 sub read_myconfig
 {
-    my ($file) = @_;
+    my ( $file, $section ) = @_;
 
-    $ENV{CONFIGPATH} = dirname(Cwd::realpath($file));
+    my $cd = dirname(Cwd::realpath($file));
+
+    $ENV{CONFIGPATH} = $cd;
 
     if (open(FILE, "<".$file))
     {
 	my $lnum = 0;
+	my $ignore = 0;
 
 	foreach my $line (<FILE>)
 	{
@@ -903,13 +941,48 @@ sub read_myconfig
 	    # skip empty lines and comment lines
 	    next if ($line =~ /^[ \t]*(\#.*)?$/);
 
-	    while ($line =~ /%(\w+)/)
+	    # replace env variables
+	    $line =~ s/\$\((\w+)\)/$ENV{$1}/ge;
+
+	    if ($line =~ /^\s* %common\b/x)
 	    {
-		my $text = $ENV{$1};
-		$line =~ s/%$1/$text/g;
+		$ignore = 0;
+		next;
 	    }
 
-	    if ($line =~ /^\s*([^\s]+)\s+(\S+)?/)
+	    if ($line =~ /^\s* %section \s+ ([*-\w]+)/x)
+	    {
+		my $p = $1;
+		$p =~ s/\*/\\w\+/g;
+		$ignore = 1;
+		$ignore = $ignore && ( $_ !~ /^$p$/ ) foreach (split(/:/, $section));
+#		print STDERR "using $p\n" unless $ignore;
+		next;
+	    }
+
+	    if ($line =~ /^\s* %else\b/x)
+	    {
+		$ignore = !$ignore;
+		next;
+	    }
+
+	    next if $ignore;
+
+	    if ($line =~ /^\s* %error \s+ (.*)$/x)
+	    {
+		error("$file:$lnum: $1");
+		exit -1;
+	    }
+
+	    if ($line =~ /^\s* %include \s+ (\S+)/x)
+	    {
+		my $f = $1;
+		$f = "$cd/$f" unless $f =~ /^\//;
+		read_myconfig( $f, $section );
+		next;
+	    }
+
+	    if ($line =~ /^\s* (\w+) (?: \s+(\S+) )?/x)
 	    {
 		my $opt = $config_opts{$1};
 
@@ -936,7 +1009,10 @@ sub read_myconfig
 
 		    $$opt{vlocation} = "$file:$lnum";
 		}
+		next;
 	    }
+
+	    warning("$file:$lnum: bad line format, ignored");
 	}
 
 	close(FILE);
@@ -1347,23 +1423,24 @@ sub main
 	print "
 Usage: config.pl [options]
 
-	--input=file        Set configuration input file. Default is `myconfig'.
-			    
+	--input=file[:...]  Set build configuration file list (myconfig).
+	--build=name[:...]  Set build configuration enabled section names.
+
 	--header=file       Output configuration header in `file'.
 	--docheader=file    Output header with documentation tags in `file'.
 	--makefile=file     Output configuration makefile variables in `file'.
 	--m4=file           Output configuration m4 macro definitions in `file'.
 	--python=file       Output configuration python definitions in `file'.
 
-	--depmakefile=file Output config files depend makefile `file'.
-			    
+	--depmakefile=file  Output config files depend makefile `file'.
+
 	--check             Check configuration constraints without output.
 	--list[=all]        Display configuration tokens list.
 	--info=token        Display informations about `token'.
-			    
+
 	--arch-cpu          Output arch-cpu couple
-			    
-	--path=dir[:dir]    Set list of directories to explore, default is \$PWD
+
+	--path=dir[:...]    Set list of directories to explore, default is \$PWD
 ";
 	return;
     }
@@ -1385,7 +1462,8 @@ Usage: config.pl [options]
 	return;
     }
 
-    read_myconfig($param_h{input});
+    read_myconfig( $_, $param_h{build} )
+	foreach (split(/:/, $param_h{input}));
 
     set_config();
     preprocess_values();

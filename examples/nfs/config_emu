@@ -20,4 +20,4 @@
   CONFIG_DRIVER_CHAR_EMUTTY
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/nfs:%CONFIGPATH
+  CONFIG_MODULES examples/nfs:$(CONFIGPATH)
