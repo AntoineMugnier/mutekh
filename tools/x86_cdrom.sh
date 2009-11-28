@@ -11,7 +11,7 @@ else
 fi
 
 if [ "x$2" = "x" ] ; then
-	QEMU=qemu
+	QEMU=$(type -p qemu 2>/dev/null)
 else
 	QEMU=$2
 fi
@@ -30,4 +30,6 @@ $CP $KERNEL tmp_iso/boot/
 $MKISOFS -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $ISO_NAME tmp_iso/
 $RM -r tmp_iso/
 
-$QEMU -boot d -cdrom $ISO_NAME $*
+if [ ! -z "$QEMU" -a -e "$QEMU" ] ; then
+	$QEMU -boot d -cdrom $ISO_NAME $*
+fi
