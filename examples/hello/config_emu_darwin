@@ -20,7 +20,7 @@ CONFIG_ARCH_EMU_DARWIN
   CONFIG_COMPILE_DEBUG
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/hello:%CONFIGPATH
+  CONFIG_MODULES examples/hello:$(CONFIGPATH)
 
 
 CONFIG_CPU_RESET_HANDLER undefined
