@@ -34,6 +34,9 @@ my %param_h = (
 	       "build" => "default",
 	       );
 
+my %sec_types;
+my %used_build = ( "default" => 1 );
+
 sub text80
 {
     my ($msg, $prefix, $firstprefix) = @_;
@@ -74,7 +77,7 @@ sub error
     my ($msg, @list) = @_;
     my $tlist = join(", ", @list) if (@list);
 
-    print STDERR text80($msg.$tlist, "      ", "error ")."\n";
+    print STDERR text80($msg.$tlist, "      ", "error:")."\n";
 
     $err_flag = 1;
 }
@@ -84,7 +87,7 @@ sub warning
     my ($msg, @list) = @_;
     my $tlist = join(", ", @list) if (@list);
 
-    print STDERR text80($msg.$tlist, "        ", "warning ")."\n";
+    print STDERR text80($msg.$tlist, "        ", "warning:")."\n";
 }
 
 sub check_rule
@@ -927,6 +930,7 @@ sub read_myconfig
 
     my $cd = dirname(Cwd::realpath($file));
 
+    $ENV{CONFIGSECTION} = 'common';
     $ENV{CONFIGPATH} = $cd;
 
     if (open(FILE, "<".$file))
@@ -946,16 +950,30 @@ sub read_myconfig
 
 	    if ($line =~ /^\s* %common\b/x)
 	    {
+		$ENV{CONFIGSECTION} = 'common';
 		$ignore = 0;
 		next;
 	    }
 
-	    if ($line =~ /^\s* %section \s+ ([*-\w]+)/x)
+	    if ($line =~ /^\s* %section \s+ ([*-\w\s]+)/x)
 	    {
-		my $p = $1;
-		$p =~ s/\*/\\w\+/g;
+		my $w = $1;
 		$ignore = 1;
-		$ignore = $ignore && ( $_ !~ /^$p$/ ) foreach (split(/:/, $section));
+
+		foreach my $p (split(/\s+/, $w)) {
+
+		    $p =~ s/\*/\\w\+/g;
+
+		    foreach (split(/:/, $section)) {
+			if ( $_ =~ /^$p$/ ) {
+			    $ignore = 0;
+			    $used_build{$_} = 1;
+			    $ENV{CONFIGSECTION} = $_;
+			}
+		    }
+
+		    last if !$ignore;
+		}
 #		print STDERR "using $p\n" unless $ignore;
 		next;
 	    }
@@ -968,10 +986,39 @@ sub read_myconfig
 
 	    next if $ignore;
 
+	    if ($line =~ /^\s* %set \s+ (\w+) \s+ (.*?) \s*$/x)
+	    {
+		$ENV{$1} = $2;
+		next;
+	    }
+
 	    if ($line =~ /^\s* %error \s+ (.*)$/x)
 	    {
 		error("$file:$lnum: $1");
-		exit -1;
+		next;
+	    }
+
+	    if ($line =~ /^\s* %warning \s+ (.*)$/x)
+	    {
+		warning("$file:$lnum: $1");
+		next;
+	    }
+
+	    if ($line =~ /^\s* %types \s+ (\w+\b\s*)+$/x)
+	    {
+		foreach (split(/\s+/, $1)) {
+		    error( "$file: multiple `$_' section types in use" ) if ($sec_types{$_} == 1);
+		    $sec_types{$_}++;
+		}
+		next;
+	    }
+
+	    if ($line =~ /^\s* %requiretypes \s+ (\w+\b\s*)+$/x)
+	    {
+		foreach (split(/\s+/, $1)) {
+		    error( "$file:$lnum: no `$_' section type in use (required)" ) if (!$sec_types{$_});
+		}
+		next;
 	    }
 
 	    if ($line =~ /^\s* %include \s+ (\S+)/x)
@@ -1464,6 +1511,12 @@ Usage: config.pl [options]
 
     read_myconfig( $_, $param_h{build} )
 	foreach (split(/:/, $param_h{input}));
+
+    foreach (split(/:/, $param_h{build})) {
+	error("build section name `$_' never considered in configuration file") if ( !$used_build{$_} );
+    }
+
+    exit 1 if $err_flag;
 
     set_config();
     preprocess_values();
