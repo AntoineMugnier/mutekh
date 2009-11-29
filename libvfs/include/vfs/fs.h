@@ -119,6 +119,7 @@ typedef VFS_FS_NODE_OPEN(vfs_fs_node_open_t);
    This function transfers the ownership of @tt *node to the caller
 
    @csee #VFS_FS_LOOKUP
+   @see vfs_lookup @see vfs_node_lookup
  */
 typedef VFS_FS_LOOKUP(vfs_fs_lookup_t);
 
@@ -139,6 +140,7 @@ typedef VFS_FS_LOOKUP(vfs_fs_lookup_t);
    This function transfers the ownership of @tt *node to the caller
 
    @csee #VFS_FS_CREATE
+   @see vfs_node_create @see vfs_create
  */
 typedef VFS_FS_CREATE(vfs_fs_create_t);
 
@@ -171,6 +173,7 @@ typedef VFS_FS_CREATE(vfs_fs_create_t);
    @tt *rnode is actually @tt node
 
    @csee #VFS_FS_LINK
+   @see vfs_node_link
  */
 typedef VFS_FS_LINK(vfs_fs_link_t);
 
@@ -190,6 +193,7 @@ typedef VFS_FS_LINK(vfs_fs_link_t);
    @return 0 on success, or an error code
 
    @csee #VFS_FS_UNLINK
+   @see vfs_node_unlink @see vfs_unlink
  */
 typedef VFS_FS_UNLINK(vfs_fs_unlink_t);
 
@@ -208,6 +212,7 @@ typedef VFS_FS_UNLINK(vfs_fs_unlink_t);
    @return 0 on success, or an error code
 
    @csee #VFS_FS_STAT
+   @see vfs_node_stat @see vfs_stat
  */
 typedef VFS_FS_STAT(vfs_fs_stat_t);
 
@@ -237,16 +242,17 @@ struct vfs_fs_s
 {
 	atomic_t ref;
 
-	vfs_fs_node_open_t *node_open;
-	vfs_fs_lookup_t *lookup;
-	vfs_fs_create_t *create;
-	vfs_fs_link_t *link;
-	vfs_fs_unlink_t *unlink;
-	vfs_fs_stat_t *stat;
-	vfs_fs_can_unmount_t *can_unmount;
+	vfs_fs_node_open_t *node_open;  //< mandatory
+	vfs_fs_lookup_t *lookup;        //< mandatory
+	vfs_fs_create_t *create;        //< optional, may be NULL
+	vfs_fs_link_t *link;            //< optional, may be NULL
+	vfs_fs_unlink_t *unlink;        //< optional, may be NULL
+	vfs_fs_stat_t *stat;            //< mandatory
+	vfs_fs_can_unmount_t *can_unmount; //< mandatory
 
 	struct vfs_node_s *old_node;
 	struct vfs_node_s *root;
+    uint8_t flag_ro:1;
 };
 
 #endif

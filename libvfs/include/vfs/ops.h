@@ -70,6 +70,7 @@ error_t vfs_umount(struct vfs_fs_s *fs);
    @return 0 if found
 
    @this transfers the ownership of @tt node to caller.
+   @see vfs_fs_lookup_t @see vfs_lookup
 */
 error_t vfs_node_lookup(struct vfs_node_s *parent,
 						const char *name,
@@ -77,14 +78,23 @@ error_t vfs_node_lookup(struct vfs_node_s *parent,
 						struct vfs_node_s **node);
 
 /**
+   @this opens an existing node in a given FS.
+
+   It relies on the @ref vfs_fs_node_open_t fs drivers operation, refer for details.
+   @this transfers the ownership of @tt node to caller.
+   @see vfs_open
+*/
+error_t vfs_node_open(struct vfs_fs_s *fs,
+                      struct vfs_node_s *node,
+                      enum vfs_open_flags_e flags,
+                      struct vfs_file_s **file);
+
+/**
    @this creates a new anonymous node in a given FS.
 
-   @param fs File system to create the node in
-   @param type Type of the node
-   @param node Returned node
-   @return 0 if created
-
+   It relies on the @ref vfs_fs_create_t fs drivers operation, refer for details.
    @this transfers the ownership of @tt node to caller.
+   @see vfs_create
  */
 error_t vfs_node_create(struct vfs_fs_s *fs,
 						enum vfs_node_type_e type,
@@ -105,6 +115,7 @@ error_t vfs_node_create(struct vfs_fs_s *fs,
 
    @this transfers the ownership of @tt rnode to caller, even if it is
    actually @tt node.
+   @see vfs_fs_link_t
  */
 error_t vfs_node_link(struct vfs_node_s *parent,
 					  struct vfs_node_s *node,
@@ -119,6 +130,7 @@ error_t vfs_node_link(struct vfs_node_s *parent,
    @param name Name of the node to unlink
    @param namelen Length of name
    @return 0 if unlinked correctly
+   @see vfs_fs_unlink_t @see vfs_unlink
  */
 error_t vfs_node_unlink(struct vfs_node_s *parent,
 						const char *name,
@@ -130,6 +142,7 @@ error_t vfs_node_unlink(struct vfs_node_s *parent,
    @param node Node to retrieve information about
    @param stat User-provided buffer to hold node information
    @return 0 if node was found, or an error
+   @see vfs_fs_stat_t @see vfs_stat
 */
 error_t vfs_node_stat(struct vfs_node_s *node,
 					  struct vfs_stat_s *stat);

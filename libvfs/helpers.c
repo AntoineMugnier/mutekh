@@ -148,7 +148,7 @@ error_t vfs_create(struct vfs_node_s *root,
 	return -EEXISTS;
 
   doit:
-	err = cwd->fs->create(cwd->fs, type, &rnode);
+	err = vfs_node_create(cwd->fs, type, &rnode);
 	vfs_printk("create %d %p ", err, rnode);
 	if ( err ) {
 		vfs_node_refdrop(cwd);
@@ -191,8 +191,7 @@ error_t vfs_open(struct vfs_node_s *root,
 		}
 	}
 
-	vfs_printk(" node_open[%p:%p](%p): ", node->fs, node->fs->node_open, node);
-	err = node->fs->node_open(node, flags, file);
+	err = vfs_node_open(node->fs, node, flags, file);
 	vfs_node_refdrop(node);
 	vfs_printk("%d %p>\n", err, *file);
 	return err;

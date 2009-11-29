@@ -171,7 +171,28 @@ error_t vfs_node_create(struct vfs_fs_s *fs,
 						enum vfs_node_type_e type,
 						struct vfs_node_s **node)
 {
+    if ( fs->create == NULL )
+        return -ENOTSUP;
+
+    if ( fs->flag_ro )
+        return -EPERM;
+
 	return fs->create(fs, type, node);
+}
+
+error_t vfs_node_open(struct vfs_fs_s *fs,
+                      struct vfs_node_s *node,
+                      enum vfs_open_flags_e flags,
+                      struct vfs_file_s **file)
+{
+	vfs_printk(" node_open[%p:%p](%p): ", fs, node->fs->node_open, node);
+
+    assert( fs->node_open != NULL );
+
+    if ( flags & (VFS_OPEN_WRITE | VFS_OPEN_CREATE | VFS_OPEN_APPEND) && fs->flag_ro )
+        return -EPERM;
+
+    return fs->node_open(node, flags, file);
 }
 
 error_t vfs_node_link(struct vfs_node_s *parent,
@@ -186,6 +207,12 @@ error_t vfs_node_link(struct vfs_node_s *parent,
 
 	if ( parent->type != VFS_NODE_DIR )
 		return -EINVAL;
+
+    if ( parent->fs->link == NULL )
+        return -ENOTSUP;
+
+    if ( parent->fs->flag_ro )
+        return -EPERM;
 
 	char tmpname[CONFIG_VFS_NAMELEN];
 	memset(tmpname, 0, CONFIG_VFS_NAMELEN);
@@ -231,6 +258,12 @@ error_t vfs_node_unlink(struct vfs_node_s *parent,
 {
 	if ( parent->type != VFS_NODE_DIR )
 		return -EINVAL;
+
+    if ( parent->fs->unlink == NULL )
+        return -ENOTSUP;
+
+    if ( parent->fs->flag_ro )
+        return -EPERM;
 
 	char tmpname[CONFIG_VFS_NAMELEN];
 	memset(tmpname, 0, CONFIG_VFS_NAMELEN);

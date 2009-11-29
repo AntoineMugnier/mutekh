@@ -56,6 +56,8 @@ error_t ramfs_open(struct vfs_fs_s **fs)
 	mnt->stat = ramfs_stat;
 	mnt->can_unmount = ramfs_can_unmount;
 
+    mnt->flag_ro = 0;
+
 	mnt->old_node = NULL;
 
 	struct vfs_node_s *node = vfs_node_new(NULL, mnt, VFS_NODE_DIR, "", NULL, NULL);
