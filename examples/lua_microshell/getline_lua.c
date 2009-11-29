@@ -46,13 +46,12 @@ void* shell(void *param)
 
     printk("init vfs... ");
 //	fat_open(rootfs_dev, 0, &vfs_root);
-	struct vfs_mount_s *root_mount;
-	ramfs_open(NULL, 0, &root_mount);
+	struct vfs_fs_s *root_mount;
+	ramfs_open(&root_mount);
 	vfs_set_root(root_mount->root);
+	vfs_set_cwd(root_mount->root);
 
     printk("ok\n");
-
-	vfs_set_cwd(vfs_get_root());
 
     /* create lua state */
     luast = luaL_newstate();

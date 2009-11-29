@@ -144,8 +144,8 @@ int mount(lua_State *st)
 	if ( err )
 		goto err_node;
 
-	struct vfs_mount_s *mount;
-	err = ramfs_open(NULL, 0, &mount);
+	struct vfs_fs_s *mount;
+	err = ramfs_open(&mount);
 	if ( err )
 		goto err_open;
 
@@ -176,7 +176,7 @@ int umount(lua_State *st)
 	if ( err )
 		goto err_node;
 
-	err = vfs_umount(node->mount);
+	err = vfs_umount(node->fs);
 	if ( err )
 		goto err_node;
 	return 0;
