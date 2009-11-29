@@ -177,28 +177,29 @@ static inline uint64_t endian_swap64(uint64_t x)
  */
 
 #if defined (CONFIG_CPU_NONALIGNED_ACCESS)
-/** @internal @multiple */
-# define __endian_16_na_load(a)		(*((uint16_t*)a))
-# define __endian_32_na_load(a)		(*((uint32_t*)a))
-# define __endian_64_na_load(a)		(*((uint64_t*)a))
-# define __endian_16_na_store(a, x)	(*((uint16_t*)a) = (x))
-# define __endian_32_na_store(a, x)	(*((uint32_t*)a) = (x))
-# define __endian_64_na_store(a, x)	(*((uint64_t*)a) = (x))
+/** @multiple @this loads from non aligned memory location with native endianess */
+# define endian_16_na_load(a)		(*((uint16_t*)a))
+# define endian_32_na_load(a)		(*((uint32_t*)a))
+# define endian_64_na_load(a)		(*((uint64_t*)a))
+/** @multiple @this stores to non aligned memory location with native endianess */
+# define endian_16_na_store(a, x)	(*((uint16_t*)a) = (x))
+# define endian_32_na_store(a, x)	(*((uint32_t*)a) = (x))
+# define endian_64_na_store(a, x)	(*((uint64_t*)a) = (x))
 
 /** @multiple @this allows direct non aligned word width memory access with endian permutation */
-# define endian_le16_na_load(a)		endian_le16(__endian_16_na_load(a))
-# define endian_le32_na_load(a)		endian_le32(__endian_32_na_load(a))
-# define endian_le64_na_load(a)		endian_le64(__endian_64_na_load(a))
-# define endian_le16_na_store(a, x)	__endian_16_na_store(a, endian_le16(x))
-# define endian_le32_na_store(a, x)	__endian_32_na_store(a, endian_le32(x))
-# define endian_le64_na_store(a, x)	__endian_64_na_store(a, endian_le64(x))
+# define endian_le16_na_load(a)		endian_le16(endian_16_na_load(a))
+# define endian_le32_na_load(a)		endian_le32(endian_32_na_load(a))
+# define endian_le64_na_load(a)		endian_le64(endian_64_na_load(a))
+# define endian_le16_na_store(a, x)	endian_16_na_store(a, endian_le16(x))
+# define endian_le32_na_store(a, x)	endian_32_na_store(a, endian_le32(x))
+# define endian_le64_na_store(a, x)	endian_64_na_store(a, endian_le64(x))
 
-# define endian_be16_na_load(a)		endian_be16(__endian_16_na_load(a))
-# define endian_be32_na_load(a)		endian_be32(__endian_32_na_load(a))
-# define endian_be64_na_load(a)		endian_be64(__endian_64_na_load(a))
-# define endian_be16_na_store(a, x)	__endian_16_na_store(a, endian_be16(x))
-# define endian_be32_na_store(a, x)	__endian_32_na_store(a, endian_be32(x))
-# define endian_be64_na_store(a, x)	__endian_64_na_store(a, endian_be64(x))
+# define endian_be16_na_load(a)		endian_be16(endian_16_na_load(a))
+# define endian_be32_na_load(a)		endian_be32(endian_32_na_load(a))
+# define endian_be64_na_load(a)		endian_be64(endian_64_na_load(a))
+# define endian_be16_na_store(a, x)	endian_16_na_store(a, endian_be16(x))
+# define endian_be32_na_store(a, x)	endian_32_na_store(a, endian_be32(x))
+# define endian_be64_na_store(a, x)	endian_64_na_store(a, endian_be64(x))
 
 #else
 
@@ -268,13 +269,25 @@ static inline uint64_t endian_swap64(uint64_t x)
 					 __ENDIAN_NAS_R(a, 7, __val, 0); __val; })
 
 
-/** @multiple @internal */
-# define __endian_16_na_load(a)		endian_le16(endian_le16_na_load(a))
-# define __endian_32_na_load(a)		endian_le32(endian_le32_na_load(a))
-# define __endian_64_na_load(a)		endian_le64(endian_le64_na_load(a))
-# define __endian_16_na_store(a, x)	endian_le16_na_store(a, endian_le16(x))
-# define __endian_32_na_store(a, x)	endian_le32_na_store(a, endian_le32(x))
-# define __endian_64_na_store(a, x)	endian_le64_na_store(a, endian_le64(x))
+# if defined (CONFIG_CPU_ENDIAN_BIG)
+/** @multiple @this loads from non aligned memory location with native endianess */
+#  define endian_16_na_load(a)		endian_be16_na_load(a)
+#  define endian_32_na_load(a)		endian_be32_na_load(a)
+#  define endian_64_na_load(a)		endian_be64_na_load(a)
+/** @multiple @this stores to non aligned memory location with native endianess */
+#  define endian_16_na_store(a, x)	endian_be16_na_store(a, x)
+#  define endian_32_na_store(a, x)	endian_be32_na_store(a, x)
+#  define endian_64_na_store(a, x)	endian_be64_na_store(a, x)
+# else
+/** @multiple @this loads from non aligned memory location with native endianess */
+#  define endian_16_na_load(a)		endian_le16_na_load(a)
+#  define endian_32_na_load(a)		endian_le32_na_load(a)
+#  define endian_64_na_load(a)		endian_le64_na_load(a)
+/** @multiple @this stores to non aligned memory location with native endianess */
+#  define endian_16_na_store(a, x)	endian_le16_na_store(a, x)
+#  define endian_32_na_store(a, x)	endian_le32_na_store(a, x)
+#  define endian_64_na_store(a, x)	endian_le64_na_store(a, x)
+# endif
 
 #endif
 
