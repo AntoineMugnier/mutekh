@@ -86,14 +86,6 @@ typedef VFS_FILE_CLOSE(vfs_file_close_t);
  */
 typedef VFS_FILE_READ(vfs_file_read_t);
 
-/**
-   @this is a stub read function for generic implementation of
-   unavailable read operation.
-
-   @csee #VFS_FILE_READ
- */
-VFS_FILE_READ(vfs_file_read_na);
-
 
 /** @this defines the file write operation prototype */
 #define VFS_FILE_WRITE(x) ssize_t (x)(struct vfs_file_s *file, const void *buffer, size_t size)
@@ -111,13 +103,6 @@ VFS_FILE_READ(vfs_file_read_na);
  */
 typedef VFS_FILE_WRITE(vfs_file_write_t);
 
-/**
-   @this is a stub write function for generic implementation of
-   unavailable write operation.
-
-   @csee #VFS_FILE_WRITE
- */
-VFS_FILE_WRITE(vfs_file_write_na);
 
 
 /** @this defines the file seek operation prototype */
@@ -138,41 +123,26 @@ VFS_FILE_WRITE(vfs_file_write_na);
  */
 typedef VFS_FILE_SEEK(vfs_file_seek_t);
 
-/**
-   @this is a stub seek function for generic implementation of
-   unavailable seek operation.
-
-   @csee #VFS_FILE_SEEK
- */
-VFS_FILE_SEEK(vfs_file_seek_na);
-
 
 OBJECT_TYPE     (vfs_file, REFCOUNT, struct vfs_file_s);
 OBJECT_PROTOTYPE(vfs_file, static inline, vfs_file);
 
 struct vfs_file_s
 {
-	vfs_file_entry_t obj_entry;
-    /** Corresponding node in the VFS */
-	struct vfs_node_s *node;
-    /** Close operation for this file */
-	vfs_file_close_t *close;
-    /** Read operation for this file */
-	vfs_file_read_t *read;
-    /** Write operation for this file */
-	vfs_file_write_t *write;
-    /** Seek operation for this file */
-	vfs_file_seek_t *seek;
-    /** Current point in file */
-	off_t offset;
-    /** File system private data */
-	void *priv;
+	vfs_file_entry_t obj_entry;         
+	struct vfs_node_s *node;            //< Corresponding node in the VFS  
+	vfs_file_close_t *close;            //< Close operation for this file  
+	vfs_file_read_t *read;              //< Read operation for this file   
+	vfs_file_write_t *write;            //< Write operation for this file  
+	vfs_file_seek_t *seek;              //< Seek operation for this file   
+	off_t offset;                       //< Current access position in file
+	void *priv;                         //< File system private data
 };
 
 struct vfs_dirent_s
 {
-    /** Name of the directory entry */
-	char name[CONFIG_VFS_NAMELEN];
+    /** Name of the directory entry, asciiZ */
+	char name[CONFIG_VFS_NAMELEN + 1];
     /** Type of node */
 	enum vfs_node_type_e type;
     /** Size of file in bytes, or count of children nodes excluding
@@ -185,6 +155,24 @@ OBJECT_DESTRUCTOR(vfs_file);
 
 OBJECT_FUNC   (vfs_file, REFCOUNT, static inline, vfs_file, obj_entry);
 
+#ifdef __MKDOC__
+/**
+   @this creates a new opened file object. All file access operations are
+   initialized with default error returning functions. The close operation
+   defaults to a @ref vfs_file_refdrop call.
+
+   @param storage pointer to pre-allocated memory for new vfs node, may be NULL.
+   @param node associated vfs node
+   @return the new file object.
+ */
+struct file_s * vfs_file_new(void *storage, struct vfs_node_s * node);
+#endif
+
+/** @this increases the file reference count and return the file itself. */
+struct vfs_file_s * vfs_file_refnew(struct vfs_file_s * file);
+
+/** @this decreases the file reference count and may delete the file if no more reference exist. */
+void vfs_file_refdrop(struct vfs_file_s * file);
 
 /**
    @this reads from an opened file

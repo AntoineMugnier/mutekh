@@ -57,6 +57,30 @@ error_t vfs_umount(struct vfs_fs_s *fs);
 
 /* Node operations */
 
+#ifdef __MKDOC__
+/**
+   @this creates a new vfs node.
+
+   @param storage pointer to pre-allocated memory for new vfs node, may be NULL.
+   @param fs associated file system instance
+   @param type node type
+   @param name node name
+   @param namelen lenght of node name
+   @param private pointer to node private data
+   @param deleter pointer to node delete functions
+   @return the new vfs node.
+ */
+struct vfs_node_s * vfs_node_new(void *storage, struct vfs_fs_s *fs,
+                                 enum vfs_node_type_e type, const char *name, size_t namelen,
+                                 void *private, vfs_node_fs_priv_deleter_t *deleter);
+#endif
+
+/** @this increases the node reference count and return the node itself. */
+struct vfs_node_s * vfs_node_refnew(struct vfs_node_s * node);
+
+/** @this decreases the node reference count and may delete the node if no more reference exist. */
+void vfs_node_refdrop(struct vfs_node_s * node);
+
 /**
    @this looks for a node named @tt name as a child of @tt
    parent. First looks up in the hash table. If @tt name is not found,

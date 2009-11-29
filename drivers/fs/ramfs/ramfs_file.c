@@ -51,16 +51,16 @@ VFS_FS_NODE_OPEN(ramfs_node_open)
 	switch (node->type) {
 	case VFS_NODE_FILE:
 		vfs_printk("file ");
-		f->read = flags & VFS_OPEN_READ ? ramfs_file_read : vfs_file_read_na;
-		f->write = flags & VFS_OPEN_WRITE ? ramfs_file_write : vfs_file_write_na;
+		if ( flags & VFS_OPEN_READ )
+		  f->read = ramfs_file_read; /* FIXME should handle operation and return -EPERM instead ? */
+		if ( flags & VFS_OPEN_WRITE )
+		  f->write = ramfs_file_write;
 		f->seek = ramfs_file_seek;
 		f->priv = ramfs_data_refnew(node->priv);
 		break;
 	case VFS_NODE_DIR:
 		vfs_printk("dir ");
 		f->read = ramfs_dir_read;
-		f->write = vfs_file_write_na;
-		f->seek = vfs_file_seek_na;
 		f->priv = (void *)(uintptr_t)0;
 		break;
 	}

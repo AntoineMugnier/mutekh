@@ -102,6 +102,7 @@ CONTAINER_FUNC       (vfs_dir_hash, HASHLIST, static inline, vfs_dir, name);
 CONTAINER_FUNC_NOLOCK(vfs_dir_hash, HASHLIST, static inline, vfs_dir_nolock, name);
 CONTAINER_KEY_FUNC   (vfs_dir_hash, HASHLIST, static inline, vfs_dir, name);
 
+/** @see vfs_node_new */
 OBJECT_CONSTRUCTOR(vfs_node);
 OBJECT_DESTRUCTOR(vfs_node);
 

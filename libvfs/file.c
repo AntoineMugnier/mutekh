@@ -21,27 +21,38 @@
 
 #include <vfs/vfs.h>
 
-VFS_FILE_READ(vfs_file_read_na)
+static VFS_FILE_READ(default_vfs_file_read)
 {
 	return -ENOTSUP;
 }
 
-VFS_FILE_WRITE(vfs_file_write_na)
+static VFS_FILE_WRITE(default_vfs_file_write)
 {
 	return -ENOTSUP;
 }
 
-VFS_FILE_SEEK(vfs_file_seek_na)
+static VFS_FILE_SEEK(default_vfs_file_seek)
 {
 	return -ENOTSUP;
+}
+
+static VFS_FILE_CLOSE(default_vfs_file_close)
+{
+	vfs_file_refdrop(file);
+	
+	return 0;
 }
 
 OBJECT_CONSTRUCTOR(vfs_file)
 {
 	struct vfs_node_s *node = vfs_node_refnew(va_arg(ap, struct vfs_node_s*));
-	vfs_printk("<file create %s>", node->name);
+	vfs_printk("<file open %s>", node->name);
 	obj->offset = 0;
 	obj->node = node;
+	obj->close = default_vfs_file_close;
+	obj->read = default_vfs_file_read;
+	obj->write = default_vfs_file_write;
+	obj->seek = default_vfs_file_seek;
 
 	atomic_inc(&node->fs->ref);
 
@@ -50,7 +61,7 @@ OBJECT_CONSTRUCTOR(vfs_file)
 
 OBJECT_DESTRUCTOR(vfs_file)
 {
-	vfs_printk("<file delete %s>", obj->node->name);
+	vfs_printk("<file close %s>", obj->node->name);
 
 	atomic_dec(&obj->node->fs->ref);
 

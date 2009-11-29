@@ -93,6 +93,7 @@ typedef VFS_FS_CAN_UNMOUNT(vfs_fs_can_unmount_t);
    This function transfers the ownership of @tt *file to the caller
 
    @csee #VFS_FS_NODE_OPEN
+   @see vfs_node_open @see vfs_open
  */
 typedef VFS_FS_NODE_OPEN(vfs_fs_node_open_t);
 

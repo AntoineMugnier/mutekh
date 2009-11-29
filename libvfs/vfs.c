@@ -299,11 +299,16 @@ OBJECT_CONSTRUCTOR(vfs_node)
 	struct vfs_fs_s *fs = va_arg(ap, struct vfs_fs_s *);
 	obj->type = va_arg(ap, enum vfs_node_type_e);
 	const char *name = va_arg(ap, const char *);
+	size_t size = va_arg(ap, size_t);
 	obj->priv = va_arg(ap, void*);
 	obj->priv_deleter = va_arg(ap, vfs_node_fs_priv_deleter_t*);
 
-	memset(obj->name, 0, CONFIG_VFS_NAMELEN);
-	strncpy(obj->name, name, CONFIG_VFS_NAMELEN);
+    /* FIXME should gracefully handle shortened names colision */
+    if (size > CONFIG_VFS_NAMELEN)
+        size = CONFIG_VFS_NAMELEN;
+    memcpy(obj->name, name, size);
+	memset(obj->name + size, 0, CONFIG_VFS_NAMELEN - size);
+
 	obj->fs = fs;
 
 	atomic_inc(&fs->ref);

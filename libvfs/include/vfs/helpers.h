@@ -41,7 +41,7 @@
    @param node Found node, if available (return value)
    @return 0 if found, or an error
    @this transfers the ownership to caller.
-   @see vfs_fs_lookup_t @see vfs_node_lookup
+   @see vfs_node_lookup
 */
 error_t vfs_lookup(struct vfs_node_s *root,
 				   struct vfs_node_s *cwd,
@@ -61,7 +61,7 @@ error_t vfs_lookup(struct vfs_node_s *root,
    @param node Found node, if no error (return value)
    @return 0 if created, or an error
    @this transfers the ownership to caller.
-   @see vfs_node_create @see vfs_fs_create_t
+   @see vfs_node_create
 */
 error_t vfs_create(struct vfs_node_s *root,
 				   struct vfs_node_s *cwd,
@@ -103,7 +103,7 @@ error_t vfs_open(struct vfs_node_s *root,
    '/'. It must end with a @tt '\0'
    @param stat User-provided buffer to hold node information
    @return 0 if node was found, or an error
-   @see vfs_fs_stat_t @see vfs_node_stat
+   @see vfs_node_stat
 */
 error_t vfs_stat(struct vfs_node_s *root,
 				 struct vfs_node_s *cwd,
@@ -119,7 +119,7 @@ error_t vfs_stat(struct vfs_node_s *root,
    absolute from @tt root).  @tt path may contain one or more @tt
    '/'. It must end with a @tt '\0'
    @return 0 if node was found and deleted, or an error
-   @see vfs_node_unlink @see vfs_fs_unlink_t
+   @see vfs_node_unlink
 */
 error_t vfs_unlink(struct vfs_node_s *root,
 				   struct vfs_node_s *cwd,

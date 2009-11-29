@@ -47,6 +47,7 @@ error_t ramfs_open(struct vfs_fs_s **fs)
 	if ( mnt == NULL )
 		goto nomem_fs;
 
+    memset(mnt, 0, sizeof(*mnt));
 	atomic_set(&mnt->ref, 0);
 	mnt->node_open = ramfs_node_open;
 	mnt->lookup = ramfs_lookup;
@@ -56,11 +57,9 @@ error_t ramfs_open(struct vfs_fs_s **fs)
 	mnt->stat = ramfs_stat;
 	mnt->can_unmount = ramfs_can_unmount;
 
-    mnt->flag_ro = 0;
-
 	mnt->old_node = NULL;
 
-	struct vfs_node_s *node = vfs_node_new(NULL, mnt, VFS_NODE_DIR, "", NULL, NULL);
+	struct vfs_node_s *node = vfs_node_new(NULL, mnt, VFS_NODE_DIR, "", 0, NULL, NULL);
 	if ( node == NULL )
 		goto nomem_dir;
 
@@ -99,7 +98,7 @@ VFS_FS_CREATE(ramfs_create)
 			goto err_priv;
 		priv_deleter = ramfs_file_node_deleted;
 	}
-	struct vfs_node_s *rnode = vfs_node_new(NULL, fs, type, "",
+	struct vfs_node_s *rnode = vfs_node_new(NULL, fs, type, "", 0,
 											priv, priv_deleter);
 	if ( !rnode )
 		goto err_rnode;
@@ -131,7 +130,7 @@ VFS_FS_LINK(ramfs_link)
 	struct vfs_node_s *nnode;
 	if ( node->parent != NULL ) {
 		vfs_printk("clone (parent=%p) ", node->parent);
-		nnode = vfs_node_new(NULL, parent->fs, VFS_NODE_FILE, name,
+		nnode = vfs_node_new(NULL, parent->fs, VFS_NODE_FILE, name, namelen,
 							 ramfs_data_refnew(node->priv),
 							 ramfs_file_node_deleted);
 		if (nnode == NULL) {
