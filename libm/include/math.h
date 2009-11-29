@@ -15,8 +15,6 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Based on string.h from dietlibc-0.29 http://www.fefe.de/dietlibc/
-
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
 
 */
