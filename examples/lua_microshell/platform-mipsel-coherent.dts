@@ -47,7 +47,19 @@
 	    device_type = "soclib:tty";
 		tty_count = <1>;
 		reg = <0xd0200000 0x10>;
+		irq = <&{/xicu@0} 1>;
+	};
+/*
+	timer@0 {
+	    device_type = "soclib:timer";
+		reg = <0xd3200000 0x10>;
 		irq = <&{/xicu@0} 0>;
+	};
+*/
+	block@0 {
+	    device_type = "soclib:block_device";
+	    	reg = <0xd5200000 0x20>;
+		irq = <&{/xicu@0} 2>;
 	};
 
 	xicu@0 {
@@ -89,11 +101,17 @@
 	memory@0 {
 		device_type = "memory";
 		cached;
-		memreg: reg = <0x7f400000 0x00100000>;
+		memreg: reg = <0x61100000 0x00100000>;
+	};
+
+	memory@1 {
+		device_type = "memory";
+		memreg: reg = <0x62600000 0x00100000>;
 	};
 
 	chosen {
 		console = &{/tty@0};
+/*		timer = &{/timer@0}; */
 	};
 
 };

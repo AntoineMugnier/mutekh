@@ -47,6 +47,8 @@ error_t ramfs_open(struct vfs_fs_s **fs)
 	if ( mnt == NULL )
 		goto nomem_fs;
 
+    vfs_printk("ramfs: opening new ramfs volume\n");
+
     memset(mnt, 0, sizeof(*mnt));
 	atomic_set(&mnt->ref, 0);
 	mnt->node_open = ramfs_node_open;

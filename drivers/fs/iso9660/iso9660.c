@@ -65,8 +65,12 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
     const struct dev_block_params_s *bdp = dev_block_getparams(bd);
     uint8_t *ptr;
 
-    if ( bdp->blk_size != ISO9660_BLOCK_SIZE )
+    vfs_printk("iso9660: opening new iso9660 volume\n");
+
+    if ( bdp->blk_size != ISO9660_BLOCK_SIZE ) {
+        vfs_printk("iso9660: unsupported device block size: %d\n", bdp->blk_size);
 		return -EINVAL;
+    }
 
     mnt = mem_alloc(sizeof (*mnt), mem_scope_sys);
     if ( mnt == NULL )
@@ -75,13 +79,16 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
 
     /* read volume descriptor */
     ptr = mnt->voldesc_;
-    if (( err = dev_block_spin_read(bd, &ptr, ISO9660_PRIM_VOLDESC_BLOCK, 1) ))
+    if (( err = dev_block_spin_read(bd, &ptr, ISO9660_PRIM_VOLDESC_BLOCK, 1) )) {
+        vfs_printk("iso9660: unable to read primary volume descriptor\n");
         goto free_mnt;
+    }
 
     /* check signature */
     if ((mnt->voldesc.vol_desc_type != 1) ||
         strncmp(mnt->voldesc.std_identifier, "CD001", 5) ||
         (mnt->voldesc.vol_desc_version != 1)) {
+        vfs_printk("iso9660: bad primary volume descriptor signature\n");
         err = -EINVAL;
         goto free_mnt;
     }
@@ -89,6 +96,7 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
     /* check device size */
     if ( bdp->blk_count < mnt->voldesc.vol_blk_count ) {
         err = -EINVAL;
+        vfs_printk("iso9660: device block count smaller than fs\n");
         goto free_mnt;
     }
 
@@ -104,13 +112,16 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
     /* root node init */
     if ( ! (mnt->voldesc.root_dir.type & iso9660_file_isdir) ) {
         err = -EINVAL;
+        vfs_printk("iso9660: root entry is not a directory\n");
         goto free_mnt;
     }
 
     mnt->fs.root = (struct vfs_node_s *)iso9660_node_new((struct vfs_fs_s*)mnt, &mnt->voldesc.root_dir);
 
-    if (mnt->fs.root == NULL)
+    if (mnt->fs.root == NULL) {
+        return -ENOMEM;
         goto free_mnt;
+    }
 
     mnt->bd = device_obj_refnew(bd);
 
@@ -149,7 +160,7 @@ VFS_FS_LOOKUP(iso9660_lookup)
         if (( err = dev_block_wait_read(isofs->bd, &ptr, first + b, 1) ))
             return err;
 
-        for ( entry = (void*)dirblk; (uint8_t*)entry < dirblk + 1; ) {
+        for ( entry = (void*)dirblk; (uint8_t*)entry < dirblk + ISO9660_BLOCK_SIZE; ) {
 
             /* skip to next block on zero sized dir entry */
             if ( entry->dir_size == 0 )
@@ -166,7 +177,7 @@ VFS_FS_LOOKUP(iso9660_lookup)
 
             if (enamelen == namelen && !memcmp(entry->idf, name, namelen)) {
                 *node = (void*)iso9660_node_new(ref->fs, entry);
-                return 0;
+                return *node ? 0 : -ENOMEM;
             }
 
             entry = (void *) ((uint8_t*)entry + entry->dir_size);

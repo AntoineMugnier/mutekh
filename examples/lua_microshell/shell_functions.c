@@ -6,6 +6,8 @@
 #include <vfs/vfs.h>
 
 #include <drivers/fs/ramfs/ramfs.h>
+#include <drivers/fs/iso9660/iso9660.h>
+#include <drivers/device/enum/fdt/enum-fdt.h>
 
 static inline const char * lua_getstringopt(lua_State *st, size_t n, size_t *size)
 {
@@ -237,6 +239,34 @@ int _vfs_dump(lua_State *st)
 
 void init_shell(lua_State* luast)
 {
+    printk("init vfs... ");
+//	fat_open(rootfs_dev, 0, &vfs_root);
+	struct vfs_fs_s *root_mount;
+
+	ramfs_open(&root_mount);
+
+	vfs_set_root(root_mount->root);
+	vfs_set_cwd(root_mount->root);
+
+#ifdef CONFIG_DRIVER_FS_ISO9660
+    {
+        struct vfs_fs_s *cdrom_mount;
+        struct device_s *bd;
+        extern struct device_s fdt_enum_dev;
+
+        if ((bd = enum_fdt_lookup(&fdt_enum_dev, "/block@0"))) {
+            iso9660_open(&cdrom_mount, bd);
+
+            struct vfs_node_s *node;
+            error_t err = vfs_create(root_mount->root, root_mount->root, "cdrom", VFS_NODE_DIR, &node);
+
+            vfs_mount(node, cdrom_mount);
+        }
+    }
+#endif
+
+    printk("ok\n");
+
     lua_register(luast, "mount", mount);
     lua_register(luast, "umount", umount);
     lua_register(luast, "ls", ls);
@@ -248,9 +278,9 @@ void init_shell(lua_State* luast)
     lua_register(luast, "append", append);
     lua_register(luast, "vfs_dump", _vfs_dump);
 
-	struct vfs_node_s *root = vfs_get_root();
+    struct vfs_node_s *root = vfs_get_root();
 
-	vfs_dump(root);
+    //	vfs_dump(root);
 
 	struct vfs_file_s *file;
 	error_t err = vfs_open(root, root, "/test.txt", VFS_OPEN_WRITE|VFS_OPEN_CREATE, &file);
@@ -262,5 +292,15 @@ void init_shell(lua_State* luast)
 		vfs_file_close(file);
 	}
 
-	vfs_dump(root);
+	// vfs_dump(root);
 }
+
+// Local Variables:
+// tab-width: 4
+// c-basic-offset: 4
+// c-file-offsets:((innamespace . 0)(inline-open . 0))
+// indent-tabs-mode: nil
+// End:
+
+// vim: filetype=cpp:expandtab:shiftwidth=4:tabstop=4:softtabstop=4
+

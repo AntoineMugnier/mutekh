@@ -117,7 +117,8 @@ DEVBLOCK_REQUEST(block_soclib_request)
 
 DEVBLOCK_GETPARAMS(block_soclib_getparams)
 {
-  return &(((struct block_soclib_context_s *)(dev->drv_pv))->params);
+  struct block_soclib_context_s *pv = dev->drv_pv;
+  return &pv->params;
 }
 
 /* 
@@ -231,8 +232,8 @@ DEV_INIT(block_soclib_init)
 
   cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_IRQ_ENABLE, 1);
 
-  printk("Soclib block device : %u sectors\n",
-	 pv->params.blk_count);
+  printk("Soclib block device : %u sectors %u bytes per block\n",
+	 pv->params.blk_count, pv->params.blk_size);
 
   DEV_ICU_BIND(dev->icudev, dev, dev->irq, block_soclib_irq);
 

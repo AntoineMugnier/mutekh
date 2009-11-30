@@ -23,9 +23,6 @@
    @file
    @module {Virtual File System}
    @short File system driver operations interface
-
-
-   File system
  */
 
 #ifndef _VFS_FS_H_

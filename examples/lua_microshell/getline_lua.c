@@ -44,19 +44,10 @@ void* shell(void *param)
     struct term_behavior_s	*bhv;
     lua_State			*luast;
 
-    printk("init vfs... ");
-//	fat_open(rootfs_dev, 0, &vfs_root);
-	struct vfs_fs_s *root_mount;
-	ramfs_open(&root_mount);
-	vfs_set_root(root_mount->root);
-	vfs_set_cwd(root_mount->root);
-
-    printk("ok\n");
-
     /* create lua state */
     luast = luaL_newstate();
 
-	init_shell(luast);
+    init_shell(luast);
 
     /* initialize terminal */
     if (!(tm = term_alloc(console_dev, console_dev, luast)))

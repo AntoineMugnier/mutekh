@@ -138,7 +138,7 @@ struct vfs_stat_s
 //	dev_t dev;
 };
 
-#if 0
+#ifdef CONFIG_VFS_VERBOSE
 # define vfs_printk(...) printk(__VA_ARGS__)
 #else
 # define vfs_printk(...) do{}while(0)
