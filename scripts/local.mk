@@ -195,7 +195,7 @@ pre_headers:=
 doc_headers:=
 doc_files:=
 
--include $$(LOCAL_SRC_DIR)/Makefile
+include $$(LOCAL_SRC_DIR)/Makefile
 
 #$$( # info  OBJS=$$(objs))
 
