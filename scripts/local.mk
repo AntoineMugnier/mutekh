@@ -6,7 +6,7 @@ define declare_copy
 #$( # info  ======== declare_copy, $(1), $(2), $(3))
 
 $(3)/$(1): $(2)/$(1)
-	echo '    COPY    ' $$(notdir $$@)
+	echo '   COPY     ' $$(notdir $$@)
 	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
 	cp $$< $$@
 
@@ -102,7 +102,7 @@ endef
 define declare_gpct_header
 
 $(3)/$(1): $(2)/$(1:.h=.t)
-	@echo '  Backslash ' $$(notdir $$@)
+	@echo '    \\      ' $$(notdir $$@)
 	@mkdir -p $(dir $(3)/$(1).h)
 	cp $$< $$@
 	perl $(MUTEK_SRC_DIR)/gpct/gpct/build/backslash.pl < $$< > $$@
@@ -138,7 +138,7 @@ ifeq ($(wildcard $(2)/$(1).cpp),$(2)/$(1).cpp)
 
 # cpp preprocessed files
 $(3)/$(1): $(2)/$(1).cpp $(CONF_DIR)/.config.h
-	@echo '    CPP     ' $$(notdir $$@)
+	@echo '   CPP      ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	$(DEPCC) -E -M -MF $$@.deps -MT $$@ $$(INCS) -P -x c $$<
 	$(CC) -E $$(INCS) -P -x c - < $$< > $$@
@@ -195,7 +195,7 @@ pre_headers:=
 doc_headers:=
 doc_files:=
 
--include $$(LOCAL_SRC_DIR)/Makefile
+include $$(LOCAL_SRC_DIR)/Makefile
 
 #$$( # info  OBJS=$$(objs))
 
