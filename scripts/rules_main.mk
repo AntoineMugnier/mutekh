@@ -108,6 +108,7 @@ else
 $(FINAL_LINK_TARGET): $(FINAL_LINK_SOURCE) FORCE \
 		$(arch_OBJ_DIR)/ldscript \
 		$(cpu_OBJ_DIR)/ldscript
+	@echo '    LD out   ' $(notdir $@)
 	$(LD) $(LINK_LDFLAGS) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		$< \
 		-T $(arch_OBJ_DIR)/ldscript \
@@ -122,7 +123,7 @@ $(BUILD_DIR)/$(target).o: $(CONF_DIR)/.config.m4 \
 		$(META_OBJECT_LIST) \
         $(TARGET_OBJECT_LIST) \
 	    FORCE
-	@echo '    LD o    ' $(notdir $@)
+	@echo '    LD o     ' $(notdir $@)
 	$(LD) -r \
 		$(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		-q $(filter %.o,$^) $(filter %.a,$^) \
@@ -131,7 +132,7 @@ $(BUILD_DIR)/$(target).o: $(CONF_DIR)/.config.m4 \
 
 $(BUILD_DIR)/$(target).pre.o: $(CONF_DIR)/.config.m4 $(TARGET_OBJECT_LIST) \
 	    FORCE $(arch_SRC_DIR)/ldscript_obj
-	@echo '    LD o    ' $(notdir $@)
+	@echo '    LD o     ' $(notdir $@)
 	$(LD) -r \
 		$(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		-q $(filter %.o,$^) $(filter %.a,$^) \
