@@ -28,6 +28,10 @@
 #ifndef __GPCT_PLATFORM_HEXO_H__
 #define __GPCT_PLATFORM_HEXO_H__
 
+#ifdef GPCT_PLATFORM_H_
+# error gpct_platform_hexo.h must be included before any gpct header
+#endif
+
 #include <hexo/error.h>
 #include <hexo/types.h>
 #include <hexo/atomic.h>
