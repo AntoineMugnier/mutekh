@@ -33,6 +33,7 @@
 
 #include <drivers/device/char/tty-emu/tty-emu.h>
 #include <drivers/device/timer/emu/timer-emu.h>
+#include <drivers/device/block/file-emu/block-file-emu.h>
 
 #include <device/device.h>
 #include <device/driver.h>
@@ -55,6 +56,10 @@ struct device_s tty_dev;
 struct device_s timer_dev;
 #endif
 
+#if defined(CONFIG_DRIVER_BLOCK)
+struct device_s block_dev;
+#endif
+
 void arch_hw_init()
 {
 	/* TTY init */
@@ -69,8 +74,17 @@ void arch_hw_init()
 	console_dev = &tty_dev;
 #endif
 
-	/********* Timer init ******************************** */
+	/* block device */
+#if defined(CONFIG_DRIVER_BLOCK)
+	device_init(&block_dev);
+# if defined(CONFIG_DRIVER_BLOCK_EMU)
+	block_file_emu_init(&block_dev, "block.bin");
+# else
+#  error CONFIG_DRIVER_BLOCK case not handled in hw_init()
+# endif
+#endif
 
+	/* timer init */
 #if defined(CONFIG_DRIVER_TIMER)
 	device_init(&timer_dev);
 # if defined(CONFIG_DRIVER_TIMER_EMU)

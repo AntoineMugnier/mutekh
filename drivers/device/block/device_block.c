@@ -70,7 +70,7 @@ static error_t dev_block_lock_request(struct device_s *dev, uint8_t **data,
   while (!status.done)
     ;
 
-  return rq.error;
+  return -rq.error;
 }
 
 #ifdef CONFIG_MUTEK_SCHEDULER
@@ -124,7 +124,7 @@ static error_t dev_block_wait_request(struct device_s *dev, uint8_t **data,
 
   lock_destroy(&status.lock);
 
-  return rq.error;
+  return -rq.error;
 }
 #endif
 

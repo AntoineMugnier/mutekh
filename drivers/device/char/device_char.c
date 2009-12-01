@@ -60,11 +60,14 @@ static DEVCHAR_CALLBACK(dev_char_lock_request_whole_cb)
 }
 
 static ssize_t dev_char_lock_request(struct device_s *dev, uint8_t *data,
-									 size_t size, enum dev_char_rq_type_e type,
-									 devchar_callback_t		*callback)
+				     size_t size, enum dev_char_rq_type_e type,
+				     devchar_callback_t *callback)
 {
   struct dev_char_rq_s rq;
   struct dev_char_wait_rq_s status;
+
+  if (size == 0)
+    return 0;
 
   status.done = 0;
   rq.type = type;
@@ -116,11 +119,14 @@ static DEVCHAR_CALLBACK(dev_char_wait_request_whole_cb)
 }
 
 static ssize_t dev_char_wait_request(struct device_s *dev, uint8_t *data,
-									 size_t size, enum dev_char_rq_type_e type,
-									 devchar_callback_t		*callback)
+				     size_t size, enum dev_char_rq_type_e type,
+				     devchar_callback_t *callback)
 {
   struct dev_char_rq_s rq;
   struct dev_char_wait_rq_s status;
+
+  if (size == 0)
+    return 0;
 
   lock_init(&status.lock);
   status.ctx = NULL;
