@@ -197,6 +197,9 @@ error_t vfs_node_open(struct vfs_fs_s *fs,
         break;
 
     case VFS_NODE_FILE:
+        if ( flags & VFS_OPEN_DIR )
+            return -EINVAL;
+
         if ( !(flags & (VFS_OPEN_READ | VFS_OPEN_WRITE) ) )
             return -EINVAL;
 

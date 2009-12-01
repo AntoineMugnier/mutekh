@@ -104,9 +104,22 @@ error_t vfs_node_lookup(struct vfs_node_s *parent,
 /**
    @this opens an existing node in a given FS.
 
+   @tt flags inform the file system about the actions intended on the
+   file.  @ref VFS_OPEN_READ and @ref VFS_OPEN_WRITE may be ored
+   together.  For directories, the only valid operation is @ref
+   VFS_OPEN_READ | @ref VFS_OPEN_DIR.
+
+   @this fail if trying to open a file with @ref VFS_OPEN_DIR flag present.
+
+   This function must only honor @ref VFS_OPEN_READ, @ref VFS_OPEN_WRITE and
+   @ref VFS_OPEN_DIR flags.  Other flags must be ignored (even
+   @ref VFS_OPEN_CREATE and @ref VFS_OPEN_APPEND).
+
+   This function must not create new files implicitely.
+
    It relies on the @ref vfs_fs_node_open_t fs drivers operation, refer for details.
    @this transfers the ownership of @tt node to caller.
-   @see vfs_open
+   @see vfs_open @see vfs_fs_node_open_t
 */
 error_t vfs_node_open(struct vfs_fs_s *fs,
                       struct vfs_node_s *node,

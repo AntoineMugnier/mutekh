@@ -67,19 +67,7 @@ typedef VFS_FS_CAN_UNMOUNT(vfs_fs_can_unmount_t);
 										struct vfs_file_s **file)
 
 /**
-   This function opens a node for read/write operations.  @tt flags inform the
-   file system about the actions intended on the file.  @ref VFS_OPEN_READ
-   and @ref VFS_OPEN_WRITE may be ored together.  For directories, the only
-   valid operation is @ref VFS_OPEN_READ | @ref VFS_OPEN_DIR.
-
-   This function must fail if trying to open a file with @ref VFS_OPEN_DIR flag
-   present.
-
-   This function must only honor @ref VFS_OPEN_READ, @ref VFS_OPEN_WRITE and
-   @ref VFS_OPEN_DIR flags.  Other flags must be ignored (even
-   @ref VFS_OPEN_CREATE and @ref VFS_OPEN_APPEND).
-
-   This function must not create new files implicitely.
+   This function opens a node for read/write operations.  
 
    @param node Node to open. It may be an anonymous node (not present
    in any directory)
@@ -87,7 +75,9 @@ typedef VFS_FS_CAN_UNMOUNT(vfs_fs_can_unmount_t);
    @param file Returned file descriptor on success
    @return 0 on success, or an error code
 
-   This function transfers the ownership of @tt *file to the caller
+   Some checks are already performed on @tt and node type, see @ref
+   vfs_node_open for details. This function transfers the ownership
+   of @tt *file to the caller.
 
    @csee #VFS_FS_NODE_OPEN
    @see vfs_node_open @see vfs_open
