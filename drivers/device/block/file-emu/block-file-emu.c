@@ -134,14 +134,15 @@ DEV_INIT(block_file_emu_init)
   if (pv->fd < 0)
     {
       printk("Unable to open device file %s\n", params);
-      goto err_pv;
+      pv->params.blk_count = 0;
+    }
+  else
+    {
+      size_t off = emu_do_syscall(EMU_SYSCALL_LSEEK, 3, pv->fd, 0, EMU_SEEK_END);
+      pv->params.blk_count = off / CONFIG_DRIVER_BLOCK_EMU_BLOCKSIZE;
     }
 
-  size_t off = emu_do_syscall(EMU_SYSCALL_LSEEK, 3, pv->fd, 0, EMU_SEEK_END);
-
   pv->params.blk_size = CONFIG_DRIVER_BLOCK_EMU_BLOCKSIZE;
-  pv->params.blk_count = off / CONFIG_DRIVER_BLOCK_EMU_BLOCKSIZE;
-
   printk("Emu block device : %u sectors\n", pv->params.blk_count);
 
   dev->drv_pv = pv;
