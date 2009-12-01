@@ -23,6 +23,7 @@
 #define _ISO9660_H_
 
 #include <vfs/fs.h>
+#include <vfs/ops.h>
 
 /**
    @this creates a new ISO9660 file system instance.

@@ -113,7 +113,9 @@ VFS_FILE_READ(iso9660_file_read)
         }
     }
 
-    return buffer_ - (uint8_t*)buffer;
+    size = buffer_ - (uint8_t*)buffer;
+    file->offset += size;
+    return size;
 }
 
 VFS_FILE_READ(iso9660_dir_read)
@@ -132,6 +134,7 @@ VFS_FILE_READ(iso9660_dir_read)
 
         uint8_t dirblk[ISO9660_BLOCK_SIZE];
         uint8_t *ptr = dirblk;
+        char entryname[255];
 
         struct iso9660_dir_s *entry = (void*)(dirblk + o);
 
@@ -145,20 +148,25 @@ VFS_FILE_READ(iso9660_dir_read)
             continue;
         }
 
-        size_t enamelen = entry->idf_len;
+    next:
+        if ( entry->dir_size + o > ISO9660_BLOCK_SIZE ) {
+            vfs_printk("iso9660: overlapping directory entry not supported\n");
+            return -ENOTSUP;
+        }
 
-        /* check entry size */
-        if (sizeof(*entry) + enamelen > entry->dir_size)
-            return -EIO;
+        /* skip . and .. entries */
+        if ( entry->idf_len == 1 && entry->idf[0] < 2 ) {
+            o += entry->dir_size;
+            entry = (void*)(dirblk + o);
+            goto next;
+        }
 
-        if (enamelen > 2 && entry->idf[enamelen - 2] == ';')
-            enamelen -= 2;
+        size_t entrynamelen = sizeof(entryname);
+        if (( err = iso9660_read_direntry(isofs->bd, entry, entryname, &entrynamelen) ))
+            return err;
 
-        if (enamelen > CONFIG_VFS_NAMELEN)
-            enamelen = CONFIG_VFS_NAMELEN;
-
-        dirent->name[enamelen] = 0;
-        memcpy(dirent->name, entry->idf, enamelen);
+        entrynamelen = vfs_name_mangle(entryname, entrynamelen, dirent->name);
+        dirent->name[entrynamelen] = 0;
 
         if (entry->type & iso9660_file_isdir) {
             dirent->type = VFS_NODE_DIR;

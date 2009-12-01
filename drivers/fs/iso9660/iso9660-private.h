@@ -34,7 +34,7 @@ struct iso9660_node_s
 {
   struct vfs_node_s node; /* keep first field */
   struct {
-    uint16_t padding;
+    uint16_t padding;	  /* align 32bits fields in iso9660_dir_s */
     struct iso9660_dir_s entry;
   } __attribute__ ((packed));
 };
@@ -59,6 +59,10 @@ VFS_FS_CAN_UNMOUNT(iso9660_can_unmount);
 VFS_FILE_SEEK(iso9660_file_seek);
 VFS_FILE_READ(iso9660_file_read);
 VFS_FILE_READ(iso9660_dir_read);
+
+error_t iso9660_read_direntry(struct device_s *bd,
+			      const struct iso9660_dir_s *entry,
+                              char *name, size_t *namelen);
 
 #endif
 

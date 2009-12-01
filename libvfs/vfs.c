@@ -25,7 +25,27 @@
 
 #include <string.h>
 
-#include "vfs-private.h"
+static void
+vfs_node_reparent(struct vfs_node_s *node, struct vfs_node_s *parent)
+{
+	if ( node->parent != NULL )
+		vfs_node_refdrop(node->parent);
+
+	if ( parent != NULL )
+		node->parent = vfs_node_refnew(parent);
+	else
+		node->parent = NULL;
+}
+
+static struct vfs_node_s *
+vfs_mangled_dir_lookup(vfs_dir_hash_root_t *children,
+                       const char *fullname, size_t fullnamelen)
+{
+	char tmpname[CONFIG_VFS_NAMELEN];
+    vfs_name_mangle(fullname, fullnamelen, tmpname);
+
+	return vfs_dir_lookup(children, tmpname);
+}
 
 error_t vfs_mount(struct vfs_node_s *mountpoint,
 				  struct vfs_fs_s *fs)
@@ -48,7 +68,7 @@ error_t vfs_mount(struct vfs_node_s *mountpoint,
 	if ( mountpoint->fs->root == mountpoint )
 		return -EINVAL;
 
-	lock_spin(&mountpoint->dir.children.lock);
+	vfs_dir_wrlock(&mountpoint->dir.children);
 
 	/* Keep a reference to the mountpoint node, it may be open */
 	fs->old_node = vfs_node_refnew(mountpoint);
@@ -59,7 +79,9 @@ error_t vfs_mount(struct vfs_node_s *mountpoint,
 	vfs_dir_nolock_push(&mountpoint->parent->dir.children, fs_root);
 	vfs_node_reparent(fs_root, mountpoint->parent);
 
-	lock_release(&mountpoint->dir.children.lock);
+	vfs_dir_unlock(&mountpoint->dir.children);
+
+	vfs_printk("<mount ok>");
 
 	return 0;
 }
@@ -78,7 +100,7 @@ error_t vfs_umount(struct vfs_fs_s *fs)
 		return -EINVAL;
 
 	/* >>> Critical section */
-	lock_spin(&parent->dir.children.lock);
+	vfs_dir_wrlock(&parent->dir.children);
 
 	if ( ! fs->can_unmount(fs) )
 		goto is_busy;
@@ -88,7 +110,7 @@ error_t vfs_umount(struct vfs_fs_s *fs)
 	vfs_dir_nolock_push(&parent->dir.children, fs->old_node);
 	vfs_node_refdrop(fs->old_node);
 
-	lock_release(&parent->dir.children.lock);
+	vfs_dir_unlock(&parent->dir.children);
 	/* <<< Critical section */
 
 	fs_root->parent = NULL;
@@ -100,7 +122,7 @@ error_t vfs_umount(struct vfs_fs_s *fs)
 	return 0;
 
   is_busy:
-	lock_release(&parent->dir.children.lock);
+	vfs_dir_unlock(&parent->dir.children);
 	return -EBUSY;
 }
 
@@ -134,14 +156,10 @@ error_t vfs_node_lookup(struct vfs_node_s *parent,
 		return 0;
 	}
 
-	char tmpname[CONFIG_VFS_NAMELEN];
-	memset(tmpname, 0, CONFIG_VFS_NAMELEN);
-	memcpy(tmpname, name, namelen);
-
 	semaphore_wait(&parent->dir.semaphore);
 
 	/* Now lookup inside the hash */
-	*node = vfs_dir_lookup(&parent->dir.children, tmpname);
+	*node = vfs_mangled_dir_lookup(&parent->dir.children, name, namelen);
 	if ( *node ) {
 		vfs_node_refnew(*node);
 		vfs_printk("ok %p [%s]>", (*node), (*node)->name);
@@ -155,6 +173,8 @@ error_t vfs_node_lookup(struct vfs_node_s *parent,
 		vfs_printk("err %d>", err);
 		goto fini;
 	}
+
+    assert((*node)->name[0]);   /* not an anonymous node */
 
 	/* As FS got a node for this, we can register it in the hash */
 	vfs_dir_push(&parent->dir.children, *node);
@@ -230,13 +250,9 @@ error_t vfs_node_link(struct vfs_node_s *parent,
     if ( parent->fs->flag_ro )
         return -EPERM;
 
-	char tmpname[CONFIG_VFS_NAMELEN];
-	memset(tmpname, 0, CONFIG_VFS_NAMELEN);
-	memcpy(tmpname, name, namelen);
-
 	semaphore_wait(&parent->dir.semaphore);
 
-	struct vfs_node_s *prev_node = vfs_dir_lookup(&parent->dir.children, tmpname);
+	struct vfs_node_s *prev_node = vfs_mangled_dir_lookup(&parent->dir.children, name, namelen);
 
 	if ( prev_node ) {
 		if ( prev_node->type == VFS_NODE_DIR ) {
@@ -253,6 +269,8 @@ error_t vfs_node_link(struct vfs_node_s *parent,
 		vfs_printk("fail %d>\n", err);
 		goto fini;
 	}
+
+    assert((*rnode)->name[0]);
 
 	vfs_node_reparent(*rnode, parent);
 	vfs_dir_push(&parent->dir.children, *rnode);
@@ -281,13 +299,9 @@ error_t vfs_node_unlink(struct vfs_node_s *parent,
     if ( parent->fs->flag_ro )
         return -EPERM;
 
-	char tmpname[CONFIG_VFS_NAMELEN];
-	memset(tmpname, 0, CONFIG_VFS_NAMELEN);
-	memcpy(tmpname, name, namelen);
-
 	semaphore_wait(&parent->dir.semaphore);
 
-	struct vfs_node_s *node = vfs_dir_lookup(&parent->dir.children, tmpname);
+	struct vfs_node_s *node = vfs_mangled_dir_lookup(&parent->dir.children, name, namelen);
 
 	error_t err = parent->fs->unlink(parent, name, namelen);
 	if ( err )
@@ -310,21 +324,45 @@ error_t vfs_node_stat(struct vfs_node_s *node,
 	return node->fs->stat(node, stat);
 }
 
+size_t vfs_name_mangle(const char *fullname, size_t fulllen, char *vfsname)
+{
+    /* FIXME should gracefully handle shortened names colision */
+    if (fulllen > CONFIG_VFS_NAMELEN)
+        fulllen = CONFIG_VFS_NAMELEN;
+    /* fulllen can be 0 for anonymous nodes only */
+    memcpy(vfsname, fullname, fulllen);
+	memset(vfsname + fulllen, 0, CONFIG_VFS_NAMELEN - fulllen);
+
+    return fulllen;
+}
+
+bool_t vfs_name_compare(const char *fullname, size_t fulllen,
+                        const char *vfsname, size_t vfsnamelen)
+{
+    /* should compare vfsname with both fullname and shortened name */
+
+    assert(vfsnamelen && fulllen);
+
+    if (fulllen == vfsnamelen && !memcmp(fullname, vfsname, fulllen))
+        return 1;
+
+    if (fulllen > CONFIG_VFS_NAMELEN) {
+        /* FIXME should gracefully handle shortened names compare HERE */
+    }
+
+    return 0;
+}
+
 OBJECT_CONSTRUCTOR(vfs_node)
 {
 	struct vfs_fs_s *fs = va_arg(ap, struct vfs_fs_s *);
 	obj->type = va_arg(ap, enum vfs_node_type_e);
-	const char *name = va_arg(ap, const char *);
-	size_t size = va_arg(ap, size_t);
+	const char *fullname = va_arg(ap, const char *);
+	size_t fullnamelen = va_arg(ap, size_t);
 	obj->priv = va_arg(ap, void*);
 	obj->priv_deleter = va_arg(ap, vfs_node_fs_priv_deleter_t*);
 
-    /* FIXME should gracefully handle shortened names colision */
-    if (size > CONFIG_VFS_NAMELEN)
-        size = CONFIG_VFS_NAMELEN;
-    memcpy(obj->name, name, size);
-	memset(obj->name + size, 0, CONFIG_VFS_NAMELEN - size);
-
+    vfs_name_mangle(fullname, fullnamelen, obj->name);
 	obj->fs = fs;
 
 	atomic_inc(&fs->ref);

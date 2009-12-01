@@ -41,13 +41,14 @@ static void iso9660_node_delete(struct vfs_node_s *node)
 }
 
 static struct iso9660_node_s *
-iso9660_node_new(struct vfs_fs_s *fs, const struct iso9660_dir_s *entry)
+iso9660_node_new(struct vfs_fs_s *fs, const struct iso9660_dir_s *entry,
+                 const char *name, size_t namelen)
 {
     struct iso9660_node_s *isonode = mem_alloc(sizeof (*isonode), mem_scope_sys);
-    enum vfs_node_type_e type = isonode->entry.type & iso9660_file_isdir ? VFS_NODE_DIR : VFS_NODE_FILE;
+    enum vfs_node_type_e type = entry->type & iso9660_file_isdir ? VFS_NODE_DIR : VFS_NODE_FILE;
 
-    if (!vfs_node_new(&isonode->node, fs, type, entry->idf,
-                      entry->idf_len, NULL, iso9660_node_delete))
+    if (!vfs_node_new(&isonode->node, fs, type, name,
+                      namelen, NULL, iso9660_node_delete))
         {
             mem_free(isonode);
             return NULL;
@@ -117,7 +118,7 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
         goto free_mnt;
     }
 
-    mnt->fs.root = (struct vfs_node_s *)iso9660_node_new((struct vfs_fs_s*)mnt, &mnt->voldesc.root_dir);
+    mnt->fs.root = (struct vfs_node_s *)iso9660_node_new((struct vfs_fs_s*)mnt, &mnt->voldesc.root_dir, "", 0);
 
     if (mnt->fs.root == NULL) {
         return -ENOMEM;
@@ -162,22 +163,28 @@ VFS_FS_LOOKUP(iso9660_lookup)
 
         for ( entry = (void*)dirblk; (uint8_t*)entry < dirblk + ISO9660_BLOCK_SIZE; ) {
 
+            char entryname[255];
+
             /* skip to next block on zero sized dir entry */
             if ( entry->dir_size == 0 )
                 break;
 
-            size_t enamelen = entry->idf_len;
+            if ( (uint8_t*)entry + entry->dir_size > dirblk + ISO9660_BLOCK_SIZE ) {
+                vfs_printk("iso9660: overlapping directory entry not supported\n");
+                return -ENOTSUP;
+            }
 
-            /* check entry size */
-            if (sizeof(*entry) + enamelen > entry->dir_size)
-                return -EIO;
+            /* ignore . and .. entries */
+            if ( entry->idf_len > 1 || entry->idf[0] > 1 ) {
 
-            if (enamelen > 2 && entry->idf[enamelen - 2] == ';')
-                enamelen -= 2;
+                size_t entrynamelen = sizeof(entryname);
+                if (( err = iso9660_read_direntry(isofs->bd, entry, entryname, &entrynamelen) ))
+                    return err;
 
-            if (enamelen == namelen && !memcmp(entry->idf, name, namelen)) {
-                *node = (void*)iso9660_node_new(ref->fs, entry);
-                return *node ? 0 : -ENOMEM;
+                if (vfs_name_compare(entryname, entrynamelen, name, namelen)) {
+                    *node = (void*)iso9660_node_new(ref->fs, entry, entryname, entrynamelen);
+                    return *node ? 0 : -ENOMEM;
+                }
             }
 
             entry = (void *) ((uint8_t*)entry + entry->dir_size);

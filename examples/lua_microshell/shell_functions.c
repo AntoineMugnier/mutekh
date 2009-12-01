@@ -237,11 +237,12 @@ int _vfs_dump(lua_State *st)
 	return 0;
 }
 
+struct vfs_fs_s *root_mount;
+
 void init_shell(lua_State* luast)
 {
     printk("init vfs... ");
 //	fat_open(rootfs_dev, 0, &vfs_root);
-	struct vfs_fs_s *root_mount;
 
 	ramfs_open(&root_mount);
 

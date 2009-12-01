@@ -59,19 +59,21 @@ error_t vfs_umount(struct vfs_fs_s *fs);
 
 #ifdef __MKDOC__
 /**
-   @this creates a new vfs node.
+   @this creates a new vfs node. It may be called from the fs driver.
 
    @param storage pointer to pre-allocated memory for new vfs node, may be NULL.
    @param fs associated file system instance
    @param type node type
-   @param name node name
-   @param namelen lenght of node name
+   @param fullname entry full name as described by file system.
+          May be longer than @ref #CONFIG_VFS_NAMELEN and will be mangled if needed.
+   @param fullnamelen lenght of full name
    @param private pointer to node private data
    @param deleter pointer to node delete functions
    @return the new vfs node.
+   @see vfs_name_mangle
  */
 struct vfs_node_s * vfs_node_new(void *storage, struct vfs_fs_s *fs,
-                                 enum vfs_node_type_e type, const char *name, size_t namelen,
+                                 enum vfs_node_type_e type, const char *fullname, size_t fullnamelen,
                                  void *private, vfs_node_fs_priv_deleter_t *deleter);
 #endif
 
@@ -88,17 +90,19 @@ void vfs_node_refdrop(struct vfs_node_s * node);
 
    @param parent Node to look up from
    @param name Name of the node, must not contain any @tt '/'. It may
-   not end with a @tt '\0'
+          not end with a @tt '\0' . May be eiter a full length file system
+          name or a vfs shortened node name.
    @param namelen Length of node name
    @param node Returned node
    @return 0 if found
 
    @this transfers the ownership of @tt node to caller.
    @see vfs_fs_lookup_t @see vfs_lookup
+   @see vfs_name_mangle
 */
 error_t vfs_node_lookup(struct vfs_node_s *parent,
-						const char *name,
-						size_t namelen,
+						const char *fullname,
+						size_t fullnamelen,
 						struct vfs_node_s **node);
 
 /**
@@ -145,33 +149,37 @@ error_t vfs_node_create(struct vfs_fs_s *fs,
 
    @param parent Where to attach a new child
    @param node Node to attach
-   @param name Name of the new node
-   @param namelen Length of name of the new node
+   @param fullname Name of the new node, may be a long file system
+          entry name but will be shortened for use as vfs node name.
+   @param fullnamelen Length of name of the new node
    @param rnode Actually attached node
    @return 0 if created
 
    @this transfers the ownership of @tt rnode to caller, even if it is
    actually @tt node.
    @see vfs_fs_link_t
+   @see vfs_name_mangle
  */
 error_t vfs_node_link(struct vfs_node_s *parent,
 					  struct vfs_node_s *node,
-					  const char *name,
-					  size_t namelen,
+					  const char *fullname,
+					  size_t fullnamelen,
 					  struct vfs_node_s **rnode);
 
 /**
    Unlinks a node from its parent.
 
    @param parent Where to unlink a child
-   @param name Name of the node to unlink
-   @param namelen Length of name
+   @param fullname Name of the node, must not contain any @tt '/'. It may
+          not end with a @tt '\0' . May be eiter a full length file system
+          name or a vfs shortened node name.
+   @param fullnamelen Length of name
    @return 0 if unlinked correctly
    @see vfs_fs_unlink_t @see vfs_unlink
  */
 error_t vfs_node_unlink(struct vfs_node_s *parent,
-						const char *name,
-						size_t namelen);
+						const char *fullname,
+						size_t fullnamelen);
 
 /**
    @this retrieves information about a given node.
@@ -183,6 +191,33 @@ error_t vfs_node_unlink(struct vfs_node_s *parent,
 */
 error_t vfs_node_stat(struct vfs_node_s *node,
 					  struct vfs_stat_s *stat);
+
+/**
+   @this compares a full entry name as described by the on disk file
+   system directory entry with a possibly shortened and mangled node
+   name as seen by the vfs.
+
+   @param fullname entry full name as described by file system
+   @param fullnamelen lenght of full name
+   @param vfsname possibly shortened node name
+   @param vfsnamelen possibly shortened node name lenght
+   @return true if equal
+   @see vfs_name_mangle
+ */
+bool_t vfs_name_compare(const char *fullname, size_t fullnamelen,
+                            const char *vfsname, size_t vfsnamelen);
+
+/**
+   @this setup a possibly mangled and shortened vfs node name from a
+   full lenght file system entry name. No extra @tt '\0' is added to mangled name.
+
+   @param fullname entry full name as described by file system
+   @param fullnamelen lenght of full name
+   @param vfsname possibly shortened node name
+   @return length of resulting
+   @see vfs_name_mangle @see vfs_node_new
+ */
+size_t vfs_name_mangle(const char *fullname, size_t fullnamelen, char *vfsname);
 
 #endif
 

@@ -115,5 +115,30 @@ struct				iso9660_prim_voldesc_s
   uint8_t			filestrutc_version;	/* File Structure Version (1) */
 } __attribute__ ((packed));
 
+/* System Use Sharing Protocol for Rock Ridge dir entries */
+
+struct				iso9660_susp_s
+{
+  uint16_t			sign;
+  uint8_t			len;
+  uint8_t			version;
+  uint8_t			data[0];
+} __attribute__ ((packed));
+
+struct				iso9660_susp_nm_s
+{
+  struct iso9660_susp_s		hdr;
+  uint8_t			flag;
+  char				name[0];
+} __attribute__ ((packed));
+
+struct				iso9660_susp_ce_s
+{
+  struct iso9660_susp_s		hdr;
+  ISO9660_ENDIAN(uint32_t,	block);
+  ISO9660_ENDIAN(uint32_t,	offset);
+  ISO9660_ENDIAN(uint32_t,	size);
+} __attribute__ ((packed));
+
 #endif
 
