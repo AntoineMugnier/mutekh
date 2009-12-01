@@ -34,7 +34,7 @@
 # warning NDEBUG is deprecated here, use CONFIG_LIBC_ASSERT or CONFIG_DEBUG
 #endif
 
-#if defined(CONFIG_LIBC_ASSERT)
+# if defined(CONFIG_LIBC_ASSERT)
 
 void
 __assert_fail(const char *file,
@@ -42,12 +42,18 @@ __assert_fail(const char *file,
 			  const char *func,
 			  const char *expr);
 
-/** standard assert macro */
-# define assert(expr) ((void) ((expr) ? 0 : __assert_fail(__FILE__, __LINE__, __func__, #expr)))
-#else
-/** standard assert macro */
-# define assert(expr) ((void) 0)
-#endif
+/** @multiple @this is the standard @tt assert macro */
+#  define assert(expr) ((void) ((expr) ? 0 : __assert_fail(__FILE__, __LINE__, __func__, #expr)))
+# else
+#  define assert(expr) ((void) 0)
+# endif
+
+# if defined(CONFIG_LIBC_ASSERT)
+/** @multiple @this macro does the same as the @ref #assert macro, but still execute @tt expr when @ref #CONFIG_LIBC_ASSERT is disabled */
+#  define ensure(expr) assert(expr)
+# else
+#  define ensure(expr) ((void) (expr))
+# endif
 
 #endif
 
