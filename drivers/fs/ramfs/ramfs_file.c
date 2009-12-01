@@ -31,16 +31,6 @@ VFS_FS_NODE_OPEN(ramfs_node_open)
 {
 	vfs_printk("<ramfs_node_open %p %x ", node, flags);
 
-	if ( flags & VFS_OPEN_DIR ) {
-		if ( (node->type != VFS_NODE_DIR)
-			 || !(flags & VFS_OPEN_READ) )
-			return -EINVAL;
-	} else {
-		if ( (node->type != VFS_NODE_FILE)
-			 || !(flags & (VFS_OPEN_READ | VFS_OPEN_WRITE)) )
-			return -EINVAL;
-	}
-
 	struct vfs_file_s *f = vfs_file_new(NULL, node);
 	if ( f == NULL ) {
 		vfs_printk("err>");

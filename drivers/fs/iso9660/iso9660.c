@@ -30,6 +30,7 @@
 #include <device/driver.h>
 
 #include <string.h>
+#include <hexo/endian.h>
 
 #include "iso9660.h"
 #include "iso9660-private.h"
@@ -45,8 +46,8 @@ iso9660_node_new(struct vfs_fs_s *fs, const struct iso9660_dir_s *entry)
     struct iso9660_node_s *isonode = mem_alloc(sizeof (*isonode), mem_scope_sys);
     enum vfs_node_type_e type = isonode->entry.type & iso9660_file_isdir ? VFS_NODE_DIR : VFS_NODE_FILE;
 
-    if (vfs_node_new(&isonode->node, fs, type, entry->idf,
-                     entry->idf_len, NULL, iso9660_node_delete))
+    if (!vfs_node_new(&isonode->node, fs, type, entry->idf,
+                      entry->idf_len, NULL, iso9660_node_delete))
         {
             mem_free(isonode);
             return NULL;
@@ -128,7 +129,6 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
 	// TODO register destructor
 
 	*fs = (struct vfs_fs_s*)mnt;
-
 	return 0;
 
  free_mnt:
@@ -144,7 +144,7 @@ VFS_FS_CAN_UNMOUNT(iso9660_can_unmount)
 VFS_FS_LOOKUP(iso9660_lookup)
 {
     struct iso9660_node_s *isonode = (void*)ref;
-    struct iso9660_fs_s *isofs = (void*)isonode->node.fs;
+    struct iso9660_fs_s *isofs = (void*)ref->fs;
 
     size_t count = ALIGN_VALUE_UP(isonode->entry.file_size, ISO9660_BLOCK_SIZE) / ISO9660_BLOCK_SIZE;
     dev_block_lba_t first = isonode->entry.data_blk;

@@ -31,6 +31,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <hexo/endian.h>
 
 #include "iso9660.h"
 #include "iso9660-private.h"

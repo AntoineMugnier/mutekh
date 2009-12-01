@@ -4,19 +4,18 @@
   
   # Mutek features
   CONFIG_MUTEK_CONSOLE
-  CONFIG_MUTEK_MEMALLOC_SMART
-  CONFIG_SOCLIB_MEMCHECK
+  CONFIG_MUTEK_MEMALLOC_SIMPLE
   
   # Scheduler
   CONFIG_PTHREAD
   CONFIG_PTHREAD_STACK_SIZE 16384
   CONFIG_MUTEK_SCHEDULER
   CONFIG_MUTEK_SCHEDULER_MIGRATION
-  CONFIG_SMP
 
   # Libs
   CONFIG_LIBTERMUI
   CONFIG_LIBLUA
+  CONFIG_LIBC_ASSERT
   
   # FS drivers
   CONFIG_VFS
@@ -30,12 +29,46 @@
   
   # Compilation features
   CONFIG_COMPILE_DEBUG
+  CONFIG_COMPILE_OPTIMIZE 0
   
   # New source code module to be compiled
   CONFIG_MODULES app:$(CONFIGPATH)
   
   CONFIG_COMPILE_SAVETEMPS
   
+%section emu-linux-*
+  %types hostos
+
+  CONFIG_ARCH_EMU_LINUX
+
+%section emu-darwin-*
+  %types hostos
+
+  CONFIG_ARCH_EMU_DARWIN
+
+%section emu-*-x86_64
+  %types cpu
+
+  CONFIG_CPU_X86_64_EMU
+
+%section emu-*-x86
+  %types cpu
+
+  CONFIG_CPU_X86_EMU
+
+%section emu-*-*
+  %requiretypes hostos
+  %types arch
+
+  CONFIG_ARCH_EMU
+
+  CONFIG_ARCH_HW_INIT
+  CONFIG_DRIVER_CHAR_EMUTTY
+  CONFIG_DRIVER_BLOCK_EMU
+  CONFIG_DRIVER_BLOCK_EMU_BLOCKSIZE 2048
+  CONFIG_CPU_RESET_HANDLER undefined
+
+
 %section ibmpc-x86
   %types arch cpu
 
@@ -101,6 +134,8 @@
   %types arch
   CONFIG_ARCH_SOCLIB
   
+  CONFIG_SMP
+  CONFIG_SOCLIB_MEMCHECK
   CONFIG_FDT
   CONFIG_DRIVER_ENUM_FDT
   

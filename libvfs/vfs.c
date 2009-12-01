@@ -189,8 +189,21 @@ error_t vfs_node_open(struct vfs_fs_s *fs,
 
     assert( fs->node_open != NULL );
 
-    if ( flags & (VFS_OPEN_WRITE | VFS_OPEN_CREATE | VFS_OPEN_APPEND) && fs->flag_ro )
-        return -EPERM;
+    /* check open mode en permission based on node type */
+    switch ( node->type ) {
+    case VFS_NODE_DIR:
+        if ( flags != (VFS_OPEN_DIR | VFS_OPEN_READ) )
+            return -EINVAL;
+        break;
+
+    case VFS_NODE_FILE:
+        if ( !(flags & (VFS_OPEN_READ | VFS_OPEN_WRITE) ) )
+            return -EINVAL;
+
+        if ( flags & (VFS_OPEN_WRITE | VFS_OPEN_CREATE | VFS_OPEN_APPEND) && fs->flag_ro )
+            return -EPERM;
+        break;
+    }
 
     return fs->node_open(node, flags, file);
 }

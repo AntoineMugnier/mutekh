@@ -27,7 +27,7 @@ int ls(lua_State *st)
     struct vfs_file_s *dir;
     struct vfs_dirent_s dirent;
 
-	error_t err = vfs_open(vfs_get_root(), vfs_get_cwd(), pathname, 0, &dir);
+	error_t err = vfs_open(vfs_get_root(), vfs_get_cwd(), pathname, VFS_OPEN_DIR | VFS_OPEN_READ, &dir);
     if (err)
     {
         printk("Error: %s\n", strerror(err));
@@ -252,10 +252,16 @@ void init_shell(lua_State* luast)
     {
         struct vfs_fs_s *cdrom_mount;
         struct device_s *bd;
+
+# ifdef CONFIG_ARCH_SOCLIB
         extern struct device_s fdt_enum_dev;
 
         if ((bd = enum_fdt_lookup(&fdt_enum_dev, "/block@0"))) {
-            iso9660_open(&cdrom_mount, bd);
+# elif defined (CONFIG_ARCH_EMU)
+        extern struct device_s block_dev;
+        if ((bd = &block_dev)) {
+# endif
+            ensure(iso9660_open(&cdrom_mount, bd) == 0);
 
             struct vfs_node_s *node;
             error_t err = vfs_create(root_mount->root, root_mount->root, "cdrom", VFS_NODE_DIR, &node);
