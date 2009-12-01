@@ -134,7 +134,6 @@ VFS_FILE_READ(iso9660_dir_read)
 
         uint8_t dirblk[ISO9660_BLOCK_SIZE];
         uint8_t *ptr = dirblk;
-        char entryname[255];
 
         struct iso9660_dir_s *entry = (void*)(dirblk + o);
 
@@ -161,7 +160,9 @@ VFS_FILE_READ(iso9660_dir_read)
             goto next;
         }
 
+        char entryname[255];
         size_t entrynamelen = sizeof(entryname);
+
         if (( err = iso9660_read_direntry(isofs->bd, entry, entryname, &entrynamelen) ))
             return err;
 

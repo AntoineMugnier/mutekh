@@ -43,7 +43,7 @@ error_t iso9660_read_direntry(struct device_s *bd,
     size_t idflen = entry->idf_len;
 
     /* check entry size */
-    if (sizeof(*entry) + idflen > elen)
+    if (!idflen || sizeof(*entry) + idflen > elen)
         return -EBADDATA;
 
 #ifdef CONFIG_DRIVER_FS_ISO9660_ROCKRIDGE
@@ -66,7 +66,7 @@ error_t iso9660_read_direntry(struct device_s *bd,
 
         switch (endian_le16_na_load(&susp->sign)) {
 
-        case 0x4d4e: {           /* NM */
+        case 0x4d4e: {           /* NM (name chunk) */
             struct iso9660_susp_nm_s *nm = (void*)susp;
             datalen -= sizeof (*nm);
             if (datalen < 0 || rrnamelen + datalen > *namelen)
@@ -79,10 +79,10 @@ error_t iso9660_read_direntry(struct device_s *bd,
             break;
         }
 
-        case 0x5850:            /* PX (entry mode) */
+        case 0x5850:            /* PX (unix mode/type) */
             break;
 
-        case 0x4654:            /* TF (timestamp) */
+        case 0x4654:            /* TF (unix timestamp) */
             break;
 
         case 0x4543: {            /* CE (continue in other block) */
@@ -117,8 +117,12 @@ error_t iso9660_read_direntry(struct device_s *bd,
     } else {
 #endif
 
+        /* strip annoying ;x suffix */
         if (idflen > 2 && entry->idf[idflen - 2] == ';')
             idflen -= 2;
+
+	if (idflen > *namelen)
+	  idflen = *namelen;
 
         memcpy(name, entry->idf, idflen);
         *namelen = idflen;
@@ -129,4 +133,13 @@ error_t iso9660_read_direntry(struct device_s *bd,
 
     return 0;
 }
+
+// Local Variables:
+// tab-width: 4
+// c-basic-offset: 4
+// c-file-offsets:((innamespace . 0)(inline-open . 0))
+// indent-tabs-mode: nil
+// End:
+
+// vim: filetype=cpp:expandtab:shiftwidth=4:tabstop=4:softtabstop=4
 

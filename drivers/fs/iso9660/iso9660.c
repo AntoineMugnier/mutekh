@@ -163,8 +163,6 @@ VFS_FS_LOOKUP(iso9660_lookup)
 
         for ( entry = (void*)dirblk; (uint8_t*)entry < dirblk + ISO9660_BLOCK_SIZE; ) {
 
-            char entryname[255];
-
             /* skip to next block on zero sized dir entry */
             if ( entry->dir_size == 0 )
                 break;
@@ -177,7 +175,9 @@ VFS_FS_LOOKUP(iso9660_lookup)
             /* ignore . and .. entries */
             if ( entry->idf_len > 1 || entry->idf[0] > 1 ) {
 
+                char entryname[255];
                 size_t entrynamelen = sizeof(entryname);
+
                 if (( err = iso9660_read_direntry(isofs->bd, entry, entryname, &entrynamelen) ))
                     return err;
 
