@@ -122,8 +122,8 @@ stream_nprintf(term_stream_t stream, size_t n, const char *fmt, ...)
   va_list list;
 
   va_start(list, fmt);
-  res = vsnprintf(buf, n, fmt, list);
-  dev_char_wait_write(stream, (void*)buf, res > n ? n : res);
+  if ((res = vsnprintf(buf, n, fmt, list)))
+    dev_char_wait_write(stream, (void*)buf, res > n ? n : res);
   va_end(list);
 
   return res;

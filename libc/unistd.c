@@ -18,7 +18,7 @@ struct fd_entry_s
 CONTAINER_TYPE(fdarray, DARRAY, struct fd_entry_s, 1, 256)
 CONTAINER_FUNC(fdarray, DARRAY, static, fdarray);
 
-static fdarray_root_t fd_array;
+static fdarray_root_t fd_array = CONTAINER_ROOT_INITIALIZER(fdarray, DARRAY);
 
 static fd_t fd_new(fdarray_root_t *fda)
 {
@@ -48,6 +48,9 @@ fd_t fd_add(const struct fileops_s *ops, void *hndl)
 {
 	fd_t fd = fd_new(&fd_array);
 	struct fd_entry_s *e = fd_get(&fd_array, fd);
+
+	/* NULL handler would confuse fd allocator */
+	assert(hndl != NULL);
 
 	e->ops = ops;
 	e->hndl = hndl;
