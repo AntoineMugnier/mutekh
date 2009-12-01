@@ -69,8 +69,6 @@ struct mem_alloc_region_s
 
 /***************** Memory allocatable region management ******************/
 
-static const size_t	mem_hdr_size = 0;
-
 struct mem_alloc_region_s
 {
   lock_t		lock;

@@ -23,28 +23,35 @@
 #include <string.h>
 #include "memalloc.h"
 
-#ifdef CONFIG_MUTEK_MEMALLOC_SIMPLE
-
 /***************** Memory allocation interface ******************/
 
 void *mem_alloc_region_pop(struct mem_alloc_region_s *region, size_t size)
 {
-  void	*res, *next;
+  void *res, *next;
 
   lock_spin(&region->lock);
 
   res = region->next;
 
+  /* insert a single word header to keep track of allocated size */
+  size_t *hdr = res;
+  res = hdr + 1;
+
 #ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
   memset(res, 0x5a, size);
 #endif
 
-  next = (uint8_t*)region->next + size;
+  next = (uint8_t*)res + size;
 
-  if (next > region->last)
-    res = NULL;
-
-  region->next = next;
+  if (next <= region->last)
+    {
+      *hdr = size;
+      region->next = next;
+    }
+  else
+    {
+      res = NULL;
+    }
 
   lock_release(&region->lock);
 
@@ -60,36 +67,36 @@ void mem_alloc_region_init(struct mem_alloc_region_s *region,
   region->last = end;
 }
 
-/** allocate a new memory block in given region */
 void *mem_alloc(size_t size, enum mem_scope_e scope)
 {
   struct mem_alloc_region_s *region;
-  void *hdr;
+  void *res;
 
   region = mem_region_get_scope(scope);
 
-  size = mem_hdr_size
-    + ALIGN_VALUE_UP(size, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  res = mem_alloc_region_pop(region, ALIGN_VALUE_UP(size, CONFIG_MUTEK_MEMALLOC_ALIGN));
 
-  hdr = mem_alloc_region_pop(region, size);
+  if (!res)
+    printk("malloc(%d,%d) returns NULL\n", size, scope);
 
-  return hdr != NULL
-    ? (uint8_t*)hdr + mem_hdr_size : NULL;
-}
-
-/** free allocated memory block */
-void mem_free(void *ptr)
-{
+  return res;
 }
 
 size_t mem_alloc_getsize(void *ptr)
 {
-  return NULL;
+  return ((size_t*)ptr)[-1];
+}
+
+void mem_free(void *ptr)
+{
+#ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
+  memset(ptr, 0xa5, mem_alloc_getsize(ptr));
+#endif
 }
 
 void *mem_reserve(struct mem_alloc_region_s *region, void *start, size_t size)
 {
+  printk("mem_reserve(,%p,%d) returns NULL (not implemented with CONFIG_MUTEK_MEMALLOC_SIMPLE)\n", start, size);
   return NULL;
 }
 
-#endif
