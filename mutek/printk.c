@@ -18,7 +18,7 @@ void printk_set_output(printf_output_func_t *f, void *priv)
 inline ssize_t vprintk(const char *format, va_list ap)
 {
 #ifdef CONFIG_COMPILE_INSTRUMENT
-	bool_t old = hexo_instrument_trace(0);
+	bool_t old = mutek_instrument_trace(0);
 #endif
 	error_t err = EIO;
 
@@ -28,7 +28,7 @@ inline ssize_t vprintk(const char *format, va_list ap)
 #endif
 
 #ifdef CONFIG_COMPILE_INSTRUMENT
-	hexo_instrument_trace(old);
+	mutek_instrument_trace(old);
 #endif
 
 	return err;
