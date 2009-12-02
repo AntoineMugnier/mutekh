@@ -5,14 +5,17 @@ doc_headers = mutek/mem_alloc.h mutek/page_alloc.h mutek/printf_arg.h	\
 
 objs = timer.o
 objs += printf_arg.o
-objs += mem_region_alloc.o
+
+ifeq ($(CONFIG_MUTEK_MEM_REGION), defined)
+objs += mem_region.o					
+endif
 
 ifeq ($(CONFIG_MUTEK_MEMALLOC_SMART), defined)
-objs += mem_alloc_smart.o					
+objs += memory_allocator_smart.o					
 endif
 
 ifeq ($(CONFIG_MUTEK_MEMALLOC_SIMPLE), defined)
-objs += mem_alloc_simple.o					
+objs += memory_allocator_simple.o					
 endif
 
 ifeq ($(CONFIG_COMPILE_INSTRUMENT), defined)

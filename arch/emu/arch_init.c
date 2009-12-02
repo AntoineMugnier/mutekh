@@ -24,7 +24,6 @@
 #include <hexo/init.h>
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
-#include <mutek/mem_alloc.h>
 #include <mutek/scheduler.h>
 
 #include <arch/hexo/emu_syscalls.h>
@@ -56,6 +55,7 @@ void arch_init()
 #endif
 
 	  arch_hw_init();
+      mem_region_init();
 
       /* run mutek_start() */
       mutek_start(0, 0);

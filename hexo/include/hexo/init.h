@@ -45,8 +45,11 @@ void user_hw_init();
 void arch_hw_init();
 #endif
 
-/** Memory initialization. initialize memory subsystem by creating the (mem_scope_sys) region. (located in arch/current/mem_init.c) */
+/** Memory initialization. initialize boot strap cpu's memory subsystem. (located in arch/current/mem_init.c) */
 void mem_init();
+
+/** Memory initialization. initialize memory subsystem for non boot strap cpus. (located in arch/current/mem_init.c) */
+void mem_region_init();
 
 /** Global initialization of Hexo, must be called after memory
  * initialization, before device initalization

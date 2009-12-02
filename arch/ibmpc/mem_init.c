@@ -21,6 +21,8 @@
 
 #include <assert.h>
 #include <mutek/mem_alloc.h>
+#include <mutek/mem_region.h>
+#include <mutek/memory_allocator.h>
 #include <hexo/segment.h>
 #include <hexo/lock.h>
 #include <hexo/endian.h>
@@ -70,11 +72,35 @@ void mem_init(void)
   assert(mem_end > mem_start);
 
 #ifdef CONFIG_HEXO_MMU
-  mem_alloc_region_init( mem_region_get_scope(mem_scope_sys)
-			, mem_start, CONFIG_HEXO_MMU_INITIAL_END);
+  default_region = memory_allocator_init(NULL,
+					 mem_start,
+					 CONFIG_HEXO_MMU_INITIAL_END);
 #else
-  mem_alloc_region_init( mem_region_get_scope(mem_scope_sys)
-			, mem_start, mem_end);
+  default_region = memory_allocator_init(NULL,
+					 mem_start,
+					 mem_end);
 #endif
 }
 
+void mem_region_init(void)
+{
+#if defined(CONFIG_MUTEK_MEM_REGION)
+  cpu_id_t cpu;
+  uint_fast16_t i;
+  
+  for (cpu=0; cpu<arch_get_cpu_count(); cpu++)
+    {
+      mem_region_id_init(cpu);
+      
+      for (i=0; i<mem_scope_e_count; i++)
+	{
+	  if (i == mem_scope_sys)
+	    mem_region_id_add(cpu, i, default_region, 0);
+	  else
+	    mem_region_id_add(cpu, i, default_region, 200);
+	}
+    }
+
+  default_region = NULL;
+#endif
+}
