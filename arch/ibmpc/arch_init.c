@@ -132,9 +132,6 @@ void arch_init()
 #endif
 
 	  //FIXME: move this in user/arch_hw_init
-      mem_region_set_scope(mem_scope_cluster,mem_region_get_scope(mem_scope_sys));
-      mem_region_set_scope(mem_scope_context,mem_region_get_scope(mem_scope_sys));
-      mem_region_set_scope(mem_scope_cpu,mem_region_get_scope(mem_scope_sys));
 
       /* run mutek_start() */
       mutek_start(0, 0);
