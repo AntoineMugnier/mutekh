@@ -383,12 +383,14 @@ OBJECT_CONSTRUCTOR(vfs_node)
 
 OBJECT_DESTRUCTOR(vfs_node)
 {
-	vfs_printk("<node] delete %p '%s'", obj, obj->name);
+	vfs_printk("<node delete %p '%s'", obj, obj->name);
 
 	atomic_dec(&obj->fs->ref);
 
-	if ( obj->parent )
+	if ( obj->parent ) {
 		vfs_node_refdrop(obj->parent);
+		vfs_dir_remove(&obj->parent->dir.children, obj);
+    }
 	if (obj->type == VFS_NODE_DIR) {
 		vfs_dir_destroy(&obj->dir.children);
 		semaphore_destroy(&obj->dir.semaphore);
