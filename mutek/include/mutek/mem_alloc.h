@@ -22,7 +22,7 @@
 /**
  * @file
  * @module{Mutek}
- * @short Memory allocation stuff
+ * @short High level memory allocation stuff
  */
 
 
@@ -32,8 +32,14 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/lock.h>
+#include <mutek/memory_allocator.h>
+#include <mutek/printk.h>
 
-struct mem_alloc_region_s;
+#if defined(CONFIG_MUTEK_MEM_REGION)
+#include <mutek/mem_region.h>
+#endif
+
+extern struct memory_allocator_region_s *default_region;
 
 enum mem_scope_e
   {
@@ -42,37 +48,52 @@ enum mem_scope_e
     mem_scope_context,
     mem_scope_cpu,
     mem_scope_default,
+    mem_scope_e_count,
   };
 
-void mem_alloc_region_init(struct mem_alloc_region_s *region, void *address, void *end);
 
-void *mem_alloc(size_t size, enum mem_scope_e scope);
+/** @this allocate a new memory block in given scope*/
+static inline
+void *mem_alloc(size_t size, enum mem_scope_e scope)
+{
+  void *ptr = NULL;
 
-void mem_free(void *ptr);
+  if (default_region != NULL)
+    ptr = memory_allocator_pop (default_region, size);
 
-void *mem_reserve(struct mem_alloc_region_s *region, void *start, size_t size);
+# if defined (CONFIG_MUTEK_MEM_REGION)
+  else
+    {
+      struct mem_region_s *region_item;
+      mem_region_lock(scope);
+      region_item = mem_region_get_first (scope);
+      while( region_item )
+	{
+	  ptr = memory_allocator_pop (region_item->region, size);
+	  if (ptr != NULL)
+	    break;
+	  region_item = mem_region_get_next (scope, region_item);
+	}
+      
+      mem_region_unlock(scope);
+    }
+# endif
 
-size_t mem_alloc_getsize(void *ptr);
+  return ptr;
+}
 
-struct mem_alloc_header_s *
-mem_alloc_region_extend(struct mem_alloc_region_s *region, void *start, size_t size);
+/** @this free allocated memory block */
+static inline
+void mem_free(void *ptr)
+{
+  memory_allocator_push(ptr);
+}
 
-/*********************************/
-
-/** @this returns the farless memory allocatable region, depending to the scope */
-struct mem_alloc_region_s *mem_region_get_scope(enum mem_scope_e scope);
-
-/** @this sets the region corresponding to a scope */
-void mem_region_set_scope(enum mem_scope_e scope, struct mem_alloc_region_s *region);
-
-#if ( defined(CONFIG_DEVICE_TREE) && defined(CONFIG_FDT) )
-/** @this initializes memory allocatable regions, exclude the sys region region. */
-void mem_region_init(struct device_s *root, void *blob);
-#else
-void mem_region_init();
-#endif
-
-/** @this creates and initializes memory allocatable region. used by mem_regions_init. */
-struct mem_alloc_region_s *mem_region_create(uintptr_t start, uintptr_t end, bool_t cached); 
+/** @this return the size of given memory block */
+static inline
+size_t mem_getsize(void *ptr)
+{
+  return memory_allocator_getsize(ptr);
+}
 
 #endif

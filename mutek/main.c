@@ -200,7 +200,7 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
   printk("CPU %i is up and running.\n", cpu_id());
 
 #if defined(CONFIG_COMPILE_INSTRUMENT)
-  //  mutek_instrument_trace(1);
+  mutek_instrument_trace(1);
   //  mutek_instrument_alloc_guard(1);
 #endif
 

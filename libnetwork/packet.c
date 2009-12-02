@@ -19,8 +19,10 @@
 
 */
 
-#include <hexo/endian.h>
 #include <hexo/types.h>
+#include <hexo/endian.h>
+#include <hexo/gpct_platform_hexo.h>
+#include <hexo/gpct_lock_hexo.h>
 
 #include <pthread.h>
 #include <semaphore.h>
