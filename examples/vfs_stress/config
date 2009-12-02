@@ -2,6 +2,8 @@
 # Application license
 CONFIG_LICENSE_APP_GPL
 
+CONFIG_COMPILE_OPTIMIZE s
+
 # Mutek features
 CONFIG_MUTEK_CONSOLE
 CONFIG_MUTEK_MEMALLOC_SMART
@@ -11,7 +13,6 @@ CONFIG_PTHREAD
 CONFIG_PTHREAD_STACK_SIZE 8192
 CONFIG_MUTEK_SCHEDULER
 CONFIG_MUTEK_SCHEDULER_MIGRATION
-CONFIG_SMP
 
 # Libs
 CONFIG_LIBTERMUI
@@ -23,6 +24,7 @@ CONFIG_DRIVER_FS_RAMFS
 
 # Libc
 CONFIG_LIBC_STREAM
+CONFIG_LIBC_ASSERT
 #  CONFIG_VFS_LIBC_STREAM
 
 # Compilation features
@@ -33,13 +35,13 @@ CONFIG_MODULES app:$(CONFIGPATH)
 
 CONFIG_COMPILE_SAVETEMPS
 
-%section ibmpc-x86
+%section ibmpc-*
+%types arch
+
+CONFIG_SMP
 
 # Platform types
 CONFIG_ARCH_IBMPC
-
-# Processor types
-CONFIG_CPU_X86
 
 # Device drivers
 CONFIG_DRIVER_CHAR_VGATTY
@@ -51,6 +53,48 @@ CONFIG_DRIVER_TIMER_8253
 CONFIG_MUTEK_TIMERMS
 
 CONFIG_CPU_RESET_HANDLER undefined
+
+%section ibmpc-x86
+%types cpu
+# Processor types
+CONFIG_CPU_X86
+
+%section ibmpc-x86_64
+%types cpu
+# Processor types
+CONFIG_CPU_X86_64
+  
+%section emu-linux-*
+  %types hostos
+
+  CONFIG_ARCH_EMU_LINUX
+
+%section emu-darwin-*
+  %types hostos
+
+  CONFIG_ARCH_EMU_DARWIN
+
+%section emu-*-x86_64
+  %types cpu
+
+  CONFIG_CPU_X86_64_EMU
+
+%section emu-*-x86
+  %types cpu
+
+  CONFIG_CPU_X86_EMU
+
+%section emu-*-*
+  %requiretypes hostos
+  %types arch
+
+  CONFIG_ARCH_EMU
+
+  CONFIG_ARCH_HW_INIT
+  CONFIG_DRIVER_CHAR_EMUTTY
+  CONFIG_DRIVER_BLOCK_EMU
+  CONFIG_DRIVER_BLOCK_EMU_BLOCKSIZE 2048
+  CONFIG_CPU_RESET_HANDLER undefined
 
 %section mipsel
 %types cpu
@@ -93,8 +137,11 @@ CONFIG_CPU_CACHE_COHERENCY
 CONFIG_SOCLIB_EARLY_CONSOLE 0xd0200000
 
 %section soclib
+%types arch
+%types soclib
 %requiretypes pf cpu
 
+CONFIG_SMP
 CONFIG_ARCH_SOCLIB
 
 CONFIG_FDT
@@ -115,3 +162,16 @@ CONFIG_DRIVER_ICU_SOCLIB_XICU
 
 CONFIG_DATA_FROM_ROM
 CONFIG_CPU_MAXCOUNT 4
+
+%section memalloc-debug
+CONFIG_MUTEK_MEMALLOC_DEBUG
+
+%section instrument
+CONFIG_COMPILE_INSTRUMENT
+
+%section memchecker
+%requiretypes soclib
+CONFIG_SOCLIB_MEMCHECK
+
+%common
+%requiretypes arch cpu
