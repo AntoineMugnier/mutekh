@@ -70,20 +70,20 @@
 # define net_be16_store(a, v)		endian_be16_na_store(&a, v)
 # define net_be32_store(a, v)		endian_be32_na_store(&a, v)
 # define net_be64_store(a, v)		endian_be64_na_store(&a, v)
-# define net_16_load(a)			__endian_16_na_load(&a)
-# define net_32_load(a)			__endian_32_na_load(&a)
-# define net_64_load(a)			__endian_64_na_load(&a)
-# define net_16_store(a, v)		__endian_16_na_store(&a, v)
-# define net_32_store(a, v)		__endian_32_na_store(&a, v)
-# define net_64_store(a, v)		__endian_64_na_store(&a, v)
+# define net_16_load(a)			endian_16_na_load(&a)
+# define net_32_load(a)			endian_32_na_load(&a)
+# define net_64_load(a)			endian_64_na_load(&a)
+# define net_16_store(a, v)		endian_16_na_store(&a, v)
+# define net_32_store(a, v)		endian_32_na_store(&a, v)
+# define net_64_store(a, v)		endian_64_na_store(&a, v)
 #endif
 
-#define net_16_na_load(a)		__endian_16_na_load(&a)
-#define net_32_na_load(a)		__endian_32_na_load(&a)
-#define net_64_na_load(a)		__endian_64_na_load(&a)
-#define net_16_na_store(a, v)		__endian_16_na_store(&a, v)
-#define net_32_na_store(a, v)		__endian_32_na_store(&a, v)
-#define net_64_na_store(a, v)		__endian_64_na_store(&a, v)
+#define net_16_na_load(a)		endian_16_na_load(&a)
+#define net_32_na_load(a)		endian_32_na_load(&a)
+#define net_64_na_load(a)		endian_64_na_load(&a)
+#define net_16_na_store(a, v)		endian_16_na_store(&a, v)
+#define net_32_na_store(a, v)		endian_32_na_store(&a, v)
+#define net_64_na_store(a, v)		endian_64_na_store(&a, v)
 
 /*
  * Maximum number of stages in our stack.
