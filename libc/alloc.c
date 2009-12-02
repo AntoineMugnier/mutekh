@@ -37,7 +37,7 @@ realloc(void *ptr, size_t size)
   if (ptr == NULL)
     return malloc(size);
 
-  oldsize = mem_alloc_getsize(ptr);
+  oldsize = mem_getsize(ptr);
 
   if (oldsize >= size)
     return ptr;
