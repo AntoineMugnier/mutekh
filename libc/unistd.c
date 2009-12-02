@@ -18,7 +18,7 @@ struct fd_entry_s
 CONTAINER_TYPE(fdarray, DARRAY, struct fd_entry_s, 1, 256)
 CONTAINER_FUNC(fdarray, DARRAY, static, fdarray);
 
-static fdarray_root_t fd_array = CONTAINER_ROOT_INITIALIZER(fdarray, DARRAY);
+static fdarray_root_t fd_array;
 
 static fd_t fd_new(fdarray_root_t *fda)
 {
@@ -49,9 +49,6 @@ fd_t fd_add(const struct fileops_s *ops, void *hndl)
 	fd_t fd = fd_new(&fd_array);
 	struct fd_entry_s *e = fd_get(&fd_array, fd);
 
-	/* NULL handler would confuse fd allocator */
-	assert(hndl != NULL);
-
 	e->ops = ops;
 	e->hndl = hndl;
 
@@ -62,7 +59,7 @@ fd_t fd_add(const struct fileops_s *ops, void *hndl)
                   File descriptor oriented operations
    ********************************************************************** */
 
-#if defined(CONFIG_VFS) && 0
+#ifdef CONFIG_VFS
 
 static const struct fileops_s open_fops =
 {
@@ -77,9 +74,9 @@ inline fd_t creat(const char *pathname, mode_t mode)
     return open(pathname, O_CREAT|O_WRONLY|O_TRUNC, mode);
 }
 
-static enum open_flags_e flags_to_vfs(const enum vfs_open_flags_e mode)
+static enum open_flags_e flags_to_vfs(const vfs_open_flags_t mode)
 {
-  enum vfs_open_flags_e flags = 0;
+  vfs_open_flags_t flags = 0;
 
   if (mode & O_RDONLY)
     flags |= VFS_O_RDONLY;
@@ -115,15 +112,11 @@ fd_t open(const char *pathname, enum open_flags_e flags, ...)
       va_end(ap);
     }
 
-  struct vfs_file_s *hndl;
-  if (vfs_open(vfs_get_root(), vfs_get_pwd(),
-			   pathname, flags_to_vfs(flags), hndl))
+  if (vfs_open(vfs_get_root(), pathname, flags_to_vfs(flags), mode, &e->hndl))
     {
       fd_free(&fd_array, e);
       return -1;
     }
-
-  e->hndl = hndl;
 
   return fd;
 }
@@ -171,51 +164,45 @@ error_t close(fd_t fd)
                   VFS operations
    ********************************************************************** */
 
-#if defined(CONFIG_VFS)
+#ifdef CONFIG_VFS
 
+/* FIXME */
 error_t stat(const char *path, struct stat *st)
 {
   struct vfs_stat_s vst;
 
-  if (vfs_stat(vfs_get_root(), vfs_get_cwd(),
-			   path, &vst))
+  if (vfs_stat(vfs_get_root(), path, &vst))
     return -1;
 
   memset(st, 0, sizeof(*st));
   st->st_size = vst.size;
 
-  switch (vst.type) {
-  case VFS_NODE_DIR:
-	  st->st_mode |= S_IFDIR;
-	  break;
-  case VFS_NODE_FILE:
-	  st->st_mode |= S_IFREG;
-	  break;
-  }
+  if (vst.attr & VFS_DIR)
+    st->st_mode |= S_IFDIR;
+  else
+    st->st_mode |= S_IFREG;
 
   return 0;
 }
 
 error_t lstat(const char *path, struct stat *buf)
 {
-	return stat(path, buf);
+  return stat(path, buf);
 }
 
 error_t access(const char *pathname, enum access_perm_e mode)
 {
-	return 0;
+  return 0;
 }
 
 error_t remove(const char *pathname)
 {
-	return ENOTSUP;
-//	return vfs_unlink(vfs_get_root(), pathname);
+  return vfs_unlink(vfs_get_root(), pathname);
 }
 
 error_t mkdir(const char *pathname, mode_t mode)
 {
-	return ENOTSUP;
-//	return vfs_mkdir(vfs_get_root(), pathname, mode);
+  return vfs_mkdir(vfs_get_root(), pathname, mode);
 }
 
 #endif /* CONFIG_VFS */
