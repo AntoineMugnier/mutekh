@@ -44,47 +44,60 @@ struct fat_bpb_s
 	uint8_t volume_type[8];
 } __attribute__((packed));
 
-// TODO use GPCT, use a custom allocator
-struct fat_extent_chain_s
-{
-	uint16_t base;
-	uint16_t size;
-	struct fat_extent_chain_s *next;
-}
+#define CLUSTER_END ((uint16_t)0xffff)
 
-// TODO use GPCT, use a custom allocator
-// TODO a fast way to seek in the list (hash ?) in case the drive is too fragmented
-struct fat_extent_s
-{
-	struct fat_extent_chain_s *first;
-	uint16_t size; // in clusters == sum(chain.size foreach chain)
-}
+struct fat_s;
+struct fat_extent_cache_s;
 
+CONTAINER_TYPE(fat_extent, CLIST, struct fat_extent_s
+{
+    CONTAINER_ENTRY_TYPE(CLIST) list_entry;
+    uint16_t cluster_contig_no; // index from start of file
+	uint16_t cluster_contig_first; // index in fat
+	uint16_t cluster_contig_count; // count in fat entries
+	uint16_t cluster_next; // next fat index where it may be contiguous
+    struct fat_extent_cache_s *cache;
+}, list_entry);
+
+CONTAINER_FUNC(fat_extent, CLIST, static inline, fat_extent, list_entry);
+
+CONTAINER_TYPE(fat_extent_cache, CLIST,
+struct fat_extent_cache_s
+{
+    CONTAINER_ENTRY_TYPE(CLIST) list_entry;
+    struct fat_s *fat;
+    fat_extent_root_t files;
+    struct rwlock_s lock;
+    uint32_t file_size;
+    uint16_t first_cluster;
+}, list_entry);
+
+CONTAINER_FUNC(fat_extent_cache, CLIST, static inline, fat_extent_cache, list_entry);
 
 /*
   The fat context.
-  
-  TODO: add a list of currently-known extents, indexed by their first
-  cluster index.
 
   TODO: proper locking
 */
 struct fat_s
 {
 	struct device_s *dev;
-	struct fat_extent_s free;
 	uint32_t total_sector_count;
 	uint32_t fat_secsize;
 	uint32_t cluster0_sector; /* == first_data_sector - (2 << sect_per_clust_pow2) */
 	uint16_t root_dir_secsize;
 	uint16_t reserved_sect_count;
+	uint16_t first_probable_free_cluster;
 	uint8_t sect_size_pow2;
 	uint8_t sect_per_clust_pow2;
 	uint8_t fat_count;
-	uint8_t __pad; // make tmp_block aligned
 
 	// This block is probably not right here, but we must guarantee
 	// not to overflow caller's stack...
+
+    bool_t tmp_block_dirty;
+	// having a uint32_t here makes tmp_block aligned
+    uint32_t tmp_block_no;
 	uint8_t tmp_block[0];
 };
 
@@ -94,9 +107,21 @@ static error_t fat16_load_sector(struct fat_s *state, dev_block_lba_t lba)
 	error_t err;
 	uint8_t *blocks[1] = {state->tmp_block};
 
+    if ( state->tmp_block_no == lba )
+        return 0;
+
+    if ( state->tmp_block_dirty ) {
+        err = dev_block_wait_write(state->dev, blocks, state->tmp_block_no, 1);
+        if ( err )
+            return err;
+        state->tmp_block_dirty = 0;
+        state->tmp_block_no = CLUSTER_END;
+    }
+
 	err = dev_block_wait_read(state->dev, blocks, lba, 1);
 	if ( err )
 		return err;
+    state->tmp_block_no == lba;
 	return 0;
 }
 
@@ -144,6 +169,7 @@ static error_t parse_bpb(struct fat_s *state)
 		state->fat_secsize * state->fat_count +
 		state->root_dir_secsize -
 		(2 << state->sect_per_clust_pow2);
+    state->first_probable_free_cluster = 2;
 
 	return 0;
 }
@@ -153,43 +179,6 @@ static inline
 bool_t fat_entry16_is_free(uint16_t entry)
 {
 	return entry == 0;
-}
-
-// retrieves the freelist from the FAT.
-static
-error_t parse_freelist(struct fat_s *state)
-{
-	size_t i, j;
-	error_t err;
-	dev_block_lba_t cluster;
-	dev_block_lba_t fat_sector = state->reserved_sect_count;
-	const dev_block_lba_t fat_end = state->reserved_sect_count + state->fat_secsize;
-	const dev_block_lba_t cluster_mask = (1 << (state->sect_size_pow2 - 1)) - 1;
-	uint16_t *fat_table = (uint16_t *)state->tmp_block;
-
-	struct fat_extent_chain_s * extent = NULL;
-
-	state->free_cluster_count = 0;
-
-	err = fat16_load_sector(state, state->reserved_sect_count);
-	if ( err )
-		return err;
-
-	for ( cluster = 2; cluster < state->total_cluster_count; ++cluster ) {
-		size_t offset = cluster & cluster_mask;
-
-		if ( offset == 0 ) {
-			err = fat16_load_sector(state, cluster >> (state->sect_size_pow2 - 1));
-			if ( err )
-				return err;
-		}
-
-		if ( fat_entry16_is_free(fat_table[offset]) ) {
-			// append in freelist, but merge contiguous ones
-		}
-	}
-	
-	return 0;
 }
 
 static FAT_BACKEND_OPEN(fat16_backend_open)
@@ -204,10 +193,6 @@ static FAT_BACKEND_OPEN(fat16_backend_open)
 	state->dev = dev;
 
 	err = parse_bpb(state);
-	if ( err )
-		goto cant_open;
-
-	err = parse_freelist(state);
 	if ( err )
 		goto cant_open;
 
@@ -231,13 +216,61 @@ static FAT_BACKEND_CLOSE(fat16_backend_close)
 	return 0;
 }
 
+static inline void fat16_cut_fat_cluster_no(
+    struct fat_s *fat,
+    uint16_t cluster_no,
+    size_t *fat_block_no,
+    size_t *fat_offset)
+{
+    *fat_block_no = cluster_no >> (fat->sect_size_pow2 - 1);
+    *fat_offset = cluster_no & ((1 << (fat->sect_size_pow2 - 1)) - 1);
+}
+
+static uint16_t fat16_get_next_pointer(struct fat_s *fat, uint16_t cluster_no)
+{
+    uint16_t fat_sector;
+    uint16_t fat_offset;
+    fat16_cut_fat_cluster_no(fat, cluster_no, &fat_sector, &fat_offset);
+
+    if ( fat_sector >= fat->fat_secsize )
+        return CLUSTER_END;
+
+    fat16_load_sector(fat, fat_sector);
+    uint16_t *data = (uint16_t*)fat->tmp_block;
+
+    return data[fat_offset];
+}
+
+static uint16_t fat16_get_free_free_cluster(struct fat_s *fat)
+{
+    size_t i;
+
+    for ( i = fat->first_probable_free_cluster;
+          i < fat->total_sector_count;
+          ++i ) {
+        uint16_t next_pointer = fat16_get_next_pointer(fat, i);
+        if ( next_pointer == 0 ) {
+            fat->first_probable_free_cluster = i + 1;
+            return i;
+        }
+    }
+    return CLUSTER_END;
+}
+
+static void fat16_set_fat(struct fat_s *fat, uint16_t cluster_no, uint16_t next_cluster_no)
+{
+    uint16_t fat_sector;
+    uint16_t fat_offset;
+    fat16_cut_fat_cluster_no(fat, cluster_no, &fat_sector, &fat_offset);
+    uint16_t *data = (uint16_t*)fat->tmp_block;
+
+    data[fat_offset] = next_cluster_no;
+}
 
 static FAT_EXTENT_GET_NEW(fat16_extent_get_new)
 {
-	if ( size > fat->free_cluster_count )
-		return -ENOMEM;
-
-	// pop size clusters from free list.
+    struct fat_extent_cache_s *extent = fat16_extent_new();
+    
 }
 
 static FAT_EXTENT_GET_AT(fat16_extent_get_at)
@@ -246,12 +279,12 @@ static FAT_EXTENT_GET_AT(fat16_extent_get_at)
 
 static FAT_EXTENT_GET_SIZE(fat16_extent_get_size)
 {
-	return extent->size;
+	return extent->file_size;
 }
 
 static FAT_EXTENT_RESIZE(fat16_extent_resize)
 {
-
+    if ( extent->new_cluster_count 
 }
 
 static FAT_EXTENT_RELEASE(fat16_extent_release)

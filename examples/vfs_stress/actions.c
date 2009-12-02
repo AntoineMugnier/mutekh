@@ -213,8 +213,9 @@ void action_ls()
 		return;
 	}
 
-    while ( vfs_file_read(dir, &dirent, sizeof(dirent)) == sizeof(dirent) )
-        printk("%s [%s] %d\n", dirent.name, dirent.type == VFS_NODE_DIR ? "dir" : "reg", dirent.size);
+    while ( vfs_file_read(dir, &dirent, sizeof(dirent)) == sizeof(dirent) ) {
+//        printk("%s [%s] %d\n", dirent.name, dirent.type == VFS_NODE_DIR ? "dir" : "reg", dirent.size);
+    }
 
     vfs_file_close(dir);
 }

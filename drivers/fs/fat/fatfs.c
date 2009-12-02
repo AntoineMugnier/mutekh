@@ -21,7 +21,7 @@
 
 VFS_FS_PROBE(fat_fs_probe)
 {
-
+    
 }
 
 VFS_FS_OPEN(fat_fs_open)

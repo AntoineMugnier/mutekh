@@ -26,6 +26,7 @@
 
 struct fat_s;
 struct fat_extent_s;
+struct fat_file_s;
 
 /*
   @this opens a block device for reading as a FAT. It may return
@@ -49,6 +50,7 @@ struct fat_extent_s;
   reserves the clusters in the FAT.
  */
 #define FAT_EXTENT_GET_NEW(x) error_t (x)(struct fat_s *fat, size_t clusters, struct fat_extent_s **extent)
+
 /*
   @this allocates a new extent chain from the actual FAT on disk.
  */
@@ -66,16 +68,16 @@ struct fat_extent_s;
 #define FAT_EXTENT_RESIZE(x) error_t (x)(struct fat_s *fat, struct fat_extent_s *extent, size_t new_cluster_count)
 
 /*
-  @this destroys a given extent. Released clusters are pushed back in
-  freelist.
+  @this releases a given extent back to the access. This does not
+  change data on disk.
  */
-#define FAT_EXTENT_RELEASE(x) error_t (x)(struct fat_s *fat, struct fat_extent_s *extent)
+#define FAT_EXTENT_RELEASE(x) error_t (x)(struct fat_extent_s *extent)
 
 /*
   @this translates from a given block number in an extent to a real
   block device LBA.
  */
-#define FAT_EXTENT_BLOCK2LBA(x) error_t (x)(struct fat_s *fat, struct fat_extent_s *extent, size_t block, size_t *lba)
+#define FAT_FILE_BLOCK2LBA(x) error_t (x)(struct fat_s *fat, struct fat_file_s *file, size_t block, size_t *lba)
 
 struct fat_access_ops_s
 {
