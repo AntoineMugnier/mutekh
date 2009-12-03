@@ -216,11 +216,8 @@ void cpu_init(void)
 #ifdef CONFIG_SMP
   /* enable and initialize x86 APIC */
   cpu_x86_init_apic();
-#endif
 
   /* setup cpu local storage */
-
-#ifdef CONFIG_SMP
   void			*cls;
   uint16_t		cls_sel;
 
@@ -267,12 +264,10 @@ void cpu_init(void)
 #endif
 #ifdef CONFIG_SMP
   cpu_x86_segdesc_free(cls_sel);
-#endif
  err_cls_seg:
-#ifdef CONFIG_SMP
   mem_free(cls);
-#endif
  err_cls:
+#endif
   ;
 }
 
