@@ -73,6 +73,7 @@ SECTIONS
 
 	.rodata : {
 			*(.rodata*)
+            . = ALIGN(4);
 			global_driver_registry = .;
 			KEEP(*(.drivers))
 			global_driver_registry_end = .;
