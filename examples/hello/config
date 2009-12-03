@@ -2,7 +2,7 @@
 %common		# optional at file start
 
   # New source code module to be compiled
-  CONFIG_MODULES examples/hello:$(CONFIGPATH)
+  CONFIG_MODULES +hello:$(CONFIGPATH)
 
   # Application license
   CONFIG_LICENSE_APP_LGPL
@@ -14,124 +14,12 @@
 
   # Libs
   CONFIG_PTHREAD
-  CONFIG_CPU_MAXCOUNT 4
 
-
-
-%include /dev/null		# absolute or relative to current file
-
+%include ../common/build_options.conf
+%include ../common/platforms.conf
 
 
 %section default		# default build section name
 
   %error Missing build configuration section names, please specify BUILD=xxx
-
-
-
-%section debug
-
-  CONFIG_COMPILE_OPTIMIZE 0
-  CONFIG_COMPILE_DEBUG
-  CONFIG_DEBUG
-
-%else
-
-  CONFIG_COMPILE_OPTIMIZE 2
-
-
-
-%section emu-linux-*
-  %types hostos
-
-  CONFIG_ARCH_EMU_LINUX
-
-%section emu-darwin-*
-  %types hostos
-
-  CONFIG_ARCH_EMU_DARWIN
-
-%section emu-*-x86_64
-  %types cpu
-
-  CONFIG_CPU_X86_64_EMU
-
-%section emu-*-x86
-  %types cpu
-
-  CONFIG_CPU_X86_EMU
-
-%section emu-*-*
-  %requiretypes hostos
-  %types architecture
-
-  CONFIG_ARCH_EMU
-
-  CONFIG_ARCH_HW_INIT
-  CONFIG_DRIVER_CHAR_EMUTTY
-  CONFIG_CPU_RESET_HANDLER undefined
-
-
-
-%section ibmpc-x86
-  %types architecture cpu
-
-  CONFIG_ARCH_IBMPC
-  CONFIG_CPU_X86
-  CONFIG_SMP
-
-  CONFIG_DRIVER_CHAR_VGATTY
-  CONFIG_DRIVER_ICU_8259
-
-  CONFIG_CPU_RESET_HANDLER
-
-
-
-%section soclib-*
-  %types architecture
-
-  # Platform types
-  CONFIG_ARCH_SOCLIB
-  CONFIG_SMP
-
-  # Memory layout
-  CONFIG_HETROM_ADDR 0x60100000
-  CONFIG_HETROM_SIZE 0x00100000
-  
-  CONFIG_ROM_ADDR 0x61100000
-  CONFIG_ROM_SIZE 0x00100000
-  
-  CONFIG_RAM_ADDR 0x71600000
-  CONFIG_RAM_SIZE 0x00100000
-  
-  CONFIG_CPU_RESET_HANDLER
-
-  # Device and drivers
-  CONFIG_DRIVER_CHAR_SOCLIBTTY
-  CONFIG_DRIVER_ICU_SOCLIB
-  CONFIG_DRIVER_TIMER_SOCLIB
-
-  CONFIG_ARCH_DEVICE_TREE
-  CONFIG_FDT
-  CONFIG_DRIVER_ENUM_FDT
-
-%section soclib-mipsel soclib-mips
-  %types cpu
-
-  CONFIG_CPU_MIPS
-  CONFIG_CPU_MIPS_VERSION 32
-  CONFIG_CPU_ENDIAN_LITTLE
-
-%section soclib-arm
-  %types cpu
-
-  CONFIG_CPU_ARM
-  CONFIG_CPU_ARM_SOCLIB
-
-%section soclib-ppc soclib-powerpc
-  %types cpu
-
-  CONFIG_CPU_PPC
-
-%common
-  %requiretypes architecture cpu
 
