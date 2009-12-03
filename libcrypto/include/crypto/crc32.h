@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Cryptographic algorithms}
+ * @short IEEE 802.3 32 bits Cyclic Redundancy Check algorithm
+ */
+
 #ifndef _CRC32_H_
 #define _CRC32_H_
 

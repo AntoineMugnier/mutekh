@@ -19,6 +19,12 @@
 
 */
 
+/**
+ * @file
+ * @module{Cryptographic algorithms}
+ * @short ARC4 cipher and pseudo random stream generator
+ */
+
 #ifndef ARC4_H_
 #define ARC4_H_
 
