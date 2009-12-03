@@ -28,6 +28,8 @@
 #error This file can not be included directly
 #else
 
+#include <hexo/types.h>
+
 #define CPU_LOCAL_H_
 
 /************************************************************************/
@@ -40,8 +42,14 @@
 
 /************************************************************************/
 
+#if defined(CONFIG_ARCH_EMU_LINUX)
 /** context local storage type attribute */
 #define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
+#elif defined(CONFIG_ARCH_EMU_DARWIN)
+#define CONTEXT_LOCAL	__attribute__((section ("__DATA, __contextdata")))
+#else
+# error Hu?
+#endif
 
 extern CPU_LOCAL void *__cpu_context_data_base;
 

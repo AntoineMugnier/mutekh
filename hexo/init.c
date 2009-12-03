@@ -26,3 +26,5 @@ void hexo_global_init()
 	device_tree_init();
 #endif
 }
+
+

@@ -26,7 +26,7 @@
 #include <hexo/ipi.h>
 
 /* processor current scheduler context */
-CONTEXT_LOCAL struct sched_context_s *sched_cur;
+CONTEXT_LOCAL struct sched_context_s *sched_cur = NULL;
 
 /* processor idle context */
 CPU_LOCAL struct sched_context_s sched_idle;

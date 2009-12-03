@@ -90,6 +90,25 @@ FINAL_LINK_TARGET?=$(BUILD_DIR)/$(target).out
 FINAL_LINK_SOURCE?=$(BUILD_DIR)/$(target).o
 
 ifeq ($(LD_NO_Q),1)
+
+ifeq ($(CONFIG_ARCH_EMU_DARWIN),defined)
+$(BUILD_DIR)/$(target).out: $(CONF_DIR)/.config.m4 \
+		$(COPY_OBJECT_LIST) \
+		$(META_OBJECT_LIST) \
+		$(TARGET_OBJECT_LIST) \
+	    FORCE
+	echo '    LDL     $@'
+	$(LD) $(LINK_LDFLAGS) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
+		$(filter %_before.o,$(filter %.o,$^)) \
+		$(filter-out %_before.o %_after.o,$(filter %.o,$^)) \
+		$(filter %.a,$^) \
+		$(filter %_after.o,$(filter %.o,$^)) \
+		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` \
+	-flat_namespace \
+	-e _arch_init \
+	-undefined warning
+
+else
 WL=-Wl,
 $(BUILD_DIR)/$(target).out: $(CONF_DIR)/.config.m4 \
 		$(COPY_OBJECT_LIST) \
@@ -104,6 +123,7 @@ $(BUILD_DIR)/$(target).out: $(CONF_DIR)/.config.m4 \
 		$(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \
 		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name`
+endif
 else
 $(FINAL_LINK_TARGET): $(FINAL_LINK_SOURCE) FORCE \
 		$(arch_OBJ_DIR)/ldscript \

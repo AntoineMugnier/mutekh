@@ -227,10 +227,15 @@ struct driver_s
    Registers a driver (struct driver_s) in the global_driver_registry
    table.
  */
+#if defined(CONFIG_ARCH_EMU_DARWIN)
+#define REGISTER_DRIVER(name) \
+	const __attribute__((section ("__DATA, __drivers"))) \
+	const struct driver_s *name##_drv_ptr = &name
+#else
 #define REGISTER_DRIVER(name) \
 	const __attribute__((section (".drivers"))) \
 	const struct driver_s *name##_drv_ptr = &name
-
+#endif
 
 /**
    Try to get a driver registered with these characteristics

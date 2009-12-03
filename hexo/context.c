@@ -6,10 +6,10 @@
 #include <hexo/interrupt.h>
 
 /** pointer to current context */
-CONTEXT_LOCAL struct context_s *context_cur;
+CONTEXT_LOCAL struct context_s *context_cur = NULL;
 
 /** syscall handler for current context */
-CONTEXT_LOCAL cpu_syscall_handler_t  *cpu_syscall_handler;
+CONTEXT_LOCAL cpu_syscall_handler_t  *cpu_syscall_handler = NULL;
 
 /** init a context object using current execution context */
 error_t
