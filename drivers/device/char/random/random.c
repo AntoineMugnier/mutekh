@@ -41,7 +41,7 @@ DEVCHAR_REQUEST(dev_random_request)
     case DEV_CHAR_READ: {
       size_t size = rq->size;
 
-      arc4_stream(pv->arc4_state, rq->data, rq->size);
+      crypto_arc4_getstream(&pv->arc4_state, rq->data, rq->size);
 
       rq->size = 0;
       rq->error = 0;
@@ -56,7 +56,7 @@ DEVCHAR_REQUEST(dev_random_request)
 	{
 	  size_t size = rq->size > 256 ? 256 : rq->size;
 
-	  arc4_s_permut(pv->arc4_state, rq->data, size);
+	  crypto_arc4_update(&pv->arc4_state, rq->data, size);
 
 	  rq->size -= size;
 	  rq->error = 0;
@@ -113,7 +113,7 @@ DEV_INIT(dev_random_init)
 
   dev->drv_pv = pv;
 
-  arc4_s_init(pv->arc4_state);
+  crypto_arc4_init(&pv->arc4_state);
 
   return 0;
 }

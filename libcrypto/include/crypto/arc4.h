@@ -19,21 +19,22 @@
 
 */
 
+#ifndef ARC4_H_
+#define ARC4_H_
 
-#ifndef RANDOM_CHAR_PRIVATE_H_
-#define RANDOM_CHAR_PRIVATE_H_
+#include <crypto/crypto.h>
 
-#include <hexo/types.h>
-#include <device/device.h>
-
-#include <crypto/arc4.h>
-
-/**************************************************************/
-
-struct random_context_s
-{
-  struct crypto_arc4_ctx_s arc4_state;
+/** ARC4 algorithm internal state */
+struct crypto_arc4_ctx_s {
+  uint8_t state[256];
 };
+
+CRYPTO_STREAM_INIT(crypto_arc4_init);
+CRYPTO_STREAM_UPDATE(crypto_arc4_update);
+CRYPTO_STREAM_GETSTREAM(crypto_arc4_getstream);
+CRYPTO_STREAM_XORSTREAM(crypto_arc4_xorstream);
+
+extern struct crypto_stream_algo_s crypto_arc4;
 
 #endif
 

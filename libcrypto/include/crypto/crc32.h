@@ -19,21 +19,20 @@
 
 */
 
+#ifndef _CRC32_H_
+#define _CRC32_H_
 
-#ifndef RANDOM_CHAR_PRIVATE_H_
-#define RANDOM_CHAR_PRIVATE_H_
+#include <crypto/crypto.h>
 
-#include <hexo/types.h>
-#include <device/device.h>
-
-#include <crypto/arc4.h>
-
-/**************************************************************/
-
-struct random_context_s
-{
-  struct crypto_arc4_ctx_s arc4_state;
+struct crypto_crc32_ctx_s {
+  uint32_t crc;
 };
+
+CRYPTO_HASH_INIT(crypto_crc32_init);
+CRYPTO_HASH_UPDATE(crypto_crc32_update);
+CRYPTO_HASH_GET(crypto_crc32_get);
+
+extern struct crypto_hash_algo_s crypto_crc32;
 
 #endif
 
