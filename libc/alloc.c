@@ -46,7 +46,13 @@ realloc(void *ptr, size_t size)
   if( ! (p = malloc(size)))
     return NULL;
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  soclib_mem_check_disable(SOCLIB_MC_CHECK_INIT);
+#endif
   memcpy(p, ptr, oldsize);
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  soclib_mem_check_enable(SOCLIB_MC_CHECK_INIT);
+#endif
 
   free(ptr);
   return p;

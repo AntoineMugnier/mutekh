@@ -464,7 +464,7 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
 #ifdef CONFIG_SOCLIB_MEMCHECK
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
-  soclib_mem_check_region_status(start, size, SOCLIB_MC_REGION_FREE);
+  soclib_mem_check_region_status(hdr, size, SOCLIB_MC_REGION_FREE);
 #elif defined( CONFIG_MUTEK_MEMALLOC_DEBUG )
   memset(hdr, 0xa5, size);
 #endif
