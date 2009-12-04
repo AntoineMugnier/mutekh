@@ -47,14 +47,14 @@
 	    device_type = "soclib:tty";
 		tty_count = <1>;
 		reg = <0xd0200000 0x10>;
-		irq = <&{/xicu@0} 0>;
+		irq = <&{/xicu@0/out@0} 0>;
 	};
 
 	xicu@0 {
 	    device_type = "soclib:xicu:root";
 		input_lines = <2>;
 		ipis = <4>;
-		timers = <4>;
+		timers = <1>;
 		reg = <0xd2200000 0x1000>;
 
 	    	out@0 {
