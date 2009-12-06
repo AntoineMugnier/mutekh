@@ -34,10 +34,17 @@
 
 /************************************************************************/
 
+#define CPU_LOCAL	__attribute__((section (".cpudata")))
+
+extern CPU_LOCAL void *__cpu_data_base;
+extern __ldscript_symbol_t __cpu_data_start;
+
 /** cpu local storage type attribute */
 #ifdef CONFIG_SMP
-# undef CPU_LOCAL
-# define CPU_LOCAL	__thread
+# define CPU_GET_CLS() ((uintptr_t)__cpu_data_base - (uintptr_t)&__cpu_data_start)
+# define CPU_LOCAL_CLS_SET(cls, n, v) { *(typeof(n)*)((uintptr_t)(cls) - (uintptr_t)&__cpu_data_start + (uintptr_t)&(n)) = (v); }
+# define CPU_LOCAL_CLS_GET(cls, n) 	({ *(typeof(n)*)((uintptr_t)(cls) - (uintptr_t)&__cpu_data_start + (uintptr_t)&(n)); })
+# define CPU_LOCAL_CLS_ADDR(cls, n) ((void*)((uintptr_t)(cls) - (uintptr_t)&__cpu_data_start + (uintptr_t)&(n)))
 #endif
 
 /************************************************************************/
@@ -51,7 +58,7 @@
 # error Hu?
 #endif
 
-extern CPU_LOCAL void *__cpu_context_data_base;
+extern CPU_LOCAL void *__context_data_base;
 
 /* We do not have VMA to 0 for context local sections on this
    architecture because it causes some loading problems with linux
@@ -59,9 +66,10 @@ extern CPU_LOCAL void *__cpu_context_data_base;
    subtract the __context_data_start to the TLS address here. */
 
 extern __ldscript_symbol_t __context_data_start;
-#define CONTEXT_GET_TLS() ((uintptr_t)CPU_LOCAL_GET(__cpu_context_data_base) - (uintptr_t)&__context_data_start)
+#define CONTEXT_GET_TLS() ((uintptr_t)CPU_LOCAL_GET(__context_data_base) - (uintptr_t)&__context_data_start)
 #define CONTEXT_LOCAL_TLS_SET(tls, n, v) { *(typeof(n)*)((uintptr_t)(tls) - (uintptr_t)&__context_data_start + (uintptr_t)&(n)) = (v); }
 #define CONTEXT_LOCAL_TLS_GET(tls, n) 	({ *(typeof(n)*)((uintptr_t)(tls) - (uintptr_t)&__context_data_start + (uintptr_t)&(n)); })
+#define CONTEXT_LOCAL_TLS_ADDR(tls, n) ((void*)((uintptr_t)(tls) - (uintptr_t)&__context_data_start + (uintptr_t)&(n)))
 
 #endif
 

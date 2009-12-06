@@ -67,9 +67,9 @@ asm(
 
         /* restore kernel stack ! */
 # ifdef CONFIG_SMP
-        "   lw      $sp,    __cpu_context_data_base($27) \n"
+        "   lw      $sp,    __context_data_base($27) \n"
 # else
-        "   lw      $sp,    __cpu_context_data_base      \n"
+        "   lw      $sp,    __context_data_base      \n"
 # endif
         "   addiu   $sp,    %lo(context_kstack)          \n"
         "   lw      $sp,    ($sp)                        \n"
@@ -182,9 +182,9 @@ asm(
         "   addiu   $5,     $sp,    0                    \n" /* register table on stack */
         "   addiu   $sp,    $sp,    -4*4                 \n"
 #ifdef CONFIG_SMP
-        "   lw      $11,    __cpu_context_data_base($27) \n"
+        "   lw      $11,    __context_data_base($27) \n"
 #else
-        "   lw      $11,    __cpu_context_data_base      \n"
+        "   lw      $11,    __context_data_base      \n"
 #endif
         "   lw      $1,     cpu_syscall_handler($11)     \n"
         "   jalr    $1                                   \n"

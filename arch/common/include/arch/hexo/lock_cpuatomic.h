@@ -36,7 +36,7 @@
 
 struct		arch_lock_s
 {
-  atomic_int_t	a;
+  volatile atomic_int_t	a;
 };
 
 #define ARCH_LOCK_INITIALIZER	{ .a = 0 }

@@ -70,9 +70,9 @@
 #define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
 
 /** pointer to context local storage in cpu local storage */
-extern CPU_LOCAL void *__cpu_context_data_base;
+extern CPU_LOCAL void *__context_data_base;
 
-#define CONTEXT_GET_TLS() ((uintptr_t)CPU_LOCAL_GET(__cpu_context_data_base))
+#define CONTEXT_GET_TLS() ((uintptr_t)CPU_LOCAL_GET(__context_data_base))
 
 #endif
 

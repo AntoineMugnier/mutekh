@@ -10,4 +10,6 @@ endif
 
 subdirs = include/arch/hexo
 
-copy = ldscript
+ifeq ($(LINKING),1)
+meta = ldscript
+endif

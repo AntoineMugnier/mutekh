@@ -28,8 +28,6 @@
 #ifndef LOCAL_H_
 #define LOCAL_H_
 
-# define CPU_LOCAL
-
 #include <hexo/types.h>
 #include "cpu/hexo/local.h"
 
@@ -46,6 +44,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
 # ifndef CPU_LOCAL
 /** @this must be used as attribute for cpu local variables */
+#  warning CPU_LOCAL not defined by cpu code
 #  define CPU_LOCAL
 # endif
 

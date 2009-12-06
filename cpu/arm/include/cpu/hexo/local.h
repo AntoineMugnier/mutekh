@@ -87,10 +87,10 @@
 # define CPU_LOCAL
 # define CPU_GET_TLS() ((uintptr_t)0)
 
-extern CPU_LOCAL void *__cpu_context_data_base;
+extern CPU_LOCAL void *__context_data_base;
 
 # define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
-# define CONTEXT_GET_TLS() ((uintptr_t)__cpu_context_data_base)
+# define CONTEXT_GET_TLS() ((uintptr_t)__context_data_base)
 
 #endif /* end CONFIG_CPU_ARM_TLS_IN_C15 */
 

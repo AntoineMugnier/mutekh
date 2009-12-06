@@ -77,7 +77,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		/* input args */
 		: "0" (&old->stack_ptr)
 		, "1" (&new->stack_ptr)
-		, "2" (CPU_LOCAL_ADDR(__cpu_context_data_base))
+		, "2" (CPU_LOCAL_ADDR(__context_data_base))
 
 		/* remaining registers will be clobbered too */
 		: "memory"
@@ -102,7 +102,7 @@ cpu_context_jumpto(struct context_s *new)
 		"	retq			\n"
 		:
 		: "r" (new->stack_ptr)
-		, "r" (CPU_LOCAL_ADDR(__cpu_context_data_base))
+		, "r" (CPU_LOCAL_ADDR(__context_data_base))
 		);
 
   while (1)

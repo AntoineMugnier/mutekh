@@ -6,7 +6,7 @@ error_t
 cpu_context_bootstrap(struct context_s *context)
 {
   /* set context local storage base pointer */
-  CPU_LOCAL_SET(__cpu_context_data_base, context->tls);
+  CPU_LOCAL_SET(__context_data_base, context->tls);
 
   return 0;
 }

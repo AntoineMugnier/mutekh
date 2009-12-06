@@ -11,7 +11,7 @@
 
 #define POOL_SIZE 256		/* number of max different block allocated at the same time */
 #define MAX_SIZE 4096		/* maximum single malloc size */
-#define INTER_COUNT 2500
+#define INTER_COUNT 1000
 #define THREAD_COUNT 8
 
 struct block_s
@@ -119,8 +119,8 @@ void * thread(void *id_)
 
   }
 
-  printk("thread %i terminated: %i crc errors, %i alloc, %i free, %i realloc, %i alloc fail\n",
-	 id, errors, ac, fc, rc, nc);
+  printk("cpu %i thread %i terminated: %i crc errors, %i alloc, %i free, %i realloc, %i alloc fail\n",
+	 cpu_id(), id, errors, ac, fc, rc, nc);
   assert(!errors);
 
   return NULL;

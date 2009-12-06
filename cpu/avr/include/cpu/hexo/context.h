@@ -72,9 +72,9 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	push	r0				\n"
 		"	cli					\n"
 		/* save context local storage on stack */
-		"	lds	r0, __cpu_context_data_base + 1	\n"
+		"	lds	r0, __context_data_base + 1	\n"
 		"	push	r0				\n"
-		"	lds	r0, __cpu_context_data_base	\n"
+		"	lds	r0, __context_data_base	\n"
 		"	push	r0				\n"
 		/* switch stack pointer */
 		"	in	r0, 0x3d			\n"
@@ -85,9 +85,9 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	out	0x3e, %B1			\n"
 		/* restore tls */
 		"	pop	r0				\n"
-		"	sts	__cpu_context_data_base, r0	\n"
+		"	sts	__context_data_base, r0	\n"
 		"	pop	r0				\n"
-		"	sts	__cpu_context_data_base + 1, r0	\n"
+		"	sts	__context_data_base + 1, r0	\n"
 		/* restore flags */
 		"	pop	r0				\n"
 		"	out	0x3f, r0			\n"
@@ -126,9 +126,9 @@ cpu_context_jumpto(struct context_s *new)
 		"	out	0x3e, %B0			\n"
 		/* restore tls */
 		"	pop	r0				\n"
-		"	sts	__cpu_context_data_base, r0	\n"
+		"	sts	__context_data_base, r0	\n"
 		"	pop	r0				\n"
-		"	sts	__cpu_context_data_base + 1, r0	\n"
+		"	sts	__context_data_base + 1, r0	\n"
 		/* restore flags */
 		"	pop	r0				\n"
 		"	out	0x3f, r0			\n"

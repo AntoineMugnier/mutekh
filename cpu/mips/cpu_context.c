@@ -15,7 +15,7 @@ error_t
 cpu_context_bootstrap(struct context_s *context)
 {
     /* set context local storage base pointer */
-    CPU_LOCAL_SET(__cpu_context_data_base, context->tls);
+    CPU_LOCAL_SET(__context_data_base, context->tls);
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
     soclib_mem_check_change_id(cpu_id(), (uint32_t)&context->stack_ptr);

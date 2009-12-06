@@ -41,7 +41,7 @@ void mem_init(void)
   mem_start = (void*)emu_do_syscall(EMU_SYSCALL_MMAP, 6, NULL, 
 				    CONFIG_ARCH_EMU_MEMORY,
 				    EMU_PROT_READ | EMU_PROT_WRITE | EMU_PROT_EXEC,
-				    EMU_MAP_PRIVATE | EMU_MAP_ANONYMOUS, 0, 0);
+				    EMU_MAP_SHARED | EMU_MAP_ANONYMOUS, -1, 0);
 
   if (mem_start == EMU_MAP_FAILED)
     emu_do_syscall(EMU_SYSCALL_EXIT, 1);

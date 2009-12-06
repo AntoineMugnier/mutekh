@@ -25,6 +25,8 @@
 
 #define CPU_CPU_H_
 
+#include <hexo/local.h>
+
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	8
 
@@ -33,10 +35,12 @@ static inline const char *cpu_type_name(void)
   return "x86";
 }
 
+extern CPU_LOCAL cpu_id_t _cpu_id;
+
 static inline cpu_id_t cpu_id(void)
 {
 #ifdef CONFIG_SMP
-  cpu_trap();			/* not supported */
+    return _cpu_id;
 #else
   return 0;
 #endif  
@@ -46,7 +50,7 @@ static inline bool_t
 cpu_isbootstrap(void)
 {
 #ifdef CONFIG_SMP
-  cpu_trap();			/* not supported */
+    return (_cpu_id == 0);
 #endif
   return 1;
 }
@@ -66,25 +70,14 @@ cpu_cycle_count(void)
   return 0;
 }
 
-struct cpu_cld_s
-{
 #ifdef CONFIG_SMP
-# error not supported
+extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
-  /* CPU id */
-  uint32_t	id;
-  /* PID of the worker unix process */
-  int32_t	worker_pid;
-  /* PID of the unix process used to perform ptrace ops */
-  int32_t	tracer_pid;
-};
-
-extern struct cpu_cld_s	*cpu_cld_list[CONFIG_CPU_MAXCOUNT];
 
 static inline void *cpu_get_cls(cpu_id_t cpu_id)
 {
 #ifdef CONFIG_SMP
-# error not supported
+    return cpu_local_storage[cpu_id];
 #endif
   return NULL;
 }

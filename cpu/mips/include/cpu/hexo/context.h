@@ -102,7 +102,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 
 		: "0" (&old->stack_ptr)
 		, "1" (&new->stack_ptr)
-		, "2" (CPU_LOCAL_ADDR(__cpu_context_data_base))
+		, "2" (CPU_LOCAL_ADDR(__context_data_base))
 
 #if defined(CONFIG_CPU_MIPS_ABI_O32) || defined(CONFIG_CPU_MIPS_ABI_O64)
 		/* These GP registers will be saved by the compiler */
@@ -166,7 +166,7 @@ cpu_context_jumpto(struct context_s *new)
 		".set pop				\n"
 		:
 		: "r" (&new->stack_ptr)
-		, "r" (CPU_LOCAL_ADDR(__cpu_context_data_base))
+		, "r" (CPU_LOCAL_ADDR(__context_data_base))
 		);
 
   while (1)

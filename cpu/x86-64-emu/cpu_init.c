@@ -22,20 +22,27 @@
 
 #include <mutek/mem_alloc.h>
 #include <string.h>
+#include <stdlib.h>
 #include <hexo/interrupt.h>
 #include <hexo/init.h>
 #include <hexo/iospace.h>
 #include <hexo/lock.h>
 #include <hexo/segment.h>
 
-CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
+/** pointer to cpu local storage itself */
+CPU_LOCAL void *__cpu_data_base;
 /** pointer to context local storage in cpu local storage */
-CPU_LOCAL void *__cpu_context_data_base;
+CPU_LOCAL void *__context_data_base;
 
 /* cpu interrupts state */
 volatile CPU_LOCAL bool_t cpu_irq_state = 0;
+
+#ifdef CONFIG_SMP
+void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
+CPU_LOCAL cpu_id_t _cpu_id;
+#endif
 
 error_t
 cpu_global_init(void)
@@ -43,10 +50,22 @@ cpu_global_init(void)
   return 0;
 }
 
-static CPU_LOCAL struct cpu_cld_s	*cpu_cld;
-
 void cpu_init(void)
 {
+#ifdef CONFIG_SMP
+  void			*cls;
+
+  if(!(cls = arch_cpudata_alloc()))
+      abort();
+
+  /* setup cpu local storage */
+  cpu_local_storage[_cpu_id] = cls;
+
+  /* we use this variable in non shared page as a cls register
+   * that's why we do not use CPU_LOCAL_SET here. */
+  __cpu_data_base = cls;
+#endif
+
 }
 
 void cpu_start_other_cpu(void)

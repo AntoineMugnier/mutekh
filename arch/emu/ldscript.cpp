@@ -20,12 +20,19 @@ SECTIONS
 			/* data depending on cpu architecture (fonction pointer variables, ...) */
 			*(.cpuarchdata*)
 		}
+        __data_start = LOADADDR(.data);
+    __data_end = LOADADDR(.data) + SIZEOF(.data);
 
 	.bss : { *(.bss*) }
+    __bss_start = LOADADDR(.bss);
+    __bss_end = LOADADDR(.bss) + SIZEOF(.bss);
 
 	/* We do not set VMA to 0 for these sections because it causes some loading
 	problems with linux exec loader (when /proc/sys/vm/mmap_min_addr is set).
 	Instead we subtract the __context_data_start to the TLS address when used. */
+
+    /* ensure cpudata is in a separate page from data */
+    . = ALIGN(CONFIG_ARCH_EMU_PAGESIZE);
 
 	/* CPU local data section */
 	.cpudata :

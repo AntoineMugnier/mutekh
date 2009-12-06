@@ -24,63 +24,100 @@
 #include <hexo/init.h>
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
+#include <hexo/endian.h>
 #include <mutek/scheduler.h>
 
 #include <arch/hexo/emu_syscalls.h>
 
 #ifdef CONFIG_SMP
-static uint_fast8_t	cpu_count = 1;
+static size_t cpu_count = CONFIG_CPU_MAXCOUNT;
+static volatile bool_t cpu_init_flag = 0;
 #endif
+
+extern __ldscript_symbol_t __data_start, __data_end;
+extern __ldscript_symbol_t __bss_start, __bss_end;
+
+static void emu_data_remap(void)
+{
+    uint8_t *data_start = ALIGN_ADDRESS_LOW(&__data_start, CONFIG_ARCH_EMU_PAGESIZE);
+    uint8_t *bss_end = ALIGN_ADDRESS_UP(&__bss_end, CONFIG_ARCH_EMU_PAGESIZE);
+    size_t size = bss_end - data_start;
+
+    uint8_t copy[size];
+    memcpy(copy, data_start, size);
+
+    if ((void*)emu_do_syscall(EMU_SYSCALL_MMAP, 6, data_start, size,
+            EMU_PROT_READ | EMU_PROT_WRITE,
+            EMU_MAP_FIXED | EMU_MAP_SHARED | EMU_MAP_ANONYMOUS, -1, 0) == EMU_MAP_FAILED)
+        emu_do_syscall(EMU_SYSCALL_EXIT, 1, 42);  
+    
+    memcpy(data_start, copy, size);
+}
 
 /* architecture specific init function */
 void arch_init()
 {
-#ifdef CONFIG_SMP
-  if (cpu_isbootstrap())
-    /* First CPU */
+    /* remap data+bss segment with SHARED attribute */
+    emu_data_remap();
+
+    mem_init();
+
+    hexo_global_init();
+
+    cpu_global_init();
+
+#if defined(CONFIG_SMP)
+    /* now everything is shared except the stack (the current unix stack) */
+    size_t i;
+    for (i=1; i<CONFIG_CPU_MAXCOUNT; i++)
     {
+        //if (fork() == 0)
+        if (emu_do_syscall(EMU_SYSCALL_FORK, 0) == 0)
+        {
+            _cpu_id = i;
+            goto other_cpu;
+        }
+    }
+    _cpu_id = 0;
 #endif
-      mem_init();
 
-	  hexo_global_init();
-
-      cpu_global_init();
-
-      /* configure first CPU */
-      cpu_init();
+    /* configure first CPU */
+    cpu_init();
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
-      sched_global_init();
-      sched_cpu_init();
+    sched_global_init();
+    sched_cpu_init();
 #endif
 
-	  arch_hw_init();
-      mem_region_init();
+    arch_hw_init();
+    mem_region_init();
 
-      /* run mutek_start() */
-      mutek_start(0, 0);
+#if defined(CONFIG_SMP)
+    cpu_init_flag = 1;
+#endif
+
+    /* run mutek_start() */
+    mutek_start(0, 0);
+
+    emu_do_syscall(EMU_SYSCALL_EXIT, 1, 1);  
+
 #ifdef CONFIG_SMP
-    }
-  else
-    /* Other CPUs */
-    {
-      /* configure other CPUs */
+other_cpu:
+    /* configure other CPUs */
 
-      #error init lock missing
-      cpu_init();
-      cpu_count++;
+    while (cpu_init_flag != 1)
+        ;
 
-      /* run mutek_start_smp() */
+    cpu_init();
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
-      sched_cpu_init();
+    sched_cpu_init();
 #endif
 
-      mutek_start_smp();
-    }
-#endif
+    mutek_start_smp();
 
-  emu_do_syscall(EMU_SYSCALL_EXIT, 0);  
+    emu_do_syscall(EMU_SYSCALL_EXIT, 1, 0);  
+#endif
 }
 
 void arch_start_other_cpu(void)

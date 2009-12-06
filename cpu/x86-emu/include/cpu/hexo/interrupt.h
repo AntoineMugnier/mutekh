@@ -54,26 +54,26 @@ cpu_exception_sethandler(cpu_exception_handler_t *hndl)
 static inline void
 cpu_interrupt_disable(void)
 {
-  CPU_LOCAL_SET(cpu_irq_state, 0);
+  cpu_irq_state = 0;
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
-  CPU_LOCAL_SET(cpu_irq_state, 1);
+  cpu_irq_state = 1;
 }
 
 static inline void
 cpu_interrupt_process(void)
 {
   cpu_interrupt_enable();
-  /* FIXME */
+  asm volatile ( "" ::: "memory" );
 }
 
 static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
-  *state = CPU_LOCAL_GET(cpu_irq_state);
+  *state = cpu_irq_state;
 }
 
 static inline void
@@ -86,13 +86,13 @@ cpu_interrupt_savestate_disable(reg_t *state)
 static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
-  CPU_LOCAL_SET(cpu_irq_state, *state);
+  cpu_irq_state = *state;
 }
 
 static inline bool_t
 cpu_interrupt_getstate(void)
 {
-  return CPU_LOCAL_GET(cpu_irq_state);
+  return cpu_irq_state;
 }
 
 static inline bool_t

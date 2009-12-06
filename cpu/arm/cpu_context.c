@@ -8,7 +8,7 @@
 #endif
 
 #if !defined(CONFIG_CPU_ARM_TLS_IN_C15)
-CPU_LOCAL void *__cpu_context_data_base;
+CPU_LOCAL void *__context_data_base;
 #endif
 
 error_t
@@ -18,7 +18,7 @@ cpu_context_bootstrap(struct context_s *context)
 #if defined(CONFIG_CPU_ARM_TLS_IN_C15)
 	asm volatile ("mcr p15,0,%0,c13,c0,4" : : "r" (context->tls));
 #else
-	__cpu_context_data_base = context->tls;
+	__context_data_base = context->tls;
 #endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
