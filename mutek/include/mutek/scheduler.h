@@ -69,6 +69,8 @@ CONTAINER_TYPE	     (sched_queue, DLIST, struct sched_context_s
 CONTAINER_FUNC       (sched_queue, DLIST, static inline, sched_queue, list_entry);
 CONTAINER_FUNC_NOLOCK(sched_queue, DLIST, static inline, sched_queue_nolock, list_entry);
 
+#define SCHED_QUEUE_INITIALIZER CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST)
+
 extern CONTEXT_LOCAL struct sched_context_s *sched_cur;
 
 static inline struct sched_context_s *
