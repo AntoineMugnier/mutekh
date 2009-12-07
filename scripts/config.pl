@@ -1034,6 +1034,7 @@ sub read_myconfig
 	    if ($line =~ /^\s* (\w+) (?: \s+(\S+) )?/x)
 	    {
 		my $opt = $config_opts{$1};
+        my $val = $2;
 
 		if (not $opt)
 		{
@@ -1047,9 +1048,16 @@ sub read_myconfig
 			      " it must be provided by defining other appropriate token(s) instead.");
 		    }
 
-		    if (defined $2)
+		    if (defined $val)
 		    {
-			$$opt{value} = $2;
+                if ($val =~ /^\+(.*)/)
+                {
+                    $$opt{value} .= " ".$1;
+                }
+                else
+                {
+                    $$opt{value} = $val;
+                }
 		    }
 		    else
 		    {
@@ -1238,7 +1246,7 @@ sub write_makefile
 	{
 	    next if $ENV{$var} eq $init_env{$var};
 
-	    print FILE "BUILD_$var=\"".$init_env{$var}."\"\n";
+	    print FILE "BUILD_$var=".$init_env{$var}."\n";
 	}
 
 	close(FILE);

@@ -1,4 +1,5 @@
 CONF_DIR=$(BUILD_DIR)
+MKDOC=mkdoc
 
 include $(MUTEK_SRC_DIR)/doc/header_list.mk
 
@@ -8,11 +9,11 @@ SVN_REV:=$(shell svn info $(MUTEK_SRC_DIR) | grep ^Revision: | cut -d' ' -f2)
 
 $(BUILD_DIR)/doc/config.h:
 	test -d $(BUILD_DIR)/doc || mkdir -p $(BUILD_DIR)/doc
-	$(MUTEK_SRC_DIR)/scripts/config.pl --docheader=$@
+	perl $(MUTEK_SRC_DIR)/scripts/config.pl --docheader=$@
 
 doc: $(BUILD_DIR)/doc/config.h
 	cd $(MUTEK_SRC_DIR) ; \
-	mkdoc $(MKDOCFLAGS) doc/gpct.mkdoclib \
+	$(MKDOC) $(MKDOCFLAGS) doc/gpct.mkdoclib \
 	  --mkdoclib-create doc/html/mutek-api \
 	  --mkdoclib-url http://www.mutek.fr/www/mutekh_api/ \
 	  --output-path $(BUILD_DIR)/doc \

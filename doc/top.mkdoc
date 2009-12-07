@@ -55,6 +55,10 @@
  @order 87
 @end group
 
+@moduledef{Cryptographic algorithms}
+ @short Ciphers, random generators and hash functions library
+@end group
+
 @moduledef{SRL}
  @short MutekS API
  This module implements the MutekS API,

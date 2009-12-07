@@ -81,7 +81,7 @@ CRYPTO_STREAM_UPDATE(crypto_arc4_update)
 }
 
 CRYPTO_STREAM_GETSTREAM(crypto_arc4_getstream) ARC4_PROCESS( = )
-CRYPTO_STREAM_GETSTREAM(crypto_arc4_xorstream) ARC4_PROCESS( ^= )
+CRYPTO_STREAM_XORSTREAM(crypto_arc4_xorstream) ARC4_PROCESS( ^= )
 
 struct crypto_stream_algo_s crypto_arc4 = {
   .f_init = crypto_arc4_init,

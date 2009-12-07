@@ -19,6 +19,25 @@
 
 */
 
+/**
+   @file
+   @module{Cryptographic algorithms}
+   @short Algorithm classes and interfaces definitions
+
+   This file defines function prototypes and algorithm object
+   structure for different classes of algorithms.
+
+   Algorithms can be used either directly or in an interchangeable
+   manner using algorithm classes defined here.
+
+   Here are the available algorithms classes:
+
+   @list
+    @item @ref crypto_hash_algo_s describes hash algorithms.
+    @item @ref crypto_stream_algo_s describes stream algorithms.
+   @end list
+ */
+
 #ifndef _CRYPTO_H_
 #define _CRYPTO_H_
 
@@ -28,19 +47,22 @@
  *    Hash Algorithms
  */
 
+/** @csee crypto_hash_init_t */
 #define CRYPTO_HASH_INIT(n) void (n)(void *ctx_)
 
-/** @this reinitializes the hash context */
+/** This function reinitializes the hash context */
 typedef CRYPTO_HASH_INIT(crypto_hash_init_t);
 
+/** @csee crypto_hash_update_t */
 #define CRYPTO_HASH_UPDATE(n) void (n)(void *ctx_, const uint8_t *data, size_t len)
 
-/** @this updates the hash context with passed data */
+/** This function updates the hash context with passed data */
 typedef CRYPTO_HASH_UPDATE(crypto_hash_update_t);
 
+/** @csee crypto_hash_get_t */
 #define CRYPTO_HASH_GET(n) void (n) (void *ctx_, uint8_t *hash)
 
-/** @this get the hash result */
+/** This function get the hash result */
 typedef CRYPTO_HASH_GET(crypto_hash_get_t);
 
 /** @this describes a hash algorithm */
@@ -57,27 +79,32 @@ struct crypto_hash_algo_s
  *    Pseudo Random Generator Algorithms
  */
 
+/** @csee crypto_stream_init_t */
 #define CRYPTO_STREAM_INIT(n) void (n)(void *ctx_)
 
-/** @this reinitializes the stream generator */
+/** This function reinitializes the stream generator */
 typedef CRYPTO_STREAM_INIT(crypto_stream_init_t);
 
+/** @csee crypto_stream_update_t */
 #define CRYPTO_STREAM_UPDATE(n) void (n)(void *ctx_, const uint8_t *key, size_t keylen)
 
-/** @this updates the stream generator state using given key */
+/** This function updates the stream generator state using given key */
 typedef CRYPTO_STREAM_UPDATE(crypto_stream_update_t);
 
+/** @csee crypto_stream_getstream_t */
 #define CRYPTO_STREAM_GETSTREAM(n) void (n)(void *ctx_, uint8_t *data, size_t data_len)
 
-/** @this gets pseudo random stream. The @tt data parameter
+/** This function gets pseudo random stream. The @tt data parameter
     may be @ref NULL to update generator state but discard output stream. */
 typedef CRYPTO_STREAM_GETSTREAM(crypto_stream_getstream_t);
 
+/** @csee crypto_stream_xorstream_t */
 #define CRYPTO_STREAM_XORSTREAM(n) void (n)(void *ctx_, uint8_t *data, size_t data_len)
 
-/** @this xor a buffer with pseudo random stream. */
+/** This function xor a buffer with pseudo random stream. */
 typedef CRYPTO_STREAM_XORSTREAM(crypto_stream_xorstream_t);
 
+/** @this describes a stream generator algorithm */
 struct crypto_stream_algo_s
 {
   crypto_stream_init_t *f_init;

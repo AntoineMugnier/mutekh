@@ -19,7 +19,8 @@ LINKING=0
 endif
 export LINKING
 
-CONF_DIR=$(BUILD_DIR)
+# CONF_DIR=$(BUILD_DIR)
+CONF_DIR=$(BUILD_DIR)/obj-$(TARGET_COUPLE)
 
 include $(CONF_DIR)/.config.mk
 include $(MUTEK_SRC_DIR)/scripts/config.mk
