@@ -75,6 +75,15 @@ static bool_t atomic_inc(atomic_t *a);
    @return 0 if new atomic value is 0. */
 static bool_t atomic_dec(atomic_t *a);
 
+/**
+   @this atomicaly adds an integer value.
+
+   @param a Atomic to add into
+   @param val Value to add
+   @return the old value contained in a.
+ */
+static atomic_int_t atomic_add(atomic_t *a, atomic_int_t val);
+
 /** @this atomicaly sets bit in intger value */
 static void atomic_bit_set(atomic_t *a, uint_fast8_t n);
 

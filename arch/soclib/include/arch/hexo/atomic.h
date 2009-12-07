@@ -85,6 +85,22 @@ static inline  bool_t atomic_inc(atomic_t *a)
   return res;
 }
 
+static inline  atomic_int_t atomic_add(atomic_t *a, atomic_int_t val)
+{
+  atomic_int_t	res;
+
+#ifdef CONFIG_SMP
+  lock_spin_irq(&__atomic_arch_lock);
+#endif
+  res = a->value;
+  a->value += val;
+#ifdef CONFIG_SMP
+  lock_release_irq(&__atomic_arch_lock);
+#endif
+
+  return res;
+}
+
 static inline  bool_t atomic_dec(atomic_t *a)
 {
   atomic_int_t	res;
@@ -198,6 +214,11 @@ static inline atomic_int_t atomic_get(atomic_t *a)
 static inline bool_t atomic_inc(atomic_t *a)
 {
   return cpu_atomic_inc(&a->value);
+}
+
+static inline atomic_int_t atomic_add(atomic_t *a, atomic_int_t val)
+{
+    return cpu_atomic_add(&a->value, val);
 }
 
 static inline bool_t atomic_dec(atomic_t *a)

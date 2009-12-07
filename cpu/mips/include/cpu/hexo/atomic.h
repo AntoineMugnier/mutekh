@@ -67,6 +67,27 @@ cpu_atomic_dec(volatile atomic_int_t *a)
     return result - 1 != 0;
 }
 
+#define HAS_CPU_ATOMIC_ADD
+
+static inline atomic_int_t
+cpu_atomic_add(volatile atomic_int_t *a, atomic_int_t val)
+{
+    reg_t  result, tmp;
+
+    asm volatile (
+        "1:     ll      %[result], %[atomic]      \n"
+        "       addu    %[tmp], %[result], %[val] \n"
+        "       sc      %[tmp], %[atomic]         \n"
+        "       beqz    %[tmp], 1b                \n"
+        : [tmp] "=&r" (tmp), [result] "=&r" (result)
+        , [atomic] "=m" (*a)
+        : [val] "r" (val)
+        , [atomic_in] "m" (*a)
+        );
+
+    return result;
+}
+
 #define HAS_CPU_ATOMIC_TESTSET
 
 static inline bool_t
