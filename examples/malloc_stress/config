@@ -2,7 +2,7 @@
 %common		# optional at file start
 
   # New source code module to be compiled
-  CONFIG_MODULES examples/hello:$(CONFIGPATH)
+  CONFIG_MODULES app:$(CONFIGPATH)
 
   # Application license
   CONFIG_LICENSE_APP_LGPL
@@ -21,97 +21,7 @@
 
   %error Missing build configuration name, please specify BUILD=xxx
 
+%common
 
-
-%section debug
-
-  CONFIG_COMPILE_OPTIMIZE 2
-  CONFIG_COMPILE_DEBUG
-  CONFIG_LIBC_ASSERT
-
-%else
-
-  CONFIG_COMPILE_OPTIMIZE 2
-  CONFIG_CPU_MAXCOUNT 4
-
-
-
-%section emu-*-*
-
-  CONFIG_ARCH_EMU
-
-  CONFIG_ARCH_HW_INIT
-  CONFIG_DRIVER_CHAR_EMUTTY
-  CONFIG_CPU_RESET_HANDLER undefined
-
-%section emu-linux-*
-
-  CONFIG_ARCH_EMU_LINUX
-
-%section emu-darwin-*
-
-  CONFIG_ARCH_EMU_DARWIN
-
-%section emu-*-x86_64
-
-  CONFIG_CPU_X86_64_EMU
-
-%section emu-*-x86
-
-  CONFIG_CPU_X86_EMU
-
-
-%section ibmpc-x86
-
-  CONFIG_ARCH_IBMPC
-  CONFIG_CPU_X86
-  CONFIG_SMP
-
-  CONFIG_DRIVER_CHAR_VGATTY
-  CONFIG_DRIVER_ICU_8259
-
-  CONFIG_CPU_RESET_HANDLER
-
-
-%section soclib-*
-
-  # Platform types
-  CONFIG_ARCH_SOCLIB
-  CONFIG_SMP
-
-  # Memory layout
-  CONFIG_HETROM_ADDR 0x60100000
-  CONFIG_HETROM_SIZE 0x00100000
-  
-  CONFIG_ROM_ADDR 0x61100000
-  CONFIG_ROM_SIZE 0x00100000
-  
-  CONFIG_RAM_ADDR 0x71600000
-  CONFIG_RAM_SIZE 0x00100000
-  
-  CONFIG_CPU_RESET_HANDLER
-
-  # Device and drivers
-  CONFIG_DRIVER_CHAR_SOCLIBTTY
-  CONFIG_DRIVER_ICU_SOCLIB
-  CONFIG_DRIVER_TIMER_SOCLIB
-
-  CONFIG_ARCH_DEVICE_TREE
-  CONFIG_FDT
-  CONFIG_DRIVER_ENUM_FDT
-
-%section soclib-mipsel
-
-  CONFIG_CPU_MIPS
-  CONFIG_CPU_MIPS_VERSION 32
-  CONFIG_CPU_ENDIAN_LITTLE
-
-%section soclib-arm
-
-  CONFIG_CPU_ARM
-  CONFIG_CPU_ARM_SOCLIB
-
-%section soclib-ppc
-
-  CONFIG_CPU_PPC
-
+%include ../common/platforms.conf
+%include ../common/build_options.conf
