@@ -40,7 +40,11 @@ VFS_UNLINK_NODE(vfat_unlink_node);
 
 
 VFS_OPEN_FILE(vfat_open);
+#if defined(CONFIG_DRIVER_FS_VFAT_READBYPASSBC)
+VFS_READ_FILE(vfat_read_bypass_bc);
+#else
 VFS_READ_FILE(vfat_read);
+#endif
 VFS_WRITE_FILE(vfat_write);
 VFS_LSEEK_FILE(vfat_lseek);
 VFS_RELEASE_FILE(vfat_release);
@@ -68,7 +72,11 @@ static const struct vfs_node_op_s vfat_n_op =
 static const struct vfs_file_op_s vfat_f_op = 
   {
     .open = vfat_open,
+#if defined(CONFIG_DRIVER_FS_VFAT_READBYPASSBC)
+    .read = vfat_read_bypass_bc,
+#else
     .read = vfat_read,
+#endif
     .write = vfat_write,
     .lseek = vfat_lseek,
     .readdir = vfat_readdir,

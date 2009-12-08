@@ -151,6 +151,107 @@ VFS_READ_FILE(vfat_read)
   return asked_size - size;
 }
 
+VFS_READ_FILE(vfat_read_bypass_bc)
+{
+    struct vfat_context_s *ctx;
+    struct vfat_file_s *file_info;
+    struct bc_request_s request;
+    vfat_cluster_t next_cluster;
+    vfat_cluster_t current_cluster;
+    vfat_offset_t current_cluster_offset;
+    vfat_offset_t current_sector_offset;
+    vfat_sector_t current_sector;
+    vfat_sector_t first_sector;
+    uint8_t *pread;
+    uint8_t *pbuff;
+    size_t asked_size;
+    size_t sector_size;
+    uint_fast32_t i,count;
+    int_fast32_t bytes_left;
+
+#ifdef CONFIG_DRIVER_FS_VFAT_DEBUG
+    printk("++++ vfat_read started, asked size %d\n", size);
+#endif
+
+    if(file->f_node->n_attr & VFS_FIFO)
+        return -EINVAL;
+
+    if(size == 0) return 0;
+
+    file_info = file->f_pv;
+    ctx = file_info->ctx;
+    struct bc_buffer_s *buffers[ctx->sectors_per_cluster];
+    request.buffers = buffers;
+    sector_size = ctx->bytes_per_sector;
+    asked_size =  size;
+    pbuff = buffer;
+    current_cluster = file_info->current_cluster;
+    current_cluster_offset = file_info->current_offset;
+
+    while(size > 0)
+    {
+        if(current_cluster_offset >= ctx->bytes_per_cluster)
+        {
+            if(vfat_query_fat(ctx, current_cluster, &next_cluster))
+                return -VFS_IO_ERR;
+
+            if(current_cluster == 0x0FFFFFF7)
+                return -VFS_EBADBLK;
+
+            if (next_cluster >= 0x0FFFFFF8)
+                break;
+
+            current_cluster = next_cluster;
+            current_cluster_offset = 0;
+        }
+        first_sector = VFAT_CONVERT_CLUSTER(ctx,current_cluster);
+        i = current_cluster_offset / sector_size;
+        current_sector = first_sector + i ;
+        count = ctx->sectors_per_cluster - i;
+
+        if (i > 0 || size < count*sector_size)
+        {
+            uint8_t datablk[count*sector_size];
+            uint8_t *ptr[count];
+
+            size_t c;
+            for (c=0; c<count; c++)
+                ptr[c] = &datablk[c*sector_size];
+
+            if(dev_block_wait_read(ctx->dev, ptr, current_sector, count))
+                return -VFS_IO_ERR;
+
+            size_t s = __MIN(size, sector_size*count);
+
+            memcpy(pbuff, datablk+current_cluster_offset, s);
+
+            pbuff += s;
+            size -= s;
+            current_cluster_offset += s;
+
+        } else {
+            uint8_t *ptr[count];
+
+            size_t c;
+            for (c=0; c<count; c++)
+                ptr[c] = &pbuff[c*sector_size];
+
+            if(dev_block_wait_read(ctx->dev, ptr, current_sector, count))
+                return -VFS_IO_ERR;
+
+            size_t s = sector_size * count;
+
+            pbuff += s;
+            size -= s;
+            current_cluster_offset += s;
+        }
+    }
+
+    file_info->current_cluster = current_cluster;
+    file_info->current_offset = current_cluster_offset;
+
+    return asked_size - size;
+}
 
 VFS_WRITE_FILE(vfat_write)
 {
