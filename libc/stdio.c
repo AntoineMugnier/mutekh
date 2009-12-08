@@ -60,81 +60,119 @@ static error_t	__stdio_read_flush(FILE *stream)
   return 0;
 }
 
+static error_t unbuffered_read(size_t size, FILE *stream, const uint8_t *ptr)
+{
+    ssize_t res;
+
+    while (size)
+    {
+        res = stream->ops->read(stream->hndl, ptr, size);
+
+        if (res <= 0)
+        {
+            if (res == 0)
+                stream->eof = 1;
+            else
+                stream->error = 1;
+
+            return res;
+        }
+
+        stream->pos += res;
+        size -= res;
+        ptr += res;
+    }
+
+    return 1;
+}
+
 error_t	__stdio_read(size_t size, FILE *stream, uint8_t *ptr)
 {
-  uint8_t	local[CONFIG_LIBC_STREAM_BUFFER_SIZE];
-  ssize_t	res, local_size;
+    if (!stream->ops->read)
+        return -EINVAL;
 
-  if (!stream->ops->read)
-    return -EINVAL;
-
-  /* get data from buffer */
-  res = stream_fifo_pop_array(&stream->fifo_read, ptr, size);
-  size -= res;
-  ptr += res;
-  stream->pos += res;
-
-  if (size)
+    switch(stream->buf_mode)
     {
-      /* read buffer is empty here */
-      stream->rwflush = &__stdio_no_flush;
+        case _IONBF:
+        case _IOLBF:
+            /* line buffered for LBF is non-sense so let's assume it's unbuffered */
+            return unbuffered_read(size, stream, ptr);
 
-      /* read more data directly from fd */
-      while (size > CONFIG_LIBC_STREAM_BUFFER_SIZE)
-	{
-	  res = stream->ops->read(stream->hndl, ptr, CONFIG_LIBC_STREAM_BUFFER_SIZE);
+        case _IOFBF:
+            {
+                uint8_t	local[CONFIG_LIBC_STREAM_BUFFER_SIZE];
+                ssize_t	res, local_size;
 
-	  if (res <= 0)
-	    {
-	      if (res == 0)
-		stream->eof = 1;
- 	      else
-		stream->error = 1;
+                /* get data from buffer */
+                res = stream_fifo_pop_array(&stream->fifo_read, ptr, size);
+                size -= res;
+                ptr += res;
+                stream->pos += res;
 
-	      return res;
-	    }
+                if (size)
+                {
+                    /* read buffer is empty here */
+                    stream->rwflush = &__stdio_no_flush;
 
-	  stream->eof = 0;
-	  size -= res;
-	  ptr += res;
-	  stream->pos += res;
-	}
+                    /* read more data directly from fd */
+                    while (size > CONFIG_LIBC_STREAM_BUFFER_SIZE)
+                    {
+                        size_t s = (size/CONFIG_LIBC_STREAM_BUFFER_SIZE)*CONFIG_LIBC_STREAM_BUFFER_SIZE;
+                        res = stream->ops->read(stream->hndl, ptr, s);
+
+                        if (res <= 0)
+                        {
+                            if (res == 0)
+                                stream->eof = 1;
+                            else
+                                stream->error = 1;
+
+                            return res;
+                        }
+
+                        stream->eof = 0;
+                        size -= res;
+                        ptr += res;
+                        stream->pos += res;
+                    }
+                }
+
+                /* read remaining data in local buffer */
+                for (local_size = 0; local_size < size; local_size += res)
+                {
+                    res = stream->ops->read(stream->hndl, local + local_size,
+                            CONFIG_LIBC_STREAM_BUFFER_SIZE - local_size);
+
+                    if (res < 0)
+                    {
+                        stream->error = 1;
+                        return res;
+                    }
+                    if (res == 0)
+                        break;
+                }
+
+                memcpy(ptr, local, size);
+                stream->pos += size;
+
+                if (local_size >= size)
+                {
+                    if (local_size > size)
+                    {
+                        /* if more data than needed, put in read buffer */
+                        stream_fifo_pushback_array(&stream->fifo_read, local + size, local_size - size);
+                        stream->rwflush = &__stdio_read_flush;
+                    }
+                    return 1;
+                }
+                else
+                {
+                    /* not enough data have been read */
+                    stream->eof = 1;
+                }
+            }
     }
-
-  /* read remaining data in local buffer */
-  for (local_size = 0; local_size < size; local_size += res)
-    {
-      res = stream->ops->read(stream->hndl, local + local_size,
-			      CONFIG_LIBC_STREAM_BUFFER_SIZE - local_size);
-
-      if (res < 0)
-	{
-	  stream->error = 1;
-	  return res;
-	}
-      if (res == 0)
-	break;
-    }
-
-  memcpy(ptr, local, size);
-  stream->pos += size;
-
-  if (local_size >= size)
-    {
-      if (local_size > size)
-	{
-	  /* if more data than needed, put in read buffer */
-	  stream_fifo_pushback_array(&stream->fifo_read, local + size, local_size - size);
-	  stream->rwflush = &__stdio_read_flush;
-	}
-      return 1;
-    }
-  else
-    {
-      /* not enough data have been read */
-      stream->eof = 1;
-      return 0;
-    }
+    return 0;
 }
 
 static error_t unbuffered_write(size_t size, FILE *stream, const uint8_t *ptr)
