@@ -290,6 +290,9 @@ error_t vfs_node_link(struct vfs_node_s *parent,
     if ( parent->fs->link == NULL )
         return -ENOTSUP;
 
+    if ( parent->fs != node->fs )
+        return -ENOTSUP;
+
     if ( parent->fs->flag_ro )
         return -EPERM;
 

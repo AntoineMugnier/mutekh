@@ -179,6 +179,8 @@ VFS_FS_LINK(ramfs_link)
 	if ( namelen >= CONFIG_VFS_NAMELEN )
 		return -EINVAL;
 
+    error_t err = 0;
+
 	char tmpname[CONFIG_VFS_NAMELEN];
 	memset(tmpname, 0, CONFIG_VFS_NAMELEN);
 	memcpy(tmpname, name, namelen);
@@ -187,8 +189,8 @@ VFS_FS_LINK(ramfs_link)
     struct vfs_node_s *node_parent = vfs_node_get_parent(node);
 
 	if ( (node_parent != NULL) && (node->type == VFS_NODE_DIR) ) {
-        vfs_node_refdrop(node_parent);
-		return -EINVAL;
+        err = -EISDIR;
+        goto link_err_isdir;
     }
 
 	vfs_printk("<%s %s ", __FUNCTION__, tmpname);
@@ -210,13 +212,18 @@ VFS_FS_LINK(ramfs_link)
 	struct vfs_node_s *nnode;
 	if ( node_parent != NULL ) {
         rfs_node = ramfs_node_new(NULL, VFS_NODE_FILE, ramfs_data_refnew(rfs_curnode->data));
+        if ( rfs_node == NULL ) {
+			vfs_printk("new rfsnode failed>");
+			err = -ENOMEM;
+            goto link_new_rfs_node_failed;
+        }
         vfs_printk("clone (parent=%p) ", node_parent);
 		nnode = vfs_node_new(NULL, parent->fs, VFS_NODE_FILE, name, namelen,
 							 rfs_node, ramfs_node_deletepriv);
 		if (nnode == NULL) {
-			vfs_printk("failed>");
-            ramfs_dir_unlock(&rfs_parent->children);
-			return -ENOMEM;
+			vfs_printk("new vfsnode failed>");
+			err = -ENOMEM;
+            goto link_new_vfs_node_failed;
 		}
 	} else {
 		vfs_printk("use ");
@@ -224,23 +231,25 @@ VFS_FS_LINK(ramfs_link)
         rfs_node = rfs_curnode;
 	}
 
-    memcpy(rfs_node->name, name, namelen);
-	memset(rfs_node->name + namelen, 0, CONFIG_VFS_NAMELEN - namelen);
+    memcpy(rfs_node->name, tmpname, CONFIG_VFS_NAMELEN);
     ramfs_dir_nolock_push(&rfs_parent->children, rfs_node);
-
     ramfs_dir_unlock(&rfs_parent->children);
 
-    memcpy(nnode->name, name, namelen);
-	memset(nnode->name + namelen, 0, CONFIG_VFS_NAMELEN - namelen);
-
+    memcpy(nnode->name, tmpname, CONFIG_VFS_NAMELEN);
 	*rnode = nnode;
-
 	vfs_printk("ok>");
 
-	if ( node_parent != NULL )
-        vfs_node_refdrop(node_parent);
+    goto link_done;
 
-	return 0;
+  link_new_vfs_node_failed:
+    ramfs_node_refdrop(rfs_node);
+  link_new_rfs_node_failed:
+    ramfs_dir_unlock(&rfs_parent->children);
+  link_err_isdir:
+  link_done:
+    if ( node_parent != NULL )
+        vfs_node_refdrop(node_parent);
+	return err;
 }
 
 VFS_FS_UNLINK(ramfs_unlink)
