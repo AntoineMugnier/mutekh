@@ -128,11 +128,11 @@ typedef DEV_CLEANUP(dev_cleanup_t);
 
 #define DEVICE_MAX_ADDRSLOT	4
 
+#include <hexo/gpct_platform_hexo.h>
+#include <hexo/gpct_lock_hexo.h>
 
 #ifdef CONFIG_DEVICE_TREE
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_clist.h>
 #include <gpct/object_refcount.h>
 
