@@ -47,13 +47,23 @@ error_t vfs_mount(struct vfs_node_s *mountpoint,
 				  struct vfs_fs_s *fs);
 
 /**
+   @this mounts a file system as the root of all.
+
+   @param fs new filesystem to attach at root
+   @param mountpoint Node where the filesystem root lies
+   @return 0 if mounted correctly
+ */
+error_t vfs_create_root(struct vfs_fs_s *fs,
+                        struct vfs_node_s **mountpoint);
+
+/**
    @this unmounts a file system. @tt fs must not have any files
    left open. Old directory node will be restored in VFS.
 
-   @param fs filesystem to detach from its mountpoint
+   @param mountpoint Mountpoint where to umount a file system
    @return 0 if unmounted correctly
  */
-error_t vfs_umount(struct vfs_fs_s *fs);
+error_t vfs_umount(struct vfs_node_s *mountpoint);
 
 /* Node operations */
 
@@ -73,8 +83,8 @@ error_t vfs_umount(struct vfs_fs_s *fs);
    @see vfs_name_mangle
  */
 struct vfs_node_s * vfs_node_new(void *storage, struct vfs_fs_s *fs,
-                                 enum vfs_node_type_e type, const char *fullname, size_t fullnamelen,
-                                 void *private, vfs_node_fs_priv_deleter_t *deleter);
+                                 const char *fullname, size_t fullnamelen,
+                                 struct fs_node_s *fs_node);
 #endif
 
 /** @this increases the node reference count and return the node itself. */
@@ -125,8 +135,7 @@ error_t vfs_node_lookup(struct vfs_node_s *parent,
    @this transfers the ownership of @tt node to caller.
    @see vfs_open @see vfs_fs_node_open_t
 */
-error_t vfs_node_open(struct vfs_fs_s *fs,
-                      struct vfs_node_s *node,
+error_t vfs_node_open(struct vfs_node_s *node,
                       enum vfs_open_flags_e flags,
                       struct vfs_file_s **file);
 

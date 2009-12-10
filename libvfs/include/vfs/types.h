@@ -29,6 +29,18 @@
 #define _VFS_TYPES_H_
 
 #include <vfs/fs.h>
+#include <pthread.h>
+#include <mutek/printk.h>
+
+#undef GPCT_OBJ_REF_INFO
+#define GPCT_OBJ_REF_INFO(p) vfs_printk("<%s %p %d />", __FUNCTION__, p, gpct_atomic_get(&p->obj_entry.refcnt))
+
+#ifdef CONFIG_VFS_VERBOSE
+# define vfs_printk(fmt, x...) do{printk("%p: "fmt"\n", pthread_self(), ##x);}while(0)
+#else
+# define vfs_printk(...) do{}while(0)
+#endif
+
 #include <mutek/gpct_mutek_semaphore.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
@@ -36,8 +48,15 @@
 #include <gpct/object_refcount.h>
 #include <mutek/semaphore.h>
 
+
 typedef size_t vfs_file_size_t;
 typedef uint16_t vfs_node_attr_t;
+
+/**
+   @this is a node structure for a given File System. @this is
+   FS-dependant.
+*/
+struct fs_node_s;
 
 enum vfs_node_type_e
 {
@@ -62,9 +81,6 @@ struct vfs_node_s
 {
 	CONTAINER_ENTRY_TYPE(HASHLIST) hash_entry;
 
-    /** Node type */
-    enum vfs_node_type_e type;
-
     /** File system the node is in */
     struct vfs_fs_s *fs;
 
@@ -79,10 +95,7 @@ struct vfs_node_s
     lock_t parent_lock;
 
     /** Private file system data attached to this node */
-    void *priv;
-
-    /** Function responsible for freeing the private filesystem data */
-    vfs_node_fs_priv_deleter_t *priv_deleter;
+    struct fs_node_s *fs_node;
 
 	vfs_node_entry_t obj_entry;
 
@@ -93,12 +106,8 @@ struct vfs_node_s
     atomic_t stat_count;
 #endif
 
-	union {
-		struct {
-            /** Children cache hash */
-			vfs_dir_hash_root_t children;
-		} dir;
-	};
+    /** Children cache hash */
+	vfs_dir_hash_root_t children;
 }
 , hash_entry, 5);
 
@@ -142,10 +151,10 @@ struct vfs_stat_s
 
 #include <pthread.h>
 
-#ifdef CONFIG_VFS_VERBOSE
-# define vfs_printk(...) do{printk("%p: ", pthread_self());printk(__VA_ARGS__);printk("\n");}while(0)
+#if defined(CONFIG_VFS_STATS)
+# define VFS_STATS_INC(obj, field) atomic_inc(&(obj)->field)
 #else
-# define vfs_printk(...) do{}while(0)
+# define VFS_STATS_INC(x, y) do{}while(0)
 #endif
 
 #endif

@@ -46,34 +46,26 @@ static VFS_FILE_CLOSE(default_vfs_file_close)
 
 OBJECT_CONSTRUCTOR(vfs_file)
 {
-	struct vfs_node_s *node = vfs_node_refnew(va_arg(ap, struct vfs_node_s*));
-	vfs_printk("<file open %s>", node->name);
+	struct fs_node_s *node = va_arg(ap, struct fs_node_s*);
+	vfs_fs_node_refnew_t *node_refnew = va_arg(ap, vfs_fs_node_refnew_t *);
+	vfs_fs_node_refdrop_t *node_refdrop = va_arg(ap, vfs_fs_node_refdrop_t *);
+
+	vfs_printk("<file open %p>", node);
 	obj->offset = 0;
-	obj->node = node;
+	obj->node = node_refnew(node);
+	obj->node_refdrop = node_refdrop;
 	obj->close = default_vfs_file_close;
 	obj->read = default_vfs_file_read;
 	obj->write = default_vfs_file_write;
 	obj->seek = default_vfs_file_seek;
-
-	atomic_inc(&node->fs->ref);
-#if defined(CONFIG_VFS_STATS)
-	atomic_inc(&node->open_count);
-	atomic_inc(&node->fs->file_open_count);
-#endif
 
 	return 0;
 }
 
 OBJECT_DESTRUCTOR(vfs_file)
 {
-	vfs_printk("<file close %s>", obj->node->name);
+	vfs_printk("<file close %p>", obj->node);
 
-	atomic_dec(&obj->node->fs->ref);
-#if defined(CONFIG_VFS_STATS)
-	atomic_inc(&obj->node->close_count);
-	atomic_inc(&obj->node->fs->file_close_count);
-#endif
-
-	vfs_node_refdrop(obj->node);
+	obj->node_refdrop(obj->node);
 }
 

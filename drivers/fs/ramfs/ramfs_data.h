@@ -35,6 +35,7 @@ OBJECT_PROTOTYPE(ramfs_data, static inline, ramfs_data);
 
 struct ramfs_data_s
 {
+    uint32_t magic;
 	ramfs_data_entry_t obj_entry;
 	void *data;
 	size_t allocated_size;
@@ -44,6 +45,7 @@ struct ramfs_data_s
 static inline OBJECT_CONSTRUCTOR(ramfs_data)
 {
 	obj->data = NULL;
+	obj->magic = 0x1ada1ada;
 	obj->allocated_size = 0;
 	obj->actual_size = 0;
 

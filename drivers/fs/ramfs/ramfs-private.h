@@ -34,17 +34,18 @@
 
 VFS_FS_NODE_OPEN(ramfs_node_open);
 
-OBJECT_TYPE     (ramfs_node, REFCOUNT, struct ramfs_node_s);
+OBJECT_TYPE     (ramfs_node, REFCOUNT, struct fs_node_s);
 
 #define CONTAINER_LOCK_ramfs_dir_hash HEXO_SPIN
 
 CONTAINER_TYPE    (ramfs_dir_hash, HASHLIST,
-struct ramfs_node_s
+struct fs_node_s
 {
     ramfs_node_entry_t obj_entry;
     char name[CONFIG_VFS_NAMELEN];
 	CONTAINER_ENTRY_TYPE(HASHLIST) hash_entry;
     enum vfs_node_type_e type;
+    struct fs_node_s *parent;
     union {
         struct ramfs_data_s *data;
         ramfs_dir_hash_root_t children;
@@ -59,9 +60,12 @@ CONTAINER_KEY_TYPE(ramfs_dir_hash, BLOB, name, CONFIG_VFS_NAMELEN);
 OBJECT_CONSTRUCTOR(ramfs_node);
 OBJECT_DESTRUCTOR(ramfs_node);
 
-struct ramfs_node_s;
+OBJECT_PROTOTYPE         (ramfs_node, static inline, ramfs_node);
+OBJECT_FUNC              (ramfs_node, REFCOUNT, static inline, ramfs_node, obj_entry);
 
-bool_t ramfs_dir_get_nth(struct ramfs_node_s *node, struct vfs_dirent_s *dirent, size_t n);
+struct fs_node_s;
+
+bool_t ramfs_dir_get_nth(struct fs_node_s *node, struct vfs_dirent_s *dirent, size_t n);
 
 #endif
 

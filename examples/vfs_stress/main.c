@@ -13,7 +13,8 @@
 
 void random_vfs_actions();
 
-struct vfs_fs_s * vfs_init()
+static
+struct vfs_node_s * vfs_init()
 {
 	struct vfs_fs_s *root_fs;
 
@@ -21,7 +22,10 @@ struct vfs_fs_s * vfs_init()
 	ramfs_open(&root_fs);
     printk("ok\n");
 
-	return root_fs;
+    struct vfs_node_s *root_node;
+    vfs_create_root(root_fs, &root_node);
+
+	return root_node;
 }
 
 pthread_t thread[NTHREAD];
@@ -65,6 +69,7 @@ void *_main(void *root_ptr)
 	vfs_set_cwd(root_ptr);
 
     print_malloc_stats();
+
 	while (1) {
 		size_t i;
 		for ( i=0; i<NTHREAD; ++i )
@@ -72,16 +77,18 @@ void *_main(void *root_ptr)
 		for ( i=0; i<NTHREAD; ++i )
 			pthread_join(thread[i], NULL);
 
-		printk("Cleaning up /...\n");
-
-        action_rmrf_inner(root, ".");
-
         print_malloc_stats();
 
-		printk("System still alive after all this...\n");
 		printk("Tree:\n");
 		vfs_dump(root);
 		ramfs_dump(root->fs);
+
+		printk("Cleaning up /...\n");
+        action_rmrf_inner(root, ".");
+
+		printk("System still alive after all this...\n");
+        print_malloc_stats();
+
 		for ( i=0; i<100000; ++i )
 			asm volatile("nop");
 		printk("Going on...\n");
@@ -91,7 +98,7 @@ void *_main(void *root_ptr)
 
 void app_start()
 {
-	struct vfs_fs_s *root = vfs_init();
+	struct vfs_node_s *root = vfs_init();
 
-	pthread_create(&main_thread, NULL, _main, root->root);
+	pthread_create(&main_thread, NULL, _main, root);
 }

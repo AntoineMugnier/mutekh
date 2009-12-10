@@ -10,6 +10,21 @@
 #include <drivers/fs/iso9660/iso9660.h>
 #include <drivers/device/enum/fdt/enum-fdt.h>
 
+static
+struct vfs_node_s * vfs_init()
+{
+	struct vfs_fs_s *root_fs;
+
+    printk("init vfs... ");
+	ramfs_open(&root_fs);
+    printk("ok\n");
+
+    struct vfs_node_s *root_node;
+    vfs_create_root(root_fs, &root_node);
+
+	return root_node;
+}
+
 static inline const char * lua_getstringopt(lua_State *st, size_t n, size_t *size)
 {
     const char *s = lua_tolstring(st, n, size);
@@ -92,7 +107,9 @@ int cd(lua_State *st)
         return -1;
     }
 
-	if ( node->type != VFS_NODE_DIR ) {
+    struct vfs_stat_s stat;
+    vfs_node_stat(node, &stat);
+	if ( stat.type != VFS_NODE_DIR ) {
         printk("Error: %s is not a directory\n", pathname);
 		vfs_node_refdrop(node);
 		return -1;
@@ -106,7 +123,7 @@ int cd(lua_State *st)
 
 static void post_print(struct vfs_node_s *node)
 {
-	if ( node->parent ) {
+	if ( node->parent != node ) {
 		post_print(node->parent);
 		printk("/");
 	}
@@ -133,6 +150,45 @@ int rm(lua_State *st)
 		printk("Error: %s\n", strerror(err));
 	}
 	return 0;
+}
+
+int ln(lua_State *st)
+{
+    if ( lua_gettop(st) < 2 )
+		return 1;
+
+	const char *src = lua_getstringopt(st, 1, NULL);
+	const char *dst = lua_getstringopt(st, 2, NULL);
+
+	error_t err = vfs_link(vfs_get_root(), vfs_get_cwd(),
+                           src, dst);
+	if ( err )
+		printk("Error: %s\n", strerror(err));
+
+	return err;
+}
+
+int mv(lua_State *st)
+{
+    if ( lua_gettop(st) < 2 )
+		return 1;
+
+	const char *src = lua_getstringopt(st, 1, NULL);
+	const char *dst = lua_getstringopt(st, 2, NULL);
+
+	error_t err = vfs_link(vfs_get_root(), vfs_get_cwd(),
+                           src, dst);
+	if ( err ) {
+		printk("link error %s\n", strerror(err));
+        return err;
+    }
+
+    err = vfs_unlink(vfs_get_root(), vfs_get_cwd(),
+                             src);
+	if ( err )
+		printk("unlink error %s\n", strerror(err));
+
+	return err;
 }
 
 int mount(lua_State *st)
@@ -179,7 +235,7 @@ int umount(lua_State *st)
 	if ( err )
 		goto err_node;
 
-	err = vfs_umount(node->fs);
+	err = vfs_umount(node);
 	if ( err )
 		goto err_node;
 	return 0;
@@ -218,7 +274,7 @@ int append(lua_State *st)
 						   VFS_OPEN_WRITE|VFS_OPEN_CREATE,
 						   &file);
 	if ( err ) {
-		printk("Error opening %s: %d\n", err);
+		printk("Error opening %s: %d\n", filename, err);
 	} else {
 		vfs_file_write(file, blob, blob_size);
 		vfs_file_close(file);
@@ -249,17 +305,14 @@ int _ramfs_dump(lua_State *st)
 	return 0;
 }
 
-struct vfs_fs_s *root_mount;
+struct vfs_node_s *root_mount;
 
 void init_shell(lua_State* luast)
 {
-    printk("init vfs... ");
-//	fat_open(rootfs_dev, 0, &vfs_root);
+	root_mount = vfs_init();
 
-	ramfs_open(&root_mount);
-
-	vfs_set_root(root_mount->root);
-	vfs_set_cwd(root_mount->root);
+	vfs_set_root(root_mount);
+	vfs_set_cwd(root_mount);
 
 #ifdef CONFIG_DRIVER_FS_ISO9660
     {
@@ -274,12 +327,25 @@ void init_shell(lua_State* luast)
         extern struct device_s block_dev;
         if ((bd = &block_dev)) {
 # endif
-            ensure(iso9660_open(&cdrom_mount, bd) == 0);
+            error_t err = iso9660_open(&cdrom_mount, bd);
+            if ( err ) {
+                printk("Error opening ISO fs: %s\n", strerror(err));
+                abort();
+            }
 
             struct vfs_node_s *node;
-            error_t err = vfs_create(root_mount->root, root_mount->root, "cdrom", VFS_NODE_DIR, &node);
+            err = vfs_create(root_mount, root_mount, "cdrom", VFS_NODE_DIR, &node);
+            if ( err ) {
+                printk("Error creating \"/cdrom\": %s\n", strerror(err));
+                abort();
+            }
 
-            vfs_mount(node, cdrom_mount);
+            err = vfs_mount(node, cdrom_mount);
+            if ( err ) {
+                printk("Error mounting \"/cdrom\": %s\n", strerror(err));
+                abort();
+            }
+            vfs_node_refdrop(node);
         }
     }
 #endif
@@ -289,6 +355,8 @@ void init_shell(lua_State* luast)
     lua_register(luast, "mount", mount);
     lua_register(luast, "umount", umount);
     lua_register(luast, "ls", ls);
+    lua_register(luast, "ln", ln);
+    lua_register(luast, "mv", mv);
     lua_register(luast, "cat", cat);
     lua_register(luast, "cd", cd);
     lua_register(luast, "mkdir", _mkdir);

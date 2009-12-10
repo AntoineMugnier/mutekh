@@ -65,7 +65,7 @@ VFS_FILE_READ(ramfs_dir_read)
 
 	uintptr_t cur = (uintptr_t)file->priv;
 
-	struct ramfs_node_s *rfs_node = file->node->priv;
+	struct fs_node_s *rfs_node = file->node;
     bool_t gotit = ramfs_dir_get_nth(rfs_node, buffer, cur);
 
     if ( gotit )
@@ -129,7 +129,7 @@ VFS_FS_NODE_OPEN(ramfs_node_open)
 {
 	vfs_printk("<ramfs_node_open %p %x ", node, flags);
 
-	struct vfs_file_s *f = vfs_file_new(NULL, node);
+	struct vfs_file_s *f = vfs_file_new(NULL, node, ramfs_node_refnew, ramfs_node_refdrop);
 	if ( f == NULL ) {
 		vfs_printk("err>");
 		return -ENOMEM;
@@ -137,12 +137,12 @@ VFS_FS_NODE_OPEN(ramfs_node_open)
 
 	switch (node->type) {
 	case VFS_NODE_FILE: {
-        struct ramfs_node_s *rfs_node = node->priv;
+        struct fs_node_s *rfs_node = node;
 		vfs_printk("file ");
 		if ( flags & VFS_OPEN_READ )
-		  f->read = ramfs_file_read; /* FIXME should handle operation and return -EPERM instead ? */
+            f->read = ramfs_file_read;
 		if ( flags & VFS_OPEN_WRITE )
-		  f->write = ramfs_file_write;
+            f->write = ramfs_file_write;
 		f->seek = ramfs_file_seek;
 		f->priv = ramfs_data_refnew(rfs_node->data);
         f->close = ramfs_file_close;

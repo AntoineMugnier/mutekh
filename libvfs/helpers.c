@@ -47,6 +47,7 @@ static const char *prev_slash(const char *start, const char *str)
     return start;
 }
 
+#if 0
 static const char *prev_token(const char *start, const char *str)
 {
 	const char *p = str;
@@ -55,6 +56,7 @@ static const char *prev_token(const char *start, const char *str)
         --p;
     return p;
 }
+#endif
 
 static const char *last_slash_or_end(const char *str)
 {
@@ -162,7 +164,7 @@ error_t vfs_lookup(struct vfs_node_s *root,
 	const char *where;
 
 	error_t err = vfs_lookup_part(root, cwd, path, end, &where, node);
-    if ( !err && (where == end) )
+    if ( !err && (where >= end) )
         return 0;
     vfs_node_refdrop(*node);
     if ( err )
@@ -198,7 +200,7 @@ error_t vfs_create(struct vfs_node_s *root,
 	const char *stopped_at;
 
 	error_t err = vfs_lookup_part(root, cwd, path, end, &stopped_at, &parent);
-    if ( (err == -ENOENT) && (stopped_at == last_part) )
+    if ( (err == -ENOENT) && (stopped_at >= last_part) )
         goto do_create;
 
     vfs_printk(" ! exists>\n");
@@ -244,7 +246,7 @@ error_t vfs_open(struct vfs_node_s *root,
 	const char *stopped_at;
 
 	error_t err = vfs_lookup_part(root, cwd, path, end, &stopped_at, &node);
-    if ( (err == -ENOENT) && (stopped_at == last_part) && (flags & VFS_OPEN_CREATE) )
+    if ( (err == -ENOENT) && (stopped_at >= last_part) && (flags & VFS_OPEN_CREATE) )
         goto do_create;
 
     if ( err == 0 )
@@ -288,7 +290,7 @@ error_t vfs_open(struct vfs_node_s *root,
 
     // node is node to open
 
-	err = vfs_node_open(node->fs, node, flags, file);
+	err = vfs_node_open(node, flags, file);
 	vfs_node_refdrop(node);
 	vfs_printk("%d %p>\n", err, *file);
 	return err;
@@ -310,6 +312,62 @@ error_t vfs_stat(struct vfs_node_s *root,
 	return err;
 }
 
+error_t vfs_link(struct vfs_node_s *root,
+                 struct vfs_node_s *cwd,
+                 const char *src,
+                 const char *dst)
+{
+	if ( !root || !cwd || !src || !dst )
+		return -EINVAL;
+
+	const char *dst_end = last_slash_or_end(dst);
+	const char *dst_prev = prev_slash(dst, dst_end);
+
+	const char *dst_last_part = next_nonslash(dst_prev);
+
+    /* We wont create "." or ".." */
+    if ( dst_last_part[0] == '.'
+         && (((dst_end-dst_last_part) == 1)
+             || ((dst_last_part[1] == '.')
+                 && ((dst_end-dst_last_part) == 2))
+             ))
+        return -EINVAL;
+
+    struct vfs_node_s *parent;
+	const char *stopped_at;
+
+	error_t err = vfs_lookup_part(root, cwd, dst, dst_end, &stopped_at, &parent);
+    if ( (err == -ENOENT) && (stopped_at >= dst_last_part) )
+        goto do_link;
+
+    vfs_printk(" exists>\n");
+    vfs_node_refdrop(parent);
+    return err;
+
+  do_link:
+
+    {
+        struct vfs_node_s *rnode;
+
+        err = vfs_lookup(root, cwd, src, &rnode);
+        vfs_printk("src lookup %d %p ", err, rnode);
+        if ( err ) {
+            vfs_node_refdrop(parent);
+            vfs_printk(" err>\n");
+            return err;
+        }
+
+        struct vfs_node_s *new_node;
+        err = vfs_node_link(parent, rnode, dst_last_part, dst_end-dst_last_part, &new_node);
+        if ( err == 0 )
+            vfs_node_refdrop(new_node);
+        vfs_node_refdrop(parent);
+        vfs_node_refdrop(rnode);
+        vfs_printk("link %d %p>", err, new_node);
+        return err;
+    }
+}
+
 error_t vfs_unlink(struct vfs_node_s *root,
 				   struct vfs_node_s *cwd,
 				   const char *path)
@@ -322,7 +380,7 @@ error_t vfs_unlink(struct vfs_node_s *root,
 
     // TODO also check we dont try to delete parent of any mountpoint
     // in the system.
-	if ( node->fs->root == node ) {
+	if ( node->fs->root == node->fs_node ) {
 		vfs_node_refdrop(node);
 		return -EBUSY;
 	}
@@ -346,13 +404,11 @@ void vfs_dump_item(struct vfs_node_s *node,
 	size_t i;
 	for (i=0; i<pfx; ++i)
 		printk(" ");
-    char v = node->type == VFS_NODE_DIR ? '>' : '-';
-    printk(" %c %d \"%s\" %p (%p)"
+    printk(" + %d \"%s\" %p (%p)"
 #if defined(CONFIG_VFS_STATS)
            ", lu: %d, open: %d, close: %d, stat: %d"
 #endif
            "\n"
-           , v
            , vfs_node_refcount(node)
            , node->name
            , node, node->parent
@@ -364,13 +420,9 @@ void vfs_dump_item(struct vfs_node_s *node,
 #endif
         );
 
-	switch ( node->type ) {
-	case VFS_NODE_DIR:
-		CONTAINER_FOREACH(vfs_dir_hash, HASHLIST, &node->dir.children, {
-				vfs_dump_item(item, pfx+2);
-			});
-		break;
-	}
+    CONTAINER_FOREACH(vfs_dir_hash, HASHLIST, &node->children, {
+            vfs_dump_item(item, pfx+2);
+        });
 }
 
 void vfs_dump(struct vfs_node_s *root)

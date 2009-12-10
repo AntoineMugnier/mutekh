@@ -8,8 +8,8 @@
 
 #include "my_rand.h"
 
-#define dprintk(...) do{}while(0)
-//#define dprintk(...) printk(__VA_ARGS__)
+//#define dprintk(...) do{}while(0)
+#define dprintk(...) printk(__VA_ARGS__)
 
 typedef void (action_t)();
 
@@ -66,9 +66,18 @@ static error_t get_random_name(struct vfs_node_s *base, char *name)
 	return done ? 0 : -EUNKNOWN;
 }
 
+static void post_print(struct vfs_node_s *node)
+{
+	if ( node->parent != node ) {
+		post_print(node->parent);
+		printk("/");
+	}
+	printk("%s", node->name);
+}
+
 void action_cwd()
 {
-	struct vfs_node_s *node;
+	struct vfs_node_s *node = NULL;
 	struct vfs_node_s *base = vfs_get_cwd();
 	error_t err;
 	char name[CONFIG_VFS_NAMELEN];
@@ -92,8 +101,19 @@ void action_cwd()
 	err = vfs_lookup(vfs_get_root(), base, name, &node);
 	if ( err )
 		return;
-	if ( node->type == VFS_NODE_DIR )
+
+    assert(node);
+
+    struct vfs_stat_s stat;
+    vfs_node_stat(node, &stat);
+	if ( stat.type == VFS_NODE_DIR ) {
+        dprintk("%p: cwd from ", pthread_self());
+        post_print(vfs_get_cwd());
+        dprintk(" to ");
+        post_print(node);
+        dprintk("\n");
 		vfs_set_cwd(node);
+    }
 	vfs_node_refdrop(node);
 }
 
@@ -104,7 +124,7 @@ void action_mkdir()
 
 	dprintk("%s \"%s\"...\n", __FUNCTION__, name);
 
-	struct vfs_node_s *node;
+	struct vfs_node_s *node = NULL;
 	error_t err = vfs_create(vfs_get_root(), vfs_get_cwd(),
 							 name, VFS_NODE_DIR, &node);
 	if (err == 0) {
@@ -121,7 +141,7 @@ void action_create_file()
 
 	dprintk("%s \"%s\"...\n", __FUNCTION__, name);
 
-	struct vfs_file_s *file;
+	struct vfs_file_s *file = NULL;
 	error_t err = vfs_open(vfs_get_root(), vfs_get_cwd(),
 						   name, VFS_OPEN_WRITE|VFS_OPEN_CREATE, &file);
 	if (err)
@@ -149,7 +169,7 @@ void action_rm()
 error_t action_rmrf_inner(struct vfs_node_s *_cwd, const char *name)
 {
 	struct vfs_node_s *cwd = vfs_node_refnew(_cwd);
-	struct vfs_stat_s stat;
+	struct vfs_stat_s stat = {0};
 	error_t err;
 
 	err = vfs_stat(vfs_get_root(), cwd, name, &stat);
@@ -159,12 +179,12 @@ error_t action_rmrf_inner(struct vfs_node_s *_cwd, const char *name)
 
 	if ( stat.type == VFS_NODE_DIR ) {
         dprintk(" is directory\n");
-		struct vfs_node_s *node;
+		struct vfs_node_s *node = NULL;
 		if ( vfs_lookup(vfs_get_root(), cwd, name, &node) == 0 ) {
 			assert(node);
 
 			while ( 1 ) {
-				struct vfs_file_s *dir;
+				struct vfs_file_s *dir = NULL;
 				struct vfs_dirent_s dirent;
 		
 				err = vfs_open(vfs_get_root(), node, ".",
@@ -223,7 +243,7 @@ void action_ls()
 {
 	dprintk("%s...\n", __FUNCTION__);
 
-    struct vfs_file_s *dir;
+    struct vfs_file_s *dir = NULL;
     struct vfs_dirent_s dirent;
 
 	error_t err = vfs_open(vfs_get_root(), vfs_get_cwd(), ".",

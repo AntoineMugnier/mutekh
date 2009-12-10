@@ -37,7 +37,7 @@ struct vfs_fs_s;
 enum vfs_node_type_e;
 enum vfs_open_flags_e;
 
-struct vfs_node_s;
+struct fs_node_s;
 struct vfs_file_s;
 
 struct vfs_stat_s;
@@ -62,7 +62,7 @@ struct vfs_stat_s;
 typedef VFS_FS_CAN_UNMOUNT(vfs_fs_can_unmount_t);
 
 /** @this defines the fs node open operation prototype */
-#define VFS_FS_NODE_OPEN(x) error_t (x)(struct vfs_node_s *node,	\
+#define VFS_FS_NODE_OPEN(x) error_t (x)(struct fs_node_s *node,	\
 										enum vfs_open_flags_e flags,			\
 										struct vfs_file_s **file)
 
@@ -86,10 +86,10 @@ typedef VFS_FS_NODE_OPEN(vfs_fs_node_open_t);
 
 
 /** @this defines the fs lookup operation prototype */
-#define VFS_FS_LOOKUP(x) error_t (x)(struct vfs_node_s *ref,		\
+#define VFS_FS_LOOKUP(x) error_t (x)(struct fs_node_s *ref,		\
 									   const char *name,				\
 									   size_t namelen,					\
-									   struct vfs_node_s **node)
+									   struct fs_node_s **node)
 
 /**
    This function searches for a given name in a directory node. This function is only
@@ -115,7 +115,7 @@ typedef VFS_FS_LOOKUP(vfs_fs_lookup_t);
 /** @this defines the fs create operation prototype */
 #define VFS_FS_CREATE(x) error_t (x)(struct vfs_fs_s *fs,	\
 									   enum vfs_node_type_e type,		\
-									   struct vfs_node_s **node)
+									   struct fs_node_s **node)
 
 /**
    This function creates a new anonymous node in a given file system.
@@ -133,11 +133,11 @@ typedef VFS_FS_LOOKUP(vfs_fs_lookup_t);
 typedef VFS_FS_CREATE(vfs_fs_create_t);
 
 /** @this defines the fs link operation prototype */
-#define VFS_FS_LINK(x) error_t (x)(struct vfs_node_s *parent,	   \
-									 struct vfs_node_s *node,	   \
+#define VFS_FS_LINK(x) error_t (x)(struct fs_node_s *parent,	   \
+									 struct fs_node_s *node,	   \
 									 const char *name,				   \
 									 size_t namelen,				   \
-									 struct vfs_node_s **rnode)
+									 struct fs_node_s **rnode)
 
 /**
    This function links a node in a parent directory node.  Filesystem may not
@@ -167,7 +167,7 @@ typedef VFS_FS_LINK(vfs_fs_link_t);
 
 
 /** @this defines the fs unlink operation prototype */
-#define VFS_FS_UNLINK(x) error_t (x)(struct vfs_node_s *parent,  \
+#define VFS_FS_UNLINK(x) error_t (x)(struct fs_node_s *parent,  \
 									   const char *name,			   \
 									   size_t namelen)
 
@@ -188,7 +188,7 @@ typedef VFS_FS_UNLINK(vfs_fs_unlink_t);
 
 
 /** @this defines the fs stat operation prototype */
-#define VFS_FS_STAT(x) error_t (x)(struct vfs_node_s *node,  \
+#define VFS_FS_STAT(x) error_t (x)(struct fs_node_s *node,  \
 								   struct vfs_stat_s *stat)
 
 /**
@@ -205,23 +205,35 @@ typedef VFS_FS_UNLINK(vfs_fs_unlink_t);
 typedef VFS_FS_STAT(vfs_fs_stat_t);
 
 
-/** VFS node file system private data deleter prototype macro */
-#define VFS_NODE_FS_PRIV_DELETER(x) void (x)(struct vfs_node_s *node)
+
+/** @this defines the fs node refnew operation prototype */
+#define VFS_FS_NODE_REFNEW(x) struct fs_node_s * (x)(struct fs_node_s *node)
 
 /**
-   @this is a callback provided by the file system implementation
-   called on node descruction.  It must delete any private data
-   attached to the node.
+   This function notifies the file system a node is not referenced any
+   more.
 
-   There is no way for this callback to cancel the deletion.
+   @param node Node not used any more
 
-   File system must not perform any long-time operation in this call.
-
-   @param node Deleted node
-
-   @csee #VFS_NODE_FS_PRIV_DELETER
+   @csee #VFS_FS_NODE_REFNEW
+   @see vfs_node_node_refnew @see vfs_node_refnew
  */
-typedef VFS_NODE_FS_PRIV_DELETER(vfs_node_fs_priv_deleter_t);
+typedef VFS_FS_NODE_REFNEW(vfs_fs_node_refnew_t);
+
+/** @this defines the fs node refdrop operation prototype */
+#define VFS_FS_NODE_REFDROP(x) void (x)(struct fs_node_s *node)
+
+/**
+   This function notifies the file system a node is not referenced any
+   more.
+
+   @param node Node not used any more
+
+   @csee #VFS_FS_NODE_REFDROP
+   @see vfs_node_node_refdrop @see vfs_node_refdrop
+ */
+typedef VFS_FS_NODE_REFDROP(vfs_fs_node_refdrop_t);
+
 
 /**
    @this is an opened file system state.
@@ -237,9 +249,11 @@ struct vfs_fs_s
 	vfs_fs_unlink_t *unlink;        //< optional, may be NULL
 	vfs_fs_stat_t *stat;            //< mandatory
 	vfs_fs_can_unmount_t *can_unmount; //< mandatory
+	vfs_fs_node_refnew_t *node_refnew; //< mandatory
+	vfs_fs_node_refdrop_t *node_refdrop; //< mandatory
 
 	struct vfs_node_s *old_node;
-	struct vfs_node_s *root;
+	struct fs_node_s *root;
     uint8_t flag_ro:1;
 
 #if defined(CONFIG_VFS_STATS)

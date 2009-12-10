@@ -125,4 +125,23 @@ error_t vfs_unlink(struct vfs_node_s *root,
 				   struct vfs_node_s *cwd,
 				   const char *path);
 
+/**
+   @this links a path to another
+
+   @param root Current root directory
+   @param cwd Current base directory
+   @param src Path of the node to link from, relative (from @tt cwd, or
+   absolute from @tt root).  @tt path may contain one or more @tt
+   '/'. It must end with a @tt '\0'
+   @param dst Path of the node to link to, relative (from @tt cwd, or
+   absolute from @tt root).  @tt path may contain one or more @tt
+   '/'. It must end with a @tt '\0'
+   @return 0 if node was linked, or an error
+   @see vfs_node_unlink
+*/
+error_t vfs_link(struct vfs_node_s *root,
+                 struct vfs_node_s *cwd,
+                 const char *src,
+                 const char *dst);
+
 #endif

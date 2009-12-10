@@ -18,6 +18,15 @@ typedef void (action_t)();
 
 extern action_t * const actions[];
 
+static void post_print(struct vfs_node_s *node)
+{
+	if ( node->parent != node ) {
+		post_print(node->parent);
+		printk("/");
+	}
+	printk("%s", node->name);
+}
+
 void random_vfs_actions()
 {
 	uint16_t count;
@@ -33,5 +42,7 @@ void random_vfs_actions()
 
 		actions[r]();
 	}
+    printk("%p Pwd at end: ", pthread_self());
+    post_print(vfs_get_cwd());
+    printk("\n");
 }
-
