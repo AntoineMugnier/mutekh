@@ -203,8 +203,11 @@ error_t device_register(struct device_s *dev,
 error_t device_unregister(struct device_s *dev);
 
 void device_dump_list(struct device_s *root);
-struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i);
+
+#endif /* !CONFIG_DEVICE_TREE */
+
 void device_init(struct device_s *dev);
+struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i);
 
 #ifdef CONFIG_VMEM
 uintptr_t vpage_io_map(paddr_t paddr, size_t size);
@@ -224,8 +227,6 @@ error_t device_mem_map(struct device_s *dev, uint_fast8_t mask)
 #endif
   return 0;
 }
-
-#endif /* !CONFIG_DEVICE_TREE */
 
 #ifdef CONFIG_DEVICE_TREE
 #define DEVICE_INITIALIZER							\
