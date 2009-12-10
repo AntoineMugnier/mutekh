@@ -147,6 +147,8 @@ DEV_IRQ(block_soclib_irq)
   struct dev_block_rq_s *rq = dev_blk_queue_head(&pv->queue);
   uint32_t st = cpu_mem_read_32(dev->addr[0] + BLOCK_SOCLIB_STATUS);
 
+/*   printk("block dev irq %p, st: %x\n", dev, st); */
+
   switch (st)
     {
     case BLOCK_SOCLIB_STATUS_READ_SUCCESS:

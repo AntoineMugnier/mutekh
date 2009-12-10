@@ -37,26 +37,21 @@ DEVICU_ENABLE(xicu_filter_enable)
 {
     struct xicu_filter_private_s *pv = dev->drv_pv;
 
-	if ( irq & XICU_IRQ_IPI )
-		xicu_root_enable_ipi(PARENT(dev), irq&0x1f, pv->output, enable);
-	else
-		xicu_root_enable_hwi(PARENT(dev), irq&0x1f, pv->output, enable);
+/*     printk("xicu %p %d enable %d %d\n", dev, pv->output, irq, enable); */
+    xicu_root_enable_hwi(PARENT(dev), irq&0x1f, pv->output, enable);
 }
 
 DEVICU_SETHNDL(xicu_filter_sethndl)
 {
-	if ( irq & XICU_IRQ_IPI )
-		return xicu_root_set_ipi_handler(PARENT(dev), irq&0x1f, hndl, data);
-	else
-		return xicu_root_set_hwi_handler(PARENT(dev), irq&0x1f, hndl, data);
+    struct xicu_filter_private_s *pv = dev->drv_pv;
+
+/*     printk("xicu %p %d sethndl %d -> %p %p\n", dev, pv->output, irq, hndl, data); */
+    return xicu_root_set_hwi_handler(PARENT(dev), irq&0x1f, hndl, data);
 }
 
 DEVICU_DELHNDL(xicu_filter_delhndl)
 {
-	if ( irq & XICU_IRQ_IPI )
-		return xicu_root_set_ipi_handler(PARENT(dev), irq&0x1f, NULL, NULL);
-	else
-		return xicu_root_set_hwi_handler(PARENT(dev), irq&0x1f, NULL, NULL);
+    return xicu_root_set_hwi_handler(PARENT(dev), irq&0x1f, NULL, NULL);
 }
 
 DEV_IRQ(xicu_filter_handler)
@@ -66,6 +61,14 @@ DEV_IRQ(xicu_filter_handler)
 
     uint32_t prio = endian_le32(cpu_mem_read_32(XICU_REG_ADDR(
 			dev->addr[0], XICU_PRIO, pv->output)));
+
+/*     printk("xicu %p %d prio %x\n", dev, pv->output, prio); */
+/*     printk("xicu %p %d wti: %d %x\n", dev, pv->output, */
+/*            !!XICU_PRIO_HAS_WTI(prio), XICU_PRIO_WTI(prio)); */
+/*     printk("xicu %p %d hwi: %d %x\n", dev, pv->output, */
+/*            !!XICU_PRIO_HAS_HWI(prio), XICU_PRIO_HWI(prio)); */
+/*     printk("xicu %p %d pti: %d %x\n", dev, pv->output, */
+/*            !!XICU_PRIO_HAS_PTI(prio), XICU_PRIO_PTI(prio)); */
 
 	if ( XICU_PRIO_HAS_WTI(prio) )
 		return xicu_root_handle_ipi(PARENT(dev), XICU_PRIO_WTI(prio));
