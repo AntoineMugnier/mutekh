@@ -74,6 +74,9 @@ struct memory_allocator_region_s
 #endif
 };
 
+static const size_t region_hdr_size = ALIGN_VALUE_UP ( sizeof( struct memory_allocator_region_s ),
+				       CONFIG_MUTEK_MEMALLOC_ALIGN)
+
 struct memory_allocator_region_s *default_region;
 /***************************************/
 
@@ -167,6 +170,7 @@ mmu_region_nolock_extend(struct memory_allocator_region_s *region, size_t size)
   return memory_allocator_nolock_extend(region, vmem_ops.vpage_alloc(initial_ppage_region, size), size * CONFIG_HEXO_MMU_PAGESIZE);
 }
 # endif
+
 
 
 void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size)
@@ -472,8 +476,7 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
   if (container_region == NULL)
     {
       region = start;
-      hdr = start + ALIGN_ADDRESS_UP ( sizeof( struct memory_allocator_region_s ),
-				       CONFIG_MUTEK_MEMALLOC_ALIGN);
+      hdr = start + region_hdr_size;
     }
   else
     {
