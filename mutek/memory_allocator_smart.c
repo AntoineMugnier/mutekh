@@ -118,9 +118,10 @@ memory_allocator_candidate(struct memory_allocator_region_s *region, size_t size
 
 #endif
 
-//FIXME: Use lock??
+/** @internal */
+static inline
 struct memory_allocator_header_s *
-memory_allocator_extend(struct memory_allocator_region_s *region, void *start, size_t size)
+memory_allocator_nolock_extend(struct memory_allocator_region_s *region, void *start, size_t size)
 {
   struct memory_allocator_header_s *hdr = start;
   assert( hdr != NULL );
@@ -137,19 +138,33 @@ memory_allocator_extend(struct memory_allocator_region_s *region, void *start, s
     alloc_list_push(&region->root, hdr);
     
 #ifdef CONFIG_MUTEK_MEMALLOC_STATS
-    region->free_size += ( size * CONFIG_HEXO_MMU_PAGESIZE );
+    region->free_size += size;
     region->free_blocks++;
 #endif
   }
   return hdr;
 }
 
+struct memory_allocator_header_s *
+memory_allocator_extend(struct memory_allocator_region_s *region, void *start, size_t size)
+{
+    struct memory_allocator_header_s *h;
+
+    CPU_INTERRUPT_SAVESTATE_DISABLE;
+    lock_spin(&region->lock);
+    h = memory_allocator_nolock_extend(region, start, size);
+    lock_release(&region->lock);
+    CPU_INTERRUPT_RESTORESTATE;
+
+    return h;
+}
+
 # ifdef CONFIG_HEXO_MMU
 /** @internal */
 static inline struct memory_allocator_header_s *
-mmu_region_extend(struct memory_allocator_region_s *region, size_t size)
+mmu_region_nolock_extend(struct memory_allocator_region_s *region, size_t size)
 {
-  return memory_allocator_extend(region, vmem_ops.vpage_alloc(initial_ppage_region, size), size * CONFIG_HEXO_MMU_PAGESIZE);
+  return memory_allocator_nolock_extend(region, vmem_ops.vpage_alloc(initial_ppage_region, size), size * CONFIG_HEXO_MMU_PAGESIZE);
 }
 # endif
 
@@ -175,7 +190,7 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
   /* find suitable free block */
   if ((hdr = memory_allocator_candidate(region, size)) 
 #ifdef CONFIG_HEXO_MMU
-      || (hdr = mmu_region_extend(region, (size / CONFIG_HEXO_MMU_PAGESIZE) + 1))
+      || (hdr = mmu_region_nolock_extend(region, (size / CONFIG_HEXO_MMU_PAGESIZE) + 1))
 #endif
       )
     {
@@ -196,12 +211,18 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
 	  hdr->size = size;
 
 	  alloc_list_insert_post(&region->root, hdr, next);
-	}
 
+	}
 #ifdef CONFIG_MUTEK_MEMALLOC_STATS
-      region->free_size -= size;
+      else
+        {
+          region->free_blocks--;
+        }
+      region->free_size -= hdr->size;
       region->alloc_blocks++;
 #endif
+
+
 
 #ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
       memset(hdr + 1, 0x5a, hdr->size - sizeof(*hdr));
@@ -286,7 +307,7 @@ void memory_allocator_push(void *address)
 	  next->signature = 0;
 #endif
 #ifdef CONFIG_MUTEK_MEMALLOC_STATS
-	  region->free_blocks--;
+          region->free_blocks--;
 #endif
 
 #ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
@@ -311,7 +332,7 @@ void memory_allocator_push(void *address)
 	  hdr->signature = 0;
 #endif
 #ifdef CONFIG_MUTEK_MEMALLOC_STATS
-	  region->free_blocks--;
+          region->free_blocks--;
 #endif
 #ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
 	  memset(hdr, 0xa5, mem_hdr_size);
@@ -419,7 +440,7 @@ void *memory_allocator_reserve(struct memory_allocator_region_s *region, void *s
 	hdr->is_free = 0;
       
 #ifdef CONFIG_MUTEK_MEMALLOC_STATS
-      region->free_size -= size;
+      region->free_size -= hdr->size;
       region->alloc_blocks++;
 #endif
 
@@ -451,7 +472,8 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
   if (container_region == NULL)
     {
       region = start;
-      hdr = start + sizeof( struct memory_allocator_region_s );
+      hdr = start + ALIGN_ADDRESS_UP ( sizeof( struct memory_allocator_region_s ),
+				       CONFIG_MUTEK_MEMALLOC_ALIGN);
     }
   else
     {
@@ -459,7 +481,7 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
       hdr = start;
     }
 
-  size_t			size = (uint8_t*)end - (uint8_t*)hdr;
+  size_t size = (uint8_t*)end - (uint8_t*)hdr;
   
 #ifdef CONFIG_SOCLIB_MEMCHECK
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -564,13 +586,13 @@ error_t memory_allocator_stats(struct memory_allocator_region_s *region,
 #ifdef CONFIG_MUTEK_MEMALLOC_STATS
 
   if (alloc_blocks)
-    *alloc_blocks = region->alloc_blocks;
+      *alloc_blocks = region->alloc_blocks;
 
   if (free_size)
-    *free_size = region->free_size;
+      *free_size = region->free_size;
 
   if (free_blocks)
-    *free_blocks = region->free_blocks;
+      *free_blocks = region->free_blocks;
 
   return 0;
 #else
