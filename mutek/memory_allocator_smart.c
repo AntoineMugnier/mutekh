@@ -75,7 +75,7 @@ struct memory_allocator_region_s
 };
 
 static const size_t region_hdr_size = ALIGN_VALUE_UP ( sizeof( struct memory_allocator_region_s ),
-				       CONFIG_MUTEK_MEMALLOC_ALIGN)
+						       CONFIG_MUTEK_MEMALLOC_ALIGN);
 
 struct memory_allocator_region_s *default_region;
 /***************************************/
