@@ -33,7 +33,10 @@
 #include <hexo/atomic.h>
 
 #define GPCT_CONFIG_NOPLATFORM
+#define GPCT_CONFIG_ATOMIC_OTHER
 
+#define GPCT_INT	int_fast8_t
+#define GPCT_UINT	uint_fast8_t
 #define GPCT_ULONG	__compiler_ulong_t
 #define GPCT_ULONGLONG	__compiler_ulonglong_t
 
@@ -75,27 +78,27 @@ static inline gpct_bool_t gpct_atomic_dec(gpct_atomic_t *a)
   return atomic_dec(a);
 }
 
-static inline gpct_bool_t gpct_atomic_bit_test(gpct_atomic_t *a, uint_fast8_t n)
+static inline gpct_bool_t gpct_atomic_bit_test(gpct_atomic_t *a, gpct_atomic_int_t n)
 {
   return atomic_bit_test(a, n);
 }
 
-static inline gpct_bool_t gpct_atomic_bit_test_set(gpct_atomic_t *a, uint_fast8_t n)
+static inline gpct_bool_t gpct_atomic_bit_test_set(gpct_atomic_t *a, gpct_atomic_int_t n)
 {
   return atomic_bit_testset(a, n);
 }
 
-static inline gpct_bool_t gpct_atomic_bit_test_clr(gpct_atomic_t *a, uint_fast8_t n)
+static inline gpct_bool_t gpct_atomic_bit_test_clr(gpct_atomic_t *a, gpct_atomic_int_t n)
 {
   return atomic_bit_testclr(a, n);
 }
 
-static inline void gpct_atomic_bit_clr(gpct_atomic_t *a, uint_fast8_t n)
+static inline void gpct_atomic_bit_clr(gpct_atomic_t *a, gpct_atomic_int_t n)
 {
   return atomic_bit_clr(a, n);
 }
 
-static inline void gpct_atomic_bit_set(gpct_atomic_t *a, uint_fast8_t n)
+static inline void gpct_atomic_bit_set(gpct_atomic_t *a, gpct_atomic_int_t n)
 {
   return atomic_bit_set(a, n);
 }
