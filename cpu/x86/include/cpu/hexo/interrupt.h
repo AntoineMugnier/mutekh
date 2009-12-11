@@ -159,7 +159,9 @@ cpu_is_interruptible(void)
 static inline void
 cpu_interrupt_wait(void)
 {
-  __asm__ volatile ("hlt");
+  __asm__ volatile ("sti \n"
+                    "hlt \n"
+                    "cli \n");
 }
 
 #endif

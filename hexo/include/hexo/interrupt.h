@@ -77,7 +77,12 @@ static inline bool_t cpu_is_interruptible();
     to force global variable reload after interrupts processing. */
 static inline void cpu_interrupt_process();
 
-/** @this enters interrupt wait state. May return imediatly if unsupported */
+/**
+   @this enters interrupt wait state. May return imediatly if
+   unsupported
+   
+   @this must be called with interrupts disabled.
+*/
 static inline void cpu_interrupt_wait();
 
 /** @showcontent

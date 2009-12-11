@@ -149,13 +149,11 @@ static CONTEXT_ENTRY(sched_context_idle)
 
   /* release lock acquired in previous sched_context_switch() call */
   sched_unlock();
-  cpu_interrupt_enable();
+  cpu_interrupt_disable();
 
   while (1)
     {
       struct sched_context_s	*next;
-
-      cpu_interrupt_enable();
 
       /* do not wait if several cpus are running because context may
 	 be put in running queue by an other cpu with no interrupt */
@@ -172,8 +170,6 @@ static CONTEXT_ENTRY(sched_context_idle)
 	 reloading after interrupts execution. */
       cpu_interrupt_process();
 
-      /* try to switch to next context */
-      cpu_interrupt_disable();
       sched_queue_wrlock(root);
 
       if ((next = __sched_candidate_noidle(root)) != NULL)
