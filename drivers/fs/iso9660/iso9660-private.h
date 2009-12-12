@@ -22,7 +22,7 @@
 #ifndef _ISO9660_PRIVATE_H_
 #define _ISO9660_PRIVATE_H_
 
-#define fs_node_s iso9660_node_s
+#define fs_node_s fs_node_s
 
 #include <vfs/types.h>
 #include <vfs/fs.h>
@@ -32,14 +32,16 @@
 
 #define ISO9660_BURST_BLKCOUNT 64
 
-OBJECT_TYPE     (iso9660_node, REFCOUNT, struct iso9660_node_s);
+OBJECT_TYPE     (iso9660_node, REFCOUNT, struct fs_node_s);
 OBJECT_PROTOTYPE(iso9660_node, static inline, iso9660_node);
 
-struct iso9660_node_s
+struct iso9660_fs_s;
+
+struct fs_node_s
 {
   iso9660_node_entry_t obj_entry;
 
-  struct vfs_fs_s *fs;
+  struct iso9660_fs_s *fs;
   
   struct {
     uint16_t padding;	  /* align 32bits fields in iso9660_dir_s */
@@ -55,7 +57,7 @@ OBJECT_FUNC   (iso9660_node, REFCOUNT, static inline, iso9660_node, obj_entry);
 struct iso9660_fs_s
 {
   struct vfs_fs_s		fs; /* keep first field */
-  struct iso9660_node_s		*root;
+  struct fs_node_s		*root;
   struct device_s		*bd;
 
   union {

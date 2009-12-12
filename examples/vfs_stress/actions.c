@@ -68,9 +68,12 @@ static error_t get_random_name(struct vfs_node_s *base, char *name)
 
 static void post_print(struct vfs_node_s *node)
 {
-	if ( node->parent != node ) {
-		post_print(node->parent);
+    struct vfs_node_s *parent = vfs_node_get_parent(node);
+	if ( parent ) {
+        if ( parent != node )
+            post_print(parent);
 		printk("/");
+        vfs_node_refdrop(parent);
 	}
 	printk("%s", node->name);
 }

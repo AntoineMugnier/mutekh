@@ -35,7 +35,9 @@ GETLINE_FCN_COMPLETE(lua_complete);
 
 static GETLINE_FCN_PROMPT(prompt)
 {
-    return term_printf(tm, "[lua:%s] ", vfs_get_cwd()->name);
+    char name[CONFIG_VFS_NAMELEN];
+    vfs_node_get_name(vfs_get_cwd(), name, CONFIG_VFS_NAMELEN);
+    return term_printf(tm, "[lua:%s] ", name);
 }
 
 void* shell(void *param)

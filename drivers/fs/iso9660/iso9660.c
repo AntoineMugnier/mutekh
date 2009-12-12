@@ -36,15 +36,15 @@
 #include "iso9660-private.h"
 
 #if 0
-struct iso9660_node_s *
+struct fs_node_s *
 iso9660_node_new(void *mem,
-                 struct vfs_fs_s *fs, const struct iso9660_dir_s *entry,
+                 struct iso9660_fs_s *fs, const struct iso9660_dir_s *entry,
                  const char *name, size_t namelen);
 #endif
 
 OBJECT_CONSTRUCTOR(iso9660_node)
 {
-    struct vfs_fs_s *fs = va_arg(ap, struct vfs_fs_s *);
+    struct iso9660_fs_s *fs = va_arg(ap, struct iso9660_fs_s *);
     const struct iso9660_dir_s *entry = va_arg(ap, const struct iso9660_dir_s *);
 //    const char *name = va_arg(ap, const char *);
 //    size_t namelen = va_arg(ap, size_t);
@@ -81,6 +81,7 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
     if ( mnt == NULL )
         return -ENOMEM;
     memset(mnt, 0, sizeof(*mnt));
+    vfs_fs_new(&mnt->fs);
 
     /* read volume descriptor */
     ptr = mnt->voldesc_;
@@ -149,7 +150,7 @@ VFS_FS_CAN_UNMOUNT(iso9660_can_unmount)
 
 VFS_FS_LOOKUP(iso9660_lookup)
 {
-    struct iso9660_node_s *isonode = ref;
+    struct fs_node_s *isonode = ref;
     struct iso9660_fs_s *isofs = ref->fs;
 
     size_t count = ALIGN_VALUE_UP(isonode->entry.file_size, ISO9660_BLOCK_SIZE) / ISO9660_BLOCK_SIZE;
@@ -223,7 +224,7 @@ VFS_FS_NODE_OPEN(iso9660_node_open)
 
 VFS_FS_STAT(iso9660_stat)
 {
-    struct iso9660_node_s *isonode = (void*)node;
+    struct fs_node_s *isonode = (void*)node;
 
     stat->nlink = 1;
     stat->size = isonode->entry.file_size;

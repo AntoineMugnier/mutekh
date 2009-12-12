@@ -20,6 +20,7 @@
 */
 
 #include <vfs/vfs.h>
+#include "vfs-private.h"
 #include <mutek/printk.h>
 
 static const char *next_nonslash(const char *str)
@@ -220,7 +221,7 @@ error_t vfs_create(struct vfs_node_s *root,
             return err;
         }
 
-        err = vfs_node_link(parent, rnode, last_part, end-last_part, node);
+        err = vfs_node_link(rnode, parent, last_part, end-last_part, node);
         vfs_node_refdrop(parent);
         vfs_node_refdrop(rnode);
         vfs_printk("link %d %p>", err, *node);
@@ -273,7 +274,7 @@ error_t vfs_open(struct vfs_node_s *root,
             return err;
         }
 
-        err = vfs_node_link(node, created_node, last_part, end-last_part, &linked_node);
+        err = vfs_node_link(created_node, node, last_part, end-last_part, &linked_node);
         vfs_node_refdrop(node);
         vfs_node_refdrop(created_node);
 
@@ -358,7 +359,7 @@ error_t vfs_link(struct vfs_node_s *root,
         }
 
         struct vfs_node_s *new_node;
-        err = vfs_node_link(parent, rnode, dst_last_part, dst_end-dst_last_part, &new_node);
+        err = vfs_node_link(rnode, parent, dst_last_part, dst_end-dst_last_part, &new_node);
         if ( err == 0 )
             vfs_node_refdrop(new_node);
         vfs_node_refdrop(parent);
@@ -408,6 +409,7 @@ void vfs_dump_item(struct vfs_node_s *node,
 #if defined(CONFIG_VFS_STATS)
            ", lu: %d, open: %d, close: %d, stat: %d"
 #endif
+//           ", free: %p"
            "\n"
            , vfs_node_refcount(node)
            , node->name
@@ -418,6 +420,7 @@ void vfs_dump_item(struct vfs_node_s *node,
            , atomic_get(&node->close_count)
            , atomic_get(&node->stat_count)
 #endif
+//           , node->obj_entry.storage_free
         );
 
     CONTAINER_FOREACH(vfs_dir_hash, HASHLIST, &node->children, {
@@ -430,6 +433,16 @@ void vfs_dump(struct vfs_node_s *root)
 	printk("VFS dump for root %p, fsroot: %p, refcount: %d\n",
 		   root, root->fs->root, atomic_get(&root->fs->ref));
 	vfs_dump_item(root, 0);
+}
+
+void vfs_dump_lru(struct vfs_node_s *root)
+{
+	printk("VFS LRU dump for root %p, fsroot: %p\n",
+		   root, root->fs->root);
+    
+    CONTAINER_FOREACH(vfs_lru, DLIST, &root->fs->lru_list, {
+            vfs_dump_item(item, 2);
+        });
 }
 
 void vfs_fs_dump_stats(struct vfs_fs_s *fs)

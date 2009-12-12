@@ -20,9 +20,12 @@ extern action_t * const actions[];
 
 static void post_print(struct vfs_node_s *node)
 {
-	if ( node->parent != node ) {
-		post_print(node->parent);
+    struct vfs_node_s *parent = vfs_node_get_parent(node);
+	if ( parent ) { 
+        if ( parent != node )
+            post_print(parent);
 		printk("/");
+        vfs_node_refdrop(parent);
 	}
 	printk("%s", node->name);
 }
@@ -41,6 +44,7 @@ void random_vfs_actions()
 		uint16_t r = my_rand() % actions_tab_size;
 
 		actions[r]();
+//        vfs_dump(vfs_get_root());
 	}
     printk("%p Pwd at end: ", pthread_self());
     post_print(vfs_get_cwd());

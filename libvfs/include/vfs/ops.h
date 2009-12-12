@@ -67,26 +67,6 @@ error_t vfs_umount(struct vfs_node_s *mountpoint);
 
 /* Node operations */
 
-#ifdef __MKDOC__
-/**
-   @this creates a new vfs node. It may be called from the fs driver.
-
-   @param storage pointer to pre-allocated memory for new vfs node, may be NULL.
-   @param fs associated file system instance
-   @param type node type
-   @param fullname entry full name as described by file system.
-          May be longer than @ref #CONFIG_VFS_NAMELEN and will be mangled if needed.
-   @param fullnamelen lenght of full name
-   @param private pointer to node private data
-   @param deleter pointer to node delete functions
-   @return the new vfs node.
-   @see vfs_name_mangle
- */
-struct vfs_node_s * vfs_node_new(void *storage, struct vfs_fs_s *fs,
-                                 const char *fullname, size_t fullnamelen,
-                                 struct fs_node_s *fs_node);
-#endif
-
 /** @this increases the node reference count and return the node itself. */
 struct vfs_node_s * vfs_node_refnew(struct vfs_node_s * node);
 
@@ -156,8 +136,8 @@ error_t vfs_node_create(struct vfs_fs_s *fs,
    Thus the actually attached node returned in @tt rnode may be
    different from @tt node.
 
-   @param parent Where to attach a new child
    @param node Node to attach
+   @param parent Where to attach a new child
    @param fullname Name of the new node, may be a long file system
           entry name but will be shortened for use as vfs node name.
    @param fullnamelen Length of name of the new node
@@ -169,11 +149,29 @@ error_t vfs_node_create(struct vfs_fs_s *fs,
    @see vfs_fs_link_t
    @see vfs_name_mangle
  */
-error_t vfs_node_link(struct vfs_node_s *parent,
-					  struct vfs_node_s *node,
+error_t vfs_node_link(struct vfs_node_s *node,
+					  struct vfs_node_s *parent,
 					  const char *fullname,
 					  size_t fullnamelen,
 					  struct vfs_node_s **rnode);
+
+/**
+   @this moves a node in a given parent.
+
+   @param node Node to attach to a new parent
+   @param parent Where to attach node
+   @param fullname Name of the new node, may be a long file system
+          entry name but will be shortened for use as vfs node name.
+   @param fullnamelen Length of name of the new node
+   @return 0 if created
+
+   @see vfs_fs_move_t
+   @see vfs_name_mangle
+ */
+error_t vfs_node_move(struct vfs_node_s *node,
+					  struct vfs_node_s *parent,
+					  const char *fullname,
+					  size_t fullnamelen);
 
 /**
    Unlinks a node from its parent.
@@ -227,6 +225,14 @@ bool_t vfs_name_compare(const char *fullname, size_t fullnamelen,
    @see vfs_name_compare @see vfs_node_new
  */
 size_t vfs_name_mangle(const char *fullname, size_t fullnamelen, char *vfsname);
+
+struct vfs_node_s *vfs_node_get_parent(struct vfs_node_s *node);
+
+ssize_t vfs_node_get_name(struct vfs_node_s *node,
+                          char *name,
+                          size_t namelen);
+
+struct vfs_fs_s *vfs_node_get_fs(struct vfs_node_s *node);
 
 #endif
 

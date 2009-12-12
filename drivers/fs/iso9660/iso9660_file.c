@@ -38,7 +38,7 @@
 
 VFS_FILE_SEEK(iso9660_file_seek)
 {
-    struct iso9660_node_s *isonode = (void*)file->node;
+    struct fs_node_s *isonode = (void*)file->node;
 
 	switch (whence) {
 	case VFS_SEEK_SET:
@@ -63,7 +63,7 @@ VFS_FILE_SEEK(iso9660_file_seek)
 
 VFS_FILE_READ(iso9660_file_read)
 {
-    struct iso9660_node_s *isonode = file->node;
+    struct fs_node_s *isonode = file->node;
     struct iso9660_fs_s *isofs = isonode->fs;
     uint8_t *buffer_ = buffer;
 
@@ -120,8 +120,8 @@ VFS_FILE_READ(iso9660_file_read)
 
 VFS_FILE_READ(iso9660_dir_read)
 {
-    struct iso9660_node_s *isonode = (void*)file->node;
-    struct iso9660_fs_s *isofs = (void*)isonode->fs;
+    struct fs_node_s *isonode = file->node;
+    struct iso9660_fs_s *isofs = isonode->fs;
     struct vfs_dirent_s *dirent = buffer;
 
     size_t count = ALIGN_VALUE_UP(isonode->entry.file_size, ISO9660_BLOCK_SIZE) / ISO9660_BLOCK_SIZE;

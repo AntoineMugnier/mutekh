@@ -38,6 +38,30 @@ CONTAINER_FUNC_NOLOCK    (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir_nol
 CONTAINER_KEY_FUNC       (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir, name);
 CONTAINER_KEY_FUNC_NOLOCK(ramfs_dir_hash, HASHLIST, static inline, ramfs_dir_nolock, name);
 
+void ramfs_2dir_wrlock(ramfs_dir_hash_root_t *d1,
+                       ramfs_dir_hash_root_t *d2)
+{
+    if ( d1 < d2 ) {
+        ramfs_dir_wrlock(d1);
+        ramfs_dir_wrlock(d2);
+    } else {
+        ramfs_dir_wrlock(d2);
+        ramfs_dir_wrlock(d1);
+    }
+}
+
+void ramfs_2dir_unlock(ramfs_dir_hash_root_t *d1,
+                       ramfs_dir_hash_root_t *d2)
+{
+    if ( d1 < d2 ) {
+        ramfs_dir_unlock(d2);
+        ramfs_dir_unlock(d1);
+    } else {
+        ramfs_dir_unlock(d1);
+        ramfs_dir_unlock(d2);
+    }
+}
+
 OBJECT_CONSTRUCTOR(ramfs_node)
 {
     vfs_printk("<ramfs_node_ctor");
@@ -155,6 +179,11 @@ VFS_FS_LINK(ramfs_link)
     
 	vfs_printk("<%s %s ", __FUNCTION__, name);
 
+    if ( parent->parent == NULL ) {
+        vfs_printk("dandling>");
+        return -ENOTSUP;
+    }
+
 	/* We cant support hardlinks of directories */
 	if ( (node->parent != NULL)
          && (node->type == VFS_NODE_DIR) ) {
@@ -194,6 +223,49 @@ VFS_FS_LINK(ramfs_link)
 	vfs_printk("ok>");
 
     *rnode = ret_node;
+
+	return 0;
+}
+
+VFS_FS_MOVE(ramfs_move)
+{
+	if ( namelen >= CONFIG_VFS_NAMELEN )
+		return -EINVAL;
+    
+    if ( parent->type != VFS_NODE_DIR )
+        return -EINVAL;
+
+    if ( node->parent == NULL
+         || node->parent == node )
+        return -EINVAL;
+    
+	vfs_printk("<%s %s ", __FUNCTION__, name);
+
+    if ( parent->parent == NULL ) {
+        vfs_printk("dandling>");
+        return -ENOTSUP;
+    }
+
+    struct fs_node_s *parent_src = node->parent;
+    ramfs_2dir_wrlock(&parent_src->children, &parent->children);
+    ramfs_dir_nolock_remove(&parent_src->children, node);
+	memset(node->name, 0, CONFIG_VFS_NAMELEN);
+	memcpy(node->name, name, namelen);
+
+    struct fs_node_s *old_file = ramfs_dir_nolock_lookup(&parent->children, node->name);
+    if ( old_file ) {
+        old_file->parent = NULL;
+        ramfs_dir_nolock_remove(&parent->children, old_file);
+    }
+
+    node->parent = parent;
+    ramfs_dir_nolock_push(&parent->children, node);
+    ramfs_2dir_unlock(&parent->children, &parent_src->children);
+
+    if ( old_file )
+        ramfs_node_refdrop(old_file);
+
+	vfs_printk("ok>");
 
 	return 0;
 }
@@ -259,13 +331,12 @@ error_t ramfs_close(struct vfs_fs_s *fs)
 
 error_t ramfs_open(struct vfs_fs_s **fs)
 {
-	struct vfs_fs_s *mnt = mem_alloc(sizeof(struct vfs_fs_s), mem_scope_sys);
+	struct vfs_fs_s *mnt = vfs_fs_new(NULL);
 	if ( mnt == NULL )
 		goto nomem_fs;
 
     vfs_printk("ramfs: opening new ramfs volume\n");
 
-    memset(mnt, 0, sizeof(*mnt));
 	atomic_set(&mnt->ref, 0);
 	mnt->node_open = ramfs_node_open;
 	mnt->lookup = ramfs_lookup;
@@ -282,6 +353,8 @@ error_t ramfs_open(struct vfs_fs_s **fs)
     struct fs_node_s *root = ramfs_node_new(NULL, VFS_NODE_DIR);
 	if ( root == NULL )
 		goto nomem_dir;
+
+    root->parent = root;
 
 	mnt->root = root;
 

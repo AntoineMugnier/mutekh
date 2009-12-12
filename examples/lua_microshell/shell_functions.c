@@ -123,11 +123,16 @@ int cd(lua_State *st)
 
 static void post_print(struct vfs_node_s *node)
 {
-	if ( node->parent != node ) {
-		post_print(node->parent);
+    char name[CONFIG_VFS_NAMELEN];
+
+    struct vfs_node_s *parent = vfs_node_get_parent(node);
+	if ( parent ) {
+		post_print(parent);
+		vfs_node_refdrop(parent);
 		printk("/");
 	}
-	printk("%s", node->name);
+    vfs_node_get_name(node, name, CONFIG_VFS_NAMELEN);
+	printk("%s", name);
 }
 
 int pwd(lua_State *st)
@@ -256,6 +261,8 @@ int _mkdir(lua_State *st)
 	error_t err = vfs_create(vfs_get_root(), vfs_get_cwd(), filename, VFS_NODE_DIR, &node);
 	if ( !err )
 		vfs_node_refdrop(node);
+    else
+        printk("Error: %s\n", strerror(err));
 	return 0;
 }
 
@@ -283,13 +290,20 @@ int append(lua_State *st)
     return 0;
 }
 
-void vfs_dump(struct vfs_node_s *);
-
 int _vfs_dump(lua_State *st)
 {
 	struct vfs_node_s *root = vfs_get_root();
 
 	vfs_dump(root);
+
+	return 0;
+}
+
+int _vfs_lru(lua_State *st)
+{
+	struct vfs_node_s *root = vfs_get_root();
+
+	vfs_dump_lru(root);
 
 	return 0;
 }
@@ -300,7 +314,7 @@ int _ramfs_dump(lua_State *st)
 {
 	struct vfs_node_s *root = vfs_get_root();
 
-	ramfs_dump(root->fs);
+	ramfs_dump(vfs_node_get_fs(root));
 
 	return 0;
 }
@@ -364,6 +378,7 @@ void init_shell(lua_State* luast)
     lua_register(luast, "pwd", pwd);
     lua_register(luast, "append", append);
     lua_register(luast, "vfs_dump", _vfs_dump);
+    lua_register(luast, "vfs_lru", _vfs_lru);
     lua_register(luast, "ramfs_dump", _ramfs_dump);
 
     struct vfs_node_s *root = vfs_get_root();
@@ -371,7 +386,7 @@ void init_shell(lua_State* luast)
     //	vfs_dump(root);
 
 	vfs_dump(root);
-	ramfs_dump(root->fs);
+	ramfs_dump(vfs_node_get_fs(root));
 
 
 	struct vfs_file_s *file;
@@ -385,7 +400,7 @@ void init_shell(lua_State* luast)
 	}
 
 	vfs_dump(root);
-	ramfs_dump(root->fs);
+	ramfs_dump(vfs_node_get_fs(root));
 
 	// vfs_dump(root);
 }

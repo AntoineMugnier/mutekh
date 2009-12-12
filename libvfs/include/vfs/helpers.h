@@ -144,4 +144,8 @@ error_t vfs_link(struct vfs_node_s *root,
                  const char *src,
                  const char *dst);
 
+void vfs_dump(struct vfs_node_s *root);
+
+void vfs_dump_lru(struct vfs_node_s *root);
+
 #endif

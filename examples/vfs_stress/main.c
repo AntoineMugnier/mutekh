@@ -9,7 +9,7 @@
 
 #include <drivers/fs/ramfs/ramfs.h>
 
-#define NTHREAD 4
+#define NTHREAD 10
 
 void random_vfs_actions();
 
@@ -70,6 +70,10 @@ void *_main(void *root_ptr)
 
     print_malloc_stats();
 
+    size_t alloc;
+    memory_allocator_stats(default_region,
+                           &alloc, 0, 0);
+
 	while (1) {
 		size_t i;
 		for ( i=0; i<NTHREAD; ++i )
@@ -81,16 +85,22 @@ void *_main(void *root_ptr)
 
 		printk("Tree:\n");
 		vfs_dump(root);
+		vfs_dump_lru(root);
 		ramfs_dump(root->fs);
 
 		printk("Cleaning up /...\n");
         action_rmrf_inner(root, ".");
+
+		printk("Tree:\n");
+		vfs_dump(root);
+		ramfs_dump(root->fs);
 
 		printk("System still alive after all this...\n");
         print_malloc_stats();
 
 		for ( i=0; i<100000; ++i )
 			asm volatile("nop");
+//        memory_allocator_dump_used(default_region, alloc);
 		printk("Going on...\n");
 	}
 	return NULL;

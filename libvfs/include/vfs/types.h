@@ -29,25 +29,13 @@
 #define _VFS_TYPES_H_
 
 #include <vfs/fs.h>
-#include <pthread.h>
-#include <mutek/printk.h>
 
-#undef GPCT_OBJ_REF_INFO
-#define GPCT_OBJ_REF_INFO(p) vfs_printk("<%s %p %d />", __FUNCTION__, p, gpct_atomic_get(&p->obj_entry.refcnt))
-
-#ifdef CONFIG_VFS_VERBOSE
-# define vfs_printk(fmt, x...) do{printk("%p: "fmt"\n", pthread_self(), ##x);}while(0)
-#else
-# define vfs_printk(...) do{}while(0)
-#endif
-
-#include <mutek/gpct_mutek_semaphore.h>
+#include <mutek/semaphore.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/object_refcount.h>
 #include <mutek/semaphore.h>
-
 
 typedef size_t vfs_file_size_t;
 typedef uint16_t vfs_node_attr_t;
@@ -66,12 +54,11 @@ enum vfs_node_type_e
 	VFS_NODE_FILE,
 };
 
-struct vfs_node_s;
-
 OBJECT_TYPE     (vfs_node, REFCOUNT, struct vfs_node_s);
-OBJECT_PROTOTYPE(vfs_node, static inline, vfs_node);
+OBJECT_PROTOTYPE(vfs_node, , vfs_node);
 
-#define CONTAINER_LOCK_vfs_dir_hash MUTEK_SEMAPHORE
+//#define CONTAINER_LOCK_vfs_dir_hash MUTEK_SEMAPHORE
+#define CONTAINER_LOCK_vfs_lru HEXO_SPIN
 
 CONTAINER_TYPE    (vfs_dir_hash, HASHLIST,
 /**
@@ -80,6 +67,8 @@ CONTAINER_TYPE    (vfs_dir_hash, HASHLIST,
 struct vfs_node_s
 {
 	CONTAINER_ENTRY_TYPE(HASHLIST) hash_entry;
+    CONTAINER_ENTRY_TYPE(DLIST)    lru_entry;
+	vfs_node_entry_t obj_entry;
 
     /** File system the node is in */
     struct vfs_fs_s *fs;
@@ -89,15 +78,24 @@ struct vfs_node_s
         characters in the name should be filled with @tt '\0' */
     char name[CONFIG_VFS_NAMELEN];
 
-    /** Parent node. Root and dandling node have their own pointer here */
-	struct vfs_node_s *parent;
+    /**
+       Parent node.
 
+       Root has its own pointer here, dandling nodes have NULL
+
+       Accesses to this value must be protected for atomicity with
+       @tt parent_lock.
+    */
+	struct vfs_node_s *parent;
     lock_t parent_lock;
+
+    /**
+       Whether this node is eligible to LRU
+     */
+    bool_t in_lru;
 
     /** Private file system data attached to this node */
     struct fs_node_s *fs_node;
-
-	vfs_node_entry_t obj_entry;
 
 #if defined(CONFIG_VFS_STATS)
     atomic_t lookup_count;
@@ -106,21 +104,86 @@ struct vfs_node_s
     atomic_t stat_count;
 #endif
 
-    /** Children cache hash */
+    /**
+       Children cache hash.
+       
+       Accesses to this value must be protected through @tt
+       dir_semaphore.
+    */
 	vfs_dir_hash_root_t children;
+
+    struct semaphore_s dir_semaphore;
 }
 , hash_entry, 5);
 
-struct vfs_node_s *vfs_node_get_parent(struct vfs_node_s *node);
+#define CONTAINER_OBJ_vfs_dir_hash vfs_node
+//#define CONTAINER_OBJ_vfs_lru vfs_node
 
-/** @see vfs_node_new */
+CONTAINER_TYPE(vfs_lru, DLIST, struct vfs_node_s, lru_entry);
+
+/** @see vfs_node_createnew */
 OBJECT_CONSTRUCTOR(vfs_node);
 OBJECT_DESTRUCTOR(vfs_node);
 
-OBJECT_FUNC   (vfs_node, REFCOUNT, static inline, vfs_node, obj_entry);
-// CONTAINER_FUNC(vfs_dir_hash, HASHLIST, static inline, vfs_dir);
 
 
+OBJECT_TYPE     (vfs_fs, SIMPLE, struct vfs_fs_s);
+
+/**
+   @this is an opened file system state.
+ */
+struct vfs_fs_s
+{
+	vfs_fs_entry_t obj_entry;
+
+	atomic_t ref;
+
+	vfs_fs_node_open_t *node_open;  //< mandatory
+	vfs_fs_lookup_t *lookup;        //< mandatory
+	vfs_fs_create_t *create;        //< optional, may be NULL
+	vfs_fs_link_t *link;            //< optional, may be NULL
+	vfs_fs_move_t *move;            //< optional, may be NULL
+	vfs_fs_unlink_t *unlink;        //< optional, may be NULL
+	vfs_fs_stat_t *stat;            //< mandatory
+	vfs_fs_can_unmount_t *can_unmount; //< mandatory
+	vfs_fs_node_refnew_t *node_refnew; //< mandatory
+	vfs_fs_node_refdrop_t *node_refdrop; //< mandatory
+
+    vfs_lru_root_t lru_list;
+
+	struct vfs_node_s *old_node;
+	struct fs_node_s *root;
+    uint8_t flag_ro:1;
+
+#if defined(CONFIG_VFS_STATS)
+    atomic_t node_open_count;
+
+    atomic_t lookup_count;
+    atomic_t create_count;
+    atomic_t link_count;
+    atomic_t move_count;
+    atomic_t unlink_count;
+    atomic_t stat_count;
+
+    atomic_t node_create_count;
+    atomic_t node_destroy_count;
+
+    atomic_t file_open_count;
+    atomic_t file_close_count;
+#endif
+};
+
+OBJECT_PROTOTYPE(vfs_fs, , vfs_fs);
+
+/** @see vfs_fs_new */
+OBJECT_CONSTRUCTOR(vfs_fs);
+OBJECT_DESTRUCTOR(vfs_fs);
+
+
+
+/**
+   @this is the vfs_node_stat() operation response buffer.
+ */
 struct vfs_stat_s
 {
     /** File or directory */
@@ -149,12 +212,18 @@ struct vfs_stat_s
 //	dev_t dev;
 };
 
-#include <pthread.h>
-
 #if defined(CONFIG_VFS_STATS)
 # define VFS_STATS_INC(obj, field) atomic_inc(&(obj)->field)
 #else
 # define VFS_STATS_INC(x, y) do{}while(0)
+#endif
+
+#ifdef CONFIG_VFS_VERBOSE
+# include <pthread.h>
+# include <mutek/printk.h>
+# define vfs_printk(fmt, x...) do{printk("%p: "fmt"\n", pthread_self(), ##x);}while(0)
+#else
+# define vfs_printk(...) do{}while(0)
 #endif
 
 #endif

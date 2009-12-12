@@ -32,6 +32,10 @@
 #include <hexo/atomic.h>
 #include <hexo/error.h>
 
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_dlist.h>
+#include <gpct/object_simple.h>
+
 struct vfs_fs_s;
 
 enum vfs_node_type_e;
@@ -133,11 +137,11 @@ typedef VFS_FS_LOOKUP(vfs_fs_lookup_t);
 typedef VFS_FS_CREATE(vfs_fs_create_t);
 
 /** @this defines the fs link operation prototype */
-#define VFS_FS_LINK(x) error_t (x)(struct fs_node_s *parent,	   \
-									 struct fs_node_s *node,	   \
-									 const char *name,				   \
-									 size_t namelen,				   \
-									 struct fs_node_s **rnode)
+#define VFS_FS_LINK(x) error_t (x)(struct fs_node_s *node,             \
+                                   struct fs_node_s *parent,           \
+                                   const char *name,				   \
+                                   size_t namelen,                     \
+                                   struct fs_node_s **rnode)
 
 /**
    This function links a node in a parent directory node.  Filesystem may not
@@ -149,8 +153,8 @@ typedef VFS_FS_CREATE(vfs_fs_create_t);
    point on link after the operation (@tt{rnode}) may be different from
    the passed node (@tt{node}).
 
-   @param parent Parent directory node to attach @tt node in
    @param node Node to attach in @tt parent
+   @param parent Parent directory node to attach @tt node in
    @param name Name to lookup for, it may not end with @tt '\0'.
    @param namelen Length of name, excluding any @tt '\0'
    @param rnode Actually attached node, may be @tt node or another new
@@ -164,6 +168,27 @@ typedef VFS_FS_CREATE(vfs_fs_create_t);
    @see vfs_node_link
  */
 typedef VFS_FS_LINK(vfs_fs_link_t);
+
+
+/** @this defines the fs move operation prototype */
+#define VFS_FS_MOVE(x) error_t (x)(struct fs_node_s *node,             \
+                                   struct fs_node_s *parent,           \
+                                   const char *name,				   \
+                                   size_t namelen)
+
+/**
+   This function moves a node in another parent directory node.
+
+   @param node Node to attach in @tt parent
+   @param parent Parent directory to attach @tt node in
+   @param name Name to set for new node name, it may not end with @tt '\0'.
+   @param namelen Length of name, excluding any @tt '\0'
+   @return 0 on success, or an error code
+
+   @csee #VFS_FS_MOVE
+   @see vfs_node_move
+ */
+typedef VFS_FS_MOVE(vfs_fs_move_t);
 
 
 /** @this defines the fs unlink operation prototype */
@@ -235,43 +260,17 @@ typedef VFS_FS_NODE_REFNEW(vfs_fs_node_refnew_t);
 typedef VFS_FS_NODE_REFDROP(vfs_fs_node_refdrop_t);
 
 
+#ifdef __MKDOC__
 /**
-   @this is an opened file system state.
+   @this creates a new FS object and initializes all its common
+   fields.
+
+   @param storage Optional pre-allocated buffer to use as fs. @this
+   allocates a new bufer if NULL.
+   @return a new fs, NULL on error.
  */
-struct vfs_fs_s
-{
-	atomic_t ref;
-
-	vfs_fs_node_open_t *node_open;  //< mandatory
-	vfs_fs_lookup_t *lookup;        //< mandatory
-	vfs_fs_create_t *create;        //< optional, may be NULL
-	vfs_fs_link_t *link;            //< optional, may be NULL
-	vfs_fs_unlink_t *unlink;        //< optional, may be NULL
-	vfs_fs_stat_t *stat;            //< mandatory
-	vfs_fs_can_unmount_t *can_unmount; //< mandatory
-	vfs_fs_node_refnew_t *node_refnew; //< mandatory
-	vfs_fs_node_refdrop_t *node_refdrop; //< mandatory
-
-	struct vfs_node_s *old_node;
-	struct fs_node_s *root;
-    uint8_t flag_ro:1;
-
-#if defined(CONFIG_VFS_STATS)
-    atomic_t node_open_count;
-
-    atomic_t lookup_count;
-    atomic_t create_count;
-    atomic_t link_count;
-    atomic_t unlink_count;
-    atomic_t stat_count;
-
-    atomic_t node_create_count;
-    atomic_t node_destroy_count;
-
-    atomic_t file_open_count;
-    atomic_t file_close_count;
+struct vfs_fs_s *vfs_fs_new(void *storage);
 #endif
-};
 
 void vfs_fs_dump_stats(struct vfs_fs_s *fs);
 
