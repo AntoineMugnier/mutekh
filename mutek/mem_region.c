@@ -34,7 +34,7 @@
 
 
 CONTAINER_TYPE(region_list, SLIST, struct mem_region_s, list_entry);
-CONTAINER_KEY_TYPE(region_list, SCALAR, priority);
+CONTAINER_KEY_TYPE(region_list, PTR, SCALAR, priority);
 
 CONTAINER_FUNC(region_list, SLIST, static inline, region_list);
 CONTAINER_FUNC_NOLOCK(region_list, SLIST, static inline, region_list_nolock);

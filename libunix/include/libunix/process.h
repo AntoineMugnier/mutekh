@@ -34,7 +34,7 @@ CONTAINER_TYPE(unix_ps_list, CLIST, struct unix_process_s
 CONTAINER_FUNC(unix_ps_list, CLIST, static inline, unix_plist);
 
 CONTAINER_TYPE(unix_ps_hash, HASHLIST, struct unix_process_s, hash_entry, 16);
-CONTAINER_KEY_TYPE(unix_ps_hash, SCALAR, pid);
+CONTAINER_KEY_TYPE(unix_ps_hash, PTR, SCALAR, pid);
 
 CONTAINER_FUNC(unix_ps_hash, HASHLIST, static inline, unix_phash, pid);
 CONTAINER_KEY_FUNC(unix_ps_hash, HASHLIST, static inline, unix_phash, pid);

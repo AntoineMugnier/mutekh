@@ -163,7 +163,7 @@ struct					rpcb_s
 };
 
 CONTAINER_TYPE(rpcb, HASHLIST, struct rpcb_s, list_entry, 64);
-CONTAINER_KEY_TYPE(rpcb, SCALAR, id);
+CONTAINER_KEY_TYPE(rpcb, PTR, SCALAR, id);
 
 /*
  * NFS connection descriptor.

@@ -118,7 +118,7 @@ OBJECT_FUNC(udp_desc_obj, SIMPLE, static inline, udp_desc_obj, obj_entry);
 
 #define CONTAINER_LOCK_udp_desc	HEXO_SPIN
 CONTAINER_TYPE(udp_desc, HASHLIST, struct net_udp_desc_s, list_entry, 64);
-CONTAINER_KEY_TYPE(udp_desc, SCALAR, port);
+CONTAINER_KEY_TYPE(udp_desc, PTR, SCALAR, port);
 
 /*
  * Prototypes
