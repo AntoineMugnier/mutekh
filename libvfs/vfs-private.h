@@ -55,7 +55,8 @@ struct vfs_node_s * vfs_node_new(void *storage, struct vfs_fs_s *fs,
  */
 struct vfs_node_s *vfs_node_createnew(
     struct vfs_fs_s *fs,
-    const char *fullname, size_t fullnamelen,
+    const char *fullname,
+    size_t fullnamelen,
     struct fs_node_s *fs_node);
 
 /**
@@ -68,10 +69,10 @@ void vfs_node_use(struct vfs_node_s *node);
 
 // CONTAINER_FUNC(vfs_dir_hash, HASHLIST, static inline, vfs_dir);
 
-CONTAINER_KEY_TYPE       (vfs_dir_hash, BLOB, name, CONFIG_VFS_NAMELEN);
+CONTAINER_KEY_TYPE(vfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
 
-CONTAINER_FUNC           (vfs_dir_hash, HASHLIST, static inline, vfs_dir, name);
-CONTAINER_KEY_FUNC       (vfs_dir_hash, HASHLIST, static inline, vfs_dir, name);
+CONTAINER_KEY_FUNC(vfs_dir_hash, HASHLIST, static inline, vfs_dir, name);
+CONTAINER_FUNC    (vfs_dir_hash, HASHLIST, static inline, vfs_dir, name);
 
 static inline void vfs_node_dirlock(struct vfs_node_s *node)
 {

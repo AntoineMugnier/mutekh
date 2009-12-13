@@ -28,13 +28,13 @@
 
 OBJECT_FUNC   (vfs_node, REFCOUNT, , vfs_node, obj_entry);
 
-CONTAINER_KEY_TYPE(vfs_lru, FUNC, obj_entry, vfs_node_refcount);
+CONTAINER_KEY_TYPE(vfs_lru, CUSTOM, SCALAR, vfs_node_refcount(vfs_lru_item), vfs_lru_refcount);
 
 CONTAINER_FUNC       (vfs_lru, DLIST, static, vfs_lru, lru_entry);
 CONTAINER_FUNC_NOLOCK(vfs_lru, DLIST, static, vfs_lru_nolock, lru_entry);
 
-CONTAINER_KEY_FUNC_NOLOCK(vfs_lru, DLIST, static, vfs_lru, obj_entry);
-CONTAINER_KEY_FUNC_NOLOCK(vfs_lru, DLIST, static, vfs_lru_nolock, obj_entry);
+CONTAINER_KEY_FUNC_NOLOCK(vfs_lru, DLIST, static, vfs_lru, vfs_lru_refcount);
+CONTAINER_KEY_FUNC_NOLOCK(vfs_lru, DLIST, static, vfs_lru_nolock, vfs_lru_refcount);
 
 
 ssize_t vfs_node_get_name(struct vfs_node_s *node,

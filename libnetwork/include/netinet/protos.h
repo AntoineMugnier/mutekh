@@ -214,7 +214,7 @@ OBJECT_FUNC(net_proto_obj, REFCOUNT, static inline, net_proto_obj, obj_entry);
 
 #define CONTAINER_OBJ_net_protos	net_proto_obj
 CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, list_entry, 8);
-CONTAINER_KEY_TYPE(net_protos, SCALAR, id);
+CONTAINER_KEY_TYPE(net_protos, PTR, SCALAR, id);
 
 /*
  * Container functions.

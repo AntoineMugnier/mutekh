@@ -168,7 +168,7 @@ OBJECT_FUNC(arp_entry_obj, SIMPLE, static inline, arp_entry_obj, obj_entry);
 
 #define CONTAINER_LOCK_arp_table	HEXO_SPIN
 CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, list_entry, 64);
-CONTAINER_KEY_TYPE(arp_table, SCALAR, ip);
+CONTAINER_KEY_TYPE(arp_table, PTR, SCALAR, ip);
 
 /*
  * ARP private data.

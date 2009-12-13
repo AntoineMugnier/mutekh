@@ -190,7 +190,7 @@ OBJECT_FUNC(fragment_obj, SIMPLE, static inline, fragment_obj, obj_entry);
 
 #define CONTAINER_LOCK_ip_packet	HEXO_SPIN
 CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, list_entry, 64);
-CONTAINER_KEY_TYPE(ip_packet, BLOB, id, 6);
+CONTAINER_KEY_TYPE(ip_packet, PTR, BLOB, id, 6);
 
 /*
  * IP private data.

@@ -206,7 +206,9 @@ error_t vfs_create(struct vfs_node_s *root,
 
     vfs_printk(" ! exists>\n");
     vfs_node_refdrop(parent);
-    return err;
+    if ( err )
+        return err;
+    return -EEXISTS;
 
   do_create:
 

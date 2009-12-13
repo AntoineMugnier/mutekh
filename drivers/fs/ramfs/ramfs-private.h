@@ -54,7 +54,7 @@ struct fs_node_s
 
 #define CONTAINER_OBJ_ramfs_dir_hash ramfs_node
 
-CONTAINER_KEY_TYPE(ramfs_dir_hash, BLOB, name, CONFIG_VFS_NAMELEN);
+CONTAINER_KEY_TYPE(ramfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
 //CONTAINER_PROTOTYPE(ramfs_dir_hash, HASHLIST, static inline);
 
 OBJECT_CONSTRUCTOR(ramfs_node);

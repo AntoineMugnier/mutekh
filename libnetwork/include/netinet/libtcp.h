@@ -184,7 +184,7 @@ OBJECT_FUNC(static inline, tcp_session_obj, SIMPLE, tcp_session_obj, obj_entry);
  */
 
 CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, NOOBJ, list_entry, 64);
-CONTAINER_KEY_TYPE(tcp_session, AGGREGATE, remote);
+CONTAINER_KEY_TYPE(tcp_session, PTR, AGGREGATE, remote);
 
 /*
  * Prototypes

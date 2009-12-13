@@ -102,7 +102,7 @@ OBJECT_FUNC(net_if_obj, REFCOUNT, static inline, net_if_obj, obj_entry);
 #define CONTAINER_OBJ_net_if		net_if_obj
 #define CONTAINER_LOCK_net_if		HEXO_SPIN
 CONTAINER_TYPE(net_if, HASHLIST, struct net_if_s, list_entry, 4);
-CONTAINER_KEY_TYPE(net_if, STRING, name);
+CONTAINER_KEY_TYPE(net_if, PTR, STRING, name);
 
 /*
  * Functions prototypes.
