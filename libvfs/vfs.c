@@ -26,6 +26,12 @@
 
 #include <string.h>
 
+/*
+  Here are two helpers when we need to take two locks at the same time
+  in two directories. We MUST always take them in the same order to
+  avoid deadlocks. So we take them in pointer order, and release them
+  in the opposite order.
+ */
 void vfs_node_2dirlock(struct vfs_node_s *d1,
                        struct vfs_node_s *d2)
 {
@@ -150,7 +156,7 @@ error_t vfs_umount(struct vfs_node_s *mountpoint)
 		return -EINVAL;
 
 	vfs_node_dirlock(parent);
-	if ( !fs->can_unmount(fs) ) {
+	if ( !fs->ops->can_unmount(fs) ) {
         vfs_node_dirunlock(parent);
         vfs_node_refdrop(parent);
         return -EBUSY;
@@ -229,7 +235,7 @@ error_t vfs_node_lookup(struct vfs_node_s *parent,
 	}
 
 	/* Last call: ask the FS */
-	err = parent->fs->lookup(parent->fs_node, name, namelen, &fs_node);
+	err = parent->fs->ops->lookup(parent->fs_node, name, namelen, &fs_node);
 
 	if ( err ) {
 		vfs_printk("err %d>", err);
@@ -237,7 +243,7 @@ error_t vfs_node_lookup(struct vfs_node_s *parent,
 	}
 
     *node = vfs_node_createnew(parent->fs, name, namelen, fs_node);
-    parent->fs->node_refdrop(fs_node);
+    parent->fs->ops->node_refdrop(fs_node);
     if ( *node == NULL ) {
         err = -ENOMEM;
         goto fini;
@@ -257,7 +263,7 @@ error_t vfs_node_create(struct vfs_fs_s *fs,
 						enum vfs_node_type_e type,
 						struct vfs_node_s **node)
 {
-    if ( fs->create == NULL )
+    if ( fs->ops->create == NULL )
         return -ENOTSUP;
 
     if ( fs->flag_ro )
@@ -267,12 +273,12 @@ error_t vfs_node_create(struct vfs_fs_s *fs,
 
     struct fs_node_s *fs_node;
 
-	error_t err = fs->create(fs, type, &fs_node);
+	error_t err = fs->ops->create(fs, type, &fs_node);
     if ( err )
         return err;
 
     *node = vfs_node_createnew(fs, NULL, 0, fs_node);
-    fs->node_refdrop(fs_node);
+    fs->ops->node_refdrop(fs_node);
 
     if ( *node == NULL ) {
         return -ENOMEM;
@@ -287,13 +293,13 @@ error_t vfs_node_open(struct vfs_node_s *node,
 {
 	vfs_printk(" node_open(%p): ", node);
 
-    assert( node->fs->node_open != NULL );
+    assert( node->fs->ops->node_open != NULL );
 
 	VFS_STATS_INC(node->fs, node_open_count);
 
     vfs_node_lru_rehash(node);
 
-    return node->fs->node_open(node->fs_node, flags, file);
+    return node->fs->ops->node_open(node->fs_node, flags, file);
 }
 
 error_t vfs_node_link(struct vfs_node_s *node,
@@ -306,7 +312,7 @@ error_t vfs_node_link(struct vfs_node_s *node,
 
 	vfs_printk("<%s '%s' %p [%s] in %p [%s]... ", __FUNCTION__, name, node, node->name, parent, parent->name);
 
-    if ( parent->fs->link == NULL )
+    if ( parent->fs->ops->link == NULL )
         return -ENOTSUP;
 
     if ( parent->fs != node->fs )
@@ -327,7 +333,7 @@ error_t vfs_node_link(struct vfs_node_s *node,
 
     struct fs_node_s *rfs_node;
 
-	err = parent->fs->link(node->fs_node, parent->fs_node,
+	err = parent->fs->ops->link(node->fs_node, parent->fs_node,
                            name, namelen, &rfs_node);
 	if ( err ) {
 		vfs_printk("fail %d>\n", err);
@@ -341,7 +347,7 @@ error_t vfs_node_link(struct vfs_node_s *node,
     *rnode = vfs_node_createnew(parent->fs,
                                 name, namelen,
                                 rfs_node);
-    parent->fs->node_refdrop(rfs_node);
+    parent->fs->ops->node_refdrop(rfs_node);
     if ( *rnode == NULL ) {
         /*
           TODO
@@ -381,7 +387,7 @@ error_t vfs_node_move(struct vfs_node_s *node,
 
 	vfs_printk("<%s '%s' %p [%s] in %p [%s]... ", __FUNCTION__, name, node, node->name, parent, parent->name);
 
-    if ( parent->fs->move == NULL )
+    if ( parent->fs->ops->move == NULL )
         return -ENOTSUP;
 
     if ( parent->fs != node->fs )
@@ -402,7 +408,7 @@ error_t vfs_node_move(struct vfs_node_s *node,
 	vfs_node_2dirlock(parent, parent_src);
 	struct vfs_node_s *prev_node = vfs_dir_mangled_lookup(parent, name, namelen);
 
-	err = parent->fs->move(node->fs_node, parent->fs_node,
+	err = parent->fs->ops->move(node->fs_node, parent->fs_node,
                            name, namelen);
 	if ( err ) {
 		vfs_printk("fail %d>\n", err);
@@ -430,7 +436,7 @@ error_t vfs_node_unlink(struct vfs_node_s *parent,
 						const char *name,
 						size_t namelen)
 {
-    if ( parent->fs->unlink == NULL )
+    if ( parent->fs->ops->unlink == NULL )
         return -ENOTSUP;
 
     if ( parent->fs->flag_ro )
@@ -444,7 +450,7 @@ error_t vfs_node_unlink(struct vfs_node_s *parent,
 
 	struct vfs_node_s *node = vfs_dir_mangled_lookup(parent, name, namelen);
 
-	error_t err = parent->fs->unlink(parent->fs_node, name, namelen);
+	error_t err = parent->fs->ops->unlink(parent->fs_node, name, namelen);
 	if ( err )
 		goto fini;
 
@@ -468,7 +474,7 @@ error_t vfs_node_stat(struct vfs_node_s *node,
 
     vfs_node_lru_rehash(node);
 
-	return node->fs->stat(node->fs_node, stat);
+	return node->fs->ops->stat(node->fs_node, stat);
 }
 
 size_t vfs_name_mangle(const char *fullname, size_t fulllen, char *vfsname)

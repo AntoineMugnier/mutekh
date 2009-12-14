@@ -137,14 +137,13 @@ VFS_FS_NODE_OPEN(ramfs_node_open)
 
 	switch (node->type) {
 	case VFS_NODE_FILE: {
-        struct fs_node_s *rfs_node = node;
 		vfs_printk("file ");
 		if ( flags & VFS_OPEN_READ )
             f->read = ramfs_file_read;
 		if ( flags & VFS_OPEN_WRITE )
             f->write = ramfs_file_write;
 		f->seek = ramfs_file_seek;
-		f->priv = ramfs_data_refnew(rfs_node->data);
+		f->priv = ramfs_data_refnew(node->data);
         f->close = ramfs_file_close;
         break;
     }

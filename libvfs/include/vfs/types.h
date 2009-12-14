@@ -49,9 +49,9 @@ struct fs_node_s;
 enum vfs_node_type_e
 {
     /** A directory node */
-	VFS_NODE_DIR,
+    VFS_NODE_DIR,
     /** A regular file node */
-	VFS_NODE_FILE,
+    VFS_NODE_FILE,
 };
 
 OBJECT_TYPE     (vfs_node, REFCOUNT, struct vfs_node_s);
@@ -66,9 +66,9 @@ CONTAINER_TYPE    (vfs_dir_hash, HASHLIST,
  */
 struct vfs_node_s
 {
-	CONTAINER_ENTRY_TYPE(HASHLIST) hash_entry;
+    CONTAINER_ENTRY_TYPE(HASHLIST) hash_entry;
     CONTAINER_ENTRY_TYPE(DLIST)    lru_entry;
-	vfs_node_entry_t obj_entry;
+    vfs_node_entry_t obj_entry;
 
     /** File system the node is in */
     struct vfs_fs_s *fs;
@@ -86,7 +86,7 @@ struct vfs_node_s
        Accesses to this value must be protected for atomicity with
        @tt parent_lock.
     */
-	struct vfs_node_s *parent;
+    struct vfs_node_s *parent;
     lock_t parent_lock;
 
     /**
@@ -110,7 +110,7 @@ struct vfs_node_s
        Accesses to this value must be protected through @tt
        dir_semaphore.
     */
-	vfs_dir_hash_root_t children;
+    vfs_dir_hash_root_t children;
 
     struct semaphore_s dir_semaphore;
 }
@@ -127,6 +127,21 @@ OBJECT_DESTRUCTOR(vfs_node);
 
 
 
+struct vfs_fs_ops_s
+{
+    vfs_fs_node_open_t *node_open;  //< mandatory
+    vfs_fs_lookup_t *lookup;        //< mandatory
+    vfs_fs_create_t *create;        //< optional, may be NULL
+    vfs_fs_link_t *link;            //< optional, may be NULL
+    vfs_fs_move_t *move;            //< optional, may be NULL
+    vfs_fs_unlink_t *unlink;        //< optional, may be NULL
+    vfs_fs_stat_t *stat;            //< mandatory
+    vfs_fs_can_unmount_t *can_unmount; //< mandatory
+    vfs_fs_node_refnew_t *node_refnew; //< mandatory
+    vfs_fs_node_refdrop_t *node_refdrop; //< mandatory
+};
+
+
 OBJECT_TYPE     (vfs_fs, SIMPLE, struct vfs_fs_s);
 
 /**
@@ -134,26 +149,15 @@ OBJECT_TYPE     (vfs_fs, SIMPLE, struct vfs_fs_s);
  */
 struct vfs_fs_s
 {
-	vfs_fs_entry_t obj_entry;
-
-	atomic_t ref;
-
-	vfs_fs_node_open_t *node_open;  //< mandatory
-	vfs_fs_lookup_t *lookup;        //< mandatory
-	vfs_fs_create_t *create;        //< optional, may be NULL
-	vfs_fs_link_t *link;            //< optional, may be NULL
-	vfs_fs_move_t *move;            //< optional, may be NULL
-	vfs_fs_unlink_t *unlink;        //< optional, may be NULL
-	vfs_fs_stat_t *stat;            //< mandatory
-	vfs_fs_can_unmount_t *can_unmount; //< mandatory
-	vfs_fs_node_refnew_t *node_refnew; //< mandatory
-	vfs_fs_node_refdrop_t *node_refdrop; //< mandatory
-
     vfs_lru_root_t lru_list;
-
-	struct vfs_node_s *old_node;
-	struct fs_node_s *root;
+    struct fs_node_s *root;
+    const struct vfs_fs_ops_s *ops;
+    atomic_t ref;
     uint8_t flag_ro:1;
+
+    vfs_fs_entry_t obj_entry;
+
+    struct vfs_node_s *old_node;
 
 #if defined(CONFIG_VFS_STATS)
     atomic_t node_open_count;
@@ -187,29 +191,29 @@ OBJECT_DESTRUCTOR(vfs_fs);
 struct vfs_stat_s
 {
     /** File or directory */
-	enum vfs_node_type_e type;
+    enum vfs_node_type_e type;
 
     /** File size in bytes, or directory entry count excluding "." and
         ".." */
-	vfs_file_size_t size;
+    vfs_file_size_t size;
 
     /** Count of links to the data on disk */
-	size_t nlink;
+    size_t nlink;
 
 //  /** Creation timestamp */
-//	time_t ctime;
+//  time_t ctime;
 //  /** Access timestamp */
-//	time_t atime;
+//  time_t atime;
 //  /** Modification timestamp */
-//	time_t mtime;
+//  time_t mtime;
 //  /** Modes, ... */
-//	vfs_node_attr_t attr;
+//  vfs_node_attr_t attr;
 //  /** User ID */
-//	uid_t uid;
+//  uid_t uid;
 //  /** Group ID */
-//	gid_t gid;
+//  gid_t gid;
 //  /** Device number */
-//	dev_t dev;
+//  dev_t dev;
 };
 
 #if defined(CONFIG_VFS_STATS)

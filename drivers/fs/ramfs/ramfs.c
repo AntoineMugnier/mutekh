@@ -38,6 +38,12 @@ CONTAINER_FUNC_NOLOCK    (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir_nol
 CONTAINER_KEY_FUNC       (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir, name);
 CONTAINER_KEY_FUNC_NOLOCK(ramfs_dir_hash, HASHLIST, static inline, ramfs_dir_nolock, name);
 
+/*
+  Here are two helpers when we need to take two locks at the same time
+  in two directories. We MUST always take them in the same order to
+  avoid deadlocks. So we take them in pointer order, and release them
+  in the opposite order.
+ */
 void ramfs_2dir_wrlock(ramfs_dir_hash_root_t *d1,
                        ramfs_dir_hash_root_t *d2)
 {
@@ -329,6 +335,20 @@ error_t ramfs_close(struct vfs_fs_s *fs)
 	return -EBUSY;
 }
 
+static const struct vfs_fs_ops_s ramfs_ops =
+{
+    .node_open = ramfs_node_open,
+    .lookup = ramfs_lookup,
+    .create = ramfs_create,
+    .link = ramfs_link,
+    .move = ramfs_move,
+    .unlink = ramfs_unlink,
+    .stat = ramfs_stat,
+    .can_unmount = ramfs_can_unmount,
+    .node_refdrop = ramfs_node_refdrop,
+    .node_refnew = ramfs_node_refnew,
+};
+
 error_t ramfs_open(struct vfs_fs_s **fs)
 {
 	struct vfs_fs_s *mnt = vfs_fs_new(NULL);
@@ -338,16 +358,8 @@ error_t ramfs_open(struct vfs_fs_s **fs)
     vfs_printk("ramfs: opening new ramfs volume\n");
 
 	atomic_set(&mnt->ref, 0);
-	mnt->node_open = ramfs_node_open;
-	mnt->lookup = ramfs_lookup;
-	mnt->create = ramfs_create;
-	mnt->link = ramfs_link;
-	mnt->unlink = ramfs_unlink;
-	mnt->stat = ramfs_stat;
-	mnt->can_unmount = ramfs_can_unmount;
-    mnt->node_refdrop = ramfs_node_refdrop;
-    mnt->node_refnew = ramfs_node_refnew;
 
+    mnt->ops = &ramfs_ops;
 	mnt->old_node = NULL;
 
     struct fs_node_s *root = ramfs_node_new(NULL, VFS_NODE_DIR);

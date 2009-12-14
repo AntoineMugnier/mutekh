@@ -63,6 +63,21 @@ OBJECT_DESTRUCTOR(iso9660_node)
 {
 };
 
+static const struct vfs_fs_ops_s iso9660_ops =
+{
+    .node_open = iso9660_node_open,
+    .lookup = iso9660_lookup,
+    .stat = iso9660_stat,
+    .can_unmount = iso9660_can_unmount,
+    .node_refdrop = iso9660_node_refdrop,
+    .node_refnew = iso9660_node_refnew,
+
+    .create = NULL,
+    .link = NULL,
+    .move = NULL,
+    .unlink = NULL,
+};
+
 error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
 {
     error_t err;
@@ -74,7 +89,7 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
 
     if ( bdp->blk_size != ISO9660_BLOCK_SIZE ) {
         vfs_printk("iso9660: unsupported device block size: %d\n", bdp->blk_size);
-		return -EINVAL;
+        return -EINVAL;
     }
 
     mnt = mem_alloc(sizeof (*mnt), mem_scope_sys);
@@ -108,14 +123,9 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
 
     /* fs struct */
     atomic_set(&mnt->fs.ref, 0);
-    mnt->fs.node_open = iso9660_node_open;
-    mnt->fs.lookup = iso9660_lookup;
-    mnt->fs.stat = iso9660_stat;
-    mnt->fs.can_unmount = iso9660_can_unmount;
+    mnt->fs.ops = &iso9660_ops;
     mnt->fs.flag_ro = 1;
     mnt->fs.old_node = NULL;
-    mnt->fs.node_refnew = (vfs_fs_node_refnew_t *)iso9660_node_refnew;
-    mnt->fs.node_refdrop = (vfs_fs_node_refdrop_t *)iso9660_node_refdrop;
 
     /* root node init */
     if ( ! (mnt->voldesc.root_dir.type & iso9660_file_isdir) ) {
@@ -133,19 +143,19 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
 
     mnt->bd = device_obj_refnew(bd);
 
-	// TODO register destructor
+    // TODO register destructor
 
-	*fs = &mnt->fs;
-	return 0;
+    *fs = &mnt->fs;
+    return 0;
 
  free_mnt:
-	mem_free(mnt);
-	return err;
+    mem_free(mnt);
+    return err;
 }
 
 VFS_FS_CAN_UNMOUNT(iso9660_can_unmount)
 {
-	return 0;
+    return 0;
 }
 
 VFS_FS_LOOKUP(iso9660_lookup)

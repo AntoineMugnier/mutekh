@@ -59,7 +59,7 @@ OBJECT_CONSTRUCTOR(vfs_node)
     vfs_name_mangle(fullname, fullnamelen, obj->name);
 	obj->fs = fs;
 
-    obj->fs_node = obj->fs->node_refnew(va_arg(ap, struct fs_node_s *));
+    obj->fs_node = obj->fs->ops->node_refnew(va_arg(ap, struct fs_node_s *));
 
 	obj->in_lru = 0;
         
@@ -111,7 +111,7 @@ OBJECT_DESTRUCTOR(vfs_node)
 
     VFS_STATS_INC(obj->fs, node_destroy_count);
 
-    obj->fs->node_refdrop(obj->fs_node);
+    obj->fs->ops->node_refdrop(obj->fs_node);
     vfs_printk(" done>");
 }
 
