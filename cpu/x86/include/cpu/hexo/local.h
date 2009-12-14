@@ -53,6 +53,10 @@
 
 # define CPU_GET_CLS()   ({ uintptr_t _ptr_; __asm__ ("movl %%fs:__cpu_data_base, %0" : "=r" (_ptr_)); _ptr_; })
 
+#else /* CONFIG_SMP */
+
+# define CPU_LOCAL
+
 #endif /* !CONFIG_SMP */
 
 /** pointer to cpu local storage itself */
