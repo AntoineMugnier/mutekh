@@ -62,7 +62,11 @@
   _ptr_;						\
 })
 
-#endif /* !CONFIG_SMP */
+#else /* CONFIG_SMP */
+
+# define CPU_LOCAL
+
+#endif /* CONFIG_SMP */
 
 /************************************************************************/
 
