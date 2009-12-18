@@ -536,3 +536,15 @@ char *strpbrk(const char *s1, const char *s2)
 
 #endif
 
+int_fast8_t memcstcmp(const void *s1, int_fast8_t v, size_t n)
+{
+    int8_t *data = s1;
+    size_t i;
+
+    for ( i=0; i<n; ++i ) {
+        if ( data[i] != v )
+            return data[i] - v;
+    }
+    return 0;
+}
+
