@@ -258,6 +258,8 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   if (!thread)
     return ENOMEM;
 
+  memset(thread, 0, sizeof(struct pthread_s));
+
   if (lock_init(&thread->lock))
     {
       mem_free(thread);
