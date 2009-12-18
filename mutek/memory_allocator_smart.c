@@ -74,6 +74,9 @@ struct memory_allocator_region_s
 #endif
 };
 
+static const size_t region_hdr_size = ALIGN_VALUE_UP ( sizeof( struct memory_allocator_region_s ),
+						       CONFIG_MUTEK_MEMALLOC_ALIGN);
+
 struct memory_allocator_region_s *default_region;
 /***************************************/
 
@@ -167,6 +170,7 @@ mmu_region_nolock_extend(struct memory_allocator_region_s *region, size_t size)
   return memory_allocator_nolock_extend(region, vmem_ops.vpage_alloc(initial_ppage_region, size), size * CONFIG_HEXO_MMU_PAGESIZE);
 }
 # endif
+
 
 
 void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size)
@@ -475,7 +479,7 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
   if (container_region == NULL)
     {
       region = start;
-      hdr = start + sizeof( struct memory_allocator_region_s );
+      hdr = start + region_hdr_size;
     }
   else
     {
@@ -599,5 +603,32 @@ error_t memory_allocator_stats(struct memory_allocator_region_s *region,
   return 0;
 #else
   return -ENOTSUP;
+#endif
+}
+
+void memory_allocator_dump_used(struct memory_allocator_region_s *region, size_t ignore)
+{
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
+#endif
+
+    CONTAINER_FOREACH(alloc_list, CLIST, &region->root, {
+            if ( !item->is_free ) {
+                if ( ignore ) {
+                    --ignore;
+                } else {
+                    printk("Memory block at %p, %d bytes:\n",
+                           item+1, item->size-sizeof(*item));
+                    hexdumpk((void*)(((uintptr_t)(item+1))+0xc),
+                            item->size-sizeof(*item)-0xc);
+                    printk("\n");
+                }
+            }
+        });
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
+  CPU_INTERRUPT_RESTORESTATE;
 #endif
 }
