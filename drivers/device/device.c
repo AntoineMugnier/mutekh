@@ -110,6 +110,7 @@ struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i)
 {
   struct device_s *res = NULL;
 
+#ifdef CONFIG_DEVICE_TREE
   CONTAINER_FOREACH(device_list, CLIST, &dev->children,
   {
     if (i-- == 0)
@@ -118,6 +119,7 @@ struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i)
 	break;
       }
   });
+#endif
 
   return res;
 }
