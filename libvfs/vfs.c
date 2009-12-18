@@ -117,7 +117,7 @@ error_t vfs_mount(struct vfs_node_s *mountpoint,
     vfs_node_refnew(mountpoint);
 
     struct vfs_node_s *new_node = vfs_node_createnew(
-        fs, mountpoint->name, strlen(mountpoint->name),
+        fs, mountpoint->name,
         fs->root);
 
     if ( new_node == NULL )
@@ -188,7 +188,7 @@ error_t vfs_create_root(struct vfs_fs_s *fs,
 		return -EBUSY;
 
     struct vfs_node_s *new_node =
-        vfs_node_createnew(fs, "", 0, fs->root);
+        vfs_node_createnew(fs, NULL, fs->root);
 
     if ( new_node == NULL )
         return -ENOMEM;
@@ -234,15 +234,17 @@ error_t vfs_node_lookup(struct vfs_node_s *parent,
 		goto fini;
 	}
 
+    char mangled_name[CONFIG_VFS_NAMELEN];
+
 	/* Last call: ask the FS */
-	err = parent->fs->ops->lookup(parent->fs_node, name, namelen, &fs_node);
+	err = parent->fs->ops->lookup(parent->fs_node, name, namelen, &fs_node, mangled_name);
 
 	if ( err ) {
 		vfs_printk("err %d>", err);
 		goto fini;
 	}
 
-    *node = vfs_node_createnew(parent->fs, name, namelen, fs_node);
+    *node = vfs_node_createnew(parent->fs, mangled_name, fs_node);
     parent->fs->ops->node_refdrop(fs_node);
     if ( *node == NULL ) {
         err = -ENOMEM;
@@ -277,7 +279,7 @@ error_t vfs_node_create(struct vfs_fs_s *fs,
     if ( err )
         return err;
 
-    *node = vfs_node_createnew(fs, NULL, 0, fs_node);
+    *node = vfs_node_createnew(fs, NULL, fs_node);
     fs->ops->node_refdrop(fs_node);
 
     if ( *node == NULL ) {
@@ -332,22 +334,21 @@ error_t vfs_node_link(struct vfs_node_s *node,
 	VFS_STATS_INC(parent->fs, link_count);
 
     struct fs_node_s *rfs_node;
+    char mangled_name[CONFIG_VFS_NAMELEN];
 
 	err = parent->fs->ops->link(node->fs_node, parent->fs_node,
-                           name, namelen, &rfs_node);
+                                name, namelen, &rfs_node, mangled_name);
 	if ( err ) {
 		vfs_printk("fail %d>\n", err);
 		goto fini;
 	}
 
-    if ( prev_node != NULL ) {
+    if ( prev_node != NULL )
         vfs_node_parent_nolock_unset(prev_node);
-    }
 
-    *rnode = vfs_node_createnew(parent->fs,
-                                name, namelen,
-                                rfs_node);
+    *rnode = vfs_node_createnew(parent->fs, mangled_name, rfs_node);
     parent->fs->ops->node_refdrop(rfs_node);
+
     if ( *rnode == NULL ) {
         /*
           TODO

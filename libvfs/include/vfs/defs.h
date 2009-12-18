@@ -19,27 +19,49 @@
   Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
 */
 
-#include <vfs/vfs.h>
-#include "vfs-private.h"
-#include <mutek/mem_alloc.h>
-#include <mutek/printk.h>
+/**
+   @file
+   @module {Virtual File System}
+   @short Constant definitions
+ */
 
-OBJECT_FUNC   (vfs_fs, SIMPLE, , vfs_fs, obj_entry);
+#ifndef _VFS_DEFS_H_
+#define _VFS_DEFS_H_
 
-CONTAINER_FUNC(vfs_lru, CLIST, static inline, vfs_lru, lru_entry);
+#include <hexo/types.h>
 
-OBJECT_CONSTRUCTOR(vfs_fs)
+typedef size_t vfs_file_size_t;
+typedef uint16_t vfs_node_attr_t;
+
+/**
+   @this is a node structure for a given File System. @this is
+   FS-dependant.
+*/
+struct fs_node_s;
+
+enum vfs_node_type_e
 {
-    atomic_set(&obj->ref, 0);
-    vfs_lru_init(&obj->lru_list);
+    /** A directory node */
+    VFS_NODE_DIR,
+    /** A regular file node */
+    VFS_NODE_FILE,
+};
 
-	return 0;
-}
+#if defined(CONFIG_VFS_STATS)
+# define VFS_STATS_INC(obj, field) atomic_inc(&(obj)->field)
+#else
+# define VFS_STATS_INC(x, y) do{}while(0)
+#endif
 
-OBJECT_DESTRUCTOR(vfs_fs)
-{
-    vfs_lru_destroy(&obj->lru_list);
-}
+#ifdef CONFIG_VFS_VERBOSE
+# include <pthread.h>
+# include <mutek/printk.h>
+# define vfs_printk(fmt, x...) do{printk("%p: "fmt"\n", pthread_self(), ##x);}while(0)
+#else
+# define vfs_printk(...) do{}while(0)
+#endif
+
+#endif
 
 // Local Variables:
 // tab-width: 4

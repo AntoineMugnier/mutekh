@@ -21,8 +21,25 @@
 
 #include <hexo/types.h>
 #include <vfs/fs.h>
+#include <vfs/file.h>
 #include "fat-types.h"
 #include "fat-private.h"
+#include "fat-defs.h"
+#include "fat-sector-cache.h"
+
+void fat_name_to_vfs(char *dst, const char *src)
+{
+    memset(dst, 0, FAT_83_NAMELEN);
+    size_t i;
+    for ( i=0; i<11; ++i ) {
+        if ( src[i] != ' ' )
+            *dst++ = src[i];
+        if ( i == 7 )
+            *dst++ = '.';
+    }
+    if ( dst[-1] == '.' )
+        dst[-1] = 0;
+}
 
 VFS_FS_CREATE(fat_create)
 {
@@ -51,4 +68,79 @@ VFS_FS_STAT(fat_stat)
     stat->nlink = 1;
 
     return 0;
+}
+
+VFS_FS_LOOKUP(fat_lookup)
+{
+    struct fat_file_s *ffile = fat_file_new(NULL, ref);
+    struct fat_s *fat = ref->fat;
+
+    if ( ffile == NULL )
+        return -ENOMEM;
+
+    union fat_dirent_u fat_dirent[1];
+    char name_83[FAT_83_NAMELEN];
+
+    off_t offset = 0;
+
+    do {
+        ssize_t r = fat_get_next_dirent(ffile, &offset, fat_dirent, name_83, mangled_name);
+        if ( r != 1 ) {
+            fat_file_refdrop(ffile);
+            return -ENOENT;
+        }
+
+        vfs_printk("<%s: @%d wanted: '%s', 8.3: '%s', lfn: '%s'>",
+                   __FUNCTION__, offset, name, name_83, mangled_name);
+
+        if ( !strncasecmp(mangled_name, name, namelen) || !strncasecmp(name_83, name, namelen) )
+            break;
+    } while (1);
+
+    fat_file_refdrop(ffile);
+
+    common_cluster_t cluster = (fat_dirent->old.clust_hi << 16)
+        | fat_dirent->old.clust_lo;
+
+    struct fs_node_s *rnode = fat_node_pool_lookup(&fat->nodes, cluster);
+    if ( rnode == NULL ) {
+        rnode = fat_node_new(NULL, fat, cluster,
+                             (fat_dirent->old.attr & ATTR_DIRECTORY) ? 0 : fat_dirent->old.file_size,
+                             (fat_dirent->old.attr & ATTR_DIRECTORY) ? VFS_NODE_DIR : VFS_NODE_FILE);
+    }
+
+    if ( rnode == NULL )
+        return -ENOMEM;
+    
+    *node = rnode;
+
+    return 0;
+}
+
+VFS_FILE_READ(fat_dir_read)
+{
+    struct fat_file_s *ffile = file->priv;
+
+    union fat_dirent_u fat_dirent[1];
+    struct vfs_dirent_s *vfs_dirent = buffer;
+    char name_83[FAT_83_NAMELEN];
+
+    if ( size != sizeof(*vfs_dirent) )
+        return -EINVAL;
+
+    do {
+        ssize_t r = fat_get_next_dirent(ffile, &file->offset, fat_dirent, name_83, vfs_dirent->name);
+        if ( r != 1 )
+            return 0;
+
+        if ( vfs_dirent->name[0] == 0 )
+            strcpy(vfs_dirent->name, name_83);
+
+        vfs_dirent->size = fat_dirent->old.file_size;
+        vfs_dirent->type = fat_dirent->old.attr & ATTR_DIRECTORY
+            ? VFS_NODE_DIR
+            : VFS_NODE_FILE;
+
+        return sizeof(*vfs_dirent);
+    } while (1);
 }

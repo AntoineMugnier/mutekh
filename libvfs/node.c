@@ -19,6 +19,8 @@
   Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
 */
 
+#define GPCT_CONFIG_NODEPRECATED
+
 #include <vfs/vfs.h>
 #include "vfs-private.h"
 #include <mutek/mem_alloc.h>
@@ -30,11 +32,11 @@ OBJECT_FUNC   (vfs_node, REFCOUNT, , vfs_node, obj_entry);
 
 CONTAINER_KEY_TYPE(vfs_lru, CUSTOM, SCALAR, vfs_node_refcount(vfs_lru_item), vfs_lru_refcount);
 
-CONTAINER_FUNC       (vfs_lru, DLIST, static, vfs_lru, lru_entry);
-CONTAINER_FUNC_NOLOCK(vfs_lru, DLIST, static, vfs_lru_nolock, lru_entry);
+CONTAINER_FUNC       (vfs_lru, CLIST, static, vfs_lru, lru_entry);
+CONTAINER_FUNC_NOLOCK(vfs_lru, CLIST, static, vfs_lru_nolock, lru_entry);
 
-CONTAINER_KEY_FUNC_NOLOCK(vfs_lru, DLIST, static, vfs_lru, vfs_lru_refcount);
-CONTAINER_KEY_FUNC_NOLOCK(vfs_lru, DLIST, static, vfs_lru_nolock, vfs_lru_refcount);
+CONTAINER_KEY_FUNC_NOLOCK(vfs_lru, CLIST, static, vfs_lru, vfs_lru_refcount);
+CONTAINER_KEY_FUNC_NOLOCK(vfs_lru, CLIST, static, vfs_lru_nolock, vfs_lru_refcount);
 
 
 ssize_t vfs_node_get_name(struct vfs_node_s *node,
@@ -53,10 +55,12 @@ struct vfs_fs_s *vfs_node_get_fs(struct vfs_node_s *node)
 OBJECT_CONSTRUCTOR(vfs_node)
 {
 	struct vfs_fs_s *fs = va_arg(ap, struct vfs_fs_s *);
-	const char *fullname = va_arg(ap, const char *);
-	size_t fullnamelen = va_arg(ap, size_t);
+	const char *mangled_name = va_arg(ap, const char *);
 
-    vfs_name_mangle(fullname, fullnamelen, obj->name);
+    if ( mangled_name )
+        memcpy(obj->name, mangled_name, CONFIG_VFS_NAMELEN);
+    else
+        memset(obj->name, 0, CONFIG_VFS_NAMELEN);
 	obj->fs = fs;
 
     obj->fs_node = obj->fs->ops->node_refnew(va_arg(ap, struct fs_node_s *));
@@ -136,7 +140,7 @@ void vfs_node_lru_rehash(struct vfs_node_s *node)
 
 struct vfs_node_s *vfs_node_createnew(
     struct vfs_fs_s *fs,
-    const char *fullname, size_t fullnamelen,
+    const char *mangled_name,
     struct fs_node_s *fs_node)
 {
     object_storage_free_t *old_storage_free = NULL;
@@ -144,14 +148,17 @@ struct vfs_node_s *vfs_node_createnew(
 
     vfs_printk("<node createnew ");
 
+    assert( vfs_lru_check(&fs->lru_list) == 0 );
+
     for (;;) {
         node = vfs_lru_pop(&fs->lru_list);
-        node->in_lru = 0;
 
-        if ( !node ) {
+        if ( node == NULL ) {
             vfs_printk("empty lru ");
             break;
         }
+
+        node->in_lru = 0;
 
         if ( vfs_node_refcount(node) > 1 ) {
             vfs_printk("first is reffed ");
@@ -207,11 +214,10 @@ struct vfs_node_s *vfs_node_createnew(
         vfs_node_refdrop(parent);
     }
 
-    if ( node )
-        vfs_printk("used %p from lru ", node);
-    node = vfs_node_new(node, fs, fullname, fullnamelen, fs_node);
+    vfs_printk("used %p from lru ", node);
+    node = vfs_node_new(node, fs, mangled_name, fs_node);
 
-    if ( old_storage_free )
+    if ( old_storage_free != NULL )
         node->obj_entry.storage_free = old_storage_free;
 
     vfs_printk(">");

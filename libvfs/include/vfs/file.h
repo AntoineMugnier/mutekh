@@ -29,6 +29,8 @@
 #define _VFS_FILE_H_
 
 #include <hexo/types.h>
+#include <gpct/object_refcount.h>
+#include <vfs/defs.h>
 
 enum vfs_open_flags_e {
     /** Allow read operation */

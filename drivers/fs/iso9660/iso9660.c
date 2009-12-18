@@ -197,6 +197,8 @@ VFS_FS_LOOKUP(iso9660_lookup)
                 if (( err = iso9660_read_direntry(isofs->bd, entry, entryname, &entrynamelen) ))
                     return err;
 
+                vfs_name_mangle(entryname, entrynamelen, mangled_name);
+
                 if (vfs_name_compare(entryname, entrynamelen, name, namelen)) {
                     *node = (void*)iso9660_node_new(NULL, isofs, entry, entryname, entrynamelen);
                     return *node ? 0 : -ENOMEM;

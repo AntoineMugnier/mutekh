@@ -442,7 +442,7 @@ void vfs_dump_lru(struct vfs_node_s *root)
 	printk("VFS LRU dump for root %p, fsroot: %p\n",
 		   root, root->fs->root);
     
-    CONTAINER_FOREACH(vfs_lru, DLIST, &root->fs->lru_list, {
+    CONTAINER_FOREACH(vfs_lru, CLIST, &root->fs->lru_list, {
             vfs_dump_item(item, 2);
         });
 }

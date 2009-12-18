@@ -25,13 +25,16 @@
 #include <hexo/types.h>
 #include <vfs/fs.h>
 #include <vfs/types.h>
+#include <vfs/file.h>
+
+#include <mutek/semaphore.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/cont_clist.h>
 #include <gpct/object_refcount.h>
-#include <mutek/rwlock.h>
+
 #define FAT_COMMON
 #include "fat-types.h"
 
@@ -174,6 +177,8 @@ ssize_t fat_data_read(
     struct fat_file_s *ffile,
     off_t offset,
     void *buffer, size_t size);
+
+VFS_FILE_READ(fat_dir_read);
 
 /*
   Common FAT FS operations

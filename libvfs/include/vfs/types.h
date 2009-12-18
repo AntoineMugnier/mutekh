@@ -28,17 +28,16 @@
 #ifndef _VFS_TYPES_H_
 #define _VFS_TYPES_H_
 
+#include <vfs/defs.h>
 #include <vfs/fs.h>
 
 #include <mutek/semaphore.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_hashlist.h>
+#include <gpct/cont_clist.h>
 #include <gpct/object_refcount.h>
 #include <mutek/semaphore.h>
-
-typedef size_t vfs_file_size_t;
-typedef uint16_t vfs_node_attr_t;
 
 /**
    @this is a node structure for a given File System. @this is
@@ -46,16 +45,14 @@ typedef uint16_t vfs_node_attr_t;
 */
 struct fs_node_s;
 
-enum vfs_node_type_e
-{
-    /** A directory node */
-    VFS_NODE_DIR,
-    /** A regular file node */
-    VFS_NODE_FILE,
-};
+struct vfs_node_s;
 
 OBJECT_TYPE     (vfs_node, REFCOUNT, struct vfs_node_s);
 OBJECT_PROTOTYPE(vfs_node, , vfs_node);
+
+/** @see vfs_node_createnew */
+OBJECT_CONSTRUCTOR(vfs_node);
+OBJECT_DESTRUCTOR(vfs_node);
 
 //#define CONTAINER_LOCK_vfs_dir_hash MUTEK_SEMAPHORE
 #define CONTAINER_LOCK_vfs_lru HEXO_SPIN
@@ -67,7 +64,7 @@ CONTAINER_TYPE    (vfs_dir_hash, HASHLIST,
 struct vfs_node_s
 {
     CONTAINER_ENTRY_TYPE(HASHLIST) hash_entry;
-    CONTAINER_ENTRY_TYPE(DLIST)    lru_entry;
+    CONTAINER_ENTRY_TYPE(CLIST)    lru_entry;
     vfs_node_entry_t obj_entry;
 
     /** File system the node is in */
@@ -117,30 +114,10 @@ struct vfs_node_s
 , hash_entry, 5);
 
 #define CONTAINER_OBJ_vfs_dir_hash vfs_node
-//#define CONTAINER_OBJ_vfs_lru vfs_node
 
-CONTAINER_TYPE(vfs_lru, DLIST, struct vfs_node_s, lru_entry);
+CONTAINER_TYPE(vfs_lru, CLIST, struct vfs_node_s, lru_entry);
 
-/** @see vfs_node_createnew */
-OBJECT_CONSTRUCTOR(vfs_node);
-OBJECT_DESTRUCTOR(vfs_node);
-
-
-
-struct vfs_fs_ops_s
-{
-    vfs_fs_node_open_t *node_open;  //< mandatory
-    vfs_fs_lookup_t *lookup;        //< mandatory
-    vfs_fs_create_t *create;        //< optional, may be NULL
-    vfs_fs_link_t *link;            //< optional, may be NULL
-    vfs_fs_move_t *move;            //< optional, may be NULL
-    vfs_fs_unlink_t *unlink;        //< optional, may be NULL
-    vfs_fs_stat_t *stat;            //< mandatory
-    vfs_fs_can_unmount_t *can_unmount; //< mandatory
-    vfs_fs_node_refnew_t *node_refnew; //< mandatory
-    vfs_fs_node_refdrop_t *node_refdrop; //< mandatory
-};
-
+struct vfs_fs_ops_s;
 
 OBJECT_TYPE     (vfs_fs, SIMPLE, struct vfs_fs_s);
 
@@ -215,20 +192,6 @@ struct vfs_stat_s
 //  /** Device number */
 //  dev_t dev;
 };
-
-#if defined(CONFIG_VFS_STATS)
-# define VFS_STATS_INC(obj, field) atomic_inc(&(obj)->field)
-#else
-# define VFS_STATS_INC(x, y) do{}while(0)
-#endif
-
-#ifdef CONFIG_VFS_VERBOSE
-# include <pthread.h>
-# include <mutek/printk.h>
-# define vfs_printk(fmt, x...) do{printk("%p: "fmt"\n", pthread_self(), ##x);}while(0)
-#else
-# define vfs_printk(...) do{}while(0)
-#endif
 
 #endif
 

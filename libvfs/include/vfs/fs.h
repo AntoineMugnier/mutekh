@@ -90,10 +90,11 @@ typedef VFS_FS_NODE_OPEN(vfs_fs_node_open_t);
 
 
 /** @this defines the fs lookup operation prototype */
-#define VFS_FS_LOOKUP(x) error_t (x)(struct fs_node_s *ref,		\
-									   const char *name,				\
-									   size_t namelen,					\
-									   struct fs_node_s **node)
+#define VFS_FS_LOOKUP(x) error_t (x)(struct fs_node_s *ref,             \
+                                     const char *name,                  \
+                                     size_t namelen,					\
+                                     struct fs_node_s **node,           \
+                                     char *mangled_name)
 
 /**
    This function searches for a given name in a directory node. This function is only
@@ -106,6 +107,8 @@ typedef VFS_FS_NODE_OPEN(vfs_fs_node_open_t);
    @param namelen Length of name, excluding any @tt '\0'
    @param node Returned node if found.  File system must not insert
    the @tt node in the @tt ref's children hash
+   @param mangled_name Mangled name of returned node. The buffer is
+   #CONFIG_VFS_NAMELEN long.
    @return 0 on success, or an error code
 
    This function transfers the ownership of @tt *node to the caller
@@ -141,7 +144,8 @@ typedef VFS_FS_CREATE(vfs_fs_create_t);
                                    struct fs_node_s *parent,           \
                                    const char *name,				   \
                                    size_t namelen,                     \
-                                   struct fs_node_s **rnode)
+                                   struct fs_node_s **rnode,           \
+                                   char *mangled_name)
 
 /**
    This function links a node in a parent directory node.  Filesystem may not
@@ -159,6 +163,8 @@ typedef VFS_FS_CREATE(vfs_fs_create_t);
    @param namelen Length of name, excluding any @tt '\0'
    @param rnode Actually attached node, may be @tt node or another new
    node.
+   @param mangled_name Mangled name of returned node. The buffer is
+   #CONFIG_VFS_NAMELEN long.
    @return 0 on success, or an error code
 
    This function transfers the ownership of @tt *rnode to the caller, even if
@@ -273,6 +279,20 @@ struct vfs_fs_s *vfs_fs_new(void *storage);
 #endif
 
 void vfs_fs_dump_stats(struct vfs_fs_s *fs);
+
+struct vfs_fs_ops_s
+{
+    vfs_fs_node_open_t *node_open;  //< mandatory
+    vfs_fs_lookup_t *lookup;        //< mandatory
+    vfs_fs_create_t *create;        //< optional, may be NULL
+    vfs_fs_link_t *link;            //< optional, may be NULL
+    vfs_fs_move_t *move;            //< optional, may be NULL
+    vfs_fs_unlink_t *unlink;        //< optional, may be NULL
+    vfs_fs_stat_t *stat;            //< mandatory
+    vfs_fs_can_unmount_t *can_unmount; //< mandatory
+    vfs_fs_node_refnew_t *node_refnew; //< mandatory
+    vfs_fs_node_refdrop_t *node_refdrop; //< mandatory
+};
 
 #endif
 

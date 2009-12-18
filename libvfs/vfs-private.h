@@ -29,6 +29,7 @@
 #define _VFS_PRIVATE_H_
 
 
+
 static inline
 bool_t vfs_node_is_dandling(struct vfs_node_s *node)
 {
@@ -46,17 +47,15 @@ struct vfs_node_s * vfs_node_new(void *storage, struct vfs_fs_s *fs,
 
    @param fs associated file system instance
    @param type node type
-   @param fullname entry full name as described by file system.
-          May be longer than @ref #CONFIG_VFS_NAMELEN and will be mangled if needed.
-   @param fullnamelen lenght of full name
+   @param mangled_name Entry mangled name. Must be exactly
+   #CONFIG_VFS_NAMELEN long.
    @return the new vfs node.
 
    @see vfs_name_mangle
  */
 struct vfs_node_s *vfs_node_createnew(
     struct vfs_fs_s *fs,
-    const char *fullname,
-    size_t fullnamelen,
+    const char *mangled_name,
     struct fs_node_s *fs_node);
 
 /**
@@ -90,5 +89,7 @@ static inline bool_t vfs_node_dirtrylock(struct vfs_node_s *node)
 }
 
 void vfs_node_parent_nolock_unset(struct vfs_node_s *node);
+
+void vfs_node_lru_rehash(struct vfs_node_s *node);
 
 #endif

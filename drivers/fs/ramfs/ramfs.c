@@ -19,6 +19,8 @@
   Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
 */
 
+#define GPCT_CONFIG_NODEPRECATED
+
 #include <hexo/types.h>
 #include <hexo/error.h>
 
@@ -141,11 +143,10 @@ VFS_FS_LOOKUP(ramfs_lookup)
     if ( ref->type != VFS_NODE_DIR )
         return -EINVAL;
 
-    char vfsname[CONFIG_VFS_NAMELEN];
-	memset(vfsname, 0, CONFIG_VFS_NAMELEN);
-    memcpy(vfsname, name, namelen);
+	memset(mangled_name, 0, CONFIG_VFS_NAMELEN);
+    memcpy(mangled_name, name, namelen);
 
-    struct fs_node_s *child = ramfs_dir_lookup(&ref->children, vfsname);
+    struct fs_node_s *child = ramfs_dir_lookup(&ref->children, mangled_name);
     if ( child ) {
         *node = child;
         vfs_printk(" ok>");
@@ -212,6 +213,7 @@ VFS_FS_LINK(ramfs_link)
 
 	memset(ret_node->name, 0, CONFIG_VFS_NAMELEN);
 	memcpy(ret_node->name, name, namelen);
+	memcpy(mangled_name, name, CONFIG_VFS_NAMELEN);
 
     ramfs_dir_wrlock(&parent->children);
     struct fs_node_s *old_file = ramfs_dir_nolock_lookup(&parent->children, ret_node->name);
