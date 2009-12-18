@@ -8,6 +8,7 @@
 
 #include <drivers/fs/ramfs/ramfs.h>
 #include <drivers/fs/iso9660/iso9660.h>
+#include <drivers/fs/fat/fat.h>
 #include <drivers/device/enum/fdt/enum-fdt.h>
 
 static
@@ -86,6 +87,44 @@ int cat(lua_State *st)
             default:
                 printk("bad argument\n");
                 break;
+        }
+    }
+
+    return 0;
+}
+
+int hexdump(lua_State *st)
+{
+    unsigned int i;
+
+    for (i = 1; i <= lua_gettop(st); i++)
+    {
+        switch (lua_type(st, i))
+        {
+        case LUA_TSTRING:
+        {
+            FILE* f;
+            const char *pathname = lua_getstringopt(st, 1, NULL);
+            char buffer[256];
+            ssize_t s, base = 0;
+
+            if ((f = fopen(pathname, "r")) == NULL)
+            {
+                printk("error '%s': %s\n", pathname, strerror(errno));
+                break;
+            }
+
+            while ((s = fread(buffer, sizeof(buffer), 1, f)) > 0) {
+                hexdumpk(base, buffer, s*sizeof(buffer));
+                base += s*sizeof(buffer);
+            }
+            
+            fclose(f);
+            break;
+        }
+        default:
+            printk("bad argument\n");
+            break;
         }
     }
 
@@ -364,6 +403,42 @@ void init_shell(lua_State* luast)
     }
 #endif
 
+#ifdef CONFIG_DRIVER_FS_FAT16
+    {
+        struct vfs_fs_s *fat_mount;
+        struct device_s *bd;
+
+# ifdef CONFIG_ARCH_SOCLIB
+        extern struct device_s fdt_enum_dev;
+
+        if ((bd = enum_fdt_lookup(&fdt_enum_dev, "/block@1"))) {
+# elif defined (CONFIG_ARCH_EMU)
+        extern struct device_s block_dev;
+        if ((bd = &block_dev)) {
+# endif
+            error_t err = fat16_open(bd, &fat_mount);
+            if ( err ) {
+                printk("Error opening FAT16: %s\n", strerror(err));
+                abort();
+            }
+
+            struct vfs_node_s *node;
+            err = vfs_create(root_mount, root_mount, "fat", VFS_NODE_DIR, &node);
+            if ( err ) {
+                printk("Error creating \"/fat\": %s\n", strerror(err));
+                abort();
+            }
+
+            err = vfs_mount(node, fat_mount);
+            if ( err ) {
+                printk("Error mounting \"/fat\": %s\n", strerror(err));
+                abort();
+            }
+            vfs_node_refdrop(node);
+        }
+    }
+#endif
+
     printk("ok\n");
 
     lua_register(luast, "mount", mount);
@@ -372,6 +447,7 @@ void init_shell(lua_State* luast)
     lua_register(luast, "ln", ln);
     lua_register(luast, "mv", mv);
     lua_register(luast, "cat", cat);
+    lua_register(luast, "hexdump", hexdump);
     lua_register(luast, "cd", cd);
     lua_register(luast, "mkdir", _mkdir);
     lua_register(luast, "rm", rm);
