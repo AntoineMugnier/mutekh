@@ -518,7 +518,7 @@ VFS_FS_LOOKUP(fat_lookup)
         vfs_printk("<%s: @%d wanted: '%s', 8.3: '%s', lfn: '%s'>",
                    __FUNCTION__, offset, name, name_83, vfs_name);
 
-        if ( !strcasecmp(vfs_name, name) || !strcasecmp(name_83, name) )
+        if ( !strncasecmp(vfs_name, name, namelen) || !strncasecmp(name_83, name, namelen) )
             break;
     } while (1);
 
