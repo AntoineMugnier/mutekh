@@ -39,8 +39,6 @@ enum vfs_open_flags_e {
     VFS_OPEN_WRITE = 2,
     /** Create the file if nonexistant */
     VFS_OPEN_CREATE = 4,
-    /** Seek at end of file upon open */
-    VFS_OPEN_APPEND = 8,
     /** Open a directory (only valid with VFS_OPEN_READ) */
     VFS_OPEN_DIR = 16,
 };
