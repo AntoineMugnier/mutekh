@@ -35,8 +35,7 @@
 #include <gpct/cont_clist.h>
 #include <gpct/object_refcount.h>
 
-#define FAT_COMMON
-#include "fat-types.h"
+#include "fat-defs.h"
 
 struct fat_s;
 struct fs_node_s;
@@ -128,33 +127,39 @@ OBJECT_FUNC(fat_node, REFCOUNT, static inline, fat_node, obj_entry);
 #define FAT_ENTRY_FIND_FREE(x) common_cluster_t (x)                 \
     (struct fat_s *fat)
 
-#define FAT_ENTRY_IS_END(x) bool_t (x)(common_cluster_t cluster)
-
 struct fat_ops_s
 {
     FAT_ENTRY_GET(*entry_get);
     FAT_ENTRY_SET(*entry_set);
     FAT_ENTRY_FIND_FREE(*entry_find_free);
-    FAT_ENTRY_IS_END(*entry_is_end);
 };
 
+enum fat_type_e
+{
+    FAT32 = 32,
+    FAT16 = 16,
+    FAT12 = 12,
+};
 
 struct fat_s
 {
     struct vfs_fs_s fs;
 	struct device_s *dev;
     const struct fat_ops_s *ops;
+	common_cluster_t root_dir_secsize;
+    // This holds a sector for fat16.
+    common_cluster_t root_dir_base;
+	common_cluster_t first_probable_free_cluster;
 	sector_t total_sector_count;
 	sector_t fat_secsize;
 	sector_t cluster0_sector; /* == first_data_sector - (2 << sect_per_clust_pow2) */
-	common_cluster_t root_dir_secsize;
-	common_cluster_t reserved_sect_count;
-	common_cluster_t first_probable_free_cluster;
+	sector_t fat_sect0;
     fat_node_pool_root_t nodes;
+    struct fat_tmp_sector_s *sector;
 	uint8_t sect_size_pow2;
 	uint8_t sect_per_clust_pow2;
 	uint8_t fat_count;
-    struct fat_tmp_sector_s *sector;
+	enum fat_type_e type;
 };
 
 static inline
@@ -178,7 +183,14 @@ ssize_t fat_data_read(
     off_t offset,
     void *buffer, size_t size);
 
+static inline bool_t fat_entry_is_end(common_cluster_t cluster)
+{
+    return ((cluster | 0x7) + 1) == 0;
+}
+
 VFS_FILE_READ(fat_dir_read);
+
+void fat_str_to_lower(char *str, size_t size);
 
 /*
   Common FAT FS operations
@@ -190,5 +202,11 @@ VFS_FS_LINK(fat_link);
 VFS_FS_MOVE(fat_move);
 VFS_FS_UNLINK(fat_unlink);
 VFS_FS_STAT(fat_stat);
+
+VFS_FILE_CLOSE(fat_file_close);
+VFS_FILE_READ(fat_dir_read);
+VFS_FILE_READ(fat_file_read);
+VFS_FILE_WRITE(fat_file_write);
+VFS_FILE_SEEK(fat_file_seek);
 
 #endif

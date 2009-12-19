@@ -22,7 +22,6 @@
 #include <hexo/types.h>
 #include <vfs/fs.h>
 #include <vfs/file.h>
-#include "fat-types.h"
 #include "fat-private.h"
 #include "fat-defs.h"
 #include "fat-sector-cache.h"

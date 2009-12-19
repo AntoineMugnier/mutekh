@@ -35,7 +35,6 @@
 #include "fat-sector-cache.h"
 #include "fat.h"
 
-#define FAT_COMMON
 #include "fat-defs.h"
 #include "fat-private.h"
 
@@ -67,6 +66,9 @@ error_t fat_get_next_dirent(struct fat_file_s *ffile,
                 continue;
         }
         
+        if ( dirent->old.ntres & NTRES_LOWER_NAME )
+            fat_str_to_lower(dirent->old.name, 11);
+
         fat_name_to_vfs(vfs_mangled_name, dirent->old.name);
         fat_name_to_vfs(name_83, dirent->old.name);
 

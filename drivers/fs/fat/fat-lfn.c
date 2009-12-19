@@ -35,7 +35,6 @@
 #include "fat-sector-cache.h"
 #include "fat.h"
 
-#define FAT_COMMON
 #include "fat-defs.h"
 #include "fat-private.h"
 
@@ -143,6 +142,9 @@ error_t fat_get_next_dirent(struct fat_file_s *ffile,
             /* do check sum */
             if (lfn_cksum(dirent->old.name) != cksum)
                 id = LFN_ID_INVALID;
+
+            if ( dirent->old.ntres & NTRES_LOWER_NAME )
+                fat_str_to_lower(dirent->old.name, 11);
 
             if ( id == LFN_ID_COMPLETED && flen )
                 vfs_name_mangle(fname, flen, vfs_mangled_name);

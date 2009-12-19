@@ -21,7 +21,6 @@
 
 #include "fat-sector-cache.h"
 #include "fat-private.h"
-#define FAT_COMMON
 #include "fat-defs.h"
 
 static

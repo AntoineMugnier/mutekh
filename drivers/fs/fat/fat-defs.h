@@ -23,7 +23,32 @@
 #define _FAT_DEFS_H_
 
 #include <hexo/types.h>
-#include "fat-types.h"
+#include <device/block.h>
+
+struct fat_bpb16_s {
+    uint8_t drive_number;
+    uint8_t nt_reserved;
+    uint8_t boot_sig;
+    uint8_t volume_id[4];
+    uint8_t volume_label[11];
+    uint8_t volume_type[8];
+} __attribute__((packed));
+
+struct fat_bpb32_s {
+    uint32_t fat_size;
+    uint16_t flags;
+    uint16_t fs_version;
+    uint32_t root_cluster;
+    uint16_t fs_info;
+    uint16_t bk_boot_sector;
+    uint8_t reserved[12];
+    uint8_t drive_number;
+    uint8_t reserved1;
+    uint8_t boot_sig;
+    uint8_t volume_id[4];
+    uint8_t volume_label[11];
+    uint8_t volume_type[8];
+} __attribute__((packed));
 
 struct fat_bpb_s
 {
@@ -40,13 +65,10 @@ struct fat_bpb_s
 	uint8_t drive_info[8];
 	uint32_t total_sector_count32;
 
-	/* Fat 12/16 specific from here */
-	uint8_t drive_number;
-	uint8_t nt_reserved;
-	uint8_t boot_sig;
-	uint8_t volume_id[4];
-	uint8_t volume_label[11];
-	uint8_t volume_type[8];
+    union {
+        struct fat_bpb16_s bpb16;
+        struct fat_bpb32_s bpb32;
+    } __attribute__((packed));
 } __attribute__((packed));
 
 union fat_dirent_u
@@ -90,13 +112,37 @@ union fat_dirent_u
 #define ATTR_DIRECTORY 0x10
 #define ATTR_ARCHIVE   0x20
 
+#define NTRES_LOWER_NAME 0x8
+
 #define FAT_DIR_ENTRY_FREE 0xe5
 #define FAT_DIR_ENTRY_E5   0x05
 #define FAT_DIR_ENTRY_LAST 0x0
 
-#define CLUSTER_MASK   ((cluster_t)0xffff)
-#define CLUSTER_END     ((cluster_t)0xffff)
-
 #define FAT_83_NAMELEN 13
+
+#if defined(FAT_16)
+typedef uint16_t cluster_t;
+# if defined(CONFIG_DRIVER_FS_FAT32)
+#  define CLUSTER_TO_COMMON(x) ((int32_t)(int16_t)(x))
+# else
+#  define CLUSTER_TO_COMMON(x) (x)
+# endif
+#elif defined(FAT_32)
+typedef uint32_t cluster_t;
+# define CLUSTER_TO_COMMON(x) (x)
+#endif
+
+#if defined(CONFIG_DRIVER_FS_FAT16) && defined(CONFIG_DRIVER_FS_FAT32)
+typedef uint32_t common_cluster_t;
+#elif defined(CONFIG_DRIVER_FS_FAT16)
+typedef uint16_t common_cluster_t;
+#elif defined(CONFIG_DRIVER_FS_FAT32)
+typedef uint32_t common_cluster_t;
+#endif
+
+#define CLUSTER_MASK   ((common_cluster_t)0xffffffff)
+#define CLUSTER_END     ((common_cluster_t)0xffffffff)
+
+typedef dev_block_lba_t sector_t;
 
 #endif

@@ -22,8 +22,7 @@
 #include <hexo/types.h>
 #include <vfs/fs.h>
 #include <vfs/file.h>
-#define FAT_COMMON
-#include "fat-types.h"
+
 #include "fat-private.h"
 #include "fat-defs.h"
 #include "fat-sector-cache.h"
@@ -71,7 +70,7 @@ OBJECT_DESTRUCTOR(fat_node)
     semaphore_destroy(&obj->lock);
 }
 
-static void dump_file(const struct fat_file_s *file)
+static inline void dump_file(const struct fat_file_s *file)
 {
     vfs_printk("<fat file: first cluster: %d, size: %d, zone: @%d %d-%d>",
                file->extent->first_cluster, file->extent->file_size,
@@ -130,7 +129,7 @@ common_cluster_t fat_file_get_cluster(
     /* Walk for the rest */
     while ( (ret = fat_file_translate_cluster(file, cluster)) == 0 ) {
         ret = node->fat->ops->entry_get(node->fat, file->zone_end - 1);
-        if ( node->fat->ops->entry_is_end(ret) ) {
+        if ( fat_entry_is_end(ret) ) {
             ret = 0;
             break;
         } else if ( ret == file->zone_end ) {
@@ -199,10 +198,10 @@ sector_t fat_file_get_sector(struct fat_file_s *ffile, off_t offset)
     struct fat_s *fat = node->fat;
 
     sector_t vsector = offset >> fat->sect_size_pow2;
-    cluster_t vcluster = vsector >> fat->sect_per_clust_pow2;
+    common_cluster_t vcluster = vsector >> fat->sect_per_clust_pow2;
     sector_t psector_mask = (1 << fat->sect_per_clust_pow2) - 1;
     sector_t psector_offset = vsector & psector_mask;
-    cluster_t pcluster;
+    common_cluster_t pcluster;
 
     semaphore_wait(&node->lock);
     pcluster = fat_file_translate_cluster(ffile, vcluster);
@@ -290,7 +289,8 @@ ssize_t fat_file_read_aligned_sectors(
     return max << fat->sect_size_pow2;
 }
 
-/* TODO Compile this code only if we have support for fat12/16 */
+#if defined(CONFIG_DRIVER_FS_FAT16)
+/* If we only compile FAT32 code, we dont need this hack */
 static
 ssize_t fat_root_read(
     struct fat_file_s *ffile,
@@ -303,9 +303,7 @@ ssize_t fat_root_read(
     size_t block_mask = (block_size - 1);
     size_t block_offset = offset & block_mask;
     sector_t sect = (offset >> fat->sect_size_pow2)
-        + fat->cluster0_sector
-        + (2 << fat->sect_per_clust_pow2)
-        - fat->root_dir_secsize;
+        + fat->root_dir_base;
 
     if ( offset >= ffile->extent->file_size )
         return 0;
@@ -324,15 +322,17 @@ ssize_t fat_root_read(
 
     return size;
 }
+#endif
 
 ssize_t fat_data_read(
     struct fat_file_s *ffile,
     off_t offset,
     void *buffer, size_t size)
 {
-    /* TODO Compile this code only if we have support for fat12/16 */
+#if defined(CONFIG_DRIVER_FS_FAT16)
     if ( ffile->extent->first_cluster == 0 )
         return fat_root_read(ffile, offset, buffer, size);
+#endif
 
     uint8_t *data = buffer;
     size_t sector_size = (1 << ffile->extent->fat->sect_size_pow2);
@@ -378,11 +378,10 @@ ssize_t fat_data_read(
   err:
     if (ret < 0)
         return ret;
-    if (ret == 0)
-        return size - left;
+
     left -= ret;
 
-    vfs_printk("<%s after all. left: %d bytes @ %d>", __FUNCTION__, size, offset);
+    vfs_printk("<%s after all. size: %d left: %d bytes @ %d>", __FUNCTION__, size, left, offset);
 
     return size-left;
 }
@@ -412,8 +411,26 @@ VFS_FILE_WRITE(fat_file_write)
 VFS_FILE_SEEK(fat_file_seek)
 {
     struct fat_file_s *ffile = file->priv;
-    (void)ffile;
-    return -ENOTSUP;
+
+	switch (whence) {
+	case VFS_SEEK_SET:
+		break;
+	case VFS_SEEK_CUR:
+		offset += file->offset;
+		break;
+	case VFS_SEEK_END:
+		offset += ffile->extent->file_size;
+		break;
+	}
+
+	if ( offset > (off_t)ffile->extent->file_size )
+		offset = ffile->extent->file_size;
+	if ( offset < 0 )
+		offset = 0;
+
+	file->offset = offset;
+
+	return offset;
 }
 
 VFS_FS_NODE_OPEN(fat_node_open)
