@@ -32,18 +32,24 @@
 #include <gpct/object_refcount.h>
 #include <vfs/defs.h>
 
-enum vfs_open_flags_e {
+enum vfs_open_flags_e
+{
     /** Allow read operation */
     VFS_OPEN_READ = 1,
     /** Allow write operation */
     VFS_OPEN_WRITE = 2,
     /** Create the file if nonexistant */
     VFS_OPEN_CREATE = 4,
+    /** Append mode */
+    VFS_OPEN_APPEND = 8,
+    /** Append mode */
+    VFS_OPEN_TRUNCATE = 16,
     /** Open a directory (only valid with VFS_OPEN_READ) */
-    VFS_OPEN_DIR = 16,
+    VFS_OPEN_DIR = 32,
 };
 
-enum vfs_whence_e {
+enum vfs_whence_e
+{
     /** Seek from start of file */
 	VFS_SEEK_SET,
     /** Seek from end of file */
@@ -117,11 +123,29 @@ typedef VFS_FILE_WRITE(vfs_file_write_t);
    @return the new absolute point from start of file
 
    @this function may be used to seek beyond end of file. This is not
-   an error until another operation is performed.
+   an error.
 
    @csee #VFS_FILE_SEEK 
  */
 typedef VFS_FILE_SEEK(vfs_file_seek_t);
+
+
+/** @this defines the file truncate operation prototype */
+#define VFS_FILE_TRUNCATE(x) off_t (x)(struct vfs_file_s *file, off_t new_size)
+
+/**
+   @this changes size of a file to exactly @tt new_size
+
+   @param file File to truncate
+   @param new_size Offset to cut at
+   @return 0 if done
+
+   @this function may be used to truncate beyond end of file. This
+   will extent the file with zeros.
+
+   @csee #VFS_FILE_TRUNCATE 
+ */
+typedef VFS_FILE_TRUNCATE(vfs_file_truncate_t);
 
 
 OBJECT_TYPE     (vfs_file, REFCOUNT, struct vfs_file_s);
@@ -136,6 +160,7 @@ struct vfs_file_s
 	vfs_file_read_t *read;              //< Read operation for this file   
 	vfs_file_write_t *write;            //< Write operation for this file  
 	vfs_file_seek_t *seek;              //< Seek operation for this file   
+	vfs_file_truncate_t *truncate;      //< Truncate operation for this file   
 	off_t offset;                       //< Current access position in file
 	void *priv;                         //< File system private data
 };
@@ -231,6 +256,19 @@ static inline off_t vfs_file_seek(struct vfs_file_s *file,
 					  enum vfs_whence_e whence)
 {
 	return file->seek(file, offset, whence);
+}
+
+/**
+   @this truncates the file to the exact size @tt new_size
+
+   @param file File to truncate
+   @param new_size New file size
+   @return 0 if done
+*/
+static inline off_t vfs_file_truncate(struct vfs_file_s *file,
+					  off_t new_size)
+{
+	return file->truncate(file, new_size);
 }
 
 #endif

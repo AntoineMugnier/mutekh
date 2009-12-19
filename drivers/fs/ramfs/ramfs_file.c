@@ -99,6 +99,32 @@ VFS_FILE_WRITE(ramfs_file_write)
 	return size;
 }
 
+VFS_FILE_TRUNCATE(ramfs_file_truncate)
+{
+    struct ramfs_data_s *data = file->priv;
+    if ( new_size > (off_t)data->allocated_size ) {
+        new_size |= 0xfff;
+        new_size += 1;
+
+        error_t err = ramfs_data_realloc(data, new_size);
+        if ( err )
+            return err;
+
+        memset(data->data+data->actual_size, 0, new_size - data->actual_size);
+    }
+
+    data->actual_size = new_size;
+
+    return 0;
+}
+
+VFS_FILE_WRITE(ramfs_file_append)
+{
+ 	struct ramfs_data_s *data = file->priv;
+    file->offset = data->actual_size;
+    return ramfs_file_write(file, buffer, size);
+}
+
 VFS_FILE_SEEK(ramfs_file_seek)
 {
 	struct ramfs_data_s *data = file->priv;
@@ -142,9 +168,14 @@ VFS_FS_NODE_OPEN(ramfs_node_open)
             f->read = ramfs_file_read;
 		if ( flags & VFS_OPEN_WRITE )
             f->write = ramfs_file_write;
+        if ( flags & VFS_OPEN_APPEND )
+            f->write = ramfs_file_append;
+        if ( flags & VFS_OPEN_TRUNCATE )
+            ramfs_file_truncate(f, 0);
 		f->seek = ramfs_file_seek;
 		f->priv = ramfs_data_refnew(node->data);
         f->close = ramfs_file_close;
+        f->truncate = ramfs_file_truncate;
         break;
     }
 	case VFS_NODE_DIR:
@@ -158,3 +189,12 @@ VFS_FS_NODE_OPEN(ramfs_node_open)
 	vfs_printk("ok: %p>", f);
 	return 0;
 }
+
+// Local Variables:
+// tab-width: 4
+// c-basic-offset: 4
+// c-file-offsets:((innamespace . 0)(inline-open . 0))
+// indent-tabs-mode: nil
+// End:
+
+// vim: filetype=cpp:expandtab:shiftwidth=4:tabstop=4:softtabstop=4

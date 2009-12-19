@@ -87,6 +87,10 @@ static enum open_flags_e flags_to_vfs(const enum vfs_open_flags_e mode)
     flags |= VFS_OPEN_WRITE;
   if (mode & O_CREAT)
     flags |= VFS_OPEN_CREATE;
+  if (mode & O_APPEND)
+    flags |= VFS_OPEN_APPEND;
+  if ( flags & O_TRUNC )
+    flags |= VFS_OPEN_TRUNCATE;
 
   return (flags);
 }
@@ -121,13 +125,6 @@ fd_t open(const char *pathname, enum open_flags_e flags, ...)
     }
 
   e->hndl = hndl;
-
-  if ( flags & O_APPEND )
-      vfs_file_seek(hndl, 0, VFS_SEEK_END);
-
-  /* TODO !!! */
-/*   if ( flags & O_TRUNC ) */
-/*       vfs_file_seek(hndl, 0, VFS_SEEK_END); */
 
   return fd;
 }

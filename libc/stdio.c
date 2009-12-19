@@ -411,7 +411,7 @@ static enum vfs_open_flags_e	open_flags(const char *str)
 	  break;
 
 	case ('w'):
-	  flags |= VFS_OPEN_WRITE | VFS_OPEN_CREATE;
+	  flags |= VFS_OPEN_WRITE | VFS_OPEN_CREATE | VFS_OPEN_TRUNCATE;
 	  break;
 
 	case ('+'):
@@ -419,7 +419,7 @@ static enum vfs_open_flags_e	open_flags(const char *str)
 	  break;
 
 	case ('a'):
-	  flags |= VFS_OPEN_WRITE;
+	  flags |= VFS_OPEN_WRITE | VFS_OPEN_APPEND;
 	  break;
 
 	case ('b'):
@@ -462,9 +462,6 @@ FILE *fopen(const char *path, const char *mode)
   ops->write = hndl->write;
   ops->lseek = hndl->seek;
   ops->close = hndl->close;
-
-  if ( strchr(mode, 'a') )
-      ops->lseek(hndl, 0, VFS_SEEK_END);
 
   __stdio_stream_init(file);
 

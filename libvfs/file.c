@@ -37,6 +37,11 @@ static VFS_FILE_SEEK(default_vfs_file_seek)
 	return -ENOTSUP;
 }
 
+static VFS_FILE_TRUNCATE(default_vfs_file_truncate)
+{
+	return -ENOTSUP;
+}
+
 static VFS_FILE_CLOSE(default_vfs_file_close)
 {
 	vfs_file_refdrop(file);
@@ -58,6 +63,7 @@ OBJECT_CONSTRUCTOR(vfs_file)
 	obj->read = default_vfs_file_read;
 	obj->write = default_vfs_file_write;
 	obj->seek = default_vfs_file_seek;
+	obj->truncate = default_vfs_file_truncate;
 
 	return 0;
 }
