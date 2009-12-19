@@ -403,7 +403,7 @@ void init_shell(lua_State* luast)
     }
 #endif
 
-#ifdef CONFIG_DRIVER_FS_FAT16
+#ifdef CONFIG_DRIVER_FS_FAT
     {
         struct vfs_fs_s *fat_mount;
         struct device_s *bd;
@@ -416,9 +416,9 @@ void init_shell(lua_State* luast)
         extern struct device_s block_dev;
         if ((bd = &block_dev)) {
 # endif
-            error_t err = fat16_open(bd, &fat_mount);
+            error_t err = fat_open(bd, &fat_mount);
             if ( err ) {
-                printk("Error opening FAT16: %s\n", strerror(err));
+                printk("Error opening FAT: %s\n", strerror(err));
                 abort();
             }
 
