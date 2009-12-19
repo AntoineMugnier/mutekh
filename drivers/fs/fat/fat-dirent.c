@@ -20,6 +20,7 @@
 */
 
 #include <hexo/types.h>
+#include <hexo/endian.h>
 #include <vfs/fs.h>
 #include <vfs/file.h>
 #include "fat-private.h"
@@ -98,13 +99,14 @@ VFS_FS_LOOKUP(fat_lookup)
 
     fat_file_refdrop(ffile);
 
-    common_cluster_t cluster = (fat_dirent->old.clust_hi << 16)
-        | fat_dirent->old.clust_lo;
+    common_cluster_t cluster =
+        (endian_le16(fat_dirent->old.clust_hi) << 16)
+        | endian_le16(fat_dirent->old.clust_lo);
 
     struct fs_node_s *rnode = fat_node_pool_lookup(&fat->nodes, cluster);
     if ( rnode == NULL ) {
         rnode = fat_node_new(NULL, fat, cluster,
-                             (fat_dirent->old.attr & ATTR_DIRECTORY) ? 0 : fat_dirent->old.file_size,
+                             (fat_dirent->old.attr & ATTR_DIRECTORY) ? 0 : endian_le32(fat_dirent->old.file_size),
                              (fat_dirent->old.attr & ATTR_DIRECTORY) ? VFS_NODE_DIR : VFS_NODE_FILE);
     }
 
@@ -135,7 +137,7 @@ VFS_FILE_READ(fat_dir_read)
         if ( vfs_dirent->name[0] == 0 )
             strcpy(vfs_dirent->name, name_83);
 
-        vfs_dirent->size = fat_dirent->old.file_size;
+        vfs_dirent->size = endian_le32(fat_dirent->old.file_size);
         vfs_dirent->type = fat_dirent->old.attr & ATTR_DIRECTORY
             ? VFS_NODE_DIR
             : VFS_NODE_FILE;

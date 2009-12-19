@@ -19,6 +19,8 @@
   Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
 */
 
+#include <hexo/endian.h>
+
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
 
@@ -67,15 +69,22 @@ static error_t fat_parse_bpb(struct fat_s *state, struct fat_tmp_sector_s *secto
 		return -ENOENT;
 	}
 
-	if ( bpb->byte_per_sector != params->blk_size ) {
+    uint16_t byte_per_sector = endian_le16(bpb->byte_per_sector);
+    uint16_t reserved_sect_count = endian_le16(bpb->reserved_sect_count);
+    uint16_t root_dirent_count = endian_le16(bpb->root_dirent_count);
+    uint16_t total_sector_count16 = endian_le16(bpb->total_sector_count16);
+    uint32_t total_sector_count32 = endian_le32(bpb->total_sector_count32);
+    uint16_t fat_size16 = endian_le16(bpb->fat_size);
+    uint32_t fat_size32 = endian_le32(bpb->bpb32.fat_size);
+	if ( byte_per_sector != params->blk_size ) {
 		printk("FAT Error: device sector size (%d) does not match FAT's (%d)\n",
-			   params->blk_size, bpb->byte_per_sector);
+			   params->blk_size, byte_per_sector);
 		return -EINVAL;
 	}
 
-	state->total_sector_count = bpb->total_sector_count16
-		? bpb->total_sector_count16
-		: bpb->total_sector_count32;
+	state->total_sector_count = total_sector_count16
+		? total_sector_count16
+		: total_sector_count32;
 
 	if ( state->total_sector_count < params->blk_count ) {
 		printk("FAT Error: device size (%d blocks) is less than FAT's (%d blocks)\n",
@@ -83,25 +92,22 @@ static error_t fat_parse_bpb(struct fat_s *state, struct fat_tmp_sector_s *secto
 		return -EINVAL;
 	}
 
-	state->sect_size_pow2 = __builtin_ctz(bpb->byte_per_sector);
+	state->sect_size_pow2 = __builtin_ctz(byte_per_sector);
 	state->sect_per_clust_pow2 = __builtin_ctz(bpb->sector_per_cluster);
-	state->root_dir_secsize = bpb->root_dirent_count >> (state->sect_size_pow2 - 5);
+	state->root_dir_secsize = root_dirent_count >> (state->sect_size_pow2 - 5);
 	state->fat_count = bpb->fat_count;
 
-    if ( bpb->fat_size == 0 )
-        state->fat_secsize = bpb->bpb32.fat_size;
-    else
-        state->fat_secsize = bpb->fat_size;
+    state->fat_secsize = ( fat_size16 == 0 ) ? fat_size32 : fat_size16;
 
 #if defined(CONFIG_DRIVER_FS_FAT_TYPE_FROM_STRING)
     if ( ! memcmp(bpb->bpb16.volume_type, "FAT12   ", 8) ) {
-        if ( bpb->fat_size == 0 ) {
+        if ( fat_size16 == 0 ) {
             printk("This fat12 uses fat32 headers, bad\n");
             return -ENOTSUP;
         }
         state->type = FAT12;
     } else if ( ! memcmp(bpb->bpb16.volume_type, "FAT16   ", 8) ) {
-        if ( bpb->fat_size == 0 ) {
+        if ( fat_size16 == 0 ) {
             printk("This fat16 uses fat32 headers, bad\n");
             return -ENOTSUP;
         }
@@ -112,19 +118,19 @@ static error_t fat_parse_bpb(struct fat_s *state, struct fat_tmp_sector_s *secto
 #else    
     uint32_t data_clusters =
         (state->total_sector_count
-         - bpb->reserved_sect_count
+         - reserved_sect_count
          - state->fat_secsize * state->fat_count
          - state->root_dir_secsize
             ) >> state->sect_per_clust_pow2;
 
     if ( data_clusters < 4085 ) {
-        if ( bpb->fat_size == 0 ) {
+        if ( fat_size16 == 0 ) {
             printk("This fat12 uses fat32 headers, bad\n");
             return -ENOTSUP;
         }
         state->type = FAT12;
     } else if ( data_clusters < 65525 ) {
-        if ( bpb->fat_size == 0 ) {
+        if ( fat_size16 == 0 ) {
             printk("This fat16 uses fat32 headers, bad\n");
             return -ENOTSUP;
         }
@@ -133,17 +139,17 @@ static error_t fat_parse_bpb(struct fat_s *state, struct fat_tmp_sector_s *secto
         state->type = FAT32;
 #endif
 
-	state->fat_sect0 = bpb->reserved_sect_count;
+	state->fat_sect0 = reserved_sect_count;
 	state->cluster0_sector =
-		bpb->reserved_sect_count
+		reserved_sect_count
 		+ state->fat_secsize * state->fat_count
 		+ state->root_dir_secsize
 		- (2 << state->sect_per_clust_pow2);
 
     if (state->type == FAT32) {
-        state->root_dir_base = bpb->bpb32.root_cluster;
+        state->root_dir_base = endian_le32(bpb->bpb32.root_cluster);
     } else {
-        state->root_dir_base = bpb->reserved_sect_count
+        state->root_dir_base = reserved_sect_count
             + state->fat_secsize * state->fat_count;
     }
     state->first_probable_free_cluster = 2;

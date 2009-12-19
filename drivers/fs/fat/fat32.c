@@ -21,6 +21,8 @@
 
 #define FAT_32
 
+#include <hexo/endian.h>
+
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
 
@@ -63,9 +65,10 @@ static common_cluster_t fat32_entry_get(
         return err;
     uint32_t *data = (uint32_t*)fat->sector->data;
 
-    vfs_printk("<%s(%d) = %d>", __FUNCTION__, cluster_no, data[fat_offset]);
+    uint32_t ret = endian_le32(data[fat_offset]) & 0x0fffffff;
 
-    uint32_t ret = data[fat_offset];
+    vfs_printk("<%s(%d) = %d>", __FUNCTION__, cluster_no, ret);
+
     fat_sector_lock_release(fat->sector);
     return ret;
 }
@@ -101,7 +104,14 @@ static error_t fat32_entry_set(
         return err;
 
     uint32_t *data = (uint32_t*)fat->sector->data;
-    data[fat_offset] = next_cluster_no;
+    /*
+      Put le endian swap on constants and local data, this avoids
+      double swap for on-disk data. | and & dont care about
+      endianness anyway
+    */
+    data[fat_offset] =
+        (data[fat_offset] & endian_le32(0xf0000000))
+        | (endian_le32(next_cluster_no) & endian_le32(0x0fffffff));
     fat_sector_lock_release(fat->sector);
     return 0;
 }

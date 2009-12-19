@@ -21,6 +21,8 @@
 
 #define FAT_16
 
+#include <hexo/endian.h>
+
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
 
@@ -64,9 +66,10 @@ static common_cluster_t fat16_entry_get(
         return CLUSTER_TO_COMMON(CLUSTER_END);
     uint16_t *data = (uint16_t*)fat->sector->data;
 
-    vfs_printk("<%s(%d) = %d>", __FUNCTION__, cluster_no, data[fat_offset]);
+    uint16_t ret = endian_le16(data[fat_offset]);
 
-    uint16_t ret = data[fat_offset];
+    vfs_printk("<%s(%d) = %d>", __FUNCTION__, cluster_no, ret);
+
     fat_sector_lock_release(fat->sector);
     return CLUSTER_TO_COMMON(ret);
 }
@@ -102,7 +105,7 @@ static error_t fat16_entry_set(
         return err;
 
     uint16_t *data = (uint16_t*)fat->sector->data;
-    data[fat_offset] = next_cluster_no;
+    data[fat_offset] = endian_le16(next_cluster_no);
     fat_sector_lock_release(fat->sector);
     return 0;
 }

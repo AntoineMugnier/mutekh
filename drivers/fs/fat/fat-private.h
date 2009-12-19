@@ -185,7 +185,11 @@ ssize_t fat_data_read(
 
 static inline bool_t fat_entry_is_end(common_cluster_t cluster)
 {
+#if defined(CONFIG_DRIVER_FS_FAT32)
+    return ((cluster | 0xf0000007) + 1) == 0;
+#else
     return ((cluster | 0x7) + 1) == 0;
+#endif
 }
 
 VFS_FILE_READ(fat_dir_read);
