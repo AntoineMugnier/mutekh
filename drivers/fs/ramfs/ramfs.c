@@ -143,8 +143,7 @@ VFS_FS_LOOKUP(ramfs_lookup)
     if ( ref->type != VFS_NODE_DIR )
         return -EINVAL;
 
-	memset(mangled_name, 0, CONFIG_VFS_NAMELEN);
-    memcpy(mangled_name, name, namelen);
+    vfs_name_mangle(name, namelen, mangled_name);
 
     struct fs_node_s *child = ramfs_dir_lookup(&ref->children, mangled_name);
     if ( child ) {
@@ -211,9 +210,8 @@ VFS_FS_LINK(ramfs_link)
 		ret_node = ramfs_node_refnew(node);
 	}
 
-	memset(ret_node->name, 0, CONFIG_VFS_NAMELEN);
-	memcpy(ret_node->name, name, namelen);
-	memcpy(mangled_name, name, CONFIG_VFS_NAMELEN);
+    vfs_name_mangle(name, namelen, mangled_name);
+	memcpy(ret_node->name, mangled_name, CONFIG_VFS_NAMELEN);
 
     ramfs_dir_wrlock(&parent->children);
     struct fs_node_s *old_file = ramfs_dir_nolock_lookup(&parent->children, ret_node->name);
