@@ -43,7 +43,7 @@ DEVICU_ENABLE(xicu_filter_enable)
 
 DEVICU_SETHNDL(xicu_filter_sethndl)
 {
-    struct xicu_filter_private_s *pv = dev->drv_pv;
+/*     struct xicu_filter_private_s *pv = dev->drv_pv; */
 
 /*     printk("xicu %p %d sethndl %d -> %p %p\n", dev, pv->output, irq, hndl, data); */
     return xicu_root_set_hwi_handler(PARENT(dev), irq&0x1f, hndl, data);
