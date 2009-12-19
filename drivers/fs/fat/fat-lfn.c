@@ -144,7 +144,9 @@ error_t fat_get_next_dirent(struct fat_file_s *ffile,
                 id = LFN_ID_INVALID;
 
             if ( dirent->old.ntres & NTRES_LOWER_NAME )
-                fat_str_to_lower(dirent->old.name, 11);
+                fat_str_to_lower(dirent->old.name, 8);
+            if ( dirent->old.ntres & NTRES_LOWER_EXT )
+                fat_str_to_lower(dirent->old.name+8, 3);
 
             if ( id == LFN_ID_COMPLETED && flen )
                 vfs_name_mangle(fname, flen, vfs_mangled_name);

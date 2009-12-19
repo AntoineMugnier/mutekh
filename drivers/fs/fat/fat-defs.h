@@ -113,6 +113,7 @@ union fat_dirent_u
 #define ATTR_ARCHIVE   0x20
 
 #define NTRES_LOWER_NAME 0x8
+#define NTRES_LOWER_EXT  0x10
 
 #define FAT_DIR_ENTRY_FREE 0xe5
 #define FAT_DIR_ENTRY_E5   0x05
