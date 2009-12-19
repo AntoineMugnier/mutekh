@@ -76,6 +76,19 @@ vfs_node_parent_nolock_set(struct vfs_node_s *node, struct vfs_node_s *parent)
     vfs_node_lru_rehash(node);
 }
 
+inline
+size_t vfs_name_mangle(const char *fullname, size_t fulllen, char *vfsname)
+{
+    /* FIXME should gracefully handle shortened names colision */
+    if (fulllen > CONFIG_VFS_NAMELEN)
+        fulllen = CONFIG_VFS_NAMELEN;
+    /* fulllen can be 0 for anonymous nodes only */
+    memcpy(vfsname, fullname, fulllen);
+	memset(vfsname + fulllen, 0, CONFIG_VFS_NAMELEN - fulllen);
+
+    return fulllen;
+}
+
 static struct vfs_node_s *
 vfs_dir_mangled_lookup(struct vfs_node_s *node,
                               const char *fullname, size_t fullnamelen)
@@ -476,18 +489,6 @@ error_t vfs_node_stat(struct vfs_node_s *node,
     vfs_node_lru_rehash(node);
 
 	return node->fs->ops->stat(node->fs_node, stat);
-}
-
-size_t vfs_name_mangle(const char *fullname, size_t fulllen, char *vfsname)
-{
-    /* FIXME should gracefully handle shortened names colision */
-    if (fulllen > CONFIG_VFS_NAMELEN)
-        fulllen = CONFIG_VFS_NAMELEN;
-    /* fulllen can be 0 for anonymous nodes only */
-    memcpy(vfsname, fullname, fulllen);
-	memset(vfsname + fulllen, 0, CONFIG_VFS_NAMELEN - fulllen);
-
-    return fulllen;
 }
 
 bool_t vfs_name_compare(const char *fullname, size_t fulllen,
