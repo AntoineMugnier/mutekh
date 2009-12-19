@@ -18,7 +18,7 @@ struct fd_entry_s
 CONTAINER_TYPE(fdarray, DARRAY, struct fd_entry_s, 1, 256)
 CONTAINER_FUNC(fdarray, DARRAY, static, fdarray);
 
-static fdarray_root_t fd_array;
+static fdarray_root_t fd_array = CONTAINER_ROOT_INITIALIZER(fdarray, DARRAY);
 
 static fd_t fd_new(fdarray_root_t *fda)
 {
@@ -49,6 +49,9 @@ fd_t fd_add(const struct fileops_s *ops, void *hndl)
 	fd_t fd = fd_new(&fd_array);
 	struct fd_entry_s *e = fd_get(&fd_array, fd);
 
+	/* NULL handler would confuse fd allocator */
+	assert(hndl != NULL);
+
 	e->ops = ops;
 	e->hndl = hndl;
 
@@ -59,14 +62,14 @@ fd_t fd_add(const struct fileops_s *ops, void *hndl)
                   File descriptor oriented operations
    ********************************************************************** */
 
-#ifdef CONFIG_VFS
+#if defined(CONFIG_VFS)
 
-static const struct fileops_s open_fops =
-{
-  .read = (fileops_read_t*)vfs_read,
-  .write = (fileops_write_t*)vfs_write,
-  .lseek = (fileops_lseek_t*)vfs_lseek,
-  .close = (fileops_close_t*)vfs_close,
+static const
+struct fileops_s open_fops = {
+    .read =  (fileops_read_t *)vfs_file_read,
+    .write = (fileops_write_t*)vfs_file_write,
+    .lseek = (fileops_lseek_t*)vfs_file_seek,
+    .close = (fileops_close_t*)vfs_file_close,
 };
 
 inline fd_t creat(const char *pathname, mode_t mode)
@@ -74,20 +77,16 @@ inline fd_t creat(const char *pathname, mode_t mode)
     return open(pathname, O_CREAT|O_WRONLY|O_TRUNC, mode);
 }
 
-static enum open_flags_e flags_to_vfs(const vfs_open_flags_t mode)
+static enum open_flags_e flags_to_vfs(const enum vfs_open_flags_e mode)
 {
-  vfs_open_flags_t flags = 0;
+  enum vfs_open_flags_e flags = 0;
 
   if (mode & O_RDONLY)
-    flags |= VFS_O_RDONLY;
+    flags |= VFS_OPEN_READ;
   if (mode & O_WRONLY)
-    flags |= VFS_O_WRONLY;
+    flags |= VFS_OPEN_WRITE;
   if (mode & O_CREAT)
-    flags |= VFS_O_CREATE;
-  //if (mode & O_TRUNC) //FIXME: seems not to exist yet in libVFS
-  //    flags |= VFS_O_TRUNC;
-  if (mode & O_APPEND)
-    flags |= VFS_O_APPEND;
+    flags |= VFS_OPEN_CREATE;
 
   return (flags);
 }
@@ -103,6 +102,7 @@ fd_t open(const char *pathname, enum open_flags_e flags, ...)
     return fd;
 
   e = fd_get(&fd_array, fd);
+  /* TODO allocate a ops buffer and directly reference pointers. */
   e->ops = &open_fops;
 
   if (flags & O_CREAT)
@@ -112,11 +112,22 @@ fd_t open(const char *pathname, enum open_flags_e flags, ...)
       va_end(ap);
     }
 
-  if (vfs_open(vfs_get_root(), pathname, flags_to_vfs(flags), mode, &e->hndl))
+  struct vfs_file_s *hndl;
+  if (vfs_open(vfs_get_root(), vfs_get_cwd(),
+			   pathname, flags_to_vfs(flags), &hndl))
     {
       fd_free(&fd_array, e);
       return -1;
     }
+
+  e->hndl = hndl;
+
+  if ( flags & O_APPEND )
+      vfs_file_seek(hndl, 0, VFS_SEEK_END);
+
+  /* TODO !!! */
+/*   if ( flags & O_TRUNC ) */
+/*       vfs_file_seek(hndl, 0, VFS_SEEK_END); */
 
   return fd;
 }
@@ -164,45 +175,53 @@ error_t close(fd_t fd)
                   VFS operations
    ********************************************************************** */
 
-#ifdef CONFIG_VFS
+#if defined(CONFIG_VFS)
 
-/* FIXME */
 error_t stat(const char *path, struct stat *st)
 {
   struct vfs_stat_s vst;
 
-  if (vfs_stat(vfs_get_root(), path, &vst))
+  if (vfs_stat(vfs_get_root(), vfs_get_cwd(),
+			   path, &vst))
     return -1;
 
   memset(st, 0, sizeof(*st));
   st->st_size = vst.size;
 
-  if (vst.attr & VFS_DIR)
-    st->st_mode |= S_IFDIR;
-  else
-    st->st_mode |= S_IFREG;
+  switch (vst.type) {
+  case VFS_NODE_DIR:
+	  st->st_mode |= S_IFDIR;
+	  break;
+  case VFS_NODE_FILE:
+	  st->st_mode |= S_IFREG;
+	  break;
+  }
 
   return 0;
 }
 
 error_t lstat(const char *path, struct stat *buf)
 {
-  return stat(path, buf);
+	return stat(path, buf);
 }
 
 error_t access(const char *pathname, enum access_perm_e mode)
 {
-  return 0;
+	return 0;
 }
 
 error_t remove(const char *pathname)
 {
-  return vfs_unlink(vfs_get_root(), pathname);
+    return vfs_unlink(vfs_get_root(), vfs_get_cwd(), pathname);
 }
 
 error_t mkdir(const char *pathname, mode_t mode)
 {
-  return vfs_mkdir(vfs_get_root(), pathname, mode);
+    struct vfs_node_s *node = NULL;
+    error_t err = vfs_create(vfs_get_root(), vfs_get_cwd(), pathname, VFS_NODE_DIR, &node);
+    if ( err == 0 )
+        vfs_node_refdrop(node);
+    return err;
 }
 
 #endif /* CONFIG_VFS */
