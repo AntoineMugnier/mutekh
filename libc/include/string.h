@@ -48,6 +48,8 @@ void *memmove(void *dst, const void *src, size_t size);
 
 int_fast8_t memcmp(const void *s1, const void *s2, size_t n) __attribute__ ((pure));
 
+int_fast8_t memcstcmp(const void *s1, int_fast8_t, size_t n) __attribute__ ((pure));
+
 /** copy data from text address space, different from memcpy() for
     Harvard architecture processors */
 void * memcpy_from_code(void *dst, const void *src, size_t size);
