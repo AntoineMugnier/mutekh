@@ -43,6 +43,8 @@ struct semaphore_s
 	sched_queue_root_t wait;
 };
 
+#define SEMAPHORE_INITIALIZER {1, SCHED_QUEUE_INITIALIZER}
+
 /**
    @this initializes a semaphore structure
 
