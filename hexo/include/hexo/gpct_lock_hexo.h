@@ -26,12 +26,12 @@
  * @short Hexo specific platform definition for GPCT
  */
 
-#ifndef __TEMPLATE_LOCK_HEXO_H_
-#define __TEMPLATE_LOCK_HEXO_H_
+#ifndef __GPCT_LOCK_HEXO_H__
+#define __GPCT_LOCK_HEXO_H__
+
+#include <hexo/gpct_platform_hexo.h>
 
 #include <hexo/lock.h>
-
-#include <gpct/_platform.h>
 
 /*************************************************************
  *	HEXO_SPIN mutex lock functions to use with container
