@@ -105,8 +105,7 @@ $(3)/$(1): $(2)/$(1:.h=.t)
 	@echo '    \\      ' $$(notdir $$@)
 	@mkdir -p $(dir $(3)/$(1).h)
 	cp $$< $$@
-	perl $(MUTEK_SRC_DIR)/gpct/gpct/build/backslash.pl < $$< > $$@ 2> $$@.log
-	sed -e 's-^warning:\([0-9]*\):-$$<:\1:warning:-g' < $$@.log 1>&2
+	perl $(MUTEK_SRC_DIR)/gpct/gpct/build/backslash.pl < $$< > $$@
 
 endef
 

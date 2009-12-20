@@ -61,6 +61,20 @@ cpu_atomic_dec(volatile atomic_int_t *a)
   return zero;
 }
 
+#define HAS_CPU_ATOMIC_ADD
+
+static inline atomic_int_t
+cpu_atomic_add(volatile atomic_int_t *a, atomic_int_t val)
+{
+	atomic_int_t oldval;
+
+	do {
+		oldval = *a;
+	} while ( ! __sync_bool_compare_and_swap((volatile atomic_int_t*)a, oldval, oldval+val) );
+
+	return oldval;
+}
+
 #define HAS_CPU_ATOMIC_TESTSET
 
 static inline bool_t
