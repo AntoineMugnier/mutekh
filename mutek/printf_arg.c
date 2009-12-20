@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <string.h>
 #include <hexo/types.h>
 
 #include <mutek/printf_arg.h>
@@ -312,3 +313,95 @@ mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
   }
   goto printf_state_main;
 }
+
+static inline char n2hex(uint8_t n)
+{
+    if ( n<10 )
+        return n+'0';
+    return n-10+'a';
+}
+
+static inline void hexdump_line_init(
+    char *line, size_t line_width, size_t w)
+{
+    const size_t addrw = 8;
+
+    memset(line, ' ', line_width);
+
+    line[line_width-1] = '\n';
+    line[addrw+1] = '|';
+    line[addrw+3+w*3+1] = '|';
+}
+
+static inline void hexdump_new_line(
+    char *line, uintptr_t addr,
+    size_t w)
+{
+    size_t i;
+    const size_t addrw = 8;
+
+    for ( i=0; i<addrw; ++i ) {
+        line[addrw-1-i] = n2hex(addr & 0xf);
+        addr >>= 4;
+    }
+
+    memset(line+addrw+3, ' ', w*3);
+    memset(line+addrw+3+w*3+3, '.', w);
+}
+
+static inline void hexdump_put_char(
+    char *line, size_t index, uint8_t val,
+    size_t w)
+{
+    const size_t addrw = 8;
+
+    line[addrw+3+index*3]   = n2hex(val >> 4);
+    line[addrw+3+index*3+1] = n2hex(val & 0xf);
+
+    if ( (val >= 32) && (val < 128) )
+        line[addrw+3+w*3+3+index] = val;
+}
+
+void
+mutek_hexdump_arg(void *ctx, printf_output_func_t * const fcn,
+                  uintptr_t address, const void *base, size_t size)
+{
+    const size_t w = 16;
+    // addraddr | xx xx [12] xx xx | ..[12]..\n
+    static const size_t line_width = 8+3+3*w+3+w+1;
+    char line[line_width];
+
+    hexdump_line_init(line, line_width, w);
+    hexdump_new_line(line, address & ~(w-1), w);
+
+    const uint8_t *data = base;
+    const uint8_t *end = data + size;
+
+    for ( ; data < end; ++data, ++address ) {
+        size_t index = (uintptr_t)address % w;
+        hexdump_put_char(line, index, *data, w);
+
+        if ( index == w-1 ) {
+            fcn(ctx, line, 0, line_width);
+            bool_t once = 0;
+
+            while ( memcstcmp(data+1, 0, w) == 0 ) {
+                data += w;
+                address += w;
+                once = 1;
+            }
+
+            if ( once ) {
+                fcn(ctx, "***\n", 0, 4);
+            }
+
+            if ( data+1 < end )
+                hexdump_new_line(line, address+1, w);
+        }
+                      
+    }
+
+    if ( (uintptr_t)data & (w-1) )
+        fcn(ctx, line, 0, line_width);
+}
+

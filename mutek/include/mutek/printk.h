@@ -9,6 +9,7 @@
 void printk_set_output(printf_output_func_t *f, void *ctx);
 ssize_t printk(const char *format, ...);
 inline ssize_t vprintk(const char *format, va_list ap);
+void hexdumpk(uintptr_t address, const void *data, size_t len);
 
 #else /* no printk */
 
@@ -18,6 +19,12 @@ void printk_set_output(printf_output_func_t *f, void *ctx)
 
 static inline
 ssize_t printk(const char *format, ...)
+{
+	return 0;
+}
+
+static inline
+void hexdumpk(uintptr_t address, const void *data, size_t len)
 {
 	return 0;
 }

@@ -13,4 +13,8 @@ ssize_t
 mutek_printf_arg(void *ctx, printf_output_func_t * const fcn,
 				 const char *format, va_list ap);
 
+void
+mutek_hexdump_arg(void *ctx, printf_output_func_t * const fcn,
+                  uintptr_t address, const void *base, size_t len);
+
 #endif

@@ -45,3 +45,9 @@ ssize_t printk(const char *format, ...)
 
   return res;
 }
+
+void hexdumpk(uintptr_t address, const void *data, size_t len)
+{
+    mutek_hexdump_arg(printk_output_arg, printk_output, address, data, len);
+}
+
