@@ -153,6 +153,8 @@ bool_t xicu_root_handle_hwi(struct device_s *dev, uint_fast8_t id)
 /* 	cpu_mem_read_32(XICU_REG_ADDR(timer_dev->addr[0], */
 /* 								  XICU_HWI_ACK, */
 /* 								  id)); */
+/*     printk("xicu %p %d hwi: %p %p\n", dev, id, */
+/*            handler->hndl, handler->data); */
 
 	if (handler->hndl) {
 	    handler->hndl(handler->data);

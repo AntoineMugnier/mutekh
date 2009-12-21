@@ -19,6 +19,7 @@
 
 */
 
+#include <hexo/endian.h>
 
 #include <hexo/types.h>
 
@@ -44,10 +45,14 @@
 static void block_soclib_op_start(struct device_s *dev,
 				  struct dev_block_rq_s *rq)
 {
-  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_BUFFER, (uint32_t)*rq->data);
-  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_LBA, rq->lba);
-  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_COUNT, 1);
-  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_OP, (uint32_t)rq->drvdata);
+  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_BUFFER,
+                   endian_le32((uint32_t)*rq->data));
+  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_LBA,
+                   endian_le32(rq->lba));
+  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_COUNT,
+                   endian_le32(1));
+  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_OP,
+                   endian_le32((uint32_t)rq->drvdata));
 }
 
 /* add a new request in queue and start if idle */
@@ -145,7 +150,10 @@ DEV_IRQ(block_soclib_irq)
   lock_spin(&dev->lock);
 
   struct dev_block_rq_s *rq = dev_blk_queue_head(&pv->queue);
-  uint32_t st = cpu_mem_read_32(dev->addr[0] + BLOCK_SOCLIB_STATUS);
+  uint32_t st = endian_le32(
+      cpu_mem_read_32(dev->addr[0] + BLOCK_SOCLIB_STATUS));
+
+/*   printk("block dev irq %p, st: %x\n", dev, st); */
 
   switch (st)
     {
@@ -225,12 +233,15 @@ DEV_INIT(block_soclib_init)
   if (!pv)
     goto err;
 
-  pv->params.blk_size = cpu_mem_read_32(dev->addr[0] + BLOCK_SOCLIB_BLOCK_SIZE);
-  pv->params.blk_count = cpu_mem_read_32(dev->addr[0] + BLOCK_SOCLIB_SIZE);
+  pv->params.blk_size = endian_le32(
+      cpu_mem_read_32(dev->addr[0] + BLOCK_SOCLIB_BLOCK_SIZE));
+  pv->params.blk_count = endian_le32(
+      cpu_mem_read_32(dev->addr[0] + BLOCK_SOCLIB_SIZE));
 
   dev_blk_queue_init(&pv->queue);
 
-  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_IRQ_ENABLE, 1);
+  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_IRQ_ENABLE,
+                   endian_le32(1));
 
   printk("Soclib block device : %u sectors %u bytes per block\n",
 	 pv->params.blk_count, pv->params.blk_size);
