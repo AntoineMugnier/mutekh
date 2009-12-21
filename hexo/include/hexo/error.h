@@ -69,6 +69,9 @@ typedef int_fast8_t		error_t;
 /** end of data */
 #define EEOF		12
 
+/** bad data/inconsistency */
+#define EBADDATA	13
+
 /** File exists */
 #define EEXISTS 17
 

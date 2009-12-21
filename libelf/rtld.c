@@ -25,10 +25,6 @@
 
 #include <libelf/rtld.h>
 
-#ifdef CONFIG_LIBELF_HACKVFSNAME
-# include <vfs/vfs.h>
-#endif
-
 static error_t _rtld_partial_load_dynobj(struct dynobj_rtld_s **dynobj, const char *pathname,
         dynobj_list_root_t *list_dynobj, dynobj_list_root_t *list_dep);
 
@@ -664,12 +660,7 @@ static struct dynobj_rtld_s*
 _rtld_lookup_name(const char *pathname,
         dynobj_list_root_t *list_lookup)
 {
-#ifdef CONFIG_LIBELF_HACKVFSNAME
-    char dynobj_name[13];
-    touppershortname(dynobj_name, pathname);
-#else
     const char *dynobj_name=pathname;
-#endif
 
     _libelf_debug(DEBUG, "_rtld_lookup_name\n");
     _libelf_debug(DEBUG, "\tlooking up for \"%s\" object\n", dynobj_name);

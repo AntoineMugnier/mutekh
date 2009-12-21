@@ -50,6 +50,12 @@
 		irq = <&{/xicu@0/out@0} 0>;
 	};
 
+	block@0 {
+	    device_type = "soclib:block_device";
+		reg = <0xd1200000 0x20>;
+		irq = <&{/xicu@0/out@0} 1>;
+	};
+
 	xicu@0 {
 	    device_type = "soclib:xicu:root";
 		input_lines = <2>;

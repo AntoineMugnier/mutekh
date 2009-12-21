@@ -6,8 +6,9 @@
 
 #include <vfs/vfs.h>
 
+#include <drivers/fs/ramfs/ramfs.h>
+
 #include "my_rand.h"
-#include "cwd.h"
 
 #define ACTIONS 128
 
@@ -19,13 +20,14 @@ extern action_t * const actions[];
 
 static void post_print(struct vfs_node_s *node)
 {
-    struct vfs_node_s *parent = node->n_parent;
+    struct vfs_node_s *parent = vfs_node_get_parent(node);
 	if ( parent ) { 
         if ( parent != node )
             post_print(parent);
 		printk("/");
+        vfs_node_refdrop(parent);
 	}
-	printk("%s", node->n_name);
+	printk("%s", node->name);
 }
 
 void random_vfs_actions()

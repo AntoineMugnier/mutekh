@@ -15,7 +15,7 @@ void arm_c_exc_undef()
 {
 	void *where = __builtin_return_address(0);
 	cpu_exception_handler_t *exception_handler = CPU_LOCAL_GET(cpu_exception_handler);
-	exception_handler(0, where, 0, 0, 0);
+	exception_handler(0, (uintptr_t)where, 0, 0, 0);
 }
 
 __attribute__ ((interrupt ("SWI")))
@@ -23,7 +23,7 @@ void arm_c_exc_swi()
 {
 	void *where = __builtin_return_address(0);
 	cpu_exception_handler_t *exception_handler = CPU_LOCAL_GET(cpu_exception_handler);
-	exception_handler(1, where, 0, 0, 0);
+	exception_handler(1, (uintptr_t)where, 0, 0, 0);
 }
 
 __attribute__ ((interrupt ("ABORT")))
@@ -31,7 +31,7 @@ void arm_c_exc_pabt()
 {
 	void *where = __builtin_return_address(0);
 	cpu_exception_handler_t *exception_handler = CPU_LOCAL_GET(cpu_exception_handler);
-	exception_handler(2, where, (void*)AT91C_BASE_MC->MC_AASR, 0, 0);
+	exception_handler(2, (uintptr_t)where, (uintptr_t)AT91C_BASE_MC->MC_AASR, 0, 0);
 }
 
 __attribute__ ((interrupt ("ABORT")))
@@ -39,7 +39,7 @@ void arm_c_exc_dabt()
 {
 	void *where = __builtin_return_address(0);
 	cpu_exception_handler_t *exception_handler = CPU_LOCAL_GET(cpu_exception_handler);
-	exception_handler(3, where, (void*)AT91C_BASE_MC->MC_AASR, 0, 0);
+	exception_handler(3, (uintptr_t)where, (uintptr_t)AT91C_BASE_MC->MC_AASR, 0, 0);
 }
 
 #ifdef CONFIG_DRIVER_ICU_ARM

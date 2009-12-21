@@ -28,10 +28,6 @@
 
 #include <libelf/elf.h>
 
-#ifdef CONFIG_LIBELF_HACKVFSNAME
-# include <vfs/vfs.h>
-#endif
-
 #define ELF_HDR_SIZE 128 /* based on linux, the header should be less than 128bytes */
 
 /* Load ELF header, perform test and load Program Header
@@ -329,12 +325,7 @@ err:
  */
 error_t elf_load_file(const char *pathname, struct obj_elf_s *elfobj)
 {
-#ifdef CONFIG_LIBELF_HACKVFSNAME
-    char elfobj_name[13];
-    touppershortname(elfobj_name, pathname);
-#else
     char *elfobj_name=pathname;
-#endif
 
     FILE* file;
 

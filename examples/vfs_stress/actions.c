@@ -5,14 +5,11 @@
 #include <string.h>
 
 #include <vfs/vfs.h>
-#include <vfs/vfs-private.h>
 
 #include "my_rand.h"
 
 //#define dprintk(...) do{}while(0)
 #define dprintk(...) printk(__VA_ARGS__)
-
-#include "cwd.h"
 
 typedef void (action_t)();
 
@@ -35,39 +32,50 @@ static error_t get_random_name(struct vfs_node_s *base, char *name)
 {
     struct vfs_file_s *dir;
     struct vfs_dirent_s dirent;
+    struct vfs_stat_s stat;
     bool_t done = 0;
 
-	memset(name, 0, VFS_MAX_NAME_LENGTH);
+	memset(name, 0, CONFIG_VFS_NAMELEN);
 
-	error_t err = vfs_opendir(vfs_get_cwd(), ".",
-                              0, &dir);
+	error_t err = vfs_stat(vfs_get_root(), vfs_get_cwd(), ".", &stat);
+	if ( ! stat.size )
+		return -EIO;
+
+	size_t n = my_rand() % stat.size;
+
+	err = vfs_open(vfs_get_root(), base, ".",
+				   VFS_OPEN_READ | VFS_OPEN_DIR, &dir);
     if (err) {
 		return -EIO;
 	}
 
     for (;;) {
-        error_t err = vfs_readdir(dir, &dirent);
-        if ( err )
+        ssize_t rlen = vfs_file_read(dir, &dirent, sizeof(dirent));
+        if ( rlen != sizeof(dirent) )
             break;
-        if ( !done || my_rand() > 0xc000 ) {
-            memcpy(name, dirent.d_name, VFS_MAX_NAME_LENGTH);
-            done = 1;
-        }
+        done = 1;
+//        printk("readdir %d: %s\n", n, dirent.name);
+        if ( n == 0 )
+            break;
+        --n;
     }
+    if ( done )
+        memcpy(name, dirent.name, CONFIG_VFS_NAMELEN);
 
-    vfs_closedir(dir);
+    vfs_file_close(dir);
 	return done ? 0 : -EUNKNOWN;
 }
 
 static void post_print(struct vfs_node_s *node)
 {
-    struct vfs_node_s *parent = node->n_parent;
+    struct vfs_node_s *parent = vfs_node_get_parent(node);
 	if ( parent ) {
         if ( parent != node )
             post_print(parent);
 		printk("/");
+        vfs_node_refdrop(parent);
 	}
-	printk("%s", node->n_name);
+	printk("%s", node->name);
 }
 
 void action_cwd()
@@ -75,7 +83,7 @@ void action_cwd()
 	struct vfs_node_s *node = NULL;
 	struct vfs_node_s *base = vfs_get_cwd();
 	error_t err;
-	char name[VFS_MAX_NAME_LENGTH];
+	char name[CONFIG_VFS_NAMELEN];
 
 	if ( my_rand() > 0xd000 ) {
 		name[0] = '.';
@@ -93,41 +101,57 @@ void action_cwd()
 
 	dprintk("%s \"%s\"...\n", __FUNCTION__, name);
 
-	err = vfs_chdir(base, name, &node);
+	err = vfs_lookup(vfs_get_root(), base, name, &node);
 	if ( err )
 		return;
 
-    vfs_set_cwd(node);
+    assert(node);
+
+    struct vfs_stat_s stat;
+    vfs_node_stat(node, &stat);
+	if ( stat.type == VFS_NODE_DIR ) {
+        dprintk("%p: cwd from ", pthread_self());
+        post_print(vfs_get_cwd());
+        dprintk(" to ");
+        post_print(node);
+        dprintk("\n");
+		vfs_set_cwd(node);
+    }
+	vfs_node_refdrop(node);
 }
 
 void action_mkdir()
 {
-	char name[VFS_MAX_NAME_LENGTH];
-	create_random_name(name, VFS_MAX_NAME_LENGTH);
+	char name[CONFIG_VFS_NAMELEN];
+	create_random_name(name, CONFIG_VFS_NAMELEN);
 
 	dprintk("%s \"%s\"...\n", __FUNCTION__, name);
 
-	error_t err = vfs_mkdir(vfs_get_cwd(), name, 0);
-	if (err) {
+	struct vfs_node_s *node = NULL;
+	error_t err = vfs_create(vfs_get_root(), vfs_get_cwd(),
+							 name, VFS_NODE_DIR, &node);
+	if (err == 0) {
+		vfs_node_refdrop(node);
+	} else {
 		dprintk("%s error %s\n", __FUNCTION__, strerror(err));
 	}
 }
 
 void action_create_file()
 {
-	char name[VFS_MAX_NAME_LENGTH];
-	create_random_name(name, VFS_MAX_NAME_LENGTH);
+	char name[CONFIG_VFS_NAMELEN];
+	create_random_name(name, CONFIG_VFS_NAMELEN);
 
 	dprintk("%s \"%s\"...\n", __FUNCTION__, name);
 
 	struct vfs_file_s *file = NULL;
-	error_t err = vfs_open(vfs_get_cwd(),
-						   name, VFS_O_WRONLY|VFS_O_CREATE, 0644, &file);
+	error_t err = vfs_open(vfs_get_root(), vfs_get_cwd(),
+						   name, VFS_OPEN_WRITE|VFS_OPEN_CREATE, &file);
 	if (err)
 		goto error_open;
 
-	vfs_write(file, (uint8_t *)action_create_file, 128);
-	vfs_close(file);
+	vfs_file_write(file, action_create_file, 128);
+	vfs_file_close(file);
 	return;
 
   error_open:
@@ -136,67 +160,65 @@ void action_create_file()
 
 void action_rm()
 {
-	char name[VFS_MAX_NAME_LENGTH];
+	char name[CONFIG_VFS_NAMELEN];
 	error_t err = get_random_name(vfs_get_cwd(), name);
 
 	dprintk("%s \"%s\"...\n", __FUNCTION__, name);
 
 	if ( !err )
-		vfs_unlink(vfs_get_cwd(), name);
+		vfs_unlink(vfs_get_root(), vfs_get_cwd(), name);
 }
 
-error_t action_rmrf_inner(struct vfs_node_s *_cwd, char *name)
+error_t action_rmrf_inner(struct vfs_node_s *_cwd, const char *name)
 {
-    vfs_node_up(_cwd);
-	struct vfs_node_s *cwd = _cwd;
+	struct vfs_node_s *cwd = vfs_node_refnew(_cwd);
 	struct vfs_stat_s stat = {0};
 	error_t err;
 
-	err = vfs_stat(cwd, name, &stat);
+	err = vfs_stat(vfs_get_root(), cwd, name, &stat);
     dprintk("rmrf stat 'name': %s\n", name, strerror(err));
 	if ( err )
 		goto end;
 
-	if ( stat.attr & VFS_DIR ) {
+	if ( stat.type == VFS_NODE_DIR ) {
         dprintk(" is directory\n");
-        
 		struct vfs_node_s *node = NULL;
-        struct vfs_node_s *inner;
-        err = vfs_chdir(cwd, name, &inner);
-		if ( !err ) {
+		if ( vfs_lookup(vfs_get_root(), cwd, name, &node) == 0 ) {
+			assert(node);
+
 			while ( 1 ) {
 				struct vfs_file_s *dir = NULL;
 				struct vfs_dirent_s dirent;
 		
-				err = vfs_opendir(node, ".", 0, &dir);
+				err = vfs_open(vfs_get_root(), node, ".",
+							   VFS_OPEN_READ | VFS_OPEN_DIR, &dir);
 				if ( err )
 					break;
-
-				err = vfs_readdir(dir, &dirent);
-				vfs_closedir(dir);
-				if ( err )
+				ssize_t len = vfs_file_read(dir, &dirent, sizeof(dirent));
+                dprintk("Read len: %d\n", len);
+				vfs_file_close(dir);
+				if ( !len )
 					break;
 
-                if ( dirent.d_name[0] != '.' ) {
-                    err = action_rmrf_inner(node, dirent.d_name);
-                    if ( err )
-                        break;
-                }
+				err = action_rmrf_inner(node, dirent.name);
+                if ( err )
+                    break;
 			}
-            err = vfs_chdir(cwd, "..", &inner);
+
+			vfs_node_refdrop(node);
 		}
 	}
-	err = vfs_unlink(cwd, name);
+	err = vfs_unlink(vfs_get_root(), cwd, name);
     dprintk(" unlink '%s': %s\n", name, strerror(err));
 
   end:
-	vfs_node_down(cwd);
+	vfs_node_refdrop(cwd);
     return err;
 }
 
 void action_rmrf()
 {
-	char name[VFS_MAX_NAME_LENGTH];
+	char name[CONFIG_VFS_NAMELEN];
 	error_t err = get_random_name(vfs_get_cwd(), name);
 
 	dprintk("%s \"%s\"...\n", __FUNCTION__, name);
@@ -220,7 +242,6 @@ void action_umount()
 
 }
 
-#if 0
 void action_ls()
 {
 	dprintk("%s...\n", __FUNCTION__);
@@ -241,7 +262,6 @@ void action_ls()
 
     vfs_file_close(dir);
 }
-#endif
 
 action_t * const actions[] =
 {
@@ -252,7 +272,7 @@ action_t * const actions[] =
 	action_rmrf,
 /* 	action_mount, */
 /* 	action_umount, */
-//	action_ls,
+	action_ls,
 	0,
 };
 

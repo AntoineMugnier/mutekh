@@ -41,14 +41,15 @@ asm(
     "bne	cr0, 1b					\n"
 #endif
 
-    "rlwinm	3,29,12,0,19				\n"
+    "slwi	3,29,11				\n"
     "sub	1,1,3					\n"
 
 	"li    3, 0                      \n"
+	"mtctr 3                         \n"
 	"mtmsr 3                         \n"
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-    "addi	2,	0,	1024		\n"
+    "addi	2,	0,	2048		\n"
 /*     "lis	0, hi(" ASM_STR(SOCLIB_MC_MAGIC_VAL) ") \n" */
 /*     "ori	0, 0, lo(" ASM_STR(SOCLIB_MC_MAGIC_VAL) ") \n" */
 	"lis	0, (" ASM_STR(SOCLIB_MC_MAGIC_VAL) ")@h  \n"

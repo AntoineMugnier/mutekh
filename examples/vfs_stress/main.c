@@ -5,26 +5,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <drivers/device/enum/fdt/enum-fdt.h>
-
 #include <vfs/vfs.h>
-#include <vfs/vfs-private.h>
-#include "cwd.h"
 
-#define NTHREAD 3
+#include <drivers/fs/ramfs/ramfs.h>
 
-CONTEXT_LOCAL struct vfs_node_s *cwd;
+#define NTHREAD 10
 
 void random_vfs_actions();
 
 static
-struct vfs_node_s * _vfs_init(struct device_s *dev)
+struct vfs_node_s * vfs_init()
 {
-	struct vfs_node_s *root_node;
+	struct vfs_fs_s *root_fs;
 
     printk("init vfs... ");
-    error_t err = vfs_init(dev, VFS_VFAT_TYPE, 20, 20, &root_node);
-    printk("%d\n", err);
+	ramfs_open(&root_fs);
+    printk("ok\n");
+
+    struct vfs_node_s *root_node;
+    vfs_create_root(root_fs, &root_node);
 
 	return root_node;
 }
@@ -34,11 +33,10 @@ pthread_t main_thread;
 
 void *vfs_stress(void *root_ptr)
 {
-    struct vfs_node_s *root = root_ptr;
-    CONTEXT_LOCAL_SET(cwd, root);
-    vfs_node_up(root);
 	random_vfs_actions();
-    vfs_node_down(CONTEXT_LOCAL_GET(cwd));
+
+    // Reset all before thread deletion...
+	vfs_set_cwd(NULL);
 	return NULL;
 }
 
@@ -80,8 +78,17 @@ void *_main(void *root_ptr)
 
         print_malloc_stats();
 
+		printk("Tree:\n");
+		vfs_dump(root);
+		vfs_dump_lru(root);
+		ramfs_dump(root->fs);
+
 		printk("Cleaning up /...\n");
         action_rmrf_inner(root, ".");
+
+		printk("Tree:\n");
+		vfs_dump(root);
+		ramfs_dump(root->fs);
 
 		printk("System still alive after all this...\n");
         print_malloc_stats();
@@ -96,8 +103,7 @@ void *_main(void *root_ptr)
 
 void app_start()
 {
-    extern struct device_s fdt_enum_dev;
-    struct vfs_node_s *root = _vfs_init(enum_fdt_lookup(&fdt_enum_dev, "/block@1"));
+	struct vfs_node_s *root = vfs_init();
 
 	pthread_create(&main_thread, NULL, _main, root);
 }
