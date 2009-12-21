@@ -146,7 +146,7 @@ SECTIONS
 // #endif
 
 	__system_uncached_heap_start = .;
-	__system_uncached_heap_end = ORIGIN(mem_ram) + LENGTH(mem_ram) - 4*2048;
+	__system_uncached_heap_end = ORIGIN(mem_ram) + LENGTH(mem_ram);
 
 	__initial_stack = __system_uncached_heap_end;
 
