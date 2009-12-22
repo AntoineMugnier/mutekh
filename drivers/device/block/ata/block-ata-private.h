@@ -158,7 +158,7 @@ typedef DRIVE_ATA_START_FUNC(drive_ata_start_func_t);
 #define DRIVE_ATA_IRQ_FUNC(n) bool_t (n) (struct device_s *dev, struct dev_block_rq_s *rq)
 typedef DRIVE_ATA_IRQ_FUNC(drive_ata_irq_func_t);
 
-struct drive_ata_oper_s
+struct drive_ata_rq_s
 {
   /* this function is called on irq */
   drive_ata_irq_func_t *irq;

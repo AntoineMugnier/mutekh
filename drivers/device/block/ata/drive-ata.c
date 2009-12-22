@@ -52,8 +52,8 @@ static void drive_ata_rq_start(struct device_s *dev,
 
   if (idle)
     {
-      struct drive_ata_oper_s *op = rq->drvdata;
-      op->start(dev, rq);
+      struct drive_ata_rq_s *arq = (void*)(rq + 1);
+      arq->start(dev, rq);
     }
 }
 
@@ -62,14 +62,13 @@ static void drive_ata_rq_end(struct device_s *dev)
 {
   struct drive_ata_context_s *dpv = dev->drv_pv;
   struct dev_block_rq_s *rq;
-  struct drive_ata_oper_s *op;
 
   dev_blk_queue_pop(&dpv->queue);
 
   if ((rq = dev_blk_queue_head(&dpv->queue)) != NULL)
     {
-      op = rq->drvdata;
-      op->start(dev, rq);
+      struct drive_ata_rq_s *arq = (void*)(rq + 1);
+      arq->start(dev, rq);
     }
   else
     {
@@ -87,9 +86,8 @@ bool_t drive_ata_try_irq(struct device_s *dev)
 
   if ((rq = dev_blk_queue_head(&dpv->queue)) != NULL)
     {
-      struct drive_ata_oper_s *op = rq->drvdata;
-
-      return op->irq(dev, rq);
+      struct drive_ata_rq_s *arq = (void*)(rq + 1);
+      return arq->irq(dev, rq);
     }
 
   return 0;
@@ -103,9 +101,9 @@ static DRIVE_ATA_START_FUNC(drive_ata_read_start)
 {
   struct device_s *parent = dev->parent;
   struct drive_ata_context_s *dpv = dev->drv_pv;
-  uint32_t lba = rq->lba & 0x0fffffff;
+  uint32_t lba = (rq->lba + rq->progress) & 0x0fffffff;
 
-  dpv->ata_sec_count = __MIN(256, rq->count);
+  dpv->ata_sec_count = __MIN(256, rq->count - rq->progress);
 
   controller_ata_reg_w8(parent, ATA_REG_DRVHEAD, dpv->devhead_reg | (lba >> 24));
 
@@ -115,13 +113,12 @@ static DRIVE_ATA_START_FUNC(drive_ata_read_start)
   controller_ata_reg_w8(parent, ATA_REG_SECTOR_COUNT, dpv->ata_sec_count);
 
   controller_ata_reg_w8(parent, ATA_REG_COMMAND, ATA_CMD_READ_SECTORS);
-
 }
 
 static DRIVE_ATA_IRQ_FUNC(drive_ata_read_irq)
 {
-//  struct controller_ata_context_s*cpv = dev->parent->drv_pv;
   struct drive_ata_context_s	*dpv = dev->drv_pv;
+  struct drive_ata_rq_s *arq = (void*)(rq + 1);
   uint8_t status;
 
   controller_ata_reg_w8(dev->parent, ATA_REG_DRVHEAD, dpv->devhead_reg);
@@ -130,8 +127,8 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_read_irq)
 
   if (status & ATA_STATUS_ERROR)
     {
-      rq->error = EIO;
-      rq->callback(dev, rq, 0);
+      rq->progress = -EIO;
+      rq->callback(rq, 0, arq + 1);
 
       drive_ata_rq_end(dev);
       return 1;
@@ -139,17 +136,14 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_read_irq)
 
   if (status & ATA_STATUS_DATA_RQ)
     {
-      controller_ata_data_read16(dev->parent, *rq->data);
+      controller_ata_data_read16(dev->parent, rq->data[rq->progress]);
 
-      rq->lba++;
-      rq->count--;
-      rq->data++;
-      rq->error = 0;
+      rq->progress++;
       dpv->ata_sec_count--;
 
-      rq->callback(dev, rq, 1);
+      rq->callback(rq, 1, arq + 1);
 
-      if (rq->count == 0)
+      if (rq->count >= rq->progress)
 	{
 	  drive_ata_rq_end(dev);
 	}
@@ -173,9 +167,9 @@ static DRIVE_ATA_START_FUNC(drive_ata_write_start)
 {
   struct device_s *parent = dev->parent;
   struct drive_ata_context_s *dpv = dev->drv_pv;
-  uint32_t lba = rq->lba & 0x0fffffff;
+  uint32_t lba = (rq->lba + rq->progress) & 0x0fffffff;
 
-  dpv->ata_sec_count = __MIN(256, rq->count);
+  dpv->ata_sec_count = __MIN(256, rq->count - rq->progress);
 
   controller_ata_reg_w8(parent, ATA_REG_DRVHEAD, dpv->devhead_reg | (lba >> 24));
   controller_ata_reg_w8(parent, ATA_REG_CYLINDER_HIGH, lba >> 16);
@@ -188,13 +182,13 @@ static DRIVE_ATA_START_FUNC(drive_ata_write_start)
   while (controller_ata_reg_r8(parent, ATA_REG_STATUS) & ATA_STATUS_BUSY)
     ;
 
-  controller_ata_data_write16(parent, *rq->data);
+  controller_ata_data_write16(parent, rq->data[rq->progress]);
 }
 
 static DRIVE_ATA_IRQ_FUNC(drive_ata_write_irq)
 {
-//  struct controller_ata_context_s*cpv = dev->parent->drv_pv;
   struct drive_ata_context_s	*dpv = dev->drv_pv;
+  struct drive_ata_rq_s *arq = (void*)(rq + 1);
   uint8_t status;
 
   controller_ata_reg_w8(dev->parent, ATA_REG_DRVHEAD, dpv->devhead_reg);
@@ -205,29 +199,26 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_write_irq)
     {
       if (status & ATA_STATUS_ERROR)
 	{
-	  rq->error = EIO;
-	  rq->callback(dev, rq, 0);
+	  rq->progress = -EIO;
+	  rq->callback(rq, 0, arq + 1);
 
 	  drive_ata_rq_end(dev);
 	}
       else
 	{
-	  rq->lba++;
-	  rq->count--;
-	  rq->data++;
-	  rq->error = 0;
+	  rq->progress++;
 	  dpv->ata_sec_count--;
 
-	  rq->callback(dev, rq, 1);
+	  rq->callback(rq, 1, arq + 1);
 
-	  if (rq->count == 0)
+	  if (rq->count >= rq->progress)
 	    {
 	      drive_ata_rq_end(dev);
 	    }
 	  else
 	    {
 	      if (dpv->ata_sec_count > 0)
-		controller_ata_data_write16(dev->parent, *rq->data);
+		controller_ata_data_write16(dev->parent, rq->data[rq->progress]);
 	      else
 		drive_ata_write_start(dev, rq);
 	    }
@@ -239,51 +230,44 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_write_irq)
   return 0;
 }
 
-static const struct drive_ata_oper_s drive_ata_write_oper =
-  {
-    .irq = drive_ata_write_irq,
-    .start = drive_ata_write_start,
-  };
-
-static const struct drive_ata_oper_s drive_ata_read_oper =
-  {
-    .irq = drive_ata_read_irq,
-    .start = drive_ata_read_start,
-  };
-
 DEVBLOCK_REQUEST(drive_ata_request)
 {
 //  struct controller_ata_context_s *cpv = dev->parent->drv_pv;
   struct drive_ata_context_s *dpv = dev->drv_pv;
+  struct drive_ata_rq_s *arq = (void*)(rq + 1);
 
   LOCK_SPIN_IRQ(&dev->parent->lock);
 
   if (rq->lba + rq->count > dpv->drv_params.blk_count)
     {
-      rq->error = ERANGE;
-      rq->callback(dev, rq, 0);
+      rq->progress = -ERANGE;
+      rq->callback(rq, 0, arq + 1);
     }
   else
     {
-      switch (rq->type)
+      switch (rq->type & DEV_BLOCK_OPMASK)
 	{
 	case DEV_BLOCK_READ:
-	  rq->drvdata = (void*)&drive_ata_read_oper;
+	  arq->irq = drive_ata_write_irq;
+	  arq->start = drive_ata_write_start;
+	  drive_ata_rq_start(dev, rq);
 	  break;
+
 	case DEV_BLOCK_WRITE:
-	  rq->drvdata = (void*)&drive_ata_write_oper;
+	  arq->irq = drive_ata_read_irq;
+	  arq->start = drive_ata_read_start;
+	  drive_ata_rq_start(dev, rq);
+	  break;
+
+	default:
+	  rq->progress = -ENOTSUP;
+	  rq->callback(rq, 0, arq + 1);
 	  break;
 	}
-
-      drive_ata_rq_start(dev, rq);
     }
 
   LOCK_RELEASE_IRQ(&dev->parent->lock);
 }
-
-/* 
- * device write operation
- */
 
 DEVBLOCK_GETPARAMS(drive_ata_getparams)
 {
@@ -292,9 +276,10 @@ DEVBLOCK_GETPARAMS(drive_ata_getparams)
   return &pv->drv_params;
 }
 
-/* 
- * device close operation
- */
+DEVBLOCK_GETRQSIZE(block_soclib_getrqsize)
+{
+  return sizeof(struct dev_block_rq_s) + sizeof(struct block_ata_rq_s);
+}
 
 DEV_CLEANUP(drive_ata_cleanup)
 {
@@ -302,10 +287,6 @@ DEV_CLEANUP(drive_ata_cleanup)
 
   mem_free(pv);
 }
-
-/* 
- * device open operation
- */
 
 const struct driver_s	drive_ata_drv =
 {

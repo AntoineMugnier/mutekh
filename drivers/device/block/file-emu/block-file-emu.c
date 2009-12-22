@@ -44,53 +44,53 @@ DEVBLOCK_REQUEST(block_file_emu_request)
 {
   struct block_file_emu_context_s *pv = dev->drv_pv;
   struct dev_block_params_s *p = &pv->params;
-  dev_block_lba_t lba = rq->lba;
-  dev_block_lba_t count = rq->count;
+  dev_block_lba_t lba = rq->lba + rq->progress;
+  dev_block_lba_t count = rq->count - rq->progress;
 
-  if (lba + count <= p->blk_count)
+  if (lba + count > p->blk_count)
     {
-      reg_t id;
-      size_t b;
-
-      emu_do_syscall(EMU_SYSCALL_LSEEK, 3, pv->fd, lba * p->blk_size, EMU_SEEK_SET);
-
-      switch (rq->type)
-	{
-	case DEV_BLOCK_READ:
-	  id = EMU_SYSCALL_READ;
-	  break;
-	case DEV_BLOCK_WRITE:
-	  id = EMU_SYSCALL_WRITE;
-	  break;
-	}
-
-      for (b = 0; b < count; b++)
-	emu_do_syscall(id, 3, pv->fd, rq->data[b], p->blk_size);
-
-       rq->error = 0;
-       rq->count -= count;
-       rq->lba += count;
-       rq->callback(dev, rq, count);
+      rq->progress = -ERANGE;
+      rq->callback(rq, 0, rq + 1);
+      return;
     }
-  else
+
+  reg_t id;
+  size_t b;
+
+  switch (rq->type & DEV_BLOCK_OPMASK)
     {
-      rq->error = ERANGE;
-      rq->callback(dev, rq, 0);
+    case DEV_BLOCK_READ:
+      id = EMU_SYSCALL_READ;
+      break;
+
+    case DEV_BLOCK_WRITE:
+      id = EMU_SYSCALL_WRITE;
+      break;
+
+    default:
+      rq->progress = -ENOTSUP;
+      rq->callback(rq, 0, rq + 1);
+      return;
     }
+
+  emu_do_syscall(EMU_SYSCALL_LSEEK, 3, pv->fd, lba * p->blk_size, EMU_SEEK_SET);
+
+  for (b = 0; b < count; b++)
+    emu_do_syscall(id, 3, pv->fd, rq->data[b], p->blk_size);
+
+  rq->progress += count;
+  rq->callback(rq, count, rq + 1);
 }
-
-/* 
- * device params
- */
 
 DEVBLOCK_GETPARAMS(block_file_emu_getparams)
 {
   return &(((struct block_file_emu_context_s *)(dev->drv_pv))->params);
 }
 
-/* 
- * device close operation
- */
+DEVBLOCK_GETRQSIZE(block_file_emu_getrqsize)
+{
+  return sizeof(struct dev_block_rq_s);
+}
 
 DEV_CLEANUP(block_file_emu_cleanup)
 {
@@ -100,10 +100,6 @@ DEV_CLEANUP(block_file_emu_cleanup)
   mem_free(pv);
 }
 
-/* 
- * device open operation
- */
-
 const struct driver_s	block_file_emu_drv =
 {
   .class		= device_class_block,
@@ -112,6 +108,7 @@ const struct driver_s	block_file_emu_drv =
   .f.blk = {
     .f_request		= block_file_emu_request,
     .f_getparams	= block_file_emu_getparams,
+    .f_getrqsize	= block_file_emu_getrqsize,
   }
 };
 

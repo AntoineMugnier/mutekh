@@ -39,62 +39,60 @@
 
 /**************************************************************/
 
-/* 
- * device read/write request
- */
-
 DEVBLOCK_REQUEST(block_ramdisk_request)
 {
   struct block_ramdisk_context_s *pv = dev->drv_pv;
   struct dev_block_params_s *p = &pv->params;
-  dev_block_lba_t lba = rq->lba;
-  dev_block_lba_t count = rq->count;
+  dev_block_lba_t lba = rq->lba + rq->progress;
+  dev_block_lba_t count = rq->count - rq->progress;
+
+  if (lba + count > p->blk_count)
+    {
+      rq->progress = -ERANGE;
+      rq->callback(rq, 0, rq + 1);
+      return;
+    }
 
   lock_spin(&dev->lock);
 
-  if (lba + count <= p->blk_count)
+  size_t b;
+
+  switch (rq->type & DEV_BLOCK_OPMASK)
     {
-      size_t b;
+    case DEV_BLOCK_READ:
+      for (b = 0; b < count; b++)
+	memcpy(rq->data[b], pv->mem + ((lba + b) * p->blk_size), p->blk_size);
 
-      switch (rq->type)
-	{
-	case DEV_BLOCK_READ:
-	  for (b = 0; b < count; b++)
-	    memcpy(rq->data[b], pv->mem + ((lba + b) * p->blk_size), p->blk_size);
-	  break;
+      rq->progress += count;
+      rq->callback(rq, count, rq + 1);
+      break;
 
-	case DEV_BLOCK_WRITE:
-	  for (b = 0; b < count; b++)
-	    memcpy(pv->mem + ((lba + b) * p->blk_size), rq->data[b], p->blk_size);
-	  break;
-	}
+    case DEV_BLOCK_WRITE:
+      for (b = 0; b < count; b++)
+	memcpy(pv->mem + ((lba + b) * p->blk_size), rq->data[b], p->blk_size);
 
-      rq->error = 0;
-      rq->count -= count;
-      rq->lba += count;
-      rq->callback(dev, rq, count);
-    }
-  else
-    {
-      rq->error = ERANGE;
-      rq->callback(dev, rq, 0);
+      rq->progress += count;
+      rq->callback(rq, count, rq + 1);
+      break;
+
+    default:
+      rq->progress = -ENOTSUP;
+      rq->callback(rq, 0, arq + 1);
+      break;
     }
 
   lock_release(&dev->lock);
 }
-
-/* 
- * device params
- */
 
 DEVBLOCK_GETPARAMS(block_ramdisk_getparams)
 {
   return &(((struct block_ramdisk_context_s *)(dev->drv_pv))->params);
 }
 
-/* 
- * device close operation
- */
+DEVBLOCK_GETRQSIZE(block_rmadisk_getrqsize)
+{
+  return sizeof(struct dev_block_rq_s);
+}
 
 DEV_CLEANUP(block_ramdisk_cleanup)
 {
@@ -104,10 +102,6 @@ DEV_CLEANUP(block_ramdisk_cleanup)
 	  mem_free(pv->mem);
   mem_free(pv);
 }
-
-/* 
- * device open operation
- */
 
 static const struct devenum_ident_s	block_ramdisk_ids[] =
 {
@@ -125,6 +119,7 @@ const struct driver_s	block_ramdisk_drv =
   .f.blk = {
     .f_request		= block_ramdisk_request,
     .f_getparams	= block_ramdisk_getparams,
+    .f_getrqsize	= block_rmadisk_getrqsize,
   }
 };
 

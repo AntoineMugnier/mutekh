@@ -44,49 +44,57 @@ typedef uint32_t dev_block_lba_t;
 struct dev_block_rq_s;
 
 /** Block device read/write callback */
-#define DEVBLOCK_CALLBACK(n) void (n) (struct device_s *dev, \
-				       const struct dev_block_rq_s *rq, \
-				       size_t count)
+#define DEVBLOCK_CALLBACK(n) void (n) (const struct dev_block_rq_s *rq, size_t count, void *rq_extra)
 
 /**
    Block device read callback function. This function is called for
-   each group of blocks read. It may be called several times, @tt {rq->count != 0}
-   and @tt rq->error must be used to detect operation end. The device
-   lock is held when call back function is called.
+   each group of blocks read. It may be called several times,
+   @tt {rq->progress > 0 && rq->progress < rq->count}
+   must be used to detect operation end. The device
+   lock may be held when call back function is called.
 
-   @param dev pointer to device descriptor
-   @param rq pointer to request data. @tt rq->count field is
-          updated with remaining blocks to process. @tt rq->lba is undefined.
-	  @tt rq->data is advanced to the next block buffer. @tt rq->error is updated.
+   @param rq pointer to request data.
+          @tt rq->proress field is updated to processed blocks count or has negative
+	  error code.
    @param count number of processed blocks
+   @param rq_extra pointer to effective request structure end for calling driver,
+          may be used to store private data, see @ref devblock_getrqsize_t .
    @see #DEVBLOCK_CALLBACK
 */
 typedef DEVBLOCK_CALLBACK(devblock_callback_t);
 
 enum dev_block_rq_type_e
   {
-    DEV_BLOCK_READ, DEV_BLOCK_WRITE,
+    DEV_BLOCK_READ = 1,
+    DEV_BLOCK_WRITE = 2,
+
+    DEV_BLOCK_OPMASK = 3,
+
+    DEV_BLOCK_NOCACHE = 4,
   };
 
-CONTAINER_TYPE(dev_blk_queue, CLIST,
+/** Block device request object. This object must be allocated using
+    the size returned by @ref dev_block_getrqsize to account for extra space
+    required by the driver. */
+
 struct dev_block_rq_s
 {  
-  enum dev_block_rq_type_e	type;
-  dev_block_lba_t		lba;	/* lba */
-  size_t			count;	/* block count */
-  devblock_callback_t		*callback; /* callback function */
-  void				*pvdata; /* pv data for callback */
-  uint8_t			**data; /* table of pointer to data blocks */
-  error_t			error; /* error code set by driver */
+  CONTAINER_ENTRY_TYPE(CLIST)	queue_entry;
 
-  void				*drvdata; /* driver private data */
-  dev_blk_queue_entry_t		queue_entry; /* used by driver to enqueue requests */
-}, queue_entry);
+  enum dev_block_rq_type_e	type;    //< request type and flags
+  dev_block_lba_t		lba;     //< logical block address
+  size_t			count;	 //< block count
+  uint8_t			**data;  //< table of pointer to data blocks
+  ssize_t			progress; //< number of processed blocks or negative error code
 
+  devblock_callback_t		*callback; //< callback function
+  void				*pvdata;   //< pv data for USER callback
+
+  uint8_t			drvs_privates[0]; //< drivers private data
+};
+
+CONTAINER_TYPE(dev_blk_queue, CLIST, struct dev_block_rq_s, queue_entry);
 CONTAINER_FUNC(dev_blk_queue, CLIST, static inline, dev_blk_queue);
-
-
-
 
 /** Block device class request() function tempate. */
 #define DEVBLOCK_REQUEST(n)	void (n) (struct device_s *dev,	\
@@ -99,10 +107,11 @@ CONTAINER_FUNC(dev_blk_queue, CLIST, static inline, dev_blk_queue);
    Block device request function type. Request count data blocks
    from the device.
 
-   @param rq pointer to request. lba, count, data and callback
-             field must be intialized.
    @param dev pointer to device descriptor
-   @param size max data request bytes count
+   @param rq pointer to request. @tt lba , @tt count , @tt data ,
+          @tt progress and @tt callback field must be intialized.
+	  @tt progress field may not be zero.
+          The request object must All fields may be modified
    @see #DEVBLOCK_REQUEST
 */
 typedef DEVBLOCK_REQUEST(devblock_request_t);
@@ -134,11 +143,31 @@ typedef DEVBLOCK_GETPARAMS(devblock_getparams_t);
 
 
 
+
+/** Block device class getrqsize() function tempate. */
+#define DEVBLOCK_GETRQSIZE(n)	size_t (n) (struct device_s *dev)
+
+/** Block device class getrqsize() methode shortcut */
+
+#define dev_block_getrqsize(dev) (dev)->drv->f.blk.f_getrqsize(dev)
+
+/**
+   Block device getrqsize function type.
+
+   @param dev pointer to device descriptor
+   @return size of the request object for the given device
+   @see #DEVBLOCK_GETRQSIZE
+*/
+typedef DEVBLOCK_GETRQSIZE(devblock_getrqsize_t);
+
+
+
 /** Block device class methodes */
 struct dev_class_block_s
 {
   devblock_request_t		*f_request;
   devblock_getparams_t		*f_getparams;
+  devblock_getrqsize_t		*f_getrqsize;
 };
 
 

@@ -47,8 +47,8 @@ DEVBLOCK_REQUEST(block_partition_request)
 
   if (rq->lba + rq->count > pv->drv_params.blk_count)
     {
-      rq->error = ERANGE;
-      rq->callback(dev, rq, 0);
+      rq->progress = -ERANGE;
+      rq->callback(rq, 0, rq + 1);
     }
   else
     {
@@ -252,6 +252,10 @@ DEV_CREATE(block_partition_create)
   return count;
 }
 
+DEVBLOCK_GETRQSIZE(block_partition_getrqsize)
+{
+  return dev_block_getrqsize(dev->parent);
+}
 
 const struct driver_s block_partition_drv =
 {
@@ -261,5 +265,7 @@ const struct driver_s block_partition_drv =
   .f.blk = {
     .f_request		= block_partition_request,
     .f_getparams	= block_partition_getparams,
+    .f_getrqsize	= block_partition_getrqsize,
   }
 };
+

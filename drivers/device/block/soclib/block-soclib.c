@@ -45,14 +45,16 @@
 static void block_soclib_op_start(struct device_s *dev,
 				  struct dev_block_rq_s *rq)
 {
+  struct block_soclib_rq_s *srq = (void*)(rq + 1);
+
   cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_BUFFER,
-                   endian_le32((uint32_t)*rq->data));
+                   endian_le32((uint32_t)rq->data[rq->progress]));
   cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_LBA,
-                   endian_le32(rq->lba));
+                   endian_le32(rq->lba + rq->progress));
   cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_COUNT,
                    endian_le32(1));
   cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_OP,
-                   endian_le32((uint32_t)rq->drvdata));
+                   endian_le32((uint32_t)srq->rq_code));
 }
 
 /* add a new request in queue and start if idle */
@@ -88,29 +90,34 @@ DEVBLOCK_REQUEST(block_soclib_request)
 {
   struct block_soclib_context_s *pv = dev->drv_pv;
   struct dev_block_params_s *p = &pv->params;
-  dev_block_lba_t lba = rq->lba;
-  dev_block_lba_t count = rq->count;
+  struct block_soclib_rq_s *srq = (void*)(rq + 1);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (lba + count <= p->blk_count)
+  if (rq->lba + rq->count <= p->blk_count)
     {
-       switch (rq->type)
+      switch (rq->type & DEV_BLOCK_OPMASK)
 	{
 	case DEV_BLOCK_READ:
-	  rq->drvdata = (void*)BLOCK_SOCLIB_OP_READ;
+	  srq->rq_code = BLOCK_SOCLIB_OP_READ;
+	  block_soclib_rq_start(dev, rq);
 	  break;
+
 	case DEV_BLOCK_WRITE:
-	  rq->drvdata = (void*)BLOCK_SOCLIB_OP_WRITE;
+	  srq->rq_code = BLOCK_SOCLIB_OP_WRITE;
+	  block_soclib_rq_start(dev, rq);
+	  break;
+
+	default:
+	  rq->progress = -ENOTSUP;
+	  rq->callback(rq, 0, srq + 1);
 	  break;
 	}
-
-      block_soclib_rq_start(dev, rq);
     }
   else
     {
-      rq->error = ERANGE;
-      rq->callback(dev, rq, 0);
+      rq->progress = -ERANGE;
+      rq->callback(rq, 0, srq + 1);
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -150,6 +157,8 @@ DEV_IRQ(block_soclib_irq)
   lock_spin(&dev->lock);
 
   struct dev_block_rq_s *rq = dev_blk_queue_head(&pv->queue);
+  struct block_soclib_rq_s *srq = (void*)(rq + 1);
+
   uint32_t st = endian_le32(
       cpu_mem_read_32(dev->addr[0] + BLOCK_SOCLIB_STATUS));
 
@@ -161,14 +170,10 @@ DEV_IRQ(block_soclib_irq)
     case BLOCK_SOCLIB_STATUS_WRITE_SUCCESS:
       assert(rq != NULL);
 
-      rq->lba--;
-      rq->count--;
-      rq->data++;
-      rq->error = 0;
+      rq->progress++;
+      rq->callback(rq, 1, srq + 1);
 
-      rq->callback(dev, rq, 1);
-
-      if (rq->count == 0)
+      if (rq->count >= rq->progress)
 	block_soclib_rq_end(dev);
       else
 	block_soclib_op_start(dev, rq);
@@ -181,9 +186,8 @@ DEV_IRQ(block_soclib_irq)
     case BLOCK_SOCLIB_STATUS_WRITE_ERROR:
       assert(rq != NULL);
 
-      rq->error = EIO;
-
-      rq->callback(dev, rq, 0);
+      rq->progress = -EIO;
+      rq->callback(rq, 0, srq + 1);
       block_soclib_rq_end(dev);
 
       lock_release(&dev->lock);
@@ -196,9 +200,10 @@ DEV_IRQ(block_soclib_irq)
 
 }
 
-/* 
- * device open operation
- */
+DEVBLOCK_GETRQSIZE(block_soclib_getrqsize)
+{
+  return sizeof(struct dev_block_rq_s) + sizeof(struct block_soclib_rq_s);
+}
 
 static const struct devenum_ident_s	block_soclib_ids[] =
 {
@@ -216,6 +221,7 @@ const struct driver_s	block_soclib_drv =
   .f.blk = {
     .f_request		= block_soclib_request,
     .f_getparams	= block_soclib_getparams,
+    .f_getrqsize	= block_soclib_getrqsize,
   }
 };
 

@@ -35,6 +35,11 @@ struct block_soclib_context_s
   uint8_t *buffer;
 };
 
+struct block_soclib_rq_s
+{
+  uint32_t rq_code;
+};
+
 #define BLOCK_SOCLIB_BUFFER 0
 #define BLOCK_SOCLIB_LBA 4
 #define BLOCK_SOCLIB_COUNT 8

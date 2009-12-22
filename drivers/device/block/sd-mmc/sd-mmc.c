@@ -123,7 +123,7 @@ static DEVSPI_CALLBACK(sd_mmc_read_done)
 	struct rw_cmd_state_s *state = priv;
 	struct device_s *dev = state->dev;
     struct sd_mmc_context_s *pv = dev->drv_pv;
-	struct dev_block_rq_s *bdrq = state->blockdev_rq;
+	struct dev_block_rq_s *bdrq = state->bdrq;
 
 	state->state.done = 1;
 
@@ -131,20 +131,19 @@ static DEVSPI_CALLBACK(sd_mmc_read_done)
 		lock_spin(&dev->lock);
 
 		state->state.error = 1;
-		bdrq->error = EIO;
+		bdrq->progress = -EIO;
 		lock_release(&dev->lock);
 
-		bdrq->callback(dev, bdrq, 0);
+		bdrq->callback(bdrq, 0, bdrq + 1);
 
 		dev_blk_queue_remove(&pv->queue, bdrq);
 
 		sd_mmc_handle_next_req(dev);
 	} else {
-		bdrq->lba++;
-		bdrq->count--;
+		bdrq->progress++;
 		bdrq->callback(dev, bdrq, 1);
-		if ( bdrq->count ) {
-			switch (bdrq->type) {
+		if ( bdrq->count > bdrq->progress ) {
+		  switch (bdrq->type & DEV_BLOCK_OPMASK) {
 			case DEV_BLOCK_READ:
 				__sd_mmc_read(dev, bdrq);
 				break;
@@ -346,7 +345,7 @@ bool_t __sd_mmc_get_block(
 
 void sdmmc_rw_command_buffer_init(
 	struct device_s *dev,
-	struct dev_block_rq_s *blockdev_rq,
+	struct dev_block_rq_s *bdrq,
 	uint8_t cmd,
 	uint32_t byte)
 {
@@ -356,7 +355,7 @@ void sdmmc_rw_command_buffer_init(
 	size_t cmdc = 0;
 
 	memset(buf, 0, sizeof(*buf));
-	buf->state.blockdev_rq = blockdev_rq;
+	buf->state.bdrq = bdrq;
 	buf->state.dev = dev;
 	buf->command_value[0] = 0x40|cmd;
 	buf->command_value[1] = (byte >> 24) & 0xff;
@@ -380,13 +379,13 @@ void sdmmc_rw_command_buffer_init(
 		  * Read CRC
 		  */
 		TO_SPI(SPIRQ_WAIT_VALUE(0xff, pv->access_timeout, wait_token_data_start));
-		TO_SPI(SPIRQ_R_8(blockdev_rq->data[0], p->blk_size, 0xff, 1));
+		TO_SPI(SPIRQ_R_8(bdrq->data[bdrq->progress], p->blk_size, 0xff, 1));
 		TO_SPI(SPIRQ_R_8(buf->crc, 2, 0xff, 1));
 		break;
 	case SDMMC_CMD_WRITE_SINGLE_BLOCK:
 		buf->tmp[0] = SDMMC_TOKEN_DATA_START;
 		TO_SPI(SPIRQ_W_8(buf->tmp, 1, 1));
-		TO_SPI(SPIRQ_W_8(blockdev_rq->data, p->blk_size, 1));
+		TO_SPI(SPIRQ_W_8(bdrq->data[bdrq->progress], p->blk_size, 1));
 		TO_SPI(SPIRQ_W_8(buf->crc, 2, 1));
 		TO_SPI(SPIRQ_WAIT_VALUE(0xff, 4, get_data_response));
 		TO_SPI(SPIRQ_WAIT_VALUE(0xff, pv->access_timeout, wait_not_busy));
@@ -411,7 +410,7 @@ static void __sd_mmc_read(struct device_s *dev, struct dev_block_rq_s *rq)
 		dev,
 		rq,
 		SDMMC_CMD_READ_SINGLE_BLOCK,
-		rq->lba << pv->csd.read_bl_len);
+		rq->lba + rq->progress << pv->csd.read_bl_len);
 	dev_spi_request(pv->spi, &pv->rw_cmd_buffer.spi_request);
 }
 
@@ -423,7 +422,7 @@ static void __sd_mmc_write(struct device_s *dev, struct dev_block_rq_s *rq)
 		dev,
 		rq,
 		SDMMC_CMD_WRITE_SINGLE_BLOCK,
-		rq->lba << pv->csd.read_bl_len);
+		rq->lba + rq->progress << pv->csd.read_bl_len);
 	dev_spi_request(pv->spi, &pv->rw_cmd_buffer.spi_request);
 }
 
@@ -602,27 +601,32 @@ sd_mmc_handle_next_req(struct device_s *dev)
 	}
 
 	if ( !pv->usable ) {
-        rq->error = EIO;
-        rq->callback(dev, rq, 0);
+        rq->progress = -EIO;
+        rq->callback(rq, 0, rq + 1);
 		return;
 	}
 
-    dev_block_lba_t lba = rq->lba;
-    dev_block_lba_t count = rq->count;
+    dev_block_lba_t lba = rq->lba + rq->progress;
+    dev_block_lba_t count = rq->count - rq->progress;
 
     if (lba + count > p->blk_count) {
-        rq->error = ERANGE;
-        rq->callback(dev, rq, 0);
+        rq->progress = -ERANGE;
+        rq->callback(rq, 0, rq + 1);
 		return;
     }
 
-	switch (rq->type) {
+	switch (rq->type & DEV_BLOCK_OPMASK) {
 	case DEV_BLOCK_READ:
 		__sd_mmc_read(dev, rq);
 		break;
 	case DEV_BLOCK_WRITE:
 		__sd_mmc_write(dev, rq);
 		break;
+
+	default:
+	  rq->progress = -ENOTSUP;
+	  rq->callback(rq, 0, rq + 1);
+	  break;
 	}
 }
 
@@ -645,6 +649,11 @@ DEVBLOCK_GETPARAMS(sd_mmc_get_params)
     return &(pv->params);
 }
 
+DEVBLOCK_GETRQSIZE(block_soclib_get_rqsize)
+{
+  return sizeof(struct dev_block_rq_s);
+}
+
 const struct driver_s   sd_mmc_drv =
 {
     .class      = device_class_block,
@@ -653,7 +662,8 @@ const struct driver_s   sd_mmc_drv =
 	.f.blk = {
 		.f_request      = sd_mmc_request,
 		.f_getparams    = sd_mmc_get_params,
-	},
+		.f_getrqsize	= sd_mmc_get_rqsize,
+    },
 };
 
 DEV_INIT(sd_mmc_init)
