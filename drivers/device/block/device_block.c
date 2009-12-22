@@ -30,6 +30,8 @@
 # include <hexo/lock.h>
 #endif
 
+#include <alloca.h>
+
 struct dev_block_wait_rq_s
 {
 #ifdef CONFIG_MUTEK_SCHEDULER
@@ -43,7 +45,7 @@ static DEVBLOCK_CALLBACK(dev_block_syncl_request)
 {
   struct dev_block_wait_rq_s *status = rq->pvdata;
 
-  if (rq->error || rq->count == 0)
+  if (rq->progress < 0 || rq->progress >= rq->count)
     status->done = 1;
 }
 
@@ -52,25 +54,25 @@ static error_t dev_block_lock_request(struct device_s *dev, uint8_t **data,
 				      enum dev_block_rq_type_e type)
 {
   struct dev_block_wait_rq_s status;
-  struct dev_block_rq_s rq;
+  struct dev_block_rq_s *rq = alloca(dev_block_getrqsize(dev));
 
   status.done = 0;
-  rq.data = data;
-  rq.lba = lba;
-  rq.count = count;
-  rq.type = type;
-  rq.pvdata = &status;
-  rq.callback = dev_block_syncl_request;
-  rq.error = 0;
+  rq->data = data;
+  rq->lba = lba;
+  rq->count = count;
+  rq->type = type;
+  rq->pvdata = &status;
+  rq->callback = dev_block_syncl_request;
+  rq->progress = 0;
 
-  dev_block_request(dev, &rq);
+  dev_block_request(dev, rq);
 
   assert(cpu_is_interruptible());
 
   while (!status.done)
     ;
 
-  return -rq.error;
+  return __MIN(rq->progress, 0);
 }
 
 #ifdef CONFIG_MUTEK_SCHEDULER
@@ -78,7 +80,7 @@ static DEVBLOCK_CALLBACK(dev_block_sync_request)
 {
   struct dev_block_wait_rq_s *status = rq->pvdata;
 
-  if (rq->error || rq->count == 0)
+  if (rq->progress < 0 || rq->progress >= rq->count)
     {
       lock_spin(&status->lock);
       if (status->ctx != NULL)
@@ -93,20 +95,20 @@ static error_t dev_block_wait_request(struct device_s *dev, uint8_t **data,
 				      enum dev_block_rq_type_e type)
 {
   struct dev_block_wait_rq_s status;
-  struct dev_block_rq_s rq;
+  struct dev_block_rq_s *rq = alloca(dev_block_getrqsize(dev));
 
   lock_init(&status.lock);
   status.ctx = NULL;
   status.done = 0;
-  rq.data = data;
-  rq.lba = lba;
-  rq.count = count;
-  rq.type = type;
-  rq.pvdata = &status;
-  rq.callback = dev_block_sync_request;
-  rq.error = 0;
+  rq->data = data;
+  rq->lba = lba;
+  rq->count = count;
+  rq->type = type;
+  rq->pvdata = &status;
+  rq->callback = dev_block_sync_request;
+  rq->progress = 0;
 
-  dev_block_request(dev, &rq);
+  dev_block_request(dev, rq);
 
   /* ensure callback doesn't occur here */
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -124,7 +126,7 @@ static error_t dev_block_wait_request(struct device_s *dev, uint8_t **data,
 
   lock_destroy(&status.lock);
 
-  return -rq.error;
+  return __MIN(rq->progress, 0);
 }
 #endif
 
