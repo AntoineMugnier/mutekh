@@ -649,7 +649,7 @@ DEVBLOCK_GETPARAMS(sd_mmc_get_params)
     return &(pv->params);
 }
 
-DEVBLOCK_GETRQSIZE(block_soclib_get_rqsize)
+DEVBLOCK_GETRQSIZE(sd_mmc_get_rqsize)
 {
   return sizeof(struct dev_block_rq_s);
 }
