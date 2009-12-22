@@ -182,6 +182,7 @@ VFS_FS_NODE_OPEN(ramfs_node_open)
 		vfs_printk("dir ");
 		f->read = ramfs_dir_read;
 		f->priv = (void *)(uintptr_t)0;
+        f->close = ramfs_file_close;
 		break;
 	}
 
