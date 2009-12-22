@@ -17,11 +17,14 @@ int md5(lua_State *st)
         case LUA_TSTRING:
         {
             FILE* f;
-            const char *pathname = lua_getstringopt(st, 1, NULL);
+            const char *pathname = lua_tolstring(st, i, NULL);
             uint8_t buffer[256];
             ssize_t s;
             struct crypto_md5_ctx_s hash;
             uint8_t digest[16];
+
+            if ( pathname == NULL )
+                return 0;
 
             crypto_md5_init(&hash);
 

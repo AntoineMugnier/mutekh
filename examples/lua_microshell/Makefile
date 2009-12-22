@@ -31,4 +31,4 @@ ifeq ($(CONFIG_MUTEK_TIMERMS),defined)
 objs += timer.o
 endif
 
-DIR_CFLAGS=-O0 -ggdb
+#DIR_CFLAGS=-O0 -ggdb
