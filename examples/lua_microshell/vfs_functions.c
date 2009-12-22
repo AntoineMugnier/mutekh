@@ -7,11 +7,10 @@
 #include <vfs/vfs.h>
 
 #include <drivers/fs/ramfs/ramfs.h>
+#include <drivers/fs/devfs/devfs.h>
 #include <drivers/fs/iso9660/iso9660.h>
 #include <drivers/fs/fat/fat.h>
 #include <drivers/device/enum/fdt/enum-fdt.h>
-
-#include <crypto/md5.h>
 
 static
 struct vfs_node_s * vfs_init()
@@ -121,50 +120,6 @@ int hexdump(lua_State *st)
                 base += s*sizeof(buffer);
             }
             
-            fclose(f);
-            break;
-        }
-        default:
-            printk("bad argument\n");
-            break;
-        }
-    }
-
-    return 0;
-}
-
-int md5(lua_State *st)
-{
-    unsigned int i;
-
-    for (i = 1; i <= lua_gettop(st); i++)
-    {
-        switch (lua_type(st, i))
-        {
-        case LUA_TSTRING:
-        {
-            FILE* f;
-            const char *pathname = lua_getstringopt(st, 1, NULL);
-            uint8_t buffer[256];
-            ssize_t s;
-            struct crypto_md5_ctx_s hash;
-            uint8_t digest[16];
-
-            crypto_md5_init(&hash);
-
-            if ((f = fopen(pathname, "r")) == NULL)
-            {
-                printk("error '%s': %s\n", pathname, strerror(errno));
-                break;
-            }
-
-            while ((s = fread(buffer, 1, sizeof(buffer), f)) > 0) {
-                crypto_md5_update(&hash, buffer, s);
-            }
-            
-            crypto_md5_get(&hash, digest);
-            printk("md5: %P\n", digest, 16);
-
             fclose(f);
             break;
         }
@@ -287,27 +242,52 @@ int mount(lua_State *st)
     if ( lua_gettop(st) < 1 )
 		return 1;
 
-	const char *filename = lua_getstringopt(st, 1, NULL);
+	const char *fs_type = lua_getstringopt(st, 1, NULL);
+	const char *filename = lua_getstringopt(st, 2, NULL);
 
 	struct vfs_node_s *node;
 	error_t err = vfs_lookup(vfs_get_root(), vfs_get_cwd(), filename, &node);
 	if ( err )
 		goto err_node;
 
-	struct vfs_fs_s *mount;
-	err = ramfs_open(&mount);
-	if ( err )
-		goto err_open;
+	struct vfs_fs_s *mount = NULL;
+#if defined(CONFIG_DRIVER_FS_RAMFS)
+    if ( !strcmp(fs_type, "ramfs") ) {
+        err = ramfs_open(&mount);
+        if ( err )
+            goto err_open;
+    }
+#endif
+#if defined(CONFIG_DRIVER_FS_DEVFS)
+    if ( !strcmp(fs_type, "devfs") ) {
+        err = devfs_open(&mount);
+        if ( err )
+            goto err_open;
+    }
+#endif
+#if defined(CONFIG_DRIVER_FS_ISO9660)
+    if ( !strcmp(fs_type, "iso9660") ) {
+        err = -ENOENT;
+        struct device_s *bd = NULL;
+        extern struct device_s fdt_enum_dev;
+        if ( (bd = enum_fdt_lookup(&fdt_enum_dev,
+                                   lua_getstringopt(st, 3, NULL))) == NULL
+             || (err = iso9660_open(&mount, bd)) )
+            goto err_open;
+    }
+#endif
 
 	err = vfs_mount(node, mount);
 	if ( err )
 		goto err_mount;
 
+	vfs_node_refdrop(node);
+
 	return 0;
   err_mount:
 //	ramfs_close(mount);
   err_open:
-	mem_free(mount);
+//	mem_free(mount);
 	vfs_node_refdrop(node);
   err_node:
 	printk("Error: %s\n", strerror(err));
@@ -407,7 +387,7 @@ int _ramfs_dump(lua_State *st)
 
 struct vfs_node_s *root_mount;
 
-void init_shell(lua_State* luast)
+void init_vfs_shell(lua_State* luast)
 {
 	root_mount = vfs_init();
 
@@ -454,7 +434,6 @@ void init_shell(lua_State* luast)
     lua_register(luast, "vfs_dump", _vfs_dump);
     lua_register(luast, "vfs_lru", _vfs_lru);
     lua_register(luast, "ramfs_dump", _ramfs_dump);
-    lua_register(luast, "md5", md5);
 
     struct vfs_node_s *root = vfs_get_root();
 

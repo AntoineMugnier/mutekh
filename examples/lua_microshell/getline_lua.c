@@ -4,10 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <drivers/device/icu/soclib-icu/icu-soclib.h>
-#include <drivers/device/block/soclib/block-soclib.h>
-#include <drivers/device/block/partition/block-partition.h>
-
 #include <device/device.h>
 #include <device/driver.h>
 #include <hexo/interrupt.h>
@@ -16,21 +12,49 @@
 #include <lua/lauxlib.h>
 #include <lua/lua.h>
 
-#include <drivers/fs/ramfs/ramfs.h>
-
 #include <termui/term.h>
 #include <termui/getline.h>
 
 extern struct device_s * console_dev;
 
-struct device_s * rootfs_dev;
-
 pthread_t a;
 
-
-void init_shell(lua_State*);
+void init_vfs_shell(lua_State*);
 void init_dsrl_shell(lua_State* luast);
 void init_rtld_shell(lua_State* luast);
+void init_crypto_shell(lua_State* luast);
+void init_timer_shell(lua_State *st);
+
+static void initialize_shell(lua_State* luast)
+{
+#if defined(CONFIG_VFS)
+    init_vfs_shell(luast);
+#endif
+
+#if defined(CONFIG_LIBDSRL)
+    init_dsrl_shell(luast);
+#endif
+
+#if defined(CONFIG_LIBELF_RTLD)
+    init_rtld_shell(luast);
+#endif
+
+#if defined(CONFIG_LIBCRYPTO_MD5)
+    init_crypto_shell(luast);
+#endif
+
+#if defined(CONFIG_MUTEK_TIMERMS)
+    init_timer_shell(luast);
+#endif
+
+#if defined(CONFIG_DRIVER_LCD)
+    init_lcd_shell(luast);
+#endif
+}
+
+
+
+
 
 /* line completion handler found in getline_lua_complete.c */
 GETLINE_FCN_COMPLETE(lua_complete);
@@ -52,15 +76,8 @@ void* shell(void *param)
     luast = luaL_newstate();
 
     luaL_openlibs(luast);
-    init_shell(luast);
 
-#if defined(CONFIG_LIBDSRL)
-    init_dsrl_shell(luast);
-#endif
-
-#if defined(CONFIG_LIBELF_RTLD)
-    init_rtld_shell(luast);
-#endif
+    initialize_shell(luast);
 
     /* initialize terminal */
     if (!(tm = term_alloc(console_dev, console_dev, luast)))
@@ -138,35 +155,8 @@ void* shell(void *param)
 }
 
 
-void do_block_hexdump(struct device_s *bd, size_t lba)
-{
-	const struct dev_block_params_s *params = dev_block_getparams(bd);
-	
-	uint8_t block[params->blk_size];
-	uint8_t *blocks[1] = {block};
-
-	error_t err = dev_block_wait_read(bd, blocks, lba, 1);
-	if ( err ) {
-		printf("Error reading LBA %x, %d\r\n", lba, err);
-	} else {
-		size_t i;
-		printf("LBA %x, read ok\r\n", lba);
-		for ( i=0; i<params->blk_size; i+=16 )
-			printf(" %p: %P\r\n", (void*)(uintptr_t)i, &block[i], 16);
-	}
-}
-
-
 void app_start()
 {
-/* 	if ( block_partition_create(&bd_dev, 0) > 0 ) { */
-/* 		part_dev = device_get_child(&bd_dev, 0); */
-/* 	} else { */
-/* 		part_dev = &bd_dev; */
-/* 	} */
-
-/* 	do_block_hexdump(part_dev, 0); */
-
     pthread_create(&a, NULL, shell, NULL);
 }
 
