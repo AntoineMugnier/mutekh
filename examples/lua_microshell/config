@@ -32,6 +32,7 @@ CONFIG_DRIVER_FS_ISO9660
 CONFIG_LIBC_STREAM
 CONFIG_LIBC_ASSERT
 #  CONFIG_VFS_LIBC_STREAM
+CONFIG_LIBCRYPTO_MD5
 
 # New source code module to be compiled
 CONFIG_MODULES app:$(CONFIGPATH)
@@ -40,6 +41,11 @@ CONFIG_COMPILE_SAVETEMPS
 
 %include ../common/platforms.conf
 %include ../common/build_options.conf
+
+%section emu-*-*
+
+CONFIG_DRIVER_BLOCK_EMU
+CONFIG_DRIVER_BLOCK_EMU_BLOCKSIZE 2048
 
 %section rtld
 

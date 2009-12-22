@@ -11,6 +11,8 @@
 #include <drivers/fs/fat/fat.h>
 #include <drivers/device/enum/fdt/enum-fdt.h>
 
+#include <crypto/md5.h>
+
 static
 struct vfs_node_s * vfs_init()
 {
@@ -119,6 +121,50 @@ int hexdump(lua_State *st)
                 base += s*sizeof(buffer);
             }
             
+            fclose(f);
+            break;
+        }
+        default:
+            printk("bad argument\n");
+            break;
+        }
+    }
+
+    return 0;
+}
+
+int md5(lua_State *st)
+{
+    unsigned int i;
+
+    for (i = 1; i <= lua_gettop(st); i++)
+    {
+        switch (lua_type(st, i))
+        {
+        case LUA_TSTRING:
+        {
+            FILE* f;
+            const char *pathname = lua_getstringopt(st, 1, NULL);
+            uint8_t buffer[256];
+            ssize_t s, base = 0;
+            struct crypto_md5_ctx_s hash;
+            uint8_t digest[16];
+
+            crypto_md5_init(&hash);
+
+            if ((f = fopen(pathname, "r")) == NULL)
+            {
+                printk("error '%s': %s\n", pathname, strerror(errno));
+                break;
+            }
+
+            while ((s = fread(buffer, 1, sizeof(buffer), f)) > 0) {
+                crypto_md5_update(&hash, buffer, s);
+            }
+            
+            crypto_md5_get(&hash, &digest);
+            printk("md5: %P\n", digest, 16);
+
             fclose(f);
             break;
         }
@@ -408,6 +454,7 @@ void init_shell(lua_State* luast)
     lua_register(luast, "vfs_dump", _vfs_dump);
     lua_register(luast, "vfs_lru", _vfs_lru);
     lua_register(luast, "ramfs_dump", _ramfs_dump);
+    lua_register(luast, "md5", md5);
 
     struct vfs_node_s *root = vfs_get_root();
 
