@@ -61,7 +61,7 @@ struct device_s *enum_fdt_get_phandle(struct device_s *dev, uint32_t phandle)
 	return NULL;
 }
 
-struct device_s *enum_fdt_lookup(struct device_s *dev, const char *path)
+DEVENUM_LOOKUP(enum_fdt_lookup)
 {
 	struct enum_fdt_context_s *pv = dev->drv_pv;
 
@@ -69,10 +69,29 @@ struct device_s *enum_fdt_lookup(struct device_s *dev, const char *path)
 			dprintk("[%s] ", item->device_path);
 			if ( !strcmp(item->device_path, path) )
 				return item->dev;
+            char path2[ENUM_FDT_PATH_MAXLEN];
+            strncpy(path2, item->device_path+1, ENUM_FDT_PATH_MAXLEN);
+            char *foo;
+            while ( (foo = strchr(path2, '/') ) )
+                *foo = '-';
+			if ( !strcmp(path, path2) )
+				return item->dev;
 		});
 	return NULL;
 }
 
+DEVENUM_INFO(enum_fdt_info)
+{
+    if ( child->parent != dev )
+        return -EINVAL;
+
+    struct enum_pv_fdt_s *enum_pv = child->enum_pv;
+    strncpy(info->path, enum_pv->device_path+1, DEV_ENUM_MAX_PATH_LEN);
+    char *foo;
+    while ( (foo = strchr(info->path, '/') ) )
+        *foo = '-';
+    return 0;
+}
 
 error_t enum_fdt_register_one(struct device_s *dev, struct device_s *item)
 {
@@ -121,6 +140,7 @@ const struct driver_s	enum_fdt_drv =
 	.f_cleanup		= enum_fdt_cleanup,
 	.f.denum = {
 		.f_lookup = enum_fdt_lookup,
+		.f_info = enum_fdt_info,
 //		.f_register		= enum_fdt_register,
 	}
 };

@@ -55,9 +55,42 @@ typedef DEVENUM_LOOKUP(devenum_lookup_t);
  */
 #define dev_enum_lookup(dev, ...) (dev)->drv->f.denum.f_lookup(dev, __VA_ARGS__)
 
+#define DEV_ENUM_MAX_PATH_LEN 32
+
+struct dev_enum_info_s
+{
+    char path[DEV_ENUM_MAX_PATH_LEN];
+};
+
+
+/**
+   Info function prototype macro
+ */
+#define DEVENUM_INFO(x) error_t (x)(struct device_s *dev,              \
+                                    struct device_s *child,            \
+                                    struct dev_enum_info_s *info)
+
+/**
+   Info function prototype. Queries information about a child of a
+   given device.
+
+   @param dev The device to info from
+   @param child The child of @tt dev to query information about
+   @param info The caller-allocated information structure to return
+   information in
+   @return 0 if done, or an error.
+ */
+typedef DEVENUM_INFO(devenum_info_t);
+
+/**
+   Info function shortcut
+ */
+#define dev_enum_info(dev, ...) (dev)->drv->f.denum.f_info(dev, __VA_ARGS__)
+
 struct dev_class_enum_s
 {
 	devenum_lookup_t *f_lookup;
+	devenum_info_t *f_info;
 };
 
 #endif
