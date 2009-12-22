@@ -146,7 +146,7 @@ int md5(lua_State *st)
             FILE* f;
             const char *pathname = lua_getstringopt(st, 1, NULL);
             uint8_t buffer[256];
-            ssize_t s, base = 0;
+            ssize_t s;
             struct crypto_md5_ctx_s hash;
             uint8_t digest[16];
 
@@ -162,7 +162,7 @@ int md5(lua_State *st)
                 crypto_md5_update(&hash, buffer, s);
             }
             
-            crypto_md5_get(&hash, &digest);
+            crypto_md5_get(&hash, digest);
             printk("md5: %P\n", digest, 16);
 
             fclose(f);
