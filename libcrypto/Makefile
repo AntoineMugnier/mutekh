@@ -9,3 +9,7 @@ ifeq ($(CONFIG_LIBCRYPTO_CRC32), defined)
 objs += crc32.o
 endif
 
+ifeq ($(CONFIG_LIBCRYPTO_MD5), defined)
+objs += md5.o
+endif
+
