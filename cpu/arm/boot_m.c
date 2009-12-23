@@ -71,7 +71,8 @@ asm(
     "mov  r1, #0                      \n\t"
 
 	/* jump to arch_init */
-	"ldr  pc, =arch_init              \n\t"
+    "ldr   r5, =arch_init             \n\t"
+	"bx    r5                         \n\t"
 	".size   arm_boot, .-arm_boot     \n\t"
 	".endfunc \n\t"
 

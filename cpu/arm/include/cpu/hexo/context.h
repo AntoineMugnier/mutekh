@@ -38,9 +38,16 @@ struct cpu_context_s
 {
 };
 
+#if defined(__thumb__)
+void arm_cpu_context_switch(struct context_s *old, struct context_s *new);
+#endif
+
 static inline void
 cpu_context_switch(struct context_s *old, struct context_s *new)
 {
+#if defined(__thumb__)
+    arm_cpu_context_switch(old, new);
+#else
 	void *old_addr = &old->stack_ptr;
 	void *new_addr = &new->stack_ptr;
 
@@ -100,12 +107,21 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		, "r12", /* "sp", */ "r14"
 		, "memory"
 		);
+#endif
 }
+
+#if defined(__thumb__)
+__attribute__((noreturn))
+void arm_cpu_context_jumpto(struct context_s *new);
+#endif
 
 static inline void
 __attribute__((always_inline, noreturn))
 cpu_context_jumpto(struct context_s *new)
 {
+#if defined(__thumb__)
+    arm_cpu_context_jumpto(new);
+#else
 	void *new_addr = &new->stack_ptr;
 
 	asm volatile (
@@ -138,6 +154,7 @@ cpu_context_jumpto(struct context_s *new)
 
 	while(1)
 		;
+#endif
 }
 
 static inline void

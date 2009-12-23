@@ -26,9 +26,13 @@ CPUCFLAGS += -fno-dwarf2-cfi-asm
 endif
 endif
 
+ifeq ($(CONFIG_CPU_ARM_THUMB), defined)
+CPUCFLAGS += -mthumb -mthumb-interwork
+endif
+
 ifeq ($(CONFIG_CPU_ARM_FPU),soft)
-CPUCFLAGS+=-msoft-float -mfloat-abi=softfp -mfpu=vfp
-CPUASFLAGS+= -mfpu=vfp
+CPUCFLAGS+=-msoft-float -mfloat-abi=softfp
+CPUASFLAGS+=
 endif
 
 ifeq ($(CONFIG_CPU_ENDIAN_LITTLE), defined)

@@ -62,34 +62,46 @@ static inline void
 cpu_interrupt_disable(void)
 {
 	uint32_t tmp;
+    THUMB_TMP_VAR;
 
 	asm volatile(
+        THUMB_TO_ARM
 		"mrs  %0, cpsr        \n\t"
 		"orr  %0, %0, #0x80   \n\t"
 		"msr  cpsr, %0        \n\t"
-		: "=r" (tmp) );
+        ARM_TO_THUMB
+		: "=r" (tmp) /*,*/ THUMB_OUT(,)
+        );
+/* #endif */
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
 	uint32_t tmp;
+    THUMB_TMP_VAR;
 
 	asm volatile(
+        THUMB_TO_ARM
 		"mrs  %0, cpsr        \n\t"
 		"bic  %0, %0, #0x80   \n\t"
 		"msr  cpsr, %0        \n\t"
-		: "=r" (tmp) );
+        ARM_TO_THUMB
+		: "=r" (tmp) /*,*/ THUMB_OUT(,)
+        );
 }
 
 static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
 	uint32_t tmp;
+    THUMB_TMP_VAR;
 
 	asm volatile(
+        THUMB_TO_ARM
 		"mrs  %0, cpsr        \n\t"
-		: "=r" (tmp) );
+        ARM_TO_THUMB
+		: "=r" (tmp) /*,*/ THUMB_OUT(,) );
 
 	*state = tmp;
 }
@@ -98,12 +110,15 @@ static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
 	uint32_t tmp, result;
+    THUMB_TMP_VAR;
 
 	asm volatile(
+        THUMB_TO_ARM
 		"mrs  %1, cpsr        \n\t"
 		"orr  %0, %1, #0x80   \n\t"
 		"msr  cpsr, %0        \n\t"
-		: "=r" (tmp), "=r" (result) );
+        ARM_TO_THUMB
+		: "=r" (tmp), "=r" (result) /*,*/ THUMB_OUT(,) );
 
 	*state = result;
 }
@@ -111,9 +126,14 @@ cpu_interrupt_savestate_disable(reg_t *state)
 static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
+    THUMB_TMP_VAR;
+
 	asm volatile(
+        THUMB_TO_ARM
 		"msr  cpsr, %0        \n\t"
-		:: "r" (*state) );
+        ARM_TO_THUMB
+		/* : */ THUMB_OUT(:)
+        : "r" (*state) );
 }
 
 static inline void
@@ -133,10 +153,13 @@ static inline bool_t
 cpu_interrupt_getstate(void)
 {
 	reg_t		state;
+    THUMB_TMP_VAR;
 
 	asm volatile(
+        THUMB_TO_ARM
 		"mrs  %0, cpsr        \n\t"
-		: "=r" (state) );
+        ARM_TO_THUMB
+		: "=r" (state) /*,*/ THUMB_OUT(,) );
 
 	return !(state & 0x80);
 }
@@ -151,9 +174,14 @@ static inline void
 cpu_interrupt_wait(void)
 {
 #if defined(__ARM_ARCH_6K__)
+    THUMB_TMP_VAR;
+
 	asm volatile(
-		"mcr p15, 0, %0, c7, c0, 4"
-		:: "r" (0) );
+        THUMB_TO_ARM
+		"mcr p15, 0, %0, c7, c0, 4  \n\t"
+        ARM_TO_THUMB
+		/*:*/  THUMB_OUT(:)
+        : "r" (0) );
 #else
 	/**/
 #endif

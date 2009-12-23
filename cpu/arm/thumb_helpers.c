@@ -15,31 +15,23 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
-
+    Copyright (c) Nicolas Pouillon, <nipo@ssji.net>, 2009
 */
 
-#ifndef __ARM_SPECIFIC_H_
-#define __ARM_SPECIFIC_H_
+#include <hexo/interrupt.h>
+#include <hexo/context.h>
 
 #if defined(__thumb__)
-# define THUMB_TMP_VAR uint32_t thumb_tmp
-# define THUMB_TO_ARM                \
-    ".align 2             \n\t"     \
-    "bx   pc              \n\t"     \
-    "nop                  \n\t"     \
-    ".arm                 \n\t"
-# define ARM_TO_THUMB                \
-    "add  %[adr], pc, #1  \n\t"     \
-    "bx   %[adr]          \n\t"     \
-    "1:                   \n\t"
-# define THUMB_OUT(x...) x [adr] "=&r" (thumb_tmp)
-#else
-# define THUMB_TMP_VAR
-# define THUMB_TO_ARM
-# define ARM_TO_THUMB
-# define THUMB_OUT(x, ...) x
+# error This file must be compiled in ARM mode
 #endif
 
-#endif
+__attribute__((noreturn))
+void arm_cpu_context_jumpto(struct context_s *new)
+{
+    cpu_context_jumpto(new);
+}
 
+void arm_cpu_context_switch(struct context_s *old, struct context_s *new)
+{
+    cpu_context_switch(old, new);
+}
