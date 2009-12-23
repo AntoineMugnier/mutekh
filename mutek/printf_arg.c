@@ -368,7 +368,7 @@ mutek_hexdump_arg(void *ctx, printf_output_func_t * const fcn,
 {
     const size_t w = 16;
     // addraddr | xx xx [12] xx xx | ..[12]..\n
-    static const size_t line_width = 8+3+3*w+3+w+1;
+    const size_t line_width = 8+3+3*w+3+w+1;
     char line[line_width];
 
     hexdump_line_init(line, line_width, w);
