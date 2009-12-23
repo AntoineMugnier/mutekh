@@ -42,14 +42,6 @@ int cmd_backlight(lua_State *st)
 	return 0;
 }
 
-extern const uint8_t bitmap[24948];
-
-int cmd_lcd_reblit(lua_State *st)
-{
-	dev_lcd_blit(&lcd_dev, 0, 132, 0, 126, bitmap);
-	return 0;
-}
-
 int cmd_lcd_blit(lua_State *st)
 {
   size_t nargs = lua_gettop(st);
@@ -84,7 +76,6 @@ void init_lcd_shell(lua_State *st)
 {
 	lua_register(st, "backlight", cmd_backlight);
 	lua_register(st, "lcd_blit", cmd_lcd_blit);
-	lua_register(st, "lcd_reblit", cmd_lcd_reblit);
 	lua_register(st, "lcd_blit_block", cmd_lcd_blit_block);
 	lua_register(st, "lcd_invert", cmd_lcd_invert);
 	lua_register(st, "lcd_set_contrast", cmd_lcd_set_contrast);
