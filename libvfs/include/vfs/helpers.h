@@ -23,6 +23,11 @@
    @file
    @module {Virtual File System}
    @short Operations on path strings
+
+   These operations implements the layer typically used by a @tt
+   libunix or a @tt libc. These functions use null-terminated strings,
+   don't rely on hardwired root and cwd nodes, and return errors
+   directly usable for errno.
  */
 
 #ifndef _VFS_HELPERS_H_
@@ -144,8 +149,19 @@ error_t vfs_link(struct vfs_node_s *root,
                  const char *src,
                  const char *dst);
 
+/**
+   @this dumps the present tree state of VFS starting at @tt root.
+
+   @param root Where to start dump from
+ */
 void vfs_dump(struct vfs_node_s *root);
 
+/**
+   @this dumps the present node LRU state, using @ref vfs_dump for
+   each node in LRU.
+
+   @param root File-system root to use for LRU walking.
+ */
 void vfs_dump_lru(struct vfs_node_s *root);
 
 #endif

@@ -24,9 +24,9 @@
    @module {Virtual File System}
    @short Keep track of global file system root and cwd nodes
 
-   Depending on configuration (@see #CONFIG_VFS_GLOBAL_CWD and
-   #CONFIG_VFS_GLOBAL_ROOT), root and current working directories
-   may be global or thread-local.
+   Depending on configuration (@ref #CONFIG_VFS_GLOBAL_CWD and @ref
+   #CONFIG_VFS_GLOBAL_ROOT), root and current working directories may
+   be global or thread-local.
 
    If root is not chosen to be a system-wide global, root must be
    correctly set on thread creation.
@@ -42,6 +42,7 @@
 
 #include <hexo/local.h>
 
+/** @hidden */
 struct vfs_node_s;
 
 /** @this returns the global vfs root node */
@@ -54,7 +55,7 @@ static inline void vfs_set_root(struct vfs_node_s *root);
    @this returns the global current working directory node
    
    If current working directory is undefined, this sets the cwd to
-   vfs_get_root().
+   value returned by @ref vfs_get_root.
 */
 static inline struct vfs_node_s *vfs_get_cwd();
 
@@ -66,8 +67,10 @@ static inline void vfs_set_cwd(struct vfs_node_s *cwd);
 
 
 #if defined(CONFIG_VFS_GLOBAL_CWD)
+/** @hidden */
 extern struct vfs_node_s *_vfs_cwd;
 
+/** @hidden */
 static inline struct vfs_node_s *vfs_get_cwd()
 {
     if ( _vfs_cwd == NULL )
@@ -76,6 +79,7 @@ static inline struct vfs_node_s *vfs_get_cwd()
     return _vfs_cwd;
 }
 
+/** @hidden */
 static inline void vfs_set_cwd(struct vfs_node_s *cwd)
 {
 	struct vfs_node_s *old = _vfs_cwd;
@@ -87,9 +91,10 @@ static inline void vfs_set_cwd(struct vfs_node_s *cwd)
 }
 
 #else
-
+/** @hidden */
 extern CONTEXT_LOCAL struct vfs_node_s *_vfs_cwd;
 
+/** @hidden */
 static inline struct vfs_node_s *vfs_get_cwd()
 {
     if ( CONTEXT_LOCAL_GET(_vfs_cwd) == NULL )
@@ -98,6 +103,7 @@ static inline struct vfs_node_s *vfs_get_cwd()
     return CONTEXT_LOCAL_GET(_vfs_cwd);
 }
 
+/** @hidden */
 static inline void vfs_set_cwd(struct vfs_node_s *cwd)
 {
 	struct vfs_node_s *old = CONTEXT_LOCAL_GET(_vfs_cwd);
@@ -110,8 +116,10 @@ static inline void vfs_set_cwd(struct vfs_node_s *cwd)
 #endif
 
 #if defined(CONFIG_VFS_GLOBAL_ROOT)
+/** @hidden */
 extern struct vfs_node_s *_vfs_root;
 
+/** @hidden */
 static inline struct vfs_node_s *vfs_get_root()
 {
     assert(_vfs_root);
@@ -119,6 +127,7 @@ static inline struct vfs_node_s *vfs_get_root()
     return _vfs_root;
 }
 
+/** @hidden */
 static inline void vfs_set_root(struct vfs_node_s *root)
 {
 	struct vfs_node_s *old = _vfs_root;
@@ -129,8 +138,10 @@ static inline void vfs_set_root(struct vfs_node_s *root)
 		vfs_node_refdrop( old );
 }
 #else
+/** @hidden */
 extern CONTEXT_LOCAL struct vfs_node_s *_vfs_root;
 
+/** @hidden */
 static inline struct vfs_node_s *vfs_get_root()
 {
     assert(CONTEXT_LOCAL_GET(_vfs_root));
@@ -138,6 +149,7 @@ static inline struct vfs_node_s *vfs_get_root()
     return CONTEXT_LOCAL_GET(_vfs_root);
 }
 
+/** @hidden */
 static inline void vfs_set_root(struct vfs_node_s *root)
 {
 	struct vfs_node_s *old = CONTEXT_LOCAL_GET(_vfs_root);

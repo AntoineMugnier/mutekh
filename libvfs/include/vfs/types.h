@@ -39,14 +39,6 @@
 #include <gpct/object_refcount.h>
 #include <mutek/semaphore.h>
 
-/**
-   @this is a node structure for a given File System. @this is
-   FS-dependant.
-*/
-struct fs_node_s;
-
-struct vfs_node_s;
-
 OBJECT_TYPE     (vfs_node, REFCOUNT, struct vfs_node_s);
 OBJECT_PROTOTYPE(vfs_node, , vfs_node);
 
@@ -63,8 +55,12 @@ CONTAINER_TYPE    (vfs_dir_hash, HASHLIST,
  */
 struct vfs_node_s
 {
+    /** @internal */
     CONTAINER_ENTRY_TYPE(HASHLIST) hash_entry;
+    /** @internal */
     CONTAINER_ENTRY_TYPE(CLIST)    lru_entry;
+    /** @internal
+        Object-management related */
     vfs_node_entry_t obj_entry;
 
     /** File system the node is in */
@@ -75,26 +71,33 @@ struct vfs_node_s
         characters in the name should be filled with @tt '\0' */
     char name[CONFIG_VFS_NAMELEN];
 
-    /**
-       Parent node.
+    /** @internal
+        Parent node.
 
-       Root has its own pointer here, dandling nodes have NULL
+        Root has its own pointer here, dandling nodes have NULL.
 
-       Accesses to this value must be protected for atomicity with
-       @tt parent_lock.
+        Accesses to this value must be protected for atomicity with
+        @tt parent_lock.
+
+        Code external to VFS code MUST use @ref vfs_node_get_parent.
     */
     struct vfs_node_s *parent;
+    /** @internal
+        Lock protecting accesses to parent */
     lock_t parent_lock;
 
-    /**
-       Whether this node is eligible to LRU
-     */
+    /** @internal
+        Whether this node is present in LRU */
     bool_t in_lru;
 
-    /** Private file system data attached to this node */
+    /** @internal
+        Private file system data attached to this node */
     struct fs_node_s *fs_node;
 
 #if defined(CONFIG_VFS_STATS)
+    /** @multiple
+        Statistics counter
+     */
     atomic_t lookup_count;
     atomic_t open_count;
     atomic_t close_count;
@@ -102,6 +105,7 @@ struct vfs_node_s
 #endif
 
     /**
+       @internal
        Children cache hash.
        
        Accesses to this value must be protected through @tt
@@ -109,6 +113,8 @@ struct vfs_node_s
     */
     vfs_dir_hash_root_t children;
 
+    /** @internal
+        Semaphore protecting @tt children */
     struct semaphore_s dir_semaphore;
 }
 , hash_entry, 5);
@@ -122,21 +128,35 @@ struct vfs_fs_ops_s;
 OBJECT_TYPE     (vfs_fs, SIMPLE, struct vfs_fs_s);
 
 /**
-   @this is an opened file system state.
+   @this is an opened filesystem state.
  */
 struct vfs_fs_s
 {
+    /** LRU of @ref vfs_node_s used for this filesystem */
     vfs_lru_root_t lru_list;
+    /** Root node of the filesystem. This is filled when opening the filesystem */
     struct fs_node_s *root;
+    /** A pointer to supported operations table */
     const struct vfs_fs_ops_s *ops;
+    /** A simple reference counter for exclusive internal use of FS implementation */
     atomic_t ref;
+    /** Whether filesystem is read-only */
     uint8_t flag_ro:1;
 
+    /** Object-management-related */
     vfs_fs_entry_t obj_entry;
 
+    /**
+       Mountpoint that was replaced with this filesystem's root on
+       mount. NULL for non-mounted filesystems
+    */
     struct vfs_node_s *old_node;
 
 #if defined(CONFIG_VFS_STATS)
+    /**
+       @multiple
+       Statistics counter
+    */
     atomic_t node_open_count;
 
     atomic_t lookup_count;

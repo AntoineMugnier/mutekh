@@ -30,14 +30,13 @@
 
 #include <hexo/types.h>
 
-typedef size_t vfs_file_size_t;
-typedef uint16_t vfs_node_attr_t;
-
-/**
-   @this is a node structure for a given File System. @this is
-   FS-dependant.
-*/
+/** @hidden */
 struct fs_node_s;
+
+/** @hidden */
+struct vfs_node_s;
+
+typedef size_t vfs_file_size_t;
 
 enum vfs_node_type_e
 {

@@ -22,7 +22,31 @@
 /**
    @file
    @module {Virtual File System}
-   @short File system driver operations interface
+   @short Filesystem driver operations interface
+
+   Filesystems are drivers to the low-level aspects of a given
+   filesystem. They basically manipulate 3 structures:
+   @list
+
+   @item @ref vfs_fs_s: A filesystem state. It is unique for an open
+   filesystem. This structure is used to mount a filesystem in
+   another (with @ref vfs_mount).
+
+   @item @ref fs_node_s: A filesystem-level node. It represents an
+   actual node in a filesystem. This type is
+   filesystem-implementation dependant, VFS sees it as an abstract
+   type. Is is also refcounted through @tt node_refnew and @tt
+   node_refdrop function pointers of @ref vfs_fs_ops_s.
+
+   @item @ref vfs_file_s: An open file descriptor. It is created by
+   @tt node_open (in @ref vfs_fs_ops_s) and must be closed on finish.
+
+   @end list
+
+   Filesystems may be read-only, or even read-write only at the
+   file-level. This means operations like @tt lookup, @tt move, @tt
+   link and others are not possible. If so, corresponding entries in
+   @ref vfs_fs_ops_s may be NULL.
  */
 
 #ifndef _VFS_FS_H_
@@ -36,14 +60,20 @@
 #include <gpct/cont_dlist.h>
 #include <gpct/object_simple.h>
 
+/** @hidden */
 struct vfs_fs_s;
 
+/** @hidden */
 enum vfs_node_type_e;
+/** @hidden */
 enum vfs_open_flags_e;
 
+/** @hidden */
 struct fs_node_s;
+/** @hidden */
 struct vfs_file_s;
 
+/** @hidden */
 struct vfs_stat_s;
 
 /** @this defines the fs unmountable test prototype */
@@ -247,7 +277,7 @@ typedef VFS_FS_STAT(vfs_fs_stat_t);
    @param node Node not used any more
 
    @csee #VFS_FS_NODE_REFNEW
-   @see vfs_node_node_refnew @see vfs_node_refnew
+   @see vfs_node_refnew
  */
 typedef VFS_FS_NODE_REFNEW(vfs_fs_node_refnew_t);
 
@@ -261,7 +291,7 @@ typedef VFS_FS_NODE_REFNEW(vfs_fs_node_refnew_t);
    @param node Node not used any more
 
    @csee #VFS_FS_NODE_REFDROP
-   @see vfs_node_node_refdrop @see vfs_node_refdrop
+   @see vfs_node_refdrop
  */
 typedef VFS_FS_NODE_REFDROP(vfs_fs_node_refdrop_t);
 

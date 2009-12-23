@@ -23,6 +23,32 @@
    @file
    @module {Virtual File System}
    @short Operations on file handles
+
+   @section {The node_open operation}
+   @alias node_open
+   
+   When opening a node, @ref vfs_open_flags_e are passed to tell the
+   VFS and the filesystem driver what type of operation is required.
+
+   When opening directories, the only valid operation is to open
+   read-only. Thus the correct flags are: @ref VFS_OPEN_READ @tt{|}
+   @ref VFS_OPEN_DIR.
+
+   When opening files, one may open with @ref VFS_OPEN_READ and/or
+   @ref VFS_OPEN_WRITE. If @ref VFS_OPEN_APPEND is passed-in, @tt
+   write operations will always write at the end of file.
+
+   @ref VFS_OPEN_CREATE is only valid for creating files (so it is
+   invalid with @ref VFS_OPEN_DIR), and is not supported at all layers
+   of the VFS. It is valid when using @ref vfs_open, but invalid when
+   using @tt node_open action of @ref vfs_fs_ops_s (because node
+   already exists).
+   
+   @ref VFS_OPEN_TRUNCATE is to erase contents of a file at opening,
+   filesystem is responsible for implementing this flag.
+   
+   @end section
+
  */
 
 #ifndef _VFS_FILE_H_
@@ -40,9 +66,9 @@ enum vfs_open_flags_e
     VFS_OPEN_WRITE = 2,
     /** Create the file if nonexistant */
     VFS_OPEN_CREATE = 4,
-    /** Append mode */
+    /** Always write at end */
     VFS_OPEN_APPEND = 8,
-    /** Append mode */
+    /** Erase contents of file on open, this is filesystem-implemented */
     VFS_OPEN_TRUNCATE = 16,
     /** Open a directory (only valid with VFS_OPEN_READ) */
     VFS_OPEN_DIR = 32,
