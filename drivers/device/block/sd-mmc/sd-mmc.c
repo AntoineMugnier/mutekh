@@ -123,7 +123,7 @@ static DEVSPI_CALLBACK(sd_mmc_read_done)
 	struct rw_cmd_state_s *state = priv;
 	struct device_s *dev = state->dev;
     struct sd_mmc_context_s *pv = dev->drv_pv;
-	struct dev_block_rq_s *bdrq = state->bdrq;
+	struct dev_block_rq_s *bdrq = state->blockdev_rq;
 
 	state->state.done = 1;
 
@@ -141,7 +141,7 @@ static DEVSPI_CALLBACK(sd_mmc_read_done)
 		sd_mmc_handle_next_req(dev);
 	} else {
 		bdrq->progress++;
-		bdrq->callback(dev, bdrq, 1);
+		bdrq->callback(bdrq, 1, bdrq + 1);
 		if ( bdrq->count > bdrq->progress ) {
 		  switch (bdrq->type & DEV_BLOCK_OPMASK) {
 			case DEV_BLOCK_READ:
@@ -355,7 +355,7 @@ void sdmmc_rw_command_buffer_init(
 	size_t cmdc = 0;
 
 	memset(buf, 0, sizeof(*buf));
-	buf->state.bdrq = bdrq;
+	buf->state.blockdev_rq = bdrq;
 	buf->state.dev = dev;
 	buf->command_value[0] = 0x40|cmd;
 	buf->command_value[1] = (byte >> 24) & 0xff;
@@ -410,7 +410,7 @@ static void __sd_mmc_read(struct device_s *dev, struct dev_block_rq_s *rq)
 		dev,
 		rq,
 		SDMMC_CMD_READ_SINGLE_BLOCK,
-		rq->lba + rq->progress << pv->csd.read_bl_len);
+		rq->lba + (rq->progress << pv->csd.read_bl_len));
 	dev_spi_request(pv->spi, &pv->rw_cmd_buffer.spi_request);
 }
 
@@ -422,7 +422,7 @@ static void __sd_mmc_write(struct device_s *dev, struct dev_block_rq_s *rq)
 		dev,
 		rq,
 		SDMMC_CMD_WRITE_SINGLE_BLOCK,
-		rq->lba + rq->progress << pv->csd.read_bl_len);
+		rq->lba + (rq->progress << pv->csd.read_bl_len));
 	dev_spi_request(pv->spi, &pv->rw_cmd_buffer.spi_request);
 }
 
