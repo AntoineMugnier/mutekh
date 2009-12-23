@@ -135,9 +135,20 @@ DEV_CLEANUP(pitc_6079a_cleanup)
 	mem_free(pv);
 }
 
+#ifdef CONFIG_DRIVER_ENUM_FDT
+static const struct devenum_ident_s	pitc_6079a_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("pitc6079a", 0, 0),
+	{ 0 }
+};
+#endif
+
 const struct driver_s	pitc_6079a_drv =
 {
     .class      = device_class_timer,
+#ifdef CONFIG_DRIVER_ENUM_FDT
+    .id_table   = pitc_6079a_ids,
+#endif
     .f_init     = pitc_6079a_init,
     .f_cleanup      = pitc_6079a_cleanup,
     .f_irq      = pitc_6079a_irq,
@@ -148,6 +159,10 @@ const struct driver_s	pitc_6079a_drv =
         .f_getvalue     = pitc_6079a_getvalue,
     }
 };
+
+#ifdef CONFIG_DRIVER_ENUM_FDT
+REGISTER_DRIVER(pitc_6079a_drv);
+#endif
 
 /* 
  * device open operation

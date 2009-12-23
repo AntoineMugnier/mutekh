@@ -127,9 +127,20 @@ DEV_CLEANUP(icu_sam7_cleanup)
 	mem_free(pv);
 }
 
+#ifdef CONFIG_DRIVER_ENUM_FDT
+static const struct devenum_ident_s	icu_sam7_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("sam7:icu", 0, 0),
+	{ 0 }
+};
+#endif
+
 const struct driver_s	icu_sam7_drv =
 {
     .class      = device_class_icu,
+#ifdef CONFIG_DRIVER_ENUM_FDT
+    .id_table   = icu_sam7_ids,
+#endif
     .f_init     = icu_sam7_init,
     .f_cleanup  = icu_sam7_cleanup,
     .f_irq      = icu_sam7_handler,
@@ -140,6 +151,10 @@ const struct driver_s	icu_sam7_drv =
         .f_delhndl      = icu_sam7_delhndl,
     }
 };
+
+#ifdef CONFIG_DRIVER_ENUM_FDT
+REGISTER_DRIVER(icu_sam7_drv);
+#endif
 
 #if 0
 static

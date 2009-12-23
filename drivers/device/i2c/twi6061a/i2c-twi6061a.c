@@ -279,9 +279,20 @@ DEVI2C_SET_BAUDRATE(i2c_twi6061a_set_baudrate)
 	return MCK/2/((br<<exp) + 3);
 }
 
+#ifdef CONFIG_DRIVER_ENUM_FDT
+static const struct devenum_ident_s	i2c_twi6061a_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("twi6061a", 0, 0),
+	{ 0 }
+};
+#endif
+
 const struct driver_s   i2c_twi6061a_drv =
 {
     .class      = device_class_i2c,
+#ifdef CONFIG_DRIVER_ENUM_FDT
+    .id_table   = i2c_twi6061a_ids,
+#endif
     .f_init     = i2c_twi6061a_init,
     .f_cleanup  = i2c_twi6061a_cleanup,
     .f_irq      = i2c_twi6061a_irq,
@@ -290,6 +301,10 @@ const struct driver_s   i2c_twi6061a_drv =
 		.f_set_baudrate = i2c_twi6061a_set_baudrate,
 	},
 };
+
+#ifdef CONFIG_DRIVER_ENUM_FDT
+REGISTER_DRIVER(i2c_twi6061a_drv);
+#endif
 
 DEV_INIT(i2c_twi6061a_init)
 {

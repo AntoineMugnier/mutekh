@@ -90,9 +90,31 @@ static DEVGPIO_IRQ(mt5f_state_changed)
 	}
 }
 
+#ifdef CONFIG_DRIVER_ENUM_FDT
+static const struct driver_param_binder_s dev_mt5f_binder[] =
+{
+	PARAM_BIND(struct dev_mt5f_param_s, gpio_dev, PARAM_DATATYPE_DEVICE_PTR),
+	PARAM_BIND(struct dev_mt5f_param_s, a, PARAM_DATATYPE_INT),
+	PARAM_BIND(struct dev_mt5f_param_s, b, PARAM_DATATYPE_INT),
+	PARAM_BIND(struct dev_mt5f_param_s, c, PARAM_DATATYPE_INT),
+	PARAM_BIND(struct dev_mt5f_param_s, d, PARAM_DATATYPE_INT),
+	PARAM_BIND(struct dev_mt5f_param_s, common, PARAM_DATATYPE_INT),
+	{ 0 }
+};
+
+static const struct devenum_ident_s	dev_mt5f_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("mt5f", sizeof(struct dev_mt5f_param_s), dev_mt5f_binder),
+	{ 0 }
+};
+#endif
+
 const struct driver_s   mt5f_drv =
 {
     .class      = device_class_input,
+#ifdef CONFIG_DRIVER_ENUM_FDT
+    .id_table   = dev_mt5f_ids,
+#endif
     .f_init     = dev_mt5f_init,
     .f_cleanup  = dev_mt5f_cleanup,
 	.f.input = {
@@ -103,6 +125,9 @@ const struct driver_s   mt5f_drv =
 	},
 };
 
+#ifdef CONFIG_DRIVER_ENUM_FDT
+REGISTER_DRIVER(mt5f_drv);
+#endif
 
 DEV_INIT(dev_mt5f_init)
 {

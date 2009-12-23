@@ -191,9 +191,20 @@ DEV_IRQ(gpio_sam7_irq)
 }
 
 
+#ifdef CONFIG_DRIVER_ENUM_FDT
+static const struct devenum_ident_s	gpio_sam7_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("sam7:gpio", 0, 0),
+	{ 0 }
+};
+#endif
+
 const struct driver_s   gpio_sam7_drv =
 {
     .class      = device_class_gpio,
+#ifdef CONFIG_DRIVER_ENUM_FDT
+    .id_table   = gpio_sam7_ids,
+#endif
     .f_init     = gpio_sam7_init,
     .f_cleanup  = gpio_sam7_cleanup,
     .f_irq      = gpio_sam7_irq,
@@ -207,6 +218,9 @@ const struct driver_s   gpio_sam7_drv =
 	},
 };
 
+#ifdef CONFIG_DRIVER_ENUM_FDT
+REGISTER_DRIVER(gpio_sam7_drv);
+#endif
 
 DEV_INIT(gpio_sam7_init)
 {

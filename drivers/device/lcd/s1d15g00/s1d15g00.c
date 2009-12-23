@@ -358,9 +358,29 @@ DEVLCD_GETINFO(s1d15g00_getinfo)
  * device open operation
  */
 
+#ifdef CONFIG_DRIVER_ENUM_FDT
+static const struct driver_param_binder_s s1d15g00_binder[] =
+{
+	PARAM_BIND(struct s1d15g00_param_s, spi_dev, PARAM_DATATYPE_DEVICE_PTR),
+	PARAM_BIND(struct s1d15g00_param_s, spi_lun, PARAM_DATATYPE_INT),
+	PARAM_BIND(struct s1d15g00_param_s, set_reset_gpio_dev, PARAM_DATATYPE_DEVICE_PTR),
+	PARAM_BIND(struct s1d15g00_param_s, set_reset_gpio_id, PARAM_DATATYPE_INT),
+	{ 0 }
+};
+
+static const struct devenum_ident_s	s1d15g00_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("s1d15g00", sizeof(struct s1d15g00_param_s), s1d15g00_binder),
+	{ 0 }
+};
+#endif
+
 const struct driver_s	s1d15g00_drv =
 {
 	.class		= device_class_lcd,
+#ifdef CONFIG_DRIVER_ENUM_FDT
+    .id_table   = s1d15g00_ids,
+#endif
 	.f_init		= s1d15g00_init,
 	.f_cleanup		= s1d15g00_cleanup,
 	.f.lcd = {
@@ -368,6 +388,11 @@ const struct driver_s	s1d15g00_drv =
 		.f_getinfo      = s1d15g00_getinfo,
 	}
 };
+
+#ifdef CONFIG_DRIVER_ENUM_FDT
+REGISTER_DRIVER(s1d15g00_drv);
+#endif
+
 
 DEV_INIT(s1d15g00_init)
 {
