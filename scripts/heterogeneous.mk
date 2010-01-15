@@ -22,6 +22,7 @@ $(BUILD_DIR)/kernel-%.pre.o: FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
 		 MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF) \
 	     BUILD=$* \
+	     OBJ_DIR=$(BUILD_DIR)/obj-$* \
 		 BUILD_DIR=$(BUILD_DIR) TARGET_EXT=pre.o \
 		 CONF_DIR=$(BUILD_DIR)/obj-$* target=kernel-$* \
 		 kernel

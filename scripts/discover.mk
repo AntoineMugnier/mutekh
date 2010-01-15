@@ -16,7 +16,7 @@ define declare_module_dir
 
 MKDOC_ARGS += -I $(2)/include
 $(1)_SRC_DIR:=$(2)
-$(1)_OBJ_DIR:=$(BUILD_DIR)/obj-$(TARGET_COUPLE)/$(1)
+$(1)_OBJ_DIR:=$(OBJ_DIR)/$(1)
 
 endef
 
