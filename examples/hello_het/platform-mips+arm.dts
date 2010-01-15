@@ -23,15 +23,15 @@
 			icudev_type = "cpu:mips";
 		};
 
-		Arm@2 {
-			name = "Arm";
+		Arm,v6k@2 {
+			name = "Arm,v6k";
 			device_type = "cpu";
 			reg = <2>;
 			icudev_type = "cpu:arm";
 		};
 
-		Arm@3 {
-			name = "Arm";
+		Arm,v6k@3 {
+			name = "Arm,v6k";
 			device_type = "cpu";
 			reg = <3>;
 			icudev_type = "cpu:arm";
@@ -39,24 +39,47 @@
 
 	};
 
+	xicu@0 {
+	    device_type = "soclib:xicu:root";
+		input_lines = <2>;
+		ipis = <4>;
+		timers = <1>;
+		reg = <0xd2200000 0x1000>;
+
+	    	out@0 {
+	    	    device_type = "soclib:xicu:filter";
+	    	    parent = &{/xicu@0};
+	    		output_line = <0>;
+	    		irq = <&{/cpus/Mips,32@0} 0>;
+	    	};
+	    
+	    	out@1 {
+	    	    device_type = "soclib:xicu:filter";
+	    	    parent = &{/xicu@0};
+	    		output_line = <1>;
+	    		irq = <&{/cpus/Mips,32@1} 0>;
+	    	};
+	    
+	    	out@2 {
+	    	    device_type = "soclib:xicu:filter";
+	    	    parent = &{/xicu@0};
+	    		output_line = <2>;
+	    		irq = <&{/cpus/Arm,v6k@2} 0>;
+	    	};
+	    
+	    	out@3 {
+	    	    device_type = "soclib:xicu:filter";
+	    	    parent = &{/xicu@0};
+	    		output_line = <3>;
+	    		irq = <&{/cpus/Arm,v6k@3} 0>;
+	    	};
+	};
+
 	tty@0 {
 	    device_type = "soclib:tty";
 		tty_count = <1>;
 		reg = <0x90600000 0x10>;
-		irq = <&{/icu@0} 1>;
-	};
-
-	icu@0 {
-	    device_type = "soclib:icu";
-		input_count = <2>;
-		reg = <0x20600000 0x20>;
-		irq = <&{/cpus/Mips,32@0} 0>;
-	};
-
-	timer@0 {
-	    device_type = "soclib:timer";
-		reg = <0x01620000 0x10>;
-		irq = <&{/icu@0} 0>;
+ 		irq = <&{/xicu@0/out@0} 0>;
 	};
 
 	memory@0 {
@@ -66,9 +89,6 @@
 
 	chosen {
 		console = &{/tty@0};
-		timer = &{/timer@0};
 	};
-
-	
 
 };
