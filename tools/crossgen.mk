@@ -105,49 +105,43 @@ $(GDB_TGZ): $(GDB_STAMP)-wget
 	touch $@
 
 
-$(BINUTILS_STAMP)-$(TARGET)-conf:
-	touch $@
+$(BINUTILS_STAMP)-$(TARGET)-conf: $(BINUTILS_DIR)
 	mkdir -p $(BINUTILS_BDIR)
-	( cd $(BINUTILS_BDIR) ; $(BINUTILS_DIR)/configure --prefix=$(PREFIX) --target=$(TARGET) --disable-checking --disable-werror $(BINUTILS_CONF) )
+	( cd $(BINUTILS_BDIR) ; $(BINUTILS_DIR)/configure --prefix=$(PREFIX) --target=$(TARGET) --disable-checking --disable-werror $(BINUTILS_CONF) ) && touch $@
 
 $(BINUTILS_STAMP)-$(TARGET)-build: $(BINUTILS_STAMP)-$(TARGET)-conf
-	touch $@
-	make -C $(BINUTILS_BDIR)
+	make -C $(BINUTILS_BDIR) && touch $@
 
 $(PREFIX)/bin/$(TARGET)-as: $(BINUTILS_STAMP)-$(TARGET)-build
-	make -C $(BINUTILS_BDIR) install
+	make -C $(BINUTILS_BDIR) install && touch $@
 
-binutils: $(BINUTILS_DIR) $(PREFIX)/bin/$(TARGET)-as
+binutils: $(PREFIX)/bin/$(TARGET)-as
 
 
 
-$(GCC_STAMP)-$(TARGET)-conf:
-	touch $@
+$(GCC_STAMP)-$(TARGET)-conf: $(GCC_DIR) binutils
 	mkdir -p $(GCC_BDIR)
-	( cd $(GCC_BDIR) ; $(GCC_DIR)/configure --prefix=$(PREFIX) --target=$(TARGET) --disable-checking --disable-werror $(GCC_CONF) )
+	( cd $(GCC_BDIR) ; $(GCC_DIR)/configure --prefix=$(PREFIX) --target=$(TARGET) --disable-checking --disable-werror $(GCC_CONF) ) && touch $@
 
 $(GCC_STAMP)-$(TARGET)-build: $(GCC_STAMP)-$(TARGET)-conf
-	touch $@
-	make -C $(GCC_BDIR)
+	make -C $(GCC_BDIR) && touch $@
 
 $(PREFIX)/bin/$(TARGET)-gcc: $(GCC_STAMP)-$(TARGET)-build
-	make -C $(GCC_BDIR) install
+	make -C $(GCC_BDIR) install && touch $@
 
-gcc: binutils $(GCC_DIR) $(PREFIX)/bin/$(TARGET)-gcc
+gcc: $(PREFIX)/bin/$(TARGET)-gcc
 
 
 
-$(GDB_STAMP)-$(TARGET)-conf:
-	touch $@
+$(GDB_STAMP)-$(TARGET)-conf: $(GDB_DIR)
 	mkdir -p $(GDB_BDIR)
-	( cd $(GDB_BDIR) ; $(GDB_DIR)/configure --prefix=$(PREFIX) --target=$(TARGET) --disable-checking --disable-werror $(GDB_CONF) )
+	( cd $(GDB_BDIR) ; $(GDB_DIR)/configure --prefix=$(PREFIX) --target=$(TARGET) --disable-checking --disable-werror $(GDB_CONF) ) && touch $@
 
 $(GDB_STAMP)-$(TARGET)-build: $(GDB_STAMP)-$(TARGET)-conf
-	touch $@
-	make -C $(GDB_BDIR)
+	make -C $(GDB_BDIR) && touch $@
 
 $(PREFIX)/bin/$(TARGET)-gdb: $(GDB_STAMP)-$(TARGET)-build
-	make -C $(GDB_BDIR) install
+	make -C $(GDB_BDIR) install && touch $@
 
-gdb: $(GDB_DIR) $(PREFIX)/bin/$(TARGET)-gdb
+gdb: $(PREFIX)/bin/$(TARGET)-gdb
 
