@@ -36,14 +36,18 @@
  * Private vgz tty device context
  */
 
+#ifdef CONFIG_HEXO_IRQ
 CONTAINER_TYPE(tty_fifo, RING, uint8_t, 32);
 CONTAINER_FUNC(tty_fifo, RING, static inline, tty_fifo);
+#endif
 
 struct tty_soclib_context_s
 {
   /* tty input request queue and char fifo */
   dev_char_queue_root_t		read_q;
+#ifdef CONFIG_HEXO_IRQ
   tty_fifo_root_t		read_fifo;
+#endif
 };
 
 #endif

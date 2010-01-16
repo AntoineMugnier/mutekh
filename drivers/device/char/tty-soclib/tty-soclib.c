@@ -43,7 +43,16 @@ void tty_soclib_try_read(struct device_s *dev)
 
   while ((rq = dev_char_queue_head(&pv->read_q)))
     {
-      size_t size = tty_fifo_pop_array(&pv->read_fifo, rq->data, rq->size);
+      size_t size;
+
+#ifdef CONFIG_HEXO_IRQ
+      size = tty_fifo_pop_array(&pv->read_fifo, rq->data, rq->size);
+#else
+      /* use polling if no IRQ support available */
+      size = 0;
+      while (cpu_mem_read_8(dev->addr[0] + TTY_SOCLIB_REG_STATUS) && size < rq->size)
+	rq->data[size++] = cpu_mem_read_8(dev->addr[0] + TTY_SOCLIB_REG_READ);
+#endif
 
       if (!size)
 	break;
@@ -105,14 +114,19 @@ DEV_CLEANUP(tty_soclib_cleanup)
 {
   struct tty_soclib_context_s	*pv = dev->drv_pv;
 
+#ifdef CONFIG_HEXO_IRQ
   if ( dev->icudev )
 	  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
 
   tty_fifo_destroy(&pv->read_fifo);
+#endif
+
   dev_char_queue_destroy(&pv->read_q);
 
   mem_free(pv);
 }
+
+#ifdef CONFIG_HEXO_IRQ
 
 /*
  * device irq
@@ -140,6 +154,8 @@ DEV_IRQ(tty_soclib_irq)
   return 1;
 }
 
+#endif
+
 /* 
  * device open operation
  */
@@ -156,7 +172,9 @@ const struct driver_s	tty_soclib_drv =
   .id_table		= tty_soclib_ids,
   .f_init		= tty_soclib_init,
   .f_cleanup		= tty_soclib_cleanup,
+#ifdef CONFIG_HEXO_IRQ
   .f_irq		= tty_soclib_irq,
+#endif
   .f.chr = {
     .f_request		= tty_soclib_request,
   }
@@ -179,10 +197,13 @@ DEV_INIT(tty_soclib_init)
   dev->drv_pv = pv;
 
   dev_char_queue_init(&pv->read_q);
+
+#ifdef CONFIG_HEXO_IRQ
   tty_fifo_init(&pv->read_fifo);
 
   if ( dev->icudev )
 	  DEV_ICU_BIND(dev->icudev, dev, dev->irq, tty_soclib_irq);
+#endif
 
   return 0;
 }

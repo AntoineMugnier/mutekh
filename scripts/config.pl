@@ -886,8 +886,9 @@ sub check_config
 	{
 	    if ($$opt{value} ne "undefined")
 	    {
-		if (not process_config_depend($opt) or
-		    not process_config_parent($opt))
+		if (not process_config_parent($opt) or
+		    not process_config_depend($opt)
+		    )
 		{
 		    $$opt{value} = "undefined";
 		    process_config_unprovide($opt);

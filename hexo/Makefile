@@ -9,6 +9,10 @@ ifeq ($(CONFIG_HEXO_IPI), defined)
 objs += ipi.o
 endif
 
+ifeq ($(CONFIG_HEXO_IRQ), defined)
+objs += interrupt.o
+endif
+
 doc_headers = \
 	hexo/atomic.h hexo/cpu.h hexo/ipi.h	\
 	hexo/mmu.h hexo/interrupt.h hexo/local.h hexo/error.h		\
