@@ -77,7 +77,7 @@ DEVBLOCK_REQUEST(block_ramdisk_request)
 
     default:
       rq->progress = -ENOTSUP;
-      rq->callback(rq, 0, arq + 1);
+      rq->callback(rq, 0, rq + 1);
       break;
     }
 
