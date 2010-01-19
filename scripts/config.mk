@@ -1,6 +1,6 @@
 
 CONF_PATH:=$(MUTEK_SRC_DIR):$(CURRENT_DIR):$(USER_DIR)
-CONF_TMP_BASE:=$(shell mktemp /tmp/mutekh_config.XXXXXX)
+CONF_TMP_BASE:=$(shell echo /tmp/mutekh_config.$$$$.$${RANDOM})
 CONF_EXTS = py m4 h mk
 
 CONFIG_TMP_FILES=$(addprefix $(CONF_TMP_BASE).,$(CONF_EXTS))
@@ -22,6 +22,8 @@ $(CONF_DIR)/.config.%: $(CONF_TMP_BASE).%
 		echo "   CONF      $@" ; \
 		cp $< $@ ; \
 	fi
+
+.INTERMEDIATE: $(CONFIG_TMP_FILES)
 
 # Here is a special case for the dependency file, this is because we
 # want to always create the deps file when reloading the

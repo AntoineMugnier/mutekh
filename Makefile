@@ -46,7 +46,7 @@ ifneq ($(VERBOSE),1)
 MAKEFLAGS = -s
 endif
 
-CONF_DIR:=$(shell mktemp /tmp/mutekh_config.XXXXXX)
+CONF_DIR:=$(shell echo /tmp/mutekh_config.$$$$.$${RANDOM})
 
 all: kernel
 
