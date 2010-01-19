@@ -49,21 +49,24 @@ typedef SCHED_CANDIDATE_FCN(sched_candidate_fcn_t);
 
 CONTAINER_TYPE	     (sched_queue, DLIST, struct sched_context_s
 {
-  struct context_s	context;
-  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
+  CONTAINER_ENTRY_TYPE(DLIST) list_entry;
+  sched_queue_root_t    *root;		//< keep track of associated scheduler queue
+  struct context_s	context;	//< execution context
+
+#if defined (CONFIG_MUTEK_SCHEDULER_STATIC) && defined(CONFIG_HEXO_IPI)
+  void			*cpu_cls;	//< used as cpu identifier for IPIs
+#endif
+
   void			*private;
 
 #ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
   cpu_bitmap_t		cpu_map;
 #endif
 
-#ifdef CONFIG_MUTEK_SCHEDULER_STATIC
-  void *cpu_cls;
-#endif
-
 #ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
   sched_candidate_fcn_t	*is_candidate;
 #endif
+
 }, list_entry);
 
 CONTAINER_FUNC       (sched_queue, DLIST, static inline, sched_queue, list_entry);

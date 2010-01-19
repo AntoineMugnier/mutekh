@@ -21,13 +21,13 @@ void app_start()
   switch (cpu_id())
     {
     case 0:
-    case 1:
+      //    case 1:
       pthread_mutex_init(&m, NULL);
       pthread_create(&a, NULL, f, "Hello\n");
       break;
 
     case 2:
-    case 3:
+      //    case 3:
       pthread_create(&b, NULL, f, "World\n");
       break;
     }
