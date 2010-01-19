@@ -94,10 +94,7 @@ extern CPU_LOCAL cpu_x86_segsel_t *cpu_tls_seg;
 extern volatile CPU_LOCAL struct cpu_x86_tss_s cpu_tss;
 #endif
 
-static inline const char *cpu_type_name(void)
-{
-  return "x86";
-}
+#define CPU_TYPE_NAME x86
 
 static inline cpu_id_t cpu_id(void)
 {

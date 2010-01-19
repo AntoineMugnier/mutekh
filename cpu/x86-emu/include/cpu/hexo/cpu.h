@@ -30,10 +30,7 @@
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	8
 
-static inline const char *cpu_type_name(void)
-{
-  return "x86";
-}
+#define CPU_TYPE_NAME x86
 
 extern CPU_LOCAL cpu_id_t _cpu_id;
 

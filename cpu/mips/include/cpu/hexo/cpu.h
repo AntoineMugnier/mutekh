@@ -166,10 +166,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
 #endif
 
-static inline const char *cpu_type_name(void)
-{
-  return "mips";
-}
+#define CPU_TYPE_NAME mips32
 
 static inline cpu_id_t
 cpu_id(void)

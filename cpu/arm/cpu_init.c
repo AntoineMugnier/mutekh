@@ -32,7 +32,7 @@
 #endif
 
 #ifndef CONFIG_DRIVER_ICU_ARM
-static uint8_t irq_stack[128];
+static uint8_t arm_irq_stack[128];
 #endif
 
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
@@ -78,7 +78,7 @@ static void __arm_exception_setup()
 
 	struct arm_exception_context_s *cpu_context = arm_exception_context[cpu_id()];
 #ifndef CONFIG_DRIVER_ICU_ARM
-	arm_setup_exception_stack(irq_stack+sizeof(irq_stack)-4, 0x12);
+	arm_setup_exception_stack(arm_irq_stack+sizeof(arm_irq_stack)-4, 0x12);
 #else
 	arm_setup_exception_stack(&cpu_context[0], 0x12); // IRQ
 #endif
