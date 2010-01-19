@@ -89,16 +89,17 @@ cpu_dcache_invld_buf(void *ptr, size_t size)
 #define _TO_STR(x) #x
 #define TO_STR(x) _TO_STR(x)
 
+/** @this returns the cpu type name */
 static inline const char *
 cpu_type_name(void)
 {
   return TO_STR(CPU_TYPE_NAME);
 }
 
-/** @this can be used to declare and refer to a variable
-    or function prefixed by cpu type name. */
 # define __CPU_NAME_DECL(t, x) t##_##x
 # define _CPU_NAME_DECL(t, x) __CPU_NAME_DECL(t, x)
+/** @this can be used to declare and refer to a variable
+    or function prefixed by cpu type name. */
 # define CPU_NAME_DECL(x) _CPU_NAME_DECL(CPU_TYPE_NAME, x)
 
 #endif
