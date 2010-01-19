@@ -18,8 +18,18 @@ void *f(void *param)
 
 void app_start()
 {
-  pthread_mutex_init(&m, NULL);
-  pthread_create(&a, NULL, f, "Hello world\n");
-  pthread_create(&b, NULL, f, "Hello world\n");
+  switch (cpu_id())
+    {
+    case 0:
+    case 1:
+      pthread_mutex_init(&m, NULL);
+      pthread_create(&a, NULL, f, "Hello\n");
+      break;
+
+    case 2:
+    case 3:
+      pthread_create(&b, NULL, f, "World\n");
+      break;
+    }
 }
 

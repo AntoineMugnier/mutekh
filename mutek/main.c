@@ -216,6 +216,9 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
     }
   else
     {
+#ifdef CONFIG_MUTEK_SMP_APP_START
+      app_start();
+#endif
       cpu_interrupt_disable();
 
 #if defined(CONFIG_MUTEK_SCHEDULER)

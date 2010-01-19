@@ -29,8 +29,12 @@ AS=$(CPUTOOLS)as
 OBJCOPY=$(CPUTOOLS)objcopy
 OBJDUMP=$(CPUTOOLS)objdump
 
-CFLAGS=	-nostdlib -fno-builtin -Wall -O$(CONFIG_COMPILE_OPTIMIZE) -ffunction-sections -fdata-sections
+CFLAGS=	-nostdlib -fno-builtin -Wall -O$(CONFIG_COMPILE_OPTIMIZE)
 DTC=dtc
+
+ifeq ($(CONFIG_HET_BUILD), defined)
+CFLAGS += -fno-section-anchors -ffunction-sections -fdata-sections
+endif
 
 ifeq ($(CONFIG_COMPILE_SAVETEMPS), defined)
 CFLAGS += -save-temps
