@@ -46,7 +46,7 @@ const uint32_t *fdt_skip_str(const uint32_t *ptr)
 {
 	uint32_t data;
 	do {
-		data = endian_be32(*ptr++);
+		data = *ptr++;
 	} while (((data - 0x01010101) & 0x80808080) == 0);
 	return ptr;
 }
