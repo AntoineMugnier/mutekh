@@ -69,6 +69,7 @@ SECTIONS
 	.text : {
 		*(.init*)
 		*(.text*)
+		*(.glue*)
 	} > mem_hetrom
 
 	.rodata : {
