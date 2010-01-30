@@ -197,7 +197,7 @@ static FDT_ON_MEM_RESERVE_FUNC(creator_mem_reserve)
 }
 
 
-void soclib_parse_fdt(void *blob, struct device_s *enum_dev)
+void mutek_parse_fdt(struct device_s *enum_dev, void *blob)
 {
 	struct consumer_state_s priv = {
 		.enum_dev = enum_dev,

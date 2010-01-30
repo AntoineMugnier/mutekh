@@ -26,8 +26,7 @@
 # include <device/enum.h>
 # include <device/driver.h>
 # include <device/device.h>
-
-void soclib_parse_fdt(void *dt, struct device_s *enum_dev);
+# include <mutek/fdt.h>
 #endif
 
 #if defined(CONFIG_SOCLIB_MEMCHECK)
@@ -145,7 +144,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 #if defined(CONFIG_ARCH_DEVICE_TREE)
         device_init(&fdt_enum_dev);
         enum_fdt_init(&fdt_enum_dev, device_tree);
-        soclib_parse_fdt(device_tree, &fdt_enum_dev);
+        mutek_parse_fdt(&fdt_enum_dev, device_tree);
         mem_region_init();//TODO: change with mem_parse_fdt when lib topology is done
         //        mem_parse_fdt(device_tree);
 

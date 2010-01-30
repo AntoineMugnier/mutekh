@@ -15,10 +15,6 @@ ifeq ($(CONFIG_SOCLIB_MEMCHECK), defined)
  objs += mem_checker.o
 endif
 
-ifeq ($(CONFIG_ARCH_DEVICE_TREE), defined)
- objs += fdt_consumer.o
-endif
-
 ifeq ($(LINKING),1)
 
 meta = ldscript
