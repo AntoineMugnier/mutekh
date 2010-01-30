@@ -401,12 +401,14 @@ VFS_FILE_READ(fat_file_read)
     return r;
 }
 
+#if defined(CONFIG_DRIVER_FS_FAT_RW)
 VFS_FILE_WRITE(fat_file_write)
 {
     struct fat_file_s *ffile = file->priv;
     (void)ffile;
     return -ENOTSUP;
 }
+#endif
 
 VFS_FILE_SEEK(fat_file_seek)
 {
@@ -450,8 +452,10 @@ VFS_FS_NODE_OPEN(fat_node_open)
 	case VFS_NODE_FILE: {
 		if ( flags & VFS_OPEN_READ )
             rfile->read = fat_file_read;
+#if defined(CONFIG_DRIVER_FS_FAT_RW)
 		if ( flags & VFS_OPEN_WRITE )
             rfile->write = fat_file_write;
+#endif
 		rfile->seek = fat_file_seek;
         break;
     }

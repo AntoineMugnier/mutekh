@@ -41,6 +41,7 @@ void fat_name_to_vfs(char *dst, const char *src)
         dst[-1] = 0;
 }
 
+#if defined(CONFIG_DRIVER_FS_FAT_RW)
 VFS_FS_CREATE(fat_create)
 {
     return -ENOTSUP;
@@ -60,6 +61,7 @@ VFS_FS_UNLINK(fat_unlink)
 {
     return -ENOTSUP;
 }
+#endif
 
 VFS_FS_STAT(fat_stat)
 {

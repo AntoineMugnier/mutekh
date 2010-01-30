@@ -74,6 +74,7 @@ static common_cluster_t fat16_entry_get(
     return CLUSTER_TO_COMMON(ret);
 }
 
+#if defined(CONFIG_DRIVER_FS_FAT_RW)
 static common_cluster_t fat16_entry_find_free(
     struct fat_s *fat)
 {
@@ -109,10 +110,13 @@ static error_t fat16_entry_set(
     fat_sector_lock_release(fat->sector);
     return 0;
 }
+#endif
 
 const struct fat_ops_s fat16_fat_ops =
 {
     .entry_get = fat16_entry_get,
+#if defined(CONFIG_DRIVER_FS_FAT_RW)
     .entry_set = fat16_entry_set,
     .entry_find_free = fat16_entry_find_free,
+#endif
 };

@@ -234,6 +234,10 @@ error_t fat_open(struct device_s *dev, struct vfs_fs_s **fs)
 	if ( root == NULL )
 		goto cant_open;
 
+#if !defined(CONFIG_DRIVER_FS_FAT_RW)
+    mnt->ro = 1;
+#endif
+
 	mnt->root = root;
 
 	*fs = mnt;
@@ -256,10 +260,12 @@ static const struct vfs_fs_ops_s fat_ops =
 {
     .node_open = fat_node_open,
     .lookup = fat_lookup,
+#if defined(CONFIG_DRIVER_FS_FAT_RW)
     .create = fat_create,
     .link = fat_link,
     .move = fat_move,
     .unlink = fat_unlink,
+#endif
     .stat = fat_stat,
     .can_unmount = fat_can_unmount,
     .node_refdrop = fat_node_refdrop,

@@ -120,18 +120,22 @@ OBJECT_FUNC(fat_node, REFCOUNT, static inline, fat_node, obj_entry);
     (struct fat_s *fat,                                             \
      common_cluster_t cluster)
 
-#define FAT_ENTRY_SET(x) error_t (x)                                   \
+#if defined(CONFIG_DRIVER_FS_FAT_RW)
+# define FAT_ENTRY_SET(x) error_t (x)                                   \
     (struct fat_s *fat,                                             \
      common_cluster_t cluster, common_cluster_t next)
 
-#define FAT_ENTRY_FIND_FREE(x) common_cluster_t (x)                 \
+# define FAT_ENTRY_FIND_FREE(x) common_cluster_t (x)                 \
     (struct fat_s *fat)
+#endif
 
 struct fat_ops_s
 {
     FAT_ENTRY_GET(*entry_get);
+#if defined(CONFIG_DRIVER_FS_FAT_RW)
     FAT_ENTRY_SET(*entry_set);
     FAT_ENTRY_FIND_FREE(*entry_find_free);
+#endif
 };
 
 enum fat_type_e
