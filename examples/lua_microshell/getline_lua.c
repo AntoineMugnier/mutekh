@@ -8,7 +8,10 @@
 #include <device/driver.h>
 #include <hexo/interrupt.h>
 
-#include <vfs/vfs.h>
+#if defined(CONFIG_VFS)
+# include <vfs/vfs.h>
+#endif
+
 #include <lua/lauxlib.h>
 #include <lua/lua.h>
 
@@ -61,9 +64,13 @@ GETLINE_FCN_COMPLETE(lua_complete);
 
 static GETLINE_FCN_PROMPT(prompt)
 {
+#if defined(CONFIG_VFS)
     char name[CONFIG_VFS_NAMELEN];
     vfs_node_get_name(vfs_get_cwd(), name, CONFIG_VFS_NAMELEN);
     return term_printf(tm, "[lua:%s] ", name);
+#else
+    return term_printf(tm, "[lua] ");
+#endif
 }
 
 void* shell(void *param)
