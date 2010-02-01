@@ -2,8 +2,7 @@
 objs =						\
 cpu.o						\
 init.o						\
-context.o					\
-interrupt.o
+context.o
 
 ifeq ($(CONFIG_HEXO_IPI), defined)
 objs += ipi.o
