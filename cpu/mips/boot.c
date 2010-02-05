@@ -38,7 +38,12 @@ asm(
 #if __mips >= 32
         "   mfc0    $8,     $12                                                            \n"
         /* let status.erl for eret */
+# ifdef CONFIG_COMPILE_SOFTFLOAT
         "   ori     $8,     $0,     0x0000fc04                                             \n"
+# else
+        "   li      $0,     0x4000fc04                                                     \n"
+        "   or      $8,     $0,     $8                                                     \n"
+# endif
         "   mtc0    $8,     $12                                                            \n"
 # if __mips > 32
         "   ehb                                                                            \n"
