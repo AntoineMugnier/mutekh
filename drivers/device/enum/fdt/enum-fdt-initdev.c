@@ -57,10 +57,12 @@ static void parse_icudev( struct device_s *enum_dev,
 		return;
 
 	dprintk("Getting icudev with path %s... ", data);
+    struct device_s *icu = enum_fdt_lookup(enum_dev, (const char*)data);
+	dprintk("got %p\n", icu);
 
-	dev->icudev = enum_fdt_lookup(enum_dev, (const char*)data);
-
-	dprintk("got %p\n", dev->icudev);
+    if ( icu->drv != NULL && icu->drv->type != device_class_icu )
+        printk("Warning: %s is not an ICU, expect crashes\n", (const char *)data);
+	dev->icudev = icu;
 }
 
 static void parse_reg( struct device_s *dev, const void *data, size_t datalen )
