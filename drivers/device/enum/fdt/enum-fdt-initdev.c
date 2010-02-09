@@ -60,7 +60,7 @@ static void parse_icudev( struct device_s *enum_dev,
     struct device_s *icu = enum_fdt_lookup(enum_dev, (const char*)data);
 	dprintk("got %p\n", icu);
 
-    if ( icu->drv != NULL && icu->drv->type != device_class_icu )
+    if ( icu->drv != NULL && icu->drv->class != device_class_icu )
         printk("Warning: %s is not an ICU, expect crashes\n", (const char *)data);
 	dev->icudev = icu;
 }
