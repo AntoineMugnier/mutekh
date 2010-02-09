@@ -48,6 +48,12 @@ DEVTIMER_SETPERIOD(xicu_timer_setperiod)
 					  XICU_PTI_PER,
 					  id),
 		endian_le32(period));
+
+	cpu_mem_write_32(
+		XICU_REG_ADDR(dev->addr[0],
+					  XICU_PTI_ENABLE,
+					  id),
+		endian_le32(1<<id));
 	return 0;
 }
 
