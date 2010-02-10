@@ -25,15 +25,29 @@
 #include <string.h>
 #include <ctype.h> /* FIXME */
 
+static const uintptr_t reg_t_log2_m1 =
+  sizeof(reg_t) == 1 ? 0 :
+  sizeof(reg_t) == 2 ? 1 :
+  sizeof(reg_t) == 4 ? 3 : 7;
+
 /********************************/
 
 #ifndef HAS_CPU_MEMSET
 #undef memset
-inline void * memset(void * dst, int_fast8_t s, size_t count)
+inline void * memset(void *dst, int_fast8_t s, size_t count)
 {
-  char	*a = dst;
+  const reg_t v = s * (reg_t)0x0101010101010101LL;
+  int8_t *a = dst;
+  reg_t *r;
 
-  while (count--)
+  /* align */
+  while ((uintptr_t)a & reg_t_log2_m1)
+    count--, *a++ = s;
+
+  for (r = (reg_t*)a; (count & ~reg_t_log2_m1); count -= 4)
+    *r++ = v;
+
+  for (a = (int8_t*)r; count; count--)
     *a++ = s;
 
   return dst;
@@ -46,12 +60,12 @@ inline void * memset(void * dst, int_fast8_t s, size_t count)
 #undef memcpy
 void *memcpy( void *_dst, const void *_src, size_t size )
 {
-	uint32_t *dst = _dst;
-	const uint32_t *src = _src;
-	if ( ! ((uintptr_t)dst & 3) && ! ((uintptr_t)src & 3) )
-		while (size > 3) {
+	reg_t *dst = _dst;
+	const reg_t *src = _src;
+	if ( ! ((uintptr_t)dst & reg_t_log2_m1) && ! ((uintptr_t)src & reg_t_log2_m1) )
+		while (size >= sizeof(reg_t)) {
 			*dst++ = *src++;
-			size -= 4;
+			size -= sizeof(reg_t);
 		}
 
 	uint8_t *cdst = (uint8_t*)dst;
@@ -327,8 +341,8 @@ inline void * memchr(const void *s, int_fast8_t c, size_t n)
 #undef strcasecmp
 inline int_fast8_t strcasecmp(const char* s1, const char* s2)
 {
-    register uint32_t  x2;
-    register uint32_t  x1;
+  uint_fast8_t  x2;
+  uint_fast8_t  x1;
 
     while (1) {
         x2 = *s2 - 'A'; if (__unlikely(x2 < 26u)) x2 += 32;
@@ -350,8 +364,8 @@ inline int_fast8_t strcasecmp(const char* s1, const char* s2)
 #undef strncasecmp
 inline int_fast8_t strncasecmp(const char* s1, const char* s2, size_t len)
 {
-    register uint32_t  x2;
-    register uint32_t  x1;
+  uint_fast8_t  x2;
+  uint_fast8_t  x1;
     register const char*   end = s1 + len;
 
     while (1) {
@@ -380,9 +394,7 @@ void *memccpy(void *dst, const void *src, char c, size_t count)
   {
     *a++ = *b;
     if (*b==c)
-    {
       return (void *)a;
-    }
     b++;
   }
   return 0;
