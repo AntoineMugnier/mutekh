@@ -521,7 +521,7 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
   alloc_list_push(&region->root, hdr);
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-  soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
+  soclib_mem_check_enable(SOCLIB_MC_CHECK_REGIONS);
   CPU_INTERRUPT_RESTORESTATE;
 #endif
   
