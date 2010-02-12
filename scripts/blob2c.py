@@ -13,6 +13,10 @@ parser.add_option('-s',
 				  dest = 'section', nargs = 1, type = 'string',
 				  help = 'Change section name (no default (.rodata))',
 				  default = '')
+parser.add_option('-S',
+				  dest = 'size', action = 'store_true',
+				  help = 'Also emit a size symbol "<name>_size"',
+				  default = False)
 parser.add_option('-o',
 				  dest = 'output', nargs = 1, type = 'string',
 				  help = 'Change section output file name (default = -)',
@@ -31,6 +35,8 @@ if args and args[0] != '-':
 blob = input.read()
 input.close()
 
+if opts.size:
+	print >> output, '#include <stdint.h>'
 if opts.section:
 	print >> output, '__attribute__((section "%s"))'%opts.section
 print >> output, 'const unsigned char %s[] = {'%opts.name
@@ -40,3 +46,8 @@ for i in range(0, len(blob), 8):
 		print >> output, "0x%02x,"%ord(c),
 	print >> output
 print >> output, '};'
+if opts.section:
+	print >> output, '__attribute__((section "%s"))'%opts.section
+if opts.size:
+    print >> output, 'const size_t %s_size = %d;'%(
+        opts.name, len(blob))
