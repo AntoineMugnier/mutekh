@@ -933,6 +933,8 @@ sub read_myconfig
 
     my $cd = dirname(Cwd::realpath($file));
 
+    push @config_files, Cwd::realpath($file);
+
     $init_env{CONFIGSECTION} = 'common';
     $init_env{CONFIGPATH} = $cd;
 
@@ -958,14 +960,14 @@ sub read_myconfig
 		next;
 	    }
 
-	    if ($line =~ /^\s* %section \s+ ([*-\w\s]+)/x)
+	    if ($line =~ /^\s* %section \s+ ([*\w\d\s-]+)/x)
 	    {
 		my $w = $1;
 		$ignore = 1;
 
 		foreach my $p (split(/\s+/, $w)) {
 
-		    $p =~ s/\*/\\w\+/g;
+		    $p =~ s/\*/[\\w\\d]\+/g;
 
 		    foreach (split(/:/, $section)) {
 			if ( $_ =~ /^$p$/ ) {
@@ -975,9 +977,10 @@ sub read_myconfig
 			}
 		    }
 
+#		    print STDERR "ignoring $p: $ignore\n";
+
 		    last if !$ignore;
 		}
-#		print STDERR "using $p\n" unless $ignore;
 		next;
 	    }
 
@@ -989,7 +992,7 @@ sub read_myconfig
 
 	    next if $ignore;
 
-	    if ($line =~ /^\s* %set \s+ (\w+) \s+ (.*?) \s*$/x)
+	    if ($line =~ /^\s* %set \s+ (\w[\w\d]*) \s+ (.*?) \s*$/x)
 	    {
 		$init_env{$1} = $2;
 		next;
@@ -1007,7 +1010,7 @@ sub read_myconfig
 		next;
 	    }
 
-	    if ($line =~ /^\s* %types \s+ (\w+\b\s*)+$/x)
+	    if ($line =~ /^\s* %types \s+ (\w[\w\d]*\b\s*)+$/x)
 	    {
 		foreach (split(/\s+/, $1)) {
 		    error( "$file: multiple `$_' section types in use" ) if ($sec_types{$_} == 1);
@@ -1016,7 +1019,7 @@ sub read_myconfig
 		next;
 	    }
 
-	    if ($line =~ /^\s* %requiretypes \s+ (\w+\b\s*)+$/x)
+	    if ($line =~ /^\s* %requiretypes \s+ (\w[\w\d]*\b\s*)+$/x)
 	    {
 		foreach (split(/\s+/, $1)) {
 		    error( "$file:$lnum: no `$_' section type in use (required)" ) if (!$sec_types{$_});
@@ -1032,7 +1035,7 @@ sub read_myconfig
 		next;
 	    }
 
-	    if ($line =~ /^\s* (\w+) (?: \s+(\S+) )?/x)
+	    if ($line =~ /^\s* (\w[\w\d]*) (?: \s+(\S+) )?/x)
 	    {
 		my $opt = $config_opts{$1};
         my $val = $2;
@@ -1166,7 +1169,7 @@ sub write_doc_header
 		    {
 			my @l;
 			foreach ( split(/\s+/, $dep_and) ) {
-			    s/^\w+/$& /;
+			    s/^\w[\w\d]*/$& /;
 			    push @l, "\@ref \#$_";
 			}
 			print FILE "     \@item ".join(" or ", @l)."\n";
@@ -1589,3 +1592,9 @@ Usage: config.pl [options]
 main;
 exit 0;
 
+
+# Local Variables:
+# tab-width: 8
+# basic-offset: 4
+# indent-tabs-mode: t
+# End:

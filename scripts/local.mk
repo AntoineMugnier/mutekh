@@ -60,12 +60,26 @@ ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be a device-tree file)
 
-$(3)/$(1): $(2)/$(1:.o=.dts)
+$(3)/$(1): $(2)/$(1:.o=.dts) $(CONF_DIR)/.config.h
 	@echo ' DTC->C+CC  ' $$(notdir $$@)
 	test -d $(3) || mkdir -p $(3)
 	cd $(3) ; $(DTC) -O dtb -o $(3)/$(1:.o=.blob) $$<
 	cd $(3) ; python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
 		-o $(3)/$(1:.o=.c) -n dt_blob_start $(3)/$(1:.o=.blob)
+	cd $(3) ; \
+	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $(DIR_CFLAGS) -c \
+		$(3)/$(1:.o=.c) -o $$@
+
+else
+ifeq ($(wildcard $(2)/$(1:.o=.dict)),$(2)/$(1:.o=.dict))
+
+#$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be a forth dictionary)
+
+$(3)/$(1): $(2)/$(1:.o=.dict)
+	@echo ' DICT->C+CC ' $$(notdir $$@)
+	test -d $(3) || mkdir -p $(3)
+	cd $(3) ; python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
+		-o $(3)/$(1:.o=.c) -S -n forth_dictionary $$<
 	cd $(3) ; \
 	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $(DIR_CFLAGS) -c \
 		$(3)/$(1:.o=.c) -o $$@
@@ -92,6 +106,7 @@ ifdef HETLINK
 		echo '             renaming static symbols' ; \
 		$(CPUTOOLS)objcopy --redefine-syms=$$@.static $$@ ; \
 	fi
+endif
 endif
 endif
 endif

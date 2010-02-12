@@ -22,6 +22,8 @@ export LINKING
 OBJ_DIR:=$(BUILD_DIR)/obj-$(TARGET_COUPLE)
 CONF_DIR:=$(BUILD_DIR)
 
+DEP_FILE_LIST:=
+
 include $(CONF_DIR)/.config.mk
 include $(MUTEK_SRC_DIR)/scripts/config.mk
 include $(MUTEK_SRC_DIR)/scripts/discover.mk

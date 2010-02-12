@@ -32,7 +32,14 @@ $(CONF_DIR)/.config.%: $(CONF_TMP_BASE).%
 # That means we can safely create the .deps directly in its final
 # place, and not go through the reconf thing.
 
-$(CONFIG_TMP_FILES): $(CONF)
+DEP_FILE_LIST += $(CONF_DIR)/.config.deps
+
+FORCE:
+	@true
+
+.PHONY: FORCE
+
+$(CONFIG_TMP_FILES): $(CONF) FORCE
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--path=$(CONF_PATH) \
 		--input=$(CONF)					\
@@ -42,6 +49,7 @@ $(CONFIG_TMP_FILES): $(CONF)
 		--depmakefile=$(CONF_DIR)/.config.deps			\
 		--makefile=$(CONF_TMP_BASE).mk		\
 		--build=$(BUILD)
+#	sed -i -e 's;$(CONF_TMP_BASE);$(CONF_DIR)/.config;g' $(CONF_DIR)/.config.deps
 
 config: $(CONF_DIR) $(CONFIG_FILES)
 
