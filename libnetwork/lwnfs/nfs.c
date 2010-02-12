@@ -71,7 +71,7 @@ TIMER_CALLBACK(rpc_timeout)
   if (rpcb->data == NULL)
     {
       /* wake up */
-      semaphore_post(&rpcb->sem);
+      semaphore_give(&rpcb->sem, 1);
     }
 }
 
@@ -99,7 +99,7 @@ UDP_CALLBACK(rpc_callback)
       timer_cancel_event(&rpcb->timeout, 0);
 
       /* wake up */
-      semaphore_post(&rpcb->sem);
+      semaphore_give(&rpcb->sem, 1);
     }
 }
 
@@ -222,7 +222,7 @@ static error_t		do_rpc(struct nfs_s	*server,
     }
 
   /* wait reply */
-  semaphore_wait(&rpcb.sem);
+  semaphore_take(&rpcb.sem, 1);
 
   /* get reply */
   reply = (struct rpc_reply_s *)rpcb.data;

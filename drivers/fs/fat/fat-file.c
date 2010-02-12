@@ -166,7 +166,7 @@ error_t fat_file_get_biggest_sector_range(
     sector_t psector_offset = (vsector & psector_mask) ^ psector_mask;
     common_cluster_t pcluster;
 
-    semaphore_wait(&node->lock);
+    semaphore_take(&node->lock, 1);
     pcluster = fat_file_get_cluster(ffile, vcluster);
     if ( pcluster == 0 )
         goto err;
@@ -187,7 +187,7 @@ error_t fat_file_get_biggest_sector_range(
     err = 0;
 
   err:
-    semaphore_post(&node->lock);
+    semaphore_give(&node->lock, 1);
     return err;
 }
 
@@ -203,14 +203,14 @@ sector_t fat_file_get_sector(struct fat_file_s *ffile, off_t offset)
     sector_t psector_offset = vsector & psector_mask;
     common_cluster_t pcluster;
 
-    semaphore_wait(&node->lock);
+    semaphore_take(&node->lock, 1);
     pcluster = fat_file_translate_cluster(ffile, vcluster);
     if ( pcluster )
         goto found;
     pcluster = fat_file_get_cluster(ffile, vcluster);
     if ( pcluster )
         goto found;
-    semaphore_post(&node->lock);
+    semaphore_give(&node->lock, 1);
     return 0;
 
     vfs_printk("<%s: ", __FUNCTION__);
@@ -218,7 +218,7 @@ sector_t fat_file_get_sector(struct fat_file_s *ffile, off_t offset)
     vfs_printk(" %d->%d>", pcluster, psector_offset + (pcluster << fat->sect_per_clust_pow2) + fat->cluster0_sector);
 
   found:
-    semaphore_post(&node->lock);
+    semaphore_give(&node->lock, 1);
     return psector_offset + (pcluster << fat->sect_per_clust_pow2) + fat->cluster0_sector;
 }
 

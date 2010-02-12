@@ -71,7 +71,7 @@ static CONTEXT_ENTRY(packet_dispatch_thread)
 	{
 		/* wait for a packet, or termination */
 		net_debug("[%s] dispatch waiting for packet\n", dispatch->interface->name);
-		semaphore_wait(&dispatch->sem);
+		semaphore_take(&dispatch->sem, 1);
 		net_debug("[%s] wakeup\n", dispatch->interface->name);
 
 		packet = packet_queue_pop(&dispatch->queue);
@@ -95,7 +95,7 @@ static inline void dispatch_wakeup(struct net_dispatch_s *dispatch, struct net_p
 	net_debug("[%s] pushing %p\n", dispatch->interface->name, packet);
 
 	packet_queue_pushback(&dispatch->queue, packet);
-	semaphore_post(&dispatch->sem);
+	semaphore_give(&dispatch->sem, 1);
 }
 
 struct net_dispatch_s *network_dispatch_create(struct net_if_s *interface)
@@ -135,7 +135,7 @@ void network_dispatch_kill(struct net_dispatch_s *dispatch)
 	dispatch->killer = sched_get_current();
 	dispatch->must_quit = 1;
 
-	semaphore_post(&dispatch->sem);
+	semaphore_give(&dispatch->sem, 1);
 
 	/* and wait it actually stops */
 	CPU_INTERRUPT_SAVESTATE_DISABLE;

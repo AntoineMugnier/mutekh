@@ -44,9 +44,9 @@ error_t fat_sector_flush_nolock(struct fat_tmp_sector_s *sector,
 error_t fat_sector_flush(struct fat_tmp_sector_s *sector,
                          struct device_s *dev)
 {
-    semaphore_wait(&sector->semaphore);
+    semaphore_take(&sector->semaphore, 1);
     error_t err = fat_sector_flush_nolock(sector, dev);
-    semaphore_post(&sector->semaphore);
+    semaphore_give(&sector->semaphore, 1);
 
     return err;
 }
@@ -58,19 +58,19 @@ error_t fat_sector_lock_and_load(struct fat_tmp_sector_s *sector,
 	error_t err;
 	uint8_t *blocks[1] = {sector->data};
 
-    semaphore_wait(&sector->semaphore);
+    semaphore_take(&sector->semaphore, 1);
     if ( sector->lba == lba )
         return 0;
 
     err = fat_sector_flush_nolock(sector, dev);
 	if ( err ) {
-        semaphore_post(&sector->semaphore);
+        semaphore_give(&sector->semaphore, 1);
 		return err;
     }
 
 	err = dev_block_wait_read(dev, blocks, lba, 1);
 	if ( err ) {
-        semaphore_post(&sector->semaphore);
+        semaphore_give(&sector->semaphore, 1);
 		return err;
     }
     sector->lba = lba;
@@ -79,5 +79,5 @@ error_t fat_sector_lock_and_load(struct fat_tmp_sector_s *sector,
 
 void fat_sector_lock_release(struct fat_tmp_sector_s *sector)
 {
-    semaphore_post(&sector->semaphore);
+    semaphore_give(&sector->semaphore, 1);
 }

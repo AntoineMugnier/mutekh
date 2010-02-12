@@ -461,7 +461,7 @@ struct net_packet_s	*socket_grab_packet(socket_t			fd,
 	  timer_add_event(&timer_ms, &timeout);
 	}
 
-      semaphore_wait(recv_sem);
+      semaphore_take(recv_sem, 1);
 
       /* has timeout expired ? */
       if (timeout_started)
@@ -528,7 +528,7 @@ struct net_buffer_s	*socket_grab_buffer(socket_t			fd,
 	  timer_add_event(&timer_ms, &timeout);
 	}
 
-      semaphore_wait(recv_sem);
+      semaphore_take(recv_sem, 1);
 
       /* has timeout expired ? */
       if (timeout_started)

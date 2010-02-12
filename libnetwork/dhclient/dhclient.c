@@ -532,7 +532,7 @@ static TIMER_CALLBACK(dhcp_renew)
   struct dhcp_lease_s	*lease = (struct dhcp_lease_s *)pv;
 
   /* initiate renewal */
-  semaphore_post(&lease->sem);
+  semaphore_give(&lease->sem, 1);
 }
 
 static CONTEXT_ENTRY(dhcp_renew_th)
@@ -548,7 +548,7 @@ static CONTEXT_ENTRY(dhcp_renew_th)
 
   while (1)
     {
-      semaphore_wait(&lease->sem);
+      semaphore_take(&lease->sem, 1);
 
       if (lease->exit)
 	break;
@@ -696,7 +696,7 @@ error_t			dhcp_client(const char	*ifname)
   if ((timer = malloc(sizeof (struct timer_event_s))) == NULL)
     {
       lease->exit = 1;
-      semaphore_post(&lease->sem);
+      semaphore_give(&lease->sem, 1);
     }
   else
     {
@@ -707,7 +707,7 @@ error_t			dhcp_client(const char	*ifname)
       if (timer_add_event(&timer_ms, timer))
 	{
 	  lease->exit = 1;
-	  semaphore_post(&lease->sem);
+	  semaphore_give(&lease->sem, 1);
 	}
     }
 

@@ -75,17 +75,17 @@ CONTAINER_FUNC    (vfs_dir_hash, HASHLIST, static inline, vfs_dir, name);
 
 static inline void vfs_node_dirlock(struct vfs_node_s *node)
 {
-    semaphore_wait(&node->dir_semaphore);
+    semaphore_take(&node->dir_semaphore, 1);
 }
 
 static inline void vfs_node_dirunlock(struct vfs_node_s *node)
 {
-    semaphore_post(&node->dir_semaphore);
+    semaphore_give(&node->dir_semaphore, 1);
 }
 
 static inline bool_t vfs_node_dirtrylock(struct vfs_node_s *node)
 {
-    return semaphore_trywait(&node->dir_semaphore);
+    return semaphore_try_take(&node->dir_semaphore, 1);
 }
 
 void vfs_node_parent_nolock_unset(struct vfs_node_s *node);

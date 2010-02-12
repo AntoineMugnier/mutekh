@@ -55,19 +55,19 @@ gpct_lock_MUTEK_SEMAPHORE_destroy(struct semaphore_s *lock)
 static inline void
 gpct_lock_MUTEK_SEMAPHORE_wrlock(struct semaphore_s *lock)
 {
-  semaphore_wait(lock);
+  semaphore_take(lock, 1);
 }
 
 static inline void
 gpct_lock_MUTEK_SEMAPHORE_rdlock(struct semaphore_s *lock)
 {
-  semaphore_wait(lock);
+  semaphore_take(lock, 1);
 }
 
 static inline void
 gpct_lock_MUTEK_SEMAPHORE_unlock(struct semaphore_s *lock)
 {
-  semaphore_post(lock);
+  semaphore_give(lock, 1);
 }
 
 #endif

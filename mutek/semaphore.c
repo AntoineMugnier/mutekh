@@ -25,7 +25,7 @@
 #include <mutek/scheduler.h>
 #include <mutek/semaphore.h>
 
-error_t semaphore_init(struct semaphore_s *semaphore, uint_fast8_t value)
+error_t semaphore_init(struct semaphore_s *semaphore, semaphore_count_t value)
 {
 	semaphore->count = value;
 	return sched_queue_init(&semaphore->wait);
@@ -36,36 +36,33 @@ void semaphore_destroy(struct semaphore_s *semaphore)
 	sched_queue_destroy(&semaphore->wait);
 }
 
-void semaphore_wait(struct semaphore_s *semaphore)
+void semaphore_take(struct semaphore_s *semaphore, semaphore_count_t value)
 {
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
 	sched_queue_wrlock(&semaphore->wait);
 
-	if (semaphore->count <= 0)
-    {
-		/* add current thread in semaphore wait queue */
+    semaphore->count -= value;
+	if (semaphore->count < 0) {
+        /* add current thread in semaphore wait queue */
+        semaphore->count += 1;
 		sched_wait_unlock(&semaphore->wait);
-    }
-	else
-    {
-		semaphore->count--;
+    } else
 		sched_queue_unlock(&semaphore->wait);
-    }
 
 	CPU_INTERRUPT_RESTORESTATE;
 }
 
-error_t semaphore_trywait(struct semaphore_s *semaphore)
+error_t semaphore_try_take(struct semaphore_s *semaphore, semaphore_count_t value)
 {
 	error_t	res = 0;
 
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
 	sched_queue_wrlock(&semaphore->wait);
 
-	if (semaphore->count <= 0)
+	if ( (semaphore->count - value) < 0 )
 		res = EBUSY;
 	else
-		semaphore->count--;
+		semaphore->count -= value;
 
 	sched_queue_unlock(&semaphore->wait);
 	CPU_INTERRUPT_RESTORESTATE;
@@ -73,26 +70,32 @@ error_t semaphore_trywait(struct semaphore_s *semaphore)
 	return res;
 }
 
-void semaphore_post(struct semaphore_s *semaphore)
+void semaphore_give(struct semaphore_s *semaphore, semaphore_count_t value)
 {
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
 	sched_queue_wrlock(&semaphore->wait);
 
-	if (!sched_wake(&semaphore->wait))
-		semaphore->count++;
+    semaphore->count += value;
+    while ( (semaphore->count > 0) &&
+            sched_wake(&semaphore->wait) )
+        semaphore->count -= 1;
 
 	sched_queue_unlock(&semaphore->wait);
 	CPU_INTERRUPT_RESTORESTATE;
 }
 
-void semaphore_getvalue(struct semaphore_s *semaphore, semaphore_count_t *sval)
+semaphore_count_t semaphore_value(struct semaphore_s *semaphore)
 {
-	CPU_INTERRUPT_SAVESTATE_DISABLE;
-	sched_queue_wrlock(&semaphore->wait);
+    semaphore_count_t ret;
 
-	*sval = semaphore->count;
+	CPU_INTERRUPT_SAVESTATE_DISABLE;
+	sched_queue_rdlock(&semaphore->wait);
+
+	ret = semaphore->count;
 
 	sched_queue_unlock(&semaphore->wait);
 	CPU_INTERRUPT_RESTORESTATE;
+
+    return ret;
 }
 

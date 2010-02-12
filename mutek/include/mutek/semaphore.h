@@ -31,7 +31,7 @@
 #include <mutek/scheduler.h>
 
 /** Type for the semaphore counting */
-typedef uint_fast8_t semaphore_count_t;
+typedef int_fast8_t semaphore_count_t;
 
 /** Semaphore object structure */
 struct semaphore_s
@@ -56,40 +56,43 @@ error_t
 semaphore_init(struct semaphore_s *semaphore, semaphore_count_t value);
 
 /**
-   @this waits for the semaphore count to be at least 1. @this
+   @this waits for the semaphore count to be at least n. @this
    decrements the count and returns.
 
    @param semaphore Semaphore structure
+   @param n Semaphore count to change
  */
 void
-semaphore_wait(struct semaphore_s *semaphore);
+semaphore_take(struct semaphore_s *semaphore, semaphore_count_t n);
 
 /**
    @this tries to take the semaphore, but dont wait if it cant take
    it. It will return EBUSY instead.
 
    @param semaphore Semaphore structure
+   @param n Semaphore count to change
    @returns 0 if taken else EBUSY
  */
 error_t
-semaphore_trywait(struct semaphore_s *semaphore);
+semaphore_try_take(struct semaphore_s *semaphore, semaphore_count_t n);
 
 /**
-   @this increments the semaphore count, and wakes 1 frozen task.
+   @this changes the count of semaphore in a way it may not block,
+   even if count does become negative.
 
    @param semaphore Semaphore structure
  */
 void
-semaphore_post(struct semaphore_s *semaphore);
+semaphore_give(struct semaphore_s *semaphore, semaphore_count_t n);
 
 /**
    @this gets the current value of a semaphore.
 
    @param semaphore Semaphore structure
-   @param sval Return value: current semaphore count
+   @return current semaphore count
  */
-void
-semaphore_getvalue(struct semaphore_s *semaphore, semaphore_count_t *sval);
+semaphore_count_t
+semaphore_value(struct semaphore_s *semaphore);
 
 /**
    @this destroys a semaphore. If some tasks are still waiting on the

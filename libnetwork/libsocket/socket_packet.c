@@ -47,7 +47,7 @@ static TIMER_CALLBACK(recv_timeout)
   socket_t			fd = (socket_t)pv;
   struct socket_packet_pv_s	*pv_packet = (struct socket_packet_pv_s *)fd->pv;
 
-  semaphore_post(&pv_packet->recv_sem);
+  semaphore_give(&pv_packet->recv_sem, 1);
 }
 
 /*
@@ -461,11 +461,11 @@ static _SHUTDOWN(shutdown_packet)
       /* drop all waiting packets */
       packet_queue_lock_clear(&pv->recv_q);
 
-      semaphore_getvalue(&pv->recv_sem, &val);
+      val = semaphore_value(&pv->recv_sem);
       while (val < 0)
 	{
-	  semaphore_post(&pv->recv_sem);
-	  semaphore_getvalue(&pv->recv_sem, &val);
+	  semaphore_give(&pv->recv_sem, 1);
+	  val = semaphore_value(&pv->recv_sem);
 	}
 
       if (fd->shutdown == SHUT_RDWR)
@@ -544,7 +544,7 @@ void		pf_packet_signal(struct net_if_s	*interface,
 	      CONTAINER_FOREACH_CONTINUE;
 
 	    if (packet_queue_lock_pushback(&pv->recv_q, packet))
-	      semaphore_post(&pv->recv_sem);
+	      semaphore_give(&pv->recv_sem, 1);
 	  }
       }
   });

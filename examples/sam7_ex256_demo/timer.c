@@ -14,7 +14,7 @@ static struct semaphore_s timer_sem;
 
 static TIMER_CALLBACK(restart)
 {
-	semaphore_post(&timer_sem);
+	semaphore_give(&timer_sem, 1);
 }
 
 static TIMER_CALLBACK(delayed_print)
@@ -32,7 +32,7 @@ int cmd_usleep(lua_State *st)
 	uint32_t usec = lua_tonumber(st, 1);
 	sleep_event.delay = usec;
 	timer_add_event(&timer_ms, &sleep_event);
-	semaphore_wait(&timer_sem);
+	semaphore_take(&timer_sem, 1);
 	return 0;
 }
 

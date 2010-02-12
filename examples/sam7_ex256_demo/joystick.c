@@ -40,7 +40,7 @@ static DEVINPUT_CALLBACK(joystick_moved)
 	n->new_val = value;
 	j_queue_pushback(&j_list, n);
 
-	semaphore_post(&sem);
+	semaphore_give(&sem, 1);
 }
 
 static DEVGPIO_IRQ(button_pressed)
@@ -60,7 +60,7 @@ static DEVGPIO_IRQ(button_pressed)
 
 	j_queue_pushback(&j_list, n);
 
-	semaphore_post(&sem);
+	semaphore_give(&sem, 1);
 }
 
 const char *name[] = {
@@ -93,7 +93,7 @@ void *joystick_main(void *unused)
 	dev_input_setcallback(&dev_mt5f, DEVINPUT_CTRLID_ALL, 0, joystick_moved, NULL);
 
 	while (1) {
-		semaphore_wait(&sem);
+		semaphore_take(&sem, 1);
 
 		struct joy_event_s *n = j_queue_pop(&j_list);
 
