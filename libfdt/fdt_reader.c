@@ -135,6 +135,11 @@ static error_t fdt_check_header(const void *blob)
 {
 	const struct fdt_header_s *header = blob;
 
+    if ( blob == NULL ) {
+		printk("Null blob\n");
+		return -EINVAL;
+	}
+
 	if ( (uintptr_t)blob & 3 ) {
 		printk("Unaligned FDT: %p\n", blob);
 		return -EINVAL;
