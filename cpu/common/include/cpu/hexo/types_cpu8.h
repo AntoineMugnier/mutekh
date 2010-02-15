@@ -71,6 +71,9 @@ typedef	int8_t			atomic_int_t;
 /** general cpu register integer type */
 typedef uint8_t			reg_t;
 
+/** general cpu signed register integer type */
+typedef int8_t		sreg_t;
+
 #define CPU_AVR_HI8(x)		(((uintptr_t)(x)) >> 8)
 #define CPU_AVR_LO8(x)		(((uintptr_t)(x)) & 0xff)
 

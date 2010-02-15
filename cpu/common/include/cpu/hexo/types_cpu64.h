@@ -71,5 +71,8 @@ typedef	int32_t			atomic_int_t;
 /** general cpu register integer type */
 typedef uint64_t		reg_t;
 
+/** general cpu signed register integer type */
+typedef int64_t		sreg_t;
+
 #endif
 
