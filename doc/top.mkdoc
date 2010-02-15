@@ -101,6 +101,13 @@
  See @url https://www-asim.lip6.fr/trac/dsx/
 @end group
 
+@moduledef{Capsule}
+ @short Capsule threading library
+
+ Environment aiming at easing parallel programming, see
+ @url https://alchemy.futurs.inria.fr/capsule/
+@end group
+
 @moduledef{FDT access library}
  @short Flattened device tree access library
  This library offers a mid-level access to Flattened Device Tree blobs
