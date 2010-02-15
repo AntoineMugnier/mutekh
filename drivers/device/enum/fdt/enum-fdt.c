@@ -148,7 +148,7 @@ const struct driver_s	enum_fdt_drv =
 static void *clone_blob( void *blob )
 {
 	size_t size = fdt_get_size(blob);
-	if ( !size )
+	if ( blob == NULL || !size )
 		return 0;
 	void *b2 = mem_alloc(size, (mem_scope_sys));
 	if ( b2 )
