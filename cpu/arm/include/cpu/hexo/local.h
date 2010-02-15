@@ -33,6 +33,8 @@
 
 #if defined(CONFIG_CPU_ARM_TLS_IN_C15)
 
+#include "cpu/hexo/specific.h"
+
 /************************************************************************/
 
 # ifdef CONFIG_SMP
@@ -43,10 +45,13 @@
 # define CPU_GET_CLS()												   \
 	({																   \
 		uintptr_t _ptr_;											   \
+        THUMB_TMP_VAR;                                                 \
 																	   \
 		asm (														   \
-			"mrc p15,0,%0,c13,c0,3"									   \
-			: "=r" (_ptr_)											   \
+            THUMB_TO_ARM                                               \
+			"mrc p15,0,%[ptr],c13,c0,3\n\t"                            \
+            ARM_TO_THUMB                                               \
+			: [ptr] "=r" (_ptr_) /*,*/ THUMB_OUT(,)                    \
 			);														   \
 																	   \
 		_ptr_;														   \
@@ -67,10 +72,13 @@
 # define CONTEXT_GET_TLS()											   \
 	({																   \
 		uintptr_t _ptr_;											   \
+        THUMB_TMP_VAR;                                                 \
 																	   \
 		asm (														   \
-			"mrc p15,0,%0,c13,c0,4"									   \
-			: "=r" (_ptr_)											   \
+            THUMB_TO_ARM                                               \
+			"mrc p15,0,%[ptr],c13,c0,4\n\t"                            \
+            ARM_TO_THUMB                                               \
+			: [ptr] "=r" (_ptr_) /*,*/ THUMB_OUT(,)                    \
 			);														   \
 																	   \
 		_ptr_;														   \

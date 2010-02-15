@@ -62,15 +62,16 @@ static inline void
 cpu_interrupt_disable(void)
 {
 	uint32_t tmp;
-    THUMB_TMP_VAR;
 
 	asm volatile(
-        THUMB_TO_ARM
+#if __thumb__
+        "cpsid i"
+#else
 		"mrs  %0, cpsr        \n\t"
 		"orr  %0, %0, #0x80   \n\t"
 		"msr  cpsr, %0        \n\t"
-        ARM_TO_THUMB
-		: "=r" (tmp) /*,*/ THUMB_OUT(,)
+#endif
+		: "=r" (tmp)
         );
 /* #endif */
 }
@@ -79,15 +80,16 @@ static inline void
 cpu_interrupt_enable(void)
 {
 	uint32_t tmp;
-    THUMB_TMP_VAR;
 
 	asm volatile(
-        THUMB_TO_ARM
+#if __thumb__
+        "cpsie i"
+#else
 		"mrs  %0, cpsr        \n\t"
 		"bic  %0, %0, #0x80   \n\t"
 		"msr  cpsr, %0        \n\t"
-        ARM_TO_THUMB
-		: "=r" (tmp) /*,*/ THUMB_OUT(,)
+#endif
+		: "=r" (tmp)
         );
 }
 
@@ -99,9 +101,9 @@ cpu_interrupt_savestate(reg_t *state)
 
 	asm volatile(
         THUMB_TO_ARM
-		"mrs  %0, cpsr        \n\t"
+		"mrs  %[tmp], cpsr        \n\t"
         ARM_TO_THUMB
-		: "=r" (tmp) /*,*/ THUMB_OUT(,) );
+		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,) );
 
 	*state = tmp;
 }
@@ -114,11 +116,11 @@ cpu_interrupt_savestate_disable(reg_t *state)
 
 	asm volatile(
         THUMB_TO_ARM
-		"mrs  %1, cpsr        \n\t"
-		"orr  %0, %1, #0x80   \n\t"
-		"msr  cpsr, %0        \n\t"
+		"mrs  %[result], cpsr        \n\t"
+		"orr  %[tmp], %[result], #0x80   \n\t"
+		"msr  cpsr, %[tmp]        \n\t"
         ARM_TO_THUMB
-		: "=r" (tmp), "=r" (result) /*,*/ THUMB_OUT(,) );
+		: [tmp] "=r" (tmp), [result] "=r" (result) /*,*/ THUMB_OUT(,) );
 
 	*state = result;
 }
@@ -130,10 +132,10 @@ cpu_interrupt_restorestate(const reg_t *state)
 
 	asm volatile(
         THUMB_TO_ARM
-		"msr  cpsr, %0        \n\t"
+		"msr  cpsr, %[state]        \n\t"
         ARM_TO_THUMB
 		/* : */ THUMB_OUT(:)
-        : "r" (*state) );
+        : [state] "r" (*state) );
 }
 
 static inline void
@@ -157,9 +159,9 @@ cpu_interrupt_getstate(void)
 
 	asm volatile(
         THUMB_TO_ARM
-		"mrs  %0, cpsr        \n\t"
+		"mrs  %[state], cpsr        \n\t"
         ARM_TO_THUMB
-		: "=r" (state) /*,*/ THUMB_OUT(,) );
+		: [state] "=r" (state) /*,*/ THUMB_OUT(,) );
 
 	return !(state & 0x80);
 }
@@ -178,10 +180,10 @@ cpu_interrupt_wait(void)
 
 	asm volatile(
         THUMB_TO_ARM
-		"mcr p15, 0, %0, c7, c0, 4  \n\t"
+		"mcr p15, 0, %[zero], c7, c0, 4  \n\t"
         ARM_TO_THUMB
 		/*:*/  THUMB_OUT(:)
-        : "r" (0) );
+        : [zero] "r" (0) );
 #else
 	/**/
 #endif

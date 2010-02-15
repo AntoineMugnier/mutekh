@@ -21,4 +21,5 @@ interrupt.o_CFLAGS = -mno-thumb
 cpu_init.o_CFLAGS = -mno-thumb
 boot_m.o_CFLAGS = -mno-thumb
 boot.o_CFLAGS = -mno-thumb
+thumb_helpers.o_CFLAGS = -mno-thumb
 endif

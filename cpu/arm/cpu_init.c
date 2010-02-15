@@ -32,7 +32,7 @@
 #endif
 
 #ifndef CONFIG_DRIVER_ICU_ARM
-static uint8_t arm_irq_stack[128];
+static uint32_t arm_irq_stack[128/4];
 #endif
 
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;

@@ -31,7 +31,7 @@ CPUCFLAGS += -mthumb -mthumb-interwork
 endif
 
 ifeq ($(CONFIG_CPU_ARM_FPU),soft)
-CPUCFLAGS+=-msoft-float -mfloat-abi=softfp
+CPUCFLAGS+=-msoft-float -mfpu=fpa
 CPUASFLAGS+=
 endif
 

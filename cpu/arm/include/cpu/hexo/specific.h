@@ -16,7 +16,7 @@
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
-
+    Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2009
 */
 
 #ifndef __ARM_SPECIFIC_H_
@@ -24,16 +24,17 @@
 
 #if defined(__thumb__)
 # define THUMB_TMP_VAR uint32_t thumb_tmp
-# define THUMB_TO_ARM                \
-    ".align 2             \n\t"     \
-    "bx   pc              \n\t"     \
-    "nop                  \n\t"     \
-    ".arm                 \n\t"
-# define ARM_TO_THUMB                \
+# define THUMB_TO_ARM                 \
+    ".align 2               \n\t"     \
+    "mov  %[adr], pc        \n\t"     \
+    "add  %[adr], %[adr], #4\n\t"     \
+    "bx   %[adr]            \n\t"     \
+    "nop                    \n\t"     \
+    ".arm                   \n\t"
+# define ARM_TO_THUMB               \
     "add  %[adr], pc, #1  \n\t"     \
-    "bx   %[adr]          \n\t"     \
-    "1:                   \n\t"
-# define THUMB_OUT(x...) x [adr] "=&r" (thumb_tmp)
+    "bx   %[adr]          \n\t"
+# define THUMB_OUT(x...) x [adr] "=&l" (thumb_tmp)
 #else
 # define THUMB_TMP_VAR
 # define THUMB_TO_ARM

@@ -16,7 +16,14 @@ cpu_context_bootstrap(struct context_s *context)
 {
   /* set context local storage register base pointer */
 #if defined(CONFIG_CPU_ARM_TLS_IN_C15)
-	asm volatile ("mcr p15,0,%0,c13,c0,4" : : "r" (context->tls));
+    THUMB_TMP_VAR;
+    
+	asm volatile (
+        THUMB_TO_ARM
+        "mcr p15,0,%0,c13,c0,4 \n\t"
+        ARM_TO_THUMB
+        /*:*/ THUMB_OUT(:)
+        : "r" (context->tls));
 #else
 	__context_data_base = context->tls;
 #endif

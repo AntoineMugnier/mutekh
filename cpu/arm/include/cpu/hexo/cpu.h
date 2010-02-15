@@ -31,6 +31,8 @@
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
 
+#include "cpu/hexo/specific.h"
+
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	16
 
@@ -58,7 +60,14 @@ cpu_id(void)
 {
 #if defined(__ARM_ARCH_6K__)
 	uint32_t ret;
-	asm volatile("mrc  p15,0,%0,c0,c0,5":"=r"(ret));
+    THUMB_TMP_VAR;
+
+	asm(
+        THUMB_TO_ARM
+        "mrc p15, 0, %[ret], c0, c0, 5\n\t"
+        ARM_TO_THUMB
+        : [ret] "=r"(ret) /*,*/ THUMB_OUT(,));
+
 	return ret;
 #else
 # ifdef CONFIG_SMP
@@ -89,7 +98,14 @@ cpu_cycle_count(void)
 {
 #if defined(__ARM_ARCH_6K__)
 	uint32_t ret;
-	asm("mrc  p15,0,%0,c15,c12,1":"=r"(ret));
+    THUMB_TMP_VAR;
+
+	asm(
+        THUMB_TO_ARM
+        "mrc p15, 0, %[ret], c15, c12, 1\n\t"
+        ARM_TO_THUMB
+        : [ret] "=r"(ret) /*,*/ THUMB_OUT(,));
+
 	return ret;
 #elif defined(__ARM_ARCH_4T__)
 	/* who cares ? */
@@ -117,15 +133,26 @@ static inline void *cpu_get_cls(cpu_id_t cpu_id)
 static inline void cpu_dcache_invld(void *ptr)
 {
 #if defined(CONFIG_CPU_CACHE)
-	asm("mcr p15, 0, %0, c7, c6, 1"::"r"(ptr));
+    THUMB_TMP_VAR;
+	asm(
+        THUMB_TO_ARM
+        "mcr p15, 0, %[ptr], c7, c6, 1\n\t"
+        ARM_TO_THUMB
+        /*:*/ THUMB_OUT(:)
+        : [ptr] "r"(ptr));
 #endif
 }
 
 static inline size_t cpu_dcache_line_size()
 {
 #if defined(CONFIG_CPU_CACHE)
+    THUMB_TMP_VAR;
 	uint32_t ret;
-	asm("mrc p15, 0, %0, c0, c0, 1":"=r"(ret));
+	asm(
+        THUMB_TO_ARM
+        "mrc p15, 0, %[ret], c0, c0, 1\n\t"
+        ARM_TO_THUMB
+        : [ret] "=r"(ret) /*,*/ THUMB_OUT(,));
 
 	return (((ret >> 12) & 0x3) + 3) << 1;
 #else
