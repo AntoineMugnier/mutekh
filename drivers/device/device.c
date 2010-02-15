@@ -124,3 +124,21 @@ struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i)
   return res;
 }
 
+#if defined(CONFIG_DEVICE_TREE)
+static void _device_tree_walk(struct device_s *dev, device_tree_walker_t *walker, void *priv)
+{
+    walker(dev, priv);
+    CONTAINER_FOREACH(device_list, CLIST, &dev->children,
+    {
+        _device_tree_walk(item, walker, priv);
+    });
+}
+#endif
+
+void device_tree_walk(device_tree_walker_t *walker, void *priv)
+{
+#if defined(CONFIG_DEVICE_TREE)
+    _device_tree_walk(&enum_root, walker, priv);
+#endif
+}
+
