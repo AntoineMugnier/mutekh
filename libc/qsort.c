@@ -75,7 +75,7 @@ med3(char *a, char *b, char *c, qsort_compar_t *cmp)
               :(cmp(b, c) > 0 ? b : (cmp(a, c) < 0 ? a : c ));
 }
 
-void qsort(void *base, size_t nel, size_t width, qsort_compar_t *compar)
+void qsort(void *a, size_t n, size_t es, qsort_compar_t *cmp)
 {
 	char *pa, *pb, *pc, *pd, *pl, *pm, *pn;
 	size_t d, r;
