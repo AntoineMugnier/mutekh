@@ -105,6 +105,24 @@ atoll(const char *nptr);
 /** Get integer maximum value */
 #define __MAX(a, b) ({ const typeof(a) __a = (a); const typeof(b) __b = (b); __b > __a ? __b : __a; })
 
+
+/**
+   @this defines the function prototype used for comparaison in qsort.
+ */
+typedef int_fast8_t qsort_compar_t(const void *, const void *);
+
+/**
+   @this sorts the @tt{nel}-element long array pointed by @tt base
+   containing elements of size @tt width. Using @tt compar as the
+   comparaison function.
+
+   @param base Base pointer of the array
+   @param nel Element count in the array
+   @param width sizeof(element)
+   @param compar comparaison fuction
+*/
+void qsort(void *base, size_t nel, size_t width, qsort_compar_t *compar);
+
 /******************** random */
 
 typedef uint_fast8_t	__rand_type_t;

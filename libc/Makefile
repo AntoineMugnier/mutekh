@@ -5,6 +5,7 @@ intconv.o					\
 printf.o					\
 rand.o						\
 error.o						\
+qsort.o						\
 stdlib.o					\
 unistd.o
 
