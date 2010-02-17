@@ -26,6 +26,7 @@
 #include <hexo/types.h>
 
 #include <capsule_api.h>
+#include <capsule_abs_itf.h>
 
 #define CAP_STACK_SIZE 4096*4
 
@@ -304,6 +305,17 @@ void capsule_sys_dump_all_stats(FILE * stream)
 
     fprintf(stream, "\n");
     fprintf(stream, "Total free context at end: %d\n", capsule_queue_count(&free_jobs));
+}
+
+void capsule_sys_reset_all_stats()
+{
+    size_t i;
+
+    for ( i=0; i<arch_get_cpu_count(); ++i ) {
+        cpu_ctxts[i]->probes = 0;
+        cpu_ctxts[i]->job_count = 0;
+        cpu_ctxts[i]->joins = 0;
+    }
 }
 
 void capsule_probe(capsule_ctxt_func_t func, capsule_ctxt_t ** ctxt)

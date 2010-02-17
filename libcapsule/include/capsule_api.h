@@ -153,6 +153,11 @@ void capsule_sys_unblock(void);
 void capsule_sys_dump_all_stats(FILE * stream);
 
 /**
+   Reset statistics.
+ */
+void capsule_sys_reset_all_stats();
+
+/**
    @this checks a hardware thread is globally available for calling
    @tt func, if so, reserve it and return it in @tt ctxt. If thread is
    available, next call MUST be capsule_divide.
