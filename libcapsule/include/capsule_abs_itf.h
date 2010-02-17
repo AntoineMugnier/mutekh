@@ -33,6 +33,15 @@
 #include <capsule_types.h>
 
 /**
+   @internal
+
+   Blocking semaphore take operation, which runs other capsule threads
+   when blocked.
+ */
+void _capsule_semaphore_take(struct semaphore_s *sem, int_fast8_t val)
+
+
+/**
    @this initializes a mutex
 
    @param mutex The mutex
@@ -67,7 +76,7 @@ capsule_rc_t capsule_abs_mutex_destroy (capsule_abs_mutex_t * mutex)
 static inline
 capsule_rc_t capsule_abs_mutex_lock (capsule_abs_mutex_t * mutex)
 {
-    semaphore_take(mutex, 1);
+    _capsule_semaphore_take(mutex, 1);
     return 0;
 }
 

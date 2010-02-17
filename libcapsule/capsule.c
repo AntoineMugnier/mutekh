@@ -359,11 +359,7 @@ void capsule_group_join(void)
     dprintk("group_join count: %d\n", semaphore_value(&group->join));
 
     // wait all other threads
-    while ( semaphore_try_take(&group->join, 1) != 0 ) {
-        struct capsule_ctxt_s *job = capsule_queue_pop(&jobs);
-        if ( job )
-            do_one_job(job);
-    }
+    _capsule_semaphore_take(&group->join, 1);
 
     dprintk("group_joined count: %d, parent: %p\n", semaphore_value(&group->join), parent);
 
@@ -372,5 +368,16 @@ void capsule_group_join(void)
         cur->group = parent;
     } else {
         semaphore_give(&group->join, 1);
+    }
+}
+
+
+void _capsule_semaphore_take(struct semaphore_s *sem, int_fast8_t val)
+{
+    // wait all other threads
+    while ( semaphore_try_take(sem, val) != 0 ) {
+        struct capsule_ctxt_s *job = capsule_queue_pop(&jobs);
+        if ( job )
+            do_one_job(job);
     }
 }
