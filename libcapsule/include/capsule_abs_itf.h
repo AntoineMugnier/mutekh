@@ -38,7 +38,7 @@
    Blocking semaphore take operation, which runs other capsule threads
    when blocked.
  */
-void _capsule_semaphore_take(struct semaphore_s *sem, int_fast8_t val)
+void _capsule_semaphore_take(struct semaphore_s *sem, int_fast8_t val);
 
 
 /**
