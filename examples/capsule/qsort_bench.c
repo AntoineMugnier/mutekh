@@ -27,6 +27,7 @@
 
 typedef void test_func_t(struct array_s *array);
 
+static
 uint32_t test(
     size_t loops,
     test_func_t *func,

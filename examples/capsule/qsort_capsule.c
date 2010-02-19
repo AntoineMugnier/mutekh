@@ -39,6 +39,7 @@ void swap(elem_t *a, elem_t *b)
 }
 
 /* partition of array [left,right[ */
+static
 ssize_t qs_partition(struct array_s *array, size_t left, size_t right)
 {
     elem_t *data = array->array;
@@ -140,6 +141,7 @@ static inline struct qsort_param_s *qsort_param_alloc()
     return r;
 }
 
+static
 void qsort_param_release(struct qsort_param_s * elem)
 {
     qsort_param_queue_push(&qsort_param_queue, elem);
@@ -153,6 +155,7 @@ void qsort_param_init()
         qsort_param_release(malloc(sizeof(struct qsort_param_s)));
 }
 
+static
 void capsule_wrapper(void * arg)
 {
     struct qsort_param_s *param = arg;
@@ -187,6 +190,7 @@ void qs_probe_run(qs_func_t *func, struct array_s *array, ssize_t left, ssize_t 
   Capsule basic implementation
  */
 
+static
 void qs_capsule(struct array_s *array, ssize_t left, ssize_t right)
 {
     ssize_t pivot = qs_partition(array, left, right);
@@ -202,6 +206,7 @@ void qs_capsule(struct array_s *array, ssize_t left, ssize_t right)
   Capsule joining implementation
  */
 
+static
 void qs_capsule_grouped(struct array_s *array, ssize_t left, ssize_t right)
 {
     ssize_t pivot = qs_partition(array, left, right);
@@ -219,6 +224,7 @@ void qs_capsule_grouped(struct array_s *array, ssize_t left, ssize_t right)
  Sequential implementation
  */
 
+static
 void qs_seq(struct array_s *array, ssize_t left, ssize_t right)
 {
     ssize_t pivot = qs_partition(array, left, right);

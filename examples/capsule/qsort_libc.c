@@ -25,6 +25,7 @@
  Libc implementation
  */
 
+static
 int_fast8_t qsort_cmp(const void * a, const void * b)
 {
     const elem_t *t_a = a;
