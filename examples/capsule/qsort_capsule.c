@@ -38,43 +38,45 @@ void swap(elem_t *a, elem_t *b)
     *b = tmp;
 }
 
+#if 0
 /* partition of array [left,right[ */
 static
-ssize_t qs_partition(struct array_s *array, size_t left, size_t right)
+ssize_t qs_partition(struct array_s *array, ssize_t left, ssize_t right)
 {
     elem_t *data = array->array;
-    const size_t oleft = left, oright = right;
+    const ssize_t oleft = left, oright = right;
 
     right--;
 
     if ( left >= right )
         return -1;
 
-    size_t pivot_idx = left;
+    ssize_t pivot_idx = left;
     elem_t pivot = data[pivot_idx];
 
 #ifdef VERBOSE
-    printf("%s: %p %d -> %d; pivot: %d\n", __FUNCTION__, array, oleft, oright, pivot);
+    printf("\n%s: %p %d -> %d; pivot: %d\n", __FUNCTION__, array, oleft, oright, pivot);
 #endif
 
-    while ( left < right ) {
+    for (;;) {
+
 #ifdef VERBOSE
         array_dump(array, left, right+1);
 #endif
-
-        if ( (data[left] <= pivot) ) {
+    
+        while ( (data[left] <= pivot) && (left < oright) )
             left++;
-            continue;
-        }
 
-        if ( (data[right] > pivot) ) {
+        while ( (data[right] >= pivot) && (right > oleft) )
             right--;
-            continue;
-        }
 
 #ifdef VERBOSE
         printf("%s: .......... %d >< %d | %d %d\n", __FUNCTION__, left, right, data[left], data[right]);
 #endif
+
+        if ( left >= right )
+            break;
+
         swap(&data[left], &data[right]);
 
         left++;
@@ -82,31 +84,99 @@ ssize_t qs_partition(struct array_s *array, size_t left, size_t right)
     }
 
 #ifdef VERBOSE
-    printf("%s: ---------- %d >< %d\n", __FUNCTION__, left, right);
+    printf("%s: ---------- %d == %d\n", __FUNCTION__, left, right);
 #endif
 
-    if ( right < left ) {
-        left = right;
-#ifdef VERBOSE
-        printf("%s: ---------- %d >< %d\n", __FUNCTION__, left, right);
-#endif
-    } else if ( right == left ) {
-        if ( data[left] > pivot )
-            left--;
-    }
+    if ( right <= oleft )
+        return oleft+1;
 
 #ifdef VERBOSE
-    array_dump(array, left, pivot_idx+1);
+    array_dump(array, right, pivot_idx+1);
 #endif
         
-    swap(&data[pivot_idx], &data[left]);
+    swap(&data[pivot_idx], &data[right]);
 
 #ifdef VERBOSE
-    array_dump(array, left, pivot_idx+1);
+    array_dump(array, right, pivot_idx+1);
 #endif
 
     return right;
 }
+#else
+
+#define idx(array, x) ((x)-(array)->array)
+
+/* partition of array [left,right[ */
+static
+ssize_t qs_partition(struct array_s *array, const ssize_t oleft, const ssize_t oright)
+{
+    elem_t *data = array->array;
+
+    elem_t *data_left = &data[oleft];
+    elem_t *data_right = &data[oright];
+    elem_t * const data_oleft = &data[oleft];
+    elem_t * const data_oright = &data[oright];
+
+    data_right--;
+
+    if ( data_left >= data_right )
+        return -1;
+
+    ssize_t pivot_idx = oleft;
+    elem_t *data_pivot_idx = &data[pivot_idx];
+
+    elem_t pivot = *data_pivot_idx;
+
+#ifdef VERBOSE
+    printf("\n%s: %p %d -> %d; pivot: %d\n", __FUNCTION__, array, oleft, oright, pivot);
+#endif
+
+    for (;;) {
+
+#ifdef VERBOSE
+        array_dump(array, idx(array, data_left), idx(array, data_right)+1);
+#endif
+    
+        while ( (*data_left <= pivot) && (data_left < data_oright) )
+            data_left++;
+
+        while ( (*data_right >= pivot) && (data_right > data_oleft) )
+            data_right--;
+
+#ifdef VERBOSE
+        printf("%s: .......... %d >< %d | %d %d\n", __FUNCTION__, idx(array, data_left), idx(array, data_right), *data_left, *data_right);
+#endif
+
+        if ( data_left >= data_right )
+            break;
+
+        swap(data_left, data_right);
+
+        data_left++;
+        data_right--;
+    }
+
+#ifdef VERBOSE
+    printf("%s: ---------- %d == %d\n", __FUNCTION__, idx(array, data_left), idx(array, data_right));
+#endif
+
+    if ( data_right <= data_oleft )
+        return oleft+1;
+
+#ifdef VERBOSE
+    array_dump(array, idx(array, data_right), pivot_idx+1);
+#endif
+        
+    swap(data_pivot_idx, data_right);
+
+#ifdef VERBOSE
+    array_dump(array, idx(array, data_right), pivot_idx+1);
+#endif
+
+    return idx(array, data_right);
+}
+
+#endif
 
 /*
   Capsule implementation
@@ -151,7 +221,7 @@ void qsort_param_init()
 {
     size_t i;
     qsort_param_queue_init(&qsort_param_queue);
-    for ( i=0; i<40; ++i )
+    for ( i=0; i<100; ++i )
         qsort_param_release(malloc(sizeof(struct qsort_param_s)));
 }
 
