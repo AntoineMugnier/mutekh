@@ -70,18 +70,18 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	sw	$15,	0*4($sp)	\n"
 		/* switch stack pointer */
 		"	sw	$sp,	(%0)		\n"
-		"	lw	$15,	(%1)		\n"
 #ifdef CONFIG_SOCLIB_MEMCHECK
+		"	lw	$15,	(%1)		\n"
 			/* let memchecker know about context switch */
 		"	li	$1,	" ASM_STR(SOCLIB_MC_MAGIC_VAL) " \n"
 		"	sw	$1,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
 		"	sw	%1,	" ASM_STR(SOCLIB_MC_CTX_SET) "($0) \n"
 		"	ori	$1,	$0,	" ASM_STR(SOCLIB_MC_CHECK_SPFP) " \n"
 		"	sw	$1,	" ASM_STR(SOCLIB_MC_ENABLE) "($0) \n"
-#endif
 		"	move	$sp,	$15		\n"
-#ifdef CONFIG_SOCLIB_MEMCHECK
 		"	sw	$0,	" ASM_STR(SOCLIB_MC_MAGIC) "($0) \n"
+#else
+		"	lw	$sp,	(%1)		\n"
 #endif
 		/* restore status & tls */
 		"	lw	$1,	1*4($sp)	\n"
