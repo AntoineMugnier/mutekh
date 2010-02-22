@@ -31,16 +31,17 @@
 # include <arch/mem_checker.h>
 #endif
 
-#ifndef CONFIG_DRIVER_ICU_ARM
+#ifdef CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER
 static uint32_t arm_irq_stack[128/4];
 #endif
 
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
 struct arm_exception_context_s {
-	uint32_t user_pc;
-	uint32_t user_cpsr;
-	uint32_t user_r0;
+	uint32_t r0;
+	uint32_t r1;
+	uint32_t pc;
+	uint32_t cpsr;
 };
 
 #ifdef CONFIG_SMP
@@ -77,8 +78,8 @@ static void __arm_exception_setup()
 #endif
 
 	struct arm_exception_context_s *cpu_context = arm_exception_context[cpu_id()];
-#ifndef CONFIG_DRIVER_ICU_ARM
-	arm_setup_exception_stack(arm_irq_stack+sizeof(arm_irq_stack)-4, 0x12);
+#ifdef CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER
+	arm_setup_exception_stack(arm_irq_stack+sizeof(arm_irq_stack)/4-4, 0x12);
 #else
 	arm_setup_exception_stack(&cpu_context[0], 0x12); // IRQ
 #endif

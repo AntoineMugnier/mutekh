@@ -66,6 +66,15 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
     "-",        "-",    "CacheErr", "-"		\
 }
 
+#define CPU_EXCEPTION_DATA_ALIGN   0x4 // ADEL
+#define CPU_EXCEPTION_INS_ERROR    0x6 // IBE
+#define CPU_EXCEPTION_DATA_ERROR   0x7 // DBE
+#define CPU_EXCEPTION_BREAKPOINT   0x9 // Bp
+#define CPU_EXCEPTION_ILLEGAL_INS  0xa // RI
+#define CPU_EXCEPTION_COPROC       0xb // CpU
+#define CPU_EXCEPTION_TRAP         0xd // Tr
+#define CPU_EXCEPTION_FPE          0xf // FPE
+
 #if __mips >= 32 
 
 #define cpu_mips_mfc0(id, sel)			\

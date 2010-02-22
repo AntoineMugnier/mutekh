@@ -19,6 +19,8 @@
 
 */
 
+#include <hexo/asm.h>
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
 # include <arch/mem_checker.h>
 #endif
@@ -26,10 +28,7 @@
 asm(
         ".section        .boot,\"ax\",@progbits                                            \n"
 
-        ".globl cpu_boot                                                                   \n"
-        ".func cpu_boot				    \n\t"
-        ".type   cpu_boot, %function    \n\t"
-        "cpu_boot:                                                                         \n"
+        FUNC_START(cpu_boot)
 
         ".set push                                                                         \n"
         ".set noreorder                                                                    \n"
@@ -122,8 +121,7 @@ asm(
 #endif
 
         ".set pop                                                                          \n"
-	".size   cpu_boot, .-cpu_boot   \n\t"
-	".endfunc \n\t"
+        FUNC_END(cpu_boot)
 );
 
 // Local Variables:

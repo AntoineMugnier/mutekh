@@ -16,8 +16,75 @@
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
-
+    Copyright (c) 2010, Nicolas Pouillon <nipo@ssji.net>
 */
+
+#include <hexo/asm.h>
+
+#ifdef CONFIG_SMP
+# define CPU_LOCAL_GET(reg, name) "    lw " #reg ", " #name "($27) \n"
+#else
+# define CPU_LOCAL_GET(reg, name) "    lw " #reg ", " #name "\n"
+#endif
+
+#if __mips >= 32
+# define CPU_ID(reg)                                                   \
+    "   mfc0    " #reg ",    $15,    1           \n"                   \
+    "   andi    " #reg ",    " #reg ",    0x3ff  \n"
+# define STATUS_UM_BIT "0x10"
+#else
+# define CPU_ID(reg)                                                   \
+    "   mfc0    " #reg ",    $15                 \n"                   \
+    "   andi    " #reg ",    " #reg ",    0x3ff  \n"
+# define STATUS_UM_BIT "0x8"
+#endif
+
+// Not in macros: $0, $26 (k0), $27 (k1), $29 (sp)
+
+// 11 registers (but as we call ABI-compliant func, t* may not be saved)
+// so only gp and ra must be saved.
+// Even if we end-up switching threads, switch() will finally save them
+#define DO_CALLEE_SAVED(op, reg)                 \
+    "   " #op "  $28,   28 * 4(" #reg ") \n"     \
+    "   " #op "  $31,   31 * 4(" #reg ") \n"
+/*
+    "   " #op "  $16,   16 * 4(" #reg ") \n"     \
+    "   " #op "  $17,   17 * 4(" #reg ") \n"     \
+    "   " #op "  $18,   18 * 4(" #reg ") \n"     \
+    "   " #op "  $19,   19 * 4(" #reg ") \n"     \
+    "   " #op "  $20,   20 * 4(" #reg ") \n"     \
+    "   " #op "  $21,   21 * 4(" #reg ") \n"     \
+    "   " #op "  $22,   22 * 4(" #reg ") \n"     \
+    "   " #op "  $23,   23 * 4(" #reg ") \n"     \
+    "   " #op "  $30,   30 * 4(" #reg ") \n"     \
+*/
+
+
+// 10 registers
+#define DO_TEMP_REGS(op, reg)                    \
+    "   " #op "   $8,    8 * 4(" #reg ") \n"     \
+    "   " #op "   $9,    9 * 4(" #reg ") \n"     \
+    "   " #op "  $10,   10 * 4(" #reg ") \n"     \
+    "   " #op "  $11,   11 * 4(" #reg ") \n"     \
+    "   " #op "  $12,   12 * 4(" #reg ") \n"     \
+    "   " #op "  $13,   13 * 4(" #reg ") \n"     \
+    "   " #op "  $14,   14 * 4(" #reg ") \n"     \
+    "   " #op "  $15,   15 * 4(" #reg ") \n"     \
+    "   " #op "  $24,   24 * 4(" #reg ") \n"     \
+    "   " #op "  $25,   25 * 4(" #reg ") \n"
+
+#define DO_AT_REG(op, reg)                       \
+    "   " #op "   $1,    1 * 4(" #reg ") \n"
+
+#define DO_RVAL_REGS(op, reg)                    \
+    "   " #op "   $2,    2 * 4(" #reg ") \n"     \
+    "   " #op "   $3,    3 * 4(" #reg ") \n"
+
+#define DO_ARG_REGS(op, reg)                     \
+    "   " #op "   $4,    4 * 4(" #reg ") \n"     \
+    "   " #op "   $5,    5 * 4(" #reg ") \n"     \
+    "   " #op "   $6,    6 * 4(" #reg ") \n"     \
+    "   " #op "   $7,    7 * 4(" #reg ") \n"
 
 asm(
         ".section        .excep,\"ax\",@progbits         \n"
@@ -25,17 +92,14 @@ asm(
         ".set push                                       \n"
         ".set noreorder                                  \n"
         "   b       1f                                   \n"
-# if __mips >= 32
+#if __mips >= 32
         ".space 0x17c                                    \n"
 #else
         ".space 0x7c                                     \n"
 #endif
         ".set pop                                        \n"
 
-        ".globl mips_interrupt_entry                     \n"
-        ".func mips_interrupt_entry                      \n"
-        ".type mips_interrupt_entry, %function           \n"
-        "mips_interrupt_entry:                           \n"
+        FUNC_START(mips_interrupt_entry)
         ".set push                                       \n"
         ".set noat                                       \n"
 
@@ -43,71 +107,86 @@ asm(
 
         /* restore cpu local storage */
 #if defined(CONFIG_CPU_USER)
+
+        /* event from user mode ? */
+        "   mfc0    $26,    $12                          \n"
+        "   andi    $26,    $26,  " STATUS_UM_BIT "      \n"
+
+        ".set noreorder                                  \n"
+        /* zero if from Kernel mode */
+        "   beqz    $26,    1f                           \n"
+        /* abuse the delay slot to get the current SP (sp_user_kernel) */
+        "   move    $26,    $sp                          \n"
+        ".set reorder                                    \n"
+
 # if defined(CONFIG_SMP)
-
-#  if __mips >= 32
-        "   mfc0    $26,    $15,    1                    \n"
-#  else
-        "   mfc0    $26,    $15                          \n"
-#  endif
-
-        "   andi    $26,    $26,    0x3ff                \n"
+        /* Restore CLS if we are from user mode */
+        CPU_ID($26)
         "   sll     $26,    $26,    2                    \n"
         "   lw      $27,    cpu_local_storage($26)       \n"
 # endif
 
-        /* event from user mode ? */
-        "   mfc0    $26,    $12                          \n"
-        "   andi    $26,    $26,    0x8                  \n"
-
-        ".set noreorder                                  \n"
-        "   blez    $26,    1f                           \n"
+        /* Get user's SP (sp_user_user) */
         "   move    $26,    $sp                          \n"
-        ".set reorder                                    \n"
 
         /* restore kernel stack ! */
-# ifdef CONFIG_SMP
-        "   lw      $sp,    __context_data_base($27) \n"
-# else
-        "   lw      $sp,    __context_data_base      \n"
-# endif
-        "   addiu   $sp,    %lo(context_kstack)          \n"
-        "   lw      $sp,    ($sp)                        \n"
+        CPU_LOCAL_GET($sp, __context_data_base)
+        "   lw      $sp,    %lo(context_kstack)($sp)     \n"
+        "1:                                              \n"
 #else  /* !defined(CONFIG_CPU_USER) */
+        /* Get current SP (sp_user_none) */
         "   move    $26,    $sp                          \n"
 #endif
 
-        /* save registers usefull to syscall */
-        "1:                                              \n"
-        "   addu    $sp,    -4*32                        \n"
+        /*
+          Either:
+          * We are not handling user mode and $26 is last known sp (sp_user_none)
+          * We are handling user mode
+           * From user mode, $26 is user's sp (sp_user_user)
+           * From kernel mode, $26 is last known sp (sp_user_kernel)
+         */
+
+        /* save registers useful to syscall */
 #if defined(CONFIG_LIBELF_RTLD_TLS)
         /* add room for hwrena and tls registers */
-        "   addu    $sp,    -4*2                         \n"
+        "   addu    $sp,    -4*35                        \n"
+#else
+        "   addu    $sp,    -4*33                        \n"
 #endif
         "   sw      $26,    29*4($sp)                    \n"
 
-        "   sw      $4,     4*4($sp)                     \n" /* Args regs */
-        "   sw      $5,     5*4($sp)                     \n" /* Args regs */
-        "   sw      $6,     6*4($sp)                     \n" /* Args regs */
-        "   sw      $7,     7*4($sp)                     \n" /* Args regs */
-
-        "   sw      $31,    31*4($sp)                    \n" /* Return address regs */
+        DO_ARG_REGS(sw, $sp)
 
         /* read and extract cause */
         "   mfc0    $4,     $13                          \n"
         "   andi    $6,     $4,     0x3c                 \n"
 
-        /* read & save EPC */
-        "   mfc0    $5,     $14                          \n"
-        "   sw      $5,     0*4($sp)                     \n"
+        "   mfc0    $5,     $12                          \n"
+        "   sb      $5,     32*4($sp)                    \n"
+        /* Let's say we are in kernel mode, no exception, no irq */
+# if __mips >= 32
+        "   ori     $5,     $5,     0x1f                 \n"
+        "   xori    $5,     $5,     0x1f                 \n"
+# else
+#  error Implement me
+# endif
+        "   mtc0    $5,     $12                          \n"
 
 #if defined(CONFIG_LIBELF_RTLD_TLS)
         /* read & save hwrena */
         "   mfc0    $7,     $7                           \n"
-        "   sw      $7,     32*4($sp)                    \n"
+        "   sw      $7,     33*4($sp)                    \n"
         /* read & save tls */
         "   mfc0    $7,     $4, 2                        \n"
-        "   sw      $7,     33*4($sp)                    \n"
+        "   sw      $7,     34*4($sp)                    \n"
+#endif
+
+#if defined(CONFIG_CPU_USER)
+        /* increment the user-mode counter */
+        CPU_LOCAL_GET($5, __context_data_base)
+        "   lw      $7,     %lo(usermode_counter)($5)    \n"
+        "   addui   $7,     $7, 1                        \n"
+        "   sw      $7,     %lo(usermode_counter)($5)    \n"
 #endif
 
         "   li      $7,     32                           \n"
@@ -115,61 +194,40 @@ asm(
 
         /* save extra registers for hw interrupts and exceptions only */
 
-        "   sw      $1,     1*4($sp)                     \n" /* AT reg */
+        DO_AT_REG(sw, $sp)
+        DO_RVAL_REGS(sw, $sp)
+        DO_TEMP_REGS(sw, $sp)
+        DO_CALLEE_SAVED(sw, $sp)
 
-        "   sw      $2,     2*4($sp)                     \n" /* Return value regs */
-        "   sw      $3,     3*4($sp)                     \n" /* Return value regs */
-
-        "   sw      $8,     8*4($sp)                     \n" /* Temp regs */
-        "   sw      $9,     9*4($sp)                     \n" /* Temp regs */
-        "   sw      $10,    10*4($sp)                    \n" /* Temp regs */
-        "   sw      $11,    11*4($sp)                    \n" /* Temp regs */
-        "   sw      $12,    12*4($sp)                    \n" /* Temp regs */
-        "   sw      $13,    13*4($sp)                    \n" /* Temp regs */
-        "   sw      $14,    14*4($sp)                    \n" /* Temp regs */
-        "   sw      $15,    15*4($sp)                    \n" /* Temp regs */
-
-        "   sw      $16,    16*4($sp)                    \n" /* Callee saved */
-        "   sw      $17,    17*4($sp)                    \n" /* Callee saved */
-        "   sw      $18,    18*4($sp)                    \n" /* Callee saved */
-        "   sw      $19,    19*4($sp)                    \n" /* Callee saved */
-        "   sw      $20,    20*4($sp)                    \n" /* Callee saved */
-        "   sw      $21,    21*4($sp)                    \n" /* Callee saved */
-        "   sw      $22,    22*4($sp)                    \n" /* Callee saved */
-        "   sw      $23,    23*4($sp)                    \n" /* Callee saved */
-
-        "   sw      $30,    30*4($sp)                    \n" /* Callee saved */
-
-        "   sw      $24,    24*4($sp)                    \n" /* Temp regs */
-        "   sw      $25,    25*4($sp)                    \n" /* Temp regs */
-
-        "   sw      $28,    28*4($sp)                    \n" /* Save user GP */
+        /* read & save EPC */
+        "   mfc0    $5,     $14                          \n"
+        "   sw      $5,     0*4($sp)                     \n"
 
         "   beq     $6,     $0,     interrupt_hw         \n"
 
         /*************************************************************
           exception handling
          **************************************************************/
-
         "interrupt_ex:                                   \n"
 
         /* exception function arguments */
-        "   srl     $4,     $6,     2                    \n" /* adjust cause arg */
-        //"   move    $5,     $5                           \n" /* execution pointer */
-        "   mfc0    $6,     $8                           \n" /* bad address if any */
-        "   addiu   $7,     $sp,    0                    \n" /* register table on stack */
+        /* adjust cause arg */
+        "   srl     $4,     $6,     2                    \n"
+        /* execution pointer */
+        //"   move    $5,     $5                           \n"
+        /* bad address if any */
+        "   mfc0    $6,     $8                           \n"
+        /* register table on stack */
+        "   addiu   $7,     $sp,    0                    \n"
 
         "   addiu   $sp,    $sp,    -5*4                 \n"
         "   sw      $26,    4*4($sp)                     \n"
-#ifdef CONFIG_SMP
-        "   lw      $1,     cpu_exception_handler($27)   \n"
-#else
-        "   lw      $1,     cpu_exception_handler        \n"
-#endif
+        CPU_LOCAL_GET($1, cpu_exception_handler)
         "   jalr    $1                                   \n"
         "   addiu   $sp,    $sp,    5*4                  \n"
 
-        "   lw      $26,    0*4($sp)                     \n" /* get EPC value */
+        /* get EPC value */
+        "   lw      $26,    0*4($sp)                     \n"
 
         "   j       return                               \n"
 
@@ -178,20 +236,20 @@ asm(
          **************************************************************/
         "interrupt_sys:                                  \n"
 
-        "   move    $4,     $0                           \n" /* single trap on mips: id = 0 */
-        "   addiu   $5,     $sp,    0                    \n" /* register table on stack */
+        /* single trap on mips: id = 0 */
+        "   move    $4,     $0                           \n"
+        /* register table on stack */
+        "   addiu   $5,     $sp,    0                    \n"
         "   addiu   $sp,    $sp,    -4*4                 \n"
-#ifdef CONFIG_SMP
-        "   lw      $11,    __context_data_base($27) \n"
-#else
-        "   lw      $11,    __context_data_base      \n"
-#endif
+        CPU_LOCAL_GET($31, __context_data_base)
         "   lw      $1,     cpu_syscall_handler($11)     \n"
         "   jalr    $1                                   \n"
         "   addiu   $sp,    $sp,    4*4                  \n"
 
-        "   lw      $26,    0*4($sp)                     \n" /* get EPC value */
-        "   addiu   $26,    4                            \n" /* increment epc for not doing the syscall again */
+        /* get EPC value */
+        "   lw      $26,    0*4($sp)                     \n"
+        /* increment epc for not doing the syscall again */
+        "   addiu   $26,    4                            \n"
 
 #ifdef CONFIG_SYSCALL_CLEAN_REGS
         /* FIXME cleanup all caller saved registers here */
@@ -204,75 +262,54 @@ asm(
          **************************************************************/
         "interrupt_hw:                                   \n"
 
-        "   srl     $5,     $4,     10                   \n" /* hw interrupt line id */
+#if defined(CONFIG_HEXO_IRQ)
+        /* hw interrupt line id */
+        "   srl     $5,     $4,     10                   \n"
         "   andi    $5,     $5,     0xff                 \n"
 
         "   addiu   $sp,    $sp,    -4*4                 \n"
-#ifdef CONFIG_SMP
-        "   lw      $1,     cpu_interrupt_handler($27)   \n"
-        "   lw      $4,     cpu_interrupt_handler_arg($27)\n"
-#else
-        "   lw      $1,     cpu_interrupt_handler        \n"
-        "   lw      $4,     cpu_interrupt_handler_arg    \n"
-#endif
+        CPU_LOCAL_GET($1, cpu_interrupt_handler)
+        CPU_LOCAL_GET($4, cpu_interrupt_handler_arg)
         "   jalr    $1                                   \n"
         "   addiu   $sp,    $sp,    4*4                  \n"
+#endif
 
-        "   lw      $26,    0*4($sp)                     \n" /* get EPC value */
+        /* get EPC value */
+        "   lw      $26,    0*4($sp)                     \n"
 
         /************************************************************/
-
         /* restore registers */
         "return:                                         \n"
 
-        "   lw      $1,     1*4($sp)                     \n"
-
-        "   lw      $4,     4*4($sp)                     \n"
-        "   lw      $5,     5*4($sp)                     \n"
-        "   lw      $6,     6*4($sp)                     \n"
-        "   lw      $7,     7*4($sp)                     \n"
-
-        "   lw      $8,     8*4($sp)                     \n"
-        "   lw      $9,     9*4($sp)                     \n"
-        "   lw      $10,    10*4($sp)                    \n"
-        "   lw      $11,    11*4($sp)                    \n"
-        "   lw      $12,    12*4($sp)                    \n"
-        "   lw      $13,    13*4($sp)                    \n"
-        "   lw      $14,    14*4($sp)                    \n"
-        "   lw      $15,    15*4($sp)                    \n"
-
-        "   lw      $16,    16*4($sp)                    \n"
-        "   lw      $17,    17*4($sp)                    \n"
-        "   lw      $18,    18*4($sp)                    \n"
-        "   lw      $19,    19*4($sp)                    \n"
-        "   lw      $20,    20*4($sp)                    \n"
-        "   lw      $21,    21*4($sp)                    \n"
-        "   lw      $22,    22*4($sp)                    \n"
-        "   lw      $23,    23*4($sp)                    \n"
-
-        "   lw      $30,    30*4($sp)                    \n"
-
-        "   lw      $24,    24*4($sp)                    \n"
-        "   lw      $25,    25*4($sp)                    \n"
+        DO_AT_REG(lw, $sp)
+        DO_ARG_REGS(lw, $sp)
+        DO_TEMP_REGS(lw, $sp)
 
         "return_val:                                     \n"
 
-        "   lw      $2,     2*4($sp)                     \n" /* Syscall return value */
-        "   lw      $3,     3*4($sp)                     \n" /* Syscall return value */
+        DO_RVAL_REGS(lw, $sp)
+
+        /* reload lower byte of status */
+        "   lbu     $28,    32*4($sp)                    \n"
+        "   mfc0    $31,    $12                          \n"
+        "   ori     $31,    $31,    0xff                 \n"
+        "   xori    $31,    $31,    0xff                 \n"
+        "   or      $31,    $31,    $28                  \n"
+        "   mtc0    $31,    $12                          \n"
 
 #if defined(CONFIG_LIBELF_RTLD_TLS)
         /* reload hwrena */
-        "   lw      $31,    32*4($sp)                    \n"
+        "   lw      $31,    33*4($sp)                    \n"
         "   mtc0    $31,    $7                           \n"
         /* reload tls */
-        "   lw      $31,    33*4($sp)                    \n"
+        "   lw      $31,    34*4($sp)                    \n"
         "   mtc0    $31,    $4, 2                        \n"
 #endif
 
-        "   lw      $28,    28*4($sp)                    \n" /* restore user GP */
-        "   lw      $31,    31*4($sp)                    \n" /* restore return address */
+        DO_CALLEE_SAVED(lw, $sp)
 
-        "   lw      $sp,    29*4($sp)                    \n" /* restore user stack */
+        /* restore user stack */
+        "   lw      $sp,    29*4($sp)                    \n"
 
 # if __mips >= 32
         /* restore epc for eret */
@@ -285,16 +322,14 @@ asm(
 # endif
 
         ".set pop                                        \n"
-		".endfunc                                        \n"
-        ".size mips_interrupt_entry, .-mips_interrupt_entry \n"
+        FUNC_END(mips_interrupt_entry)
         );
 
-        // Local Variables:
-        // tab-width: 4;
-        // c-basic-offset: 4;
-        // c-file-offsets:((innamespace . 0)(inline-open . 0));
-        // indent-tabs-mode: nil;
-        // End:
-        //
-        // vim: filetype=cpp:expandtab:shiftwidth=4:tabstop=4:softtabstop=4
+// Local Variables:
+// tab-width: 4;
+// c-basic-offset: 4;
+// indent-tabs-mode: nil;
+// End:
+//
+// vim: filetype=cpp:expandtab:shiftwidth=4:tabstop=4:softtabstop=4
 

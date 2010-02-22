@@ -44,11 +44,17 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #define CPU_FAULT_NAMES {       \
 "Unknown",                      \
 "Program",                      \
-"Alignment",                    \
-"Machine check",                \
 "Data storage",                 \
 "Instruction storage",          \
+"Alignment",                    \
+"Other",                        \
 }
+
+#define CPU_EXCEPTION_ILLEGAL_INS  0x1
+#define CPU_EXCEPTION_DATA_ERROR   0x2
+#define CPU_EXCEPTION_INS_ERROR    0x3
+#define CPU_EXCEPTION_DATA_ALIGN   0x4
+#define CPU_EXCEPTION_OTHER        0x5
 
 #define CPU_TYPE_NAME powerpc
 

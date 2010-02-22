@@ -113,6 +113,9 @@ static inline void cpu_interrupt_wait();
 /**
    CPU exception handler function type.
 
+   Passed regtable and stack contents may be modified by exception
+   handler and are restored modified to context.
+
    @param type exception ID
    @param execptr faulty instruction pointer
    @param dataptr faulty memory access pointer

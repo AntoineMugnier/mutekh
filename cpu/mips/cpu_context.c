@@ -7,10 +7,6 @@
 # include <arch/mem_checker.h>
 #endif
 
-#if defined(CONFIG_CPU_USER)
-CONTEXT_LOCAL uintptr_t context_kstack;
-#endif
-
 error_t
 cpu_context_bootstrap(struct context_s *context)
 {

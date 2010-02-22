@@ -92,6 +92,7 @@ DEVICU_DELHNDL(icu_sam7_delhndl)
 
 DEV_IRQ(icu_sam7_handler)
 {
+#if !defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
 	AT91PS_AIC registers = (void*)dev->addr[0];
 //	struct icu_sam7_private_s	*pv = dev->drv_pv;
 //	struct icu_sam7_handler_s	*h = pv->table[irq];
@@ -110,6 +111,7 @@ DEV_IRQ(icu_sam7_handler)
 
 //	registers->AIC_EOICR = 0;
 
+#endif
 	return 0;
 }
 
@@ -156,18 +158,7 @@ const struct driver_s	icu_sam7_drv =
 REGISTER_DRIVER(icu_sam7_drv);
 #endif
 
-#if 0
-static
-__attribute__ ((interrupt ("IRQ")))
-void sam7_spurious_irq_handler()
-{
-	uint32_t irq;
-	asm("ldr %0, [sp, #6*4]": "=r" (irq));
-	kputs("SAM7 lost spurious interrupt\n");
-	cpu_mem_write_32(0xfffff130, 1);
-}
-#endif
-
+#if defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
 struct device_s	*sam7_c_irq_dev;
 
 __attribute__ ((interrupt ("IRQ")))
@@ -193,6 +184,7 @@ void arm_c_fiq_handler()
 		h->hndl(h->data);
 	registers->AIC_EOICR = 1;
 }
+#endif
 
 DEV_INIT(icu_sam7_init)
 {
@@ -231,7 +223,7 @@ DEV_INIT(icu_sam7_init)
 
 	dev->drv_pv = pv;
 
-#if defined(CONFIG_DRIVER_ICU_ARM)
+#if !defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
 	assert(dev->icudev);
 	DEV_ICU_BIND(dev->icudev, dev, dev->irq, icu_sam7_handler);
 #endif
@@ -264,39 +256,3 @@ DEVICU_ENABLE(icu_sam7_enable)
 		registers->AIC_SVR[irq] = (uint32_t)(pv->table+32);
 	}
 }
-
-asm(
-    ".globl arm_exc_irq              \n\t"
-    ".func  arm_exc_irq              \n\t"
-    ".type   arm_exc_irq, %function  \n\t"
-    "arm_exc_irq:                    \n\t"
-	"push {r0, r1, r2, r4, lr}       \n\t"
-	"mov  r0, #0                     \n\t"
-	"add  lr, pc, #4                 \n\t"
-	//
-	"pop  {r0, r1, r2, r4, lr}       \n\t"
-	"subs pc, r14, #4                \n\t"
-	".size   arm_exc_irq, .-arm_exc_irq     \n\t"
-	".endfunc \n\t"
-
-    ".globl sam7_irq_handler              \n\t"
-    ".func  sam7_irq_handler              \n\t"
-    ".type   sam7_irq_handler, %function  \n\t"
-    "sam7_irq_handler:                    \n\t"
-	"push {lr}                          \n\t"
-	"mrs  lr, spsr                      \n\t"
-	"push {r0, r1, r2, r3, lr}          \n\t"
-    ".globl pwetpwet                    \n\t"
-    "pwetpwet:                          \n\t"
-	"ldr  r0, [sp, #4*6]                \n\t"
-	"mov  lr, pc                        \n\t"
-	"ldr  pc, =icu_sam7_handler         \n\t"
-	"ldr  r0, =0xfffff130               \n\t"
-	"str  lr, [r0]                      \n\t"
-	"pop  {r0, r1, r2, r3, lr}          \n\t"
-	"msr  spsr, lr                     \n\t"
-	"pop  {lr}                         \n\t"
-	"subs pc, r14, #4                \n\t"
-	".size   sam7_irq_handler, .-sam7_irq_handler     \n\t"
-	".endfunc \n\t"
-	);

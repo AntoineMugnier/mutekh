@@ -8,6 +8,10 @@ ifeq ($(CONFIG_HEXO_IPI), defined)
 objs += ipi.o
 endif
 
+ifeq ($(CONFIG_CPU_USER), defined)
+objs += user_mode.o
+endif
+
 ifeq ($(CONFIG_HEXO_IRQ), defined)
 objs += interrupt.o
 endif
