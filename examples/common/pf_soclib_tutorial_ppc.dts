@@ -95,11 +95,12 @@
 	memory@0 {
 		device_type = "memory";
 		cached;
-		memreg: reg = <0x7f400000 0x00100000>;
+        reg = <0x7f000000 0x01000000>;
 	};
 
 	chosen {
 		console = &{/tty@0};
+        timer = &{/xicu@0};
 	};
 
 };
