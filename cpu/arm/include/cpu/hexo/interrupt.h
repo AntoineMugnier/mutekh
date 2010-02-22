@@ -62,16 +62,19 @@ static inline void
 cpu_interrupt_disable(void)
 {
 	uint32_t tmp;
+    THUMB_TMP_VAR;
 
 	asm volatile(
-#if __thumb__
+#if __thumb__ && !defined(CONFIG_CPU_ARM_7TDMI)
         "cpsid i"
 #else
-		"mrs  %0, cpsr        \n\t"
-		"orr  %0, %0, #0x80   \n\t"
-		"msr  cpsr, %0        \n\t"
+        THUMB_TO_ARM
+		"mrs  %[tmp], cpsr            \n\t"
+		"orr  %[tmp], %[tmp], #0x80   \n\t"
+		"msr  cpsr, %[tmp]            \n\t"
+        ARM_TO_THUMB
 #endif
-		: "=r" (tmp)
+		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
         );
 /* #endif */
 }
@@ -80,16 +83,19 @@ static inline void
 cpu_interrupt_enable(void)
 {
 	uint32_t tmp;
+    THUMB_TMP_VAR;
 
 	asm volatile(
-#if __thumb__
+#if __thumb__ && !defined(CONFIG_CPU_ARM_7TDMI)
         "cpsie i"
 #else
-		"mrs  %0, cpsr        \n\t"
-		"bic  %0, %0, #0x80   \n\t"
-		"msr  cpsr, %0        \n\t"
+        THUMB_TO_ARM
+		"mrs  %[tmp], cpsr            \n\t"
+		"bic  %[tmp], %[tmp], #0x80   \n\t"
+		"msr  cpsr, %[tmp]            \n\t"
+        ARM_TO_THUMB
 #endif
-		: "=r" (tmp)
+		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
         );
 }
 
