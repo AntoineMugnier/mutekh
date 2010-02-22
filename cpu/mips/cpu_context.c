@@ -80,7 +80,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 #ifdef CONFIG_COMPILE_SOFTFLOAT
     *--context->stack_ptr = 0x0000ff00;
 #else
-    *--context->stack_ptr = 0x4000ff00;
+    *--context->stack_ptr = 0x2000ff00;
 #endif
 
     /* context local storage address */
