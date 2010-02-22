@@ -21,7 +21,7 @@ build_$(1)/kernel: build_$(1) $(1) FORCE
 
 endef
 
-$(eval $(foreach conf,$(CONFIGS),$(call declare_config,$(conf))))
+$(eval $(foreach conf,$(filter-out $(DISABLED),$(CONFIGS)),$(call declare_config,$(conf))))
 
 kernels: $(KERNELS)
 
