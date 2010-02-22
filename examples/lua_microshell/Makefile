@@ -1,5 +1,5 @@
 
-objs = getline_lua.o
+objs = getline_lua.o mem.o
 
 ifeq ($(CONFIG_VFS),defined)
 objs += vfs_functions.o

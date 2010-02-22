@@ -22,6 +22,7 @@ extern struct device_s * console_dev;
 
 pthread_t a;
 
+void init_mem_shell(lua_State*);
 void init_vfs_shell(lua_State*);
 void init_dsrl_shell(lua_State* luast);
 void init_rtld_shell(lua_State* luast);
@@ -30,6 +31,8 @@ void init_timer_shell(lua_State *st);
 
 static void initialize_shell(lua_State* luast)
 {
+    init_mem_shell(luast);
+
 #if defined(CONFIG_VFS)
     init_vfs_shell(luast);
 #endif
