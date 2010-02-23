@@ -30,7 +30,7 @@
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	16
 
-#define CPU_TYPE_NAME x86-64
+#define CPU_TYPE_NAME x86_64
 
 extern CPU_LOCAL cpu_id_t _cpu_id;
 
