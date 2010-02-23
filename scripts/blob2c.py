@@ -9,6 +9,10 @@ parser.add_option('-n',
 				  dest = 'name', nargs = 1, type = 'string',
 				  help = 'Change symbol name (default = "blob")',
 				  default = 'blob')
+parser.add_option('-a',
+				  dest = 'align', nargs = 1, type = 'int',
+				  help = 'Add an alignment constraint on blob variable',
+				  default = '1')
 parser.add_option('-s',
 				  dest = 'section', nargs = 1, type = 'string',
 				  help = 'Change section name (no default (.rodata))',
@@ -39,6 +43,8 @@ if opts.size:
 	print >> output, '#include <stdint.h>'
 if opts.section:
 	print >> output, '__attribute__((section "%s"))'%opts.section
+if opts.align != 1:
+	print >> output, '__attribute__((aligned (%d)))'%opts.align
 print >> output, 'const unsigned char %s[] = {'%opts.name
 for i in range(0, len(blob), 8):
 	print >> output, '   ',
