@@ -78,13 +78,13 @@
 	tty@0 {
 	    device_type = "soclib:tty";
 		tty_count = <1>;
-		reg = <0x90600000 0x10>;
+		reg = <0xd0200000 0x10>;
  		irq = <&{/xicu@0/out@0} 0>;
 	};
 
 	memory@0 {
 		device_type = "memory";
-		memreg: reg = <0x71600000 0x00100000>;
+		memreg: reg = <0x7f000000 0x01000000>;
 	};
 
 	chosen {

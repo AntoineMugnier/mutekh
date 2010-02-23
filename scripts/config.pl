@@ -23,6 +23,7 @@
 use strict;
 use Cwd;
 use File::Basename;
+use Term::ANSIColor;
 
 my @config_files;
 my @output_files;
@@ -35,52 +36,17 @@ my %param_h = (
 	       );
 
 my %sec_types;
+my %sec_types_req;
 my %used_build = ( "default" => 1 );
 
 my %init_env = ( %ENV );		# initial environment
-
-sub text80
-{
-    my ($msg, $prefix, $firstprefix) = @_;
-    my $res;
-    my $len;
-    my $tw = $ENV{COLUMNS} || 80;
-    my $maxlen = $tw - length($prefix);
-
-    $firstprefix = $prefix if (not defined $firstprefix);
-
-    foreach my $word (split(/\s+/, $msg))
-    {
-	if ($len + 1 + length($word) >= $maxlen)
-	{
-	    $res .= "\n".$prefix.$word;
-	    $len = length($word);
-	}
-	else
-	{
-	    if ($res)
-	    {
-		$len += length($word) + 1;
-		$res .= " ".$word;
-	    }
-	    else
-	    {
-		$len += length($word);
-		$res .= $firstprefix.$word;
-	    }
-	}
-    }
-
-    return $res;
-}
 
 sub error
 {
     my ($msg, @list) = @_;
     my $tlist = join(", ", @list) if (@list);
 
-    print STDERR text80($msg.$tlist, "      ", "error:")."\n";
-
+    print STDERR color('bold red')."error:".color('clear red')."$msg$tlist\n".color('reset');
     $err_flag = 1;
 }
 
@@ -89,7 +55,7 @@ sub warning
     my ($msg, @list) = @_;
     my $tlist = join(", ", @list) if (@list);
 
-    print STDERR text80($msg.$tlist, "        ", "warning:")."\n";
+    print STDERR color('bold yellow')."warning:".color('reset')."$msg$tlist\n";
 }
 
 sub check_rule
@@ -941,7 +907,8 @@ sub read_myconfig
     if (open(FILE, "<".$file))
     {
 	my $lnum = 0;
-	my $ignore = 0;
+	my @ignore = ( 0 );
+	my @cur_sections = ( ["common"] );
 
 	foreach my $line (<FILE>)
 	{
@@ -953,44 +920,88 @@ sub read_myconfig
 	    # replace env variables
 	    $line =~ s/\$\((\w+)\)/$init_env{$1}/ge;
 
-	    if ($line =~ /^\s* %common\b/x)
+	    if ($line =~ /^\s* %(sub)?section \s+ ([*\w\d\s-]+)/x)
 	    {
-		$init_env{CONFIGSECTION} = 'common';
-		$ignore = 0;
-		next;
-	    }
+		my $s = $1;	# subsection ?
+		my @sections = split(/\s+/, $2);
+		my $i = 1;
 
-	    if ($line =~ /^\s* %section \s+ ([*\w\d\s-]+)/x)
-	    {
-		my $w = $1;
-		$ignore = 1;
+		if (!$s || !@ignore[1]) {
 
-		foreach my $p (split(/\s+/, $w)) {
+		    foreach my $p (@sections) {
 
-		    $p =~ s/\*/[\\w\\d]\+/g;
+			my $p_ = $p;
+			$p_ =~ s/\*/[\\w\\d]\+/g;
 
-		    foreach (split(/:/, $section)) {
-			if ( $_ =~ /^$p$/ ) {
-			    $ignore = 0;
-			    $used_build{$_} = 1;
-			    $init_env{CONFIGSECTION} = $_;
+			foreach (split(/:/, $section)) {
+			    if ( $_ =~ /^$p_$/ ) {
+				$i = 0;
+				$used_build{$_} = 1;
+				$init_env{CONFIGSECTION} = $_ if ( !$s );
+			    }
 			}
+
+			last if !$i;
 		    }
+		}
 
-#		    print STDERR "ignoring $p: $ignore\n";
-
-		    last if !$ignore;
+		if ( $s ) {
+		    unshift @ignore, $i;
+		    unshift @cur_sections, [ @sections ];
+		} else {
+		    @ignore = ( $i );
+		    @cur_sections = [ @sections ];
 		}
 		next;
 	    }
 
 	    if ($line =~ /^\s* %else\b/x)
 	    {
-		$ignore = !$ignore;
+		@ignore[0] = !@ignore[0] if !@ignore[1];
+		@cur_sections[0] = [];
 		next;
 	    }
 
-	    next if $ignore;
+	    if ($line =~ /^\s* %end\b/x)
+	    {
+		if ( scalar @ignore < 2 ) {
+		    if ( scalar @ignore == 1 ) {
+			$line = "%common";
+		    } else {
+			error( "$file:$lnum: unbalanced %end.");
+		    }
+		} else {
+		    shift @ignore;
+		    shift @cur_sections;
+		}
+		next;
+	    }
+
+	    if ($line =~ /^\s* %common\b/x)
+	    {
+		$init_env{CONFIGSECTION} = 'common';
+		@cur_sections = ( ["common"] );
+		@ignore = ( 0 );
+		next;
+	    }
+
+	    if ($line =~ /^\s* %types \s+ (\w[\w\d]*\b\s*)+$/x)
+	    {
+		foreach my $t (split(/\s+/, $1)) {
+		    if (!@ignore[0]) {
+			error( "$file: multiple `$t' section types in use" ) if ($sec_types{$t} == 1);
+			$sec_types{$t}++;
+		    }
+
+		    my $r = $sec_types_req{$t};
+		    $r = [] if ( ! $r );
+		    push @$r, $_ foreach (@{@cur_sections[0]});
+		    $sec_types_req{$t} = $r;
+		}
+		next;
+	    }
+
+	    next if @ignore[0];
 
 	    if ($line =~ /^\s* %set \s+ (\w[\w\d]*) \s+ (.*?) \s*$/x)
 	    {
@@ -1004,25 +1015,35 @@ sub read_myconfig
 		next;
 	    }
 
+	    if ($line =~ /^\s* %die \s+ (.*)$/x)
+	    {
+		error("$1");
+		next;
+	    }
+
 	    if ($line =~ /^\s* %warning \s+ (.*)$/x)
 	    {
-		warning("$file:$lnum: $1");
+		warning("$1");
 		next;
 	    }
 
-	    if ($line =~ /^\s* %types \s+ (\w[\w\d]*\b\s*)+$/x)
+	    if ($line =~ /^\s* %notice \s+ (.*)$/x)
 	    {
-		foreach (split(/\s+/, $1)) {
-		    error( "$file: multiple `$_' section types in use" ) if ($sec_types{$_} == 1);
-		    $sec_types{$_}++;
-		}
+		print STDERR color('green')."notice:".color('reset')."$1\n";
 		next;
 	    }
 
-	    if ($line =~ /^\s* %requiretypes \s+ (\w[\w\d]*\b\s*)+$/x)
+	    if ($line =~ /^\s* %requiretypes \s+ (.+) $/x)
 	    {
-		foreach (split(/\s+/, $1)) {
-		    error( "$file:$lnum: no `$_' section type in use (required)" ) if (!$sec_types{$_});
+		foreach my $t (split(/\s+/, $1)) {
+		    next if ($sec_types{$t});
+
+		    my $r = $sec_types_req{$t};
+		    if ( !$r ) {
+			error("$file:$lnum: required `$t' type is never defined");
+		    } else {
+			error("no `$t' section in use, candidate sections are: ", @$r);
+		    }
 		}
 		next;
 	    }

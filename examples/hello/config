@@ -1,6 +1,4 @@
 
-%common		# optional at file start
-
   # New source code module to be compiled
   CONFIG_MODULES +hello:$(CONFIGPATH)
 
@@ -17,9 +15,3 @@
 
 %include ../common/build_options.conf
 %include ../common/platforms.conf
-
-
-%section default		# default build section name
-
-  %error Missing build configuration section names, please specify BUILD=xxx
-

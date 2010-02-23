@@ -49,7 +49,7 @@ MEMORY
 #if !defined(mem_except)
 	mem_except (RXAL)  : ORIGIN = CONFIG_CPU_EXCEPTION_FIXED_ADDRESS, LENGTH = 0x1000
 #endif
-#ifdef CONFIG_HETROM_ADDR
+#ifdef CONFIG_HET_BUILD
     mem_hetrom (RXAL): ORIGIN = CONFIG_HETROM_ADDR, LENGTH = CONFIG_HETROM_SIZE
 #else
 # define mem_hetrom mem_rom

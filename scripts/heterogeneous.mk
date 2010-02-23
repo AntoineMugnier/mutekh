@@ -1,6 +1,6 @@
 
 HETLINK=$(MUTEK_SRC_DIR)/tools/hlink/hetlink
-BUILDS:=$(subst :, ,$(BUILD))
+BUILDS:=$(subst :, ,$(EACH))
 COUPLES:=
 
 $(eval $(foreach c,$(BUILDS),$(call decl_conf,$(c))))
@@ -14,14 +14,14 @@ export HETLINK
 kernel-het: $(HET_KERNELS)
 	echo "BUILDS: $(BUILDS)"
 	echo "HET_KERNELS: $(HET_KERNELS)"
-	echo "PRE_OBJS: $(PRE_OBJS)"
-	echo "HET_OBJS: $(HET_OBJS)"
+#	echo "PRE_OBJS: $(PRE_OBJS)"
+#	echo "HET_OBJS: $(HET_OBJS)"
 
 $(BUILD_DIR)/kernel-%.pre.o: FORCE
 	@echo "PRE $@"
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
 		 MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF) \
-	     BUILD=$* \
+	     BUILD=$(BUILD):$* \
 	     OBJ_DIR=$(BUILD_DIR)/obj-$* \
 		 BUILD_DIR=$(BUILD_DIR) TARGET_EXT=pre.o \
 		 CONF_DIR=$(BUILD_DIR)/obj-$* target=kernel-$* \
@@ -43,7 +43,7 @@ $(BUILD_DIR)/kernel-%.het.out : $(BUILD_DIR)/kernel-%.pre.o.het.o FORCE
 		 MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF) \
 		 BUILD_DIR=$(BUILD_DIR) \
 		 CONF_DIR=$(BUILD_DIR)/obj-$* \
-		 BUILD=$* \
+		 BUILD=$(BUILD):$* \
 		 FINAL_LINK_TARGET=$@ \
 		 FINAL_LINK_SOURCE=$< \
 		 final_link
