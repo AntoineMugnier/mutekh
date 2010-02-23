@@ -53,7 +53,7 @@ $(3)/$(1): $(2)/$(1:.o=.S) $(BUILD_DIR)/.done_pre_header_list
 	cd $(3) ; \
 	$(DEPCC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
 	cd $(3) ; \
-	$(CPP) $$(INCS) $$< | $(AS) $$(CPUASFLAGS) -o $$@
+	$(CC) $$(INCS) -c -x assembler-with-cpp $$< $$(CPUCFLAGS) -o $$@
 
 else
 ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))

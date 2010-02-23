@@ -6,4 +6,7 @@ else
 CPUTOOLS=
 endif
 
-CPUCFLAGS=-mno-tls-direct-seg-refs
+CPUCFLAGS=-mno-tls-direct-seg-refs -m32
+CPULDFLAGS= -melf_i386
+
+
