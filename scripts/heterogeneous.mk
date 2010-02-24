@@ -22,9 +22,8 @@ $(BUILD_DIR)/kernel-%.pre.o: FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
 		 MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF) \
 	     BUILD=$(BUILD):$* \
-	     OBJ_DIR=$(BUILD_DIR)/obj-$* \
 		 BUILD_DIR=$(BUILD_DIR) TARGET_EXT=pre.o \
-		 CONF_DIR=$(BUILD_DIR)/obj-$* target=kernel-$* \
+		 target=kernel-$* \
 		 kernel
 
 # We have to go through an unique target or the hetlink will be done
@@ -42,7 +41,6 @@ $(BUILD_DIR)/kernel-%.het.out : $(BUILD_DIR)/kernel-%.pre.o.het.o FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
 		 MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF) \
 		 BUILD_DIR=$(BUILD_DIR) \
-		 CONF_DIR=$(BUILD_DIR)/obj-$* \
 		 BUILD=$(BUILD):$* \
 		 FINAL_LINK_TARGET=$@ \
 		 FINAL_LINK_SOURCE=$< \

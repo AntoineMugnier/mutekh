@@ -1,10 +1,5 @@
 POST_TARGET=__foo.out
 
-TARGET_COUPLE:=$(shell \
-	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-	--path=$(MUTEK_SRC_DIR):$(CURRENT_DIR):$(USER_DIR) \
-		--input=$(CONF) --build=$(BUILD) --arch-cpu)
-
 LDFLAGS=
 target = kernel-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME)
 TARGET_EXT ?= out
@@ -19,12 +14,20 @@ LINKING=0
 endif
 export LINKING
 
-OBJ_DIR:=$(BUILD_DIR)/obj-$(TARGET_COUPLE)
-CONF_DIR:=$(BUILD_DIR)
+OBJ_DIR:=$(shell cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
+		--path=$(CONF_PATH)              \
+		--input=$(CONF)					 \
+		--build-path=$(BUILD_DIR)/obj-   \
+		--build=$(BUILD) --config)
+
+ifeq ($(OBJ_DIR),)
+$(error Configure script failed)
+endif
+
+include $(OBJ_DIR)/config.mk
 
 DEP_FILE_LIST:=
 
-include $(CONF_DIR)/.config.mk
 include $(MUTEK_SRC_DIR)/scripts/config.mk
 include $(MUTEK_SRC_DIR)/scripts/discover.mk
 
@@ -37,15 +40,13 @@ include $(1)
 # $# $# (info $(1) not found)
 endif
 
-ADDCONFIG := $(CONF_DIR)/.config.py
-
 endef
 
 $(eval \
 $(foreach depfile,$(DEP_FILE_LIST),\
 $(call do_inc_dep,$(depfile))))
 
-$(eval $(call do_inc_dep,$(CONF_DIR)/.config.deps))
+$(eval $(call do_inc_dep,$(OBJ_DIR)/config.deps))
 
 endif
 
@@ -55,7 +56,7 @@ COPY_OBJECT_LIST:=$(filter-out %ldscript,$(COPY_OBJECT_LIST))
 
 all: kernel
 
-$(BUILD_DIR)/.done_pre_header_list: $(PRE_HEADER_LIST)
+$(OBJ_DIR)/.done_pre_header_list: $(PRE_HEADER_LIST)
 	@touch $@
 
 objs:
@@ -67,7 +68,7 @@ objs:
 showpaths:
 	@echo MUTEK_SRC_DIR $(MUTEK_SRC_DIR)
 	@echo BUILD_DIR $(BUILD_DIR)
-	@echo CONF_DIR $(CONF_DIR)
+	@echo OBJ_DIR $(OBJ_DIR)
 	@echo CONF $(CONF)
 	@echo target $(target)
 	@echo Modules: $(MODULES)
@@ -81,21 +82,26 @@ showpaths:
 
 FORCE:
 
-kernel: $(BUILD_DIR)/$(KERNEL_FILE) $(ADDCONFIG)
+kernel: $(OBJ_DIR)/$(KERNEL_FILE)
+	cp $< $(BUILD_DIR)
 
 clean:
-	rm -f $(BUILD_DIR)/$(KERNEL_FILE) $(TARGET_OBJECT_LIST)
+	rm -f $(OBJ_DIR)/$(KERNEL_FILE) $(TARGET_OBJECT_LIST)
 	rm -rf $(foreach mn,$(MODULE_NAMES),$($(mn)_OBJ_DIR))
 	rm -f $(CONFIG_FILES)
+	rm -f $(OBJ_DIR)/$(target).o
+	rm -f $(OBJ_DIR)/$(target).out
+	rm -f $(OBJ_DIR)/config.*
+	rm -f $(OBJ_DIR)/.done_pre_header_list
+	rm -f $(BUILD_DIR)/$(target).out
 
-
-FINAL_LINK_TARGET?=$(BUILD_DIR)/$(target).out
-FINAL_LINK_SOURCE?=$(BUILD_DIR)/$(target).o
+FINAL_LINK_TARGET?=$(OBJ_DIR)/$(target).out
+FINAL_LINK_SOURCE?=$(OBJ_DIR)/$(target).o
 
 ifeq ($(LD_NO_Q),1)
 
 ifeq ($(CONFIG_ARCH_EMU_DARWIN),defined)
-$(BUILD_DIR)/$(target).out: $(CONF_DIR)/.config.m4 \
+$(OBJ_DIR)/$(target).out: $(OBJ_DIR)/config.m4 \
 		$(COPY_OBJECT_LIST) \
 		$(META_OBJECT_LIST) \
 		$(TARGET_OBJECT_LIST) \
@@ -113,7 +119,7 @@ $(BUILD_DIR)/$(target).out: $(CONF_DIR)/.config.m4 \
 
 else
 WL=-Wl,
-$(BUILD_DIR)/$(target).out: $(CONF_DIR)/.config.m4 \
+$(OBJ_DIR)/$(target).out: $(OBJ_DIR)/config.m4 \
 		$(COPY_OBJECT_LIST) \
 		$(META_OBJECT_LIST) \
 		$(TARGET_OBJECT_LIST) \
@@ -141,7 +147,7 @@ endif
 
 final_link: $(FINAL_LINK_TARGET)
 
-$(BUILD_DIR)/$(target).o: $(CONF_DIR)/.config.m4 \
+$(OBJ_DIR)/$(target).o: $(OBJ_DIR)/config.m4 \
 		$(COPY_OBJECT_LIST) \
 		$(META_OBJECT_LIST) \
         $(TARGET_OBJECT_LIST) \
@@ -153,7 +159,7 @@ $(BUILD_DIR)/$(target).o: $(CONF_DIR)/.config.m4 \
 		$(addprefix -T ,$(filter %ldscript,$^)) \
 		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name`
 
-$(BUILD_DIR)/$(target).pre.o: $(CONF_DIR)/.config.m4 $(TARGET_OBJECT_LIST) \
+$(OBJ_DIR)/$(target).pre.o: $(OBJ_DIR)/config.m4 $(TARGET_OBJECT_LIST) \
 	    FORCE $(arch_SRC_DIR)/ldscript_obj
 	@echo '    LD o     ' $(notdir $@)
 	$(LD) -r \
@@ -164,15 +170,15 @@ $(BUILD_DIR)/$(target).pre.o: $(CONF_DIR)/.config.m4 $(TARGET_OBJECT_LIST) \
 
 kernel-postlink: $(POST_TARGET)
 
-$(POST_TARGET): $(BUILD_DIR)/$(target).o $(POST_LDSCRIPT)
+$(POST_TARGET): $(OBJ_DIR)/$(target).o $(POST_LDSCRIPT)
 	@echo '    LD post ' $(notdir $@)
 	$(LD) -o $@ --gc-sections -T $(POST_LDSCRIPT) $<
 
-$(BUILD_DIR)/$(target).hex: $(BUILD_DIR)/$(target).out
+$(OBJ_DIR)/$(target).hex: $(OBJ_DIR)/$(target).out
 	echo 'OBJCOPY HEX ' $(notdir $@)
 	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) -O ihex $< $@
 
-$(BUILD_DIR)/$(target).bin: $(BUILD_DIR)/$(target).out
+$(OBJ_DIR)/$(target).bin: $(OBJ_DIR)/$(target).out
 	echo 'OBJCOPY BIN ' $(notdir $@)
 	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) -O binary $< $@
 

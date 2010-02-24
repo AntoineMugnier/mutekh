@@ -1,71 +1,17 @@
 
-CONF_PATH:=$(MUTEK_SRC_DIR):$(CURRENT_DIR):$(USER_DIR)
-CONF_TMP_BASE:=$(shell echo /tmp/mutekh_config.$$$$.$${RANDOM})
-CONF_EXTS = py m4 h mk
-
-CONFIG_TMP_FILES=$(addprefix $(CONF_TMP_BASE).,$(CONF_EXTS))
-CONFIG_FILES=$(addprefix $(CONF_DIR)/.config.,$(CONF_EXTS) deps)
-
-$(CONF_DIR):
-	mkdir -p $@
-
-$(CONF_DIR)/.config.%: $(CONF_TMP_BASE).%
-	test -d $(CONF_DIR) || mkdir -p $(CONF_DIR)
-	if [ -r "$@" ] ; then \
-		if diff -q $@ $< 2>&1 > /dev/null ; then \
-			echo "   CONF OK   " $(notdir $@) ; \
-		else \
-			echo "   CONF RE   " $(notdir $@) ; \
-			cp $< $@ ; \
-		fi ; \
-	else \
-		echo "   CONF      $@" ; \
-		cp $< $@ ; \
-	fi
-
-.INTERMEDIATE: $(CONFIG_TMP_FILES)
-
-# Here is a special case for the dependency file, this is because we
-# want to always create the deps file when reloading the
-# configuration, and we have a special handling in rules_main.mk for
-# deps, in order to avoid missing files and circular dependencies.
-# That means we can safely create the .deps directly in its final
-# place, and not go through the reconf thing.
-
-DEP_FILE_LIST += $(CONF_DIR)/.config.deps
-
 FORCE:
 	@true
 
 .PHONY: FORCE
 
-$(CONFIG_TMP_FILES): $(CONF) FORCE
-	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(CONF_PATH) \
-		--input=$(CONF)					\
-		--python=$(CONF_TMP_BASE).py		\
-		--m4=$(CONF_TMP_BASE).m4			\
-		--header=$(CONF_TMP_BASE).h			\
-		--depmakefile=$(CONF_DIR)/.config.deps			\
-		--makefile=$(CONF_TMP_BASE).mk		\
-		--build=$(BUILD)
-#	sed -i -e 's;$(CONF_TMP_BASE);$(CONF_DIR)/.config;g' $(CONF_DIR)/.config.deps
-
-config: $(CONF_DIR) $(CONFIG_FILES)
+config:
+	@true
 
 checkconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--path=$(CONF_PATH) \
 		--input=$(CONF) --check		\
 		--build=$(BUILD)
-
-
-couple:
-	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(CONF_PATH) \
-		--input=$(CONF) --arch-cpu		\
-		--build=$(BUILD)
-
 
 listconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\

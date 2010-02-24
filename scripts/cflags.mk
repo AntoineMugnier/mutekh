@@ -68,7 +68,7 @@ INCS=-nostdinc -D__MUTEK__ \
 	-I$(CURRENT_DIR) \
 	-I$(BUILD_DIR) \
 	-I$(MUTEK_SRC_DIR) \
-	-include $(CONF_DIR)/.config.h
+	-include $(OBJ_DIR)/config.h
 
 cflags:
 	@echo $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS)
@@ -79,7 +79,7 @@ endif
 
 mkmf: $(TARGET_MK)
 
-$(TARGET_MK): $(CONF_DIR)/.config.mk
+$(TARGET_MK): $(OBJ_DIR)/config.mk
 	@> $@
 	@echo 'CC=$(CC)' >> $@
 	@echo 'LD=$(LD)' >> $@

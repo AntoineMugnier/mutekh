@@ -1,4 +1,3 @@
-CONF_DIR=$(BUILD_DIR)
 MKDOC=mkdoc
 
 include $(MUTEK_SRC_DIR)/doc/header_list.mk
