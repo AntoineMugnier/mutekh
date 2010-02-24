@@ -58,21 +58,36 @@ mkmf: config
 helpconfig listconfig showconfig listallconfig:
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/config.mk $@
 
+# Test for heterogeneous builds
+ifeq ($(EACH),)
+
+# not heterogeneous
+
 clean:
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ CLEANING=1 MAKEFLAGS=$(MAKEFLAGS)
 	-rm -f $(CONF_DIR)/.config.* 2>/dev/null
 
-FORCE::
-	@true
-
 config showpaths kernel cflags objs: FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ MAKEFLAGS=$(MAKEFLAGS)
 
+else
+
+# heterogeneous
+
+clean:
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/heterogeneous.mk $@ CLEANING=1 MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF)
+	-rm -f $(CONF_DIR)/.config.* 2>/dev/null
+
+kernel kernel-het: FORCE
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/heterogeneous.mk $@ MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF)
+
+endif # end heterogeneous
+
+FORCE::
+	@true
+
 kernel-postlink:  FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ MAKEFLAGS=$(MAKEFLAGS) POST_LDSCRIPT=$(POST_LDSCRIPT) POST_TARGET=$(POST_TARGET)
-
-kernel-het: 
-	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/heterogeneous.mk $@ MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF)
 
 doc: FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/doc.mk $@ MAKEFLAGS=$(MAKEFLAGS)

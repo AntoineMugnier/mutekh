@@ -1,17 +1,17 @@
 
 HETLINK=$(MUTEK_SRC_DIR)/tools/hlink/hetlink
 BUILDS:=$(subst :, ,$(EACH))
-COUPLES:=
 
-$(eval $(foreach c,$(BUILDS),$(call decl_conf,$(c))))
-
+CLEAN_TARGETS=$(foreach build,$(BUILDS),$(BUILD_DIR)/kernel-$(build)-clean)
 PRE_OBJS=$(foreach build,$(BUILDS),$(BUILD_DIR)/kernel-$(build).pre.o)
 HET_OBJS=$(foreach build,$(BUILDS),$(BUILD_DIR)/kernel-$(build).pre.o.het.o)
 HET_KERNELS=$(foreach build,$(BUILDS),$(BUILD_DIR)/kernel-$(build).het.out)
 
 export HETLINK
 
-kernel-het: $(HET_KERNELS)
+kernel-het: kernel
+
+kernel: $(HET_KERNELS)
 	echo "BUILDS: $(BUILDS)"
 	echo "HET_KERNELS: $(HET_KERNELS)"
 #	echo "PRE_OBJS: $(PRE_OBJS)"
@@ -20,11 +20,22 @@ kernel-het: $(HET_KERNELS)
 $(BUILD_DIR)/kernel-%.pre.o: FORCE
 	@echo "PRE $@"
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
-		 MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF) \
+		 MAKEFLAGS=$(MAKEFLAGS) \
+	     CONF=$(CONF) \
 	     BUILD=$(BUILD):$* \
 		 BUILD_DIR=$(BUILD_DIR) TARGET_EXT=pre.o \
 		 target=kernel-$* \
 		 kernel
+
+$(BUILD_DIR)/kernel-%-clean: FORCE
+	@echo "CLEAN $@"
+	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
+		 MAKEFLAGS=$(MAKEFLAGS) \
+	     CONF=$(CONF) \
+	     BUILD=$(BUILD):$* \
+		 BUILD_DIR=$(BUILD_DIR) TARGET_EXT=pre.o \
+		 target=kernel-$* \
+		 clean
 
 # We have to go through an unique target or the hetlink will be done
 # twice...
@@ -39,16 +50,18 @@ __do_hetlink : $(PRE_OBJS) $(HETLINK_CONF) FORCE
 
 $(BUILD_DIR)/kernel-%.het.out : $(BUILD_DIR)/kernel-%.pre.o.het.o FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
-		 MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF) \
+		 MAKEFLAGS=$(MAKEFLAGS) \
+		 CONF=$(CONF) \
 		 BUILD_DIR=$(BUILD_DIR) \
 		 BUILD=$(BUILD):$* \
 		 FINAL_LINK_TARGET=$@ \
 		 FINAL_LINK_SOURCE=$< \
 		 final_link
 
-clean:
+
+
+clean: $(CLEAN_TARGETS)
 	rm -f $(PRE_OBJS) $(HET_OBJS) $(HET_KERNELS)
-	rm -r $(foreach c,$(COUPLES),obj-$(c))
 
 .PHONY: FORCE
 
