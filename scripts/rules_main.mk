@@ -1,12 +1,9 @@
 POST_TARGET=__foo.out
 
 LDFLAGS=
-target = kernel-$(CONFIG_ARCH_NAME)-$(CONFIG_CPU_NAME)
 TARGET_EXT ?= out
 
 TARGET_SECTIONS=.text .data .boot .contextdata
-
-KERNEL_FILE=$(target).$(TARGET_EXT)
 
 LINKING=1
 ifeq ($(TARGET_EXT),o)
@@ -14,15 +11,19 @@ LINKING=0
 endif
 export LINKING
 
-OBJ_DIR:=$(shell cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
+OUT_NAME := $(shell cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--path=$(CONF_PATH)              \
 		--input=$(CONF)					 \
 		--build-path=$(BUILD_DIR)/obj-   \
-		--build=$(BUILD) --config)
+		--build=$(BUILD) --config $(CONFIG_FLAGS) )
 
-ifeq ($(OBJ_DIR),)
+ifeq ($(OUT_NAME),)
 $(error Configure script failed)
 endif
+
+OBJ_DIR := $(BUILD_DIR)/obj-$(OUT_NAME)
+target = $(subst /,-,$(OUT_NAME))
+KERNEL_FILE=$(target).$(TARGET_EXT)
 
 include $(OBJ_DIR)/config.mk
 
@@ -84,6 +85,8 @@ FORCE:
 
 kernel: $(OBJ_DIR)/$(KERNEL_FILE)
 	cp $< $(BUILD_DIR)
+	@echo 'BUILD DIR   ' $(OBJ_DIR)
+	@echo 'KERNEL      ' $(notdir $<)
 
 clean:
 	rm -f $(OBJ_DIR)/$(KERNEL_FILE) $(TARGET_OBJECT_LIST)

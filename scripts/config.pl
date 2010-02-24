@@ -30,6 +30,7 @@ use Term::ANSIColor;
 my @config_files;
 my @output_files;
 my %config_opts;
+my $quiet_flag = 0;
 my $err_flag = 0;
 my $bld_path = ".";
 
@@ -42,23 +43,37 @@ my %sec_types;
 my %sec_types_req;
 my %used_build = ( "default" => 1 );
 
-my %init_env = ( %ENV );		# initial environment
+my %vars;
 
 sub error
 {
+    $err_flag = 1;
+    return if $quiet_flag;
+
     my ($msg, @list) = @_;
     my $tlist = join(", ", @list) if (@list);
 
     print STDERR color('bold red')."error:".color('clear red')."$msg$tlist\n".color('reset');
-    $err_flag = 1;
 }
 
 sub warning
 {
+    return if $quiet_flag;
+
     my ($msg, @list) = @_;
     my $tlist = join(", ", @list) if (@list);
 
     print STDERR color('bold yellow')."warning:".color('reset')."$msg$tlist\n";
+}
+
+sub notice
+{
+    return if $quiet_flag;
+
+    my ($msg, @list) = @_;
+    my $tlist = join(", ", @list) if (@list);
+
+    print STDERR color('green')."notice:".color('reset')."$msg$tlist\n";
 }
 
 sub check_rule
@@ -331,7 +346,7 @@ sub process_file
 	    if ($state)
 	    {
 		$line =~ s/^\s*//g;
-		$line =~ s/\$\((\w+)\)/$init_env{$1}/ge;
+		$line =~ s/\$\((\w+)\)/$vars{$1}/ge;
 
 		my @line_l = split(/\s+/, $line);
 
@@ -381,7 +396,7 @@ sub explore
     foreach my $ent (<$dir/*.config>) {
 	my $rp = Cwd::realpath($ent);
 	push @config_files, $rp;
-	$init_env{CONFIGPATH} = dirname($rp);
+	$vars{CONFIGPATH} = dirname($rp);
 	process_file($ent);
     }
 }
@@ -901,8 +916,8 @@ sub read_myconfig
 
     push @config_files, Cwd::realpath($file);
 
-    $init_env{CONFIGSECTION} = 'common';
-    $init_env{CONFIGPATH} = $cd;
+    $vars{CONFIGSECTION} = 'common';
+    $vars{CONFIGPATH} = $cd;
 
     if (open(FILE, "<".$file))
     {
@@ -918,7 +933,7 @@ sub read_myconfig
 	    next if ($line =~ /^[ \t]*(\#.*)?$/);
 
 	    # replace env variables
-	    $line =~ s/\$\((\w+)\)/$init_env{$1}/ge;
+	    $line =~ s/\$\((\w+)\)/$vars{$1}/ge;
 
 	    if ($line =~ /^\s* %(sub)?section \s+ ([*\w\d\s-]+)/x)
 	    {
@@ -937,7 +952,7 @@ sub read_myconfig
 			    if ( $_ =~ /^$p_$/ ) {
 				$i = 0;
 				$used_build{$_} = 1;
-				$init_env{CONFIGSECTION} = $_ if ( !$s );
+				$vars{CONFIGSECTION} = $_ if ( !$s );
 			    }
 			}
 
@@ -979,7 +994,7 @@ sub read_myconfig
 
 	    if ($line =~ /^\s* %common\b/x)
 	    {
-		$init_env{CONFIGSECTION} = 'common';
+		$vars{CONFIGSECTION} = 'common';
 		@cur_sections = ( ["common"] );
 		@ignore = ( 0 );
 		next;
@@ -993,10 +1008,13 @@ sub read_myconfig
 			$sec_types{$t}++;
 		    }
 
-		    my $r = $sec_types_req{$t};
-		    $r = [] if ( ! $r );
-		    push @$r, $_ foreach (@{@cur_sections[0]});
-		    $sec_types_req{$t} = $r;
+		    # keep track of available sections for a declared types
+		    if (!@ignore[1]) {
+			my $r = $sec_types_req{$t};
+			$r = [] if ( ! $r );
+			push @$r, $_ foreach (@{@cur_sections[0]});
+			$sec_types_req{$t} = $r;
+		    }
 		}
 		next;
 	    }
@@ -1005,7 +1023,7 @@ sub read_myconfig
 
 	    if ($line =~ /^\s* %set \s+ (\w[\w\d]*) \s+ (.*?) \s*$/x)
 	    {
-		$init_env{$1} = $2;
+		$vars{$1} = $2;
 		next;
 	    }
 
@@ -1017,19 +1035,19 @@ sub read_myconfig
 
 	    if ($line =~ /^\s* %die \s+ (.*)$/x)
 	    {
-		error("$1");
+		error($1);
 		next;
 	    }
 
 	    if ($line =~ /^\s* %warning \s+ (.*)$/x)
 	    {
-		warning("$1");
+		warning($1);
 		next;
 	    }
 
 	    if ($line =~ /^\s* %notice \s+ (.*)$/x)
 	    {
-		print STDERR color('green')."notice:".color('reset')."$1\n";
+		notice($1);
 		next;
 	    }
 
@@ -1279,11 +1297,9 @@ sub write_makefile
 	}
 
 	print FILE ("\n# configuration variables\n\n");
-	foreach my $var (keys %init_env)
+	foreach my $var (keys %vars)
 	{
-	    next if $ENV{$var} eq $init_env{$var};
-
-	    print FILE "BUILD_$var=".$init_env{$var}."\n";
+	    print FILE "BUILD_$var=".$vars{$var}."\n";
 	}
 
 	close(FILE);
@@ -1527,21 +1543,27 @@ Usage: config.pl [options]
 	--build=name:...    Set build configuration enabled section names.
 
 	--src-path=dir:...  Set list of source directories to explore, default is `.'.
-	--build-path=dir    Set output directory base, default is './'.
-	--build-name=name   Set output directory base, default is './'.
+	--build-path=dir    Set output directory base, default is `./'.
+	--build-name=name   Set build name, default is `arch-cpu'.
+	--output-name=name  Set kernel binary name, default is 'kernel'.
 
         --config            Output .h, .py, .m4, .mk and .deps configuration in `config.*' files.
 	--check             Check configuration constraints without output.
 	--list[=all]        Display configuration tokens list.
 	--info=token        Display informations about `token'.
 	--docheader=file    Output header with documentation tags in `file' file.
+	--quiet             Do not output diagnostic messages.
+
 ";
 	return;
     }
 
-    delete $init_env{CONFIGSECTION};
-    delete $init_env{CONFIGPATH};
-    $init_env{BUILD_NAME} = $param_h{build_name};
+    delete $vars{CONFIGSECTION};
+    delete $vars{CONFIGPATH};
+    $vars{BUILD_NAME} = $param_h{build_name};
+    $vars{OUTPUT_NAME} = $param_h{output_name};
+
+    $quiet_flag = 1 if ($param_h{quiet});
 
     if ($param_h{src_path}) {
 	explore($_) foreach (split(/:/, $param_h{src_path}))
@@ -1573,13 +1595,18 @@ Usage: config.pl [options]
     set_config();
     preprocess_values();
 
-    if ( !$init_env{BUILD_NAME} ) {
-	my $arch = $config_opts{CONFIG_ARCH_NAME};
-	my $cpu = $config_opts{CONFIG_CPU_NAME};
-	$init_env{BUILD_NAME} = $$arch{value}."-".$$cpu{value};
+    if ( !$vars{OUTPUT_NAME} ) {
+	$vars{OUTPUT_NAME} = 'kernel';
     }
 
-    $bld_path .= $init_env{BUILD_NAME};
+    if ( !$vars{BUILD_NAME} ) {
+	my $arch = $config_opts{CONFIG_ARCH_NAME};
+	my $cpu = $config_opts{CONFIG_CPU_NAME};
+	$vars{BUILD_NAME} = $$arch{value}."-".$$cpu{value};
+    }
+
+    my $bld_name = $vars{OUTPUT_NAME}."-".$vars{BUILD_NAME};
+    $bld_path .= $bld_name;
 
     if ($param_h{list})
     {
@@ -1606,7 +1633,7 @@ Usage: config.pl [options]
 	error("unable to create build directory `$bld_path'") if (! -d $bld_path);
 	exit 1 if $err_flag;
 
-	print $bld_path."\n";
+	print $bld_name."\n";
 
 	if (write_header()) {
 	    write_makefile();

@@ -12,7 +12,7 @@ Some builds may require the following tools
   * The flattened device tree compiler (dtc): http://git.jdl.com/gitweb/
   * The heterogeneous linker found in tools/hlink/
 
-You my need real hardware or a simulator to run MutekH:
+You may need real hardware or a simulator to run MutekH:
 
   * http://www.qemu.org/ to try native x86 binaries
   * https://www.soclib.fr/ to experiment with various multiprocessor platforms

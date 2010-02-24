@@ -2,39 +2,39 @@
 HETLINK=$(MUTEK_SRC_DIR)/tools/hlink/hetlink
 BUILDS:=$(subst :, ,$(EACH))
 
-CLEAN_TARGETS=$(foreach build,$(BUILDS),$(BUILD_DIR)/kernel-$(build)-clean)
-PRE_OBJS=$(foreach build,$(BUILDS),$(BUILD_DIR)/kernel-$(build).pre.o)
-HET_OBJS=$(foreach build,$(BUILDS),$(BUILD_DIR)/kernel-$(build).pre.o.het.o)
-HET_KERNELS=$(foreach build,$(BUILDS),$(BUILD_DIR)/kernel-$(build).het.out)
+CLEAN_TARGETS=$(foreach build,$(BUILDS),$(BUILD_DIR)/het-kernel-$(build)-clean)
+PRE_OBJS=$(foreach build,$(BUILDS),$(BUILD_DIR)/het-kernel-$(build).pre.o)
+HET_OBJS=$(foreach build,$(BUILDS),$(BUILD_DIR)/het-kernel-$(build).pre.o.het.o)
+HET_KERNELS=$(foreach build,$(BUILDS),$(BUILD_DIR)/het-kernel-$(build).het.out)
 
 export HETLINK
 
 kernel-het: kernel
 
 kernel: $(HET_KERNELS)
-	echo "BUILDS: $(BUILDS)"
-	echo "HET_KERNELS: $(HET_KERNELS)"
+#	echo "BUILDS: $(BUILDS)"
+	echo "HET_KERNELS: "$(notdir $(HET_KERNELS))
 #	echo "PRE_OBJS: $(PRE_OBJS)"
 #	echo "HET_OBJS: $(HET_OBJS)"
 
-$(BUILD_DIR)/kernel-%.pre.o: FORCE
+$(BUILD_DIR)/het-kernel-%.pre.o: FORCE
 	@echo "PRE $@"
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
 		 MAKEFLAGS=$(MAKEFLAGS) \
 	     CONF=$(CONF) \
 	     BUILD=$(BUILD):$* \
 		 BUILD_DIR=$(BUILD_DIR) TARGET_EXT=pre.o \
-		 target=kernel-$* \
+		 target=het-kernel-$* \
 		 kernel
 
-$(BUILD_DIR)/kernel-%-clean: FORCE
+$(BUILD_DIR)/het-kernel-%-clean: FORCE
 	@echo "CLEAN $@"
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
 		 MAKEFLAGS=$(MAKEFLAGS) \
 	     CONF=$(CONF) \
 	     BUILD=$(BUILD):$* \
 		 BUILD_DIR=$(BUILD_DIR) TARGET_EXT=pre.o \
-		 target=kernel-$* \
+		 target=het-kernel-$* \
 		 clean
 
 # We have to go through an unique target or the hetlink will be done
@@ -48,10 +48,10 @@ __do_hetlink : $(PRE_OBJS) $(HETLINK_CONF) FORCE
 	echo '    HETLINK ' $(notdir $@)
 	$(HETLINK) -v 4 -c $(MUTEK_SRC_DIR)/scripts/hetlink.conf $(PRE_OBJS)
 
-$(BUILD_DIR)/kernel-%.het.out : $(BUILD_DIR)/kernel-%.pre.o.het.o FORCE
+$(BUILD_DIR)/het-kernel-%.het.out : $(BUILD_DIR)/het-kernel-%.pre.o.het.o FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk \
 		 MAKEFLAGS=$(MAKEFLAGS) \
-		 CONF=$(CONF) \
+		 CONF=$(CONF) CONFIG_FLAGS=--quiet \
 		 BUILD_DIR=$(BUILD_DIR) \
 		 BUILD=$(BUILD):$* \
 		 FINAL_LINK_TARGET=$@ \

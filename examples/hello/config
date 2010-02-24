@@ -13,5 +13,8 @@
   # Libs
   CONFIG_PTHREAD
 
+%set OUTPUT_NAME hello
+
 %include ../common/build_options.conf
 %include ../common/platforms.conf
+
