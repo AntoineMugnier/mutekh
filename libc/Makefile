@@ -25,5 +25,3 @@ doc_headers = \
 	sys/stat.h fileops.h ctype.h unistd.h	\
 	semaphore.h fcntl.h errno.h stdio.h time.h stdarg.h	\
 	stddef.h stdint.h stdlib.h setjmp.h string.h assert.h limits.h
-
-unistd.o_CFLAGS= -Wno-missing-braces -Wno-array-bounds

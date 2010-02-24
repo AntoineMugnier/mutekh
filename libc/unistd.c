@@ -18,6 +18,9 @@ struct fd_entry_s
 CONTAINER_TYPE(fdarray, DARRAY, struct fd_entry_s, 1, 256)
 CONTAINER_FUNC(fdarray, DARRAY, static, fdarray);
 
+/* This removes a tedious warning... */
+#define gpct_lock_CONTAINER_LOCK_fdarray_initializer {}
+
 static fdarray_root_t fd_array = CONTAINER_ROOT_INITIALIZER(fdarray, DARRAY);
 
 static fd_t fd_new(fdarray_root_t *fda)
