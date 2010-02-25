@@ -25,6 +25,7 @@ endif
 OBJ_DIR := $(BUILD_DIR)/obj-$(OUT_NAME)
 target = $(subst /,-,$(OUT_NAME))
 KERNEL_FILE=$(target).$(TARGET_EXT)
+FINAL_KERNEL_FILE=$(target).$(TARGET_EXT)
 
 include $(OBJ_DIR)/config.mk
 
@@ -85,7 +86,7 @@ showpaths:
 FORCE:
 
 kernel: $(OBJ_DIR)/$(KERNEL_FILE)
-	cp $< $(BUILD_DIR)
+	cp $< $(BUILD_DIR)/$(FINAL_KERNEL_FILE)
 	@echo 'BUILD DIR   ' $(OBJ_DIR)
 	@echo 'KERNEL      ' $(notdir $<)
 
