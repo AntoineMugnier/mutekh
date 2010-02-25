@@ -941,7 +941,7 @@ sub read_myconfig
 		my @sections = split(/\s+/, $2);
 		my $i = 1;
 
-		if (!$s || !@ignore[1]) {
+		if (!$s || !@ignore[0]) {
 
 		    foreach my $p (@sections) {
 
