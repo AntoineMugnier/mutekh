@@ -12,7 +12,7 @@ endif
 export LINKING
 
 OUT_NAME := $(shell cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(CONF_PATH)              \
+		--path=$(CONF_PATH):.            \
 		--input=$(CONF)					 \
 		--build-path=$(BUILD_DIR)/obj-   \
 		--build=$(BUILD) --config $(CONFIG_FLAGS) )
