@@ -33,7 +33,6 @@
 #include <hexo/error.h>
 #include <hexo/lock.h>
 #include <mutek/memory_allocator.h>
-#include <mutek/printk.h>
 
 #if defined(CONFIG_MUTEK_MEM_REGION)
 #include <mutek/mem_region.h>
@@ -94,6 +93,13 @@ static inline
 size_t mem_getsize(void *ptr)
 {
   return memory_allocator_getsize(ptr);
+}
+
+/** @this resize the given memory block, return NULL if failed */
+static inline
+void *mem_resize(void *ptr, size_t size)
+{
+  return memory_allocator_resize(ptr, size);
 }
 
 #endif

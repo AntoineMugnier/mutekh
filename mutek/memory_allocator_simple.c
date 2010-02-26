@@ -111,6 +111,12 @@ memory_allocator_extend(struct memory_allocator_region_s *region, void *start, s
   return NULL;
 }
 
+void *memory_allocator_resize(void *address, size_t size)
+{
+  return NULL;
+}
+
+
 void memory_allocator_push(void *ptr)
 {
 #ifdef CONFIG_MUTEK_MEMALLOC_DEBUG

@@ -33,7 +33,28 @@
 #include <hexo/error.h>
 #include <hexo/lock.h>
 
+/** Error code in memory allocator */
+enum mem_error_e
+  {
+    /** memory header crc invalid */
+    EMEMCRC = 1,
+    /** guard zone incorrect */
+    EMEMGUARD,
+    /** invalid use of free memory space */
+    EMEMDEBUG,
+    /** region size and addition of header size are not egal */
+    EMEMHDRSIZE,
+  };
+
+
 struct memory_allocator_region_s;
+
+/** @this contains memory check return value*/
+struct memory_allocator_check_s;
+
+extern struct memory_allocator_check_s mem_check;
+
+extern struct memory_allocator_region_s *default_region;
 
 /** @this initialize a memory region*/
 struct memory_allocator_region_s *
@@ -42,6 +63,9 @@ memory_allocator_init(struct memory_allocator_region_s *container_region, void *
 /** @this extend an existing memory region with a new memory space */
 struct memory_allocator_header_s *
 memory_allocator_extend(struct memory_allocator_region_s *region, void *start, size_t size);
+
+/** @this resize the given memory block */
+void *memory_allocator_resize(void *address, size_t size);
 
 /** @this allocate a new memory block in given region */
 void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size);
@@ -55,13 +79,15 @@ void *memory_allocator_reserve(struct memory_allocator_region_s *region, void *s
 /** @this return the size of given memory block */
 size_t memory_allocator_getsize(void *ptr);
 
-/** @this */
+/** @this return statistic of memory region use */
 error_t memory_allocator_stats(struct memory_allocator_region_s *region,
 			size_t *alloc_blocks,
 			size_t *free_size,
 			size_t *free_blocks);
 
-/** @this */
-bool_t memory_allocator_guard_check(struct memory_allocator_region_s *region);
+/** @this make memory region check depending to activated token: guard zone, headers' integrity (crc and size) 
+    and if free space was used */
+enum mem_error_e memory_allocator_region_check(struct memory_allocator_region_s *region
+				     , struct memory_allocator_check_s *check);
 
 #endif

@@ -1,6 +1,4 @@
-
 #include <mutek/mem_alloc.h>
-
 #include <string.h>
 #include <stdlib.h>
 
@@ -37,12 +35,17 @@ realloc(void *ptr, size_t size)
   if (ptr == NULL)
     return malloc(size);
 
+  if (size == 0)
+    {
+      free(ptr);
+      return NULL;
+    }
+
+  if( ( p = mem_resize(ptr, size) ) != NULL )
+    return p;
+
   oldsize = mem_getsize(ptr);
 
-  if (oldsize >= size)
-    return ptr;
-
-  
   if( ! (p = malloc(size)))
     return NULL;
 

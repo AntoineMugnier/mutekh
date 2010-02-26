@@ -14,6 +14,10 @@ ifeq ($(CONFIG_MUTEK_MEMALLOC_SMART), defined)
 objs += memory_allocator_smart.o					
 endif
 
+ifeq ($(CONFIG_MUTEK_MEMALLOC_EXPERIMENTAL), defined)
+objs += memory_allocator_experimental.o					
+endif
+
 ifeq ($(CONFIG_MUTEK_MEMALLOC_SIMPLE), defined)
 objs += memory_allocator_simple.o					
 endif
