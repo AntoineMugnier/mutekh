@@ -164,6 +164,12 @@ memory_allocator_extend(struct memory_allocator_region_s *region, void *start, s
     return h;
 }
 
+void *memory_allocator_resize(void *address, size_t size)
+{
+  return NULL;
+}
+
+
 # ifdef CONFIG_HEXO_MMU
 /** @internal */
 static inline struct memory_allocator_header_s *
