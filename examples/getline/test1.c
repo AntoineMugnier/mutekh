@@ -2,18 +2,14 @@
 #include <termui/term.h>
 #include <termui/getline.h>
 
-#include <pthread.h>
-
 extern struct device_s *console_dev;
-
-pthread_t a;
 
 static GETLINE_FCN_PROMPT(prompt)
 {
   return term_printf(tm, "[%31AMutekH%A] ");
 }
 
-void *f(void *param)
+void app_start()
 {
   struct term_s			*tm;
   struct term_behavior_s	*bhv;
@@ -58,10 +54,5 @@ void *f(void *param)
 
   while (1)
     ;
-}
-
-void app_start()
-{
-  pthread_create(&a, NULL, f, "Hello World\n");
 }
 

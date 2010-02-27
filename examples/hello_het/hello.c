@@ -2,7 +2,7 @@
 #include <pthread.h>
 #include <mutek/printk.h>
 
-pthread_mutex_t m;
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
 pthread_t a, b;
 
 void *f(void *param)
@@ -18,16 +18,15 @@ void *f(void *param)
 
 void app_start()
 {
-  switch (cpu_id())
+  /* every processor execute the app_start function due to CONFIG_MUTEK_SMP_APP_START */
+
+  switch (cpu_id() % 2)
     {
     case 0:
-      //    case 1:
-      pthread_mutex_init(&m, NULL);
       pthread_create(&a, NULL, f, "Hello\n");
       break;
 
     case 2:
-      //    case 3:
       pthread_create(&b, NULL, f, "World\n");
       break;
     }

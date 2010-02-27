@@ -231,6 +231,7 @@ void app_start()
       start = 1;
     }
 
+  /* every processor execute the app_start function due to CONFIG_MUTEK_SMP_APP_START */
   pthread_create(&PThreadTable[cpu_id()], NULL, (void * (*)(void *))(slave_sort), NULL);
 }
 
@@ -272,7 +273,11 @@ static void slave_sort()
   stats = dostats;
 
   pthread_mutex_lock(&(global->lock_Index));
-  printk("Thread started on cpu %i (%s)\n", cpu_id(), cpu_type_name());
+  printk("Thread started on cpu %i (%s)"
+#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
+	 " but threads migration is enabled"
+#endif
+	 "\n", cpu_id(), cpu_type_name());
   MyNum = global->Index;
   global->Index++;
   pthread_mutex_unlock(&(global->lock_Index));

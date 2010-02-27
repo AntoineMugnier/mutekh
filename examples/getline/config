@@ -1,21 +1,19 @@
 
-  %set OUTPUT_NAME capsule
+  %set OUTPUT_NAME getline
 
   # New source code module to be compiled
   CONFIG_MODULES +$(OUTPUT_NAME):$(CONFIGPATH)
 
   # Application license
-  CONFIG_LICENSE_APP_LGPL
+  CONFIG_LICENSE_APP_GPL
 
   # Mutek features
   CONFIG_MUTEK_CONSOLE
   CONFIG_MUTEK_MEMALLOC_SMART
 
   # Libs
-  CONFIG_CAPSULE
+  CONFIG_LIBTERMUI
 
-%common
-
-%include ../common/platforms.conf
 %include ../common/build_options.conf
+%include ../common/platforms.conf
 

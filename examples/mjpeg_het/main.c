@@ -92,7 +92,11 @@ static pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static void *run_task(srl_task_s *task)
 {
   pthread_mutex_lock(&print_lock);
-  printk("Starting %s task on %s processor %i\n", task->name, cpu_type_name(), cpu_id());
+  printk("Starting %s task on %s processor %i"
+#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
+	 " but threads migration is enabled"
+#endif
+	 "\n", task->name, cpu_type_name(), cpu_id());
   pthread_mutex_unlock(&print_lock);
 
   if ( task->bootstrap )
@@ -110,6 +114,7 @@ static volatile start = 0;
 
 int app_start()
 {
+  /* every processor execute the app_start function due to CONFIG_MUTEK_SMP_APP_START */
 
   switch (cpu_id())
     {

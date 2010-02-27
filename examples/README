@@ -1,70 +1,36 @@
 
+
 Required tools
 ==============
 
-Building MutekH requires the following software packages:
-
-  * A GNU compiler or cross-compiler, use tools/crossgen.mk to get one
-  * A perl interpreter
-
-Some builds may require the following tools
-
-  * The flattened device tree compiler (dtc): http://git.jdl.com/gitweb/
-  * The heterogeneous linker found in tools/hlink/
-
-You may need real hardware or a simulator to run MutekH:
-
-  * http://www.qemu.org/ to try native x86 binaries
-  * https://www.soclib.fr/ to experiment with various multiprocessor platforms
+See: https://www.mutekh.org/trac/mutekh/wiki/BuildingExamples
 
 
 Building examples
 =================
 
-Each example comes with its own config file which is used to configure
-the MutekH kernel build. This file contains application specific
-configuration to enable kernel features.
-
-Some other configuration options are related to target
-architecture. Some ready to use configuration sets for specific
-targets are factored in the common/ directory. These configuration
-files are organized in sections that can be enabled from the build
-command line. Look at the chosen example/config file to determine if
-it uses a custom configuration file or it relies on these common
-configuration sets.
-
-Here are make invocations for various target architectures to build
-examples which are using common configuration files:
+See: https://www.mutekh.org/trac/mutekh/wiki/BuildingExamples
 
 
-  * As unix process (no hardware needed), on x86_64 machine running Linux:
+Some available examples
+=======================
 
-    $ make CONF=examples/hello/config BUILD=emu-linux-x86_64
+ - hello: Multithread Hello world example.
 
+ - getline: libtermui readline feature demo
 
-  * Pc, x86 machine boot image
+ - libtermui_liblua: libtermui readline with lua script interpreter demo
 
-    $ make CONF=examples/hello/config BUILD=ibmpc-x86
+ - capsule: libcapsule distributed quick sort algorithm demo
 
+ - malloc_stress: Memory allocator stress test.
 
-  * For SoCLib simulator, Mips32 Little endian, for
-    caba-vgmn-mutekh_soclib_tutorial or
-    caba-vgmn-mutekh_kernel_tutorial platforms:
+ - hello_het: Multithread Hello world example for classical and
+   heterogeneous platforms.
 
-    $ make CONF=examples/hello/config BUILD=soclib-mips32el:pf-tutorial
+ - mjpeg_het: Pipelined multithread Mjpeg decoder test for classical
+   and heterogeneous platforms.
 
-
-  * Heterogeneous builds for SoCLib simulator, Mips32 LE and Arm processors for
-    caba-vgmn-mutekh_kernel_tutorial platform:
-
-    $ make kernel-het CONF=examples/hello_het/config BUILD=pf-het EACH=soclib-mips32el:soclib-arm
-
-
-
-More documentation available at:
-  * https://www.mutekh.org
-  * https://www.mutekh.org/trac/mutekh/wiki/BuildSystem
-  * https://www.mutekh.org/trac/mutekh/wiki/QuickStartUnix
-  * https://www.mutekh.org/trac/mutekh/wiki/Arch/Soclib/Tutorial
-  * https://www.mutekh.org/trac/mutekh/wiki/QuickStartSoclib
+ - splash_radix_het: Distributed multithread radix sort based on
+   splash2 benchmarks, for classical and heterogeneous platforms.
 

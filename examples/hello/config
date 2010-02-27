@@ -1,6 +1,8 @@
 
+  %set OUTPUT_NAME hello
+
   # New source code module to be compiled
-  CONFIG_MODULES +hello:$(CONFIGPATH)
+  CONFIG_MODULES +$(OUTPUT_NAME):$(CONFIGPATH)
 
   # Application license
   CONFIG_LICENSE_APP_LGPL
@@ -12,8 +14,6 @@
 
   # Libs
   CONFIG_PTHREAD
-
-%set OUTPUT_NAME hello
 
 %include ../common/build_options.conf
 %include ../common/platforms.conf
