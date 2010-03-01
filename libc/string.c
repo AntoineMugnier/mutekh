@@ -25,10 +25,7 @@
 #include <string.h>
 #include <ctype.h> /* FIXME */
 
-static const uintptr_t reg_t_log2_m1 =
-  sizeof(reg_t) == 1 ? 0 :
-  sizeof(reg_t) == 2 ? 1 :
-  sizeof(reg_t) == 4 ? 3 : 7;
+#define reg_t_log2_m1 (sizeof(reg_t)-1)
 
 /********************************/
 
@@ -41,14 +38,17 @@ inline void * memset(void *dst, int_fast8_t s, size_t count)
   reg_t *r;
 
   /* align */
-  while ((uintptr_t)a & reg_t_log2_m1)
+  while ( ((uintptr_t)a & reg_t_log2_m1) && count )
     count--, *a++ = s;
 
-  for (r = (reg_t*)a; (count & ~reg_t_log2_m1); count -= 4)
-    *r++ = v;
+  size_t ucount = count & reg_t_log2_m1;
+  count &= ~reg_t_log2_m1;
 
-  for (a = (int8_t*)r; count; count--)
-    *a++ = s;
+  for (r = (reg_t*)a; count; count -= sizeof(reg_t))
+      *r++ = v;
+
+  for (a = (int8_t*)r; ucount; ucount--)
+      *a++ = s;
 
   return dst;
 }
