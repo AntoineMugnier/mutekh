@@ -314,6 +314,9 @@ error_t vfs_node_open(struct vfs_node_s *node,
 
     assert( node->fs->ops->node_open != NULL );
 
+    if ( (flags & VFS_OPEN_WRITE) && (node->fs->flag_ro) )
+        return -EPERM;
+
 	VFS_STATS_INC(node->fs, node_open_count);
 
     vfs_node_lru_rehash(node);
