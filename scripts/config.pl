@@ -1069,8 +1069,6 @@ sub read_myconfig
 	    if ($line =~ /^\s* %include \s+ (\S+)/x)
 	    {
 		my $f = $1;
-		# replace env variables
-		$f =~ s/\$\((\w+)\)/$vars{$1}/ge;
 		$f = "$cd/$f" unless $f =~ /^\//;
 		read_myconfig( $f, $section );
 		next;
