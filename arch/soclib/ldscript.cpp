@@ -70,6 +70,7 @@ SECTIONS
 		*(.init*)
 		*(.text*)
 		*(.glue*)
+		*(.got2)
 	} > mem_hetrom
 
 	.rodata : {
@@ -152,7 +153,7 @@ SECTIONS
 	__initial_stack = __system_uncached_heap_end;
 
 	/* GOT section */
- 	/DISCARD/ : { *(.got2) }
+ 	/DISCARD/ : { *(.eh_frame) }
 
 	ASSERT(__system_uncached_heap_start == __bss_end, "Unlinked sections found, please report a bug")
 }
