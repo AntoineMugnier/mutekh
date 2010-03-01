@@ -61,11 +61,16 @@ asm(
         "   la      $sp,    __initial_stack - 16                                           \n"
         "   andi    $9,     $9,     0x000003ff                                             \n"
 
-#ifndef CONFIG_SMP
         "1:                                                                                \n"
+#ifndef CONFIG_SMP
+        /* spin if cpuid != 0 */
         "   bne     $0,     $9,     1b                                                     \n"
         "   nop                                                                            \n"
 #else
+        /* spin if cpuid >= CONFIG_CPU_MAXCOUNT */
+        "   slt     $8,     $9,     " ASM_STR(CONFIG_CPU_MAXCOUNT) "                       \n"
+        "   beq     $0,     $8,     1b                                                     \n"
+
         "   sll     $8,     $9,     10                                                     \n"
         "   subu    $sp,    $sp,    $8                                                     \n"
 #endif
