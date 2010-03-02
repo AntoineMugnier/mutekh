@@ -31,9 +31,10 @@
 
 #ifndef HAS_CPU_MEMSET
 #undef memset
-inline void * memset(void *dst, int_fast8_t s, size_t count)
+inline void * memset(void *dst, int_fast8_t _s, size_t count)
 {
-  const reg_t v = s * (reg_t)0x0101010101010101LL;
+  int8_t s = _s;
+  const reg_t v = (uint8_t)s * (reg_t)0x0101010101010101LL;
   int8_t *a = dst;
   reg_t *r;
 
@@ -548,10 +549,11 @@ char *strpbrk(const char *s1, const char *s2)
 
 #endif
 
-int_fast8_t memcstcmp(const void *s1, int_fast8_t v, size_t n)
+int_fast8_t memcstcmp(const void *s1, int_fast8_t _v, size_t n)
 {
     const int8_t *data = s1;
     size_t i;
+    const int8_t v = _v;
 
     for ( i=0; i<n; ++i ) {
         if ( data[i] != v )
