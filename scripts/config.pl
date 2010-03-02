@@ -80,7 +80,7 @@ sub check_rule
 {
     my ($orig, $rule) = @_;
 
-    $rule =~ /^([^\s=<>]+)([=<>]*)([^\s]*)$/;
+    $rule =~ /^(\w+)([=<>!]*)([^\s]*)$/;
     my $dep = $1;
     my $op = $2;
     my $val = $3;
@@ -97,21 +97,32 @@ sub check_rule
     {
 	return 1 if ($$opt{value} ne "undefined");
     }
-    elsif ($op eq "=")
+    elsif ($op eq "!")
     {
-	return 1 if ($$opt{value} eq $val);
-    }
-    elsif  ($op eq ">")
-    {
-	return 1 if ($$opt{value} > $val);
-    }
-    elsif  ($op eq "<")
-    {
-	return 1 if ($$opt{value} < $val);
+	return 1 if ($$opt{value} eq "undefined");
     }
     else
     {
-	error($$orig{location}.": bad operator in assertion for `".$$opt{name}."' token");
+	if ($op eq "=")
+	{
+	    return 1 if ($$opt{value} eq $val);
+	}
+	elsif  ($op eq ">")
+	{
+	    return 1 if ($$opt{value} > $val);
+	}
+	elsif  ($op eq "<")
+	{
+	    return 1 if ($$opt{value} < $val);
+	}
+	else
+	{
+	    error($$orig{location}.": bad operator in assertion for `".$$opt{name}."' token");
+	}
+
+	error($$orig{location}.": `".$$orig{name}."' token use ".
+	      "a value condition on `".$dep."' token which has the `value' flag missing")
+	    if (!$$opt{flags}->{value});
     }
 
     return 0;
@@ -180,13 +191,13 @@ sub cmd_flags
 
     foreach my $flag (@args)
     {
-	if (defined $$opts{$flag})
+	if (defined $$opts{flags}->{$flag})
 	{
 	    warning($location.": unable to set flag `".$flag."' for `".$$opts{name}." token'");
 	}
 	else
 	{
-	    $$opts{$flag} = 1;
+	    $$opts{flags}->{$flag} = 1;
 	}
     }
 }
@@ -205,11 +216,29 @@ sub cmd_suggest
     push(@{$$opts{suggest}}, "@args");
 }
 
+sub cmd_when
+{
+    my ($location, $opts, @args) = @_;
+
+    push(@{$$opts{when}}, "@args");
+}
+
 sub cmd_single
 {
     my ($location, $opts, @args) = @_;
 
     push(@{$$opts{single}}, "@args");
+}
+
+sub cmd_module
+{
+    my ($location, $opts, $name, @desc) = @_;
+
+    $$opts{module} = {
+	name => $name,
+	description => join(" ", @desc),
+	path => $vars{CONFIGPATH}
+    };
 }
 
 sub cmd_fallback
@@ -236,6 +265,8 @@ my %config_cmd =
  "require" => \&cmd_require,
  "single" => \&cmd_single,
  "suggest" => \&cmd_suggest,
+ "when" => \&cmd_when,
+ "module" => \&cmd_module,
  "fallback" => \&cmd_fallback,
  "provide" => \&cmd_provide,
  "desc" => \&cmd_desc,
@@ -327,13 +358,13 @@ sub process_file
 		    $$opts{parent} = [];
 		    $$opts{require} = [];
 		    $$opts{suggest} = [];
+		    $$opts{when} = [];
 		    $$opts{single} = [];
 		    $$opts{desc} = [];
 		    $$opts{provide} = [];
 		    $$opts{provided_by} = [];
 		    $$opts{exclude} = [];
 		    $$opts{provided_count} = 0;
-		    $$opts{module} = $module;
 		    $state = 1;
 
 		}
@@ -426,44 +457,39 @@ sub process_config_depend
 	{
 	    my $opt = $config_opts{$dep};
 
-	    if ($opt)
-	    {
-		if ($$opt{value} ne "undefined")
-		{
-		    $flag += process_config_depend($opt);
-		}
-	    }
-	    else
+	    if (!$opt)
 	    {
 		warning($$orig{location}.": `".$$orig{name}."' depends on undeclared token `".$dep."', ignored.");
+		next;
+	    }
+
+	    if ($$opt{value} ne "undefined")
+	    {
+		$flag += process_config_depend($opt);
 	    }
 	}
 
 	# return 0 if dependency not ok
 	if (not $flag)
 	{
-		warning($$orig{vlocation}.": `".$$orig{name}."' token will be undefined ".
+		notice("`".$$orig{name}."' token will be undefined ".
 			"due to unmet dependencies; dependencies list is: ",
 			@deps_and);
 
-		if (my $fb = $$orig{fallback})
+		if (my $dep = $$orig{fallback})
 		{
-		    $fb =~ /^([^\s=]+)=?([^\s]*)$/;
-		    my $dep = $1;
-		    my $val = $2 ? $2 : "defined";
 		    my $opt = $config_opts{$dep};
 
 		    if ($opt)
 		    {
 			if ($$opt{value} eq "undefined")
 			{
-			    warning("using `".$fb."' as fall-back definition for `".$$orig{name}."'.");
-			    $$opt{value} = $val;
-			    process_config_provide($opt);
+			    notice("using `".$dep."' as fallback option for `".$$orig{name}."'.");
+			    $$opt{value} = 'defined';
 			}
 			else
 			{
-			    warning("`".$dep."' fall-back token for `".$$orig{name}."' has already been defined, good.");
+			    notice("`".$dep."' fallback token for `".$$orig{name}."' has already been defined, good.");
 			}
 		    }
 		}
@@ -476,6 +502,40 @@ sub process_config_depend
 
     return $res;
 }
+
+##
+## checks auto define conditions
+##
+
+sub process_config_when
+{
+    my ($orig) = @_;
+
+    return if (defined $depend_cache{$$orig{name}."when"});
+
+    my $res;
+    foreach my $dep_and (@{$$orig{when}})
+    {
+	my @deps_and = split(/\s+/, $dep_and);
+	$res = 1;
+
+	foreach my $rule (@deps_and)
+	{
+	    if (!check_rule($orig, $rule))
+	    {
+		$res = 0;
+		last;
+	    }
+	}
+
+	last if $res;
+    }
+
+    $depend_cache{$$orig{name}."when"} = $res;
+
+    return $res;
+}
+
 
 ##
 ## at least one parent must be defined
@@ -563,7 +623,7 @@ sub process_config_require
 
 	if (not $flag)
 	{
-	    error($$orig{vlocation}.": `".$$orig{name}."' token is defined ".
+	    error("`".$$orig{name}."' token is defined ".
 		  "but has unmet requirements; requirements list is: ",
 		  @deps_and);
 	}
@@ -630,9 +690,6 @@ sub process_config_provide
 {
     my ($orig) = @_;
 
-    return if ($$orig{provide_done});
-    $$orig{provide_done} = 1;
-
     foreach my $rule (@{$$orig{provide}})
     {
 	$rule =~ /^([^\s=]+)=?([^\s]*)$/;
@@ -640,13 +697,19 @@ sub process_config_provide
 	my $val = $2 ? $2 : "defined";
 	my $opt = $config_opts{$dep};
 
-	my $concat = 0;
-
-	if ($val =~ /^\+(.*)/)
+	if ($$orig{flags}->{value})
 	{
-	    $val = $1;
-	    $concat = 1;
+	    error($$orig{location}.": `".$$orig{name}."' is a value token and can not use `provide'");
+	    return;
 	}
+
+	if (!$$opt{flags}->{value})
+	{
+	    error($$orig{location}.": `".$$orig{name}."' token provides ".
+		  "the `".$dep."' token which has the `value' flag missing");
+	}
+
+	next if ($$orig{value} eq "undefined");
 
 	if ($val eq "undefined")
 	{
@@ -661,67 +724,18 @@ sub process_config_provide
 	    {		
 		$$opt{value} = $val;
 		$$opt{vlocation} = $$orig{location};
+		$$opt{provided_count}++;
 	    }
-	    else
+	    elsif ($$opt{value} ne $val)
 	    {
-		# if value start with a '+' it must be concatened
-		if ($concat)
-		{
-		    $$opt{value} .= " " . $val;
-		}
-		elsif ($val ne $$opt{value})
-		{
-		    error($$orig{location}.": `".$$orig{name}."' token provides ".
-			  "already defined token `".$dep."' with a different value;".
-			  " previous value definition was at ".$$opt{vlocation});
-		}
-
-		# prevent previously defined tokens from being undefined by unprovide
-		if (not $$opt{provided_count})
-		{
-		    $$opt{provided_count}++;
-		}
-
+		error($$orig{location}.": `".$$orig{name}."' token provides ".
+		      "already defined token `".$dep."' with a different value `".$val."';".
+		      " previous value definition was `".$$opt{value}."' at ".$$opt{vlocation});
 	    }
-	    $$opt{provided_count}++;
-
-	    process_config_provide($opt);
 	}
 	else
 	{
 	    warning($$orig{location}.": `".$$orig{name}."' provides undeclared token `".$dep."', ignored.");
-	}
-    }
-}
-
-##
-## cancels/removes provided tokens
-##
-
-sub process_config_unprovide
-{
-    my ($orig) = @_;
-
-    foreach my $rule (@{$$orig{provide}})
-    {
-	$rule =~ /^([^\s=]+)=?([^\s]*)$/;
-	my $dep = $1;
-	my $val = $2;
-	my $opt = $config_opts{$dep};
-
-	if ($opt)
-	{
-	    $$opt{provided_count}--;
-
-	    # if value start with a '+' it must be deleted from string
-	    if ($val =~ /^\+(.*)/)
-	    {
-		$$opt{value} =~ s/\b$1\b//;
-	    }
-	    elsif ($$opt{provided_count} < 1)
-	    {
-		$$opt{value} = "undefined";
-	    }
 	}
     }
 }
@@ -798,14 +812,34 @@ sub set_config
     }
 
     # provides all tokens
-
+ 
     foreach my $opt (values %config_opts)
     {
-	if ($$opt{value} ne "undefined")
+	process_config_provide($opt);
+    }
+
+    my $changed;
+
+    do
+    {
+	$changed = 0;
+	%depend_cache = ();
+
+	foreach my $opt (values %config_opts)
 	{
-	    process_config_provide($opt);
+	    if ($$opt{value} eq "undefined" && !$$opt{flags}->{userdefined})
+	    {
+		if ( process_config_when($opt) )
+		{
+		    $$opt{value} = "defined";
+		    $changed = 1;
+		    process_config_provide($opt);
+		    last;
+		}
+	    }
 	}
     }
+    until (not $changed);
 
     foreach my $opt (values %config_opts)
     {
@@ -854,6 +888,19 @@ sub check_config
 		error($$opt{location}.": `".$$opt{name}."' fall-back to self");
 	    }
 	}
+
+	if ($$opt{flags}->{value})
+	{
+	    if (scalar @{$$opt{depend}})
+	    {
+		error($$opt{location}.": `".$$opt{name}."' value token can not use `depend'.");
+	    }
+
+	    if (scalar @{$$opt{provide}} || scalar @{$$opt{when}})
+	    {
+		error($$opt{location}.": `".$$opt{name}."' value token can not use `when' or `provide'.");
+	    }
+	}
     }
 
     # checks and adjusts dependencies
@@ -867,12 +914,10 @@ sub check_config
 	{
 	    if ($$opt{value} ne "undefined")
 	    {
-		if (not process_config_parent($opt) or
-		    not process_config_depend($opt)
-		    )
+		if ( not process_config_parent($opt) or
+		     not process_config_depend($opt) )
 		{
 		    $$opt{value} = "undefined";
-		    process_config_unprovide($opt);
 		    $changed = 1;
 		    last;
 		}
@@ -901,9 +946,17 @@ sub check_config
 	    process_config_suggest($opt);
 	}
 
-	if ($$opt{mandatory} and ($$opt{value} eq "undefined"))
+	if ($$opt{flags}->{mandatory} and ($$opt{value} eq "undefined"))
 	{
 	    error($$opt{vlocation}.": `".$$opt{name}."' token can not be undefined");
+	}
+    }
+
+    foreach my $opt (values %config_opts)
+    {
+	if ($$opt{value} eq "defined" && defined $$opt{module})
+	{
+	    $vars{MODULES} .= " ".$$opt{module}->{name}.":".$$opt{module}->{path};
 	}
     }
 }
@@ -1027,6 +1080,12 @@ sub read_myconfig
 		next;
 	    }
 
+	    if ($line =~ /^\s* %append \s+ (\w[\w\d]*) \s+ (.*?) \s*$/x)
+	    {
+		$vars{$1} .= " $2";
+		next;
+	    }
+
 	    if ($line =~ /^\s* %error \s+ (.*)$/x)
 	    {
 		error("$file:$lnum: $1");
@@ -1077,7 +1136,7 @@ sub read_myconfig
 	    if ($line =~ /^\s* (\w[\w\d]*) (?: \s+(\S+) )?/x)
 	    {
 		my $opt = $config_opts{$1};
-        my $val = $2;
+		my $val = $2;
 
 		if (not $opt)
 		{
@@ -1085,29 +1144,16 @@ sub read_myconfig
 		}
 		else
 		{
-		    if ($$opt{nodefine})
+		    if ($$opt{flags}->{nodefine})
 		    {
 			error("$file:$lnum: `".$$opt{name}."' token can not be defined directly;".
 			      " it must be provided by defining other appropriate token(s) instead.");
 		    }
 
-		    if (defined $val)
-		    {
-                if ($val =~ /^\+(.*)/)
-                {
-                    $$opt{value} .= " ".$1;
-                }
-                else
-                {
-                    $$opt{value} = $val;
-                }
-		    }
-		    else
-		    {
-			$$opt{value} = "defined";
-		    }
-
+		    $val = "defined" if (!defined $val);
+		    $$opt{value} = $val;
 		    $$opt{vlocation} = "$file:$lnum";
+		    $$opt{flags}->{userdefined} = 1;
 		}
 		next;
 	    }
@@ -1138,7 +1184,7 @@ sub write_header
 
 	foreach my $opt (sort { $$a{name} cmp $$b{name} } values %config_opts)
 	{
-	    next if $$opt{noexport} or $$opt{noheader};
+	    next if $$opt{flags}->{noexport} or $$opt{flags}->{noheader};
 
 	    if ($$opt{value} eq "undefined")
 	    {
@@ -1190,7 +1236,7 @@ sub write_doc_header
 	{
 	    my @desc = @{$$opt{"desc"}};
 
-	    next if $$opt{noexport} or $$opt{noheader};
+	    next if $$opt{flags}->{noexport} or $$opt{flags}->{noheader};
 
 	    my $pwd = Cwd::realpath($ENV{PWD});
 	    my $loc = $$opt{location};
@@ -1291,7 +1337,7 @@ sub write_makefile
 	print FILE ("\n# configuration options\n\n");
 	foreach my $opt (values %config_opts)
 	{
-	    next if $$opt{noexport} or $$opt{nomakefile};
+	    next if $$opt{flags}->{noexport} or $$opt{flags}->{nomakefile};
 
 	    print FILE $$opt{name}."=".$$opt{value}."\n";
 	}
@@ -1320,7 +1366,7 @@ sub write_m4
     {
 	foreach my $opt (values %config_opts)
 	{
-	    next if $$opt{noexport};
+	    next if $$opt{flags}->{noexport};
 
 	    print FILE "m4_define(".$$opt{name}.", `".$$opt{value}."')\n";
 	}
@@ -1343,7 +1389,7 @@ sub write_py
     {
 	foreach my $opt (values %config_opts)
 	{
-	    next if $$opt{noexport};
+	    next if $$opt{flags}->{noexport};
 
 	    print FILE $$opt{name}." = '".$$opt{value}."'\n";
 	}
@@ -1358,7 +1404,7 @@ sub write_py
 
 sub tokens_list
 {
-    printf("\n    %-40s %s \n", "Configuration token name", "Declare location");
+    printf("\n %-4s %-40s %-16s %s \n", "", "Configuration token name", "Value", "Declare location");
     print ("="x79, "\n\n");
 
     foreach my $name (sort keys %config_opts)
@@ -1368,7 +1414,7 @@ sub tokens_list
 
 	if (not ($param_h{list} eq "all"))
 	{
-	    next if ($$opt{nodefine});
+	    next if ($$opt{flags}->{nodefine});
 
 	    # hide entry if all parents are disabled
 	    if (my @list = @{$$opt{parent}})
@@ -1386,22 +1432,23 @@ sub tokens_list
 	    }
 	}
 
-	if ($$opt{value} eq "undefined") {
-	    $attr = " ";
-	} elsif ($$opt{provided_count}) {
-	    $attr = "p";
-	} elsif ($$opt{mandatory}) {
-	    $attr = "m";
-	} elsif ($$opt{value} ne "defined") {
-	    $attr = "v";
-	} else {
-	    $attr = "+";
+	if ($$opt{provided_count}) {
+	    $attr .= "p";
+	}
+	if ($$opt{flags}->{mandatory}) {
+	    $attr .= "m";
+	}
+	if ($$opt{flags}->{value}) {
+	    $attr .= "v";
+	}
+	if ($$opt{flags}->{nodefine}) {
+	    $attr .= "n";
 	}
 
-	printf(" %s  %-40s (%s)\n", $attr, $name, $$opt{location});
+	printf(" %-4s %-40s %-16s %s\n", $attr, $name, $$opt{value}, basename($$opt{location}));
     }
 
-    print("\n    (+) defined, (p) provided, (m) mandatory, (v) value.\n\n");
+    print("\n    (n) no user define (p) provided, (m) mandatory, (v) value.\n\n");
 }
 
 sub tokens_info
@@ -1422,16 +1469,16 @@ sub tokens_info
 
     if (my @desc = @{$$opt{"desc"}})
     {
-	print text80("@desc", "  ")."\n";
+	print join(" ", @desc)."\n";
     }
     else
     {
 	print "(no description)\n";
     }
 
-    print("\n  This token is mandatory and can not be undefined.\n") if $$opt{mandatory};
+    print("\n  This token is mandatory and can not be undefined.\n") if $$opt{flags}->{mandatory};
 
-    print("\n  This token can not be defined directly by user.\n") if $$opt{nodefine};
+    print("\n  This token can not be defined directly by user.\n") if $$opt{flags}->{nodefine};
 
     printf("
   declared at   :  %s
@@ -1452,8 +1499,7 @@ sub tokens_info
 
 	foreach my $dep_and (@list)
 	{
-	    print text80(join(" or ", split(/\s+/, $dep_and)),
-			 "      ", "    * ")."\n";
+	    print " * ".join(" or ", split(/\s+/, $dep_and))."\n";
 	}
     }
 
@@ -1463,8 +1509,7 @@ sub tokens_info
 
 	foreach my $dep_and (@list)
 	{
-	    print text80(join(" or ", split(/\s+/, $dep_and)),
-			 "      ", "    * ")."\n";
+	    print " * ".join(" or ", split(/\s+/, $dep_and))."\n";
 	}
     }
 
@@ -1474,8 +1519,7 @@ sub tokens_info
 
 	foreach my $dep_and (@list)
 	{
-	    print text80(join(" or ", split(/\s+/, $dep_and)),
-			 "      ", "    * ")."\n";
+	    print " * ".join(" or ", split(/\s+/, $dep_and))."\n";
 	}
     }
 
@@ -1485,8 +1529,7 @@ sub tokens_info
 
 	foreach my $dep (@list)
 	{
-	    print text80(join(" or ", split(/\s+/, $dep)),
-			 "      ", "    * ")."\n";
+	    print " * ".join(" or ", split(/\s+/, $dep))."\n";
 	}
     }
 
@@ -1496,8 +1539,7 @@ sub tokens_info
 
 	foreach my $dep (@list)
 	{
-	    print text80(join(" or ", split(/\s+/, $dep)),
-			 "      ", "    * ")."\n";
+	    print " * ".join(" or ", split(/\s+/, $dep))."\n";
 	}
     }
 
@@ -1507,8 +1549,7 @@ sub tokens_info
 
 	foreach my $dep (@list)
 	{
-	    print text80(join(" or ", split(/\s+/, $dep)),
-			 "      ", "    * ")."\n";
+	    print " * ".join(" or ", split(/\s+/, $dep))."\n";
 	}
     }
 
@@ -1594,7 +1635,7 @@ Usage: config.pl [options]
     exit 1 if $err_flag;
 
     set_config();
-    preprocess_values();
+    check_config();
 
     if ( !$vars{OUTPUT_NAME} ) {
 	$vars{OUTPUT_NAME} = 'kernel';
@@ -1611,23 +1652,18 @@ Usage: config.pl [options]
 
     if ($param_h{list})
     {
-	check_config();
 	tokens_list();
 	return;
     }
 
     if ($param_h{info})
     {
-	check_config();
 	set_provided_by();
 	tokens_info($param_h{info});
 	return;
     }
 
-    if ($param_h{config} or $param_h{check}) {
-	check_config();
-	exit 1 if $err_flag;
-    }
+    exit 1 if $err_flag;
 
     if ($param_h{config}) {
 	mkpath($bld_path);

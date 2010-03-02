@@ -1,7 +1,5 @@
 
-BASE_MODULES += libc hexo mutek gpct drivers
-
-MODULES = $(CONFIG_MODULES) $(foreach mod,$(BASE_MODULES),$(mod):$(MUTEK_SRC_DIR)/$(mod))
+MODULES = $(BUILD_MODULES) # $(foreach mod,$(BASE_MODULES),$(mod):$(MUTEK_SRC_DIR)/$(mod))
 
 # filter module names
 MODULE_NAMES := $(foreach modwd,$(MODULES),$(shell echo $(modwd) | cut -d: -f1))

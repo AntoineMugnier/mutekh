@@ -1,6 +1,6 @@
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/lock_test:$(CONFIGPATH)
+  %append MODULES examples/lock_test:$(CONFIGPATH)
 
 # Program license
   CONFIG_LICENSE_APP_GPL

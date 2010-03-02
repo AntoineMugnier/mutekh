@@ -21,7 +21,7 @@
 
 /**
  * @file
- * @module{Devices}
+ * @module{Device drivers}
  * @short Liquide cristal display driver API
  */
 

@@ -84,11 +84,13 @@ DEV_IRQ(xicu_filter_handler)
 
 DEVICU_SETUPIPI(xicu_filter_setupipi)
 {
+#ifdef CONFIG_HEXO_IPI
 	struct xicu_filter_private_s *pv = dev->drv_pv;
 
 	xicu_root_set_ipi_handler(PARENT(dev), ipi_no&0x1f, (dev_irq_t*)ipi_process_rq, NULL);
 	xicu_root_enable_ipi(PARENT(dev), ipi_no&0x1f, pv->output, 1);
 
+#endif
 	return (void*)(uintptr_t)ipi_no;
 }
 

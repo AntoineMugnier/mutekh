@@ -6,7 +6,7 @@
 #include <hexo/ipi.h>
 #endif
 
-#include <drivers/device/enum/fdt/enum-fdt.h>
+#include <drivers/enum/fdt/enum-fdt.h>
 #include <device/icu.h>
 #include <device/device.h>
 #include <device/driver.h>

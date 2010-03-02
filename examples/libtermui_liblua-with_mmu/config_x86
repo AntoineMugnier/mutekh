@@ -32,5 +32,5 @@ CONFIG_DRIVER_ICU_8259
 CONFIG_LIBTERMUI
 CONFIG_LIBLUA
 
-CONFIG_MODULES examples/libtermui_liblua:$(CONFIGPATH)
+%append MODULES examples/libtermui_liblua:$(CONFIGPATH)
 

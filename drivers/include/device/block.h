@@ -21,7 +21,7 @@
 
 /**
  * @file
- * @module{Devices}
+ * @module{Device drivers}
  * @short Block device driver API
  */                                                                 
 

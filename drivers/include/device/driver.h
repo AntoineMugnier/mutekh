@@ -21,7 +21,7 @@
 
 /**                                                                 
  * @file                                                            
- * @module{Devices}
+ * @module{Device drivers}
  * @short Driver classes definitions
  */                                                                 
 

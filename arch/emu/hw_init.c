@@ -31,9 +31,9 @@
 #include <hexo/cpu.h>
 #include <mutek/scheduler.h>
 
-#include <drivers/device/char/tty-emu/tty-emu.h>
-#include <drivers/device/timer/emu/timer-emu.h>
-#include <drivers/device/block/file-emu/block-file-emu.h>
+#include <drivers/char/tty-emu/tty-emu.h>
+#include <drivers/timer/emu/timer-emu.h>
+#include <drivers/block/file-emu/block-file-emu.h>
 
 #include <device/device.h>
 #include <device/driver.h>

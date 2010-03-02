@@ -1,7 +1,7 @@
 
 #include <hexo/interrupt.h>
-#include <drivers/device/icu/8259/icu-8259.h>
-#include <drivers/device/block/ata/block-ata.h>
+#include <drivers/icu/8259/icu-8259.h>
+#include <drivers/block/ata/block-ata.h>
 #include <device/device.h>
 #include <device/driver.h>
 

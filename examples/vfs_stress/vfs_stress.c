@@ -6,7 +6,7 @@
 
 #include <vfs/vfs.h>
 
-#include <drivers/fs/ramfs/ramfs.h>
+#include <libvfs/fs/ramfs/ramfs.h>
 
 #include "my_rand.h"
 

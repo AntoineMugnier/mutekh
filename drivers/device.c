@@ -19,7 +19,7 @@
 
 */
 
-#include <drivers/device/enum/root/enum-root.h>
+#include <drivers/enum/root/enum-root.h>
 
 #include <device/device.h>
 #include <device/driver.h>

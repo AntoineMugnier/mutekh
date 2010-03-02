@@ -2,15 +2,12 @@
   %set OUTPUT_NAME mjpeg_het
 
 # New source code module to be compiled
-  CONFIG_MODULES +$(OUTPUT_NAME):$(CONFIGPATH)
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
 
 # Application license
   CONFIG_LICENSE_APP_GPL
 
 # Mutek features
-  CONFIG_MUTEK_CONSOLE
-  CONFIG_MUTEK_SCHEDULER_MIGRATION
-  CONFIG_MUTEK_MEMALLOC_SMART
   CONFIG_MUTEK_SMP_APP_START
 
 # Libs

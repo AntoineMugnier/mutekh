@@ -1,7 +1,7 @@
 
-#include <drivers/device/char/random/random.h>
-#include <drivers/device/char/null/null.h>
-#include <drivers/device/char/zero/zero.h>
+#include <drivers/char/random/random.h>
+#include <drivers/char/null/null.h>
+#include <drivers/char/zero/zero.h>
 
 #include <stdint.h>
 #include <stdio.h>

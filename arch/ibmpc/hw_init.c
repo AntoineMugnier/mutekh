@@ -11,18 +11,18 @@
 #include <hexo/cpu.h>
 #include <mutek/scheduler.h>
 
-#include <drivers/device/char/uart-8250/uart-8250.h>
-#include <drivers/device/char/tty-vga/tty-vga.h>
-#include <drivers/device/icu/8259/icu-8259.h>
-#include <drivers/device/block/sd-mmc/sd-mmc.h>
-#include <drivers/device/timer/8253/timer-8253.h>
-#include <drivers/device/input/8042/input-8042.h>
-#include <drivers/device/input/mt5-f/mt5-f.h>
-#include <drivers/device/fb/vga/fb-vga.h>
-#include <drivers/device/enum/pci/enum-pci.h>
-#include <drivers/device/enum/isapnp/enum-isapnp.h>
-#include <drivers/device/net/ne2000/net-ne2000.h>
-#include <drivers/device/lcd/s1d15g00/s1d15g00.h>
+#include <drivers/char/uart-8250/uart-8250.h>
+#include <drivers/char/tty-vga/tty-vga.h>
+#include <drivers/icu/8259/icu-8259.h>
+#include <drivers/block/sd-mmc/sd-mmc.h>
+#include <drivers/timer/8253/timer-8253.h>
+#include <drivers/input/8042/input-8042.h>
+#include <drivers/input/mt5-f/mt5-f.h>
+#include <drivers/fb/vga/fb-vga.h>
+#include <drivers/enum/pci/enum-pci.h>
+#include <drivers/enum/isapnp/enum-isapnp.h>
+#include <drivers/net/ne2000/net-ne2000.h>
+#include <drivers/lcd/s1d15g00/s1d15g00.h>
 
 #include <device/device.h>
 #include <device/driver.h>

@@ -24,7 +24,7 @@
   CONFIG_DRIVER_TIMER_SOCLIB
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/hello:$(CONFIGPATH)
+  %append MODULES examples/hello:$(CONFIGPATH)
 
 CONFIG_ROM_ADDR 0x60100000
 CONFIG_ROM_SIZE 0x00100000

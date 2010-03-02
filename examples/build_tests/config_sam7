@@ -1,6 +1,6 @@
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/hello:$(CONFIGPATH)
+  %append MODULES examples/hello:$(CONFIGPATH)
 
 CONFIG_LICENSE_APP_GPL
 
@@ -22,7 +22,7 @@ CONFIG_MUTEK_CONSOLE
 
 CONFIG_MUTEK_SCHEDULER_STATIC
 
-CONFIG_MODULES app:$(CONFIGPATH)
+%append MODULES app:$(CONFIGPATH)
 
 
 CONFIG_COMPILE_DEBUG

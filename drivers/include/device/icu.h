@@ -21,7 +21,7 @@
 
 /**
  * @file
- * @module{Devices}
+ * @module{Device drivers}
  * @short Interrupt controller driver API
  */
 

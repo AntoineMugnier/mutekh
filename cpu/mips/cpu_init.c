@@ -28,8 +28,8 @@
 #include <hexo/interrupt.h>
 
 #if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_ARCH_SOCLIB)
-# include <drivers/device/enum/fdt/enum-fdt.h>
-# include <drivers/device/icu/mips/icu-mips.h>
+# include <drivers/enum/fdt/enum-fdt.h>
+# include <drivers/icu/mips/icu-mips.h>
 # include <device/device.h>
 
 extern struct device_s fdt_enum_dev;

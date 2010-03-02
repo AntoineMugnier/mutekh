@@ -37,4 +37,4 @@
   CONFIG_DRIVER_CHAR_RANDOM
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/vmem:$(CONFIGPATH)
+  %append MODULES examples/vmem:$(CONFIGPATH)

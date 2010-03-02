@@ -19,5 +19,5 @@ CONFIG_LIBLUA
 CONFIG_LIBC_STREAM
 CONFIG_LIBC_STREAM_STD
 
-CONFIG_MODULES examples/libtermui_liblua:$(CONFIGPATH)
+%append MODULES examples/libtermui_liblua:$(CONFIGPATH)
 

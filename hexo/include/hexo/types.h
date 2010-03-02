@@ -32,14 +32,14 @@
 typedef unsigned char		uint8_t;
 
 /** Base interger type, 16 bits unsigned int */
-#if CONFIG_COMPILE_SIZEOF_INT == 2
+#if CONFIG_CPU_SIZEOF_INT == 2
 typedef unsigned int		uint16_t;
 #else
 typedef unsigned short		uint16_t;
 #endif
 
 /** Base interger type, 32 bits unsigned int */
-#if CONFIG_COMPILE_SIZEOF_INT == 2
+#if CONFIG_CPU_SIZEOF_INT == 2
 typedef unsigned long		uint32_t;
 #else
 typedef unsigned int		uint32_t;
@@ -52,14 +52,14 @@ typedef unsigned long long	uint64_t;
 typedef signed char		int8_t;
 
 /** Base interger type, 16 bits signed int */
-#if CONFIG_COMPILE_SIZEOF_INT == 2
+#if CONFIG_CPU_SIZEOF_INT == 2
 typedef signed int		int16_t;
 #else
 typedef signed short		int16_t;
 #endif
 
 /** Base interger type, 32 bits signed int */
-#if CONFIG_COMPILE_SIZEOF_INT == 2
+#if CONFIG_CPU_SIZEOF_INT == 2
 typedef signed long		int32_t;
 #else
 typedef signed int		int32_t;

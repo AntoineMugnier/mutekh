@@ -6,11 +6,11 @@
 #include <lua/lua.h>
 #include <vfs/vfs.h>
 
-#include <drivers/fs/ramfs/ramfs.h>
-#include <drivers/fs/devfs/devfs.h>
-#include <drivers/fs/iso9660/iso9660.h>
-#include <drivers/fs/fat/fat.h>
-#include <drivers/device/enum/fdt/enum-fdt.h>
+#include <libvfs/fs/ramfs/ramfs.h>
+#include <libvfs/fs/devfs/devfs.h>
+#include <libvfs/fs/iso9660/iso9660.h>
+#include <libvfs/fs/fat/fat.h>
+#include <drivers/enum/fdt/enum-fdt.h>
 
 static
 struct vfs_node_s * vfs_init()

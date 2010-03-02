@@ -20,7 +20,7 @@
 
 /**
  * @file
- * @module{Devices}
+ * @module{Device drivers}
  * @short Memory device driver API
  */
 

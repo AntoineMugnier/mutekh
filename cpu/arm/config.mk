@@ -30,7 +30,7 @@ ifeq ($(CONFIG_CPU_ARM_THUMB), defined)
 CPUCFLAGS += -mthumb -mthumb-interwork
 endif
 
-ifeq ($(CONFIG_CPU_ARM_FPU),soft)
+ifeq ($(CONFIG_COMPILE_SOFTFLOAT),defined)
 CPUCFLAGS+=-msoft-float -mfpu=vfp
 CPUASFLAGS+=
 endif

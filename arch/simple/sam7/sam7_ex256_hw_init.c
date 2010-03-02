@@ -1,19 +1,19 @@
 #include <hexo/init.h>
 #include <hexo/types.h>
 
-#include <drivers/device/char/uart-us6089c/uart-us6089c.h>
-#include <drivers/device/i2c/twi6061a/i2c-twi6061a.h>
-#include <drivers/device/spi/spi6088d/spi-spi6088d.h>
+#include <drivers/char/uart-us6089c/uart-us6089c.h>
+#include <drivers/i2c/twi6061a/i2c-twi6061a.h>
+#include <drivers/spi/spi6088d/spi-spi6088d.h>
 
-#include <drivers/device/char/dbgu-sam7/dbgu-sam7.h>
-#include <drivers/device/icu/sam7/icu-sam7.h>
-#include <drivers/device/gpio/sam7/gpio-sam7.h>
+#include <drivers/char/dbgu-sam7/dbgu-sam7.h>
+#include <drivers/icu/sam7/icu-sam7.h>
+#include <drivers/gpio/sam7/gpio-sam7.h>
 
-#include <drivers/device/lcd/s1d15g00/s1d15g00.h>
-#include <drivers/device/input/mt5-f/mt5-f.h>
-#include <drivers/device/block/sd-mmc/sd-mmc.h>
+#include <drivers/lcd/s1d15g00/s1d15g00.h>
+#include <drivers/input/mt5-f/mt5-f.h>
+#include <drivers/block/sd-mmc/sd-mmc.h>
 
-#include <drivers/device/timer/pitc_6079a/pitc_6079a.h>
+#include <drivers/timer/pitc_6079a/pitc_6079a.h>
 
 #include <device/device.h>
 #include <device/driver.h>

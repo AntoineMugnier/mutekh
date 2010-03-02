@@ -27,4 +27,4 @@
 # Libs
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/test_random:$(CONFIGPATH)
+  %append MODULES examples/test_random:$(CONFIGPATH)

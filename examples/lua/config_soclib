@@ -29,5 +29,5 @@
   CONFIG_LIBLUA
 
 # New source code module to be compiled
-  CONFIG_MODULES examples/lua:$(CONFIGPATH)
+  %append MODULES examples/lua:$(CONFIGPATH)
 

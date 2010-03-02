@@ -1,7 +1,7 @@
 #include <hexo/types.h>
 #include <hexo/interrupt.h>
 
-#include <drivers/device/icu/arm/icu-arm.h>
+#include <drivers/icu/arm/icu-arm.h>
 #include <device/device.h>
 #include <device/driver.h>
 

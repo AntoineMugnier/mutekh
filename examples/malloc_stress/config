@@ -2,18 +2,10 @@
   %set OUTPUT_NAME malloc_stress
 
   # New source code module to be compiled
-  CONFIG_MODULES +$(OUTPUT_NAME):$(CONFIGPATH)
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
 
   # Application license
   CONFIG_LICENSE_APP_LGPL
-
-  # Mutek features
-  CONFIG_MUTEK_CONSOLE
-  CONFIG_MUTEK_SCHEDULER_MIGRATION
-
-  # Mutek features
-  CONFIG_MUTEK_CONSOLE
-  CONFIG_MUTEK_SCHEDULER_MIGRATION
 
 %section alloc-simple
   %types stressed_allocator
@@ -32,6 +24,7 @@
 
   # Libs
   CONFIG_PTHREAD
+  CONFIG_LIBCRYPTO
   CONFIG_LIBCRYPTO_CRC32
 
 %include ../common/build_options.conf
