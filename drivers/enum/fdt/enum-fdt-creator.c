@@ -66,9 +66,10 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_creator_node_entry)
 	struct walker_node_info_s *node_info =
 		mem_alloc(sizeof(struct walker_node_info_s), (mem_scope_sys));
 
+    memset(node_info, 0, sizeof(*node_info));
+
 	priv->node_info = node_info;
 	node_info->parent = parent;
-	node_info->new = NULL;
 	node_info->where = IN_NONE;
 
 	dprintk("FDT enum considering node '%s'\n", path);
