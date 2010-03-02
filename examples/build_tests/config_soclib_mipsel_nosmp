@@ -12,9 +12,7 @@
   CONFIG_ARCH_SOCLIB
 
 # Processor types, Mips little endian with multiprocessor support up to 4 cpus
-  CONFIG_CPU_MIPS
-  CONFIG_CPU_MIPS_VERSION 32
-  CONFIG_CPU_ENDIAN_LITTLE
+  CONFIG_CPU_MIPS32EL_SOCLIB
   CONFIG_SMP undefined
 
 # Mutek features

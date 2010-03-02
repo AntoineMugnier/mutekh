@@ -617,7 +617,7 @@ sub process_config_suggest
 
 	if (not $flag)
 	{
-	    warning($$orig{vlocation}.": `".$$orig{name}."' token is defined ".
+	    warning("`".$$orig{name}."' token is defined ".
 		    "and suggests this configuration: ",
 		    @deps_and);
 	}
