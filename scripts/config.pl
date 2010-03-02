@@ -241,20 +241,6 @@ sub cmd_module
     };
 }
 
-sub cmd_fallback
-{
-    my ($location, $opts, $arg) = @_;
-
-    if (defined $$opts{fallback})
-    {
-	error($location.": fallback token already declared for `".$$opts{name}."' token");
-    }
-    else
-    {
-	$$opts{fallback} = $arg;
-    }
-}
-
 my %config_cmd =
 (
  "exclude" => \&cmd_exclude,
@@ -267,7 +253,6 @@ my %config_cmd =
  "suggest" => \&cmd_suggest,
  "when" => \&cmd_when,
  "module" => \&cmd_module,
- "fallback" => \&cmd_fallback,
  "provide" => \&cmd_provide,
  "desc" => \&cmd_desc,
  "description" => \&cmd_desc
@@ -472,27 +457,9 @@ sub process_config_depend
 	# return 0 if dependency not ok
 	if (not $flag)
 	{
-		notice("`".$$orig{name}."' token will be undefined ".
-			"due to unmet dependencies; dependencies list is: ",
-			@deps_and);
-
-		if (my $dep = $$orig{fallback})
-		{
-		    my $opt = $config_opts{$dep};
-
-		    if ($opt)
-		    {
-			if ($$opt{value} eq "undefined")
-			{
-			    notice("using `".$dep."' as fallback option for `".$$orig{name}."'.");
-			    $$opt{value} = 'defined';
-			}
-			else
-			{
-			    notice("`".$dep."' fallback token for `".$$orig{name}."' has already been defined, good.");
-			}
-		    }
-		}
+	    notice("`".$$orig{name}."' token will be undefined ".
+		   "due to unmet dependencies; dependencies list is: ",
+		   @deps_and);
 
 	    $res = 0;
 	}
@@ -872,21 +839,6 @@ sub check_config
 	if (not (lc($name) =~ /^config_/))
 	{
 	    warning($$opt{location}.": `".$name."' has no `CONFIG_' prefix");
-	}
-
-	if (my $fb = $$opt{fallback})
-	{
-	    $fb =~ /^([^\s=]+)/;
-
-	    if (not $config_opts{$1})
-	    {
-		warning($$opt{location}.": `".$$opt{name}."' fall-back to undeclared token `".$1."'");
-	    }
-
-	    if ($config_opts{$1} eq $opt)
-	    {
-		error($$opt{location}.": `".$$opt{name}."' fall-back to self");
-	    }
 	}
 
 	if ($$opt{flags}->{value})
@@ -1282,11 +1234,6 @@ sub write_doc_header
             doc_list($$opt{provide}, "Defining this token will also provide");
             doc_list($$opt{provided_by}, "This token is provided along with");
 
-	    if (my $fb = $$opt{fallback})
-	    {
-		print FILE "\n  Fallback token : \@ref \#$fb\n";
-	    }
-
 	    print FILE "*/\n#define ".$$opt{name}."\n\n";
 	    next;
 	}
@@ -1487,11 +1434,6 @@ sub tokens_info
   current value :  %s
 ", $$opt{location}, $$opt{vlocation},
 	   $$opt{default}, $$opt{value});
-
-    if (my $fb = $$opt{fallback})
-    {
-	printf("  fall-back def :  %s\n", $fb);
-    }
 
     if (my @list = @{$$opt{depend}})
     {
