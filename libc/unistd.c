@@ -1,6 +1,6 @@
 
 #include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_darray.h>
+#include <gpct/cont_array.h>
 
 #include <unistd.h>
 #include <fileops.h>
@@ -15,13 +15,13 @@ struct fd_entry_s
   void *hndl;
 };
 
-CONTAINER_TYPE(fdarray, DARRAY, struct fd_entry_s, 1, 256)
-CONTAINER_FUNC(fdarray, DARRAY, static, fdarray);
+CONTAINER_TYPE(fdarray, ARRAY, struct fd_entry_s, CONFIG_LIBC_MAX_FD)
+CONTAINER_FUNC(fdarray, ARRAY, static, fdarray);
 
 /* This removes a tedious warning... */
 #define gpct_lock_CONTAINER_LOCK_fdarray_initializer {}
 
-static fdarray_root_t fd_array = CONTAINER_ROOT_INITIALIZER(fdarray, DARRAY);
+static fdarray_root_t fd_array = CONTAINER_ROOT_INITIALIZER(fdarray, ARRAY);
 
 static fd_t fd_new(fdarray_root_t *fda)
 {
