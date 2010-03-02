@@ -84,6 +84,7 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_creator_node_entry)
 
 
 		node_info->new = device_obj_new(NULL);
+		node_info->new->drv = NULL;
 		node_info->new_pv = mem_alloc(sizeof(struct enum_pv_fdt_s), (mem_scope_sys));
 		node_info->new_pv->offset = fdt_reader_get_struct_offset(state);
 		node_info->new_pv->device_type = devtype;
