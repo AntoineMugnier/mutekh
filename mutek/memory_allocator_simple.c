@@ -47,7 +47,7 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
   size_t *hdr = res;
   res = hdr + 1;
 
-#ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
+#ifdef CONFIG_MUTEK_MEMALLOC_SCRAMBLE
   memset(res, 0x5a, size);
 #endif
 
@@ -119,7 +119,7 @@ void *memory_allocator_resize(void *address, size_t size)
 
 void memory_allocator_push(void *ptr)
 {
-#ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
+#ifdef CONFIG_MUTEK_MEMALLOC_SCRAMBLE
   memset(ptr, 0xa5, memory_allocator_getsize(ptr));
 #endif
 }

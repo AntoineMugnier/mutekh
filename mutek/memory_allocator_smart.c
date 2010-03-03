@@ -236,7 +236,7 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
 
 
 
-#ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
+#ifdef CONFIG_MUTEK_MEMALLOC_SCRAMBLE
       memset(hdr + 1, 0x5a, hdr->size - sizeof(*hdr));
 #endif
 
@@ -289,7 +289,7 @@ void memory_allocator_push(void *address)
 
   hdr->is_free = 1;
 
-#ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
+#ifdef CONFIG_MUTEK_MEMALLOC_SCRAMBLE
   memset(hdr + 1, 0xa5, hdr->size - sizeof(*hdr));
 #endif
 
@@ -322,7 +322,7 @@ void memory_allocator_push(void *address)
           region->free_blocks--;
 #endif
 
-#ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
+#ifdef CONFIG_MUTEK_MEMALLOC_SCRAMBLE
 	  memset(next, 0xa5, mem_hdr_size);
 #endif
 	}
@@ -346,7 +346,7 @@ void memory_allocator_push(void *address)
 #ifdef CONFIG_MUTEK_MEMALLOC_STATS
           region->free_blocks--;
 #endif
-#ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
+#ifdef CONFIG_MUTEK_MEMALLOC_SCRAMBLE
 	  memset(hdr, 0xa5, mem_hdr_size);
 #endif
 	}
@@ -498,7 +498,7 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   soclib_mem_check_disable(SOCLIB_MC_CHECK_REGIONS);
   soclib_mem_check_region_status(hdr, size, SOCLIB_MC_REGION_FREE);
-#elif defined( CONFIG_MUTEK_MEMALLOC_DEBUG )
+#elif defined( CONFIG_MUTEK_MEMALLOC_SCRAMBLE_INIT )
   memset(hdr, 0xa5, size);
 #endif
 
