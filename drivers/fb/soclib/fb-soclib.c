@@ -72,9 +72,9 @@ DEVFB_SETPALETTE(fb_soclib_setpalette)
   for (i = 0; i < __MIN(256, count); i++)
     {
       /* setup each channel */
-		palette[i*3] = pal[i].r<<2;
-		palette[i*3+1] = pal[i].g<<2;
-		palette[i*3+2] = pal[i].b<<2;
+		palette[i*3] = pal[i].r;
+		palette[i*3+1] = pal[i].g;
+		palette[i*3+2] = pal[i].b;
     }
 }
 

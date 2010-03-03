@@ -241,8 +241,8 @@ DEVFB_SETPALETTE(fb_vga_setpalette)
   for (i = 0; i < __MIN(256, count); i++)
     {
       /* setup each channel */
-      cpu_io_write_8(FB_VGA_PEL_D, pal[i].r);
-      cpu_io_write_8(FB_VGA_PEL_D, pal[i].g);
-      cpu_io_write_8(FB_VGA_PEL_D, pal[i].b);
+      cpu_io_write_8(FB_VGA_PEL_D, pal[i].r >> 2);
+      cpu_io_write_8(FB_VGA_PEL_D, pal[i].g >> 2);
+      cpu_io_write_8(FB_VGA_PEL_D, pal[i].b >> 2);
     }
 }
