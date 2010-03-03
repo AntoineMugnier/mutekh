@@ -70,8 +70,10 @@ DEV_IRQ(xicu_filter_handler)
 /*     printk("xicu %p %d pti: %d %x\n", dev, pv->output, */
 /*            !!XICU_PRIO_HAS_PTI(prio), XICU_PRIO_PTI(prio)); */
 
+#ifdef CONFIG_HEXO_IPI
 	if ( XICU_PRIO_HAS_WTI(prio) )
 		return xicu_root_handle_ipi(PARENT(dev), XICU_PRIO_WTI(prio));
+#endif
 
 	if ( XICU_PRIO_HAS_HWI(prio) )
 		return xicu_root_handle_hwi(PARENT(dev), XICU_PRIO_HWI(prio));
@@ -82,15 +84,14 @@ DEV_IRQ(xicu_filter_handler)
 	return 0;
 }
 
+#ifdef CONFIG_HEXO_IPI
 DEVICU_SETUPIPI(xicu_filter_setupipi)
 {
-#ifdef CONFIG_HEXO_IPI
 	struct xicu_filter_private_s *pv = dev->drv_pv;
 
 	xicu_root_set_ipi_handler(PARENT(dev), ipi_no&0x1f, (dev_irq_t*)ipi_process_rq, NULL);
 	xicu_root_enable_ipi(PARENT(dev), ipi_no&0x1f, pv->output, 1);
 
-#endif
 	return (void*)(uintptr_t)ipi_no;
 }
 
@@ -104,6 +105,7 @@ DEVICU_SENDIPI(xicu_filter_sendipi)
 		endian_le32((uint32_t)cpu_icu_identifier));
 	return 0;
 }
+#endif
 
 static const struct driver_param_binder_s xicufilter_param_binder[] =
 {
@@ -129,8 +131,10 @@ const struct driver_s	xicu_filter_drv =
 		.f_enable    = xicu_filter_enable,
 		.f_sethndl   = xicu_filter_sethndl,
 		.f_delhndl   = xicu_filter_delhndl,
+#ifdef CONFIG_HEXO_IPI
 		.f_sendipi   = xicu_filter_sendipi,
 		.f_setupipi  = xicu_filter_setupipi,
+#endif
 	}
 };
 

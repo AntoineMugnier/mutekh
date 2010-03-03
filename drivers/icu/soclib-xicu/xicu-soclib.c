@@ -92,19 +92,20 @@ void xicu_root_enable_hwi(struct device_s *dev,
 		endian_le32(1 << input_line));
 }
 
+
+#ifdef CONFIG_HEXO_IPI
 void xicu_root_enable_ipi(struct device_s *dev,
 						  uint_fast8_t input_line,
 						  uint_fast8_t output_line,
 						  bool_t enable)
 {
-#ifdef CONFIG_HEXO_IPI
 	cpu_mem_write_32(
 		XICU_REG_ADDR(dev->addr[0],
 					  enable ? XICU_MSK_WTI_ENABLE : XICU_MSK_WTI_DISABLE,
 					  output_line),
 		endian_le32(1 << input_line));
-#endif
 }
+#endif
 
 error_t xicu_root_set_hwi_handler(struct device_s *dev,
 								  uint_fast8_t input_line,
@@ -121,6 +122,7 @@ error_t xicu_root_set_hwi_handler(struct device_s *dev,
 	return 0;
 }
 
+#ifdef CONFIG_HEXO_IPI
 error_t xicu_root_set_ipi_handler(struct device_s *dev,
 								  uint_fast8_t input_line,
 								  dev_irq_t *hndl,
@@ -152,6 +154,7 @@ bool_t xicu_root_handle_ipi(struct device_s *dev, uint_fast8_t ipi)
 	printk("XICU ipi lost irq\n");
 	return 0;
 }
+#endif
 
 bool_t xicu_root_handle_hwi(struct device_s *dev, uint_fast8_t id)
 {
