@@ -41,7 +41,7 @@ void mem_init(void)
 
   default_region = memory_allocator_init(NULL, 
 				      &__system_uncached_heap_start, 
-				      &__system_uncached_heap_end);
+					 ((uintprt_t)&__system_uncached_heap_end - 1024 * CONFIG_CPU_MAXCOUNT));
 
 #endif
 }
