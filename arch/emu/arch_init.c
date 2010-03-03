@@ -29,7 +29,7 @@
 
 #include <arch/hexo/emu_syscalls.h>
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 static size_t cpu_count = CONFIG_CPU_MAXCOUNT;
 static volatile bool_t cpu_init_flag = 0;
 #endif
@@ -66,7 +66,7 @@ void arch_init()
 
     cpu_global_init();
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_ARCH_SMP)
     /* now everything is shared except the stack (the current unix stack) */
     size_t i;
     for (i=1; i<CONFIG_CPU_MAXCOUNT; i++)
@@ -92,7 +92,7 @@ void arch_init()
     arch_hw_init();
     mem_region_init();
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_ARCH_SMP)
     cpu_init_flag = 1;
 #endif
 
@@ -101,7 +101,7 @@ void arch_init()
 
     emu_do_syscall(EMU_SYSCALL_EXIT, 1, 1);  
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 other_cpu:
     /* configure other CPUs */
 
@@ -126,7 +126,7 @@ void arch_start_other_cpu(void)
 
 cpu_id_t arch_get_cpu_count(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   return cpu_count;
 #else
   return 1;

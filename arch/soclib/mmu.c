@@ -90,7 +90,7 @@ uint_fast32_t mmu_global_init()
       mmu_k_pagedir[uncached_pde].p2m.local_access = 0;
       mmu_k_pagedir[uncached_pde].p2m.remote_access = 0;
       mmu_k_pagedir[uncached_pde].p2m.address = MMU_PADDR_TO_PPN1( MMU_PDE_TO_VADDR( uncached_pde ) );
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
       mmu_k_pagedir[uncached_pde].p2m.cacheable = 1;//fixme
 #else
       mmu_k_pagedir[uncached_pde].p2m.cacheable = 1;
@@ -103,7 +103,7 @@ uint_fast32_t mmu_global_init()
     }
   else
     {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
       mmu_k_pagedir[text_pde].p2m.cacheable = 1;//FIXME
 #endif      
       mmu_k_pagedir[text_pde].p2m.writable = 1;

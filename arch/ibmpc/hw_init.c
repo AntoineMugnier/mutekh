@@ -57,7 +57,7 @@ extern struct device_s *timerms_dev;
 struct device_s timer_dev;
 #endif
 
-#if defined(CONFIG_DRIVER_KEYBOARD)
+#if defined(CONFIG_DRIVER_INPUT)
 struct device_s keyboard_dev;
 #endif
 
@@ -142,7 +142,7 @@ void arch_hw_init()
 # endif
 #endif
 
-#if defined(CONFIG_DRIVER_KEYBOARD)
+#if defined(CONFIG_DRIVER_INPUT)
 	device_init(&keyboard_dev);
 # if defined(CONFIG_DRIVER_INPUT_8042)
 	keyboard_dev.addr[0] = 0x60;
@@ -150,7 +150,7 @@ void arch_hw_init()
 	keyboard_dev.icudev = &icu_dev;
 	input_8042_init(&keyboard_dev, NULL);
 # else
-#  warning CONFIG_DRIVER_KEYBOARD case not handled in hw_init()
+#  warning CONFIG_DRIVER_INPUT case not handled in hw_init()
 # endif
 #endif
 

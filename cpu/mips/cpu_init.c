@@ -40,7 +40,7 @@ CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 /** pointer to context local storage in cpu local storage */
 CPU_LOCAL void *__context_data_base;
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
 
@@ -60,7 +60,7 @@ void cpu_init(void)
   /* Set exception vector */
   cpu_mips_mtc0(15, 1, (reg_t)&__exception_base_ptr);
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   void			*cls;
 
   /* setup cpu local storage */
@@ -83,7 +83,7 @@ void cpu_init(void)
 
 void cpu_start_other_cpu(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 
 #endif
 }

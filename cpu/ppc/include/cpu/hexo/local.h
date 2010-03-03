@@ -32,7 +32,7 @@
 
 /************************************************************************/
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 
 # undef CPU_LOCAL
 # define CPU_LOCAL	__attribute__((section (".cpudata")))
@@ -51,11 +51,11 @@
   _ptr_;						\
 })
 
-#else /* CONFIG_SMP */
+#else /* CONFIG_ARCH_SMP */
 
 # define CPU_LOCAL
 
-#endif /* !CONFIG_SMP */
+#endif /* !CONFIG_ARCH_SMP */
 
 /************************************************************************/
 

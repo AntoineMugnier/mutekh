@@ -25,7 +25,7 @@
 
 #define CPU_CPU_H_
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
 
@@ -108,7 +108,7 @@ cpu_trap()
 
 static inline void *cpu_get_cls(cpu_id_t cpu_id)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   return cpu_local_storage[cpu_id];
 #endif
   return NULL;

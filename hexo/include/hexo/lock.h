@@ -51,7 +51,7 @@ static void arch_lock_release(struct arch_lock_s *lock);
 
 struct			lock_s
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   /** architecture specific lock data */
   struct arch_lock_s	arch;
 #endif
@@ -61,7 +61,7 @@ struct			lock_s
 
 typedef struct lock_s	lock_t;
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 # define LOCK_INITIALIZER	{ .arch = ARCH_LOCK_INITIALIZER }
 #else
 # define LOCK_INITIALIZER	{ }
@@ -70,7 +70,7 @@ typedef struct lock_s	lock_t;
 /** allocate a new lock and return associated atomic memory location */
 static inline error_t lock_init(lock_t *lock)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   return arch_lock_init(&lock->arch);
 #else
   return 0;
@@ -81,7 +81,7 @@ static inline error_t lock_init(lock_t *lock)
 /** @this frees lock ressources */
 static inline void lock_destroy(lock_t *lock)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   return arch_lock_destroy(&lock->arch);
 #endif
 }
@@ -90,7 +90,7 @@ static inline void lock_destroy(lock_t *lock)
 /** @this tries to take lock */
 static inline bool_t lock_try(lock_t *lock)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   return arch_lock_try(&lock->arch);
 #else
   return 0;
@@ -101,7 +101,7 @@ static inline bool_t lock_try(lock_t *lock)
 /** @this spins to take lock */
 static inline void lock_spin(lock_t *lock)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   arch_lock_spin(&lock->arch);
 #endif
 }
@@ -110,7 +110,7 @@ static inline void lock_spin(lock_t *lock)
 /** @this returns the current lock state */
 static inline bool_t lock_state(lock_t *lock)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   return arch_lock_state(&lock->arch);
 #else
   return 0;
@@ -144,7 +144,7 @@ static inline void lock_spin_irq(lock_t *lock)
 /** @this releases a lock */
 static inline void lock_release(lock_t *lock)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   arch_lock_release(&lock->arch);
 #endif
 }

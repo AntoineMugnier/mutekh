@@ -4,7 +4,7 @@
 # Platform types
   CONFIG_ARCH_SOCLIB
   CONFIG_ARCH_SOCLIB_RAMLOCK undefined
-  CONFIG_SMP
+  CONFIG_ARCH_SMP
 
 # Processor types
   CONFIG_CPU_MIPS

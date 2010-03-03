@@ -44,7 +44,7 @@ struct arm_exception_context_s {
 	uint32_t cpsr;
 };
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
 
@@ -93,7 +93,7 @@ static void __arm_exception_setup()
 
 void cpu_init(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 # if !defined(CONFIG_CPU_ARM_TLS_IN_C15)
 #  error SMP and TLS unsupported
 # endif
@@ -110,7 +110,7 @@ void cpu_init(void)
 
 void cpu_start_other_cpu(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 
 #endif
 }

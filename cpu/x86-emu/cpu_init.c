@@ -39,7 +39,7 @@ CPU_LOCAL void *__context_data_base;
 /* cpu interrupts state */
 volatile CPU_LOCAL bool_t cpu_irq_state = 0;
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 CPU_LOCAL cpu_id_t _cpu_id;
 #endif
@@ -52,7 +52,7 @@ cpu_global_init(void)
 
 void cpu_init(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   void			*cls;
 
   if(!(cls = arch_cpudata_alloc()))

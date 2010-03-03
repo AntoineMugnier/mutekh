@@ -35,7 +35,7 @@ asm(
     "la     1, __initial_stack - 8@l(9)  \n"
     "mfdcr  29,0                         \n"
 
-#ifndef CONFIG_SMP
+#ifndef CONFIG_ARCH_SMP
     /* only first CPU is allowed to boot */
     "cmpwi  cr0, 29, 0                  \n"
     "1:                                 \n"

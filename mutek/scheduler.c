@@ -156,7 +156,7 @@ static CONTEXT_ENTRY(sched_context_idle)
 
       /* do not wait if several cpus are running because context may
 	 be put in running queue by an other cpu with no interrupt */
-#if !defined(CONFIG_SMP)
+#if !defined(CONFIG_ARCH_SMP)
       /* CPU sleep waiting for interrupts */
       cpu_interrupt_wait();
 #elif defined(CONFIG_HEXO_IPI)

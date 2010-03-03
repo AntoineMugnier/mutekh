@@ -37,7 +37,7 @@
 
 /************************************************************************/
 
-# ifdef CONFIG_SMP
+# ifdef CONFIG_ARCH_SMP
 
 #  undef CPU_LOCAL
 #  define CPU_LOCAL	__attribute__((section (".cpudata")))
@@ -57,11 +57,11 @@
 		_ptr_;														   \
 	})
 
-#else /* CONFIG_SMP */
+#else /* CONFIG_ARCH_SMP */
 
 # define CPU_LOCAL
 
-# endif /* !CONFIG_SMP */
+# endif /* !CONFIG_ARCH_SMP */
 
 /************************************************************************/
 
@@ -87,7 +87,7 @@
 
 #else /* not CONFIG_CPU_ARM_TLS_IN_C15 */
 
-# ifdef CONFIG_SMP
+# ifdef CONFIG_ARCH_SMP
 /*
  * We could support not having dedicated registers with an indirection
  * through a global table and cpuid(), but for now, we'll be lazy

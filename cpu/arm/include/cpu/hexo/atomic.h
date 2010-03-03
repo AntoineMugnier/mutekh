@@ -27,7 +27,7 @@
 #error This file can not be included directly
 #else
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_ARCH_SMP)
 
 #include "cpu/hexo/specific.h"
 

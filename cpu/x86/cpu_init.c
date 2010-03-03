@@ -44,7 +44,7 @@ CONTEXT_LOCAL void *__context_data_base;
 
 static struct cpu_x86_gatedesc_s cpu_idt[CPU_MAX_INTERRUPTS];
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 cpu_x86_segsel_t cpu_local_storage_seg[CONFIG_CPU_MAXCOUNT];
 #endif
@@ -119,7 +119,7 @@ cpu_global_init(void)
 			 CPU_X86_GATE_INT32, 3, 0);
     }
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   /* copy boot section below 1Mb for slave CPUs bootup */
   memcpy((void*)ARCH_SMP_BOOT_ADDR, (char*)&__boot_start, (char*)&__boot_end - (char*)&__boot_start);
 #endif
@@ -174,7 +174,7 @@ cpu_x86_segdesc_free(cpu_x86_segsel_t sel)
   lock_release(&gdt_lock);  
 }
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 static void cpu_x86_init_apic()
 {
   cpu_x86_apic_t *apic = (void*)ARCH_SMP_LOCAL_APICADDR;
@@ -213,7 +213,7 @@ void cpu_init(void)
   cpu_x86_stackseg_use(ARCH_GDT_DATA_INDEX, 0);
   cpu_x86_codeseg_use(ARCH_GDT_CODE_INDEX, 0);
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   /* enable and initialize x86 APIC */
   cpu_x86_init_apic();
 
@@ -262,7 +262,7 @@ void cpu_init(void)
 #ifdef CONFIG_CPU_USER
  err_tss_seg:
 #endif
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   cpu_x86_segdesc_free(cls_sel);
  err_cls_seg:
   mem_free(cls);
@@ -273,7 +273,7 @@ void cpu_init(void)
 
 void cpu_start_other_cpu(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   cpu_x86_apic_t	*apic = cpu_apic_get_regaddr();
   uint32_t		i;
 

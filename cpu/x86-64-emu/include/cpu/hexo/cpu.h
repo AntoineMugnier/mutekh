@@ -36,7 +36,7 @@ extern CPU_LOCAL cpu_id_t _cpu_id;
 
 static inline cpu_id_t cpu_id(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
     return _cpu_id;
 #else
   return 0;
@@ -46,7 +46,7 @@ static inline cpu_id_t cpu_id(void)
 static inline bool_t
 cpu_isbootstrap(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
     return (_cpu_id == 0);
 #endif
   return 1;
@@ -67,13 +67,13 @@ cpu_cycle_count(void)
   return 0;
 }
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
 
 static inline void *cpu_get_cls(cpu_id_t cpu_id)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
     return cpu_local_storage[cpu_id];
 #endif
   return NULL;

@@ -29,7 +29,7 @@
 
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
 
@@ -48,7 +48,7 @@ void cpu_init(void)
   /* Set exception vector */
   asm volatile("mtevpr %0" : : "r"(&__exception_base_ptr));
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   void			*cls;
 
   /* setup cpu local storage */
@@ -61,7 +61,7 @@ void cpu_init(void)
 
 void cpu_start_other_cpu(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 
 #endif
 }

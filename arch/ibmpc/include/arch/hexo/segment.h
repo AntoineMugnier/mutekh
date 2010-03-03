@@ -35,7 +35,7 @@
 /* System global heap memory */
 extern __ldscript_symbol_t __system_heap_start;
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 /* cpu template segment load address defined in ld script*/
 extern __ldscript_symbol_t __cpu_data_start, __cpu_data_end;
 #endif
@@ -47,7 +47,7 @@ extern __ldscript_symbol_t __boot_start, __boot_end;
 static inline void *
 arch_cpudata_alloc(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   void			*cls;
 
   /* allocate memory and copy from template */
@@ -66,7 +66,7 @@ arch_cpudata_alloc(void)
 static inline size_t
 arch_cpudata_size(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   return (char*)&__cpu_data_end - (char*)&__cpu_data_start;
 #else
   return 0;

@@ -81,7 +81,7 @@ static FDT_ON_NODE_ENTRY_FUNC(creator_node_entry)
 		priv->ipi_no = 0;
 #endif
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_ARCH_SMP)
 		bool_t got;
 		got = fdt_reader_get_prop_int(
 			state, "reg",

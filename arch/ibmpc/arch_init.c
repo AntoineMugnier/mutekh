@@ -60,7 +60,7 @@ struct multiboot_header_s multiboot_header =
   .checksum = 0 - MULTIBOOT_MAGIC,
 };
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 static lock_t		cpu_init_lock;	/* cpu intialization lock */
 static lock_t		cpu_start_lock;	/* cpu wait for start lock */
 #endif
@@ -68,7 +68,7 @@ static lock_t		cpu_start_lock;	/* cpu wait for start lock */
 /* architecture specific init function */
 void arch_init() 
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   if (cpu_isbootstrap())
     /* First CPU */
     {
@@ -113,7 +113,7 @@ void arch_init()
 #endif
 
       /* send reset/init signal to other CPUs */
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
       lock_try(&cpu_start_lock);
       cpu_start_other_cpu();
 #endif
@@ -135,7 +135,7 @@ void arch_init()
 
       /* run mutek_start() */
       mutek_start(0, 0);
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
     }
   else
     /* Other CPUs */
@@ -168,7 +168,7 @@ void arch_init()
 
 void arch_start_other_cpu(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   lock_release(&cpu_start_lock);
 #endif
 }

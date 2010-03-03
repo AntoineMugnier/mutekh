@@ -98,7 +98,7 @@ static void srl_task_run(srl_task_s *task)
 
 void user_hw_init()
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 	const srl_cpudesc_s * const *cpu;
 	uint_fast16_t cpuid;
 	

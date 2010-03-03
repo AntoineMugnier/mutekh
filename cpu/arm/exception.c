@@ -45,14 +45,14 @@
     "ldr  " rd ", [" rd ", " rt "]     \n\t"
 
 #if defined(CONFIG_CPU_ARM_TLS_IN_C15)
-# ifdef CONFIG_SMP
+# ifdef CONFIG_ARCH_SMP
 #  define CPULOCAL_GET(name, rd, rt) GET_CP15_REL(name, rd, rt, 3)
 # else
 #  define CPULOCAL_GET(name, rd, rt) GET_GLOBAL(name, rd)
 # endif
 # define CONTEXTLOCAL_GET(name, rd, rt) GET_CP15_REL(name, rd, rt, 4)
 #else
-# ifdef CONFIG_SMP
+# ifdef CONFIG_ARCH_SMP
 #  error Please define me a way to get TLS/CLS
 # else
 #  define CPULOCAL_GET(name, rd, rt) GET_GLOBAL(name, rd)

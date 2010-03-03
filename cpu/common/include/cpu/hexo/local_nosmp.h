@@ -33,7 +33,7 @@
 /************************************************************************/
 
 /** cpu local storage type attribute */
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 # error SMP not supported here
 #endif
 

@@ -42,7 +42,7 @@
 
 /************************************************************************/
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 
 # undef CPU_LOCAL
 # define CPU_LOCAL	__attribute__((section (".cpudata")))
@@ -53,11 +53,11 @@
 
 # define CPU_GET_CLS()   ({ uintptr_t _ptr_; __asm__ ("movl %%fs:__cpu_data_base, %0" : "=r" (_ptr_)); _ptr_; })
 
-#else /* CONFIG_SMP */
+#else /* CONFIG_ARCH_SMP */
 
 # define CPU_LOCAL
 
-#endif /* !CONFIG_SMP */
+#endif /* !CONFIG_ARCH_SMP */
 
 /** pointer to cpu local storage itself */
 extern CPU_LOCAL void *__cpu_data_base;

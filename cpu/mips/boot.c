@@ -62,7 +62,7 @@ asm(
         "   andi    $9,     $9,     0x000003ff                                             \n"
 
         "1:                                                                                \n"
-#ifndef CONFIG_SMP
+#ifndef CONFIG_ARCH_SMP
         /* spin if cpuid != 0 */
         "   bne     $0,     $9,     1b                                                     \n"
         "   nop                                                                            \n"

@@ -14,7 +14,7 @@
 # Processor types, Soclib's ARM with multiprocessor support up to 4 cpus
   CONFIG_CPU_ARM_SOCLIB
   CONFIG_CPU_ARM_SOCLIB
-  CONFIG_SMP undefined
+  CONFIG_ARCH_SMP undefined
 
 # Mutek features
   CONFIG_MUTEK_CONSOLE

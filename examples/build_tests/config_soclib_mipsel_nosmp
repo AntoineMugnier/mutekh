@@ -13,7 +13,7 @@
 
 # Processor types, Mips little endian with multiprocessor support up to 4 cpus
   CONFIG_CPU_MIPS32EL_SOCLIB
-  CONFIG_SMP undefined
+  CONFIG_ARCH_SMP undefined
 
 # Mutek features
   CONFIG_MUTEK_CONSOLE

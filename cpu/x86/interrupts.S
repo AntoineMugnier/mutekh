@@ -36,7 +36,7 @@
 
 #define ENTRY_ALIGN	16
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 # define CLS_SEG	%fs:
 #else
 # define CLS_SEG
@@ -403,7 +403,7 @@ x86_seg_restore:
 	movl	%eax, %ds
 	movl	%eax, %es
 
-# ifdef CONFIG_SMP
+# ifdef CONFIG_ARCH_SMP
 	mov	$0x1b, %ecx			; /* get cpu id */
 	rdmsr
 	and	$0xfffff000, %eax

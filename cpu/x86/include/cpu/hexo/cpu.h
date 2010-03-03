@@ -84,7 +84,7 @@ cpu_cycle_count(void)
   return (low | ((uint64_t)high << 32));
 }
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 extern cpu_x86_segsel_t cpu_local_storage_seg[CONFIG_CPU_MAXCOUNT];
 extern CPU_LOCAL cpu_x86_segsel_t *cpu_tls_seg;
@@ -98,7 +98,7 @@ extern volatile CPU_LOCAL struct cpu_x86_tss_s cpu_tss;
 
 static inline cpu_id_t cpu_id(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   cpu_x86_apic_t *apic = cpu_apic_get_regaddr();
 
   return cpu_mem_read_32((uintptr_t)&apic->lapic_id) >> 24;
@@ -115,7 +115,7 @@ cpu_trap()
 
 static inline void *cpu_get_cls(cpu_id_t cpu_id)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
   return cpu_local_storage[cpu_id];
 #endif
   return NULL;

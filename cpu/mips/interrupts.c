@@ -21,7 +21,7 @@
 
 #include <hexo/asm.h>
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 # define CPU_LOCAL_GET(reg, name) "    lw " #reg ", " #name "($27) \n"
 #else
 # define CPU_LOCAL_GET(reg, name) "    lw " #reg ", " #name "\n"
@@ -119,7 +119,7 @@ asm(
         "   move    $26,    $sp                          \n"
         ".set reorder                                    \n"
 
-# if defined(CONFIG_SMP)
+# if defined(CONFIG_ARCH_SMP)
         /* Restore CLS if we are from user mode */
         CPU_ID($26)
         "   sll     $26,    $26,    2                    \n"

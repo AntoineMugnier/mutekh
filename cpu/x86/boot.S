@@ -85,14 +85,14 @@ cpu_boot:
 	mov	$0x1b, %ecx
 	rdmsr
 
-#ifndef CONFIG_SMP
+#ifndef CONFIG_ARCH_SMP
 	test	$0x100, %eax	; /* is bootstrap ? */
 	jnz 1f
 	hlt
 1:
 #endif
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 	andl	$0xfffff000, %eax /* get local APIC base address */
 	mov	0x20(%eax), %eax /* read local apic ID */
 	shrl	$24, %eax

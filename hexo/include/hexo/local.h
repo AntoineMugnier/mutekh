@@ -33,7 +33,7 @@
 
 /************************************************************************/
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 

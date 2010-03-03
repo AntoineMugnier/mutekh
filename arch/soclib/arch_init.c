@@ -73,7 +73,7 @@ extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_
 #include <hexo/mmu.h>
 #endif
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 static uint_fast8_t cpu_count = 1;
 volatile bool_t     cpu_init_flag = 0;
 volatile bool_t     cpu_start_flag = 0;
@@ -85,7 +85,7 @@ lock_t              __atomic_arch_lock;
 /* architecture specific init function */
 void arch_init(void *device_tree, void *bootloader_pointer_table)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
     if (cpu_isbootstrap())    /* FIXME */
         /* First CPU */
     {
@@ -164,7 +164,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
             cpu_interrupt_set_handler_device(icu);
 #endif
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
         /* send reset/init signal to other CPUs */
         cpu_init_flag = 1;
 #endif
@@ -176,7 +176,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 
         /* run mutek_start() */
         mutek_start(0, 0);
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
     }
     else
         /* Other CPUs */
@@ -226,14 +226,14 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 
 void arch_start_other_cpu(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
     cpu_start_flag++;
 #endif
 }
 
 inline cpu_id_t arch_get_cpu_count(void)
 {
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
     return cpu_count;
 #else
     return 1;

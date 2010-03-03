@@ -49,7 +49,7 @@ asm(
     FUNC_START(arm_boot)
 #if !defined(CONFIG_ARCH_SIMPLE)
     "mrc  p15,0,r4,c0,c0,5       \n\t"
-# ifndef CONFIG_SMP
+# ifndef CONFIG_ARCH_SMP
     "cmp    r4, #0              \n\t"
     "1: bne 1b                  \n\t"
 # endif

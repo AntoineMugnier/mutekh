@@ -40,7 +40,7 @@
     "lis   " #rd ", (" #name ")@h         \n\t"                        \
     "ori   " #rd ", " #rd ", (" #name ")@l\n\t"
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_SMP
 # define CPULOCAL_GET(name, rd, rt) GET_SPRREL(name, rd, rt, 0x105)
 #else
 # define CPULOCAL_GET(name, rd, rt) GET_GLOBAL(name, rd, rt)
