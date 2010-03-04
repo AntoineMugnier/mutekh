@@ -186,6 +186,7 @@ void app_start()
       }
 
       global->Index = 0;
+      global->final = 0;
       max_num_digits = get_max_digits(max_key);
       printk("\n");
       printk("Integer Radix Sort\n");
