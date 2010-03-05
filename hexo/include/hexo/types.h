@@ -68,6 +68,24 @@ typedef signed int		int32_t;
 /** Base interger type, 64 bits signed int */
 typedef signed long long	int64_t;
 
+#ifdef CONFIG_HEXO_INTTYPES_SMALL
+/** signed integer type of CPU prefered size, at least 8 bits */
+typedef	int8_t			int_fast8_t;
+/** signed integer type of CPU prefered size, at least 16 bits */
+typedef	int16_t			int_fast16_t;
+/** signed integer type of CPU prefered size, at least 32 bits */
+typedef	int32_t			int_fast32_t;
+/** signed integer type of CPU prefered size, at least 64 bits */
+typedef	int64_t			int_fast64_t;
+/** unsigned integer type of CPU prefered size, at least 8 bits */
+typedef	uint8_t			uint_fast8_t;
+/** unsigned integer type of CPU prefered size, at least 16 bits */
+typedef	uint16_t		uint_fast16_t;
+/** unsigned integer type of CPU prefered size, at least 32 bits */
+typedef	uint32_t		uint_fast32_t;
+/** unsigned integer type of CPU prefered size, at least 64 bits */
+typedef	uint64_t		uint_fast64_t;
+#endif
 
 #include "cpu/hexo/types.h"
 #include "arch/hexo/types.h"

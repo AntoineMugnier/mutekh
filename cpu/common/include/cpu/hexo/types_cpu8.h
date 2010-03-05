@@ -32,45 +32,37 @@
 
 #define CPU_TYPES_H_
 
+#ifndef CONFIG_HEXO_INTTYPES_SMALL
+
 /** signed integer type of CPU prefered size, at least 8 bits */
 typedef	int8_t			int_fast8_t;
-
 /** signed integer type of CPU prefered size, at least 16 bits */
 typedef	int16_t			int_fast16_t;
-
 /** signed integer type of CPU prefered size, at least 32 bits */
 typedef	int32_t			int_fast32_t;
-
 /** signed integer type of CPU prefered size, at least 64 bits */
 typedef	int64_t			int_fast64_t;
-
 /** unsigned integer type of CPU prefered size, at least 8 bits */
 typedef	uint8_t			uint_fast8_t;
-
 /** unsigned integer type of CPU prefered size, at least 16 bits */
 typedef	uint16_t		uint_fast16_t;
-
 /** unsigned integer type of CPU prefered size, at least 32 bits */
 typedef	uint32_t		uint_fast32_t;
-
 /** unsigned integer type of CPU prefered size, at least 64 bits */
 typedef	uint64_t		uint_fast64_t;
 
+#endif
+
 /** unsigned integer type suitable for memory addresses */
 typedef uint16_t		uintptr_t;
-
 /** signed integer type suitable for memory addresses */
 typedef int16_t			intptr_t;
-
 /** signed integer type suitable for memory addresses */
 typedef int16_t			ptrdiff_t;
-
 /** integer type used for atomic operation */
 typedef	int8_t			atomic_int_t;
-
 /** general cpu register integer type */
 typedef uint8_t			reg_t;
-
 /** general cpu signed register integer type */
 typedef int8_t		sreg_t;
 
