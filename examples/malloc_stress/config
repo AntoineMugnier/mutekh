@@ -19,6 +19,19 @@
   %types stressed_allocator
   CONFIG_MUTEK_MEMALLOC_EXPERIMENTAL
 
+%section mem-guard
+  %types debug_tool
+  CONFIG_MUTEK_MEMALLOC_GUARD
+
+%section mem-crc
+  %types debug_tool
+  CONFIG_MUTEK_MEMALLOC_CRC
+
+%section mem-scramble
+  %types debug_tool
+  CONFIG_MUTEK_MEMALLOC_SCRAMBLE
+
+
 %common
   %requiretypes stressed_allocator
 

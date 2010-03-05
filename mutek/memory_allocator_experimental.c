@@ -41,7 +41,6 @@
 #include <arch/mem_checker.h>
 #endif
 
-
 /********************************************************/
 /*********** Structure and global declaration ***********/
 
@@ -61,17 +60,25 @@ struct memory_allocator_header_s
   CONTAINER_ENTRY_TYPE(CLIST)	block_entry;
 
 #ifdef CONFIG_MUTEK_MEMALLOC_CRC
-  uint8_t crc[4];
+  uint32_t crc;
 #endif
 };
 
-static const size_t	mem_hdr_size = ALIGN_VALUE_UP(sizeof (struct memory_allocator_header_s),
+static const size_t mem_hdr_size = sizeof (struct memory_allocator_header_s);
+
+#ifdef CONFIG_MUTEK_MEMALLOC_CRC
+static const size_t mem_hdr_size_no_crc = sizeof (struct memory_allocator_header_s) - sizeof (uint32_t);
+#else
+static const size_t mem_hdr_size_no_crc = sizeof (struct memory_allocator_header_s);
+#endif
+
+static const size_t	mem_hdr_size_align = ALIGN_VALUE_UP(sizeof (struct memory_allocator_header_s),
 						      CONFIG_MUTEK_MEMALLOC_ALIGN);
 
 CONTAINER_TYPE(free_list, CLIST, struct memory_allocator_header_s, free_entry);
 CONTAINER_TYPE(block_list, CLIST, struct memory_allocator_header_s, block_entry);
 
-#define MEMALLOC_SPLIT_SIZE	(2 * mem_hdr_size + 16)
+#define MEMALLOC_SPLIT_SIZE	(2 * mem_hdr_size_align + 16)
 
 /*************************/
 
@@ -117,41 +124,45 @@ CONTAINER_FUNC(free_list, CLIST, static inline, free_list, free_entry);
 /********************************************************/
 /*************** size and address translator ******************/
 
+/*@this return the memory block header corresponding to the given user
+  memory address*/
+
 static inline
 void *mem2hdr(void *mem)
 {
-  return (void*)((uintptr_t)mem - mem_hdr_size
+  return (void*)((uintptr_t)mem - mem_hdr_size_align
 #ifdef CONFIG_MUTEK_MEMALLOC_GUARD
 		 - CONFIG_MUTEK_MEMALLOC_GUARD_SIZE
 #endif
 		 );
 }
 
-/*************************/
+/*@this return the useable memory address corresponding to given
+  memory block header*/
 
 static inline
 void *hdr2mem(void *hdr)
 {
-  return (void *)((uintptr_t)hdr + mem_hdr_size
+  return (void *)((uintptr_t)hdr + mem_hdr_size_align
 #ifdef CONFIG_MUTEK_MEMALLOC_GUARD
 		  + CONFIG_MUTEK_MEMALLOC_GUARD_SIZE
 #endif  
 		  );
 }
 
-/*************************/
+/*@this converts usable memory block size to actual block size*/
 
 static inline
 size_t size_alloc2real(size_t size)
 {
-  return mem_hdr_size
+  return mem_hdr_size_align
 #ifdef CONFIG_MUTEK_MEMALLOC_GUARD
     + CONFIG_MUTEK_MEMALLOC_GUARD_SIZE * 2
 #endif
     + ALIGN_VALUE_UP(size, CONFIG_MUTEK_MEMALLOC_ALIGN);
 }
 
-/*************************/
+/*@this converts actual block size to usable memory block size*/
 
 static inline
 size_t size_real2alloc(size_t size)
@@ -160,10 +171,10 @@ size_t size_real2alloc(size_t size)
 #ifdef CONFIG_MUTEK_MEMALLOC_GUARD
     - CONFIG_MUTEK_MEMALLOC_GUARD_SIZE * 2
 #endif
-    - mem_hdr_size;
+    - mem_hdr_size_align;
 }
 
-/*************************/
+/*@this return the real size of a memory block*/
 
 static inline
 size_t header_get_size( block_list_root_t *root, struct memory_allocator_header_s *hdr)
@@ -176,15 +187,9 @@ size_t header_get_size( block_list_root_t *root, struct memory_allocator_header_
 /*************** Memory check function ******************/
 
 static inline
-void *cmp_zone( const void *start, uint8_t value , size_t size )
-{
-  int_fast8_t res = 0;
-  while ( size && !(res = ((uint8_t*)start)[size--] - value));
+bool_t header_is_alloc(struct memory_allocator_header_s *hdr);
 
-  if (res)
-    return (uint8_t*)( (uintptr_t)start + size + 1);
-  return NULL;
-}
+/*@this set the header's crc field*/
 
 static inline
 void memory_allocator_crc_set(struct memory_allocator_header_s *hdr)
@@ -194,13 +199,13 @@ void memory_allocator_crc_set(struct memory_allocator_header_s *hdr)
   struct crypto_crc32_ctx_s crc;
 
   crypto_crc32_init(&crc);
-  crypto_crc32_update(&crc, (uint8_t*)hdr, sizeof(hdr)-4 );
-  crypto_crc32_get(&crc, hdr->crc);
+  crypto_crc32_update(&crc, (uint8_t*)hdr, mem_hdr_size_no_crc );
+  crypto_crc32_get(&crc, (uint8_t*)&hdr->crc);
 
 #endif
 }
 
-/*************************/
+/*@this check the header's crc field*/
 
 static inline
 bool_t memory_allocator_crc_check(struct memory_allocator_header_s *hdr)
@@ -208,36 +213,86 @@ bool_t memory_allocator_crc_check(struct memory_allocator_header_s *hdr)
 #ifdef CONFIG_MUTEK_MEMALLOC_CRC
 
   struct crypto_crc32_ctx_s crc;
-  uint8_t result[4];
+  uint32_t result;
 
-  crypto_crc32_init (&crc);
-  crypto_crc32_update (&crc, (uint8_t*)hdr, sizeof(hdr)-4 );
-  crypto_crc32_get (&crc, result);
-  
-  if ( memcmp(hdr->crc, result, 4) )
+  crypto_crc32_init(&crc);
+  crypto_crc32_update(&crc, (uint8_t*)hdr, mem_hdr_size_no_crc );
+  crypto_crc32_get(&crc, (uint8_t*)&result);
+
+  if ( memcmp(&hdr->crc, &result, 4) )
     {
       return 1;
     }
+
 #endif
   return 0;
 }
 
-/*************************/
+/*@this apply function to a list, and update previous and next header's crc  */
+
+#if defined (CONFIG_MUTEK_MEMALLOC_CRC)
+
+ #define MEM_LIST_FUNCTION_REM(function, list_name, hdr) do{		\
+  struct memory_allocator_header_s *_prev, *_next;			\
+  _prev = list_name##_list_prev(&region->list_name##_root, hdr);	\
+  _next = list_name##_list_next(&region->list_name##_root, hdr);	\
+  list_name##_list_##function(&region->list_name##_root, hdr);	\
+  if (_prev)memory_allocator_crc_set(_prev);					\
+  if (_next)memory_allocator_crc_set(_next);				\
+ }while(0)
+
+ #define MEM_LIST_FUNCTION_INS(function, list_name, hdr, other) do{		\
+  struct memory_allocator_header_s *_prev, *_next;			\
+  list_name##_list_##function(&region->list_name##_root, other, hdr); \
+  _prev = list_name##_list_prev(&region->list_name##_root, hdr);	\
+  _next = list_name##_list_next(&region->list_name##_root, hdr);	\
+  if (_prev)memory_allocator_crc_set(_prev);				\
+  if (_next)memory_allocator_crc_set(_next);				\
+ }while(0)
+
+ #define MEM_LIST_FUNCTION_PUSH(function, list_name, hdr) do{		\
+  struct memory_allocator_header_s *_prev, *_next;			\
+  list_name##_list_##function(&region->list_name##_root, hdr);	\
+  _prev = list_name##_list_prev(&region->list_name##_root, hdr);	\
+  _next = list_name##_list_next(&region->list_name##_root, hdr);	\
+  if (_prev)memory_allocator_crc_set(_prev);				\
+  if (_next)memory_allocator_crc_set(_next);				\
+ }while(0)
+
+
+#else
+
+ #define MEM_LIST_FUNCTION_REM(function, list_name, hdr) do{		\
+  list_name##_list_##function(&region->list_name##_root, hdr);	\
+ }while(0)
+
+ #define MEM_LIST_FUNCTION_INS(function, list_name, hdr, other) do{	\
+  list_name##_list_##function(&region->list_name##_root, other, hdr); \
+ }while(0) 
+
+ #define MEM_LIST_FUNCTION_PUSH(function, list_name, hdr) do{		\
+  list_name##_list_##function(&region->list_name##_root, hdr);	\
+ }while(0)
+
+#endif
+
+
+/*@this set two guard zone, at start and end point, in the given memory block*/
 
 static inline
 void memory_allocator_guard_set(size_t size, struct memory_allocator_header_s *hdr)
 {
 #ifdef CONFIG_MUTEK_MEMALLOC_GUARD
-  memset( hdr + mem_hdr_size,
+  memset( (void*)( (uintptr_t) hdr + mem_hdr_size_align ),
 	  0x55,
 	  CONFIG_MUTEK_MEMALLOC_GUARD_SIZE );
-  memset( hdr + size - CONFIG_MUTEK_MEMALLOC_GUARD_SIZE,
+  memset( (void*)( (uintptr_t)hdr + size - CONFIG_MUTEK_MEMALLOC_GUARD_SIZE),
 	  0xaa,
 	  CONFIG_MUTEK_MEMALLOC_GUARD_SIZE );
 #endif
 }
 
-/*************************/
+/*@this check the memory block's guard zone*/
 
 static inline
 bool_t memory_allocator_guard_check(size_t size, struct memory_allocator_header_s *hdr)
@@ -245,13 +300,13 @@ bool_t memory_allocator_guard_check(size_t size, struct memory_allocator_header_
 #ifdef CONFIG_MUTEK_MEMALLOC_GUARD
   uint8_t r;
 
-  r = cmp_zone( hdr + mem_hdr_size,
+  r = memcstcmp( (void*)( (uintptr_t)hdr + mem_hdr_size_align),
 		 0x55,
 		CONFIG_MUTEK_MEMALLOC_GUARD_SIZE );
   if ( r )
     return 1;
 
-  r = cmp_zone( hdr + size - CONFIG_MUTEK_MEMALLOC_GUARD_SIZE,
+  r = memcstcmp( (void*)( (uintptr_t)hdr + size - CONFIG_MUTEK_MEMALLOC_GUARD_SIZE),
 		 0xaa,
 		CONFIG_MUTEK_MEMALLOC_GUARD_SIZE );
   if ( r )
@@ -261,40 +316,38 @@ bool_t memory_allocator_guard_check(size_t size, struct memory_allocator_header_
   return 0;
 }
 
-/*************************/
+/*@this set the whole memory block with a special value*/
 
 static inline
 void memory_allocator_debug_set(size_t size, struct memory_allocator_header_s *hdr)
 {
 #ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
-  if (hdr->is_free)
+  if (!header_is_alloc(hdr))
     {
-      memset ( hdr2mem (hdr), 0xa5 , size_real2alloc (size) );
+      memset( hdr2mem(hdr), 0xa5 , size_real2alloc(size) );
     }
   else
     {
-      memset ( hdr2mem (hdr), 0x5a , size_real2alloc (size) );
+      memset( hdr2mem(hdr), 0x5a , size_real2alloc(size) );
     }
 
 #endif
 }
 
-/*************************/
+/*@this check if the memory block isn't corrupt*/
 
 static inline
 void *memory_allocator_debug_check(size_t size, struct memory_allocator_header_s *hdr)
 {
   void *res = NULL;
 #ifdef CONFIG_MUTEK_MEMALLOC_DEBUG
-  if (hdr->is_free)
+  if (!header_is_alloc(hdr))
     {
-      res = cmp_zone( hdr2mem(hdr), 0xa5 , size_real2alloc (size) )
+      res = memcstcmp( hdr2mem(hdr), 0xa5 , size_real2alloc(size) );
     }
 #endif
   return res;
 }
-
-/*************************/
 
 static inline
 void disable_memchecker()
@@ -304,8 +357,6 @@ void disable_memchecker()
 #endif
 }
 
-/*************************/
-
 static inline
 void enable_memchecker()
 {
@@ -314,31 +365,25 @@ void enable_memchecker()
 #endif
 }
 
-/*************************/
-
 static inline
 void memchecker_set_alloc(size_t size, void *hdr)
 {
 #ifdef CONFIG_SOCLIB_MEMCHECK
   soclib_mem_check_region_status(hdr2mem(hdr),
-				 size_real2alloc (size),
+				 size_real2alloc(size),
 				 SOCLIB_MC_REGION_ALLOC);
 #endif
 }
-
-/*************************/
 
 static inline
 void memchecker_set_free(size_t size, void *hdr)
 {
 #ifdef CONFIG_SOCLIB_MEMCHECK
   soclib_mem_check_region_status(hdr2mem(hdr),
-				 size_real2alloc (size),
+				 size_real2alloc(size),
 				 SOCLIB_MC_REGION_FREE);
 #endif
 }
-
-/*************************/
 
 static inline
 bool_t header_is_alloc(struct memory_allocator_header_s *hdr)
@@ -346,7 +391,6 @@ bool_t header_is_alloc(struct memory_allocator_header_s *hdr)
   return ( hdr->free_null_marker == NULL );
 }
 
-/*************************/
 static inline
 void header_set_alloc(struct memory_allocator_header_s *hdr, struct memory_allocator_region_s *region )
 {
@@ -354,15 +398,11 @@ void header_set_alloc(struct memory_allocator_header_s *hdr, struct memory_alloc
   hdr->region = region;
 }
 
-/*************************/
-
 static inline
 bool_t header_is_endblock(struct memory_allocator_header_s *hdr)
 {
   return ( hdr->region == NULL );
 }
-
-/*************************/
 
 static inline
 void header_set_endblock(struct memory_allocator_header_s *hdr)
@@ -385,8 +425,6 @@ void update_region_stats(struct memory_allocator_region_s *region,
 #endif
 } 
 
-/*************************/
-
 static inline
 void init_region_stats(struct memory_allocator_region_s *region,
 		  ssize_t size, uint32_t free_block, uint32_t alloc_block)
@@ -398,27 +436,26 @@ void init_region_stats(struct memory_allocator_region_s *region,
 #endif
 } 
 
-/*************************/
-
 static inline
 struct memory_allocator_header_s *
 memory_allocator_nolock_extend(struct memory_allocator_region_s *region, void *start, size_t size)
 {
   struct memory_allocator_header_s *hdr = start;
-  struct memory_allocator_header_s *hdr_end = start + size - mem_hdr_size;
+  struct memory_allocator_header_s *hdr_end = start + size - mem_hdr_size_align;
   size_t hdr_size = (void*)hdr - (void*)hdr_end;
 
   ensure( hdr != NULL );
   
-  block_list_pushback (&region->block_root, hdr);
-  free_list_push (&region->free_root, hdr);
-
-  memory_allocator_crc_set(hdr);
-  memory_allocator_debug_set(hdr_size, hdr);
-  memory_allocator_guard_set(hdr_size, hdr);
+  MEM_LIST_FUNCTION_PUSH(pushback, block, hdr);
+  MEM_LIST_FUNCTION_PUSH(push, free, hdr);
   
   header_set_endblock(hdr_end);
-  block_list_pushback (&region->block_root, hdr_end);
+  MEM_LIST_FUNCTION_PUSH(pushback, block, hdr_end);
+
+  memory_allocator_debug_set(hdr_size, hdr);
+  memory_allocator_guard_set(hdr_size, hdr);
+
+  memory_allocator_crc_set(hdr);
   memory_allocator_crc_set(hdr_end);
 
   region->size += size;
@@ -427,8 +464,6 @@ memory_allocator_nolock_extend(struct memory_allocator_region_s *region, void *s
 
   return hdr;
 }
-
-/*************************/
 
 # ifdef CONFIG_HEXO_MMU
 static inline struct memory_allocator_header_s *
@@ -451,7 +486,7 @@ memory_allocator_candidate(struct memory_allocator_region_s *region, size_t size
 {
   CONTAINER_FOREACH(block_list, CLIST, &region->block_root,
   {
-    if ( !header_is_alloc(item) && header_get_size (&region->block_root, item) >= size)
+    if ( !header_is_alloc(item) && header_get_size(&region->block_root, item) >= size)
       return item;
   });
 
@@ -514,19 +549,17 @@ memory_allocator_extend(struct memory_allocator_region_s *region, void *start, s
     return h;
 }
 
-/************************OK*/
-
 void *memory_allocator_resize(void *address, size_t size)
 {
   struct memory_allocator_header_s *hdr = mem2hdr(address);
 
-  ensure ( header_is_alloc (hdr) );
+  ensure( header_is_alloc(hdr) );
 
   struct memory_allocator_region_s *region = hdr->region;
 
   size = size_alloc2real(size);
   
-  size_t hdr_size = header_get_size (&region->block_root, hdr);
+  size_t hdr_size = header_get_size(&region->block_root, hdr);
 
   ssize_t diff = (size - hdr_size);
   
@@ -542,7 +575,7 @@ void *memory_allocator_resize(void *address, size_t size)
   
   if ( !header_is_alloc(next) )
     {
-      size_t next_size = header_get_size (&region->block_root, next);
+      size_t next_size = header_get_size(&region->block_root, next);
       
       if (next_size < diff)
 	{
@@ -550,8 +583,8 @@ void *memory_allocator_resize(void *address, size_t size)
 	}
       else
 	{
-	  free_list_remove(&region->free_root, next);
-	  block_list_remove(&region->block_root, next);
+	  MEM_LIST_FUNCTION_REM(remove, free, next);
+	  MEM_LIST_FUNCTION_REM(remove, block, next);
 	  
 	  if (next_size >= diff + MEMALLOC_SPLIT_SIZE)
 	    {
@@ -561,8 +594,8 @@ void *memory_allocator_resize(void *address, size_t size)
 	      next = (void*)((uintptr_t)hdr + size);
 	      next_size -= diff;
 
-	      block_list_insert_post (&region->block_root, hdr, next);
-	      free_list_push (&region->free_root, next);
+	      MEM_LIST_FUNCTION_INS(insert_post, block, next, hdr);
+	      MEM_LIST_FUNCTION_PUSH(push, free, next);
 
 	      memory_allocator_crc_set(next);
 	      memory_allocator_guard_set(next_size, next);
@@ -593,8 +626,8 @@ void *memory_allocator_resize(void *address, size_t size)
 
 	      next = (void*)((uintptr_t)hdr + size);
 	      size_t next_size = -diff;
-	      block_list_insert_post (&region->block_root, hdr, next);
-              free_list_push (&region->free_root, next);
+	      MEM_LIST_FUNCTION_INS(insert_post, block, next, hdr);
+	      MEM_LIST_FUNCTION_PUSH(push, free, next);
 
 	      memory_allocator_crc_set(next);
 	      memory_allocator_guard_set(next_size, next);
@@ -612,8 +645,6 @@ void *memory_allocator_resize(void *address, size_t size)
 
   return address;
 }
-
-/************************OK*/
 
 void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size)
 {
@@ -633,37 +664,38 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
 #endif
       )
     {
-      size_t hdr_size = header_get_size (&region->block_root, hdr);
-      ensure ( !memory_allocator_debug_check (hdr_size, hdr) );
-      ensure ( !memory_allocator_guard_check (hdr_size, hdr) );
-      ensure ( !memory_allocator_crc_check (hdr) );
+      size_t hdr_size = header_get_size(&region->block_root, hdr);
+      ensure( !memory_allocator_debug_check(hdr_size, hdr) );
+      ensure( !memory_allocator_guard_check(hdr_size, hdr) );
+      ensure( !memory_allocator_crc_check(hdr) );
       
-      free_list_remove (&region->free_root, hdr);
-      header_set_alloc (hdr, region);
+      MEM_LIST_FUNCTION_REM(remove, free, hdr);
+      header_set_alloc(hdr, region);
       
       /* check if split is needed */
       if (hdr_size >= size + MEMALLOC_SPLIT_SIZE)
 	{
 	  struct memory_allocator_header_s	*next = (void*)((uintptr_t)hdr + size);
 
-	  block_list_insert_post (&region->block_root, hdr, next);
-	  free_list_push (&region->free_root, next);
+	  MEM_LIST_FUNCTION_INS(insert_post, block, next, hdr);
+	  MEM_LIST_FUNCTION_PUSH(push, free, next);
 	    
 	  memory_allocator_crc_set(next);
-	  size_t next_size = header_get_size (&region->block_root, next); 
-	  memory_allocator_debug_set (next_size, next);
-	  memory_allocator_guard_set (next_size, next);
+	  
+	  size_t next_size = header_get_size(&region->block_root, next); 
+	  memory_allocator_debug_set(next_size, next);
+	  memory_allocator_guard_set(next_size, next);
 
-	  memory_allocator_guard_set (size, hdr);
-          update_region_stats (region, 0, 1, 0);
+	  memory_allocator_guard_set(size, hdr);
+          update_region_stats(region, 0, 1, 0);
 	}
 
-      update_region_stats (region, 0, -1, 1);
+      update_region_stats(region, 0, -1, 1);
 
-      memory_allocator_crc_set (hdr);
-      memory_allocator_debug_set (size, hdr);
+      memory_allocator_crc_set(hdr);
+      memory_allocator_debug_set(size, hdr);
 
-      memchecker_set_alloc (size, hdr);
+      memchecker_set_alloc(size, hdr);
     }
 
   enable_memchecker();
@@ -675,53 +707,49 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
 
 }
 
-/************************OK*/
-
 void memory_allocator_push(void *address)
 {
   struct memory_allocator_header_s	*hdr, *next, *prev;
   hdr = mem2hdr(address);
   struct memory_allocator_region_s	*region = hdr->region;
-  size_t size = header_get_size (&region->block_root, hdr);
+  size_t size = header_get_size(&region->block_root, hdr);
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   lock_spin(&region->lock);
   disable_memchecker();
 
-  //  ensure(hdr->size >= mem_hdr_size);
+  ensure( !memory_allocator_guard_check(size, hdr) );
+  ensure( !memory_allocator_crc_check(hdr) );
 
-  ensure ( !memory_allocator_guard_check (size, hdr) );
-  ensure ( !memory_allocator_crc_check (hdr) );
+  next = block_list_next(&region->block_root, hdr);
+  ensure( !memory_allocator_crc_check(next) );
+  prev = block_list_prev(&region->block_root, hdr);
+  ensure( !memory_allocator_crc_check(prev) );
 
-  next = block_list_next (&region->block_root, hdr);
-  ensure ( !memory_allocator_crc_check (next) );
-  prev = block_list_prev (&region->block_root, hdr);
-  ensure ( !memory_allocator_crc_check (prev) );
+  memchecker_set_free(size, hdr);
 
-  memchecker_set_free (size, hdr);
-
-  if ( ! header_is_alloc (next) )
+  if ( ! header_is_alloc(next) )
     {
-      free_list_remove(&region->free_root, next);
-      block_list_remove(&region->block_root, next);
+      MEM_LIST_FUNCTION_REM(remove, free, next);
+      MEM_LIST_FUNCTION_REM(remove, block, next);
       update_region_stats(region, 0, -1, 0);
     }  
 
-  if ( ! header_is_alloc (prev) )
+  if ( ! header_is_alloc(prev) )
     {
-      block_list_remove(&region->block_root, hdr);
-      memory_allocator_crc_set (prev);
+      MEM_LIST_FUNCTION_REM(remove, block, hdr);
+      memory_allocator_crc_set(prev);
       hdr = prev;
     }
   else
     {
-      free_list_push (&region->free_root, hdr);
-      memory_allocator_crc_set (hdr);
+      MEM_LIST_FUNCTION_PUSH(push, free, hdr);
+      memory_allocator_crc_set(hdr);
       update_region_stats(region, 0, 1, 0);
     }
 
-  size = header_get_size (&region->block_root, hdr);
-  memory_allocator_debug_set (size, hdr);      
+  size = header_get_size(&region->block_root, hdr);
+  memory_allocator_debug_set(size, hdr);      
 
   update_region_stats(region, 0, 0, -1);
 
@@ -729,8 +757,6 @@ void memory_allocator_push(void *address)
   lock_release(&region->lock);
   CPU_INTERRUPT_RESTORESTATE;
 }
-
-/************************OK*/
 
 size_t memory_allocator_getsize(void *ptr)
 {
@@ -741,12 +767,12 @@ size_t memory_allocator_getsize(void *ptr)
 
   struct memory_allocator_header_s *hdr = mem2hdr(ptr);
 
-  ensure ( header_is_alloc (hdr) );
+  ensure( header_is_alloc(hdr) );
 
-  size_t size = header_get_size (&hdr->region->block_root, hdr);
+  size_t size = header_get_size(&hdr->region->block_root, hdr);
 
-  ensure ( !memory_allocator_guard_check (size, hdr) );
-  ensure ( !memory_allocator_crc_check (hdr) );
+  ensure( !memory_allocator_guard_check(size, hdr) );
+  ensure( !memory_allocator_crc_check(hdr) );
 
   result = size_real2alloc(size);
 
@@ -755,8 +781,6 @@ size_t memory_allocator_getsize(void *ptr)
 
   return result;
 }
-
-/*************************/
 
 void *memory_allocator_reserve(struct memory_allocator_region_s *region, void *start, size_t size)
 {
@@ -772,36 +796,36 @@ void *memory_allocator_reserve(struct memory_allocator_region_s *region, void *s
   /* test if the reserve memory space is not already used and return the header which contains the reserve space*/
   if ((hdr = get_hdr_for_rsv(region, start, size)))
     {
-      size_t hdr_size = header_get_size (&region->block_root, hdr);
-      ensure ( !memory_allocator_debug_check (hdr_size, hdr) );
-      ensure ( !memory_allocator_guard_check (hdr_size, hdr) );
-      ensure ( !memory_allocator_crc_check (hdr) );
+      size_t hdr_size = header_get_size(&region->block_root, hdr);
+      ensure( !memory_allocator_debug_check(hdr_size, hdr) );
+      ensure( !memory_allocator_guard_check(hdr_size, hdr) );
+      ensure( !memory_allocator_crc_check(hdr) );
       
       /* check if split is needed FIXME: split after with no split before*/
       if (MEMALLOC_SPLIT_SIZE < ( (uintptr_t)start - (uintptr_t)hdr) )
 	{
 	  struct memory_allocator_header_s  *prev = hdr;
 
-	  hdr = mem2hdr (start);
+	  hdr = mem2hdr(start);
 
 	  size_t prev_size = hdr - prev;
 
-	  header_set_alloc (hdr, region);
+	  header_set_alloc(hdr, region);
 
-	  block_list_insert_post (&region->block_root, prev, hdr);
+	  MEM_LIST_FUNCTION_INS(insert_post, block, hdr, prev);
 
 	  /*check is split is needed after the reserve space*/
 	  if( MEMALLOC_SPLIT_SIZE <= ( hdr_size - size - prev_size ) )
 	    {
 	      struct memory_allocator_header_s *next = ((void*)hdr + size);
 	      
-	      block_list_insert_post (&region->block_root, hdr, next);
-	      free_list_push (&region->free_root, next);
+	      MEM_LIST_FUNCTION_INS(insert_post, block, next, hdr);
+	      MEM_LIST_FUNCTION_PUSH(push, free, next); 
 	      
 	      size_t next_size = hdr_size - size - prev_size;
 
-	      memory_allocator_crc_set (next);
-	      memory_allocator_guard_set (next_size, next);
+	      memory_allocator_crc_set(next);
+	      memory_allocator_guard_set(next_size, next);
 
 	      update_region_stats(region, 0, 1, 0);
 	    }
@@ -816,14 +840,14 @@ void *memory_allocator_reserve(struct memory_allocator_region_s *region, void *s
 	}
       else
 	{
-	  free_list_remove (&region->free_root, hdr);
+	  MEM_LIST_FUNCTION_REM(remove, free, hdr);
 
 	  memory_allocator_crc_set(hdr);      
 	  memory_allocator_debug_set(hdr_size, hdr);
 	  update_region_stats(region, 0, -1, 0);
 	}
       
-      hdr_size = header_get_size (&region->block_root, hdr);
+      hdr_size = header_get_size(&region->block_root, hdr);
       update_region_stats(region, hdr_size, 0, 1);
 
       memchecker_set_alloc(hdr_size, hdr);
@@ -836,8 +860,6 @@ void *memory_allocator_reserve(struct memory_allocator_region_s *region, void *s
 
   return hdr;
 }
-
-/************************OK*/
 
 struct memory_allocator_region_s *
 memory_allocator_init(struct memory_allocator_region_s *container_region,
@@ -856,11 +878,11 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
     }
   else
     {
-      region = memory_allocator_pop (container_region, sizeof (struct memory_allocator_region_s));
+      region = memory_allocator_pop(container_region, sizeof (struct memory_allocator_region_s));
       hdr = start;
     }
 
-  hdr_end = end - mem_hdr_size;
+  hdr_end = end - mem_hdr_size_align;
 
   size_t size = (uintptr_t)hdr_end - (uintptr_t)hdr;
   
@@ -877,9 +899,9 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
   
   init_region_stats(region, size, 1, 0);
   
-  /* push initial block */
+  /* push initials blocks */
   
-  assert(size > mem_hdr_size);
+  assert(size > mem_hdr_size_align);
   
   header_set_endblock(hdr_end);
 
@@ -887,11 +909,13 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
 
   block_list_push(&region->block_root, hdr);
   free_list_push(&region->free_root, hdr);
-  
+
+  memory_allocator_crc_set(hdr_end);  
   memory_allocator_crc_set(hdr);
-  size_t size = header_get_size (&region->block_root, hdr);
-  memory_allocator_debug_set (size, hdr);
-  memory_allocator_guard_set (size, hdr);
+
+  size_t size = header_get_size(&region->block_root, hdr);
+  memory_allocator_debug_set(size, hdr);
+  memory_allocator_guard_set(size, hdr);
 
   memchecker_set_free(size, hdr);
   enable_memchecker();
@@ -899,8 +923,6 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
   
   return region;
 }
-
-/*************************/
 
 /* enum mem_error_e memory_allocator_region_check(struct memory_allocator_region_s *region, struct memory_allocator_check_s *check) */
 /* { */
@@ -953,8 +975,6 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
 
 /*   return res; */
 /*}*/
-
-/*************************/
 
 error_t memory_allocator_stats(struct memory_allocator_region_s *region,
 			size_t *alloc_blocks,
