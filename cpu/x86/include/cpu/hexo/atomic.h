@@ -31,12 +31,18 @@
 
 #define HAS_CPU_ATOMIC_INC
 
+#if !defined(CONFIG_ARCH_EMU) || defined(CONFIG_ARCH_SMP)
+# define _SMPLOCK "lock\n"
+#else
+# define _SMPLOCK
+#endif
+
 static inline bool_t
 cpu_atomic_inc(volatile atomic_int_t *a)
 {
   uint8_t		zero;
 
-  asm volatile ("lock incl	%0	\n"
+  asm volatile (_SMPLOCK "incl	%0	\n"
           "pause \n"
 		"setnz		%1	\n"
 		: "=m" (*a), "=q" (zero)
@@ -52,7 +58,7 @@ cpu_atomic_dec(volatile atomic_int_t *a)
 {
   uint8_t		zero;
 
-  asm volatile ("lock decl	%0	\n"
+  asm volatile (_SMPLOCK "decl	%0	\n"
           "pause \n"
 		"setnz		%1	\n"
 		: "=m" (*a), "=q" (zero)
@@ -68,7 +74,7 @@ cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
 {
   uint8_t		isset;
 
-  asm volatile ("lock bts	%2, %0	\n"
+  asm volatile (_SMPLOCK "bts	%2, %0	\n"
           "pause \n"
 		"setc		%1	\n"
 		: "=m,m" (*a), "=q,q" (isset)
@@ -83,7 +89,7 @@ cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
 {
-  asm volatile ("1:	lock bts	%1, %0	\n"
+  asm volatile ("1:	" _SMPLOCK "bts	%1, %0	\n"
           "pause \n"
 		"	jc		1b	\n"
 		: "=m,m" (*a)
@@ -98,7 +104,7 @@ cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
 {
   uint8_t		isset;
 
-  asm volatile ("lock btr	%2, %0	\n"
+  asm volatile (_SMPLOCK "btr	%2, %0	\n"
           "pause \n"
 		"setc		%1	\n"
 		: "=m,m" (*a), "=q,q" (isset)
@@ -114,7 +120,7 @@ cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
 {
-  asm volatile ("1:	lock btr	%1, %0	\n"
+  asm volatile ("1:	" _SMPLOCK " btr	%1, %0	\n"
           "pause \n"
 		"	jnc		1b	\n"
 		: "=m,m" (*a)
@@ -127,7 +133,7 @@ cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
 {
-  asm volatile ("lock bts	%1, %0	\n"
+  asm volatile (_SMPLOCK "bts	%1, %0	\n"
           "pause \n"
 		: "=m,m" (*a)
 		: "r,I" (n)
@@ -139,12 +145,14 @@ cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
 {
-  asm volatile ("lock btr	%1, %0	\n"
+  asm volatile (_SMPLOCK "btr	%1, %0	\n"
           "pause \n"
 		: "=m,m" (*a)
 		: "r,I" (n)
 		);
 }
+
+#undef _SMPLOCK
 
 #endif
 
