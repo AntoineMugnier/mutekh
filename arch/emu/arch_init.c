@@ -32,7 +32,6 @@
 #ifdef CONFIG_ARCH_SMP
 static size_t cpu_count = CONFIG_CPU_MAXCOUNT;
 static volatile bool_t cpu_init_flag = 0;
-#endif
 
 extern __ldscript_symbol_t __data_start, __data_end;
 extern __ldscript_symbol_t __bss_start, __bss_end;
@@ -53,12 +52,15 @@ static void emu_data_remap(void)
     
     memcpy(data_start, copy, size);
 }
+#endif
 
 /* architecture specific init function */
 void arch_init()
 {
+#if defined(CONFIG_ARCH_SMP)
     /* remap data+bss segment with SHARED attribute */
     emu_data_remap();
+#endif
 
     mem_init();
 

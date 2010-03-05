@@ -34,13 +34,20 @@
 
 /************************************************************************/
 
+#if defined(CONFIG_ARCH_EMU_LINUX)
+/** context local storage type attribute */
 #define CPU_LOCAL	__attribute__((section (".cpudata")))
+#elif defined(CONFIG_ARCH_EMU_DARWIN)
+#define CPU_LOCAL
+#else
+# error Hu?
+#endif
 
 extern CPU_LOCAL void *__cpu_data_base;
 extern __ldscript_symbol_t __cpu_data_start;
 
-/** cpu local storage type attribute */
 #ifdef CONFIG_ARCH_SMP
+/** cpu local storage type attribute */
 # define CPU_GET_CLS() ((uintptr_t)__cpu_data_base - (uintptr_t)&__cpu_data_start)
 # define CPU_LOCAL_CLS_SET(cls, n, v) { *(typeof(n)*)((uintptr_t)(cls) - (uintptr_t)&__cpu_data_start + (uintptr_t)&(n)) = (v); }
 # define CPU_LOCAL_CLS_GET(cls, n) 	({ *(typeof(n)*)((uintptr_t)(cls) - (uintptr_t)&__cpu_data_start + (uintptr_t)&(n)); })

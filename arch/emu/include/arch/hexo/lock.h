@@ -77,7 +77,9 @@ static inline bool_t arch_lock_state(struct arch_lock_s *lock)
 static inline void arch_lock_release(struct arch_lock_s *lock)
 {
   cpu_atomic_bit_clr(&lock->a, 0);
+#if !defined(CONFIG_ARCH_EMU_DARWIN)
   emu_do_syscall(EMU_SYSCALL_SCHED_YIELD, 0);
+#endif
 }
 
 #endif

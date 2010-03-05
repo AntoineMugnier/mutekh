@@ -87,6 +87,9 @@ FORCE:
 
 kernel: $(OBJ_DIR)/$(KERNEL_FILE)
 	cp $< $(BUILD_DIR)/$(FINAL_KERNEL_FILE)
+ifeq ($(CONFIG_ARCH_EMU),defined)
+	chmod +x $(BUILD_DIR)/$(FINAL_KERNEL_FILE)
+endif
 	@echo 'BUILD DIR   ' $(OBJ_DIR)
 	@echo 'KERNEL      ' $(notdir $<)
 
