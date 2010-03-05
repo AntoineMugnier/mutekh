@@ -6,3 +6,7 @@ term_xterm.o
 objs += getline.o getline_complete.o	\
 	getline_edit.o getline_history.o
 
+objs += console_builtin.o console.o console_complete.o	\
+	console_entries.o console_parse.o		\
+	console_process.o
+

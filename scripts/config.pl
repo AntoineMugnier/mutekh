@@ -223,6 +223,13 @@ sub cmd_suggest
     push(@{$$opts{suggest}}, "@args");
 }
 
+sub cmd_suggest_when
+{
+    my ($location, $opts, @args) = @_;
+
+    push(@{$$opts{suggest_when}}, "@args");
+}
+
 sub cmd_when
 {
     my ($location, $opts, @args) = @_;
@@ -258,6 +265,7 @@ my %config_cmd =
  "require" => \&cmd_require,
  "single" => \&cmd_single,
  "suggest" => \&cmd_suggest,
+ "suggest_when" => \&cmd_suggest_when,
  "when" => \&cmd_when,
  "module" => \&cmd_module,
  "provide" => \&cmd_provide,
@@ -350,6 +358,7 @@ sub process_file
 		    $$opts{parent} = [];
 		    $$opts{require} = [];
 		    $$opts{suggest} = [];
+		    $$opts{suggest_when} = [];
 		    $$opts{when} = [];
 		    $$opts{single} = [];
 		    $$opts{desc} = [];
@@ -404,6 +413,9 @@ sub process_file
 sub explore
 {
     my ($dir) = @_;
+
+    return if !$dir;
+    error("Can not explore `$dir' directory") if ! -d $dir;
 
     # skip already processed dir
     $dir = Cwd::realpath($dir);
@@ -511,7 +523,6 @@ sub process_config_when
 
     return $res;
 }
-
 
 ##
 ## at least one parent must be defined
@@ -629,6 +640,38 @@ sub process_config_suggest
 	    notice("`".$$orig{name}."' token is defined ".
 		    "and suggests this configuration: ",
 		    @deps_and);
+	}
+    }
+
+    return if ($$orig{value} ne "undefined");
+
+    my $res = !scalar @{$$orig{parent}};
+    foreach my $dep (@{$$orig{parent}})
+    {
+	my $opt = $config_opts{$dep};
+
+	if ($opt && $$opt{value} ne "undefined")
+	{
+	    $res = 1;
+	    last;
+	}
+    }
+
+    return if !$res;
+
+    foreach my $dep_and (@{$$orig{suggest_when}})
+    {
+	my @deps_and = split(/\s+/, $dep_and);
+
+	foreach my $rule (@deps_and)
+	{
+	    if (check_rule($orig, $rule))
+	    {
+		notice("`".$$orig{name}."' token is undefined ".
+		       "but is suggested when: ",
+		       @deps_and);
+
+	    }
 	}
     }
 }
@@ -885,8 +928,15 @@ sub check_config
 	{
 	    if ($$opt{value} ne "undefined")
 	    {
-		if ( not process_config_parent($opt) or
-		     not process_config_depend($opt) )
+		if ( not process_config_parent($opt) )
+		{
+		    $$opt{value} = "undefined";
+		    $$opt{parent_undef} = 1;
+		    $changed = 1;
+		    last;
+		}
+
+		if ( not process_config_depend($opt) )
 		{
 		    $$opt{value} = "undefined";
 		    $changed = 1;
