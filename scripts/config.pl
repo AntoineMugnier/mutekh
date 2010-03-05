@@ -643,7 +643,9 @@ sub process_config_suggest
 	}
     }
 
-    return if ($$orig{value} ne "undefined");
+    # suggest default value may not be appropriate
+    return if ($$orig{value} ne $$orig{default});
+    return if ($$orig{userdefined});
 
     my $res = !scalar @{$$orig{parent}};
     foreach my $dep (@{$$orig{parent}})
@@ -667,10 +669,8 @@ sub process_config_suggest
 	{
 	    if (check_rule($orig, $rule))
 	    {
-		notice("`".$$orig{name}."' token is undefined ".
-		       "but is suggested when: ",
+		notice("`".$$orig{name}."' token defaults to `".$$orig{value}."' which may not be appropriate when: ",
 		       @deps_and);
-
 	    }
 	}
     }
@@ -846,7 +846,7 @@ sub set_config
 
 	foreach my $opt (values %config_opts)
 	{
-	    if ($$opt{value} eq "undefined" && !$$opt{flags}->{userdefined})
+	    if ($$opt{value} eq "undefined" && !$$opt{userdefined})
 	    {
 		if ( process_config_when($opt) )
 		{
@@ -1171,7 +1171,7 @@ sub read_myconfig
 		    $val = "defined" if (!defined $val);
 		    $$opt{value} = $val;
 		    $$opt{vlocation} = "$file:$lnum";
-		    $$opt{flags}->{userdefined} = 1;
+		    $$opt{userdefined} = 1;
 		}
 		next;
 	    }
