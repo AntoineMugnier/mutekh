@@ -93,5 +93,8 @@ static inline void cpu_dcache_invld(void *ptr)
 {
 }
 
+#define CPU_AVR_HI8(x)		(((uintptr_t)(x)) >> 8)
+#define CPU_AVR_LO8(x)		(((uintptr_t)(x)) & 0xff)
+
 #endif
 

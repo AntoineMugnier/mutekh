@@ -28,66 +28,72 @@
 #ifndef TYPES_H_
 #define TYPES_H_
 
-/** Base interger type, 8 bits unsigned int */
+#include "cpu/hexo/types.h"
+
+/* define fixed width types */
+
 typedef unsigned char		uint8_t;
-
-/** Base interger type, 16 bits unsigned int */
-#if CONFIG_CPU_SIZEOF_INT == 2
-typedef unsigned int		uint16_t;
-#else
-typedef unsigned short		uint16_t;
-#endif
-
-/** Base interger type, 32 bits unsigned int */
-#if CONFIG_CPU_SIZEOF_INT == 2
-typedef unsigned long		uint32_t;
-#else
-typedef unsigned int		uint32_t;
-#endif
-
-/** Base interger type, 64 bits unsigned int */
-typedef unsigned long long	uint64_t;
-
-/** Base interger type, 8 bits signed int */
 typedef signed char		int8_t;
 
-/** Base interger type, 16 bits signed int */
-#if CONFIG_CPU_SIZEOF_INT == 2
+#if CPU_SIZEOF_INT == 16
+typedef unsigned int		uint16_t;
 typedef signed int		int16_t;
-#else
+#elif CPU_SIZEOF_SHORT == 16
+typedef unsigned short		uint16_t;
 typedef signed short		int16_t;
 #endif
 
-/** Base interger type, 32 bits signed int */
-#if CONFIG_CPU_SIZEOF_INT == 2
-typedef signed long		int32_t;
-#else
+#if CPU_SIZEOF_INT == 32
+typedef unsigned int		uint32_t;
 typedef signed int		int32_t;
+#elif CPU_SIZEOF_LONG == 32
+typedef unsigned long		uint32_t;
+typedef signed long		int32_t;
 #endif
 
-/** Base interger type, 64 bits signed int */
+typedef unsigned long long	uint64_t;
 typedef signed long long	int64_t;
 
+/* define other iso c99 integer types */
+
+#define _DEFINE_INT_TYPE_(a, b, c) a##b##c
+#define _DEFINE_INT_TYPE(a, b, c) _DEFINE_INT_TYPE_(a, b, c)
+
+#define _DEFINE_FAST_INT(size)					\
+  typedef _DEFINE_INT_TYPE(int, INT_FAST##size##_SIZE, _t)	\
+       int##_fast##size##_t;					\
+  typedef _DEFINE_INT_TYPE(uint, INT_FAST##size##_SIZE, _t)	\
+       uint##_fast##size##_t;
+
+#define _DEFINE_PTR_INT(size)					\
+  typedef _DEFINE_INT_TYPE(uint, size, _t)	uintptr_t;	\
+  typedef _DEFINE_INT_TYPE(int, size, _t)	intptr_t;	\
+  typedef _DEFINE_INT_TYPE(int, size, _t)	ptrdiff_t;
+
+#define _DEFINE_REG_INT(size)					\
+  typedef _DEFINE_INT_TYPE(uint, size, _t)	reg_t;		\
+  typedef _DEFINE_INT_TYPE(int, size, _t)	sreg_t;
+
 #ifdef CONFIG_HEXO_INTTYPES_SMALL
-/** signed integer type of CPU prefered size, at least 8 bits */
-typedef	int8_t			int_fast8_t;
-/** signed integer type of CPU prefered size, at least 16 bits */
-typedef	int16_t			int_fast16_t;
-/** signed integer type of CPU prefered size, at least 32 bits */
-typedef	int32_t			int_fast32_t;
-/** signed integer type of CPU prefered size, at least 64 bits */
-typedef	int64_t			int_fast64_t;
-/** unsigned integer type of CPU prefered size, at least 8 bits */
-typedef	uint8_t			uint_fast8_t;
-/** unsigned integer type of CPU prefered size, at least 16 bits */
-typedef	uint16_t		uint_fast16_t;
-/** unsigned integer type of CPU prefered size, at least 32 bits */
-typedef	uint32_t		uint_fast32_t;
-/** unsigned integer type of CPU prefered size, at least 64 bits */
-typedef	uint64_t		uint_fast64_t;
+# undef INT_FAST8_SIZE
+# define INT_FAST8_SIZE          8
+# undef INT_FAST16_SIZE
+# define INT_FAST16_SIZE         16
+# undef INT_FAST32_SIZE
+# define INT_FAST32_SIZE         32
+# undef INT_FAST64_SIZE
+# define INT_FAST64_SIZE         64
 #endif
 
-#include "cpu/hexo/types.h"
+_DEFINE_FAST_INT(8)
+_DEFINE_FAST_INT(16)
+_DEFINE_FAST_INT(32)
+_DEFINE_FAST_INT(64)
+_DEFINE_PTR_INT(INT_PTR_SIZE)
+_DEFINE_REG_INT(INT_REG_SIZE)
+
+typedef sreg_t atomic_int_t;
+
 #include "arch/hexo/types.h"
 
 /** Physical address type*/
