@@ -72,6 +72,12 @@ typedef int_fast8_t		error_t;
 /** bad data/inconsistency */
 #define EBADDATA	13
 
+/** operation canceled */
+#define ECANCELED 14
+
+/** operation canceled */
+#define EACCES 15
+
 /** File exists */
 #define EEXISTS 17
 
