@@ -32,6 +32,8 @@
 
 /********************* memory allocation */
 
+#include "alloca.h"
+
 void * __attribute__ ((malloc))
 calloc(size_t nmemb, size_t size);
 
