@@ -63,8 +63,11 @@ typedef uint64_t cpu_cycle_t;
 static inline cpu_cycle_t
 cpu_cycle_count(void)
 {
-  cpu_trap();			/* not supported */
-  return 0;
+  uint64_t      low, high;
+
+  asm volatile("rdtsc" : "=a" (low), "=d" (high));
+
+  return (low | ((uint64_t)high << 32));
 }
 
 #ifdef CONFIG_ARCH_SMP
