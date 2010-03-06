@@ -48,9 +48,11 @@ realloc(void *ptr, size_t size);
 
 /********************* integer conversion */
 
+#if 0
 uint_fast8_t strto_uintl8(const char *nptr, char **endptr, int_fast8_t base);
 int_fast8_t strto_intl8(const char *nptr, char **endptr, int_fast8_t base);
 int_fast8_t ato_intl8(const char *nptr);
+#endif
 
 uint_fast16_t strto_uintl16(const char *nptr, char **endptr, int_fast8_t base);
 int_fast16_t strto_intl16(const char *nptr, char **endptr, int_fast8_t base);
@@ -64,40 +66,17 @@ uint_fast64_t strto_uintl64(const char *nptr, char **endptr, int_fast8_t base);
 int_fast64_t strto_intl64(const char *nptr, char **endptr, int_fast8_t base);
 int_fast64_t ato_intl64(const char *nptr);
 
-/** strtol function is deprecated because integer type width can not be
-    clearly determined */
-int_fast32_t __attribute__ ((deprecated))
-strtol(const char *nptr, char **endptr, int_fast8_t base);
+# define _STRTOINT__(a, b) a ## b
+# define _STRTOINT_(a, b) _STRTOINT__(a, b)
 
-/** strtoul function is deprecated because integer type width can not be
-    clearly determined */
-uint_fast32_t __attribute__ ((deprecated))
-strtoul(const char *nptr, char **endptr, int_fast8_t base);
+# define strtol _STRTOINT_(strto_intl, CPU_SIZEOF_LONG)
+# define strtoul _STRTOINT_(strto_uintl, CPU_SIZEOF_LONG)
+# define strtoll strto_intl64
+# define strtoull strto_uintl64
 
-/** atoi function is deprecated because integer type width can not be
-    clearly determined */
-int_fast32_t __attribute__ ((deprecated))
-atoi(const char *nptr);
-
-/** atol function is deprecated because integer type width can not be
-    clearly determined */
-int_fast32_t __attribute__ ((deprecated))
-atol(const char *nptr);
-
-/** strtoll function is deprecated because integer type width can not be
-    clearly determined */
-int_fast32_t __attribute__ ((deprecated))
-strtoll(const char *nptr, char **endptr, int_fast8_t base);
-
-/** strtoull function is deprecated because integer type width can not be
-    clearly determined */
-uint_fast64_t __attribute__ ((deprecated))
-strtoull(const char *nptr, char **endptr, int_fast8_t base);
-
-/** atoll function is deprecated because integer type width can not be
-    clearly determined */
-int_fast64_t __attribute__ ((deprecated))
-atoll(const char *nptr);
+# define atoi _STRTOINT_(ato_intl, CPU_SIZEOF_INT)
+# define atol _STRTOINT_(ato_intl, CPU_SIZEOF_LONG)
+# define atoll ato_intl64
 
 /********************* misc */
 

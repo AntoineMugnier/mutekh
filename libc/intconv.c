@@ -132,109 +132,25 @@ type name(const char *nptr)						\
     }									\
 }
 
+#if 0
 __INTCONV_STRTOTYPE_POST	(strto_uintl8, uint_fast8_t);
 __INTCONV_STRTOTYPE_UNSIGNED	(strto_uintl8, uint_fast8_t, strto_uintl8);
 __INTCONV_STRTOTYPE_SIGNED	(strto_intl8,  int_fast8_t,  strto_uintl8);
 __INTCONV_ATOTYPE		(ato_intl8,    int_fast8_t,  strto_uintl8);
-
+#endif
 
 __INTCONV_STRTOTYPE_POST	(strto_uintl16, uint_fast16_t);
 __INTCONV_STRTOTYPE_UNSIGNED	(strto_uintl16, uint_fast16_t, strto_uintl16);
 __INTCONV_STRTOTYPE_SIGNED	(strto_intl16,  int_fast16_t,  strto_uintl16);
 __INTCONV_ATOTYPE		(ato_intl16,    int_fast16_t,  strto_uintl16);
 
-
 __INTCONV_STRTOTYPE_POST	(strto_uintl32, uint_fast32_t);
 __INTCONV_STRTOTYPE_UNSIGNED	(strto_uintl32, uint_fast32_t, strto_uintl32);
 __INTCONV_STRTOTYPE_SIGNED	(strto_intl32,  int_fast32_t,  strto_uintl32);
 __INTCONV_ATOTYPE		(ato_intl32,    int_fast32_t,  strto_uintl32);
 
-#if CONFIG_CPU_SIZEOF_INT >= 4
 __INTCONV_STRTOTYPE_POST	(strto_uintl64, uint_fast64_t);
 __INTCONV_STRTOTYPE_UNSIGNED	(strto_uintl64, uint_fast64_t, strto_uintl64);
 __INTCONV_STRTOTYPE_SIGNED	(strto_intl64,  int_fast64_t,  strto_uintl64);
 __INTCONV_ATOTYPE		(ato_intl64,    int_fast64_t,  strto_uintl64);
-#endif
-
-/********************* deprecated standard functions */
-
-#if !defined(CONFIG_ARCH_EMU_DARWIN)
-
-int_fast32_t
-strtol(const char *nptr, char **endptr, int_fast8_t base)
-__attribute__ ((weak, alias("strto_intl32")));
-
-uint_fast32_t
-strtoul(const char *nptr, char **endptr, int_fast8_t base)
-__attribute__ ((weak, alias("strto_uintl32")));
-
-int_fast32_t
-atoi(const char *nptr)
-__attribute__ ((weak, alias("ato_intl32")));
-
-int_fast32_t
-atol(const char *nptr)
-__attribute__ ((weak, alias("ato_intl32")));
-
-#if !defined(CONFIG_CPU_AVR)
-int_fast32_t
-strtoll(const char *nptr, char **endptr, int_fast8_t base)
-__attribute__ ((weak, alias("strto_intl64")));
-
-uint_fast64_t
-strtoull(const char *nptr, char **endptr, int_fast8_t base)
-__attribute__ ((weak, alias("strto_uintl64")));
-
-int_fast64_t
-atoll(const char *nptr)
-__attribute__ ((weak, alias("ato_intl64")));
-#endif
-
-#else /* EMU on Darwin */
-
-int_fast32_t
-strtol(const char *nptr, char **endptr, int_fast8_t base)
-{
-    return strto_intl32(nptr, endptr, base);
-}
-
-uint_fast32_t
-strtoul(const char *nptr, char **endptr, int_fast8_t base)
-{
-    return strto_uintl32(nptr, endptr, base);
-}
-
-int_fast32_t
-atoi(const char *nptr)
-{
-    return ato_intl32(nptr);
-}
-
-int_fast32_t
-atol(const char *nptr)
-{
-    return ato_intl32(nptr);
-}
-
-#if !defined(CONFIG_CPU_AVR)
-int_fast32_t
-strtoll(const char *nptr, char **endptr, int_fast8_t base)
-{
-    return strto_intl64(nptr, endptr, base);
-}
-
-uint_fast64_t
-strtoull(const char *nptr, char **endptr, int_fast8_t base)
-{
-    return strto_uintl64(nptr, endptr, base);
-}
-
-int_fast64_t
-atoll(const char *nptr)
-{
-    return ato_intl64(nptr);
-}
-#endif
-
-#endif /* EMU on Darwin */
 
