@@ -62,6 +62,14 @@ void arch_start_other_cpu(void);
 
 cpu_cycle_t cpu_cycle_count(void);
 
+static inline
+void cpu_cycle_wait(cpu_cycle_t delta)
+{
+    delta += cpu_cycle_count();
+    while ( cpu_cycle_count() < delta )
+        ;
+}
+
 /** cpu trap instruction */
 void cpu_trap();
 
