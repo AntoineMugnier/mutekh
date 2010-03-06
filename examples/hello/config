@@ -7,9 +7,6 @@
   # Application license
   CONFIG_LICENSE_APP_LGPL
 
-  # Mutek features
-  CONFIG_HEXO_IPI undefined
-
   # Libs
   CONFIG_PTHREAD
 

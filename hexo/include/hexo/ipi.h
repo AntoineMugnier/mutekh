@@ -40,9 +40,6 @@
 
 typedef IPI_MSG_FUNC(ipi_msg_func_t);
 
-extern CPU_LOCAL struct device_s *ipi_icu_dev;
-extern CPU_LOCAL void *ipi_cpu_id;
-
 #define CONTAINER_LOCK_ipi_queue HEXO_SPIN
 
 CONTAINER_TYPE(ipi_queue, DLIST,
@@ -53,41 +50,65 @@ struct ipi_request_s
   ipi_queue_entry_t queue_entry;
 }, queue_entry);
 
-CONTAINER_FUNC(ipi_queue, DLIST, static inline, ipi_queue);
+struct ipi_endpoint_s
+{
+    struct device_s *icu_dev;
+    void *priv;
+    ipi_queue_root_t ipi_fifo;
+#if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
+    CONTAINER_ENTRY_TYPE(CLIST) idle_cpu_queue_list_entry;
+#endif
+};
+
+extern CPU_LOCAL struct ipi_endpoint_s ipi_endpoint;
+
 
 /**
-   Send an ipi to given processor. Processor is identified using its
-   cpu local storage pointer.
+   Send an ipi to given endpoint.
+
+   @param endpoint Pointer to ipi endpoint
    @return zero if ipi was sent
-   @see #CPU_LOCAL_ID_ADDR
  */
-error_t ipi_post(void *cpu_cls);
+error_t ipi_post(struct ipi_endpoint_s *endpoint);
 
 /**
    Attach the given callback for execution on target processor and
-   send an ipi to given processor on success  Processor is identified using its
-   cpu local storage pointer.
+   send an ipi to given endpoint.
 
+   @param endpoint Pointer to ipi endpoint
+   @param rq Request buffer
    @return zero if message was attached and ipi sent
    @see #CPU_LOCAL_ID_ADDR
  */
-error_t ipi_post_rq(void *cpu_cls, struct ipi_request_s *rq);
+error_t ipi_post_rq(struct ipi_endpoint_s *endpoint, struct ipi_request_s *rq);
 
 /**
-   Request processing of pending messages on current processor. Called from icu driver
+   Request processing of pending messages on current processor. Must
+   be called from icu driver
  */
 void ipi_process_rq();
 
 /**
-   Setup a IPI device for a given CPU.
+   Setup a IPI device for a given endpoint.
 
-   @param cpu_cls CPU's cls to hook up in
-   @param ipi_icudev Icudev handling the IPIs
-   @param privdata Icudev private data returned by @ref dev_icu_setupipi
+   @param endpoint IPI endpoint to set up
+   @param ipi_dev ICU device handling the IPI
+   @param ipi_no IPI number in ICU device @tt ipi_dev
  */
-void ipi_hook_cpu(void *cpu_cls,
-				  struct device_s *ipi_icudev,
-				  void *privdata);
+error_t ipi_hook_endpoint(struct ipi_endpoint_s *endpoint,
+                          struct device_s *ipi_dev,
+                          uint_fast8_t ipi_no);
+
+/**
+   Checks whether a given endpoint may receive IPIs.
+
+   @param endpoint IPI endpoint to check
+   @return whether endpoint may receive IPIs
+*/
+static inline
+bool_t ipi_endpoint_isvalid(struct ipi_endpoint_s *endpoint)
+{
+    return endpoint != NULL && endpoint->icu_dev != NULL;
+}
 
 #endif
-

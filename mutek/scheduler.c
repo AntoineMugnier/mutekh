@@ -66,85 +66,108 @@ __sched_candidate(sched_queue_root_t *root)
   return next;
 }
 
+#if defined(CONFIG_HEXO_IPI)
+#define CONTAINER_LOCK_idle_cpu_queue HEXO_SPIN
+CONTAINER_TYPE(idle_cpu_queue, CLIST, struct ipi_endpoint_s, idle_cpu_queue_list_entry);
+CONTAINER_FUNC(idle_cpu_queue, CLIST, static inline, idle_cpu_queue, list_entry);
+#endif
+
+struct scheduler_s
+{
+    sched_queue_root_t root;
+#if defined(CONFIG_HEXO_IPI) && defined(CONFIG_MUTEK_SCHEDULER_MIGRATION)
+    idle_cpu_queue_root_t idle_cpu;
+#elif defined(CONFIG_HEXO_IPI) && defined(CONFIG_MUTEK_SCHEDULER_STATIC)
+    struct ipi_endpoint_s *ipi_endpoint;
+#endif
+};
+
+static inline struct ipi_endpoint_s *__sched_pop_ipi_endpoint(struct scheduler_s *sched)
+{
+#if defined(CONFIG_HEXO_IPI) && defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
+	return idle_cpu_queue_pop(&sched->idle_cpu);
+#elif defined(CONFIG_HEXO_IPI) && defined (CONFIG_MUTEK_SCHEDULER_STATIC)
+    return sched->ipi_endpoint;
+#endif
+    return NULL;
+}
+
 /************************************************************************/
 
 #if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
 
 /* scheduler root */
-static sched_queue_root_t	CPU_NAME_DECL(sched_root);
-
-# if defined(CONFIG_HEXO_IPI)
-/* sleeping cpu list */
-
-CONTAINER_TYPE(sched_cls_queue, CLIST, struct sched_cls_item_s
-{
-  CONTAINER_ENTRY_TYPE(CLIST)	list_entry;
-}, list_entry);
-
-CONTAINER_FUNC(sched_cls_queue, CLIST, static inline, sched_cls_queue, list_entry);
-
-static sched_cls_queue_root_t cls_queue;
-
-static CPU_LOCAL struct sched_cls_item_s sched_cls_item;
-
-#  define GET_CLS_FROM_ITEM(item) ((void*)((uintptr_t)(item) - (uintptr_t)&sched_cls_item))
-# endif /* IPI */
+static struct scheduler_s CPU_NAME_DECL(scheduler);
 
 /* return scheduler root */
-static inline sched_queue_root_t *
-__sched_root(void)
+static inline struct scheduler_s *
+__scheduler_get(void)
 {
-  return & CPU_NAME_DECL(sched_root);
+  return & CPU_NAME_DECL(scheduler);
 }
-
-static inline
-void __sched_context_push(struct sched_context_s *sched_ctx)
-{
-	sched_queue_pushback(sched_ctx->root, sched_ctx);
-#if defined(CONFIG_HEXO_IPI)
-	struct sched_cls_item_s *idle = sched_cls_queue_pop(&cls_queue);
-	if ( idle ) {
-		ipi_post(GET_CLS_FROM_ITEM(idle));
-		sched_cls_queue_pushback(&cls_queue, idle);
-	}
-#endif /* IPI */
-}
-
-/************************************************************************/
 
 #elif defined (CONFIG_MUTEK_SCHEDULER_STATIC)
 
 /* scheduler root */
-static CPU_LOCAL sched_queue_root_t	sched_root;
+static CPU_LOCAL struct scheduler_s	scheduler;
 
 /* return scheduler root */
-static inline sched_queue_root_t *
-__sched_root(void)
+static inline struct scheduler_s *
+__scheduler_get(void)
 {
-  return CPU_LOCAL_ADDR(sched_root);
-}
-
-static inline
-void __sched_context_push(struct sched_context_s *sched_ctx)
-{
-	sched_queue_pushback(sched_ctx->root, sched_ctx);
-#if defined(CONFIG_HEXO_IPI)
-	ipi_post(sched_ctx->cpu_cls);
-#endif /* IPI */
+  return CPU_LOCAL_ADDR(scheduler);
 }
 
 #endif
 
 /************************************************************************/
 
+static inline
+void __sched_context_push(struct sched_context_s *sched_ctx)
+{
+    struct scheduler_s *sched = sched_ctx->scheduler;
+	sched_queue_pushback(&sched->root, sched_ctx);
+
+    struct ipi_endpoint_s *idle = __sched_pop_ipi_endpoint(sched);
+	if ( idle )
+		ipi_post(idle);
+}
+
+static inline void __sched_yield_cpu(struct scheduler_s *sched)
+{
+    ensure( !cpu_is_interruptible() );
+
+#if !defined(CONFIG_ARCH_SMP)
+    /* CPU sleep waiting for interrupts */
+    cpu_interrupt_wait();
+#else /* We are SMP */
+    /* do not always make CPU sleep if SMP because context may be put
+       in running queue by an other cpu with no signalling. IPI is the
+       only way to solve the "problem".
+    */
+# if defined(CONFIG_HEXO_IPI)
+#  if defined(CONFIG_MUTEK_SCHEDULER_MIGRATION)
+    struct ipi_endpoint_s *ipi_e = CPU_LOCAL_ADDR(ipi_endpoint);
+
+    if ( ipi_endpoint_isvalid(ipi_e) ) {
+        idle_cpu_queue_pushback(&sched->idle_cpu, ipi_e);
+        cpu_interrupt_wait();
+        /* We may receive an IPI, but device IRQs are also possible,
+         * so remove us preventively */
+        idle_cpu_queue_remove(&sched->idle_cpu, ipi_e);
+    }
+#  else
+    cpu_interrupt_wait();
+#  endif
+# endif
+#endif
+}
+
+
 /* idle context runtime */
 static CONTEXT_ENTRY(sched_context_idle)
 {
-  sched_queue_root_t *root = __sched_root();
-
-#if defined(CONFIG_MUTEK_SCHEDULER_MIGRATION) && defined(CONFIG_HEXO_IPI)
-  sched_cls_queue_push(&cls_queue, CPU_LOCAL_ADDR(sched_cls_item));
-#endif
+  struct scheduler_s *sched = __scheduler_get();
 
   /* release lock acquired in previous sched_context_switch() call */
   sched_unlock();
@@ -154,36 +177,22 @@ static CONTEXT_ENTRY(sched_context_idle)
     {
       struct sched_context_s	*next;
 
-      /* do not wait if several cpus are running because context may
-	 be put in running queue by an other cpu with no interrupt */
-#if !defined(CONFIG_ARCH_SMP)
-      /* CPU sleep waiting for interrupts */
-      cpu_interrupt_wait();
-#elif defined(CONFIG_HEXO_IPI)
-      if (CPU_LOCAL_GET(ipi_icu_dev))
-		  cpu_interrupt_wait();
-#endif
+      __sched_yield_cpu(sched);
 
       /* Let enough time for pending interrupts to execute and assume
 	 memory is clobbered to force scheduler root queue
 	 reloading after interrupts execution. */
       cpu_interrupt_process();
 
-      sched_queue_wrlock(root);
+      sched_queue_wrlock(&sched->root);
 
-      if ((next = __sched_candidate_noidle(root)) != NULL)
+      if ((next = __sched_candidate_noidle(&sched->root)) != NULL)
 	{
-#if defined(CONFIG_MUTEK_SCHEDULER_MIGRATION) && defined(CONFIG_HEXO_IPI)
-	  sched_cls_queue_remove(&cls_queue, CPU_LOCAL_ADDR(sched_cls_item));
-#endif
 	  context_switch_to(&next->context);
-#if defined(CONFIG_MUTEK_SCHEDULER_MIGRATION) && defined(CONFIG_HEXO_IPI)
-	  sched_cls_queue_push(&cls_queue, CPU_LOCAL_ADDR(sched_cls_item));
-#endif
 	  //	  printk("(c%i idle)", cpu_id());
 	}
 
-      sched_queue_unlock(root);
+      sched_queue_unlock(&sched->root);
     }
 }
 
@@ -195,21 +204,21 @@ static CONTEXT_ENTRY(sched_context_idle)
    with interrupts disabled */
 void sched_context_switch(void)
 {
-  sched_queue_root_t *root = __sched_root();
+  struct scheduler_s *sched = __scheduler_get();
   struct sched_context_s *next;
 
   assert(!cpu_is_interruptible());
 
-  sched_queue_wrlock(root);
+  sched_queue_wrlock(&sched->root);
 
-  if ((next = __sched_candidate_noidle(root)))
+  if ((next = __sched_candidate_noidle(&sched->root)))
     {
       /* push context back in running queue */
-      sched_queue_nolock_pushback(root, CONTEXT_LOCAL_GET(sched_cur));
+      sched_queue_nolock_pushback(&sched->root, CONTEXT_LOCAL_GET(sched_cur));
       context_switch_to(&next->context);
     }
 
-  sched_queue_unlock(root);
+  sched_queue_unlock(&sched->root);
 }
 
 /* Must be called with interrupts disabled and sched locked */
@@ -220,7 +229,7 @@ void sched_context_exit(void)
   struct sched_context_s	*next;
 
   /* get next running context */
-  next = __sched_candidate(__sched_root());
+  next = __sched_candidate(&__scheduler_get()->root);
   context_jump_to(&next->context);
 }
 
@@ -228,14 +237,14 @@ void sched_lock(void)
 {
   assert(!cpu_is_interruptible());
 
-  sched_queue_wrlock(__sched_root());
+  sched_queue_wrlock(&__scheduler_get()->root);
 }
 
 void sched_unlock(void)
 {
   assert(!cpu_is_interruptible());
 
-  sched_queue_unlock(__sched_root());
+  sched_queue_unlock(&__scheduler_get()->root);
 }
 
 void sched_context_init(struct sched_context_s *sched_ctx)
@@ -245,11 +254,7 @@ void sched_context_init(struct sched_context_s *sched_ctx)
 			sched_cur, sched_ctx);
 
   sched_ctx->private = NULL;
-  sched_ctx->root = __sched_root();
-
-#if defined (CONFIG_MUTEK_SCHEDULER_STATIC) && defined(CONFIG_HEXO_IPI)
-  sched_ctx->cpu_cls = (void*)CPU_GET_CLS();
-#endif
+  sched_ctx->scheduler = __scheduler_get();
 
 #ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
   sched_ctx->is_candidate = NULL;
@@ -268,7 +273,7 @@ void sched_context_start(struct sched_context_s *sched_ctx)
 void sched_wait_callback(sched_queue_root_t *queue,
 		         void (*callback)(void *ctx), void *ctx)
 {
-  sched_queue_root_t *root = __sched_root();
+  struct scheduler_s *sched = __scheduler_get();
   struct sched_context_s *next;
 
   assert(!cpu_is_interruptible());
@@ -278,10 +283,10 @@ void sched_wait_callback(sched_queue_root_t *queue,
   callback(ctx);
 
   /* get next running context */
-  sched_queue_wrlock(root);
-  next = __sched_candidate(root);
+  sched_queue_wrlock(&sched->root);
+  next = __sched_candidate(&sched->root);
   context_switch_to(&next->context);
-  sched_queue_unlock(root);
+  sched_queue_unlock(&sched->root);
 }
 
 /* push current context in the 'queue', unlock it and switch to next
@@ -289,7 +294,7 @@ void sched_wait_callback(sched_queue_root_t *queue,
    interrupts disabled */
 void sched_wait_unlock(sched_queue_root_t *queue)
 {
-  sched_queue_root_t *root = __sched_root();
+  struct scheduler_s *sched = __scheduler_get();
   struct sched_context_s *next;
 
   assert(!cpu_is_interruptible());
@@ -299,10 +304,10 @@ void sched_wait_unlock(sched_queue_root_t *queue)
   sched_queue_unlock(queue);
 
   /* get next running context */
-  sched_queue_wrlock(root);
-  next = __sched_candidate(root);
+  sched_queue_wrlock(&sched->root);
+  next = __sched_candidate(&sched->root);
   context_switch_to(&next->context);
-  sched_queue_unlock(root);
+  sched_queue_unlock(&sched->root);
 }
 
 /* Switch to next context available in the 'root' queue, do not put
@@ -311,32 +316,32 @@ void sched_wait_unlock(sched_queue_root_t *queue)
    disabled */
 void sched_context_stop(void)
 {
-  sched_queue_root_t *root = __sched_root();
+  struct scheduler_s *sched = __scheduler_get();
   struct sched_context_s *next;
 
   assert(!cpu_is_interruptible());
 
   /* get next running context */
-  sched_queue_wrlock(root);
-  next = __sched_candidate(root);
+  sched_queue_wrlock(&sched->root);
+  next = __sched_candidate(&sched->root);
   context_switch_to(&next->context);
-  sched_queue_unlock(root);
+  sched_queue_unlock(&sched->root);
 }
 
 /* Same as sched_context_stop but unlock given spinlock before switching */
 void sched_context_stop_unlock(lock_t *lock)
 {
-  sched_queue_root_t *root = __sched_root();
+  struct scheduler_s *sched = __scheduler_get();
   struct sched_context_s *next;
 
   assert(!cpu_is_interruptible());
 
   /* get next running context */
-  sched_queue_wrlock(root);
+  sched_queue_wrlock(&sched->root);
   lock_release(lock);
-  next = __sched_candidate(root);
+  next = __sched_candidate(&sched->root);
   context_switch_to(&next->context);
-  sched_queue_unlock(root);
+  sched_queue_unlock(&sched->root);
 }
 
 /* Must be called with interrupts disabled and queue locked */
@@ -354,11 +359,13 @@ struct sched_context_s *sched_wake(sched_queue_root_t *queue)
 
 void sched_global_init(void)
 {
-#if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
+#if defined(CONFIG_MUTEK_SCHEDULER_MIGRATION)
+    struct scheduler_s *sched = __scheduler_get();
+
+    sched_queue_init(&sched->root);
 # if defined(CONFIG_HEXO_IPI)
-  sched_cls_queue_init(&cls_queue);
+    idle_cpu_queue_init(&sched->idle_cpu);
 # endif
-  sched_queue_init(__sched_root());
 #endif
 }
 
@@ -378,8 +385,13 @@ void sched_cpu_init(void)
 
   assert(err == 0);
 
-#if defined (CONFIG_MUTEK_SCHEDULER_STATIC)
-  sched_queue_init(__sched_root());
+#if defined(CONFIG_MUTEK_SCHEDULER_STATIC)
+    struct scheduler_s *sched = __scheduler_get();
+
+    sched_queue_init(&sched->root);
+# if defined(CONFIG_HEXO_IPI)
+    sched->ipi_endpoint = NULL;
+# endif
 #endif
 }
 
@@ -422,10 +434,7 @@ void sched_affinity_clear(struct sched_context_s *sched_ctx)
 void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
   void *cls = CPU_GET_CLS_ID(cpu);
-#if defined(CONFIG_HEXO_IPI)
-  sched_ctx->cpu_cls = cls;
-#endif
-  sched_ctx->root = CPU_LOCAL_CLS_ADDR(cls, sched_root);
+  sched_ctx->scheduler = CPU_LOCAL_CLS_ADDR(cls, scheduler);
 }
 
 void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu)

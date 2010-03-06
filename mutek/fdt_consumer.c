@@ -119,12 +119,10 @@ static FDT_ON_NODE_LEAVE_FUNC(creator_node_leave)
 		priv->state = IN_CPUS;
 #if defined(CONFIG_HEXO_IPI)
 		if ( priv->ipi_dev && priv->ipi_dev->drv ) {
-			dprintk("Preparing ipi dev\n");
-			void *foo = dev_icu_setupipi(priv->ipi_dev, priv->ipi_no);
-			dprintk("  CPU %d using %p:%d as ipi device, cls=%p, priv=%p\n",
-				   priv->cpuid, priv->ipi_dev, priv->ipi_no,
-				   cpu_local_storage[priv->cpuid], foo);
-			ipi_hook_cpu(cpu_local_storage[priv->cpuid], priv->ipi_dev, foo);
+            ipi_hook_endpoint(
+                CPU_LOCAL_CLS_ADDR(cpu_local_storage[priv->cpuid], ipi_endpoint),
+                priv->ipi_dev,
+                priv->ipi_no);
 		} else {
 			dprintk("  No IPI dev for CPU %d\n", priv->cpuid);
 		}

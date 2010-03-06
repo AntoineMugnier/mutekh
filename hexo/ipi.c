@@ -25,43 +25,44 @@
 #include <device/device.h>
 #include <hexo/ipi.h>
 
-static CPU_LOCAL ipi_queue_root_t ipi_fifo = CONTAINER_ROOT_INITIALIZER(ipi_queue, DLIST);
-CPU_LOCAL struct device_s *ipi_icu_dev = 0;
-CPU_LOCAL void *ipi_cpu_id;
+CONTAINER_FUNC(ipi_queue, DLIST, static inline, ipi_queue);
 
-error_t ipi_post(void *cpu_cls)
+CPU_LOCAL struct ipi_endpoint_s ipi_endpoint = {};
+
+error_t ipi_post(struct ipi_endpoint_s *endpoint)
 {
-  struct device_s *icu = *CPU_LOCAL_CLS_ADDR(cpu_cls, ipi_icu_dev);
+    struct device_s *icu = endpoint->icu_dev;
 
-  if (!icu)
-    return -EOPNOTSUPP;
+    if (!icu)
+        return -EOPNOTSUPP;
 
-  return dev_icu_sendipi(icu, *CPU_LOCAL_CLS_ADDR(cpu_cls, ipi_cpu_id));
+    return dev_icu_sendipi(icu, endpoint->priv);
 }
 
-error_t ipi_post_rq(void *cpu_cls, struct ipi_request_s *rq)
+error_t ipi_post_rq(struct ipi_endpoint_s *endpoint, struct ipi_request_s *rq)
 {
-  if (ipi_queue_pushback(CPU_LOCAL_CLS_ADDR(cpu_cls, ipi_fifo), rq))
-    return ipi_post(cpu_cls);
+    if (ipi_queue_pushback(&endpoint->ipi_fifo, rq))
+        return ipi_post(endpoint);
 
-  return -ENOMEM;
+    return -ENOMEM;
 }
 
 void ipi_process_rq()
 {
-  struct ipi_request_s *rq;
+    struct ipi_request_s *rq;
+    ipi_queue_root_t *fifo = &(CPU_LOCAL_ADDR(ipi_endpoint)->ipi_fifo);
 
-  while ((rq = ipi_queue_pop(CPU_LOCAL_ADDR(ipi_fifo))))
-    rq->func(rq->private);
+    while ((rq = ipi_queue_pop(fifo)))
+        rq->func(rq->private);
 }
 
-void ipi_hook_cpu(void *cpu_cls,
-				  struct device_s *ipi_icudev,
-				  void *privdata)
+error_t ipi_hook_endpoint(struct ipi_endpoint_s *endpoint,
+                          struct device_s *ipi_dev,
+                          uint_fast8_t ipi_no)
 {
-	struct device_s **icu = CPU_LOCAL_CLS_ADDR(cpu_cls, ipi_icu_dev);
-	void ** priv = CPU_LOCAL_CLS_ADDR(cpu_cls, ipi_cpu_id);
+    void *foo = dev_icu_setupipi(ipi_dev, ipi_no);
+    endpoint->icu_dev = ipi_dev;
+    endpoint->priv = foo;
 
-	*icu = ipi_icudev;
-	*priv = privdata;
+    return 0;
 }
