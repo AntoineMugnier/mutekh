@@ -29,6 +29,7 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <mutek/fileops.h>
 
 #define PATH_MAX 512
 
@@ -54,11 +55,6 @@ fd_t creat(const char *pathname, mode_t mode);
 fd_t open(const char *pathname, enum open_flags_e flags, /* mode_t mode */...);
 
 /* ************************************************** */
-
-enum seek_whence_e
-  {
-    SEEK_SET, SEEK_END, SEEK_CUR
-  };
 
 #define HAVE_LSEEK
 off_t lseek(fd_t fildes, off_t offset, enum seek_whence_e whence);

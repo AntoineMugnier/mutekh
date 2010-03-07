@@ -30,6 +30,11 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
+enum seek_whence_e
+  {
+    SEEK_SET, SEEK_END, SEEK_CUR
+  };
+
 /** File operations read function prototype */
 #define FILEOPS_READ(n)  ssize_t (n) (void *file, uint8_t *buffer, size_t count)
 /** File operations write function prototype */

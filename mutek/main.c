@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <mutek/timer.h>
 #include <mutek/printk.h>
+#include <mutek/console.h>
 
 #if defined(CONFIG_VFS)
 # include <vfs/vfs.h>
@@ -69,25 +70,6 @@ DEVTIMER_CALLBACK(timer_callback)
 #endif
 
 #ifdef CONFIG_MUTEK_MAIN
-#ifdef CONFIG_MUTEK_CONSOLE
-struct device_s *console_dev = NULL;
-
-static inline PRINTF_OUTPUT_FUNC(__printf_out_tty)
-{
-	if ( !cpu_is_interruptible() )
-		return;
-  while (len > 0)
-    {
-		ssize_t	res = dev_char_spin_write((struct device_s *)ctx, (uint8_t*)str, len);
-
-      if (res < 0)
-	break;
-      len -= res;
-      str += res;
-    }
-}
-
-#endif
 
 #if defined (CONFIG_MUTEK_SCHEDULER)
 static struct sched_context_s main_ctx;

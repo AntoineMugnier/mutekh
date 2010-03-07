@@ -297,6 +297,9 @@ static inline off_t vfs_file_truncate(struct vfs_file_s *file,
 	return file->truncate(file, new_size);
 }
 
+/** @this provides a file operations function set */
+extern const struct fileops_s vfs_file_fops;
+
 #endif
 
 // Local Variables:

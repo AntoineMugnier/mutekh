@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
-#include <fileops.h>
+#include <mutek/fileops.h>
 
 #ifdef CONFIG_VFS
 #include <vfs/vfs.h>
@@ -516,3 +516,45 @@ FILE *fopen(const char *path, const char *mode)
 }
 
 #endif /* CONFIG_VFS */
+
+
+/* ************************************************** standard streams */
+
+#ifdef CONFIG_LIBC_STREAM_STD
+
+#include <mutek/console.h>
+
+static error_t	no_flush(FILE *stream)
+{
+  return 0;
+}
+
+static struct file_s stdin_file =
+{
+  .ops = &console_file_ops,
+  .buf_mode = _IOLBF,
+  .rwflush = &no_flush,
+};
+
+FILE * const stdin = &stdin_file;
+
+static struct file_s stdout_file =
+{
+  .ops = &console_file_ops,
+  .buf_mode = _IOLBF,
+  .rwflush = &no_flush,
+};
+
+FILE * const stdout = &stdout_file;
+
+static struct file_s stderr_file =
+{
+  .ops = &console_file_ops,
+  .buf_mode = _IONBF,
+  .rwflush = &no_flush,
+};
+
+FILE * const stderr = &stderr_file;
+
+#endif
+

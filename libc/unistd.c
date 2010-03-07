@@ -1,9 +1,30 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2010
+
+*/
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_array.h>
 
 #include <unistd.h>
-#include <fileops.h>
+#include <mutek/fileops.h>
+#include <mutek/console.h>
 
 #ifdef CONFIG_VFS
 #include <vfs/vfs.h>
@@ -65,15 +86,21 @@ fd_t fd_add(const struct fileops_s *ops, void *hndl)
                   File descriptor oriented operations
    ********************************************************************** */
 
-#if defined(CONFIG_VFS)
+void stdio_in_out_err_init()
+{
+  fd_t fd;
 
-static const
-struct fileops_s open_fops = {
-    .read =  (fileops_read_t *)vfs_file_read,
-    .write = (fileops_write_t*)vfs_file_write,
-    .lseek = (fileops_lseek_t*)vfs_file_seek,
-    .close = (fileops_close_t*)vfs_file_close,
-};
+  fd = fd_add(&console_file_ops, (void*)-1);
+  assert(fd == 0);
+
+  fd = fd_add(&console_file_ops, (void*)-1);
+  assert(fd == 1);
+
+  fd = fd_add(&console_file_ops, (void*)-1);
+  assert(fd == 2);
+}
+
+#if defined(CONFIG_VFS)
 
 inline fd_t creat(const char *pathname, mode_t mode)
 {
@@ -109,8 +136,7 @@ fd_t open(const char *pathname, enum open_flags_e flags, ...)
     return fd;
 
   e = fd_get(&fd_array, fd);
-  /* TODO allocate a ops buffer and directly reference pointers. */
-  e->ops = &open_fops;
+  e->ops = &vfs_file_fops;
 
   if (flags & O_CREAT)
     {

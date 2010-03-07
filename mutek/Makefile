@@ -1,10 +1,9 @@
 
 doc_headers = mutek/mem_alloc.h mutek/page_alloc.h mutek/printf_arg.h	\
 	mutek/printk.h mutek/rwlock.h mutek/scheduler.h mutek/timer.h	\
-	mutek/vmem_kalloc.h mutek/semaphore.h mutek/fdt.h
+	mutek/vmem_kalloc.h mutek/semaphore.h mutek/fdt.h mutek/console.h
 
-objs = timer.o
-objs += printf_arg.o
+objs = timer.o printf_arg.o console.o
 
 ifeq ($(CONFIG_MUTEK_MEM_REGION), defined)
 objs += mem_region.o					

@@ -19,6 +19,7 @@
   Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
 */
 
+#include <mutek/fileops.h>
 #include <mutek/printk.h>
 #include <vfs/vfs.h>
 
@@ -74,4 +75,11 @@ OBJECT_DESTRUCTOR(vfs_file)
 
 	obj->node_refdrop(obj->node);
 }
+
+const struct fileops_s vfs_file_fops = {
+	.read =  (fileops_read_t *)vfs_file_read,
+	.write = (fileops_write_t*)vfs_file_write,
+	.lseek = (fileops_lseek_t*)vfs_file_seek,
+	.close = (fileops_close_t*)vfs_file_close,
+};
 
