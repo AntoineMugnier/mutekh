@@ -26,7 +26,7 @@ MKISOFS=mkisofs
 ISO_NAME=mutekh.iso
 
 $TAR xjf ${D}/iso.tar.bz2
-$CP $KERNEL tmp_iso/boot/
+$CP $KERNEL tmp_iso/boot/kernel-ibmpc-x86.out
 $MKISOFS -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $ISO_NAME tmp_iso/
 $RM -r tmp_iso/
 
