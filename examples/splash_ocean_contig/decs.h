@@ -74,40 +74,82 @@ extern double ****q_multi;
 extern double ****rhs_multi;
 
 struct locks_struct {
-   long (idlock);
-   long (psiailock);
-   long (psibilock);
-   long (donelock);
-   long (error_lock);
-   long (bar_lock);
+   pthread_mutex_t (idlock);
+   pthread_mutex_t (psiailock);
+   pthread_mutex_t (psibilock);
+   pthread_mutex_t (donelock);
+   pthread_mutex_t (error_lock);
+   pthread_mutex_t (bar_lock);
 };
 
 extern struct locks_struct *locks;
 
 struct bars_struct {
 #if defined(MULTIPLE_BARRIERS)
-   long (iteration);
-   long (gsudn);
-   long (p_setup);
-   long (p_redph);
-   long (p_soln);
-   long (p_subph);
-   long (sl_prini);
-   long (sl_psini);
-   long (sl_onetime);
-   long (sl_phase_1);
-   long (sl_phase_2);
-   long (sl_phase_3);
-   long (sl_phase_4);
-   long (sl_phase_5);
-   long (sl_phase_6);
-   long (sl_phase_7);
-   long (sl_phase_8);
-   long (sl_phase_9);
-   long (sl_phase_10);
-   long (error_barrier);
+   
+pthread_barrier_t	(iteration);
+
+   
+pthread_barrier_t	(gsudn);
+
+   
+pthread_barrier_t	(p_setup);
+
+   
+pthread_barrier_t	(p_redph);
+
+   
+pthread_barrier_t	(p_soln);
+
+   
+pthread_barrier_t	(p_subph);
+
+   
+pthread_barrier_t	(sl_prini);
+
+   
+pthread_barrier_t	(sl_psini);
+
+   
+pthread_barrier_t	(sl_onetime);
+
+   
+pthread_barrier_t	(sl_phase_1);
+
+   
+pthread_barrier_t	(sl_phase_2);
+
+   
+pthread_barrier_t	(sl_phase_3);
+
+   
+pthread_barrier_t	(sl_phase_4);
+
+   
+pthread_barrier_t	(sl_phase_5);
+
+   
+pthread_barrier_t	(sl_phase_6);
+
+   
+pthread_barrier_t	(sl_phase_7);
+
+   
+pthread_barrier_t	(sl_phase_8);
+
+   
+pthread_barrier_t	(sl_phase_9);
+
+   
+pthread_barrier_t	(sl_phase_10);
+
+   
+pthread_barrier_t	(error_barrier);
+
 #else
-   long (barrier);
+   
+pthread_barrier_t	(barrier);
+
 #endif
 };
 
