@@ -135,11 +135,11 @@ void __sched_context_push(struct sched_context_s *sched_ctx)
 
 static inline void __sched_yield_cpu(struct scheduler_s *sched)
 {
-    ensure( !cpu_is_interruptible() );
 
 #if !defined(CONFIG_ARCH_SMP)
     /* CPU sleep waiting for interrupts */
     cpu_interrupt_wait();
+    cpu_interrupt_disable();
 #else /* We are SMP */
     /* do not always make CPU sleep if SMP because context may be put
        in running queue by an other cpu with no signalling. IPI is the
@@ -149,15 +149,18 @@ static inline void __sched_yield_cpu(struct scheduler_s *sched)
 #  if defined(CONFIG_MUTEK_SCHEDULER_MIGRATION)
     struct ipi_endpoint_s *ipi_e = CPU_LOCAL_ADDR(ipi_endpoint);
 
-    if ( ipi_endpoint_isvalid(ipi_e) ) {
+    if ( ipi_endpoint_isvalid(ipi_e) )
+      {
         idle_cpu_queue_pushback(&sched->idle_cpu, ipi_e);
         cpu_interrupt_wait();
+	cpu_interrupt_disable();
         /* We may receive an IPI, but device IRQs are also possible,
          * so remove us preventively */
         idle_cpu_queue_remove(&sched->idle_cpu, ipi_e);
-    }
+      }
 #  else
     cpu_interrupt_wait();
+    cpu_interrupt_disable();
 #  endif
 # endif
 #endif
@@ -171,7 +174,6 @@ static CONTEXT_ENTRY(sched_context_idle)
 
   /* release lock acquired in previous sched_context_switch() call */
   sched_unlock();
-  cpu_interrupt_disable();
 
   while (1)
     {
@@ -183,6 +185,11 @@ static CONTEXT_ENTRY(sched_context_idle)
 	 memory is clobbered to force scheduler root queue
 	 reloading after interrupts execution. */
       cpu_interrupt_process();
+
+      /* WARNING: cpu_interrupt_wait and cpu_interrupt_process will
+	 reenable interrupts. We must disable interrupts again before
+	 taking the scheduler lock. */
+      cpu_interrupt_disable();
 
       sched_queue_wrlock(&sched->root);
 

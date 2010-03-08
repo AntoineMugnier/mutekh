@@ -95,7 +95,7 @@ DEVICU_DELHNDL(icu_mips_delhndl)
 
 static CPU_INTERRUPT_HANDLER(icu_mips_handler)
 {
-	struct device_s *dev = priv;
+	struct device_s *dev = CPU_LOCAL_GET(cpu_interrupt_handler_dev);
 	struct icu_mips_private_s	*pv = dev->drv_pv;
 	struct icu_mips_handler_s	*h;
 	if ( !irq )

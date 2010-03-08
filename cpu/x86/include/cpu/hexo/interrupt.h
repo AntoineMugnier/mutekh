@@ -55,45 +55,35 @@
 /** interrupts entry tampline code size  */
 #define CPU_INTERRUPT_ENTRY_ALIGN	16
 
-extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
-extern CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
-
 void x86_interrupt_hw_entry(void);
 void x86_interrupt_ex_entry(void);
 void x86_interrupt_sys_entry(void);
 void x86_interrupt_sys_enter(void);
 
 static inline void
-cpu_interrupt_sethandler(cpu_interrupt_handler_t *hndl)
-{
-  CPU_LOCAL_SET(cpu_interrupt_handler, hndl);
-}
-
-static inline void
-cpu_exception_sethandler(cpu_exception_handler_t *hndl)
-{
-  CPU_LOCAL_SET(cpu_exception_handler, hndl);
-}
-
-static inline void
 cpu_interrupt_disable(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "cli\n"
 		    );
+#endif
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "sti\n"
 		    );
+#endif
 }
 
 static inline void
 cpu_interrupt_process(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "sti\n"
     /* nop is required here to let enough time for pending interrupts
@@ -106,39 +96,47 @@ cpu_interrupt_process(void)
        a function loop (scheduler root queue for instance) */
 		    : "memory"
 		    );
+#endif
 }
 
 static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
+#ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "pushfl	\n"
 		    "popl	%0\n"
 		    : "=m,r" (*state)
 		    );
+#endif
 }
 
 static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
+#ifdef CONFIG_HEXO_IRQ
   cpu_interrupt_savestate(state);
   cpu_interrupt_disable();
+#endif
 }
 
 static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
+#ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "pushl	%0\n"
 		    "popfl	\n"
 		    :
 		    : "m,r" (*state)
 		    );
+#endif
 }
 
 static inline bool_t
 cpu_interrupt_getstate(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   reg_t		flags;
 
   __asm__ volatile (
@@ -148,21 +146,30 @@ cpu_interrupt_getstate(void)
 		    );
 
   return flags & 0x200 ? 1 : 0;
+#else
+  return 0;
+#endif
 }
 
 static inline bool_t
 cpu_is_interruptible(void)
 {
+#ifdef CONFIG_HEXO_IRQ
 	return cpu_interrupt_getstate();
+#else
+	return 0;
+#endif
 }
 
-static inline void
-cpu_interrupt_wait(void)
+#ifdef CONFIG_CPU_WAIT_IRQ
+static inline void cpu_interrupt_wait(void)
 {
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile ("sti \n"
-                    "hlt \n"
-                    "cli \n");
+                    "hlt \n");
+# endif
 }
+#endif
 
 #endif
 

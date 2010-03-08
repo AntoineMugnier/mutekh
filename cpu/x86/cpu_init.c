@@ -33,8 +33,6 @@
 #include <cpu/hexo/apic.h>
 #include <cpu/hexo/msr.h>
 
-CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
-
 /** pointer to cpu local storage itself */
 CPU_LOCAL void *__cpu_data_base;
 /** pointer to context local storage itself */
@@ -49,7 +47,7 @@ void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 cpu_x86_segsel_t cpu_local_storage_seg[CONFIG_CPU_MAXCOUNT];
 #endif
 
-#ifdef CONFIG_CPU_USER
+#ifdef CONFIG_HEXO_USERMODE
 volatile CPU_LOCAL struct cpu_x86_tss_s cpu_tss;
 #endif
 
@@ -69,7 +67,7 @@ cpu_global_init(void)
   cpu_x86_seg_setup(&gdt[ARCH_GDT_CODE_INDEX].seg, 0,
 		    0xffffffff, CPU_X86_SEG_EXEC_NC_R, 0, 1);
 
-#ifdef CONFIG_CPU_USER
+#ifdef CONFIG_HEXO_USERMODE
   cpu_x86_seg_setup(&gdt[ARCH_GDT_USER_CODE_INDEX].seg, 0,
 		    0xffffffff, CPU_X86_SEG_EXEC_NC_R, 3, 1);
 #endif
@@ -77,7 +75,7 @@ cpu_global_init(void)
   cpu_x86_seg_setup(&gdt[ARCH_GDT_DATA_INDEX].seg, 0,
 		    0xffffffff, CPU_X86_SEG_DATA_UP_RW, 0, 1);
 
-#ifdef CONFIG_CPU_USER
+#ifdef CONFIG_HEXO_USERMODE
   cpu_x86_seg_setup(&gdt[ARCH_GDT_USER_DATA_INDEX].seg, 0,
 		    0xffffffff, CPU_X86_SEG_DATA_UP_RW, 3, 1);
 #endif
@@ -236,7 +234,7 @@ void cpu_init(void)
   CPU_LOCAL_SET(__cpu_data_base, cls);
 #endif
 
-#ifdef CONFIG_CPU_USER
+#ifdef CONFIG_HEXO_USERMODE
 
   uint16_t		tss_sel;
   struct cpu_x86_tss_s *tss = CPU_LOCAL_ADDR(cpu_tss);
@@ -259,7 +257,7 @@ void cpu_init(void)
 
   return;
 
-#ifdef CONFIG_CPU_USER
+#ifdef CONFIG_HEXO_USERMODE
  err_tss_seg:
 #endif
 #ifdef CONFIG_ARCH_SMP

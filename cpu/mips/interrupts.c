@@ -106,7 +106,7 @@ asm(
         "1:                                              \n"
 
         /* restore cpu local storage */
-#if defined(CONFIG_CPU_USER)
+#if defined(CONFIG_HEXO_USERMODE)
 
         /* event from user mode ? */
         "   mfc0    $26,    $12                          \n"
@@ -133,7 +133,7 @@ asm(
         CPU_LOCAL_GET($sp, __context_data_base)
         "   lw      $sp,    %lo(context_kstack)($sp)     \n"
         "1:                                              \n"
-#else  /* !defined(CONFIG_CPU_USER) */
+#else  /* !defined(CONFIG_HEXO_USERMODE) */
         /* Get current SP (sp_user_none) */
         "   move    $26,    $sp                          \n"
 #endif
@@ -181,11 +181,11 @@ asm(
         "   sw      $7,     34*4($sp)                    \n"
 #endif
 
-#if defined(CONFIG_CPU_USER)
+#if 0 && defined(CONFIG_HEXO_USERMODE)
         /* increment the user-mode counter */
         CPU_LOCAL_GET($5, __context_data_base)
         "   lw      $7,     %lo(usermode_counter)($5)    \n"
-        "   addui   $7,     $7, 1                        \n"
+        "   addiu   $7,     $7, 1                        \n"
         "   sw      $7,     %lo(usermode_counter)($5)    \n"
 #endif
 
@@ -264,12 +264,11 @@ asm(
 
 #if defined(CONFIG_HEXO_IRQ)
         /* hw interrupt line id */
-        "   srl     $5,     $4,     10                   \n"
-        "   andi    $5,     $5,     0xff                 \n"
+        "   srl     $4,     $4,     10                   \n"
+        "   andi    $4,     $4,     0xff                 \n"
 
         "   addiu   $sp,    $sp,    -4*4                 \n"
         CPU_LOCAL_GET($1, cpu_interrupt_handler)
-        CPU_LOCAL_GET($4, cpu_interrupt_handler_arg)
         "   jalr    $1                                   \n"
         "   addiu   $sp,    $sp,    4*4                  \n"
 #endif

@@ -27,8 +27,6 @@
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
 
-CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
-
 #ifdef CONFIG_ARCH_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif

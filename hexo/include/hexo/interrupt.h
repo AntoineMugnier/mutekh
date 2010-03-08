@@ -33,11 +33,13 @@
 
 /************************************************************ hw irq */
 
+#ifdef CONFIG_HEXO_IRQ
+
 /** CPU interrupt handler function template
     @see cpu_interrupt_handler_t
     @showcontent
 */
-#define CPU_INTERRUPT_HANDLER(n) void (n) (void *priv, uint_fast8_t irq)
+#define CPU_INTERRUPT_HANDLER(n) void (n) (uint_fast8_t irq)
 
 /** CPU interrupt handler function type.
 
@@ -47,50 +49,67 @@
 typedef CPU_INTERRUPT_HANDLER(cpu_interrupt_handler_t);
 
 /** @this sets the hardware interrupt handler for the current cpu */
-void cpu_interrupt_set_handler_func(cpu_interrupt_handler_t *handler,
-									void *priv);
+void cpu_interrupt_sethandler(cpu_interrupt_handler_t *handler);
+
+extern CPU_LOCAL struct device_s *cpu_interrupt_handler_dev;
 
 struct device_s;
 
 /** @this sets hardware interrupt handler device for the current cpu */
-void cpu_interrupt_set_handler_device(struct device_s *dev);
+void cpu_interrupt_sethandler_device(struct device_s *dev);
+#endif
+
 
 /** @this disables all maskable interrupts for the current cpu */
+__attribute__ ((always_inline))
 static inline void cpu_interrupt_disable();
+
 /** @this enables all maskable interrupts for the current cpu */
+__attribute__ ((always_inline))
 static inline void cpu_interrupt_enable();
+
 /** @this saves interrupts enable state (may use stack) */
+__attribute__ ((always_inline))
 static inline void cpu_interrupt_savestate(reg_t *state);
+
 /** @this saves interrupts enable state end disable interrupts */
+__attribute__ ((always_inline))
 static inline void cpu_interrupt_savestate_disable(reg_t *state);
+
 /** @this restores interrupts enable state (may use stack) */
+__attribute__ ((always_inline))
 static inline void cpu_interrupt_restorestate(const reg_t *state);
+
 /** @this reads current interrupts state as boolean */
+__attribute__ ((always_inline))
 static inline bool_t cpu_interrupt_getstate();
+
 /** @this checks if the cpu is interruptible */
+__attribute__ ((always_inline))
 static inline bool_t cpu_is_interruptible();
 
 /** @this enables interrupts and give a change to pending requests to
     execute. This function must be used to avoid the "sti; cli"
-    syndrome which makes interrupts execution impossible on some
-    procesors. Memory is marked as clobbered by this function 
-    to force global variable reload after interrupts processing. */
+    sequence which don't let interrupts raise on some
+    processors. Memory is marked as clobbered by this function to
+    force global variable reload after interrupts occured. */
+__attribute__ ((always_inline))
 static inline void cpu_interrupt_process();
 
-/**
-   @this enters interrupt wait state. May return imediatly if
-   unsupported
-   
-   @this must be called with interrupts disabled.
-*/
+#ifdef CONFIG_CPU_WAIT_IRQ
+/** @this enables interrupts and enters in interrupt wait state. The
+    @ref #CONFIG_CPU_WAIT_IRQ token may be used to check for
+    availability.  */
+__attribute__ ((always_inline))
 static inline void cpu_interrupt_wait();
+#endif
 
 /** @showcontent
     @this saves interrupts enable state end disable interrupts. This macro
     must be matched with the @ref #CPU_INTERRUPT_RESTORESTATE macro. */
 #define CPU_INTERRUPT_SAVESTATE_DISABLE				\
 {								\
-  reg_t	__interrupt_state;				\
+  reg_t	__interrupt_state;					\
   cpu_interrupt_savestate_disable(&__interrupt_state);
 
 /** @showcontent
@@ -127,9 +146,18 @@ typedef CPU_EXCEPTION_HANDLER(cpu_exception_handler_t);
 
 
 /** Set exception interrupt handler for the current cpu */
-static void cpu_exception_sethandler(cpu_exception_handler_t *hndl);
+void cpu_exception_sethandler(cpu_exception_handler_t *hndl);
 
+#ifdef CONFIG_HEXO_USERMODE
 
+/** Set user exception interrupt handler for the current context */
+void cpu_user_exception_sethandler(cpu_exception_handler_t *hndl);
+
+struct context_s *context;
+/** Set user exception interrupt handler for the given context */
+void cpu_user_exception_sethandler_ctx(struct context_s *context,
+				       cpu_exception_handler_t *hndl);
+#endif
 
 /************************************************************ syscalls */
 
@@ -147,22 +175,14 @@ static void cpu_exception_sethandler(cpu_exception_handler_t *hndl);
     @see #CPU_SYSCALL_HANDLER
 */
 typedef CPU_SYSCALL_HANDLER(cpu_syscall_handler_t);
-
-extern CONTEXT_LOCAL cpu_syscall_handler_t  *cpu_syscall_handler;
-
-/** @this sets syscall interrupt handler for the current execution @ref context_s {context} */
-static inline void
-cpu_syscall_sethandler(cpu_syscall_handler_t *hndl)
-{
-  CONTEXT_LOCAL_SET(cpu_syscall_handler, hndl);
-}
-
 struct context_s;
 
+/** @this sets the syscall handler for the current context */
+void cpu_syscall_sethandler(cpu_syscall_handler_t *hndl);
+
 /** @this sets syscall interrupt handler for a given context */
-void
-cpu_syscall_sethandler_ctx(struct context_s *context,
-			   cpu_syscall_handler_t *hndl);
+void cpu_syscall_sethandler_ctx(struct context_s *context,
+				cpu_syscall_handler_t *hndl);
 
 /************************************************************/
 

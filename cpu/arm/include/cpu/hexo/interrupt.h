@@ -36,9 +36,6 @@
 
 #include "cpu/hexo/specific.h"
 
-extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
-extern CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
-
 #ifdef CONFIG_DRIVER_ICU_ARM
 struct device_s;
 extern CPU_LOCAL struct device_s cpu_icu_dev;
@@ -47,61 +44,54 @@ extern CPU_LOCAL struct device_s cpu_icu_dev;
 void mips_interrupt_entry(void);
 
 static inline void
-cpu_interrupt_sethandler(cpu_interrupt_handler_t *hndl)
-{
-  CPU_LOCAL_SET(cpu_interrupt_handler, hndl);
-}
-
-static inline void
-cpu_exception_sethandler(cpu_exception_handler_t *hndl)
-{
-  CPU_LOCAL_SET(cpu_exception_handler, hndl);
-}
-
-static inline void
 cpu_interrupt_disable(void)
 {
+#ifdef CONFIG_HEXO_IRQ
+
 	uint32_t tmp;
     THUMB_TMP_VAR;
 
 	asm volatile(
-#if __thumb__ && !defined(CONFIG_CPU_ARM_7TDMI)
+# if __thumb__ && !defined(CONFIG_CPU_ARM_7TDMI)
         "cpsid i"
-#else
+# else
         THUMB_TO_ARM
 		"mrs  %[tmp], cpsr            \n\t"
 		"orr  %[tmp], %[tmp], #0x80   \n\t"
 		"msr  cpsr, %[tmp]            \n\t"
         ARM_TO_THUMB
-#endif
+# endif
 		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
         );
-/* #endif */
+#endif
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
+#ifdef CONFIG_HEXO_IRQ
 	uint32_t tmp;
     THUMB_TMP_VAR;
 
 	asm volatile(
-#if __thumb__ && !defined(CONFIG_CPU_ARM_7TDMI)
+# if __thumb__ && !defined(CONFIG_CPU_ARM_7TDMI)
         "cpsie i"
-#else
+# else
         THUMB_TO_ARM
 		"mrs  %[tmp], cpsr            \n\t"
 		"bic  %[tmp], %[tmp], #0x80   \n\t"
 		"msr  cpsr, %[tmp]            \n\t"
         ARM_TO_THUMB
-#endif
+# endif
 		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
         );
+#endif
 }
 
 static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
+#ifdef CONFIG_HEXO_IRQ
 	uint32_t tmp;
     THUMB_TMP_VAR;
 
@@ -112,11 +102,13 @@ cpu_interrupt_savestate(reg_t *state)
 		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,) );
 
 	*state = tmp;
+#endif
 }
 
 static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
+#ifdef CONFIG_HEXO_IRQ
 	uint32_t tmp, result;
     THUMB_TMP_VAR;
 
@@ -129,11 +121,13 @@ cpu_interrupt_savestate_disable(reg_t *state)
 		: [tmp] "=r" (tmp), [result] "=r" (result) /*,*/ THUMB_OUT(,) );
 
 	*state = result;
+#endif
 }
 
 static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
+#ifdef CONFIG_HEXO_IRQ
     THUMB_TMP_VAR;
 
 	asm volatile(
@@ -142,24 +136,25 @@ cpu_interrupt_restorestate(const reg_t *state)
         ARM_TO_THUMB
 		/* : */ THUMB_OUT(:)
         : [state] "r" (*state) );
+#endif
 }
 
 static inline void
 cpu_interrupt_process(void)
 {
-	reg_t state;
-	cpu_interrupt_savestate(&state);
+#ifdef CONFIG_HEXO_IRQ
 	cpu_interrupt_enable();
     /* memory clobber is important here as cpu_interrupt_process()
        will let pending intterupts change global variables checked in
        a function loop (scheduler root queue for instance) */
 	__asm__ volatile ("nop":::"memory");
-	cpu_interrupt_restorestate(&state);
+#endif
 }
 
 static inline bool_t
 cpu_interrupt_getstate(void)
 {
+#ifdef CONFIG_HEXO_IRQ
 	reg_t		state;
     THUMB_TMP_VAR;
 
@@ -170,18 +165,28 @@ cpu_interrupt_getstate(void)
 		: [state] "=r" (state) /*,*/ THUMB_OUT(,) );
 
 	return !(state & 0x80);
+#else
+	return 0;
+#endif
 }
 
 static inline bool_t
 cpu_is_interruptible(void)
 {
+#ifdef CONFIG_HEXO_IRQ
 	return cpu_interrupt_getstate();
+#else
+	return 0;
+#endif
 }
 
-static inline void
-cpu_interrupt_wait(void)
+
+#ifdef CONFIG_CPU_WAIT_IRQ
+static inline void cpu_interrupt_wait(void)
 {
-#if defined(__ARM_ARCH_6K__)
+# ifdef CONFIG_HEXO_IRQ
+  cpu_interrupt_enable();
+#  if defined(__ARM_ARCH_6K__)
     THUMB_TMP_VAR;
 
 	asm volatile(
@@ -190,10 +195,12 @@ cpu_interrupt_wait(void)
         ARM_TO_THUMB
 		/*:*/  THUMB_OUT(:)
         : [zero] "r" (0) );
-#else
-	/**/
-#endif
+#  else
+# error CONFIG_CPU_WAIT_IRQ should not be defined here
+#  endif
+# endif
 }
+#endif
 
 #endif
 

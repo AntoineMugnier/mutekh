@@ -35,8 +35,6 @@
 extern struct device_s fdt_enum_dev;
 #endif
 
-CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
-
 /** pointer to context local storage in cpu local storage */
 CPU_LOCAL void *__context_data_base;
 

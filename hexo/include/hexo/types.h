@@ -136,7 +136,7 @@ typedef int _dont_use_native_int_type_t __attribute__ ((deprecated));
 # define int	_dont_use_native_int_type_t
 
 /** @this prevents use of compiler native long type,
-    @@t int_fast*_t and @tt uint_fast*_t types are prefered. */
+    @tt int_fast*_t and @tt uint_fast*_t types are prefered. */
 typedef long _dont_use_native_long_type_t __attribute__ ((deprecated));
 # define long	_dont_use_native_long_type_t
 #endif
@@ -147,15 +147,11 @@ typedef long _dont_use_native_long_type_t __attribute__ ((deprecated));
 /** @this returns min integer value for a type */
 #define __MAXOF_TYPE(t)        ((typeof(t))(((typeof(t))-1) < 0 ? ~(((typeof(t))1) << (sizeof(typeof(t)) * 8 - 1)) : -1))
 
-#ifndef __cplusplus
-
 /** NULL pointer definition */
-#define NULL	((void*)0)
-
+#ifndef __cplusplus
+# define NULL	((void*)0)
 #else
-
-#define NULL 0
-
+# define NULL 0
 #endif
 
 #endif

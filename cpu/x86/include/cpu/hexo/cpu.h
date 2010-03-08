@@ -90,7 +90,7 @@ extern cpu_x86_segsel_t cpu_local_storage_seg[CONFIG_CPU_MAXCOUNT];
 extern CPU_LOCAL cpu_x86_segsel_t *cpu_tls_seg;
 #endif
 
-#ifdef CONFIG_CPU_USER
+#ifdef CONFIG_HEXO_USERMODE
 extern volatile CPU_LOCAL struct cpu_x86_tss_s cpu_tss;
 #endif
 

@@ -91,7 +91,7 @@ error_t cpu_context_init(struct context_s *context, context_entry_t *entry, void
 void cpu_context_destroy(struct context_s *context);
 
 
-#if defined(CONFIG_CPU_USER)
+#if defined(CONFIG_HEXO_USERMODE)
 
 /** @showcontent user entry point function prototype */
 #define USER_ENTRY(n) void (n) (void *param)

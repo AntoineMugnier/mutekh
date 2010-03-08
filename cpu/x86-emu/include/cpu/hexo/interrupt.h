@@ -36,76 +36,85 @@
 
 extern volatile CPU_LOCAL bool_t cpu_irq_state;
 
-extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
-extern CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
-
-static inline void
-cpu_interrupt_sethandler(cpu_interrupt_handler_t *hndl)
-{
-  CPU_LOCAL_SET(cpu_interrupt_handler, hndl);
-}
-
-static inline void
-cpu_exception_sethandler(cpu_exception_handler_t *hndl)
-{
-  CPU_LOCAL_SET(cpu_exception_handler, hndl);
-}
-
 static inline void
 cpu_interrupt_disable(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   cpu_irq_state = 0;
+#endif
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   cpu_irq_state = 1;
+#endif
 }
 
 static inline void
 cpu_interrupt_process(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   cpu_interrupt_enable();
-  asm volatile ( "" ::: "memory" );
+  asm volatile ( "nop" ::: "memory" );
+#endif
 }
 
 static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
+#ifdef CONFIG_HEXO_IRQ
   *state = cpu_irq_state;
+#endif
 }
 
 static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
+#ifdef CONFIG_HEXO_IRQ
   cpu_interrupt_savestate(state);
   cpu_interrupt_disable();
+#endif
 }
 
 static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
+#ifdef CONFIG_HEXO_IRQ
   cpu_irq_state = *state;
+#endif
 }
 
 static inline bool_t
 cpu_interrupt_getstate(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   return cpu_irq_state;
+#else
+  return 0;
+#endif
 }
 
 static inline bool_t
 cpu_is_interruptible(void)
 {
+#ifdef CONFIG_HEXO_IRQ
 	return cpu_interrupt_getstate();
+#else
+	return 0;
+#endif
 }
 
+#ifdef CONFIG_CPU_WAIT_IRQ
 static inline void
 cpu_interrupt_wait(void)
 {
+# ifdef CONFIG_HEXO_IRQ
   /* FIXME */
+# endif
 }
+#endif
 
 #endif
 

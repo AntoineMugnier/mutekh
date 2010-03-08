@@ -226,8 +226,7 @@ asm(".section        .text,\"ax\",@progbits  \n"
 
 #if defined(CONFIG_HEXO_IRQ)
     CPULOCAL_GET("cpu_interrupt_handler", 5, 5)
-    CPULOCAL_GET("cpu_interrupt_handler_arg", 3, 3)
-    "mr    4, 0                            \n\t"
+    "mr    3, 0                            \n\t"
     "mtctr 5                               \n\t"
 
     /* Call the interrupt handler */

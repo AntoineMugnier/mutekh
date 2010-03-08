@@ -35,8 +35,6 @@
 static uint32_t arm_irq_stack[128/4];
 #endif
 
-CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
-
 struct arm_exception_context_s {
 	uint32_t r0;
 	uint32_t r1;

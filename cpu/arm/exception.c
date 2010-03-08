@@ -236,12 +236,9 @@ asm(
 #if !defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
     FUNC_START(arm_irq_common)
 #if defined(CONFIG_HEXO_IRQ)
-    "push  {r1, r2, r3, ip}        \n\t"
+    "push  {r1, r2, r3, ip}        \n\t" /* FIXME may save less registers */
     /* Put handler arguments: */
-    /* a0: priv */
-    /* a1: irq */
-    "mov   r1, r0                  \n\t"
-    CPULOCAL_GET("cpu_interrupt_handler_arg", "r0", "r3")
+    /* a0: irq */
     CPULOCAL_GET("cpu_interrupt_handler",     "ip", "r3")
     "mov   lr, pc                  \n\t"
     "bx    ip                      \n\t"

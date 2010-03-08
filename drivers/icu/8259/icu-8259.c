@@ -90,7 +90,7 @@ DEVICU_DELHNDL(icu_8259_delhndl)
 
 static CPU_INTERRUPT_HANDLER(icu_8259_cpu_handler)
 {
-  struct device_s *dev = priv;
+  struct device_s *dev = CPU_LOCAL_GET(cpu_interrupt_handler_dev);
   struct icu_8259_private_s	*pv = dev->drv_pv;
   struct icu_8259_handler_s	*h = pv->table + irq;
 

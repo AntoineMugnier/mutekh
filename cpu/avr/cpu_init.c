@@ -22,8 +22,6 @@
 #include <hexo/interrupt.h>
 #include <hexo/init.h>
 
-CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
-
 /** pointer to context local storage in cpu local storage */
 CPU_LOCAL void *__context_data_base;
 

@@ -34,31 +34,15 @@
 
 #include "hexo/local.h"
 
-extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
-extern CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
-
 #ifdef CONFIG_DRIVER_ICU_PPC
 struct device_s;
 extern CPU_LOCAL struct device_s cpu_icu_dev;
 #endif
 
-void mips_interrupt_entry(void);
-
-static inline void
-cpu_interrupt_sethandler(cpu_interrupt_handler_t *hndl)
-{
-  CPU_LOCAL_SET(cpu_interrupt_handler, hndl);
-}
-
-static inline void
-cpu_exception_sethandler(cpu_exception_handler_t *hndl)
-{
-  CPU_LOCAL_SET(cpu_exception_handler, hndl);
-}
-
 static inline void
 cpu_interrupt_disable(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   reg_t tmp;
 
   asm volatile (
@@ -71,11 +55,13 @@ cpu_interrupt_disable(void)
 		:
 		: "r" (tmp)
 		);
+#endif
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   reg_t tmp;
 
   asm volatile (
@@ -88,11 +74,13 @@ cpu_interrupt_enable(void)
 		:
 		: "r" (tmp)
 		);
+#endif
 }
 
 static inline void
 cpu_interrupt_process(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   cpu_interrupt_enable();
   __asm__ volatile ("nop"
 		    :
@@ -103,20 +91,24 @@ cpu_interrupt_process(void)
 		    : "memory"
 		    );
   cpu_interrupt_disable();
+#endif
 }
 
 static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
+#ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "mfmsr	%0\n"
 		    : "=r" (*state)
 		    );
+#endif
 }
 
 static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
+#ifdef CONFIG_HEXO_IRQ
   reg_t tmp;
 
   asm volatile (
@@ -129,21 +121,25 @@ cpu_interrupt_savestate_disable(reg_t *state)
 		:
 		: "r" (tmp)
 		);
+#endif
 }
 
 static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
+#ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "mtmsr	%0"
 		    :
 		    : "r" (*state)
 		    );
+#endif
 }
 
 static inline bool_t
 cpu_interrupt_getstate(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   reg_t		state;
 
   __asm__ volatile (
@@ -151,20 +147,31 @@ cpu_interrupt_getstate(void)
 		    : "=r" (state)
 		    );
 
-  return state & 0x8000 ? 1 : 0;
+  return !!(state & 0x8000);
+#else
+  return 0;
+#endif
 }
 
 static inline bool_t
 cpu_is_interruptible(void)
 {
+#ifdef CONFIG_HEXO_IRQ
 	return cpu_interrupt_getstate();
+#else
+	return 0;
+#endif
 }
 
-static inline void
-cpu_interrupt_wait(void)
+#ifdef CONFIG_CPU_WAIT_IRQ
+static inline void cpu_interrupt_wait(void)
 {
-  //  __asm__ volatile ("");
+# ifdef CONFIG_HEXO_IRQ
+  cpu_interrupt_enable();
+  __asm__ volatile ("wait\n");	/* Power ISA 2.0 */
+# endif
 }
+#endif
 
 #endif
 

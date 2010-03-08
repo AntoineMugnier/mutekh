@@ -8,9 +8,6 @@
 /** pointer to current context */
 CONTEXT_LOCAL struct context_s *context_cur = NULL;
 
-/** syscall handler for current context */
-CONTEXT_LOCAL cpu_syscall_handler_t  *cpu_syscall_handler = NULL;
-
 /** init a context object using current execution context */
 error_t
 context_bootstrap(struct context_s *context)
@@ -81,12 +78,5 @@ context_destroy(struct context_s *context)
   arch_contextdata_free(context->tls);
 
   return context->stack_start;
-}
-
-void
-cpu_syscall_sethandler_ctx(struct context_s *context,
-			   cpu_syscall_handler_t *hndl)
-{
-  CONTEXT_LOCAL_TLS_SET(context->tls, cpu_syscall_handler, hndl);
 }
 

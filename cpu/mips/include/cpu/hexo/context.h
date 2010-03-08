@@ -195,7 +195,7 @@ cpu_context_set(uintptr_t stack, void *jumpto)
     ;
 }
 
-# if defined(CONFIG_CPU_USER)
+# if defined(CONFIG_HEXO_USERMODE)
 
 /** kernel stack pointer value on user entry */
 extern CONTEXT_LOCAL uintptr_t context_kstack;

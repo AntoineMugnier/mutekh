@@ -75,7 +75,7 @@ cpu_context_destroy(struct context_s *context)
   cpu_x86_segdesc_free((uint16_t)stack[0]);
 }
 
-# if defined(CONFIG_CPU_USER)
+# if defined(CONFIG_HEXO_USERMODE)
 
 void __attribute__((noreturn))
 cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,

@@ -62,7 +62,7 @@ DEVICU_DELHNDL(icu_ppc_delhndl)
 
 static CPU_INTERRUPT_HANDLER(icu_ppc_handler)
 {
-	struct device_s *dev = priv;
+	struct device_s *dev = CPU_LOCAL_GET(cpu_interrupt_handler_dev);
 	struct icu_ppc_private_s	*pv = dev->drv_pv;
 	struct icu_ppc_handler_s	*h = pv->table;
 	

@@ -147,7 +147,7 @@ cpu_context_set(uintptr_t stack, void *jumpto)
   while (1);
 }
 
-# if defined(CONFIG_CPU_USER)
+# if defined(CONFIG_HEXO_USERMODE)
 
 void __attribute__((noreturn))
 cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,

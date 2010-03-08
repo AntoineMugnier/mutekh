@@ -29,8 +29,6 @@
 #include <hexo/lock.h>
 #include <hexo/segment.h>
 
-CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
-
 /** pointer to cpu local storage itself */
 CPU_LOCAL void *__cpu_data_base;
 /** pointer to context local storage in cpu local storage */
