@@ -36,12 +36,12 @@
 
 #define ENTRY_ALIGN	16
 
-# define TLS_SEG	%gs
+# define TLS_SEG(x)	%gs x
 
 #ifdef CONFIG_ARCH_SMP
-# define CLS_SEG	%fs
+# define CLS_SEG(x)	%fs x
 #else
-# define CLS_SEG
+# define CLS_SEG(x)
 #endif
 
 /** generic entry point template */
@@ -122,11 +122,11 @@ PUT_ENTRY(1f)
 #ifdef CONFIG_HEXO_USERMODE
 	cmpl	$0x8, 60(%esp)			; /* test CS on stack, user mode ? */
 	je	1f
-	call	TLS_SEG: *(cpu_user_exception_handler)
+	call	TLS_SEG(:) *(cpu_user_exception_handler)
 	jmp	2f
 #endif
 1:	
-	call	CLS_SEG: *(cpu_exception_handler)
+	call	CLS_SEG(:) *(cpu_exception_handler)
 2:	
 	add	$20, %esp
 	jmp	x86_interrupt_end
@@ -236,7 +236,7 @@ PUT_ENTRY(5f)
 	call	x86_seg_restore
 #endif
 	pushl	%edi
-	call	CLS_SEG: *(cpu_interrupt_handler)
+	call	CLS_SEG(:) *(cpu_interrupt_handler)
 	add	$4, %esp
 	jmp	x86_interrupt_end
 
@@ -393,7 +393,7 @@ x86_interrupt_sys_enter:
 #endif
 	pushl	%esp				; /* regtable */
 	pushl	%edi				; /* number */
-	call	TLS_SEG: *(cpu_syscall_handler)
+	call	TLS_SEG(:) *(cpu_syscall_handler)
 	add	$8, %esp
 	jmp	x86_interrupt_end
 
@@ -415,10 +415,10 @@ x86_seg_restore:
 	shr	$24, %eax
 	movl	cpu_local_storage_seg(,%eax,2), %eax ; /* restore cls segment */
 	shl	$3, %eax
-	movl	%eax, CLS_SEG
+	movl	%eax, CLS_SEG()
 # endif
-	movl	CLS_SEG: (cpu_tls_seg), %eax	; /* restore tls segment */
-	movl	%eax, TLS_SEG
+	movl	CLS_SEG(:) (cpu_tls_seg), %eax	; /* restore tls segment */
+	movl	%eax, TLS_SEG()
 	ret
 #endif
 
@@ -433,8 +433,8 @@ x86_interrupt_end:
 	mov	$0x20, %eax
 	mov	%eax, %ds
 	mov	%eax, %es
-	mov	%eax, CLS_SEG
-	mov	%eax, TLS_SEG
+	mov	%eax, CLS_SEG()
+	mov	%eax, TLS_SEG()
 
 # ifdef CONFIG_CPU_X86_SYSENTER
 	popa
