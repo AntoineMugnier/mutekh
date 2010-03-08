@@ -137,9 +137,11 @@ static inline void __sched_yield_cpu(struct scheduler_s *sched)
 {
 
 #if !defined(CONFIG_ARCH_SMP)
-    /* CPU sleep waiting for interrupts */
+# ifdef CONFIG_CPU_WAIT_IRQ
+    /* CPU sleep waiting for device IRQ */
     cpu_interrupt_wait();
     cpu_interrupt_disable();
+# endif
 #else /* We are SMP */
     /* do not always make CPU sleep if SMP because context may be put
        in running queue by an other cpu with no signalling. IPI is the
