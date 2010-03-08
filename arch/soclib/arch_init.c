@@ -161,7 +161,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 #if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_HEXO_IRQ)
         struct device_s *icu = enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id());
         if ( icu )
-            cpu_interrupt_set_handler_device(icu);
+            cpu_interrupt_sethandler_device(icu);
 #endif
 
 #ifdef CONFIG_ARCH_SMP
@@ -198,7 +198,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 #if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_HEXO_IRQ)
         struct device_s *icu = enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id());
         if ( icu )
-            cpu_interrupt_set_handler_device(icu);
+            cpu_interrupt_sethandler_device(icu);
 #endif
 
         cpu_count++;
