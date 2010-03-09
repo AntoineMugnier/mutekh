@@ -30,16 +30,16 @@ DEP_FILE_LIST+=$(3)/$(1:.o=.m4.deps)
 
 $(3)/$(1): $(2)/$(1:.o=.S.m4) $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py
 	@echo '   M4+AS    ' $$(notdir $$@)
-	test -d $(3) || mkdir -p $(3)
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 \
 		$$< | m4 -s $$(filter -I%,$$(INCS)) -P | \
 		python $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py \
 		$$@ $$(filter -I%,$$(INCS)) > $$(@:.o=.m4.deps)
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 \
 		$$< | m4 $$(filter -I%,$$(INCS)) -P > $$(@:.o=.S)
-	cd $(3) ; \
+	cd $(dir $(3)/$(1)) ; \
 	$(DEPCC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$(@:.o=.S)
-	cd $(3) ; \
+	cd $(dir $(3)/$(1)) ; \
 	$(CPP) $$(INCS) $$(@:.o=.S) | $(AS) $$(CPUASFLAGS) -o $$@
 
 else
@@ -49,10 +49,10 @@ ifeq ($(wildcard $(2)/$(1:.o=.S)),$(2)/$(1:.o=.S))
 
 $(3)/$(1): $(2)/$(1:.o=.S) $(OBJ_DIR)/.done_pre_header_list
 	@echo '    AS      ' $$(notdir $$@)
-	test -d $(3) || mkdir -p $(3)
-	cd $(3) ; \
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
+	cd $(dir $(3)/$(1)) ; \
 	$(DEPCC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
-	cd $(3) ; \
+	cd $(dir $(3)/$(1)) ; \
 	$(CC) $$(INCS) -c -x assembler-with-cpp $$< $$(CPUCFLAGS) -o $$@
 
 else
@@ -62,12 +62,12 @@ ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))
 
 $(3)/$(1): $(2)/$(1:.o=.dts) $(OBJ_DIR)/config.h
 	@echo ' DTC->C+CC  ' $$(notdir $$@)
-	test -d $(3) || mkdir -p $(3)
-	cd $(3) ; $(DTC) -O dtb -o $(3)/$(1:.o=.blob) $$<
-	cd $(3) ; python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
+	cd $(dir $(3)/$(1)) ; $(DTC) -O dtb -o $(3)/$(1:.o=.blob) $$<
+	cd $(dir $(3)/$(1)) ; python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
 	    -a 4 \
 		-o $(3)/$(1:.o=.c) -n dt_blob_start $(3)/$(1:.o=.blob)
-	cd $(3) ; \
+	cd $(dir $(3)/$(1)) ; \
 	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $(DIR_CFLAGS) -c \
 		$(3)/$(1:.o=.c) -o $$@
 
@@ -78,11 +78,11 @@ ifeq ($(wildcard $(2)/$(1:.o=.dict)),$(2)/$(1:.o=.dict))
 
 $(3)/$(1): $(2)/$(1:.o=.dict)
 	@echo ' DICT->C+CC ' $$(notdir $$@)
-	test -d $(3) || mkdir -p $(3)
-	cd $(3) ; python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
+	cd $(dir $(3)/$(1)) ; python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
 	    -a 4 \
 		-o $(3)/$(1:.o=.c) -S -n forth_dictionary $$<
-	cd $(3) ; \
+	cd $(dir $(3)/$(1)) ; \
 	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $(DIR_CFLAGS) -c \
 		$(3)/$(1:.o=.c) -o $$@
 
@@ -92,12 +92,12 @@ else
 
 $(3)/$(1): $(2)/$(1:.o=.c) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_list
 	@echo '    CC      ' $$(notdir $$@)
-	test -d $(3) || mkdir -p $(3)
-	cd $(3) ; \
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
+	cd $(dir $(3)/$(1)) ; \
 	$(DEPCC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CFLAGS) $(DIR_CFLAGS) \
 		-M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
-	cd $(3) ; \
+	cd $(dir $(3)/$(1)) ; \
 	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $($(1)_CFLAGS) $(DIR_CFLAGS) -c \
 		$$< -o $$@
 ifdef HETLINK
@@ -137,7 +137,7 @@ define declare_meta_h
 # This is used by emultaion platform to get correct syscall numbers and args
 $(3)/$(1): $(2)/$(1:.h=.def) $(OBJ_DIR)/config.h
 	@echo ' HOST CPP   ' $$(notdir $$@)
-	test -d $(3) || mkdir -p $(3)
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
 	cat $(OBJ_DIR)/config.h $(2)/$(1:.h=.def) | \
 		$(HOSTCC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) -E - | grep '#define' > $(3)/$(1)
 
@@ -156,7 +156,7 @@ ifeq ($(wildcard $(2)/$(1).cpp),$(2)/$(1).cpp)
 # cpp preprocessed files
 $(3)/$(1): $(2)/$(1).cpp $(OBJ_DIR)/config.h
 	@echo '   CPP      ' $$(notdir $$@)
-	test -d $(3) || mkdir -p $(3)
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
 	$(DEPCC) -E -M -MF $$@.deps -MT $$@ $$(INCS) -P -x c $$<
 	$(CC) -E $$(INCS) -P -x c - < $$< > $$@
 
@@ -165,7 +165,7 @@ else
 # m4 preprocessed files
 $(3)/$(1): $(2)/$(1).m4 $(OBJ_DIR)/config.m4 $(MUTEK_SRC_DIR)/scripts/global.m4 $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py
 	@echo '    M4      ' $$(notdir $$@)
-	test -d $(3) || mkdir -p $(3)
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 \
 		$$< | m4 -s $$(filter -I%,$$(INCS)) -P | \
 		python $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py \
