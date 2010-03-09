@@ -66,7 +66,7 @@ __sched_candidate(sched_queue_root_t *root)
   return next;
 }
 
-#if defined(CONFIG_HEXO_IPI)
+#if defined(CONFIG_HEXO_IPI) && defined(CONFIG_MUTEK_SCHEDULER_MIGRATION)
 #define CONTAINER_LOCK_idle_cpu_queue HEXO_SPIN
 CONTAINER_TYPE(idle_cpu_queue, CLIST, struct ipi_endpoint_s, idle_cpu_queue_list_entry);
 CONTAINER_FUNC(idle_cpu_queue, CLIST, static inline, idle_cpu_queue, list_entry);
@@ -82,16 +82,6 @@ struct scheduler_s
 #endif
 };
 
-static inline struct ipi_endpoint_s *__sched_pop_ipi_endpoint(struct scheduler_s *sched)
-{
-#if defined(CONFIG_HEXO_IPI) && defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
-	return idle_cpu_queue_pop(&sched->idle_cpu);
-#elif defined(CONFIG_HEXO_IPI) && defined (CONFIG_MUTEK_SCHEDULER_STATIC)
-    return sched->ipi_endpoint;
-#endif
-    return NULL;
-}
-
 /************************************************************************/
 
 #if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
@@ -106,6 +96,15 @@ __scheduler_get(void)
   return & CPU_NAME_DECL(scheduler);
 }
 
+# if defined(CONFIG_HEXO_IPI)
+static inline struct ipi_endpoint_s *__sched_pop_ipi_endpoint(struct scheduler_s *sched)
+{
+  return idle_cpu_queue_pop(&sched->idle_cpu);
+}
+# endif
+
+/***************************/
+
 #elif defined (CONFIG_MUTEK_SCHEDULER_STATIC)
 
 /* scheduler root */
@@ -118,6 +117,13 @@ __scheduler_get(void)
   return CPU_LOCAL_ADDR(scheduler);
 }
 
+#if defined(CONFIG_HEXO_IPI)
+static inline struct ipi_endpoint_s *__sched_pop_ipi_endpoint(struct scheduler_s *sched)
+{
+  return sched->ipi_endpoint;
+}
+# endif
+
 #endif
 
 /************************************************************************/
@@ -128,9 +134,11 @@ void __sched_context_push(struct sched_context_s *sched_ctx)
     struct scheduler_s *sched = sched_ctx->scheduler;
 	sched_queue_pushback(&sched->root, sched_ctx);
 
+#if defined(CONFIG_HEXO_IPI)
     struct ipi_endpoint_s *idle = __sched_pop_ipi_endpoint(sched);
 	if ( idle )
 		ipi_post(idle);
+#endif
 }
 
 static inline void __sched_yield_cpu(struct scheduler_s *sched)
@@ -289,10 +297,13 @@ void sched_wait_callback(sched_queue_root_t *queue,
 
   /* add current context to queue, assume dont need lock */
   sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
+
+  /* lock scheduler before callback so that current
+     context can not be woken up in the mean time. */
+  sched_queue_wrlock(&sched->root);
   callback(ctx);
 
   /* get next running context */
-  sched_queue_wrlock(&sched->root);
   next = __sched_candidate(&sched->root);
   context_switch_to(&next->context);
   sched_queue_unlock(&sched->root);
@@ -310,10 +321,13 @@ void sched_wait_unlock(sched_queue_root_t *queue)
 
   /* add current context to queue, assume queue is already locked */
   sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
+
+  /* lock scheduler before unlocking queue so that current
+     context can not be woken up in the mean time. */
+  sched_queue_wrlock(&sched->root);
   sched_queue_unlock(queue);
 
   /* get next running context */
-  sched_queue_wrlock(&sched->root);
   next = __sched_candidate(&sched->root);
   context_switch_to(&next->context);
   sched_queue_unlock(&sched->root);
