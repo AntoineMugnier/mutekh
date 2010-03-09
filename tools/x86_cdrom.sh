@@ -5,15 +5,14 @@
 ##
 
 if [ "x$1" = "x" ] ; then
-	KERNEL=kernel-ibmpc-x86.out
+	echo "usage: $0 kernel-ibmpc-x86.out [qemu options]"
+	exit 0
 else
 	KERNEL=$1
 fi
 
-if [ "x$2" = "x" ] ; then
+if [ "x$QEMU" = "x" ] ; then
 	QEMU=$(type -p qemu 2>/dev/null)
-else
-	QEMU=$2
 fi
 
 D=$(dirname $0)
@@ -30,6 +29,7 @@ $CP $KERNEL tmp_iso/boot/kernel-ibmpc-x86.out
 $MKISOFS -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $ISO_NAME tmp_iso/
 $RM -r tmp_iso/
 
-if [ ! -z "$QEMU" -a -e "$QEMU" ] ; then
-	$QEMU -boot d -cdrom $ISO_NAME $*
+if [ -e "$QEMU" ] ; then
+	$QEMU -boot d -cdrom $ISO_NAME "$@"
 fi
+
