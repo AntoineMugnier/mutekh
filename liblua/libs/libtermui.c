@@ -42,11 +42,11 @@ match_len(const char *a, const char *b)
 
 #define MAX_CANDIDATES 256
 
-GETLINE_FCN_COMPLETE(lua_complete)
+TERMUI_GETLINE_FCN_COMPLETE(lua_complete)
 {
   lua_State *luast = private;
-  const char *start = getline_line_start(bhv);
-  const char *cursor = getline_line_cursor(bhv);
+  const char *start = termui_getline_line_start(bhv);
+  const char *cursor = termui_getline_line_cursor(bhv);
   const char *path = cursor;
   int table = LUA_GLOBALSINDEX;
   char *buf, *next;
@@ -75,7 +75,7 @@ GETLINE_FCN_COMPLETE(lua_complete)
 
       if (!lua_istable(luast, -1))
 	{
-	  term_beep(bhv->tm);
+	  termui_term_beep(bhv->tm);
 	  return;
 	}
 
@@ -113,24 +113,24 @@ GETLINE_FCN_COMPLETE(lua_complete)
     {
       /* no candidate */
     case (0):
-      term_beep(bhv->tm);
+      termui_term_beep(bhv->tm);
       break;
 
       /* one candidate */
     case (1): {
       const char *str = lua_tostring(luast, -1);
 
-      getline_insert(bhv, str + plen, lua_objlen(luast, -1) - plen);
+      termui_getline_insert(bhv, str + plen, lua_objlen(luast, -1) - plen);
       lua_gettable(luast, table);
 
       switch (lua_type(luast, -1))
 	{
 	case LUA_TTABLE:
-	  getline_insert(bhv, ".", 1);
+	  termui_getline_insert(bhv, ".", 1);
 	  break;
 	case LUA_TFUNCTION:
-	  getline_insert(bhv, "()", 2);
-	  getline_move_backward(bhv, 1);
+	  termui_getline_insert(bhv, "()", 2);
+	  termui_getline_move_backward(bhv, 1);
 	  break;
 	}
 
@@ -143,7 +143,7 @@ GETLINE_FCN_COMPLETE(lua_complete)
       const char *common = lua_tostring(luast, -1);
       int mlen, len = lua_objlen(luast, -1);
 
-      term_printf(bhv->tm, "\n");
+      termui_term_printf(bhv->tm, "\n");
 
       /* display key list and find longest common len */
       while (count--)
@@ -152,14 +152,14 @@ GETLINE_FCN_COMPLETE(lua_complete)
 	  mlen = match_len(common, str);
 	  if (mlen < len)
 	    len = mlen;
-	  term_printf(bhv->tm, "%s\n", str);
+	  termui_term_printf(bhv->tm, "%s\n", str);
 	  lua_pop(luast, 1);
 	}
 
-      getline_reprompt(bhv);
+      termui_getline_reprompt(bhv);
 
       if (mlen > plen)
-	getline_insert(bhv, common + plen, len - plen);
+	termui_getline_insert(bhv, common + plen, len - plen);
     }
 
     }

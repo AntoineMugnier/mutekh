@@ -13,10 +13,6 @@ ifeq ($(CONFIG_LIBDSRL),defined)
 objs += dsrl_functions.o
 endif
 
-ifeq ($(CONFIG_LIBDSRL),defined)
-objs += dsrl_functions.o
-endif
-
 ifeq ($(CONFIG_LIBCRYPTO_MD5),defined)
 objs += crypto_functions.o
 endif

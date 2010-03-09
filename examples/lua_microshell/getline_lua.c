@@ -24,7 +24,6 @@ pthread_t a;
 
 void init_mem_shell(lua_State*);
 void init_vfs_shell(lua_State*);
-void init_dsrl_shell(lua_State* luast);
 void init_rtld_shell(lua_State* luast);
 void init_crypto_shell(lua_State* luast);
 void init_timer_shell(lua_State *st);
@@ -35,10 +34,6 @@ static void initialize_shell(lua_State* luast)
 
 #if defined(CONFIG_VFS)
     init_vfs_shell(luast);
-#endif
-
-#if defined(CONFIG_LIBDSRL)
-    init_dsrl_shell(luast);
 #endif
 
 #if defined(CONFIG_LIBELF_RTLD)
@@ -63,24 +58,24 @@ static void initialize_shell(lua_State* luast)
 
 
 /* line completion handler found in getline_lua_complete.c */
-GETLINE_FCN_COMPLETE(lua_complete);
+TERMUI_GETLINE_FCN_COMPLETE(lua_complete);
 
-static GETLINE_FCN_PROMPT(prompt)
+static TERMUI_GETLINE_FCN_PROMPT(prompt)
 {
 #if defined(CONFIG_VFS)
     char name[CONFIG_VFS_NAMELEN];
     vfs_node_get_name(vfs_get_cwd(), name, CONFIG_VFS_NAMELEN);
-    return term_printf(tm, "[lua:%s] ", name);
+    return termui_term_printf(tm, "[lua:%s] ", name);
 #else
-    return term_printf(tm, "[lua] ");
+    return termui_term_printf(tm, "[lua] ");
 #endif
 }
 
 void* shell(void *param)
 {
-    struct term_s			*tm;
-    struct term_behavior_s	*bhv;
-    lua_State			*luast;
+    struct termui_term_s		*tm;
+    struct termui_term_behavior_s	*bhv;
+    lua_State				*luast;
 
     /* create lua state */
     luast = luaL_newstate();
@@ -90,45 +85,45 @@ void* shell(void *param)
     initialize_shell(luast);
 
     /* initialize terminal */
-    if (!(tm = term_alloc(console_dev, console_dev, luast)))
+    if (!(tm = termui_term_alloc(console_dev, console_dev, luast)))
         return NULL;
 
     /* set capabilities */
-    term_set(tm, "xterm");
+    termui_term_set(tm, "xterm");
 
 #if defined(CONFIG_DRIVER_CHAR_SOCLIBTTY)
     char *disable_cr = "\x1b[20l";
     char *enable_cr = "\x1b[20h";
-    term_writestr(tm, disable_cr, strlen(disable_cr));
+    termui_term_writestr(tm, disable_cr, strlen(disable_cr));
 #endif
 
-    term_printf(tm, "lua shell example, use Ctrl-D to quit\n\n");
+    termui_term_printf(tm, "lua shell example, use Ctrl-D to quit\n\n");
 
     /* initialize getline behavior according to term capabilities */
-    if (!(bhv = getline_alloc(tm, 256)))	/* max line len = 256 */
+    if (!(bhv = termui_getline_alloc(tm, 256)))	/* max line len = 256 */
         return NULL;
 
-    getline_history_init(bhv, 64); /* 64 entries max */
-    getline_complete_init(bhv, lua_complete);
-    getline_setprompt(bhv, prompt);
+    termui_getline_history_init(bhv, 64); /* 64 entries max */
+    termui_getline_complete_init(bhv, lua_complete);
+    termui_getline_setprompt(bhv, prompt);
 
     while (1)
     {
         int oldtop;
         const char *line;
 
-        if (!(line = getline_process(bhv)))
+        if (!(line = termui_getline_process(bhv)))
             break;
 
         /* skip blank line */
         if (!*(line += strspn(line, "\n\r\t ")))
             continue;
 
-        getline_history_addlast(bhv);
+        termui_getline_history_addlast(bhv);
 
         if (luaL_loadbuffer(luast, line, strlen(line), ""))
         {
-            term_printf(tm, "%91AParse error:%A %s\n", lua_tostring(luast, -1));
+            termui_term_printf(tm, "%91AParse error:%A %s\n", lua_tostring(luast, -1));
             lua_pop(luast, 1);
             continue;
         }
@@ -136,16 +131,16 @@ void* shell(void *param)
         oldtop = lua_gettop(luast);
 
 #if defined(CONFIG_DRIVER_CHAR_SOCLIBTTY)
-        term_writestr(tm, enable_cr, strlen(enable_cr));
+        termui_term_writestr(tm, enable_cr, strlen(enable_cr));
 #endif
         int err = lua_pcall(luast, 0, LUA_MULTRET, 0);
 #if defined(CONFIG_DRIVER_CHAR_SOCLIBTTY)
-        term_writestr(tm, disable_cr, strlen(disable_cr));
+        termui_term_writestr(tm, disable_cr, strlen(disable_cr));
 #endif
 
         if (err)
         {
-            term_printf(tm, "%91AExecution error:%A %s\n", lua_tostring(luast, -1));
+            termui_term_printf(tm, "%91AExecution error:%A %s\n", lua_tostring(luast, -1));
             lua_pop(luast, 1);
             continue;
         }
@@ -156,10 +151,10 @@ void* shell(void *param)
     lua_close(luast);
 
     /* free resources allocated by getline behavior */
-    getline_free(bhv);
+    termui_getline_free(bhv);
 
     /* free resources and restore terminal attributes */
-    term_free(tm);
+    termui_term_free(tm);
 
     return 0;
 }

@@ -1,16 +1,17 @@
-objs =	\
-term.o term_none.o term_printf.o	\
-term_telnet.o term_vt100.o term_vt102.o \
-term_xterm.o
+
+objs = src/term.o src/term_none.o src/term_printf.o src/term_vt100.o	\
+       src/term_vt102.o src/term_xterm.o src/strings.o
 
 ifeq ($(CONFIG_LIBTERMUI_GETLINE), defined)
-objs += getline.o getline_complete.o	\
-	getline_edit.o getline_history.o
+objs += src/getline.o src/getline_complete.o src/getline_edit.o	\
+	src/getline_history.o
 endif
 
 ifeq ($(CONFIG_LIBTERMUI_CONSOLE), defined)
-objs += console_builtin.o console.o console_complete.o	\
-	console_entries.o console_parse.o		\
-	console_process.o
+objs += src/console_builtin.o src/console.o src/console_complete.o	\
+	src/console_entries.o src/console_parse.o			\
+	src/console_process.o
 endif
+
+DIR_CFLAGS=-I $(LOCAL_SRC_DIR)
 
