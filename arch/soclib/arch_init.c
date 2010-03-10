@@ -73,6 +73,8 @@ extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_
 #include <hexo/mmu.h>
 #endif
 
+#define START_MAGIC 0x67c51264
+
 #ifdef CONFIG_ARCH_SMP
 static uint_fast8_t cpu_count = 1;
 volatile bool_t     cpu_init_flag = 0;
@@ -89,8 +91,6 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
     if (cpu_isbootstrap())    /* FIXME */
         /* First CPU */
     {
-        cpu_init_flag = 0;
-
         lock_init(&__atomic_arch_lock);
         lock_init(&cpu_init_lock);
 
@@ -166,7 +166,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 
 #ifdef CONFIG_ARCH_SMP
         /* send reset/init signal to other CPUs */
-        cpu_init_flag = 1;
+        cpu_init_flag = START_MAGIC;
 #endif
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
@@ -183,7 +183,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
     {
         assert(cpu_id() < CONFIG_CPU_MAXCOUNT);
 
-        while (cpu_init_flag == 0)
+        while (cpu_init_flag != START_MAGIC)
             ;
 
         /* configure other CPUs */
@@ -207,7 +207,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 
         /* wait for start signal */
 
-        while (cpu_start_flag == 0)
+        while (cpu_start_flag != START_MAGIC)
             ;
 
         /* run mutek_start_smp() */
@@ -227,7 +227,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 void arch_start_other_cpu(void)
 {
 #ifdef CONFIG_ARCH_SMP
-    cpu_start_flag++;
+    cpu_start_flag = START_MAGIC;
 #endif
 }
 
