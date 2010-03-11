@@ -30,14 +30,18 @@
 
 #ifdef CONFIG_DEVICE_TREE
 
+# ifdef CONFIG_DRIVER_ENUM_ROOT
 struct device_s enum_root;
+# endif
 
 void device_tree_init()
 {
+# ifdef CONFIG_DRIVER_ENUM_ROOT
 	device_init(&enum_root);
 	enum_root_init(&enum_root, NULL);
 	/* Dont reference ourselves... */
 	device_list_remove(&enum_root.children, &enum_root);
+# endif
 }
 
 CONTAINER_FUNC(device_list, CLIST, inline, device_list);
@@ -47,7 +51,9 @@ OBJECT_CONSTRUCTOR(device_obj)
   device_list_init(&obj->children);
   lock_init(&obj->lock);
   obj->parent = NULL;
+#ifdef CONFIG_DRIVER_ENUM_ROOT
   device_register(obj, &enum_root, NULL);
+#endif
 
   return 0;
 }
@@ -124,7 +130,7 @@ struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i)
   return res;
 }
 
-#if defined(CONFIG_DEVICE_TREE)
+#if defined(CONFIG_DEVICE_TREE) && defined (CONFIG_DRIVER_ENUM_ROOT)
 static void _device_tree_walk(struct device_s *dev, device_tree_walker_t *walker, void *priv)
 {
     walker(dev, priv);
@@ -133,12 +139,10 @@ static void _device_tree_walk(struct device_s *dev, device_tree_walker_t *walker
         _device_tree_walk(item, walker, priv);
     });
 }
-#endif
 
 void device_tree_walk(device_tree_walker_t *walker, void *priv)
 {
-#if defined(CONFIG_DEVICE_TREE)
     _device_tree_walk(&enum_root, walker, priv);
-#endif
 }
+#endif
 

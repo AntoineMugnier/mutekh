@@ -9,27 +9,27 @@ config:
 
 checkconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(CONF_PATH) \
+		--src-path=$(MUTEK_SRC_DIR) \
 		--input=$(CONF) --check		\
 		--build=$(BUILD)
 
 listconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(CONF_PATH) \
+		--src-path=$(MUTEK_SRC_DIR) \
 		--input=$(CONF) --list		\
 		--build=$(BUILD)
 
 
 listallconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(CONF_PATH) \
+		--src-path=$(MUTEK_SRC_DIR) \
 		--input=$(CONF) --list=all		\
 		--build=$(BUILD)
 
 
 showconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
-		--path=$(CONF_PATH) \
+		--src-path=$(MUTEK_SRC_DIR) \
 		--input=$(CONF) --info=$(TOKEN)		\
 		--build=$(BUILD)
 

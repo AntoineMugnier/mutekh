@@ -17,7 +17,7 @@
 #     along with MutekH; if not, write to the Free Software Foundation,
 #     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 #
-#     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+#     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2010
 #
 
 use strict;
@@ -26,6 +26,7 @@ use File::Basename;
 use File::Compare;
 use File::Path;
 use Term::ANSIColor;
+#use Data::Dumper;
 
 my @config_files;
 my @output_files;
@@ -33,6 +34,7 @@ my %config_opts;
 my $quiet_flag = 0;
 my $err_flag = 0;
 my $bld_path = ".";
+my $debug = $ENV{MUTEK_CONFIG_DEBUG};
 
 my %param_h = (
 	       "input" => "myconfig",
@@ -44,6 +46,10 @@ my %sec_types_req;
 my %used_build = ( "default" => 1 );
 
 my %vars;
+
+###############################################################################
+#	Reporting and messages
+###############################################################################
 
 sub mycolor
 {
@@ -63,6 +69,12 @@ sub error
     print STDERR mycolor('bold red')."error:".mycolor('clear red')."$msg$tlist\n".mycolor('reset');
 }
 
+sub error_loc
+{
+    my ($opt, $msg, @args) = @_;
+    error("$opt->{file}:$opt->{location}: in $opt->{name} declaration: $msg", @args);
+}
+
 sub warning
 {
     return if $quiet_flag;
@@ -71,6 +83,12 @@ sub warning
     my $tlist = join(", ", @list) if (@list);
 
     print STDERR mycolor('bold yellow')."warning:".mycolor('reset')."$msg$tlist\n";
+}
+
+sub warning_loc
+{
+    my ($opt, $msg, @args) = @_;
+    warning("$opt->{file}:$opt->{location}: in $opt->{name} declaration: $msg", @args);
 }
 
 sub notice
@@ -83,903 +101,1043 @@ sub notice
     print STDERR mycolor('green')."notice:".mycolor('reset')."$msg$tlist\n";
 }
 
-sub check_rule
+sub debug
 {
-    my ($orig, $rule) = @_;
+    return if !$debug;
 
-    $rule =~ /^(\w+)([=<>!]*)([^\s]*)$/;
-    my $dep = $1;
-    my $op = $2;
-    my $val = $3;
+    my ($level, $msg) = @_;
 
-    my $opt = $config_opts{$dep};
-
-    if (not $opt)
-    {
-	warning($$orig{location}.": `".$$orig{name}."' refers to undeclared token `".$dep."', ignored.");
-	return 0;
-    }
-
-    if (not $op)
-    {
-	return 1 if ($$opt{value} ne "undefined");
-    }
-    elsif ($op eq "!")
-    {
-	return 1 if ($$opt{value} eq "undefined");
-    }
-    else
-    {
-	if ($op eq "=")
-	{
-	    return 1 if ($$opt{value} eq $val);
-	}
-	elsif  ($op eq ">")
-	{
-	    return 1 if ($$opt{value} > $val);
-	}
-	elsif  ($op eq "<")
-	{
-	    return 1 if ($$opt{value} < $val);
-	}
-	else
-	{
-	    error($$orig{location}.": bad operator in assertion for `".$$opt{name}."' token");
-	}
-
-	error($$orig{location}.": `".$$orig{name}."' token use ".
-	      "a value condition on `".$dep."' token which has the `value' flag missing")
-	    if (!$$opt{flags}->{value});
-    }
-
-    return 0;
+    print STDERR mycolor('blue')."debug:".mycolor('reset')."$msg\n";
 }
 
-# set description
 
-sub cmd_desc
+###############################################################################
+#	Configuration constraints parsing
+###############################################################################
+
+sub args_desc
 {
-    my ($location, $opts, @args) = @_;
+    my ($location, $opts, $tag, @args) = @_;
 
-    push(@{$$opts{desc}}, @args);
+    $opts->{desc} .= join(" ", @args)." ";
 }
 
-# add dependency
-
-sub cmd_depend
+sub args_list_concat
 {
-    my ($location, $opts, @args) = @_;
+    my ($location, $opts, $tag, @args) = @_;
 
-    push(@{$$opts{depend}}, "@args");
+    $opts->{$tag} ||= [];
+    push(@{$opts->{$tag}}, @args);
 }
 
-# add weak dependency
-
-sub cmd_parent
+sub args_list_add
 {
-    my ($location, $opts, @args) = @_;
+    my ($location, $opts, $tag, @args) = @_;
 
-    push(@{$$opts{parent}}, @args);
+    $opts->{$tag} ||= [];
+    push(@{$opts->{$tag}}, [@args]);
 }
 
-# add definition
-
-sub cmd_provide
+sub args_single
 {
-    my ($location, $opts, @args) = @_;
+    my ($location, $opts, $tag, @args) = @_;
 
-    push(@{$$opts{provide}}, @args);
+    args_list_add($location, $opts, 'single', @args);
+    args_list_add($location, $opts, 'depend', @args);
 }
 
-# set default value
-
-sub cmd_default
+sub args_default
 {
-    my ($location, $opts, @args) = @_;
+    my ($location, $opts, $tag, @args) = @_;
     my $value = "@args";
 
-    warning($location.": default value redefined for `".$$opts{name}." token'") if ($$opts{default});
+    warning($location.": default value redefined for `".$opts->{name}." token'") if ($opts->{default});
 
-    $$opts{default} = $value;
+    $opts->{default} = $value;
 }
 
-# add exclusion
-
-sub cmd_exclude
+sub args_flags
 {
-    my ($location, $opts, @args) = @_;
-
-    push(@{$$opts{exclude}}, @args);
-}
-
-sub cmd_flags
-{
-    my ($location, $opts, @args) = @_;
+    my ($location, $opts, $tag, @args) = @_;
 
     foreach my $flag (@args)
     {
-	if (defined $$opts{flags}->{$flag})
+	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private)$/)
 	{
-	    warning($location.": unable to set flag `".$flag."' for `".$$opts{name}." token'");
+	    error($location.": unknown flag `".$flag."' for `".$opts->{name}." token'");
+	    next;
 	}
-	else
+
+	if (defined $opts->{flags}->{$flag})
 	{
-	    $$opts{flags}->{$flag} = 1;
+	    warning($location.": flag `".$flag."' is already set for `".$opts->{name}." token'");
+	    next;
 	}
+
+	$opts->{flags}->{$flag} = 1;
+	$opts->{flags}->{$flag."_keep"} = 1;
+	$opts->{value} = 'defined' if $flag eq 'mandatory';
     }
 }
 
-sub cmd_require
+sub args_module
 {
-    my ($location, $opts, @args) = @_;
+    my ($location, $opts, $tag, $name, @desc) = @_;
 
-    push(@{$$opts{require}}, "@args");
-}
-
-sub cmd_suggest
-{
-    my ($location, $opts, @args) = @_;
-
-    push(@{$$opts{suggest}}, "@args");
-}
-
-sub cmd_suggest_when
-{
-    my ($location, $opts, @args) = @_;
-
-    push(@{$$opts{suggest_when}}, "@args");
-}
-
-sub cmd_when
-{
-    my ($location, $opts, @args) = @_;
-
-    push(@{$$opts{when}}, "@args");
-}
-
-sub cmd_single
-{
-    my ($location, $opts, @args) = @_;
-
-    push(@{$$opts{single}}, "@args");
-}
-
-sub cmd_module
-{
-    my ($location, $opts, $name, @desc) = @_;
-
-    $$opts{module} = {
+    $opts->{module} = {
 	name => $name,
 	description => join(" ", @desc),
 	path => $vars{CONFIGPATH}
     };
+    $opts->{flags}->{root} = 1;
+}
+
+sub args_range
+{
+    my ($location, $opts, $tag, @args) = @_;
+
+    if ( "@args" =~ /^\[\s*(-?\w+)\s*,\s*(-?\w+)\s*\]$/ ) {
+	$opts->{range} = { 'min' => $1, 'max' => $2 };
+
+    } else {
+	my $sw = {};
+	$sw->{$_} = 1 foreach ( @args );
+	$opts->{switch} = $sw;
+    }
 }
 
 my %config_cmd =
 (
- "exclude" => \&cmd_exclude,
- "default" => \&cmd_default,
- "depend" => \&cmd_depend,
- "parent" => \&cmd_parent,
- "flags" => \&cmd_flags,
- "require" => \&cmd_require,
- "single" => \&cmd_single,
- "suggest" => \&cmd_suggest,
- "suggest_when" => \&cmd_suggest_when,
- "when" => \&cmd_when,
- "module" => \&cmd_module,
- "provide" => \&cmd_provide,
- "desc" => \&cmd_desc,
- "description" => \&cmd_desc
+ "exclude" => \&args_list_concat,
+ "default" => \&args_default,
+ "depend" => \&args_list_add,
+ "parent" => \&args_list_concat,
+ "flags" => \&args_flags,
+ "require" => \&args_list_add,
+ "single" => \&args_single,
+ "suggest" => \&args_list_concat,
+ "suggest_when" => \&args_list_add,
+ "when" => \&args_list_add,
+ "module" => \&args_module,
+ "provide" => \&args_list_concat,
+ "range" => \&args_range,
+ "desc" => \&args_desc,
 );
 
-##
-## parses source and configuration files and process %config blocks
-##
+my %processed_files;
 
-my %processed;
-
-sub process_file
+sub read_tokens_file
 {
     my ($file) = @_;
 
-    # skip already processed files
+    # skip already processed_files files
     $file = Cwd::realpath($file);
 
-    return if ($processed{$file});
-    $processed{$file} = 1;
+    return if ($processed_files{$file});
+    $processed_files{$file} = 1;
 
     # process file
 
-    if (open(FILE, "< ".$file))
-    {
-	my $state = 0;
-	my $lnum = 0;
-	my $blocks = 0;
-	my $name;
-	my $opts;
-	my $module;
+    if (!open(FILE, "< ".$file)) {
+	return 1;
+    }
 
-	foreach my $line (<FILE>)
-	{
-	    $lnum++;
+    my $state = 0;
+    my $lnum = 0;
+    my $blocks = 0;
+    my $name;
+    my $opts;
 
-	    next if ($line =~ /^[ \t]*(\#.*)?$/);
+    foreach my $line (<FILE>) {
+	$lnum++;
 
-	    # catch %config blocks start and end
+	next if ($line =~ /^[ \t]*(\#.*)?$/);
 
-	    if ($line =~ /^\s*%module\s+(.+?)\s+$/)
-	    {
-		$module = $1;
-		next;
-	    }
+	# catch %config blocks start and end
 
-	    if ($line =~ /^\s*%config\s+(\S+)/)
-	    {
-		if ($1 eq "end")
-		{
-		    if (not $state)
-		    {
-			error("$file:$lnum: unexpected `%config end'");
-			next;
-		    }
+	if ($line =~ /^\s*%config\s+(\S+)/) {
 
-		    # set token default attribute to `undefined' if no default set
+	    if ($1 eq "end") {
 
-		    if (not defined $$opts{default})
-		    {
-			$$opts{default} = "undefined";
-		    }
+		if (not $state) {
+		    error("$file:$lnum: unexpected `%config end'");
+		    next;
+		}
 
+		# set token default attribute to `undefined' if no default set
+
+		$state = 0;
+
+	    } else {
+
+		if ($state) {
+		    error("$file:$lnum: unexpected `%config', previous `".
+			  $1."' block not terminated");
 		    $state = 0;
 		}
-		else
-		{
-		    if ($state)
-		    {
-			error("$file:$lnum: unexpected `%config', previous `".
-			      $1."' block not terminated");
-			$state = 0;
-		    }
 
-		    if ($opts = $config_opts{$1})
-		    {
-			error("$file:$lnum: `".$1."' block already declared ".
-			      "at `".$$opts{location}."'");
-			next;
-		    }
-
-		    $blocks++;
-		    $name = $1;
-		    $opts = $config_opts{$1} = {};
-		    $$opts{location} = "$file:$lnum";
-		    $$opts{name} = $name;
-		    $$opts{depend} = [];
-		    $$opts{parent} = [];
-		    $$opts{require} = [];
-		    $$opts{suggest} = [];
-		    $$opts{suggest_when} = [];
-		    $$opts{when} = [];
-		    $$opts{single} = [];
-		    $$opts{desc} = [];
-		    $$opts{provide} = [];
-		    $$opts{provided_by} = [];
-		    $$opts{exclude} = [];
-		    $$opts{provided_count} = 0;
-		    $state = 1;
-
+		if ($opts = $config_opts{$1}) {
+		    error("$file:$lnum: `".$1."' block already declared ".
+			  "at $opts->{file}:$opts->{location}");
+		    next;
 		}
 
-		next;
+		$blocks++;
+		$name = $1;
+		$opts = $config_opts{$1} = {};
+		$opts->{location} = $lnum;
+		$opts->{file} = $file;
+		$opts->{name} = $name;
+		$opts->{depnotice} = [];
+		$state = 1;
 	    }
 
-	    # process %config blocks content
+	    next;
+	}
 
-	    if ($state)
-	    {
-		$line =~ s/^\s*//g;
-		$line =~ s/\$\((\w+)\)/$vars{$1}/ge;
+	# process %config blocks content
 
-		my @line_l = split(/\s+/, $line);
+	if ($state) {
+	    $line =~ s/^\s*//g;
+	    $line =~ s/\$\((\w+)\)/$vars{$1}/ge;
 
-		# get pointer on function for command
-		if (my $func_ptr = $config_cmd{@line_l[0]})
-		{
-		    # call command function
-		    $func_ptr -> ("$file:$lnum", $opts, @line_l[1..@line_l - 1]);
-		}
-		else
-		{
-		    # error if unknow function
-		    error("$file:$lnum: unknown command `".@line_l[0]."' in `%config' block");
-		}
+	    my @line_l = split(/\s+/, $line);
+
+	    # get pointer on function for command
+	    if (my $func_ptr = $config_cmd{@line_l[0]}) {
+		# call command function
+		$func_ptr -> ("$file:$lnum", $opts, @line_l[0], @line_l[1..@line_l - 1]);
+	    } else {
+		# error if unknow function
+		error("$file:$lnum: unknown command `".@line_l[0]."' in `%config' block");
 	    }
 	}
-
-	if ($state)
-	{
-	    error("$file:$lnum: unexpected end of file, `%config end' expected");
-	}
-
-	close(FILE);
     }
+
+    if ($state) {
+	error("$file:$lnum: unexpected end of file, `%config end' expected");
+    }
+
+    close(FILE);
+
+    return 0;
 }
 
-
-##
-## explores all subdirectories to find configuration token declarations
-##
-
-sub explore
+sub explore_token_dirs
 {
     my ($dir) = @_;
 
     return if !$dir;
     error("Can not explore `$dir' directory") if ! -d $dir;
 
-    # skip already processed dir
+    # skip already processed_files dir
     $dir = Cwd::realpath($dir);
 
-    return if ($processed{$dir});
-    $processed{$dir} = 1;
+    return if ($processed_files{$dir});
+    $processed_files{$dir} = 1;
 
     foreach my $ent (<$dir/*>)
     {
-	explore($ent) if (-d $ent && !-l $ent);
+	explore_token_dirs($ent) if (-d $ent && !-l $ent);
     }
 
     foreach my $ent (<$dir/*.config>) {
 	my $rp = Cwd::realpath($ent);
 	push @config_files, $rp;
 	$vars{CONFIGPATH} = dirname($rp);
-	process_file($ent);
+	read_tokens_file($ent);
     }
 }
 
-##
-## recursively checks all dependency of a defined token
-##
+###############################################################################
+#	Constraints rules checking
+###############################################################################
 
-my %depend_cache;
+# check a condition
+sub check_condition
+{
+    my ($value, $cond) = @_;
 
+    return ($value ne "undefined") if !$cond;
+
+    if ( $cond =~ /^([=<>!]+)([^\s]*)$/ ) {
+	my $op = $1;
+	my $val = $2;
+
+	if ($op eq "!")	{
+	    return ($value eq "undefined");
+	} elsif ($op eq "=") {
+	    return ($value eq $val);
+	} elsif  ($op eq ">") {
+	    return ($value > $val);
+	} elsif  ($op eq "<") {
+	    return ($value < $val);
+	}
+
+    }
+
+    error("bad operator in value test");
+    return 0;
+}
+
+# check if a token is defined
+sub check_defined
+{
+    my $token = shift;
+
+    return $token->{getvalue}->( $token ) ne 'undefined';
+}
+
+# check a token condition rule
+sub check_rule
+{
+    my $rule = shift;
+
+    return check_condition( $rule->{token}->{getvalue}->( $rule->{token} ), $rule->{condition} );
+}
+
+# return true if one of the list elements evaluate to true
+sub foreach_or_list
+{
+    my ( $list, $process, @args ) = @_;
+
+    if ( $list ) {
+	foreach ( @$list ) {
+	    if ( $process->( $_, @args ) ) {
+		return 1;
+	    }
+	}
+    }
+
+    return 0;
+}
+
+# return number of elements evaluating to true
+sub foreach_count_list
+{
+    my ( $list, $except, $process, @args ) = @_;
+    my $res = 0;
+
+    if ( $list ) {
+	foreach ( @$list ) {
+	    if ( $process->( $_, @args ) ) {
+		$res++;
+	    }
+	}
+    }
+
+    return $res == $except;
+}
+
+# return true if all of the list elements evaluate to true
+sub foreach_and_list
+{
+    my ( $list, $process, @args ) = @_;
+
+    if ( $list ) {
+	foreach ( @$list ) {
+	    if ( ! $process->( $_, @args ) ) {
+		return 0;
+	    }
+	}
+    }
+
+    return 1;
+}
+
+# execute a closure if token flag is defined
+sub if_flag
+{
+    my ( $token, $flag, $process, @args ) = @_;
+
+    return 0 if ( !$token->{flags}->{$flag} );
+    return $process->( $token, @args ) if $process;
+    return 1;
+}
+
+sub is_equal
+{
+    my ( $a, $b, $process, @args ) = @_;
+
+    return 0 if ( $a ne $b );
+    return $process->( $a, @args ) if $process;
+    return 1;
+}
+
+# iterate over all list and sub-lists elements
+sub foreach_tag_args
+{
+    my ( $token, $tag, $process ) = @_;
+
+    my $list = $token->{$tag};
+    return if (!$list);
+
+    my $r;
+    $r = sub {
+	my $list = shift;
+
+	foreach ( @$list ) {
+	    if ( ref $_ eq 'ARRAY' ) {
+		$r->( $_ );
+	    } else {
+		$process->( $_ );
+	    }
+	}
+    };
+
+    $r->($list);
+}
+
+sub get_token_name_list
+{
+    my ( $list, $sep, $prefix, $suffix ) = @_;
+    my @names;
+    $prefix ||= "`";
+    $suffix ||= "'";
+    push @names, $prefix.$_->{name}.$suffix foreach ( @$list );
+    return join( $sep, @names );
+}
+
+sub get_rule_name_list
+{
+    my ( $list, $sep, $prefix, $suffix ) = @_;
+    my @names;
+    $prefix ||= "`";
+    $suffix ||= "'";
+    push @names, $prefix.$_->{token}->{name}.$_->{condition}.$suffix foreach ( @$list );
+    return join( $sep, @names );
+}
+
+sub get_token_name
+{
+    my ( $token, $sep, $prefix, $suffix ) = @_;
+    return $prefix.$token->{name}.$suffix;
+}
+
+sub get_rule_name
+{
+    my ( $rule, $sep, $prefix, $suffix ) = @_;
+    return $prefix.$rule->{token}->{name}.$rule->{condition}.$suffix;
+}
+
+sub check_definable
+{
+    my ( $opt ) = @_;
+
+    # this code shows how to simple check constraints. Most functions
+    # below does the same with diagnostic printing code inserted.
+
+    return 0 if !foreach_or_list( $opt->{parent}, \&check_defined );
+    return 0 if !foreach_and_list( $opt->{depend}, \&foreach_or_list, \&check_defined );
+    return 0 if !foreach_and_list( $opt->{single}, \&foreach_count_list, 1, \&check_defined );
+    return 0 if foreach_or_list( $opt->{exclude}, \&check_defined );
+
+    return 1 if !$opt->{flags}->{value};
+    return 0 if !foreach_and_list( $opt->{require}, \&foreach_or_list, \&check_rule );
+    return 1;
+}
+
+# check dependencies expressed with the `depend' and `parent' tags
 sub process_config_depend
 {
-    my $res = 1;
-    my ( $orig ) = @_;
 
-    if (defined $depend_cache{$$orig{name}."depend"})
+    # try to recursively define tokens marked with the `auto' flag
+    sub process_auto
     {
-	return $depend_cache{$$orig{name}."depend"};
-    }
+	my ( $dep, $opt ) = @_;
 
-    foreach my $dep_and (@{$$orig{depend}})
-    {
-	my @deps_and = split(/\s+/, $dep_and);
- 	my $flag = 0;
+	return 1 if ( check_defined( $dep ) );
+	return 0 if !$dep->{flags}->{auto};
 
-	foreach my $dep (@deps_and)
-	{
-	    my $opt = $config_opts{$dep};
+	# automatic token definition can be done only once to avoid loops
+	$dep->{flags}->{auto} = 0;
 
-	    if (!$opt)
-	    {
-		warning($$orig{location}.": `".$$orig{name}."' depends on undeclared token `".$dep."', ignored.");
-		next;
-	    }
+	if ( $dep->{userdefined} ) {
+	    push @{$dep->{depnotice}}, "`$dep->{name}' token could be automatically defined ".
+		"as a dependency of `$opt->{name}' but is explicitly undefined in ".
+		"build configuration file.";
 
-	    if ($$opt{value} ne "undefined")
-	    {
-		$flag += process_config_depend($opt);
-	    }
+	    debug(1, "config prevents auto define of $dep->{name} as an autodep of $opt->{name}");
+	    return 0;
 	}
 
-	# return 0 if dependency not ok
-	if (not $flag)
-	{
-	    if ($$orig{value} ne "undefined") {
-		notice("`".$$orig{name}."' token will be undefined ".
-		       "due to unmet dependencies; dependencies list is: ",
-		       @deps_and);
-	    }
-
-	    $res = 0;
+	# try to recursively auto define parents and dependencies
+	if ( !foreach_and_list( $dep->{depend}, sub {
+	    return process_auto( $opt, shift->[0] );
+        }) || ($dep->{parent} && !process_auto( $dep->{parent}->[0], $opt ) ) ) {
+	    return 0;
 	}
+
+	$dep->{value} = 'defined';
+
+	debug(1, "$dep->{name} had been defined as an autodep of $opt->{name}");
+
+	return 1;
     }
 
-    $depend_cache{$$orig{name}."depend"} = $res;
+    my ($opt) = @_;
 
-    return $res;
+    return 0 if ( !check_defined( $opt ) );
+    return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} );
+
+    # check if at least one parent is defined
+    my $pres = 1;
+
+    if ( $opt->{parent} && !foreach_or_list( $opt->{parent}, \&check_defined ) ) {
+	my $first_par = $opt->{parent}->[0];
+	# try define a parent with auto flag set
+	$pres = foreach_or_list( $opt->{parent}, \&if_flag, 'auto', \&process_auto, $opt );
+    }
+
+    # check if all dependencies tags have at least one token defined
+    my $dres = $pres && ( !$opt->{depend} || foreach_and_list( $opt->{depend}, sub {
+	my $or_list = shift;
+
+	return 1 if ( foreach_or_list( $or_list, \&check_defined ) );
+
+	my $depnames = get_token_name_list( $or_list, " or " );
+
+	# try to automatically define an `auto' dependency and parents
+	if ( foreach_or_list( $or_list, \&if_flag, 'auto', \&process_auto, $opt ) ) {
+
+	    return 1;
+
+	# error if `harddep' dependency not satisfied
+	} elsif ( $opt->{flags}->{harddep} || $opt->{flags}->{mandatory} ) {
+
+	    $opt->{deperror} = "`$opt->{name}' token is required but has unmet dependencies: $depnames";
+
+	    debug(1, "undefine $opt->{name} due to harddeps that are not satisfied: $depnames");
+
+	} else {
+
+	    push @{$opt->{depnotice}}, "`$opt->{name}' token will be undefined due to unmet dependencies: ".
+		get_token_name_list( $or_list, " or " );
+
+	    debug(1, "undefine $opt->{name} due to deps that are not satisfied: $depnames");
+	}
+
+	$opt->{value} = 'undefined';
+	$opt->{depundef} = 1;
+	return 0;
+    }));
+
+    # silently undefines token with undefined parent unless assigned in build configuration
+    if ( !$pres ) {
+
+	if ( $opt->{userdefined} ) {
+	    push @{$opt->{depnotice}}, "`$opt->{name}' token is defined in build configuration ".
+		"file but has undefined parent.";
+	}
+
+	$opt->{value} = 'undefined';
+	$opt->{depundef} = 1;
+
+	debug(1, "undefine $opt->{name} due to undefined parent");
+    }
+
+    # return changes status
+    return !$dres || !$pres;
 }
-
-##
-## checks auto define conditions
-##
 
 sub process_config_when
 {
-    my ($orig) = @_;
+    my ( $opt ) = @_;
 
-    return if (defined $depend_cache{$$orig{name}."when"});
+    return 0 if !$opt->{when} || $opt->{whendone};
+    return 0 if ( check_defined( $opt ) || $opt->{userdefined} );
 
-    my $res;
-    foreach my $dep_and (@{$$orig{when}})
-    {
-	my @deps_and = split(/\s+/, $dep_and);
-	$res = 1;
+    my $res = foreach_or_list( $opt->{when}, \&foreach_and_list, \&check_rule );
 
-	foreach my $rule (@deps_and)
-	{
-	    if (!check_rule($orig, $rule))
-	    {
-		$res = 0;
-		last;
-	    }
-	}
+    if ( $res ) {
+	debug(1, "$opt->{name} defined thanks to one of its `when' rule");
+	$opt->{value} = 'defined';
 
-	last if $res;
+	# when rule is used only once
+	$opt->{whendone} = 1;
+
+	# clear existing undefine diagnostics
+	$opt->{depnotice} = [];
+	$opt->{deperror} = "";
+	$opt->{depundef} = 0;
     }
-
-    $depend_cache{$$orig{name}."when"} = $res;
 
     return $res;
 }
-
-##
-## at least one parent must be defined
-##
-
-sub process_config_parent
-{
-    my $res = 1;
-    my ($orig) = @_;
-
-    if (defined $depend_cache{$$orig{name}."parent"})
-    {
-	return $depend_cache{$$orig{name}."parent"};
-    }
-
-    foreach my $dep (@{$$orig{parent}})
-    {
-	my $opt = $config_opts{$dep};
-	$res = 0;
-
-	if ($opt)
-	{
-	    if ($$opt{value} ne "undefined")
-	    {
-		$res = process_config_parent($opt);
-	    }
-	}
-	else
-	{
-	    warning($$orig{location}.": `".$$orig{name}."' has undeclared parent token `".$dep."', ignored.");
-	}
-
-	last if $res;
-    }
-
-    $depend_cache{$$orig{name}."parent"} = $res;
-
-    return $res;
-}
-
-##
-## checks exclusion list of a defined token
-##
 
 sub process_config_exclude
 {
-    my ($orig) = @_;
+    my ( $opt ) = @_;
 
-    foreach my $dep (@{$$orig{exclude}})
-    {
-	my $opt = $config_opts{$dep};
+    return 0 if ( !check_defined( $opt ) );
 
-	if ($opt)
-	{
-	    if ($$opt{value} ne "undefined")
-	    {
-		error($$orig{vlocation}.": `".$$orig{name}."' and ".
-		      " `".$dep."' (".$$opt{vlocation}.") can not be defined at the same time");
-	    }
-	}
-	else
-	{
-	    warning($$orig{location}.": `".$$orig{name}."' excludes undeclared token `".$dep."', ignored.");
-	}
-    }
+    foreach_and_list( $opt->{single}, sub {
+	my $list = shift;
+
+	my $res = foreach_count_list( $list, 1, \&check_defined );
+	error("`$opt->{name}' requires that only one of these tokens is defined: ".
+	      get_token_name_list( $list, " or " ) ) if !$res;
+	return $res;
+    });
+
+    foreach_or_list( $opt->{exclude}, sub {
+	my $ex = shift;
+
+	return 0 if !check_defined( $ex );
+	error("`$opt->{name}' and `$ex->{name}' can not be defined at the same time");
+	return 1;
+    });
 }
-
-##
-## checks requirement list of a defined token
-##
 
 sub process_config_require
 {
-    my ($orig) = @_;
+    my ( $opt ) = @_;
 
-    foreach my $dep_and (@{$$orig{require}})
-    {
-	my @deps_and = split(/\s+/, $dep_and);
- 	my $flag = 0;
+    return 0 if ( $opt->{flags}->{value} || $opt->{flags}->{meta} );
+    return 0 if ( !check_defined( $opt ) );
 
-	foreach my $rule (@deps_and)
-	{
-	    $flag = 1 if (check_rule($orig, $rule));
-	}
+    return foreach_and_list( $opt->{require}, sub {
+	my $rq = shift;
 
-	if ($$orig{value} ne "undefined" && not $flag)
-	{
-	    error("`".$$orig{name}."' token is defined ".
-		  "but has unmet requirements; requirements list is: ",
-		  @deps_and);
-	}
-    }
+	my $res = foreach_or_list( $rq, \&check_rule );
+	error("`$opt->{name}' is defined and requires ".get_rule_name_list( $rq ) ) if !$res;
+	return $res;
+    });
 }
 
-##
-## checks suggestion list of a defined token
-##
+sub process_config_range
+{
+    my ( $opt ) = @_;
+
+    if ($opt->{flags}->{value}) {
+
+	# check value is in possibles values list
+	if ($opt->{switch} && !$opt->{switch}->{$opt->{value}}) {
+	    error("token `$opt->{name}' is set to `$opt->{value}' ".
+		  "but allowed values are: ".join(" ", sort keys %{$opt->{switch}}) );
+	}
+
+	# check value range
+	if ( $opt->{range} && ( $opt->{range}->{min} > $opt->{value} ||
+				$opt->{range}->{max} < $opt->{value} ) ) {
+	    error("token `$opt->{name}' is set to `$opt->{value}' but allowed ".
+		  "range is: [$opt->{range}->{min}, $opt->{range}->{max}]" );
+	}
+
+    } else {
+	error("token `$opt->{name}' is set to `$opt->{value}' value but lacks the `value' flag")
+	    if ($opt->{value} !~ /(un)?defined/);
+    }
+}
 
 sub process_config_suggest
 {
-    my ($orig) = @_;
+    my ( $opt ) = @_;
 
-    foreach my $dep_and (@{$$orig{suggest}})
-    {
-	my @deps_and = split(/\s+/, $dep_and);
- 	my $flag = 0;
+    if ( check_defined( $opt ) ) {
+	# suggest unmet condition that may be interesting with this token defined
 
-	foreach my $rule (@deps_and)
-	{
-	    $flag = 1 if (check_rule($orig, $rule));
-	}
+	foreach_and_list( $opt->{suggest}, sub {
+	    my $rule = shift;
+	    my $res = check_rule( $rule );
 
-	if ($$orig{value} ne "undefined" && not $flag)
-	{
-	    notice("`".$$orig{name}."' token is defined ".
-		    "and suggests this configuration: ",
-		    @deps_and);
-	}
-    }
+	    if ( !$res ) {
+		my $token = $rule->{token};
 
-    # suggest default value may not be appropriate
-    return if ($$orig{value} ne $$orig{default});
-    return if ($$orig{userdefined});
-
-    my $res = !scalar @{$$orig{parent}};
-    foreach my $dep (@{$$orig{parent}})
-    {
-	my $opt = $config_opts{$dep};
-
-	if ($opt && $$opt{value} ne "undefined")
-	{
-	    $res = 1;
-	    last;
-	}
-    }
-
-    return if !$res;
-
-    foreach my $dep_and (@{$$orig{suggest_when}})
-    {
-	my @deps_and = split(/\s+/, $dep_and);
-
-	foreach my $rule (@deps_and)
-	{
-	    if (check_rule($orig, $rule))
-	    {
-		notice("`".$$orig{name}."' token defaults to `".$$orig{value}."' which may not be appropriate when: ",
-		       @deps_and);
+		# do not suggest if not a value token and can not define due to other constraints
+		if ( $token->{flags}->{value} || check_definable( $token ) ) {
+		    notice("`$opt->{name}' token is defined and suggests this configuration: ".
+			   get_rule_name( $rule ) );
+		}
 	    }
-	}
+	    return 1;
+        });
+
+    } elsif ( !$opt->{userdefined} ) {
+	# suggest this token be defined
+
+	foreach_and_list( $opt->{suggest_when}, sub {
+	    my $list = shift;
+
+	    my $res = foreach_and_list( $list, \&check_rule ) && check_definable( $opt );
+	    notice("`$opt->{name}' token is currently undefined but suggested by: ".
+		   get_rule_name_list( $list, " and " ) )." condition" if $res;
+	    return 1;
+        });
     }
 }
 
-##
-## process single definition constraints and add to exclude lists
-##
-
-sub process_config_single
+sub tokens_set_methods
 {
-    my ($orig) = @_;
+    foreach my $opt (values %config_opts) {
 
-    foreach my $dep_and (@{$$orig{single}})
-    {
-	my @deps_and = split(/\s+/, $dep_and);
+	# set getvalue method
+	if ($opt->{flags}->{meta}) {
 
-	foreach my $r1 (@deps_and)
-	{
-	    foreach my $r2 (@deps_and)
-	    {
-		next if ($r1 eq $r2);
+	    $opt->{providers} = [];
+	    # meta token getvalue method returns 'defined' if one of its provider is defined
+	    $opt->{getvalue} = sub {
+		my ( $token ) = @_;
 
-		my $opt = $config_opts{$r1};
-		push(@{$$opt{exclude}}, $r2);
+		foreach my $p (@{$token->{providers}}) {
+		    return 'defined' if check_defined( $p );
+		}
+		return 'undefined';
+	    }
+
+	} elsif ($opt->{flags}->{value}) {
+
+	    # value token getvalue method returns value provided by its first provider token
+	    $opt->{getvalue} = sub {
+		my ( $token ) = @_;
+		my $value = $token->{value};
+
+		foreach my $p (@{$token->{providers}}) {
+		    if ( check_condition( $p->{getvalue}->( $p ) ) ) {
+			$value = $token->{provided}->{$p->{name}};
+			last;
+		    }
+		}
+
+		return $value;
+	    }
+
+	} else {
+
+	    # normal token getvalue method returns value
+	    $opt->{getvalue} = sub {
+		my ( $token ) = @_;
+
+		return $token->{value};
 	    }
 	}
+
     }
 }
 
-##
-## defines all tokens provided by a defined token
-##
-
-sub process_config_provide
+sub tokens_resolve
 {
-    my ($orig) = @_;
+    foreach my $opt (values %config_opts) {
+	# set check operation for token
 
-    foreach my $rule (@{$$orig{provide}})
-    {
-	$rule =~ /^([^\s=]+)=?([^\s]*)$/;
-	my $dep = $1;
-	my $val = $2 ? $2 : "defined";
-	my $opt = $config_opts{$dep};
+	foreach my $tag (qw(parent require suggest depend
+			 suggest_when when single
+			 exclude provide)) {
 
-	if ($$orig{flags}->{value})
-	{
-	    error($$orig{location}.": `".$$orig{name}."' is a value token and can not use `provide'");
-	    return;
+	    my $r;
+	    $r = sub {
+		my $b = shift;
+
+		return $b if !defined $b;
+
+		if ( ref $b eq "HASH" ) {
+		    return $b;
+
+		} elsif ( ref $b eq "ARRAY" ) {
+		    my $a = [];
+		    foreach (@$b) {
+			my $e = $r->($_);
+			push @$a, $e if defined $e;
+		    }
+		    return $a;
+
+		} else {
+		    my $res;
+		    my $token;
+
+		    if ($tag =~ /^(require|suggest|suggest_when|when)$/) {
+			# token name may have condition attached
+			if ( not $b =~ /^(\w+)(.*)$/ ) {
+			    error_loc($opt, "bad argument `$b` to `$tag' tag");
+			    return undef;
+			}
+
+			if ( $token = $config_opts{$1} ) {
+			    $res = {
+				token => $token,
+				condition => $2,
+			    };
+			}
+
+		    } elsif ($tag =~ /^(provide)$/) {
+			# token name may have value attached
+			if ( not $b =~ /^(\w+)(?:=(.+))?$/ ) {
+			    error_loc($opt, "bad argument `$b` to `$tag' tag");
+			    return undef;
+			}
+
+			if ( $token = $config_opts{$1} ) {
+			    $res = {
+				token => $token,
+				value => defined $2 ? $2 : 'defined',
+			    };
+			}
+
+		    } else {
+			# bare token name
+			$token = $res = $config_opts{$b};
+		    }
+
+		    if (!$res) {
+			error_loc($opt, "undeclared token `$b' used with `$tag' tag.");
+			return undef;
+		    }
+
+		    return $res;
+		}
+	    };
+
+	    $opt->{$tag} = $r->($opt->{$tag});
 	}
 
-	if (!$$opt{flags}->{value})
-	{
-	    error($$orig{location}.": `".$$orig{name}."' token provides ".
-		  "the `".$dep."' token which has the `value' flag missing");
-	}
+    }
 
-	next if ($$orig{value} eq "undefined");
+    # propagate harddep flag to dependencies
 
-	if ($val eq "undefined")
-	{
-	    error($$orig{location}.": `".$$orig{name}."' token provides `".
-		  $dep."' with `undefined' value");
-	    next;
-	}
+#    for ( my $chg = 1; $chg--; ) {
+#	foreach my $opt (values %config_opts) {
+#	    if ( $opt->{flags}->{harddep} ) {
+#		foreach_tag_args( $opt, 'depend', sub {
+#		    $chg = 1 if ( !shift->{flags}->{harddep}++ );
+#                });
+#	    }
+#	}
+#    }
 
-	if ($opt)
-	{
-	    if ($$opt{value} eq "undefined")
-	    {		
-		$$opt{value} = $val;
-		$$opt{vlocation} = $$orig{location};
-		$$opt{provided_count}++;
-	    }
-	    elsif ($$opt{value} ne $val)
-	    {
-		error($$orig{location}.": `".$$orig{name}."' token provides ".
-		      "already defined token `".$dep."' with a different value `".$val."';".
-		      " previous value definition was `".$$opt{value}."' at ".$$opt{vlocation});
-	    }
-	}
-	else
-	{
-	    warning($$orig{location}.": `".$$orig{name}."' provides undeclared token `".$dep."', ignored.");
-	}
+    foreach my $opt (values %config_opts) {
+
+	# set token providers list
+	foreach_tag_args( $opt, 'provide', sub {
+	    my $c = shift;
+	    my $t = $c->{token};
+
+	    push @{$t->{providers}}, $opt;
+	    $t->{provided}->{$opt->{name}} = $c->{value};
+	});
     }
 }
 
-##
-## set provided_by list for all tokens
-##
+# flags exclusion table
 
-sub set_provided_by
+#              value meta mandatory harddep auto
+#  value              x      x        x      x
+#  meta          y           x        x      x
+#  mandatory     y    y               x      x
+#  harddep       y    y      y               
+#  auto          y    y      y        
+
+my %flags_exclude = (
+    "value/meta" => 1,
+    "value/harddep" => 1,
+    "value/auto" => 1,
+    "value/mandatory" => 1,
+    "meta/mandatory" => 1,
+    "meta/harddep" => 1,
+    "meta/auto" => 1,
+    "mandatory/harddep" => 1,
+    "mandatory/auto" => 1,
+    );
+
+sub tokens_check
 {
-    foreach my $opt (values %config_opts)
-    {
-	foreach my $rule (@{$$opt{provide}})
-	{
-	    $rule =~ /^([^\s=]+)=?([^\s]*)$/;
-	    my $dep = $1;
+    foreach my $opt (values %config_opts) {
 
-	    if (my $opt2 = $config_opts{$dep})
-	    {
-		push(@{$$opt2{provided_by}}, $$opt{name});
-	    }
-	}
-    }
-}
-
-##
-## replace token names in values by value
-##
-
-sub preprocess_values
-{
-    foreach my $opt (values %config_opts)
-    {
-	my $value = $$opt{value};
-	my $token;
-
-	# replace configuration token names by values
-
-	while  ($token = $config_opts{$value})
-	{
-	    $value = $$token{value};
-	}
-
-	# normalize numerical value
-
-# 	if ($value =~ /^0x[0-9a-fA-F]+$/)
-# 	{
-# 	    $value = sprintf "0x%x", hex $value;
-# 	} elsif ($value =~ /^0[0-7]+$/) {
-# 	    $value = sprintf "0x%x", oct $value;
-# 	} elsif ($value =~ /^\d+$/) {
-# 	    $value = sprintf "0x%x", $value;
-# 	}
-
-	$$opt{value} = $value;
-    }
-}
-
-##
-## sets token values
-##
-
-sub set_config
-{
-    # set default values
-
-    foreach my $opt (values %config_opts)
-    {
-	if (not defined $$opt{value})
-	{
-	    $$opt{value} = $$opt{default};
-	    $$opt{vlocation} = $$opt{location};
-	}
-    }
-
-    # provides all tokens
- 
-    foreach my $opt (values %config_opts)
-    {
-	process_config_provide($opt);
-    }
-
-    my $changed;
-
-    do
-    {
-	$changed = 0;
-	%depend_cache = ();
-
-	foreach my $opt (values %config_opts)
-	{
-	    if ($$opt{value} eq "undefined" && !$$opt{userdefined})
-	    {
-		if ( process_config_when($opt) )
-		{
-		    $$opt{value} = "defined";
-		    $changed = 1;
-		    process_config_provide($opt);
-		    last;
+	foreach my $fa (keys %{$opt->{flags}}) {
+	    foreach my $fb (keys %{$opt->{flags}}) {
+		if ( $flags_exclude{"$fa/$fb"} ) {
+		    error_loc($opt, "flags `$fa' and `$fb' can not be used together.");
 		}
 	    }
 	}
-    }
-    until (not $changed);
 
-    foreach my $opt (values %config_opts)
-    {
-	process_config_single($opt);
+	my $private_check = sub {
+	    my ( $p, $tag ) = @_;
+
+	    if ( $p->{flags}->{private} && $p->{file} ne $opt->{file} && 
+		 !foreach_or_list( $p->{parent}, \&is_equal, $opt ) ) {
+		error_loc($opt, "token `$p->{name}' is private and can not be used with `$tag' outside `$p->{file}'.");
+	    }
+	};
+
+	foreach_tag_args( $opt, 'provide', sub {
+	    my $c = shift;
+	    my $p = $c->{token};
+
+	    if (!$p->{flags}->{meta} && !$p->{flags}->{value}) {
+		error_loc($opt, "`provide' tag used on `$p->{name}' token without `meta' or `value' flag.");
+	    }
+
+	    if ($p->{flags}->{meta} && $c->{value} ne 'defined') {
+		error_loc($opt, "can not specify a `provide' value for `$p->{name}' token with `meta' flag");
+	    }
+
+	    $private_check->( $p, 'provide' );
+	});
+
+	foreach_tag_args( $opt, 'require', sub {
+	    my $p = shift->{token};
+
+	    if (!$p->{flags}->{value}) {
+		error_loc($opt, "`require' tag used on `$p->{name}' token without `value' flag; use `depend' instead");
+	    }
+	});
+
+	if ( ( $opt->{range} || $opt->{switch} ) && !$opt->{flags}->{value} ) {
+	    error_loc($opt, "`range' tag may only be used with `value' flagged tokens.")
+	}
+
+	if ( $opt->{flags}->{auto} && $opt->{default} eq 'defined' ) {
+	    warning_loc($opt, "token has `auto' flag but is defined by default.")
+	}
+
+	if ($opt->{flags}->{value}) {
+
+	    error_loc($opt, "token has both `value' and `meta' flags.")
+		if ($opt->{flags}->{meta});
+
+	    foreach my $tag (qw(depend when require provide suggest suggest_when exclude single)) {
+		error_loc($opt, "token with `value' flag can't use the `$tag' tag.")
+		    if ($opt->{$tag});
+	    }
+	}
+
+	if ($opt->{flags}->{meta}) {
+	    foreach my $tag (qw(default depend when require suggest_when single)) {
+		error_loc($opt, "token with `meta' flag can't use the `$tag' tag.")
+		    if ($opt->{$tag});
+	    }
+	}
+
+	if ($opt->{flags}->{mandatory}) {
+	    foreach my $tag (qw(default when suggest_when suggest)) {
+		error_loc($opt, "token with `mandatory' flag can't use the `$tag' tag.")
+		    if ($opt->{$tag});
+	    }
+	}
+
+	my %parents;
+
+ 	foreach_tag_args( $opt, 'parent', sub {
+	    my $p = shift;
+
+	    $parents{$p} = 1;
+	    if ($p->{flags}->{value} || $p->{flags}->{meta}) {
+		error_loc($opt, "token has the `$p->{name}' token with `value' or `meta' flag as parent.");
+	    }
+
+	    $private_check->( $p, 'parent' );
+	});
+
+	foreach_tag_args( $opt, 'depend', sub {
+	    my $p = shift;
+
+	    if ($parents{$p}) {
+		warning_loc($opt, "use of `depend' on a parent token is useless.");
+	    }
+
+	    if ($p->{flags}->{value}) {
+		error_loc($opt, "token depends on `$p->{name}' token with `value' flag; use `require' instead.");
+	    }
+
+	    $private_check->( $p, 'depend' );
+	});
+
+	foreach_tag_args( $opt, 'exclude', sub {
+	    my $p = shift;
+
+	    if ($p->{flags}->{value}) {
+		error_loc($opt, "token excludes `$p->{name}' token with `value' flag; use `require' instead.");
+	    }
+	});
+
+	foreach_tag_args( $opt, 'single', sub {
+	    my $p = shift;
+	    my $res = 0;
+
+	    foreach_tag_args( $p, 'parent', sub {
+		my $pp = shift;
+		$res = 1 if ($pp == $opt);
+	    });
+	    if ( !$res ) {
+		error_loc($opt, "use of `single' tag on `$p->{name}' token which is not a direct child.");
+	    }
+	});
+
+	if (not $opt->{desc}) {
+	    warning_loc($opt, "missing `desc` description tag");
+	}
+
+	if (uc($opt->{name}) ne $opt->{name})	{
+	    warning_loc($opt, "token name is not strictly upper case");
+	}
+
+	if (not (lc($opt->{name}) =~ /^config_/)) {
+	    warning_loc($opt, "token name does not begin with `CONFIG_' prefix");
+	}
+
+	if (!$opt->{parent} && !$opt->{flags}->{root}) {
+	    warning_loc($opt, "token has no parent")
+	}
     }
 }
-
-##
-## checks all configuration constraints
-##
 
 sub check_config
 {
-    my $changed = 0;
-
-    foreach my $opt (values %config_opts)
-    {
-	my $name = $$opt{name};
-
-	if (not @{$$opt{desc}})
-	{
-	    warning($$opt{location}.": missing description for `".$$opt{name}."' token");
-	}
-
-	if (uc($name) ne $name)
-	{
-	    warning($$opt{location}.": `".$name."' is not strictly upper case");
-	}
-
-	if (not (lc($name) =~ /^config_/))
-	{
-	    warning($$opt{location}.": `".$name."' has no `CONFIG_' prefix");
-	}
-
-	if ($$opt{flags}->{value})
-	{
-	    if (scalar @{$$opt{depend}})
-	    {
-		error($$opt{location}.": `".$$opt{name}."' value token can not use `depend'.");
-	    }
-
-	    if (scalar @{$$opt{provide}} || scalar @{$$opt{when}})
-	    {
-		error($$opt{location}.": `".$$opt{name}."' value token can not use `when' or `provide'.");
-	    }
-	}
-	else
-	{
-	    warning($$opt{location}.": `".$name."' seems to have the `value' flag missing")
-		if ($$opt{value} !~ /(un)?defined/);
-	}
-
-	if (scalar @{$$opt{parent}} == 0 && !$$opt{flags}->{root})
-	{
-	    warning($$opt{location}.": `".$name."' has no parent")
+    # set default values
+    foreach my $opt (values %config_opts) {
+	if (not defined $opt->{value}) {
+	    $opt->{default} ||= 'undefined';
+	    $opt->{value} = $opt->{default};
+	    $opt->{vlocation} = "$opt->{file}:$opt->{location}";
 	}
     }
 
-    # checks and adjusts dependencies
-
-    do
-    {
-	$changed = 0;
-	%depend_cache = ();
-
-	foreach my $opt (values %config_opts)
-	{
-	    if ($$opt{value} ne "undefined")
-	    {
-		if ( not process_config_parent($opt) )
-		{
-		    $$opt{value} = "undefined";
-		    $$opt{parent_undef} = 1;
-		    $changed = 1;
-		    last;
-		}
-
-		if ( not process_config_depend($opt) )
-		{
-		    $$opt{value} = "undefined";
-		    $changed = 1;
-		    last;
-		}
+    for ( my $chg = 1; $chg--; ) {
+	# process `when' tags
+	foreach my $opt (values %config_opts) {
+	    if ( process_config_when($opt) ) {
+		$chg = 1;
+	    }
+	}
+	next if $chg;
+	# checks and adjusts dependencies
+	foreach my $opt (values %config_opts) {
+	    if ( process_config_depend($opt) ) {
+		$chg = 1;
 	    }
 	}
     }
-    until (not $changed);
 
-    # check update exclusion lists
-
-    foreach my $opt (values %config_opts)
-    {
-	if ($$opt{value} ne "undefined")
-	{
-	    process_config_exclude($opt);
-	}
+    foreach my $opt (values %config_opts) {
+	notice( $_ ) foreach ( @{$opt->{depnotice}} );
+	error( $opt->{deperror} ) if ( $opt->{deperror} );
     }
 
-    # checks require and mandatory
+    # store all token values of value and meta tokens
+    foreach my $opt (values %config_opts) {
+	next if !($opt->{flags}->{value} || $opt->{flags}->{meta});
+	my $val = $opt->{getvalue}->( $opt );
 
-    foreach my $opt (values %config_opts)
-    {
+	debug(1, "Setting $opt->{name} token value to $val")
+	    if $opt->{value} eq $val;
+
+	$opt->{value} = $val;
+    }
+
+    # check exclude, require and range tag constraints
+    foreach my $opt (values %config_opts) {
+	process_config_exclude($opt);
 	process_config_require($opt);
+	process_config_range($opt);
 	process_config_suggest($opt);
-
-	if ($$opt{flags}->{mandatory} and ($$opt{value} eq "undefined"))
-	{
-	    error($$opt{vlocation}.": `".$$opt{name}."' token can not be undefined");
-	}
-    }
-
-    foreach my $opt (values %config_opts)
-    {
-	if ($$opt{value} eq "defined" && defined $$opt{module})
-	{
-	    $vars{MODULES} .= " ".$$opt{module}->{name}.":".$$opt{module}->{path};
-	}
     }
 }
 
-sub read_myconfig
+###############################################################################
+#	Build configuration parsing
+###############################################################################
+
+sub read_build_config
 {
     my ( $file, $section ) = @_;
 
@@ -990,202 +1148,189 @@ sub read_myconfig
     $vars{CONFIGSECTION} = 'common';
     $vars{CONFIGPATH} = $cd;
 
-    if (open(FILE, "<".$file))
-    {
-	my $lnum = 0;
-	my @ignore = ( 0 );
-	my @cur_sections = ( ["common"] );
+    debug(1, "reading `$file' build configuration file...");
 
-	foreach my $line (<FILE>)
-	{
-	    $lnum++;
+    if (!open(FILE, "<".$file)) {
+	error("unable to open/read `$file' build configuration file");
+	return 1;
+    }
 
-	    # skip empty lines and comment lines
-	    next if ($line =~ /^[ \t]*(\#.*)?$/);
+    my $lnum = 0;
+    my @ignore = ( 0 );
+    my @cur_sections = ( ["common"] );
 
-	    # replace env variables
-	    $line =~ s/\$\((\w+)\)/$vars{$1}/ge;
+    foreach my $line (<FILE>) {
+	$lnum++;
 
-	    if ($line =~ /^\s* %(sub)?section \s+ ([*\w\d\s-]+)/x)
-	    {
-		my $s = $1;	# subsection ?
-		my @sections = split(/\s+/, $2);
-		my $i = 1;
+	# skip empty lines and comment lines
+	next if ($line =~ /^[ \t]*(\#.*)?$/);
 
-		if (!$s || !@ignore[0]) {
+	# replace variables
+	$line =~ s/\$\((\w+)\)/$vars{$1}/ge;
 
-		    foreach my $p (@sections) {
+	if ($line =~ /^\s* %(sub)?section \s+ ([*\w\d\s-]+)/x) {
+	    my $s = $1;	# subsection ?
+	    my @sections = split(/\s+/, $2);
+	    my $i = 1;
 
-			my $p_ = $p;
-			$p_ =~ s/\*/[\\w\\d]\+/g;
+	    if (!$s || !@ignore[0]) {
 
-			foreach (split(/:/, $section)) {
-			    if ( $_ =~ /^$p_$/ ) {
-				$i = 0;
-				$used_build{$_} = 1;
-				$vars{CONFIGSECTION} = $_ if ( !$s );
-			    }
+		foreach my $p (@sections) {
+
+		    my $p_ = $p;
+		    $p_ =~ s/\*/[\\w\\d]\+/g;
+
+		    foreach (split(/:/, $section)) {
+			if ( $_ =~ /^$p_$/ ) {
+			    $i = 0;
+			    $used_build{$_} = 1;
+			    $vars{CONFIGSECTION} = $_ if ( !$s );
 			}
-
-			last if !$i;
-		    }
-		}
-
-		if ( $s ) {
-		    unshift @ignore, $i;
-		    unshift @cur_sections, [ @sections ];
-		} else {
-		    @ignore = ( $i );
-		    @cur_sections = [ @sections ];
-		}
-		next;
-	    }
-
-	    if ($line =~ /^\s* %else\b/x)
-	    {
-		@ignore[0] = !@ignore[0] if !@ignore[1];
-		@cur_sections[0] = [];
-		next;
-	    }
-
-	    if ($line =~ /^\s* %end\b/x)
-	    {
-		if ( scalar @ignore < 2 ) {
-		    if ( scalar @ignore == 1 ) {
-			$line = "%common";
-		    } else {
-			error( "$file:$lnum: unbalanced %end.");
-		    }
-		} else {
-		    shift @ignore;
-		    shift @cur_sections;
-		}
-		next;
-	    }
-
-	    if ($line =~ /^\s* %common\b/x)
-	    {
-		$vars{CONFIGSECTION} = 'common';
-		@cur_sections = ( ["common"] );
-		@ignore = ( 0 );
-		next;
-	    }
-
-	    if ($line =~ /^\s* %types \s+ (\w[\w\d]*\b\s*)+$/x)
-	    {
-		foreach my $t (split(/\s+/, $1)) {
-		    if (!@ignore[0]) {
-			error( "$file: multiple `$t' section types in use" ) if ($sec_types{$t} == 1);
-			$sec_types{$t}++;
 		    }
 
-		    # keep track of available sections for a declared types
-		    if (!@ignore[1]) {
-			my $r = $sec_types_req{$t};
-			$r = [] if ( ! $r );
-			push @$r, $_ foreach (@{@cur_sections[0]});
-			$sec_types_req{$t} = $r;
-		    }
+		    last if !$i;
 		}
-		next;
 	    }
 
-	    next if @ignore[0];
-
-	    if ($line =~ /^\s* %set \s+ (\w[\w\d]*) \s+ (.*?) \s*$/x)
-	    {
-		$vars{$1} = $2;
-		next;
+	    if ( $s ) {
+		unshift @ignore, $i;
+		unshift @cur_sections, [ @sections ];
+	    } else {
+		@ignore = ( $i );
+		@cur_sections = [ @sections ];
 	    }
-
-	    if ($line =~ /^\s* %append \s+ (\w[\w\d]*) \s+ (.*?) \s*$/x)
-	    {
-		$vars{$1} .= " $2";
-		next;
-	    }
-
-	    if ($line =~ /^\s* %error \s+ (.*)$/x)
-	    {
-		error("$file:$lnum: $1");
-		next;
-	    }
-
-	    if ($line =~ /^\s* %die \s+ (.*)$/x)
-	    {
-		error($1);
-		next;
-	    }
-
-	    if ($line =~ /^\s* %warning \s+ (.*)$/x)
-	    {
-		warning($1);
-		next;
-	    }
-
-	    if ($line =~ /^\s* %notice \s+ (.*)$/x)
-	    {
-		notice($1);
-		next;
-	    }
-
-	    if ($line =~ /^\s* %requiretypes \s+ (.+) $/x)
-	    {
-		foreach my $t (split(/\s+/, $1)) {
-		    next if ($sec_types{$t});
-
-		    my $r = $sec_types_req{$t};
-		    if ( !$r ) {
-			error("$file:$lnum: required `$t' type is never defined");
-		    } else {
-			error("no `$t' section in use, candidate sections are: ", @$r);
-		    }
-		}
-		next;
-	    }
-
-	    if ($line =~ /^\s* %include \s+ (\S+)/x)
-	    {
-		my $f = $1;
-		$f = "$cd/$f" unless $f =~ /^\//;
-		read_myconfig( $f, $section );
-		next;
-	    }
-
-	    if ($line =~ /^\s* (\w[\w\d]*) (?: \s+(\S+) )?/x)
-	    {
-		my $opt = $config_opts{$1};
-		my $val = $2;
-
-		if (not $opt)
-		{
-		     warning("$file:$lnum: undeclared configuration token `$1', ignored");
-		}
-		else
-		{
-		    if ($$opt{flags}->{nodefine})
-		    {
-			error("$file:$lnum: `".$$opt{name}."' token can not be defined directly;".
-			      " it must be provided by defining other appropriate token(s) instead.");
-		    }
-
-		    $val = "defined" if (!defined $val);
-		    $$opt{value} = $val;
-		    $$opt{vlocation} = "$file:$lnum";
-		    $$opt{userdefined} = 1;
-		}
-		next;
-	    }
-
-	    warning("$file:$lnum: bad line format, ignored");
+	    next;
 	}
 
-	close(FILE);
+	if ($line =~ /^\s* %else\b/x) {
+	    @ignore[0] = !@ignore[0] if !@ignore[1];
+	    @cur_sections[0] = [];
+	    next;
+	}
+
+	if ($line =~ /^\s* %end\b/x) {
+	    if ( scalar @ignore < 2 ) {
+		if ( scalar @ignore == 1 ) {
+		    $line = "%common";
+		} else {
+		    error( "$file:$lnum: unbalanced %end.");
+		}
+	    } else {
+		shift @ignore;
+		shift @cur_sections;
+	    }
+	    next;
+	}
+
+	if ($line =~ /^\s* %common\b/x) {
+	    $vars{CONFIGSECTION} = 'common';
+	    @cur_sections = ( ["common"] );
+	    @ignore = ( 0 );
+	    next;
+	}
+
+	if ($line =~ /^\s* %types \s+ (\w[\w\d]*\b\s*)+$/x) {
+	    foreach my $t (split(/\s+/, $1)) {
+		if (!@ignore[0]) {
+		    error( "$file: multiple `$t' section types in use" ) if ($sec_types{$t} == 1);
+		    $sec_types{$t}++;
+		}
+
+		# keep track of available sections for a declared types
+		if (!@ignore[1]) {
+		    my $r = $sec_types_req{$t};
+		    $r = [] if ( ! $r );
+		    push @$r, $_ foreach (@{@cur_sections[0]});
+		    $sec_types_req{$t} = $r;
+		}
+	    }
+	    next;
+	}
+
+	next if @ignore[0];
+
+	if ($line =~ /^\s* %set \s+ (\w[\w\d]*) \s+ (.*?) \s*$/x) {
+	    $vars{$1} = $2;
+	    next;
+	}
+
+	if ($line =~ /^\s* %append \s+ (\w[\w\d]*) \s+ (.*?) \s*$/x) {
+	    $vars{$1} .= " $2";
+	    next;
+	}
+
+	if ($line =~ /^\s* %error \s+ (.*)$/x) {
+	    error("$file:$lnum: $1");
+	    next;
+	}
+
+	if ($line =~ /^\s* %die \s+ (.*)$/x) {
+	    error($1);
+	    next;
+	}
+
+	if ($line =~ /^\s* %warning \s+ (.*)$/x) {
+	    warning($1);
+	    next;
+	}
+
+	if ($line =~ /^\s* %notice \s+ (.*)$/x) {
+	    notice($1);
+	    next;
+	}
+
+	if ($line =~ /^\s* %requiretypes \s+ (.+) $/x) {
+	    foreach my $t (split(/\s+/, $1)) {
+		next if ($sec_types{$t});
+
+		my $r = $sec_types_req{$t};
+		if ( !$r ) {
+		    error("$file:$lnum: required `$t' type is never defined");
+		} else {
+		    error("no `$t' section in use, candidate sections are: ", @$r);
+		}
+	    }
+	    next;
+	}
+
+	if ($line =~ /^\s* %include \s+ (\S+)/x) {
+	    my $f = $1;
+	    $f = "$cd/$f" unless $f =~ /^\//;
+	    read_build_config( $f, $section );
+	    next;
+	}
+
+	if ($line =~ /^\s* (\w[\w\d]*) (?: \s+(\S+) )?/x) {
+	    my $opt = $config_opts{$1};
+	    my $val = $2;
+
+	    if (not $opt) {
+		warning("$file:$lnum: undeclared configuration token `$1', ignored");
+
+	    } else {
+		if ($opt->{flags}->{internal} || $opt->{flags}->{meta}  || $opt->{flags}->{mandatory}) {
+		    error("$file:$lnum: `".$opt->{name}."' token can not be defined in".
+			  "build configuration file directly.");
+		}
+
+		$val = "defined" if (!defined $val);
+		$opt->{value} = $val;
+		$opt->{vlocation} = "$file:$lnum";
+		$opt->{userdefined} = 1;
+	    }
+	    next;
+	}
+
+	warning("$file:$lnum: bad line format, ignored");
     }
-    else
-    {
-	error("unable to open/read `".$file."' configuration input file");
-    }
+
+    close(FILE);
+    return 0;
 }
+
+###############################################################################
+#	Output files
+###############################################################################
 
 sub write_header
 {
@@ -1193,136 +1338,60 @@ sub write_header
 
     push @output_files, $file;
 
-    if (open(FILE, ">".$file))
-    {
-	print FILE ("/*\n".
-		    " * This file has been generated by the configuration script.\n".
-		    " */\n\n");
+    debug(1, "writing C header file to `$file'");
 
-	foreach my $opt (values %config_opts)
-	{
-	    next if $$opt{flags}->{noexport} or $$opt{flags}->{noheader};
-
-	    if ($$opt{value} eq "undefined")
-	    {
-		print FILE "#undef  ".$$opt{name}."\n";
-		next;
-	    }
-
-	    if ($$opt{value} eq "defined")
-	    {
-		print FILE "#define ".$$opt{name}."\n";
-		next;
-	    }
-
-	    print FILE "#define ".$$opt{name}." ".$$opt{value}."\n";
-	}
-
-	close(FILE);
-    }
-    else
-    {
+    if (!open(FILE, ">".$file)) {
 	error(" unable to open `$file' to write configuration");
+	return 1;
     }
 
-    return 0;
-}
+    print FILE ("/*\n".
+		" * This file has been generated by the configuration script.\n".
+		" */\n\n");
 
-sub write_doc_header
-{
-    my $file = "$bld_path/configdoc.h";
+    foreach my $opt (values %config_opts) {
 
-    push @output_files, $file;
+	next if $opt->{flags}->{noexport};
 
-    if (open(FILE, ">".$file))
-    {
-	print FILE ("/** \@file \@hidden\n".
-		    " * This file has been generated by the configuration script.\n".
-		    " */\n\n");
-
-	foreach my $opt (values %config_opts)
-	{
-	    my @desc = @{$$opt{"desc"}};
-
-	    next if $$opt{flags}->{noexport} or $$opt{flags}->{noheader};
-
-	    my $pwd = Cwd::realpath($ENV{PWD});
-	    my $loc = $$opt{location};
-
-	    $loc =~ s/^$pwd\///;
-
-	    print FILE
-"/**
-    @desc 
-";
-	    print FILE "   \@module {".$$opt{module}."}\n" if defined $$opt{module};
-
-	    print FILE"
-    \@list
-     \@item Declared in \@sourcelink $loc.
-     \@item Default value is $$opt{default}.
-    \@end list
-";
-
-	    sub doc_list
-	    {
-		my ( $listref, $title ) = @_;
-		if (my @list = @{$listref})
-		{
-		    print FILE "\n    $title:\n    \@list\n";
-		    foreach my $dep_and (@list)
-		    {
-			my @l;
-			foreach ( split(/\s+/, $dep_and) ) {
-			    s/^\w[\w\d]*/$& /;
-			    push @l, "\@ref \#$_";
-			}
-			print FILE "     \@item ".join(" or ", @l)."\n";
-		    }
-		    print FILE "    \@end list\n";
-		}
-	    }
-
-            doc_list($$opt{depend}, "This token depends on");
-            doc_list($$opt{require}, "This token require definition of");
-            doc_list($$opt{suggest}, "Defining this token suggest use of");
-            doc_list($$opt{exclude}, "This token can not be defined along with");
-            doc_list($$opt{provide}, "Defining this token will also provide");
-            doc_list($$opt{provided_by}, "This token is provided along with");
-
-	    print FILE "*/\n#define ".$$opt{name}."\n\n";
+	if ($opt->{value} eq "undefined") {
+	    print FILE "#undef  ".$opt->{name}."\n";
 	    next;
 	}
 
-	close(FILE);
+	if ($opt->{value} eq "defined") {
+	    print FILE "#define ".$opt->{name}."\n";
+	    next;
+	}
+
+	print FILE "#define ".$opt->{name}." ".$opt->{value}."\n";
     }
-    else
-    {
-	error(" unable to open `$file' to write documentation");
-    }
+
+    close(FILE);
+    return 0;
 }
 
 sub write_depmakefile
 {
     my $file = "$bld_path/config.deps";
 
-    if (open(FILE, ">".$file))
-    {
-	print FILE ("##\n".
-		    "## This file has been generated by the configuration script.\n".
-		    "##\n\n");
+    debug(1, "writing dependencies makefile to `$file'");
 
-	print FILE $_." \\\n" foreach (@output_files);
-	print FILE ":";
-	print FILE " \\\n\t".$_ foreach (@config_files);
-	print FILE "\n";
-
-	close(FILE);
-    }
-    else
-    {
+    if (!open(FILE, ">".$file)) {
 	error(" unable to open `$file' to write configuration");
+	return 1;
     }
+
+    print FILE ("##\n".
+		"## This file has been generated by the configuration script.\n".
+		"##\n\n");
+
+    print FILE $_." \\\n" foreach (@output_files);
+    print FILE ":";
+    print FILE " \\\n\t".$_ foreach (@config_files);
+    print FILE "\n";
+
+    close(FILE);
+    return 0;
 }
 
 sub write_makefile
@@ -1332,40 +1401,40 @@ sub write_makefile
 
     push @output_files, $file_;
 
-    if (open(FILE, ">".$file))
-    {
-	print FILE ("##\n".
-		    "## This file has been generated by the configuration script.\n".
-		    "##\n");
+    debug(1, "writing makefile to `$file'");
 
-	print FILE ("\n# configuration options\n\n");
-	foreach my $opt (sort { $$a{name} cmp $$b{name} } values %config_opts)
-	{
-	    next if $$opt{flags}->{noexport} or $$opt{flags}->{nomakefile};
-
-	    print FILE $$opt{name}."=".$$opt{value}."\n";
-	}
-
-	print FILE ("\n# configuration variables\n\n");
-	foreach my $var (sort keys %vars)
-	{
-	    print FILE "BUILD_$var=".$vars{$var}."\n";
-	}
-
-	close(FILE);
-
-        if ( ! -f $file_ || compare($file, $file_) ) {
-            unlink($file_);
-            rename($file, $file_);
-	    return 1;
-        } else {
-            unlink($file);
-	    return 0;
-	}
-    }
-    else
-    {
+    if (!open(FILE, ">".$file)) {
 	error(" unable to open `$file' to write configuration");
+	return 1;
+    }
+
+    print FILE ("##\n".
+		"## This file has been generated by the configuration script.\n".
+		"##\n");
+
+    print FILE ("\n# configuration options\n\n");
+
+    foreach my $opt (sort { $a->{name} cmp $b->{name} } values %config_opts) {
+	next if $opt->{flags}->{noexport} or $opt->{flags}->{nomakefile};
+
+	print FILE $opt->{name}."=".$opt->{value}."\n";
+    }
+
+    print FILE ("\n# configuration variables\n\n");
+
+    foreach my $var (sort keys %vars) {
+	print FILE "BUILD_$var=".$vars{$var}."\n";
+    }
+
+    close(FILE);
+
+    if ( ! -f $file_ || compare($file, $file_) ) {
+	unlink($file_);
+	rename($file, $file_);
+	return -1;
+    } else {
+	unlink($file);
+	return 0;
     }
 }
 
@@ -1375,21 +1444,20 @@ sub write_m4
 
     push @output_files, $file;
 
-    if (open(FILE, ">".$file))
-    {
-	foreach my $opt (values %config_opts)
-	{
-	    next if $$opt{flags}->{noexport};
+    debug(1, "writing m4 file to `$file'");
 
-	    print FILE "m4_define(".$$opt{name}.", `".$$opt{value}."')\n";
-	}
-
-	close(FILE);
-    }
-    else
-    {
+    if (!open(FILE, ">".$file)) {
 	error(" unable to open `$file' to write configuration");
     }
+
+    foreach my $opt (values %config_opts) {
+	next if $opt->{flags}->{noexport};
+
+	print FILE "m4_define(".$opt->{name}.", `".$opt->{value}."')\n";
+    }
+
+    close(FILE);
+    return 0;
 }
 
 sub write_py
@@ -1398,193 +1466,210 @@ sub write_py
 
     push @output_files, $file;
 
-    if (open(FILE, ">".$file))
-    {
-	foreach my $opt (values %config_opts)
-	{
-	    next if $$opt{flags}->{noexport};
+    debug(1, "writing python file to `$file'");
 
-	    print FILE $$opt{name}." = '".$$opt{value}."'\n";
-	}
-
-	close(FILE);
-    }
-    else
-    {
+    if (!open(FILE, ">".$file)) {
 	error(" unable to open `$file' to write configuration");
+	return 1;
     }
+
+    foreach my $opt (values %config_opts) {
+	next if $opt->{flags}->{noexport};
+
+	print FILE $opt->{name}." = '".$opt->{value}."'\n";
+    }
+
+    close(FILE);
+    return 0;
 }
+
+###############################################################################
+#	Help and Documentation output
+###############################################################################
 
 sub tokens_list
 {
-    printf("\n %-4s %-40s %-16s %s \n", "", "Configuration token name", "Value", "Declare location");
-    print ("="x79, "\n\n");
+    my $all = $param_h{list} eq "all";
+
+    printf("\n %-6s%-40s %-16s %s \n", "", "Configuration token name", "Value", "Declare location");
+    print ("="x80, "\n\n");
 
     foreach my $name (sort keys %config_opts)
     {
 	my $opt = $config_opts{$name};
 	my $attr;
 
-	if (not ($param_h{list} eq "all"))
+	if ( not $all )
 	{
-	    next if ($$opt{flags}->{nodefine});
-
-	    # hide entry if all parents are disabled
-	    if (my @list = @{$$opt{parent}})
-	    {
-		my	$flag = 0;
-
-		foreach my $n (@list)
-		{
-		    my $o = $config_opts{$n};
-		
-		    $flag = 1 if ($$o{value} ne "undefined");
-		}
-
-		next if (not $flag);
-	    }
+	    next if ($opt->{flags}->{internal} || $opt->{flags}->{meta});
+	    next if !$opt->{flags}->{root} && !foreach_or_list( $opt->{parent}, \&check_defined );
 	}
 
-	if ($$opt{provided_count}) {
-	    $attr .= "p";
+	if ($opt->{flags}->{value_keep}) {
+	    $attr .= "v";
+	} elsif ($opt->{value} eq 'defined') {
+	    $attr .= "+";
+	} else {
+	    $attr .= " ";
 	}
-	if ($$opt{flags}->{mandatory}) {
+	$attr .= " ";
+	if ($opt->{module}) {
+	    $attr .= "X";
+	}
+	if ($opt->{userdefined}) {
+	    $attr .= "U";
+	}
+	if ($opt->{flags}->{mandatory_keep}) {
+	    $attr .= "M";
+	}
+	if ($opt->{flags}->{auto_keep}) {
+	    $attr .= "A";
+	}
+	if ($opt->{flags}->{internal_keep}) {
+	    $attr .= "i";
+	}
+	if ($opt->{flags}->{meta_keep}) {
 	    $attr .= "m";
 	}
-	if ($$opt{flags}->{value}) {
-	    $attr .= "v";
-	}
-	if ($$opt{flags}->{nodefine}) {
-	    $attr .= "n";
+
+	printf(" %-6s%-40s %-16s %-16s ", $attr, $name, $opt->{value},
+	       basename($opt->{file}).":".$opt->{location});
+
+	if ( $all && $opt->{vlocation}) {
+	    print "  ".basename($opt->{vlocation});
 	}
 
-	printf(" %-4s %-40s %-16s %s\n", $attr, $name, $$opt{value}, basename($$opt{location}));
+	print "\n";
     }
 
-    print("\n    (n) no user define (p) provided, (m) mandatory, (v) value.\n\n");
+    print "\n";
+    print("    (+) defined, (U) assigned in build config file, (X) module.\n");
+    print("    (v) value, (A) automatic dependency, (M) mandatory.\n");
+    if ( $all ) {
+	print("    (i) for internal use, (m) meta: provided by other token.\n");
+    }
+    print "\n";
+}
+
+sub write_token_doc
+{
+    my ( $out, $opt ) = @_;
+
+    my $pwd = Cwd::realpath($ENV{PWD});
+    my $loc = "$opt->{file}:$opt->{location}";
+    $loc =~ s/^$pwd\///;
+
+    print {$out} "   Token description: $opt->{desc}\n\n";
+
+    print {$out} "   This token in declared in \@sourcelink $loc.\n\n";
+    print {$out} "   The default value is `$opt->{default}'.\n\n" if ( defined $opt->{default} );
+    print {$out} "   This token is a meta token and can not be defined directly.\n\n" if ( $opt->{flags}->{meta} );
+
+    sub print_list
+    {
+	my ( $out, $list, $title, $sep, $disp ) = @_;
+
+	return if !$list;
+	print {$out} "   $title:\n";
+	print {$out} "   \@list\n";
+	foreach ( @$list ) {
+	    my $text = $disp->( $_, $sep, '#', ' ' );
+	    $text =~ s/\w+/$& /g;
+	    print {$out} "      \@item ".$text."\n";
+	}
+	print {$out} "   \@end list\n\n";
+    }
+
+    print_list($out, $opt->{parent}, "This token has the following parents", ", ", \&get_token_name );
+    print_list($out, $opt->{depend}, "This token depends on", " or ", \&get_token_name_list );
+    print_list($out, $opt->{require}, "This token requires", " or ", \&get_rule_name_list );
+    print_list($out, $opt->{when}, "This token is automatically defined when", " and ", \&get_rule_name_list );
+    print_list($out, $opt->{suggest}, "Defining this token suggest use of", " or ", \&get_rule_name );
+    print_list($out, $opt->{suggest_when}, "Definition of this token is suggested when", " and ", \&get_rule_name_list );
+    print_list($out, $opt->{exclude}, "This token can not be defined along with", "", \&get_token_name );
+    print_list($out, $opt->{provide}, "Defining this token will also provide", "", \&get_rule_name );
+    print_list($out, $opt->{providers}, "This token value is provided along with", "", \&get_token_name );
+
+        # FIXME add range and more flags infos
 }
 
 sub tokens_info
 {
-    my ($name) = @_;
+    my ( $name ) = @_;
     my $opt = $config_opts{$name};
 
-    if (not $opt)
-    {
-	print "No `".$name."' token declared\n";
-	return;
+    if ( !$opt ) {
+	error("no such token `$name'");
+	return 1;
     }
 
-    printf("
-==================== %s ====================
+    print STDOUT "   Token name: $name\n";
+    print STDOUT "   Token current value: $opt->{value}\n";
 
-", $name);
+    write_token_doc( \*STDOUT, $opt );
 
-    if (my @desc = @{$$opt{"desc"}})
-    {
-	print join(" ", @desc)."\n";
-    }
-    else
-    {
-	print "(no description)\n";
-    }
-
-    print("\n  This token is mandatory and can not be undefined.\n") if $$opt{flags}->{mandatory};
-
-    print("\n  This token can not be defined directly by user.\n") if $$opt{flags}->{nodefine};
-
-    printf("
-  declared at   :  %s
-  assigned at   :  %s
-  default value :  %s
-  current value :  %s
-", $$opt{location}, $$opt{vlocation},
-	   $$opt{default}, $$opt{value});
-
-    if (my @list = @{$$opt{depend}})
-    {
-	print "\n  depends on :\n\n";
-
-	foreach my $dep_and (@list)
-	{
-	    print " * ".join(" or ", split(/\s+/, $dep_and))."\n";
-	}
-    }
-
-    if (my @list = @{$$opt{require}})
-    {
-	print "\n  require :\n\n";
-
-	foreach my $dep_and (@list)
-	{
-	    print " * ".join(" or ", split(/\s+/, $dep_and))."\n";
-	}
-    }
-
-    if (my @list = @{$$opt{suggest}})
-    {
-	print "\n  suggest :\n\n";
-
-	foreach my $dep_and (@list)
-	{
-	    print " * ".join(" or ", split(/\s+/, $dep_and))."\n";
-	}
-    }
-
-    if (my @list = @{$$opt{exclude}})
-    {
-	print "\n  excludes :\n\n";
-
-	foreach my $dep (@list)
-	{
-	    print " * ".join(" or ", split(/\s+/, $dep))."\n";
-	}
-    }
-
-    if (my @list = @{$$opt{provide}})
-    {
-	print "\n  provides :\n\n";
-
-	foreach my $dep (@list)
-	{
-	    print " * ".join(" or ", split(/\s+/, $dep))."\n";
-	}
-    }
-
-    if (my @list = @{$$opt{provided_by}})
-    {
-	print "\n  may be provided by :\n\n";
-
-	foreach my $dep (@list)
-	{
-	    print " * ".join(" or ", split(/\s+/, $dep))."\n";
-	}
-    }
-
-    print "\n";
+    return 0;
 }
+
+sub write_doc_header
+{
+    my ( $file ) = @_;
+
+    push @output_files, $file;
+
+    debug(1, "writing doc header file to `$file'");
+
+    if (!open(FILE, ">".$file)) {
+	error(" unable to open `$file' to write documentation");
+	return 1;
+    }
+
+    print FILE ("/** \@file \@hidden\n".
+		" * This file has been generated by the configuration script.\n".
+		" */\n\n");
+
+    foreach my $opt (values %config_opts) {
+
+	next if $opt->{flags}->{noexport};
+	my $mod = $opt;
+
+	while ( $mod && !$mod->{module} && $mod->{parent} ) {
+	    $mod = $mod->{parent}->[0];
+	}
+
+	print FILE "/**\n";
+	write_token_doc( \*FILE, $opt );
+	print FILE "   \@module {".$mod->{module}->{description}."}\n"
+	    if $mod && $mod->{module} && $mod->{module}->{description};
+	print FILE "   \@internal\n" if ( $opt->{flags}->{internal} );
+	print FILE "*/\n#define ".$opt->{name}."\n\n";
+	next;
+    }
+
+    close(FILE);
+    return 0;
+}
+
+###############################################################################
+#	Main function
+###############################################################################
 
 sub main
 {
-    foreach my $param (@ARGV)
-    {
-	error " bad command line parameter `$param'"
+    foreach my $param (@ARGV) {
+	error " bad command line option `$param'"
 	    if (! ($param =~ /--([^=]+)=?(.*)/));
-	
+
 	my $name = $1;
-	my $value = $2;
+	my $value = $2 ? $2 : 1;
 
 	$name =~ s/-/_/g;
+	$param_h{$name} = $value;
 
-	if ($value) {
-	    $param_h{$name} = $value;
-	} else {
-	    $param_h{$name} = 1;
-	}
+	debug(1, "command line option: `$param' $value");
     }
 
-    if (not @ARGV or $param_h{help})
-    {
+    if (not @ARGV or $param_h{help} or !$param_h{src_path}) {
 	print "
 Usage: config.pl [options]
 
@@ -1613,37 +1698,69 @@ Usage: config.pl [options]
     $vars{BUILD_NAME} = $param_h{build_name};
     $vars{OUTPUT_NAME} = $param_h{output_name};
 
-    $quiet_flag = 1 if ($param_h{quiet});
+    $quiet_flag = defined $param_h{quiet};
+    $debug |= defined $param_h{debug};
 
-    if ($param_h{src_path}) {
-	explore($_) foreach (split(/:/, $param_h{src_path}))
-    } else {
-	explore($ENV{PWD});
-    }
+    debug(1, "explore source tree and parse .config token files");
+
+    explore_token_dirs($_) foreach (split(/:/, $param_h{src_path}));
+
+    debug(1, "resolve and check tokens");
+
+    tokens_set_methods();
+    tokens_resolve();
+    tokens_check();
+
+    exit 1 if $err_flag;
+
+    debug(1, "read build configuration files");
 
     if ($param_h{build_path}) {
 	$bld_path = $param_h{build_path};
     }
 
-    exit 1 if $err_flag;
-
-    if ($param_h{docheader})
-    {
+    if ($param_h{docheader}) {
 	write_doc_header($param_h{docheader});
-	return;
+	exit 0;
     }
 
-    read_myconfig( $_, $param_h{build} )
+    if ( !$param_h{input} ) {
+	error("no build configuration file specified.");
+    }
+
+    read_build_config( $_, $param_h{build} )
 	foreach (split(/:/, $param_h{input}));
 
+    debug(1, "check build configuration files");
+
     foreach (split(/:/, $param_h{build})) {
-	error("build section name `$_' never considered in configuration file") if ( !$used_build{$_} );
+	error("build section name `$_' never considered in configuration file")
+	    if ( !$used_build{$_} );
     }
 
     exit 1 if $err_flag;
 
-    set_config();
     check_config();
+
+    debug(1, "help and info display actions");
+
+    if ($param_h{list}) {
+	return tokens_list();
+    }
+
+    if ($param_h{info}) {
+	return tokens_info($param_h{info});
+    }
+
+    debug(1, "declare modules");
+
+    foreach my $opt (values %config_opts) {
+	if ( defined $opt->{module} && check_defined($opt) ) {
+	    $vars{MODULES} .= " ".$opt->{module}->{name}.":".$opt->{module}->{path};
+	}
+    }
+
+    debug(1, "setup some special variables");
 
     if ( !$vars{OUTPUT_NAME} ) {
 	$vars{OUTPUT_NAME} = 'kernel';
@@ -1652,24 +1769,13 @@ Usage: config.pl [options]
     if ( !$vars{BUILD_NAME} ) {
 	my $arch = $config_opts{CONFIG_ARCH_NAME};
 	my $cpu = $config_opts{CONFIG_CPU_NAME};
-	$vars{BUILD_NAME} = $$arch{value}."-".$$cpu{value};
+	$vars{BUILD_NAME} = $arch->{value}."-".$cpu->{value};
     }
 
     my $bld_name = $vars{OUTPUT_NAME}."-".$vars{BUILD_NAME};
     $bld_path .= $bld_name;
 
-    if ($param_h{list})
-    {
-	tokens_list();
-	return;
-    }
-
-    if ($param_h{info})
-    {
-	set_provided_by();
-	tokens_info($param_h{info});
-	return;
-    }
+    debug(1, "take action based on command line options");
 
     exit 1 if $err_flag;
 
@@ -1678,6 +1784,7 @@ Usage: config.pl [options]
 	error("unable to create build directory `$bld_path'") if (! -d $bld_path);
 	exit 1 if $err_flag;
 
+	debug(1, "build name is `$bld_name'");
 	print $bld_name."\n";
 
 	if (write_makefile()) {
