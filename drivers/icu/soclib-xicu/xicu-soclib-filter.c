@@ -85,14 +85,16 @@ DEV_IRQ(xicu_filter_handler)
 }
 
 #ifdef CONFIG_HEXO_IPI
-DEVICU_SETUPIPI(xicu_filter_setupipi)
+DEVICU_SETUP_IPI_EP(xicu_filter_setup_ipi_ep)
 {
 	struct xicu_filter_private_s *pv = dev->drv_pv;
 
+	endpoint->icu_dev = dev;
 	xicu_root_set_ipi_handler(PARENT(dev), ipi_no&0x1f, (dev_irq_t*)ipi_process_rq, NULL);
 	xicu_root_enable_ipi(PARENT(dev), ipi_no&0x1f, pv->output, 1);
 
-	return (void*)(uintptr_t)ipi_no;
+	endpoint->priv = (void*)(uintptr_t)ipi_no;
+	return 0;
 }
 
 DEVICU_SENDIPI(xicu_filter_sendipi)
@@ -133,7 +135,7 @@ const struct driver_s	xicu_filter_drv =
 		.f_delhndl   = xicu_filter_delhndl,
 #ifdef CONFIG_HEXO_IPI
 		.f_sendipi   = xicu_filter_sendipi,
-		.f_setupipi  = xicu_filter_setupipi,
+		.f_setup_ipi_ep  = xicu_filter_setup_ipi_ep,
 #endif
 	}
 };
