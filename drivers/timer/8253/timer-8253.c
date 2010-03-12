@@ -117,7 +117,7 @@ DEV_CLEANUP(timer_8253_cleanup)
 {
   struct timer_8253_context_s	*pv = dev->drv_pv;
 
-  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, timer_8253_irq);
 
   mem_free(pv);
 }

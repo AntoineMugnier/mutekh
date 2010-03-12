@@ -472,7 +472,7 @@ DEV_CLEANUP(tty_vga_cleanup)
   struct tty_vga_context_s	*pv = dev->drv_pv;
 
 #ifdef CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD
-  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, tty_vga_irq);
 #endif
 
 #ifdef DRIVER_CHAR_VGATTY_HAS_FIFO

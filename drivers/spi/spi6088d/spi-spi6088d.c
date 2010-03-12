@@ -523,8 +523,7 @@ DEV_INIT(spi_spi6088d_init)
 	dev_spi_queue_init(&pv->queue);
 
 	dev_icu_sethndl(dev->icudev, dev->irq, spi_spi6088d_irq, dev);
-	dev_icu_set_flags(dev->icudev, dev->irq, 0x2 );
-	dev_icu_enable(dev->icudev, dev->irq, 1);
+	dev_icu_enable(dev->icudev, dev->irq, 1, 0x2 );
 
 	return 0;
 }
@@ -533,7 +532,7 @@ DEV_CLEANUP(spi_spi6088d_cleanup)
 {
     struct spi_spi6088d_context_s *pv = dev->drv_pv;
 
-	DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+    DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, spi_spi6088d_irq);
 
     mem_free(pv);
 }

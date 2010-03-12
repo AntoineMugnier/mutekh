@@ -142,7 +142,7 @@ DEV_CLEANUP(uart_us6089c_cleanup)
 {
 	struct uart_us6089c_context_s	*pv = dev->drv_pv;
 
-	DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+	DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, uart_us6089c_irq);
 
 	dev_char_queue_destroy(&pv->write_q);
 	dev_char_queue_destroy(&pv->read_q);
@@ -234,8 +234,7 @@ DEV_INIT(uart_us6089c_init)
 	registers->US_IF = 0;
 
 	dev_icu_sethndl(dev->icudev, dev->irq, uart_us6089c_irq, dev);
-	dev_icu_set_flags(dev->icudev, dev->irq, 0x4);
-	dev_icu_enable(dev->icudev, dev->irq, 1);
+	dev_icu_enable(dev->icudev, dev->irq, 1, 0x4);
 
 	// enable receiver and transmitter
 	registers->US_CR = US6089C_RXEN | US6089C_TXEN;

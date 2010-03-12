@@ -505,7 +505,7 @@ DEV_CLEANUP(net_ne2000_cleanup)
   struct net_ne2000_context_s	*pv = dev->drv_pv;
 
   /* disable IRQ */
-  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, net_ne2000_irq);
 
   /* terminate the dispatch thread */
   if ( pv->dispatch )

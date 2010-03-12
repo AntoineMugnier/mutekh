@@ -89,17 +89,6 @@ error_t ipi_post_rq(struct ipi_endpoint_s *endpoint, struct ipi_request_s *rq);
 void ipi_process_rq();
 
 /**
-   Setup a IPI device for a given endpoint.
-
-   @param endpoint IPI endpoint to set up
-   @param ipi_dev ICU device handling the IPI
-   @param ipi_no IPI number in ICU device @tt ipi_dev
- */
-error_t ipi_hook_endpoint(struct ipi_endpoint_s *endpoint,
-                          struct device_s *ipi_dev,
-                          uint_fast8_t ipi_no);
-
-/**
    Checks whether a given endpoint may receive IPIs.
 
    @param endpoint IPI endpoint to check

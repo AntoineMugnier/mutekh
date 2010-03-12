@@ -54,16 +54,6 @@ static DEV_IRQ(icu_sam7_handle_sysctrl)
 	return 0;
 }
 
-DEVICU_SET_FLAGS(icu_sam7_set_flags)
-{
-	AT91PS_AIC registers = (void*)dev->addr[0];
-//	struct icu_sam7_private_s	*pv = dev->drv_pv;
-
-	assert(irq < 32 && "Only 32 irq line are available on SAM7");
-
-	registers->AIC_SMR[irq] = flags;
-}
-
 DEVICU_SETHNDL(icu_sam7_sethndl)
 {
 	assert(irq < 32 && "Only 32 irq line are available on SAM7");
@@ -123,7 +113,7 @@ DEV_CLEANUP(icu_sam7_cleanup)
 	registers->AIC_IDCR = (uint32_t)-1;
 
 #if defined(CONFIG_DRIVER_ICU_ARM)
-	DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+	DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, icu_sam7_handler);
 #endif
 
 	mem_free(pv);
@@ -148,7 +138,6 @@ const struct driver_s	icu_sam7_drv =
     .f_irq      = icu_sam7_handler,
     .f.icu = {
         .f_enable       = icu_sam7_enable,
-        .f_set_flags    = icu_sam7_set_flags,
         .f_sethndl      = icu_sam7_sethndl,
         .f_delhndl      = icu_sam7_delhndl,
     }
@@ -238,6 +227,8 @@ DEVICU_ENABLE(icu_sam7_enable)
 {
 	AT91PS_AIC registers = (void*)dev->addr[0];
 	struct icu_sam7_private_s	*pv = sam7_c_irq_dev->drv_pv;
+
+	registers->AIC_SMR[irq] = flags;
 
 	if ( (1<<irq) & ICU_SAM7_SYSCTRL_VIRQS ) {
 		if ( enable )

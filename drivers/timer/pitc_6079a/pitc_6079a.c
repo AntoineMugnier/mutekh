@@ -130,7 +130,7 @@ DEV_CLEANUP(pitc_6079a_cleanup)
 {
 	struct pitc_6079a_context_s	*pv = dev->drv_pv;
 
-	DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+	DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, pitc_6079a_irq);
 
 	mem_free(pv);
 }
@@ -185,8 +185,7 @@ DEV_INIT(pitc_6079a_init)
 	dev->drv_pv = pv;
 
 	dev_icu_sethndl(dev->icudev, dev->irq, pitc_6079a_irq, dev);
-	dev_icu_set_flags(dev->icudev, dev->irq, 0x2 );
-	dev_icu_enable(dev->icudev, dev->irq, 1);
+	dev_icu_enable(dev->icudev, dev->irq, 1, 0x2);
 
 	return 0;
 }

@@ -116,7 +116,7 @@ DEV_CLEANUP(tty_soclib_cleanup)
 
 #ifdef CONFIG_HEXO_IRQ
   if ( dev->icudev )
-	  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+    DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, tty_soclib_irq);
 
   tty_fifo_destroy(&pv->read_fifo);
 #endif

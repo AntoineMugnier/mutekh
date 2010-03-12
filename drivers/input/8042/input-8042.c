@@ -336,7 +336,7 @@ DEV_CLEANUP(input_8042_cleanup)
 {
   struct input_8042_context_s	*pv = dev->drv_pv;
 
-  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, input_8042_irq);
 
   lock_destroy(&pv->lock);
   mem_free(pv);

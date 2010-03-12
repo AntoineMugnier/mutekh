@@ -144,7 +144,7 @@ DEV_CLEANUP(timer_soclib_cleanup)
 {
   struct timer_soclib_context_s	*pv = dev->drv_pv;
 
-  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, timer_soclib_irq);
 
   mem_free(pv);
 }

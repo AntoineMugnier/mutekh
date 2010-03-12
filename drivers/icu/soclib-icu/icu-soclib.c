@@ -79,7 +79,7 @@ DEV_CLEANUP(icu_soclib_cleanup)
 {
   struct icu_soclib_private_s	*pv = dev->drv_pv;
 
-  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, icu_soclib_handler);
 
   mem_free(pv);
 }

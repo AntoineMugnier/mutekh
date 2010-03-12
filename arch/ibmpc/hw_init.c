@@ -75,6 +75,7 @@ extern const uint8_t mutek_logo_320x200[320*200];
 
 #if defined(CONFIG_DRIVER_ICU)
 struct device_s icu_dev;
+struct device_s apic_icu_dev;
 #endif
 
 #ifdef CONFIG_MUTEK_CONSOLE

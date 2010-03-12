@@ -243,8 +243,7 @@ DEV_INIT(gpio_sam7_init)
 	dev->drv_pv = pv;
 
 	dev_icu_sethndl(dev->icudev, dev->irq, gpio_sam7_irq, dev);
-	dev_icu_set_flags(dev->icudev, dev->irq, (AT91C_AIC_SRCTYPE_INT_HIGH_LEVEL | 0x2 ));
-	dev_icu_enable(dev->icudev, dev->irq, 1);
+	dev_icu_enable(dev->icudev, dev->irq, 1, AT91C_AIC_SRCTYPE_INT_HIGH_LEVEL | 0x2);
 
 	return 0;
 }
@@ -253,7 +252,7 @@ DEV_CLEANUP(gpio_sam7_cleanup)
 {
     struct gpio_sam7_context_s *pv = dev->drv_pv;
 
-	DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+    DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, gpio_sam7_irq);
 
     mem_free(pv);
 }

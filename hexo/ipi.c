@@ -55,14 +55,3 @@ void ipi_process_rq()
     while ((rq = ipi_queue_pop(fifo)))
         rq->func(rq->private);
 }
-
-error_t ipi_hook_endpoint(struct ipi_endpoint_s *endpoint,
-                          struct device_s *ipi_dev,
-                          uint_fast8_t ipi_no)
-{
-    void *foo = dev_icu_setupipi(ipi_dev, ipi_no);
-    endpoint->icu_dev = ipi_dev;
-    endpoint->priv = foo;
-
-    return 0;
-}

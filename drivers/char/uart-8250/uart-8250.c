@@ -134,7 +134,7 @@ DEV_CLEANUP(uart_8250_cleanup)
 {
   struct uart_8250_context_s	*pv = dev->drv_pv;
 
-  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, uart_8250_irq);
 
   dev_char_queue_destroy(&pv->read_q);
   dev_char_queue_destroy(&pv->write_q);

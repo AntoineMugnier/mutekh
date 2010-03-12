@@ -48,7 +48,7 @@ DEV_CLEANUP(controller_ata_cleanup)
 {
   struct controller_ata_context_s	*pv = dev->drv_pv;
 
-  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq);
+  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, controller_ata_irq);
 
   mem_free(pv);
 }

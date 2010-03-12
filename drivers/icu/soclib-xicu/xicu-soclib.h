@@ -91,7 +91,7 @@ DEVICU_ENABLE(xicu_filter_enable);
 DEVICU_SETHNDL(xicu_filter_sethndl);
 DEVICU_DELHNDL(xicu_filter_delhndl);
 DEVICU_SENDIPI(xicu_filter_sendipi);
-DEVICU_SETUPIPI(xicu_filter_setupipi);
+DEVICU_SETUP_IPI_EP(xicu_filter_setup_ipi_ep);
 
 struct xicu_filter_param_s
 {
