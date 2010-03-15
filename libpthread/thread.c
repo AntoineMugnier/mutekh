@@ -36,7 +36,9 @@ CONTEXT_LOCAL pthread_t __pthread_current = NULL;
 void
 __pthread_switch(void)
 {
+#ifdef CONFIG_HEXO_IRQ
   assert(cpu_is_interruptible());
+#endif
 
 #ifdef CONFIG_PTHREAD_CANCEL
   if (pthread_self()->cancelasync)

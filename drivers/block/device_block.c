@@ -67,7 +67,9 @@ static error_t dev_block_lock_request(struct device_s *dev, uint8_t **data,
 
   dev_block_request(dev, rq);
 
+#ifdef CONFIG_HEXO_IRQ
   assert(cpu_is_interruptible());
+#endif
 
   while (!status.done)
     ;

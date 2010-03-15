@@ -31,8 +31,10 @@ struct device_s *console_dev = NULL;
 
 PRINTF_OUTPUT_FUNC(__printf_out_tty)
 {
+#ifdef CONFIG_HEXO_IRQ
   if ( !cpu_is_interruptible() )
     return;
+#endif
 
   while (len > 0)
     {

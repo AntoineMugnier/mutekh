@@ -74,7 +74,9 @@ static ssize_t dev_char_lock_request(struct device_s *dev, uint8_t *data,
 
   dev_char_request(dev, &rq);
 
+#ifdef CONFIG_HEXO_IRQ
   assert(cpu_is_interruptible());
+#endif
 
   while (!status.done)
     ;
