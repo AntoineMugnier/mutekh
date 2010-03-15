@@ -280,6 +280,7 @@ void capsule_sys_unblock(void)
     probes_blocked = 0;
 }
 
+#ifdef CONFIG_LIBC_STREAM
 void capsule_sys_dump_all_stats(FILE * stream)
 {
     size_t job_count = 0;
@@ -306,6 +307,7 @@ void capsule_sys_dump_all_stats(FILE * stream)
     fprintf(stream, "\n");
     fprintf(stream, "Total free context at end: %d\n", capsule_queue_count(&free_jobs));
 }
+#endif
 
 void capsule_sys_reset_all_stats()
 {

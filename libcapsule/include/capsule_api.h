@@ -150,7 +150,9 @@ void capsule_sys_unblock(void);
 
    @param stream Stdio stream to dump statistics to
  */
+#ifdef CONFIG_LIBC_STREAM
 void capsule_sys_dump_all_stats(FILE * stream);
+#endif
 
 /**
    Reset statistics.
