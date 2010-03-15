@@ -109,7 +109,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 #endif
 
 #if defined(CONFIG_SOCLIB_EARLY_CONSOLE)
-        soclib_early_console(CONFIG_SOCLIB_EARLY_CONSOLE);
+        soclib_early_console(CONFIG_SOCLIB_EARLY_CONSOLE_ADDR);
 #endif
 
         /* configure system wide cpu data */

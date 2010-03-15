@@ -22,7 +22,7 @@ inline ssize_t vprintk(const char *format, va_list ap)
 #endif
 	error_t err = EIO;
 
-#ifdef CONFIG_MUTEK_CONSOLE
+#if defined(CONFIG_MUTEK_CONSOLE) || defined(CONFIG_MUTEK_EARLY_CONSOLE)
 	if ( printk_output )
 		err = mutek_printf_arg(printk_output_arg, printk_output, format, ap);
 #endif

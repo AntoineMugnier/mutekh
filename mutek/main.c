@@ -93,7 +93,7 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 	sched_context_init(&main_ctx);
 #endif
 
-#if defined(CONFIG_MUTEK_CONSOLE)
+#if defined(CONFIG_MUTEK_CONSOLE) && !defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
 	if ( console_dev )
 		printk_set_output(__printf_out_tty, console_dev);
 #endif
