@@ -32,7 +32,12 @@ CONTEXT_LOCAL struct sched_context_s *sched_cur = NULL;
 /* processor idle context */
 CPU_LOCAL struct sched_context_s sched_idle;
 
-/* return next scheduler candidate */
+/***********************************************************************
+ *      Scheduler base operations
+ */
+
+/************************** return next scheduler candidate except idle */
+
 static struct sched_context_s *
 __sched_candidate_noidle(sched_queue_root_t *root)
 {
@@ -54,7 +59,8 @@ __sched_candidate_noidle(sched_queue_root_t *root)
 #endif
 }
 
-/* return next scheduler candidate */
+/************************** return next scheduler candidate */
+
 static inline struct sched_context_s *
 __sched_candidate(sched_queue_root_t *root)
 {
@@ -66,11 +72,15 @@ __sched_candidate(sched_queue_root_t *root)
   return next;
 }
 
+/************************** scheduler idle processors queue */
+
 #if defined(CONFIG_HEXO_IPI) && defined(CONFIG_MUTEK_SCHEDULER_MIGRATION)
 #define CONTAINER_LOCK_idle_cpu_queue HEXO_SPIN
 CONTAINER_TYPE(idle_cpu_queue, CLIST, struct ipi_endpoint_s, idle_cpu_queue_list_entry);
 CONTAINER_FUNC(idle_cpu_queue, CLIST, static inline, idle_cpu_queue, list_entry);
 #endif
+
+/************************** scheduler running contexts queue */
 
 struct scheduler_s
 {
@@ -81,8 +91,6 @@ struct scheduler_s
     struct ipi_endpoint_s *ipi_endpoint;
 #endif
 };
-
-/************************************************************************/
 
 #if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
 
@@ -96,15 +104,6 @@ __scheduler_get(void)
   return & CPU_NAME_DECL(scheduler);
 }
 
-# if defined(CONFIG_HEXO_IPI)
-static inline struct ipi_endpoint_s *__sched_pop_ipi_endpoint(struct scheduler_s *sched)
-{
-  return idle_cpu_queue_pop(&sched->idle_cpu);
-}
-# endif
-
-/***************************/
-
 #elif defined (CONFIG_MUTEK_SCHEDULER_STATIC)
 
 /* scheduler root */
@@ -117,29 +116,37 @@ __scheduler_get(void)
   return CPU_LOCAL_ADDR(scheduler);
 }
 
-#if defined(CONFIG_HEXO_IPI)
-static inline struct ipi_endpoint_s *__sched_pop_ipi_endpoint(struct scheduler_s *sched)
-{
-  return sched->ipi_endpoint;
-}
-# endif
-
 #endif
 
-/************************************************************************/
+/************************** scheduler context wake */
 
 static inline
 void __sched_context_push(struct sched_context_s *sched_ctx)
 {
     struct scheduler_s *sched = sched_ctx->scheduler;
-	sched_queue_pushback(&sched->root, sched_ctx);
+
+    sched_queue_pushback(&sched->root, sched_ctx);
 
 #if defined(CONFIG_HEXO_IPI)
-    struct ipi_endpoint_s *idle = __sched_pop_ipi_endpoint(sched);
-	if ( idle )
-		ipi_post(idle);
+    struct ipi_endpoint_s *idle;
+# if defined(CONFIG_MUTEK_SCHEDULER_MIGRATION)
+
+  /* do not pop, will be removed from idle queue once cpu has woken
+     up, because we can be sure we do not pop just before the cpu goes
+     in wait state. */
+    idle = idle_cpu_queue_head(&sched->idle_cpu);
+
+# else  /* CONFIG_MUTEK_SCHEDULER_STATIC */
+    idle = sched->ipi_endpoint;
+
+# endif
+
+    if ( idle )
+      ipi_post(idle);
 #endif
 }
+
+/************************** scheduler processor wait */
 
 static inline void __sched_yield_cpu(struct scheduler_s *sched)
 {
@@ -150,32 +157,38 @@ static inline void __sched_yield_cpu(struct scheduler_s *sched)
     cpu_interrupt_wait();
     cpu_interrupt_disable();
 # endif
-#else /* We are SMP */
+
+#else /* CONFIG_ARCH_SMP */
     /* do not always make CPU sleep if SMP because context may be put
        in running queue by an other cpu with no signalling. IPI is the
-       only way to solve the "problem".
-    */
+       only way to solve this issue and wake a lazy processor. */
 # if defined(CONFIG_HEXO_IPI)
-#  if defined(CONFIG_MUTEK_SCHEDULER_MIGRATION)
-    struct ipi_endpoint_s *ipi_e = CPU_LOCAL_ADDR(ipi_endpoint);
 
-    if ( ipi_endpoint_isvalid(ipi_e) )
-      {
-        idle_cpu_queue_pushback(&sched->idle_cpu, ipi_e);
-        cpu_interrupt_wait();
-	cpu_interrupt_disable();
-        /* We may receive an IPI, but device IRQs are also possible,
-         * so remove us preventively */
-        idle_cpu_queue_remove(&sched->idle_cpu, ipi_e);
-      }
-#  else
+    struct ipi_endpoint_s *ipi_e = CPU_LOCAL_ADDR(ipi_endpoint);
+    assert( ipi_endpoint_isvalid(ipi_e) );
+
+#  if defined(CONFIG_MUTEK_SCHEDULER_MIGRATION)
+    idle_cpu_queue_pushback(&sched->idle_cpu, ipi_e);
     cpu_interrupt_wait();
     cpu_interrupt_disable();
+    idle_cpu_queue_remove(&sched->idle_cpu, ipi_e);
+
+#  else  /* CONFIG_MUTEK_SCHEDULER_STATIC */
+    sched->ipi_endpoint = ipi_e;
+    cpu_interrupt_wait();
+    cpu_interrupt_disable();
+    sched->ipi_endpoint = NULL;
 #  endif
+
 # endif
 #endif
 }
 
+/***********************************************************************
+ *      Scheduler idle context
+ */
+
+//#define SCHED_IDLE_DEBUG
 
 /* idle context runtime */
 static CONTEXT_ENTRY(sched_context_idle)
@@ -189,6 +202,9 @@ static CONTEXT_ENTRY(sched_context_idle)
     {
       struct sched_context_s	*next;
 
+#ifdef SCHED_IDLE_DEBUG
+      printk("(c%i idle)", cpu_id());
+#endif
       __sched_yield_cpu(sched);
 
       /* Let enough time for pending interrupts to execute and assume
@@ -205,15 +221,19 @@ static CONTEXT_ENTRY(sched_context_idle)
 
       if ((next = __sched_candidate_noidle(&sched->root)) != NULL)
 	{
+#ifdef SCHED_IDLE_DEBUG
+          printk("(c%i running)", cpu_id());
+#endif
 	  context_switch_to(&next->context);
-	  //	  printk("(c%i idle)", cpu_id());
 	}
 
       sched_queue_unlock(&sched->root);
     }
 }
 
-/************************************************************************/
+/***********************************************************************
+ *      Scheduler primitives
+ */
 
 /* Switch to next context available in the root queue. This function
    returns if no other context is available, controle is passed
