@@ -52,8 +52,14 @@ void mem_region_id_init(cpu_id_t cpu_id);
 /** @this returns a farless memory allocatable region, depending to the scope */
 struct mem_region_s *mem_region_get_first(enum mem_scope_e scope);
 
+/** @this returns a farless memory allocatable region, depending to the scope */
+struct mem_region_s *mem_region_id_get_first(cpu_id_t cpu_id, enum mem_scope_e scope);
+
 /** @this returns a the next memory allocatable region, depending to the scope */
 struct mem_region_s *mem_region_get_next(enum mem_scope_e scope, struct mem_region_s *region);
+
+/** @this returns a the next memory allocatable region, depending to the scope */
+struct mem_region_s *mem_region_id_get_next(cpu_id_t cpu_id, enum mem_scope_e scope, struct mem_region_s *region);
 
 /** @this add the given region to the scope */
 void mem_region_add(enum mem_scope_e scope, struct memory_allocator_region_s *region, uint_fast16_t priority);
@@ -70,7 +76,13 @@ void mem_region_id_remove(cpu_id_t cpu_id, enum mem_scope_e scope, struct memory
 /** @this lock the given scope*/
 void mem_region_lock(enum mem_scope_e scope);
 
+/** @this lock the given scope of the specified cpu*/
+void mem_region_id_lock(cpu_id_t cpu_id, enum mem_scope_e scope);
+
 /** @this unlock the given scope*/
 void mem_region_unlock(enum mem_scope_e scope);
+
+/** @this unlock the given scope of the specified cpu*/
+void mem_region_id_unlock(cpu_id_t cpu_id, enum mem_scope_e scope);
 
 #endif
