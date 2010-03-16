@@ -39,6 +39,8 @@ DEVICU_ENABLE(xicu_filter_enable)
 
 /*     printk("xicu %p %d enable %d %d\n", dev, pv->output, irq, enable); */
     xicu_root_enable_hwi(PARENT(dev), irq&0x1f, pv->output, enable);
+
+    return 0;
 }
 
 DEVICU_SETHNDL(xicu_filter_sethndl)
@@ -99,12 +101,13 @@ DEVICU_SETUP_IPI_EP(xicu_filter_setup_ipi_ep)
 
 DEVICU_SENDIPI(xicu_filter_sendipi)
 {
+	uint32_t cpu_ident = (uint32_t)endpoint->priv;
 /* 	printk("xicu send ipi to %x\n", cpu_icu_identifier); */
 
-	cpu_mem_write_32(XICU_REG_ADDR(dev->addr[0],
-					  XICU_WTI_REG,
-					  ((uint32_t)cpu_icu_identifier) & 0x1f),
-		endian_le32((uint32_t)cpu_icu_identifier));
+	cpu_mem_write_32(XICU_REG_ADDR(endpoint->icu_dev->addr[0],
+				       XICU_WTI_REG,
+				       cpu_ident & 0x1f),
+			 endian_le32(cpu_ident));
 	return 0;
 }
 #endif
@@ -153,9 +156,6 @@ DEV_INIT(xicu_filter_init)
 {
 	struct xicu_filter_param_s *param = params;
 
-	device_mem_map( dev , 1 );
-	dev->drv = &xicu_filter_drv;
-
 /* 	printk("Creating an XICU filter device. Parent %p [%p] output %d @%p; icu %p/%d\n", */
 /* 		   param->parent, param->parent->drv, */
 /* 		   param->output_line, param->parent->addr[0], */
@@ -166,6 +166,8 @@ DEV_INIT(xicu_filter_init)
 	if ( !pv )
 		return -ENOMEM;
 
+	device_mem_map( dev , 1 );
+	dev->drv = &xicu_filter_drv;
 	dev->drv_pv = pv;
 
 	pv->parent = param->parent;

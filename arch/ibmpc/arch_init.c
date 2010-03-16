@@ -23,10 +23,22 @@
 #include <hexo/types.h>
 #include <hexo/init.h>
 #include <hexo/cpu.h>
+
+#ifdef CONFIG_HEXO_IPI
+# include <device/icu.h>
+# include <device/device.h>
+# include <device/driver.h>
+# include <hexo/ipi.h>
+#endif
+
 #include <hexo/lock.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/scheduler.h>
+#include <mutek/printk.h>
 
+#ifdef CONFIG_DRIVER_ICU_APIC
+# include <drivers/icu/apic/icu-apic.h>
+#endif
 
 #ifdef CONFIG_HEXO_MMU
 #include <hexo/mmu.h>
@@ -60,9 +72,28 @@ struct multiboot_header_s multiboot_header =
   .checksum = 0 - MULTIBOOT_MAGIC,
 };
 
+#ifdef CONFIG_DRIVER_ICU_APIC
+static void apic_init()
+{
+  struct device_s *lapic = CPU_LOCAL_ADDR(apic_dev);
+
+  device_init(lapic);
+  lapic->addr[0] = 0xfee00000;
+  icu_apic_init(lapic, NULL);
+
+#ifdef CONFIG_HEXO_IPI
+  dev_icu_setup_ipi_ep(lapic, CPU_LOCAL_ADDR(ipi_endpoint), cpu_id());
+#endif
+}
+#endif
+
 #ifdef CONFIG_ARCH_SMP
 static lock_t		cpu_init_lock;	/* cpu intialization lock */
 static lock_t		cpu_start_lock;	/* cpu wait for start lock */
+#endif
+
+#ifdef CONFIG_IBMPC_EARLY_CONSOLE_VGA
+PRINTF_OUTPUT_FUNC(early_console_vga);
 #endif
 
 /* architecture specific init function */
@@ -74,14 +105,16 @@ void arch_init()
     {
       lock_init(&cpu_init_lock);
       lock_init(&cpu_start_lock);
-
 #endif
 
+#ifdef CONFIG_IBMPC_EARLY_CONSOLE_VGA
+      printk_set_output(early_console_vga, NULL);
+#endif
       cpu_global_init();
 
       mem_init();
 
-	  hexo_global_init();
+      hexo_global_init();
 
 #ifdef CONFIG_HEXO_MMU
 
@@ -106,16 +139,19 @@ void arch_init()
 
 #endif /*CONFIG_HEXO_MMU*/
 
-      /* configure first CPU */
+      /* send reset/init signal to other CPUs */
+#ifdef CONFIG_ARCH_SMP
+      lock_try(&cpu_start_lock);
+#endif
+
+      /* configure first CPU and start app CPUs */
       cpu_init();
 #ifdef CONFIG_HEXO_MMU
       mmu_cpu_init();
 #endif
 
-      /* send reset/init signal to other CPUs */
-#ifdef CONFIG_ARCH_SMP
-      lock_try(&cpu_start_lock);
-      cpu_start_other_cpu();
+#ifdef CONFIG_DRIVER_ICU_APIC
+      apic_init();
 #endif
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
@@ -131,7 +167,6 @@ void arch_init()
 # error No supported hardware initialization
 #endif
 
-	  //FIXME: move this in user/arch_hw_init
 
       /* run mutek_start() */
       mutek_start(0, 0);
@@ -146,11 +181,15 @@ void arch_init()
 
       cpu_init();
 
-      lock_release(&cpu_init_lock);
+#ifdef CONFIG_DRIVER_ICU_APIC
+      apic_init();
+#endif
 
 #ifdef CONFIG_HEXO_MMU
       mmu_cpu_init();
 #endif
+
+      lock_release(&cpu_init_lock);
 
       /* wait for start signal */
       while (lock_state(&cpu_start_lock))

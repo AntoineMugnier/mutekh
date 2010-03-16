@@ -25,18 +25,14 @@
 #include <device/device.h>
 #include <hexo/ipi.h>
 
-CONTAINER_FUNC(ipi_queue, DLIST, static inline, ipi_queue);
-
 CPU_LOCAL struct ipi_endpoint_s ipi_endpoint = {};
 
 error_t ipi_post(struct ipi_endpoint_s *endpoint)
 {
-    struct device_s *icu = endpoint->icu_dev;
-
-    if (!icu)
+    if (!endpoint)
         return -EOPNOTSUPP;
 
-    return dev_icu_sendipi(icu, endpoint->priv);
+    return dev_icu_sendipi(endpoint->icu_dev, endpoint);
 }
 
 error_t ipi_post_rq(struct ipi_endpoint_s *endpoint, struct ipi_request_s *rq)
@@ -50,8 +46,8 @@ error_t ipi_post_rq(struct ipi_endpoint_s *endpoint, struct ipi_request_s *rq)
 void ipi_process_rq()
 {
     struct ipi_request_s *rq;
-    ipi_queue_root_t *fifo = &(CPU_LOCAL_ADDR(ipi_endpoint)->ipi_fifo);
+    struct ipi_endpoint_s *ep = CPU_LOCAL_ADDR(ipi_endpoint);
 
-    while ((rq = ipi_queue_pop(fifo)))
+    while ((rq = ipi_queue_pop(&ep->ipi_fifo)))
         rq->func(rq->private);
 }

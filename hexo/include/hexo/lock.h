@@ -56,7 +56,9 @@ struct			lock_s
   struct arch_lock_s	arch;
 #endif
   /** interrupt state save */
+#ifdef CONFIG_HEXO_IRQ
   reg_t			irq_state;
+#endif
 };
 
 typedef struct lock_s	lock_t;
@@ -122,11 +124,15 @@ static inline bool_t lock_state(lock_t *lock)
     Use of the @ref #LOCK_SPIN_IRQ macro is prefered. */
 static inline void lock_spin_irq(lock_t *lock)
 {
+#ifdef CONFIG_HEXO_IRQ
   reg_t		state;
 
   cpu_interrupt_savestate_disable(&state);
+#endif
   lock_spin(lock);
+#ifdef CONFIG_HEXO_IRQ
   lock->irq_state = state;
+#endif
 }
 
 
@@ -134,12 +140,16 @@ static inline void lock_spin_irq(lock_t *lock)
     lock. This macro must be matched with the LOCK_RELEASE_IRQ macro.
     It is prefered over the lock_spin_irq() function because interrupt
     state may be saved in a register */
-#define LOCK_SPIN_IRQ(lock)					\
+#ifdef CONFIG_HEXO_IRQ
+# define LOCK_SPIN_IRQ(lock)					\
 {								\
   reg_t	__interrupt_state;					\
   cpu_interrupt_savestate_disable(&__interrupt_state);		\
   lock_spin(lock);
-
+#else
+# define LOCK_SPIN_IRQ(lock)					\
+  lock_spin(lock);
+#endif
 
 /** @this releases a lock */
 static inline void lock_release(lock_t *lock)
@@ -154,10 +164,13 @@ static inline void lock_release(lock_t *lock)
     Use of the @ref #LOCK_RELEASE_IRQ macro is prefered. */
 static inline void lock_release_irq(lock_t *lock)
 {
+#ifdef CONFIG_HEXO_IRQ
   reg_t		state = lock->irq_state;
-
+#endif
   lock_release(lock);
+#ifdef CONFIG_HEXO_IRQ
   cpu_interrupt_restorestate(&state);
+#endif
 }
 
 
@@ -165,10 +178,15 @@ static inline void lock_release_irq(lock_t *lock)
     must be matched with the LOCK_SPIN_IRQ macro. It is prefered over
     the lock_release_irq() function because interrupt state may be
     saved in a register */
-#define LOCK_RELEASE_IRQ(lock)					\
+#ifdef CONFIG_HEXO_IRQ
+# define LOCK_RELEASE_IRQ(lock)					\
   lock_release(lock);						\
   cpu_interrupt_restorestate(&__interrupt_state);		\
 }
+#else
+# define LOCK_RELEASE_IRQ(lock)					\
+  lock_release(lock);
+#endif
 
 #endif
 

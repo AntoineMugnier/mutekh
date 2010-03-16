@@ -43,5 +43,11 @@ void writek(const char *data, size_t len)
 
 #endif /* printk */
 
+#define PRINTK_RET(val, ...)			\
+do {						\
+	printk(__VA_ARGS__);			\
+	return (val);				\
+} while (0)
+
 #endif
 

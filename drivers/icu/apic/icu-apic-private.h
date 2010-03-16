@@ -19,22 +19,24 @@
 
 */
 
-#ifndef __ICU_8259_PRIVATE_H_
-#define __ICU_8259_PRIVATE_H_
+#ifndef __ICU_apic_PRIVATE_H_
+#define __ICU_apic_PRIVATE_H_
 
 #include <device/device.h>
-#include "icu-8259.h"
 
-struct icu_8259_handler_s
+struct icu_apic_handler_s
 {
   dev_irq_t		*hndl;
   void			*data;
 };
 
-struct icu_8259_private_s
+struct icu_apic_private_s
 {
-  struct icu_8259_handler_s	table[ICU_8259_MAX_LINES];
+  struct icu_apic_handler_s	table[CPU_HWINT_VECTOR_COUNT];
+  struct device_s		*dev;
 };
+
+#define APIC_IPI_VECTOR 0x5e
 
 #endif
 

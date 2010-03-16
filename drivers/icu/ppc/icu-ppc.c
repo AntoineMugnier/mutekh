@@ -35,6 +35,7 @@
 
 DEVICU_ENABLE(icu_ppc_enable)
 {
+	return 0;
 }
 
 DEVICU_SETHNDL(icu_ppc_sethndl)

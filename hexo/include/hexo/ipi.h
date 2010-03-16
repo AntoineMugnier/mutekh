@@ -56,9 +56,12 @@ struct ipi_endpoint_s
     void *priv;
     ipi_queue_root_t ipi_fifo;
 #if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
-    CONTAINER_ENTRY_TYPE(CLIST) idle_cpu_queue_list_entry;
+    CONTAINER_ENTRY_TYPE(DLIST) idle_cpu_queue_list_entry;
 #endif
 };
+
+CONTAINER_FUNC(ipi_queue, DLIST, static inline, ipi_queue);
+CONTAINER_FUNC_NOLOCK(ipi_queue, DLIST, static inline, ipi_queue_nolock);
 
 extern CPU_LOCAL struct ipi_endpoint_s ipi_endpoint;
 

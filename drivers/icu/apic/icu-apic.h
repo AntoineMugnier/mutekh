@@ -19,22 +19,24 @@
 
 */
 
-#ifndef __ICU_8259_PRIVATE_H_
-#define __ICU_8259_PRIVATE_H_
 
+#ifndef DRIVER_ICU_apic_H_
+#define DRIVER_ICU_apic_H_
+
+#include <device/icu.h>
 #include <device/device.h>
-#include "icu-8259.h"
 
-struct icu_8259_handler_s
-{
-  dev_irq_t		*hndl;
-  void			*data;
-};
+#include <hexo/local.h>
 
-struct icu_8259_private_s
-{
-  struct icu_8259_handler_s	table[ICU_8259_MAX_LINES];
-};
+extern CPU_LOCAL struct device_s apic_dev;
+
+/* icu device functions */
+
+DEV_INIT(icu_apic_init);
+DEVICU_ENABLE(icu_apic_enable);
+DEVICU_SETHNDL(icu_apic_sethndl);
+DEVICU_DELHNDL(icu_apic_delhndl);
+DEV_CLEANUP(icu_apic_cleanup);
 
 #endif
 

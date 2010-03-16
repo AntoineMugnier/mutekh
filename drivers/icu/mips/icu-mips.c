@@ -65,6 +65,8 @@ DEVICU_ENABLE(icu_mips_enable)
 		pv->mask &= ~mask;
 
     pv->must_update = 1;
+
+    return 0;
 }
 
 DEVICU_SETHNDL(icu_mips_sethndl)

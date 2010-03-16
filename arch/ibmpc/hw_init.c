@@ -22,7 +22,7 @@
 #include <drivers/enum/pci/enum-pci.h>
 #include <drivers/enum/isapnp/enum-isapnp.h>
 #include <drivers/net/ne2000/net-ne2000.h>
-#include <drivers/lcd/s1d15g00/s1d15g00.h>
+#include <drivers/icu/apic/icu-apic.h>
 
 #include <device/device.h>
 #include <device/driver.h>
@@ -73,9 +73,8 @@ struct device_s enum_isapnp;
 extern const uint8_t mutek_logo_320x200[320*200];
 #endif
 
-#if defined(CONFIG_DRIVER_ICU)
+#if defined(CONFIG_DRIVER_ICU_8259)
 struct device_s icu_dev;
-struct device_s apic_icu_dev;
 #endif
 
 #ifdef CONFIG_MUTEK_CONSOLE
@@ -86,17 +85,17 @@ void arch_hw_init()
 {
   /********* ICU init ******************************** */
 
-#if defined(CONFIG_DRIVER_ICU)
+#if defined(CONFIG_DRIVER_ICU_8259)
 	device_init(&icu_dev);
-# if defined(CONFIG_DRIVER_ICU_8259)
-	icu_dev.addr[ICU_ADDR_MASTER] = 0x0020;
-	icu_dev.addr[ICU_ADDR_SLAVE] = 0x00a0;
-	icu_8259_init(&icu_dev, NULL);
+	icu_dev.addr[0] = 0x20;
+	icu_dev.addr[1] = 0xa0;
 
-	cpu_interrupt_sethandler_device(&icu_dev);
-# else
-#  error CONFIG_DRIVER_ICU case not handled in hw_init()
+# if defined(CONFIG_DRIVER_ICU_APIC)
+	icu_dev.icudev = CPU_LOCAL_ADDR(apic_dev);
+	icu_dev.irq = 0;
 # endif
+
+	icu_8259_init(&icu_dev, NULL);
 #endif
 
 	/********* TTY init ******************************** */
@@ -118,8 +117,10 @@ void arch_hw_init()
 # if defined(CONFIG_DRIVER_CHAR_VGATTY)
 	tty_dev.addr[VGA_TTY_ADDR_BUFFER] = 0x000b8000;
 	tty_dev.addr[VGA_TTY_ADDR_CRTC] = 0x03d4;
+#  if defined(CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD)
 	tty_dev.irq = 1;
 	tty_dev.icudev = &icu_dev;
+#  endif
 	tty_vga_init(&tty_dev, NULL);
 # else
 #  warning CONFIG_DRIVER_TTY case not handled in hw_init()

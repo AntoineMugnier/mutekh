@@ -36,6 +36,7 @@
 
 DEVICU_ENABLE(icu_arm_enable)
 {
+	return 0;
 }
 
 DEVICU_SETHNDL(icu_arm_sethndl)

@@ -39,6 +39,8 @@ DEVICU_ENABLE(icu_soclib_enable)
 	  cpu_mem_write_32(dev->addr[0] + ICU_SOCLIB_REG_IER_SET, endian_le32(1 << irq));
   else
 	  cpu_mem_write_32(dev->addr[0] + ICU_SOCLIB_REG_IER_CLR, endian_le32(1 << irq));
+
+  return 0;
 }
 
 DEVICU_SETHNDL(icu_soclib_sethndl)

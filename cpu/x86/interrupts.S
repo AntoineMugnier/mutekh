@@ -131,6 +131,9 @@ PUT_ENTRY(1f)
 	add	$20, %esp
 	jmp	x86_interrupt_end
 
+
+#ifdef CONFIG_HEXO_IRQ
+
 .globl x86_interrupt_hw_entry
 .align ENTRY_ALIGN
 x86_interrupt_hw_entry:
@@ -229,16 +232,22 @@ PUT_ENTRY(5b)
 PUT_ENTRY(5c)
 PUT_ENTRY(5d)
 PUT_ENTRY(5e)
-PUT_ENTRY(5f)
+
+/* entry 0x5f is a direct iret */
+.align ENTRY_ALIGN
+        iret
 
 3:
-#ifdef CONFIG_HEXO_USERMODE
+# ifdef CONFIG_HEXO_USERMODE
 	call	x86_seg_restore
-#endif
+# endif
 	pushl	%edi
 	call	CLS_SEG(:) *(cpu_interrupt_handler)
 	add	$4, %esp
 	jmp	x86_interrupt_end
+
+#endif
+
 
 .globl x86_interrupt_sys_entry
 .align ENTRY_ALIGN

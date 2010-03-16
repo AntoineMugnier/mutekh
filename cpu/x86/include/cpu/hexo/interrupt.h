@@ -55,6 +55,9 @@
 /** interrupts entry tampline code size  */
 #define CPU_INTERRUPT_ENTRY_ALIGN	16
 
+/** direct iret entry, used for cpu wakeup ipis */
+#define CPU_HWINT_VECTOR_IRET           0x5f
+
 void x86_interrupt_hw_entry(void);
 void x86_interrupt_ex_entry(void);
 void x86_interrupt_sys_entry(void);

@@ -72,7 +72,3 @@ void cpu_init(void)
 #endif
 }
 
-void cpu_start_other_cpu(void)
-{
-}
-

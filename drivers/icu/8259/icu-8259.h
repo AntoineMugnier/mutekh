@@ -26,11 +26,6 @@
 #include <device/icu.h>
 #include <device/device.h>
 
-/* devices addresses slots */
-
-#define ICU_ADDR_MASTER		0
-#define ICU_ADDR_SLAVE		1
-
 /* icu device functions */
 
 DEV_INIT(icu_8259_init);
@@ -38,6 +33,8 @@ DEVICU_ENABLE(icu_8259_enable);
 DEVICU_SETHNDL(icu_8259_sethndl);
 DEVICU_DELHNDL(icu_8259_delhndl);
 DEV_CLEANUP(icu_8259_cleanup);
+
+#define ICU_8259_MAX_LINES 16
 
 #endif
 

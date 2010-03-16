@@ -30,7 +30,8 @@
 #include <hexo/local.h>
 
 #include "pmode.h"
-#include "apic.h"
+#include "msr.h"
+#include <drivers/icu/apic/apic.h>
 
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	8
@@ -46,11 +47,6 @@
 #define CPU_GPREG_ECX	6
 #define CPU_GPREG_EAX	7
 		
-/**
-   x86 apic boot strap processor (BSP)
-   @return true if processor is the bootstrap processor
-*/
-
 static inline bool_t
 cpu_isbootstrap(void)
 {
@@ -99,9 +95,8 @@ extern volatile CPU_LOCAL struct cpu_x86_tss_s cpu_tss;
 static inline cpu_id_t cpu_id(void)
 {
 #ifdef CONFIG_ARCH_SMP
-  cpu_x86_apic_t *apic = cpu_apic_get_regaddr();
-
-  return cpu_mem_read_32((uintptr_t)&apic->lapic_id) >> 24;
+  uintptr_t x = cpu_x86_read_msr(IA32_APIC_BASE_MSR) & ~0xfff;
+  return cpu_mem_read_32(x + APIC_REG_LAPIC_ID) >> 24;
 #else
   return 0;
 #endif

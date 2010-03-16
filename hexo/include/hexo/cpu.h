@@ -34,9 +34,6 @@
 /** init system wide cpu data */
 error_t cpu_global_init(void);
 
-/** send hardware reset/init signal to non first CPUs */
-void cpu_start_other_cpu(void);
-
 /** Setup CPU specific data */
 void cpu_init(void);
 

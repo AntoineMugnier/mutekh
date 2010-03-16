@@ -40,8 +40,8 @@ struct device_s;
 struct driver_s;
 
 /** ICU device class enable() function template */
-#define DEVICU_ENABLE(n)	void (n) (struct device_s *dev, uint_fast8_t irq, \
-					  bool_t enable, reg_t flags)
+#define DEVICU_ENABLE(n)	error_t (n) (struct device_s *dev, uint_fast8_t irq, \
+                                             bool_t enable, reg_t flags)
 
 /** ICU device class enable() function type. Enable or Disable
     interrupt line.
@@ -107,16 +107,16 @@ typedef DEVICU_DELHNDL(devicu_delhndl_t);
 
 
 
+struct ipi_endpoint_s;
+
 /** ICU device class sendipi() function template */
-#define DEVICU_SENDIPI(n)	error_t (n) (struct device_s *dev, void *cpu_icu_identifier)
+#define DEVICU_SENDIPI(n)	error_t (n) (struct ipi_endpoint_s *endpoint)
 /** ICU device class sendipi() function type. send an ipi to specified processor. */
 typedef DEVICU_SENDIPI(devicu_sendipi_t);
 /** ICU device class sendipi() function shortcut */
-#define dev_icu_sendipi(dev, ...) (dev)->drv->f.icu.f_sendipi(dev, __VA_ARGS__ )
+#define dev_icu_sendipi(dev, ...) (dev)->drv->f.icu.f_sendipi(__VA_ARGS__ )
 
 
-
-struct ipi_endpoint_s;
 
 /** ICU device class setupipi() function template */
 #define DEVICU_SETUP_IPI_EP(n)	error_t (n) (struct device_s *dev, \

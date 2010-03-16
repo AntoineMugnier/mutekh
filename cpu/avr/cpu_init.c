@@ -36,10 +36,6 @@ struct cpu_cld_s *cpu_init(uint_fast8_t cpu_id)
   return NULL;
 }
 
-void cpu_start_other_cpu(void)
-{
-}
-
 uint_fast8_t cpu_id(void)
 {
   return 0;

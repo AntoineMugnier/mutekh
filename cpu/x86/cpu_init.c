@@ -30,7 +30,6 @@
 #include <hexo/cpu.h>
 
 #include <cpu/hexo/pmode.h>
-#include <cpu/hexo/apic.h>
 #include <cpu/hexo/msr.h>
 
 /** pointer to cpu local storage itself */
@@ -95,6 +94,7 @@ cpu_global_init(void)
 			 CPU_X86_GATE_INT32, 0, 0);
     }
 
+#ifdef CONFIG_HEXO_IRQ
   /* fill IDT with hardware interrupts entry points */
 
   for (i = 0; i < CPU_HWINT_VECTOR_COUNT; i++)
@@ -105,6 +105,7 @@ cpu_global_init(void)
 			 ARCH_GDT_CODE_INDEX, entry,
 			 CPU_X86_GATE_INT32, 0, 0);
     }
+#endif
 
   /* fill IDT with syscall entry points */
 
@@ -119,7 +120,8 @@ cpu_global_init(void)
 
 #ifdef CONFIG_ARCH_SMP
   /* copy boot section below 1Mb for slave CPUs bootup */
-  memcpy((void*)ARCH_SMP_BOOT_ADDR, (char*)&__boot_start, (char*)&__boot_end - (char*)&__boot_start);
+  memcpy((void*)CONFIG_CPU_X86_SMP_BOOT_ADDR,
+         (char*)&__boot_start, (char*)&__boot_end - (char*)&__boot_start);
 #endif
 
   return 0;
@@ -172,33 +174,9 @@ cpu_x86_segdesc_free(cpu_x86_segsel_t sel)
   lock_release(&gdt_lock);  
 }
 
-#ifdef CONFIG_ARCH_SMP
-static void cpu_x86_init_apic()
-{
-  cpu_x86_apic_t *apic = (void*)ARCH_SMP_LOCAL_APICADDR;
-  uint32_t i;
-
-  /* relocate APIC */
-  cpu_apic_set_regaddr(apic);
-  /* update local APIC id */
-  //  cpu_mem_write_32((uintptr_t)&apic->lapic_id, cpu_id << 24);
-
-  /* enable CPU local APIC */
-  i = cpu_mem_read_32((uintptr_t)&apic->spurious_int);
-  i |= 0x100;
-  cpu_mem_write_32((uintptr_t)&apic->spurious_int, i);
-}
-#endif
-
 void cpu_init(void)
 {
   uint_fast16_t		id = cpu_id();
-
-  if (id >= CONFIG_CPU_MAXCOUNT)
-    {
-      asm volatile ("cli \n"
-		    "hlt \n");
-    }
 
   /* set GDT pointer */
   cpu_x86_set_gdt(gdt, ARCH_GDT_SIZE);
@@ -212,8 +190,6 @@ void cpu_init(void)
   cpu_x86_codeseg_use(ARCH_GDT_CODE_INDEX, 0);
 
 #ifdef CONFIG_ARCH_SMP
-  /* enable and initialize x86 APIC */
-  cpu_x86_init_apic();
 
   /* setup cpu local storage */
   void			*cls;
@@ -232,6 +208,7 @@ void cpu_init(void)
   cpu_local_storage_seg[id] = cls_sel;
   cpu_x86_datasegfs_use(cls_sel, 0);
   CPU_LOCAL_SET(__cpu_data_base, cls);
+
 #endif
 
 #ifdef CONFIG_HEXO_USERMODE
@@ -267,34 +244,5 @@ void cpu_init(void)
  err_cls:
 #endif
   ;
-}
-
-void cpu_start_other_cpu(void)
-{
-#ifdef CONFIG_ARCH_SMP
-  cpu_x86_apic_t	*apic = cpu_apic_get_regaddr();
-  uint32_t		i;
-
-  /* broadcast an INIT IPI to other CPU */
-  cpu_mem_write_32((uintptr_t)&apic->icr_0_31, 0x000c4500);
-
-  /* 10 ms delay */
-  for (i = 0; i < 4000000; i++)
-    asm volatile ("nop\n");
-
-  assert((ARCH_SMP_BOOT_ADDR & 0xfff00fff) == 0);
-
-  uint32_t icr_value = 0x000c4600 | (ARCH_SMP_BOOT_ADDR >> 12);
-
-  /* broadcast an SIPI IPI to other CPU */
-  cpu_mem_write_32((uintptr_t)&apic->icr_0_31, icr_value);
-
-  /* 200 us delay */
-  for (i = 0; i < 80000; i++)
-    asm volatile ("nop\n");
-
-  /* broadcast an SIPI IPI to other CPU */
-  cpu_mem_write_32((uintptr_t)&apic->icr_0_31, icr_value);
-#endif
 }
 

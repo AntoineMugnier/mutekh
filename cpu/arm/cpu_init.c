@@ -106,10 +106,3 @@ void cpu_init(void)
 	__arm_exception_setup();
 }
 
-void cpu_start_other_cpu(void)
-{
-#ifdef CONFIG_ARCH_SMP
-
-#endif
-}
-
