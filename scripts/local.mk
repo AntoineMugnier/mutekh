@@ -47,7 +47,7 @@ ifeq ($(wildcard $(2)/$(1:.o=.S)),$(2)/$(1:.o=.S))
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be ASM file)
 
-$(3)/$(1): $(2)/$(1:.o=.S) $(OBJ_DIR)/.done_pre_header_list
+$(3)/$(1): $(2)/$(1:.o=.S) $(OBJ_DIR)/.done_pre_header_list $(OBJ_DIR)/config.h
 	@echo '    AS      ' $$(notdir $$@)
 	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
 	cd $(dir $(3)/$(1)) ; \
