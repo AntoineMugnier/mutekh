@@ -122,7 +122,7 @@ int app_start()
       pthread_barrier_init(&start_barrier, NULL, 7);
       pthread_create((pthread_t*)&demux.thread, NULL, (start_routine_t)run_task, (void*)&demux);
       pthread_create((pthread_t*)&libu.thread, NULL, (start_routine_t)run_task, (void*)&libu);
-      start = 1;
+      start = 1234;
       break;
 
     case 1:
@@ -139,7 +139,7 @@ int app_start()
       pthread_create((pthread_t*)&ramdac.thread, NULL, (start_routine_t)run_task, (void*)&ramdac);
     }
 
-  while (!start)
+  while (start != 1234)
     ;
 
   return 0;
