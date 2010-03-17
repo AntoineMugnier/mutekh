@@ -1,191 +1,64 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright (C) 2010, Joel Porquet <joel.porquet@lip6.fr>
+    Copyright (C) 2010, Becoulet <alexandre.becoulet@free.fr>
+
+*/
+
+
 #include <hexo/error.h>
 #include <hexo/types.h>
 #include <hexo/context.h>
-#include <hexo/interrupt.h>
-#include <hexo/cpu.h>
-#include <stdlib.h>
-#include <stdio.h>
 
 #include <libunix/syscall.h>
 #include <libunix/libunix.h>
-#include <libunix/process.h>
 
-/*
-
-exit
-fork
-read
-write
-open
-close
-waitpid
-creat
-link
-unlink
-execve
-chdir
-time
-mknod
-chmod
-lchmod
-stat
-lseek
-getpid
-mount
-setuid
-getuid
-stime
-ptrace
-alarm
-nice
-sync
-kill
-setgid
-getgid
-umount
-setpgid
-umask
-chroot
-dup2
-getppid
-setpgrp
-setsid
-sigaction
-symlink
-lstat
-readdir
-mmap
-munmap
-clone
-chown
-getcwd
-vfork
-
-*/
-
-
-extern struct unix_process_s *unix_process_current;
-
-reg_t unix_sys_invalid(void)
-{
-  puts("invalid syscall\n");
-  return 0;
-}
-
-reg_t unix_sys_fork(void)
-{
-  struct unix_process_s *ps_child;
-  struct unix_process_s *ps_parent;
-
-#ifdef CONFIG_UNIX_DEBUG
-  puts("fork\n");
-#endif
-
-  /*     CONTEXT_LOCAL_SET(unix_process_current, ps_parent); */
-
-  /*     ps_child = unix_create_process(ps_parent); */
-
-  /*     memcpy(&(ps_child->stack_vaddr_start), */
-  /* 	   &(ps_parent->stack_vaddr_start), */
-  /* 	   abs(ps_child->stack_vaddr_end - ps_child->stack_vaddr_start)); */
-
-  /*     unix_start_process(ps_child); */
-
-  return 0;
-}
-
-reg_t unix_sys_execve(const char *filename, char *const argv [], char *const envp[])
-{
-#ifdef CONFIG_UNIX_DEBUG
-  puts("execve\n");
-#endif
-
-  return 0;
-}
-
-struct unix_syscall_s unix_syscall_table[] =
+static const struct libunix_syscall_s
+unix_syscall_table[LIBUNIX_SYSCALL_COUNT] =
   {
-    { .argc = 0, .call = unix_sys_invalid },
-    { .argc = 0, .call = unix_sys_fork },
-    { .argc = 3, .call = unix_sys_execve },
+    /* Vfs related syscalls */
+
+    [LIBUNIX_SYS_OPEN]   = { .argc = 3, .call = libunix_sys_open },
+    [LIBUNIX_SYS_CREAT]  = { .argc = 2, .call = libunix_sys_creat },
+    [LIBUNIX_SYS_READ]   = { .argc = 3, .call = libunix_sys_read },
+    [LIBUNIX_SYS_WRITE]  = { .argc = 3, .call = libunix_sys_write },
+    [LIBUNIX_SYS_CLOSE]  = { .argc = 1, .call = libunix_sys_close },
+    [LIBUNIX_SYS_FSTAT]  = { .argc = 2, .call = libunix_sys_fstat },
+    [LIBUNIX_SYS_LINK]   = { .argc = 2, .call = libunix_sys_link },
+    [LIBUNIX_SYS_UNLINK] = { .argc = 1, .call = libunix_sys_unlink },
+    [LIBUNIX_SYS_LSEEK]  = { .argc = 4, .call = libunix_sys_lseek },
+    [LIBUNIX_SYS_CHDIR]  = { .argc = 1, .call = libunix_sys_chdir },
+
+    /* Process related syscalls */
+
+    [LIBUNIX_SYS_EXECVE] = { .argc = 3, .call = libunix_sys_execve },
+    [LIBUNIX_SYS_FORK]   = { .argc = 1, .call = libunix_sys_fork },
+    [LIBUNIX_SYS_EXIT]   = { .argc = 1, .call = libunix_sys_exit },
+    [LIBUNIX_SYS_GETPID] = { .argc = 0, .call = libunix_sys_getpid },
+    [LIBUNIX_SYS_WAIT4]  = { .argc = 4, .call = libunix_sys_wait4 },
+    [LIBUNIX_SYS_KILL]   = { .argc = 2, .call = libunix_sys_kill },
+
+    /* Memory related syscalls */
+
+    [LIBUNIX_SYS_SBRK]   = { .argc = 1, .call = libunix_sys_sbrk },
+
+    /* Time realted functions */
+
+    [LIBUNIX_SYS_TIME]   = { .argc = 1, .call = libunix_sys_time },
   };
 
-#define UNIX_SYSCALLTABLE_SIZE 3
-
-/*
-  argc < 6:
-  1->ebx
-  2->ecx
-  3->edx
-  4->esi
-  5->edi
-
-  argc == 6:
-  ptr->ebx
-*/
-
-#define CPU_GPREG_EDI   0
-#define CPU_GPREG_ESI   1
-#define CPU_GPREG_EBP   2
-#define CPU_GPREG_ESP   3
-#define CPU_GPREG_EBX   4
-#define CPU_GPREG_EDX   5
-#define CPU_GPREG_ECX   6
-#define CPU_GPREG_EAX   7
-
-CPU_SYSCALL_HANDLER(unix_syscall_handler)
-{
-  puts("yala");
-  return;
-
-  if (regtable[CPU_GPREG_EAX] < UNIX_SYSCALLTABLE_SIZE)
-    {
-      struct unix_syscall_s *f = &unix_syscall_table[regtable[CPU_GPREG_EAX]];
-
-      switch(f->argc)
-	{
-	case 0:
-	  f->call();
-	  break;
-	case 1:
-	  f->call(regtable[CPU_GPREG_EBX]);
-	  break;
-	case 2:
-	  f->call(regtable[CPU_GPREG_EBX],
-		  regtable[CPU_GPREG_ECX]);
-	  break;
-	case 3:
-	  f->call(regtable[CPU_GPREG_EBX],
-		  regtable[CPU_GPREG_ECX],
-		  regtable[CPU_GPREG_EDX]);
-	  break;
-	case 4:
-	  f->call(regtable[CPU_GPREG_EBX],
-		  regtable[CPU_GPREG_ECX],
-		  regtable[CPU_GPREG_EDX],
-		  regtable[CPU_GPREG_ESI]);
-	  break;
-	case 5:
-	  f->call(regtable[CPU_GPREG_EBX],
-		  regtable[CPU_GPREG_ECX],
-		  regtable[CPU_GPREG_EDX],
-		  regtable[CPU_GPREG_ESI],
-		  regtable[CPU_GPREG_EDI]);
-	  break;
-	case 6:
-	  {
-	    reg_t *args = (reg_t*)regtable[CPU_GPREG_EBX];
-
-	    f->call(args[0], args[1],
-		    args[2], args[3],
-		    args[4], args[5]);
-	  }
-	  break;
-	default:
-	  unix_syscall_table[0].call();
-	  break;
-	}
-    }
-  else
-	  unix_syscall_table[0].call();
-}

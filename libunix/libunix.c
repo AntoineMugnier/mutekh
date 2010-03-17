@@ -20,10 +20,8 @@
 
 */
 
-#include <libunix.h>
-
-CONTAINER_FUNC    (libunix_proc_table, HASHLIST, , libunix_proc, pid);
-CONTAINER_KEY_FUNC(libunix_proc_table, HASHLIST, , libunix_proc, pid);
-
-CONTAINER_FUNC    (libunix_proc_tree, CLIST, , libunix_chld);
+error_t libunix_init(struct libunix_s *lu)
+{
+  return 0;
+}
 

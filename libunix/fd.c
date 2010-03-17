@@ -22,8 +22,6 @@
 
 #include <libunix.h>
 
-CONTAINER_FUNC    (libunix_proc_table, HASHLIST, , libunix_proc, pid);
-CONTAINER_KEY_FUNC(libunix_proc_table, HASHLIST, , libunix_proc, pid);
-
-CONTAINER_FUNC    (libunix_proc_tree, CLIST, , libunix_chld);
+OBJECT_FUNC   (libunix_fd_obj, REFCOUNT, , libunix_fd, obj_entry);
+CONTAINER_FUNC(libunix_fd_table, ARRAY, , libunix_fd);
 

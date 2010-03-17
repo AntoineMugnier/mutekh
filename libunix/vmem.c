@@ -22,8 +22,6 @@
 
 #include <libunix.h>
 
-CONTAINER_FUNC    (libunix_proc_table, HASHLIST, , libunix_proc, pid);
-CONTAINER_KEY_FUNC(libunix_proc_table, HASHLIST, , libunix_proc, pid);
-
-CONTAINER_FUNC    (libunix_proc_tree, CLIST, , libunix_chld);
+CONTAINER_FUNC(libunix_vma_table, CLIST, , libunix_vma);
+CONTAINER_KEY_FUNC(libunix_vma_table, CLIST, , libunix_vma, start);
 

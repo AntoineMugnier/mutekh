@@ -20,10 +20,11 @@
 
 */
 
-#include <libunix.h>
+#include <libunix/syscall.h>
+#include <libunix/libunix.h>
 
-CONTAINER_FUNC    (libunix_proc_table, HASHLIST, , libunix_proc, pid);
-CONTAINER_KEY_FUNC(libunix_proc_table, HASHLIST, , libunix_proc, pid);
-
-CONTAINER_FUNC    (libunix_proc_tree, CLIST, , libunix_chld);
+reg_t libunix_sys_time(struct libunix_time_s *tloc)
+{
+  return -EINVAL;
+}
 

@@ -20,10 +20,36 @@
 
 */
 
-#include <libunix.h>
+#include <libunix/syscall.h>
+#include <libunix/libunix.h>
 
-CONTAINER_FUNC    (libunix_proc_table, HASHLIST, , libunix_proc, pid);
-CONTAINER_KEY_FUNC(libunix_proc_table, HASHLIST, , libunix_proc, pid);
+sreg_t libunix_sys_execve(const char *path, char **argv, char **envp)
+{
+  return -EINVAL;
+}
 
-CONTAINER_FUNC    (libunix_proc_tree, CLIST, , libunix_chld);
+sreg_t libunix_sys_fork(reg_t flags)
+{
+  return -EINVAL;
+}
+
+sreg_t libunix_sys_exit(sreg_t c)
+{
+  return -EINVAL;
+}
+
+sreg_t libunix_sys_getpid()
+{
+  return -EINVAL;
+}
+
+sreg_t libunix_sys_wait4(reg_t pid, reg_t *stat_addr, reg_t options, struct libunix_rusage_s *ru)
+{
+  return -EINVAL;
+}
+
+sreg_t libunix_sys_kill(reg_t pid, reg_t sig)
+{
+  return -EINVAL;
+}
 
