@@ -83,7 +83,7 @@ DEVICU_SENDIPI(icu_apic_sendipi)
 
   /* select quick return vector if no request ipi pending */
   icr_low = ipi_queue_nolock_isempty(&endpoint->ipi_fifo)
-    ? CPU_HWINT_VECTOR_IRET : APIC_IPI_VECTOR;
+    ? APIC_IPI_VECTOR : APIC_IPI_RQ_VECTOR;
   icr_low += CPU_HWINT_VECTOR;
 
   /* send ipi */
@@ -100,8 +100,6 @@ DEVICU_SENDIPI(icu_apic_sendipi)
 
 DEVICU_ENABLE(icu_apic_enable)
 {
-  uint32_t mask = enable ? 0 : APIC_LVT_MASKED;
-
 #ifdef CONFIG_DRIVER_ICU_8259
   if (irq < ICU_8259_MAX_LINES)
     return 0;
@@ -154,13 +152,17 @@ static CPU_INTERRUPT_HANDLER(icu_apic_cpu_handler)
 
   assert(irq < CPU_HWINT_VECTOR_COUNT);
 
-#ifdef CONFIG_HEXO_IPI
-  if (irq == APIC_IPI_VECTOR)
-    /* call ipi processing */
-    ipi_process_rq();
-  else
-#endif
+  switch (irq)
     {
+#ifdef CONFIG_HEXO_IPI
+    case APIC_IPI_RQ_VECTOR:
+      /* call ipi processing */
+      ipi_process_rq();
+    case APIC_IPI_VECTOR:
+      break;
+#endif
+
+    default: {
       struct icu_apic_handler_s *h = pv->table + irq;
 
       /* call interrupt handler */
@@ -168,6 +170,8 @@ static CPU_INTERRUPT_HANDLER(icu_apic_cpu_handler)
         h->hndl(h->data);
       else
         printk("APIC: lost interrupt %i\n", irq);
+    }
+
     }
 
 #ifdef CONFIG_DRIVER_ICU_8259
@@ -290,13 +294,13 @@ DEV_INIT(icu_apic_init)
 
   icu_apic_setup(dev);
 
+  dev->drv = &icu_apic_drv;
+
 #ifdef CONFIG_ARCH_IBMPC_SMP
   /* wake up other processors if we are bootstrap */
   if (cpu_isbootstrap())
     icu_apic_wake_others(dev);
 #endif
-
-  dev->drv = &icu_apic_drv;
 
   return 0;
 }

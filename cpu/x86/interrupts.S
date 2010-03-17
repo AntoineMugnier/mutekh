@@ -232,10 +232,7 @@ PUT_ENTRY(5b)
 PUT_ENTRY(5c)
 PUT_ENTRY(5d)
 PUT_ENTRY(5e)
-
-/* entry 0x5f is a direct iret */
-.align ENTRY_ALIGN
-        iret
+PUT_ENTRY(5f)
 
 3:
 # ifdef CONFIG_HEXO_USERMODE

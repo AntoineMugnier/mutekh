@@ -60,8 +60,8 @@ cpu_interrupt_process(void)
 #ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "sei\n"
-    /* nop is required here to let enough time for pending interrupts
-       to execute on some processors */
+    /* nop is required here to let enough time for pending interrupts execution */
+		    "nop\n"
 		    "nop\n"
 		    :
 		    :
@@ -143,13 +143,17 @@ static inline void cpu_interrupt_wait(void)
   reg_t	tmp;
 
   __asm__ volatile (
-		    "sei			\n"
-		    /* enable sleep mode first */
+		    /* enable sleep mode */
 		    "in		%0, 0x35	\n"
 		    "ori	%0, 0x40	\n"
 		    "out	0x35, %0	\n"
-		    "sleep			\n"
+		    /* then enable interrupts and sleep (atomic) */
+		    "sei ; sleep		\n"
+		    /* disable sleep mode */
+		    "andi	%0, 0xbf	\n"
+		    "out	0x35, %0	\n"
 		    : "=d" (tmp)
+		    :: "memory"
 		    );
 # endif
 }

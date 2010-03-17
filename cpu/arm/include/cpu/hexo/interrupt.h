@@ -185,7 +185,6 @@ cpu_is_interruptible(void)
 static inline void cpu_interrupt_wait(void)
 {
 # ifdef CONFIG_HEXO_IRQ
-  cpu_interrupt_enable();
 #  if defined(__ARM_ARCH_6K__)
     THUMB_TMP_VAR;
 
@@ -194,7 +193,8 @@ static inline void cpu_interrupt_wait(void)
 		"mcr p15, 0, %[zero], c7, c0, 4  \n\t"
         ARM_TO_THUMB
 		/*:*/  THUMB_OUT(:)
-        : [zero] "r" (0) );
+        : [zero] "r" (0)
+	: "memory" );
 #  else
 # error CONFIG_CPU_WAIT_IRQ should not be defined here
 #  endif

@@ -37,6 +37,7 @@ struct icu_apic_private_s
 };
 
 #define APIC_IPI_VECTOR 0x5e
+#define APIC_IPI_RQ_VECTOR 0x5f
 
 #endif
 

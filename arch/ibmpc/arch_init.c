@@ -181,12 +181,12 @@ void arch_init()
 
       cpu_init();
 
-#ifdef CONFIG_DRIVER_ICU_APIC
-      apic_init();
-#endif
-
 #ifdef CONFIG_HEXO_MMU
       mmu_cpu_init();
+#endif
+
+#ifdef CONFIG_DRIVER_ICU_APIC
+      apic_init();
 #endif
 
       lock_release(&cpu_init_lock);

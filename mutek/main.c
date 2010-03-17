@@ -120,8 +120,6 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 
   arch_start_other_cpu(); /* let other CPUs enter main_smp() */
 
-  cpu_interrupt_disable();
-
   mutek_start_smp();
 
   return 0;
@@ -177,8 +175,6 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
 {
   cpu_exception_sethandler(fault_handler);
 
-  cpu_interrupt_enable();
-
   printk("CPU %i is up and running.\n", cpu_id());
 
 #if defined(CONFIG_COMPILE_INSTRUMENT)
@@ -189,8 +185,8 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
   if (cpu_isbootstrap())
     {
       app_start();
-      cpu_interrupt_disable();
 #if defined(CONFIG_MUTEK_SCHEDULER)
+      cpu_interrupt_disable();
       context_destroy(&main_ctx.context);
       sched_lock();
       sched_context_exit();
@@ -201,9 +197,9 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
 #ifdef CONFIG_MUTEK_SMP_APP_START
       app_start();
 #endif
-      cpu_interrupt_disable();
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
+      cpu_interrupt_disable();
       sched_lock();
       sched_context_exit();
 #endif

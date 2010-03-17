@@ -92,6 +92,7 @@ cpu_interrupt_process(void)
     /* nop is required here to let enough time for pending interrupts
        to execute on some processors */
 		    "nop\n"
+		    "nop\n"
 		    :
 		    :
     /* memory clobber is important here as cpu_interrupt_process()
@@ -168,8 +169,10 @@ cpu_is_interruptible(void)
 static inline void cpu_interrupt_wait(void)
 {
 # ifdef CONFIG_HEXO_IRQ
-  __asm__ volatile ("sti \n"
-                    "hlt \n");
+  /* sti ; hlt is guaranteed to be atomic */
+  __asm__ volatile ("sti; hlt \n"
+		    ::: "memory"
+		    );
 # endif
 }
 #endif
