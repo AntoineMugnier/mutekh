@@ -88,8 +88,6 @@ void __pthread_cancel_self(void)
 
 #endif /* CONFIG_PTHREAD_CANCEL */
 
-static reg_t	tmp_stack[64];
-
 /** end pthread execution */
 void
 pthread_exit(void *retval)
@@ -131,8 +129,9 @@ pthread_exit(void *retval)
   sched_lock();
 
   /* setup temp stack memory and jump to __pthread_cleanup() */
-  cpu_context_set((uintptr_t)(tmp_stack - 1) + sizeof(tmp_stack),
-		     __pthread_cleanup);
+  cpu_context_set(sched_tmp_stack() - sizeof (reg_t) +
+		  CONFIG_MUTEK_SCHEDULER_TMP_STACK_SIZE,
+		  __pthread_cleanup);
 }
 
 

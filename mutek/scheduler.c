@@ -91,6 +91,7 @@ struct scheduler_s
 #elif defined(CONFIG_HEXO_IPI) && defined(CONFIG_MUTEK_SCHEDULER_STATIC)
     struct ipi_endpoint_s *ipi_endpoint;
 #endif
+    uint8_t tmp_stack[CONFIG_MUTEK_SCHEDULER_TMP_STACK_SIZE];
 };
 
 #if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
@@ -284,6 +285,11 @@ void sched_unlock(void)
   assert(!cpu_is_interruptible());
 
   sched_queue_unlock(&__scheduler_get()->root);
+}
+
+uintptr_t sched_tmp_stack(void)
+{
+  return (uintptr_t)__scheduler_get()->tmp_stack;
 }
 
 void sched_context_init(struct sched_context_s *sched_ctx)

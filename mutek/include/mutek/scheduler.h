@@ -78,11 +78,17 @@ sched_get_current(void)
   return CONTEXT_LOCAL_GET(sched_cur);
 }
 
-/** lock main scheduler queue. */
+/** @this lock scheduler running queue associated with current context. */
 void sched_lock(void);
 
-/** release main scheduler queue. Must be used after thread entry */
+/** @this release scheduler queue associated with current
+    context. Must be used after scheduler context entry. */
 void sched_unlock(void);
+
+/** @this return a scheduler local temporary stack usable when the
+    scheduler is locked. This is useful during context self
+    exit/destroy. Must be called with scheduler locked. */
+uintptr_t sched_tmp_stack(void);
 
 /** initialize scheduler context. context_init(&sched_ctx->context)
     must be called before */
