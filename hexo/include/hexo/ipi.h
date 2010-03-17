@@ -30,6 +30,7 @@
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_dlist.h>
+#include <gpct/cont_slist.h>
 #include <hexo/gpct_lock_hexo.h>
 
 #include "error.h"
@@ -55,9 +56,7 @@ struct ipi_endpoint_s
     struct device_s *icu_dev;
     void *priv;
     ipi_queue_root_t ipi_fifo;
-#if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
-    CONTAINER_ENTRY_TYPE(DLIST) idle_cpu_queue_list_entry;
-#endif
+    CONTAINER_ENTRY_TYPE(SLIST) idle_cpu_queue_list_entry;
 };
 
 CONTAINER_FUNC(ipi_queue, DLIST, static inline, ipi_queue);
