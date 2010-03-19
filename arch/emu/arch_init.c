@@ -26,6 +26,7 @@
 #include <hexo/lock.h>
 #include <hexo/endian.h>
 #include <mutek/scheduler.h>
+#include <mutek/printk.h>
 
 #include <arch/hexo/emu_syscalls.h>
 
@@ -54,9 +55,20 @@ static void emu_data_remap(void)
 }
 #endif
 
+#ifdef CONFIG_EMU_EARLY_CONSOLE
+PRINTF_OUTPUT_FUNC(early_console_fd1)
+{
+  emu_do_syscall(EMU_SYSCALL_WRITE, 3, 1, str, len);  
+}
+#endif
+
 /* architecture specific init function */
 void arch_init()
 {
+#ifdef CONFIG_EMU_EARLY_CONSOLE
+  printk_set_output(early_console_fd1, NULL);
+#endif
+
 #if defined(CONFIG_ARCH_SMP)
     /* remap data+bss segment with SHARED attribute */
     emu_data_remap();
