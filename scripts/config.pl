@@ -31,6 +31,7 @@ use Term::ANSIColor;
 my @config_files;
 my @output_files;
 my %config_opts;
+my %inits;
 my $quiet_flag = 0;
 my $err_flag = 0;
 my $bld_path = ".";
@@ -115,11 +116,11 @@ sub debug
 #	Configuration constraints parsing
 ###############################################################################
 
-sub args_desc
+sub args_text
 {
     my ($location, $opts, $tag, @args) = @_;
 
-    $opts->{desc} .= join(" ", @args)." ";
+    $opts->{$tag} .= join(" ", @args)."\n";
 }
 
 sub args_list_concat
@@ -128,6 +129,17 @@ sub args_list_concat
 
     $opts->{$tag} ||= [];
     push(@{$opts->{$tag}}, @args);
+}
+
+sub args_word
+{
+    my ($location, $opts, $tag, @args) = @_;
+
+    if ($opts->{$tag}) {
+	error("$location: multiple `$tag' tags in use");
+    }
+
+    $opts->{$tag} = "@args";
 }
 
 sub args_list_add
@@ -208,6 +220,11 @@ sub args_range
 
 my %config_cmd =
 (
+ ""
+);
+
+my %config_cmd =
+(
  "exclude" => \&args_list_concat,
  "default" => \&args_default,
  "depend" => \&args_list_add,
@@ -221,7 +238,63 @@ my %config_cmd =
  "module" => \&args_module,
  "provide" => \&args_list_concat,
  "range" => \&args_range,
- "desc" => \&args_desc,
+ "desc" => \&args_text,
+);
+
+sub new_token_block
+{
+    my ($name, $file, $lnum) = @_;
+
+    my $opts;
+
+    if ($opts = $config_opts{$name}) {
+	error("$file:$lnum: `$name' token already declared ".
+	      "at $opts->{file}:$opts->{location}");
+	return undef;
+    }
+
+    $opts = $config_opts{$name} = {};
+    $opts->{location} = $lnum;
+    $opts->{file} = $file;
+    $opts->{name} = $name;
+    $opts->{depnotice} = [];
+
+    return ($opts, \%config_cmd);
+}
+
+my %init_cmd =
+(
+ "parent" => \&args_list_concat,
+ "code" => \&args_text,
+ "before" => \&args_list_concat,
+ "after" => \&args_list_concat,
+ "during" => \&args_word,
+);
+
+sub new_init_block
+{
+    my ($name, $file, $lnum) = @_;
+
+    my $init;
+
+    if ($init = $inits{$name}) {
+	error("$file:$lnum: `$name' init action already declared ".
+	      "at $init->{file}:$init->{location}");
+	return undef;
+    }
+
+    $init = $inits{$name} = {};
+    $init->{location} = $lnum;
+    $init->{file} = $file;
+    $init->{name} = $name;
+
+    return ($init, \%init_cmd);
+}
+
+my %config_blocks =
+(
+ "config" => \&new_token_block,
+ "init" => \&new_init_block,
 );
 
 my %processed_files;
@@ -244,8 +317,7 @@ sub read_tokens_file
 
     my $state = 0;
     my $lnum = 0;
-    my $blocks = 0;
-    my $name;
+    my $blk_name;
     my $opts;
 
     foreach my $line (<FILE>) {
@@ -255,41 +327,36 @@ sub read_tokens_file
 
 	# catch %config blocks start and end
 
-	if ($line =~ /^\s*%config\s+(\S+)/) {
+	if ($line =~ /^\s*%(\w+)\s+(\S+)/) {
 
-	    if ($1 eq "end") {
+	    $blk_name = $1;
+
+	    if ($2 eq "end") {
 
 		if (not $state) {
-		    error("$file:$lnum: unexpected `%config end'");
+		    error("$file:$lnum: unexpected `%$blk_name end'");
 		    next;
 		}
 
 		# set token default attribute to `undefined' if no default set
-
-		$state = 0;
+		$state = undef;
 
 	    } else {
 
 		if ($state) {
-		    error("$file:$lnum: unexpected `%config', previous `".
-			  $1."' block not terminated");
-		    $state = 0;
+		    error("$file:$lnum: unexpected `%$blk_name' block tag, previous ".
+			  "block not terminated.");
+		    $state = undef;
 		}
 
-		if ($opts = $config_opts{$1}) {
-		    error("$file:$lnum: `".$1."' block already declared ".
-			  "at $opts->{file}:$opts->{location}");
+		my $new_ = $config_blocks{$blk_name};
+
+		if (!$new_) {
+		    error("$file:$lnum: bad block type `%$blk_name'.");
 		    next;
 		}
 
-		$blocks++;
-		$name = $1;
-		$opts = $config_opts{$1} = {};
-		$opts->{location} = $lnum;
-		$opts->{file} = $file;
-		$opts->{name} = $name;
-		$opts->{depnotice} = [];
-		$state = 1;
+		($opts, $state) = $new_->($2, $file, $lnum);
 	    }
 
 	    next;
@@ -303,19 +370,19 @@ sub read_tokens_file
 
 	    my @line_l = split(/\s+/, $line);
 
-	    # get pointer on function for command
-	    if (my $func_ptr = $config_cmd{@line_l[0]}) {
-		# call command function
+	    # get pointer on function for tag
+	    if (my $func_ptr = $state->{@line_l[0]}) {
+		# call tag function
 		$func_ptr -> ("$file:$lnum", $opts, @line_l[0], @line_l[1..@line_l - 1]);
 	    } else {
 		# error if unknow function
-		error("$file:$lnum: unknown command `".@line_l[0]."' in `%config' block");
+		error("$file:$lnum: bad tag name `".@line_l[0]."' in `%$blk_name' block");
 	    }
 	}
     }
 
     if ($state) {
-	error("$file:$lnum: unexpected end of file, `%config end' expected");
+	error("$file:$lnum: unexpected end of file, `%$blk_name end' expected");
     }
 
     close(FILE);
@@ -346,6 +413,271 @@ sub explore_token_dirs
 	push @config_files, $rp;
 	$vars{CONFIGPATH} = dirname($rp);
 	read_tokens_file($ent);
+    }
+}
+
+###############################################################################
+#	Token name resolve
+###############################################################################
+
+# token name may have a condition attached
+
+sub tokens_resolve_config_cond
+{
+    my ( $opt, $str, $tag ) = @_;
+
+    my $res;
+
+    if ( not $str =~ /^(\w+)(.*)$/ ) {
+	error_loc($opt, "bad argument `$str` to `$tag' tag");
+	return undef;
+    }
+
+    if ( my $token = $config_opts{$1} ) {
+	$res = {
+	    token => $token,
+	    condition => $2,
+	};
+    }
+
+    return $res;
+}
+
+# token name may have value attached
+
+sub tokens_resolve_config_value
+{
+    my ( $opt, $str, $tag ) = @_;
+
+    my $res;
+
+    if ( not $str =~ /^(\w+)(?:=(.+))?$/ ) {
+	error_loc($opt, "bad argument `$str` to `$tag' tag");
+	return undef;
+    }
+
+    if ( my $token = $config_opts{$1} ) {
+	$res = {
+	    token => $token,
+	    value => defined $2 ? $2 : 'defined',
+	};
+    }
+
+    return $res;
+}
+
+sub tokens_resolve_config_bare
+{
+    my ( $opt, $str, $tag ) = @_;
+
+    return $config_opts{$str};
+}
+
+sub tokens_resolve_init
+{
+    my ( $opt, $str, $tag ) = @_;
+
+    return $inits{$str};
+}
+
+my %config_tokens_resolvers =
+(
+ "require" => \&tokens_resolve_config_cond,
+ "suggest" => \&tokens_resolve_config_cond,
+ "suggest_when" => \&tokens_resolve_config_cond,
+ "when" => \&tokens_resolve_config_cond,
+ "provide" => \&tokens_resolve_config_value,
+ "parent" => \&tokens_resolve_config_bare,
+ "depend" => \&tokens_resolve_config_bare,
+ "single" => \&tokens_resolve_config_bare,
+ "exclude" => \&tokens_resolve_config_bare,
+);
+
+my %init_tokens_resolvers =
+(
+ "parent" => \&tokens_resolve_config_bare,
+ "after" => \&tokens_resolve_init,
+ "before" => \&tokens_resolve_init,
+ "need" => \&tokens_resolve_init,
+ "during" => \&tokens_resolve_init,
+);
+
+sub tokens_resolve
+{
+    my ( $token_space, $resolvers ) = @_;
+
+    foreach my $opt ( values %$token_space ) {
+	# set check operation for token
+
+	foreach my $tag ( keys %$resolvers ) {
+
+	    my $r;
+	    $r = sub {
+		my $b = shift;
+
+		return $b if !defined $b;
+
+		if ( ref $b eq "HASH" ) {
+		    return $b;
+
+		} elsif ( ref $b eq "ARRAY" ) {
+		    my $a = [];
+		    foreach (@$b) {
+			my $e = $r->($_);
+			push @$a, $e if defined $e;
+		    }
+		    return $a;
+
+		} else {
+		    my $res;
+		    my $token;
+
+		    $res = $resolvers->{$tag}->( $opt, $b, $tag );
+
+		    if (!$res) {
+			error_loc($opt, "undeclared token `$b' used with `$tag' tag.");
+		    }
+
+		    return $res;
+		}
+	    };
+
+	    $opt->{$tag} = $r->($opt->{$tag});
+	}
+
+    }
+}
+
+###############################################################################
+#	Initialization actions
+###############################################################################
+
+my @init_actions;
+
+sub process_inits_rec
+{
+    my ( $init, $sinit, $order, $iorder ) = @_;
+
+    our %cycle;
+
+    if ( $cycle{$init} ) {
+	error_loc($init, "found cycle while processing `$order' tags");
+	return;
+    }
+
+    $cycle{$init} = 1;
+
+    sub process_inits_set
+    {
+        my ( $init, $sinit, $order, $iorder ) = @_;
+    
+        if ( $sinit->{"is$iorder"}->{$init} ) {
+	    error("initialization order conflict `$sinit->{name} $order $init->{name}'");
+	    return 1;
+        }
+    
+        debug(1, "$sinit->{name} $order $init->{name}");
+        $sinit->{"is$order"}->{$init} = 1;
+    
+        return 0;
+    }
+    
+    sub process_inits_chld
+    {
+        my ( $init, $sinit, $order, $iorder ) = @_;
+    
+        foreach my $c ( @{$init->{childs}} ) {
+	    process_inits_set( $c, $sinit, $order, $iorder );
+    	    process_inits_chld( $c, $sinit, $order, $iorder );
+        }
+    }
+
+    if ( $init->{$order} ) {
+	foreach my $c ( @{$init->{$order}} ) {
+	    next if process_inits_set( $c, $sinit, $order, $iorder );
+
+	    process_inits_chld( $c, $sinit, $order, $iorder );
+	    process_inits_rec( $c, $sinit, $order, $iorder );
+	}
+    }
+
+    if ( $init->{during} ) {
+	my $during = $init->{during};
+
+	process_inits_set( $during, $sinit, $order, $iorder ) if ( $init != $sinit );
+	process_inits_rec( $during, $sinit, $order, $iorder );
+    }
+
+    $cycle{$init} = 0;
+}
+
+sub process_inits
+{
+    foreach my $init ( values %inits ) {
+	$init->{defined} = !$init->{parent} || foreach_or_list( $init->{parent}, \&check_defined );
+    }
+
+    foreach my $init ( values %inits ) {
+	next if !$init->{defined};
+
+	# setup heirarchy
+	if ( my $during = $init->{during} ) {
+
+	    if ( $during->{defined} ) {
+
+		$during->{childs} ||= [];
+		push @{$during->{childs}}, $init;
+
+		if ( $during->{code} ) {
+		    error_loc($init, "action used with `during' tag has initialization code attached");
+		}
+
+	    } else {
+		warning_loc($init, "initialization action will not take place because `$during->{name}' is disabled") ;
+		next;
+	    }
+	}
+	push @init_actions, $init;
+    }
+
+    foreach my $init ( @init_actions ) {
+	process_inits_rec( $init, $init, "before", "after" );
+	process_inits_rec( $init, $init, "after", "before" );
+    };
+
+    return if $err_flag;
+
+    # reorder
+
+    for ( my $chg = 1; $chg--; ) {
+
+	for (my $i = 0; $i < scalar @init_actions; $i++) {
+	    my $a = @init_actions[$i];
+
+	    for (my $j = 0; $j < scalar @init_actions; $j++) {
+		next if $i == $j;
+		my $b = @init_actions[$j];
+
+		if (($i < $j && $a->{isafter}->{$b}) ||
+		    ($i > $j && $a->{isbefore}->{$b})) {
+		    @init_actions[$i] = $b;
+		    @init_actions[$j] = $a;
+		    $chg = 1;
+		    last;
+		}
+	    }
+	}
+    }
+
+}
+
+sub output_inits
+{
+    my ( $out, $actions, $indent ) = @_;
+
+    foreach my $init (@$actions) {
+	print {$out} "$indent/* $init->{name} */\n";
+	print {$out} "$indent".$init->{code};
     }
 }
 
@@ -527,7 +859,7 @@ sub check_definable
     # this code shows how to simple check constraints. Most functions
     # below does the same with diagnostic printing code inserted.
 
-    return 0 if !foreach_or_list( $opt->{parent}, \&check_defined );
+    return 0 if $opt->{parent} && !foreach_or_list( $opt->{parent}, \&check_defined );
     return 0 if !foreach_and_list( $opt->{depend}, \&foreach_or_list, \&check_defined );
     return 0 if !foreach_and_list( $opt->{single}, \&foreach_count_list, 1, \&check_defined );
     return 0 if foreach_or_list( $opt->{exclude}, \&check_defined );
@@ -815,83 +1147,8 @@ sub tokens_set_methods
     }
 }
 
-sub tokens_resolve
+sub tokens_provider
 {
-    foreach my $opt (values %config_opts) {
-	# set check operation for token
-
-	foreach my $tag (qw(parent require suggest depend
-			 suggest_when when single
-			 exclude provide)) {
-
-	    my $r;
-	    $r = sub {
-		my $b = shift;
-
-		return $b if !defined $b;
-
-		if ( ref $b eq "HASH" ) {
-		    return $b;
-
-		} elsif ( ref $b eq "ARRAY" ) {
-		    my $a = [];
-		    foreach (@$b) {
-			my $e = $r->($_);
-			push @$a, $e if defined $e;
-		    }
-		    return $a;
-
-		} else {
-		    my $res;
-		    my $token;
-
-		    if ($tag =~ /^(require|suggest|suggest_when|when)$/) {
-			# token name may have condition attached
-			if ( not $b =~ /^(\w+)(.*)$/ ) {
-			    error_loc($opt, "bad argument `$b` to `$tag' tag");
-			    return undef;
-			}
-
-			if ( $token = $config_opts{$1} ) {
-			    $res = {
-				token => $token,
-				condition => $2,
-			    };
-			}
-
-		    } elsif ($tag =~ /^(provide)$/) {
-			# token name may have value attached
-			if ( not $b =~ /^(\w+)(?:=(.+))?$/ ) {
-			    error_loc($opt, "bad argument `$b` to `$tag' tag");
-			    return undef;
-			}
-
-			if ( $token = $config_opts{$1} ) {
-			    $res = {
-				token => $token,
-				value => defined $2 ? $2 : 'defined',
-			    };
-			}
-
-		    } else {
-			# bare token name
-			$token = $res = $config_opts{$b};
-		    }
-
-		    if (!$res) {
-			error_loc($opt, "undeclared token `$b' used with `$tag' tag.");
-			return undef;
-		    }
-
-		    return $res;
-		}
-	    };
-
-	    $opt->{$tag} = $r->($opt->{$tag});
-	}
-
-    }
-
     # propagate harddep flag to dependencies
 
 #    for ( my $chg = 1; $chg--; ) {
@@ -1483,6 +1740,25 @@ sub write_py
     return 0;
 }
 
+sub write_inits
+{
+    my $file = "$bld_path/inits.c";
+
+    push @output_files, $file;
+
+    debug(1, "writing initialization code `$file'");
+
+    if (!open(FILE, ">".$file)) {
+	error(" unable to open `$file' to write initialization code");
+	return 1;
+    }
+
+    output_inits( \*FILE, \@init_actions );
+
+    close(FILE);
+    return 0;
+}
+
 ###############################################################################
 #	Help and Documentation output
 ###############################################################################
@@ -1708,7 +1984,9 @@ Usage: config.pl [options]
     debug(1, "resolve and check tokens");
 
     tokens_set_methods();
-    tokens_resolve();
+    tokens_resolve( \%config_opts, \%config_tokens_resolvers );
+    tokens_resolve( \%inits, \%init_tokens_resolvers );
+    tokens_provider();
     tokens_check();
 
     exit 1 if $err_flag;
@@ -1741,6 +2019,7 @@ Usage: config.pl [options]
     exit 1 if $err_flag;
 
     check_config();
+    process_inits();
 
     debug(1, "help and info display actions");
 
@@ -1791,6 +2070,7 @@ Usage: config.pl [options]
 	    write_header();
 	    write_m4();
 	    write_py();
+	    write_inits();
 	    write_depmakefile();
 	}
 	return;
@@ -1805,5 +2085,4 @@ exit 0;
 # Local Variables:
 # tab-width: 8
 # basic-offset: 4
-# indent-tabs-mode: t
 # End:
