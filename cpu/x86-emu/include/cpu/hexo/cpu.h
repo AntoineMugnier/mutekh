@@ -37,7 +37,7 @@ extern CPU_LOCAL cpu_id_t _cpu_id;
 static inline cpu_id_t cpu_id(void)
 {
 #ifdef CONFIG_ARCH_SMP
-    return _cpu_id;
+  return CPU_LOCAL_GET(_cpu_id);
 #else
   return 0;
 #endif  
@@ -47,7 +47,7 @@ static inline bool_t
 cpu_isbootstrap(void)
 {
 #ifdef CONFIG_ARCH_SMP
-    return (_cpu_id == 0);
+  return (cpu_id() == 0);
 #endif
   return 1;
 }

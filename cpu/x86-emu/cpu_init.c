@@ -34,9 +34,6 @@ CPU_LOCAL void *__cpu_data_base;
 /** pointer to context local storage in cpu local storage */
 CPU_LOCAL void *__context_data_base;
 
-/* cpu interrupts state */
-volatile CPU_LOCAL bool_t cpu_irq_state = 0;
-
 #ifdef CONFIG_ARCH_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 CPU_LOCAL cpu_id_t _cpu_id;

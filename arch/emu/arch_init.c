@@ -62,6 +62,8 @@ PRINTF_OUTPUT_FUNC(early_console_fd1)
 }
 #endif
 
+__compiler_sint_t cpu_pids[CONFIG_CPU_MAXCOUNT];
+
 /* architecture specific init function */
 void arch_init()
 {
@@ -80,23 +82,34 @@ void arch_init()
 
     cpu_global_init();
 
+    cpu_pids[0] = emu_do_syscall(EMU_SYSCALL_GETPID, 0);
+
 #if defined(CONFIG_ARCH_SMP)
     /* now everything is shared except the stack (the current unix stack) */
     size_t i;
     for (i=1; i<CONFIG_CPU_MAXCOUNT; i++)
     {
-        //if (fork() == 0)
-        if (emu_do_syscall(EMU_SYSCALL_FORK, 0) == 0)
-        {
-            _cpu_id = i;
-            goto other_cpu;
+      __compiler_sint_t pid;
+      
+      pid = emu_do_syscall(EMU_SYSCALL_FORK, 0);
+
+      if (pid == 0)
+	{
+	  _cpu_id = i;
+	  goto other_cpu;
         }
+
+      cpu_pids[i] = pid;
     }
     _cpu_id = 0;
 #endif
 
     /* configure first CPU */
     cpu_init();
+
+#ifdef CONFIG_HEXO_IRQ
+    emu_interrupts_init();
+#endif
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
     sched_global_init();

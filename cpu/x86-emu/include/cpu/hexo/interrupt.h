@@ -34,13 +34,20 @@
 
 #include "hexo/local.h"
 
-extern volatile CPU_LOCAL bool_t cpu_irq_state;
+#ifdef CONFIG_HEXO_IRQ
+void emu_interrupts_process(__compiler_sint_t sig);
+void emu_interrupts_wait(void);
+void emu_interrupts_init(void);
+void emu_interrupts_set(bool_t state);
+bool_t emu_interrupts_get(void);
+void emu_interrupts_post(cpu_id_t cpu);
+#endif
 
 static inline void
 cpu_interrupt_disable(void)
 {
 #ifdef CONFIG_HEXO_IRQ
-  cpu_irq_state = 0;
+  emu_interrupts_set(0);
 #endif
 }
 
@@ -48,16 +55,15 @@ static inline void
 cpu_interrupt_enable(void)
 {
 #ifdef CONFIG_HEXO_IRQ
-  cpu_irq_state = 1;
+  emu_interrupts_set(1);
 #endif
 }
 
-static inline void
+static void
 cpu_interrupt_process(void)
 {
 #ifdef CONFIG_HEXO_IRQ
-  cpu_interrupt_enable();
-  asm volatile ( "nop" ::: "memory" );
+  emu_interrupts_process(0);
 #endif
 }
 
@@ -65,7 +71,7 @@ static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
 #ifdef CONFIG_HEXO_IRQ
-  *state = cpu_irq_state;
+  *state = emu_interrupts_get();
 #endif
 }
 
@@ -82,7 +88,7 @@ static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
 #ifdef CONFIG_HEXO_IRQ
-  cpu_irq_state = *state;
+  emu_interrupts_set(*state);
 #endif
 }
 
@@ -90,7 +96,7 @@ static inline bool_t
 cpu_interrupt_getstate(void)
 {
 #ifdef CONFIG_HEXO_IRQ
-  return cpu_irq_state;
+  return emu_interrupts_get();
 #else
   return 0;
 #endif
@@ -100,9 +106,9 @@ static inline bool_t
 cpu_is_interruptible(void)
 {
 #ifdef CONFIG_HEXO_IRQ
-	return cpu_interrupt_getstate();
+  return cpu_interrupt_getstate();
 #else
-	return 0;
+  return 0;
 #endif
 }
 
@@ -111,7 +117,7 @@ static inline void
 cpu_interrupt_wait(void)
 {
 # ifdef CONFIG_HEXO_IRQ
-  /* FIXME */
+  emu_interrupts_wait();
 # endif
 }
 #endif

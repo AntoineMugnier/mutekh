@@ -8,6 +8,7 @@
 
 #if defined(CONFIG_ARCH_EMU_LINUX)
 # include <asm/mman.h>
+# include <signal.h>
 #elif defined(CONFIG_ARCH_EMU_DARWIN)
 # include <sys/mman.h>
 #endif
@@ -55,6 +56,13 @@ EMU_CPP(#define) EMU_O_RDWR		O_RDWR
 EMU_CPP(#define) EMU_SEEK_SET		SEEK_SET
 EMU_CPP(#define) EMU_SEEK_CUR		SEEK_CUR
 EMU_CPP(#define) EMU_SEEK_END		SEEK_END
+
+/*
+ * signal
+ */
+
+EMU_CPP(#define) EMU_SIG_IGN		SIG_IGN
+EMU_CPP(#define) EMU_SIG_USR1		SIGUSR1
 
 /*
  * ioctl/tuntap syscalls arguments
