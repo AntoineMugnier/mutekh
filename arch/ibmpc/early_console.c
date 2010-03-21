@@ -19,15 +19,20 @@
 
 */
 
+#include <hexo/lock.h>
 #include <string.h>
 #include <mutek/printk.h>
+
+static lock_t early_vga_lock = LOCK_INITIALIZER;
+static uint_fast16_t cursor = 0;
 
 PRINTF_OUTPUT_FUNC(early_console_vga)
 {
   uint16_t *ptr = (void*)0xb8000;
-  static uint_fast16_t cursor = 0;
   static const size_t width = 80;
   static const size_t height = 25;
+
+  lock_spin(&early_vga_lock);
 
   while (len--)
     {
@@ -48,6 +53,8 @@ PRINTF_OUTPUT_FUNC(early_console_vga)
       if (cursor >= height * width)
         cursor = 0;
     }
+
+  lock_release(&early_vga_lock);
 
   /* force memory write */
   asm volatile("":::"memory");
