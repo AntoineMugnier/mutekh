@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 ##
 ## Script made to boot from an iso cdrom file
