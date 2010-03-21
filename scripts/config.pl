@@ -862,6 +862,8 @@ sub check_definable
     return 0 if $opt->{parent} && !foreach_or_list( $opt->{parent}, \&check_defined );
     return 0 if !foreach_and_list( $opt->{depend}, \&foreach_or_list, \&check_defined );
     return 0 if !foreach_and_list( $opt->{single}, \&foreach_count_list, 1, \&check_defined );
+
+    # FIXME insert other tokens exclude list in token exclude list
     return 0 if foreach_or_list( $opt->{exclude}, \&check_defined );
 
     return 1 if !$opt->{flags}->{value};
@@ -880,9 +882,17 @@ sub process_config_depend
 
 	return 1 if ( check_defined( $dep ) );
 	return 0 if !$dep->{flags}->{auto};
+	return 0 if foreach_or_list( $opt->{exclude}, \&check_defined );
 
 	# automatic token definition can be done only once to avoid loops
 	$dep->{flags}->{auto} = 0;
+
+	# try to recursively auto define parents and dependencies
+	if ( !foreach_and_list( $dep->{depend}, sub {
+	    return process_auto( $opt, shift->[0] );
+        }) || ($dep->{parent} && !process_auto( $dep->{parent}->[0], $opt ) ) ) {
+	    return 0;
+	}
 
 	if ( $dep->{userdefined} ) {
 	    push @{$dep->{depnotice}}, "`$dep->{name}' token could be automatically defined ".
@@ -890,13 +900,6 @@ sub process_config_depend
 		"build configuration file.";
 
 	    debug(1, "config prevents auto define of $dep->{name} as an autodep of $opt->{name}");
-	    return 0;
-	}
-
-	# try to recursively auto define parents and dependencies
-	if ( !foreach_and_list( $dep->{depend}, sub {
-	    return process_auto( $opt, shift->[0] );
-        }) || ($dep->{parent} && !process_auto( $dep->{parent}->[0], $opt ) ) ) {
 	    return 0;
 	}
 
@@ -915,9 +918,9 @@ sub process_config_depend
     # check if at least one parent is defined
     my $pres = 1;
 
+
     if ( $opt->{parent} && !foreach_or_list( $opt->{parent}, \&check_defined ) ) {
-	my $first_par = $opt->{parent}->[0];
-	# try define a parent with auto flag set
+       # try define a parent with auto flag set
 	$pres = foreach_or_list( $opt->{parent}, \&if_flag, 'auto', \&process_auto, $opt );
     }
 
