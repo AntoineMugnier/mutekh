@@ -174,7 +174,7 @@ sub args_flags
 
     foreach my $flag (@args)
     {
-	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private)$/)
+	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private|maxval|minval|sumval)$/)
 	{
 	    error($location.": unknown flag `".$flag."' for `".$opts->{name}." token'");
 	    next;
@@ -217,11 +217,6 @@ sub args_range
 	$opts->{switch} = $sw;
     }
 }
-
-my %config_cmd =
-(
- ""
-);
 
 my %config_cmd =
 (
@@ -315,7 +310,7 @@ sub read_tokens_file
 	return 1;
     }
 
-    my $state = 0;
+    my $state = undef;
     my $lnum = 0;
     my $blk_name;
     my $opts;
@@ -325,7 +320,7 @@ sub read_tokens_file
 
 	next if ($line =~ /^[ \t]*(\#.*)?$/);
 
-	# catch %config blocks start and end
+	# catch blocks start and end
 
 	if ($line =~ /^\s*%(\w+)\s+(\S+)/) {
 
@@ -338,7 +333,6 @@ sub read_tokens_file
 		    next;
 		}
 
-		# set token default attribute to `undefined' if no default set
 		$state = undef;
 
 	    } else {
@@ -362,7 +356,7 @@ sub read_tokens_file
 	    next;
 	}
 
-	# process %config blocks content
+	# process block content
 
 	if ($state) {
 	    $line =~ s/^\s*//g;
@@ -420,7 +414,7 @@ sub explore_token_dirs
 #	Token name resolve
 ###############################################################################
 
-# token name may have a condition attached
+# config token name with optional condition attached
 
 sub tokens_resolve_config_cond
 {
@@ -443,7 +437,7 @@ sub tokens_resolve_config_cond
     return $res;
 }
 
-# token name may have value attached
+# config token name with optional value attached
 
 sub tokens_resolve_config_value
 {
@@ -466,12 +460,16 @@ sub tokens_resolve_config_value
     return $res;
 }
 
+# bare config token name
+
 sub tokens_resolve_config_bare
 {
     my ( $opt, $str, $tag ) = @_;
 
     return $config_opts{$str};
 }
+
+# bare init token name
 
 sub tokens_resolve_init
 {
@@ -506,8 +504,9 @@ sub tokens_resolve
 {
     my ( $token_space, $resolvers ) = @_;
 
+    # replace strings by token references in token tag data
+
     foreach my $opt ( values %$token_space ) {
-	# set check operation for token
 
 	foreach my $tag ( keys %$resolvers ) {
 
@@ -1122,15 +1121,47 @@ sub tokens_set_methods
 
 	} elsif ($opt->{flags}->{value}) {
 
-	    # value token getvalue method returns value provided by its first provider token
+            my $combine;
+
+	    # specify how to handle provide conflicts
+            if ( $opt->{flags}->{maxval} ) {
+                $combine = sub {
+                    my ( $opt, $old, $new ) = @_;
+                    return $old > $new ? $old : $new;
+                }
+            } elsif ( $opt->{flags}->{minval} ) {
+                $combine = sub {
+                    my ( $opt, $old, $new ) = @_;
+                    return $old < $new ? $old : $new;
+                }
+            } elsif ( $opt->{flags}->{sumval} ) {
+                $combine = sub {
+                    my ( $opt, $old, $new ) = @_;
+                    return $old + $new;
+                }
+            } else {
+                $combine = sub {
+                    my ( $opt, $old, $new ) = @_;
+                    if ( $old != $new ) {
+                        $opt->{deperror} = "Conflict between `$old' and `$new' values for `provide' on `$opt->{name}' token";
+                    }
+                    return $new;
+                }
+            }
+
+	    # value token getvalue method returns value provided by provider tokens
 	    $opt->{getvalue} = sub {
 		my ( $token ) = @_;
 		my $value = $token->{value};
 
 		foreach my $p (@{$token->{providers}}) {
 		    if ( check_condition( $p->{getvalue}->( $p ) ) ) {
-			$value = $token->{provided}->{$p->{name}};
-			last;
+                        my $new = $token->{provided}->{$p->{name}};
+                        if ( $value eq "undefined" ) {
+                            $value = $new;
+                        } else {
+                            $value = $combine->( $token, $value, $new );
+                        }
 		    }
 		}
 
@@ -1152,18 +1183,6 @@ sub tokens_set_methods
 
 sub tokens_provider
 {
-    # propagate harddep flag to dependencies
-
-#    for ( my $chg = 1; $chg--; ) {
-#	foreach my $opt (values %config_opts) {
-#	    if ( $opt->{flags}->{harddep} ) {
-#		foreach_tag_args( $opt, 'depend', sub {
-#		    $chg = 1 if ( !shift->{flags}->{harddep}++ );
-#                });
-#	    }
-#	}
-#    }
-
     foreach my $opt (values %config_opts) {
 
 	# set token providers list
@@ -1181,10 +1200,10 @@ sub tokens_provider
 
 #              value meta mandatory harddep auto
 #  value              x      x        x      x
-#  meta          y           x        x      x
-#  mandatory     y    y               x      x
-#  harddep       y    y      y               
-#  auto          y    y      y        
+#  meta          y           x        x      x  
+#  mandatory     y    y               x      x  
+#  harddep       y    y      y                  
+#  auto          y    y      y                  
 
 my %flags_exclude = (
     "value/meta" => 1,
@@ -1252,14 +1271,16 @@ sub tokens_check
 
 	if ($opt->{flags}->{value}) {
 
-	    error_loc($opt, "token has both `value' and `meta' flags.")
-		if ($opt->{flags}->{meta});
-
 	    foreach my $tag (qw(depend when require provide suggest suggest_when exclude single)) {
 		error_loc($opt, "token with `value' flag can't use the `$tag' tag.")
 		    if ($opt->{$tag});
 	    }
-	}
+	} else {
+            foreach my $f (qw(minval maxval sumval)) {
+                error_loc($opt, "token with `$f' flag lacks the `value' flag.")
+                    if ($opt->{flags}->{$f});
+            }
+        }
 
 	if ($opt->{flags}->{meta}) {
 	    foreach my $tag (qw(default depend when require suggest_when single)) {
