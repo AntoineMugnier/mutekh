@@ -10,8 +10,8 @@
 #include <crypto/crc32.h>
 
 #define POOL_SIZE 256		/* number of max different block allocated at the same time */
-#define MAX_SIZE 4096		/* maximum single malloc size */
-#define INTER_COUNT 1000
+#define MAX_SIZE 16384		/* maximum single malloc size */
+#define INTER_COUNT 100000
 #define THREAD_COUNT 8
 
 struct block_s
@@ -19,7 +19,7 @@ struct block_s
   uint32_t size;
   uint8_t *data;
   uint8_t hash[4];
-  lock_t lock;
+  pthread_mutex_t lock;
 };
 
 struct block_s pool[POOL_SIZE] = { };
@@ -62,7 +62,7 @@ void * thread(void *id_)
     uint_fast16_t e = rand() % POOL_SIZE;
     struct block_s *b = pool + e;
 
-    lock_spin(&b->lock);
+    pthread_mutex_lock(&b->lock);
 
     switch (rand() % 3) {
 
@@ -98,7 +98,7 @@ void * thread(void *id_)
       if (b->data)
 	hash_check(b->data, b->size, b->hash);
 
-      size_t size = rand() % MAX_SIZE;
+      size_t size = rand() % MAX_SIZE + 1; /* FIXME should test size == 0 */
       void *data = realloc(b->data, size);
       if (data) {
 	b->data = data;
@@ -115,8 +115,7 @@ void * thread(void *id_)
 
     }
 
-    lock_release(&b->lock);
-
+    pthread_mutex_unlock(&b->lock);
   }
 
   printk("cpu %i thread %i terminated: %i crc errors, %i alloc, %i free, %i realloc, %i alloc fail\n",
@@ -131,6 +130,10 @@ pthread_t threads[THREAD_COUNT];
 void app_start()
 {
   size_t i;
+
+  for (i = 0; i < POOL_SIZE; i++) {
+    pthread_mutex_init(&pool[i].lock, NULL);
+  }
 
   for (i = 0; i < THREAD_COUNT; i++)
     pthread_create(threads + i, NULL, thread, (void*)i);
