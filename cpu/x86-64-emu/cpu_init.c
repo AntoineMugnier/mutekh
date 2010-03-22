@@ -39,7 +39,7 @@ volatile CPU_LOCAL bool_t cpu_irq_state = 0;
 
 #ifdef CONFIG_ARCH_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-CPU_LOCAL cpu_id_t _cpu_id;
+CPU_LOCAL cpu_id_t _cpu_id;     /* use cpu_id() to access */
 #endif
 
 error_t
@@ -57,13 +57,19 @@ void cpu_init(void)
       abort();
 
   /* setup cpu local storage */
-  cpu_local_storage[_cpu_id] = cls;
+  cpu_local_storage[cpu_id()] = cls;
 
   /* we use this variable in non shared page as a cls register
    * that's why we do not use CPU_LOCAL_SET here. */
   __cpu_data_base = cls;
 #endif
 
-}
+#if defined(CONFIG_CPU_X86_ALIGNCHECK)
+   /* enable alignment check */
+    asm volatile("	pushf						\n"
+                 "	orl	$0x40000, (%rsp)			\n"
+                 "	popf						\n");
+#endif
 
+}
 

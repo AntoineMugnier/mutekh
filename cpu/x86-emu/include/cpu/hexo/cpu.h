@@ -32,12 +32,16 @@
 
 #define CPU_TYPE_NAME x86
 
+#ifdef CONFIG_ARCH_SMP
 extern CPU_LOCAL cpu_id_t _cpu_id;
+#endif  
 
 static inline cpu_id_t cpu_id(void)
 {
 #ifdef CONFIG_ARCH_SMP
-  return CPU_LOCAL_GET(_cpu_id);
+  /* do not use CPU_LOCAL_GET here has _cpu_id is stored in process
+     local memory and assigned before CLS allocation */
+  return _cpu_id;
 #else
   return 0;
 #endif  

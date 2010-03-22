@@ -36,7 +36,7 @@ CPU_LOCAL void *__context_data_base;
 
 #ifdef CONFIG_ARCH_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-CPU_LOCAL cpu_id_t _cpu_id;
+CPU_LOCAL cpu_id_t _cpu_id;     /* use cpu_id() to access */
 #endif
 
 error_t
@@ -54,7 +54,7 @@ void cpu_init(void)
       abort();
 
   /* setup cpu local storage */
-  cpu_local_storage[_cpu_id] = cls;
+  cpu_local_storage[cpu_id()] = cls;
 
   /* we use this variable in non shared page as a cls register
    * that's why we do not use CPU_LOCAL_SET here. */

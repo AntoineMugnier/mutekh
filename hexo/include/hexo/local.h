@@ -85,8 +85,8 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
 #else
 
-# define CPU_GET_CLS_ID(cpuid) ((void*)0)
-# define CPU_GET_CLS() ((void*)0)
+//# define CPU_GET_CLS_ID(cpuid) __cpu_local_h_must_provide_CPU_GET_CLS_ID_macro
+//# define CPU_GET_CLS() __cpu_local_h_must_provide_CPU_GET_CLS_macro
 # define CPU_LOCAL_ADDR(n)   (&(n))
 # define CPU_LOCAL_CLS_ADDR(cls, n) (&(n))
 # define CPU_LOCAL_ID_ADDR(cpuid, n) (&(n))

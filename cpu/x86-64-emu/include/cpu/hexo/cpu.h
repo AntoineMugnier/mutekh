@@ -32,12 +32,16 @@
 
 #define CPU_TYPE_NAME x86_64
 
+#ifdef CONFIG_ARCH_SMP
 extern CPU_LOCAL cpu_id_t _cpu_id;
+#endif  
 
 static inline cpu_id_t cpu_id(void)
 {
 #ifdef CONFIG_ARCH_SMP
-    return _cpu_id;
+  /* do not use CPU_LOCAL_GET here has _cpu_id is stored in process
+     local memory and assigned before CLS allocation */
+  return _cpu_id;
 #else
   return 0;
 #endif  
@@ -47,7 +51,7 @@ static inline bool_t
 cpu_isbootstrap(void)
 {
 #ifdef CONFIG_ARCH_SMP
-    return (_cpu_id == 0);
+  return (cpu_id() == 0);
 #endif
   return 1;
 }
@@ -77,7 +81,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 static inline void *cpu_get_cls(cpu_id_t cpu_id)
 {
 #ifdef CONFIG_ARCH_SMP
-    return cpu_local_storage[cpu_id];
+  return cpu_local_storage[cpu_id];
 #endif
   return NULL;
 }

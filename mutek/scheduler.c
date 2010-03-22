@@ -431,6 +431,7 @@ void sched_cpu_init(void)
   uint8_t *stack;
   error_t err;
 
+  assert(CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE % sizeof(reg_t) == 0);
   stack = arch_contextstack_alloc(CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE);
 
   assert(stack != NULL);

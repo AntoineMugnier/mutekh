@@ -49,9 +49,12 @@ context_init(struct context_s *context,
   if (!(context->tls = arch_contextdata_alloc()))
     return ENOMEM;
 
+  assert((uintptr_t)context->tls % sizeof(reg_t) == 0);
+
   CONTEXT_LOCAL_TLS_SET(context->tls, context_cur, context);
 
   assert(stack_end > stack_start);
+  assert((uintptr_t)stack_end % sizeof(reg_t) == 0);
 
   context->stack_start = stack_start;
   context->stack_end = stack_end;
