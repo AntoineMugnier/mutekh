@@ -35,6 +35,7 @@
 #include <hexo/error.h>
 #include <hexo/local.h>
 #include <hexo/lock.h>
+#include <hexo/atomic.h>
 #include <hexo/context.h>
 #include <mutek/scheduler.h>
 #include <hexo/interrupt.h>
@@ -59,12 +60,6 @@ typedef struct pthread_attr_s pthread_attr_t;
 /** @internal pointer to current thread */
 extern CONTEXT_LOCAL pthread_t __pthread_current;
 
-/** @internal init pthread sub system and bootstrap initial thread */
-void __pthread_bootstrap(void);
-
-/** @internal switch to next thread */
-void __pthread_switch(void);
-
 /************************************************************************
 		PThread Thread related public API
 ************************************************************************/
@@ -72,27 +67,18 @@ void __pthread_switch(void);
 /** @internal pthread descriptor structure */
 struct pthread_s
 {
-  lock_t lock;
   /** context */
   struct sched_context_s	sched_ctx;
 
-#ifdef CONFIG_PTHREAD_JOIN
-  /** thread is marked as detached */
-  bool_t			detached:1;
-  /** thread has exited and is waiting for join/detach */
-  bool_t			joinable:1;
+  /* thread state flags (detached, joinable, canceled ...) */
+  atomic_t                      state;
+  lock_t lock;
 
+#ifdef CONFIG_PTHREAD_JOIN
   /** pointer to thread waiting for termination */
   struct pthread_s              *joined;
-
   /** joined thread exit value */
   void				*joined_retval;
-#endif
-
-#ifdef CONFIG_PTHREAD_CANCEL
-  bool_t			canceled:1;
-  bool_t			cancelstate:1;
-  bool_t			cancelasync:1;
 #endif
 
   /** start routine argument */
@@ -100,6 +86,12 @@ struct pthread_s
   /** start routine pointer */
   pthread_start_routine_t	*start_routine;
 };
+
+#define _PTHREAD_STATE_DETACHED         0 //< thread is marked as detached
+#define _PTHREAD_STATE_JOINABLE         1 //< thread is joinable
+#define _PTHREAD_STATE_CANCELED         2 //< thread has been canceled
+#define _PTHREAD_STATE_NOCANCEL         3 //< thread ignore cancel
+#define _PTHREAD_STATE_CANCELASYNC      4 //< thread use asynchronous cancelation
 
 #define _PTHREAD_ATTRFLAG_AFFINITY	0x01
 #define _PTHREAD_ATTRFLAG_STACK		0x02
@@ -151,6 +143,7 @@ pthread_self(void)
 static inline void
 pthread_yield(void)
 {
+  void __pthread_switch(void);
   __pthread_switch();
 }
 
@@ -173,8 +166,89 @@ pthread_join(pthread_t thread, void **value_ptr);
 
 #endif
 
-/** @internal @this displays pthread current runqueue */
-void __pthread_dump_runqueue(void);
+/************************************************************************
+		PThread Cancelation related public API
+************************************************************************/
+
+#ifdef CONFIG_PTHREAD_CANCEL
+
+/** canceled thread exit value */
+#define PTHREAD_CANCELED		((void*)-1)
+
+/** @multiple @this may be used with @ref pthread_setcancelstate */
+#define PTHREAD_CANCEL_DISABLE		0
+#define PTHREAD_CANCEL_ENABLE		1
+
+/** @multiple @this may be used with @ref pthread_setcanceltype */
+#define PTHREAD_CANCEL_DEFERRED		0
+#define PTHREAD_CANCEL_ASYNCHRONOUS	1
+
+/** @internal */
+typedef void __pthread_cleanup_fcn_t(void*);
+
+/** @internal cancelation cleanup context */
+struct __pthread_cleanup_s
+{
+  __pthread_cleanup_fcn_t	*fcn;
+  void				*arg;
+  /* pointer to previous cancelation context */
+  struct __pthread_cleanup_s	*prev;
+};
+
+/** @internal cleanup context linked list */
+extern CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
+
+/** @this must be matched with @ref #pthread_cleanup_pop */
+#define pthread_cleanup_push(routine_, arg_)		\
+{							\
+  reg_t				__irq_state;            \
+  cpu_interrupt_savestate_disable(&__irq_state);	\
+							\
+  const struct __pthread_cleanup_s	__cleanup =	\
+    {							\
+      .fcn = (routine_),				\
+      .arg = (arg_),					\
+      .prev = CONTEXT_LOCAL_GET(__pthread_cleanup_list),	\
+    };							\
+							\
+  CONTEXT_LOCAL_SET(__pthread_cleanup_list, &__cleanup);	\
+							\
+  cpu_interrupt_restorestate(&__irq_state);
+
+/** @this must be matched with @ref #pthread_cleanup_push */
+#define pthread_cleanup_pop(execute)				\
+  cpu_interrupt_savestate_disable(&__irq_state);		\
+								\
+  if (execute)							\
+    __cleanup.fcn(__cleanup.arg);				\
+								\
+  CONTEXT_LOCAL_SET(__pthread_cleanup_list, __cleanup.prev);	\
+								\
+  cpu_interrupt_restorestate(&__irq_state);			\
+}
+
+static inline void
+pthread_testcancel(void)
+{
+  void __pthread_cancel_self(void);
+
+  if (atomic_bit_test(&pthread_self()->state, _PTHREAD_STATE_CANCELED))
+    __pthread_cancel_self();
+}
+
+error_t
+pthread_setcancelstate(int_fast8_t state, int_fast8_t *oldstate);
+
+error_t
+pthread_setcanceltype(int_fast8_t type, int_fast8_t *oldtype);
+
+static inline error_t
+pthread_cancel(pthread_t thread)
+{
+  return atomic_bit_testset(&thread->state, _PTHREAD_STATE_CANCELED);
+}
+
+#endif /* CONFIG_PTHREAD_CANCEL */
 
 /************************************************************************
 		PThread Mutex related public API
@@ -416,6 +490,9 @@ pthread_rwlock_init(pthread_rwlock_t *rwlock,
 static inline error_t
 pthread_rwlock_rdlock(pthread_rwlock_t *rwlock)
 {
+# ifdef CONFIG_PTHREAD_CANCEL
+  pthread_testcancel();
+# endif
   return rwlock_rdlock(rwlock);
 }
 
@@ -428,6 +505,9 @@ pthread_rwlock_tryrdlock(pthread_rwlock_t *rwlock)
 static inline error_t
 pthread_rwlock_wrlock(pthread_rwlock_t *rwlock)
 {
+# ifdef CONFIG_PTHREAD_CANCEL
+  pthread_testcancel();
+# endif
   return rwlock_wrlock(rwlock);
 }
 
@@ -530,111 +610,6 @@ pthread_spin_unlock(pthread_spinlock_t *spinlock)
 
 #endif
 
-/************************************************************************
-		PThread Cancelation related public API
-************************************************************************/
-
-#ifdef CONFIG_PTHREAD_CANCEL
-
-/** canceled thread exit value */
-#define PTHREAD_CANCELED		((void*)-1)
-
-/** @multiple @this may be used with @ref pthread_setcancelstate */
-#define PTHREAD_CANCEL_DISABLE		0
-#define PTHREAD_CANCEL_ENABLE		1
-
-/** @multiple @this may be used with @ref pthread_setcanceltype */
-#define PTHREAD_CANCEL_DEFERRED		0
-#define PTHREAD_CANCEL_ASYNCHRONOUS	1
-
-/** @internal */
-typedef void __pthread_cleanup_fcn_t(void*);
-
-/** @internal cancelation cleanup context */
-struct __pthread_cleanup_s
-{
-  __pthread_cleanup_fcn_t	*fcn;
-  void				*arg;
-  /* pointer to previous cancelation context */
-  struct __pthread_cleanup_s	*prev;
-};
-
-/** @internal cleanup context linked list */
-extern CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
-
-/** @this must be matched with @ref #pthread_cleanup_pop */
-#define pthread_cleanup_push(routine_, arg_)		\
-{							\
-  reg_t				__irq_state;	\
-							\
-  cpu_interrupt_savestate_disable(&__irq_state);	\
-							\
-  const struct __pthread_cleanup_s	__cleanup =	\
-    {							\
-      .fcn = (routine_),				\
-      .arg = (arg_),					\
-      .prev = CONTEXT_LOCAL_GET(__pthread_cleanup_list),	\
-    };							\
-							\
-  CONTEXT_LOCAL_SET(__pthread_cleanup_list, &__cleanup);	\
-							\
-  cpu_interrupt_restorestate(&__irq_state);
-
-/** @this must be matched with @ref #pthread_cleanup_push */
-#define pthread_cleanup_pop(execute)				\
-  cpu_interrupt_savestate_disable(&__irq_state);		\
-								\
-  if (execute)							\
-    __cleanup.fcn(__cleanup.arg);				\
-								\
-  CONTEXT_LOCAL_SET(__pthread_cleanup_list, __cleanup.prev);	\
-								\
-  cpu_interrupt_restorestate(&__irq_state);			\
-}
-
-/** @internal */
-void __pthread_cancel_self(void);
-
-static inline void
-pthread_testcancel(void)
-{
-  if (pthread_self()->canceled)
-    __pthread_cancel_self();
-}
-
-static inline void
-pthread_cancel(pthread_t thread)
-{
-  thread->canceled = 1;
-}
-
-static inline int_fast8_t
-pthread_setcancelstate(int_fast8_t state, int_fast8_t *oldstate)
-{
-  struct pthread_s	*self = pthread_self();
-
-  if (oldstate)
-    *oldstate = self->cancelstate;
-
-  self->cancelstate = state;
-
-  return 0;
-}
-
-static inline int_fast8_t
-pthread_setcanceltype(int_fast8_t type, int_fast8_t *oldtype)
-{
-  struct pthread_s	*self = pthread_self();
-
-  if (oldtype)
-    *oldtype = self->cancelasync;
-
-  self->cancelasync = type;
-
-  return 0;
-}
-
-#endif /* CONFIG_PTHREAD_CANCEL */
 
 #endif
 #endif

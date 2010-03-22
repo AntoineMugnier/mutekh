@@ -19,8 +19,8 @@
 
 */
 
+#include "pthread_pv.h"
 #include <stdio.h>
-#include <pthread.h>
 
 #include <hexo/error.h>
 #include <mutek/mem_alloc.h>
@@ -41,8 +41,7 @@ __pthread_switch(void)
 #endif
 
 #ifdef CONFIG_PTHREAD_CANCEL
-  if (pthread_self()->cancelasync)
-    pthread_testcancel();
+  pthread_testcancel();
 #endif
 
   cpu_interrupt_disable();
@@ -50,8 +49,7 @@ __pthread_switch(void)
   cpu_interrupt_enable();
 }
 
-
-static void
+void
 __pthread_cleanup(void)
 {
   struct pthread_s *thread = pthread_self();
@@ -68,38 +66,20 @@ __pthread_cleanup(void)
   sched_context_exit();
 }
 
-#ifdef CONFIG_PTHREAD_CANCEL
-
-/** cancelation context linked list head */
-CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list = NULL;
-
-void __pthread_cancel_self(void)
-{
-  struct __pthread_cleanup_s		*c;
-
-  cpu_interrupt_disable();
-
-  /* call thread cleanup handlers */
-  for (c = CONTEXT_LOCAL_GET(__pthread_cleanup_list); c; c = c->prev)
-    c->fcn(c->arg);
-
-  pthread_exit(PTHREAD_CANCELED);
-}
-
-#endif /* CONFIG_PTHREAD_CANCEL */
-
 /** end pthread execution */
 void
 pthread_exit(void *retval)
 {
   struct pthread_s	*this = pthread_self();
 
+  atomic_bit_set(&this->state, _PTHREAD_STATE_CANCELED);
+
   /* remove thread from runnable list */
   cpu_interrupt_disable();
   lock_spin(&this->lock);
 
 #ifdef CONFIG_PTHREAD_JOIN
-  if (!this->detached)
+  if (!atomic_bit_test(&this->state, _PTHREAD_STATE_DETACHED))
     {
       pthread_t joined_thread = this->joined;
 
@@ -107,7 +87,7 @@ pthread_exit(void *retval)
       /* thread not joined yet */
 	{
 	  /* mark thread as joinable */
-	  this->joinable = 1;
+	  atomic_bit_set(&this->state, _PTHREAD_STATE_JOINABLE);
 
 	  this->joined_retval = retval;
 
@@ -144,50 +124,54 @@ pthread_join(pthread_t thread, void **value_ptr)
 {
   error_t	res = 0;
 
+#ifdef CONFIG_PTHREAD_CANCEL
+  pthread_testcancel();
+#endif
+
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   lock_spin(&thread->lock);
 
 # ifdef CONFIG_PTHREAD_CHECK
-  if (thread->detached)
+  if (atomic_bit_test(&thread->state, _PTHREAD_STATE_DETACHED))
     {
       lock_release(&thread->lock);
       res = EINVAL;
     }
   else
 # endif
-  {
-    if (thread->joinable)
-      {
+    {
+      if (atomic_bit_test(&thread->state, _PTHREAD_STATE_JOINABLE))
+        {
           if (value_ptr)
-              *value_ptr = thread->joined_retval;
+            *value_ptr = thread->joined_retval;
 
-	/* wake up terminated thread waiting for join */
-	sched_context_start(&thread->sched_ctx);
+          /* wake up terminated thread waiting for join */
+          sched_context_start(&thread->sched_ctx);
 
-	lock_release(&thread->lock);
-      }
-    else
-      {
-	if(thread->joined)
-	{
-	  lock_release(&thread->lock);
-	  res=EINVAL;
-	}
-	else
-	{
-	  /* register current thread into target thread's descriptor */
-	  thread->joined = pthread_self();
-	  assert(thread->joined && "Can not call pthread_join from non pthread context");
+          lock_release(&thread->lock);
+        }
+      else
+        {
+          if (thread->joined)
+            {
+              lock_release(&thread->lock);
+              res = EINVAL;
+            }
+          else
+            {
+              /* register current thread into target thread's descriptor */
+              thread->joined = pthread_self();
+              assert(thread->joined && "Can not call pthread_join from non pthread context");
 
-	  /* wait for thread termination */
-	  sched_context_stop_unlock(&thread->lock);
-	  
-	  /* get joined thread's exit value */
-      if (value_ptr)
-          *value_ptr = pthread_self()->joined_retval;
-	}
-      }
-  }
+              /* wait for thread termination */
+              sched_context_stop_unlock(&thread->lock);
+
+              /* get joined thread's exit value */
+              if (value_ptr)
+                *value_ptr = pthread_self()->joined_retval;
+            }
+        }
+    }
 
   CPU_INTERRUPT_RESTORESTATE;
 
@@ -204,17 +188,13 @@ pthread_detach(pthread_t thread)
 
   lock_spin_irq(&thread->lock);
 
-# ifdef CONFIG_PTHREAD_CHECK
-  if (thread->detached)
-      res = EINVAL;
-  else
-# endif
+  if (!atomic_bit_testset(&thread->state, _PTHREAD_STATE_DETACHED))
     {
-      thread->detached = 1;
-
-      if (thread->joinable)
+      if (atomic_bit_test(&thread->state, _PTHREAD_STATE_JOINABLE))
 	sched_context_start(&thread->sched_ctx);
     }
+  else
+    res = EINVAL;
 
   lock_release_irq(&thread->lock);
   return res;
@@ -304,13 +284,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   thread->start_routine = start_routine;
   thread->arg = arg;
   thread->joined = NULL;
-  thread->joinable = 0;
-  thread->detached = 0;
-#ifdef CONFIG_PTHREAD_CANCEL
-  thread->canceled = 0;
-  thread->cancelstate = PTHREAD_CANCEL_ENABLE;
-  thread->cancelasync = PTHREAD_CANCEL_DEFERRED;
-#endif
+  atomic_set(&thread->state, 0);
 
 #ifdef CONFIG_PTHREAD_ATTRIBUTES
   /* add cpu affinity */

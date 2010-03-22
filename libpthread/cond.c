@@ -71,6 +71,10 @@ pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
   error_t	res = 0;
 
+#ifdef CONFIG_PTHREAD_CANCEL
+  pthread_testcancel();
+#endif
+
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   sched_queue_wrlock(&cond->wait);
 
@@ -98,6 +102,10 @@ pthread_cond_timedwait(pthread_cond_t *cond,
 		       pthread_mutex_t *mutex,
 		       const struct timespec *delay)
 {
+#ifdef CONFIG_PTHREAD_CANCEL
+  pthread_testcancel();
+#endif
+
   /* FIXME */
   return pthread_cond_wait(cond, mutex);
 }
