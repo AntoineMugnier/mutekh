@@ -35,27 +35,19 @@ struct memory_allocator_region_s *default_region;
 
 void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size)
 {
-  void *res, *next;
+  void *next, *res;
 
   size = ALIGN_VALUE_UP(size, CONFIG_MUTEK_MEMALLOC_ALIGN);
 
   lock_spin(&region->lock);
 
-  res = region->next;
-
-  /* insert a single word header to keep track of allocated size */
-  size_t *hdr = res;
-  res = hdr + 1;
-
-#ifdef CONFIG_MUTEK_MEMALLOC_SCRAMBLE
-  memset(res, 0x5a, size);
-#endif
-
+  res = ALIGN_ADDRESS_UP((size_t*)region->next + 1, CONFIG_MUTEK_MEMALLOC_ALIGN);
   next = (uint8_t*)res + size;
 
   if (next <= region->last)
     {
-      *hdr = size;
+      /* set a single word header to keep track of allocated size */
+      ((size_t*)res)[-1] = size;
       region->next = next;
     }
   else
@@ -64,6 +56,11 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
     }
 
   lock_release(&region->lock);
+
+#ifdef CONFIG_MUTEK_MEMALLOC_SCRAMBLE
+  if (res)
+    memset(res, 0x5a, size);
+#endif
 
   return res;
 }
