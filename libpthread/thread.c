@@ -285,6 +285,8 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
 	}
     }
 
+  assert(stack_size % sizeof(reg_t) == 0);
+
   /* setup context for new thread */
   res = context_init(&thread->sched_ctx.context, stack,
 		     stack + stack_size, pthread_context_entry, thread);

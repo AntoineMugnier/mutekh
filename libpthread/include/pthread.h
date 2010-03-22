@@ -36,12 +36,8 @@
 #include <hexo/local.h>
 #include <hexo/lock.h>
 #include <hexo/context.h>
-#include <mutek/rwlock.h>
 #include <mutek/scheduler.h>
 #include <hexo/interrupt.h>
-
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
 
 /************************************************************************
 		PThread types
@@ -184,6 +180,8 @@ void __pthread_dump_runqueue(void);
 		PThread Mutex related public API
 ************************************************************************/
 
+#ifdef CONFIG_PTHREAD_MUTEX
+
 typedef struct pthread_mutexattr_s pthread_mutexattr_t;
 
 /** @internal Mutex object structure */
@@ -192,13 +190,13 @@ struct				pthread_mutex_s
   /** mutex counter */
   uint_fast8_t				count;
 
-#ifdef CONFIG_PTHREAD_MUTEX_ATTR
+# ifdef CONFIG_PTHREAD_MUTEX_ATTR
   /** mutex attributes */
   const struct pthread_mutexattr_s	*attr;
 
   /** owner thread */
   struct pthread_s			*owner;
-#endif
+# endif
 
   /** blocked threads wait queue */
   sched_queue_root_t			wait;
@@ -206,7 +204,7 @@ struct				pthread_mutex_s
 
 typedef struct pthread_mutex_s pthread_mutex_t;
 
-#ifdef CONFIG_PTHREAD_MUTEX_ATTR
+# ifdef CONFIG_PTHREAD_MUTEX_ATTR
 
 /** @internal mutex attributes structure */
 struct				pthread_mutexattr_s
@@ -220,13 +218,13 @@ struct				pthread_mutexattr_s
 };
 
 /** Normal mutex type identifier */
-# define PTHREAD_MUTEX_NORMAL		0
+#  define PTHREAD_MUTEX_NORMAL		0
 /** Error checking mutex type identifier */
-# define PTHREAD_MUTEX_ERRORCHECK	1
+#  define PTHREAD_MUTEX_ERRORCHECK	1
 /** Recurvive mutex type identifier */
-# define PTHREAD_MUTEX_RECURSIVE	2
+#  define PTHREAD_MUTEX_RECURSIVE	2
 /** Default mutex type identifier */
-# define PTHREAD_MUTEX_DEFAULT		3
+#  define PTHREAD_MUTEX_DEFAULT		3
 
 /** @multiple @internal */
 extern pthread_mutexattr_t __pthread_mutex_attr_normal;
@@ -234,34 +232,34 @@ extern pthread_mutexattr_t __pthread_mutex_attr_errorcheck;
 extern pthread_mutexattr_t __pthread_mutex_attr_recursive;
 
 /** @this is the normal mutex object static initializer */
-# define PTHREAD_MUTEX_INITIALIZER						       \
+#  define PTHREAD_MUTEX_INITIALIZER						       \
   {										       \
     .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
     .attr = &__pthread_mutex_attr_normal					       \
   }
 
 /** @this is the recurvive mutex object static initializer */
-# define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP					       \
+#  define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP				      \
   {										       \
     .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
     .attr = &__pthread_mutex_attr_recursive						\
   }
 
 /** @this is error checking mutex object static initializer */
-# define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP				       \
+#  define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP				       \
   {										       \
     .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
     .attr = &__pthread_mutex_attr_errorcheck					       \
   }
 
-#else
+# else
 
-# define PTHREAD_MUTEX_INITIALIZER						       \
+#  define PTHREAD_MUTEX_INITIALIZER						       \
   {										       \
     .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
   }
 
-#endif
+# endif
 
 /** @this initializes a mutex */
 error_t
@@ -272,7 +270,7 @@ pthread_mutex_init(pthread_mutex_t *mutex,
 error_t
 pthread_mutex_destroy(pthread_mutex_t *mutex);
 
-#ifdef CONFIG_PTHREAD_MUTEX_ATTR
+# ifdef CONFIG_PTHREAD_MUTEX_ATTR
 
 /** @this takes a mutex */
 static inline error_t
@@ -313,7 +311,7 @@ pthread_mutexattr_destroy(pthread_mutexattr_t *attr)
   return 0;
 }
 
-#else /* !CONFIG_PTHREAD_MUTEX_ATTR */
+# else /* !CONFIG_PTHREAD_MUTEX_ATTR */
 
 static inline error_t
 pthread_mutex_lock(pthread_mutex_t *mutex)
@@ -336,11 +334,15 @@ pthread_mutex_unlock(pthread_mutex_t *mutex)
   return __pthread_mutex_normal_unlock(mutex);
 }
 
+# endif
+
 #endif
 
 /************************************************************************
 		PThread Cond related public API
 ************************************************************************/
+
+#ifdef CONFIG_PTHREAD_COND
 
 struct timespec;
 
@@ -382,9 +384,15 @@ pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
     .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
   }
 
+#endif
+
 /************************************************************************
 		PThread RWLock related public API
 ************************************************************************/
+
+#ifdef CONFIG_PTHREAD_RWLOCK
+
+#include <mutek/rwlock.h>
 
 /** @internal */
 struct rwlock_s;
@@ -438,9 +446,13 @@ pthread_rwlock_unlock(pthread_rwlock_t *rwlock)
 /** normal rwlock object static initializer */
 # define PTHREAD_RWLOCK_INITIALIZER RWLOCK_INITIALIZER
 
+#endif
+
 /************************************************************************
 		PThread barrier related public API
 ************************************************************************/
+
+#ifdef CONFIG_PTHREAD_BARRIER
 
 typedef struct pthread_barrierattr_s pthread_barrierattr_t;
 
@@ -472,9 +484,13 @@ error_t pthread_barrier_wait(pthread_barrier_t *barrier);
     .count = (n),									  \
   }
 
+#endif
+
 /************************************************************************
 		PThread Spinlock related public API
 ************************************************************************/
+
+#ifdef CONFIG_PTHREAD_SPIN
 
 typedef struct arch_lock_s pthread_spinlock_t;
 
@@ -511,6 +527,8 @@ pthread_spin_unlock(pthread_spinlock_t *spinlock)
   arch_lock_release(spinlock);
   return 0;
 }
+
+#endif
 
 /************************************************************************
 		PThread Cancelation related public API

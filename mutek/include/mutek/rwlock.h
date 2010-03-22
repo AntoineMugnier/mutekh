@@ -31,14 +31,13 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/lock.h>
-#include <mutek/rwlock.h>
 #include <mutek/scheduler.h>
 
 struct rwlock_s
 {
-  /** lock counter
-      < 0 : write locked
-      > 0 : read locked */
+  /** lock counter:
+      count < 0 is write locked,
+      count > 0 is read locked. */
   int_fast8_t                           count;
   /** blocked threads waiting for read */
   sched_queue_root_t                    wait_rd;
@@ -70,7 +69,8 @@ rwlock_unlock(struct rwlock_s *rwlock);
 /** normal rwlock object static initializer */
 #define RWLOCK_INITIALIZER                              \
   {                                                             \
-     .wait_rd = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),	\
+     .count = 0,                                                \
+     .wait_rd = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
      .wait_wr = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),	\
   }
 

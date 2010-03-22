@@ -169,7 +169,7 @@ rwlock_unlock(struct rwlock_s *rwlock)
 
       break;
 
-#ifdef CONFIG_CHECK
+#ifdef CONFIG_DEBUG
       /* already unlocked */
     case 0:
       res = -EPERM;
