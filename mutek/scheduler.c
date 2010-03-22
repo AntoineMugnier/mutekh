@@ -93,7 +93,7 @@ struct scheduler_s
 #if defined(CONFIG_HEXO_IPI)
     idle_cpu_queue_root_t idle_cpu;
 #endif
-    uint8_t tmp_stack[CONFIG_MUTEK_SCHEDULER_TMP_STACK_SIZE];
+    reg_t tmp_stack[CONFIG_MUTEK_SCHEDULER_TMP_STACK_SIZE / sizeof(reg_t)];
 };
 
 #if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
