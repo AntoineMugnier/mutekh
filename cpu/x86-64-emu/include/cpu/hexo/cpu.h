@@ -56,11 +56,7 @@ cpu_isbootstrap(void)
   return 1;
 }
 
-static inline
-void cpu_trap()
-{
-  asm volatile ("int3");
-}
+void cpu_trap();
 
 typedef uint64_t cpu_cycle_t;
 

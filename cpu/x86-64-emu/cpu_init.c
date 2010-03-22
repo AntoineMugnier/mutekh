@@ -42,6 +42,18 @@ void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 CPU_LOCAL cpu_id_t _cpu_id;     /* use cpu_id() to access */
 #endif
 
+void cpu_trap()
+{
+#ifdef CONFIG_ARCH_EMU_TRAP_KILL
+  /* kill process group */
+  if (cpu_pids[0] > 1)
+    emu_do_syscall(EMU_SYSCALL_KILL, 2, -cpu_pids[0], EMU_SIG_TERM);
+  emu_do_syscall(EMU_SYSCALL_EXIT, 1, 0);
+#else
+  asm volatile ("int3");
+#endif
+}
+
 error_t
 cpu_global_init(void)
 {

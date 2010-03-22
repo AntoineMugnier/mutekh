@@ -63,6 +63,7 @@ EMU_CPP(#define) EMU_SEEK_END		SEEK_END
 
 EMU_CPP(#define) EMU_SIG_IGN		SIG_IGN
 EMU_CPP(#define) EMU_SIG_USR1		SIGUSR1
+EMU_CPP(#define) EMU_SIG_TERM		SIGTERM
 
 /*
  * ioctl/tuntap syscalls arguments
