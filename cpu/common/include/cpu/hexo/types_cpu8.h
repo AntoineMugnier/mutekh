@@ -37,11 +37,13 @@
 #define INT_FAST32_SIZE		32
 #define INT_FAST64_SIZE		64
 
-#define CPU_SIZEOF_SHORT	8
+#define CPU_SIZEOF_SHORT	16
 #define CPU_SIZEOF_INT		16
 #define CPU_SIZEOF_LONG		32
 #define INT_PTR_SIZE		16
 #define INT_REG_SIZE		8
+
+#define INT_ATOMIC_SIZE         8
 
 #endif
 

@@ -43,5 +43,7 @@
 #define INT_PTR_SIZE		64
 #define INT_REG_SIZE		64
 
+#define INT_ATOMIC_SIZE         32
+
 #endif
 
