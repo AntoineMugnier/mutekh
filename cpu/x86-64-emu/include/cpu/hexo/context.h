@@ -41,8 +41,11 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
      save _all_ registers ourself */
 
   asm volatile (
-		/* save execution pointer */
+                /* preserve x86_64 abi red zone */
+                "       subq    $128, %%rsp     \n"
+
 #ifdef CONFIG_COMPILE_PIC
+		/* save execution pointer */
 		"	callq	1f		\n"
 		"	jmp	2f		\n"
 		"1:				\n"
@@ -68,6 +71,9 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		/* restore execution pointer */
 		"	retq			\n"
 		"2:				\n"
+
+                /* skip x86_64 abi red zone */
+                "       addq    $128, %%rsp     \n"
 
 		/* these input registers will be clobbered */
 		: "=a" (tmp0)
