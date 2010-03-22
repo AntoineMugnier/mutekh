@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
 
