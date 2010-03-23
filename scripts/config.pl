@@ -1647,6 +1647,12 @@ sub write_header
 	print FILE "#define ".$opt->{name}." ".$opt->{value}."\n";
     }
 
+    print FILE "\n#define __MUTEKH__\n";
+
+    foreach my $var (sort keys %vars) {
+	print FILE "#define BUILD_$var ".$vars{$var}."\n";
+    }
+
     close(FILE);
     return 0;
 }
@@ -2081,6 +2087,9 @@ Usage: config.pl [options]
     debug(1, "take action based on command line options");
 
     exit 1 if $err_flag;
+
+    delete $vars{CONFIGSECTION};
+    delete $vars{CONFIGPATH};
 
     if ($param_h{config}) {
 	mkpath($bld_path);
