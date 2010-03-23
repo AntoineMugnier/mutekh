@@ -611,6 +611,9 @@ error_t memory_allocator_stats(struct memory_allocator_region_s *region,
 #endif
 }
 
+#if 0
+
+// depends on CONFIG_MUTEK_PRINTK_HEXDUMP
 void memory_allocator_dump_used(struct memory_allocator_region_s *region, size_t ignore)
 {
 #ifdef CONFIG_SOCLIB_MEMCHECK
@@ -638,3 +641,6 @@ void memory_allocator_dump_used(struct memory_allocator_region_s *region, size_t
   CPU_INTERRUPT_RESTORESTATE;
 #endif
 }
+
+#endif
+

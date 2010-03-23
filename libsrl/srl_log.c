@@ -25,7 +25,7 @@
 #include <hexo/types.h>
 #include <hexo/endian.h>
 
-#include <mutek/printf_arg.h>
+#include <libc/formatter.h>
 
 static PRINTF_OUTPUT_FUNC(srl_log_out)
 {
@@ -70,7 +70,7 @@ void _srl_log_printf(const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	mutek_printf_arg(CONTEXT_LOCAL_GET(context_tty), srl_log_out, fmt, ap);
+	formatter_printf(CONTEXT_LOCAL_GET(context_tty), srl_log_out, fmt, ap);
 	va_end(ap);
 }
 
@@ -79,7 +79,7 @@ void _cpu_printf(const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	mutek_printf_arg(CPU_LOCAL_GET(cpu_tty), srl_log_out, fmt, ap);
+	formatter_printf(CPU_LOCAL_GET(cpu_tty), srl_log_out, fmt, ap);
 	va_end(ap);
 }
 
@@ -108,7 +108,7 @@ void _srl_log_printf(const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	mutek_printf_arg(tcg_tty, srl_log_out, fmt, ap);
+	formatter_printf(tcg_tty, srl_log_out, fmt, ap);
 	va_end(ap);
 }
 
@@ -117,7 +117,7 @@ void _cpu_printf(const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	mutek_printf_arg(tcg_tty, srl_log_out, fmt, ap);
+	formatter_printf(tcg_tty, srl_log_out, fmt, ap);
 	va_end(ap);
 }
 

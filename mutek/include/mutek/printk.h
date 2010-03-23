@@ -4,7 +4,7 @@
 #if defined(CONFIG_MUTEK_PRINTK)
 
 #include <stdarg.h>
-#include <mutek/printf_arg.h>
+#include <libc/formatter.h>
 
 void printk_set_output(printf_output_func_t *f, void *ctx);
 ssize_t printk(const char *format, ...);

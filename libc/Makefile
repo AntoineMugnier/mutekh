@@ -8,7 +8,7 @@ error.o						\
 qsort.o						\
 stdlib.o					\
 unistd.o					\
-fileops.c
+formatter.o
 
 ifeq ($(CONFIG_LIBC_ASSERT), defined)
 objs += assert.o
@@ -21,4 +21,5 @@ endif
 doc_headers = \
 	sys/stat.h ctype.h unistd.h	\
 	semaphore.h fcntl.h errno.h stdio.h time.h stdarg.h	\
-	stddef.h stdint.h stdlib.h setjmp.h string.h assert.h limits.h
+	stddef.h stdint.h stdlib.h setjmp.h string.h assert.h limits.h \
+        libc/formatter.h

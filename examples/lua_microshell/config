@@ -16,6 +16,7 @@
   # Libc
   CONFIG_LIBC_STREAM
   CONFIG_LIBC_ASSERT
+  CONFIG_MUTEK_PRINTK_HEXDUMP
   #  CONFIG_VFS_LIBC_STREAM
   
   # New source code module to be compiled

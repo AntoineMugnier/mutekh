@@ -19,22 +19,27 @@
 
 */
 
-#ifndef MUTEK_CONSOLE_H_
-#define MUTEK_CONSOLE_H_
+#ifndef MUTEK_PRINTF_ARG_H_
+#define MUTEK_PRINTF_ARG_H_
 
-#include <mutek/fileops.h>
-#include <libc/formatter.h>
+/**
+ * @file
+ * @module{C library}
+ */
 
-extern const struct fileops_s console_file_ops;
+#include <stdarg.h>
+#include <hexo/types.h>
 
-#if defined(CONFIG_MUTEK_CONSOLE)
+#define PRINTF_OUTPUT_FUNC(x) void (x)(void *ctx, const char *str, size_t offset, size_t len)
 
-struct device_s;
-extern struct device_s *console_dev;
+typedef PRINTF_OUTPUT_FUNC(printf_output_func_t);
 
-PRINTF_OUTPUT_FUNC(__printf_out_tty);
+ssize_t
+formatter_printf(void *ctx, printf_output_func_t * const fcn,
+				 const char *format, va_list ap);
+
+void
+mutek_hexdump_arg(void *ctx, printf_output_func_t * const fcn,
+                  uintptr_t address, const void *base, size_t len);
 
 #endif
-
-#endif
-

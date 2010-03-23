@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <mutek/printf_arg.h>
+#include <libc/formatter.h>
 
 #ifdef CONFIG_LIBC_STREAM
 static inline void
@@ -64,7 +64,7 @@ inline ssize_t vsnprintf(char *str, size_t size, const char *format, va_list ap)
     .out = str,
   };
 
-  res = mutek_printf_arg(&ctx, __printf_out_str, format, ap);
+  res = formatter_printf(&ctx, __printf_out_str, format, ap);
 
   /* add final \0 to output string */
   if (ctx.size > res)
@@ -107,7 +107,7 @@ ssize_t sprintf(char *str, const char *format, ...)
 
 ssize_t vfprintf(FILE *stream, const char *format, va_list ap)
 {
-  return mutek_printf_arg(stream, __printf_out_stream, format, ap);
+  return formatter_printf(stream, __printf_out_stream, format, ap);
 }
 
 ssize_t fprintf(FILE *stream, const char *format, ...)
