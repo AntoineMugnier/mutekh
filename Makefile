@@ -31,9 +31,9 @@ endif
 CONF=myconfig
 
 export BUILD?=default
-BUILD_DIR:=$(abspath $(BUILD_DIR))
-MUTEK_SRC_DIR:=$(abspath $(MUTEK_SRC_DIR))
-CONF:=$(abspath $(CONF))
+BUILD_DIR:=$(realpath $(BUILD_DIR))
+MUTEK_SRC_DIR:=$(realpath $(MUTEK_SRC_DIR))
+CONF:=$(realpath $(CONF))
 
 export MUTEK_SRC_DIR
 export BUILD_DIR
@@ -46,7 +46,13 @@ ifneq ($(VERBOSE),1)
 MAKEFLAGS = -s
 endif
 
-CONF_DIR:=$(shell echo /tmp/mutekh_config.$$$$.$${RANDOM})
+CONF_DIR:=$(shell echo /tmp/.mutekh_config.$$$$.$${RANDOM})
+
+ifeq ($(findstring $(MUTEK_SRC_DIR),$(BUILD_DIR)),)
+        $(warning [41;1m You are building MutekH out of the source tree.    [m)
+        $(warning [41;1m Please ensure you are invoking MutekH build system [m)
+        $(warning [41;1m directly before reporting problems.                [m)
+endif
 
 all: kernel
 
