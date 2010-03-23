@@ -52,15 +52,11 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
             context->stack_start, context->stack_end);
 #endif
 
-    /* FIXME?
-     * stack_end points to the first word after the end of the stack.
-     * substracting 5 words to it means that we let room for 4 words and the
-     * stack_ptr points on the 5th words (backward).
-     * since stack_ptr is first decremented before any store in the stack
-     * (*--context->stack_ptr), it means we will have 5 empty words.
-     * Mips ABI only requires 4 free words in the stack...
+    /*
+     * Mips ABI only requires 4 free words in the stack.
+     * Preserve 64bits align for doubles.
      */
-    context->stack_ptr = (reg_t*)context->stack_end - 5;
+    context->stack_ptr = (reg_t*)context->stack_end - 4;
 
     /* push entry function address and param arg */
     *--context->stack_ptr = (uintptr_t)entry;
