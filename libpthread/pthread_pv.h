@@ -35,7 +35,7 @@ __pthread_cleanup(void);
 void
 __pthread_cancel_self(void);
 
-#if 0
+# if 0
 static inline void
 __pthread_testcancel_async(void)
 {
@@ -44,9 +44,11 @@ __pthread_testcancel_async(void)
   if (!self->canceled && self->cancelasync)
     __pthread_cancel_self();
 }
-#endif
+# endif
 
-#endif
+#endif  /* CONFIG_PTHREAD_CANCEL */
+
+extern CONTEXT_LOCAL pthread_t __pthread_current;
 
 #endif
 

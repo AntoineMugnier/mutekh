@@ -269,7 +269,7 @@ struct				pthread_mutex_s
   const struct pthread_mutexattr_s	*attr;
 
   /** owner thread */
-  struct pthread_s			*owner;
+  struct sched_context_s		*owner;
 # endif
 
   /** blocked threads wait queue */

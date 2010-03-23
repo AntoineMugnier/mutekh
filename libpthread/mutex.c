@@ -120,7 +120,7 @@ __pthread_mutex_errorcheck_lock(pthread_mutex_t *mutex)
   /* check current mutex state */
   if (mutex->count)
     {
-      if (mutex->owner == pthread_self())
+      if (mutex->owner == sched_get_current())
 	{
 	  /* dead lock condition detected */
 	  res = EDEADLK;
@@ -135,7 +135,7 @@ __pthread_mutex_errorcheck_lock(pthread_mutex_t *mutex)
   else
     {
       /* mark mutex as used */
-      mutex->owner = pthread_self();
+      mutex->owner = sched_get_current();
       mutex->count++;
       sched_queue_unlock(&mutex->wait);
     }
@@ -156,7 +156,7 @@ __pthread_mutex_errorcheck_trylock(pthread_mutex_t *mutex)
   /* check current mutex state */
   if (mutex->count)
     {
-      if (mutex->owner == pthread_self())
+      if (mutex->owner == sched_get_current())
 	/* dead lock condition detected */
 	res = EDEADLK;
       else
@@ -181,10 +181,12 @@ __pthread_mutex_errorcheck_unlock(pthread_mutex_t *mutex)
 
   if (mutex->count)
     {
-      if (mutex->owner == pthread_self())
+      if (mutex->owner == sched_get_current())
 	{
-	  if (!sched_wake(&mutex->wait))
-	    mutex->count--;
+	  mutex->owner = sched_wake(&mutex->wait);
+
+          if (mutex->owner == NULL)
+            mutex->count--;
 	}
       else
 	res = EPERM;
@@ -225,7 +227,7 @@ __pthread_mutex_recursive_lock(pthread_mutex_t *mutex)
   sched_queue_wrlock(&mutex->wait);
 
   /* check current mutex state */
-  if (mutex->count && (mutex->owner != pthread_self()))
+  if (mutex->count && (mutex->owner != sched_get_current()))
     {
       /* add current thread in mutex wait queue */
       sched_wait_unlock(&mutex->wait);
@@ -233,7 +235,7 @@ __pthread_mutex_recursive_lock(pthread_mutex_t *mutex)
   else
     {
       /* mark mutex as used */
-      mutex->owner = pthread_self();
+      mutex->owner = sched_get_current();
       mutex->count++;
       sched_queue_unlock(&mutex->wait);
     }
@@ -251,7 +253,7 @@ __pthread_mutex_recursive_trylock(pthread_mutex_t *mutex)
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   sched_queue_wrlock(&mutex->wait);
 
-  if (mutex->count && (mutex->owner != pthread_self()))
+  if (mutex->count && (mutex->owner != sched_get_current()))
     res = EBUSY;
   else
     mutex->count++;
@@ -268,10 +270,13 @@ __pthread_mutex_recursive_unlock(pthread_mutex_t *mutex)
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   sched_queue_wrlock(&mutex->wait);
 
-  if (mutex->count == 1)
-    sched_wake(&mutex->wait);
+  if (--mutex->count == 0)
+    {
+      mutex->owner = sched_wake(&mutex->wait);
 
-  mutex->count--;
+      if (mutex->owner != NULL)
+        mutex->count++;
+    }
 
   sched_queue_unlock(&mutex->wait);
   CPU_INTERRUPT_RESTORESTATE;
