@@ -27,9 +27,7 @@
 #error This file can not be included directly
 #else
 
-#define ARCH_LOCK_H_
-
-#ifdef CONFIG_ARCH_SOCLIB_RAMLOCK
+# ifdef CONFIG_ARCH_SOCLIB_RAMLOCK
 
 /************************************************************** 
 	USE RAMLOCKS
@@ -94,64 +92,17 @@ static inline bool_t arch_lock_state(struct arch_lock_s *lock)
   return state;
 }
 
-#else
+# else  /* CONFIG_ARCH_SOCLIB_RAMLOCK */
 
 /************************************************************** 
 	USE CPU ATOMIC OPS
  **************************************************************/
 
-#include "hexo/atomic.h"
-#ifdef CONFIG_DEBUG_SPINLOCK_LIMIT
-#include <assert.h>
-#endif
+#  include <arch/common/include/arch/hexo/lock_cpuatomic.h>
 
-#define ARCH_HAS_ATOMIC
+# endif  /* CONFIG_ARCH_SOCLIB_RAMLOCK */
 
-struct		arch_lock_s
-{
-  atomic_int_t	a;
-};
-
-#define ARCH_LOCK_INITIALIZER	{ .a = 0 }
-
-static inline error_t arch_lock_init(struct arch_lock_s *lock)
-{
-  lock->a = 0;
-  return 0;
-}
-
-static inline void arch_lock_destroy(struct arch_lock_s *lock)
-{
-}
-
-static inline bool_t arch_lock_try(struct arch_lock_s *lock)
-{
-  return cpu_atomic_bit_testset(&lock->a, 0);
-}
-
-static inline void arch_lock_spin(struct arch_lock_s *lock)
-{
-#ifdef CONFIG_DEBUG_SPINLOCK_LIMIT
-  uint32_t deadline = CONFIG_DEBUG_SPINLOCK_LIMIT;
-
-  while (cpu_atomic_bit_testset(&lock->a, 0))
-    assert(deadline-- > 0);
-#else
-  cpu_atomic_bit_waitset(&lock->a, 0);
-#endif
-}
-
-static inline bool_t arch_lock_state(struct arch_lock_s *lock)
-{
-  return lock->a & 1;
-}
-
-static inline void arch_lock_release(struct arch_lock_s *lock)
-{
-  cpu_atomic_bit_clr(&lock->a, 0);
-}
-
-#endif
+# define ARCH_LOCK_H_
 
 #endif
 

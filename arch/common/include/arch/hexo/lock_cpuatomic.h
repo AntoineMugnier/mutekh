@@ -53,7 +53,9 @@ static inline void arch_lock_destroy(struct arch_lock_s *lock)
 
 static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 {
-  return cpu_atomic_bit_testset(&lock->a, 0);
+  bool_t res = cpu_atomic_bit_testset(&lock->a, 0);
+  asm volatile ("":::"memory");
+  return res;
 }
 
 static inline void arch_lock_spin(struct arch_lock_s *lock)
@@ -66,6 +68,7 @@ static inline void arch_lock_spin(struct arch_lock_s *lock)
 #else
   cpu_atomic_bit_waitset(&lock->a, 0);
 #endif
+  asm volatile ("":::"memory");
 }
 
 static inline bool_t arch_lock_state(struct arch_lock_s *lock)
@@ -76,6 +79,7 @@ static inline bool_t arch_lock_state(struct arch_lock_s *lock)
 static inline void arch_lock_release(struct arch_lock_s *lock)
 {
   cpu_atomic_bit_clr(&lock->a, 0);
+  asm volatile ("":::"memory");
 }
 
 #endif

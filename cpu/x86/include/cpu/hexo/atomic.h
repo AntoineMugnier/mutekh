@@ -46,6 +46,7 @@ cpu_atomic_inc(volatile atomic_int_t *a)
           "pause \n"
 		"setnz		%1	\n"
 		: "=m" (*a), "=q" (zero)
+                :: "cc"
 		);
 
   return zero;
@@ -62,6 +63,7 @@ cpu_atomic_dec(volatile atomic_int_t *a)
           "pause \n"
 		"setnz		%1	\n"
 		: "=m" (*a), "=q" (zero)
+                :: "cc"
 		);
 
   return zero;
@@ -79,6 +81,7 @@ cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
 		"setc		%1	\n"
 		: "=m,m" (*a), "=q,q" (isset)
 		: "r,I" (n)
+                : "cc"
 		);
 
   return isset;
@@ -94,6 +97,7 @@ cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
 		"	jc		1b	\n"
 		: "=m,m" (*a)
 		: "r,I" (n)
+                : "cc"
 		);
 }
 
@@ -109,6 +113,7 @@ cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
 		"setc		%1	\n"
 		: "=m,m" (*a), "=q,q" (isset)
 		: "r,I" (n)
+                : "cc"
 		);
 
   return isset;
@@ -125,6 +130,7 @@ cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
 		"	jnc		1b	\n"
 		: "=m,m" (*a)
 		: "r,I" (n)
+                : "cc"
 		);
 }
 
@@ -137,6 +143,7 @@ cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
           "pause \n"
 		: "=m,m" (*a)
 		: "r,I" (n)
+                : "cc"
 		);
 }
 
@@ -149,6 +156,7 @@ cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
           "pause \n"
 		: "=m,m" (*a)
 		: "r,I" (n)
+                : "cc"
 		);
 }
 
