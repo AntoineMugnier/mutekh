@@ -1,3 +1,3 @@
 
-CPUCFLAGS=-mno-tls-direct-seg-refs -malign-double
+CPUCFLAGS=-mno-tls-direct-seg-refs
 CPUTOOLS=
