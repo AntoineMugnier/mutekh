@@ -68,6 +68,24 @@ printf_hexdump(char *buf, const uint8_t *val, size_t len)
 }
 #endif
 
+
+
+#if defined(CONFIG_LIBC_FORMATTER_FLOAT)
+typedef double __fpmax_t;
+
+ssize_t __dtostr(double d,char *buf,size_t maxlen,size_t prec,size_t prec2,ssize_t g);
+
+static inline
+void _printf_float(void *ctx, printf_output_func_t * const fcn, __fpmax_t x)
+{
+    char buf[64];
+    ssize_t len = formatter_dtostr(x, buf, sizeof(buf), 6, 6, 0);
+    fcn(ctx, buf, 0, len);
+}
+#endif
+
+
+
 static const char *hex_lower_base = "0123456789abcdef";
 static const char *hex_upper_base = "0123456789ABCDEF";
 
@@ -145,6 +163,18 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 	  typesize = CPU_SIZEOF_LONG / 8;
 	  format++;
 	  break;
+#endif
+
+#if defined(CONFIG_LIBC_FORMATTER_FLOAT)
+        case 'e':
+        case 'E':
+        case 'f':
+        case 'F':
+        case 'g':
+        case 'G':
+          _printf_float(ctx, fcn, va_arg(ap, double));
+	  format++;
+        goto printf_state_main;
 #endif
 
 	case 's':

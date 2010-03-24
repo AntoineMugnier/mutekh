@@ -42,4 +42,9 @@ void
 mutek_hexdump_arg(void *ctx, printf_output_func_t * const fcn,
                   uintptr_t address, const void *base, size_t len);
 
+/** @this write a string from a floating point value */
+ssize_t
+formatter_dtostr(double d, char *buf, size_t maxlen,
+                 size_t prec, size_t prec2, ssize_t g);
+
 #endif
