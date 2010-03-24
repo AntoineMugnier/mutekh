@@ -39,26 +39,37 @@
 
 #define CHAR_BIT	8
 
-#define SCHAR_MIN	(__MINOF_TYPE(int8_t))
-#define SCHAR_MAX	(__MAXOF_TYPE(int8_t))
+#define SCHAR_MIN	(__MINOF_TYPE(signed char))
+#define SCHAR_MAX	(__MAXOF_TYPE(signed char))
 
-#define UCHAR_MAX	(__MAXOF_TYPE(uint8_t))
+#define UCHAR_MAX	(__MAXOF_TYPE(unsigned char))
+#define UCHAR_MAX	(__MAXOF_TYPE(unsigned char))
 
 #define CHAR_MIN	SCHAR_MIN
 #define CHAR_MAX	SCHAR_MAX
 
 /* short type */
 
-#define SHRT_MIN	(__MINOF_TYPE(int16_t))
-#define SHRT_MAX	(__MAXOF_TYPE(int16_t))
-
-#define USHRT_MAX	(__MAXOF_TYPE(uint16_t))
+#define SHRT_MIN	(__MINOF_TYPE(__compiler_sshort_t))
+#define SHRT_MAX	(__MAXOF_TYPE(__compiler_sshort_t))
+#define USHRT_MIN	(__MAXOF_TYPE(__compiler_ushort_t))
+#define USHRT_MAX	(__MAXOF_TYPE(__compiler_ushort_t))
 
 /* int type */
 
-#define INT_MIN		(__MINOF_TYPE(int32_t))
-#define INT_MAX		(__MAXOF_TYPE(int32_t))
+#define INT_MIN		(__MINOF_TYPE(__compiler_sint_t))
+#define INT_MAX		(__MAXOF_TYPE(__compiler_sint_t))
+#define UINT_MIN	(__MINOF_TYPE(__compiler_uint_t))
+#define UINT_MAX	(__MAXOF_TYPE(__compiler_uint_t))
 
-#define UINT_MAX	(__MAXOF_TYPE(uint32_t))
+#define LONG_MIN	(__MINOF_TYPE(__compiler_slong_t))
+#define LONG_MAX	(__MAXOF_TYPE(__compiler_slong_t))
+#define ULONG_MIN	(__MINOF_TYPE(__compiler_ulong_t))
+#define ULONG_MAX	(__MAXOF_TYPE(__compiler_ulong_t))
+
+#define LONGLONG_MIN	(__MINOF_TYPE(__compiler_slonglong_t))
+#define LONGLONG_MAX	(__MAXOF_TYPE(__compiler_slonglong_t))
+#define ULONGLONG_MIN	(__MINOF_TYPE(__compiler_ulonglong_t))
+#define ULONGLONG_MAX	(__MAXOF_TYPE(__compiler_ulonglong_t))
 
 #endif
