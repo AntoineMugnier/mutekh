@@ -127,7 +127,7 @@ static void srl_task_init(srl_task_s *task)
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_affinity(&attr, cpu_id());
-	pthread_attr_stack(&attr, task->stack, task->stack_size);
+	pthread_attr_setstack(&attr, task->stack, task->stack_size);
 	pthread_create( &task->pthread, &attr, srl_run_task, task );
 	pthread_attr_destroy(&attr);
 }

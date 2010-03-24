@@ -64,6 +64,14 @@ extern CONTEXT_LOCAL pthread_t __pthread_current;
 		PThread Thread related public API
 ************************************************************************/
 
+/** @this set a context local variable for the given pthread */
+#define CONTEXT_LOCAL_PTHREAD_SET(th, n, v) \
+  CONTEXT_LOCAL_TLS_SET((th)->sched_ctx.context.tls, n, v)
+
+/** @this read a context local variable for the given pthread */
+#define CONTEXT_LOCAL_PTHREAD_GET(th, n) \
+  CONTEXT_LOCAL_TLS_GET((th)->sched_ctx.context.tls, n)
+
 /** @internal pthread descriptor structure */
 struct pthread_s
 {
@@ -95,6 +103,7 @@ struct pthread_s
 
 #define _PTHREAD_ATTRFLAG_AFFINITY	0x01
 #define _PTHREAD_ATTRFLAG_STACK		0x02
+#define _PTHREAD_ATTRFLAG_DETACHED	0x04
 
 /** @internal pthread attributes structure */
 struct pthread_attr_s
@@ -120,9 +129,22 @@ pthread_attr_destroy(pthread_attr_t *attr);
 error_t
 pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu);
 
-/** @this sets stack buffer attribute */
+/** @this sets stack buffer and size attribute */
 error_t
-pthread_attr_stack(pthread_attr_t *attr, void *stack_buf, size_t stack_size);
+pthread_attr_setstack(pthread_attr_t *attr, void *stack_buf, size_t stack_size);
+
+/** @this sets stack size attribute */
+error_t
+pthread_attr_setstacksize(pthread_attr_t *attr, size_t stack_size);
+
+/** @see pthread_attr_setdetachstate */
+#define PTHREAD_CREATE_DETACHED 1
+/** @see pthread_attr_setdetachstate */
+#define PTHREAD_CREATE_JOINABLE 0
+
+/** @this set initial thread state */
+error_t
+pthread_attr_setdetachstate(pthread_attr_t *attr, uint8_t state);
 
 /** @this creates a new pthread */
 error_t

@@ -231,8 +231,8 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
 {
   struct pthread_s	*thread;
   error_t		res;
-  uint8_t		*stack;
-  size_t		stack_size;
+  uint8_t		*stack = NULL;
+  size_t		stack_size = CONFIG_PTHREAD_STACK_SIZE;
 
   thread = mem_alloc(sizeof (struct pthread_s), (mem_scope_sys));
 
@@ -252,17 +252,17 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
       stack_size = attr->stack_size;
       stack = attr->stack_buf;
     }
-  else
+
+  if (stack == NULL)
 #endif
     {
-      stack_size = CONFIG_PTHREAD_STACK_SIZE;
       stack = arch_contextstack_alloc(stack_size);
 
       if (stack == NULL)
-	{
-	  mem_free(thread);
-	  return ENOMEM;
-	}
+        {
+          mem_free(thread);
+          return ENOMEM;
+        }
     }
 
   assert(stack_size % sizeof(reg_t) == 0);
@@ -285,6 +285,9 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   thread->arg = arg;
   thread->joined = NULL;
   atomic_set(&thread->state, 0);
+
+  if (attr && attr->flags & _PTHREAD_ATTRFLAG_DETACHED)
+    atomic_bit_set(&thread->state, _PTHREAD_STATE_DETACHED);
 
 #ifdef CONFIG_PTHREAD_ATTRIBUTES
   /* add cpu affinity */
@@ -345,11 +348,30 @@ error_t pthread_attr_init(pthread_attr_t *attr)
   return 0;
 }
 
-error_t pthread_attr_stack(pthread_attr_t *attr, void *stack_buf, size_t stack_size)
+error_t pthread_attr_setstack(pthread_attr_t *attr, void *stack_buf, size_t stack_size)
 {
   attr->flags |= _PTHREAD_ATTRFLAG_STACK;
   attr->stack_buf = stack_buf;
   attr->stack_size = stack_size;
+  /* FIXME enforce stack alignment here */
+  return 0;
+}
+
+error_t pthread_attr_setstacksize(pthread_attr_t *attr, size_t stack_size)
+{
+  attr->flags |= _PTHREAD_ATTRFLAG_STACK;
+  attr->stack_buf = NULL;
+  attr->stack_size = stack_size;
+  /* FIXME enforce stack alignment here */
+  return 0;
+}
+
+error_t pthread_attr_setdetachstate(pthread_attr_t *attr, uint8_t state)
+{
+  if (state == PTHREAD_CREATE_DETACHED)
+    attr->flags |= _PTHREAD_ATTRFLAG_DETACHED;
+  else
+    attr->flags &= ~_PTHREAD_ATTRFLAG_DETACHED;    
 
   return 0;
 }
