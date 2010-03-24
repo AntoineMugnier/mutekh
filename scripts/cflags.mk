@@ -32,6 +32,10 @@ OBJDUMP=$(CPUTOOLS)objdump
 CFLAGS=	-nostdlib -fno-builtin -Wall -O$(CONFIG_COMPILE_OPTIMIZE)
 DTC=dtc
 
+ifeq ($(CONFIG_OPENMP), defined)
+CFLAGS += -fopenmp
+endif
+
 ifeq ($(CONFIG_HET_BUILD), defined)
 CFLAGS += -fno-section-anchors -ffunction-sections -fdata-sections
 endif

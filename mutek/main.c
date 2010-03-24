@@ -184,6 +184,10 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
 
   if (cpu_isbootstrap())
     {
+#ifdef CONFIG_OPENMP
+      void initialize_libgomp();
+      initialize_libgomp();
+#endif
       app_start();
 #if defined(CONFIG_MUTEK_SCHEDULER)
       cpu_interrupt_disable();
