@@ -60,7 +60,7 @@ sem_post(sem_t *sem)
 static inline error_t
 sem_getvalue(sem_t *sem, uint_fast8_t *sval)
 {
-	sval = semaphore_value(sem);
+	*sval = semaphore_value(sem);
 	return 0;
 }
 
