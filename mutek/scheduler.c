@@ -490,8 +490,10 @@ void sched_affinity_clear(struct sched_context_s *sched_ctx)
 
 void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
+#if defined(CONFIG_ARCH_SMP)
   void *cls = CPU_GET_CLS_ID(cpu);
   sched_ctx->scheduler = CPU_LOCAL_CLS_ADDR(cls, scheduler);
+#endif
 }
 
 void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu)
@@ -500,7 +502,9 @@ void sched_affinity_remove(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 
 void sched_affinity_single(struct sched_context_s *sched_ctx, cpu_id_t cpu)
 {
+#if defined(CONFIG_ARCH_SMP)
   sched_affinity_add(sched_ctx, cpu);
+#endif
 }
 
 void sched_affinity_all(struct sched_context_s *sched_ctx)
