@@ -98,9 +98,9 @@ void * thread(void *id_)
       if (b->data)
 	hash_check(b->data, b->size, b->hash);
 
-      size_t size = rand() % MAX_SIZE + 1; /* FIXME should test size == 0 */
+      size_t size = rand() % MAX_SIZE;
       void *data = realloc(b->data, size);
-      if (data) {
+      if (data || size == 0) {
 	b->data = data;
 	b->size = size;
 	memset(data, rand(), size);

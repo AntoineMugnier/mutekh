@@ -641,6 +641,9 @@ void memory_allocator_dump_used(struct memory_allocator_region_s *region, size_t
   CPU_INTERRUPT_RESTORESTATE;
 #endif
 }
-
 #endif
+
+void memory_allocator_region_check(struct memory_allocator_region_s *region)
+{
+}
 

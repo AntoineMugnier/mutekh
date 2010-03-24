@@ -97,7 +97,6 @@ void mem_region_id_add(cpu_id_t cpu_id,
 
 }
 
-
 struct mem_region_s *mem_region_get_first(enum mem_scope_e scope)
 {
   region_list_root_t *root = (region_list_root_t *)CPU_LOCAL_ADDR (region_root);

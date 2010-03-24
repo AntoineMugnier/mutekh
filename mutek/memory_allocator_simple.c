@@ -133,3 +133,7 @@ bool_t memory_allocator_guard_check(struct memory_allocator_region_s *region)
 {
   return 0;
 }
+
+void memory_allocator_region_check(struct memory_allocator_region_s *region)
+{
+}

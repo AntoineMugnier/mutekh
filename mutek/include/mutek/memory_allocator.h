@@ -33,26 +33,7 @@
 #include <hexo/error.h>
 #include <hexo/lock.h>
 
-/** Error code in memory allocator */
-enum mem_error_e
-  {
-    /** memory header crc invalid */
-    EMEMCRC = 1,
-    /** guard zone incorrect */
-    EMEMGUARD,
-    /** invalid use of free memory space */
-    EMEMDEBUG,
-    /** region size and addition of header size are not egal */
-    EMEMHDRSIZE,
-  };
-
-
 struct memory_allocator_region_s;
-
-/** @this contains memory check return value*/
-struct memory_allocator_check_s;
-
-extern struct memory_allocator_check_s mem_check;
 
 extern struct memory_allocator_region_s *default_region;
 
@@ -87,7 +68,6 @@ error_t memory_allocator_stats(struct memory_allocator_region_s *region,
 
 /** @this make memory region check depending to activated token: guard zone, headers' integrity (crc and size) 
     and if free space was used */
-enum mem_error_e memory_allocator_region_check(struct memory_allocator_region_s *region
-				     , struct memory_allocator_check_s *check);
+void memory_allocator_region_check(struct memory_allocator_region_s *region);
 
 #endif
