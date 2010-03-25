@@ -779,6 +779,7 @@ size_t memory_allocator_getsize(void *ptr)
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   disable_memchecker();
+  lock_spin(& (hdr->region->lock) );
 
   size_t size = header_get_size(&hdr->region->block_root, hdr);
 
@@ -787,6 +788,7 @@ size_t memory_allocator_getsize(void *ptr)
 
   result = size_real2alloc(size);
 
+  lock_release(& (hdr->region->lock) );
   enable_memchecker();
   CPU_INTERRUPT_RESTORESTATE;
 
