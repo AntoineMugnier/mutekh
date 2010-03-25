@@ -6,9 +6,9 @@ define declare_copy
 #$( # info  ======== declare_copy, $(1), $(2), $(3))
 
 $(3)/$(1): $(2)/$(1)
-	echo '   COPY     ' $$(notdir $$@)
-	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
-	cp $$< $$@
+	echo '   COPY     ' $$(notdir $$@) $(LOG_REDIR)
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1)) $(LOG_REDIR)
+	cp $$< $$@ $(LOG_REDIR)
 
 endef
 
@@ -29,8 +29,8 @@ ifeq ($(wildcard $(2)/$(1:.o=.S.m4)),$(2)/$(1:.o=.S.m4))
 DEP_FILE_LIST+=$(3)/$(1:.o=.m4.deps)
 
 $(3)/$(1): $(2)/$(1:.o=.S.m4) $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py
-	@echo '   M4+AS    ' $$(notdir $$@)
-	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
+	@echo '   M4+AS    ' $$(notdir $$@) $(LOG_REDIR)
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1)) $(LOG_REDIR)
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 \
 		$$< | m4 -s $$(filter -I%,$$(INCS)) -P | \
 		python $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py \
@@ -38,9 +38,9 @@ $(3)/$(1): $(2)/$(1:.o=.S.m4) $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/conf
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 \
 		$$< | m4 $$(filter -I%,$$(INCS)) -P > $$(@:.o=.S)
 	cd $(dir $(3)/$(1)) ; \
-	$(DEPCC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$(@:.o=.S)
+	$(DEPCC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$(@:.o=.S) $(LOG_REDIR)
 	cd $(dir $(3)/$(1)) ; \
-	$(CPP) $$(INCS) $$(@:.o=.S) | $(AS) $$(CPUASFLAGS) -o $$@
+	$(CPP) $$(INCS) $$(@:.o=.S) | $(AS) $$(CPUASFLAGS) -o $$@ $(LOG_REDIR)
 
 else
 ifeq ($(wildcard $(2)/$(1:.o=.S)),$(2)/$(1:.o=.S))
@@ -48,12 +48,12 @@ ifeq ($(wildcard $(2)/$(1:.o=.S)),$(2)/$(1:.o=.S))
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be ASM file)
 
 $(3)/$(1): $(2)/$(1:.o=.S) $(OBJ_DIR)/.done_pre_header_list $(OBJ_DIR)/config.h
-	@echo '    AS      ' $$(notdir $$@)
-	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
+	@echo '    AS      ' $$(notdir $$@) $(LOG_REDIR)
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1)) $(LOG_REDIR)
 	cd $(dir $(3)/$(1)) ; \
-	$(DEPCC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
+	$(DEPCC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$< $(LOG_REDIR)
 	cd $(dir $(3)/$(1)) ; \
-	$(CC) $$(INCS) -c -x assembler-with-cpp $$< $$(CPUCFLAGS) -o $$@
+	$(CC) $$(INCS) -c -x assembler-with-cpp $$< $$(CPUCFLAGS) -o $$@ $(LOG_REDIR)
 
 else
 ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))
@@ -61,15 +61,14 @@ ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be a device-tree file)
 
 $(3)/$(1): $(2)/$(1:.o=.dts) $(OBJ_DIR)/config.h
-	@echo ' DTC->C+CC  ' $$(notdir $$@)
-	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
-	cd $(dir $(3)/$(1)) ; $(DTC) -O dtb -o $(3)/$(1:.o=.blob) $$<
+	@echo ' DTC->C+CC  ' $$(notdir $$@) $(LOG_REDIR)
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1)) $(LOG_REDIR)
+	cd $(dir $(3)/$(1)) ; $(DTC) -O dtb -o $(3)/$(1:.o=.blob) $$< $(LOG_REDIR)
 	cd $(dir $(3)/$(1)) ; python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
-	    -a 4 \
-		-o $(3)/$(1:.o=.c) -n dt_blob_start $(3)/$(1:.o=.blob)
+	    -a 4 -o $(3)/$(1:.o=.c) -n dt_blob_start $(3)/$(1:.o=.blob) $(LOG_REDIR)
 	cd $(dir $(3)/$(1)) ; \
 	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $(DIR_CFLAGS) -c \
-		$(3)/$(1:.o=.c) -o $$@
+		$(3)/$(1:.o=.c) -o $$@ $(LOG_REDIR)
 
 else
 ifeq ($(wildcard $(2)/$(1:.o=.dict)),$(2)/$(1:.o=.dict))
@@ -77,36 +76,35 @@ ifeq ($(wildcard $(2)/$(1:.o=.dict)),$(2)/$(1:.o=.dict))
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be a forth dictionary)
 
 $(3)/$(1): $(2)/$(1:.o=.dict)
-	@echo ' DICT->C+CC ' $$(notdir $$@)
+	@echo ' DICT->C+CC ' $$(notdir $$@) $(LOG_REDIR)
 	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
 	cd $(dir $(3)/$(1)) ; python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
-	    -a 4 \
-		-o $(3)/$(1:.o=.c) -S -n forth_dictionary $$<
+	    -a 4 -o $(3)/$(1:.o=.c) -S -n forth_dictionary $$< $(LOG_REDIR)
 	cd $(dir $(3)/$(1)) ; \
 	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $(DIR_CFLAGS) -c \
-		$(3)/$(1:.o=.c) -o $$@
+		$(3)/$(1:.o=.c) -o $$@ $(LOG_REDIR)
 
 else
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be C file)
 
 $(3)/$(1): $(2)/$(1:.o=.c) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_list
-	@echo '    CC      ' $$(notdir $$@)
-	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
+	@echo '    CC      ' $$(notdir $$@) $(LOG_REDIR)
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1)) $(LOG_REDIR)
 	cd $(dir $(3)/$(1)) ; \
 	$(DEPCC) $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
 		$($(1)_CFLAGS) $(DIR_CFLAGS) \
-		-M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$<
+		-M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$< $(LOG_REDIR)
 	cd $(dir $(3)/$(1)) ; \
 	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) $$(INCS) $($(1)_CFLAGS) $(DIR_CFLAGS) -c \
-		$$< -o $$@
+		$$< -o $$@ $(LOG_REDIR)
 ifdef HETLINK
 	md5=$$(shell md5sum $$< | cut -c 1-8) ; \
 		rm -f $$@.static ; \
 		$(CPUTOOLS)nm $$@ | grep ' t ' | cut -c 12- | sort -u | while read i ; do echo "$$$${i} _$$$${md5}_$$$${i}" >> $$@.static ; done
 	if test -e $$@.static ; then \
-		echo '             renaming static symbols' ; \
-		$(CPUTOOLS)objcopy --redefine-syms=$$@.static $$@ ; \
+		echo '             renaming static symbols' $(LOG_REDIR) ; \
+		$(CPUTOOLS)objcopy --redefine-syms=$$@.static $$@ $(LOG_REDIR) ; \
 	fi
 endif
 endif
@@ -119,11 +117,11 @@ endef
 define declare_gpct_header
 
 $(3)/$(1): $(2)/$(1:.h=.t)
-	@echo '    \\      ' $$(notdir $$@)
-	@mkdir -p $(dir $(3)/$(1).h)
-	cp $$< $$@
-	perl $(MUTEK_SRC_DIR)/gpct/gpct/build/backslash.pl < $$< > $$@ 2> $$@.log
-	sed -e 's!^warning:\([0-9]*\):!$$<:\1:warning:!g' < $$@.log 1>&2
+	@echo '    \\      ' $$(notdir $$@) $(LOG_REDIR)
+	@mkdir -p $(dir $(3)/$(1).h) $(LOG_REDIR)
+	cp $$< $$@ $(LOG_REDIR)
+	perl $(MUTEK_SRC_DIR)/gpct/gpct/build/backslash.pl < $$< > $$@ 2>> $(LOG_FILE)
+#	sed -e 's!^warning:\([0-9]*\):!$$<:\1:warning:!g' < $(LOG_FILE) 1>&2
 
 endef
 
@@ -136,8 +134,8 @@ define declare_meta_h
 # Extract HOST defined macros and inject values in a new header file.
 # This is used by emultaion platform to get correct syscall numbers and args
 $(3)/$(1): $(2)/$(1:.h=.def) $(OBJ_DIR)/config.h
-	@echo ' HOST CPP   ' $$(notdir $$@)
-	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
+	@echo ' HOST CPP   ' $$(notdir $$@) $(LOG_REDIR)
+	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1)) $(LOG_REDIR)
 	cat $(OBJ_DIR)/config.h $(2)/$(1:.h=.def) | \
 		$(HOSTCC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) -E - | grep '#define' > $(3)/$(1)
 
@@ -155,7 +153,7 @@ ifeq ($(wildcard $(2)/$(1).cpp),$(2)/$(1).cpp)
 
 # cpp preprocessed files
 $(3)/$(1): $(2)/$(1).cpp $(OBJ_DIR)/config.h
-	@echo '   CPP      ' $$(notdir $$@)
+	@echo '   CPP      ' $$(notdir $$@) $(LOG_REDIR)
 	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
 	$(DEPCC) -E -M -MF $$@.deps -MT $$@ $$(INCS) -P -x c $$<
 	$(CC) -E $$(INCS) -P -x c - < $$< > $$@
@@ -164,7 +162,7 @@ else
 
 # m4 preprocessed files
 $(3)/$(1): $(2)/$(1).m4 $(OBJ_DIR)/config.m4 $(MUTEK_SRC_DIR)/scripts/global.m4 $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py
-	@echo '    M4      ' $$(notdir $$@)
+	@echo '    M4      ' $$(notdir $$@) $(LOG_REDIR)
 	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1))
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 \
 		$$< | m4 -s $$(filter -I%,$$(INCS)) -P | \

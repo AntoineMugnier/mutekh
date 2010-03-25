@@ -26,6 +26,8 @@ OBJ_DIR := $(BUILD_DIR)/obj-$(OUT_NAME)
 target = $(subst /,-,$(OUT_NAME))
 KERNEL_FILE=$(target).$(TARGET_EXT)
 FINAL_KERNEL_FILE=$(target).$(TARGET_EXT)
+LOG_FILE=$(OBJ_DIR)/build.log
+LOG_REDIR= 2>&1 | tee -a $(LOG_FILE)
 
 include $(OBJ_DIR)/config.mk
 
@@ -92,6 +94,20 @@ ifeq ($(CONFIG_ARCH_EMU),defined)
 endif
 	@echo 'BUILD DIR   ' $(OBJ_DIR)
 	@echo 'KERNEL      ' $(notdir $<)
+	( echo ; echo Tools: ; echo ; ) >> $(LOG_FILE)
+	$(CC) -v >> $(LOG_FILE) 2>&1 || true
+	$(LD) -V >> $(LOG_FILE) 2>&1 || true
+	echo >> $(LOG_FILE)
+	( echo ; echo Repository: ; echo ; ) >> $(LOG_FILE)
+	svn info $(MUTEK_SRC_DIR) >> $(LOG_FILE) || true
+	echo >> $(LOG_FILE)
+	touch $(OBJ_DIR)/build.env
+	env | grep -v SESSION | grep -v PASS | sort > $(OBJ_DIR)/build.env_
+	( echo ; echo Environment: ; echo ; ) >> $(LOG_FILE)
+	diff $(OBJ_DIR)/build.env $(OBJ_DIR)/build.env_ >> $(LOG_FILE) || true
+	mv $(OBJ_DIR)/build.env_ $(OBJ_DIR)/build.env
+	( echo ; echo -n "================ finished on " ; date ; echo ) >> $(LOG_FILE)
+	cp $(LOG_FILE) $(BUILD_DIR)/$(FINAL_KERNEL_FILE).log
 
 clean:
 	rm -f $(OBJ_DIR)/$(KERNEL_FILE) $(TARGET_OBJECT_LIST)
@@ -114,7 +130,7 @@ $(OBJ_DIR)/$(target).out: $(OBJ_DIR)/config.m4 \
 		$(META_OBJECT_LIST) \
 		$(TARGET_OBJECT_LIST) \
 	    FORCE
-	echo '    LDL     $@'
+	echo '    LDL     $@' $(LOG_REDIR)
 	$(LD) $(LINK_LDFLAGS) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		$(filter %_before.o,$(filter %.o,$^)) \
 		$(filter-out %_before.o %_after.o,$(filter %.o,$^)) \
@@ -123,7 +139,7 @@ $(OBJ_DIR)/$(target).out: $(OBJ_DIR)/config.m4 \
 		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` \
 	-flat_namespace \
 	-e _arch_init \
-	-undefined warning
+	-undefined warning $(LOG_REDIR)
 
 else
 WL=-Wl,
@@ -134,23 +150,23 @@ $(OBJ_DIR)/$(target).out: $(OBJ_DIR)/config.m4 \
 		$(arch_OBJ_DIR)/ldscript \
 		$(cpu_OBJ_DIR)/ldscript \
 	    FORCE
-	@echo '    LDL     ' $(notdir $@)
+	@echo '    LDL     ' $(notdir $@) $(LOG_REDIR)
 	$(CC) $(addprefix $(WL),$(LINK_LDFLAGS) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS)) \
 		$(CFLAGS) $(CPUCFLAGS) \
 		$(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \
-		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name`
+		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` $(LOG_REDIR)
 endif
 else
 $(FINAL_LINK_TARGET): $(FINAL_LINK_SOURCE) FORCE \
 		$(arch_OBJ_DIR)/ldscript \
 		$(cpu_OBJ_DIR)/ldscript
-	@echo '    LD out   ' $(notdir $@)
+	@echo '    LD out   ' $(notdir $@) $(LOG_REDIR)
 	$(LD) $(LINK_LDFLAGS) $(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		$< \
 		-T $(arch_OBJ_DIR)/ldscript \
 		-T $(cpu_OBJ_DIR)/ldscript \
-		-o $@
+		-o $@ $(LOG_REDIR)
 endif
 
 final_link: $(FINAL_LINK_TARGET)
@@ -160,33 +176,33 @@ $(OBJ_DIR)/$(target).o: $(OBJ_DIR)/config.m4 \
 		$(META_OBJECT_LIST) \
         $(TARGET_OBJECT_LIST) \
 	    FORCE
-	@echo '    LD o     ' $(notdir $@)
+	@echo '    LD o     ' $(notdir $@) $(LOG_REDIR)
 	$(LD) -r \
 		$(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		-q $(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \
-		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name`
+		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` $(LOG_REDIR)
 
 $(OBJ_DIR)/$(target).pre.o: $(OBJ_DIR)/config.m4 $(TARGET_OBJECT_LIST) \
 	    FORCE $(arch_SRC_DIR)/ldscript_obj
-	@echo '    LD o     ' $(notdir $@)
+	@echo '    LD o     ' $(notdir $@) $(LOG_REDIR)
 	$(LD) -r \
 		$(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		-q $(filter %.o,$^) $(filter %.a,$^) \
 		-T $(arch_SRC_DIR)/ldscript_obj \
-		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name`
+		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` $(LOG_REDIR)
 
 kernel-postlink: $(POST_TARGET)
 
 $(POST_TARGET): $(OBJ_DIR)/$(target).o $(POST_LDSCRIPT)
-	@echo '    LD post ' $(notdir $@)
-	$(LD) -o $@ --gc-sections -T $(POST_LDSCRIPT) $<
+	@echo '    LD post ' $(notdir $@) $(LOG_REDIR)
+	$(LD) -o $@ --gc-sections -T $(POST_LDSCRIPT) $< $(LOG_REDIR)
 
 $(OBJ_DIR)/$(target).hex: $(OBJ_DIR)/$(target).out
-	echo 'OBJCOPY HEX ' $(notdir $@)
-	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) -O ihex $< $@
+	echo 'OBJCOPY HEX ' $(notdir $@) $(LOG_REDIR)
+	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) -O ihex $< $@ $(LOG_REDIR)
 
 $(OBJ_DIR)/$(target).bin: $(OBJ_DIR)/$(target).out
-	echo 'OBJCOPY BIN ' $(notdir $@)
-	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) -O binary $< $@
+	echo 'OBJCOPY BIN ' $(notdir $@) $(LOG_REDIR)
+	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) -O binary $< $@ $(LOG_REDIR)
 

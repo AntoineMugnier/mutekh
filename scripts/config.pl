@@ -116,11 +116,30 @@ sub debug
 #	Configuration constraints parsing
 ###############################################################################
 
-sub args_text
+sub args_text_block
 {
     my ($location, $opts, $tag, @args) = @_;
 
     $opts->{$tag} .= join(" ", @args)."\n";
+}
+
+sub args_text_line
+{
+    my ($location, $opts, $tag, @args) = @_;
+
+    if ($opts->{$tag}) {
+	error("$location: multiple `$tag' tags in use");
+    }
+
+    $opts->{$tag} = join(" ", @args);
+}
+
+sub args_function
+{
+    my ($location, $opts, $tag, $constr, $destr) = @_;
+
+    $opts->{constructor} = $constr;
+    $opts->{destructor} = $destr;
 }
 
 sub args_list_concat
@@ -233,7 +252,7 @@ my %config_cmd =
  "module" => \&args_module,
  "provide" => \&args_list_concat,
  "range" => \&args_range,
- "desc" => \&args_text,
+ "desc" => \&args_text_block,
 );
 
 sub new_token_block
@@ -260,10 +279,12 @@ sub new_token_block
 my %init_cmd =
 (
  "parent" => \&args_list_concat,
- "code" => \&args_text,
+ "function" => \&args_function,
+ "prototype" => \&args_text_line,
  "before" => \&args_list_concat,
  "after" => \&args_list_concat,
  "during" => \&args_word,
+ "desc" => \&args_text_block,
 );
 
 sub new_init_block
@@ -603,7 +624,7 @@ sub process_inits_rec
     if ( $init->{during} ) {
 	my $during = $init->{during};
 
-	process_inits_set( $during, $sinit, $order, $iorder ) if ( $init != $sinit );
+#	process_inits_set( $during, $sinit, $order, $iorder ) if ( $init != $sinit );
 	process_inits_rec( $during, $sinit, $order, $iorder );
     }
 
@@ -627,15 +648,23 @@ sub process_inits
 		$during->{childs} ||= [];
 		push @{$during->{childs}}, $init;
 
-		if ( $during->{code} ) {
-		    error_loc($init, "action used with `during' tag has initialization code attached");
+		if ( $during->{constructor} ) {
+		    error_loc($init, "init tokens used with `during' tag can not have `function' defined");
 		}
 
 	    } else {
-		warning_loc($init, "initialization action will not take place because `$during->{name}' is disabled") ;
+		warning_loc($init, "initialization will not take place because `$during->{name}' is disabled") ;
 		next;
 	    }
-	}
+
+	} elsif ( $init->{constructor} ) {
+            warning_loc($init, "init token has `function' defined but is not attached to a parent token");
+        }
+
+        if ( $init->{prototype} && $init->{constructor} ) {
+            error_loc($init, "init `prototype' can only be defined for non-leaf tokens (without `function')");
+        }
+
 	push @init_actions, $init;
     }
 
@@ -668,15 +697,73 @@ sub process_inits
 	}
     }
 
+    # number
+
+    for (my $i = 0; $i < scalar @init_actions; $i++) {
+        my $a = @init_actions[$i];
+        $a->{num} = $i;
+    }
+
+}
+
+sub output_inits_details
+{
+    my ( $out, $actions ) = @_;
+
+    foreach my $init (@$actions) {
+        print {$out} "  $init->{name} ";
+        print {$out} " $init->{constructor}(); " if ( $init->{constructor} );
+        print {$out} " $init->{destructor}(); " if ( $init->{destructor} );
+        print {$out} "\n";
+    }
 }
 
 sub output_inits
 {
-    my ( $out, $actions, $indent ) = @_;
+    my ( $out, $actions ) = @_;
 
     foreach my $init (@$actions) {
-	print {$out} "$indent/* $init->{name} */\n";
-	print {$out} "$indent".$init->{code};
+
+        next if ( ! $init->{childs} );
+        next if $init->{constructor};
+
+        my @calls;
+
+        foreach_recurs( $init, "childs", sub {
+            my $chld = shift;
+            push @calls, $chld;
+        });
+
+        print {$out} "#define $init->{name}_PROTOTYPES \\\n";
+        foreach my $call ( @calls ) {
+            my $args;
+            my $par = $call;
+
+            while ( $par = $par->{during} ) {
+                last if ( $args = $par->{prototype} );                
+            }
+            print {$out} "  void $call->{constructor}($args); \\\n"
+                if ( $call->{constructor} );
+            print {$out} "  void $call->{destructor}($args); \\\n"
+                if ( $call->{destructor} );
+        }
+        print {$out} "\n";
+
+        @calls = sort { $a->{num} > $b->{num} } @calls;
+
+        print {$out} "#define $init->{name}_INIT(...) \\\n";
+        foreach my $call ( @calls ) {
+            print {$out} "  $call->{constructor}(__VA_ARGS__); \\\n"
+                if ( $call->{constructor} );
+        }
+        print {$out} "\n";
+
+        print {$out} "#define $init->{name}_CLEANUP(...) \\\n";
+        foreach my $call ( reverse @calls ) {
+            print {$out} "  $call->{destructor}(__VA_ARGS__); \\\n"
+                if ( $call->{destructor} );
+        }
+        print {$out} "\n";
     }
 }
 
@@ -817,6 +904,19 @@ sub foreach_tag_args
     };
 
     $r->($list);
+}
+
+sub foreach_recurs
+{
+    my ( $token, $tag, $process ) = @_;
+
+    my $list = $token->{$tag};
+    return if (!$list);
+
+    foreach ( @$list ) {
+        $process->( $_ );
+        foreach_recurs( $_, $tag, $process );
+    }
 }
 
 sub get_token_name_list
@@ -1422,6 +1522,11 @@ sub read_build_config
 {
     my ( $file, $section ) = @_;
 
+    if ( ! -f $file ) {
+        error("You need to specify a valid build configuration file in order to build MutekH");
+        error("See: https://www.mutekh.org/trac/mutekh/wiki/BuildingExamples");
+    }
+
     my $cd = dirname(Cwd::realpath($file));
 
     push @config_files, Cwd::realpath($file);
@@ -1721,7 +1826,7 @@ sub write_makefile
 	return -1;
     } else {
 	unlink($file);
-	return 0;
+	return $debug;  # assume overwriten if debug mode
     }
 }
 
@@ -1789,16 +1894,59 @@ sub write_inits
     return 0;
 }
 
+sub write_infos
+{
+    my $file = "$bld_path/build.log";
+
+    push @output_files, $file;
+
+    debug(1, "writing info text file `$file'");
+
+    if (!open(FILE, ">>".$file)) {
+	error(" unable to open `$file' to write build summary text file");
+	return 1;
+    }
+
+    print FILE "Flattened build configuration file:\n\n";
+    flat_config( \*FILE );
+    print FILE "\n";
+
+    print FILE "Initialization order:\n\n";
+    output_inits_details( \*FILE, \@init_actions );
+    print FILE "\n";
+
+    print FILE "Configuration used:\n\n";
+    tokens_list( \*FILE, 0 );
+    print FILE "\n";
+
+    close(FILE);
+    return 0;
+}
+
 ###############################################################################
 #	Help and Documentation output
 ###############################################################################
 
+sub flat_config
+{
+    my ( $out ) = @_;
+
+    foreach my $name (sort keys %config_opts)
+    {
+	my $opt = $config_opts{$name};
+
+	next if (!$opt->{userdefined});
+
+	print {$out} "  $opt->{name} $opt->{value}\n";
+    }
+}
+
 sub tokens_list
 {
-    my $all = $param_h{list} eq "all";
+    my ( $out, $all ) = @_;
 
-    printf("\n %-6s%-40s %-16s %s \n", "", "Configuration token name", "Value", "Declare location");
-    print ("="x80, "\n\n");
+    printf {$out} (" %-6s%-40s %-16s %s \n", "", "Configuration token name", "Value", "Declare location");
+    print {$out} "="x80, "\n\n";
 
     foreach my $name (sort keys %config_opts)
     {
@@ -1838,23 +1986,23 @@ sub tokens_list
 	    $attr .= "m";
 	}
 
-	printf(" %-6s%-40s %-16s %-16s ", $attr, $name, $opt->{value},
+	printf {$out} (" %-6s%-40s %-16s %-16s ", $attr, $name, $opt->{value},
 	       basename($opt->{file}).":".$opt->{location});
 
 	if ( $all && $opt->{vlocation}) {
-	    print "  ".basename($opt->{vlocation});
+	    print {$out} "  ".basename($opt->{vlocation});
 	}
 
-	print "\n";
+	print {$out} "\n";
     }
 
-    print "\n";
-    print("    (+) defined, (U) assigned in build config file, (X) module.\n");
-    print("    (v) value, (A) automatic dependency, (M) mandatory.\n");
+    print {$out} "\n";
+    print {$out} "    (+) defined, (U) assigned in build config file, (X) module.\n";
+    print {$out} "    (v) value, (A) automatic dependency, (M) mandatory.\n";
     if ( $all ) {
-	print("    (i) for internal use, (m) meta: provided by other token.\n");
+	print {$out} "    (i) for internal use, (m) meta: provided by other token.\n";
     }
-    print "\n";
+    print {$out} "\n";
 }
 
 sub write_token_doc
@@ -2054,7 +2202,7 @@ Usage: config.pl [options]
     debug(1, "help and info display actions");
 
     if ($param_h{list}) {
-	return tokens_list();
+	return tokens_list( \*STDOUT, $param_h{list} eq "all" );
     }
 
     if ($param_h{info}) {
@@ -2105,6 +2253,7 @@ Usage: config.pl [options]
 	    write_py();
 	    write_inits();
 	    write_depmakefile();
+            write_infos();
 	}
 	return;
     }
