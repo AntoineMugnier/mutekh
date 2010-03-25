@@ -55,12 +55,12 @@ asm(
 # endif
 
     // Allocate 1K stacks
-    "lsl  r5, r4, #10            \n\t"
+    "lsl  r5, r4, #" ASM_STR(CONFIG_HEXO_RESET_STACK_SIZE) "\n\t"
 
     "ldr  r13, =__initial_stack-16   \n\t"
     "subs r13, r13, r5                         \n\t"
 # ifdef CONFIG_SOCLIB_MEMCHECK
-    "mov  r0, #1024           \n\t"
+    "mov  r0, #1<<" ASM_STR(CONFIG_HEXO_RESET_STACK_SIZE) "           \n\t"
     "ldr  r2, =" ASM_STR(SOCLIB_MC_MAGIC_VAL) "  \n\t"
     "ldr  r1, =" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) " \n\t"
     "str  r2, [r1, #(" ASM_STR(SOCLIB_MC_MAGIC) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
@@ -73,6 +73,10 @@ asm(
 
     "mov  r0, #" ASM_STR(SOCLIB_MC_CHECK_SPFP+SOCLIB_MC_CHECK_INIT) " \n\t"
     "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_ENABLE) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
+
+    /* mark cpu_init_flag variable as initialized */
+    "ldr  r0, =cpu_init_flag  \n\t"
+    "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_INITIALIZED) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
 
     "mov  r0, #0             \n\t"
     "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_MAGIC) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"

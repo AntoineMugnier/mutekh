@@ -38,6 +38,9 @@
 /** Set disabled checks */
 #define SOCLIB_MC_DISABLE (CONFIG_SOCLIB_MEMCHECK_ADDRESS + 36)
 
+/** Mark region as intialized */
+#define SOCLIB_MC_INITIALIZED (CONFIG_SOCLIB_MEMCHECK_ADDRESS + 40)
+
 /** Stack pointer range must be checked */
 # define SOCLIB_MC_CHECK_SP 1
 /** Frame pointer range must be checked */

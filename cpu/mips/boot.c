@@ -69,7 +69,7 @@ asm(
         "   slt     $8,     $9,     " ASM_STR(CONFIG_CPU_MAXCOUNT) "                       \n"
         "   beq     $0,     $8,     1b                                                     \n"
 
-        "   sll     $8,     $9,     10                                                     \n"
+        "   sll     $8,     $9,     " ASM_STR(CONFIG_HEXO_RESET_STACK_SIZE) "              \n"
         "   subu    $sp,    $sp,    $8                                                     \n"
 #endif
 
@@ -80,7 +80,7 @@ asm(
 #ifdef CONFIG_SOCLIB_MEMCHECK
         ".set push                                                                         \n"
         ".set noat                                                                         \n"
-        "   addiu   $8,     $0,     1024                                                   \n"
+        "   addiu   $8,     $0,     1 << " ASM_STR(CONFIG_HEXO_RESET_STACK_SIZE) "         \n"
         "   li      $1,     " ASM_STR(SOCLIB_MC_MAGIC_VAL) "                               \n"
         "   sw      $1,     " ASM_STR(SOCLIB_MC_MAGIC) "($0)                               \n"
 
@@ -92,6 +92,10 @@ asm(
         "   sw      $9,     " ASM_STR(SOCLIB_MC_CTX_SET) "($0)                             \n"
         "   ori     $1,     $0,     " ASM_STR(SOCLIB_MC_CHECK_SPFP+SOCLIB_MC_CHECK_INIT) " \n"
         "   sw      $1,     " ASM_STR(SOCLIB_MC_ENABLE) "($0)                              \n"
+
+        /* mark cpu_init_flag variable as initialized */
+        "   la      $8,     cpu_init_flag                                                  \n"
+        "   sw      $8,     " ASM_STR(SOCLIB_MC_INITIALIZED) "($0)                         \n"
 
         "   sw      $0,     " ASM_STR(SOCLIB_MC_MAGIC) "($0)                               \n"
         ".set pop                                                                          \n"

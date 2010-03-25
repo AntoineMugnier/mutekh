@@ -42,14 +42,14 @@ asm(
     "bne    cr0, 1b                     \n"
 #endif
 
-    "rlwinm 3,29,12,0,19                \n"
+    "slwi   3,29, " ASM_STR(CONFIG_HEXO_RESET_STACK_SIZE) " \n"
     "sub    1,1,3                       \n"
 
     "li    3, 0                         \n"
     "mtmsr 3                            \n"
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-    "addi   2,  0,  1024                \n"
+    "addi   2,  0,  1 << " ASM_STR(CONFIG_HEXO_RESET_STACK_SIZE) "\n"
 /*     "lis 0, hi(" ASM_STR(SOCLIB_MC_MAGIC_VAL) ") \n" */
 /*     "ori 0, 0, lo(" ASM_STR(SOCLIB_MC_MAGIC_VAL) ") \n" */
     "lis    0, (" ASM_STR(SOCLIB_MC_MAGIC_VAL) ")@h  \n"
@@ -64,6 +64,11 @@ asm(
     "stw    29, " ASM_STR(SOCLIB_MC_CTX_SET) "(0) \n"
     "addi   0,  0,  " ASM_STR(SOCLIB_MC_CHECK_SPFP+SOCLIB_MC_CHECK_INIT) " \n"
     "stw    0,  " ASM_STR(SOCLIB_MC_ENABLE) "(0) \n"
+
+    /* mark cpu_init_flag variable as initialized */
+    "lis    2, cpu_init_flag@ha          \n"
+    "la     2, cpu_init_flag@l(2)        \n"
+    "stw    2,  " ASM_STR(SOCLIB_MC_INITIALIZED) "(0) \n"
 
     "stw    3,  " ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
 #endif
