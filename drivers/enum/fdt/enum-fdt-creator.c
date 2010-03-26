@@ -85,10 +85,13 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_creator_node_entry)
 
 		node_info->new = device_obj_new(NULL);
 		node_info->new->drv = NULL;
-		node_info->new_pv = mem_alloc(sizeof(struct enum_pv_fdt_s), (mem_scope_sys));
-		node_info->new_pv->offset = fdt_reader_get_struct_offset(state);
-		node_info->new_pv->device_type = devtype;
-		strncpy(node_info->new_pv->device_path, path, ENUM_FDT_PATH_MAXLEN);
+
+		struct enum_pv_fdt_s *npv = mem_alloc(sizeof(struct enum_pv_fdt_s), (mem_scope_sys));
+		memset(npv, 0, sizeof(*npv));
+		node_info->new_pv = npv;
+		npv->offset = fdt_reader_get_struct_offset(state);
+		npv->device_type = devtype;
+		strncpy(npv->device_path, path, ENUM_FDT_PATH_MAXLEN);
 
 		if ( !strcmp( devtype, "cpu" ) ) {
 			const void *icudevtype = NULL;
@@ -97,7 +100,7 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_creator_node_entry)
 			node_info->where = IN_CPU;
 			if ( fdt_reader_has_prop(state, "icudev_type",
 									 &icudevtype, &icudevlen ) ) {
-				node_info->new_pv->device_type = icudevtype;
+				npv->device_type = icudevtype;
 			}
 		}
 	}
