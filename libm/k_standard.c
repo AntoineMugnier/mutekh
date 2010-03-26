@@ -17,7 +17,11 @@
 
 #include <mutek/printk.h>
 
-#define	WRITE2(u,v)	printk("%s", u)
+#define CONFIG_MUTEK_PRINTK
+# define	WRITE2(u,v)	printk("%s", u)
+#else
+# define	WRITE2(u,v)
+#endif
 
 static double zero = 0.0;	/* used as const */
 
