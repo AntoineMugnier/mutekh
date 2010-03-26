@@ -555,12 +555,13 @@ void *memory_allocator_resize(void *address, size_t size)
   struct memory_allocator_header_s *hdr = mem2hdr(address);
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
-  lock_spin(&region->lock);
   disable_memchecker();
-  
-  assert( header_is_alloc(hdr) && !header_is_endblock(hdr) );
 
   struct memory_allocator_region_s *region = hdr->region;
+
+  lock_spin(&region->lock);
+  
+  assert( header_is_alloc(hdr) && !header_is_endblock(hdr) );
 
   size = size_alloc2real(size);
   
@@ -712,16 +713,16 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
 
 void memory_allocator_push(void *address)
 {
-  struct memory_allocator_header_s	*hdr, *next, *prev;
-  hdr = mem2hdr(address);
+  struct memory_allocator_header_s	*next, *prev, *hdr = mem2hdr(address);
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
-  lock_spin(&region->lock);
   disable_memchecker();
 
-  assert( header_is_alloc(hdr) && !header_is_endblock(hdr) );
-
   struct memory_allocator_region_s	*region = hdr->region;
+
+  lock_spin(&region->lock);
+
+  assert( header_is_alloc(hdr) && !header_is_endblock(hdr) );
 
   size_t size = header_get_size(&region->block_root, hdr);
 
