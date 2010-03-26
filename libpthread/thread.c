@@ -286,10 +286,10 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   thread->joined = NULL;
   atomic_set(&thread->state, 0);
 
+#ifdef CONFIG_PTHREAD_ATTRIBUTES
   if (attr && attr->flags & _PTHREAD_ATTRFLAG_DETACHED)
     atomic_bit_set(&thread->state, _PTHREAD_STATE_DETACHED);
 
-#ifdef CONFIG_PTHREAD_ATTRIBUTES
   /* add cpu affinity */
   if (attr && attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
     {
