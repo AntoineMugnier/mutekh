@@ -587,6 +587,8 @@ void *memory_allocator_resize(void *address, size_t size)
 	  MEM_LIST_FUNCTION_REM(remove, free, next);
 	  MEM_LIST_FUNCTION_REM(remove, block, next);
 	  
+	  memchecker_set_free(hdr_size, hdr);
+
 	  if (next_size >= diff + MEMALLOC_SPLIT_SIZE)
 	    {
 
@@ -603,14 +605,15 @@ void *memory_allocator_resize(void *address, size_t size)
 	      memory_allocator_scramble_set(next_size, next);
 
 	      update_region_stats(region, -diff, 1, 0);
+	      memchecker_set_alloc(size, hdr);
 	    }
-
+	  else
+	    {
+	      memchecker_set_alloc( hdr_size + next_size, hdr);
+	    }
 	  update_region_stats(region, -next_size, -1, 0);
 
 	  memory_allocator_crc_set(hdr);
-
-	  memchecker_set_free(hdr_size, hdr);
-	  memchecker_set_alloc(size, hdr);
 	}
     }
   else
@@ -635,6 +638,7 @@ void *memory_allocator_resize(void *address, size_t size)
 	      memory_allocator_scramble_set(next_size, next);
 
 	      update_region_stats(region, -diff, 1, 0);
+	      memchecker_set_free(next_size, next);
 	    }
 	}
     }
