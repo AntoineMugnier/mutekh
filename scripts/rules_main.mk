@@ -27,7 +27,7 @@ target = $(subst /,-,$(OUT_NAME))
 KERNEL_FILE=$(target).$(TARGET_EXT)
 FINAL_KERNEL_FILE=$(target).$(TARGET_EXT)
 LOG_FILE=$(OBJ_DIR)/build.log
-LOG_REDIR= 2>&1 | tee -a $(LOG_FILE)
+#LOG_REDIR= 3>>$(LOG_FILE) 1>&3 2>&3
 
 include $(OBJ_DIR)/config.mk
 
