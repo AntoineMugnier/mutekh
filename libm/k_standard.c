@@ -15,14 +15,9 @@
 #include "fdlibm.h"
 #include <errno.h>
 
-#ifndef _USE_WRITE
-#include <stdio.h>			/* fputs(), stderr */
-#define	WRITE2(u,v)	fputs(u, stderr)
-#else	/* !defined(_USE_WRITE) */
-#include <unistd.h>			/* write */
-#define	WRITE2(u,v)	write(2, u, v)
-#undef fflush
-#endif	/* !defined(_USE_WRITE) */
+#include <mutek/printk.h>
+
+#define	WRITE2(u,v)	printk("%s", u)
 
 static double zero = 0.0;	/* used as const */
 
