@@ -93,10 +93,11 @@ asm(
         "   ori     $1,     $0,     " ASM_STR(SOCLIB_MC_CHECK_SPFP+SOCLIB_MC_CHECK_INIT) " \n"
         "   sw      $1,     " ASM_STR(SOCLIB_MC_ENABLE) "($0)                              \n"
 
+#ifdef CONFIG_ARCH_SMP
         /* mark cpu_init_flag variable as initialized */
         "   la      $8,     cpu_init_flag                                                  \n"
         "   sw      $8,     " ASM_STR(SOCLIB_MC_INITIALIZED) "($0)                         \n"
-
+#endif
         "   sw      $0,     " ASM_STR(SOCLIB_MC_MAGIC) "($0)                               \n"
         ".set pop                                                                          \n"
 #endif

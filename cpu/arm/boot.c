@@ -74,9 +74,11 @@ asm(
     "mov  r0, #" ASM_STR(SOCLIB_MC_CHECK_SPFP+SOCLIB_MC_CHECK_INIT) " \n\t"
     "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_ENABLE) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
 
+#ifdef CONFIG_ARCH_SMP
     /* mark cpu_init_flag variable as initialized */
     "ldr  r0, =cpu_init_flag  \n\t"
     "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_INITIALIZED) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
+#endif
 
     "mov  r0, #0             \n\t"
     "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_MAGIC) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"

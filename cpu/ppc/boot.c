@@ -65,10 +65,12 @@ asm(
     "addi   0,  0,  " ASM_STR(SOCLIB_MC_CHECK_SPFP+SOCLIB_MC_CHECK_INIT) " \n"
     "stw    0,  " ASM_STR(SOCLIB_MC_ENABLE) "(0) \n"
 
+#ifdef CONFIG_ARCH_SMP
     /* mark cpu_init_flag variable as initialized */
     "lis    2, cpu_init_flag@ha          \n"
     "la     2, cpu_init_flag@l(2)        \n"
     "stw    2,  " ASM_STR(SOCLIB_MC_INITIALIZED) "(0) \n"
+#endif
 
     "stw    3,  " ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
 #endif
