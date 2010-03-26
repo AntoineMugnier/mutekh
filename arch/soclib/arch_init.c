@@ -95,15 +95,8 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         lock_init(&cpu_init_lock);
 
 #endif
+
 #ifdef CONFIG_DATA_FROM_ROM
-# if defined(CONFIG_SOCLIB_MEMCHECK)
-        soclib_mem_check_region_status((uint8_t*)&__data_start,
-                                       (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start,
-                                       SOCLIB_MC_REGION_ALLOC);
-        soclib_mem_check_region_status((uint8_t*)&__bss_start,
-                                       (uint8_t*)&__bss_end-(uint8_t*)&__bss_start,
-                                       SOCLIB_MC_REGION_ALLOC);
-# endif
         memcpy_from_code((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
         memset((uint8_t*)&__bss_start, 0, (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
 #endif
