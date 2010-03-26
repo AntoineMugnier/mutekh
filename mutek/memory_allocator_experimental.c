@@ -554,6 +554,10 @@ void *memory_allocator_resize(void *address, size_t size)
 {
   struct memory_allocator_header_s *hdr = mem2hdr(address);
 
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  lock_spin(&region->lock);
+  disable_memchecker();
+  
   assert( header_is_alloc(hdr) && !header_is_endblock(hdr) );
 
   struct memory_allocator_region_s *region = hdr->region;
@@ -565,12 +569,7 @@ void *memory_allocator_resize(void *address, size_t size)
   ssize_t diff = (size - hdr_size);
   
   if (! diff )
-    return address;
-  
-  CPU_INTERRUPT_SAVESTATE_DISABLE;
-  lock_spin(&region->lock);
-
-  disable_memchecker();
+    goto done;
   
   struct memory_allocator_header_s *next = block_list_next(&region->block_root, hdr);
   
@@ -639,8 +638,8 @@ void *memory_allocator_resize(void *address, size_t size)
 	}
     }
 
+ done:
   enable_memchecker();
-
   lock_release(&region->lock);
   CPU_INTERRUPT_RESTORESTATE;
 
@@ -716,15 +715,15 @@ void memory_allocator_push(void *address)
   struct memory_allocator_header_s	*hdr, *next, *prev;
   hdr = mem2hdr(address);
 
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  lock_spin(&region->lock);
+  disable_memchecker();
+
   assert( header_is_alloc(hdr) && !header_is_endblock(hdr) );
 
   struct memory_allocator_region_s	*region = hdr->region;
 
   size_t size = header_get_size(&region->block_root, hdr);
-
-  CPU_INTERRUPT_SAVESTATE_DISABLE;
-  lock_spin(&region->lock);
-  disable_memchecker();
 
   memory_allocator_guard_check(size, hdr);
   memory_allocator_crc_check(hdr);
@@ -775,11 +774,11 @@ size_t memory_allocator_getsize(void *ptr)
 
   struct memory_allocator_header_s *hdr = mem2hdr(ptr);
 
-  assert( header_is_alloc(hdr) && !header_is_endblock(hdr) );
-
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   disable_memchecker();
   lock_spin(& (hdr->region->lock) );
+
+  assert( header_is_alloc(hdr) && !header_is_endblock(hdr) );
 
   size_t size = header_get_size(&hdr->region->block_root, hdr);
 
