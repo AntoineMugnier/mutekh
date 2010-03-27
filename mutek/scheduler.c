@@ -149,10 +149,16 @@ void __sched_context_push(struct sched_context_s *sched_ctx)
  *      Scheduler idle context
  */
 
+extern struct sched_context_s main_ctx;
+
 /* idle context runtime */
 static CONTEXT_ENTRY(sched_context_idle)
 {
   struct scheduler_s *sched = __scheduler_get();
+
+  /* destroy app_start context */
+  if (cpu_isbootstrap())
+    context_destroy(&main_ctx.context);
 
 #ifdef CONFIG_HEXO_IPI
   /* Get scheduler IPI endpoint for this processor  */

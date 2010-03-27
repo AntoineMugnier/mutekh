@@ -72,7 +72,7 @@ DEVTIMER_CALLBACK(timer_callback)
 #ifdef CONFIG_MUTEK_MAIN
 
 #if defined (CONFIG_MUTEK_SCHEDULER)
-static struct sched_context_s main_ctx;
+struct sched_context_s main_ctx;
 #endif
 
 #if defined(CONFIG_LIBC_STREAM_STD)
@@ -191,7 +191,6 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
       app_start();
 #if defined(CONFIG_MUTEK_SCHEDULER)
       cpu_interrupt_disable();
-      context_destroy(&main_ctx.context);
       sched_lock();
       sched_context_exit();
 #endif
