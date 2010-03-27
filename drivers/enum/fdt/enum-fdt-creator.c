@@ -89,6 +89,7 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_creator_node_entry)
 		struct enum_pv_fdt_s *npv = mem_alloc(sizeof(struct enum_pv_fdt_s), (mem_scope_sys));
 		memset(npv, 0, sizeof(*npv));
 		node_info->new_pv = npv;
+		npv->phandle = -1;
 		npv->offset = fdt_reader_get_struct_offset(state);
 		npv->device_type = devtype;
 		strncpy(npv->device_path, path, ENUM_FDT_PATH_MAXLEN);
