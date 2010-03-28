@@ -157,10 +157,10 @@ cpu_context_jumpto(struct context_s *new)
 #endif
 
 	/* restore status & tls */
-	"	lwz	%1, 0*4(1)		\n"
-	"	mtspr	0x114, %1		\n" /* SPRG4 is tls */
-	"	lwz	%1, 1*4(1)		\n"
-	"	mtmsr	%1			\n"
+	"	lwz	%0, 0*4(1)		\n"
+	"	mtspr	0x114, %0		\n" /* SPRG4 is tls */
+	"	lwz	%0, 1*4(1)		\n"
+	"	mtmsr	%0			\n"
 
 	/* restore r13, r14, r15 */
 	"	lwz	30, 2*4(1)		\n"
@@ -169,13 +169,15 @@ cpu_context_jumpto(struct context_s *new)
 	"	lwz	14, 5*4(1)		\n"
 
 	/* Restore execution pointer */
-	"	lwz	%1, 6*4(1)		\n"
+	"	lwz	%0, 6*4(1)		\n"
 	"	addi	1, 1, 7*4		\n"
-	"	mtctr	%1			\n"
+	"	mtctr	%0			\n"
 	"	bctrl				\n"
         :
         : "r" (&new->stack_ptr)
+#ifdef CONFIG_SOCLIB_MEMCHECK
         , "r" (SOCLIB_MC_MAGIC_VAL)
+#endif
 	);
   while (1);
 }
@@ -219,7 +221,9 @@ cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto)
 	: "r" (stack)
         , "r" (stack_size)
 	, "r" (jumpto)
+#ifdef CONFIG_SOCLIB_MEMCHECK
         , "r" (SOCLIB_MC_MAGIC_VAL)
+#endif
 	);
   while (1);
 }
