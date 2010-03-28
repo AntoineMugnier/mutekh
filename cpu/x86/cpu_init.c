@@ -169,6 +169,8 @@ cpu_x86_segdesc_free(cpu_x86_segsel_t sel)
 {
   lock_spin(&gdt_lock);
 
+  /* FIXME could use atomic op here */
+  assert(!gdt[sel].seg.available);
   gdt[sel].seg.available = 1;
 
   lock_release(&gdt_lock);  
