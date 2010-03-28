@@ -56,7 +56,7 @@ asm(
 #else
         "   mfc0    $9,     $15                                                            \n"
 #endif
-        "   la      $sp,    __initial_stack - 16                                           \n"
+        "   la      $sp,    __initial_stack                                                \n"
         "   andi    $9,     $9,     0x000003ff                                             \n"
 
         "1:                                                                                \n"
@@ -78,28 +78,40 @@ asm(
 #endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-        ".set push                                                                         \n"
-        ".set noat                                                                         \n"
-        "   addiu   $8,     $0,     1 << " ASM_STR(CONFIG_HEXO_RESET_STACK_SIZE) "         \n"
-        "   li      $1,     " ASM_STR(SOCLIB_MC_MAGIC_VAL) "                               \n"
-        "   sw      $1,     " ASM_STR(SOCLIB_MC_MAGIC) "($0)                               \n"
-
-        "   sw      $8,     " ASM_STR(SOCLIB_MC_R2) "($0)                                  \n"
-        "   subu    $8,     $sp,    $8                                                     \n"
-        "   addiu   $8,     $8,     16                                                     \n"
-        "   sw      $8,     " ASM_STR(SOCLIB_MC_R1) "($0)                                  \n"
-        "   sw      $9,     " ASM_STR(SOCLIB_MC_CTX_CREATE) "($0)                          \n"
-        "   sw      $9,     " ASM_STR(SOCLIB_MC_CTX_SET) "($0)                             \n"
-        "   ori     $1,     $0,     " ASM_STR(SOCLIB_MC_CHECK_SPFP+SOCLIB_MC_CHECK_INIT) " \n"
-        "   sw      $1,     " ASM_STR(SOCLIB_MC_ENABLE) "($0)                              \n"
-
-#ifdef CONFIG_ARCH_SMP
-        /* mark cpu_init_flag variable as initialized */
-        "   la      $8,     cpu_init_flag                                                  \n"
-        "   sw      $8,     " ASM_STR(SOCLIB_MC_INITIALIZED) "($0)                         \n"
+	        ".set push                                                                     \n"
+	        ".set noat                                                                     \n"
+	        "   addiu   $8,     $0,     1 << " ASM_STR(CONFIG_HEXO_RESET_STACK_SIZE) "     \n"
+	
+			/* enter memchecker command mode */
+	        "   li      $1,     " ASM_STR(SOCLIB_MC_MAGIC_VAL) "                           \n"
+	        "   sw      $1,     " ASM_STR(SOCLIB_MC_MAGIC) "($0)                           \n"
+	
+			/* create a new initial memchecker context using cpuid as context id */
+	        "   sw      $8,     " ASM_STR(SOCLIB_MC_R2) "($0)                              \n"
+	        "   subu    $8,     $sp,    $8                                                 \n"
+	        "   sw      $8,     " ASM_STR(SOCLIB_MC_R1) "($0)                              \n"
+	        "   sw      $9,     " ASM_STR(SOCLIB_MC_CTX_CREATE) "($0)                      \n"
+			/* switch to new memchecker context */
+	        "   sw      $9,     " ASM_STR(SOCLIB_MC_CTX_SET) "($0)                         \n"
+	
+	        /* enable all memchecker checks */
+	        "   ori     $1,     $0,     " ASM_STR(SOCLIB_MC_CHECK_ALL) " \n"
+	        "   sw      $1,     " ASM_STR(SOCLIB_MC_ENABLE) "($0)                          \n"
+	
+# ifdef CONFIG_ARCH_SMP
+	        /* mark cpu_init_flag variable as initialized */
+	        "   la      $8,     cpu_init_flag                                              \n"
+	        "   sw      $8,     " ASM_STR(SOCLIB_MC_INITIALIZED) "($0)                     \n"
+# endif
 #endif
-        "   sw      $0,     " ASM_STR(SOCLIB_MC_MAGIC) "($0)                               \n"
-        ".set pop                                                                          \n"
+
+        /* adjust stack pointer, 64 bits aligned, mips abi requires 4 free words */
+        "   addiu   $sp,    $sp,     -16                                                   \n"
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+            /* leave memchecker command mode */
+	        "   sw      $0,     " ASM_STR(SOCLIB_MC_MAGIC) "($0)                           \n"
+	        ".set pop                                                                      \n"
 #endif
 
         "   la      $4, __exception_base_ptr                                               \n"
@@ -113,7 +125,6 @@ asm(
 #endif
         /* Put a 0 in second arg */
         "   move    $5, $0                                                                 \n"
-
 
         /* jumpto arch_init function */
         "   la      $8,     arch_init                                                      \n"

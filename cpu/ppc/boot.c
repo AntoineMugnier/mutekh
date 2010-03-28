@@ -31,8 +31,8 @@ asm(
     FUNC_START(cpu_boot)
 
     /* get CPU id and adjust stack */
-    "lis    9, __initial_stack - 8@ha    \n"
-    "la     1, __initial_stack - 8@l(9)  \n"
+    "lis    9, __initial_stack@ha    \n"
+    "la     1, __initial_stack@l(9)  \n"
     "mfdcr  29,0                         \n"
 
 #ifndef CONFIG_ARCH_SMP
@@ -50,28 +50,38 @@ asm(
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
     "addi   2,  0,  1 << " ASM_STR(CONFIG_HEXO_RESET_STACK_SIZE) "\n"
-/*     "lis 0, hi(" ASM_STR(SOCLIB_MC_MAGIC_VAL) ") \n" */
-/*     "ori 0, 0, lo(" ASM_STR(SOCLIB_MC_MAGIC_VAL) ") \n" */
+
+    /* enter memchecker command mode */
     "lis    0, (" ASM_STR(SOCLIB_MC_MAGIC_VAL) ")@h  \n"
     "ori 0, 0, (" ASM_STR(SOCLIB_MC_MAGIC_VAL) ")@l  \n"
     "stw    0,  " ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
 
+    /* create a new initial memchecker context using cpuid as context id */
     "stw    2,  " ASM_STR(SOCLIB_MC_R2) "(0) \n"
     "subf   2,  2,  1                   \n"
-    "addi   2,  2,      8               \n"
     "stw    2,  " ASM_STR(SOCLIB_MC_R1) "(0) \n"
     "stw    29, " ASM_STR(SOCLIB_MC_CTX_CREATE) "(0) \n"
+
+    /* switch to new memchecker context */
     "stw    29, " ASM_STR(SOCLIB_MC_CTX_SET) "(0) \n"
-    "addi   0,  0,  " ASM_STR(SOCLIB_MC_CHECK_SPFP+SOCLIB_MC_CHECK_INIT) " \n"
+
+    /* enable all memchecker checks */
+    "addi   0,  0,  " ASM_STR(SOCLIB_MC_CHECK_ALL) " \n"
     "stw    0,  " ASM_STR(SOCLIB_MC_ENABLE) "(0) \n"
 
-#ifdef CONFIG_ARCH_SMP
+# ifdef CONFIG_ARCH_SMP
     /* mark cpu_init_flag variable as initialized */
     "lis    2, cpu_init_flag@ha          \n"
     "la     2, cpu_init_flag@l(2)        \n"
     "stw    2,  " ASM_STR(SOCLIB_MC_INITIALIZED) "(0) \n"
+# endif
 #endif
 
+    /* adjust stack pointer */
+    "addi   1,  1, -" ASM_STR(CONFIG_HEXO_STACK_ALIGN) " \n"
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+    /* leave memchecker command mode */
     "stw    3,  " ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
 #endif
 

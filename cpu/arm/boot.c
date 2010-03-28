@@ -57,34 +57,49 @@ asm(
     // Allocate 1K stacks
     "lsl  r5, r4, #" ASM_STR(CONFIG_HEXO_RESET_STACK_SIZE) "\n\t"
 
-    "ldr  r13, =__initial_stack-16   \n\t"
+    "ldr  r13, =__initial_stack   \n\t"
     "subs r13, r13, r5                         \n\t"
+
 # ifdef CONFIG_SOCLIB_MEMCHECK
-    "mov  r0, #1<<" ASM_STR(CONFIG_HEXO_RESET_STACK_SIZE) "           \n\t"
-    "ldr  r2, =" ASM_STR(SOCLIB_MC_MAGIC_VAL) "  \n\t"
-    "ldr  r1, =" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) " \n\t"
-    "str  r2, [r1, #(" ASM_STR(SOCLIB_MC_MAGIC) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
-    "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_R2) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
-    "sub  r0, sp, r0   \n\t"
-    "add  r0, r0, #4   \n\t"
-    "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_R1) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
-    "str  r4, [r1, #(" ASM_STR(SOCLIB_MC_CTX_CREATE) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
-    "str  r4, [r1, #(" ASM_STR(SOCLIB_MC_CTX_SET) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
+	    "mov  r0, #1<<" ASM_STR(CONFIG_HEXO_RESET_STACK_SIZE) "           \n\t"
+	
+	    /* enter memchecker command mode */
+	    "ldr  r2, =" ASM_STR(SOCLIB_MC_MAGIC_VAL) "  \n\t"
+	    "ldr  r1, =" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) " \n\t"
+	    "str  r2, [r1, #" ASM_STR(SOCLIB_MC_MAGIC_OFFSET) "] \n\t"
+	
+	    /* create a new initial memchecker context using cpuid as context id */
+	    "str  r0, [r1, #" ASM_STR(SOCLIB_MC_R2_OFFSET) "] \n\t"
+	    "sub  r0, sp, r0   \n\t"
+	    "add  r0, r0, #4   \n\t"
+	    "str  r0, [r1, #" ASM_STR(SOCLIB_MC_R1_OFFSET) "] \n\t"
+	    "str  r4, [r1, #" ASM_STR(SOCLIB_MC_CTX_CREATE_OFFSET) "] \n\t"
+	
+	    /* switch to new memchecker context */
+	    "str  r4, [r1, #" ASM_STR(SOCLIB_MC_CTX_SET_OFFSET) "] \n\t"
+	
+	    /* enable all memchecker checks */
+	    "mov  r0, #" ASM_STR(SOCLIB_MC_CHECK_ALL) " \n\t"
+	    "str  r0, [r1, #" ASM_STR(SOCLIB_MC_ENABLE_OFFSET) "] \n\t"
+	
+#  ifdef CONFIG_ARCH_SMP
+	    /* mark cpu_init_flag variable as initialized */
+	    "ldr  r0, =cpu_init_flag  \n\t"
+	    "str  r0, [r1, #" ASM_STR(SOCLIB_MC_INITIALIZED_OFFSET) "] \n\t"
+#  endif
+# endif
 
-    "mov  r0, #" ASM_STR(SOCLIB_MC_CHECK_SPFP+SOCLIB_MC_CHECK_INIT) " \n\t"
-    "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_ENABLE) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
+    /* adjust stack pointer, 64 bits aligned */
+    "sub  r13, r13, #8         \n\t"
 
-#ifdef CONFIG_ARCH_SMP
-    /* mark cpu_init_flag variable as initialized */
-    "ldr  r0, =cpu_init_flag  \n\t"
-    "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_INITIALIZED) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
-#endif
+# ifdef CONFIG_SOCLIB_MEMCHECK
+	    /* leave memchecker command mode */
+	    "mov  r0, #0             \n\t"
+	    "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_MAGIC_OFFSET) ")] \n\t"
+# endif
 
-    "mov  r0, #0             \n\t"
-    "str  r0, [r1, #(" ASM_STR(SOCLIB_MC_MAGIC) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
-# endif /* CONFIG_SOCLIB_MEMCHECK */
 #else /* is ARCH_SIMPLE*/
-    "ldr  r13, =__initial_stack-16  \n\t"
+    "ldr  r13, =__initial_stack - " ASM_STR(CONFIG_HEXO_STACK_ALIGN) "  \n\t"
 #endif
 
     /* Get the device tree and put it in first arg */

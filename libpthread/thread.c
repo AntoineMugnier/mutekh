@@ -109,8 +109,7 @@ pthread_exit(void *retval)
   sched_lock();
 
   /* setup temp stack memory and jump to __pthread_cleanup() */
-  cpu_context_set(sched_tmp_stack() - sizeof (reg_t) +
-		  CONFIG_MUTEK_SCHEDULER_TMP_STACK_SIZE,
+  cpu_context_set(sched_tmp_stack(), CONFIG_MUTEK_SCHEDULER_TMP_STACK_SIZE,
 		  __pthread_cleanup);
 }
 

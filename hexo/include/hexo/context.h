@@ -42,15 +42,9 @@
 #include <hexo/mmu.h>
 #include <assert.h> 
 
-/** cpu specific context structure */
-struct cpu_context_s;
-
 /** context descriptor structure */
 struct context_s
 {
-  /** cpu specific context pointer if any */
-  struct cpu_context_s	*ccontext;
-
   /** context local storage address */
   void			*tls;
 
@@ -79,7 +73,7 @@ static void cpu_context_switch(struct context_s *old, struct context_s *new);
 static void cpu_context_jumpto(struct context_s *new);
 
 /** set new stack pointer and jump to a new function */
-static void cpu_context_set(uintptr_t stack, void *jumpto);
+static void cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto);
 
 /** associate context and cpu current execution state */
 error_t cpu_context_bootstrap(struct context_s *context);

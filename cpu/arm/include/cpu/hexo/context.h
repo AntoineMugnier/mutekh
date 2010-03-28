@@ -48,8 +48,8 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 #if defined(__thumb__)
     arm_cpu_context_switch(old, new);
 #else
-	void *old_addr = &old->stack_ptr;
-	void *new_addr = &new->stack_ptr;
+    void *old_addr = &old->stack_ptr;
+    void *new_addr = &new->stack_ptr;
 
 	/*
 	  stack should be
@@ -59,48 +59,66 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 	   * tls (r2)
 	 */
 
-	asm volatile (
-		"adr  r12, 1f                      \n\t"
-		"mrs  r3, cpsr                     \n\t"
+    asm volatile (
+	/* save execution pointer */
+	"adr  r12, 1f                      \n\t"
+
+	/* save status */
+	"mrs  r3, cpsr                     \n\t"
+
+	/* save tls */
 #if defined(CONFIG_CPU_ARM_TLS_IN_C15)
-		"mrc  p15,0,r2,c13,c0,4            \n\t"
+	"mrc  p15,0,r2,c13,c0,4            \n\t"
 #else
-		"ldr  r2, 2f                       \n\t"
-		"ldr  r2, [r2]                     \n\t"
+	"ldr  r2, 2f                       \n\t"
+	"ldr  r2, [r2]                     \n\t"
 #endif
-		"push {r2, r3, r11, r12}           \n\t"
-		"str  sp, [%0]                     \n\t"
+
+	/* save regs on stack */
+	"push {r2, r3, r11, r12}           \n\t"
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
-			/* let memchecker know about context switch */
+
+		/* enter memchecker command mode */
 		"ldr  r2, =" ASM_STR(SOCLIB_MC_MAGIC_VAL) "  \n\t"
 		"ldr  r3, =" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) " \n\t"
-		"str  r2, [r3, #(" ASM_STR(SOCLIB_MC_MAGIC) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
-		"str  %1, [r3, #(" ASM_STR(SOCLIB_MC_CTX_SET) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
-		"mov  r2, #" ASM_STR(SOCLIB_MC_CHECK_SPFP) " \n\t"
-		"str  r2, [r3, #(" ASM_STR(SOCLIB_MC_ENABLE) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
+		"str  r2, [r3, #(" ASM_STR(SOCLIB_MC_MAGIC_OFFSET) ")] \n\t"
+
+		/* switch to associated memchecker context */
+		"str  %1, [r3, #(" ASM_STR(SOCLIB_MC_CTX_SET_OFFSET) ")] \n\t"
 #endif
-		"ldr  sp, [%1]                     \n\t"
+
+        /* switch stack pointer */
+	"str  sp, [%0]                     \n\t"
+	"ldr  sp, [%1]                     \n\t"
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
+		/* leave memchecker command mode */
 		"mov  r2, #0 \n\t"
-		"str  r2, [r3, #(" ASM_STR(SOCLIB_MC_MAGIC) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
+		"str  r2, [r3, #(" ASM_STR(SOCLIB_MC_MAGIC_OFFSET) ")] \n\t"
 #endif
-		"pop  {r2, r3, r11, r12}           \n\t"
-		"msr  cpsr, r3                     \n\t"
+
+	/* restore regs and status */
+	"pop  {r2, r3, r11, r12}           \n\t"
+	"msr  cpsr, r3                     \n\t"
+
+	/* restore tls and pc */
 #if defined(CONFIG_CPU_ARM_TLS_IN_C15)
-		"mcr  p15,0,r2,c13,c0,4            \n\t"
-		"bx   r12                          \n\t"
+	"mcr  p15,0,r2,c13,c0,4            \n\t"
+	"bx   r12                          \n\t"
 #else
-		"ldr  r3, 2f                       \n\t"
-		"str  r2, [r3]                     \n\t"
-		"bx   r12                          \n\t"
-		"2: .word __context_data_base  \n\t"
+	"ldr  r3, 2f                       \n\t"
+	"str  r2, [r3]                     \n\t"
+	"bx   r12                          \n\t"
+	"2: .word __context_data_base  \n\t"
 #endif
-		"1:                                \n\t"
-		: 
-		: "r"(old_addr), "r"(new_addr)
-		/* These registers will be saved by the compiler */
-		: /* "r0",  "r1",*/  "r2", "r3", "r4", "r5", "r6", "r7"
-		, "r8", "r9", "r10"
+	"1:                                \n\t"
+
+	: 
+	: "r"(old_addr), "r"(new_addr)
+	/* These registers will be saved by the compiler */
+	: /* "r0",  "r1",*/  "r2", "r3", "r4", "r5", "r6", "r7"
+	, "r8", "r9", "r10"
 # if !defined(CONFIG_COMPILE_FRAMEPTR) || defined(__OPTIMIZE__)
 		, "r11"
 # endif
@@ -119,38 +137,59 @@ static inline void
 __attribute__((always_inline, noreturn))
 cpu_context_jumpto(struct context_s *new)
 {
+#ifdef CONFIG_SOCLIB_MEMCHECK
+	reg_t t0 = SOCLIB_MC_MAGIC_VAL;
+	reg_t t1 = CONFIG_SOCLIB_MEMCHECK_ADDRESS;
+#endif
 #if defined(__thumb__)
     arm_cpu_context_jumpto(new);
 #else
 	void *new_addr = &new->stack_ptr;
 
 	asm volatile (
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
-		"ldr  r2, =" ASM_STR(SOCLIB_MC_MAGIC_VAL) "  \n\t"
-		"ldr  r3, =" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) " \n\t"
-		"str  r2, [r3, #(" ASM_STR(SOCLIB_MC_MAGIC) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
-		"str  %0, [r3, #(" ASM_STR(SOCLIB_MC_CTX_SET) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
-		"mov  r2, #" ASM_STR(SOCLIB_MC_CHECK_SPFP) " \n\t"
-		"str  r2, [r3, #(" ASM_STR(SOCLIB_MC_ENABLE) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
+		/* enter memchecker command mode */
+		"str  %1, [%2, #(" ASM_STR(SOCLIB_MC_MAGIC_OFFSET) ")] \n\t"
+
+		/* mark current memchecker context as invalid */
+		"ldr  %1, =" ASM_STR(SOCLIB_MC_CTX_ID_CURRENT) " \n\t"
+		"str  %1, [%2, #(" ASM_STR(SOCLIB_MC_CTX_INVALIDATE_OFFSET) ")] \n\t"
+
+		/* switch to associated memchecker context */
+		"str  %0, [%2, #(" ASM_STR(SOCLIB_MC_CTX_SET_OFFSET) ")] \n\t"
 #endif
-		"ldr  sp, [%0]                     \n\t"
+
+        /* switch stack pointer */
+	"ldr  sp, [%0]                     \n\t"
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
-		"mov  r2, #0 \n\t"
-		"str  r2, [r3, #(" ASM_STR(SOCLIB_MC_MAGIC) "-" ASM_STR(CONFIG_SOCLIB_MEMCHECK_ADDRESS) ")] \n\t"
+		/* leave memchecker command mode */
+		"mov  %1, #0 \n\t"
+		"str  %1, [%2, #(" ASM_STR(SOCLIB_MC_MAGIC_OFFSET) ")] \n\t"
 #endif
-		"pop  {r2, r3, r11, r12}           \n\t"
-		"msr  cpsr, r3                     \n\t"
+
+	/* restore regs and status */
+	"pop  {r2, r3, r11, r12}           \n\t"
+	"msr  cpsr, r3                     \n\t"
+
+	/* restore tls */
 #if defined(CONFIG_CPU_ARM_TLS_IN_C15)
-		"mcr  p15,0,r2,c13,c0,4            \n\t"
+	"mcr  p15,0,r2,c13,c0,4            \n\t"
 #else
-		"ldr  r3, =__context_data_base     \n\t"
-		"str  r2, [r3]                     \n\t"
+	"ldr  r3, =__context_data_base     \n\t"
+	"str  r2, [%2]                     \n\t"
 #endif
-		"bx   r12                          \n\t"
-		:
-		: "r"(new_addr)
-		: "r2", "r3"
-		);
+
+	/* restore execution pointer */
+	"bx   r12                          \n\t"
+
+	:
+	: "r"(new_addr)
+#ifdef CONFIG_SOCLIB_MEMCHECK
+	, "r" (t0), "r" (t1)
+#endif
+	);
 
 	while(1)
 		;
@@ -159,15 +198,52 @@ cpu_context_jumpto(struct context_s *new)
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_context_set(uintptr_t stack, void *jumpto)
+cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto)
 {
+#ifdef CONFIG_SOCLIB_MEMCHECK
+	reg_t t0 = SOCLIB_MC_MAGIC_VAL;
+	reg_t t1 = CONFIG_SOCLIB_MEMCHECK_ADDRESS;
+#endif
+
 	asm volatile (
-		"	mov	 sp, %0			\n"
-		"	mov  ip, %1			\n"
-		"	bx   ip				\n"
+#ifdef CONFIG_SOCLIB_MEMCHECK
+		/* enter memchecker command mode */
+		"	str  %3, [%4, #(" ASM_STR(SOCLIB_MC_MAGIC_OFFSET) ")] \n\t"
+
+		/* mark current context as invalid */
+		"	ldr  %3, =" ASM_STR(SOCLIB_MC_CTX_ID_CURRENT) " \n\t"
+		"	str  %3, [%4, #(" ASM_STR(SOCLIB_MC_CTX_INVALIDATE_OFFSET) ")] \n\t"
+
+		/* create a new temporary context using passed stack */
+		"	str  %0, [%4, #(" ASM_STR(SOCLIB_MC_R1_OFFSET) ")] \n\t"
+		"	str  %1, [%4, #(" ASM_STR(SOCLIB_MC_R2_OFFSET) ")] \n\t"
+		"	str  %0, [%4, #(" ASM_STR(SOCLIB_MC_CTX_CREATE_TMP_OFFSET) ")] \n\t"
+
+		/* switch to new temporary context */
+		"	str  %0, [%4, #(" ASM_STR(SOCLIB_MC_CTX_SET_OFFSET) ")] \n\t"
+
+#endif
+
+	/* Set stack pointer, 64 bits aligned */
+	"	add  %0, %0, %1	\n\t"
+	"	sub  sp, %0, #8			\n"
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+		/* leave memchecker command mode */
+		"	mov  %3, #0						\n"
+		"	str  %3, [%4, #(" ASM_STR(SOCLIB_MC_MAGIC_OFFSET) ")]  \n\t"
+#endif
+
+	/* jump */
+	"	mov  ip, %2			\n"
+	"	bx   ip				\n"
 		:
 		: "r" (stack)
+		, "r" (stack_size)
 		, "r" (jumpto)
+#ifdef CONFIG_SOCLIB_MEMCHECK
+		, "r" (t0), "r" (t1)
+#endif
 		);
 	while (1);
 }

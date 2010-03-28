@@ -151,14 +151,14 @@ cpu_context_jumpto(struct context_s *new)
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_context_set(uintptr_t stack, void *jumpto)
+cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto)
 {
   asm volatile (
 		"	out	0x3d, %A0			\n"
 		"	out	0x3e, %B0			\n"
 		"	ijmp					\n"
 		:
-		: "e" (stack)
+		: "e" (stack + stack_size - CONFIG_HEXO_STACK_ALIGN)
 		, "z" (jumpto)
 		);
 }

@@ -1,21 +1,14 @@
 
+#include <stdlib.h>
 #include <hexo/error.h>
 #include <hexo/context.h>
 #include <hexo/interrupt.h>
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
-#endif
 
 error_t
 cpu_context_bootstrap(struct context_s *context)
 {
     /* set context local storage base pointer */
     CPU_LOCAL_SET(__context_data_base, context->tls);
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-    soclib_mem_check_change_id(cpu_id(), (uint32_t)&context->stack_ptr);
-#endif
 
     return 0;
 }
@@ -47,16 +40,9 @@ asm(
 error_t
 cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 {
-#ifdef CONFIG_SOCLIB_MEMCHECK
-    soclib_mem_check_create_ctx((uint32_t)&context->stack_ptr,
-            context->stack_start, context->stack_end);
-#endif
-
-    /*
-     * Mips ABI only requires 4 free words in the stack.
-     * Preserve 64bits align for doubles.
-     */
-    context->stack_ptr = (reg_t*)context->stack_end - 4;
+    /* Mips ABI only requires 4 free words in the stack. */
+    context->stack_ptr = (reg_t*)((uintptr_t)context->stack_end -
+                                  __MIN(sizeof (reg_t) * 4, CONFIG_HEXO_STACK_ALIGN));
 
     /* push entry function address and param arg */
     *--context->stack_ptr = (uintptr_t)entry;
@@ -86,10 +72,6 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 void
 cpu_context_destroy(struct context_s *context)
 {
-#ifdef CONFIG_SOCLIB_MEMCHECK
-    soclib_mem_check_disable(SOCLIB_MC_CHECK_SPFP);
-    soclib_mem_check_delete_ctx((uint32_t)&context->stack_ptr);
-#endif
 #if 0
     reg_t        *stack = (reg_t*)context->stack_ptr;
 #endif

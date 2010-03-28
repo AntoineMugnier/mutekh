@@ -105,7 +105,7 @@ cpu_cycle_count(void)
 	uint32_t ret;
     THUMB_TMP_VAR;
 
-	asm(
+	asm volatile (
         THUMB_TO_ARM
         "mrc p15, 0, %[ret], c15, c12, 1\n\t"
         ARM_TO_THUMB

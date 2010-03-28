@@ -69,8 +69,10 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		"	movl	(%1), %%esp	\n"
 		/* restore tls */
 		"	pop	%%gs		\n"
+#ifdef CONFIG_HEXO_USERMODE
 		"	mov	%%gs, %%eax	\n"
 		"	mov	%%eax, " CLS_SEG " (cpu_tls_seg) 	\n"
+#endif
 #if 0
 		/* restore page directory pointer */
 		"	popl	%%edx		\n"
@@ -110,8 +112,10 @@ cpu_context_jumpto(struct context_s *new)
 		"	movl	%0, %%esp	\n"
 		/* restore tls */
 		"	pop	%%gs		\n"
+#ifdef CONFIG_HEXO_USERMODE
 		"	mov	%%gs, %%eax	\n"
 		"	mov	%%eax, " CLS_SEG " (cpu_tls_seg) 	\n"
+#endif
 #if 0
 		/* restore page directory pointer */
 		"	popl	%%edx		\n"
@@ -134,14 +138,15 @@ cpu_context_jumpto(struct context_s *new)
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_context_set(uintptr_t stack, void *jumpto)
+cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto)
 {
   asm volatile (
 		"	movl	%0, %%esp	\n"
 		"	xorl	%%ebp, %%ebp	\n"
 		"	jmpl	*%1		\n"
 		:
-		: "r,m" (stack), "r,r" (jumpto)
+		: "r,m" (stack + stack_size - CONFIG_HEXO_STACK_ALIGN),
+                  "r,r" (jumpto)
 		);
 
   while (1);

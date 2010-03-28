@@ -150,6 +150,7 @@ SECTIONS
 	__system_uncached_heap_start = .;
 	__system_uncached_heap_end = ORIGIN(mem_ram) + LENGTH(mem_ram);
 
+	. = ALIGN(CONFIG_HEXO_STACK_ALIGN);
 	__initial_stack = __system_uncached_heap_end;
 
 	/* GOT section */
