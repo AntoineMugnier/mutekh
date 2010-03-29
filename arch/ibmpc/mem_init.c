@@ -80,6 +80,9 @@ void mem_init(void)
 					 mem_start,
 					 mem_end);
 #endif
+
+  printk("Ram memory: %p-%p (%i bytes)\n", mem_start, mem_end,
+         (uint8_t*)mem_end - (uint8_t*)mem_start);
 }
 
 void mem_region_init(void)
