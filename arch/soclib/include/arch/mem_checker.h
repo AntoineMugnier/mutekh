@@ -63,6 +63,10 @@
 #define SOCLIB_MC_CTX_CREATE_TMP_OFFSET 48
 #define SOCLIB_MC_CTX_CREATE_TMP (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_CTX_CREATE_TMP_OFFSET)
 
+/** Declare a spinlock adress */
+#define SOCLIB_MC_LOCK_DECLARE_OFFSET 52
+#define SOCLIB_MC_LOCK_DECLARE (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_LOCK_DECLARE_OFFSET)
+
 #define SOCLIB_MC_CTX_ID_UNKNOWN -1
 #define SOCLIB_MC_CTX_ID_CURRENT -2
 
@@ -74,13 +78,15 @@
 # define SOCLIB_MC_CHECK_INIT 4
 /** Memory allocation status must be checked */
 # define SOCLIB_MC_CHECK_REGIONS 8
+/** Critical sections checks */
+# define SOCLIB_MC_CHECK_IRQS_LOCK 16
 
 # if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
 #  define SOCLIB_MC_CHECK_SPFP 3
-#  define SOCLIB_MC_CHECK_ALL 15
+#  define SOCLIB_MC_CHECK_ALL 31
 # else
 #  define SOCLIB_MC_CHECK_SPFP 1
-#  define SOCLIB_MC_CHECK_ALL 13
+#  define SOCLIB_MC_CHECK_ALL 29
 # endif
 
 #define ASM_STR_(x) #x
@@ -88,6 +94,17 @@
 
 #include <hexo/iospace.h>
 #include <hexo/interrupt.h>
+
+static inline __attribute__ ((always_inline)) void
+soclib_mem_check_declare_lock(void *lock, uint32_t islock)
+{
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
+  cpu_mem_write_32(SOCLIB_MC_R1, (uint32_t)lock);
+  cpu_mem_write_32(SOCLIB_MC_LOCK_DECLARE, islock);
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  CPU_INTERRUPT_RESTORESTATE;
+}
 
 static inline __attribute__ ((always_inline)) void
 soclib_mem_check_change_id(uint32_t old_id, uint32_t new_id)
