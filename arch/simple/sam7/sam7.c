@@ -1,3 +1,4 @@
+#include <hexo/local.h>
 #include <hexo/types.h>
 #include <hexo/interrupt.h>
 
@@ -7,6 +8,7 @@
 
 #include "arch/sam7/at91sam7x256.h"
 
+#ifdef CONFIG_HEXO_IRQ
 CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
 CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
@@ -42,7 +44,7 @@ void arm_c_exc_dabt()
 	exception_handler(3, (uintptr_t)where, (uintptr_t)AT91C_BASE_MC->MC_AASR, 0, 0);
 }
 
-#ifdef CONFIG_DRIVER_ICU_ARM
+# ifdef CONFIG_DRIVER_ICU_ARM
 __attribute__ ((interrupt ("IRQ")))
 void arm_c_irq_handler()
 {
@@ -54,6 +56,7 @@ void arm_c_fiq_handler()
 {
 	cpu_interrupt_handler(0);
 }
+# endif
 #endif
 
 void arch_specific_init()
