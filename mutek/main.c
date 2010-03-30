@@ -70,10 +70,8 @@ DEVTIMER_CALLBACK(timer_callback)
 #endif
 
 #if defined (CONFIG_MUTEK_SCHEDULER)
-struct sched_context_s main_ctx;
+extern struct sched_context_s main_ctx;
 #endif
-
-#ifdef CONFIG_MUTEK_MAIN
 
 #if defined(CONFIG_LIBC_STREAM_STD)
 void stdio_in_out_err_init();
@@ -208,6 +206,3 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
 #endif
     }
 }
-
-#endif
-

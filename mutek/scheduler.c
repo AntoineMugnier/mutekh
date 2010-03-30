@@ -149,7 +149,7 @@ void __sched_context_push(struct sched_context_s *sched_ctx)
  *      Scheduler idle context
  */
 
-extern struct sched_context_s main_ctx;
+struct sched_context_s main_ctx;
 
 /* idle context runtime */
 static CONTEXT_ENTRY(sched_context_idle)
