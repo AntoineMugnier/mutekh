@@ -21,14 +21,15 @@
 
 #include <hexo/types.h>
 #include <hexo/cpu.h>
+#include <hexo/iospace.h>
 #include <mutek/printk.h>
 
 static PRINTF_OUTPUT_FUNC(early_console_out)
 {
-	volatile char *out = (char*)ctx;
+	uintptr_t out = (uintptr_t)ctx;
 	size_t i;
 	for ( i=0; i<len; ++i )
-		*out = str[i];
+		cpu_mem_write_8(out, str[i]);
 }
 
 void soclib_early_console(uintptr_t addr)
