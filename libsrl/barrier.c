@@ -28,8 +28,8 @@
 
 void srl_barrier_wait(srl_barrier_t barrier)
 {
-#if 0
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
+#if 0
 	sched_queue_wrlock(&barrier->wait);
 
 	if (barrier->count == 1)
@@ -44,7 +44,6 @@ void srl_barrier_wait(srl_barrier_t barrier)
 		sched_wait_unlock(&barrier->wait);
     }
 
-	CPU_INTERRUPT_RESTORESTATE;
 #else
 	lock_spin(&barrier->lock);
 	cpu_dcache_invld_buf(barrier, sizeof(*barrier));
@@ -60,5 +59,6 @@ void srl_barrier_wait(srl_barrier_t barrier)
 		srl_sched_wait_ne_cpu(&barrier->serial, ser);
 	}
 #endif
+	CPU_INTERRUPT_RESTORESTATE;
 }
 
