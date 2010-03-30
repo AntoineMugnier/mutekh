@@ -125,7 +125,7 @@ struct mwmr_status_s
 
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
 #define MWMR_USE_SEPARATE_LOCKS
-typedef volatile uint32_t srl_mwmr_lock_t;
+typedef uint32_t srl_mwmr_lock_t;
 #define MWMR_LOCK_INITIALIZER 0
 #endif
 
@@ -143,7 +143,7 @@ struct mwmr_s {
 	uint32_t time_write;
 #endif
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
-	volatile srl_mwmr_lock_t *lock;
+	srl_mwmr_lock_t *lock;
 #endif
 };
 

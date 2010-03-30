@@ -42,34 +42,34 @@ void
 mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 			  size_t no, const mwmr_t* mwmr )
 {
-	volatile uint32_t *c = coproc;
-	c[MWMR_CONFIG_FIFO_WAY] = endian_le32(way);
-	c[MWMR_CONFIG_FIFO_NO] = endian_le32(no);
-	c[MWMR_CONFIG_STATUS_ADDR] = endian_le32((uintptr_t)mwmr->status);
-	c[MWMR_CONFIG_WIDTH] = endian_le32(mwmr->width);
-	c[MWMR_CONFIG_DEPTH] = endian_le32(mwmr->gdepth);
-	c[MWMR_CONFIG_BUFFER_ADDR] = endian_le32((uintptr_t)mwmr->buffer);
-	c[MWMR_CONFIG_RUNNING] = endian_le32(1);
-	c[MWMR_CONFIG_ENDIANNESS] = 0x11223344;
+	uintptr_t c = (uintptr_t)coproc;
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_FIFO_WAY, endian_le32(way));
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_FIFO_NO, endian_le32(no));
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_STATUS_ADDR, endian_le32((uintptr_t)mwmr->status));
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_WIDTH, endian_le32(mwmr->width));
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_DEPTH, endian_le32(mwmr->gdepth));
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_BUFFER_ADDR, endian_le32((uintptr_t)mwmr->buffer));
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_RUNNING, endian_le32(1));
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_ENDIANNESS, 0x11223344);
 }
 
 void mwmr_config( void *coproc, size_t no, const uint32_t val )
 {
-	volatile uint32_t *c = coproc;
-	c[no] = endian_le32(val);
+	uintptr_t c = (uintptr_t)coproc;
+	cpu_mem_write_32( c + sizeof(uint32_t) * no, val);
 }
 
 uint32_t mwmr_status( void *coproc, size_t no )
 {
-	volatile uint32_t *c = coproc;
-	return endian_le32(c[no]);
+	uintptr_t c = (uintptr_t)coproc;
+	return cpu_mem_read_32( c + sizeof(uint32_t) * no );
 }
 
 #if defined(CONFIG_CPU_MIPS)
 
 // returns substracted value
 static inline uint32_t
-cpu_atomic_sub_minz(volatile uint32_t *a, uint32_t val)
+cpu_atomic_sub_minz(uint32_t *a, uint32_t val)
 {
 	uint32_t  result, cmp_to_store, before;
 
@@ -93,7 +93,7 @@ cpu_atomic_sub_minz(volatile uint32_t *a, uint32_t val)
 
 // returns previous value
 static inline uint32_t
-cpu_atomic_add(volatile uint32_t *a, uint32_t val)
+cpu_atomic_add(uint32_t *a, uint32_t val)
 {
   uint32_t  result, temp;
 
@@ -111,7 +111,7 @@ cpu_atomic_add(volatile uint32_t *a, uint32_t val)
 
 // returns previous value
 static inline uint32_t
-cpu_atomic_add_wrap(volatile uint32_t *a, uint32_t val, uint32_t mod)
+cpu_atomic_add_wrap(uint32_t *a, uint32_t val, uint32_t mod)
 {
 	uint32_t  before, before_plus_val, before_plus_val_minus_mod, compar;
 
@@ -135,7 +135,7 @@ cpu_atomic_add_wrap(volatile uint32_t *a, uint32_t val, uint32_t mod)
 }
 
 static inline void
-cpu_atomic_wait_and_swap(volatile uint32_t *a, uint32_t old, uint32_t new)
+cpu_atomic_wait_and_swap(uint32_t *a, uint32_t old, uint32_t new)
 {
 	uint32_t  result;
 
@@ -157,7 +157,7 @@ cpu_atomic_wait_and_swap(volatile uint32_t *a, uint32_t old, uint32_t new)
 
 // returns substracted value
 static inline uint32_t
-cpu_atomic_sub_minz(volatile uint32_t *a, uint32_t _tosub)
+cpu_atomic_sub_minz(uint32_t *a, uint32_t _tosub)
 {
 	uint32_t oldval;
 	uint32_t tosub;
@@ -171,28 +171,28 @@ cpu_atomic_sub_minz(volatile uint32_t *a, uint32_t _tosub)
 
 		if ( tosub == 0 )
 			return 0;
-	} while ( ! atomic_compare_and_swap((volatile atomic_int_t*)a, oldval, oldval-tosub) );
+	} while ( ! atomic_compare_and_swap((atomic_int_t*)a, oldval, oldval-tosub) );
 
 	return tosub;
 }
 
 // returns previous value
 static inline uint32_t
-cpu_atomic_add(volatile uint32_t *a, uint32_t val)
+cpu_atomic_add(uint32_t *a, uint32_t val)
 {
 	uint32_t oldval;
 
 	do {
 		cpu_dcache_invld(a);
 		oldval = *a;
-	} while ( ! atomic_compare_and_swap((volatile atomic_int_t*)a, oldval, oldval+val) );
+	} while ( ! atomic_compare_and_swap((atomic_int_t*)a, oldval, oldval+val) );
 
 	return oldval;
 }
 
 // returns previous value
 static inline uint32_t
-cpu_atomic_add_wrap(volatile uint32_t *a, uint32_t val, uint32_t mod)
+cpu_atomic_add_wrap(uint32_t *a, uint32_t val, uint32_t mod)
 {
 	uint32_t oldval, newval;
 
@@ -202,16 +202,16 @@ cpu_atomic_add_wrap(volatile uint32_t *a, uint32_t val, uint32_t mod)
 		newval = (oldval+val);
 		if ( newval >= mod )
 			newval -= mod;
-	} while ( ! atomic_compare_and_swap((volatile atomic_int_t*)a, oldval, newval ) );
+	} while ( ! atomic_compare_and_swap((atomic_int_t*)a, oldval, newval ) );
 
 	return oldval;
 }
 
 static inline void
-cpu_atomic_wait_and_swap(volatile uint32_t *a, uint32_t old, uint32_t new)
+cpu_atomic_wait_and_swap(uint32_t *a, uint32_t old, uint32_t new)
 {
 	do {
-	} while ( ! atomic_compare_and_swap((volatile atomic_int_t*)a, old, new ) );
+	} while ( ! atomic_compare_and_swap((atomic_int_t*)a, old, new ) );
 }
 
 #endif

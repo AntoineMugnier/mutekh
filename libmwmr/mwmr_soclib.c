@@ -49,37 +49,35 @@ void
 mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 			  size_t no, const struct mwmr_s* mwmr )
 {
-	volatile uint32_t *c = coproc;
-	c[MWMR_CONFIG_FIFO_WAY] = endian_le32(way);
-	c[MWMR_CONFIG_FIFO_NO] = endian_le32(no);
-	c[MWMR_CONFIG_STATUS_ADDR] = endian_le32((uintptr_t)mwmr->status);
-	c[MWMR_CONFIG_DEPTH] = endian_le32(mwmr->gdepth);
-	c[MWMR_CONFIG_BUFFER_ADDR] = endian_le32((uintptr_t)mwmr->buffer);
-	c[MWMR_CONFIG_WIDTH] = endian_le32((uintptr_t)mwmr->width);
+	uintptr_t c = (uintptr_t)coproc;
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_FIFO_WAY, endian_le32(way));
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_FIFO_NO, endian_le32(no));
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_STATUS_ADDR, endian_le32((uintptr_t)mwmr->status));
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_DEPTH, endian_le32(mwmr->gdepth));
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_BUFFER_ADDR, endian_le32((uintptr_t)mwmr->buffer));
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_WIDTH, endian_le32((uintptr_t)mwmr->width));
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
-	c[MWMR_CONFIG_LOCK_ADDR] = endian_le32((uintptr_t)mwmr->lock);
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_LOCK_ADDR, endian_le32((uintptr_t)mwmr->lock));
 #endif
-	c[MWMR_CONFIG_RUNNING] = endian_le32(1);
+	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_RUNNING, endian_le32(1));
 }
 
 void mwmr_config( void *coproc, size_t no, const uint32_t val )
 {
-	// assert(no < MWMR_IOREG_MAX);
-	volatile uint32_t *c = coproc;
-	c[no] = endian_le32(val);
+	uintptr_t c = (uintptr_t)coproc;
+	cpu_mem_write_32( c + sizeof(uint32_t) * no, val);
 }
 
 uint32_t mwmr_status( void *coproc, size_t no )
 {
-	// assert(no < MWMR_IOREG_MAX);
-	volatile uint32_t *c = coproc;
-	return endian_le32(c[no]);
+	uintptr_t c = (uintptr_t)coproc;
+	return cpu_mem_read_32( c + sizeof(uint32_t) * no );
 }
 
 static inline void mwmr_lock( struct mwmr_s *fifo )
 {
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
-	while (*((volatile uint32_t *)fifo->lock) != 0) {
+	while (*((uint32_t *)fifo->lock) != 0) {
 # if defined(CONFIG_PTHREAD)
 		pthread_yield();
 # else
@@ -109,7 +107,7 @@ static inline void mwmr_lock( struct mwmr_s *fifo )
 static inline uint32_t mwmr_try_lock( struct mwmr_s *fifo )
 {
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
-	return !!*((volatile uint32_t *)fifo->lock);
+	return !!cpu_mem_read_32((uintptr_t)fifo->lock);
 #else
 	return cpu_atomic_bit_testset((atomic_int_t*)&fifo->status->lock, 0);
 #endif
@@ -118,9 +116,9 @@ static inline uint32_t mwmr_try_lock( struct mwmr_s *fifo )
 static inline void mwmr_unlock( struct mwmr_s *fifo )
 {
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
-	*((volatile uint32_t *)fifo->lock) = 0;
+	cpu_mem_write_32((uintptr_t)fifo->lock, 0);
 #else
-	*&fifo->status->lock = 0;
+    cpu_mem_write_32((uintptr_t)&fifo->status->lock, 0);
 #endif
 }
 
@@ -130,23 +128,23 @@ typedef struct {
 
 static inline void rehash_status( struct mwmr_s *fifo, local_mwmr_status_t *status )
 {
-	volatile struct mwmr_status_s *fstatus = fifo->status;
+	struct mwmr_status_s *fstatus = fifo->status;
 	cpu_dcache_invld_buf((void*)fstatus, sizeof(*fstatus));
-	status->usage = endian_le32(*(volatile uint32_t *)&fstatus->usage);
-	status->wptr =  endian_le32(*(volatile uint32_t *)&fstatus->wptr);
-	status->rptr =  endian_le32(*(volatile uint32_t *)&fstatus->rptr);
+	status->usage = endian_le32(cpu_mem_read_32( (uintptr_t)&fstatus->usage ));
+    status->wptr =  endian_le32(cpu_mem_read_32( (uintptr_t)&fstatus->wptr ));
+    status->rptr =  endian_le32(cpu_mem_read_32( (uintptr_t)&fstatus->rptr ));
 	status->modified = 0;
 //	srl_log_printf(NONE,"%s %d %d %d/%d\n", fifo->name, status->rptr, status->wptr, status->usage, fifo->gdepth);
 }
 
 static inline void writeback_status( struct mwmr_s *fifo, local_mwmr_status_t *status )
 {
-	volatile struct mwmr_status_s *fstatus = fifo->status;
+    struct mwmr_status_s *fstatus = fifo->status;
 	if ( !status->modified )
 		return;
-	*(volatile uint32_t *)&fstatus->usage = endian_le32(status->usage);
-	*(volatile uint32_t *)&fstatus->wptr = endian_le32(status->wptr);
-	*(volatile uint32_t *)&fstatus->rptr = endian_le32(status->rptr);
+	cpu_mem_write_32( (uintptr_t)&fstatus->usage, endian_le32(status->usage) );
+    cpu_mem_write_32( (uintptr_t)&fstatus->wptr, endian_le32(status->wptr) );
+	cpu_mem_write_32( (uintptr_t)&fstatus->rptr, endian_le32(status->rptr) );
 }
 
 void mwmr_read( struct mwmr_s *fifo, void *_ptr, size_t lensw )
