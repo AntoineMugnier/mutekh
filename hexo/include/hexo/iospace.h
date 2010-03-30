@@ -140,5 +140,21 @@ static uint32_t cpu_mem_read_32(uintptr_t addr);
 
 #include "cpu/hexo/iospace.h"
 
+static inline
+uint32_t cpu_mem_mask_set_32(uintptr_t addr, uint32_t mask)
+{
+    uint32_t new = cpu_mem_read_32(addr) | mask;
+    cpu_mem_write_32(addr, new);
+    return new;
+}
+
+static inline
+uint32_t cpu_mem_mask_clear_32(uintptr_t addr, uint32_t mask)
+{
+    uint32_t new = cpu_mem_read_32(addr) & ~mask;
+    cpu_mem_write_32(addr, new);
+    return new;
+}
+
 #endif
 
