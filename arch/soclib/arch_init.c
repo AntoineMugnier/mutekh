@@ -46,9 +46,9 @@ void soclib_early_console(uintptr_t addr);
 
 #include <string.h>
 
-#ifdef CONFIG_DATA_FROM_ROM
 extern __ldscript_symbol_t __bss_start;
 extern __ldscript_symbol_t __bss_end;
+#ifdef CONFIG_DATA_FROM_ROM
 extern __ldscript_symbol_t __data_start;
 extern __ldscript_symbol_t __data_load_start;
 extern __ldscript_symbol_t __data_load_end;
@@ -77,8 +77,8 @@ extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_
 
 #ifdef CONFIG_ARCH_SMP
 static uint_fast8_t cpu_count = 1;
-volatile uint32_t     cpu_init_flag = 0;
-volatile uint32_t     cpu_start_flag = 0;
+uint32_t     cpu_init_flag = 0;
+uint32_t     cpu_start_flag = 0;
 static lock_t       cpu_init_lock;    /* cpu intialization lock */
 /* integer atomic operations global spin lock */
 lock_t              __atomic_arch_lock;
@@ -96,18 +96,20 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 
 #endif
 
-#ifdef CONFIG_DATA_FROM_ROM
-# if defined(CONFIG_SOCLIB_MEMCHECK)
-        soclib_mem_check_region_status((uint8_t*)&__data_start,
-                                       (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start,
-                                       SOCLIB_MC_REGION_GLOBAL);
+#if defined(CONFIG_SOCLIB_MEMCHECK)
         soclib_mem_check_region_status((uint8_t*)&__bss_start,
                                        (uint8_t*)&__bss_end-(uint8_t*)&__bss_start,
                                        SOCLIB_MC_REGION_GLOBAL);
+# ifdef CONFIG_DATA_FROM_ROM
+        soclib_mem_check_region_status((uint8_t*)&__data_start,
+                                       (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start,
+                                       SOCLIB_MC_REGION_GLOBAL);
 # endif                                                                                        
-        memcpy_from_code((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
-        memset((uint8_t*)&__bss_start, 0, (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
 #endif
+#ifdef CONFIG_DATA_FROM_ROM
+        memcpy_from_code((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
+#endif
+        memset((uint8_t*)&__bss_start, 0, (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
 
 #if defined(CONFIG_SOCLIB_EARLY_CONSOLE)
         soclib_early_console(CONFIG_SOCLIB_EARLY_CONSOLE_ADDR);
@@ -183,7 +185,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         /* Other CPUs */
     {
         while (cpu_init_flag != START_MAGIC)
-            ;
+            asm volatile("":::"memory");
 
         assert(cpu_id() < CONFIG_CPU_MAXCOUNT);
 
@@ -209,7 +211,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         /* wait for start signal */
 
         while (cpu_start_flag != START_MAGIC)
-            ;
+            asm volatile("":::"memory");
 
         /* run mutek_start_smp() */
 
