@@ -24,7 +24,7 @@
    @param val The value to compare to                                         \
 */                                                                            \
                                                                               \
-void srl_sched_wait_##name##_##endian( volatile void *addr, int32_t val );
+void srl_sched_wait_##name##_##endian( void *addr, int32_t val );
 
 DECLARE_WAIT(le, eq, ==)
 DECLARE_WAIT(le, ne, !=)

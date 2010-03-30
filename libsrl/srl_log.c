@@ -23,18 +23,19 @@
 
 #include <hexo/local.h>
 #include <hexo/types.h>
+#include <hexo/iospace.h>
 #include <hexo/endian.h>
 
 #include <libc/formatter.h>
 
 static PRINTF_OUTPUT_FUNC(srl_log_out)
 {
-	volatile uint32_t *out_addr = ctx;
+	uintptr_t out_addr = (uintptr_t)ctx;
 	if (!out_addr)
 		return;
 
 	while (len--) {
-		*out_addr = endian_le32(*str++);
+		cpu_mem_write_32(out_addr, endian_le32(*str++));
 	}
 }
 

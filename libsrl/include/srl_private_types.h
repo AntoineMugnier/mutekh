@@ -70,7 +70,7 @@ typedef struct srl_barrier_s
 	sched_queue_root_t wait;
 #else
 	lock_t lock;
-	volatile uint32_t serial;
+	uint32_t serial;
 	
 #endif
 } srl_barrier_s;
