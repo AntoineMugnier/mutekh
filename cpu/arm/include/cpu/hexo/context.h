@@ -178,7 +178,7 @@ cpu_context_jumpto(struct context_s *new)
 	"mcr  p15,0,r2,c13,c0,4            \n\t"
 #else
 	"ldr  r3, =__context_data_base     \n\t"
-	"str  r2, [%2]                     \n\t"
+	"str  r2, [r3]                     \n\t"
 #endif
 
 	/* restore execution pointer */
