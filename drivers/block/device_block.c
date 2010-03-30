@@ -38,7 +38,7 @@ struct dev_block_wait_rq_s
   lock_t lock;
   struct sched_context_s *ctx;
 #endif
-  volatile bool_t done;
+  bool_t done;
 };
 
 static DEVBLOCK_CALLBACK(dev_block_syncl_request)
@@ -72,7 +72,7 @@ static error_t dev_block_lock_request(struct device_s *dev, uint8_t **data,
 #endif
 
   while (!status.done)
-    ;
+    asm volatile("":::"memory");
 
   return __MIN(rq->progress, 0);
 }

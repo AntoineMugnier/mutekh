@@ -37,7 +37,7 @@ struct dev_lcd_wait_rq_s
   lock_t lock;
   struct sched_context_s *ctx;
 #endif
-  volatile bool_t done;
+  bool_t done;
 };
 
 static DEVLCD_CALLBACK(dev_lcd_handle_request_cb)
@@ -91,7 +91,7 @@ static ssize_t dev_lcd_handle_request(
   lock_destroy(&status.lock);
 #else
   while (!status.done)
-	  ;
+	  asm volatile("":::"memory");
 #endif
 
   return 0;

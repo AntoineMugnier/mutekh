@@ -37,7 +37,7 @@ struct dev_i2c_wait_rq_s
 	lock_t lock;
 	struct sched_context_s *ctx;
 #endif
-	volatile bool_t done;
+	bool_t done;
 	error_t error;
 };
 
@@ -94,7 +94,7 @@ error_t dev_i2c_wait_request(
   dev_i2c_request(dev, rq);
 
   while (!status.done)
-    ;
+    asm volatile("":::"memory");
 #endif
 
   return status.error;

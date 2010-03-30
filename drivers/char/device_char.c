@@ -37,7 +37,7 @@ struct dev_char_wait_rq_s
   lock_t lock;
   struct sched_context_s *ctx;
 #endif
-  volatile bool_t done;
+  bool_t done;
 };
 
 
@@ -84,7 +84,7 @@ static ssize_t dev_char_lock_request(struct device_s *dev, uint8_t *data,
 #endif
 
   while (!status.done)
-    ;
+    asm volatile("":::"memory");
 
   assert(rq.error >= 0);
   return rq.error ? -rq.error : size - rq.size;
