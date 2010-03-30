@@ -42,13 +42,13 @@
 static REQ_HNDL(i2c_twi6061a_wait_txcomp)
 {
 	struct i2c_twi6061a_context_s *pv = dev->drv_pv;
-	volatile struct twi6061a_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 	struct dev_i2c_rq_s *rq = dev_i2c_queue_head(&pv->queue);
 
 	dev_i2c_queue_remove(&pv->queue, rq);
 	rq->callback(rq->pvdata, rq, 0);
 
-	registers->TWI_IDR = TWI6061A_TXCOMP | TWI6061A_NACK;
+	cpu_mem_write_32(registers + TWI_IDR, TWI6061A_TXCOMP | TWI6061A_NACK);
 	pv->handler = NULL;
 	return 1;
 }
@@ -56,17 +56,17 @@ static REQ_HNDL(i2c_twi6061a_wait_txcomp)
 static REQ_HNDL(i2c_twi6061a_read)
 {
 	struct i2c_twi6061a_context_s *pv = dev->drv_pv;
-	volatile struct twi6061a_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
-	*pv->data = registers->TWI_RHR;
+	*pv->data = cpu_mem_read_32(registers + TWI_RHR);
 	pv->data++;
 	pv->count--;
 	if ( pv->count == 1 ) {
-		registers->TWI_CR = TWI6061A_STOP;
+		cpu_mem_write_32(registers + TWI_CR, TWI6061A_STOP);
 	}
 	if ( pv->count == 0 ) {
-		registers->TWI_IER = TWI6061A_TXCOMP;
-		registers->TWI_IDR = TWI6061A_RXRDY;
+		cpu_mem_write_32(registers + TWI_IER, TWI6061A_TXCOMP);
+		cpu_mem_write_32(registers + TWI_IDR, TWI6061A_RXRDY);
 		pv->handler = i2c_twi6061a_wait_txcomp;
 	}
 	return 0;
@@ -75,14 +75,14 @@ static REQ_HNDL(i2c_twi6061a_read)
 static REQ_HNDL(i2c_twi6061a_write)
 {
 	struct i2c_twi6061a_context_s *pv = dev->drv_pv;
-	volatile struct twi6061a_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
-	registers->TWI_THR = *pv->data;
+	cpu_mem_write_32(registers + TWI_THR, *pv->data);
 	pv->data++;
 	pv->count--;
 	if ( pv->count == 0 ) {
-		registers->TWI_IDR = TWI6061A_TXRDY;
-		registers->TWI_IER = TWI6061A_TXCOMP;
+		cpu_mem_write_32(registers + TWI_IDR, TWI6061A_TXRDY);
+		cpu_mem_write_32(registers + TWI_IER, TWI6061A_TXCOMP);
 		pv->handler = i2c_twi6061a_wait_txcomp;
 	}
 	return 0;
@@ -93,13 +93,13 @@ static
 void i2c_twi6061a_handle_req(struct device_s *dev, struct dev_i2c_rq_s *rq)
 {
 	struct i2c_twi6061a_context_s *pv = dev->drv_pv;
-	volatile struct twi6061a_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	uint32_t mmr = (0x7f & rq->dev_addr) << 16;
 
 	if ( rq->internal_address & DEV_I2C_IADDR_MASK ) {
 		mmr |= ((rq->internal_address & DEV_I2C_IADDR_MASK) >> 24) << 8;
-		registers->TWI_IADR = rq->internal_address & 0xffffff;
+		cpu_mem_write_32(registers + TWI_IADR, rq->internal_address & 0xffffff);
 	}
 
 	pv->data = rq->data;
@@ -110,34 +110,34 @@ void i2c_twi6061a_handle_req(struct device_s *dev, struct dev_i2c_rq_s *rq)
 		uint32_t cr = TWI6061A_START;
 		uint32_t ier = TWI6061A_RXRDY | TWI6061A_NACK;
 
-		registers->TWI_MMR = mmr | TWI6061A_MREAD;
+		cpu_mem_write_32(registers + TWI_MMR, mmr | TWI6061A_MREAD);
 		pv->handler = i2c_twi6061a_read;
 
 		if ( pv->count == 1 )
 			cr |= TWI6061A_STOP;
 
-		registers->TWI_CR = cr;
-		registers->TWI_IER = ier;
+		cpu_mem_write_32(registers + TWI_CR, cr);
+		cpu_mem_write_32(registers + TWI_IER, ier);
 
 		break;
 	}
 	case DEV_I2C_WRITE:
 		pv->handler = i2c_twi6061a_write;
-		registers->TWI_MMR = mmr;
-		registers->TWI_CR = TWI6061A_START;
-		registers->TWI_IER = TWI6061A_TXRDY | TWI6061A_NACK;
+		cpu_mem_write_32(registers + TWI_MMR, mmr);
+		cpu_mem_write_32(registers + TWI_CR, TWI6061A_START);
+		cpu_mem_write_32(registers + TWI_IER, TWI6061A_TXRDY | TWI6061A_NACK);
 		i2c_twi6061a_write(dev);
 		break;
 	}
 
-//	printk("i2c st, st: %x, co: %d\n", registers->TWI_SR, pv->count);
+//	printk("i2c st, st: %x, co: %d\n", cpu_mem_read_32(registers + TWI_SR), pv->count);
 }
 #else
 static
 void i2c_twi6061a_handle_req(struct device_s *dev, struct dev_i2c_rq_s *rq)
 {
 	struct i2c_twi6061a_context_s *pv = dev->drv_pv;
-	volatile struct twi6061a_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	uint32_t mmr = (0x7f & rq->dev_addr) << 16;
 
@@ -153,35 +153,35 @@ void i2c_twi6061a_handle_req(struct device_s *dev, struct dev_i2c_rq_s *rq)
 		uint32_t cr = TWI6061A_START;
 		uint32_t ier = TWI6061A_RXRDY | TWI6061A_NACK;
 
-		registers->TWI_MMR = mmr | TWI6061A_MREAD;
-		registers->TWI_IADR = rq->internal_address & 0xffffff;
+		cpu_mem_write_32(registers + TWI_MMR, mmr | TWI6061A_MREAD);
+		cpu_mem_write_32(registers + TWI_IADR, rq->internal_address & 0xffffff);
 		pv->handler = i2c_twi6061a_read;
 
 		if ( pv->count == 1 )
 			cr |= TWI6061A_STOP;
 
-		registers->TWI_CR = cr;
+		cpu_mem_write_32(registers + TWI_CR, cr);
 
 		while ( pv->count ) {
-			while( !(registers->TWI_SR & TWI6061A_RXRDY) )
-				if ( registers->TWI_SR & (TWI6061A_NACK|TWI6061A_TXCOMP|TWI6061A_UNRE|TWI6061A_OVRE) ) {
-					rq->callback(rq->pvdata, rq, registers->TWI_SR & (TWI6061A_NACK|TWI6061A_TXCOMP|TWI6061A_UNRE|TWI6061A_OVRE));
+			while( !(cpu_mem_read_32(registers + TWI_SR) & TWI6061A_RXRDY) )
+				if ( cpu_mem_read_32(registers + TWI_SR) & (TWI6061A_NACK|TWI6061A_TXCOMP|TWI6061A_UNRE|TWI6061A_OVRE) ) {
+					rq->callback(rq->pvdata, rq, cpu_mem_read_32(registers + TWI_SR) & (TWI6061A_NACK|TWI6061A_TXCOMP|TWI6061A_UNRE|TWI6061A_OVRE));
 					dev_i2c_queue_remove(&pv->queue, rq);
 					return;
 				}
-			*pv->data = registers->TWI_RHR;
+			*pv->data = cpu_mem_read_32(registers + TWI_RHR);
 			pv->data++;
 			pv->count--;
 			if ( pv->count == 1 ) {
-				registers->TWI_CR = TWI6061A_STOP;
+				cpu_mem_write_32(registers + TWI_CR, TWI6061A_STOP);
 			}
 			if ( pv->count == 0 ) {
 				break;
 			}
 		}			
-		while( !(registers->TWI_SR & TWI6061A_TXCOMP) )
-			if ( registers->TWI_SR & (TWI6061A_NACK|TWI6061A_UNRE|TWI6061A_OVRE) ) {
-				rq->callback(rq->pvdata, rq, (registers->TWI_SR & (TWI6061A_NACK|TWI6061A_UNRE|TWI6061A_OVRE)) | 0x80 );
+		while( !(cpu_mem_read_32(registers + TWI_SR) & TWI6061A_TXCOMP) )
+			if ( cpu_mem_read_32(registers + TWI_SR) & (TWI6061A_NACK|TWI6061A_UNRE|TWI6061A_OVRE) ) {
+				rq->callback(rq->pvdata, rq, (cpu_mem_read_32(registers + TWI_SR) & (TWI6061A_NACK|TWI6061A_UNRE|TWI6061A_OVRE)) | 0x80 );
 				dev_i2c_queue_remove(&pv->queue, rq);
 				return;
 			}
@@ -193,14 +193,14 @@ void i2c_twi6061a_handle_req(struct device_s *dev, struct dev_i2c_rq_s *rq)
 	}
 	case DEV_I2C_WRITE:
 		pv->handler = i2c_twi6061a_write;
-		registers->TWI_MMR = mmr;
-		registers->TWI_CR = TWI6061A_START;
-		registers->TWI_IER = TWI6061A_TXRDY | TWI6061A_NACK;
+		cpu_mem_write_32(registers + TWI_MMR, mmr);
+		cpu_mem_write_32(registers + TWI_CR, TWI6061A_START);
+		cpu_mem_write_32(registers + TWI_IER, TWI6061A_TXRDY | TWI6061A_NACK);
 		i2c_twi6061a_write(dev);
 		break;
 	}
 
-//	printk("i2c st, st: %x, co: %d\n", registers->TWI_SR, pv->count);
+//	printk("i2c st, st: %x, co: %d\n", cpu_mem_read_32(registers + TWI_SR), pv->count);
 }
 #endif
 
@@ -226,18 +226,18 @@ DEV_IRQ(i2c_twi6061a_irq)
 {
     struct i2c_twi6061a_context_s *pv = dev->drv_pv;
 	struct dev_i2c_rq_s *rq = dev_i2c_queue_head(&pv->queue);
-	volatile struct twi6061a_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	assert(rq);
 	assert(pv->handler);
 
-//	printk("i2c irq, st: %x, co: %d\n", registers->TWI_SR, pv->count);
+//	printk("i2c irq, st: %x, co: %d\n", cpu_mem_read_32(registers + TWI_SR), pv->count);
 
-	if ( registers->TWI_SR & TWI6061A_NACK ) {
+	if ( cpu_mem_read_32(registers + TWI_SR) & TWI6061A_NACK ) {
 		dev_i2c_queue_remove(&pv->queue, rq);
 		rq->callback(rq->pvdata, rq, EIO);
 
-		registers->TWI_IDR = TWI6061A_TXCOMP | TWI6061A_RXRDY | TWI6061A_TXRDY | TWI6061A_NACK;
+		cpu_mem_write_32(registers + TWI_IDR, TWI6061A_TXCOMP | TWI6061A_RXRDY | TWI6061A_TXRDY | TWI6061A_NACK);
 		pv->handler = NULL;
 
 		rq = dev_i2c_queue_head(&pv->queue);
@@ -254,7 +254,7 @@ DEV_IRQ(i2c_twi6061a_irq)
 
 DEVI2C_SET_BAUDRATE(i2c_twi6061a_set_baudrate)
 {
-	volatile struct twi6061a_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	// We define half periods, in MCK cycles
 	br = MCK/2/br;
@@ -274,7 +274,7 @@ DEVI2C_SET_BAUDRATE(i2c_twi6061a_set_baudrate)
 
 	assert( (br & ~0xff) == 0 );
 
-	registers->TWI_CWGR = (exp << 16) | (br << 8) |  br;
+	cpu_mem_write_32(registers + TWI_CWGR, (exp << 16) | (br << 8) |  br);
 
 	return MCK/2/((br<<exp) + 3);
 }
@@ -309,7 +309,7 @@ REGISTER_DRIVER(i2c_twi6061a_drv);
 DEV_INIT(i2c_twi6061a_init)
 {
 	struct i2c_twi6061a_context_s   *pv;
-	volatile struct twi6061a_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	dev->drv = &i2c_twi6061a_drv;
 
@@ -321,17 +321,17 @@ DEV_INIT(i2c_twi6061a_init)
 
 	dev->drv_pv = pv;
 
-	registers->TWI_CR = TWI6061A_MSDIS;
+	cpu_mem_write_32(registers + TWI_CR, TWI6061A_MSDIS);
 	{ uint_fast8_t i; for (i=0; i<200; ++i) asm volatile("nop"); }
-	registers->TWI_CR = TWI6061A_SWRST;
+	cpu_mem_write_32(registers + TWI_CR, TWI6061A_SWRST);
 	{ uint_fast8_t i; for (i=0; i<200; ++i) asm volatile("nop"); }
 
-	registers->TWI_CWGR = 0
+	cpu_mem_write_32(registers + TWI_CWGR, 0
 		// MCK/(2^7) == 187KHz
 		| (7 << 16)
-		;
+		);
 
-	registers->TWI_CR = TWI6061A_MSEN;
+	cpu_mem_write_32(registers + TWI_CR, TWI6061A_MSEN);
 
 	dev_i2c_queue_init(&pv->queue);
 

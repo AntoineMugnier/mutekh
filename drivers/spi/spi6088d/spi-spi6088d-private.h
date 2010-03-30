@@ -49,30 +49,15 @@ struct spi_spi6088d_context_s
 	bool_t abort;
 };
 
-struct spi6088d_reg_s {
-	uint32_t	 SPI_CR;
-	uint32_t	 SPI_MR;
-	uint32_t	 SPI_RDR;
-	uint32_t	 SPI_TDR;
-	uint32_t	 SPI_SR;
-	uint32_t	 SPI_IER;
-	uint32_t	 SPI_IDR;
-	uint32_t	 SPI_IMR;
-	uint32_t	 Reserved0[4];
-	uint32_t	 SPI_CSR[4];
-	uint32_t	 Reserved1[48];
-	uint32_t	 SPI_RPR;
-	uint32_t	 SPI_RCR;
-	uint32_t	 SPI_TPR;
-	uint32_t	 SPI_TCR;
-	uint32_t	 SPI_RNPR;
-	uint32_t	 SPI_RNCR;
-	uint32_t	 SPI_TNPR;
-	uint32_t	 SPI_TNCR;
-	uint32_t	 SPI_PTCR;
-	uint32_t	 SPI_PTSR;
-};
-
+#define SPI_CR 0x0
+#define SPI_MR 0x4
+#define SPI_RDR 0x8
+#define SPI_TDR 0xc
+#define SPI_SR 0x10
+#define SPI_IER 0x14
+#define SPI_IDR 0x18
+#define SPI_IMR 0x1c
+#define SPI_CSR(x) (0x30 + 4*(x))
 
 #define SPI6088D_SPIEN       ((uint32_t)1 <<  0)
 #define SPI6088D_SPIDIS      ((uint32_t)1 <<  1)

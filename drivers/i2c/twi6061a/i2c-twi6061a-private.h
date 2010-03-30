@@ -35,20 +35,16 @@ struct i2c_twi6061a_context_s
 	size_t count;
 };
 
-struct twi6061a_reg_s {
-	uint32_t	 TWI_CR;
-	uint32_t	 TWI_MMR;
-	uint32_t	 Reserved0[1];
-	uint32_t	 TWI_IADR;
-	uint32_t	 TWI_CWGR;
-	uint32_t	 Reserved1[3];
-	uint32_t	 TWI_SR;
-	uint32_t	 TWI_IER;
-	uint32_t	 TWI_IDR;
-	uint32_t	 TWI_IMR;
-	uint32_t	 TWI_RHR;
-	uint32_t	 TWI_THR;
-};
+#define TWI_CR 0x0
+#define TWI_MMR 0x4
+#define TWI_IADR 0xc
+#define TWI_CWGR 0x10
+#define TWI_SR 0x20
+#define TWI_IER 0x24
+#define TWI_IDR 0x28
+#define TWI_IMR 0x2c
+#define TWI_RHR 0x30
+#define TWI_THR 0x34
 
 #define TWI6061A_START       ((uint32_t)1 <<  0)
 #define TWI6061A_STOP        ((uint32_t)1 <<  1)

@@ -34,12 +34,9 @@ struct pitc_6079a_context_s
 	void			*pv;
 };
 
-struct pitc_6079a_reg_s {
-	uint32_t mr;
-	uint32_t sr;
-	uint32_t vr;
-	uint32_t ir;
-};
-
+#define REG_MR 0x0
+#define REG_SR 0x4
+#define REG_VR 0x8
+#define REG_IR 0xc
 
 #endif

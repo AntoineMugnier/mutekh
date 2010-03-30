@@ -42,7 +42,7 @@
 
 static DEVSPI_CALLBACK(__s1d15g00_cmd_done)
 {
-	volatile bool_t *done = priv;
+	bool_t *done = priv;
 
 	*done = 1;
 }
@@ -81,13 +81,13 @@ void __s1d15g00_send_cmd_sync(struct device_s *dev,
 							  uint8_t cmd,
 							  const uint8_t *data, size_t dlen)
 {
-	volatile bool_t done;
+	bool_t done;
 	
 //	printk("S1D15G00 sending cmd %x... ", cmd);
 
 	__s1d15g00_send_cmd(dev, cmd, data, dlen, __s1d15g00_cmd_done, (void*)&done);
 	while (!done)
-		;
+		asm volatile("":::"memory");
 
 //	printk("Done\n");
 }

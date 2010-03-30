@@ -30,7 +30,6 @@
 
 DEV_INIT(icu_sam7_init);
 DEVICU_ENABLE(icu_sam7_enable);
-DEVICU_SET_FLAGS(icu_sam7_set_flags);
 DEVICU_SETHNDL(icu_sam7_sethndl);
 DEVICU_DELHNDL(icu_sam7_delhndl);
 DEV_CLEANUP(icu_sam7_cleanup);

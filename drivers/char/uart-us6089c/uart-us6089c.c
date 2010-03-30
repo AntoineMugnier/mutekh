@@ -38,13 +38,13 @@
 static void try_send(struct device_s *dev, bool_t continuous)
 {
 	struct uart_us6089c_context_s *pv = dev->drv_pv;
-	volatile struct us6089c_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 	struct dev_char_rq_s *txrq = dev_char_queue_head(&pv->write_q);
 
-	while ((registers->US_CSR & US6089C_TXRDY) && txrq)
+	while ((cpu_mem_read_32(registers + US_CSR) & US6089C_TXRDY) && txrq)
 	{
 		assert( txrq->size );
-		registers->US_THR = (uint32_t)*(txrq->data);
+		cpu_mem_write_32(registers + US_THR, (uint32_t)*(txrq->data));
 			
 		++(txrq->data);
 		--(txrq->size);
@@ -57,7 +57,7 @@ static void try_send(struct device_s *dev, bool_t continuous)
 			txrq = dev_char_queue_head(&pv->write_q);
 			if (!txrq)
 			{
-				registers->US_IDR = US6089C_TXRDY;
+				cpu_mem_write_32(registers + US_IDR, US6089C_TXRDY);
 				break;
 			}
 		}
@@ -69,13 +69,13 @@ static void try_send(struct device_s *dev, bool_t continuous)
 static void try_recv(struct device_s *dev, bool_t continuous)
 {
 	struct uart_us6089c_context_s *pv = dev->drv_pv;
-	volatile struct us6089c_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 	struct dev_char_rq_s *rxrq = dev_char_queue_head(&pv->read_q);
 
-	while ((registers->US_CSR & US6089C_RXRDY) && rxrq)
+	while ((cpu_mem_read_32(registers + US_CSR) & US6089C_RXRDY) && rxrq)
 	{
 		assert( rxrq->size );
-		uint32_t d = registers->US_RHR;
+		uint32_t d = cpu_mem_read_32(registers + US_RHR);
 
 		*rxrq->data = d;
 
@@ -90,15 +90,15 @@ static void try_recv(struct device_s *dev, bool_t continuous)
 			rxrq = dev_char_queue_head(&pv->read_q);
 			if ( !rxrq )
 			{
-				registers->US_IDR = US6089C_RXRDY;
+				cpu_mem_write_32(registers + US_IDR, US6089C_RXRDY);
 				break;
 			}
 		}
 		if ( !continuous )
 			break;
 	}
-	if (!rxrq && (registers->US_CSR & US6089C_RXRDY)) {
-		volatile uint32_t d = registers->US_RHR;
+	if (!rxrq && (cpu_mem_read_32(registers + US_CSR) & US6089C_RXRDY)) {
+		volatile uint32_t d = cpu_mem_read_32(registers + US_RHR);
 		(void)d;
 	}
 }
@@ -106,7 +106,7 @@ static void try_recv(struct device_s *dev, bool_t continuous)
 DEVCHAR_REQUEST(uart_us6089c_request)
 {
 	struct uart_us6089c_context_s	*pv = dev->drv_pv;
-	volatile struct us6089c_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	if (rq->size == 0) {
 		if (rq->callback)
@@ -120,13 +120,13 @@ DEVCHAR_REQUEST(uart_us6089c_request)
     {
     case DEV_CHAR_READ:
 		dev_char_queue_pushback(&pv->read_q, rq);
-		registers->US_IER = US6089C_RXRDY;
+		cpu_mem_write_32(registers + US_IER, US6089C_RXRDY);
 		try_recv(dev, 0);
 		break;
 
     case DEV_CHAR_WRITE:
 		dev_char_queue_pushback(&pv->write_q, rq);
-		registers->US_IER = US6089C_TXRDY;
+		cpu_mem_write_32(registers + US_IER, US6089C_TXRDY);
 		try_send(dev, 0);
 		break;
     }
@@ -199,7 +199,7 @@ REGISTER_DRIVER(uart_us6089c_drv);
 DEV_INIT(uart_us6089c_init)
 {
 	struct uart_us6089c_context_s	*pv;
-	volatile struct us6089c_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	dev->drv = &uart_us6089c_drv;
 
@@ -210,34 +210,35 @@ DEV_INIT(uart_us6089c_init)
 		return -1;
 
 	// set up the USART0 register
-	registers->US_CR =
-		US6089C_RSTRX
+	cpu_mem_write_32(registers + US_CR, 0
+        | US6089C_RSTRX
 		| US6089C_RSTTX
 		| US6089C_RXDIS
-		| US6089C_TXDIS;
+		| US6089C_TXDIS
+        );
 
 	// set char size
-	registers->US_MR = 0
+	cpu_mem_write_32(registers + US_MR, 0
 		| US6089C_PAR_NONE
 		| (0x3 << 6)
 		| 2 // Hardware handshaking
-		;
+		);
 
 	// no interupt
-	registers->US_IDR = 0xFFFF;
+	cpu_mem_write_32(registers + US_IDR, 0xFFFF);
 
 	// configure to 9600 bauds
-	registers->US_BRGR = BRD;
-	registers->US_RTOR = 0;
-	registers->US_TTGR = 0;
-	registers->US_FIDI = 0;
-	registers->US_IF = 0;
+	cpu_mem_write_32(registers + US_BRGR, BRD);
+	cpu_mem_write_32(registers + US_RTOR, 0);
+	cpu_mem_write_32(registers + US_TTGR, 0);
+	cpu_mem_write_32(registers + US_FIDI, 0);
+	cpu_mem_write_32(registers + US_IF, 0);
 
 	dev_icu_sethndl(dev->icudev, dev->irq, uart_us6089c_irq, dev);
 	dev_icu_enable(dev->icudev, dev->irq, 1, 0x4);
 
 	// enable receiver and transmitter
-	registers->US_CR = US6089C_RXEN | US6089C_TXEN;
+	cpu_mem_write_32(registers + US_CR, US6089C_RXEN | US6089C_TXEN);
 
 	dev->drv_pv = pv;
 

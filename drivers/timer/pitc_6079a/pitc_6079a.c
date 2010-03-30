@@ -41,7 +41,7 @@
 DEVTIMER_SETCALLBACK(pitc_6079a_setcallback)
 {
 	struct pitc_6079a_context_s *pv = dev->drv_pv;
-	volatile struct pitc_6079a_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	if ( id )
 		return ENOTSUP;
@@ -50,9 +50,9 @@ DEVTIMER_SETCALLBACK(pitc_6079a_setcallback)
 		pv->cb = callback;
 		pv->pv = private;
 
-		registers->mr |= PITC_PITIEN;
+        cpu_mem_mask_set_32(registers + REG_MR, PITC_PITIEN);
     } else {
-		registers->mr &= ~PITC_PITIEN;
+        cpu_mem_mask_clear_32(registers + REG_MR, PITC_PITIEN);
     }
 
 	return 0;
@@ -64,18 +64,18 @@ DEVTIMER_SETCALLBACK(pitc_6079a_setcallback)
 
 DEVTIMER_SETPERIOD(pitc_6079a_setperiod)
 {
-	volatile struct pitc_6079a_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	if (period & ~PITC_CPIV_MASK)
 		return ENOTSUP;
 
 	if (period) {
-		registers->mr = 0
-			| (registers->mr & PITC_PITIEN)
+        cpu_mem_write_32(registers + REG_MR, 0
+            | (cpu_mem_read_32(registers + REG_MR) & PITC_PITIEN)
 			| (period | PITC_PITEN)
-			;
+			);
 	} else {
-		registers->mr &= ~PITC_PITEN;
+        cpu_mem_mask_clear_32(registers + REG_MR, PITC_PITEN);
     }
 
 	return 0;
@@ -96,9 +96,9 @@ DEVTIMER_SETVALUE(pitc_6079a_setvalue)
 
 DEVTIMER_GETVALUE(pitc_6079a_getvalue)
 {
-	volatile struct pitc_6079a_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
-	return registers->ir & PITC_CPIV_MASK;
+    return cpu_mem_read_32(registers + REG_IR) & PITC_CPIV_MASK;
 }
 
 /*
@@ -108,9 +108,9 @@ DEVTIMER_GETVALUE(pitc_6079a_getvalue)
 DEV_IRQ(pitc_6079a_irq)
 {
 	struct pitc_6079a_context_s *pv = dev->drv_pv;
-	volatile struct pitc_6079a_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
-	uint32_t count = registers->vr >> 20;
+    uint32_t count = cpu_mem_read_32(registers + REG_VR) >> 20;
 	
 	if ( !count )
 		return 0;
@@ -171,7 +171,6 @@ REGISTER_DRIVER(pitc_6079a_drv);
 DEV_INIT(pitc_6079a_init)
 {
 	struct pitc_6079a_context_s *pv;
-//	volatile struct pitc_6079a_reg_s *registers = (void*)dev->addr[0];
 	dev->drv = &pitc_6079a_drv;
 
 	/* allocate private driver data */

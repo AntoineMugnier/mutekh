@@ -246,4 +246,6 @@ DEVICU_ENABLE(icu_sam7_enable)
 		registers->AIC_IDCR = 1 << irq;
 		registers->AIC_SVR[irq] = (uint32_t)(pv->table+32);
 	}
+
+    return 0;
 }

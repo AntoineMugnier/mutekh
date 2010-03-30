@@ -36,36 +36,34 @@ struct uart_us6089c_context_s
   dev_char_queue_root_t		write_q;
 };
 
-
-struct us6089c_reg_s {
-	uint32_t	 US_CR; 	// Control Register
-	uint32_t	 US_MR; 	// Mode Register
-	uint32_t	 US_IER; 	// Interrupt Enable Register
-	uint32_t	 US_IDR; 	// Interrupt Disable Register
-	uint32_t	 US_IMR; 	// Interrupt Mask Register
-	uint32_t	 US_CSR; 	// Channel Status Register
-	uint32_t	 US_RHR; 	// Receiver Holding Register
-	uint32_t	 US_THR; 	// Transmitter Holding Register
-	uint32_t	 US_BRGR; 	// Baud Rate Generator Register
-	uint32_t	 US_RTOR; 	// Receiver Time-out Register
-	uint32_t	 US_TTGR; 	// Transmitter Time-guard Register
-	uint32_t	 Reserved0[5]; 	// 
-	uint32_t	 US_FIDI; 	// FI_DI_Ratio Register
-	uint32_t	 US_NER; 	// Nb Errors Register
-	uint32_t	 Reserved1[1]; 	// 
-	uint32_t	 US_IF; 	// IRDA_FILTER Register
-	uint32_t	 Reserved2[44]; 	// 
-	uint32_t	 US_RPR; 	// Receive Pointer Register
-	uint32_t	 US_RCR; 	// Receive Counter Register
-	uint32_t	 US_TPR; 	// Transmit Pointer Register
-	uint32_t	 US_TCR; 	// Transmit Counter Register
-	uint32_t	 US_RNPR; 	// Receive Next Pointer Register
-	uint32_t	 US_RNCR; 	// Receive Next Counter Register
-	uint32_t	 US_TNPR; 	// Transmit Next Pointer Register
-	uint32_t	 US_TNCR; 	// Transmit Next Counter Register
-	uint32_t	 US_PTCR; 	// PDC Transfer Control Register
-	uint32_t	 US_PTSR; 	// PDC Transfer Status Register
-};
+// Control Register
+#define US_CR 0
+// Mode Register
+#define US_MR 4
+// Interrupt Enable Register
+#define US_IER 8
+// Interrupt Disable Register
+#define US_IDR 0xc
+// Interrupt Mask Register
+#define US_IMR 0x10
+// Channel Status Register
+#define US_CSR 0x14
+// Receiver Holding Register
+#define US_RHR 0x18
+// Transmitter Holding Register
+#define US_THR 0x1c
+// Baud Rate Generator Register
+#define US_BRGR 0x20
+// Receiver Time-out Register
+#define US_RTOR 0x24
+// Transmitter Time-guard Register
+#define US_TTGR 0x28
+// FI_DI_Ratio Register
+#define US_FIDI 0x40
+// Nb Errors Register
+#define US_NER 0x44
+// IRDA_FILTER Register
+#define US_IF 0x4c
 
 #define US6089C_RXRDY        ((uint32_t)1 <<  0)
 #define US6089C_TXRDY        ((uint32_t)1 <<  1)

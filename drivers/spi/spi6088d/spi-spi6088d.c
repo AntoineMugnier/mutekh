@@ -44,20 +44,20 @@
 #define RX_STATUS SPI6088D_RXBUFF
 
 #define DO_SYNC(...) while (											\
-		((registers->SPI_SR & (TX_STATUS|RX_STATUS)) !=	\
+		((cpu_mem_read_32(registers + SPI_SR) & (TX_STATUS|RX_STATUS)) != \
 		 (TX_STATUS|RX_STATUS))							\
 		__VA_ARGS__ )
 
 
 static void spi_select_none(struct device_s *dev)
 {
-	struct spi_spi6088d_context_s *pv = dev->drv_pv;
+//	struct spi_spi6088d_context_s *pv = dev->drv_pv;
 //	AT91C_BASE_PIOA->PIO_PER = pv->cs_bits;
 }
 
 static void spi_select_normal(struct device_s *dev)
 {
-	struct spi_spi6088d_context_s *pv = dev->drv_pv;
+//	struct spi_spi6088d_context_s *pv = dev->drv_pv;
 //	AT91C_BASE_PIOA->PIO_PDR = pv->cs_bits;
 }
 
@@ -66,9 +66,9 @@ static void spi_select_normal(struct device_s *dev)
 static CMD_HANDLER(spi_spi6088d_read_rx_1byte)
 {
 	struct spi_spi6088d_context_s *pv = dev->drv_pv;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
-	uint32_t data = registers->SPI_RDR;;
+	uint32_t data = cpu_mem_read_32(registers + SPI_RDR);
 	*(uint8_t *)(pv->rx_ptr) = data;
 	pv->rx_ptr += pv->increment;
 }
@@ -76,65 +76,64 @@ static CMD_HANDLER(spi_spi6088d_read_rx_1byte)
 static CMD_HANDLER(spi_spi6088d_read_rx_2bytes)
 {
 	struct spi_spi6088d_context_s *pv = dev->drv_pv;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
-	uint32_t data = registers->SPI_RDR;;
+	uint32_t data = cpu_mem_read_32(registers + SPI_RDR);
 	*(uint16_t*)(pv->rx_ptr) = data;	
 	pv->rx_ptr += pv->increment;
 }
 
 static CMD_HANDLER(spi_spi6088d_void_rx)
 {
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
-	uint32_t data = registers->SPI_RDR;;
-	(void)data;
+    cpu_mem_read_32(registers + SPI_RDR);
 }
 
 static CMD_HANDLER(spi_spi6088d_write_tx_1byte)
 {
 	struct spi_spi6088d_context_s *pv = dev->drv_pv;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	uint32_t data = *(uint8_t *)pv->tx_ptr
 //		| (pv->count == 0 ? (1<<24) : 0)
 		| pv->permanent;
 	pv->tx_ptr += pv->increment;
 
-	registers->SPI_TDR = data;
+    cpu_mem_write_32(registers + SPI_TDR, data);
 	pv->count--;
 }
 
 static CMD_HANDLER(spi_spi6088d_write_tx_2bytes)
 {
 	struct spi_spi6088d_context_s *pv = dev->drv_pv;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	uint32_t data = *(uint16_t*)(pv->tx_ptr)
 //		| (pv->count == 0 ? (1<<24) : 0)
 		;
 	pv->tx_ptr += pv->increment;
-	registers->SPI_TDR = data;
+    cpu_mem_write_32(registers + SPI_TDR, data);
 	pv->count--;
 }
 
 static CMD_HANDLER(spi_spi6088d_pad_tx)
 {
 	struct spi_spi6088d_context_s *pv = dev->drv_pv;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	uint32_t data = pv->pad_byte;
-	registers->SPI_TDR = data;
+    cpu_mem_write_32(registers + SPI_TDR, data);
 	pv->count--;
 }
 
 static CMD_HANDLER(spi_spi6088d_wait_value_rx)
 {
 	struct spi_spi6088d_context_s *pv = dev->drv_pv;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 	struct dev_spi_rq_s *rq = dev_spi_queue_head(&pv->queue);
 
-	uint32_t data = registers->SPI_RDR;
+    uint32_t data = cpu_mem_read_32(registers + SPI_RDR);
 	enum devspi_wait_value_answer_e ret = pv->wait_cb(dev, rq, data);
 	switch (ret) {
 	case DEV_SPI_VALUE_FAIL:
@@ -155,7 +154,7 @@ static CMD_HANDLER(spi_spi6088d_wait_value_rx)
 static bool_t spi_spi6088d_setup_command(struct device_s *dev, struct dev_spi_rq_cmd_s *cmd)
 {
 	struct spi_spi6088d_context_s *pv = dev->drv_pv;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 	bool_t handled = 0;
 
 	pv->abort = 0;
@@ -167,7 +166,7 @@ static bool_t spi_spi6088d_setup_command(struct device_s *dev, struct dev_spi_rq
 	case DEV_SPI_DESELECT:
 		ttype = "deselect";
 //		spi_select_none(dev);
-		registers->SPI_CR = SPI6088D_LASTXFER;
+        cpu_mem_write_32(registers + SPI_CR, SPI6088D_LASTXFER);
 		handled = 1;
 		break;
 	case DEV_SPI_R_8:
@@ -259,15 +258,15 @@ static
 struct dev_spi_rq_cmd_s *spi_spi6088d_get_next_cmd(struct device_s *dev)
 {
 	struct spi_spi6088d_context_s *pv = dev->drv_pv;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	struct dev_spi_rq_s *rq;
 
 	while ((rq = dev_spi_queue_head(&pv->queue))) {
 		if ( pv->cur_cmd == (size_t)-1 ) {
-			uint32_t select = registers->SPI_MR | 0xf0000;
+			uint32_t select = cpu_mem_read_32(registers + SPI_MR) | 0xf0000;
 			select &= ~(0x10000 << rq->device_id);
-			registers->SPI_MR = select;
+            cpu_mem_write_32(registers + SPI_MR, select);
 
 			// We are handling a new command queue, setup stuff
 			pv->permanent = (0xf ^ (0x1 << rq->device_id))<<16;
@@ -317,7 +316,7 @@ struct dev_spi_rq_cmd_s *spi_spi6088d_get_next_cmd(struct device_s *dev)
 DEVSPI_REQUEST(spi_spi6088d_request)
 {
     struct spi_spi6088d_context_s *pv = dev->drv_pv;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
 
@@ -333,8 +332,8 @@ DEVSPI_REQUEST(spi_spi6088d_request)
 	
 	CPU_INTERRUPT_RESTORESTATE;
 
-	registers->SPI_IER = SPI6088D_RXBUFF;
-	(void)registers->SPI_RDR;
+    cpu_mem_write_32(registers + SPI_IER, SPI6088D_RXBUFF);
+    cpu_mem_read_32(registers + SPI_RDR);
 	DO_SYNC();
 	pv->tx_handler(dev);
 }
@@ -342,7 +341,7 @@ DEVSPI_REQUEST(spi_spi6088d_request)
 DEV_IRQ(spi_spi6088d_irq)
 {
     struct spi_spi6088d_context_s *pv = dev->drv_pv;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	DO_SYNC(|| pv->abort);
 
@@ -351,7 +350,7 @@ DEV_IRQ(spi_spi6088d_irq)
 		struct dev_spi_rq_cmd_s *cmd = spi_spi6088d_get_next_cmd(dev);
 
 		if ( !cmd ) {
-			registers->SPI_IDR = SPI6088D_RXBUFF;
+            cpu_mem_write_32(registers + SPI_IDR, SPI6088D_RXBUFF);
 			return 0;
 		}
 	}
@@ -364,7 +363,7 @@ DEV_IRQ(spi_spi6088d_irq)
 DEVSPI_SET_BAUDRATE(spi_spi6088d_set_baudrate)
 {
     struct spi_spi6088d_context_s *pv = dev->drv_pv;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 	uint32_t new_data;
 
 	if ( device_id >= pv->lun_count )
@@ -381,14 +380,14 @@ DEVSPI_SET_BAUDRATE(spi_spi6088d_set_baudrate)
 /* 		   device_id, br, MCK/divisor); */
 
 	new_data = 0
-		| (registers->SPI_CSR[device_id] & 0x00ff)
+        | (cpu_mem_read_32(registers + SPI_CSR(device_id)) & 0x00ff)
 		| ((divisor & 0xff) << 8)
 		| ((uint32_t)xfer_delay << 24)
 		| ((uint32_t)cs_delay << 16);
 
 /* 	dprintk("Setting CSR[%d] to %p\n", device_id, new_data); */
 
-	registers->SPI_CSR[device_id] = new_data;
+	cpu_mem_write_32(registers + SPI_CSR(device_id), new_data);
 
 	return MCK/divisor;
 }
@@ -396,7 +395,7 @@ DEVSPI_SET_BAUDRATE(spi_spi6088d_set_baudrate)
 DEVSPI_SET_DATA_FORMAT(spi_spi6088d_set_data_format)
 {
     struct spi_spi6088d_context_s *pv = dev->drv_pv;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 	uint32_t new_data = 0;
 
 	if ( device_id >= pv->lun_count )
@@ -416,7 +415,7 @@ DEVSPI_SET_DATA_FORMAT(spi_spi6088d_set_data_format)
 
 	new_data = 0
 #if 1
-		| (registers->SPI_CSR[device_id] & ~0xff)
+        | (cpu_mem_read_32(registers + SPI_CSR(device_id)) & ~0xff)
 		| (new_data & 0xff)
 #else
 		| 0x1f02
@@ -425,7 +424,7 @@ DEVSPI_SET_DATA_FORMAT(spi_spi6088d_set_data_format)
 
 /* 	dprintk("Setting CSR[%d] to %p\n", device_id, new_data); */
 
-	registers->SPI_CSR[device_id] = new_data;
+	cpu_mem_write_32(registers + SPI_CSR(device_id), new_data);
 	return 0;
 }
 
@@ -467,7 +466,7 @@ DEV_INIT(spi_spi6088d_init)
 {
 	struct spi_spi6088d_context_s   *pv;
 	struct spi_spi6088d_param_s *param = params;
-	volatile struct spi6088d_reg_s *registers = (void*)dev->addr[0];
+	uintptr_t registers = (uintptr_t)dev->addr[0];
 	uint_fast8_t i;
 
 	dev->drv = &spi_spi6088d_drv;
@@ -487,13 +486,13 @@ DEV_INIT(spi_spi6088d_init)
 
 //	printk("SPI-SPI6088D: configuring %s, pin mask=%x, inputs=%x\n", spi, pins, inputs);
 
-	registers->SPI_CR = SPI6088D_SPIDIS;
+	cpu_mem_write_32(registers + SPI_CR, SPI6088D_SPIDIS);
 	{ uint_fast8_t i; for (i=0; i<200; ++i) asm volatile("nop"); }
-	registers->SPI_CR = SPI6088D_SWRST;
+	cpu_mem_write_32(registers + SPI_CR, SPI6088D_SWRST);
 	{ uint_fast8_t i; for (i=0; i<200; ++i) asm volatile("nop"); }
-	registers->SPI_IDR = 0x3ff;
+	cpu_mem_write_32(registers + SPI_IDR, 0x3ff);
 
-	registers->SPI_MR = 0
+	cpu_mem_write_32(registers + SPI_MR, 0
 		| (30<<24)
 //		| SPI6088D_PCSDEC
 #if 0
@@ -502,20 +501,21 @@ DEV_INIT(spi_spi6088d_init)
 		| SPI6088D_PS_FIXED
 		| (0xd<<16)
 #endif
-		| SPI6088D_MSTR;
+		| SPI6088D_MSTR
+        );
 
 	for ( i=0; i<param->lun_count; ++i ) {
-		registers->SPI_CSR[i] = 0
+        cpu_mem_write_32(registers + SPI_CSR(i), 0
 			| SPI6088D_CSAAT
 //			| SPI6088D_NCPHA
 			| (SPI6088D_SCBR & (0x1f<<8))
 //			| (SPI6088D_SCBR & ((48000000/400000+2)<<8))
 			| (SPI6088D_DLYBS & (5<<24))
 //			| SPI6088D_BITS_8;
-		;
+            );
 	}
 
-	registers->SPI_CR = SPI6088D_SPIEN;
+	cpu_mem_write_32(registers + SPI_CR, SPI6088D_SPIEN);
 
 	pv->lun_count = param->lun_count;
 	pv->cur_cmd = (size_t)-1;
