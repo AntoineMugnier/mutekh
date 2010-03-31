@@ -22,6 +22,7 @@
 #include <mutek/scheduler.h>
 #include <hexo/types.h>
 #include <hexo/atomic.h>
+#include <hexo/iospace.h>
 #include <hexo/endian.h>
 #include <hexo/interrupt.h>
 #include <string.h>

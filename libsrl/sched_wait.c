@@ -21,6 +21,7 @@
 
 #include <stddef.h>
 #include <hexo/endian.h>
+#include <hexo/iospace.h>
 #include <mutek/scheduler.h>
 #include <srl_private_types.h>
 #include <srl/srl_sched_wait.h>
