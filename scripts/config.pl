@@ -182,7 +182,7 @@ sub args_default
     my ($location, $opts, $tag, @args) = @_;
     my $value = "@args";
 
-    warning($location.": default value redefined for `".$opts->{name}." token'") if ($opts->{default});
+    warning($location.": default value redefined for `".$opts->{name}." token'") if (defined $opts->{default});
 
     $opts->{default} = $value;
 }
@@ -1467,7 +1467,7 @@ sub check_config
     # set default values
     foreach my $opt (values %config_opts) {
 	if (not defined $opt->{value}) {
-	    $opt->{default} ||= 'undefined';
+	    $opt->{default} = 'undefined' if !defined $opt->{default};
 	    $opt->{value} = $opt->{default};
 	    $opt->{vlocation} = "$opt->{file}:$opt->{location}";
 	}
