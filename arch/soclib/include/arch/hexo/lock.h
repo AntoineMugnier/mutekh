@@ -141,6 +141,7 @@ static inline void arch_lock_destroy(struct arch_lock_s *lock)
 
 static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 {
+  asm volatile ("":::"memory");
   bool_t res = cpu_atomic_bit_testset(&lock->a, 0);
   asm volatile ("":::"memory");
   return res;
@@ -148,6 +149,7 @@ static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 
 static inline void arch_lock_spin(struct arch_lock_s *lock)
 {
+  asm volatile ("":::"memory");
 #ifdef CONFIG_DEBUG_SPINLOCK_LIMIT
   uint32_t deadline = CONFIG_DEBUG_SPINLOCK_LIMIT;
 
@@ -161,12 +163,16 @@ static inline void arch_lock_spin(struct arch_lock_s *lock)
 
 static inline bool_t arch_lock_state(struct arch_lock_s *lock)
 {
-  return lock->a & 1;
+  asm volatile ("":::"memory");
+  bool_t res = lock->a & 1;
+  asm volatile ("":::"memory");
+  return res;
 }
 
 static inline void arch_lock_release(struct arch_lock_s *lock)
 {
-  cpu_atomic_bit_clr(&lock->a, 0);
+  asm volatile ("":::"memory");
+  lock->a = 0;
   asm volatile ("":::"memory");
 }
 
