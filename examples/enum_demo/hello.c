@@ -6,7 +6,7 @@
 #include <arch/hexo/emu_syscalls.h>
 #endif
 
-#if defined(CONFIG_DEVICE_TREE)
+#ifdef CONFIG_DRIVER_ENUM_ROOT
 #include <device/enum.h>
 #include <device/device.h>
 #include <device/driver.h>
@@ -33,7 +33,7 @@ static void dump_enumerator(struct device_s *root, uint_fast8_t prefix)
 
 void app_start()
 {
-#if defined(CONFIG_DEVICE_TREE)
+#ifdef CONFIG_DRIVER_ENUM_ROOT
 	dump_enumerator(&enum_root, 0);
 #endif
 
