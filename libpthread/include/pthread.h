@@ -722,21 +722,6 @@ error_t pthread_key_create(pthread_key_t *key, void (*destructor)(void *));
  */
 error_t pthread_key_delete(pthread_key_t key);
 
-#if !CONFIG_PTHREAD_KEYS_MAX
-/* define noops in case of no KEYS available. */
-static inline
-error_t pthread_key_create(pthread_key_t *key, void (*destructor)(void *))
-{
-  return -EAGAIN;
-}
-
-static inline
-error_t pthread_key_delete(pthread_key_t key)
-{
-  return -EINVAL;
-}
-#endif
-
 extern CONTEXT_LOCAL const void *_key_values[CONFIG_PTHREAD_KEYS_MAX];
 
 /**
