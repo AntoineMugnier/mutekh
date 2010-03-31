@@ -237,7 +237,16 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   uint8_t		*stack = NULL;
   size_t		stack_size = CONFIG_PTHREAD_STACK_SIZE;
 
-  thread = mem_alloc(sizeof (struct pthread_s), (mem_scope_sys));
+#ifdef CONFIG_PTHREAD_ATTRIBUTES
+  if (attr && attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
+    {
+      thread = mem_alloc_cpu(sizeof (struct pthread_s), (mem_scope_cpu), attr->cpulist[0]);
+    } 
+  else
+#endif
+    {
+      thread = mem_alloc(sizeof (struct pthread_s), (mem_scope_sys));
+    }
 
   if (!thread)
     return ENOMEM;
@@ -250,12 +259,17 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
 
   /* find a stack buffer */
 #ifdef CONFIG_PTHREAD_ATTRIBUTES
-  if (attr && attr->flags & _PTHREAD_ATTRFLAG_STACK)
+  if ( attr )
     {
-      stack_size = attr->stack_size;
-      stack = attr->stack_buf;
+      if(attr->flags & _PTHREAD_ATTRFLAG_STACK)
+        {
+          stack_size = attr->stack_size;
+          stack = attr->stack_buf;
+        } else if (attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
+        {
+          stack = mem_alloc_cpu(stack_size, mem_scope_cpu, attr->cpulist[0]);
+        }
     }
-
   if (stack == NULL)
 #endif
     {
