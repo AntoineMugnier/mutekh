@@ -72,6 +72,10 @@ pthread_exit(void *retval)
 {
   struct pthread_s	*this = pthread_self();
 
+#ifdef CONFIG_PTHREAD_KEYS
+  _pthread_keys_cleanup(this);
+#endif
+
   atomic_bit_set(&this->state, _PTHREAD_STATE_CANCELED);
 
   /* remove thread from runnable list */
@@ -301,6 +305,10 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
 #endif
 
     }
+#endif
+
+#ifdef CONFIG_PTHREAD_KEYS
+  _pthread_keys_init(thread);
 #endif
 
   *thread_ = thread;

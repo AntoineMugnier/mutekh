@@ -50,5 +50,10 @@ __pthread_testcancel_async(void)
 
 extern CONTEXT_LOCAL pthread_t __pthread_current;
 
+#if CONFIG_PTHREAD_KEYS_MAX
+void _pthread_keys_init(struct pthread_s *thread);
+void _pthread_keys_cleanup(struct pthread_s *thread);
+#endif
+
 #endif
 

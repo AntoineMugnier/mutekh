@@ -630,9 +630,150 @@ pthread_spin_unlock(pthread_spinlock_t *spinlock)
   return 0;
 }
 
-#endif
+#endif /* SPIN */
 
 
+
+#if defined(CONFIG_PTHREAD_ONCE)
+
+/** @internal */
+struct pthread_once_s
+{
+  pthread_mutex_t lock;
+  bool_t done;
+};
+
+/** @this is the POSIX type definition for pthread_once_t */
+typedef struct pthread_once_s pthread_once_t;
+
+/** @this is the POSIX type definition for PTHREAD_ONCE_INIT */
+#define PTHREAD_ONCE_INIT { PTHREAD_MUTEX_INITIALIZER, 0 }
+
+/**
+   @this calls a given function only once according to the flag
+   variable @tt once.
+
+   @tt once must have beed initialized with PTHREAD_ONCE_INIT.
+
+   @param once Flag variable used to ensure call is made only once
+   @param func Function to call once
+   @returns 0 when done
+*/
+static inline
+error_t pthread_once(pthread_once_t *once, void (*func)())
+{
+  /* No contention here... */
+  if ( once->done )
+    return 0;
+
+  pthread_mutex_lock(&once->lock);
+  if ( ! once->done ) {
+    /*
+      FIXME: The function pthread_once() is not a cancellation
+      point. However, if init_routine() is a cancellation point and is
+      canceled, the effect on once_control is as if pthread_once() was
+      never called.
+    */
+    func();
+    once->done = 1;
+  }
+  pthread_mutex_unlock(&once->lock);
+
+  return 0;
+}
+
+#endif /* ONCE */
+
+
+#if defined(CONFIG_PTHREAD_KEYS)
+
+/** @this is the maximum number of keys in the system. */
+#define PTHREAD_KEYS_MAX CONFIG_PTHREAD_KEYS_MAX
+
+/** @this is the maximum number of iterations for destructor calling */
+#define PTHREAD_DESTRUCTOR_ITERATIONS CONFIG_PTHREAD_KEYS_DESTRUCTOR_ITERATIONS
+
+typedef size_t pthread_key_t;
+
+/**
+   @this creates a new key and associates an optional destructor to
+   the keyed data.  If there cannot be any more key allocated in the
+   system, an error is signaled.
+
+   Each non-NULL @tt destructor will be called once for each exitting
+   thread with non-NULL keyed data.  Destructor must still
+   @ref pthread_key_delete the data.  If some keyed data is still
+   non-NULL after deletion, the whole deletion process is started
+   again; at most @ref PTHREAD_DESTRUCTOR_ITERATIONS times.
+
+   @param key Key handle to fill
+   @param destructor Optional destructor function; NULL if not needed
+   @returns 0 if done, -EAGAIN if no key is available any more
+ */
+error_t pthread_key_create(pthread_key_t *key, void (*destructor)(void *));
+
+/**
+   @this deletes a key.  The destructor optionnaly attached to this
+   key is not called, it is up to the application to free data
+   attached to this key.
+
+   @param key Key handle to delete
+   @returns 0 if done
+ */
+error_t pthread_key_delete(pthread_key_t key);
+
+#if !CONFIG_PTHREAD_KEYS_MAX
+/* define noops in case of no KEYS available. */
+static inline
+error_t pthread_key_create(pthread_key_t *key, void (*destructor)(void *))
+{
+  return -EAGAIN;
+}
+
+static inline
+error_t pthread_key_delete(pthread_key_t key)
+{
+  return -EINVAL;
+}
 #endif
-#endif
+
+extern CONTEXT_LOCAL const void *_key_values[CONFIG_PTHREAD_KEYS_MAX];
+
+/**
+   @this retrieves data associated to key in the current thread.
+
+   @param key Key handle to retrieve
+   @returns Value associated to key, NULL if none
+ */
+static inline
+void *pthread_getspecific(pthread_key_t key)
+{
+  if ( key >= CONFIG_PTHREAD_KEYS_MAX )
+    return NULL;
+
+  const void **_values = CONTEXT_LOCAL_ADDR(_key_values[0]);
+  return (void*)_values[key];
+}
+
+/**
+   @this sets data to associate to key in the current thread.
+
+   @param key Key handle to set
+   @param value Value associated to key, NULL if resetting needed
+ */
+static inline
+error_t pthread_setspecific(pthread_key_t key, const void *value)
+{
+  if ( key >= CONFIG_PTHREAD_KEYS_MAX )
+    return -EINVAL;
+
+  const void **_values = CONTEXT_LOCAL_ADDR(_key_values[0]);
+  _values[key] = value;
+  return 0;
+}
+
+#endif /* KEYS */
+
+#endif /* CONFIG_PTHREAD */
+#endif /* PTHREAD_H_ */
 

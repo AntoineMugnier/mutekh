@@ -5,6 +5,10 @@ ifeq ($(CONFIG_PTHREAD_MUTEX), defined)
 objs += mutex.o
 endif
 
+ifeq ($(CONFIG_PTHREAD_KEYS), defined)
+objs += keys.o
+endif
+
 ifeq ($(CONFIG_PTHREAD_COND), defined)
 objs += cond.o
 endif
