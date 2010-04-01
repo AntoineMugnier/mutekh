@@ -14,7 +14,7 @@ build_$(1):
 	mkdir $$@
 
 build_$(1)/kernel: build_$(1) $(1) FORCE
-	$(MAKE) -f $(MUTEK_SRC_DIR)/Makefile \
+	$$(MAKE) -f $(MUTEK_SRC_DIR)/Makefile \
 		MUTEK_SRC_DIR=$(MUTEK_SRC_DIR) \
 		CONF=$$$${PWD}/$(1) \
 		BUILD_DIR=$$$${PWD}/$$<
