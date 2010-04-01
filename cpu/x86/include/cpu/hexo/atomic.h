@@ -169,7 +169,7 @@ cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
 
   asm volatile (_SMPLOCK
                 "cmpxchgl	%0, %3	\n"
-		"setc		%1	\n"
+		"setz		%1	\n"
 		: "=m,m" (*a), "=q,q" (done)
 		: "a" (old), "r" (new)
                 : "cc"
