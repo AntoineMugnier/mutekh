@@ -189,7 +189,7 @@ pthread_detach(pthread_t thread)
 {
   error_t	res = 0;
 
-  lock_spin_irq(&thread->lock);
+  LOCK_SPIN_IRQ(&thread->lock);
 
   if (!atomic_bit_testset(&thread->state, _PTHREAD_STATE_DETACHED))
     {
@@ -199,7 +199,7 @@ pthread_detach(pthread_t thread)
   else
     res = EINVAL;
 
-  lock_release_irq(&thread->lock);
+  LOCK_RELEASE_IRQ(&thread->lock);
   return res;
 }
 

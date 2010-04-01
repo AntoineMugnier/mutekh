@@ -596,8 +596,7 @@ DEVNET_SENDPKT(net_ne2000_sendpkt)
       net_be16_store(hdr->ether_type, proto);
     }
 
-  /* take lock */
-  lock_spin_irq(&pv->lock);
+  LOCK_SPIN_IRQ(&pv->lock);
 
   /* if the device is busy, queue the packet */
   if ((cpu_io_read_8(dev->addr[NET_NE2000_ADDR] + NE2000_CMD) & NE2000_TXP) ||
@@ -614,8 +613,7 @@ DEVNET_SENDPKT(net_ne2000_sendpkt)
       ne2000_send(dev);
     }
 
-  /* release lock */
-  lock_release_irq(&pv->lock);
+  LOCK_RELEASE_IRQ(&pv->lock);
 }
 
 /*

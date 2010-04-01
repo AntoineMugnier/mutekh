@@ -268,13 +268,11 @@ DEVNET_SENDPKT(net_tuntap_sendpkt)
       offs += fragsz;
     }
 
-  /* take lock */
-  lock_spin_irq(&pv->lock);
+  LOCK_SPIN_IRQ(&pv->lock);
 
   emu_do_syscall(EMU_SYSCALL_WRITE, 3, pv->fd, buff, offs);
 
-  /* release lock */
-  lock_release_irq(&pv->lock);
+  LOCK_RELEASE_IRQ(&pv->lock);
 
   packet_obj_refdrop(packet);
 }
