@@ -88,9 +88,9 @@ struct sdmmc_csd_s
 
 struct cmd_state_s
 {
-	volatile bool_t done;
-	volatile bool_t error;
-	volatile uint8_t data;
+	bool_t done;
+	bool_t error;
+	uint8_t data;
 };
 
 struct rw_cmd_state_s
@@ -98,7 +98,7 @@ struct rw_cmd_state_s
 	struct cmd_state_s state;
 	struct device_s *dev;
 	struct dev_block_rq_s *blockdev_rq;
-	volatile uint32_t count;
+	uint32_t count;
 };
 
 struct sd_mmc_rw_command_buffer_s

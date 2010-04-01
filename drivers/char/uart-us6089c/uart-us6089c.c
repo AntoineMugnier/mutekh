@@ -97,10 +97,8 @@ static void try_recv(struct device_s *dev, bool_t continuous)
 		if ( !continuous )
 			break;
 	}
-	if (!rxrq && (cpu_mem_read_32(registers + US_CSR) & US6089C_RXRDY)) {
-		volatile uint32_t d = cpu_mem_read_32(registers + US_RHR);
-		(void)d;
-	}
+	if (!rxrq && (cpu_mem_read_32(registers + US_CSR) & US6089C_RXRDY))
+		cpu_mem_read_32(registers + US_RHR);
 }
 
 DEVCHAR_REQUEST(uart_us6089c_request)

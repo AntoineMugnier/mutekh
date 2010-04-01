@@ -28,6 +28,7 @@
 #include <device/driver.h>
 
 #include <hexo/iospace.h>
+#include <hexo/ordering.h>
 #include <mutek/mem_alloc.h>
 #include <hexo/endian.h>
 #include <mutek/printk.h>
@@ -187,7 +188,7 @@ void __sd_mmc_stuff_bytes(
 	dev_spi_request(pv->spi, &spi_request);
 	
 	while ( !state.done )
-		;
+		order_compiler_mem();
 }
 
 static inline
@@ -216,7 +217,7 @@ uint8_t __sd_mmc_to_spi_mode(
 	dev_spi_request(pv->spi, &spi_request);
 	
 	while ( !state.done )
-		;
+		order_compiler_mem();
 /* 	printk("to_spi -> %x %s\n", */
 /* 		   state.data, */
 /* 		   (state.error ? "error" : "ok")); */
@@ -257,7 +258,7 @@ uint8_t __sd_mmc_send_command(
 	dev_spi_request(pv->spi, &spi_request);
 	
 	while ( !state.done )
-		;
+		order_compiler_mem();
 /* 	printk("cmd(%d, %p) (%x) -> %x %s\n", */
 /* 		   cmd, (void*)arg, command_value[5], */
 /* 		   state.data, */
@@ -305,7 +306,7 @@ uint8_t __sd_mmc_send_acmd(
 	dev_spi_request(pv->spi, &spi_request);
 	
 	while ( !state.done )
-		;
+		order_compiler_mem();
 /* 	printk("cmd(%d, %p) (%x) -> %x %s\n", */
 /* 		   cmd, (void*)arg, command_value[5], */
 /* 		   state.data, */
@@ -337,7 +338,8 @@ bool_t __sd_mmc_get_block(
 		.device_id = pv->spi_lun,
 	};
 	dev_spi_request(pv->spi, &spi_request);
-	while ( !state.done );
+	while ( !state.done )
+        order_compiler_mem();
 	return state.error;
 }
 

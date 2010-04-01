@@ -106,7 +106,7 @@ typedef struct srl_abstract_task_s {
 #else /* not CONFIG_PTHREAD */
 	struct sched_context_s context;
 	int32_t wait_val;
-	volatile void *wait_addr;
+	void *wait_addr;
 #endif
 	void *tty_addr;
 } srl_task_s;
