@@ -1,7 +1,7 @@
 MUTEK_SRC_DIR?=$(abspath $(shell pwd)/../..)
 CONFIGS = $(wildcard config_*)
 KERNELS:=
-BUILD_DIR?=.
+BUILD_DIR?=$(shell pwd)
 BUILD_DIRS:=
 
 all: kernels
