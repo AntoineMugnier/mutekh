@@ -47,14 +47,12 @@ cpu_interrupt_disable(void)
 
   asm volatile (
 		"mfmsr %0		\n\t"
-		: "=r" (tmp)
-	  );
-  tmp &= ~0x8000;
-  asm volatile (
+                "ori %0, %0, 0x8000     \n\t"
+                "xori %0, %0, 0x8000    \n\t"
 		"mtmsr %0		\n\t"
-		:
-		: "r" (tmp)
-		);
+		: "=r" (tmp)
+                :: "memory"     /* compiler memory barrier */
+	  );
 #endif
 }
 
@@ -66,14 +64,12 @@ cpu_interrupt_enable(void)
 
   asm volatile (
 		"mfmsr %0		\n\t"
-		: "=r" (tmp)
-	  );
-  tmp |= 0x8000;
-  asm volatile (
+                "ori %0, %0, 0x8000     \n\t"
 		"mtmsr %0		\n\t"
-		:
-		: "r" (tmp)
-		);
+		: "=r" (tmp)
+                :
+                : "memory"     /* compiler memory barrier */
+	  );
 #endif
 }
 
@@ -112,15 +108,15 @@ cpu_interrupt_savestate_disable(reg_t *state)
   reg_t tmp;
 
   asm volatile (
-		"mfmsr %0		\n\t"
-		: "=r" (*state)
-	  );
-  tmp = *state & ~0x8000;
-  asm volatile (
+		"mfmsr %1		\n\t"
+                "ori %0, %1, 0x8000     \n\t"
+                "xori %0, %0, 0x8000    \n\t"
 		"mtmsr %0		\n\t"
-		:
-		: "r" (tmp)
-		);
+		: "=r" (tmp),
+                  "=r" (*state)
+                :
+                : "memory"     /* compiler memory barrier */
+	  );
 #endif
 }
 
@@ -132,6 +128,7 @@ cpu_interrupt_restorestate(const reg_t *state)
 		    "mtmsr	%0"
 		    :
 		    : "r" (*state)
+                    : "memory"     /* compiler memory barrier */
 		    );
 #endif
 }

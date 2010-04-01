@@ -63,6 +63,10 @@ cpu_interrupt_disable(void)
 # endif
 		    "MTC0_WAIT			\n"
 		    ".set pop			\n"
+
+                    :
+                    :
+                    : "memory"     /* compiler memory barrier */
 		    );
 #endif
 }
@@ -84,6 +88,10 @@ cpu_interrupt_enable(void)
 		    "mtc0	$1,	$12	\n"
 # endif
 		    ".set pop			\n"
+
+                    :
+                    :
+                    : "memory"     /* compiler memory barrier */
 		    );
 #endif
 }
@@ -120,6 +128,8 @@ cpu_interrupt_savestate_disable(reg_t *state)
 		    ".set pop				\n"
 # endif
 		    : "=r" (*state)
+                    :
+                    : "memory"     /* compiler memory barrier */
 		    );
 #endif
 }
@@ -135,6 +145,7 @@ cpu_interrupt_restorestate(const reg_t *state)
 # endif
 		    :
 		    : "r" (*state)
+                    : "memory"     /* compiler memory barrier */
 		    );
 #endif
 }

@@ -68,7 +68,10 @@ cpu_interrupt_disable(void)
 {
 #ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
-		    "cli\n"
+                    "cli"
+                    :
+                    :
+                    : "memory" /* compiler memory barrier */
 		    );
 #endif
 }
@@ -78,7 +81,10 @@ cpu_interrupt_enable(void)
 {
 #ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
-		    "sti\n"
+                    "sti"
+                    :
+                    :
+                    : "memory" /* compiler memory barrier */
 		    );
 #endif
 }
@@ -119,8 +125,14 @@ static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
 #ifdef CONFIG_HEXO_IRQ
-  cpu_interrupt_savestate(state);
-  cpu_interrupt_disable();
+  __asm__ volatile (
+		    "pushfl	\n"
+		    "popl	%0\n"
+                    "cli        \n"
+		    : "=m,r" (*state)
+                    :
+                    : "memory"     /* compiler memory barrier */
+		    );
 #endif
 }
 
@@ -133,6 +145,7 @@ cpu_interrupt_restorestate(const reg_t *state)
 		    "popfl	\n"
 		    :
 		    : "m,r" (*state)
+                    : "memory"     /* compiler memory barrier */
 		    );
 #endif
 }

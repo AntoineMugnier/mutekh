@@ -32,7 +32,8 @@
 
 #define CPU_INTERRUPT_H_
 
-#include "hexo/local.h"
+#include <hexo/local.h>
+#include <hexo/ordering.h>
 
 #ifdef CONFIG_HEXO_IRQ
 void emu_interrupts_process(__compiler_sint_t sig);
@@ -48,6 +49,7 @@ cpu_interrupt_disable(void)
 {
 #ifdef CONFIG_HEXO_IRQ
   emu_interrupts_set(0);
+  order_compiler_mem();
 #endif
 }
 
@@ -55,6 +57,7 @@ static inline void
 cpu_interrupt_enable(void)
 {
 #ifdef CONFIG_HEXO_IRQ
+  order_compiler_mem();
   emu_interrupts_set(1);
 #endif
 }
@@ -81,6 +84,7 @@ cpu_interrupt_savestate_disable(reg_t *state)
 #ifdef CONFIG_HEXO_IRQ
   cpu_interrupt_savestate(state);
   cpu_interrupt_disable();
+  order_compiler_mem();
 #endif
 }
 
@@ -88,6 +92,7 @@ static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
 #ifdef CONFIG_HEXO_IRQ
+  order_compiler_mem();
   emu_interrupts_set(*state);
 #endif
 }

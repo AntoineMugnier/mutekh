@@ -38,8 +38,10 @@ static inline void
 cpu_interrupt_disable(void)
 {
 #ifdef CONFIG_HEXO_IRQ
-  __asm__ volatile (
-		    "cli\n"
+  __asm__ volatile ("cli\n"
+                    :
+                    :
+                    : "memory"     /* compiler memory barrier */
 		    );
 #endif
 }
@@ -49,7 +51,10 @@ cpu_interrupt_enable(void)
 {
 #ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
-		    "sei\n"
+                    "sei\n"
+                    :
+                    :
+                    : "memory"     /* compiler memory barrier */
 		    );
 #endif
 }
@@ -81,7 +86,7 @@ cpu_interrupt_savestate(reg_t *state)
 		    "in		%0, 0x3f\n"
 		    : "=r" (*state)
 		    :
-		    : "cc"
+                    : "cc"
 		    );
 #endif
 }
@@ -90,8 +95,13 @@ static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
 #ifdef CONFIG_HEXO_IRQ
-  cpu_interrupt_savestate(state);
-  cpu_interrupt_disable();
+  __asm__ volatile (
+		    "in		%0, 0x3f\n"
+		    "cli                \n"
+		    : "=r" (*state)
+		    :
+                    : "cc", "memory"     /* compiler memory barrier */
+		    );
 #endif
 }
 
@@ -103,7 +113,7 @@ cpu_interrupt_restorestate(const reg_t *state)
 		    "out	0x3f, %0\n"
 		    :
 		    : "r" (*state)
-		    : "cc"
+		    : "cc", "memory"     /* compiler memory barrier */
 		    );
 #endif
 }
@@ -153,7 +163,8 @@ static inline void cpu_interrupt_wait(void)
 		    "andi	%0, 0xbf	\n"
 		    "out	0x35, %0	\n"
 		    : "=d" (tmp)
-		    :: "memory"
+		    :
+                    : "memory"
 		    );
 # endif
 }

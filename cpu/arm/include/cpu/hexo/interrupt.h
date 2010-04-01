@@ -62,6 +62,8 @@ cpu_interrupt_disable(void)
         ARM_TO_THUMB
 # endif
 		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
+                :
+                : "memory"     /* compiler memory barrier */
         );
 #endif
 }
@@ -84,6 +86,8 @@ cpu_interrupt_enable(void)
         ARM_TO_THUMB
 # endif
 		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
+                :
+                : "memory"     /* compiler memory barrier */
         );
 #endif
 }
@@ -118,8 +122,10 @@ cpu_interrupt_savestate_disable(reg_t *state)
 		"orr  %[tmp], %[result], #0x80   \n\t"
 		"msr  cpsr, %[tmp]        \n\t"
         ARM_TO_THUMB
-		: [tmp] "=r" (tmp), [result] "=r" (result) /*,*/ THUMB_OUT(,) );
-
+		: [tmp] "=r" (tmp), [result] "=r" (result) /*,*/ THUMB_OUT(,)
+                :
+                : "memory"     /* compiler memory barrier */
+                     );
 	*state = result;
 #endif
 }
@@ -135,7 +141,9 @@ cpu_interrupt_restorestate(const reg_t *state)
 		"msr  cpsr, %[state]        \n\t"
         ARM_TO_THUMB
 		/* : */ THUMB_OUT(:)
-        : [state] "r" (*state) );
+        : [state] "r" (*state)
+        : "memory"     /* compiler memory barrier */
+                     );
 #endif
 }
 

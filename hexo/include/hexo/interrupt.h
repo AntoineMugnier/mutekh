@@ -60,11 +60,13 @@ void cpu_interrupt_sethandler_device(struct device_s *dev);
 #endif
 
 
-/** @this disables all maskable interrupts for the current cpu */
+/** @this disables all maskable interrupts for the current cpu.
+    This acts as a compiler memory barrier. */
 __attribute__ ((always_inline))
 static inline void cpu_interrupt_disable();
 
-/** @this enables all maskable interrupts for the current cpu */
+/** @this enables all maskable interrupts for the current cpu.
+    This acts as a compiler memory barrier. */
 __attribute__ ((always_inline))
 static inline void cpu_interrupt_enable();
 
@@ -72,11 +74,13 @@ static inline void cpu_interrupt_enable();
 __attribute__ ((always_inline))
 static inline void cpu_interrupt_savestate(reg_t *state);
 
-/** @this saves interrupts enable state end disable interrupts */
+/** @this saves interrupts enable state end disable interrupts.
+    This acts as a compiler memory barrier. */
 __attribute__ ((always_inline))
 static inline void cpu_interrupt_savestate_disable(reg_t *state);
 
-/** @this restores interrupts enable state (may use stack) */
+/** @this restores interrupts enable state (may use stack).
+    This acts as a compiler memory barrier. */
 __attribute__ ((always_inline))
 static inline void cpu_interrupt_restorestate(const reg_t *state);
 
@@ -106,7 +110,8 @@ static inline void cpu_interrupt_wait();
 
 /** @showcontent
     @this saves interrupts enable state end disable interrupts. This macro
-    must be matched with the @ref #CPU_INTERRUPT_RESTORESTATE macro. */
+    must be matched with the @ref #CPU_INTERRUPT_RESTORESTATE macro.
+    This acts as a compiler memory barrier. */
 #define CPU_INTERRUPT_SAVESTATE_DISABLE				\
 {								\
   reg_t	__interrupt_state;					\
@@ -114,7 +119,8 @@ static inline void cpu_interrupt_wait();
 
 /** @showcontent
     @this restores interrupts enable state. This macro must be matched with
-    the @ref #CPU_INTERRUPT_SAVESTATE_DISABLE macro. */
+    the @ref #CPU_INTERRUPT_SAVESTATE_DISABLE macro. 
+    This acts as a compiler memory barrier. */
 #define CPU_INTERRUPT_RESTORESTATE				\
   cpu_interrupt_restorestate(&__interrupt_state);		\
 }
