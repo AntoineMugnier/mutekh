@@ -37,11 +37,11 @@
 #include <arch/dma-8237.h>
 #endif
 
-#if defined(CONFIG_DRIVER_TTY)
+#if defined(CONFIG_DRIVER_CHAR_VGATTY) || defined(CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD)
 struct device_s tty_dev;
 #endif
 
-#if defined(CONFIG_DRIVER_UART)
+#if defined(CONFIG_DRIVER_CHAR_UART8250)
 struct device_s uart_dev;
 #endif
 
@@ -100,19 +100,15 @@ void arch_hw_init()
 
 	/********* TTY init ******************************** */
 
-#if defined(CONFIG_DRIVER_UART)
+#if defined(CONFIG_DRIVER_CHAR_UART8250)
 	device_init(&uart_dev);
-# if defined(CONFIG_DRIVER_CHAR_UART8250)
 	uart_dev.addr[UART_8250_ADDR] = 0x03f8;
 	uart_dev.irq = 4;
 	uart_dev.icudev = &icu_dev;
 	uart_8250_init(&uart_dev, NULL);
-# else
-#  warning CONFIG_DRIVER_UART case not handled in hw_init()
-# endif
 #endif
 
-#ifdef CONFIG_DRIVER_TTY
+#if defined(CONFIG_DRIVER_CHAR_VGATTY) || defined(CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD)
 	device_init(&tty_dev);
 # if defined(CONFIG_DRIVER_CHAR_VGATTY)
 	tty_dev.addr[VGA_TTY_ADDR_BUFFER] = 0x000b8000;
@@ -123,7 +119,7 @@ void arch_hw_init()
 #  endif
 	tty_vga_init(&tty_dev, NULL);
 # else
-#  warning CONFIG_DRIVER_TTY case not handled in hw_init()
+#  warning CONFIG_DRIVER_CHAR case not handled in hw_init()
 # endif
 #endif
 
@@ -212,10 +208,10 @@ void arch_hw_init()
 #endif
 
 #if defined(CONFIG_MUTEK_CONSOLE)
-# if defined(CONFIG_DRIVER_UART)
-	console_dev = &uart_dev;
-# elif defined(CONFIG_DRIVER_TTY)
+# if defined(CONFIG_DRIVER_CHAR_VGATTY) || defined(CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD)
 	console_dev = &tty_dev;
+# elif defined(CONFIG_DRIVER_CHAR_UART8250)
+	console_dev = &uart_dev;
 # else
 #  error I would like an output for my console
 # endif

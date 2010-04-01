@@ -48,7 +48,7 @@
 extern struct device_s *console_dev;
 #endif
 
-#if defined(CONFIG_DRIVER_TTY)
+#if defined(CONFIG_DRIVER_CHAR_EMUTTY)
 struct device_s tty_dev;
 #endif
 
@@ -63,15 +63,13 @@ struct device_s block_dev;
 void arch_hw_init()
 {
 	/* TTY init */
-#ifdef CONFIG_DRIVER_TTY
+#if defined(CONFIG_DRIVER_CHAR_EMUTTY)
 	device_init(&tty_dev);
-# if defined(CONFIG_DRIVER_CHAR_EMUTTY)
 	tty_emu_init(&tty_dev, NULL);
-# else
-#  error CONFIG_DRIVER_TTY case not handled in hw_init()
-# endif
 
+# if defined(CONFIG_MUTEK_CONSOLE)
 	console_dev = &tty_dev;
+# endif
 #endif
 
 	/* block device */
