@@ -37,6 +37,7 @@
 #include <hexo/lock.h>
 #include <hexo/atomic.h>
 #include <hexo/context.h>
+#include <hexo/ordering.h>
 #include <mutek/scheduler.h>
 #include <hexo/interrupt.h>
 
@@ -594,39 +595,45 @@ error_t pthread_barrier_wait(pthread_barrier_t *barrier);
 
 #ifdef CONFIG_PTHREAD_SPIN
 
-typedef struct arch_lock_s pthread_spinlock_t;
+typedef atomic_int_t pthread_spinlock_t;
 
 static inline error_t
 pthread_spin_init(pthread_spinlock_t *spinlock,
 		      bool_t pshared)
 {
-  return arch_lock_init(spinlock);
+  *spinlock = 0;
+  order_smp_write();
+  return 0;
 }
 
 static inline error_t
 pthread_spin_destroy(pthread_spinlock_t *spinlock)
 {
-  arch_lock_destroy(spinlock);
   return 0;
 }
 
 static inline error_t
 pthread_spin_lock(pthread_spinlock_t *spinlock)
 {
-  arch_lock_spin(spinlock);
+  cpu_atomic_bit_waitset(spinlock, 0);
+  order_smp_mem();
   return 0;
 }
 
 static inline error_t
 pthread_spin_trylock(pthread_spinlock_t *spinlock)
 {
-  return arch_lock_try(spinlock) ? -EBUSY : 0;
+  bool_t res = cpu_atomic_bit_testset(spinlock, 0);
+  order_smp_mem();
+  return res ? -EBUSY : 0;
 }
 
 static inline error_t
 pthread_spin_unlock(pthread_spinlock_t *spinlock)
 {
-  arch_lock_release(spinlock);
+  order_smp_mem();
+  *spinlock = 0;
+  order_smp_write();
   return 0;
 }
 
