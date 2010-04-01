@@ -38,12 +38,12 @@
 #endif
 
 static inline bool_t
-cpu_atomic_inc(volatile atomic_int_t *a)
+cpu_atomic_inc(atomic_int_t *a)
 {
   uint8_t		zero;
 
-  asm volatile (_SMPLOCK "incl	%0	\n"
-          "pause \n"
+  asm volatile (_SMPLOCK
+                "incl	%0	\n"
 		"setnz		%1	\n"
 		: "=m" (*a), "=q" (zero)
                 :: "cc"
@@ -55,12 +55,12 @@ cpu_atomic_inc(volatile atomic_int_t *a)
 #define HAS_CPU_ATOMIC_DEC
 
 static inline bool_t
-cpu_atomic_dec(volatile atomic_int_t *a)
+cpu_atomic_dec(atomic_int_t *a)
 {
   uint8_t		zero;
 
-  asm volatile (_SMPLOCK "decl	%0	\n"
-          "pause \n"
+  asm volatile (_SMPLOCK
+                "decl	%0	\n"
 		"setnz		%1	\n"
 		: "=m" (*a), "=q" (zero)
                 :: "cc"
@@ -72,12 +72,12 @@ cpu_atomic_dec(volatile atomic_int_t *a)
 #define HAS_CPU_ATOMIC_TESTSET
 
 static inline bool_t
-cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 {
   uint8_t		isset;
 
-  asm volatile (_SMPLOCK "btsl	%2, %0	\n"
-          "pause \n"
+  asm volatile (_SMPLOCK
+                "btsl	%2, %0	\n"
 		"setc		%1	\n"
 		: "=m,m" (*a), "=q,q" (isset)
 		: "r,I" (n)
@@ -90,11 +90,12 @@ cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_WAITSET
 
 static inline void
-cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
 {
-  asm volatile ("1:	" _SMPLOCK "btsl	%1, %0	\n"
-          "pause \n"
-		"	jc		1b	\n"
+  asm volatile ("1:	" _SMPLOCK
+                "btsl	%1, %0          \n"
+                "pause                  \n"
+		"jc		1b	\n"
 		: "=m,m" (*a)
 		: "r,I" (n)
                 : "cc"
@@ -104,12 +105,12 @@ cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_TESTCLR
 
 static inline bool_t
-cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 {
   uint8_t		isset;
 
-  asm volatile (_SMPLOCK "btrl	%2, %0	\n"
-          "pause \n"
+  asm volatile (_SMPLOCK
+                "btrl	%2, %0          \n"
 		"setc		%1	\n"
 		: "=m,m" (*a), "=q,q" (isset)
 		: "r,I" (n)
@@ -123,11 +124,12 @@ cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_WAITCLR
 
 static inline void
-cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 {
-  asm volatile ("1:	" _SMPLOCK " btrl	%1, %0	\n"
-          "pause \n"
-		"	jnc		1b	\n"
+  asm volatile ("1:	" _SMPLOCK
+                "btrl	%1, %0          \n"
+                "pause                  \n"
+		"jnc		1b	\n"
 		: "=m,m" (*a)
 		: "r,I" (n)
                 : "cc"
@@ -137,10 +139,10 @@ cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_SET
 
 static inline void
-cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
 {
-  asm volatile (_SMPLOCK "btsl	%1, %0	\n"
-          "pause \n"
+  asm volatile (_SMPLOCK
+                "btsl	%1, %0	\n"
 		: "=m,m" (*a)
 		: "r,I" (n)
                 : "cc"
@@ -150,14 +152,30 @@ cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_CLR
 
 static inline void
-cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 {
-  asm volatile (_SMPLOCK "btrl	%1, %0	\n"
-          "pause \n"
+  asm volatile (_SMPLOCK
+                "btrl	%1, %0	\n"
 		: "=m,m" (*a)
 		: "r,I" (n)
                 : "cc"
 		);
+}
+
+static inline bool_t
+cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
+{
+  uint8_t		done;
+
+  asm volatile (_SMPLOCK
+                "cmpxchgl	%0, %3	\n"
+		"setc		%1	\n"
+		: "=m,m" (*a), "=q,q" (done)
+		: "a" (old), "r" (new)
+                : "cc"
+		);
+
+  return done;
 }
 
 #undef _SMPLOCK

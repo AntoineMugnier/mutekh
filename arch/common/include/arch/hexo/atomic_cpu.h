@@ -15,7 +15,7 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2010
 
 */
 
@@ -23,22 +23,24 @@
 #error This file can not be included directly
 #else
 
-#define ARCH_ATOMIC_H_
+#include <hexo/ordering.h>
 
 #define ATOMIC_INITIALIZER(n)		{ .value = (n) }
 
 struct arch_atomic_s
 {
-  volatile atomic_int_t	value;
+  atomic_int_t	value;
 };
 
 static inline void atomic_set(atomic_t *a, atomic_int_t value)
 {
   a->value = value;
+  order_smp_write();
 }
 
 static inline atomic_int_t atomic_get(atomic_t *a)
 {
+  order_compiler_mem();
   return a->value;
 }
 
@@ -74,8 +76,16 @@ static inline bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n)
 
 static inline bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n)
 {
+  order_compiler_mem();
   return ((1 << n) & a->value) != 0;
 }
+
+static inline bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t new)
+{
+  return cpu_atomic_compare_and_swap(&a->value, old, new);
+}
+
+#define ARCH_ATOMIC_H_
 
 #endif
 

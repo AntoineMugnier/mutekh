@@ -30,13 +30,14 @@
 #define ARCH_LOCK_H_
 
 #include <assert.h>
-#include "hexo/atomic.h"
+#include <hexo/atomic.h>
+#include <hexo/ordering.h>
 
 #define ARCH_HAS_ATOMIC
 
 struct		arch_lock_s
 {
-  volatile atomic_int_t	a;
+  atomic_int_t a;
 };
 
 #define ARCH_LOCK_INITIALIZER	{ .a = 0 }
@@ -44,6 +45,7 @@ struct		arch_lock_s
 static inline error_t arch_lock_init(struct arch_lock_s *lock)
 {
   lock->a = 0;
+  order_smp_write();
   return 0;
 }
 
@@ -54,7 +56,7 @@ static inline void arch_lock_destroy(struct arch_lock_s *lock)
 static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 {
   bool_t res = cpu_atomic_bit_testset(&lock->a, 0);
-  asm volatile ("":::"memory");
+  order_smp_mem();
   return res;
 }
 
@@ -64,22 +66,28 @@ static inline void arch_lock_spin(struct arch_lock_s *lock)
   uint32_t deadline = CONFIG_DEBUG_SPINLOCK_LIMIT;
 
   while (cpu_atomic_bit_testset(&lock->a, 0))
-    assert(deadline-- > 0);
+    {
+      asm volatile("pause");
+      assert(deadline-- > 0);
+    }
 #else
   cpu_atomic_bit_waitset(&lock->a, 0);
 #endif
-  asm volatile ("":::"memory");
+  order_smp_mem();
 }
 
 static inline bool_t arch_lock_state(struct arch_lock_s *lock)
 {
-  return lock->a & 1;
+  bool_t res = lock->a & 1;
+  order_smp_read();
+  return res;
 }
 
 static inline void arch_lock_release(struct arch_lock_s *lock)
 {
-  cpu_atomic_bit_clr(&lock->a, 0);
-  asm volatile ("":::"memory");
+  order_smp_mem();
+  lock->a = 0;
+  order_smp_write();
 }
 
 #endif

@@ -23,84 +23,120 @@
 #error This file can not be included directly
 #else
 
+#include <hexo/interrupt.h>
+
+#ifdef CONFIG_ARCH_SMP
+# error No valid cpu atomic operations defined for SMP build
+#endif
+
+/*
+ * We dont need to add extra memory barrier for pseudo atomic
+ * operations here because interrupt enable and disable acts as a
+ * compiler memory barrier.
+ */
+
 #define CPU_ATOMIC_H_
 
-// #define HAS_CPU_ATOMIC_INC
-
 static inline bool_t
-cpu_atomic_inc(volatile atomic_int_t *a)
+cpu_atomic_inc(atomic_int_t *a)
 {
+  bool_t res;
+
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
   (*a)++;
+  res = *a ? 1 : 0;
+  CPU_INTERRUPT_RESTORESTATE;
 
-  return *a ? 1 : 0;
+  return res;
 }
 
-// #define HAS_CPU_ATOMIC_DEC
-
 static inline bool_t
-cpu_atomic_dec(volatile atomic_int_t *a)
+cpu_atomic_dec(atomic_int_t *a)
 {
+  bool_t res;
+
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
   (*a)--;
+  res = *a ? 1 : 0;
+  CPU_INTERRUPT_RESTORESTATE;
 
-  return *a ? 1 : 0;
+  return res;
 }
-
-// #define HAS_CPU_ATOMIC_TESTSET
 
 static inline bool_t
-cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 {
-  atomic_int_t	old = *a;
+  bool_t res;
+  atomic_int_t	old;
 
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  old = *a;
   *a |= (1 << n);
+  res = !!(old & (1 << n));
+  CPU_INTERRUPT_RESTORESTATE;
 
-  return (old & (1 << n)) ? 1 : 0;
+  return res;
 }
 
-// #define HAS_CPU_ATOMIC_WAITSET
-
 static inline void
-cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
 {
-  while (!(*a & (1 << n)))
+  while (!cpu_atomic_bit_testset(a, n))
     ;
 }
 
-// #define HAS_CPU_ATOMIC_TESTCLR
-
 static inline bool_t
-cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 {
-  atomic_int_t	old = *a;
+  bool_t res;
+  atomic_int_t	old;
 
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  old = *a;
   *a &= ~(1 << n);
+  res = !!(old & (1 << n));
+  CPU_INTERRUPT_RESTORESTATE;
 
-  return (old & (1 << n)) ? 1 : 0;
+  return res;
 }
 
-// #define HAS_CPU_ATOMIC_WAITCLR
-
 static inline void
-cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 {
-  while ((*a & (1 << n)))
+  while (cpu_atomic_bit_testclr())
     ;
 }
 
-//#define HAS_CPU_ATOMIC_SET
-
 static inline void
-cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
 {
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
   *a |= (1 << n);
+  CPU_INTERRUPT_RESTORESTATE;
 }
 
-// #define HAS_CPU_ATOMIC_CLR
-
 static inline void
-cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 {
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
   *a &= ~(1 << n);
+  CPU_INTERRUPT_RESTORESTATE;
+}
+
+static inline bool_t
+cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
+{
+  bool_t res = 0;
+
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  if (*a == old)
+    {
+      *a = new;
+      res = 1;
+    }
+  CPU_INTERRUPT_RESTORESTATE;  
+
+  return bool;
 }
 
 #endif

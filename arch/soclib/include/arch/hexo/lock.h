@@ -27,6 +27,8 @@
 #error This file can not be included directly
 #else
 
+#include <hexo/ordering.h>
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
 # include <arch/mem_checker.h>
 #endif
@@ -37,7 +39,7 @@
 	USE RAMLOCKS
  **************************************************************/
 
-#include "hexo/iospace.h"
+#include <hexo/iospace.h>
 
 //#define ARCH_HAS_ATOMIC
 
@@ -73,13 +75,10 @@ static inline void arch_lock_destroy(struct arch_lock_s *lock)
 
 static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 {
-#if 0
-  uint_fast8_t t;
-  for (t = 0; t < 30; t++)
-    asm volatile("nop");
-#endif
-
-  return cpu_mem_read_32(lock->ramlock);
+  uint32_t result;
+  result = cpu_mem_read_32(lock->ramlock);
+  order_smp_mem();
+  return result;
 }
 
 static inline void arch_lock_spin(struct arch_lock_s *lock)
@@ -90,6 +89,7 @@ static inline void arch_lock_spin(struct arch_lock_s *lock)
 
 static inline void arch_lock_release(struct arch_lock_s *lock)
 {
+  order_smp_mem();
   cpu_mem_write_32(lock->ramlock, 0);
 }
 
@@ -116,7 +116,7 @@ static inline bool_t arch_lock_state(struct arch_lock_s *lock)
 
 struct		arch_lock_s
 {
-  volatile atomic_int_t	a;
+  atomic_int_t	a;
 };
 
 #define ARCH_LOCK_INITIALIZER	{ .a = 0 }
@@ -124,6 +124,7 @@ struct		arch_lock_s
 static inline error_t arch_lock_init(struct arch_lock_s *lock)
 {
   lock->a = 0;
+  order_smp_write();
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
   soclib_mem_check_declare_lock((void*)&lock->a, 1);
@@ -141,15 +142,13 @@ static inline void arch_lock_destroy(struct arch_lock_s *lock)
 
 static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 {
-  asm volatile ("":::"memory");
   bool_t res = cpu_atomic_bit_testset(&lock->a, 0);
-  asm volatile ("":::"memory");
+  order_smp_mem();
   return res;
 }
 
 static inline void arch_lock_spin(struct arch_lock_s *lock)
 {
-  asm volatile ("":::"memory");
 #ifdef CONFIG_DEBUG_SPINLOCK_LIMIT
   uint32_t deadline = CONFIG_DEBUG_SPINLOCK_LIMIT;
 
@@ -158,22 +157,21 @@ static inline void arch_lock_spin(struct arch_lock_s *lock)
 #else
   cpu_atomic_bit_waitset(&lock->a, 0);
 #endif
-  asm volatile ("":::"memory");
+  order_smp_mem();
 }
 
 static inline bool_t arch_lock_state(struct arch_lock_s *lock)
 {
-  asm volatile ("":::"memory");
   bool_t res = lock->a & 1;
-  asm volatile ("":::"memory");
+  order_smp_read();
   return res;
 }
 
 static inline void arch_lock_release(struct arch_lock_s *lock)
 {
-  asm volatile ("":::"memory");
+  order_smp_mem();
   lock->a = 0;
-  asm volatile ("":::"memory");
+  order_smp_write();
 }
 
 #endif

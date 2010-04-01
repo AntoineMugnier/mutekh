@@ -27,16 +27,14 @@
 #error This file can not be included directly
 #else
 
-#if defined(CONFIG_ARCH_SMP)
-
-#include "cpu/hexo/specific.h"
+#include <cpu/hexo/specific.h>
 
 #define CPU_ATOMIC_H_
 
 #define HAS_CPU_ATOMIC_INC
 
 static inline bool_t
-cpu_atomic_inc(volatile atomic_int_t *a)
+cpu_atomic_inc(atomic_int_t *a)
 {
 	reg_t tmp = 0, tmp2;
     THUMB_TMP_VAR;
@@ -61,7 +59,7 @@ cpu_atomic_inc(volatile atomic_int_t *a)
 #define HAS_CPU_ATOMIC_DEC
 
 static inline bool_t
-cpu_atomic_dec(volatile atomic_int_t *a)
+cpu_atomic_dec(atomic_int_t *a)
 {
 	reg_t tmp = 0, tmp2;
     THUMB_TMP_VAR;
@@ -86,7 +84,7 @@ cpu_atomic_dec(volatile atomic_int_t *a)
 #define HAS_CPU_ATOMIC_TESTSET
 
 static inline bool_t
-cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
 	reg_t tmp, tmp2, tmp3;
@@ -116,7 +114,7 @@ cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_WAITSET
 
 static inline void
-cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
 	reg_t tmp = 0, tmp2;
@@ -143,7 +141,7 @@ cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_TESTCLR
 
 static inline bool_t
-cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
 	reg_t tmp, tmp2, tmp3;
@@ -173,7 +171,7 @@ cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_WAITCLR
 
 static inline void
-cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
 	reg_t tmp = 0, tmp2;
@@ -199,7 +197,7 @@ cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_SET
 
 static inline void
-cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
 	reg_t tmp, tmp2;
@@ -223,7 +221,7 @@ cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_CLR
 
 static inline void
-cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
+cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
 	reg_t tmp, tmp2;
@@ -244,10 +242,12 @@ cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n)
 		);
 }
 
-#else /* SMP */
-
-#include "cpu/common/include/cpu/hexo/atomic_na.h"
+static inline bool_t
+cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
+{
+  /* FIXME */
+  return __sync_bool_compare_and_swap(a, old, new);
+}
 
 #endif
 
-#endif

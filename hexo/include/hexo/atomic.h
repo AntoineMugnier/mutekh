@@ -46,77 +46,73 @@
   atomic values access.
  */
 
-#include "cpu/hexo/atomic.h"
+#ifdef CONFIG_CPU_SMP_CAPABLE
+# include <cpu/hexo/atomic.h>
+#else
+/* 
+   We have better using processor atomic operations when supported
+   even for single processor systems because atomic_na implementation
+   need to disable and restore interrupts for each access.
+ */
+# include <cpu/common/include/cpu/hexo/atomic_na.h>
+#endif
 
 /** @multiple @internal */
-static bool_t cpu_atomic_inc(volatile atomic_int_t *a);
-static bool_t cpu_atomic_dec(volatile atomic_int_t *a);
-static bool_t cpu_atomic_bit_testset(volatile atomic_int_t *a, uint_fast8_t n);
-static void cpu_atomic_bit_waitset(volatile atomic_int_t *a, uint_fast8_t n);
-static bool_t cpu_atomic_bit_testclr(volatile atomic_int_t *a, uint_fast8_t n);
-static void cpu_atomic_bit_waitclr(volatile atomic_int_t *a, uint_fast8_t n);
-static void cpu_atomic_bit_set(volatile atomic_int_t *a, uint_fast8_t n);
-static void cpu_atomic_bit_clr(volatile atomic_int_t *a, uint_fast8_t n);
+static bool_t cpu_atomic_inc(atomic_int_t *a);
+static bool_t cpu_atomic_dec(atomic_int_t *a);
+static bool_t cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n);
+static void cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n);
+static bool_t cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n);
+static void cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n);
+static void cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n);
+static void cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n);
+static bool_t cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new);
 
 /** Atomic value type */
 typedef struct arch_atomic_s atomic_t;
 
-/** @this sets atomic integer value. The @ref %value parameter is useless. */
+/** @this sets atomic integer value in memory */
 static void atomic_set(atomic_t *a, atomic_int_t value);
 
-/** @this gets atomic integer value */
+/** @this gets atomic integer value in memory */
 static atomic_int_t atomic_get(atomic_t *a);
 
-/** @this atomicaly increments integer value.
+/** @this atomicaly increments integer value in memory.
    @return 0 if new atomic value is 0. */
 static bool_t atomic_inc(atomic_t *a);
 
-/** @this atomicaly decrements integer value
+/** @this atomicaly decrements integer value in memory
    @return 0 if new atomic value is 0. */
 static bool_t atomic_dec(atomic_t *a);
 
-/** @this atomicaly sets bit in intger value */
+/** @this atomicaly sets bit in intger value in memory */
 static void atomic_bit_set(atomic_t *a, uint_fast8_t n);
 
-/** @this atomicaly tests and sets bit in integer value
+/** @this atomicaly tests and sets bit in integer value in memory
    @return 0 if bit was cleared before. */
 static bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n);
 
-/** @this atomicaly clears bit in integer value */
+/** @this atomicaly clears bit in integer value in memory */
 static void atomic_bit_clr(atomic_t *a, uint_fast8_t n);
 
-/** @this atomicaly tests and clears bit in integer value
+/** @this atomicaly tests and clears bit in integer value in memory
    @return 0 if bit was cleared before. */
 static bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n);
 
-/** @this tests bit in integer value
+/** @this tests bit in integer value in memory
    @return 0 if bit is cleared. */
 static bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n);
 
-/** @this compares memory to old and replace with new if they are the same
+/** @this compares memory to old and replace with new if they are the same.
    @return true if exchanged */
-static bool_t atomic_compare_and_swap(volatile atomic_int_t *a, atomic_int_t old, atomic_int_t new);
+static bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t new);
 
 #if 0
 /** Static atomic value initializer */
 # define ATOMIC_INITIALIZER(n)	/* defined in implementation */
 #endif
 
-#include "arch/hexo/atomic.h"
-
-#if __GNUC__ >= 4
-
-static inline bool_t
-atomic_compare_and_swap(volatile atomic_int_t *a, atomic_int_t old, atomic_int_t new)
-{
-# if defined(HAS_CPU_ATOMIC_COMPARE_AND_SWAP)
-	return cpu_atomic_compare_and_swap(a, old, new);
-# else
-	return __sync_bool_compare_and_swap(a, old, new);
-# endif
-}
-
-#endif // GNUC 4
+#include <arch/hexo/atomic.h>
 
 #endif
 
