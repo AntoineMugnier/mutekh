@@ -245,8 +245,26 @@ cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 static inline bool_t
 cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
 {
-  /* FIXME */
-  return __sync_bool_compare_and_swap(a, old, new);
+	reg_t tmp, loaded;
+    THUMB_TMP_VAR;
+
+	asm volatile(
+        THUMB_TO_ARM
+		"1:                                   \n\t"
+		"ldrex   %[loaded], [%[atomic]]       \n\t"
+		"cmp     %[loaded], %[old]            \n\t"
+		"bne     2f                           \n\t"
+		"strex   %[tmp], %[new], [%[atomic]]  \n\t"
+		"tst     %[tmp], #1                   \n\t"
+		"bne     1b                           \n\t"
+        "2:                                   \n\t"
+        ARM_TO_THUMB
+		: [tmp] "=&r" (tmp), [loaded] "=&r" (loaded), "=m" (*a)
+		/*,*/ THUMB_OUT(,)
+        : [old] "r" (old), [new] "r" (new), [atomic] "r" (a)
+		);
+
+    return loaded == old;
 }
 
 #endif
