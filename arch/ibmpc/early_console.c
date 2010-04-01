@@ -57,6 +57,6 @@ PRINTF_OUTPUT_FUNC(early_console_vga)
   lock_release(&early_vga_lock);
 
   /* force memory write */
-  asm volatile("":::"memory");
+  order_compiler_mem();
 }
 

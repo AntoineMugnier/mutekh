@@ -155,21 +155,21 @@ soclib_mem_check_region_status(void *region, size_t size, uint32_t status)
 static inline __attribute__ ((always_inline)) void
 soclib_mem_check_disable(uint32_t flags)
 {
-  __asm__ __volatile__("" ::: "memory");
+  order_compiler_mem();
   cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
   cpu_mem_write_32(SOCLIB_MC_DISABLE, flags);
   cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
-  __asm__ __volatile__("" ::: "memory");
+  order_compiler_mem();
 }
 
 static inline __attribute__ ((always_inline)) void
 soclib_mem_check_enable(uint32_t flags)
 {
-  __asm__ __volatile__("" ::: "memory");
+  order_compiler_mem();
   cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
   cpu_mem_write_32(SOCLIB_MC_ENABLE, flags);
   cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
-  __asm__ __volatile__("" ::: "memory");
+  order_compiler_mem();
 }
 
 #endif

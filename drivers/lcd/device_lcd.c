@@ -91,7 +91,7 @@ static ssize_t dev_lcd_handle_request(
   lock_destroy(&status.lock);
 #else
   while (!status.done)
-	  asm volatile("":::"memory");
+	  order_compiler_mem();
 #endif
 
   return 0;

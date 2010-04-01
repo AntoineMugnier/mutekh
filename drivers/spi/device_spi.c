@@ -79,7 +79,7 @@ static ssize_t dev_char_lock_request(struct device_s *dev, uint8_t *data,
 #endif
 
   while (!status.done)
-    asm volatile("":::"memory");
+    order_compiler_mem();
 
   assert(rq.error >= 0);
   return rq.error ? -rq.error : size - rq.size;

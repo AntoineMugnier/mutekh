@@ -32,7 +32,7 @@
 
 #ifdef CONFIG_ARCH_SMP
 static size_t cpu_count = CONFIG_CPU_MAXCOUNT;
-static volatile bool_t cpu_init_flag = 0;
+static bool_t cpu_init_flag = 0;
 
 extern __ldscript_symbol_t __data_start, __data_end;
 extern __ldscript_symbol_t __bss_start, __bss_end;
@@ -133,7 +133,7 @@ other_cpu:
     /* configure other CPUs */
 
     while (cpu_init_flag != 1)
-        ;
+        order_compiler_mem();
 
     cpu_init();
 

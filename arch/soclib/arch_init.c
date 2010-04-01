@@ -185,7 +185,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         /* Other CPUs */
     {
         while (cpu_init_flag != START_MAGIC)
-            asm volatile("":::"memory");
+            order_compiler_mem();
 
         assert(cpu_id() < CONFIG_CPU_MAXCOUNT);
 
@@ -211,7 +211,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         /* wait for start signal */
 
         while (cpu_start_flag != START_MAGIC)
-            asm volatile("":::"memory");
+            order_compiler_mem();
 
         /* run mutek_start_smp() */
 

@@ -94,7 +94,7 @@ error_t dev_i2c_wait_request(
   dev_i2c_request(dev, rq);
 
   while (!status.done)
-    asm volatile("":::"memory");
+    order_compiler_mem();
 #endif
 
   return status.error;

@@ -72,7 +72,7 @@ static error_t dev_block_lock_request(struct device_s *dev, uint8_t **data,
 #endif
 
   while (!status.done)
-    asm volatile("":::"memory");
+    order_compiler_mem();
 
   return __MIN(rq->progress, 0);
 }

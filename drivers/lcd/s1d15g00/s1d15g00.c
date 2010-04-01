@@ -87,7 +87,7 @@ void __s1d15g00_send_cmd_sync(struct device_s *dev,
 
 	__s1d15g00_send_cmd(dev, cmd, data, dlen, __s1d15g00_cmd_done, (void*)&done);
 	while (!done)
-		asm volatile("":::"memory");
+		order_compiler_mem();
 
 //	printk("Done\n");
 }

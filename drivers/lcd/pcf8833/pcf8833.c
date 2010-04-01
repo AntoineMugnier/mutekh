@@ -78,7 +78,7 @@ void __pcf8833_send_cmd_sync(struct device_s *dev,
 
 	__pcf8833_send_cmd(dev, cmd, data, dlen, __pcf8833_cmd_done, (void*)&done);
 	while (!done)
-		asm volatile("":::"memory");
+		order_compiler_mem();
 
 //	printk("Done\n");
 }
