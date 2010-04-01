@@ -543,7 +543,6 @@ static CONTEXT_ENTRY(dhcp_renew_th)
   uint_fast8_t		i;
   struct net_addr_s	null;
 
-  sched_unlock();
   cpu_interrupt_enable();
 
   while (1)
@@ -630,7 +629,6 @@ static CONTEXT_ENTRY(dhcp_renew_th)
   semaphore_destroy(&lease->sem);
   mem_free(lease);
 
-  sched_lock();
   sched_context_exit();
 }
 

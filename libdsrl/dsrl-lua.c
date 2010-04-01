@@ -338,7 +338,6 @@ static CONTEXT_ENTRY(dsrl_run_task)
     cpu_mips_mtc0(12, 0, status);
 #endif
 
-    sched_unlock();
     cpu_interrupt_enable();
 
     /* application must become PIC independently */
@@ -348,7 +347,7 @@ static CONTEXT_ENTRY(dsrl_run_task)
 
     // should not happen (at least if previously we went in user mode)
     cpu_interrupt_disable();
-    sched_lock();
+
     sched_context_exit();
 }
 RESOURCE_BUILD(dsrl_task)

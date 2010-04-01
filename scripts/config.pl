@@ -790,6 +790,10 @@ sub check_condition
 	    return ($value > $val);
 	} elsif  ($op eq "<") {
 	    return ($value < $val);
+	} elsif  ($op eq ">=") {
+	    return ($value >= $val);
+	} elsif  ($op eq "<=") {
+	    return ($value <= $val);
 	}
 
     }
@@ -1365,6 +1369,7 @@ sub tokens_check
 	    error_loc($opt, "`range' tag may only be used with `value' flagged tokens.")
 	}
 
+        # FIXME check there is no parent or depend with auto flag set when default defined, suggest use of when tag
 	if ( $opt->{flags}->{auto} && $opt->{default} eq 'defined' ) {
 	    warning_loc($opt, "token has `auto' flag but is defined by default.")
 	}

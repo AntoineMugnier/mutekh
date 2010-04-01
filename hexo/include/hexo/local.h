@@ -123,12 +123,12 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
 #ifndef CONTEXT_LOCAL_ADDR
 /** @this returns the address of context local variable */
-# define CONTEXT_LOCAL_ADDR(n)	({ (void*)((uintptr_t)CONTEXT_GET_TLS() + (uintptr_t)&(n)); })
+# define CONTEXT_LOCAL_ADDR(n)	({ (typeof(n)*)((uintptr_t)CONTEXT_GET_TLS() + (uintptr_t)&(n)); })
 #endif
 
 /** @this returns the address of context local object for different context */
 #ifndef CONTEXT_LOCAL_TLS_ADDR
-# define CONTEXT_LOCAL_TLS_ADDR(tls, n)	({ (void*)((uintptr_t)(tls) + (uintptr_t)&(n)); })
+# define CONTEXT_LOCAL_TLS_ADDR(tls, n)	({ (typeof(n)*)((uintptr_t)(tls) + (uintptr_t)&(n)); })
 #endif
 
 /************************************************************************/

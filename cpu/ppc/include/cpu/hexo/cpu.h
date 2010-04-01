@@ -25,48 +25,37 @@
 
 #define CPU_CPU_H_
 
-#ifdef CONFIG_ARCH_SMP
+#define PPC_MSR_IRQ_ENABLED     0x8000
+#define PPC_MSR_USERMODE        0x4000
+#define PPC_MSR_FPU_ENABLED     0x2000
+
+#ifndef __MUTEK_ASM__
+
+# ifdef CONFIG_ARCH_SMP
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-#endif
+# endif
 
 /** general purpose regsiters count */
-#define CPU_GPREG_COUNT	32
+# define CPU_GPREG_COUNT	32
 
-#define CPU_GPREG_NAMES {											   \
-		"vol", " sp", "sd1", "ar0", "ar1", " a2", " a3", " a4",		   \
-			" a5", " a6", " a7", " v0", " v1", "sd0", " l0", " l1",   \
-			" l2", " l3", " l4", " l5", " l6", " l7", " l8", " l9",	   \
-			"l10", "l11", "l12", "l13", "l14", "l15", "l16", "l17"	   \
+# define CPU_GPREG_NAMES {                                                         \
+                "vol", " sp", "sd1", "ar0", "ar1", " a2", " a3", " a4",            \
+                        " a5", " a6", " a7", " v0", " v1", "sd0", " l0", " l1",   \
+                        " l2", " l3", " l4", " l5", " l6", " l7", " l8", " l9",    \
+                        "l10", "l11", "l12", "l13", "l14", "l15", "l16", "l17"     \
 }
 
-#define CPU_FAULT_COUNT 6
-
-#define CPU_FAULT_NAMES {       \
-"Unknown",                      \
-"Program",                      \
-"Data storage",                 \
-"Instruction storage",          \
-"Alignment",                    \
-"Other",                        \
-}
-
-#define CPU_EXCEPTION_ILLEGAL_INS  0x1
-#define CPU_EXCEPTION_DATA_ERROR   0x2
-#define CPU_EXCEPTION_INS_ERROR    0x3
-#define CPU_EXCEPTION_DATA_ALIGN   0x4
-#define CPU_EXCEPTION_OTHER        0x5
-
-#define CPU_TYPE_NAME powerpc
+# define CPU_TYPE_NAME powerpc
 
 static inline cpu_id_t
 cpu_id(void)
 {
-  reg_t		reg;
+  reg_t         reg;
 
   asm volatile (
-		"mfdcr %0, 0"
-		: "=r" (reg)
-		);
+                "mfdcr %0, 0"
+                : "=r" (reg)
+                );
 
   return reg;
 }
@@ -93,9 +82,9 @@ cpu_cycle_count(void)
   uint32_t      result;
 
   asm volatile (
-		"mftbl %0"
-		: "=r" (result)
-		);
+                "mftbl %0"
+                : "=r" (result)
+                );
 
   return result;
 }
@@ -108,26 +97,28 @@ cpu_trap()
 
 static inline void *cpu_get_cls(cpu_id_t cpu_id)
 {
-#ifdef CONFIG_ARCH_SMP
+# ifdef CONFIG_ARCH_SMP
   return cpu_local_storage[cpu_id];
-#endif
+# endif
   return NULL;
 }
 
 static inline void cpu_dcache_invld(void *ptr)
 {
   asm volatile (
-		"dcbi 0, %0"
-		:
-		: "r" (ptr)
-		: "memory"
-		);
+                "dcbi 0, %0"
+                :
+                : "r" (ptr)
+                : "memory"
+                );
 }
 
 static inline size_t cpu_dcache_line_size()
 {
   return CONFIG_CPU_CACHE_LINE;
 }
+
+#endif  /* __MUTEK_ASM__ */
 
 #endif
 

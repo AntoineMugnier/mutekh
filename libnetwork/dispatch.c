@@ -62,7 +62,6 @@ static CONTEXT_ENTRY(packet_dispatch_thread)
 
 	net_if_obj_refnew(dispatch->interface);
 
-	sched_unlock();
 	cpu_interrupt_enable();
 
 	net_debug("[%s] In dispatch thread, pv=%p\n", dispatch->interface->name, dispatch);
@@ -83,7 +82,6 @@ static CONTEXT_ENTRY(packet_dispatch_thread)
 			if (dispatch->must_quit) {
 				net_if_obj_refdrop(dispatch->interface);
 				sched_context_start(dispatch->killer);
-				sched_lock();
 				sched_context_exit();
 			}
 		}

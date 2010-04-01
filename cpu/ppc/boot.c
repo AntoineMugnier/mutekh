@@ -26,9 +26,7 @@
 #endif
 
 asm(
-    ".section        .text,\"ax\",@progbits     \n"
-
-    FUNC_START(cpu_boot)
+    FUNC_START(.text, cpu_boot)
 
     /* get CPU id and adjust stack */
     "lis    9, __initial_stack@ha    \n"
@@ -108,9 +106,7 @@ asm(
     );
 
 asm(
-    ".section        .boot,\"ax\",@progbits  \n\t"
-
-    FUNC_START(cpu_boot_pointer)
+    FUNC_START(.boot, cpu_boot_pointer)
     "1:                                      \n\t"
     "lis    3, cpu_boot@ha                   \n\t"
     "la     3, cpu_boot@l(3)                 \n\t"

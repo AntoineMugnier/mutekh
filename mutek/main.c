@@ -62,7 +62,7 @@ DEVTIMER_CALLBACK(timer_callback)
 {
 	//  printk("timer callback\n");
 # if defined(CONFIG_MUTEK_SCHEDULER_PREEMPT)
-	sched_context_switch();
+        context_set_preempt(sched_context_preempt);
 # endif
 
 	timer_inc_ticks(&timer_ms, 10);
@@ -189,7 +189,6 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
       app_start();
 #if defined(CONFIG_MUTEK_SCHEDULER)
       cpu_interrupt_disable();
-      sched_lock();
       sched_context_exit();
 #endif
     }
@@ -201,7 +200,6 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
       cpu_interrupt_disable();
-      sched_lock();
       sched_context_exit();
 #endif
     }

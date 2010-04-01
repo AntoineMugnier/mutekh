@@ -108,7 +108,7 @@ static void main_runner(void *unused)
     cpu_trap();
 
     cpu_interrupt_disable();
-    sched_lock();
+
     sched_context_exit();
 }
 
@@ -180,7 +180,6 @@ static void do_one_job(struct capsule_ctxt_s *job)
 
 CONTEXT_ENTRY(capsule_sys_runner)
 {
-	sched_unlock();
     cpu_interrupt_enable();
 
     dprintk("%s on %d %p\n", __FUNCTION__, cpu_id(), param);

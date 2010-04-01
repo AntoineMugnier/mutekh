@@ -89,11 +89,10 @@
 #  define SOCLIB_MC_CHECK_ALL 29
 # endif
 
-#define ASM_STR_(x) #x
-#define ASM_STR(x) ASM_STR_(x)
+#ifndef __MUTEK_ASM__
 
-#include <hexo/iospace.h>
-#include <hexo/interrupt.h>
+# include <hexo/iospace.h>
+# include <hexo/interrupt.h>
 
 static inline __attribute__ ((always_inline)) void
 soclib_mem_check_declare_lock(void *lock, uint32_t islock)
@@ -171,6 +170,8 @@ soclib_mem_check_enable(uint32_t flags)
   cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
   order_compiler_mem();
 }
+
+# endif  /* __MUTEK_ASM__ */
 
 #endif
 

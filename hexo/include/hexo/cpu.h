@@ -28,8 +28,12 @@
 #ifndef __CPU_H_
 #define __CPU_H_
 
-#include "types.h"
-#include "error.h"
+# include <hexo/types.h>
+# include <hexo/error.h>
+
+#include <cpu/hexo/cpu.h>
+
+#ifndef __MUTEK_ASM__
 
 /** init system wide cpu data */
 error_t cpu_global_init(void);
@@ -55,8 +59,6 @@ cpu_id_t arch_get_cpu_count(void);
 /** unlock non first CPUs so that they can enter main_smp() */
 void arch_start_other_cpu(void);
 
-#include "cpu/hexo/cpu.h"
-
 cpu_cycle_t cpu_cycle_count(void);
 
 static inline
@@ -76,23 +78,23 @@ static size_t cpu_dcache_line_size();
 /** invalidate the cpu data cache line containing this address */
 static void cpu_dcache_invld(void *ptr);
 
-# if defined(CONFIG_CPU_CACHE)
+#  if defined(CONFIG_CPU_CACHE)
 
 /** invalidate all the cpu data cache lines within given range.
     size is in bytes. */
 void cpu_dcache_invld_buf(void *ptr, size_t size);
 
-# else
+#  else
 
 static inline void
 cpu_dcache_invld_buf(void *ptr, size_t size)
 {
 }
 
-# endif
+#  endif
 
-#define _TO_STR(x) #x
-#define TO_STR(x) _TO_STR(x)
+# define _TO_STR(x) #x
+# define TO_STR(x) _TO_STR(x)
 
 /** @this returns the cpu type name */
 static inline const char *
@@ -107,5 +109,6 @@ cpu_type_name(void)
     or function prefixed by cpu type name. */
 # define CPU_NAME_DECL(x) _CPU_NAME_DECL(CPU_TYPE_NAME, x)
 
-#endif
+#endif  /* __MUTEK_ASM__ */
 
+#endif

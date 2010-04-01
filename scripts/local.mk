@@ -51,9 +51,9 @@ $(3)/$(1): $(2)/$(1:.o=.S) $(OBJ_DIR)/.done_pre_header_list $(OBJ_DIR)/config.h
 	@echo '    AS      ' $$(notdir $$@) $(LOG_REDIR)
 	test -d $(dir $(3)/$(1)) || mkdir -p $(dir $(3)/$(1)) $(LOG_REDIR)
 	cd $(dir $(3)/$(1)) ; \
-	$(DEPCC) $$(CFLAGS) $$(DEPINC) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$< $(LOG_REDIR)
+	$(DEPCC) $$(CFLAGS) $$(DEPINC) $(INCS) -M -MT $(3)/$(1) -MF $$(@:.o=.deps) $$< $(LOG_REDIR)
 	cd $(dir $(3)/$(1)) ; \
-	$(CC) $$(INCS) -c -x assembler-with-cpp $$< $$(CPUCFLAGS) -o $$@ $(LOG_REDIR)
+	$(CC) $$(INCS) -D__MUTEK_ASM__ -c -x assembler-with-cpp $$< $$(CPUCFLAGS) -o $$@ $(LOG_REDIR)
 
 else
 ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))

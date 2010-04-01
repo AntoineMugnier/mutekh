@@ -36,11 +36,18 @@
 #ifndef CONTEXT_H_
 #define CONTEXT_H_
 
-#include <hexo/types.h>
-#include <hexo/local.h>
-#include <hexo/error.h>
-#include <hexo/mmu.h>
-#include <assert.h> 
+#define HEXO_CONTEXT_S_TLS              0
+#define HEXO_CONTEXT_S_STACK_START      1
+#define HEXO_CONTEXT_S_STACK_END        2
+#define HEXO_CONTEXT_S_STACK_PTR        3
+
+#ifndef __MUTEK_ASM__
+
+# include <hexo/types.h>
+# include <hexo/local.h>
+# include <hexo/error.h>
+# include <hexo/mmu.h>
+# include <assert.h> 
 
 /** context descriptor structure */
 struct context_s
@@ -56,24 +63,56 @@ struct context_s
   /** current stack pointer value */
   reg_t			*stack_ptr;
 
-#ifdef CONFIG_HEXO_MMU
+# ifdef CONFIG_HEXO_MMU
   struct mmu_context_s	*mmu;
-#endif
+# endif
 };
 
-/** @showcontent Context entry point function prototype */
+/** @showcontent context entry point function prototype */
 #define CONTEXT_ENTRY(n) void (n) (void *param)
-/** context entry point function type */
+/** context entry point function type. @csee #CONTEXT_ENTRY */
 typedef CONTEXT_ENTRY(context_entry_t);
 
-/** Switch context by saving/restoring all registers from/to context stack */
-static void cpu_context_switch(struct context_s *old, struct context_s *new);
 
-/** Jump to context from _non_ context */
-static void cpu_context_jumpto(struct context_s *new);
+# if defined(CONFIG_HEXO_USERMODE)
+/** @showcontent user entry point function prototype */
+#define USER_ENTRY(n) void (n) (void *param)
+/** user entry point function type. @csee #USER_ENTRY */
+typedef USER_ENTRY(user_entry_t);
+#endif
+
+
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+/** @showcontent context preempt function prototype.
+
+    This function is called on interrupt handler completion
+    and may return a pointer to a context to switch to or NULL.
+    When returning a context pointer, the interrupted context will be
+    saved instead of being resumed. @csee context_set_preempt .
+*/
+#define CONTEXT_PREEMPT(n) struct context_s * (n)(void)
+/** context preempt function prototype. @csee #CONTEXT_PREEMPT */
+typedef CONTEXT_PREEMPT(context_preempt_t);
+#endif
+
+#endif  /* __MUTEK_ASM__ */
+#include "cpu/hexo/context.h"
+#ifndef __MUTEK_ASM__
+
+/** Save current context and restore given context */
+void cpu_context_switch(struct context_s *new);
+
+/** Restore given context without saving current context */
+__attribute__((noreturn))
+void cpu_context_jumpto(struct context_s *new);
 
 /** set new stack pointer and jump to a new function */
-static void cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto);
+__attribute__((noreturn))
+void cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto);
+
+__attribute__((noreturn))
+void cpu_context_stack_use(struct context_s *context,
+                           context_entry_t *func, void *param);
 
 /** associate context and cpu current execution state */
 error_t cpu_context_bootstrap(struct context_s *context);
@@ -84,25 +123,37 @@ error_t cpu_context_init(struct context_s *context, context_entry_t *entry, void
 /** Context cleanup */
 void cpu_context_destroy(struct context_s *context);
 
-
-#if defined(CONFIG_HEXO_USERMODE)
-
-/** @showcontent user entry point function prototype */
-#define USER_ENTRY(n) void (n) (void *param)
-/** user entry point function type */
-typedef USER_ENTRY(user_entry_t);
-
+# if defined(CONFIG_HEXO_USERMODE)
 /** set kernel stack, user stack pointer and jump to a new function in user mode */
+__attribute__((noreturn))
 void cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,
 			  user_entry_t *entry, void *param);
+# endif
 
-#endif
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+/** @internal */
+extern CPU_LOCAL context_preempt_t *cpu_preempt_handler;
 
+/** @this sets a preemption handler function for the processor. The
+    preemtion handler is reset to NULL on each exception and irq and
+    must be setup by the interrupt handler when context preemption is needed. */
+static inline void context_set_preempt(context_preempt_t *func)
+{
+  CPU_LOCAL_SET(cpu_preempt_handler, func);
+}
+# endif
 
-#include "cpu/hexo/context.h"
-
-/** pointer to current context object */
+/** @internal */
 extern CONTEXT_LOCAL struct context_s *context_cur;
+
+/** @this executes the given function using given existing context
+    stack while the context is not actually running. */
+__attribute__((noreturn))
+static inline void context_stack_use(struct context_s *context,
+                                     context_entry_t *func, void *param)
+{
+  cpu_context_stack_use(context, func, param);
+}
 
 /** init a context object using current execution context */
 error_t context_bootstrap(struct context_s *context);
@@ -119,9 +170,9 @@ reg_t * context_destroy(struct context_s *context);
 /** switch to a given context */
 static inline void context_switch_to(struct context_s *context)
 {
+#if 0
   struct context_s *cur = CONTEXT_LOCAL_GET(context_cur);
 
-#if 0
   if (cur == context)
     cpu_trap();
 #endif
@@ -130,7 +181,7 @@ static inline void context_switch_to(struct context_s *context)
   mmu_context_switch_to(context->mmu);
 #endif
 
-  cpu_context_switch(cur, context);
+  cpu_context_switch(context);
 }
 
 /** jump to a given context without saving current context */
@@ -149,6 +200,8 @@ static inline struct context_s * context_current(void)
 {
   return CONTEXT_LOCAL_GET(context_cur);
 }
+
+#endif  /* __MUTEK_ASM__ */
 
 #endif
 

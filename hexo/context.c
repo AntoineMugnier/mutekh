@@ -9,6 +9,10 @@
 # include <arch/mem_checker.h>
 #endif
 
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+CPU_LOCAL context_preempt_t *cpu_preempt_handler;
+#endif
+
 /** pointer to current context */
 CONTEXT_LOCAL struct context_s *context_cur = NULL;
 

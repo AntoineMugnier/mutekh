@@ -19,30 +19,41 @@
 
 */
 
-
-/**
-   @file
-
-   CPU specific interrupt handling
-*/
-
 #if !defined(INTERRUPT_H_) || defined(CPU_INTERRUPT_H_)
 #error This file can not be included directly
 #else
 
 #define CPU_INTERRUPT_H_
 
-#include "hexo/local.h"
+#define CPU_EXCEPTION_ILLEGAL_INS  0x1
+#define CPU_EXCEPTION_DATA_ERROR   0x2
+#define CPU_EXCEPTION_INS_ERROR    0x3
+#define CPU_EXCEPTION_DATA_ALIGN   0x4
+#define CPU_EXCEPTION_OTHER        0x5
+#define CPU_FAULT_COUNT 6
 
-#ifdef CONFIG_DRIVER_ICU_PPC
+#ifndef __MUTEK_ASM__
+
+# define CPU_FAULT_NAMES {       \
+"Unknown",                      \
+"Program",                      \
+"Data storage",                 \
+"Instruction storage",          \
+"Alignment",                    \
+"Other",                        \
+}
+
+# include "hexo/local.h"
+
+# ifdef CONFIG_DRIVER_ICU_PPC
 struct device_s;
 extern CPU_LOCAL struct device_s cpu_icu_dev;
-#endif
+# endif
 
 static inline void
 cpu_interrupt_disable(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   reg_t tmp;
 
   asm volatile (
@@ -53,13 +64,13 @@ cpu_interrupt_disable(void)
 		: "=r" (tmp)
                 :: "memory"     /* compiler memory barrier */
 	  );
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   reg_t tmp;
 
   asm volatile (
@@ -70,13 +81,13 @@ cpu_interrupt_enable(void)
                 :
                 : "memory"     /* compiler memory barrier */
 	  );
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_process(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   cpu_interrupt_enable();
   __asm__ volatile ("nop"
 		    :
@@ -87,24 +98,24 @@ cpu_interrupt_process(void)
 		    : "memory"
 		    );
   cpu_interrupt_disable();
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "mfmsr	%0\n"
 		    : "=r" (*state)
 		    );
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   reg_t tmp;
 
   asm volatile (
@@ -117,26 +128,26 @@ cpu_interrupt_savestate_disable(reg_t *state)
                 :
                 : "memory"     /* compiler memory barrier */
 	  );
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "mtmsr	%0"
 		    :
 		    : "r" (*state)
                     : "memory"     /* compiler memory barrier */
 		    );
-#endif
+# endif
 }
 
 static inline bool_t
 cpu_interrupt_getstate(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   reg_t		state;
 
   __asm__ volatile (
@@ -145,30 +156,32 @@ cpu_interrupt_getstate(void)
 		    );
 
   return !!(state & 0x8000);
-#else
+# else
   return 0;
-#endif
+# endif
 }
 
 static inline bool_t
 cpu_is_interruptible(void)
 {
-#ifdef CONFIG_HEXO_IRQ
-	return cpu_interrupt_getstate();
-#else
-	return 0;
-#endif
-}
-
-#ifdef CONFIG_CPU_WAIT_IRQ
-static inline void cpu_interrupt_wait(void)
-{
 # ifdef CONFIG_HEXO_IRQ
-  __asm__ volatile ("wait\n"	/* Power ISA 2.0 */
-		    ::: "memory");
+	return cpu_interrupt_getstate();
+# else
+	return 0;
 # endif
 }
-#endif
+
+# ifdef CONFIG_CPU_WAIT_IRQ
+static inline void cpu_interrupt_wait(void)
+{
+#  ifdef CONFIG_HEXO_IRQ
+  __asm__ volatile ("wait\n"	/* Power ISA 2.0 */
+		    ::: "memory");
+#  endif
+}
+# endif
+
+#endif  /* __MUTEK_ASM__ */
 
 #endif
 

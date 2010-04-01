@@ -45,6 +45,8 @@ struct sched_context_s;
 /** scheduler context candidate checking function type */
 typedef SCHED_CANDIDATE_FCN(sched_candidate_fcn_t);
 
+
+
 #define CONTAINER_LOCK_sched_queue HEXO_SPIN
 
 CONTAINER_TYPE	     (sched_queue, DLIST, struct sched_context_s
@@ -70,25 +72,28 @@ CONTAINER_FUNC_NOLOCK(sched_queue, DLIST, static inline, sched_queue_nolock, lis
 
 #define SCHED_QUEUE_INITIALIZER CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST)
 
-extern CONTEXT_LOCAL struct sched_context_s *sched_cur;
 
+/** @internal */
+extern CONTEXT_LOCAL struct sched_context_s *sched_cur;
+/** @internal */
+extern CPU_LOCAL struct sched_context_s sched_idle;
+
+
+/** @this return current scheduler context */
 static inline struct sched_context_s *
 sched_get_current(void)
 {
   return CONTEXT_LOCAL_GET(sched_cur);
 }
 
-/** @this lock scheduler running queue associated with current context. */
-void sched_lock(void);
 
-/** @this release scheduler queue associated with current
-    context. Must be used after scheduler context entry. */
-void sched_unlock(void);
-
-/** @this return a scheduler local temporary stack usable when the
-    scheduler is locked. This is useful during context self
-    exit/destroy. Must be called with scheduler locked. */
-uintptr_t sched_tmp_stack(void);
+/** @this return a cpu local context for temporary stack use with @ref
+    cpu_context_stack_use. This context must be used with interupts
+    disabled. This is useful during context exit/destroy. */
+static inline struct context_s *sched_tmp_context(void)
+{
+  return &CPU_LOCAL_ADDR(sched_idle)->context;
+}
 
 /** initialize scheduler context. context_init(&sched_ctx->context)
     must be called before */
@@ -165,6 +170,14 @@ void sched_affinity_clear(struct sched_context_s *sched_ctx);
 
 /** setup a scheduler context candidate checking function */
 void sched_context_candidate_fcn(struct sched_context_s *sched_ctx, sched_candidate_fcn_t *fcn);
+
+
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+/** scheduler context preemption handler.
+    Return next scheduler candidate for preemption.
+    @see context_set_preempt @see #CONTEXT_PREEMPT */
+CONTEXT_PREEMPT(sched_context_preempt);
+# endif
 
 #endif
 #endif
