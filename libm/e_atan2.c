@@ -62,14 +62,14 @@ pi_lo   = 1.2246467991473531772E-16; /* 0x3CA1A626, 0x33145C07 */
 #endif
 {  
 	double z;
-	int k,m,hx,hy,ix,iy,n0;
+	int32_t k,m,hx,hy,ix,iy,n0;
 	unsigned lx,ly;
 
-	n0 = ((*(int*)&one)>>29)^1;	/* high word index */
-	hx = *(n0+(int*)&x); ix = hx&0x7fffffff;
-	lx = *(1-n0+(int*)&x);
-	hy = *(n0+(int*)&y); iy = hy&0x7fffffff;
-	ly = *(1-n0+(int*)&y);
+	n0 = ((*(int32_t*)&one)>>29)^1;	/* high word index */
+	hx = *(n0+(int32_t*)&x); ix = hx&0x7fffffff;
+	lx = *(1-n0+(int32_t*)&x);
+	hy = *(n0+(int32_t*)&y); iy = hy&0x7fffffff;
+	ly = *(1-n0+(int32_t*)&y);
 	if(((ix|((lx|-lx)>>31))>0x7ff00000)||
 	   ((iy|((ly|-ly)>>31))>0x7ff00000))	/* x or y is NaN */
 	   return x+y;
@@ -116,7 +116,7 @@ pi_lo   = 1.2246467991473531772E-16; /* 0x3CA1A626, 0x33145C07 */
 	else z=atan(fabs(y/x));		/* safe to do y/x */
 	switch (m) {
 	    case 0: return       z  ;	/* atan(+,+) */
-	    case 1: *(n0+(int*)&z) ^= 0x80000000;
+	    case 1: *(n0+(int32_t*)&z) ^= 0x80000000;
 		    return       z  ;	/* atan(-,+) */
 	    case 2: return  pi-(z-pi_lo);/* atan(+,-) */
 	    default: /* case 3 */

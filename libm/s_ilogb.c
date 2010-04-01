@@ -26,18 +26,18 @@ static double one  = 1.0;
 #endif
 
 #ifdef __STDC__
-	int ilogb(double x)
+	int32_t ilogb(double x)
 #else
-	int ilogb(x)
+	int32_t ilogb(x)
 	double x;
 #endif
 {
-	int n0,hx,lx,ix;
+	int32_t n0,hx,lx,ix;
 
-	n0 = ((*(int*)&one)>>29)^1;		/* high word index */
+	n0 = ((*(int32_t*)&one)>>29)^1;		/* high word index */
 	hx  = (*(n0+(unsigned*)&x))&0x7fffffff;	/* high word of x */
 	if(hx<0x00100000) {
-	    lx = *(1-n0+(int*)&x);
+	    lx = *(1-n0+(int32_t*)&x);
 	    if((hx|lx)==0) 
 		return 0x80000001;	/* ilogb(0) = 0x80000001 */
 	    else			/* subnormal x */

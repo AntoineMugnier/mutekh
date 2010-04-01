@@ -104,10 +104,10 @@ static double zero = 0.0;
 #endif
 {
 	double hfsq,f,c,s,z,R,u;
-	int k,hx,n0,hu,ax;
+	int32_t k,hx,n0,hu,ax;
 
-	n0 = (*((int*)&two54)>>30)^1;	/* high word index */
-	hx = *(n0+(int*)&x);		/* high word of x */
+	n0 = (*((int32_t*)&two54)>>30)^1;	/* high word index */
+	hx = *(n0+(int32_t*)&x);		/* high word of x */
 	ax = hx&0x7fffffff;
 
 	k = 1;
@@ -123,29 +123,29 @@ static double zero = 0.0;
 		else
 		    return x - x*x*0.5;
 	    }
-	    if(hx>0||hx<=((int)0xbfd2bec3)) {
+	    if(hx>0||hx<=((int32_t)0xbfd2bec3)) {
 		k=0;f=x;hu=1;}	/* -0.2929<x<0.41422 */
 	} 
 	if (hx >= 0x7ff00000) return x+x;
 	if(k!=0) {
 	    if(hx<0x43400000) {
 		u  = 1.0+x; 
-	        hu = *(n0+(int*)&u);		/* high word of u */
+	        hu = *(n0+(int32_t*)&u);		/* high word of u */
 	        k  = (hu>>20)-1023;
 	        c  = (k>0)? 1.0-(u-x):x-(u-1.0);/* correction term */
 		c /= u;
 	    } else {
 		u  = x;
-	        hu = *(n0+(int*)&u);		/* high word of u */
+	        hu = *(n0+(int32_t*)&u);		/* high word of u */
 	        k  = (hu>>20)-1023;
 		c  = 0;
 	    }
 	    hu &= 0x000fffff;
 	    if(hu<0x6a09e) {
-	        *(n0+(int*)&u) = hu|0x3ff00000;	/* normalize u */
+	        *(n0+(int32_t*)&u) = hu|0x3ff00000;	/* normalize u */
 	    } else {
 	        k += 1; 
-	        *(n0+(int*)&u) = hu|0x3fe00000;	/* normalize u/2 */
+	        *(n0+(int32_t*)&u) = hu|0x3fe00000;	/* normalize u/2 */
 	        hu = (0x00100000-hu)>>2;
 	    }
 	    f = u-1.0;

@@ -55,18 +55,18 @@ S5  = -2.50507602534068634195e-08, /* 0xBE5AE5E6, 0x8A2B9CEB */
 S6  =  1.58969099521155010221e-10; /* 0x3DE5D93A, 0x5ACFD57C */
 
 #ifdef __STDC__
-	double __kernel_sin(double x, double y, int iy)
+	double __kernel_sin(double x, double y, int32_t iy)
 #else
 	double __kernel_sin(x, y, iy)
-	double x,y; int iy;		/* iy=0 if y is zero */
+	double x,y; int32_t iy;		/* iy=0 if y is zero */
 #endif
 {
 	double z,r,v;
-	int n0, ix;
-	n0 = ((*(int*)&half)>>29)^1;		/* high word index */
-	ix = (*(n0+(int*)&x))&0x7fffffff;	/* high word of x */
+	int32_t n0, ix;
+	n0 = ((*(int32_t*)&half)>>29)^1;		/* high word index */
+	ix = (*(n0+(int32_t*)&x))&0x7fffffff;	/* high word of x */
 	if(ix<0x3e400000)			/* |x| < 2**-27 */
-	   {if((int)x==0) return x;}		/* generate inexact */
+	   {if((int32_t)x==0) return x;}		/* generate inexact */
 	z	=  x*x;
 	v	=  z*x;
 	r	=  S2+z*(S3+z*(S4+z*(S5+z*S6)));

@@ -194,10 +194,10 @@ sb7  = -2.24409524465858183362e+01; /* 0xC03670E2, 0x42712D62 */
 	double x;
 #endif
 {
-	int n0,hx,ix,i;
+	int32_t n0,hx,ix,i;
 	double R,S,P,Q,s,y,z,r;
-	n0 = ((*(int*)&one)>>29)^1;
-	hx = *(n0+(int*)&x);
+	n0 = ((*(int32_t*)&one)>>29)^1;
+	hx = *(n0+(int32_t*)&x);
 	ix = hx&0x7fffffff;
 	if(ix>=0x7ff00000) {		/* erf(nan)=nan */
 	    i = ((unsigned)hx>>31)<<1;
@@ -239,7 +239,7 @@ sb7  = -2.24409524465858183362e+01; /* 0xC03670E2, 0x42712D62 */
 				sb5+s*(sb6+s*sb7))))));
 	}
 	z  = x;  
-	*(1-n0+(int*)&z) = 0;
+	*(1-n0+(int32_t*)&z) = 0;
 	r  =  __ieee754_exp(-z*z-0.5625)*__ieee754_exp((z-x)*(z+x)+R/S);
 	if(hx>=0) return one-r/x; else return  r/x-one;
 }
@@ -251,10 +251,10 @@ sb7  = -2.24409524465858183362e+01; /* 0xC03670E2, 0x42712D62 */
 	double x;
 #endif
 {
-	int n0,hx,ix;
+	int32_t n0,hx,ix;
 	double R,S,P,Q,s,y,z,r;
-	n0 = ((*(int*)&one)>>29)^1;
-	hx = *(n0+(int*)&x);
+	n0 = ((*(int32_t*)&one)>>29)^1;
+	hx = *(n0+(int32_t*)&x);
 	ix = hx&0x7fffffff;
 	if(ix>=0x7ff00000) {			/* erfc(nan)=nan */
 						/* erfc(+-inf)=0,2 */
@@ -302,7 +302,7 @@ sb7  = -2.24409524465858183362e+01; /* 0xC03670E2, 0x42712D62 */
 				sb5+s*(sb6+s*sb7))))));
 	    }
 	    z  = x;
-	    *(1-n0+(int*)&z)  = 0;
+	    *(1-n0+(int32_t*)&z)  = 0;
 	    r  =  __ieee754_exp(-z*z-0.5625)*
 			__ieee754_exp((z-x)*(z+x)+R/S);
 	    if(hx>0) return r/x; else return two-r/x;

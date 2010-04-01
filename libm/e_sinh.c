@@ -45,11 +45,11 @@ static double one = 1.0, shuge = 1.0e307;
 #endif
 {	
 	double t,w,h;
-	int ix,jx;
+	int32_t ix,jx;
 	unsigned lx;
 
     /* High word of |x|. */
-	jx = *( (((*(int*)&one)>>29)^1) + (int*)&x);
+	jx = *( (((*(int32_t*)&one)>>29)^1) + (int32_t*)&x);
 	ix = jx&0x7fffffff;
 
     /* x is INF or NaN */

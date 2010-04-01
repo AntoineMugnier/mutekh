@@ -163,10 +163,10 @@ static double zero=  0.00000000000000000000e+00;
 #endif
 {
 	double y,z;
-	int n,n0,ix;
+	int32_t n,n0,ix;
 
-	n0 = ((*(int*)&one)>>29)^1;
-	ix = 0x7fffffff&(*(n0+(int*)&x));
+	n0 = ((*(int32_t*)&one)>>29)^1;
+	ix = 0x7fffffff&(*(n0+(int32_t*)&x));
 
 	if(ix<0x3fd00000) return __kernel_sin(pi*x,zero,0);
 	y = -x;		/* x is assume negative */
@@ -179,13 +179,13 @@ static double zero=  0.00000000000000000000e+00;
 	if(z!=y) {				/* inexact anyway */
 	    y  *= 0.5;
 	    y   = 2.0*(y - floor(y));		/* y = |x| mod 2.0 */
-	    n   = (int) (y*4.0);
+	    n   = (int32_t) (y*4.0);
 	} else {
             if(ix>=0x43400000) {
                 y = zero; n = 0;                 /* y must be even */
             } else {
                 if(ix<0x43300000) z = y+two52;	/* exact */
-                n   = (*(1+(int*)&z))&1;        /* lower word of z */
+                n   = (*(1+(int32_t*)&z))&1;        /* lower word of z */
                 y  = n;
                 n<<= 2;
             }
@@ -205,18 +205,18 @@ static double zero=  0.00000000000000000000e+00;
 
 
 #ifdef __STDC__
-	double __ieee754_lgamma_r(double x, int *signgamp)
+	double __ieee754_lgamma_r(double x, int32_t *signgamp)
 #else
 	double __ieee754_lgamma_r(x,signgamp)
-	double x; int *signgamp;
+	double x; int32_t *signgamp;
 #endif
 {
 	double t,y,z,nadj,p,p1,p2,p3,q,r,w;
-	int n0,i,hx,lx,ix;
+	int32_t n0,i,hx,lx,ix;
 
-	n0 = ((*(int*)&one)>>29)^1;
-	hx = *(n0+(int*)&x);
-	lx = *(1-n0+(int*)&x);
+	n0 = ((*(int32_t*)&one)>>29)^1;
+	hx = *(n0+(int32_t*)&x);
+	lx = *(1-n0+(int32_t*)&x);
 
     /* purge off +-inf, NaN, +-0, and negative arguments */
 	*signgamp = 1;
@@ -276,7 +276,7 @@ static double zero=  0.00000000000000000000e+00;
 	    }
 	}
 	else if(ix<0x40200000) { 			/* x < 8.0 */
-	    i = (int)x;
+	    i = (int32_t)x;
 	    t = zero;
 	    y = x-(double)i;
 	    p = y*(s0+y*(s1+y*(s2+y*(s3+y*(s4+y*(s5+y*s6))))));

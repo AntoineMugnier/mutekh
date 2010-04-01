@@ -135,10 +135,10 @@ Q5  =  -2.01099218183624371326e-07; /* BE8AFDB7 6E09C32D */
 #endif
 {
 	double y,hi,lo,c,t,e,hxs,hfx,r1;
-	int k,xsb,n0;
+	int32_t k,xsb,n0;
 	unsigned hx;
 
-	n0 = ((*(int*)&one)>>29)^1;	/* high word index */
+	n0 = ((*(int32_t*)&one)>>29)^1;	/* high word index */
 	hx  = *(n0+(unsigned*)&x);	/* high word of x */
 	xsb = hx&0x80000000;		/* sign bit of x */
 	if(xsb==0) y=x; else y= -x;	/* y = |x| */
@@ -148,7 +148,7 @@ Q5  =  -2.01099218183624371326e-07; /* BE8AFDB7 6E09C32D */
 	if(hx >= 0x4043687A) {			/* if |x|>=56*ln2 */
 	    if(hx >= 0x40862E42) {		/* if |x|>=709.78... */
                 if(hx>=0x7ff00000) {
-		    if(((hx&0xfffff)|*(1-n0+(int*)&x))!=0) 
+		    if(((hx&0xfffff)|*(1-n0+(int32_t*)&x))!=0) 
 		         return x+x; 	 /* NaN */
 		    else return (xsb==0)? x:-1.0;/* exp(+-inf)={inf,-1} */
 	        }
@@ -198,19 +198,19 @@ Q5  =  -2.01099218183624371326e-07; /* BE8AFDB7 6E09C32D */
 	       	else 	      return  one+2.0*(x-e);
 	    if (k <= -2 || k>56) {   /* suffice to return exp(x)-1 */
 	        y = one-(e-x);
-	        *(n0+(int*)&y) += (k<<20);	/* add k to y's exponent */
+	        *(n0+(int32_t*)&y) += (k<<20);	/* add k to y's exponent */
 	        return y-one;
 	    }
 	    t = one;
 	    if(k<20) {
-	       	*(n0+(int*)&t) = 0x3ff00000 - (0x200000>>k);  /* t=1-2^-k */
+	       	*(n0+(int32_t*)&t) = 0x3ff00000 - (0x200000>>k);  /* t=1-2^-k */
 	       	y = t-(e-x);
-	       	*(n0+(int*)&y) += (k<<20);	/* add k to y's exponent */
+	       	*(n0+(int32_t*)&y) += (k<<20);	/* add k to y's exponent */
 	   } else {
-	       	*(n0+(int*)&t)  = ((0x3ff-k)<<20);	/* 2^-k */
+	       	*(n0+(int32_t*)&t)  = ((0x3ff-k)<<20);	/* 2^-k */
 	       	y = x-(e+t);
 	       	y += one;
-	       	*(n0+(int*)&y) += (k<<20);	/* add k to y's exponent */
+	       	*(n0+(int32_t*)&y) += (k<<20);	/* add k to y's exponent */
 	    }
 	}
 	return y;

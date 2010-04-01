@@ -90,12 +90,12 @@ static double zero   =  0.0;
 #endif
 {
 	double hfsq,f,s,z,R,w,t1,t2,dk;
-	int k,hx,n0,i,j;
+	int32_t k,hx,n0,i,j;
 	unsigned lx;
 
-	n0 = (*((int*)&two54)>>30)^1;	/* high word index */
-	hx = *(n0+(int*)&x);		/* high word of x */
-	lx = *(1-n0+(int*)&x);		/* low  word of x */
+	n0 = (*((int32_t*)&two54)>>30)^1;	/* high word index */
+	hx = *(n0+(int32_t*)&x);		/* high word of x */
+	lx = *(1-n0+(int32_t*)&x);		/* low  word of x */
 
 	k=0;
 	if (hx < 0x00100000) {			/* x < 2**-1022  */
@@ -103,13 +103,13 @@ static double zero   =  0.0;
 		return -two54/zero;		/* log(+-0)=-inf */
 	    if (hx<0) return (x-x)/zero;	/* log(-#) = NaN */
 	    k -= 54; x *= two54; /* subnormal number, scale up x */
-	    hx = *(n0+(int*)&x);		/* high word of x */
+	    hx = *(n0+(int32_t*)&x);		/* high word of x */
 	} 
 	if (hx >= 0x7ff00000) return x+x;
 	k += (hx>>20)-1023;
 	hx &= 0x000fffff;
 	i = (hx+0x95f64)&0x100000;
-	*(n0+(int*)&x) = hx|(i^0x3ff00000);	/* normalize x or x/2 */
+	*(n0+(int32_t*)&x) = hx|(i^0x3ff00000);	/* normalize x or x/2 */
 	k += (i>>20);
 	f = x-1.0;
 	if((0x000fffff&(2+hx))<3) {	/* |f| < 2**-20 */

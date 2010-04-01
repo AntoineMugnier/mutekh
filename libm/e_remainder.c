@@ -36,16 +36,16 @@ static double zero = 0.0, one  = 1.0;
 	double x,p;
 #endif
 {
-	int hx,hp,n0,n1;
+	int32_t hx,hp,n0,n1;
 	unsigned sx,lx,lp;
 	double p_half;
 
-	n0 = ((*(int*)&one)>>29)^1;	/* index of high word */
+	n0 = ((*(int32_t*)&one)>>29)^1;	/* index of high word */
 	n1 = 1-n0;			/* index of low word */
-	hx = *( n0 + (int*)&x);		/* high word of x */
-	lx = *( n1 + (int*)&x);		/* low  word of x */
-	hp = *( n0 + (int*)&p);		/* high word of p */
-	lp = *( n1 + (int*)&p);		/* low  word of p */
+	hx = *( n0 + (int32_t*)&x);		/* high word of x */
+	lx = *( n1 + (int32_t*)&x);		/* low  word of x */
+	hp = *( n0 + (int32_t*)&p);		/* high word of p */
+	lp = *( n1 + (int32_t*)&p);		/* low  word of p */
 	sx = hx&0x80000000;
 	hp &= 0x7fffffff;
 	hx &= 0x7fffffff;
@@ -74,6 +74,6 @@ static double zero = 0.0, one  = 1.0;
 		if(x>=p_half) x -= p;
 	    }
 	}
-	*(n0+(int*)&x) ^= sx;
+	*(n0+(int32_t*)&x) ^= sx;
 	return x;
 }

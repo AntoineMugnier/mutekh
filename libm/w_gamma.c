@@ -20,7 +20,7 @@
 
 #include "fdlibm.h"
 
-extern int signgam;
+extern int32_t signgam;
 
 #ifdef __STDC__
 	double gamma(double x)

@@ -90,14 +90,14 @@ huge   = 1.0e300;
 #endif
 {
 	double w,s1,s2,z;
-	int n0,ix,hx,id;
+	int32_t n0,ix,hx,id;
 
-	n0 = ((*(int*)&one)>>29)^1;
-	hx = *(n0+(int*)&x);
+	n0 = ((*(int32_t*)&one)>>29)^1;
+	hx = *(n0+(int32_t*)&x);
 	ix = hx&0x7fffffff;
 	if(ix>=0x44100000) {	/* if |x| >= 2^66 */
 	    if(ix>0x7ff00000||
-		(ix==0x7ff00000&&(*(1-n0+(int*)&x)!=0)))
+		(ix==0x7ff00000&&(*(1-n0+(int32_t*)&x)!=0)))
 		return x+x;		/* NaN */
 	    if(hx>0) return  atanhi[3]+atanlo[3];
 	    else     return -atanhi[3]-atanlo[3];

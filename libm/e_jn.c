@@ -51,23 +51,23 @@ one   =  1.00000000000000000000e+00; /* 0x3FF00000, 0x00000000 */
 static double zero  =  0.00000000000000000000e+00;
 
 #ifdef __STDC__
-	double __ieee754_jn(int n, double x)
+	double __ieee754_jn(int32_t n, double x)
 #else
 	double __ieee754_jn(n,x)
-	int n; double x;
+	int32_t n; double x;
 #endif
 {
-	int i,n0,hx,ix,lx, sgn;
+	int32_t i,n0,hx,ix,lx, sgn;
 	double a, b, temp, di;
 	double z, w;
 
     /* J(-n,x) = (-1)^n * J(n, x), J(n, -x) = (-1)^n * J(n, x)
      * Thus, J(-n,x) = J(n,-x)
      */
-	n0 = 1^((*(int*)&one)>>29);
-	hx = *(n0+(int*)&x);
+	n0 = 1^((*(int32_t*)&one)>>29);
+	hx = *(n0+(int32_t*)&x);
 	ix = 0x7fffffff&hx;
-	lx = *(1-n0+(int*)&x);
+	lx = *(1-n0+(int32_t*)&x);
     /* if J(n,NaN) is NaN */
 	if((ix|((unsigned)(lx|-lx))>>31)>0x7ff00000) return x+x;
 	if(n<0){		
@@ -159,7 +159,7 @@ static double zero  =  0.00000000000000000000e+00;
 		 */
 	    /* determine k */
 		double t,v;
-		double q0,q1,h,tmp; int k,m;
+		double q0,q1,h,tmp; int32_t k,m;
 		w  = (n+n)/(double)x; h = 2.0/(double)x;
 		q0 = w;  z = w+h; q1 = w*z - 1.0; k=1;
 		while(q1<1.0e9) {
@@ -213,20 +213,20 @@ static double zero  =  0.00000000000000000000e+00;
 }
 
 #ifdef __STDC__
-	double __ieee754_yn(int n, double x) 
+	double __ieee754_yn(int32_t n, double x) 
 #else
 	double __ieee754_yn(n,x) 
-	int n; double x;
+	int32_t n; double x;
 #endif
 {
-	int i,n0,hx,ix,lx;
-	int sign;
+	int32_t i,n0,hx,ix,lx;
+	int32_t sign;
 	double a, b, temp;
 
-	n0 = 1^((*(int*)&one)>>29);
-	hx = *(n0+(int*)&x);
+	n0 = 1^((*(int32_t*)&one)>>29);
+	hx = *(n0+(int32_t*)&x);
 	ix = 0x7fffffff&hx;
-	lx = *(1-n0+(int*)&x);
+	lx = *(1-n0+(int32_t*)&x);
     /* if Y(n,NaN) is NaN */
 	if((ix|((unsigned)(lx|-lx))>>31)>0x7ff00000) return x+x;
 	if((ix|lx)==0) return -one/zero;
@@ -264,7 +264,7 @@ static double zero  =  0.00000000000000000000e+00;
 	    a = __ieee754_y0(x);
 	    b = __ieee754_y1(x);
 	/* quit if b is -inf */
-	    for(i=1;i<n&&(*(n0+(int*)&b)!=0xfff00000);i++){ 
+	    for(i=1;i<n&&(*(n0+(int32_t*)&b)!=0xfff00000);i++){ 
 		temp = b;
 		b = ((double)(i+i)/x)*b - a;
 		a = temp;

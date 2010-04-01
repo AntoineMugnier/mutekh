@@ -12,17 +12,17 @@
  */
 
 /* 
- * wrapper double lgamma_r(double x, int *signgamp)
+ * wrapper double lgamma_r(double x, int32_t *signgamp)
  */
 
 #include "fdlibm.h"
 
 
 #ifdef __STDC__
-	double lgamma_r(double x, int *signgamp) /* wrapper lgamma_r */
+	double lgamma_r(double x, int32_t *signgamp) /* wrapper lgamma_r */
 #else
 	double lgamma_r(x,signgamp)              /* wrapper lgamma_r */
-        double x; int *signgamp;
+        double x; int32_t *signgamp;
 #endif
 {
 #ifdef _IEEE_LIBM

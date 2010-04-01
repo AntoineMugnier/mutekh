@@ -32,27 +32,27 @@ one   =  1.00000000000000000000e+00, /* 0x3FF00000, 0x00000000 */
 two54 =  1.80143985094819840000e+16; /* 0x43500000, 0x00000000 */
 
 #ifdef __STDC__
-	double frexp(double x, int *eptr)
+	double frexp(double x, int32_t *eptr)
 #else
 	double frexp(x, eptr)
-	double x; int *eptr;
+	double x; int32_t *eptr;
 #endif
 {
-	int n0, hx, ix, lx;
-	n0 = 1^((*(int*)&one)>>29);
-	hx = *(n0+(int*)&x);
+	int32_t n0, hx, ix, lx;
+	n0 = 1^((*(int32_t*)&one)>>29);
+	hx = *(n0+(int32_t*)&x);
 	ix = 0x7fffffff&hx;
-	lx = *(1-n0+(int*)&x);
+	lx = *(1-n0+(int32_t*)&x);
 	*eptr = 0;
 	if(ix>=0x7ff00000||((ix|lx)==0)) return x;	/* 0,inf,nan */
 	if (ix<0x00100000) {		/* subnormal */
 	    x *= two54;
-	    hx = *(n0+(int*)&x);
+	    hx = *(n0+(int32_t*)&x);
 	    ix = hx&0x7fffffff;
 	    *eptr = -54;
 	}
 	*eptr += (ix>>20)-1022;
 	hx = (hx&0x800fffff)|0x3fe00000;
-	*(int*)&x = hx;
+	*(int32_t*)&x = hx;
 	return x;
 }

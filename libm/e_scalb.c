@@ -21,10 +21,10 @@
 
 #ifdef _SCALB_INT
 #ifdef __STDC__
-	double __ieee754_scalb(double x, int fn)
+	double __ieee754_scalb(double x, int32_t fn)
 #else
 	double __ieee754_scalb(x,fn)
-	double x; int fn;
+	double x; int32_t fn;
 #endif
 #else
 #ifdef __STDC__
@@ -46,6 +46,6 @@
 	if (rint(fn)!=fn) return (fn-fn)/(fn-fn);
 	if ( fn > 65000.0) return scalbn(x, 65000);
 	if (-fn > 65000.0) return scalbn(x,-65000);
-	return scalbn(x,(int)fn);
+	return scalbn(x,(int32_t)fn);
 #endif
 }

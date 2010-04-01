@@ -93,10 +93,10 @@ static double zero = 0.0;
 #endif
 {
 	double z, s,c,ss,cc,r,u,v;
-	int n0,hx,ix;
+	int32_t n0,hx,ix;
 
-	n0 = ((*(int*)&one)>>29)^1;
-	hx = *(n0+(int*)&x);
+	n0 = ((*(int32_t*)&one)>>29)^1;
+	hx = *(n0+(int32_t*)&x);
 	ix = hx&0x7fffffff;
 	if(ix>=0x7ff00000) return one/(x*x);
 	x = fabs(x);
@@ -163,12 +163,12 @@ v04  =  4.41110311332675467403e-10; /* 0x3DFE5018, 0x3BD6D9EF */
 #endif
 {
 	double z, s,c,ss,cc,u,v;
-	int n0,hx,ix,lx;
+	int32_t n0,hx,ix,lx;
 
-        n0 = 1^((*(int*)&one)>>29);
-        hx = *(n0+(int*)&x);
+        n0 = 1^((*(int32_t*)&one)>>29);
+        hx = *(n0+(int32_t*)&x);
         ix = 0x7fffffff&hx;
-        lx = *(1-n0+(int*)&x);
+        lx = *(1-n0+(int32_t*)&x);
     /* Y0(NaN) is NaN, y0(-inf) is Nan, y0(inf) is 0  */
 	if(ix>=0x7ff00000) return  one/(x+x*x); 
         if((ix|lx)==0) return -one/zero;
@@ -332,8 +332,8 @@ static double pS2[5] = {
 	double *p,*q;
 #endif
 	double z,r,s;
-	int ix;
-	ix = 0x7fffffff&(*( (((*(int*)&one)>>29)^1) + (int*)&x));
+	int32_t ix;
+	ix = 0x7fffffff&(*( (((*(int32_t*)&one)>>29)^1) + (int32_t*)&x));
 	if(ix>=0x40200000)     {p = pR8; q= pS8;}
 	else if(ix>=0x40122E8B){p = pR5; q= pS5;}
 	else if(ix>=0x4006DB6D){p = pR3; q= pS3;}
@@ -467,8 +467,8 @@ static double qS2[6] = {
 	double *p,*q;
 #endif
 	double s,r,z;
-	int ix;
-	ix = 0x7fffffff&(*( (((*(int*)&one)>>29)^1) + (int*)&x));
+	int32_t ix;
+	ix = 0x7fffffff&(*( (((*(int32_t*)&one)>>29)^1) + (int32_t*)&x));
 	if(ix>=0x40200000)     {p = qR8; q= qS8;}
 	else if(ix>=0x40122E8B){p = qR5; q= qS5;}
 	else if(ix>=0x4006DB6D){p = qR3; q= qS3;}

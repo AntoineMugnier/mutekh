@@ -44,20 +44,20 @@ G =  3.57142857142857150787e-01; /* 5/14      = 0x3FD6DB6D, 0xB6DB6DB7 */
 #endif
 {
 	double	one	= 1.0;
-	int	n0,hx;
+	int32_t	n0,hx;
 	double r,s,t=0.0,w;
 	unsigned *pt = (unsigned *) &t, sign;
 
 
-	n0 = ((*(int*)&one)>>29)^1;	/* index of high word */
-	hx = *( n0 + (int*)&x);		/* high word of x */
+	n0 = ((*(int32_t*)&one)>>29)^1;	/* index of high word */
+	hx = *( n0 + (int32_t*)&x);		/* high word of x */
 	sign=hx&0x80000000; 		/* sign= sign(x) */
 	hx  ^=sign;
 	if(hx>=0x7ff00000) return(x+x); /* cbrt(NaN,INF) is itself */
-	if((hx|*(1-n0+(int*)&x))==0) 
+	if((hx|*(1-n0+(int32_t*)&x))==0) 
 	    return(x);		/* cbrt(0) is itself */
 
-	*(n0+(int*)&x) = hx;	/* x <- |x| */
+	*(n0+(int32_t*)&x) = hx;	/* x <- |x| */
     /* rough cbrt to 5 bits */
 	if(hx<0x00100000) 		/* subnormal number */
 	  {pt[n0]=0x43500000; 		/* set t= 2**54 */

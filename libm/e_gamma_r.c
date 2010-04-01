@@ -22,10 +22,10 @@
 #include "fdlibm.h"
 
 #ifdef __STDC__
-	double __ieee754_gamma_r(double x, int *signgamp)
+	double __ieee754_gamma_r(double x, int32_t *signgamp)
 #else
 	double __ieee754_gamma_r(x,signgamp)
-	double x; int *signgamp;
+	double x; int32_t *signgamp;
 #endif
 {
 	return __ieee754_lgamma_r(x,signgamp);

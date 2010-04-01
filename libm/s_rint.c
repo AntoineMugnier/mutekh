@@ -41,13 +41,13 @@ TWO52[2]={
 	double x;
 #endif
 {
-	int i0,n0,j0,sx;
+	int32_t i0,n0,j0,sx;
 	unsigned i,i1;
 	double w,t;
-	n0 = (*((int *)&one)>>29)^1;
-	i0 =  *(n0+(int*)&x);
+	n0 = (*((int32_t *)&one)>>29)^1;
+	i0 =  *(n0+(int32_t*)&x);
 	sx = (i0>>31)&1;
-	i1 =  *(1-n0+(int*)&x);
+	i1 =  *(1-n0+(int32_t*)&x);
 	j0 = ((i0>>20)&0x7ff)-0x3ff;
 	if(j0<20) {
 	    if(j0<0) { 	
@@ -55,11 +55,11 @@ TWO52[2]={
 		i1 |= (i0&0x0fffff);
 		i0 &= 0xfffe0000;
 		i0 |= ((i1|-i1)>>12)&0x80000;
-		*(n0+(int*)&x)=i0;
+		*(n0+(int32_t*)&x)=i0;
 	        w = TWO52[sx]+x;
 	        t =  w-TWO52[sx];
-	        i0 = *(n0+(int*)&t);
-	        *(n0+(int*)&t) = (i0&0x7fffffff)|(sx<<31);
+	        i0 = *(n0+(int32_t*)&t);
+	        *(n0+(int32_t*)&t) = (i0&0x7fffffff)|(sx<<31);
 	        return t;
 	    } else {
 		i = (0x000fffff)>>j0;
@@ -79,8 +79,8 @@ TWO52[2]={
 	    i>>=1;
 	    if((i1&i)!=0) i1 = (i1&(~i))|((0x40000000)>>(j0-20));
 	}
-	*(n0+(int*)&x) = i0;
-	*(1-n0+(int*)&x) = i1;
+	*(n0+(int32_t*)&x) = i0;
+	*(1-n0+(int32_t*)&x) = i1;
 	w = TWO52[sx]+x;
 	return w-TWO52[sx];
 }

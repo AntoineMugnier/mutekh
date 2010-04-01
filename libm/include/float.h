@@ -54,7 +54,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #define DBL_DIG		__DBL_DIG__
 #define LDBL_DIG	__LDBL_DIG__
 
-/* Minimum int x such that FLT_RADIX**(x-1) is a normalized float, emin */
+/* Minimum int32_t x such that FLT_RADIX**(x-1) is a normalized float, emin */
 #undef FLT_MIN_EXP
 #undef DBL_MIN_EXP
 #undef LDBL_MIN_EXP
@@ -74,7 +74,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #define DBL_MIN_10_EXP	__DBL_MIN_10_EXP__
 #define LDBL_MIN_10_EXP	__LDBL_MIN_10_EXP__
 
-/* Maximum int x such that FLT_RADIX**(x-1) is a representable float, emax.  */
+/* Maximum int32_t x such that FLT_RADIX**(x-1) is a representable float, emax.  */
 #undef FLT_MAX_EXP
 #undef DBL_MAX_EXP
 #undef LDBL_MAX_EXP

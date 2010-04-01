@@ -48,18 +48,18 @@ static double zero = 0.0;
 #endif
 {
 	double t;
-	int hx,n0,ix;
+	int32_t hx,n0,ix;
 	unsigned lx;
-	n0 = ((*(int*)&one)>>29)^1;
-	hx = *(n0+(int*)&x);		/* high word */
-	lx = *(1-n0+(int*)&x);		/* low word */
+	n0 = ((*(int32_t*)&one)>>29)^1;
+	hx = *(n0+(int32_t*)&x);		/* high word */
+	lx = *(1-n0+(int32_t*)&x);		/* low word */
 	ix = hx&0x7fffffff;
 	if ((ix|((lx|(-lx))>>31))>0x3ff00000) /* |x|>1 */
 	    return (x-x)/(x-x);
 	if(ix==0x3ff00000) 
 	    return x/zero;
 	if(ix<0x3e300000&&(huge+x)>zero) return x;	/* x<2**-28 */
-	*(n0+(int*)&x) = ix;		/* x <- |x| */
+	*(n0+(int32_t*)&x) = ix;		/* x <- |x| */
 	if(ix<0x3fe00000) {		/* x < 0.5 */
 	    t = x+x;
 	    t = 0.5*log1p(t+t*x/(one-x));

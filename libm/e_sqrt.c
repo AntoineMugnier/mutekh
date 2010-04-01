@@ -96,16 +96,16 @@ static	double	one	= 1.0, tiny=1.0e-300;
 	double x;
 #endif
 {
-	int	n0;
+	int32_t	n0;
 
 	double z;
-	int 	sign = (int)0x80000000; 
+	int32_t 	sign = (int32_t)0x80000000; 
 	unsigned r,t1,s1,ix1,q1;
-	int ix0,s0,q,m,t,i;
+	int32_t ix0,s0,q,m,t,i;
 
-	n0 = ((*(int*)&one)>>29)^1;		/* index of high word */
-	ix0 = *(n0+(int*)&x);			/* high word of x */
-	ix1 = *((1-n0)+(int*)&x);		/* low word of x */
+	n0 = ((*(int32_t*)&one)>>29)^1;		/* index of high word */
+	ix0 = *(n0+(int32_t*)&x);			/* high word of x */
+	ix1 = *((1-n0)+(int32_t*)&x);		/* low word of x */
 
     /* take care of Inf and NaN */
 	if((ix0&0x7ff00000)==0x7ff00000) {			
@@ -190,8 +190,8 @@ static	double	one	= 1.0, tiny=1.0e-300;
 	ix1 =  q1>>1;
 	if ((q&1)==1) ix1 |= sign;
 	ix0 += (m <<20);
-	*(n0+(int*)&z) = ix0;
-	*((1-n0)+(int*)&z) = ix1;
+	*(n0+(int32_t*)&z) = ix0;
+	*((1-n0)+(int32_t*)&z) = ix1;
 	return z;
 }
 
@@ -244,7 +244,7 @@ A.  sqrt(x) by Newton Iteration
 	approximates sqrt(x) to almost 8-bit.
 
 	Value of T1:
-	static int T1[32]= {
+	static int32_t T1[32]= {
 	0,	1024,	3062,	5746,	9193,	13348,	18162,	23592,
 	29598,	36145,	43202,	50740,	58733,	67158,	75992,	85215,
 	83599,	71378,	60428,	50647,	41945,	34246,	27478,	21581,
@@ -339,7 +339,7 @@ B.  sqrt(x) by Reciproot Iteration
 	to almost 7.8-bit.
 
 	Value of T2:
-	static int T2[64]= {
+	static int32_t T2[64]= {
 	0x1500,	0x2ef8,	0x4d67,	0x6b02,	0x87be,	0xa395,	0xbe7a,	0xd866,
 	0xf14a,	0x1091b,0x11fcd,0x13552,0x14999,0x15c98,0x16e34,0x17e5f,
 	0x18d03,0x19a01,0x1a545,0x1ae8a,0x1b5c4,0x1bb01,0x1bfde,0x1c28d,

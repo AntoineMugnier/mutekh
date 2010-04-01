@@ -30,6 +30,6 @@ static double one = 1.0;
 	double x;
 #endif
 {
-	*((((*(int*)&one)>>29)^1)+(int*)&x) &= 0x7fffffff;
+	*((((*(int32_t*)&one)>>29)^1)+(int32_t*)&x) &= 0x7fffffff;
         return x;
 }

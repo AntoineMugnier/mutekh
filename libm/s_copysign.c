@@ -32,8 +32,8 @@ static double one = 1.0;
 	double x,y;
 #endif
 {
-	int     n0;
-	n0 = ((*(int*)&one)>>29)^1;	/* high word index */
+	int32_t     n0;
+	n0 = ((*(int32_t*)&one)>>29)^1;	/* high word index */
 	*(n0+(unsigned*)&x) =
 	(*(n0+(unsigned*)&x)&0x7fffffff)|(*(n0+(unsigned*)&y)&0x80000000);
         return x;

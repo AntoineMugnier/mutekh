@@ -35,11 +35,11 @@ static double one = 1.0,huge = 1.0e300;
 	double x;
 #endif
 {
-	int i0,i1,n0,j0;
+	int32_t i0,i1,n0,j0;
 	unsigned i,j;
-	n0 = (*((int *)&one)>>29)^1;
-	i0 =  *(n0+(int*)&x);
-	i1 =  *(1-n0+(int*)&x);
+	n0 = (*((int32_t *)&one)>>29)^1;
+	i0 =  *(n0+(int32_t*)&x);
+	i1 =  *(1-n0+(int32_t*)&x);
 	j0 = ((i0>>20)&0x7ff)-0x3ff;
 	if(j0<20) {
 	    if(j0<0) { 	/* raise inexact if x != 0 */
@@ -74,7 +74,7 @@ static double one = 1.0,huge = 1.0e300;
 		i1 &= (~i);
 	    }
 	}
-	*(n0+(int*)&x) = i0;
-	*(1-n0+(int*)&x) = i1;
+	*(n0+(int32_t*)&x) = i0;
+	*(1-n0+(int32_t*)&x) = i1;
 	return x;
 }

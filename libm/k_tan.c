@@ -71,20 +71,20 @@ T[] =  {
 };
 
 #ifdef __STDC__
-	double __kernel_tan(double x, double y, int iy)
+	double __kernel_tan(double x, double y, int32_t iy)
 #else
 	double __kernel_tan(x, y, iy)
-	double x,y; int iy;
+	double x,y; int32_t iy;
 #endif
 {
 	double z,r,v,w,s;
-	int n0,ix,hx;
-	n0 = ((*(int*)&one)>>29)^1;		/* high word index */
-	hx = *(n0+(int*)&x);	/* high word of x */
+	int32_t n0,ix,hx;
+	n0 = ((*(int32_t*)&one)>>29)^1;		/* high word index */
+	hx = *(n0+(int32_t*)&x);	/* high word of x */
 	ix = hx&0x7fffffff;	/* high word of |x| */
 	if(ix<0x3e300000)			/* x < 2**-28 */
-	    {if((int)x==0) {			/* generate inexact */
-		if(((ix|*(1-n0+(int*)&x))|(iy+1))==0) return one/fabs(x);
+	    {if((int32_t)x==0) {			/* generate inexact */
+		if(((ix|*(1-n0+(int32_t*)&x))|(iy+1))==0) return one/fabs(x);
 		else return (iy==1)? x: -one/x;
 	    }
 	    }
@@ -116,10 +116,10 @@ T[] =  {
      /*  compute -1.0/(x+r) accurately */
 	    double a,t;
 	    z  = w;
-	    *(1-n0+(int*)&z) = 0;
+	    *(1-n0+(int32_t*)&z) = 0;
 	    v  = r-(z - x); 	/* z+v = r+x */
 	    t = a  = -1.0/w;	/* a = -1.0/w */
-	    *(1-n0+(int*)&t) = 0;
+	    *(1-n0+(int32_t*)&t) = 0;
 	    s  = 1.0+t*z;
 	    return t+a*(s+t*v);
 	}

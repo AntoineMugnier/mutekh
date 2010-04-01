@@ -12,7 +12,7 @@
  */
 
 /*
- * wrapper jn(int n, double x), yn(int n, double x)
+ * wrapper jn(int32_t n, double x), yn(int32_t n, double x)
  * floating point Bessel's function of the 1st and 2nd kind
  * of order n
  *          
@@ -40,10 +40,10 @@
 #include "fdlibm.h"
 
 #ifdef __STDC__
-	double jn(int n, double x)	/* wrapper jn */
+	double jn(int32_t n, double x)	/* wrapper jn */
 #else
 	double jn(n,x)			/* wrapper jn */
-	double x; int n;
+	double x; int32_t n;
 #endif
 {
 #ifdef _IEEE_LIBM
@@ -60,10 +60,10 @@
 }
 
 #ifdef __STDC__
-	double yn(int n, double x)	/* wrapper yn */
+	double yn(int32_t n, double x)	/* wrapper yn */
 #else
 	double yn(n,x)			/* wrapper yn */
-	double x; int n;
+	double x; int32_t n;
 #endif
 {
 #ifdef _IEEE_LIBM

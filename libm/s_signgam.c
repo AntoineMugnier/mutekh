@@ -1,2 +1,2 @@
 #include "fdlibm.h"
-int signgam = 0;
+int32_t signgam = 0;

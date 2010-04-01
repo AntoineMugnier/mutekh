@@ -23,14 +23,14 @@
 
 #ifdef __STDC__
 #ifdef _SCALB_INT
-	double scalb(double x, int fn)		/* wrapper scalb */
+	double scalb(double x, int32_t fn)		/* wrapper scalb */
 #else
 	double scalb(double x, double fn)	/* wrapper scalb */
 #endif
 #else
 	double scalb(x,fn)			/* wrapper scalb */
 #ifdef _SCALB_INT
-	double x; int fn;
+	double x; int32_t fn;
 #else
 	double x,fn;
 #endif

@@ -48,7 +48,7 @@
 	if(!finite(z)) {
 	    if(finite(x)&&finite(y)) {
 	        if(isnan(z))
-	            return __kernel_standard(x,y,24); /* pow neg**non-int */
+	            return __kernel_standard(x,y,24); /* pow neg**non-int32_t */
 	        else 
 	            return __kernel_standard(x,y,21); /* pow overflow */
 	    }

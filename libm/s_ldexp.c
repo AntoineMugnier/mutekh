@@ -15,10 +15,10 @@
 #include <errno.h>
 
 #ifdef __STDC__
-	double ldexp(double value, int exp)
+	double ldexp(double value, int32_t exp)
 #else
 	double ldexp(value, exp)
-	double value; int exp;
+	double value; int32_t exp;
 #endif
 {
 	if(!finite(value)||value==0.0) return value;

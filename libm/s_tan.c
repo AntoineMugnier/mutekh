@@ -57,10 +57,10 @@ static double one=1.0;
 #endif
 {
 	double y[2],z=0.0;
-	int n, ix;
+	int32_t n, ix;
 
     /* High word of x. */
-	ix = *( (((*(int*)&one)>>29)^1) + (int*)&x);
+	ix = *( (((*(int32_t*)&one)>>29)^1) + (int32_t*)&x);
 
     /* |x| ~< pi/4 */
 	ix &= 0x7fffffff;

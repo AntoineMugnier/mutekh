@@ -74,12 +74,12 @@ qS4 =  7.70381505559019352791e-02; /* 0x3FB3B8C5, 0xB12E9282 */
 #endif
 {
 	double t,w,p,q,c,r,s;
-	int n0,hx,ix;
-	n0 = ((*(int*)&one)>>29)^1;
-	hx = *(n0+(int*)&x);
+	int32_t n0,hx,ix;
+	n0 = ((*(int32_t*)&one)>>29)^1;
+	hx = *(n0+(int32_t*)&x);
 	ix = hx&0x7fffffff;
 	if(ix>= 0x3ff00000) {		/* |x|>= 1 */
-	    if(((ix-0x3ff00000)|*(1-n0+(int*)&x))==0)
+	    if(((ix-0x3ff00000)|*(1-n0+(int32_t*)&x))==0)
 		    /* asin(1)=+-pi/2 with inexact */
 		return x*pio2_hi+x*pio2_lo;	
 	    return (x-x)/(x-x);		/* asin(|x|>1) is NaN */   
@@ -104,7 +104,7 @@ qS4 =  7.70381505559019352791e-02; /* 0x3FB3B8C5, 0xB12E9282 */
 	    t = pio2_hi-(2.0*(s+s*w)-pio2_lo);
 	} else {
 	    w  = s;
-	    *(1-n0+(int*)&w) = 0;
+	    *(1-n0+(int32_t*)&w) = 0;
 	    c  = (t-w*w)/(s+w);
 	    r  = p/q;
 	    p  = 2.0*s*r-(pio2_lo-2.0*c);

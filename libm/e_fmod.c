@@ -32,12 +32,12 @@ static double one = 1.0, Zero[] = {0.0, -0.0,};
 	double x,y ;
 #endif
 {
-	int n,n0,n1,hx,hy,hz,ix,iy,sx,i;
-	int *px = (int*)&x, *py = (int*)&y;
+	int32_t n,n0,n1,hx,hy,hz,ix,iy,sx,i;
+	int32_t *px = (int32_t*)&x, *py = (int32_t*)&y;
 	unsigned lx,ly,lz;
 
 
-	n0 = ((*(int*)&one)>>29)^1;	/* index of high word */
+	n0 = ((*(int32_t*)&one)>>29)^1;	/* index of high word */
 	n1 = 1-n0;			/* index of low word */
 
 	hx = *( n0 + px);		/* high word of x */

@@ -58,35 +58,35 @@ static double one = 1.0;
 	double x, y;
 #endif
 {
-	int n0;
+	int32_t n0;
 	double a=x,b=y,t1,t2,y1,y2,w;
-	int j,k,ha,hb;
+	int32_t j,k,ha,hb;
 
-	n0 = ((*(int*)&one)>>29)^1;	/* high word index */
-	ha = *(n0+(int*)&x)&0x7fffffff;	/* high word of  x */
-	hb = *(n0+(int*)&y)&0x7fffffff;	/* high word of  y */
+	n0 = ((*(int32_t*)&one)>>29)^1;	/* high word index */
+	ha = *(n0+(int32_t*)&x)&0x7fffffff;	/* high word of  x */
+	hb = *(n0+(int32_t*)&y)&0x7fffffff;	/* high word of  y */
 	if(hb > ha) {a=y;b=x;j=ha; ha=hb;hb=j;} else {a=x;b=y;}
-	*(n0+(int*)&a) = ha;	/* a <- |a| */
-	*(n0+(int*)&b) = hb;	/* b <- |b| */
+	*(n0+(int32_t*)&a) = ha;	/* a <- |a| */
+	*(n0+(int32_t*)&b) = hb;	/* b <- |b| */
 	if((ha-hb)>0x3c00000) {return a+b;} /* x/y > 2**60 */
 	k=0;
 	if(ha > 0x5f300000) {	/* a>2**500 */
 	   if(ha >= 0x7ff00000) {	/* Inf or NaN */
 	       w = a+b;			/* for sNaN */
-	       if(((ha&0xfffff)|*(1-n0+(int*)&a))==0) w = a;
-	       if(((hb^0x7ff00000)|*(1-n0+(int*)&b))==0) w = b;
+	       if(((ha&0xfffff)|*(1-n0+(int32_t*)&a))==0) w = a;
+	       if(((hb^0x7ff00000)|*(1-n0+(int32_t*)&b))==0) w = b;
 	       return w;
 	   }
 	   /* scale a and b by 2**-600 */
 	   ha -= 0x25800000; hb -= 0x25800000;	k += 600;
-	   *(n0+(int*)&a) = ha;
-	   *(n0+(int*)&b) = hb;
+	   *(n0+(int32_t*)&a) = ha;
+	   *(n0+(int32_t*)&b) = hb;
 	}
 	if(hb < 0x20b00000) {	/* b < 2**-500 */
 	    if(hb <= 0x000fffff) {	/* subnormal b or 0 */	
-		if((hb|(*(1-n0+(int*)&b)))==0) return a;
+		if((hb|(*(1-n0+(int32_t*)&b)))==0) return a;
 		t1=0;
-		*(n0+(int*)&t1) = 0x7fd00000;	/* t1=2^1022 */
+		*(n0+(int32_t*)&t1) = 0x7fd00000;	/* t1=2^1022 */
 		b *= t1;
 		a *= t1;
 		k -= 1022;
@@ -94,30 +94,30 @@ static double one = 1.0;
 	        ha += 0x25800000; 	/* a *= 2^600 */
 		hb += 0x25800000;	/* b *= 2^600 */
 		k -= 600;
-	   	*(n0+(int*)&a) = ha;
-	   	*(n0+(int*)&b) = hb;
+	   	*(n0+(int32_t*)&a) = ha;
+	   	*(n0+(int32_t*)&b) = hb;
 	    }
 	}
     /* medium size a and b */
 	w = a-b;
 	if (w>b) {
 	    t1 = 0;
-	    *(n0+(int*)&t1) = ha;
+	    *(n0+(int32_t*)&t1) = ha;
 	    t2 = a-t1;
 	    w  = sqrt(t1*t1-(b*(-b)-t2*(a+t1)));
 	} else {
 	    a  = a+a;
 	    y1 = 0;
-	    *(n0+(int*)&y1) = hb;
+	    *(n0+(int32_t*)&y1) = hb;
 	    y2 = b - y1;
 	    t1 = 0;
-	    *(n0+(int*)&t1) = ha+0x00100000;
+	    *(n0+(int32_t*)&t1) = ha+0x00100000;
 	    t2 = a - t1;
 	    w  = sqrt(t1*y1-(w*(-w)-(t1*y2+t2*b)));
 	}
 	if(k!=0) {
 	    t1 = 1.0;
-	    *(n0+(int*)&t1) += (k<<20);
+	    *(n0+(int32_t*)&t1) += (k<<20);
 	    return t1*w;
 	} else return w;
 }

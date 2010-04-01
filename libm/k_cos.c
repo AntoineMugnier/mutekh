@@ -69,11 +69,11 @@ C6  = -1.13596475577881948265e-11; /* 0xBDA8FAE9, 0xBE8838D4 */
 #endif
 {
 	double a,hz,z,r,qx;
-	int n0, ix;
-	n0 = ((*(int*)&one)>>29)^1;		/* high word index */
-	ix = (*(n0+(int*)&x))&0x7fffffff;	/* ix = |x|'s high word*/
+	int32_t n0, ix;
+	n0 = ((*(int32_t*)&one)>>29)^1;		/* high word index */
+	ix = (*(n0+(int32_t*)&x))&0x7fffffff;	/* ix = |x|'s high word*/
 	if(ix<0x3e400000) {			/* if x < 2**27 */
-	    if(((int)x)==0) return one;		/* generate inexact */
+	    if(((int32_t)x)==0) return one;		/* generate inexact */
 	}
 	z  = x*x;
 	r  = z*(C1+z*(C2+z*(C3+z*(C4+z*(C5+z*C6)))));
@@ -83,8 +83,8 @@ C6  = -1.13596475577881948265e-11; /* 0xBDA8FAE9, 0xBE8838D4 */
 	    if(ix > 0x3fe90000) {		/* x > 0.78125 */
 		qx = 0.28125;
 	    } else {
-	        *(n0+(int*)&qx) = ix-0x00200000;	/* x/4 */
-	        *(1-n0+(int*)&qx) = 0;
+	        *(n0+(int32_t*)&qx) = ix-0x00200000;	/* x/4 */
+	        *(1-n0+(int32_t*)&qx) = 0;
 	    }
 	    hz = 0.5*z-qx;
 	    a  = one-qx;

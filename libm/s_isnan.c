@@ -25,16 +25,16 @@ static double one = 1.0;
 #endif
 
 #ifdef __STDC__
-	int isnan(double x)
+	int32_t isnan(double x)
 #else
-	int isnan(x)
+	int32_t isnan(x)
 	double x;
 #endif
 {
-	int n0,hx,lx;
-	n0 = ((*(int*)&one)>>29)^1;
-	hx = (*(n0+(int*)&x)&0x7fffffff);
-	lx = *(1-n0+(int*)&x);
+	int32_t n0,hx,lx;
+	n0 = ((*(int32_t*)&one)>>29)^1;
+	hx = (*(n0+(int32_t*)&x)&0x7fffffff);
+	lx = *(1-n0+(int32_t*)&x);
 	hx |= (unsigned)(lx|(-lx))>>31;	
 	hx = 0x7ff00000 - hx;
 	return ((unsigned)(hx))>>31;

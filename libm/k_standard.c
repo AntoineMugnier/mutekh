@@ -74,20 +74,20 @@ static double zero = 0.0;	/* used as const */
 
 
 #ifdef __STDC__
-	double __kernel_standard(double x, double y, int type) 
+	double __kernel_standard(double x, double y, int32_t type) 
 #else
 	double __kernel_standard(x,y,type) 
-	double x,y; int type;
+	double x,y; int32_t type;
 #endif
 {
 	struct exception exc;
 #ifndef HUGE_VAL	/* this is the only routine that uses HUGE_VAL */ 
 #define HUGE_VAL inf
 	double one = 1.0, inf = 0.0;
-	int i0;
+	int32_t i0;
 
-	i0 = ((*(int*)&one)>>29)^1;
-	*(i0+(int*)&inf) = 0x7ff00000;	/* set inf to infinite */
+	i0 = ((*(int32_t*)&one)>>29)^1;
+	*(i0+(int32_t*)&inf) = 0x7ff00000;	/* set inf to infinite */
 #endif
 
 #ifdef _USE_WRITE

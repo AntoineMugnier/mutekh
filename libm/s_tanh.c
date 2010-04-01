@@ -51,10 +51,10 @@ static double one=1.0, two=2.0, tiny = 1.0e-300;
 #endif
 {
 	double t,z;
-	int jx,ix;
+	int32_t jx,ix;
 
     /* High word of |x|. */
-	jx = *( (((*(int*)&one)>>29)^1) + (int*)&x);
+	jx = *( (((*(int32_t*)&one)>>29)^1) + (int32_t*)&x);
 	ix = jx&0x7fffffff;
 
     /* x is INF or NaN */

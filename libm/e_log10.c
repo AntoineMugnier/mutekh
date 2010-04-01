@@ -67,10 +67,10 @@ static double zero   =  0.0;
 #endif
 {
 	double y,z;
-	int i,k,n0,hx;
+	int32_t i,k,n0,hx;
 	unsigned lx;
 
-	n0 = ((*(int*)&one)>>29)^1;	/* high word index */
+	n0 = ((*(int32_t*)&one)>>29)^1;	/* high word index */
 	hx = *(n0+(unsigned*)&x);	/* high word of x */
 	lx = *(1-n0+(unsigned*)&x);	/* low word of x */
 
@@ -80,14 +80,14 @@ static double zero   =  0.0;
                 return -two54/zero;             /* log(+-0)=-inf */
             if (hx<0) return (x-x)/zero;        /* log(-#) = NaN */
             k -= 54; x *= two54; /* subnormal number, scale up x */
-            hx = *(n0+(int*)&x);                /* high word of x */
+            hx = *(n0+(int32_t*)&x);                /* high word of x */
         }
 	if (hx >= 0x7ff00000) return x+x;
 	k += (hx>>20)-1023;
 	i  = ((unsigned)k&0x80000000)>>31;
         hx = (hx&0x000fffff)|((0x3ff-i)<<20);
         y  = (double)(k+i);
-        *(n0+(int*)&x) = hx;
+        *(n0+(int32_t*)&x) = hx;
 	z  = y*log10_2lo + ivln10*__ieee754_log(x);
 	return  z+y*log10_2hi;
 }

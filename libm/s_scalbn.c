@@ -12,7 +12,7 @@
  */
 
 /* 
- * scalbn (double x, int n)
+ * scalbn (double x, int32_t n)
  * scalbn(x,n) returns x* 2**n  computed by  exponent  
  * manipulation rather than by actually performing an 
  * exponentiation or a multiplication.
@@ -31,21 +31,21 @@ huge   = 1.0e+300,
 tiny   = 1.0e-300;
 
 #ifdef __STDC__
-	double scalbn (double x, int n)
+	double scalbn (double x, int32_t n)
 #else
 	double scalbn (x,n)
-	double x; int n;
+	double x; int32_t n;
 #endif
 {
-	int  k,n0,hx,lx;
-	n0 = ((*(int*)&two54)>>30)^1;		/* high word index */
-	hx = *(n0+(int*)&x);
-	lx = *(1-n0+(int*)&x);
+	int32_t  k,n0,hx,lx;
+	n0 = ((*(int32_t*)&two54)>>30)^1;		/* high word index */
+	hx = *(n0+(int32_t*)&x);
+	lx = *(1-n0+(int32_t*)&x);
         k = (hx&0x7ff00000)>>20;		/* extract exponent */
         if (k==0) {				/* 0 or subnormal x */
             if ((lx|(hx&0x7fffffff))==0) return x; /* +-0 */
 	    x *= two54; 
-	    hx = *(n0+(int*)&x);
+	    hx = *(n0+(int32_t*)&x);
 	    k = ((hx&0x7ff00000)>>20) - 54; 
             if (n< -50000) return tiny*x; 	/*underflow*/
 	    }
@@ -53,12 +53,12 @@ tiny   = 1.0e-300;
         k = k+n; 
         if (k >  0x7fe) return huge*copysign(huge,x); /* overflow  */
         if (k > 0) 				/* normal result */
-	    {*(n0+(int*)&x) = (hx&0x800fffff)|(k<<20); return x;}
+	    {*(n0+(int32_t*)&x) = (hx&0x800fffff)|(k<<20); return x;}
         if (k <= -54)
             if (n > 50000) 	/* in case integer overflow in n+k */
 		return huge*copysign(huge,x);	/*overflow*/
 	    else return tiny*copysign(tiny,x); 	/*underflow*/
         k += 54;				/* subnormal result */
-        *(n0+(int*)&x) = (hx&0x800fffff)|(k<<20);
+        *(n0+(int32_t*)&x) = (hx&0x800fffff)|(k<<20);
         return x*twom54;
 }

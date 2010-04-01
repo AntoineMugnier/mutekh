@@ -25,14 +25,14 @@ static double one = 1.0;
 #endif
 
 #ifdef __STDC__
-	int finite(double x)
+	int32_t finite(double x)
 #else
-	int finite(x)
+	int32_t finite(x)
 	double x;
 #endif
 {
-	int n0,hx; 
-	n0 = ((*(int*)&one)>>29)^1;
-	hx = *(n0+(int*)&x);
+	int32_t n0,hx; 
+	n0 = ((*(int32_t*)&one)>>29)^1;
+	hx = *(n0+(int32_t*)&x);
 	return  (unsigned)((hx&0x7fffffff)-0x7ff00000)>>31;
 }

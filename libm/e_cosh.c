@@ -48,11 +48,11 @@ static double one = 1.0, half=0.5, huge = 1.0e300;
 #endif
 {	
 	double t,w;
-	int ix;
+	int32_t ix;
 	unsigned lx;
 
     /* High word of |x|. */
-	ix = *( (((*(int*)&one)>>29)^1) + (int*)&x);
+	ix = *( (((*(int32_t*)&one)>>29)^1) + (int32_t*)&x);
 	ix &= 0x7fffffff;
 
     /* x is INF or NaN */

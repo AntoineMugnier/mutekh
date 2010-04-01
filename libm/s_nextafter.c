@@ -33,15 +33,15 @@ static double one=1.0;
 	double x,y;
 #endif
 {
-	int	n0,n1,hx,hy,ix,iy;
+	int32_t	n0,n1,hx,hy,ix,iy;
 	unsigned lx,ly;
 
-	n0 = ((*(int*)&one)>>29)^1;	/* index of high word */
+	n0 = ((*(int32_t*)&one)>>29)^1;	/* index of high word */
 	n1 = 1-n0;
-	hx = *( n0 + (int*)&x);		/* high word of x */
-	lx = *( n1 + (int*)&x);		/* low  word of x */
-	hy = *( n0 + (int*)&y);		/* high word of y */
-	ly = *( n1 + (int*)&y);		/* low  word of y */
+	hx = *( n0 + (int32_t*)&x);		/* high word of x */
+	lx = *( n1 + (int32_t*)&x);		/* low  word of x */
+	hy = *( n0 + (int32_t*)&y);		/* high word of y */
+	ly = *( n1 + (int32_t*)&y);		/* low  word of y */
 	ix = hx&0x7fffffff;		/* |x| */
 	iy = hy&0x7fffffff;		/* |y| */
 
@@ -50,8 +50,8 @@ static double one=1.0;
 	   return x+y;				
 	if(x==y) return x;		/* x=y, return x */
 	if((ix|lx)==0) {			/* x == 0 */
-	    *(n0+(int*)&x) = hy&0x80000000;	/* return +-minsubnormal */
-	    *(n1+(int*)&x) = 1;
+	    *(n0+(int32_t*)&x) = hy&0x80000000;	/* return +-minsubnormal */
+	    *(n1+(int32_t*)&x) = 1;
 	    y = x*x;
 	    if(y==x) return y; else return x;	/* raise underflow flag */
 	} 
@@ -77,10 +77,10 @@ static double one=1.0;
 	if(hy<0x00100000) {		/* underflow */
 	    y = x*x;
 	    if(y!=x) {		/* raise underflow flag */
-		*(n0+(int*)&y) = hx; *(n1+(int*)&y) = lx;
+		*(n0+(int32_t*)&y) = hx; *(n1+(int32_t*)&y) = lx;
 		return y;
 	    }
 	}
-	*(n0+(int*)&x) = hx; *(n1+(int*)&x) = lx;
+	*(n0+(int32_t*)&x) = hx; *(n1+(int32_t*)&x) = lx;
 	return x;
 }

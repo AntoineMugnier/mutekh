@@ -41,9 +41,9 @@ huge=  1.00000000000000000000e+300;
 #endif
 {	
 	double t,w;
-	int n0,hx,ix;
-	n0 = ((*(int*)&one)>>29)^1;
-	hx = *(n0+(int*)&x);
+	int32_t n0,hx,ix;
+	n0 = ((*(int32_t*)&one)>>29)^1;
+	hx = *(n0+(int32_t*)&x);
 	ix = hx&0x7fffffff;
 	if(ix>=0x7ff00000) return x+x;	/* x is inf or NaN */
 	if(ix< 0x3e300000) {	/* |x|<2**-28 */
