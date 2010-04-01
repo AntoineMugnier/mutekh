@@ -1,6 +1,7 @@
 MUTEK_SRC_DIR?=$(abspath $(shell pwd)/../..)
 CONFIGS = $(wildcard config_*)
 KERNELS:=
+BUILD_DIR?=.
 BUILD_DIRS:=
 
 all: kernels
@@ -8,7 +9,7 @@ all: kernels
 define declare_config
 
 KERNELS+=build_$(1)/kernel
-BUILD_DIRS+=build_$(1)
+BUILD_DIRS+=$(BUILD_DIR)/build_$(1)
 
 build_$(1):
 	mkdir $$@
@@ -17,7 +18,7 @@ build_$(1)/kernel: build_$(1) $(1) FORCE
 	$$(MAKE) -f $(MUTEK_SRC_DIR)/Makefile \
 		MUTEK_SRC_DIR=$(MUTEK_SRC_DIR) \
 		CONF=$$$${PWD}/$(1) \
-		BUILD_DIR=$$$${PWD}/$$<
+		BUILD_DIR=$(BUILD_DIR)/build_$(1)
 
 endef
 

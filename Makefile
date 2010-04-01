@@ -91,3 +91,6 @@ kernel-postlink:  FORCE
 
 doc: FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/doc.mk $@ MAKEFLAGS=$(MAKEFLAGS)
+
+buildtest:
+	$(MAKE) -C $(MUTEK_SRC_DIR)/examples/build_tests/ -f test.mk
