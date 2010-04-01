@@ -103,7 +103,7 @@ cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 static inline void
 cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 {
-  while (cpu_atomic_bit_testclr())
+  while (cpu_atomic_bit_testclr(a, n))
     ;
 }
 
@@ -136,7 +136,7 @@ cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
     }
   CPU_INTERRUPT_RESTORESTATE;  
 
-  return bool;
+  return res;
 }
 
 #endif
