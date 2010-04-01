@@ -40,7 +40,7 @@
 
 void
 mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
-			  size_t no, const mwmr_t* mwmr )
+			  size_t no, const struct mwmr_s* mwmr )
 {
 	uintptr_t c = (uintptr_t)coproc;
 	cpu_mem_write_32( c + sizeof(uint32_t) * MWMR_CONFIG_FIFO_WAY, endian_le32(way));
@@ -65,96 +65,6 @@ uint32_t mwmr_status( void *coproc, size_t no )
 	return cpu_mem_read_32( c + sizeof(uint32_t) * no );
 }
 
-#if defined(CONFIG_CPU_MIPS)
-
-// returns substracted value
-static inline uint32_t
-cpu_atomic_sub_minz(uint32_t *a, uint32_t val)
-{
-	uint32_t  result, cmp_to_store, before;
-
-  asm volatile(
-	       "1:     ll      %[before], %[a_in]		     \n"
-		   "       slt     %[cmp_to_store], %[before], %[val]             \n"
-		   "       movn    %[result], %[before], %[cmp_to_store]             \n"
-		   "       movz    %[result], %[val], %[cmp_to_store]             \n"
-		   // if *a <  val: %[cmp_to_store] = 1 then %[result] = *a
-		   // if *a >= val: %[cmp_to_store] = 0 then %[result] = val
-	       "       subu    %[cmp_to_store], %[before], %[result]             \n"
-	       "       sc      %[cmp_to_store], %[a_out]                \n"
-	       "       beqz    %[cmp_to_store], 1b                \n"
-	       : [cmp_to_store] "=&r" (cmp_to_store), [result] "=&r" (result)
-		   , [before] "=&r" (before), [a_out] "=m" (*a)
-	       : [a_in] "m" (*a), [val] "r" (val)
-	       );
-
-  return result;
-}
-
-// returns previous value
-static inline uint32_t
-cpu_atomic_add(uint32_t *a, uint32_t val)
-{
-  uint32_t  result, temp;
-
-  asm volatile(
-	       "1:     ll      %[result], %[a_in]		     \n"
-	       "       addu    %[temp], %[result], %[val]            \n"
-	       "       sc      %[temp], %[a_out]                \n"
-	       "       beqz    %[temp], 1b                \n"
-	       : [temp] "=&r" (temp), [result] "=&r" (result), [a_out] "=m" (*a)
-	       : [a_in] "m" (*a), [val] "r" (val)
-	       );
-
-  return result;
-}
-
-// returns previous value
-static inline uint32_t
-cpu_atomic_add_wrap(uint32_t *a, uint32_t val, uint32_t mod)
-{
-	uint32_t  before, before_plus_val, before_plus_val_minus_mod, compar;
-
-  asm volatile(
-	       "1:     ll      %[before], %[a_in]		     \n"
-	       "       addu    %[before_plus_val], %[before], %[val]            \n"
-	       "       subu    %[before_plus_val_minus_mod], %[before_plus_val], %[mod]            \n"
-		   "       slt     %[compar], %[before_plus_val], %[mod]            \n"
-		   "       movn    %[before_plus_val_minus_mod], %[before_plus_val], %[compar]            \n"
-	       "       sc      %[before_plus_val_minus_mod], %[a_out]                \n"
-	       "       beqz    %[before_plus_val_minus_mod], 1b                \n"
-	       : [before_plus_val_minus_mod] "=&r" (before_plus_val_minus_mod)
-		   , [before_plus_val] "=&r" (before_plus_val)
-		   , [before] "=&r" (before)
-		   , [compar] "=&r" (compar)
-		   , [a_out] "=m" (*a)
-	       : [a_in] "m" (*a), [val] "r" (val), [mod] "r" (mod)
-	       );
-
-  return before;
-}
-
-static inline void
-cpu_atomic_wait_and_swap(uint32_t *a, uint32_t old, uint32_t new)
-{
-	uint32_t  result;
-
-  asm volatile(
-	       ".set push   \n"
-	       ".set noreorder   \n"
-	       "1:     ll      %[result], %[a_in]		     \n"
-		   "       bne     %[result], %[old], 1b        \n"
-	       "       move    %[result], %[new]         \n"
-	       "       sc      %[result], %[a_out]                \n"
-	       ".set pop   \n"
-	       "       beqz    %[result], 1b                \n"
-	       : [result] "=&r" (result), [a_out] "=m" (*a)
-	       : [a_in] "m" (*a), [old] "r" (old), [new] "r" (new)
-	       );
-}
-
-# else // CONFIG_CPU_MIPS not defined
-
 // returns substracted value
 static inline uint32_t
 cpu_atomic_sub_minz(uint32_t *a, uint32_t _tosub)
@@ -171,7 +81,7 @@ cpu_atomic_sub_minz(uint32_t *a, uint32_t _tosub)
 
 		if ( tosub == 0 )
 			return 0;
-	} while ( ! atomic_compare_and_swap((atomic_int_t*)a, oldval, oldval-tosub) );
+	} while ( ! atomic_compare_and_swap((atomic_t*)a, oldval, oldval-tosub) );
 
 	return tosub;
 }
@@ -185,7 +95,7 @@ cpu_atomic_add(uint32_t *a, uint32_t val)
 	do {
 		cpu_dcache_invld(a);
 		oldval = *a;
-	} while ( ! atomic_compare_and_swap((atomic_int_t*)a, oldval, oldval+val) );
+	} while ( ! atomic_compare_and_swap((atomic_t*)a, oldval, oldval+val) );
 
 	return oldval;
 }
@@ -202,7 +112,7 @@ cpu_atomic_add_wrap(uint32_t *a, uint32_t val, uint32_t mod)
 		newval = (oldval+val);
 		if ( newval >= mod )
 			newval -= mod;
-	} while ( ! atomic_compare_and_swap((atomic_int_t*)a, oldval, newval ) );
+	} while ( ! atomic_compare_and_swap((atomic_t*)a, oldval, newval ) );
 
 	return oldval;
 }
@@ -211,13 +121,11 @@ static inline void
 cpu_atomic_wait_and_swap(uint32_t *a, uint32_t old, uint32_t new)
 {
 	do {
-	} while ( ! atomic_compare_and_swap((atomic_int_t*)a, old, new ) );
+	} while ( ! atomic_compare_and_swap((atomic_t*)a, old, new ) );
 }
 
-#endif
-
 size_t mwmr_read_unit(
-	soclib_mwmr_status_s *status,
+	struct mwmr_status_s *status,
 	const uint8_t *mwmr_buffer,
 	const size_t gdepth,
 	uint8_t *user_buffer,
@@ -268,7 +176,7 @@ size_t mwmr_read_unit(
 }
 
 size_t mwmr_write_unit(
-	soclib_mwmr_status_s *status,
+	struct mwmr_status_s *status,
 	uint8_t *mwmr_buffer,
 	const size_t gdepth,
 	const uint8_t *user_buffer,
@@ -315,7 +223,7 @@ size_t mwmr_write_unit(
 	return xfer_size;
 }
 
-void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
+void mwmr_read( struct mwmr_s *fifo, void *_ptr, size_t lensw )
 {
 #if MWMR_DEBUG
 	printk("mwmr_read(fifo = %p, status = %p, user_buf = %p, user_len = %d)\n",
@@ -349,7 +257,7 @@ void mwmr_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 	}
 }
 
-void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
+void mwmr_write( struct mwmr_s *fifo, const void *_ptr, size_t lensw )
 {
 #if MWMR_DEBUG
 	printk("mwmr_write(fifo = %p, status = %p, user_buf = %p, user_len = %d)\n",
@@ -383,7 +291,7 @@ void mwmr_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
 	}
 }
 
-size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
+size_t mwmr_try_read( struct mwmr_s *fifo, void *_ptr, size_t lensw )
 {
 #if MWMR_DEBUG
 	printk("mwmr_try_read(fifo = %p, status = %p, user_buf = %p, user_len = %d)\n",
@@ -398,7 +306,7 @@ size_t mwmr_try_read( mwmr_t *fifo, void *_ptr, size_t lensw )
 		ptr, lensw);
 }
 
-size_t mwmr_try_write( mwmr_t *fifo, const void *_ptr, size_t lensw )
+size_t mwmr_try_write( struct mwmr_s *fifo, const void *_ptr, size_t lensw )
 {
 #if MWMR_DEBUG
 	printk("mwmr_write_write(fifo = %p, status = %p, user_buf = %p, user_len = %d)\n",
