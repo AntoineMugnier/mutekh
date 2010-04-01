@@ -44,6 +44,7 @@ cpu_atomic_inc(atomic_int_t *a)
 		"  bne-    1b                    \n"
 		: [tmp] "=&b" (tmp), "=m" (*a)
 		: [atomic] "r" (a)
+        : "cr0"
 		);
 	
 	return tmp != 0;
@@ -64,6 +65,7 @@ cpu_atomic_dec(atomic_int_t *a)
 		"  bne-    1b                    \n"
 		: [tmp] "=&b" (tmp), "=m" (*a)
 		: [atomic] "r" (a)
+        : "cr0"
 		);
 	
 	return tmp != 0;
@@ -88,6 +90,7 @@ cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
         "2:                                   \n"
         : [tmp] "=&r" (tmp), [result] "=&r"(result), "=m" (*a)
         : [mask] "r"(mask), [atomic] "r" (a)
+        : "cr0"
         );
     
 	return result != 0;
@@ -111,6 +114,7 @@ cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
         "  bne-    1b                         \n"
         : [tmp] "=&r" (tmp), [result] "=&r"(result), "=m" (*a)
         : [mask] "r"(mask), [atomic] "r" (a)
+        : "cr0"
         );
 }
 
@@ -133,6 +137,7 @@ cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
         "2:                                   \n"
         : [tmp] "=&r" (tmp), [result] "=&r"(result), "=m" (*a)
         : [mask] "r"(mask), [atomic] "r" (a)
+        : "cr0"
         );
     
 	return result != 0;
@@ -156,6 +161,7 @@ cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
         "  bne-    1b                         \n"
         : [tmp] "=&r" (tmp), [result] "=&r"(result), "=m" (*a)
         : [mask] "r"(mask), [atomic] "r" (a)
+        : "cr0"
         );
 }
 
@@ -175,6 +181,7 @@ cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
         "   bne-    1b                      \n"
         : [tmp] "=&r" (tmp), "=m" (*a)
         : [mask] "r"(mask), [atomic] "r" (a)
+        : "cr0"
         );
 }
 
@@ -194,6 +201,7 @@ cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
         "   bne-    1b                      \n"
         : [tmp] "=&r" (tmp), "=m" (*a)
         : [mask] "r"(mask), [atomic] "r" (a)
+        : "cr0"
         );
 }
 
