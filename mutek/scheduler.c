@@ -276,7 +276,6 @@ CONTEXT_PREEMPT(sched_context_preempt)
   sched_queue_nolock_pushback(&sched->root, cur);
   sched_queue_unlock(&sched->root);
 
-  printk("preempt %p\n", &next->context);
   return &next->context;
 }
 #endif

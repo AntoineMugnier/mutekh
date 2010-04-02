@@ -26,23 +26,18 @@
 #endif
 
 asm(
-        ".section        .boot,\"ax\",@progbits                                            \n"
 
-        FUNC_START(cpu_boot)
+FUNC_START(.boot, cpu_boot)
 
         ".set push                                                                         \n"
         ".set noreorder                                                                    \n"
 
         /* set up IT disable and kernel mode */
-#if __mips >= 32
+#if CONFIG_CPU_MIPS_VERSION >= 32
         /* let status.erl for eret */
-# ifdef CONFIG_COMPILE_SOFTFLOAT
         "   ori     $8,     $0,     0x0000fc04                                             \n"
-# else
-        "   li      $8,     0x2000fc04                                                     \n"
-# endif
         "   mtc0    $8,     $12                                                            \n"
-# if __mips > 32
+# if CONFIG_CPU_MIPS_VERSION > 32
         "   ehb                                                                            \n"
 # endif
 #else
@@ -51,7 +46,7 @@ asm(
 #endif
 
         /* get CPU id and adjust stack */
-#if __mips >= 32
+#if CONFIG_CPU_MIPS_VERSION >= 32
         "   mfc0    $9,     $15,    1                                                      \n"
 #else
         "   mfc0    $9,     $15                                                            \n"
@@ -128,9 +123,9 @@ asm(
 
         /* jumpto arch_init function */
         "   la      $8,     arch_init                                                      \n"
-#if __mips >= 32
+#if CONFIG_CPU_MIPS_VERSION >= 32
         "   mtc0    $8,     $30                                                            \n"
-# if __mips > 32
+# if CONFIG_CPU_MIPS_VERSION > 32
         "   ei                                                                             \n"
 # endif
         "   eret                                                                           \n"

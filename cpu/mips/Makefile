@@ -1,8 +1,5 @@
 
-objs = 											\
-interrupts.o										\
-cpu_init.o										\
-cpu_context.o
+objs = interrupt.o context_switch.o cpu_init.o cpu_context.o
 
 ifeq ($(CONFIG_CPU_RESET_HANDLER),defined)
 objs += boot.o

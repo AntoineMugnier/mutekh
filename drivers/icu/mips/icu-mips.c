@@ -41,7 +41,7 @@ void icu_mips_update(struct device_s *dev)
 	 * Prevent the Mips-specific code to be compiled on heterogeneous
 	 * builds.
 	 */
-#if defined(__mips)
+#if defined(CONFIG_CPU_MIPS_VERSION)
 	struct icu_mips_private_s	*pv = dev->drv_pv;
 
 //	printk("ICU mips mask %x for cpu %d\n", pv->mask, cpu_id());

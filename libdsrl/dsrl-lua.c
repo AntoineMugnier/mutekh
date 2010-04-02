@@ -326,7 +326,7 @@ static CONTEXT_ENTRY(dsrl_run_task)
     /* setup tls */
     tls_init_tp(task->tp);
 
-#if defined(CONFIG_CPU_MIPS) && __mips >= 32
+#if defined(CONFIG_CPU_MIPS) && CONFIG_CPU_MIPS_VERSION >= 32
     /* allow user to access count and count_cc registers */
     reg_t hwrena = cpu_mips_mfc0(7, 0);
     hwrena |= 0x0000000c; // count and count_cc are respectively #2 and #3

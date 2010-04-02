@@ -93,6 +93,7 @@
 
 # include <hexo/iospace.h>
 # include <hexo/interrupt.h>
+# include <hexo/ordering.h>
 
 static inline __attribute__ ((always_inline)) void
 soclib_mem_check_declare_lock(void *lock, uint32_t islock)

@@ -35,8 +35,8 @@
 .macro SPRREL_ACCESS op, name, rd, rt, spr
         mfspr  \rt,      \spr
         \op    \rd,      \name (\rt)
-    .if \rt != 0
-        .fail 0, "rt register can not be r0 here"
+    .if \rt == 0
+        .fail 0	// rt can not be zero here
     .endif
 .endm
 
@@ -45,6 +45,9 @@
         lis   \rt, \name@h
         ori   \rt, \rt, \name@l
         \op   \rd, 0(\rt)
+    .if \rt == 0
+        .fail 0	// rt can not be zero here
+    .endif
 .endm
 
 #ifdef CONFIG_ARCH_SMP

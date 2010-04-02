@@ -55,18 +55,13 @@ struct context_s
   /** context local storage address */
   void			*tls;
 
-  /** stack memory start address */
-  void			*stack_start;
-  /** stack memory end address */
-  void			*stack_end;
-
-  /** current stack pointer value */
-  reg_t			*stack_ptr;
-
 # ifdef CONFIG_HEXO_MMU
   struct mmu_context_s	*mmu;
 # endif
 };
+
+extern CONTEXT_LOCAL uintptr_t context_stack_start;
+extern CONTEXT_LOCAL uintptr_t context_stack_end;
 
 /** @showcontent context entry point function prototype */
 #define CONTEXT_ENTRY(n) void (n) (void *param)
@@ -165,7 +160,7 @@ error_t context_init(struct context_s *context,
 
 /** free ressource associated with a context and return a pointer to
     context stack buffer  */
-reg_t * context_destroy(struct context_s *context);
+void * context_destroy(struct context_s *context);
 
 /** switch to a given context */
 static inline void context_switch_to(struct context_s *context)

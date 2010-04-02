@@ -169,6 +169,8 @@ void cpu_user_exception_sethandler_ctx(struct context_s *context,
 
 /************************************************************ syscalls */
 
+#ifdef CONFIG_HEXO_USERMODE
+
 # include <hexo/context.h>
 
 /** CPU syscall handler function template
@@ -191,6 +193,8 @@ void cpu_syscall_sethandler(cpu_syscall_handler_t *hndl);
 /** @this sets syscall interrupt handler for a given context */
 void cpu_syscall_sethandler_ctx(struct context_s *context,
 				cpu_syscall_handler_t *hndl);
+
+#endif
 
 /************************************************************/
 
