@@ -81,7 +81,7 @@
 /** Critical sections checks */
 # define SOCLIB_MC_CHECK_IRQS_LOCK 16
 
-# if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
+# if defined(CONFIG_COMPILE_FRAMEPTR) && (CONFIG_COMPILE_OPTIMIZE == 0)
 #  define SOCLIB_MC_CHECK_SPFP 3
 #  define SOCLIB_MC_CHECK_ALL 31
 # else

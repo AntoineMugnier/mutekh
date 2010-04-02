@@ -31,6 +31,11 @@
 	ori	\reg,	\reg,	\value@l  
 .endm
 
+.macro LA32 reg symbol
+	lis	\reg,		\symbol@ha
+	la	\reg,		\symbol@l(\reg)
+.endm
+
 /* access a variable using a SPR as base */
 .macro SPRREL_ACCESS op, name, rd, rt, spr
         mfspr  \rt,      \spr

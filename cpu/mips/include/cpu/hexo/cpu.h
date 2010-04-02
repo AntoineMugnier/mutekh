@@ -37,6 +37,7 @@
 #define CPU_MIPS_CAUSE          13
 #define CPU_MIPS_EPC            14
 #define CPU_MIPS_BADADDR        8
+#define CPU_MIPS_EEPC           30
 
 # define CPU_MIPS_STATUS_EXL    0x2
 # define CPU_MIPS_STATUS_FPU    0x20000000

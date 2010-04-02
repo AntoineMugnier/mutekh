@@ -84,9 +84,17 @@ static lock_t       cpu_init_lock;    /* cpu intialization lock */
 lock_t              __atomic_arch_lock;
 #endif
 
+#ifdef CONFIG_ARCH_DEVICE_TREE
+extern __ldscript_symbol_t dt_blob_start;
+#endif
+
 /* architecture specific init function */
 void arch_init(void *device_tree, void *bootloader_pointer_table)
 {
+#ifdef CONFIG_ARCH_DEVICE_TREE
+    device_tree = &dt_blob_start;
+#endif
+
 #ifdef CONFIG_ARCH_SMP
     if (cpu_isbootstrap())    /* FIXME */
         /* First CPU */
