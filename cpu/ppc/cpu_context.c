@@ -34,13 +34,15 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   struct context_regs_s *regs = CONTEXT_LOCAL_TLS_ADDR(context->tls, ppc_context_regs);
 
   regs->save_mask = CPU_PPC_CONTEXT_RESTORE_CALLER; /* for r3 */
-  regs->gpr[1] = (uintptr_t)context->stack_end - CONFIG_HEXO_STACK_ALIGN;
+  regs->gpr[1] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
+               - CONFIG_HEXO_STACK_ALIGN;
   regs->gpr[3] = (uintptr_t)param;
   regs->cr = 0;
 
   /* msr, interrupts are disabled */
 #if defined (CONFIG_HEXO_FPU) && !defined(CONFIG_HEXO_LAZY_SWITCH)
   regs->msr = PPC_MSR_FPU_ENABLED;
+  reeg->fpscr = 0;
 #else
   regs->msr = 0;
 #endif

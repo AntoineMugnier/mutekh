@@ -40,7 +40,8 @@
 /* access a global variable */
 .macro GLOBAL_ACCESS op, name, rd, rt
         lis   \rt, \name@ha
-        \op   \rd, \name@l(\rt)
+        ori   \rt, \rt, \name@l
+        \op   \rd, 0(\rt)
 .endm
 
 #ifdef CONFIG_ARCH_SMP

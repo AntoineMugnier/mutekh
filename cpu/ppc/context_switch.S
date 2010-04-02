@@ -41,6 +41,8 @@
     * r13 is the small data area pointer
     * VE, OE, UE, ZE, XE, NI, and RN (rounding mode) bits of the FPSCR are
       callee saved the rest of the FPSCR is caller saved.
+
+    Have a look to interrupt.S for interrupt context switch and preemption.
 */
 
 
@@ -64,10 +66,20 @@ FUNC_START(.text, cpu_context_switch)
         li      0,              CPU_PPC_CONTEXT_RESTORE_CALLEE
         stw     0,              CPU_PPC_CONTEXT_SAVE_MASK (2)
 
+        // save condition register
+        mfcr    0
+        stw     0,              CPU_PPC_CONTEXT_CR(2)
+
+        // save link register and pc
+        mflr    0
+        stw     0,              CPU_PPC_CONTEXT_LR(2)
+        // resume directly at return address
+        stw     0,              CPU_PPC_CONTEXT_PC(2)
+
 #ifdef CONFIG_HEXO_FPU
         // test fpu enabled
         andi.   5,      8,      PPC_MSR_FPU_ENABLED
-        beq     0,              1f
+        beq     1f
 
 # ifdef CONFIG_HEXO_LAZY_SWITCH
         // keep track of last context using fpu on this processor
@@ -81,15 +93,6 @@ FUNC_START(.text, cpu_context_switch)
         stfd    0,              CPU_PPC_CONTEXT_FPSCR(2)
 1:
 #endif
-
-        // save condition register
-        mfcr    0
-        stw     0,              CPU_PPC_CONTEXT_CR(2)
-
-        // save link register and pc (equal when not returning from exception)
-        mflr    0
-        stw     0,              CPU_PPC_CONTEXT_LR(2)
-        stw     0,              CPU_PPC_CONTEXT_PC(2)
 
         b       cpu_context_jumpto
 
@@ -107,8 +110,7 @@ FUNC_START(.text, cpu_context_jumpto)
         stw     0,              SOCLIB_MC_MAGIC (0) 
 
         // switch to associated memchecker context
-        addi    0,      3,      HEXO_CONTEXT_S_STACK_PTR * 4
-        stw     0,              SOCLIB_MC_CTX_SET (0)
+        stw     3,              SOCLIB_MC_CTX_SET (0)
 #endif
 
         // restore tls pointer from context struct
@@ -175,8 +177,10 @@ FUNC_START(.text, cpu_context_jumpto)
 1:
 #endif
 
+#if 0   // callee should almost always get restored (except on context start)
         andi.   5,      4,      CPU_PPC_CONTEXT_RESTORE_CALLEE
         beq     1f
+#endif
 
         // restore callee saved gp registers r14 to r31
         lmw     14,             CPU_PPC_CONTEXT_GPR(14)(2)
@@ -249,29 +253,28 @@ FUNC_START(.text, cpu_context_stack_use)
         LI32    0,              SOCLIB_MC_MAGIC_VAL
         stw     0,              SOCLIB_MC_MAGIC (0) 
 
-        addi    0,      3,      HEXO_CONTEXT_S_STACK_PTR * 4
-        stw     0,              SOCLIB_MC_CTX_SET (0)
+        stw     3,              SOCLIB_MC_CTX_SET (0)
 #endif
 
-        // context local storage
+        // get context local storage
         lwz     2,              HEXO_CONTEXT_S_TLS * 4(3)
         // context registers save array
         addi    2,      2,      ppc_context_regs@l
 
-        // get context stack
+        // use context stack
         lwz     1,              CPU_PPC_CONTEXT_GPR(1)(2)
         // preserve ppc abi redzone
         addi    1,      1,      -224
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         // leave memchecker command mode
-        addi    0,      0,      0
+        li      0,              0
         stw     0,              SOCLIB_MC_MAGIC (0)
 #endif
 
 #ifndef CONFIG_RELEASE
         // ensure we do not use context local storage from here
-        li      0,      0
+        li      0,              0
         mtspr   0x114,          0
 #endif
 

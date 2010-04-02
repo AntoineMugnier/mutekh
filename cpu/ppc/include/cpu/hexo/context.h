@@ -28,9 +28,8 @@
 /** @multiple @this specify context save mask values */
 # define CPU_PPC_CONTEXT_RESTORE_CALLEE   1
 # define CPU_PPC_CONTEXT_RESTORE_CALLER   2
-# define CPU_PPC_CONTEXT_RESTORE_FPU      4
 
-# define CPU_PPC_CONTEXT_RESTORE_NONE     0
+# define CPU_PPC_CONTEXT_RESTORE_NONE     (~3)
 
 /** @multiple @this describes @ref context_regs_s field offset */
 #define CPU_PPC_CONTEXT_SAVE_MASK       0
@@ -68,13 +67,6 @@ struct context_regs_s
   reg_t xer;
 # endif
 };
-
-#  if defined(CONFIG_HEXO_USERMODE)
-
-/** kernel stack pointer value on user entry */
-extern CONTEXT_LOCAL uintptr_t context_kstack;
-
-#  endif  /* CONFIG_HEXO_USERMODE */
 
 # endif  /* __MUTEK_ASM__ */
 

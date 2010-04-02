@@ -41,6 +41,8 @@
   Doing this allow us to perform as few register saving operations as
   possible because registers are already partially saved for exception
   handling purpose if we decide to switch context.
+
+  Have a look to context_switch.S for more.
 */
 
 
@@ -55,16 +57,19 @@
   hardware floating point operations.
 */
 
-.macro PPC_EXCEPT_SAVE_BASE
+.macro PPC_EXCEPT_SAVE srr_pc srr_msr
+        // preserve r2
+        mtspr   PPC_SPRG(2),    2
+
         // get context local storage
         mfspr   2,              PPC_SPRG(4)
         // get context registers save array
         addi    2,      2,      ppc_context_regs@l
 
-        // save stack pointer
+        // save stack pointer and r0
         stw     1,              CPU_PPC_CONTEXT_GPR( 1)(2)
-
         stw     0,              CPU_PPC_CONTEXT_GPR( 0)(2)
+
         // save condition register
         mfcr    0
         stw     0,              CPU_PPC_CONTEXT_CR(2)
@@ -76,14 +81,6 @@
         xori    0,      0,      PPC_MSR_FPU_ENABLED
         mtmsr   0
 #endif
-
-.endm
-
-.macro PPC_EXCEPT_SAVE srr_pc srr_msr
-        // preserve r2
-        mtspr   PPC_SPRG(2),    2
-
-        PPC_EXCEPT_SAVE_BASE
 
         // preserve ppc abi redzone
         addi    1,      1,      -224
@@ -138,18 +135,6 @@
 */
 
 .macro PPC_EXCEPT_FAULT type
-        // find right handler
-#ifdef CONFIG_HEXO_USERMODE
-        // from user mode ?
-        andi    10,     8,      PPC_MSR_USERMODE
-        beq     1f
-        CONTEXT_LOCAL   lwz     cpu_user_exception_handler, 9, 10
-        and.    9,      9,      9
-        bne     2f
-1:
-#endif
-        CPU_LOCAL       lwz     cpu_exception_handler, 9, 10
-2:
 
         // prepare handler call
         li      3,      \type           // arg0 type
@@ -157,6 +142,27 @@
         mfdear  5                       // arg2 data error
         addi    6,      2,      CPU_PPC_CONTEXT_GPR(0) // arg3 reg table
         addi    7,      1,      224     // arg4 sp, skip redzone
+
+        // find right handler
+#ifdef CONFIG_HEXO_USERMODE
+        // from user mode ?
+        andi.   10,     8,      PPC_MSR_USERMODE
+        beq     1f
+
+        // use kernel context stack when from user mode
+        CONTEXT_LOCAL   lwz     context_stack_end, 1, 10
+        addi    1,      1,      -CONFIG_HEXO_STACK_ALIGN
+
+        // use context local fault handler for user when available
+        CONTEXT_LOCAL   lwz     cpu_user_exception_handler, 9, 10
+        and.    9,      9,      9
+        bne     2f
+1:
+#endif
+        // use cpu local fault handler
+        CPU_LOCAL       lwz     cpu_exception_handler, 9, 10
+2:
+
         mtctr   9
         bctrl
 .endm
@@ -168,6 +174,16 @@
 */
 
 .macro PPC_EXCEPT_SYSCALL
+#ifdef CONFIG_HEXO_USERMODE
+        // from user mode ?
+        andi.   10,     8,      PPC_MSR_USERMODE
+        beq     1f
+
+        // use kernel context stack
+        CONTEXT_LOCAL   lwz     context_stack_end, 1, 10
+        addi    1,      1,      -CONFIG_HEXO_STACK_ALIGN
+1:
+#endif
         CONTEXT_LOCAL   lwz     cpu_syscall_handler, 9, 10
         li      3,      0               // arg0 number
         addi    4,      2,      CPU_PPC_CONTEXT_GPR(0) // arg1 reg table
@@ -177,10 +193,20 @@
 
 
 /*
-  The PPC_EXCEPT_SYSCALL macro contains code to call syscall handlers
+  The PPC_EXCEPT_IRQ macro contains code to call syscall handlers
 */
 
 .macro PPC_EXCEPT_IRQ number
+#ifdef CONFIG_HEXO_USERMODE
+        // from user mode ?
+        andi.   10,     8,      PPC_MSR_USERMODE
+        beq     1f
+
+        // use kernel context stack
+        CONTEXT_LOCAL   lwz     context_stack_end, 1, 10
+        addi    1,      1,      -CONFIG_HEXO_STACK_ALIGN
+1:
+#endif
 #ifndef CONFIG_RELEASE
         // ensure we do not use context local storage in irq handler
         li      0,              0
@@ -227,15 +253,15 @@
         // lets deals with all not yet saved registers
 
 # ifdef CONFIG_HEXO_FPU
-        lwz     8,              CPU_PPC_CONTEXT_MSR(2)
         // test fpu enabled for previous context
+        lwz     8,              CPU_PPC_CONTEXT_MSR(2)
         andi.   5,      8,      PPC_MSR_FPU_ENABLED
         beq     1f
 
-# ifdef CONFIG_HEXO_LAZY_SWITCH
+#  ifdef CONFIG_HEXO_LAZY_SWITCH
         // keep track of last context using fpu on this processor
         CPU_LOCAL       stw     ppc_lazy_last, 2, 10
-# endif
+#  endif
 
         // save fpu registers 0 to 31
         SMD_FPU 2,      0,      31
@@ -245,7 +271,7 @@
 1:
 # endif
 
-        // save callee saved gp registers r14 to r31
+        // save callee saved registers r14 to r31
         stmw    14,             CPU_PPC_CONTEXT_GPR(14)(2)
 
         // set save mask
@@ -266,17 +292,6 @@
   and return to interrupted code.
 */
 
-.macro  PPC_EXCEPT_RESTORE_BASE
-        // restore condition register
-        lwz     0,              CPU_PPC_CONTEXT_CR(2)
-        mtcr    0
-
-        // restore 0 - 2
-        LMW_GP  2,      0,      2
-
-        rfi
-.endm
-
 .macro  PPC_EXCEPT_RESTORE
 
         // restore link register
@@ -290,26 +305,39 @@
         // restore caller saved gp registers 0 - 13
         LMW_GP  2,      3,      13
 
-        PPC_EXCEPT_RESTORE_BASE
+        // restore condition register
+        lwz     0,              CPU_PPC_CONTEXT_CR(2)
+        mtcr    0
+
+        // restore 0 - 2
+        LMW_GP  2,      0,      2
+
+        rfi
 .endm
 
 .section .excep,"ax",@progbits
 
-/* critical interrupt (critical, async) */
+
+
+        /* critical interrupt (critical, async) */
 FUNC_START_ORG(ppc_critical_entry, 0x100)
         PPC_EXCEPT_SAVE mfsrr2 mfsrr3
         PPC_EXCEPT_FAULT 0
 1:      b 1b
 FUNC_END(ppc_critical_entry)
 
-/* machine check (critical, async, imprecise) */
+
+
+        /* machine check (critical, async, imprecise) */
 FUNC_START_ORG(ppc_machine_entry, 0x200)
         PPC_EXCEPT_SAVE mfsrr2 mfsrr3
         PPC_EXCEPT_FAULT 0
 1:      b 1b
 FUNC_END(ppc_machine_entry)
 
-/* data storage */
+
+
+        /* data storage */
 FUNC_START_ORG(ppc_data_storage_entry, 0x300)
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
@@ -317,7 +345,9 @@ FUNC_START_ORG(ppc_data_storage_entry, 0x300)
         b ppc_preempt_and_restore
 FUNC_END(ppc_data_storage_entry)
 
-/* instr storage */
+
+
+        /* instr storage */
 FUNC_START_ORG(ppc_instr_storage_entry, 0x400)
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
@@ -325,15 +355,23 @@ FUNC_START_ORG(ppc_instr_storage_entry, 0x400)
         b ppc_preempt_and_restore
 FUNC_END(ppc_instr_storage_entry)
 
-/* external (async) */
+
+
+        /* external (async) */
 FUNC_START_ORG(ppc_external_entry, 0x500)
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
+#ifdef CONFIG_HEXO_IRQ
         PPC_EXCEPT_IRQ 0
+#else
+        PPC_EXCEPT_FAULT CPU_EXCEPTION_IRQ        
+#endif
         b ppc_preempt_and_restore
 FUNC_END(ppc_external_entry)
 
-/* alignment */
+
+
+        /* alignment */
 FUNC_START_ORG(ppc_align_entry, 0x600)
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
@@ -341,7 +379,9 @@ FUNC_START_ORG(ppc_align_entry, 0x600)
         b ppc_preempt_and_restore
 FUNC_END(ppc_align_entry)
 
-/* program */
+
+
+        /* program */
 FUNC_START_ORG(ppc_program_entry, 0x700)
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
 #if defined(CONFIG_HEXO_LAZY_SWITCH) && defined(CONFIG_HEXO_FPU)
@@ -351,17 +391,17 @@ FUNC_START_ORG(ppc_program_entry, 0x700)
         // enable fpu and retry
         ori     8,      8,      PPC_MSR_FPU_ENABLED
         mtsrr1  8
-        b       2f
+        b       ppc_restore_only
 1:
 #endif
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_ILLEGAL_INS
         b ppc_preempt_and_restore
-2:
-        b ppc_restore_only
 FUNC_END(ppc_program_entry)
 
-/* fpu unusable */
+
+
+        /* fpu unusable */
 FUNC_START_ORG(ppc_fpu_entry, 0x800)
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
@@ -369,12 +409,19 @@ FUNC_START_ORG(ppc_fpu_entry, 0x800)
         b ppc_preempt_and_restore
 FUNC_END(ppc_fpu_entry)
 
-/* syscall */
+
+
+        /* syscall */
 FUNC_START_ORG(ppc_syscall_entry, 0xc00)
-        PPC_EXCEPT_SAVE_BASE
-        SMW_GP  2,      3,      9       // syscall args in regtable, max 6 args
+        PPC_EXCEPT_SAVE mfsrr0 mfsrr1
+        PPC_EXCEPT_PREEMPT_CLEAR
+#ifdef CONFIG_HEXO_USERMODE
         PPC_EXCEPT_SYSCALL
-        PPC_EXCEPT_RESTORE_BASE
+	// FIXME do not need to restore everything for syscall
+#else
+        PPC_EXCEPT_FAULT CPU_EXCEPTION_ILLEGAL_INS
+#endif
+        b ppc_preempt_and_restore
 FUNC_END(ppc_syscall_entry)
 
 FUNC_START(.excep, ppc_preempt_and_restore)
@@ -403,4 +450,8 @@ FUNC_END(ppc_preempt_and_restore)
 
 /* debug (critical, (a)sync) */
 .org 0x2000
+
+// Local Variables:
+// indent-tabs-mode: nil;
+// vim: filetype=cpp:expandtab
 
