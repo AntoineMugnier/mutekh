@@ -93,6 +93,7 @@
 #define ASM_STR(x) ASM_STR_(x)
 
 #include <hexo/iospace.h>
+#include <hexo/ordering.h>
 #include <hexo/interrupt.h>
 
 static inline __attribute__ ((always_inline)) void
