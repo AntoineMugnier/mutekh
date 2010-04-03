@@ -73,6 +73,9 @@ asm(
     SUB_##pc_offset                                                    \
     /* store r0 and exc pc in tmp buffer */                            \
     "stmia  sp, {r0, r1, lr}      \n\t"                                \
+    /* Take current msr, save it */                                    \
+    "mrs    r0, cpsr              \n\t"                                \
+    "str    r0, [sp, #20]         \n\t"                                \
     /* Take old msr, save it */                                        \
     "mrs    r0, spsr              \n\t"                                \
     "str    r0, [sp, #12]         \n\t"                                \
@@ -81,13 +84,20 @@ asm(
     /* disable irqs, switch to supervisor */                           \
     "bic    r0, r0, #0xff         \n\t"                                \
     "orr    r0, r0, #0xd3         \n\t"                                \
-    "msr    cpsr, r0              \n\t"
+    "msr    cpsr, r0              \n\t"                                \
+    /* save super lr, in case we were in super */                      \
+    "str    lr, [r1, #16]         \n\t"
 
 #define restore_exception()                                            \
     /*                                                                 \
      * Here we're back with tmp buf in r1,                             \
      * all registers but r0/r1 should already be restored.             \
      */                                                                \
+    /* restore lr, just if we were from super */                       \
+    "ldr    lr, [r1, #16]         \n\t"                                \
+    /* restore stupid mode */                                          \
+    "ldr    r0, [r1, #20]         \n\t"                                \
+    "msr    cpsr, r0              \n\t"                                \
     /* restore spsr */                                                 \
     "ldr    r0, [r1, #12]         \n\t"                                \
     "msr    spsr, r0              \n\t"                                \
