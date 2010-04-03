@@ -32,6 +32,7 @@
 #endif
 
 #ifdef CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER
+CPU_LOCAL
 static uint32_t arm_irq_stack[128/4];
 #endif
 
@@ -48,6 +49,7 @@ struct arm_exception_context_s {
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
 
+CPU_LOCAL
 struct arm_exception_context_s arm_exception_context[CONFIG_CPU_MAXCOUNT][3];
 
 #define arm_setup_exception_stack(context, psr_mode)				   \
@@ -79,12 +81,12 @@ static void __arm_exception_setup()
 
 	struct arm_exception_context_s *cpu_context = arm_exception_context[cpu_id()];
 #ifdef CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER
-	arm_setup_exception_stack(arm_irq_stack+sizeof(arm_irq_stack)/4-4, 0x12);
+	arm_setup_exception_stack(CPU_LOCAL_ADDR(arm_irq_stack[0])+sizeof(arm_irq_stack)/4-4, 0x12);
 #else
-	arm_setup_exception_stack(&cpu_context[0], 0x12); // IRQ
+	arm_setup_exception_stack(CPU_LOCAL_ADDR(cpu_context[0]), 0x12); // IRQ
 #endif
-	arm_setup_exception_stack(&cpu_context[1], 0x17); // Abort
-	arm_setup_exception_stack(&cpu_context[2], 0x1b); // Undef
+	arm_setup_exception_stack(CPU_LOCAL_ADDR(cpu_context[1]), 0x17); // Abort
+	arm_setup_exception_stack(CPU_LOCAL_ADDR(cpu_context[2]), 0x1b); // Undef
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
 	soclib_mem_check_enable(SOCLIB_MC_CHECK_SPFP);
