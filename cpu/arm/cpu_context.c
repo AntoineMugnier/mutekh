@@ -36,6 +36,10 @@ void __arm_context_entry(void);
 
 asm(
     ".type __arm_context_entry, %function \n"
+#if defined(__thumb__)
+	".code	16                  \n"
+	".thumb_func            	\n"
+#endif
     "__arm_context_entry:		\n"
     "	pop {r0, pc}			\n"
     ".size __arm_context_entry, .-__arm_context_entry \n"

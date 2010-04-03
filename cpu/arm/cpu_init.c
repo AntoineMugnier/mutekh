@@ -38,8 +38,10 @@ static uint32_t arm_irq_stack[128/4];
 struct arm_exception_context_s {
 	uint32_t r0;
 	uint32_t r1;
-	uint32_t pc;
-	uint32_t cpsr;
+	uint32_t pc;   // the pc in the mode we were from
+	uint32_t spsr; // the mode we were from
+	uint32_t lr;   // the lr of the super mode
+	uint32_t cpsr; // the except mode the cpu jumped in
 };
 
 #ifdef CONFIG_ARCH_SMP

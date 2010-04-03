@@ -35,3 +35,9 @@ void arm_cpu_context_switch(struct context_s *old, struct context_s *new)
 {
     cpu_context_switch(old, new);
 }
+
+__attribute__((noreturn))
+void arm_cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto)
+{
+    cpu_context_set(stack, stack_size, jumpto);
+}

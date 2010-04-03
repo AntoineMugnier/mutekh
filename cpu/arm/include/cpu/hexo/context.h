@@ -196,6 +196,11 @@ cpu_context_jumpto(struct context_s *new)
 #endif
 }
 
+#if defined(__thumb__)
+__attribute__((noreturn))
+void arm_cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto);
+#endif
+
 static inline void
 __attribute__((always_inline, noreturn))
 cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto)
@@ -204,6 +209,10 @@ cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto)
 	reg_t t0 = SOCLIB_MC_MAGIC_VAL;
 	reg_t t1 = CONFIG_SOCLIB_MEMCHECK_ADDRESS;
 #endif
+
+#if defined(__thumb__)
+    arm_cpu_context_set(stack, stack_size, jumpto);
+#else
 
 	asm volatile (
 #ifdef CONFIG_SOCLIB_MEMCHECK
@@ -246,6 +255,8 @@ cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto)
 #endif
 		);
 	while (1);
+
+#endif
 }
 
 # if defined(CONFIG_HEXO_USERMODE)
