@@ -46,7 +46,7 @@ typedef union
 typedef struct
 {
   tls_dtv_t *dtvp;
-  void      *private;
+  void      *priv;
 } tls_tcb_t;
 
 /* for mips, unlike the specs say, tp points after the tcb */

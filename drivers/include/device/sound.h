@@ -38,12 +38,12 @@
 struct device_s;
 struct driver_s;
 
-#define DEVSOUND_CALLBACK(n)	void (n)(void *private)
+#define DEVSOUND_CALLBACK(n)	void (n)(void *priv)
 typedef DEVSOUND_CALLBACK(devsound_callback_t);
 
 /** Sound device class read() function tempate. */
 #define DEVSOUND_READ(n)	ssize_t  (n) (struct device_s *dev, uint8_t *data, size_t count, \
-					      devsound_callback_t *cback, void *private)
+					      devsound_callback_t *cback, void *priv)
 
 /** Sound device class read() methode shortcut */
 
@@ -65,7 +65,7 @@ typedef DEVSOUND_READ(devsound_read_t);
 
 /** Sound device class write() function tempate. */
 #define DEVSOUND_WRITE(n)	ssize_t  (n) (struct device_s *dev, const uint8_t *data, size_t count, \
-					      devsound_callback_t *cback, void *private)
+					      devsound_callback_t *cback, void *priv)
 
 /** 
     Sound device class write() function type.  Write bytes data to the

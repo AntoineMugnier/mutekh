@@ -172,7 +172,7 @@ enum devgpio_event_e
 #define DEVGPIO_IRQ(x) void (x)(struct device_s *dev,				   \
 								devgpio_id_t gpio,					   \
 								enum devgpio_event_e event,			   \
-								void *private)
+								void *priv)
 
 /**
    GPIO device IRQ callback function declaration
@@ -180,7 +180,7 @@ enum devgpio_event_e
    @param dev gpio device
    @param gpio the gpio triggerring the IRQ
    @param event event that triggerred the IRQ
-   @param private private callback data
+   @param priv private callback data
  */
 typedef DEVGPIO_IRQ(devgpio_irq_t);
 

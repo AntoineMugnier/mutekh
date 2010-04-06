@@ -74,7 +74,7 @@ error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *wal
 
 			if ( level < max_level ) {
 				bool_t wanted = walker->on_node_entry(
-					walker->private,
+					walker->priv,
 					state,
 					full_path+1);
 				if ( !wanted )
@@ -93,7 +93,7 @@ error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *wal
 
 			if ( level < max_level )
 				walker->on_node_prop(
-					walker->private,
+					walker->priv,
 					state,
 					&state->string_table[endian_be32(prop->strid)],
 					prop->data,
@@ -105,7 +105,7 @@ error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *wal
 //			printk("end level: %d, max_level: %d, %s\n", level, max_level, full_path);
 
 			if ( level < max_level - 1 )
-				walker->on_node_leave(walker->private);
+				walker->on_node_leave(walker->priv);
 			
 			char *end = strrchr(full_path, '/');
 			assert(end);
@@ -178,7 +178,7 @@ error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker)
 	struct fdt_mem_reserve_map_s *reserve_map =
 		(void*)((uintptr_t)blob + endian_be32(header->off_mem_rsvmap));
 	while ( reserve_map->addr || reserve_map->size ) {
-		walker->on_mem_reserve(walker->private,
+		walker->on_mem_reserve(walker->priv,
 							   endian_be64(reserve_map->addr),
 							   endian_be64(reserve_map->size));
 		reserve_map++;

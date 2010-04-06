@@ -48,7 +48,7 @@ DEVTIMER_SETCALLBACK(pitc_6079a_setcallback)
 
 	if (callback) {
 		pv->cb = callback;
-		pv->pv = private;
+		pv->pv = priv;
 
         cpu_mem_mask_set_32(registers + REG_MR, PITC_PITIEN);
     } else {

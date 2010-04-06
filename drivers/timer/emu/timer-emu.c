@@ -45,7 +45,7 @@ DEVTIMER_SETCALLBACK(timer_emu_setcallback)
   if (callback)
     {
       pv->cb[id] = callback;
-      pv->pv[id] = private;
+      pv->pv[id] = priv;
     }
 
   return 0;

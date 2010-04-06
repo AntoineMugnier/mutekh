@@ -49,5 +49,5 @@ void ipi_process_rq()
     struct ipi_endpoint_s *ep = CPU_LOCAL_ADDR(ipi_endpoint);
 
     while ((rq = ipi_queue_pop(&ep->ipi_fifo)))
-        rq->func(rq->private);
+        rq->func(rq->priv);
 }

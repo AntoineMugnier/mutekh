@@ -41,14 +41,14 @@ struct driver_s;
 
 
 /** timer device class callback function template */
-#define DEVTIMER_CALLBACK(n)	void (n) (void *private)
+#define DEVTIMER_CALLBACK(n)	void (n) (void *priv)
 /** timer device class callback function type */
 typedef DEVTIMER_CALLBACK(devtimer_callback_t);
 
 
 
 /** TIMER device class setcallback() function template */
-#define DEVTIMER_SETCALLBACK(n)	error_t (n) (struct device_s *dev, uint_fast8_t id, devtimer_callback_t *callback, void *private)
+#define DEVTIMER_SETCALLBACK(n)	error_t (n) (struct device_s *dev, uint_fast8_t id, devtimer_callback_t *callback, void *priv)
 /** TIMER device class setcallback() function type. Change current
     timer/counter callback. a NULL pointer may be used to disable
     timer callback.
@@ -56,7 +56,7 @@ typedef DEVTIMER_CALLBACK(devtimer_callback_t);
     * @param dev pointer to device descriptor
     * @param id timer id
     * @param callback new timer callback
-    * @param private private data passed to callback function
+    * @param priv private data passed to callback function
     */
 typedef DEVTIMER_SETCALLBACK(devtimer_setcallback_t);
 /** TIMER device class setcallback() function shortcut */

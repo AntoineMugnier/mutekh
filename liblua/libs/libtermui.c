@@ -44,7 +44,7 @@ match_len(const char *a, const char *b)
 
 TERMUI_GETLINE_FCN_COMPLETE(lua_complete)
 {
-  lua_State *luast = private;
+  lua_State *luast = priv;
   const char *start = termui_getline_line_start(bhv);
   const char *cursor = termui_getline_line_cursor(bhv);
   const char *path = cursor;

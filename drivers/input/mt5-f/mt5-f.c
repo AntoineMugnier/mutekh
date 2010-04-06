@@ -64,14 +64,14 @@ DEVINPUT_SETCALLBACK(dev_mt5f_setcallback)
 	struct mt5f_context_s *pv = dev->drv_pv;
 
 	pv->callback = callback;
-	pv->private = private;
+	pv->priv = priv;
 
 	return 0;
 }
 
 static DEVGPIO_IRQ(mt5f_state_changed)
 {
-	struct device_s *me = private;
+	struct device_s *me = priv;
 	struct mt5f_context_s *pv = me->drv_pv;
 	
 	uint_fast8_t new_state = mt5f_get_state(me);
@@ -84,7 +84,7 @@ static DEVGPIO_IRQ(mt5f_state_changed)
 	while ( diff ) {
 		uint_fast8_t id = __builtin_ctz(diff);
 
-		pv->callback(id, !!(new_state & (1<<id)), pv->private);
+		pv->callback(id, !!(new_state & (1<<id)), pv->priv);
 
 		diff &= ~(1<<id);
 	}
@@ -150,7 +150,7 @@ DEV_INIT(dev_mt5f_init)
 	pv->d = param->d;
 	pv->common = param->common;
 	pv->callback = NULL;
-	pv->private = NULL;
+	pv->priv = NULL;
 
 	device_obj_refnew(pv->gpio_dev);
 

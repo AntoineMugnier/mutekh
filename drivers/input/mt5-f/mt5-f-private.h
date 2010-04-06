@@ -25,7 +25,7 @@
 struct mt5f_context_s
 {
 	devinput_callback_t *callback;
-	void *private;
+	void *priv;
 	struct device_s *gpio_dev;
 	devgpio_id_t a;
 	devgpio_id_t b;

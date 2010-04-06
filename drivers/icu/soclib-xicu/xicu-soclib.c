@@ -37,7 +37,7 @@ DEVTIMER_SETCALLBACK(xicu_timer_setcallback)
 	struct timer_handler_s *handler = &pv->timer_handlers[id];
 
 	handler->hndl = callback;
-	handler->data = private;
+	handler->data = priv;
 	return 0;
 }
 

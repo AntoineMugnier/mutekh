@@ -100,9 +100,9 @@ static void parse_reg_size( struct device_s *dev, const void *data, size_t datal
 
 static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 {
-	struct initdev_state_s *priv = private;
-	struct enum_pv_fdt_s *enum_pv = priv->dev->enum_pv;
-	const struct driver_param_binder_s *binder = priv->ident->fdtname.binder;
+	struct initdev_state_s *pv = priv;
+	struct enum_pv_fdt_s *enum_pv = pv->dev->enum_pv;
+	const struct driver_param_binder_s *binder = pv->ident->fdtname.binder;
 	
 	{
 		const void *value = NULL;
@@ -110,41 +110,41 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 
 		if ( fdt_reader_has_prop(state, "icudev", &value, &len ) ) {
 			printk("Warning: icudev/irq couple got deprecated in favor of irq = <&{/dev} irq_no>\n");
-			parse_icudev( priv->enum_dev, priv->dev, value, len );
+			parse_icudev( pv->enum_dev, pv->dev, value, len );
 		} else
-			priv->dev->icudev = NULL;
+			pv->dev->icudev = NULL;
 
 		if ( fdt_reader_has_prop(state, "irq", &value, &len ) ) {
 			if ( len > 4 ) {
 				// New mode = <phandle irq>
 				uint32_t phandle = endian_be32(*(uint32_t*)value);
-				priv->dev->irq = endian_be32(*((uint32_t*)value + 1));
+				pv->dev->irq = endian_be32(*((uint32_t*)value + 1));
 				fdt_parse_sized( 1, value, sizeof(phandle), &phandle );
-				priv->dev->icudev = enum_fdt_get_phandle(priv->enum_dev, phandle);
+				pv->dev->icudev = enum_fdt_get_phandle(pv->enum_dev, phandle);
 			} else {
 				printk("Warning: icudev/irq couple got deprecated in favor of irq = <&{/dev} irq_no>\n");
-				priv->dev->irq = endian_be32(*(uint32_t*)value);
+				pv->dev->irq = endian_be32(*(uint32_t*)value);
 			}
 		} else
-			priv->dev->irq = -1;
+			pv->dev->irq = -1;
 
 		if ( fdt_reader_has_prop(state, "reg", &value, &len ) ) {
 			if ( !strcmp(enum_pv->device_type, "memory") )
-				parse_reg_size( priv->dev, value, len );
+				parse_reg_size( pv->dev, value, len );
 			else
-				parse_reg( priv->dev, value, len );
+				parse_reg( pv->dev, value, len );
 		}
 	}
 
 	/*
 	  If the icu controller is not initialized yet, try to do it now
 	 */
-	if ( priv->dev->icudev && !priv->dev->icudev->drv ) {
+	if ( pv->dev->icudev && !pv->dev->icudev->drv ) {
 		error_t err = 
-			enum_fdt_register_one(priv->enum_dev, priv->dev->icudev);
+			enum_fdt_register_one(pv->enum_dev, pv->dev->icudev);
 		if (err) {
 			printk("lzkjeflzkjf %d\n", err);
-			priv->err = err;
+			pv->err = err;
 			return 0;
 		}
 	}
@@ -161,37 +161,37 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 				dprintk("%P\n", value, len);
 				switch (binder->datatype) {
 				case PARAM_DATATYPE_BOOL:
-					*(bool_t*)(priv->param + binder->struct_offset) = 1;
+					*(bool_t*)(pv->param + binder->struct_offset) = 1;
 					break;
 				case PARAM_DATATYPE_INT:
 					fdt_parse_sized( 1, value,
-								 binder->datalen, priv->param + binder->struct_offset );
+								 binder->datalen, pv->param + binder->struct_offset );
 					break;
 				case PARAM_DATATYPE_DEVICE_PTR:
 				{
-					struct device_s *ref = enum_fdt_lookup(priv->enum_dev, value);
+					struct device_s *ref = enum_fdt_lookup(pv->enum_dev, value);
 					if ( ! ref->drv )
-						enum_fdt_register_one(priv->enum_dev, ref);
-					*(struct device_s **)(priv->param + binder->struct_offset) =
+						enum_fdt_register_one(pv->enum_dev, ref);
+					*(struct device_s **)(pv->param + binder->struct_offset) =
 						ref;
 					break;
 				}
 				case PARAM_DATATYPE_ADDR:
 					fdt_parse_sized( enum_pv->addr_cells, value,
-								 binder->datalen, priv->param + binder->struct_offset );
+								 binder->datalen, pv->param + binder->struct_offset );
 					break;
 				}
 			} else {
 				dprintk("no value\n");
 				switch (binder->datatype) {
 				case PARAM_DATATYPE_BOOL:
-					*(bool_t*)(priv->param + binder->struct_offset) = 0;
+					*(bool_t*)(pv->param + binder->struct_offset) = 0;
 					break;
 				default:
 #if 1
 					printk("  Warning: parameter %s not found for device %s, trying without\n", binder->param_name, enum_pv->device_path);
 #else
-					priv->err = ENOENT;
+					pv->err = ENOENT;
 					return 0;
 #endif
 				}
@@ -239,7 +239,7 @@ error_t enum_fdt_use_drv(
 	};
 
 	struct fdt_walker_s walker = {
-		.private = &priv,
+		.priv = &priv,
 		.on_node_entry = initdev_node_entry,
 		.on_node_leave = NULL,
 		.on_node_prop = NULL,

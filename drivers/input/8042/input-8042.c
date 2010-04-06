@@ -98,14 +98,14 @@ DEVINPUT_SETCALLBACK(input_8042_setcallback)
       for (i = 0; i < INPUT_8042_KEYCOUNT; i++)
 	{
 	  pv->events[i].callback = callback;
-	  pv->events[i].private = private;
+	  pv->events[i].priv = priv;
 	  pv->events[i].type = type;
 	}
     }
   else
     {
       pv->events[id].callback = callback;
-      pv->events[id].private = private;
+      pv->events[id].priv = priv;
       pv->events[id].type = type;
     }
 
@@ -120,9 +120,9 @@ input_8042_keyevent(struct input_8042_context_s *pv, devinput_ctrlid_t keyid, bo
   if (pv->events[keyid].callback != NULL)
     {
       if (down && (pv->events[keyid].type & DEVINPUT_EVENT_BUTTON_DOWN))
-	pv->events[keyid].callback(keyid, down, pv->events[keyid].private);
+	pv->events[keyid].callback(keyid, down, pv->events[keyid].priv);
       if (!down && (pv->events[keyid].type & DEVINPUT_EVENT_BUTTON_UP))
-	pv->events[keyid].callback(keyid, down, pv->events[keyid].private);
+	pv->events[keyid].callback(keyid, down, pv->events[keyid].priv);
     }
 
   /* FIXME handle led status change here depending on key pressed */

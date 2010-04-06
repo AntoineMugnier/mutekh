@@ -37,7 +37,7 @@
 #include "local.h"
 #include <device/device.h>
 
-#define IPI_MSG_FUNC(n) void (n)(void *private)
+#define IPI_MSG_FUNC(n) void (n)(void *priv)
 
 typedef IPI_MSG_FUNC(ipi_msg_func_t);
 
@@ -47,7 +47,7 @@ CONTAINER_TYPE(ipi_queue, DLIST,
 struct ipi_request_s
 {
   ipi_msg_func_t *func;
-  void *private;
+  void *priv;
   ipi_queue_entry_t queue_entry;
 }, queue_entry);
 

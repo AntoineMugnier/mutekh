@@ -166,7 +166,7 @@ static void do_one_job(struct capsule_ctxt_s *job)
     dprintk("%s on %d job %p done\n", __FUNCTION__, cpu_id(), job);
 
     if ( job->private_dtor != NULL )
-        job->private_dtor(job->private);
+        job->private_dtor(job->priv);
 
     job->private_dtor = NULL;
 

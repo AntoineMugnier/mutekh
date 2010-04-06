@@ -46,7 +46,7 @@ struct input_8042_context_s
   struct 
   {
     devinput_callback_t		*callback;
-    void			*private;
+    void			*priv;
     uint_fast8_t		type;
   }				events[INPUT_8042_KEYCOUNT];
 };

@@ -296,7 +296,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
     }
 
   sched_context_init(&thread->sched_ctx);
-  thread->sched_ctx.private = thread;
+  thread->sched_ctx.priv = thread;
 
   thread->start_routine = start_routine;
   thread->arg = arg;

@@ -204,11 +204,11 @@ error_t device_unregister(struct device_s *dev);
 
 void device_dump_list(struct device_s *root);
 
-#define DEVICE_TREE_WALKER(x) void (x)(struct device_s *dev, void *private)
+#define DEVICE_TREE_WALKER(x) void (x)(struct device_s *dev, void *priv)
 
 typedef DEVICE_TREE_WALKER(device_tree_walker_t);
 
-void device_tree_walk(device_tree_walker_t *walker, void *private);
+void device_tree_walk(device_tree_walker_t *walker, void *priv);
 
 #endif /* !CONFIG_DEVICE_TREE */
 

@@ -101,7 +101,7 @@ struct capsule_ctxt_s
     /**
        private user data associated to thread
      */
-    void *private;
+    void *priv;
 
     /**
        private user data destructor associated to thread
@@ -197,7 +197,7 @@ capsule_ctxt_t *capsule_ctxt_get(void);
 static inline
 void capsule_ctxt_set_user_data(capsule_ctxt_t * ctxt, void * user_data)
 {
-    ctxt->private = user_data;
+    ctxt->priv = user_data;
 }
 
 /**
@@ -210,7 +210,7 @@ void capsule_ctxt_set_user_data(capsule_ctxt_t * ctxt, void * user_data)
 static inline
 void capsule_ctxt_get_user_data(capsule_ctxt_t const * ctxt, void ** user_data)
 {
-    *user_data = ctxt->private;
+    *user_data = ctxt->priv;
 }
 
 /**

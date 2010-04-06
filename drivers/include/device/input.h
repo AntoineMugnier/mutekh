@@ -59,7 +59,7 @@ struct devinput_info_s
 
 
 /** input device class callback function template */
-#define DEVINPUT_CALLBACK(n)	void (n) (devinput_ctrlid_t id, devinput_value_t value, void *private)
+#define DEVINPUT_CALLBACK(n)	void (n) (devinput_ctrlid_t id, devinput_value_t value, void *priv)
 /** input device class callback function type */
 typedef DEVINPUT_CALLBACK(devinput_callback_t);
 
@@ -118,7 +118,7 @@ typedef DEVINPUT_WRITE(devinput_write_t);
 					     uint_fast8_t type,			\
 					     devinput_ctrlid_t id,		\
 					     devinput_callback_t *callback,	\
-					     void *private)
+					     void *priv)
 
 #define dev_input_setcallback(dev, ...) (dev)->drv->f.input.f_setcallback(dev, __VA_ARGS__ )
 /**
@@ -131,7 +131,7 @@ typedef DEVINPUT_WRITE(devinput_write_t);
    @param type type mask value for event types to watch
    @param id id of the control to watch
    @param callback new callback function
-   @param private private data passed to callback function
+   @param priv private data passed to callback function
    @return non zero value on error
 */
 typedef DEVINPUT_SETCALLBACK(devinput_setcallback_t);

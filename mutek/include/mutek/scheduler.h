@@ -53,7 +53,7 @@ CONTAINER_TYPE	     (sched_queue, DLIST, struct sched_context_s
   struct scheduler_s *scheduler;		//< keep track of associated scheduler queue
   struct context_s	context;	//< execution context
 
-  void			*private;
+  void			*priv;
 
 #ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION_AFFINITY
   cpu_bitmap_t		cpu_map;

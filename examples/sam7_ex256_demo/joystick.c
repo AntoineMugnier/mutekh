@@ -46,7 +46,7 @@ static DEVINPUT_CALLBACK(joystick_moved)
 static DEVGPIO_IRQ(button_pressed)
 {
 	struct joy_event_s *n = malloc(sizeof(*n));
-	n->id = (uintptr_t)private;
+	n->id = (uintptr_t)priv;
 
 	switch ( event ) {
 	default:

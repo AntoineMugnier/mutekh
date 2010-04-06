@@ -41,7 +41,7 @@ static bool_t sys_in_segment( struct lookup_state_s *priv )
 //TODO: Add memory reservation support and default_region extend
 static FDT_ON_NODE_ENTRY_FUNC(mem_lookup_node_entry)
 {
-	struct lookup_state_s *priv = private;
+	struct lookup_state_s *private = priv;
 
 	const void *devtype = NULL;
 	size_t devtypelen;
@@ -56,13 +56,13 @@ static FDT_ON_NODE_ENTRY_FUNC(mem_lookup_node_entry)
 		if ( !strcmp( devtype, "memory" ) ) {
 		  /* Memory segment found*/
 		  /* 1: get info: cacheability, addr and size*/
-		  priv->cached = 0;
+		  private->cached = 0;
 		  if ( fdt_reader_has_prop(state, "cached", NULL, NULL ) )
-		    priv->cached = 1;
+		    private->cached = 1;
 
 		  if ( fdt_reader_has_prop(state, "reg", &value, &len ) )
 		    {
-		      parse_reg_size( priv, value);
+		      parse_reg_size( private, value);
 		    }
 		  else
 		    return 0;
@@ -79,7 +79,7 @@ static FDT_ON_NODE_ENTRY_FUNC(mem_lookup_node_entry)
 		  /* 4: create a region associated to this segment*/
 		  struct memory_allocator_region_s *region;
 		  
-		  if (priv->cached)
+		  if (private->cached)
 		    region = memory_allocator_init(mem_region_get_first(mem_scope_sys)->region,
 					  mem_info.base,
 					  mem_info.base + mem_info.size);
@@ -99,18 +99,18 @@ static FDT_ON_NODE_ENTRY_FUNC(mem_lookup_node_entry)
 
 static FDT_ON_NODE_ENTRY_FUNC(topology_lookup_node_entry)
 {
-  struct lookup_state_s *priv = private;
+  struct lookup_state_s *private = priv;
   
-  switch (priv->state) 
+  switch (private->state) 
     {
     case IN_ROOT:
       if ( !strcmp(path, "/topology") )
 	{
-	  priv->state = IN_TOPOLOGY;
+	  private->state = IN_TOPOLOGY;
 	}
       break;
     case IN_TOPOLOGY:
-      priv->state = IN_CLUSTER;
+      private->state = IN_CLUSTER;
       
       break;
     default:
@@ -121,26 +121,26 @@ static FDT_ON_NODE_ENTRY_FUNC(topology_lookup_node_entry)
 
 static FDT_ON_NODE_PROP_FUNC(cell_lookup_node_prop)
 {
-  struct lookup_state_s *priv = private;
+  struct lookup_state_s *private = priv;
   
   if ( !strcmp( name, "#address-cells" ) )
-    priv->addr_cells = endian_be32(*(uint32_t*)data);
+    private->addr_cells = endian_be32(*(uint32_t*)data);
   else if ( !strcmp( name, "#size-cells" ) )
-    priv->size_cells = endian_be32(*(uint32_t*)data);
+    private->size_cells = endian_be32(*(uint32_t*)data);
 }
 
 
 static FDT_ON_NODE_LEAVE_FUNC(topology_node_leave)
 {
-  switch (priv->state) 
+  switch (private->state) 
     {
     case IN_ROOT:
       break;
     case IN_TOPOLOGY:
-      priv->state = IN_ROOT;
+      private->state = IN_ROOT;
       break;
     case IN_CLUSTER:
-      priv->state = IN_TOPOLOGY;
+      private->state = IN_TOPOLOGY;
       break;
     default:
       break;
@@ -163,7 +163,7 @@ void mem_lookup_parse_fdt(void *blob,  )
   struct lookup_state_s mem_priv;
   
   struct fdt_walker_s walker = {
-    .private = &mem_priv,
+    .priv = &mem_priv,
     .on_node_entry = mem_lookup_node_entry,
     .on_node_leave = nop_node_leave,
     .on_node_prop = cell_lookup_node_prop,
@@ -174,7 +174,7 @@ void mem_lookup_parse_fdt(void *blob,  )
 
   struct topology_lookup_state_s top_priv;
 
-  walker.private = &top_priv,
+  walker.priv = &top_priv,
   walker.on_node_entry = topology_lookup_node_entry,
 
   fdt_walk_blob(blob, &walker);

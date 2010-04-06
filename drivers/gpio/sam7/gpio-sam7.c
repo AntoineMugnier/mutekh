@@ -153,7 +153,7 @@ DEVGPIO_REGISTER_IRQ(gpio_sam7_register_irq)
 
 	enable:
 		pv->handler[gpio].func = callback;
-		pv->handler[gpio].private = private_data;
+		pv->handler[gpio].priv = private_data;
 		registers->PIO_IER = 1<<gpio;
 		return 0;
 	}
@@ -182,7 +182,7 @@ DEV_IRQ(gpio_sam7_irq)
 		h->func(dev,
 				gpio,
 				(value & mgpio) ? GPIO_VALUE_UP : GPIO_VALUE_DOWN,
-				h->private);
+				h->priv);
 
 		state &= ~mgpio;
 	}

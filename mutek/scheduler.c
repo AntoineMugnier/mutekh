@@ -309,7 +309,7 @@ void sched_context_init(struct sched_context_s *sched_ctx)
   CONTEXT_LOCAL_TLS_SET(sched_ctx->context.tls,
 			sched_cur, sched_ctx);
 
-  sched_ctx->private = NULL;
+  sched_ctx->priv = NULL;
   sched_ctx->scheduler = __scheduler_get();
 
 #ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN

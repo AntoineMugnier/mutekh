@@ -48,7 +48,7 @@ DEVTIMER_SETCALLBACK(timer_soclib_setcallback)
   if (callback)
     {
       pv->cb[id] = callback;
-      pv->pv[id] = private;
+      pv->pv[id] = priv;
 
       cpu_mem_write_32(base + TIMER_SOCLIB_REG_MODE, mode | TIMER_SOCLIB_REG_MODE_IRQEN);
     }

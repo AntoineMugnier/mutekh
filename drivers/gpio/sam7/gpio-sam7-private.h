@@ -27,7 +27,7 @@
 struct gpio_sam7_handler_s
 {
 	devgpio_irq_t *func;
-	void *private;
+	void *priv;
 };
 
 struct gpio_sam7_context_s

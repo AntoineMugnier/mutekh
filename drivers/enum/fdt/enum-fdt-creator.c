@@ -60,15 +60,15 @@ struct creator_state_s
 
 static FDT_ON_NODE_ENTRY_FUNC(enum_creator_node_entry)
 {
-	struct creator_state_s *priv = private;
-	struct walker_node_info_s *parent = priv->node_info;
+	struct creator_state_s *private = priv;
+	struct walker_node_info_s *parent = private->node_info;
 
 	struct walker_node_info_s *node_info =
 		mem_alloc(sizeof(struct walker_node_info_s), (mem_scope_sys));
 
     memset(node_info, 0, sizeof(*node_info));
 
-	priv->node_info = node_info;
+	private->node_info = node_info;
 	node_info->parent = parent;
 	node_info->where = IN_NONE;
 
@@ -118,12 +118,12 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_creator_node_entry)
 
 static FDT_ON_NODE_LEAVE_FUNC(enum_creator_node_leave)
 {
-	struct creator_state_s *priv = private;
-	struct enum_fdt_context_s *pv = priv->dev->drv_pv;
+	struct creator_state_s *private = priv;
+	struct enum_fdt_context_s *pv = private->dev->drv_pv;
 	dprintk("   creator_node_leave(%p) ni: %p, npv: %p\n",
-		   private, priv->node_info,
-		   priv->node_info->new_pv);
-	struct walker_node_info_s *node_info = priv->node_info;
+		   private, private->node_info,
+		   private->node_info->new_pv);
+	struct walker_node_info_s *node_info = private->node_info;
 
 	if ( node_info->new_pv ) {
 		node_info->new_pv->addr_cells = node_info->addr_cells;
@@ -144,7 +144,7 @@ static FDT_ON_NODE_LEAVE_FUNC(enum_creator_node_leave)
 			   node_info->size_cells);
 
 		device_obj_refnew(node_info->new);
-		device_register(node_info->new, priv->dev, node_info->new_pv);
+		device_register(node_info->new, private->dev, node_info->new_pv);
 
 		dprintk(" ok\n");
 	}
@@ -152,29 +152,29 @@ static FDT_ON_NODE_LEAVE_FUNC(enum_creator_node_leave)
 	node_info->new = NULL;
 	node_info->new_pv = NULL;
 
-	priv->node_info = node_info->parent;
+	private->node_info = node_info->parent;
 
 	mem_free(node_info);
 }
 
 static FDT_ON_NODE_PROP_FUNC(enum_creator_node_prop)
 {
-	struct creator_state_s *priv = private;
-	struct enum_fdt_context_s *pv = priv->dev->drv_pv;
+	struct creator_state_s *private = priv;
+	struct enum_fdt_context_s *pv = private->dev->drv_pv;
 
 	if ( !strcmp( name, "#address-cells" ) )
-		priv->node_info->addr_cells = endian_be32(*(uint32_t*)data);
+		private->node_info->addr_cells = endian_be32(*(uint32_t*)data);
 	else if ( !strcmp( name, "#size-cells" ) )
-		priv->node_info->size_cells = endian_be32(*(uint32_t*)data);
-	else if ( priv->node_info->where == IN_CHOSEN && !strcmp( name, "console" ) )
+		private->node_info->size_cells = endian_be32(*(uint32_t*)data);
+	else if ( private->node_info->where == IN_CHOSEN && !strcmp( name, "console" ) )
 		pv->console_path = data;
-	else if ( priv->node_info->where == IN_CPU && !strcmp( name, "reg" ) ) {
+	else if ( private->node_info->where == IN_CPU && !strcmp( name, "reg" ) ) {
 		uint32_t val = (uint32_t)-1;
-		fdt_parse_sized( priv->node_info->addr_cells, data,
+		fdt_parse_sized( private->node_info->addr_cells, data,
 					 sizeof(val), &val );
-		priv->node_info->new_pv->cpuid = val;
+		private->node_info->new_pv->cpuid = val;
 	} else if ( !strcmp( name, "linux,phandle" ) )
-		priv->node_info->new_pv->phandle = endian_be32(*(uint32_t*)data);
+		private->node_info->new_pv->phandle = endian_be32(*(uint32_t*)data);
 }
 
 static FDT_ON_MEM_RESERVE_FUNC(enum_creator_mem_reserve)
@@ -191,7 +191,7 @@ void enum_fdt_create_children(struct device_s *dev)
 	};
 
 	struct fdt_walker_s walker = {
-		.private = &priv,
+		.priv = &priv,
 		.on_node_entry = enum_creator_node_entry,
 		.on_node_leave = enum_creator_node_leave,
 		.on_node_prop = enum_creator_node_prop,
