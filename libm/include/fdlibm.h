@@ -18,6 +18,8 @@
 
 C_HEADER_BEGIN
 
+#include <hexo/types.h>
+
 /**
   @file
   @module {Math library}
