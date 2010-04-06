@@ -31,7 +31,7 @@ struct cpu_context_s
 };
 
 static inline void
-cpu_context_switch(struct context_s *old, struct context_s *new)
+cpu_context_switch(struct context_s *old, struct context_s *future)
 {
   register reg_t	tmp0, tmp1, tmp2;
 
@@ -82,7 +82,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 
 		/* input args */
 		: "0" (&old->stack_ptr)
-		, "1" (&new->stack_ptr)
+		, "1" (&future->stack_ptr)
 		, "2" (CPU_LOCAL_ADDR(__context_data_base))
 
 		/* remaining registers will be clobbered too */
@@ -94,7 +94,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_context_jumpto(struct context_s *new)
+cpu_context_jumpto(struct context_s *future)
 {
   asm volatile (
 		"	movq	%0, %%rsp	\n"
@@ -107,7 +107,7 @@ cpu_context_jumpto(struct context_s *new)
 		/* restore execution pointer */
 		"	retq			\n"
 		:
-		: "r" (new->stack_ptr)
+		: "r" (future->stack_ptr)
 		, "r" (CPU_LOCAL_ADDR(__context_data_base))
 		);
 

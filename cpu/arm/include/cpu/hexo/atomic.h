@@ -243,9 +243,9 @@ cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 }
 
 static inline bool_t
-cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
+cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)
 {
-	reg_t tmp, loaded;
+	atomic_int_t tmp, loaded;
     THUMB_TMP_VAR;
 
 	asm volatile(
@@ -254,14 +254,14 @@ cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
 		"ldrex   %[loaded], [%[atomic]]       \n\t"
 		"cmp     %[loaded], %[old]            \n\t"
 		"bne     2f                           \n\t"
-		"strex   %[tmp], %[new], [%[atomic]]  \n\t"
+		"strex   %[tmp], %[future], [%[atomic]]  \n\t"
 		"tst     %[tmp], #1                   \n\t"
 		"bne     1b                           \n\t"
         "2:                                   \n\t"
         ARM_TO_THUMB
 		: [tmp] "=&r" (tmp), [loaded] "=&r" (loaded), "=m" (*a)
 		/*,*/ THUMB_OUT(,)
-        : [old] "r" (old), [new] "r" (new), [atomic] "r" (a)
+        : [old] "r" (old), [future] "r" (future), [atomic] "r" (a)
 		);
 
     return loaded == old;

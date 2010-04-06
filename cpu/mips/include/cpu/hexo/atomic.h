@@ -214,7 +214,7 @@ cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 }
 
 static inline bool_t
-cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
+cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)
 {
     reg_t tmp, loaded;
 
@@ -224,7 +224,7 @@ cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
         "       sync                                 \n"
         "1:     ll      %[loaded], %[atomic]         \n"
         "       bne     %[loaded], %[old], 2f        \n"
-        "       move    %[tmp], %[new]               \n"
+        "       move    %[tmp], %[future]               \n"
         "       sc      %[tmp], %[atomic]            \n"
         "       beqz    %[tmp], 1b                   \n"
         "       nop                                  \n"
@@ -232,7 +232,7 @@ cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
         "       sync                                 \n"
         ".set pop                                    \n"
         : [tmp] "=&r" (tmp), [loaded] "=&r" (loaded), [atomic] "+m" (*a)
-        : [old] "r" (old), [new] "r" (new)
+        : [old] "r" (old), [future] "r" (future)
         : "memory"
         );
 

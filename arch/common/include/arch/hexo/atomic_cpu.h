@@ -80,9 +80,9 @@ static inline bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n)
   return ((1 << n) & a->value) != 0;
 }
 
-static inline bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t new)
+static inline bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t future)
 {
-  return cpu_atomic_compare_and_swap(&a->value, old, new);
+  return cpu_atomic_compare_and_swap(&a->value, old, future);
 }
 
 #define ARCH_ATOMIC_H_

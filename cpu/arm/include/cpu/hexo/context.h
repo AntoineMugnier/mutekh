@@ -39,17 +39,17 @@ struct cpu_context_s
 };
 
 #if defined(__thumb__)
-void arm_cpu_context_switch(struct context_s *old, struct context_s *new);
+void arm_cpu_context_switch(struct context_s *old, struct context_s *future);
 #endif
 
 static inline void
-cpu_context_switch(struct context_s *old, struct context_s *new)
+cpu_context_switch(struct context_s *old, struct context_s *future)
 {
 #if defined(__thumb__)
-    arm_cpu_context_switch(old, new);
+    arm_cpu_context_switch(old, future);
 #else
     void *old_addr = &old->stack_ptr;
-    void *new_addr = &new->stack_ptr;
+    void *new_addr = &future->stack_ptr;
 
 	/*
 	  stack should be
@@ -130,21 +130,21 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 
 #if defined(__thumb__)
 __attribute__((noreturn))
-void arm_cpu_context_jumpto(struct context_s *new);
+void arm_cpu_context_jumpto(struct context_s *future);
 #endif
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_context_jumpto(struct context_s *new)
+cpu_context_jumpto(struct context_s *future)
 {
 #ifdef CONFIG_SOCLIB_MEMCHECK
 	reg_t t0 = SOCLIB_MC_MAGIC_VAL;
 	reg_t t1 = CONFIG_SOCLIB_MEMCHECK_ADDRESS;
 #endif
 #if defined(__thumb__)
-    arm_cpu_context_jumpto(new);
+    arm_cpu_context_jumpto(future);
 #else
-	void *new_addr = &new->stack_ptr;
+	void *new_addr = &future->stack_ptr;
 
 	asm volatile (
 

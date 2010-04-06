@@ -127,14 +127,14 @@ static inline  bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n)
   return res;
 }
 
-static inline bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t new)
+static inline bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t future)
 {
   bool_t res = 0;
 
   LOCK_SPIN_IRQ(&__atomic_arch_lock);
   if (a->value == old)
     {
-      a->value = new;
+      a->value = future;
       res = 1;
     }
   LOCK_RELEASE_IRQ(&__atomic_arch_lock);

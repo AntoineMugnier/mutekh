@@ -206,7 +206,7 @@ cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 }
 
 static inline bool_t
-cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
+cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)
 {
     reg_t loaded;
 
@@ -215,12 +215,12 @@ cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
         "1:     lwarx   %[loaded], 0, %[atomic]      \n"
         "       cmpw    %[loaded], %[old]            \n"
         "       bne-    2f                           \n"
-        "       stwcx.  %[new], 0, %[atomic]         \n"
+        "       stwcx.  %[future], 0, %[atomic]         \n"
         "       bne-    1b                           \n"
         "       isync                                \n"
         "2:                                          \n"
         : [loaded] "=&r" (loaded), "=m" (*a)
-        : [old] "r" (old), [new] "r" (new), [atomic] "r" (a)
+        : [old] "r" (old), [future] "r" (future), [atomic] "r" (a)
         : "cr0"
         );
 

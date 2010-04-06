@@ -66,7 +66,7 @@ static bool_t cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n);
 static void cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n);
 static void cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n);
 static void cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n);
-static bool_t cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new);
+static bool_t cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future);
 
 /** Atomic value type */
 typedef struct arch_atomic_s atomic_t;
@@ -103,9 +103,9 @@ static bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n);
    @return 0 if bit is cleared. */
 static bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n);
 
-/** @this compares memory to old and replace with new if they are the same.
+/** @this compares memory to old and replace with future if they are the same.
    @return true if exchanged */
-static bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t new);
+static bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t future);
 
 #if 0
 /** Static atomic value initializer */

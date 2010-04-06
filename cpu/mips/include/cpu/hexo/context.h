@@ -35,7 +35,7 @@ struct cpu_context_s
 };
 
 static inline void
-cpu_context_switch(struct context_s *old, struct context_s *new)
+cpu_context_switch(struct context_s *old, struct context_s *future)
 {
   void	*unused1, *unused2, *unused3;
 
@@ -110,7 +110,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 	, "=r" (unused3)
 
 	: "0" (&old->stack_ptr)
-	, "1" (&new->stack_ptr)
+	, "1" (&future->stack_ptr)
 	, "2" (CPU_LOCAL_ADDR(__context_data_base))
 
           /* These GP registers will be saved by the compiler */
@@ -138,7 +138,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_context_jumpto(struct context_s *new)
+cpu_context_jumpto(struct context_s *future)
 {
   asm volatile (
 	".set push			\n"
@@ -181,7 +181,7 @@ cpu_context_jumpto(struct context_s *new)
 	"	jr	$1			\n"
 	".set pop				\n"
 	:
-	: "r" (&new->stack_ptr)
+	: "r" (&future->stack_ptr)
 	, "r" (CPU_LOCAL_ADDR(__context_data_base))
 	);
 

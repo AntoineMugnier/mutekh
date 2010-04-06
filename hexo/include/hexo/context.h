@@ -67,10 +67,10 @@ struct context_s
 typedef CONTEXT_ENTRY(context_entry_t);
 
 /** Switch context by saving/restoring all registers from/to context stack */
-static void cpu_context_switch(struct context_s *old, struct context_s *new);
+static void cpu_context_switch(struct context_s *old, struct context_s *future);
 
 /** Jump to context from _non_ context */
-static void cpu_context_jumpto(struct context_s *new);
+static void cpu_context_jumpto(struct context_s *future);
 
 /** set new stack pointer and jump to a new function */
 static void cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto);

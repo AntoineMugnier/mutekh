@@ -163,7 +163,7 @@ cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 }
 
 static inline bool_t
-cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
+cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)
 {
   uint8_t		done;
 
@@ -171,7 +171,7 @@ cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
                 "cmpxchgl	%0, %3	\n"
 		"setz		%1	\n"
 		: "=m,m" (*a), "=q,q" (done)
-		: "a" (old), "r" (new)
+		: "a" (old), "r" (future)
                 : "cc"
 		);
 

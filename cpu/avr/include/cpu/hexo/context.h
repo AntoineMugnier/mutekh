@@ -54,7 +54,7 @@ struct cpu_context_s
 #endif
 
 static inline void
-cpu_context_switch(struct context_s *old, struct context_s *new)
+cpu_context_switch(struct context_s *old, struct context_s *future)
 {
   register void	*tmp0, *tmp1;
 
@@ -102,7 +102,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 		, "=x" (tmp1)
 
 		: "0" (&old->stack_ptr)
-		, "1" (new->stack_ptr)
+		, "1" (future->stack_ptr)
 		/* These GP registers will be saved by the compiler */
 		: "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9"
 		, "r10", "r11", "r12", "r13", "r14", "r15", "r16", "r17"
@@ -119,7 +119,7 @@ cpu_context_switch(struct context_s *old, struct context_s *new)
 
 static inline void
 __attribute__((always_inline, noreturn))
-cpu_context_jumpto(struct context_s *new)
+cpu_context_jumpto(struct context_s *future)
 {
   asm volatile (
 		"	out	0x3d, %A0			\n"
@@ -139,7 +139,7 @@ cpu_context_jumpto(struct context_s *new)
 		"	ret					\n"
 		"2:						\n"
 		: 
-		: "z" (new->stack_ptr)
+		: "z" (future->stack_ptr)
 
 		/* These GP registers will be saved by the compiler */
 		: "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9"

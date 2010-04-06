@@ -124,14 +124,14 @@ cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 }
 
 static inline bool_t
-cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
+cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)
 {
   bool_t res = 0;
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   if (*a == old)
     {
-      *a = new;
+      *a = future;
       res = 1;
     }
   CPU_INTERRUPT_RESTORESTATE;  
