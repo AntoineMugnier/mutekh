@@ -272,6 +272,7 @@ C_HEADER_BEGIN
 #define logl __builtin_logl
 #define modfl __builtin_modfl
 #define modf __builtin_modf
+#define modff __builtin_modff
 #define powf __builtin_powf
 #define powl __builtin_powl
 #define sinf __builtin_sinf
