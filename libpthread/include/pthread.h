@@ -22,6 +22,10 @@
 #ifndef PTHREAD_H_
 #define PTHREAD_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{Pthread library}
@@ -767,5 +771,7 @@ error_t pthread_setspecific(pthread_key_t key, const void *value)
 #endif /* KEYS */
 
 #endif /* CONFIG_PTHREAD */
+C_HEADER_END
+
 #endif /* PTHREAD_H_ */
 

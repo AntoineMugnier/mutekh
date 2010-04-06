@@ -54,6 +54,10 @@
 #ifndef _VFS_FILE_H_
 #define _VFS_FILE_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include <hexo/types.h>
 #include <gpct/object_refcount.h>
 #include <vfs/defs.h>
@@ -299,6 +303,8 @@ static inline off_t vfs_file_truncate(struct vfs_file_s *file,
 
 /** @this provides a file operations function set */
 extern const struct fileops_s vfs_file_fops;
+
+C_HEADER_END
 
 #endif
 

@@ -28,6 +28,10 @@
 #ifndef LOCAL_H_
 #define LOCAL_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include <hexo/types.h>
 #include "cpu/hexo/local.h"
 
@@ -132,6 +136,8 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
 
 /************************************************************************/
+
+C_HEADER_END
 
 #endif
 

@@ -31,6 +31,10 @@
 #ifndef MATH_H_
 #define MATH_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #if defined(CONFIG_LIBM)
 # include <fdlibm.h>
 #endif
@@ -300,6 +304,8 @@
 #define sinh __builtin_sinh
 #define sin __builtin_sin
 #define sqrt __builtin_sqrt
+
+C_HEADER_END
 
 #endif
 

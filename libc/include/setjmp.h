@@ -23,6 +23,10 @@
 #ifndef SETJMP_H_
 #define SETJMP_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -52,6 +56,8 @@ siglongjmp(sigjmp_buf env, reg_t val)
 {
   longjmp(env, val);
 }
+
+C_HEADER_END
 
 #endif
 

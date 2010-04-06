@@ -22,12 +22,18 @@
 #ifndef FCNTL_H_
 #define FCNTL_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
  */
 
 #include <unistd.h>
+
+C_HEADER_END
 
 #endif
 

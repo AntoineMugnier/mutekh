@@ -28,6 +28,10 @@
 #ifndef __GPCT_PLATFORM_HEXO_H__
 #define __GPCT_PLATFORM_HEXO_H__
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #ifdef GPCT_PLATFORM_H_
 # error gpct_platform_hexo.h must be included before any gpct header
 #endif
@@ -106,6 +110,8 @@ static inline void gpct_atomic_bit_set(gpct_atomic_t *a, gpct_atomic_int_t n)
 {
   return atomic_bit_set(a, n);
 }
+
+C_HEADER_END
 
 #endif
 

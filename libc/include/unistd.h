@@ -22,6 +22,10 @@
 #ifndef UNISTD_H_
 #define UNISTD_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -110,6 +114,8 @@ error_t remove(const char *pathname);
 
 #define HAVE_MKDIR
 error_t mkdir(const char *pathname, mode_t mode);
+
+C_HEADER_END
 
 #endif
 

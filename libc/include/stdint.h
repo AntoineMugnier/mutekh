@@ -22,6 +22,10 @@
 #ifndef STDINT_H_
 #define STDINT_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -76,6 +80,8 @@
 
 #define PTRDIFF_MIN		__MINOF_TYPE(ptrdiff_t)
 #define PTRDIFF_MAX		__MAXOF_TYPE(ptrdiff_t)
+
+C_HEADER_END
 
 #endif
 

@@ -11,6 +11,13 @@
  * ====================================================
  */
 
+#ifndef __FDLIBM_H_
+#define __FDLIBM_H_
+
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
   @file
   @module {Math library}
@@ -200,3 +207,7 @@ extern double __kernel_sin __P((double,double,int32_t));
 extern double __kernel_cos __P((double,double));
 extern double __kernel_tan __P((double,double,int32_t));
 extern int32_t    __kernel_rem_pio2 __P((double*,double*,int32_t,int32_t,int32_t,const int32_t*));
+
+C_HEADER_END
+
+#endif

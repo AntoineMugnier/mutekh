@@ -24,6 +24,10 @@
 #ifndef CTYPE_H_
 #define CTYPE_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -150,6 +154,8 @@ tolower(int_fast8_t c)
 }
 
 // #define tolower __builtin_tolower
+
+C_HEADER_END
 
 #endif
 

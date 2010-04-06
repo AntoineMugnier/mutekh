@@ -28,11 +28,17 @@
 #ifndef _VFS_H_
 #define _VFS_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include <vfs/types.h>
 #include <vfs/helpers.h>
 #include <vfs/ops.h>
 #include <vfs/file.h>
 
 #include <vfs/globals.h>
+
+C_HEADER_END
 
 #endif

@@ -28,6 +28,10 @@
 #ifndef INTERRUPT_H_
 #define INTERRUPT_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include "local.h"
 #include "types.h"
 
@@ -193,6 +197,8 @@ void cpu_syscall_sethandler_ctx(struct context_s *context,
 /************************************************************/
 
 #include "cpu/hexo/interrupt.h"
+
+C_HEADER_END
 
 #endif
 

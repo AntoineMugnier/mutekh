@@ -22,6 +22,10 @@
 #ifndef STDIO_H_
 #define STDIO_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -249,6 +253,8 @@ ssize_t printf(const char *format, ...);
 # endif	/* CONFIG_LIBC_STREAM_STD */
 
 #endif /* CONFIG_LIBC_STREAM */
+
+C_HEADER_END
 
 #endif
 

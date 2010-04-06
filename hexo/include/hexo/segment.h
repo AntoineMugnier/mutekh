@@ -28,6 +28,10 @@
 #ifndef SEGMENT_H_
 #define SEGMENT_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include "types.h"
 
 /** allocate and setup cpu local storage memory */
@@ -52,6 +56,8 @@ static void arch_contextstack_free(void *ptr);
 
 
 #include "arch/hexo/segment.h"
+
+C_HEADER_END
 
 #endif
 

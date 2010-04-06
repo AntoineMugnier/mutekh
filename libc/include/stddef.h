@@ -22,6 +22,10 @@
 #ifndef STDDEF_H_
 #define STDDEF_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -36,6 +40,8 @@
 /** standard @tt offsetof macro */
 # define offsetof(t, f) ((size_t) &((t*)0)->f)
 #endif
+
+C_HEADER_END
 
 #endif
 

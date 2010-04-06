@@ -29,6 +29,10 @@
 #ifndef __GPCT_LOCK_HEXO_H__
 #define __GPCT_LOCK_HEXO_H__
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include <hexo/gpct_platform_hexo.h>
 
 #include <hexo/lock.h>
@@ -116,6 +120,8 @@ gpct_lock_HEXO_SPIN_IRQ_unlock(gpct_lock_HEXO_SPIN_IRQ_type_t *lock)
   lock_release(&lock->lock);
   cpu_interrupt_restorestate(&lock->irq);
 }
+
+C_HEADER_END
 
 #endif
 

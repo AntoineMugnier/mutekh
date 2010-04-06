@@ -28,6 +28,10 @@
 #ifndef LOCK_H_
 #define LOCK_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include "types.h"
 #include "error.h"
 #include "interrupt.h"
@@ -147,6 +151,8 @@ static inline void lock_release(lock_t *lock)
 # define LOCK_RELEASE_IRQ(lock)					\
   lock_release(lock);
 #endif
+
+C_HEADER_END
 
 #endif
 

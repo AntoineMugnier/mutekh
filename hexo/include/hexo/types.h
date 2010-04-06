@@ -28,6 +28,10 @@
 #ifndef TYPES_H_
 #define TYPES_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include "cpu/hexo/types.h"
 
 /* define fixed width types */
@@ -155,6 +159,8 @@ typedef long _dont_use_native_long_type_t __attribute__ ((deprecated));
 #else
 # define NULL 0
 #endif
+
+C_HEADER_END
 
 #endif
 

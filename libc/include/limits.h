@@ -22,6 +22,10 @@
 #ifndef LIMITS_H_
 #define LIMITS_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -71,5 +75,7 @@
 #define LONGLONG_MAX	(__MAXOF_TYPE(__compiler_slonglong_t))
 #define ULONGLONG_MIN	(__MINOF_TYPE(__compiler_ulonglong_t))
 #define ULONGLONG_MAX	(__MAXOF_TYPE(__compiler_ulonglong_t))
+
+C_HEADER_END
 
 #endif

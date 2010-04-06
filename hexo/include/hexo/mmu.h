@@ -28,6 +28,10 @@
 #ifndef MMU_H_
 #define MMU_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include "types.h"
 #include "error.h"
 #include "local.h"
@@ -135,6 +139,8 @@ static inline uintptr_t mmu_get_ins_bad_address(void);
 #endif
 
 #endif
+
+C_HEADER_END
 
 #endif
 

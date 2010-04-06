@@ -22,6 +22,10 @@
 #ifndef STDLIB_H_
 #define STDLIB_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -154,6 +158,8 @@ __compiler_slonglong_t llabs(__compiler_slonglong_t j);
 #define labs abs
 /** standard llabs function */
 #define llabs abs
+
+C_HEADER_END
 
 #endif
 

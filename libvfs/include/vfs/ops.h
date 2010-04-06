@@ -28,6 +28,10 @@
 #ifndef _VFS_OPS_H_
 #define _VFS_OPS_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include <vfs/types.h>
 #include <vfs/fs.h>
 
@@ -237,6 +241,8 @@ ssize_t vfs_node_get_name(struct vfs_node_s *node,
                           size_t namelen);
 
 struct vfs_fs_s *vfs_node_get_fs(struct vfs_node_s *node);
+
+C_HEADER_END
 
 #endif
 

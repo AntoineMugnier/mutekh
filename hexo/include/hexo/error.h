@@ -28,6 +28,10 @@
 #ifndef ERROR_H_
 #define ERROR_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include "types.h"
 
 /** error code type */
@@ -130,6 +134,8 @@ typedef int_fast8_t		error_t;
 
 /** no route to host */
 #define EHOSTUNREACH	113
+
+C_HEADER_END
 
 #endif
 

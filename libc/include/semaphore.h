@@ -22,6 +22,10 @@
 #ifndef SEMAPHORE_H_
 #define SEMAPHORE_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -70,6 +74,8 @@ sem_destroy(sem_t *sem)
 	semaphore_destroy(sem);
 	return 0;
 }
+
+C_HEADER_END
 
 #endif
 

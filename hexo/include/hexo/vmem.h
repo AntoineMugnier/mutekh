@@ -28,6 +28,10 @@
 #ifndef VMEM_H_
 #define VMEM_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #if defined(CONFIG_VMEM)
 
 struct vmem_page_region_s;
@@ -107,5 +111,7 @@ void vmem_vpage_ops_init(struct vmem_ops_s *vmem_ops)
 }
 
 #endif
+
+C_HEADER_END
 
 #endif

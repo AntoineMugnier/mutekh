@@ -21,6 +21,10 @@
 #ifndef TIME_H_
 #define TIME_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
    @file
    @module{C library}
@@ -44,5 +48,7 @@ static inline error_t time(time_t *t)
 {
   return 0;
 }
+
+C_HEADER_END
 
 #endif

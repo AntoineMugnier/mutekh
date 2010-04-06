@@ -28,6 +28,10 @@
 #ifndef IPI_H_
 #define IPI_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_dlist.h>
 #include <gpct/cont_slist.h>
@@ -101,5 +105,7 @@ bool_t ipi_endpoint_isvalid(struct ipi_endpoint_s *endpoint)
 {
     return endpoint != NULL && endpoint->icu_dev != NULL;
 }
+
+C_HEADER_END
 
 #endif

@@ -28,6 +28,10 @@
 #ifndef _VFS_DEFS_H_
 #define _VFS_DEFS_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include <hexo/types.h>
 
 /** @hidden */
@@ -59,6 +63,8 @@ enum vfs_node_type_e
 #else
 # define vfs_printk(...) do{}while(0)
 #endif
+
+C_HEADER_END
 
 #endif
 

@@ -52,6 +52,10 @@
 #ifndef _VFS_FS_H_
 #define _VFS_FS_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include <hexo/types.h>
 #include <hexo/atomic.h>
 #include <hexo/error.h>
@@ -323,6 +327,8 @@ struct vfs_fs_ops_s
     vfs_fs_node_refnew_t *node_refnew; //< mandatory
     vfs_fs_node_refdrop_t *node_refdrop; //< mandatory
 };
+
+C_HEADER_END
 
 #endif
 

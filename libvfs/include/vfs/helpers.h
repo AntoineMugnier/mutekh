@@ -33,6 +33,10 @@
 #ifndef _VFS_HELPERS_H_
 #define _VFS_HELPERS_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include <vfs/types.h>
 
 /**
@@ -163,5 +167,7 @@ void vfs_dump(struct vfs_node_s *root);
    @param root File-system root to use for LRU walking.
  */
 void vfs_dump_lru(struct vfs_node_s *root);
+
+C_HEADER_END
 
 #endif

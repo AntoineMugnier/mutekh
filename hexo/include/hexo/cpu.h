@@ -28,6 +28,10 @@
 #ifndef __CPU_H_
 #define __CPU_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include "types.h"
 #include "error.h"
 
@@ -106,6 +110,8 @@ cpu_type_name(void)
 /** @this can be used to declare and refer to a variable
     or function prefixed by cpu type name. */
 # define CPU_NAME_DECL(x) _CPU_NAME_DECL(CPU_TYPE_NAME, x)
+
+C_HEADER_END
 
 #endif
 

@@ -24,6 +24,10 @@
 #ifndef STRING_H_
 #define STRING_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -184,6 +188,8 @@ int_fast8_t ffsll(uint64_t i);
 #define ffsll	__builtin_ffsll
 
 const char *strerror(error_t errnum);
+
+C_HEADER_END
 
 #endif
 

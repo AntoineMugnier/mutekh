@@ -27,6 +27,10 @@
 #ifndef __ENDIAN_H_
 #define __ENDIAN_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include "types.h"
 
 /***********************************************************************
@@ -332,6 +336,8 @@ static inline uint64_t endian_swap64(uint64_t x)
 
 /** @this extracts bits between specified first and last index */
 #define BITS_EXTRACT_FL(v, first, last) BITS_EXTRACT_FC(v, first, (last) - (first) + 1)
+
+C_HEADER_END
 
 #endif
 

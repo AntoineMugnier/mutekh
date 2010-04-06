@@ -28,6 +28,10 @@
 #ifndef _VFS_TYPES_H_
 #define _VFS_TYPES_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include <vfs/defs.h>
 #include <vfs/fs.h>
 
@@ -212,6 +216,8 @@ struct vfs_stat_s
 //  /** Device number */
 //  dev_t dev;
 };
+
+C_HEADER_END
 
 #endif
 

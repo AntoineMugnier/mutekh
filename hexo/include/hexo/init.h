@@ -28,6 +28,10 @@
 #ifndef INIT_H_
 #define INIT_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include "types.h"
 #include "error.h"
 
@@ -64,6 +68,8 @@ void mutek_start_smp(void);
 
 /** User application entry point */
 void app_start();
+
+C_HEADER_END
 
 #endif
 

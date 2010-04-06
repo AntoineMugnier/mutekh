@@ -22,6 +22,10 @@
 #ifndef _HEXO_ORDERING_H_
 #define _HEXO_ORDERING_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{Hexo}
@@ -142,6 +146,8 @@
     read operation starts, from platform and devices point of
     view. */
 #define order_io_mem_read()        __asm__ __volatile__ (CPU_ORDER_IO_READ ::: "memory");
+
+C_HEADER_END
 
 #endif
 

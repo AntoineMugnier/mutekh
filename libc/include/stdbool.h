@@ -22,6 +22,10 @@
 #ifndef STDBOOL_H_
 #define STDBOOL_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -35,6 +39,8 @@ typedef bool_t bool;
 #define true 1
 
 #define __bool_true_false_are_ 1
+
+C_HEADER_END
 
 #endif
 

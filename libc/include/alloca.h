@@ -22,6 +22,10 @@
 #ifndef ALLOCA_H_
 #define ALLOCA_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include <hexo/types.h>
 
 __attribute__((always_inline))
@@ -29,6 +33,8 @@ static inline void *alloca(size_t size)
 {
   return __builtin_alloca(size);
 }
+
+C_HEADER_END
 
 #endif
 

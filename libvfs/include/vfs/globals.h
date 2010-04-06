@@ -40,6 +40,10 @@
 #ifndef _VFS_GLOBALS_H_
 #define _VFS_GLOBALS_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 #include <hexo/local.h>
 
 /** @hidden */
@@ -161,6 +165,8 @@ static inline void vfs_set_root(struct vfs_node_s *root)
 		vfs_node_refdrop( old );
 }
 #endif
+
+C_HEADER_END
 
 #endif
 

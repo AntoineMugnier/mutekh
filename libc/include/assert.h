@@ -22,6 +22,10 @@
 #ifndef __ASSERT_H_
 #define __ASSERT_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -54,6 +58,8 @@ __assert_fail(const char *file,
 # else
 #  define ensure(expr) ((void) (expr))
 # endif
+
+C_HEADER_END
 
 #endif
 

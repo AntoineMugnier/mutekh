@@ -24,6 +24,10 @@
 #ifndef STDARG_H_
 #define STDARG_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -43,6 +47,8 @@ typedef __builtin_va_list va_list;
 #define va_end          __builtin_va_end
 #define va_arg          __builtin_va_arg
 #define va_copy(d,s)    __builtin_va_copy((d),(s))
+
+C_HEADER_END
 
 #endif
 
