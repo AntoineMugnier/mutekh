@@ -9,11 +9,6 @@
 
   # Libs
   CONFIG_PTHREAD
-  CONFIG_PTHREAD_SPIN
-  CONFIG_MUTEK_SCHEDULER_PREEMPT
-#  CONFIG_HEXO_IRQ undefined
-  CONFIG_HEXO_USERMODE
-  CONFIG_HEXO_FPU
 %include ../common/build_options.conf
 %include ../common/platforms.conf
 

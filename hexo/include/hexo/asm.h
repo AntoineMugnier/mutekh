@@ -19,8 +19,8 @@
  *         Nicolas Pouillon <nipo@ssji.net>, 2010
  */
 
-#ifndef HEXO_ASM_H_
-#define HEXO_ASM_H_
+#ifndef ASM_H_
+#define ASM_H_
 
 #include <cpu/hexo/asm.h>
 

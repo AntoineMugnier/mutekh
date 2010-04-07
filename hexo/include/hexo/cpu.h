@@ -54,7 +54,7 @@ static const char *cpu_type_name(void);
 static bool_t cpu_isbootstrap(void);
 
 /** return total cpus count */
-cpu_id_t arch_get_cpu_count(void);
+size_t arch_get_cpu_count(void);
 
 /** unlock non first CPUs so that they can enter main_smp() */
 void arch_start_other_cpu(void);

@@ -36,10 +36,8 @@
 #ifndef CONTEXT_H_
 #define CONTEXT_H_
 
+/** offset of tls field in @ref context_s */
 #define HEXO_CONTEXT_S_TLS              0
-#define HEXO_CONTEXT_S_STACK_START      1
-#define HEXO_CONTEXT_S_STACK_END        2
-#define HEXO_CONTEXT_S_STACK_PTR        3
 
 #ifndef __MUTEK_ASM__
 
@@ -69,26 +67,21 @@ extern CONTEXT_LOCAL uintptr_t context_stack_end;
 typedef CONTEXT_ENTRY(context_entry_t);
 
 
-# if defined(CONFIG_HEXO_USERMODE)
-/** @showcontent user entry point function prototype */
-#define USER_ENTRY(n) void (n) (void *param)
-/** user entry point function type. @csee #USER_ENTRY */
-typedef USER_ENTRY(user_entry_t);
-#endif
-
-
-# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 /** @showcontent context preempt function prototype.
 
-    This function is called on interrupt handler completion
-    and may return a pointer to a context to switch to or NULL.
-    When returning a context pointer, the interrupted context will be
-    saved instead of being resumed. @csee context_set_preempt .
-*/
-#define CONTEXT_PREEMPT(n) struct context_s * (n)(void)
+    This function is called on interrupt handler completion and may
+    return a pointer to a context to switch to or NULL. When
+    returning a context pointer, the interrupted context will not be
+    resumed. @csee context_set_preempt.
+
+    The interrupted context will be completely saved before calling
+    this function so that it may be immediately resumed on an other
+    processor before the interrupt handler even returns.
+ */
+#define CONTEXT_PREEMPT(n) struct context_s * (n)(void *param)
 /** context preempt function prototype. @csee #CONTEXT_PREEMPT */
 typedef CONTEXT_PREEMPT(context_preempt_t);
-#endif
+
 
 #endif  /* __MUTEK_ASM__ */
 #include "cpu/hexo/context.h"
@@ -109,6 +102,18 @@ __attribute__((noreturn))
 void cpu_context_stack_use(struct context_s *context,
                            context_entry_t *func, void *param);
 
+/** @this sets the execution pointer of the specified context and
+    return previous execution pointer. This function can be used to
+    force asynchronous execution of some code when the context is
+    resumed.
+
+    This function may be called on non executing contexts and from
+    context preempt handler.
+
+    @see cpu_context_hook_return
+*/
+uintptr_t cpu_context_hook(struct context_s *context, uintptr_t pc);
+
 /** associate context and cpu current execution state */
 error_t cpu_context_bootstrap(struct context_s *context);
 
@@ -119,22 +124,23 @@ error_t cpu_context_init(struct context_s *context, context_entry_t *entry, void
 void cpu_context_destroy(struct context_s *context);
 
 # if defined(CONFIG_HEXO_USERMODE)
-/** set kernel stack, user stack pointer and jump to a new function in user mode */
+/** set user stack pointer and jump to a new function in user mode */
 __attribute__((noreturn))
-void cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,
-			  user_entry_t *entry, void *param);
+void cpu_context_set_user(uintptr_t stack_ptr, uintptr_t entry, reg_t param);
 # endif
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 /** @internal */
 extern CPU_LOCAL context_preempt_t *cpu_preempt_handler;
+extern CPU_LOCAL void *cpu_preempt_param;
 
 /** @this sets a preemption handler function for the processor. The
     preemtion handler is reset to NULL on each exception and irq and
     must be setup by the interrupt handler when context preemption is needed. */
-static inline void context_set_preempt(context_preempt_t *func)
+static inline void context_set_preempt(context_preempt_t *func, void *param)
 {
   CPU_LOCAL_SET(cpu_preempt_handler, func);
+  CPU_LOCAL_SET(cpu_preempt_param, param);
 }
 # endif
 

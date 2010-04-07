@@ -242,7 +242,7 @@ void arch_start_other_cpu(void)
 #endif
 }
 
-inline cpu_id_t arch_get_cpu_count(void)
+inline size_t arch_get_cpu_count(void)
 {
 #ifdef CONFIG_ARCH_SMP
     return cpu_count;

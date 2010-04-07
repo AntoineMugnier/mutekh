@@ -11,6 +11,7 @@
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 CPU_LOCAL context_preempt_t *cpu_preempt_handler;
+CPU_LOCAL void *cpu_preempt_param;
 #endif
 
 CONTEXT_LOCAL uintptr_t context_stack_start;

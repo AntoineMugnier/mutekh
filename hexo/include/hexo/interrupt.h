@@ -134,9 +134,9 @@ static inline void cpu_interrupt_wait();
     @see cpu_exception_handler_t
     @showcontent
 */
-# define CPU_EXCEPTION_HANDLER(n) void (n) (uint_fast8_t type, uintptr_t execptr, \
-					   uintptr_t dataptr, reg_t *regtable, \
-					   uintptr_t stackptr)
+# define CPU_EXCEPTION_HANDLER(n) void (n) (uint_fast8_t type, uintptr_t *execptr, \
+                                            uintptr_t dataptr, reg_t *regtable, \
+                                            uintptr_t stackptr)
 /**
    CPU exception handler function type.
 
