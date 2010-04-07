@@ -1,12 +1,12 @@
 
 ifdef HETLINK
 define do_hetlink_mangling
-	md5=$$(shell md5sum $$< | cut -c 1-8) ; \
-		rm -f $$@.static ; \
-		$(CPUTOOLS)nm $$@ | grep ' t ' | cut -c 12- | sort -u | while read i ; do echo "$$$${i} _$$$${md5}_$$$${i}" >> $$@.static ; done
-	if test -e $$@.static ; then \
+	md5=$(shell md5sum $< | cut -c 1-8) ; \
+		rm -f $@.static ; \
+		$(CPUTOOLS)nm $@ | grep ' t ' | cut -c 12- | sort -u | while read i ; do echo "$${i} _$${md5}_$${i}" >> $@.static ; done
+	if test -e $@.static ; then \
 		echo '             renaming static symbols' $(LOG_REDIR) ; \
-		$(CPUTOOLS)objcopy --redefine-syms=$$@.static $$@ $(LOG_REDIR) ; \
+		$(CPUTOOLS)objcopy --redefine-syms=$@.static $@ $(LOG_REDIR) ; \
 	fi
 endef
 endif
