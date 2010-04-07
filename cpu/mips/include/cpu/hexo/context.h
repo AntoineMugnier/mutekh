@@ -31,7 +31,7 @@
 
 # define CPU_MIPS_CONTEXT_RESTORE_NONE     (~3)
 
-/** @multiple @this describes @ref context_regs_s field offset */
+/** @multiple @this describes @ref cpu_context_s field offset */
 #define CPU_MIPS_CONTEXT_SAVE_MASK      0
 #define CPU_MIPS_CONTEXT_GPR(n)         (CPU_MIPS_CONTEXT_SAVE_MASK + INT_REG_SIZE/8 + (n - 1) * INT_REG_SIZE/8)
 #define CPU_MIPS_CONTEXT_LO             CPU_MIPS_CONTEXT_GPR(32)
@@ -49,7 +49,7 @@
 # include <hexo/cpu.h>
 
 /** PowerPc processor context state */
-struct context_regs_s
+struct cpu_context_s
 {
   union {
     reg_t save_mask;       //< what is being saved and restored

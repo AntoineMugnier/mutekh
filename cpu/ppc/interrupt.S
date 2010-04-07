@@ -138,7 +138,7 @@
 
         // prepare handler call
         li      3,      \type           // arg0 type
-                                        // arg1 pc
+        addi    4,      2,      CPU_PPC_CONTEXT_PC // arg1 execptr
         mfdear  5                       // arg2 data error
         addi    6,      2,      CPU_PPC_CONTEXT_GPR(0) // arg3 reg table
         addi    7,      1,      224     // arg4 sp, skip redzone

@@ -4,11 +4,11 @@
 #include <hexo/context.h>
 #include <hexo/interrupt.h>
 
-CONTEXT_LOCAL struct context_regs_s mips_context_regs;
+CONTEXT_LOCAL struct cpu_context_s mips_context_regs;
 
 #ifdef CONFIG_HEXO_LAZY_SWITCH
 /* last fpu restored context */
-CPU_LOCAL struct context_regs_s *mips_lazy_last = 0;
+CPU_LOCAL struct cpu_context_s *mips_lazy_last = 0;
 #endif
 
 error_t
@@ -28,7 +28,7 @@ cpu_context_bootstrap(struct context_s *context)
 error_t
 cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 {
-  struct context_regs_s *regs = CONTEXT_LOCAL_TLS_ADDR(context->tls, mips_context_regs);
+  struct cpu_context_s *regs = CONTEXT_LOCAL_TLS_ADDR(context->tls, mips_context_regs);
 
   regs->save_mask = CPU_MIPS_CONTEXT_RESTORE_CALLER; /* for r4 */
   regs->gpr[CPU_MIPS_SP] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)

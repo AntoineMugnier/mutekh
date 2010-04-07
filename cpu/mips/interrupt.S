@@ -167,7 +167,7 @@ interrupt_ex:
 2:
 
         srl     $4,     $4,     2                  // arg0 type
-        //   move    $5,     $5                    // arg1 pc
+        addiu   $5,     $26,    CPU_MIPS_CONTEXT_PC // arg1 execptr
         mfc0    $6,     $CPU_MIPS_BADADDR          // arg2 data error
         addiu   $7,     $26,    CPU_MIPS_CONTEXT_GPR(1) // arg3 reg table
         move    $8,     $sp                        // arg4 sp
