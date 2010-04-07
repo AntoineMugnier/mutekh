@@ -1,9 +1,5 @@
 
-objs =											\
-boot.o											\
-cpu_init.o										\
-cpu_context.o                                                                           \
-interrupts.o
+objs = boot.o cpu_init.o cpu_context.o interrupts.o context_switch.o
 
 ifeq ($(CONFIG_HEXO_MMU), defined)
 objs += mmu.o

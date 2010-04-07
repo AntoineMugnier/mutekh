@@ -26,6 +26,13 @@
 #ifndef CPU_X86_MSR_H_
 #define CPU_X86_MSR_H_
 
+#define IA32_APIC_BASE_MSR	0x01b
+#define SYSENTER_CS_MSR		0x174
+#define SYSENTER_ESP_MSR	0x175
+#define SYSENTER_EIP_MSR	0x176
+
+#ifndef __MUTEK_ASM__
+
 static inline uint64_t
 cpu_x86_read_msr(uint32_t index)
 {
@@ -54,10 +61,7 @@ cpu_x86_write_msr(uint32_t index, uint64_t value)
 	       );
 }
 
-#define IA32_APIC_BASE_MSR	0x01b
-#define SYSENTER_CS_MSR		0x174
-#define SYSENTER_ESP_MSR	0x175
-#define SYSENTER_EIP_MSR	0x176
+#endif
 
 #endif
 

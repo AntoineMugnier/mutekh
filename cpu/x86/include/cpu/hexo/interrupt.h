@@ -32,20 +32,18 @@
 
 #define CPU_INTERRUPT_H_
 
-#include "hexo/local.h"
-
 /** first interrupt vector used for exceptions */
 #define CPU_EXCEPT_VECTOR		0
 /** exceptions vector count */
 #define CPU_EXCEPT_VECTOR_COUNT		32
 
 /** first interrupt vector used for hardware interrupts */
-#define CPU_HWINT_VECTOR		32
+#define CPU_HWINT_VECTOR		(CPU_EXCEPT_VECTOR_COUNT)
 /** hardware interrupts vector count */
 #define CPU_HWINT_VECTOR_COUNT		96
 
 /** first interrupt vector used for system calls */
-#define CPU_SYSCALL_VECTOR		128
+#define CPU_SYSCALL_VECTOR		(CPU_EXCEPT_VECTOR_COUNT + CPU_HWINT_VECTOR_COUNT)
 /** syscall vector count */
 #define CPU_SYSCALL_VECTOR_COUNT	128
 
@@ -58,6 +56,11 @@
 /** direct iret entry, used for cpu wakeup ipis */
 #define CPU_HWINT_VECTOR_IRET           0x5f
 
+
+#ifndef __MUTEK_ASM__
+
+# include <hexo/local.h>
+
 void x86_interrupt_hw_entry(void);
 void x86_interrupt_ex_entry(void);
 void x86_interrupt_sys_entry(void);
@@ -66,33 +69,33 @@ void x86_interrupt_sys_enter(void);
 static inline void
 cpu_interrupt_disable(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
                     "cli"
                     :
                     :
                     : "memory" /* compiler memory barrier */
 		    );
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
                     "sti"
                     :
                     :
                     : "memory" /* compiler memory barrier */
 		    );
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_process(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "sti\n"
     /* nop is required here to let enough time for pending interrupts
@@ -106,25 +109,25 @@ cpu_interrupt_process(void)
        a function loop (scheduler root queue for instance) */
 		    : "memory"
 		    );
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "pushfl	\n"
 		    "popl	%0\n"
 		    : "=m,r" (*state)
 		    );
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "pushfl	\n"
 		    "popl	%0\n"
@@ -133,13 +136,13 @@ cpu_interrupt_savestate_disable(reg_t *state)
                     :
                     : "memory"     /* compiler memory barrier */
 		    );
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "pushl	%0\n"
 		    "popfl	\n"
@@ -147,13 +150,13 @@ cpu_interrupt_restorestate(const reg_t *state)
 		    : "m,r" (*state)
                     : "memory"     /* compiler memory barrier */
 		    );
-#endif
+# endif
 }
 
 static inline bool_t
 cpu_interrupt_getstate(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
   reg_t		flags;
 
   __asm__ volatile (
@@ -163,32 +166,34 @@ cpu_interrupt_getstate(void)
 		    );
 
   return flags & 0x200 ? 1 : 0;
-#else
+# else
   return 0;
-#endif
+# endif
 }
 
 static inline bool_t
 cpu_is_interruptible(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
 	return cpu_interrupt_getstate();
-#else
+# else
 	return 0;
-#endif
+# endif
 }
 
-#ifdef CONFIG_CPU_WAIT_IRQ
+# ifdef CONFIG_CPU_WAIT_IRQ
 static inline void cpu_interrupt_wait(void)
 {
-# ifdef CONFIG_HEXO_IRQ
+#  ifdef CONFIG_HEXO_IRQ
   /* sti ; hlt is guaranteed to be atomic */
   __asm__ volatile ("sti; hlt \n"
 		    ::: "memory"
 		    );
-# endif
+#  endif
 }
-#endif
+# endif
+
+#endif  /* __MUTEK_ASM__ */
 
 #endif
 

@@ -61,9 +61,10 @@
 1:	movl	$0x08,		%eax
 	movw	%ax,		%ds
 	movw	%ax,		%es
+	movw	%ax,		%ss
+        xorl    %eax,           %eax
 	movw	%ax,		%fs
 	movw	%ax,		%gs
-	movw	%ax,		%ss
 
 
 /*******************************************************
@@ -110,8 +111,15 @@ cpu_boot:
 	add	$0x0001fffc, %eax
 	mov	%eax, %esp
 	xor	%ebp, %ebp
+
+        /* invalidate cls and tls segments */
+        xorl    %eax,           %eax
+	movw	%ax,		%fs
+	movw	%ax,		%gs
+        
 	/* call arch_init function */
 	call	arch_init
+        
 	/* stop processor execution */
 	cli
 	hlt

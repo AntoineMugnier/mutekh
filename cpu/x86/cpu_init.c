@@ -47,7 +47,16 @@ cpu_x86_segsel_t cpu_local_storage_seg[CONFIG_CPU_MAXCOUNT];
 #endif
 
 #ifdef CONFIG_HEXO_USERMODE
-volatile CPU_LOCAL struct cpu_x86_tss_s cpu_tss;
+CPU_LOCAL struct cpu_x86_tss_s cpu_tss;
+#endif
+
+/* we always need an interrupt stack on x86 with user mode because
+   processor switch/use stack for interrupt handler entry */
+#ifndef CONFIG_HEXO_INTERRUPT_STACK_SIZE
+# define CONFIG_HEXO_INTERRUPT_STACK_SIZE 128
+#endif
+#if defined(CONFIG_HEXO_USERMODE) || defined(CONFIG_HEXO_INTERRUPT_STACK)
+CPU_LOCAL uint8_t cpu_interrupt_stack[CONFIG_HEXO_INTERRUPT_STACK_SIZE];
 #endif
 
 /** gdt table lock */
@@ -55,6 +64,8 @@ static lock_t		gdt_lock;
 
 /** CPU Global descriptor table */
 union cpu_x86_desc_s gdt[ARCH_GDT_SIZE];
+
+void *mem_end;
 
 error_t
 cpu_global_init(void)
@@ -64,11 +75,11 @@ cpu_global_init(void)
   lock_init(&gdt_lock);
 
   cpu_x86_seg_setup(&gdt[ARCH_GDT_CODE_INDEX].seg, 0,
-		    0xffffffff, CPU_X86_SEG_EXEC_NC_R, 0, 1);
+		    0xffffffff /*(uintptr_t)mem_end*/, CPU_X86_SEG_EXEC_NC_R, 0, 1);
 
 #ifdef CONFIG_HEXO_USERMODE
   cpu_x86_seg_setup(&gdt[ARCH_GDT_USER_CODE_INDEX].seg, 0,
-		    0xffffffff, CPU_X86_SEG_EXEC_NC_R, 3, 1);
+		    0xffffffff /*(uintptr_t)mem_end*/, CPU_X86_SEG_EXEC_NC_R, 3, 1);
 #endif
 
   cpu_x86_seg_setup(&gdt[ARCH_GDT_DATA_INDEX].seg, 0,
@@ -107,6 +118,7 @@ cpu_global_init(void)
     }
 #endif
 
+#ifdef CONFIG_HEXO_USERMODE
   /* fill IDT with syscall entry points */
 
   for (i = 0; i < CPU_SYSCALL_VECTOR_COUNT; i++)
@@ -117,6 +129,7 @@ cpu_global_init(void)
 			 ARCH_GDT_CODE_INDEX, entry,
 			 CPU_X86_GATE_INT32, 3, 0);
     }
+#endif
 
 #ifdef CONFIG_ARCH_SMP
   /* copy boot section below 1Mb for slave CPUs bootup */
@@ -220,7 +233,9 @@ void cpu_init(void)
 
   memset(tss, 0, sizeof(struct cpu_x86_tss_s));
 
+  /* setup a tiny processor local interrupt entry stack */
   tss->ss0 = ARCH_GDT_DATA_INDEX << 3;
+  tss->esp0 = (uintptr_t)CPU_LOCAL_ADDR(cpu_interrupt_stack) + CONFIG_HEXO_INTERRUPT_STACK_SIZE;
 
   if (!(tss_sel = cpu_x86_segment_alloc((uintptr_t)tss, sizeof(*tss), CPU_X86_SEG_CONTEXT32)))
     goto err_tss_seg;
@@ -229,7 +244,8 @@ void cpu_init(void)
 
 # ifdef CONFIG_CPU_X86_SYSENTER
   cpu_x86_write_msr(SYSENTER_CS_MSR, CPU_X86_SEG_SEL(ARCH_GDT_CODE_INDEX, 0));
-  cpu_x86_write_msr(SYSENTER_EIP_MSR, x86_interrupt_sys_enter);
+  cpu_x86_write_msr(SYSENTER_EIP_MSR, (uintptr_t)x86_interrupt_sys_enter);
+  cpu_x86_write_msr(SYSENTER_ESP_MSR, tss->esp0);
 # endif
 
 #endif
