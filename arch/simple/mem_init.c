@@ -33,8 +33,10 @@ void mem_init(void)
   mem_end = ALIGN_ADDRESS_LOW(mem_end, CONFIG_MUTEK_MEMALLOC_ALIGN);
   mem_start = ALIGN_ADDRESS_UP(mem_start, CONFIG_MUTEK_MEMALLOC_ALIGN);
 
-  default_region = memory_allocator_init(NULL, 
-					 mem_start,
-					 mem_end);
+  default_region = memory_allocator_init(
+    NULL, 
+    mem_start,
+    (void*)((uintptr_t)mem_end -
+            (1 << CONFIG_HEXO_RESET_STACK_SIZE) * CONFIG_CPU_MAXCOUNT));
 }
 
