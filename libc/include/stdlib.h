@@ -82,6 +82,14 @@ int_fast64_t ato_intl64(const char *nptr);
 # define atol _STRTOINT_(ato_intl, CPU_SIZEOF_LONG)
 # define atoll ato_intl64
 
+double strtod(const char *d, const char **ret);
+
+static inline
+float atof(const char *f)
+{
+  return strtod(f, NULL);
+}
+
 /********************* misc */
 
 /** Get integer minimum value */
@@ -108,6 +116,14 @@ typedef int_fast8_t qsort_compar_t(const void *, const void *);
 */
 void qsort(void *base, size_t nel, size_t width, qsort_compar_t *compar);
 
+void *bsearch(
+  const void *key,
+  const void *base,
+  size_t nel,
+  size_t width,
+  __compiler_sint_t (*compar) (const void *, const void *)
+  );
+
 /******************** random */
 
 typedef uint_fast8_t	__rand_type_t;
@@ -120,14 +136,8 @@ void srand(__rand_type_t seed);
 
 /******************** abort */
 
-static inline void
-abort(void)
-{
-  cpu_trap();
-
-  while (1)
-    ;
-}
+__attribute__((noreturn))
+void abort();
 
 /******************* exit */
 
@@ -144,20 +154,55 @@ error_t
 __attribute__ ((deprecated))
 atexit(void (*function)(void));
 
+__attribute__((deprecated))
+static inline char *getenv(const char *key);
+
+__attribute__((deprecated))
+static inline error_t system(const char *cmd);
+
 /****************** abs */
 
-#if 0
-__compiler_sint_t abs(__compiler_sint_t j);
-__compiler_slong_t labs(__compiler_slong_t j);
-__compiler_slonglong_t llabs(__compiler_slonglong_t j);
-#endif
+static inline
+__compiler_sint_t abs(__compiler_sint_t x)
+{
+  return x<0 ? -x : x;
+}
 
-/** standard abs function */
-#define abs(x) ({ const typeof(x) __x = (x); __x < 0 ? -__x : __x; })
-/** standard labs function */
-#define labs abs
-/** standard llabs function */
-#define llabs abs
+static inline
+__compiler_slong_t labs(__compiler_slong_t x)
+{
+  return x<0 ? -x : x;
+}
+
+static inline
+__compiler_slonglong_t llabs(__compiler_slonglong_t x)
+{
+  return x<0 ? -x : x;
+}
+
+// div / ldiv
+
+typedef struct {
+  __compiler_sint_t quot;
+  __compiler_sint_t rem;
+} div_t;
+
+static inline div_t div(__compiler_sint_t number, __compiler_sint_t denom)
+{
+  div_t r = {number/denom, number%denom};
+  return r;
+}
+
+typedef struct {
+  __compiler_slong_t quot;
+  __compiler_slong_t rem;
+} ldiv_t;
+
+static inline ldiv_t ldiv(__compiler_slong_t number, __compiler_slong_t denom)
+{
+  ldiv_t r = {number/denom, number%denom};
+  return r;
+}
 
 C_HEADER_END
 
