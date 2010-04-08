@@ -155,10 +155,10 @@ __attribute__ ((deprecated))
 atexit(void (*function)(void));
 
 __attribute__((deprecated))
-static inline char *getenv(const char *key);
+char *getenv(const char *key);
 
 __attribute__((deprecated))
-static inline error_t system(const char *cmd);
+error_t system(const char *cmd);
 
 /****************** abs */
 

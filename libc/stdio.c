@@ -1,4 +1,5 @@
 
+#include <hexo/error.h>
 #include <errno.h>
 #include <stdio.h>
 #include <assert.h>
@@ -556,5 +557,9 @@ static struct file_s stderr_file =
 
 FILE * const stderr = &stderr_file;
 
-#endif
+void perror(const char *reason)
+{
+  fprintf(stderr, "%s: %s\n", reason, strerror(errno));
+}
 
+#endif

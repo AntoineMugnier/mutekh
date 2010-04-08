@@ -55,12 +55,12 @@ void *bsearch(
     return NULL;
 }
 
-static inline char *getenv(const char *key)
+char *getenv(const char *key)
 {
   return NULL;
 }
 
-static inline error_t system(const char *cmd)
+error_t system(const char *cmd)
 {
   return -1;
 }

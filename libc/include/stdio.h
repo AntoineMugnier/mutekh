@@ -250,6 +250,17 @@ static inline ssize_t vprintf(const char *format, va_list ap)
 #define HAVE_PRINTF
 ssize_t printf(const char *format, ...);
 
+#define HAVE_GETS
+__attribute__((deprecated))
+static inline
+char *gets(char *s)
+{
+  return fgets(s, 1024, stdin);
+}
+
+#define HAVE_PERROR
+void perror(const char *reason);
+
 # endif	/* CONFIG_LIBC_STREAM_STD */
 
 #endif /* CONFIG_LIBC_STREAM */
