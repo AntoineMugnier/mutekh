@@ -41,21 +41,23 @@ realloc(void *ptr, size_t size)
       return NULL;
     }
 
-  if( ( p = mem_resize(ptr, size) ) != NULL )
-    return p;
-
   oldsize = mem_getsize(ptr);
 
   if (oldsize == size)
     return ptr;
 
+  if( ( p = mem_resize(ptr, size) ) != NULL )
+    return p;
+
   if( ! (p = malloc(size)))
     return NULL;
 
+  /*Memchecker must be disable for init checking. Initial area may
+    contains uninitialized words.*/
 #ifdef CONFIG_SOCLIB_MEMCHECK
   soclib_mem_check_disable(SOCLIB_MC_CHECK_INIT);
 #endif
-  memcpy(p, ptr, (oldsize<size)?oldsize:size );
+  //  memcpy(p, ptr, oldsize );
 #ifdef CONFIG_SOCLIB_MEMCHECK
   soclib_mem_check_enable(SOCLIB_MC_CHECK_INIT);
 #endif
