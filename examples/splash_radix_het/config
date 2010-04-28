@@ -15,6 +15,6 @@
   CONFIG_HEXO_INTTYPES_DEPRECATED undefined
   CONFIG_LIBC_STREAM_STD undefined
 
-%include ../common/build_options.conf
-%include ../common/platforms-soclib.conf
+%include $(SRC_DIR)/examples/common/build_options.conf
+%include $(SRC_DIR)/examples/common/platforms-soclib.conf
 

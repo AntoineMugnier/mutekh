@@ -15,8 +15,8 @@
   CONFIG_HEXO_INTTYPES_DEPRECATED undefined
   CONFIG_LIBC_FORMATTER_FLOAT
 
-%include ../common/build_options.conf
-%include ../common/platforms.conf
+%include $(SRC_DIR)/examples/common/build_options.conf
+%include $(SRC_DIR)/examples/common/platforms.conf
 
   CONFIG_ARCH_EMU_UNLOCK_YIELD undefined
 

@@ -11,6 +11,6 @@
   CONFIG_LIBTERMUI
   CONFIG_LIBLUA
 
-%include ../common/build_options.conf
-%include ../common/platforms.conf
+%include $(SRC_DIR)/examples/common/build_options.conf
+%include $(SRC_DIR)/examples/common/platforms.conf
 
