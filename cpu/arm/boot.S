@@ -1,0 +1,122 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+    Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2009-2010
+*/
+
+#include <hexo/asm.h>
+#include <hexo/cpu.h>
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/mem_checker.h>
+#endif
+
+FUNC_START(.boot, cpu_boot)
+        ldr     pc, =arm_boot
+        ldr     pc, =arm_exc_undef
+        ldr     pc, =arm_exc_swi
+        ldr     pc, =arm_exc_pabt
+        ldr     pc, =arm_exc_dabt
+        nop
+#if defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
+        ldr     pc, =arm_c_irq_handler
+        ldr     pc, =arm_c_fiq_handler
+#else
+        ldr     pc, =arm_exc_irq
+        ldr     pc, =arm_exc_fiq
+#endif
+FUNC_END(cpu_boot)
+
+
+FUNC_START(.text, arm_boot)
+        CPU_ID r4
+        cmp    r4, # CONFIG_CPU_MAXCOUNT
+        bgt    cpu_boot_idle
+
+        ldr  r13, =__initial_stack
+
+#ifndef CONFIG_ARCH_SMP
+        lsl  r5, r4, # CONFIG_HEXO_RESET_STACK_SIZE \n\t
+        subs r13, r13, r5
+#endif
+
+# ifdef CONFIG_SOCLIB_MEMCHECK
+	    mov  r0, #1<< CONFIG_HEXO_RESET_STACK_SIZE
+
+	    /* enter memchecker command mode */
+	    ldr  r2, = SOCLIB_MC_MAGIC_VAL
+	    ldr  r1, = CONFIG_SOCLIB_MEMCHECK_ADDRESS
+	    str  r2, [r1, # SOCLIB_MC_MAGIC_OFFSET ]
+
+	    /* create a new initial memchecker context using cpuid as
+	       context id */
+	    str  r0, [r1, # SOCLIB_MC_R2_OFFSET ]
+	    sub  r0, sp, r0
+	    add  r0, r0, #4
+	    str  r0, [r1, # SOCLIB_MC_R1_OFFSET ]
+	    str  r4, [r1, # SOCLIB_MC_CTX_CREATE_OFFSET ]
+
+	    /* switch to new memchecker context */
+	    str  r4, [r1, # SOCLIB_MC_CTX_SET_OFFSET ]
+
+	    /* enable all memchecker checks */
+	    mov  r0, # SOCLIB_MC_CHECK_ALL
+	    str  r0, [r1, # SOCLIB_MC_ENABLE_OFFSET ]
+
+#  ifdef CONFIG_ARCH_SMP
+	    /* mark cpu_init_flag variable as initialized */
+	    ldr  r0, =cpu_init_flag
+	    str  r0, [r1, # SOCLIB_MC_INITIALIZED_OFFSET ]
+#  endif
+# endif
+
+        /* adjust stack pointer, 64 bits aligned */
+        bic  r13, r13, #63
+
+# ifdef CONFIG_SOCLIB_MEMCHECK
+	    /* leave memchecker command mode */
+	    mov  r0, #0
+	    str  r0, [r1, # SOCLIB_MC_MAGIC_OFFSET ]
+# endif
+
+        /* Get the device tree and put it in first arg */
+#ifdef CONFIG_ARCH_DEVICE_TREE
+        ldr  r0, =dt_blob_start
+#else
+        mov  r0, #0
+#endif
+        /* Put a 0 in second arg */
+        mov  r1, #0
+
+        ldr  r12, =arch_init
+        bx   r12
+FUNC_END(arm_boot)
+
+FUNC_START(.text, cpu_boot_idle)
+        mov   r0, #0
+        CPU_YIELD r0
+        b     cpu_boot_idle
+FUNC_END(cpu_boot_idle)
+
+// Local Variables:
+// tab-width: 4;
+// c-basic-offset: 4;
+// indent-tabs-mode: nil;
+// End:
+//
+// vim: filetype=cpp:expandtab:shiftwidth=4:tabstop=4:softtabstop=4
