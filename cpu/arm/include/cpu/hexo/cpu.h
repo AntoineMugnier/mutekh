@@ -23,6 +23,8 @@
 #error This file can not be included directly
 #else
 
+#ifndef __MUTEK_ASM__
+
 #include <hexo/endian.h>
 
 #define CPU_CPU_H_
@@ -53,17 +55,12 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 "Software",			\
 }
 
-#define CPU_EXCEPTION_ILLEGAL_INS  0x1
-#define CPU_EXCEPTION_DATA_ERROR   0x2
-#define CPU_EXCEPTION_INS_ERROR    0x3
-#define CPU_EXCEPTION_DATA_ALIGN   0x4
-
 #define CPU_TYPE_NAME arm
 
 static inline cpu_id_t
 cpu_id(void)
 {
-#if defined(__ARM_ARCH_6K__)
+#if defined(CONFIG_CPU_ARM_SOCLIB)
 	uint32_t ret;
     THUMB_TMP_VAR;
 
@@ -164,6 +161,13 @@ static inline size_t cpu_dcache_line_size()
 	return 16;
 #endif
 }
+
+#endif
+
+#define CPU_EXCEPTION_ILLEGAL_INS  0x1
+#define CPU_EXCEPTION_DATA_ERROR   0x2
+#define CPU_EXCEPTION_INS_ERROR    0x3
+#define CPU_EXCEPTION_DATA_ALIGN   0x4
 
 #endif
 

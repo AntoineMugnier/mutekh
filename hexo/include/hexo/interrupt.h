@@ -32,23 +32,25 @@
 
 C_HEADER_BEGIN
 
+#ifndef __MUTEK_ASM__
+
 #include "local.h"
 #include "types.h"
 
 /************************************************************ hw irq */
 
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
 
 /** CPU interrupt handler function template
     @see cpu_interrupt_handler_t
     @showcontent
 */
-#define CPU_INTERRUPT_HANDLER(n) void (n) (uint_fast8_t irq)
+# define CPU_INTERRUPT_HANDLER(n) void (n) (uint_fast8_t irq)
 
 /** CPU interrupt handler function type.
 
     @param irq interrupt line number
-    @see #CPU_INTERRUPT_HANDLER
+    @see # CPU_INTERRUPT_HANDLER
 */
 typedef CPU_INTERRUPT_HANDLER(cpu_interrupt_handler_t);
 
@@ -61,7 +63,7 @@ struct device_s;
 
 /** @this sets hardware interrupt handler device for the current cpu */
 void cpu_interrupt_sethandler_device(struct device_s *dev);
-#endif
+# endif
 
 
 /** @this disables all maskable interrupts for the current cpu.
@@ -104,13 +106,13 @@ static inline bool_t cpu_is_interruptible();
 __attribute__ ((always_inline))
 static inline void cpu_interrupt_process();
 
-#ifdef CONFIG_CPU_WAIT_IRQ
+# ifdef CONFIG_CPU_WAIT_IRQ
 /** @this enables interrupts and enters in interrupt wait state. The
-    @ref #CONFIG_CPU_WAIT_IRQ token may be used to check for
+    @ref # CONFIG_CPU_WAIT_IRQ token may be used to check for
     availability.  */
 __attribute__ ((always_inline))
 static inline void cpu_interrupt_wait();
-#endif
+# endif
 
 /** @showcontent
     @this saves interrupts enable state end disable interrupts. This macro
@@ -136,9 +138,9 @@ static inline void cpu_interrupt_wait();
     @see cpu_exception_handler_t
     @showcontent
 */
-#define CPU_EXCEPTION_HANDLER(n) void (n) (uint_fast8_t type, uintptr_t execptr, \
-					   uintptr_t dataptr, reg_t *regtable, \
-					   uintptr_t stackptr)
+# define CPU_EXCEPTION_HANDLER(n) void (n) (uint_fast8_t type, uintptr_t *execptr, \
+                                            uintptr_t dataptr, reg_t *regtable, \
+                                            uintptr_t stackptr)
 /**
    CPU exception handler function type.
 
@@ -150,7 +152,7 @@ static inline void cpu_interrupt_wait();
    @param dataptr faulty memory access pointer
    @param regtable register table
    @param stackptr value of stack pointer
-   @see #CPU_EXCEPTION_HANDLER
+   @see # CPU_EXCEPTION_HANDLER
 */
 typedef CPU_EXCEPTION_HANDLER(cpu_exception_handler_t);
 
@@ -158,7 +160,7 @@ typedef CPU_EXCEPTION_HANDLER(cpu_exception_handler_t);
 /** Set exception interrupt handler for the current cpu */
 void cpu_exception_sethandler(cpu_exception_handler_t *hndl);
 
-#ifdef CONFIG_HEXO_USERMODE
+# ifdef CONFIG_HEXO_USERMODE
 
 /** Set user exception interrupt handler for the current context */
 void cpu_user_exception_sethandler(cpu_exception_handler_t *hndl);
@@ -167,22 +169,24 @@ struct context_s *context;
 /** Set user exception interrupt handler for the given context */
 void cpu_user_exception_sethandler_ctx(struct context_s *context,
 				       cpu_exception_handler_t *hndl);
-#endif
+# endif
 
 /************************************************************ syscalls */
 
-#include <hexo/context.h>
+#ifdef CONFIG_HEXO_USERMODE
+
+# include <hexo/context.h>
 
 /** CPU syscall handler function template
     @see cpu_syscall_handler_t
     @showcontent
 */
-#define CPU_SYSCALL_HANDLER(n) void (n) (uint_fast8_t number, reg_t *regtable)
+# define CPU_SYSCALL_HANDLER(n) void (n) (uint_fast8_t number, reg_t *regtable)
 
 /** CPU syscall handler function type.
 
     @param irq interrupt line number
-    @see #CPU_SYSCALL_HANDLER
+    @see # CPU_SYSCALL_HANDLER
 */
 typedef CPU_SYSCALL_HANDLER(cpu_syscall_handler_t);
 struct context_s;
@@ -194,9 +198,13 @@ void cpu_syscall_sethandler(cpu_syscall_handler_t *hndl);
 void cpu_syscall_sethandler_ctx(struct context_s *context,
 				cpu_syscall_handler_t *hndl);
 
+#endif
+
 /************************************************************/
 
-#include "cpu/hexo/interrupt.h"
+#endif  /* __MUTEK_ASM__ */
+
+# include "cpu/hexo/interrupt.h"
 
 C_HEADER_END
 

@@ -42,7 +42,6 @@ struct arm_exception_context_s {
 	uint32_t pc;   // the pc in the mode we were from
 	uint32_t spsr; // the mode we were from
 	uint32_t lr;   // the lr of the super mode
-	uint32_t cpsr; // the except mode the cpu jumped in
 };
 
 #ifdef CONFIG_ARCH_SMP
