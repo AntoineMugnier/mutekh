@@ -49,6 +49,12 @@
      ldr   \rd, [\rd, \rt]
 .endm
 
+.macro SET_CP15_REL name, tmp, tmp2, val, op2
+     mrc   p15,0, \tmp, c13, c0, \op2
+     ldr   \tmp2, =\name
+     str   \val, [\tmp, \tmp2]
+.endm
+
 /* get a global variable */
 .macro GET_GLOBAL name, rd
      ldr   \rd, =\name
@@ -75,6 +81,7 @@
      add   \rd, \rt, \rd
 .endm
 
+
 #if !defined(CONFIG_ARCH_SMP)
 .macro CPU_LOCAL name, rd, rt
      GET_GLOBAL \name, \rd
@@ -84,24 +91,35 @@
      GET_GLOBAL_REL \name, \rd, \rt, __context_data_base
 .endm
 
-.macro CONTEXT_LOCAL_ADDR name, rd
-     GET_GLOBAL_REL_ADDR \name, \rd, __context_data_base
+.macro CPU_LOCAL_SET name, tmp, tmp2, val
+     SET_GLOBAL \name, \val, \tmp
+.endm
+
+.macro CONTEXT_LOCAL_ADDR name, rd, rt
+   GET_GLOBAL_REL_ADDR \name, \rd, \rt, __context_data_base
 .endm
 
 .macro TLS_BASE_SET reg, tmp
      SET_GLOBAL __context_data_base, \reg, \tmp
 .endm
+
 #elif defined(CONFIG_CPU_ARM_TLS_IN_C15)
 .macro CPU_LOCAL name, rd, rt
-     GET_GLOBAL \name, \rd
+     GET_CP15_REL \name, \rd, \rt, 3
+.endm
+
+.macro CPU_LOCAL_SET name, tmp, tmp2, val
+     SET_CP15_REL \name, \tmp, \tmp2, \val, 3
 .endm
 
 .macro CONTEXT_LOCAL name, rd, rt
      GET_CP15_REL \name, \rd, \rt, 4
 .endm
 
-.macro CONTEXT_LOCAL_ADDR name, rd
-     CONTEXT_LOCAL_REL_ADDR \name, \rd
+.macro CONTEXT_LOCAL_ADDR name, rd, rt
+     mrc   p15,0, \rt, c13, c0, 4
+     ldr   \rd, =\name
+     add   \rd, \rd, \rt
 .endm
 
 .macro TLS_BASE_SET reg, tmp

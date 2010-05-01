@@ -33,12 +33,15 @@ FUNC_START(.boot, cpu_boot)
         ldr     pc, =arm_exc_pabt
         ldr     pc, =arm_exc_dabt
         nop
-#if defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
+#ifdef CONFIG_HEXO_IRQ
+# if defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
         ldr     pc, =arm_c_irq_handler
         ldr     pc, =arm_c_fiq_handler
-#else
+# else
         ldr     pc, =arm_exc_irq
         ldr     pc, =arm_exc_fiq
+
+# endif
 #endif
 FUNC_END(cpu_boot)
 
@@ -50,8 +53,8 @@ FUNC_START(.text, arm_boot)
 
         ldr  r13, =__initial_stack
 
-#ifndef CONFIG_ARCH_SMP
-        lsl  r5, r4, # CONFIG_HEXO_RESET_STACK_SIZE \n\t
+#ifdef CONFIG_ARCH_SMP
+        lsl  r5, r4, # CONFIG_HEXO_RESET_STACK_SIZE
         subs r13, r13, r5
 #endif
 
