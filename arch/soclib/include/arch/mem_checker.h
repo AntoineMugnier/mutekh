@@ -67,6 +67,10 @@
 #define SOCLIB_MC_LOCK_DECLARE_OFFSET 52
 #define SOCLIB_MC_LOCK_DECLARE (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_LOCK_DECLARE_OFFSET)
 
+/** Enables the memchecker when going out of the range [PC:val] */
+#define SOCLIB_MC_DELAYED_MAGIC_OFFSET 56
+#define SOCLIB_MC_DELAYED_MAGIC (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_DELAYED_MAGIC_OFFSET)
+
 #define SOCLIB_MC_CTX_ID_UNKNOWN -1
 #define SOCLIB_MC_CTX_ID_CURRENT -2
 
@@ -81,7 +85,7 @@
 /** Critical sections checks */
 # define SOCLIB_MC_CHECK_IRQS_LOCK 16
 
-# if defined(CONFIG_COMPILE_FRAMEPTR) && !defined(__OPTIMIZE__)
+# if defined(CONFIG_COMPILE_FRAMEPTR) && (CONFIG_COMPILE_OPTIMIZE == 0)
 #  define SOCLIB_MC_CHECK_SPFP 3
 #  define SOCLIB_MC_CHECK_ALL 31
 # else
@@ -89,12 +93,11 @@
 #  define SOCLIB_MC_CHECK_ALL 29
 # endif
 
-#define ASM_STR_(x) #x
-#define ASM_STR(x) ASM_STR_(x)
+#ifndef __MUTEK_ASM__
 
-#include <hexo/iospace.h>
-#include <hexo/ordering.h>
-#include <hexo/interrupt.h>
+# include <hexo/iospace.h>
+# include <hexo/interrupt.h>
+# include <hexo/ordering.h>
 
 static inline __attribute__ ((always_inline)) void
 soclib_mem_check_declare_lock(void *lock, uint32_t islock)
@@ -172,6 +175,8 @@ soclib_mem_check_enable(uint32_t flags)
   cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
   order_compiler_mem();
 }
+
+# endif  /* __MUTEK_ASM__ */
 
 #endif
 
