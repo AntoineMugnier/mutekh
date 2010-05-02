@@ -51,6 +51,9 @@
         /* Switch to super (After taking sp+x in r1) */
         msr      cpsr_c, #0xd3
 
+        mov     r0, #CPU_ARM_CONTEXT_RESTORE_CALLEE|CPU_ARM_CONTEXT_RESTORE_CALLER
+        str     r0, [r1, #CPU_ARM_CONTEXT_SAVE_MASK-CPU_ARM_CONTEXT_GPR(0)]
+
 #if defined(CONFIG_HEXO_USERMODE)
         /* r0 is still cpsr */
         tst    r0, #0xf
@@ -146,6 +149,9 @@ FUNC_START(.text, arm_exc_swi)
         // Save return address
         str    lr, [r11, #CPU_ARM_CONTEXT_GPR(15)]
 
+        mov    r12, #CPU_ARM_CONTEXT_RESTORE_CALLEE|CPU_ARM_CONTEXT_RESTORE_CALLER
+        str    r12, [r11, #CPU_ARM_CONTEXT_SAVE_MASK]
+
         // Save caller-saved regs (arguments)
         add    r12, r11, #CPU_ARM_CONTEXT_GPR(2)
         stmia  r12, {r0, r1, r2, r3}
@@ -169,7 +175,7 @@ FUNC_START(.text, arm_exc_swi)
         // And finally save r11 (through r12)
         pop    {r12}
         str    r12, [r11, #CPU_ARM_CONTEXT_GPR(11)]
-
+        
         preempt_clear
         mov    r1, r11
         b      arm_swi_common
