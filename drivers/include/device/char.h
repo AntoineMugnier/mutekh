@@ -105,32 +105,32 @@ struct dev_class_char_s
 };
 
 
-/** Synchronous helper read function. This function use the scheduler
+/** Synchronous helper read function. This function uses the scheduler
     api to put current context in wait state if no data is available
-    from device yet. This function spin in a loop waiting for read
+    from device yet. This function spins in a loop waiting for read
     operation to complete when scheduler is disabled.
 
     @returns processed bytes count or negative error code.
 */
 ssize_t dev_char_wait_read(struct device_s *dev, uint8_t *data, size_t size);
 
-/** Synchronous helper read function. This function spin in a loop
+/** Synchronous helper read function. This function spins in a loop
     waiting for read operation to complete.
 
     @returns processed bytes count or negative error code.
 */
 ssize_t dev_char_spin_read(struct device_s *dev, uint8_t *data, size_t size);
 
-/** Synchronous helper write function. This function use the scheduler
+/** Synchronous helper write function. This function uses the scheduler
     api to put current context in wait state if no data is available
-    from device yet. This function spin in a loop waiting for write
+    from device yet. This function spins in a loop waiting for write
     operation to complete when scheduler is disabled.
 
     @returns processed bytes count or negative error code.
 */
 ssize_t dev_char_wait_write(struct device_s *dev, const uint8_t *data, size_t size);
 
-/** Synchronous helper write function. This function spin in a loop
+/** Synchronous helper write function. This function spins in a loop
     waiting for write operation to complete.
 
     @returns processed bytes count or negative error code.
