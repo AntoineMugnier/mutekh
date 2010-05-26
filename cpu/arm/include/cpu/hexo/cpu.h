@@ -43,18 +43,6 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 "r8", "r9", "r10", "r11", "r12", "sp", "lr", "pc",						   \
 }
 
-#define CPU_FAULT_COUNT 7
-
-#define CPU_FAULT_NAMES {			\
-"None",					\
-"Reset",				\
-"Data abort",				\
-"FIQ",				\
-"IRQ",				\
-"Prefetch abort",			\
-"Software",			\
-}
-
 #define CPU_TYPE_NAME arm
 
 static inline cpu_id_t
@@ -168,6 +156,14 @@ static inline size_t cpu_dcache_line_size()
 #define CPU_EXCEPTION_DATA_ERROR   0x2
 #define CPU_EXCEPTION_INS_ERROR    0x3
 #define CPU_EXCEPTION_DATA_ALIGN   0x4
+#define CPU_FAULT_COUNT 4
+
+#define CPU_FAULT_NAMES {			\
+"Software",			\
+"Data abort",				\
+"Ins abort",			\
+"Data alignment",			\
+}
 
 #endif
 

@@ -119,10 +119,15 @@ FUNC_START(.text, arm_context_jumpto_internal)
     // Take &[r13 r14] in sp
     add     sp, r2, #CPU_ARM_CONTEXT_GPR(13)
 
+#if defined(CONFIG_HEXO_USERMODE)
+    // Load spsr
+    ldr     lr, [r2, #CPU_ARM_CONTEXT_CPSR]
+#endif
+
     // Test whether we need to restore caller saved
     ldr     r1, [r2, #CPU_ARM_CONTEXT_SAVE_MASK]
     tst     r1, #CPU_ARM_CONTEXT_RESTORE_CALLER
-    
+
     // We do
     // r0 is &r0
     ldmneia r0, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
@@ -130,9 +135,9 @@ FUNC_START(.text, arm_context_jumpto_internal)
     addeq   r0, r2, #CPU_ARM_CONTEXT_GPR(4)
     ldmeqia r0, {r4, r5, r6, r7, r8, r9, r10, r11}
 
+#if defined(CONFIG_HEXO_USERMODE)
     /* From now on, we can only touch lr, which is spsr for now. */
     
-#if defined(CONFIG_HEXO_USERMODE)
     /* If we are from user mode, restore user regs */
     tst     lr, #0xf
     /* if 0 (eq), from user mode */
@@ -147,11 +152,14 @@ FUNC_START(.text, arm_context_jumpto_internal)
     // Switch to any error mode, say, abort
     msr      cpsr_c, #0xd7
 
+    // Stack pointer is now abort mode's one we set previously in
+	// CPU_EXC_SP_SETUP. It points to &r0
+
     // restore status
     ldr     lr, [sp, #CPU_ARM_CONTEXT_CPSR-CPU_ARM_CONTEXT_GPR(0)]
     msr     spsr, lr
 
-    // Now sp points to the reg table, load pc
+    // Load pc
     ldr      lr, [sp, #CPU_ARM_CONTEXT_GPR(15)-CPU_ARM_CONTEXT_GPR(0)]
     // Restore
     movs     pc, lr

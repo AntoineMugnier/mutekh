@@ -40,6 +40,10 @@
         /* Save PC */
         str    lr, [sp, #CPU_ARM_CONTEXT_GPR(15)-CPU_ARM_CONTEXT_GPR(0)]
 
+        /* Tell what to restore */
+        mov     r0, #CPU_ARM_CONTEXT_RESTORE_CALLEE|CPU_ARM_CONTEXT_RESTORE_CALLER
+        str     r0, [sp, #CPU_ARM_CONTEXT_SAVE_MASK-CPU_ARM_CONTEXT_GPR(0)]
+
         /* Take old msr, save it */
         mrs    r0, spsr
         str    r0, [sp, #CPU_ARM_CONTEXT_CPSR-CPU_ARM_CONTEXT_GPR(0)]
@@ -50,9 +54,6 @@
 
         /* Switch to super (After taking sp+x in r1) */
         msr      cpsr_c, #0xd3
-
-        mov     r0, #CPU_ARM_CONTEXT_RESTORE_CALLEE|CPU_ARM_CONTEXT_RESTORE_CALLER
-        str     r0, [r1, #CPU_ARM_CONTEXT_SAVE_MASK-CPU_ARM_CONTEXT_GPR(0)]
 
 #if defined(CONFIG_HEXO_USERMODE)
         /* r0 is still cpsr */
