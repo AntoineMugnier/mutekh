@@ -790,6 +790,10 @@ sub check_condition
 	    return ($value > $val);
 	} elsif  ($op eq "<") {
 	    return ($value < $val);
+	} elsif  ($op eq ">=") {
+	    return ($value >= $val);
+	} elsif  ($op eq "<=") {
+	    return ($value <= $val);
 	}
 
     }
@@ -1017,10 +1021,8 @@ sub process_config_depend
     # check if at least one parent is defined
     my $pres = 1;
 
-
     if ( $opt->{parent} && !foreach_or_list( $opt->{parent}, \&check_defined ) ) {
-       # try define a parent with auto flag set
-	$pres = foreach_or_list( $opt->{parent}, \&if_flag, 'auto', \&process_auto, $opt );
+	$pres = 0;
     }
 
     # check if all dependencies tags have at least one token defined
@@ -1365,6 +1367,7 @@ sub tokens_check
 	    error_loc($opt, "`range' tag may only be used with `value' flagged tokens.")
 	}
 
+        # FIXME check there is no parent or depend with auto flag set when default defined, suggest use of when tag
 	if ( $opt->{flags}->{auto} && $opt->{default} eq 'defined' ) {
 	    warning_loc($opt, "token has `auto' flag but is defined by default.")
 	}
