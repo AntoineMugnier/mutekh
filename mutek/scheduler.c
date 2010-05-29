@@ -252,10 +252,7 @@ static CONTEXT_ENTRY(sched_context_idle)
          idle cpu list after cpu_interrupt_wait() call in case of IRQ and
          therefore allows use of a singly linked and non-locked list. */
       if (!idle_cpu_queue_isorphan(ipi_e))
-        {
-          assert(sched_queue_isempty(&sched->root));
-          goto still_idle;
-        }
+        goto still_idle;
 #endif
     }
 }
