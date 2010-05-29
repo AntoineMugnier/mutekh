@@ -9,7 +9,6 @@
 #include <hexo/lock.h>
 #include <hexo/context.h>
 #include <hexo/cpu.h>
-#include <mutek/scheduler.h>
 
 #include <drivers/char/uart-8250/uart-8250.h>
 #include <drivers/char/tty-vga/tty-vga.h>

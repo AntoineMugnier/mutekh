@@ -29,7 +29,10 @@
 #include <hexo/lock.h>
 #include <hexo/context.h>
 #include <hexo/cpu.h>
-#include <mutek/scheduler.h>
+
+#if defined(CONFIG_MUTEK_SCHEDULER)
+# include <mutek/scheduler.h>
+#endif
 
 #include <device/char.h>
 #include <device/timer.h>
@@ -62,7 +65,7 @@ DEVTIMER_CALLBACK(timer_callback)
 {
 	//  printk("timer callback\n");
 # if defined(CONFIG_MUTEK_SCHEDULER_PREEMPT)
-	sched_context_switch();
+        context_set_preempt(sched_preempt_switch, NULL);
 # endif
 
 	timer_inc_ticks(&timer_ms, 10);
@@ -71,6 +74,8 @@ DEVTIMER_CALLBACK(timer_callback)
 
 #if defined (CONFIG_MUTEK_SCHEDULER)
 extern struct sched_context_s main_ctx;
+#else
+struct context_s main_ctx;
 #endif
 
 #if defined(CONFIG_LIBC_STREAM_STD)
@@ -89,6 +94,8 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 #if defined (CONFIG_MUTEK_SCHEDULER)
 	context_bootstrap(&main_ctx.context);
 	sched_context_init(&main_ctx);
+#else
+	context_bootstrap(&main_ctx);
 #endif
 
 #if defined(CONFIG_MUTEK_CONSOLE) && !defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
@@ -143,7 +150,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   printk("CPU Fault: cpuid(%u) faultid(%u-%s)\n", cpu_id(), type, name);
   printk("Execution pointer: %p, Bad address (if any): %p\n"
 	 "Registers:"
-		 , (void*)execptr, (void*)dataptr);
+		 , (void*)*execptr, (void*)dataptr);
 
   for (i = 0; i < CPU_GPREG_COUNT; i++)
 #ifdef CPU_GPREG_NAMES
@@ -189,7 +196,6 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
       app_start();
 #if defined(CONFIG_MUTEK_SCHEDULER)
       cpu_interrupt_disable();
-      sched_lock();
       sched_context_exit();
 #endif
     }
@@ -201,7 +207,6 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
       cpu_interrupt_disable();
-      sched_lock();
       sched_context_exit();
 #endif
     }

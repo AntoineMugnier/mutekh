@@ -33,7 +33,9 @@
 
 #include <hexo/lock.h>
 #include <mutek/mem_alloc.h>
-#include <mutek/scheduler.h>
+#if defined(CONFIG_MUTEK_SCHEDULER)
+# include <mutek/scheduler.h>
+#endif
 #include <mutek/printk.h>
 
 #ifdef CONFIG_DRIVER_ICU_APIC
@@ -90,6 +92,7 @@ static void apic_init()
 #ifdef CONFIG_ARCH_SMP
 static lock_t		cpu_init_lock;	/* cpu intialization lock */
 static lock_t		cpu_start_lock;	/* cpu wait for start lock */
+static size_t           cpu_count = 1;
 #endif
 
 #ifdef CONFIG_IBMPC_EARLY_CONSOLE_VGA
@@ -188,6 +191,7 @@ void arch_init()
 #ifdef CONFIG_DRIVER_ICU_APIC
       apic_init();
 #endif
+      cpu_count++;
 
       lock_release(&cpu_init_lock);
 
@@ -212,4 +216,12 @@ void arch_start_other_cpu(void)
 #endif
 }
 
+size_t arch_get_cpu_count(void)
+{
+#ifdef CONFIG_ARCH_SMP
+  return cpu_count;
+#else
+  return 1;
+#endif
+}
 
