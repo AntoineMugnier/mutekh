@@ -93,7 +93,6 @@ struct scheduler_s
 #if defined(CONFIG_HEXO_IPI)
     idle_cpu_queue_root_t idle_cpu;
 #endif
-    reg_t tmp_stack[CONFIG_MUTEK_SCHEDULER_TMP_STACK_SIZE / sizeof(reg_t)];
 };
 
 #if defined (CONFIG_MUTEK_SCHEDULER_MIGRATION)
@@ -156,6 +155,9 @@ static CONTEXT_ENTRY(sched_context_idle)
 {
   struct scheduler_s *sched = __scheduler_get();
 
+  sched_queue_wrlock(&sched->root);
+  cpu_interrupt_disable();
+
   /* destroy app_start context */
   if (cpu_isbootstrap())
     context_destroy(&main_ctx.context);
@@ -172,11 +174,14 @@ static CONTEXT_ENTRY(sched_context_idle)
     {
       struct sched_context_s	*next;
 
-      cpu_interrupt_disable();
-
       /* Try to get a runnable context from running queue */
-      if ((next = __sched_candidate_noidle(&sched->root)) != NULL)
-	context_switch_to(&next->context);
+      next = __sched_candidate_noidle(&sched->root);
+
+      if (next != NULL)
+        {
+          sched_queue_unlock(&sched->root);
+          context_switch_to(&next->context);
+        }
 
   /************************** single processor case */
 
@@ -235,12 +240,16 @@ static CONTEXT_ENTRY(sched_context_idle)
       sched_queue_wrlock(&sched->root);
 
 #if defined(CONFIG_HEXO_IPI)
+
       /* Do not even try to poll the running queue if always marked as
-	 idle. Doing this also save us from removing the us from the
+	 idle. Doing this also save us from removing us from the
 	 idle cpu list after cpu_interrupt_wait() call in case of IRQ and
 	 therefor allow use of a singly linked and non-locked list. */
       if (!idle_cpu_queue_isorphan(ipi_e))
-	goto still_idle;
+        {
+          assert(sched_queue_isempty(&sched->root));
+          goto still_idle;
+        }
 #endif
     }
 }
@@ -249,11 +258,30 @@ static CONTEXT_ENTRY(sched_context_idle)
  *      Scheduler primitives
  */
 
-/* Switch to next context available in the root queue. This function
-   returns if no other context is available, control is passed
-   back to current context rather than Idle context. Must be called
-   with interrupts disabled */
-void sched_context_switch(void)
+CONTEXT_PREEMPT(sched_preempt_switch)
+{
+  struct scheduler_s *sched = __scheduler_get();
+  struct sched_context_s *cur = CONTEXT_LOCAL_GET(sched_cur);
+  struct sched_context_s *next;
+
+  if (cur == NULL)
+    return NULL;
+
+  assert(!cpu_is_interruptible());
+  assert(sched == cur->scheduler);
+
+  sched_queue_wrlock(&sched->root);
+  next = __sched_candidate_noidle(&sched->root);
+
+  if (next != NULL)
+    sched_queue_nolock_pushback(&sched->root, cur);
+
+  sched_queue_unlock(&sched->root);
+
+  return next ? &next->context : NULL;
+}
+
+CONTEXT_PREEMPT(sched_preempt_stop)
 {
   struct scheduler_s *sched = __scheduler_get();
   struct sched_context_s *next;
@@ -261,47 +289,37 @@ void sched_context_switch(void)
   assert(!cpu_is_interruptible());
 
   sched_queue_wrlock(&sched->root);
-
-  if ((next = __sched_candidate_noidle(&sched->root)))
-    {
-      /* push context back in running queue */
-      sched_queue_nolock_pushback(&sched->root, CONTEXT_LOCAL_GET(sched_cur));
-      context_switch_to(&next->context);
-    }
-
+  next = __sched_candidate(&sched->root);
   sched_queue_unlock(&sched->root);
+
+  return &next->context;
 }
 
-/* Must be called with interrupts disabled and sched locked */
-void sched_context_exit(void)
+CONTEXT_PREEMPT(sched_preempt_wait_unlock)
 {
-  assert(!cpu_is_interruptible());
+  sched_queue_root_t *queue = param;
+  struct scheduler_s *sched = __scheduler_get();
+  struct sched_context_s *cur = CONTEXT_LOCAL_GET(sched_cur);
+  struct sched_context_s *next;
 
-  struct sched_context_s	*next;
+  assert(!cpu_is_interruptible());
+  assert(sched == cur->scheduler);
+
+  /* add current context to queue, assume queue is already locked */
+  sched_queue_nolock_pushback(queue, cur);
+
+  /* lock scheduler before unlocking queue so that current
+     context can not be woken up in the mean time. */
+  sched_queue_wrlock(&sched->root);
+  sched_queue_unlock(queue);
 
   /* get next running context */
-  next = __sched_candidate(&__scheduler_get()->root);
-  context_jump_to(&next->context);
+  next = __sched_candidate(&sched->root);
+  sched_queue_unlock(&sched->root);
+
+  return &next->context;
 }
 
-void sched_lock(void)
-{
-  assert(!cpu_is_interruptible());
-
-  sched_queue_wrlock(&__scheduler_get()->root);
-}
-
-void sched_unlock(void)
-{
-  assert(!cpu_is_interruptible());
-
-  sched_queue_unlock(&__scheduler_get()->root);
-}
-
-uintptr_t sched_tmp_stack(void)
-{
-  return (uintptr_t)__scheduler_get()->tmp_stack;
-}
 
 void sched_context_init(struct sched_context_s *sched_ctx)
 {
@@ -330,12 +348,14 @@ void sched_wait_callback(sched_queue_root_t *queue,
 		         void (*callback)(void *ctx), void *ctx)
 {
   struct scheduler_s *sched = __scheduler_get();
+  struct sched_context_s *cur = CONTEXT_LOCAL_GET(sched_cur);
   struct sched_context_s *next;
 
   assert(!cpu_is_interruptible());
+  assert(sched == cur->scheduler);
 
   /* add current context to queue, assume dont need lock */
-  sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
+  sched_queue_nolock_pushback(queue, cur);
 
   /* lock scheduler before callback so that current
      context can not be woken up in the mean time. */
@@ -344,50 +364,9 @@ void sched_wait_callback(sched_queue_root_t *queue,
 
   /* get next running context */
   next = __sched_candidate(&sched->root);
-  context_switch_to(&next->context);
   sched_queue_unlock(&sched->root);
-}
 
-/* push current context in the 'queue', unlock it and switch to next
-   context available in the 'root' queue. Must be called with
-   interrupts disabled */
-void sched_wait_unlock(sched_queue_root_t *queue)
-{
-  struct scheduler_s *sched = __scheduler_get();
-  struct sched_context_s *next;
-
-  assert(!cpu_is_interruptible());
-
-  /* add current context to queue, assume queue is already locked */
-  sched_queue_nolock_pushback(queue, CONTEXT_LOCAL_GET(sched_cur));
-
-  /* lock scheduler before unlocking queue so that current
-     context can not be woken up in the mean time. */
-  sched_queue_wrlock(&sched->root);
-  sched_queue_unlock(queue);
-
-  /* get next running context */
-  next = __sched_candidate(&sched->root);
   context_switch_to(&next->context);
-  sched_queue_unlock(&sched->root);
-}
-
-/* Switch to next context available in the 'root' queue, do not put
-   current context in any queue. Idle context may be selected if no
-   other contexts are available. Must be called with interrupts
-   disabled */
-void sched_context_stop(void)
-{
-  struct scheduler_s *sched = __scheduler_get();
-  struct sched_context_s *next;
-
-  assert(!cpu_is_interruptible());
-
-  /* get next running context */
-  sched_queue_wrlock(&sched->root);
-  next = __sched_candidate(&sched->root);
-  context_switch_to(&next->context);
-  sched_queue_unlock(&sched->root);
 }
 
 /* Same as sched_context_stop but unlock given spinlock before switching */
@@ -402,8 +381,9 @@ void sched_context_stop_unlock(lock_t *lock)
   sched_queue_wrlock(&sched->root);
   lock_release(lock);
   next = __sched_candidate(&sched->root);
-  context_switch_to(&next->context);
   sched_queue_unlock(&sched->root);
+
+  context_switch_to(&next->context);
 }
 
 /* Must be called with interrupts disabled and queue locked */

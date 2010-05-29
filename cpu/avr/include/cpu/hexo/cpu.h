@@ -65,16 +65,6 @@ cpu_isbootstrap(void)
   return 1;
 }
 
-/**
-   cpu cycle touner type
-*/
-
-typedef uint32_t cpu_cycle_t;
-
-/**
-   cpu cycle counter read function
-*/
-
 static inline cpu_cycle_t
 __attribute__ ((deprecated))
 cpu_cycle_count(void)

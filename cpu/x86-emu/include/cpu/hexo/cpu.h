@@ -58,8 +58,6 @@ cpu_isbootstrap(void)
 
 void cpu_trap();
 
-typedef uint64_t cpu_cycle_t;
-
 static inline cpu_cycle_t
 cpu_cycle_count(void)
 { 

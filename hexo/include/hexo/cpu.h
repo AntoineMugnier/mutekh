@@ -28,12 +28,22 @@
 #ifndef __CPU_H_
 #define __CPU_H_
 
+#include <hexo/types.h>
+#include <hexo/error.h>
+
 #include <hexo/decls.h>
+
+#ifndef __MUTEK_ASM__
 
 C_HEADER_BEGIN
 
-#include "types.h"
-#include "error.h"
+typedef uint64_t cpu_cycle_t;
+
+#endif
+
+#include <cpu/hexo/cpu.h>
+
+#ifndef __MUTEK_ASM__
 
 /** init system wide cpu data */
 error_t cpu_global_init(void);
@@ -54,14 +64,24 @@ static const char *cpu_type_name(void);
 static bool_t cpu_isbootstrap(void);
 
 /** return total cpus count */
-cpu_id_t arch_get_cpu_count(void);
+size_t arch_get_cpu_count(void);
 
 /** unlock non first CPUs so that they can enter main_smp() */
 void arch_start_other_cpu(void);
 
-#include "cpu/hexo/cpu.h"
-
+/** return processor cycles count timestamp */
 cpu_cycle_t cpu_cycle_count(void);
+
+/** return number of cycles spent since @tt start stamp. */
+static inline cpu_cycle_t cpu_cycle_diff(cpu_cycle_t start)
+{
+  cpu_cycle_t now = cpu_cycle_count();
+
+  /* handle 32bits wrap */
+  if (now < start)
+    now += 0x100000000ULL;
+  return now - start;
+}
 
 static inline
 void cpu_cycle_wait(cpu_cycle_t delta)
@@ -80,23 +100,23 @@ static size_t cpu_dcache_line_size();
 /** invalidate the cpu data cache line containing this address */
 static void cpu_dcache_invld(void *ptr);
 
-# if defined(CONFIG_CPU_CACHE)
+#  if defined(CONFIG_CPU_CACHE)
 
 /** invalidate all the cpu data cache lines within given range.
     size is in bytes. */
 void cpu_dcache_invld_buf(void *ptr, size_t size);
 
-# else
+#  else
 
 static inline void
 cpu_dcache_invld_buf(void *ptr, size_t size)
 {
 }
 
-# endif
+#  endif
 
-#define _TO_STR(x) #x
-#define TO_STR(x) _TO_STR(x)
+# define _TO_STR(x) #x
+# define TO_STR(x) _TO_STR(x)
 
 /** @this returns the cpu type name */
 static inline const char *
@@ -113,5 +133,6 @@ cpu_type_name(void)
 
 C_HEADER_END
 
-#endif
+#endif  /* __MUTEK_ASM__ */
 
+#endif

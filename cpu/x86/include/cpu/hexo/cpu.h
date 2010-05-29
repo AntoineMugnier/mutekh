@@ -25,18 +25,8 @@
 
 #define CPU_CPU_H_
 
-#include <hexo/interrupt.h>
-#include <hexo/iospace.h>
-#include <hexo/local.h>
-
-#include "pmode.h"
-#include "msr.h"
-#include <drivers/icu/apic/apic.h>
-
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	8
-
-#define CPU_GPREG_NAMES { "edi", "esi", "ebp", "esp", "ebx", "edx", "ecx", "eax" }
 
 #define CPU_GPREG_EDI	0
 #define CPU_GPREG_ESI	1
@@ -46,7 +36,22 @@
 #define CPU_GPREG_EDX	5
 #define CPU_GPREG_ECX	6
 #define CPU_GPREG_EAX	7
+
+#define CPU_X86_EFLAGS_NONE  (1<<1)
+#define CPU_X86_EFLAGS_IRQ   (1<<9)
+
+#ifndef __MUTEK_ASM__
 		
+#include <hexo/interrupt.h>
+#include <hexo/iospace.h>
+#include <hexo/local.h>
+
+#include "pmode.h"
+#include "msr.h"
+#include <drivers/icu/apic/apic.h>
+
+# define CPU_GPREG_NAMES { "edi", "esi", "ebp", "esp", "ebx", "edx", "ecx", "eax" }
+
 static inline bool_t
 cpu_isbootstrap(void)
 {
@@ -60,16 +65,7 @@ cpu_isbootstrap(void)
   return msr & 0x100 ? 1 : 0;
 }
 
-/**
-   cpu cycle touner type
-*/
-
-typedef uint64_t cpu_cycle_t;
-
-/**
-   cpu cycle counter read function
-*/
-
+/** cpu cycle counter read function */
 static inline cpu_cycle_t
 cpu_cycle_count(void)
 {
@@ -84,10 +80,6 @@ cpu_cycle_count(void)
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 extern cpu_x86_segsel_t cpu_local_storage_seg[CONFIG_CPU_MAXCOUNT];
 extern CPU_LOCAL cpu_x86_segsel_t *cpu_tls_seg;
-#endif
-
-#ifdef CONFIG_HEXO_USERMODE
-extern volatile CPU_LOCAL struct cpu_x86_tss_s cpu_tss;
 #endif
 
 #define CPU_TYPE_NAME x86
@@ -127,6 +119,8 @@ static inline size_t cpu_dcache_line_size()
 {
   return 0;			/* FIXME */
 }
+
+#endif  /* __MUTEK_ASM__ */
 
 #endif
 
