@@ -181,7 +181,13 @@ static CONTEXT_ENTRY(sched_context_idle)
         {
           sched_queue_unlock(&sched->root);
           context_switch_to(&next->context);
+
+          /* A context might have been pushed in run queue during switch */
+          sched_queue_wrlock(&sched->root);
+          continue;
         }
+
+      /* The processor is considered idle from this point */
 
   /************************** single processor case */
 
