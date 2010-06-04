@@ -3,7 +3,7 @@ POST_TARGET=__foo.out
 LDFLAGS=
 TARGET_EXT ?= out
 
-TARGET_SECTIONS=.text .data .boot .contextdata
+TARGET_SECTIONS=.boot .text .rodata .excep .cpudata .contextdata .data
 
 LINKING=1
 ifeq ($(TARGET_EXT),o)
@@ -200,9 +200,9 @@ $(POST_TARGET): $(OBJ_DIR)/$(target).o $(POST_LDSCRIPT)
 
 $(OBJ_DIR)/$(target).hex: $(OBJ_DIR)/$(target).out
 	echo 'OBJCOPY HEX ' $(notdir $@) $(LOG_REDIR)
-	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) -O ihex $< $@ $(LOG_REDIR)
+	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O ihex $< $@ $(LOG_REDIR)
 
 $(OBJ_DIR)/$(target).bin: $(OBJ_DIR)/$(target).out
 	echo 'OBJCOPY BIN ' $(notdir $@) $(LOG_REDIR)
-	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) -O binary $< $@ $(LOG_REDIR)
+	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O binary $< $@ $(LOG_REDIR)
 
