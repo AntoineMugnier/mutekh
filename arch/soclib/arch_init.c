@@ -204,7 +204,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
             cpu_interrupt_sethandler_device(icu);
 #endif
 
-        cpu_count++;
+        uint_fast8_t my_count = ++cpu_count;
 
         lock_release(&cpu_init_lock);
 
@@ -212,6 +212,9 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 
         while (cpu_start_flag != START_MAGIC)
             order_compiler_mem();
+
+        if ( my_count == cpu_count )
+            cpu_init_flag = 0;
 
         /* run mutek_start_smp() */
 
