@@ -84,9 +84,17 @@ static lock_t       cpu_init_lock;    /* cpu intialization lock */
 lock_t              __atomic_arch_lock;
 #endif
 
+#ifdef CONFIG_ARCH_DEVICE_TREE
+extern __ldscript_symbol_t dt_blob_start;
+#endif
+
 /* architecture specific init function */
 void arch_init(void *device_tree, void *bootloader_pointer_table)
 {
+#ifdef CONFIG_ARCH_DEVICE_TREE
+    device_tree = &dt_blob_start;
+#endif
+
 #ifdef CONFIG_ARCH_SMP
     if (cpu_isbootstrap())    /* FIXME */
         /* First CPU */
@@ -204,7 +212,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
             cpu_interrupt_sethandler_device(icu);
 #endif
 
-        cpu_count++;
+        uint_fast8_t my_count = ++cpu_count;
 
         lock_release(&cpu_init_lock);
 
@@ -212,6 +220,9 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 
         while (cpu_start_flag != START_MAGIC)
             order_compiler_mem();
+
+        if ( my_count == cpu_count )
+            cpu_init_flag = 0;
 
         /* run mutek_start_smp() */
 
@@ -234,7 +245,7 @@ void arch_start_other_cpu(void)
 #endif
 }
 
-inline cpu_id_t arch_get_cpu_count(void)
+inline size_t arch_get_cpu_count(void)
 {
 #ifdef CONFIG_ARCH_SMP
     return cpu_count;
