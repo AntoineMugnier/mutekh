@@ -177,6 +177,25 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         sched_cpu_init();
 #endif
 
+#ifdef CONFIG_ARCH_SMP
+        uint_fast8_t last_count = 0;
+        
+        for ( ;; ) {
+            order_compiler_mem();
+
+            if ( last_count == cpu_count )
+                break;
+            last_count = cpu_count;
+
+            if ( last_count == CONFIG_CPU_MAXCOUNT )
+                break;
+            
+            cpu_cycle_wait(100000);
+        }
+
+        cpu_init_flag = 0;
+#endif
+
         /* run mutek_start() */
         mutek_start(0, 0);
 #ifdef CONFIG_ARCH_SMP
@@ -204,7 +223,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
             cpu_interrupt_sethandler_device(icu);
 #endif
 
-        uint_fast8_t my_count = ++cpu_count;
+        ++cpu_count;
 
         lock_release(&cpu_init_lock);
 
@@ -212,9 +231,6 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 
         while (cpu_start_flag != START_MAGIC)
             order_compiler_mem();
-
-        if ( my_count == cpu_count )
-            cpu_init_flag = 0;
 
         /* run mutek_start_smp() */
 
