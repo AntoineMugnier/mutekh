@@ -36,7 +36,7 @@ VFS_FS_NODE_OPEN(ramfs_node_open);
 
 OBJECT_TYPE     (ramfs_node, REFCOUNT, struct fs_node_s);
 
-#define CONTAINER_LOCK_ramfs_dir_hash HEXO_SPIN
+#define CONTAINER_LOCK_ramfs_dir_hash HEXO_SPIN_IRQ
 
 CONTAINER_TYPE    (ramfs_dir_hash, HASHLIST,
 struct fs_node_s

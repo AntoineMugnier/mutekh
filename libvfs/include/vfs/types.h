@@ -51,7 +51,7 @@ OBJECT_CONSTRUCTOR(vfs_node);
 OBJECT_DESTRUCTOR(vfs_node);
 
 //#define CONTAINER_LOCK_vfs_dir_hash MUTEK_SEMAPHORE
-#define CONTAINER_LOCK_vfs_lru HEXO_SPIN
+#define CONTAINER_LOCK_vfs_lru HEXO_SPIN_IRQ
 
 CONTAINER_TYPE    (vfs_dir_hash, HASHLIST,
 /**

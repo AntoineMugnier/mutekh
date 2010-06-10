@@ -59,21 +59,25 @@ void vfs_node_2dirunlock(struct vfs_node_s *d1,
 static void
 vfs_node_parent_nolock_set_for_root(struct vfs_node_s *node, struct vfs_node_s *parent)
 {
+    CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&node->parent_lock);
     node->parent = vfs_node_refnew(parent);
     vfs_dir_push(&parent->children, node);
     lock_release(&node->parent_lock);
+    CPU_INTERRUPT_RESTORESTATE;
 }
 
 static void
 vfs_node_parent_nolock_set(struct vfs_node_s *node, struct vfs_node_s *parent)
 {
+    CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&node->parent_lock);
 	assert( vfs_node_is_dandling(node) );
     node->parent = vfs_node_refnew(parent);
     vfs_dir_push(&parent->children, node);
     lock_release(&node->parent_lock);
     vfs_node_lru_rehash(node);
+    CPU_INTERRUPT_RESTORESTATE;
 }
 
 inline

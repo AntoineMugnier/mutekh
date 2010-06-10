@@ -116,6 +116,7 @@ OBJECT_DESTRUCTOR(vfs_node)
     VFS_STATS_INC(obj->fs, node_destroy_count);
 
     obj->fs->ops->node_refdrop(obj->fs_node);
+    lock_destroy(&obj->parent_lock);
     vfs_printk(" done>");
 }
 
@@ -229,10 +230,12 @@ struct vfs_node_s *vfs_node_get_parent(struct vfs_node_s *node)
 {
     struct vfs_node_s *parent = NULL;
 
+    CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&node->parent_lock);
 	if ( !vfs_node_is_dandling(node) )
         parent = vfs_node_refnew(node->parent);
     lock_release(&node->parent_lock);
+    CPU_INTERRUPT_RESTORESTATE;
 
     return parent;
 }
@@ -240,6 +243,7 @@ struct vfs_node_s *vfs_node_get_parent(struct vfs_node_s *node)
 void
 vfs_node_parent_nolock_unset(struct vfs_node_s *node)
 {
+    CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&node->parent_lock);
 	if ( !vfs_node_is_dandling(node) ) {
         struct vfs_node_s *parent = node->parent;
@@ -249,6 +253,7 @@ vfs_node_parent_nolock_unset(struct vfs_node_s *node)
         vfs_node_lru_drop(node);
     }
     lock_release(&node->parent_lock);
+    CPU_INTERRUPT_RESTORESTATE;
 }
 
 // Local Variables:

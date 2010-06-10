@@ -235,7 +235,7 @@ error_t fat_open(struct device_s *dev, struct vfs_fs_s **fs)
 		goto cant_open;
 
 #if !defined(CONFIG_DRIVER_FS_FAT_RW)
-    mnt->ro = 1;
+    mnt->flag_ro = 0;
 #endif
 
 	mnt->root = root;

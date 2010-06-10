@@ -46,7 +46,7 @@ struct fat_file_s;
 OBJECT_TYPE     (fat_file, REFCOUNT, struct fat_file_s);
 OBJECT_PROTOTYPE(fat_file, static inline, fat_file);
 
-#define CONTAINER_LOCK_fat_file_list HEXO_SPIN
+#define CONTAINER_LOCK_fat_file_list HEXO_SPIN_IRQ
 #define CONTAINER_OBJ_fat_file_list fat_file
 
 CONTAINER_TYPE(fat_file_list, CLIST,
@@ -76,7 +76,7 @@ fat_file_new(void *storage, struct fs_node_s *node);
 OBJECT_TYPE     (fat_node, REFCOUNT, struct fs_node_s);
 OBJECT_PROTOTYPE(fat_node, static inline, fat_node);
 
-#define CONTAINER_LOCK_fat_node_pool HEXO_SPIN
+#define CONTAINER_LOCK_fat_node_pool HEXO_SPIN_IRQ
 #define CONTAINER_OBJ_fat_node_pool fat_node
 
 CONTAINER_TYPE(fat_node_pool, HASHLIST,
