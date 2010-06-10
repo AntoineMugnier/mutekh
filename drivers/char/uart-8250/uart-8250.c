@@ -169,9 +169,21 @@ DEV_IRQ(uart_8250_irq)
  * device open operation
  */
 
+#ifdef CONFIG_DRIVER_ENUM_FDT
+static const struct devenum_ident_s	uart_8250_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("uart8250", 0, 0),
+	DEVENUM_FDTNAME_ENTRY("uart16550", 0, 0),
+	{ 0 }
+};
+#endif
+
 const struct driver_s	uart_8250_drv =
 {
   .class		= device_class_char,
+#ifdef CONFIG_DRIVER_ENUM_FDT
+  .id_table     = uart_8250_ids,
+#endif
   .f_init		= uart_8250_init,
   .f_cleanup		= uart_8250_cleanup,
   .f_irq		= uart_8250_irq,
@@ -179,6 +191,10 @@ const struct driver_s	uart_8250_drv =
     .f_request		= uart_8250_request,
   }
 };
+
+#ifdef CONFIG_DRIVER_ENUM_FDT
+REGISTER_DRIVER(uart_8250_drv);
+#endif
 
 DEV_INIT(uart_8250_init)
 {
