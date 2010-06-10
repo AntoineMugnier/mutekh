@@ -88,6 +88,14 @@ lock_t              __atomic_arch_lock;
 extern __ldscript_symbol_t dt_blob_start;
 #endif
 
+#if defined (CONFIG_MUTEK_SCHEDULER)
+extern struct sched_context_s main_ctx;
+#else
+struct context_s main_ctx;
+#endif
+
+extern __ldscript_symbol_t __initial_stack;
+
 /* architecture specific init function */
 void arch_init(void *device_tree, void *bootloader_pointer_table)
 {
@@ -180,10 +188,20 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         cpu_init_flag = START_MAGIC;
 #endif
 
+        {
+            uintptr_t stack_end = (uintptr_t)&__initial_stack - (1 << CONFIG_HEXO_RESET_STACK_SIZE) * cpu_id();
+
 #if defined(CONFIG_MUTEK_SCHEDULER)
-        sched_global_init();
-        sched_cpu_init();
+            sched_global_init();
+            sched_cpu_init();
+
+            /* FIXME initial stack space will never be freed ! */
+            context_bootstrap(&main_ctx.context, 0, stack_end);
+            sched_context_init(&main_ctx);
+#else
+            context_bootstrap(&main_ctx, 0, stack_end);
 #endif
+        }
 
 #ifdef CONFIG_ARCH_SMP
         uint_fast8_t last_count = 0;
@@ -245,6 +263,9 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 #if defined(CONFIG_MUTEK_SCHEDULER)
         sched_cpu_init();
 #endif
+
+        /* FIXME should have context_bootstrap for non bsp processors,
+           especially when CONFIG_MUTEK_SMP_APP_START is defined. */
 
         mutek_start_smp();
     }

@@ -25,11 +25,9 @@ CONTEXT_LOCAL uintptr_t context_stack_end;
 /** pointer to current context */
 CONTEXT_LOCAL struct context_s *context_cur = NULL;
 
-extern __ldscript_symbol_t __initial_stack;
-
 /** init a context object using current execution context */
 error_t
-context_bootstrap(struct context_s *context)
+context_bootstrap(struct context_s *context, uintptr_t stack, size_t stack_size)
 {
   error_t	res;
 
@@ -39,10 +37,8 @@ context_bootstrap(struct context_s *context)
 
   CONTEXT_LOCAL_TLS_SET(context->tls, context_cur, context);
 
-  /* FIXME initial stack space will never be freed ! */
-  CONTEXT_LOCAL_TLS_SET(context->tls, context_stack_start, 0);
-  CONTEXT_LOCAL_TLS_SET(context->tls, context_stack_end,
-                        (uintptr_t)&__initial_stack - CONFIG_HEXO_RESET_STACK_SIZE * cpu_id());
+  CONTEXT_LOCAL_TLS_SET(context->tls, context_stack_start, stack);
+  CONTEXT_LOCAL_TLS_SET(context->tls, context_stack_end, stack + stack_size);
 
   /* setup cpu specific context data */
   if ((res = cpu_context_bootstrap(context)))

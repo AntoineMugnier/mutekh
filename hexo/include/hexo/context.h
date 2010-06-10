@@ -36,7 +36,7 @@
 #ifndef CONTEXT_H_
 #define CONTEXT_H_
 
-/** offset of tls field in @ref context_s */
+/** @internal offset of tls field in @ref context_s */
 #define HEXO_CONTEXT_S_TLS              0
 
 #ifndef __MUTEK_ASM__
@@ -47,10 +47,10 @@
 # include <hexo/mmu.h>
 # include <assert.h> 
 
-/** context descriptor structure */
+/** @internal context descriptor structure */
 struct context_s
 {
-  /** context local storage address */
+  /** context local storage address. @csee #HEXO_CONTEXT_S_TLS */
   void			*tls;
 
 # ifdef CONFIG_HEXO_MMU
@@ -64,21 +64,23 @@ struct context_s
 # endif
 };
 
+/** @internal */
 extern CONTEXT_LOCAL uintptr_t context_stack_start;
+/** @internal */
 extern CONTEXT_LOCAL uintptr_t context_stack_end;
 
-/** @showcontent context entry point function prototype */
+/** @showvalue @this is the context entry point function prototype */
 #define CONTEXT_ENTRY(n) void (n) (void *param)
-/** context entry point function type. @csee #CONTEXT_ENTRY */
+/** @this is context entry point function type. @csee #CONTEXT_ENTRY */
 typedef CONTEXT_ENTRY(context_entry_t);
 
 
-/** @showcontent context preempt function prototype.
+/** @showvalue context preempt function prototype.
 
-    This function is called on interrupt handler completion and may
+    This function type is used on interrupt handler completion and may
     return a pointer to a context to switch to or NULL. When
     returning a context pointer, the interrupted context will not be
-    resumed. @csee context_set_preempt.
+    resumed. @see context_set_preempt.
 
     The interrupted context will be completely saved before calling
     this function so that it may be immediately resumed on an other
@@ -93,44 +95,38 @@ typedef CONTEXT_PREEMPT(context_preempt_t);
 #include "cpu/hexo/context.h"
 #ifndef __MUTEK_ASM__
 
-/** Save current context and restore given context */
+/** @internal @this only performs processor specific part of the job. @csee context_switch_to */
 void cpu_context_switch(struct context_s *new);
 
-/** Restore given context without saving current context */
+/** @internal @this only performs processor specific part of the job. @csee context_jump_to */
 __attribute__((noreturn))
 void cpu_context_jumpto(struct context_s *new);
 
-/** set new stack pointer and jump to a new function */
+/** @this sets new stack pointer and jump to a new function. */
 __attribute__((noreturn))
 void cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto);
 
+/** @internal @this executes a function using given context stack.
+    Current context stack content is preserved.
+    @this only performs processor specific part of the job. @csee context_stack_use */
 __attribute__((noreturn))
 void cpu_context_stack_use(struct context_s *context,
                            context_entry_t *func, void *param);
 
-/** @this sets the execution pointer of the specified context and
-    return previous execution pointer. This function can be used to
-    force asynchronous execution of some code when the context is
-    resumed.
-
-    This function may be called on non executing contexts and from
-    context preempt handler.
-
-    @see cpu_context_hook_return
-*/
-uintptr_t cpu_context_hook(struct context_s *context, uintptr_t pc);
-
-/** associate context and cpu current execution state */
+/** @internal @this intializes given context to match cpu current execution state.
+    @this only performs processor specific part of the job. @csee context_bootstrap */
 error_t cpu_context_bootstrap(struct context_s *context);
 
-/** Prepare context execution by setting up original stack values */
+/** @internal @this initializes context and prepares first context execution.
+    @this only performs processor specific part of the job. @csee context_init */
 error_t cpu_context_init(struct context_s *context, context_entry_t *entry, void *param);
 
-/** Context cleanup */
+/** @internal @this cleanups given context resources.
+    @this only performs processor specific part of the job. @csee context_init */
 void cpu_context_destroy(struct context_s *context);
 
 # if defined(CONFIG_HEXO_USERMODE)
-/** set user stack pointer and jump to a new function in user mode */
+/** @this sets user stack pointer and jump to a new function in user mode. */
 __attribute__((noreturn))
 void cpu_context_set_user(uintptr_t stack_ptr, uintptr_t entry, reg_t param);
 # endif
@@ -138,11 +134,13 @@ void cpu_context_set_user(uintptr_t stack_ptr, uintptr_t entry, reg_t param);
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 /** @internal */
 extern CPU_LOCAL context_preempt_t *cpu_preempt_handler;
+/** @internal */
 extern CPU_LOCAL void *cpu_preempt_param;
 
 /** @this sets a preemption handler function for the processor. The
     preemtion handler is reset to NULL on each exception and irq and
-    must be setup by the interrupt handler when context preemption is needed. */
+    must be setup by the interrupt handler when context preemption is needed.
+    @see #CONTEXT_PREEMPT */
 static inline void context_set_preempt(context_preempt_t *func, void *param)
 {
   CPU_LOCAL_SET(cpu_preempt_handler, func);
@@ -163,7 +161,7 @@ static inline void context_stack_use(struct context_s *context,
 }
 
 /** init a context object using current execution context */
-error_t context_bootstrap(struct context_s *context);
+error_t context_bootstrap(struct context_s *context, uintptr_t stack, size_t stack_size);
 
 /** init a context object allocating a new context */
 error_t context_init(struct context_s *context,
@@ -174,22 +172,29 @@ error_t context_init(struct context_s *context,
     context stack buffer  */
 void * context_destroy(struct context_s *context);
 
+
+
 #ifdef CONFIG_HEXO_CONTEXT_STATS
+/** @internal timestamp of last context switch on this processor */
 extern CPU_LOCAL cpu_cycle_t context_swicth_time;
 
+/** @internal @this updates context stats when leaving current context on switch. */
 static inline void context_leave_stats(struct context_s *context)
 {
   if (context)
     context->cycles += cpu_cycle_diff(CPU_LOCAL_GET(context_swicth_time));
 }
 
+/** @internal @this updates context stats when entering current context on switch. */
 static inline void context_enter_stats(struct context_s *context)
 {
   CPU_LOCAL_SET(context_swicth_time, cpu_cycle_count());
 }
 #endif
 
-/** switch to a given context */
+
+
+/** @this saves current context and restore given context. */
 static inline void context_switch_to(struct context_s *context)
 {
 #ifdef CONFIG_HEXO_CONTEXT_STATS
@@ -211,7 +216,7 @@ static inline void context_switch_to(struct context_s *context)
 #endif
 }
 
-/** jump to a given context without saving current context */
+/** @this restores given context without saving current context. */
 static inline void
 __attribute__((noreturn))
 context_jump_to(struct context_s *context)
@@ -228,7 +233,7 @@ context_jump_to(struct context_s *context)
   cpu_context_jumpto(context);
 }
 
-/** return current context object */
+/** @this returns a pointer to current context */
 static inline struct context_s * context_current(void)
 {
   return CONTEXT_LOCAL_GET(context_cur);

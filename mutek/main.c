@@ -72,12 +72,6 @@ DEVTIMER_CALLBACK(timer_callback)
 }
 #endif
 
-#if defined (CONFIG_MUTEK_SCHEDULER)
-extern struct sched_context_s main_ctx;
-#else
-struct context_s main_ctx;
-#endif
-
 #if defined(CONFIG_LIBC_STREAM_STD)
 void stdio_in_out_err_init();
 #endif
@@ -90,13 +84,6 @@ int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
 	lock_init(&fault_lock);
 	cpu_exception_sethandler(fault_handler);
-
-#if defined (CONFIG_MUTEK_SCHEDULER)
-	context_bootstrap(&main_ctx.context);
-	sched_context_init(&main_ctx);
-#else
-	context_bootstrap(&main_ctx);
-#endif
 
 #if defined(CONFIG_MUTEK_CONSOLE) && !defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
 	if ( console_dev )

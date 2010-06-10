@@ -61,9 +61,10 @@
 1:	movl	$0x08,		%eax
 	movw	%ax,		%ds
 	movw	%ax,		%es
+	movw	%ax,		%ss
+        xorl    %eax,           %eax
 	movw	%ax,		%fs
 	movw	%ax,		%gs
-	movw	%ax,		%ss
 
 
 /*******************************************************
@@ -102,16 +103,24 @@ cpu_boot:
 	hlt
 1:	
 	/* change stack offset depending on CPU id */
-	shll	$13, %eax
-#else
-	mov	$0, %eax
+	shll	$CONFIG_HEXO_RESET_STACK_SIZE, %eax
 #endif
 
-	add	$0x0001fffc, %eax
-	mov	%eax, %esp
+	mov	$__initial_stack, %esp
 	xor	%ebp, %ebp
+
+#ifdef CONFIG_ARCH_SMP
+	subl	%eax, %esp
+#endif
+
+        /* invalidate cls and tls segments */
+        xorl    %eax,           %eax
+	movw	%ax,		%fs
+	movw	%ax,		%gs
+        
 	/* call arch_init function */
 	call	arch_init
+        
 	/* stop processor execution */
 	cli
 	hlt

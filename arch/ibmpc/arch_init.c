@@ -99,6 +99,15 @@ static size_t           cpu_count = 1;
 PRINTF_OUTPUT_FUNC(early_console_vga);
 #endif
 
+
+#if defined (CONFIG_MUTEK_SCHEDULER)
+extern struct sched_context_s main_ctx;
+#else
+struct context_s main_ctx;
+#endif
+
+extern __ldscript_symbol_t __initial_stack;
+
 /* architecture specific init function */
 void arch_init() 
 {
@@ -157,10 +166,20 @@ void arch_init()
       apic_init();
 #endif
 
+      {
+            uintptr_t stack_end = (uintptr_t)&__initial_stack - (1 << CONFIG_HEXO_RESET_STACK_SIZE) * cpu_id();
+
 #if defined(CONFIG_MUTEK_SCHEDULER)
-      sched_global_init();
-      sched_cpu_init();
+            sched_global_init();
+            sched_cpu_init();
+
+            /* FIXME initial stack space will never be freed ! */
+            context_bootstrap(&main_ctx.context, 0, stack_end);
+            sched_context_init(&main_ctx);
+#else
+            context_bootstrap(&main_ctx, 0, stack_end);
 #endif
+        }
 
 #if defined(CONFIG_ARCH_HW_INIT_USER)
 	  user_hw_init();
