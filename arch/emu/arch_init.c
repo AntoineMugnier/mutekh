@@ -64,9 +64,17 @@ PRINTF_OUTPUT_FUNC(early_console_fd1)
 
 __compiler_sint_t cpu_pids[CONFIG_CPU_MAXCOUNT];
 
+#if defined (CONFIG_MUTEK_SCHEDULER)
+extern struct sched_context_s main_ctx;
+#else
+struct context_s main_ctx;
+#endif
+
 /* architecture specific init function */
 void arch_init()
 {
+    volatile reg_t     first_stack_word;
+
 #ifdef CONFIG_EMU_EARLY_CONSOLE
   printk_set_output(early_console_fd1, NULL);
 #endif
@@ -114,6 +122,12 @@ void arch_init()
 #if defined(CONFIG_MUTEK_SCHEDULER)
     sched_global_init();
     sched_cpu_init();
+
+    /* initial stack space will never be freed ! */
+    context_bootstrap(&main_ctx.context, 0, (uintptr_t)&first_stack_word);
+    sched_context_init(&main_ctx);
+#else
+    context_bootstrap(&main_ctx, 0, (uintptr_t)&first_stack_word);
 #endif
 
     arch_hw_init();
@@ -151,7 +165,7 @@ void arch_start_other_cpu(void)
 {
 }
 
-cpu_id_t arch_get_cpu_count(void)
+size_t arch_get_cpu_count(void)
 {
 #ifdef CONFIG_ARCH_SMP
   return cpu_count;
