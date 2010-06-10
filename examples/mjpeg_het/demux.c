@@ -49,13 +49,14 @@ void load_quant_tables(block_io *input, block_io *quanti)
 void skip_segment(block_io *f)
 {
     uint32_t size;
-    uint8_t tag[8];
+    //    uint8_t tag[8];
 
     size = block_io_read_int16(f);
     size -= 2;
     if (size > 5) {
-        *(uint32_t*)tag = block_io_read_int32(f);
-        tag[4] = 0;
+      // *(uint32_t*)tag =
+      block_io_read_int32(f);
+      //  tag[4] = 0;
         //srl_log_printf(DEBUG, "SKIP: tag: %s, size: %d\n", tag, size);
         size -= 4;
     }

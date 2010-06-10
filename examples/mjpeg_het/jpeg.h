@@ -44,6 +44,6 @@
 #define EOF -1
 #endif
 
-#define DATA_MAGIC 0xda1a0000
+#define DATA_MAGIC 0xda1a
 
 #endif /* JPEG_H_ */

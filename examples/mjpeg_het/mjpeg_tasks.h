@@ -2,6 +2,8 @@
 #ifndef MJPEG_TASKS_H_
 #define MJPEG_TASKS_H_
 
+void task_stats();
+
 struct _idct_args_t {
   const srl_mwmr_t input;
   const srl_mwmr_t output;
