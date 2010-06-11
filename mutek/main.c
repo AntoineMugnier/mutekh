@@ -122,7 +122,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   int_fast8_t		i;
   reg_t			*sp = (reg_t*)stackptr;
 #ifdef CPU_GPREG_NAMES
-  const char		*reg_names[] = CPU_GPREG_NAMES;
+  static const char		*reg_names[] = CPU_GPREG_NAMES;
 #endif
 
 #ifdef CPU_FAULT_NAMES
