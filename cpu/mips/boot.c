@@ -49,6 +49,8 @@ asm(
         "   li      $8,     0x00000000                                                     \n"
         "   mtc0    $8,     $12                                                            \n"
 #endif
+        /* initialize CAUSE register */
+        "   mtc0    $0,     $13                                                            \n"
 
         /* get CPU id and adjust stack */
 #if __mips >= 32
