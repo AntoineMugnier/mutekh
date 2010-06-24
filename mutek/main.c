@@ -163,6 +163,15 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 /** application main function */
 void app_start();
 
+static void bootstrap_cleanup(void *param)
+{
+  extern struct sched_context_s main_ctx;
+  context_destroy(&main_ctx.context);
+
+  /* scheduler context switch without saving */
+  sched_context_exit();
+}
+
 void mutek_start_smp(void)  /* ALL CPUs execute this function */
 {
   cpu_exception_sethandler(fault_handler);
@@ -183,7 +192,9 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
       app_start();
 #if defined(CONFIG_MUTEK_SCHEDULER)
       cpu_interrupt_disable();
-      sched_context_exit();
+
+      /* run bootstrap_cleanup() on temporary context stack */
+      cpu_context_stack_use(sched_tmp_context(), bootstrap_cleanup, NULL);
 #endif
     }
   else

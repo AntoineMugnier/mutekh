@@ -158,10 +158,6 @@ static CONTEXT_ENTRY(sched_context_idle)
   sched_queue_wrlock(&sched->root);
   cpu_interrupt_disable();
 
-  /* destroy app_start context */
-  if (cpu_isbootstrap())
-    context_destroy(&main_ctx.context);
-
 #ifdef CONFIG_HEXO_IPI
   /* Get scheduler IPI endpoint for this processor  */
   struct ipi_endpoint_s *ipi_e = CPU_LOCAL_ADDR(ipi_endpoint);
