@@ -1,0 +1,542 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright (c) Eric Guthmuller 2010
+
+*/
+
+
+#include <hexo/types.h>
+
+#include <device/spi.h>
+#include <device/icu.h>
+#include <device/device.h>
+#include <device/driver.h>
+
+#include <hexo/iospace.h>
+#include <mutek/mem_alloc.h>
+#include <hexo/endian.h>
+#include <mutek/printk.h>
+
+#include <assert.h>
+
+#include "spi-oc_spi_controller.h"
+#include "spi-oc_spi_controller-private.h"
+
+#define MCK 12500000
+//#define OC_SPI_CTRL_DEBUG
+
+static void spi_select_none(struct device_s *dev)
+{
+}
+
+static void spi_select_normal(struct device_s *dev)
+{
+}
+
+
+
+static CMD_HANDLER(spi_oc_spi_controller_read_rx_1byte)
+{
+	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	uintptr_t registers = (uintptr_t)dev->addr[0];
+	struct dev_spi_rq_s *rq = dev_spi_queue_head(&pv->queue);
+
+	uint32_t data = cpu_mem_read_32(registers + SPI_OC_RX(0))&((1<<pv->bits_per_word[rq->device_id])-1);
+#ifdef OC_SPI_CTRL_DEBUG
+	printk("SPI read_rx_1byte data : %x\n", data);
+#endif
+	*(uint8_t *)(pv->rx_ptr) = data;
+	pv->rx_ptr += pv->increment;
+}
+
+static CMD_HANDLER(spi_oc_spi_controller_read_rx_2bytes)
+{
+	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	uintptr_t registers = (uintptr_t)dev->addr[0];
+	struct dev_spi_rq_s *rq = dev_spi_queue_head(&pv->queue);
+
+	uint32_t data = cpu_mem_read_32(registers + SPI_OC_RX(0))&((1<<pv->bits_per_word[rq->device_id])-1);
+#ifdef OC_SPI_CTRL_DEBUG
+	printk("SPI read_rx_2byte data : %x\n", data);
+#endif
+	*(uint16_t*)(pv->rx_ptr) = data;	
+	pv->rx_ptr += pv->increment;
+}
+
+static CMD_HANDLER(spi_oc_spi_controller_void_rx)
+{
+	uintptr_t registers = (uintptr_t)dev->addr[0];
+
+	uint32_t data =	cpu_mem_read_32(registers + SPI_OC_RX(0));
+#ifdef OC_SPI_CTRL_DEBUG
+	printk("SPI void_rx data : %x\n", data);
+#endif
+}
+
+static CMD_HANDLER(spi_oc_spi_controller_write_tx_1byte)
+{
+	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	uintptr_t registers = (uintptr_t)dev->addr[0];
+
+	uint32_t data = *(uint8_t *)pv->tx_ptr
+		| pv->constant;
+	pv->tx_ptr += pv->increment;
+
+	// set the data
+	cpu_mem_write_32(registers + SPI_OC_TX(0), data);
+	data = cpu_mem_read_32(registers + SPI_OC_TX(0));
+#ifdef OC_SPI_CTRL_DEBUG
+	printk("SPI write_tx_1byte data : %x\n", data);
+#endif
+	// go !
+	cpu_mem_mask_set_32(registers + SPI_OC_CTRL, SPI_OC_GO_BSY);
+	pv->count--;
+}
+
+static CMD_HANDLER(spi_oc_spi_controller_write_tx_2bytes)
+{
+	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	uintptr_t registers = (uintptr_t)dev->addr[0];
+
+	uint32_t data = *(uint16_t*)(pv->tx_ptr)
+//		| (pv->count == 0 ? (1<<24) : 0)
+		;
+	pv->tx_ptr += pv->increment;
+	// set the data
+	cpu_mem_write_32(registers + SPI_OC_TX(0), data);
+	data = cpu_mem_read_32(registers + SPI_OC_TX(0));
+#ifdef OC_SPI_CTRL_DEBUG
+	printk("SPI write_tx_2bytes data : %x\n", data);
+#endif
+	// go !
+	cpu_mem_mask_set_32(registers + SPI_OC_CTRL, SPI_OC_GO_BSY);
+	pv->count--;
+}
+
+static CMD_HANDLER(spi_oc_spi_controller_pad_tx)
+{
+	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	uintptr_t registers = (uintptr_t)dev->addr[0];
+
+	uint32_t data = pv->pad_byte;
+#ifdef OC_SPI_CTRL_DEBUG
+	printk("SPI pad_tx data : %x\n", data);
+#endif
+	// set the data
+	cpu_mem_write_32(registers + SPI_OC_TX(0), data);
+	// go !
+	cpu_mem_mask_set_32(registers + SPI_OC_CTRL, SPI_OC_GO_BSY);
+	pv->count--;
+}
+
+static CMD_HANDLER(spi_oc_spi_controller_wait_value_rx)
+{
+	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	uintptr_t registers = (uintptr_t)dev->addr[0];
+	struct dev_spi_rq_s *rq = dev_spi_queue_head(&pv->queue);
+
+    	uint32_t data = cpu_mem_read_32(registers + SPI_OC_RX(0))&((1<<pv->bits_per_word[rq->device_id])-1);
+#ifdef OC_SPI_CTRL_DEBUG
+	printk("SPI wait_value_rx data : %x\n", data);
+#endif
+	enum devspi_wait_value_answer_e ret = pv->wait_cb(dev, rq, data);
+	switch (ret) {
+	case DEV_SPI_VALUE_FAIL:
+		pv->abort = 1;
+		pv->count = 0;
+		break;
+	case DEV_SPI_VALUE_FOUND:
+		pv->count = 0;
+		break;
+	case DEV_SPI_VALUE_RETRY:
+		if ( pv->count == 0 )
+			pv->abort = 1;
+		break;
+	}
+}
+
+
+static bool_t spi_oc_spi_controller_setup_command(struct device_s *dev, struct dev_spi_rq_cmd_s *cmd)
+{
+	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	uintptr_t registers = (uintptr_t)dev->addr[0];
+	bool_t handled = 0;
+
+	pv->abort = 0;
+
+/* 	select &= ~SPI6088D_PCSDEC; */
+
+	const char *ttype = "unknown";
+	switch ( cmd->type ) {
+	case DEV_SPI_DESELECT:
+		ttype = "deselect";
+		cpu_mem_write_32(registers + SPI_OC_SS, 0);
+		handled = 1;
+		break;
+	case DEV_SPI_R_8:
+		ttype = "read";
+		pv->tx_handler = spi_oc_spi_controller_pad_tx;
+		pv->rx_handler = spi_oc_spi_controller_read_rx_1byte;
+		pv->increment = cmd->read.ptr_increment;
+		pv->rx_ptr = (uintptr_t)cmd->read.data;
+		pv->count = cmd->read.size;
+		pv->pad_byte = cmd->read.padding;
+		break;
+	case DEV_SPI_W_8:
+		ttype = "write";
+		pv->tx_handler = spi_oc_spi_controller_write_tx_1byte;
+		pv->increment = cmd->write.ptr_increment;
+		pv->rx_handler = spi_oc_spi_controller_void_rx;
+		pv->tx_ptr = (uintptr_t)cmd->write.data;
+		pv->count = cmd->write.size;
+		break;
+	case DEV_SPI_RW_8:
+		ttype = "read_write";
+		pv->rx_handler = spi_oc_spi_controller_read_rx_1byte;
+		pv->tx_handler = spi_oc_spi_controller_write_tx_1byte;
+		pv->increment = cmd->read_write.ptr_increment;
+		pv->rx_ptr = (uintptr_t)cmd->read_write.rdata;
+		pv->tx_ptr = (uintptr_t)cmd->read_write.wdata;
+		pv->count = cmd->read_write.size;
+		break;
+	case DEV_SPI_R_16:
+		ttype = "read";
+		pv->tx_handler = spi_oc_spi_controller_pad_tx;
+		pv->rx_handler = spi_oc_spi_controller_read_rx_2bytes;
+		pv->increment = cmd->read.ptr_increment;
+		pv->rx_ptr = (uintptr_t)cmd->read.data;
+		pv->count = cmd->read.size;
+		pv->pad_byte = cmd->read.padding;
+		break;
+	case DEV_SPI_W_16:
+		ttype = "write";
+		pv->tx_handler = spi_oc_spi_controller_write_tx_2bytes;
+		pv->increment = cmd->write.ptr_increment;
+		pv->rx_handler = spi_oc_spi_controller_void_rx;
+		pv->tx_ptr = (uintptr_t)cmd->write.data;
+		pv->count = cmd->write.size;
+		break;
+	case DEV_SPI_RW_16:
+		ttype = "read_write";
+		pv->rx_handler = spi_oc_spi_controller_read_rx_2bytes;
+		pv->tx_handler = spi_oc_spi_controller_write_tx_2bytes;
+		pv->increment = cmd->read_write.ptr_increment;
+		pv->rx_ptr = (uintptr_t)cmd->read_write.rdata;
+		pv->tx_ptr = (uintptr_t)cmd->read_write.wdata;
+		pv->count = cmd->read_write.size;
+		break;
+	case DEV_SPI_SET_CONSTANT:
+		ttype= "set_constant";
+		pv->constant = cmd->constant.data; 
+		handled = 1;
+		break;
+	case DEV_SPI_WAIT_VALUE:
+		ttype= "wait_byte_value";
+		pv->tx_handler = spi_oc_spi_controller_pad_tx;
+		pv->rx_handler = spi_oc_spi_controller_wait_value_rx;
+		pv->pad_byte = cmd->wait_value.padding;
+		pv->wait_cb = cmd->wait_value.callback;
+		pv->count = cmd->wait_value.timeout;
+		break;
+	case DEV_SPI_PAD_UNSELECTED:
+		ttype= "pad_unselected";
+		spi_select_none(dev);
+		goto pad;
+	case DEV_SPI_PAD:
+		ttype= "pad";
+	pad:
+		pv->tx_handler = spi_oc_spi_controller_pad_tx;
+		pv->rx_handler = spi_oc_spi_controller_void_rx;
+		pv->pad_byte = cmd->pad.padding;
+		pv->count = cmd->pad.size;
+		break;
+	}
+#ifdef OC_SPI_CTRL_DEBUG
+	printk("Spi new command %s\n", ttype);
+#endif
+
+	return handled;
+}
+
+static
+struct dev_spi_rq_cmd_s *spi_oc_spi_controller_get_next_cmd(struct device_s *dev)
+{
+	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	uintptr_t registers = (uintptr_t)dev->addr[0];
+
+	struct dev_spi_rq_s *rq;
+
+	while ((rq = dev_spi_queue_head(&pv->queue))) {
+		if ( pv->cur_cmd == (size_t)-1 ) {
+			uint32_t select = (0x1 << rq->device_id);
+			uint32_t divider = 0;
+			cpu_mem_write_32(registers + SPI_OC_SS, select);
+			pv->constant = 0;
+			pv->cur_cmd = 0;
+			// set the divider
+			cpu_mem_write_32(registers + SPI_OC_DIVIDER, pv->dividers[rq->device_id] & SPI_OC_DIVIDER_M);
+			divider = cpu_mem_read_32(registers + SPI_OC_DIVIDER);
+			// set the default length
+			uint32_t mode_rx = (pv->modes[rq->device_id]&0x1) ? SPI_OC_RX_NEG : 0;
+			uint32_t mode_tx = (pv->modes[rq->device_id]&0x1) ? 0 : SPI_OC_TX_NEG;
+			uint32_t keep_cs = (pv->keep_cs[rq->device_id]&0x1) ? SPI_OC_ASS : 0;
+			uint32_t ctrl_reg = cpu_mem_read_32(registers + SPI_OC_CTRL);
+			ctrl_reg = (ctrl_reg & ~SPI_OC_CHAR_LEN) | pv->bits_per_word[rq->device_id];
+			ctrl_reg = (ctrl_reg & ~SPI_OC_RX_NEG) | mode_rx;
+			ctrl_reg = (ctrl_reg & ~SPI_OC_TX_NEG) | mode_tx;
+			ctrl_reg = (ctrl_reg & ~SPI_OC_ASS) | keep_cs;
+			cpu_mem_write_32(registers + SPI_OC_CTRL, ctrl_reg);
+			ctrl_reg = cpu_mem_read_32(registers + SPI_OC_CTRL);
+#ifdef OC_SPI_CTRL_DEBUG
+			printk("SPI request, Setting SS 0x%x , CTRL 0x%x and Divisor 0x%x registers\n",select,ctrl_reg,divider);
+#endif
+		} else {
+			// A command terminated, so let's handle the cleanup
+			struct dev_spi_rq_cmd_s *last_cmd = &rq->command[pv->cur_cmd];
+			pv->constant = 0;
+
+			if ( last_cmd->type == DEV_SPI_PAD_UNSELECTED ) {
+				spi_select_normal(dev);
+			}
+
+			if ( pv->abort ) {
+				rq->callback(rq->pvdata, rq, 1);
+				dev_spi_queue_remove(&pv->queue, rq);
+				pv->cur_cmd = (size_t)-1;
+				continue;
+			}
+
+			if ( pv->cur_cmd == rq->command_count - 1 ) {
+				rq->callback(rq->pvdata, rq, 0);
+				dev_spi_queue_remove(&pv->queue, rq);
+				pv->cur_cmd = (size_t)-1;
+				continue;
+			}
+
+			pv->cur_cmd++;
+		}
+		struct dev_spi_rq_cmd_s *cmd = &rq->command[pv->cur_cmd];
+
+		if ( spi_oc_spi_controller_setup_command(dev, cmd) )
+			continue;
+		
+/* 		printk("Cmd rx: %p, tx: %p, inc: %d, rptr: %p, wptr: %p, count: %d, perm: %p\n", */
+/* 			   pv->rx_handler, pv->tx_handler,  */
+/* 			   pv->increment, */
+/* 			   pv->rx_ptr, pv->tx_ptr, */
+/* 			   pv->count, pv->permanent); */
+
+		return &rq->command[pv->cur_cmd];
+	}
+	return NULL;
+}
+
+DEVSPI_REQUEST(spi_oc_spi_controller_request)
+{
+	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+
+	CPU_INTERRUPT_SAVESTATE_DISABLE;
+
+	bool_t queue_empty = !dev_spi_queue_head(&pv->queue);
+
+	dev_spi_queue_pushback(&pv->queue, rq);
+
+	if ( ! queue_empty )
+		return;
+	
+	struct dev_spi_rq_cmd_s *cmd = spi_oc_spi_controller_get_next_cmd(dev);
+	assert( cmd );
+	
+	CPU_INTERRUPT_RESTORESTATE;
+
+	pv->tx_handler(dev);
+}
+
+DEV_IRQ(spi_oc_spi_controller_irq)
+{
+    struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	uintptr_t registers = (uintptr_t)dev->addr[0];
+
+	// reset interrupt
+	cpu_mem_read_32(registers + SPI_OC_CTRL);
+
+	pv->rx_handler(dev);
+	if ( pv->count == 0 ) {
+		struct dev_spi_rq_cmd_s *cmd = spi_oc_spi_controller_get_next_cmd(dev);
+
+		if ( !cmd ) {
+			return 0;
+		}
+	}
+	pv->tx_handler(dev);
+
+	return 0;
+}
+
+DEVSPI_SET_BAUDRATE(spi_oc_spi_controller_set_baudrate)
+{
+    struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+
+	if ( device_id >= pv->lun_count )
+		return (uint32_t) -1;
+        uint32_t i;
+	for(i=0; i < (1<<16); i++){
+	  if((i+1)*br*2>MCK)
+	    break;	
+	}
+/*
+	uint32_t divisor = MCK/(br*2);
+	if ( MCK/divisor > br*2 )
+		divisor++;
+	if ( divisor > 65535 )
+		divisor = 65535;
+        uint32_t return_value = MCK/(divisor*2);
+	if ( divisor != 0 )
+		divisor--;
+*/
+uint32_t return_value = br;
+/* 	dprintk("Setting CSR[%d]'s baudrate, asked %d, got %d\n", */
+/* 		   device_id, br, MCK/divisor); */
+
+/* 	dprintk("Setting CSR[%d] to %p\n", device_id, new_data); */
+
+	// We save the divider for this device
+	//pv->dividers[device_id]=divisor;
+	pv->dividers[device_id]=i;
+
+	return return_value;
+}
+
+DEVSPI_SET_DATA_FORMAT(spi_oc_spi_controller_set_data_format)
+{
+	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+
+	if ( device_id >= pv->lun_count )
+		return ERANGE;
+
+	if ( bits_per_word > 16 || bits_per_word < 8 )
+		return ERANGE;
+
+	// We save the number of bits per word for this device
+	pv->bits_per_word[device_id] = bits_per_word ;
+
+	// We save the mode
+	pv->modes[device_id]=spi_mode;
+	if(spi_mode > 1){
+		printk("SPI Controller, unsupported mode, mode = %i\n", spi_mode);
+	}
+	
+	// We save the keep_cs
+	pv->keep_cs[device_id]=keep_cs_active;
+
+	return 0;
+}
+
+#ifdef CONFIG_DRIVER_ENUM_FDT
+static const struct driver_param_binder_s spi_oc_spi_controller_param_binder[] =
+{
+	PARAM_BIND(struct spi_oc_spi_controller_param_s, lun_count, PARAM_DATATYPE_INT),
+	{ 0 }
+};
+
+static const struct devenum_ident_s	spi_oc_spi_controller_ids[] =
+{
+	DEVENUM_FDTNAME_ENTRY("oc_spi_controller", sizeof(struct spi_oc_spi_controller_param_s), spi_oc_spi_controller_param_binder),
+	{ 0 }
+};
+#endif
+
+const struct driver_s   spi_oc_spi_controller_drv =
+{
+    .class      = device_class_spi,
+#ifdef CONFIG_DRIVER_ENUM_FDT
+    .id_table   = spi_oc_spi_controller_ids,
+#endif
+    .f_init     = spi_oc_spi_controller_init,
+    .f_cleanup  = spi_oc_spi_controller_cleanup,
+    .f_irq      = spi_oc_spi_controller_irq,
+	.f.spi = {
+		.f_request = spi_oc_spi_controller_request,
+		.f_set_baudrate = spi_oc_spi_controller_set_baudrate,
+		.f_set_data_format = spi_oc_spi_controller_set_data_format,
+	},
+};
+
+#ifdef CONFIG_DRIVER_ENUM_FDT
+REGISTER_DRIVER(spi_oc_spi_controller_drv);
+#endif
+
+DEV_INIT(spi_oc_spi_controller_init)
+{
+	struct spi_oc_spi_controller_context_s   *pv;
+	struct spi_oc_spi_controller_param_s *param = params;
+	uintptr_t registers = (uintptr_t)dev->addr[0];
+
+	dev->drv = &spi_oc_spi_controller_drv;
+
+	if ( param->lun_count > 8 ) {
+		printk("SPI-OC_SPI_CONTROLLER: Invalid lun count: %d\n", param->lun_count);
+		return -1;
+	}
+
+	/* allocate private driver data */
+	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
+
+	if (!pv)
+		return -1;
+
+	dev->drv_pv = pv;
+
+	pv->lun_count = param->lun_count;
+	pv->cur_cmd = (size_t)-1;
+
+	pv->bits_per_word = mem_alloc(sizeof(uint_fast8_t) * (param->lun_count), (mem_scope_sys));
+	if (!pv->bits_per_word)
+		return -1;
+
+	pv->dividers = mem_alloc(sizeof(uint_fast16_t) * (param->lun_count), (mem_scope_sys));
+	if (!pv->dividers)
+		return -1;
+
+	pv->modes = mem_alloc(sizeof(uint_fast8_t) * (param->lun_count), (mem_scope_sys));
+	if (!pv->modes)
+		return -1;
+
+	pv->keep_cs = mem_alloc(sizeof(uint_fast8_t) * (param->lun_count), (mem_scope_sys));
+	if (!pv->keep_cs)
+		return -1;
+
+	dev_spi_queue_init(&pv->queue);
+
+	dev_icu_sethndl(dev->icudev, dev->irq, spi_oc_spi_controller_irq, dev);
+	dev_icu_enable(dev->icudev, dev->irq, 1, 0 );
+
+	cpu_mem_mask_set_32(registers+SPI_OC_CTRL, SPI_OC_IE);
+
+	return 0;
+}
+
+DEV_CLEANUP(spi_oc_spi_controller_cleanup)
+{
+    struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+
+    DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, spi_oc_spi_controller_irq);
+
+    mem_free(pv);
+}
+
