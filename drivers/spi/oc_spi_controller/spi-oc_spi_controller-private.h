@@ -27,28 +27,31 @@
 #define CMD_HANDLER(x) void x(struct device_s *dev)
 typedef CMD_HANDLER(cmd_handler_f);
 
+struct spi_oc_spi_controller_dev_config_s
+{
+        uint_fast8_t bits_per_word;
+        uint_fast16_t dividers;
+        uint_fast8_t modes;
+	bool_t keep_cs;
+};
+
 struct spi_oc_spi_controller_context_s
 {
 	dev_spi_queue_root_t queue;
-	uint32_t cs_bits;
 	cmd_handler_f *tx_handler;
 	cmd_handler_f *rx_handler;
-	size_t cur_cmd;
 	devspi_wait_value_callback_t *wait_cb;
-	size_t count;
-	uint_fast8_t increment;
-        uint_fast8_t *bits_per_word;
-        uint_fast16_t *dividers;
-        uint_fast8_t *modes;
-	bool_t *keep_cs;
-	uint_fast16_t constant;
+	uint_fast8_t lun_count;
+
+        struct spi_oc_spi_controller_dev_config_s *dev_config;
 
 	uintptr_t tx_ptr;
 	uintptr_t rx_ptr;
-
+	size_t cur_cmd;
+	size_t count;
+	uint_fast8_t increment;
+	uint_fast16_t constant;
 	uint16_t pad_byte;
-
-	uint_fast8_t lun_count;
 
 	bool_t abort;
 };

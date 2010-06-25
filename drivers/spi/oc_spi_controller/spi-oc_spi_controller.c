@@ -53,10 +53,11 @@ static void spi_select_normal(struct device_s *dev)
 static CMD_HANDLER(spi_oc_spi_controller_read_rx_1byte)
 {
 	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	struct spi_oc_spi_controller_dev_config_s *config = pv->dev_config;
 	uintptr_t registers = (uintptr_t)dev->addr[0];
 	struct dev_spi_rq_s *rq = dev_spi_queue_head(&pv->queue);
 
-	uint32_t data = cpu_mem_read_32(registers + SPI_OC_RX(0))&((1<<pv->bits_per_word[rq->device_id])-1);
+	uint32_t data = cpu_mem_read_32(registers + SPI_OC_RX(0))&((1<<config[rq->device_id].bits_per_word)-1);
 #ifdef OC_SPI_CTRL_DEBUG
 	printk("SPI read_rx_1byte data : %x\n", data);
 #endif
@@ -67,10 +68,11 @@ static CMD_HANDLER(spi_oc_spi_controller_read_rx_1byte)
 static CMD_HANDLER(spi_oc_spi_controller_read_rx_2bytes)
 {
 	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	struct spi_oc_spi_controller_dev_config_s *config = pv->dev_config;
 	uintptr_t registers = (uintptr_t)dev->addr[0];
 	struct dev_spi_rq_s *rq = dev_spi_queue_head(&pv->queue);
 
-	uint32_t data = cpu_mem_read_32(registers + SPI_OC_RX(0))&((1<<pv->bits_per_word[rq->device_id])-1);
+	uint32_t data = cpu_mem_read_32(registers + SPI_OC_RX(0))&((1<<config[rq->device_id].bits_per_word)-1);
 #ifdef OC_SPI_CTRL_DEBUG
 	printk("SPI read_rx_2byte data : %x\n", data);
 #endif
@@ -80,12 +82,6 @@ static CMD_HANDLER(spi_oc_spi_controller_read_rx_2bytes)
 
 static CMD_HANDLER(spi_oc_spi_controller_void_rx)
 {
-	uintptr_t registers = (uintptr_t)dev->addr[0];
-
-	uint32_t data =	cpu_mem_read_32(registers + SPI_OC_RX(0));
-#ifdef OC_SPI_CTRL_DEBUG
-	printk("SPI void_rx data : %x\n", data);
-#endif
 }
 
 static CMD_HANDLER(spi_oc_spi_controller_write_tx_1byte)
@@ -99,8 +95,8 @@ static CMD_HANDLER(spi_oc_spi_controller_write_tx_1byte)
 
 	// set the data
 	cpu_mem_write_32(registers + SPI_OC_TX(0), data);
-	data = cpu_mem_read_32(registers + SPI_OC_TX(0));
 #ifdef OC_SPI_CTRL_DEBUG
+	data = cpu_mem_read_32(registers + SPI_OC_TX(0));
 	printk("SPI write_tx_1byte data : %x\n", data);
 #endif
 	// go !
@@ -119,8 +115,8 @@ static CMD_HANDLER(spi_oc_spi_controller_write_tx_2bytes)
 	pv->tx_ptr += pv->increment;
 	// set the data
 	cpu_mem_write_32(registers + SPI_OC_TX(0), data);
-	data = cpu_mem_read_32(registers + SPI_OC_TX(0));
 #ifdef OC_SPI_CTRL_DEBUG
+	data = cpu_mem_read_32(registers + SPI_OC_TX(0));
 	printk("SPI write_tx_2bytes data : %x\n", data);
 #endif
 	// go !
@@ -147,10 +143,11 @@ static CMD_HANDLER(spi_oc_spi_controller_pad_tx)
 static CMD_HANDLER(spi_oc_spi_controller_wait_value_rx)
 {
 	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	struct spi_oc_spi_controller_dev_config_s *config = pv->dev_config;
 	uintptr_t registers = (uintptr_t)dev->addr[0];
 	struct dev_spi_rq_s *rq = dev_spi_queue_head(&pv->queue);
 
-    	uint32_t data = cpu_mem_read_32(registers + SPI_OC_RX(0))&((1<<pv->bits_per_word[rq->device_id])-1);
+    	uint32_t data = cpu_mem_read_32(registers + SPI_OC_RX(0))&((1<<config[rq->device_id].bits_per_word)-1);
 #ifdef OC_SPI_CTRL_DEBUG
 	printk("SPI wait_value_rx data : %x\n", data);
 #endif
@@ -277,6 +274,7 @@ static
 struct dev_spi_rq_cmd_s *spi_oc_spi_controller_get_next_cmd(struct device_s *dev)
 {
 	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	struct spi_oc_spi_controller_dev_config_s *config = pv->dev_config;
 	uintptr_t registers = (uintptr_t)dev->addr[0];
 
 	struct dev_spi_rq_s *rq;
@@ -289,14 +287,14 @@ struct dev_spi_rq_cmd_s *spi_oc_spi_controller_get_next_cmd(struct device_s *dev
 			pv->constant = 0;
 			pv->cur_cmd = 0;
 			// set the divider
-			cpu_mem_write_32(registers + SPI_OC_DIVIDER, pv->dividers[rq->device_id] & SPI_OC_DIVIDER_M);
+			cpu_mem_write_32(registers + SPI_OC_DIVIDER, config[rq->device_id].dividers & SPI_OC_DIVIDER_M);
 			divider = cpu_mem_read_32(registers + SPI_OC_DIVIDER);
 			// set the default length
-			uint32_t mode_rx = (pv->modes[rq->device_id]&0x1) ? SPI_OC_RX_NEG : 0;
-			uint32_t mode_tx = (pv->modes[rq->device_id]&0x1) ? 0 : SPI_OC_TX_NEG;
-			uint32_t keep_cs = (pv->keep_cs[rq->device_id]&0x1) ? SPI_OC_ASS : 0;
+			uint32_t mode_rx = (config[rq->device_id].modes & 0x1) ? SPI_OC_RX_NEG : 0;
+			uint32_t mode_tx = (config[rq->device_id].modes & 0x1) ? 0 : SPI_OC_TX_NEG;
+			uint32_t keep_cs = (config[rq->device_id].keep_cs & 0x1) ? SPI_OC_ASS : 0;
 			uint32_t ctrl_reg = cpu_mem_read_32(registers + SPI_OC_CTRL);
-			ctrl_reg = (ctrl_reg & ~SPI_OC_CHAR_LEN) | pv->bits_per_word[rq->device_id];
+			ctrl_reg = (ctrl_reg & ~SPI_OC_CHAR_LEN) | config[rq->device_id].bits_per_word;
 			ctrl_reg = (ctrl_reg & ~SPI_OC_RX_NEG) | mode_rx;
 			ctrl_reg = (ctrl_reg & ~SPI_OC_TX_NEG) | mode_tx;
 			ctrl_reg = (ctrl_reg & ~SPI_OC_ASS) | keep_cs;
@@ -390,7 +388,8 @@ DEV_IRQ(spi_oc_spi_controller_irq)
 
 DEVSPI_SET_BAUDRATE(spi_oc_spi_controller_set_baudrate)
 {
-    struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+    	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	struct spi_oc_spi_controller_dev_config_s *config = pv->dev_config;
 
 	if ( device_id >= pv->lun_count )
 		return (uint32_t) -1;
@@ -417,7 +416,7 @@ uint32_t return_value = br;
 
 	// We save the divider for this device
 	//pv->dividers[device_id]=divisor;
-	pv->dividers[device_id]=i;
+	config[device_id].dividers=i;
 
 	return return_value;
 }
@@ -425,6 +424,7 @@ uint32_t return_value = br;
 DEVSPI_SET_DATA_FORMAT(spi_oc_spi_controller_set_data_format)
 {
 	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
+	struct spi_oc_spi_controller_dev_config_s *config = pv->dev_config;
 
 	if ( device_id >= pv->lun_count )
 		return ERANGE;
@@ -433,16 +433,16 @@ DEVSPI_SET_DATA_FORMAT(spi_oc_spi_controller_set_data_format)
 		return ERANGE;
 
 	// We save the number of bits per word for this device
-	pv->bits_per_word[device_id] = bits_per_word ;
+	config[device_id].bits_per_word = bits_per_word ;
 
 	// We save the mode
-	pv->modes[device_id]=spi_mode;
+	config[device_id].modes=spi_mode;
 	if(spi_mode > 1){
 		printk("SPI Controller, unsupported mode, mode = %i\n", spi_mode);
 	}
 	
 	// We save the keep_cs
-	pv->keep_cs[device_id]=keep_cs_active;
+	config[device_id].keep_cs=keep_cs_active;
 
 	return 0;
 }
@@ -505,20 +505,8 @@ DEV_INIT(spi_oc_spi_controller_init)
 	pv->lun_count = param->lun_count;
 	pv->cur_cmd = (size_t)-1;
 
-	pv->bits_per_word = mem_alloc(sizeof(uint_fast8_t) * (param->lun_count), (mem_scope_sys));
-	if (!pv->bits_per_word)
-		return -1;
-
-	pv->dividers = mem_alloc(sizeof(uint_fast16_t) * (param->lun_count), (mem_scope_sys));
-	if (!pv->dividers)
-		return -1;
-
-	pv->modes = mem_alloc(sizeof(uint_fast8_t) * (param->lun_count), (mem_scope_sys));
-	if (!pv->modes)
-		return -1;
-
-	pv->keep_cs = mem_alloc(sizeof(uint_fast8_t) * (param->lun_count), (mem_scope_sys));
-	if (!pv->keep_cs)
+	pv->dev_config = mem_alloc(sizeof(struct spi_oc_spi_controller_dev_config_s) * (param->lun_count), (mem_scope_sys));
+	if (!pv->dev_config)
 		return -1;
 
 	dev_spi_queue_init(&pv->queue);
