@@ -47,6 +47,8 @@ static void block_soclib_op_start(struct device_s *dev,
 {
   struct block_soclib_rq_s *srq = (void*)(rq + 1);
 
+/*   printk("New op: %d %d\n", rq->lba, srq->rq_code); */
+
   cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_BUFFER,
                    endian_le32((uint32_t)rq->data[rq->progress]));
   cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_LBA,
@@ -64,6 +66,8 @@ static void block_soclib_rq_start(struct device_s *dev,
   struct block_soclib_context_s *pv = dev->drv_pv;
   bool_t idle = dev_blk_queue_isempty(&pv->queue);
 
+/*   printk("%s\n", __FUNCTION__); */
+
   dev_blk_queue_pushback(&pv->queue, rq);
 
   if (idle)
@@ -75,6 +79,8 @@ static void block_soclib_rq_end(struct device_s *dev)
 {
   struct block_soclib_context_s *pv = dev->drv_pv;
   struct dev_block_rq_s *rq;
+
+/*   printk("%s\n", __FUNCTION__); */
 
   dev_blk_queue_pop(&pv->queue);
 
@@ -173,10 +179,10 @@ DEV_IRQ(block_soclib_irq)
       rq->progress++;
       rq->callback(rq, 1, srq + 1);
 
-      if (rq->count >= rq->progress)
-	block_soclib_rq_end(dev);
+      if (rq->progress < rq->count)
+        block_soclib_op_start(dev, rq);
       else
-	block_soclib_op_start(dev, rq);
+        block_soclib_rq_end(dev);
 
       lock_release(&dev->lock);
       return 1;
