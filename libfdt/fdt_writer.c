@@ -116,7 +116,7 @@ uint32_t fdt_writer_push_string(
 void fdt_writer_node_prop(
 	struct fdt_writer_s *writer,
 	const char *name,
-	void *data,
+	const void *data,
 	size_t len)
 {
 	if ( writer->err || (void*)writer->struct_ptr + 8 + len > (void*)writer->rst ) {
