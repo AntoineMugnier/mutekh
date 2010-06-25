@@ -57,9 +57,9 @@ enum vfs_node_type_e
 #endif
 
 #ifdef CONFIG_VFS_VERBOSE
-# include <pthread.h>
+# include <mutek/scheduler.h>
 # include <mutek/printk.h>
-# define vfs_printk(fmt, x...) do{printk("%p: "fmt"\n", pthread_self(), ##x);}while(0)
+# define vfs_printk(fmt, x...) do{printk("%p: "fmt"\n", sched_get_current(), ##x);}while(0)
 #else
 # define vfs_printk(...) do{}while(0)
 #endif
