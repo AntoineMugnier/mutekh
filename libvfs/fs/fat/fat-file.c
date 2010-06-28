@@ -163,7 +163,7 @@ error_t fat_file_get_biggest_sector_range(
     sector_t vsector = offset >> fat->sect_size_pow2;
     common_cluster_t vcluster = vsector >> fat->sect_per_clust_pow2;
     sector_t psector_mask = (1 << fat->sect_per_clust_pow2) - 1;
-    sector_t psector_offset = (vsector & psector_mask) ^ psector_mask;
+    sector_t psector_offset = vsector & psector_mask;
     common_cluster_t pcluster;
 
     semaphore_take(&node->lock, 1);
@@ -171,18 +171,25 @@ error_t fat_file_get_biggest_sector_range(
     if ( pcluster == 0 )
         goto err;
 
+    vfs_printk("<%s %d", __FUNCTION__, pcluster);
+
     *first_sector = fat->cluster0_sector + (pcluster << fat->sect_per_clust_pow2) + psector_offset;
-    // Catch up as far as possible, therefore, from the zone end.
-    pcluster = ffile->zone_end;
     for (;;) {
+        // Catch up as far as possible, therefore, from the zone end.
+        pcluster = ffile->zone_end;
         // remember zone_end is the first cluster after contiguous zone.
         pcluster = fat->ops->entry_get(fat, pcluster-1);
+
+        vfs_printk("-%d", pcluster);
+
         if ( pcluster == ffile->zone_end )
             ffile->zone_end += 1;
         else
             break;
     }
     *last_sector = fat->cluster0_sector + (ffile->zone_end << fat->sect_per_clust_pow2);
+
+    vfs_printk(" %d>", *last_sector);
 
     err = 0;
 
@@ -463,6 +470,7 @@ VFS_FS_NODE_OPEN(fat_node_open)
 		rfile->read = fat_dir_read;
 		break;
     }
+    rfile->offset = 0;
     rfile->close = fat_file_close;
 
     rfile->priv = ffile;
