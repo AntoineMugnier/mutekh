@@ -22,17 +22,18 @@
 #include <hexo/error.h>
 #include <hexo/endian.h>
 
-#include <fdt/reader.h>
-
+#include <string.h>
 #include <assert.h>
-
 #include <mutek/printk.h>
 
-
+#include <fdt/reader.h>
 #include "fdt_internals.h"
 
-
-#include <string.h>
+#if 0
+# define dprintk(x...) printk(x)
+#else
+# define dprintk(x...) do{}while(0)
+#endif
 
 struct fdt_walker_state_s
 {
@@ -67,7 +68,7 @@ error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *wal
 		case FDT_NODE_START: {
 			level++;
 
-//			printk("start level: %d, max_level: %d, %s\n", level, max_level, state->ptr);
+			dprintk("start level: %d, max_level: %d, %s\n", level, max_level, state->ptr);
 		
 			strncat(full_path, "/", 32);
 			strncat(full_path, (const char*)state->ptr, 32);
@@ -86,10 +87,10 @@ error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *wal
 		case FDT_PROP: {
 			struct fdt_prop_s *prop = (struct fdt_prop_s*)state->ptr;
 
-//			printk("  prop %s %P\n",
-/* 				   &state->string_table[endian_be32(prop->strid)], */
-/* 				   prop->data, */
-/* 				   endian_be32(prop->size)); */
+			dprintk("  prop %s %P\n",
+				   &state->string_table[endian_be32(prop->strid)],
+				   prop->data,
+				   endian_be32(prop->size));
 
 			if ( level < max_level )
 				walker->on_node_prop(
@@ -102,7 +103,7 @@ error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *wal
 			break;
 		}
 		case FDT_NODE_END:
-//			printk("end level: %d, max_level: %d, %s\n", level, max_level, full_path);
+			dprintk("end level: %d, max_level: %d, %s\n", level, max_level, full_path);
 
 			if ( level < max_level - 1 )
 				walker->on_node_leave(walker->priv);
@@ -111,11 +112,11 @@ error_t fdt_walk_node(struct fdt_walker_state_s *state, struct fdt_walker_s *wal
 			assert(end);
 			*(end) = 0;
 			if ( max_level == level-- ) {
-//				printk("Reverting cloak\n");
+				dprintk("Reverting cloak\n");
 				max_level = 512;
 			}
 
-//			printk(" post end level: %d, max_level: %d\n", level, max_level);
+			dprintk(" post end level: %d, max_level: %d\n", level, max_level);
 
 			if ( level == 0 )
 				return 0;
@@ -167,8 +168,9 @@ error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker)
 	if ( (err = fdt_check_header(blob)) )
 		return err;
 
-/* 	printk("FDT magic OK, string table @ %p\n", endian_be32(header->off_dt_strings)); */
-/* 	printk("FDT magic OK, struct table @ %p\n", endian_be32(header->off_dt_struct)); */
+	printk("FDT magic OK, string @ %p, struct @ %p\n",
+           endian_be32(header->off_dt_strings),
+           endian_be32(header->off_dt_struct));
 
 	state.string_table = (const char*)blob + endian_be32(header->off_dt_strings);
 	state.struct_base
