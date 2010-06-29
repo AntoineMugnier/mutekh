@@ -24,7 +24,6 @@
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 
-#include <pthread.h>
 #include <semaphore.h>
 
 #include <netinet/packet.h>

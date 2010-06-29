@@ -118,7 +118,8 @@ struct					net_tcp_seg_s
   }					u;
 };
 
-CONTAINER_TYPE(tcp_segment_queue, CLIST, struct net_tcp_seg_s, HEXO_SPIN_IRQ, NOOBJ, list_entry);
+#define CONTAINER_LOCK_tcp_segment_queue HEXO_SPIN_IRQ
+CONTAINER_TYPE(tcp_segment_queue, CLIST, struct net_tcp_seg_s, list_entry);
 
 /*
  * This structure defines a TCP session.
@@ -177,13 +178,13 @@ struct					net_tcp_session_s
 
 OBJECT_CONSTRUCTOR(tcp_session_obj);
 OBJECT_DESTRUCTOR(tcp_session_obj);
-OBJECT_FUNC(static inline, tcp_session_obj, SIMPLE, tcp_session_obj, obj_entry);
+OBJECT_FUNC(tcp_session_obj, SIMPLE, static inline, tcp_session_obj, obj_entry);
 
 /*
  * Container types for tcp session list.
  */
 
-CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, NOLOCK, NOOBJ, list_entry, 64);
+CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, list_entry, 64);
 CONTAINER_KEY_TYPE(tcp_session, PTR, AGGREGATE, remote);
 
 /*

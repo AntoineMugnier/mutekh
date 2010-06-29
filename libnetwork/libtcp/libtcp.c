@@ -50,6 +50,7 @@
 #include <mutek/timer.h>
 #include <stdlib.h>
 
+#include <mutek/printk.h>
 #undef net_debug
 #define net_debug printk
 
@@ -57,20 +58,20 @@
  * Session container.
  */
 
-CONTAINER_FUNC(static inline, tcp_session, HASHLIST, tcp_session, NOLOCK, remote);
-CONTAINER_KEY_FUNC(static inline, tcp_session, HASHLIST, tcp_session, NOLOCK, remote);
+CONTAINER_FUNC(tcp_session, HASHLIST, static inline, tcp_session, remote);
+CONTAINER_KEY_FUNC(tcp_session, HASHLIST, static inline, tcp_session, remote);
 
 /*
  * Segment queues
  */
 
-CONTAINER_FUNC(static inline, tcp_segment_queue, CLIST, tcp_segment_queue, HEXO_SPIN_IRQ);
+CONTAINER_FUNC(tcp_segment_queue, CLIST, static inline, tcp_segment_queue);
 
 /*
  * TCP session list.
  */
 
-static tcp_session_root_t	sessions = CONTAINER_ROOT_INITIALIZER(tcp_session, HASHLIST, NOLOCK);
+static CONTAINER_ROOT_DECLARATOR(tcp_session, HASHLIST, sessions);
 
 /*
  * Session objects
@@ -78,12 +79,8 @@ static tcp_session_root_t	sessions = CONTAINER_ROOT_INITIALIZER(tcp_session, HAS
 
 OBJECT_CONSTRUCTOR(tcp_session_obj)
 {
-  struct net_tcp_session_s	*obj;
-
-  if ((obj = mem_alloc(sizeof (struct net_tcp_session_s), (mem_scope_sys))) == NULL)
-    return NULL;
-
-  tcp_session_obj_init(obj);
+  #warning
+  //  tcp_session_obj_init(obj);
 
   obj->route = NULL;
   tcp_segment_queue_init(&obj->unacked);
