@@ -1,10 +1,10 @@
 #ifndef MUTEK_PRINTK_H_
 #define MUTEK_PRINTK_H_
 
-#if defined(CONFIG_MUTEK_PRINTK)
-
 #include <stdarg.h>
 #include <libc/formatter.h>
+
+#if defined(CONFIG_MUTEK_PRINTK)
 
 void printk_set_output(printf_output_func_t *f, void *ctx);
 ssize_t printk(const char *format, ...);
@@ -27,7 +27,6 @@ ssize_t printk(const char *format, ...)
 static inline
 void hexdumpk(uintptr_t address, const void *data, size_t len)
 {
-	return 0;
 }
 
 static inline
