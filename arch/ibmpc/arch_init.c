@@ -102,8 +102,6 @@ PRINTF_OUTPUT_FUNC(early_console_vga);
 
 #if defined (CONFIG_MUTEK_SCHEDULER)
 extern struct sched_context_s main_ctx;
-#else
-struct context_s main_ctx;
 #endif
 
 extern __ldscript_symbol_t __initial_stack;
@@ -176,8 +174,6 @@ void arch_init()
             /* FIXME initial stack space will never be freed ! */
             context_bootstrap(&main_ctx.context, 0, stack_end);
             sched_context_init(&main_ctx);
-#else
-            context_bootstrap(&main_ctx, 0, stack_end);
 #endif
         }
 

@@ -66,8 +66,6 @@ __compiler_sint_t cpu_pids[CONFIG_CPU_MAXCOUNT];
 
 #if defined (CONFIG_MUTEK_SCHEDULER)
 extern struct sched_context_s main_ctx;
-#else
-struct context_s main_ctx;
 #endif
 
 /* architecture specific init function */
@@ -126,8 +124,6 @@ void arch_init()
     /* initial stack space will never be freed ! */
     context_bootstrap(&main_ctx.context, 0, (uintptr_t)&first_stack_word);
     sched_context_init(&main_ctx);
-#else
-    context_bootstrap(&main_ctx, 0, (uintptr_t)&first_stack_word);
 #endif
 
     arch_hw_init();

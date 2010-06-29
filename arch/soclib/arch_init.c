@@ -90,8 +90,6 @@ extern __ldscript_symbol_t dt_blob_start;
 
 #if defined (CONFIG_MUTEK_SCHEDULER)
 extern struct sched_context_s main_ctx;
-#else
-struct context_s main_ctx;
 #endif
 
 extern __ldscript_symbol_t __initial_stack;
@@ -198,8 +196,6 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
             /* FIXME initial stack space will never be freed ! */
             context_bootstrap(&main_ctx.context, 0, stack_end);
             sched_context_init(&main_ctx);
-#else
-            context_bootstrap(&main_ctx, 0, stack_end);
 #endif
         }
 
