@@ -278,7 +278,7 @@ DEVBLOCK_GETPARAMS(drive_ata_getparams)
 
 DEVBLOCK_GETRQSIZE(block_soclib_getrqsize)
 {
-  return sizeof(struct dev_block_rq_s) + sizeof(struct block_ata_rq_s);
+  return sizeof(struct dev_block_rq_s) + sizeof(struct drive_ata_rq_s);
 }
 
 DEV_CLEANUP(drive_ata_cleanup)
