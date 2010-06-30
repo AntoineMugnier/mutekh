@@ -589,6 +589,12 @@ sd_mmc_handle_next_req(struct device_s *dev)
     struct dev_block_params_s *p = &pv->params;
 	struct dev_block_rq_s *rq;
 
+	if ( !pv->usable ) {
+        rq->progress = -EIO;
+        rq->callback(rq, 0, rq + 1);
+		return;
+	}
+
     LOCK_SPIN_IRQ(&dev->lock);
     if ( pv->current_request == NULL ) {
         rq = dev_blk_queue_pop(&pv->queue);
@@ -599,12 +605,6 @@ sd_mmc_handle_next_req(struct device_s *dev)
     LOCK_RELEASE_IRQ(&dev->lock);
     if ( rq == NULL )
         return;
-
-	if ( !pv->usable ) {
-        rq->progress = -EIO;
-        rq->callback(rq, 0, rq + 1);
-		return;
-	}
 
     dev_block_lba_t lba = rq->lba + rq->progress;
     dev_block_lba_t count = rq->count - rq->progress;
@@ -637,7 +637,7 @@ DEVBLOCK_REQUEST(sd_mmc_request)
 
     LOCK_SPIN_IRQ(&dev->lock);
     if (dev_blk_queue_head(&pv->queue) == NULL) {
-        pv->current_request == rq;
+        pv->current_request = rq;
         must_start = 1;
     } else {
         dev_blk_queue_pushback(&pv->queue, rq);
