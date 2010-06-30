@@ -61,7 +61,7 @@ void mem_region_init();
 void hexo_global_init();
 
 /** MutekH main function (located in main/main.c) */
-int_fast8_t mutek_start(int_fast8_t argc, char **argv);
+int_fast8_t mutek_start(void);
 
 /** MutekH main function for non first CPU (located in main/main.c) */
 void mutek_start_smp(void);

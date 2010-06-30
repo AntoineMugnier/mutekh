@@ -89,8 +89,8 @@ FUNC_START(.text, cpu_boot)
         LA32    2,              __exception_base_ptr
         mtevpr  2
 
-        /* jumpto arch_init function */
-        LA32    2,              arch_init
+        /* jump to architecture code */
+        LA32    2,              boot_from_reset_vector
         mtctr   2
         bctr
 FUNC_END(cpu_boot)

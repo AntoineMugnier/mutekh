@@ -85,7 +85,7 @@ lock_t              __atomic_arch_lock;
 #endif
 
 #ifdef CONFIG_ARCH_DEVICE_TREE
-extern __ldscript_symbol_t dt_blob_start;
+extern void *arch_fdt;
 #endif
 
 #if defined (CONFIG_MUTEK_SCHEDULER)
@@ -95,12 +95,8 @@ extern struct sched_context_s main_ctx;
 extern __ldscript_symbol_t __initial_stack;
 
 /* architecture specific init function */
-void arch_init(void *device_tree, void *bootloader_pointer_table)
+void arch_init(uintptr_t base_sp)
 {
-#ifdef CONFIG_ARCH_DEVICE_TREE
-    device_tree = &dt_blob_start;
-#endif
-
 #ifdef CONFIG_ARCH_SMP
     if (cpu_isbootstrap())    /* FIXME */
         /* First CPU */
@@ -160,8 +156,8 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 
 #if defined(CONFIG_ARCH_DEVICE_TREE)
         device_init(&fdt_enum_dev);
-        enum_fdt_init(&fdt_enum_dev, device_tree);
-        mutek_parse_fdt(&fdt_enum_dev, device_tree);
+        enum_fdt_init(&fdt_enum_dev, arch_fdt);
+        mutek_parse_fdt(&fdt_enum_dev, arch_fdt);
         mem_region_init();//TODO: change with mem_parse_fdt when lib topology is done
         //        mem_parse_fdt(device_tree);
 
@@ -186,18 +182,14 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         cpu_init_flag = START_MAGIC;
 #endif
 
-        {
-            uintptr_t stack_end = (uintptr_t)&__initial_stack - (1 << CONFIG_HEXO_RESET_STACK_SIZE) * cpu_id();
-
 #if defined(CONFIG_MUTEK_SCHEDULER)
-            sched_global_init();
-            sched_cpu_init();
+        sched_global_init();
+        sched_cpu_init();
 
-            /* FIXME initial stack space will never be freed ! */
-            context_bootstrap(&main_ctx.context, 0, stack_end);
-            sched_context_init(&main_ctx);
+        /* FIXME initial stack space will never be freed ! */
+        context_bootstrap(&main_ctx.context, 0, base_sp);
+        sched_context_init(&main_ctx);
 #endif
-        }
 
 #ifdef CONFIG_ARCH_SMP
         uint_fast8_t last_count = 0;
@@ -219,7 +211,7 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
 #endif
 
         /* run mutek_start() */
-        mutek_start(0, 0);
+        mutek_start();
 #ifdef CONFIG_ARCH_SMP
     }
     else

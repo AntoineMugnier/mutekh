@@ -60,6 +60,14 @@ cpu_id(void)
   return reg;
 }
 
+static inline
+reg_t cpu_get_stackptr()
+{
+    reg_t ret;
+    asm("mr %0, 1": "=r"(ret));
+    return ret;
+}
+
 static inline bool_t
 cpu_isbootstrap(void)
 {

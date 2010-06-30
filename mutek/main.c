@@ -36,6 +36,7 @@
 
 #include <device/char.h>
 #include <device/timer.h>
+#include <device/enum.h>
 
 #include <device/device.h>
 #include <device/driver.h>
@@ -49,6 +50,14 @@
 
 #if defined(CONFIG_VFS)
 # include <vfs/vfs.h>
+#endif
+
+#if defined(CONFIG_ARCH_DEVICE_TREE)
+# include <drivers/enum/fdt/enum-fdt.h>
+# include <mutek/fdt.h>
+
+extern struct device_s fdt_enum_dev;
+extern void *arch_fdt;
 #endif
 
 #if defined (CONFIG_MUTEK_TIMERMS)
@@ -80,10 +89,17 @@ static CPU_EXCEPTION_HANDLER(fault_handler);
 
 static lock_t fault_lock;
 
-int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
+int_fast8_t mutek_start()  /* FIRST CPU only */
 {
 	lock_init(&fault_lock);
 	cpu_exception_sethandler(fault_handler);
+
+#if defined(CONFIG_ARCH_DEVICE_TREE)
+    cpu_interrupt_enable();
+    enum_fdt_children_init(&fdt_enum_dev);
+    mutek_parse_fdt_chosen(&fdt_enum_dev, arch_fdt);
+    cpu_interrupt_disable();
+#endif
 
 #if defined(CONFIG_MUTEK_CONSOLE) && !defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
 	if ( console_dev )

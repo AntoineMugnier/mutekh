@@ -69,7 +69,7 @@ extern struct sched_context_s main_ctx;
 #endif
 
 /* architecture specific init function */
-void arch_init()
+void arch_init(uintptr_t init_sp)
 {
     volatile reg_t     first_stack_word;
 
@@ -134,7 +134,7 @@ void arch_init()
 #endif
 
     /* run mutek_start() */
-    mutek_start(0, 0);
+    mutek_start();
 
     emu_do_syscall(EMU_SYSCALL_EXIT, 1, 1);  
 

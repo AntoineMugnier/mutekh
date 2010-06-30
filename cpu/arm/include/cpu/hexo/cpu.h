@@ -73,6 +73,14 @@ cpu_isbootstrap(void)
   return cpu_id() == 0;
 }
 
+static inline
+reg_t cpu_get_stackptr()
+{
+    reg_t ret;
+    asm("mov %0, sp": "=r"(ret));
+    return ret;
+}
+
 static inline cpu_cycle_t
 cpu_cycle_count(void)
 {

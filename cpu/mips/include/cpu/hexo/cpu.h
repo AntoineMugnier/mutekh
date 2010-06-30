@@ -194,6 +194,14 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
 # endif
 
+static inline
+reg_t cpu_get_stackptr()
+{
+    reg_t ret;
+    asm("move %0, $sp": "=r"(ret));
+    return ret;
+}
+
 # define CPU_TYPE_NAME mips32
 
 static inline cpu_id_t

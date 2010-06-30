@@ -102,8 +102,8 @@ FUNC_START(.boot, cpu_boot)
         mtc0    $4,     $15,    1
 #endif
 
-        /* jumpto arch_init function */
-        la      $8,             arch_init
+        /* jump to architecture code */
+        la      $8,             boot_from_reset_vector
 #if CONFIG_CPU_MIPS_VERSION >= 32
         MTC0_   $8,             CPU_MIPS_EEPC
         eret

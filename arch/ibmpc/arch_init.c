@@ -107,7 +107,7 @@ extern struct sched_context_s main_ctx;
 extern __ldscript_symbol_t __initial_stack;
 
 /* architecture specific init function */
-void arch_init() 
+void arch_init(uintptr_t init_sp)
 {
 #ifdef CONFIG_ARCH_SMP
   if (cpu_isbootstrap())
@@ -187,7 +187,7 @@ void arch_init()
 
 
       /* run mutek_start() */
-      mutek_start(0, 0);
+      mutek_start();
 #ifdef CONFIG_ARCH_SMP
     }
   else

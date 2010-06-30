@@ -198,6 +198,6 @@ void enum_fdt_create_children(struct device_s *dev)
 		.on_mem_reserve = enum_creator_mem_reserve,
 	};
 
-	dprintk("walking blob\n");
+	dprintk("%s walking blob\n", __FUNCTION__);
 	fdt_walk_blob(pv->blob, &walker);
 }

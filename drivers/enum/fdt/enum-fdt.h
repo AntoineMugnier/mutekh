@@ -31,6 +31,8 @@ DEV_INIT(enum_fdt_init);
 DEVENUM_LOOKUP(enum_fdt_lookup);
 struct device_s *enum_fdt_icudev_for_cpuid(struct device_s *dev, cpu_id_t id);
 struct device_s *enum_fdt_get_phandle(struct device_s *dev, uint32_t phandle);
+void enum_fdt_children_init(struct device_s *dev);
+error_t enum_fdt_wake_cpuid(struct device_s *dev, cpu_id_t id, void *entry);
 
 #endif
 
