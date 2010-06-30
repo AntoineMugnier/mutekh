@@ -313,16 +313,16 @@ struct dev_spi_rq_cmd_s *spi_oc_spi_controller_get_next_cmd(struct device_s *dev
 			}
 
 			if ( pv->abort ) {
-				rq->callback(rq->pvdata, rq, 1);
 				dev_spi_queue_remove(&pv->queue, rq);
 				pv->cur_cmd = (size_t)-1;
+				rq->callback(rq->pvdata, rq, 1);
 				continue;
 			}
 
 			if ( pv->cur_cmd == rq->command_count - 1 ) {
-				rq->callback(rq->pvdata, rq, 0);
 				dev_spi_queue_remove(&pv->queue, rq);
 				pv->cur_cmd = (size_t)-1;
+				rq->callback(rq->pvdata, rq, 0);
 				continue;
 			}
 
