@@ -35,36 +35,24 @@
 
 #include <mutek/printk.h>
 
+
+
 void icu_mips_update(struct device_s *dev)
 {
-	/*
-	 * Prevent the Mips-specific code to be compiled on heterogeneous
-	 * builds.
-	 */
-#if defined(__mips)
-	struct icu_mips_private_s	*pv = dev->drv_pv;
+	/* Prevent the Mips-specific code to be compiled on heterogeneous
+	 * builds. */
+#if defined(CONFIG_CPU_MIPS_VERSION)
+//	struct icu_mips_private_s	*pv = dev->drv_pv;
 
-//	printk("ICU mips mask %x for cpu %d\n", pv->mask, cpu_id());
-
-	reg_t status = cpu_mips_mfc0(12, 0);
-	status = (status & 0xffff00ff) | ((uint32_t)pv->mask << 8);
-	cpu_mips_mtc0(12, 0, status);
-
-    pv->must_update = 0;
+	reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
+	status |= 0xfc00;
+	cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
 #endif
 }
 
 DEVICU_ENABLE(icu_mips_enable)
 {
-	struct icu_mips_private_s	*pv = dev->drv_pv;
-
-	reg_t mask = 1 << (irq + 2);
-	if (enable)
-		pv->mask |= mask;
-	else
-		pv->mask &= ~mask;
-
-    pv->must_update = 1;
+//	struct icu_mips_private_s	*pv = dev->drv_pv;
 
     return 0;
 }
@@ -85,10 +73,6 @@ DEVICU_DELHNDL(icu_mips_delhndl)
 	struct icu_mips_private_s	*pv = dev->drv_pv;
 	struct icu_mips_handler_s	*h = pv->table + irq;
 
-	reg_t mask = 1 << (irq + 2);
-	assert( (mask & pv->mask) == 0 && "You should have disabled this interrupt already" );
-	(void)(mask&pv->mask);
-
 	h->hndl = NULL;
 	h->data = NULL;
 
@@ -100,6 +84,7 @@ static CPU_INTERRUPT_HANDLER(icu_mips_handler)
 	struct device_s *dev = CPU_LOCAL_GET(cpu_interrupt_handler_dev);
 	struct icu_mips_private_s	*pv = dev->drv_pv;
 	struct icu_mips_handler_s	*h;
+
 	if ( !irq )
 		return;
 	uint32_t irq_no = __builtin_ctz(irq);
@@ -111,13 +96,17 @@ static CPU_INTERRUPT_HANDLER(icu_mips_handler)
 
 	h = pv->table + irq_no;
 	
-	if (h->hndl)
+	if (h->hndl) {
 		h->hndl(h->data);
-	else
-		printk("Mips %d lost interrupt %i\n", cpu_id(), irq_no);
-
-    if ( pv->must_update )
-        icu_mips_update(dev);
+    } else {
+		printk("Mips %d had unhandled interrupt %i, disabling it, "
+               "reenabling will be impossible\n",
+               cpu_id(), irq_no);
+        
+        reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
+        status &= ~(1 << (irq_no + 10));
+        cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
+    }
 }
 
 DEV_CLEANUP(icu_mips_cleanup)
@@ -164,8 +153,6 @@ DEV_INIT(icu_mips_init)
 	dev->drv_pv = pv;
 
 	memset(pv, 0, sizeof(*pv));
-
-    pv->must_update = 1;
 
 	return 0;
 
