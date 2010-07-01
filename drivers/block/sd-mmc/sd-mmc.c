@@ -636,7 +636,8 @@ DEVBLOCK_REQUEST(sd_mmc_request)
     bool_t must_start = 0;
 
     LOCK_SPIN_IRQ(&dev->lock);
-    if (dev_blk_queue_head(&pv->queue) == NULL) {
+    if (dev_blk_queue_head(&pv->queue) == NULL &&
+        pv->current_request == NULL ) {
         pv->current_request = rq;
         must_start = 1;
     } else {
