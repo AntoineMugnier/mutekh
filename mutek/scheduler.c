@@ -273,11 +273,18 @@ CONTEXT_PREEMPT(sched_preempt_switch)
   next = __sched_candidate_noidle(&sched->root);
 
   if (next != NULL)
-    sched_queue_nolock_pushback(&sched->root, cur);
+    {
+      struct context_s *ctx = &next->context;
+
+      /* push current context on exec queue */
+      sched_queue_nolock_pushback(&sched->root, cur);
+      /* queue will be unlocked once context has been saved */
+      context_set_unlock(ctx, &sched->root.lock);
+      return ctx;
+    }
 
   sched_queue_unlock(&sched->root);
-
-  return next ? &next->context : NULL;
+  return NULL;
 }
 
 CONTEXT_PREEMPT(sched_preempt_stop)
@@ -289,9 +296,12 @@ CONTEXT_PREEMPT(sched_preempt_stop)
 
   sched_queue_wrlock(&sched->root);
   next = __sched_candidate(&sched->root);
-  sched_queue_unlock(&sched->root);
 
-  return &next->context;
+  struct context_s *ctx = &next->context;
+  /* queue will be unlocked once context has been saved */
+  context_set_unlock(ctx, &sched->root.lock);
+
+  return ctx;
 }
 
 CONTEXT_PREEMPT(sched_preempt_wait_unlock)
@@ -314,9 +324,12 @@ CONTEXT_PREEMPT(sched_preempt_wait_unlock)
 
   /* get next running context */
   next = __sched_candidate(&sched->root);
-  sched_queue_unlock(&sched->root);
 
-  return &next->context;
+  struct context_s *ctx = &next->context;
+  /* queue will be unlocked once context has been saved */
+  context_set_unlock(ctx, &sched->root.lock);
+
+  return ctx;
 }
 
 
@@ -343,31 +356,6 @@ void sched_context_start(struct sched_context_s *sched_ctx)
   __sched_context_push(sched_ctx);
 }
 
-void sched_wait_callback(sched_queue_root_t *queue,
-                         void (*callback)(void *ctx), void *ctx)
-{
-  struct scheduler_s *sched = __scheduler_get();
-  struct sched_context_s *cur = CONTEXT_LOCAL_GET(sched_cur);
-  struct sched_context_s *next;
-
-  assert(!cpu_is_interruptible());
-  assert(sched == cur->scheduler);
-
-  /* add current context to queue, assume dont need lock */
-  sched_queue_nolock_pushback(queue, cur);
-
-  /* lock scheduler before callback so that current
-     context can not be woken up in the mean time. */
-  sched_queue_wrlock(&sched->root);
-  callback(ctx);
-
-  /* get next running context */
-  next = __sched_candidate(&sched->root);
-  sched_queue_unlock(&sched->root);
-
-  context_switch_to(&next->context);
-}
-
 /* Same as sched_context_stop but unlock given spinlock before switching */
 void sched_context_stop_unlock(lock_t *lock)
 {
@@ -380,9 +368,12 @@ void sched_context_stop_unlock(lock_t *lock)
   sched_queue_wrlock(&sched->root);
   lock_release(lock);
   next = __sched_candidate(&sched->root);
-  sched_queue_unlock(&sched->root);
+ 
+  struct context_s *ctx = &next->context;
+  /* queue will be unlocked once context has been saved */
+  context_set_unlock(ctx, &sched->root.lock);
 
-  context_switch_to(&next->context);
+  context_switch_to(ctx);
 }
 
 /* Must be called with interrupts disabled and queue locked */

@@ -46,8 +46,8 @@ FUNC_START(.text, cpu_context_switch)
         movl    %eax, (x86emu_context + CPU_X86EMU_CONTEXT_esp)(%edx)
 
         // eflags
-//        pushf
-//        popl    (x86emu_context + CPU_X86EMU_CONTEXT_EFLAGS)(%edx)
+        pushf
+        popl    (x86emu_context + CPU_X86EMU_CONTEXT_EFLAGS)(%edx)
 
         // save pc
         movl    (%esp), %eax
@@ -73,8 +73,20 @@ FUNC_START(.text, cpu_context_jumpto)
         // get param
         movl    4(%esp), %edx
 
+# ifdef CONFIG_ARCH_SMP
+        // unlock some atomic value on context restore if requested
+        movl    HEXO_CONTEXT_S_UNLOCK * 4(%edx), %eax
+        test    %eax,   %eax
+        jz      1f
+
+        // unlock and clear unlock address
+        movl    $0,     (%eax)        
+        movl    $0,     HEXO_CONTEXT_S_UNLOCK * 4(%edx)        
+1:      
+# endif
+
         // get register save array
-        movl    HEXO_CONTEXT_S_TLS(%edx), %edx
+        movl    HEXO_CONTEXT_S_TLS * 4(%edx), %edx
 
         // switch context data base
         movl    %edx, (%ecx)
@@ -85,14 +97,14 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // prepare restoration
         pushl   (x86emu_context + CPU_X86EMU_CONTEXT_EIP)(%edx)
-//        pushl   (x86emu_context + CPU_X86EMU_CONTEXT_EFLAGS)(%edx)
+        pushl   (x86emu_context + CPU_X86EMU_CONTEXT_EFLAGS)(%edx)
 
         // restore gp regs
         .irp    reg, ebp, ebx, ecx, eax, edi, esi, edx
         mov     (x86emu_context + CPU_X86EMU_CONTEXT_\reg)(%edx), %\reg
         .endr
 
-//        popf
+        popf
         ret
 
 FUNC_END(cpu_context_jumpto)
@@ -128,7 +140,7 @@ FUNC_START(.text, cpu_context_stack_use)
         mov     12(%esp), %edx
 
         // get register save array
-        mov     HEXO_CONTEXT_S_TLS(%eax), %eax
+        mov     HEXO_CONTEXT_S_TLS * 4(%eax), %eax
         subl    $__context_data_start, %eax
 
         // use context stack

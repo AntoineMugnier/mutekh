@@ -38,6 +38,8 @@
 
 /** @internal offset of tls field in @ref context_s */
 #define HEXO_CONTEXT_S_TLS              0
+/** @internal offset of unlock field in @ref context_s */
+#define HEXO_CONTEXT_S_UNLOCK           1
 
 #ifndef __MUTEK_ASM__
 
@@ -45,6 +47,7 @@
 # include <hexo/local.h>
 # include <hexo/error.h>
 # include <hexo/mmu.h>
+# include <hexo/lock.h>
 # include <assert.h> 
 
 /** @internal context descriptor structure */
@@ -52,6 +55,11 @@ struct context_s
 {
   /** context local storage address. @csee #HEXO_CONTEXT_S_TLS */
   void			*tls;
+
+# ifdef CONFIG_ARCH_SMP
+  /** pointer to atomic int to clear on context switch */
+  atomic_int_t          *unlock;
+# endif
 
 # ifdef CONFIG_HEXO_MMU
   struct mmu_context_s	*mmu;
@@ -147,6 +155,16 @@ static inline void context_set_preempt(context_preempt_t *func, void *param)
   CPU_LOCAL_SET(cpu_preempt_param, param);
 }
 # endif
+
+/** @this sets address of a lock which must be unlocked on next context
+    restoration. The lock address is reset to NULL once unlock has been performed. */
+static inline void context_set_unlock(struct context_s *context, lock_t *lock)
+{
+# ifdef CONFIG_ARCH_SMP
+  // FIXME use arch code to get atomic value address from lock
+  context->unlock = (void*)lock;
+# endif
+}
 
 /** @internal */
 extern CONTEXT_LOCAL struct context_s *context_cur;

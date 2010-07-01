@@ -134,15 +134,6 @@ static inline void sched_context_exit(void)
   context_jump_to(sched_preempt_stop(NULL));
 }
 
-/* Switch to next context available in the 'root' queue, do not put
-   current context in any queue. Idle context may be selected if no
-   other contexts are available. Must be called with interrupts
-   disabled */
-static inline void sched_context_stop(void)
-{
-  context_switch_to(sched_preempt_stop(NULL));
-}
-
 /* push current context in the 'queue', unlock it and switch to next
    context available in the 'root' queue. Must be called with
    interrupts disabled */
@@ -150,7 +141,6 @@ static inline void sched_wait_unlock(sched_queue_root_t *queue)
 {
   context_switch_to(sched_preempt_wait_unlock(queue));
 }
-
 
 /** enqueue scheduler context for execution. Must be called with
     interrupts disabled */
@@ -174,11 +164,6 @@ error_t sched_queue_init(sched_queue_root_t *queue);
 void sched_queue_destroy(sched_queue_root_t *queue);
 
 typedef void (sched_wait_cb_t)(void *ctx);
-
-/** add current context on the wait queue, invoke callback and switch to
-    next context. Must be called with interrupts disabled */
-void sched_wait_callback(sched_queue_root_t *queue,
-			 sched_wait_cb_t *callback, void *ctx);
 
 /** wake a context from this queue */
 /* Must be called with interrupts disabled */

@@ -47,6 +47,10 @@ context_bootstrap(struct context_s *context, uintptr_t stack, size_t stack_size)
       return res;
     }
 
+# ifdef CONFIG_ARCH_SMP
+  context->unlock = NULL;
+# endif
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
     soclib_mem_check_change_id(cpu_id(), (uint32_t)context);
 #endif
@@ -85,6 +89,10 @@ context_init(struct context_s *context,
   CONTEXT_LOCAL_TLS_SET(context->tls, context_stack_start, (uintptr_t)stack_start);
   CONTEXT_LOCAL_TLS_SET(context->tls, context_stack_end, (uintptr_t)stack_end);
 
+# ifdef CONFIG_ARCH_SMP
+  context->unlock = NULL;
+# endif
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
   soclib_mem_check_create_ctx((uint32_t)context, stack_start, stack_end);
 #endif
@@ -115,6 +123,11 @@ void *
 context_destroy(struct context_s *context)
 {
   void *stack = (void*)CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_start);
+
+# ifdef CONFIG_ARCH_SMP
+  assert(context->unlock == NULL);
+# endif
+
   cpu_context_destroy(context);
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
