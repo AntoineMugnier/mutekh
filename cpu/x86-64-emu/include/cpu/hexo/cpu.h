@@ -32,27 +32,29 @@
 
 #define CPU_TYPE_NAME x86_64
 
-#ifdef CONFIG_ARCH_SMP
+#ifndef __MUTEK_ASM__
+
+# ifdef CONFIG_ARCH_SMP
 extern CPU_LOCAL cpu_id_t _cpu_id;
-#endif  
+# endif  
 
 static inline cpu_id_t cpu_id(void)
 {
-#ifdef CONFIG_ARCH_SMP
+# ifdef CONFIG_ARCH_SMP
   /* do not use CPU_LOCAL_GET here has _cpu_id is stored in process
      local memory and assigned before CLS allocation */
   return _cpu_id;
-#else
+# else
   return 0;
-#endif  
+# endif  
 }
 
 static inline bool_t
 cpu_isbootstrap(void)
 {
-#ifdef CONFIG_ARCH_SMP
+# ifdef CONFIG_ARCH_SMP
   return (cpu_id() == 0);
-#endif
+# endif
   return 1;
 }
 
@@ -68,29 +70,31 @@ cpu_cycle_count(void)
   return (low | ((uint64_t)high << 32));
 }
 
-#ifdef CONFIG_ARCH_SMP
+# ifdef CONFIG_ARCH_SMP
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-#endif
+# endif
 
 static inline void *cpu_get_cls(cpu_id_t cpu_id)
 {
-#ifdef CONFIG_ARCH_SMP
+# ifdef CONFIG_ARCH_SMP
   return cpu_local_storage[cpu_id];
-#endif
+# endif
   return NULL;
 }
 
 static inline void cpu_dcache_invld(void *ptr)
 {
-#ifndef CONFIG_CPU_CACHE_COHERENCY
-# error
-#endif
+# ifndef CONFIG_CPU_CACHE_COHERENCY
+#  error
+# endif
 }
 
 static inline size_t cpu_dcache_line_size()
 {
   return 0;
 }
+
+# endif
 
 #endif
 
