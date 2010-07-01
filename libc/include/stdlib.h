@@ -126,7 +126,7 @@ void *bsearch(
 
 /******************** random */
 
-typedef uint_fast8_t	__rand_type_t;
+typedef reg_t	__rand_type_t;
 
 #define RAND_MAX	(sizeof (__rand_type_t) > 1 ? 32767 : 255)
 
