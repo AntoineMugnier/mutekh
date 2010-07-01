@@ -78,12 +78,6 @@ FUNC_START(.boot, cpu_boot)
         /* enable all memchecker checks */
         li      $1,             SOCLIB_MC_CHECK_ALL
         sw      $1,             SOCLIB_MC_ENABLE ($0)
-
-# ifdef CONFIG_ARCH_SMP
-        /* mark cpu_init_flag variable as initialized */
-        la      $8,             cpu_init_flag
-        sw      $8,             SOCLIB_MC_INITIALIZED ($0)
-# endif
 #endif
 
         /* adjust stack pointer, 64 bits aligned, mips abi requires 4 free words */

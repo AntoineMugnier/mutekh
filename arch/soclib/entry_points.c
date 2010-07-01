@@ -22,8 +22,12 @@
 #include <hexo/types.h>
 #include <hexo/cpu.h>
 #include <hexo/init.h>
+#include <hexo/atomic.h>
 #include <hexo/interrupt.h>
 #include <string.h>
+
+#include <arch/mem_checker.h>
+
 
 #ifdef CONFIG_ARCH_DEVICE_TREE
 void *arch_fdt;
@@ -37,12 +41,10 @@ void init_bss()
     extern __ldscript_symbol_t __bss_start;
     extern __ldscript_symbol_t __bss_end;
 
-#if defined(CONFIG_SOCLIB_MEMCHECK)
     soclib_mem_check_region_status(
         (uint8_t*)&__bss_start,
         (uint8_t*)&__bss_end-(uint8_t*)&__bss_start,
         SOCLIB_MC_REGION_GLOBAL);
-#endif
     memset(
         (uint8_t*)&__bss_start,
         0,
@@ -62,6 +64,29 @@ void boot_from_bootloader(void *device_tree)
 
 
 #if defined(CONFIG_CPU_RESET_HANDLER)
+
+#define N (sizeof(atomic_t) * 8)
+#define START_BARRIER_WORDS ((CONFIG_CPU_MAXCOUNT + N - 1) / N)
+static atomic_t start_barrier[START_BARRIER_WORDS];
+
+static void start_barrier_wait()
+{
+    size_t bit = cpu_id() & (N - 1);
+    atomic_t *bar = &start_barrier[cpu_id() / N];
+
+    atomic_bit_clr(bar, bit);
+    while ( atomic_bit_test(bar, bit) == 0 )
+        order_compiler_mem();
+}
+
+void start_barrier_release(cpu_id_t cpu)
+{
+    size_t bit = cpu & (N - 1);
+    atomic_t *bar = &start_barrier[cpu / N];
+
+    atomic_bit_set(bar, bit);
+}
+
 void boot_from_reset_vector()
 {
 #ifdef CONFIG_ARCH_DEVICE_TREE
@@ -72,13 +97,17 @@ void boot_from_reset_vector()
         - (1 << CONFIG_HEXO_RESET_STACK_SIZE) * cpu_id();
 
     if ( cpu_isbootstrap() ) {
+        cpu_cycle_wait(10000);
         init_bss();
 #ifdef CONFIG_ARCH_DEVICE_TREE
         arch_fdt = &dt_blob_start;
 #endif
     } else {
+        soclib_mem_mark_initialized(start_barrier, START_BARRIER_WORDS);
+        start_barrier_wait(start_barrier);
     }
 
     arch_init(sp);
 }
-#endif
+
+#endif /* CONFIG_CPU_RESET_HANDLER */

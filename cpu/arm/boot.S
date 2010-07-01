@@ -80,12 +80,6 @@ FUNC_START(.text, arm_boot)
 	    /* enable all memchecker checks */
 	    mov  r0, # SOCLIB_MC_CHECK_ALL
 	    str  r0, [r1, # SOCLIB_MC_ENABLE_OFFSET ]
-
-#  ifdef CONFIG_ARCH_SMP
-	    /* mark cpu_init_flag variable as initialized */
-	    ldr  r0, =cpu_init_flag
-	    str  r0, [r1, # SOCLIB_MC_INITIALIZED_OFFSET ]
-#  endif
 # endif
 
         /* adjust stack pointer, 64 bits aligned */

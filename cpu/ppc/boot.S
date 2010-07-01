@@ -68,12 +68,6 @@ FUNC_START(.text, cpu_boot)
         /* enable all memchecker checks */
         addi    0,      0,      SOCLIB_MC_CHECK_ALL
         stw     0,              SOCLIB_MC_ENABLE (0)
-
-# ifdef CONFIG_ARCH_SMP
-        /* mark cpu_init_flag variable as initialized */
-        LA32    2,              cpu_init_flag
-        stw     2,              SOCLIB_MC_INITIALIZED (0)
-# endif
 #endif
 
         /* adjust stack pointer */

@@ -29,9 +29,7 @@
 # include <mutek/fdt.h>
 #endif
 
-#if defined(CONFIG_SOCLIB_MEMCHECK)
-# include <arch/mem_checker.h>
-#endif
+#include <arch/mem_checker.h>
 
 #if defined(CONFIG_SOCLIB_EARLY_CONSOLE)
 void soclib_early_console(uintptr_t addr);
@@ -62,7 +60,6 @@ extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_
 #ifdef CONFIG_ARCH_SMP
 static uint_fast8_t cpu_count = 1;
 uint32_t     cpu_start_flag = 0;
-uint32_t     cpu_init_flag = 0;
 static lock_t       cpu_init_lock;    /* cpu intialization lock */
 /* integer atomic operations global spin lock */
 lock_t              __atomic_arch_lock;
@@ -82,12 +79,10 @@ void soclib_setup_memory()
     extern __ldscript_symbol_t __data_load_start;
     extern __ldscript_symbol_t __data_load_end;
 
-# if defined(CONFIG_SOCLIB_MEMCHECK)
     soclib_mem_check_region_status(
         (uint8_t*)&__data_start,
         (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start,
         SOCLIB_MC_REGION_GLOBAL);
-# endif
     memcpy_from_code(
         (uint8_t*)&__data_start,
         (uint8_t*)&__data_load_start,
@@ -143,6 +138,8 @@ void hw_init()
 #endif
 }
 
+static inline void start_other_cpus(void);
+
 /**
    @this is the function run by the bootstrap CPU of the platform. It
    initializes all the hardware.
@@ -175,10 +172,7 @@ void arch_init_bootstrap(uintptr_t init_sp)
 # endif
 #endif
 
-#ifdef CONFIG_ARCH_SMP
-    /* send reset/init signal to other CPUs */
-    cpu_init_flag = START_MAGIC;
-#endif
+    start_other_cpus();
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
     sched_global_init();
@@ -219,9 +213,6 @@ void arch_init_bootstrap(uintptr_t init_sp)
 static
 void arch_init_other()
 {
-    while (cpu_init_flag != START_MAGIC)
-        order_compiler_mem();
-
     assert(cpu_id() < CONFIG_CPU_MAXCOUNT);
 
     /* configure other CPUs */
@@ -261,6 +252,25 @@ void arch_init_other()
 }
 #endif
 
+static inline
+void start_other_cpus(void)
+{
+#ifdef CONFIG_ARCH_SMP
+    size_t i;
+    for ( i=0; i<CONFIG_CPU_MAXCOUNT; ++i ) {
+        if ( i == cpu_id() )
+            continue;
+        error_t err = enum_fdt_wake_cpuid(&fdt_enum_dev, i, arch_init_other);
+        if (err)
+            printk("Error waking cpu %d from FDT: %s\n", i, strerror(err));
+# if defined(CONFIG_CPU_RESET_HANDLER)
+        extern void start_barrier_release(cpu_id_t cpu);
+        start_barrier_release(i);
+# endif
+    }
+#endif
+}
+
 /* architecture specific init function */
 void arch_init(uintptr_t init_sp)
 {
@@ -277,18 +287,6 @@ void arch_init(uintptr_t init_sp)
 void arch_start_other_cpu(void)
 {
 #ifdef CONFIG_ARCH_SMP
-    size_t i;
-    for ( i=0; i<CONFIG_CPU_MAXCOUNT; ++i ) {
-        if ( i == cpu_id() )
-            continue;
-        error_t err = enum_fdt_wake_cpuid(&fdt_enum_dev, i, arch_init_other);
-        if (err)
-            printk("Error waking cpu %d: %s\n", i, strerror(err));
-    }
-
-    cpu_cycle_wait(100000);
-
-    cpu_init_flag = 0;
     cpu_start_flag = START_MAGIC;
 #endif
 }
