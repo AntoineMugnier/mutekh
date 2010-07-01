@@ -52,7 +52,7 @@ cpu_global_init(void)
 
 void cpu_init(void)
 {
-  extern __ldscript_symbol_t __segment_excep_start;
+/*   extern __ldscript_symbol_t __segment_excep_start; */
   extern __ldscript_symbol_t __exception_base_ptr;
 
   /* Set exception vector */
