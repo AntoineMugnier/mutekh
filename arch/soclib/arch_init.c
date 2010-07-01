@@ -260,9 +260,11 @@ void start_other_cpus(void)
     for ( i=0; i<CONFIG_CPU_MAXCOUNT; ++i ) {
         if ( i == cpu_id() )
             continue;
+# if defined(CONFIG_ARCH_SOCLIB_BOOTLOADER_MUTEKH)
         error_t err = enum_fdt_wake_cpuid(&fdt_enum_dev, i, arch_init_other);
         if (err)
             printk("Error waking cpu %d from FDT: %s\n", i, strerror(err));
+# endif
 # if defined(CONFIG_CPU_RESET_HANDLER)
         extern void start_barrier_release(cpu_id_t cpu);
         start_barrier_release(i);

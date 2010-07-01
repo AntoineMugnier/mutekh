@@ -51,6 +51,7 @@ void init_bss()
         (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
 }
 
+#if defined(CONFIG_ARCH_SOCLIB_BOOTLOADER_MUTEKH)
 void boot_from_bootloader(void *device_tree)
 {
     // We can't expect anything from bootlaoder :'(
@@ -61,7 +62,7 @@ void boot_from_bootloader(void *device_tree)
 #endif
     arch_init(cpu_get_stackptr());
 }
-
+#endif
 
 #if defined(CONFIG_CPU_RESET_HANDLER)
 
