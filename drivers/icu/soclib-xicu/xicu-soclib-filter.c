@@ -176,6 +176,16 @@ DEV_INIT(xicu_filter_init)
 
 	pv->output = param->output_line;
 
+	cpu_mem_write_32(
+		XICU_REG_ADDR(dev->addr[0], XICU_MSK_HWI_DISABLE, pv->output),
+		(uint32_t)-1);
+	cpu_mem_write_32(
+		XICU_REG_ADDR(dev->addr[0], XICU_MSK_PTI_DISABLE, pv->output),
+		(uint32_t)-1);
+	cpu_mem_write_32(
+		XICU_REG_ADDR(dev->addr[0], XICU_MSK_WTI_DISABLE, pv->output),
+		(uint32_t)-1);
+
 	DEV_ICU_BIND(dev->icudev, dev, dev->irq, xicu_filter_handler);
 
 	return 0;
