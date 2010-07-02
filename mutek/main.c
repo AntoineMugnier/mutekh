@@ -182,8 +182,19 @@ void app_start();
 #if defined(CONFIG_MUTEK_SCHEDULER)
 static void bootstrap_cleanup(void *param)
 {
-  extern struct sched_context_s main_ctx;
-  context_destroy(&main_ctx.context);
+  if (cpu_isbootstrap()) {
+    extern struct sched_context_s main_ctx;
+    context_destroy(&main_ctx.context);
+
+#if defined(CONFIG_ARCH_SOCLIB) && 0
+    extern void mem_reclaim_initmem();
+    mem_reclaim_initmem();
+#endif
+  } else {
+#ifdef CONFIG_SOCLIB_MEMCHECK
+    soclib_mem_check_delete_ctx((uint32_t)cpu_id());
+#endif
+  }
 
   /* scheduler context switch without saving */
   sched_context_exit();
@@ -201,29 +212,20 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
   //  mutek_instrument_alloc_guard(1);
 #endif
 
-  if (cpu_isbootstrap())
-    {
+  if (cpu_isbootstrap()) {
 #ifdef CONFIG_OPENMP
       void initialize_libgomp();
       initialize_libgomp();
 #endif
       app_start();
-#if defined(CONFIG_MUTEK_SCHEDULER)
-      cpu_interrupt_disable();
-
-      /* run bootstrap_cleanup() on temporary context stack */
-      cpu_context_stack_use(sched_tmp_context(), bootstrap_cleanup, NULL);
-#endif
-    }
-  else
-    {
+  } else {
 #ifdef CONFIG_MUTEK_SMP_APP_START
       app_start();
 #endif
-
+  }
 #if defined(CONFIG_MUTEK_SCHEDULER)
-      cpu_interrupt_disable();
-      sched_context_exit();
+  /* run bootstrap_cleanup() on temporary context stack */
+  cpu_interrupt_disable();
+  cpu_context_stack_use(sched_tmp_context(), bootstrap_cleanup, NULL);
 #endif
-    }
 }
