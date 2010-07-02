@@ -93,8 +93,9 @@
         };
 
 	tty@0 {
-	    device_type = "soclib:tty";
-		tty_count = <1>;
+	  device_type = "uart16550";
+    crystal_hz  = <12500000>;
+    line_baud = <115200>;
 		reg = <0x10200000 0x100>;
 		irq = <&{/xicu@0/out@0} 0>;
 	};
