@@ -68,6 +68,16 @@ FUNC_END(cpu_context_switch)
 .endm
 
 FUNC_START(.text, cpu_context_jumpto)
+
+# ifdef CONFIG_ARCH_SMP
+    // unlock some atomic value on context restore if requested
+    ldr   r2, [r0, #HEXO_CONTEXT_S_UNLOCK * 4]
+    cmp   r2, #0
+    movne r1, #0
+    strne r1, [r2]
+    strne r1, [r0, #HEXO_CONTEXT_S_UNLOCK * 4]
+#endif
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
     /* enter memchecker command mode */
     ldr  r2, =SOCLIB_MC_MAGIC_VAL 
