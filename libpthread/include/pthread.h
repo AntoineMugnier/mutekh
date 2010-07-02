@@ -715,11 +715,11 @@ typedef size_t pthread_key_t;
    thread with non-NULL keyed data.  Destructor must still
    @ref pthread_key_delete the data.  If some keyed data is still
    non-NULL after deletion, the whole deletion process is started
-   again; at most @ref PTHREAD_DESTRUCTOR_ITERATIONS times.
+   again; at most @ref #PTHREAD_DESTRUCTOR_ITERATIONS times.
 
    @param key Key handle to fill
-   @param destructor Optional destructor function; NULL if not needed
-   @returns 0 if done, -EAGAIN if no key is available any more
+   @param destructor Optional destructor function; @tt NULL if not needed
+   @returns 0 if done, @tt -EAGAIN if no key is available any more
  */
 error_t pthread_key_create(pthread_key_t *key, void (*destructor)(void *));
 

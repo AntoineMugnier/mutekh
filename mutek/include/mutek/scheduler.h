@@ -49,7 +49,7 @@ typedef SCHED_CANDIDATE_FCN(sched_candidate_fcn_t);
 
 #define CONTAINER_LOCK_sched_queue HEXO_SPIN
 
-CONTAINER_TYPE	     (sched_queue, DLIST, struct sched_context_s
+struct sched_context_s
 {
   CONTAINER_ENTRY_TYPE(DLIST) list_entry;
   struct scheduler_s *scheduler;		//< keep track of associated scheduler queue
@@ -65,7 +65,9 @@ CONTAINER_TYPE	     (sched_queue, DLIST, struct sched_context_s
   sched_candidate_fcn_t	*is_candidate;
 #endif
 
-}, list_entry);
+};
+
+CONTAINER_TYPE       (sched_queue, DLIST, struct sched_context_s, list_entry);
 
 CONTAINER_FUNC       (sched_queue, DLIST, static inline, sched_queue, list_entry);
 CONTAINER_FUNC_NOLOCK(sched_queue, DLIST, static inline, sched_queue_nolock, list_entry);
@@ -134,7 +136,7 @@ static inline void sched_context_exit(void)
   context_jump_to(sched_preempt_stop(NULL));
 }
 
-/* push current context in the 'queue', unlock it and switch to next
+/** push current context in the 'queue', unlock it and switch to next
    context available in the 'root' queue. Must be called with
    interrupts disabled */
 static inline void sched_wait_unlock(sched_queue_root_t *queue)

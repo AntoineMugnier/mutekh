@@ -2030,7 +2030,7 @@ sub write_token_doc
 	print {$out} "   $title:\n";
 	print {$out} "   \@list\n";
 	foreach ( @$list ) {
-	    my $text = $disp->( $_, $sep, '#', ' ' );
+	    my $text = $disp->( $_, $sep, '@ref #', ' ' );
 	    $text =~ s/\w+/$& /g;
 	    print {$out} "      \@item ".$text."\n";
 	}

@@ -30,7 +30,7 @@
  @order 99
 @end group
 
-@moduledef{Devices}
+@moduledef{Device drivers}
  @short Hardware device driver classes API
  @order 98
 @end group
@@ -73,8 +73,8 @@
  VFS also implement root directory and current-working-directory
  through @ref vfs_get_cwd and @ref vfs_get_root (@ref
  @vfs/globals.h). Configuration can make them system-wise or
- thread-local (@ref CONFIG_VFS_GLOBAL_CWD and @ref
- CONFIG_VFS_GLOBAL_ROOT).
+ thread-local (@ref #CONFIG_VFS_GLOBAL_CWD and @ref
+ #CONFIG_VFS_GLOBAL_ROOT).
 
  File handles are also reference-counted. On most filesystems, nodes
  may be opened more than once at the same time, each instance of an
