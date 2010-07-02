@@ -187,22 +187,14 @@ typedef struct {
   __compiler_sint_t rem;
 } div_t;
 
-static inline div_t div(__compiler_sint_t number, __compiler_sint_t denom)
-{
-  div_t r = {number/denom, number%denom};
-  return r;
-}
+div_t div(__compiler_sint_t number, __compiler_sint_t denom);
 
 typedef struct {
   __compiler_slong_t quot;
   __compiler_slong_t rem;
 } ldiv_t;
 
-static inline ldiv_t ldiv(__compiler_slong_t number, __compiler_slong_t denom)
-{
-  ldiv_t r = {number/denom, number%denom};
-  return r;
-}
+ldiv_t ldiv(__compiler_slong_t number, __compiler_slong_t denom);
 
 C_HEADER_END
 
