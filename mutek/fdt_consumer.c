@@ -194,7 +194,7 @@ static FDT_ON_NODE_ENTRY_FUNC(chosen_node_entry)
 
 	switch (private->state) {
 	case IN_ROOT:
-		if ( !strcmp(path, "/") )
+		if ( !strcmp(path, "") )
             return 1;
 
 		if ( !strcmp(path, "/chosen") ) {
