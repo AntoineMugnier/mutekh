@@ -10,3 +10,5 @@ else
 objs += mwmr_soclib.o
 endif
 endif
+
+doc_headers = mwmr/mwmr.h

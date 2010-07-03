@@ -24,64 +24,28 @@
 #include <hexo/endian.h>
 #include <assert.h>
 
-/**
-   @this reads a given size from a mwmr channel. If the size is not
-   available in the channel, the read will block.
-
-   @param mwmr The mwmr channel
-   @param buffer The buffer to retrieve data into
-   @param size The size (in bytes) of the requested transfer. This has
-   to be a multiple of the channel's width.
- */
-static inline void srl_mwmr_read( srl_mwmr_t mwmr, void *buffer, size_t size )
+/** @see mwmr_read */
+static inline void srl_mwmr_read( srl_mwmr_t channel, void *buffer, size_t size )
 {
-	mwmr_read( mwmr, buffer, size );
+	mwmr_read( channel, buffer, size );
 }
 
-/**
-   @this writes a given size from a mwmr channel. If the size is not
-   free in the channel, the write will block.
-
-   @param mwmr The mwmr channel
-   @param buffer The buffer to retrieve data from
-   @param size The size (in bytes) of the requested transfer. This has
-   to be a multiple of the channel's width.
- */
-static inline void srl_mwmr_write( srl_mwmr_t mwmr, const void *buffer, size_t size )
+/** @see mwmr_write */
+static inline void srl_mwmr_write( srl_mwmr_t channel, const void *buffer, size_t size )
 {
-	mwmr_write( mwmr, buffer, size );
+	mwmr_write( channel, buffer, size );
 }
 
-/**
-   @this reads a given size from a mwmr channel. If the size is not
-   available in the channel, or if the lock is not available, @this will
-   return without transfering the whole buffer.
-
-   @param mwmr The mwmr channel
-   @param buffer The buffer to retrieve data into
-   @param size The size (in bytes) of the requested transfer. This has
-   to be a multiple of the channel's width.
-   @return the amount of bytes actually transfered
- */
-static inline size_t srl_mwmr_try_read( srl_mwmr_t mwmr, void *buffer, size_t size )
+/** @see mwmr_try_read */
+static inline size_t srl_mwmr_try_read( srl_mwmr_t channel, void *buffer, size_t size )
 {
-	return mwmr_try_read( mwmr, buffer, size );
+	return mwmr_try_read( channel, buffer, size );
 }
 
-/**
-   @this writes a given size from a mwmr channel. If the size is not
-   free in the channel, or if the lock is not available, @this will
-   return without transfering the whole buffer.
-
-   @param mwmr The mwmr channel
-   @param buffer The buffer to retrieve data from
-   @param size The size (in bytes) of the requested transfer. This has
-   to be a multiple of the channel's width.
-   @return the amount of bytes actually transfered
- */
-static inline size_t srl_mwmr_try_write( srl_mwmr_t mwmr, const void *buffer, size_t size )
+/** @see mwmr_try_write */
+static inline size_t srl_mwmr_try_write( srl_mwmr_t channel, const void *buffer, size_t size )
 {
-	return mwmr_try_write( mwmr, buffer, size );
+	return mwmr_try_write( channel, buffer, size );
 }
 
 # if defined(CONFIG_MWMR_SOCLIB)

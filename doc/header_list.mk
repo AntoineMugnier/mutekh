@@ -1,5 +1,6 @@
 
-BASE_MODULES += libsrl libfdt libpthread libm libelf libvfs libcrypto libcapsule hexo mutek libc drivers
+BASE_MODULES += libsrl libfdt libpthread libm libelf libvfs libcrypto	\
+libcapsule hexo mutek libc drivers libmwmr
 
 ARCH_HEADER= arch/hexo/atomic.h arch/hexo/lock.h	\
 	arch/hexo/segment.h arch/hexo/types.h
