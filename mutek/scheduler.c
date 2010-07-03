@@ -357,7 +357,7 @@ void sched_context_start(struct sched_context_s *sched_ctx)
 }
 
 /* Same as sched_context_stop but unlock given spinlock before switching */
-void sched_context_stop_unlock(lock_t *lock)
+void sched_stop_unlock(lock_t *lock)
 {
   struct scheduler_s *sched = __scheduler_get();
   struct sched_context_s *next;

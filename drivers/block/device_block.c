@@ -123,7 +123,7 @@ static error_t dev_block_wait_request(struct device_s *dev, uint8_t **data,
     {
       status.ctx = sched_get_current();
 /*       printk("Stopping %p\n", status.ctx); */
-      sched_context_stop_unlock(&status.lock);
+      sched_stop_unlock(&status.lock);
     }
   else
     lock_release(&status.lock);

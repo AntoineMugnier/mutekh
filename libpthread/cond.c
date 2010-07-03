@@ -58,7 +58,8 @@ pthread_cond_broadcast(pthread_cond_t *cond)
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   sched_queue_wrlock(&cond->wait);
 
-  while (sched_wake(&cond->wait));
+  while (sched_wake(&cond->wait))
+    ;
 
   sched_queue_unlock(&cond->wait);
   CPU_INTERRUPT_RESTORESTATE;
