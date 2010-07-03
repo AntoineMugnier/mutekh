@@ -29,6 +29,11 @@
 
 #define UART_8250_ADDR	0
 
+struct uart_8250_param_s {
+    uint32_t crystal_hz;
+    uint32_t line_baud;
+};
+
 /* tty device functions */
 
 DEV_IRQ(uart_8250_irq);

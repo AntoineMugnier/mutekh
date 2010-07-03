@@ -28,7 +28,12 @@
 struct uart_8250_context_s
 {
   uint8_t				line_mode;
-  uint16_t				line_speed;
+  uint32_t              crystal_hz;
+  uint32_t				line_baud;
+  uint32_t              divisor;
+
+  struct dev_char_rq_s *read_rq;
+  struct dev_char_rq_s *write_rq;
 
   dev_char_queue_root_t	read_q;
   dev_char_queue_root_t	write_q;
