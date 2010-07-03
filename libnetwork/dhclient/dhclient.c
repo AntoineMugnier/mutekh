@@ -27,15 +27,15 @@
 #include <hexo/error.h>
 #include <hexo/endian.h>
 
-#include <netinet/if.h>
+#include <network/if.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#include <netinet/dhcp.h>
+#include <network/dhcp.h>
 #include <netinet/arp.h>
 #include <netinet/udp.h>
-#include <netinet/route.h>
-#include <netinet/socket.h>
-#include <netinet/packet.h>
+#include <network/route.h>
+#include <network/socket.h>
+#include <network/packet.h>
 
 #include <mutek/printk.h>
 
@@ -458,7 +458,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		    }
 		  printk("dhclient:\n  assigned %u.%u.%u.%u netmask %u.%u.%u.%u\n",
 			 EXTRACT_IPV4(addr.addr.ipv4), EXTRACT_IPV4(mask.addr.ipv4));
-		  if_config(interface->index, IF_SET, &addr, &mask);
+		  if_config(interface, IF_SET, &addr, &mask);
 		  route_flush(interface);
 
 		  printk("  lease time: %u seconds\n", lease->delay / 1000);
@@ -543,7 +543,6 @@ static CONTEXT_ENTRY(dhcp_renew_th)
   uint_fast8_t		i;
   struct net_addr_s	null;
 
-  sched_unlock();
   cpu_interrupt_enable();
 
   while (1)
@@ -597,7 +596,7 @@ static CONTEXT_ENTRY(dhcp_renew_th)
 	  if (timer_add_event(&timer_ms, lease->timer))
 	    goto err;
 
-	  if_dump("eth0");
+	  if_dump(lease->interface);
 	  route_dump();
 	}
 
@@ -620,9 +619,9 @@ static CONTEXT_ENTRY(dhcp_renew_th)
 
   /* bring interface down */
   IPV4_ADDR_SET(null, 0);
-  if_config(lease->interface->index, IF_SET, &null, &null);
+  if_config(lease->interface, IF_SET, &null, &null);
   route_flush(lease->interface);
-  if_down("eth0");
+  if_down(lease->interface);
 
   /* release objects */
   timer_cancel_event(lease->timer, 0);
@@ -630,7 +629,6 @@ static CONTEXT_ENTRY(dhcp_renew_th)
   semaphore_destroy(&lease->sem);
   mem_free(lease);
 
-  sched_lock();
   sched_context_exit();
 }
 
@@ -650,17 +648,17 @@ error_t			dhcp_client(const char	*ifname)
   struct net_route_s	*route = NULL;
 
   if ((interface = if_get_by_name(ifname)) == NULL)
-    return -1;
+    return -ENOENT;
 
   if ((lease = malloc(sizeof (struct dhcp_lease_s))) == NULL)
-    return -1;
+    return -ENOMEM;
 
   lease->interface = interface;
   lease->delay = 0;
 
   /* ifconfig 0.0.0.0 */
   IPV4_ADDR_SET(null, 0);
-  if_config(interface->index, IF_SET, &null, &null);
+  if_config(interface, IF_SET, &null, &null);
   if ((route = route_obj_new(NULL, &null, &null, interface)) == NULL)
     goto leave;
   route_add(route);
@@ -723,12 +721,12 @@ error_t			dhcp_client(const char	*ifname)
 
   if (route != NULL)
     route_del(route);
-  if_config(interface->index, IF_DEL, &null, NULL);
+  if_config(interface, IF_DEL, &null, NULL);
 
   if (sock != NULL)
     shutdown(sock, SHUT_RDWR);
   if (sock_packet != NULL)
     shutdown(sock_packet, SHUT_RDWR);
 
-  return -1;
+  return -EUNKNOWN;
 }

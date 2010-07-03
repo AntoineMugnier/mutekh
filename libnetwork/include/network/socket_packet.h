@@ -19,33 +19,26 @@
 
 */
 
-#ifndef NETINET_SOCKET_RAW_H
-#define NETINET_SOCKET_RAW_H
+#ifndef NETWORK_SOCKET_PACKET_H
+#define NETWORK_SOCKET_PACKET_H
 
-#ifndef CONFIG_NETWORK_SOCKET_RAW
+#ifndef CONFIG_NETWORK_SOCKET_PACKET
 # warning Socket support is not enabled in configuration file
 #endif
 
-#include <netinet/packet.h>
-#include <netinet/protos.h>
-#include <netinet/route.h>
-#include <netinet/socket.h>
+#include <network/packet.h>
+#include <network/protos.h>
+#include <network/if.h>
+#include <network/socket.h>
 
 #include <semaphore.h>
 
-struct				socket_raw_pv_s
+struct				socket_packet_pv_s
 {
   net_proto_id_t		proto;
   bool_t			header;
-
-  uint_fast32_t			icmp_mask;
-  uint_fast32_t			family;
-  struct net_addr_s		local;
-  struct net_addr_s		remote;
-  bool_t			any;
-  bool_t			connected;
-  struct net_route_s		*route;
-  struct net_if_s		*local_interface;
+  uint_fast32_t			interface;
+  error_t			error;
 
   packet_queue_root_t		recv_q;
   struct semaphore_s				recv_sem;

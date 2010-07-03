@@ -27,12 +27,14 @@
 #include <netinet/udp.h>
 #include <netinet/ip.h>
 #include <netinet/in.h>
-#include <netinet/packet.h>
-#include <netinet/protos.h>
+#include <network/udp.h>
+#include <network/ip.h>
+#include <network/packet.h>
+#include <network/protos.h>
 
-#include <netinet/if.h>
+#include <network/if.h>
 
-#include <netinet/libudp.h>
+#include <network/libudp.h>
 
 #include <mutek/printk.h>
 

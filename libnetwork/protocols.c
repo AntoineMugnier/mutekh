@@ -22,8 +22,8 @@
 #include <hexo/types.h>
 #include <mutek/mem_alloc.h>
 
-#include <netinet/packet.h>
-#include <netinet/protos.h>
+#include <network/packet.h>
+#include <network/protos.h>
 
 /*
  * Protocol instance constructor

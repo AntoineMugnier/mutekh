@@ -19,29 +19,36 @@
 
 */
 
-#ifndef NETINET_SOCKET_UDP_H
-#define NETINET_SOCKET_UDP_H
+#ifndef NETWORK_SOCKET_RAW_H
+#define NETWORK_SOCKET_RAW_H
 
-#ifndef CONFIG_NETWORK_UDP
-# warning UDP support is not enabled in configuration file
+#ifndef CONFIG_NETWORK_SOCKET_RAW
+# warning Socket support is not enabled in configuration file
 #endif
 
-#include <netinet/libudp.h>
-#include <netinet/packet.h>
-#include <netinet/protos.h>
-#include <netinet/socket.h>
-#include <netinet/socket_internals.h>
+#include <network/packet.h>
+#include <network/protos.h>
+#include <network/route.h>
+#include <network/socket.h>
 
 #include <semaphore.h>
 
-struct			socket_udp_pv_s
+struct				socket_raw_pv_s
 {
-  struct net_udp_desc_s	*desc;
-  uint_fast32_t		family;
+  net_proto_id_t		proto;
+  bool_t			header;
 
-  net_port_t		recv_port;
-  buffer_queue_root_t	recv_q;
-  struct semaphore_s			recv_sem;
+  uint_fast32_t			icmp_mask;
+  uint_fast32_t			family;
+  struct net_addr_s		local;
+  struct net_addr_s		remote;
+  bool_t			any;
+  bool_t			connected;
+  struct net_route_s		*route;
+  struct net_if_s		*local_interface;
+
+  packet_queue_root_t		recv_q;
+  struct semaphore_s				recv_sem;
 };
 
 #endif

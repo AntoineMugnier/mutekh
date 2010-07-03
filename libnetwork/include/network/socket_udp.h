@@ -19,46 +19,29 @@
 
 */
 
-#ifndef NET_NE2000_PRIVATE_H_
-#define NET_NE2000_PRIVATE_H_
+#ifndef NETWORK_SOCKET_UDP_H
+#define NETWORK_SOCKET_UDP_H
 
-#include <hexo/types.h>
-#include <hexo/lock.h>
+#ifndef CONFIG_NETWORK_UDP
+# warning UDP support is not enabled in configuration file
+#endif
 
-#include <pthread.h>
+#include <network/libudp.h>
+#include <network/packet.h>
+#include <network/protos.h>
+#include <network/socket.h>
+#include <network/socket_internals.h>
+
 #include <semaphore.h>
 
-#include <network/packet.h>
-#include <netinet/ether.h>
-#include <network/protos.h>
-#include <network/if.h>
-
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
-
-/*
- * private data of a ne2000 network device
- */
-
-struct				net_ne2000_context_s
+struct			socket_udp_pv_s
 {
-  lock_t			lock;
+  struct net_udp_desc_s	*desc;
+  uint_fast32_t		family;
 
-  uint_fast8_t			io_16;
-  uint_fast16_t			tx_buf;
-  uint_fast16_t			rx_buf;
-  uint_fast16_t			mem;
-
-  bool_t			run;
-  packet_queue_root_t		sendqueue;
-  uint_fast8_t			send_tries;
-  struct net_dispatch_s *dispatch;
-  struct net_packet_s		*current;
-  struct device_s		*icudev;
-
-  uint8_t			mac[ETH_ALEN];
-  struct net_if_s		*interface;
+  net_port_t		recv_port;
+  buffer_queue_root_t	recv_q;
+  struct semaphore_s			recv_sem;
 };
 
 #endif
-

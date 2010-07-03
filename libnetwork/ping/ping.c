@@ -25,16 +25,16 @@
 
 #include <hexo/error.h>
 
-#include <netinet/if.h>
+#include <network/if.h>
 #include <netinet/in.h>
 #include <netinet/icmp.h>
-#include <netinet/socket.h>
+#include <network/socket.h>
 
 #include <limits.h>
 #include <mutek/timer.h>
 #include <mutek/printk.h>
 
-#include <netinet/ping.h>
+#include <network/ping.h>
 
 error_t			ping(struct net_addr_s	*host,
 			     uint_fast32_t	count,

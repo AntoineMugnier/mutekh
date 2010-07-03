@@ -19,15 +19,21 @@
 
 */
 
-#ifndef NETINET_LIBTCP_H
-#define NETINET_LIBTCP_H
+#ifndef NETWORK_LIBTCP_H
+#define NETWORK_LIBTCP_H
+
+/**
+   @file
+   @module{Network library}
+   @short TCP stack
+ */
 
 #ifndef CONFIG_NETWORK_TCP
 # warning TCP support is not enabled in configuration file
 #endif
 
-#include <netinet/protos.h>
-#include <netinet/packet.h>
+#include <network/protos.h>
+#include <network/packet.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>

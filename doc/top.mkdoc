@@ -93,6 +93,10 @@
  @short Ciphers, random generators and hash functions library
 @end group
 
+@moduledef{Network library}
+ @short Network protocols handling
+@end group
+
 @moduledef{MWMR}
   @short Multi-Writer Multi-Reader channels API
 

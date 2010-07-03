@@ -19,8 +19,14 @@
 
 */
 
-#ifndef NETINET_ROUTE_H
-#define NETINET_ROUTE_H
+#ifndef NETWORK_ROUTE_H
+#define NETWORK_ROUTE_H
+
+/**
+   @file
+   @module{Network library}
+   @short Routing stack
+ */
 
 #include <hexo/types.h>
 #include <hexo/error.h>
@@ -30,7 +36,7 @@
 #include <gpct/object_refcount.h>
 #include <gpct/cont_dlist.h>
 
-#include <netinet/packet.h>
+#include <network/packet.h>
 
 struct net_if_s;
 

@@ -29,14 +29,16 @@
 #include <netinet/ip.h>
 #include <netinet/icmp.h>
 #include <netinet/arp.h>
-#include <netinet/packet.h>
+#include <network/ip.h>
+#include <network/icmp.h>
+#include <network/arp.h>
+#include <network/packet.h>
 #include <netinet/ether.h>
-#include <netinet/protos.h>
+#include <network/protos.h>
 #include <netinet/in.h>
 
-#include <netinet/if.h>
-#include <netinet/route.h>
-#include <netinet/libsocket.h>
+#include <network/if.h>
+#include <network/route.h>
 
 #include <stdlib.h>
 #include <mutek/timer.h>

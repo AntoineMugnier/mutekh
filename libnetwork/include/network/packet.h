@@ -22,6 +22,12 @@
 #ifndef NETINET_PACKET_H_
 #define NETINET_PACKET_H_
 
+/**
+   @file
+   @module{Network library}
+   @short Packet handling API
+ */
+
 #if defined (CONFIG_NETWORK_PACKET_ASM)
 # include <cpu/packet.h>
 #endif
@@ -108,7 +114,7 @@ struct		net_header_s
 #include <gpct/object_refcount.h>
 #include <gpct/cont_dlist.h>
 
-#include <netinet/protos.h>
+#include <network/protos.h>
 #include <netinet/ether.h>
 
 #include <mutek/semaphore.h>

@@ -19,17 +19,23 @@
 
 */
 
-#ifndef NETINET_LIBUDP_H
-#define NETINET_LIBUDP_H
+#ifndef NETWORK_LIBUDP_H
+#define NETWORK_LIBUDP_H
+
+/**
+   @file
+   @module{Network library}
+   @short UDP stack
+ */
 
 #ifndef CONFIG_NETWORK_UDP
 # warning UDP support is not enabled in configuration file
 #endif
 
-#include <netinet/protos.h>
-#include <netinet/packet.h>
+#include <network/protos.h>
+#include <network/packet.h>
 #include <netinet/udp.h>
-#include <netinet/route.h>
+#include <network/route.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>

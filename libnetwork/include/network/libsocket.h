@@ -19,16 +19,18 @@
 
 */
 
-#ifndef NETINET_LIBSOCKET_H
-#define NETINET_LIBSOCKET_H
+#ifndef NETWORK_LIBSOCKET_H
+#define NETWORK_LIBSOCKET_H
 
-#ifndef CONFIG_NETWORK_SOCKET
-# warning Socket support is not enabled in configuration file
-#endif
+/**
+   @file
+   @module{Network library}
+   @short Low-level socket API
+ */
 
-#include <netinet/protos.h>
-#include <netinet/packet.h>
-#include <netinet/if.h>
+#include <network/protos.h>
+#include <network/packet.h>
+#include <network/if.h>
 
 #ifdef CONFIG_NETWORK_SOCKET_PACKET
 void	pf_packet_signal(struct net_if_s	*interface,

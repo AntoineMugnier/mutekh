@@ -26,9 +26,9 @@
 
 #include <semaphore.h>
 
-#include <netinet/packet.h>
-#include <netinet/protos.h>
-#include <netinet/if.h>
+#include <network/packet.h>
+#include <network/protos.h>
+#include <network/if.h>
 
 #ifdef CONFIG_NETWORK_PROFILING
 uint_fast32_t	netobj_new[NETWORK_PROFILING_NB_OBJS] = { 0, 0, 0 };

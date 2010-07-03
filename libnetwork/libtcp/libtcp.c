@@ -37,15 +37,17 @@
 #include <mutek/mem_alloc.h>
 #include <hexo/cpu.h>
 
-#include <netinet/packet.h>
-#include <netinet/protos.h>
+#include <network/packet.h>
+#include <network/protos.h>
+#include <network/ip.h>
 #include <netinet/ip.h>
-#include <netinet/if.h>
+#include <network/if.h>
 #include <netinet/in.h>
 #include <netinet/ether.h>
 
+#include <network/tcp.h>
 #include <netinet/tcp.h>
-#include <netinet/libtcp.h>
+#include <network/libtcp.h>
 
 #include <mutek/timer.h>
 #include <stdlib.h>

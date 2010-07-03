@@ -19,7 +19,7 @@
 
 */
 
-#if !defined(NETINET_SOCKET_H) || defined(SOCKET_HEXO_H)
+#if !defined(NETWORK_SOCKET_H) || defined(SOCKET_HEXO_H)
 #error This file can not be included directly
 #else
 

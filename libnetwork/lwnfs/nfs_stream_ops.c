@@ -1,6 +1,6 @@
 
 #include <stdio.h>
-#include <netinet/nfs.h>
+#include <network/nfs.h>
 
 /* descriptor */
 struct		hdl_s

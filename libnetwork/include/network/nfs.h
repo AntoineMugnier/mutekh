@@ -19,8 +19,14 @@
 
 */
 
-#ifndef NETINET_NFS_H_
-#define NETINET_NFS_H_
+#ifndef NETWORK_NFS_H_
+#define NETWORK_NFS_H_
+
+/**
+   @file
+   @module{Network library}
+   @short Low-level NFS stack
+ */
 
 #ifndef CONFIG_NETWORK_NFS
 # warning NFS support is not enabled in configuration file

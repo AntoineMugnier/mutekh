@@ -19,8 +19,14 @@
 
 */
 
-#ifndef NETINET_DHCP_H
-#define NETINET_DHCP_H
+#ifndef NETWORK_DHCP_H
+#define NETWORK_DHCP_H
+
+/**
+   @file
+   @module{Network library}
+   @short DHCP client stack
+ */
 
 #ifndef CONFIG_NETWORK_DHCLIENT
 # warning DHCP client support is not enabled in configuration file
@@ -78,16 +84,15 @@
 #define DHCP_TIMEOUT	10 /* 10 seconds */
 #define DHCP_DFL_LEASE	120000 /* 2 minutes */
 
-#include <netinet/if.h>
+#include <network/if.h>
 #include <mutek/timer.h>
 #include <mutek/scheduler.h>
 #include <mutek/semaphore.h>
 
-/*
- * DHCP lease info.
+/**
+   @this holds a DHCP lease information
  */
-
-struct			dhcp_lease_s
+struct dhcp_lease_s
 {
   struct sched_context_s context;
   uint8_t stack[2000];
@@ -100,22 +105,16 @@ struct			dhcp_lease_s
   bool_t		exit;
 };
 
-/*
- * DHCP options.
- */
-
-struct		dhcp_opt_s
+/** @this holds DHCP options */
+struct dhcp_opt_s
 {
   uint8_t	code;
   uint8_t	len;
   uint8_t	data[1];
 } __attribute__((packed));
 
-/*
- * DHCP header.
- */
-
-struct			dhcphdr
+/** @this is a DHCP protocol header */
+struct dhcphdr
 {
   uint8_t		op;
   uint8_t		htype;
@@ -134,11 +133,15 @@ struct			dhcphdr
   uint8_t		magic[4];
 } __attribute__((packed));
 
-/*
- * DHCP exported functions
- */
+/**
+   @this creates a DHCP client, attaches it to a given interface, and
+   tries to resolve an address.
 
-error_t			dhcp_client(const char	*ifname);
+   @param ifname Interface name to attach the client to.
+
+   @returns 0 upon success, or an error
+ */
+error_t dhcp_client(const char *ifname);
 
 #endif
 

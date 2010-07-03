@@ -26,9 +26,9 @@
 #include <hexo/context.h>
 #include <hexo/lock.h>
 
-#include <netinet/packet.h>
-#include <netinet/protos.h>
-#include <netinet/if.h>
+#include <network/packet.h>
+#include <network/protos.h>
+#include <network/if.h>
 
 #include <mutek/printk.h>
 
@@ -49,6 +49,7 @@ struct net_dispatch_s
 
     packet_queue_root_t queue;
 	struct semaphore_s sem;
+    lock_t kill_lock;
 };
 
 /*
@@ -62,7 +63,6 @@ static CONTEXT_ENTRY(packet_dispatch_thread)
 
 	net_if_obj_refnew(dispatch->interface);
 
-	sched_unlock();
 	cpu_interrupt_enable();
 
 	net_debug("[%s] In dispatch thread, pv=%p\n", dispatch->interface->name, dispatch);
@@ -81,10 +81,11 @@ static CONTEXT_ENTRY(packet_dispatch_thread)
 			packet_obj_refdrop(packet);
 		} else {
 			if (dispatch->must_quit) {
+                cpu_interrupt_disable();
+                lock_spin(&dispatch->kill_lock);
 				net_if_obj_refdrop(dispatch->interface);
 				sched_context_start(dispatch->killer);
-				sched_lock();
-				sched_context_exit();
+				sched_stop_unlock(&dispatch->kill_lock);
 			}
 		}
 	}
@@ -116,6 +117,8 @@ struct net_dispatch_s *network_dispatch_create(struct net_if_s *interface)
 
 	packet_queue_init(&dispatch->queue);
 
+    lock_init(&dispatch->kill_lock);
+
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
 	context_init( &dispatch->context.context,
 				  &dispatch->stack[0],
@@ -131,6 +134,8 @@ struct net_dispatch_s *network_dispatch_create(struct net_if_s *interface)
 
 void network_dispatch_kill(struct net_dispatch_s *dispatch)
 {
+	CPU_INTERRUPT_SAVESTATE_DISABLE;
+    lock_spin(&dispatch->kill_lock);
 	/* Signal the thread for termination... */
 	dispatch->killer = sched_get_current();
 	dispatch->must_quit = 1;
@@ -138,13 +143,14 @@ void network_dispatch_kill(struct net_dispatch_s *dispatch)
 	semaphore_give(&dispatch->sem, 1);
 
 	/* and wait it actually stops */
-	CPU_INTERRUPT_SAVESTATE_DISABLE;
-	sched_context_stop();
+	sched_stop_unlock(&dispatch->kill_lock);
 	CPU_INTERRUPT_RESTORESTATE;
 
 	packet_queue_destroy(&dispatch->queue);
 
 	net_if_obj_refdrop(dispatch->interface);
+
+    lock_destroy(&dispatch->kill_lock);
 
 	mem_free(dispatch);
 }

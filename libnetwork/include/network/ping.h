@@ -19,30 +19,39 @@
 
 */
 
-#ifndef NETINET_SOCKET_TCP_H
-#define NETINET_SOCKET_TCP_H
+#ifndef NETWORK_PING_H
+#define NETWORK_PING_H
 
-#ifndef CONFIG_NETWORK_TCP
-# warning TCP support is not enabled in configuration file
-#endif
+/**
+   @file
+   @module{Network library}
+   @short Ping client
+ */
 
-#include <netinet/libtcp.h>
-#include <netinet/packet.h>
-#include <netinet/protos.h>
-#include <netinet/socket.h>
-#include <netinet/socket_internals.h>
+# ifndef CONFIG_NETWORK_PING
+#  warning PING support is not enabled in configuration file
+# endif
 
-#include <semaphore.h>
+# include <hexo/types.h>
+# include <mutek/timer.h>
+# include <netinet/packet.h>
 
-struct			socket_tcp_pv_s
+# define PING_INTERVAL	200	// ms
+# define PING_TIMEOUT	10000	// ms
+
+struct		ping_s
 {
-  struct net_tcp_session_s	*session;
-  uint_fast32_t		family;
-
-  bool_t connected;
-  net_port_t		recv_port;
-  buffer_queue_root_t	recv_q;
-  struct semaphore_s			recv_sem;
+  uint_fast32_t	total;
+  uint_fast32_t	lost;
+  uint_fast32_t	error;
+  timer_delay_t	min;
+  timer_delay_t	max;
+  timer_delay_t	avg;
 };
+
+error_t		ping(struct net_addr_s	*host,
+		     uint_fast32_t	count,
+		     size_t		size,
+		     struct ping_s	*stat);
 
 #endif

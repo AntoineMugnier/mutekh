@@ -19,8 +19,14 @@
 
 */
 
-#ifndef NETINET_PROTOS_H_
-#define NETINET_PROTOS_H_
+#ifndef NETWORK_PROTOS_H_
+#define NETWORK_PROTOS_H_
+
+/**
+   @file
+   @module{Network library}
+   @short Internal protocol definitions
+ */
 
 #include <hexo/types.h>
 #include <hexo/error.h>

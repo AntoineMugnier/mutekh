@@ -16,49 +16,30 @@
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
     Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
-
 */
 
-#ifndef NET_NE2000_PRIVATE_H_
-#define NET_NE2000_PRIVATE_H_
+#ifndef NETWORK_ICMP_H_
+#define NETWORK_ICMP_H_
 
-#include <hexo/types.h>
-#include <hexo/lock.h>
-
-#include <pthread.h>
-#include <semaphore.h>
-
-#include <network/packet.h>
-#include <netinet/ether.h>
-#include <network/protos.h>
-#include <network/if.h>
-
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
-
-/*
- * private data of a ne2000 network device
+/**
+   @file
+   @module{Network library}
+   @short ICMP stack
  */
 
-struct				net_ne2000_context_s
-{
-  lock_t			lock;
+#include <network/packet.h>
+#include <network/protos.h>
 
-  uint_fast8_t			io_16;
-  uint_fast16_t			tx_buf;
-  uint_fast16_t			rx_buf;
-  uint_fast16_t			mem;
+/*
+  @module{Network library}
+  @short{ICMP functions}
+ */
 
-  bool_t			run;
-  packet_queue_root_t		sendqueue;
-  uint_fast8_t			send_tries;
-  struct net_dispatch_s *dispatch;
-  struct net_packet_s		*current;
-  struct device_s		*icudev;
+NET_PUSHPKT(icmp_pushpkt);
+NET_PREPAREPKT(icmp_preparepkt);
+NET_ERRORMSG(icmp_errormsg);
 
-  uint8_t			mac[ETH_ALEN];
-  struct net_if_s		*interface;
-};
+/** @this is the ICMP protocol descriptor */
+extern const struct net_proto_desc_s	icmp_protocol;
 
 #endif
-

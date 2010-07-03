@@ -19,29 +19,44 @@
 
 */
 
-#ifndef NETINET_SOCKET_PACKET_H
-#define NETINET_SOCKET_PACKET_H
+#ifndef NETWORK_UDP_H_
+#define NETWORK_UDP_H_
 
-#ifndef CONFIG_NETWORK_SOCKET_PACKET
-# warning Socket support is not enabled in configuration file
+/**
+   @file
+   @module{Network library}
+   @short UDP stack
+ */
+
+#ifndef CONFIG_NETWORK_UDP
+# warning UDP support is not enabled in configuration file
 #endif
 
-#include <netinet/packet.h>
-#include <netinet/protos.h>
-#include <netinet/if.h>
-#include <netinet/socket.h>
+#include <hexo/types.h>
+#include <network/packet.h>
+#include <network/protos.h>
 
-#include <semaphore.h>
+/*
+ * UDP functions
+ */
 
-struct				socket_packet_pv_s
-{
-  net_proto_id_t		proto;
-  bool_t			header;
-  uint_fast32_t			interface;
-  error_t			error;
+NET_PUSHPKT(udp_pushpkt);
+inline uint8_t	*udp_preparepkt(struct net_if_s		*interface,
+				struct net_proto_s	*addressing,
+				struct net_packet_s	*packet,
+				size_t			size,
+				size_t			max_padding);
+inline void	udp_sendpkt(struct net_if_s	*interface,
+			    struct net_proto_s	*addressing,
+			    struct net_packet_s	*packet,
+			    uint_fast16_t	source_port,
+			    uint_fast16_t	dest_port,
+			    bool_t		compute_checksum);
 
-  packet_queue_root_t		recv_q;
-  struct semaphore_s				recv_sem;
-};
+/*
+ * UDP protocol descriptor.
+ */
+
+extern const struct net_proto_desc_s	udp_protocol;
 
 #endif

@@ -19,10 +19,10 @@
 
 */
 
-#ifndef NETINET_SOCKET_INTERNALS_H
-# define NETINET_SOCKET_INTERNALS_H
+#ifndef NETWORK_SOCKET_INTERNALS_H
+# define NETWORK_SOCKET_INTERNALS_H
 
-#ifndef NETINET_SOCKET_H
+#ifndef NETWORK_SOCKET_H
 # error "You must include <netinet/socket.h> before including this file."
 #endif
 
