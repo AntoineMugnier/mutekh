@@ -1,0 +1,262 @@
+
+body {
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  font-size: 11pt;
+  color: black; background: white;
+}
+
+a:link {
+  text-decoration: none;
+  color: #303078;
+}
+
+a:visited {
+  text-decoration: none;
+  color: #303078;
+}
+
+h1 {
+  text-align: center;
+}
+
+ul {
+  list-style-type: disc;
+}
+
+table {
+ width : 100%;
+ text-align: left;
+ background: #3040a8;
+ border-radius: 8px 8px 0px 0px;
+ -moz-border-radius: 8px 8px 0px 0px;
+ -webkit-border-radius: 8px 8px 0px 0px;
+ border-style: none;
+ border-collapse: separate;
+ border-spacing: 0px;
+ margin: 5px 0px;
+}
+
+.table_caption {
+  width: 100%;
+  font-style: italic;
+}
+
+.table_frame {
+  text-align: center;
+  font-size: 10pt;
+  margin: 20px 30px;
+}
+
+.img_caption {
+  width: 100%;
+  font-style: italic;
+}
+
+.img_frame {
+  text-align: center;
+  font-size: 10pt;
+  margin: 20px 30px;
+}
+
+td {
+  padding: 4px 10px;
+}
+
+th {
+  padding : 4px 10px;
+  text-align: left;
+  color: white;
+}
+
+hr {
+  margin: 20px 0px;
+}
+
+h3 {
+  margin: 0px;
+}
+
+.subtitle {
+  font-size: smaller;
+}
+
+.tr0 {
+  background-color : #e8ecff;
+}
+
+.tr1 {
+  background-color : #f0f4ff;
+}
+
+.center {
+  text-align: center;
+}
+
+.warning {
+  color: #800000;
+}
+
+.codebox {
+  border: none;
+  border-radius: 8px;
+  -moz-border-radius: 8px;
+  -webkit-border-radius: 8px;
+  background: #e8f0ff;
+  padding: 15px;
+  margin: 0px 30px;
+}
+
+.codenum {
+  color: gray;
+  font-style: italic;
+}
+
+.headlogo {
+  float: left;
+  vertical-align: middle;
+  padding: 0px 20px 0px 0px;
+}
+
+.nodoc {
+  color: gray;
+  font-style: italic;
+}
+
+.listitem_pure {
+  font-style: italic;
+}
+
+.docnode {
+  margin-top: 30px;
+  margin-bottom: 40px;
+  margin-left: 30px;
+}
+
+.divpublicmember {
+  border: none;
+  border-radius: 8px;
+  -moz-border-radius: 8px;
+  -webkit-border-radius: 8px;
+  color: white;
+  background: #303078;
+  padding: 2px 10px;
+}
+
+.divslotmember a,
+.divsignalmember a,
+.divprotectedmember a,
+.divpublicmember a,
+.divprivatemember, a {
+  color: #a0a0c0;
+}
+
+.divprotectedmember {
+  border: none;
+  border-radius: 8px;
+  -moz-border-radius: 8px;
+  -webkit-border-radius: 8px;
+  color: white;
+  background: #602078;
+  padding: 2px 10px;
+}
+
+.divprivatemember {
+  border: none;
+  border-radius: 8px;
+  -moz-border-radius: 8px;
+  -webkit-border-radius: 8px;
+  color: white;
+  background: #a02038;
+  padding: 2px 10px;
+}
+
+.divslotmember {
+  border: none;
+  border-radius: 8px;
+  -moz-border-radius: 8px;
+  -webkit-border-radius: 8px;
+  color: white;
+  background: #106030;
+  padding: 2px 10px;
+}
+
+.divsignalmember {
+  border: none;
+  border-radius: 8px;
+  -moz-border-radius: 8px;
+  -webkit-border-radius: 8px;
+  color: white;
+  background: #306010;
+  padding: 2px 10px;
+}
+
+.codecmt {
+  display: inline;
+  color: #c00000;
+}
+
+.codekw {
+  color: #00d0d0;
+}
+
+.codestr {
+  color: #00d000;
+}
+
+.codedir {
+  color: #0000d0;
+}
+
+.divtextcontent {
+  padding: 0px 30px;
+  margin-bottom: 40px;
+}
+
+.tt {
+  font-family: monospace;
+}
+
+.hover_link:hover {
+    content: " [link]";
+}
+
+div.sec_hidden {
+    display: none;
+}
+div.sec_shown {
+}
+
+.function_prefix {
+    display: inline-block;
+    min-width: 230px;
+}
+
+.function_name {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.variable_name {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.variable_prefix {
+    display: inline-block;
+    min-width: 230px;
+}
+
+.field_prefix {
+    display: inline-block;
+    min-width: 230px;
+}
+
+.field_name {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.macro_name {
+    font-weight: bold;
+}
+
