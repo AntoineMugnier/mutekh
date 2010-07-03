@@ -168,9 +168,9 @@ error_t fdt_walk_blob(const void *blob, struct fdt_walker_s *walker)
 	if ( (err = fdt_check_header(blob)) )
 		return err;
 
-	printk("FDT magic OK, string @ %p, struct @ %p\n",
-           endian_be32(header->off_dt_strings),
-           endian_be32(header->off_dt_struct));
+	dprintk("FDT magic OK, string @ %p, struct @ %p\n",
+            endian_be32(header->off_dt_strings),
+            endian_be32(header->off_dt_struct));
 
 	state.string_table = (const char*)blob + endian_be32(header->off_dt_strings);
 	state.struct_base
