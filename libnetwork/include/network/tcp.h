@@ -77,13 +77,40 @@
  */
 
 NET_PUSHPKT(tcp_pushpkt);
+
+/**
+   @this prepares headers of a packet up to the TCP header
+
+   @param interface Outgoing interface
+   @param addressing Lower protocol
+   @param packet Packet descriptor
+   @param size TCP payload size
+
+   @returns the TCP payload address where caller can write @tt size
+            bytes.
+ */
 uint8_t	*tcp_preparepkt(struct net_if_s		*interface,
-			struct net_proto_s	*addressing,
-			struct net_packet_s	*packet,
-			size_t			size,
-			size_t			max_padding);
+                        struct net_proto_s	*addressing,
+                        struct net_packet_s	*packet,
+                        size_t			size,
+                        size_t			max_padding);
+
+/**
+   @this sends a control packet for an existing TCP session
+
+   @param session Valid TCP session descriptor
+   @param operation Operation to perform (syn, ack, fin)
+ */
 void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
-			    uint_fast8_t		operation);
+                            uint_fast8_t		operation);
+
+/**
+   @this sends a prepared and populated packet to the network.
+
+   @param session Valid TCP session descriptor
+   @param data Data to send
+   @param size Size of @tt data
+ */
 void	tcp_send_datapkt(struct net_tcp_session_s	*session,
 			 void				*data,
 			 size_t				size,

@@ -28,10 +28,6 @@
    @short UDP stack
  */
 
-#ifndef CONFIG_NETWORK_UDP
-# warning UDP support is not enabled in configuration file
-#endif
-
 #include <hexo/types.h>
 #include <network/packet.h>
 #include <network/protos.h>
@@ -41,17 +37,41 @@
  */
 
 NET_PUSHPKT(udp_pushpkt);
-inline uint8_t	*udp_preparepkt(struct net_if_s		*interface,
-				struct net_proto_s	*addressing,
-				struct net_packet_s	*packet,
-				size_t			size,
-				size_t			max_padding);
-inline void	udp_sendpkt(struct net_if_s	*interface,
-			    struct net_proto_s	*addressing,
-			    struct net_packet_s	*packet,
-			    uint_fast16_t	source_port,
-			    uint_fast16_t	dest_port,
-			    bool_t		compute_checksum);
+
+/**
+   @this prepares headers of a packet up to the UDP header
+
+   @param interface Outgoing interface
+   @param addressing Lower protocol
+   @param packet Packet descriptor
+   @param size UDP payload size
+
+   @returns the UDP payload address where caller can write @tt size
+            bytes.
+ */
+uint8_t	*udp_preparepkt(struct net_if_s		*interface,
+                        struct net_proto_s	*addressing,
+                        struct net_packet_s	*packet,
+                        size_t			size,
+                        size_t			max_padding);
+
+/**
+   @this sends a prepared and populated packet to the network.
+
+   @param interface Outgoing interface
+   @param addressing Lower protocol
+   @param packet Packet descriptor
+   @param source_port Source port
+   @param dest_port Destination port
+   @param compute_checksum Whether to add the optional UDP payload
+          checksum in header, or to put 0
+ */
+void	udp_sendpkt(struct net_if_s	*interface,
+                    struct net_proto_s	*addressing,
+                    struct net_packet_s	*packet,
+                    uint_fast16_t	source_port,
+                    uint_fast16_t	dest_port,
+                    bool_t		compute_checksum);
 
 /*
  * UDP protocol descriptor.

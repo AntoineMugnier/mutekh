@@ -42,8 +42,8 @@ struct net_packet_s;
 struct net_addr_s;
 struct net_proto_s;
 
-/*
- * Error types for control protocols (ICMP for example).
+/**
+   Error types for control protocols (ICMP for example).
  */
 
 #define	ERROR_NET_UNREACHABLE		0
@@ -59,18 +59,36 @@ struct net_proto_s;
 #define ERROR_BAD_HEADER		10
 #define	ERROR_UNKNOWN			11
 
-/*
- * Prototype of a push function.
- */
+/**
+   @this is the prototype for a push function.
 
+   A push function passes a packet from lower-level parts of the
+   kernel (network device "side") towards upper levels (application
+   "side") of the network stack.
+
+   @param interface The incoming interface
+   @param packet The incoming packet
+   @param protocol The protocol internal state
+ */
 #define NET_PUSHPKT(f)	void (f)(struct net_if_s	*interface,	\
 				 struct net_packet_s	*packet,	\
 				 struct	net_proto_s	*protocol)
 
+/** pushpkt function type */
 typedef NET_PUSHPKT(net_pushpkt_t);
 
-/*
- * Prototype of the function used to prepare a packet.
+/**
+   @this is the prototype for a packet preparation function.
+
+   A packet preparation fonction prepare packet headers for future
+   sending of a packet of known size. It does not need to know about
+   the actual data.
+
+   @param interface The desired output interface
+   @param packet the packet descriptor
+   @param size of the payload
+   @returns the address where the caller can write its payload of size
+            @tt size
  */
 
 #define NET_PREPAREPKT(f)	uint8_t *(f)(struct net_if_s	*interface,\
@@ -78,24 +96,27 @@ typedef NET_PUSHPKT(net_pushpkt_t);
 					 size_t			size,	   \
 					 size_t			max_padding)
 
+/** preparepkt function type */
 typedef NET_PREPAREPKT(net_preparepkt_t);
 
-/*
- * Prototype of the function used to initialize private data.
+/**
+   @this initializes a protocol internal state
  */
-
 #define NET_INITPROTO(f)	error_t (f)(struct net_if_s	*interface,	\
 					    struct net_proto_s	*proto,		\
 					    va_list		va)
 
+/** protocol initializer type */
 typedef NET_INITPROTO(net_initproto_t);
 
-/*
- * Prototype of the function used to clear a protocol and its private data.
- */
+/**
+   @this is used to clear a protocol and its private data
 
+   @param proto Protocol state to destroy
+ */
 #define NET_DESTROYPROTO(f)	void (f)(struct net_proto_s	*proto)
 
+/** protocol destructor type */
 typedef NET_DESTROYPROTO(net_destroyproto_t);
 
 typedef uint_fast16_t net_pkt_size_t;
@@ -103,30 +124,49 @@ typedef uint_fast16_t net_proto_id_t;
 typedef uint_fast16_t net_error_id_t;
 typedef uint_fast16_t net_port_t;
 
-/*
- * Prototype of the function used to send a packet.
- */
+/**
+   @this is used to send a packet. Packets must be previously be
+   prepared with @see #NET_PREPAREPKT.
 
+   @param interface Outgoing interface
+   @param packet Packet descriptor buffer
+   @param protocol Encapsulating protocol descriptor
+   @param proto Encapsulated protocol id
+ */
 #define NET_SENDPKT(f)		void (f)(struct net_if_s	*interface,  \
 					 struct net_packet_s	*packet,     \
 					 struct net_proto_s	*protocol,   \
 					 net_proto_id_t		proto)
 
+/** send function type */
 typedef NET_SENDPKT(net_sendpkt_t);
 
-/*
- * Prototype of the function used to match internet addresses.
- */
+/**
+   @this tells whether two addresses match for a given protocol and
+   mask.
 
+   @param protocol Protocol used for matching
+   @param a First address to compare
+   @param a Second address to compare
+   @param mask Mask for comparaison, may be NULL for equality match
+
+   @returns whether the two addresses match
+ */
 #define NET_MATCHADDR(f) uint_fast8_t (f)(struct net_proto_s	*protocol,\
 					  struct net_addr_s	*a,	  \
 					  struct net_addr_s	*b,	  \
 					  struct net_addr_s	*mask)
 
+/** match function type */
 typedef NET_MATCHADDR(net_matchaddr_t);
 
-/*
- * Prototype of the function that computes the pseudo header checksum.
+/**
+   @this computes the pseudo header checksum.
+
+   @param addressing Used encapsulating protocol
+   @param packet Packet descriptor
+   @param proto Protocol id of encapsulated protocol
+   @param size Size of encapsulated payload
  */
 
 #define NET_PSEUDOHEADER_CHECKSUM(f)					\
@@ -137,29 +177,31 @@ typedef NET_MATCHADDR(net_matchaddr_t);
 
 typedef NET_PSEUDOHEADER_CHECKSUM(net_pseudoheader_checksum_t);
 
-/*
- * Prototype of function reporting error.
- */
+/**
+   @this reports error.
 
+   @param erroneous Erroneous packet to signal error on
+   @param error Error type
+ */
 #define NET_ERRORMSG(f)	void	(f)(struct net_packet_s	*erroneous,	\
 				    net_error_id_t	error, ...)
 
 typedef NET_ERRORMSG(net_errormsg_t);
 
-/*
- * Prototype of function signaling an error to an higher level.
- */
+/**
+   @this signals error to an higher level.
 
+   @param error Error type
+ */
 #define NET_SIGNAL_ERROR(f)	void	(f)(net_error_id_t	error,		\
 					    struct net_addr_s	*address,	\
 					    net_port_t		port)
 
 typedef NET_SIGNAL_ERROR(net_signal_error_t);
 
-/*
- * This structure defines the interface of an addressing protocol.
+/**
+   @this defines the interface of an addressing protocol.
  */
-
 struct				net_addressing_interface_s
 {
   net_sendpkt_t			*sendpkt;
@@ -168,27 +210,25 @@ struct				net_addressing_interface_s
   net_errormsg_t		*errormsg;
 };
 
-/*
- * This structure defines the interface of a control protocol.
+/**
+   @this defines the interface of a control protocol.
  */
-
 struct				net_control_interface_s
 {
   net_errormsg_t		*errormsg;
 };
 
-/*
- * This structure defines a protocol.
+/**
+   @this is a protocol definition.
  */
-
 struct					net_proto_desc_s
 {
-  const char				*name;	/* the name of the protocol */
-  net_proto_id_t			id;	/* protocol identifier */
-  net_pushpkt_t				*pushpkt; /* push packet function */
-  net_preparepkt_t			*preparepkt; /* prepare packet func */
-  net_initproto_t			*initproto; /* init pv data */
-  net_destroyproto_t			*destroyproto; /* clear pv data */
+  const char				*name;	//< the name of the protocol 
+  net_proto_id_t			id;	//< protocol identifier 
+  net_pushpkt_t				*pushpkt; //< push packet function 
+  net_preparepkt_t			*preparepkt; //< prepare packet func 
+  net_initproto_t			*initproto; //< init pv data 
+  net_destroyproto_t			*destroyproto; //< clear pv data 
   union
   {
     const struct net_addressing_interface_s	*addressing;
@@ -199,11 +239,14 @@ struct					net_proto_desc_s
 
 OBJECT_TYPE(net_proto_obj, REFCOUNT, struct net_proto_s);
 
+/**
+   @this is a protocol state.
+ */
 struct					net_proto_s
 {
-  const struct net_proto_desc_s		*desc;	/* protocol descriptor */
-  net_proto_id_t			id;	/* protocol identifier */
-  struct net_proto_pv_s			*pv;	/* private data */
+  const struct net_proto_desc_s		*desc;	//< protocol descriptor 
+  net_proto_id_t			id;	//< protocol identifier 
+  struct net_proto_pv_s			*pv;	//< private data 
   bool_t				initialized;
 
   net_proto_obj_entry_t			obj_entry;
