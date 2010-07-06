@@ -26,7 +26,7 @@
 # warning TCP support is not enabled in configuration file
 #endif
 
-#include <network/libtcp.h>
+#include <libtcp/libtcp.h>
 #include <network/packet.h>
 #include <network/protos.h>
 #include <network/socket.h>

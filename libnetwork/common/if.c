@@ -21,15 +21,15 @@
 
 #include <network/packet.h>
 #include <network/protos.h>
-#include <network/if.h>
+#include <network/interface.h>
 
 #ifdef CONFIG_NETWORK_IPV4
 # include <netinet/ip.h>
 # include <netinet/arp.h>
 # include <netinet/icmp.h>
-# include <network/ip.h>
+# include <network/ipv4.h>
 # include <network/arp.h>
-# include <network/icmp.h>
+# include <network/icmpv4.h>
 #endif
 #ifdef CONFIG_NETWORK_UDP
 # include <netinet/udp.h>
@@ -40,7 +40,7 @@
 # include <network/tcp.h>
 #endif
 #ifdef CONFIG_NETWORK_SOCKET
-# include <network/libsocket.h>
+# include <libsocket/libsocket.h>
 #endif
 
 #include <device/net.h>

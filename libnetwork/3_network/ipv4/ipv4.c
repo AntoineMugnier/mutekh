@@ -29,15 +29,15 @@
 #include <netinet/ip.h>
 #include <netinet/icmp.h>
 #include <netinet/arp.h>
-#include <network/ip.h>
-#include <network/icmp.h>
+#include <network/ipv4.h>
+#include <network/icmpv4.h>
 #include <network/arp.h>
 #include <network/packet.h>
 #include <netinet/ether.h>
 #include <network/protos.h>
 #include <netinet/in.h>
 
-#include <network/if.h>
+#include <network/interface.h>
 #include <network/route.h>
 
 #include <stdlib.h>

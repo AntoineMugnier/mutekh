@@ -24,7 +24,7 @@
 #include <network/socket.h>
 #include <network/socket_internals.h>
 #include <network/socket_udp.h>
-#include <network/libudp.h>
+#include <libudp/libudp.h>
 #include <netinet/udp.h>
 
 #include <mutek/mem_alloc.h>

@@ -25,7 +25,7 @@
 
 #include <hexo/error.h>
 
-#include <network/if.h>
+#include <network/interface.h>
 #include <netinet/in.h>
 #include <netinet/icmp.h>
 #include <network/socket.h>

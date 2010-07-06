@@ -27,7 +27,7 @@
 #include <network/socket.h>
 #include <network/socket_internals.h>
 #include <network/socket_packet.h>
-#include <network/if.h>
+#include <network/interface.h>
 #include <netinet/arp.h>
 
 #include <mutek/mem_alloc.h>

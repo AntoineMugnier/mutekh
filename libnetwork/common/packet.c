@@ -28,7 +28,7 @@
 
 #include <network/packet.h>
 #include <network/protos.h>
-#include <network/if.h>
+#include <network/interface.h>
 
 #ifdef CONFIG_NETWORK_PROFILING
 uint_fast32_t	netobj_new[NETWORK_PROFILING_NB_OBJS] = { 0, 0, 0 };

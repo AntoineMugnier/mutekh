@@ -29,8 +29,8 @@
 
 #include <network/packet.h>
 #include <network/protos.h>
-#include <network/if.h>
-#include <network/libtcp.h>
+#include <network/interface.h>
+#include <libtcp/libtcp.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>

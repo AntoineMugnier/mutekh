@@ -28,7 +28,7 @@
 
 #include <network/packet.h>
 #include <network/protos.h>
-#include <network/if.h>
+#include <network/interface.h>
 
 #include <mutek/printk.h>
 

@@ -27,7 +27,7 @@
 #include <hexo/error.h>
 #include <hexo/endian.h>
 
-#include <network/if.h>
+#include <network/interface.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <network/dhcp.h>

@@ -26,14 +26,14 @@
 #include <netinet/tcp.h>
 #include <netinet/ip.h>
 #include <network/tcp.h>
-#include <network/ip.h>
+#include <network/ipv4.h>
 #include <netinet/in.h>
 #include <network/packet.h>
 #include <network/protos.h>
 
-#include <network/if.h>
+#include <network/interface.h>
 
-#include <network/libtcp.h>
+#include <libtcp/libtcp.h>
 
 #include <stdio.h>
 

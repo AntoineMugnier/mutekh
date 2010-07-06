@@ -36,10 +36,10 @@
 #include <netinet/ip.h>
 #include <netinet/ether.h>
 #include <netinet/in.h>
-#include <network/if.h>
+#include <network/interface.h>
 #include <network/route.h>
 
-#include <network/libudp.h>
+#include <libudp/libudp.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>

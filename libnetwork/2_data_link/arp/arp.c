@@ -27,11 +27,11 @@
 #include <netinet/arp.h>
 #include <netinet/ip.h>
 #include <network/arp.h>
-#include <network/ip.h>
+#include <network/ipv4.h>
 #include <network/packet.h>
 #include <network/protos.h>
 
-#include <network/if.h>
+#include <network/interface.h>
 
 #include <mutek/timer.h>
 #include <mutek/printk.h>

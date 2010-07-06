@@ -28,13 +28,13 @@
 #include <netinet/ip.h>
 #include <netinet/in.h>
 #include <network/udp.h>
-#include <network/ip.h>
+#include <network/ipv4.h>
 #include <network/packet.h>
 #include <network/protos.h>
 
-#include <network/if.h>
+#include <network/interface.h>
 
-#include <network/libudp.h>
+#include <libudp/libudp.h>
 
 #include <mutek/printk.h>
 

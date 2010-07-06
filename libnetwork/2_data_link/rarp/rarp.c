@@ -29,7 +29,7 @@
 
 #include <mutek/printk.h>
 
-#include <network/if.h>
+#include <network/interface.h>
 #include <netinet/in.h>
 #include <netinet/arp.h>
 #include <network/socket.h>

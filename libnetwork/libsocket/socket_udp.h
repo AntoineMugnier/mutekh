@@ -26,7 +26,7 @@
 # warning UDP support is not enabled in configuration file
 #endif
 
-#include <network/libudp.h>
+#include <libudp/libudp.h>
 #include <network/packet.h>
 #include <network/protos.h>
 #include <network/socket.h>

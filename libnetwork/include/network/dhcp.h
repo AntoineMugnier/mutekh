@@ -84,7 +84,7 @@
 #define DHCP_TIMEOUT	10 /* 10 seconds */
 #define DHCP_DFL_LEASE	120000 /* 2 minutes */
 
-#include <network/if.h>
+#include <network/interface.h>
 #include <mutek/timer.h>
 #include <mutek/scheduler.h>
 #include <mutek/semaphore.h>

@@ -27,7 +27,7 @@
 #include <network/socket.h>
 #include <network/socket_internals.h>
 #include <network/socket_raw.h>
-#include <network/if.h>
+#include <network/interface.h>
 #include <netinet/ip.h>
 #include <netinet/icmp.h>
 #include <network/route.h>

@@ -23,7 +23,7 @@
 #include <network/socket.h>
 #include <network/socket_internals.h>
 #include <network/socket_tcp.h>
-#include <network/libtcp.h>
+#include <libtcp/libtcp.h>
 #include <network/tcp.h>
 #include <netinet/tcp.h>
 

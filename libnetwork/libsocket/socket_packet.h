@@ -19,31 +19,29 @@
 
 */
 
-#ifndef NETWORK_LIBSOCKET_H
-#define NETWORK_LIBSOCKET_H
+#ifndef NETWORK_SOCKET_PACKET_H
+#define NETWORK_SOCKET_PACKET_H
 
-/**
-   @file
-   @module{Network library}
-   @short Low-level socket API
- */
+#ifndef CONFIG_NETWORK_SOCKET_PACKET
+# warning Socket support is not enabled in configuration file
+#endif
 
-#include <network/protos.h>
 #include <network/packet.h>
-#include <network/if.h>
+#include <network/protos.h>
+#include <network/interface.h>
+#include <network/socket.h>
 
-#ifdef CONFIG_NETWORK_SOCKET_PACKET
-void	pf_packet_signal(struct net_if_s	*interface,
-			 struct net_packet_s	*packet,
-			 net_proto_id_t		protocol);
+#include <semaphore.h>
+
+struct				socket_packet_pv_s
+{
+  net_proto_id_t		proto;
+  bool_t			header;
+  uint_fast32_t			interface;
+  error_t			error;
+
+  packet_queue_root_t		recv_q;
+  struct semaphore_s				recv_sem;
+};
+
 #endif
-
-#ifdef CONFIG_NETWORK_SOCKET_RAW
-void	sock_raw_signal(struct net_if_s		*interface,
-			struct net_proto_s	*addressing,
-			struct net_packet_s	*packet,
-			net_proto_id_t		protocol);
-#endif
-
-#endif
-

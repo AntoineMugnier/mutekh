@@ -22,7 +22,7 @@
 #include <network/protos.h>
 #include <network/route.h>
 #include <netinet/ether.h>
-#include <network/if.h>
+#include <network/interface.h>
 #include <netinet/ip.h>
 
 #include <mutek/printk.h>
