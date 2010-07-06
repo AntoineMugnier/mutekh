@@ -1,6 +1,33 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with MutekH; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2010
+
+*/
 
 #include <hexo/error.h>
 #include <hexo/context.h>
+
+CONTEXT_LOCAL struct cpu_context_s ppc_context_regs;
+
+#ifdef CONFIG_HEXO_LAZY_SWITCH
+/* last fpu restored context */
+CPU_LOCAL struct cpu_context_s *ppc_lazy_last = 0;
+#endif
 
 error_t
 cpu_context_bootstrap(struct context_s *context)
@@ -8,61 +35,43 @@ cpu_context_bootstrap(struct context_s *context)
   /* set context local storage register base pointer */
   asm volatile("mtspr 0x114, %0" : : "r" (context->tls)); /* SPRG4 is tls */
 
+  /* nothing is saved for this context */
+  CONTEXT_LOCAL_ADDR(ppc_context_regs)->save_mask = 0;
+
   return 0;
 }
-
-
-
-/* fake context entry point, pop entry function param and entry function
-   address from stack and perform jump to real entry function.  We
-   need to do this to pass an argument to the context entry function. */
-void __ppc_context_entry(void);
-
-asm(
-    "__ppc_context_entry:		\n"
-    "	lwz	3, 0(1)	\n" /* entry function param */
-    "	lwz	0, 4(1)	\n" /* entry function address */
-    "	addi	1, 1, 2*4		\n"
-    "	mtctr	0			\n"
-    "	bctrl				\n"
-    );
-
 
 
 /* context init function */
 
-error_t
-cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
-{
 #if CONFIG_HEXO_STACK_ALIGN < 16
 # error PowerPc ABI requires 16 bytes alignment
 #endif
-  context->stack_ptr = (reg_t*)((uintptr_t)context->stack_end -
-                                CONFIG_HEXO_STACK_ALIGN);
 
-  /* push entry function address and param arg */
-  *--context->stack_ptr = (uintptr_t)entry;
-  *--context->stack_ptr = (uintptr_t)param;
+error_t
+cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
+{
+  struct cpu_context_s *regs = CONTEXT_LOCAL_TLS_ADDR(context->tls, ppc_context_regs);
 
-  /* fake entry point */
-  *--context->stack_ptr = (uintptr_t)&__ppc_context_entry;
-
-  /* r14, r15, r30, r31 */
-  *--context->stack_ptr = 0;
-  *--context->stack_ptr = 0;
-  *--context->stack_ptr = 0;
-  *--context->stack_ptr = 0;
+  regs->save_mask = CPU_PPC_CONTEXT_RESTORE_CALLER; /* for r3 */
+  regs->gpr[1] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
+               - CONFIG_HEXO_STACK_ALIGN;
+  regs->gpr[3] = (uintptr_t)param;
+  regs->cr = 0;
 
   /* msr, interrupts are disabled */
-  *--context->stack_ptr = 0;
+#if defined (CONFIG_HEXO_FPU) && !defined(CONFIG_HEXO_LAZY_SWITCH)
+  regs->msr = PPC_MSR_FPU_ENABLED;
+  reeg->fpscr = 0;
+#else
+  regs->msr = 0;
+#endif
 
-  /* context local storage address */
-  *--context->stack_ptr = (uintptr_t)context->tls;
+  regs->lr = 0xa5a5a5a5;        /* can not return from context entry */
+  regs->pc = (uintptr_t)entry;
 
   return 0;
 }
-
-
 
 void
 cpu_context_destroy(struct context_s *context)

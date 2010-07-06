@@ -23,222 +23,52 @@
 #error This file can not be included directly
 #else
 
-#include <hexo/cpu.h>
+# include <hexo/types.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
+/** @multiple @this specify context save mask values */
+# define CPU_PPC_CONTEXT_RESTORE_CALLEE   1
+# define CPU_PPC_CONTEXT_RESTORE_CALLER   2
+
+# define CPU_PPC_CONTEXT_RESTORE_NONE     (~3)
+
+/** @multiple @this describes @ref cpu_context_s field offset */
+#define CPU_PPC_CONTEXT_SAVE_MASK       0
+#define CPU_PPC_CONTEXT_GPR(n)  	(CPU_PPC_CONTEXT_SAVE_MASK + INT_REG_SIZE/8 + n * INT_REG_SIZE/8)
+#define CPU_PPC_CONTEXT_CR      	CPU_PPC_CONTEXT_GPR(32)
+#define CPU_PPC_CONTEXT_CTR     	(CPU_PPC_CONTEXT_CR + INT_REG_SIZE/8)
+#define CPU_PPC_CONTEXT_MSR     	(CPU_PPC_CONTEXT_CTR + INT_REG_SIZE/8)
+#define CPU_PPC_CONTEXT_LR      	(CPU_PPC_CONTEXT_MSR + INT_REG_SIZE/8)
+#define CPU_PPC_CONTEXT_PC      	(CPU_PPC_CONTEXT_LR + INT_REG_SIZE/8)
+#ifdef CONFIG_HEXO_FPU
+# define CPU_PPC_CONTEXT_FR(n)   	(CPU_PPC_CONTEXT_PC + INT_REG_SIZE/8 + n * 8)
+# define CPU_PPC_CONTEXT_FPSCR   	CPU_PPC_CONTEXT_FR(32)
+# define CPU_PPC_CONTEXT_XER     	(CPU_PPC_CONTEXT_FPSCR + 8)
 #endif
+/** */
 
+#ifndef __MUTEK_ASM__
+
+# include <hexo/cpu.h>
+
+/** PowerPc processor context state */
 struct cpu_context_s
 {
+  reg_t save_mask;       //< what is being saved and restored
+  reg_t gpr[32];
+  reg_t cr;
+  reg_t ctr;
+  reg_t msr;
+  reg_t lr;
+  reg_t pc;
+# ifdef CONFIG_HEXO_FPU
+  /* 64 bits aligned here */
+  double fpr[32];
+  uint64_t fpscr;
+  reg_t xer;
+# endif
 };
 
-static inline void
-cpu_context_switch(struct context_s *old, struct context_s *future)
-{
-  void	*unused1, *unused2;
-
-  asm volatile (
-
-        /* preserve stack red zone, FIXME use a standalone asm function to avoid this */
-	"	addi	1, 1, -224		\n"
-
-        /* room to save context */
-	"	addi	1, 1, -7*4		\n"
-#ifndef CONFIG_COMPILE_PIC
-#warning To be tested
-	/* save execution pointer based on current PC */
-	"	bl	1f			\n"
-	"	b	2f			\n"
-	"1:	mflr	0			\n"
-#else
-	/* save execution pointer based on static label address */
-	"	lis	0, 2f@h			\n"
-	"	ori	0, 0, 2f@l		\n"
-#endif
-	"	stw	0, 6*4(1)		\n"
-	/* save r30, r31, r14, r15 */
-	"	stw	14, 5*4(1)		\n"
-	"	stw	15, 4*4(1)		\n"
-	"	stw	31, 3*4(1)		\n"
-	"	stw	30, 2*4(1)		\n"
-	/* save status */
-	"	mfmsr	0			\n"
-	"	stw	0, 1*4(1)		\n"
-
-	/* disable interrupts */
-	"	andi.	2, 0, 0x8000		\n"
-	"	xor	0, 2, 0			\n"
-	"	mtmsr	0			\n"
-	/* save context local storage on stack */
-	"	mfspr	0, 0x114		\n"
-	"	stw	0, 0*4(1)		\n"
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-		/* enter memchecker command mode */
-		"	lis	0, (" ASM_STR(SOCLIB_MC_MAGIC_VAL) ")@h  \n"
-		"	ori 0,	0, (" ASM_STR(SOCLIB_MC_MAGIC_VAL) ")@l  \n"
-		"	stw	0,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
-
-		/* switch to associated memchecker context */
-		"	stw	%1,	" ASM_STR(SOCLIB_MC_CTX_SET) "(0) \n"
-#endif
-
-	/* switch stack pointer */
-	"	stw	1, 0(%0)		\n"
-	"	lwz	1, 0(%1)		\n"
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-		/* leave memchecker command mode */
-		"	addi 0, 0, 0                             \n"
-		"	stw	0,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
-#endif
-
-	/* restore status & tls */
-	"	lwz	0, 0*4(1)		\n"
-	"	mtspr	0x114, 0		\n" /* SPRG4 is tls */
-	"	lwz	0, 1*4(1)		\n"
-	"	mtmsr	0			\n"
-
-	/* restore r30, r31, r14, r15 */
-	"	lwz	30, 2*4(1)		\n"
-	"	lwz	31, 3*4(1)		\n"
-	"	lwz	15, 4*4(1)		\n"
-	"	lwz	14, 5*4(1)		\n"
-
-	/* Restore execution pointer */
-	"	lwz	0, 6*4(1)		\n"
-	"	addi	1, 1, 7*4		\n"
-	"	addi	1, 1, 224		\n"
-	"	mtctr	0			\n"
-	"	bctrl				\n"
-	"2:					\n"
-	: "=r" (unused1)
-	, "=r" (unused2)
-
-	: "0" (&old->stack_ptr)
-	, "1" (&future->stack_ptr)
-
-	/* These registers will be saved by the compiler */
-	: "r0", "r2", "r3", "r4", "r5", "r6", "r7"
-	, "r8", "r9", "r10", "r11", "r12", "r13" /*, "r14", "r15" */
-        , "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23"
-	, "r24", "r25", "r26", "r27", "r28", "r29" /*, "r30", "r31" */
-	, "cr0", "cr1", "cr2", "cr3", "cr4", "cr5", "cr6", "cr7"
-	, "lr", "ctr"
-	, "memory"
-	);
-}
-
-static inline void
-__attribute__((always_inline, noreturn))
-cpu_context_jumpto(struct context_s *future)
-{
-  asm volatile (
-#ifdef CONFIG_SOCLIB_MEMCHECK
-		/* enter memchecker command mode */
-		"	stw	%1,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
-
-		/* mark current memchecker context as invalid */
-		"	addi %1, %1, " ASM_STR(SOCLIB_MC_CTX_ID_CURRENT) " \n"
-		"	stw	%1,	" ASM_STR(SOCLIB_MC_CTX_INVALIDATE) "(0) \n"
-
-		/* switch to associated memchecker context */
-		"	stw	%0,	" ASM_STR(SOCLIB_MC_CTX_SET) "(0) \n"
-#endif
-
-        /* switch stack pointer */
-	"	lwz	1, 0(%0)			\n"
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-		/* leave memchecker command mode */
-		"	addi %1, 0, %1                             \n"
-		"	stw	%1,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
-#endif
-
-	/* restore status & tls */
-	"	lwz	%0, 0*4(1)		\n"
-	"	mtspr	0x114, %0		\n" /* SPRG4 is tls */
-	"	lwz	%0, 1*4(1)		\n"
-	"	mtmsr	%0			\n"
-
-	/* restore r13, r14, r15 */
-	"	lwz	30, 2*4(1)		\n"
-	"	lwz	31, 3*4(1)		\n"
-	"	lwz	15, 4*4(1)		\n"
-	"	lwz	14, 5*4(1)		\n"
-
-	/* Restore execution pointer */
-	"	lwz	%0, 6*4(1)		\n"
-	"	addi	1, 1, 7*4		\n"
-	"	mtctr	%0			\n"
-	"	bctrl				\n"
-        :
-        : "r" (&future->stack_ptr)
-#ifdef CONFIG_SOCLIB_MEMCHECK
-        , "r" (SOCLIB_MC_MAGIC_VAL)
-#endif
-	);
-  while (1);
-}
-
-static inline void
-__attribute__((always_inline, noreturn))
-cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto)
-{
-  asm volatile (
-#ifdef CONFIG_SOCLIB_MEMCHECK
-		/* enter memchecker command mode */
-		"	stw	%3,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
-
-		/* mark current memchecker context as invalid */
-		"	addi    %3, 0,  " ASM_STR(SOCLIB_MC_CTX_ID_CURRENT) " \n"
-		"	stw	%3,	" ASM_STR(SOCLIB_MC_CTX_INVALIDATE) "(0) \n"
-
-		/* create a new temporary memchecker context using passed stack */
-		"	stw	%0,	" ASM_STR(SOCLIB_MC_R1) "(0) \n"
-		"	stw	%1,	" ASM_STR(SOCLIB_MC_R2) "(0) \n"
-		"	stw	%0,	" ASM_STR(SOCLIB_MC_CTX_CREATE_TMP) "(0) \n"
-
-		/* switch to new temporary memchecker context */
-		"	stw	%0,	" ASM_STR(SOCLIB_MC_CTX_SET) "(0) \n"
-#endif
-
-	/* Set stack pointer, 64 bits aligned */
-	"	add	%0, %0, %1		\n"
-	"	addi	1, %0, -8		\n"
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-		/* leave memchecker command mode */
-		"	addi %3, 0, 0                             \n"
-		"	stw	%3,	" ASM_STR(SOCLIB_MC_MAGIC) "(0) \n"
-#endif
-
-        /* Jump */
-	"	mtctr	%2			\n"
-	"	bctrl				\n"
-	:
-	: "r" (stack)
-        , "r" (stack_size)
-	, "r" (jumpto)
-#ifdef CONFIG_SOCLIB_MEMCHECK
-        , "r" (SOCLIB_MC_MAGIC_VAL)
-#endif
-	);
-  while (1);
-}
-
-# if defined(CONFIG_HEXO_USERMODE)
-
-/** kernel stack pointer value on user entry */
-extern CONTEXT_LOCAL uintptr_t context_kstack;
-
-void
-__attribute__((noreturn))
-cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,
-		     user_entry_t *entry, void *param);
-
-# endif
+# endif  /* __MUTEK_ASM__ */
 
 #endif
 

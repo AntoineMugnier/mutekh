@@ -22,8 +22,7 @@
 
 /**
    @file
-
-   x86 Protected mode
+   @short x86 Protected mode
  */
 
 /* 
@@ -33,7 +32,75 @@
 #ifndef CPU_PMODE_H_
 #define CPU_PMODE_H_
 
-#include "hexo/types.h"
+/** x86 segment type Task 16 bits */
+#define CPU_X86_SEG_CONTEXT16	0x01
+/** x86 segment type Local Descriptor Table */
+#define CPU_X86_SEG_LDT		0x02
+/** x86 segment type Task 16 bits busy */
+#define CPU_X86_SEG_CONTEXT16_BUSY	0x03
+/** x86 segment type Task 32 bits */
+#define CPU_X86_SEG_CONTEXT32	0x09
+/** x86 segment type Task 32 bits busy */
+#define CPU_X86_SEG_CONTEXT32_BUSY	0x0b
+/** x86 segment type Data Expand up, Read Only */
+#define CPU_X86_SEG_DATA_UP_RO	0x10
+/** x86 segment type Data Expand down, Read Only */
+#define CPU_X86_SEG_DATA_DN_RO	0x14
+/** x86 segment type Data Expand up, Read Write */
+#define CPU_X86_SEG_DATA_UP_RW	0x12
+/** x86 segment type Data Expand down, Read Write */
+#define CPU_X86_SEG_DATA_DN_RW	0x16
+/** x86 segment type Code Non Coforming Level */
+#define CPU_X86_SEG_EXEC_NC	0x18
+/** x86 segment type Code Coforming Level */
+#define CPU_X86_SEG_EXEC	0x1c
+/** x86 segment type Code Non Coforming Level, Read */
+#define CPU_X86_SEG_EXEC_NC_R	0x1a
+/** x86 segment type Code Coforming Level, Read */
+#define CPU_X86_SEG_EXEC_R	0x1e
+/** x86 segment accessed flag */
+#define CPU_X86_SEG_ACCESSED	0x01
+
+
+/** x86 gate type 16 bits call  */
+#define CPU_X86_GATE_CALL16	0x4
+/** x86 gate type context */
+#define CPU_X86_GATE_CONTEXT	0x5
+/** x86 gate type 16 bits interrupt */
+#define CPU_X86_GATE_INT16	0x6
+/** x86 gate type 16 bits trap */
+#define CPU_X86_GATE_TRAP16	0x7
+/** x86 gate type 32 bits call */
+#define CPU_X86_GATE_CALL32	0xc
+/** x86 gate type 32 bits interrupt */
+#define CPU_X86_GATE_INT32	0xe
+/** x86 gate type 32 bits trap */
+#define CPU_X86_GATE_TRAP32	0xf
+
+
+/** index of the mandatory GDT null descriptor */
+#define ARCH_GDT_NULL		0
+/** index of the code segment descriptor in GDT */
+#define ARCH_GDT_CODE_INDEX	1
+/** index of the data segment descriptor in GDT */
+#define ARCH_GDT_DATA_INDEX	2
+/** index of the user level code segment descriptor in GDT */
+#define ARCH_GDT_USER_CODE_INDEX	3
+/** index of the user level data segment descriptor in GDT */
+#define ARCH_GDT_USER_DATA_INDEX	4
+/** First GDT available descriptor */
+#define ARCH_GDT_FIRST_ALLOC	5
+/** size of the Globale Descriptor Table for x86 CPU */
+#define ARCH_GDT_SIZE		256
+
+#define CPU_X86_USER            3
+#define CPU_X86_KERNEL          0
+
+#define CPU_X86_SEGSEL(index, rpl)      ((index) << 3 | (rpl))
+
+#ifndef __MUTEK_ASM__
+
+#include <hexo/types.h>
 
 /** x86 segement selector integer type */
 typedef uint16_t	cpu_x86_segsel_t;
@@ -64,34 +131,6 @@ struct cpu_x86_segdesc_s
 		base_24_31:8;
 } __attribute__ ((packed));
 
-/** x86 segment type Task 16 bits */
-#define CPU_X86_SEG_CONTEXT16	0x01
-/** x86 segment type Local Descriptor Table */
-#define CPU_X86_SEG_LDT		0x02
-/** x86 segment type Task 16 bits busy */
-#define CPU_X86_SEG_CONTEXT16_BUSY	0x03
-/** x86 segment type Task 32 bits */
-#define CPU_X86_SEG_CONTEXT32	0x09
-/** x86 segment type Task 32 bits busy */
-#define CPU_X86_SEG_CONTEXT32_BUSY	0x0b
-/** x86 segment type Data Expand up, Read Only */
-#define CPU_X86_SEG_DATA_UP_RO	0x10
-/** x86 segment type Data Expand down, Read Only */
-#define CPU_X86_SEG_DATA_DN_RO	0x14
-/** x86 segment type Data Expand up, Read Write */
-#define CPU_X86_SEG_DATA_UP_RW	0x12
-/** x86 segment type Data Expand down, Read Write */
-#define CPU_X86_SEG_DATA_DN_RW	0x16
-/** x86 segment type Code Non Coforming Level */
-#define CPU_X86_SEG_EXEC_NC	0x18
-/** x86 segment type Code Coforming Level */
-#define CPU_X86_SEG_EXEC	0x1c
-/** x86 segment type Code Non Coforming Level, Read */
-#define CPU_X86_SEG_EXEC_NC_R	0x1a
-/** x86 segment type Code Coforming Level, Read */
-#define CPU_X86_SEG_EXEC_R	0x1e
-/** x86 segment accessed flag */
-#define CPU_X86_SEG_ACCESSED	0x01
 
 /**
    Setup a segment descriptor
@@ -148,21 +187,6 @@ struct cpu_x86_gatedesc_s
 
 		offset_16_31:16;
 } __attribute__ ((packed));
-
-/** x86 gate type 16 bits call  */
-#define CPU_X86_GATE_CALL16	0x4
-/** x86 gate type context */
-#define CPU_X86_GATE_CONTEXT	0x5
-/** x86 gate type 16 bits interrupt */
-#define CPU_X86_GATE_INT16	0x6
-/** x86 gate type 16 bits trap */
-#define CPU_X86_GATE_TRAP16	0x7
-/** x86 gate type 32 bits call */
-#define CPU_X86_GATE_CALL32	0xc
-/** x86 gate type 32 bits interrupt */
-#define CPU_X86_GATE_INT32	0xe
-/** x86 gate type 32 bits trap */
-#define CPU_X86_GATE_TRAP32	0xf
 
 /**
    Setup a gate descriptor
@@ -456,28 +480,6 @@ struct cpu_x86_tss_s
 
 
 
-/** index of the mandatory GDT null descriptor */
-#define ARCH_GDT_NULL		0
-
-/** index of the code segment descriptor in GDT */
-#define ARCH_GDT_CODE_INDEX	1
-
-/** index of the data segment descriptor in GDT */
-#define ARCH_GDT_DATA_INDEX	2
-
-/** index of the user level code segment descriptor in GDT */
-#define ARCH_GDT_USER_CODE_INDEX	3
-
-/** index of the user level data segment descriptor in GDT */
-#define ARCH_GDT_USER_DATA_INDEX	4
-
-/** First GDT available descriptor */
-#define ARCH_GDT_FIRST_ALLOC	5
-
-/** size of the Globale Descriptor Table for x86 CPU */
-#define ARCH_GDT_SIZE		256
-
-
 #define CPU_X86_SEG_SEL(index, rpl) (((index) << 3) | rpl)
 
 /**
@@ -497,5 +499,8 @@ cpu_x86_segsel_t cpu_x86_segment_alloc(uintptr_t addr,
 void cpu_x86_segdesc_free(cpu_x86_segsel_t sel);
 
 /**************************************/
+
+# endif
+
 #endif
 

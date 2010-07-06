@@ -31,9 +31,9 @@
 
 #define CPU_LOCAL_H_
 
-#if defined(CONFIG_CPU_ARM_TLS_IN_C15)
-
 #include "cpu/hexo/specific.h"
+
+#if defined(CONFIG_CPU_ARM_TLS_IN_C15)
 
 /************************************************************************/
 

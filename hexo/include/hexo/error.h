@@ -32,10 +32,14 @@
 
 C_HEADER_BEGIN
 
-#include "types.h"
+#include <hexo/types.h>
+
+#ifndef __MUTEK_ASM__
 
 /** error code type */
 typedef int_fast8_t		error_t;
+
+#endif
 
 /** unknown or undefined error */
 #define EUNKNOWN	1

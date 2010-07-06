@@ -15,42 +15,14 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2010
 
 */
 
-#ifndef _PTHREAD_PV_H_
-#define _PTHREAD_PV_H_
+#if !defined(ASM_H_) || defined(CPU_ASM_H_)
+#error This file can not be included directly
+#else
 
-#include <pthread.h>
-
-#ifdef CONFIG_PTHREAD_CANCEL
-
-void
-__pthread_switch(void);
-
-void
-__pthread_cancel_self(void);
-
-# if 0
-static inline void
-__pthread_testcancel_async(void)
-{
-  pthread_t self = pthread_self();
-
-  if (!self->canceled && self->cancelasync)
-    __pthread_cancel_self();
-}
-# endif
-
-#endif  /* CONFIG_PTHREAD_CANCEL */
-
-extern CONTEXT_LOCAL pthread_t __pthread_current;
-
-#if CONFIG_PTHREAD_KEYS_MAX
-void _pthread_keys_init(struct pthread_s *thread);
-void _pthread_keys_cleanup(struct pthread_s *thread);
-#endif
 
 #endif
 

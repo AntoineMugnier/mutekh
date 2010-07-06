@@ -28,6 +28,8 @@ SECTIONS
 	.data :	 { *(.data*) } > mem_ram
 	.cpuarchdata : { *(.cpuarchdata*) } > mem_ram
 
+        __initial_stack = 0xa0000;
+
 	__system_heap_start = ADDR(.cpuarchdata) + SIZEOF(.cpuarchdata);
 
 	__cpu_data_start = LOADADDR(.cpudata);

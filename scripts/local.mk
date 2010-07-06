@@ -100,8 +100,14 @@ else ifeq ($(wildcard $(2)/$(1:.o=.S)),$(2)/$(1:.o=.S))
 
 $(3)/$(1): $(2)/$(1:.o=.S) $(OBJ_DIR)/.done_pre_header_list $(OBJ_DIR)/config.h
 	$(call prepare_command,AS,$$@)
-	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<)
-	$(call run_command,$$@,$(CC) $$(INCS) -c -x assembler-with-cpp $$< $$(CPUCFLAGS) -o $$@)
+	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),\
+		-x assembler-with-cpp $$<,\
+		$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+		$($(1)_CFLAGS) $(DIR_CFLAGS) -D__MUTEK_ASM__)
+	$(call compile,$(CC),$$@,\
+		-x assembler-with-cpp $$<,\
+		$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+		$($(1)_CFLAGS) $(DIR_CFLAGS) -D__MUTEK_ASM__)
 
 else ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))
 
