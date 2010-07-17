@@ -53,6 +53,9 @@ enum mem_scope_e
 static inline
 void *mem_alloc(size_t size, enum mem_scope_e scope)
 {
+  if (size == 0) 
+    return NULL;
+
   void *ptr = NULL;
 
   if (default_region != NULL)
@@ -83,6 +86,9 @@ void *mem_alloc(size_t size, enum mem_scope_e scope)
 static inline
 void *mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
 {
+  if (size == 0)
+    return NULL;
+
   void *ptr = NULL;
 
   if (default_region != NULL)
