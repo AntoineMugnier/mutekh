@@ -162,23 +162,28 @@ error_t system(const char *cmd);
 
 /****************** abs */
 
-static inline
-__compiler_sint_t abs(__compiler_sint_t x)
-{
-  return x<0 ? -x : x;
-}
+#define abs(n)                                                          \
+({                                                                      \
+  typedef typeof(n) _t;                                                 \
+  _t gpct_n = (n);                                                      \
+                                                                        \
+  __builtin_types_compatible_p(typeof(n), __compiler_slong_t) ? __builtin_absl(n) : \
+  __builtin_types_compatible_p(typeof(n), __compiler_slonglong_t) ? __builtin_absll(n) : \
+  __builtin_abs(n);                                                     \
+})
 
-static inline
-__compiler_slong_t labs(__compiler_slong_t x)
-{
-  return x<0 ? -x : x;
-}
+#define labs(x) abs(x)
+#define llabs(x) abs(x)
 
-static inline
-__compiler_slonglong_t llabs(__compiler_slonglong_t x)
-{
-  return x<0 ? -x : x;
-}
+#define log2i(n)                                                        \
+({                                                                      \
+  typedef typeof(n) _t;                                                 \
+  _t gpct_n = (n);                                                      \
+                                                                        \
+  __builtin_types_compatible_p(_t, __compiler_slong_t) ? sizeof(__compiler_slong_t) * 8 - 1 - __builtin_clzl(gpct_n) : \
+  __builtin_types_compatible_p(_t, __compiler_slonglong_t) ? sizeof(__compiler_slonglong_t) * 8 - 1 - __builtin_clzll(gpct_n) : \
+  sizeof(__compiler_sint_t) * 8 - 1 - __builtin_clz(gpct_n);                               \
+})
 
 // div / ldiv
 

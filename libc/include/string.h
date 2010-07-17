@@ -181,11 +181,18 @@ stpcpy(char *dest, const char *src);
 
 /***************************************** bit string operations */
 
-int_fast8_t ffsl(uint32_t i);
-#define ffsl	__builtin_ffsl
+#define ffs(n)                                                          \
+({                                                                      \
+  typedef typeof(n) _t;                                                 \
+  _t gpct_n = (n);                                                      \
+                                                                        \
+  __builtin_types_compatible_p(typeof(n), __compiler_slong_t) ? __builtin_ffsl(n) : \
+  __builtin_types_compatible_p(typeof(n), __compiler_slonglong_t) ? __builtin_ffsll(n) : \
+  __builtin_ffs(n);                                                     \
+})
 
-int_fast8_t ffsll(uint64_t i);
-#define ffsll	__builtin_ffsll
+#define ffsl(x) ffs(x)
+#define ffsll(x) ffs(x)
 
 const char *strerror(error_t errnum);
 
