@@ -86,7 +86,7 @@ void arch_start_other_cpu(void)
 {
 }
 
-inline cpu_id_t arch_get_cpu_count(void)
+inline size_t arch_get_cpu_count(void)
 {
   return 1;
 }

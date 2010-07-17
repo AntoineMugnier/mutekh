@@ -1,6 +1,7 @@
 
 objs =											\
 arch_init.o										\
+entry_points.o										\
 mem_init.o \
 hw_init.o
 
