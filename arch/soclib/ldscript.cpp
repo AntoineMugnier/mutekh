@@ -156,7 +156,9 @@ SECTIONS
 	/* GOT section */
  	/DISCARD/ : { *(.eh_frame) }
 
-	ASSERT(__system_uncached_heap_start == __bss_end, "Unlinked sections found, please report a bug")
+#if !defined(CONFIG_CPU_NIOS)
+ 	ASSERT(__system_uncached_heap_start == __bss_end, "Unlinked sections found, please report a bug")
+#endif
 }
 
 ENTRY(arch_init)

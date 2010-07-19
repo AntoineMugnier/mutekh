@@ -30,3 +30,7 @@ endif
 ifeq ($(CONFIG_DRIVER_ICU_SAM7), defined)
  subdirs += sam7
 endif
+
+ifeq ($(CONFIG_DRIVER_ICU_NIOS), defined)
+ subdirs += nios
+endif
