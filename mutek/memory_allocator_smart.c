@@ -569,7 +569,7 @@ void *memory_allocator_resize(void *address, size_t size)
 
   ssize_t diff = (size - hdr_size);
   
-  if (! diff )
+  if (diff == 0)
     goto done;
   
   struct memory_allocator_header_s *next = block_list_next(&region->block_root, hdr);
@@ -578,7 +578,7 @@ void *memory_allocator_resize(void *address, size_t size)
     {
       size_t next_size = header_get_size(&region->block_root, next);
       
-      if (next_size < diff)
+      if (diff > 0 && next_size < (size_t)diff)
 	{
 	  address = NULL;
 	}
@@ -611,6 +611,7 @@ void *memory_allocator_resize(void *address, size_t size)
 	    {
 	      memchecker_set_alloc( hdr_size + next_size, hdr);
 	    }
+
 	  update_region_stats(region, -next_size, -1, 0);
 
 	  memory_allocator_crc_set(hdr);
@@ -618,7 +619,7 @@ void *memory_allocator_resize(void *address, size_t size)
     }
   else
     {
-      if (size >= hdr_size)
+      if (diff > 0)
 	{
 	  address = NULL;
 	}
@@ -626,6 +627,8 @@ void *memory_allocator_resize(void *address, size_t size)
 	{
 	  if (size + MEMALLOC_SPLIT_SIZE <= hdr_size)
 	    {
+              memchecker_set_free(hdr_size, hdr);
+
 	      memory_allocator_guard_set(size, hdr);
 
 	      next = (void*)((uintptr_t)hdr + size);
@@ -638,7 +641,7 @@ void *memory_allocator_resize(void *address, size_t size)
 	      memory_allocator_scramble_set(next_size, next);
 
 	      update_region_stats(region, -diff, 1, 0);
-	      memchecker_set_free(next_size, next);
+	      memchecker_set_alloc(size, hdr);
 	    }
 	}
     }
