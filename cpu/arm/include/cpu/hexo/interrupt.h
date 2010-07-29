@@ -31,6 +31,7 @@
 #else
 
 #define CPU_INTERRUPT_H_
+#define __armv7m__
 
 #include "hexo/local.h"
 
@@ -101,7 +102,11 @@ cpu_interrupt_savestate(reg_t *state)
 
 	asm volatile(
         THUMB_TO_ARM
+#if defined(__armv7m__)
+		"mrs  %[tmp], primask     \n\t"
+#else
 		"mrs  %[tmp], cpsr        \n\t"
+#endif
         ARM_TO_THUMB
 		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,) );
 
@@ -118,9 +123,14 @@ cpu_interrupt_savestate_disable(reg_t *state)
 
 	asm volatile(
         THUMB_TO_ARM
+#if defined(__armv7m__)
+		"mrs    %[result], primask     \n\t"
+		"cpsid  i                      \n\t"
+#else
 		"mrs  %[result], cpsr        \n\t"
 		"orr  %[tmp], %[result], #0x80   \n\t"
 		"msr  cpsr, %[tmp]        \n\t"
+#endif
         ARM_TO_THUMB
 		: [tmp] "=r" (tmp), [result] "=r" (result) /*,*/ THUMB_OUT(,)
                 :
@@ -138,11 +148,15 @@ cpu_interrupt_restorestate(const reg_t *state)
 
 	asm volatile(
         THUMB_TO_ARM
+#if defined(__armv7m__)
+		"msr  primask, %[state]     \n\t"
+#else
 		"msr  cpsr, %[state]        \n\t"
+#endif
         ARM_TO_THUMB
 		/* : */ THUMB_OUT(:)
         : [state] "r" (*state)
-        : "memory"     /* compiler memory barrier */
+ : "memory"     /* compiler memory barrier */
                      );
 #endif
 }
@@ -168,11 +182,18 @@ cpu_interrupt_getstate(void)
 
 	asm volatile(
         THUMB_TO_ARM
+#if defined(__armv7m__)
+		"mrs  %[state], primask     \n\t"
+#else
 		"mrs  %[state], cpsr        \n\t"
+#endif
         ARM_TO_THUMB
 		: [state] "=r" (state) /*,*/ THUMB_OUT(,) );
-
+#if defined(__armv7m__)
+        return !(state & 0x01);
+#else
 	return !(state & 0x80);
+#endif
 #else
 	return 0;
 #endif
@@ -203,6 +224,11 @@ static inline void cpu_interrupt_wait(void)
 		/*:*/  THUMB_OUT(:)
         : [zero] "r" (0)
 	: "memory" );
+#  elsif defined(__armv7m__)
+        asm volatile(
+                     "wfi \n\t"
+                     : "memory" );
+        cpu_interrupt_enable();
 #  else
 # error CONFIG_CPU_WAIT_IRQ should not be defined here
 #  endif

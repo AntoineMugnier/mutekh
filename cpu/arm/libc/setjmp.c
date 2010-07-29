@@ -23,10 +23,14 @@
 
 reg_t setjmp(jmp_buf env);
 asm(
+        ".thumb                  \n"
+        ".thumb_func             \n"
 	".type setjmp, %function \n"
 	".globl setjmp          \n\t"
 	"setjmp:                \n\t"
-	"stmia   r0, {r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, lr} \n\t"
+      	"stmia   r0, {r4, r5, r6, r7, r8, r9, r10, r11, r12}\n\t"
+        "str     r13, [r2, #-40]\n\t"
+        "str     lr,  [r2, #-44]\n\t"
 	"movs    r0, #0         \n\t"
 	"bx      lr             \n\t"
 	".size setjmp, .-setjmp \n\t"
@@ -35,13 +39,18 @@ asm(
 
 void longjmp(jmp_buf env, reg_t val);
 asm(
+        ".thumb                  \n"
+        ".thumb_func             \n"
 	".type longjmp, %function \n"
 	".globl longjmp          \n\t"
 	"longjmp:                \n\t"
 	"mov    r2, r0           \n\t"
 	"cmp    r1, #0           \n\t"
+	"ITE    NE               \n\t"
 	"movne  r0, r1           \n\t"
 	"moveq  r0, #1           \n\t"
-	"ldmia  r2, {r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, pc} \n\t"
+	"ldmia  r2, {r4, r5, r6, r7, r8, r9, r10, r11, r12}\n\t"
+        "ldr     r13, [r2, #-40]\n\t"
+        "ldr     pc,  [r2, #-44]\n\t"
 	".size longjmp, .-longjmp \n\t"
 	);

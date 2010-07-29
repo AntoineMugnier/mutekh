@@ -11,18 +11,6 @@ CONTEXT_LOCAL struct cpu_context_s arm_context_regs;
 CPU_LOCAL void *__context_data_base;
 #endif
 
-#define arm_setup_exception_stack(context, psr_mode)				   \
-	asm volatile(													   \
-		"mrs  r2, cpsr            \n\t"								   \
-		"bic  r3, r2, #0x1f       \n\t"								   \
-		"orr  r3, r3, %0          \n\t"								   \
-		"msr  cpsr, r3            \n\t"								   \
-		"mov  sp, %1              \n\t"								   \
-		"msr  cpsr, r2            \n\t"								   \
-		:															   \
-		: "i"(psr_mode), "r"(context)								   \
-		: "r2", "r3" );
-
 static void __arm_exception_setup()
 {
     struct cpu_context_s *ctx = CONTEXT_LOCAL_ADDR(arm_context_regs);
@@ -32,9 +20,6 @@ static void __arm_exception_setup()
 	soclib_mem_check_disable(SOCLIB_MC_CHECK_SPFP);
 #endif
 
-	arm_setup_exception_stack(addr, 0x12); // IRQ
-	arm_setup_exception_stack(addr, 0x17); // Abort
-	arm_setup_exception_stack(addr, 0x1b); // Undef
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
 	soclib_mem_check_enable(SOCLIB_MC_CHECK_SPFP);
@@ -74,15 +59,16 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
     regs->save_mask =
         CPU_ARM_CONTEXT_RESTORE_CALLER |
         CPU_ARM_CONTEXT_RESTORE_CALLEE;
-    regs->gpr[13] =
+    regs->sp =
         CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
         - CONFIG_HEXO_STACK_ALIGN;
     regs->gpr[0] = (uintptr_t)param;
 
-    regs->cpsr = 0x000000d3;
+    regs->xpsr  = 0x01000000;
+    regs->masks = 0x00000100; // interrupt disable, fault enable 
 
-    regs->gpr[14] = 0xa5a5a5a5; /* can not return from context entry */
-    regs->gpr[15] = (uintptr_t)entry;
+    regs->lr    = 0xa5a5a5a5; /* can not return from context entry */
+    regs->pc    = (uintptr_t)entry;
 
     return 0;
 }
@@ -122,6 +108,9 @@ extern CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 struct context_s *arm_exc_common(reg_t no, struct cpu_context_s *context)
 {
     cpu_exception_handler_t *handler = NULL;
+    uintptr_t *data_ptr = NULL;
+    if(no == CPU_EXCEPTION_DATA_ERROR)
+        data_ptr = *((uintptr_t *)0xE000ED38);
 #ifdef CONFIG_HEXO_USERMODE
     if ( (context->cpsr & 0xf) == 0 )
         handler = CONTEXT_LOCAL_GET(cpu_user_exception_handler);
@@ -129,10 +118,10 @@ struct context_s *arm_exc_common(reg_t no, struct cpu_context_s *context)
     if ( handler == NULL )
         handler = CPU_LOCAL_GET(cpu_exception_handler);
     handler(no,
-            (void *)context->gpr[15],
-            0,
+            (void *)context->pc,
+            data_ptr,
             &context->gpr[0],
-            context->gpr[13]);
+            context->sp);
 
     return arm_except_preempt();
 }

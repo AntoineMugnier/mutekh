@@ -26,76 +26,33 @@
 # include <arch/mem_checker.h>
 #endif
 
-FUNC_START(.boot, cpu_boot)
-        ldr     pc, =arm_boot
-        ldr     pc, =arm_exc_undef
-        ldr     pc, =arm_exc_swi
-        ldr     pc, =arm_exc_pabt
-        ldr     pc, =arm_exc_dabt
-        nop
-#ifdef CONFIG_HEXO_IRQ
-# if defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
-        ldr     pc, =arm_c_irq_handler
-        ldr     pc, =arm_c_fiq_handler
-# else
-        ldr     pc, =arm_exc_irq
-        ldr     pc, =arm_exc_fiq
-
-# endif
-#endif
-FUNC_END(cpu_boot)
-
+//.syntax unified
 
 FUNC_START(.text, arm_boot)
         CPU_ID r4
         cmp    r4, # CONFIG_CPU_MAXCOUNT
         bgt    cpu_boot_idle
 
-        ldr  r13, =__initial_stack
-
-#ifdef CONFIG_ARCH_SMP
-        lsl  r5, r4, # CONFIG_HEXO_RESET_STACK_SIZE
-        subs r13, r13, r5
-#endif
-
-# ifdef CONFIG_SOCLIB_MEMCHECK
-	    mov  r0, #1<< CONFIG_HEXO_RESET_STACK_SIZE
-
-	    /* enter memchecker command mode */
-	    ldr  r2, = SOCLIB_MC_MAGIC_VAL
-	    ldr  r1, = CONFIG_SOCLIB_MEMCHECK_ADDRESS
-	    str  r2, [r1, # SOCLIB_MC_MAGIC_OFFSET ]
-
-	    /* create a new initial memchecker context using cpuid as
-	       context id */
-	    str  r0, [r1, # SOCLIB_MC_R2_OFFSET ]
-	    sub  r0, sp, r0
-	    add  r0, r0, #4
-	    str  r0, [r1, # SOCLIB_MC_R1_OFFSET ]
-	    str  r4, [r1, # SOCLIB_MC_CTX_CREATE_OFFSET ]
-
-	    /* switch to new memchecker context */
-	    str  r4, [r1, # SOCLIB_MC_CTX_SET_OFFSET ]
-
-	    /* enable all memchecker checks */
-	    mov  r0, # SOCLIB_MC_CHECK_ALL
-	    str  r0, [r1, # SOCLIB_MC_ENABLE_OFFSET ]
-# endif
+        ldr.w  r0, =__initial_stack
 
         /* adjust stack pointer, 64 bits aligned */
-        bic  r13, r13, #63
+        bic    r0, #7
+        mov    sp, r0
 
-# ifdef CONFIG_SOCLIB_MEMCHECK
-	    /* leave memchecker command mode */
-	    mov  r0, #0
-	    str  r0, [r1, # SOCLIB_MC_MAGIC_OFFSET ]
-# endif
+        /* Force the hardware exception handler to align stack */
+/*       ldr    r1, .nvic
+        ldr    r0, [r1]
+        orr    r0, r0, #0x200
+        str    r0, [r1]
+*/
+        ldr.w  r12, =boot_from_reset_vector
+        bx     r12
 
-        ldr  r12, =boot_from_reset_vector
-        bx   r12
+.nvic:  .word 0xE000ED14
 FUNC_END(arm_boot)
 
 FUNC_START(.text, cpu_boot_idle)
+        .thumb_func
         mov   r0, #0
         CPU_YIELD r0
         b     cpu_boot_idle

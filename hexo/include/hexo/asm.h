@@ -38,7 +38,7 @@
 # define ASM_STR_(x) #x
 # define ASM_STR(x) ASM_STR_(x)
 
-# define FUNC_START(sec, x)              \
+# define FUNC_START(sec, x)                     \
         ASM_SECTION(sec.x)                    ; \
         .globl x                              ; \
         .func x                               ; \

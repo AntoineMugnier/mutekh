@@ -9,6 +9,10 @@ ifeq ($(CONFIG_ARCH_SIMPLE_SAM7),defined)
 subdirs+=sam7
 endif
 
+ifeq ($(CONFIG_ARCH_SIMPLE_LM3S),defined)
+subdirs+=lm3s
+endif
+
 ifeq ($(CONFIG_ARCH_SIMPLE_ATMEGA),defined)
 subdirs+=atmega
 endif

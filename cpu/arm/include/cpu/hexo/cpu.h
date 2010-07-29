@@ -40,7 +40,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
 #define CPU_GPREG_NAMES {											   \
 "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",						   \
-"r8", "r9", "r10", "r11", "r12", "sp", "lr", "pc",						   \
+  "r8", "r9", "r10", "r11", "r12", "pc", "sp", "lr",              \
 }
 
 #define CPU_TYPE_NAME arm
@@ -150,17 +150,19 @@ static inline size_t cpu_dcache_line_size()
 
 #endif
 
-#define CPU_EXCEPTION_ILLEGAL_INS  0x1
-#define CPU_EXCEPTION_DATA_ERROR   0x2
-#define CPU_EXCEPTION_INS_ERROR    0x3
-#define CPU_EXCEPTION_DATA_ALIGN   0x4
-#define CPU_FAULT_COUNT 4
+#define CPU_EXCEPTION_NMI          0x1
+#define CPU_EXCEPTION_HARDFAULT    0x2
+#define CPU_EXCEPTION_MPU_ERROR    0x3
+#define CPU_EXCEPTION_DATA_ERROR   0x4
+#define CPU_EXCEPTION_ILLEGAL_INS  0x5
+#define CPU_FAULT_COUNT 5
 
-#define CPU_FAULT_NAMES {			\
-"Software",			\
-"Data abort",				\
-"Ins abort",			\
-"Data alignment",			\
+#define CPU_FAULT_NAMES {	\
+"Non Maskable Interrupt",	\
+"Hard Fault",			\
+"MPU Error",			\
+"Bus Error",			\
+"Illegal Instruction",		\
 }
 
 #endif

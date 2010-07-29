@@ -23,8 +23,18 @@
 
 #ifdef __MUTEK_ASM__
 
-# define ASM_SECTION(name) \
-        .section name,"ax"
+.syntax unified
+.thumb
+
+# if defined(CONFIG_CPU_ARM_THUMB2_ONLY)
+#  define ASM_SECTION(name) \
+         .section name,"ax"                    ; \
+         .thumb                                ; \
+         .thumb_func
+# else
+#  define ASM_SECTION(name) \
+         .section name,"ax"
+# endif
 
 # define CPU_ASM_FUNC_END .ltorg
 

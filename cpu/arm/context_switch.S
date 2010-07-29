@@ -28,7 +28,7 @@
 
 /*
    Callee saved: r4-r11 r13
-   Caller saved: r12
+   Caller saved: r0-r3 r12 xpsr lr
     + Arguments: r0-r3
 */
 
@@ -39,59 +39,32 @@ FUNC_START(.text, cpu_context_switch)
     // save "callee saved" registers
     add     r1, r2, #CPU_ARM_CONTEXT_GPR(4)
     stmia   r1, {r4, r5, r6, r7, r8, r9, r10, r11}
-    str     r13, [r2, #CPU_ARM_CONTEXT_GPR(13)]
-
+    str     r13, [r2, #CPU_ARM_CONTEXT_SP]
+        
     // write save/restore mask
     mov     r4, #CPU_ARM_CONTEXT_RESTORE_CALLEE
     str     r4, [r2, #CPU_ARM_CONTEXT_SAVE_MASK]
 
-    mrs     r4, cpsr
-    str     r4, [r2, #CPU_ARM_CONTEXT_CPSR]
-    str     r14, [r2, #CPU_ARM_CONTEXT_GPR(15)]
-    
+    // write special register                      
+    mrs     r4, xpsr                               
+    str     r4, [r2, #CPU_ARM_CONTEXT_XPSR]        
+    // write masks                                 
+    mrs     r4, basepri                            
+    lsl     r5, r4, #16                                    
+    mrs     r4, primask                            
+    and     r4, r4, 0x1                            
+    orr     r5, r5, r4, lsl #8                     
+    mrs     r4, faultmask                          
+    and     r4, r4, 0x1                            
+    orr     r5, r5, r4                             
+    str     r5, [r2, #CPU_ARM_CONTEXT_MASKS]       
+    // write lr with the current pc                
+    str     r14, [r2, #CPU_ARM_CONTEXT_PC]         
+   
     b       cpu_context_jumpto
 FUNC_END(cpu_context_switch)
 
-
-.macro CPU_EXC_SP_SETUP rsp
-    // IRQ
-    msr  cpsr_c, #0xd2
-    mov  sp, \rsp
-    // Abort
-    msr  cpsr_c, #0xd7
-    mov  sp, \rsp
-    // Undef
-    msr  cpsr_c, #0xdb
-    mov  sp, \rsp
-    // We're back
-    msr  cpsr_c, #0xd3
-.endm
-
 FUNC_START(.text, cpu_context_jumpto)
-
-# ifdef CONFIG_ARCH_SMP
-    // unlock some atomic value on context restore if requested
-    ldr   r2, [r0, #HEXO_CONTEXT_S_UNLOCK * 4]
-    cmp   r2, #0
-    movne r1, #0
-    strne r1, [r0, #HEXO_CONTEXT_S_UNLOCK * 4]
-    strne r1, [r2]
-#endif
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-    /* enter memchecker command mode */
-    ldr  r2, =SOCLIB_MC_MAGIC_VAL 
-    ldr  r1, =CONFIG_SOCLIB_MEMCHECK_ADDRESS 
-    str  r2, [r1, #SOCLIB_MC_MAGIC_OFFSET]
-
-    /* switch to associated memchecker context */
-    str  r0, [r1, #SOCLIB_MC_CTX_SET_OFFSET]
-
-    /* leave memchecker command mode */
-    ldr     r3, =2f
-    str     r3, [r1, #SOCLIB_MC_DELAYED_MAGIC_OFFSET]
-#endif
-
     // restore tls pointer from context struct
     ldr  r3, [r0, #HEXO_CONTEXT_S_TLS * 4]
     TLS_BASE_SET r3, r2
@@ -103,17 +76,8 @@ FUNC_END(cpu_context_jumpto)
 FUNC_START(.text, arm_context_may_preempt)
 #if defined(CONFIG_HEXO_CONTEXT_PREEMPT)
     movs  r0, r0
+    IT    NE
     bne   cpu_context_jumpto
-#endif
-#ifdef CONFIG_SOCLIB_MEMCHECK
-    /* enter memchecker command mode */
-    ldr  r2, =SOCLIB_MC_MAGIC_VAL 
-    ldr  r1, =CONFIG_SOCLIB_MEMCHECK_ADDRESS 
-    str  r2, [r1, #SOCLIB_MC_MAGIC_OFFSET]
-
-    /* leave memchecker command mode */
-    ldr     r3, =2f
-    str     r3, [r1, #SOCLIB_MC_DELAYED_MAGIC_OFFSET]
 #endif
     b arm_context_jumpto_internal
 FUNC_END(arm_context_may_preempt)
@@ -122,30 +86,19 @@ FUNC_START(.text, arm_context_jumpto_internal)
     // context registers save array
     CONTEXT_LOCAL_ADDR arm_context_regs, r2, r3
 
-    // Setup sp to be &r0 for all error modes
+    // Setup r0 to be &r0
     add     r0, r2, #CPU_ARM_CONTEXT_GPR(0)
-    CPU_EXC_SP_SETUP r0
 
-    // Take &[r13 r14] in sp
-    add     sp, r2, #CPU_ARM_CONTEXT_GPR(13)
+    // Take &[r13 r14] in r3
+    add     r3, r2, #CPU_ARM_CONTEXT_SP
 
-#if defined(CONFIG_HEXO_USERMODE)
+#if defined(CONFIG_HEXO_USERMODE) // not supported
     // Load spsr
     ldr     lr, [r2, #CPU_ARM_CONTEXT_CPSR]
 #endif
 
-    // Test whether we need to restore caller saved
-    ldr     r1, [r2, #CPU_ARM_CONTEXT_SAVE_MASK]
-    tst     r1, #CPU_ARM_CONTEXT_RESTORE_CALLER
 
-    // We do
-    // r0 is &r0
-    ldmneia r0, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
-    // We dont
-    addeq   r0, r2, #CPU_ARM_CONTEXT_GPR(4)
-    ldmeqia r0, {r4, r5, r6, r7, r8, r9, r10, r11}
-
-#if defined(CONFIG_HEXO_USERMODE)
+#if defined(CONFIG_HEXO_USERMODE) // not supported
     /* From now on, we can only touch lr, which is spsr for now. */
     
     /* If we are from user mode, restore user regs */
@@ -156,59 +109,44 @@ FUNC_START(.text, arm_context_jumpto_internal)
     /* We were from super, so restore in place */
     ldmneia  sp, {r13, r14}
 #else
-    ldmia    sp, {r13, r14}
+    // sp is in r3
+    ldmia    r3, {r4, r14}
+    mov      r13, r4
 #endif
-    
-    // Switch to any error mode, say, abort
-    msr      cpsr_c, #0xd7
 
-    // Stack pointer is now abort mode's one we set previously in
-	// CPU_EXC_SP_SETUP. It points to &r0
+    // Restore masks
+    ldr      r5, [r2, #CPU_ARM_CONTEXT_MASKS]
+    and      r4, r5, #1
+    msr      faultmask, r4
+    lsr      r5, r5, #8
+    and      r4, r5, #1
+    msr      primask, r4
+    lsr      r5, r5, #8
+    and      r4, r5, #255
+    msr      basepri, r4
 
-    // restore status
-    ldr     lr, [sp, #CPU_ARM_CONTEXT_CPSR-CPU_ARM_CONTEXT_GPR(0)]
-    msr     spsr, lr
-
-    // Load pc
-    ldr      lr, [sp, #CPU_ARM_CONTEXT_GPR(15)-CPU_ARM_CONTEXT_GPR(0)]
-    // Restore
-    movs     pc, lr
-2:
+    // Test whether we need to restore caller saved
+    ldr     r1, [r2, #CPU_ARM_CONTEXT_SAVE_MASK]
+    tst     r1, #CPU_ARM_CONTEXT_RESTORE_CALLER
+    ITT     EQ
+    // We dont
+    addeq   r0, r2, #CPU_ARM_CONTEXT_GPR(4)
+    ldmiaeq r0, {r4, r5, r6, r7, r8, r9, r10, r11, r12, pc}
+        
+    // We do
+    // Restore special registers
+    ldr      r4, [r2, #CPU_ARM_CONTEXT_XPSR]
+    msr      xpsr, r4
+    // r0 is &r0
+    ldmia   r0, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, pc}
 FUNC_END(arm_context_jumpto_internal)
 
 
 FUNC_START(.text, cpu_context_set)
-#ifdef CONFIG_SOCLIB_MEMCHECK
-    /* enter memchecker command mode */
-    ldr  r3, =SOCLIB_MC_MAGIC_VAL 
-    ldr  r4, =CONFIG_SOCLIB_MEMCHECK_ADDRESS 
-    str  r3, [r4, #SOCLIB_MC_MAGIC_OFFSET]
-
-    /* switch to associated memchecker context */
-    str  r0, [r4, #SOCLIB_MC_CTX_SET_OFFSET]
-
-    /* mark current memchecker context as invalid */
-    mov  r3, #SOCLIB_MC_CTX_ID_CURRENT
-    str  r3, [r4, #SOCLIB_MC_CTX_INVALIDATE_OFFSET]
-
-    /* create a new temporary memchecker context using passed stack */
-    str  r0, [r4, #SOCLIB_MC_R1_OFFSET]
-    str  r1, [r4, #SOCLIB_MC_R2_OFFSET]
-    str  r0, [r4, #SOCLIB_MC_CTX_CREATE_TMP_OFFSET]
-
-    /* switch to new temporary memchecker context */
-    str  r0, [r4, #SOCLIB_MC_CTX_SET_OFFSET]
-#endif
-
     /* Set stack pointer, 64 bits aligned */
-    add  r13, r0, r1
-    bic  r13, #63
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-    /* leave memchecker command mode */
-    mov  r0, #0
-    str  r0, [r4, #SOCLIB_MC_MAGIC_OFFSET]
-#endif
+    add  r4, r0, r1
+    bic  r4, #7
+    mov  r13,r4
 
     /* Jump */
     bx   r2
@@ -217,15 +155,6 @@ FUNC_END(cpu_context_set)
 
 
 FUNC_START(.text, cpu_context_stack_use)
-#ifdef CONFIG_SOCLIB_MEMCHECK
-    /* enter memchecker command mode */
-    ldr  r3, =SOCLIB_MC_MAGIC_VAL 
-    ldr  r4, =CONFIG_SOCLIB_MEMCHECK_ADDRESS 
-    str  r3, [r4, #SOCLIB_MC_MAGIC_OFFSET]
-
-    /* switch to associated memchecker context */
-    str  r0, [r4, #SOCLIB_MC_CTX_SET_OFFSET]
-#endif
 
     // restore tls pointer from context struct
     ldr  r5, [r0, #HEXO_CONTEXT_S_TLS * 4]
@@ -235,13 +164,7 @@ FUNC_START(.text, cpu_context_stack_use)
     CONTEXT_LOCAL_ADDR arm_context_regs, r6, r3
 
     // use stack ptr
-    ldr     r13, [r6, #CPU_ARM_CONTEXT_GPR(13)]
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-    /* leave memchecker command mode */
-    mov  r0, #0
-    str  r0, [r4, #SOCLIB_MC_MAGIC_OFFSET]
-#endif
+    ldr     r13, [r6, #CPU_ARM_CONTEXT_SP]
 
 #ifndef CONFIG_RELEASE
     // prevent use of previous context local storage

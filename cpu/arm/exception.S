@@ -27,53 +27,61 @@
 #endif
 
 .macro prepare_exception offset
+    // get context registers save array
+    CONTEXT_LOCAL_ADDR arm_context_regs, r2, r3
+
+    add    r1, r2, #CPU_ARM_CONTEXT_GPR(4)
+    /* store most registers in tmp buffer */
+    stmia  r1, {r4, r5, r6, r7, r8, r9, r10, r11}
+    str    lr, [r2, #CPU_ARM_CONTEXT_LR]
+    str    sp, [r2, #CPU_ARM_CONTEXT_SP]
+
+    /* Test wether it is a bus fault or not */
+    mrs    r1, ipsr
+    and    r1, r1, #255
+    cmp    r1, #5
+    /* If the interrupt number is not 5, branch */
+    bne    1f
+
+    /* It is a bud fault, check if the stack is ok */
+    /* Load the Bus Fault Status Register */
+    ldr    r1, =0xE000ED29
+    ldrb   r1, [r1]    
+    and    r1, #16
+    /* If the STKERR bit is null, branch */
+    cbz    r1, 1f
+    /* The bit is set, pass some register saving */
+    b      2f
+        
+1:      
+    /* Store remaining registers */
+    /*   Store r0 to r4    */
+    add    r1, r2, #CPU_ARM_CONTEXT_GPR(0)
+    ldr    r4, [sp]
+    ldr    r5, [sp, #4]
+    ldr    r6, [sp, #8]
+    ldr    r7, [sp, #12]
+    stmia  r1, {r4,r5,r6,r7}
+
+    /*   Store R12 and PC   */
+    add    r1, r2, #CPU_ARM_CONTEXT_GPR(12)
+    ldr    r4, [sp, #16]
+    ldr    r5, [sp, #24]
     /* uniformize return address, but avoid a sub when 0 */
     .if \offset != 0
-        sub    lr, lr, #\offset
+        sub    r5, r5, #\offset
     .endif
+    stmia  r1, {r4, r5}
 
-    /* SP points to r0 in cpu_context_s */
-
-    /* store most registers in tmp buffer */
-    stmia  sp, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
-
-    /* Save PC */
-    str    lr, [sp, #CPU_ARM_CONTEXT_GPR(15)-CPU_ARM_CONTEXT_GPR(0)]
-
+    /* Take old xpsr, save it */
+    ldr    r0, [sp, #28]
+    str    r0, [r2, #CPU_ARM_CONTEXT_XPSR]
+        
+2:      
     /* Tell what to restore */
     mov     r0, #CPU_ARM_CONTEXT_RESTORE_CALLEE|CPU_ARM_CONTEXT_RESTORE_CALLER
-    str     r0, [sp, #CPU_ARM_CONTEXT_SAVE_MASK-CPU_ARM_CONTEXT_GPR(0)]
+    str     r0, [r2, #CPU_ARM_CONTEXT_SAVE_MASK]
 
-    /* Take old msr, save it */
-    mrs    r0, spsr
-    str    r0, [sp, #CPU_ARM_CONTEXT_CPSR-CPU_ARM_CONTEXT_GPR(0)]
-
-    /* last but not least, we have to save sp and lr, this
-       may involve shadowed registers */
-    add    r1, sp, #CPU_ARM_CONTEXT_GPR(13)-CPU_ARM_CONTEXT_GPR(0)
-
-    /* Switch to super (After taking sp+x in r1) */
-    msr      cpsr_c, #0xd3
-
-#if defined(CONFIG_HEXO_USERMODE)
-    /* r0 is still cpsr */
-    tst    r0, #0xf
-    /* if 0 (eq), from user mode */
-    /* We were from super, go to save super */
-    bne 1f
-    
-    /* from user mode, abuse stmia^ */
-    stmia  r1, {r13, r14}^
-    /* Always restore kernel stack pointer */
-    CONTEXT_LOCAL context_stack_end, r2, r3
-    b 2f
-1:  
-#endif        
-    /* We were from super, so save super's sp and lr */
-    stmia  r1, {r13, r14}
-2:  
-
-    bic    sp, sp, #63
 .endm
 
 .macro preempt_clear
@@ -98,102 +106,70 @@
 .endm
 #endif
     
-    /* r14 is exc pc + 4 */
+    /* sp + 28 is exc pc */
 FUNC_START(.text, arm_exc_undef)
-    prepare_exception 4
+    prepare_exception 0
     handle_exception CPU_EXCEPTION_ILLEGAL_INS
 FUNC_END(arm_exc_undef)
 
-    /* r14 is error pc + 4 */
-FUNC_START(.text, arm_exc_pabt)
-    prepare_exception 4
-    handle_exception CPU_EXCEPTION_INS_ERROR
-FUNC_END(arm_exc_pabt)
-
-    /* r14 is error pc + 8 */
+    /* sp + 28 is error pc */
 FUNC_START(.text, arm_exc_dabt)
-    prepare_exception 8
+    prepare_exception 0
     handle_exception CPU_EXCEPTION_DATA_ERROR
 FUNC_END(arm_exc_dabt)
 
-#if defined(CONFIG_HEXO_IRQ) && !defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
-    /* r14 is error pc + 4 */
-FUNC_START(.text, arm_exc_irq)
+    /* sp + 28 is error pc + 4 */
+FUNC_START(.text, arm_exc_nmi)
     prepare_exception 4
-    handle_irq 0
-FUNC_END(arm_exc_irq)
+    handle_exception CPU_EXCEPTION_NMI
+FUNC_END(arm_exc_nmi)
 
-    /* r14 is error pc + 4 */
-FUNC_START(.text, arm_exc_fiq)
-    .warning "Context saving is not correct for fiq handling"
-    prepare_exception 4
-    handle_irq 1
-FUNC_END(arm_exc_fiq)
-#endif
+    /* sp + 28 is error pc */
+FUNC_START(.text, arm_exc_hfault)
+    prepare_exception 0
+    handle_exception CPU_EXCEPTION_HARDFAULT
+FUNC_END(arm_exc_hfault)
 
-    /* r14 is swi pc + 4 */
+    /* sp + 28 is error pc */
+FUNC_START(.text, arm_exc_mpu)
+    prepare_exception 0
+    handle_exception CPU_EXCEPTION_MPU_ERROR
+FUNC_END(arm_exc_mpu)
+
+    /* sp + 28 is swi pc + 4 */
 FUNC_START(.text, arm_exc_swi)
-    /* Let's say our ABI tells we can trash r12 */
-#if defined(CONFIG_HEXO_USERMODE)
-    mrs    r12, spsr
-    tst    r12, #0xf
-    bne    1f // swi from kernel
-
-    /* We are in swi from userland, we cant trust sp, restore it */
-    CONTEXT_LOCAL context_stack_end, sp, r12
-    bic    sp, sp, #63
-1:
-#endif
-
-    // Now we have a trusted stack, we can work...
-    /* We must save r11, but we have nothing else than a stack, so
-     * use it. Beware of side-effects when playing with sp (see below)
+    /* We use caller saved register, which where saved
+       on the stack by the hw.
      */
-    push   {r11}
-    // Use r11 to reference cpu_context
-    CONTEXT_LOCAL_ADDR arm_context_regs, r11, r12
+
+    // Use r2 to reference cpu_context
+    CONTEXT_LOCAL_ADDR arm_context_regs, r4, r3
 
     // Save return address
-    str    lr, [r11, #CPU_ARM_CONTEXT_GPR(15)]
+    str    lr, [r4, #CPU_ARM_CONTEXT_PC]
 
-    mov    r12, #CPU_ARM_CONTEXT_RESTORE_CALLEE|CPU_ARM_CONTEXT_RESTORE_CALLER
-    str    r12, [r11, #CPU_ARM_CONTEXT_SAVE_MASK]
+    // Save SP
+    str    sp, [r4, #CPU_ARM_CONTEXT_SP]
 
-    // Save caller-saved regs (arguments)
-    add    r12, r11, #CPU_ARM_CONTEXT_GPR(2)
-    stmia  r12, {r0, r1, r2, r3}
+     // Save masks
+    mrs     r1, basepri
+    lsl     r2, r1, #16
+    mrs     r1, primask
+    and     r1, r1, 0x1
+    orr     r2, r2, r1, lsl #8
+    mrs     r1, faultmask
+    and     r1, r1, 0x1
+    orr     r2, r2, r1
+    str     r2, [r4, #CPU_ARM_CONTEXT_MASKS]
+        
+    mov    r3, #CPU_ARM_CONTEXT_RESTORE_CALLEE
+    str    r3, [r4, #CPU_ARM_CONTEXT_SAVE_MASK]
 
-    // Save mode
-    mrs    r1, spsr
-    str    r1, [r11, #CPU_ARM_CONTEXT_CPSR]
-
-    /* Location of pop {r12} is a little cheesy:
-     * Overall, we want to save the sp as it was in previous mode,
-     * so we have to pop r12 *before* the stmneia {r13, r14}...
-     */
-    pop    {r12} // changes r13
-
-#if defined(CONFIG_HEXO_USERMODE)
-    /* r1 is still cpsr */
-    tst    r1, #0xf
-
-    /* if 0 (eq), from user mode */
-    /* from user mode, abuse stmia^ */
-    stmeqia  r11, {r13, r14}^
-    /* We were from super, so save super */
-    stmneia  r11, {r13, r14}
-#else
-    /* Save sp and lr */
-    stmia  r11, {r13, r14}
-#endif
-    
-    /* And finally save r11 (which was pushed previously, and
-     * popped to r12) */
-    str    r12, [r11, #CPU_ARM_CONTEXT_GPR(11)]
     
     preempt_clear
-    mov    r1, r11
+    mov    r1, r4
     b      arm_swi_common
+        
 FUNC_END(arm_exc_swi)
 
 // Local Variables:

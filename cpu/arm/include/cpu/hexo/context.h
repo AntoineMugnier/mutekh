@@ -35,15 +35,23 @@
 /** @multiple @this describes @ref cpu_context_s field offset */
 #define CPU_ARM_CONTEXT_SAVE_MASK      0
 #define CPU_ARM_CONTEXT_GPR(n)         ((CPU_ARM_CONTEXT_SAVE_MASK + 1 + n)*4)
-#define CPU_ARM_CONTEXT_CPSR           CPU_ARM_CONTEXT_GPR(16)
+#define CPU_ARM_CONTEXT_PC              CPU_ARM_CONTEXT_GPR(13)
+#define CPU_ARM_CONTEXT_SP              CPU_ARM_CONTEXT_GPR(14)
+#define CPU_ARM_CONTEXT_LR              CPU_ARM_CONTEXT_GPR(15)
+#define CPU_ARM_CONTEXT_XPSR            CPU_ARM_CONTEXT_GPR(16)
+#define CPU_ARM_CONTEXT_MASKS           CPU_ARM_CONTEXT_GPR(17)
 
 #ifndef __MUTEK_ASM__
 
 struct cpu_context_s
 {
     reg_t save_mask;       //< what is being saved and restored
-    reg_t gpr[16];
-    reg_t cpsr;
+    reg_t gpr[13];
+    reg_t pc;
+    reg_t sp;
+    reg_t lr;
+    reg_t xpsr;
+    reg_t masks;           // 23:16 -> basepri, 15:8 -> primask, 7:0 -> faultmask
 };
 
 #endif

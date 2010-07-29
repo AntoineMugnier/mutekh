@@ -22,7 +22,7 @@
 #ifndef __ARM_SPECIFIC_H_
 #define __ARM_SPECIFIC_H_
 
-#if defined(__thumb__)
+#if defined(__thumb__)&& !defined(CONFIG_CPU_ARM_THUMB2_ONLY)
 # define THUMB_TMP_VAR uint32_t thumb_tmp
 # define THUMB_TO_ARM                 \
     ".align 2               \n\t"     \
