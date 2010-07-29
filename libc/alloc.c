@@ -49,6 +49,8 @@ realloc(void *ptr, size_t size)
   if( ( p = mem_resize(ptr, size) ) != NULL )
     return p;
 
+  assert(size>oldsize);
+
   if( ! (p = malloc(size)))
     return NULL;
 
