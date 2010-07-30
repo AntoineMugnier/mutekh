@@ -77,6 +77,8 @@ void * thread(void *id_)
 	hash_check(b->data, b->size, b->hash);
 	fc++;
 	free(b->data);
+	b->data = NULL;
+	b->size = 0;
       }
 
       size_t size = rand() % MAX_SIZE;
