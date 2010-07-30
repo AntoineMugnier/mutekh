@@ -591,9 +591,6 @@ void *memory_allocator_resize(void *address, size_t size)
 
 	  if (next_size >= diff + MEMALLOC_SPLIT_SIZE)
 	    {
-
-	      memory_allocator_guard_set(size, hdr);
-
 	      next = (void*)((uintptr_t)hdr + size);
 	      next_size -= diff;
 
@@ -605,15 +602,16 @@ void *memory_allocator_resize(void *address, size_t size)
 	      memory_allocator_scramble_set(next_size, next);
 
 	      update_region_stats(region, -diff, 1, 0);
-	      memchecker_set_alloc(size, hdr);
 	    }
 	  else
 	    {
-	      memchecker_set_alloc( hdr_size + next_size, hdr);
+              size = hdr_size + next_size;
 	    }
 
+          memchecker_set_alloc(size, hdr);
 	  update_region_stats(region, -next_size, -1, 0);
 
+          memory_allocator_guard_set(size, hdr);             
 	  memory_allocator_crc_set(hdr);
 	}
     }
@@ -701,6 +699,10 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
 	  memory_allocator_guard_set(size, hdr);
           update_region_stats(region, 0, 1, 0);
 	}
+      else
+        {
+          size = hdr_size;
+        }
 
       update_region_stats(region, 0, -1, 1);
 
