@@ -41,6 +41,7 @@ void soclib_early_console(uintptr_t addr);
 #include <hexo/cpu.h>
 #include <mutek/printk.h>
 #include <mutek/scheduler.h>
+#include <hexo/context.h>
 
 #include <string.h>
 

@@ -68,7 +68,7 @@ void boot_from_bootloader(void *device_tree)
 
 #define N (sizeof(atomic_t) * 8)
 #define START_BARRIER_WORDS ((CONFIG_CPU_MAXCOUNT + N - 1) / N)
-static atomic_t start_barrier[START_BARRIER_WORDS];
+atomic_t start_barrier[START_BARRIER_WORDS];
 
 static void start_barrier_wait()
 {
