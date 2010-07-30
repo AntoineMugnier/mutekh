@@ -78,8 +78,8 @@ FUNC_START(.text, cpu_context_jumpto)
         jz      1f
 
         // unlock and clear unlock address
-        movl    $0,     (%rax)
         movq    $0,     HEXO_CONTEXT_S_UNLOCK * 8(%rdi)
+        movl    $0,     (%rax)
 1:      
 # endif
 

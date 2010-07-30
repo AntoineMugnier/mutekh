@@ -112,8 +112,8 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // unlock and clear unlock address
         addi    0,      0,      0
-        stw     0,              0(2)
         stw     0,              HEXO_CONTEXT_S_UNLOCK * 4 (3)
+        stw     0,              0(2)
 1:      
 #endif
 

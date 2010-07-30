@@ -74,8 +74,8 @@ FUNC_START(.text, cpu_context_jumpto)
     ldr   r2, [r0, #HEXO_CONTEXT_S_UNLOCK * 4]
     cmp   r2, #0
     movne r1, #0
-    strne r1, [r2]
     strne r1, [r0, #HEXO_CONTEXT_S_UNLOCK * 4]
+    strne r1, [r2]
 #endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
