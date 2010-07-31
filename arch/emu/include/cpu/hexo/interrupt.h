@@ -36,12 +36,11 @@
 #include <hexo/ordering.h>
 
 #ifdef CONFIG_HEXO_IRQ
-void emu_interrupts_process(__compiler_sint_t sig);
 void emu_interrupts_wait(void);
 void emu_interrupts_init(void);
 void emu_interrupts_set(bool_t state);
 bool_t emu_interrupts_get(void);
-void emu_interrupts_post(cpu_id_t cpu);
+void emu_interrupts_post(cpu_id_t cpu, uint_fast8_t irq);
 #endif
 
 static inline void
@@ -62,12 +61,10 @@ cpu_interrupt_enable(void)
 #endif
 }
 
-static void
+static inline void
 cpu_interrupt_process(void)
 {
-#ifdef CONFIG_HEXO_IRQ
-  emu_interrupts_process(0);
-#endif
+  cpu_interrupt_enable();
 }
 
 static inline void

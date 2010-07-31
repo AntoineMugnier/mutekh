@@ -110,12 +110,11 @@ void arch_init(uintptr_t init_sp)
     _cpu_id = 0;
 #endif
 
-    /* configure first CPU */
-    cpu_init();
-
 #ifdef CONFIG_HEXO_IRQ
     emu_interrupts_init();
 #endif
+    /* configure first CPU */
+    cpu_init();
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
     sched_global_init();
@@ -145,6 +144,9 @@ other_cpu:
     while (cpu_init_flag != 1)
         order_compiler_mem();
 
+#ifdef CONFIG_HEXO_IRQ
+    emu_interrupts_init();
+#endif
     cpu_init();
 
 #if defined(CONFIG_MUTEK_SCHEDULER)

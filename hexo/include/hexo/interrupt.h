@@ -98,7 +98,7 @@ static inline bool_t cpu_interrupt_getstate();
 __attribute__ ((always_inline))
 static inline bool_t cpu_is_interruptible();
 
-/** @this enables interrupts and give a change to pending requests to
+/** @this enables interrupts and give a chance to pending requests to
     execute. This function must be used to avoid the "sti; cli"
     sequence which don't let interrupts raise on some
     processors. Memory is marked as clobbered by this function to
