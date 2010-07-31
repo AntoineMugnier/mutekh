@@ -12,11 +12,11 @@
 
 m4_forloop(i, 0, CONFIG_CPU_MAXCOUNT-1, `
 
-		Mips,32@i {
-			name = "Mips,32";
+		CONFIG_CPU_NAME@i {
+			name = "CONFIG_CPU_NAME";
 			device_type = "cpu";
 			reg = <i>;
-			icudev_type = "cpu:mips";
+			icudev_type = "cpu:CONFIG_CPU_ARCHNAME";
 			ipi = <&{/xicu@0/out@i} i>;
 		};
 ')
@@ -38,7 +38,7 @@ m4_forloop(i, 0, CONFIG_CPU_MAXCOUNT-1, `
 	xicu@0 {
 	    device_type = "soclib:xicu:root";
 		input_lines = <2>;
-		ipis = <8>;
+		ipis = <CONFIG_CPU_MAXCOUNT>;
 		timers = <1>;
 		reg = <0xd2200000 0x1000>;
 
@@ -48,7 +48,7 @@ m4_forloop(i, 0, CONFIG_CPU_MAXCOUNT-1, `
 	    	    device_type = "soclib:xicu:filter";
 	    	    parent = &{/xicu@0};
 	    		output_line = <i>;
-	    		irq = <&{/cpus/Mips,32@i} 0>;
+	    		irq = <&{/cpus/CONFIG_CPU_NAME@i} 0>;
 	    	};
 ')
 	};
