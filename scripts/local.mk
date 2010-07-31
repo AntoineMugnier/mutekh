@@ -77,31 +77,20 @@ DEP_FILE_LIST+=$(3)/$(1:.o=.deps)
 
 #$( # info  ======== declare_obj, $(1), $(2), $(3))
 
-ifeq ($(wildcard $(2)/$(1:.o=.S.m4)),$(2)/$(1:.o=.S.m4))
-
-#$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be M4+ASM file)
-
-DEP_FILE_LIST+=$(3)/$(1:.o=.m4.deps)
-
-$(3)/$(1): $(2)/$(1:.o=.S.m4) $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py
-	$(call prepare_command,M4+AS,$$@)
-	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 \
-		$$< | m4 -s $$(filter -I%,$$(INCS)) -P | \
-		python $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py \
-		$$@ $$(filter -I%,$$(INCS)) > $$(@:.o=.m4.deps)
-	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 \
-		$$< | m4 $$(filter -I%,$$(INCS)) -P > $$(@:.o=.S)
-	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$(@:.o=.S))
-	$(call run_command,$$@,$(CPP) $$(INCS) $$(@:.o=.S) | $(AS) $$(CPUASFLAGS) -o $$@)
-
-else ifeq ($(wildcard $(2)/$(1:.o=.S)),$(2)/$(1:.o=.S))
+ifeq ($(wildcard $(2)/$(1:.o=.S)),$(2)/$(1:.o=.S))
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be ASM file)
 
 $(3)/$(1): $(2)/$(1:.o=.S) $(OBJ_DIR)/.done_pre_header_list $(OBJ_DIR)/config.h
 	$(call prepare_command,AS,$$@)
-	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<)
-	$(call run_command,$$@,$(CC) $$(INCS) -c -x assembler-with-cpp $$< $$(CPUCFLAGS) -o $$@)
+	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),\
+		-x assembler-with-cpp $$<,\
+		$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+		$($(1)_CFLAGS) $(DIR_CFLAGS) -D__MUTEK_ASM__)
+	$(call compile,$(CC),$$@,\
+		-x assembler-with-cpp $$<,\
+		$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+		$($(1)_CFLAGS) $(DIR_CFLAGS) -D__MUTEK_ASM__)
 
 else ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))
 
@@ -109,7 +98,7 @@ else ifeq ($(wildcard $(2)/$(1:.o=.dts)),$(2)/$(1:.o=.dts))
 
 $(3)/$(1): $(2)/$(1:.o=.dts) $(OBJ_DIR)/config.h
 	$(call prepare_command,DTC,$$@)
-	$(call run_command,$$@,$(DTC) -O dtb -o $(3)/$(1:.o=.blob) $$<)
+	$(call run_command,$$@,m4 -P $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 $$< | $(DTC) -O dtb -o $(3)/$(1:.o=.blob))
 	$(call blob2c,$$(@:.o=.c),$$(@:.o=.blob),dt_blob_start)
 	$(call compile,$(CC),$$@,$$(@:.o=.c))
 
