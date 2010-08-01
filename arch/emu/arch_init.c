@@ -28,6 +28,13 @@
 #include <mutek/scheduler.h>
 #include <mutek/printk.h>
 
+#ifdef CONFIG_HEXO_IPI
+# include <device/icu.h>
+# include <device/device.h>
+# include <device/driver.h>
+# include <hexo/ipi.h>
+#endif
+
 #include <arch/hexo/emu_syscalls.h>
 
 #ifdef CONFIG_ARCH_SMP
@@ -60,6 +67,10 @@ PRINTF_OUTPUT_FUNC(early_console_fd1)
 {
   emu_do_syscall(EMU_SYSCALL_WRITE, 3, 1, str, len);  
 }
+#endif
+
+#ifdef CONFIG_DRIVER_ICU_EMU
+extern struct device_s icu_dev;
 #endif
 
 __compiler_sint_t cpu_pids[CONFIG_CPU_MAXCOUNT];
@@ -128,6 +139,10 @@ void arch_init(uintptr_t init_sp)
     arch_hw_init();
     mem_region_init();
 
+# ifdef CONFIG_HEXO_IPI
+    dev_icu_setup_ipi_ep(&icu_dev, CPU_LOCAL_ADDR(ipi_endpoint), cpu_id());
+# endif
+
 #if defined(CONFIG_ARCH_SMP)
     cpu_init_flag = 1;
 #endif
@@ -152,6 +167,10 @@ other_cpu:
 #if defined(CONFIG_MUTEK_SCHEDULER)
     sched_cpu_init();
 #endif
+
+# ifdef CONFIG_HEXO_IPI
+    dev_icu_setup_ipi_ep(&icu_dev, CPU_LOCAL_ADDR(ipi_endpoint), cpu_id());
+# endif
 
     mutek_start_smp();
 

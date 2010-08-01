@@ -31,6 +31,7 @@
 #include <hexo/cpu.h>
 #include <mutek/scheduler.h>
 
+#include <drivers/icu/emu/icu-emu.h>
 #include <drivers/char/tty-emu/tty-emu.h>
 #include <drivers/timer/emu/timer-emu.h>
 #include <drivers/block/file-emu/block-file-emu.h>
@@ -43,6 +44,10 @@
 #include <stdlib.h>
 #include <mutek/timer.h>
 #include <mutek/printk.h>
+
+#ifdef CONFIG_DRIVER_ICU_EMU
+struct device_s icu_dev;
+#endif
 
 #if defined(CONFIG_MUTEK_CONSOLE)
 extern struct device_s *console_dev;
@@ -62,6 +67,13 @@ struct device_s block_dev;
 
 void arch_hw_init()
 {
+
+	/* ICU init */
+#ifdef CONFIG_DRIVER_ICU_EMU
+	device_init(&icu_dev);
+	icu_emu_init(&icu_dev, NULL);
+#endif
+
 	/* TTY init */
 #if defined(CONFIG_DRIVER_CHAR_EMUTTY)
 	device_init(&tty_dev);

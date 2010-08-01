@@ -184,7 +184,6 @@ stpcpy(char *dest, const char *src);
 #define ffs(n)                                                          \
 ({                                                                      \
   typedef typeof(n) _t;                                                 \
-  _t gpct_n = (n);                                                      \
                                                                         \
   __builtin_types_compatible_p(typeof(n), __compiler_slong_t) ? __builtin_ffsl(n) : \
   __builtin_types_compatible_p(typeof(n), __compiler_slonglong_t) ? __builtin_ffsll(n) : \
