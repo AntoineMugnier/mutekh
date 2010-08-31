@@ -566,30 +566,115 @@ typedef struct pthread_barrierattr_s pthread_barrierattr_t;
 /** @internal */
 struct				pthread_barrier_s
 {
-  int_fast8_t				count;
-  /** blocked threads waiting for read */
-  sched_queue_root_t			wait;
+#ifdef CONFIG_PTHREAD_BARRIER_ATTR
+  const struct _pthread_barrier_func_s *funcs;
+#endif
+
+  union {
+    struct {
+      int_fast32_t				count;
+      /** blocked threads waiting for read */
+      sched_queue_root_t			wait;
+    } normal;
+#ifdef CONFIG_PTHREAD_BARRIER_SPIN
+    struct {
+      int_fast32_t			max_count;
+      atomic_t				count;
+      uint8_t               padding[64];
+      uint8_t				release;
+    } spin;
+#endif
+  };
 };
+
+#ifdef CONFIG_PTHREAD_BARRIER_ATTR
+
+/** @internal pointers to wait action depends on type */
+struct _pthread_barrier_func_s {
+  error_t (*barrier_init)	(struct pthread_barrier_s *barrier, unsigned count);
+  error_t (*barrier_wait)	(struct pthread_barrier_s *barrier);
+  error_t (*barrier_destroy)	(struct pthread_barrier_s *barrier);
+};
+
+struct _pthread_barrier_func_s barrier_normal_funcs;
+
+#define PTHREAD_BARRIER_DEFAULT 0
+
+#ifdef CONFIG_PTHREAD_BARRIER_SPIN
+# define PTHREAD_BARRIER_SPIN    1
+#endif
+
+/** @internal barrier attributes structure */
+struct pthread_barrierattr_s
+{
+  const struct _pthread_barrier_func_s *funcs;
+};
+
+error_t
+pthread_barrierattr_settype(pthread_barrierattr_t *attr, int_fast8_t type);
+
+/** @this initialize a barrier attribute object */
+static inline error_t
+pthread_barrierattr_init(pthread_barrierattr_t *attr)
+{
+  return pthread_barrierattr_settype(attr, PTHREAD_BARRIER_DEFAULT);
+}
+
+#endif
 
 typedef struct pthread_barrier_s pthread_barrier_t;
 
-error_t pthread_barrier_destroy(pthread_barrier_t *barrier);
-
 error_t pthread_barrier_init(pthread_barrier_t *barrier,
-			     const pthread_barrierattr_t *attr,
-			     unsigned count);
+                             const pthread_barrierattr_t *attr,
+                             unsigned count);
 
-error_t pthread_barrier_wait(pthread_barrier_t *barrier);
+error_t _pthread_barrier_normal_destroy(pthread_barrier_t *barrier);
+error_t _pthread_barrier_normal_wait(pthread_barrier_t *barrier);
+
+
+static inline
+error_t pthread_barrier_destroy(pthread_barrier_t *barrier)
+{
+#ifdef CONFIG_PTHREAD_BARRIER_ATTR
+  return barrier->funcs->barrier_destroy(barrier);
+#else
+  return _pthread_barrier_normal_destroy(barrier);
+#endif
+}
+
+static inline
+error_t pthread_barrier_wait(pthread_barrier_t *barrier)
+{
+#ifdef CONFIG_PTHREAD_BARRIER_ATTR
+  return barrier->funcs->barrier_wait(barrier);
+#else
+  return _pthread_barrier_normal_wait(barrier);
+#endif
+}
 
 /** @this may be returned by @ref pthread_barrier_wait */
 #define PTHREAD_BARRIER_SERIAL_THREAD	-1
 
+#ifdef CONFIG_PTHREAD_BARRIER_ATTR
+
+/** normal rwlock object static initializer */
+# define PTHREAD_BARRIER_INITIALIZER(n)                                 \
+  {                                                                     \
+    .funcs = barrier_normal_funcs,                                      \
+      .normal.wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),    \
+      .normal.count = (n),                                              \
+  }
+
+#else
+
 /** normal rwlock object static initializer */
 # define PTHREAD_BARRIER_INITIALIZER(n)							  \
   {											  \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),	  \
-    .count = (n),									  \
+    .normal.wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),	  \
+    .normal.count = (n),									  \
   }
+
+#endif
 
 #endif
 
