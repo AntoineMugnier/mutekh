@@ -33,12 +33,6 @@ C_HEADER_BEGIN
 
 #include <unistd.h>
 
-int fcntl(int fildes, int cmd, ...);
-
-#define F_SETFL 0
-#define F_GETFL 1
-#define O_NONBLOCK 1
-
 C_HEADER_END
 
 #endif

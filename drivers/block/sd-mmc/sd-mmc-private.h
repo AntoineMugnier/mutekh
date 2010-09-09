@@ -121,7 +121,6 @@ struct sd_mmc_context_s
 	struct device_s *spi;
 	struct sd_mmc_rw_command_buffer_s rw_cmd_buffer;
 	dev_blk_queue_root_t queue;
-	struct dev_block_rq_s *current_request;
 	enum card_mode_e mode;
 	uint_fast8_t spi_lun;
 	bool_t usable;

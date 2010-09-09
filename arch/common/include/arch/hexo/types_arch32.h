@@ -31,9 +31,9 @@
 /** boolean value */
 typedef int8_t		bool_t;
 /** data size integer type */
-typedef long unsigned int	size_t;
+typedef uint_fast32_t	size_t;
 /** signed data size integer type */
-typedef long signed int	ssize_t;
+typedef int_fast32_t	ssize_t;
 /** offset integer type */
 typedef int_fast32_t	off_t;
 /** biggest unsigned integer type available */

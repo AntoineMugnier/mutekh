@@ -77,7 +77,7 @@ uint32_t fdt_writer_node_entry(
 void fdt_writer_node_prop(
 	struct fdt_writer_s *writer,
 	const char *name,
-	const void *data,
+	void *data,
 	size_t len);
 
 /**

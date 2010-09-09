@@ -81,18 +81,10 @@ static CPU_EXCEPTION_HANDLER(fault_handler);
 
 static lock_t fault_lock;
 
-#if defined(CONFIG_UCLIBCPP)
-extern void _cxx_call_ctors();
-#endif
-
 int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
 {
 	lock_init(&fault_lock);
 	cpu_exception_sethandler(fault_handler);
-
-#if defined(CONFIG_UCLIBCPP)
-    _cxx_call_ctors();
-#endif
 
 #if defined (CONFIG_MUTEK_SCHEDULER)
 	context_bootstrap(&main_ctx.context);

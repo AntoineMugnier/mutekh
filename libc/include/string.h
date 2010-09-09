@@ -161,6 +161,9 @@ char * __attribute__ ((malloc))
 strndup(const char *s, size_t n);
 
 char *
+strtok(char *s, const char *delim);
+
+char *
 strtok_r(char *s, const char *delim, char **ptrptr);
 
 size_t
@@ -168,6 +171,9 @@ strlcpy(char *dst, const char *src, size_t size);
 
 size_t
 strlcat(char *dst, const char *src, size_t size);
+
+size_t
+strxfrm(char *dest, const char *src, size_t n);
 
 char *
 stpcpy(char *dest, const char *src);
@@ -182,12 +188,6 @@ int_fast8_t ffsll(uint64_t i);
 #define ffsll	__builtin_ffsll
 
 const char *strerror(error_t errnum);
-
-char *
-strtok(char *s, const char *delim);
-
-size_t
-strxfrm(char *dest, const char *src, size_t n);
 
 C_HEADER_END
 

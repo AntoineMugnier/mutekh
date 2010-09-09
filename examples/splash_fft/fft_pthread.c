@@ -330,12 +330,8 @@ void main()
   printf("\n");
 
   {
-    pthread_barrier_attr_t battr;
-    pthread_barrierattr_init(&battr);
-//    pthread_barrierattr_settype(&battr, PTHREAD_BARRIER_SPIN);
-
-	pthread_barrier_init(&(Global->start), &battr, P);
-  };
+	pthread_barrier_init(&(Global->start), NULL, P);
+};
   {pthread_mutex_init(&(Global->idlock), NULL);};
   Global->id = 0;
   InitX(x);                  /* place random values in x */

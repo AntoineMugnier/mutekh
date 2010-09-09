@@ -24,10 +24,10 @@ SECTIONS
 		*(.sdata*)
 		*(.data*)
 		*(.rodata*)
-        . = ALIGN(4);
 		global_driver_registry = .;
 		KEEP(*(.drivers))
 		global_driver_registry_end = .;
+		*(.common*)
 
 		/* data depending on cpu architecture (fonction pointer variables, ...) */
 		*(.cpuarchdata*)
@@ -47,11 +47,9 @@ SECTIONS
 
 	.bss __data_end : {
 		__bss_start = .;
+		*(.bss*)
 		*(.sbss*)
 		*(COMMON)
-		*(.scommon*)
-		*(.common*)
-		*(.bss*)
 		__bss_end = .;
 	} > mem_ram
 

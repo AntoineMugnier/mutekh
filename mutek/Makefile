@@ -60,5 +60,3 @@ endif
 ifeq ($(CONFIG_ARCH_DEVICE_TREE), defined)
  objs += fdt_consumer.o
 endif
-
-memory_allocator_smart.o_CFLAGS=-O0 -ggdb

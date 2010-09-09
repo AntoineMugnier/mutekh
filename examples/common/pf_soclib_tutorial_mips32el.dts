@@ -101,7 +101,6 @@
 	chosen {
 		console = &{/tty@0};
         timer = &{/xicu@0};
-        root = &{/block@0};
 	};
 
 };

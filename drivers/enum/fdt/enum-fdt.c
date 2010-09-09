@@ -55,10 +55,8 @@ struct device_s *enum_fdt_get_phandle(struct device_s *dev, uint32_t phandle)
 {
 	CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
 			struct enum_pv_fdt_s *enum_pv = item->enum_pv;
-			if ( enum_pv->phandle == phandle ) {
-                enum_fdt_register_one(dev, item);
+			if ( enum_pv->phandle == phandle )
 				return item;
-            }
 		});
 	return NULL;
 }
@@ -76,10 +74,8 @@ DEVENUM_LOOKUP(enum_fdt_lookup)
             char *foo;
             while ( (foo = strchr(path2, '/') ) )
                 *foo = '-';
-			if ( !strcmp(path, path2) ) {
-                enum_fdt_register_one(dev, item->dev);
+			if ( !strcmp(path, path2) )
 				return item->dev;
-            }
 		});
 	return NULL;
 }
@@ -189,13 +185,13 @@ DEV_INIT(enum_fdt_init)
 	dprintk("creating children\n");
 	enum_fdt_create_children(dev);
 
-/* 	dprintk("registering drivers\n"); */
-/* 	CONTAINER_FOREACH(device_list, CLIST, &dev->children, { */
-/* 			struct enum_pv_fdt_s *enum_pv; */
-/* 			enum_pv = item->enum_pv; */
-/* 			dprintk(" registering driver for %s\n", enum_pv->device_path); */
-/* 			enum_fdt_register_one(dev, item); */
-/* 		}); */
+	dprintk("registering drivers\n");
+	CONTAINER_FOREACH(device_list, CLIST, &dev->children, {
+			struct enum_pv_fdt_s *enum_pv;
+			enum_pv = item->enum_pv;
+			dprintk(" registering driver for %s\n", enum_pv->device_path);
+			enum_fdt_register_one(dev, item);
+		});
 
 	return 0;
 }

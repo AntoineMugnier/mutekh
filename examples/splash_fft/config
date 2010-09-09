@@ -15,9 +15,6 @@
   # Libs
   CONFIG_PTHREAD
 
-  CONFIG_PTHREAD_BARRIER_ATTR
-  CONFIG_PTHREAD_BARRIER_SPIN
-
 %include ../common/build_options.conf
 %include ../common/platforms.conf
 
