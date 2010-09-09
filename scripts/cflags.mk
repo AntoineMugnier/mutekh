@@ -19,8 +19,13 @@
 -include $(arch_SRC_DIR)/config.mk
 -include $(cpu_SRC_DIR)/config.mk
 
+ifdef CCC_ANALYZER_HTML
+CC:=$(CC) -ccc-gcc-name=$(CPUTOOLS)gcc
+CXX:=$(CXX) -ccc-gcc-name=$(CPUTOOLS)g++
+else
 CC=$(CCACHE) $(CPUTOOLS)gcc
 CXX=$(CCACHE) $(CPUTOOLS)g++
+endif
 HOSTCC=gcc
 DEPCC?=$(CC)
 CPP=$(CPUTOOLS)cpp

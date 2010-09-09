@@ -69,16 +69,26 @@ SECTIONS
 	.text : {
 		*(.init*)
 		*(.text*)
+		*(.gnu.linkonce.t.*)
 		*(.glue*)
 		*(.got2)
 	} > mem_hetrom
 
 	.rodata : {
 			*(.rodata*)
+
+            SORT(CONSTRUCTORS)
+
+			*(.gnu.linkonce.r.*)
             . = ALIGN(4);
 			global_driver_registry = .;
 			KEEP(*(.drivers))
 			global_driver_registry_end = .;
+            . = ALIGN(4);
+			cxx_ctors_begin = .;
+            KEEP(*(SORT(.ctors.*)))
+			KEEP(*(.ctors))
+			cxx_ctors_end = .;
 	} > mem_rom
 
 	.excep : {

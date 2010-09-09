@@ -36,18 +36,6 @@
 #include "sd-mmc.h"
 #include "sd-mmc-private.h"
 
-#include "arch/sam7/at91sam7x256.h"
-
-#define DBGU_DEBUG(x)													\
-	do {																\
-		while ( ! (AT91C_BASE_DBGU->DBGU_CSR & AT91C_US_COMM_TX) );		\
-		asm volatile ("MCR	p14, 0, %0, c1, c0, 0" :: "r" (x));			\
-	} while(0)
-
-#define DEBUG(x) //DBGU_DEBUG(x)
-#define DEBUG_HEX(x) DEBUG(((x) > 9 ? ((x)+'a'-10) : ((x)+'0')))
-#define DEBUG_HEX_CHR(x) DEBUG_HEX(((x)>>4)&0xf); DEBUG_HEX((x)&0xf)
-
 static const uint8_t xfer_delay = 30;
 static const uint8_t cs_delay = 30;
 static const uint32_t base_br = 300000;
@@ -83,7 +71,6 @@ static DEVSPI_WAIT_VALUE_CALLBACK(check_cmd_accepted)
 {
 	struct cmd_state_s *state = rq->pvdata;
 
-//	DEBUG_HEX_CHR(value);
 	state->data = value;
 	if ( !(value & 0x80) ) {
 		if ( value & 0x7c )
@@ -137,7 +124,9 @@ static DEVSPI_CALLBACK(sd_mmc_read_done)
 
 		bdrq->callback(bdrq, 0, bdrq + 1);
 
-		dev_blk_queue_remove(&pv->queue, bdrq);
+        LOCK_SPIN_IRQ(&dev->lock);
+        pv->current_request = NULL;
+        LOCK_RELEASE_IRQ(&dev->lock);
 
 		sd_mmc_handle_next_req(dev);
 	} else {
@@ -153,7 +142,10 @@ static DEVSPI_CALLBACK(sd_mmc_read_done)
 				break;
 			}
 		} else {
-			dev_blk_queue_remove(&pv->queue, bdrq);
+            LOCK_SPIN_IRQ(&dev->lock);
+            pv->current_request = NULL;
+            LOCK_RELEASE_IRQ(&dev->lock);
+
 			sd_mmc_handle_next_req(dev);
 		}
 	}
@@ -412,7 +404,7 @@ static void __sd_mmc_read(struct device_s *dev, struct dev_block_rq_s *rq)
 		dev,
 		rq,
 		SDMMC_CMD_READ_SINGLE_BLOCK,
-		rq->lba + (rq->progress << pv->csd.read_bl_len));
+		(rq->lba + rq->progress) << pv->csd.read_bl_len);
 	dev_spi_request(pv->spi, &pv->rw_cmd_buffer.spi_request);
 }
 
@@ -424,7 +416,7 @@ static void __sd_mmc_write(struct device_s *dev, struct dev_block_rq_s *rq)
 		dev,
 		rq,
 		SDMMC_CMD_WRITE_SINGLE_BLOCK,
-		rq->lba + (rq->progress << pv->csd.read_bl_len));
+		(rq->lba + rq->progress) << pv->csd.read_bl_len);
 	dev_spi_request(pv->spi, &pv->rw_cmd_buffer.spi_request);
 }
 
@@ -597,10 +589,16 @@ sd_mmc_handle_next_req(struct device_s *dev)
     struct dev_block_params_s *p = &pv->params;
 	struct dev_block_rq_s *rq;
 
-	rq = dev_blk_queue_head(&pv->queue);
-	if ( rq == NULL ) {
-		return;
-	}
+    LOCK_SPIN_IRQ(&dev->lock);
+    if ( pv->current_request == NULL ) {
+        rq = dev_blk_queue_pop(&pv->queue);
+        pv->current_request = rq;
+    } else {
+        rq = pv->current_request;
+    }
+    LOCK_RELEASE_IRQ(&dev->lock);
+    if ( rq == NULL )
+        return;
 
 	if ( !pv->usable ) {
         rq->progress = -EIO;
@@ -635,10 +633,16 @@ sd_mmc_handle_next_req(struct device_s *dev)
 DEVBLOCK_REQUEST(sd_mmc_request)
 {
     struct sd_mmc_context_s *pv = dev->drv_pv;
+    bool_t must_start = 0;
 
-	bool_t must_start = !dev_blk_queue_head(&pv->queue);
-
-	dev_blk_queue_pushback(&pv->queue, rq);
+    LOCK_SPIN_IRQ(&dev->lock);
+    if (dev_blk_queue_head(&pv->queue) == NULL) {
+        pv->current_request == rq;
+        must_start = 1;
+    } else {
+        dev_blk_queue_pushback(&pv->queue, rq);
+    }
+    LOCK_RELEASE_IRQ(&dev->lock);
 
 	if (must_start)
 		sd_mmc_handle_next_req(dev);
@@ -711,6 +715,7 @@ DEV_INIT(sd_mmc_init)
 	device_obj_refnew(pv->spi);
 
 	dev_blk_queue_init(&pv->queue);
+    pv->current_request = NULL;
 
 	dev_spi_set_data_format(pv->spi, pv->spi_lun,
 							8, SPI_MODE_0, 1);

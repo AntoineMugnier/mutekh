@@ -170,12 +170,12 @@ VFS_FS_NODE_OPEN(ramfs_node_open)
             f->write = ramfs_file_write;
         if ( flags & VFS_OPEN_APPEND )
             f->write = ramfs_file_append;
-        if ( flags & VFS_OPEN_TRUNCATE )
-            ramfs_file_truncate(f, 0);
 		f->seek = ramfs_file_seek;
 		f->priv = ramfs_data_refnew(node->data);
         f->close = ramfs_file_close;
         f->truncate = ramfs_file_truncate;
+        if ( flags & VFS_OPEN_TRUNCATE )
+            ramfs_file_truncate(f, 0);
         break;
     }
 	case VFS_NODE_DIR:

@@ -29,10 +29,14 @@ struct device_s icu_dev;
 struct device_s bd_dev;
 struct device_s spi0_dev;
 struct device_s spi1_dev;
+#if defined(CONFIG_DRIVER_I2C_TWI6061A)
 struct device_s i2c_dev;
+#endif
 struct device_s lcd_dev;
 struct device_s dev_mt5f;
+#if defined(CONFIG_DRIVER_TIMER_PITC_6079A)
 struct device_s pitc_dev;
+#endif
 
 extern struct device_s *console_dev;
 
@@ -167,6 +171,7 @@ void arch_specific_hw_init()
 	}
 
 
+#if defined(CONFIG_DRIVER_I2C_TWI6061A)
 	// i2c
 	set_gpio(&dev_gpio_pioa, 10, 1, GPIO_WAY_OPENDRAIN);  // sda
 	set_gpio(&dev_gpio_pioa, 11, 1, GPIO_WAY_OPENDRAIN);  // sck
@@ -184,7 +189,7 @@ void arch_specific_hw_init()
 	i2c_dev.irq = AT91C_ID_TWI;
 	i2c_dev.icudev = &icu_dev;
 	i2c_twi6061a_init(&i2c_dev, NULL);
-
+#endif
 
 	// spi1
 	set_gpio(&dev_gpio_pioa, 24, 2, GPIO_WAY_INPUT);  // miso
@@ -211,6 +216,7 @@ void arch_specific_hw_init()
 		sd_mmc_init(&bd_dev, &params);
 	}
 
+#if defined(CONFIG_DRIVER_TIMER_PITC_6079A)
 	// Timer
 	device_init(&pitc_dev);
 	pitc_dev.addr[0] = (uintptr_t)AT91C_BASE_PITC;
@@ -220,5 +226,10 @@ void arch_specific_hw_init()
 
 #if defined(CONFIG_MUTEK_TIMERMS)
 	timerms_dev = &pitc_dev;
+#endif
+#else
+#if defined(CONFIG_MUTEK_TIMERMS)
+	timerms_dev = NULL;
+#endif
 #endif
 }
