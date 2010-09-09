@@ -99,6 +99,10 @@ static size_t           cpu_count = 1;
 PRINTF_OUTPUT_FUNC(early_console_vga);
 #endif
 
+#ifdef CONFIG_IBMPC_EARLY_CONSOLE_UART
+PRINTF_OUTPUT_FUNC(early_console_uart);
+#endif
+
 
 #if defined (CONFIG_MUTEK_SCHEDULER)
 extern struct sched_context_s main_ctx;
@@ -119,6 +123,9 @@ void arch_init(uintptr_t init_sp)
 
 #ifdef CONFIG_IBMPC_EARLY_CONSOLE_VGA
       printk_set_output(early_console_vga, NULL);
+#endif
+#ifdef CONFIG_IBMPC_EARLY_CONSOLE_UART
+      printk_set_output(early_console_uart, NULL);
 #endif
       cpu_global_init();
 
