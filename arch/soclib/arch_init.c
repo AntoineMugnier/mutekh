@@ -148,8 +148,9 @@ void arch_init(void *device_tree, void *bootloader_pointer_table)
         device_init(&fdt_enum_dev);
         enum_fdt_init(&fdt_enum_dev, device_tree);
         mutek_parse_fdt(&fdt_enum_dev, device_tree);
+#if defined(CONFIG_MUTEK_MEM_REGION_AUTO_INIT)
         mem_region_init();//TODO: change with mem_parse_fdt when lib topology is done
-        //        mem_parse_fdt(device_tree);
+#endif
 
 #elif defined(CONFIG_ARCH_HW_INIT_USER)
         user_hw_init();
