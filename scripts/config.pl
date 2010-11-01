@@ -790,6 +790,10 @@ sub check_condition
 	    return ($value > $val);
 	} elsif  ($op eq "<") {
 	    return ($value < $val);
+	} elsif  ($op eq ">=") {
+	    return ($value >= $val);
+	} elsif  ($op eq "<=") {
+	    return ($value <= $val);
 	}
 
     }
@@ -971,9 +975,8 @@ sub check_definable
 }
 
 # check dependencies expressed with the `depend' and `parent' tags
-sub process_config_depend
+sub process_config_auto
 {
-
     # try to recursively define tokens marked with the `auto' flag
     sub process_auto
     {
@@ -981,10 +984,10 @@ sub process_config_depend
 
 	return 1 if ( check_defined( $dep ) );
 	return 0 if !$dep->{flags}->{auto};
-	return 0 if foreach_or_list( $opt->{exclude}, \&check_defined );
+#	return 0 if foreach_or_list( $opt->{exclude}, \&check_defined );
 
 	# automatic token definition can be done only once to avoid loops
-	$dep->{flags}->{auto} = 0;
+#	$dep->{flags}->{auto} = 0;
 
 	# try to recursively auto define parents and dependencies
 	if ( !foreach_and_list( $dep->{depend}, sub {
@@ -1010,6 +1013,38 @@ sub process_config_depend
     }
 
     my ($opt) = @_;
+    my $chg = 0;
+
+    return 0 if ( !check_defined( $opt ) );
+    return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} );
+    return 0 if !$opt->{depend};
+
+    # check if at least one parent is defined
+    if ( $opt->{parent} && !foreach_or_list( $opt->{parent}, \&check_defined ) ) {
+	return 0;
+    }
+
+    # check if all dependencies tags have at least one token defined
+    foreach_and_list( $opt->{depend}, sub {
+	my $or_list = shift;
+
+	return 1 if ( foreach_or_list( $or_list, \&check_defined ) );
+
+	my $depnames = get_token_name_list( $or_list, " or " );
+
+	# try to automatically define an `auto' dependency and parents
+	my $r = foreach_or_list( $or_list, \&if_flag, 'auto', \&process_auto, $opt );
+        $chg += $r;
+        return $r;
+    });
+
+    return $chg;
+}
+
+# check dependencies expressed with the `depend' and `parent' tags
+sub process_config_depend
+{
+    my ($opt) = @_;
 
     return 0 if ( !check_defined( $opt ) );
     return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} );
@@ -1017,10 +1052,8 @@ sub process_config_depend
     # check if at least one parent is defined
     my $pres = 1;
 
-
     if ( $opt->{parent} && !foreach_or_list( $opt->{parent}, \&check_defined ) ) {
-       # try define a parent with auto flag set
-	$pres = foreach_or_list( $opt->{parent}, \&if_flag, 'auto', \&process_auto, $opt );
+	$pres = 0;
     }
 
     # check if all dependencies tags have at least one token defined
@@ -1031,13 +1064,7 @@ sub process_config_depend
 
 	my $depnames = get_token_name_list( $or_list, " or " );
 
-	# try to automatically define an `auto' dependency and parents
-	if ( foreach_or_list( $or_list, \&if_flag, 'auto', \&process_auto, $opt ) ) {
-
-	    return 1;
-
-	# error if `harddep' dependency not satisfied
-	} elsif ( $opt->{flags}->{harddep} || $opt->{flags}->{mandatory} ) {
+        if ( $opt->{flags}->{harddep} || $opt->{flags}->{mandatory} ) {
 
 	    $opt->{deperror} = "`$opt->{name}' token is required but has unmet dependencies: $depnames";
 
@@ -1365,6 +1392,7 @@ sub tokens_check
 	    error_loc($opt, "`range' tag may only be used with `value' flagged tokens.")
 	}
 
+        # FIXME check there is no parent or depend with auto flag set when default defined, suggest use of when tag
 	if ( $opt->{flags}->{auto} && $opt->{default} eq 'defined' ) {
 	    warning_loc($opt, "token has `auto' flag but is defined by default.")
 	}
@@ -1477,6 +1505,13 @@ sub check_config
 	# process `when' tags
 	foreach my $opt (values %config_opts) {
 	    if ( process_config_when($opt) ) {
+		$chg = 1;
+	    }
+	}
+	next if $chg;
+	# checks and adjusts dependencies
+	foreach my $opt (values %config_opts) {
+	    if ( process_config_auto($opt) ) {
 		$chg = 1;
 	    }
 	}
@@ -2027,7 +2062,7 @@ sub write_token_doc
 	print {$out} "   $title:\n";
 	print {$out} "   \@list\n";
 	foreach ( @$list ) {
-	    my $text = $disp->( $_, $sep, '#', ' ' );
+	    my $text = $disp->( $_, $sep, '@ref #', ' ' );
 	    $text =~ s/\w+/$& /g;
 	    print {$out} "      \@item ".$text."\n";
 	}
