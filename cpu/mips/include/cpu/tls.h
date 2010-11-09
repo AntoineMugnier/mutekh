@@ -29,7 +29,7 @@
 #include <hexo/cpu.h>
 
 /* check we have mips32 */
-#if __mips < 32
+#if CONFIG_CPU_MIPS_VERSION < 32
 # error "TLS only available from mips32 version"
 #endif
 

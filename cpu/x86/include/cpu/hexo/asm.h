@@ -15,20 +15,14 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2010
 
 */
 
-#ifndef __MIPS_SPECIFIC_H_
-#define __MIPS_SPECIFIC_H_
+#if !defined(ASM_H_) || defined(CPU_ASM_H_)
+#error This file can not be included directly
+#else
 
-/** mtf0 instruction wait cycles (FIXME should depend on MIPS version) */
-__asm__ (
-	 ".macro MTC0_WAIT	\n"
-	 "nop			\n"
-	 "nop			\n"
-	 ".endm			\n"
-	 );
 
 #endif
 

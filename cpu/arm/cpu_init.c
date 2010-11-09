@@ -36,33 +36,9 @@ CPU_LOCAL
 static uint32_t arm_irq_stack[128/4];
 #endif
 
-struct arm_exception_context_s {
-	uint32_t r0;
-	uint32_t r1;
-	uint32_t pc;   // the pc in the mode we were from
-	uint32_t spsr; // the mode we were from
-	uint32_t lr;   // the lr of the super mode
-	uint32_t cpsr; // the except mode the cpu jumped in
-};
-
 #ifdef CONFIG_ARCH_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
-
-CPU_LOCAL
-struct arm_exception_context_s arm_exception_context[3];
-
-#define arm_setup_exception_stack(context, psr_mode)				   \
-	asm volatile(													   \
-		"mrs  r2, cpsr            \n\t"								   \
-		"bic  r3, r2, #0x1f       \n\t"								   \
-		"orr  r3, r3, %0          \n\t"								   \
-		"msr  cpsr, r3            \n\t"								   \
-		"mov  sp, %1              \n\t"								   \
-		"msr  cpsr, r2            \n\t"								   \
-		:															   \
-		: "i"(psr_mode), "r"(context)								   \
-		: "r2", "r3" );
 
 /* CPU Local Descriptor structure */
 
@@ -71,29 +47,6 @@ cpu_global_init(void)
 {
 
   return 0;
-}
-
-static void __arm_exception_setup()
-{
-#ifdef CONFIG_SOCLIB_MEMCHECK
-	soclib_mem_check_disable(SOCLIB_MC_CHECK_SPFP);
-#endif
-
-	struct arm_exception_context_s *cpu_context =
-        CPU_LOCAL_ADDR(arm_exception_context[0]);
-
-#ifdef CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER
-	arm_setup_exception_stack(CPU_LOCAL_ADDR(arm_irq_stack[0])
-                              +sizeof(arm_irq_stack)/4-4, 0x12);
-#else
-	arm_setup_exception_stack(&cpu_context[0], 0x12); // IRQ
-#endif
-	arm_setup_exception_stack(&cpu_context[1], 0x17); // Abort
-	arm_setup_exception_stack(&cpu_context[2], 0x1b); // Undef
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-	soclib_mem_check_enable(SOCLIB_MC_CHECK_SPFP);
-#endif
 }
 
 void cpu_init(void)
@@ -109,7 +62,5 @@ void cpu_init(void)
 		
 	asm volatile ("mcr p15,0,%0,c13,c0,3":: "r" (cls));
 #endif
-
-	__arm_exception_setup();
 }
 
