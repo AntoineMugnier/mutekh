@@ -100,28 +100,28 @@ void mem_region_id_add(cpu_id_t cpu_id,
 struct mem_region_s *mem_region_get_first(enum mem_scope_e scope)
 {
   region_list_root_t *root = (region_list_root_t *)CPU_LOCAL_ADDR (region_root);
-  printk("MemRegion: Get the first region in the scope %d\n",scope);
+  //  printk("MemRegion: Get the first region in the scope %d\n",scope);
   return region_list_nolock_head (&root[scope]);
 }
 
 struct mem_region_s *mem_region_id_get_first(cpu_id_t cpu_id, enum mem_scope_e scope)
 {
   region_list_root_t *root = (region_list_root_t *)CPU_LOCAL_ID_ADDR (cpu_id, region_root);
-  printk("MemRegion: Get the first region in the scope %d\n",scope);
+  //  printk("MemRegion: Get the first region in the scope %d\n",scope);
   return region_list_nolock_head (&root[scope]);
 }
 
 struct mem_region_s *mem_region_get_next(enum mem_scope_e scope, struct mem_region_s *region_item)
 {
   region_list_root_t *root = (region_list_root_t *)CPU_LOCAL_ADDR (region_root);
-  printk("MemRegion: Get the next region of %x in the scope %d\n",region_item, scope);
+  //  printk("MemRegion: Get the next region of %x in the scope %d\n",region_item, scope);
   return region_list_nolock_next (&root[scope], region_item);
 }
 
 struct mem_region_s *mem_region_id_get_next(cpu_id_t cpu_id, enum mem_scope_e scope, struct mem_region_s *region_item)
 {
   region_list_root_t *root = (region_list_root_t *)CPU_LOCAL_ID_ADDR (cpu_id, region_root);
-  printk("MemRegion: Get the next region of %x in the scope %d\n",region_item, scope);
+  //  printk("MemRegion: Get the next region of %x in the scope %d\n",region_item, scope);
   return region_list_nolock_next (&root[scope], region_item);
 }
 
@@ -158,27 +158,27 @@ void mem_region_id_remove(cpu_id_t cpu_id,
 void mem_region_lock(enum mem_scope_e scope)
 {
   region_list_root_t *root = (region_list_root_t *)CPU_LOCAL_ADDR (region_root);
-  printk("MemRegion: lock of the scope %d\n",scope);
+  //  printk("MemRegion: lock of the scope %d\n",scope);
   region_list_wrlock(&root[scope]);
 }
 
 void mem_region_id_lock(cpu_id_t cpu_id, enum mem_scope_e scope)
 {
   region_list_root_t *root = (region_list_root_t *)CPU_LOCAL_ID_ADDR (cpu_id, region_root);
-  printk("MemRegion: lock of the scope %d\n",scope);
+  //  printk("MemRegion: lock of the scope %d\n",scope);
   region_list_wrlock(&root[scope]);
 }
 
 void mem_region_unlock(enum mem_scope_e scope)
 {
   region_list_root_t *root = (region_list_root_t *)CPU_LOCAL_ADDR (region_root);
-  printk("MemRegion: unlock of the scope %d\n",scope);
+  //  printk("MemRegion: unlock of the scope %d\n",scope);
   region_list_unlock(&root[scope]);
 }
 
 void mem_region_id_unlock(cpu_id_t cpu_id, enum mem_scope_e scope)
 {
   region_list_root_t *root = (region_list_root_t *)CPU_LOCAL_ID_ADDR (cpu_id, region_root);
-  printk("MemRegion: unlock of the scope %d\n",scope);
+  //  printk("MemRegion: unlock of the scope %d\n",scope);
   region_list_unlock(&root[scope]);
 }

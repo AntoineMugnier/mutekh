@@ -116,16 +116,16 @@ error_t enum_fdt_register_one(struct device_s *dev, struct device_s *item)
 
 	/* ignore already configured devices */
 	if (item->drv != NULL)
-        return 0;
+		return 0;
 
-    const struct driver_s *drv = driver_get_matching_fdtname(enum_pv->device_type);
+	const struct driver_s *drv = driver_get_matching_fdtname(enum_pv->device_type);
 
 	if ( drv == NULL ) {
 		dprintk("No driver for %s\n", enum_pv->device_type);
         return -ENOTSUP;
 	}
 
-    return enum_fdt_use_drv(dev, item, drv);
+	return enum_fdt_use_drv(dev, item, drv);
 }
 
 struct device_s *
@@ -147,7 +147,7 @@ enum_fdt_icudev_for_cpuid(struct device_s *dev, cpu_id_t id)
 			}
 		});
     if ( rdev == NULL )
-        dprintk("not found\n");
+	dprintk("not found\n");
 
     LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -267,6 +267,14 @@ DEV_INIT(enum_fdt_init)
 
 	dprintk("creating children\n");
 	enum_fdt_create_children(dev);
+
+/* 	dprintk("registering drivers\n"); */
+/* 	CONTAINER_FOREACH(device_list, CLIST, &dev->children, { */
+/* 			struct enum_pv_fdt_s *enum_pv; */
+/* 			enum_pv = item->enum_pv; */
+/* 			dprintk(" registering driver for %s\n", enum_pv->device_path); */
+/* 			enum_fdt_register_one(dev, item); */
+/* 		}); */
 
 	return 0;
 }
