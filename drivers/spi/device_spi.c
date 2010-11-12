@@ -142,7 +142,7 @@ static ssize_t dev_char_wait_request(struct device_s *dev, uint8_t *data,
   if (!status.done)
     {
       status.ctx = sched_get_current();
-      sched_context_stop_unlock(&status.lock);
+      sched_stop_unlock(&status.lock);
     }
   else
     lock_release(&status.lock);

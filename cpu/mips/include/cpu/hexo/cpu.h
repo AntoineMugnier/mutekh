@@ -22,28 +22,47 @@
 #if !defined(__CPU_H_) || defined(CPU_CPU_H_)
 #error This file can not be included directly
 #else
+#define CPU_CPU_H_
+
+#if defined(CONFIG_CPU_MIPS_VERSION) && CONFIG_CPU_MIPS_VERSION != CONFIG_CPU_MIPS_VERSION
+# warning compiler mips version doesnt match configuration
+#endif
+
+#define CPU_MIPS_GP             28
+#define CPU_MIPS_SP             29
+#define CPU_MIPS_FP             30
+#define CPU_MIPS_RA             31
+
+#define CPU_MIPS_STATUS         12
+#define CPU_MIPS_CAUSE          13
+#define CPU_MIPS_EPC            14
+#define CPU_MIPS_BADADDR        8
+#define CPU_MIPS_EEPC           30
+
+# define CPU_MIPS_STATUS_EXL    0x2
+# define CPU_MIPS_STATUS_FPU    0x20000000
+
+#ifndef __MUTEK_ASM__
 
 #include <hexo/endian.h>
 
-#define CPU_CPU_H_
-
-#ifdef CONFIG_ARCH_SMP
+# ifdef CONFIG_ARCH_SMP
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-#endif
+# endif
 
 /** general purpose regsiters count */
-#define CPU_GPREG_COUNT	32
+# define CPU_GPREG_COUNT	32
 
-#define CPU_GPREG_NAMES {											   \
+# define CPU_GPREG_NAMES {											   \
 "pc", "at", "v0", "v1", "a0", "a1", "a2", "a3",						   \
 "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",						   \
 "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",						   \
 "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra",						   \
 }
 
-#define CPU_FAULT_COUNT 32
+# define CPU_FAULT_COUNT 32
 
-#define CPU_FAULT_NAMES {			\
+# define CPU_FAULT_NAMES {			\
 "Interrupt",					\
 "TLB Modification",				\
 "TLB Load error",				\
@@ -66,18 +85,18 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
     "-",        "-",    "CacheErr", "-"		\
 }
 
-#define CPU_EXCEPTION_DATA_ALIGN   0x4 // ADEL
-#define CPU_EXCEPTION_INS_ERROR    0x6 // IBE
-#define CPU_EXCEPTION_DATA_ERROR   0x7 // DBE
-#define CPU_EXCEPTION_BREAKPOINT   0x9 // Bp
-#define CPU_EXCEPTION_ILLEGAL_INS  0xa // RI
-#define CPU_EXCEPTION_COPROC       0xb // CpU
-#define CPU_EXCEPTION_TRAP         0xd // Tr
-#define CPU_EXCEPTION_FPE          0xf // FPE
+# define CPU_EXCEPTION_DATA_ALIGN   0x4 // ADEL
+# define CPU_EXCEPTION_INS_ERROR    0x6 // IBE
+# define CPU_EXCEPTION_DATA_ERROR   0x7 // DBE
+# define CPU_EXCEPTION_BREAKPOINT   0x9 // Bp
+# define CPU_EXCEPTION_ILLEGAL_INS  0xa // RI
+# define CPU_EXCEPTION_COPROC       0xb // CpU
+# define CPU_EXCEPTION_TRAP         0xd // Tr
+# define CPU_EXCEPTION_FPE          0xf // FPE
 
-#if __mips >= 32 
+# if CONFIG_CPU_MIPS_VERSION >= 32 
 
-#define cpu_mips_mfc0(id, sel)			\
+# define cpu_mips_mfc0(id, sel)			\
 ({						\
   reg_t _reg;					\
 						\
@@ -90,7 +109,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
   _reg;						\
 })
 
-#define cpu_mips_mtc0(id, sel, val)		\
+# define cpu_mips_mtc0(id, sel, val)		\
 ({						\
   reg_t _reg = val;				\
 						\
@@ -101,7 +120,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 		);				\
 })
 
-#define cpu_mips_mfc2(id, sel)			\
+# define cpu_mips_mfc2(id, sel)			\
 ({						\
   reg_t _reg;					\
 						\
@@ -114,7 +133,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
   _reg;						\
 })
 
-#define cpu_mips_mtc2(id, sel, val)		\
+# define cpu_mips_mtc2(id, sel, val)		\
 ({						\
   reg_t _reg = val;				\
 						\
@@ -126,9 +145,9 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 })
 
 
-#else
+# else
 
-#define cpu_mips_mfc0(id, sel)			\
+# define cpu_mips_mfc0(id, sel)			\
 ({						\
   reg_t _reg;					\
 						\
@@ -140,7 +159,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
   _reg;						\
 })
 
-#define cpu_mips_mtc0(id, sel, val)										   \
+# define cpu_mips_mtc0(id, sel, val)										   \
 ({						\
   reg_t _reg = val;				\
 						\
@@ -150,7 +169,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 		);				\
 })
 
-#define cpu_mips_mfc2(id, sel)			\
+# define cpu_mips_mfc2(id, sel)			\
 ({						\
   reg_t _reg;					\
 						\
@@ -162,7 +181,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
   _reg;						\
 })
 
-#define cpu_mips_mtc2(id, sel, val)		\
+# define cpu_mips_mtc2(id, sel, val)		\
 ({						\
   reg_t _reg = val;				\
 						\
@@ -173,9 +192,17 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 })
 
 
-#endif
+# endif
 
-#define CPU_TYPE_NAME mips32
+static inline
+reg_t cpu_get_stackptr()
+{
+    reg_t ret;
+    asm("move %0, $sp": "=r"(ret));
+    return ret;
+}
+
+# define CPU_TYPE_NAME mips32
 
 static inline cpu_id_t
 cpu_id(void)
@@ -188,16 +215,6 @@ cpu_isbootstrap(void)
 {
   return cpu_id() == 0;
 }
-
-/**
-   cpu cycle touner type
-*/
-
-typedef uint32_t cpu_cycle_t;
-
-/**
-   cpu cycle counter read function
-*/
 
 static inline cpu_cycle_t
 cpu_cycle_count(void)
@@ -213,26 +230,26 @@ cpu_trap()
 
 static inline void *cpu_get_cls(cpu_id_t cpu_id)
 {
-#ifdef CONFIG_ARCH_SMP
+# ifdef CONFIG_ARCH_SMP
   return cpu_local_storage[cpu_id];
-#endif
+# endif
   return NULL;
 }
 
 static inline void cpu_dcache_invld(void *ptr)
 {
   asm volatile (
-#if __mips >= 32
+# if CONFIG_CPU_MIPS_VERSION >= 32
 		" cache %0, %1"
 		: : "i" (0x11) , "R" (*(uint8_t*)(ptr))
-#else
-# ifdef CONFIG_ARCH_SOCLIB
+# else
+#  ifdef CONFIG_ARCH_SOCLIB
 		" lw $0, (%0)"
 		: : "r" (ptr)
-# else
+#  else
 		"nop"::
+#  endif
 # endif
-#endif
 		: "memory"
 		);
 }
@@ -253,5 +270,7 @@ static inline size_t cpu_dcache_line_size()
   return 8;
 }
 
-#endif
+# endif  /* __MUTEK_ASM__ */
+
+# endif
 

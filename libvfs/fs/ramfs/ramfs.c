@@ -98,6 +98,7 @@ OBJECT_DESTRUCTOR(ramfs_node)
     vfs_printk("<ramfs_node_dtor");
     if ( obj->type == VFS_NODE_DIR ) {
         ramfs_dir_clear(&obj->children);
+        ramfs_dir_destroy(&obj->children);
     } else {
         ramfs_data_refdrop(obj->data);
     }
@@ -362,6 +363,7 @@ error_t ramfs_open(struct vfs_fs_s **fs)
 
     mnt->ops = &ramfs_ops;
 	mnt->old_node = NULL;
+    mnt->flag_ro = 0;
 
     struct fs_node_s *root = ramfs_node_new(NULL, VFS_NODE_DIR);
 	if ( root == NULL )

@@ -45,9 +45,11 @@ struct sched_context_s;
 /** scheduler context candidate checking function type */
 typedef SCHED_CANDIDATE_FCN(sched_candidate_fcn_t);
 
+
+
 #define CONTAINER_LOCK_sched_queue HEXO_SPIN
 
-CONTAINER_TYPE	     (sched_queue, DLIST, struct sched_context_s
+struct sched_context_s
 {
   CONTAINER_ENTRY_TYPE(DLIST) list_entry;
   struct scheduler_s *scheduler;		//< keep track of associated scheduler queue
@@ -63,32 +65,53 @@ CONTAINER_TYPE	     (sched_queue, DLIST, struct sched_context_s
   sched_candidate_fcn_t	*is_candidate;
 #endif
 
-}, list_entry);
+};
+
+CONTAINER_TYPE       (sched_queue, DLIST, struct sched_context_s, list_entry);
 
 CONTAINER_FUNC       (sched_queue, DLIST, static inline, sched_queue, list_entry);
 CONTAINER_FUNC_NOLOCK(sched_queue, DLIST, static inline, sched_queue_nolock, list_entry);
 
 #define SCHED_QUEUE_INITIALIZER CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST)
 
-extern CONTEXT_LOCAL struct sched_context_s *sched_cur;
 
+/** @internal */
+extern CONTEXT_LOCAL struct sched_context_s *sched_cur;
+/** @internal */
+extern CPU_LOCAL struct sched_context_s sched_idle;
+
+
+/** @this return current scheduler context */
 static inline struct sched_context_s *
 sched_get_current(void)
 {
   return CONTEXT_LOCAL_GET(sched_cur);
 }
 
-/** @this lock scheduler running queue associated with current context. */
-void sched_lock(void);
+/** @this return a cpu local context for temporary stack use with @ref
+    cpu_context_stack_use. This context must be used with interupts
+    disabled. This is useful during context exit/destroy. */
+static inline struct context_s * sched_tmp_context(void)
+{
+  return &CPU_LOCAL_ADDR(sched_idle)->context;
+}
 
-/** @this release scheduler queue associated with current
-    context. Must be used after scheduler context entry. */
-void sched_unlock(void);
+/** scheduler context preemption handler.
+    Push current context back in running queue and
+    return next scheduler candidate for preemption.
+    @see context_set_preempt @see #CONTEXT_PREEMPT */
+CONTEXT_PREEMPT(sched_preempt_switch);
 
-/** @this return a scheduler local temporary stack usable when the
-    scheduler is locked. This is useful during context self
-    exit/destroy. Must be called with scheduler locked. */
-uintptr_t sched_tmp_stack(void);
+/** scheduler context preemption handler.
+    Return next scheduler candidate for preemption.
+    @see context_set_preempt @see #CONTEXT_PREEMPT */
+CONTEXT_PREEMPT(sched_preempt_stop);
+
+/** scheduler context preemption handler.
+    Return next scheduler candidate for preemption.
+    @see context_set_preempt @see #CONTEXT_PREEMPT */
+CONTEXT_PREEMPT(sched_preempt_wait_unlock);
+
 
 /** initialize scheduler context. context_init(&sched_ctx->context)
     must be called before */
@@ -96,24 +119,39 @@ void sched_context_init(struct sched_context_s *sched_ctx);
 
 /** switch to next context */
 /* Must be called with interrupts disabled */
-void sched_context_switch(void);
+static inline void sched_context_switch(void)
+{
+  struct context_s *next = sched_preempt_switch(NULL);
+
+  if (next)
+    context_switch_to(next);
+}
 
 /** jump to next context without saving current context. current
     context will be lost. Must be called with interrupts disabled and
     main sched queue locked */
-void sched_context_exit(void);
+/* Must be called with interrupts disabled */
+static inline void sched_context_exit(void)
+{
+  context_jump_to(sched_preempt_stop(NULL));
+}
+
+/** push current context in the 'queue', unlock it and switch to next
+   context available in the 'root' queue. Must be called with
+   interrupts disabled */
+static inline void sched_wait_unlock(sched_queue_root_t *queue)
+{
+  context_switch_to(sched_preempt_wait_unlock(queue));
+}
 
 /** enqueue scheduler context for execution. Must be called with
     interrupts disabled */
 void sched_context_start(struct sched_context_s *sched_ctx);
 
-/** switch to next context without pushing current context back. Must
-    be called with interrupts disabled */
-void sched_context_stop(void);
 
 /** switch to next context without pushing current context back. Must
     be called with interrupts disabled */
-void sched_context_stop_unlock(lock_t *lock);
+void sched_stop_unlock(lock_t *lock);
 
 /** lock context queue */
 error_t sched_queue_lock(sched_queue_root_t *queue);
@@ -127,16 +165,7 @@ error_t sched_queue_init(sched_queue_root_t *queue);
 /** destroy context queue */
 void sched_queue_destroy(sched_queue_root_t *queue);
 
-/** add current context on the wait queue, unlock queue and switch to
-    next context. Must be called with interrupts disabled */
-void sched_wait_unlock(sched_queue_root_t *queue);
-
 typedef void (sched_wait_cb_t)(void *ctx);
-
-/** add current context on the wait queue, invoke callback and switch to
-    next context. Must be called with interrupts disabled */
-void sched_wait_callback(sched_queue_root_t *queue,
-			 sched_wait_cb_t *callback, void *ctx);
 
 /** wake a context from this queue */
 /* Must be called with interrupts disabled */
@@ -165,6 +194,7 @@ void sched_affinity_clear(struct sched_context_s *sched_ctx);
 
 /** setup a scheduler context candidate checking function */
 void sched_context_candidate_fcn(struct sched_context_s *sched_ctx, sched_candidate_fcn_t *fcn);
+
 
 #endif
 #endif

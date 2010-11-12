@@ -82,7 +82,7 @@ static ssize_t dev_lcd_handle_request(
   if (!status.done)
     {
       status.ctx = sched_get_current();
-      sched_context_stop_unlock(&status.lock);
+      sched_stop_unlock(&status.lock);
     }
   else
     lock_release(&status.lock);

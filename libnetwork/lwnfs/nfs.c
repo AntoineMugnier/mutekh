@@ -51,7 +51,7 @@
 #include <netinet/in.h>
 #include <netinet/udp.h>
 
-#include <netinet/nfs.h>
+#include <network/nfs.h>
 #include <mutek/printk.h>
 
 #include <semaphore.h>

@@ -42,7 +42,7 @@ extern __ldscript_symbol_t __data_load_end;
 void arch_specific_init();
 
 /* architecture specific init function */
-void arch_init() 
+void arch_init(uintptr_t init_sp) 
 {
 #ifdef CONFIG_DATA_FROM_ROM
 	memcpy_from_code((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
@@ -76,7 +76,7 @@ void arch_init()
 #endif
 
   /* run mutek_start() */
-  mutek_start(0, 0);
+  mutek_start();
 
   while (1)
     ;
@@ -86,7 +86,7 @@ void arch_start_other_cpu(void)
 {
 }
 
-inline cpu_id_t arch_get_cpu_count(void)
+inline size_t arch_get_cpu_count(void)
 {
   return 1;
 }

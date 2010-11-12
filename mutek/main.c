@@ -29,10 +29,14 @@
 #include <hexo/lock.h>
 #include <hexo/context.h>
 #include <hexo/cpu.h>
-#include <mutek/scheduler.h>
+
+#if defined(CONFIG_MUTEK_SCHEDULER)
+# include <mutek/scheduler.h>
+#endif
 
 #include <device/char.h>
 #include <device/timer.h>
+#include <device/enum.h>
 
 #include <device/device.h>
 #include <device/driver.h>
@@ -46,6 +50,14 @@
 
 #if defined(CONFIG_VFS)
 # include <vfs/vfs.h>
+#endif
+
+#if defined(CONFIG_ARCH_DEVICE_TREE)
+# include <drivers/enum/fdt/enum-fdt.h>
+# include <mutek/fdt.h>
+
+extern struct device_s fdt_enum_dev;
+extern void *arch_fdt;
 #endif
 
 #if defined (CONFIG_MUTEK_TIMERMS)
@@ -62,15 +74,11 @@ DEVTIMER_CALLBACK(timer_callback)
 {
 	//  printk("timer callback\n");
 # if defined(CONFIG_MUTEK_SCHEDULER_PREEMPT)
-	sched_context_switch();
+        context_set_preempt(sched_preempt_switch, NULL);
 # endif
 
 	timer_inc_ticks(&timer_ms, 10);
 }
-#endif
-
-#if defined (CONFIG_MUTEK_SCHEDULER)
-extern struct sched_context_s main_ctx;
 #endif
 
 #if defined(CONFIG_LIBC_STREAM_STD)
@@ -81,14 +89,16 @@ static CPU_EXCEPTION_HANDLER(fault_handler);
 
 static lock_t fault_lock;
 
-int_fast8_t mutek_start(int_fast8_t argc, char **argv)  /* FIRST CPU only */
+int_fast8_t mutek_start()  /* FIRST CPU only */
 {
 	lock_init(&fault_lock);
 	cpu_exception_sethandler(fault_handler);
 
-#if defined (CONFIG_MUTEK_SCHEDULER)
-	context_bootstrap(&main_ctx.context);
-	sched_context_init(&main_ctx);
+#if defined(CONFIG_ARCH_DEVICE_TREE)
+    cpu_interrupt_enable();
+    enum_fdt_children_init(&fdt_enum_dev);
+    mutek_parse_fdt_chosen(&fdt_enum_dev, arch_fdt);
+    cpu_interrupt_disable();
 #endif
 
 #if defined(CONFIG_MUTEK_CONSOLE) && !defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
@@ -128,7 +138,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   int_fast8_t		i;
   reg_t			*sp = (reg_t*)stackptr;
 #ifdef CPU_GPREG_NAMES
-  const char		*reg_names[] = CPU_GPREG_NAMES;
+  static const char		*reg_names[] = CPU_GPREG_NAMES;
 #endif
 
 #ifdef CPU_FAULT_NAMES
@@ -143,7 +153,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   printk("CPU Fault: cpuid(%u) faultid(%u-%s)\n", cpu_id(), type, name);
   printk("Execution pointer: %p, Bad address (if any): %p\n"
 	 "Registers:"
-		 , (void*)execptr, (void*)dataptr);
+		 , (void*)*execptr, (void*)dataptr);
 
   for (i = 0; i < CPU_GPREG_COUNT; i++)
 #ifdef CPU_GPREG_NAMES
@@ -169,6 +179,33 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 /** application main function */
 void app_start();
 
+#if defined(CONFIG_MUTEK_SCHEDULER)
+static void bootstrap_cleanup(void *param)
+{
+/*   extern struct sched_context_s main_ctx; */
+/*   context_destroy(&main_ctx.context); */
+
+#if defined(CONFIG_ARCH_SOCLIB) && 0
+  extern void mem_reclaim_initmem();
+  mem_reclaim_initmem();
+#endif
+
+  /* scheduler context switch without saving */
+  sched_context_exit();
+}
+
+static void other_cleanup(void *param)
+{
+  cpu_id_t id = (uintptr_t)param;
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  soclib_mem_check_delete_ctx(id);
+#endif
+
+  /* scheduler context switch without saving */
+  sched_context_exit();
+}
+#endif
+
 void mutek_start_smp(void)  /* ALL CPUs execute this function */
 {
   cpu_exception_sethandler(fault_handler);
@@ -180,29 +217,26 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
   //  mutek_instrument_alloc_guard(1);
 #endif
 
-  if (cpu_isbootstrap())
-    {
+  if (cpu_isbootstrap()) {
 #ifdef CONFIG_OPENMP
-      void initialize_libgomp();
-      initialize_libgomp();
+    void initialize_libgomp();
+    initialize_libgomp();
 #endif
-      app_start();
+    app_start();
 #if defined(CONFIG_MUTEK_SCHEDULER)
-      cpu_interrupt_disable();
-      sched_lock();
-      sched_context_exit();
+    /* run bootstrap_cleanup() on temporary context stack */
+    cpu_interrupt_disable();
+    cpu_context_stack_use(sched_tmp_context(), bootstrap_cleanup, NULL);
 #endif
-    }
-  else
-    {
+  } else {
+    cpu_id_t id = cpu_id();
 #ifdef CONFIG_MUTEK_SMP_APP_START
-      app_start();
+    app_start();
 #endif
-
 #if defined(CONFIG_MUTEK_SCHEDULER)
-      cpu_interrupt_disable();
-      sched_lock();
-      sched_context_exit();
+    /* run bootstrap_cleanup() on temporary context stack */
+    cpu_interrupt_disable();
+    cpu_context_stack_use(sched_tmp_context(), other_cleanup, (void*)(uintptr_t)id);
 #endif
-    }
+  }
 }

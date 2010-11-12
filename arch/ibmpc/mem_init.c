@@ -20,6 +20,7 @@
 */
 
 #include <assert.h>
+#include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/mem_region.h>
 #include <mutek/memory_allocator.h>

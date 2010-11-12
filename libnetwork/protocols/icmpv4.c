@@ -27,17 +27,20 @@
 #include <netinet/icmp.h>
 #include <netinet/ip.h>
 #include <netinet/in.h>
-#include <netinet/packet.h>
-#include <netinet/protos.h>
+#include <network/icmp.h>
+#include <network/ip.h>
+#include <network/packet.h>
+#include <network/protos.h>
 #ifdef CONFIG_NETWORK_UDP
-#include <netinet/libudp.h>
+#include <network/libudp.h>
 #endif
 #ifdef CONFIG_NETWORK_TCP
-#include <netinet/libtcp.h>
+#include <network/libtcp.h>
 #include <netinet/tcp.h>
+#include <network/tcp.h>
 #endif
 
-#include <netinet/if.h>
+#include <network/if.h>
 #include <mutek/printk.h>
 
 /*

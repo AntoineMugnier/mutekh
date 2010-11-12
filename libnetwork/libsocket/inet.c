@@ -22,6 +22,7 @@
 #include <hexo/error.h>
 
 #include <netinet/socket.h>
+#include <network/socket.h>
 #include <netinet/in.h>
 
 error_t		inet_aton(const char *cp, struct in_addr *inp)
@@ -30,28 +31,28 @@ error_t		inet_aton(const char *cp, struct in_addr *inp)
   uint_fast8_t	i;
   uint_fast32_t	ip = 0;
 
-  i = strto_uintl8(cp, &p, 10);
+  i = strto_uintl16(cp, &p, 10);
   if (*p != '.')
     return 0;
 
   ip = i << 24;
 
   p++;
-  i = strto_uintl8(p, &p, 10);
+  i = strto_uintl16(p, &p, 10);
   if (*p != '.')
     return 0;
 
   ip |= (i << 16);
 
   p++;
-  i = strto_uintl8(p, &p, 10);
+  i = strto_uintl16(p, &p, 10);
   if (*p != '.')
     return 0;
 
   ip |= (i << 8);
 
   p++;
-  i = strto_uintl8(p, &p, 10);
+  i = strto_uintl16(p, &p, 10);
   if (*p != 0)
     return 0;
 

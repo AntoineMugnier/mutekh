@@ -6,7 +6,7 @@
 
 #include "jpeg.h"
 
-static uint8_t *data_ptr, *data_end;
+static const uint8_t *data_ptr, *data_end;
 
 void tg_func_bootstrap(struct _tg_args_t *_func_args)
 {
@@ -17,7 +17,7 @@ void tg_func_bootstrap(struct _tg_args_t *_func_args)
 void tg_func_tg(struct _tg_args_t *_func_args)
 {
   srl_mwmr_t output = _func_args->output;
-  size_t s, len = 32;
+  size_t len = 32;
   uint8_t e_[32], *e = e_;
 
   while (len--)

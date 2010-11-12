@@ -25,13 +25,15 @@
 
 #include <netinet/tcp.h>
 #include <netinet/ip.h>
+#include <network/tcp.h>
+#include <network/ip.h>
 #include <netinet/in.h>
-#include <netinet/packet.h>
-#include <netinet/protos.h>
+#include <network/packet.h>
+#include <network/protos.h>
 
-#include <netinet/if.h>
+#include <network/if.h>
 
-#include <netinet/libtcp.h>
+#include <network/libtcp.h>
 
 #include <stdio.h>
 

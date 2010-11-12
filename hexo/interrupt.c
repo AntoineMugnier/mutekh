@@ -27,7 +27,7 @@
 
 #include <mutek/printk.h>
 
-
+/************************************************************ irqs */
 
 #ifdef CONFIG_HEXO_IRQ
 
@@ -53,8 +53,9 @@ cpu_interrupt_sethandler(cpu_interrupt_handler_t *handler)
 
 #endif
 
+/************************************************************ syscalls */
 
-
+#ifdef CONFIG_HEXO_USERMODE
 
 /** syscall handler for current context */
 CONTEXT_LOCAL cpu_syscall_handler_t  *cpu_syscall_handler = NULL;
@@ -72,7 +73,9 @@ cpu_syscall_sethandler(cpu_syscall_handler_t *hndl)
   CONTEXT_LOCAL_SET(cpu_syscall_handler, hndl);
 }
 
+#endif
 
+/************************************************************ exceptions */
 
 #ifdef CONFIG_HEXO_USERMODE
 /** user mode exception handler for current context */

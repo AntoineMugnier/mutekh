@@ -30,6 +30,8 @@
 
 #define CPU_LOCAL_H_
 
+#ifndef __MUTEK_ASM__
+
 /************************************************************************/
 
 #define CPU_LOCAL	__attribute__((section (".cpudata")))
@@ -62,6 +64,8 @@ extern __ldscript_symbol_t __context_data_start;
 #define CONTEXT_LOCAL_TLS_SET(tls, n, v) { *(typeof(n)*)((uintptr_t)(tls) - (uintptr_t)&__context_data_start + (uintptr_t)&(n)) = (v); }
 #define CONTEXT_LOCAL_TLS_GET(tls, n) 	({ *(typeof(n)*)((uintptr_t)(tls) - (uintptr_t)&__context_data_start + (uintptr_t)&(n)); })
 #define CONTEXT_LOCAL_TLS_ADDR(tls, n) ((void*)((uintptr_t)(tls) - (uintptr_t)&__context_data_start + (uintptr_t)&(n)))
+
+#endif
 
 #endif
 

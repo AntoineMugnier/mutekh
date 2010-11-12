@@ -1,3 +1,3 @@
 
-objs = setjmp.o
+objs = setjmp.o string.o
 

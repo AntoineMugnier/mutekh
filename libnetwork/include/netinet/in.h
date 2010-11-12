@@ -19,6 +19,12 @@
 #ifndef NETINET_IN_H_
 #define NETINET_IN_H_
 
+/**
+   @file
+   @module{Network library}
+   @short Standard header for Internet Protocol definitions
+ */
+
 #include <hexo/endian.h>
 #include <netinet/sockaddr.h>
 

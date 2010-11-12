@@ -19,11 +19,12 @@
 
 */
 
-#include <netinet/packet.h>
-#include <netinet/socket.h>
-#include <netinet/socket_internals.h>
-#include <netinet/socket_tcp.h>
-#include <netinet/libtcp.h>
+#include <network/packet.h>
+#include <network/socket.h>
+#include <network/socket_internals.h>
+#include <network/socket_tcp.h>
+#include <network/libtcp.h>
+#include <network/tcp.h>
 #include <netinet/tcp.h>
 
 #include <mutek/mem_alloc.h>

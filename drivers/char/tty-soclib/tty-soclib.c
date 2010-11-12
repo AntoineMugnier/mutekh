@@ -139,11 +139,11 @@ DEV_IRQ(tty_soclib_irq)
 
   lock_spin(&dev->lock);
 
-  while ( cpu_mem_read_8(dev->addr[0] + TTY_SOCLIB_REG_STATUS)
-		  && (tty_fifo_count(&pv->read_fifo) < tty_fifo_size(&pv->read_fifo)) ) {
+  while ( cpu_mem_read_8(dev->addr[0] + TTY_SOCLIB_REG_STATUS) ) {
 	  /* get character from tty */
 	  c = cpu_mem_read_8(dev->addr[0] + TTY_SOCLIB_REG_READ);
-	  /* add character to driver fifo */
+
+	  /* add character to driver fifo, discard if fifo full */
 	  tty_fifo_pushback(&pv->read_fifo, c);
   }
 

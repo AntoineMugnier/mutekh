@@ -38,7 +38,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include <netinet/if.h>
+#include <network/if.h>
 
 #include <arch/hexo/emu_syscalls.h>
 

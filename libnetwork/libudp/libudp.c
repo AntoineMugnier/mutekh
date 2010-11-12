@@ -29,16 +29,17 @@
 #include <mutek/mem_alloc.h>
 #include <hexo/cpu.h>
 
-#include <netinet/packet.h>
-#include <netinet/protos.h>
+#include <network/packet.h>
+#include <network/protos.h>
 #include <netinet/udp.h>
+#include <network/udp.h>
 #include <netinet/ip.h>
 #include <netinet/ether.h>
 #include <netinet/in.h>
-#include <netinet/if.h>
-#include <netinet/route.h>
+#include <network/if.h>
+#include <network/route.h>
 
-#include <netinet/libudp.h>
+#include <network/libudp.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_hashlist.h>

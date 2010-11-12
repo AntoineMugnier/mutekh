@@ -20,6 +20,12 @@
 #ifndef NETINET_SOCKADDR_H
 #define NETINET_SOCKADDR_H
 
+/**
+   @file
+   @module{Network library}
+   @short Standard header for socket addresses definitions
+ */
+
 #include <hexo/types.h>
 
 /* POSIX.1g specifies this type name for the `sa_family' member.  */

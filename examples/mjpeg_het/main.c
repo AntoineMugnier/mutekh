@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <mutek/printk.h>
 
 #include "srl.h"
 #include "srl_private_types.h"
@@ -89,6 +90,17 @@ typedef void *(*start_routine_t)(void*);
 
 static pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 
+void task_stats()
+{
+#ifdef CONFIG_HEXO_CONTEXT_STATS
+  static const srl_task_s *tl[] = { &tg, &demux, &libu, &vld, &idct, &iqzz, &ramdac, 0 };
+  int i;
+
+  for (i = 0; tl[i]; i++)
+    printk("%6s: %i\n", tl[i]->name, tl[i]->thread->sched_ctx.context.cycles);
+#endif
+}
+
 static void *run_task(srl_task_s *task)
 {
   pthread_mutex_lock(&print_lock);
@@ -110,37 +122,47 @@ static void *run_task(srl_task_s *task)
   return NULL;
 }
 
-static volatile start = 0;
+static volatile reg_t start = 0;
 
 int app_start()
 {
   /* every processor execute the app_start function due to CONFIG_MUTEK_SMP_APP_START */
 
+#ifdef CONFIG_ARCH_SMP
   switch (cpu_id())
     {
     case 0:
+#endif
       pthread_barrier_init(&start_barrier, NULL, 7);
       pthread_create((pthread_t*)&demux.thread, NULL, (start_routine_t)run_task, (void*)&demux);
-      pthread_create((pthread_t*)&libu.thread, NULL, (start_routine_t)run_task, (void*)&libu);
+      pthread_create((pthread_t*)&iqzz.thread, NULL, (start_routine_t)run_task, (void*)&iqzz);
+#ifdef CONFIG_ARCH_SMP
       start = 1234;
       break;
 
     case 1:
+#endif
       pthread_create((pthread_t*)&vld.thread, NULL, (start_routine_t)run_task, (void*)&vld);
-      pthread_create((pthread_t*)&iqzz.thread, NULL, (start_routine_t)run_task, (void*)&iqzz);
+#ifdef CONFIG_ARCH_SMP
       break;
 
     case 2:
+#endif
       pthread_create((pthread_t*)&idct.thread, NULL, (start_routine_t)run_task, (void*)&idct);
-      pthread_create((pthread_t*)&tg.thread, NULL, (start_routine_t)run_task, (void*)&tg);
+#ifdef CONFIG_ARCH_SMP
       break;
 
     case 3:
+#endif
+      pthread_create((pthread_t*)&libu.thread, NULL, (start_routine_t)run_task, (void*)&libu);
+      pthread_create((pthread_t*)&tg.thread, NULL, (start_routine_t)run_task, (void*)&tg);
       pthread_create((pthread_t*)&ramdac.thread, NULL, (start_routine_t)run_task, (void*)&ramdac);
+#ifdef CONFIG_ARCH_SMP
     }
 
   while (start != 1234)
     ;
+#endif
 
   return 0;
 }

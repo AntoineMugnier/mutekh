@@ -29,10 +29,10 @@
 
 #include <mutek/printk.h>
 
-#include <netinet/if.h>
+#include <network/if.h>
 #include <netinet/in.h>
 #include <netinet/arp.h>
-#include <netinet/socket.h>
+#include <network/socket.h>
 
 error_t			rarp_client(const char	*ifname)
 {
@@ -122,7 +122,7 @@ error_t			rarp_client(const char	*ifname)
 	  /* set the new address */
 	  IPV4_ADDR_SET(v4_addr, ip);
 	  IPV4_ADDR_SET(v4_mask, mask);
-	  if (if_config(interface->index, IF_SET, &v4_addr, &v4_mask))
+	  if (if_config(interface, IF_SET, &v4_addr, &v4_mask))
 	    goto leave;
 	  /* configure interface route */
 	  IPV4_ADDR_SET(target, v4_addr.addr.ipv4 & v4_mask.addr.ipv4);

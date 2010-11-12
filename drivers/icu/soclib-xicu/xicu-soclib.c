@@ -171,7 +171,7 @@ bool_t xicu_root_handle_hwi(struct device_s *dev, uint_fast8_t id)
 	    handler->hndl(handler->data);
 		return 0;
 	}
-	printk("XICU hwi lost irq\n");
+	printk("XICU hwi lost irq %d\n", id);
 	return 0;
 }
 

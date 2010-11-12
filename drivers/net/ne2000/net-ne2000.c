@@ -34,7 +34,7 @@
 
 #include <mutek/printk.h>
 
-#include <netinet/if.h>
+#include <network/if.h>
 #include <network/dispatch.h>
 
 #include "net-ne2000.h"

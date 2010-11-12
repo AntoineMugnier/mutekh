@@ -135,35 +135,6 @@ static FDT_ON_NODE_PROP_FUNC(creator_node_prop)
 	struct consumer_state_s *private = priv;
 
 	switch (private->state) {
-	case IN_CHOSEN:
-#ifdef CONFIG_MUTEK_CONSOLE
-		if ( !strcmp(name, "console") ) {
-			struct device_s *cd = enum_fdt_lookup(private->enum_dev, data);
-			if ( cd && cd->drv ) {
-				dprintk("Setting console device to node %s\n", data);
-				console_dev = cd;
-			}
-		}
-#endif
-#ifdef CONFIG_MUTEK_TIMERMS
-		if ( !strcmp(name, "timer") ) {
-			struct device_s *cd = enum_fdt_lookup(private->enum_dev, data);
-			if ( cd && cd->drv ) {
-				dprintk("Setting timer device to node %s\n", data);
-				timerms_dev = cd;
-			}
-		}
-#endif
-#ifdef CONFIG_VFS
-		if ( !strcmp(name, "root") ) {
-			struct device_s *cd = enum_fdt_lookup(private->enum_dev, data);
-			if ( cd && cd->drv ) {
-				dprintk("Setting root device to node %s\n", data);
-				root_dev = cd;
-			}
-		}
-#endif
-		break;
 	case IN_CPU:
 #if defined(CONFIG_HEXO_IPI)
 		if ( !strcmp(name, "ipi_dev") ) {
@@ -206,6 +177,108 @@ void mutek_parse_fdt(struct device_s *enum_dev, void *blob)
 		.on_node_entry = creator_node_entry,
 		.on_node_leave = creator_node_leave,
 		.on_node_prop = creator_node_prop,
+		.on_mem_reserve = creator_mem_reserve,
+	};
+
+	dprintk("%s walking blob\n", __FUNCTION__);
+	fdt_walk_blob(blob, &walker);
+}
+
+
+
+static FDT_ON_NODE_ENTRY_FUNC(chosen_node_entry)
+{
+	struct consumer_state_s *private = priv;
+
+	dprintk(">> %s, %d\n", path, private->state);
+
+	switch (private->state) {
+	case IN_ROOT:
+		if ( !strcmp(path, "") )
+            return 1;
+
+		if ( !strcmp(path, "/chosen") ) {
+			private->state = IN_CHOSEN;
+			return 1;
+		}
+    default:
+        return 0;
+	}
+			
+	return 0;
+}
+
+static FDT_ON_NODE_LEAVE_FUNC(chosen_node_leave)
+{
+	struct consumer_state_s *private = priv;
+
+	dprintk("<< %d\n", private->state);
+
+	switch (private->state) {
+	case IN_ROOT:
+		break;
+	case IN_CPUS:
+	case IN_CHOSEN:
+	case IN_TOPOLOGY:
+		private->state = IN_ROOT;
+		break;
+	case IN_CPU:
+		private->state = IN_CPUS;
+		break;
+	}
+}
+
+static FDT_ON_NODE_PROP_FUNC(chosen_node_prop)
+{
+	struct consumer_state_s *private = priv;
+
+	switch (private->state) {
+	case IN_CHOSEN:
+#ifdef CONFIG_MUTEK_CONSOLE
+		if ( !strcmp(name, "console") ) {
+			struct device_s *cd = enum_fdt_lookup(private->enum_dev, data);
+			if ( cd && cd->drv ) {
+				dprintk("Setting console device to node %s\n", data);
+				console_dev = cd;
+			}
+		}
+#endif
+#ifdef CONFIG_MUTEK_TIMERMS
+		if ( !strcmp(name, "timer") ) {
+			struct device_s *cd = enum_fdt_lookup(private->enum_dev, data);
+			if ( cd && cd->drv ) {
+				dprintk("Setting timer device to node %s\n", data);
+				timerms_dev = cd;
+			}
+		}
+#endif
+#ifdef CONFIG_VFS
+		if ( !strcmp(name, "root") ) {
+			struct device_s *cd = enum_fdt_lookup(private->enum_dev, data);
+			if ( cd && cd->drv ) {
+				dprintk("Setting root device to node %s\n", data);
+				root_dev = cd;
+			}
+		}
+#endif
+		break;
+	default:
+		break;
+	}
+}
+
+void mutek_parse_fdt_chosen(struct device_s *enum_dev, void *blob)
+{
+	struct consumer_state_s priv = {
+		.enum_dev = enum_dev,
+		.state = IN_ROOT,
+	};
+
+	struct fdt_walker_s walker = {
+		.priv = &priv,
+		.on_node_entry = chosen_node_entry,
+		.on_node_leave = chosen_node_leave,
+		.on_node_prop = chosen_node_prop,
 		.on_mem_reserve = creator_mem_reserve,
 	};
 

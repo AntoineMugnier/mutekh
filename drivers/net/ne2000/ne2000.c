@@ -29,7 +29,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include <netinet/if.h>
+#include <network/if.h>
 
 #include "net-ne2000.h"
 

@@ -2,8 +2,10 @@
 #include <pthread.h>
 #include <mutek/printk.h>
 
+#define THREAD_COUNT 4
+
 pthread_mutex_t m;
-pthread_t a, b;
+pthread_t pthread[THREAD_COUNT];
 
 void *f(void *param)
 {
@@ -12,14 +14,17 @@ void *f(void *param)
       pthread_mutex_lock(&m);
       printk("(%s:%i) %s", cpu_type_name(), cpu_id(), param);
       pthread_mutex_unlock(&m);
-      pthread_yield();
+      cpu_cycle_wait(10000);
+      //      pthread_yield();
     }
 }
 
 void app_start()
 {
+  size_t i;
+
   pthread_mutex_init(&m, NULL);
-  pthread_create(&a, NULL, f, "Hello world\n");
-  pthread_create(&b, NULL, f, "Hello world\n");
+  for ( i = 0; i < THREAD_COUNT; ++i )
+    pthread_create(&pthread[i], NULL, f, "Hello world\n");
 }
 

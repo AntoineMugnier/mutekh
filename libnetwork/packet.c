@@ -24,12 +24,11 @@
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 
-#include <pthread.h>
 #include <semaphore.h>
 
-#include <netinet/packet.h>
-#include <netinet/protos.h>
-#include <netinet/if.h>
+#include <network/packet.h>
+#include <network/protos.h>
+#include <network/if.h>
 
 #ifdef CONFIG_NETWORK_PROFILING
 uint_fast32_t	netobj_new[NETWORK_PROFILING_NB_OBJS] = { 0, 0, 0 };

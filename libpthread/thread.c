@@ -50,9 +50,9 @@ __pthread_switch(void)
 }
 
 void
-__pthread_cleanup(void)
+__pthread_cleanup(void *param)
 {
-  struct pthread_s *thread = pthread_self();
+  struct pthread_s *thread = param;
 
   /* cleanup current context */
   arch_contextstack_free(context_destroy(&thread->sched_ctx.context));
@@ -62,7 +62,7 @@ __pthread_cleanup(void)
   /* free thread structure */
   mem_free(thread);
 
-  /* schduler context switch without saving */
+  /* scheduler context switch without saving */
   sched_context_exit();
 }
 
@@ -96,7 +96,7 @@ pthread_exit(void *retval)
 	  this->joined_retval = retval;
 
 	  /* stop thread, waiting for pthread_join or pthread_detach */
-	  sched_context_stop_unlock(&this->lock);
+	  sched_stop_unlock(&this->lock);
 	}
       else
 	/* thread already joined */
@@ -110,11 +110,8 @@ pthread_exit(void *retval)
     }
 #endif /* CONFIG_PTHREAD_JOIN */
 
-  sched_lock();
-
-  /* setup temp stack memory and jump to __pthread_cleanup() */
-  cpu_context_set(sched_tmp_stack(), CONFIG_MUTEK_SCHEDULER_TMP_STACK_SIZE,
-		  __pthread_cleanup);
+  /* run __pthread_cleanup() on temporary context stack */
+  cpu_context_stack_use(sched_tmp_context(), __pthread_cleanup, this);
 }
 
 
@@ -167,7 +164,7 @@ pthread_join(pthread_t thread, void **value_ptr)
               assert(thread->joined && "Can not call pthread_join from non pthread context");
 
               /* wait for thread termination */
-              sched_context_stop_unlock(&thread->lock);
+              sched_stop_unlock(&thread->lock);
 
               /* get joined thread's exit value */
               if (value_ptr)
@@ -213,9 +210,6 @@ static CONTEXT_ENTRY(pthread_context_entry)
   struct pthread_s	*thread = param;
 
   CONTEXT_LOCAL_SET(__pthread_current, thread);
-
-  /* release lock acquired in previous sched_context_switch() call */
-  sched_unlock();
 
   /* enable interrupts for current thread */
   cpu_interrupt_enable();	/* FIXME should reflect state at thread creation time ? */

@@ -126,7 +126,7 @@ void *bsearch(
 
 /******************** random */
 
-typedef uint_fast8_t	__rand_type_t;
+typedef reg_t	__rand_type_t;
 
 #define RAND_MAX	(sizeof (__rand_type_t) > 1 ? 32767 : 255)
 
@@ -162,23 +162,28 @@ error_t system(const char *cmd);
 
 /****************** abs */
 
-static inline
-__compiler_sint_t abs(__compiler_sint_t x)
-{
-  return x<0 ? -x : x;
-}
+#define abs(n)                                                          \
+({                                                                      \
+  typedef typeof(n) _t;                                                 \
+  _t gpct_n = (n);                                                      \
+                                                                        \
+  __builtin_types_compatible_p(typeof(n), __compiler_slong_t) ? __builtin_absl(n) : \
+  __builtin_types_compatible_p(typeof(n), __compiler_slonglong_t) ? __builtin_absll(n) : \
+  __builtin_abs(n);                                                     \
+})
 
-static inline
-__compiler_slong_t labs(__compiler_slong_t x)
-{
-  return x<0 ? -x : x;
-}
+#define labs(x) abs(x)
+#define llabs(x) abs(x)
 
-static inline
-__compiler_slonglong_t llabs(__compiler_slonglong_t x)
-{
-  return x<0 ? -x : x;
-}
+#define log2i(n)                                                        \
+({                                                                      \
+  typedef typeof(n) _t;                                                 \
+  _t gpct_n = (n);                                                      \
+                                                                        \
+  __builtin_types_compatible_p(_t, __compiler_slong_t) ? sizeof(__compiler_slong_t) * 8 - 1 - __builtin_clzl(gpct_n) : \
+  __builtin_types_compatible_p(_t, __compiler_slonglong_t) ? sizeof(__compiler_slonglong_t) * 8 - 1 - __builtin_clzll(gpct_n) : \
+  sizeof(__compiler_sint_t) * 8 - 1 - __builtin_clz(gpct_n);                               \
+})
 
 // div / ldiv
 
@@ -187,22 +192,14 @@ typedef struct {
   __compiler_sint_t rem;
 } div_t;
 
-static inline div_t div(__compiler_sint_t number, __compiler_sint_t denom)
-{
-  div_t r = {number/denom, number%denom};
-  return r;
-}
+div_t div(__compiler_sint_t number, __compiler_sint_t denom);
 
 typedef struct {
   __compiler_slong_t quot;
   __compiler_slong_t rem;
 } ldiv_t;
 
-static inline ldiv_t ldiv(__compiler_slong_t number, __compiler_slong_t denom)
-{
-  ldiv_t r = {number/denom, number%denom};
-  return r;
-}
+ldiv_t ldiv(__compiler_slong_t number, __compiler_slong_t denom);
 
 C_HEADER_END
 

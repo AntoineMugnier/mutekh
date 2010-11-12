@@ -30,7 +30,7 @@
  @order 99
 @end group
 
-@moduledef{Devices}
+@moduledef{Device drivers}
  @short Hardware device driver classes API
  @order 98
 @end group
@@ -73,8 +73,8 @@
  VFS also implement root directory and current-working-directory
  through @ref vfs_get_cwd and @ref vfs_get_root (@ref
  @vfs/globals.h). Configuration can make them system-wise or
- thread-local (@ref CONFIG_VFS_GLOBAL_CWD and @ref
- CONFIG_VFS_GLOBAL_ROOT).
+ thread-local (@ref #CONFIG_VFS_GLOBAL_CWD and @ref
+ #CONFIG_VFS_GLOBAL_ROOT).
 
  File handles are also reference-counted. On most filesystems, nodes
  may be opened more than once at the same time, each instance of an
@@ -93,12 +93,36 @@
  @short Ciphers, random generators and hash functions library
 @end group
 
-@moduledef{SRL}
- @short MutekS API
- This module implements the MutekS API,
- mainly used by the DSX software.
+@moduledef{Network library}
+ @short Network protocols handling
+@end group
 
- See @url https://www-asim.lip6.fr/trac/dsx/
+@moduledef{MWMR}
+  @short Multi-Writer Multi-Reader channels API
+
+  Multi-Writer Multi-Reader API is designed for streaming
+  applications.
+
+  MWMR channels are basically FIFOs with concurrent access to either
+  ends. Data integrity is asserted for a given fixed @em item @em
+  width.
+
+  MWMR comes with an hardware MWMR controller able to use the same
+  protocol as the software implementation. This controller is
+  available as a SoCLib component.
+
+  This library also implements a software-only version of the API,
+  using pthread's mutexes and conditions, but more elegant when only
+  accessing channels from software tasks. @see CONFIG_MWMR_PTHREAD
+@end group
+
+@moduledef{SRL}
+  @short MutekS API
+
+  This module implements the MutekS API,
+  mainly used by the DSX software.
+
+  See @url https://www-asim.lip6.fr/trac/dsx/
 @end group
 
 @moduledef{Capsule}

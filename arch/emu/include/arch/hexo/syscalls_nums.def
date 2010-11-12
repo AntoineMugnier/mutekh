@@ -31,3 +31,8 @@ X(#define) EMU_SYSCALL_KILL     SYSCALL_NAME(kill)
 X(#define) EMU_SYSCALL_PIPE     SYSCALL_NAME(pipe)
 X(#define) EMU_SYSCALL_SIGNAL   SYSCALL_NAME(signal)
 X(#define) EMU_SYSCALL_SCHED_YIELD    SYSCALL_NAME(sched_yield)
+X(#define) EMU_SYSCALL_RT_SIGPROCMASK    SYSCALL_NAME(rt_sigprocmask)
+X(#define) EMU_SYSCALL_RT_SIGTIMEDWAIT    SYSCALL_NAME(rt_sigtimedwait)
+X(#define) EMU_SYSCALL_RT_SIGACTION    SYSCALL_NAME(rt_sigaction)
+
+

@@ -12,4 +12,8 @@ ifeq ($(CONFIG_IBMPC_EARLY_CONSOLE_VGA), defined)
 objs += early_console.o
 endif
 
+ifeq ($(CONFIG_IBMPC_EARLY_CONSOLE_UART), defined)
+objs += early_console_uart.o
+endif
+
 meta = ldscript

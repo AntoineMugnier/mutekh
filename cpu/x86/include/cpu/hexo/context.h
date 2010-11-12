@@ -23,142 +23,65 @@
 #error This file can not be included directly
 #else
 
-struct cpu_context_s
+#ifndef __MUTEK_ASM__
+
+struct cpu_context_regs_s
 {
+  uint32_t edi;
+  uint32_t esi;
+  uint32_t ebp;
+  uint32_t esp;     /* user or kernel stack pointer */
+  uint32_t ebx;
+  uint32_t edx;
+  uint32_t ecx;
+  uint32_t eax;
+  uint32_t eip;
+  uint32_t eflags;
 };
 
-#ifdef CONFIG_ARCH_SMP
-# define CLS_SEG	"%%fs:"
-#else
-# define CLS_SEG
-#endif
-
-static inline void
-cpu_context_switch(struct context_s *old, struct context_s *future)
+struct cpu_context_s
 {
-  reg_t	tmp0, tmp1;
-
-  /* Note: gcc save and restore registers for us because all registers
-     are marked clobbered in the asm statement. This will allow gcc to
-     decide which registers must be saved so that we don't need to
-     save _all_ registers ourself */
-
-  asm volatile (
-		/* save execution pointer */
-#ifdef CONFIG_COMPILE_PIC
-		"	call	1f		\n"
-		"	jmp	2f		\n"
-		"1:				\n"
-#else
-		"	pushl	2f		\n"
-#endif
-		/* save frame pointer */
-		"	push	%%ebp		\n"
-		/* save flags */
-		"	pushf			\n"
-		"	cli			\n"
-#if 0
-		/* save page directory pointer */
-		"	movl	%%cr3, %%eax	\n"
-		"	pushl	%%eax		\n"
-#endif
-		/* save context local storage on stack */
-		"	push	%%gs		\n"
-		/* switch stack pointer */
-		"	movl	%%esp, (%0)	\n"
-		"	movl	(%1), %%esp	\n"
-		/* restore tls */
-		"	pop	%%gs		\n"
-#ifdef CONFIG_HEXO_USERMODE
-		"	mov	%%gs, %%eax	\n"
-		"	mov	%%eax, " CLS_SEG " (cpu_tls_seg) 	\n"
-#endif
-#if 0
-		/* restore page directory pointer */
-		"	popl	%%edx		\n"
-		"	cmpl	%%edx, %%eax	\n" /* avoid useless TLB flush */
-		"	jz	3f		\n"
-		"	movl	%%edx, %%cr3	\n"
-		"3:				\n"
-#endif
-		/* restore flags */
-		"	popf			\n"
-		/* restore frame pointer */
-		"	pop	%%ebp		\n"
-		/* restore execution pointer */
-		"	ret			\n"
-		"2:				\n"
-
-		/* these input registers will be clobbered */
-		: "=b" (tmp0)
-		, "=S" (tmp1)
-
-		/* input args */
-		: "0" (&old->stack_ptr)
-		, "1" (&future->stack_ptr)
-
-		/* remaining registers will be clobbered too */
-		: "memory"
-		, "%eax", /* "%ebx", */ "%ecx", "%edx"
-		, /* "%esi", */ "%edi"
-		);
-}
-
-static inline void
-__attribute__((always_inline, noreturn))
-cpu_context_jumpto(struct context_s *future)
-{
-  asm volatile (
-		"	movl	%0, %%esp	\n"
-		/* restore tls */
-		"	pop	%%gs		\n"
-#ifdef CONFIG_HEXO_USERMODE
-		"	mov	%%gs, %%eax	\n"
-		"	mov	%%eax, " CLS_SEG " (cpu_tls_seg) 	\n"
-#endif
-#if 0
-		/* restore page directory pointer */
-		"	popl	%%edx		\n"
-		"	movl	%%edx, %%cr3	\n"
-#endif
-		/* restore flags */
-		"	popf			\n"
-
-		/* restore frame pointer */
-		"	pop	%%ebp		\n"
-
-		/* restore execution pointer */
-		"	ret			\n"
-		:
-		: "r" (future->stack_ptr)
-		);
-
-  while (1);
-}
-
-static inline void
-__attribute__((always_inline, noreturn))
-cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto)
-{
-  asm volatile (
-		"	movl	%0, %%esp	\n"
-		"	xorl	%%ebp, %%ebp	\n"
-		"	jmpl	*%1		\n"
-		:
-		: "r,m" (stack + stack_size - CONFIG_HEXO_STACK_ALIGN),
-                  "r,r" (jumpto)
-		);
-
-  while (1);
-}
-
-# if defined(CONFIG_HEXO_USERMODE)
-
-void __attribute__((noreturn))
-cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,
-		     user_entry_t *entry, void *param);
-
+  uint32_t mask;
+  /* sorted in iret order */
+  struct cpu_context_regs_s kregs;
+# ifdef CONFIG_HEXO_USERMODE
+  struct cpu_context_regs_s uregs;
 # endif
+# ifdef CONFIG_HEXO_FPU
+  __attribute__((aligned(16)))
+  uint8_t mm[512];  /* fpu and multimedia state */
+# endif
+};
+
+#else
+
+#define CPU_X86_CONTEXT_MASK_USER       1
+
+.extern x86_context_regs
+.equ CPU_X86_CONTEXT_mask,    0
+
+.equ CPU_X86_CONTEXT_edi,     4
+.equ CPU_X86_CONTEXT_esi,     8 
+.equ CPU_X86_CONTEXT_ebp,     12
+.equ CPU_X86_CONTEXT_esp,     16
+.equ CPU_X86_CONTEXT_ebx,     20
+.equ CPU_X86_CONTEXT_edx,     24
+.equ CPU_X86_CONTEXT_ecx,     28
+.equ CPU_X86_CONTEXT_eax,     32
+.equ CPU_X86_CONTEXT_EIP,     36
+.equ CPU_X86_CONTEXT_EFLAGS,  40
+
+.equ CPU_X86_CONTEXT_REGS_OFFSET, 4
+
+# ifdef CONFIG_HEXO_USERMODE
+.equ CPU_X86_CONTEXT_USER_SHIFT, 40
+.equ CPU_X86_CONTEXT_MM,         96
+# else
+.equ CPU_X86_CONTEXT_MM,         48
+# endif
+
+
+#endif
 
 #endif
 

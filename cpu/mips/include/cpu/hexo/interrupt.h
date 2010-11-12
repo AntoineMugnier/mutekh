@@ -32,9 +32,9 @@
 
 #define CPU_INTERRUPT_H_
 
-#include "hexo/local.h"
+#include <hexo/local.h>
 
-#include "cpu/hexo/specific.h"
+#include <cpu/hexo/asm.h>
 
 #ifdef CONFIG_DRIVER_ICU_MIPS
 struct device_s;

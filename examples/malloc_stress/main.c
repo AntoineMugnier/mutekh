@@ -45,7 +45,8 @@ static void hash_check(const void *data, size_t len, const uint8_t *hash)
   crypto_crc32_get(&crc, result);
   
   if (memcmp(result, hash, 4)) {
-    printk("CRC ERROR at %p\n", data);
+    printk("CRC ERROR at %p, expected %P, got %P\n", data, hash, 4, result, 4);
+    hexdumpk((uintptr_t)data, (char*)data - 32, 16);
     errors++;
   }
 }

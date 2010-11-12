@@ -33,6 +33,20 @@ OBJECT_CONSTRUCTOR(vfs_fs)
     atomic_set(&obj->ref, 0);
     vfs_lru_init(&obj->lru_list);
 
+#if defined(CONFIG_VFS_STATS)
+    atomic_set(&obj->node_open_count, 0);
+    atomic_set(&obj->lookup_count, 0);
+    atomic_set(&obj->create_count, 0);
+    atomic_set(&obj->link_count, 0);
+    atomic_set(&obj->move_count, 0);
+    atomic_set(&obj->unlink_count, 0);
+    atomic_set(&obj->stat_count, 0);
+    atomic_set(&obj->node_create_count, 0);
+    atomic_set(&obj->node_destroy_count, 0);
+    atomic_set(&obj->file_open_count, 0);
+    atomic_set(&obj->file_close_count, 0);
+#endif
+
 	return 0;
 }
 

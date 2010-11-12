@@ -82,11 +82,14 @@ static DEVBLOCK_CALLBACK(dev_block_sync_request)
 {
   struct dev_block_wait_rq_s *status = rq->pvdata;
 
+/*   printk("block callback %d/%d %d\n", rq->progress, rq->count, count); */
   if (rq->progress < 0 || rq->progress >= rq->count)
     {
       lock_spin(&status->lock);
-      if (status->ctx != NULL)
-	sched_context_start(status->ctx);
+      if (status->ctx != NULL) {
+/*         printk("Restarting %p\n", status->ctx); */
+        sched_context_start(status->ctx);
+      }
       status->done = 1;
       lock_release(&status->lock);
     }
@@ -119,7 +122,8 @@ static error_t dev_block_wait_request(struct device_s *dev, uint8_t **data,
   if (!status.done)
     {
       status.ctx = sched_get_current();
-      sched_context_stop_unlock(&status.lock);
+/*       printk("Stopping %p\n", status.ctx); */
+      sched_stop_unlock(&status.lock);
     }
   else
     lock_release(&status.lock);

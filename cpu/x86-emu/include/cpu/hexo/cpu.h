@@ -32,6 +32,9 @@
 
 #define CPU_TYPE_NAME x86
 
+
+#ifndef __MUTEK_ASM__
+
 #ifdef CONFIG_ARCH_SMP
 extern CPU_LOCAL cpu_id_t _cpu_id;
 #endif  
@@ -57,8 +60,6 @@ cpu_isbootstrap(void)
 }
 
 void cpu_trap();
-
-typedef uint64_t cpu_cycle_t;
 
 static inline cpu_cycle_t
 cpu_cycle_count(void)
@@ -95,4 +96,6 @@ static inline size_t cpu_dcache_line_size()
 }
 
 #endif
+#endif
+
 

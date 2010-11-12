@@ -26,13 +26,79 @@
 
 #include <netinet/arp.h>
 #include <netinet/ip.h>
-#include <netinet/packet.h>
-#include <netinet/protos.h>
+#include <network/arp.h>
+#include <network/ip.h>
+#include <network/packet.h>
+#include <network/protos.h>
 
-#include <netinet/if.h>
+#include <network/if.h>
 
 #include <mutek/timer.h>
 #include <mutek/printk.h>
+
+/**
+   @this is the ARP Resolution structure
+ */
+struct arp_resolution_s
+{
+  packet_queue_root_t			wait;
+  uint_fast8_t				retry;
+  struct net_if_s			*interface;
+  struct net_proto_s			*addressing;
+  struct net_proto_s			*arp;
+  struct timer_event_s			timeout;
+};
+
+OBJECT_TYPE(arp_entry_obj, SIMPLE, struct arp_entry_s);
+
+/**
+   @this is the ARP table entry
+ */
+struct arp_entry_s
+{
+  uint_fast32_t				ip;
+  uint8_t				mac[ETH_ALEN];
+  bool_t				valid;
+  timer_delay_t				timestamp;
+  struct arp_resolution_s		*resolution;
+
+  arp_entry_obj_entry_t			obj_entry;
+  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+};
+
+OBJECT_CONSTRUCTOR(arp_entry_obj);
+OBJECT_DESTRUCTOR(arp_entry_obj);
+OBJECT_FUNC(arp_entry_obj, SIMPLE, static inline, arp_entry_obj, obj_entry);
+
+/*
+ * ARP table types.
+ */
+
+#define CONTAINER_LOCK_arp_table	HEXO_SPIN
+CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, list_entry, 64);
+CONTAINER_KEY_TYPE(arp_table, PTR, SCALAR, ip);
+
+/*
+ * ARP private data.
+ */
+
+struct			net_pv_arp_s
+{
+  arp_table_root_t	table;
+  struct timer_event_s	stale_timeout;
+};
+
+/*
+ * RARP private data.
+ */
+
+struct			net_pv_rarp_s
+{
+  struct net_proto_s	*ip;
+};
+
+static TIMER_CALLBACK(arp_timeout);
+static TIMER_CALLBACK(arp_stale_timeout);
 
 /*
  * ARP table functions.
@@ -338,10 +404,11 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 					  uint8_t		*mac,
 					  uint_fast8_t		flags)
 {
+  assert(arp != NULL);
+
   struct net_pv_arp_s	*pv = (struct net_pv_arp_s *)arp->pv;
   struct arp_entry_s	*arp_entry;
 
-  assert(arp != NULL);
   assert(ip != 0);
 
   if ((arp_entry = arp_table_lookup(&pv->table, ip)) != NULL)
@@ -399,12 +466,6 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 
   return arp_entry;
 }
-
-/*
- * Get the MAC address corresponding to an IP.
- *
- * Make an ARP request if needed.
- */
 
 const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
 				     struct net_proto_s		*arp,
@@ -484,7 +545,7 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
  * Request timeout callback.
  */
 
-TIMER_CALLBACK(arp_timeout)
+static TIMER_CALLBACK(arp_timeout)
 {
   struct arp_entry_s		*entry = (struct arp_entry_s *)pv;
   struct arp_resolution_s	*res = entry->resolution;
@@ -524,7 +585,7 @@ TIMER_CALLBACK(arp_timeout)
  * Stale entry timeout.
  */
 
-TIMER_CALLBACK(arp_stale_timeout)
+static TIMER_CALLBACK(arp_stale_timeout)
 {
   struct net_pv_arp_s	*pv_arp = (struct net_pv_arp_s *)pv;
   timer_delay_t		t = timer_get_tick(&timer_ms);

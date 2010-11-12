@@ -19,11 +19,12 @@
 
 */
 
-#include <netinet/packet.h>
 #include <netinet/socket.h>
-#include <netinet/socket_internals.h>
-#include <netinet/socket_udp.h>
-#include <netinet/libudp.h>
+#include <network/packet.h>
+#include <network/socket.h>
+#include <network/socket_internals.h>
+#include <network/socket_udp.h>
+#include <network/libudp.h>
 #include <netinet/udp.h>
 
 #include <mutek/mem_alloc.h>

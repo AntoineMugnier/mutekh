@@ -9,10 +9,22 @@
 #ifndef MWMR_H_
 #define MWMR_H_
 
+/**
+   @file
+   @module{MWMR}
+   @short MWMR channels access
+ */
+
+/**
+   @this is an abstract MWMR channel structure.
+ */
+struct mwmr_s;
+
 #if defined(CONFIG_MWMR_PTHREAD)
 
-#include <pthread.h>
+# include <pthread.h>
 
+/** @hidden */
 struct mwmr_status_s
 {
 	pthread_mutex_t lock;
@@ -22,6 +34,7 @@ struct mwmr_status_s
 	size_t usage;
 };
 
+/** @hidden */
 struct mwmr_s {
 	struct mwmr_status_s *status;
 	size_t width;
@@ -31,10 +44,13 @@ struct mwmr_s {
 	const char *const name;
 };
 
+/** @hidden */
 typedef struct {} srl_mwmr_lock_t;
-#define MWMR_LOCK_INITIALIZER {}
+/** @hidden */
+# define MWMR_LOCK_INITIALIZER {}
 
-#define MWMR_STATUS_INITIALIZER(x,y)							\
+/** @hidden */
+# define MWMR_STATUS_INITIALIZER(x,y)							\
 	{															\
 		.lock = PTHREAD_MUTEX_INITIALIZER,						\
 		.nempty = PTHREAD_COND_INITIALIZER,						\
@@ -44,7 +60,8 @@ typedef struct {} srl_mwmr_lock_t;
 		.usage = 0,												\
 	}
 
-#define MWMR_INITIALIZER(w, d, b, st, n, l)					   \
+/** @hidden */
+# define MWMR_INITIALIZER(w, d, b, st, n, l)					   \
 	{														   \
 		.width = w,											   \
 		.depth = d,											   \
@@ -58,6 +75,7 @@ typedef struct {} srl_mwmr_lock_t;
 
 # ifdef CONFIG_MWMR_LOCKFREE
 
+/** @hidden */
 enum SoclibMwmrRegisters {
     MWMR_IOREG_MAX = 16,
     MWMR_RESET = MWMR_IOREG_MAX,
@@ -72,11 +90,13 @@ enum SoclibMwmrRegisters {
     MWMR_FIFO_FILL_STATUS,
 };
 
+/** @hidden */
 enum SoclibMwmrWay {
     MWMR_TO_COPROC,
     MWMR_FROM_COPROC,
 };
 
+/** @hidden */
 struct mwmr_status_s
 {
 	uint32_t free_tail; // bytes
@@ -88,10 +108,12 @@ struct mwmr_status_s
 	uint32_t data_size; // bytes
 };
 
-#define MWMR_STATUS_INITIALIZER(w, d) {0,0,(w*d),0,0,0}
+/** @hidden */
+#  define MWMR_STATUS_INITIALIZER(w, d) {0,0,(w*d),0,0,0}
 
 # else /* not CONFIG_MWMR_LOCKFREE */
 
+/** @hidden */
 enum SoclibMwmrRegisters {
     MWMR_IOREG_MAX = 16,
     MWMR_RESET = MWMR_IOREG_MAX,
@@ -106,11 +128,7 @@ enum SoclibMwmrRegisters {
     MWMR_FIFO_FILL_STATUS,
 };
 
-enum SoclibMwmrWay {
-    MWMR_TO_COPROC,
-    MWMR_FROM_COPROC,
-};
-
+/** @hidden */
 struct mwmr_status_s
 {
 	uint32_t rptr;
@@ -119,16 +137,21 @@ struct mwmr_status_s
 	uint32_t lock;
 };
 
-#define MWMR_STATUS_INITIALIZER(w,d) {0,0,0,0}
+/** @hidden */
+#  define MWMR_STATUS_INITIALIZER(w,d) {0,0,0,0}
 
 # endif /* CONFIG_MWMR_LOCKFREE */
 
-#ifdef CONFIG_MWMR_USE_RAMLOCKS
-#define MWMR_USE_SEPARATE_LOCKS
+# ifdef CONFIG_MWMR_USE_RAMLOCKS
+/** @hidden */
+#  define MWMR_USE_SEPARATE_LOCKS
+/** @hidden */
 typedef uint32_t srl_mwmr_lock_t;
-#define MWMR_LOCK_INITIALIZER 0
-#endif
+/** @hidden */
+#  define MWMR_LOCK_INITIALIZER 0
+# endif
 
+/** @hidden */
 struct mwmr_s {
 	size_t width;
 	size_t depth;
@@ -136,23 +159,22 @@ struct mwmr_s {
 	void *buffer;
 	struct mwmr_status_s *status;
 	const char *const name;
-#ifdef CONFIG_MWMR_INSTRUMENTATION
+# ifdef CONFIG_MWMR_INSTRUMENTATION
 	uint32_t n_read;
 	uint32_t n_write;
 	uint32_t time_read;
 	uint32_t time_write;
-#endif
-#ifdef CONFIG_MWMR_USE_RAMLOCKS
+# endif
+# ifdef CONFIG_MWMR_USE_RAMLOCKS
+/** @hidden */
 	srl_mwmr_lock_t *lock;
-#endif
+# endif
 };
 
-void mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
-				   size_t no, const struct mwmr_s* mwmr );
+# ifdef CONFIG_MWMR_USE_RAMLOCKS
 
-#ifdef CONFIG_MWMR_USE_RAMLOCKS
-
-# define MWMR_INITIALIZER(w, d, b, st, n, l)				   \
+/** @hidden */
+#  define MWMR_INITIALIZER(w, d, b, st, n, l)				   \
 	{														   \
 		.width = w,											   \
 		.depth = d,											   \
@@ -162,12 +184,15 @@ void mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
 		.name = n,											   \
 		.lock = l,											   \
 	}
-#else
+# else
 
+/** @hidden */
 typedef struct {} srl_mwmr_lock_t;
-#define MWMR_LOCK_INITIALIZER {}
+/** @hidden */
+#  define MWMR_LOCK_INITIALIZER {}
 
-# define MWMR_INITIALIZER(w, d, b, st, n, l)				   \
+/** @hidden */
+#  define MWMR_INITIALIZER(w, d, b, st, n, l)				   \
 	{														   \
 		.width = w,											   \
 		.depth = d,											   \
@@ -176,23 +201,106 @@ typedef struct {} srl_mwmr_lock_t;
 		.status = st,									   	   \
 		.name = n,											   \
 	}
-#endif
-
-#ifdef CONFIG_MWMR_INSTRUMENTATION
-void mwmr_dump_stats( const struct mwmr_s *mwmr );
-void mwmr_clear_stats( struct mwmr_s *mwmr );
-#endif
+# endif
 
 #else
 # error No valid MWMR implementation
 #endif
 
-void mwmr_init( struct mwmr_s* );
+#ifdef CONFIG_MWMR_INSTRUMENTATION
 
-void mwmr_read( struct mwmr_s*, void *, size_t );
-void mwmr_write( struct mwmr_s*, const void *, size_t );
+/**
+   @this dumps statistics about usage of the channel to current
+   console.
 
-size_t mwmr_try_read( struct mwmr_s*, void *, size_t );
-size_t mwmr_try_write( struct mwmr_s*, const void *, size_t );
+   @param channel The channel
+*/
+void mwmr_dump_stats( const struct mwmr_s *channel );
+
+/**
+   @this resets statistics about usage of the channel.
+
+   @param channel The channel
+*/
+void mwmr_clear_stats( struct mwmr_s *channel );
+#endif
+
+/**
+   @this is the way of the channel designated when configuring an
+   hardware MWMR controller
+ */
+enum SoclibMwmrWay {
+    MWMR_TO_COPROC,
+    MWMR_FROM_COPROC,
+};
+
+/**
+   @this initializes an hardware MWMR controller for usage of a given
+   channel. Controller starts to use channel as soon as configured.
+
+   @param coproc Base address of controller
+   @param way Way of the channel
+   @param no Number of the channel. Channels are numbered from 0 in
+             each way.
+   @param mwmr Channel to use from coprocessor
+ */
+void mwmr_hw_init( void *coproc, enum SoclibMwmrWay way,
+				   size_t no, const struct mwmr_s* mwmr );
+
+/**
+   @this resets the channel's internal state. All data inside it will
+   be lost.
+
+   @param channel The channel to reset
+ */
+void mwmr_init( struct mwmr_s *channel );
+
+/**
+   @this reads a given size from a mwmr channel. If the size is not
+   available in the channel, the read will block.
+
+   @param channel The mwmr channel
+   @param buffer The buffer to retrieve data into
+   @param size The size (in bytes) of the requested transfer. This has
+   to be a multiple of the channel's width.
+ */
+void mwmr_read( struct mwmr_s *channel, void *buffer, size_t size );
+
+/**
+   @this writes a given size from a mwmr channel. If the size is not
+   free in the channel, the write will block.
+
+   @param channel The mwmr channel
+   @param buffer The buffer to retrieve data from
+   @param size The size (in bytes) of the requested transfer. This has
+   to be a multiple of the channel's width.
+ */
+void mwmr_write( struct mwmr_s *channel, const void *buffer, size_t size );
+
+/**
+   @this reads a given size from a mwmr channel. If the size is not
+   available in the channel, or if the lock is not available, @this will
+   return without transfering the whole buffer.
+
+   @param channel The mwmr channel
+   @param buffer The buffer to retrieve data into
+   @param size The size (in bytes) of the requested transfer. This has
+   to be a multiple of the channel's width.
+   @return the amount of bytes actually transfered
+ */
+size_t mwmr_try_read( struct mwmr_s *channel, void *buffer, size_t size );
+
+/**
+   @this writes a given size from a mwmr channel. If the size is not
+   free in the channel, or if the lock is not available, @this will
+   return without transfering the whole buffer.
+
+   @param channel The mwmr channel
+   @param buffer The buffer to retrieve data from
+   @param size The size (in bytes) of the requested transfer. This has
+   to be a multiple of the channel's width.
+   @return the amount of bytes actually transfered
+ */
+size_t mwmr_try_write( struct mwmr_s *channel, const void *buffer, size_t size );
 
 #endif

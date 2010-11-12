@@ -30,9 +30,6 @@ void
 __pthread_switch(void);
 
 void
-__pthread_cleanup(void);
-
-void
 __pthread_cancel_self(void);
 
 # if 0

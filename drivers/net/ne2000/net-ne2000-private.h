@@ -28,10 +28,10 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include <netinet/packet.h>
+#include <network/packet.h>
 #include <netinet/ether.h>
-#include <netinet/protos.h>
-#include <netinet/if.h>
+#include <network/protos.h>
+#include <network/if.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_clist.h>

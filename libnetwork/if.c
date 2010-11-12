@@ -19,23 +19,28 @@
 
 */
 
-#include <netinet/packet.h>
-#include <netinet/protos.h>
-#include <netinet/if.h>
+#include <network/packet.h>
+#include <network/protos.h>
+#include <network/if.h>
 
 #ifdef CONFIG_NETWORK_IPV4
 # include <netinet/ip.h>
 # include <netinet/arp.h>
 # include <netinet/icmp.h>
+# include <network/ip.h>
+# include <network/arp.h>
+# include <network/icmp.h>
 #endif
 #ifdef CONFIG_NETWORK_UDP
 # include <netinet/udp.h>
+# include <network/udp.h>
 #endif
 #ifdef CONFIG_NETWORK_TCP
 # include <netinet/tcp.h>
+# include <network/tcp.h>
 #endif
 #ifdef CONFIG_NETWORK_SOCKET
-# include <netinet/libsocket.h>
+# include <network/libsocket.h>
 #endif
 
 #include <device/net.h>
@@ -171,7 +176,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
  * Unregister a net interface.
  */
 
-void			if_unregister(struct net_if_s	*interface)
+void if_unregister(struct net_if_s *interface)
 {
   route_flush(interface);
   net_if_remove(&net_interfaces, interface);
@@ -182,34 +187,20 @@ void			if_unregister(struct net_if_s	*interface)
  * Bring an interface up.
  */
 
-void			if_up(char*		name)
+void if_up(struct net_if_s *interface)
 {
-  struct net_if_s	*interface;
+  printk("Bringing up interface %s\n", interface->name);
 
-  if ((interface = net_if_lookup(&net_interfaces, name)))
-    {
-      printk("Bringing up interface %s\n", name);
-
-      interface->state = NET_IF_STATE_UP;
-
-      net_if_obj_refdrop(interface);
-    }
+  interface->state = NET_IF_STATE_UP;
 }
 
 /*
  * Bring an interface down.
  */
 
-void			if_down(char*		name)
+void if_down(struct net_if_s *interface)
 {
-  struct net_if_s	*interface;
-
-  if ((interface = net_if_lookup(&net_interfaces, name)))
-    {
-      interface->state = NET_IF_STATE_DOWN;
-
-      net_if_obj_refdrop(interface);
-    }
+  interface->state = NET_IF_STATE_DOWN;
 }
 
 #ifdef CONFIG_NETWORK_IPV4
@@ -232,19 +223,18 @@ static void		if_destroy_ipv4(net_protos_root_t	*protos,
  * Configure an interface.
  */
 
-error_t			if_config(int_fast32_t		ifindex,
-				  uint_fast8_t		action,
+error_t			if_config(struct net_if_s *interface,
+				  enum if_action_e action,
 				  struct net_addr_s	*address,
 				  struct net_addr_s	*mask)
 {
-  struct net_if_s	*interface = if_get_by_index(ifindex);
   struct net_proto_s	*ip;
   struct net_proto_s	*arp;
   struct net_proto_s	*icmp;
   error_t		err = -1;
 
   if (interface == NULL)
-    return -1;
+    return -EINVAL;
 
   if (interface->state != NET_IF_STATE_UP)
     goto leave;
@@ -422,45 +412,32 @@ void			if_sendpkt(struct net_if_s	*interface,
     dev_net_sendpkt(interface->dev, packet, proto);
 }
 
-static void		spc(uint_fast8_t	i)
-{
-  for (; i > 0; i--)
-    printk(" ");
-}
-
 /*
  * Dump interface(s)
  */
 
-void			if_dump(const char	*name)
+error_t if_dump(struct net_if_s *interface)
 {
-  struct net_if_s	*interface;
-  uint_fast8_t		i;
+  if ( interface->state != NET_IF_STATE_UP )
+    return -EINVAL;
 
-  if ((interface = net_if_lookup(&net_interfaces, name)) && interface->state == NET_IF_STATE_UP)
-    {
-      i = printk("%s", name);
-      spc(6 - i);
-      printk("HWaddr %02x:%02x:%02x:%02x:%02x:%02x\n", interface->mac[0], interface->mac[1],
-	     interface->mac[2], interface->mac[3], interface->mac[4], interface->mac[5]);
+  printk("%s", interface->name);
+  printk("    HWaddr %02x:%02x:%02x:%02x:%02x:%02x\n",
+         interface->mac[0], interface->mac[1],
+	     interface->mac[2], interface->mac[3],
+         interface->mac[4], interface->mac[5]);
 #ifdef CONFIG_NETWORK_IPV4
-	  NET_FOREACH_PROTO(&interface->protocols, ETHERTYPE_IP,
-	  {
-	    struct net_pv_ip_s	*ipv4 = (struct net_pv_ip_s *)item->pv;
-
-	    spc(6);
-	    printk("inet addr %u.%u.%u.%u mask %u.%u.%u.%u broadcast %u.%u.%u.%u\n",
-		   EXTRACT_IPV4(ipv4->addr), EXTRACT_IPV4(ipv4->mask),
-		   EXTRACT_IPV4(ipv4->addr | (0xffffffff & ~ipv4->mask)));
-	  });
+  NET_FOREACH_PROTO(&interface->protocols, ETHERTYPE_IP, {
+      struct net_pv_ip_s	*ipv4 = (struct net_pv_ip_s *)item->pv;
+      printk("    inet addr %u.%u.%u.%u mask %u.%u.%u.%u broadcast %u.%u.%u.%u\n",
+             EXTRACT_IPV4(ipv4->addr), EXTRACT_IPV4(ipv4->mask),
+             EXTRACT_IPV4(ipv4->addr | (0xffffffff & ~ipv4->mask)));
+    });
 #endif
-      spc(6);
-      printk("%u bytes sent (%u packets), %u bytes received (%u packets)\n",
+  printk("    %u bytes sent (%u packets), %u bytes received (%u packets)\n",
 	     interface->tx_bytes, interface->tx_packets,
 	     interface->rx_bytes, interface->rx_packets);
-
-      net_if_obj_refdrop(interface);
-    }
+  return 0;
 }
 
 /*

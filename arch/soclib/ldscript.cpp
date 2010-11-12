@@ -1,7 +1,19 @@
 /*
   We may have aliasing in rom/except/boot segments. If so, we merge
   all we can in mem_rom segment.
+
+  We may also have alisasing of ram/rom (for bootloaded kernels), so
+  we may merge all we can in mem_ram.
  */
+
+
+/* ram + rom */
+#if CONFIG_RAM_ADDR == CONFIG_ROM_ADDR
+# define mem_rom mem_ram
+# if defined(CONFIG_CPU_RESET_HANDLER)
+#  error You may not have a reset handler with rom in ram
+# endif
+#endif
 
 /* The first two may only happen if reset handler is present */
 #if defined(CONFIG_CPU_RESET_HANDLER)
@@ -54,7 +66,9 @@ MEMORY
 #else
 # define mem_hetrom mem_rom
 #endif
+#if !defined(mem_rom)
     mem_rom (RXAL): ORIGIN = CONFIG_ROM_ADDR, LENGTH = CONFIG_ROM_SIZE
+#endif
     mem_ram (RWAL): ORIGIN = CONFIG_RAM_ADDR, LENGTH = CONFIG_RAM_SIZE
 }
 
@@ -150,8 +164,10 @@ SECTIONS
 	__system_uncached_heap_start = .;
 	__system_uncached_heap_end = ORIGIN(mem_ram) + LENGTH(mem_ram);
 
+#if defined(CONFIG_CPU_RESET_HANDLER)
 	. = ALIGN(CONFIG_HEXO_STACK_ALIGN);
 	__initial_stack = __system_uncached_heap_end;
+#endif
 
 	/* GOT section */
  	/DISCARD/ : { *(.eh_frame) }

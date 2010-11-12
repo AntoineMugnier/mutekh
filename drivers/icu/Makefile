@@ -34,3 +34,7 @@ endif
 ifeq ($(CONFIG_DRIVER_ICU_NIOS), defined)
  subdirs += nios
 endif
+
+ifeq ($(CONFIG_DRIVER_ICU_EMU), defined)
+ subdirs += emu
+endif

@@ -19,10 +19,10 @@
 
 */
 
-#include <netinet/protos.h>
-#include <netinet/route.h>
+#include <network/protos.h>
+#include <network/route.h>
 #include <netinet/ether.h>
-#include <netinet/if.h>
+#include <network/if.h>
 #include <netinet/ip.h>
 
 #include <mutek/printk.h>

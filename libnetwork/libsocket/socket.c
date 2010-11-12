@@ -20,7 +20,8 @@
 */
 
 #include <netinet/socket.h>
-#include <netinet/socket_internals.h>
+#include <network/socket.h>
+#include <network/socket_internals.h>
 #include <semaphore.h>
 #include <mutek/timer.h>
 

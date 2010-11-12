@@ -47,6 +47,8 @@ error_t fdt_writer_init(
 	void *blob,
 	size_t available_size)
 {
+    memset(blob, 0, available_size);
+
 	writer->header = blob;
 	writer->mem_reserve_ptr = (void*)(writer->header+1);
 	writer->struct_begin
@@ -178,9 +180,6 @@ error_t fdt_writer_finalize(struct fdt_writer_s *writer, size_t *real_size)
 		writer->end - writer->rst);
 	writer->header->size_dt_struct = endian_be32(
 		4 * (writer->struct_ptr - writer->struct_begin));
-
-	/* Clear last entry of memory reservation map */
-	memset((char*)writer->struct_begin - 8, 0, 8);
 
 	return 0;
 }

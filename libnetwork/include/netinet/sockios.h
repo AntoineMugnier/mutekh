@@ -17,7 +17,12 @@
    02111-1307 USA.  */
 
 #ifndef NETINET_SOCKIOS_H
-#define
+#define NETINET_SOCKIOS_H
+
+/**
+   @file
+   @module{Network library}
+ */
 
 /* Routing table calls.  */
 #define SIOCADDRT	0x890B		/* add routing table entry	*/

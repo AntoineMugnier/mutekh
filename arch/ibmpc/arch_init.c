@@ -33,7 +33,9 @@
 
 #include <hexo/lock.h>
 #include <mutek/mem_alloc.h>
-#include <mutek/scheduler.h>
+#if defined(CONFIG_MUTEK_SCHEDULER)
+# include <mutek/scheduler.h>
+#endif
 #include <mutek/printk.h>
 
 #ifdef CONFIG_DRIVER_ICU_APIC
@@ -90,14 +92,26 @@ static void apic_init()
 #ifdef CONFIG_ARCH_SMP
 static lock_t		cpu_init_lock;	/* cpu intialization lock */
 static lock_t		cpu_start_lock;	/* cpu wait for start lock */
+static size_t           cpu_count = 1;
 #endif
 
 #ifdef CONFIG_IBMPC_EARLY_CONSOLE_VGA
 PRINTF_OUTPUT_FUNC(early_console_vga);
 #endif
 
+#ifdef CONFIG_IBMPC_EARLY_CONSOLE_UART
+PRINTF_OUTPUT_FUNC(early_console_uart);
+#endif
+
+
+#if defined (CONFIG_MUTEK_SCHEDULER)
+extern struct sched_context_s main_ctx;
+#endif
+
+extern __ldscript_symbol_t __initial_stack;
+
 /* architecture specific init function */
-void arch_init() 
+void arch_init(uintptr_t init_sp)
 {
 #ifdef CONFIG_ARCH_SMP
   if (cpu_isbootstrap())
@@ -109,6 +123,9 @@ void arch_init()
 
 #ifdef CONFIG_IBMPC_EARLY_CONSOLE_VGA
       printk_set_output(early_console_vga, NULL);
+#endif
+#ifdef CONFIG_IBMPC_EARLY_CONSOLE_UART
+      printk_set_output(early_console_uart, NULL);
 #endif
       cpu_global_init();
 
@@ -154,10 +171,18 @@ void arch_init()
       apic_init();
 #endif
 
+      {
+            uintptr_t stack_end = (uintptr_t)&__initial_stack - (1 << CONFIG_HEXO_RESET_STACK_SIZE) * cpu_id();
+
 #if defined(CONFIG_MUTEK_SCHEDULER)
-      sched_global_init();
-      sched_cpu_init();
+            sched_global_init();
+            sched_cpu_init();
+
+            /* FIXME initial stack space will never be freed ! */
+            context_bootstrap(&main_ctx.context, 0, stack_end);
+            sched_context_init(&main_ctx);
 #endif
+        }
 
 #if defined(CONFIG_ARCH_HW_INIT_USER)
 	  user_hw_init();
@@ -169,7 +194,7 @@ void arch_init()
 
 
       /* run mutek_start() */
-      mutek_start(0, 0);
+      mutek_start();
 #ifdef CONFIG_ARCH_SMP
     }
   else
@@ -188,6 +213,7 @@ void arch_init()
 #ifdef CONFIG_DRIVER_ICU_APIC
       apic_init();
 #endif
+      cpu_count++;
 
       lock_release(&cpu_init_lock);
 
@@ -212,4 +238,12 @@ void arch_start_other_cpu(void)
 #endif
 }
 
+size_t arch_get_cpu_count(void)
+{
+#ifdef CONFIG_ARCH_SMP
+  return cpu_count;
+#else
+  return 1;
+#endif
+}
 

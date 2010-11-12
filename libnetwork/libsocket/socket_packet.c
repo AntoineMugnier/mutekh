@@ -23,11 +23,11 @@
 #include <device/net.h>
 #include <device/driver.h>
 
-#include <netinet/packet.h>
-#include <netinet/socket.h>
-#include <netinet/socket_internals.h>
-#include <netinet/socket_packet.h>
-#include <netinet/if.h>
+#include <network/packet.h>
+#include <network/socket.h>
+#include <network/socket_internals.h>
+#include <network/socket_packet.h>
+#include <network/if.h>
 #include <netinet/arp.h>
 
 #include <mutek/mem_alloc.h>

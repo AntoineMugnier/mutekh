@@ -15,7 +15,7 @@
     along with MutekH; if not, write to the Free Software Foundation,
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2010
 
 */
 
@@ -23,123 +23,64 @@
 #error This file can not be included directly
 #else
 
-#include <hexo/local.h>
-#include <hexo/cpu.h>
+#ifndef __MUTEK_ASM__
+
+struct cpu_context_regs_s
+{
+  uint64_t rdi;
+  uint64_t rsi;
+  uint64_t rbp;
+  uint64_t rsp;
+  uint64_t rbx;
+  uint64_t rdx;
+  uint64_t rcx;
+  uint64_t rax;
+  uint64_t rn[8];
+  uint64_t rip;
+  uint64_t rflags;
+};
 
 struct cpu_context_s
 {
+  uint64_t mask;
+  /* sorted in iret order */
+  struct cpu_context_regs_s kregs;
+# ifdef CONFIG_HEXO_FPU
+  __attribute__((aligned(16)))
+  uint8_t mm[512];  /* fpu and multimedia state */
+# endif
 };
 
-static inline void
-cpu_context_switch(struct context_s *old, struct context_s *future)
-{
-  register reg_t	tmp0, tmp1, tmp2;
-
-  /* Note: gcc save and restore registers for us because all registers
-     are marked clobbered in the asm statement. This will allow gcc to
-     decide which registers must be saved so that we don't need to
-     save _all_ registers ourself */
-
-  asm volatile (
-                /* preserve x86_64 abi red zone */
-                "       subq    $128, %%rsp     \n"
-
-#ifdef CONFIG_COMPILE_PIC
-		/* save execution pointer */
-		"	callq	1f		\n"
-		"	jmp	2f		\n"
-		"1:				\n"
 #else
-		"	pushl	2f		\n"
+
+.extern x86emu_context
+.equ CPU_X86EMU_CONTEXT_mask,    0
+
+.equ CPU_X86EMU_CONTEXT_rdi,     8
+.equ CPU_X86EMU_CONTEXT_rsi,     16
+.equ CPU_X86EMU_CONTEXT_rbp,     24
+.equ CPU_X86EMU_CONTEXT_rsp,     32
+.equ CPU_X86EMU_CONTEXT_rbx,     40
+.equ CPU_X86EMU_CONTEXT_rdx,     48
+.equ CPU_X86EMU_CONTEXT_rcx,     56
+.equ CPU_X86EMU_CONTEXT_rax,     64
+.equ CPU_X86EMU_CONTEXT_r8,      72
+.equ CPU_X86EMU_CONTEXT_r9,      80 
+.equ CPU_X86EMU_CONTEXT_r10,     88 
+.equ CPU_X86EMU_CONTEXT_r11,     96 
+.equ CPU_X86EMU_CONTEXT_r12,     104
+.equ CPU_X86EMU_CONTEXT_r13,     112
+.equ CPU_X86EMU_CONTEXT_r14,     120
+.equ CPU_X86EMU_CONTEXT_r15,     128
+.equ CPU_X86EMU_CONTEXT_RIP,     136
+
+.equ CPU_X86EMU_CONTEXT_RFLAGS,  144
+
+.equ CPU_X86EMU_CONTEXT_REGS_OFFSET, 8
+
+.equ CPU_X86EMU_CONTEXT_MM,      160
+
 #endif
-		/* save frame pointer */
-		"	push	%%rbp		\n"
-		/* save flags */
-		"	pushf			\n"
-//		"	cli			\n" /* FIXME */
-		/* save context local storage on stack */
-		"	push	(%2)		\n"
-		/* switch stack pointer */
-		"	movq	%%rsp, (%0)	\n"
-		"	movq	(%1), %%rsp	\n"
-		/* restore tls */
-		"	pop	(%2)		\n"
-		/* restore flags */
-		"	popf			\n"
-		/* restore frame pointer */
-		"	pop	%%rbp		\n"
-		/* restore execution pointer */
-		"	retq			\n"
-		"2:				\n"
-
-                /* skip x86_64 abi red zone */
-                "       addq    $128, %%rsp     \n"
-
-		/* these input registers will be clobbered */
-		: "=a" (tmp0)
-		, "=b" (tmp1)
-		, "=c" (tmp2)
-
-		/* input args */
-		: "0" (&old->stack_ptr)
-		, "1" (&future->stack_ptr)
-		, "2" (CPU_LOCAL_ADDR(__context_data_base))
-
-		/* remaining registers will be clobbered too */
-		: "memory"
-		, /* "%rax"*, */ /* "%rbx", */ /* "%rcx", */ "%rdx", "%rsi", "%rdi"
-		, "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15"
-		);
-}
-
-static inline void
-__attribute__((always_inline, noreturn))
-cpu_context_jumpto(struct context_s *future)
-{
-  asm volatile (
-		"	movq	%0, %%rsp	\n"
-		/* restore tls */
-		"	pop	(%1)		\n"
- 		/* restore flags */
-		"	popf			\n"
-		/* restore frame pointer */
-		"	pop	%%rbp		\n"
-		/* restore execution pointer */
-		"	retq			\n"
-		:
-		: "r" (future->stack_ptr)
-		, "r" (CPU_LOCAL_ADDR(__context_data_base))
-		);
-
-  while (1)
-    ;
-}
-
-static inline void
-__attribute__((always_inline, noreturn))
-cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto)
-{
-  asm volatile (
-		"	movq	%0, %%rsp	\n"
-		"	xorq	%%rbp, %%rbp	\n"
-		"	jmpq	*%1		\n"
-		:
-		: "r,m" (stack + stack_size - CONFIG_HEXO_STACK_ALIGN)
-                , "r,r" (jumpto)
-		);
-
-  while (1)
-    ;
-}
-
-static inline void
-__attribute__((always_inline, noreturn))
-cpu_context_set_user(uintptr_t kstack, uintptr_t ustack, uintptr_t jumpto)
-{
-  cpu_trap();			/* not supported */
-  while (1)
-    ;
-}
 
 #endif
 

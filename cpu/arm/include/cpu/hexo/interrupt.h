@@ -41,7 +41,7 @@ struct device_s;
 extern CPU_LOCAL struct device_s cpu_icu_dev;
 #endif
 
-void mips_interrupt_entry(void);
+void arm_interrupt_entry(void);
 
 static inline void
 cpu_interrupt_disable(void)

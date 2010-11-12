@@ -43,4 +43,6 @@
  */
 void mutek_parse_fdt(void *dt, struct device_s *enum_dev);
 
+void mutek_parse_fdt_chosen(void *dt, struct device_s *enum_dev);
+
 #endif

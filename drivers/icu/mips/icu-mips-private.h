@@ -36,8 +36,6 @@ struct icu_mips_handler_s
 struct icu_mips_private_s
 {
 	struct icu_mips_handler_s	table[ICU_MIPS_MAX_VECTOR];
-	uint8_t mask;
-    bool_t must_update;
 };
 
 #endif

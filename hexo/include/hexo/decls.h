@@ -1,7 +1,7 @@
 #ifndef HEXO_DECLS_H_
 #define HEXO_DECLS_H_
 
-#if __cplusplus
+#if __cplusplus && !defined(__MUTEK_ASM__)
 # define C_HEADER_BEGIN extern "C" {
 # define C_HEADER_END }
 #else

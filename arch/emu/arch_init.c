@@ -28,6 +28,13 @@
 #include <mutek/scheduler.h>
 #include <mutek/printk.h>
 
+#ifdef CONFIG_HEXO_IPI
+# include <device/icu.h>
+# include <device/device.h>
+# include <device/driver.h>
+# include <hexo/ipi.h>
+#endif
+
 #include <arch/hexo/emu_syscalls.h>
 
 #ifdef CONFIG_ARCH_SMP
@@ -62,11 +69,21 @@ PRINTF_OUTPUT_FUNC(early_console_fd1)
 }
 #endif
 
+#ifdef CONFIG_DRIVER_ICU_EMU
+extern struct device_s icu_dev;
+#endif
+
 __compiler_sint_t cpu_pids[CONFIG_CPU_MAXCOUNT];
 
+#if defined (CONFIG_MUTEK_SCHEDULER)
+extern struct sched_context_s main_ctx;
+#endif
+
 /* architecture specific init function */
-void arch_init()
+void arch_init(uintptr_t init_sp)
 {
+    volatile reg_t     first_stack_word;
+
 #ifdef CONFIG_EMU_EARLY_CONSOLE
   printk_set_output(early_console_fd1, NULL);
 #endif
@@ -104,27 +121,34 @@ void arch_init()
     _cpu_id = 0;
 #endif
 
-    /* configure first CPU */
-    cpu_init();
-
 #ifdef CONFIG_HEXO_IRQ
     emu_interrupts_init();
 #endif
+    /* configure first CPU */
+    cpu_init();
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
     sched_global_init();
     sched_cpu_init();
+
+    /* initial stack space will never be freed ! */
+    context_bootstrap(&main_ctx.context, 0, (uintptr_t)&first_stack_word);
+    sched_context_init(&main_ctx);
 #endif
 
     arch_hw_init();
     mem_region_init();
+
+# ifdef CONFIG_HEXO_IPI
+    dev_icu_setup_ipi_ep(&icu_dev, CPU_LOCAL_ADDR(ipi_endpoint), cpu_id());
+# endif
 
 #if defined(CONFIG_ARCH_SMP)
     cpu_init_flag = 1;
 #endif
 
     /* run mutek_start() */
-    mutek_start(0, 0);
+    mutek_start();
 
     emu_do_syscall(EMU_SYSCALL_EXIT, 1, 1);  
 
@@ -135,11 +159,18 @@ other_cpu:
     while (cpu_init_flag != 1)
         order_compiler_mem();
 
+#ifdef CONFIG_HEXO_IRQ
+    emu_interrupts_init();
+#endif
     cpu_init();
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
     sched_cpu_init();
 #endif
+
+# ifdef CONFIG_HEXO_IPI
+    dev_icu_setup_ipi_ep(&icu_dev, CPU_LOCAL_ADDR(ipi_endpoint), cpu_id());
+# endif
 
     mutek_start_smp();
 
@@ -151,7 +182,7 @@ void arch_start_other_cpu(void)
 {
 }
 
-cpu_id_t arch_get_cpu_count(void)
+size_t arch_get_cpu_count(void)
 {
 #ifdef CONFIG_ARCH_SMP
   return cpu_count;

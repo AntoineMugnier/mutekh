@@ -19,20 +19,43 @@
  *         Nicolas Pouillon <nipo@ssji.net>, 2010
  */
 
-#ifndef HEXO_ASM_H_
-#define HEXO_ASM_H_
+#ifndef ASM_H_
+#define ASM_H_
 
-#define ASM_STR_(x) #x
-#define ASM_STR(x) ASM_STR_(x)
+#include <cpu/hexo/asm.h>
 
-#define FUNC_START(x)                             \
-        "\t.globl " #x "            \n"           \
-        "\t.func " #x "             \n"           \
-        "\t.type " #x ", %function  \n"           \
-        #x ":                     \n"
+#ifdef __MUTEK_ASM__
 
-#define FUNC_END(x)                           \
-    "\t.endfunc               \n"             \
-    "\t.size " #x ", .-" #x " \n"
+# ifndef ASM_SECTION
+#  define ASM_SECTION(name) \
+    .section name,"ax",@progbits
+# endif
+
+# ifndef CPU_ASM_FUNC_END
+#  define CPU_ASM_FUNC_END
+# endif
+
+# define ASM_STR_(x) #x
+# define ASM_STR(x) ASM_STR_(x)
+
+# define FUNC_START(sec, x)              \
+        ASM_SECTION(sec.x)                    ; \
+        .globl x                              ; \
+        .func x                               ; \
+        .type x , %function                   ; \
+        x:
+
+# define FUNC_START_ORG(x, o)              \
+        .org o                                ; \
+        .func x                               ; \
+        .type x , %function                   ; \
+        x:
+
+# define FUNC_END(x)                            \
+        CPU_ASM_FUNC_END                      ; \
+        .endfunc                              ; \
+        .size x, .-x
+
+#endif
 
 #endif
