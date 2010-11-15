@@ -67,13 +67,11 @@ enum device_class_e
 typedef DEV_IRQ(dev_irq_t);
 
 
-
-
 /** Common class create() function template. */
 #define DEV_CREATE(n)	error_t (n) (struct device_s *parent, void *params)
 
-/** Common device class create() methode shortcut */
-#define dev_create(param) (dev)->drv->f_create(param)
+/** Common device class create() method shortcut */
+#define dev_create(dev, param) (dev)->drv->f_create(dev, param)
 
 /** Common device class create() function. This function must be used
     to create new virtual devices if driver support this.
@@ -90,7 +88,7 @@ typedef DEV_CREATE(dev_create_t);
 /** Common class init() function template. */
 #define DEV_INIT(n)	error_t (n) (struct device_s *dev, void *params)
 
-/** Common device class init() methode shortcut */
+/** Common device class init() method shortcut */
 #define dev_init(dev, ...) (dev)->drv->f_init(dev, __VA_ARGS__)
 
 /** Common device class init() function type. This function will init
@@ -111,7 +109,7 @@ typedef DEV_INIT(dev_init_t);
 /** Common device class cleanup() function template. */
 #define DEV_CLEANUP(n)	void    (n) (struct device_s *dev)
 
-/** Common device class cleanup() methode shortcut */
+/** Common device class cleanup() method shortcut */
 #define dev_cleanup(dev) (dev)->drv->f_cleanup(dev)
 
 /** Common device class cleanup() function type. Free all ressources
@@ -223,15 +221,16 @@ static inline
 error_t device_mem_map(struct device_s *dev, uint_fast8_t mask)
 {
 #if defined( CONFIG_VMEM )
-  uint_fast8_t i;
-  for( i = 0 ; i < ( sizeof(uint_fast8_t) * 8 ) ; i++ )
+    uint_fast8_t i = 0;
+    while ( mask )
     {
-    if( mask & 0x1 )
-      dev->addr[ i ] = vpage_io_map( dev->addr[ i ], 1 );
-    mask >>= 1;
+        if ( mask & 1 )
+            dev->addr[i] = vpage_io_map( dev->addr[i], 1 );
+        ++i;
+        mask >>= 1;
     }
 #endif
-  return 0;
+    return 0;
 }
 
 #ifdef CONFIG_DEVICE_TREE
