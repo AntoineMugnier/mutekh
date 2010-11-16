@@ -1,6 +1,7 @@
 #include <mutek/mem_alloc.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 inline void *
 malloc(size_t size)
