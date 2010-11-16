@@ -19,8 +19,8 @@
 
 */
 
-#ifndef __ICU_SAM7_PRIVATE_H_
-#define __ICU_SAM7_PRIVATE_H_
+#ifndef __ICU_CM3_PRIVATE_H_
+#define __ICU_CM3_PRIVATE_H_
 
 #include <device/icu.h>
 #include <device/device.h>
@@ -35,8 +35,9 @@ struct icu_cm3_handler_s
 
 struct icu_cm3_private_s
 {
-	struct icu_cm3_handler_s	*table;
-	uint_fast8_t virq_refcount;
+  struct icu_cm3_handler_s	*table;
+  uint_fast16_t intlinesnum;
+  uint_fast8_t virq_refcount;
 };
 
 #endif

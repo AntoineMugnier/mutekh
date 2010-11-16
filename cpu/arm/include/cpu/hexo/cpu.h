@@ -99,7 +99,7 @@ cpu_cycle_count(void)
 	/* who cares ? */
 	return 0;
 #else
-# warning No CPU cycle counter
+        //# warning No CPU cycle counter
 	return 0;
 #endif
 }

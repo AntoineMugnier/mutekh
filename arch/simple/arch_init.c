@@ -41,6 +41,8 @@ extern __ldscript_symbol_t __data_load_end;
 
 void arch_specific_init();
 
+void simple_early_console();
+
 /* architecture specific init function */
 void arch_init(uintptr_t init_sp) 
 {
@@ -51,6 +53,7 @@ void arch_init(uintptr_t init_sp)
 
   /* Configure arch-specific things */
   arch_specific_init();
+  simple_early_console(); // !!! temporary
 
   /* configure system wide cpu data */
   cpu_global_init();
@@ -74,6 +77,7 @@ void arch_init(uintptr_t init_sp)
 #else
 # error No supported hardware initialization
 #endif
+
 
   /* run mutek_start() */
   mutek_start();

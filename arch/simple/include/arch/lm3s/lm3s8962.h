@@ -26,6 +26,25 @@ typedef struct _LM3SS_WDT {
   LM3S_REG  WDT_LOCKR; // Watchdog Timer Lock Register
 } LM3SS_WDT, *LM3SPS_WDT;
 
+typedef struct _LM3SS_UART {
+  LM3S_REG  UART_DR;    // UART Data Register
+  LM3S_REG  UART_RSECR; // UART Receive Status/Error Clear Register
+  LM3S_REG  Reserved0[4];  
+  LM3S_REG  UART_FR;    // UART Flag Register
+  LM3S_REG  Reserved1;     
+  LM3S_REG  UART_ILPR;  // UART IrDA Low-Power Register
+  LM3S_REG  UART_IBRDR; // UART Integer Baud-Rate Divisor Register
+  LM3S_REG  UART_FBRDR; // UART Fractionnal Baud-Rate Divisor Register
+  LM3S_REG  UART_LCRHR; // UART Line Control Register
+  LM3S_REG  UART_CTLR;  // UART Control Register
+  LM3S_REG  UART_IFLSR; // UART Interrupt FIFO Level Select Register
+  LM3S_REG  UART_IMR;   // UART Interrupt Mask Register
+  LM3S_REG  UART_RISR;  // UART Raw Interrupt Status Register
+  LM3S_REG  UART_MISR;  // UART Masked Interrupt Status Register
+  LM3S_REG  Reserved2;     
+  LM3S_REG  UART_ICRR;  // UART Interrupt Clear Register
+} LM3SS_UART, *LM3SPS_UART;
+
 typedef struct _LM3SS_GPIO {
   LM3S_REG  GPIO_DATAR[256]; // GPIO Data Registers
   LM3S_REG  GPIO_DIRR;       // GPIO Direction Register
@@ -88,6 +107,8 @@ typedef struct _LM3SS_SYSCTL {
 #define LM3S_BASE_GPIOE     ((LM3SPS_GPIO)      0x40024000) // GPIOE Base Address
 #define LM3S_BASE_GPIOF     ((LM3SPS_GPIO)      0x40025000) // GPIOF Base Address
 #define LM3S_BASE_GPIOG     ((LM3SPS_GPIO)      0x40026000) // GPIOG Base Address
+#define LM3S_BASE_UART0     ((LM3SPS_UART)      0x4000C000) // UART0 Base Address
+#define LM3S_BASE_UART1     ((LM3SPS_UART)      0x4000D000) // UART1 Base Address
 #define LM3S_BASE_SYSCTL    ((LM3SPS_SYSCTL)    0x400FE000) // SYSCTL Base Address
 
 #endif

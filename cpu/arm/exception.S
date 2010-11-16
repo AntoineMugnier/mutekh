@@ -43,7 +43,7 @@
     /* If the interrupt number is not 5, branch */
     bne    1f
 
-    /* It is a bud fault, check if the stack is ok */
+    /* It is a bus fault, check if the stack is ok */
     /* Load the Bus Fault Status Register */
     ldr    r1, =0xE000ED29
     ldrb   r1, [r1]    

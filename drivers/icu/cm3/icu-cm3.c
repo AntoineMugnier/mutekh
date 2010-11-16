@@ -39,10 +39,10 @@
 
 DEVICU_SETHNDL(icu_cm3_sethndl)
 {
-	assert(irq < 32 && "Only 32 irq line are available on SAM7");
-
 	struct icu_cm3_private_s	*pv = dev->drv_pv;
 	struct icu_cm3_handler_s	*h = pv->table;
+
+	assert(irq < pv->intlinesnum && "Only intlinesnum irq line are available on CM3");
 
 	h[irq].hndl = hndl;
 	h[irq].data = data;
@@ -52,10 +52,10 @@ DEVICU_SETHNDL(icu_cm3_sethndl)
 
 DEVICU_DELHNDL(icu_cm3_delhndl)
 {
-	assert(irq < 32 && "Only 32 irq line are available on SAM7");
-
 	struct icu_cm3_private_s	*pv = dev->drv_pv;
 	struct icu_cm3_handler_s	*h = pv->table;
+
+	assert(irq < pv->intlinesnum && "Only intlinesnum irq line are available on CM3");
 
 	h[irq].hndl = NULL;
 	h[irq].data = NULL;
@@ -67,20 +67,17 @@ DEV_IRQ(icu_cm3_handler)
 {
 #if !defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
 	CM3PS_NVIC registers = (void*)dev->addr[0];
-	uint8_t irq = registers->NVIC_ITCTLR & 0x1f;
+	uint16_t irq = CM3_BASE_NVIC->NVIC_ITCTLR & 0x1f;
         irq -= 16;
 	struct icu_cm3_private_s	*pv = dev->drv_pv;
-	struct icu_cm3_handler_s	*h = pv->table[irq];
+	struct icu_cm3_handler_s	*h = &pv->table[irq];
 
-
-//	registers->AIC_ICCR = 1 << irq;
 
 	if (h && h->hndl)
 		h->hndl(h->data);
 	else
-		printk("SAM7 %d lost interrupt %i\n", cpu_id(), irq);
+		printk("CM3 %d lost interrupt %i\n", cpu_id(), irq);
 
-//	registers->AIC_EOICR = 0;
 
 #endif
 	return 0;
@@ -88,14 +85,14 @@ DEV_IRQ(icu_cm3_handler)
 
 DEV_CLEANUP(icu_cm3_cleanup)
 {
-	struct tty_cm3_context_s	*pv = dev->drv_pv;
-	AT91PS_AIC registers = (void*)dev->addr[0];
+	struct icu_cm3_private_s	*pv = dev->drv_pv;
+	CM3PS_NVIC registers = CM3_BASE_NVIC;
 
-	registers->AIC_IDCR = (uint32_t)-1;
+        size_t i;
+	for ( i=0; i < (pv->intlinesnum / 32); i++) 
+		CM3_BASE_NVIC->NVIC_ITENR[i] = 0; 
 
-#if defined(CONFIG_DRIVER_ICU_ARM)
-	DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, icu_cm3_handler);
-#endif
+        mem_free(pv->table);
 
 	mem_free(pv);
 }
@@ -133,37 +130,42 @@ DEV_INIT(icu_cm3_init)
 {
 	struct icu_cm3_private_s	*pv;
 	uint_fast8_t i;
-	AT91PS_AIC registers = (void*)dev->addr[0];
 
 	dev->drv = &icu_cm3_drv;
 
 	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
-	cm3_c_irq_dev = dev;
+        //	cm3_c_irq_dev = dev;
 
 	if ( pv == NULL )
-		goto memerr;
+	  goto memerr;
 	
-	pv->virq_refcount = 0;
+        /* Set the irq line number */
+        pv->intlinesnum = CM3_BASE_NVIC->NVIC_ITCTLR+1;
+        pv->intlinesnum *=32;
+        if(pv->intlinesnum > ICU_CM3_MAX_VECTOR)
+          pv->intlinesnum = ICU_CM3_MAX_VECTOR;
 
-	registers->AIC_IDCR = (uint32_t)-1;
-	registers->AIC_ICCR = (uint32_t)-1;
+        /* Allocate the vector interrupt table */
+        pv->table = mem_alloc(sizeof(*pv->table), (mem_scope_sys));
+        if ( pv->table == NULL )
+          goto memerr;
 
-	for (i=0; i < 8; i++) 
-		AT91C_BASE_AIC->AIC_EOICR = 0; 
+        /* Desactivate all interrupt sources */
+	for ( i=0; i < (pv->intlinesnum / 32); i++) 
+		CM3_BASE_NVIC->NVIC_ITENR[i] = 0; 
 
-	for ( i=0; i<32; ++i ) {
-		registers->AIC_SVR[i] = (uint32_t)(pv->table+32);
+        /* Set all priorities to 0 */
+	for ( i=0; i < (pv->intlinesnum / 4); i++ ) {
+		CM3_BASE_NVIC->NVIC_ITPRIR[i] = (uint32_t)(pv->table+32);
+	}
+
+        /* Set all handlers and their datas pointers to NULL */
+        for ( i=0; i< pv->intlinesnum ; i++ ) {
 		pv->table[i].hndl = NULL;
 		pv->table[i].data = NULL;
-	}
-	pv->table[32].hndl = NULL;
-	pv->table[32].data = NULL;
-	registers->AIC_SPU = (uint32_t)(pv->table+32);
-//	registers->AIC_DCR = 1;
-
-	pv->table[1].hndl = icu_cm3_handle_sysctrl;
-	pv->table[1].data = dev;
-
+        }
+	
+        /* Register private datas */
 	dev->drv_pv = pv;
 
 
@@ -175,26 +177,16 @@ DEV_INIT(icu_cm3_init)
 
 DEVICU_ENABLE(icu_cm3_enable)
 {
-	AT91PS_AIC registers = (void*)dev->addr[0];
-	struct icu_cm3_private_s	*pv = cm3_c_irq_dev->drv_pv;
+	struct icu_cm3_private_s	*pv = dev->drv_pv;
 
-	registers->AIC_SMR[irq] = flags;
+	assert(irq < pv->intlinesnum && "Only intlinesnum irq line are available on CM3");
 
-	if ( (1<<irq) & ICU_SAM7_SYSCTRL_VIRQS ) {
-		if ( enable )
-			pv->virq_refcount++;
-		else
-			pv->virq_refcount--;
-		enable = !!(pv->virq_refcount);
-		irq = 1;
-	}
+        uint32_t i = irq / 32;
 
 	if (enable) {
-		registers->AIC_IECR = 1 << irq;
-		registers->AIC_SVR[irq] = (uint32_t)(pv->table+irq);
+          CM3_BASE_NVIC->NVIC_ITENR[i] =CM3_BASE_NVIC->NVIC_ITENR[i] | (1 << (irq & 31)); 
 	} else {
-		registers->AIC_IDCR = 1 << irq;
-		registers->AIC_SVR[irq] = (uint32_t)(pv->table+32);
+          CM3_BASE_NVIC->NVIC_ITENR[i] =CM3_BASE_NVIC->NVIC_ITENR[i] & ~(1 << (irq & 31)); 
 	}
 
     return 0;
