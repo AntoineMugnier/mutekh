@@ -32,6 +32,14 @@ void arch_specific_init()
   LM3S_BASE_GPIOF->GPIO_DIRR = 0x00000001 | LM3S_BASE_GPIOF->GPIO_DIRR;
   // --> PF0 is a digital pin
   LM3S_BASE_GPIOF->GPIO_DENR = 0x00000001 | LM3S_BASE_GPIOF->GPIO_DENR;
+  // --> PF1 is an input
+  LM3S_BASE_GPIOF->GPIO_DIRR = ~0x00000002 & LM3S_BASE_GPIOF->GPIO_DIRR;
+  // --> PF1 is a digital pin
+  LM3S_BASE_GPIOF->GPIO_DENR = 0x00000002 | LM3S_BASE_GPIOF->GPIO_DENR;
+  // --> PF1 has a pull-up
+  LM3S_BASE_GPIOF->GPIO_PURR = 0x00000002 | LM3S_BASE_GPIOF->GPIO_PURR;
+  // --> PF1 generate interrupt
+  LM3S_BASE_GPIOF->GPIO_IMR = 0x00000002 | LM3S_BASE_GPIOF->GPIO_IMR;
   // --> PA0 and PA1 are digital pins
   LM3S_BASE_GPIOA->GPIO_DENR = 0x00000003 | LM3S_BASE_GPIOA->GPIO_DENR;
   // --> PA0 and PA1 are controlled by uart0 module
