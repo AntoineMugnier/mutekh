@@ -31,6 +31,7 @@ extern void arm_exc_mpu();
 extern void arm_exc_dabt();
 extern void arm_exc_undef();
 extern void arm_exc_swi();
+extern void arm_exc_irq();
 extern void arm_exc_tick();
 
 typedef void (*isr_handler_t) ();
@@ -55,6 +56,50 @@ __attribute__((section(".boot"),used))
       arm_exc_swi,
       0,
       0,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
+      arm_exc_irq,
       };
         
 

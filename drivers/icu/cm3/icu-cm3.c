@@ -43,7 +43,6 @@ DEVICU_SETHNDL(icu_cm3_sethndl)
 	struct icu_cm3_handler_s	*h = pv->table;
 
 	assert(irq < pv->intlinesnum && "Only intlinesnum irq line are available on CM3");
-
 	h[irq].hndl = hndl;
 	h[irq].data = data;
 
@@ -65,21 +64,15 @@ DEVICU_DELHNDL(icu_cm3_delhndl)
 
 DEV_IRQ(icu_cm3_handler)
 {
-#if !defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
-	CM3PS_NVIC registers = (void*)dev->addr[0];
-	uint16_t irq = CM3_BASE_NVIC->NVIC_ITCTLR & 0x1f;
+	uint16_t irq = CM3_BASE_NVIC->NVIC_ITCTLR & 0x1ff;
         irq -= 16;
 	struct icu_cm3_private_s	*pv = dev->drv_pv;
-	struct icu_cm3_handler_s	*h = &pv->table[irq];
+	struct icu_cm3_handler_s	*h = pv->table;
 
-
-	if (h && h->hndl)
-		h->hndl(h->data);
+	if (h[irq].hndl)
+		h[irq].hndl(h[irq].data);
 	else
 		printk("CM3 %d lost interrupt %i\n", cpu_id(), irq);
-
-
-#endif
 	return 0;
 }
 
@@ -87,7 +80,6 @@ DEV_CLEANUP(icu_cm3_cleanup)
 {
 	struct icu_cm3_private_s	*pv = dev->drv_pv;
 	CM3PS_NVIC registers = CM3_BASE_NVIC;
-
         size_t i;
 	for ( i=0; i < (pv->intlinesnum / 32); i++) 
 		CM3_BASE_NVIC->NVIC_ITENR[i] = 0; 
@@ -135,18 +127,17 @@ DEV_INIT(icu_cm3_init)
 
 	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
         //	cm3_c_irq_dev = dev;
-
 	if ( pv == NULL )
 	  goto memerr;
-	
+
         /* Set the irq line number */
-        pv->intlinesnum = CM3_BASE_NVIC->NVIC_ITCTLR+1;
+        pv->intlinesnum = CM3_BASE_NVIC->NVIC_ITCTL_TYPER+1;
         pv->intlinesnum *=32;
         if(pv->intlinesnum > ICU_CM3_MAX_VECTOR)
           pv->intlinesnum = ICU_CM3_MAX_VECTOR;
 
         /* Allocate the vector interrupt table */
-        pv->table = mem_alloc(sizeof(*pv->table), (mem_scope_sys));
+        pv->table = mem_alloc(sizeof(*pv->table)*(pv->intlinesnum), (mem_scope_sys));
         if ( pv->table == NULL )
           goto memerr;
 
@@ -168,6 +159,8 @@ DEV_INIT(icu_cm3_init)
         /* Register private datas */
 	dev->drv_pv = pv;
 
+	assert(dev->icudev);
+	DEV_ICU_BIND(dev->icudev, dev, dev->irq, icu_cm3_handler);
 
 	return 0;
 

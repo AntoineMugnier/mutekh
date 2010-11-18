@@ -36,6 +36,20 @@
     str    lr, [r2, #CPU_ARM_CONTEXT_LR]
     str    sp, [r2, #CPU_ARM_CONTEXT_SP]
 
+    // write special register                      
+    mrs     r4, xpsr                               
+    str     r4, [r2, #CPU_ARM_CONTEXT_XPSR]        
+    // write masks                                 
+    mrs     r4, basepri                            
+    lsl     r5, r4, #16                                    
+    mrs     r4, primask                            
+    and     r4, r4, 0x1                            
+    orr     r5, r5, r4, lsl #8                     
+    mrs     r4, faultmask                          
+    and     r4, r4, 0x1                            
+    orr     r5, r5, r4                             
+    str     r5, [r2, #CPU_ARM_CONTEXT_MASKS]       
+
     /* Test wether it is a bus fault or not */
     mrs    r1, ipsr
     and    r1, r1, #255
@@ -66,7 +80,8 @@
     /*   Store R12 and PC   */
     add    r1, r2, #CPU_ARM_CONTEXT_GPR(12)
     ldr    r4, [sp, #16]
-    ldr    r5, [sp, #24]
+    //ldr    r5, [sp, #24]
+    ldr    r5, =arm_return_exc
     /* uniformize return address, but avoid a sub when 0 */
     .if \offset != 0
         sub    r5, r5, #\offset
@@ -79,7 +94,7 @@
         
 2:      
     /* Tell what to restore */
-    mov     r0, #CPU_ARM_CONTEXT_RESTORE_CALLEE|CPU_ARM_CONTEXT_RESTORE_CALLER
+    mov     r0, #CPU_ARM_CONTEXT_RESTORE_CALLEE  //|CPU_ARM_CONTEXT_RESTORE_CALLER
     str     r0, [r2, #CPU_ARM_CONTEXT_SAVE_MASK]
 
 .endm
@@ -105,6 +120,10 @@
     b      arm_irq_common
 .endm
 #endif
+
+FUNC_START(.text, arm_return_exc)
+    bx     lr
+FUNC_END(arm_exc_undef)
     
     /* sp + 28 is exc pc */
 FUNC_START(.text, arm_exc_undef)
@@ -134,6 +153,12 @@ FUNC_END(arm_exc_hfault)
 FUNC_START(.text, arm_exc_mpu)
     prepare_exception 0
     handle_exception CPU_EXCEPTION_MPU_ERROR
+FUNC_END(arm_exc_mpu)
+
+    /* sp + 28 is error pc */
+FUNC_START(.text, arm_exc_irq)
+    prepare_exception 0
+    handle_irq 0
 FUNC_END(arm_exc_mpu)
 
     /* sp + 28 is swi pc + 4 */
