@@ -58,18 +58,18 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 
     regs->save_mask =
         CPU_ARM_CONTEXT_RESTORE_CALLER |
-        CPU_ARM_CONTEXT_RESTORE_CALLEE |
-        CPU_ARM_CONTEXT_RESTORE_PC;
+        CPU_ARM_CONTEXT_RESTORE_CALLEE ;
     regs->sp =
         CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
-        - CONFIG_HEXO_STACK_ALIGN;
+        - CONFIG_HEXO_STACK_ALIGN - 4;
+    *((uintptr_t *)(regs->sp)) = (uintptr_t) entry; // push entry on the stack
     regs->gpr[0] = (uintptr_t)param;
 
     regs->xpsr  = 0x01000000;
     regs->masks = 0x00000102; // interrupt disable, fault enable, Process Stack 
 
     regs->lr    = 0xa5a5a5a5; /* can not return from context entry */
-    regs->pc    = (uintptr_t)entry;
+    //regs->pc    = (uintptr_t)entry;  /* pc is placed on top of the stack */
 
     return 0;
 }

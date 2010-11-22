@@ -85,9 +85,6 @@ FUNC_START(.text, arm_context_jumpto_internal)
     // context registers save array
     CONTEXT_LOCAL_ADDR arm_context_regs, r2, r3
 
-    // Setup r0 to be &r0
-    add     r0, r2, #CPU_ARM_CONTEXT_GPR(0)
-
     // Restore masks (to setup the good sp type)
     ldr      r5, [r2, #CPU_ARM_CONTEXT_MASKS]
     and      r4, r5, #2
@@ -113,30 +110,30 @@ FUNC_START(.text, arm_context_jumpto_internal)
     /* We were from super, so restore in place */
     ldmneia  sp, {r13, r14}
 #else
-    // &r0 is in r0, restore sp
-    ldr      r4, [r2, #CPU_ARM_CONTEXT_SP]
-    mov      r13, r4
+    // restore sp
+    ldr      r13, [r2, #CPU_ARM_CONTEXT_SP]
 #endif
 
+    // Setup r4 to be &r4
+    add     r4, r2, #CPU_ARM_CONTEXT_GPR(4)
+    // Restore CALLE registers
+    ldmia   r4, {r4, r5, r6, r7, r8, r9, r10, r11}
     // Test whether we need to restore caller saved
     ldr     r1, [r2, #CPU_ARM_CONTEXT_SAVE_MASK]
     tst     r1, #CPU_ARM_CONTEXT_RESTORE_CALLER
-    ITTTE   EQ
-    // We dont
-    addeq   r0, r2, #CPU_ARM_CONTEXT_GPR(4)
-    ldmiaeq r0, {r4, r5, r6, r7, r8, r9, r10, r11}
+    ITE     EQ
+    // No need to restore caller saved, we return (frequent case is optimized)
     popeq   {pc}
-    // We do
+    // We have to restore caller saved registers
+    // Setup r0 to be &r0
+    addne   r0, r2, #CPU_ARM_CONTEXT_GPR(0)
+    // Restore remaining registers
     // Restore special registers
-    ldrne    r4, [r2, #CPU_ARM_CONTEXT_XPSR]
-    msr      xpsr, r4
-    // Restore PC and push it on stack if necessay
-    tst      r1, #CPU_ARM_CONTEXT_RESTORE_PC
-    ITT      NE
-    ldrne    r4, [r2, #CPU_ARM_CONTEXT_PC]
-    pushne   {r4}
+    ldr     r3, [r2, #CPU_ARM_CONTEXT_XPSR]
+    msr     xpsr, r3
+    ldr     r12, [r2, #CPU_ARM_CONTEXT_GPR(12)]
     // r0 is &r0
-    ldmia   r0, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
+    ldmia   r0, {r0, r1, r2, r3}
     pop     {pc}
 FUNC_END(arm_context_jumpto_internal)
 

@@ -29,9 +29,8 @@
 /** @multiple @this specify context save mask values */
 # define CPU_ARM_CONTEXT_RESTORE_CALLEE   1
 # define CPU_ARM_CONTEXT_RESTORE_CALLER   2
-# define CPU_ARM_CONTEXT_RESTORE_PC       4
 
-# define CPU_ARM_CONTEXT_RESTORE_NONE     (~7)
+# define CPU_ARM_CONTEXT_RESTORE_NONE     (~3)
 
 /** @multiple @this describes @ref cpu_context_s field offset */
 #define CPU_ARM_CONTEXT_SAVE_MASK      0
