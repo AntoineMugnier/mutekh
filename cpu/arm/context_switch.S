@@ -39,6 +39,10 @@ FUNC_START(.text, cpu_context_switch)
     // save "callee saved" registers
     add     r1, r2, #CPU_ARM_CONTEXT_GPR(4)
     stmia   r1, {r4, r5, r6, r7, r8, r9, r10, r11}
+
+    // pop lr (for returning)
+    push    {lr}
+    // save sp
     str     r13, [r2, #CPU_ARM_CONTEXT_SP]
         
     // write save/restore mask
@@ -50,16 +54,11 @@ FUNC_START(.text, cpu_context_switch)
     str     r4, [r2, #CPU_ARM_CONTEXT_XPSR]        
     // write masks                                 
     mrs     r4, basepri                            
-    lsl     r5, r4, #16                                    
-    mrs     r4, primask                            
-    and     r4, r4, 0x1                            
-    orr     r5, r5, r4, lsl #8                     
-    mrs     r4, faultmask                          
-    and     r4, r4, 0x1                            
+    lsl     r5, r4, #8                                    
+    mrs     r4, control                          
+    and     r4, r4, 0x2 // we only save SP type (we are ever priviled)                            
     orr     r5, r5, r4                             
     str     r5, [r2, #CPU_ARM_CONTEXT_MASKS]       
-    // write lr with the current pc                
-    str     r14, [r2, #CPU_ARM_CONTEXT_PC]         
    
     b       cpu_context_jumpto
 FUNC_END(cpu_context_switch)
@@ -79,7 +78,7 @@ FUNC_START(.text, arm_context_may_preempt)
     IT    NE
     bne   cpu_context_jumpto
 #endif
-    b arm_context_jumpto_internal
+    bx    lr
 FUNC_END(arm_context_may_preempt)
 
 FUNC_START(.text, arm_context_jumpto_internal)
@@ -89,8 +88,13 @@ FUNC_START(.text, arm_context_jumpto_internal)
     // Setup r0 to be &r0
     add     r0, r2, #CPU_ARM_CONTEXT_GPR(0)
 
-    // Take &[r13 r14] in r3
-    add     r3, r2, #CPU_ARM_CONTEXT_SP
+    // Restore masks (to setup the good sp type)
+    ldr      r5, [r2, #CPU_ARM_CONTEXT_MASKS]
+    and      r4, r5, #2
+    msr      control, r4
+    lsr      r5, r5, #8
+    and      r4, r5, #1
+    msr      primask, r4
 
 #if defined(CONFIG_HEXO_USERMODE) // not supported
     // Load spsr
@@ -109,36 +113,31 @@ FUNC_START(.text, arm_context_jumpto_internal)
     /* We were from super, so restore in place */
     ldmneia  sp, {r13, r14}
 #else
-    // sp is in r3
-    ldmia    r3, {r4, r14}
+    // &r0 is in r0, restore sp
+    ldr      r4, [r2, #CPU_ARM_CONTEXT_SP]
     mov      r13, r4
 #endif
-
-    // Restore masks
-    ldr      r5, [r2, #CPU_ARM_CONTEXT_MASKS]
-    and      r4, r5, #1
-    msr      faultmask, r4
-    lsr      r5, r5, #8
-    and      r4, r5, #1
-    msr      primask, r4
-    lsr      r5, r5, #8
-    and      r4, r5, #255
-    msr      basepri, r4
 
     // Test whether we need to restore caller saved
     ldr     r1, [r2, #CPU_ARM_CONTEXT_SAVE_MASK]
     tst     r1, #CPU_ARM_CONTEXT_RESTORE_CALLER
-    ITT     EQ
+    ITTTE   EQ
     // We dont
     addeq   r0, r2, #CPU_ARM_CONTEXT_GPR(4)
-    ldmiaeq r0, {r4, r5, r6, r7, r8, r9, r10, r11, r12, pc}
-        
+    ldmiaeq r0, {r4, r5, r6, r7, r8, r9, r10, r11}
+    popeq   {pc}
     // We do
     // Restore special registers
-    ldr      r4, [r2, #CPU_ARM_CONTEXT_XPSR]
+    ldrne    r4, [r2, #CPU_ARM_CONTEXT_XPSR]
     msr      xpsr, r4
+    // Restore PC and push it on stack if necessay
+    tst      r1, #CPU_ARM_CONTEXT_RESTORE_PC
+    ITT      NE
+    ldrne    r4, [r2, #CPU_ARM_CONTEXT_PC]
+    pushne   {r4}
     // r0 is &r0
-    ldmia   r0, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, pc}
+    ldmia   r0, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
+    pop     {pc}
 FUNC_END(arm_context_jumpto_internal)
 
 

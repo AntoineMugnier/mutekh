@@ -33,70 +33,75 @@
     add    r1, r2, #CPU_ARM_CONTEXT_GPR(4)
     /* store most registers in tmp buffer */
     stmia  r1, {r4, r5, r6, r7, r8, r9, r10, r11}
-    str    lr, [r2, #CPU_ARM_CONTEXT_LR]
-    str    sp, [r2, #CPU_ARM_CONTEXT_SP]
 
-    // write special register                      
-    mrs     r4, xpsr                               
-    str     r4, [r2, #CPU_ARM_CONTEXT_XPSR]        
+
     // write masks                                 
-    mrs     r4, basepri                            
-    lsl     r5, r4, #16                                    
     mrs     r4, primask                            
     and     r4, r4, 0x1                            
     orr     r5, r5, r4, lsl #8                     
-    mrs     r4, faultmask                          
-    and     r4, r4, 0x1                            
+    mrs     r4, control                          
+    and     r4, r4, 0x2                            
     orr     r5, r5, r4                             
     str     r5, [r2, #CPU_ARM_CONTEXT_MASKS]       
 
-    /* Test wether it is a bus fault or not */
-    mrs    r1, ipsr
-    and    r1, r1, #255
-    cmp    r1, #5
-    /* If the interrupt number is not 5, branch */
-    bne    1f
+    and    r4, lr, #15
+    teq    lr, #1
+    ITE    EQ
+    mrseq  r4, msp
+    mrsne  r4, psp
+    str    r4, [r2, #CPU_ARM_CONTEXT_SP]
 
-    /* It is a bus fault, check if the stack is ok */
-    /* Load the Bus Fault Status Register */
-    ldr    r1, =0xE000ED29
-    ldrb   r1, [r1]    
-    and    r1, #16
-    /* If the STKERR bit is null, branch */
-    cbz    r1, 1f
-    /* The bit is set, pass some register saving */
-    b      2f
+;;     /* Test wether it is a bus fault or not */
+;;     mrs    r1, ipsr
+;;     and    r1, r1, #255
+;;     cmp    r1, #5
+;;     /* If the interrupt number is not 5, branch */
+;;     bne    1f
+
+;;     /* It is a bus fault, check if the stack is ok */
+;;     /* Load the Bus Fault Status Register */
+;;     ldr    r1, =0xE000ED29
+;;     ldrb   r1, [r1]    
+;;     and    r1, #16
+;;     /* If the STKERR bit is null, branch */
+;;     cbz    r1, 1f
+;;     /* The bit is set, pass some register saving */
+;;     b      2f
         
-1:      
+;; 1:      
     /* Store remaining registers */
     /*   Store r0 to r4    */
     add    r1, r2, #CPU_ARM_CONTEXT_GPR(0)
-    ldr    r4, [sp]
-    ldr    r5, [sp, #4]
-    ldr    r6, [sp, #8]
-    ldr    r7, [sp, #12]
-    stmia  r1, {r4,r5,r6,r7}
-
-    /*   Store R12 and PC   */
-    add    r1, r2, #CPU_ARM_CONTEXT_GPR(12)
-    ldr    r4, [sp, #16]
-    //ldr    r5, [sp, #24]
-    ldr    r5, =arm_return_exc
+    ldr    r5, [r4]
+    ldr    r6, [r4, #4]
+    ldr    r7, [r4, #8]
+    ldr    r8, [r4, #12]
+    stmia  r1, {r5,r6,r7,r8}
+    /*   Store R12  */
+    ldr    r5, [r4, #16]
+    str    r5, [r2, #CPU_ARM_CONTEXT_GPR(12)]
+    /*   Store LR   */
+    ldr    r5, [r4, #20]
+    str    r5, [r2, #CPU_ARM_CONTEXT_LR]
+    /*   Store PC   */
+    ldr    r5, [r4, #24]
     /* uniformize return address, but avoid a sub when 0 */
     .if \offset != 0
         sub    r5, r5, #\offset
     .endif
-    stmia  r1, {r4, r5}
+    str    r5, [r2, #CPU_ARM_CONTEXT_PC]
 
     /* Take old xpsr, save it */
-    ldr    r0, [sp, #28]
-    str    r0, [r2, #CPU_ARM_CONTEXT_XPSR]
+    ldr    r5, [r4, #28]
+    str    r5, [r2, #CPU_ARM_CONTEXT_XPSR]
         
 2:      
     /* Tell what to restore */
-    mov     r0, #CPU_ARM_CONTEXT_RESTORE_CALLEE  //|CPU_ARM_CONTEXT_RESTORE_CALLER
+    mov     r0, #CPU_ARM_CONTEXT_RESTORE_CALLEE|CPU_ARM_CONTEXT_RESTORE_CALLER
     str     r0, [r2, #CPU_ARM_CONTEXT_SAVE_MASK]
 
+    mov     r1, r2
+        
 .endm
 
 .macro preempt_clear
@@ -123,7 +128,7 @@
 
 FUNC_START(.text, arm_return_exc)
     bx     lr
-FUNC_END(arm_exc_undef)
+FUNC_END(arm_return_exc)
     
     /* sp + 28 is exc pc */
 FUNC_START(.text, arm_exc_undef)
@@ -157,8 +162,9 @@ FUNC_END(arm_exc_mpu)
 
     /* sp + 28 is error pc */
 FUNC_START(.text, arm_exc_irq)
-    prepare_exception 0
-    handle_irq 0
+//    prepare_exception 0
+//    handle_irq 0
+    b      arm_irq_common
 FUNC_END(arm_exc_mpu)
 
     /* sp + 28 is swi pc + 4 */

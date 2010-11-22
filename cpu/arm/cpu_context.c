@@ -58,14 +58,15 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 
     regs->save_mask =
         CPU_ARM_CONTEXT_RESTORE_CALLER |
-        CPU_ARM_CONTEXT_RESTORE_CALLEE;
+        CPU_ARM_CONTEXT_RESTORE_CALLEE |
+        CPU_ARM_CONTEXT_RESTORE_PC;
     regs->sp =
         CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
         - CONFIG_HEXO_STACK_ALIGN;
     regs->gpr[0] = (uintptr_t)param;
 
     regs->xpsr  = 0x01000000;
-    regs->masks = 0x00000100; // interrupt disable, fault enable 
+    regs->masks = 0x00000102; // interrupt disable, fault enable, Process Stack 
 
     regs->lr    = 0xa5a5a5a5; /* can not return from context entry */
     regs->pc    = (uintptr_t)entry;
@@ -151,7 +152,8 @@ struct context_s *arm_irq_common(reg_t no, struct cpu_context_s *context)
         CPU_LOCAL_GET(cpu_interrupt_handler);
     handler(no);
 
-    return arm_except_preempt();
+    //    return arm_except_preempt();
+    return NULL;
 }
 #endif
 

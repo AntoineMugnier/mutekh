@@ -38,9 +38,9 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	16
 
-#define CPU_GPREG_NAMES {											   \
-"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",						   \
-  "r8", "r9", "r10", "r11", "r12", "pc", "sp", "lr",              \
+#define CPU_GPREG_NAMES {				   \
+"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",		   \
+  "r8", "r9", "r10", "r11", "r12", "sp", "lr", "pc",       \
 }
 
 #define CPU_TYPE_NAME arm
@@ -150,11 +150,11 @@ static inline size_t cpu_dcache_line_size()
 
 #endif
 
-#define CPU_EXCEPTION_NMI          0x1
-#define CPU_EXCEPTION_HARDFAULT    0x2
-#define CPU_EXCEPTION_MPU_ERROR    0x3
-#define CPU_EXCEPTION_DATA_ERROR   0x4
-#define CPU_EXCEPTION_ILLEGAL_INS  0x5
+#define CPU_EXCEPTION_NMI          0x0
+#define CPU_EXCEPTION_HARDFAULT    0x1
+#define CPU_EXCEPTION_MPU_ERROR    0x2
+#define CPU_EXCEPTION_DATA_ERROR   0x3
+#define CPU_EXCEPTION_ILLEGAL_INS  0x4
 #define CPU_FAULT_COUNT 5
 
 #define CPU_FAULT_NAMES {	\
