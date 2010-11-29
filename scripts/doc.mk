@@ -4,7 +4,7 @@ include $(MUTEK_SRC_DIR)/doc/header_list.mk
 
 include $(MUTEK_SRC_DIR)/scripts/discover.mk
 
-SVN_REV:=$(shell svn info $(MUTEK_SRC_DIR) | grep ^Revision: | cut -d' ' -f2)
+HG_REV:=$(shell cd $(MUTEK_SRC_DIR) && hg summary | grep ^parent | cut -d: -f3)
 
 $(BUILD_DIR)/doc/config.h:
 	test -d $(BUILD_DIR)/doc || mkdir -p $(BUILD_DIR)/doc
@@ -14,9 +14,9 @@ doc: $(BUILD_DIR)/doc/config.h
 	cd $(MUTEK_SRC_DIR) ; \
 	$(MKDOC) $(MKDOCFLAGS) doc/gpct.mkdoclib \
 	  --mkdoclib-create doc/html/mutek-api \
-	  --mkdoclib-url http://www.mutek.fr/www/mutekh_api/ \
+	  --mkdoclib-url http://www.mutekh.org/www/mutekh_api/ \
 	  --output-path $(BUILD_DIR)/doc \
-	  --source-rev $(SVN_REV) \
+	  --source-rev $(HG_REV) \
 	  -I $(BUILD_DIR) doc/config.h \
 	  -I . \
 	  -I doc/include \
