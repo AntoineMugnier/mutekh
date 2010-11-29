@@ -99,7 +99,8 @@ endif
 	$(LD) -V >> $(LOG_FILE) 2>&1 || true
 	echo >> $(LOG_FILE)
 	( echo ; echo Repository: ; echo ; ) >> $(LOG_FILE)
-	svn info $(MUTEK_SRC_DIR) >> $(LOG_FILE) || true
+	svn info $(MUTEK_SRC_DIR) 2>&1 >> $(LOG_FILE) || true
+	hg summary $(MUTEK_SRC_DIR) 2>&1 >> $(LOG_FILE) || true
 	echo >> $(LOG_FILE)
 	touch $(OBJ_DIR)/build.env
 	env | grep -v SESSION | grep -v PASS | sort > $(OBJ_DIR)/build.env_
