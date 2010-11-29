@@ -4,7 +4,7 @@ include $(MUTEK_SRC_DIR)/doc/header_list.mk
 
 include $(MUTEK_SRC_DIR)/scripts/discover.mk
 
-HG_REV:=$(shell cd $(MUTEK_SRC_DIR) && hg summary | grep ^parent | cut -d: -f3)
+HG_REV:=$(shell cd $(MUTEK_SRC_DIR) && hg summary | grep ^parent | cut -d: -f3 | cut -d' ' -f1)
 
 $(BUILD_DIR)/doc/config.h:
 	test -d $(BUILD_DIR)/doc || mkdir -p $(BUILD_DIR)/doc
