@@ -4,6 +4,12 @@
 #include <stdarg.h>
 #include <libc/formatter.h>
 
+/**
+ * @file
+ * @module{Mutek}
+ * @short Debugging messages output API
+ */
+
 #if defined(CONFIG_MUTEK_PRINTK)
 
 /**
