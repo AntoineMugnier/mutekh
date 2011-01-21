@@ -66,6 +66,9 @@ struct cpu_context_s
 # else
 #  error
 # endif
+#ifdef CONFIG_HEXO_FPU
+  reg_t fcsr;
+#endif
 };
 
 # endif  /* __MUTEK_ASM__ */
