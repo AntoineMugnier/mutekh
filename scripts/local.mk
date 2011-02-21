@@ -50,7 +50,7 @@ endef
 # runs blob2c.py to build c file
 define blob2c
 	( cd $$(dir $(value 1)) ; \
-		python $(MUTEK_SRC_DIR)/scripts/blob2c.py \
+		$(MUTEK_SRC_DIR)/scripts/python_wrapper.sh $(MUTEK_SRC_DIR)/scripts/blob2c.py \
 	    -a 4 -o $(value 1) -S -n $(value 3) $(value 2) \
 	) $(LOG_REDIR)
 endef
@@ -196,7 +196,7 @@ $(3)/$(1): $(2)/$(1).m4 $(OBJ_DIR)/config.m4 $(MUTEK_SRC_DIR)/scripts/global.m4 
 	$(call prepare_command,M4,$$@)
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 \
 		$$< | m4 -s $$(filter -I%,$$(INCS)) -P | \
-		python $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py \
+		$(MUTEK_SRC_DIR)/scripts/python_wrapper.sh $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py \
 		$$@ $$(filter -I%,$$(INCS)) > $$@.deps
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 \
 		$$< | m4 $$(filter -I%,$$(INCS)) -P > $$@
