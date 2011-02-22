@@ -3,34 +3,34 @@
  */
 
 {
-  ZBufferPoint *t,*pr1,*pr2,*l1,*l2;
-  float fdx1, fdx2, fdy1, fdy2, fz, d1, d2;
-  unsigned short *pz1;
-  PIXEL *pp1;
-  int part,update_left,update_right;
+  ZBufferPoint *t=NULL,*pr1=NULL,*pr2=NULL,*l1=NULL,*l2=NULL;
+  float fdx1=0, fdx2=0, fdy1=0, fdy2=0, fz=0, d1=0, d2=0;
+  unsigned short *pz1=NULL;
+  PIXEL *pp1=NULL;
+  int part=0,update_left=0,update_right=0;
 
-  int nb_lines,dx1,dy1,tmp,dx2,dy2;
+  int nb_lines=0,dx1=0,dy1=0,tmp=0,dx2=0,dy2=0;
 
-  int error,derror;
-  int x1,dxdy_min,dxdy_max;
+  int error=0,derror=0;
+  int x1=0,dxdy_min=0,dxdy_max=0;
 /* warning: x2 is multiplied by 2^16 */
-  int x2,dx2dy2;  
+  int x2=0,dx2dy2=0;  
 
 #ifdef INTERP_Z
-  int z1,dzdx,dzdy,dzdl_min,dzdl_max;
+  int z1=0,dzdx=0,dzdy=0,dzdl_min=0,dzdl_max=0;
 #endif
 #ifdef INTERP_RGB
-  int r1,drdx,drdy,drdl_min,drdl_max;
-  int g1,dgdx,dgdy,dgdl_min,dgdl_max;
-  int b1,dbdx,dbdy,dbdl_min,dbdl_max;
+  int r1=0,drdx=0,drdy=0,drdl_min=0,drdl_max=0;
+  int g1=0,dgdx=0,dgdy=0,dgdl_min=0,dgdl_max=0;
+  int b1=0,dbdx=0,dbdy=0,dbdl_min=0,dbdl_max=0;
 #endif
 #ifdef INTERP_ST
-  int s1,dsdx,dsdy,dsdl_min,dsdl_max;
-  int t1,dtdx,dtdy,dtdl_min,dtdl_max;
+  int s1=0,dsdx=0,dsdy=0,dsdl_min=0,dsdl_max=0;
+  int t1=0,dtdx=0,dtdy=0,dtdl_min=0,dtdl_max=0;
 #endif
 #ifdef INTERP_STZ
-  float sz1,dszdx,dszdy,dszdl_min,dszdl_max;
-  float tz1,dtzdx,dtzdy,dtzdl_min,dtzdl_max;
+  float sz1=0,dszdx=0,dszdy=0,dszdl_min=0,dszdl_max=0;
+  float tz1=0,dtzdx=0,dtzdy=0,dtzdl_min=0,dtzdl_max=0;
 #endif
 
   /* we sort the vertex with increasing y */

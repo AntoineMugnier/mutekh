@@ -443,7 +443,7 @@ void glLightf(int light,int type,float v)
 
 void glLightModeli(int pname,int param)
 {
-  GLParam p[6];
+  GLParam p[7];
   int i;
 
   p[0].op=OP_LightModel;

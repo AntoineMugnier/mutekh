@@ -1,6 +1,10 @@
 #ifndef __ZMATH__
 #define __ZMATH__
 
+#undef short
+#undef int
+#undef long
+
 /* Matrix & Vertex */
 
 typedef struct {
@@ -50,4 +54,4 @@ V4 gl_V4_New(float x,float y,float z,float w);
 
 int gl_Matrix_Inv(float *r,float *m,int n);
 
-#endif __ZMATH__
+#endif //__ZMATH__

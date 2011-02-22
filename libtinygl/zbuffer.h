@@ -5,6 +5,10 @@
  * Z buffer
  */
 
+#undef short
+#undef int
+#undef long
+
 #include "zfeatures.h"
 
 #define ZB_Z_BITS 16
