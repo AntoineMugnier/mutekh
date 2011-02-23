@@ -3,9 +3,8 @@ objs = api.o list.o vertex.o init.o matrix.o texture.o \
 	   zbuffer.o zline.o zdither.o ztriangle.o \
 	   zmath.o image_util.o msghandling.o \
 	   arrays.o specbuf.o memory.o
-#objs += oscontext.o
 
-#ifeq ($(CONFIG_LIBTINYGL_FB), defined)
-#objs += glfb.o
-#endif
+ifeq ($(CONFIG_LIBTINYGL_VGAFB), defined)
+objs += vgafb.o
+endif
 
