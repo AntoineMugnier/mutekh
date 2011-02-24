@@ -1,27 +1,13 @@
 
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <assert.h>
-
 #include <GL/vgafb.h>
 #include <GL/gl.h>
 
 /* for GLContext definition */
 #include "zgl.h"
 
-/* for struct device_s definition */
-#include <drivers/fb/vga/fb-vga.h>
-#include <device/device.h>
-#include <device/driver.h>
-
 struct vgafb_context {
-
     GLContext *gl_context;
-
     struct device_s *fb_dev;
-
-    unsigned int xsize;
-    unsigned int ysize;
 };
 
 static int vgafb_resize_viewport(GLContext *ctx, int *xsize, int *ysize);
@@ -58,7 +44,7 @@ error_t vgafb_make_current(struct vgafb_context *ctx, struct device_s *fb_dev)
         int i;
 
         /* Open a ZBuffer
-         *  (320x200 pixels, 256 colors mode with palette) */
+         *  (320x200 pixels, 8 bits color index with palette) */
         ZBuffer *zb;
 
         unsigned char color_indexes[ZB_NB_COLORS];
@@ -88,9 +74,7 @@ error_t vgafb_make_current(struct vgafb_context *ctx, struct device_s *fb_dev)
         ctx->gl_context->opaque = (void*)ctx;
 
         /* set the viewport
-         *  (we force a call to vgafb_resize_viewport)
-         *      do we really not to do that ? (which means providing a resize function too)
-         *      -> let's say we don't provide this now */
+         *  we do not provide this now, since we can't resize */
         //ctx->gl_context->gl_resize_viewport = vgafb_resize_viewport;
         //ctx->gl_context->viewport.xsize = -1;
         //ctx->gl_context->viewport.ysize = -1;
@@ -115,13 +99,18 @@ error_t vgafb_swap_buffer()
     char *fb;
     fb = (char*)dev_fb_getbuffer(ctx->fb_dev, 0);
 
-    /* Update framebuffer */
-    ZB_copyFrameBuffer(gl_context->zb, fb, 320*2);
+    /* Update framebuffer (the linesize is xsize*2 since tinygl works on 16 bits values */
+    int linesize = gl_context->zb->xsize*2;
+    ZB_copyFrameBuffer(gl_context->zb, fb, linesize);
 
     return 0;
 }
 
 static int vgafb_resize_viewport(GLContext *ctx, int *xsize, int *ysize)
 {
-    return 1;
+    /* we can authorize only these values */
+    *xsize = 320;
+    *ysize = 200;
+
+    return 0;
 }
