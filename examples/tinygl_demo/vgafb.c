@@ -55,6 +55,8 @@ int main(int argc, char **argv);
 void* demo_vgafb(void *param)
 {
 	main(0, NULL);
+
+    return 0;
 }
 
 void app_start()
