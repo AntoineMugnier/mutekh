@@ -1,0 +1,61 @@
+
+%set OUTPUT_NAME test
+
+# New source code module to be compiled
+%append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+# Application license
+CONFIG_LICENSE_APP_LGPL
+
+# Libs
+CONFIG_PTHREAD
+
+%include $(SRC_DIR)/examples/common/build_options.conf
+
+%section ibmpc-*
+    %types architecture
+
+    CONFIG_ARCH_IBMPC
+    CONFIG_CPU_MAXCOUNT 8
+
+    CONFIG_ARCH_HW_INIT
+
+    #CONFIG_IBMPC_EARLY_CONSOLE_VGA
+    CONFIG_IBMPC_EARLY_CONSOLE_UART
+    CONFIG_MUTEK_PRINTK_KEEP_EARLY
+
+    CONFIG_DRIVER_FB_VGA
+    CONFIG_DRIVER_ICU_8259
+    CONFIG_COMPILE_SOFTFLOAT undefined
+
+    CONFIG_CPU_RESET_HANDLER
+
+    %subsection ibmpc-x86
+        %types cpu
+
+        CONFIG_CPU_X86
+        %set BUILD_NAME ibmpc-x86
+    %end
+
+    %requiretypes cpu
+
+# get console (for stream_std)
+CONFIG_MUTEK_CONSOLE
+# console on uart (to get some feedback with qemu)
+CONFIG_DRIVER_CHAR_UART8250
+
+# otherwise fpu support does not work
+CONFIG_HEXO_LAZY_SWITCH
+
+# for stderr, etc. required by tinygl
+CONFIG_LIBC_STREAM_STD
+
+# required by tinygl
+CONFIG_LIBM
+
+# tinygl
+CONFIG_LIBTINYGL
+CONFIG_LIBTINYGL_VGAFB
+
+CONFIG_DEMO_TINYGL_GEARS
+#CONFIG_DEMO_TINYGL_SPIN
