@@ -164,6 +164,7 @@ static void load_objs()
       ho.obj_ = new elfpp::object(ho.filename_);
       ho.obj_->parse_symbol_table();
       ho.obj_->load_symbol_data();
+      ho.obj_->set_relative_relocs();
 
       het_objects.push_back(ho);
     }
