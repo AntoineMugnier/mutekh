@@ -26,57 +26,36 @@
 #include <hexo/context.h>
 #include <hexo/interrupt.h>
 
+CONTEXT_LOCAL struct cpu_context_s nios_context_regs;
+
 error_t
 cpu_context_bootstrap(struct context_s *context)
 {
   /* set context local storage base pointer */
   CPU_LOCAL_SET(__context_data_base, context->tls);
 
+  /* nothing is saved for this context */
+  CONTEXT_LOCAL_ADDR(nios_context_regs)->save_mask = 0;
+
   return 0;
 }
 
-/* fake context entry point, pop entry function param and entry function
-   address from stack and perform jump to real entry function.  We
-   need to do this to pass an argument to the context entry function. */
-void __nios2_context_entry(void);
-
-asm(
-    ".set noat                                  \n"
-	".type __nios2_context_entry, @function \n"
-    "__nios2_context_entry:                     \n"
-    "	ldw     r4, 0(sp)                       \n" /* entry function param */
-    "	ldw     r1, 4(sp)                       \n" /* entry function address */
-    "	addi    sp, sp, 2*4                     \n"
-    "	jmp     r1                              \n"
-    ".size __nios2_context_entry, .-__nios2_context_entry \n"
-    );
-
-
-
-/* context init function */
+  /* NiosII ABI requires 4 free words in the stack. */
 
 error_t
 cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 {
+  struct cpu_context_s *regs = CONTEXT_LOCAL_TLS_ADDR(context->tls, nios_context_regs);
 
-  /* NiosII ABI requires 4 free words in the stack. */
-  context->stack_ptr = (reg_t*)((uintptr_t)context->stack_end - CONFIG_HEXO_STACK_ALIGN);
+  regs->save_mask = CPU_NIOS_CONTEXT_RESTORE_CALLER; /* for r4 */
+  regs->gpr[CPU_NIOS_SP] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
+                         - CONFIG_HEXO_STACK_ALIGN;
+  regs->gpr[4] = (uintptr_t)param;
 
-  /* push entry function address and param arg */
-  *--context->stack_ptr = (uintptr_t)entry;
-  *--context->stack_ptr = (uintptr_t)param;
+  regs->status = 0;
 
-  /* fake entry point */
-  *--context->stack_ptr = (uintptr_t)&__nios2_context_entry;
-
-  /* frame pointer */
-  *--context->stack_ptr = 0;
-
-  /* status register, interrupts are disabled */
-  *--context->stack_ptr = 0x0;
-
-  /* context local storage address */
-  *--context->stack_ptr = (uintptr_t)context->tls;
+  regs->gpr[CPU_NIOS_RA] = 0xa5a5a5a5; /* can not return from context entry */
+  regs->pc = (uintptr_t)entry;
 
   return 0;
 }
@@ -86,34 +65,5 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 void
 cpu_context_destroy(struct context_s *context)
 {
-#if 0
-  reg_t	*stack = (reg_t*)context->stack_ptr;
-#endif
 }
 
-#if defined(CONFIG_HEXO_USERMODE)
-void __attribute__((noreturn))
-cpu_context_set_user(uintptr_t kstack, uintptr_t ustack,
-		     user_entry_t *entry, void *param)
-{
-  cpu_interrupt_disable();
-
-  CONTEXT_LOCAL_SET(context_kstack, kstack);
-
-  __asm__ volatile (
-		    ".set noat                     \n"
-	        ".set noreorder                \n"
-		    /* set stack */
-		    "   mov    sp,    %[ustack]    \n"
-		    /* set arg */
-		    "   mov    r4,    %[param]     \n"
-		    "   addi   sp,    -4*4         \n"
-		    "   mov    r16,   %[entry]     \n"
-		    "   jmp    r16                 \n"
-		    :
-		    : [ustack]  "r" (ustack)
-		      , [entry]   "r" (entry)
-		      , [param]   "r" (param)
-		    );
-}
-#endif

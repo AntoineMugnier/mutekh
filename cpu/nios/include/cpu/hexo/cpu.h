@@ -25,27 +25,43 @@
 #error This file can not be included directly
 #else
 
-#include <hexo/endian.h>
-
 #define CPU_CPU_H_
 
-#ifdef CONFIG_ARCH_SMP
+/* named registers */
+#define CPU_NIOS_ZERO 0
+#define CPU_NIOS_AT 1
+#define CPU_NIOS_ET 24
+#define CPU_NIOS_BT 25
+#define CPU_NIOS_GP 26
+#define CPU_NIOS_SP 27
+#define CPU_NIOS_FP 28
+#define CPU_NIOS_EA 29
+#define CPU_NIOS_BA 30
+#define CPU_NIOS_RA 31
+
+#define CPU_NIOS_CLS_REG r26
+
+#ifndef __MUTEK_ASM__
+
+#include <hexo/endian.h>
+
+# ifdef CONFIG_ARCH_SMP
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-#endif
+# endif
 
 /** general purpose registers count */
-#define CPU_GPREG_COUNT	32
+# define CPU_GPREG_COUNT	32
 
-#define CPU_GPREG_NAMES {					\
-    "pc", "at", "r2", "r3", "r4", "r5", "r6", "r7",		     \
-      "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",	 \
-      "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",\
-      "et", "bt", "gp", "sp", "fp", "ea", "ba", "ra",		 \
+# define CPU_GPREG_NAMES {					\
+      "pc", "at", "r2", "r3", "r4", "r5", "r6", "r7",           \
+      "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",     \
+      "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",   \
+      "et", "bt", "gp", "sp", "fp", "ea", "ba", "ra",           \
       }
 
-#define CPU_FAULT_COUNT 16
+# define CPU_FAULT_COUNT 16
 
-#define CPU_FAULT_NAMES	 {                      \
+# define CPU_FAULT_NAMES	 {                      \
       "Interrupt",                              \
       "Address error (Load)",                   \
       "Address error (Store)",                  \
@@ -60,7 +76,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
       "Floating point",                         \
       }
 
-#define cpu_nios_read_ctrl_reg(id)              \
+# define cpu_nios_read_ctrl_reg(id)              \
   ({                                            \
     reg_t _reg;                                 \
                                                 \
@@ -72,7 +88,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
   })
 
 
-#define cpu_nios_write_ctrl_reg(id, val)        \
+# define cpu_nios_write_ctrl_reg(id, val)        \
   ({                                            \
     reg_t _reg = val;                           \
                                                 \
@@ -82,7 +98,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
                      );                         \
   })
 
-#define CPU_TYPE_NAME nios
+# define CPU_TYPE_NAME nios
 
 static inline cpu_id_t
 cpu_id(void)
@@ -102,12 +118,6 @@ cpu_isbootstrap(void)
 {
   return cpu_id() == 0;
 }
-
-/**
-   cpu cycle touner type
-*/
-
-typedef uint32_t cpu_cycle_t;
 
 /**
    cpu cycle counter read function
@@ -152,6 +162,8 @@ static inline size_t cpu_dcache_line_size()
 {
   return 8;
 }
+
+# endif  /* __MUTEK_ASM__ */
 
 #endif
 

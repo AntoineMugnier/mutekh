@@ -27,7 +27,7 @@
 
 #define __CPU_ENDIAN_H_
 
-/** x86 CPU is little endian */
+/** nios CPU is little endian */
 #undef CPU_ENDIAN_ISBIG
 #define CPU_ENDIAN_ISLITTLE
 

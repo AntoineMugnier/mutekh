@@ -59,7 +59,8 @@ LINK_LDFLAGS += --gc-sections
 endif
 
 ifeq ($(CONFIG_COMPILE_SOFTFLOAT), defined)
-CFLAGS += -msoft-float
+CPU_SOFTFLOAT_FLAGS ?= -msoft-float
+CFLAGS += $(CPU_SOFTFLOAT_FLAGS)
 endif
 
 ifeq ($(CONFIG_COMPILE_INSTRUMENT), defined)

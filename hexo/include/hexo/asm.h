@@ -24,6 +24,9 @@
 
 #include <cpu/hexo/asm.h>
 
+# define ASM_STR_(x) #x
+# define ASM_STR(x) ASM_STR_(x)
+
 #ifdef __MUTEK_ASM__
 
 # ifndef ASM_SECTION
@@ -34,9 +37,6 @@
 # ifndef CPU_ASM_FUNC_END
 #  define CPU_ASM_FUNC_END
 # endif
-
-# define ASM_STR_(x) #x
-# define ASM_STR(x) ASM_STR_(x)
 
 # define FUNC_START(sec, x)              \
         ASM_SECTION(sec.x)                    ; \

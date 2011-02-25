@@ -21,6 +21,7 @@
  */
 
 #include <mutek/mem_alloc.h>
+#include <hexo/asm.h>
 #include <hexo/init.h>
 #include <hexo/segment.h>
 #include <hexo/cpu.h>
@@ -66,7 +67,7 @@ void cpu_init(void)
 
   /* set cpu local storage register base pointer */
   //  __asm__ volatile("wrctl ctl16, %0" : : "r" (cls));
-  __asm__ volatile("mov gp, %0" : : "r" (cls));
+  __asm__ volatile("mov " ASM_STR(CPU_NIOS_CLS_REG) ", %0" : : "r" (cls));
 #endif
 
 #if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_DRIVER_ICU_NIOS)

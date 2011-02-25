@@ -33,18 +33,19 @@
 
 #define CPU_INTERRUPT_H_
 
-#include "hexo/local.h"
+#ifndef __MUTEK_ASM__
 
-#ifdef CONFIG_DRIVER_ICU_NIOS
+# include <hexo/local.h>
+
+# ifdef CONFIG_DRIVER_ICU_NIOS
 struct device_s;
 extern CPU_LOCAL struct device_s cpu_icu_dev;
-#endif
-
-void nios2_interrupt_entry(void);
+# endif
 
 static inline void
 cpu_interrupt_disable(void)
 {
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    ".set noat 					\n"
 		    "	rdctl	r1, status		\n"
@@ -56,11 +57,13 @@ cpu_interrupt_disable(void)
                     :
                     : "memory"     /* compiler memory barrier */
 		    );
+# endif
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    ".set noat 					\n"
 		    "	rdctl	r1, status		\n"
@@ -71,11 +74,13 @@ cpu_interrupt_enable(void)
                     :
                     : "memory"     /* compiler memory barrier */
 		    );
+# endif
 }
 
 static inline void
 cpu_interrupt_process(void)
 {
+# ifdef CONFIG_HEXO_IRQ
   cpu_interrupt_enable();
 //  reg_t state;
 //  cpu_interrupt_savestate(&state);
@@ -91,22 +96,26 @@ cpu_interrupt_process(void)
 		    );
   cpu_interrupt_disable();
 //  cpu_interrupt_restorestate(&state);
+# endif
 }
 
 static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "	rdctl	%0, status\n"
 		    : "=r" (*state)
                     :
                     : "memory"     /* compiler memory barrier */
 		    );
+# endif
 }
 
 static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    ".set noat 					\n"
 		    "	rdctl	%0, status      \n"
@@ -117,55 +126,55 @@ cpu_interrupt_savestate_disable(reg_t *state)
                     :
                     : "memory"     /* compiler memory barrier */
 		    );
+# endif
 }
 
 static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
+# ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
 		    "	wrctl	status, %0		\n"
 		    :
 		    : "r" (*state)
                     : "memory"     /* compiler memory barrier */
 		    );
+# endif
 }
 
 static inline bool_t
 cpu_interrupt_getstate(void)
 {
+# ifdef CONFIG_HEXO_IRQ
   reg_t state;
 
-  __asm__ volatile (
+  __asm__ (
 		    "	rdctl	%0, status		\n"
 		    : "=r" (state)
 		    );
 
   return state & 0x1;
+# else
+  return 0;
+# endif
 }
 
 static inline bool_t
 cpu_is_interruptible(void)
 {
-	return cpu_interrupt_getstate();
-
-//	reg_t		state;
-//
-//  __asm__ volatile (
-//		    "	rdctl	%0, status		\n"
-//		    : "=r" (state)
-//		    );
-//  return ( (state & 0x1) );
+  return cpu_interrupt_getstate();
 }
 
-#ifdef CONFIG_CPU_WAIT_IRQ
+# ifdef CONFIG_CPU_WAIT_IRQ
 static inline void
 cpu_interrupt_wait(void)
 {
-# ifdef CONFIG_HEXO_IRQ
-  //  __asm__ volatile ("");
-#endif
+#  ifdef CONFIG_HEXO_IRQ
+#   error Wait instruction not available, CONFIG_CPU_WAIT_IRQ shall be undefined
+#  endif
 }
-#endif
+# endif
 
+#endif
 #endif
 

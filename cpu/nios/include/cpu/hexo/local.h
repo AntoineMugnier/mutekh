@@ -25,6 +25,8 @@
    @file Task local and CPU local variables access
 */
 
+#include <hexo/asm.h>
+
 #if !defined(LOCAL_H_) || defined(CPU_LOCAL_H_)
 #error This file can not be included directly
 #else
@@ -38,63 +40,31 @@
 # undef CPU_LOCAL
 # define CPU_LOCAL	__attribute__((section (".cpudata")))
 
-
-/*
-# define CPU_LOCAL_ADDR(n)						\
+# define CPU_LOCAL_ADDR(n)                                              \
   ({									\
-    typeof(n) *_ptr_;					\
-									    \
-    __asm__ (							\
-     ".set noat             \n"         \
-	 "	rdctl	r1, ctl16	\n"			\
-	 "	add	%0, r1, %1	    \n"			\
-	: "=r" (_ptr_)						\
+    typeof(n) *_ptr_;                                                   \
+                                                                        \
+    __asm__ (                                                           \
+     ".set noat             \n"                                         \
+     "	mov	r1, " ASM_STR(CPU_NIOS_CLS_REG) "         \n"           \
+	 "	add	%0, r1, %1	    \n"                         \
+	: "=r" (_ptr_)                                                  \
 	 : "r" (&n)							\
-								);	    \
-									    \
+								);      \
+                                                                        \
     _ptr_;								\
   })
 
 
-#define CPU_GET_CLS()					\
+#define CPU_GET_CLS()                                                   \
   ({									\
-    uintptr_t _ptr_;					\
-									    \
-    __asm__ (							\
-	 "	rdctl	%0, ctl16	\n"			\
-	 : "=r" (_ptr_)						\
-								);	    \
-									    \
-    _ptr_;								\
-  })
-
-*/
-
-# define CPU_LOCAL_ADDR(n)				\
-  ({									\
-    typeof(n) *_ptr_;					\
-									    \
-    __asm__ (							\
-     ".set noat             \n"         \
-	 "	mov	r1, gp         \n"			\
-	 "	add	%0, r1, %1	    \n"			\
-	: "=r" (_ptr_)						\
-	 : "r" (&n)							\
-								);	    \
-									    \
-    _ptr_;								\
-  })
-
-
-#define CPU_GET_CLS()					\
-  ({									\
-    uintptr_t _ptr_;					\
-									    \
-    __asm__ (							\
-	 "	mov	%0, gp	        \n"			\
-	 : "=r" (_ptr_)						\
-								);	    \
-									    \
+    uintptr_t _ptr_;                                                    \
+                                                                        \
+    __asm__ (                                                           \
+             "	mov	%0, " ASM_STR(CPU_NIOS_CLS_REG) "        \n"    \
+	 : "=r" (_ptr_)                                                 \
+								);      \
+                                                                        \
     _ptr_;								\
   })
 

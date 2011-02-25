@@ -12,3 +12,5 @@
 %include $(SRC_DIR)/examples/common/build_options.conf
 %include $(SRC_DIR)/examples/common/platforms.conf
 
+  CONFIG_ARCH_SMP undefined
+  CONFIG_CPU_MAXCOUNT 1

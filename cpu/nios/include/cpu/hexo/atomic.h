@@ -202,7 +202,6 @@ cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
   //  *a &= ~(1 << n);
 
   __asm__ volatile(
-	       ".set push                                     \n"
 	       "1:     custom  0, %[tmp], %[addr_a], zero     \n"
 	       "       and     %[tmp], %[tmp], %[mask]        \n"
 	       "       custom  1, %[tmp], %[addr_a], zero     \n"
