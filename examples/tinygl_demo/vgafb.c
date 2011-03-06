@@ -2,16 +2,25 @@
 #include <pthread.h>
 #include <mutek/printk.h>
 
+/* for struct device_s definition */
+#include <drivers/fb/vga/fb-vga.h>
+#include <device/enum.h>
+#include <device/device.h>
+#include <device/driver.h>
+
 #include <GL/gl.h>
 #include <GL/vgafb.h>
 #include "ui.h"
 
-/* for struct device_s definition */
-#include <drivers/fb/vga/fb-vga.h>
-#include <device/device.h>
-#include <device/driver.h>
-
+#if defined (CONFIG_ARCH_IBMPC)
 extern struct device_s fb_dev;
+#elif defined (CONFIG_ARCH_SOCLIB) && defined(CONFIG_ARCH_DEVICE_TREE)
+struct device_s fdt_enum_dev;
+#else
+#error
+#endif
+
+struct device_s *tinygl_fb;
 
 void tkSwapBuffers(void)
 {
@@ -25,14 +34,21 @@ int ui_loop(int argc, char **argv, const char *name)
 	if (vgafb_create_context(&ctx) != 0)
         goto err;
 
-	/* can we assume fb_vga_init has already been called?
+#if defined (CONFIG_ARCH_IBMPC)
+	/* can we assume dev_fb_init has already been called?
 	 * 	(for now, we assume it is in hw_init.c) */
+    tinygl_fb = &fb_dev;
+#elif defined (CONFIG_ARCH_SOCLIB) && defined(CONFIG_ARCH_DEVICE_TREE)
+    /* retrieve framebuffer from fdt */
+    tinygl_fb = dev_enum_lookup(&fdt_enum_dev, "/fb@0");
+    assert(tinygl_fb);
+#endif
 
 	/* setmode and ensure we are on the proper page */
-	fb_vga_setmode(&fb_dev, 320, 200, 8, FB_PACK_INDEX);
-    fb_vga_flippage(&fb_dev, 0);
+	dev_fb_setmode(tinygl_fb, 320, 200, 8, FB_PACK_INDEX);
+    dev_fb_flippage(tinygl_fb, 0);
 
-	if (vgafb_make_current(ctx, &fb_dev) != 0)
+	if (vgafb_make_current(ctx, tinygl_fb) != 0)
         goto err;
 
 	init();
