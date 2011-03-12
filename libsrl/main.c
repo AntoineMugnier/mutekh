@@ -138,11 +138,11 @@ static CONTEXT_ENTRY(srl_run_task)
 {
 	srl_task_s *task = param;
 	srl_console_init_task(task->tty_addr);
-	sched_unlock();
+
 	cpu_interrupt_enable();
 	srl_task_run(task);
 	cpu_interrupt_disable();
-	sched_lock();
+
 	sched_context_exit();
 }
 
@@ -186,7 +186,7 @@ void mutek_start_smp(void)
 	srl_cpu_init(app_desc.cpu[cpu_id()]);
 	
 	cpu_interrupt_disable();
-	sched_lock();
+
 #if CONFIG_SOCLIB_MEMCHECKER
 	soclib_mem_check_delete_ctx(cpu_id())
 #endif
@@ -229,7 +229,7 @@ void app_start()
 	srl_cpu_init(app_desc.cpu[0]);
 
 	cpu_interrupt_disable();
-	sched_lock();
+
 #if CONFIG_SOCLIB_MEMCHECKER
 	soclib_mem_check_delete_ctx(cpu_id())
 #endif
