@@ -127,23 +127,22 @@ VFS_FILE_READ(fat_dir_read)
     union fat_dirent_u fat_dirent[1];
     struct vfs_dirent_s *vfs_dirent = buffer;
     char name_83[FAT_83_NAMELEN];
+    ssize_t r;
 
     if ( size != sizeof(*vfs_dirent) )
         return -EINVAL;
 
-    do {
-        ssize_t r = fat_get_next_dirent(ffile, &file->offset, fat_dirent, name_83, vfs_dirent->name);
-        if ( r != 1 )
-            return 0;
+    r = fat_get_next_dirent(ffile, &file->offset, fat_dirent, name_83, vfs_dirent->name);
+    if ( r != 1 )
+        return 0;
 
-        if ( vfs_dirent->name[0] == 0 )
-            strcpy(vfs_dirent->name, name_83);
+    if ( vfs_dirent->name[0] == 0 )
+        strcpy(vfs_dirent->name, name_83);
 
-        vfs_dirent->size = endian_le32(fat_dirent->old.file_size);
-        vfs_dirent->type = fat_dirent->old.attr & ATTR_DIRECTORY
-            ? VFS_NODE_DIR
-            : VFS_NODE_FILE;
-
-        return sizeof(*vfs_dirent);
-    } while (1);
+    vfs_dirent->size = endian_le32(fat_dirent->old.file_size);
+    vfs_dirent->type = fat_dirent->old.attr & ATTR_DIRECTORY
+        ? VFS_NODE_DIR
+        : VFS_NODE_FILE;
+    
+    return sizeof(*vfs_dirent);
 }
