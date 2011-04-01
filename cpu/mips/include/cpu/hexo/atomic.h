@@ -28,6 +28,8 @@
 #error This file can not be included directly
 #else
 
+#include <hexo/ordering.h>
+
 #define CPU_ATOMIC_H_
 
 #define HAS_CPU_ATOMIC_INC
@@ -36,6 +38,8 @@ static inline bool_t
 cpu_atomic_inc(atomic_int_t *a)
 {
     reg_t  result, tmp;
+
+    order_smp_mem();
 
     asm volatile(
         "1:     ll      %[result], %[atomic]      \n"
@@ -56,6 +60,8 @@ cpu_atomic_dec(atomic_int_t *a)
 {
     reg_t  result, tmp;
 
+    order_smp_mem();
+
     asm volatile (
         "1:     ll      %[result], %[atomic]      \n"
         "       addiu   %[tmp], %[result], -1     \n"
@@ -75,6 +81,8 @@ cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 {
     reg_t mask = 1 << n;
     reg_t result, tmp, loaded;
+
+    order_smp_mem();
 
     asm volatile (
         ".set push                                   \n"
@@ -103,6 +111,8 @@ cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
     reg_t mask = 1 << n;
     reg_t tmp, loaded;
 
+    order_smp_mem();
+
     asm volatile(
         ".set push                                  \n"
         ".set noreorder                             \n"
@@ -127,6 +137,8 @@ cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 {
     reg_t mask = 1 << n;
     reg_t result, tmp, loaded;
+
+    order_smp_mem();
 
     asm volatile(
         ".set push                                    \n"
@@ -155,6 +167,8 @@ cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
     reg_t mask = 1 << n;
     reg_t tmp, loaded;
 
+    order_smp_mem();
+
     asm volatile(
         ".set push                                 \n"
         ".set noreorder                            \n"
@@ -180,6 +194,8 @@ cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
     reg_t mask = 1 << n;
     reg_t tmp;
 
+    order_smp_mem();
+
     asm volatile(
         ".set push                              \n"
         ".set noreorder                         \n"
@@ -201,6 +217,8 @@ cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
     reg_t mask = ~(1 << n);
     reg_t tmp;
 
+    order_smp_mem();
+
     asm volatile(
         ".set push                              \n"
         ".set noreorder                         \n"
@@ -219,10 +237,11 @@ cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t futu
 {
     reg_t tmp, loaded;
 
+    order_smp_mem();
+
     asm volatile (
         ".set push                                   \n"
         ".set noreorder                              \n"
-        "       sync                                 \n"
         "1:     ll      %[loaded], %[atomic]         \n"
         "       bne     %[loaded], %[old], 2f        \n"
         "       move    %[tmp], %[future]               \n"
@@ -230,7 +249,6 @@ cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t futu
         "       beqz    %[tmp], 1b                   \n"
         "       nop                                  \n"
         "2:                                          \n"
-        "       sync                                 \n"
         ".set pop                                    \n"
         : [tmp] "=&r" (tmp), [loaded] "=&r" (loaded), [atomic] "+m" (*a)
         : [old] "r" (old), [future] "r" (future)

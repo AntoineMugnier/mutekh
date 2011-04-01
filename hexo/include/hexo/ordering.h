@@ -33,8 +33,9 @@ C_HEADER_BEGIN
  * @short Serializing operations and memory barrier primitives
  */
 
-#if 0
 # include <cpu/hexo/ordering.h>
+
+#if 0
 # include <arch/hexo/ordering.h>
 #endif
 

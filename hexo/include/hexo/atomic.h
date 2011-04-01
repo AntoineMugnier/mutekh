@@ -45,6 +45,9 @@
   use cpu atomic operations or additional spin lock depending on
   system archicture hardware capabilities. Use it for general purpose
   atomic values access.
+
+  CPU atomic functions include memory barriers to ensure the consistency of
+  memory accesses on weakly-ordered memory architectures.
  */
 
 #ifdef CONFIG_CPU_SMP_CAPABLE

@@ -144,7 +144,6 @@ static inline void arch_lock_destroy(struct arch_lock_s *lock)
 static inline bool_t arch_lock_try(struct arch_lock_s *lock)
 {
   bool_t res = cpu_atomic_bit_testset(&lock->a, 0);
-  order_smp_mem();
   return res;
 }
 
@@ -158,7 +157,6 @@ static inline void arch_lock_spin(struct arch_lock_s *lock)
 #else
   cpu_atomic_bit_waitset(&lock->a, 0);
 #endif
-  order_smp_mem();
 }
 
 static inline bool_t arch_lock_state(struct arch_lock_s *lock)

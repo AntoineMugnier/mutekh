@@ -21,9 +21,12 @@
 */
 
 /**
- * @file
- * @module{Hexo}
- * @short Spinlock stuff
+  @file
+  @module{Hexo}
+  @short Spinlock stuff
+  
+  Spinlock operations include memory barriers to ensure the consistency of
+  memory accesses on weakly-ordered memory architectures.
  */
 
 #ifndef LOCK_H_
