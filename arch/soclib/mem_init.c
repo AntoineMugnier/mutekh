@@ -27,6 +27,7 @@
 
 extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
 
+#if defined(CONFIG_MUTEK_MEM_REGION_AUTO_INIT) || !defined(CONFIG_MUTEK_MEM_REGION)
 void mem_init(void)
 {
 #ifdef CONFIG_HEXO_MMU
@@ -70,3 +71,4 @@ void mem_region_init(void)
   default_region = NULL;
 #endif
 }
+#endif
