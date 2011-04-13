@@ -2,6 +2,10 @@
 #ifndef _SYS_STAT_H_
 #define _SYS_STAT_H_
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
 /**
  * @file
  * @module{C library}
@@ -63,6 +67,8 @@ struct stat
 
 #define S_ISDIR(mode)    __S_ISTYPE((mode), S_IFDIR)
 #define S_ISREG(mode)    __S_ISTYPE((mode), S_IFREG)
+
+C_HEADER_END
 
 #endif
 

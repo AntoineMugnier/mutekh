@@ -38,7 +38,7 @@
 #include <netinet/in.h>
 #include <mutek/mem_alloc.h>
 #include <semaphore.h>
-#include <mutek/timer.h>
+#include <time.h>
 
 /* Types of sockets.  */
 #define SOCK_STREAM	1	/* Sequenced, reliable, connection-based
@@ -271,21 +271,9 @@ struct		packet_mreq
 #define PACKET_MR_PROMISC	1
 #define PACKET_MR_ALLMULTI	2
 
-#include <mutek/timer.h>
-
-#if 1
-typedef timer_delay_t	time_t;
-typedef timer_delay_t	suseconds_t;
-
-struct timeval {
-	time_t		tv_sec;		/* seconds */
-	suseconds_t	tv_usec;	/* microseconds */
-};
-#endif
-
 struct linger {
   bool_t	l_onoff;
-  timer_delay_t	l_linger;
+  time_t	l_linger;
 };
 
 /* The following constants should be used for the second parameter of

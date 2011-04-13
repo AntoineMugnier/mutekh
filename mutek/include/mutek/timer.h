@@ -99,9 +99,11 @@ void	timer_inc_ticks(struct timer_s		*timer,
 			timer_delay_t		ticks);
 inline timer_delay_t	timer_get_tick(struct timer_s		*timer);
 
+error_t timer_sleep(struct timer_s *timer, timer_delay_t delay);
+
 CONTAINER_PROTOTYPE(timer, inline, timer);
 
-#ifdef CONFIG_MUTEK_TIMERMS
+#ifdef CONFIG_MUTEK_TIMER
 extern struct timer_s	timer_ms;
 #endif
 

@@ -16,7 +16,8 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
     02110-1301 USA.
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2009
+    Copyright Institut Telecom / Telecom ParisTech (c) 2011
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2009-2011
 */
 
 #ifndef TIME_H_
@@ -26,29 +27,57 @@
 
 C_HEADER_BEGIN
 
+#include <hexo/types.h>
+#include <hexo/error.h>
+
 /**
    @file
    @module{C library}
    @short Time-related function stubs
  */
 
-struct timeval;
-struct timezone;
+typedef uint_fast32_t time_t;
+typedef uint_fast32_t time_msec_t;
+typedef uint_fast32_t time_usec_t;
+typedef uint_fast32_t time_nsec_t;
 
-static inline error_t gettimeofday(struct timeval *tv, struct timezone *tz)
+struct timeval
 {
-  return 0;
-}
+  time_t          tv_sec;     /* seconds */
+  time_usec_t     tv_usec;    /* microseconds */
+};
 
-static inline error_t settimeofday(const struct timeval *tv, const struct timezone *tz)
+struct timespec
 {
-  return 0;
-}
+  time_t          tv_sec;     /* seconds */
+  time_nsec_t     tv_nsec;    /* nanoseconds */
+};
 
-static inline error_t time(time_t *t)
+struct timezone
 {
-  return 0;
-}
+  int tz_minuteswest;         /* minutes west of greenwich */
+  int tz_dsttime;             /* type of DST correction */
+};
+
+error_t gettimeofday(struct timeval *tv, struct timezone *tz);
+error_t settimeofday(const struct timeval *tv, const struct timezone *tz);
+time_t time(time_t *t);
+
+enum clockid_e
+{
+  CLOCK_REALTIME           = 1,
+#define CLOCK_REALTIME           CLOCK_REALTIME
+};
+
+typedef enum clockid_e clockid_t;
+
+int clock_getres(clockid_t clk_id, struct timespec *res);
+int clock_gettime(clockid_t clk_id, struct timespec *tp);
+int clock_settime(clockid_t clk_id, const struct timespec *tp);
+
+#ifdef CONFIG_MUTEK_TIMER_EVENTS
+error_t nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+#endif
 
 C_HEADER_END
 

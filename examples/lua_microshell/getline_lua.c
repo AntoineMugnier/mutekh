@@ -44,7 +44,7 @@ static void initialize_shell(lua_State* luast)
     init_crypto_shell(luast);
 #endif
 
-#if defined(CONFIG_MUTEK_TIMERMS)
+#if defined(CONFIG_MUTEK_TIMER)
     init_timer_shell(luast);
 #endif
 

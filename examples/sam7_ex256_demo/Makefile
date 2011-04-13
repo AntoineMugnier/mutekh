@@ -5,7 +5,7 @@ ifeq ($(CONFIG_DRIVER_LCD),defined)
 objs += lcd.o
 endif
 
-ifeq ($(CONFIG_MUTEK_TIMERMS),defined)
+ifeq ($(CONFIG_MUTEK_TIMER),defined)
 objs += timer.o
 endif
 

@@ -17,7 +17,8 @@
     02110-1301 USA.
 
     Copyright Matthieu Bucchianeri <matthieu.bucchianeri@epita.fr> (c) 2006
-
+    Copyright Institut Telecom / Telecom ParisTech (c) 2011
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2011
 */
 
 #include <mutek/timer.h>
@@ -27,6 +28,11 @@
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/cont_clist.h> /* XXX change to b-list */
+
+#ifdef CONFIG_MUTEK_SCHEDULER
+# include <mutek/scheduler.h>
+# include <hexo/lock.h>
+#endif
 
 CONTAINER_FUNC(timer, CLIST, inline, timer);
 
@@ -125,3 +131,60 @@ inline timer_delay_t	timer_get_tick(struct timer_s		*timer)
 {
   return timer->ticks;
 }
+
+struct sleep_wait_s
+{
+#ifdef CONFIG_MUTEK_SCHEDULER
+  lock_t lock;
+  struct sched_context_s *ctx;
+#endif
+  bool_t done;
+};
+
+#ifdef CONFIG_MUTEK_SCHEDULER
+static TIMER_CALLBACK(timer_sleep_callback)
+{
+  struct sleep_wait_s *sw = pv;
+  lock_spin(&sw->lock);
+
+  if (sw->ctx != NULL)
+    sched_context_start(sw->ctx);
+
+  sw->done = 1;
+  lock_release(&sw->lock);
+}
+
+error_t timer_sleep(struct timer_s *timer, timer_delay_t delay)
+{
+  struct timer_event_s ev;
+  struct sleep_wait_s sw;
+
+  lock_init(&sw.lock);
+  sw.ctx = NULL;
+  sw.done = 0;
+  ev.timer = timer;
+  ev.callback = timer_sleep_callback;
+  ev.pv = &sw;
+  ev.delay = delay;
+
+  timer_add_event(timer, &ev);
+
+  /* ensure callback doesn't occur here */
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  lock_spin(&sw.lock);
+
+  if (!sw.done)
+    {
+      sw.ctx = sched_get_current();
+      sched_stop_unlock(&sw.lock);
+    }
+  else
+    lock_release(&sw.lock);
+
+  CPU_INTERRUPT_RESTORESTATE;
+
+  lock_destroy(&sw.lock);
+
+  return 0;
+}
+#endif

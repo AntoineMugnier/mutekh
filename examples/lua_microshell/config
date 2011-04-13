@@ -51,7 +51,7 @@
 
 %section timer
 
-  CONFIG_MUTEK_TIMERMS
+  CONFIG_MUTEK_TIMER
 
 %section vfs
 

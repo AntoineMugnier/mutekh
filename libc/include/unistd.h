@@ -73,7 +73,6 @@ typedef uint_fast16_t uid_t;
 typedef uint_fast16_t gid_t;
 typedef uint_fast16_t blksize_t;
 typedef uint_fast32_t blkcnt_t;
-typedef uint_fast32_t time_t;
 
 #include <sys/stat.h>
 
@@ -115,6 +114,13 @@ error_t remove(const char *pathname);
 
 #define HAVE_MKDIR
 error_t mkdir(const char *pathname, mode_t mode);
+
+/* ************************************************** */
+
+#ifdef CONFIG_MUTEK_TIMER_EVENTS
+error_t usleep(uint_fast32_t usec);
+error_t sleep(uint_fast32_t usec);
+#endif
 
 C_HEADER_END
 

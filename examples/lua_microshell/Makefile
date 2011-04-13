@@ -23,7 +23,7 @@ objs += lcd.o
 endif
 endif
 
-ifeq ($(CONFIG_MUTEK_TIMERMS),defined)
+ifeq ($(CONFIG_MUTEK_TIMER),defined)
 objs += timer.o
 endif
 

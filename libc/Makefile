@@ -8,7 +8,8 @@ error.o						\
 qsort.o						\
 stdlib.o					\
 unistd.o					\
-formatter.o
+formatter.o                                     \
+time.o
 
 ifeq ($(CONFIG_LIBC_ASSERT), defined)
 objs += assert.o

@@ -61,7 +61,7 @@ extern struct device_s fdt_enum_dev;
 extern void *arch_fdt;
 #endif
 
-#if defined (CONFIG_MUTEK_TIMERMS)
+#if defined (CONFIG_MUTEK_TIMER)
 struct device_s *timerms_dev = NULL;
 struct timer_s timer_ms;
 #endif
@@ -70,7 +70,7 @@ struct timer_s timer_ms;
 struct device_s *root_dev;
 #endif
 
-#if defined(CONFIG_MUTEK_TIMERMS)
+#if defined(CONFIG_MUTEK_TIMER)
 DEVTIMER_CALLBACK(timer_callback)
 {
 	//  printk("timer callback\n");
@@ -113,7 +113,7 @@ int_fast8_t mutek_start()  /* FIRST CPU only */
 
     cpu_interrupt_enable();
 
-#if defined (CONFIG_MUTEK_TIMERMS)
+#if defined (CONFIG_MUTEK_TIMER)
 	timer_init(&timer_ms.root);
 	timer_ms.ticks = 0;
 

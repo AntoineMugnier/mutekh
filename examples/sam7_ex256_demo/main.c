@@ -23,7 +23,7 @@ void term_block_init(lua_State *st);
 #if defined(CONFIG_NETWORK)
 void net_init(lua_State *st);
 #endif
-#if defined(CONFIG_MUTEK_TIMERMS)
+#if defined(CONFIG_MUTEK_TIMER)
 void term_timer_init(lua_State *st);
 #endif
 
@@ -45,7 +45,7 @@ void* lua_main(void *unused)
 #if defined(CONFIG_NETWORK)
   net_init(luast);
 #endif
-#if defined(CONFIG_MUTEK_TIMERMS)
+#if defined(CONFIG_MUTEK_TIMER)
   term_timer_init(luast);
 #endif
 

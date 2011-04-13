@@ -36,7 +36,7 @@ struct device_s pitc_dev;
 
 extern struct device_s *console_dev;
 
-#if defined(CONFIG_MUTEK_TIMERMS)
+#if defined(CONFIG_MUTEK_TIMER)
 extern struct device_s *timerms_dev;
 #endif
 
@@ -218,7 +218,7 @@ void arch_specific_hw_init()
 	pitc_dev.icudev = &icu_dev;
 	pitc_6079a_init(&pitc_dev, NULL);
 
-#if defined(CONFIG_MUTEK_TIMERMS)
+#if defined(CONFIG_MUTEK_TIMER)
 	timerms_dev = &pitc_dev;
 #endif
 }
