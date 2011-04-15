@@ -1777,11 +1777,13 @@ sub write_header
 
 	if ($opt->{value} eq "undefined") {
 	    print FILE "#undef  ".$opt->{name}."\n";
+	    print FILE "#define  _".$opt->{name}." 0\n";
 	    next;
 	}
 
 	if ($opt->{value} eq "defined") {
 	    print FILE "#define ".$opt->{name}."\n";
+	    print FILE "#define  _".$opt->{name}." 1\n";
 	    next;
 	}
 
