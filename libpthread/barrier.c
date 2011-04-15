@@ -23,6 +23,7 @@
 #include <mutek/scheduler.h>
 #include <hexo/atomic.h>
 #include <hexo/iospace.h>
+#include <hexo/ordering.h>
 #include <hexo/error.h>
 #include <pthread.h>
 #include <assert.h>
@@ -75,9 +76,10 @@ error_t _pthread_barrier_normal_wait(pthread_barrier_t *barrier)
 error_t _pthread_barrier_spin_init(pthread_barrier_t *barrier, unsigned count)
 {
     barrier->spin.max_count = count;
-    atomic_set(&barrier->spin.count, count);
+    cpu_mem_write_32((uintptr_t)&barrier->spin.count,barrier->spin.max_count);
     cpu_mem_write_8((uintptr_t)&barrier->spin.release, 0);
-    
+    order_smp_write();
+
     return 0;
 }
 
@@ -93,16 +95,17 @@ error_t _pthread_barrier_spin_wait(pthread_barrier_t *barrier)
     // see http://www.mutekh.org/api/?function:atomic_dec
     if ( !atomic_dec(&barrier->spin.count) )
     {
-        atomic_set(&barrier->spin.count, barrier->spin.max_count);
-
+        cpu_mem_write_32((uintptr_t)&barrier->spin.count,barrier->spin.max_count);
+        order_smp_write();
         // Toggle the release state
         cpu_mem_write_8((uintptr_t)&barrier->spin.release, !release);
+        order_smp_write();
 
         return PTHREAD_BARRIER_SERIAL_THREAD;
     }
 
     while ( cpu_mem_read_8((uintptr_t)&barrier->spin.release) == release )
-        ;
+      order_smp_read();
 
     return 0;
 }
