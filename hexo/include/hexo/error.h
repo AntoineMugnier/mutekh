@@ -137,6 +137,9 @@ typedef int_fast8_t		error_t;
 /** cannot send after transport endpoint shutdown */
 #define ESHUTDOWN	108
 
+/** operation timed out */
+#define ETIMEDOUT       110
+
 /** no route to host */
 #define EHOSTUNREACH	113
 

@@ -11,6 +11,10 @@ unistd.o					\
 formatter.o                                     \
 time.o
 
+ifeq ($(CONFIG_MUTEK_TIMER), defined)
+objs += time.o
+endif
+
 ifeq ($(CONFIG_LIBC_ASSERT), defined)
 objs += assert.o
 endif

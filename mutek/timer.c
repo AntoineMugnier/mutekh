@@ -162,7 +162,6 @@ error_t timer_sleep(struct timer_s *timer, timer_delay_t delay)
   lock_init(&sw.lock);
   sw.ctx = NULL;
   sw.done = 0;
-  ev.timer = timer;
   ev.callback = timer_sleep_callback;
   ev.pv = &sw;
   ev.delay = delay;

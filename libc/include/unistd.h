@@ -117,10 +117,11 @@ error_t mkdir(const char *pathname, mode_t mode);
 
 /* ************************************************** */
 
-#ifdef CONFIG_MUTEK_TIMER_EVENTS
+config_depend(CONFIG_MUTEK_TIMER_EVENTS)
 error_t usleep(uint_fast32_t usec);
+
+config_depend(CONFIG_MUTEK_TIMER_EVENTS)
 error_t sleep(uint_fast32_t usec);
-#endif
 
 C_HEADER_END
 

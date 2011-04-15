@@ -61,7 +61,9 @@ m4_forloop(i, 0, CONFIG_CPU_MAXCOUNT-1, `
 
 	chosen {
 		console = &{/tty@0};
-//        timer = &{/xicu@0};
+m4_ifelse(CONFIG_MUTEK_TIMER, `defined', `
+                timer = &{/xicu@0};
+')
 	};
 
 };

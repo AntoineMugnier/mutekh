@@ -59,8 +59,13 @@ struct timezone
   int tz_dsttime;             /* type of DST correction */
 };
 
+config_depend(CONFIG_MUTEK_TIMER)
 error_t gettimeofday(struct timeval *tv, struct timezone *tz);
+
+config_depend(CONFIG_MUTEK_TIMER)
 error_t settimeofday(const struct timeval *tv, const struct timezone *tz);
+
+config_depend(CONFIG_MUTEK_TIMER)
 time_t time(time_t *t);
 
 enum clockid_e
@@ -71,13 +76,17 @@ enum clockid_e
 
 typedef enum clockid_e clockid_t;
 
+config_depend(CONFIG_MUTEK_TIMER)
 int clock_getres(clockid_t clk_id, struct timespec *res);
+
+config_depend(CONFIG_MUTEK_TIMER)
 int clock_gettime(clockid_t clk_id, struct timespec *tp);
+
+config_depend(CONFIG_MUTEK_TIMER)
 int clock_settime(clockid_t clk_id, const struct timespec *tp);
 
-#ifdef CONFIG_MUTEK_TIMER_EVENTS
+config_depend(CONFIG_MUTEK_TIMER_EVENTS)
 error_t nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
-#endif
 
 C_HEADER_END
 
