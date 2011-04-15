@@ -50,7 +50,7 @@ FUNC_END(cpu_boot)
 FUNC_START(.text, arm_boot)
         CPU_ID r4
         cmp    r4, # CONFIG_CPU_MAXCOUNT
-        bgt    cpu_boot_idle
+        bge    cpu_boot_idle
 
         ldr  r13, =__initial_stack
 

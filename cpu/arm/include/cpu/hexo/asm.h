@@ -84,36 +84,9 @@
      add   \rd, \rt, \rd
 .endm
 
+/* TLS stuff */
 
-# if !defined(CONFIG_ARCH_SMP)
-.macro CPU_LOCAL name, rd, rt
-     GET_GLOBAL \name, \rd
-.endm
-
-.macro CONTEXT_LOCAL name, rd, rt
-     GET_GLOBAL_REL \name, \rd, \rt, __context_data_base
-.endm
-
-.macro CPU_LOCAL_SET name, tmp, tmp2, val
-     SET_GLOBAL \name, \val, \tmp
-.endm
-
-.macro CONTEXT_LOCAL_ADDR name, rd, rt
-   GET_GLOBAL_REL_ADDR \name, \rd, \rt, __context_data_base
-.endm
-
-.macro TLS_BASE_SET reg, tmp
-     SET_GLOBAL __context_data_base, \reg, \tmp
-.endm
-
-# elif defined(CONFIG_CPU_ARM_TLS_IN_C15)
-.macro CPU_LOCAL name, rd, rt
-     GET_CP15_REL \name, \rd, \rt, 3
-.endm
-
-.macro CPU_LOCAL_SET name, tmp, tmp2, val
-     SET_CP15_REL \name, \tmp, \tmp2, \val, 3
-.endm
+# ifdef CONFIG_CPU_ARM_TLS_IN_C15
 
 .macro CONTEXT_LOCAL name, rd, rt
      GET_CP15_REL \name, \rd, \rt, 4
@@ -128,22 +101,45 @@
 .macro TLS_BASE_SET reg, tmp
     mcr   p15, 0, \reg, c13, c0, 4
 .endm
+
 # else
-.macro CPU_LOCAL name, rd, rt
-     .emsg implement me
+
+.macro CONTEXT_LOCAL_ADDR name, rd, rt
+     GET_GLOBAL_REL_ADDR \name, \rd, \rt, __context_data_base
 .endm
 
 .macro CONTEXT_LOCAL name, rd, rt
-     .emsg implement me
-.endm
-
-.macro CONTEXT_LOCAL_ADDR name, rd
-     .emsg implement me
+     GET_GLOBAL_REL \name, \rd, \rt, __context_data_base
 .endm
 
 .macro TLS_BASE_SET reg, tmp
-     .emsg implement me
+     SET_GLOBAL __context_data_base, \reg, \tmp
 .endm
+
+# endif
+
+/* CLS stuff */
+
+# ifdef CONFIG_ARCH_SMP
+
+.macro CPU_LOCAL name, rd, rt
+     GET_CP15_REL \name, \rd, \rt, 3
+.endm
+
+.macro CPU_LOCAL_SET name, tmp, tmp2, val
+     SET_CP15_REL \name, \tmp, \tmp2, \val, 3
+.endm
+
+# else
+
+.macro CPU_LOCAL name, rd, rt
+     GET_GLOBAL \name, \rd
+.endm
+
+.macro CPU_LOCAL_SET name, tmp, tmp2, val
+     SET_GLOBAL \name, \val, \tmp
+.endm
+
 # endif
 
 #endif
