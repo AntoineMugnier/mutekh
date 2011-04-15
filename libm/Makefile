@@ -1,5 +1,5 @@
 
-DIR_CFLAGS = -D_IEEE_LIBM -fno-strict-aliasing
+DIR_CFLAGS = -D_IEEE_LIBM -fno-strict-aliasing -Wno-uninitialized
 
 objs = 	k_standard.o k_rem_pio2.o \
 		k_cos.o k_sin.o k_tan.o \
