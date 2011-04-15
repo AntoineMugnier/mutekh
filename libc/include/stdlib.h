@@ -135,6 +135,11 @@ __rand_type_t rand(void);
 __rand_type_t rand_r(__rand_type_t *seedp);
 void srand(__rand_type_t seed);
 
+__rand_type_t random(void);
+void srandom(__rand_type_t seed);
+char *initstate(__rand_type_t seed, char *state, size_t n);
+char *setstate(char *state);
+
 /******************** abort */
 
 __attribute__((noreturn))

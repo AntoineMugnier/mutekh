@@ -57,3 +57,30 @@ void srand(__rand_type_t seed)
   random_seed = seed;
 }
 
+/* ************************************************** */
+
+__rand_type_t random(void)
+{
+  /* FIXME */
+  return rand();
+}
+
+void srandom(__rand_type_t seed)
+{
+  /* FIXME */
+  srand(seed);
+}
+
+char *initstate(__rand_type_t seed, char *state, size_t n)
+{
+  /* FIXME */
+  srand(seed);
+  return state;
+}
+
+char *setstate(char *state)
+{
+  /* FIXME */
+  return state;
+}
+
