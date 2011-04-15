@@ -168,9 +168,14 @@ void sched_queue_destroy(sched_queue_root_t *queue);
 
 typedef void (sched_wait_cb_t)(void *ctx);
 
-/** wake a context from this queue */
-/* Must be called with interrupts disabled */
+/** Remove first context from the queue and push it back in run queue.
+    @return context or NULL if none found on queue.
+    Must be called with interrupts disabled and queue locked. */
 struct sched_context_s *sched_wake(sched_queue_root_t *queue);
+
+/** Remove the context from its queue and push it back in run queue.
+    Must be called with interrupts disabled and queue locked. */
+void sched_context_wake(sched_queue_root_t *queue, struct sched_context_s *sched_ctx);
 
 /** scheduler intialization, must be called once */
 void sched_global_init(void);

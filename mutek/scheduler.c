@@ -378,6 +378,15 @@ void sched_stop_unlock(lock_t *lock)
 }
 
 /* Must be called with interrupts disabled and queue locked */
+void sched_context_wake(sched_queue_root_t *queue, struct sched_context_s *sched_ctx)
+{
+  assert(!cpu_is_interruptible());
+
+  sched_queue_nolock_remove(queue, sched_ctx);
+  __sched_context_push(sched_ctx);
+}
+
+/* Must be called with interrupts disabled and queue locked */
 struct sched_context_s *sched_wake(sched_queue_root_t *queue)
 {
   struct sched_context_s        *sched_ctx;
