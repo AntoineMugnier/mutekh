@@ -106,6 +106,8 @@ struct pthread_s
 #define _PTHREAD_STATE_CANCELED         2 //< thread has been canceled
 #define _PTHREAD_STATE_NOCANCEL         3 //< thread ignore cancel
 #define _PTHREAD_STATE_CANCELASYNC      4 //< thread use asynchronous cancelation
+#define _PTHREAD_STATE_TIMEDWAIT        5 //< thread can be woken up by timer callback
+#define _PTHREAD_STATE_TIMEOUT          6 //< thread timed wait has reached timeout
 
 #define _PTHREAD_ATTRFLAG_AFFINITY	0x01
 #define _PTHREAD_ATTRFLAG_STACK		0x02
@@ -446,8 +448,6 @@ pthread_mutex_unlock(pthread_mutex_t *mutex)
 
 #ifdef CONFIG_PTHREAD_COND
 
-struct timespec;
-
 /** @internal */
 struct pthread_cond_s
 {
@@ -472,10 +472,14 @@ pthread_cond_broadcast(pthread_cond_t *cond);
 error_t
 pthread_cond_signal(pthread_cond_t *cond);
 
+#ifdef CONFIG_PTHREAD_TIME
+struct timespec;
+
 error_t
 pthread_cond_timedwait(pthread_cond_t *cond, 
 		       pthread_mutex_t *mutex,
 		       const struct timespec *delay);
+#endif
 
 error_t
 pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
