@@ -118,6 +118,8 @@ extern struct timer_s	timer_ms;
   _res;								\
 })
 
+/* FIXME __builtin_choose_expr doesn't work with floats compare ? */
+#define __builtin_choose_expr(a,b,c) ((a) ? (b) : (c))
 static inline uint64_t timer_tu2sec(timer_delay_t t)
 {
   return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT >= 1e0,
@@ -173,6 +175,7 @@ static inline timer_delay_t timer_nsec2tu(uint64_t t)
                                t * (timer_delay_t)(1000000000/CONFIG_MUTEK_TIMER_UNIT),
                                t / (timer_delay_t)(1000000000/CONFIG_MUTEK_TIMER_UNIT));
 }
+#undef __builtin_choose_expr
 
 #endif
 
