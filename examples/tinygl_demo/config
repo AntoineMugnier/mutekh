@@ -46,12 +46,17 @@ CONFIG_LIBTINYGL_VGAFB
     CONFIG_DRIVER_ICU_SOCLIB_XICU
     CONFIG_DRIVER_TIMER_SOCLIB
     CONFIG_DRIVER_FB_SOCLIB
+
+    # use FPU
+    CONFIG_COMPILE_SOFTFLOAT undefined
+
   %end
 
+# re-switch to common
+%common
 
 %include $(SRC_DIR)/examples/common/build_options.conf
 %include $(SRC_DIR)/examples/common/platforms.conf
-
 
 # tweaking for ibmpc
 %section ibmpc-*
@@ -64,6 +69,8 @@ CONFIG_LIBTINYGL_VGAFB
     # otherwise fpu support does not work
     CONFIG_HEXO_LAZY_SWITCH
 
+# re-switch to common
+%common
 
 # by default
 %set DEMO_NAME gears

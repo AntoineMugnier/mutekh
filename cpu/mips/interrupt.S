@@ -249,15 +249,15 @@ mips_preempt_and_restore:
 #  endif
 
         // save fpu registers 0 to 31
-        .irp    r, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 31
-        SxC1    $\r,            CPU_MIPS_CONTEXT_FR(\r)($26)
+        .irp    r, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+        SxC1    \r,            CPU_MIPS_CONTEXT_FR(\r)($26)
         .endr
-        .irp    r, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
-        SxC1    $\r,            CPU_MIPS_CONTEXT_FR(\r)($26)
+        .irp    r, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+        SxC1    \r,            CPU_MIPS_CONTEXT_FR(\r)($26)
         .endr
 
         // save fpu status
-        mfc1    $1,     $31
+        cfc1    $1,     $31
         sw      $1,     CPU_MIPS_CONTEXT_FCSR($26)
 1:
 # endif

@@ -51,13 +51,21 @@ int ui_loop(int argc, char **argv, const char *name)
 	if (vgafb_make_current(ctx, tinygl_fb) != 0)
         goto err;
 
-	init();
+    init();
+    printk("%lu cycles to init scene\n", cpu_cycle_count());
+
 	reshape(320,200);
 
 	while(1)
 	{
+        volatile cpu_cycle_t count;
+        count = -cpu_cycle_count();
+
 		/* we cannot handle key pressing */
 		idle();
+
+        count += cpu_cycle_count();
+        printk("%lu cycles to display new frame\n", count);
 	}
 
 err:
