@@ -22,6 +22,16 @@ ifeq ($(CONFIG_CPU_MIPS_VERSION), 1)
 CPUCFLAGS=-mips1 -mno-branch-likely
 endif
 
+ifeq ($(CONFIG_HEXO_FPU), defined)
+  ifeq ($(CONFIG_CPU_MIPS_FPU), 32)
+  CPUCFLAGS+=-mfp32
+  endif
+
+  ifeq ($(CONFIG_CPU_MIPS_FPU), 64)
+  CPUCFLAGS+=-mfp64
+  endif
+endif
+
 CPUTOOLS=mipsel-unknown-elf-
 
 ifeq ($(CONFIG_CPU_ENDIAN_LITTLE), defined)

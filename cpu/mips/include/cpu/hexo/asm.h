@@ -76,17 +76,21 @@
 // restore multiple fpu regs
 .macro LxC1 i j
 # if CONFIG_CPU_MIPS_FPU == 32
-	lwc1	\i,		\j
+    .ifeq \i & 1
+	ldc1	$\i,		\j
+    .endif
 # elif CONFIG_CPU_MIPS_FPU == 64
-	ldc1	\i,		\j
+	ldc1	$\i,		\j
 #endif
 .endm
 
 .macro SxC1 i j
 # if CONFIG_CPU_MIPS_FPU == 32
-	swc1	\i,		\j
+    .ifeq \i & 1
+	sdc1	$\i,		\j
+    .endif
 # elif CONFIG_CPU_MIPS_FPU == 64
-	sdc1	\i,		\j
+	sdc1	$\i,		\j
 #endif
 .endm
 

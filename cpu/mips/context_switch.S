@@ -29,8 +29,8 @@
 #endif
 
 /*
-   Callee saved: r16-r23, r28-r31, f20-f30
-   Caller saved: r1-r15, r24-r25, lo, hi, f0-f19, f31, fcsr
+   Callee saved: r16-r23, r28-r31, f20-f31
+   Caller saved: r1-r15, r24-r25, lo, hi, f0-f19, fcsr
 */
 
 FUNC_START(.text, cpu_context_switch)
@@ -69,8 +69,8 @@ FUNC_START(.text, cpu_context_switch)
 # endif
 
         // save fpu registers 20 to 30
-        .irp    r, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
-        SxC1    $\r,            CPU_MIPS_CONTEXT_FR(\r)($2)
+        .irp    r, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+        SxC1    \r,            CPU_MIPS_CONTEXT_FR(\r)($2)
         .endr
 1:      
 #endif
@@ -153,19 +153,19 @@ FUNC_START(.text, cpu_context_jumpto)
 # endif
 
         // restore callee saved fpu registers
-        .irp    r, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
-        LxC1    $\r,            CPU_MIPS_CONTEXT_FR(\r)($25)
+        .irp    r, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+        LxC1    \r,            CPU_MIPS_CONTEXT_FR(\r)($25)
         .endr
 
         lw      $1,     CPU_MIPS_CONTEXT_FCSR($25)
-        mtc1    $1,     $31
+        ctc1    $1,     $31
 
         andi    $7,     $24,    CPU_MIPS_CONTEXT_RESTORE_CALLER
         beq     $0,     $7,     1f
 
         // restore caller saved fpu registers
-        .irp    r, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 31
-        LxC1    $\r,            CPU_MIPS_CONTEXT_FR(\r)($25)
+        .irp    r, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+        LxC1    \r,            CPU_MIPS_CONTEXT_FR(\r)($25)
         .endr
 1:      
 #endif

@@ -70,7 +70,7 @@ struct cpu_context_s
 #ifdef CONFIG_HEXO_FPU
   reg_t fcsr;
 #endif
-};
+} __attribute__((aligned(16)));
 
 # endif  /* __MUTEK_ASM__ */
 
