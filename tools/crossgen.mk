@@ -19,7 +19,7 @@
 #    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 #    02110-1301 USA.
 #
-#    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2009
+#    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2009-2011
 #
 
 #### LINE 25 IS HERE ####
@@ -45,6 +45,9 @@ gdb_CONF=
 dtc_VER=1.2.0
 
 # Target processor: mipsel mipseb powerpc arm i686 sparc nios2 ...
+# Some non-mainstream targets may require specific version of the
+# tools in order to fetch patchs. See:
+# https://www.mutekh.org/www/tools/patchs/
 TARGET=mipsel
 
 # Install PATH
@@ -53,10 +56,9 @@ PREFIX=/opt/mutekh
 # Temp directory
 WORKDIR=/tmp/crossgen
 
-# Some targets may require precise version of the tools to fetch
-# patchs from https://www.mutekh.org/www/tools/patchs/
+#### LINE 59 IS HERE ####
 
-#### LINE 45 IS HERE ####
+# packages configurations
 
 binutils_URL=ftp://ftp.gnu.org/gnu/binutils/binutils-$(binutils_VER).tar.bz2
 binutils_TGZ=$(WORKDIR)/binutils-$(binutils_VER).tar.bz2
@@ -91,8 +93,11 @@ dtc_TGZ=$(WORKDIR)/dtc-$(dtc_VER).tar.gz
 dtc_TESTBIN=bin/dtc
 
 WGET_OPTS=-c -t 5 -w 5 --no-check-certificate
+export LD_LIBRARY_PATH=$$(PREFIX)/lib 
 
 $(shell mkdir -p $(WORKDIR))
+
+# main rules
 
 help:
 	@echo Available targets are: all, gcc, binutils, gdb, dtc
@@ -100,15 +105,6 @@ help:
 	@head $(MAKEFILE_LIST) -n 58 | tail -n 33
 
 all: gcc binutils gdb dtc
-
-.PRECIOUS: $(binutils_TGZ) $(gcc_TGZ) $(gdb_TGZ) $(mpfr_TGZ) $(gmp_TGZ) $(mpc_TGZ)
-.DELETE_ON_ERROR: \
-	$(binutils_STAMP)-wget $(binutils_STAMP)-$(TARGET)-conf $(binutils_STAMP)-$(TARGET)-build \
-	$(gcc_STAMP)-wget $(gcc_STAMP)-$(TARGET)-conf $(gcc_STAMP)-$(TARGET)-build \
-	$(gdb_STAMP)-wget $(gdb_STAMP)-$(TARGET)-conf $(gdb_STAMP)-$(TARGET)-build \
-	$(mpfr_STAMP)-wget $(mpfr_STAMP)-$(TARGET)-conf $(mpfr_STAMP)-$(TARGET)-build \
-	$(gmp_STAMP)-wget $(gmp_STAMP)-$(TARGET)-conf $(gmp_STAMP)-$(TARGET)-build \
-	$(mpc_STAMP)-wget $(mpc_STAMP)-$(TARGET)-conf $(mpc_STAMP)-$(TARGET)-build
 
 % : %.tar.bz2
 	( mkdir -p $@ ; cd $@/.. ; tar xjf $< )
@@ -118,7 +114,13 @@ all: gcc binutils gdb dtc
 	( mkdir -p $@ ; cd $@/.. ; tar xzf $< )
 	touch $@
 
+# template rules for tools which depend on target processor
+
 define TGTTOOL_template
+
+.PHONY: $(1)
+.PRECIOUS: $$($(1)_TGZ)
+.DELETE_ON_ERROR: $$($(1)_STAMP)-wget $$($(1)_STAMP)-$$(TARGET)-conf $$($(1)_STAMP)-$$(TARGET)-build $$($(1)_STAMP)-$$(TARGET)-patch
 
 $(1)_DIR=$$(WORKDIR)/$(1)-$$($(1)_VER)
 $(1)_BDIR=$$(WORKDIR)/$(1)-bld-$$(TARGET)-$$($(1)_VER)
@@ -128,11 +130,14 @@ $(1)_PATCH=$$(WORKDIR)/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff
 $$($(1)_STAMP)-wget:
 	touch $$@
 	wget $$(WGET_OPTS) $$($(1)_URL) -O $$($(1)_TGZ)
+
 $$($(1)_TGZ): $$($(1)_STAMP)-wget
 	touch $$@
 
 $$($(1)_STAMP)-$$(TARGET)-patch: $$($(1)_DIR)
+        # try to fetch a patch
 	wget $$(WGET_OPTS) https://www.mutekh.org/www/tools/patchs/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
+        # test is a patch is available and apply
 	test ! -f $$($(1)_PATCH).gz || ( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 )
 	touch $$@
 
@@ -141,16 +146,22 @@ $$($(1)_STAMP)-$$(TARGET)-conf: $$($(1)_DIR) $$($(1)_STAMP)-$$(TARGET)-patch $$(
 	( cd $$($(1)_BDIR) ; $$($(1)_DIR)/configure --disable-nls --prefix=$$(PREFIX) --target=$$(TARGET)-unknown-elf --disable-checking --disable-werror $$($(1)_CONF) ) && touch $$@
 
 $$($(1)_STAMP)-$$(TARGET)-build: $$($(1)_STAMP)-$$(TARGET)-conf
-	LD_LIBRARY_PATH=$$(PREFIX)/lib make -C $$($(1)_BDIR) && touch $$@
+	make -C $$($(1)_BDIR) && touch $$@
 
 $$(PREFIX)/$$($(1)_TESTBIN): $$($(1)_STAMP)-$$(TARGET)-build
-	LD_LIBRARY_PATH=$$(PREFIX)/lib make -C $$($(1)_BDIR) install && touch $$@
+	make -C $$($(1)_BDIR) install && touch $$@
 
 $(1): $$(PREFIX)/$$($(1)_TESTBIN)
 
 endef
 
+# template rules for other non target dependent tools
+
 define TOOL_template
+
+.PHONY: $(1)
+.PRECIOUS: $$($(1)_TGZ)
+.DELETE_ON_ERROR: $$($(1)_STAMP)-wget $$($(1)_STAMP)-conf $$($(1)_STAMP)-build
 
 $(1)_DIR=$(WORKDIR)/$(1)-$($(1)_VER)
 $(1)_BDIR=$(WORKDIR)/$(1)-bld-$($(1)_VER)
@@ -159,6 +170,7 @@ $(1)_STAMP=$(WORKDIR)/$(1)-$($(1)_VER)-stamp
 $$($(1)_STAMP)-wget:
 	touch $$@
 	wget $$(WGET_OPTS) $$($(1)_URL) -O $$($(1)_TGZ)
+
 $$($(1)_TGZ): $$($(1)_STAMP)-wget
 	touch $$@
 
@@ -175,6 +187,8 @@ $$(PREFIX)/$$($(1)_TESTBIN): $$($(1)_STAMP)-build
 $(1): $$(PREFIX)/$$($(1)_TESTBIN)
 
 endef
+
+# template rules instantiation
 
 $(eval $(call TOOL_template,mpfr))
 $(eval $(call TOOL_template,gmp))
