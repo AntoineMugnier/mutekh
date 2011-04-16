@@ -22,127 +22,99 @@
 #    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2009
 #
 
-
 #### LINE 25 IS HERE ####
 
 SERVER=ftp://ftp.gnu.org/gnu
 
-BINUTILS_VER=2.20
-BINUTILS_CONF=
+binutils_VER=2.20.1
+binutils_CONF=
 
-GCC_VER=4.4.2
-GCC_CONF=--enable-languages=c --disable-libssp
+gcc_VER=4.5.2
+gcc_CONF=--enable-languages=c --disable-libssp
 
-GDB_VER=7.0
-GDB_CONF=
+gdb_VER=7.2
+gdb_CONF=
 
-TARGET=arm-unknown-elf
-PREFIX=/opt/gnu
-WORKDIR=/tmp
+# TARGET=mipseb powerpc arm i686 sparc nios2 ...
+TARGET=mipsel
 
-
+PREFIX=/opt/mutekh
+WORKDIR=/tmp/crossgen
 
 
 #### LINE 45 IS HERE ####
 
-# Download URLs
-BINUTILS_URL=$(SERVER)/binutils/binutils-$(BINUTILS_VER).tar.bz2
-GCC_URL=$(SERVER)/gcc/gcc-$(GCC_VER)/gcc-$(GCC_VER).tar.bz2
-GDB_URL=$(SERVER)/gdb/gdb-$(GDB_VER).tar.bz2
+binutils_URL=$(SERVER)/binutils/binutils-$(binutils_VER).tar.bz2
+binutils_TGZ=$(WORKDIR)/binutils-$(binutils_VER).tar.bz2
+binutils_DIR=$(WORKDIR)/binutils-$(binutils_VER)
+binutils_BDIR=$(WORKDIR)/binutils-bld-$(TARGET)-$(binutils_VER)
+binutils_STAMP=$(WORKDIR)/binutils-$(binutils_VER)-stamp
+binutils_TESTBIN=as
 
-# Archives names
-BINUTILS_TGZ=$(WORKDIR)/binutils-$(BINUTILS_VER).tar.bz2
-GCC_TGZ=$(WORKDIR)/gcc-$(GCC_VER).tar.bz2
-GDB_TGZ=$(WORKDIR)/gdb-$(GDB_VER).tar.bz2
+gcc_URL=$(SERVER)/gcc/gcc-$(gcc_VER)/gcc-$(gcc_VER).tar.bz2
+gcc_TGZ=$(WORKDIR)/gcc-$(gcc_VER).tar.bz2
+gcc_DIR=$(WORKDIR)/gcc-$(gcc_VER)
+gcc_BDIR=$(WORKDIR)/gcc-bld-$(TARGET)-$(gcc_VER)
+gcc_STAMP=$(WORKDIR)/gcc-$(gcc_VER)-stamp
+gcc_TESTBIN=gcc
+gcc_DEPS=binutils
 
-# Temporary working directory
-BINUTILS_DIR=$(WORKDIR)/binutils-$(BINUTILS_VER)
-GCC_DIR=$(WORKDIR)/gcc-$(GCC_VER)
-GDB_DIR=$(WORKDIR)/gdb-$(GDB_VER)
+gdb_URL=$(SERVER)/gdb/gdb-$(gdb_VER).tar.bz2
+gdb_TGZ=$(WORKDIR)/gdb-$(gdb_VER).tar.bz2
+gdb_DIR=$(WORKDIR)/gdb-$(gdb_VER)
+gdb_BDIR=$(WORKDIR)/gdb-bld-$(TARGET)-$(gdb_VER)
+gdb_STAMP=$(WORKDIR)/gdb-$(gdb_VER)-stamp
+gdb_TESTBIN=gdb
 
-# Build dirs
-BINUTILS_BDIR=$(WORKDIR)/bu-bld-$(TARGET)-$(BINUTILS_VER)
-GCC_BDIR=$(WORKDIR)/gcc-bld-$(TARGET)-$(GCC_VER)
-GDB_BDIR=$(WORKDIR)/gdb-bld-$(TARGET)-$(GDB_VER)
-
-# Stamp files
-BINUTILS_STAMP=$(WORKDIR)/bu-$(BINUTILS_VER)-stamp
-GCC_STAMP=$(WORKDIR)/gcc-$(GCC_VER)-stamp
-GDB_STAMP=$(WORKDIR)/gdb-$(GDB_VER)-stamp
+$(shell mkdir -p $(WORKDIR))
 
 help:
 	@echo Available targets are: all, gcc, binutils, gdb
 	@echo Default configuration is:
-	@head $(MAKEFILE_LIST) -n 41 | tail -n 16
+	@head $(MAKEFILE_LIST) -n 44 | tail -n 19
 
 all: gcc binutils gdb
 
-.PRECIOUS: $(BINUTILS_TGZ) $(GCC_TGZ) $(GDB_TGZ)
-.DELETE_ON_ERROR: $(BINUTILS_STAMP)-wget $(GCC_STAMP)-wget $(GDB_STAMP)-wget \
-	$(BINUTILS_STAMP)-$(TARGET)-conf $(BINUTILS_STAMP)-$(TARGET)-build \
-	$(GCC_STAMP)-$(TARGET)-conf $(GCC_STAMP)-$(TARGET)-build \
-	$(GDB_STAMP)-$(TARGET)-conf $(GDB_STAMP)-$(TARGET)-build
-
-$(BINUTILS_STAMP)-wget:
-	touch $@
-	wget -c $(BINUTILS_URL) -O $(BINUTILS_TGZ)
-$(BINUTILS_TGZ): $(BINUTILS_STAMP)-wget
-	touch $@
-
-$(GCC_STAMP)-wget:
-	touch $@
-	wget -c $(GCC_URL) -O $(GCC_TGZ)
-$(GCC_TGZ): $(GCC_STAMP)-wget
-	touch $@
-
-$(GDB_STAMP)-wget:
-	touch $@
-	wget -c $(GDB_URL) -O $(GDB_TGZ)
-$(GDB_TGZ): $(GDB_STAMP)-wget
-	touch $@
+.PRECIOUS: $(binutils_TGZ) $(gcc_TGZ) $(gdb_TGZ)
+.DELETE_ON_ERROR: $(binutils_STAMP)-wget $(gcc_STAMP)-wget $(gdb_STAMP)-wget \
+	$(binutils_STAMP)-$(TARGET)-conf $(binutils_STAMP)-$(TARGET)-build \
+	$(gcc_STAMP)-$(TARGET)-conf $(gcc_STAMP)-$(TARGET)-build \
+	$(gdb_STAMP)-$(TARGET)-conf $(gdb_STAMP)-$(TARGET)-build
 
 % : %.tar.bz2
 	( mkdir -p $@ ; cd $@/.. ; tar xjf $< )
 	touch $@
 
+define TOOL_template
 
-$(BINUTILS_STAMP)-$(TARGET)-conf: $(BINUTILS_DIR)
-	mkdir -p $(BINUTILS_BDIR)
-	( cd $(BINUTILS_BDIR) ; $(BINUTILS_DIR)/configure --prefix=$(PREFIX) --target=$(TARGET) --disable-checking --disable-werror $(BINUTILS_CONF) ) && touch $@
+$$($(1)_STAMP)-wget:
+	touch $$@
+	wget -c $$($(1)_URL) -O $$($(1)_TGZ)
+$$($(1)_TGZ): $$($(1)_STAMP)-wget
+	touch $$@
 
-$(BINUTILS_STAMP)-$(TARGET)-build: $(BINUTILS_STAMP)-$(TARGET)-conf
-	make -C $(BINUTILS_BDIR) && touch $@
+$$(WORKDIR)/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff:
+	wget --no-check-certificate https://www.mutekh.org/www/tools/patchs/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff.gz -O $$@.gz || test $$$$? = 8
+	gunzip $$(WORKDIR)/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff.gz || true
 
-$(PREFIX)/bin/$(TARGET)-as: $(BINUTILS_STAMP)-$(TARGET)-build
-	make -C $(BINUTILS_BDIR) install && touch $@
+$$($(1)_STAMP)-$$(TARGET)-patch: $$(WORKDIR)/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff $$($(1)_DIR)
+	test ! -f $$< || ( cd $$($(1)_DIR) ; cat $$< | patch -p 0 ) && touch $$@
 
-binutils: $(PREFIX)/bin/$(TARGET)-as
+$$($(1)_STAMP)-$$(TARGET)-conf: $$($(1)_DIR) $$($(1)_STAMP)-$$(TARGET)-patch $$($(1)_DEPS)
+	mkdir -p $$($(1)_BDIR)
+	( cd $$($(1)_BDIR) ; $$($(1)_DIR)/configure --disable-nls --prefix=$$(PREFIX) --target=$$(TARGET)-unknown-elf --disable-checking --disable-werror $$($(1)_CONF) ) && touch $$@
 
+$$($(1)_STAMP)-$$(TARGET)-build: $$($(1)_STAMP)-$$(TARGET)-conf
+	make -C $$($(1)_BDIR) && touch $$@
 
+$$(PREFIX)/bin/$$(TARGET)-unknown-elf-$$($(1)_TESTBIN): $$($(1)_STAMP)-$$(TARGET)-build
+	make -C $$($(1)_BDIR) install && touch $$@
 
-$(GCC_STAMP)-$(TARGET)-conf: $(GCC_DIR) binutils
-	mkdir -p $(GCC_BDIR)
-	( cd $(GCC_BDIR) ; $(GCC_DIR)/configure --prefix=$(PREFIX) --target=$(TARGET) --disable-checking --disable-werror $(GCC_CONF) ) && touch $@
+$(1): $$(PREFIX)/bin/$$(TARGET)-unknown-elf-$$($(1)_TESTBIN)
 
-$(GCC_STAMP)-$(TARGET)-build: $(GCC_STAMP)-$(TARGET)-conf
-	make -C $(GCC_BDIR) && touch $@
+endef
 
-$(PREFIX)/bin/$(TARGET)-gcc: $(GCC_STAMP)-$(TARGET)-build
-	make -C $(GCC_BDIR) install && touch $@
-
-gcc: $(PREFIX)/bin/$(TARGET)-gcc
-
-
-
-$(GDB_STAMP)-$(TARGET)-conf: $(GDB_DIR)
-	mkdir -p $(GDB_BDIR)
-	( cd $(GDB_BDIR) ; $(GDB_DIR)/configure --prefix=$(PREFIX) --target=$(TARGET) --disable-checking --disable-werror $(GDB_CONF) ) && touch $@
-
-$(GDB_STAMP)-$(TARGET)-build: $(GDB_STAMP)-$(TARGET)-conf
-	make -C $(GDB_BDIR) && touch $@
-
-$(PREFIX)/bin/$(TARGET)-gdb: $(GDB_STAMP)-$(TARGET)-build
-	make -C $(GDB_BDIR) install && touch $@
-
-gdb: $(PREFIX)/bin/$(TARGET)-gdb
+$(eval $(call TOOL_template,gcc))
+$(eval $(call TOOL_template,gdb))
+$(eval $(call TOOL_template,binutils))
 
