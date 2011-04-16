@@ -142,6 +142,7 @@ struct sleep_wait_s
 };
 
 #ifdef CONFIG_MUTEK_SCHEDULER
+
 static TIMER_CALLBACK(timer_sleep_callback)
 {
   struct sleep_wait_s *sw = pv;
@@ -186,4 +187,17 @@ error_t timer_sleep(struct timer_s *timer, timer_delay_t delay)
 
   return 0;
 }
+
+#else
+
+error_t timer_sleep(struct timer_s *timer, timer_delay_t delay)
+{
+  timer_delay_t t = timer_get_tick(timer);
+  
+  while ((delay > timer_get_tick(timer) - t))
+    ;
+
+  return 0;
+}
+
 #endif
