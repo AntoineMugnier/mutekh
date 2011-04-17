@@ -24,30 +24,7 @@
 
 #### LINE 25 IS HERE ####
 
-# GNU Binutils
-binutils_VER=2.20.1
-binutils_CONF=
-
-# GNU Compiler
-gcc_VER=4.5.2
-gcc_CONF=--enable-languages=c --disable-libssp
-
-# GCC requirements
-mpfr_VER=2.4.2
-gmp_VER=4.3.2
-mpc_VER=0.9
-
-# GNU Debugger
-gdb_VER=7.2
-gdb_CONF=
-
-# Device Tree Compiler
-dtc_VER=1.2.0
-
-# Target processor: mipsel mipseb powerpc arm i686 sparc nios2 ...
-# Some non-mainstream targets may require specific version of the
-# tools in order to fetch patchs. See:
-# https://www.mutekh.org/www/tools/patchs/
+# Target architecture
 TARGET=mipsel
 
 # Install PATH
@@ -56,7 +33,50 @@ PREFIX=/opt/mutekh
 # Temp directory
 WORKDIR=/tmp/crossgen
 
-#### LINE 59 IS HERE ####
+# GNU Binutils
+binutils_VER_mipsel  = 2.20.1
+binutils_VER_powerpc = 2.20.1
+binutils_VER_arm     = 2.20.1
+binutils_VER_i686    = 2.20.1
+binutils_VER_x86_64  = 2.20.1
+binutils_VER_nios2   = 2.20.1
+
+binutils_VER=$(binutils_VER_$(TARGET))
+binutils_CONF=
+
+# GNU Compiler
+gcc_VER_mipsel  = 4.5.2
+gcc_VER_powerpc = 4.5.2
+gcc_VER_arm     = 4.5.2
+gcc_VER_i686    = 4.5.2
+gcc_VER_x86_64  = 4.5.2
+gcc_VER_nios2   = 4.4.4
+
+gcc_VER=$(gcc_VER_$(TARGET))
+gcc_CONF=--enable-languages=c --disable-libssp --enable-multilib
+
+# GCC requirements
+mpfr_VER=2.4.2
+gmp_VER=4.3.2
+mpc_VER=0.9
+
+# GNU Debugger
+gdb_VER_mipsel  = 7.2
+gdb_VER_powerpc = 7.2
+gdb_VER_arm     = 7.2
+gdb_VER_i686    = 7.2
+gdb_VER_x86_64  = 7.2
+gdb_VER_nios2   = 7.0
+gdb_VER=$(gdb_VER_$(TARGET))
+gdb_CONF=
+
+# Device Tree Compiler
+dtc_VER=1.2.0
+
+
+
+
+#### LINE 79 IS HERE ####
 
 # packages configurations
 
@@ -93,7 +113,6 @@ dtc_TGZ=$(WORKDIR)/dtc-$(dtc_VER).tar.gz
 dtc_TESTBIN=bin/dtc
 
 WGET_OPTS=-c -t 5 -w 5 --no-check-certificate
-export LD_LIBRARY_PATH=$$(PREFIX)/lib 
 
 $(shell mkdir -p $(WORKDIR))
 
@@ -102,7 +121,7 @@ $(shell mkdir -p $(WORKDIR))
 help:
 	@echo Available targets are: all, gcc, binutils, gdb, dtc
 	@echo Default configuration is:
-	@head $(MAKEFILE_LIST) -n 58 | tail -n 33
+	@head $(MAKEFILE_LIST) -n 78 | tail -n 53
 
 all: gcc binutils gdb dtc
 
@@ -128,8 +147,8 @@ $(1)_STAMP=$$(WORKDIR)/$(1)-$$($(1)_VER)-stamp
 $(1)_PATCH=$$(WORKDIR)/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff
 
 $$($(1)_STAMP)-wget:
-	touch $$@
 	wget $$(WGET_OPTS) $$($(1)_URL) -O $$($(1)_TGZ)
+	touch $$@
 
 $$($(1)_TGZ): $$($(1)_STAMP)-wget
 	touch $$@
@@ -143,15 +162,15 @@ $$($(1)_STAMP)-$$(TARGET)-patch: $$($(1)_DIR)
 
 $$($(1)_STAMP)-$$(TARGET)-conf: $$($(1)_DIR) $$($(1)_STAMP)-$$(TARGET)-patch $$($(1)_DEPS)
 	mkdir -p $$($(1)_BDIR)
-	( cd $$($(1)_BDIR) ; $$($(1)_DIR)/configure --disable-nls --prefix=$$(PREFIX) --target=$$(TARGET)-unknown-elf --disable-checking --disable-werror $$($(1)_CONF) ) && touch $$@
+	( cd $$($(1)_BDIR) ; LD_LIBRARY_PATH=$$(PREFIX)/lib $$($(1)_DIR)/configure --disable-nls --prefix=$$(PREFIX) --target=$$(TARGET)-unknown-elf --disable-checking --disable-werror $$($(1)_CONF) ) && touch $$@
 
 $$($(1)_STAMP)-$$(TARGET)-build: $$($(1)_STAMP)-$$(TARGET)-conf
-	make -C $$($(1)_BDIR) && touch $$@
+	LD_LIBRARY_PATH=$$(PREFIX)/lib make -C $$($(1)_BDIR) && touch $$@
 
 $$(PREFIX)/$$($(1)_TESTBIN): $$($(1)_STAMP)-$$(TARGET)-build
-	make -C $$($(1)_BDIR) install && touch $$@
+	LD_LIBRARY_PATH=$$(PREFIX)/lib make -C $$($(1)_BDIR) install && touch $$@
 
-$(1): $$(PREFIX)/$$($(1)_TESTBIN)
+$(1): $$(shell test -f $$(PREFIX)/$$($(1)_TESTBIN) || echo $$(PREFIX)/$$($(1)_TESTBIN))
 
 endef
 
@@ -168,23 +187,23 @@ $(1)_BDIR=$(WORKDIR)/$(1)-bld-$($(1)_VER)
 $(1)_STAMP=$(WORKDIR)/$(1)-$($(1)_VER)-stamp
 
 $$($(1)_STAMP)-wget:
-	touch $$@
 	wget $$(WGET_OPTS) $$($(1)_URL) -O $$($(1)_TGZ)
+	touch $$@
 
 $$($(1)_TGZ): $$($(1)_STAMP)-wget
 	touch $$@
 
 $$($(1)_STAMP)-conf: $$($(1)_DIR) $$($(1)_DEPS)
 	mkdir -p $$($(1)_BDIR)
-	( cd $$($(1)_BDIR) ; $$($(1)_DIR)/configure --prefix=$$(PREFIX) $$($(1)_CONF) ) && touch $$@
+	( cd $$($(1)_BDIR) ; LD_LIBRARY_PATH=$$(PREFIX)/lib $$($(1)_DIR)/configure --prefix=$$(PREFIX) $$($(1)_CONF) ) && touch $$@
 
 $$($(1)_STAMP)-build: $$($(1)_STAMP)-conf
-	make -C $$($(1)_BDIR) && touch $$@
+	LD_LIBRARY_PATH=$$(PREFIX)/lib make -C $$($(1)_BDIR) && touch $$@
 
 $$(PREFIX)/$$($(1)_TESTBIN): $$($(1)_STAMP)-build
-	make -C $$($(1)_BDIR) install && touch $$@
+	LD_LIBRARY_PATH=$$(PREFIX)/lib make -C $$($(1)_BDIR) install && touch $$@
 
-$(1): $$(PREFIX)/$$($(1)_TESTBIN)
+$(1): $$(shell test -f $$(PREFIX)/$$($(1)_TESTBIN) || echo $$(PREFIX)/$$($(1)_TESTBIN))
 
 endef
 
@@ -197,3 +216,4 @@ $(eval $(call TGTTOOL_template,gdb))
 $(eval $(call TGTTOOL_template,binutils))
 $(eval $(call TGTTOOL_template,gcc))
 $(eval $(call TOOL_template,dtc))
+
