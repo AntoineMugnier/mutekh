@@ -2150,10 +2150,10 @@ sub main
 {
     foreach my $param (@ARGV) {
 	error " bad command line option `$param'"
-	    if (! ($param =~ /--([^=]+)=?(.*)/));
+	    if (! ($param =~ /--([^=]+)(=)?(.*)/));
 
 	my $name = $1;
-	my $value = $2 ? $2 : 1;
+	my $value = $2 ? $3 : 1;
 
 	$name =~ s/-/_/g;
 	$param_h{$name} = $value;
@@ -2208,6 +2208,12 @@ Usage: config.pl [options]
     exit 1 if $err_flag;
 
     debug(1, "read build configuration files");
+
+    my $bld_name;
+
+    if ($param_h{build_name}) {
+	$bld_name = $param_h{build_name};
+    }
 
     if ($param_h{build_path}) {
 	$bld_path = $param_h{build_path};
@@ -2267,7 +2273,7 @@ Usage: config.pl [options]
 	$vars{BUILD_NAME} = $arch->{value}."-".$cpu->{value};
     }
 
-    my $bld_name = $vars{OUTPUT_NAME}."-".$vars{BUILD_NAME};
+    $bld_name = $vars{OUTPUT_NAME}."-".$vars{BUILD_NAME} if !$bld_name;
     $bld_path .= $bld_name;
 
     debug(1, "take action based on command line options");

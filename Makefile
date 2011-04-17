@@ -47,8 +47,6 @@ ifneq ($(VERBOSE),1)
 MAKEFLAGS = -s
 endif
 
-CONF_DIR:=$(shell echo /tmp/.mutekh_config.$$$$.$${RANDOM})
-
 all: kernel
 
 .PHONY: FORCE
@@ -66,7 +64,6 @@ ifeq ($(EACH),)
 
 clean:
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ CLEANING=1 MAKEFLAGS=$(MAKEFLAGS)
-	-rm -f $(CONF_DIR)/.config.* 2>/dev/null
 
 config showpaths kernel cflags objs: FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ MAKEFLAGS=$(MAKEFLAGS)
@@ -77,7 +74,6 @@ else
 
 clean:
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/heterogeneous.mk $@ CLEANING=1 MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF)
-	-rm -f $(CONF_DIR)/.config.* 2>/dev/null
 
 kernel kernel-het: FORCE
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/heterogeneous.mk $@ MAKEFLAGS=$(MAKEFLAGS) CONF=$(CONF)

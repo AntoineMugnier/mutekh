@@ -16,6 +16,7 @@ OUT_NAME := $(shell cd $(MUTEK_SRC_DIR) ; \
 		--src-path=$(CONF_PATH):$(MUTEK_SRC_DIR):$(MUTEKH_CONFIG_PATH)  \
 		--input=$(CONF)					 \
 		--build-path=$(BUILD_DIR)/obj-   \
+		--build-name=$(BUILD_NAME) \
 		--build=$(BUILD) --config $(CONFIG_FLAGS) )
 
 ifeq ($(OUT_NAME),)
