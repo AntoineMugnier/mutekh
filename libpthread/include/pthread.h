@@ -580,7 +580,11 @@ struct				pthread_barrier_s
     struct {
       int_fast32_t			max_count;
       atomic_t				count;
-      uint8_t               padding[64];
+# ifdef CONFIG_CPU_CACHE_LINE
+      /** The padding is here to avoid 
+       ** cache line conflicts between count and release */
+      uint8_t                           padding[CONFIG_CPU_CACHE_LINE];
+# endif
       uint8_t				release;
     } spin;
 #endif
@@ -615,11 +619,11 @@ error_t
 pthread_barrierattr_settype(pthread_barrierattr_t *attr, int_fast8_t type);
 
 /** @this initialize a barrier attribute object */
-config_depend(CONFIG_PTHREAD_BARRIER_ATTR)
+config_depend_inline(CONFIG_PTHREAD_BARRIER_ATTR,
 error_t pthread_barrierattr_init(pthread_barrierattr_t *attr)
 {
   return pthread_barrierattr_settype(attr, PTHREAD_BARRIER_DEFAULT);
-}
+});
 
 #endif
 
