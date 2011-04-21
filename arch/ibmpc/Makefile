@@ -9,12 +9,8 @@ ifeq ($(CONFIG_ARCH_IBMPC_DMA), defined)
 objs += dma-8237.o
 endif
 
-ifeq ($(CONFIG_IBMPC_EARLY_CONSOLE_VGA), defined)
+ifeq ($(CONFIG_MUTEK_EARLY_CONSOLE), defined)
 objs += early_console.o
-endif
-
-ifeq ($(CONFIG_IBMPC_EARLY_CONSOLE_UART), defined)
-objs += early_console_uart.o
 endif
 
 meta = ldscript

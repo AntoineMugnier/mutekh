@@ -64,6 +64,7 @@ MMU_VPAGE_FREE(vmem_vpage_kfree);
 #endif /*CONFIG_HEXO_MMU*/
 
 #include "multiboot.h"
+#include "early_console.h"
 
 /* conform to Multiboot Specification */
 
@@ -96,15 +97,6 @@ static lock_t		cpu_start_lock;	/* cpu wait for start lock */
 static size_t           cpu_count = 1;
 #endif
 
-#ifdef CONFIG_IBMPC_EARLY_CONSOLE_VGA
-PRINTF_OUTPUT_FUNC(early_console_vga);
-#endif
-
-#ifdef CONFIG_IBMPC_EARLY_CONSOLE_UART
-PRINTF_OUTPUT_FUNC(early_console_uart);
-#endif
-
-
 #if defined (CONFIG_MUTEK_SCHEDULER)
 extern struct sched_context_s main_ctx;
 #endif
@@ -122,11 +114,9 @@ void arch_init(uintptr_t init_sp)
       lock_init(&cpu_start_lock);
 #endif
 
-#ifdef CONFIG_IBMPC_EARLY_CONSOLE_VGA
-      printk_set_output(early_console_vga, NULL);
-#endif
-#ifdef CONFIG_IBMPC_EARLY_CONSOLE_UART
-      printk_set_output(early_console_uart, NULL);
+#ifdef CONFIG_MUTEK_EARLY_CONSOLE
+      early_console_init();
+      printk_set_output(early_console_output, NULL);
 #endif
       cpu_global_init();
 
