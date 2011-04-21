@@ -45,6 +45,9 @@ error_t power_reboot()
 
 error_t power_shutdown()
 {
-  return ENOTSUP;
+  /* bochs/qemu ACPI poweroff hack */
+  cpu_io_write_16(0xb004, 0x2000);
+
+  return 0;
 }
 
