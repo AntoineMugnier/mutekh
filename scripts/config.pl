@@ -33,6 +33,7 @@ my @config_files;
 my @output_files;
 my %config_opts;
 my %inits;
+my $enforce_deps;
 my $quiet_flag = 0;
 my $err_flag = 0;
 my $bld_path = ".";
@@ -1050,6 +1051,8 @@ sub process_config_depend
     return 0 if ( !check_defined( $opt ) );
     return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} );
 
+    my $de = $enforce_deps ? 'deperror' : 'depnotice';
+
     # check if at least one parent is defined
     my $pres = 1;
 
@@ -1067,13 +1070,13 @@ sub process_config_depend
 
         if ( $opt->{flags}->{harddep} || $opt->{flags}->{mandatory} ) {
 
-	    $opt->{deperror} = "`$opt->{name}' token is required but has unmet dependencies: $depnames";
+	    push @{$opt->{deperror}}, "`$opt->{name}' token is required but has unmet dependencies: $depnames";
 
 	    debug(1, "undefine $opt->{name} due to harddeps that are not satisfied: $depnames");
 
 	} else {
 
-	    push @{$opt->{depnotice}}, "`$opt->{name}' token will be undefined due to unmet dependencies: ".
+	    push @{$opt->{$de}}, "`$opt->{name}' token will be undefined due to unmet dependencies: ".
 		get_token_name_list( $or_list, " or " );
 
 	    debug(1, "undefine $opt->{name} due to deps that are not satisfied: $depnames");
@@ -1088,7 +1091,7 @@ sub process_config_depend
     if ( !$pres ) {
 
 	if ( $opt->{userdefined} ) {
-	    push @{$opt->{depnotice}}, "`$opt->{name}' token is defined in build configuration ".
+	    push @{$opt->{$de}}, "`$opt->{name}' token is defined in build configuration ".
 		"file but has undefined parent.";
 	}
 
@@ -1120,7 +1123,7 @@ sub process_config_when
 
 	# clear existing undefine diagnostics
 	$opt->{depnotice} = [];
-	$opt->{deperror} = "";
+	$opt->{deperror} = [];
 	$opt->{depundef} = 0;
     }
 
@@ -1271,7 +1274,7 @@ sub tokens_set_methods
                 $combine = sub {
                     my ( $opt, $old, $new ) = @_;
                     if ( $old != $new ) {
-                        $opt->{deperror} = "Conflict between `$old' and `$new' values for `provide' on `$opt->{name}' token";
+                        push @{$opt->{deperror}}, "Conflict between `$old' and `$new' values for `provide' on `$opt->{name}' token";
                     }
                     return $new;
                 }
@@ -1527,7 +1530,7 @@ sub check_config
 
     foreach my $opt (values %config_opts) {
 	notice( $_ ) foreach ( @{$opt->{depnotice}} );
-	error( $opt->{deperror} ) if ( $opt->{deperror} );
+	error( $_ ) foreach ( @{$opt->{deperror}} );
     }
 
     # store all token values of value and meta tokens
@@ -2179,6 +2182,7 @@ Usage: config.pl [options]
 	--info=token        Display informations about `token'.
 	--docheader=file    Output header with documentation tags in `file' file.
 	--quiet             Do not output diagnostic messages.
+	--enforce-deps      Unsatisfied dependencies will raise error.
 
 ";
 	return;
@@ -2192,6 +2196,7 @@ Usage: config.pl [options]
 
     $quiet_flag = defined $param_h{quiet};
     $debug |= defined $param_h{debug};
+    $enforce_deps |= defined $param_h{enforce_deps};
 
     debug(1, "explore source tree and parse .config token files");
 
