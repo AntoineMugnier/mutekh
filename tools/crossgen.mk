@@ -85,7 +85,10 @@ bochs_CONF= --enable-x86-64 --enable-smp --enable-acpi --enable-pci --enable-dis
 qemu_VER=0.14.0
 qemu_CONF=--disable-docs --disable-kvm
 
-HELP_END=88 #### LINE 86 IS HERE ####
+# Testsuite simulation wrapper
+testwrap_VER=1.0
+
+HELP_END=91 #### LINE 86 IS HERE ####
 
 unexport MAKEFLAGS
 unexport MFLAGS
@@ -118,6 +121,9 @@ mpc_CONF+=--with-mpfr=$(PREFIX) --with-gmp=$(PREFIX)
 dtc_URL=https://www.mutekh.org/www/tools/dtc-$(dtc_VER).tar.gz
 dtc_TESTBIN=bin/dtc
 
+testwrap_URL=https://www.mutekh.org/www/tools/testwrap-$(testwrap_VER).tar.gz
+testwrap_TESTBIN=bin/testwrap
+
 bochs_URL=http://freefr.dl.sourceforge.net/project/bochs/bochs/$(bochs_VER)/bochs-$(bochs_VER).tar.gz
 bochs_TESTBIN=bin/bochs
 
@@ -139,16 +145,19 @@ help:
 	@echo "Main targets:"
 	@echo "  config    - display configuration"
 	@echo "  toolchain - download, configure, build and install gcc, binutils, gdb, dtc"
+	@echo "  testtools - download, configure, build and install testwrap, bochs, qemu"
 	@echo "  all       - download, configure, build and install all packages"
 	@echo "  cleanup   - remove all build files, keep downloaded archives"
 	@echo ""
 	@echo "Package targets:"
-	@echo "  gcc, binutils, gdb, dtc, bochs, qemu"
+	@echo "  gcc, binutils, gdb, dtc, testwrap, bochs, qemu"
 
 config:
 	@head -n $$(($(HELP_END)-1)) $(MAKEFILE_LIST) | tail -n $$(($(HELP_END)-26))
 
 toolchain: gcc binutils gdb dtc
+
+testtools: testwrap bochs qemu
 
 all:       gcc binutils gdb dtc bochs qemu
 
@@ -214,6 +223,7 @@ define TOOL_template
 $(1)_DIR=$$(WORKDIR)/$(1)-$$($(1)_VER)
 $(1)_BDIR=$$(if $$($(1)_INTREE_BUILD), $$(WORKDIR)/$(1)-$$($(1)_VER), $$(WORKDIR)/$(1)-bld-$$($(1)_VER))
 $(1)_STAMP=$$(WORKDIR)/$(1)-$$($(1)_VER)-stamp
+$(1)_PATCH=$$(WORKDIR)/$(1)-$$($(1)_VER)-latest.diff
 $(1)_TGZ=$$(WORKDIR)/$$(notdir $$($(1)_URL))
 CLEANUP_FILES+=$$($(1)_BDIR) $$($(1)_STAMP)-$$(TARGET)-conf $$($(1)_STAMP)-$$(TARGET)-build
 
@@ -221,10 +231,17 @@ $$($(1)_STAMP)-wget:
 	wget $$(WGET_OPTS) $$($(1)_URL) -O $$($(1)_TGZ)
 	touch $$@
 
+$$($(1)_STAMP)-patch: $$($(1)_DIR)
+        # try to fetch a patch
+	wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
+        # test is a patch is available and apply
+	test ! -f $$($(1)_PATCH).gz || ( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 )
+	touch $$@
+
 $$($(1)_TGZ): $$($(1)_STAMP)-wget
 	touch $$@
 
-$$($(1)_STAMP)-conf: $$($(1)_DIR) $$($(1)_DEPS)
+$$($(1)_STAMP)-conf: $$($(1)_DIR) $$($(1)_STAMP)-patch $$($(1)_DEPS)
 	mkdir -p $$($(1)_BDIR)
 	( cd $$($(1)_BDIR) ; LD_LIBRARY_PATH=$$(PREFIX)/lib $$($(1)_DIR)/configure --prefix=$$(PREFIX) $$($(1)_CONF) ) && touch $$@
 
@@ -249,6 +266,7 @@ $(eval $(call TGTTOOL_template,gcc))
 $(eval $(call TOOL_template,dtc))
 $(eval $(call TOOL_template,bochs))
 $(eval $(call TOOL_template,qemu))
+$(eval $(call TOOL_template,testwrap))
 
 cleanup:
 	rm -rf $(CLEANUP_FILES)
