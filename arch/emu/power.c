@@ -28,8 +28,10 @@ error_t power_reboot()
   return ENOTSUP;
 }
 
+extern __compiler_sint_t cpu_pids[CONFIG_CPU_MAXCOUNT];
+
 error_t power_shutdown()
 {
-  return emu_do_syscall(EMU_SYSCALL_EXIT, 1, 0);
+  emu_do_syscall(EMU_SYSCALL_KILL, 2, cpu_pids[0], EMU_SIG_KILL);
 }
 
