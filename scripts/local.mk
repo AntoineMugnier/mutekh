@@ -47,10 +47,10 @@ define compile
 endef
 
 # blob2c c_file blob symbol_name
-# runs blob2c.py to build c file
+# runs blob2c.pl to build c file
 define blob2c
 	( cd $$(dir $(value 1)) ; \
-		$(MUTEK_SRC_DIR)/scripts/python_wrapper.sh $(MUTEK_SRC_DIR)/scripts/blob2c.py \
+		perl $(MUTEK_SRC_DIR)/scripts/blob2c.pl \
 	    -a 4 -o $(value 1) -S -n $(value 3) $(value 2) \
 	) $(LOG_REDIR)
 endef
@@ -192,11 +192,11 @@ $(3)/$(1): $(2)/$(1).cpp $(OBJ_DIR)/config.h
 else
 
 # m4 preprocessed files
-$(3)/$(1): $(2)/$(1).m4 $(OBJ_DIR)/config.m4 $(MUTEK_SRC_DIR)/scripts/global.m4 $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py
+$(3)/$(1): $(2)/$(1).m4 $(OBJ_DIR)/config.m4 $(MUTEK_SRC_DIR)/scripts/global.m4 $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.pl
 	$(call prepare_command,M4,$$@)
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 \
 		$$< | m4 -s $$(filter -I%,$$(INCS)) -P | \
-		$(MUTEK_SRC_DIR)/scripts/python_wrapper.sh $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.py \
+		perl $(MUTEK_SRC_DIR)/scripts/compute_m4_deps.pl \
 		$$@ $$(filter -I%,$$(INCS)) > $$@.deps
 	cat $(MUTEK_SRC_DIR)/scripts/global.m4 $(OBJ_DIR)/config.m4 \
 		$$< | m4 $$(filter -I%,$$(INCS)) -P > $$@
