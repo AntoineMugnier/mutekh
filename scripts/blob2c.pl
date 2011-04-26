@@ -47,7 +47,7 @@ while ( my $len = read( STDIN, $line, 16 ) ) {
     $tlen += $len;
 }
 
-print "}\n";
+print "};\n";
 
 if ( $size ) {
     print "__attribute__((section \"$section\"))\n" if ( defined $section );
