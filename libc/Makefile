@@ -3,13 +3,14 @@ string.o					\
 alloc.o						\
 intconv.o					\
 printf.o					\
+scanf.o	        				\
 rand.o						\
 error.o						\
 qsort.o						\
 stdlib.o					\
 unistd.o					\
-formatter.o                                     \
-time.o
+formatter.o
+
 
 ifeq ($(CONFIG_MUTEK_TIMER), defined)
 objs += time.o
