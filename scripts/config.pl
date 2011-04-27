@@ -195,7 +195,7 @@ sub args_flags
 
     foreach my $flag (@args)
     {
-	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private|maxval|minval|sumval)$/)
+	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private|maxval|minval|sumval|deprecated|experimental)$/)
 	{
 	    error($location.": unknown flag `".$flag."' for `".$opts->{name}." token'");
 	    next;
@@ -342,6 +342,7 @@ sub read_tokens_file
 	$lnum++;
 
 	next if ($line =~ /^[ \t]*(\#.*)?$/);
+        $line =~ s/#.*$//g;
 
 	# catch blocks start and end
 
@@ -1742,6 +1743,10 @@ sub read_build_config
 		$opt->{value} = $val;
 		$opt->{vlocation} = "$file:$lnum";
 		$opt->{userdefined} = 1;
+
+                if ($opt->{flags}->{deprecated}) {
+                    warning_loc($opt, "use of deprecated token in configuration.");
+                }
 	    }
 	    next;
 	}
