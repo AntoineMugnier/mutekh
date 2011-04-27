@@ -1,4 +1,6 @@
 
+DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
+
 doc_headers = device/block.h device/char.h device/device.h			\
 	device/enum.h device/fb.h device/gpio.h device/i2c.h			\
 	device/icu.h device/input.h device/lcd.h device/mem.h device/net.h	\

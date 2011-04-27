@@ -1,4 +1,6 @@
 
+DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
+
 objs += protocols.o packet.o if.o route.o dispatch.o
 
 ifeq ($(CONFIG_NETWORK_FILTER), defined)

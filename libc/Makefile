@@ -1,3 +1,6 @@
+
+DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
+
 objs =						\
 string.o					\
 alloc.o						\

@@ -1,4 +1,6 @@
 
+DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
+
 objs += thread.o
 
 ifeq ($(CONFIG_PTHREAD_MUTEX), defined)

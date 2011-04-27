@@ -1,4 +1,6 @@
 
+DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
+
 ifeq ($(CONFIG_MWMR_PTHREAD),defined)
 objs += mwmr_pthread.o
 endif

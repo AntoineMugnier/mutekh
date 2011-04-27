@@ -1,3 +1,6 @@
+
+DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
+
 objs = \
 	vfs.o \
 	helpers.o \

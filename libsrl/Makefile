@@ -1,4 +1,6 @@
 
+DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
+
 objs = main.o
 
 ifeq ($(CONFIG_SRL_SOCLIB),defined)

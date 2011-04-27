@@ -1,4 +1,6 @@
 
+DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
+
 objs = elf.o 
 
 ifeq ($(CONFIG_LIBELF_RTLD), defined)

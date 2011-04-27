@@ -1,4 +1,6 @@
 
+DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
+
 objs = alloc.o barrier.o critical.o env.o iter.o      \
 iter_ull.o loop.o loop_ull.o ordered.o parallel.o sections.o single.o   \
 task.o team.o work.o
