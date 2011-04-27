@@ -519,7 +519,7 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
 ** =======================================================
 */
 
-#ifdef HAVE_FOPEN
+#ifdef CONFIG_VFS
 
 typedef struct LoadF {
   int extraline;

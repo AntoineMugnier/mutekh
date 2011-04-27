@@ -41,48 +41,42 @@ C_HEADER_BEGIN
 #include <stdarg.h>
 #include <unistd.h>
 
-#define HAVE_SPRINTF
 ssize_t sprintf(char *str, const char *format, ...);
 
-#define HAVE_SNPRINTF
 ssize_t snprintf(char *str, size_t size, const char *format, ...);
 
-#define HAVE_VSPRINTF
 ssize_t vsprintf(char *str, const char *format, va_list ap);
 
-#define HAVE_VSNPRINTF
 ssize_t vsnprintf(char *str, size_t size, const char *format, va_list ap);
 
-#define HAVE_SCANF
+config_depend(CONFIG_LIBC_STREAM_STD)
 ssize_t scanf(const char *format, ...);
 
-#define HAVE_SSCANF
-ssize_t sscanf(const char *str, const char *format, ...);
-
-#define HAVE_VSCANF
+config_depend(CONFIG_LIBC_STREAM_STD)
 ssize_t vscanf(const char *format, va_list ap);
 
-#define HAVE_VSSCANF
-ssize_t vsscanf(const char *str, const char *format, va_list ap);
+ssize_t sscanf(const char *str, const char *format, ...);
 
-#ifdef CONFIG_LIBC_STREAM
+ssize_t vsscanf(const char *str, const char *format, va_list ap);
 
 /** standard BUFSIZ macro */
 #define BUFSIZ		CONFIG_LIBC_STREAM_BUFFER_SIZE
 
-CONTAINER_TYPE(stream_fifo, RING, uint8_t, CONFIG_LIBC_STREAM_BUFFER_SIZE);
-
 /** standard EOF macro */
-# define EOF			-1
+#define EOF			-1
 
 typedef int32_t			fpos_t;
+
+#ifdef CONFIG_LIBC_STREAM
+
+CONTAINER_TYPE(stream_fifo, RING, uint8_t, CONFIG_LIBC_STREAM_BUFFER_SIZE);
 
 enum				stdio_buf_mode_e
 {
     _IONBF, _IOLBF, _IOFBF,
 };
 
-struct				file_s
+typedef struct			file_s
 {
   const struct fileops_s	*ops;
   void *hndl;
@@ -94,177 +88,176 @@ struct				file_s
   fpos_t			pos;
   enum stdio_buf_mode_e		buf_mode;
   bool_t			eof:1, error:1;
-};
+}                               FILE;
 
-typedef struct file_s		FILE;
-
-/** internal stream buffered read function.
+/** @internal stream buffered read function.
     @returns 1 on success, 0 on end of stream and < 0 on error.
 */
 error_t	__stdio_read(size_t size_, FILE *file, uint8_t *ptr);
 
-/** internal stream buffered write function.
+/** @internal stream buffered write function.
     @returns 0 on success, < 0 on error.
 */
 error_t __stdio_write(size_t size_, FILE *file, const uint8_t *ptr);
 
+/** @internal perform stream object initialization */
 void __stdio_stream_init(FILE *stream);
 
-#ifdef CONFIG_VFS
-# define HAVE_FOPEN
-FILE *fopen(const char *path, const char *mode);
-#endif
+#else
+typedef struct file_s { } FILE;
+#endif /* CONFIG_LIBC_STREAM */
 
-#define HAVE_FCLOSE
+config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_VFS)
+FILE *fopen(const char *path, const char *mode);
+
+config_depend(CONFIG_LIBC_STREAM)
 error_t fclose(FILE *file);
 
-#define HAVE_FPUTC
+config_depend(CONFIG_LIBC_STREAM)
 int_fast16_t fputc(unsigned char c, FILE *file);
 
-#define HAVE_FGETC
+config_depend(CONFIG_LIBC_STREAM)
 int_fast16_t fgetc(FILE *file);
 
-#define HAVE_FREAD
+config_depend(CONFIG_LIBC_STREAM)
 size_t fread(void *ptr, size_t size, size_t nmemb, FILE *file);
 
-#define HAVE_FWRITE
+config_depend(CONFIG_LIBC_STREAM)
 size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *file);
 
-#define HAVE_FGETS
+config_depend(CONFIG_LIBC_STREAM)
 char *fgets(char *str, size_t size, FILE *file);
 
-#define HAVE_FPUTS
+config_depend(CONFIG_LIBC_STREAM)
 error_t fputs(const char *str, FILE *file);
 
-#define HAVE_PUTS
+config_depend(CONFIG_LIBC_STREAM_STD)
 error_t puts(const char *str);
 
-#define HAVE_FSEEK
+config_depend(CONFIG_LIBC_STREAM)
 error_t fseek(FILE *file, fpos_t offset, int_fast8_t whence);
 
-#define HAVE_FFLUSH
+config_depend(CONFIG_LIBC_STREAM)
 error_t fflush(FILE *file);
 
-#define HAVE_FPURGE
+config_depend(CONFIG_LIBC_STREAM)
 error_t fpurge(FILE *file);
 
-#define HAVE_VFPRINTF
+config_depend(CONFIG_LIBC_STREAM)
 ssize_t vfprintf(FILE *file, const char *format, va_list ap);
 
-#define HAVE_FPRINTF
+config_depend(CONFIG_LIBC_STREAM)
 ssize_t fprintf(FILE *file, const char *format, ...);
 
-#define HAVE_FSCANF
+config_depend(CONFIG_LIBC_STREAM)
 ssize_t fscanf(FILE *file, const char *format, ...);
 
-#define HAVE_UNGETC
+config_depend(CONFIG_LIBC_STREAM)
+ssize_t vfscanf(FILE *file, const char *fmt, va_list ap);
+
+config_depend(CONFIG_LIBC_STREAM)
 int_fast16_t ungetc(int_fast16_t c, FILE *file);
 
-#define HAVE_SETVBUF
+config_depend(CONFIG_LIBC_STREAM)
 error_t setvbuf(FILE *file, char *buf, enum stdio_buf_mode_e mode, size_t size);
 
-#define HAVE_FTELL
-static inline fpos_t ftell(FILE *file)
+config_depend_inline(CONFIG_LIBC_STREAM,
+fpos_t ftell(FILE *file),
 {
   return file->pos;
-}
+});
 
-#define HAVE_REWIND
-static inline void rewind(FILE *file)
+config_depend_inline(CONFIG_LIBC_STREAM,
+void rewind(FILE *file),
 {
   fseek(file, 0, SEEK_SET);
-}
+});
 
-#define HAVE_FGETPOS
-static inline error_t fgetpos(FILE *file, fpos_t *pos)
+config_depend_inline(CONFIG_LIBC_STREAM,
+error_t fgetpos(FILE *file, fpos_t *pos),
 {
   *pos = file->pos;
   return 0;
-}
+});
 
-#define HAVE_FSETPOS
-static inline error_t fsetpos(FILE *file, const fpos_t *pos)
+config_depend_inline(CONFIG_LIBC_STREAM,
+error_t fsetpos(FILE *file, const fpos_t *pos),
 {
   return fseek(file, *pos, SEEK_SET);
-}
+});
 
-#define HAVE_GETC
-static inline int_fast16_t getc(FILE *file)
+config_depend_inline(CONFIG_LIBC_STREAM,
+int_fast16_t getc(FILE *file),
 {
   return fgetc(file);
-}
+});
 
-#define HAVE_PUTC
-static inline int_fast16_t putc(int_fast16_t c, FILE *file)
+config_depend_inline(CONFIG_LIBC_STREAM,
+int_fast16_t putc(int_fast16_t c, FILE *file),
 {
   return fputc(c, file);
-}
+});
 
-#define HAVE_CLEARERR
-static inline void clearerr(FILE *stream)
+config_depend_inline(CONFIG_LIBC_STREAM,
+void clearerr(FILE *stream),
 {
   stream->error = 0;
   stream->eof = 0;
-}
+});
 
-#define HAVE_FERROR
-static inline bool_t ferror(FILE *stream)
+config_depend_inline(CONFIG_LIBC_STREAM,
+bool_t ferror(FILE *stream),
 {
   return stream->error;
-}
+});
 
-#define HAVE_FEOF
-static inline bool_t feof(FILE *stream)
+config_depend_inline(CONFIG_LIBC_STREAM,
+bool_t feof(FILE *stream),
 {
   return stream->eof;
-}
+});
 
-# ifdef CONFIG_LIBC_STREAM_STD
-
-#define HAVE_STDIN
+config_depend(CONFIG_LIBC_STREAM_STD)
 extern FILE * const stdin;
 
-#define HAVE_STDOUT
+config_depend(CONFIG_LIBC_STREAM_STD)
 extern FILE * const stdout;
 
-#define HAVE_STDERR
+config_depend(CONFIG_LIBC_STREAM_STD)
 extern FILE * const stderr;
 
-#define HAVE_GETCHAR
-static inline int_fast16_t getchar()
+config_depend_inline(CONFIG_LIBC_STREAM_STD,
+int_fast16_t getchar(),
 {
   return fgetc(stdin);
-}
+});
 
-#define HAVE_PUTCHAR
-static inline int_fast16_t putchar(int_fast16_t c)
+config_depend_inline(CONFIG_LIBC_STREAM_STD,
+int_fast16_t putchar(int_fast16_t c),
 {
   return fputc(c, stdout);
-}
+});
 
-#define HAVE_VPRINTF
-static inline ssize_t vprintf(const char *format, va_list ap)
+config_depend_inline(CONFIG_LIBC_STREAM_STD,
+ssize_t vprintf(const char *format, va_list ap),
 {
   return vfprintf(stdout, format, ap);
-}
+});
 
-#define HAVE_PRINTF
+/** This function use libc buffered streams and thus require @ref
+    #CONFIG_LIBC_STREAM_STD enabled. Consider using @ref printk
+    instead for direct output. */
+config_depend(CONFIG_LIBC_STREAM_STD)
 ssize_t printf(const char *format, ...);
 
-#define HAVE_GETS
-__attribute__((deprecated))
-static inline
-char *gets(char *s)
+config_depend_inline(CONFIG_LIBC_STREAM_STD,
+char *gets(char *s),
 {
   return fgets(s, 1024, stdin);
-}
+});
 
-#define HAVE_PERROR
+config_depend(CONFIG_LIBC_STREAM_STD)
 void perror(const char *reason);
-
-# endif	/* CONFIG_LIBC_STREAM_STD */
-
-#endif /* CONFIG_LIBC_STREAM */
 
 C_HEADER_END
 

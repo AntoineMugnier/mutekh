@@ -278,7 +278,7 @@ static int luaB_loadstring (lua_State *L) {
   return load_aux(L, luaL_loadbuffer(L, s, l, chunkname));
 }
 
-#ifdef HAVE_FOPEN
+#ifdef CONFIG_VFS
 
 static int luaB_loadfile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
@@ -320,7 +320,7 @@ static int luaB_load (lua_State *L) {
   return load_aux(L, status);
 }
 
-#ifdef HAVE_FOPEN
+#ifdef CONFIG_VFS
 
 static int luaB_dofile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
@@ -446,14 +446,14 @@ static int luaB_newproxy (lua_State *L) {
 static const luaL_Reg base_funcs[] = {
   {"assert", luaB_assert},
   {"collectgarbage", luaB_collectgarbage},
-#ifdef HAVE_FOPEN
+#ifdef CONFIG_VFS
   {"dofile", luaB_dofile},
 #endif
   {"error", luaB_error},
   {"gcinfo", luaB_gcinfo},
   {"getfenv", luaB_getfenv},
   {"getmetatable", luaB_getmetatable},
-#ifdef HAVE_FOPEN
+#ifdef CONFIG_VFS
   {"loadfile", luaB_loadfile},
 #endif
   {"load", luaB_load},
