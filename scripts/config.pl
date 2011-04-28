@@ -337,9 +337,18 @@ sub read_tokens_file
     my $lnum = 0;
     my $blk_name;
     my $opts;
+    my $acc;
 
     foreach my $line (<FILE>) {
 	$lnum++;
+
+        if ($line =~ /\\\s*$/) {
+            $acc .= $`;
+            next;
+        } else {
+            $line = $acc.$line;
+            $acc = '';
+        }
 
 	next if ($line =~ /^[ \t]*(\#.*)?$/);
         $line =~ s/#.*$//g;
