@@ -78,6 +78,28 @@ typedef SCANF_UNGET_FUNC(scanf_unget_func_t);
     SCANF_EAT_FIELD_CHAR(var);                  \
   } while (1)
 
+#define SCANF_EAT_DECNUMBER(var, expr)          \
+  do                                            \
+    {                                           \
+      int_fast8_t v;                            \
+      if (var == EOF && !(flags & flag_valid))  \
+        goto eof;                               \
+      else if (var < 0)                         \
+        break;                                  \
+      else if (var <= '9' && var >= '0')        \
+        v = var - '0';                          \
+      else if (flags & flag_valid)              \
+        break;                                  \
+      else                                      \
+        goto merr;                              \
+      if (flags & flag_neg)                     \
+        v = -v;                                 \
+      expr;                                     \
+      flags |= flag_valid;                      \
+      SCANF_EAT_FIELD_CHAR(var);                \
+    }                                           \
+  while (1)
+
 #define SCANF_UNGET_CHAR(var)                   \
   do {                                          \
     if (var >= 0)                               \
@@ -97,9 +119,13 @@ enum scanf_flags_e
   flag_16bits  = 4,
   flag_32bits  = 8,
   flag_64bits  = 16,
-  flag_size_mask = flag_8bits | flag_16bits | flag_32bits | flag_64bits,
-  flag_neg     = 32,
-  flag_valid   = 64,
+  flag_double   = 32,
+  flag_long_double = 64,
+  flag_int_size_mask = 2+4+8+16,
+  flag_float_size_mask = 32+64,
+  flag_size_mask = 2+4+8+16+32+64,
+  flag_neg     = 128,
+  flag_valid   = 256,
 
   flag_char      = flag_8bits,
   flag_short     = SCANF_INT_TYPE(CPU_SIZEOF_SHORT),
@@ -121,7 +147,7 @@ ssize_t __scanf(void *ctx, scanf_input_func_t *in,
   uintmax_t val = 0;
   int_fast16_t c;
   uint_fast8_t state = 0;
-  uint_fast8_t flags = 0;
+  uint_fast16_t flags = 0;
   ssize_t width = 0;
   int_fast8_t base;
   char f;
@@ -182,22 +208,25 @@ ssize_t __scanf(void *ctx, scanf_input_func_t *in,
               if (flags & flag_int)
                 flags ^= flag_int | flag_short;
               else
-                flags = (flags & ~flag_size_mask) | flag_char;
+                flags = (flags & ~flag_int_size_mask) | flag_char;
               break;
             case 'j':
-              flags = (flags & ~flag_size_mask) | flag_intmax_t;
+              flags = (flags & ~flag_int_size_mask) | flag_intmax_t;
               break;
             case 'l':
-              flags = (flags & ~flag_size_mask) | flag_long;
-              break;
+              if (!(flags & (flag_double | flag_long_double)))
+                {
+                  flags = (flags & ~flag_size_mask) | flag_long | flag_double;
+                  break;
+                }
             case 'L': case 'q':
-              flags = (flags & ~flag_size_mask) | flag_long_long;
+              flags = (flags & ~flag_size_mask) | flag_long_long | flag_long_double;
               break;
             case 't':
-              flags = (flags & ~flag_size_mask) | flag_ptrdiff_t;
+              flags = (flags & ~flag_int_size_mask) | flag_ptrdiff_t;
               break;
             case 'z':
-              flags = (flags & ~flag_size_mask) | flag_size_t;
+              flags = (flags & ~flag_int_size_mask) | flag_size_t;
               break;
 
               /* convertion chars */
@@ -240,7 +269,7 @@ ssize_t __scanf(void *ctx, scanf_input_func_t *in,
               goto uint_conv;
 
             case 'p': case 'P':
-              flags = (flags & ~flag_size_mask) | flag_ptr_t;
+              flags = (flags & ~flag_int_size_mask) | flag_ptr_t;
               base = 16;
               SCANF_EAT_SPACES(c);
               goto uint_conv;
@@ -262,12 +291,11 @@ ssize_t __scanf(void *ctx, scanf_input_func_t *in,
             int_conv:
               SCANF_EAT_SPACES(c);
               SCANF_EAT_SIGN(c);
-              goto uint_conv;
 
             uint_conv:
               while (1)
                 {
-                  uint_fast8_t v;
+                  int_fast8_t v;
                   if (c == EOF && !(flags & flag_valid))
                     goto eof;
                   else if (c < 0)
@@ -299,7 +327,7 @@ ssize_t __scanf(void *ctx, scanf_input_func_t *in,
               if (flags & flag_nostore)
                 break;
 
-              switch (flags & flag_size_mask)
+              switch (flags & flag_int_size_mask)
                 {
                 case flag_8bits:
                   *va_arg(ap, uint8_t*) = val;
@@ -322,10 +350,57 @@ ssize_t __scanf(void *ctx, scanf_input_func_t *in,
               /****** floats ******/
 
 #if defined(CONFIG_LIBC_FORMATTER_FLOAT)
-            case 'f': case 'e': case 'g': case 'E': case 'a':
-              /* float conv here */
-              abort();          /* FIXME not implemented */
+            case 'f': case 'e': case 'g': case 'E': {
+              double fval = 0;
+              SCANF_EAT_SPACES(c);
+              SCANF_EAT_SIGN(c);
+              if (c != '.')
+                SCANF_EAT_DECNUMBER(c, fval = fval * 10 + v);
+              if (c == '.')
+                {
+                  double pval = 0;
+                  double scale = 1;
+                  SCANF_EAT_FIELD_CHAR(c);
+                  SCANF_EAT_DECNUMBER(c, pval = pval * 10 + v; scale *= 10);
+                  fval += pval / scale;
+                }
+              if ((flags & flag_valid) && (c | 32) == 'e')
+                {
+                  int_fast16_t i, pw = 0;
+                  SCANF_EAT_FIELD_CHAR(c);
+                  flags &= ~flag_neg;
+                  SCANF_EAT_SIGN(c);
+                  double p = (flags & flag_neg) ? .1f : 10.0f;
+                  flags &= ~flag_neg;
+                  SCANF_EAT_DECNUMBER(c, pw = pw * 10 + v);
+                  for (i = 1; i < 256; i <<= 1)
+                    {
+                      if (i & pw)
+                        fval *= p;
+                      p *= p;
+                    }
+                }
+              SCANF_UNGET_CHAR(c);
+
+              state = 0;
+              if (flags & flag_nostore)
+                break;
+
+              switch (flags & flag_float_size_mask)
+                {
+                default:
+                  *va_arg(ap, float*) = fval;
+                  break;
+                case flag_double:
+                  *va_arg(ap, double*) = fval;
+                  break;
+                case flag_long_double:
+                  *va_arg(ap, __compiler_longdouble_t*) = fval;
+                  break;
+                }
+              res++;
               break;
+            }
 #endif
 
               /****** %s string ******/
