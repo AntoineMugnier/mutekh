@@ -43,6 +43,11 @@ typedef int16_t mode_t;
 
 /* ************************************************** */
 
+#ifdef CONFIG_LIBC_UNIXFD
+/* setup fd 0, 1, 2 */
+void libc_unixfd_init();
+#endif
+
 enum open_flags_e
   {
     O_RDONLY	= 0x01,
@@ -53,16 +58,23 @@ enum open_flags_e
     O_APPEND	= 0x40,
   };
 
-#define HAVE_CREAT
+config_depend_and2(CONFIG_LIBC_UNIXFD, CONFIG_VFS)
 fd_t creat(const char *pathname, mode_t mode);
 
-#define HAVE_OPEN
+config_depend_and2(CONFIG_LIBC_UNIXFD, CONFIG_VFS)
 fd_t open(const char *pathname, enum open_flags_e flags, /* mode_t mode */...);
 
-/* ************************************************** */
-
-#define HAVE_LSEEK
+config_depend(CONFIG_LIBC_UNIXFD)
 off_t lseek(fd_t fildes, off_t offset, enum seek_whence_e whence);
+
+config_depend(CONFIG_LIBC_UNIXFD)
+ssize_t read(fd_t fd, void *buf, size_t count);
+
+config_depend(CONFIG_LIBC_UNIXFD)
+ssize_t write(fd_t fd, const void *buf, size_t count);
+
+config_depend(CONFIG_LIBC_UNIXFD)
+error_t close(fd_t fd);
 
 /* ************************************************** */
 
@@ -76,16 +88,11 @@ typedef uint_fast32_t blkcnt_t;
 
 #include <sys/stat.h>
 
-#define HAVE_FSTAT
-error_t fstat(fd_t fd, struct stat *buf);
-
-#define HAVE_STAT
+config_depend(CONFIG_VFS)
 error_t stat(const char *path, struct stat *buf);
 
-#define HAVE_LSTAT
+config_depend(CONFIG_VFS)
 error_t lstat(const char *path, struct stat *buf);
-
-/* ************************************************** */
 
 enum access_perm_e
   {
@@ -95,24 +102,15 @@ enum access_perm_e
     F_OK,               /* Test for existence.  */
   };
 
-#define HAVE_ACCESS
+config_depend(CONFIG_VFS)
 error_t access(const char *pathname, enum access_perm_e mode);
 
 /* ************************************************** */
 
-#define HAVE_READ
-ssize_t read(fd_t fd, void *buf, size_t count);
-
-#define HAVE_WRITE
-ssize_t write(fd_t fd, const void *buf, size_t count);
-
-#define HAVE_CLOSE
-error_t close(fd_t fd);
-
-#define HAVE_REMOVE
+config_depend(CONFIG_VFS)
 error_t remove(const char *pathname);
 
-#define HAVE_MKDIR
+config_depend(CONFIG_VFS)
 error_t mkdir(const char *pathname, mode_t mode);
 
 /* ************************************************** */

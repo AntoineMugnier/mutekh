@@ -31,6 +31,12 @@
 #include <vfs/vfs.h>
 #endif
 
+/* **********************************************************************
+                  File descriptor oriented operations
+   ********************************************************************** */
+
+#ifdef CONFIG_LIBC_UNIXFD
+
 struct fd_entry_s
 {
   const struct fileops_s *ops;
@@ -69,7 +75,7 @@ static void fd_free(fdarray_root_t *fda, struct fd_entry_s *e)
   e->hndl = NULL;
 }
 
-fd_t fd_add(const struct fileops_s *ops, void *hndl)
+static fd_t fd_add(const struct fileops_s *ops, void *hndl)
 {
 	fd_t fd = fd_new(&fd_array);
 	struct fd_entry_s *e = fd_get(&fd_array, fd);
@@ -83,11 +89,7 @@ fd_t fd_add(const struct fileops_s *ops, void *hndl)
 	return fd;
 }
 
-/* **********************************************************************
-                  File descriptor oriented operations
-   ********************************************************************** */
-
-void stdio_in_out_err_init()
+void libc_unixfd_init()
 {
   fd_t fd;
 
@@ -101,7 +103,7 @@ void stdio_in_out_err_init()
   assert(fd == 2);
 }
 
-#if defined(CONFIG_VFS)
+# if defined(CONFIG_VFS)
 
 inline fd_t creat(const char *pathname, mode_t mode)
 {
@@ -159,7 +161,7 @@ fd_t open(const char *pathname, enum open_flags_e flags, ...)
   return fd;
 }
 
-#endif /* CONFIG_VFS */
+# endif /* CONFIG_VFS */
 
 off_t lseek(fd_t fd, off_t offset, enum seek_whence_e whence)
 {
@@ -197,6 +199,8 @@ error_t close(fd_t fd)
     }
   return 1;
 }
+
+#endif
 
 /* **********************************************************************
                   VFS operations

@@ -45,6 +45,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <mutek/timer.h>
 #include <mutek/printk.h>
 #include <mutek/console.h>
@@ -82,10 +83,6 @@ DEVTIMER_CALLBACK(timer_callback)
 }
 #endif
 
-#if defined(CONFIG_LIBC_STREAM_STD)
-void stdio_in_out_err_init();
-#endif
-
 static CPU_EXCEPTION_HANDLER(fault_handler);
 
 static lock_t fault_lock;
@@ -107,8 +104,8 @@ int_fast8_t mutek_start()  /* FIRST CPU only */
 		printk_set_output(__printf_out_tty, console_dev);
 #endif
 
-#if defined(CONFIG_LIBC_STREAM_STD)
-	stdio_in_out_err_init();
+#if defined(CONFIG_LIBC_UNIXFD)
+	libc_unixfd_init();
 #endif
 
     cpu_interrupt_enable();
@@ -230,7 +227,9 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
     cpu_context_stack_use(sched_tmp_context(), bootstrap_cleanup, NULL);
 #endif
   } else {
+#if defined(CONFIG_MUTEK_SCHEDULER)
     cpu_id_t id = cpu_id();
+#endif
 #ifdef CONFIG_MUTEK_SMP_APP_START
     app_start();
 #endif
