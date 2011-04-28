@@ -34,47 +34,48 @@ C_HEADER_BEGIN
 
 #include <mutek/semaphore.h>
 
+config_depend(CONFIG_LIBC_SEMAPHORE)
 typedef struct semaphore_s sem_t;
 
-static inline error_t
-sem_init(sem_t *sem, bool_t pshared, uint_fast8_t value)
+config_depend_inline(CONFIG_LIBC_SEMAPHORE,
+error_t sem_init(sem_t *sem, bool_t pshared, uint_fast8_t value),
 {
 	return semaphore_init(sem, value);
-}
+});
 
-static inline error_t
-sem_wait(sem_t *sem)
+config_depend_inline(CONFIG_LIBC_SEMAPHORE,
+error_t sem_wait(sem_t *sem),
 {
 	semaphore_take(sem, 1);
 	return 0;
-}
+});
 
-static inline error_t
-sem_trywait(sem_t *sem)
+config_depend_inline(CONFIG_LIBC_SEMAPHORE,
+error_t sem_trywait(sem_t *sem),
 {
 	return semaphore_try_take(sem, 1);
-}
+});
 
-static inline error_t
-sem_post(sem_t *sem)
+config_depend_inline(CONFIG_LIBC_SEMAPHORE,
+error_t sem_post(sem_t *sem),
 {
 	semaphore_give(sem, 1);
 	return 0;
-}
+});
 
-static inline error_t
-sem_getvalue(sem_t *sem, uint_fast8_t *sval)
+config_depend_inline(CONFIG_LIBC_SEMAPHORE,
+error_t sem_getvalue(sem_t *sem, uint_fast8_t *sval),
 {
 	*sval = semaphore_value(sem);
 	return 0;
-}
+});
 
-static inline error_t
-sem_destroy(sem_t *sem)
+config_depend_inline(CONFIG_LIBC_SEMAPHORE,
+error_t sem_destroy(sem_t *sem),
 {
 	semaphore_destroy(sem);
 	return 0;
-}
+});
 
 C_HEADER_END
 
