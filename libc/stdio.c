@@ -497,10 +497,10 @@ FILE *fopen(const char *path, const char *mode)
   }
   file->hndl = (void*)hndl;
 
-  ops->read = hndl->read;
-  ops->write = hndl->write;
-  ops->lseek = hndl->seek;
-  ops->close = hndl->close;
+  ops->read =  (fileops_read_t*)hndl->read;
+  ops->write = (fileops_write_t*)hndl->write;
+  ops->lseek = (fileops_lseek_t*)hndl->seek;
+  ops->close = (fileops_close_t*)hndl->close;
 
   __stdio_stream_init(file);
 

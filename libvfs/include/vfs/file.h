@@ -78,6 +78,7 @@ enum vfs_open_flags_e
     VFS_OPEN_DIR = 32,
 };
 
+/** Compatible with @ref seek_whence_e */
 enum vfs_whence_e
 {
     /** Seek from start of file */
@@ -91,7 +92,8 @@ enum vfs_whence_e
 struct vfs_node_s;
 struct vfs_file_s;
 
-/** @this defines the file close operation prototype */
+/** @this defines the file close operation prototype.
+    Compatible with @ref #FILEOPS_CLOSE */
 #define VFS_FILE_CLOSE(x) error_t (x)(struct vfs_file_s *file)
 
 /**
@@ -106,7 +108,8 @@ struct vfs_file_s;
 typedef VFS_FILE_CLOSE(vfs_file_close_t);
 
 
-/** @this defines the file read operation prototype */
+/** @this defines the file read operation prototype.
+    Compatible with @ref #FILEOPS_READ */
 #define VFS_FILE_READ(x) ssize_t (x)(struct vfs_file_s *file, void *buffer, size_t size)
 
 /**
@@ -123,7 +126,8 @@ typedef VFS_FILE_CLOSE(vfs_file_close_t);
 typedef VFS_FILE_READ(vfs_file_read_t);
 
 
-/** @this defines the file write operation prototype */
+/** @this defines the file write operation prototype.
+    Compatible with @ref #FILEOPS_WRITE */
 #define VFS_FILE_WRITE(x) ssize_t (x)(struct vfs_file_s *file, const void *buffer, size_t size)
 
 /**
@@ -141,7 +145,8 @@ typedef VFS_FILE_WRITE(vfs_file_write_t);
 
 
 
-/** @this defines the file seek operation prototype */
+/** @this defines the file seek operation prototype.
+    Compatible with @ref #FILEOPS_LSEEK */
 #define VFS_FILE_SEEK(x) off_t (x)(struct vfs_file_s *file, off_t offset, enum vfs_whence_e whence)
 
 /**

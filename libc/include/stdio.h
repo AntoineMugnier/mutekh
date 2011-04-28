@@ -67,14 +67,14 @@ ssize_t vsscanf(const char *str, const char *format, va_list ap);
 
 typedef int32_t			fpos_t;
 
-#ifdef CONFIG_LIBC_STREAM
-
-CONTAINER_TYPE(stream_fifo, RING, uint8_t, CONFIG_LIBC_STREAM_BUFFER_SIZE);
-
 enum				stdio_buf_mode_e
 {
     _IONBF, _IOLBF, _IOFBF,
 };
+
+#ifdef CONFIG_LIBC_STREAM
+
+CONTAINER_TYPE(stream_fifo, RING, uint8_t, CONFIG_LIBC_STREAM_BUFFER_SIZE);
 
 typedef struct			file_s
 {

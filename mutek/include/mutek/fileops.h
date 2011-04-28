@@ -31,18 +31,19 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
+/** Compatible with @ref vfs_whence_e */
 enum seek_whence_e
   {
     SEEK_SET, SEEK_END, SEEK_CUR
   };
 
-/** File operations read function prototype */
+/** File operations read function prototype. Compatible with @ref #VFS_FILE_READ */
 #define FILEOPS_READ(n)  ssize_t (n) (void *file, uint8_t *buffer, size_t count)
-/** File operations write function prototype */
+/** File operations write function prototype. Compatible with @ref #VFS_FILE_WRITE */
 #define FILEOPS_WRITE(n) ssize_t (n) (void *file, const uint8_t *buffer, size_t count)
-/** File operations lseek function prototype */
+/** File operations lseek function prototype. Compatible with @ref #VFS_FILE_LSEEK */
 #define FILEOPS_LSEEK(n) error_t (n) (void *file, size_t offset, enum seek_whence_e whence)
-/** File operations close function prototype */
+/** File operations close function prototype. Compatible with @ref #VFS_FILE_CLOSE */
 #define FILEOPS_CLOSE(n) error_t (n) (void *file)
 
 typedef FILEOPS_READ(fileops_read_t);

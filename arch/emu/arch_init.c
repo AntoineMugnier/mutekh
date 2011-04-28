@@ -83,7 +83,9 @@ extern struct sched_context_s main_ctx;
 /* architecture specific init function */
 void arch_init(uintptr_t init_sp)
 {
+#if defined(CONFIG_MUTEK_SCHEDULER)
     volatile reg_t     first_stack_word;
+#endif
 
 #ifdef CONFIG_EMU_EARLY_CONSOLE
   printk_set_output(early_console_fd1, NULL);
