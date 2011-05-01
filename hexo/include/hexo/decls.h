@@ -14,7 +14,7 @@
 
 /* make unavailable functions deprecated */
 
-# ifndef __MUTEK_ASM__
+# ifndef __MUTEK_ASM__ // mkdoc:skip
 
 #  define _CONFIG_DEPEND_1(name, attr, proto, ...) \
   attr proto __VA_ARGS__
@@ -52,5 +52,12 @@
   _CONFIG_DEPEND_AND2(#token1, #token2, _##token1, _##token2, static inline, proto, __VA_ARGS__)
 
 # endif
+
+#ifdef __MKDOC__
+# define config_depend(token)
+# define config_depend_inline(token, proto, ...) static inline proto __VA_ARGS__
+# define config_depend_and2(token1, token2)
+# define config_depend_and2_inline(token1, token2, proto, ...) static inline proto __VA_ARGS__
+#endif
 
 #endif /* HEXO_DECLS_H_ */

@@ -164,9 +164,9 @@
 @end section
 
 @section THP {Configuration tokens}
- @insert {@doc/config.h} members_list
+  @insert {@doc/config.h} compound_member_list
  @section {Configuration tokens detail}
-  @insert {@doc/config.h} member_sections
+  @insert {@doc/config.h} compound_member_sections
  @end section
 @end section
 
