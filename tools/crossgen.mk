@@ -1,4 +1,4 @@
-#!/usr/bin/make -f
+0;115;0c#!/usr/bin/make -f
 #
 #    Cross compiler generation script
 #
@@ -109,6 +109,8 @@ gdb_TESTBIN=bin/$(TARGET)-unknown-elf-gdb
 
 mpfr_URL=ftp://ftp.gnu.org/gnu/mpfr/mpfr-$(mpfr_VER).tar.bz2
 mpfr_TESTBIN=lib/libmpfr.a
+mpfr_DEPS=gmp
+mpfr_CONF+=--with-gmp=$(PREFIX)
 
 gmp_URL=ftp://ftp.gnu.org/gnu/gmp/gmp-$(gmp_VER).tar.bz2
 gmp_TESTBIN=lib/libgmp.a
