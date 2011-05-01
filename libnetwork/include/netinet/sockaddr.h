@@ -57,11 +57,11 @@ typedef uint_fast16_t sa_family_t;
   __SOCKADDR_ONETYPE (sockaddr_un) \
   __SOCKADDR_ONETYPE (sockaddr_x25)
 
-#define __SOCKADDR_ONETYPE(type) struct type *__restrict __##type##__;
+#define __SOCKADDR_ONETYPE(type) struct type * __##type##__;
 typedef union { __SOCKADDR_ALLTYPES
 	      } __SOCKADDR_ARG __attribute__ ((__transparent_union__));
 #undef __SOCKADDR_ONETYPE
-#define __SOCKADDR_ONETYPE(type) __const struct type *__restrict __##type##__;
+#define __SOCKADDR_ONETYPE(type) __const struct type * __##type##__;
 typedef union { __SOCKADDR_ALLTYPES
 	      } __CONST_SOCKADDR_ARG __attribute__ ((__transparent_union__));
 #undef __SOCKADDR_ONETYPE

@@ -104,7 +104,7 @@ typedef FDT_ON_MEM_RESERVE_FUNC(fdt_on_mem_reserve_func_t);
 /**
    Structure containing pointers to user-provided functions and
    private data. When using @ref fdt_walk_blob with this structure,
-   all function pointers must be provided. Leaving a NULL pointer to
+   all function pointers must be provided. Leaving a @tt NULL pointer to
    function will lead to unpredictable results.
  */
 struct fdt_walker_s
@@ -165,7 +165,7 @@ size_t fdt_get_size(void *blob);
    previously returned by @ref fdt_reader_get_struct_offset, and has
    no meaningful value outside this context.  This function will never
    walk the memory reservation nodes. The corresponding pointer in
-   walker may be @ref NULL.
+   walker may be @tt NULL.
 
    @param blob Pointer to the FDT blob header
    @param walker User-provided functions

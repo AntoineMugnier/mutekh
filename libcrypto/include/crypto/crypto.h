@@ -96,7 +96,7 @@ typedef CRYPTO_STREAM_UPDATE(crypto_stream_update_t);
 #define CRYPTO_STREAM_GETSTREAM(n) void (n)(void *ctx_, uint8_t *data, size_t data_len)
 
 /** This function gets pseudo random stream. The @tt data parameter
-    may be @ref NULL to update generator state but discard output stream. */
+    may be @tt NULL to update generator state but discard output stream. */
 typedef CRYPTO_STREAM_GETSTREAM(crypto_stream_getstream_t);
 
 /** @csee crypto_stream_xorstream_t */

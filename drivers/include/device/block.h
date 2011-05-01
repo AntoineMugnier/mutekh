@@ -75,7 +75,7 @@ enum dev_block_rq_type_e
   };
 
 /** Block device request object. This object must be allocated using
-    the size returned by @ref dev_block_getrqsize to account for extra space
+    the size returned by @ref #dev_block_getrqsize to account for extra space
     required by the driver. */
 
 struct dev_block_rq_s
