@@ -8,7 +8,6 @@ html,body {
   font-family: Verdana, Arial, Helvetica, sans-serif;
   font-size: 11pt;
   color: black;
-  background: #e8f0ff;
   margin: 0px;
   height: 100%;
 }
@@ -22,16 +21,25 @@ html,body {
 .navlinks {
   padding: 7px 15px;
   float: right;
+  background: #e8f0ff;
 }
 
 .nestlinks {
   padding: 7px 15px;
+  background: #e8f0ff;
+  color: #203080;
 }
 
 .headlinks {
   padding: 7px 15px;
-  background: white;
+  background:#203080;
+  color:#203080;
 }
+
+.headlinks a:link, .headlinks a:visited {
+  color: white;
+}
+
 
 .head {
   display: block;
@@ -40,13 +48,28 @@ html,body {
 
 .content {
   background: white;
-  padding: 20px 15px 40px 15px;
-  min-height: 400px;
+  padding: 20px 15px 80px 15px;
+}
+
+.page
+{
+  position: relative;
+  min-height: 100%;
+  background: white;
+}
+
+* html .page
+{
+  height: 100%;
 }
 
 .foot {
+  height: 46px;
   padding: 7px 15px;
+  background: #e8f0ff;
   font-size: 80%;
+  position: relative;
+  margin-top: -60px;
 }
 
 /*********** misc */

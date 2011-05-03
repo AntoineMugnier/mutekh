@@ -10,11 +10,9 @@
  included in the section entitled @xref{GNU Free Documentation License}.
 @end section
 
-@ifopt doc_format {html}
- @section HP {Table of contents}
+@section HP {Table of contents}
   @insert toc
- @end section
-@end ifopt
+@end section
 
 @c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 @c Modules definitions

@@ -2070,7 +2070,7 @@ sub write_token_doc
 
     print {$out} "   Token description: $opt->{desc}\n\n";
 
-    print {$out} "   This token in declared in \@sourcelink $loc.\n\n";
+    print {$out} "   This token is declared in \@sourcelink $loc.\n\n";
     print {$out} "   The default value is `$opt->{default}'.\n\n" if ( defined $opt->{default} );
     print {$out} "   This token is a meta token and can not be defined directly.\n\n" if ( $opt->{flags}->{meta} );
 
