@@ -25,7 +25,7 @@
 
 /**
  * @file
- * @module{C library}
+ * @module{Mutek}
  */
 
 #include <hexo/types.h>
@@ -41,7 +41,7 @@ enum seek_whence_e
 #define FILEOPS_READ(n)  ssize_t (n) (void *file, uint8_t *buffer, size_t count)
 /** File operations write function prototype. Compatible with @ref #VFS_FILE_WRITE */
 #define FILEOPS_WRITE(n) ssize_t (n) (void *file, const uint8_t *buffer, size_t count)
-/** File operations lseek function prototype. Compatible with @ref #VFS_FILE_LSEEK */
+/** File operations lseek function prototype. Compatible with @ref #VFS_FILE_SEEK */
 #define FILEOPS_LSEEK(n) error_t (n) (void *file, size_t offset, enum seek_whence_e whence)
 /** File operations close function prototype. Compatible with @ref #VFS_FILE_CLOSE */
 #define FILEOPS_CLOSE(n) error_t (n) (void *file)

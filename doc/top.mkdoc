@@ -10,11 +10,9 @@
  included in the section entitled @xref{GNU Free Documentation License}.
 @end section
 
-@ifopt doc_format {html}
- @section HP {Table of contents}
+@section HP {Table of contents}
   @insert toc
- @end section
-@end ifopt
+@end section
 
 @c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 @c Modules definitions
@@ -164,9 +162,9 @@
 @end section
 
 @section THP {Configuration tokens}
- @insert {@doc/config.h} members_list
+  @insert {@doc/config.h} compound_member_list
  @section {Configuration tokens detail}
-  @insert {@doc/config.h} member_sections
+  @insert {@doc/config.h} compound_member_sections
  @end section
 @end section
 

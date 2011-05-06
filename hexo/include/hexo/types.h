@@ -135,7 +135,7 @@ typedef unsigned long long	__compiler_ulonglong_t;
 
 typedef long double             __compiler_longdouble_t;
 
-# ifdef _HEXO_INTTYPES_DEPRECATED
+# ifdef _HEXO_INTTYPES_DEPRECATED //mkdoc:skip
 /** @this prevents use of compiler native short type,
     @tt int_fast*_t and @tt uint_fast*_t types are prefered. */
 typedef short _dont_use_native_short_type_t __attribute__ ((deprecated));
