@@ -105,9 +105,14 @@ FUNC_START(.text, cpu_context_jumpto)
         lw      $25,    HEXO_CONTEXT_S_UNLOCK * 4 ($4)
         beq     $25,    $0,     1f
 
-        // unlock and clear unlock address
+        // clear unlock address/memory barrier
         sw      $0,     HEXO_CONTEXT_S_UNLOCK * 4 ($4)
+        sync
+        // unlock
         sw      $0,     ($25)
+        // flush the write buffer if present
+        //  -> the write is sent faster to memory
+        sync
 1:
 # endif
 
