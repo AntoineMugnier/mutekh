@@ -32,7 +32,7 @@ extern __compiler_sint_t cpu_pids[CONFIG_CPU_MAXCOUNT];
 
 error_t power_shutdown()
 {
-  emu_do_syscall(EMU_SYSCALL_KILL, 2, cpu_pids[0], EMU_SIG_KILL);
+  emu_do_syscall(EMU_SYSCALL_KILL, 2, -cpu_pids[0], EMU_SIG_KILL);
   return 0;
 }
 
