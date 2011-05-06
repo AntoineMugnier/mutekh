@@ -126,24 +126,24 @@ struct pthread_attr_s
 };
 
 /** @this creates a new pthread attribute */
-error_t
-pthread_attr_init(pthread_attr_t *attr);
+config_depend(CONFIG_PTHREAD_ATTRIBUTES)
+error_t pthread_attr_init(pthread_attr_t *attr);
 
 /** @this destroys a new pthread attribute */
-error_t
-pthread_attr_destroy(pthread_attr_t *attr);
+config_depend(CONFIG_PTHREAD_ATTRIBUTES)
+error_t pthread_attr_destroy(pthread_attr_t *attr);
 
 /** @this adds a cpu affinity attribute */
-error_t
-pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu);
+config_depend(CONFIG_PTHREAD_ATTRIBUTES)
+error_t pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu);
 
 /** @this sets stack buffer and size attribute */
-error_t
-pthread_attr_setstack(pthread_attr_t *attr, void *stack_buf, size_t stack_size);
+config_depend(CONFIG_PTHREAD_ATTRIBUTES)
+error_t pthread_attr_setstack(pthread_attr_t *attr, void *stack_buf, size_t stack_size);
 
 /** @this sets stack size attribute */
-error_t
-pthread_attr_setstacksize(pthread_attr_t *attr, size_t stack_size);
+config_depend(CONFIG_PTHREAD_ATTRIBUTES)
+error_t pthread_attr_setstacksize(pthread_attr_t *attr, size_t stack_size);
 
 /** @see pthread_attr_setdetachstate */
 #define PTHREAD_CREATE_DETACHED 1
@@ -151,8 +151,8 @@ pthread_attr_setstacksize(pthread_attr_t *attr, size_t stack_size);
 #define PTHREAD_CREATE_JOINABLE 0
 
 /** @this set initial thread state */
-error_t
-pthread_attr_setdetachstate(pthread_attr_t *attr, uint8_t state);
+config_depend(CONFIG_PTHREAD_ATTRIBUTES)
+error_t pthread_attr_setdetachstate(pthread_attr_t *attr, uint8_t state);
 
 /** @this creates a new pthread */
 error_t
