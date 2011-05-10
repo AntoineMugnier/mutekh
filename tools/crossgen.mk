@@ -1,4 +1,4 @@
-0;115;0c#!/usr/bin/make -f
+#!/usr/bin/make -f
 #
 #    Cross compiler generation script
 #
