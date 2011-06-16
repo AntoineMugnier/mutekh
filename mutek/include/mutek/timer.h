@@ -118,62 +118,65 @@ extern struct timer_s	timer_ms;
   _res;								\
 })
 
+/* fixed point scale factor for timer unit conversions */
+#define TIMER_CONV_RES 1024ULL
+
 /* FIXME __builtin_choose_expr doesn't work with floats compare ? */
 #define __builtin_choose_expr(a,b,c) ((a) ? (b) : (c))
 static inline uint64_t timer_tu2sec(timer_delay_t t)
 {
   return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT >= 1e0,
-                               t * (timer_delay_t)(1/CONFIG_MUTEK_TIMER_UNIT),
-                               t / (timer_delay_t)(1/CONFIG_MUTEK_TIMER_UNIT));
+                               t * (timer_delay_t)(1.*CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES) / TIMER_CONV_RES,
+                               t * TIMER_CONV_RES / (timer_delay_t)(1./CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES));
 }
 
 static inline uint64_t timer_tu2msec(timer_delay_t t)
 {
   return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT >= 1e-3,
-                               t * (timer_delay_t)(1000/CONFIG_MUTEK_TIMER_UNIT),
-                               t / (timer_delay_t)(1000/CONFIG_MUTEK_TIMER_UNIT));
+                               t * (timer_delay_t)(1.e3 *CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES) / TIMER_CONV_RES,
+                               t * TIMER_CONV_RES / (timer_delay_t)(1.e-3/CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES));
 }
 
 static inline uint64_t timer_tu2usec(timer_delay_t t)
 {
   return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT >= 1e-6,
-                               t * (timer_delay_t)(1000000/CONFIG_MUTEK_TIMER_UNIT),
-                               t / (timer_delay_t)(1000000/CONFIG_MUTEK_TIMER_UNIT));
+                               t * (timer_delay_t)(1.e6 *CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES) / TIMER_CONV_RES,
+                               t * TIMER_CONV_RES / (timer_delay_t)(1.e-6/CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES));
 }
 
 static inline uint64_t timer_tu2nsec(timer_delay_t t)
 {
   return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT >= 1e-9,
-                               t * (timer_delay_t)(1000000000/CONFIG_MUTEK_TIMER_UNIT),
-                               t / (timer_delay_t)(1000000000/CONFIG_MUTEK_TIMER_UNIT));
+                               t * (timer_delay_t)(1.e9 *CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES) / TIMER_CONV_RES,
+                               t * TIMER_CONV_RES / (timer_delay_t)(1.e-9/CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES));
 }
 
 static inline timer_delay_t timer_sec2tu(uint64_t t)
 {
-  return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT < 1e0,
-                               t * (timer_delay_t)(1/CONFIG_MUTEK_TIMER_UNIT),
-                               t / (timer_delay_t)(1/CONFIG_MUTEK_TIMER_UNIT));
+  return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT >= 1e0,
+                               t * TIMER_CONV_RES / (timer_delay_t)(1.*CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES),
+                               t * (timer_delay_t)(1./CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES) / TIMER_CONV_RES);
 }
 
 static inline timer_delay_t timer_msec2tu(uint64_t t)
 {
-  return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT < 1e-3,
-                               t * (timer_delay_t)(1000/CONFIG_MUTEK_TIMER_UNIT),
-                               t / (timer_delay_t)(1000/CONFIG_MUTEK_TIMER_UNIT));
+  return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT >= 1e-3,
+                               t * TIMER_CONV_RES / (timer_delay_t)(1.e3 *CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES),
+                               t * (timer_delay_t)(1.e-3/CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES) / TIMER_CONV_RES);
 }
 
 static inline timer_delay_t timer_usec2tu(uint64_t t)
 {
-  return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT < 1e-6,
-                               t * (timer_delay_t)(1000000/CONFIG_MUTEK_TIMER_UNIT),
-                               t / (timer_delay_t)(1000000/CONFIG_MUTEK_TIMER_UNIT));
+  return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT >= 1e-6,
+                               t * TIMER_CONV_RES / (timer_delay_t)(1.e6 *CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES),
+                               t * (timer_delay_t)(1.e-6/CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES) / TIMER_CONV_RES);
 }
 
 static inline timer_delay_t timer_nsec2tu(uint64_t t)
 {
-  return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT < 1e-9,
-                               t * (timer_delay_t)(1000000000/CONFIG_MUTEK_TIMER_UNIT),
-                               t / (timer_delay_t)(1000000000/CONFIG_MUTEK_TIMER_UNIT));
+  return __builtin_choose_expr(CONFIG_MUTEK_TIMER_UNIT >= 1e-9,
+                               t * TIMER_CONV_RES / (timer_delay_t)(1.e9 *CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES),
+                               t * (timer_delay_t)(1.e-9/CONFIG_MUTEK_TIMER_UNIT * TIMER_CONV_RES) / TIMER_CONV_RES);
 }
 #undef __builtin_choose_expr
 
