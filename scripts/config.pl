@@ -2078,7 +2078,7 @@ sub write_token_doc
     {
 	my ( $out, $list, $title, $sep, $disp ) = @_;
 
-	return if !$list;
+	return if !$list || !@$list;
 	print {$out} "   $title:\n";
 	print {$out} "   \@list\n";
 	foreach ( @$list ) {
@@ -2151,6 +2151,7 @@ sub write_doc_header
 	print FILE "   \@module {".$mod->{module}->{description}."}\n"
 	    if $mod && $mod->{module} && $mod->{module}->{description};
 	print FILE "   \@internal\n" if ( $opt->{flags}->{internal} );
+	print FILE "   \@mgroup {Configuration tokens}\n";
 	print FILE "*/\n#define ".$opt->{name}."\n\n";
 	next;
     }

@@ -1,4 +1,7 @@
 
+@include template.mkdoc
+@include modules.mkdoc
+
 @insert title
 
 @section TP {Copying this document} 
@@ -16,26 +19,25 @@
 
 @section TP {Modules documentation}
  @section TH {Modules list}
-  @insert {module} {NP} compound_table
+  @insert {module} compound_table
  @end section
- @insert {module} {NP} all_compound_sections
+ @insert {module} all_compound_sections
 @end section
 
 @section TP {Headers documentation}
  @section T {Headers list}
-  @insert {header} {NP} compound_table
+  @insert {header} compound_table
  @end section
-  @insert {header} {NP} all_compound_sections
+  @insert {header} all_compound_sections
 @end section
 
-@section THP {Configuration tokens}
+@section THP {Configuration}
   @insert {@doc/config.h} compound_member_list
- @section {Configuration tokens detail}
-  @insert {@doc/config.h} compound_member_sections
- @end section
 @end section
 
-@insert global_scope_section
+@section PTHe {All declarations}
+  @insert global_scope_doc
+@end section
 
 @section TP {GNU Free Documentation License}
  @include fdl-1.3.mkdoc
