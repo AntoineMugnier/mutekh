@@ -43,6 +43,9 @@ binutils_VER_arm     = 2.20.1
 binutils_VER_i686    = 2.20.1
 binutils_VER_x86_64  = 2.20.1
 binutils_VER_nios2   = 2.20.1
+binutils_VER_sparc   = 2.20.1
+binutils_VER_avr     = 2.20.1
+binutils_VER_lm32    = 2.20.1
 
 binutils_VER=$(binutils_VER_$(TARGET))
 binutils_CONF=
@@ -54,6 +57,9 @@ gcc_VER_arm     = 4.5.2
 gcc_VER_i686    = 4.5.2
 gcc_VER_x86_64  = 4.5.2
 gcc_VER_nios2   = 4.4.4
+gcc_VER_sparc   = 4.5.2
+gcc_VER_avr     = 4.5.2
+gcc_VER_lm32    = 4.5.2
 
 gcc_VER=$(gcc_VER_$(TARGET))
 gcc_CONF=--enable-languages=c --disable-libssp --enable-multilib
@@ -70,8 +76,11 @@ gdb_VER_arm     = 7.2
 gdb_VER_i686    = 7.2
 gdb_VER_x86_64  = 7.2
 gdb_VER_nios2   = 7.0
+gdb_VER_sparc   = 7.2
+gdb_VER_avr     = 7.2
+gdb_VER_lm32    = 7.2
 gdb_VER=$(gdb_VER_$(TARGET))
-gdb_CONF=
+gdb_CONF=--with-python=no
 
 # Device Tree Compiler
 dtc_VER=1.2.0
@@ -96,40 +105,50 @@ unexport MAKELEVEL
 
 # packages configurations
 
-binutils_URL=ftp://ftp.gnu.org/gnu/binutils/binutils-$(binutils_VER).tar.bz2
+binutils_ARCHIVE=binutils-$(binutils_VER).tar.bz2
+binutils_URL=ftp://ftp.gnu.org/gnu/binutils/$(binutils_ARCHIVE)
 binutils_TESTBIN=bin/$(TARGET)-unknown-elf-as
 
-gcc_URL=ftp://ftp.gnu.org/gnu/gcc/gcc-$(gcc_VER)/gcc-$(gcc_VER).tar.bz2
+gcc_ARCHIVE=gcc-$(gcc_VER).tar.bz2
+gcc_URL=ftp://ftp.gnu.org/gnu/gcc/gcc-$(gcc_VER)/$(gcc_ARCHIVE)
 gcc_TESTBIN=bin/$(TARGET)-unknown-elf-gcc
 gcc_DEPS=binutils mpfr gmp mpc
 gcc_CONF+=--with-mpfr=$(PREFIX) --with-gmp=$(PREFIX) --with-mpc=$(PREFIX)
 
-gdb_URL=ftp://ftp.gnu.org/gnu/gdb/gdb-$(gdb_VER).tar.bz2
+gdb_ARCHIVE=gdb-$(gdb_VER).tar.bz2
+gdb_URL=ftp://ftp.gnu.org/gnu/gdb/gdb-$(gdb_VER)a.tar.bz2
 gdb_TESTBIN=bin/$(TARGET)-unknown-elf-gdb
 
-mpfr_URL=ftp://ftp.gnu.org/gnu/mpfr/mpfr-$(mpfr_VER).tar.bz2
+mpfr_ARCHIVE=mpfr-$(mpfr_VER).tar.bz2
+mpfr_URL=ftp://ftp.gnu.org/gnu/mpfr/$(mpfr_ARCHIVE)
 mpfr_TESTBIN=lib/libmpfr.a
 mpfr_DEPS=gmp
 mpfr_CONF+=--with-gmp=$(PREFIX)
 
-gmp_URL=ftp://ftp.gnu.org/gnu/gmp/gmp-$(gmp_VER).tar.bz2
+gmp_ARCHIVE=gmp-$(gmp_VER).tar.bz2
+gmp_URL=ftp://ftp.gnu.org/gnu/gmp/$(gmp_ARCHIVE)
 gmp_TESTBIN=lib/libgmp.a
 
-mpc_URL=http://www.multiprecision.org/mpc/download/mpc-$(mpc_VER).tar.gz
+mpc_ARCHIVE=mpc-$(mpc_VER).tar.gz
+mpc_URL=http://www.multiprecision.org/mpc/download/$(mpc_ARCHIVE)
 mpc_TESTBIN=lib/libmpc.a
 mpc_DEPS=mpfr gmp
 mpc_CONF+=--with-mpfr=$(PREFIX) --with-gmp=$(PREFIX)
 
-dtc_URL=https://www.mutekh.org/www/tools/dtc-$(dtc_VER).tar.gz
+dtc_ARCHIVE=dtc-$(dtc_VER).tar.gz
+dtc_URL=https://www.mutekh.org/www/tools/$(dtc_ARCHIVE)
 dtc_TESTBIN=bin/dtc
 
-testwrap_URL=https://www.mutekh.org/www/tools/testwrap-$(testwrap_VER).tar.gz
+testwrap_ARCHIVE=testwrap-$(testwrap_VER).tar.gz
+testwrap_URL=https://www.mutekh.org/www/tools/$(testwrap_ARCHIVE)
 testwrap_TESTBIN=bin/testwrap
 
-bochs_URL=http://freefr.dl.sourceforge.net/project/bochs/bochs/$(bochs_VER)/bochs-$(bochs_VER).tar.gz
+bochs_ARCHIVE=bochs-$(bochs_VER).tar.gz
+bochs_URL=http://freefr.dl.sourceforge.net/project/bochs/bochs/$(bochs_VER)/$(bochs_ARCHIVE)
 bochs_TESTBIN=bin/bochs
 
-qemu_URL=http://download.savannah.gnu.org/releases/qemu/qemu-$(qemu_VER).tar.gz
+qemu_ARCHIVE=qemu-$(qemu_VER).tar.gz
+qemu_URL=http://download.savannah.gnu.org/releases/qemu/$(qemu_ARCHIVE)
 qemu_TESTBIN=bin/qemu
 qemu_INTREE_BUILD=1
 
@@ -183,7 +202,7 @@ $(1)_DIR=$$(WORKDIR)/$(1)-$$($(1)_VER)
 $(1)_BDIR=$$(WORKDIR)/$(1)-bld-$$(TARGET)-$$($(1)_VER)
 $(1)_STAMP=$$(WORKDIR)/$(1)-$$($(1)_VER)-stamp
 $(1)_PATCH=$$(WORKDIR)/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff
-$(1)_TGZ=$$(WORKDIR)/$$(notdir $$($(1)_URL))
+$(1)_TGZ=$$(WORKDIR)/$$($(1)_ARCHIVE)
 CLEANUP_FILES+=$$($(1)_BDIR) $$($(1)_STAMP)-$$(TARGET)-conf $$($(1)_STAMP)-$$(TARGET)-build $$($(1)_STAMP)-$$(TARGET)-patch $$($(1)_PATCH)*
 
 $$($(1)_STAMP)-wget:
@@ -196,7 +215,7 @@ $$($(1)_TGZ): $$($(1)_STAMP)-wget
 $$($(1)_STAMP)-$$(TARGET)-patch: $$($(1)_DIR)
         # try to fetch a patch
 	wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-$$(TARGET)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
-        # test is a patch is available and apply
+        # test if a patch is available and apply
 	test ! -f $$($(1)_PATCH).gz || ( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 )
 	touch $$@
 
@@ -226,7 +245,7 @@ $(1)_DIR=$$(WORKDIR)/$(1)-$$($(1)_VER)
 $(1)_BDIR=$$(if $$($(1)_INTREE_BUILD), $$(WORKDIR)/$(1)-$$($(1)_VER), $$(WORKDIR)/$(1)-bld-$$($(1)_VER))
 $(1)_STAMP=$$(WORKDIR)/$(1)-$$($(1)_VER)-stamp
 $(1)_PATCH=$$(WORKDIR)/$(1)-$$($(1)_VER)-latest.diff
-$(1)_TGZ=$$(WORKDIR)/$$(notdir $$($(1)_URL))
+$(1)_TGZ=$$(WORKDIR)/$$($(1)_ARCHIVE)
 CLEANUP_FILES+=$$($(1)_BDIR) $$($(1)_STAMP)-$$(TARGET)-conf $$($(1)_STAMP)-$$(TARGET)-build
 
 $$($(1)_STAMP)-wget:
