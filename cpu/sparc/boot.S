@@ -33,7 +33,7 @@ FUNC_START(.text, cpu_boot)
         wr      %g0, 0, %wim
 
         /* get CPU id and adjust stack */
-        mov     %g0,                    %g3 /** FIXME */
+        CPU_ID  %g3
         set     __initial_stack,        %sp
 
 #ifdef CONFIG_ARCH_SMP_CAPABLE

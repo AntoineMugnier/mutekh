@@ -35,6 +35,14 @@
 #  endif 
 .endm
 
+.macro CPU_ID reg
+#  ifdef CONFIG_ARCH_SMP
+#   error missing CPUID macro for your architecture
+#  else
+        mov     %g0,                    \reg
+#  endif
+.endm
+
 # else /* not asm */
 
 #  define ASM_SECTION(name)              \

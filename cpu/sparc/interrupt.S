@@ -49,7 +49,7 @@
         sethi   %hi(\k),          %l6
         or      %l6,    %lo(\k),  %l6
         jmp     %l6
-        mov \n, %l7
+        mov     \n, %o0
 .endm
 
 .macro PUT_ENTRIES i j k
@@ -68,47 +68,177 @@
     .endif
 .endm
 
+.macro PUT_EQ_ENTRIES i j k id
+        PUT_ENTRY \id, \k
+    .if \i+1<=\j
+        PUT_ENTRY \id, \k
+    .endif
+    .if \i+2<=\j
+        PUT_ENTRY \id, \k
+    .endif
+    .if \i+3<=\j
+        PUT_ENTRY \id, \k
+    .endif
+    .if \i+4<=\j
+        PUT_EQ_ENTRIES (\i+4), \j, \k, \id
+    .endif
+.endm
+
 .section .excep,"ax",@progbits
 
 __exception_base_ptr:
 
-      /* reset */
+      /* reset 0x00 */
         PUT_ENTRY       0,          cpu_boot
 
-      /* 11 faults 0x00 - 0x0b */
-        PUT_ENTRIES     0,    4,    sparc_excep_entry
-        PUT_ENTRY       5,          sparc_win_over
-        PUT_ENTRY       6,          sparc_win_under
-        PUT_ENTRIES     7,    10,   sparc_excep_entry
-        PUT_ENTRIES     0x0c, 0x10, sparc_undef_entry
+      /* 11 faults 0x01 - 0x0b */
+        PUT_ENTRIES     1,    11,   sparc_excep_entry
+        PUT_EQ_ENTRIES  0x0c, 0x10, sparc_excep_entry,  0
 
       /* 15 irqs 0x11 - 0x1f */
         PUT_ENTRIES     0,    14,   sparc_irq_entry
 
       /* 10 faults 0x20 - 0x3c */
-        PUT_ENTRIES     11,   12,   sparc_excep_entry /* 0x20, 0x21 */
-        PUT_ENTRIES     0x22, 0x23, sparc_undef_entry
-        PUT_ENTRIES     13,   14,   sparc_excep_entry /* 0x24, 0x25 */
-        PUT_ENTRIES     0x26, 0x27, sparc_undef_entry
-        PUT_ENTRIES     15,   19,   sparc_excep_entry /* 0x28 - 0x2c */
-        PUT_ENTRIES     0x2d, 0x3b, sparc_undef_entry
-        PUT_ENTRY       20,         sparc_excep_entry /* 0x3c */
-        PUT_ENTRIES     0x3d, 0x7f, sparc_undef_entry
+        PUT_ENTRIES     12,   13,   sparc_excep_entry /* 0x20, 0x21 */
+        PUT_EQ_ENTRIES  0x22, 0x23, sparc_excep_entry, 0
+        PUT_ENTRIES     14,   15,   sparc_excep_entry /* 0x24, 0x25 */
+        PUT_EQ_ENTRIES  0x26, 0x27, sparc_excep_entry, 0
+        PUT_ENTRIES     16,   20,   sparc_excep_entry /* 0x28 - 0x2c */
+        PUT_EQ_ENTRIES  0x2d, 0x3b, sparc_excep_entry, 0
+        PUT_ENTRY       21,         sparc_excep_entry /* 0x3c */
+        PUT_EQ_ENTRIES  0x3d, 0x7f, sparc_excep_entry, 0
 
+#ifdef CONFIG_HEXO_USERMODE
       /* syscalls */
         PUT_ENTRIES     0x80, 0xff, sparc_syscall_entry
+#else
+        PUT_EQ_ENTRIES  0x80, 0xff, sparc_excep_entry, 0
+#endif
 
 .section .text,"ax",@progbits
 
-sparc_win_over:
-sparc_win_under:
-sparc_undef_entry:
-        rett
+/* This macro use all local regs to save caller saved register before calling C code */
+.macro SPARC_EXCEPT_SAVE
+        // preserve other caller saved registers
+        mov     %y,     %l0
+        mov     %g1,    %l3
+        mov     %psr,   %l5
+        // %i6 and %i7 are caller saved registers, preserve %o6 and %o7 in interrupted code
+        mov     %i6,    %l6
+        mov     %i7,    %l7
+.endm
 
-sparc_excep_entry:
-sparc_irq_entry:
-sparc_syscall_entry:
-        rett
+/* This macro restore caller saved register from local regs */
+.macro SPARC_EXCEPT_RESTORE
+        // restore caller saved registers
+        mov     %l0,     %y
+        mov     %l3,    %g1
+        mov     %l5,   %psr
+        mov     %l6,    %i6
+        mov     %l7,    %i7
+.endm
+
+FUNC_START(.text, sparc_excep_entry)
+
+        SPARC_EXCEPT_SAVE
+
+        // use interrupted code stack
+        mov     %i6,    %o6
+
+        // context registers save array
+        add     %g7, %lo(sparc_context_regs), %l4
+
+        // dump some registers
+        st     %l5, [%l4 + CPU_SPARC_CONTEXT_PSR]
+        st     %l1, [%l4 + CPU_SPARC_CONTEXT_PC]
+        st     %l2, [%l4 + CPU_SPARC_CONTEXT_NPC]
+
+#ifdef CONFIG_ARCH_SMP
+        ld      [%g6 + %lo(cpu_exception_handler)], %o5
+#else
+        set     cpu_exception_handler, %o5
+        ld      [%o5], %o5
+#endif
+
+        add     %l4, CPU_SPARC_CONTEXT_PC, %o1
+        mov     %g0, %o2 /* FIXME data access address ? */
+        mov     %l4, %o3
+        call    %o5
+        mov     %i6, %o4
+
+        // read some registers back in case they were modified by c code
+        ld     [%l4 + CPU_SPARC_CONTEXT_PSR], %l5
+        ld     [%l4 + CPU_SPARC_CONTEXT_PC] , %l1
+        ld     [%l4 + CPU_SPARC_CONTEXT_NPC], %l2
+
+        SPARC_EXCEPT_RESTORE
+
+        jmp     %l1
+        rett    %l2
+FUNC_END(sparc_excep_entry)
+
+
+FUNC_START(.text, sparc_irq_entry)
+
+        SPARC_EXCEPT_SAVE
+
+        // use interrupted code stack
+        mov     %i6,    %o6
+
+#ifdef CONFIG_ARCH_SMP
+        ld      [%g6 + %lo(cpu_interrupt_handler)], %o1
+#else
+        set     cpu_interrupt_handler, %o1
+        ld      [%o1], %o1
+#endif
+
+        call    %o1
+        nop
+
+        SPARC_EXCEPT_RESTORE
+
+        jmp     %l1
+        rett    %l2
+
+FUNC_END(sparc_irq_entry)
+
+
+#ifdef CONFIG_HEXO_USERMODE
+
+FUNC_START(.text, sparc_syscall_entry)
+
+        SPARC_EXCEPT_SAVE
+        
+        // use interrupted code stack
+        mov     %i6,    %o6
+
+        // context registers save array
+        add     %g7, %lo(sparc_context_regs), %l4
+
+        // dump some registers
+        st     %g1, [%l4 + CPU_SPARC_CONTEXT_G(1)]
+        std    %i0, [%l4 + CPU_SPARC_CONTEXT_I(0)]
+        std    %i2, [%l4 + CPU_SPARC_CONTEXT_I(2)]
+        std    %i4, [%l4 + CPU_SPARC_CONTEXT_I(4)]
+        std    %i6, [%l4 + CPU_SPARC_CONTEXT_I(6)]
+
+        ld      [%g7 + %lo(cpu_syscall_handler)], %o2
+
+        call    %o2
+        mov     %l4, %o1
+
+        SPARC_EXCEPT_RESTORE
+
+        // return value
+        ld     [%l4 + CPU_SPARC_CONTEXT_G(1)], %g1
+
+        jmp     %l1
+        rett    %l2
+
+FUNC_END(sparc_syscall_entry)
+
+#endif
+
 
 // Local Variables:
 // indent-tabs-mode: nil;

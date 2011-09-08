@@ -25,24 +25,56 @@
 
 #define CPU_INTERRUPT_H_
 
-#define CPU_EXCEPTION_ILLEGAL_INS  0x1
-#define CPU_EXCEPTION_DATA_ERROR   0x2
-#define CPU_EXCEPTION_INS_ERROR    0x3
-#define CPU_EXCEPTION_DATA_ALIGN   0x4
-#define CPU_EXCEPTION_IRQ          0x5
-#define CPU_EXCEPTION_SYSCALL      0x6
-#define CPU_EXCEPTION_OTHER        0x7
-#define CPU_FAULT_COUNT 6
+#define CPU_EXCEPTION_UNDEFINED       0
+#define CPU_EXCEPTION_INS_ACCESS_EX   1
+#define CPU_EXCEPTION_INS_ILL         2
+#define CPU_EXCEPTION_INS_PRIVILEGED  3
+#define CPU_EXCEPTION_FP_DISABLED     4
+#define CPU_EXCEPTION_WIN_OVER        5
+#define CPU_EXCEPTION_WIN_UNDER       6
+#define CPU_EXCEPTION_BAD_ALIGN       7
+#define CPU_EXCEPTION_FP_EX           8
+#define CPU_EXCEPTION_DATA_ACCESS_EX  9
+#define CPU_EXCEPTION_TAG_OVER        10
+#define CPU_EXCEPTION_WATCHPOINT      11
+#define CPU_EXCEPTION_R_REG_ACCESS    12
+#define CPU_EXCEPTION_INS_ACCESS_ERR  13
+#define CPU_EXCEPTION_CP_DISABLED     14
+#define CPU_EXCEPTION_UNIMP_FLUSH     15
+#define CPU_EXCEPTION_CP_EX           16
+#define CPU_EXCEPTION_DATA_ACCESS_ERR 17
+#define CPU_EXCEPTION_DIV_BY_0        18
+#define CPU_EXCEPTION_DATA_STORE_ERR  19
+#define CPU_EXCEPTION_DATA_MMU_MISS   20
+#define CPU_EXCEPTION_INS_MMU_MISS    21
+
+#define CPU_FAULT_COUNT 22
 
 #ifndef __MUTEK_ASM__
 
 # define CPU_FAULT_NAMES {       \
-"Unknown",                      \
-"Program",                      \
-"Data storage",                 \
-"Instruction storage",          \
-"Alignment",                    \
-"Other",                        \
+/* 0  */ "Undefined exception",          \
+/* 1  */ "Instruction access exception", \
+/* 2  */ "Illegal instruction",          \
+/* 3  */ "Privileged instruction",       \
+/* 4  */ "FPU disabled",                 \
+/* 5  */ "Window overflow",              \
+/* 6  */ "Window underflow",             \
+/* 7  */ "Address not aligned",          \
+/* 8  */ "FPU exception",                \
+/* 9  */ "Data access exception",        \
+/* 10 */ "Tag overflow",                 \
+/* 11 */ "Watchpoint detected",          \
+/* 12 */ "R register access error",      \
+/* 13 */ "Instruction access error",     \
+/* 14 */ "Cp disabled",                  \
+/* 15 */ "Unimplemented flush",          \
+/* 16 */ "Cp exception",                 \
+/* 17 */ "Data access error",            \
+/* 18 */ "Divide by zero",               \
+/* 19 */ "Data store error",             \
+/* 20 */ "Data mmu miss",                \
+/* 21 */ "Instruction mmu miss",         \
 }
 
 # include "hexo/local.h"

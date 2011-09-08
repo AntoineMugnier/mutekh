@@ -29,8 +29,9 @@
 
 /*
         %g0      zero
-        %g1,%y   undefined role
+        %g1,%y   temporary
         %g2-%g4  application/compiler use, preserved by system
+                 (kernel compiled with -mno-app-regs)
         %g5-%g7  system reserved (%g7 tls, %g6 cls)
 
     Sparc system v ABI using reg windows
@@ -187,8 +188,11 @@ FUNC_START(.text, cpu_context_jumpto)
         // pc and npc
         ldd     [%g1 + CPU_SPARC_CONTEXT_PC],   %l0
         
+#ifdef CONFIG_HEXO_USERMODE
+        // not used in kernel code
         ldd     [%g1 + CPU_SPARC_CONTEXT_G(2)], %g2
         ld      [%g1 + CPU_SPARC_CONTEXT_G(4)], %g4
+#endif
         ld      [%g1 + CPU_SPARC_CONTEXT_G(1)], %g1
 
         jmp     %l0

@@ -1,3 +1,3 @@
-CPUCFLAGS=-fsigned-char -mflat
+CPUCFLAGS=-fsigned-char -mflat -mno-app-regs
 CPUTOOLS=sparc-unknown-elf-
 
