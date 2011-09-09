@@ -251,6 +251,17 @@
         and.    3,      3,      3
         beq     2f
 
+        // save callee saved registers r14 to r31
+        stmw    14,             CPU_PPC_CONTEXT_GPR(14)(2)
+
+# ifdef CONFIG_HEXO_CONTEXT_STATS
+        mr      14,             3
+        LA32    9,              context_preempt_stats
+        mtctr   9
+        bctrl
+        mr      3,              14
+# endif
+
         // lets deals with all not yet saved registers
 
 # ifdef CONFIG_HEXO_FPU
@@ -271,9 +282,6 @@
         stfd    0,              CPU_PPC_CONTEXT_FPSCR(2)
 1:
 # endif
-
-        // save callee saved registers r14 to r31
-        stmw    14,             CPU_PPC_CONTEXT_GPR(14)(2)
 
         // set save mask
         li      0,              CPU_PPC_CONTEXT_RESTORE_CALLER | CPU_PPC_CONTEXT_RESTORE_CALLEE

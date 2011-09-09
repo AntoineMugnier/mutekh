@@ -180,8 +180,12 @@
         test    %eax, %eax
         jz      10f
 
+        pushl   %eax
+# ifdef CONFIG_HEXO_CONTEXT_STATS
+        call    context_preempt_stats
+# endif
+
         // switch to returned context
-        push    %eax
         call    cpu_context_jumpto
 10:
 .endm

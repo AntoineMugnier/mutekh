@@ -236,6 +236,19 @@ mips_preempt_and_restore:
         // got pointer to context to switch to ?
         beq     $2,     $0,     mips_restore
 
+        // save callee saved registers
+        .irp    r, 16, 17, 18, 19, 20, 21, 22, 23
+        sw      $\r,            CPU_MIPS_CONTEXT_GPR(\r)($26)
+        .endr
+
+        // prepare cpu_context_jumpto arg
+        move    $4,     $2
+# ifdef CONFIG_HEXO_CONTEXT_STATS
+        move    $16,    $2
+        jal     context_preempt_stats
+        move    $4,     $16
+# endif
+
 # ifdef CONFIG_HEXO_FPU
         // test fpu enabled for previous context
         lw      $9,     CPU_MIPS_CONTEXT_SR($26)
@@ -262,16 +275,10 @@ mips_preempt_and_restore:
 1:
 # endif
 
-        // save callee saved registers
-        .irp    r, 16, 17, 18, 19, 20, 21, 22, 23
-        sw      $\r,            CPU_MIPS_CONTEXT_GPR(\r)($26)
-        .endr
-
         li      $1,     CPU_MIPS_CONTEXT_RESTORE_CALLER | CPU_MIPS_CONTEXT_RESTORE_CALLEE
         sw      $1,     CPU_MIPS_CONTEXT_SAVE_MASK($26)
 
         // switch to new context
-        move    $4,     $2
         b       cpu_context_jumpto
 #endif
 

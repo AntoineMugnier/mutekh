@@ -113,6 +113,10 @@ context_init(struct context_s *context,
 
 #ifdef CONFIG_HEXO_CONTEXT_STATS
   context->cycles = 0;
+  context->enter_cnt = 0;
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+  context->preempt_cnt = 0;
+# endif
 #endif
 
   return 0;
@@ -138,4 +142,32 @@ context_destroy(struct context_s *context)
 
   return stack;
 }
+
+#ifdef CONFIG_HEXO_CONTEXT_STATS
+
+void context_leave_stats(struct context_s *context)
+{
+  if (context)
+    context->cycles += cpu_cycle_diff(CPU_LOCAL_GET(context_swicth_time));
+}
+
+void context_enter_stats(struct context_s *context)
+{
+  CPU_LOCAL_SET(context_swicth_time, cpu_cycle_count());
+  context->enter_cnt++;
+}
+
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+void context_preempt_stats(struct context_s *next)
+{
+  struct context_s *prev = CONTEXT_LOCAL_GET(context_cur);
+
+  context_leave_stats(prev);
+  prev->preempt_cnt++;
+  context_enter_stats(next);
+}
+# endif
+
+#endif
+
 

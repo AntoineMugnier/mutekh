@@ -100,7 +100,7 @@ cpu_context_destroy(struct context_s *context)
 __attribute__((noreturn))
 extern void arm_context_jumpto_back();
 
-struct context_s *arm_except_preempt()
+inline struct context_s *arm_except_preempt()
 {
     struct context_s *ctx = NULL;
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
@@ -108,6 +108,12 @@ struct context_s *arm_except_preempt()
     if ( handler ) {
         ctx = handler(CPU_LOCAL_GET(cpu_preempt_param));
     }
+
+# ifdef CONFIG_HEXO_CONTEXT_STATS
+    if ( ctx ) {
+        context_preempt_stats(ctx);
+    }
+# endif
 #endif
 
     return ctx;
