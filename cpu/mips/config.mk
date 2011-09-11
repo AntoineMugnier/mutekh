@@ -1,3 +1,5 @@
+CPUTOOLS=mipsel-unknown-elf-
+
 ifeq ($(CONFIG_CPU_MIPS_VERSION), 32)
 CPUCFLAGS=-mips32
 endif
@@ -32,8 +34,6 @@ ifeq ($(CONFIG_HEXO_FPU), defined)
   endif
 endif
 
-CPUTOOLS=mipsel-unknown-elf-
-
 ifeq ($(CONFIG_CPU_ENDIAN_LITTLE), defined)
 CPUCFLAGS+= -EL
 CPULDFLAGS+= -EL
@@ -42,6 +42,10 @@ endif
 ifeq ($(CONFIG_CPU_ENDIAN_BIG), defined)
 CPUCFLAGS+= -EB
 CPULDFLAGS+= -EB
+endif
+
+ifeq ($(CONFIG_COMPILE_SOFTFLOAT), defined)
+CPUCFLAGS += -msoft-float
 endif
 
 CPUCFLAGS+= -G0

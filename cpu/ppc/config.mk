@@ -1,16 +1,18 @@
-CPUCFLAGS=-mstrict-align -fsigned-char -G0 -mcpu=405 -mno-dlmzb
 CPUTOOLS=powerpc-unknown-elf-
+CPUCFLAGS=-mstrict-align -fsigned-char -G0
 
-CPUTOOLS_GCC_VERSION:=$(shell \
-	(echo '((' ; $(CPUTOOLS)gcc -dumpversion | sed -e 's:\.)\?:)*100+:g' ) \
-	)
-CPUTOOLS_GCC_VERSION:=$(shell echo "$(CPUTOOLS_GCC_VERSION)" | bc -q)
+ifeq ($(CONFIG_COMPILE_SOFTFLOAT), defined)
+CPUCFLAGS += -msoft-float
+endif
 
-# Dont forget the shell's 'true' is 0...
-CPUTOOLS_GCC_4_4_PLUS:=$(shell test "$(CPUTOOLS_GCC_VERSION)" -lt "40400" ; echo "$$?" )
+ifeq ($(CONFIG_CPU_NAME), ppc405)
+CPUCFLAGS += -mcpu=405
+ ifeq ($(CONFIG_CPU_PPC_SOCLIB), defined)
+ CPUCFLAGS += -mno-dlmzb
+ endif
+endif
 
 ifeq ($(CONFIG_COMPILE_DEBUG), defined)
-ifeq ($(CPUTOOLS_GCC_4_4_PLUS), 1)
 CPUCFLAGS += -fno-dwarf2-cfi-asm
 endif
-endif
+

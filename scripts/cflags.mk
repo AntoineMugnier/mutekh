@@ -59,11 +59,6 @@ CFLAGS += -ffunction-sections -fdata-sections
 LINK_LDFLAGS += --gc-sections
 endif
 
-ifeq ($(CONFIG_COMPILE_SOFTFLOAT), defined)
-CPU_SOFTFLOAT_FLAGS ?= -msoft-float
-CFLAGS += $(CPU_SOFTFLOAT_FLAGS)
-endif
-
 ifeq ($(CONFIG_COMPILE_INSTRUMENT), defined)
 CFLAGS += -finstrument-functions
 endif
