@@ -197,7 +197,7 @@ typedef VFS_FS_CREATE(vfs_fs_create_t);
    @param namelen Length of name, excluding any @tt '\0'
    @param rnode Actually attached node, may be @tt node or another new
    node.
-   @param mangled_name Mangled name of returned node. The buffer is
+   @param mangled_name Mangled name of returned node. The buffer is @ref
    #CONFIG_VFS_NAMELEN long.
    @return 0 on success, or an error code
 

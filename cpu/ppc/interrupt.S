@@ -194,7 +194,7 @@
 
 
 /*
-  The PPC_EXCEPT_IRQ macro contains code to call syscall handlers
+  The PPC_EXCEPT_IRQ macro contains code to call irq handlers
 */
 
 .macro PPC_EXCEPT_IRQ number

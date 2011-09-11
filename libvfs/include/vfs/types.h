@@ -41,7 +41,6 @@ C_HEADER_BEGIN
 #include <gpct/cont_hashlist.h>
 #include <gpct/cont_clist.h>
 #include <gpct/object_refcount.h>
-#include <mutek/semaphore.h>
 
 OBJECT_TYPE     (vfs_node, REFCOUNT, struct vfs_node_s);
 OBJECT_PROTOTYPE(vfs_node, , vfs_node);
