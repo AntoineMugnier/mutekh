@@ -17,42 +17,26 @@
  *   02110-1301 USA.
  *
  *   Copyright Francois Charot <charot@irisa.fr>  (c) 2008
- *   INRIA Rennes Bretagne Atlantique
+ *   INRIA Rennes Bretagne Atlantique             
  *
  */
 
 
-#if !defined(CONTEXT_H_) || defined(CPU_CONTEXT_H_)
+#if !defined(__ENDIAN_H_) || defined(__CPU_ENDIAN_H_)
 #error This file can not be included directly
 #else
 
-# include <hexo/types.h>
+#define __CPU_ENDIAN_H_
 
-# define CPU_NIOS_CONTEXT_RESTORE_CALLEE   1
-# define CPU_NIOS_CONTEXT_RESTORE_CALLER   2
+/** nios2 CPU is little endian */
+#undef CPU_ENDIAN_ISBIG
+#define CPU_ENDIAN_ISLITTLE
 
-# define CPU_NIOS_CONTEXT_RESTORE_NONE     (~3)
+#undef CPU_NATIVE_NONALIGNED_ACCESS
 
-#define CPU_NIOS_CONTEXT_SAVE_MASK      0
-#define CPU_NIOS_CONTEXT_GPR(n)         (CPU_NIOS_CONTEXT_SAVE_MASK + INT_REG_SIZE/8 + (n - 1) * INT_REG_SIZE/8)
-#define CPU_NIOS_CONTEXT_STATUS         (CPU_NIOS_CONTEXT_GPR(32))
-#define CPU_NIOS_CONTEXT_PC             (CPU_NIOS_CONTEXT_GPR(33))
-
-#ifndef __MUTEK_ASM__
-
-# include <hexo/cpu.h>
-
-struct cpu_context_s
-{
-  union {
-    reg_t save_mask;       //< what is being saved and restored
-    reg_t gpr[32];
-  };
-  reg_t status;
-  reg_t pc;
-};
-
-# endif  /* __MUTEK_ASM__ */
+//#define HAS_CPU_ENDIAN_SWAP16
+//#define HAS_CPU_ENDIAN_SWAP32
+//#define HAS_CPU_ENDIAN_SWAP64
 
 #endif
 

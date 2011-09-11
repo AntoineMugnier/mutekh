@@ -62,22 +62,22 @@ FUNC_START(.text, cpu_context_switch)
         // get context local storage
         CPU_LOCAL ldw, __context_data_base, r1, r1
         // get context registers save array
-        addi    r2,     r1,     nios_context_regs
+        addi    r2,     r1,     nios2_context_regs
 
         // save "callee saved" registers
         // save gp ptr, stack ptr, frame ptr, return address
         .irp    r, 16, 17, 18, 19, 20, 21, 22, 23, 27, 28, 31
-        stw     r\r,            CPU_NIOS_CONTEXT_GPR(\r)(r2)
+        stw     r\r,            CPU_NIOS2_CONTEXT_GPR(\r)(r2)
         .endr
 
         // resume directly at return address
-        stw     r31,            CPU_NIOS_CONTEXT_PC(r2)
+        stw     r31,            CPU_NIOS2_CONTEXT_PC(r2)
 
 	rdctl   r8,             status
-        stw     r8,             CPU_NIOS_CONTEXT_STATUS(r2)
+        stw     r8,             CPU_NIOS2_CONTEXT_STATUS(r2)
 
-        movui   r8,             CPU_NIOS_CONTEXT_RESTORE_CALLEE
-        stw     r8,             CPU_NIOS_CONTEXT_SAVE_MASK(r2)
+        movui   r8,             CPU_NIOS2_CONTEXT_RESTORE_CALLEE
+        stw     r8,             CPU_NIOS2_CONTEXT_SAVE_MASK(r2)
 
         br      cpu_context_jumpto
 FUNC_END(cpu_context_switch)
@@ -112,11 +112,11 @@ FUNC_START(.text, cpu_context_jumpto)
         ldw     r8,             HEXO_CONTEXT_S_TLS * 4 (r4)
         CPU_LOCAL stw,          __context_data_base, r8, r7
 
-        addi    r2,     r8,     nios_context_regs
+        addi    r2,     r8,     nios2_context_regs
 
         // restore stack ptr, frame ptr, return address
         .irp    r, 27, 28, 31
-        ldw      r\r,           CPU_NIOS_CONTEXT_GPR(\r)(r2)
+        ldw      r\r,           CPU_NIOS2_CONTEXT_GPR(\r)(r2)
         .endr
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
@@ -125,28 +125,28 @@ FUNC_START(.text, cpu_context_jumpto)
 #endif
 
         // prepare eret to retore status and pc
-        ldw     r29,            CPU_NIOS_CONTEXT_PC(r2)
-        ldw     r1,             CPU_NIOS_CONTEXT_STATUS(r2)
+        ldw     r29,            CPU_NIOS2_CONTEXT_PC(r2)
+        ldw     r1,             CPU_NIOS2_CONTEXT_STATUS(r2)
         wrctl   estatus,        r1
 
-        ldw     r8,             CPU_NIOS_CONTEXT_SAVE_MASK(r2)
+        ldw     r8,             CPU_NIOS2_CONTEXT_SAVE_MASK(r2)
 
 #if 0   // callee shall almost always get restored (except on context start)
-        andi    r7,     r8,     CPU_NIOS_CONTEXT_RESTORE_CALLEE
+        andi    r7,     r8,     CPU_NIOS2_CONTEXT_RESTORE_CALLEE
         beq     r7,     zero,   1f
 # endif
         
         // restore "callee saved" registers
         .irp    r, 16, 17, 18, 19, 20, 21, 22, 23
-        ldw     r\r,            CPU_NIOS_CONTEXT_GPR(\r)(r2)
+        ldw     r\r,            CPU_NIOS2_CONTEXT_GPR(\r)(r2)
         .endr
 1:      
-        andi    r7,     r8,     CPU_NIOS_CONTEXT_RESTORE_CALLER
+        andi    r7,     r8,     CPU_NIOS2_CONTEXT_RESTORE_CALLER
         beq     r7,     zero,   1f
 
         // restore "caller saved" register
         .irp    r, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2
-        ldw     r\r,            CPU_NIOS_CONTEXT_GPR(\r)(r2)
+        ldw     r\r,            CPU_NIOS2_CONTEXT_GPR(\r)(r2)
         .endr
 1:
 
@@ -209,9 +209,9 @@ FUNC_START(.text, cpu_context_stack_use)
         // get tls pointer from context struct
         ldw     r8,             HEXO_CONTEXT_S_TLS * 4 (r4)
         // get context registers save array
-        addi    r2,     r8,     nios_context_regs
+        addi    r2,     r8,     nios2_context_regs
 
-        ldw     sp,             CPU_NIOS_CONTEXT_GPR(27)(r2)
+        ldw     sp,             CPU_NIOS2_CONTEXT_GPR(27)(r2)
         
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */

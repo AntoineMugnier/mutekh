@@ -31,7 +31,7 @@
 
 #if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_ARCH_SOCLIB)
 #include <drivers/enum/fdt/enum-fdt.h>
-#include <drivers/icu/nios/icu-nios.h>
+#include <drivers/icu/nios2/icu-nios2.h>
 #include <device/device.h>
 
 extern struct device_s fdt_enum_dev;
@@ -58,7 +58,7 @@ extern __ldscript_symbol_t   __exception_base_ptr;
 void cpu_init(void)
 {
   /* Set exception vector */
-  cpu_nios_write_ctrl_reg(17, (reg_t)&__exception_base_ptr);
+  cpu_nios2_write_ctrl_reg(17, (reg_t)&__exception_base_ptr);
 
 #ifdef CONFIG_ARCH_SMP
   void			*cls;
@@ -68,13 +68,13 @@ void cpu_init(void)
 
   /* set cpu local storage register base pointer */
   //  __asm__ volatile("wrctl ctl16, %0" : : "r" (cls));
-  __asm__ volatile("mov " ASM_STR(CPU_NIOS_CLS_REG) ", %0" : : "r" (cls));
+  __asm__ volatile("mov " ASM_STR(CPU_NIOS2_CLS_REG) ", %0" : : "r" (cls));
 #endif
 
-#if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_DRIVER_ICU_NIOS)
+#if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_DRIVER_ICU_NIOS2)
   struct device_s *icu = enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id());
   if ( icu )
-    icu_nios_update(icu);
+    icu_nios2_update(icu);
 #endif
 }
 

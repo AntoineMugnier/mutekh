@@ -27,7 +27,7 @@
 #include <hexo/context.h>
 #include <hexo/interrupt.h>
 
-CONTEXT_LOCAL struct cpu_context_s nios_context_regs;
+CONTEXT_LOCAL struct cpu_context_s nios2_context_regs;
 
 error_t
 cpu_context_bootstrap(struct context_s *context)
@@ -36,26 +36,26 @@ cpu_context_bootstrap(struct context_s *context)
   CPU_LOCAL_SET(__context_data_base, context->tls);
 
   /* nothing is saved for this context */
-  CONTEXT_LOCAL_ADDR(nios_context_regs)->save_mask = 0;
+  CONTEXT_LOCAL_ADDR(nios2_context_regs)->save_mask = 0;
 
   return 0;
 }
 
-  /* NiosII ABI requires 4 free words in the stack. */
+  /* Nios2 ABI requires 4 free words in the stack. */
 
 error_t
 cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 {
-  struct cpu_context_s *regs = CONTEXT_LOCAL_TLS_ADDR(context->tls, nios_context_regs);
+  struct cpu_context_s *regs = CONTEXT_LOCAL_TLS_ADDR(context->tls, nios2_context_regs);
 
-  regs->save_mask = CPU_NIOS_CONTEXT_RESTORE_CALLER; /* for r4 */
-  regs->gpr[CPU_NIOS_SP] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
+  regs->save_mask = CPU_NIOS2_CONTEXT_RESTORE_CALLER; /* for r4 */
+  regs->gpr[CPU_NIOS2_SP] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
                          - CONFIG_HEXO_STACK_ALIGN;
   regs->gpr[4] = (uintptr_t)param;
 
   regs->status = 0;
 
-  regs->gpr[CPU_NIOS_RA] = 0xa5a5a5a5; /* can not return from context entry */
+  regs->gpr[CPU_NIOS2_RA] = 0xa5a5a5a5; /* can not return from context entry */
   regs->pc = (uintptr_t)entry;
 
   return 0;

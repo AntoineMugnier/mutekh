@@ -47,7 +47,7 @@
                                                                         \
     __asm__ (                                                           \
      ".set noat             \n"                                         \
-     "	mov	r1, " ASM_STR(CPU_NIOS_CLS_REG) "         \n"           \
+     "	mov	r1, " ASM_STR(CPU_NIOS2_CLS_REG) "         \n"           \
 	 "	add	%0, r1, %1	    \n"                         \
 	: "=r" (_ptr_)                                                  \
 	 : "r" (&n)							\
@@ -62,7 +62,7 @@
     uintptr_t _ptr_;                                                    \
                                                                         \
     __asm__ (                                                           \
-             "	mov	%0, " ASM_STR(CPU_NIOS_CLS_REG) "        \n"    \
+             "	mov	%0, " ASM_STR(CPU_NIOS2_CLS_REG) "        \n"    \
 	 : "=r" (_ptr_)                                                 \
 								);      \
                                                                         \

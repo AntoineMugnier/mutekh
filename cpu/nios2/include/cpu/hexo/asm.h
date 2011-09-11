@@ -20,8 +20,8 @@
 
 */
 
-#ifndef __HEXO_NIOS_ASM_H_
-#define __HEXO_NIOS_ASM_H_
+#ifndef __HEXO_NIOS2_ASM_H_
+#define __HEXO_NIOS2_ASM_H_
 
 #ifdef __MUTEK_ASM__
 
@@ -32,7 +32,7 @@
 
 #ifdef CONFIG_ARCH_SMP
 .macro CPU_LOCAL op, name, rd, rt
-        \op \rd, \name(CPU_NIOS_CLS_REG)
+        \op \rd, \name(CPU_NIOS2_CLS_REG)
 .endm
 #else
 .macro CPU_LOCAL op, name, rd, rt

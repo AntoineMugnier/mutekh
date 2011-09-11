@@ -29,18 +29,18 @@
 #define CPU_CPU_H_
 
 /* named registers */
-#define CPU_NIOS_ZERO 0
-#define CPU_NIOS_AT 1
-#define CPU_NIOS_ET 24
-#define CPU_NIOS_BT 25
-#define CPU_NIOS_GP 26
-#define CPU_NIOS_SP 27
-#define CPU_NIOS_FP 28
-#define CPU_NIOS_EA 29
-#define CPU_NIOS_BA 30
-#define CPU_NIOS_RA 31
+#define CPU_NIOS2_ZERO 0
+#define CPU_NIOS2_AT 1
+#define CPU_NIOS2_ET 24
+#define CPU_NIOS2_BT 25
+#define CPU_NIOS2_GP 26
+#define CPU_NIOS2_SP 27
+#define CPU_NIOS2_FP 28
+#define CPU_NIOS2_EA 29
+#define CPU_NIOS2_BA 30
+#define CPU_NIOS2_RA 31
 
-#define CPU_NIOS_CLS_REG r26
+#define CPU_NIOS2_CLS_REG r26
 
 #ifndef __MUTEK_ASM__
 
@@ -77,7 +77,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
       "Floating point",                         \
       }
 
-# define cpu_nios_read_ctrl_reg(id)              \
+# define cpu_nios2_read_ctrl_reg(id)              \
   ({                                            \
     reg_t _reg;                                 \
                                                 \
@@ -89,7 +89,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
   })
 
 
-# define cpu_nios_write_ctrl_reg(id, val)        \
+# define cpu_nios2_write_ctrl_reg(id, val)        \
   ({                                            \
     reg_t _reg = val;                           \
                                                 \
@@ -99,7 +99,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
                      );                         \
   })
 
-# define CPU_TYPE_NAME nios
+# define CPU_TYPE_NAME nios2
 
 static inline cpu_id_t
 cpu_id(void)
@@ -127,7 +127,7 @@ cpu_isbootstrap(void)
 static inline cpu_cycle_t
 cpu_cycle_count(void)
 {
-  return cpu_nios_read_ctrl_reg(31);
+  return cpu_nios2_read_ctrl_reg(31);
 }
 
 
