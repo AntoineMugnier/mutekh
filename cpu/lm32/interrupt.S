@@ -25,6 +25,23 @@
 
 .section .excep,"ax",@progbits
 
+.macro LM32_EXCEPT_ENTRY id
+
+        // get context registers save array
+        ori     r31,    r0,      lo(lm32_context_regs)
+        add     r31,    r25,     r31
+
+        // save r1
+        sw      (r31 + CPU_LM32_CONTEXT_GPR(1)), r1
+        // store excep id
+        mvi     r1,     \id
+
+        // goto asm handler
+        seta    r31,    lm32_excep_entry
+        b       r31
+
+.endm
+
 __exception_base_ptr:
 
       /* reset */
@@ -37,77 +54,124 @@ __exception_base_ptr:
         nop
 
         /* breakpoint */
-1:      
-        bi      1b
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
+        .org __exception_base_ptr + 1*32
+        mv      r30,    r31
+        LM32_EXCEPT_ENTRY CPU_FAULT_BREAKPOINT
 
         /* iberr*/
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        
+        .org __exception_base_ptr + 2*32
+        LM32_EXCEPT_ENTRY CPU_FAULT_INS_BERR
+
         /* watchpoint */
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
+        .org __exception_base_ptr + 3*32
+        mv      r30,    r31
+        LM32_EXCEPT_ENTRY CPU_FAULT_WATCHPOINT
 
         /* dberr */
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
+        .org __exception_base_ptr + 4*32
+        LM32_EXCEPT_ENTRY CPU_FAULT_DATA_BERR
 
         /* div by 0 */
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
+        .org __exception_base_ptr + 5*32
+        LM32_EXCEPT_ENTRY CPU_FAULT_DIV_BY_0
 
         /* irq */
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
+        .org __exception_base_ptr + 6*32
+
+#ifdef CONFIG_HEXO_IRQ
+        seta    r31, lm32_irq_entry
+        b       r31
+#else
+        LM32_EXCEPT_ENTRY CPU_FAULT_LOST_IRQ
+#endif
 
         /* syscall */
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
+        .org __exception_base_ptr + 7*32
 
-.section .text,"ax",@progbits
+        LM32_EXCEPT_ENTRY CPU_FAULT_SYSCALL
+
+        .org __exception_base_ptr + 8*32
+
+.macro LM32_EXCEPT_RESTORE
+        .irp r, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 27, 28, 29
+        lw      r\r, (r31 + CPU_LM32_CONTEXT_GPR(\r))
+        .endr
+
+        eret
+.endm
+       
+FUNC_START(.text, lm32_excep_entry)
+
+        // save caller saved, fp, sp (r1 already saved)
+        .irp r, 2, 3, 4, 5, 6, 7, 8, 9, 10, 27, 28, 29
+        sw      (r31 + CPU_LM32_CONTEXT_GPR(\r)), r\r
+        .endr
+
+        // save PC
+        sw      (r31 + CPU_LM32_CONTEXT_PC), r30
+
+        // call fault handler
+        addi    r2,     r31,    CPU_LM32_CONTEXT_PC
+        mv      r3,     r0
+        mv      r4,     r31
+        mv      r5,     sp
+
+        seta    r10,    cpu_exception_handler
+        lw      r10,    (r10 + 0)
+        call    r10
+
+        // readback PC
+        lw      r30, (r31 + CPU_LM32_CONTEXT_PC)
+
+        // restore regs
+        .irp r, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 27, 28, 29
+        lw      r\r, (r31 + CPU_LM32_CONTEXT_GPR(\r))
+        .endr
+
+        // return
+        eret
+
+FUNC_END(lm32_excep_entry)
+
+#ifdef CONFIG_HEXO_IRQ
+FUNC_START(.text, lm32_irq_entry)
+
+        // get context registers save array
+        ori     r31,    r0,      lo(lm32_context_regs)
+        add     r31,    r25,     r31
+
+        // save caller saved regs, fp, sp
+        .irp r, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 29
+        sw      (r31 + CPU_LM32_CONTEXT_GPR(\r)), r\r
+        .endr
+
+        // find lowest irq number
+        rcsr    r1,     IP
+        mv      r11,    r1
+        calli   __ffssi2
+        addi    r1,     r1,     -1
+
+        // call irq handler
+        seta    r2,     cpu_interrupt_handler
+        lw      r2,     (r2 + 0)
+        call    r2
+
+        // acknowledge lowest pending irq
+        addi    r2,     r11,    -1
+        and     r2,     r11,    r2
+        xor     r2,     r11,    r2
+        wcsr    IP,     r2
+
+        // restore regs
+        .irp r, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 29
+        lw      r\r, (r31 + CPU_LM32_CONTEXT_GPR(\r))
+        .endr
+
+        // return
+        eret
+
+FUNC_END(lm32_irq_entry)
+#endif
 
 // Local Variables:
 // indent-tabs-mode: nil;

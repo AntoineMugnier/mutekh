@@ -23,17 +23,27 @@
 
 #define CPU_INTERRUPT_H_
 
+# define CPU_FAULT_BREAKPOINT 0
+# define CPU_FAULT_INS_BERR   1
+# define CPU_FAULT_WATCHPOINT 2
+# define CPU_FAULT_DATA_BERR  3
+# define CPU_FAULT_DIV_BY_0   4
+# define CPU_FAULT_SYSCALL    5
+# define CPU_FAULT_LOST_IRQ   6
+
+# define CPU_FAULT_COUNT 7
+
 #ifndef __MUTEK_ASM__
 
-# define CPU_FAULT_COUNT 5
-
-# define CPU_FAULT_NAMES {       \
-"Break point",                      \
-"Ins bus error",                      \
-"Watch point",          \
-"Data bus error",                 \
-"Divide by zero",          \
-}
+# define CPU_FAULT_NAMES {                      \
+    "Break point",                              \
+      "Ins bus error",                          \
+      "Watch point",                            \
+      "Data bus error",                         \
+      "Divide by zero",                         \
+      "Syscall",                                \
+      "Lost irq",                               \
+      }
 
 # ifdef CONFIG_DRIVER_ICU_LM32
 struct device_s;

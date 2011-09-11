@@ -42,6 +42,7 @@ FUNC_START(.text, cpu_boot)
 
 #ifdef CONFIG_ARCH_SMP
         /* adjust initial stack from cpuid */
+        // FIXME use calli   __ashlsi3
         sli     r1,     r3,     CONFIG_HEXO_RESET_STACK_SIZE,
         sub     sp,     sp,     r1
 #endif
