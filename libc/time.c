@@ -72,7 +72,7 @@ error_t clock_getres(clockid_t clk_id, struct timespec *res)
     }
 }
 
-int clock_gettime(clockid_t clk_id, struct timespec *tp)
+error_t clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
   switch (clk_id)
     {
@@ -89,7 +89,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
     }
 }
 
-int clock_settime(clockid_t clk_id, const struct timespec *tp)
+error_t clock_settime(clockid_t clk_id, const struct timespec *tp)
 {
   switch (clk_id)
     {

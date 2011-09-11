@@ -55,8 +55,8 @@ struct timespec
 
 struct timezone
 {
-  int tz_minuteswest;         /* minutes west of greenwich */
-  int tz_dsttime;             /* type of DST correction */
+  int_fast8_t tz_minuteswest;         /* minutes west of greenwich */
+  int_fast8_t tz_dsttime;             /* type of DST correction */
 };
 
 config_depend(CONFIG_MUTEK_TIMER)
@@ -77,13 +77,13 @@ enum clockid_e
 typedef enum clockid_e clockid_t;
 
 config_depend(CONFIG_MUTEK_TIMER)
-int clock_getres(clockid_t clk_id, struct timespec *res);
+error_t clock_getres(clockid_t clk_id, struct timespec *res);
 
 config_depend(CONFIG_MUTEK_TIMER)
-int clock_gettime(clockid_t clk_id, struct timespec *tp);
+error_t clock_gettime(clockid_t clk_id, struct timespec *tp);
 
 config_depend(CONFIG_MUTEK_TIMER)
-int clock_settime(clockid_t clk_id, const struct timespec *tp);
+error_t clock_settime(clockid_t clk_id, const struct timespec *tp);
 
 config_depend(CONFIG_MUTEK_TIMER_EVENTS)
 error_t nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
