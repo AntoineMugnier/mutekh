@@ -46,12 +46,13 @@
     typeof(n) *_ptr_;                                                   \
                                                                         \
     __asm__ (                                                           \
-     ".set noat             \n"                                         \
-     "	mov	r1, " ASM_STR(CPU_NIOS2_CLS_REG) "         \n"           \
-	 "	add	%0, r1, %1	    \n"                         \
-	: "=r" (_ptr_)                                                  \
-	 : "r" (&n)							\
-								);      \
+             ".set noat             \n"                                 \
+             "	mov	r1, " ASM_STR(CPU_NIOS2_CLS_REG) "         \n"  \
+             "	add	%0, r1, %1	    \n"                         \
+             ".set at             \n"                                   \
+             : "=r" (_ptr_)                                             \
+             : "r" (&n)							\
+            );                                                          \
                                                                         \
     _ptr_;								\
   })

@@ -40,7 +40,9 @@
 #define CPU_NIOS2_BA 30
 #define CPU_NIOS2_RA 31
 
-#define CPU_NIOS2_CLS_REG r26
+#ifdef CONFIG_ARCH_SMP
+# define CPU_NIOS2_CLS_REG r26
+#endif
 
 #ifndef __MUTEK_ASM__
 
@@ -54,27 +56,10 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 # define CPU_GPREG_COUNT	32
 
 # define CPU_GPREG_NAMES {					\
-      "pc", "at", "r2", "r3", "r4", "r5", "r6", "r7",           \
+      "zero", "at", "r2", "r3", "r4", "r5", "r6", "r7",           \
       "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",     \
       "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",   \
       "et", "bt", "gp", "sp", "fp", "ea", "ba", "ra",           \
-      }
-
-# define CPU_FAULT_COUNT 16
-
-# define CPU_FAULT_NAMES	 {                      \
-      "Interrupt",                              \
-      "Address error (Load)",                   \
-      "Address error (Store)",                  \
-      "Instruction bus error",                  \
-      "Data bus error",                         \
-      "Syscall",                                \
-      "Break point",                            \
-      "Reserved instruction",                   \
-      "Overflow",                               \
-      "Trap",                                   \
-      "Reserved exception",                     \
-      "Floating point",                         \
       }
 
 # define cpu_nios2_read_ctrl_reg(id)              \

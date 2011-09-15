@@ -34,6 +34,48 @@
 
 #define CPU_INTERRUPT_H_
 
+#define CPU_EXCEPTION_RESET                     0
+#define CPU_EXCEPTION_PRESET                    1
+#define CPU_EXCEPTION_INTERRUPT                 2
+#define CPU_EXCEPTION_TRAP                      3
+#define CPU_EXCEPTION_UNIMP_INS                 4
+#define CPU_EXCEPTION_ILLEGAL_INS               5
+#define CPU_EXCEPTION_MISALIGNED_DATA           6
+#define CPU_EXCEPTION_MISALIGNED_DEST           7
+#define CPU_EXCEPTION_DIVISION_ERROR            8
+#define CPU_EXCEPTION_SUPERVISOR_INS_ADDR       9
+#define CPU_EXCEPTION_SUPERVISOR_INS            10
+#define CPU_EXCEPTION_SUPERVISOR_DATA_ADDR      11
+#define CPU_EXCEPTION_FAST_TLB_MISS             12
+#define CPU_EXCEPTION_TLB_EXEC_PERM             13
+#define CPU_EXCEPTION_TLB_READ_PERM             14
+#define CPU_EXCEPTION_TLB_WRITE_PERM            15
+#define CPU_EXCEPTION_MPU_REGION_INS            16
+#define CPU_EXCEPTION_MPU_REGION_DATA           17
+
+# define CPU_FAULT_COUNT 18
+
+# define CPU_FAULT_NAMES	 {              \
+      /* 0  */ "Reset",                         \
+      /* 1  */ "PReset",                        \
+      /* 2  */ "Interrupt",                     \
+      /* 3  */ "Trap",                          \
+      /* 4  */ "Unimplemented instruction"      \
+      /* 5  */ "Illegal instruction"            \
+      /* 6  */ "Misaligned data access"         \
+      /* 7  */ "Misaligned destination",        \
+      /* 8  */ "Division error",                \
+      /* 9  */ "Supervisor ins address",        \
+      /* 10 */ "Supervisor instruction",        \
+      /* 11 */ "Supervisor data address",       \
+      /* 12 */ "Fast TLB Miss",                 \
+      /* 13 */ "TLB exec perm error",           \
+      /* 14 */ "TLB read perm error",           \
+      /* 15 */ "TLB write perm error",          \
+      /* 16 */ "MPU region ins error",          \
+      /* 17 */ "MPU region data error",         \
+      }
+
 #ifndef __MUTEK_ASM__
 
 # include <hexo/local.h>
@@ -53,7 +95,7 @@ cpu_interrupt_disable(void)
 		    "	ori	    r1, r1, 0x1     \n"
 		    "	addi	r1, r1, -1      \n"
 		    "	wrctl	status, r1		\n"
-
+		    ".set at 					\n"
                     :
                     :
                     : "memory"     /* compiler memory barrier */
@@ -70,6 +112,7 @@ cpu_interrupt_enable(void)
 		    "	rdctl	r1, status		\n"
 		    "	ori	    r1, r1, 0x1     \n"
 		    "	wrctl	status, r1		\n"
+		    ".set at 					\n"
 
                     :
                     :
@@ -123,6 +166,7 @@ cpu_interrupt_savestate_disable(reg_t *state)
 		    "	ori	    r1, %0, 0x1     \n"
 		    "	addi	r1, r1, -1      \n"
 		    "	wrctl	status, r1		\n"
+		    ".set at 					\n"
 		  : "=r" (*state)
                     :
                     : "memory"     /* compiler memory barrier */
