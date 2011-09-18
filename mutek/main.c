@@ -153,7 +153,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
   printk("CPU Fault: cpuid(%u) faultid(%u-%s)\n", cpu_id(), type, name);
   printk("Execution pointer: %p, Bad address (if any): %p\n"
 	 "Registers:"
-		 , (void*)*execptr, (void*)dataptr);
+		 , (void*)execptr, (void*)dataptr);
 
   for (i = CPU_CONTEXT_REG_FIRST; i < CPU_CONTEXT_REG_COUNT; i++)
 #ifdef CPU_CONTEXT_REG_NAMES

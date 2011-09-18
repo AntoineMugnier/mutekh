@@ -82,3 +82,8 @@ cpu_context_destroy(struct context_s *context)
 #endif
 }
 
+void cpu_exception_resume_pc(struct cpu_context_s *regs, uintptr_t pc)
+{
+  regs->pc = pc;
+}
+

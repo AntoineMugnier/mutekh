@@ -66,6 +66,11 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 
 
 
+void cpu_exception_resume_pc(struct cpu_context_s *regs, uintptr_t pc)
+{
+  regs->pc = pc;
+}
+
 void
 cpu_context_destroy(struct context_s *context)
 {

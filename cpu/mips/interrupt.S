@@ -169,10 +169,9 @@ interrupt_ex:
 2:
 
         srl     $4,     $4,     2                  // arg0 type
-        addiu   $5,     $26,    CPU_MIPS_CONTEXT_PC // arg1 execptr
+        //      arg1: $5 is execptr
         mfc0    $6,     $CPU_MIPS_BADADDR          // arg2 data error
-        addiu   $7,     $26,    CPU_MIPS_CONTEXT_GPR(1) // arg3 reg table
-        move    $8,     $sp                        // arg4 sp
+        move    $7,     $26                        // arg3 reg table
 
         // call handler
         addiu   $sp,    $sp,    -4 * INT_REG_SIZE/8
@@ -187,7 +186,7 @@ interrupt_ex:
 interrupt_sys:                                  
 
         move    $4,     $0                             // arg0 id == 0
-        addiu   $5,     $26,    CPU_MIPS_CONTEXT_GPR(1) // arg1 reg table
+        move    $5,     $26                            // arg1 reg table
 
         lw      $1,     cpu_syscall_handler($8)
 

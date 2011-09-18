@@ -295,14 +295,14 @@ x86_interrupt_ex_entry:
         // prepare fault handler arguments
         pushl	%eax            	/* stackptr */
         
-        leal    (x86_context + CPU_X86_CONTEXT_REGS_OFFSET)(%esi), %ecx
+        movl    (x86_context)(%esi), %ecx
         pushl	%ecx			/* regtable */
         
         movl	%cr2,   %ecx
         pushl	%ecx			/* dataptr */
         
-        leal    (x86_context + CPU_X86_CONTEXT_EIP)(%esi), %ecx
-        pushl	%ecx                    /* ptr to execptr */
+        movl    (x86_context + CPU_X86_CONTEXT_EIP)(%esi), %ecx
+        pushl	%ecx                    /* execptr */
         
         pushl	%edi			/* type */
 
@@ -507,7 +507,7 @@ x86_interrupt_sys_enter:
         movl    $0, TLS_SEG(:) (x86_context + CPU_X86_CONTEXT_mask)
 
         // prepare handler arguments
-        leal    (x86_context + CPU_X86_CONTEXT_REGS_OFFSET)(%esi), %ecx
+        leal    (x86_context)(%esi), %ecx
         pushl	%ecx				; /* regtable */
         
         pushl	%edi				; /* number */

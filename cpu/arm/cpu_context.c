@@ -138,9 +138,8 @@ struct context_s *arm_exc_common(reg_t no, struct cpu_context_s *context)
     if ( handler == NULL )
         handler = CPU_LOCAL_GET(cpu_exception_handler);
     handler(no,
-            (void *)context->gpr[15],
-            0,
-            &context->gpr[0],
+            context->gpr[15],
+            0, context,
             context->gpr[13]);
 
     return arm_except_preempt();
@@ -155,7 +154,7 @@ struct context_s *arm_swi_common(reg_t unused, struct cpu_context_s *context)
 #ifdef CONFIG_HEXO_USERMODE
     cpu_syscall_handler_t *handler =
         CONTEXT_LOCAL_GET(cpu_syscall_handler);
-    handler(0, &context->gpr[0]);
+    handler(0, context);
 #endif
 
     return arm_except_preempt();
@@ -174,6 +173,11 @@ struct context_s *arm_irq_common(reg_t no, struct cpu_context_s *context)
     return arm_except_preempt();
 }
 #endif
+
+void cpu_exception_resume_pc(struct cpu_context_s *regs, uintptr_t pc)
+{
+  regs->gpr[15] = pc;
+}
 
 // Local Variables:
 // tab-width: 4;

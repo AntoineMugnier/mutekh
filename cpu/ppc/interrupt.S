@@ -139,9 +139,9 @@
 
         // prepare handler call
         li      3,      \type           // arg0 type
-        addi    4,      2,      CPU_PPC_CONTEXT_PC // arg1 execptr
+//      mr      4,      4               // arg1 execptr
         mfdear  5                       // arg2 data error
-        addi    6,      2,      CPU_PPC_CONTEXT_GPR(0) // arg3 reg table
+        mr      6,      2               // arg3 reg table
         addi    7,      1,      224     // arg4 sp, skip redzone
 
         // find right handler
@@ -187,7 +187,7 @@
 #endif
         CONTEXT_LOCAL   lwz     cpu_syscall_handler, 9, 10
         li      3,      0               // arg0 number
-        addi    4,      2,      CPU_PPC_CONTEXT_GPR(0) // arg1 reg table
+        mr      4,      2               // arg1 reg table
         mtctr   9
         bctrl
 .endm

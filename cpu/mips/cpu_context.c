@@ -57,6 +57,11 @@ cpu_context_destroy(struct context_s *context)
 {
 }
 
+void cpu_exception_resume_pc(struct cpu_context_s *regs, uintptr_t pc)
+{
+  regs->pc = pc;
+}
+
 // Local Variables:
 // tab-width: 4;
 // c-basic-offset: 4;

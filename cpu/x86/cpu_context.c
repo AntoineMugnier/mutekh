@@ -103,3 +103,12 @@ cpu_context_destroy(struct context_s *context)
   cpu_x86_segdesc_free(tls_seg);
 }
 
+void cpu_exception_resume_pc(struct cpu_context_s *regs, uintptr_t pc)
+{
+# ifdef CONFIG_HEXO_USERMODE
+  if (regs->mask & CPU_X86_CONTEXT_MASK_USER)
+    regs->uregs.eip = pc;
+  else
+#endif
+    regs->kregs.eip = pc;
+}

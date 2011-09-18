@@ -135,12 +135,14 @@ static inline void cpu_interrupt_wait();
 
 /************************************************************ exceptions */
 
+struct cpu_context_s;
+
 /** CPU exception handler function template
     @see cpu_exception_handler_t
     @showcontent
 */
-# define CPU_EXCEPTION_HANDLER(n) void (n) (uint_fast8_t type, uintptr_t *execptr, \
-                                            uintptr_t dataptr, reg_t *regtable, \
+# define CPU_EXCEPTION_HANDLER(n) void (n) (uint_fast8_t type, uintptr_t execptr, \
+                                            uintptr_t dataptr, struct cpu_context_s *regs, \
                                             uintptr_t stackptr)
 /**
    CPU exception handler function type.
@@ -151,9 +153,9 @@ static inline void cpu_interrupt_wait();
    @param type exception ID
    @param execptr faulty instruction pointer
    @param dataptr faulty memory access pointer
-   @param regtable register table
+   @param regs processor registers context
    @param stackptr value of stack pointer
-   @see #CPU_EXCEPTION_HANDLER
+   @see #CPU_EXCEPTION_HANDLER @see cpu_exception_set_resume
 */
 typedef CPU_EXCEPTION_HANDLER(cpu_exception_handler_t);
 
@@ -161,12 +163,16 @@ typedef CPU_EXCEPTION_HANDLER(cpu_exception_handler_t);
 /** Set exception interrupt handler for the current cpu */
 void cpu_exception_sethandler(cpu_exception_handler_t *hndl);
 
+/** Change exception resume addess. This function must only be called
+    from an exception or syscall handler. */
+void cpu_exception_resume_pc(struct cpu_context_s *regs, uintptr_t pc);
+
 # ifdef CONFIG_HEXO_USERMODE
 
 /** Set user exception interrupt handler for the current context */
 void cpu_user_exception_sethandler(cpu_exception_handler_t *hndl);
 
-struct context_s *context;
+struct context_s;
 /** Set user exception interrupt handler for the given context */
 void cpu_user_exception_sethandler_ctx(struct context_s *context,
 				       cpu_exception_handler_t *hndl);
@@ -176,13 +182,11 @@ void cpu_user_exception_sethandler_ctx(struct context_s *context,
 
 #ifdef CONFIG_HEXO_USERMODE
 
-# include <hexo/context.h>
-
 /** CPU syscall handler function template
     @see cpu_syscall_handler_t
     @showcontent
 */
-# define CPU_SYSCALL_HANDLER(n) void (n) (uint_fast8_t number, reg_t *regtable)
+# define CPU_SYSCALL_HANDLER(n) void (n) (uint_fast8_t number, struct cpu_context_s *regs)
 
 /** CPU syscall handler function type.
 

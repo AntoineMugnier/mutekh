@@ -20,6 +20,7 @@
 */
 
 #include <hexo/interrupt.h>
+#include <hexo/context.h>
 
 #include <device/icu.h>
 
