@@ -243,7 +243,9 @@ FUNC_START(.text, cpu_context_set)
 
         /* Set stack pointer, 64 bits aligned */
         addu    $4,     $4,     $5 
-        addiu   $sp,    $4,     -CONFIG_HEXO_STACK_ALIGN
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        move    $fp,            $sp
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */
@@ -251,6 +253,7 @@ FUNC_START(.text, cpu_context_set)
 #endif
 
         /* Jump */
+        addiu   $sp,    $4,     -4 * INT_REG_SIZE/8
         j       $6
         .set pop                        
 FUNC_END(cpu_context_set)
@@ -279,6 +282,9 @@ FUNC_START(.text, cpu_context_stack_use)
 
         // use context stack
         lw      $sp,    CPU_MIPS_CONTEXT_GPR(CPU_MIPS_SP)($25)
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        move    $fp,            $sp
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */

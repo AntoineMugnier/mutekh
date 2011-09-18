@@ -182,6 +182,9 @@ FUNC_START(.text, cpu_context_set)
         /* Set stack pointer */
         add     r4,     r4,     r5
         addi    sp,     r4,     -CONFIG_HEXO_STACK_ALIGN
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     fp,     sp
+#endif
         
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */
@@ -212,6 +215,9 @@ FUNC_START(.text, cpu_context_stack_use)
         addi    r2,     r8,     nios2_context_regs
 
         ldw     sp,             CPU_NIOS2_CONTEXT_GPR(27)(r2)
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     fp,     sp
+#endif
         
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */

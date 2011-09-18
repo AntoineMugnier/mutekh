@@ -204,6 +204,9 @@ FUNC_START(.text, cpu_context_set)
     /* Set stack pointer, 64 bits aligned */
     add  r13, r0, r1
     bic  r13, #63
+#ifdef CONFIG_COMPILE_FRAMEPTR
+    mov  r11, r13
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
     /* leave memchecker command mode */
@@ -237,6 +240,9 @@ FUNC_START(.text, cpu_context_stack_use)
 
     // use stack ptr
     ldr     r13, [r6, #CPU_ARM_CONTEXT_GPR(13)]
+#ifdef CONFIG_COMPILE_FRAMEPTR
+    mov  r11, r13
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
     /* leave memchecker command mode */

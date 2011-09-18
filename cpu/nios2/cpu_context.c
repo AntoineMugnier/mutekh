@@ -51,6 +51,9 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   regs->save_mask = CPU_NIOS2_CONTEXT_RESTORE_CALLER; /* for r4 */
   regs->gpr[CPU_NIOS2_SP] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
                          - CONFIG_HEXO_STACK_ALIGN;
+#ifdef CONFIG_COMPILE_FRAMEPTR
+  regs->gpr[CPU_NIOS2_FP] = regs->gpr[CPU_NIOS2_SP];
+#endif
   regs->gpr[4] = (uintptr_t)param;
 
   regs->status = 0;

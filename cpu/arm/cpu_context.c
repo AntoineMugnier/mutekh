@@ -77,6 +77,9 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
     regs->gpr[13] =
         CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
         - CONFIG_HEXO_STACK_ALIGN;
+#ifdef CONFIG_COMPILE_FRAMEPTR
+    regs->gpr[11] = regs->gpr[13];
+#endif
     regs->gpr[0] = (uintptr_t)param;
 
     regs->cpsr = 0x000000d3;

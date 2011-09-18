@@ -82,7 +82,9 @@ FUNC_START(.boot, cpu_boot)
 
         /* adjust stack pointer, 64 bits aligned, mips abi requires 4 free words */
         addiu   $sp,    $sp,    -16
+#ifdef CONFIG_COMPILE_FRAMEPTR
         move    $fp,            $sp
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */

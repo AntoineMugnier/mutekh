@@ -48,6 +48,9 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   regs->save_mask = CPU_LM32_CONTEXT_RESTORE_CALLER;
   regs->gpr[28] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
                - CONFIG_HEXO_STACK_ALIGN;
+#ifdef CONFIG_COMPILE_FRAMEPTR
+  regs->gpr[27] = regs->gpr[28];
+#endif
   regs->gpr[1] = (uintptr_t)param;
   regs->ei = 0;
   regs->pc = (uintptr_t)entry;

@@ -53,6 +53,9 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   regs->save_mask = CPU_SPARC_CONTEXT_RESTORE_CALLER;
   regs->g[7] = (uintptr_t)context->tls;
   regs->o[6] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end) - CONFIG_HEXO_STACK_ALIGN;
+#ifdef CONFIG_COMPILE_FRAMEPTR
+  regs->i[7] = regs->o[6];
+#endif
   regs->o[0] = (uintptr_t)param;
   regs->psr = SPARC_PSR_PREV_SUSER_MODE | SPARC_PSR_SUSER_MODE | SPARC_PSR_PIL_MASK | SPARC_PSR_IRQ_ENABLED;
   regs->pc = (uintptr_t)entry;

@@ -78,7 +78,9 @@ FUNC_START(.boot, cpu_boot)
 #endif
 
         addi    sp,     sp,     -CONFIG_HEXO_STACK_ALIGN
+#ifdef CONFIG_COMPILE_FRAMEPTR
         mov     fp,     sp
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */

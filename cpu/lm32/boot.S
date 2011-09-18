@@ -47,6 +47,10 @@ FUNC_START(.text, cpu_boot)
         sub     sp,     sp,     r1
 #endif
 
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mv      fp,     sp
+#endif
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
 
         /* enter memchecker command mode */
@@ -63,8 +67,9 @@ FUNC_START(.text, cpu_boot)
         /* switch to new memchecker context */
         sw      (r0 + SOCLIB_MC_CTX_SET),    r3
 
-        /* enable all memchecker checks */
-        seti    r1,     SOCLIB_MC_CHECK_ALL
+        /* enable all memchecker checks except FP (gcc generated
+	code sometimes gives invalid FP for a few cycles) */
+        seti    r1,     SOCLIB_MC_CHECK_ALL & ~SOCLIB_MC_CHECK_FP
         sw      (r0 + SOCLIB_MC_ENABLE),     r1
 
         /* leave memchecker command mode */

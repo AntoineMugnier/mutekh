@@ -70,6 +70,9 @@ FUNC_START(.text, cpu_boot)
 
         /* leave room for register window save */
         add     %sp,            -INT_REG_SIZE/8*16,      %sp
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     %sp,            %i7
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */

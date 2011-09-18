@@ -33,6 +33,9 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   regs->save_mask = CPU_MIPS_CONTEXT_RESTORE_CALLER; /* for r4 */
   regs->gpr[CPU_MIPS_SP] = CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
                          - CONFIG_HEXO_STACK_ALIGN;
+#ifdef CONFIG_COMPILE_FRAMEPTR
+    regs->gpr[CPU_MIPS_FP] = regs->gpr[CPU_MIPS_SP];
+#endif
   regs->gpr[4] = (uintptr_t)param;
 
   regs->sr = 0x0000ff00 | CPU_MIPS_STATUS_EXL;

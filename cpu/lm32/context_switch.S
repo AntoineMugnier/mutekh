@@ -149,6 +149,9 @@ FUNC_START(.text, cpu_context_set)
 
         // set stack pointer
         add     sp,     r1,     r2
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mv      fp,     sp
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */
@@ -178,6 +181,9 @@ FUNC_START(.text, cpu_context_stack_use)
         add     r9,     r8,     r9
 
         lw      sp,     (r9 + CPU_LM32_CONTEXT_GPR(28))
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mv      fp,     sp
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */

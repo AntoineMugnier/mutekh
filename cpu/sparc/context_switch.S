@@ -232,6 +232,9 @@ FUNC_START(.text, cpu_context_set)
 
         // set stack pointer
         add     %o0,    %o1,    %o6
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     %o6,            %i7
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */
@@ -261,6 +264,9 @@ FUNC_START(.text, cpu_context_stack_use)
         add     %g1, %lo(sparc_context_regs), %g1
 
         ld      [%g1 + CPU_SPARC_CONTEXT_O(6)], %o6
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     %o6,            %i7
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */

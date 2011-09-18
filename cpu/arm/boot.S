@@ -85,6 +85,9 @@ FUNC_START(.text, arm_boot)
 
         /* adjust stack pointer, 64 bits aligned */
         bic  r13, r13, #63
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov  r11, r13
+#endif
 
 # ifdef CONFIG_SOCLIB_MEMCHECK
 	    /* leave memchecker command mode */

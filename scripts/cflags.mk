@@ -50,7 +50,9 @@ ifeq ($(CONFIG_COMPILE_DEBUG), defined)
 CFLAGS += -ggdb
 endif
 
-ifeq ($(CONFIG_COMPILE_FRAMEPTR), undefined)
+ifeq ($(CONFIG_COMPILE_FRAMEPTR), defined)
+CFLAGS += -fno-omit-frame-pointer
+else
 CFLAGS += -fomit-frame-pointer
 endif
 
