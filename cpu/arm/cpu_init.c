@@ -27,6 +27,7 @@
 #include <hexo/cpu.h>
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
+#include <hexo/context.h>
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
 # include <arch/mem_checker.h>
@@ -62,6 +63,32 @@ void cpu_init(void)
 	cls = cpu_local_storage[cpu_id()];
 		
 	asm volatile ("mcr p15,0,%0,c13,c0,3":: "r" (cls));
+#endif
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+        /* all these function may execute with invalid stack pointer
+           register due to arm shadow registers bank switching. */
+        void cpu_boot_end();
+        soclib_mem_bypass_sp_check(&cpu_boot, &cpu_boot_end);
+        void arm_exc_undef();
+        void arm_exc_undef_end();
+        soclib_mem_bypass_sp_check(&arm_exc_undef, &arm_exc_undef_end);
+        void arm_exc_pabt();
+        void arm_exc_pabt_end();
+        soclib_mem_bypass_sp_check(&arm_exc_pabt, &arm_exc_pabt_end);
+        void arm_exc_dabt();
+        void arm_exc_dabt_end();
+        soclib_mem_bypass_sp_check(&arm_exc_dabt, &arm_exc_dabt_end);
+# ifdef CONFIG_HEXO_IRQ
+        void arm_exc_irq();
+        void arm_exc_irq_end();
+        soclib_mem_bypass_sp_check(&arm_exc_irq, &arm_exc_irq_end);
+        void arm_exc_fiq();
+        void arm_exc_fiq_end();
+        soclib_mem_bypass_sp_check(&arm_exc_fiq, &arm_exc_fiq_end);
+# endif
+        void arm_context_jumpto_internal_end();
+        soclib_mem_bypass_sp_check(&cpu_context_jumpto, &arm_context_jumpto_internal_end);
 #endif
 }
 

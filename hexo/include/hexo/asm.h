@@ -53,6 +53,8 @@
 
 # define FUNC_END(x)                            \
         CPU_ASM_FUNC_END                      ; \
+        .globl x##_end                        ; \
+        x##_end:                                \
         .endfunc                              ; \
         .size x, .-x
 

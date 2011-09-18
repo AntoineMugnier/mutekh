@@ -67,9 +67,14 @@
 #define SOCLIB_MC_LOCK_DECLARE_OFFSET 52
 #define SOCLIB_MC_LOCK_DECLARE (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_LOCK_DECLARE_OFFSET)
 
-/** Enables the memchecker when going out of the range [PC:val] */
+/** Temporarily disable stack pointer range check until PC leaves [PC:val] range */
 #define SOCLIB_MC_DELAYED_MAGIC_OFFSET 56
 #define SOCLIB_MC_DELAYED_MAGIC (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_DELAYED_MAGIC_OFFSET)
+
+/** Update PC interval where stack pointer range check is ignored
+    with [r1:r2] range. Add to interval set when val!=0 */
+#define SOCLIB_MC_BYPASS_SP_CHECK_OFFSET 60
+#define SOCLIB_MC_BYPASS_SP_CHECK (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_BYPASS_SP_CHECK_OFFSET)
 
 #define SOCLIB_MC_CTX_ID_UNKNOWN -1
 #define SOCLIB_MC_CTX_ID_CURRENT -2
@@ -85,7 +90,7 @@
 /** Critical sections checks */
 # define SOCLIB_MC_CHECK_IRQS_LOCK 16
 
-# if defined(CONFIG_COMPILE_FRAMEPTR) && (CONFIG_COMPILE_OPTIMIZE == 0)
+# if defined(CONFIG_COMPILE_FRAMEPTR)
 #  define SOCLIB_MC_CHECK_SPFP 3
 #  define SOCLIB_MC_CHECK_ALL 31
 # else
@@ -191,6 +196,18 @@ soclib_mem_mark_initialized(void* addr, size_t size)
   order_compiler_mem();
 }
 
+static inline __attribute__ ((always_inline)) void
+soclib_mem_bypass_sp_check(void* pc_start, void *pc_end)
+{
+  order_compiler_mem();
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
+  cpu_mem_write_32(SOCLIB_MC_R1, (uint32_t)pc_start);
+  cpu_mem_write_32(SOCLIB_MC_R2, (uint32_t)pc_end);
+  cpu_mem_write_32(SOCLIB_MC_BYPASS_SP_CHECK, 1);
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+  order_compiler_mem();
+}
+
 #  else /* CONFIG_SOCLIB_MEMCHECK */
 
 static inline __attribute__ ((always_inline)) void
@@ -233,6 +250,10 @@ soclib_mem_mark_initialized(void* addr, size_t size)
 {
 }
 
+static inline __attribute__ ((always_inline)) void
+soclib_mem_bypass_sp_check(uintptr_t pc_start, uintptr_t pc_end)
+{
+}
 
 #  endif
 

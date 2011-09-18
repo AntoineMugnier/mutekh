@@ -193,8 +193,8 @@ static void bootstrap_cleanup(void *param)
 
 static void other_cleanup(void *param)
 {
-  cpu_id_t id = (uintptr_t)param;
 #ifdef CONFIG_SOCLIB_MEMCHECK
+  cpu_id_t id = (uintptr_t)param;
   soclib_mem_check_delete_ctx(id);
 #endif
 
