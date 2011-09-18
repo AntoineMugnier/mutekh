@@ -72,6 +72,10 @@ struct cpu_context_s
 #endif
 } __attribute__((aligned(16)));
 
+# define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "lo", "hi", "sr", "pc"
+# define CPU_CONTEXT_REG_FIRST 1
+# define CPU_CONTEXT_REG_COUNT 36
+
 # endif  /* __MUTEK_ASM__ */
 
 #endif

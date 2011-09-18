@@ -39,12 +39,12 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 /** general purpose regsiters count */
 # define CPU_GPREG_COUNT	32
 
-# define CPU_GPREG_NAMES {                                                         \
-                "vol", " sp", "sd1", "ar0", "ar1", " a2", " a3", " a4",            \
-                        " a5", " a6", " a7", " v0", " v1", "sd0", " l0", " l1",   \
-                        " l2", " l3", " l4", " l5", " l6", " l7", " l8", " l9",    \
-                        "l10", "l11", "l12", "l13", "l14", "l15", "l16", "l17"     \
-}
+# define CPU_GPREG_NAMES                                                \
+  "vol", " sp", "sd1", "ar0", "ar1", " a2", " a3", " a4",               \
+    " a5", " a6", " a7", " v0", " v1", "sd0", " l0", " l1",             \
+    " l2", " l3", " l4", " l5", " l6", " l7", " l8", " l9",             \
+    "l10", "l11", "l12", "l13", "l14", "l15", "l16", "l17"
+
 
 # define CPU_TYPE_NAME powerpc
 

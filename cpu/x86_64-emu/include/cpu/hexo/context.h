@@ -52,6 +52,10 @@ struct cpu_context_s
 # endif
 };
 
+# define CPU_CONTEXT_REG_NAMES "savemask", CPU_GPREG_NAMES, "rip", "rflags"
+# define CPU_CONTEXT_REG_FIRST 1
+# define CPU_CONTEXT_REG_COUNT 17
+
 #else
 
 .extern x86emu_context

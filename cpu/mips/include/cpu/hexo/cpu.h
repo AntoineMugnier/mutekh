@@ -54,12 +54,11 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 /** general purpose regsiters count */
 # define CPU_GPREG_COUNT	32
 
-# define CPU_GPREG_NAMES {											   \
-"pc", "at", "v0", "v1", "a0", "a1", "a2", "a3",						   \
+# define CPU_GPREG_NAMES 								   \
+"zero", "at", "v0", "v1", "a0", "a1", "a2", "a3",					   \
 "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",						   \
 "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",						   \
-"t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra",						   \
-}
+"t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra"						   \
 
 # define CPU_FAULT_COUNT 32
 

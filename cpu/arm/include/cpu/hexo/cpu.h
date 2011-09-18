@@ -39,10 +39,10 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 /** general purpose regsiters count */
 #define CPU_GPREG_COUNT	16
 
-#define CPU_GPREG_NAMES {											   \
-"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",						   \
-"r8", "r9", "r10", "r11", "r12", "sp", "lr", "pc",						   \
-}
+#define CPU_GPREG_NAMES                                 \
+    "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",     \
+    "r8", "r9", "r10", "r11", "r12", "sp", "lr", "pc"
+      
 
 #define CPU_TYPE_NAME arm
 

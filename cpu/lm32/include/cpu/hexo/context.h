@@ -49,6 +49,10 @@ struct cpu_context_s
   reg_t pc;
 };
 
+# define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "ei", "pc"
+# define CPU_CONTEXT_REG_FIRST 1
+# define CPU_CONTEXT_REG_COUNT 34
+
 # endif  /* __MUTEK_ASM__ */
 
 #endif

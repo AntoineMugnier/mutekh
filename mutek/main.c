@@ -23,6 +23,8 @@
 #include <hexo/init.h>
 #include <hexo/types.h>
 #include <hexo/endian.h>
+#include <hexo/context.h>
+#include <hexo/cpu.h>
 
 #include <hexo/interrupt.h>
 #include <hexo/local.h>
@@ -135,8 +137,8 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 {
   int_fast8_t		i;
   reg_t			*sp = (reg_t*)stackptr;
-#ifdef CPU_GPREG_NAMES
-  static const char		*reg_names[] = CPU_GPREG_NAMES;
+#ifdef CPU_CONTEXT_REG_NAMES
+  static const char		*reg_names[] = { CPU_CONTEXT_REG_NAMES };
 #endif
 
 #ifdef CPU_FAULT_NAMES
@@ -153,14 +155,11 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 	 "Registers:"
 		 , (void*)*execptr, (void*)dataptr);
 
-  for (i = 0; i < CPU_GPREG_COUNT; i++)
-#ifdef CPU_GPREG_NAMES
-	  printk("%s=%p%c", reg_names[i], (void*)(uintptr_t)regtable[i], (i + 1) % 4 ? ' ' : '\n');
+  for (i = CPU_CONTEXT_REG_FIRST; i < CPU_CONTEXT_REG_COUNT; i++)
+#ifdef CPU_CONTEXT_REG_NAMES
+    printk("%s=%p%c", reg_names[i], (reg_t*)(uintptr_t)regs + i, (i + 1) % 4 ? ' ' : '\n');
 #else
-    printk("%p%c", (void*)(uintptr_t)regtable[i], (i + 1) % 4 ? ' ' : '\n');
-#endif
-#if defined(CONFIG_LIBELF_RTLD_TLS)
-    printk("hwrena=%p tls=%p\n", regtable[CPU_GPREG_COUNT], regtable[CPU_GPREG_COUNT+1]);
+    printk("%p%c", (void*)(uintptr_t)regs[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
 
   printk("Stack top (%p):\n", (void*)stackptr);

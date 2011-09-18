@@ -47,6 +47,10 @@ struct cpu_context_s
     reg_t cpsr;
 };
 
+# define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "cpsr", "savemask"
+# define CPU_CONTEXT_REG_FIRST 1
+# define CPU_CONTEXT_REG_COUNT 18
+
 #endif
 
 #endif
