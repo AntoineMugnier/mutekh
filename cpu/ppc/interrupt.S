@@ -86,16 +86,10 @@
         // preserve ppc abi redzone
         addi    1,      1,      -224
 
-        // save caller saved gp registers 0, 2 - 13
+        // save caller saved gp registers 2 to 13
         SMW_GP  2,      3,      13
         mfspr   0,              PPC_SPRG(2),
         stw     0,              CPU_PPC_CONTEXT_GPR( 2)(2)
-
-#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-        // save pc
-        \srr_pc 4
-        stw     4,              CPU_PPC_CONTEXT_PC(2)
-#endif
 
         // save status register
         \srr_msr 8
@@ -110,6 +104,9 @@
         // save counter register
         mfctr   0
         stw     0,              CPU_PPC_CONTEXT_CTR(2)
+
+        // read pc
+        \srr_pc 4
 .endm
 
 
@@ -136,6 +133,9 @@
 */
 
 .macro PPC_EXCEPT_FAULT type
+
+        // save pc
+        stw     4,              CPU_PPC_CONTEXT_PC(2)
 
         // prepare handler call
         li      3,      \type           // arg0 type
@@ -166,6 +166,11 @@
 
         mtctr   9
         bctrl
+
+        // read back pc
+        lwz     4,              CPU_PPC_CONTEXT_PC(2)
+        mtsrr0  4
+
 .endm
 
 
@@ -174,8 +179,12 @@
   The PPC_EXCEPT_SYSCALL macro contains code to call syscall handlers
 */
 
-.macro PPC_EXCEPT_SYSCALL
 #ifdef CONFIG_HEXO_USERMODE
+.macro PPC_EXCEPT_SYSCALL
+
+        // save pc
+        stw     4,              CPU_PPC_CONTEXT_PC(2)
+
         // from user mode ?
         andi.   10,     8,      PPC_MSR_USERMODE
         beq     1f
@@ -184,13 +193,19 @@
         CONTEXT_LOCAL   lwz     context_stack_end, 1, 10
         addi    1,      1,      -CONFIG_HEXO_STACK_ALIGN
 1:
-#endif
+
         CONTEXT_LOCAL   lwz     cpu_syscall_handler, 9, 10
         li      3,      0               // arg0 number
         mr      4,      2               // arg1 reg table
         mtctr   9
         bctrl
+
+        // read back pc
+        lwz     4,              CPU_PPC_CONTEXT_PC(2)
+        mtsrr0  4
+
 .endm
+#endif
 
 
 /*
@@ -198,6 +213,12 @@
 */
 
 .macro PPC_EXCEPT_IRQ number
+
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+        // save pc
+        stw     4,              CPU_PPC_CONTEXT_PC(2)
+#endif
+
 #ifdef CONFIG_HEXO_USERMODE
         // from user mode ?
         andi.   10,     8,      PPC_MSR_USERMODE
@@ -311,14 +332,14 @@
         lwz     0,              CPU_PPC_CONTEXT_CTR(2)
         mtctr   0
 
-        // restore caller saved gp registers 0 - 13
+        // restore caller saved gp registers 3 to 13
         LMW_GP  2,      3,      13
 
         // restore condition register
         lwz     0,              CPU_PPC_CONTEXT_CR(2)
         mtcr    0
 
-        // restore 0 - 2
+        // restore 0 to 2
         LMW_GP  2,      0,      2
 
         rfi
@@ -428,7 +449,7 @@ FUNC_START_ORG(ppc_syscall_entry, 0xc00)
         PPC_EXCEPT_SYSCALL
 	// FIXME do not need to restore everything for syscall
 #else
-        PPC_EXCEPT_FAULT CPU_EXCEPTION_ILLEGAL_INS
+        PPC_EXCEPT_FAULT CPU_EXCEPTION_SYSCALL
 #endif
         b ppc_preempt_and_restore
 FUNC_END(ppc_syscall_entry)

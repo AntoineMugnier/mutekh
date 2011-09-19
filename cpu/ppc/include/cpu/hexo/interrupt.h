@@ -26,24 +26,24 @@
 
 #define CPU_INTERRUPT_H_
 
-#define CPU_EXCEPTION_ILLEGAL_INS  0x1
-#define CPU_EXCEPTION_DATA_ERROR   0x2
-#define CPU_EXCEPTION_INS_ERROR    0x3
-#define CPU_EXCEPTION_DATA_ALIGN   0x4
-#define CPU_EXCEPTION_IRQ          0x5
-#define CPU_EXCEPTION_SYSCALL      0x6
-#define CPU_EXCEPTION_OTHER        0x7
+#define CPU_EXCEPTION_ILLEGAL_INS  0
+#define CPU_EXCEPTION_DATA_ERROR   1
+#define CPU_EXCEPTION_INS_ERROR    2
+#define CPU_EXCEPTION_DATA_ALIGN   3
+#define CPU_EXCEPTION_IRQ          4
+#define CPU_EXCEPTION_SYSCALL      5
+
 #define CPU_FAULT_COUNT 6
 
 #ifndef __MUTEK_ASM__
 
 # define CPU_FAULT_NAMES {       \
-"Unknown",                      \
-"Program",                      \
+"Illegal instruction",          \
 "Data storage",                 \
 "Instruction storage",          \
 "Alignment",                    \
-"Other",                        \
+"Irq",                          \
+"Syscall",                      \
 }
 
 # include "hexo/local.h"
