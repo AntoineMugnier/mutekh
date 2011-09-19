@@ -14,8 +14,8 @@ void *f(void *param)
       pthread_mutex_lock(&m);
       printk("(%s:%i) %s", cpu_type_name(), cpu_id(), param);
       pthread_mutex_unlock(&m);
-      cpu_cycle_wait(10000);
-      //      pthread_yield();
+//      cpu_cycle_wait(10000);
+      pthread_yield();
     }
 }
 
