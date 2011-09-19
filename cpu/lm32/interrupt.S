@@ -25,20 +25,28 @@
 
 .section .excep,"ax",@progbits
 
+.macro LM32_GET_REGARRAY  // get context registers save array
+#if 0
+        addi    r31,    r25,     lo(lm32_context_regs)
+          // lm32 As doesnt support lo() with addi
+#else
+        .int    0x373f0000 + lm32_context_regs
+#endif
+.endm
+
 .macro LM32_EXCEPT_ENTRY id
 
-        // get context registers save array
-        ori     r31,    r0,      lo(lm32_context_regs)
-        add     r31,    r25,     r31
+        LM32_GET_REGARRAY
 
-        // save r1
+        // save r1 & r2
         sw      (r31 + CPU_LM32_CONTEXT_GPR(1)), r1
+        sw      (r31 + CPU_LM32_CONTEXT_GPR(2)), r2
         // store excep id
         mvi     r1,     \id
 
         // goto asm handler
-        seta    r31,    lm32_excep_entry
-        b       r31
+        seta    r2,    lm32_excep_entry
+        b       r2
 
 .endm
 
@@ -92,26 +100,24 @@ __exception_base_ptr:
 
         .org __exception_base_ptr + 8*32
 
-.macro LM32_EXCEPT_RESTORE
-        .irp r, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 27, 28, 29
-        lw      r\r, (r31 + CPU_LM32_CONTEXT_GPR(\r))
-        .endr
-
-        eret
-.endm
-       
 FUNC_START(.text, lm32_excep_entry)
 
-        // save caller saved, fp, sp (r1 already saved)
-        .irp r, 2, 3, 4, 5, 6, 7, 8, 9, 10, 27, 28, 29
+        // save caller saved & r11, ra (r1 & r2 already saved)
+        .irp r, 3, 4, 5, 6, 7, 8, 9, 10, 11, 29
         sw      (r31 + CPU_LM32_CONTEXT_GPR(\r)), r\r
         .endr
+
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+        // clear context preempt handler
+        seta    r2, cpu_preempt_handler
+        sw      (r2+0), r0
+#endif
 
         // save PC
         sw      (r31 + CPU_LM32_CONTEXT_PC), r30
 
         // call fault handler
-        addi    r2,     r31,    CPU_LM32_CONTEXT_PC
+        mv      r2,     r30
         mv      r3,     r0
         mv      r4,     r31
         mv      r5,     sp
@@ -123,33 +129,30 @@ FUNC_START(.text, lm32_excep_entry)
         // readback PC
         lw      r30, (r31 + CPU_LM32_CONTEXT_PC)
 
-        // restore regs
-        .irp r, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 27, 28, 29
-        lw      r\r, (r31 + CPU_LM32_CONTEXT_GPR(\r))
-        .endr
-
-        // return
-        eret
+        bi      lm32_restore_preempt
 
 FUNC_END(lm32_excep_entry)
 
 #ifdef CONFIG_HEXO_IRQ
 FUNC_START(.text, lm32_irq_entry)
 
-        // get context registers save array
-        ori     r31,    r0,      lo(lm32_context_regs)
-        add     r31,    r25,     r31
+        LM32_GET_REGARRAY
 
-        // save caller saved regs, fp, sp
+        // save caller saved regs & r11, ra
         .irp r, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 29
         sw      (r31 + CPU_LM32_CONTEXT_GPR(\r)), r\r
         .endr
 
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+        // clear context preempt handler
+        seta    r1, cpu_preempt_handler
+        sw      (r1+0), r0
+# endif
+
         // find lowest irq number
         rcsr    r1,     IP
         mv      r11,    r1
-        calli   __ffssi2
-        addi    r1,     r1,     -1
+        calli   __ctzsi2
 
         // call irq handler
         seta    r2,     cpu_interrupt_handler
@@ -162,6 +165,54 @@ FUNC_START(.text, lm32_irq_entry)
         xor     r2,     r11,    r2
         wcsr    IP,     r2
 
+FUNC_END(lm32_irq_entry)
+#endif
+
+FUNC_START(.text, lm32_restore_preempt)
+
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+
+        // check if a preempt handler has been registered
+        seta    r1, cpu_preempt_handler
+        lw      r1, (r1+0)
+        be      r1,     r0,     1f
+
+        // call preempt handler
+        call    r1
+        
+        // got pointer to context to switch to ?
+        be      r1,     r0,     1f
+
+        // save callee saved registers
+        .irp r, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 27, 28
+        sw      (r31 + CPU_LM32_CONTEXT_GPR(\r)), r\r
+        .endr
+
+        // save PC
+        sw      (r31 + CPU_LM32_CONTEXT_PC), r30
+
+        // save irq status
+        rcsr    r2,     IE
+        andi    r2,     r2,     2
+        cmpne   r2,     r2,     r0
+        sw      (r31 + CPU_LM32_CONTEXT_IE), r2
+
+        // write save/restore mask
+        seti    r2, CPU_LM32_CONTEXT_RESTORE_CALLEE | CPU_LM32_CONTEXT_RESTORE_CALLER
+        sw      (r31 + CPU_LM32_CONTEXT_SAVE_MASK), r2
+
+# ifdef CONFIG_HEXO_CONTEXT_STATS
+        // update context stats
+        mv      r11,    r1
+        calli   context_preempt_stats
+        mv      r1,    r11
+# endif
+
+        // switch to new context
+        bi      cpu_context_jumpto
+1:      
+#endif
+
         // restore regs
         .irp r, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 29
         lw      r\r, (r31 + CPU_LM32_CONTEXT_GPR(\r))
@@ -170,8 +221,7 @@ FUNC_START(.text, lm32_irq_entry)
         // return
         eret
 
-FUNC_END(lm32_irq_entry)
-#endif
+FUNC_END(lm32_restore_preempt)
 
 // Local Variables:
 // indent-tabs-mode: nil;
