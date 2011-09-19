@@ -295,7 +295,7 @@ x86_interrupt_ex_entry:
         // prepare fault handler arguments
         pushl	%eax            	/* stackptr */
         
-        movl    (x86_context)(%esi), %ecx
+        leal    (x86_context)(%esi), %ecx
         pushl	%ecx			/* regtable */
         
         movl	%cr2,   %ecx
