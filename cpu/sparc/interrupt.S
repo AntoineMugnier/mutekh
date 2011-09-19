@@ -46,10 +46,10 @@
 */
 
 .macro PUT_ENTRY n k
-        sethi   %hi(\k),          %l6
-        or      %l6,    %lo(\k),  %l6
-        jmp     %l6
-        mov     \n, %o0
+        sethi   %hi(\k),          %l4
+        or      %l4,    %lo(\k),  %l4
+        jmp     %l4
+        mov     \n, %l4
 .endm
 
 .macro PUT_ENTRIES i j k
@@ -119,6 +119,17 @@ __exception_base_ptr:
 
 /* This macro use all local regs to save caller saved register before calling C code */
 .macro SPARC_EXCEPT_SAVE
+
+#if CONFIG_CPU_SPARC_WINCOUNT < 3
+        /* need to save %o* registers to preserve %i* registers in interrupted code */
+        add     %g7, %lo(sparc_context_regs), %l0
+        
+        std     %o0, [%l0 + CPU_SPARC_CONTEXT_I(0)]
+        std     %o2, [%l0 + CPU_SPARC_CONTEXT_I(2)]
+        std     %o4, [%l0 + CPU_SPARC_CONTEXT_I(4)]
+        std     %o6, [%l0 + CPU_SPARC_CONTEXT_I(6)]
+#endif
+
         // preserve other caller saved registers
         mov     %y,     %l0
         mov     %g1,    %l3
@@ -136,6 +147,16 @@ __exception_base_ptr:
         mov     %l5,   %psr
         mov     %l6,    %i6
         mov     %l7,    %i7
+
+#if CONFIG_CPU_SPARC_WINCOUNT < 3
+        /* need to restore %o* registers */
+        add     %g7, %lo(sparc_context_regs), %l0
+
+        ldd     [%l0 + CPU_SPARC_CONTEXT_I(0)], %o0
+        ldd     [%l0 + CPU_SPARC_CONTEXT_I(2)], %o2
+        ldd     [%l0 + CPU_SPARC_CONTEXT_I(4)], %o4
+        ldd     [%l0 + CPU_SPARC_CONTEXT_I(6)], %o6
+#endif
 .endm
 
 FUNC_START(.text, sparc_excep_entry)
@@ -144,6 +165,8 @@ FUNC_START(.text, sparc_excep_entry)
 
         // use interrupted code stack
         mov     %i6,    %o6
+
+        mov     %l4,    %o0
 
         // context registers save array
         add     %g7, %lo(sparc_context_regs), %l4
@@ -193,7 +216,7 @@ FUNC_START(.text, sparc_irq_entry)
 #endif
 
         call    %o1
-        nop
+        mov     %l4,    %o0
 
         SPARC_EXCEPT_RESTORE
 
@@ -212,15 +235,17 @@ FUNC_START(.text, sparc_syscall_entry)
         // use interrupted code stack
         mov     %i6,    %o6
 
+        mov     %l4,    %o0
+        
         // context registers save array
         add     %g7, %lo(sparc_context_regs), %l4
 
         // dump some registers
         st     %g1, [%l4 + CPU_SPARC_CONTEXT_G(1)]
-        std    %i0, [%l4 + CPU_SPARC_CONTEXT_I(0)]
-        std    %i2, [%l4 + CPU_SPARC_CONTEXT_I(2)]
-        std    %i4, [%l4 + CPU_SPARC_CONTEXT_I(4)]
-        std    %i6, [%l4 + CPU_SPARC_CONTEXT_I(6)]
+        std    %i0, [%l4 + CPU_SPARC_CONTEXT_O(0)]
+        std    %i2, [%l4 + CPU_SPARC_CONTEXT_O(2)]
+        std    %i4, [%l4 + CPU_SPARC_CONTEXT_O(4)]
+        std    %i6, [%l4 + CPU_SPARC_CONTEXT_O(6)]
 
         ld      [%g7 + %lo(cpu_syscall_handler)], %o2
 
