@@ -84,26 +84,22 @@ static CPU_INTERRUPT_HANDLER(icu_mips_handler)
 	struct icu_mips_private_s	*pv = dev->drv_pv;
 	struct icu_mips_handler_s	*h;
 
-	if ( !irq )
-		return;
-	uint32_t irq_no = __builtin_ctz(irq);
-
-	if ( irq_no >= ICU_MIPS_MAX_VECTOR ) {
-		printk("Mips %d got spurious interrupt %i\n", cpu_id(), irq_no);
+	if ( irq >= ICU_MIPS_MAX_VECTOR ) {
+		printk("Mips %d got spurious interrupt %i\n", cpu_id(), irq);
 		return;
 	}
 
-	h = pv->table + irq_no;
+	h = pv->table + irq;
 	
 	if (h->hndl) {
 		h->hndl(h->data);
     } else {
 		printk("Mips %d had unhandled interrupt %i, disabling it, "
                "reenabling will be impossible\n",
-               cpu_id(), irq_no);
+               cpu_id(), irq);
         
         reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
-        status &= ~(1 << (irq_no + 10));
+        status &= ~(1 << (irq + 10));
         cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
     }
 }

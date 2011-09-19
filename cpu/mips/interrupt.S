@@ -209,9 +209,37 @@ interrupt_sys:
 #ifdef CONFIG_HEXO_IRQ
 interrupt_hw:                                   
 
-        /* hw interrupt line id */
-        srl     $4,     $6,     10                   
-        andi    $4,     $4,     0xff                 
+#if defined (CONFIG_HEXO_CONTEXT_PREEMPT) || !defined (CONFIG_CPU_MIPS_USE_ERET)
+        // get epc
+        mfc0    $5,     $CPU_MIPS_EPC
+        sw      $5,     CPU_MIPS_CONTEXT_PC($26)
+#endif
+
+        /* pending hw irq enabled in status */
+        and     $4,     $6,     $9
+        srl     $4,     $4,     CPU_MIPS_STATUS_IM_SHIFT
+        andi    $4,     $4,     CPU_MIPS_STATUS_IM >> CPU_MIPS_STATUS_IM_SHIFT
+
+        /* find lowest pending irq line */
+#if (CPU_MIPS_STATUS_IM >> CPU_MIPS_STATUS_IM_SHIFT) > 256
+# warning Interrupt mask larger than 8 bits
+        jal     __ffssi2
+        addiu   $4,     $2,     -1
+#else
+        // optimized 8 bits version
+        subu    $2,	$0,	$4
+        and     $2,	$2,	$4
+        addiu   $2,	$2,	-1
+        srl     $4,	$2,	1
+        andi    $4,	$4,	0x55
+        subu    $4,	$2,	$4
+        srl     $2,	$4,	2
+        andi    $2,	$2,	0x33
+        andi    $4,	$4,	0x33
+        addu    $2,	$2,	$4
+        srl     $3,	$2,	4
+        addu    $4,	$3,	$2
+#endif
 
         CPU_LOCAL lw,   cpu_interrupt_handler, $1, $1
 
