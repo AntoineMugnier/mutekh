@@ -1,5 +1,7 @@
 
 #include <stdlib.h>
+
+#include <hexo/cpu.h>
 #include <hexo/error.h>
 #include <hexo/context.h>
 #include <hexo/interrupt.h>
@@ -38,7 +40,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 #endif
   regs->gpr[4] = (uintptr_t)param;
 
-  regs->sr = 0x0000ff00 | CPU_MIPS_STATUS_EXL;
+  regs->sr = CPU_MIPS_STATUS_IM;
 #if defined (CONFIG_HEXO_FPU) && !defined(CONFIG_HEXO_LAZY_SWITCH)
   regs->sr |= CPU_MIPS_STATUS_FPU;
   regs->fcsr = 0;

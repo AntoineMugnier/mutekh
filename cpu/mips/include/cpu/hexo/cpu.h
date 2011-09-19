@@ -40,8 +40,32 @@
 #define CPU_MIPS_BADADDR        8
 #define CPU_MIPS_EEPC           30
 
-# define CPU_MIPS_STATUS_EXL    0x2
 # define CPU_MIPS_STATUS_FPU    0x20000000
+/** interrupts enabled */
+# define CPU_MIPS_STATUS_EI     0x00000001
+
+# define CPU_MIPS_STATUS_IM     0x0000fc00
+# define CPU_MIPS_STATUS_IM_SHIFT 10
+
+#ifdef CONFIG_CPU_MIPS_USE_ERET
+/** exception mode */
+# define CPU_MIPS_STATUS_EXL    0x00000002
+/** user mode */
+# define CPU_MIPS_STATUS_UM     0x00000010
+
+#else
+/** interruptes enabled */
+# define CPU_MIPS_STATUS_EIc    CPU_MIPS_STATUS_EI
+/** kernel mode when set */
+# define CPU_MIPS_STATUS_KUc    0x00000002
+/** previous interruptes enabled */
+# define CPU_MIPS_STATUS_EIp    0x00000004
+/** previous kernel mode when set */
+# define CPU_MIPS_STATUS_KUp    0x00000008
+
+#endif
+
+# define CPU_MIPS_CAUSE_BD      0x80000000
 
 #ifndef __MUTEK_ASM__
 
@@ -60,39 +84,6 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",						   \
 "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra"						   \
 
-# define CPU_FAULT_COUNT 32
-
-# define CPU_FAULT_NAMES {			\
-"Interrupt",					\
-"TLB Modification",				\
-"TLB Load error",				\
-"TLB Store error",				\
-"Address error (Load)",				\
-"Address error (Store)",			\
-"Instruction bus error",			\
-"Data bus error",				\
-"Syscall",					\
-"Break point",					\
-"Reserved instruction",				\
-"Coproc unusable",				\
-"Overflow",					\
-"Trap",						\
-"Reserved",					\
-"Floating point",				\
-    "-",        "-",    "C2E",      "-",	\
-    "-",        "-",    "MDMX",     "WATCH",	\
-    "MCheck",   "-",    "-",        "-",	\
-    "-",        "-",    "CacheErr", "-"		\
-}
-
-# define CPU_EXCEPTION_DATA_ALIGN   0x4 // ADEL
-# define CPU_EXCEPTION_INS_ERROR    0x6 // IBE
-# define CPU_EXCEPTION_DATA_ERROR   0x7 // DBE
-# define CPU_EXCEPTION_BREAKPOINT   0x9 // Bp
-# define CPU_EXCEPTION_ILLEGAL_INS  0xa // RI
-# define CPU_EXCEPTION_COPROC       0xb // CpU
-# define CPU_EXCEPTION_TRAP         0xd // Tr
-# define CPU_EXCEPTION_FPE          0xf // FPE
 
 # if CONFIG_CPU_MIPS_VERSION >= 32 
 

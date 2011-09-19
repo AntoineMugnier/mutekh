@@ -99,8 +99,13 @@ mips_interrupt_entry:
 #endif
 
 #ifdef CONFIG_HEXO_USERMODE
+
         // from user mode ?
+# ifdef CONFIG_CPU_MIPS_USE_ERET
         andi    $7,     $9,     CPU_MIPS_STATUS_UM
+# else
+        andi    $7,     $9,     CPU_MIPS_STATUS_KUp
+# endif
         beq     $7,     $0,     1f
 
         // get tls
@@ -109,19 +114,13 @@ mips_interrupt_entry:
 
         // use kernel context stack when from user mode
         lw      $sp,    context_stack_end($8)
-        addiu   $sp,    $sp,      -CONFIG_HEXO_STACK_ALIGN
+        addiu   $sp,    $sp,    -4 * INT_REG_SIZE/8
 1:
 #endif
 
         // get cause
         mfc0    $6,     $CPU_MIPS_CAUSE                          
         andi    $4,     $6,     0x3c                 
-
-        // get epc
-        mfc0    $5,     $CPU_MIPS_EPC
-
-        // save pc
-        sw      $5,     CPU_MIPS_CONTEXT_PC($26)
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // clear context preempt handler
@@ -154,11 +153,27 @@ mips_interrupt_entry:
          **************************************************************/
 interrupt_ex:                                   
 
-#ifdef CONFIG_HEXO_USERMODE
-        // from user mode ?
-        andi    $7,     $9,     CPU_MIPS_STATUS_UM
-        beq     $7,     $0,     1f
+        // get epc
+        mfc0    $5,     $CPU_MIPS_EPC
+        sw      $5,     CPU_MIPS_CONTEXT_PC($26)
 
+        // faulty instruction is epc + 4 if 'cause branch delay' bit is set
+        li      $7,     CPU_MIPS_CAUSE_BD
+        and     $6,     $6,     $7
+        beq     $6,     $0,     1f
+        addiu   $5,     $5,     4
+1:      
+
+#ifdef CONFIG_HEXO_USERMODE
+
+        // from user mode ?
+# ifdef CONFIG_CPU_MIPS_USE_ERET
+        andi    $7,     $9,     CPU_MIPS_STATUS_UM
+# else
+        andi    $7,     $9,     CPU_MIPS_STATUS_KUp
+# endif
+        beq     $7,     $0,     1f
+        
         // use context local fault handler for user mode when available
         lw      $1,     cpu_user_exception_handler($8)
         bne     $1,     $0,     2f
@@ -168,14 +183,24 @@ interrupt_ex:
         CPU_LOCAL lw,   cpu_exception_handler, $1, $1
 2:
 
+        addiu   $sp,    $sp,    -5 * INT_REG_SIZE/8
+
+        lw      $6,             CPU_MIPS_CONTEXT_GPR(29)($26)
+        sw      $6,             (4 * INT_REG_SIZE/8)($sp) // arg5: stackptr
+
         srl     $4,     $4,     2                  // arg0 type
         //      arg1: $5 is execptr
         mfc0    $6,     $CPU_MIPS_BADADDR          // arg2 data error
         move    $7,     $26                        // arg3 reg table
 
         // call handler
-        addiu   $sp,    $sp,    -4 * INT_REG_SIZE/8
         jalr    $1
+
+#ifdef CONFIG_CPU_MIPS_USE_ERET
+        // read back pc
+        lw      $1,    CPU_MIPS_CONTEXT_PC($26)
+        MTC0_   $1,    CPU_MIPS_EPC
+#endif
 
         j       mips_preempt_and_restore
 
@@ -185,6 +210,12 @@ interrupt_ex:
 #ifdef CONFIG_HEXO_USERMODE
 interrupt_sys:                                  
 
+        // get epc
+        mfc0    $5,     $CPU_MIPS_EPC
+        // resume pc += 4
+        addiu   $5,     $5,     4
+        sw      $5,     CPU_MIPS_CONTEXT_PC($26)
+
         move    $4,     $0                             // arg0 id == 0
         move    $5,     $26                            // arg1 reg table
 
@@ -193,10 +224,11 @@ interrupt_sys:
         addiu   $sp,    $sp,    -4 * INT_REG_SIZE/8
         jalr    $1                                   
 
-        // save pc + 4
-        mfc0    $5,     $CPU_MIPS_EPC
-        addiu   $5,     4        /* increment epc for not doing the syscall again */
-        sw      $5,     CPU_MIPS_CONTEXT_PC($26)
+# ifdef CONFIG_CPU_MIPS_USE_ERET
+        // read back pc
+        lw      $1,     CPU_MIPS_CONTEXT_PC($26)
+        MTC0_   $1,     CPU_MIPS_EPC
+# endif
 
         // FIXME cleanup all caller saved registers here for security reasons ?
         // FIXME do not need to restore everything for syscall
@@ -336,13 +368,13 @@ mips_restore:
         lw      $\r,            CPU_MIPS_CONTEXT_GPR(\r)($26)
         .endr
 
-#if CONFIG_CPU_MIPS_VERSION == 1
+#ifdef CONFIG_CPU_MIPS_USE_ERET
+        eret
+#else
         lw      $26,    CPU_MIPS_CONTEXT_PC($26)
         .set noreorder                                  
         jr      $26                                  
         rfe                                          
-#else
-        eret
 #endif
         .set pop                                        
 FUNC_END(mips_interrupt_entry)

@@ -53,8 +53,6 @@ FUNC_START(.text, cpu_context_switch)
 
         // save status register
         mfc0    $8,     $CPU_MIPS_STATUS
-        // context will be restored as an exception return
-        ori     $8,     CPU_MIPS_STATUS_EXL
         sw      $8,     CPU_MIPS_CONTEXT_SR($2)
 
 #ifdef CONFIG_HEXO_FPU
@@ -135,11 +133,15 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore status
         lw      $4,     CPU_MIPS_CONTEXT_SR($25)
+#ifdef CONFIG_CPU_MIPS_USE_ERET
+        // context will be restored as an exception return
+        ori     $4,     CPU_MIPS_STATUS_EXL
+#endif
         MTC0_   $4,     CPU_MIPS_STATUS
 
         // restore pc
         lw      $26,    CPU_MIPS_CONTEXT_PC($25)
-#if CONFIG_CPU_MIPS_VERSION > 1
+#ifdef CONFIG_CPU_MIPS_USE_ERET
         MTC0_   $26,    CPU_MIPS_EPC
 #endif
 
@@ -201,12 +203,12 @@ FUNC_START(.text, cpu_context_jumpto)
 
 1:
 
-#if CONFIG_CPU_MIPS_VERSION == 1
+#ifdef CONFIG_CPU_MIPS_USE_ERET
+        eret
+#else
         .set noreorder                                  
         jr      $26                                  
         rfe                                          
-#else
-        eret
 #endif
         .set pop
 
@@ -307,47 +309,42 @@ FUNC_START(.text, cpu_context_stack_use)
 FUNC_END(cpu_context_stack_use)
 
 
-
-
-#if defined(CONFIG_HEXO_USERMODE) && 0 // broken
+#if defined(CONFIG_HEXO_USERMODE)
 
 FUNC_START(.text, cpu_context_set_user)
-            ".set push                     \n"
-            ".set noat                     \n"
-            /* set stack */
-            "   move    $sp,    %[ustack]  \n"
-            /* set arg */
-            "   move    $4,     %[param]   \n"
-            "   addiu   $sp,    -4*4       \n"
-            "   move    $t9,    %[entry]   \n"
-# if CONFIG_CPU_MIPS_VERSION >= 32
-            /* entrypoint goes into epc */
-            "   mtc0    $t9,    $14        \n"
-            "   mfc0    $1,     $12        \n"
-            /* status.ksu=10; status.exl=1; status.ie=1 */
-#if 0
-            /* if supervisor mode is not implemented,
-             * ksu.0=R0="3rd bit of r_status" is ignored.
-             * No need to reset it then.
-             */
-            "   andi    $1,     0xFFFFFFF7 \n"
-#endif
-            "   ori     $1,     0x00000013 \n"
-            "   mtc0    $1,     $12        \n"
-            ".set noreorder                \n"
-            /* switch to user mode at @EPC with interrupt enabled */
-            "   eret                       \n"
+        .set push
+        .set noat
+
+        /* set stack */
+        addiu   $sp,    $4,     -4 * INT_REG_SIZE/8
+
+        /* set arg */
+        move    $4,     $6
+
+# ifdef CONFIG_CPU_MIPS_USE_ERET
+        /* entrypoint goes into epc */
+        MTC0_   $5,             CPU_MIPS_EPC
+
+        /* set user mode in status */
+        mfc0    $1,             $CPU_MIPS_STATUS
+        ori     $1,     $1,     CPU_MIPS_STATUS_UM | CPU_MIPS_STATUS_EXL
+        MTC0_   $1,     CPU_MIPS_STATUS
+
+        .set noreorder
+        eret
 # else
-            /* set previous state as user */
-            "   mfc0    $1,     $12        \n"
-            "   ori     $1,     0xC        \n"
-            "   mtc0    $1,     $12        \n"
-            /* "restore" user mode and jump */
-            ".set noreorder                \n"
-            "   jr      $t9                \n"
-            "   rfe                        \n"
+        /* set previous state as user */
+        mfc0    $1,             $CPU_MIPS_STATUS
+        ori     $1,     $1,     CPU_MIPS_STATUS_KUp
+        MTC0_   $1,             CPU_MIPS_STATUS
+
+        /* "restore" user mode and jump */
+        .set noreorder
+        jr      $5
+        rfe
 # endif
-            ".set pop                      \n"
+
+        .set pop
 
 FUNC_END(cpu_context_set_user)
 

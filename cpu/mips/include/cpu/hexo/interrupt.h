@@ -34,8 +34,51 @@
 #define CPU_INTERRUPT_H_
 
 #include <hexo/local.h>
-
 #include <cpu/hexo/asm.h>
+
+# define CPU_EXCEPTION_TLB_MOD      1
+# define CPU_EXCEPTION_TLB_LOAD     2
+# define CPU_EXCEPTION_TLB_STORE    3
+# define CPU_EXCEPTION_ADDR_LOAD    4 // ADEL
+# define CPU_EXCEPTION_ADDR_STORE   5 
+# define CPU_EXCEPTION_INS_ERROR    6 // IBE
+# define CPU_EXCEPTION_DATA_ERROR   7 // DBE
+# define CPU_EXCEPTION_BREAKPOINT   9 // Bp
+# define CPU_EXCEPTION_ILLEGAL_INS  10 // RI
+# define CPU_EXCEPTION_COPROC       11
+# define CPU_EXCEPTION_OVERFLOW     12
+# define CPU_EXCEPTION_TRAP         13 // Tr
+# define CPU_EXCEPTION_FPE          15 // FPE
+# define CPU_EXCEPTION_COPROC2      18
+# define CPU_EXCEPTION_MDMX         22
+# define CPU_EXCEPTION_WATCHPOINT   23
+# define CPU_EXCEPTION_MCHECK       25
+# define CPU_EXCEPTION_CACHE_ERR    30
+
+# define CPU_FAULT_COUNT 32
+
+# define CPU_FAULT_NAMES {			\
+      /* 0  */ "Interrupt",                     \
+      /* 1  */ "TLB Modification",              \
+      /* 2  */ "TLB Load error",                \
+      /* 3  */ "TLB Store error",               \
+      /* 4  */ "Address error (Load)",          \
+      /* 5  */ "Address error (Store)",         \
+      /* 6  */ "Instruction bus error",         \
+      /* 7  */ "Data bus error",                \
+      /* 8  */ "Syscall",                       \
+      /* 9  */ "Break point",                   \
+      /* 10 */ "Reserved instruction",          \
+      /* 11 */ "Coproc unusable",               \
+      /* 12 */ "Overflow",                      \
+      /* 13 */ "Trap",                          \
+      /* 14 */ "Reserved",                      \
+      /* 15 */ "Floating point",                \
+      "-",        "-",    "C2E",      "-",	\
+      "-",        "-",    "MDMX",     "WATCH",	\
+      "MCheck",   "-",    "-",        "-",	\
+      "-",        "-",    "CacheErr", "-"       \
+      }
 
 #ifdef CONFIG_DRIVER_ICU_MIPS
 struct device_s;
@@ -61,8 +104,8 @@ cpu_interrupt_disable(void)
 		    "addiu	$1,	-1	\n"
 		    ".set noreorder		\n"
 		    "mtc0	$1,	$12	\n"
-# endif
 		    "MTC0_WAIT			\n"
+# endif
 		    ".set pop			\n"
 
                     :
@@ -82,7 +125,7 @@ cpu_interrupt_enable(void)
 		    ".set reorder		\n"
 # if (CONFIG_CPU_MIPS_VERSION >= 322)
 		    "ei				\n"
-		    "ehb			\n"
+//		    "ehb			\n"
 # else
 		    "mfc0	$1,	$12	\n"
 		    "ori	$1,	1	\n"
@@ -143,6 +186,8 @@ cpu_interrupt_restorestate(const reg_t *state)
 		    "mtc0	%0,	$12		\n"
 # if (CONFIG_CPU_MIPS_VERSION >= 322)
 		    "ehb			\n"
+# else
+		    "MTC0_WAIT				\n"
 # endif
 		    :
 		    : "r" (*state)
@@ -157,6 +202,11 @@ cpu_interrupt_process(void)
 #ifdef CONFIG_HEXO_IRQ
   cpu_interrupt_enable();
   __asm__ volatile (
+# if (CONFIG_CPU_MIPS_VERSION >= 322)
+		    "ehb			\n"
+# else
+		    "MTC0_WAIT				\n"
+# endif
 		    "nop"
 		    :
 		    :
@@ -175,6 +225,11 @@ cpu_interrupt_getstate(void)
   reg_t		state;
 
   __asm__ volatile (
+# if (CONFIG_CPU_MIPS_VERSION >= 322)
+		    "ehb			\n"
+# else
+		    "MTC0_WAIT				\n"
+# endif
 		    "mfc0	%0,	$12		\n"
 		    : "=r" (state)
 		    );
@@ -192,6 +247,11 @@ cpu_is_interruptible(void)
   reg_t		state;
 
   __asm__ volatile (
+# if (CONFIG_CPU_MIPS_VERSION >= 322)
+		    "ehb			\n"
+# else
+		    "MTC0_WAIT				\n"
+# endif
 		    "mfc0	%0,	$12		\n"
 		    : "=r" (state)
 		    );

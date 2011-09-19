@@ -32,12 +32,7 @@ FUNC_START(.boot, cpu_boot)
         .set noreorder
 
         /* set up IT disable and kernel mode */
-#if CONFIG_CPU_MIPS_VERSION >= 32
-        /* set status.erl for eret */
-        li      $8,             0x0000fc04
-#else
-        li      $8,             0
-#endif
+        li      $8,             CPU_MIPS_STATUS_IM
         MTC0_   $8,             CPU_MIPS_STATUS
         MTC0_   $0,             CPU_MIPS_CAUSE
 
@@ -100,13 +95,8 @@ FUNC_START(.boot, cpu_boot)
 
         /* jump to architecture code */
         la      $8,             boot_from_reset_vector
-#if CONFIG_CPU_MIPS_VERSION >= 32
-        MTC0_   $8,             CPU_MIPS_EEPC
-        eret
-#else
-        j               $8
+        j       $8
         nop
-#endif
 
         .set pop
 FUNC_END(cpu_boot)

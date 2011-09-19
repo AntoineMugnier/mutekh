@@ -62,11 +62,9 @@
 # if CONFIG_CPU_MIPS_VERSION >= 32
         mfc0    \reg,    $15,    1
         andi    \reg,    \reg,    0x3ff
-#  define CPU_MIPS_STATUS_UM 0x10
 # else
         mfc0    \reg,    $15
         andi    \reg,    \reg,    0x3ff
-#  define CPU_MIPS_STATUS_UM 0x8
 # endif
 #else
         or     \reg,  $0,      $0
