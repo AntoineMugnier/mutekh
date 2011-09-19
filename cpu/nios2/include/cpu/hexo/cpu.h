@@ -83,6 +83,7 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
                      );                         \
   })
 
+# undef nios2
 # define CPU_TYPE_NAME nios2
 
 static inline cpu_id_t

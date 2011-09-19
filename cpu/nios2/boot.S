@@ -40,8 +40,7 @@ FUNC_START(.boot, cpu_boot)
         movia   sp,             __initial_stack
 
         /* clear status */
-        movia   r16,            0x00000000
-        wrctl   status,         r16
+        wrctl   status,         r0
 
 #ifdef CONFIG_ARCH_SMP_CAPABLE
         /* only CPU id below CONFIG_CPU_MAXCOUNT are allowed to boot */
@@ -52,12 +51,12 @@ FUNC_START(.boot, cpu_boot)
 
 #ifdef CONFIG_ARCH_SMP
         /* adjust initial stack from cpuid */
-        slli    r18,    r16,    CONFIG_HEXO_RESET_STACK_SIZE
+        slli    r17,    r16,    CONFIG_HEXO_RESET_STACK_SIZE
         sub     sp,     sp,     r17
 #endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
-        addi    r17,    zero,   1 << CONFIG_HEXO_RESET_STACK_SIZE
+        movi    r17,            1 << CONFIG_HEXO_RESET_STACK_SIZE
 
     /* enter memchecker command mode */
         movia   r1,             SOCLIB_MC_MAGIC_VAL

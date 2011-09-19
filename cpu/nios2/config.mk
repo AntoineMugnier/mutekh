@@ -1,5 +1,5 @@
 CPUTOOLS=nios2-unknown-elf-
-CPUCFLAGS= -mhw-mul -mhw-div
+CPUCFLAGS= -ffixed-r26
 
 ifeq ($(CONFIG_CPU_NIOS2_MUL), defined)
 CPUCFLAGS+= -mhw-mul

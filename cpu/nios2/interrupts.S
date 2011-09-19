@@ -58,10 +58,11 @@ nios2_interrupt_entry:
         beq     r0,     r4,     1f
 
         // get tls
-        subi    r8,     r24,    %lo(nios2_context_regs)
+        movi    r8,             %lo(nios2_context_regs)
+        sub     r8,     r24,    r8
 
         // use kernel context stack when from user mode
-        ldw      r27,    context_stack_end(r4)
+        ldw      r27,    context_stack_end(r8)
 1:
 #endif
 
@@ -113,10 +114,10 @@ nios2_interrupt_ex:
         CPU_LOCAL ldw     cpu_exception_handler, r1, r1
 2:      
 
-        ldw     r2,     CPU_NIOS2_CONTEXT_GPR(29)(r24)
+        ldw     r2,     CPU_NIOS2_CONTEXT_GPR(27)(r24)
         addi    sp,     sp,     -4
         stw     r2,     0(sp)           // arg4 sp
-        
+
         srli    r4,     r4,     2       // arg0 type
         mov     r5,     r29             // arg1 execptr
         rdctl   r6,     badaddr         // arg2 data error
@@ -135,13 +136,13 @@ nios2_interrupt_ex:
 
 #ifdef CONFIG_HEXO_USERMODE
 nios2_interrupt_sys:
-        
+
         // save return address
         stw     r29,    CPU_NIOS2_CONTEXT_PC(r24)
 
         movi    r4,     0
-        movi    r5,     r24
-        
+        mov     r5,     r24
+
         // call handler
         ldw     r1,     %lo(cpu_syscall_handler)(r8)
         callr   r1
@@ -159,6 +160,11 @@ nios2_interrupt_sys:
 nios2_interrupt_hw:                                   
 
         addi     r29,    r29,   -4
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+        // save return address
+        stw     r29,    CPU_NIOS2_CONTEXT_PC(r24)
+# endif
+
         /* hw interrupt line id */
         rdctl   r4,     ipending
         call    __ctzsi2
@@ -170,6 +176,39 @@ nios2_interrupt_hw:
 #endif
 
 nios2_preempt_and_restore:
+
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+
+        // check if a preempt handler has been registered
+        CPU_LOCAL ldw cpu_preempt_handler, r1, r1
+        beq     r0,     r1,     1f
+
+        // call preempt handler
+        callr   r1
+
+        // got pointer to context to switch to ?
+        beq     r0,     r2,     1f
+
+        // save callee saved registers
+        .irp    r, 16, 17, 18, 19, 20, 21, 22, 23
+        stw     r\r,            CPU_NIOS2_CONTEXT_GPR(\r)(r24)
+        .endr
+
+        // prepare cpu_context_jumpto arg
+        mov     r4,     r2
+# ifdef CONFIG_HEXO_CONTEXT_STATS
+        mov     r16,     r2
+        call    context_preempt_stats
+        mov     r4,     r16
+# endif
+
+        // save pc
+        movi    r1,             CPU_NIOS2_CONTEXT_RESTORE_CALLER | CPU_NIOS2_CONTEXT_RESTORE_CALLEE
+        stw     r1,             CPU_NIOS2_CONTEXT_SAVE_MASK(r24)
+
+        br      cpu_context_jumpto
+1:
+#endif
 
 nios2_restore:
 
