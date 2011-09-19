@@ -11,35 +11,7 @@ CONTEXT_LOCAL struct cpu_context_s arm_context_regs;
 CPU_LOCAL void *__context_data_base;
 #endif
 
-#define arm_setup_exception_stack(context, psr_mode)				   \
-	asm volatile(													   \
-		"mrs  r2, cpsr            \n\t"								   \
-		"bic  r3, r2, #0x1f       \n\t"								   \
-		"orr  r3, r3, %0          \n\t"								   \
-		"msr  cpsr, r3            \n\t"								   \
-		"mov  sp, %1              \n\t"								   \
-		"msr  cpsr, r2            \n\t"								   \
-		:															   \
-		: "i"(psr_mode), "r"(context)								   \
-		: "r2", "r3" );
-
-static void __arm_exception_setup()
-{
-    struct cpu_context_s *ctx = CONTEXT_LOCAL_ADDR(arm_context_regs);
-    uintptr_t addr = (uintptr_t)&ctx->gpr[0];
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-	soclib_mem_check_disable(SOCLIB_MC_CHECK_SPFP);
-#endif
-
-	arm_setup_exception_stack(addr, 0x12); // IRQ
-	arm_setup_exception_stack(addr, 0x17); // Abort
-	arm_setup_exception_stack(addr, 0x1b); // Undef
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-	soclib_mem_check_enable(SOCLIB_MC_CHECK_SPFP);
-#endif
-}
+void arm_setup_exception_stack(uintptr_t addr);
 
 error_t
 cpu_context_bootstrap(struct context_s *context)
@@ -58,7 +30,7 @@ cpu_context_bootstrap(struct context_s *context)
     __context_data_base = context->tls;
 #endif
 
-	__arm_exception_setup();
+    arm_setup_exception_stack((uintptr_t)CONTEXT_LOCAL_ADDR(arm_context_regs));
 
     return 0;
 }
@@ -134,8 +106,8 @@ struct context_s *arm_exc_common(reg_t no, struct cpu_context_s *context)
 #ifdef CONFIG_HEXO_USERMODE
     if ( (context->cpsr & 0xf) == 0 )
         handler = CONTEXT_LOCAL_GET(cpu_user_exception_handler);
-#endif  
     if ( handler == NULL )
+#endif  
         handler = CPU_LOCAL_GET(cpu_exception_handler);
     handler(no,
             context->gpr[15],

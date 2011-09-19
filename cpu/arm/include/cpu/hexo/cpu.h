@@ -151,18 +151,5 @@ static inline size_t cpu_dcache_line_size()
 
 #endif
 
-#define CPU_EXCEPTION_ILLEGAL_INS  0x1
-#define CPU_EXCEPTION_DATA_ERROR   0x2
-#define CPU_EXCEPTION_INS_ERROR    0x3
-#define CPU_EXCEPTION_DATA_ALIGN   0x4
-#define CPU_FAULT_COUNT 4
-
-#define CPU_FAULT_NAMES {			\
-"Software",			\
-"Data abort",				\
-"Ins abort",			\
-"Data alignment",			\
-}
-
 #endif
 

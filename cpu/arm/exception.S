@@ -19,6 +19,7 @@
 */
 
 #include <hexo/asm.h>
+#include <hexo/interrupt.h>
 #include <hexo/cpu.h>
 #include <hexo/context.h>
 
@@ -26,7 +27,7 @@
 # include <arch/mem_checker.h>
 #endif
 
-.macro prepare_exception offset
+.macro PREPARE_EXCEPTION offset
     /* uniformize return address, but avoid a sub when 0 */
     .if \offset != 0
         sub    lr, lr, #\offset
@@ -36,24 +37,26 @@
 
     /* store most registers in tmp buffer */
     stmia  sp, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
+    mov    r1, sp
 
     /* Save PC */
-    str    lr, [sp, #CPU_ARM_CONTEXT_GPR(15)-CPU_ARM_CONTEXT_GPR(0)]
+    str    lr, [r1, #CPU_ARM_CONTEXT_GPR(15)]
 
     /* Tell what to restore */
     mov     r0, #CPU_ARM_CONTEXT_RESTORE_CALLEE|CPU_ARM_CONTEXT_RESTORE_CALLER
-    str     r0, [sp, #CPU_ARM_CONTEXT_SAVE_MASK-CPU_ARM_CONTEXT_GPR(0)]
+    str     r0, [r1, #CPU_ARM_CONTEXT_SAVE_MASK]
 
     /* Take old msr, save it */
     mrs    r0, spsr
-    str    r0, [sp, #CPU_ARM_CONTEXT_CPSR-CPU_ARM_CONTEXT_GPR(0)]
+    str    r0, [r1, #CPU_ARM_CONTEXT_CPSR]
 
     /* last but not least, we have to save sp and lr, this
        may involve shadowed registers */
-    add    r1, sp, #CPU_ARM_CONTEXT_GPR(13)-CPU_ARM_CONTEXT_GPR(0)
 
     /* Switch to super (After taking sp+x in r1) */
     msr      cpsr_c, #0xd3
+
+    add    r2, r1, #CPU_ARM_CONTEXT_GPR(13)
 
 #if defined(CONFIG_HEXO_USERMODE)
     /* r0 is still cpsr */
@@ -63,71 +66,74 @@
     bne 1f
     
     /* from user mode, abuse stmia^ */
-    stmia  r1, {r13, r14}^
+    stmia  r2, {r13, r14}^
     /* Always restore kernel stack pointer */
-    CONTEXT_LOCAL context_stack_end, r2, r3
+    CONTEXT_LOCAL context_stack_end, r3, r13
     b 2f
 1:  
 #endif        
     /* We were from super, so save super's sp and lr */
-    stmia  r1, {r13, r14}
+    stmia  r2, {r13, r14}
 2:  
 
+    /* align stack */
     bic    sp, sp, #63
+#ifdef CONFIG_COMPILE_FRAMEPTR
+    mov  r11, r13
+#endif
+
+    /* r1 still points to arm_context_regs */
 .endm
 
-.macro preempt_clear
+.macro PREEMPT_CLEAR
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
     mov    r3, #0
     CPU_LOCAL_SET cpu_preempt_handler, r1, r2, r3
 #endif
-    ldr    lr, =arm_context_may_preempt
+    ldr    lr, =arm_exc_restore
 .endm
 
-.macro handle_exception arg
-    preempt_clear
-    mov    r0, #\arg
-    b      arm_exc_common
-.endm
-
-#ifdef CONFIG_HEXO_IRQ
-.macro handle_irq no
-    preempt_clear
-    mov    r0, #\no
-    b      arm_irq_common
-.endm
-#endif
     
     /* r14 is exc pc + 4 */
 FUNC_START(.text, arm_exc_undef)
-    prepare_exception 4
-    handle_exception CPU_EXCEPTION_ILLEGAL_INS
+    PREPARE_EXCEPTION 4
+    PREEMPT_CLEAR
+    mov    r0, #CPU_EXCEPTION_ILLEGAL_INS
+    b      arm_exc_common
 FUNC_END(arm_exc_undef)
 
     /* r14 is error pc + 4 */
 FUNC_START(.text, arm_exc_pabt)
-    prepare_exception 4
-    handle_exception CPU_EXCEPTION_INS_ERROR
+    PREPARE_EXCEPTION 4
+    PREEMPT_CLEAR
+    mov    r0, #CPU_EXCEPTION_INS_ERROR
+    b      arm_exc_common
 FUNC_END(arm_exc_pabt)
 
     /* r14 is error pc + 8 */
 FUNC_START(.text, arm_exc_dabt)
-    prepare_exception 8
-    handle_exception CPU_EXCEPTION_DATA_ERROR
+    PREPARE_EXCEPTION 8
+    PREEMPT_CLEAR
+    mov    r0, #CPU_EXCEPTION_DATA_ERROR
+    b      arm_exc_common
 FUNC_END(arm_exc_dabt)
 
 #if defined(CONFIG_HEXO_IRQ) && !defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
     /* r14 is error pc + 4 */
 FUNC_START(.text, arm_exc_irq)
-    prepare_exception 4
-    handle_irq 0
+    PREPARE_EXCEPTION 4
+    PREEMPT_CLEAR
+    mov    r0, #0
+    b      arm_irq_common
 FUNC_END(arm_exc_irq)
 
     /* r14 is error pc + 4 */
 FUNC_START(.text, arm_exc_fiq)
     .warning "Context saving is not correct for fiq handling"
-    prepare_exception 4
-    handle_irq 1
+    PREPARE_EXCEPTION 4
+    PREEMPT_CLEAR
+    mov    r0, #1
+    b      arm_irq_common
 FUNC_END(arm_exc_fiq)
 #endif
 
@@ -195,6 +201,32 @@ FUNC_START(.text, arm_exc_swi)
     mov    r1, r11
     b      arm_swi_common
 FUNC_END(arm_exc_swi)
+
+
+FUNC_START(.text, arm_exc_restore)
+
+#if defined(CONFIG_HEXO_CONTEXT_PREEMPT)
+    /* got pointer to new context to restore ? */
+    movs  r0, r0
+    bne   cpu_context_jumpto
+#endif
+
+#ifdef CONFIG_SOCLIB_MEMCHECK_
+    /* enter memchecker command mode */
+    ldr  r2, =SOCLIB_MC_MAGIC_VAL 
+    ldr  r1, =CONFIG_SOCLIB_MEMCHECK_ADDRESS 
+    str  r2, [r1, #SOCLIB_MC_MAGIC_OFFSET]
+
+    /* leave memchecker command mode */
+    ldr     r3, =2f
+    str     r3, [r1, #SOCLIB_MC_DELAYED_MAGIC_OFFSET]
+#endif
+    // context registers save array
+    CONTEXT_LOCAL_ADDR arm_context_regs, r2, r3
+
+    b arm_context_jumpto_internal
+FUNC_END(arm_exc_restore)
+
 
 // Local Variables:
 // tab-width: 4;

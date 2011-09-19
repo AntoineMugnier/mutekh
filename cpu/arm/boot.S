@@ -33,7 +33,7 @@ FUNC_START(.boot, cpu_boot)
         ldr     pc, =arm_exc_swi
         ldr     pc, =arm_exc_pabt
         ldr     pc, =arm_exc_dabt
-        nop
+        ldr     pc, =arm_exc_undef // reserved
 #ifdef CONFIG_HEXO_IRQ
 # if defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
         ldr     pc, =arm_c_irq_handler

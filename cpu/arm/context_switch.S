@@ -68,6 +68,27 @@ FUNC_END(cpu_context_switch)
     msr  cpsr_c, #0xd3
 .endm
 
+
+FUNC_START(.text, arm_setup_exception_stack)
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+    /* enter memchecker command mode */
+    ldr  r2, =SOCLIB_MC_MAGIC_VAL 
+    ldr  r1, =CONFIG_SOCLIB_MEMCHECK_ADDRESS 
+    str  r2, [r1, #SOCLIB_MC_MAGIC_OFFSET]
+#endif
+        
+    CPU_EXC_SP_SETUP r0
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+    mov  r3, #0
+    str  r3, [r1, #SOCLIB_MC_MAGIC_OFFSET]
+#endif
+
+    mov pc, lr
+FUNC_END(arm_setup_exception_stack)
+
+        
 FUNC_START(.text, cpu_context_jumpto)
 
 # ifdef CONFIG_ARCH_SMP
@@ -79,53 +100,35 @@ FUNC_START(.text, cpu_context_jumpto)
     strne r1, [r2]
 #endif
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-    /* enter memchecker command mode */
-    ldr  r2, =SOCLIB_MC_MAGIC_VAL 
-    ldr  r1, =CONFIG_SOCLIB_MEMCHECK_ADDRESS 
-    str  r2, [r1, #SOCLIB_MC_MAGIC_OFFSET]
-
-    /* switch to associated memchecker context */
-    str  r0, [r1, #SOCLIB_MC_CTX_SET_OFFSET]
-
-    /* leave memchecker command mode */
-    ldr     r3, =2f
-    str     r3, [r1, #SOCLIB_MC_DELAYED_MAGIC_OFFSET]
-#endif
-
     // restore tls pointer from context struct
     ldr  r3, [r0, #HEXO_CONTEXT_S_TLS * 4]
     TLS_BASE_SET r3, r2
 
-    b arm_context_jumpto_internal
-FUNC_END(cpu_context_jumpto)
-
-        
-FUNC_START(.text, arm_context_may_preempt)
-#if defined(CONFIG_HEXO_CONTEXT_PREEMPT)
-    movs  r0, r0
-    bne   cpu_context_jumpto
-#endif
-#ifdef CONFIG_SOCLIB_MEMCHECK
-    /* enter memchecker command mode */
-    ldr  r2, =SOCLIB_MC_MAGIC_VAL 
-    ldr  r1, =CONFIG_SOCLIB_MEMCHECK_ADDRESS 
-    str  r2, [r1, #SOCLIB_MC_MAGIC_OFFSET]
-
-    /* leave memchecker command mode */
-    ldr     r3, =2f
-    str     r3, [r1, #SOCLIB_MC_DELAYED_MAGIC_OFFSET]
-#endif
-    b arm_context_jumpto_internal
-FUNC_END(arm_context_may_preempt)
-
-FUNC_START(.text, arm_context_jumpto_internal)
     // context registers save array
     CONTEXT_LOCAL_ADDR arm_context_regs, r2, r3
 
-    // Setup sp to be &r0 for all error modes
-    add     r0, r2, #CPU_ARM_CONTEXT_GPR(0)
-    CPU_EXC_SP_SETUP r0
+#ifdef CONFIG_SOCLIB_MEMCHECK
+    /* enter memchecker command mode */
+    ldr  r3, =SOCLIB_MC_MAGIC_VAL 
+    ldr  r1, =CONFIG_SOCLIB_MEMCHECK_ADDRESS 
+    str  r3, [r1, #SOCLIB_MC_MAGIC_OFFSET]
+
+    /* switch to associated memchecker context */
+    str  r0, [r1, #SOCLIB_MC_CTX_SET_OFFSET]
+
+    mov  r3, #0
+    str  r3, [r1, #SOCLIB_MC_MAGIC_OFFSET]
+#endif
+
+    // Set sp to context &arm_context_regs for all error modes
+    CPU_EXC_SP_SETUP r2
+
+FUNC_END(cpu_context_jumpto)
+
+        
+FUNC_START(.text, arm_context_jumpto_internal)
+
+    mov     r0, r2
 
     // Take &[r13 r14] in sp
     add     sp, r2, #CPU_ARM_CONTEXT_GPR(13)
@@ -167,14 +170,15 @@ FUNC_START(.text, arm_context_jumpto_internal)
 	// CPU_EXC_SP_SETUP. It points to &r0
 
     // restore status
-    ldr     lr, [sp, #CPU_ARM_CONTEXT_CPSR-CPU_ARM_CONTEXT_GPR(0)]
+    ldr     lr, [sp, #CPU_ARM_CONTEXT_CPSR]
     msr     spsr, lr
 
     // Load pc
-    ldr      lr, [sp, #CPU_ARM_CONTEXT_GPR(15)-CPU_ARM_CONTEXT_GPR(0)]
+    ldr      lr, [sp, #CPU_ARM_CONTEXT_GPR(15)]
     // Restore
     movs     pc, lr
-2:
+
+arm_context_jumpto_internal_end:
 FUNC_END(arm_context_jumpto_internal)
 
 
@@ -266,46 +270,9 @@ FUNC_END(cpu_context_stack_use)
 
 
 
-#if defined(CONFIG_HEXO_USERMODE) && 0 // broken
+#ifdef CONFIG_HEXO_USERMODE
 
 FUNC_START(.text, cpu_context_set_user)
-        ".set push                     \n"
-        ".set noat                     \n"
-        /* set stack */
-        "   move    $sp,    %[ustack]  \n"
-        /* set arg */
-        "   move    $4,     %[param]   \n"
-        "   addiu   $sp,    -4*4       \n"
-        "   move    $t9,    %[entry]   \n"
-# if CONFIG_CPU_MIPS_VERSION >= 32
-        /* entrypoint goes into epc */
-        "   mtc0    $t9,    $14        \n"
-        "   mfc0    $1,     $12        \n"
-        /* status.ksu=10; status.exl=1; status.ie=1 */
-#if 0
-        /* if supervisor mode is not implemented,
-         * ksu.0=R0="3rd bit of r_status" is ignored.
-         * No need to reset it then.
-         */
-        "   andi    $1,     0xFFFFFFF7 \n"
-#endif
-        "   ori     $1,     0x00000013 \n"
-        "   mtc0    $1,     $12        \n"
-        ".set noreorder                \n"
-        /* switch to user mode at @EPC with interrupt enabled */
-        "   eret                       \n"
-# else
-        /* set previous state as user */
-        "   mfc0    $1,     $12        \n"
-        "   ori     $1,     0xC        \n"
-        "   mtc0    $1,     $12        \n"
-        /* "restore" user mode and jump */
-        ".set noreorder                \n"
-        "   jr      $t9                \n"
-        "   rfe                        \n"
-# endif
-        ".set pop                      \n"
-
 FUNC_END(cpu_context_set_user)
 
 #endif

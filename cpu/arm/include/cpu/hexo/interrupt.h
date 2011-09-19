@@ -37,66 +37,79 @@
 
 #include "cpu/hexo/specific.h"
 
-#ifdef CONFIG_DRIVER_ICU_ARM
+#define CPU_EXCEPTION_ILLEGAL_INS  0
+#define CPU_EXCEPTION_DATA_ERROR   1
+#define CPU_EXCEPTION_INS_ERROR    2
+#define CPU_FAULT_COUNT 3
+
+#define CPU_FAULT_NAMES {			\
+      "Illegal instruction",                    \
+      "Data abort",				\
+      "Ins abort",                              \
+      }
+
+#ifndef __MUTEK_ASM__
+
+# ifdef CONFIG_DRIVER_ICU_ARM
 struct device_s;
 extern CPU_LOCAL struct device_s cpu_icu_dev;
-#endif
+# endif
 
 void arm_interrupt_entry(void);
 
 static inline void
 cpu_interrupt_disable(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
 
 	uint32_t tmp;
     THUMB_TMP_VAR;
 
 	asm volatile(
-# if __thumb__ && !defined(CONFIG_CPU_ARM_7TDMI)
+#  if __thumb__ && !defined(CONFIG_CPU_ARM_7TDMI)
         "cpsid i"
-# else
+#  else
         THUMB_TO_ARM
 		"mrs  %[tmp], cpsr            \n\t"
-		"orr  %[tmp], %[tmp], #0x80   \n\t"
+		"orr  %[tmp], %[tmp], # 0x80   \n\t"
 		"msr  cpsr, %[tmp]            \n\t"
         ARM_TO_THUMB
-# endif
+#  endif
 		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
                 :
                 : "memory"     /* compiler memory barrier */
         );
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_enable(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
 	uint32_t tmp;
     THUMB_TMP_VAR;
 
 	asm volatile(
-# if __thumb__ && !defined(CONFIG_CPU_ARM_7TDMI)
+#  if __thumb__ && !defined(CONFIG_CPU_ARM_7TDMI)
         "cpsie i"
-# else
+#  else
         THUMB_TO_ARM
 		"mrs  %[tmp], cpsr            \n\t"
 		"bic  %[tmp], %[tmp], #0x80   \n\t"
 		"msr  cpsr, %[tmp]            \n\t"
         ARM_TO_THUMB
-# endif
+#  endif
 		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
                 :
                 : "memory"     /* compiler memory barrier */
         );
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_savestate(reg_t *state)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
 	uint32_t tmp;
     THUMB_TMP_VAR;
 
@@ -107,13 +120,13 @@ cpu_interrupt_savestate(reg_t *state)
 		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,) );
 
 	*state = tmp;
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
 	uint32_t tmp, result;
     THUMB_TMP_VAR;
 
@@ -128,13 +141,13 @@ cpu_interrupt_savestate_disable(reg_t *state)
                 : "memory"     /* compiler memory barrier */
                      );
 	*state = result;
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
     THUMB_TMP_VAR;
 
 	asm volatile(
@@ -145,25 +158,25 @@ cpu_interrupt_restorestate(const reg_t *state)
         : [state] "r" (*state)
         : "memory"     /* compiler memory barrier */
                      );
-#endif
+# endif
 }
 
 static inline void
 cpu_interrupt_process(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
 	cpu_interrupt_enable();
     /* memory clobber is important here as cpu_interrupt_process()
        will let pending intterupts change global variables checked in
        a function loop (scheduler root queue for instance) */
 	__asm__ volatile ("nop":::"memory");
-#endif
+# endif
 }
 
 static inline bool_t
 cpu_interrupt_getstate(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
 	reg_t		state;
     THUMB_TMP_VAR;
 
@@ -174,27 +187,27 @@ cpu_interrupt_getstate(void)
 		: [state] "=r" (state) /*,*/ THUMB_OUT(,) );
 
 	return !(state & 0x80);
-#else
+# else
 	return 0;
-#endif
+# endif
 }
 
 static inline bool_t
 cpu_is_interruptible(void)
 {
-#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_HEXO_IRQ
 	return cpu_interrupt_getstate();
-#else
+# else
 	return 0;
-#endif
+# endif
 }
 
 
-#ifdef CONFIG_CPU_WAIT_IRQ
+# ifdef CONFIG_CPU_WAIT_IRQ
 static inline void cpu_interrupt_wait(void)
 {
-# ifdef CONFIG_HEXO_IRQ
-#  if defined(__ARM_ARCH_6K__)
+#  ifdef CONFIG_HEXO_IRQ
+#   if defined(__ARM_ARCH_6K__)
     THUMB_TMP_VAR;
 
 	asm volatile(
@@ -204,12 +217,14 @@ static inline void cpu_interrupt_wait(void)
 		/*:*/  THUMB_OUT(:)
         : [zero] "r" (0)
 	: "memory" );
-#  else
-# error CONFIG_CPU_WAIT_IRQ should not be defined here
+#   else
+#  error CONFIG_CPU_WAIT_IRQ should not be defined here
+#   endif
 #  endif
-# endif
 }
-#endif
+# endif
+
+# endif
 
 #endif
 
