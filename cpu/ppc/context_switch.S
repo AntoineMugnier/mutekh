@@ -300,3 +300,28 @@ FUNC_START(.text, cpu_context_stack_use)
         bctr
 
 FUNC_END(cpu_context_stack_use)
+
+
+#ifdef CONFIG_HEXO_USERMODE
+
+FUNC_START(.text, cpu_context_set_user)
+
+        /* set stack */
+        mr      1,      3
+
+        /* set pc */
+        mtsrr0  4
+        
+        /* set arg */
+        mr      3,      5
+
+        /* user mode */
+        mfmsr   2
+        ori     2,      2,      PPC_MSR_USERMODE
+        mtsrr1  2
+
+        rfi
+
+FUNC_END(cpu_context_set_user)
+
+#endif
