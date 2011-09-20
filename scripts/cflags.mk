@@ -31,7 +31,7 @@ AS=$(CPUTOOLS)as
 OBJCOPY=$(CPUTOOLS)objcopy
 OBJDUMP=$(CPUTOOLS)objdump
 
-CFLAGS=	-nostdlib -fno-builtin -Wall -O$(CONFIG_COMPILE_OPTIMIZE)
+CFLAGS=	-nostdlib -fno-builtin -Wall -Wno-main -O$(CONFIG_COMPILE_OPTIMIZE)
 DTC=dtc
 
 ifeq ($(CONFIG_OPENMP), defined)
