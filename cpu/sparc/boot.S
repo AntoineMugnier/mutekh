@@ -66,6 +66,10 @@ FUNC_START(.text, cpu_boot)
         /* enable all memchecker checks */
         mov     SOCLIB_MC_CHECK_ALL, %g1
         st      %g1,            [ SOCLIB_MC_ENABLE ]
+
+        /* adjust frame pointer reg id for sparc flat abi */
+        mov     31, %g1
+        st      %g1,            [ SOCLIB_MC_SET_FP_REG ]
 #endif
 
         /* leave room for register window save */

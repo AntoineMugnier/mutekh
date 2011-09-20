@@ -84,8 +84,8 @@ cpu_isbootstrap(void)
 static inline cpu_cycle_t
 cpu_cycle_count(void)
 {
-  static cpu_cycle_t c = 0;
-  return c++;
+  extern cpu_cycle_t sparc_fake_tsc;
+  return sparc_fake_tsc++;
 }
 
 static inline void

@@ -139,6 +139,9 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore callee saved stack pointer
         ld      [%g1 + CPU_SPARC_CONTEXT_O(6)], %o6
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     %sp,            %i7
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */

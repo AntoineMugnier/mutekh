@@ -21,6 +21,7 @@
 
 #include <mutek/mem_alloc.h>
 #include <hexo/init.h>
+#include <hexo/context.h>
 #include <hexo/segment.h>
 #include <hexo/cpu.h>
 #include <hexo/local.h>
@@ -30,7 +31,7 @@
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
 
-extern __ldscript_symbol_t __exception_base_ptr;
+cpu_cycle_t sparc_fake_tsc = 0;
 
 /* CPU Local Descriptor structure */
 
@@ -50,6 +51,34 @@ void cpu_init(void)
 
   /* set cpu local storage register base pointer */
   asm volatile("mov %0 %%g6" : : "r" (cls));
+#endif
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  /* all these functions may execute with briefly invalid stack & frame
+     pointer registers due to register window switch. */
+
+  void cpu_context_jumpto_end();
+  soclib_mem_bypass_sp_check(&cpu_context_jumpto, &cpu_context_jumpto_end);
+
+  extern __ldscript_symbol_t __exception_base_ptr;
+  extern __ldscript_symbol_t __exception_base_ptr_end;
+  soclib_mem_bypass_sp_check(&__exception_base_ptr, &__exception_base_ptr_end);
+
+  void sparc_excep_entry();
+  void sparc_excep_entry_end();
+  soclib_mem_bypass_sp_check(&sparc_excep_entry, &sparc_excep_entry_end);
+
+# ifdef CONFIG_HEXO_IRQ
+  void sparc_irq_entry();
+  void sparc_irq_entry_end();
+  soclib_mem_bypass_sp_check(&sparc_irq_entry, &sparc_irq_entry_end);
+# endif
+
+# ifdef CONFIG_HEXO_USERMODE
+  void sparc_syscall_entry();
+  void sparc_syscall_entry_end();
+  soclib_mem_bypass_sp_check(&sparc_syscall_entry, &sparc_syscall_entry_end);
+# endif
 #endif
 }
 

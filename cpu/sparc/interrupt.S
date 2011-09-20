@@ -95,9 +95,13 @@ __exception_base_ptr:
         PUT_ENTRIES     1,    11,   sparc_excep_entry
         PUT_EQ_ENTRIES  0x0c, 0x10, sparc_excep_entry,  0
 
+#ifdef CONFIG_HEXO_IRQ
       /* 15 irqs 0x11 - 0x1f */
         PUT_ENTRIES     0,    14,   sparc_irq_entry
-
+#else
+        PUT_EQ_ENTRIES  0,    14,   sparc_excep_entry, 0
+#endif
+        
       /* 10 faults 0x20 - 0x3c */
         PUT_ENTRIES     12,   13,   sparc_excep_entry /* 0x20, 0x21 */
         PUT_EQ_ENTRIES  0x22, 0x23, sparc_excep_entry, 0
@@ -114,6 +118,9 @@ __exception_base_ptr:
 #else
         PUT_EQ_ENTRIES  0x80, 0xff, sparc_excep_entry, 0
 #endif
+
+__exception_base_ptr_end:
+        .globl __exception_base_ptr_end
 
 .section .text,"ax",@progbits
 
@@ -137,6 +144,7 @@ __exception_base_ptr:
         // %i6 and %i7 are caller saved registers, preserve %o6 and %o7 in interrupted code
         mov     %i6,    %l6
         mov     %i7,    %l7
+
 .endm
 
 /* This macro restore caller saved register from local regs */
@@ -165,6 +173,9 @@ FUNC_START(.text, sparc_excep_entry)
 
         // use interrupted code stack
         mov     %i6,    %o6
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     %sp,    %i7
+#endif
 
         mov     %l4,    %o0
 
@@ -201,19 +212,23 @@ FUNC_START(.text, sparc_excep_entry)
 FUNC_END(sparc_excep_entry)
 
 
+#ifdef CONFIG_HEXO_IRQ
 FUNC_START(.text, sparc_irq_entry)
 
         SPARC_EXCEPT_SAVE
 
         // use interrupted code stack
         mov     %i6,    %o6
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     %sp,    %i7
+#endif
 
-#ifdef CONFIG_ARCH_SMP
+# ifdef CONFIG_ARCH_SMP
         ld      [%g6 + %lo(cpu_interrupt_handler)], %o1
-#else
+# else
         set     cpu_interrupt_handler, %o1
         ld      [%o1], %o1
-#endif
+# endif
 
         call    %o1
         mov     %l4,    %o0
@@ -224,16 +239,19 @@ FUNC_START(.text, sparc_irq_entry)
         rett    %l2
 
 FUNC_END(sparc_irq_entry)
+#endif
 
 
 #ifdef CONFIG_HEXO_USERMODE
-
 FUNC_START(.text, sparc_syscall_entry)
 
         SPARC_EXCEPT_SAVE
         
         // use interrupted code stack
         mov     %i6,    %o6
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     %sp,    %i7
+#endif
 
         mov     %l4,    %o0
         
@@ -261,7 +279,6 @@ FUNC_START(.text, sparc_syscall_entry)
         rett    %l2
 
 FUNC_END(sparc_syscall_entry)
-
 #endif
 
 
