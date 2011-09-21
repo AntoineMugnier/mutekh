@@ -26,7 +26,7 @@
 #define CPU_CPU_H_
 
 /** sparc psr trap enabled bit */
-#define SPARC_PSR_IRQ_ENABLED     0x20
+#define SPARC_PSR_TRAP_ENABLED     0x20
 /** sparc psr previous super user mode */
 #define SPARC_PSR_PREV_SUSER_MODE 0x40
 /** sparc psr current super user mode */
@@ -35,6 +35,8 @@
 #define SPARC_PSR_PIL_MASK        0xf00
 /** sparc psr fpu enabled */
 #define SPARC_PSR_FPU_ENABLED     0x1000
+/** sparc current window pointer mask */
+#define SPARC_PSR_CWP_MASK        0x1f
 
 #define SPARC_TRAP_USERBREAK    1
 #define SPARC_TRAP_WINFLUSH     3
@@ -56,6 +58,23 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 
 # undef sparc
 # define CPU_TYPE_NAME sparc
+
+/** return sparc cpu windows count */
+static inline size_t
+cpu_sparc_wincount(void)
+{
+  uint32_t wim_mask = 0xffffffff;
+  uint32_t tmp;
+
+  asm ("  rd %%wim, %0   \n" // save wim
+       "  wr %1, %%wim   \n" // write all ones
+       "  rd %%wim, %1   \n" // read back
+       "  wr %0, %%wim   \n" // restore wim
+       : "=r" (tmp), "=r" (wim_mask): "1" (wim_mask)
+       );
+
+  return __builtin_popcount(wim_mask);
+}
 
 static inline cpu_id_t
 cpu_id(void)

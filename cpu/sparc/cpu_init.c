@@ -27,6 +27,8 @@
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
 
+#include <assert.h>
+
 #ifdef CONFIG_ARCH_SMP
 void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
@@ -43,6 +45,8 @@ cpu_global_init(void)
 
 void cpu_init(void)
 {
+  assert(cpu_sparc_wincount() == CONFIG_CPU_SPARC_WINCOUNT);
+
 #ifdef CONFIG_ARCH_SMP
   void			*cls;
 
@@ -67,6 +71,10 @@ void cpu_init(void)
   void sparc_excep_entry();
   void sparc_excep_entry_end();
   soclib_mem_bypass_sp_check(&sparc_excep_entry, &sparc_excep_entry_end);
+
+  void sparc_except_restore();
+  void sparc_except_restore_end();
+  soclib_mem_bypass_sp_check(&sparc_except_restore, &sparc_except_restore_end);
 
 # ifdef CONFIG_HEXO_IRQ
   void sparc_irq_entry();

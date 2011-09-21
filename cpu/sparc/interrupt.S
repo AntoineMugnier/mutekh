@@ -124,17 +124,22 @@ __exception_base_ptr_end:
 
 .section .text,"ax",@progbits
 
+
+
 /* This macro use all local regs to save caller saved register before calling C code */
 .macro SPARC_EXCEPT_SAVE
 
+        // get context registers save array in g5
+        add     %g7, %lo(sparc_context_regs), %g5
+
 #if CONFIG_CPU_SPARC_WINCOUNT < 3
-        /* need to save %o* registers to preserve %i* registers in interrupted code */
-        add     %g7, %lo(sparc_context_regs), %l0
+        /* need to save %o* registers to preserve %i* registers in
+	   overlapping window of interrupted code if we have only 2 windows */
         
-        std     %o0, [%l0 + CPU_SPARC_CONTEXT_I(0)]
-        std     %o2, [%l0 + CPU_SPARC_CONTEXT_I(2)]
-        std     %o4, [%l0 + CPU_SPARC_CONTEXT_I(4)]
-        std     %o6, [%l0 + CPU_SPARC_CONTEXT_I(6)]
+        std     %o0, [%g5 + CPU_SPARC_CONTEXT_I(0)]
+        std     %o2, [%g5 + CPU_SPARC_CONTEXT_I(2)]
+        std     %o4, [%g5 + CPU_SPARC_CONTEXT_I(4)]
+        std     %o6, [%g5 + CPU_SPARC_CONTEXT_I(6)]
 #endif
 
         // preserve other caller saved registers
@@ -145,10 +150,170 @@ __exception_base_ptr_end:
         mov     %i6,    %l6
         mov     %i7,    %l7
 
+        // use interrupted code stack
+        mov     %i6,    %o6
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     %sp,    %i7
+#endif
+
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+        // clear context preempt handler
+        set     cpu_preempt_handler, %o0
+        st      %g0,    [%o0]
+#endif
+
 .endm
 
-/* This macro restore caller saved register from local regs */
-.macro SPARC_EXCEPT_RESTORE
+
+FUNC_START(.text, sparc_excep_entry)
+
+        SPARC_EXCEPT_SAVE
+
+        // dump some registers
+        st     %l5, [%g5 + CPU_SPARC_CONTEXT_PSR]
+        st     %l1, [%g5 + CPU_SPARC_CONTEXT_PC]
+        st     %l2, [%g5 + CPU_SPARC_CONTEXT_NPC]
+
+        // get exception handler address
+#ifdef CONFIG_ARCH_SMP
+        ld      [%g6 + %lo(cpu_exception_handler)], %o5
+#else
+        set     cpu_exception_handler, %o5
+        ld      [%o5], %o5
+#endif
+
+        mov     %l4,    %o0 // arg1 is exception id
+        mov     %l1,    %o1 // arg2 execptr
+        mov     %g0,    %o2 // arg3 dataptr /* FIXME data access address ? */
+        mov     %g5,    %o3 // arg4 regtable
+        // call exception handler
+        call    %o5
+        mov     %l6,    %o4 // arg5 stack
+
+        // read some registers back in case they were modified by c code
+        ld     [%g5 + CPU_SPARC_CONTEXT_PSR], %l5
+        ld     [%g5 + CPU_SPARC_CONTEXT_PC] , %l1
+        b       sparc_except_restore
+        ld     [%g5 + CPU_SPARC_CONTEXT_NPC], %l2
+
+FUNC_END(sparc_excep_entry)
+
+
+#ifdef CONFIG_HEXO_USERMODE
+FUNC_START(.text, sparc_syscall_entry)
+
+        SPARC_EXCEPT_SAVE
+
+        // dump some registers
+        st     %g1, [%g5 + CPU_SPARC_CONTEXT_G(1)]
+        std    %i0, [%g5 + CPU_SPARC_CONTEXT_O(0)]
+        std    %i2, [%g5 + CPU_SPARC_CONTEXT_O(2)]
+        std    %i4, [%g5 + CPU_SPARC_CONTEXT_O(4)]
+        std    %i6, [%g5 + CPU_SPARC_CONTEXT_O(6)]
+
+        ld      [%g7 + %lo(cpu_syscall_handler)], %o2
+
+        mov     %l4,    %o0
+        call    %o2
+        mov     %g5,    %o1
+
+        // read back return value
+        b       sparc_except_restore
+        ld     [%g5 + CPU_SPARC_CONTEXT_0(0)], %i0
+
+
+FUNC_END(sparc_syscall_entry)
+#endif
+
+
+#ifdef CONFIG_HEXO_IRQ
+FUNC_START(.text, sparc_irq_entry)
+
+        SPARC_EXCEPT_SAVE
+
+        // get irq handler address
+# ifdef CONFIG_ARCH_SMP
+        ld      [%g6 + %lo(cpu_interrupt_handler)], %o1
+# else
+        set     cpu_interrupt_handler, %o1
+        ld      [%o1], %o1
+# endif
+
+        // call irq handler
+        call    %o1
+        mov     %l4,    %o0 // arg1 irq id
+
+#if 0
+        b       sparc_except_restore
+        nop
+#endif
+
+FUNC_END(sparc_irq_entry)
+#endif
+
+
+/* This function restore caller saved register from local regs */
+FUNC_START(.text, sparc_except_restore)
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+        
+        // check if a preempt handler has been registered
+        set     cpu_preempt_handler, %o0
+        ld      [%o0],  %o0
+
+        tst     %o0
+        beq     1f
+        nop
+
+        // call preempt handler
+        call    %o0
+        nop
+
+        // got pointer to context to switch to ?
+        tst     %o0
+        beq     1f
+        // save all registers available from this exception window
+        st      %l0,    [%g5 + CPU_SPARC_CONTEXT_Y]
+        st      %l1,    [%g5 + CPU_SPARC_CONTEXT_PC]
+        st      %l2,    [%g5 + CPU_SPARC_CONTEXT_NPC]
+        st      %l3,    [%g5 + CPU_SPARC_CONTEXT_G(1)]
+        st      %l5,    [%g5 + CPU_SPARC_CONTEXT_PSR]
+
+        std     %l6,    [%g5 + CPU_SPARC_CONTEXT_O(6)]
+        std     %i0,    [%g5 + CPU_SPARC_CONTEXT_O(0)]
+        std     %i2,    [%g5 + CPU_SPARC_CONTEXT_O(2)]
+        std     %i4,    [%g5 + CPU_SPARC_CONTEXT_O(4)]
+
+# ifdef CONFIG_HEXO_CONTEXT_STATS
+        // update context stats
+        call    context_preempt_stats
+# endif
+        // copy cpu_context_jumpto arg in previous window %o0
+        mov     %o0,    %i0
+
+        restore
+        // save all remaining registers from this point
+
+        std     %l0, [%g5 + CPU_SPARC_CONTEXT_L(0)]
+        std     %l2, [%g5 + CPU_SPARC_CONTEXT_L(2)]
+        std     %l4, [%g5 + CPU_SPARC_CONTEXT_L(4)]
+        std     %l6, [%g5 + CPU_SPARC_CONTEXT_L(6)]
+
+# if CONFIG_CPU_SPARC_WINCOUNT >= 3
+        // already saved if we have only 2 windows because of overlap
+        std     %i0, [%g5 + CPU_SPARC_CONTEXT_I(0)]
+        std     %i2, [%g5 + CPU_SPARC_CONTEXT_I(2)]
+        std     %i4, [%g5 + CPU_SPARC_CONTEXT_I(4)]
+        std     %i6, [%g5 + CPU_SPARC_CONTEXT_I(6)]
+# endif
+
+        // write save/restore mask
+        mov     CPU_SPARC_CONTEXT_RESTORE_CALLEE | CPU_SPARC_CONTEXT_RESTORE_CALLER, %l0
+        // switch to new context
+        b       cpu_context_jumpto
+        st      %l0, [%g5 + CPU_SPARC_CONTEXT_SAVE_MASK]
+1:      
+#endif
+        
         // restore caller saved registers
         mov     %l0,     %y
         mov     %l3,    %g1
@@ -157,130 +322,18 @@ __exception_base_ptr_end:
         mov     %l7,    %i7
 
 #if CONFIG_CPU_SPARC_WINCOUNT < 3
-        /* need to restore %o* registers */
-        add     %g7, %lo(sparc_context_regs), %l0
+        /* need to restore %o* overlapping registers */
 
-        ldd     [%l0 + CPU_SPARC_CONTEXT_I(0)], %o0
-        ldd     [%l0 + CPU_SPARC_CONTEXT_I(2)], %o2
-        ldd     [%l0 + CPU_SPARC_CONTEXT_I(4)], %o4
-        ldd     [%l0 + CPU_SPARC_CONTEXT_I(6)], %o6
-#endif
-.endm
-
-FUNC_START(.text, sparc_excep_entry)
-
-        SPARC_EXCEPT_SAVE
-
-        // use interrupted code stack
-        mov     %i6,    %o6
-#ifdef CONFIG_COMPILE_FRAMEPTR
-        mov     %sp,    %i7
+        ldd     [%g5 + CPU_SPARC_CONTEXT_I(0)], %o0
+        ldd     [%g5 + CPU_SPARC_CONTEXT_I(2)], %o2
+        ldd     [%g5 + CPU_SPARC_CONTEXT_I(4)], %o4
+        ldd     [%g5 + CPU_SPARC_CONTEXT_I(6)], %o6
 #endif
 
-        mov     %l4,    %o0
-
-        // context registers save array
-        add     %g7, %lo(sparc_context_regs), %l4
-
-        // dump some registers
-        st     %l5, [%l4 + CPU_SPARC_CONTEXT_PSR]
-        st     %l1, [%l4 + CPU_SPARC_CONTEXT_PC]
-        st     %l2, [%l4 + CPU_SPARC_CONTEXT_NPC]
-
-#ifdef CONFIG_ARCH_SMP
-        ld      [%g6 + %lo(cpu_exception_handler)], %o5
-#else
-        set     cpu_exception_handler, %o5
-        ld      [%o5], %o5
-#endif
-
-        add     %l4, CPU_SPARC_CONTEXT_PC, %o1
-        mov     %g0, %o2 /* FIXME data access address ? */
-        mov     %l4, %o3
-        call    %o5
-        mov     %i6, %o4
-
-        // read some registers back in case they were modified by c code
-        ld     [%l4 + CPU_SPARC_CONTEXT_PSR], %l5
-        ld     [%l4 + CPU_SPARC_CONTEXT_PC] , %l1
-        ld     [%l4 + CPU_SPARC_CONTEXT_NPC], %l2
-
-        SPARC_EXCEPT_RESTORE
-
+        /* return from exception */
         jmp     %l1
         rett    %l2
-FUNC_END(sparc_excep_entry)
-
-
-#ifdef CONFIG_HEXO_IRQ
-FUNC_START(.text, sparc_irq_entry)
-
-        SPARC_EXCEPT_SAVE
-
-        // use interrupted code stack
-        mov     %i6,    %o6
-#ifdef CONFIG_COMPILE_FRAMEPTR
-        mov     %sp,    %i7
-#endif
-
-# ifdef CONFIG_ARCH_SMP
-        ld      [%g6 + %lo(cpu_interrupt_handler)], %o1
-# else
-        set     cpu_interrupt_handler, %o1
-        ld      [%o1], %o1
-# endif
-
-        call    %o1
-        mov     %l4,    %o0
-
-        SPARC_EXCEPT_RESTORE
-
-        jmp     %l1
-        rett    %l2
-
-FUNC_END(sparc_irq_entry)
-#endif
-
-
-#ifdef CONFIG_HEXO_USERMODE
-FUNC_START(.text, sparc_syscall_entry)
-
-        SPARC_EXCEPT_SAVE
-        
-        // use interrupted code stack
-        mov     %i6,    %o6
-#ifdef CONFIG_COMPILE_FRAMEPTR
-        mov     %sp,    %i7
-#endif
-
-        mov     %l4,    %o0
-        
-        // context registers save array
-        add     %g7, %lo(sparc_context_regs), %l4
-
-        // dump some registers
-        st     %g1, [%l4 + CPU_SPARC_CONTEXT_G(1)]
-        std    %i0, [%l4 + CPU_SPARC_CONTEXT_O(0)]
-        std    %i2, [%l4 + CPU_SPARC_CONTEXT_O(2)]
-        std    %i4, [%l4 + CPU_SPARC_CONTEXT_O(4)]
-        std    %i6, [%l4 + CPU_SPARC_CONTEXT_O(6)]
-
-        ld      [%g7 + %lo(cpu_syscall_handler)], %o2
-
-        call    %o2
-        mov     %l4, %o1
-
-        SPARC_EXCEPT_RESTORE
-
-        // return value
-        ld     [%l4 + CPU_SPARC_CONTEXT_G(1)], %g1
-
-        jmp     %l1
-        rett    %l2
-
-FUNC_END(sparc_syscall_entry)
-#endif
-
+FUNC_END(sparc_except_restore)
 
 // Local Variables:
 // indent-tabs-mode: nil;

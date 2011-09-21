@@ -57,7 +57,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
   regs->i[7] = regs->o[6];
 #endif
   regs->o[0] = (uintptr_t)param;
-  regs->psr = SPARC_PSR_PREV_SUSER_MODE | SPARC_PSR_SUSER_MODE | SPARC_PSR_PIL_MASK | SPARC_PSR_IRQ_ENABLED;
+  regs->psr = SPARC_PSR_PREV_SUSER_MODE | SPARC_PSR_SUSER_MODE | SPARC_PSR_PIL_MASK | SPARC_PSR_TRAP_ENABLED;
   regs->pc = (uintptr_t)entry;
   regs->npc = regs->pc + 4;
 
@@ -70,5 +70,11 @@ cpu_context_destroy(struct context_s *context)
 #if 0
   reg_t		*stack = (reg_t*)context->stack_ptr;
 #endif
+}
+
+void cpu_exception_resume_pc(struct cpu_context_s *regs, uintptr_t pc)
+{
+  regs->pc = pc;
+  regs->npc = pc + 4;
 }
 

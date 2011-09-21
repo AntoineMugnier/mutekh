@@ -28,8 +28,8 @@
 
 FUNC_START(.text, cpu_boot)
 
-        /* set wim and psr. window 0 is reserved for traps */
-        wr      %g0, SPARC_PSR_SUSER_MODE | SPARC_PSR_PIL_MASK | SPARC_PSR_IRQ_ENABLED, %psr
+        /* set wim and psr. window -1 is reserved for traps */
+        wr      %g0, SPARC_PSR_SUSER_MODE | SPARC_PSR_PIL_MASK | SPARC_PSR_TRAP_ENABLED, %psr
         wr      %g0, 0, %wim
 
         /* get CPU id and adjust stack */

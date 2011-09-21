@@ -197,7 +197,14 @@ static inline bool_t
 cpu_is_interruptible(void)
 {
 # ifdef CONFIG_HEXO_IRQ
-	return cpu_interrupt_getstate();
+  reg_t		state;
+
+  __asm__ volatile (
+                    "rd %%psr, %0		\n\t"
+		    : "=r" (state)
+		    );
+
+  return (state & 0xf00) < 0xf00 && (state & 0x20);
 # else
 	return 0;
 # endif

@@ -139,9 +139,7 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore callee saved stack pointer
         ld      [%g1 + CPU_SPARC_CONTEXT_O(6)], %o6
-#ifdef CONFIG_COMPILE_FRAMEPTR
-        mov     %sp,            %i7
-#endif
+        ld      [%g1 + CPU_SPARC_CONTEXT_I(7)], %i7
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
         /* leave memchecker command mode */
@@ -150,14 +148,14 @@ FUNC_START(.text, cpu_context_jumpto)
 
         // restore status
         ld      [%g1 + CPU_SPARC_CONTEXT_PSR], %g2
-        andn    %g2, SPARC_PSR_IRQ_ENABLED, %g2
+        andn    %g2, SPARC_PSR_TRAP_ENABLED | SPARC_PSR_CWP_MASK, %g2
         mov     %g2, %psr
-        
+
         ld      [%g1 + CPU_SPARC_CONTEXT_SAVE_MASK], %g2
 
 #if 0   // callee should almost always get restored (except on context start)
         andcc   %g2, CPU_SPARC_CONTEXT_RESTORE_CALLEE, %g0
-        bz      1f
+        beq     1f
         nop
 #endif
         
@@ -170,7 +168,6 @@ FUNC_START(.text, cpu_context_jumpto)
         ldd     [%g1 + CPU_SPARC_CONTEXT_I(0)], %i0
         ldd     [%g1 + CPU_SPARC_CONTEXT_I(2)], %i2
         ldd     [%g1 + CPU_SPARC_CONTEXT_I(4)], %i4
-        ld      [%g1 + CPU_SPARC_CONTEXT_I(7)], %i7
 1:      
         andcc   %g2, CPU_SPARC_CONTEXT_RESTORE_CALLER, %g0
         bz      1f
@@ -183,7 +180,7 @@ FUNC_START(.text, cpu_context_jumpto)
         ld      [%g1 + CPU_SPARC_CONTEXT_O(7)], %o7
         ld      [%g1 + CPU_SPARC_CONTEXT_I(6)], %i6
 
-        ld      [%g1 + CPU_SPARC_CONTEXT_I(6)], %g2
+        ld      [%g1 + CPU_SPARC_CONTEXT_Y], %g2
         mov     %g2, %y
 
         save
