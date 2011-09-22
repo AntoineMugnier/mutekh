@@ -209,7 +209,7 @@ void * context_destroy(struct context_s *context);
 
 #ifdef CONFIG_HEXO_CONTEXT_STATS
 /** @internal timestamp of last context switch on this processor */
-extern CPU_LOCAL cpu_cycle_t context_swicth_time;
+extern CPU_LOCAL cpu_cycle_t context_switch_time;
 
 /** @internal @This updates context stats when current context is preempted */
 void context_preempt_stats(struct context_s *context);

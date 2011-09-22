@@ -16,7 +16,7 @@ CPU_LOCAL void *cpu_preempt_param;
 #endif
 
 #ifdef CONFIG_HEXO_CONTEXT_STATS
-CPU_LOCAL cpu_cycle_t context_swicth_time;
+CPU_LOCAL cpu_cycle_t context_switch_time;
 #endif
 
 CONTEXT_LOCAL uintptr_t context_stack_start;
@@ -148,12 +148,12 @@ context_destroy(struct context_s *context)
 void context_leave_stats(struct context_s *context)
 {
   if (context)
-    context->cycles += cpu_cycle_diff(CPU_LOCAL_GET(context_swicth_time));
+    context->cycles += cpu_cycle_diff(CPU_LOCAL_GET(context_switch_time));
 }
 
 void context_enter_stats(struct context_s *context)
 {
-  CPU_LOCAL_SET(context_swicth_time, cpu_cycle_count());
+  CPU_LOCAL_SET(context_switch_time, cpu_cycle_count());
   context->enter_cnt++;
 }
 
