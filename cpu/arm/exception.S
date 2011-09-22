@@ -68,7 +68,7 @@
     /* from user mode, abuse stmia^ */
     stmia  r2, {r13, r14}^
     /* Always restore kernel stack pointer */
-    CONTEXT_LOCAL context_stack_end, r3, r13
+    CONTEXT_LOCAL_ld context_stack_end, r3, r13
     b 2f
 1:  
 #endif        
@@ -88,9 +88,8 @@
 .macro PREEMPT_CLEAR
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
     mov    r3, #0
-    CPU_LOCAL_SET cpu_preempt_handler, r1, r2, r3
+    CPU_LOCAL_st cpu_preempt_handler, r1, r2, r3
 #endif
-    ldr    lr, =arm_exc_restore
 .endm
 
     
@@ -98,6 +97,7 @@
 FUNC_START(.text, arm_exc_undef)
     PREPARE_EXCEPTION 4
     PREEMPT_CLEAR
+    ldr    lr, =arm_exc_restore
     mov    r0, #CPU_EXCEPTION_ILLEGAL_INS
     b      arm_exc_common
 FUNC_END(arm_exc_undef)
@@ -106,6 +106,7 @@ FUNC_END(arm_exc_undef)
 FUNC_START(.text, arm_exc_pabt)
     PREPARE_EXCEPTION 4
     PREEMPT_CLEAR
+    ldr    lr, =arm_exc_restore
     mov    r0, #CPU_EXCEPTION_INS_ERROR
     b      arm_exc_common
 FUNC_END(arm_exc_pabt)
@@ -114,6 +115,7 @@ FUNC_END(arm_exc_pabt)
 FUNC_START(.text, arm_exc_dabt)
     PREPARE_EXCEPTION 8
     PREEMPT_CLEAR
+    ldr    lr, =arm_exc_restore
     mov    r0, #CPU_EXCEPTION_DATA_ERROR
     b      arm_exc_common
 FUNC_END(arm_exc_dabt)
@@ -123,6 +125,7 @@ FUNC_END(arm_exc_dabt)
 FUNC_START(.text, arm_exc_irq)
     PREPARE_EXCEPTION 4
     PREEMPT_CLEAR
+    ldr    lr, =arm_exc_restore
     mov    r0, #0
     b      arm_irq_common
 FUNC_END(arm_exc_irq)
@@ -132,24 +135,19 @@ FUNC_START(.text, arm_exc_fiq)
     .warning "Context saving is not correct for fiq handling"
     PREPARE_EXCEPTION 4
     PREEMPT_CLEAR
+    ldr    lr, =arm_exc_restore
     mov    r0, #1
     b      arm_irq_common
 FUNC_END(arm_exc_fiq)
 #endif
 
-    /* r14 is swi pc + 4 */
+#ifdef CONFIG_HEXO_USERMODE
 FUNC_START(.text, arm_exc_swi)
-    /* Let's say our ABI tells we can trash r12 */
-#if defined(CONFIG_HEXO_USERMODE)
-    mrs    r12, spsr
-    tst    r12, #0xf
-    bne    1f // swi from kernel
+    /* r14 is swi pc + 4 */
 
     /* We are in swi from userland, we cant trust sp, restore it */
-    CONTEXT_LOCAL context_stack_end, sp, r12
+    CONTEXT_LOCAL_ld context_stack_end, sp, r12
     bic    sp, sp, #63
-1:
-#endif
 
     // Now we have a trusted stack, we can work...
     /* We must save r11, but we have nothing else than a stack, so
@@ -157,7 +155,7 @@ FUNC_START(.text, arm_exc_swi)
      */
     push   {r11}
     // Use r11 to reference cpu_context
-    CONTEXT_LOCAL_ADDR arm_context_regs, r11, r12
+    CONTEXT_LOCAL_addr arm_context_regs, r11, r12
 
     // Save return address
     str    lr, [r11, #CPU_ARM_CONTEXT_GPR(15)]
@@ -166,42 +164,27 @@ FUNC_START(.text, arm_exc_swi)
     str    r12, [r11, #CPU_ARM_CONTEXT_SAVE_MASK]
 
     // Save caller-saved regs (arguments)
-    add    r12, r11, #CPU_ARM_CONTEXT_GPR(2)
-    stmia  r12, {r0, r1, r2, r3}
+    stmia  r11, {r0, r1, r2, r3}
 
     // Save mode
     mrs    r1, spsr
     str    r1, [r11, #CPU_ARM_CONTEXT_CPSR]
 
-    /* Location of pop {r12} is a little cheesy:
-     * Overall, we want to save the sp as it was in previous mode,
-     * so we have to pop r12 *before* the stmneia {r13, r14}...
-     */
-    pop    {r12} // changes r13
+    /* From user mode, use stmia^ to save user sp and lr */
+    add    r12, r11, #CPU_ARM_CONTEXT_GPR(13)
+    stmia  r12, {r13, r14}^
 
-#if defined(CONFIG_HEXO_USERMODE)
-    /* r1 is still cpsr */
-    tst    r1, #0xf
-
-    /* if 0 (eq), from user mode */
-    /* from user mode, abuse stmia^ */
-    stmeqia  r11, {r13, r14}^
-    /* We were from super, so save super */
-    stmneia  r11, {r13, r14}
-#else
-    /* Save sp and lr */
-    stmia  r11, {r13, r14}
-#endif
-    
-    /* And finally save r11 (which was pushed previously, and
-     * popped to r12) */
+    /* And finally save r11 */
+    pop    {r12}
     str    r12, [r11, #CPU_ARM_CONTEXT_GPR(11)]
-    
-    preempt_clear
-    mov    r1, r11
+
+    PREEMPT_CLEAR
+
+    ldr    lr, =arm_exc_restore
+    mov    r0, r11
     b      arm_swi_common
 FUNC_END(arm_exc_swi)
-
+#endif
 
 FUNC_START(.text, arm_exc_restore)
 
@@ -222,7 +205,7 @@ FUNC_START(.text, arm_exc_restore)
     str     r3, [r1, #SOCLIB_MC_DELAYED_MAGIC_OFFSET]
 #endif
     // context registers save array
-    CONTEXT_LOCAL_ADDR arm_context_regs, r2, r3
+    CONTEXT_LOCAL_addr arm_context_regs, r2, r3
 
     b arm_context_jumpto_internal
 FUNC_END(arm_exc_restore)

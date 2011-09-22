@@ -30,7 +30,11 @@
 FUNC_START(.boot, cpu_boot)
         ldr     pc, =arm_boot
         ldr     pc, =arm_exc_undef
+#ifdef CONFIG_HEXO_USERMODE
         ldr     pc, =arm_exc_swi
+#else
+        ldr     pc, =arm_exc_undef
+#endif
         ldr     pc, =arm_exc_pabt
         ldr     pc, =arm_exc_dabt
         ldr     pc, =arm_exc_undef // reserved
@@ -41,7 +45,6 @@ FUNC_START(.boot, cpu_boot)
 # else
         ldr     pc, =arm_exc_irq
         ldr     pc, =arm_exc_fiq
-
 # endif
 #endif
 FUNC_END(cpu_boot)

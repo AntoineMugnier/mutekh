@@ -87,6 +87,17 @@ void cpu_init(void)
         void arm_exc_fiq_end();
         soclib_mem_bypass_sp_check(&arm_exc_fiq, &arm_exc_fiq_end);
 # endif
+
+# ifdef CONFIG_HEXO_USERMODE
+        void arm_exc_swi();
+        void arm_exc_swi_end();
+        soclib_mem_bypass_sp_check(&arm_exc_swi, &arm_exc_swi_end);
+
+        void cpu_context_set_user();
+        void cpu_context_set_user_end();
+        soclib_mem_bypass_sp_check(&cpu_context_set_user, &cpu_context_set_user_end);
+# endif
+
         void arm_context_jumpto_internal_end();
         soclib_mem_bypass_sp_check(&cpu_context_jumpto, &arm_context_jumpto_internal_end);
 #endif

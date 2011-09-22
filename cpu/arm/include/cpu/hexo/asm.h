@@ -88,11 +88,11 @@
 
 # ifdef CONFIG_CPU_ARM_TLS_IN_C15
 
-.macro CONTEXT_LOCAL name, rd, rt
+.macro CONTEXT_LOCAL_ld name, rd, rt
      GET_CP15_REL \name, \rd, \rt, 4
 .endm
 
-.macro CONTEXT_LOCAL_ADDR name, rd, rt
+.macro CONTEXT_LOCAL_addr name, rd, rt
      mrc   p15,0, \rt, c13, c0, 4
      ldr   \rd, =\name
      add   \rd, \rd, \rt
@@ -104,11 +104,11 @@
 
 # else
 
-.macro CONTEXT_LOCAL_ADDR name, rd, rt
+.macro CONTEXT_LOCAL_addr name, rd, rt
      GET_GLOBAL_REL_ADDR \name, \rd, \rt, __context_data_base
 .endm
 
-.macro CONTEXT_LOCAL name, rd, rt
+.macro CONTEXT_LOCAL_ld name, rd, rt
      GET_GLOBAL_REL \name, \rd, \rt, __context_data_base
 .endm
 
@@ -122,21 +122,21 @@
 
 # ifdef CONFIG_ARCH_SMP
 
-.macro CPU_LOCAL name, rd, rt
+.macro CPU_LOCAL_ld name, rd, rt
      GET_CP15_REL \name, \rd, \rt, 3
 .endm
 
-.macro CPU_LOCAL_SET name, tmp, tmp2, val
+.macro CPU_LOCAL_st name, tmp, tmp2, val
      SET_CP15_REL \name, \tmp, \tmp2, \val, 3
 .endm
 
 # else
 
-.macro CPU_LOCAL name, rd, rt
+.macro CPU_LOCAL_ld name, rd, rt
      GET_GLOBAL \name, \rd
 .endm
 
-.macro CPU_LOCAL_SET name, tmp, tmp2, val
+.macro CPU_LOCAL_st name, tmp, tmp2, val
      SET_GLOBAL \name, \val, \tmp
 .endm
 

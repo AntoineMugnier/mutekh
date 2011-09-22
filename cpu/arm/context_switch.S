@@ -105,7 +105,7 @@ FUNC_START(.text, cpu_context_jumpto)
     TLS_BASE_SET r3, r2
 
     // context registers save array
-    CONTEXT_LOCAL_ADDR arm_context_regs, r2, r3
+    CONTEXT_LOCAL_addr arm_context_regs, r2, r3
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
     /* enter memchecker command mode */
@@ -240,7 +240,7 @@ FUNC_START(.text, cpu_context_stack_use)
     TLS_BASE_SET r5, r6
 
     // context registers save array
-    CONTEXT_LOCAL_ADDR arm_context_regs, r6, r3
+    CONTEXT_LOCAL_addr arm_context_regs, r6, r3
 
     // use stack ptr
     ldr     r13, [r6, #CPU_ARM_CONTEXT_GPR(13)]
@@ -273,6 +273,21 @@ FUNC_END(cpu_context_stack_use)
 #ifdef CONFIG_HEXO_USERMODE
 
 FUNC_START(.text, cpu_context_set_user)
+    /* set user stack reg */
+    stmda   sp, {r0}
+    ldmda   sp, {r13}^
+
+    /* set arg */
+    mov     r0,     r2
+
+    /* set previous state as user and restore */
+# ifdef CONFIG_HEXO_IRQ
+    msr     spsr,   #0x00
+# else
+    msr     spsr,   #0xd0
+# endif
+
+    movs    pc,     r1
 FUNC_END(cpu_context_set_user)
 
 #endif

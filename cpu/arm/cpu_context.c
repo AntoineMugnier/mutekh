@@ -95,7 +95,7 @@ inline struct context_s *arm_except_preempt()
 }
 
 #ifdef CONFIG_HEXO_USERMODE
-extern CONTEXT_LOCAL cpu_exception_handler_t  *cpu_user_exception_handler = NULL;
+extern CONTEXT_LOCAL cpu_exception_handler_t  *cpu_user_exception_handler;
 #endif
 
 extern CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
@@ -118,19 +118,17 @@ struct context_s *arm_exc_common(reg_t no, struct cpu_context_s *context)
 }
 
 #ifdef CONFIG_HEXO_USERMODE
-extern CONTEXT_LOCAL cpu_syscall_handler_t  *cpu_syscall_handler = NULL;
-#endif
+extern CONTEXT_LOCAL cpu_syscall_handler_t  *cpu_syscall_handler;
 
-struct context_s *arm_swi_common(reg_t unused, struct cpu_context_s *context)
+struct context_s *arm_swi_common(struct cpu_context_s *context)
 {
-#ifdef CONFIG_HEXO_USERMODE
     cpu_syscall_handler_t *handler =
         CONTEXT_LOCAL_GET(cpu_syscall_handler);
     handler(0, context);
-#endif
 
     return arm_except_preempt();
 }
+#endif
 
 #ifdef CONFIG_HEXO_IRQ
 extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
