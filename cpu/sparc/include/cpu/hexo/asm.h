@@ -43,6 +43,24 @@
 #  endif
 .endm
 
+.macro CPU_LOCAL_ld name, rd
+# ifdef CONFIG_ARCH_SMP
+         ld     [%g6 + %lo(\name)], \rd
+# else
+         set    \name,   \rd
+         ld     [\rd], \rd
+# endif
+.endm
+
+.macro CPU_LOCAL_st name, rd, rt
+# ifdef CONFIG_ARCH_SMP
+         st     \rd, [%g6 + %lo(\name)]
+# else
+         set    \name,   \rt
+         st     \rd,   [\rt]
+# endif
+.endm
+
 # else /* not asm */
 
 #  define ASM_SECTION(name)              \

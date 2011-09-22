@@ -21,6 +21,11 @@
 
 #include <hexo/error.h>
 #include <hexo/context.h>
+#include <hexo/local.h>
+
+#ifdef CONFIG_HEXO_USERMODE
+CPU_LOCAL void *__context_data_base;
+#endif
 
 __attribute__((aligned(8)))
 CONTEXT_LOCAL struct cpu_context_s sparc_context_regs;
@@ -35,6 +40,9 @@ cpu_context_bootstrap(struct context_s *context)
 {
   /* set context local storage register base pointer */
   asm volatile("mov %0, %%g7" : : "r" (context->tls));
+#ifdef CONFIG_HEXO_USERMODE
+  CPU_LOCAL_SET(__context_data_base, context->tls);
+#endif
 
   /* nothing is saved for this context */
   CONTEXT_LOCAL_ADDR(sparc_context_regs)->save_mask = 0;

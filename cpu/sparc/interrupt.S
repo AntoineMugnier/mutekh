@@ -114,9 +114,9 @@ __exception_base_ptr:
 
 #ifdef CONFIG_HEXO_USERMODE
       /* syscalls */
-        PUT_ENTRIES     0x80, 0xff, sparc_syscall_entry
+        PUT_ENTRIES     0x0, 0x7f, sparc_syscall_entry
 #else
-        PUT_EQ_ENTRIES  0x80, 0xff, sparc_excep_entry, 0
+        PUT_EQ_ENTRIES  0x0, 0x7f, sparc_excep_entry, 0
 #endif
 
 __exception_base_ptr_end:
@@ -128,6 +128,18 @@ __exception_base_ptr_end:
 
 /* This macro use all local regs to save caller saved register before calling C code */
 .macro SPARC_EXCEPT_SAVE
+
+#ifdef CONFIG_HEXO_USERMODE
+# ifdef CONFIG_ARCH_SMP
+        // restore cls
+        CPU_ID  %g5
+        sll     %g5,    2,      %g5
+        set     cpu_local_storage, %g6
+        ld      [%g6 + %g5],    %g6
+# endif
+        // restore tls
+        CPU_LOCAL_ld  __context_data_base, %g7
+#endif
 
         // get context registers save array in g5
         add     %g7, %lo(sparc_context_regs), %g5
@@ -142,6 +154,11 @@ __exception_base_ptr_end:
         std     %o6, [%g5 + CPU_SPARC_CONTEXT_I(6)]
 #endif
 
+#if defined(CONFIG_CPU_SPARC_APP_REGS)
+        std     %g2, [%g5 + CPU_SPARC_CONTEXT_G(2)]
+        st      %g4, [%g5 + CPU_SPARC_CONTEXT_G(4)]
+#endif
+
         // preserve other caller saved registers
         mov     %y,     %l0
         mov     %g1,    %l3
@@ -150,18 +167,33 @@ __exception_base_ptr_end:
         mov     %i6,    %l6
         mov     %i7,    %l7
 
-        // use interrupted code stack
-        mov     %i6,    %o6
-#ifdef CONFIG_COMPILE_FRAMEPTR
-        mov     %sp,    %i7
-#endif
-
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         // clear context preempt handler
         set     cpu_preempt_handler, %o0
         st      %g0,    [%o0]
 #endif
 
+        // use interrupted code stack
+        mov     %i6,    %o6
+
+.endm
+
+
+.macro SPARC_EXCEPT_SET_STACK        
+#ifdef CONFIG_HEXO_USERMODE
+        // from usermode ?
+        andcc   %l5,    SPARC_PSR_PREV_SUSER_MODE, %g0
+        bne     1f
+        nop
+
+        // use kernel stack
+        ld      [%g7 + %lo(context_stack_end)], %o6
+1:      
+#endif
+
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     %sp,    %i7
+#endif
 .endm
 
 
@@ -169,18 +201,36 @@ FUNC_START(.text, sparc_excep_entry)
 
         SPARC_EXCEPT_SAVE
 
+#ifdef CONFIG_HEXO_USERMODE
+        // from usermode ?
+        andcc   %l5,    SPARC_PSR_PREV_SUSER_MODE, %g0
+        bne     1f
+        nop
+
+        // use kernel stack
+        ld      [%g7 + %lo(context_stack_end)], %o6
+
+        // use context local handler
+        ld      [%g7 + %lo(cpu_user_exception_handler)], %o5
+        tst     %o5
+
+        bne     2f
+        nop
+1:      
+#endif
+
+        // use cpu local handler
+        CPU_LOCAL_ld cpu_exception_handler, %o5
+2:      
+
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     %sp,    %i7
+#endif
+
         // dump some registers
         st     %l5, [%g5 + CPU_SPARC_CONTEXT_PSR]
         st     %l1, [%g5 + CPU_SPARC_CONTEXT_PC]
         st     %l2, [%g5 + CPU_SPARC_CONTEXT_NPC]
-
-        // get exception handler address
-#ifdef CONFIG_ARCH_SMP
-        ld      [%g6 + %lo(cpu_exception_handler)], %o5
-#else
-        set     cpu_exception_handler, %o5
-        ld      [%o5], %o5
-#endif
 
         mov     %l4,    %o0 // arg1 is exception id
         mov     %l1,    %o1 // arg2 execptr
@@ -201,8 +251,13 @@ FUNC_END(sparc_excep_entry)
 
 #ifdef CONFIG_HEXO_USERMODE
 FUNC_START(.text, sparc_syscall_entry)
-
+        
         SPARC_EXCEPT_SAVE
+        SPARC_EXCEPT_SET_STACK
+
+        // skip trap instruction
+        add     %l1,    4,      %l1
+        add     %l2,    4,      %l2
 
         // dump some registers
         st     %g1, [%g5 + CPU_SPARC_CONTEXT_G(1)]
@@ -219,7 +274,7 @@ FUNC_START(.text, sparc_syscall_entry)
 
         // read back return value
         b       sparc_except_restore
-        ld     [%g5 + CPU_SPARC_CONTEXT_0(0)], %i0
+        ld     [%g5 + CPU_SPARC_CONTEXT_O(0)], %i0
 
 
 FUNC_END(sparc_syscall_entry)
@@ -230,14 +285,10 @@ FUNC_END(sparc_syscall_entry)
 FUNC_START(.text, sparc_irq_entry)
 
         SPARC_EXCEPT_SAVE
+        SPARC_EXCEPT_SET_STACK
 
         // get irq handler address
-# ifdef CONFIG_ARCH_SMP
-        ld      [%g6 + %lo(cpu_interrupt_handler)], %o1
-# else
-        set     cpu_interrupt_handler, %o1
-        ld      [%o1], %o1
-# endif
+        CPU_LOCAL_ld     cpu_interrupt_handler, %o1
 
         // call irq handler
         call    %o1
@@ -316,8 +367,9 @@ FUNC_START(.text, sparc_except_restore)
         
         // restore caller saved registers
         mov     %l0,     %y
-        mov     %l3,    %g1
         mov     %l5,   %psr
+
+        mov     %l3,    %g1
         mov     %l6,    %i6
         mov     %l7,    %i7
 

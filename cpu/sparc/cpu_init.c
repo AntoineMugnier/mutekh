@@ -86,6 +86,10 @@ void cpu_init(void)
   void sparc_syscall_entry();
   void sparc_syscall_entry_end();
   soclib_mem_bypass_sp_check(&sparc_syscall_entry, &sparc_syscall_entry_end);
+
+  void cpu_context_set_user();
+  void cpu_context_set_user_end();
+  soclib_mem_bypass_sp_check(&cpu_context_set_user, &cpu_context_set_user_end);
 # endif
 #endif
 }

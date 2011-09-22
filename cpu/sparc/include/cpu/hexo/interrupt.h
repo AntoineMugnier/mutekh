@@ -94,6 +94,7 @@ cpu_interrupt_disable(void)
 		"rd %%psr, %0		\n\t"
                 "or %0, 0xf00, %0        \n\t"
 		"wr %0, %%psr	\n\t"
+                "nop \n nop \n nop \n"
 		: "=r" (tmp)
                 :: "memory"     /* compiler memory barrier */
 	  );
@@ -110,6 +111,7 @@ cpu_interrupt_enable(void)
 		"rd %%psr, %0		\n\t"
                 "andn %0, 0xf00, %0      \n\t"
 		"wr %0, %%psr	\n\t"
+                "nop \n nop \n nop \n"
 		: "=r" (tmp)
                 :
                 : "memory"     /* compiler memory barrier */
@@ -155,6 +157,7 @@ cpu_interrupt_savestate_disable(reg_t *state)
 		"rd %%psr, %1		\n\t"
                 "or %1, 0xf00, %0      \n\t"
 		"wr %0, %%psr           \n\t"
+                "nop \n nop \n nop \n"
 		: "=r" (tmp),
                   "=r" (*state)
                 :
@@ -169,6 +172,7 @@ cpu_interrupt_restorestate(const reg_t *state)
 # ifdef CONFIG_HEXO_IRQ
   __asm__ volatile (
                     "wr %0, %%psr           \n\t"
+                    "nop \n nop \n nop \n"
 		    :
 		    : "r" (*state)
                     : "memory", "cc"     /* compiler memory barrier */

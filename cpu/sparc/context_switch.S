@@ -134,6 +134,11 @@ FUNC_START(.text, cpu_context_jumpto)
         // restore tls pointer from context struct
         ld      [%o0 + HEXO_CONTEXT_S_TLS * INT_REG_SIZE/8], %g7
 
+#ifdef CONFIG_HEXO_USERMODE
+        // save tls for restoration when back from user mode
+        CPU_LOCAL_st    __context_data_base, %g7, %g1
+#endif
+
         // context registers save array
         add     %g7, %lo(sparc_context_regs), %g1
 
@@ -147,14 +152,14 @@ FUNC_START(.text, cpu_context_jumpto)
 #endif
 
         // restore status
-        ld      [%g1 + CPU_SPARC_CONTEXT_PSR], %g2
-        andn    %g2, SPARC_PSR_TRAP_ENABLED | SPARC_PSR_CWP_MASK, %g2
-        mov     %g2, %psr
+        ld      [%g1 + CPU_SPARC_CONTEXT_PSR], %g5
+        andn    %g5, SPARC_PSR_TRAP_ENABLED | SPARC_PSR_CWP_MASK, %g5
+        mov     %g5, %psr
 
-        ld      [%g1 + CPU_SPARC_CONTEXT_SAVE_MASK], %g2
+        ld      [%g1 + CPU_SPARC_CONTEXT_SAVE_MASK], %g5
 
 #if 0   // callee should almost always get restored (except on context start)
-        andcc   %g2, CPU_SPARC_CONTEXT_RESTORE_CALLEE, %g0
+        andcc   %g5, CPU_SPARC_CONTEXT_RESTORE_CALLEE, %g0
         beq     1f
         nop
 #endif
@@ -169,7 +174,7 @@ FUNC_START(.text, cpu_context_jumpto)
         ldd     [%g1 + CPU_SPARC_CONTEXT_I(2)], %i2
         ldd     [%g1 + CPU_SPARC_CONTEXT_I(4)], %i4
 1:      
-        andcc   %g2, CPU_SPARC_CONTEXT_RESTORE_CALLER, %g0
+        andcc   %g5, CPU_SPARC_CONTEXT_RESTORE_CALLER, %g0
         bz      1f
         nop
 
@@ -180,16 +185,15 @@ FUNC_START(.text, cpu_context_jumpto)
         ld      [%g1 + CPU_SPARC_CONTEXT_O(7)], %o7
         ld      [%g1 + CPU_SPARC_CONTEXT_I(6)], %i6
 
-        ld      [%g1 + CPU_SPARC_CONTEXT_Y], %g2
-        mov     %g2, %y
+        ld      [%g1 + CPU_SPARC_CONTEXT_Y], %g5
+        mov     %g5, %y
 
         save
 
         // pc and npc
         ldd     [%g1 + CPU_SPARC_CONTEXT_PC],   %l0
-        
-#ifdef CONFIG_HEXO_USERMODE
-        // not used in kernel code
+
+#if defined(CONFIG_CPU_SPARC_APP_REGS)
         ldd     [%g1 + CPU_SPARC_CONTEXT_G(2)], %g2
         ld      [%g1 + CPU_SPARC_CONTEXT_G(4)], %g4
 #endif
@@ -282,3 +286,25 @@ FUNC_START(.text, cpu_context_stack_use)
         mov     %o2,    %o0
 
 FUNC_END(cpu_context_stack_use)
+
+#ifdef CONFIG_HEXO_USERMODE
+FUNC_START(.text, cpu_context_set_user)
+
+        save
+        
+        /* set user mode in status */
+        mov     %psr,   %l0
+        andn    %l0,    SPARC_PSR_PREV_SUSER_MODE | SPARC_PSR_TRAP_ENABLED, %l0
+        mov     %l0,    %psr
+
+        /* set stack */
+        mov     %i0,    %i6
+        /* set arg */
+        mov     %i2,    %i0
+        nop
+
+        jmp     %i1
+        rett    %i1 + 4
+
+FUNC_END(cpu_context_set_user)
+#endif
