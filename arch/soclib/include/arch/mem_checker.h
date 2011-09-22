@@ -110,6 +110,8 @@
 
 # ifndef __MUTEK_ASM__
 
+# include <stdint.h>
+
 #  if defined(CONFIG_SOCLIB_MEMCHECK)
 
 # include <hexo/iospace.h>
