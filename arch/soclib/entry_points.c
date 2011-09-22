@@ -98,7 +98,6 @@ void boot_from_reset_vector()
         - (1 << CONFIG_HEXO_RESET_STACK_SIZE) * cpu_id();
 
     if ( cpu_isbootstrap() ) {
-        cpu_cycle_wait(10000);
         init_bss();
 #ifdef CONFIG_ARCH_DEVICE_TREE
         arch_fdt = &dt_blob_start;

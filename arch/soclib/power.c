@@ -20,6 +20,7 @@
 
 */
 
+#include <arch/mem_checker.h>
 #include <hexo/power.h>
 #include <hexo/iospace.h>
 
@@ -30,6 +31,11 @@ error_t power_reboot()
 
 error_t power_shutdown()
 {
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  cpu_interrupt_disable();
+  soclib_mem_check_disable(SOCLIB_MC_CHECK_ALL);
+#endif
+
   /* FIXME vci simhelper hack */
   cpu_mem_write_32(0xd3200004, 0);
 
