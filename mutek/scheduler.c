@@ -503,13 +503,11 @@ void sched_affinity_clear(struct sched_context_s *sched_ctx)
 
 #endif
 
+#ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
 void sched_context_candidate_fcn(struct sched_context_s *sched_ctx,
                                  sched_candidate_fcn_t *fcn)
 {
-#ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
   sched_ctx->is_candidate = fcn;
-#else
-  abort();
-#endif
 }
+#endif
 
