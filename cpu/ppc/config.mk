@@ -5,11 +5,8 @@ ifeq ($(CONFIG_COMPILE_SOFTFLOAT), defined)
 CPUCFLAGS += -msoft-float
 endif
 
-ifeq ($(CONFIG_CPU_NAME), ppc405)
-CPUCFLAGS += -mcpu=405
- ifeq ($(CONFIG_CPU_PPC_SOCLIB), defined)
- CPUCFLAGS += -mno-dlmzb
- endif
+ifeq ($(CONFIG_CPU_PPC_SOCLIB), defined)
+CPUCFLAGS += -mno-dlmzb
 endif
 
 ifeq ($(CONFIG_COMPILE_DEBUG), defined)

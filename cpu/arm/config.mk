@@ -4,14 +4,6 @@ CPUCFLAGS= -fsigned-char
 CPULDFLAGS=
 CPUASFLAGS=
 
-ifneq ($(CONFIG_CPU_ARM_CPU),undefined)
-CPUCFLAGS+= -mcpu=$(CONFIG_CPU_ARM_CPU)
-endif
-
-ifneq ($(CONFIG_CPU_ARM_ARCH),undefined)
-CPUCFLAGS+= -march=$(CONFIG_CPU_ARM_ARCH)
-endif
-
 ifeq ($(CONFIG_COMPILE_DEBUG), defined)
 CPUCFLAGS += -fno-dwarf2-cfi-asm
 endif

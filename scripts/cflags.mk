@@ -50,6 +50,14 @@ ifeq ($(CONFIG_COMPILE_DEBUG), defined)
 CFLAGS += -ggdb
 endif
 
+ifneq ($(CONFIG_COMPILE_MCPU), undefined)
+CFLAGS += -mcpu=$(CONFIG_COMPILE_MCPU)
+endif
+
+ifneq ($(CONFIG_COMPILE_MARCH), undefined)
+CFLAGS += -march=$(CONFIG_COMPILE_MARCH)
+endif
+
 ifeq ($(CONFIG_COMPILE_FRAMEPTR), defined)
 CFLAGS += -fno-omit-frame-pointer
 else
