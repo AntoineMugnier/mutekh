@@ -1,0 +1,2 @@
+objs=mbz.o
+
