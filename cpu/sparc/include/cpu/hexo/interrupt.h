@@ -23,6 +23,8 @@
 #error This file can not be included directly
 #else
 
+#include <hexo/asm.h>
+
 #define CPU_INTERRUPT_H_
 
 #define CPU_EXCEPTION_UNDEFINED       0

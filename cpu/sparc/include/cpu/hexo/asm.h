@@ -22,18 +22,7 @@
 #ifndef CPU_ASM_H_
 #define CPU_ASM_H_
 
-# ifdef __MUTEK_ASM__
-
-.macro WAIT
-#  ifdef CONFIG_CPU_SPARC_LEON3
-        wrasr %g0, %asr19
-#  else
-
-#   ifdef CONFIG_CPU_WAIT_IRQ
-#    error No wait opcode defined for selected sparc processor
-#   endif
-#  endif 
-.endm
+#ifdef __MUTEK_ASM__
 
 .macro CPU_ID reg
 #  ifdef CONFIG_ARCH_SMP
@@ -61,7 +50,27 @@
 # endif
 .endm
 
+
+.macro WAIT
+# ifdef CONFIG_CPU_SPARC_LEON3
+        wr %g0, %asr19
+# endif 
+.endm
+
 # else /* not asm */
+
+asm(
+".macro WAIT \n"
+# ifdef CONFIG_CPU_SPARC_LEON3
+"        wr %g0, %asr19 \n"
+# else
+
+#  ifdef CONFIG_CPU_WAIT_IRQ
+#   error No wait opcode defined for selected sparc processor
+#  endif
+# endif 
+".endm \n"
+);
 
 #  define ASM_SECTION(name)              \
         ".section " name ",\"ax\",@progbits \n\t"
