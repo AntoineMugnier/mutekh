@@ -137,7 +137,7 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
     mnt->fs.root = iso9660_node_new(NULL, &mnt->fs, &mnt->voldesc.root_dir, "", 0);
 
     if (mnt->fs.root == NULL) {
-        return -ENOMEM;
+        err = -ENOMEM;
         goto free_mnt;
     }
 
