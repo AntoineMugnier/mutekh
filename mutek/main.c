@@ -126,7 +126,9 @@ int_fast8_t mutek_start()  /* FIRST CPU only */
 
   printk("MutekH is alive.\n");
 
+#ifdef CONFIG_ARCH_SMP
   arch_start_other_cpu(); /* let other CPUs enter main_smp() */
+#endif
 
   mutek_start_smp();
 

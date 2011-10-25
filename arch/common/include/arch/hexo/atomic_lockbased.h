@@ -140,7 +140,7 @@ static inline bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atom
     }
   LOCK_RELEASE_IRQ(&__atomic_arch_lock);
 
-  return bool;
+  return res;
 }
 
 #define ARCH_ATOMIC_H_

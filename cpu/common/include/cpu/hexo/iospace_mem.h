@@ -33,51 +33,59 @@
 
 #define CPU_IOSPACE_H_
 
+#include <hexo/ordering.h>
+
 static inline void
 cpu_mem_write_8(uintptr_t addr, uint8_t data)
 {
-  volatile uint8_t	*ptr = (uint8_t*)addr;
+  uint8_t	*ptr = (uint8_t*)addr;
 
   *ptr = data;
+  order_io_mem_write();
 }
 
 static inline uint8_t
 cpu_mem_read_8(uintptr_t addr)
 {
-  volatile uint8_t	*ptr = (uint8_t*)addr;
+  uint8_t	*ptr = (uint8_t*)addr;
 
+  order_io_mem_read();
   return *ptr;
 }
 
 static inline void
 cpu_mem_write_16(uintptr_t addr, uint16_t data)
 {
-  volatile uint16_t	*ptr = (uint16_t*)addr;
+  uint16_t	*ptr = (uint16_t*)addr;
 
   *ptr = data;
+  order_io_mem_write();
 }
 
 static inline uint16_t
 cpu_mem_read_16(uintptr_t addr)
 {
-  volatile uint16_t	*ptr = (uint16_t*)addr;
+  uint16_t	*ptr = (uint16_t*)addr;
 
+  order_io_mem_read();
   return *ptr;
 }
 
 static inline void
 cpu_mem_write_32(uintptr_t addr, uint32_t data)
 {
-  volatile uint32_t	*ptr = (uint32_t*)addr;
+  uint32_t	*ptr = (uint32_t*)addr;
 
   *ptr = data;
+  order_io_mem_write();
 }
 
 static inline uint32_t
 cpu_mem_read_32(uintptr_t addr)
 {
-  volatile uint32_t	*ptr = (uint32_t*)addr;
+  uint32_t	*ptr = (uint32_t*)addr;
 
+  order_io_mem_read();
   return *ptr;
 }
 
