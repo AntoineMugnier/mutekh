@@ -35,9 +35,15 @@ m4_forloop(i, 0, CONFIG_CPU_MAXCOUNT-1, `
 		irq = <&{/xicu@0/out@0} 1>;
 	};
 
+	fdaccess@0 {
+	    device_type = "soclib:fdaccess";
+		reg = <0xd4200000 0x100>;
+		irq = <&{/xicu@0/out@0} 2>;
+	};
+
 	xicu@0 {
 	    device_type = "soclib:xicu:root";
-		input_lines = <2>;
+		input_lines = <3>;
 		ipis = <CONFIG_CPU_MAXCOUNT>;
 		timers = <1>;
 		reg = <0xd2200000 0x1000>;
