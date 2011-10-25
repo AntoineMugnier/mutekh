@@ -87,7 +87,7 @@ typedef struct			file_s
 
   fpos_t			pos;
   enum stdio_buf_mode_e		buf_mode;
-  bool_t			eof:1, error:1;
+  bool_t			eof, error;
 }                               FILE;
 
 /** @internal stream buffered read function.
