@@ -204,6 +204,10 @@ $(OBJ_DIR)/$(target).hex: $(OBJ_DIR)/$(target).out
 	echo 'OBJCOPY HEX ' $(notdir $@) $(LOG_REDIR)
 	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O ihex $< $@ $(LOG_REDIR)
 
+$(OBJ_DIR)/$(target).srec: $(OBJ_DIR)/$(target).out
+	echo 'OBJCOPY HEX ' $(notdir $@) $(LOG_REDIR)
+	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O srec $< $@ $(LOG_REDIR)
+
 $(OBJ_DIR)/$(target).bin: $(OBJ_DIR)/$(target).out
 	echo 'OBJCOPY BIN ' $(notdir $@) $(LOG_REDIR)
 	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O binary $< $@ $(LOG_REDIR)
