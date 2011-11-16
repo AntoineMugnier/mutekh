@@ -17,19 +17,23 @@ SECTIONS
 		KEEP(*(.excep*))
 	} > mem_rom
 
-	.text : {
+        . = ALIGN(16);
+
+      .text : {
 		*(.init*)
 		*(.text*)
 		*(.glue*)
 		*(.got2)
+		  . = ALIGN(16);
 	} > mem_rom
 
 	.rodata : {
 			*(.rodata*)
-            . = ALIGN(4);
+            . = ALIGN(32);
 			global_driver_registry = .;
 			KEEP(*(.drivers))
 			global_driver_registry_end = .;
+		  . = ALIGN(16);
 	} > mem_rom
 
 	/* TLS/CLS are templates for newly allocated contexts/cpu's
@@ -41,34 +45,40 @@ SECTIONS
 	 */
 
 	/* CPU local data section */
-	.cpudata  0x0 : { *(.cpudata*) } AT> mem_rom
+        .cpudata  0x0 : { *(.cpudata*) 
+		. = ALIGN(16);
+        } AT > mem_rom
 
 	__cpu_data_start = LOADADDR(.cpudata);
 	__cpu_data_end = LOADADDR(.cpudata) + SIZEOF(.cpudata);
 
 	/* Task local data section */
-	.contextdata  0x0 : { *(.contextdata*) } AT> mem_rom
+	.contextdata  0x0 : { *(.contextdata*) 
+		. = ALIGN(16);
+	} AT > mem_rom
 
 	__context_data_start = LOADADDR(.contextdata);
 	__context_data_end = LOADADDR(.contextdata) + SIZEOF(.contextdata);
 
-	.data :	{
+	.data  :	{
 		__data_start = ABSOLUTE(.);
 		*(.sdata*)
 		*(.data*)
 		*(.cpuarchdata*)
+		. = ALIGN(16);
 	} > mem_ram
 
 	__data_load_start = LOADADDR(.data);
 	__data_load_end = LOADADDR(.data) + SIZEOF(.data);
 
-    .bss : {
+	.bss  : {
 		__bss_start = ABSOLUTE(.);
 		*(.sbss*)
 		*(COMMON)
 		*(.common*)
 		*(.scommon*)
 		*(.bss*)
+		. = ALIGN(16);
 		__bss_end = ABSOLUTE(.);
 	} > mem_ram
 
