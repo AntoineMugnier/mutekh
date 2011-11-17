@@ -382,6 +382,11 @@ FUNC_START(.text, sparc_except_restore)
         ldd     [%g5 + CPU_SPARC_CONTEXT_I(6)], %o6
 #endif
 
+#if defined(CONFIG_CPU_SPARC_APP_REGS)
+        ldd     [%g5 + CPU_SPARC_CONTEXT_G(2)], %g2
+        ld      [%g5 + CPU_SPARC_CONTEXT_G(4)], %g4
+#endif
+
         /* return from exception */
         jmp     %l1
         rett    %l2
