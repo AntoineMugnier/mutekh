@@ -27,6 +27,19 @@
 #include <hexo/endian.h>
 #include <mutek/printk.h>
 
+static void early_console_out_char(uintptr_t addr, uint8_t c)
+{
+  /* wait for transmit fifo empty */
+  while (!(cpu_mem_read_32(addr + 4) & endian_be32(0x4)))
+    ;
+
+  cpu_mem_write_32(addr, endian_be32(c));
+
+  /* wait for transmit register empty */
+  while (!(cpu_mem_read_32(addr + 4) & endian_be32(0x2)))
+    ;
+}
+
 static PRINTF_OUTPUT_FUNC(early_console_out)
 {
   uintptr_t addr = (uintptr_t)ctx;
@@ -34,15 +47,10 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
 
   for (i = 0; i < len; i++)
     {
-      /* wait for transmit fifo empty */
-      while (!(cpu_mem_read_32(addr + 4) & endian_be32(0x4)))
-        ;
+      if (str[i] == '\n')
+	early_console_out_char(addr, '\r');
 
-      cpu_mem_write_32(addr, endian_be32(str[i]));
-
-      /* wait for transmit register empty */
-      while (!(cpu_mem_read_32(addr + 4) & endian_be32(0x2)))
-        ;
+      early_console_out_char(addr, str[i]);
     }
 }
 
