@@ -68,6 +68,7 @@ cpu_sparc_wincount(void)
 
   asm ("  rd %%wim, %0   \n" // save wim
        "  wr %1, %%wim   \n" // write all ones
+       "  nop \n nop \n nop \n"
        "  rd %%wim, %1   \n" // read back
        "  wr %0, %%wim   \n" // restore wim
        : "=r" (tmp), "=r" (wim_mask): "1" (wim_mask)
