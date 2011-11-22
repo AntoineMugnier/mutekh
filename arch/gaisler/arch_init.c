@@ -40,6 +40,14 @@ extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_
 
 void arch_init(uintptr_t init_sp)
 {
+    extern __ldscript_symbol_t __bss_start;
+    extern __ldscript_symbol_t __bss_end;
+
+    memset(
+        (uint8_t*)&__bss_start,
+        0,
+        (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
+
 #if defined(CONFIG_GAISLER_EARLY_CONSOLE)
     gaisler_early_console(CONFIG_GAISLER_EARLY_CONSOLE_ADDR);
 #endif
