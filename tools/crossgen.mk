@@ -84,7 +84,7 @@ gdb_VER_lm32    = 7.2
 gdb_VER_microblaze = 7.3
 
 gdb_VER=$(gdb_VER_$(TARGET))
-gdb_CONF=--with-python=no
+gdb_CONF=--with-python=no --disable-sim
 
 # Device Tree Compiler
 dtc_VER=1.2.0
