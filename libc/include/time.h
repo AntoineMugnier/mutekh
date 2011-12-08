@@ -27,7 +27,7 @@
 
 C_HEADER_BEGIN
 
-#include <hexo/types.h>
+#include <sys/types.h>
 #include <hexo/error.h>
 
 /**
@@ -36,16 +36,7 @@ C_HEADER_BEGIN
    @short Time-related function stubs
  */
 
-typedef uint_fast32_t time_t;
-typedef uint_fast32_t time_msec_t;
-typedef uint_fast32_t time_usec_t;
-typedef uint_fast32_t time_nsec_t;
-
-struct timeval
-{
-  time_t          tv_sec;     /* seconds */
-  time_usec_t     tv_usec;    /* microseconds */
-};
+struct timeval;
 
 struct timespec
 {

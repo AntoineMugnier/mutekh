@@ -20,7 +20,9 @@
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2011
 */
 
+#include <sys/time.h>
 #include <time.h>
+
 #include <mutek/timer.h>
 
 #ifdef CONFIG_MUTEK_TIMER
