@@ -89,6 +89,24 @@ cpu_mem_read_32(uintptr_t addr)
   return *ptr;
 }
 
+static inline void
+cpu_mem_write_64(uintptr_t addr, uint64_t data)
+{
+  volatile uint64_t	*ptr = (uint64_t*)addr;
+
+  *ptr = data;
+  order_io_mem_write();
+}
+
+static inline uint64_t
+cpu_mem_read_64(uintptr_t addr)
+{
+  volatile uint64_t	*ptr = (uint64_t*)addr;
+
+  order_io_mem_read();
+  return *ptr;
+}
+
 /****************************************************/
 
 static inline void

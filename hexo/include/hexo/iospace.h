@@ -139,6 +139,24 @@ static void cpu_mem_write_32(uintptr_t addr, uint32_t data);
 
 static uint32_t cpu_mem_read_32(uintptr_t addr);
 
+/**
+   Memory space 64 bits write
+
+   @param addr write address
+   @param data value
+*/
+
+static void cpu_mem_write_64(uintptr_t addr, uint64_t data);
+
+/**
+   Memory space 64 bits read
+
+   @param addr read address
+   @return data value
+*/
+
+static uint64_t cpu_mem_read_64(uintptr_t addr);
+
 #include "cpu/hexo/iospace.h"
 
 static inline
