@@ -39,3 +39,7 @@ ifeq ($(CONFIG_DRIVER_CHAR_NULL), defined)
  subdirs += null
 endif
 
+ifeq ($(CONFIG_DRIVER_CHAR_GAISLER_APBUART), defined)
+ subdirs += gaisler-apbuart
+endif
+
