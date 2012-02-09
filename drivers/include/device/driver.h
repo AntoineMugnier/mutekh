@@ -70,6 +70,7 @@ struct driver_param_binder_s
 #define DEVENUM_TYPE_ISA 0x02
 #define DEVENUM_TYPE_ATA 0x03
 #define DEVENUM_TYPE_FDTNAME 0x04
+#define DEVENUM_TYPE_GAISLER 0x05
 
 /** device structure identification informations. wildcard values are
     enum driver dependent */
@@ -82,6 +83,10 @@ struct devenum_ident_s
 			uint16_t device;
 			uint32_t class;
 		} pci;
+		struct {
+			uint16_t vendor;
+			uint16_t device;
+		} grlib;
 		struct {
 			uint16_t vendor;
 		} isa;
@@ -141,6 +146,17 @@ struct devenum_ident_s
 	{ .type = DEVENUM_TYPE_FDTNAME, { .fdtname = {		\
 				.name = _name, .param_size = _psize,	\
 				.binder = _binder } } }
+
+/**
+   Shortcut for creating a Gaisler GAISLER entry in a static devenum_ident_s
+   array.
+
+   @param _vendor the vendor id to match, -1 for wildcard
+   @param _device the device id to match, -1 for wildcard
+ */
+#define DEVENUM_GAISLER_ENTRY(_vendor, _device)		\
+	{ .type = DEVENUM_TYPE_GAISLER, { .grlib = {				\
+				.vendor = _vendor, .device = _device } } }
 
 
 /** device driver object structure */
