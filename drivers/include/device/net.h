@@ -29,16 +29,15 @@
 #ifndef __DEVICE_NET_H__
 #define __DEVICE_NET_H__
 
-#ifdef __DRIVER_H__
-# error This header must not be included after "device/driver.h"
-#endif
-
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <device/device.h>
+
+#include <device/driver.h>
 
 struct device_s;
 struct driver_s;
+struct device_net_s;
+struct driver_net_s;
 struct net_packet_s;
 
 /* network device options */
@@ -46,7 +45,7 @@ struct net_packet_s;
 #define DEV_NET_OPT_BCAST	2
 
 /** Network device class packet creation function tempate. */
-#define DEVNET_PREPAREPKT(n)	uint8_t  *(n) (struct device_s *dev, struct net_packet_s *packet, size_t size, size_t max_padding)
+#define DEVNET_PREPAREPKT(n)	uint8_t  *(n) (struct device_net_s *ndev, struct net_packet_s *packet, size_t size, size_t max_padding)
 
 /**
     Network device class preparepkt() function type.
@@ -60,12 +59,9 @@ struct net_packet_s;
 */
 typedef DEVNET_PREPAREPKT(devnet_preparepkt_t);
 
-/** Network device class preparepkt() method shortcut */
-#define dev_net_preparepkt(dev, ...) (dev)->drv->f.net.f_preparepkt(dev, __VA_ARGS__ )
-
 
 /** Network device class packet sending function tempate. */
-#define DEVNET_SENDPKT(n)	void  (n) (struct device_s *dev, struct net_packet_s *packet, uint_fast16_t proto)
+#define DEVNET_SENDPKT(n)	void  (n) (struct device_net_s *ndev, struct net_packet_s *packet, uint_fast16_t proto)
 
 /**
     Network device class sendpkt() function type.
@@ -77,12 +73,9 @@ typedef DEVNET_PREPAREPKT(devnet_preparepkt_t);
 */
 typedef DEVNET_SENDPKT(devnet_sendpkt_t);
 
-/** Network device class sendpkt() method shortcut */
-#define dev_net_sendpkt(dev, ...) (dev)->drv->f.net.f_sendpkt(dev, __VA_ARGS__ )
-
 
 /** Network device class device set option function tempate. */
-#define DEVNET_SETOPT(n)	error_t (n) (struct device_s *dev, uint_fast32_t option, void *value, size_t len)
+#define DEVNET_SETOPT(n)	error_t (n) (struct device_net_s *ndev, uint_fast32_t option, void *value, size_t len)
 
 /**
     Network device class setopt() function type.
@@ -96,12 +89,9 @@ typedef DEVNET_SENDPKT(devnet_sendpkt_t);
 */
 typedef DEVNET_SETOPT(devnet_setopt_t);
 
-/** Network device class setopt() method shortcut */
-#define dev_net_setopt(dev, ...) (dev)->drv->f.net.f_setopt(dev, __VA_ARGS__ )
-
 
 /** Network device class device get option function tempate. */
-#define DEVNET_GETOPT(n)	error_t (n) (struct device_s *dev, uint_fast32_t option, void *value, size_t *len)
+#define DEVNET_GETOPT(n)	error_t (n) (struct device_net_s *ndev, uint_fast32_t option, void *value, size_t *len)
 
 /**
     Network device class getopt() function type.
@@ -115,18 +105,13 @@ typedef DEVNET_SETOPT(devnet_setopt_t);
 */
 typedef DEVNET_GETOPT(devnet_getopt_t);
 
-/** Network device class getopt() method shortcut */
-#define dev_net_getopt(dev, ...) (dev)->drv->f.net.f_getopt(dev, __VA_ARGS__ )
 
-
-/** Net device class methodes */
-struct dev_class_net_s
-{
-  devnet_preparepkt_t		*f_preparepkt;
-  devnet_sendpkt_t		*f_sendpkt;
-  devnet_setopt_t		*f_setopt;
-  devnet_getopt_t		*f_getopt;
-};
+DEVICE_CLASS_STRUCT(net,
+                    devnet_preparepkt_t *f_preparepkt;
+                    devnet_sendpkt_t *f_sendpkt;
+                    devnet_setopt_t *f_setopt;
+                    devnet_getopt_t *f_getopt;
+                    );
 
 #endif
 

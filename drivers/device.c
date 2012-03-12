@@ -40,78 +40,91 @@ void device_tree_init()
 # ifdef CONFIG_DRIVER_ENUM_ROOT
 	device_init(&enum_root);
 	enum_root_init(&enum_root, NULL);
-	/* Dont reference ourselves... */
-	device_list_remove(&enum_root.children, &enum_root);
 # endif
 }
 
 CONTAINER_FUNC(device_list, CLIST, inline, device_list);
 
-OBJECT_CONSTRUCTOR(device_obj)
+void device_init(struct device_s *dev)
 {
-  device_list_init(&obj->children);
-  lock_init(&obj->lock);
-  obj->parent = NULL;
-#ifdef CONFIG_DRIVER_ENUM_ROOT
-  device_register(obj, &enum_root, NULL);
-#endif
+  dev->res_count = DEVICE_STATIC_RESOURCE_COUNT;
 
-  return 0;
+  device_list_init(&dev->children);
+  lock_init(&dev->lock);
+  dev->parent = NULL;
+  dev->enum_type = DEVENUM_TYPE_INVALID;
+  dev->allocated = 0;
+
+  memset(dev->res, 0, sizeof(dev->res));
 }
 
-OBJECT_DESTRUCTOR(device_obj)
+struct device_s *device_alloc(size_t resources)
 {
-  device_unregister(obj);
-  dev_cleanup(obj);
-  device_list_destroy(&obj->children);
-  lock_destroy(&obj->lock);
+  struct device_s *dev = mem_alloc(sizeof(struct device_s) + sizeof(struct dev_resource_s)
+                                   * ((ssize_t)resources - DEVICE_STATIC_RESOURCE_COUNT), (mem_scope_sys));
+
+  dev->res_count = resources;
+  dev->enum_type = DEVENUM_TYPE_INVALID;
+  dev->allocated = 1;
+
+  return dev;
 }
 
-error_t
-device_register(struct device_s *dev,
-		struct device_s *parent,
-		void *enum_pv)
+void device_cleanup(struct device_s *dev)
 {
-	if ( dev->parent )
-		device_unregister(dev);
+  assert(!dev->parent);
+  assert(!dev->ref_count);
 
-	dev->parent = device_obj_refnew(parent);
-	dev->enum_pv = enum_pv;
+  if (dev->drv)
+    dev->drv->f_cleanup(dev);
 
-	device_list_pushback(&parent->children, dev);
+  device_list_destroy(&dev->children);
+  lock_destroy(&dev->lock);
 
-	return 0;
+  if (dev->allocated)
+    mem_free(dev);
 }
 
-error_t device_unregister(struct device_s *dev)
+void device_attach(struct device_s *dev,
+                   struct device_s *parent)
 {
-	assert(dev->parent);
+  assert(!dev->parent);
 
-	device_list_remove(&dev->parent->children, dev);
-	device_obj_refdrop(dev->parent);
+  if (!parent)
+    parent = &enum_root;
 
-	return 0;
+  dev->parent = parent;
+
+  device_list_pushback(&parent->children, dev);
+}
+
+void device_detach(struct device_s *dev)
+{
+  assert(dev->parent);
+
+  device_list_remove(&dev->parent->children, dev);
+  dev->parent = 0;
+}
+
+static void
+device_dump_list_r(struct device_s *root, uint_fast8_t i)
+{
+  CONTAINER_FOREACH(device_list, CLIST, &root->children,
+  {
+    printk("%p\n", item);
+  });
 }
 
 void
 device_dump_list(struct device_s *root)
 {
-  CONTAINER_FOREACH(device_list, CLIST, &root->children,
-  {
-    printk("device %p\n", item);
-  });
+  if (!root)
+    root = &enum_root;
+
+  device_dump_list_r(&enum_root, 0);
 }
 
 #endif
-
-void
-device_init(struct device_s *dev)
-{
-#ifdef CONFIG_DEVICE_TREE
-  device_obj_new(dev);
-#endif
-  lock_init(&dev->lock);
-}
 
 struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i)
 {
@@ -146,4 +159,140 @@ void device_tree_walk(device_tree_walker_t *walker, void *priv)
     _device_tree_walk(&enum_root, walker, priv);
 }
 #endif
+
+
+error_t device_res_id(const struct device_s *dev,
+                      enum dev_resource_type_e type,
+                      uint_fast8_t id, uint_fast8_t *res)
+{
+  uint_fast8_t i;
+
+  for (i = 0; i < dev->res_count; i++)
+    if (dev->res[i].type == type && !id--)
+      {
+        *res = i;
+        return 0;
+      }
+
+  return -ENOENT;
+}
+
+error_t device_res_get_uint(const struct device_s *dev,
+                            enum dev_resource_type_e type,
+                            uint_fast8_t id, uintptr_t *res)
+{
+  uint_fast8_t i;
+
+  for (i = 0; i < dev->res_count; i++)
+    if (dev->res[i].type == type && !id--)
+      {
+        *res = dev->res[i].uint;
+        return 0;
+      }
+
+  return -ENOENT;
+}
+
+struct dev_resource_s * device_res_add(struct device_s *dev)
+{
+  uint_fast8_t i;
+
+  for (i = 0; i < dev->res_count; i++)
+    {
+      struct dev_resource_s *r = dev->res + i;
+
+      if (r->type == DEV_RES_UNUSED)
+        return r;
+    }
+
+  return NULL;
+}
+
+error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end)
+{
+  struct dev_resource_s *r = device_res_add(dev);
+
+  if (!r)
+    return -ENOMEM;
+
+  r->type = DEV_RES_IO;
+  r->io.start = start;
+  r->io.end = end;
+
+  return 0;
+}
+
+error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
+{
+  struct dev_resource_s *r = device_res_add(dev);
+
+  if (!r)
+    return -ENOMEM;
+
+  r->type = DEV_RES_MEM;
+  r->mem.start = start;
+  r->mem.end = end;
+
+  return 0;
+}
+
+error_t device_res_add_irq(struct device_s *dev, uintptr_t irq)
+{
+  struct dev_resource_s *r = device_res_add(dev);
+
+  if (!r)
+    return -ENOMEM;
+
+  r->type = DEV_RES_IRQ;
+  r->irq.id = irq;
+
+  return 0;
+}
+
+struct device_accessor_s {
+  struct device_s *dev;
+  const void *api;
+  uint_fast8_t number;
+};
+
+struct driver_class_s {
+  enum device_class_e class_;
+  void *functions[];
+};
+
+error_t device_get_accessor(void *accessor, struct device_s *dev,
+                            enum device_class_e cl, uint_fast8_t number)
+{
+  struct device_accessor_s *a = accessor;
+  const struct driver_class_s *c;
+  uint_fast8_t i, n = number;
+
+  if (dev->drv == NULL)
+    return -ENOENT;
+
+  for (i = 0; (c = dev->drv->classes[i]) != NULL; i++)
+    {
+      if (c->class_ == cl && !n--)
+        {
+          a->dev = dev;
+          a->api = c;
+          a->number = number;
+          dev->ref_count++;
+          return 0;
+        }
+    }
+
+  return -ENOENT;
+}
+
+void device_put_accessor(void *accessor)
+{
+  struct device_accessor_s *a = accessor;
+
+  assert(a->dev && a->dev->ref_count);
+
+  a->dev->ref_count--;
+  a->dev = NULL;
+  a->api = NULL;
+}
 

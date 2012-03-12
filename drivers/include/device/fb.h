@@ -29,12 +29,10 @@
 #ifndef __DEVICE_FB_H__
 #define __DEVICE_FB_H__
 
-#ifdef __DRIVER_H__
-# error This header must not be included after "device/driver.h"
-#endif
-
 #include <hexo/types.h>
 #include <hexo/error.h>
+
+#include <device/driver.h>
 
 struct device_s;
 struct driver_s;
@@ -74,10 +72,6 @@ struct		fb_pal_s
 */
 typedef DEVFB_SETMODE(devfb_setmode_t);
 
-/** Fb device class setmode() methode shortcut */
-#define dev_fb_setmode(dev, ...) (dev)->drv->f.fb.f_setmode(dev, __VA_ARGS__ )
-
-
 
 
 /** Fb device class getbuffer() function tempate. */
@@ -93,9 +87,6 @@ typedef DEVFB_SETMODE(devfb_setmode_t);
 */
 typedef DEVFB_GETBUFFER(devfb_getbuffer_t);
 
-/** Fb device class getbuffer() methode shortcut */
-#define dev_fb_getbuffer(dev, ...) (dev)->drv->f.fb.f_getbuffer(dev, __VA_ARGS__ )
-
 
 
 /** Fb device class flippage() function tempate. */
@@ -110,9 +101,6 @@ typedef DEVFB_GETBUFFER(devfb_getbuffer_t);
     @return error code
 */
 typedef DEVFB_FLIPPAGE(devfb_flippage_t);
-
-/** Fb device class flippage() methode shortcut */
-#define dev_fb_flippage(dev, ...) (dev)->drv->f.fb.f_flippage(dev, __VA_ARGS__ )
 
 
 
@@ -130,13 +118,11 @@ typedef DEVFB_FLIPPAGE(devfb_flippage_t);
 */
 typedef DEVFB_SETPALETTE(devfb_setpalette_t);
 
-/** Fb device class setpalette() methode shortcut */
-#define dev_fb_setpalette(dev, ...) (dev)->drv->f.fb.f_setpalette(dev, __VA_ARGS__ )
-
 
 /** Fb device class methodes */
-struct dev_class_fb_s
+struct driver_fb_s
 {
+  enum device_class_e cl;
   devfb_setmode_t	*f_setmode;
   devfb_getbuffer_t	*f_getbuffer;
   devfb_flippage_t	*f_flippage;

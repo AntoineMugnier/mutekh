@@ -29,17 +29,17 @@
 #ifndef __DEVICE_LCD_H__
 #define __DEVICE_LCD_H__
 
-#ifdef __DRIVER_H__
-# error This header must not be included after "device/driver.h"
-#endif
-
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_clist.h>
 
+#include <device/driver.h>
+
 struct device_s;
 struct driver_s;
+struct device_lcd_s;
+struct driver_lcd_s;
 
 
 /** pixel color packing is RGB */
@@ -119,18 +119,14 @@ struct lcd_req_s
 CONTAINER_FUNC(dev_lcd_queue, CLIST, static inline, dev_lcd_queue);
 
 /** Lcd device class request() function tempate. */
-#define DEVLCD_REQUEST(n)	error_t  (n) (struct device_s *dev,			   \
-										  struct lcd_req_s *req)
+#define DEVLCD_REQUEST(n)	error_t  (n) (struct device_lcd_s *ldev, struct lcd_req_s *req)
 
 typedef DEVLCD_REQUEST(devlcd_request_t);
-
-/** Lcd device class request() methode shortcut */
-#define dev_lcd_request(dev, ...) (dev)->drv->f.lcd.f_request(dev, __VA_ARGS__ )
 
 
 
 /** Lcd device class getinfo() function tempate. */
-#define DEVLCD_GETINFO(n)	const struct lcd_info_s * (n) (struct device_s *dev)
+#define DEVLCD_GETINFO(n)	const struct lcd_info_s * (n) (struct device_lcd_s *ldev)
 
 /**
     Lcd device class getinfo() function type.  Get a device
@@ -141,20 +137,15 @@ typedef DEVLCD_REQUEST(devlcd_request_t);
 */
 typedef DEVLCD_GETINFO(devlcd_getinfo_t);
 
-/** Lcd device class getinfo() methode shortcut */
-#define dev_lcd_getinfo(dev) (dev)->drv->f.lcd.f_getinfo(dev)
 
 
-
-/** Lcd device class methodes */
-struct dev_class_lcd_s
-{
-  devlcd_request_t	*f_request;
-  devlcd_getinfo_t	*f_getinfo;
-};
+DEVICE_CLASS_TYPES(lcd,
+                    devlcd_request_t	*f_request;
+                    devlcd_getinfo_t	*f_getinfo;
+                    );
 
 
-ssize_t dev_lcd_set_palette(struct device_s *dev, struct lcd_pal_s *palette, size_t count);
+ssize_t dev_lcd_set_palette(struct device_lcd_s *ldev, struct lcd_pal_s *palette, size_t count);
 
 /**
     Lcd device class blit() function type.  Blit the rectangle from
@@ -172,7 +163,7 @@ ssize_t dev_lcd_set_palette(struct device_s *dev, struct lcd_pal_s *palette, siz
     @return error level
 */
 
-ssize_t dev_lcd_blit(struct device_s *dev,
+ssize_t dev_lcd_blit(struct device_lcd_s *ldev,
 					 lcd_coord_t xmin,
 					 lcd_coord_t ymin,
 					 lcd_coord_t xmax,
@@ -187,7 +178,7 @@ ssize_t dev_lcd_blit(struct device_s *dev,
     @param packing pixel color information packing
     @return error code
 */
-ssize_t dev_lcd_setmode(struct device_s *dev,
+ssize_t dev_lcd_setmode(struct device_lcd_s *ldev,
 						uint_fast8_t bpp, uint_fast8_t packing,
 						uint_fast8_t flags);
 
@@ -199,8 +190,7 @@ ssize_t dev_lcd_setmode(struct device_s *dev,
     @param contrast contrast value
     @return error code
 */
-ssize_t dev_lcd_setcontrast(struct device_s *dev,
-							uint_fast8_t contrast);
+ssize_t dev_lcd_setcontrast(struct device_lcd_s *ldev, uint_fast8_t contrast);
 
 #endif
 

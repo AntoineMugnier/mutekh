@@ -29,12 +29,10 @@
 #ifndef __DEVICE_ENUM_H__
 #define __DEVICE_ENUM_H__
 
-#ifdef __DRIVER_H__
-# error This header must not be included after "device/driver.h"
-#endif
-
 #include <hexo/types.h>
 #include <hexo/error.h>
+
+#include <device/driver.h>
 
 /**
    Lookup function prototype macro
@@ -51,10 +49,6 @@
  */
 typedef DEVENUM_LOOKUP(devenum_lookup_t);
 
-/**
-   Lookup function shortcut
- */
-#define dev_enum_lookup(dev, ...) (dev)->drv->f.denum.f_lookup(dev, __VA_ARGS__)
 
 #define DEV_ENUM_MAX_PATH_LEN 32
 
@@ -83,15 +77,12 @@ struct dev_enum_info_s
  */
 typedef DEVENUM_INFO(devenum_info_t);
 
-/**
-   Info function shortcut
- */
-#define dev_enum_info(dev, ...) (dev)->drv->f.denum.f_info(dev, __VA_ARGS__)
 
-struct dev_class_enum_s
+struct driver_enum_s
 {
-	devenum_lookup_t *f_lookup;
-	devenum_info_t *f_info;
+  enum device_class_e class_;
+  devenum_lookup_t *f_lookup;
+  devenum_info_t *f_info;
 };
 
 #endif

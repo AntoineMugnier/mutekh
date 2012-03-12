@@ -29,14 +29,12 @@
 #ifndef __DEVICE_I2C_H__
 #define __DEVICE_I2C_H__
 
-#ifdef __DRIVER_H__
-# error This header must not be included after "device/driver.h"
-#endif
-
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_clist.h>
+
+#include <device/driver.h>
 
 struct device_s;
 struct driver_s;
@@ -95,9 +93,6 @@ CONTAINER_FUNC(dev_i2c_queue, CLIST, static inline, dev_i2c_queue);
 /** I2c device class request() function tempate. */
 #define DEVI2C_REQUEST(n)	void  (n) (struct device_s *dev, struct dev_i2c_rq_s *rq)
 
-/** I2c device class request() methode shortcut */
-#define dev_i2c_request(dev, ...) (dev)->drv->f.i2c.f_request(dev, __VA_ARGS__ )
-
 /**
    I2c device class request() function type. Enqueue a request.
 
@@ -110,9 +105,6 @@ typedef DEVI2C_REQUEST(devi2c_request_t);
 /** I2c device class set_baudrate() function tempate. */
 #define DEVI2C_SET_BAUDRATE(n)	uint32_t  (n) (struct device_s *dev, uint32_t br)
 
-/** I2c device class request() methode shortcut */
-#define dev_i2c_set_baudrate(dev, ...) (dev)->drv->f.i2c.f_set_baudrate(dev, __VA_ARGS__ )
-
 /**
    I2c device class set_baudrate() function type. Change clock for device id.
 
@@ -124,8 +116,9 @@ typedef DEVI2C_SET_BAUDRATE(devi2c_set_baudrate_t);
 
 
 /** I2c device class methodes */
-struct dev_class_i2c_s
+struct driver_i2c_s
 {
+  enum device_class_e cl;
   devi2c_request_t		*f_request;
   devi2c_set_baudrate_t		*f_set_baudrate;
 };

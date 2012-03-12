@@ -49,6 +49,7 @@ struct tty_soclib_context_s
 #ifdef CONFIG_HEXO_IRQ
   tty_fifo_root_t		read_fifo;
 #endif
+  uintptr_t addr;
 };
 
 #endif

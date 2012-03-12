@@ -29,14 +29,12 @@
 #ifndef __DEVICE_GPIO_H__
 #define __DEVICE_GPIO_H__
 
-#ifdef __DRIVER_H__
-# error This header must not be included after "device/driver.h"
-#endif
-
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_clist.h>
+
+#include <device/driver.h>
 
 struct device_s;
 struct driver_s;
@@ -68,9 +66,6 @@ enum devgpio_way_e
  */
 typedef DEVGPIO_SET_WAY(devgpio_set_way_t);
 
-/** Gpio device class set_way() methode shortcut */
-#define dev_gpio_set_way(dev, ...) (dev)->drv->f.gpio.f_set_way(dev, __VA_ARGS__ )
-
 
 /** Gpio device class set_value() function tempate. */
 #define DEVGPIO_SET_VALUE(n)	error_t  (n) (struct device_s *dev,		\
@@ -90,9 +85,6 @@ typedef DEVGPIO_SET_WAY(devgpio_set_way_t);
  */
 typedef DEVGPIO_SET_VALUE(devgpio_set_value_t);
 
-/** Gpio device class set_value() methode shortcut */
-#define dev_gpio_set_value(dev, ...) (dev)->drv->f.gpio.f_set_value(dev, __VA_ARGS__ )
-
 
 /** Gpio device class set_pullup() function tempate. */
 #define DEVGPIO_SET_PULLUP(n)	error_t  (n) (struct device_s *dev,		\
@@ -111,9 +103,6 @@ typedef DEVGPIO_SET_VALUE(devgpio_set_value_t);
     @return error level
  */
 typedef DEVGPIO_SET_PULLUP(devgpio_set_pullup_t);
-
-/** Gpio device class set_pullup() methode shortcut */
-#define dev_gpio_set_pullup(dev, ...) (dev)->drv->f.gpio.f_set_pullup(dev, __VA_ARGS__ )
 
 
 /** Gpio device class assign_to_peripheral() function tempate. */
@@ -136,9 +125,6 @@ typedef DEVGPIO_SET_PULLUP(devgpio_set_pullup_t);
  */
 typedef DEVGPIO_ASSIGN_TO_PERIPHERAL(devgpio_assign_to_peripheral_t);
 
-/** Gpio device class assign_to_peripheral() methode shortcut */
-#define dev_gpio_assign_to_peripheral(dev, ...) (dev)->drv->f.gpio.f_assign_to_peripheral(dev, __VA_ARGS__ )
-
 
 /** Gpio device class get_value() function tempate. */
 #define DEVGPIO_GET_VALUE(n)	bool_t  (n) (struct device_s *dev,	   \
@@ -154,9 +140,6 @@ typedef DEVGPIO_ASSIGN_TO_PERIPHERAL(devgpio_assign_to_peripheral_t);
     @return value of pin
  */
 typedef DEVGPIO_GET_VALUE(devgpio_get_value_t);
-
-/** Gpio device class get_value() methode shortcut */
-#define dev_gpio_get_value(dev, ...) (dev)->drv->f.gpio.f_get_value(dev, __VA_ARGS__ )
 
 
 enum devgpio_event_e
@@ -208,14 +191,11 @@ typedef DEVGPIO_IRQ(devgpio_irq_t);
  */
 typedef DEVGPIO_REGISTER_IRQ(devgpio_register_irq_t);
 
-/** Gpio device class register_irq() methode shortcut */
-#define dev_gpio_register_irq(dev, ...) (dev)->drv->f.gpio.f_register_irq(dev, __VA_ARGS__ )
-
-
 
 /** Gpio device class methodes */
-struct dev_class_gpio_s
+struct driver_gpio_s
 {
+  enum device_class_e cl;
   devgpio_set_way_t	*f_set_way;
   devgpio_set_value_t	*f_set_value;
   devgpio_set_pullup_t	*f_set_pullup;

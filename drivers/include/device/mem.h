@@ -28,15 +28,15 @@
 #ifndef __DEVICE_MEM_H__
 #define __DEVICE_MEM_H__
 
-#ifdef __DRIVER_H__
-# error This header must not be included after "device/driver.h"
-#endif
-
 #include <hexo/types.h>
 #include <hexo/error.h>
 
+#include <device/driver.h>
+
 struct device_s;
 struct driver_s;
+struct device_mem_s;
+struct driver_mem_s;
 
 #define DEV_MEM_CACHED   1
 #define DEV_MEM_COHERENT 2
@@ -50,10 +50,7 @@ struct dev_mem_info_s
 
 
 /** Mem device class get_info() function tempate. */
-#define DEVMEM_GET_INFO(n)	void  (n) (struct device_s *dev, struct dev_mem_info_s *info)
-
-/** Mem device class request() methode shortcut */
-#define dev_mem_get_info(dev, ...) (dev)->drv->f.mem.f_get_info(dev, __VA_ARGS__ )
+#define DEVMEM_GET_INFO(n)	void  (n) (struct device_mem_s *mdev, struct dev_mem_info_s *info)
 
 /**
    Mem device class get_info() function type. Get information about a ram device.
@@ -64,11 +61,10 @@ struct dev_mem_info_s
 typedef DEVMEM_GET_INFO(devmem_get_info_t);
 
 
-/** Mem device class methodes */
-struct dev_class_mem_s
-{
-  devmem_get_info_t		*f_get_info;
-};
+DEVICE_CLASS_TYPES(mem,
+                   devmem_get_info_t *f_get_info;
+                   );
+
 
 #endif
 

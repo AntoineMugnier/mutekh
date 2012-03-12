@@ -96,14 +96,14 @@ int_fast8_t mutek_start()  /* FIRST CPU only */
 
 #if defined(CONFIG_ARCH_DEVICE_TREE)
     cpu_interrupt_enable();
-    enum_fdt_children_init(&fdt_enum_dev);
-    mutek_parse_fdt_chosen(&fdt_enum_dev, arch_fdt);
+//    enum_fdt_children_init(&fdt_enum_dev);
+//    mutek_parse_fdt_chosen(&fdt_enum_dev, arch_fdt);
     cpu_interrupt_disable();
 #endif
 
 #if defined(CONFIG_MUTEK_CONSOLE) && !defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
-	if ( console_dev )
-		printk_set_output(__printf_out_tty, console_dev);
+	if ( console_dev.dev )
+		printk_set_output(__printf_out_tty, &console_dev);
 #endif
 
 #if defined(CONFIG_LIBC_UNIXFD)
@@ -112,7 +112,7 @@ int_fast8_t mutek_start()  /* FIRST CPU only */
 
     cpu_interrupt_enable();
 
-#if defined (CONFIG_MUTEK_TIMER)
+#if defined (CONFIG_MUTEK_TIMER) && defined (CONFIG_DRIVER_TIMER)
 	timer_init(&timer_ms.root);
 	timer_ms.ticks = 0;
 

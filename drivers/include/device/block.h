@@ -29,14 +29,12 @@
 #ifndef __DEVICE_BLOCK_H__
 #define __DEVICE_BLOCK_H__
 
-#ifdef __DRIVER_H__
-# error This header must not be included after "device/driver.h"
-#endif
-
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_clist.h>
+
+#include <device/driver.h>
 
 struct device_s;
 struct driver_s;
@@ -101,9 +99,6 @@ CONTAINER_FUNC(dev_blk_queue, CLIST, static inline, dev_blk_queue);
 #define DEVBLOCK_REQUEST(n)	void (n) (struct device_s *dev,	\
 					  struct dev_block_rq_s *rq)
 
-/** Block device class request() methode shortcut */
-
-#define dev_block_request(dev, ...) (dev)->drv->f.blk.f_request(dev, __VA_ARGS__ )
 /**
    Block device request function type. Request count data blocks
    from the device.
@@ -164,8 +159,9 @@ typedef DEVBLOCK_GETRQSIZE(devblock_getrqsize_t);
 
 
 /** Block device class methodes */
-struct dev_class_block_s
+struct driver_block_s
 {
+  enum device_class_e cl;
   devblock_request_t		*f_request;
   devblock_getparams_t		*f_getparams;
   devblock_getrqsize_t		*f_getrqsize;

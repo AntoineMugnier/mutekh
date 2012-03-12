@@ -29,17 +29,18 @@
 #ifndef __DEVICE_SPI_H__
 #define __DEVICE_SPI_H__
 
-#ifdef __DRIVER_H__
-# error This header must not be included after "device/driver.h"
-#endif
-
 #include <hexo/types.h>
 #include <hexo/error.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_clist.h>
 
+#include <device/driver.h>
+
 struct device_s;
 struct driver_s;
+struct device_spi_s;
+struct driver_spi_s;
+
 struct dev_spi_rq_s;
 
 /** Spi device read/write callback */
@@ -68,11 +69,8 @@ enum devspi_wait_value_answer_e
 	DEV_SPI_VALUE_RETRY,
 };
 
-#define DEVSPI_WAIT_VALUE_CALLBACK(n)								   \
-	enum devspi_wait_value_answer_e									   \
-	(n) (struct device_s *dev,										   \
-		 const struct dev_spi_rq_s *rq,								   \
-		 uint16_t value)
+#define DEVSPI_WAIT_VALUE_CALLBACK(n) \
+	enum devspi_wait_value_answer_e (n) (struct device_spi_s *spidev, const struct dev_spi_rq_s *rq, uint16_t value)
 
 /**
    Spi callback when waiting for a particular value.
@@ -132,99 +130,99 @@ struct dev_spi_rq_cmd_s
 	};
 };
 
-#define SPIRQ_DESELECT()										\
-	{																	\
-		DEV_SPI_DESELECT,												\
-	}
-
-#define SPIRQ_SET_CONSTANT(constant_)							\
-	{																	\
-		DEV_SPI_SET_CONSTANT, { .constant =	{							\
-				.data = constant_,										\
-			}, },														\
-	}
-
-#define SPIRQ_R_16(data_ptr, _size, _pad, increment)					\
-	{																	\
-		DEV_SPI_R_16, { .read = {										\
-				.padding = _pad,										\
-				.data = data_ptr,										\
-				.size = _size,											\
-				.ptr_increment = increment,								\
-			}, },														\
+#define SPIRQ_DESELECT()			\
+	{					\
+		DEV_SPI_DESELECT,		\
 			}
 
-#define SPIRQ_W_16(data_ptr, _size, increment)							\
-	{																	\
-		DEV_SPI_W_16, { .write = {										\
-				.data = data_ptr,										\
-				.size = _size,											\
-				.ptr_increment = increment,								\
-			}, },														\
+#define SPIRQ_SET_CONSTANT(constant_)				\
+	{							\
+		DEV_SPI_SET_CONSTANT, { .constant =	{	\
+				.data = constant_,		\
+			}, },					\
 			}
 
-#define SPIRQ_RW_16(rdata_ptr, wdata_ptr, _size, increment)				\
-	{																	\
-		DEV_SPI_RW_16, { .read_write = {								\
-				.rdata = rdata_ptr,										\
-				.wdata = wdata_ptr,										\
-				.size = _size,											\
-				.ptr_increment = increment,								\
-			}, },														\
+#define SPIRQ_R_16(data_ptr, _size, _pad, increment)		\
+	{							\
+		DEV_SPI_R_16, { .read = {			\
+				.padding = _pad,		\
+				.data = data_ptr,		\
+				.size = _size,			\
+				.ptr_increment = increment,	\
+			}, },					\
 			}
 
-#define SPIRQ_R_8(data_ptr, _size, _pad, increment)						\
-	{																	\
-		DEV_SPI_R_8, { .read = {										\
-				.padding = _pad,										\
-				.data = data_ptr,										\
-				.size = _size,											\
-				.ptr_increment = increment,								\
-			}, },														\
+#define SPIRQ_W_16(data_ptr, _size, increment)			\
+	{							\
+		DEV_SPI_W_16, { .write = {			\
+				.data = data_ptr,		\
+				.size = _size,			\
+				.ptr_increment = increment,	\
+			}, },					\
 			}
 
-#define SPIRQ_W_8(data_ptr, _size, increment)							\
-	{																	\
-		DEV_SPI_W_8, { .write = {										\
-				.data = data_ptr,										\
-				.size = _size,											\
-				.ptr_increment = increment,								\
-			}, },														\
-	}
-
-#define SPIRQ_RW_8(rdata_ptr, wdata_ptr, _size, increment)				\
-	{																	\
-		DEV_SPI_RW_8, { .read_write = {									\
-				.rdata = rdata_ptr,										\
-				.wdata = wdata_ptr,										\
-				.size = _size,											\
-				.ptr_increment = increment,								\
-			}, },														\
-	}
-
-#define SPIRQ_WAIT_VALUE(_padding, _timeout, _callback)					\
-	{																	\
-		DEV_SPI_WAIT_VALUE, { .wait_value = {							\
-				.padding = _padding,									\
-				.timeout = _timeout,									\
-				.callback = _callback,									\
-			}, },														\
+#define SPIRQ_RW_16(rdata_ptr, wdata_ptr, _size, increment)	\
+	{							\
+		DEV_SPI_RW_16, { .read_write = {		\
+				.rdata = rdata_ptr,		\
+				.wdata = wdata_ptr,		\
+				.size = _size,			\
+				.ptr_increment = increment,	\
+			}, },					\
 			}
 
-#define SPIRQ_PAD(_padding, _size)									\
-	{																	\
-		DEV_SPI_PAD, { .pad = {											\
-				.padding = _padding,											\
-				.size = _size,											\
-			}, },														\
+#define SPIRQ_R_8(data_ptr, _size, _pad, increment)		\
+	{							\
+		DEV_SPI_R_8, { .read = {			\
+				.padding = _pad,		\
+				.data = data_ptr,		\
+				.size = _size,			\
+				.ptr_increment = increment,	\
+			}, },					\
 			}
 
-#define SPIRQ_PAD_UNSELECTED(_padding, _size)						\
-	{																	\
-		DEV_SPI_PAD_UNSELECTED, { .pad = {								\
-				.padding = _padding,											\
-				.size = _size,											\
-			}, },														\
+#define SPIRQ_W_8(data_ptr, _size, increment)			\
+	{							\
+		DEV_SPI_W_8, { .write = {			\
+				.data = data_ptr,		\
+				.size = _size,			\
+				.ptr_increment = increment,	\
+			}, },					\
+			}
+
+#define SPIRQ_RW_8(rdata_ptr, wdata_ptr, _size, increment)	\
+	{							\
+		DEV_SPI_RW_8, { .read_write = {			\
+				.rdata = rdata_ptr,		\
+				.wdata = wdata_ptr,		\
+				.size = _size,			\
+				.ptr_increment = increment,	\
+			}, },					\
+			}
+
+#define SPIRQ_WAIT_VALUE(_padding, _timeout, _callback)	\
+	{						\
+		DEV_SPI_WAIT_VALUE, { .wait_value = {	\
+				.padding = _padding,	\
+				.timeout = _timeout,	\
+				.callback = _callback,	\
+			}, },				\
+			}
+
+#define SPIRQ_PAD(_padding, _size)			\
+	{						\
+		DEV_SPI_PAD, { .pad = {			\
+				.padding = _padding,	\
+				.size = _size,		\
+			}, },				\
+			}
+
+#define SPIRQ_PAD_UNSELECTED(_padding, _size)		\
+	{						\
+		DEV_SPI_PAD_UNSELECTED, { .pad = {	\
+				.padding = _padding,	\
+				.size = _size,		\
+			}, },				\
 			}
 
 
@@ -248,10 +246,7 @@ CONTAINER_FUNC(dev_spi_queue, CLIST, static inline, dev_spi_queue);
 
 
 /** Spi device class request() function tempate. */
-#define DEVSPI_REQUEST(n)	void  (n) (struct device_s *dev, struct dev_spi_rq_s *rq)
-
-/** Spi device class request() methode shortcut */
-#define dev_spi_request(dev, ...) (dev)->drv->f.spi.f_request(dev, __VA_ARGS__ )
+#define DEVSPI_REQUEST(n)	void  (n) (struct device_spi_s *sdev, struct dev_spi_rq_s *rq)
 
 /**
    Spi device class request() function type. Enqueue a request.
@@ -263,10 +258,8 @@ typedef DEVSPI_REQUEST(devspi_request_t);
 
 
 /** Spi device class set_baudrate() function tempate. */
-#define DEVSPI_SET_BAUDRATE(n)	uint32_t  (n) (struct device_s *dev, uint_fast8_t device_id, uint32_t br, uint_fast8_t xfer_delay, uint_fast8_t cs_delay)
-
-/** Spi device class request() methode shortcut */
-#define dev_spi_set_baudrate(dev, ...) (dev)->drv->f.spi.f_set_baudrate(dev, __VA_ARGS__ )
+#define DEVSPI_SET_BAUDRATE(n)	uint32_t  (n) (struct device_spi_s *sdev, uint_fast8_t device_id, \
+					       uint32_t br, uint_fast8_t xfer_delay, uint_fast8_t cs_delay)
 
 /**
    Spi device class set_baudrate() function type. Change clock for device id.
@@ -290,16 +283,9 @@ enum spi_mode_e {
 };
 
 /** Spi device class set_baudrate() function tempate. */
-#define DEVSPI_SET_DATA_FORMAT(n)	error_t  (n) (						\
-		struct device_s *dev,											\
-		uint_fast8_t device_id,											\
-		uint_fast8_t bits_per_word,										\
-		enum spi_mode_e spi_mode,										\
-		bool_t keep_cs_active											\
-		)
-
-/** Spi device class request() methode shortcut */
-#define dev_spi_set_data_format(dev, ...) (dev)->drv->f.spi.f_set_data_format(dev, __VA_ARGS__ )
+#define DEVSPI_SET_DATA_FORMAT(n)	error_t  (n) (struct device_spi_s *sdev, uint_fast8_t device_id, \
+						      uint_fast8_t bits_per_word, enum spi_mode_e spi_mode,	\
+						      bool_t keep_cs_active)
 
 /**
    Spi device class set_data_format() function type. Change communication protocol.
@@ -313,13 +299,11 @@ enum spi_mode_e {
 typedef DEVSPI_SET_DATA_FORMAT(devspi_set_data_format_t);
 
 
-/** Spi device class methodes */
-struct dev_class_spi_s
-{
-  devspi_request_t		*f_request;
-  devspi_set_baudrate_t		*f_set_baudrate;
-  devspi_set_data_format_t		*f_set_data_format;
-};
+DEVICE_CLASS_TYPES(spi, 
+		    devspi_request_t		*f_request;
+		    devspi_set_baudrate_t	*f_set_baudrate;
+		    devspi_set_data_format_t	*f_set_data_format;
+                    );
 
 #endif
 

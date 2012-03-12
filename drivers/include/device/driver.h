@@ -33,6 +33,26 @@
 #include <hexo/error.h>
 #include <device/device.h>
 
+/** @This specifies device driver personality class. */
+enum device_class_e
+  {
+    DEVICE_CLASS_NONE = 0,
+
+    DEVICE_CLASS_BLOCK,
+    DEVICE_CLASS_CHAR,
+    DEVICE_CLASS_ENUM,
+    DEVICE_CLASS_FB,
+    DEVICE_CLASS_ICU,
+    DEVICE_CLASS_INPUT,
+    DEVICE_CLASS_NET,
+    DEVICE_CLASS_SOUND,
+    DEVICE_CLASS_TIMER,
+    DEVICE_CLASS_SPI,
+    DEVICE_CLASS_LCD,
+    DEVICE_CLASS_GPIO,
+    DEVICE_CLASS_I2C,
+    DEVICE_CLASS_MEM,
+  };
 
 #define PARAM_DATATYPE_INT 1
 #define PARAM_DATATYPE_DEVICE_PTR 2
@@ -66,17 +86,21 @@ struct driver_param_binder_s
 		.datalen = sizeof(((_struct_type *)0)->_struct_entry),		    \
 	}
 
-#define DEVENUM_TYPE_PCI 0x01
-#define DEVENUM_TYPE_ISA 0x02
-#define DEVENUM_TYPE_ATA 0x03
-#define DEVENUM_TYPE_FDTNAME 0x04
-#define DEVENUM_TYPE_GAISLER 0x05
+enum dev_enum_type_e {
+  DEVENUM_TYPE_INVALID,
+  DEVENUM_TYPE_PCI,
+  DEVENUM_TYPE_ISA,
+  DEVENUM_TYPE_ATA,
+  DEVENUM_TYPE_FDTNAME,
+  DEVENUM_TYPE_GAISLER,
+};
 
 /** device structure identification informations. wildcard values are
     enum driver dependent */
 struct devenum_ident_s
 {
-	uint8_t type;
+	uint_fast8_t type;   //< @see dev_enum_type_e
+
 	union {
 		struct {
 			uint16_t vendor;
@@ -158,86 +182,103 @@ struct devenum_ident_s
 	{ .type = DEVENUM_TYPE_GAISLER, { .grlib = {				\
 				.vendor = _vendor, .device = _device } } }
 
+#define DEV_IRQ(n) struct dev_irq_ep_s* (n) (struct dev_irq_ep_s *src, uint_fast8_t *id)
+
+/** Common device class irq() function type. Must be called on
+    interrupt request.
+
+    * @param dev pointer to device descriptor
+    * @return 1 if interrupt have been handled by the device
+    */
+
+/**
+   @This is irq handling function of device node.
+
+   @param src end point which relayed the irq.
+   @param id local identifier of irq line for relaying device.
+
+   Icu devices return pointer to next irq sink end-point or
+   NULL. Non-icu devices always return NULL.
+
+   The id must be changed to -1 when no irq were pending.
+   Non-icu devices only set to -1 or 0.
+
+   Icu devices have to determine the next sink endpoint from its
+   internal registers or passed id value. On some systems the icu
+   passes the decoded vector id to the processor in hardware and we
+   need a way to pass this value back from one icu handler to the next
+   one. Icu devices may change the id value so that it is relevant for
+   the next handler.
+*/
+typedef DEV_IRQ(dev_irq_t);
+
+
+
+
+/** Common class init() function template. */
+#define DEV_INIT(n)	error_t (n) (struct device_s *dev, void *params)
+
+/**
+   @This is device init() function type. This function will init
+   the hardware device and must be called before using any other
+   functions on the device. This function will allocate device
+   private data.
+
+   @param dev pointer to device descriptor
+   @param params driver dependent parameters, NULL if none
+   @return negative error code, 0 on succes
+*/
+typedef DEV_INIT(dev_init_t);
+
+
+
+
+/** Common device class cleanup() function template. */
+#define DEV_CLEANUP(n)	void    (n) (struct device_s *dev)
+
+/**
+   @This is device cleanup() function type. Free all ressources
+   allocated with the init() function.
+
+   @param dev pointer to device descriptor
+*/
+typedef DEV_CLEANUP(dev_cleanup_t);
+
+
+
+/** Common device class ioctl() function template. */
+#define DEV_IOCTL(n) void (n) (struct device_s *dev, uint_fast8_t id, void *param)
+
+
+/**
+   @This is device ioctl() function type. This function may be used to
+   tweak device specific features which are not available using driver
+   class API. This function should be used to access optional device
+   features only, relying on this function for operations which are
+   mandatory to make the device work indicates design error or wrong
+   driver class usage.
+
+   @param dev pointer to device descriptor
+   @param id device specific operation id
+   @param param device specific operation parameters
+*/
+typedef DEV_IOCTL(dev_ioctl_t);
+
+
 
 /** device driver object structure */
 
-#define DRV_MAX_FUNC_COUNT	6
-
 struct driver_s
 {
-  /* device class */
-  enum device_class_e		class;
-
   /* device identifier table for detection (optional) */
   const struct devenum_ident_s	*id_table;
 
-  dev_create_t			*f_create;
-  dev_init_t			*f_init;
-  dev_cleanup_t			*f_cleanup;
-  dev_irq_t			*f_irq;
+  dev_init_t	*f_init;
+  dev_cleanup_t	*f_cleanup;
+  dev_irq_t	*f_irq;
 
-  union {
-    void			*ptrs[DRV_MAX_FUNC_COUNT];
-
-#ifdef __DEVICE_CHAR_H__
-    struct dev_class_char_s	chr;
-#endif
-
-#ifdef __DEVICE_ICU_H__
-    /** interrupt controller devices */
-    struct dev_class_icu_s	icu;
-#endif
-
-#ifdef __DEVICE_FB_H__
-    /** frame buffer devices */
-    struct dev_class_fb_s	fb;
-#endif
-
-#ifdef __DEVICE_TIMER_H__
-    struct dev_class_timer_s	timer;
-#endif
-
-#ifdef __DEVICE_INPUT_H__
-    struct dev_class_input_s	input;
-#endif
-
-#ifdef __DEVICE_ENUM_H__
-    /** device enumerator class */
-    struct dev_class_enum_s	denum;
-#endif
-
-#ifdef __DEVICE_NET_H__
-    struct dev_class_net_s	net;
-#endif
-
-#ifdef __DEVICE_SOUND_H__
-    struct dev_class_sound_s	sound;
-#endif
-
-#ifdef __DEVICE_BLOCK_H__
-    struct dev_class_block_s	blk;
-#endif
-
-#ifdef __DEVICE_SPI_H__
-    struct dev_class_spi_s	spi;
-#endif
-
-#ifdef __DEVICE_LCD_H__
-    struct dev_class_lcd_s	lcd;
-#endif
-
-#ifdef __DEVICE_GPIO_H__
-    struct dev_class_gpio_s	gpio;
-#endif
-
-#ifdef __DEVICE_I2C_H__
-    struct dev_class_i2c_s	i2c;
-#endif
-
-#ifdef __DEVICE_MEM_H__
-    struct dev_class_mem_s	mem;
-#endif
-  } f;
+  /** NULL terminated array of pointers to driver classes structs */
+  const void	*classes[];
 };
 
 /**
@@ -293,5 +334,67 @@ const struct driver_s *driver_get_matching_ata(
  */
 const struct driver_s *driver_get_matching_fdtname(
 	const char *name);
+
+
+/**
+   @internal @This declares a device accessor type.
+*/
+#define DEVICE_CLASS_TYPES(cl, ...)                                    \
+/**                                                                     \
+   @This is the device accessor object type for the cl device class.    \
+   This accessor must be initialized                                    \
+   using the @ref device_get_accessor function before being used to     \
+   access the device.                                                   \
+   @see {device_get_accessor, device_put_accessor}                      \
+*/                                                                      \
+struct device_##cl##_s                                                  \
+{                                                                       \
+  struct device_s *dev;                                                 \
+  struct driver_##cl##_s *api;                                          \
+  uint_fast8_t number;                                                  \
+};                                                                      \
+                                                                        \
+/**                                                                     \
+   @This is the driver API descriptor for the cl device class.          \
+*/                                                                      \
+struct driver_##cl##_s                                                  \
+{                                                                       \
+  enum device_class_e class_;                                           \
+  __VA_ARGS__                                                           \
+};
+
+
+
+/**
+   @This invokes requested operation on device using device accessor object.
+ */
+#define DEVICE_OP(dev_accessor, op, ...)        \
+do {                                            \
+  typeof(dev_accessor) __a__ = (dev_accessor);  \
+  __a__->api->f_##op(__a__, __VA_ARGS__);       \
+} while (0)
+
+#define DEVICE_ACCESSOR_INIT { .dev = NULL, .api = NULL }
+
+/**
+   @This initializes a device accessor object. If the return value is
+   0, the accessor object can then be used to access device driver
+   functions of requested api class. The @tt number parameter can be
+   used when the device provides more than one api instance of the
+   requested class type.
+
+   @see {#DEVICE_ACCESSOR, #DEVICE_OP, device_put_accessor}
+ */
+error_t device_get_accessor(void *accessor, struct device_s *dev,
+                            enum device_class_e cl, uint_fast8_t number);
+
+/**
+   @This must be called when device driver accessor is
+   discarded. @This is used to decrement device usage references
+   count.
+   @see {device_get_accessor}
+ */
+void device_put_accessor(void *accessor);
+
 
 #endif

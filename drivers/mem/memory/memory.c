@@ -29,11 +29,17 @@
 
 DEVMEM_GET_INFO(memory_get_info)
 {
+	struct device_s *dev = mdev->dev;
 	uint32_t flags = (uint32_t)dev->drv_pv;
 
-	info->base = dev->addr[DEV_MEMORY_ADDR_BEGIN];
-	info->size = dev->addr[DEV_MEMORY_ADDR_END] - dev->addr[DEV_MEMORY_ADDR_BEGIN];
-	info->flags = flags;
+	uint_fast8_t i;
+
+	if (!device_res_id(dev, DEV_RES_MEM, 0, &i))
+		{
+			info->base = dev->res[i].mem.start;
+			info->size = dev->res[i].mem.end - dev->res[i].mem.start;
+			info->flags = flags;
+		}
 }
 
 static const struct driver_param_binder_s memory_param_binder[] =
@@ -49,15 +55,18 @@ static const struct devenum_ident_s	memory_ids[] =
 	{ 0 }
 };
 
+static const struct driver_mem_s   memory_mem_drv =
+{
+	.class_     = DEVICE_CLASS_MEM,
+	.f_get_info = memory_get_info,
+};
+
 const struct driver_s   memory_drv =
 {
-    .class      = device_class_mem,
 	.id_table	= memory_ids,
-    .f_init     = memory_init,
-    .f_cleanup  = memory_cleanup,
-	.f.mem = {
-		.f_get_info = memory_get_info,
-	},
+	.f_init		= memory_init,
+	.f_cleanup	= memory_cleanup,
+	.classes	= { &memory_mem_drv, 0 }
 };
 
 REGISTER_DRIVER(memory_drv);

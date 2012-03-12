@@ -126,12 +126,24 @@ static
 void hw_init()
 {
 #if defined(CONFIG_ARCH_DEVICE_TREE)
-    device_init(&fdt_enum_dev);
-    enum_fdt_init(&fdt_enum_dev, arch_fdt);
-    mutek_parse_fdt(&fdt_enum_dev, arch_fdt);
+//    device_init(&fdt_enum_dev);
+//    enum_fdt_init(&fdt_enum_dev, arch_fdt);
+//    mutek_parse_fdt(&fdt_enum_dev, arch_fdt);
     //TODO: change with mem_parse_fdt when lib topology is done
     mem_region_init();
     //        mem_parse_fdt(arch_fdt);
+
+    static struct device_s tty_dev;
+    extern struct device_char_s console_dev;
+
+	device_init(&tty_dev);
+    device_attach(&tty_dev, NULL);
+    device_res_add_mem(&tty_dev, 0xd0200000, 0xd0200010);
+    device_res_add_irq(&tty_dev, 0);
+    tty_soclib_init(&tty_dev, NULL);
+
+	device_get_accessor(&console_dev, &tty_dev, DEVICE_CLASS_CHAR, 0);
+
 #elif defined(CONFIG_ARCH_HW_INIT_USER)
     user_hw_init();
 #elif defined(CONFIG_ARCH_HW_INIT)

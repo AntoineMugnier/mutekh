@@ -35,20 +35,25 @@
 #include "enum-root.h"
 //#include "enum-root-private.h"
 
+static const struct driver_enum_s enum_root_enum_drv =
+{
+	.class_		= DEVICE_CLASS_ENUM,
+	.f_lookup	= &enum_root_lookup,
+};
+
+const struct driver_s	enum_root_drv =
+{
+	.f_init		= &enum_root_init,
+	.f_cleanup	= &enum_root_cleanup,
+	.classes	= { &enum_root_enum_drv, 0 }
+};
+
+REGISTER_DRIVER(enum_root_drv);
+
 
 /*
  * device open operation
  */
-
-const struct driver_s	enum_root_drv =
-{
-	.class		= device_class_enum,
-	.f_init		= enum_root_init,
-	.f_cleanup		= enum_root_cleanup,
-	.f.denum = {
-		.f_lookup = enum_root_lookup,
-	}
-};
 
 DEV_INIT(enum_root_init)
 {
@@ -83,3 +88,4 @@ DEVENUM_LOOKUP(enum_root_lookup)
 {
 	return device_get_child(dev, ato_intl16(path));
 }
+

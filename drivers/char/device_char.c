@@ -60,7 +60,7 @@ static DEVCHAR_CALLBACK(dev_char_lock_request_whole_cb)
   return 0;
 }
 
-static ssize_t dev_char_lock_request(struct device_s *dev, uint8_t *data,
+static ssize_t dev_char_lock_request(const struct device_char_s *cdev, uint8_t *data,
 				     size_t size, enum dev_char_rq_type_e type,
 				     devchar_callback_t *callback)
 {
@@ -78,7 +78,7 @@ static ssize_t dev_char_lock_request(struct device_s *dev, uint8_t *data,
   rq.data = data;
   rq.size = size;
 
-  dev_char_request(dev, &rq);
+  DEVICE_OP(cdev, request, &rq);
 
 #ifdef CONFIG_HEXO_IRQ
   assert(cpu_is_interruptible());
@@ -121,7 +121,7 @@ static DEVCHAR_CALLBACK(dev_char_wait_request_whole_cb)
   return 0;
 }
 
-static ssize_t dev_char_wait_request(struct device_s *dev, uint8_t *data,
+static ssize_t dev_char_wait_request(const struct device_char_s *cdev, uint8_t *data,
 				     size_t size, enum dev_char_rq_type_e type,
 				     devchar_callback_t *callback)
 {
@@ -141,7 +141,7 @@ static ssize_t dev_char_wait_request(struct device_s *dev, uint8_t *data,
   rq.data = data;
   rq.size = size;
 
-  dev_char_request(dev, &rq);
+  DEVICE_OP(cdev, request, &rq);
 
   /* ensure callback doesn't occur here */
 
@@ -168,31 +168,31 @@ static ssize_t dev_char_wait_request(struct device_s *dev, uint8_t *data,
 
 
 
-ssize_t dev_char_wait_read(struct device_s *dev, uint8_t *data, size_t size)
+ssize_t dev_char_wait_read(const struct device_char_s *cdev, uint8_t *data, size_t size)
 {
 #ifdef CONFIG_MUTEK_SCHEDULER
-	return dev_char_wait_request(dev, data, size, DEV_CHAR_READ, dev_char_wait_request_cb);
+	return dev_char_wait_request(cdev, data, size, DEV_CHAR_READ, dev_char_wait_request_cb);
 #else
-	return dev_char_lock_request(dev, data, size, DEV_CHAR_READ, dev_char_lock_request_cb);
+	return dev_char_lock_request(cdev, data, size, DEV_CHAR_READ, dev_char_lock_request_cb);
 #endif
 }
 
-ssize_t dev_char_spin_read(struct device_s *dev, uint8_t *data, size_t size)
+ssize_t dev_char_spin_read(const struct device_char_s *cdev, uint8_t *data, size_t size)
 {
-	return dev_char_lock_request(dev, data, size, DEV_CHAR_READ, dev_char_lock_request_cb);
+	return dev_char_lock_request(cdev, data, size, DEV_CHAR_READ, dev_char_lock_request_cb);
 }
 
-ssize_t dev_char_wait_write(struct device_s *dev, const uint8_t *data, size_t size)
+ssize_t dev_char_wait_write(const struct device_char_s *cdev, const uint8_t *data, size_t size)
 {
 #ifdef CONFIG_MUTEK_SCHEDULER
-	return dev_char_wait_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE, dev_char_wait_request_whole_cb);
+	return dev_char_wait_request(cdev, (uint8_t*)data, size, DEV_CHAR_WRITE, dev_char_wait_request_whole_cb);
 #else
-	return dev_char_lock_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE, dev_char_lock_request_whole_cb);
+	return dev_char_lock_request(cdev, (uint8_t*)data, size, DEV_CHAR_WRITE, dev_char_lock_request_whole_cb);
 #endif
 }
 
-ssize_t dev_char_spin_write(struct device_s *dev, const uint8_t *data, size_t size)
+ssize_t dev_char_spin_write(const struct device_char_s *cdev, const uint8_t *data, size_t size)
 {
-	return dev_char_lock_request(dev, (uint8_t*)data, size, DEV_CHAR_WRITE, dev_char_lock_request_whole_cb);
+	return dev_char_lock_request(cdev, (uint8_t*)data, size, DEV_CHAR_WRITE, dev_char_lock_request_whole_cb);
 }
 

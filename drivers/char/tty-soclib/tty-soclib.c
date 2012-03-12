@@ -24,14 +24,14 @@
 
 #include "tty-soclib-private.h"
 
-#include <device/icu.h>
 #include <hexo/types.h>
 #include <hexo/endian.h>
-#include <device/device.h>
-#include <device/driver.h>
 #include <hexo/iospace.h>
 #include <mutek/mem_alloc.h>
 #include <hexo/interrupt.h>
+
+#include <device/device.h>
+#include <device/char.h>
 
 #define TTY_SOCLIB_REG_WRITE	0
 #define TTY_SOCLIB_REG_STATUS	4
@@ -51,8 +51,8 @@ void tty_soclib_try_read(struct device_s *dev)
 #else
       /* use polling if no IRQ support available */
       size = 0;
-      while (cpu_mem_read_8(dev->addr[0] + TTY_SOCLIB_REG_STATUS) && size < rq->size)
-	rq->data[size++] = cpu_mem_read_8(dev->addr[0] + TTY_SOCLIB_REG_READ);
+      while (cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_STATUS) && size < rq->size)
+	rq->data[size++] = cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_READ);
 #endif
 
       if (!size)
@@ -61,7 +61,7 @@ void tty_soclib_try_read(struct device_s *dev)
       rq->size -= size;
       rq->error = 0;
 
-      if (rq->callback(dev, rq, size) || rq->size == 0)
+      if (rq->callback(rq, size) || rq->size == 0)
 	dev_char_queue_remove(&pv->read_q, rq);
       else
 	rq->data += size;
@@ -70,11 +70,15 @@ void tty_soclib_try_read(struct device_s *dev)
 
 DEVCHAR_REQUEST(tty_soclib_request)
 {
+  struct device_s               *dev = cdev->dev;
   struct tty_soclib_context_s	*pv = dev->drv_pv;
 
   assert(rq->size);
+  assert(cdev->number == 0);
 
   LOCK_SPIN_IRQ(&dev->lock);
+
+  rq->cdev = cdev;
 
   switch (rq->type)
     {
@@ -93,11 +97,11 @@ DEVCHAR_REQUEST(tty_soclib_request)
       size_t size = rq->size;
 
       for (i = 0; i < rq->size; i++)
-	cpu_mem_write_32(dev->addr[0] + TTY_SOCLIB_REG_WRITE, endian_le32(rq->data[i]));
+	cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_WRITE, endian_le32(rq->data[i]));
 
       rq->size = 0;
       rq->error = 0;
-      rq->callback(dev, rq, size);
+      rq->callback(rq, size);
 
       break;
     }
@@ -140,9 +144,9 @@ DEV_IRQ(tty_soclib_irq)
 
   lock_spin(&dev->lock);
 
-  while ( cpu_mem_read_8(dev->addr[0] + TTY_SOCLIB_REG_STATUS) ) {
+  while ( cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_STATUS) ) {
 	  /* get character from tty */
-	  c = cpu_mem_read_8(dev->addr[0] + TTY_SOCLIB_REG_READ);
+	  c = cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_READ);
 
 	  /* add character to driver fifo, discard if fifo full */
 	  tty_fifo_pushback(&pv->read_fifo, c);
@@ -167,18 +171,21 @@ static const struct devenum_ident_s	tty_soclib_ids[] =
 	{ 0 }
 };
 
+static const struct driver_char_s	tty_soclib_char_drv =
+{
+  .class_		= DEVICE_CLASS_CHAR,
+  .f_request		= tty_soclib_request,
+};
+
 const struct driver_s	tty_soclib_drv =
 {
-  .class		= device_class_char,
   .id_table		= tty_soclib_ids,
   .f_init		= tty_soclib_init,
   .f_cleanup		= tty_soclib_cleanup,
 #ifdef CONFIG_HEXO_IRQ
   .f_irq		= tty_soclib_irq,
 #endif
-  .f.chr = {
-    .f_request		= tty_soclib_request,
-  }
+  .classes              = { &tty_soclib_char_drv, 0 }
 };
 
 REGISTER_DRIVER(tty_soclib_drv);
@@ -187,17 +194,17 @@ DEV_INIT(tty_soclib_init)
 {
   struct tty_soclib_context_s	*pv;
   device_mem_map( dev , 1 << 0 );
-  dev->drv = &tty_soclib_drv;
 
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
   if (!pv)
-    return -1;
-
-  dev->drv_pv = pv;
+    return -ENOMEM;
 
   dev_char_queue_init(&pv->read_q);
+
+  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr))
+    goto err_mem;
 
 #ifdef CONFIG_HEXO_IRQ
   tty_fifo_init(&pv->read_fifo);
@@ -206,6 +213,12 @@ DEV_INIT(tty_soclib_init)
 	  DEV_ICU_BIND(dev->icudev, dev, dev->irq, tty_soclib_irq);
 #endif
 
+  dev->drv = &tty_soclib_drv;
+  dev->drv_pv = pv;
   return 0;
+
+ err_mem:
+  mem_free(pv);
+  return -1;
 }
 

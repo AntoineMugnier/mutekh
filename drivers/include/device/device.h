@@ -35,97 +35,39 @@ struct driver_s;
 #include <hexo/types.h>
 #include <hexo/error.h>
 
-enum device_class_e
-  {
-    device_class_none = 0,
+struct dev_irq_ep_s;
 
-    device_class_block,
-    device_class_char,
-    device_class_enum,
-    device_class_fb,
-    device_class_icu,
-    device_class_input,
-    device_class_net,
-    device_class_sound,
-    device_class_timer,
-    device_class_spi,
-    device_class_lcd,
-    device_class_gpio,
-    device_class_i2c,
-    device_class_mem,
-  };
+#define DEV_IRQ_EP_PROCESS(n) bool_t (n) (struct dev_irq_ep_s *ep, int_fast8_t id)
+typedef DEV_IRQ_EP_PROCESS(dev_irq_ep_process_t);
 
+/** Device irq end-point object. Irq source and sink endpoints are
+    linked together to make irqs topology graph */
+struct dev_irq_ep_s
+{
+  /** Irq event handling function for endpoint */
+  dev_irq_ep_process_t *process;
 
-/** Common class irq() function template. */
-#define DEV_IRQ(n)	bool_t (n) (struct device_s *dev)
+  /** Number of links */
+  uint_fast8_t links_count;
 
-/** Common device class irq() function type. Must be called on
-    interrupt request.
+  union {
+    /** Single link case */
+    struct dev_irq_ep_s *single;
 
-    * @param dev pointer to device descriptor
-    * @return 1 if interrupt have been handled by the device
-    */
-typedef DEV_IRQ(dev_irq_t);
+    /** Multiple links case */
+    struct dev_irq_ep_s **array;
+  }  /** For source ep: list of sink ep which can recieve the irq signal,
+         for sink ep: list of source ep which can relay this irq */
+    links;
+
+  /** For source ep: link to device which may raise irq,
+      for sink ep: link to device which can handle irq. */
+  struct device_s   *dev;
+};
 
 
-/** Common class create() function template. */
-#define DEV_CREATE(n)	error_t (n) (struct device_s *parent, void *params)
-
-/** Common device class create() method shortcut */
-#define dev_create(dev, param) (dev)->drv->f_create(dev, param)
-
-/** Common device class create() function. This function must be used
-    to create new virtual devices if driver support this.
-
-    * @param parent parent device for new virtual devices if any.
-    * @param params driver dependent parameters, NULL if none
-    * @return negative error code, or number of created devices on success.
-    */
-typedef DEV_CREATE(dev_create_t);
-
-
-
-
-/** Common class init() function template. */
-#define DEV_INIT(n)	error_t (n) (struct device_s *dev, void *params)
-
-/** Common device class init() method shortcut */
-#define dev_init(dev, ...) (dev)->drv->f_init(dev, __VA_ARGS__)
-
-/** Common device class init() function type. This function will init
-    the hardware device and must be called before using any other
-    functions on the device. This function will allocate device
-    private data.
-
-    * @param dev pointer to device descriptor
-    * @param icudev pointer to associated interrupt controller device
-    * @param params driver dependent parameters, NULL if none
-    * @return negative error code, 0 on succes
-    */
-typedef DEV_INIT(dev_init_t);
-
-
-
-
-/** Common device class cleanup() function template. */
-#define DEV_CLEANUP(n)	void    (n) (struct device_s *dev)
-
-/** Common device class cleanup() method shortcut */
-#define dev_cleanup(dev) (dev)->drv->f_cleanup(dev)
-
-/** Common device class cleanup() function type. Free all ressources
-    allocated with the init() function.
-
-   * @param dev pointer to device descriptor
-   */
-typedef DEV_CLEANUP(dev_cleanup_t);
-
-
-
-
-/** Device descriptor structure */
-
-#define DEVICE_MAX_ADDRSLOT	4
+/** Number of resource slots for statically allocated @ref device_s objects */
+#define DEVICE_STATIC_RESOURCE_COUNT	2
 
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
@@ -135,72 +77,147 @@ typedef DEV_CLEANUP(dev_cleanup_t);
 #include <gpct/cont_clist.h>
 #include <gpct/object_refcount.h>
 
-OBJECT_TYPE(device_obj, REFCOUNT, struct device_s);
-
-OBJECT_PROTOTYPE(device_obj, static inline, device_obj);
-
 #endif
 
-/** device object structure */
+enum dev_resource_type_e
+{
+    DEV_RES_UNUSED = 0,         //< Unused resource slot
+    DEV_RES_MEM,                //< Physical memory address mapping resource
+    DEV_RES_IO,                 //< Io space address mapping resource
+    DEV_RES_IRQ,                //< Interrupt line resource
+    DEV_RES_ID,                 //< Unique numeric id, meaning depends on parent device type
+    DEV_RES_VENDORID,           //< Vendor id, meaning depends on parent device type
+    DEV_RES_DEVICEID,           //< Device id specific to current vendor id
+};
+
+struct dev_resource_s
+{
+  uint16_t type;                // resource descriptor type @see dev_resource_type_e
+  union {
+    uintptr_t uint;
+    struct {
+      uintptr_t start;
+      uintptr_t end;
+    }   mem;
+
+    struct {
+      uintptr_t start;
+      uintptr_t end;
+    }   io;
+
+    struct {
+      uintptr_t id;         //< irq number given by device enumerator
+      struct dev_irq_ep_s *ep; //< associated irq end point, may be NULL
+    }   irq;
+
+    struct {
+      uintptr_t id;          //< dynamic numeric id
+    }   id;
+
+    struct {
+      uintptr_t id;          //< optional vendor numeric id, may be -1
+      const char *name;     //< optional vendor string id, may be NULL
+    }   vendorid;
+
+    struct {
+      uintptr_t id;          //< optional device numeric id, may be -1
+      const char *name;     //< optional device string, may be NULL
+    }   deviceid;
+  };
+};
+
+error_t device_res_id(const struct device_s *dev,
+                      enum dev_resource_type_e type,
+                       uint_fast8_t id, uint_fast8_t *res);
+
+error_t device_res_get_uint(const struct device_s *dev,
+                            enum dev_resource_type_e type,
+                            uint_fast8_t id, uintptr_t *res);
+
+struct dev_resource_s * device_res_add(struct device_s *dev);
+
+error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end);
+error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end);
+error_t device_res_add_irq(struct device_s *dev, uintptr_t irq);
+
+enum device_status_e
+{
+  DEVICE_NO_DRIVER,
+  DEVICE_DRIVER_INIT_PENDING,
+  DEVICE_DRIVER_INIT_DONE,
+  DEVICE_DRIVER_INIT_FAILED,
+};
 
 #ifdef CONFIG_DEVICE_TREE
 
 #define CONTAINER_LOCK_device_list HEXO_SPIN
-#define CONTAINER_OBJ_device_list device_obj
 
 CONTAINER_TYPE(device_list, CLIST,
 #endif
+/** device object structure */
 struct device_s
 {
-  const struct driver_s		*drv;
-  struct device_s		*icudev;
-
   /** general purpose device lock */
   lock_t			lock;
 
   /** pointer to device driver private data if any */
   void				*drv_pv;
 
-  /** hardware interrupt line number */
-  int_fast8_t			irq;
-
-  /** device IO addresses table */
-  uintptr_t			addr[DEVICE_MAX_ADDRSLOT];
+  /** device resources table */
+  uint_fast8_t                  res_count;
 
 #ifdef CONFIG_DEVICE_TREE
-  /** pointer to device enumrator private data if any */
+  /** pointer to device enumerator private data if any */
   void				*enum_pv;
+  uint_fast8_t                  enum_type; //< type of enumerator @see dev_enum_type_e
 
   struct device_s		*parent;
   device_list_entry_t		list_entry;
-  device_obj_entry_t		obj_entry;
   device_list_root_t		children;
+  uint_fast8_t                  ref_count;
+  bool_t                        allocated;
 #endif /* !CONFIG_DEVICE_TREE */
 
+  /** Set to true if driver initialization done */
+  enum device_status_e          status;
+  const struct driver_s		*drv;
+
+  /** device resources table */
+  struct dev_resource_s         res[DEVICE_STATIC_RESOURCE_COUNT];
 }
 #ifdef CONFIG_DEVICE_TREE
 , list_entry)
 #endif
 ;
 
-/* used when no irq line is present/available */
-#define DEVICE_IRQ_INVALID	-1
-
 #ifdef CONFIG_DEVICE_TREE
 
-OBJECT_CONSTRUCTOR(device_obj);
-OBJECT_DESTRUCTOR(device_obj);
+/** @This initializes a statically allocated device object. Number of
+    resource slot is @ref #DEVICE_STATIC_RESOURCE_COUNT
+    @see {device_init, device_cleanup} */
+void device_init(struct device_s *dev);
 
-OBJECT_FUNC(device_obj, REFCOUNT, static inline, device_obj, obj_entry);
+/** @This allocates and initializes a device object. Requested number
+    of resource slots is allocated.
+    @see {device_alloc, device_cleanup} */
+struct device_s *device_alloc(size_t resources);
+
+/** @This cleanups a device object. Memory is freed if device has been
+    allocated using @ref device_alloc. Device must not be registered
+    or have registered children and references count must be zero. */
+void device_cleanup(struct device_s *dev);
 
 CONTAINER_PROTOTYPE(device_list, inline, device_list);
 
-error_t device_register(struct device_s *dev,
-			struct device_s *parent,
-			void *enum_pv);
+/** @This attaches a device to a parent enumerator device. If the
+    parent device pointer is NULL, the device is attached on root enumerator. */
+void device_attach(struct device_s *dev,
+                      struct device_s *parent);
 
-error_t device_unregister(struct device_s *dev);
+/** @This detaches a device from its parent enumerator device */
+void device_detach(struct device_s *dev);
 
+/** @This prints the current devices tree. */
 void device_dump_list(struct device_s *root);
 
 #define DEVICE_TREE_WALKER(x) void (x)(struct device_s *dev, void *priv)
@@ -234,15 +251,6 @@ error_t device_mem_map(struct device_s *dev, uint_fast8_t mask)
     return 0;
 }
 
-#ifdef CONFIG_DEVICE_TREE
-#define DEVICE_INITIALIZER							\
-{										\
-  .children = CONTAINER_ROOT_INITIALIZER(device_list, CLIST),			\
-  .obj_entry = OBJECT_INITIALIZER(device_obj, REFCOUNT)				\
-}
-#else
-#define DEVICE_INITIALIZER	{ }
-#endif
 
 #endif
 

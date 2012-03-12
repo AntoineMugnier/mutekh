@@ -29,15 +29,15 @@
 #ifndef __DEVICE_INPUT_H__
 #define __DEVICE_INPUT_H__
 
-#ifdef __DRIVER_H__
-# error This header must not be included after "device/driver.h"
-#endif
-
 #include <hexo/types.h>
 #include <hexo/error.h>
 
+#include <device/driver.h>
+
 struct device_s;
 struct driver_s;
+struct device_input_s;
+struct driver_input_s;
 
 #define DEVINPUT_EVENT_BUTTON_UP	0x01
 #define DEVINPUT_EVENT_BUTTON_DOWN	0x02
@@ -66,10 +66,9 @@ typedef DEVINPUT_CALLBACK(devinput_callback_t);
 
 
 /** Input device class info function tempate. */
-#define DEVINPUT_INFO(n)	void  (n) (struct device_s *dev,		\
+#define DEVINPUT_INFO(n)	void  (n) (struct device_input_s *idev,		\
 					   struct devinput_info_s *info)
 
-#define dev_input_info(dev, ...) (dev)->drv->f.input.f_info(dev, __VA_ARGS__ )
 /**
    Input device class info() function type. This function get
    informations about available controles.
@@ -81,10 +80,9 @@ typedef DEVINPUT_INFO(devinput_info_t);
 
 
 /** Input device class read function tempate. */
-#define DEVINPUT_READ(n)	devinput_value_t (n) (struct device_s *dev,	\
+#define DEVINPUT_READ(n)	devinput_value_t (n) (struct device_input_s *idev,	\
 						      devinput_ctrlid_t id)
 
-#define dev_input_read(dev, ...) (dev)->drv->f.input.f_read(dev, __VA_ARGS__ )
 /**
    Input device class read() function type. This function read control
    current value.
@@ -97,11 +95,10 @@ typedef DEVINPUT_READ(devinput_read_t);
 
 
 /** Input device class write function tempate. */
-#define DEVINPUT_WRITE(n)	error_t (n) (struct device_s *dev,	\
+#define DEVINPUT_WRITE(n)	error_t (n) (struct device_input_s *idev,	\
 					     devinput_ctrlid_t id,	\
 					     devinput_value_t value)
 
-#define dev_input_write(dev, ...) (dev)->drv->f.input.f_write(dev, __VA_ARGS__ )
 /**
    Input device class write() function type. This function set control
    current value.
@@ -115,13 +112,12 @@ typedef DEVINPUT_WRITE(devinput_write_t);
 
 
 /** Input device class event setcallback function tempate. */
-#define DEVINPUT_SETCALLBACK(n)	error_t (n) (struct device_s *dev,		\
+#define DEVINPUT_SETCALLBACK(n)	error_t (n) (struct device_input_s *idev, \
 					     uint_fast8_t type,			\
 					     devinput_ctrlid_t id,		\
 					     devinput_callback_t *callback,	\
 					     void *priv)
 
-#define dev_input_setcallback(dev, ...) (dev)->drv->f.input.f_setcallback(dev, __VA_ARGS__ )
 /**
    Input device class setcallback() function type. This function set
    a new event handler for a control. Special DEVINPUT_CTRLID_ALL
@@ -137,16 +133,12 @@ typedef DEVINPUT_WRITE(devinput_write_t);
 */
 typedef DEVINPUT_SETCALLBACK(devinput_setcallback_t);
 
-
-/** Input device class methodes */
-struct dev_class_input_s
-{
-  devinput_info_t		*f_info;
-  devinput_read_t		*f_read;
-  devinput_write_t		*f_write;
-  devinput_setcallback_t	*f_setcallback;
-};
-
+DEVICE_CLASS_STRUCT(input, 
+                    devinput_info_t *f_info;
+                    devinput_read_t *f_read;
+                    devinput_write_t *f_write;
+                    devinput_setcallback_t *f_setcallback;
+                    );
 
 #endif
 

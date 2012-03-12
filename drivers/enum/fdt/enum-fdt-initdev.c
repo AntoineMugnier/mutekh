@@ -144,7 +144,6 @@ static FDT_ON_NODE_ENTRY_FUNC(initdev_node_entry)
 		error_t err = 
 			enum_fdt_register_one(pv->enum_dev, pv->dev->icudev);
 		if (err) {
-			printk("lzkjeflzkjf %d\n", err);
 			pv->err = err;
 			return 0;
 		}

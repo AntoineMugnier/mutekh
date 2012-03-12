@@ -61,10 +61,7 @@ ifeq ($(CONFIG_MUTEK_RWLOCK), defined)
 objs += rwlock.o
 endif
 
-ifeq ($(CONFIG_ARCH_DEVICE_TREE), defined)
- objs += fdt_consumer.o
-endif
-
 ifeq ($(CONFIG_MUTEK_SLAB), defined)
  objs += slab_allocator.o
 endif
+

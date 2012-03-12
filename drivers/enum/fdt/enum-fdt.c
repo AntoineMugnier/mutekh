@@ -126,7 +126,8 @@ error_t enum_fdt_register_one(struct device_s *dev, struct device_s *item)
         return -ENOTSUP;
 	}
 
-	return enum_fdt_use_drv(dev, item, drv);
+//	return enum_fdt_use_drv(dev, item, drv);
+        return 0;
 }
 
 struct device_s *
@@ -217,16 +218,18 @@ error_t enum_fdt_wake_cpuid(struct device_s *dev, cpu_id_t id, void *entry)
  * device open operation
  */
 
+static const struct driver_enum_s enum_fdt_enum_drv =
+{
+	.class_		= DEVICE_CLASS_ENUM,
+	.f_lookup	= &enum_fdt_lookup,
+        .f_info         = &enum_fdt_info,
+};
+
 const struct driver_s	enum_fdt_drv =
 {
-	.class		= device_class_enum,
 	.f_init		= enum_fdt_init,
-	.f_cleanup		= enum_fdt_cleanup,
-	.f.denum = {
-		.f_lookup = enum_fdt_lookup,
-		.f_info = enum_fdt_info,
-//		.f_register		= enum_fdt_register,
-	}
+	.f_cleanup	= enum_fdt_cleanup,
+	.classes	= { &enum_fdt_enum_drv, 0 }
 };
 
 static void *clone_blob( void *blob )
@@ -267,7 +270,7 @@ DEV_INIT(enum_fdt_init)
 	dev->drv_pv = pv;
 
 	dprintk("creating children\n");
-	enum_fdt_create_children(dev);
+//	enum_fdt_create_children(dev);
 
 /* 	dprintk("registering drivers\n"); */
 /* 	CONTAINER_FOREACH(device_list, CLIST, &dev->children, { */

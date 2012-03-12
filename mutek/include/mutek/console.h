@@ -30,8 +30,9 @@ extern const struct fileops_s console_file_ops;
 
 #if defined(CONFIG_MUTEK_CONSOLE)
 
-struct device_s;
-extern struct device_s *console_dev;
+#include <device/char.h>
+
+extern struct device_char_s console_dev;
 
 PRINTF_OUTPUT_FUNC(__printf_out_tty);
 
