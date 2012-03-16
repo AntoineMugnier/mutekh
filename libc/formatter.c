@@ -309,6 +309,14 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 
       case ('s'): {
 	char	*str = (char*)val;
+
+        if (!str)
+          {
+            len = 6;
+            buf = "(null)";
+            break;
+          }
+
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
 	size_t	maxlen;
 
