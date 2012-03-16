@@ -111,7 +111,8 @@ struct dev_resource_s
     }   irq;
 
     struct {
-      uintptr_t id;          //< dynamic numeric id
+      uintptr_t major;          //< dynamic numeric id
+      uintptr_t minor;          //< dynamic numeric id
     }   id;
 
     struct {
@@ -166,6 +167,11 @@ struct device_s
   /** device resources table */
   uint_fast8_t                  res_count;
 
+  /** Default interrupt controller used when binding end-points. If
+      this pointer is NULL, value from first parent device with a
+      valid pointer must be used. */
+  struct device_s		*icu;
+
 #ifdef CONFIG_DEVICE_TREE
   /** pointer to device enumerator private data if any */
   void				*enum_pv;
@@ -218,7 +224,10 @@ void device_attach(struct device_s *dev,
 void device_detach(struct device_s *dev);
 
 /** @This prints the current devices tree. */
-void device_dump_list(struct device_s *root);
+void device_dump(struct device_s *root);
+
+/** @This prints the current devices tree. */
+void device_dump_tree(struct device_s *root);
 
 #define DEVICE_TREE_WALKER(x) void (x)(struct device_s *dev, void *priv)
 

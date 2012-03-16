@@ -106,22 +106,86 @@ void device_detach(struct device_s *dev)
   dev->parent = 0;
 }
 
-static void
-device_dump_list_r(struct device_s *root, uint_fast8_t i)
+void
+device_dump_r(struct device_s *dev, uint_fast8_t indent)
 {
+  uint_fast8_t i, j;
+
+  printk("\n");
+  for (i = 0; i < indent; i++)
+    printk("  ");
+  printk("Device %p, status: %i, use: %i\n", dev, dev->status, dev->ref_count);
+
+  if (dev->icu)
+    {
+      for (i = 0; i < indent; i++)
+        printk("  ");
+      printk("  Interrupts controller: %p", dev->icu);
+    }
+
+  if (dev->drv)
+    {
+      for (i = 0; i < indent; i++)
+        printk("  ");
+      printk("  Driver: %p \"%s\"\n", dev->drv, dev->drv->desc);
+    }
+
+  for (j = 0; j < dev->res_count; j++)
+    {
+      for (i = 0; i < indent; i++)
+        printk("  ");
+      switch (dev->res[j].type)
+        {
+        case DEV_RES_UNUSED:
+          continue;
+        case DEV_RES_MEM:
+          printk("  %i: Memory range from %p to %p\n", j, dev->res[j].mem.start, dev->res[j].mem.end);
+          break;
+        case DEV_RES_IO:
+          printk("  %i: I/O range from %p to %p\n", j, dev->res[j].io.start, dev->res[j].io.end);
+          break;
+        case DEV_RES_IRQ:
+          printk("  %i: IRQ number %i, source end-point %p\n", j, dev->res[j].irq.id, dev->res[j].irq.ep);
+          break;
+        case DEV_RES_ID:
+          printk("  %i: ID %x %x\n", j, dev->res[j].id.major, dev->res[j].id.minor);
+          break;
+        case DEV_RES_VENDORID:
+          printk("  %i: Vendor %x \"%s\"\n", j, dev->res[j].vendorid.id, dev->res[j].vendorid.name);
+          break;
+        case DEV_RES_DEVICEID:
+          printk("  %i: Device %x \"%s\"\n", j, dev->res[j].vendorid.id, dev->res[j].vendorid.name);
+          break;
+        default:
+          printk("  %i: unknown resource type %i\n", j, dev->res[j].type);
+        }
+    }
+}
+
+void
+device_dump(struct device_s *dev)
+{
+  device_dump_r(dev, 0);
+}
+
+static void
+device_dump_tree_r(struct device_s *root, uint_fast8_t i)
+{
+  device_dump_r(root, i);
+
   CONTAINER_FOREACH(device_list, CLIST, &root->children,
   {
-    printk("%p\n", item);
+    device_dump_tree_r(item, i+1);
   });
 }
 
 void
-device_dump_list(struct device_s *root)
+device_dump_tree(struct device_s *root)
 {
   if (!root)
     root = &enum_root;
 
-  device_dump_list_r(&enum_root, 0);
+  device_dump_tree_r(&enum_root, 0);
 }
 
 #endif

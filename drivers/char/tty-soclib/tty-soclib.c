@@ -179,6 +179,7 @@ static const struct driver_char_s	tty_soclib_char_drv =
 
 const struct driver_s	tty_soclib_drv =
 {
+  .desc                 = "SoCLib TTY driver",
   .id_table		= tty_soclib_ids,
   .f_init		= tty_soclib_init,
   .f_cleanup		= tty_soclib_cleanup,

@@ -270,11 +270,17 @@ typedef DEV_IOCTL(dev_ioctl_t);
 
 struct driver_s
 {
-  /* device identifier table for detection (optional) */
+  /** device identifier table for detection (optional) */
   const struct devenum_ident_s	*id_table;
 
+  /** driver description string */
+  const char *desc;
+
+  /** driver initialization function */
   dev_init_t	*f_init;
+  /** driver cleanup function */
   dev_cleanup_t	*f_cleanup;
+  /** driver irq handling function */
   dev_irq_t	*f_irq;
 
   /** NULL terminated array of pointers to driver classes structs */

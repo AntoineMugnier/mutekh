@@ -43,6 +43,7 @@ static const struct driver_enum_s enum_root_enum_drv =
 
 const struct driver_s	enum_root_drv =
 {
+	.desc		= "MutekH root enumerator",
 	.f_init		= &enum_root_init,
 	.f_cleanup	= &enum_root_cleanup,
 	.classes	= { &enum_root_enum_drv, 0 }
@@ -57,17 +58,7 @@ REGISTER_DRIVER(enum_root_drv);
 
 DEV_INIT(enum_root_init)
 {
-/* 	struct enum_root_context_s *pv; */
-
 	dev->drv = &enum_root_drv;
-
-	/* allocate private driver data */
-/* 	pv = mem_alloc(sizeof(*pv), (mem_scope_sys)); */
-
-/* 	if (!pv) */
-/* 		return -1; */
-
-/* 	dev->drv_pv = pv; */
 
 	return 0;
 }
@@ -79,9 +70,6 @@ DEV_INIT(enum_root_init)
 
 DEV_CLEANUP(enum_root_cleanup)
 {
-/* 	struct enum_root_context_s	*pv = dev->drv_pv; */
-
-/* 	mem_free(pv); */
 }
 
 DEVENUM_LOOKUP(enum_root_lookup)
