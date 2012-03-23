@@ -1,75 +1,81 @@
 /dts-v1/;
 
 / {
-	model = "MutekH_SoCLib_Tutorial";
 	compatible = "MutekH_SoCLib_Tutorial";
 	#address-cells = <1>;
 	#size-cells = <1>;
+        interrupt-parent = <&{/xicu@0}>;
 
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-m4_forloop(i, 0, CONFIG_CPU_MAXCOUNT-1, `
-
-		CONFIG_CPU_NAME@i {
-			name = "CONFIG_CPU_NAME";
-			device_type = "cpu";
-			reg = <i>;
-			icudev_type = "cpu:CONFIG_CPU_ARCHNAME";
-			ipi = <&{/xicu@0/out@i} i>;
+		mips32el@0 {
+                        compatible = "mips32";
+			reg = <0>;
+                        interrupt-controller;
 		};
-')
+
+		mips32el@1 {
+                        compatible = "mips32";
+			reg = <1>;
+                        interrupt-controller;
+		};
+
+		mips32el@2 {
+                        compatible = "mips32";
+			reg = <2>;
+                        interrupt-controller;
+		};
+
+		mips32el@3 {
+                        compatible = "mips32";
+			reg = <3>;
+                        interrupt-controller;
+		};
+
 	};
 
 	tty@0 {
-	    device_type = "soclib:tty";
+                compatible = "soclib:vci_multi_tty";
 		tty_count = <1>;
 		reg = <0xd0200000 0x10>;
-		irq = <&{/xicu@0/out@0} 0>;
+		interrupts = <0>;
 	};
 
 	block@0 {
-	    device_type = "soclib:block_device";
+	        compatible = "soclib:vci_block_device";
 		reg = <0xd1200000 0x20>;
-		irq = <&{/xicu@0/out@0} 1>;
+		interrupts = <1>;
 	};
 
 	fdaccess@0 {
-	    device_type = "soclib:fdaccess";
+                compatible = "soclib:vci_fdaccess";
 		reg = <0xd4200000 0x100>;
-		irq = <&{/xicu@0/out@0} 2>;
+		interrupts = <2>;
 	};
 
 	xicu@0 {
-	    device_type = "soclib:xicu:root";
-		input_lines = <3>;
-		ipis = <CONFIG_CPU_MAXCOUNT>;
-		timers = <1>;
+	        compatible = "soclib:vci_xicu";
 		reg = <0xd2200000 0x1000>;
+                interrupt-controller;
 
-m4_forloop(i, 0, CONFIG_CPU_MAXCOUNT-1, `
-
-	    	out@i {
-	    	    device_type = "soclib:xicu:filter";
-	    	    parent = &{/xicu@0};
-	    		output_line = <i>;
-	    		irq = <&{/cpus/CONFIG_CPU_NAME@i} 0>;
-	    	};
-')
+                              /*  xicu out   target dev           target in*/
+                interrupt-map = < 0          &{/cpus/mips32el@0}  0
+                                  1          &{/cpus/mips32el@1}  0
+                                  2          &{/cpus/mips32el@2}  0
+                                  3          &{/cpus/mips32el@3}  0 >;
 	};
 
 	memory@0 {
-		device_type = "memory";
-		cached;
-		memreg: reg = <0x7f000000 0x01000000>;
+       		compatible = "soclib:vci_ram";
+		reg = <0x7f000000 0x01000000>;
 	};
 
 	chosen {
 		console = &{/tty@0};
-m4_ifelse(CONFIG_MUTEK_TIMER, `defined', `
                 timer = &{/xicu@0};
-')
 	};
 
 };
+

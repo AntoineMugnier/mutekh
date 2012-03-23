@@ -23,8 +23,12 @@ void app_start()
 {
   size_t i;
 
+#if 0
   pthread_mutex_init(&m, NULL);
   for ( i = 0; i < THREAD_COUNT; ++i )
     pthread_create(&pthread[i], NULL, f, "Hello world\n");
+#endif
+
+  device_dump_tree(0);
 }
 

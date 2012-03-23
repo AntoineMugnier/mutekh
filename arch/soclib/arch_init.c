@@ -139,10 +139,17 @@ void hw_init()
 	device_init(&tty_dev);
     device_attach(&tty_dev, NULL);
     device_res_add_mem(&tty_dev, 0xd0200000, 0xd0200010);
-    device_res_add_irq(&tty_dev, 0);
     tty_soclib_init(&tty_dev, NULL);
 
 	device_get_accessor(&console_dev, &tty_dev, DEVICE_CLASS_CHAR, 0);
+
+    static struct device_s fdt_dev;
+
+    device_init(&fdt_dev);
+    device_attach(&fdt_dev, NULL);
+    device_res_add_mem(&fdt_dev, (uintptr_t)arch_fdt, (uintptr_t)arch_fdt + fdt_get_size(arch_fdt));
+    enum_fdt_init(&fdt_dev, arch_fdt);
+
 
 #elif defined(CONFIG_ARCH_HW_INIT_USER)
     user_hw_init();

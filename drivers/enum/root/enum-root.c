@@ -59,6 +59,7 @@ REGISTER_DRIVER(enum_root_drv);
 DEV_INIT(enum_root_init)
 {
 	dev->drv = &enum_root_drv;
+	dev->status = DEVICE_DRIVER_INIT_DONE;
 
 	return 0;
 }

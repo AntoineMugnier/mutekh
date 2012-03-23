@@ -202,30 +202,18 @@ void fdt_get_rsvmap(const void *blob, uint32_t resno,
    @param retval Pointer to a data value to fill
    @return the memory following the parsed data cell
  */
-static inline void* fdt_parse_sized( uint8_t cells, const void *data,
-									 uint8_t retval_size, void *retval )
+static inline void* fdt_parse_cell(const void *data, uint8_t cells, uintptr_t *retval)
 {
-	if ( retval && retval_size ) {
+	if ( retval ) {
 		switch (cells) {
+		case 0:
+			*(uintptr_t*)retval = 0;
+			break;
 		case 1:
-			switch (retval_size) {
-			case 4:
-				*(uint32_t*)retval = endian_be32(*(uint32_t*)data);
-				break;
-			case 8:
-				*(uint64_t*)retval = endian_be32(*(uint32_t*)data);
-				break;
-			}
+			*(uintptr_t*)retval = endian_be32(*(const uint32_t*)data);
 			break;
 		case 2:
-			switch (retval_size) {
-			case 4:
-				*(uint32_t*)retval = endian_be64(*(uint64_t*)data);
-				break;
-			case 8:
-				*(uint64_t*)retval = endian_be64(*(uint64_t*)data);
-				break;
-			}
+			*(uintptr_t*)retval = endian_be64(*(const uint64_t*)data);
 			break;
 		}
 	}
@@ -248,13 +236,13 @@ static inline void* fdt_parse_sized( uint8_t cells, const void *data,
 static inline
 bool_t fdt_reader_get_prop_int(const struct fdt_walker_state_s *state,
 							   const char *propname,
-							   void *rval, size_t rsize)
+							   uintptr_t *rval)
 {
 	const void *binval;
 	size_t binsize;
 
 	if ( fdt_reader_has_prop(state, propname, &binval, &binsize) ) {
-		fdt_parse_sized(1, binval, rsize, rval);
+		fdt_parse_cell(binval, 1, rval);
 		return 1;
 	}
 	return 0;

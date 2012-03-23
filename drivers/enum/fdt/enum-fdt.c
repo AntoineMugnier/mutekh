@@ -17,11 +17,13 @@
     02110-1301 USA.
 
     Copyright (c) 2009, Nicolas Pouillon <nipo@ssji.net>
+    Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2012
 */
 
 
 #include <hexo/types.h>
 #include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
 #include <hexo/local.h>
 #include <hexo/segment.h>
 
@@ -40,247 +42,346 @@
 #include "enum-fdt.h"
 #include "enum-fdt-private.h"
 
+#define FDT_MAX_DEPTH 8
 
-
-struct device_s *enum_fdt_get_at_offset(struct device_s *dev, uint32_t offset)
+enum enum_fdt_section_e
 {
-	CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
-			struct enum_pv_fdt_s *enum_pv = item->enum_pv;
-			if ( enum_pv->offset == offset )
-				return item;
-		});
-	return NULL;
+  FDT_SECTION_NONE,
+  FDT_SECTION_CPUS,
+  FDT_SECTION_DEVICE,
+  FDT_SECTION_CHOSEN,
+};
+
+struct enum_fdt_stack_entry_s
+{
+  struct device_s *dev;
+  uint32_t icu_phandle;
+  uint8_t addr_cells;
+  uint8_t size_cells;
+  uint8_t interrupt_cells;
+  enum enum_fdt_section_e section;
+};
+
+struct enum_fdt_parse_ctx_s
+{
+  struct enum_fdt_stack_entry_s stack[FDT_MAX_DEPTH];
+  int_fast8_t stack_top;
+};
+
+static const char * fdt_name(const char *path)
+{
+  const char *n = path;
+
+  while (*path)
+    {
+      if (*path == '/')
+        n = path + 1;
+      path++;
+    }
+
+  return n;
 }
 
-struct device_s *enum_fdt_get_phandle(struct device_s *dev, uint32_t phandle)
+static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
 {
-	CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
-			struct enum_pv_fdt_s *enum_pv = item->enum_pv;
-			if ( enum_pv->phandle == phandle ) {
-                enum_fdt_register_one(dev, item);
-				return item;
-            }
-		});
-	return NULL;
-}
+  struct enum_fdt_parse_ctx_s *ctx = priv;
+  const char *name = fdt_name(path);
 
-void enum_fdt_children_init(struct device_s *dev)
-{
-	dprintk("registering drivers\n");
-	CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
-			struct enum_pv_fdt_s *enum_pv;
-			enum_pv = item->enum_pv;
-			dprintk(" registering driver for %s\n", enum_pv->device_path);
-			enum_fdt_register_one(dev, item);
-		});
-}
+  ctx->stack_top++;
 
-DEVENUM_LOOKUP(enum_fdt_lookup)
-{
-	struct enum_fdt_context_s *pv = dev->drv_pv;
+  if (ctx->stack_top == 0)
+    return 1;
 
-	CONTAINER_FOREACH(fdt_node, CLIST, &pv->devices, {
-			dprintk("[%s] ", item->device_path);
-			if ( !strcmp(item->device_path, path) ) {
-                enum_fdt_register_one(dev, item->dev);
-				return item->dev;
-            }
-            char path2[ENUM_FDT_PATH_MAXLEN];
-            strncpy(path2, item->device_path+1, ENUM_FDT_PATH_MAXLEN);
-            char *foo;
-            while ( (foo = strchr(path2, '/') ) )
-                *foo = '-';
-			if ( !strcmp(path, path2) ) {
-                enum_fdt_register_one(dev, item->dev);
-				return item->dev;
-            }
-		});
-	return NULL;
-}
-
-DEVENUM_INFO(enum_fdt_info)
-{
-    if ( child->parent != dev )
-        return -EINVAL;
-
-    struct enum_pv_fdt_s *enum_pv = child->enum_pv;
-    strncpy(info->path, enum_pv->device_path+1, DEV_ENUM_MAX_PATH_LEN);
-    char *foo;
-    while ( (foo = strchr(info->path, '/') ) )
-        *foo = '-';
+  if (ctx->stack_top >= FDT_MAX_DEPTH)
     return 0;
-}
 
-error_t enum_fdt_register_one(struct device_s *dev, struct device_s *item)
-{
-	struct enum_pv_fdt_s *enum_pv = item->enum_pv;
+  struct enum_fdt_stack_entry_s *e = ctx->stack + ctx->stack_top;
+  struct enum_fdt_stack_entry_s *p = ctx->stack + ctx->stack_top - 1;
 
-	/* ignore already configured devices */
-	if (item->drv != NULL)
-		return 0;
+  *e = *p;
 
-	const struct driver_s *drv = driver_get_matching_fdtname(enum_pv->device_type);
-
-	if ( drv == NULL ) {
-		dprintk("No driver for %s\n", enum_pv->device_type);
-        return -ENOTSUP;
-	}
-
-//	return enum_fdt_use_drv(dev, item, drv);
-        return 0;
-}
-
-struct device_s *
-enum_fdt_icudev_for_cpuid(struct device_s *dev, cpu_id_t id)
-{
-	struct enum_fdt_context_s *pv = dev->drv_pv;
-    struct device_s *rdev = NULL;
-
-    LOCK_SPIN_IRQ(&dev->lock);
-
-	dprintk("Looking up cpu icudev for cpuid %d... ", id);
-	CONTAINER_FOREACH(fdt_node, CLIST, &pv->devices, {
-			dprintk("[%s %s/%d] ", item->device_type, item->device_path, item->cpuid);
-			if ( !strncmp(item->device_type, "cpu:", 4)
-				 && item->cpuid == id ) {
-				dprintk("OK\n");
-                enum_fdt_register_one(dev, item->dev);
-				rdev = item->dev;
-			}
-		});
-    if ( rdev == NULL )
-	dprintk("not found\n");
-
-    LOCK_RELEASE_IRQ(&dev->lock);
-
-	return rdev;
-}
-
-static FDT_ON_NODE_ENTRY_FUNC(wake_node_entry)
-{
-	void ***entry_ptr = priv;
-
-    const void *value = NULL;
-    size_t len;
-
-    if ( fdt_reader_has_prop(state, "boot_vector_pointer", &value, &len ) ) {
-        fdt_parse_sized( 1, value, sizeof(*entry_ptr), entry_ptr );
-    }
-
+  if (p->dev == NULL)
     return 0;
+
+  if ((p->section == FDT_SECTION_NONE || p->section == FDT_SECTION_CPUS) && strchr(name, '@'))
+    {
+      struct device_s *d = device_alloc(40);
+
+      if (d)
+        {
+          d->name = strdup(name);
+          d->enum_type = DEVENUM_TYPE_FDTNAME;
+          device_attach(d, p->dev);
+        }
+
+      e->dev = d;
+      if (e->section == FDT_SECTION_NONE)
+        e->section = FDT_SECTION_DEVICE;
+      return 1;
+    }
+  else if (p->section == FDT_SECTION_NONE && !strcmp(name, "cpus"))
+    {
+      e->section = FDT_SECTION_CPUS;
+      return 1;
+    }
+
+  printk("enum-fdt: ignored node `%s'\n", path);
+
+  return 0;
 }
 
-error_t enum_fdt_wake_cpuid(struct device_s *dev, cpu_id_t id, void *entry)
+static FDT_ON_NODE_LEAVE_FUNC(enum_fdt_node_leave)
 {
-	struct enum_fdt_context_s *pv = dev->drv_pv;
-    struct device_s *rdev = NULL;
+  struct enum_fdt_parse_ctx_s *ctx = priv;
 
-    LOCK_SPIN_IRQ(&dev->lock);
-	dprintk("Looking up cpu icudev for cpuid %d... ", id);
-	CONTAINER_FOREACH(fdt_node, CLIST, &pv->devices, {
-			dprintk("[%s %s/%d] ", item->device_type, item->device_path, item->cpuid);
-			if ( !strncmp(item->device_type, "cpu:", 4)
-				 && item->cpuid == id ) {
-				dprintk("OK\n");
-				rdev = item->dev;
-			}
-		});
-    LOCK_RELEASE_IRQ(&dev->lock);
-
-    if ( rdev == NULL ) {
-        dprintk("not found\n");
-        return -ENOENT;
-    }
-
-    void **entry_ptr = NULL;
-    struct enum_pv_fdt_s *enum_pv = rdev->enum_pv;
-	struct fdt_walker_s walker = {
-		.priv = &entry_ptr,
-		.on_node_entry = wake_node_entry,
-		.on_node_leave = NULL,
-		.on_node_prop = NULL,
-		.on_mem_reserve = NULL,
-	};
-
-	error_t err = fdt_walk_blob_from(pv->blob, &walker, enum_pv->offset);
-    if ( err )
-        return err;
-
-    if ( entry_ptr ) {
-        *entry_ptr = entry;
-        return 0;
-    }
-
-    return -ENOENT;
+  ctx->stack_top--;
 }
 
-/*
- * device open operation
- */
+static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
+{
+  struct enum_fdt_parse_ctx_s *ctx = priv;
+
+  if (ctx->stack_top >= FDT_MAX_DEPTH)
+    return;
+
+  struct enum_fdt_stack_entry_s *e = ctx->stack + ctx->stack_top;
+  uint8_t *data8 = data;
+
+  switch (name[0])
+    {
+    case '#':
+      if (!strcmp(name + 1, "address-cells") && datalen == 4)
+        {
+          e->addr_cells = endian_be32(*(uint32_t*)data);
+          return;
+        }
+      else if (!strcmp(name + 1, "size-cells") && datalen == 4)
+        {
+          e->size_cells = endian_be32(*(uint32_t*)data);
+          return;
+        }
+      else if (!strcmp(name + 1, "interrupt-cells") && datalen == 4)
+        {
+          e->interrupt_cells = endian_be32(*(uint32_t*)data);
+          return;
+        }
+      break;
+
+    case 'r': {
+      uint32_t elen = (e->addr_cells + e->size_cells) * 4;
+
+      if (!strcmp(name + 1, "eg") && datalen >= elen)
+        switch (e->section)
+          {
+            uintptr_t a, b;
+          case FDT_SECTION_CPUS:
+            fdt_parse_cell(data, e->addr_cells, &a);
+            device_res_add_id(e->dev, a, 0);
+            return;
+          case FDT_SECTION_DEVICE:
+            while (datalen >= elen)
+              {
+                fdt_parse_cell(fdt_parse_cell(data8, e->addr_cells, &a), e->size_cells, &b);
+                device_res_add_mem(e->dev, a, b);
+                datalen -= elen;
+                data8 += elen;
+              }
+            return;
+          }
+      break;
+    }
+
+    case 'c':
+      if (!strcmp(name + 1, "ompatible") && datalen)
+        switch (e->section)
+          {
+          case FDT_SECTION_CPUS:
+          case FDT_SECTION_DEVICE: {
+            char *name = malloc(datalen + 1);
+            if (name)
+              {
+                memcpy(name, data, datalen);
+                name[datalen] = 0;
+                device_res_add_productid(e->dev, 0, name);
+                return;
+              }
+          }
+          case FDT_SECTION_NONE:
+            return;
+          }
+      break;
+
+    case 'l':
+      if (!strcmp(name + 1, "inux,phandle") && datalen == 4)
+        {
+          e->dev->enum_pv = (void*)endian_be32(*(uint32_t*)data);
+          return;
+        }
+      break;
+
+    case 'i': {
+      uint32_t elen = e->interrupt_cells * 4;
+
+      if (!strcmp(name + 1, "nterrupt-parent") && datalen == 4)
+        {
+          e->icu_phandle = endian_be32(*(uint32_t*)data);
+          return;
+        }
+
+      else if (!strcmp(name + 1, "nterrupts") && elen >= 4 && datalen >= elen)
+        {
+          uint32_t phandle = e->icu_phandle;
+          uint32_t j = 0;
+
+          if (phandle == -1)
+            break;
+
+          while (datalen >= elen)
+            {
+              uint16_t icu_in = endian_be32(*(uint32_t*)data8);
+              /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
+              device_res_add_irq(e->dev, j++, icu_in, (void*)phandle);
+              datalen -= elen;
+              data8 += elen;
+            }
+          return;
+        }
+
+      else if (!strcmp(name + 1, "nterrupt-map") && elen >= 4 && datalen >= 8 + elen)
+        {
+          while (datalen >= 8 + elen)
+            {
+              uint16_t icu_out = endian_be32(*(uint32_t*)data8);
+              uint32_t phandle = endian_be32(*(uint32_t*)(data8 + 4));
+              uint16_t icu_in = endian_be32(*(uint32_t*)(data8 + 8));
+              /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
+              device_res_add_irq(e->dev, icu_out, icu_in, (void*)phandle);
+              datalen -= 8 + elen;
+              data8 += 8 + elen;
+            }
+          return;
+        }
+
+      else if (!strcmp(name + 1, "nterrupt-controller"))
+        {
+          return;
+        }
+    }
+    }
+
+  printk("enum-fdt: unhandled node property `%s'\n", name);
+}
+
+static FDT_ON_MEM_RESERVE_FUNC(enum_fdt_mem_reserve)
+{
+  struct enum_fdt_parse_ctx_s *ctx = priv;
+}
 
 static const struct driver_enum_s enum_fdt_enum_drv =
 {
-	.class_		= DEVICE_CLASS_ENUM,
-	.f_lookup	= &enum_fdt_lookup,
-        .f_info         = &enum_fdt_info,
+  .class_	= DEVICE_CLASS_ENUM,
 };
 
 const struct driver_s	enum_fdt_drv =
 {
-	.f_init		= enum_fdt_init,
-	.f_cleanup	= enum_fdt_cleanup,
-	.classes	= { &enum_fdt_enum_drv, 0 }
+  .desc         = "Flat Device Tree enumerator",
+  .f_init	= enum_fdt_init,
+  .f_cleanup	= enum_fdt_cleanup,
+  .classes	= { &enum_fdt_enum_drv, 0 }
 };
 
-static void *clone_blob( void *blob )
+static struct device_s *enum_fdt_get_phandle(struct device_s *dev, uint32_t phandle)
 {
-	size_t size = fdt_get_size(blob);
-	if ( blob == NULL || !size )
-		return NULL;
-	void *b2 = mem_alloc(size, (mem_scope_sys));
-	if ( b2 )
-		memcpy(b2, blob, size);
-	return b2;
+  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
+      if ((uint32_t)item->enum_pv == phandle)
+        return item;
+
+      struct device_s *r = enum_fdt_get_phandle(item, phandle);
+
+      if (r)
+        return r;
+    });
+  return NULL;
 }
 
-extern struct device_s *console_dev;	
+static void resolve_icu_links(struct device_s *root, struct device_s *dev)
+{
+  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
+      uint_fast8_t i;
+
+      for (i = 0; i < item->res_count; i++)
+        {
+          struct dev_resource_s *r = item->res + i;
+
+          if (r->type == DEV_RES_IRQ)
+            {
+              struct device_s *d = enum_fdt_get_phandle(root, (uint32_t)r->irq.icu); 
+
+              /* set pointer to icu device or drop irq resource entry */
+              if (d)
+                r->irq.icu = d;
+              else {
+                printk("enum-fdt: bad interrupt controller handle in %p `%s'\n", item, item->name);
+                r->type = DEV_RES_UNUSED;
+              }
+            }
+        }
+
+      resolve_icu_links(root, item);
+  });
+}
 
 DEV_INIT(enum_fdt_init)
 {
-	struct enum_fdt_context_s *pv;
+  struct enum_fdt_parse_ctx_s ctx = {
+    .stack = {
+      {
+        .dev = dev,
+        .icu_phandle = -1,
+        .addr_cells = sizeof(uintptr_t) / 4,
+        .size_cells = 1,
+        .interrupt_cells = 1,
+        .section = FDT_SECTION_NONE
+      }
+    },
+    .stack_top = -1,
+  };
 
-	dev->drv = &enum_fdt_drv;
+  struct fdt_walker_s walker = {
+    .priv = &ctx,
+    .on_node_entry = enum_fdt_node_entry,
+    .on_node_leave = enum_fdt_node_leave,
+    .on_node_prop = enum_fdt_node_prop,
+    .on_mem_reserve = enum_fdt_mem_reserve,
+  };
 
-	/* allocate private driver data */
-	pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
+  struct enum_fdt_context_s *pv;
 
-	if (!pv)
-		return -1;
+  dev->status = DEVICE_DRIVER_INIT_FAILED;
+  dev->drv = &enum_fdt_drv;
 
-	pv->blob = clone_blob(params);
-	dprintk("blob cloned from %p to %p\n", params, pv->blob);
-	if ( !pv->blob ) {
-		mem_free(pv);
-		return -1;
-	}
+  /* allocate private driver data */
+  pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
-	fdt_node_init(&pv->devices);
-	pv->console_path = NULL;
+  if (!pv)
+    return -1;
 
-	dev->drv_pv = pv;
+  uintptr_t addr;
 
-	dprintk("creating children\n");
-//	enum_fdt_create_children(dev);
+  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr))
+    goto err_mem;
 
-/* 	dprintk("registering drivers\n"); */
-/* 	CONTAINER_FOREACH(device_list, CLIST, &dev->children, { */
-/* 			struct enum_pv_fdt_s *enum_pv; */
-/* 			enum_pv = item->enum_pv; */
-/* 			dprintk(" registering driver for %s\n", enum_pv->device_path); */
-/* 			enum_fdt_register_one(dev, item); */
-/* 		}); */
+  fdt_walk_blob((const void*)addr, &walker);
+  resolve_icu_links(dev, dev);
 
-	return 0;
+  dev->drv_pv = pv;
+  dev->status = DEVICE_DRIVER_INIT_DONE;
+
+  return 0;
+
+ err_mem:
+  mem_free(pv);
+  return -1;
 }
 
 
@@ -290,9 +391,8 @@ DEV_INIT(enum_fdt_init)
 
 DEV_CLEANUP(enum_fdt_cleanup)
 {
-	struct enum_fdt_context_s	*pv = dev->drv_pv;
+  struct enum_fdt_context_s	*pv = dev->drv_pv;
 
-	mem_free(pv->blob);
-	mem_free(pv);
+  mem_free(pv);
 }
 

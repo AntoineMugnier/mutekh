@@ -38,8 +38,9 @@ struct device_s enum_root;
 void device_tree_init()
 {
 # ifdef CONFIG_DRIVER_ENUM_ROOT
-	device_init(&enum_root);
-	enum_root_init(&enum_root, NULL);
+  device_init(&enum_root);
+  enum_root_init(&enum_root, NULL);
+  enum_root.name = "root";
 # endif
 }
 
@@ -47,13 +48,14 @@ CONTAINER_FUNC(device_list, CLIST, inline, device_list);
 
 void device_init(struct device_s *dev)
 {
-  dev->res_count = DEVICE_STATIC_RESOURCE_COUNT;
-
   device_list_init(&dev->children);
   lock_init(&dev->lock);
   dev->parent = NULL;
   dev->enum_type = DEVENUM_TYPE_INVALID;
+  dev->res_count = DEVICE_STATIC_RESOURCE_COUNT;
   dev->allocated = 0;
+  dev->status = DEVICE_NO_DRIVER;
+  dev->name = NULL;
 
   memset(dev->res, 0, sizeof(dev->res));
 }
@@ -63,9 +65,14 @@ struct device_s *device_alloc(size_t resources)
   struct device_s *dev = mem_alloc(sizeof(struct device_s) + sizeof(struct dev_resource_s)
                                    * ((ssize_t)resources - DEVICE_STATIC_RESOURCE_COUNT), (mem_scope_sys));
 
-  dev->res_count = resources;
+  device_list_init(&dev->children);
+  lock_init(&dev->lock);
+  dev->parent = NULL;
   dev->enum_type = DEVENUM_TYPE_INVALID;
+  dev->res_count = resources;
   dev->allocated = 1;
+  dev->status = DEVICE_NO_DRIVER;
+  dev->name = NULL;
 
   return dev;
 }
@@ -82,18 +89,32 @@ void device_cleanup(struct device_s *dev)
   lock_destroy(&dev->lock);
 
   if (dev->allocated)
-    mem_free(dev);
+    {
+      if (dev->name)
+        mem_free(dev->name);
+
+      mem_free(dev);
+    }
 }
 
 void device_attach(struct device_s *dev,
                    struct device_s *parent)
 {
+  static uint_fast16_t id;
+  char name [16];
+
   assert(!dev->parent);
 
   if (!parent)
     parent = &enum_root;
 
   dev->parent = parent;
+
+  if (!dev->name)
+    {
+      sprintf(name, "dev%u", id++);
+      dev->name = strdup(name);
+    }
 
   device_list_pushback(&parent->children, dev);
 }
@@ -110,54 +131,64 @@ void
 device_dump_r(struct device_s *dev, uint_fast8_t indent)
 {
   uint_fast8_t i, j;
+  const char *status[] = { DEVICE_STATUS_NAMES };
 
   printk("\n");
   for (i = 0; i < indent; i++)
     printk("  ");
-  printk("Device %p, status: %i, use: %i\n", dev, dev->status, dev->ref_count);
-
-  if (dev->icu)
-    {
-      for (i = 0; i < indent; i++)
-        printk("  ");
-      printk("  Interrupts controller: %p", dev->icu);
-    }
+  printk("Device %p `%s'\n", dev, dev->name);
+  for (i = 0; i < indent; i++)
+    printk("  ");
+  printk("  status: %s, use: %i\n", status[dev->status], dev->ref_count);
 
   if (dev->drv)
     {
       for (i = 0; i < indent; i++)
         printk("  ");
-      printk("  Driver: %p \"%s\"\n", dev->drv, dev->drv->desc);
+      printk("  Driver: %p `%s'\n", dev->drv, dev->drv->desc);
     }
+
+  uint_fast8_t count[DEV_RES_TYPES_COUNT] = { 0 };
 
   for (j = 0; j < dev->res_count; j++)
     {
+      struct dev_resource_s *r = dev->res + j;
+
+      uint16_t type = r->type;
+      uint_fast8_t c = 0;
+
+      if (type < DEV_RES_TYPES_COUNT)
+        c = count[type]++;
+
+      if (type == DEV_RES_UNUSED)
+          continue;
       for (i = 0; i < indent; i++)
         printk("  ");
-      switch (dev->res[j].type)
+      switch (type)
         {
-        case DEV_RES_UNUSED:
-          continue;
         case DEV_RES_MEM:
-          printk("  %i: Memory range from %p to %p\n", j, dev->res[j].mem.start, dev->res[j].mem.end);
+          printk("  Memory range %i from %p to %p\n", c, r->mem.start, r->mem.end);
           break;
         case DEV_RES_IO:
-          printk("  %i: I/O range from %p to %p\n", j, dev->res[j].io.start, dev->res[j].io.end);
+          printk("  I/O range %i from %p to %p\n", c, r->io.start, r->io.end);
           break;
         case DEV_RES_IRQ:
-          printk("  %i: IRQ number %i, source end-point %p\n", j, dev->res[j].irq.id, dev->res[j].irq.ep);
+          printk("  IRQ output %i bound to input %i of controller %p `%s'\n",
+                 r->irq.dev_out_id, r->irq.icu_in_id, r->irq.icu, r->irq.icu->name);
           break;
         case DEV_RES_ID:
-          printk("  %i: ID %x %x\n", j, dev->res[j].id.major, dev->res[j].id.minor);
+          printk("  Numerical identifier %x %x\n", r->id.major, r->id.minor);
           break;
         case DEV_RES_VENDORID:
-          printk("  %i: Vendor %x \"%s\"\n", j, dev->res[j].vendorid.id, dev->res[j].vendorid.name);
+          printk("  Vendor ID %x `%s'\n", r->vendor.id, r->vendor.name);
           break;
-        case DEV_RES_DEVICEID:
-          printk("  %i: Device %x \"%s\"\n", j, dev->res[j].vendorid.id, dev->res[j].vendorid.name);
+        case DEV_RES_PRODUCTID:
+          printk("  Product ID %x `%s'\n", r->product.id, r->product.name);
           break;
         default:
-          printk("  %i: unknown resource type %i\n", j, dev->res[j].type);
+          printk("  %i: unknown resource type %i\n", j, r->type);
+        case DEV_RES_UNUSED:
+          ;
         }
     }
 }
@@ -300,7 +331,8 @@ error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
   return 0;
 }
 
-error_t device_res_add_irq(struct device_s *dev, uintptr_t irq)
+error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id,
+                           uint_fast16_t icu_in_id, struct device_s *icu)
 {
   struct dev_resource_s *r = device_res_add(dev);
 
@@ -308,7 +340,51 @@ error_t device_res_add_irq(struct device_s *dev, uintptr_t irq)
     return -ENOMEM;
 
   r->type = DEV_RES_IRQ;
-  r->irq.id = irq;
+  r->irq.dev_out_id = dev_out_id;
+  r->irq.icu_in_id = icu_in_id;
+  r->irq.icu = icu;
+
+  return 0;
+}
+
+error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor)
+{
+  struct dev_resource_s *r = device_res_add(dev);
+
+  if (!r)
+    return -ENOMEM;
+
+  r->type = DEV_RES_ID;
+  r->id.major = major;
+  r->id.minor = minor;
+
+  return 0;
+}
+
+error_t device_res_add_vendorid(struct device_s *dev, uintptr_t id, const char *name)
+{
+  struct dev_resource_s *r = device_res_add(dev);
+
+  if (!r)
+    return -ENOMEM;
+
+  r->type = DEV_RES_VENDORID;
+  r->vendor.id = id;
+  r->vendor.name = name;
+
+  return 0;
+}
+
+error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char *name)
+{
+  struct dev_resource_s *r = device_res_add(dev);
+
+  if (!r)
+    return -ENOMEM;
+
+  r->type = DEV_RES_PRODUCTID;
+  r->product.id = id;
+  r->product.name = name;
 
   return 0;
 }

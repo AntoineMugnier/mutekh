@@ -87,7 +87,9 @@ enum dev_resource_type_e
     DEV_RES_IRQ,                //< Interrupt line resource
     DEV_RES_ID,                 //< Unique numeric id, meaning depends on parent device type
     DEV_RES_VENDORID,           //< Vendor id, meaning depends on parent device type
-    DEV_RES_DEVICEID,           //< Device id specific to current vendor id
+    DEV_RES_PRODUCTID,            //< Model id specific to current vendor id
+
+    DEV_RES_TYPES_COUNT,              //< Number of resource types
 };
 
 struct dev_resource_s
@@ -106,8 +108,9 @@ struct dev_resource_s
     }   io;
 
     struct {
-      uintptr_t id;         //< irq number given by device enumerator
-      struct dev_irq_ep_s *ep; //< associated irq end point, may be NULL
+      uint16_t dev_out_id;        //< device outgoing irq line identifier
+      uint16_t icu_in_id;         //< interrupt controller irq input identifier
+      struct device_s *icu;       //< associated interrupt controller
     }   irq;
 
     struct {
@@ -118,12 +121,12 @@ struct dev_resource_s
     struct {
       uintptr_t id;          //< optional vendor numeric id, may be -1
       const char *name;     //< optional vendor string id, may be NULL
-    }   vendorid;
+    }   vendor;
 
     struct {
       uintptr_t id;          //< optional device numeric id, may be -1
       const char *name;     //< optional device string, may be NULL
-    }   deviceid;
+    }   product;
   };
 };
 
@@ -139,15 +142,23 @@ struct dev_resource_s * device_res_add(struct device_s *dev);
 
 error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end);
 error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end);
-error_t device_res_add_irq(struct device_s *dev, uintptr_t irq);
+error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id, uint_fast16_t icu_in_id, struct device_s *icu);
+error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor);
+error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char *name);
 
 enum device_status_e
 {
+  /** No driver is currently attached to the device */
   DEVICE_NO_DRIVER,
+  /** A driver has been attached to the device but initialization has not been performed yet */
   DEVICE_DRIVER_INIT_PENDING,
+  /** A driver has been attached to the device and initialization took place */
   DEVICE_DRIVER_INIT_DONE,
+  /** A driver has been attached to the device but initialization failed */
   DEVICE_DRIVER_INIT_FAILED,
 };
+
+#define DEVICE_STATUS_NAMES "no driver", "init pending", "init ok", "init failed"
 
 #ifdef CONFIG_DEVICE_TREE
 
@@ -167,12 +178,13 @@ struct device_s
   /** device resources table */
   uint_fast8_t                  res_count;
 
-  /** Default interrupt controller used when binding end-points. If
-      this pointer is NULL, value from first parent device with a
-      valid pointer must be used. */
-  struct device_s		*icu;
-
 #ifdef CONFIG_DEVICE_TREE
+  bool_t                        allocated;
+
+  /** device name, freed on device object destruction if not NULL and
+      @tt allocated is set. */
+  const char *                  name;
+
   /** pointer to device enumerator private data if any */
   void				*enum_pv;
   uint_fast8_t                  enum_type; //< type of enumerator @see dev_enum_type_e
@@ -181,7 +193,6 @@ struct device_s
   device_list_entry_t		list_entry;
   device_list_root_t		children;
   uint_fast8_t                  ref_count;
-  bool_t                        allocated;
 #endif /* !CONFIG_DEVICE_TREE */
 
   /** Set to true if driver initialization done */

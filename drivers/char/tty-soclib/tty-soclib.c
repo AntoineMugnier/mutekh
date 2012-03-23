@@ -196,6 +196,8 @@ DEV_INIT(tty_soclib_init)
   struct tty_soclib_context_s	*pv;
   device_mem_map( dev , 1 << 0 );
 
+  dev->status = DEVICE_DRIVER_INIT_FAILED;
+
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
 
@@ -214,6 +216,7 @@ DEV_INIT(tty_soclib_init)
 	  DEV_ICU_BIND(dev->icudev, dev, dev->irq, tty_soclib_irq);
 #endif
 
+  dev->status = DEVICE_DRIVER_INIT_DONE;
   dev->drv = &tty_soclib_drv;
   dev->drv_pv = pv;
   return 0;
