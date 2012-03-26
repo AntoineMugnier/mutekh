@@ -38,7 +38,7 @@
 static const struct driver_enum_s enum_root_enum_drv =
 {
 	.class_		= DEVICE_CLASS_ENUM,
-	.f_lookup	= &enum_root_lookup,
+	.f_match_driver	= &enum_root_match_driver,
 };
 
 const struct driver_s	enum_root_drv =
@@ -51,10 +51,10 @@ const struct driver_s	enum_root_drv =
 
 REGISTER_DRIVER(enum_root_drv);
 
-
-/*
- * device open operation
- */
+DEVENUM_MATCH_DRIVER(enum_root_match_driver)
+{
+	return 0;
+}
 
 DEV_INIT(enum_root_init)
 {
@@ -64,17 +64,7 @@ DEV_INIT(enum_root_init)
 	return 0;
 }
 
-
-/*
- * device close operation
- */
-
 DEV_CLEANUP(enum_root_cleanup)
 {
-}
-
-DEVENUM_LOOKUP(enum_root_lookup)
-{
-	return device_get_child(dev, ato_intl16(path));
 }
 

@@ -58,7 +58,6 @@
 
 #if defined(CONFIG_ARCH_DEVICE_TREE)
 # include <drivers/enum/fdt/enum-fdt.h>
-# include <mutek/fdt.h>
 
 extern struct device_s fdt_enum_dev;
 extern void *arch_fdt;

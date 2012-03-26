@@ -29,7 +29,7 @@
 
 DEV_CLEANUP(enum_fdt_cleanup);
 DEV_INIT(enum_fdt_init);
-DEVENUM_LOOKUP(enum_fdt_lookup);
+DEVENUM_MATCH_DRIVER(enum_fdt_match_driver);
 
 #define ENUM_FDT_MAX_RESOURCES 40
 #define ENUM_FDT_MAX_DEPTH 8

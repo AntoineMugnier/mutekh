@@ -219,10 +219,14 @@ typedef DEV_IRQ(dev_irq_t);
 #define DEV_INIT(n)	error_t (n) (struct device_s *dev, void *params)
 
 /**
-   @This is device init() function type. This function will init
-   the hardware device and must be called before using any other
-   functions on the device. This function will allocate device
-   private data.
+   @This is device init() function type. This function will allocate
+   device private data and initialize the hardware. It must be called
+   before using any other functions on the device.
+   
+   @This must update the @ref device_s::status value to indicate the
+   new status of the device. The value can be left to @ref
+   DEVICE_DRIVER_INIT_PENDING if the device was not initialized due to
+   missing resource but can be successfully initialized later.
 
    @param dev pointer to device descriptor
    @param params driver dependent parameters, NULL if none
@@ -280,8 +284,11 @@ struct driver_s
   dev_init_t	*f_init;
   /** driver cleanup function */
   dev_cleanup_t	*f_cleanup;
+
+#ifdef CONFIG_HEXO_IRQ
   /** driver irq handling function */
   dev_irq_t	*f_irq;
+#endif
 
   /** NULL terminated array of pointers to driver classes structs */
   const void	*classes[];
@@ -300,47 +307,6 @@ struct driver_s
 	const __attribute__((section (".drivers"))) \
 	const struct driver_s *name##_drv_ptr = &name
 #endif
-
-/**
-   Try to get a driver registered with these characteristics
-
-   @param vendor Vendor of PCI device
-   @param vendor Device of PCI device
-   @param vendor Class of PCI device
-   @return A driver if found, NULL otherwise
- */
-const struct driver_s *driver_get_matching_pci(
-	uint16_t vendor,
-	uint16_t device,
-	uint32_t class);
-
-/**
-   Try to get a driver registered with these characteristics
-
-   @param vendor Vendor of ISA device
-   @return A driver if found, NULL otherwise
- */
-const struct driver_s *driver_get_matching_isa(
-	uint16_t vendor);
-
-/**
-   Try to get a driver registered with these characteristics
-
-   @param name Name of ata device
-   @return A driver if found, NULL otherwise
- */
-const struct driver_s *driver_get_matching_ata(
-	const char *name);
-
-/**
-   Try to get a driver registered with these characteristics
-
-   @param name Name of device_type in the FDT
-   @return A driver if found, NULL otherwise
- */
-const struct driver_s *driver_get_matching_fdtname(
-	const char *name);
-
 
 /**
    @internal @This declares a device accessor type.
@@ -375,10 +341,10 @@ struct driver_##cl##_s                                                  \
    @This invokes requested operation on device using device accessor object.
  */
 #define DEVICE_OP(dev_accessor, op, ...)        \
-do {                                            \
+({                                            \
   typeof(dev_accessor) __a__ = (dev_accessor);  \
   __a__->api->f_##op(__a__, __VA_ARGS__);       \
-} while (0)
+})
 
 #define DEVICE_ACCESSOR_INIT { .dev = NULL, .api = NULL }
 
@@ -402,5 +368,17 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
  */
 void device_put_accessor(void *accessor);
 
+/**
+   @This walks down the device tree from specified node (from root if
+   @tt dev is NULL) and try to find appropriate driver for each
+   device and eventually initializes it provided that all resources
+   are available. (The device initialization can be skipped if the
+   associated interrupt controller has not been initialized yet for
+   instance.)
+
+   The tree is traversed multiple times until no more actions can be
+   taken.
+*/
+void device_bind_driver(struct device_s *dev);
 
 #endif

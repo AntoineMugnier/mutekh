@@ -106,10 +106,11 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
     {
       struct device_s *d = device_alloc(ENUM_FDT_MAX_RESOURCES);
 
+      d->enum_dev = ctx->dev;
+
       if (d)
         {
           d->name = strdup(name);
-          d->enum_type = DEVENUM_TYPE_FDTNAME;
           device_attach(d, p->dev);
         }
 
@@ -229,6 +230,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
         }
       break;
 
+#ifdef CONFIG_HEXO_IRQ
     case 'i': {
       uint32_t elen = e->interrupt_cells * 4;
 
@@ -277,9 +279,11 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
           return;
         }
     }
+#endif
+
     }
 
-  printk("enum-fdt: unhandled node property `%s'\n", name);
+  printk("enum-fdt: ignored node property `%s'\n", name);
 }
 
 static FDT_ON_MEM_RESERVE_FUNC(enum_fdt_mem_reserve)
@@ -287,9 +291,36 @@ static FDT_ON_MEM_RESERVE_FUNC(enum_fdt_mem_reserve)
   //  struct enum_fdt_parse_ctx_s *ctx = priv;
 }
 
+
+DEVENUM_MATCH_DRIVER(enum_fdt_match_driver)
+{
+  const struct devenum_ident_s *ident = drv->id_table;
+
+  if (!ident)
+    return 0;
+
+  for ( ; ident->type != 0; ident++ )
+    {
+      if (ident->type != DEVENUM_TYPE_FDTNAME)
+        continue;
+
+      const struct dev_resource_s *r = device_res_get(dev, DEV_RES_PRODUCTID, 0);
+
+      if (!r || !r->product.name)
+        continue;
+
+//      printk("(%s) (%s)\n", ident->fdtname.name, r->product.name);
+
+      return !strcmp(ident->fdtname.name, r->product.name);
+    }
+
+  return 0;
+}
+
 static const struct driver_enum_s enum_fdt_enum_drv =
 {
   .class_	= DEVICE_CLASS_ENUM,
+  .f_match_driver = enum_fdt_match_driver,
 };
 
 const struct driver_s	enum_fdt_drv =
@@ -314,6 +345,7 @@ static struct device_s *enum_fdt_get_phandle(struct device_s *dev, uint32_t phan
   return NULL;
 }
 
+#ifdef CONFIG_HEXO_IRQ
 static void resolve_icu_links(struct device_s *root, struct device_s *dev)
 {
   CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
@@ -340,6 +372,7 @@ static void resolve_icu_links(struct device_s *root, struct device_s *dev)
       resolve_icu_links(root, item);
   });
 }
+#endif
 
 DEV_INIT(enum_fdt_init)
 {
@@ -383,10 +416,14 @@ DEV_INIT(enum_fdt_init)
     goto err_mem;
 
   fdt_walk_blob((const void*)addr, &walker);
+#ifdef CONFIG_HEXO_IRQ
   resolve_icu_links(dev, dev);
+#endif
 
   dev->drv_pv = pv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
+
+  device_bind_driver(dev);
 
   return 0;
 

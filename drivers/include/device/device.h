@@ -138,6 +138,10 @@ error_t device_res_get_uint(const struct device_s *dev,
                             enum dev_resource_type_e type,
                             uint_fast8_t id, uintptr_t *res);
 
+struct dev_resource_s *device_res_get(struct device_s *dev,
+                                      enum dev_resource_type_e type,
+                                      uint_fast8_t id);
+
 struct dev_resource_s * device_res_add(struct device_s *dev);
 
 error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end);
@@ -186,8 +190,8 @@ struct device_s
   const char *                  name;
 
   /** pointer to device enumerator private data if any */
+  struct device_s               *enum_dev;
   void				*enum_pv;
-  uint_fast8_t                  enum_type; //< type of enumerator @see dev_enum_type_e
 
   struct device_s		*parent;
   device_list_entry_t		list_entry;

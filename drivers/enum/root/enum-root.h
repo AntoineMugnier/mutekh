@@ -29,7 +29,7 @@
 
 DEV_CLEANUP(enum_root_cleanup);
 DEV_INIT(enum_root_init);
-DEVENUM_LOOKUP(enum_root_lookup);
+DEVENUM_MATCH_DRIVER(enum_root_match_driver);
 
 #endif
 

@@ -167,7 +167,7 @@ DEV_IRQ(tty_soclib_irq)
 
 static const struct devenum_ident_s	tty_soclib_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("soclib:tty", 0, 0),
+	DEVENUM_FDTNAME_ENTRY("soclib:vci_multi_tty", 0, 0),
 	{ 0 }
 };
 

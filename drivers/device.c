@@ -22,8 +22,11 @@
 
 #include <drivers/enum/root/enum-root.h>
 
+#include <stdio.h>
 #include <device/device.h>
 #include <device/driver.h>
+#include <device/enum.h>
+
 #include <hexo/error.h>
 #include <mutek/mem_alloc.h>
 
@@ -51,11 +54,11 @@ void device_init(struct device_s *dev)
   device_list_init(&dev->children);
   lock_init(&dev->lock);
   dev->parent = NULL;
-  dev->enum_type = DEVENUM_TYPE_INVALID;
   dev->res_count = DEVICE_STATIC_RESOURCE_COUNT;
   dev->allocated = 0;
   dev->status = DEVICE_NO_DRIVER;
   dev->name = NULL;
+  dev->enum_dev = &enum_root;
 
   memset(dev->res, 0, sizeof(dev->res));
 }
@@ -68,11 +71,11 @@ struct device_s *device_alloc(size_t resources)
   device_list_init(&dev->children);
   lock_init(&dev->lock);
   dev->parent = NULL;
-  dev->enum_type = DEVENUM_TYPE_INVALID;
   dev->res_count = resources;
   dev->allocated = 1;
   dev->status = DEVICE_NO_DRIVER;
   dev->name = NULL;
+  dev->enum_dev = &enum_root;
 
   return dev;
 }
@@ -91,7 +94,7 @@ void device_cleanup(struct device_s *dev)
   if (dev->allocated)
     {
       if (dev->name)
-        mem_free(dev->name);
+        mem_free((void*)dev->name);
 
       mem_free(dev);
     }
@@ -189,10 +192,12 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
         case DEV_RES_IO:
           printk("  I/O range %i from %p to %p\n", c, r->io.start, r->io.end);
           break;
+#ifdef CONFIG_HEXO_IRQ
         case DEV_RES_IRQ:
           printk("  IRQ output %i bound to input %i of controller %p `%s'\n",
                  r->irq.dev_out_id, r->irq.icu_in_id, r->irq.icu, r->irq.icu->name);
           break;
+#endif
         case DEV_RES_ID:
           printk("  Numerical identifier %x %x\n", r->id.major, r->id.minor);
           break;
@@ -289,6 +294,19 @@ error_t device_res_id(const struct device_s *dev,
   return -ENOENT;
 }
 
+struct dev_resource_s *device_res_get(struct device_s *dev,
+                                      enum dev_resource_type_e type,
+                                      uint_fast8_t id)
+{
+  uint_fast8_t i;
+
+  for (i = 0; i < dev->res_count; i++)
+    if (dev->res[i].type == type && !id--)
+      return dev->res + i;
+
+  return NULL;
+}
+
 error_t device_res_get_uint(const struct device_s *dev,
                             enum dev_resource_type_e type,
                             uint_fast8_t id, uintptr_t *res)
@@ -351,6 +369,7 @@ error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
 error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id,
                            uint_fast16_t icu_in_id, struct device_s *icu)
 {
+#ifdef CONFIG_HEXO_IRQ
   struct dev_resource_s *r = device_res_add(dev);
 
   if (!r)
@@ -362,6 +381,9 @@ error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id,
   r->irq.icu = icu;
 
   return 0;
+#else
+  return -EINVAL;
+#endif
 }
 
 error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor)
@@ -451,5 +473,107 @@ void device_put_accessor(void *accessor)
   a->dev->ref_count--;
   a->dev = NULL;
   a->api = NULL;
+}
+
+static bool_t device_bind_driver_r(struct device_s *dev)
+{
+  extern const struct driver_s * global_driver_registry[];
+  extern const struct driver_s * global_driver_registry_end[];
+
+  bool_t done = 0;
+
+  switch (dev->status)
+    {
+    case DEVICE_NO_DRIVER: {
+      const struct driver_s **drv = global_driver_registry;
+
+      struct device_enum_s e;
+
+      /* get associated enumerator device */
+      if (!dev->enum_dev)
+        break;
+      if (device_get_accessor(&e, dev->enum_dev, DEVICE_CLASS_ENUM, 0))
+        break;
+
+      /* iterate over available drivers */
+      for ( ; drv < global_driver_registry_end ; drv++ )
+        {
+          /* driver entry may be NULL on heterogeneous systems */
+          if (!*drv)
+            continue;
+
+          /* use enumerator to decide if driver is appropriate for this device */
+          if (DEVICE_OP(&e, match_driver, *drv, dev))
+            {
+              dev->drv = *drv;
+              dev->status = DEVICE_DRIVER_INIT_PENDING;
+              printk("device: %p `%s' device bound to %p `%s' driver\n",
+                     dev, dev->name, *drv, (*drv)->desc);
+              done = 1;
+              break;
+            }
+        }
+
+      device_put_accessor(&e);
+
+      if (dev->status != DEVICE_DRIVER_INIT_PENDING)
+        break;
+    }
+
+      /* try to intialize device using associated driver */
+    case DEVICE_DRIVER_INIT_PENDING: {
+      const struct driver_s *drv = dev->drv;
+      uint_fast8_t i;
+
+      /** check dependencies before try device initialization */
+      for (i = 0; i < dev->res_count; i++)
+        {
+          struct dev_resource_s *r = dev->res + i;
+          switch (r->type)
+            {
+#ifdef CONFIG_HEXO_IRQ
+              /** check that interrupt controllers are initialized */
+            case DEV_RES_IRQ:
+              if (!r->irq.icu || r->irq.icu->status != DEVICE_DRIVER_INIT_DONE)
+                goto skip;
+#endif
+            default:
+              break;
+            }
+        }
+
+      /** device init */
+      error_t err = drv->f_init(dev, NULL);
+
+      if (err)
+        printk("device: device %p `%s' initialization failed with return code %i\n",
+               dev, dev->name, err);
+
+      if (dev->status != DEVICE_DRIVER_INIT_PENDING)
+        done = 1;
+
+      goto skip;
+      skip:;
+    }
+
+    default:
+      break;
+    }
+
+  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
+      done |= device_bind_driver_r(item);
+  });
+
+  return done;
+}
+
+void device_bind_driver(struct device_s *dev)
+{
+  if (!dev)
+    dev = &enum_root;
+
+  /* try to bind and init as many devices as possible */
+  while (device_bind_driver_r(dev))
+    ;
 }
 

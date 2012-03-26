@@ -26,7 +26,6 @@
 # include <device/enum.h>
 # include <device/driver.h>
 # include <device/device.h>
-# include <mutek/fdt.h>
 #endif
 
 #include <arch/mem_checker.h>
@@ -133,6 +132,7 @@ void hw_init()
     mem_region_init();
     //        mem_parse_fdt(arch_fdt);
 
+#if 0
     static struct device_s tty_dev;
     extern struct device_char_s console_dev;
 
@@ -142,6 +142,7 @@ void hw_init()
     tty_soclib_init(&tty_dev, NULL);
 
 	device_get_accessor(&console_dev, &tty_dev, DEVICE_CLASS_CHAR, 0);
+#endif
 
     static struct device_s fdt_dev;
 
@@ -149,7 +150,6 @@ void hw_init()
     device_attach(&fdt_dev, NULL);
     device_res_add_mem(&fdt_dev, (uintptr_t)arch_fdt, (uintptr_t)arch_fdt + fdt_get_size(arch_fdt));
     enum_fdt_init(&fdt_dev, arch_fdt);
-
 
 #elif defined(CONFIG_ARCH_HW_INIT_USER)
     user_hw_init();
