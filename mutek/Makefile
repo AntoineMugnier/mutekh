@@ -1,7 +1,7 @@
 
 doc_headers = mutek/mem_alloc.h mutek/page_alloc.h libc/formatter.h	\
 	mutek/printk.h mutek/rwlock.h mutek/scheduler.h mutek/timer.h	\
-	mutek/vmem_kalloc.h mutek/semaphore.h mutek/fdt.h mutek/console.h \
+	mutek/vmem_kalloc.h mutek/semaphore.h mutek/console.h \
         mutek/fileops.h mutek/memory_allocator.h mutek/mem_region.h
 #        slab_allocator.h
 

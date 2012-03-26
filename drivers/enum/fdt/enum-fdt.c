@@ -42,8 +42,6 @@
 #include "enum-fdt.h"
 #include "enum-fdt-private.h"
 
-#define FDT_MAX_DEPTH 8
-
 enum enum_fdt_section_e
 {
   FDT_SECTION_NONE,
@@ -64,7 +62,8 @@ struct enum_fdt_stack_entry_s
 
 struct enum_fdt_parse_ctx_s
 {
-  struct enum_fdt_stack_entry_s stack[FDT_MAX_DEPTH];
+  struct device_s *dev; // enum fdt dev
+  struct enum_fdt_stack_entry_s stack[ENUM_FDT_MAX_DEPTH];
   int_fast8_t stack_top;
 };
 
@@ -92,7 +91,7 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
   if (ctx->stack_top == 0)
     return 1;
 
-  if (ctx->stack_top >= FDT_MAX_DEPTH)
+  if (ctx->stack_top >= ENUM_FDT_MAX_DEPTH)
     return 0;
 
   struct enum_fdt_stack_entry_s *e = ctx->stack + ctx->stack_top;
@@ -105,7 +104,7 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
 
   if ((p->section == FDT_SECTION_NONE || p->section == FDT_SECTION_CPUS) && strchr(name, '@'))
     {
-      struct device_s *d = device_alloc(40);
+      struct device_s *d = device_alloc(ENUM_FDT_MAX_RESOURCES);
 
       if (d)
         {
@@ -134,6 +133,11 @@ static FDT_ON_NODE_LEAVE_FUNC(enum_fdt_node_leave)
 {
   struct enum_fdt_parse_ctx_s *ctx = priv;
 
+  struct enum_fdt_stack_entry_s *e = ctx->stack + ctx->stack_top;
+
+  if (e->dev != ctx->dev)
+    device_shrink(e->dev);
+
   ctx->stack_top--;
 }
 
@@ -141,28 +145,28 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
 {
   struct enum_fdt_parse_ctx_s *ctx = priv;
 
-  if (ctx->stack_top >= FDT_MAX_DEPTH)
+  if (ctx->stack_top >= ENUM_FDT_MAX_DEPTH)
     return;
 
   struct enum_fdt_stack_entry_s *e = ctx->stack + ctx->stack_top;
-  uint8_t *data8 = data;
+  const uint8_t *data8 = data;
 
   switch (name[0])
     {
     case '#':
       if (!strcmp(name + 1, "address-cells") && datalen == 4)
         {
-          e->addr_cells = endian_be32(*(uint32_t*)data);
+          e->addr_cells = endian_be32(*(const uint32_t*)data);
           return;
         }
       else if (!strcmp(name + 1, "size-cells") && datalen == 4)
         {
-          e->size_cells = endian_be32(*(uint32_t*)data);
+          e->size_cells = endian_be32(*(const uint32_t*)data);
           return;
         }
       else if (!strcmp(name + 1, "interrupt-cells") && datalen == 4)
         {
-          e->interrupt_cells = endian_be32(*(uint32_t*)data);
+          e->interrupt_cells = endian_be32(*(const uint32_t*)data);
           return;
         }
       break;
@@ -170,29 +174,33 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
     case 'r': {
       uint32_t elen = (e->addr_cells + e->size_cells) * 4;
 
-      if (!strcmp(name + 1, "eg") && datalen >= elen)
+      if (!strcmp(name + 1, "eg") && datalen >= elen && e->dev != ctx->dev)
         switch (e->section)
           {
             uintptr_t a, b;
           case FDT_SECTION_CPUS:
+            a = 0;
             fdt_parse_cell(data, e->addr_cells, &a);
             device_res_add_id(e->dev, a, 0);
             return;
           case FDT_SECTION_DEVICE:
             while (datalen >= elen)
               {
+                a = b = 0;
                 fdt_parse_cell(fdt_parse_cell(data8, e->addr_cells, &a), e->size_cells, &b);
                 device_res_add_mem(e->dev, a, b);
                 datalen -= elen;
                 data8 += elen;
               }
             return;
+          default:
+            break;
           }
       break;
     }
 
     case 'c':
-      if (!strcmp(name + 1, "ompatible") && datalen)
+      if (!strcmp(name + 1, "ompatible") && datalen && e->dev != ctx->dev)
         switch (e->section)
           {
           case FDT_SECTION_CPUS:
@@ -208,13 +216,15 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
           }
           case FDT_SECTION_NONE:
             return;
+          default:
+            break;
           }
       break;
 
     case 'l':
-      if (!strcmp(name + 1, "inux,phandle") && datalen == 4)
+      if (!strcmp(name + 1, "inux,phandle") && datalen == 4 && e->dev != ctx->dev)
         {
-          e->dev->enum_pv = (void*)endian_be32(*(uint32_t*)data);
+          e->dev->enum_pv = (void*)endian_be32(*(const uint32_t*)data);
           return;
         }
       break;
@@ -224,11 +234,11 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
 
       if (!strcmp(name + 1, "nterrupt-parent") && datalen == 4)
         {
-          e->icu_phandle = endian_be32(*(uint32_t*)data);
+          e->icu_phandle = endian_be32(*(const uint32_t*)data);
           return;
         }
 
-      else if (!strcmp(name + 1, "nterrupts") && elen >= 4 && datalen >= elen)
+      else if (!strcmp(name + 1, "nterrupts") && elen >= 4 && datalen >= elen && e->dev != ctx->dev)
         {
           uint32_t phandle = e->icu_phandle;
           uint32_t j = 0;
@@ -238,7 +248,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
 
           while (datalen >= elen)
             {
-              uint16_t icu_in = endian_be32(*(uint32_t*)data8);
+              uint16_t icu_in = endian_be32(*(const uint32_t*)data8);
               /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
               device_res_add_irq(e->dev, j++, icu_in, (void*)phandle);
               datalen -= elen;
@@ -247,13 +257,13 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
           return;
         }
 
-      else if (!strcmp(name + 1, "nterrupt-map") && elen >= 4 && datalen >= 8 + elen)
+      else if (!strcmp(name + 1, "nterrupt-map") && elen >= 4 && datalen >= 8 + elen && e->dev != ctx->dev)
         {
           while (datalen >= 8 + elen)
             {
-              uint16_t icu_out = endian_be32(*(uint32_t*)data8);
-              uint32_t phandle = endian_be32(*(uint32_t*)(data8 + 4));
-              uint16_t icu_in = endian_be32(*(uint32_t*)(data8 + 8));
+              uint16_t icu_out = endian_be32(*(const uint32_t*)data8);
+              uint32_t phandle = endian_be32(*(const uint32_t*)(data8 + 4));
+              uint16_t icu_in = endian_be32(*(const uint32_t*)(data8 + 8));
               /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
               device_res_add_irq(e->dev, icu_out, icu_in, (void*)phandle);
               datalen -= 8 + elen;
@@ -262,7 +272,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
           return;
         }
 
-      else if (!strcmp(name + 1, "nterrupt-controller"))
+      else if (!strcmp(name + 1, "nterrupt-controller") && e->dev != ctx->dev)
         {
           return;
         }
@@ -274,7 +284,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
 
 static FDT_ON_MEM_RESERVE_FUNC(enum_fdt_mem_reserve)
 {
-  struct enum_fdt_parse_ctx_s *ctx = priv;
+  //  struct enum_fdt_parse_ctx_s *ctx = priv;
 }
 
 static const struct driver_enum_s enum_fdt_enum_drv =
@@ -334,6 +344,7 @@ static void resolve_icu_links(struct device_s *root, struct device_s *dev)
 DEV_INIT(enum_fdt_init)
 {
   struct enum_fdt_parse_ctx_s ctx = {
+    .dev = dev,
     .stack = {
       {
         .dev = dev,

@@ -224,6 +224,10 @@ struct device_s *device_alloc(size_t resources);
     or have registered children and references count must be zero. */
 void device_cleanup(struct device_s *dev);
 
+/** @This reduces resource slots count to number of used slots
+    count. The device node is reallocated to save memory. */
+void device_shrink(struct device_s *dev);
+
 CONTAINER_PROTOTYPE(device_list, inline, device_list);
 
 /** @This attaches a device to a parent enumerator device. If the

@@ -97,6 +97,23 @@ void device_cleanup(struct device_s *dev)
     }
 }
 
+void device_shrink(struct device_s *dev)
+{
+  uint_fast8_t i;
+
+  for (i = dev->res_count; i > 0; i--)
+    if (dev->res[i-1].type != DEV_RES_UNUSED)
+      break;
+
+  if (i < dev->res_count)
+    {
+      dev->res_count = i;
+
+      mem_resize(dev, sizeof(struct device_s) + sizeof(struct dev_resource_s)
+                 * ((ssize_t)i - DEVICE_STATIC_RESOURCE_COUNT));
+    }
+}
+
 void device_attach(struct device_s *dev,
                    struct device_s *parent)
 {

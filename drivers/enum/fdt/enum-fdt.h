@@ -31,5 +31,8 @@ DEV_CLEANUP(enum_fdt_cleanup);
 DEV_INIT(enum_fdt_init);
 DEVENUM_LOOKUP(enum_fdt_lookup);
 
+#define ENUM_FDT_MAX_RESOURCES 40
+#define ENUM_FDT_MAX_DEPTH 8
+
 #endif
 
