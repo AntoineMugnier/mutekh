@@ -111,26 +111,6 @@ DEVCHAR_REQUEST(tty_soclib_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-/* 
- * device close operation
- */
-
-DEV_CLEANUP(tty_soclib_cleanup)
-{
-  struct tty_soclib_context_s	*pv = dev->drv_pv;
-
-#ifdef CONFIG_HEXO_IRQ
-  if ( dev->icudev )
-    DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, tty_soclib_irq);
-
-  tty_fifo_destroy(&pv->read_fifo);
-#endif
-
-  dev_char_queue_destroy(&pv->read_q);
-
-  mem_free(pv);
-}
-
 #ifdef CONFIG_HEXO_IRQ
 
 /*
@@ -139,8 +119,11 @@ DEV_CLEANUP(tty_soclib_cleanup)
 
 DEV_IRQ(tty_soclib_irq)
 {
+  struct device_s *dev = src->dev;
   struct tty_soclib_context_s *pv = dev->drv_pv;
   uint8_t c;
+
+  *id = -1;
 
   lock_spin(&dev->lock);
 
@@ -150,13 +133,13 @@ DEV_IRQ(tty_soclib_irq)
 
 	  /* add character to driver fifo, discard if fifo full */
 	  tty_fifo_pushback(&pv->read_fifo, c);
+          *id = 0;
   }
 
   tty_soclib_try_read(dev);
-
   lock_release(&dev->lock);
 
-  return 1;
+  return NULL;
 }
 
 #endif
@@ -179,13 +162,10 @@ static const struct driver_char_s	tty_soclib_char_drv =
 
 const struct driver_s	tty_soclib_drv =
 {
-  .desc                 = "SoCLib TTY driver",
+  .desc                 = "SoCLib TTY",
   .id_table		= tty_soclib_ids,
   .f_init		= tty_soclib_init,
   .f_cleanup		= tty_soclib_cleanup,
-#ifdef CONFIG_HEXO_IRQ
-  .f_irq		= tty_soclib_irq,
-#endif
   .classes              = { &tty_soclib_char_drv, 0 }
 };
 
@@ -210,15 +190,19 @@ DEV_INIT(tty_soclib_init)
     goto err_mem;
 
 #ifdef CONFIG_HEXO_IRQ
-  tty_fifo_init(&pv->read_fifo);
+  if (device_irq_link(dev, tty_soclib_irq, &pv->irq_ep, 1))
+    goto err_mem;
 
-  if ( dev->icudev )
-	  DEV_ICU_BIND(dev->icudev, dev, dev->irq, tty_soclib_irq);
+  tty_fifo_init(&pv->read_fifo);
 #endif
 
   dev->status = DEVICE_DRIVER_INIT_DONE;
   dev->drv = &tty_soclib_drv;
   dev->drv_pv = pv;
+
+#warning FIXME use choosen in fdt driver
+  extern struct device_char_s console_dev;
+  device_get_accessor(&console_dev, dev, DEVICE_CLASS_CHAR, 0);
   return 0;
 
  err_mem:
@@ -226,3 +210,17 @@ DEV_INIT(tty_soclib_init)
   return -1;
 }
 
+DEV_CLEANUP(tty_soclib_cleanup)
+{
+  struct tty_soclib_context_s	*pv = dev->drv_pv;
+
+#ifdef CONFIG_HEXO_IRQ
+  device_irq_unlink(dev, &pv->irq_ep, 1);
+
+  tty_fifo_destroy(&pv->read_fifo);
+#endif
+
+  dev_char_queue_destroy(&pv->read_q);
+
+  mem_free(pv);
+}

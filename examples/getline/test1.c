@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <termui/term.h>
 #include <termui/getline.h>
+#include <device/char.h>
 
-extern struct device_s *console_dev;
+extern struct device_char_s console_dev;
 
 static TERMUI_GETLINE_FCN_PROMPT(prompt)
 {
@@ -16,7 +17,7 @@ void app_start()
   struct termui_term_behavior_s	*bhv;
 
   /* initialize terminal */
-  if (!(tm = termui_term_alloc(console_dev, console_dev, NULL)))
+  if (!(tm = termui_term_alloc(&console_dev, &console_dev, NULL)))
     abort();
 
   /* set capabilities */

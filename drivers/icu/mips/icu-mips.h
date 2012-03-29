@@ -29,12 +29,8 @@
 
 /* icu device functions */
 
-DEV_INIT(icu_mips_init);
-DEVICU_ENABLE(icu_mips_enable);
-DEVICU_SETHNDL(icu_mips_sethndl);
-DEVICU_DELHNDL(icu_mips_delhndl);
-DEV_CLEANUP(icu_mips_cleanup);
-void icu_mips_update(struct device_s *dev);
+DEV_INIT(mips_init);
+DEV_CLEANUP(mips_cleanup);
 
 #endif
 

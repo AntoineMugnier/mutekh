@@ -36,81 +36,44 @@
 
 struct device_s;
 struct driver_s;
-
-/** ICU device class enable() function template */
-#define DEVICU_ENABLE(n)	error_t (n) (struct device_s *dev, uint_fast8_t irq, \
-                                             bool_t enable, reg_t flags)
-
-/** ICU device class enable() function type. Enable or Disable
-    interrupt line.
-
-    * @param dev pointer to device descriptor
-    * @param irq icu interrupt line number
-    * @param enable 0 disable interrupt
-    * @param flags icu specific interrupt handling flags, default to 0
-    */
-typedef DEVICU_ENABLE(devicu_enable_t);
-
-
-
-/** ICU device class sethndl() function template */
-#define DEVICU_SETHNDL(n)	error_t (n) (struct device_s *dev, uint_fast8_t irq, dev_irq_t *hndl, void *data)
-/** ICU device class sethndl() function type. Setup a new interrupt
-    handler and associated private data.
-
-    * @param dev pointer to device descriptor
-    * @param irq icu interrupt line number
-    * @param hndl pointer to handler function
-    * @param data pointer to associated private data if any
-    * @return negative error code
-    */
-typedef DEVICU_SETHNDL(devicu_sethndl_t);
-
-
-
-/** ICU device class delhndl() function template */
-#define DEVICU_DELHNDL(n)	error_t (n) (struct device_s *dev, uint_fast8_t irq, dev_irq_t *hndl)
-/** ICU device class delhndl() function type. Remove interrupt
-    handler. Several handlers may be registered when interrupt sharing
-    is used.
-
-    * @param dev pointer to device descriptor
-    * @param irq icu interrupt line number
-    * @param hndl pointer to handler function
-    * @return negative error code
-    */
-typedef DEVICU_DELHNDL(devicu_delhndl_t);
-
-
+struct device_icu_s;
 struct ipi_endpoint_s;
+struct dev_irq_ep_s;
 
-/** ICU device class sendipi() function template */
-#define DEVICU_SENDIPI(n)	error_t (n) (struct ipi_endpoint_s *endpoint)
-/** ICU device class sendipi() function type. send an ipi to specified processor. */
-typedef DEVICU_SENDIPI(devicu_sendipi_t);
+#define DEVICU_GET_SINK(n)	struct dev_irq_ep_s * (n) (struct device_icu_s *idev, uint_fast8_t icu_in_id)
+
+/** @This gets interrupt sink end-point for given incoming interrupt
+    line of the controller and enables associated interrupt line. */
+typedef DEVICU_GET_SINK(devicu_get_sink_t);
 
 
+#define DEVICU_DISABLE_SINK(n)	void (n) (struct device_icu_s *idev, struct dev_irq_ep_s *sink, uint_fast8_t icu_in_id)
 
-/** ICU device class setupipi() function template */
-#define DEVICU_SETUP_IPI_EP(n)	error_t (n) (struct device_s *dev, \
+/** @This disables interrupt line associated with given sink end-point
+    and line number. */
+typedef DEVICU_DISABLE_SINK(devicu_disable_sink_t);
+
+
+#warning FIXME the ipi endpoint contains a function pointer and private data to send the ipi
+
+#define DEVICU_SETUP_IPI_EP(n)	error_t (n) (struct device_icu_s *idev, \
 					     struct ipi_endpoint_s *endpoint, \
-					     uint_fast8_t ipi_no)
-/** ICU device class setupipi() function type. setup an ipi endpoint. */
+					     struct device_s *cpu)
+/** @This setups an ipi end-point for sending intrruptions to the
+    specified processor.  @This may delegate setup of the ipi
+    end-point to a linked interrupt controller, the initial call to
+    this function is performed directly on the processor device which
+    will receive the ipi. */
 typedef DEVICU_SETUP_IPI_EP(devicu_setup_ipi_ep_t);
-
 
 
 /** ICU device class methodes */
 
-struct driver_icu_s
-{
-  enum device_class_e cl;
-  devicu_enable_t	*f_enable;
-  devicu_sethndl_t	*f_sethndl;
-  devicu_delhndl_t	*f_delhndl;
-  devicu_sendipi_t	*f_sendipi;
-  devicu_setup_ipi_ep_t	*f_setup_ipi_ep;
-};
+DEVICE_CLASS_TYPES(icu, 
+                   devicu_get_sink_t	*f_get_sink;
+                   devicu_disable_sink_t *f_disable_sink;
+                   devicu_setup_ipi_ep_t	*f_setup_ipi_ep;
+                   );
 
 #endif
 

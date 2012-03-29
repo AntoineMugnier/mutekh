@@ -149,7 +149,7 @@ void hw_init()
     device_init(&fdt_dev);
     device_attach(&fdt_dev, NULL);
     device_res_add_mem(&fdt_dev, (uintptr_t)arch_fdt, (uintptr_t)arch_fdt + fdt_get_size(arch_fdt));
-    enum_fdt_init(&fdt_dev, arch_fdt);
+    enum_fdt_init(&fdt_dev, NULL);
 
 #elif defined(CONFIG_ARCH_HW_INIT_USER)
     user_hw_init();
@@ -183,14 +183,6 @@ void arch_init_bootstrap(uintptr_t init_sp)
 
     /* configure first CPU */
     cpu_init();
-
-#if defined(CONFIG_ARCH_DEVICE_TREE)
-# if defined(CONFIG_HEXO_IRQ)
-    struct device_s *icu = enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id());
-    if ( icu )
-        cpu_interrupt_sethandler_device(icu);
-# endif
-#endif
 
     start_other_cpus();
 
@@ -243,13 +235,6 @@ void arch_init_other()
 #endif      
     cpu_init();
         
-
-#if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_HEXO_IRQ)
-    struct device_s *icu = enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id());
-    if ( icu )
-        cpu_interrupt_sethandler_device(icu);
-#endif
-
     ++cpu_count;
 
     lock_release(&cpu_init_lock);

@@ -11,36 +11,37 @@
 		#size-cells = <0>;
 
 		mips32el@0 {
-                        compatible = "mips32";
+                        compatible = "cpu:mips";
 			reg = <0>;
                         interrupt-controller;
 		};
-
+/*
 		mips32el@1 {
-                        compatible = "mips32";
+                        compatible = "cpu:mips";
 			reg = <1>;
                         interrupt-controller;
 		};
 
 		mips32el@2 {
-                        compatible = "mips32";
+                        compatible = "cpu:mips";
 			reg = <2>;
                         interrupt-controller;
 		};
 
 		mips32el@3 {
-                        compatible = "mips32";
+                        compatible = "cpu:mips";
 			reg = <3>;
                         interrupt-controller;
 		};
-
+*/
 	};
 
 	tty@0 {
                 compatible = "soclib:vci_multi_tty";
 		tty_count = <1>;
 		reg = <0xd0200000 0x10>;
-		interrupts = <0>;
+                interrupt-parent = <&{/cpus/mips32el@0}>;
+		interrupts = <1>;
 	};
 
 	block@0 {
@@ -61,10 +62,10 @@
                 interrupt-controller;
 
                               /*  xicu out   target dev           target in*/
-                interrupt-map = < 0          &{/cpus/mips32el@0}  0
+                interrupt-map = < 0          &{/cpus/mips32el@0}  0 /*
                                   1          &{/cpus/mips32el@1}  0
                                   2          &{/cpus/mips32el@2}  0
-                                  3          &{/cpus/mips32el@3}  0 >;
+                                  3          &{/cpus/mips32el@3}  0 */ >;
 	};
 
 	memory@0 {

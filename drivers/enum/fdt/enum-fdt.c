@@ -182,14 +182,16 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
           case FDT_SECTION_CPUS:
             a = 0;
             fdt_parse_cell(data, e->addr_cells, &a);
-            device_res_add_id(e->dev, a, 0);
+            if (device_res_add_id(e->dev, a, 0))
+              goto res_err;
             return;
           case FDT_SECTION_DEVICE:
             while (datalen >= elen)
               {
                 a = b = 0;
                 fdt_parse_cell(fdt_parse_cell(data8, e->addr_cells, &a), e->size_cells, &b);
-                device_res_add_mem(e->dev, a, b);
+                if (device_res_add_mem(e->dev, a, b))
+                  goto res_err;
                 datalen -= elen;
                 data8 += elen;
               }
@@ -211,7 +213,8 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
               {
                 memcpy(name, data, datalen);
                 name[datalen] = 0;
-                device_res_add_productid(e->dev, 0, name);
+                if (device_res_add_productid(e->dev, 0, name))
+                  goto res_err;
                 return;
               }
           }
@@ -251,8 +254,15 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
           while (datalen >= elen)
             {
               uint16_t icu_in = endian_be32(*(const uint32_t*)data8);
-              /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
-              device_res_add_irq(e->dev, j++, icu_in, (void*)phandle);
+
+              struct dev_resource_s *r = device_res_add(e->dev);
+              if (!r)
+                goto res_err;
+              r->type = DEV_RES_IRQ;
+              r->irq.dev_out_id = j++;
+              r->irq.icu_in_id = icu_in;
+              r->irq.icu = (void*)phandle;   /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
+
               datalen -= elen;
               data8 += elen;
             }
@@ -267,7 +277,15 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
               uint32_t phandle = endian_be32(*(const uint32_t*)(data8 + 4));
               uint16_t icu_in = endian_be32(*(const uint32_t*)(data8 + 8));
               /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
-              device_res_add_irq(e->dev, icu_out, icu_in, (void*)phandle);
+
+              struct dev_resource_s *r = device_res_add(e->dev);
+              if (!r)
+                goto res_err;
+              r->type = DEV_RES_IRQ;
+              r->irq.dev_out_id = icu_out;
+              r->irq.icu_in_id = icu_in;
+              r->irq.icu = (void*)phandle;  /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
+
               datalen -= 8 + elen;
               data8 += 8 + elen;
             }
@@ -283,7 +301,11 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
 
     }
 
-  printk("enum-fdt: ignored node property `%s'\n", name);
+  printk("enum-fdt: device %p `%s', ignored node property `%s'\n", e->dev, e->dev->name, name);
+  return;
+
+ res_err:
+  printk("enum-fdt: device %p `%s', unable to add more resource entries\n", e->dev, e->dev->name);
 }
 
 static FDT_ON_MEM_RESERVE_FUNC(enum_fdt_mem_reserve)
@@ -331,6 +353,7 @@ const struct driver_s	enum_fdt_drv =
   .classes	= { &enum_fdt_enum_drv, 0 }
 };
 
+#ifdef CONFIG_HEXO_IRQ
 static struct device_s *enum_fdt_get_phandle(struct device_s *dev, uint32_t phandle)
 {
   CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
@@ -345,7 +368,6 @@ static struct device_s *enum_fdt_get_phandle(struct device_s *dev, uint32_t phan
   return NULL;
 }
 
-#ifdef CONFIG_HEXO_IRQ
 static void resolve_icu_links(struct device_s *root, struct device_s *dev)
 {
   CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
@@ -361,7 +383,10 @@ static void resolve_icu_links(struct device_s *root, struct device_s *dev)
 
               /* set pointer to icu device or drop irq resource entry */
               if (d)
-                r->irq.icu = d;
+                {
+                  r->irq.icu = d;
+                  d->ref_count++;
+                }
               else {
                 printk("enum-fdt: bad interrupt controller handle in %p `%s'\n", item, item->name);
                 r->type = DEV_RES_UNUSED;

@@ -35,37 +35,6 @@ struct driver_s;
 #include <hexo/types.h>
 #include <hexo/error.h>
 
-struct dev_irq_ep_s;
-
-#define DEV_IRQ_EP_PROCESS(n) bool_t (n) (struct dev_irq_ep_s *ep, int_fast8_t id)
-typedef DEV_IRQ_EP_PROCESS(dev_irq_ep_process_t);
-
-/** Device irq end-point object. Irq source and sink endpoints are
-    linked together to make irqs topology graph */
-struct dev_irq_ep_s
-{
-  /** Irq event handling function for endpoint */
-  dev_irq_ep_process_t *process;
-
-  /** Number of links */
-  uint_fast8_t links_count;
-
-  union {
-    /** Single link case */
-    struct dev_irq_ep_s *single;
-
-    /** Multiple links case */
-    struct dev_irq_ep_s **array;
-  }  /** For source ep: list of sink ep which can recieve the irq signal,
-         for sink ep: list of source ep which can relay this irq */
-    links;
-
-  /** For source ep: link to device which may raise irq,
-      for sink ep: link to device which can handle irq. */
-  struct device_s   *dev;
-};
-
-
 /** Number of resource slots for statically allocated @ref device_s objects */
 #define DEVICE_STATIC_RESOURCE_COUNT	2
 
@@ -146,6 +115,8 @@ struct dev_resource_s * device_res_add(struct device_s *dev);
 
 error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end);
 error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end);
+
+/** increase icu reference count */
 error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id, uint_fast16_t icu_in_id, struct device_s *icu);
 error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor);
 error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char *name);

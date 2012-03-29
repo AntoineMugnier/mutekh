@@ -24,19 +24,15 @@
 #define __ICU_mips_PRIVATE_H_
 
 #include <device/icu.h>
-#include <device/device.h>
-
-struct icu_mips_handler_s
-{
-  dev_irq_t		*hndl;
-  void			*data;
-};
+#include <device/irq.h>
 
 #define ICU_MIPS_MAX_VECTOR	6
 
-struct icu_mips_private_s
+struct mips_private_s
 {
-	struct icu_mips_handler_s	table[ICU_MIPS_MAX_VECTOR];
+#ifdef CONFIG_HEXO_IRQ
+  struct dev_irq_ep_s	sinks[ICU_MIPS_MAX_VECTOR];
+#endif
 };
 
 #endif

@@ -58,13 +58,6 @@ typedef CPU_INTERRUPT_HANDLER(cpu_interrupt_handler_t);
 
 /** @this sets the hardware interrupt handler for the current cpu */
 void cpu_interrupt_sethandler(cpu_interrupt_handler_t *handler);
-
-extern CPU_LOCAL struct device_s *cpu_interrupt_handler_dev;
-
-struct device_s;
-
-/** @this sets hardware interrupt handler device for the current cpu */
-void cpu_interrupt_sethandler_device(struct device_s *dev);
 # endif
 
 

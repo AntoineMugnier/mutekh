@@ -28,129 +28,168 @@
 #include <stdio.h>
 
 #include <hexo/types.h>
+#include <hexo/interrupt.h>
+#include <hexo/local.h>
+
 #include <device/device.h>
 #include <device/driver.h>
-#include <hexo/iospace.h>
-#include <mutek/mem_alloc.h>
-#include <hexo/interrupt.h>
+#include <device/irq.h>
 
+#include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-void icu_mips_update(struct device_s *dev)
-{
-	/* Prevent the Mips-specific code to be compiled on heterogeneous
-	 * builds. */
-#if defined(CONFIG_CPU_MIPS_VERSION)
-//	struct icu_mips_private_s	*pv = dev->drv_pv;
+#ifdef CONFIG_HEXO_IRQ
 
-	reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
-	status |= 0xfc00;
-	cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
+static CPU_LOCAL struct device_s *mips_icu_dev;
+
+static CPU_INTERRUPT_HANDLER(mips_irq_handler)
+{
+  struct device_s *dev = CPU_LOCAL_GET(mips_icu_dev);
+  struct mips_private_s  *pv = dev->drv_pv;
+
+  if ( irq < ICU_MIPS_MAX_VECTOR ) {
+    struct dev_irq_ep_s *sink = pv->sinks + irq;
+
+    if (sink->process(sink, 0))
+      return;
+  }
+
+  printk("mips: %d got spurious interrupt %i\n", cpu_id(), irq);
+}
+
+static DEVICU_SETUP_IPI_EP(mips_icu_setup_ipi_ep)
+{
+  abort(); // FIXME
+  return -1;
+}
+
+static DEVICU_DISABLE_SINK(mips_icu_disable_sink)
+{
+# ifndef CONFIG_ARCH_SMP
+  /* Disable irq line. On SMP platforms, all lines must remain enabled. */
+  reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
+  status &= ~(1 << (icu_in_id + 10));
+  cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
+# endif
+}
+
+static DEVICU_GET_SINK(mips_icu_get_sink)
+{
+  struct device_s *dev = idev->dev;
+  struct mips_private_s  *pv = dev->drv_pv;
+
+  if (icu_in_id >= ICU_MIPS_MAX_VECTOR)
+    return NULL;
+
+# ifndef CONFIG_ARCH_SMP
+  /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
+  reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
+  status |= 1 << (icu_in_id + 10);
+  cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
+# endif
+
+  return pv->sinks + icu_in_id;
+}
+
+const struct driver_icu_s  mips_icu_drv =
+{
+  .class_          = DEVICE_CLASS_ICU,
+  .f_get_sink     = mips_icu_get_sink,
+  .f_disable_sink = mips_icu_disable_sink,
+  .f_setup_ipi_ep = mips_icu_setup_ipi_ep,
+};
+
 #endif
-}
 
-DEVICU_ENABLE(icu_mips_enable)
+static const struct devenum_ident_s  mips_ids[] =
 {
-//	struct icu_mips_private_s	*pv = dev->drv_pv;
-
-    return 0;
-}
-
-DEVICU_SETHNDL(icu_mips_sethndl)
-{
-	struct icu_mips_private_s	*pv = dev->drv_pv;
-	struct icu_mips_handler_s	*h = pv->table + irq;
-
-	h->hndl = hndl;
-	h->data = data;
-
-	return 0;
-}
-
-DEVICU_DELHNDL(icu_mips_delhndl)
-{
-	struct icu_mips_private_s	*pv = dev->drv_pv;
-	struct icu_mips_handler_s	*h = pv->table + irq;
-
-	h->hndl = NULL;
-	h->data = NULL;
-
-	return 0;
-}
-
-static CPU_INTERRUPT_HANDLER(icu_mips_handler)
-{
-	struct device_s *dev = CPU_LOCAL_GET(cpu_interrupt_handler_dev);
-	struct icu_mips_private_s	*pv = dev->drv_pv;
-	struct icu_mips_handler_s	*h;
-
-	if ( irq >= ICU_MIPS_MAX_VECTOR ) {
-		printk("Mips %d got spurious interrupt %i\n", cpu_id(), irq);
-		return;
-	}
-
-	h = pv->table + irq;
-	
-	if (h->hndl) {
-		h->hndl(h->data);
-    } else {
-		printk("Mips %d had unhandled interrupt %i, disabling it, "
-               "reenabling will be impossible\n",
-               cpu_id(), irq);
-        
-        reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
-        status &= ~(1 << (irq + 10));
-        cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
-    }
-}
-
-DEV_CLEANUP(icu_mips_cleanup)
-{
-	struct icu_mips_private_s *pv = dev->drv_pv;
-
-    mem_free(pv);
-}
-
-static const struct devenum_ident_s	icu_mips_ids[] =
-{
-	DEVENUM_FDTNAME_ENTRY("cpu:mips", 0, 0),
-	{ 0 }
+  DEVENUM_FDTNAME_ENTRY("cpu:mips", 0, 0),
+  { 0 }
 };
 
-const struct driver_s	icu_mips_drv =
+const struct driver_s  mips_drv =
 {
-	.class		= device_class_icu,
-    .id_table   = icu_mips_ids,
-	.f_init		= icu_mips_init,
-	.f_irq      = (dev_irq_t *)icu_mips_handler,
-	.f_cleanup		= icu_mips_cleanup,
-	.f.icu = {
-		.f_enable		= icu_mips_enable,
-		.f_sethndl		= icu_mips_sethndl,
-		.f_delhndl		= icu_mips_delhndl,
-	}
+  .desc           = "Mips processor",
+  .id_table       = mips_ids,
+
+  .f_init          = mips_init,
+  .f_cleanup      = mips_cleanup,
+
+  .classes        = {
+#ifdef CONFIG_HEXO_IRQ
+    &mips_icu_drv,
+#endif
+    0
+  }
 };
 
-REGISTER_DRIVER(icu_mips_drv);
+REGISTER_DRIVER(mips_drv);
 
-DEV_INIT(icu_mips_init)
+DEV_INIT(mips_init)
 {
-	struct icu_mips_private_s	*pv;
+  struct mips_private_s  *pv;
 
-	dev->drv = &icu_mips_drv;
+  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
-	/* FIXME allocation scope ? */
-	pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
+  struct dev_resource_s *res = device_res_get(dev, DEV_RES_ID, 0);
+  if (!res)
+    PRINTK_RET(-ENOENT, "mips: device has no ID resource");
 
-	if ( pv == NULL )
-		goto memerr;
+  if (res->id.major != cpu_id())
+    PRINTK_RET(-EINVAL, "mips: driver init must be executed on CPU with matching id");
 
-	dev->drv_pv = pv;
+  /* FIXME allocation scope ? */
+  pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 
-	memset(pv, 0, sizeof(*pv));
+  if ( pv == NULL )
+    return -ENOMEM;
 
-	return 0;
+  memset(pv, 0, sizeof(*pv));
+  dev->drv_pv = pv;
 
-  memerr:
-	return -ENOMEM;
+#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_ARCH_SMP
+  /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
+  reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
+  status |= 0xfc00;
+  cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
+# endif
+
+  uint_fast8_t i;
+
+  /* init mips irq sink end-points */
+  for (i = 0; i < ICU_MIPS_MAX_VECTOR; i++)
+    device_irq_ep_sink_init(pv->sinks + i, dev, NULL);
+
+  CPU_LOCAL_SET(mips_icu_dev, dev);
+  cpu_interrupt_sethandler(mips_irq_handler);
+#endif
+
+  dev->drv = &mips_drv;
+  dev->status = DEVICE_DRIVER_INIT_DONE;
+
+  return 0;
 }
+
+DEV_CLEANUP(mips_cleanup)
+{
+  struct mips_private_s *pv = dev->drv_pv;
+
+#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_ARCH_SMP
+  /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
+  reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
+  status &= ~0xfc00;
+  cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
+# endif
+
+  uint_fast8_t i;
+
+  /* detach mips irq sink end-points */
+  for (i = 0; i < ICU_MIPS_MAX_VECTOR; i++)
+    device_irq_ep_unlink(NULL, pv->sinks + i);
+#endif
+
+  mem_free(pv);
+}
+

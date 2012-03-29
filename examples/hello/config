@@ -12,5 +12,11 @@
 %include $(SRC_DIR)/examples/common/build_options.conf
 %include $(SRC_DIR)/examples/common/platforms.conf
 
-  CONFIG_HEXO_IRQ undefined
+  CONFIG_HEXO_IRQ defined
+CONFIG_DRIVER_BLOCK_SOCLIB undefined
+CONFIG_DRIVER_ICU_MIPS defined
+CONFIG_DRIVER_TIMER_SOCLIB undefined
+CONFIG_DRIVER_ICU_SOCLIB undefined
+CONFIG_DRIVER_ICU_SOCLIB_XICU undefined
 
+  CONFIG_ARCH_SMP undefined

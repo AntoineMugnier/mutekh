@@ -7,5 +7,10 @@ doc_headers = device/block.h device/char.h device/device.h			\
 	device/sound.h device/spi.h device/timer.h device/driver.h 
 
 objs = driver.o device.o
+
+ifeq ($(CONFIG_HEXO_IRQ), defined)
+ objs += irq.o
+endif
+
 subdirs = block char enum fb icu input net sound timer spi lcd gpio i2c mem
 

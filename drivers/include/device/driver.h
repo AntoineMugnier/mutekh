@@ -182,38 +182,6 @@ struct devenum_ident_s
 	{ .type = DEVENUM_TYPE_GAISLER, { .grlib = {				\
 				.vendor = _vendor, .device = _device } } }
 
-#define DEV_IRQ(n) struct dev_irq_ep_s* (n) (struct dev_irq_ep_s *src, uint_fast8_t *id)
-
-/** Common device class irq() function type. Must be called on
-    interrupt request.
-
-    * @param dev pointer to device descriptor
-    * @return 1 if interrupt have been handled by the device
-    */
-
-/**
-   @This is irq handling function of device node.
-
-   @param src end point which relayed the irq.
-   @param id local identifier of irq line for relaying device.
-
-   Icu devices return pointer to next irq sink end-point or
-   NULL. Non-icu devices always return NULL.
-
-   The id must be changed to -1 when no irq were pending.
-   Non-icu devices only set to -1 or 0.
-
-   Icu devices have to determine the next sink endpoint from its
-   internal registers or passed id value. On some systems the icu
-   passes the decoded vector id to the processor in hardware and we
-   need a way to pass this value back from one icu handler to the next
-   one. Icu devices may change the id value so that it is relevant for
-   the next handler.
-*/
-typedef DEV_IRQ(dev_irq_t);
-
-
-
 
 /** Common class init() function template. */
 #define DEV_INIT(n)	error_t (n) (struct device_s *dev, void *params)
@@ -284,11 +252,6 @@ struct driver_s
   dev_init_t	*f_init;
   /** driver cleanup function */
   dev_cleanup_t	*f_cleanup;
-
-#ifdef CONFIG_HEXO_IRQ
-  /** driver irq handling function */
-  dev_irq_t	*f_irq;
-#endif
 
   /** NULL terminated array of pointers to driver classes structs */
   const void	*classes[];

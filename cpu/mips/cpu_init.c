@@ -69,12 +69,6 @@ void cpu_init(void)
   asm volatile("move $27, %0" : : "r" (cls));
 #endif
 
-#if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_DRIVER_ICU_MIPS)
-  struct device_s *icu = enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id());
-  if ( icu )
-	  icu_mips_update(icu);
-#endif
-
 /* #ifdef CONFIG_HEXO_MMU */
 /*   mmu_vpage_set(0x80000180, (uintptr_t)&__segment_excep_start, MMU_PAGE_ATTR_RX | MMU_PAGE_ATTR_PRESENT); */
 /* #endif */

@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <device/device.h>
 #include <device/driver.h>
+#include <device/irq.h>
 #include <device/enum.h>
 
 #include <hexo/error.h>
@@ -82,11 +83,27 @@ struct device_s *device_alloc(size_t resources)
 
 void device_cleanup(struct device_s *dev)
 {
+  uint_fast8_t i;
+
   assert(!dev->parent);
   assert(!dev->ref_count);
 
   if (dev->drv)
     dev->drv->f_cleanup(dev);
+
+  for (i = 0; i < dev->res_count; i++)
+    {
+      struct dev_resource_s *r = dev->res + i;
+      switch (r->type)
+        {
+#ifdef CONFIG_HEXO_IRQ
+        case DEV_RES_IRQ:
+          r->irq.icu--;
+#endif
+        default:
+          break;
+        }
+    }
 
   device_list_destroy(&dev->children);
   lock_destroy(&dev->lock);
@@ -380,6 +397,8 @@ error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id,
   r->irq.icu_in_id = icu_in_id;
   r->irq.icu = icu;
 
+  icu->ref_count++;
+
   return 0;
 #else
   return -EINVAL;
@@ -534,7 +553,7 @@ static bool_t device_bind_driver_r(struct device_s *dev)
 #ifdef CONFIG_HEXO_IRQ
               /** check that interrupt controllers are initialized */
             case DEV_RES_IRQ:
-              if (!r->irq.icu || r->irq.icu->status != DEVICE_DRIVER_INIT_DONE)
+              if (r->irq.icu->status != DEVICE_DRIVER_INIT_DONE)
                 goto skip;
 #endif
             default:

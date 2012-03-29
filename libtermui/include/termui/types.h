@@ -36,7 +36,7 @@ typedef uint_fast8_t		termui_comp_index_t;
 typedef int_fast8_t		termui_comp_sindex_t;
 typedef uint_fast16_t		termui_strlen_t;
 
-typedef struct device_s *	termui_iostream_t;
+typedef struct device_char_s *	termui_iostream_t;
 
 /* compiler native types, used for printf format */
 typedef __compiler_sint_t	termui_int_t;

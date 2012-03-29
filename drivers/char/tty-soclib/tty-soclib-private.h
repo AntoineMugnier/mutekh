@@ -26,6 +26,7 @@
 
 #include <hexo/types.h>
 #include <device/device.h>
+#include <device/irq.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_ring.h>
@@ -48,8 +49,10 @@ struct tty_soclib_context_s
   dev_char_queue_root_t		read_q;
 #ifdef CONFIG_HEXO_IRQ
   tty_fifo_root_t		read_fifo;
+  struct dev_irq_ep_s           irq_ep;
 #endif
   uintptr_t addr;
+
 };
 
 #endif
