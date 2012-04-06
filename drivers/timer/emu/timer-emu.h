@@ -23,7 +23,7 @@
 #ifndef DRIVER_TIMER_EMU_H_
 #define DRIVER_TIMER_EMU_H_
 
-#include <device/timer.h>
+#include <device/class/timer.h>
 #include <device/device.h>
 
 /* timer device functions */

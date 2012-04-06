@@ -37,9 +37,9 @@
 # include <mutek/scheduler.h>
 #endif
 
-#include <device/char.h>
-#include <device/timer.h>
-#include <device/enum.h>
+#include <device/class/char.h>
+#include <device/class/timer.h>
+#include <device/class/enum.h>
 
 #include <device/device.h>
 #include <device/driver.h>
@@ -111,7 +111,7 @@ int_fast8_t mutek_start()  /* FIRST CPU only */
 
     cpu_interrupt_enable();
 
-#if defined (CONFIG_MUTEK_TIMER) && defined (CONFIG_DRIVER_TIMER)
+#if defined (CONFIG_MUTEK_TIMER) && defined (CONFIG_DEVICE_TIMER)
 	timer_init(&timer_ms.root);
 	timer_ms.ticks = 0;
 

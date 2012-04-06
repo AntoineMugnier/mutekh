@@ -54,38 +54,6 @@ enum device_class_e
     DEVICE_CLASS_MEM,
   };
 
-#define PARAM_DATATYPE_INT 1
-#define PARAM_DATATYPE_DEVICE_PTR 2
-#define PARAM_DATATYPE_ADDR 3
-#define PARAM_DATATYPE_BOOL 4
-
-/**
-   A link from a device property and a field in the parameter
-   structure of a driver init()
- */
-struct driver_param_binder_s
-{
-	const char *param_name;
-	uint16_t struct_offset;
-	uint8_t datatype;
-	uint8_t datalen;
-};
-
-/**
-   Helper macro to create an entry in a struct driver_param_binder_s
-
-   @param _struct_type full type name of the parameter structure type
-   @param _struct_entry field name in the parameter structure
-   @param _datatype type of the data chosen in the PARAM_DATATYPE_*
- */
-#define PARAM_BIND(_struct_type, _struct_entry, _datatype)			    \
-	{																	\
-		.param_name = #_struct_entry,									\
-		.struct_offset = __builtin_offsetof(_struct_type, _struct_entry), \
-		.datatype = _datatype,										    \
-		.datalen = sizeof(((_struct_type *)0)->_struct_entry),		    \
-	}
-
 enum dev_enum_type_e {
   DEVENUM_TYPE_INVALID,
   DEVENUM_TYPE_PCI,
@@ -116,8 +84,6 @@ struct devenum_ident_s
 		} isa;
 		struct {
 			const char *name;
-			size_t param_size;
-			const struct driver_param_binder_s *binder;
 		} fdtname;
 		struct {
 			const char *str;
@@ -164,12 +130,10 @@ struct devenum_ident_s
    devenum_ident_s array.
 
    @param _name The string to match from the device-tree
-   @param _binder The data binder table pointer for the fdt to param conversion
  */
-#define DEVENUM_FDTNAME_ENTRY(_name, _psize, _binder)	\
+#define DEVENUM_FDTNAME_ENTRY(_name)	\
 	{ .type = DEVENUM_TYPE_FDTNAME, { .fdtname = {		\
-				.name = _name, .param_size = _psize,	\
-				.binder = _binder } } }
+				.name = _name } } }
 
 /**
    Shortcut for creating a Gaisler GAISLER entry in a static devenum_ident_s
@@ -184,7 +148,7 @@ struct devenum_ident_s
 
 
 /** Common class init() function template. */
-#define DEV_INIT(n)	error_t (n) (struct device_s *dev, void *params)
+#define DEV_INIT(n)	error_t (n) (struct device_s *dev)
 
 /**
    @This is device init() function type. This function will allocate

@@ -24,8 +24,8 @@
 #ifndef DRIVER_XICU_soclib_H_
 #define DRIVER_XICU_soclib_H_
 
-#include <device/timer.h>
-#include <device/icu.h>
+#include <device/class/timer.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 
 /*

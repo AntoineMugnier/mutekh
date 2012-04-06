@@ -22,7 +22,7 @@
 #ifndef DRIVER_PITC_6079A_H_
 #define DRIVER_PITC_6079A_H_
 
-#include <device/timer.h>
+#include <device/class/timer.h>
 #include <device/device.h>
 
 /* timer device functions */

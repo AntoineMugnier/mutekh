@@ -23,7 +23,7 @@
 #ifndef __ENUM_PCI_H_
 #define __ENUM_PCI_H_
 
-#include <device/enum.h>
+#include <device/class/enum.h>
 #include <device/device.h>
 
 #include <stdint.h>

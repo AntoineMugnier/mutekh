@@ -24,7 +24,7 @@
 
 #include <hexo/types.h>
 #include <mutek/semaphore.h>
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 
 struct fat_tmp_sector_s

@@ -25,7 +25,7 @@
 #define LCD_S1D15G00_H_
 
 #include <hexo/types.h>
-#include <device/lcd.h>
+#include <device/class/lcd.h>
 
 DEVLCD_REQUEST(s1d15g00_request);
 DEVLCD_GETINFO(s1d15g00_getinfo);

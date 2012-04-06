@@ -23,7 +23,7 @@
 #ifndef DRIVER_GPIO_SAM7_H_
 #define DRIVER_GPIO_SAM7_H_
 
-#include <device/gpio.h>
+#include <device/class/gpio.h>
 
 struct gpio_sam7_param_s
 {

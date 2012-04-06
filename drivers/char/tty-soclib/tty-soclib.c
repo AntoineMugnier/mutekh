@@ -31,7 +31,7 @@
 #include <hexo/interrupt.h>
 
 #include <device/device.h>
-#include <device/char.h>
+#include <device/class/char.h>
 
 #define TTY_SOCLIB_REG_WRITE	0
 #define TTY_SOCLIB_REG_STATUS	4
@@ -150,7 +150,7 @@ DEV_IRQ(tty_soclib_irq)
 
 static const struct devenum_ident_s	tty_soclib_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("soclib:vci_multi_tty", 0, 0),
+	DEVENUM_FDTNAME_ENTRY("soclib:vci_multi_tty"),
 	{ 0 }
 };
 

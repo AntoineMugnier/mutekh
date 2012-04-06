@@ -23,7 +23,7 @@
 
 #if defined(CONFIG_ARCH_DEVICE_TREE)
 # include <drivers/enum/fdt/enum-fdt.h>
-# include <device/enum.h>
+# include <device/class/enum.h>
 # include <device/driver.h>
 # include <device/device.h>
 #endif
@@ -139,7 +139,7 @@ void hw_init()
 	device_init(&tty_dev);
     device_attach(&tty_dev, NULL);
     device_res_add_mem(&tty_dev, 0xd0200000, 0xd0200010);
-    tty_soclib_init(&tty_dev, NULL);
+    tty_soclib_init(&tty_dev);
 
 	device_get_accessor(&console_dev, &tty_dev, DEVICE_CLASS_CHAR, 0);
 #endif
@@ -149,7 +149,7 @@ void hw_init()
     device_init(&fdt_dev);
     device_attach(&fdt_dev, NULL);
     device_res_add_mem(&fdt_dev, (uintptr_t)arch_fdt, (uintptr_t)arch_fdt + fdt_get_size(arch_fdt));
-    enum_fdt_init(&fdt_dev, NULL);
+    enum_fdt_init(&fdt_dev);
 
 #elif defined(CONFIG_ARCH_HW_INIT_USER)
     user_hw_init();

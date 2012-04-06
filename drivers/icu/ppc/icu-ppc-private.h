@@ -23,7 +23,7 @@
 #ifndef __ICU_PPC_PRIVATE_H_
 #define __ICU_PPC_PRIVATE_H_
 
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 
 struct icu_ppc_handler_s

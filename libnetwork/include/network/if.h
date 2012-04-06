@@ -29,7 +29,7 @@
    @short Interface handling
  */
 
-#include <device/net.h>
+#include <device/class/net.h>
 #include <device/device.h>
 #include <network/protos.h>
 #include <network/packet.h>

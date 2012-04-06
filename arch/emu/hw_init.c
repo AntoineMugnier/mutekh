@@ -58,11 +58,11 @@ extern struct device_s *console_dev;
 struct device_s tty_dev;
 #endif
 
-#if defined(CONFIG_DRIVER_TIMER)
+#if defined(CONFIG_DEVICE_TIMER)
 struct device_s timer_dev;
 #endif
 
-#if defined(CONFIG_DRIVER_BLOCK)
+#if defined(CONFIG_DEVICE_BLOCK)
 struct device_s block_dev;
 #endif
 
@@ -86,24 +86,24 @@ void arch_hw_init()
 #endif
 
 	/* block device */
-#if defined(CONFIG_DRIVER_BLOCK)
+#if defined(CONFIG_DEVICE_BLOCK)
 	device_init(&block_dev);
 # if defined(CONFIG_DRIVER_BLOCK_EMU)
 	block_file_emu_init(&block_dev, "block.bin");
 # else
-#  error CONFIG_DRIVER_BLOCK case not handled in hw_init()
+#  error CONFIG_DEVICE_BLOCK case not handled in hw_init()
 # endif
 #endif
 
 	/* timer init */
-#if defined(CONFIG_DRIVER_TIMER)
+#if defined(CONFIG_DEVICE_TIMER)
 	device_init(&timer_dev);
 # if defined(CONFIG_DRIVER_TIMER_EMU)
 	timer_emu_init(&timer_dev, NULL);
 	dev_timer_setperiod(&timer_dev, 0, 0xffff);
 	dev_timer_setcallback(&timer_dev, 0, timer_callback, 0);
 # else
-#  warning CONFIG_DRIVER_TIMER case not handled in hw_init()
+#  warning CONFIG_DEVICE_TIMER case not handled in hw_init()
 # endif
 #endif
 }

@@ -23,7 +23,7 @@
 #ifndef __ICU_NIOS2_PRIVATE_H_
 #define __ICU_NIOS2_PRIVATE_H_
 
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 
 struct icu_nios2_handler_s

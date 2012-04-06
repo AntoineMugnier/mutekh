@@ -23,7 +23,7 @@
 #ifndef DRIVER_SD_MMC_H_
 #define DRIVER_SD_MMC_H_
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 
 struct sd_mmc_param_s

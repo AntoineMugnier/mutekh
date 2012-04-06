@@ -1,7 +1,6 @@
 /dts-v1/;
 
 / {
-	compatible = "MutekH_SoCLib_Tutorial";
 	#address-cells = <1>;
 	#size-cells = <1>;
         interrupt-parent = <&{/xicu@0}>;
@@ -38,10 +37,10 @@
 
 	tty@0 {
                 compatible = "soclib:vci_multi_tty";
-		tty_count = <1>;
 		reg = <0xd0200000 0x10>;
-                interrupt-parent = <&{/cpus/mips32el@0}>;
-		interrupts = <1>;
+		interrupts = <0>;
+
+                param-int-tty-count = <1>;
 	};
 
 	block@0 {
@@ -66,6 +65,11 @@
                                   1          &{/cpus/mips32el@1}  0
                                   2          &{/cpus/mips32el@2}  0
                                   3          &{/cpus/mips32el@3}  0 */ >;
+
+                param-int-pti-count = <4>;
+                param-int-hwi-count = <3>;
+                param-int-wti-count = <4>;
+                param-int-irq-count = <4>;
 	};
 
 	memory@0 {

@@ -22,7 +22,7 @@
 #ifndef __PITC_6079A_PRIVATE_H_
 #define __PITC_6079A_PRIVATE_H_
 
-#include <device/timer.h>
+#include <device/class/timer.h>
 #include <device/device.h>
 
 #define PITC_PITEN     (1<<24)

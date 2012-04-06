@@ -57,6 +57,9 @@ enum dev_resource_type_e
     DEV_RES_ID,                 //< Unique numeric id, meaning depends on parent device type
     DEV_RES_VENDORID,           //< Vendor id, meaning depends on parent device type
     DEV_RES_PRODUCTID,            //< Model id specific to current vendor id
+    DEV_RES_STR_PARAM,
+    DEV_RES_UINT_PARAM,
+    DEV_RES_UINT_ARRAY_PARAM,
 
     DEV_RES_TYPES_COUNT,              //< Number of resource types
 };
@@ -96,6 +99,21 @@ struct dev_resource_s
       uintptr_t id;          //< optional device numeric id, may be -1
       const char *name;     //< optional device string, may be NULL
     }   product;
+
+    struct {
+      const char *name;
+      const char *value;
+    }   str_param;
+
+    struct {
+      const char *name;
+      uintptr_t value;
+    }   uint_param;
+
+    struct {
+      const char *name;
+      uintptr_t *value;
+    }   uint_array_param;
   };
 };
 
@@ -113,13 +131,61 @@ struct dev_resource_s *device_res_get(struct device_s *dev,
 
 struct dev_resource_s * device_res_add(struct device_s *dev);
 
+/** @This adds an IO space address range to the device resources list. */
 error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end);
+
+/** @This adds an memory space address range to the device resources list. */
 error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end);
 
-/** increase icu reference count */
+/** @This adds an IRQ binding to the device resources list. The entry
+    describes how the specified output IRQ line of the device must be
+    connected to the specified input line of the given interrupt
+    controller device. Actual binding will take place when the device
+    driver is initialized. Use counter of the interrupt controller
+    device is increased. */
 error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id, uint_fast16_t icu_in_id, struct device_s *icu);
+
+/** @This adds a numerical identifier which uniquely identify an
+    instance of the device. This is generally used by device which are
+    commonly referred to by using a number. Processor devices must
+    use this resource for the cpu id. */
 error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor);
+
+/** @This attaches a vendor identifier resource to the device. Both a
+    numerical and a string values can be specified. The exact meaning
+    of the value depends on the parent enumerator device. When the
+    device node has been dynamically allocated using @ref device_alloc
+    and the @tt name string is not NULL, the string pointer will be
+    freed on cleanup. */
+error_t device_res_add_vendorid(struct device_s *dev, uintptr_t id, const char *name);
+
+/** @This attaches a product identifier resource to the device. Both a
+    numerical and a string values can be specified. The exact meaning
+    of the value depends on the parent enumerator device. When the
+    device node has been dynamically allocated using @ref device_alloc
+    and the @tt name string is not NULL, the string pointer will be
+    freed on cleanup. */
 error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char *name);
+
+/** @This attaches a string parameter resource to the device. The
+    exact meaning of the value is driver dependent. When the device
+    node has been dynamically allocated using @ref device_alloc, the
+    name and value string pointers will be freed on cleanup. */
+error_t device_res_add_str_param(struct device_s *dev, const char *name, const char *value);
+
+/** @This attaches an integer parameter resource to the device. The
+    exact meaning of the value is driver dependent. When the device
+    node has been dynamically allocated using @ref device_alloc, the
+    name string pointer will be freed on cleanup. */
+error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintptr_t value);
+
+/** @This attaches an integer array parameter resource to the
+    device. The first value of the array must indicate the number of
+    subsequent entries in the array. The exact meaning of the value is
+    driver dependent. When the device node has been dynamically
+    allocated using @ref device_alloc, the name and value pointers
+    will be freed on cleanup. */
+error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, uintptr_t *value);
 
 enum device_status_e
 {
@@ -147,14 +213,24 @@ struct device_s
   /** general purpose device lock */
   lock_t			lock;
 
-  /** pointer to device driver private data if any */
+  /** Set to true if driver initialization done */
+  enum device_status_e          status;
+
+  /** pointer to device driver if any */
+  const struct driver_s		*drv;
+  /** pointer to device driver private data */
   void				*drv_pv;
 
   /** device resources table */
   uint_fast8_t                  res_count;
 
-#ifdef CONFIG_DEVICE_TREE
+  /** device uses counter */
+  uint_fast8_t                  ref_count;
+
+  /** indicated if the device node has been dynamically allocated */
   bool_t                        allocated;
+
+#ifdef CONFIG_DEVICE_TREE
 
   /** device name, freed on device object destruction if not NULL and
       @tt allocated is set. */
@@ -167,12 +243,7 @@ struct device_s
   struct device_s		*parent;
   device_list_entry_t		list_entry;
   device_list_root_t		children;
-  uint_fast8_t                  ref_count;
 #endif /* !CONFIG_DEVICE_TREE */
-
-  /** Set to true if driver initialization done */
-  enum device_status_e          status;
-  const struct driver_s		*drv;
 
   /** device resources table */
   struct dev_resource_s         res[DEVICE_STATIC_RESOURCE_COUNT];
@@ -227,7 +298,6 @@ void device_tree_walk(device_tree_walker_t *walker, void *priv);
 
 #endif /* !CONFIG_DEVICE_TREE */
 
-void device_init(struct device_s *dev);
 struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i);
 
 #ifdef CONFIG_VMEM

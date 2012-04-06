@@ -28,7 +28,7 @@
 #include <hexo/interrupt.h>
 #include <cpu/hexo/msr.h>
 
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 #include <device/driver.h>
 

@@ -18,7 +18,7 @@ objs += crypto_functions.o
 endif
 
 ifeq ($(CONFIG_ARCH_SIMPLE_OLIMEX_SAM7_EX256),defined)
-ifeq ($(CONFIG_DRIVER_LCD),defined)
+ifeq ($(CONFIG_DEVICE_LCD),defined)
 objs += lcd.o
 endif
 endif

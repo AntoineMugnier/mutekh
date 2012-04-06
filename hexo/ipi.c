@@ -21,7 +21,7 @@
 
 */
 
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/driver.h>
 #include <device/device.h>
 #include <hexo/ipi.h>

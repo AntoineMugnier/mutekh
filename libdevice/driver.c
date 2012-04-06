@@ -1,0 +1,186 @@
+/*
+    This file is part of MutekH.
+    
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+    
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+    
+    You should have received a copy of the GNU Lesser General Public
+    License along with MutekH; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+    02110-1301 USA.
+
+    Copyright (c) 2009, Nicolas Pouillon, <nipo@ssji.net>
+    Copyright (c) 2011 Alexandre Becoulet <alexandre.becoulet@telecom-paristech.fr>
+    Copyright (c) 2011 Institut Telecom / Telecom ParisTech
+*/
+
+#include <hexo/error.h>
+
+#include <mutek/mem_alloc.h>
+#include <mutek/printk.h>
+
+#include <device/device.h>
+#include <device/driver.h>
+#include <device/class/enum.h>
+
+struct device_accessor_s {
+  struct device_s *dev;
+  const void *api;
+  uint_fast8_t number;
+};
+
+struct driver_class_s {
+  enum device_class_e class_;
+  void *functions[];
+};
+
+# ifdef CONFIG_DRIVER_ENUM_ROOT
+struct device_s enum_root;
+# endif
+
+error_t device_get_accessor(void *accessor, struct device_s *dev,
+                            enum device_class_e cl, uint_fast8_t number)
+{
+  struct device_accessor_s *a = accessor;
+  const struct driver_class_s *c;
+  uint_fast8_t i, n = number;
+
+  if (dev->drv == NULL)
+    return -ENOENT;
+
+  for (i = 0; (c = dev->drv->classes[i]) != NULL; i++)
+    {
+      if (c->class_ == cl && !n--)
+        {
+          a->dev = dev;
+          a->api = c;
+          a->number = number;
+          dev->ref_count++;
+          return 0;
+        }
+    }
+
+  return -ENOENT;
+}
+
+void device_put_accessor(void *accessor)
+{
+  struct device_accessor_s *a = accessor;
+
+  assert(a->dev && a->dev->ref_count);
+
+  a->dev->ref_count--;
+  a->dev = NULL;
+  a->api = NULL;
+}
+
+static bool_t device_bind_driver_r(struct device_s *dev)
+{
+  extern const struct driver_s * global_driver_registry[];
+  extern const struct driver_s * global_driver_registry_end[];
+
+  bool_t done = 0;
+
+  switch (dev->status)
+    {
+    case DEVICE_NO_DRIVER: {
+      const struct driver_s **drv = global_driver_registry;
+
+      struct device_enum_s e;
+
+      /* get associated enumerator device */
+      if (!dev->enum_dev)
+        break;
+      if (device_get_accessor(&e, dev->enum_dev, DEVICE_CLASS_ENUM, 0))
+        break;
+
+      /* iterate over available drivers */
+      for ( ; drv < global_driver_registry_end ; drv++ )
+        {
+          /* driver entry may be NULL on heterogeneous systems */
+          if (!*drv)
+            continue;
+
+          /* use enumerator to decide if driver is appropriate for this device */
+          if (DEVICE_OP(&e, match_driver, *drv, dev))
+            {
+              dev->drv = *drv;
+              dev->status = DEVICE_DRIVER_INIT_PENDING;
+              printk("device: %p `%s' device bound to %p `%s' driver\n",
+                     dev, dev->name, *drv, (*drv)->desc);
+              done = 1;
+              break;
+            }
+        }
+
+      device_put_accessor(&e);
+
+      if (dev->status != DEVICE_DRIVER_INIT_PENDING)
+        break;
+    }
+
+      /* try to intialize device using associated driver */
+    case DEVICE_DRIVER_INIT_PENDING: {
+      const struct driver_s *drv = dev->drv;
+      uint_fast8_t i;
+
+      /** check dependencies before try device initialization */
+      for (i = 0; i < dev->res_count; i++)
+        {
+          struct dev_resource_s *r = dev->res + i;
+          switch (r->type)
+            {
+#ifdef CONFIG_HEXO_IRQ
+              /** check that interrupt controllers are initialized */
+            case DEV_RES_IRQ:
+              if (r->irq.icu->status != DEVICE_DRIVER_INIT_DONE)
+                goto skip;
+#endif
+            default:
+              break;
+            }
+        }
+
+      /** device init */
+      error_t err = drv->f_init(dev);
+
+      if (err)
+        printk("device: device %p `%s' initialization failed with return code %i\n",
+               dev, dev->name, err);
+
+      if (dev->status != DEVICE_DRIVER_INIT_PENDING)
+        done = 1;
+
+      goto skip;
+      skip:;
+    }
+
+    default:
+      break;
+    }
+
+  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
+      done |= device_bind_driver_r(item);
+  });
+
+  return done;
+}
+
+void device_bind_driver(struct device_s *dev)
+{
+  if (!dev)
+    dev = &enum_root;
+
+  /* try to bind and init as many devices as possible */
+  while (device_bind_driver_r(dev))
+    ;
+}
+
+

@@ -23,7 +23,7 @@
 #ifndef DRIVER_NET_NE2000_H_
 #define DRIVER_NET_NE2000_H_
 
-#include <device/net.h>
+#include <device/class/net.h>
 #include <device/device.h>
 
 /* devices addresses slots */

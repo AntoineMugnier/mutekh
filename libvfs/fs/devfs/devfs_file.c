@@ -22,9 +22,9 @@
 #include <hexo/types.h>
 
 #include <device/device.h>
-#include <device/char.h>
-#include <device/block.h>
-#include <device/enum.h>
+#include <device/class/char.h>
+#include <device/class/block.h>
+#include <device/class/enum.h>
 #include <device/driver.h>
 
 #include <mutek/mem_alloc.h>

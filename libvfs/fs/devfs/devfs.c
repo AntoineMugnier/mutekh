@@ -23,7 +23,7 @@
 #include <hexo/error.h>
 
 #include <device/device.h>
-#include <device/enum.h>
+#include <device/class/enum.h>
 #include <device/driver.h>
 
 #include <mutek/mem_alloc.h>

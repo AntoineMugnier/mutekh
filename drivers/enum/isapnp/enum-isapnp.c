@@ -23,7 +23,7 @@
 
 #include <hexo/types.h>
 
-#include <device/enum.h>
+#include <device/class/enum.h>
 #include <device/device.h>
 #include <device/driver.h>
 

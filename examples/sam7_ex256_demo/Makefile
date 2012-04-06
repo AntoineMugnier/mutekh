@@ -1,7 +1,7 @@
 
 objs = main.o bitmap.o block.o joystick.o i2c.o
 
-ifeq ($(CONFIG_DRIVER_LCD),defined)
+ifeq ($(CONFIG_DEVICE_LCD),defined)
 objs += lcd.o
 endif
 

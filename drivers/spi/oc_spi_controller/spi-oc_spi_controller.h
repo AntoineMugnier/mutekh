@@ -23,7 +23,7 @@
 #ifndef DRIVER_SPI_OC_SPI_CONTROLLER_H_
 #define DRIVER_SPI_OC_SPI_CONTROLLER_H_
 
-#include <device/spi.h>
+#include <device/class/spi.h>
 #include <device/device.h>
 
 struct spi_oc_spi_controller_param_s

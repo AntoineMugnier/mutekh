@@ -25,7 +25,7 @@
 
 #include "gaisler-apbuart-private.h"
 
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <device/device.h>

@@ -30,7 +30,7 @@ extern const struct fileops_s console_file_ops;
 
 #if defined(CONFIG_MUTEK_CONSOLE)
 
-#include <device/char.h>
+#include <device/class/char.h>
 
 extern struct device_char_s console_dev;
 

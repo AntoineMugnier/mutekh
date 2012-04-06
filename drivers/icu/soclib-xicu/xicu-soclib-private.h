@@ -25,7 +25,7 @@
 #ifndef __XICU_soclib_PRIVATE_H_
 #define __XICU_soclib_PRIVATE_H_
 
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 
 #define XICU_WTI_REG 0

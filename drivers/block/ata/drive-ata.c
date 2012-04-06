@@ -24,7 +24,7 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 #include <device/driver.h>
 

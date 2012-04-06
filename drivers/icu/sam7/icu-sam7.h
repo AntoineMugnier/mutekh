@@ -24,7 +24,7 @@
 #ifndef DRIVER_ICU_SAM7_H_
 #define DRIVER_ICU_SAM7_H_
 
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 
 /* icu device functions */

@@ -23,8 +23,8 @@
 
 #include <hexo/types.h>
 
-#include <device/i2c.h>
-#include <device/icu.h>
+#include <device/class/i2c.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 #include <device/driver.h>
 

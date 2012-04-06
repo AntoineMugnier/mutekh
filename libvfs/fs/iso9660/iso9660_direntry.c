@@ -24,7 +24,7 @@
 
 #include <mutek/printk.h>
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 #include <device/driver.h>
 

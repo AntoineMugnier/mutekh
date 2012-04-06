@@ -26,7 +26,7 @@
 #include <hexo/cpu.h>
 
 #ifdef CONFIG_HEXO_IPI
-# include <device/icu.h>
+# include <device/class/icu.h>
 # include <device/device.h>
 # include <device/driver.h>
 # include <hexo/ipi.h>

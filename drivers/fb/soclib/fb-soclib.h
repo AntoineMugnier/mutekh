@@ -25,7 +25,7 @@
 #ifndef DRIVER_FB_SOCLIBFB_H_
 #define DRIVER_FB_SOCLIBFB_H_
 
-#include <device/fb.h>
+#include <device/class/fb.h>
 #include <device/device.h>
 
 /* fb device functions */

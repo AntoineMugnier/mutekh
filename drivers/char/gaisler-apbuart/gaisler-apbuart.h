@@ -24,7 +24,7 @@
 #ifndef DRIVER_GAISLER_APBUART_H_
 #define DRIVER_GAISLER_APBUART_H_
 
-#include <device/char.h>
+#include <device/class/char.h>
 #include <device/device.h>
 
 /* tty device functions */

@@ -24,7 +24,7 @@
 
 #include <hexo/types.h>
 
-#include <device/fb.h>
+#include <device/class/fb.h>
 #include <device/device.h>
 #include <device/driver.h>
 

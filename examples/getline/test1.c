@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <termui/term.h>
 #include <termui/getline.h>
-#include <device/char.h>
+#include <device/class/char.h>
 
 extern struct device_char_s console_dev;
 
@@ -15,6 +15,8 @@ void app_start()
 {
   struct termui_term_s			*tm;
   struct termui_term_behavior_s	*bhv;
+
+  device_dump_tree(0);
 
   /* initialize terminal */
   if (!(tm = termui_term_alloc(&console_dev, &console_dev, NULL)))

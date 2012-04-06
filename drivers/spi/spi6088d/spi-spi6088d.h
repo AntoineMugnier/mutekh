@@ -23,7 +23,7 @@
 #ifndef DRIVER_SPI_SPI6088D_H_
 #define DRIVER_SPI_SPI6088D_H_
 
-#include <device/spi.h>
+#include <device/class/spi.h>
 #include <device/device.h>
 
 struct spi_spi6088d_param_s

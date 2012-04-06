@@ -103,7 +103,7 @@ const struct driver_icu_s  mips_icu_drv =
 
 static const struct devenum_ident_s  mips_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("cpu:mips", 0, 0),
+  DEVENUM_FDTNAME_ENTRY("cpu:mips"),
   { 0 }
 };
 

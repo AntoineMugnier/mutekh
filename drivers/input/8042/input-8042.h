@@ -23,7 +23,7 @@
 #ifndef DRIVER_INPUT_8042_H_
 #define DRIVER_INPUT_8042_H_
 
-#include <device/input.h>
+#include <device/class/input.h>
 #include <device/device.h>
 
 /* devices addresses slots */

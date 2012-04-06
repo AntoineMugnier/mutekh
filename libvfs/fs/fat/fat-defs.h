@@ -23,7 +23,7 @@
 #define _FAT_DEFS_H_
 
 #include <hexo/types.h>
-#include <device/block.h>
+#include <device/class/block.h>
 
 struct fat_bpb16_s {
     uint8_t drive_number;

@@ -27,7 +27,7 @@
 #include <hexo/ipi.h>
 #include <hexo/interrupt.h>
 
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 #include <device/driver.h>
 

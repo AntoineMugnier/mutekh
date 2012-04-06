@@ -21,7 +21,7 @@
 */
 
 #include <hexo/interrupt.h>
-#include <device/char.h>
+#include <device/class/char.h>
 
 #include <mutek/printk.h>
 #include <mutek/fileops.h>

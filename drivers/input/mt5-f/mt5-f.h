@@ -23,8 +23,8 @@
 #ifndef _MT5F_H_
 #define _MT5F_H_
 
-#include <device/gpio.h>
-#include <device/input.h>
+#include <device/class/gpio.h>
+#include <device/class/input.h>
 #include <device/device.h>
 
 #define MT5F_LEFT 0

@@ -21,7 +21,7 @@
 
 #include <hexo/types.h>
 
-#include <device/mem.h>
+#include <device/class/mem.h>
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -42,16 +42,9 @@ DEVMEM_GET_INFO(memory_get_info)
 		}
 }
 
-static const struct driver_param_binder_s memory_param_binder[] =
-{
-	PARAM_BIND(struct dev_memory_param_s, cached, PARAM_DATATYPE_BOOL),
-	PARAM_BIND(struct dev_memory_param_s, coherent, PARAM_DATATYPE_BOOL),
-	{ 0 }
-};
-
 static const struct devenum_ident_s	memory_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("memory", sizeof(struct dev_memory_param_s), memory_param_binder),
+	DEVENUM_FDTNAME_ENTRY("memory"),
 	{ 0 }
 };
 
@@ -73,15 +66,12 @@ REGISTER_DRIVER(memory_drv);
 
 DEV_INIT(memory_init)
 {
-	struct dev_memory_param_s *param = params;
-
 	dev->drv = &memory_drv;
 
 	uint32_t flags = 0;
-	if ( param->coherent )
-		flags |= DEV_MEM_CACHED|DEV_MEM_COHERENT;
-	if ( param->cached )
-		flags |= DEV_MEM_CACHED;
+#warning FIXME
+	flags |= DEV_MEM_CACHED|DEV_MEM_COHERENT;
+	flags |= DEV_MEM_CACHED;
 
 	dev->drv_pv = (void*)flags;
 

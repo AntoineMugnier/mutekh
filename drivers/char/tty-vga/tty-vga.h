@@ -23,7 +23,7 @@
 #ifndef DRIVER_TTY_VGA_H_
 #define DRIVER_TTY_VGA_H_
 
-#include <device/char.h>
+#include <device/class/char.h>
 #include <device/device.h>
 
 /* devices addresses slots */

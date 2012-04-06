@@ -23,7 +23,7 @@
 */
 
 #include <device/device.h>
-#include <device/i2c.h>
+#include <device/class/i2c.h>
 #include <device/driver.h>
 
 #ifdef CONFIG_MUTEK_SCHEDULER

@@ -1,8 +1,4 @@
 
-ifeq ($(CONFIG_DRIVER_BLOCK), defined)
-objs += device_block.o
-endif
-
 ifeq ($(CONFIG_DRIVER_BLOCK_ATA), defined)
  subdirs += ata
 endif

@@ -23,7 +23,7 @@
 #ifndef DRIVER_BLOCK_FILE_EMU_H_
 #define DRIVER_BLOCK_FILE_EMU_H_
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 
 DEV_IRQ(block_file_emu_irq);

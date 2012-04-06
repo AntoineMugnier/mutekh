@@ -23,8 +23,8 @@
 #include <hexo/types.h>
 
 
-#include <device/lcd.h>
-#include <device/spi.h>
+#include <device/class/lcd.h>
+#include <device/class/spi.h>
 #include <device/device.h>
 #include <device/driver.h>
 

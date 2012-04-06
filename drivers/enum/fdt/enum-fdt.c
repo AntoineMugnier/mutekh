@@ -27,8 +27,8 @@
 #include <hexo/local.h>
 #include <hexo/segment.h>
 
-#include <device/enum.h>
-#include <device/icu.h>
+#include <device/class/enum.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -233,6 +233,35 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
         }
       break;
 
+    case 'p':
+      if (e->dev != ctx->dev)
+        {
+          if (!strncmp(name + 1, "aram-str-", 9))
+            {
+              char *value = malloc(datalen + 1);
+              memcpy(value, data, datalen);
+              value[datalen] = 0;
+              device_res_add_str_param(e->dev, strdup(name + 10), value);
+              return;
+            }
+          else if (!strncmp(name + 1, "aram-int-", 9) && datalen == 4)
+            {
+              device_res_add_uint_param(e->dev, strdup(name + 10), endian_be32(*(const uint32_t*)data));
+              return;
+            }
+          else if (!strncmp(name + 1, "aram-array-", 11))
+            {
+              uintptr_t *value = malloc((datalen / 4 + 1) * sizeof(uintptr_t));
+              value[0] = datalen / 4;
+              uint_fast8_t i;
+              for (i = 0; i < datalen / 4; i++)
+                value[i + 1] = endian_be32(((const uint32_t*)data)[i]);
+              device_res_add_uint_array_param(e->dev, strdup(name + 12), value);
+              return;
+            }
+       }
+      break;
+
 #ifdef CONFIG_HEXO_IRQ
     case 'i': {
       uint32_t elen = e->interrupt_cells * 4;
@@ -301,7 +330,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
 
     }
 
-  printk("enum-fdt: device %p `%s', ignored node property `%s'\n", e->dev, e->dev->name, name);
+  printk("enum-fdt: device %p `%s', ignored node property `%s : %P'\n", e->dev, e->dev->name, name, data, datalen);
   return;
 
  res_err:

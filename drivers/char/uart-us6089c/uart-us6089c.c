@@ -24,7 +24,7 @@
 
 #include "uart-us6089c-private.h"
 
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <hexo/types.h>
 #include <device/device.h>
 #include <device/driver.h>

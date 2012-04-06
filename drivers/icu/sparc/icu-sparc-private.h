@@ -24,7 +24,7 @@
 #ifndef __ICU_sparc_PRIVATE_H_
 #define __ICU_sparc_PRIVATE_H_
 
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 
 struct icu_sparc_handler_s

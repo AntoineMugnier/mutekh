@@ -24,9 +24,9 @@
 
 #include <hexo/types.h>
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/driver.h>
 
 #include <hexo/iospace.h>

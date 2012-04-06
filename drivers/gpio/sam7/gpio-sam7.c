@@ -23,8 +23,8 @@
 
 #include <hexo/types.h>
 
-#include <device/gpio.h>
-#include <device/icu.h>
+#include <device/class/gpio.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 #include <device/driver.h>
 

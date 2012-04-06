@@ -1,6 +1,6 @@
 
-#include <device/input.h>
-#include <device/gpio.h>
+#include <device/class/input.h>
+#include <device/class/gpio.h>
 #include <device/driver.h>
 #include <device/device.h>
 

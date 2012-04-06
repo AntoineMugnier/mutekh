@@ -24,7 +24,7 @@
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/driver.h>
 #include <device/device.h>
 #include <vfs/types.h>

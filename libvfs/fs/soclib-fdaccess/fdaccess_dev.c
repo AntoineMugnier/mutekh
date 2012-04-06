@@ -25,7 +25,7 @@
 #include <hexo/iospace.h>
 
 #include <device/device.h>
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/driver.h>
 
 #include <mutek/mem_alloc.h>

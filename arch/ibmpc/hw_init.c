@@ -44,7 +44,7 @@ struct device_s tty_dev;
 struct device_s uart_dev;
 #endif
 
-#if defined(CONFIG_DRIVER_FB)
+#if defined(CONFIG_DEVICE_FB)
 struct device_s fb_dev;
 #endif
 
@@ -52,11 +52,11 @@ struct device_s fb_dev;
 extern struct device_s *timerms_dev;
 #endif
 
-#if defined(CONFIG_DRIVER_TIMER)
+#if defined(CONFIG_DEVICE_TIMER)
 struct device_s timer_dev;
 #endif
 
-#if defined(CONFIG_DRIVER_INPUT)
+#if defined(CONFIG_DEVICE_INPUT)
 struct device_s keyboard_dev;
 #endif
 
@@ -118,13 +118,13 @@ void arch_hw_init()
 #  endif
 	tty_vga_init(&tty_dev, NULL);
 # else
-#  warning CONFIG_DRIVER_CHAR case not handled in hw_init()
+#  warning CONFIG_DEVICE_CHAR case not handled in hw_init()
 # endif
 #endif
 
 	/********* Timer init ******************************** */
 
-#if defined(CONFIG_DRIVER_TIMER)
+#if defined(CONFIG_DEVICE_TIMER)
 	device_init(&timer_dev);
 # if defined(CONFIG_DRIVER_TIMER_8253)
 	timer_dev.addr[0] = 0x0040;
@@ -135,11 +135,11 @@ void arch_hw_init()
 	timerms_dev = &timer_dev;
 #  endif
 # else
-#  warning CONFIG_DRIVER_TIMER case not handled in hw_init()
+#  warning CONFIG_DEVICE_TIMER case not handled in hw_init()
 # endif
 #endif
 
-#if defined(CONFIG_DRIVER_INPUT)
+#if defined(CONFIG_DEVICE_INPUT)
 	device_init(&keyboard_dev);
 # if defined(CONFIG_DRIVER_INPUT_8042)
 	keyboard_dev.addr[0] = 0x60;
@@ -147,13 +147,13 @@ void arch_hw_init()
 	keyboard_dev.icudev = &icu_dev;
 	input_8042_init(&keyboard_dev, NULL);
 # else
-#  warning CONFIG_DRIVER_INPUT case not handled in hw_init()
+#  warning CONFIG_DEVICE_INPUT case not handled in hw_init()
 # endif
 #endif
 
 	/********* FB init ********************************* */
 
-#if defined(CONFIG_DRIVER_FB)
+#if defined(CONFIG_DEVICE_FB)
 	device_init(&fb_dev);
 # if defined(CONFIG_DRIVER_FB_VGA)
 	fb_vga_init(&fb_dev, NULL);
@@ -163,7 +163,7 @@ void arch_hw_init()
 	memcpy(p, mutek_logo_320x200, 64000);
 #  endif
 # else
-#  warning CONFIG_DRIVER_FB case not handled in hw_init()
+#  warning CONFIG_DEVICE_FB case not handled in hw_init()
 # endif
 #endif
 

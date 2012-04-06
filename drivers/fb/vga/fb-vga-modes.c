@@ -24,7 +24,7 @@
 
 #include <stdlib.h>
 
-#include <device/fb.h>
+#include <device/class/fb.h>
 
 #include <hexo/types.h>
 #include <hexo/iospace.h>

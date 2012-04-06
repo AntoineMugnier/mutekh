@@ -17,13 +17,14 @@
     02110-1301 USA.
 
     Copyright Alexandre Becoulet <alexandre.becoulet@telecom-paristech.fr> (c) 2012
+    Copyright (c) 2011 Institut Telecom / Telecom ParisTech
 
 */
 
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/irq.h>
-#include <device/icu.h>
+#include <device/class/icu.h>
 
 #include <mutek/printk.h>
 

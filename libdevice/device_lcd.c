@@ -23,7 +23,7 @@
 */
 
 #include <device/device.h>
-#include <device/lcd.h>
+#include <device/class/lcd.h>
 #include <device/driver.h>
 
 #ifdef CONFIG_MUTEK_SCHEDULER

@@ -23,7 +23,7 @@
 #ifndef DRIVER_BLOCK_CACHE_H_
 #define DRIVER_BLOCK_CACHE_H_
 
-#include <device/block.h>
+#include <device/class/block.h>
 #include <device/device.h>
 
 DEV_CREATE(block_cache_create);

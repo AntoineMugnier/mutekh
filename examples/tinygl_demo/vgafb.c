@@ -4,7 +4,7 @@
 
 /* for struct device_s definition */
 #include <drivers/fb/vga/fb-vga.h>
-#include <device/enum.h>
+#include <device/class/enum.h>
 #include <device/device.h>
 #include <device/driver.h>
 

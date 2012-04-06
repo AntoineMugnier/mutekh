@@ -22,8 +22,8 @@
 
 #include <hexo/types.h>
 
-#include <device/icu.h>
-#include <device/net.h>
+#include <device/class/icu.h>
+#include <device/class/net.h>
 #include <device/device.h>
 #include <device/driver.h>
 

@@ -48,7 +48,7 @@ static void initialize_shell(lua_State* luast)
     init_timer_shell(luast);
 #endif
 
-#if defined(CONFIG_DRIVER_LCD)
+#if defined(CONFIG_DEVICE_LCD)
     init_lcd_shell(luast);
 #endif
 }

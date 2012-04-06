@@ -23,7 +23,7 @@
 #ifndef DRIVER_MEMORY_H_
 #define DRIVER_MEMORY_H_
 
-#include <device/mem.h>
+#include <device/class/mem.h>
 #include <device/device.h>
 
 DEV_INIT(memory_init);

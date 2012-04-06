@@ -23,7 +23,7 @@
 #ifndef __ICU_mips_PRIVATE_H_
 #define __ICU_mips_PRIVATE_H_
 
-#include <device/icu.h>
+#include <device/class/icu.h>
 #include <device/irq.h>
 
 #define ICU_MIPS_MAX_VECTOR	6

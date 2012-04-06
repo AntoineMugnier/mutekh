@@ -44,7 +44,7 @@
 # include <network/libsocket.h>
 #endif
 
-#include <device/net.h>
+#include <device/class/net.h>
 #include <device/device.h>
 #include <device/driver.h>
 

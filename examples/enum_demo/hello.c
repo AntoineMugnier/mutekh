@@ -7,7 +7,7 @@
 #endif
 
 #ifdef CONFIG_DRIVER_ENUM_ROOT
-#include <device/enum.h>
+#include <device/class/enum.h>
 #include <device/device.h>
 #include <device/driver.h>
 

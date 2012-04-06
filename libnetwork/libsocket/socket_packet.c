@@ -21,7 +21,7 @@
 */
 
 #include <device/device.h>
-#include <device/net.h>
+#include <device/class/net.h>
 #include <device/driver.h>
 
 #include <network/packet.h>

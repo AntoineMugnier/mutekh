@@ -27,7 +27,7 @@
 #ifndef DRIVERS_TUNTAP_H
 #define DRIVERS_TUNTAP_H
 
-#include <device/net.h>
+#include <device/class/net.h>
 #include <device/device.h>
 
 DEV_IRQ(net_tuntap_irq);

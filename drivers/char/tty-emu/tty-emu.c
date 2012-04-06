@@ -23,7 +23,7 @@
 
 #include <hexo/types.h>
 
-#include <device/char.h>
+#include <device/class/char.h>
 #include <device/device.h>
 #include <device/driver.h>
 

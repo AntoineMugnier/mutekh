@@ -26,8 +26,8 @@
 #include "block-ata.h"
 #include "block-ata-private.h"
 
-#include <device/enum.h>
-#include <device/icu.h>
+#include <device/class/enum.h>
+#include <device/class/icu.h>
 #include <device/device.h>
 #include <device/driver.h>
 
