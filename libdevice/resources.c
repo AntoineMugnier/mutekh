@@ -28,22 +28,6 @@
 
 #include <device/device.h>
 
-error_t device_res_id(const struct device_s *dev,
-                      enum dev_resource_type_e type,
-                      uint_fast8_t id, uint_fast8_t *res)
-{
-  uint_fast8_t i;
-
-  for (i = 0; i < dev->res_count; i++)
-    if (dev->res[i].type == type && !id--)
-      {
-        *res = i;
-        return 0;
-      }
-
-  return -ENOENT;
-}
-
 struct dev_resource_s *device_res_get(struct device_s *dev,
                                       enum dev_resource_type_e type,
                                       uint_fast8_t id)
@@ -59,26 +43,64 @@ struct dev_resource_s *device_res_get(struct device_s *dev,
 
 error_t device_res_get_uint(const struct device_s *dev,
                             enum dev_resource_type_e type,
-                            uint_fast8_t id, uintptr_t *res)
+                            uint_fast8_t id, uintptr_t *a, uintptr_t *b)
 {
   uint_fast8_t i;
 
   for (i = 0; i < dev->res_count; i++)
     if (dev->res[i].type == type && !id--)
       {
-        *res = dev->res[i].uint;
+        if (a)
+          *a = dev->res[i].uint[0];
+        if (b)
+          *b = dev->res[i].uint[1];
         return 0;
       }
 
   return -ENOENT;
 }
 
-struct dev_resource_s * device_res_add(struct device_s *dev)
+inline error_t device_get_param_uint(const struct device_s *dev, const char *name, uintptr_t *a)
 {
   uint_fast8_t i;
 
-  if (dev->status != DEVICE_NO_DRIVER)
-    return NULL;
+  for (i = 0; i < dev->res_count; i++)
+    if (dev->res[i].type == DEV_RES_UINT_PARAM && !strcmp(name, dev->res[i].uint_param.name))
+      {
+        *a = dev->res[i].uint_param.value;
+        return 0;
+      }
+
+  return -ENOENT;
+}
+
+error_t device_get_param_str(const struct device_s *dev, const char *name, char * const *a)
+{
+  return device_get_param_uint(dev, name, (uintptr_t*)a);
+}
+
+inline void device_get_param_uint_default(const struct device_s *dev, const char *name, uintptr_t *a, uintptr_t def)
+{
+  uint_fast8_t i;
+
+  for (i = 0; i < dev->res_count; i++)
+    if (dev->res[i].type == DEV_RES_UINT_PARAM && !strcmp(name, dev->res[i].uint_param.name))
+      {
+        *a = dev->res[i].uint_param.value;
+        return;
+      }
+
+  *a = def;
+}
+
+void device_get_param_str_default(const struct device_s *dev, const char *name, char * const *a, const char *def)
+{
+  return device_get_param_uint_default(dev, name, (uintptr_t*)a, (uintptr_t)def);
+}
+
+struct dev_resource_s * device_res_unused(struct device_s *dev)
+{
+  uint_fast8_t i;
 
   for (i = 0; i < dev->res_count; i++)
     {
@@ -93,8 +115,10 @@ struct dev_resource_s * device_res_add(struct device_s *dev)
 
 error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end)
 {
-  struct dev_resource_s *r = device_res_add(dev);
+  struct dev_resource_s *r = device_res_unused(dev);
 
+  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+    return -EBUSY;
   if (!r)
     return -ENOMEM;
 
@@ -107,8 +131,10 @@ error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end)
 
 error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
 {
-  struct dev_resource_s *r = device_res_add(dev);
+  struct dev_resource_s *r = device_res_unused(dev);
 
+  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+    return -EBUSY;
   if (!r)
     return -ENOMEM;
 
@@ -123,8 +149,10 @@ error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id,
                            uint_fast16_t icu_in_id, struct device_s *icu)
 {
 #ifdef CONFIG_HEXO_IRQ
-  struct dev_resource_s *r = device_res_add(dev);
+  struct dev_resource_s *r = device_res_unused(dev);
 
+  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+    return -EBUSY;
   if (!r)
     return -ENOMEM;
 
@@ -143,8 +171,10 @@ error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id,
 
 error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor)
 {
-  struct dev_resource_s *r = device_res_add(dev);
+  struct dev_resource_s *r = device_res_unused(dev);
 
+  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+    return -EBUSY;
   if (!r)
     return -ENOMEM;
 
@@ -157,8 +187,10 @@ error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor
 
 error_t device_res_add_vendorid(struct device_s *dev, uintptr_t id, const char *name)
 {
-  struct dev_resource_s *r = device_res_add(dev);
+  struct dev_resource_s *r = device_res_unused(dev);
 
+  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+    return -EBUSY;
   if (!r)
     return -ENOMEM;
 
@@ -171,8 +203,10 @@ error_t device_res_add_vendorid(struct device_s *dev, uintptr_t id, const char *
 
 error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char *name)
 {
-  struct dev_resource_s *r = device_res_add(dev);
+  struct dev_resource_s *r = device_res_unused(dev);
 
+  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+    return -EBUSY;
   if (!r)
     return -ENOMEM;
 
@@ -185,8 +219,10 @@ error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char 
 
 error_t device_res_add_str_param(struct device_s *dev, const char *name, const char *value)
 {
-  struct dev_resource_s *r = device_res_add(dev);
+  struct dev_resource_s *r = device_res_unused(dev);
 
+  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+    return -EBUSY;
   if (!r)
     return -ENOMEM;
 
@@ -199,8 +235,10 @@ error_t device_res_add_str_param(struct device_s *dev, const char *name, const c
 
 error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintptr_t value)
 {
-  struct dev_resource_s *r = device_res_add(dev);
+  struct dev_resource_s *r = device_res_unused(dev);
 
+  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+    return -EBUSY;
   if (!r)
     return -ENOMEM;
 
@@ -213,8 +251,10 @@ error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintpt
 
 error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, uintptr_t *value)
 {
-  struct dev_resource_s *r = device_res_add(dev);
+  struct dev_resource_s *r = device_res_unused(dev);
 
+  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+    return -EBUSY;
   if (!r)
     return -ENOMEM;
 

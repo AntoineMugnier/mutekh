@@ -186,11 +186,13 @@ DEV_INIT(tty_soclib_init)
 
   dev_char_queue_init(&pv->read_q);
 
-  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr))
+  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
 #ifdef CONFIG_HEXO_IRQ
-  if (device_irq_link(dev, tty_soclib_irq, &pv->irq_ep, 1))
+  device_irq_tail_source_init(dev, &pv->irq_ep, 1, &tty_soclib_irq);
+
+  if (device_irq_source_link(dev, &pv->irq_ep, 1))
     goto err_mem;
 
   tty_fifo_init(&pv->read_fifo);
@@ -215,7 +217,7 @@ DEV_CLEANUP(tty_soclib_cleanup)
   struct tty_soclib_context_s	*pv = dev->drv_pv;
 
 #ifdef CONFIG_HEXO_IRQ
-  device_irq_unlink(dev, &pv->irq_ep, 1);
+  device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
   tty_fifo_destroy(&pv->read_fifo);
 #endif

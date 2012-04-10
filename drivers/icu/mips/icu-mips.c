@@ -49,19 +49,19 @@ static CPU_INTERRUPT_HANDLER(mips_irq_handler)
 
   if ( irq < ICU_MIPS_MAX_VECTOR ) {
     struct dev_irq_ep_s *sink = pv->sinks + irq;
+    int_fast16_t id = 0;
 
-    if (sink->process(sink, 0))
-      return;
+    sink->process(sink, &id);
   }
-
-  printk("mips: %d got spurious interrupt %i\n", cpu_id(), irq);
 }
 
+#ifdef CONFIG_HEXO_IPI
 static DEVICU_SETUP_IPI_EP(mips_icu_setup_ipi_ep)
 {
   abort(); // FIXME
   return -1;
 }
+#endif
 
 static DEVICU_DISABLE_SINK(mips_icu_disable_sink)
 {
@@ -96,7 +96,9 @@ const struct driver_icu_s  mips_icu_drv =
   .class_          = DEVICE_CLASS_ICU,
   .f_get_sink     = mips_icu_get_sink,
   .f_disable_sink = mips_icu_disable_sink,
+#ifdef CONFIG_HEXO_IPI
   .f_setup_ipi_ep = mips_icu_setup_ipi_ep,
+#endif
 };
 
 #endif
@@ -155,11 +157,8 @@ DEV_INIT(mips_init)
   cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
 # endif
 
-  uint_fast8_t i;
-
   /* init mips irq sink end-points */
-  for (i = 0; i < ICU_MIPS_MAX_VECTOR; i++)
-    device_irq_ep_sink_init(pv->sinks + i, dev, NULL);
+  device_irq_sink_init(dev, pv->sinks, ICU_MIPS_MAX_VECTOR, NULL);
 
   CPU_LOCAL_SET(mips_icu_dev, dev);
   cpu_interrupt_sethandler(mips_irq_handler);
@@ -182,12 +181,8 @@ DEV_CLEANUP(mips_cleanup)
   status &= ~0xfc00;
   cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
 # endif
-
-  uint_fast8_t i;
-
   /* detach mips irq sink end-points */
-  for (i = 0; i < ICU_MIPS_MAX_VECTOR; i++)
-    device_irq_ep_unlink(NULL, pv->sinks + i);
+  device_irq_sink_unlink(dev, pv->sinks, ICU_MIPS_MAX_VECTOR);
 #endif
 
   mem_free(pv);

@@ -32,14 +32,13 @@ DEVMEM_GET_INFO(memory_get_info)
 	struct device_s *dev = mdev->dev;
 	uint32_t flags = (uint32_t)dev->drv_pv;
 
-	uint_fast8_t i;
+	struct dev_resource_s *r = device_res_get(dev, DEV_RES_MEM, 0);
 
-	if (!device_res_id(dev, DEV_RES_MEM, 0, &i))
-		{
-			info->base = dev->res[i].mem.start;
-			info->size = dev->res[i].mem.end - dev->res[i].mem.start;
-			info->flags = flags;
-		}
+	if (r) {
+		info->base = r->mem.start;
+		info->size = r->mem.end - r->mem.start;
+		info->flags = flags;
+	}
 }
 
 static const struct devenum_ident_s	memory_ids[] =

@@ -68,7 +68,7 @@ struct dev_resource_s
 {
   uint16_t type;                // resource descriptor type @see dev_resource_type_e
   union {
-    uintptr_t uint;
+    uintptr_t uint[2];
     struct {
       uintptr_t start;
       uintptr_t end;
@@ -117,19 +117,9 @@ struct dev_resource_s
   };
 };
 
-error_t device_res_id(const struct device_s *dev,
-                      enum dev_resource_type_e type,
-                       uint_fast8_t id, uint_fast8_t *res);
 
-error_t device_res_get_uint(const struct device_s *dev,
-                            enum dev_resource_type_e type,
-                            uint_fast8_t id, uintptr_t *res);
-
-struct dev_resource_s *device_res_get(struct device_s *dev,
-                                      enum dev_resource_type_e type,
-                                      uint_fast8_t id);
-
-struct dev_resource_s * device_res_add(struct device_s *dev);
+/** @This returns a poiner to next unused resource slot. @internal */
+struct dev_resource_s * device_res_unused(struct device_s *dev);
 
 /** @This adds an IO space address range to the device resources list. */
 error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end);
@@ -186,6 +176,26 @@ error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintpt
     allocated using @ref device_alloc, the name and value pointers
     will be freed on cleanup. */
 error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, uintptr_t *value);
+
+/** @This returns a pointer to resource of requested type with given position. */
+struct dev_resource_s *device_res_get(struct device_s *dev,
+                                      enum dev_resource_type_e type,
+                                      uint_fast8_t number);
+
+/** @This reads integer resource values. @This can be used to read
+    ids, memory and io ranges resources. @tt a and @tt b pointers may
+    be @tt NULL. */
+error_t device_res_get_uint(const struct device_s *dev,
+                            enum dev_resource_type_e type,
+                            uint_fast8_t id, uintptr_t *a, uintptr_t *b);
+
+error_t device_get_param_uint(const struct device_s *dev, const char *name, uintptr_t *a);
+
+error_t device_get_param_str(const struct device_s *dev, const char *name, char * const *a);
+
+void device_get_param_uint_default(const struct device_s *dev, const char *name, uintptr_t *a, uintptr_t def);
+
+void device_get_param_str_default(const struct device_s *dev, const char *name, char * const *a, const char *def);
 
 enum device_status_e
 {

@@ -54,7 +54,7 @@ typedef DEVICU_GET_SINK(devicu_get_sink_t);
 typedef DEVICU_DISABLE_SINK(devicu_disable_sink_t);
 
 
-#warning FIXME the ipi endpoint contains a function pointer and private data to send the ipi
+// FIXME
 
 #define DEVICU_SETUP_IPI_EP(n)	error_t (n) (struct device_icu_s *idev, \
 					     struct ipi_endpoint_s *endpoint, \
@@ -72,7 +72,9 @@ typedef DEVICU_SETUP_IPI_EP(devicu_setup_ipi_ep_t);
 DEVICE_CLASS_TYPES(icu, 
                    devicu_get_sink_t	*f_get_sink;
                    devicu_disable_sink_t *f_disable_sink;
+#ifdef CONFIG_HEXO_IPI
                    devicu_setup_ipi_ep_t	*f_setup_ipi_ep;
+#endif
                    );
 
 #endif

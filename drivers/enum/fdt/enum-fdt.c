@@ -284,7 +284,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
             {
               uint16_t icu_in = endian_be32(*(const uint32_t*)data8);
 
-              struct dev_resource_s *r = device_res_add(e->dev);
+              struct dev_resource_s *r = device_res_unused(e->dev);
               if (!r)
                 goto res_err;
               r->type = DEV_RES_IRQ;
@@ -307,7 +307,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
               uint16_t icu_in = endian_be32(*(const uint32_t*)(data8 + 8));
               /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
 
-              struct dev_resource_s *r = device_res_add(e->dev);
+              struct dev_resource_s *r = device_res_unused(e->dev);
               if (!r)
                 goto res_err;
               r->type = DEV_RES_IRQ;
@@ -466,7 +466,7 @@ DEV_INIT(enum_fdt_init)
 
   uintptr_t addr;
 
-  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr))
+  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
     goto err_mem;
 
   fdt_walk_blob((const void*)addr, &walker);
