@@ -8,3 +8,5 @@ endif
 ifeq ($(CONFIG_CPU_ARM_THUMB), defined)
 sam7.o_CFLAGS = -mno-thumb
 endif
+
+subdirs = drivers

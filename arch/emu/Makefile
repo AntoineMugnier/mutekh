@@ -13,8 +13,9 @@ ifeq ($(CONFIG_HEXO_IRQ),defined)
 objs += interrupts.o
 endif
 
-subdirs = include/arch/hexo
+subdirs = include/arch/hexo drivers
 
 ifeq ($(LINKING),1)
 meta = ldscript
 endif
+

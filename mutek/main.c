@@ -111,7 +111,7 @@ int_fast8_t mutek_start()  /* FIRST CPU only */
 
     cpu_interrupt_enable();
 
-#if defined (CONFIG_MUTEK_TIMER) && defined (CONFIG_DEVICE_TIMER)
+#if 0 && defined (CONFIG_MUTEK_TIMER) && defined (CONFIG_DEVICE_TIMER)
 	timer_init(&timer_ms.root);
 	timer_ms.ticks = 0;
 

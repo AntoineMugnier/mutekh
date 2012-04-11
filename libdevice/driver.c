@@ -30,30 +30,20 @@
 #include <device/driver.h>
 #include <device/class/enum.h>
 
-struct device_accessor_s {
-  struct device_s *dev;
-  const void *api;
-  uint_fast8_t number;
-};
-
-struct driver_class_s {
-  enum device_class_e class_;
-  void *functions[];
-};
-
 # ifdef CONFIG_DRIVER_ENUM_ROOT
 struct device_s enum_root;
 # endif
 
 error_t device_get_accessor(void *accessor, struct device_s *dev,
-                            enum device_class_e cl, uint_fast8_t number)
+                            enum driver_class_e cl, uint_fast8_t number)
 {
   struct device_accessor_s *a = accessor;
   const struct driver_class_s *c;
   uint_fast8_t i, n = number;
 
-  if (dev->drv == NULL)
-    return -ENOENT;
+  if (dev->status != DEVICE_DRIVER_INIT_DONE)
+    return -EAGAIN;
+  assert(dev->drv != NULL);
 
   for (i = 0; (c = dev->drv->classes[i]) != NULL; i++)
     {
@@ -67,7 +57,7 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
         }
     }
 
-  return -ENOENT;
+  return -ENOTSUP;
 }
 
 void device_put_accessor(void *accessor)

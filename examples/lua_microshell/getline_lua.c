@@ -91,7 +91,7 @@ void* shell(void *param)
     /* set capabilities */
     termui_term_set(tm, "xterm");
 
-#if defined(CONFIG_DRIVER_CHAR_SOCLIBTTY)
+#if defined(CONFIG_DRIVER_SOCLIB_VCI_MULTI_TTY)
     char *disable_cr = "\x1b[20l";
     char *enable_cr = "\x1b[20h";
     termui_term_writestr(tm, disable_cr, strlen(disable_cr));
@@ -130,11 +130,11 @@ void* shell(void *param)
 
         oldtop = lua_gettop(luast);
 
-#if defined(CONFIG_DRIVER_CHAR_SOCLIBTTY)
+#if defined(CONFIG_DRIVER_SOCLIB_VCI_MULTI_TTY)
         termui_term_writestr(tm, enable_cr, strlen(enable_cr));
 #endif
         int err = lua_pcall(luast, 0, LUA_MULTRET, 0);
-#if defined(CONFIG_DRIVER_CHAR_SOCLIBTTY)
+#if defined(CONFIG_DRIVER_SOCLIB_VCI_MULTI_TTY)
         termui_term_writestr(tm, disable_cr, strlen(disable_cr));
 #endif
 

@@ -92,7 +92,7 @@ VFS_FS_LOOKUP(devfs_lookup)
 
     struct device_s *child = NULL;
 
-    if ( dev->drv->class == device_class_enum ) {
+    if ( dev->drv->class == driver_class_enum ) {
         child = dev_enum_lookup(dev, _name);
     } else if ( ! strncmp("child", name, 5) ) {
         size_t n = ato_intl16(name+5);
@@ -111,7 +111,7 @@ VFS_FS_LOOKUP(devfs_lookup)
 VFS_FS_STAT(devfs_stat)
 {
 /*     struct device_s *dev = node->dev; */
-/*     enum device_class_e class = device_class_none; */
+/*     enum driver_class_e class = device_class_none; */
 /*     if ( dev->drv ) { */
 /*         class = dev->drv->class; */
 /*     } */
@@ -200,7 +200,7 @@ bool_t devfs_dir_get_nth(struct fs_node_s *node, struct vfs_dirent_s *dirent, si
 
     dirent->type = VFS_NODE_DIR;
     dirent->size = 0;
-    if ( dev->drv->class == device_class_enum
+    if ( dev->drv->class == driver_class_enum
          && dev->drv->f.denum.f_info ) {
         struct dev_enum_info_s info;
 

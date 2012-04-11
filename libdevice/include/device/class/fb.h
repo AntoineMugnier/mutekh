@@ -122,7 +122,7 @@ typedef DEVFB_SETPALETTE(devfb_setpalette_t);
 /** Fb device class methodes */
 struct driver_fb_s
 {
-  enum device_class_e cl;
+  enum driver_class_e cl;
   devfb_setmode_t	*f_setmode;
   devfb_getbuffer_t	*f_getbuffer;
   devfb_flippage_t	*f_flippage;

@@ -195,7 +195,7 @@ typedef DEVGPIO_REGISTER_IRQ(devgpio_register_irq_t);
 /** Gpio device class methodes */
 struct driver_gpio_s
 {
-  enum device_class_e cl;
+  enum driver_class_e cl;
   devgpio_set_way_t	*f_set_way;
   devgpio_set_value_t	*f_set_value;
   devgpio_set_pullup_t	*f_set_pullup;

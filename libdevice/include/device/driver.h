@@ -34,27 +34,35 @@
 #include <device/device.h>
 
 /** @This specifies device driver personality class. */
-enum device_class_e
-  {
-    DEVICE_CLASS_NONE = 0,
+enum driver_class_e
+{
+  DEVICE_CLASS_NONE = 0,
 
-    DEVICE_CLASS_BLOCK,
-    DEVICE_CLASS_CHAR,
-    DEVICE_CLASS_ENUM,
-    DEVICE_CLASS_FB,
-    DEVICE_CLASS_ICU,
-    DEVICE_CLASS_INPUT,
-    DEVICE_CLASS_NET,
-    DEVICE_CLASS_SOUND,
-    DEVICE_CLASS_TIMER,
-    DEVICE_CLASS_SPI,
-    DEVICE_CLASS_LCD,
-    DEVICE_CLASS_GPIO,
-    DEVICE_CLASS_I2C,
-    DEVICE_CLASS_MEM,
-  };
+  DEVICE_CLASS_BLOCK,
+  DEVICE_CLASS_CHAR,
+  DEVICE_CLASS_ENUM,
+  DEVICE_CLASS_FB,
+  DEVICE_CLASS_ICU,
+  DEVICE_CLASS_INPUT,
+  DEVICE_CLASS_NET,
+  DEVICE_CLASS_SOUND,
+  DEVICE_CLASS_TIMER,
+  DEVICE_CLASS_SPI,
+  DEVICE_CLASS_LCD,
+  DEVICE_CLASS_GPIO,
+  DEVICE_CLASS_I2C,
+  DEVICE_CLASS_MEM,
+  DEVICE_CLASS_Sys_Last = DEVICE_CLASS_MEM, //< last MutekH reserved value in use
+  DEVICE_CLASS_User_First = 128,            //< First user defined device class id
+};
 
-enum dev_enum_type_e {
+#define DRIVER_CLASS_NAMES                                         \
+  "None", "Block", "Char", "Enumerator", "FrameBuffer",            \
+  "IrqCtrl", "Input", "Network", "Sound",                          \
+  "Timer", "SPI", "LCD", "GPIO", "I2C", "Memory"
+
+enum dev_enum_type_e
+{
   DEVENUM_TYPE_INVALID,
   DEVENUM_TYPE_PCI,
   DEVENUM_TYPE_ISA,
@@ -258,11 +266,22 @@ struct device_##cl##_s                                                  \
 */                                                                      \
 struct driver_##cl##_s                                                  \
 {                                                                       \
-  enum device_class_e class_;                                           \
+  enum driver_class_e class_;                                           \
   __VA_ARGS__                                                           \
 };
 
+struct device_accessor_s
+{
+  struct device_s *dev;
+  const void *api;
+  uint_fast8_t number;
+};
 
+struct driver_class_s
+{
+  enum driver_class_e class_;
+  void *functions[];
+};
 
 /**
    @This invokes requested operation on device using device accessor object.
@@ -285,7 +304,7 @@ struct driver_##cl##_s                                                  \
    @see {#DEVICE_ACCESSOR, #DEVICE_OP, device_put_accessor}
  */
 error_t device_get_accessor(void *accessor, struct device_s *dev,
-                            enum device_class_e cl, uint_fast8_t number);
+                            enum driver_class_e cl, uint_fast8_t number);
 
 /**
    @This must be called when device driver accessor is

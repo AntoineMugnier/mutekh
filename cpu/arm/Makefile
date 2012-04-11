@@ -20,3 +20,7 @@ boot_m.o_CFLAGS = -mno-thumb
 boot.o_CFLAGS = -mno-thumb
 thumb_helpers.o_CFLAGS = -mno-thumb
 endif
+
+ifeq ($(CONFIG_DRIVER_CPU_ARM),defined)
+objs += driver.o
+endif

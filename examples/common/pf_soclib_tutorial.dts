@@ -9,25 +9,25 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		mips32el@0 {
+		cpu@0 {
                         compatible = "cpu:mips";
 			reg = <0>;
                         interrupt-controller;
 		};
 /*
-		mips32el@1 {
+		cpu@1 {
                         compatible = "cpu:mips";
 			reg = <1>;
                         interrupt-controller;
 		};
 
-		mips32el@2 {
+		cpu@2 {
                         compatible = "cpu:mips";
 			reg = <2>;
                         interrupt-controller;
 		};
 
-		mips32el@3 {
+		cpu@3 {
                         compatible = "cpu:mips";
 			reg = <3>;
                         interrupt-controller;
@@ -61,10 +61,10 @@
                 interrupt-controller;
 
                               /*  xicu out   target dev           target in*/
-                interrupt-map = < 0          &{/cpus/mips32el@0}  0 /*
-                                  1          &{/cpus/mips32el@1}  0
-                                  2          &{/cpus/mips32el@2}  0
-                                  3          &{/cpus/mips32el@3}  0 */ >;
+                interrupt-map = < 0          &{/cpus/cpu@0}  0 /*
+                                  1          &{/cpus/cpu@1}  0
+                                  2          &{/cpus/cpu@2}  0
+                                  3          &{/cpus/cpu@3}  0 */ >;
 
                 param-int-pti-count = <4>;
                 param-int-hwi-count = <3>;

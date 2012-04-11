@@ -45,9 +45,19 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
 
   if (dev->drv)
     {
-      for (i = 0; i < indent; i++)
+      const struct driver_class_s *c;
+      for (i = 0; i < indent + 1; i++)
         printk("  ");
-      printk("  Driver: %p `%s'\n", dev->drv, dev->drv->desc);
+      printk("Driver: %p `%s'\n", dev->drv, dev->drv->desc);
+      for (i = 0; i < indent + 2; i++)
+        printk("  ");
+      printk("Classes: ");
+      for (i = 0; (c = dev->drv->classes[i]); i++)
+        {
+          static const char *cnames[] = { DRIVER_CLASS_NAMES };
+          printk("%u:%s ", c->class_, c->class_ <= DEVICE_CLASS_Sys_Last ? cnames[c->class_] : "Custom");
+        }
+      printk("\n");
     }
 
   uint_fast8_t count[DEV_RES_TYPES_COUNT] = { 0 };

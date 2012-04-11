@@ -14,3 +14,6 @@ objs += early_console.o
 endif
 
 meta = ldscript
+
+subdirs = drivers
+

@@ -105,7 +105,7 @@ typedef DEVSOUND_MODE(devsound_mode_t);
 /** Sound device class methodes */
 struct driver_sound_s
 {
-  enum device_class_e cl;
+  enum driver_class_e cl;
   devsound_read_t		*f_read;
   devsound_write_t		*f_write;
   devsound_mode_t		*f_mode;

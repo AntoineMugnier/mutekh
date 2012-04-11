@@ -29,14 +29,6 @@
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
 
-#if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_ARCH_SOCLIB)
-#include <drivers/enum/fdt/enum-fdt.h>
-#include <drivers/icu/nios2/icu-nios2.h>
-#include <device/device.h>
-
-extern struct device_s fdt_enum_dev;
-#endif
-
 /** pointer to context local storage in cpu local storage */
 CPU_LOCAL void *__context_data_base;
 
@@ -71,11 +63,6 @@ void cpu_init(void)
   __asm__ volatile("mov " ASM_STR(CPU_NIOS2_CLS_REG) ", %0" : : "r" (cls));
 #endif
 
-#if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_DRIVER_ICU_NIOS2)
-  struct device_s *icu = enum_fdt_icudev_for_cpuid(&fdt_enum_dev, cpu_id());
-  if ( icu )
-    icu_nios2_update(icu);
-#endif
 }
 
 

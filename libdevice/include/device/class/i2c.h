@@ -118,7 +118,7 @@ typedef DEVI2C_SET_BAUDRATE(devi2c_set_baudrate_t);
 /** I2c device class methodes */
 struct driver_i2c_s
 {
-  enum device_class_e cl;
+  enum driver_class_e cl;
   devi2c_request_t		*f_request;
   devi2c_set_baudrate_t		*f_set_baudrate;
 };

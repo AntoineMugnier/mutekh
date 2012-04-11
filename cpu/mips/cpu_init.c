@@ -28,13 +28,6 @@
 #include <hexo/local.h>
 #include <hexo/interrupt.h>
 
-#if defined(CONFIG_ARCH_DEVICE_TREE) && defined(CONFIG_ARCH_SOCLIB)
-# include <drivers/enum/fdt/enum-fdt.h>
-# include <drivers/icu/mips/icu-mips.h>
-# include <device/device.h>
-
-extern struct device_s fdt_enum_dev;
-#endif
 
 /** pointer to context local storage in cpu local storage */
 CPU_LOCAL void *__context_data_base;

@@ -18,3 +18,5 @@ ifeq ($(LINKING),1)
 meta = ldscript
 
 endif
+
+subdirs = drivers

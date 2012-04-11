@@ -12,3 +12,8 @@ endif
 copy = ldscript
 
 subdirs = libc
+
+ifeq ($(CONFIG_DRIVER_CPU_NIOS2),defined)
+objs += driver.o
+endif
+

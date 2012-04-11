@@ -115,6 +115,7 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
         }
 
       e->dev = d;
+      d->enum_pv = (void*)-1;
       if (e->section == FDT_SECTION_NONE)
         e->section = FDT_SECTION_DEVICE;
       return 1;

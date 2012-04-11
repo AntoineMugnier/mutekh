@@ -8,3 +8,7 @@ endif
 copy = ldscript
 
 subdirs = libc
+
+ifeq ($(CONFIG_DRIVER_CPU_SPARC),defined)
+objs += driver.o
+endif

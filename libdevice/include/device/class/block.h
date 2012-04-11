@@ -161,7 +161,7 @@ typedef DEVBLOCK_GETRQSIZE(devblock_getrqsize_t);
 /** Block device class methodes */
 struct driver_block_s
 {
-  enum device_class_e cl;
+  enum driver_class_e cl;
   devblock_request_t		*f_request;
   devblock_getparams_t		*f_getparams;
   devblock_getrqsize_t		*f_getrqsize;

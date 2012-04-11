@@ -1,3 +1,0 @@
-
-objs = soclib-xicu.o
-
