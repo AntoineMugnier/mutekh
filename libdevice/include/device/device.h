@@ -57,6 +57,7 @@ enum dev_resource_type_e
     DEV_RES_ID,                 //< Unique numeric id, meaning depends on parent device type
     DEV_RES_VENDORID,           //< Vendor id, meaning depends on parent device type
     DEV_RES_PRODUCTID,            //< Model id specific to current vendor id
+    DEV_RES_REVISION,
     DEV_RES_STR_PARAM,
     DEV_RES_UINT_PARAM,
     DEV_RES_UINT_ARRAY_PARAM,
@@ -101,6 +102,11 @@ struct dev_resource_s
     }   product;
 
     struct {
+      uintptr_t major;
+      uintptr_t minor;
+    }   revision;
+
+    struct {
       const char *name;
       const char *value;
     }   str_param;
@@ -140,6 +146,9 @@ error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id, uint_
     commonly referred to by using a number. Processor devices must
     use this resource for the cpu id. */
 error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor);
+
+/** @This adds a revision information for the device. */
+error_t device_res_add_revision(struct device_s *dev, uintptr_t major, uintptr_t minor);
 
 /** @This attaches a vendor identifier resource to the device. Both a
     numerical and a string values can be specified. The exact meaning

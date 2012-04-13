@@ -121,6 +121,8 @@ error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end)
     return -EBUSY;
   if (!r)
     return -ENOMEM;
+  if (start >= end)
+    return -EINVAL;
 
   r->type = DEV_RES_IO;
   r->io.start = start;
@@ -137,6 +139,8 @@ error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
     return -EBUSY;
   if (!r)
     return -ENOMEM;
+  if (start >= end)
+    return -EINVAL;
 
   r->type = DEV_RES_MEM;
   r->mem.start = start;
@@ -161,7 +165,8 @@ error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id,
   r->irq.icu_in_id = icu_in_id;
   r->irq.icu = icu;
 
-  icu->ref_count++;
+  if (icu)
+    icu->ref_count++;
 
   return 0;
 #else
@@ -181,6 +186,22 @@ error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor
   r->type = DEV_RES_ID;
   r->id.major = major;
   r->id.minor = minor;
+
+  return 0;
+}
+
+error_t device_res_add_revision(struct device_s *dev, uintptr_t major, uintptr_t minor)
+{
+  struct dev_resource_s *r = device_res_unused(dev);
+
+  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+    return -EBUSY;
+  if (!r)
+    return -ENOMEM;
+
+  r->type = DEV_RES_REVISION;
+  r->revision.major = major;
+  r->revision.minor = minor;
 
   return 0;
 }

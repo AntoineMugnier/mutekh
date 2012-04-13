@@ -20,6 +20,10 @@
 
 */
 
+# include <device/driver.h>
+# include <device/device.h>
+# include <device/class/char.h>
+
 #include <mutek/printk.h>
 #include <mutek/scheduler.h>
 #include <hexo/context.h>
@@ -62,6 +66,15 @@ void arch_init(uintptr_t init_sp)
     hexo_global_init();
 
     cpu_init();
+
+#if 1
+    static struct device_s ahbctrl_dev;
+
+    device_init(&ahbctrl_dev);
+    device_attach(&ahbctrl_dev, NULL);
+    device_res_add_mem(&ahbctrl_dev, 0xfffff000, 0xffffffe0);
+    ahbctrl_init(&ahbctrl_dev);
+#endif
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
     sched_global_init();

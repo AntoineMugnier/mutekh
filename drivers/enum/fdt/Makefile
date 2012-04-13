@@ -1,3 +1,3 @@
 
-objs = enum-fdt.o
+objs = fdt.o
 

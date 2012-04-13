@@ -16,23 +16,19 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
     02110-1301 USA.
 
-    Copyright (c) 2011 Alexandre Becoulet <alexandre.becoulet@telecom-paristech.fr>
-    Copyright (c) 2011 Institut Telecom / Telecom ParisTech
-
+    Copyright (c) 2009, Nicolas Pouillon <nipo@ssji.net>
 */
 
-#ifndef DRIVER_GAISLER_APBUART_H_
-#define DRIVER_GAISLER_APBUART_H_
+#ifndef __ENUM_FDT_H_
+#define __ENUM_FDT_H_
 
-#include <device/class/char.h>
+#include <device/class/enum.h>
 #include <device/device.h>
 
-/* tty device functions */
+#include <stdint.h>
 
-DEV_IRQ(gaisler_apbuart_irq);
-DEV_INIT(gaisler_apbuart_init);
-DEV_CLEANUP(gaisler_apbuart_cleanup);
-DEVCHAR_REQUEST(gaisler_apbuart_request);
+DEV_CLEANUP(enum_fdt_cleanup);
+DEV_INIT(enum_fdt_init);
 
 #endif
 

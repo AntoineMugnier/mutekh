@@ -55,7 +55,7 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
       for (i = 0; (c = dev->drv->classes[i]); i++)
         {
           static const char *cnames[] = { DRIVER_CLASS_NAMES };
-          printk("%u:%s ", c->class_, c->class_ <= DEVICE_CLASS_Sys_Last ? cnames[c->class_] : "Custom");
+          printk("%u-%s ", c->class_, c->class_ <= DEVICE_CLASS_Sys_Last ? cnames[c->class_] : "Custom");
         }
       printk("\n");
     }
@@ -94,10 +94,13 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
           printk("  Numerical identifier %x %x\n", r->id.major, r->id.minor);
           break;
         case DEV_RES_VENDORID:
-          printk("  Vendor ID %x `%s'\n", r->vendor.id, r->vendor.name);
+          printk("  Vendor ID 0x%04x `%s'\n", r->vendor.id, r->vendor.name);
           break;
         case DEV_RES_PRODUCTID:
-          printk("  Product ID %x `%s'\n", r->product.id, r->product.name);
+          printk("  Product ID 0x%04x `%s'\n", r->product.id, r->product.name);
+          break;
+        case DEV_RES_REVISION:
+          printk("  Revision %u.%u\n", r->revision.major, r->revision.minor);
           break;
         case DEV_RES_STR_PARAM:
           printk("  Custom parameter `%s' = `%s'\n", r->str_param.name, r->str_param.value);

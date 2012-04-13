@@ -52,7 +52,6 @@ struct tty_soclib_context_s
   struct dev_irq_ep_s           irq_ep;
 #endif
   uintptr_t addr;
-
 };
 
 #endif

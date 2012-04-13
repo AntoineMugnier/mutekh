@@ -114,6 +114,10 @@ static DEV_INIT(sparc_init);
 static const struct devenum_ident_s  sparc_ids[] =
 {
   DEVENUM_FDTNAME_ENTRY("cpu:sparc"),
+#ifdef CONFIG_ARCH_GAISLER
+  DEVENUM_GAISLER_ENTRY(0x1, 0x003), /* leon 3 */
+  DEVENUM_GAISLER_ENTRY(0x1, 0x048), /* leon 4 */
+#endif
   { 0 }
 };
 
@@ -150,14 +154,17 @@ static DEV_INIT(sparc_init)
     PRINTK_RET(-EINVAL, "sparc: driver init must be executed on CPU with matching id");
 #endif
 
-  /* FIXME allocation scope ? */
-  pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
+  if (sizeof(*pv))
+    {
+      /* FIXME allocation scope ? */
+      pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 
-  if ( pv == NULL )
-    return -ENOMEM;
+      if ( pv == NULL )
+        return -ENOMEM;
 
-  memset(pv, 0, sizeof(*pv));
-  dev->drv_pv = pv;
+      memset(pv, 0, sizeof(*pv));
+      dev->drv_pv = pv;
+    }
 
 #ifdef CONFIG_DEVICE_IRQ
 # ifdef CONFIG_ARCH_SMP
@@ -189,6 +196,7 @@ static DEV_CLEANUP(sparc_cleanup)
   device_irq_sink_unlink(dev, pv->sinks, ICU_SPARC_MAX_VECTOR);
 #endif
 
-  mem_free(pv);
+  if (sizeof(*pv))
+    mem_free(pv);
 }
 

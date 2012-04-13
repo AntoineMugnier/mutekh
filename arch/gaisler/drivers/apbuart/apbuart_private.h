@@ -25,7 +25,8 @@
 #define DRIVER_GAISLER_APBUART_PV_H_
 
 #include <hexo/types.h>
-#include <device/device.h>
+#include <device/class/char.h>
+#include <device/irq.h>
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_ring.h>
@@ -60,12 +61,14 @@ CONTAINER_FUNC(uart_fifo, RING, static inline, uart_fifo);
 
 struct gaisler_apbuart_context_s
 {
+  uintptr_t addr;
   /* tty input request queue and char fifo */
   dev_char_queue_root_t		read_q;
   dev_char_queue_root_t		write_q;
   uart_fifo_root_t		read_fifo;
-#ifdef CONFIG_HEXO_IRQ
+#ifdef CONFIG_DEVICE_IRQ
   uart_fifo_root_t		write_fifo;
+  struct dev_irq_ep_s           irq_ep;
 #endif
 };
 

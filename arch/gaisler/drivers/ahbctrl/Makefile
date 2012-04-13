@@ -1,0 +1,3 @@
+
+objs = ahbctrl.o
+

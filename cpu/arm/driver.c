@@ -149,14 +149,17 @@ static DEV_INIT(arm_init)
     PRINTK_RET(-EINVAL, "arm: driver init must be executed on CPU with matching id");
 #endif
 
-  /* FIXME allocation scope ? */
-  pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
+  if (sizeof(*pv))
+    {
+      /* FIXME allocation scope ? */
+      pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
 
-  if ( pv == NULL )
-    return -ENOMEM;
+      if ( pv == NULL )
+        return -ENOMEM;
 
-  memset(pv, 0, sizeof(*pv));
-  dev->drv_pv = pv;
+      memset(pv, 0, sizeof(*pv));
+      dev->drv_pv = pv;
+    }
 
 #ifdef CONFIG_DEVICE_IRQ
 # ifdef CONFIG_ARCH_SMP
@@ -188,6 +191,7 @@ static DEV_CLEANUP(arm_cleanup)
   device_irq_sink_unlink(dev, pv->sinks, ICU_ARM_MAX_VECTOR);
 #endif
 
-  mem_free(pv);
+  if (sizeof(*pv))
+    mem_free(pv);
 }
 

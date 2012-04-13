@@ -113,17 +113,11 @@ DEVCHAR_REQUEST(tty_soclib_request)
 
 #ifdef CONFIG_DEVICE_IRQ
 
-/*
- * device irq
- */
-
-DEV_IRQ(tty_soclib_irq)
+static DEV_IRQ(tty_soclib_irq)
 {
   struct device_s *dev = src->dev;
   struct tty_soclib_context_s *pv = dev->drv_pv;
   uint8_t c;
-
-  *id = -1;
 
   lock_spin(&dev->lock);
 

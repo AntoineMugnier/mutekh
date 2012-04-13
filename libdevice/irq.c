@@ -441,9 +441,18 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *src, u
           goto error;
         }
 
+      struct device_s *icu_dev = r->irq.icu;
+
+      if (!icu_dev)
+        {
+          printk("device: no interrupt controller available for %p `%s' device.\n", dev, dev->name);
+          err = -ENOENT;
+          goto error;
+        }
+
       struct device_icu_s icu;
 
-      if (device_get_accessor(&icu, r->irq.icu, DEVICE_CLASS_ICU, 0))
+      if (device_get_accessor(&icu, icu_dev, DEVICE_CLASS_ICU, 0))
         {
           printk("device: can not use %p `%s' device as an interrupt controller.\n", r->irq.icu, r->irq.icu->name);
           err = -EINVAL;

@@ -39,8 +39,7 @@
 
 #include <fdt/reader.h>
 
-#include "enum-fdt.h"
-#include "enum-fdt-private.h"
+#include "fdt.h"
 
 enum enum_fdt_section_e
 {
@@ -60,10 +59,18 @@ struct enum_fdt_stack_entry_s
   enum enum_fdt_section_e section;
 };
 
+#if CONFIG_DRIVER_ENUM_FDT_MAX_DEPTH < 2
+# error CONFIG_DRIVER_ENUM_FDT_MAX_DEPTH must be at least 2
+#endif
+
+#if CONFIG_DRIVER_ENUM_FDT_MAX_RESOURCES < 1
+# error CONFIG_DRIVER_ENUM_FDT_MAX_RESOURCES must be at least 1
+#endif
+
 struct enum_fdt_parse_ctx_s
 {
   struct device_s *dev; // enum fdt dev
-  struct enum_fdt_stack_entry_s stack[ENUM_FDT_MAX_DEPTH];
+  struct enum_fdt_stack_entry_s stack[CONFIG_DRIVER_ENUM_FDT_MAX_DEPTH];
   int_fast8_t stack_top;
 };
 
@@ -91,7 +98,7 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
   if (ctx->stack_top == 0)
     return 1;
 
-  if (ctx->stack_top >= ENUM_FDT_MAX_DEPTH)
+  if (ctx->stack_top >= CONFIG_DRIVER_ENUM_FDT_MAX_DEPTH)
     return 0;
 
   struct enum_fdt_stack_entry_s *e = ctx->stack + ctx->stack_top;
@@ -104,7 +111,7 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
 
   if ((p->section == FDT_SECTION_NONE || p->section == FDT_SECTION_CPUS) && strchr(name, '@'))
     {
-      struct device_s *d = device_alloc(ENUM_FDT_MAX_RESOURCES);
+      struct device_s *d = device_alloc(CONFIG_DRIVER_ENUM_FDT_MAX_RESOURCES);
 
       d->enum_dev = ctx->dev;
 
@@ -147,7 +154,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
 {
   struct enum_fdt_parse_ctx_s *ctx = priv;
 
-  if (ctx->stack_top >= ENUM_FDT_MAX_DEPTH)
+  if (ctx->stack_top >= CONFIG_DRIVER_ENUM_FDT_MAX_DEPTH)
     return;
 
   struct enum_fdt_stack_entry_s *e = ctx->stack + ctx->stack_top;
@@ -191,7 +198,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
               {
                 a = b = 0;
                 fdt_parse_cell(fdt_parse_cell(data8, e->addr_cells, &a), e->size_cells, &b);
-                if (device_res_add_mem(e->dev, a, b))
+                if (device_res_add_mem(e->dev, a, a + b))
                   goto res_err;
                 datalen -= elen;
                 data8 += elen;
@@ -335,7 +342,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
   return;
 
  res_err:
-  printk("enum-fdt: device %p `%s', unable to add more resource entries\n", e->dev, e->dev->name);
+  printk("enum-fdt: device %p `%s', error adding resource entry\n", e->dev, e->dev->name);
 }
 
 static FDT_ON_MEM_RESERVE_FUNC(enum_fdt_mem_reserve)
@@ -454,37 +461,24 @@ DEV_INIT(enum_fdt_init)
     .on_mem_reserve = enum_fdt_mem_reserve,
   };
 
-  struct enum_fdt_context_s *pv;
-
   dev->status = DEVICE_DRIVER_INIT_FAILED;
   dev->drv = &enum_fdt_drv;
-
-  /* allocate private driver data */
-  pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
-
-  if (!pv)
-    return -1;
 
   uintptr_t addr;
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL))
-    goto err_mem;
+    return -ENOENT;
 
   fdt_walk_blob((const void*)addr, &walker);
 #ifdef CONFIG_HEXO_IRQ
   resolve_icu_links(dev, dev);
 #endif
 
-  dev->drv_pv = pv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   device_bind_driver(dev);
 
   return 0;
-
- err_mem:
-  mem_free(pv);
-  return -1;
 }
 
 
@@ -494,8 +488,5 @@ DEV_INIT(enum_fdt_init)
 
 DEV_CLEANUP(enum_fdt_cleanup)
 {
-  struct enum_fdt_context_s	*pv = dev->drv_pv;
-
-  mem_free(pv);
 }
 

@@ -22,7 +22,7 @@
 #include <assert.h>
 
 #if defined(CONFIG_ARCH_DEVICE_TREE)
-# include <drivers/enum/fdt/enum-fdt.h>
+# include <drivers/enum/fdt/fdt.h>
 # include <device/class/enum.h>
 # include <device/driver.h>
 # include <device/device.h>

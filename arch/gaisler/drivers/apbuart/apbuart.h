@@ -16,23 +16,23 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
     02110-1301 USA.
 
-    Copyright (c) 2009, Nicolas Pouillon <nipo@ssji.net>
+    Copyright (c) 2011 Alexandre Becoulet <alexandre.becoulet@telecom-paristech.fr>
+    Copyright (c) 2011 Institut Telecom / Telecom ParisTech
+
 */
 
-#ifndef __ENUM_FDT_H_
-#define __ENUM_FDT_H_
+#ifndef DRIVER_GAISLER_APBUART_H_
+#define DRIVER_GAISLER_APBUART_H_
 
-#include <device/class/enum.h>
+#include <device/driver.h>
+#include <device/class/char.h>
 #include <device/device.h>
 
-#include <stdint.h>
+/* tty device functions */
 
-DEV_CLEANUP(enum_fdt_cleanup);
-DEV_INIT(enum_fdt_init);
-DEVENUM_MATCH_DRIVER(enum_fdt_match_driver);
-
-#define ENUM_FDT_MAX_RESOURCES 40
-#define ENUM_FDT_MAX_DEPTH 8
+DEV_INIT(gaisler_apbuart_init);
+DEV_CLEANUP(gaisler_apbuart_cleanup);
+DEVCHAR_REQUEST(gaisler_apbuart_request);
 
 #endif
 

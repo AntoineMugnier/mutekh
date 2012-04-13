@@ -56,13 +56,6 @@
 # include <vfs/vfs.h>
 #endif
 
-#if defined(CONFIG_ARCH_DEVICE_TREE)
-# include <drivers/enum/fdt/enum-fdt.h>
-
-extern struct device_s fdt_enum_dev;
-extern void *arch_fdt;
-#endif
-
 #if defined (CONFIG_MUTEK_TIMER)
 struct device_s *timerms_dev = NULL;
 struct timer_s timer_ms;

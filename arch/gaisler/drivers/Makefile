@@ -1,3 +1,13 @@
 
-subdirs = apbuart
+ifeq ($(CONFIG_DRIVER_GAISLER_APBUART), defined)
+subdirs += apbuart
+endif
+
+ifeq ($(CONFIG_DRIVER_GAISLER_AHBCTRL), defined)
+subdirs += ahbctrl
+endif
+
+ifeq ($(CONFIG_DRIVER_GAISLER_APBCTRL), defined)
+subdirs += apbctrl
+endif
 

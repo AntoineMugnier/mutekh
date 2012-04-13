@@ -112,7 +112,8 @@ void device_cleanup(struct device_s *dev)
         {
 #ifdef CONFIG_HEXO_IRQ
         case DEV_RES_IRQ:
-          r->irq.icu--;
+          if (r->irq.icu)
+            r->irq.icu--;
           break;
 #endif
         case DEV_RES_VENDORID:
