@@ -1017,9 +1017,14 @@ sub process_config_auto
 	    return 0;
 	}
 
+	if ( $dep->{depundef} ) {
+	    debug(1, "auto define of $dep->{name} as an autodep of $opt->{name} is not possible");
+	    return 0;
+        }
+
 	$dep->{value} = 'defined';
 
-	debug(1, "$dep->{name} had been defined as an autodep of $opt->{name}");
+	debug(1, "$dep->{name} has been defined as an autodep of $opt->{name}");
 
 	return 1;
     }
@@ -1102,7 +1107,7 @@ sub process_config_depend
 
 	if ( $opt->{userdefined} ) {
 	    push @{$opt->{$de}}, "`$opt->{name}' token is defined in build configuration ".
-		"file but has undefined parent.";
+		"but will be undefined due to undefined parent.";
 	}
 
 	$opt->{value} = 'undefined';
