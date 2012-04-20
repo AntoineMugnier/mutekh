@@ -85,10 +85,12 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
           printk("  I/O range %i from %p to %p\n", c, r->io.start, r->io.end);
           break;
 #ifdef CONFIG_HEXO_IRQ
-        case DEV_RES_IRQ:
+        case DEV_RES_IRQ: {
+          struct device_s *icu = r->irq.icu;
           printk("  IRQ output %i bound to input %i of controller %p `%s'\n",
-                 r->irq.dev_out_id, r->irq.icu_in_id, r->irq.icu, r->irq.icu->name);
+                 r->irq.dev_out_id, r->irq.icu_in_id, icu, icu ? icu->name : "default");
           break;
+        }
 #endif
         case DEV_RES_ID:
           printk("  Numerical identifier %x %x\n", r->id.major, r->id.minor);

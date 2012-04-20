@@ -52,7 +52,7 @@ static DEVICU_GET_SINK(soclib_xicu_icu_get_sink)
   if (icu_in_id >= pv->hwi_count)
     return NULL;
 
-  /* enable hwi on output 0 FIXME */
+  /* enable hwi on output 0 FIXME SMP */
   cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_ENABLE, 0), endian_le32(1 << icu_in_id));
 
   return pv->sinks + icu_in_id;

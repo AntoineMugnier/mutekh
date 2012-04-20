@@ -276,6 +276,11 @@ DEV_INIT(gaisler_apbuart_init)
   dev->drv = &gaisler_apbuart_drv;
   dev->drv_pv = pv;
 
+#warning FIXME use choosen
+  extern struct device_char_s console_dev;
+  device_get_accessor(&console_dev, dev, DEVICE_CLASS_CHAR, 0);
+  return 0;
+
   return 0;
  err_mem:
   mem_free(pv);

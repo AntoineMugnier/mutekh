@@ -192,5 +192,10 @@ void device_irq_source_unlink(struct device_s *dev, struct dev_irq_ep_s *sources
     of source/sink end-points allocated in the private driver data. */
 void device_irq_sink_unlink(struct device_s *dev, struct dev_irq_ep_s *sinks, uint_fast8_t sink_count);
 
+/** @This is used when an IRQ line resource entry on a device has a
+    @tt NULL pointer as reference to an interrupt controller. @This
+    queries the enumerator device associated with the device. */
+struct device_s * device_get_default_icu(struct device_s *dev);
+
 #endif
 

@@ -28,6 +28,7 @@
 
 #include <device/device.h>
 #include <device/driver.h>
+#include <device/irq.h>
 #include <device/class/enum.h>
 
 # ifdef CONFIG_DRIVER_ENUM_ROOT
@@ -129,9 +130,13 @@ static bool_t device_bind_driver_r(struct device_s *dev)
             {
 #ifdef CONFIG_HEXO_IRQ
               /** check that interrupt controllers are initialized */
-            case DEV_RES_IRQ:
-              if (r->irq.icu->status != DEVICE_DRIVER_INIT_DONE)
+            case DEV_RES_IRQ: {
+              struct device_s *icu = r->irq.icu;
+              if (!icu)
+                icu = device_get_default_icu(dev);
+              if (!icu || icu->status != DEVICE_DRIVER_INIT_DONE)
                 goto skip;
+            }
 #endif
             default:
               break;

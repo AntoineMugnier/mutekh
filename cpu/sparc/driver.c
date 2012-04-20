@@ -35,10 +35,15 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
+#ifdef CONFIG_CPU_SPARC_SINGLE_IRQ_EP
+#define ICU_SPARC_MAX_VECTOR	1
+#else
+#define ICU_SPARC_MAX_VECTOR	15
+#endif
+
 struct sparc_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
-#define ICU_SPARC_MAX_VECTOR	15
   struct dev_irq_ep_s	sinks[ICU_SPARC_MAX_VECTOR];
 #endif
 };
@@ -56,12 +61,19 @@ static CPU_INTERRUPT_HANDLER(sparc_irq_handler)
   struct device_s *dev = CPU_LOCAL_GET(sparc_icu_dev);
   struct sparc_dev_private_s  *pv = dev->drv_pv;
 
+#ifdef CONFIG_CPU_SPARC_SINGLE_IRQ_EP
+    struct dev_irq_ep_s *sink = pv->sinks;
+    int_fast16_t id = irq;
+
+    sink->process(sink, &id);
+#else
   if ( irq < ICU_SPARC_MAX_VECTOR ) {
     struct dev_irq_ep_s *sink = pv->sinks + irq;
     int_fast16_t id = 0;
 
     sink->process(sink, &id);
   }
+#endif
 }
 
 #ifdef CONFIG_HEXO_IPI

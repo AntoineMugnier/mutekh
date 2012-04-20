@@ -283,13 +283,18 @@ struct driver_class_s
   void *functions[];
 };
 
-/**
-   @This invokes requested operation on device using device accessor object.
- */
+/** @This invokes requested operation on device using device accessor object. */
 #define DEVICE_OP(dev_accessor, op, ...)        \
 ({                                            \
   typeof(dev_accessor) __a__ = (dev_accessor);  \
   __a__->api->f_##op(__a__, __VA_ARGS__);       \
+})
+
+/** @This tests if the driver provides the specified operation. */
+#define DEVICE_HAS_OP(dev_accessor, op)        \
+({                                            \
+  typeof(dev_accessor) __a__ = (dev_accessor);  \
+  __a__->api->f_##op != NULL;       \
 })
 
 #define DEVICE_ACCESSOR_INIT { .dev = NULL, .api = NULL }

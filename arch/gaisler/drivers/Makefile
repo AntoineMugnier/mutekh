@@ -11,3 +11,7 @@ ifeq ($(CONFIG_DRIVER_GAISLER_APBCTRL), defined)
 subdirs += apbctrl
 endif
 
+ifeq ($(CONFIG_DRIVER_GAISLER_IRQMP), defined)
+subdirs += irqmp
+endif
+

@@ -25,6 +25,7 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/icu.h>
+#include <device/class/enum.h>
 
 #include <mutek/printk.h>
 
@@ -442,6 +443,8 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *src, u
         }
 
       struct device_s *icu_dev = r->irq.icu;
+      if (!icu_dev)
+        icu_dev = device_get_default_icu(dev);
 
       if (!icu_dev)
         {
@@ -485,3 +488,23 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *src, u
   device_irq_source_unlink(dev, src, src_count);
   return err;
 }
+
+struct device_s * device_get_default_icu(struct device_s *dev)
+{
+  struct device_enum_s e;
+
+  if (!dev->enum_dev)
+    return NULL;
+  if (device_get_accessor(&e, dev->enum_dev, DEVICE_CLASS_ENUM, 0))
+    return NULL;
+
+  struct device_s *icu = NULL;
+
+  if (DEVICE_HAS_OP(&e, get_default_icu))
+    icu = DEVICE_OP(&e, get_default_icu, dev);
+
+  device_put_accessor(&e);
+
+  return icu;
+}
+

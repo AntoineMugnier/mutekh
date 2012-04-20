@@ -38,10 +38,26 @@ struct device_enum_s;
 
 #define DEVENUM_MATCH_DRIVER(n) bool_t (n)(struct device_enum_s *edev, const struct driver_s *drv, struct device_s *dev)
 
+/** @This determines if the @tt drv driver is suitable to drive the
+    @tt dev device. The device must have been enumerated by the @tt
+    edev device. @This generally relies on the enumeration ids table
+    provided by the driver. */
 typedef DEVENUM_MATCH_DRIVER(devenum_match_driver_t);
+
+#define DEVENUM_GET_DEFAULT_ICU(n) struct device_s * (n)(struct device_enum_s *edev, struct device_s *dev)
+
+/** @This is used when an IRQ line resource entry on a device has a
+    @tt NULL pointer as reference to an interrupt controller. @This
+    may return a pointer to an interrupt controller device or NULL if
+    none is available. The device must have been enumerated by the @tt
+    edev device. */
+typedef DEVENUM_GET_DEFAULT_ICU(devenum_get_default_icu_t);
 
 DEVICE_CLASS_TYPES(enum,
                    devenum_match_driver_t *f_match_driver;
+#ifdef CONFIG_DEVICE_IRQ
+                   devenum_get_default_icu_t *f_get_default_icu;
+#endif
                    );
 
 #endif

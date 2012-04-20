@@ -35,6 +35,16 @@
 
 #include <string.h>
 
+#ifdef CONFIG_DEVICE_IRQ
+extern struct device_s *gaisler_icu;
+
+static DEVENUM_GET_DEFAULT_ICU(apbctrl_get_default_icu)
+{
+  assert(dev->enum_dev == edev->dev);
+  return gaisler_icu;
+}
+#endif
+
 static DEVENUM_MATCH_DRIVER(apbctrl_match_driver)
 {
   const struct devenum_ident_s *ident = drv->id_table;
@@ -85,12 +95,18 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
       uint8_t irq = endian_be32(p[0]) & 0x1f;
 
       if (irq)
-        device_res_add_irq(d, 0, irq, NULL);
+        device_res_add_irq(d, 0, irq - 1, NULL);
 
       /* check for interrupt controller device */
       if (vendor == 0x01 && device == 0x00d)
-        ;
-#warning FIXME
+        {
+          // keep track of gaisler single irq controller
+          gaisler_icu = d;
+
+          // bind to all processors devices
+#warning FIXME iterate over processors to add irq link ressources
+          //  device_res_add_irq(d, 0, 0, cpu_device);
+        }
 #endif
 
       uint32_t start = begin + (((endian_be32(p[1]) >> 20) & 0xfff) << 8);
@@ -129,11 +145,14 @@ static const struct driver_enum_s apbctrl_enum_drv =
 {
   .class_	= DEVICE_CLASS_ENUM,
   .f_match_driver = apbctrl_match_driver,
+#ifdef CONFIG_DEVICE_IRQ
+  .f_get_default_icu = apbctrl_get_default_icu,
+#endif
 };
 
 const struct driver_s	apbctrl_drv =
 {
-  .desc         = "Gaisler APB controller",
+  .desc         = "Gaisler APB bus controller",
   .id_table	= gaisler_apbctrl_ids,
   .f_init	= apbctrl_init,
   .f_cleanup	= apbctrl_cleanup,
@@ -158,7 +177,6 @@ DEV_INIT(apbctrl_init)
   apbctrl_scan(dev, begin);
 
   dev->status = DEVICE_DRIVER_INIT_DONE;
-  device_bind_driver(dev);
 
   return 0;
 

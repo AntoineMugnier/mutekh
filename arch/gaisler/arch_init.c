@@ -30,6 +30,10 @@
 #include <hexo/init.h>
 #include <mutek/memory_allocator.h>
 
+#ifdef CONFIG_DEVICE_IRQ
+struct device_s *gaisler_icu = NULL;
+#endif
+
 #if defined(CONFIG_GAISLER_EARLY_CONSOLE)
 void gaisler_early_console(uintptr_t addr);
 #endif
@@ -74,6 +78,8 @@ void arch_init(uintptr_t init_sp)
     device_attach(&ahbctrl_dev, NULL);
     device_res_add_mem(&ahbctrl_dev, 0xfffff000, 0xffffffe0);
     ahbctrl_init(&ahbctrl_dev);
+
+    device_bind_driver(NULL);
 #endif
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
