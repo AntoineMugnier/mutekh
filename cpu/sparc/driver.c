@@ -108,7 +108,7 @@ static DEVICU_GET_SINK(sparc_icu_get_sink)
 
 const struct driver_icu_s  sparc_icu_drv =
 {
-  .class_          = DEVICE_CLASS_ICU,
+  .class_          = DRIVER_CLASS_ICU,
   .f_get_sink     = sparc_icu_get_sink,
   .f_disable_sink = sparc_icu_disable_sink,
 #ifdef CONFIG_HEXO_IPI

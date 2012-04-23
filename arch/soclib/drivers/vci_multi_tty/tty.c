@@ -150,7 +150,7 @@ static const struct devenum_ident_s	tty_soclib_ids[] =
 
 static const struct driver_char_s	tty_soclib_char_drv =
 {
-  .class_		= DEVICE_CLASS_CHAR,
+  .class_		= DRIVER_CLASS_CHAR,
   .f_request		= tty_soclib_request,
 };
 
@@ -196,9 +196,6 @@ DEV_INIT(tty_soclib_init)
   dev->drv = &tty_soclib_drv;
   dev->drv_pv = pv;
 
-#warning FIXME use choosen in fdt driver
-  extern struct device_char_s console_dev;
-  device_get_accessor(&console_dev, dev, DEVICE_CLASS_CHAR, 0);
   return 0;
 
  err_mem:

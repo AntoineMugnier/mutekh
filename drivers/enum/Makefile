@@ -1,8 +1,4 @@
 
-ifeq ($(CONFIG_DRIVER_ENUM_ROOT), defined)
- subdirs += root
-endif
-
 ifeq ($(CONFIG_DRIVER_ENUM_PCI), defined)
  subdirs += pci
 endif

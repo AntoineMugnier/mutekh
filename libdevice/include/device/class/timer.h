@@ -103,7 +103,7 @@ typedef DEVTIMER_SETVALUE(devtimer_setvalue_t);
 typedef DEVTIMER_GETVALUE(devtimer_getvalue_t);
 
 
-DEVICE_CLASS_TYPES(timer,
+DRIVER_CLASS_TYPES(timer,
                    devtimer_setperiod_t *f_setperiod;
                    devtimer_getvalue_t *f_getvalue;
                    devtimer_setcallback_t *f_setcallback;

@@ -141,6 +141,7 @@ struct dev_irq_ep_s
 };
 
 /** @internal @This creates a link between a source end-point and a sink-endpoint. */
+config_depend(CONFIG_DEVICE_IRQ)
 error_t device_irq_ep_link(struct dev_irq_ep_s *source, struct dev_irq_ep_s *sink);
 
 /** @internal @This removes a link between a source end-point and a
@@ -149,12 +150,14 @@ error_t device_irq_ep_link(struct dev_irq_ep_s *source, struct dev_irq_ep_s *sin
     If the @tt NULL pointer is passed as one of the argument, all
     links of the valid end-point pointer are removed. No error are
     returned if no link exist.  */
+config_depend(CONFIG_DEVICE_IRQ)
 error_t device_irq_ep_unlink(struct dev_irq_ep_s *source, struct dev_irq_ep_s *sink);
 
 /** @This initializes an array of device interrupt source
     end-points. The @ref device_irq_tail_source_init and @ref
     device_irq_icu_source_init function can be used to setup faster
     interrupt call path. */
+config_depend(CONFIG_DEVICE_IRQ)
 void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, uint_fast8_t src_count, dev_irq_t *handler);
 
 /** @This initializes an array of device interrupt source
@@ -162,6 +165,7 @@ void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, 
     handling which prevent the handler from returning a sink
     end-point. This variant of @ref device_irq_source_init can not be
     used to setup source end-points for interrupt controllers devices. */
+config_depend(CONFIG_DEVICE_IRQ)
 void device_irq_tail_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, uint_fast8_t src_count, dev_irq_t *handler);
 
 /** @This initializes an array of device interrupt source
@@ -170,9 +174,11 @@ void device_irq_tail_source_init(struct device_s *dev, struct dev_irq_ep_s *sour
     processing speed. The interrupt controller drivers must provide a
     single function which re-implement the default end-point
     processing code along with the handler stuff. */
+config_depend(CONFIG_DEVICE_IRQ)
 void device_irq_icu_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, uint_fast8_t src_count, dev_irq_ep_process_t *process);
 
 /** @This initializes an array of device interrupt sink end-points */
+config_depend(CONFIG_DEVICE_IRQ)
 void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint_fast8_t src_count, dev_irq_ack_t *ack_handler);
 
 /** @This links device interrupt source end-points to appropriate sink
@@ -180,21 +186,25 @@ void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint
     resources. @This is usually called from device driver
     initialization function passing an array of source end-points
     allocated in the private driver data for the device. */
+config_depend(CONFIG_DEVICE_IRQ)
 error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *sources, uint_fast8_t src_count);
 
 /** @This unlink device interrupt end-points. @This is usually
     called from device driver cleanup function passing an array
     of source/sink end-points allocated in the private driver data. */
+config_depend(CONFIG_DEVICE_IRQ)
 void device_irq_source_unlink(struct device_s *dev, struct dev_irq_ep_s *sources, uint_fast8_t src_count);
 
 /** @This unlink device interrupt end-points. @This is usually
     called from device driver cleanup function passing an array
     of source/sink end-points allocated in the private driver data. */
+config_depend(CONFIG_DEVICE_IRQ)
 void device_irq_sink_unlink(struct device_s *dev, struct dev_irq_ep_s *sinks, uint_fast8_t sink_count);
 
 /** @This is used when an IRQ line resource entry on a device has a
     @tt NULL pointer as reference to an interrupt controller. @This
     queries the enumerator device associated with the device. */
+config_depend(CONFIG_DEVICE_IRQ)
 struct device_s * device_get_default_icu(struct device_s *dev);
 
 #endif

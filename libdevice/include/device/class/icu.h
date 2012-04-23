@@ -69,7 +69,7 @@ typedef DEVICU_SETUP_IPI_EP(devicu_setup_ipi_ep_t);
 
 /** ICU device class methodes */
 
-DEVICE_CLASS_TYPES(icu, 
+DRIVER_CLASS_TYPES(icu, 
                    devicu_get_sink_t	*f_get_sink;
                    devicu_disable_sink_t *f_disable_sink;
 #ifdef CONFIG_HEXO_IPI

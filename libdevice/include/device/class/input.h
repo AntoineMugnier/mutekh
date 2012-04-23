@@ -133,7 +133,7 @@ typedef DEVINPUT_WRITE(devinput_write_t);
 */
 typedef DEVINPUT_SETCALLBACK(devinput_setcallback_t);
 
-DEVICE_CLASS_STRUCT(input, 
+DRIVER_CLASS_STRUCT(input, 
                     devinput_info_t *f_info;
                     devinput_read_t *f_read;
                     devinput_write_t *f_write;

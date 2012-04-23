@@ -53,7 +53,7 @@ typedef DEVENUM_MATCH_DRIVER(devenum_match_driver_t);
     edev device. */
 typedef DEVENUM_GET_DEFAULT_ICU(devenum_get_default_icu_t);
 
-DEVICE_CLASS_TYPES(enum,
+DRIVER_CLASS_TYPES(enum,
                    devenum_match_driver_t *f_match_driver;
 #ifdef CONFIG_DEVICE_IRQ
                    devenum_get_default_icu_t *f_get_default_icu;

@@ -35,16 +35,6 @@
 
 #include <string.h>
 
-#ifdef CONFIG_DEVICE_IRQ
-extern struct device_s *gaisler_icu;
-
-static DEVENUM_GET_DEFAULT_ICU(apbctrl_get_default_icu)
-{
-  assert(dev->enum_dev == edev->dev);
-  return gaisler_icu;
-}
-#endif
-
 static DEVENUM_MATCH_DRIVER(apbctrl_match_driver)
 {
   const struct devenum_ident_s *ident = drv->id_table;
@@ -67,6 +57,51 @@ static DEVENUM_MATCH_DRIVER(apbctrl_match_driver)
   return 0;
 }
 
+
+#ifdef CONFIG_DEVICE_IRQ 
+
+extern struct device_s *gaisler_icu;
+
+static DEVENUM_GET_DEFAULT_ICU(apbctrl_get_default_icu)
+{
+  assert(dev->enum_dev == edev->dev);
+  return gaisler_icu;
+}
+
+
+/* Traverse device tree to add irq resource between irqmp and processors. */
+
+struct apbctrl_scan_cpu_irq_ctx_s
+{
+  struct device_s *irqmp;
+  uint_fast8_t count;
+};
+
+static DEVICE_TREE_WALKER(apbctrl_scan_cpu_irq)
+{
+  struct apbctrl_scan_cpu_irq_ctx_s *ctx = priv;
+
+  if (dev->flags & DEVICE_FLAG_CPU)
+    {
+      uintptr_t maj, min;
+      if (device_res_get_uint(dev, DEV_RES_ID, 0, &maj, &min))
+        return 0;
+
+#ifndef CONFIG_ARCH_SMP
+      if (maj > 0)
+        return 0;
+#endif
+      device_res_add_irq(ctx->irqmp, maj, 0, dev);
+      ctx->count++;
+    }
+
+  return 0;
+}
+#endif
+
+
+/* Enumerate devices using Gaisler APB pnp records. */
+
 static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
 {
   uint_fast8_t i;
@@ -83,7 +118,13 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
       uint16_t device = (endian_be32(p[0]) >> 12) & 0xfff;
       uint8_t version = (endian_be32(p[0]) >> 5) & 0x1f; 
 
+#ifdef CONFIG_DEVICE_IRQ
+      bool_t is_icu = (vendor == 0x01 && device == 0x00d);
+      struct device_s *d = device_alloc(5 + (is_icu ? CONFIG_CPU_MAXCOUNT : 0));
+#else
       struct device_s *d = device_alloc(5);
+#endif
+
       if (!d)
         continue;
 
@@ -98,14 +139,16 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
         device_res_add_irq(d, 0, irq - 1, NULL);
 
       /* check for interrupt controller device */
-      if (vendor == 0x01 && device == 0x00d)
+      if (is_icu && gaisler_icu == NULL)
         {
+          struct apbctrl_scan_cpu_irq_ctx_s ctx = { d, 0 };
           // keep track of gaisler single irq controller
           gaisler_icu = d;
+          // add irq links from irqmp to cpu
+          device_tree_walk(NULL, &apbctrl_scan_cpu_irq, &ctx);
 
-          // bind to all processors devices
-#warning FIXME iterate over processors to add irq link ressources
-          //  device_res_add_irq(d, 0, 0, cpu_device);
+          if (ctx.count == 0)
+            printk("apbctrl: no processor found to link to irqmp device.");
         }
 #endif
 
@@ -143,7 +186,7 @@ static const struct devenum_ident_s	gaisler_apbctrl_ids[] =
 
 static const struct driver_enum_s apbctrl_enum_drv =
 {
-  .class_	= DEVICE_CLASS_ENUM,
+  .class_	= DRIVER_CLASS_ENUM,
   .f_match_driver = apbctrl_match_driver,
 #ifdef CONFIG_DEVICE_IRQ
   .f_get_default_icu = apbctrl_get_default_icu,

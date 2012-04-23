@@ -31,16 +31,23 @@
 #include <device/class/icu.h>
 #include <device/irq.h>
 
+#include <assert.h>
+#include <string.h>
+
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+
+#ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
+# define GAISLER_IRQMP_SINKS_COUNT 31
+#else
+# define GAISLER_IRQMP_SINKS_COUNT 15
+#endif
 
 struct gaisler_irqmp_private_s
 {
   uintptr_t addr;
 
   struct dev_irq_ep_s *sinks;
-  uint_fast8_t sinks_count;
-
   struct dev_irq_ep_s *srcs;
   uint_fast8_t srcs_count;
 };
@@ -50,7 +57,7 @@ static DEVICU_GET_SINK(gaisler_irqmp_icu_get_sink)
   struct device_s *dev = idev->dev;
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
 
-  if (icu_in_id >= pv->sinks_count)
+  if (icu_in_id >= GAISLER_IRQMP_SINKS_COUNT)
     return NULL;
 
   /* enable hwi on output 0 FIXME SMP */
@@ -69,19 +76,45 @@ static DEVICU_SETUP_IPI_EP(gaisler_irqmp_icu_setup_ipi_ep)
 }
 #endif
 
-static DEV_IRQ_EP_PROCESS(gaisler_irqmp_source_process)
+#ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
+static DEV_IRQ_EP_PROCESS(gaisler_irqmp_source_process_eirq)
 {
-  struct dev_irq_ep_s  *src = ep;
   struct device_s *dev = ep->dev;
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
-  uint_fast8_t cpu = src - pv->srcs;
   uint_fast8_t irq = *id;
 
+#ifdef CONFIG_ARCH_SMP
+  struct dev_irq_ep_s  *src = ep;
+  uint_fast8_t cpu = src - pv->srcs;
   assert(cpu < pv->srcs_count);
+#else
+  uint_fast8_t cpu = 0;
+#endif
 
-#warning CONFIG_DRIVER_GAISLER_IRQMP_EIRQ support
+  if (irq < 15)
+    {
+      struct dev_irq_ep_s *sink;
+      uint32_t eack = endian_be32(cpu_mem_read_32(pv->addr + 0xc0 + cpu * 4)) & 0x1f;
 
-  if (irq < pv->sinks_count)
+      assert(eack > 15);
+
+      if (eack)
+        sink = pv->sinks + eack - 1;
+      else
+        sink = pv->sinks + irq;
+      int_fast16_t next_id = 0;
+      sink->process(sink, &next_id);
+    }
+}
+#endif
+
+static DEV_IRQ_EP_PROCESS(gaisler_irqmp_source_process)
+{
+  struct device_s *dev = ep->dev;
+  struct gaisler_irqmp_private_s *pv = dev->drv_pv;
+  uint_fast8_t irq = *id;
+
+  if (irq < GAISLER_IRQMP_SINKS_COUNT)
     {
       struct dev_irq_ep_s *sink = pv->sinks + irq;
       int_fast16_t next_id = 0;
@@ -97,7 +130,7 @@ static const struct devenum_ident_s	gaisler_irqmp_ids[] =
 
 const struct driver_icu_s  gaisler_irqmp_icu_drv =
 {
-  .class_         = DEVICE_CLASS_ICU,
+  .class_         = DRIVER_CLASS_ICU,
   .f_get_sink     = gaisler_irqmp_icu_get_sink,
   .f_disable_sink = gaisler_irqmp_icu_disable_sink,
 # ifdef CONFIG_HEXO_IPI
@@ -140,31 +173,37 @@ static DEV_INIT(gaisler_irqmp_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
+  __attribute__((unused))
   uint32_t status = endian_be32(cpu_mem_read_32(pv->addr + 0x10));
-  pv->srcs_count = (status >> 28) + 1; // number of cpus
-  pv->sinks_count = 15;
-#ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
-  pv->sinks_count += ((status >> 16) & 0xf);
-#else
 
-  printk("%u %u\n", pv->srcs_count, pv->sinks_count);
+#ifdef CONFIG_ARCH_SMP
+  pv->srcs_count = (status >> 28) + 1; // number of cpus
+#else
+  pv->srcs_count = 1;
+#endif
 
   /* init gaisler_irqmp irq source end-points */
   pv->srcs = mem_alloc(sizeof(pv->srcs[0]) * pv->srcs_count, (mem_scope_sys));
   if (!pv->srcs)
     goto err_mem;
 
-  device_irq_icu_source_init(dev, pv->srcs, pv->srcs_count, &gaisler_irqmp_source_process);
+#ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
+  if (((status >> 16) & 0xf) != 0)
+    device_irq_icu_source_init(dev, pv->srcs, pv->srcs_count, &gaisler_irqmp_source_process_eirq);
+  else
+#endif
+    device_irq_icu_source_init(dev, pv->srcs, pv->srcs_count, &gaisler_irqmp_source_process);
 
   if (device_irq_source_link(dev, pv->srcs, pv->srcs_count))
     goto err_mem2;
 
+#warning FIXME check error handling
   /* init gaisler_irqmp irq sink end-points */
-  pv->sinks = mem_alloc(sizeof(pv->sinks[0]) * pv->sinks_count, (mem_scope_sys));
+  pv->sinks = mem_alloc(sizeof(pv->sinks[0]) * GAISLER_IRQMP_SINKS_COUNT, (mem_scope_sys));
   if (!pv->sinks)
     goto err_unlink;
 
-  device_irq_sink_init(dev, pv->sinks, pv->sinks_count, NULL);
+  device_irq_sink_init(dev, pv->sinks, GAISLER_IRQMP_SINKS_COUNT, NULL);
 
 
   dev->drv = &gaisler_irqmp_drv;
@@ -186,7 +225,7 @@ static DEV_CLEANUP(gaisler_irqmp_cleanup)
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
 
   /* detach gaisler_irqmp irq end-points */
-  device_irq_sink_unlink(dev, pv->sinks, pv->sinks_count);
+  device_irq_sink_unlink(dev, pv->sinks, GAISLER_IRQMP_SINKS_COUNT);
   device_irq_source_unlink(dev, pv->srcs, pv->srcs_count);
 
   mem_free(pv->srcs);

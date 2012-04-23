@@ -21,13 +21,13 @@
 
 */
 
-#include <drivers/enum/root/enum-root.h>
 #include <mutek/printk.h>
 #include <device/device.h>
+#include <device/driver.h>
 
-# ifdef CONFIG_DRIVER_ENUM_ROOT
-struct device_s enum_root;
-# endif
+#ifdef CONFIG_DEVICE_TREE
+struct device_s device_enum_root;
+#endif
 
 static void
 device_dump_r(struct device_s *dev, uint_fast8_t indent)
@@ -55,7 +55,7 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
       for (i = 0; (c = dev->drv->classes[i]); i++)
         {
           static const char *cnames[] = { DRIVER_CLASS_NAMES };
-          printk("%u-%s ", c->class_, c->class_ <= DEVICE_CLASS_Sys_Last ? cnames[c->class_] : "Custom");
+          printk("%u-%s ", c->class_, c->class_ <= DRIVER_CLASS_Sys_Last ? cnames[c->class_] : "Custom");
         }
       printk("\n");
     }
@@ -84,7 +84,7 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
         case DEV_RES_IO:
           printk("  I/O range %i from %p to %p\n", c, r->io.start, r->io.end);
           break;
-#ifdef CONFIG_HEXO_IRQ
+#ifdef CONFIG_DEVICE_IRQ
         case DEV_RES_IRQ: {
           struct device_s *icu = r->irq.icu;
           printk("  IRQ output %i bound to input %i of controller %p `%s'\n",
@@ -149,9 +149,9 @@ void
 device_dump_tree(struct device_s *root)
 {
   if (!root)
-    root = &enum_root;
+    root = &device_enum_root;
 
-  device_dump_tree_r(&enum_root, 0);
+  device_dump_tree_r(&device_enum_root, 0);
 }
 
 #endif

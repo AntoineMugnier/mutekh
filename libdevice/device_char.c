@@ -80,7 +80,7 @@ static ssize_t dev_char_lock_request(const struct device_char_s *cdev, uint8_t *
 
   DEVICE_OP(cdev, request, &rq);
 
-#ifdef CONFIG_HEXO_IRQ
+#ifdef CONFIG_DEVICE_IRQ
   assert(cpu_is_interruptible());
 #endif
 

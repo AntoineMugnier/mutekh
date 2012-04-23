@@ -28,6 +28,8 @@
 
 #include <device/device.h>
 
+#include <string.h>
+
 struct dev_resource_s *device_res_get(struct device_s *dev,
                                       enum dev_resource_type_e type,
                                       uint_fast8_t id)
@@ -152,7 +154,7 @@ error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
 error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id,
                            uint_fast16_t icu_in_id, struct device_s *icu)
 {
-#ifdef CONFIG_HEXO_IRQ
+#ifdef CONFIG_DEVICE_IRQ
   struct dev_resource_s *r = device_res_unused(dev);
 
   if (dev->status == DEVICE_DRIVER_INIT_DONE)

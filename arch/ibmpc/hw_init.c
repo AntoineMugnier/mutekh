@@ -208,9 +208,9 @@ void arch_hw_init()
 
 #if defined(CONFIG_MUTEK_CONSOLE)
 # if defined(CONFIG_DRIVER_CHAR_VGATTY) || defined(CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD)
-	device_get_accessor(&console_dev, &tty_dev, DEVICE_CLASS_CHAR, 0);
+	device_get_accessor(&console_dev, &tty_dev, DRIVER_CLASS_CHAR, 0);
 # elif defined(CONFIG_DRIVER_CHAR_UART8250)
-	device_get_accessor(&console_dev, &uart_dev, DEVICE_CLASS_CHAR, 0);
+	device_get_accessor(&console_dev, &uart_dev, DRIVER_CLASS_CHAR, 0);
 # else
 #  error I would like an output for my console
 # endif

@@ -31,8 +31,11 @@
 #include <device/irq.h>
 #include <device/class/enum.h>
 
+#include <assert.h>
+#include <string.h>
+
 # ifdef CONFIG_DRIVER_ENUM_ROOT
-struct device_s enum_root;
+struct device_s device_enum_root;
 # endif
 
 error_t device_get_accessor(void *accessor, struct device_s *dev,
@@ -72,7 +75,9 @@ void device_put_accessor(void *accessor)
   a->api = NULL;
 }
 
-static bool_t device_bind_driver_r(struct device_s *dev)
+#ifdef CONFIG_DEVICE_TREE
+
+static bool_t device_find_driver_r(struct device_s *dev)
 {
   extern const struct driver_s * global_driver_registry[];
   extern const struct driver_s * global_driver_registry_end[];
@@ -89,7 +94,7 @@ static bool_t device_bind_driver_r(struct device_s *dev)
       /* get associated enumerator device */
       if (!dev->enum_dev)
         break;
-      if (device_get_accessor(&e, dev->enum_dev, DEVICE_CLASS_ENUM, 0))
+      if (device_get_accessor(&e, dev->enum_dev, DRIVER_CLASS_ENUM, 0))
         break;
 
       /* iterate over available drivers */
@@ -102,10 +107,7 @@ static bool_t device_bind_driver_r(struct device_s *dev)
           /* use enumerator to decide if driver is appropriate for this device */
           if (DEVICE_OP(&e, match_driver, *drv, dev))
             {
-              dev->drv = *drv;
-              dev->status = DEVICE_DRIVER_INIT_PENDING;
-              printk("device: %p `%s' device bound to %p `%s' driver\n",
-                     dev, dev->name, *drv, (*drv)->desc);
+              device_bind_driver(dev, *drv);
               done = 1;
               break;
             }
@@ -118,64 +120,88 @@ static bool_t device_bind_driver_r(struct device_s *dev)
     }
 
       /* try to intialize device using associated driver */
-    case DEVICE_DRIVER_INIT_PENDING: {
-      const struct driver_s *drv = dev->drv;
-      uint_fast8_t i;
+    case DEVICE_DRIVER_INIT_PENDING: 
 
-      /** check dependencies before try device initialization */
-      for (i = 0; i < dev->res_count; i++)
-        {
-          struct dev_resource_s *r = dev->res + i;
-          switch (r->type)
-            {
-#ifdef CONFIG_HEXO_IRQ
-              /** check that interrupt controllers are initialized */
-            case DEV_RES_IRQ: {
-              struct device_s *icu = r->irq.icu;
-              if (!icu)
-                icu = device_get_default_icu(dev);
-              if (!icu || icu->status != DEVICE_DRIVER_INIT_DONE)
-                goto skip;
-            }
-#endif
-            default:
-              break;
-            }
-        }
-
-      /** device init */
-      error_t err = drv->f_init(dev);
-
-      if (err)
-        printk("device: device %p `%s' initialization failed with return code %i\n",
-               dev, dev->name, err);
-
-      if (dev->status != DEVICE_DRIVER_INIT_PENDING)
-        done = 1;
-
-      goto skip;
-      skip:;
-    }
+      if (device_init_driver(dev) != -EAGAIN)
+        if (dev->status != DEVICE_DRIVER_INIT_PENDING)
+          done = 1;
 
     default:
       break;
     }
 
   CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
-      done |= device_bind_driver_r(item);
+      done |= device_find_driver_r(item);
   });
 
   return done;
 }
 
-void device_bind_driver(struct device_s *dev)
+extern struct device_s device_enum_root;
+
+void device_find_driver(struct device_s *dev)
 {
   if (!dev)
-    dev = &enum_root;
+    dev = &device_enum_root;
 
   /* try to bind and init as many devices as possible */
-  while (device_bind_driver_r(dev))
+  while (device_find_driver_r(dev))
     ;
 }
 
+#endif
+
+error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv)
+{
+  if (dev->status != DEVICE_NO_DRIVER)
+    return -EBUSY;
+
+  dev->drv = drv;
+  dev->status = DEVICE_DRIVER_INIT_PENDING;      
+
+  printk("device: %p `%s' uses %p `%s' driver\n",
+         dev, dev->name, drv, drv->desc);
+
+  return 0;
+}
+
+error_t device_init_driver(struct device_s *dev)
+{
+  const struct driver_s *drv = dev->drv;
+
+  if (dev->status != DEVICE_DRIVER_INIT_PENDING)
+    return -EBUSY;
+
+  uint_fast8_t i;
+
+  /* check dependencies before try device initialization */
+  for (i = 0; i < dev->res_count; i++)
+    {
+      struct dev_resource_s *r = dev->res + i;
+      switch (r->type)
+        {
+#ifdef CONFIG_DEVICE_IRQ
+          /* check that interrupt controllers are initialized */
+        case DEV_RES_IRQ: {
+          struct device_s *icu = r->irq.icu;
+          if (!icu)
+            icu = device_get_default_icu(dev);
+          if (!icu || icu->status != DEVICE_DRIVER_INIT_DONE)
+            return -EAGAIN;
+        }
+#endif
+        default:
+          break;
+        }
+    }
+
+  /* device init */
+  error_t err = drv->f_init(dev);
+
+  if (err)
+    printk("device: device %p `%s' initialization failed with return code %i\n",
+           dev, dev->name, err);
+
+  return err;
+}
 

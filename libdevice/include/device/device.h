@@ -42,10 +42,8 @@ struct driver_s;
 #include <hexo/gpct_lock_hexo.h>
 
 #ifdef CONFIG_DEVICE_TREE
-
-#include <gpct/cont_clist.h>
-#include <gpct/object_refcount.h>
-
+# include <gpct/cont_clist.h>
+# include <gpct/object_refcount.h>
 #endif
 
 enum dev_resource_type_e
@@ -220,10 +218,22 @@ enum device_status_e
 
 #define DEVICE_STATUS_NAMES "no driver", "init pending", "init ok", "init failed"
 
+enum device_flags_e
+{
+  /** The device object has been dynamically allocated and must be freed on cleanup. */
+  DEVICE_FLAG_ALLOCATED = 1,
+  /** This device is a processor. Operations on this device may only
+      be executed on the corresponding processor. */
+  DEVICE_FLAG_CPU = 2,
+  /** This device must be retained as the default device of its class. */
+  DEVICE_FLAG_CHOSEN = 4,
+};
+
+
+
+
 #ifdef CONFIG_DEVICE_TREE
-
-#define CONTAINER_LOCK_device_list HEXO_SPIN
-
+# define CONTAINER_LOCK_device_list HEXO_SPIN
 CONTAINER_TYPE(device_list, CLIST,
 #endif
 /** device object structure */
@@ -247,13 +257,13 @@ struct device_s
   uint_fast8_t                  ref_count;
 
   /** indicated if the device node has been dynamically allocated */
-  bool_t                        allocated;
-
-#ifdef CONFIG_DEVICE_TREE
+  uint_fast8_t                  flags;
 
   /** device name, freed on device object destruction if not NULL and
       @tt allocated is set. */
   const char *                  name;
+
+#ifdef CONFIG_DEVICE_TREE
 
   /** pointer to device enumerator private data if any */
   struct device_s               *enum_dev;
@@ -268,11 +278,14 @@ struct device_s
   struct dev_resource_s         res[DEVICE_STATIC_RESOURCE_COUNT];
 }
 #ifdef CONFIG_DEVICE_TREE
-, list_entry)
+, list_entry);
+
+CONTAINER_PROTOTYPE(device_list, inline, device_list);
 #endif
 ;
 
-#ifdef CONFIG_DEVICE_TREE
+
+
 
 /** @This initializes a statically allocated device object. Number of
     resource slot is @ref #DEVICE_STATIC_RESOURCE_COUNT
@@ -293,30 +306,43 @@ void device_cleanup(struct device_s *dev);
     count. The device node is reallocated to save memory. */
 void device_shrink(struct device_s *dev);
 
-CONTAINER_PROTOTYPE(device_list, inline, device_list);
-
 /** @This attaches a device to a parent enumerator device. If the
     parent device pointer is NULL, the device is attached on root enumerator. */
+config_depend(CONFIG_DEVICE_TREE)
 void device_attach(struct device_s *dev,
                       struct device_s *parent);
 
 /** @This detaches a device from its parent enumerator device */
+config_depend(CONFIG_DEVICE_TREE)
 void device_detach(struct device_s *dev);
 
 /** @This prints the current devices tree. */
 void device_dump(struct device_s *root);
 
 /** @This prints the current devices tree. */
+config_depend(CONFIG_DEVICE_TREE)
 void device_dump_tree(struct device_s *root);
 
-#define DEVICE_TREE_WALKER(x) void (x)(struct device_s *dev, void *priv)
+/** @see device_tree_walker_t */
+#define DEVICE_TREE_WALKER(x) bool_t (x)(struct device_s *dev, void *priv)
 
+/** @see device_tree_walk */
 typedef DEVICE_TREE_WALKER(device_tree_walker_t);
 
-void device_tree_walk(device_tree_walker_t *walker, void *priv);
+/** @This traverse device tree calling @ref device_tree_walker_t
+    function type foreach each node. Traversal stops if the provided
+    function returns non-zero. */
+config_depend(CONFIG_DEVICE_TREE)
+bool_t device_tree_walk(struct device_s *root, device_tree_walker_t *walker, void *priv);
 
-#endif /* !CONFIG_DEVICE_TREE */
+/** @This returns first device with the @tt CPU flag set and matching
+    specified numerical ids. The -1 value can be used as wildcard for
+    both ids but the device still has to have an id resource attached. */
+config_depend(CONFIG_DEVICE_TREE)
+struct device_s *device_get_cpu(uint_fast8_t major_id, uint_fast8_t minor_id);
 
+/** @This returns child device at specified index */
+config_depend(CONFIG_DEVICE_TREE)
 struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i);
 
 #ifdef CONFIG_VMEM

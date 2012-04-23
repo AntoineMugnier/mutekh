@@ -28,9 +28,11 @@
 #include <device/class/enum.h>
 
 #include <mutek/printk.h>
+#include <mutek/mem_alloc.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <assert.h>
-#include <mutek/mem_alloc.h>
 
 /* anchor source_process */
 static DEV_IRQ_EP_PROCESS(device_irq_source_process)
@@ -455,7 +457,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *src, u
 
       struct device_icu_s icu;
 
-      if (device_get_accessor(&icu, icu_dev, DEVICE_CLASS_ICU, 0))
+      if (device_get_accessor(&icu, icu_dev, DRIVER_CLASS_ICU, 0))
         {
           printk("device: can not use %p `%s' device as an interrupt controller.\n", r->irq.icu, r->irq.icu->name);
           err = -EINVAL;
@@ -491,11 +493,12 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *src, u
 
 struct device_s * device_get_default_icu(struct device_s *dev)
 {
+#ifdef CONFIG_DEVICE_TREE
   struct device_enum_s e;
 
   if (!dev->enum_dev)
     return NULL;
-  if (device_get_accessor(&e, dev->enum_dev, DEVICE_CLASS_ENUM, 0))
+  if (device_get_accessor(&e, dev->enum_dev, DRIVER_CLASS_ENUM, 0))
     return NULL;
 
   struct device_s *icu = NULL;
@@ -506,5 +509,8 @@ struct device_s * device_get_default_icu(struct device_s *dev)
   device_put_accessor(&e);
 
   return icu;
+#else
+  return NULL;
+#endif
 }
 

@@ -96,7 +96,7 @@ CONTAINER_FUNC(dev_char_queue, CLIST, static inline, dev_char_queue);
 typedef DEVCHAR_REQUEST(devchar_request_t);
 
 
-DEVICE_CLASS_TYPES(char, 
+DRIVER_CLASS_TYPES(char, 
                    devchar_request_t *f_request;
                    );
 

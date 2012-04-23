@@ -22,7 +22,6 @@
 #include <assert.h>
 
 #if defined(CONFIG_ARCH_DEVICE_TREE)
-# include <drivers/enum/fdt/fdt.h>
 # include <device/class/enum.h>
 # include <device/driver.h>
 # include <device/device.h>
@@ -45,7 +44,6 @@ void soclib_early_console(uintptr_t addr);
 #include <string.h>
 
 #if defined(CONFIG_ARCH_DEVICE_TREE)
-struct device_s fdt_enum_dev;
 extern void *arch_fdt;
 #endif
 
@@ -125,12 +123,8 @@ static
 void hw_init()
 {
 #if defined(CONFIG_ARCH_DEVICE_TREE)
-//    device_init(&fdt_enum_dev);
-//    enum_fdt_init(&fdt_enum_dev, arch_fdt);
-//    mutek_parse_fdt(&fdt_enum_dev, arch_fdt);
     //TODO: change with mem_parse_fdt when lib topology is done
     mem_region_init();
-    //        mem_parse_fdt(arch_fdt);
 
 #if 0
     static struct device_s tty_dev;
@@ -141,15 +135,19 @@ void hw_init()
     device_res_add_mem(&tty_dev, 0xd0200000, 0xd0200010);
     tty_soclib_init(&tty_dev);
 
-	device_get_accessor(&console_dev, &tty_dev, DEVICE_CLASS_CHAR, 0);
+	device_get_accessor(&console_dev, &tty_dev, DRIVER_CLASS_CHAR, 0);
 #endif
 
+    extern const struct driver_s enum_fdt_drv;
     static struct device_s fdt_dev;
 
     device_init(&fdt_dev);
     device_attach(&fdt_dev, NULL);
     device_res_add_mem(&fdt_dev, (uintptr_t)arch_fdt, (uintptr_t)arch_fdt + fdt_get_size(arch_fdt));
-    enum_fdt_init(&fdt_dev);
+    device_bind_driver(&fdt_dev, &enum_fdt_drv);
+    device_init_driver(&fdt_dev);
+
+    device_find_driver(NULL);
 
 #elif defined(CONFIG_ARCH_HW_INIT_USER)
     user_hw_init();

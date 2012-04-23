@@ -34,6 +34,7 @@
 #include <device/irq.h>
 
 #include <string.h>
+#include <stdio.h>
 
 #ifdef CONFIG_DEVICE_IRQ
 extern struct device_s *gaisler_icu;
@@ -70,6 +71,7 @@ static DEVENUM_MATCH_DRIVER(ahbctrl_match_driver)
 static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
 {
   const uint32_t *p;
+  uintptr_t cpu_id = 0;
 
   for (p = (const uint32_t*)begin; p < (const uint32_t*)end && (uintptr_t)p < 0xfffffff0; p += 8)
     {
@@ -88,6 +90,19 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
       device_res_add_vendorid(d, vendor, NULL);
       device_res_add_productid(d, device, NULL);
       device_res_add_revision(d, version, 0);
+
+      /* processor case */
+      if (vendor == 1 && (device == 0x003 || device == 0x048))
+        {
+          char name [16];
+
+          device_res_add_id(d, cpu_id, 0);
+          d->flags |= DEVICE_FLAG_CPU;
+
+          sprintf(name, "cpu%u", cpu_id);
+          d->name = strdup(name);
+          cpu_id++;
+        }
 
 #ifdef CONFIG_DEVICE_IRQ
       uint8_t irq = endian_be32(p[0]) & 0x1f;
@@ -143,12 +158,12 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
     }
 }
 
-DEV_CLEANUP(ahbctrl_cleanup);
-DEV_INIT(ahbctrl_init);
+static DEV_CLEANUP(ahbctrl_cleanup);
+static DEV_INIT(ahbctrl_init);
 
 static const struct driver_enum_s ahbctrl_enum_drv =
 {
-  .class_	= DEVICE_CLASS_ENUM,
+  .class_	= DRIVER_CLASS_ENUM,
   .f_match_driver = ahbctrl_match_driver,
 #ifdef CONFIG_DEVICE_IRQ
   .f_get_default_icu = ahbctrl_get_default_icu,
@@ -165,7 +180,7 @@ const struct driver_s	ahbctrl_drv =
 
 REGISTER_DRIVER(ahbctrl_drv);
 
-DEV_INIT(ahbctrl_init)
+static DEV_INIT(ahbctrl_init)
 {
   dev->status = DEVICE_DRIVER_INIT_FAILED;
   dev->drv = &ahbctrl_drv;
@@ -184,7 +199,7 @@ DEV_INIT(ahbctrl_init)
   return -1;
 }
 
-DEV_CLEANUP(ahbctrl_cleanup)
+static DEV_CLEANUP(ahbctrl_cleanup)
 {
 }
 

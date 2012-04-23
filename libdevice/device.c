@@ -32,22 +32,21 @@
 
 #include <mutek/printk.h>
 
-#include <drivers/enum/root/enum-root.h>
-
-# ifdef CONFIG_DRIVER_ENUM_ROOT
-struct device_s enum_root;
-# endif
+#ifdef CONFIG_DEVICE_TREE
+extern const struct driver_s device_enum_root_drv;
+struct device_s device_enum_root;
+CONTAINER_FUNC(device_list, CLIST, inline, device_list);
+#endif
 
 void device_tree_init()
 {
-# ifdef CONFIG_DRIVER_ENUM_ROOT
-  device_init(&enum_root);
-  enum_root_init(&enum_root);
-  enum_root.name = "root";
-# endif
+#ifdef CONFIG_DEVICE_TREE
+  device_init(&device_enum_root);
+  device_enum_root.name = "root";
+  device_bind_driver(&device_enum_root, &device_enum_root_drv);
+  device_init_driver(&device_enum_root);
+#endif
 }
-
-CONTAINER_FUNC(device_list, CLIST, inline, device_list);
 
 void device_init(struct device_s *dev)
 {
@@ -56,11 +55,11 @@ void device_init(struct device_s *dev)
   dev->drv = NULL;
   dev->res_count = DEVICE_STATIC_RESOURCE_COUNT;
   dev->ref_count = 0;
-  dev->allocated = 0;
+  dev->flags = 0;
 
 #ifdef CONFIG_DEVICE_TREE
   dev->name = NULL;
-  dev->enum_dev = &enum_root;
+  dev->enum_dev = &device_enum_root;
   dev->parent = NULL;
   device_list_init(&dev->children);
 #endif
@@ -80,11 +79,11 @@ struct device_s *device_alloc(size_t resources)
       dev->drv = NULL;
       dev->res_count = resources;
       dev->ref_count = 0;
-      dev->allocated = 1;
+      dev->flags = DEVICE_FLAG_ALLOCATED;
 
 #ifdef CONFIG_DEVICE_TREE
       dev->name = NULL;
-      dev->enum_dev = &enum_root;
+      dev->enum_dev = &device_enum_root;
       dev->parent = NULL;
       device_list_init(&dev->children);
 #endif
@@ -99,7 +98,9 @@ void device_cleanup(struct device_s *dev)
 {
   uint_fast8_t i;
 
+#ifdef CONFIG_DEVICE_TREE
   assert(!dev->parent);
+#endif
   assert(!dev->ref_count);
 
   if (dev->status == DEVICE_DRIVER_INIT_DONE)
@@ -110,28 +111,28 @@ void device_cleanup(struct device_s *dev)
       struct dev_resource_s *r = dev->res + i;
       switch (r->type)
         {
-#ifdef CONFIG_HEXO_IRQ
+#ifdef CONFIG_DEVICE_IRQ
         case DEV_RES_IRQ:
           if (r->irq.icu)
             r->irq.icu--;
           break;
 #endif
         case DEV_RES_VENDORID:
-          if (r->vendor.name && dev->allocated)
+          if (r->vendor.name && (dev->flags & DEVICE_FLAG_ALLOCATED))
             mem_free((void*)r->vendor.name);
           break;
 
         case DEV_RES_PRODUCTID:
-          if (r->product.name && dev->allocated)
+          if (r->product.name && (dev->flags & DEVICE_FLAG_ALLOCATED))
             mem_free((void*)r->product.name);
           break;
 
         case DEV_RES_STR_PARAM:
         case DEV_RES_UINT_ARRAY_PARAM:
-          if (dev->allocated)
+          if (dev->flags & DEVICE_FLAG_ALLOCATED)
             mem_free((void*)r->str_param.value);
         case DEV_RES_UINT_PARAM:
-          if (dev->allocated)
+          if (dev->flags & DEVICE_FLAG_ALLOCATED)
             mem_free((void*)r->str_param.name);
           break;
 
@@ -140,10 +141,13 @@ void device_cleanup(struct device_s *dev)
         }
     }
 
+#ifdef CONFIG_DEVICE_TREE
   device_list_destroy(&dev->children);
+#endif
+
   lock_destroy(&dev->lock);
 
-  if (dev->allocated)
+  if (dev->flags & DEVICE_FLAG_ALLOCATED)
     {
       if (dev->name)
         mem_free((void*)dev->name);
@@ -155,6 +159,8 @@ void device_cleanup(struct device_s *dev)
 void device_shrink(struct device_s *dev)
 {
   uint_fast8_t i;
+
+  assert(dev->flags & DEVICE_FLAG_ALLOCATED);
 
   for (i = dev->res_count; i > 0; i--)
     if (dev->res[i-1].type != DEV_RES_UNUSED)
@@ -169,6 +175,8 @@ void device_shrink(struct device_s *dev)
     }
 }
 
+#ifdef CONFIG_DEVICE_TREE
+
 void device_attach(struct device_s *dev,
                    struct device_s *parent)
 {
@@ -178,7 +186,7 @@ void device_attach(struct device_s *dev,
   assert(!dev->parent);
 
   if (!parent)
-    parent = &enum_root;
+    parent = &device_enum_root;
 
   dev->parent = parent;
 
@@ -203,7 +211,6 @@ struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i)
 {
   struct device_s *res = NULL;
 
-#ifdef CONFIG_DEVICE_TREE
   CONTAINER_FOREACH(device_list, CLIST, &dev->children,
   {
     if (i-- == 0)
@@ -212,24 +219,64 @@ struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i)
 	break;
       }
   });
-#endif
 
   return res;
 }
 
-#if defined(CONFIG_DEVICE_TREE) && defined (CONFIG_DRIVER_ENUM_ROOT)
-static void _device_tree_walk(struct device_s *dev, device_tree_walker_t *walker, void *priv)
+static bool_t _device_tree_walk(struct device_s *dev, device_tree_walker_t *walker, void *priv)
 {
-    walker(dev, priv);
-    CONTAINER_FOREACH(device_list, CLIST, &dev->children,
-    {
-        _device_tree_walk(item, walker, priv);
-    });
+  if (walker(dev, priv))
+    return 1;
+
+  CONTAINER_FOREACH(device_list, CLIST, &dev->children,
+  {
+    if(_device_tree_walk(item, walker, priv))
+      return 1;
+  });
+
+  return 0;
 }
 
-void device_tree_walk(device_tree_walker_t *walker, void *priv)
+bool_t device_tree_walk(struct device_s *root, device_tree_walker_t *walker, void *priv)
 {
-    _device_tree_walk(&enum_root, walker, priv);
+  if (!root)
+    root = &device_enum_root;
+  return _device_tree_walk(root, walker, priv);
 }
+
+struct device_get_cpu_ctx_s
+{
+  struct device_s *cpu;
+  uint_fast8_t major;
+  uint_fast8_t minor;
+};
+
+static DEVICE_TREE_WALKER(device_get_cpu_r)
+{
+  struct device_get_cpu_ctx_s *ctx = priv;
+
+  if (dev->flags & DEVICE_FLAG_CPU)
+    {
+      uintptr_t maj, min;
+      if (device_res_get_uint(dev, DEV_RES_ID, 0, &maj, &min))
+        return 0;
+
+      if ((ctx->major == maj || ctx->major == -1) && (ctx->minor == min || ctx->minor == -1))
+        {
+          ctx->cpu = dev;
+          return 1;
+        }
+    }
+
+  return 0;
+}
+
+struct device_s *device_get_cpu(uint_fast8_t major_id, uint_fast8_t minor_id)
+{
+  struct device_get_cpu_ctx_s ctx = { NULL, major_id, minor_id };
+  device_tree_walk(NULL, &device_get_cpu_r, &ctx);
+  return ctx.cpu;
+}
+
 #endif
 

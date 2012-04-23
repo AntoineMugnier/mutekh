@@ -36,24 +36,24 @@
 /** @This specifies device driver personality class. */
 enum driver_class_e
 {
-  DEVICE_CLASS_NONE = 0,
+  DRIVER_CLASS_NONE = 0,
 
-  DEVICE_CLASS_BLOCK,
-  DEVICE_CLASS_CHAR,
-  DEVICE_CLASS_ENUM,
-  DEVICE_CLASS_FB,
-  DEVICE_CLASS_ICU,
-  DEVICE_CLASS_INPUT,
-  DEVICE_CLASS_NET,
-  DEVICE_CLASS_SOUND,
-  DEVICE_CLASS_TIMER,
-  DEVICE_CLASS_SPI,
-  DEVICE_CLASS_LCD,
-  DEVICE_CLASS_GPIO,
-  DEVICE_CLASS_I2C,
-  DEVICE_CLASS_MEM,
-  DEVICE_CLASS_Sys_Last = DEVICE_CLASS_MEM, //< last MutekH reserved value in use
-  DEVICE_CLASS_User_First = 128,            //< First user defined device class id
+  DRIVER_CLASS_BLOCK,
+  DRIVER_CLASS_CHAR,
+  DRIVER_CLASS_ENUM,
+  DRIVER_CLASS_FB,
+  DRIVER_CLASS_ICU,
+  DRIVER_CLASS_INPUT,
+  DRIVER_CLASS_NET,
+  DRIVER_CLASS_SOUND,
+  DRIVER_CLASS_TIMER,
+  DRIVER_CLASS_SPI,
+  DRIVER_CLASS_LCD,
+  DRIVER_CLASS_GPIO,
+  DRIVER_CLASS_I2C,
+  DRIVER_CLASS_MEM,
+  DRIVER_CLASS_Sys_Last = DRIVER_CLASS_MEM, //< last MutekH reserved value in use
+  DRIVER_CLASS_User_First = 128,            //< First user defined device class id
 };
 
 #define DRIVER_CLASS_NAMES                                         \
@@ -246,7 +246,7 @@ struct driver_s
 /**
    @internal @This declares a device accessor type.
 */
-#define DEVICE_CLASS_TYPES(cl, ...)                                    \
+#define DRIVER_CLASS_TYPES(cl, ...)                                    \
 /**                                                                     \
    @This is the device accessor object type for the cl device class.    \
    This accessor must be initialized                                    \
@@ -330,6 +330,15 @@ void device_put_accessor(void *accessor);
    The tree is traversed multiple times until no more actions can be
    taken.
 */
-void device_bind_driver(struct device_s *dev);
+config_depend(CONFIG_DEVICE_TREE)
+void device_find_driver(struct device_s *dev);
+
+/** @This binds a device to a device driver. No check is performed to
+    determine if the driver is appropriate. */
+error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv);
+
+/** @This performs device initialization using previously bound driver. */
+error_t device_init_driver(struct device_s *dev);
 
 #endif
+

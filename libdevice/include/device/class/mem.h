@@ -61,7 +61,7 @@ struct dev_mem_info_s
 typedef DEVMEM_GET_INFO(devmem_get_info_t);
 
 
-DEVICE_CLASS_TYPES(mem,
+DRIVER_CLASS_TYPES(mem,
                    devmem_get_info_t *f_get_info;
                    );
 

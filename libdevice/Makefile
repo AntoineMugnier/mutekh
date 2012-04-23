@@ -9,8 +9,12 @@ doc_headers =  device/device.h  device/driver.h device/irq.h \
 
 objs = driver.o device.o dump.o resources.o
 
-ifeq ($(CONFIG_HEXO_IRQ), defined)
+ifeq ($(CONFIG_DEVICE_IRQ), defined)
  objs += irq.o
+endif
+
+ifeq ($(CONFIG_DEVICE_TREE), defined)
+ objs += enum_root.o
 endif
 
 ifeq ($(CONFIG_DEVICE_CHAR), defined)

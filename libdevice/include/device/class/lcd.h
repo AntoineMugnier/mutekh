@@ -139,7 +139,7 @@ typedef DEVLCD_GETINFO(devlcd_getinfo_t);
 
 
 
-DEVICE_CLASS_TYPES(lcd,
+DRIVER_CLASS_TYPES(lcd,
                     devlcd_request_t	*f_request;
                     devlcd_getinfo_t	*f_getinfo;
                     );

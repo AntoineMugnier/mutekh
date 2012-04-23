@@ -25,21 +25,8 @@
 #include <device/device.h>
 #include <device/driver.h>
 
-#include "memory.h"
-
-DEVMEM_GET_INFO(memory_get_info)
-{
-	struct device_s *dev = mdev->dev;
-	uint32_t flags = (uint32_t)dev->drv_pv;
-
-	struct dev_resource_s *r = device_res_get(dev, DEV_RES_MEM, 0);
-
-	if (r) {
-		info->base = r->mem.start;
-		info->size = r->mem.end - r->mem.start;
-		info->flags = flags;
-	}
-}
+static DEV_INIT(memory_init);
+static DEV_CLEANUP(memory_cleanup);
 
 static const struct devenum_ident_s	memory_ids[] =
 {
@@ -49,8 +36,7 @@ static const struct devenum_ident_s	memory_ids[] =
 
 static const struct driver_mem_s   memory_mem_drv =
 {
-	.class_     = DEVICE_CLASS_MEM,
-	.f_get_info = memory_get_info,
+	.class_     = DRIVER_CLASS_MEM,
 };
 
 const struct driver_s   memory_drv =
@@ -63,21 +49,15 @@ const struct driver_s   memory_drv =
 
 REGISTER_DRIVER(memory_drv);
 
-DEV_INIT(memory_init)
+static DEV_INIT(memory_init)
 {
+	dev->status = DEVICE_DRIVER_INIT_DONE;
 	dev->drv = &memory_drv;
-
-	uint32_t flags = 0;
-#warning FIXME
-	flags |= DEV_MEM_CACHED|DEV_MEM_COHERENT;
-	flags |= DEV_MEM_CACHED;
-
-	dev->drv_pv = (void*)flags;
 
 	return 0;
 }
 
-DEV_CLEANUP(memory_cleanup)
+static DEV_CLEANUP(memory_cleanup)
 {
 }
 

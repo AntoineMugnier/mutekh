@@ -299,7 +299,7 @@ enum spi_mode_e {
 typedef DEVSPI_SET_DATA_FORMAT(devspi_set_data_format_t);
 
 
-DEVICE_CLASS_TYPES(spi, 
+DRIVER_CLASS_TYPES(spi, 
 		    devspi_request_t		*f_request;
 		    devspi_set_baudrate_t	*f_set_baudrate;
 		    devspi_set_data_format_t	*f_set_data_format;

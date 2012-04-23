@@ -81,6 +81,32 @@ static CPU_EXCEPTION_HANDLER(fault_handler);
 
 static lock_t fault_lock;
 
+#if defined(CONFIG_MUTEK_CONSOLE)
+
+extern struct device_char_s console_dev;
+
+struct device_find_chosen_ctx_s
+{
+    struct device_s *console;
+};
+
+static DEVICE_TREE_WALKER(device_find_chosen)
+{
+    struct device_find_chosen_ctx_s *ctx = priv;
+
+    if (ctx->console == NULL)
+        {
+            if (device_get_accessor(&console_dev, dev, DRIVER_CLASS_CHAR, 0) == 0)
+                {
+                    ctx->console = dev;
+                    return 1;
+                }            
+        }
+
+    return 0;
+}
+#endif
+
 int_fast8_t mutek_start()  /* FIRST CPU only */
 {
 	lock_init(&fault_lock);
@@ -93,9 +119,14 @@ int_fast8_t mutek_start()  /* FIRST CPU only */
     cpu_interrupt_disable();
 #endif
 
-#if defined(CONFIG_MUTEK_CONSOLE) && !defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
-	if ( console_dev.dev )
-		printk_set_output(__printf_out_tty, &console_dev);
+#if defined(CONFIG_MUTEK_CONSOLE)
+    struct device_find_chosen_ctx_s ctx = { 0 };
+    device_tree_walk(NULL, &device_find_chosen, &ctx);
+
+# if !defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
+    if ( ctx.console )
+      printk_set_output(__printf_out_tty, &console_dev);
+# endif
 #endif
 
 #if defined(CONFIG_LIBC_UNIXFD)

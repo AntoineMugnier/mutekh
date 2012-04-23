@@ -72,14 +72,16 @@ void arch_init(uintptr_t init_sp)
     cpu_init();
 
 #if 1
+    extern const struct driver_s ahbctrl_drv;
     static struct device_s ahbctrl_dev;
 
     device_init(&ahbctrl_dev);
     device_attach(&ahbctrl_dev, NULL);
     device_res_add_mem(&ahbctrl_dev, 0xfffff000, 0xffffffe0);
-    ahbctrl_init(&ahbctrl_dev);
+    device_bind_driver(&ahbctrl_dev, &ahbctrl_drv);
+    device_init_driver(&ahbctrl_dev);
 
-    device_bind_driver(NULL);
+    device_find_driver(NULL);
 #endif
 
 #if defined(CONFIG_MUTEK_SCHEDULER)

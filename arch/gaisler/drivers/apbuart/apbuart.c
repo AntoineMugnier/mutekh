@@ -211,7 +211,7 @@ static const struct devenum_ident_s	gaisler_apbuart_ids[] =
 
 static const struct driver_char_s	gaisler_apbuart_char_drv =
 {
-  .class_		= DEVICE_CLASS_CHAR,
+  .class_		= DRIVER_CLASS_CHAR,
   .f_request		= gaisler_apbuart_request,
 };
 
@@ -275,11 +275,6 @@ DEV_INIT(gaisler_apbuart_init)
   dev->status = DEVICE_DRIVER_INIT_DONE;
   dev->drv = &gaisler_apbuart_drv;
   dev->drv_pv = pv;
-
-#warning FIXME use choosen
-  extern struct device_char_s console_dev;
-  device_get_accessor(&console_dev, dev, DEVICE_CLASS_CHAR, 0);
-  return 0;
 
   return 0;
  err_mem:

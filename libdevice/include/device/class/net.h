@@ -106,7 +106,7 @@ typedef DEVNET_SETOPT(devnet_setopt_t);
 typedef DEVNET_GETOPT(devnet_getopt_t);
 
 
-DEVICE_CLASS_STRUCT(net,
+DRIVER_CLASS_STRUCT(net,
                     devnet_preparepkt_t *f_preparepkt;
                     devnet_sendpkt_t *f_sendpkt;
                     devnet_setopt_t *f_setopt;

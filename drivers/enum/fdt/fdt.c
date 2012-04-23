@@ -39,8 +39,6 @@
 
 #include <fdt/reader.h>
 
-#include "fdt.h"
-
 enum enum_fdt_section_e
 {
   FDT_SECTION_NONE,
@@ -119,10 +117,13 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
         {
           d->name = strdup(name);
           device_attach(d, p->dev);
+
+          d->enum_pv = (void*)-1;
+          if (p->section == FDT_SECTION_CPUS)
+            d->flags |= DEVICE_FLAG_CPU;
         }
 
       e->dev = d;
-      d->enum_pv = (void*)-1;
       if (e->section == FDT_SECTION_NONE)
         e->section = FDT_SECTION_DEVICE;
       return 1;
@@ -270,7 +271,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
        }
       break;
 
-#ifdef CONFIG_HEXO_IRQ
+#ifdef CONFIG_DEVICE_IRQ
     case 'i': {
       uint32_t elen = e->interrupt_cells * 4;
 
@@ -378,9 +379,12 @@ DEVENUM_MATCH_DRIVER(enum_fdt_match_driver)
 
 static const struct driver_enum_s enum_fdt_enum_drv =
 {
-  .class_	= DEVICE_CLASS_ENUM,
+  .class_	= DRIVER_CLASS_ENUM,
   .f_match_driver = enum_fdt_match_driver,
 };
+
+static DEV_CLEANUP(enum_fdt_cleanup);
+static DEV_INIT(enum_fdt_init);
 
 const struct driver_s	enum_fdt_drv =
 {
@@ -436,7 +440,7 @@ static void resolve_icu_links(struct device_s *root, struct device_s *dev)
 }
 #endif
 
-DEV_INIT(enum_fdt_init)
+static DEV_INIT(enum_fdt_init)
 {
   struct enum_fdt_parse_ctx_s ctx = {
     .dev = dev,
@@ -476,17 +480,10 @@ DEV_INIT(enum_fdt_init)
 
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
-  device_bind_driver(dev);
-
   return 0;
 }
 
-
-/*
- * device close operation
- */
-
-DEV_CLEANUP(enum_fdt_cleanup)
+static DEV_CLEANUP(enum_fdt_cleanup)
 {
 }
 
