@@ -55,26 +55,5 @@
 #define XICU_MAX_HWI 32
 #define XICU_MAX_PTI 32
 
-struct soclib_xicu_private_s
-{
-  uintptr_t addr;
-
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
-  uintptr_t pti_count;
-#endif
-
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
-  uintptr_t hwi_count;
-  uintptr_t irq_count;
-  struct dev_irq_ep_s *sinks;
-  struct dev_irq_ep_s *srcs;
-
-# ifdef CONFIG_HEXO_IPI
-  uintptr_t wti_count;
-# endif
-#endif
-
-};
-
 #endif
 

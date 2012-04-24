@@ -47,10 +47,10 @@ struct dev_irq_ep_s;
 typedef DEVICU_GET_SINK(devicu_get_sink_t);
 
 
-#define DEVICU_DISABLE_SINK(n)	void (n) (struct device_icu_s *idev, struct dev_irq_ep_s *sink, uint_fast8_t icu_in_id)
+#define DEVICU_DISABLE_SINK(n)	void (n) (struct device_icu_s *idev, struct dev_irq_ep_s *sink, uint_fast8_t id)
 
 /** @This disables interrupt line associated with given sink end-point
-    and line number. */
+    and logical irq id. */
 typedef DEVICU_DISABLE_SINK(devicu_disable_sink_t);
 
 

@@ -20,23 +20,43 @@
 
 */
 
-#include "xicu.h"
 #include "xicu_private.h"
 
 #include <string.h>
 #include <stdio.h>
 
 #include <hexo/types.h>
-#include <hexo/interrupt.h>
 #include <hexo/iospace.h>
 #include <hexo/endian.h>
 
 #include <device/device.h>
 #include <device/driver.h>
+#include <device/class/icu.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+
+struct soclib_xicu_private_s
+{
+  uintptr_t addr;
+
+#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+  uintptr_t pti_count;
+#endif
+
+#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+  uintptr_t hwi_count;
+  uintptr_t irq_count;
+  struct dev_irq_ep_s *sinks;
+  struct dev_irq_ep_s *srcs;
+
+# ifdef CONFIG_HEXO_IPI
+  uintptr_t wti_count;
+# endif
+#endif
+
+};
 
 /************************************************************************
         Interrupts controller driver part
@@ -60,6 +80,7 @@ static DEVICU_GET_SINK(soclib_xicu_icu_get_sink)
 
 static DEVICU_DISABLE_SINK(soclib_xicu_icu_disable_sink)
 {
+  /* FIXME disable sink */
 }
 
 #ifdef CONFIG_HEXO_IPI
@@ -117,6 +138,9 @@ static const struct devenum_ident_s  soclib_xicu_ids[] =
   { 0 }
 };
 
+static DEV_INIT(soclib_xicu_init);
+static DEV_CLEANUP(soclib_xicu_cleanup);
+
 const struct driver_s  soclib_xicu_drv =
 {
   .desc           = "Soclib VciXicu",
@@ -133,7 +157,7 @@ const struct driver_s  soclib_xicu_drv =
   }
 };
 
-DEV_INIT(soclib_xicu_init)
+static DEV_INIT(soclib_xicu_init)
 {
   struct soclib_xicu_private_s  *pv;
 
@@ -202,7 +226,7 @@ DEV_INIT(soclib_xicu_init)
   return -1;
 }
 
-DEV_CLEANUP(soclib_xicu_cleanup)
+static DEV_CLEANUP(soclib_xicu_cleanup)
 {
   struct soclib_xicu_private_s *pv = dev->drv_pv;
 

@@ -139,6 +139,7 @@ static DEVCPU_REG_INIT(arm_cpu_reg_init)
 #ifdef CONFIG_SOCLIB_MEMCHECK
   /* all these function may execute with invalid stack pointer
      register due to arm shadow registers bank switching. */
+  void cpu_boot();
   void cpu_boot_end();
   soclib_mem_bypass_sp_check(&cpu_boot, &cpu_boot_end);
   void arm_exc_undef();
@@ -169,6 +170,7 @@ static DEVCPU_REG_INIT(arm_cpu_reg_init)
   soclib_mem_bypass_sp_check(&cpu_context_set_user, &cpu_context_set_user_end);
 # endif
 
+  void cpu_context_jumpto();
   void arm_context_jumpto_internal_end();
   soclib_mem_bypass_sp_check(&cpu_context_jumpto, &arm_context_jumpto_internal_end);
 #endif
