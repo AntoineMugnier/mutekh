@@ -29,13 +29,28 @@
 
 #ifdef CONFIG_HEXO_IRQ
 
-CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
+static CPU_INTERRUPT_HANDLER(empty_interrupt_handler)
+{
+}
+
+CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler = &empty_interrupt_handler;
 
 void
 cpu_interrupt_sethandler(cpu_interrupt_handler_t *handler)
 {
+  if (!handler)
+    handler = &empty_interrupt_handler;
   CPU_LOCAL_SET(cpu_interrupt_handler, handler);
 }
+
+# ifdef CONFIG_ARCH_SMP
+void cpu_interrupt_cls_sethandler(void *cls, cpu_interrupt_handler_t *handler)
+{
+  if (!handler)
+    handler = &empty_interrupt_handler;
+  CPU_LOCAL_CLS_SET(cls, cpu_interrupt_handler, handler);
+}
+# endif
 
 #endif
 

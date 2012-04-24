@@ -10,7 +10,7 @@
 		#size-cells = <0>;
 
 		cpu@0 {
-                        compatible = "cpu:sparc";
+                        compatible = "cpu:arm";
 			reg = <0>;
                         interrupt-controller;
 		};

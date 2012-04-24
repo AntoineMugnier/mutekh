@@ -52,14 +52,15 @@ enum driver_class_e
   DRIVER_CLASS_GPIO,
   DRIVER_CLASS_I2C,
   DRIVER_CLASS_MEM,
-  DRIVER_CLASS_Sys_Last = DRIVER_CLASS_MEM, //< last MutekH reserved value in use
+  DRIVER_CLASS_CPU,
+  DRIVER_CLASS_Sys_Last = DRIVER_CLASS_CPU, //< last MutekH reserved value in use
   DRIVER_CLASS_User_First = 128,            //< First user defined device class id
 };
 
 #define DRIVER_CLASS_NAMES                                         \
   "None", "Block", "Char", "Enumerator", "FrameBuffer",            \
-  "IrqCtrl", "Input", "Network", "Sound",                          \
-  "Timer", "SPI", "LCD", "GPIO", "I2C", "Memory"
+  "ICU", "Input", "Network", "Sound",                          \
+  "Timer", "SPI", "LCD", "GPIO", "I2C", "Memory", "CPU"
 
 enum dev_enum_type_e
 {
@@ -287,7 +288,7 @@ struct driver_class_s
 #define DEVICE_OP(dev_accessor, op, ...)        \
 ({                                            \
   typeof(dev_accessor) __a__ = (dev_accessor);  \
-  __a__->api->f_##op(__a__, __VA_ARGS__);       \
+  __a__->api->f_##op(__a__, ## __VA_ARGS__);       \
 })
 
 /** @This tests if the driver provides the specified operation. */

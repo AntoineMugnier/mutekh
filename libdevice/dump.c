@@ -55,8 +55,11 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
       for (i = 0; (c = dev->drv->classes[i]); i++)
         {
           static const char *cnames[] = { DRIVER_CLASS_NAMES };
-          printk("%u-%s ", c->class_, c->class_ <= DRIVER_CLASS_Sys_Last ? cnames[c->class_] : "Custom");
-        }
+          if (c->class_ <= DRIVER_CLASS_Sys_Last)
+            printk("%s, ", cnames[c->class_]);
+          else
+            printk("Custom(%u), ", c->class_);
+         }
       printk("\n");
     }
 
@@ -87,7 +90,7 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
 #ifdef CONFIG_DEVICE_IRQ
         case DEV_RES_IRQ: {
           struct device_s *icu = r->irq.icu;
-          printk("  IRQ output %i bound to input %i of controller %p `%s'\n",
+          printk("  IRQ output %i connected to input %i of controller %p `%s'\n",
                  r->irq.dev_out_id, r->irq.icu_in_id, icu, icu ? icu->name : "default");
           break;
         }

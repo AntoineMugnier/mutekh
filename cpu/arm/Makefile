@@ -1,8 +1,5 @@
 
-objs = 											\
-cpu_init.o										\
-context_switch.o								\
-cpu_context.o
+objs = context_switch.o cpu_context.o
 
 ifeq ($(CONFIG_CPU_RESET_HANDLER),defined)
 objs += boot.o exception.o

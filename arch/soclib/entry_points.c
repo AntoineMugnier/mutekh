@@ -90,9 +90,6 @@ void start_barrier_release(cpu_id_t cpu)
 
 void boot_from_reset_vector()
 {
-#ifdef CONFIG_ARCH_DEVICE_TREE
-    extern __ldscript_symbol_t dt_blob_start;
-#endif
     extern __ldscript_symbol_t __initial_stack;
     uintptr_t sp = (uintptr_t)&__initial_stack
         - (1 << CONFIG_HEXO_RESET_STACK_SIZE) * cpu_id();
@@ -100,7 +97,7 @@ void boot_from_reset_vector()
     if ( cpu_isbootstrap() ) {
         init_bss();
 #ifdef CONFIG_ARCH_DEVICE_TREE
-        arch_fdt = &dt_blob_start;
+        arch_fdt = (void*)CONFIG_ARCH_SOCLIB_FDT_ROM_ADDRESS;
 #endif
     } else {
         soclib_mem_mark_initialized(start_barrier, START_BARRIER_WORDS);

@@ -21,10 +21,12 @@
 
 #include <assert.h>
 
-#if defined(CONFIG_ARCH_DEVICE_TREE)
-# include <device/class/enum.h>
+# include <device/class/cpu.h>
 # include <device/driver.h>
 # include <device/device.h>
+
+#if defined(CONFIG_ARCH_DEVICE_TREE)
+# include <device/class/enum.h>
 #endif
 
 #include <arch/mem_checker.h>
@@ -119,24 +121,30 @@ void soclib_vmem_init()
 #endif
 }
 
+static void cpu_reg_init()
+{
+    /* find processor device */
+    struct device_s *dev = device_get_cpu(cpu_id(), 0);
+
+    if (!dev)
+        return;
+
+    struct device_cpu_s cpu_dev;
+
+    if (device_get_accessor(&cpu_dev, dev, DRIVER_CLASS_CPU, 0))
+        return;
+
+    DEVICE_OP(&cpu_dev, reg_init);
+
+    device_put_accessor(&cpu_dev);
+}
+
 static
 void hw_init()
 {
 #if defined(CONFIG_ARCH_DEVICE_TREE)
     //TODO: change with mem_parse_fdt when lib topology is done
     mem_region_init();
-
-#if 0
-    static struct device_s tty_dev;
-    extern struct device_char_s console_dev;
-
-	device_init(&tty_dev);
-    device_attach(&tty_dev, NULL);
-    device_res_add_mem(&tty_dev, 0xd0200000, 0xd0200010);
-    tty_soclib_init(&tty_dev);
-
-	device_get_accessor(&console_dev, &tty_dev, DRIVER_CLASS_CHAR, 0);
-#endif
 
     extern const struct driver_s enum_fdt_drv;
     static struct device_s fdt_dev;
@@ -172,7 +180,6 @@ void arch_init_bootstrap(uintptr_t init_sp)
 #endif
 
     /* configure system wide cpu data */
-    cpu_global_init();
     mem_init();
     hexo_global_init();
     soclib_vmem_init();
@@ -180,7 +187,7 @@ void arch_init_bootstrap(uintptr_t init_sp)
     hw_init();
 
     /* configure first CPU */
-    cpu_init();
+    cpu_reg_init();
 
     start_other_cpus();
 
@@ -231,7 +238,6 @@ void arch_init_other()
 #ifdef CONFIG_HEXO_MMU
     mmu_cpu_init();
 #endif      
-    cpu_init();
         
     ++cpu_count;
 
@@ -241,6 +247,8 @@ void arch_init_other()
 
     while (cpu_start_flag != START_MAGIC)
         order_compiler_mem();
+
+    cpu_reg_init();
 
     /* run mutek_start_smp() */
 

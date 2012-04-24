@@ -116,14 +116,6 @@ cpu_trap()
                 : : "i" (SPARC_TRAP_USERBREAK) );
 }
 
-static inline void *cpu_get_cls(cpu_id_t cpu_id)
-{
-# ifdef CONFIG_ARCH_SMP
-  return cpu_local_storage[cpu_id];
-# endif
-  return NULL;
-}
-
 static inline void cpu_dcache_invld(void *ptr)
 {
 }

@@ -102,14 +102,6 @@ cpu_trap()
   asm volatile ("int3");
 }
 
-static inline void *cpu_get_cls(cpu_id_t cpu_id)
-{
-#ifdef CONFIG_ARCH_SMP
-  return cpu_local_storage[cpu_id];
-#endif
-  return NULL;
-}
-
 static inline void cpu_dcache_invld(void *ptr)
 {
 #ifndef CONFIG_CPU_CACHE_COHERENCY

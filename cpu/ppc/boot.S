@@ -87,7 +87,7 @@ FUNC_START(.text, cpu_boot)
         /* jump to architecture code */
         LA32    2,              boot_from_reset_vector
         mtctr   2
-        bctr
+        bctrl
 FUNC_END(cpu_boot)
 
 

@@ -90,7 +90,7 @@ FUNC_START(.boot, cpu_boot)
        wrctl   ctl17,           r4
 
        movia   r16,             boot_from_reset_vector
-       jmp     r16
+       callr   r16
 FUNC_END(cpu_boot)
 
 FUNC_START(.boot, cpu_boot_idle)

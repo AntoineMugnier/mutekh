@@ -29,6 +29,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/class/icu.h>
+#include <device/class/cpu.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
@@ -38,6 +39,10 @@ struct lm32_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct dev_irq_ep_s	sinks[CONFIG_CPU_LM32_IRQ_COUNT];
+#endif
+
+#ifdef CONFIG_ARCH_SMP
+  void *cls;            //< cpu local storage
 #endif
 };
 
@@ -112,6 +117,41 @@ const struct driver_icu_s  lm32_icu_drv =
 
 #endif
 
+/************************************************************************
+        CPU driver part
+************************************************************************/
+
+static DEVCPU_REG_INIT(lm32_cpu_reg_init)
+{
+#ifdef CONFIG_ARCH_SMP
+
+# error lm32 support has no CPU local storage register for SMP
+
+# ifdef CONFIG_DEVICE_IRQ
+  /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
+  asm volatile ("wcsr	IM, %0" :: "r" ((1 << CONFIG_CPU_LM32_IRQ_COUNT)-1));
+# endif
+#endif
+}
+
+#ifdef CONFIG_ARCH_SMP
+static DEVCPU_GET_STORAGE(lm32_cpu_get_storage)
+{
+  struct device_s *dev = cdev->dev;
+  struct lm32_dev_private_s *pv = dev->drv_pv;
+  return pv->cls;
+}
+#endif
+
+const struct driver_cpu_s  lm32_cpu_drv =
+{
+  .class_          = DRIVER_CLASS_CPU,
+  .f_reg_init      = lm32_cpu_reg_init,
+#ifdef CONFIG_ARCH_SMP
+  .f_get_storage   = lm32_cpu_get_storage,
+#endif
+};
+
 /************************************************************************/
 
 static DEV_CLEANUP(lm32_cleanup);
@@ -132,6 +172,7 @@ const struct driver_s  lm32_drv =
   .f_cleanup      = lm32_cleanup,
 
   .classes        = {
+    &lm32_cpu_drv,
 #ifdef CONFIG_DEVICE_IRQ
     &lm32_icu_drv,
 #endif
@@ -147,14 +188,12 @@ static DEV_INIT(lm32_init)
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
+  uintptr_t id = 0;
+  if (device_res_get_uint(dev, DEV_RES_ID, 0, &id, NULL))
 #ifdef CONFIG_ARCH_SMP
-  struct dev_resource_s *res = device_res_get(dev, DEV_RES_ID, 0);
-  if (!res)
-    PRINTK_RET(-ENOENT, "lm32: device has no ID resource");
-
-  if (res->id.major != cpu_id())
-    PRINTK_RET(-EINVAL, "lm32: driver init must be executed on CPU with matching id");
+    PRINTK_RET(-ENOENT, "lm32: device has no ID resource")
 #endif
+      ;
 
   if (sizeof(*pv))
     {
@@ -168,21 +207,27 @@ static DEV_INIT(lm32_init)
       dev->drv_pv = pv;
     }
 
+#ifdef CONFIG_ARCH_SMP
+  /* allocate cpu local storage */
+  pv->cls = arch_cpudata_alloc();
+  if (!pv->cls)
+    goto err_mem;
+#endif
+
 #ifdef CONFIG_DEVICE_IRQ
-# ifdef CONFIG_ARCH_SMP
-  /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
-  asm volatile ("wcsr	IM, %0" :: "r" ((1 << CONFIG_CPU_LM32_IRQ_COUNT)-1));
-
-  reg_t status = cpu_lm32_mfc0(CPU_LM32_STATUS, 0);
-  status |= 0xfc00;
-  cpu_lm32_mtc0(CPU_LM32_STATUS, 0, status);
-# endif
-
   /* init lm32 irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_LM32_IRQ_COUNT, NULL);
 
-  CPU_LOCAL_SET(lm32_icu_dev, dev);
-  cpu_interrupt_sethandler(lm32_irq_handler);
+# ifdef CONFIG_ARCH_SMP
+  CPU_LOCAL_CLS_SET(pv->cls, lm32_icu_dev, dev);
+  cpu_interrupt_cls_sethandler(pv->cls, lm32_irq_handler);
+# else
+  if (id == 0)
+    {
+      CPU_LOCAL_SET(lm32_icu_dev, dev);
+      cpu_interrupt_sethandler(lm32_irq_handler);
+    }
+# endif
 #endif
 
   dev->drv = &lm32_drv;

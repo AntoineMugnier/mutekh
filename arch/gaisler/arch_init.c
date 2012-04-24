@@ -46,6 +46,24 @@ struct context_s main_ctx;
 
 extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
 
+static void cpu_reg_init()
+{
+    /* find processor device */
+    struct device_s *dev = device_get_cpu(cpu_id(), 0);
+
+    if (!dev)
+        return;
+
+    struct device_cpu_s cpu_dev;
+
+    if (device_get_accessor(&cpu_dev, dev, DRIVER_CLASS_CPU, 0))
+        return;
+
+    DEVICE_OP(&cpu_dev, reg_init);
+
+    device_put_accessor(&cpu_dev);
+}
+
 void arch_init(uintptr_t init_sp)
 {
     extern __ldscript_symbol_t __bss_start;
@@ -69,8 +87,6 @@ void arch_init(uintptr_t init_sp)
 
     hexo_global_init();
 
-    cpu_init();
-
 #if 1
     extern const struct driver_s ahbctrl_drv;
     static struct device_s ahbctrl_dev;
@@ -83,6 +99,8 @@ void arch_init(uintptr_t init_sp)
 
     device_find_driver(NULL);
 #endif
+
+    cpu_reg_init();
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
     sched_global_init();

@@ -43,11 +43,6 @@ cpu_id(void)
 	return 0;
 }
 
-static inline void *cpu_get_cls(cpu_id_t cpu_id)
-{
-	return NULL;
-}
-
 static inline void
 cpu_trap()
 {

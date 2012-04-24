@@ -44,7 +44,7 @@ extern CPU_LOCAL cpu_id_t _cpu_id;
 static inline cpu_id_t cpu_id(void)
 {
 #ifdef CONFIG_ARCH_SMP
-  /* do not use CPU_LOCAL_GET here has _cpu_id is stored in process
+  /* do not use CPU_LOCAL_GET here as _cpu_id is stored in process
      local memory and assigned before CLS allocation */
   return _cpu_id;
 #else
@@ -76,14 +76,6 @@ cpu_cycle_count(void)
 #ifdef CONFIG_ARCH_SMP
 extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #endif
-
-static inline void *cpu_get_cls(cpu_id_t cpu_id)
-{
-#ifdef CONFIG_ARCH_SMP
-    return cpu_local_storage[cpu_id];
-#endif
-  return NULL;
-}
 
 static inline void cpu_dcache_invld(void *ptr)
 {

@@ -13,10 +13,4 @@
 %include $(SRC_DIR)/examples/common/platforms.conf
 
   CONFIG_HEXO_IRQ defined
-CONFIG_DRIVER_SOCLIB_VCI_BLOCK_DEVICE undefined
-CONFIG_DRIVER_ICU_MIPS defined
-CONFIG_DRIVER_SOCLIB_VCI_TIMER undefined
-CONFIG_DRIVER_SOCLIB_VCI_ICU undefined
-CONFIG_DRIVER_SOCLIB_VCI_XICU undefined
-
-  CONFIG_ARCH_SMP undefined
+  CONFIG_ARCH_SMP defined

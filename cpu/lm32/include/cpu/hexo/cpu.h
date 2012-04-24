@@ -76,11 +76,6 @@ cpu_trap()
   asm volatile ("break");
 }
 
-static inline void *cpu_get_cls(cpu_id_t cpu_id)
-{
-  return NULL;
-}
-
 static inline void cpu_dcache_invld(void *ptr)
 {
 }

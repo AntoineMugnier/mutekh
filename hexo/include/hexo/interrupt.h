@@ -56,8 +56,14 @@ C_HEADER_BEGIN
 */
 typedef CPU_INTERRUPT_HANDLER(cpu_interrupt_handler_t);
 
-/** @this sets the hardware interrupt handler for the current cpu */
+/** @This sets the hardware interrupt handler for the current cpu. */
 void cpu_interrupt_sethandler(cpu_interrupt_handler_t *handler);
+
+/** @This sets the hardware interrupt handler for an other cpu. The
+    processor local storage of the processor which will have its
+    interrupt handler updated must be specified. */
+config_depend(CONFIG_ARCH_SMP)
+void cpu_interrupt_cls_sethandler(void *cls, cpu_interrupt_handler_t *handler);
 # endif
 
 

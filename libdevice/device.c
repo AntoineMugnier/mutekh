@@ -216,7 +216,7 @@ struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i)
     if (i-- == 0)
       {
 	res = item;
-	break;
+        CONTAINER_FOREACH_BREAK;
       }
   });
 
@@ -228,13 +228,18 @@ static bool_t _device_tree_walk(struct device_s *dev, device_tree_walker_t *walk
   if (walker(dev, priv))
     return 1;
 
+  bool_t res = 0;
+
   CONTAINER_FOREACH(device_list, CLIST, &dev->children,
   {
     if(_device_tree_walk(item, walker, priv))
-      return 1;
+      {
+        res = 1;
+        CONTAINER_FOREACH_BREAK;
+      }
   });
 
-  return 0;
+  return res;
 }
 
 bool_t device_tree_walk(struct device_s *root, device_tree_walker_t *walker, void *priv)

@@ -26,14 +26,20 @@
 #include <hexo/types.h>
 #include <hexo/interrupt.h>
 #include <hexo/local.h>
+#include <hexo/segment.h>
 
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/class/icu.h>
+#include <device/class/cpu.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/mem_checker.h>
+#endif
 
 #ifdef CONFIG_CPU_SPARC_SINGLE_IRQ_EP
 #define ICU_SPARC_MAX_VECTOR	1
@@ -45,6 +51,10 @@ struct sparc_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct dev_irq_ep_s	sinks[ICU_SPARC_MAX_VECTOR];
+#endif
+
+#ifdef CONFIG_ARCH_SMP
+  void *cls;            //< cpu local storage
 #endif
 };
 
@@ -118,6 +128,80 @@ const struct driver_icu_s  sparc_icu_drv =
 
 #endif
 
+/************************************************************************
+        CPU driver part
+************************************************************************/
+
+static DEVCPU_REG_INIT(sparc_cpu_reg_init)
+{
+#ifdef CONFIG_ARCH_SMP
+  struct device_s *dev = cdev->dev;
+  struct sparc_dev_private_s *pv = dev->drv_pv;
+
+  /* set cpu local storage register base pointer */
+  asm volatile("mov %0 %%g6" : : "r" (pv->cls));
+
+# ifdef CONFIG_DEVICE_IRQ
+  /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
+# endif
+#endif
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  /* all these functions may execute with briefly invalid stack & frame
+     pointer registers due to register window switch. */
+
+  void cpu_context_jumpto();
+  void cpu_context_jumpto_end();
+  soclib_mem_bypass_sp_check(&cpu_context_jumpto, &cpu_context_jumpto_end);
+
+  extern __ldscript_symbol_t __exception_base_ptr;
+  extern __ldscript_symbol_t __exception_base_ptr_end;
+  soclib_mem_bypass_sp_check(&__exception_base_ptr, &__exception_base_ptr_end);
+
+  void sparc_excep_entry();
+  void sparc_excep_entry_end();
+  soclib_mem_bypass_sp_check(&sparc_excep_entry, &sparc_excep_entry_end);
+
+  void sparc_except_restore();
+  void sparc_except_restore_end();
+  soclib_mem_bypass_sp_check(&sparc_except_restore, &sparc_except_restore_end);
+
+# ifdef CONFIG_HEXO_IRQ
+  void sparc_irq_entry();
+  void sparc_irq_entry_end();
+  soclib_mem_bypass_sp_check(&sparc_irq_entry, &sparc_irq_entry_end);
+# endif
+
+# ifdef CONFIG_HEXO_USERMODE
+  void sparc_syscall_entry();
+  void sparc_syscall_entry_end();
+  soclib_mem_bypass_sp_check(&sparc_syscall_entry, &sparc_syscall_entry_end);
+
+  void cpu_context_set_user();
+  void cpu_context_set_user_end();
+  soclib_mem_bypass_sp_check(&cpu_context_set_user, &cpu_context_set_user_end);
+# endif
+#endif
+}
+
+#ifdef CONFIG_ARCH_SMP
+static DEVCPU_GET_STORAGE(sparc_cpu_get_storage)
+{
+  struct device_s *dev = cdev->dev;
+  struct sparc_dev_private_s *pv = dev->drv_pv;
+  return pv->cls;
+}
+#endif
+
+const struct driver_cpu_s  sparc_cpu_drv =
+{
+  .class_          = DRIVER_CLASS_CPU,
+  .f_reg_init      = sparc_cpu_reg_init,
+#ifdef CONFIG_ARCH_SMP
+  .f_get_storage   = sparc_cpu_get_storage,
+#endif
+};
+
 /************************************************************************/
 
 static DEV_CLEANUP(sparc_cleanup);
@@ -142,6 +226,7 @@ const struct driver_s  sparc_drv =
   .f_cleanup      = sparc_cleanup,
 
   .classes        = {
+    &sparc_cpu_drv,
 #ifdef CONFIG_DEVICE_IRQ
     &sparc_icu_drv,
 #endif
@@ -157,14 +242,15 @@ static DEV_INIT(sparc_init)
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
-#ifdef CONFIG_ARCH_SMP
-  struct dev_resource_s *res = device_res_get(dev, DEV_RES_ID, 0);
-  if (!res)
-    PRINTK_RET(-ENOENT, "sparc: device has no ID resource");
+  assert(cpu_sparc_wincount() == CONFIG_CPU_SPARC_WINCOUNT);
 
-  if (res->id.major != cpu_id())
-    PRINTK_RET(-EINVAL, "sparc: driver init must be executed on CPU with matching id");
+  /* get processor device id specifed in resources */
+  uintptr_t id = 0;
+  if (device_res_get_uint(dev, DEV_RES_ID, 0, &id, NULL))
+#ifdef CONFIG_ARCH_SMP
+    PRINTK_RET(-ENOENT, "sparc: device has no ID resource")
 #endif
+      ;
 
   if (sizeof(*pv))
     {
@@ -178,16 +264,27 @@ static DEV_INIT(sparc_init)
       dev->drv_pv = pv;
     }
 
-#ifdef CONFIG_DEVICE_IRQ
-# ifdef CONFIG_ARCH_SMP
-  /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
-# endif
+#ifdef CONFIG_ARCH_SMP
+  /* allocate cpu local storage */
+  pv->cls = arch_cpudata_alloc();
+  if (!pv->cls)
+    goto err_mem;
+#endif
 
+#ifdef CONFIG_DEVICE_IRQ
   /* init sparc irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, ICU_SPARC_MAX_VECTOR, NULL);
 
-  CPU_LOCAL_SET(sparc_icu_dev, dev);
-  cpu_interrupt_sethandler(sparc_irq_handler);
+# ifdef CONFIG_ARCH_SMP
+  CPU_LOCAL_CLS_SET(pv->cls, sparc_icu_dev, dev);
+  cpu_interrupt_cls_sethandler(pv->cls, sparc_irq_handler);
+# else
+  if (id == 0)
+    {
+      CPU_LOCAL_SET(sparc_icu_dev, dev);
+      cpu_interrupt_sethandler(sparc_irq_handler);
+    }
+# endif
 #endif
 
   dev->drv = &sparc_drv;

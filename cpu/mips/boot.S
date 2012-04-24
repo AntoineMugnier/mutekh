@@ -95,7 +95,7 @@ FUNC_START(.boot, cpu_boot)
 
         /* jump to architecture code */
         la      $8,             boot_from_reset_vector
-        j       $8
+        jal     $8
         nop
 
         .set pop

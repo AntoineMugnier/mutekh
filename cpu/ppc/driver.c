@@ -25,10 +25,12 @@
 #include <hexo/types.h>
 #include <hexo/interrupt.h>
 #include <hexo/local.h>
+#include <hexo/segment.h>
 
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/class/icu.h>
+#include <device/class/cpu.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
@@ -39,6 +41,10 @@ struct ppc_dev_private_s
 #ifdef CONFIG_DEVICE_IRQ
 #define ICU_PPC_MAX_VECTOR	1
   struct dev_irq_ep_s	sinks[ICU_PPC_MAX_VECTOR];
+#endif
+
+#ifdef CONFIG_ARCH_SMP
+  void *cls;            //< cpu local storage
 #endif
 };
 
@@ -105,6 +111,46 @@ const struct driver_icu_s  ppc_icu_drv =
 
 #endif
 
+/************************************************************************
+        CPU driver part
+************************************************************************/
+
+static DEVCPU_REG_INIT(ppc_cpu_reg_init)
+{
+  struct device_s *dev = cdev->dev;
+  struct ppc_dev_private_s *pv = dev->drv_pv;
+
+  /* set exception vector */
+  extern __ldscript_symbol_t __exception_base_ptr;
+  asm volatile("mtevpr %0" : : "r"(&__exception_base_ptr));
+
+#ifdef CONFIG_ARCH_SMP
+  asm volatile("mtspr 0x115, %0" : : "r" (pv->cls)); /* SPRG5 is cls */
+
+# ifdef CONFIG_DEVICE_IRQ
+  /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
+# endif
+#endif
+}
+
+#ifdef CONFIG_ARCH_SMP
+static DEVCPU_GET_STORAGE(ppc_cpu_get_storage)
+{
+  struct device_s *dev = cdev->dev;
+  struct ppc_dev_private_s *pv = dev->drv_pv;
+  return pv->cls;
+}
+#endif
+
+const struct driver_cpu_s  ppc_cpu_drv =
+{
+  .class_          = DRIVER_CLASS_CPU,
+  .f_reg_init      = ppc_cpu_reg_init,
+#ifdef CONFIG_ARCH_SMP
+  .f_get_storage   = ppc_cpu_get_storage,
+#endif
+};
+
 /************************************************************************/
 
 static DEV_CLEANUP(ppc_cleanup);
@@ -125,6 +171,7 @@ const struct driver_s  ppc_drv =
   .f_cleanup      = ppc_cleanup,
 
   .classes        = {
+    &ppc_cpu_drv,
 #ifdef CONFIG_DEVICE_IRQ
     &ppc_icu_drv,
 #endif
@@ -140,15 +187,15 @@ static DEV_INIT(ppc_init)
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
+  /* get processor device id specifed in resources */
+  uintptr_t id = 0;
+  if (device_res_get_uint(dev, DEV_RES_ID, 0, &id, NULL))
 #ifdef CONFIG_ARCH_SMP
-  struct dev_resource_s *res = device_res_get(dev, DEV_RES_ID, 0);
-  if (!res)
-    PRINTK_RET(-ENOENT, "ppc: device has no ID resource");
-
-  if (res->id.major != cpu_id())
-    PRINTK_RET(-EINVAL, "ppc: driver init must be executed on CPU with matching id");
+    PRINTK_RET(-ENOENT, "ppc: device has no ID resource")
 #endif
+      ;
 
+  /* allocate device private data */
   if (sizeof(*pv))
     {
       /* FIXME allocation scope ? */
@@ -161,22 +208,36 @@ static DEV_INIT(ppc_init)
       dev->drv_pv = pv;
     }
 
-#ifdef CONFIG_DEVICE_IRQ
-# ifdef CONFIG_ARCH_SMP
-  /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
-# endif
+#ifdef CONFIG_ARCH_SMP
+  /* allocate cpu local storage */
+  pv->cls = arch_cpudata_alloc();
+  if (!pv->cls)
+    goto err_mem;
+#endif
 
+#ifdef CONFIG_DEVICE_IRQ
   /* init ppc irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, ICU_PPC_MAX_VECTOR, NULL);
 
-  CPU_LOCAL_SET(ppc_icu_dev, dev);
-  cpu_interrupt_sethandler(ppc_irq_handler);
+# ifdef CONFIG_ARCH_SMP
+  CPU_LOCAL_CLS_SET(pv->cls, ppc_icu_dev, dev);
+  cpu_interrupt_cls_sethandler(pv->cls, ppc_irq_handler);
+# else
+  if (id == 0)
+    {
+      CPU_LOCAL_SET(ppc_icu_dev, dev);
+      cpu_interrupt_sethandler(ppc_irq_handler);
+    }
+# endif
 #endif
 
   dev->drv = &ppc_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
+ err_mem:
+  mem_free(pv);
+  return -1;
 }
 
 static DEV_CLEANUP(ppc_cleanup)

@@ -25,20 +25,30 @@
 #include <hexo/types.h>
 #include <hexo/interrupt.h>
 #include <hexo/local.h>
+#include <hexo/segment.h>
 
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/class/icu.h>
+#include <device/class/cpu.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/mem_checker.h>
+#endif
 
 struct arm_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
 #define ICU_ARM_MAX_VECTOR	1
   struct dev_irq_ep_s	sinks[ICU_ARM_MAX_VECTOR];
+#endif
+
+#ifdef CONFIG_ARCH_SMP
+  void *cls;            //< cpu local storage
 #endif
 };
 
@@ -105,6 +115,83 @@ const struct driver_icu_s  arm_icu_drv =
 
 #endif
 
+/************************************************************************
+        CPU driver part
+************************************************************************/
+
+static DEVCPU_REG_INIT(arm_cpu_reg_init)
+{
+  struct device_s *dev = cdev->dev;
+  struct arm_dev_private_s *pv = dev->drv_pv;
+
+#ifdef CONFIG_ARCH_SMP
+
+# if !defined(CONFIG_CPU_ARM_TLS_IN_C15)
+#  error SMP and TLS unsupported
+# endif
+  asm volatile ("mcr p15,0,%0,c13,c0,3":: "r" (pv->cls));
+
+# ifdef CONFIG_DEVICE_IRQ
+  /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
+# endif
+#endif
+
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  /* all these function may execute with invalid stack pointer
+     register due to arm shadow registers bank switching. */
+  void cpu_boot_end();
+  soclib_mem_bypass_sp_check(&cpu_boot, &cpu_boot_end);
+  void arm_exc_undef();
+  void arm_exc_undef_end();
+  soclib_mem_bypass_sp_check(&arm_exc_undef, &arm_exc_undef_end);
+  void arm_exc_pabt();
+  void arm_exc_pabt_end();
+  soclib_mem_bypass_sp_check(&arm_exc_pabt, &arm_exc_pabt_end);
+  void arm_exc_dabt();
+  void arm_exc_dabt_end();
+  soclib_mem_bypass_sp_check(&arm_exc_dabt, &arm_exc_dabt_end);
+# ifdef CONFIG_HEXO_IRQ
+  void arm_exc_irq();
+  void arm_exc_irq_end();
+  soclib_mem_bypass_sp_check(&arm_exc_irq, &arm_exc_irq_end);
+  void arm_exc_fiq();
+  void arm_exc_fiq_end();
+  soclib_mem_bypass_sp_check(&arm_exc_fiq, &arm_exc_fiq_end);
+# endif
+
+# ifdef CONFIG_HEXO_USERMODE
+  void arm_exc_swi();
+  void arm_exc_swi_end();
+  soclib_mem_bypass_sp_check(&arm_exc_swi, &arm_exc_swi_end);
+
+  void cpu_context_set_user();
+  void cpu_context_set_user_end();
+  soclib_mem_bypass_sp_check(&cpu_context_set_user, &cpu_context_set_user_end);
+# endif
+
+  void arm_context_jumpto_internal_end();
+  soclib_mem_bypass_sp_check(&cpu_context_jumpto, &arm_context_jumpto_internal_end);
+#endif
+}
+
+#ifdef CONFIG_ARCH_SMP
+static DEVCPU_GET_STORAGE(arm_cpu_get_storage)
+{
+  struct device_s *dev = cdev->dev;
+  struct arm_dev_private_s *pv = dev->drv_pv;
+  return pv->cls;
+}
+#endif
+
+const struct driver_cpu_s  arm_cpu_drv =
+{
+  .class_          = DRIVER_CLASS_CPU,
+  .f_reg_init      = arm_cpu_reg_init,
+#ifdef CONFIG_ARCH_SMP
+  .f_get_storage   = arm_cpu_get_storage,
+#endif
+};
+
 /************************************************************************/
 
 static DEV_CLEANUP(arm_cleanup);
@@ -125,6 +212,7 @@ const struct driver_s  arm_drv =
   .f_cleanup      = arm_cleanup,
 
   .classes        = {
+    &arm_cpu_drv,
 #ifdef CONFIG_DEVICE_IRQ
     &arm_icu_drv,
 #endif
@@ -140,15 +228,15 @@ static DEV_INIT(arm_init)
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
+  /* get processor device id specifed in resources */
+  uintptr_t id = 0;
+  if (device_res_get_uint(dev, DEV_RES_ID, 0, &id, NULL))
 #ifdef CONFIG_ARCH_SMP
-  struct dev_resource_s *res = device_res_get(dev, DEV_RES_ID, 0);
-  if (!res)
-    PRINTK_RET(-ENOENT, "arm: device has no ID resource");
-
-  if (res->id.major != cpu_id())
-    PRINTK_RET(-EINVAL, "arm: driver init must be executed on CPU with matching id");
+    PRINTK_RET(-ENOENT, "arm: device has no ID resource")
 #endif
+      ;
 
+  /* allocate device private data */
   if (sizeof(*pv))
     {
       /* FIXME allocation scope ? */
@@ -161,22 +249,37 @@ static DEV_INIT(arm_init)
       dev->drv_pv = pv;
     }
 
-#ifdef CONFIG_DEVICE_IRQ
-# ifdef CONFIG_ARCH_SMP
-  /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
-# endif
+#ifdef CONFIG_ARCH_SMP
+  /* allocate cpu local storage */
+  pv->cls = arch_cpudata_alloc();
+  if (!pv->cls)
+    goto err_mem;
+#endif
 
+#ifdef CONFIG_DEVICE_IRQ
   /* init arm irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, ICU_ARM_MAX_VECTOR, NULL);
 
-  CPU_LOCAL_SET(arm_icu_dev, dev);
-  cpu_interrupt_sethandler(arm_irq_handler);
+  /* set processor interrupt handler */
+# ifdef CONFIG_ARCH_SMP
+  CPU_LOCAL_CLS_SET(pv->cls, arm_icu_dev, dev);
+  cpu_interrupt_cls_sethandler(pv->cls, arm_irq_handler);
+# else
+  if (id == 0)
+    {
+      CPU_LOCAL_SET(arm_icu_dev, dev);
+      cpu_interrupt_sethandler(arm_irq_handler);
+    }
+# endif
 #endif
 
   dev->drv = &arm_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
+ err_mem:
+  mem_free(pv);
+  return -1;
 }
 
 static DEV_CLEANUP(arm_cleanup)

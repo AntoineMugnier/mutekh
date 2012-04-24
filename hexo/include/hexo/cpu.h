@@ -46,18 +46,6 @@ typedef uint64_t cpu_cycle_t;
 
 #ifndef __MUTEK_ASM__
 
-/** init system wide cpu data */
-error_t cpu_global_init(void);
-
-/** Setup CPU specific data */
-void cpu_init(void);
-
-/** get cpu local storage */
-static void *cpu_get_cls(cpu_id_t cpu_id);
-
-/** return CPU id number */
-static cpu_id_t cpu_id(void);
-
 /** return CPU architecture type name */
 static const char *cpu_type_name(void);
 

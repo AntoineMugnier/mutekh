@@ -1,8 +1,5 @@
 
-objs =											\
-cpu_init.o										\
-cpu_context.o										\
-context_switch.o
+objs = cpu_context.o context_switch.o
 
 copy = ldscript
 

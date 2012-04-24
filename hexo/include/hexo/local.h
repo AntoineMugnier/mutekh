@@ -42,13 +42,6 @@ C_HEADER_BEGIN
 
 # ifdef CONFIG_ARCH_SMP
 
-extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-
-#  ifndef CPU_GET_CLS_ID
-/** @this returns the address of the cpu local storage for a given cpu */
-#   define CPU_GET_CLS_ID(cpuid) cpu_local_storage[(cpuid)]
-#  endif
-
 #  ifndef CPU_LOCAL
 /** @this must be used as attribute for cpu local variables */
 #   warning CPU_LOCAL not defined by cpu code
@@ -85,14 +78,8 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
 #   define CPU_LOCAL_CLS_ADDR(cls, n)	( (typeof(n)*)((uintptr_t)(cls) + (uintptr_t)&(n)) )
 #  endif
 
-#  ifndef CPU_LOCAL_ID_ADDR
-/** @this returns the address of a cpu local variable for the given cpu */
-#   define CPU_LOCAL_ID_ADDR(cpuid, n) CPU_LOCAL_CLS_ADDR(CPU_GET_CLS_ID(cpuid), n)
-#  endif
-
 # else
 
-//#  define CPU_GET_CLS_ID(cpuid) __cpu_local_h_must_provide_CPU_GET_CLS_ID_macro
 //#  define CPU_GET_CLS() __cpu_local_h_must_provide_CPU_GET_CLS_macro
 #  define CPU_LOCAL_ADDR(n)   (&(n))
 #  define CPU_LOCAL_CLS_ADDR(cls, n) (&(n))
