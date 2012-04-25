@@ -156,7 +156,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
       uint32_t mask = ~(((endian_be32(p[1]) >> 4) & 0xfff) << 8) & 0xfffff;
 
       if (mask & (mask+1))
-        printk("apbctrl: address mask with non contiguous range is not supported\n");
+        printk("apbctrl: %p device address mask with non contiguous range is not supported\n", d);
       else
         {
           switch (endian_be32(p[1]) & 0xf)

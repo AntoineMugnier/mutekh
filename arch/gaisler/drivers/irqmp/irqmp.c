@@ -96,10 +96,11 @@ static DEV_IRQ_EP_PROCESS(gaisler_irqmp_source_process_eirq)
       struct dev_irq_ep_s *sink;
       uint32_t eack = endian_be32(cpu_mem_read_32(pv->addr + 0xc0 + cpu * 4)) & 0x1f;
 
-      assert(eack > 15);
-
       if (eack)
-        sink = pv->sinks + eack - 1;
+        {
+          assert(eack > 15);
+          sink = pv->sinks + eack - 1;
+        }
       else
         sink = pv->sinks + irq;
       int_fast16_t next_id = 0;

@@ -23,6 +23,7 @@
 # include <device/driver.h>
 # include <device/device.h>
 # include <device/class/char.h>
+# include <device/class/cpu.h>
 
 #include <mutek/printk.h>
 #include <mutek/scheduler.h>
@@ -77,8 +78,6 @@ void arch_init(uintptr_t init_sp)
 #if defined(CONFIG_GAISLER_EARLY_CONSOLE)
     gaisler_early_console(CONFIG_GAISLER_EARLY_CONSOLE_ADDR);
 #endif
-
-    cpu_global_init();
 
     default_region = memory_allocator_init(NULL, 
                                            &__system_uncached_heap_start, 
