@@ -172,7 +172,17 @@ static DEV_INIT(mips_init);
 
 static const struct devenum_ident_s  mips_ids[] =
 {
+#ifdef CONFIG_FDT
   DEVENUM_FDTNAME_ENTRY("cpu:mips"),
+# ifdef CONFIG_CPU_ENDIAN_LITTLE
+  DEVENUM_FDTNAME_ENTRY("cpu:mipsel"),
+  DEVENUM_FDTNAME_ENTRY("cpu:mips32el"),
+# endif
+# ifdef CONFIG_CPU_ENDIAN_BIG
+  DEVENUM_FDTNAME_ENTRY("cpu:mipseb"),
+  DEVENUM_FDTNAME_ENTRY("cpu:mips32eb"),
+# endif
+#endif
   { 0 }
 };
 

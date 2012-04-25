@@ -159,7 +159,9 @@ static DEV_INIT(lm32_init);
 
 static const struct devenum_ident_s  lm32_ids[] =
 {
+#ifdef CONFIG_FDT
   DEVENUM_FDTNAME_ENTRY("cpu:lm32"),
+#endif
   { 0 }
 };
 

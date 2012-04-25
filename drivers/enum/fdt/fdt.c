@@ -369,9 +369,8 @@ DEVENUM_MATCH_DRIVER(enum_fdt_match_driver)
       if (!r || !r->product.name)
         continue;
 
-//      printk("(%s) (%s)\n", ident->fdtname.name, r->product.name);
-
-      return !strcmp(ident->fdtname.name, r->product.name);
+      if (!strcmp(ident->fdtname.name, r->product.name))
+        return 1;
     }
 
   return 0;

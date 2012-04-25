@@ -201,7 +201,9 @@ static DEV_INIT(arm_init);
 
 static const struct devenum_ident_s  arm_ids[] =
 {
+#ifdef CONFIG_FDT
   DEVENUM_FDTNAME_ENTRY("cpu:arm"),
+#endif
   { 0 }
 };
 
