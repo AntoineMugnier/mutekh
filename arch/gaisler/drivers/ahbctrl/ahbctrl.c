@@ -71,10 +71,15 @@ static DEVENUM_MATCH_DRIVER(ahbctrl_match_driver)
 static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
 {
   const uint32_t *p;
-  uintptr_t cpu_id = 0;
+  uint_fast8_t i;
 
-  for (p = (const uint32_t*)begin; p < (const uint32_t*)end && (uintptr_t)p < 0xfffffff0; p += 8)
+  for (i = 0; i < 128; i++)
     {
+      const uint32_t *p = (const uint32_t*)(begin + 32 * i);
+
+      if (p >= end || p >= 0xfffffff0)
+        break;
+
       uint8_t vendor = endian_be32(p[0]) >> 24;
 
       if (!vendor)
@@ -96,12 +101,11 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
         {
           char name [16];
 
-          device_res_add_id(d, cpu_id, 0);
+          device_res_add_id(d, i, 0);
           d->flags |= DEVICE_FLAG_CPU;
 
-          sprintf(name, "cpu%u", cpu_id);
+          sprintf(name, "cpu%u", i);
           d->name = strdup(name);
-          cpu_id++;
         }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -128,7 +132,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
           mask = ~(mask << 20);
 
           if (mask & (mask+1))
-            printk("ahbctrl: address mask with non contiguous range is not supported\n");
+            printk("ahbctrl: %p device address mask with non contiguous range is not supported\n", d);
           else
             {
               switch (type)
