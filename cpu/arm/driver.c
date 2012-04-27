@@ -31,6 +31,7 @@
 #include <device/driver.h>
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
+#include <device/class/timer.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
@@ -48,6 +49,7 @@ struct arm_dev_private_s
 #endif
 
 #ifdef CONFIG_ARCH_SMP
+  uint_fast8_t id;
   void *cls;            //< cpu local storage
 #endif
 };
@@ -119,12 +121,15 @@ const struct driver_icu_s  arm_icu_drv =
         CPU driver part
 ************************************************************************/
 
+CPU_LOCAL struct device_s *cpu_device = NULL;
+
 static DEVCPU_REG_INIT(arm_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
   struct arm_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
+  assert(pv->id == cpu_id());
 
 # if !defined(CONFIG_CPU_ARM_TLS_IN_C15)
 #  error SMP and TLS unsupported
@@ -135,6 +140,8 @@ static DEVCPU_REG_INIT(arm_cpu_reg_init)
   /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
 # endif
 #endif
+
+  CPU_LOCAL_SET(cpu_device, dev);
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
   /* all these function may execute with invalid stack pointer
@@ -194,6 +201,57 @@ const struct driver_cpu_s  arm_cpu_drv =
 #endif
 };
 
+/************************************************************************
+        Timer driver part
+************************************************************************/
+
+#ifdef CONFIG_CPU_ARM_CYCLES_COUNTER
+
+static DEVTIMER_GET_VALUE(arm_timer_get_value)
+{
+  struct device_s *dev = tdev->dev;
+  struct arm_dev_private_s *pv = dev->drv_pv;
+
+# ifdef CONFIG_ARCH_SMP
+  assert(pv->id == cpu_id());
+# endif
+
+  uint32_t ret;
+  THUMB_TMP_VAR;
+
+  asm volatile (
+                THUMB_TO_ARM
+                "mrc p15, 0, %[ret], c15, c12, 1\n\t"
+                ARM_TO_THUMB
+                : [ret] "=r"(ret) /*,*/ THUMB_OUT(,));
+
+  return ret;
+}
+
+static DEVTIMER_RESOLUTION(arm_timer_resolution)
+{
+  error_t err = 0;
+
+  if (res)
+    {
+      if (*res != 0)
+        err = -ENOTSUP;
+      *res = DEVTIMER_RES_FIXED_POINT(1.0);
+    }
+
+  if (max)
+    *max = 0xffffffff;
+}
+
+static const struct driver_timer_s  arm_timer_drv =
+{
+  .class_          = DRIVER_CLASS_TIMER,
+  .f_get_value     = arm_timer_get_value,
+  .f_resolution    = arm_timer_resolution,
+};
+
+#endif
+
 /************************************************************************/
 
 static DEV_CLEANUP(arm_cleanup);
@@ -219,6 +277,9 @@ const struct driver_s  arm_drv =
     &arm_cpu_drv,
 #ifdef CONFIG_DEVICE_IRQ
     &arm_icu_drv,
+#endif
+#ifdef CONFIG_CPU_ARM_CYCLES_COUNTER
+    &arm_timer_drv,
 #endif
     0
   }
@@ -256,6 +317,7 @@ static DEV_INIT(arm_init)
 #ifdef CONFIG_ARCH_SMP
   /* allocate cpu local storage */
   pv->cls = arch_cpudata_alloc();
+  pv->id = id;
   if (!pv->cls)
     goto err_mem;
 #endif

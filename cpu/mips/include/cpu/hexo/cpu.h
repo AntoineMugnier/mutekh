@@ -207,12 +207,6 @@ cpu_isbootstrap(void)
   return cpu_id() == 0;
 }
 
-static inline cpu_cycle_t
-cpu_cycle_count(void)
-{
-  return cpu_mips_mfc0(9, 0);
-}
-
 static inline void
 cpu_trap()
 {

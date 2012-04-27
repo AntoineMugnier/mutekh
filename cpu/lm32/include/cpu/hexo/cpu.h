@@ -61,15 +61,6 @@ cpu_isbootstrap(void)
   return cpu_id() == 0;
 }
 
-static inline cpu_cycle_t
-cpu_cycle_count(void)
-{
-    reg_t ret;
-    asm volatile ("rcsr %0, CC"
-        : "=r" (ret));
-    return ret;
-}
-
 static inline void
 cpu_trap()
 {

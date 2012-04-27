@@ -105,17 +105,6 @@ cpu_isbootstrap(void)
   return cpu_id() == 0;
 }
 
-/**
-   cpu cycle counter read function
-*/
-
-static inline cpu_cycle_t
-cpu_cycle_count(void)
-{
-  return cpu_nios2_read_ctrl_reg(31);
-}
-
-
 static inline void
 cpu_trap()
 {

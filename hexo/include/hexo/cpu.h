@@ -38,8 +38,6 @@
 
 C_HEADER_BEGIN
 
-typedef uint64_t cpu_cycle_t;
-
 #endif
 
 #include <cpu/hexo/cpu.h>
@@ -57,28 +55,6 @@ size_t arch_get_cpu_count(void);
 
 /** unlock non first CPUs so that they can enter main_smp() */
 void arch_start_other_cpu(void);
-
-/** return processor cycles count timestamp */
-cpu_cycle_t cpu_cycle_count(void);
-
-/** return number of cycles spent since @tt start stamp. */
-static inline cpu_cycle_t cpu_cycle_diff(cpu_cycle_t start)
-{
-  cpu_cycle_t now = cpu_cycle_count();
-
-  /* handle 32bits wrap */
-  if (now < start)
-    now += 0x100000000ULL;
-  return now - start;
-}
-
-static inline
-void cpu_cycle_wait(cpu_cycle_t delta)
-{
-    delta += cpu_cycle_count();
-    while ( cpu_cycle_count() < delta )
-        ;
-}
 
 /** cpu trap instruction */
 void cpu_trap();

@@ -31,8 +31,18 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <hexo/local.h>
 
 #include <device/driver.h>
+
+/** @internal */
+extern CPU_LOCAL struct device_s *cpu_device;
+
+/** @This returns a pointer to local cpu device */
+static inline struct device_s * cpu_local_device()
+{
+  return CPU_LOCAL_GET(cpu_device);
+}
 
 struct device_s;
 struct driver_s;

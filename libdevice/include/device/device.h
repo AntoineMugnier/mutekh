@@ -54,8 +54,9 @@ enum dev_resource_type_e
     DEV_RES_IRQ,                //< Interrupt line resource
     DEV_RES_ID,                 //< Unique numeric id, meaning depends on parent device type
     DEV_RES_VENDORID,           //< Vendor id, meaning depends on parent device type
-    DEV_RES_PRODUCTID,            //< Model id specific to current vendor id
+    DEV_RES_PRODUCTID,          //< Model id specific to current vendor id
     DEV_RES_REVISION,
+    DEV_RES_FREQ,               //< frequency in Hertz
     DEV_RES_STR_PARAM,
     DEV_RES_UINT_PARAM,
     DEV_RES_UINT_ARRAY_PARAM,
@@ -103,6 +104,10 @@ struct dev_resource_s
       uintptr_t major;
       uintptr_t minor;
     }   revision;
+
+    struct {
+      uint64_t i:40, f:24;     //< frequency in 40.24 fixed point format
+    }   freq;
 
     struct {
       const char *name;

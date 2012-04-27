@@ -82,29 +82,6 @@ reg_t cpu_get_stackptr()
     return ret;
 }
 
-static inline cpu_cycle_t
-cpu_cycle_count(void)
-{
-#if defined(__ARM_ARCH_6K__)
-	uint32_t ret;
-    THUMB_TMP_VAR;
-
-	asm volatile (
-        THUMB_TO_ARM
-        "mrc p15, 0, %[ret], c15, c12, 1\n\t"
-        ARM_TO_THUMB
-        : [ret] "=r"(ret) /*,*/ THUMB_OUT(,));
-
-	return ret;
-#elif defined(__ARM_ARCH_4T__)
-	/* who cares ? */
-	return 0;
-#else
-# warning No CPU cycle counter
-	return 0;
-#endif
-}
-
 static inline void
 cpu_trap()
 {

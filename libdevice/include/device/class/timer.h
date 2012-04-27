@@ -39,75 +39,134 @@ struct driver_s;
 struct driver_timer_s;
 struct device_timer_s;
 
+/** Timer absolute value type */
+typedef uint64_t dev_timer_value_t;
+/** Timer relative value type */
+typedef uint32_t dev_timer_delay_t;
+
+struct dev_timer_rq_s;
+
 /** timer device class callback function template */
-#define DEVTIMER_CALLBACK(n)	void (n) (void *priv)
-/** timer device class callback function type */
+#define DEVTIMER_CALLBACK(n)    bool_t (n) (struct dev_timer_rq_s *rq)
+/** Timer device request callback. This function is called when the
+    timer deadline is reached.
+
+    The request is rescheduled if the function return true. If the
+    request @tt delay field was not zero when the request was first
+    scheduled, the delay must not be changed and the next callback
+    will be called with the same interval. If the delay field was
+    zero, the @tt field deadline value can be updated to a new value. */
 typedef DEVTIMER_CALLBACK(devtimer_callback_t);
 
+/** Timer request @csee devtimer_request_t */
+struct dev_timer_rq_s
+{
+  dev_timer_value_t             deadline;    //< absolute timer deadline
+  dev_timer_delay_t             delay;       //< timer delay
+  devtimer_callback_t           *callback;   //< callback function
+  void                          *pvdata;     //< pv data for callback
+  void                          *drvdata;    //< driver private data
+  struct device_timer_s         *tdev;       //< pointer to associated timer device
+  CONTAINER_ENTRY_TYPE(CLIST)   queue_entry; //< used by driver to enqueue requests
+};
 
+CONTAINER_TYPE(dev_timer_queue, CLIST, struct dev_timer_rq_s, queue_entry);
+CONTAINER_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue);
 
-/** TIMER device class setcallback() function template */
-#define DEVTIMER_SETCALLBACK(n)	error_t (n) (struct device_timer_s *tdev, uint_fast8_t id, devtimer_callback_t *callback, void *priv)
-/** TIMER device class setcallback() function type. Change current
-    timer/counter callback. a NULL pointer may be used to disable
-    timer callback.
-
-    * @param dev pointer to device descriptor
-    * @param id timer id
-    * @param callback new timer callback
-    * @param priv private data passed to callback function
-    */
-typedef DEVTIMER_SETCALLBACK(devtimer_setcallback_t);
-
-
-
-/** TIMER device class setperiod() function template */
-#define DEVTIMER_SETPERIOD(n)	error_t (n) (struct device_timer_s *tdev, uint_fast8_t id, uintmax_t period)
-/** TIMER device class setperiod() function type. Change timer/counter
-    period. Period can be the max value for incremening counters or
-    the start value for decrmenting counters. A value of 0 may disable
-    timer depending on hardware capabilites.
-
-    * @param dev pointer to device descriptor
-    * @param id timer id
-    * @param period timer period
-    */
-typedef DEVTIMER_SETPERIOD(devtimer_setperiod_t);
+CONTAINER_KEY_TYPE(dev_timer_queue, PTR, SCALAR, deadline);
+CONTAINER_KEY_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue, deadline);
 
 
 
-/** TIMER device class setvalue() function template */
-#define DEVTIMER_SETVALUE(n)	error_t (n) (struct device_timer_s *tdev, uint_fast8_t id, uintmax_t value)
-/** TIMER device class setvalue() function type. Change current
-    timer/counter value. May only be used to reset timer depending on
-    hardware capabilities.
+/** Timer device class request() function template. */
+#define DEVTIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
 
-    * @param dev pointer to device descriptor
-    * @param id timer id
-    * @param value new timer value
-    */
-typedef DEVTIMER_SETVALUE(devtimer_setvalue_t);
+/**
+   Timer device class request function. Enqueue a timer request.
+
+   @param rq pointer to request.
+
+   The resquest @tt delay and @tt callback fields must be initialized.  If
+   @tt delay is zero, the @tt deadline field must be initialized with an
+   absolute deadline timer value.
+
+   Request callback will be called immediately from within this
+   function if the deadline has already been reached.
+
+   @This function is optional, if @ref #DEVICE_HAS_OP returns false,
+   the timer device can not be used to schedule events.
+*/
+typedef DEVTIMER_REQUEST(devtimer_request_t);
+
+
+/** Timer device class cancel() function template. */
+#define DEVTIMER_CANCEL(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
+
+/**
+   Timer device class cancel function. Cancel a queued timer request.
+
+   @param rq pointer to cancel.
+
+   @return @tt -ENOENT if the request was not found (already reached).
+
+   @This function is optional but must be available along with @ref devtimer_request_t.
+*/
+typedef DEVTIMER_CANCEL(devtimer_cancel_t);
 
 
 
-/** TIMER device class getvalue() function template */
-#define DEVTIMER_GETVALUE(n)	uintmax_t (n) (struct device_timer_s *tdev, uint_fast8_t id)
-/** TIMER device class getvalue() function type. Get the current timer
-    value. May return 0 or truncated timer value depending on hardware
-    capabilities.
+/** Timer device class getvalue() function template */
+#define DEVTIMER_GET_VALUE(n)	dev_timer_value_t (n) (struct device_timer_s *tdev)
 
-    * @param dev pointer to device descriptor
-    * @param id timer id
-    * @return current timer value
-    */
-typedef DEVTIMER_GETVALUE(devtimer_getvalue_t);
+/**
+   @This reads the current raw timer value. The timer value is increasing with time.
+
+   @param value pointer to value storage.
+
+   @csee #DEVTIMER_GETVALUE @csee #dev_timer_getvalue
+
+   @This function is mandatory.
+*/
+typedef DEVTIMER_GET_VALUE(devtimer_get_value_t);
+
+
+/** Timer device fixed point resolution @see #DEVTIMER_RES_FIXED_POINT */
+typedef uint64_t dev_timer_res_t;
+
+/** Compute timer device fixed point resolution value from real value */
+#define DEVTIMER_RES_FIXED_POINT(v) ((uint64_t)(v * (1ULL << 32)))
+
+/** Timer device resolution() function template */
+#define DEVTIMER_RESOLUTION(n)	void (n) (struct device_timer_s *tdev, dev_timer_res_t *res, dev_timer_value_t *max)
+
+/**
+   @This tries to set timer resolution to value pointed to by @tt
+   new_res if the pointer is not @tt NULL and the current value is not
+   zero.
+
+   @This puts the new timer resolution, which can be different from
+   the requested resolution depending on hardware capabilities, in @tt
+   *res if the pointer is not NULL.
+
+   @This puts the maximum timer value reached when the timer is to
+   overlap in @tt *max if the pointer is not @tt NULL.
+
+   If the new resolution value is different from the requested one,
+   @tt -ERANGE is returned.  If setting timer resolution is not
+   supported, @tt -ENOTSUP is returned.
+
+   @This function is mandatory.
+
+   @see #DEVTIMER_RES_FIXED_POINT
+*/
+typedef DEVTIMER_RESOLUTION(devtimer_resolution_t);
 
 
 DRIVER_CLASS_TYPES(timer,
-                   devtimer_setperiod_t *f_setperiod;
-                   devtimer_getvalue_t *f_getvalue;
-                   devtimer_setcallback_t *f_setcallback;
-                   devtimer_setvalue_t *f_setvalue;
+                   devtimer_request_t *f_request;
+                   devtimer_cancel_t *f_cancel;
+                   devtimer_get_value_t *f_get_value;
+                   devtimer_resolution_t *f_resolution;
                    );
 
 #endif

@@ -31,6 +31,7 @@
 #include <device/driver.h>
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
+#include <device/class/timer.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
@@ -46,6 +47,7 @@ struct mips_dev_private_s
 #endif
 
 #ifdef CONFIG_ARCH_SMP
+  uint_fast8_t id;
   void *cls;            //< cpu local storage
 #endif
 };
@@ -82,9 +84,13 @@ static DEVICU_SETUP_IPI_EP(mips_icu_setup_ipi_ep)
 static DEVICU_DISABLE_SINK(mips_icu_disable_sink)
 {
 # ifndef CONFIG_ARCH_SMP
+  struct device_s *dev = idev->dev;
+  struct mips_dev_private_s  *pv = dev->drv_pv;
+  uint_fast8_t i = sink - pv->sinks;
+
   /* Disable irq line. On SMP platforms, all lines must remain enabled. */
   reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
-  status &= ~(1 << (icu_in_id + 10));
+  status &= ~(1 << (i + 10));
   cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
 # endif
 }
@@ -107,7 +113,7 @@ static DEVICU_GET_SINK(mips_icu_get_sink)
   return pv->sinks + icu_in_id;
 }
 
-const struct driver_icu_s  mips_icu_drv =
+static const struct driver_icu_s  mips_icu_drv =
 {
   .class_          = DRIVER_CLASS_ICU,
   .f_get_sink     = mips_icu_get_sink,
@@ -123,12 +129,16 @@ const struct driver_icu_s  mips_icu_drv =
         CPU driver part
 ************************************************************************/
 
+CPU_LOCAL struct device_s *cpu_device = NULL;
+
 static DEVCPU_REG_INIT(mips_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
   struct mips_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
+  assert(pv->id == cpu_id());
+
   /* set cpu local storage register base pointer */
   asm volatile("move $27, %0" : : "r" (pv->cls));
 
@@ -143,6 +153,8 @@ static DEVCPU_REG_INIT(mips_cpu_reg_init)
   cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
 # endif
 #endif
+
+  CPU_LOCAL_SET(cpu_device, dev);
 }
 
 
@@ -156,7 +168,7 @@ static DEVCPU_GET_STORAGE(mips_cpu_get_storage)
 #endif
 
 
-const struct driver_cpu_s  mips_cpu_drv =
+static const struct driver_cpu_s  mips_cpu_drv =
 {
   .class_          = DRIVER_CLASS_CPU,
   .f_reg_init      = mips_cpu_reg_init,
@@ -164,6 +176,50 @@ const struct driver_cpu_s  mips_cpu_drv =
   .f_get_storage   = mips_cpu_get_storage,
 #endif
 };
+
+/************************************************************************
+        Timer driver part
+************************************************************************/
+
+# if CONFIG_CPU_MIPS_VERSION >= 32
+
+#define MIPS_HAS_TIMER
+
+static DEVTIMER_GET_VALUE(mips_timer_get_value)
+{
+  struct device_s *dev = tdev->dev;
+  struct mips_dev_private_s *pv = dev->drv_pv;
+
+#ifdef CONFIG_ARCH_SMP
+  assert(pv->id == cpu_id());
+#endif
+
+  return cpu_mips_mfc0(9, 0);
+}
+
+static DEVTIMER_RESOLUTION(mips_timer_resolution)
+{
+  error_t err = 0;
+
+  if (res)
+    {
+      if (*res != 0)
+        err = -ENOTSUP;
+      *res = DEVTIMER_RES_FIXED_POINT(1.0);
+    }
+
+  if (max)
+    *max = 0xffffffff;
+}
+
+static const struct driver_timer_s  mips_timer_drv =
+{
+  .class_          = DRIVER_CLASS_TIMER,
+  .f_get_value     = mips_timer_get_value,
+  .f_resolution    = mips_timer_resolution,
+};
+
+#endif
 
 /************************************************************************/
 
@@ -198,6 +254,9 @@ const struct driver_s  mips_drv =
     &mips_cpu_drv,
 #ifdef CONFIG_DEVICE_IRQ
     &mips_icu_drv,
+#endif
+#ifdef MIPS_HAS_TIMER
+    &mips_timer_drv,
 #endif
     0
   }
@@ -235,6 +294,7 @@ static DEV_INIT(mips_init)
 #ifdef CONFIG_ARCH_SMP
   /* allocate cpu local storage */
   pv->cls = arch_cpudata_alloc();
+  pv->id = id;
   if (!pv->cls)
     goto err_mem;
 #endif

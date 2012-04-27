@@ -30,6 +30,7 @@
 #include <device/driver.h>
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
+#include <device/class/timer.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
@@ -42,6 +43,7 @@ struct lm32_dev_private_s
 #endif
 
 #ifdef CONFIG_ARCH_SMP
+  uint_fast8_t id;
   void *cls;            //< cpu local storage
 #endif
 };
@@ -78,10 +80,14 @@ static DEVICU_SETUP_IPI_EP(lm32_icu_setup_ipi_ep)
 static DEVICU_DISABLE_SINK(lm32_icu_disable_sink)
 {
 # ifndef CONFIG_ARCH_SMP
+  struct device_s *dev = idev->dev;
+  struct lm32_dev_private_s  *pv = dev->drv_pv;
+  uint_fast8_t i = sink - pv->sinks;
+
   /* Disable irq line. On SMP platforms, all lines must remain enabled. */
   reg_t status;
   asm volatile ("rcsr	%0, IM" : "=r" (status));
-  status &= ~(1 << icu_in_id);
+  status &= ~(1 << i);
   asm volatile ("wcsr	IM, %0" :: "r" (status));
 # endif
 }
@@ -121,9 +127,15 @@ const struct driver_icu_s  lm32_icu_drv =
         CPU driver part
 ************************************************************************/
 
+CPU_LOCAL struct device_s *cpu_device = NULL;
+
 static DEVCPU_REG_INIT(lm32_cpu_reg_init)
 {
+  struct device_s *dev = cdev->dev;
+  struct lm32_dev_private_s *pv = dev->drv_pv;
+
 #ifdef CONFIG_ARCH_SMP
+  assert(pv->id == cpu_id());
 
 # error lm32 support has no CPU local storage register for SMP
 
@@ -132,6 +144,8 @@ static DEVCPU_REG_INIT(lm32_cpu_reg_init)
   asm volatile ("wcsr	IM, %0" :: "r" ((1 << CONFIG_CPU_LM32_IRQ_COUNT)-1));
 # endif
 #endif
+
+  CPU_LOCAL_SET(cpu_device, dev);
 }
 
 #ifdef CONFIG_ARCH_SMP
@@ -150,6 +164,46 @@ const struct driver_cpu_s  lm32_cpu_drv =
 #ifdef CONFIG_ARCH_SMP
   .f_get_storage   = lm32_cpu_get_storage,
 #endif
+};
+
+/************************************************************************
+        Timer driver part
+************************************************************************/
+
+static DEVTIMER_GET_VALUE(lm32_timer_get_value)
+{
+  struct device_s *dev = tdev->dev;
+  struct lm32_dev_private_s *pv = dev->drv_pv;
+
+#ifdef CONFIG_ARCH_SMP
+  assert(pv->id == cpu_id());
+#endif
+
+  uint32_t ret;
+  asm volatile ("rcsr %0, CC" : "=r" (ret));
+  return ret;
+}
+
+static DEVTIMER_RESOLUTION(lm32_timer_resolution)
+{
+  error_t err = 0;
+
+  if (res)
+    {
+      if (*res != 0)
+        err = -ENOTSUP;
+      *res = DEVTIMER_RES_FIXED_POINT(1.0);
+    }
+
+  if (max)
+    *max = 0xffffffff;
+}
+
+static const struct driver_timer_s  lm32_timer_drv =
+{
+  .class_          = DRIVER_CLASS_TIMER,
+  .f_get_value     = lm32_timer_get_value,
+  .f_resolution    = lm32_timer_resolution,
 };
 
 /************************************************************************/
@@ -178,6 +232,7 @@ const struct driver_s  lm32_drv =
 #ifdef CONFIG_DEVICE_IRQ
     &lm32_icu_drv,
 #endif
+    &lm32_timer_drv,
     0
   }
 };
@@ -212,6 +267,7 @@ static DEV_INIT(lm32_init)
 #ifdef CONFIG_ARCH_SMP
   /* allocate cpu local storage */
   pv->cls = arch_cpudata_alloc();
+  pv->id = id;
   if (!pv->cls)
     goto err_mem;
 #endif
@@ -236,6 +292,9 @@ static DEV_INIT(lm32_init)
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
+ err_mem:
+  mem_free(pv);
+  return -1;
 }
 
 static DEV_CLEANUP(lm32_cleanup)

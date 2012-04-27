@@ -31,6 +31,7 @@
 #include <device/driver.h>
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
+#include <device/class/timer.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
@@ -44,6 +45,7 @@ struct ppc_dev_private_s
 #endif
 
 #ifdef CONFIG_ARCH_SMP
+  uint_fast8_t id;
   void *cls;            //< cpu local storage
 #endif
 };
@@ -115,6 +117,8 @@ const struct driver_icu_s  ppc_icu_drv =
         CPU driver part
 ************************************************************************/
 
+CPU_LOCAL struct device_s *cpu_device = NULL;
+
 static DEVCPU_REG_INIT(ppc_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
@@ -125,12 +129,16 @@ static DEVCPU_REG_INIT(ppc_cpu_reg_init)
   asm volatile("mtevpr %0" : : "r"(&__exception_base_ptr));
 
 #ifdef CONFIG_ARCH_SMP
+  assert(pv->id == cpu_id());
+
   asm volatile("mtspr 0x115, %0" : : "r" (pv->cls)); /* SPRG5 is cls */
 
 # ifdef CONFIG_DEVICE_IRQ
   /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
 # endif
 #endif
+
+  CPU_LOCAL_SET(cpu_device, dev);
 }
 
 #ifdef CONFIG_ARCH_SMP
@@ -149,6 +157,47 @@ const struct driver_cpu_s  ppc_cpu_drv =
 #ifdef CONFIG_ARCH_SMP
   .f_get_storage   = ppc_cpu_get_storage,
 #endif
+};
+
+/************************************************************************
+        Timer driver part
+************************************************************************/
+
+static DEVTIMER_GET_VALUE(ppc_timer_get_value)
+{
+  struct device_s *dev = tdev->dev;
+  struct ppc_dev_private_s *pv = dev->drv_pv;
+
+#ifdef CONFIG_ARCH_SMP
+  assert(pv->id == cpu_id());
+#endif
+
+  uint32_t      result;
+  asm volatile ("mftbl %0" : "=r" (result));
+
+  return result;
+}
+
+static DEVTIMER_RESOLUTION(ppc_timer_resolution)
+{
+  error_t err = 0;
+
+  if (res)
+    {
+      if (*res != 0)
+        err = -ENOTSUP;
+      *res = DEVTIMER_RES_FIXED_POINT(1.0);
+    }
+
+  if (max)
+    *max = 0xffffffff;
+}
+
+static const struct driver_timer_s  ppc_timer_drv =
+{
+  .class_          = DRIVER_CLASS_TIMER,
+  .f_get_value     = ppc_timer_get_value,
+  .f_resolution    = ppc_timer_resolution,
 };
 
 /************************************************************************/
@@ -178,6 +227,7 @@ const struct driver_s  ppc_drv =
 #ifdef CONFIG_DEVICE_IRQ
     &ppc_icu_drv,
 #endif
+    &ppc_timer_drv,
     0
   }
 };
@@ -214,6 +264,7 @@ static DEV_INIT(ppc_init)
 #ifdef CONFIG_ARCH_SMP
   /* allocate cpu local storage */
   pv->cls = arch_cpudata_alloc();
+  pv->id = id;
   if (!pv->cls)
     goto err_mem;
 #endif
