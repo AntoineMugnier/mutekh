@@ -29,6 +29,7 @@
 #include <mutek/scheduler.h>
 #include <hexo/context.h>
 #include <hexo/init.h>
+#include <hexo/iospace.h>
 #include <mutek/memory_allocator.h>
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -65,7 +66,7 @@ static void cpu_reg_init()
     device_put_accessor(&cpu_dev);
 }
 
-void arch_init(uintptr_t init_sp)
+void arch_init_bootstrap(uintptr_t init_sp)
 {
     extern __ldscript_symbol_t __bss_start;
     extern __ldscript_symbol_t __bss_end;
@@ -101,6 +102,12 @@ void arch_init(uintptr_t init_sp)
 
     cpu_reg_init();
 
+    // start other 4 CPUs hack
+#ifdef CONFIG_ARCH_SMP
+#warning SMP start hack
+    cpu_mem_write_32(0x80000010, (1 << CONFIG_CPU_MAXCOUNT) - 1);
+#endif
+
 #if defined(CONFIG_MUTEK_SCHEDULER)
     sched_global_init();
     sched_cpu_init();
@@ -113,6 +120,42 @@ void arch_init(uintptr_t init_sp)
 #endif
 
     mutek_start();
+}
+
+#ifdef CONFIG_ARCH_SMP
+/**
+   @this is the function run by all CPUs other than the bootstrap one.
+ */
+static
+void arch_init_other()
+{
+    assert(cpu_id() < CONFIG_CPU_MAXCOUNT);
+
+    cpu_reg_init();
+
+    /* run mutek_start_smp() */
+
+#if defined(CONFIG_MUTEK_SCHEDULER)
+    sched_cpu_init();
+#endif
+
+    /* FIXME should have context_bootstrap for non bsp processors,
+       especially when CONFIG_MUTEK_SMP_APP_START is defined. */
+
+    mutek_start_smp();
+}
+#endif
+
+void arch_init(uintptr_t init_sp)
+{
+#ifdef CONFIG_ARCH_SMP
+    if (cpu_id() == 0)
+        arch_init_bootstrap(init_sp);
+    else
+        arch_init_other();
+#else
+    arch_init_bootstrap(init_sp);
+#endif
 }
 
 void boot_from_reset_vector(uintptr_t init_sp)

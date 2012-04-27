@@ -25,6 +25,8 @@
 
 #define CPU_CPU_H_
 
+#include <hexo/asm.h>
+
 /** sparc psr trap enabled bit */
 #define SPARC_PSR_TRAP_ENABLED     0x20
 /** sparc psr previous super user mode */
@@ -80,10 +82,9 @@ cpu_sparc_wincount(void)
 static inline cpu_id_t
 cpu_id(void)
 {
-  //  reg_t         reg;
-  /** FIXME */
-
-  return 0;
+  reg_t ret;
+  asm("CPU_ID %0" : "=r" (ret));
+  return ret;
 }
 
 static inline
@@ -99,13 +100,6 @@ static inline bool_t
 cpu_isbootstrap(void)
 {
   return cpu_id() == 0;
-}
-
-static inline cpu_cycle_t
-cpu_cycle_count(void)
-{
-  extern cpu_cycle_t sparc_fake_tsc;
-  return sparc_fake_tsc++;
 }
 
 static inline void

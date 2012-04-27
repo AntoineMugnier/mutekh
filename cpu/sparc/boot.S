@@ -37,9 +37,10 @@ FUNC_START(.text, cpu_boot)
         set     __initial_stack,        %sp
 
 #ifdef CONFIG_ARCH_SMP_CAPABLE
-        /* only first CPU is allowed to boot */
-        tst     %g3
-        bne     cpu_boot_idle
+        /* spin if cpuid >= CONFIG_CPU_MAXCOUNT */
+        cmp     %g3,    CONFIG_CPU_MAXCOUNT
+        bge     cpu_boot_idle
+        nop
 #endif
 
 #ifdef CONFIG_ARCH_SMP

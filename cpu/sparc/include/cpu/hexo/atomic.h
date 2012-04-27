@@ -29,4 +29,18 @@
 
 #define CPU_ATOMIC_H_
 
+#define HAS_CPU_ATOMIC_COMPARE_AND_SWAP
+
+static inline bool_t
+cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)
+{
+  asm volatile("casa [%4] 0, %3, %0        \n"
+               : "=r" (future), "+m" (*a)
+               : "0" (future), "r" (old), "r" (a)
+               );
+
+  return future == old;
+}
+
 #endif
+

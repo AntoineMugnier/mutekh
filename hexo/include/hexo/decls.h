@@ -14,19 +14,19 @@
 
 /* make unavailable functions deprecated */
 
+# if _GNUC_VERSION >= 40500
+#  define deprecated(message)   __attribute__((deprecated(message)))
+# else
+#  define deprecated(message)   __attribute__((deprecated))
+# endif
+
 # ifndef __MUTEK_ASM__ // mkdoc:skip
 
 #  define _CONFIG_DEPEND_1(name, attr, proto, ...) \
   attr proto __VA_ARGS__
-#  if _GNUC_VERSION >= 40500
+
 #   define _CONFIG_DEPEND_0(name, attr, proto, ...) \
-  __attribute__((deprecated("this symbol depends on " name ", not defined in configuration"))) \
-  proto
-#  else
-#   define _CONFIG_DEPEND_0(name, attr, proto, ...) \
-  __attribute__((deprecated)) \
-  proto
-#  endif
+  deprecated("this symbol depends on " name ", not defined in configuration") proto
 
 #  define _CONFIG_DEPEND_AND_00(name, attr, proto, ...) _CONFIG_DEPEND_0(name, attr, proto, __VA_ARGS__)
 #  define _CONFIG_DEPEND_AND_01(name, attr, proto, ...) _CONFIG_DEPEND_0(name, attr, proto, __VA_ARGS__)

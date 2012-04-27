@@ -33,6 +33,7 @@
 #define LOCK_H_
 
 #include <hexo/decls.h>
+#include <hexo/ordering.h>
 
 C_HEADER_BEGIN
 
@@ -97,6 +98,7 @@ static inline void lock_destroy(lock_t *lock)
 static inline bool_t lock_try(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
+  order_smp_mem();
   return arch_lock_try(&lock->arch);
 #else
   return 0;
@@ -108,6 +110,7 @@ static inline bool_t lock_try(lock_t *lock)
 static inline void lock_spin(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
+  order_smp_mem();
   arch_lock_spin(&lock->arch);
 #endif
 }
@@ -140,6 +143,7 @@ static inline bool_t lock_state(lock_t *lock)
 static inline void lock_release(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
+  order_smp_mem();
   arch_lock_release(&lock->arch);
 #endif
 }

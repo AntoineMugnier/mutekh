@@ -89,7 +89,7 @@ static bool_t atomic_inc(atomic_t *a);
    @return 0 if new atomic value is 0. */
 static bool_t atomic_dec(atomic_t *a);
 
-/** @this atomicaly sets bit in intger value in memory */
+/** @this atomicaly sets bit in integer value in memory */
 static void atomic_bit_set(atomic_t *a, uint_fast8_t n);
 
 /** @this atomicaly tests and sets bit in integer value in memory
@@ -117,6 +117,119 @@ static bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_
 #endif
 
 #include <arch/hexo/atomic.h>
+
+/* provide some default implementations based on compare and swap for
+   other atomic functions unless a better implementation is provided
+   by processor support code. */
+
+#ifdef HAS_CPU_ATOMIC_COMPARE_AND_SWAP
+
+# ifndef HAS_CPU_ATOMIC_INC
+#  define HAS_CPU_ATOMIC_INC
+static inline bool_t
+cpu_atomic_inc(atomic_int_t *a)
+{
+  atomic_int_t old;
+  do {
+    asm ("" : "+m" (*a));
+    old = *a;
+  } while (!cpu_atomic_compare_and_swap(a, old, old + 1));
+
+  return old + 1 != 0;
+}
+# endif
+
+# ifndef HAS_CPU_ATOMIC_DEC
+#  define HAS_CPU_ATOMIC_DEC
+static inline bool_t
+cpu_atomic_dec(atomic_int_t *a)
+{
+  atomic_int_t old;
+  do {
+    asm ("" : "+m" (*a));
+    old = *a;
+  } while (!cpu_atomic_compare_and_swap(a, old, old - 1));
+
+  return old - 1 != 0;
+}
+# endif
+
+# ifndef HAS_CPU_ATOMIC_TESTSET
+#  define HAS_CPU_ATOMIC_TESTSET
+static inline bool_t
+cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
+{
+  atomic_int_t mask = 1 << n;
+  atomic_int_t old;
+  bool_t res;
+
+  do {
+    asm ("" : "+m" (*a));
+    old = *a;
+    res = (old & mask) != 0;
+  } while (!res && !cpu_atomic_compare_and_swap(a, old, old | mask));
+
+  return res;
+}
+# endif
+
+# ifndef HAS_CPU_ATOMIC_TESTCLR
+#  define HAS_CPU_ATOMIC_TESTCLR
+static inline bool_t
+cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
+{
+  atomic_int_t mask = 1 << n;
+  atomic_int_t old;
+  bool_t res;
+
+  do {
+    asm ("" : "+m" (*a));
+    old = *a;
+    res = (old & mask) != 0;
+  } while (res && !cpu_atomic_compare_and_swap(a, old, old & ~mask));
+
+  return res;
+}
+# endif
+#endif
+
+#if defined(HAS_CPU_ATOMIC_TESTSET) && !defined(HAS_CPU_ATOMIC_WAITSET)
+# define HAS_CPU_ATOMIC_WAITSET
+static inline void
+cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
+{
+  while (cpu_atomic_bit_testset(a, n))
+    ;
+}
+#endif
+
+#if defined(HAS_CPU_ATOMIC_TESTCLR) && !defined(HAS_CPU_ATOMIC_WAITCLR)
+# define HAS_CPU_ATOMIC_WAITCLR
+static inline void
+cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
+{
+  while (!cpu_atomic_bit_testclr(a, n))
+    ;
+}
+#endif
+
+#if defined(HAS_CPU_ATOMIC_TESTSET) && !defined(HAS_CPU_ATOMIC_SET)
+# define HAS_CPU_ATOMIC_SET
+static inline void
+cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
+{
+  cpu_atomic_bit_testset(a, n);
+}
+#endif
+
+#if defined(HAS_CPU_ATOMIC_TESTCLR) && !defined(HAS_CPU_ATOMIC_CLR)
+#define HAS_CPU_ATOMIC_CLR
+static inline void
+cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
+{
+  cpu_atomic_bit_testclr(a, n);
+}
+#endif
 
 #endif
 

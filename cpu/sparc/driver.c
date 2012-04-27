@@ -54,6 +54,7 @@ struct sparc_dev_private_s
 #endif
 
 #ifdef CONFIG_ARCH_SMP
+  uint_fast8_t id;
   void *cls;            //< cpu local storage
 #endif
 };
@@ -132,19 +133,26 @@ const struct driver_icu_s  sparc_icu_drv =
         CPU driver part
 ************************************************************************/
 
+CPU_LOCAL struct device_s *cpu_device = NULL;
+
 static DEVCPU_REG_INIT(sparc_cpu_reg_init)
 {
-#ifdef CONFIG_ARCH_SMP
   struct device_s *dev = cdev->dev;
+
+#ifdef CONFIG_ARCH_SMP
   struct sparc_dev_private_s *pv = dev->drv_pv;
 
+  assert(pv->id == cpu_id());
+
   /* set cpu local storage register base pointer */
-  asm volatile("mov %0 %%g6" : : "r" (pv->cls));
+  asm volatile("mov %0, %%g6" : : "r" (pv->cls));
 
 # ifdef CONFIG_DEVICE_IRQ
   /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
 # endif
 #endif
+
+  CPU_LOCAL_SET(cpu_device, dev);
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
   /* all these functions may execute with briefly invalid stack & frame
@@ -269,6 +277,7 @@ static DEV_INIT(sparc_init)
 #ifdef CONFIG_ARCH_SMP
   /* allocate cpu local storage */
   pv->cls = arch_cpudata_alloc();
+  pv->id = id;
   if (!pv->cls)
     goto err_mem;
 #endif
@@ -293,6 +302,9 @@ static DEV_INIT(sparc_init)
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
+ err_mem:
+  mem_free(pv);
+  return -1;
 }
 
 static DEV_CLEANUP(sparc_cleanup)
