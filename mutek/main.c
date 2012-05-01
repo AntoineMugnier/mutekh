@@ -112,16 +112,7 @@ int_fast8_t mutek_start()  /* FIRST CPU only */
 	lock_init(&fault_lock);
 	cpu_exception_sethandler(fault_handler);
 
-#if defined(CONFIG_ARCH_DEVICE_TREE)
-    cpu_interrupt_enable();
-//    enum_fdt_children_init(&fdt_enum_dev);
-//    mutek_parse_fdt_chosen(&fdt_enum_dev, arch_fdt);
-    cpu_interrupt_disable();
-#endif
-
 #if defined(CONFIG_MUTEK_CONSOLE)
-    struct device_find_chosen_ctx_s ctx = { 0 };
-    device_tree_walk(NULL, &device_find_chosen, &ctx);
 
 # if !defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
     if ( ctx.console )

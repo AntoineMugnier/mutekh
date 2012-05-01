@@ -183,5 +183,18 @@ cpu_mem_write_32(uintptr_t addr, uint32_t data)
 		    );
 }
 
+static inline uint64_t
+cpu_mem_read_64(uintptr_t addr)
+{
+  return cpu_mem_read_32(addr) | ((uint64_t)cpu_mem_read_32(addr + 4) << 32);
+}
+
+static inline void
+cpu_mem_write_64(uintptr_t addr, uint64_t data)
+{
+  cpu_mem_write_32(addr, data);
+  cpu_mem_write_32(addr + 4, data >> 32);
+}
+
 #endif
 

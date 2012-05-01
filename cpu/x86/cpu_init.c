@@ -30,43 +30,17 @@
 #include <hexo/segment.h>
 #include <hexo/cpu.h>
 
+#include "cpu_private.h"
+
 #include <cpu/hexo/pmode.h>
 #include <cpu/hexo/msr.h>
 
-/** pointer to cpu local storage itself */
-CPU_LOCAL void *__cpu_data_base;
-/** pointer to context local storage itself */
-CONTEXT_LOCAL void *__context_data_base;
-
-/* CPU Local Descriptor structure */
-
-static struct cpu_x86_gatedesc_s cpu_idt[CPU_MAX_INTERRUPTS];
-
-#ifdef CONFIG_ARCH_SMP
-void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-cpu_x86_segsel_t cpu_local_storage_seg[CONFIG_CPU_MAXCOUNT];
-#endif
-
-#ifdef CONFIG_HEXO_USERMODE
-CPU_LOCAL struct cpu_x86_tss_s cpu_tss;
-#endif
-
-/* we always need an interrupt stack on x86 with user mode because
-   processor switch/use stack for interrupt handler entry */
-#ifndef CONFIG_HEXO_INTERRUPT_STACK_SIZE
-# define CONFIG_HEXO_INTERRUPT_STACK_SIZE 128
-#endif
-#if defined(CONFIG_HEXO_USERMODE) || defined(CONFIG_HEXO_INTERRUPT_STACK)
-CPU_LOCAL uint8_t cpu_interrupt_stack[CONFIG_HEXO_INTERRUPT_STACK_SIZE];
-#endif
-
-/** gdt table lock */
-static lock_t		gdt_lock;
+/* CPU interrupt descriptor table */
+struct cpu_x86_gatedesc_s cpu_idt[CPU_MAX_INTERRUPTS];
 
 /** CPU Global descriptor table */
 union cpu_x86_desc_s gdt[ARCH_GDT_SIZE];
-
-void *mem_end;
+static lock_t        gdt_lock;
 
 error_t
 cpu_global_init(void)
@@ -76,11 +50,11 @@ cpu_global_init(void)
   lock_init(&gdt_lock);
 
   cpu_x86_seg_setup(&gdt[ARCH_GDT_CODE_INDEX].seg, 0,
-		    0xffffffff /*(uintptr_t)mem_end*/, CPU_X86_SEG_EXEC_NC_R, 0, 1);
+		    0xffffffff, CPU_X86_SEG_EXEC_NC_R, 0, 1);
 
 #ifdef CONFIG_HEXO_USERMODE
   cpu_x86_seg_setup(&gdt[ARCH_GDT_USER_CODE_INDEX].seg, 0,
-		    0xffffffff /*(uintptr_t)mem_end*/, CPU_X86_SEG_EXEC_NC_R, 3, 1);
+		    0xffffffff, CPU_X86_SEG_EXEC_NC_R, 3, 1);
 #endif
 
   cpu_x86_seg_setup(&gdt[ARCH_GDT_DATA_INDEX].seg, 0,
@@ -96,7 +70,6 @@ cpu_global_init(void)
     gdt[i].seg.available = 1;
 
   /* fill IDT with exceptions entry points */
-
   for (i = 0; i < CPU_EXCEPT_VECTOR_COUNT; i++)
     {
       uintptr_t	entry = ((uintptr_t)&x86_interrupt_ex_entry) + i * CPU_INTERRUPT_ENTRY_ALIGN;
@@ -108,7 +81,6 @@ cpu_global_init(void)
 
 #ifdef CONFIG_HEXO_IRQ
   /* fill IDT with hardware interrupts entry points */
-
   for (i = 0; i < CPU_HWINT_VECTOR_COUNT; i++)
     {
       uintptr_t	entry = ((uintptr_t)&x86_interrupt_hw_entry) + i * CPU_INTERRUPT_ENTRY_ALIGN;
@@ -121,7 +93,6 @@ cpu_global_init(void)
 
 #ifdef CONFIG_HEXO_USERMODE
   /* fill IDT with syscall entry points */
-
   for (i = 0; i < CPU_SYSCALL_VECTOR_COUNT; i++)
     {
       uintptr_t	entry = ((uintptr_t)&x86_interrupt_sys_entry) + i * CPU_INTERRUPT_ENTRY_ALIGN;
@@ -183,7 +154,6 @@ cpu_x86_segdesc_free(cpu_x86_segsel_t sel)
 {
   lock_spin(&gdt_lock);
 
-  /* FIXME could use atomic op here */
   assert(!gdt[sel].seg.available);
   gdt[sel].seg.available = 1;
 
@@ -192,75 +162,5 @@ cpu_x86_segdesc_free(cpu_x86_segsel_t sel)
 
 void cpu_init(void)
 {
-  /* set GDT pointer */
-  cpu_x86_set_gdt(gdt, ARCH_GDT_SIZE);
-
-  /* set IDT pointer */
-  cpu_x86_set_idt(cpu_idt, CPU_MAX_INTERRUPTS);
-
-  /* activate defined segments */
-  cpu_x86_dataseg_use(ARCH_GDT_DATA_INDEX, 0);
-  cpu_x86_stackseg_use(ARCH_GDT_DATA_INDEX, 0);
-  cpu_x86_codeseg_use(ARCH_GDT_CODE_INDEX, 0);
-
-#ifdef CONFIG_ARCH_SMP
-
-  /* setup cpu local storage */
-  uint_fast16_t		id = cpu_id();
-  void			*cls;
-  uint16_t		cls_sel;
-
-  if (!(cls = arch_cpudata_alloc()))
-    goto err_cls;
-
-  cpu_local_storage[id] = cls;
-
-  if (!(cls_sel = cpu_x86_segment_alloc((uintptr_t)cls,
-					arch_cpudata_size(),
-					CPU_X86_SEG_DATA_UP_RW)))
-    goto err_cls_seg;
-
-  cpu_local_storage_seg[id] = cls_sel;
-  cpu_x86_datasegfs_use(cls_sel, 0);
-  CPU_LOCAL_SET(__cpu_data_base, cls);
-
-#endif
-
-#ifdef CONFIG_HEXO_USERMODE
-
-  uint16_t		tss_sel;
-  struct cpu_x86_tss_s *tss = CPU_LOCAL_ADDR(cpu_tss);
-
-  memset(tss, 0, sizeof(struct cpu_x86_tss_s));
-
-  /* setup a tiny processor local interrupt entry stack */
-  tss->ss0 = ARCH_GDT_DATA_INDEX << 3;
-  tss->esp0 = (uintptr_t)CPU_LOCAL_ADDR(cpu_interrupt_stack) + CONFIG_HEXO_INTERRUPT_STACK_SIZE;
-
-  if (!(tss_sel = cpu_x86_segment_alloc((uintptr_t)tss, sizeof(*tss), CPU_X86_SEG_CONTEXT32)))
-    goto err_tss_seg;
-
-  cpu_x86_taskseg_use(tss_sel);
-
-# ifdef CONFIG_CPU_X86_SYSENTER
-  cpu_x86_write_msr(SYSENTER_CS_MSR, CPU_X86_SEG_SEL(ARCH_GDT_CODE_INDEX, 0));
-  cpu_x86_write_msr(SYSENTER_EIP_MSR, (uintptr_t)x86_interrupt_sys_enter);
-  cpu_x86_write_msr(SYSENTER_ESP_MSR, tss->esp0);
-# endif
-
-#endif
-
-  return;
-
-#ifdef CONFIG_HEXO_USERMODE
- err_tss_seg:
-#endif
-#ifdef CONFIG_ARCH_SMP
-  cpu_x86_segdesc_free(cls_sel);
- err_cls_seg:
-  mem_free(cls);
- err_cls:
-#endif
-  ;
 }
 

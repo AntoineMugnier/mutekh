@@ -10,19 +10,6 @@
 #include <hexo/context.h>
 #include <hexo/cpu.h>
 
-#include <drivers/char/uart-8250/uart-8250.h>
-#include <drivers/char/tty-vga/tty-vga.h>
-#include <drivers/icu/8259/icu-8259.h>
-#include <drivers/block/sd-mmc/sd-mmc.h>
-#include <drivers/timer/8253/timer-8253.h>
-#include <drivers/input/8042/input-8042.h>
-#include <drivers/input/mt5-f/mt5-f.h>
-#include <drivers/fb/vga/fb-vga.h>
-#include <drivers/enum/pci/enum-pci.h>
-#include <drivers/enum/isapnp/enum-isapnp.h>
-#include <drivers/net/ne2000/net-ne2000.h>
-#include <drivers/icu/apic/icu-apic.h>
-
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -82,6 +69,21 @@ extern struct device_s *console_dev;
 
 void arch_hw_init()
 {
+	extern const struct driver_s  x86_drv;
+	static struct device_s cpu_dev;
+	device_init(&cpu_dev);
+	cpu_dev.flags |= DEVICE_FLAG_CPU;
+	device_attach(&cpu_dev, NULL);
+	device_res_add_id(&cpu_dev, 0, 0);
+
+	printk("cpu dev bind...\n");
+	device_bind_driver(&cpu_dev, &x86_drv);
+
+	printk("cpu dev init...\n");
+	device_init_driver(&cpu_dev);
+	printk("done...\n");
+
+#if 0
   /********* ICU init ******************************** */
 
 #if defined(CONFIG_DRIVER_ICU_8259)
@@ -215,5 +217,8 @@ void arch_hw_init()
 #  error I would like an output for my console
 # endif
 # endif
+
+#endif
+
 }
 

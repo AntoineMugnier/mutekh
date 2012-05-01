@@ -49,7 +49,6 @@
 
 #include "pmode.h"
 #include "msr.h"
-#include <drivers/icu/apic/apic.h>
 
 #define CPU_GPREG_COUNT	8
 #define CPU_GPREG_NAMES "edi", "esi", "ebp", "esp", "ebx", "edx", "ecx", "eax"
@@ -67,34 +66,9 @@ cpu_isbootstrap(void)
   return msr & 0x100 ? 1 : 0;
 }
 
-/** cpu cycle counter read function */
-static inline cpu_cycle_t
-cpu_cycle_count(void)
-{
-  uint32_t      low, high;
-
-  asm volatile("rdtsc" : "=a" (low), "=d" (high));
-
-  return (low | ((uint64_t)high << 32));
-}
-
-#ifdef CONFIG_ARCH_SMP
-extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-extern cpu_x86_segsel_t cpu_local_storage_seg[CONFIG_CPU_MAXCOUNT];
-extern CPU_LOCAL cpu_x86_segsel_t *cpu_tls_seg;
-#endif
-
 #define CPU_TYPE_NAME x86
 
-static inline cpu_id_t cpu_id(void)
-{
-#ifdef CONFIG_ARCH_SMP
-  uintptr_t x = cpu_x86_read_msr(IA32_APIC_BASE_MSR) & ~0xfff;
-  return cpu_mem_read_32(x + APIC_REG_LAPIC_ID) >> 24;
-#else
-  return 0;
-#endif
-}
+cpu_id_t cpu_id(void);
 
 static inline void
 cpu_trap()

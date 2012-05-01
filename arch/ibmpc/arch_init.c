@@ -25,10 +25,12 @@
 #include <hexo/init.h>
 #include <hexo/cpu.h>
 
-#ifdef CONFIG_HEXO_IPI
 # include <device/class/icu.h>
+# include <device/class/cpu.h>
 # include <device/device.h>
 # include <device/driver.h>
+
+#ifdef CONFIG_HEXO_IPI
 # include <hexo/ipi.h>
 #endif
 
@@ -38,10 +40,6 @@
 # include <mutek/scheduler.h>
 #endif
 #include <mutek/printk.h>
-
-#ifdef CONFIG_DRIVER_ICU_APIC
-# include <drivers/icu/apic/icu-apic.h>
-#endif
 
 #ifdef CONFIG_HEXO_MMU
 #include <hexo/mmu.h>
@@ -76,7 +74,7 @@ struct multiboot_header_s multiboot_header =
   .checksum = 0 - MULTIBOOT_MAGIC,
 };
 
-#ifdef CONFIG_DRIVER_ICU_APIC
+#if 0
 static void apic_init()
 {
   struct device_s *lapic = CPU_LOCAL_ADDR(apic_dev);
@@ -102,6 +100,29 @@ extern struct sched_context_s main_ctx;
 #endif
 
 extern __ldscript_symbol_t __initial_stack;
+
+static void cpu_reg_init()
+{
+    /* find processor device */
+    struct device_s *dev = device_get_cpu(cpu_id(), 0);
+
+    if (!dev)
+        return;
+
+    struct device_cpu_s cpu_dev;
+
+    if (device_get_accessor(&cpu_dev, dev, DRIVER_CLASS_CPU, 0))
+      {
+        printk("cpu not found\n");
+        return;
+      }
+
+    printk("cpu init...\n");
+    DEVICE_OP(&cpu_dev, reg_init);
+    printk("done\n");
+
+    device_put_accessor(&cpu_dev);
+}
 
 /* architecture specific init function */
 void arch_init(uintptr_t init_sp)
@@ -153,12 +174,23 @@ void arch_init(uintptr_t init_sp)
 #endif
 
       /* configure first CPU and start app CPUs */
-      cpu_init();
+      //      cpu_init();
+
+#if defined(CONFIG_ARCH_HW_INIT_USER)
+	  user_hw_init();
+#elif defined(CONFIG_ARCH_HW_INIT)
+	  arch_hw_init();
+#else
+# error No supported hardware initialization
+#endif
+
+    cpu_reg_init();
+
 #ifdef CONFIG_HEXO_MMU
       mmu_cpu_init();
 #endif
 
-#ifdef CONFIG_DRIVER_ICU_APIC
+#if 0 //def CONFIG_DRIVER_ICU_APIC
       apic_init();
 #endif
 
@@ -175,15 +207,6 @@ void arch_init(uintptr_t init_sp)
 #endif
         }
 
-#if defined(CONFIG_ARCH_HW_INIT_USER)
-	  user_hw_init();
-#elif defined(CONFIG_ARCH_HW_INIT)
-	  arch_hw_init();
-#else
-# error No supported hardware initialization
-#endif
-
-
       /* run mutek_start() */
       mutek_start();
 #ifdef CONFIG_ARCH_SMP
@@ -195,13 +218,13 @@ void arch_init(uintptr_t init_sp)
 
       lock_spin(&cpu_init_lock);
 
-      cpu_init();
+      //      cpu_init();
 
 #ifdef CONFIG_HEXO_MMU
       mmu_cpu_init();
 #endif
 
-#ifdef CONFIG_DRIVER_ICU_APIC
+#if 0 //def CONFIG_DRIVER_ICU_APIC
       apic_init();
 #endif
       cpu_count++;

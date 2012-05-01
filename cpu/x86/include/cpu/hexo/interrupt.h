@@ -51,7 +51,7 @@
 /** max interrupt line handled by the CPU */
 #define CPU_MAX_INTERRUPTS		256
 
-/** interrupts entry tampline code size  */
+/** interrupts entry trampoline size  */
 #define CPU_INTERRUPT_ENTRY_ALIGN	16
 
 /** direct iret entry, used for cpu wakeup ipis */
