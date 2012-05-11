@@ -1,3 +1,4 @@
+
 /*
     This file is part of MutekH.
     
@@ -34,8 +35,9 @@
 
 #include <assert.h>
 
+#if 0
 /* anchor source_process */
-static DEV_IRQ_EP_PROCESS(device_irq_source_process)
+static DEV_IRQ_EP_PROCESS(device_icu_source_process)
 {
   struct dev_irq_ep_s  *src = ep;
 
@@ -56,12 +58,6 @@ static DEV_IRQ_EP_PROCESS(device_irq_source_process)
 }
 /* anchor end */
 
-void device_irq_spurious_process(struct dev_irq_ep_s *sink, int_fast16_t *id)
-{
-  /* FIXME disable lost irq here */
-}
-
-#if 0
 /* anchor sink_process */
 static DEV_IRQ_EP_PROCESS(device_irq_sink_process)
 {
@@ -94,52 +90,23 @@ static DEV_IRQ_EP_PROCESS(device_irq_sink_process)
       break;
     }
     }
-
-  /* for icu devs only */
-  if (sink->f_irq_ack)
-    sink->f_irq_ack(sink, *id);
 }
 /* anchor end */
 #endif
 
-static DEV_IRQ_EP_PROCESS(device_irq_sink_process_0a)
-{
-  struct dev_irq_ep_s  *sink = ep;
-  device_irq_spurious_process(sink, id);
-  sink->f_irq_ack(sink, *id);
-}
-
 static DEV_IRQ_EP_PROCESS(device_irq_sink_process_0)
 {
   struct dev_irq_ep_s  *sink = ep;
-  device_irq_spurious_process(sink, id);
-}
 
-static DEV_IRQ_EP_PROCESS(device_irq_sink_process_1a)
-{
-  struct dev_irq_ep_s  *sink = ep;
-  struct dev_irq_ep_s *src = sink->links.single;
-  src->process(src, id);
-  sink->f_irq_ack(sink, *id);
+  printk("device: spurious interrupt on sink end-point %p with no connection (icu device %p)\n", sink, sink->dev);
 }
 
 static DEV_IRQ_EP_PROCESS(device_irq_sink_process_1)
 {
   struct dev_irq_ep_s  *sink = ep;
-  struct dev_irq_ep_s *src = sink->links.single;
+  struct dev_irq_ep_s *src = sink->links.single; 
+  //  printk("irq1 %u %p\n", id, src->dev);
   src->process(src, id);
-}
-
-static DEV_IRQ_EP_PROCESS(device_irq_sink_process_Na)
-{
-  struct dev_irq_ep_s  *sink = ep;
-  uint_fast8_t i;
-  for (i = 0; i < sink->links_count; i++)
-    {
-      struct dev_irq_ep_s *src = sink->links.array[i];
-      src->process(src, id);
-    }
-  sink->f_irq_ack(sink, *id);
 }
 
 static DEV_IRQ_EP_PROCESS(device_irq_sink_process_N)
@@ -149,6 +116,7 @@ static DEV_IRQ_EP_PROCESS(device_irq_sink_process_N)
   for (i = 0; i < sink->links_count; i++)
     {
       struct dev_irq_ep_s *src = sink->links.array[i];
+      //  printk("irqN %u %p\n", id, src->dev);
       src->process(src, id);
     }
 }
@@ -157,23 +125,110 @@ static void device_irq_sink_fcn_set(struct dev_irq_ep_s *sink)
 {
   switch (sink->links_count)
     {
-      case 0:
-        sink->process = sink->f_irq_ack
-          ? &device_irq_sink_process_0a
-          : &device_irq_sink_process_0;
-        return;
-      case 1:
-        sink->process = sink->f_irq_ack
-          ? &device_irq_sink_process_1a
-          : &device_irq_sink_process_1;
-        return;
-      default:
-        sink->process = sink->f_irq_ack
-          ? &device_irq_sink_process_Na
-          : &device_irq_sink_process_N;
-        return;
+    case 0: {
+      struct device_icu_s icu;
+
+      if (!device_get_accessor(&icu, sink->dev, DRIVER_CLASS_ICU, 0))
+        {
+          if (DEVICE_HAS_OP(&icu, disable_irq))
+            DEVICE_OP(&icu, disable_irq, sink);
+          device_put_accessor(&icu);
+        }
+      sink->process = &device_irq_sink_process_0;
+      return;
+    }
+    case 1:
+      sink->process = &device_irq_sink_process_1;
+      return;
+    default:
+      sink->process = &device_irq_sink_process_N;
+      return;
     }
 }
+
+/****************************************/
+
+#ifdef CONFIG_DEVICE_IRQ_BYPASS
+
+void device_irq_bypass_init(struct dev_irq_bypass_s *bypass, uint_fast8_t count)
+{
+  memset(bypass, 0, sizeof(*bypass) * count);
+}
+
+void device_irq_bypass_cleanup(struct dev_irq_bypass_s *bypass, uint_fast8_t count)
+{
+  uint_fast8_t i;
+  for (i = 0; i < count; i++)
+    device_irq_bypass_unlink(bypass + i);
+}
+
+void device_irq_bypass_unlink(struct dev_irq_bypass_s *bypass)
+{
+  struct dev_irq_ep_s *src = bypass->src;
+  struct dev_irq_bypass_s **head, *i;
+
+  if (src == NULL)
+    return;
+
+  for (head = &src->bypass_list; (i = *head); head = &i->next)
+    if (i == bypass)
+      {
+        *head = i->next;
+        i->src = NULL;
+        i->next = NULL;
+        return;
+      }
+
+  abort();
+}
+
+error_t device_irq_bypass_link(struct dev_irq_ep_s *src, struct dev_irq_bypass_s *bypass)
+{
+  if (!src)
+    {
+      device_irq_bypass_unlink(bypass);
+      bypass->next = bypass; // unusable mark
+      return -EBUSY;
+    }
+  else if (bypass->src)
+    {
+      if (bypass->src == src)
+        return -EEXISTS;
+      device_irq_bypass_unlink(bypass);
+      bypass->next = bypass; // unusable mark
+      return -EBUSY;
+    }
+  else if (bypass->next == bypass)
+    {
+      return -EBUSY;
+    }
+  else
+    {
+      bypass->next = src->bypass_list;
+      src->bypass_list = bypass;
+      bypass->src = src;
+      return 0;
+    }
+}
+
+void device_irq_bypass_src_cleanup(struct dev_irq_ep_s *src)
+{
+  struct dev_irq_bypass_s *bypass = src->bypass_list;
+
+  while (bypass)
+    {
+      assert(bypass->src == src);
+      bypass->src = NULL;
+
+      struct dev_irq_bypass_s *next = bypass->next;
+      bypass->next = NULL;
+      bypass = next;
+    }
+
+  src->bypass_list = NULL;
+}
+
+#endif
 
 /****************************************/
 
@@ -307,28 +362,14 @@ error_t device_irq_ep_unlink(struct dev_irq_ep_s *source, struct dev_irq_ep_s *s
   assert(!sink || sink->type != DEV_IRQ_EP_SOURCE);
 #endif
 
-  if (source == NULL)
-    {
-      device_irq_ep_unlink_all(sink);
-      device_irq_sink_fcn_set(sink);
-      return 0;
-    }
-  else if (sink == NULL)
-    {
-      device_irq_ep_unlink_all(source);
-      return 0;
-    }
-  else
-    {
-      if (device_irq_ep_unlink_half(source, sink))
-        return -ENOENT;
-      ensure(!device_irq_ep_unlink_half(sink, source));
-      device_irq_sink_fcn_set(sink);
-      return 0;
-    }
+  if (device_irq_ep_unlink_half(source, sink))
+    return -ENOENT;
+  ensure(!device_irq_ep_unlink_half(sink, source));
+  device_irq_sink_fcn_set(sink);
+  return 0;
 }
 
-void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, uint_fast8_t src_count, dev_irq_t *handler)
+void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, uint_fast8_t src_count, dev_irq_ep_process_t *handler)
 {
   uint_fast8_t i;
 
@@ -336,50 +377,18 @@ void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, 
     {
       struct dev_irq_ep_s *ep = sources + i;
       ep->dev = dev;
-      ep->process = &device_irq_source_process;
+      ep->process = handler;
       ep->links_count = 0;
-      ep->f_irq = handler;
+#ifdef CONFIG_DEVICE_IRQ_BYPASS
+      ep->bypass_list = NULL;
+#endif
 #ifdef CONFIG_DEBUG
       ep->type = DEV_IRQ_EP_SOURCE;
 #endif
     }
 }
 
-void device_irq_tail_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, uint_fast8_t src_count, dev_irq_t *handler)
-{
-  uint_fast8_t i;
-
-  for (i = 0; i < src_count; i++)
-    {
-      struct dev_irq_ep_s *ep = sources + i;
-      ep->dev = dev;
-      ep->process = (dev_irq_ep_process_t*)handler;
-      ep->links_count = 0;
-      ep->f_irq = NULL;
-#ifdef CONFIG_DEBUG
-      ep->type = DEV_IRQ_EP_SOURCE;
-#endif
-    }
-}
-
-void device_irq_icu_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, uint_fast8_t src_count, dev_irq_ep_process_t *process)
-{
-  uint_fast8_t i;
-
-  for (i = 0; i < src_count; i++)
-    {
-      struct dev_irq_ep_s *ep = sources + i;
-      ep->dev = dev;
-      ep->process = process;
-      ep->links_count = 0;
-      ep->f_irq = NULL;
-#ifdef CONFIG_DEBUG
-      ep->type = DEV_IRQ_EP_SOURCE;
-#endif
-    }
-}
-
-void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint_fast8_t sink_count, dev_irq_ack_t *ack_handler)
+void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint_fast8_t sink_count)
 {
   uint_fast8_t i;
 
@@ -388,7 +397,6 @@ void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint
       struct dev_irq_ep_s *ep = sinks + i;
       ep->dev = dev;
       ep->links_count = 0;
-      ep->f_irq_ack = ack_handler;
 #ifdef CONFIG_DEBUG
       ep->type = DEV_IRQ_EP_SINK;
 #endif
@@ -406,6 +414,9 @@ void device_irq_source_unlink(struct device_s *dev, struct dev_irq_ep_s *sources
       assert(src[i].type != DEV_IRQ_EP_SINK);
 #endif
       device_irq_ep_unlink_all(sources + i);
+#ifdef CONFIG_DEVICE_IRQ_BYPASS
+      device_irq_bypass_src_cleanup(sources + i);
+#endif
     }
 }
 
@@ -423,7 +434,7 @@ void device_irq_sink_unlink(struct device_s *dev, struct dev_irq_ep_s *sinks, ui
     }
 }
 
-error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *src, uint_fast8_t src_count)
+error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, uint_fast8_t src_count, bool_t enable)
 {
   uint_fast8_t i;
   uint_fast8_t j = -1;
@@ -438,8 +449,8 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *src, u
 
       if (r->irq.dev_out_id >= src_count)
         {
-          printk("device: driver for device %p `%s' does not provide source end-point for IRQ output %u.\n",
-                 dev, dev->name, r->irq.dev_out_id);
+          printk("device: driver for device %p does not provide source end-point for IRQ output %u.\n",
+                 dev, r->irq.dev_out_id);
           err = -ENOENT;
           goto error;
         }
@@ -450,7 +461,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *src, u
 
       if (!icu_dev)
         {
-          printk("device: no interrupt controller available for %p `%s' device.\n", dev, dev->name);
+          printk("device: no interrupt controller available for %p device.\n", dev);
           err = -ENOENT;
           goto error;
         }
@@ -459,21 +470,22 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *src, u
 
       if (device_get_accessor(&icu, icu_dev, DRIVER_CLASS_ICU, 0))
         {
-          printk("device: can not use %p `%s' device as an interrupt controller.\n", r->irq.icu, r->irq.icu->name);
+          printk("device: can not use %p device as an interrupt controller.\n", r->irq.icu);
           err = -EINVAL;
           goto error;
         }
 
-      struct dev_irq_ep_s *sink = DEVICE_OP(&icu, get_sink, r->irq.icu_in_id);
+      struct dev_irq_ep_s *src = srcs + r->irq.dev_out_id;
+      struct dev_irq_ep_s *sink = DEVICE_OP(&icu, get_endpoint, DEV_IRQ_EP_SINK, r->irq.icu_in_id);
 
       if (!sink)
         {
-          printk("device: interrupt controller %p `%s' does not have sink end-point for IRQ input %u.\n");
+          printk("device: interrupt controller %p does not have sink end-point for IRQ input %u.\n", icu_dev, r->irq.icu_in_id);
           err = -EINVAL;
         }
       else
         {
-          err = device_irq_ep_link(src + r->irq.dev_out_id, sink);
+          err = device_irq_ep_link(src, sink);
         }
 
       if (err)
@@ -481,14 +493,58 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *src, u
 
       device_put_accessor(&icu);
 
+      r->irq.icu = icu_dev;
+
+      if (enable)
+        if (!device_icu_irq_enable(src, r->irq.irq_id, src, src))
+          {
+            printk("device: Unable to enable IRQ output %u of device %p, no suitable irq path found.\n", r->irq.irq_id, dev);
+            goto error;
+          }
+
       j++;
     }
 
   return 0;
 
  error:
-  device_irq_source_unlink(dev, src, src_count);
+  device_irq_source_unlink(dev, srcs, src_count);
   return err;
+}
+
+bool_t device_icu_irq_enable(struct dev_irq_ep_s *local_src, uint_fast16_t target_irq_id,
+                             struct dev_irq_ep_s *target_src, struct dev_irq_ep_s *dev_src)
+{
+  struct dev_irq_ep_s **array;
+  uint_fast8_t count = local_src->links_count;
+
+  switch (count)
+    {
+    case 0:
+      return 0;
+    case 1:
+      array = &local_src->links.single;
+      break;
+    default:
+      array = local_src->links.array;
+      break;
+    }
+
+  bool_t res = 0;
+  uint_fast8_t  j;
+
+  for (j = 0; j < count; j++)
+    {
+      struct dev_irq_ep_s *next_sink = array[j];
+      struct device_icu_s next_icu;
+
+#warning should we enable all source or stop on the first success? use icu priority to decide order?
+      ensure(device_get_accessor(&next_icu, next_sink->dev, DRIVER_CLASS_ICU, 0) == 0);
+      res |= DEVICE_OP(&next_icu, enable_irq, next_sink, target_irq_id, target_src, dev_src);
+      device_put_accessor(&next_icu);
+    }
+
+  return res;
 }
 
 struct device_s * device_get_default_icu(struct device_s *dev)

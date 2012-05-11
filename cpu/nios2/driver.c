@@ -74,50 +74,67 @@ static CPU_INTERRUPT_HANDLER(nios2_irq_handler)
   }
 }
 
-#ifdef CONFIG_HEXO_IPI
-static DEVICU_SETUP_IPI_EP(nios2_icu_setup_ipi_ep)
-{
-  abort(); // FIXME
-  return -1;
-}
-#endif
-
-static DEVICU_DISABLE_SINK(nios2_icu_disable_sink)
-{
-# ifndef CONFIG_ARCH_SMP
-  /* Disable irq line. On SMP platforms, all lines must remain enabled. */
-  reg_t status = cpu_nios2_read_ctrl_reg(3);
-  status &= ~(1 << icu_in_id);
-  cpu_nios2_write_ctrl_reg(3, status);
-# endif
-}
-
-static DEVICU_GET_SINK(nios2_icu_get_sink)
+static DEVICU_GET_ENDPOINT(nios2_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct nios2_dev_private_s  *pv = dev->drv_pv;
 
-  if (icu_in_id >= ICU_NIOS2_MAX_VECTOR)
-    return NULL;
+  switch (type)
+    {
+    case DEV_IRQ_EP_SINK:
+      if (id < ICU_NIOS2_MAX_VECTOR)
+        return pv->sinks + id;
+    default:
+      return NULL;
+    }
+}
 
-# ifndef CONFIG_ARCH_SMP
+static DEVICU_ENABLE_IRQ(nios2_icu_enable_irq)
+{
+  struct device_s *dev = CPU_LOCAL_GET(nios2_icu_dev);
+  struct nios2_dev_private_s  *pv = dev->drv_pv;
+
+  // inputs are single wire, logical irq id must be 0
+  if (irq_id > 0)
+    return 0;
+
+# ifdef CONFIG_ARCH_SMP
+  if (!arch_cpu_irq_affinity_test(dev, dev_ep))
+    return 0;
+
+# else
   /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
+  uint_fast8_t icu_in_id = sink - pv->sinks;
   reg_t status = cpu_nios2_read_ctrl_reg(3);
   status |= 1 << icu_in_id;
   cpu_nios2_write_ctrl_reg(3, status);
 # endif
 
-  return pv->sinks + icu_in_id;
+  return 1;
 }
+
+# ifndef CONFIG_ARCH_SMP
+static DEVICU_DISABLE_IRQ(nios2_icu_disable_irq)
+{
+  struct device_s *dev = CPU_LOCAL_GET(nios2_icu_dev);
+  struct nios2_dev_private_s  *pv = dev->drv_pv;
+  uint_fast8_t icu_in_id = sink - pv->sinks;
+
+  /* Disable irq line. On SMP platforms, all lines must remain enabled. */
+  reg_t status = cpu_nios2_read_ctrl_reg(3);
+  status &= ~(1 << icu_in_id);
+  cpu_nios2_write_ctrl_reg(3, status);
+}
+# endif
 
 const struct driver_icu_s  nios2_icu_drv =
 {
   .class_          = DRIVER_CLASS_ICU,
-  .f_get_sink     = nios2_icu_get_sink,
-  .f_disable_sink = nios2_icu_disable_sink,
-#ifdef CONFIG_HEXO_IPI
-  .f_setup_ipi_ep = nios2_icu_setup_ipi_ep,
-#endif
+  .f_get_endpoint  = nios2_icu_get_endpoint,
+  .f_enable_irq    = nios2_icu_enable_irq,
+# ifndef CONFIG_ARCH_SMP
+  .f_disable_irq   = nios2_icu_disable_irq,
+# endif
 };
 
 #endif
@@ -131,7 +148,7 @@ CPU_LOCAL struct device_s *cpu_device = NULL;
 static DEVCPU_REG_INIT(nios2_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
-  struct nios2_dev_private_s *pv = dev->drv_pv;
+  __unused__ struct nios2_dev_private_s *pv = dev->drv_pv;
 
   /* Set exception vector */
   extern __ldscript_symbol_t   __exception_base_ptr;
@@ -177,7 +194,7 @@ const struct driver_cpu_s  nios2_cpu_drv =
 static DEVTIMER_GET_VALUE(nios2_timer_get_value)
 {
   struct device_s *dev = tdev->dev;
-  struct nios2_dev_private_s *pv = dev->drv_pv;
+  __unused__ struct nios2_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
   assert(pv->id == cpu_id());
@@ -277,7 +294,7 @@ static DEV_INIT(nios2_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init nios2 irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, ICU_NIOS2_MAX_VECTOR, NULL);
+  device_irq_sink_init(dev, pv->sinks, ICU_NIOS2_MAX_VECTOR);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->cls, nios2_icu_dev, dev);
@@ -295,9 +312,12 @@ static DEV_INIT(nios2_init)
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
+#ifdef CONFIG_ARCH_SMP
  err_mem:
-  mem_free(pv);
+  if (sizeof(*pv))
+    mem_free(pv);
   return -1;
+#endif
 }
 
 static DEV_CLEANUP(nios2_cleanup)

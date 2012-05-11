@@ -64,6 +64,10 @@ void device_init(struct device_s *dev)
   device_list_init(&dev->children);
 #endif
 
+#if defined(CONFIG_ARCH_SMP) && defined(CONFIG_DEVICE_IRQ)
+  //  cpu_set_init(&dev->cpu_irqs);
+#endif
+
   memset(dev->res, 0, sizeof(dev->res));
 }
 
@@ -86,6 +90,10 @@ struct device_s *device_alloc(size_t resources)
       dev->enum_dev = &device_enum_root;
       dev->parent = NULL;
       device_list_init(&dev->children);
+#endif
+
+#if defined(CONFIG_ARCH_SMP) && defined(CONFIG_DEVICE_IRQ)
+      //      cpu_set_init(&dev->cpu_irqs);
 #endif
 
       memset(dev->res, 0, sizeof(struct dev_resource_s) * resources);
@@ -146,6 +154,10 @@ void device_cleanup(struct device_s *dev)
 #endif
 
   lock_destroy(&dev->lock);
+
+#if defined(CONFIG_ARCH_SMP) && defined(CONFIG_DEVICE_IRQ)
+  //  cpu_set_destroy(&dev->cpu_irqs);
+#endif
 
   if (dev->flags & DEVICE_FLAG_ALLOCATED)
     {

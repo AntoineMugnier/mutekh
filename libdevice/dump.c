@@ -90,8 +90,8 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
 #ifdef CONFIG_DEVICE_IRQ
         case DEV_RES_IRQ: {
           struct device_s *icu = r->irq.icu;
-          printk("  IRQ output %i connected to input %i of controller %p `%s'\n",
-                 r->irq.dev_out_id, r->irq.icu_in_id, icu, icu ? icu->name : "default");
+          printk("  IRQ %u connected to input %u:%u of controller %p `%s'\n",
+                 r->irq.dev_out_id, r->irq.icu_in_id, r->irq.irq_id, icu, icu ? icu->name : "default");
           break;
         }
 #endif

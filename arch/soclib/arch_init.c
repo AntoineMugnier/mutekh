@@ -202,23 +202,6 @@ void arch_init_bootstrap(uintptr_t init_sp)
     context_bootstrap(&main_ctx, 0, init_sp);
 #endif
 
-#ifdef CONFIG_ARCH_SMP
-    uint_fast8_t last_count = 0;
-        
-    for ( ;; ) {
-        order_compiler_mem();
-
-        if ( last_count == cpu_count )
-            break;
-        last_count = cpu_count;
-
-        if ( last_count == CONFIG_CPU_MAXCOUNT )
-            break;
-            
-        cpu_cycle_wait(100000);
-    }
-#endif
-
     /* run mutek_start() */
     mutek_start();
 }
@@ -312,6 +295,13 @@ inline size_t arch_get_cpu_count(void)
     return 1;
 #endif
 }
+
+#if defined(CONFIG_DEVICE_IRQ) && defined(CONFIG_ARCH_SMP)
+bool_t arch_cpu_irq_affinity_test(struct device_s *cpu, struct dev_irq_ep_s *src)
+{
+    return 1;
+}
+#endif
 
 // Local Variables:
 // tab-width: 4;

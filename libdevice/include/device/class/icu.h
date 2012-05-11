@@ -33,6 +33,7 @@
 #include <hexo/error.h>
 
 #include <device/driver.h>
+#include <device/irq.h>
 
 struct device_s;
 struct driver_s;
@@ -40,42 +41,83 @@ struct device_icu_s;
 struct ipi_endpoint_s;
 struct dev_irq_ep_s;
 
-#define DEVICU_GET_SINK(n)	struct dev_irq_ep_s * (n) (struct device_icu_s *idev, uint_fast8_t icu_in_id)
+/** Interrupt controller device class @ref devicu_get_endpoint_t function template. */
+#define DEVICU_GET_ENDPOINT(n)	void * (n) (struct device_icu_s *idev, enum dev_irq_ep_type_e type, uint_fast8_t id)
 
-/** @This gets interrupt sink end-point for given incoming interrupt
-    line of the controller and enables associated interrupt line. */
-typedef DEVICU_GET_SINK(devicu_get_sink_t);
+/** @This gets interrupt end-point of given type with given id in
+    range [0-N]. @This returns @tt NULL if out of range.
 
-
-#define DEVICU_DISABLE_SINK(n)	void (n) (struct device_icu_s *idev, struct dev_irq_ep_s *sink, uint_fast8_t id)
-
-/** @This disables interrupt line associated with given sink end-point
-    and logical irq id. */
-typedef DEVICU_DISABLE_SINK(devicu_disable_sink_t);
+    @This is mandatory.
+ */
+typedef DEVICU_GET_ENDPOINT(devicu_get_endpoint_t);
 
 
-// FIXME
+/** Interrupt controller device class @ref devicu_enable_irq_t function template. */
+#define DEVICU_ENABLE_IRQ(n)	bool_t (n) (struct device_icu_s *idev, struct dev_irq_ep_s *sink, \
+                                            uint_fast16_t irq_id, struct dev_irq_ep_s *src, struct dev_irq_ep_s *dev_ep)
 
-#define DEVICU_SETUP_IPI_EP(n)	error_t (n) (struct device_icu_s *idev, \
-					     struct ipi_endpoint_s *endpoint, \
-					     struct device_s *cpu)
-/** @This setups an ipi end-point for sending intrruptions to the
-    specified processor.  @This may delegate setup of the ipi
-    end-point to a linked interrupt controller, the initial call to
-    this function is performed directly on the processor device which
-    will receive the ipi. */
-typedef DEVICU_SETUP_IPI_EP(devicu_setup_ipi_ep_t);
+/** @This enables interrupt associated with given sink end-point and
+    logical irq id. @This function must first call @ref
+    device_icu_irq_enable in order to recursively enable interrupt
+    along the path to processor(s).
 
+    The return value of this function indicates if the interrupt has
+    been successfully enabled and can be relayed through the sink
+    end-point. Information attached to the device may be used to
+    decide if a given interrupt path is suitable; this includes
+    information about processor affinity for device interrupt
+    handling.
+
+    @param idev a pointer to the interrupt controller device.
+    @param sink a pointer to the local sink end-point associated with irq to enable.
+    @param irq_id the logical id of the irq to enable.
+    @param src a pointer to a remote source end-point which must be processed on interrupt, may be NULL.
+    @param dev_ep a pointer to the source end-point of regular device associated with interrupt.
+
+    The pointer to the remote source end-point may be provided so that
+    the interrupt controller may choose to store a shortcut pointer to
+    this end-point in order to bypass the regular interrupt
+    propagation call graph. When recursively calling @ref
+    device_icu_irq_enable, the provided source end-point may be the
+    local source end-point used to relay the interrupt or the @tt src
+    pointer passed by caller. If the interrupt propagation doesn't
+    need processing other that @tt irq_id based de-multiplexing (no
+    acknowledgment or hardware register access) and de-multiplexing is
+    not performed in this controller, forwarding the @tt src argument
+    allows bypassing one or more end-point connections traversal when
+    the interrupt is raised.
+
+    @This is mandatory.
+*/
+typedef DEVICU_ENABLE_IRQ(devicu_enable_irq_t);
+
+
+/** Interrupt controller device class @ref devicu_disable_irq_t function template. */
+#define DEVICU_DISABLE_IRQ(n)	void (n) (struct device_icu_s *idev, struct dev_irq_ep_s *sink)
+
+/** @This disables interrupt associated with given sink
+    end-point. This function is called when a sink end-point links
+    count become 0. This function may be called even if interrupts are
+    already disabled. 
+
+    @This is optional.
+*/
+typedef DEVICU_DISABLE_IRQ(devicu_disable_irq_t);
 
 /** ICU device class methodes */
 
 DRIVER_CLASS_TYPES(icu, 
-                   devicu_get_sink_t	*f_get_sink;
-                   devicu_disable_sink_t *f_disable_sink;
-#ifdef CONFIG_HEXO_IPI
-                   devicu_setup_ipi_ep_t	*f_setup_ipi_ep;
-#endif
+                   devicu_get_endpoint_t *f_get_endpoint;
+                   devicu_enable_irq_t *f_enable_irq;
+                   devicu_disable_irq_t *f_disable_irq;
                    );
+
+/** @This is used to propagate interrupt enabling along the irq
+    routing path between device and processor(s). @see
+    devicu_enable_irq_t @see device_irq_source_link. */
+config_depend(CONFIG_DEVICE_IRQ)
+bool_t device_icu_irq_enable(struct dev_irq_ep_s *local_src, uint_fast16_t target_irq_id,
+                             struct dev_irq_ep_s *target_src, struct dev_irq_ep_s *dev_src);
 
 #endif
 

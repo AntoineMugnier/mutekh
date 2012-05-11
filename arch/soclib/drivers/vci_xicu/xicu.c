@@ -37,6 +37,16 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
+#define XICU_RR_COUNT 5
+
+struct soclib_xicu_sink_s
+{
+  struct dev_irq_ep_s sink;
+  uint32_t     affinity;
+  uint_fast8_t current;
+  uint_fast8_t counter;
+};
+
 struct soclib_xicu_private_s
 {
   uintptr_t addr;
@@ -47,8 +57,9 @@ struct soclib_xicu_private_s
 
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
   uintptr_t hwi_count;
+  struct soclib_xicu_sink_s *sinks;
+
   uintptr_t irq_count;
-  struct dev_irq_ep_s *sinks;
   struct dev_irq_ep_s *srcs;
 
 # ifdef CONFIG_HEXO_IPI
@@ -64,30 +75,110 @@ struct soclib_xicu_private_s
 
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
 
-static DEVICU_GET_SINK(soclib_xicu_icu_get_sink)
+static DEVICU_GET_ENDPOINT(soclib_xicu_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
 
-  if (icu_in_id >= pv->hwi_count)
-    return NULL;
+  switch (type)
+    {
+    case DEV_IRQ_EP_SINK:
+      if (id < pv->hwi_count)
+        return &pv->sinks[id].sink;
+      return NULL;
 
-  /* enable hwi on output 0 FIXME SMP */
-  cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_ENABLE, 0), endian_le32(1 << icu_in_id));
+    case DEV_IRQ_EP_SOURCE:
+      if (id < pv->irq_count)
+        return pv->srcs + id;
 
-  return pv->sinks + icu_in_id;
+    default:
+      return NULL;
+    }
 }
 
-static DEVICU_DISABLE_SINK(soclib_xicu_icu_disable_sink)
+#warning add IRQ load balance policy
+static void soclib_xicu_rr_mask(struct soclib_xicu_private_s *pv, struct soclib_xicu_sink_s* xsink)
 {
-  /* FIXME disable sink */
-}
+  uint_fast8_t icu_in_id = xsink - pv->sinks;
 
-#ifdef CONFIG_HEXO_IPI
-static DEVICU_SETUP_IPI_EP(soclib_xicu_icu_setup_ipi_ep)
-{
-}
+#if 1
+  /* enable hwi on first affinity source */
+  uint_fast8_t first = ffs(xsink->affinity) - 1;
+  cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_ENABLE, first), endian_le32(1 << icu_in_id));
+#else
+  /* round robin stuff */
+
+  if (!xsink->counter--)
+    {
+      xsink->counter = XICU_RR_COUNT;
+
+      cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_DISABLE, xsink->current), endian_le32(1 << icu_in_id));
+
+      do {
+        xsink->current = (xsink->current + 1) % pv->irq_count;
+      } while (!(xsink->affinity & (1 << xsink->current)));
+
+      cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_ENABLE, xsink->current), endian_le32(1 << icu_in_id));
+    }
 #endif
+}
+
+static DEVICU_ENABLE_IRQ(soclib_xicu_icu_enable_irq)
+{
+  struct device_s *dev = idev->dev;
+  struct soclib_xicu_private_s *pv = dev->drv_pv;
+  struct soclib_xicu_sink_s *xsink = (struct soclib_xicu_sink_s*)sink;
+  uint_fast8_t icu_in_id = xsink - pv->sinks;
+
+  if (irq_id > 0)
+    {
+      printk("xicu %p: single wire IRQ must use 0 as logical IRQ id for %p device\n", dev, dev_ep->dev);
+      return 0;
+    }
+
+  uint32_t affinity = 0;
+  uint_fast8_t i;
+
+  // find routes through all source end-points which will relay this interrupt
+  for (i = 0; i < pv->irq_count; i++)
+    {
+      if (device_icu_irq_enable(pv->srcs + i, 0, NULL, dev_ep))
+        affinity |= (1 << i);
+    }
+
+  if (!affinity)
+    {
+      printk("xicu %p: found no source end-point which can relay interrupt for %p device\n", dev, dev_ep->dev);
+      return 0;
+    }
+  else if (xsink->affinity && affinity != xsink->affinity)
+    { 
+      xsink->affinity |= affinity;
+      printk("xicu %p: shared interrupt on sink %u will change affinity\n", dev, icu_in_id);
+    }
+  else
+    {
+      xsink->affinity = affinity;
+      xsink->current = 0;
+      xsink->counter = 0;
+      soclib_xicu_rr_mask(pv, xsink);
+    }
+
+  return 1;
+}
+
+static DEVICU_DISABLE_IRQ(soclib_xicu_icu_disable_irq)
+{
+  struct device_s *dev = idev->dev;
+  struct soclib_xicu_private_s *pv = dev->drv_pv;
+  struct soclib_xicu_sink_s *xsink = (struct soclib_xicu_sink_s*)sink;
+  uint_fast8_t icu_in_id = xsink - pv->sinks;
+
+  // disable relaying of this sink
+  cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_HWI_DISABLE, xsink->current), endian_le32(1 << icu_in_id));
+
+  pv->sinks[icu_in_id].affinity = 0;
+}
 
 static DEV_IRQ_EP_PROCESS(soclib_xicu_source_process)
 {
@@ -105,19 +196,19 @@ static DEV_IRQ_EP_PROCESS(soclib_xicu_source_process)
       if (!XICU_PRIO_HAS_HWI(prio))
         break;
 
-      struct dev_irq_ep_s *sink = pv->sinks + XICU_PRIO_HWI(prio);
+      struct soclib_xicu_sink_s *xsink = pv->sinks + XICU_PRIO_HWI(prio);
+      struct dev_irq_ep_s *sink = &xsink->sink;
       sink->process(sink, id);
+      soclib_xicu_rr_mask(pv, xsink);
     }
 }
 
 const struct driver_icu_s  soclib_xicu_icu_drv =
 {
   .class_         = DRIVER_CLASS_ICU,
-  .f_get_sink     = soclib_xicu_icu_get_sink,
-  .f_disable_sink = soclib_xicu_icu_disable_sink,
-# ifdef CONFIG_HEXO_IPI
-  .f_setup_ipi_ep = soclib_xicu_icu_setup_ipi_ep,
-# endif
+  .f_get_endpoint = soclib_xicu_icu_get_endpoint,
+  .f_disable_irq  = soclib_xicu_icu_disable_irq,
+  .f_enable_irq   = soclib_xicu_icu_enable_irq,
 };
 
 #endif
@@ -187,9 +278,9 @@ static DEV_INIT(soclib_xicu_init)
       if (!pv->srcs)
         goto err_mem;
 
-      device_irq_icu_source_init(dev, pv->srcs, pv->irq_count, &soclib_xicu_source_process);
+      device_irq_source_init(dev, pv->srcs, pv->irq_count, &soclib_xicu_source_process);
 
-      if (device_irq_source_link(dev, pv->srcs, pv->irq_count))
+      if (device_irq_source_link(dev, pv->srcs, pv->irq_count, 0))
         goto err_mem2;
     }
 
@@ -201,7 +292,12 @@ static DEV_INIT(soclib_xicu_init)
       if (!pv->sinks)
         goto err_unlink;
 
-      device_irq_sink_init(dev, pv->sinks, pv->hwi_count, NULL);
+      uint_fast8_t i;
+      for (i = 0; i < pv->hwi_count; i++)
+        {
+          device_irq_sink_init(dev, &pv->sinks[i].sink, 1);
+          pv->sinks[i].affinity = 0;
+        }
     }
 
 # ifdef CONFIG_HEXO_IPI
@@ -232,7 +328,9 @@ static DEV_CLEANUP(soclib_xicu_cleanup)
 
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
   /* detach soclib_xicu irq end-points */
-  device_irq_sink_unlink(dev, pv->sinks, pv->hwi_count);
+  uint_fast8_t i;
+  for (i = 0; i < pv->hwi_count; i++)
+    device_irq_sink_unlink(dev, &pv->sinks[i].sink, 1);
   device_irq_source_unlink(dev, pv->srcs, pv->irq_count);
 
   if (pv->srcs)

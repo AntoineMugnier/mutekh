@@ -93,7 +93,7 @@ CONTAINER_KEY_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue, deadl
    Request callback will be called immediately from within this
    function if the deadline has already been reached.
 
-   @This function is optional, if @ref #DEVICE_HAS_OP returns false,
+   @This is optional, if @ref #DEVICE_HAS_OP returns false,
    the timer device can not be used to schedule events.
 */
 typedef DEVTIMER_REQUEST(devtimer_request_t);
@@ -109,7 +109,7 @@ typedef DEVTIMER_REQUEST(devtimer_request_t);
 
    @return @tt -ENOENT if the request was not found (already reached).
 
-   @This function is optional but must be available along with @ref devtimer_request_t.
+   @This is optional but must be available along with @ref devtimer_request_t.
 */
 typedef DEVTIMER_CANCEL(devtimer_cancel_t);
 
@@ -125,7 +125,7 @@ typedef DEVTIMER_CANCEL(devtimer_cancel_t);
 
    @csee #DEVTIMER_GETVALUE @csee #dev_timer_getvalue
 
-   @This function is mandatory.
+   @This is mandatory.
 */
 typedef DEVTIMER_GET_VALUE(devtimer_get_value_t);
 
@@ -155,7 +155,7 @@ typedef uint64_t dev_timer_res_t;
    @tt -ERANGE is returned.  If setting timer resolution is not
    supported, @tt -ENOTSUP is returned.
 
-   @This function is mandatory.
+   @This is mandatory.
 
    @see #DEVTIMER_RES_FIXED_POINT
 */

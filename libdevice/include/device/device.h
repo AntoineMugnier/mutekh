@@ -80,8 +80,9 @@ struct dev_resource_s
     }   io;
 
     struct {
-      uint16_t dev_out_id;        //< device outgoing irq line identifier
-      uint16_t icu_in_id;         //< interrupt controller irq input identifier
+      uint8_t dev_out_id;        //< id of physical irq link going out of the device
+      uint8_t icu_in_id;         //< id of physical irq link going into the interrupt controller
+      uint16_t irq_id;            //< logical irq id
       struct device_s *icu;       //< associated interrupt controller
     }   irq;
 
@@ -136,13 +137,20 @@ error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end);
 /** @This adds an memory space address range to the device resources list. */
 error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end);
 
-/** @This adds an IRQ binding to the device resources list. The entry
-    describes how the specified output IRQ line of the device must be
-    connected to the specified input line of the given interrupt
-    controller device. Actual binding will take place when the device
-    driver is initialized. Use counter of the interrupt controller
-    device is increased. */
-error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id, uint_fast16_t icu_in_id, struct device_s *icu);
+/** @This adds an IRQ binding to the device resources list.
+
+    The entry specifies how the physical output irq link of the device
+    must be connected to the specified input link of the given
+    interrupt controller and gives the logical irq number associated
+    to the device. The logical irq number is used when the link is a
+    bus carrying an interrupt identifier; zero is used if the link is a
+    single wire.
+
+    Actual binding will take place when the device driver is
+    initialized. Use count of the interrupt controller device is
+    increased. */
+error_t device_res_add_irq(struct device_s *dev, uint_fast8_t dev_out_id, uint_fast8_t icu_in_id,
+                           uint_fast16_t irq_id, struct device_s *icu);
 
 /** @This adds a numerical identifier which uniquely identify an
     instance of the device. This is generally used by device which are
@@ -278,6 +286,10 @@ struct device_s
   device_list_entry_t		list_entry;
   device_list_root_t		children;
 #endif /* !CONFIG_DEVICE_TREE */
+
+#if defined(CONFIG_ARCH_SMP) && defined(CONFIG_DEVICE_IRQ)
+  //  struct cpu_set_s              irq_cpus;
+#endif
 
   /** device resources table */
   struct dev_resource_s         res[DEVICE_STATIC_RESOURCE_COUNT];

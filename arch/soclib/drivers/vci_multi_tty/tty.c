@@ -113,9 +113,9 @@ DEVCHAR_REQUEST(tty_soclib_request)
 
 #ifdef CONFIG_DEVICE_IRQ
 
-static DEV_IRQ(tty_soclib_irq)
+static DEV_IRQ_EP_PROCESS(tty_soclib_irq)
 {
-  struct device_s *dev = src->dev;
+  struct device_s *dev = ep->dev;
   struct tty_soclib_context_s *pv = dev->drv_pv;
   uint8_t c;
 
@@ -132,8 +132,6 @@ static DEV_IRQ(tty_soclib_irq)
 
   tty_soclib_try_read(dev);
   lock_release(&dev->lock);
-
-  return NULL;
 }
 
 #endif
@@ -174,6 +172,7 @@ DEV_INIT(tty_soclib_init)
 
   /* alocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
+  dev->drv_pv = pv;
 
   if (!pv)
     return -ENOMEM;
@@ -184,20 +183,24 @@ DEV_INIT(tty_soclib_init)
     goto err_mem;
 
 #ifdef CONFIG_DEVICE_IRQ
-  device_irq_tail_source_init(dev, &pv->irq_ep, 1, &tty_soclib_irq);
-
-  if (device_irq_source_link(dev, &pv->irq_ep, 1))
-    goto err_mem;
+  device_irq_source_init(dev, &pv->irq_ep, 1, &tty_soclib_irq);
 
   tty_fifo_init(&pv->read_fifo);
+
+  if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
+    goto err_fifo;
+
 #endif
 
   dev->status = DEVICE_DRIVER_INIT_DONE;
   dev->drv = &tty_soclib_drv;
-  dev->drv_pv = pv;
 
   return 0;
 
+#ifdef CONFIG_DEVICE_IRQ
+  err_fifo:
+  tty_fifo_destroy(&pv->read_fifo);
+#endif
  err_mem:
   mem_free(pv);
   return -1;

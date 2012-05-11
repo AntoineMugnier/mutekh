@@ -71,44 +71,45 @@ static CPU_INTERRUPT_HANDLER(ppc_irq_handler)
   }
 }
 
-#ifdef CONFIG_HEXO_IPI
-static DEVICU_SETUP_IPI_EP(ppc_icu_setup_ipi_ep)
-{
-  abort(); // FIXME
-  return -1;
-}
-#endif
-
-static DEVICU_DISABLE_SINK(ppc_icu_disable_sink)
-{
-# ifndef CONFIG_ARCH_SMP
-  /* Disable irq line. On SMP platforms, all lines must remain enabled. */
-# endif
-}
-
-static DEVICU_GET_SINK(ppc_icu_get_sink)
+static DEVICU_GET_ENDPOINT(ppc_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct ppc_dev_private_s  *pv = dev->drv_pv;
 
-  if (icu_in_id >= ICU_PPC_MAX_VECTOR)
-    return NULL;
+  switch (type)
+    {
+    case DEV_IRQ_EP_SINK:
+      if (id < ICU_PPC_MAX_VECTOR)
+        return pv->sinks + id;
+    default:
+      return NULL;
+    }
+}
 
-# ifndef CONFIG_ARCH_SMP
+static DEVICU_ENABLE_IRQ(ppc_icu_enable_irq)
+{
+  __unused__ struct device_s *dev = idev->dev;
+
+  // inputs are single wire, logical irq id must be 0
+  if (irq_id > 0)
+    return 0;
+
+# ifdef CONFIG_ARCH_SMP
+  if (!arch_cpu_irq_affinity_test(dev, dev_ep))
+    return 0;
+
+# else
   /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
 # endif
 
-  return pv->sinks + icu_in_id;
+  return 1;
 }
 
 const struct driver_icu_s  ppc_icu_drv =
 {
   .class_          = DRIVER_CLASS_ICU,
-  .f_get_sink     = ppc_icu_get_sink,
-  .f_disable_sink = ppc_icu_disable_sink,
-#ifdef CONFIG_HEXO_IPI
-  .f_setup_ipi_ep = ppc_icu_setup_ipi_ep,
-#endif
+  .f_get_endpoint  = ppc_icu_get_endpoint,
+  .f_enable_irq    = ppc_icu_enable_irq,
 };
 
 #endif
@@ -122,7 +123,7 @@ CPU_LOCAL struct device_s *cpu_device = NULL;
 static DEVCPU_REG_INIT(ppc_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
-  struct ppc_dev_private_s *pv = dev->drv_pv;
+  __unused__ struct ppc_dev_private_s *pv = dev->drv_pv;
 
   /* set exception vector */
   extern __ldscript_symbol_t __exception_base_ptr;
@@ -166,7 +167,7 @@ const struct driver_cpu_s  ppc_cpu_drv =
 static DEVTIMER_GET_VALUE(ppc_timer_get_value)
 {
   struct device_s *dev = tdev->dev;
-  struct ppc_dev_private_s *pv = dev->drv_pv;
+  __unused__ struct ppc_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
   assert(pv->id == cpu_id());
@@ -271,7 +272,7 @@ static DEV_INIT(ppc_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init ppc irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, ICU_PPC_MAX_VECTOR, NULL);
+  device_irq_sink_init(dev, pv->sinks, ICU_PPC_MAX_VECTOR);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->cls, ppc_icu_dev, dev);
@@ -289,9 +290,12 @@ static DEV_INIT(ppc_init)
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
+#ifdef CONFIG_ARCH_SMP
  err_mem:
-  mem_free(pv);
+  if (sizeof(*pv))
+    mem_free(pv);
   return -1;
+#endif
 }
 
 static DEV_CLEANUP(ppc_cleanup)

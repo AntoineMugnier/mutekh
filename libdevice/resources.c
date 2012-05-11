@@ -151,8 +151,8 @@ error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
   return 0;
 }
 
-error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id,
-                           uint_fast16_t icu_in_id, struct device_s *icu)
+error_t device_res_add_irq(struct device_s *dev, uint_fast8_t dev_out_id,
+                           uint_fast8_t icu_in_id, uint_fast16_t irq_id, struct device_s *icu)
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct dev_resource_s *r = device_res_unused(dev);
@@ -165,6 +165,7 @@ error_t device_res_add_irq(struct device_s *dev, uint_fast16_t dev_out_id,
   r->type = DEV_RES_IRQ;
   r->irq.dev_out_id = dev_out_id;
   r->irq.icu_in_id = icu_in_id;
+  r->irq.irq_id = irq_id;
   r->irq.icu = icu;
 
   if (icu)

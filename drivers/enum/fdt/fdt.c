@@ -53,7 +53,9 @@ struct enum_fdt_stack_entry_s
   uint32_t icu_phandle;
   uint8_t addr_cells;
   uint8_t size_cells;
+#ifdef CONFIG_DEVICE_IRQ
   uint8_t interrupt_cells;
+#endif
   enum enum_fdt_section_e section;
 };
 
@@ -174,11 +176,13 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
           e->size_cells = endian_be32(*(const uint32_t*)data);
           return;
         }
+#ifdef CONFIG_DEVICE_IRQ
       else if (!strcmp(name + 1, "interrupt-cells") && datalen == 4)
         {
           e->interrupt_cells = endian_be32(*(const uint32_t*)data);
           return;
         }
+#endif
       break;
 
     case 'r': {
@@ -291,15 +295,18 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
 
           while (datalen >= elen)
             {
-              uint16_t icu_in = endian_be32(*(const uint32_t*)data8);
-
               struct dev_resource_s *r = device_res_unused(e->dev);
               if (!r)
                 goto res_err;
               r->type = DEV_RES_IRQ;
               r->irq.dev_out_id = j++;
-              r->irq.icu_in_id = icu_in;
-              r->irq.icu = (void*)phandle;   /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
+              r->irq.icu_in_id = endian_be32(*(const uint32_t*)data8);
+
+              /* logical irq id is passed as second value if interrupt cells size > 4 */
+              r->irq.irq_id = elen > 4 ? endian_be32(*(const uint32_t*)(data8 + 4)) : 0;
+
+              /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
+              r->irq.icu = (void*)phandle;
 
               datalen -= elen;
               data8 += elen;
@@ -311,18 +318,20 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
         {
           while (datalen >= 8 + elen)
             {
-              uint16_t icu_out = endian_be32(*(const uint32_t*)data8);
-              uint32_t phandle = endian_be32(*(const uint32_t*)(data8 + 4));
-              uint16_t icu_in = endian_be32(*(const uint32_t*)(data8 + 8));
               /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
 
               struct dev_resource_s *r = device_res_unused(e->dev);
               if (!r)
                 goto res_err;
               r->type = DEV_RES_IRQ;
-              r->irq.dev_out_id = icu_out;
-              r->irq.icu_in_id = icu_in;
-              r->irq.icu = (void*)phandle;  /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
+              r->irq.dev_out_id = endian_be32(*(const uint32_t*)data8);
+              r->irq.icu_in_id = endian_be32(*(const uint32_t*)(data8 + 8));
+
+              /* logical irq id is passed as fourth value if interrupt cells size > 12 */
+              r->irq.irq_id = elen > 12 ? endian_be32(*(const uint32_t*)(data8 + 12)) : 0;
+
+              /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
+              r->irq.icu = (void*)endian_be32(*(const uint32_t*)(data8 + 4));
 
               datalen -= 8 + elen;
               data8 += 8 + elen;
@@ -449,7 +458,9 @@ static DEV_INIT(enum_fdt_init)
         .icu_phandle = -1,
         .addr_cells = sizeof(uintptr_t) / 4,
         .size_cells = 1,
+#ifdef CONFIG_DEVICE_IRQ
         .interrupt_cells = 1,
+#endif
         .section = FDT_SECTION_NONE
       }
     },

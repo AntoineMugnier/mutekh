@@ -70,14 +70,13 @@ static DEVENUM_MATCH_DRIVER(ahbctrl_match_driver)
 
 static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
 {
-  const uint32_t *p;
   uint_fast8_t i;
 
   for (i = 0; i < 128; i++)
     {
       const uint32_t *p = (const uint32_t*)(begin + 32 * i);
 
-      if (p >= end || p >= 0xfffffff0)
+      if ((uintptr_t)p >= end || (uintptr_t)p >= 0xfffffff0)
         break;
 
       uint8_t vendor = endian_be32(p[0]) >> 24;
@@ -112,7 +111,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
       uint8_t irq = endian_be32(p[0]) & 0x1f;
 
       if (irq)
-        device_res_add_irq(d, 0, irq - 1, NULL);
+        device_res_add_irq(d, 0, irq - 1, 0, NULL);
 #endif
 
       uint_fast8_t i;

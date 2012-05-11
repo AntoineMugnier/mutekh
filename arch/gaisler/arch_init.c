@@ -163,3 +163,9 @@ void boot_from_reset_vector(uintptr_t init_sp)
   arch_init(init_sp);
 }
 
+#if defined(CONFIG_DEVICE_IRQ) && defined(CONFIG_ARCH_SMP)
+bool_t arch_cpu_irq_affinity_test(struct device_s *cpu, struct dev_irq_ep_s *src)
+{
+    return 1;
+}
+#endif

@@ -91,7 +91,7 @@ static DEVICE_TREE_WALKER(apbctrl_scan_cpu_irq)
       if (maj > 0)
         return 0;
 #endif
-      device_res_add_irq(ctx->irqmp, maj, 0, dev);
+      device_res_add_irq(ctx->irqmp, maj, 0, 0, dev);
       ctx->count++;
     }
 
@@ -136,7 +136,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
       uint8_t irq = endian_be32(p[0]) & 0x1f;
 
       if (irq)
-        device_res_add_irq(d, 0, irq - 1, NULL);
+        device_res_add_irq(d, 0, irq - 1, 0, NULL);
 
       /* check for interrupt controller device */
       if (is_icu && gaisler_icu == NULL)

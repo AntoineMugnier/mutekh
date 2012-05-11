@@ -69,56 +69,69 @@ static CPU_INTERRUPT_HANDLER(lm32_irq_handler)
   }
 }
 
-#ifdef CONFIG_HEXO_IPI
-static DEVICU_SETUP_IPI_EP(lm32_icu_setup_ipi_ep)
-{
-  abort(); // FIXME
-  return -1;
-}
-#endif
-
-static DEVICU_DISABLE_SINK(lm32_icu_disable_sink)
-{
-# ifndef CONFIG_ARCH_SMP
-  struct device_s *dev = idev->dev;
-  struct lm32_dev_private_s  *pv = dev->drv_pv;
-  uint_fast8_t i = sink - pv->sinks;
-
-  /* Disable irq line. On SMP platforms, all lines must remain enabled. */
-  reg_t status;
-  asm volatile ("rcsr	%0, IM" : "=r" (status));
-  status &= ~(1 << i);
-  asm volatile ("wcsr	IM, %0" :: "r" (status));
-# endif
-}
-
-static DEVICU_GET_SINK(lm32_icu_get_sink)
+static DEVICU_GET_ENDPOINT(lm32_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct lm32_dev_private_s  *pv = dev->drv_pv;
 
-  if (icu_in_id >= CONFIG_CPU_LM32_IRQ_COUNT)
-    return NULL;
+  switch (type)
+    {
+    case DEV_IRQ_EP_SINK:
+      if (id < CONFIG_CPU_LM32_IRQ_COUNT)
+        return pv->sinks + id;
+    default:
+      return NULL;
+    }
+}
 
-# ifndef CONFIG_ARCH_SMP
+static DEVICU_ENABLE_IRQ(lm32_icu_enable_irq)
+{
+  struct device_s *dev = idev->dev;
+  struct lm32_dev_private_s  *pv = dev->drv_pv;
+
+  // inputs are single wire, logical irq id must be 0
+  if (irq_id > 0)
+    return 0;
+
+# ifdef CONFIG_ARCH_SMP
+  if (!arch_cpu_irq_affinity_test(dev, dev_ep))
+    return 0;
+
+# else
   /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
+  uint_fast8_t icu_in_id = sink - pv->sinks;
   reg_t status;
   asm volatile ("rcsr	%0, IM" : "=r" (status));
   status |= 1 << icu_in_id;
   asm volatile ("wcsr	IM, %0" :: "r" (status));
 # endif
 
-  return pv->sinks + icu_in_id;
+  return 1;
 }
+
+# ifndef CONFIG_ARCH_SMP
+/* Disable irq line. On SMP platforms, all lines must remain enabled. */
+static DEVICU_DISABLE_IRQ(lm32_icu_disable_irq)
+{
+  struct device_s *dev = idev->dev;
+  struct lm32_dev_private_s  *pv = dev->drv_pv;
+  uint_fast8_t icu_in_id = sink - pv->sinks;
+
+  reg_t status;
+  asm volatile ("rcsr	%0, IM" : "=r" (status));
+  status &= ~(1 << icu_in_id);
+  asm volatile ("wcsr	IM, %0" :: "r" (status));
+}
+# endif
 
 const struct driver_icu_s  lm32_icu_drv =
 {
   .class_          = DRIVER_CLASS_ICU,
-  .f_get_sink     = lm32_icu_get_sink,
-  .f_disable_sink = lm32_icu_disable_sink,
-#ifdef CONFIG_HEXO_IPI
-  .f_setup_ipi_ep = lm32_icu_setup_ipi_ep,
-#endif
+  .f_get_endpoint  = lm32_icu_get_endpoint,
+  .f_enable_irq   = lm32_icu_enable_irq,
+# ifndef CONFIG_ARCH_SMP
+  .f_disable_irq   = lm32_icu_disable_irq,
+# endif
 };
 
 #endif
@@ -132,7 +145,7 @@ CPU_LOCAL struct device_s *cpu_device = NULL;
 static DEVCPU_REG_INIT(lm32_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
-  struct lm32_dev_private_s *pv = dev->drv_pv;
+  __unused__ struct lm32_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
   assert(pv->id == cpu_id());
@@ -173,7 +186,7 @@ const struct driver_cpu_s  lm32_cpu_drv =
 static DEVTIMER_GET_VALUE(lm32_timer_get_value)
 {
   struct device_s *dev = tdev->dev;
-  struct lm32_dev_private_s *pv = dev->drv_pv;
+  __unused__ struct lm32_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
   assert(pv->id == cpu_id());
@@ -274,7 +287,7 @@ static DEV_INIT(lm32_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init lm32 irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_LM32_IRQ_COUNT, NULL);
+  device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_LM32_IRQ_COUNT);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->cls, lm32_icu_dev, dev);
@@ -292,9 +305,12 @@ static DEV_INIT(lm32_init)
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
+#ifdef CONFIG_ARCH_SMP
  err_mem:
-  mem_free(pv);
+  if (sizeof(*pv))
+    mem_free(pv);
   return -1;
+#endif
 }
 
 static DEV_CLEANUP(lm32_cleanup)

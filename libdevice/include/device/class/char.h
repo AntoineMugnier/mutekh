@@ -84,7 +84,7 @@ struct dev_char_rq_s
 CONTAINER_FUNC(dev_char_queue, CLIST, static inline, dev_char_queue);
 
 
-/** Char device class request() function tempate. */
+/** Char device class @ref devchar_request_t function template. */
 #define DEVCHAR_REQUEST(n)	void  (n) (const struct device_char_s *cdev, struct dev_char_rq_s *rq)
 
 /**

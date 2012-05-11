@@ -73,54 +73,67 @@ static CPU_INTERRUPT_HANDLER(mips_irq_handler)
   }
 }
 
-#ifdef CONFIG_HEXO_IPI
-static DEVICU_SETUP_IPI_EP(mips_icu_setup_ipi_ep)
-{
-  abort(); // FIXME
-  return -1;
-}
-#endif
-
-static DEVICU_DISABLE_SINK(mips_icu_disable_sink)
-{
-# ifndef CONFIG_ARCH_SMP
-  struct device_s *dev = idev->dev;
-  struct mips_dev_private_s  *pv = dev->drv_pv;
-  uint_fast8_t i = sink - pv->sinks;
-
-  /* Disable irq line. On SMP platforms, all lines must remain enabled. */
-  reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
-  status &= ~(1 << (i + 10));
-  cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
-# endif
-}
-
-static DEVICU_GET_SINK(mips_icu_get_sink)
+static DEVICU_GET_ENDPOINT(mips_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
-  struct mips_dev_private_s  *pv = dev->drv_pv;
+  struct mips_dev_private_s *pv = dev->drv_pv;
 
-  if (icu_in_id >= ICU_MIPS_MAX_VECTOR)
-    return NULL;
+  switch (type)
+    {
+    case DEV_IRQ_EP_SINK:
+      if (id < ICU_MIPS_MAX_VECTOR)
+        return pv->sinks + id;
+    default:
+      return NULL;
+    }
+}
 
-# ifndef CONFIG_ARCH_SMP
+static DEVICU_ENABLE_IRQ(mips_icu_enable_irq)
+{
+  struct device_s *dev = idev->dev;
+  struct mips_dev_private_s *pv = dev->drv_pv;
+
+  // inputs are single wire, logical irq id must be 0
+  if (irq_id > 0)
+    return 0;
+
+# ifdef CONFIG_ARCH_SMP
+  if (!arch_cpu_irq_affinity_test(dev, dev_ep))
+    return 0;
+
+# else
   /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
+  uint_fast8_t icu_in_id = sink - pv->sinks;
   reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
   status |= 1 << (icu_in_id + 10);
   cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
 # endif
 
-  return pv->sinks + icu_in_id;
+  return 1;
 }
+
+# ifndef CONFIG_ARCH_SMP
+/* Disable irq line. On SMP platforms, all lines must remain enabled. */
+static DEVICU_DISABLE_IRQ(mips_icu_disable_irq)
+{
+  struct device_s *dev = idev->dev;
+  struct mips_dev_private_s  *pv = dev->drv_pv;
+  uint_fast8_t icu_in_id = sink - pv->sinks;
+
+  reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
+  status &= ~(1 << (icu_in_id + 10));
+  cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
+}
+# endif
 
 static const struct driver_icu_s  mips_icu_drv =
 {
   .class_          = DRIVER_CLASS_ICU,
-  .f_get_sink     = mips_icu_get_sink,
-  .f_disable_sink = mips_icu_disable_sink,
-#ifdef CONFIG_HEXO_IPI
-  .f_setup_ipi_ep = mips_icu_setup_ipi_ep,
-#endif
+  .f_get_endpoint  = mips_icu_get_endpoint,
+  .f_enable_irq   = mips_icu_enable_irq,
+# ifndef CONFIG_ARCH_SMP
+  .f_disable_irq   = mips_icu_disable_irq,
+# endif
 };
 
 #endif
@@ -134,7 +147,7 @@ CPU_LOCAL struct device_s *cpu_device = NULL;
 static DEVCPU_REG_INIT(mips_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
-  struct mips_dev_private_s *pv = dev->drv_pv;
+  __unused__ struct mips_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
   assert(pv->id == cpu_id());
@@ -188,7 +201,7 @@ static const struct driver_cpu_s  mips_cpu_drv =
 static DEVTIMER_GET_VALUE(mips_timer_get_value)
 {
   struct device_s *dev = tdev->dev;
-  struct mips_dev_private_s *pv = dev->drv_pv;
+  __unused__ struct mips_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
   assert(pv->id == cpu_id());
@@ -301,7 +314,7 @@ static DEV_INIT(mips_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init mips irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, ICU_MIPS_MAX_VECTOR, NULL);
+  device_irq_sink_init(dev, pv->sinks, ICU_MIPS_MAX_VECTOR);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->cls, mips_icu_dev, dev);
@@ -319,9 +332,12 @@ static DEV_INIT(mips_init)
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
+#ifdef CONFIG_ARCH_SMP
  err_mem:
-  mem_free(pv);
+  if (sizeof(*pv))
+    mem_free(pv);
   return -1;
+#endif
 }
 
 static DEV_CLEANUP(mips_cleanup)

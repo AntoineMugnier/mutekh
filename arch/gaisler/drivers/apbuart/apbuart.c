@@ -187,9 +187,9 @@ DEVCHAR_REQUEST(gaisler_apbuart_request)
 
 #ifdef CONFIG_DEVICE_IRQ
 
-static DEV_IRQ(gaisler_apbuart_irq)
+static DEV_IRQ_EP_PROCESS(gaisler_apbuart_irq)
 {
-  struct device_s *dev = src->dev;
+  struct device_s *dev = ep->dev;
 
   lock_spin(&dev->lock);
 
@@ -197,8 +197,6 @@ static DEV_IRQ(gaisler_apbuart_irq)
   gaisler_apbuart_try_write(dev);
 
   lock_release(&dev->lock);
-
-  return NULL;
 }
 
 #endif
@@ -234,6 +232,7 @@ DEV_INIT(gaisler_apbuart_init)
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
+  dev->drv_pv = pv;
 
   if (!pv)
     return -ENOMEM;
@@ -246,17 +245,22 @@ DEV_INIT(gaisler_apbuart_init)
   /* enable transmitter and receiver */
   c |= (APBUART_REG_CTRL_TE | APBUART_REG_CTRL_RE);
 
+  dev_char_queue_init(&pv->read_q);
+  dev_char_queue_init(&pv->write_q);
+
+  uart_fifo_init(&pv->read_fifo);
+
 #ifdef CONFIG_DEVICE_IRQ
-
-  device_irq_tail_source_init(dev, &pv->irq_ep, 1, &gaisler_apbuart_irq);
-
-  if (device_irq_source_link(dev, &pv->irq_ep, 1))
-    goto err_mem;
 
   c |=  (APBUART_REG_CTRL_TI | APBUART_REG_CTRL_RI);
   c &= ~(APBUART_REG_CTRL_DI | APBUART_REG_CTRL_BI | APBUART_REG_CTRL_SI | APBUART_REG_CTRL_RF | APBUART_REG_CTRL_TF);
 
   uart_fifo_init(&pv->write_fifo);
+
+  device_irq_source_init(dev, &pv->irq_ep, 1, &gaisler_apbuart_irq);
+
+  if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
+    goto err_fifo;
 
 #else
 
@@ -265,18 +269,20 @@ DEV_INIT(gaisler_apbuart_init)
          APBUART_REG_CTRL_BI | APBUART_REG_CTRL_SI | APBUART_REG_CTRL_TI | APBUART_REG_CTRL_RI);
 #endif
 
-  dev_char_queue_init(&pv->read_q);
-  dev_char_queue_init(&pv->write_q);
-
-  uart_fifo_init(&pv->read_fifo);
-
   cpu_mem_write_32(pv->addr + APBUART_REG_CTRL, endian_be32(c));
 
-  dev->status = DEVICE_DRIVER_INIT_DONE;
   dev->drv = &gaisler_apbuart_drv;
-  dev->drv_pv = pv;
+  dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
+
+#ifdef CONFIG_DEVICE_IRQ
+ err_fifo:
+  uart_fifo_destroy(&pv->write_fifo);
+  uart_fifo_destroy(&pv->read_fifo);
+  dev_char_queue_destroy(&pv->read_q);
+  dev_char_queue_destroy(&pv->write_q);
+#endif
  err_mem:
   mem_free(pv);
   return -1;
@@ -289,13 +295,14 @@ DEV_CLEANUP(gaisler_apbuart_cleanup)
   uint32_t c = endian_be32(cpu_mem_read_32(pv->addr + APBUART_REG_CTRL));
 
 #ifdef CONFIG_DEVICE_IRQ
-  device_irq_source_unlink(dev, &pv->irq_ep, 1);
-
-  uart_fifo_destroy(&pv->write_fifo);
 
   /* disable irqs */
   c &= ~(APBUART_REG_CTRL_RF | APBUART_REG_CTRL_TF | APBUART_REG_CTRL_DI |
          APBUART_REG_CTRL_BI | APBUART_REG_CTRL_SI | APBUART_REG_CTRL_TI | APBUART_REG_CTRL_RI);
+
+  device_irq_source_unlink(dev, &pv->irq_ep, 1);
+
+  uart_fifo_destroy(&pv->write_fifo);
 
 #endif
 
