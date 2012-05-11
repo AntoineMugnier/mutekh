@@ -14,6 +14,8 @@
 
 /* make unavailable functions deprecated */
 
+# define __unused__ __attribute__((unused))
+
 # if _GNUC_VERSION >= 40500
 #  define deprecated(message)   __attribute__((deprecated(message)))
 # else

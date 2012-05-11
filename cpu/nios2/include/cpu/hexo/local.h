@@ -51,7 +51,9 @@
              "	add	%0, r1, %1	    \n"                         \
              ".set at             \n"                                   \
              : "=r" (_ptr_)                                             \
-             : "r" (&n)							\
+             : "r" (&(n))						\
+  /* prevent optimize if memory has been reloaded (possible context switch) */ \
+             , "m" (*(reg_t*)4)                                         \
             );                                                          \
                                                                         \
     _ptr_;								\
@@ -63,9 +65,11 @@
     uintptr_t _ptr_;                                                    \
                                                                         \
     __asm__ (                                                           \
-             "	mov	%0, " ASM_STR(CPU_NIOS2_CLS_REG) "        \n"    \
-	 : "=r" (_ptr_)                                                 \
-								);      \
+             "	mov	%0, " ASM_STR(CPU_NIOS2_CLS_REG) "        \n"   \
+             : "=r" (_ptr_)                                             \
+  /* prevent optimize if memory has been reloaded (possible context switch) */ \
+             : "m" (*(reg_t*)4)                                         \
+	    );                                                          \
                                                                         \
     _ptr_;								\
   })

@@ -43,20 +43,22 @@
 #  undef CPU_LOCAL
 #  define CPU_LOCAL	__attribute__((section (".cpudata")))
 
-# define CPU_GET_CLS()												   \
-	({																   \
-		uintptr_t _ptr_;											   \
-        THUMB_TMP_VAR;                                                 \
-																	   \
-		asm (														   \
-            THUMB_TO_ARM                                               \
-			"mrc p15,0,%[ptr],c13,c0,3\n\t"                            \
-            ARM_TO_THUMB                                               \
-			: [ptr] "=r" (_ptr_) /*,*/ THUMB_OUT(,)                    \
-			);														   \
-																	   \
-		_ptr_;														   \
-	})
+# define CPU_GET_CLS()                                                  \
+        ({                                                              \
+                uintptr_t _ptr_;                                        \
+                THUMB_TMP_VAR;                                          \
+                                                                        \
+                asm (                                                   \
+                     THUMB_TO_ARM                                       \
+                     "mrc p15,0,%[ptr],c13,c0,3\n\t"                    \
+                     ARM_TO_THUMB                                       \
+                     : [ptr] "=r" (_ptr_) /*,*/ THUMB_OUT(,)            \
+  /* prevent optimize if memory has been reloaded (possible context switch) */ \
+                     : "m" (*(reg_t*)4)                                 \
+                     );                                                 \
+                                                                        \
+                _ptr_;                                                  \
+        })
 
 #else /* CONFIG_ARCH_SMP */
 
@@ -70,20 +72,20 @@
 # define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
 
 /** get address of cpu local object */
-# define CONTEXT_GET_TLS()											   \
-	({																   \
-		uintptr_t _ptr_;											   \
-        THUMB_TMP_VAR;                                                 \
-																	   \
-		asm (														   \
-            THUMB_TO_ARM                                               \
-			"mrc p15,0,%[ptr],c13,c0,4\n\t"                            \
-            ARM_TO_THUMB                                               \
-			: [ptr] "=r" (_ptr_) /*,*/ THUMB_OUT(,)                    \
-			);														   \
-																	   \
-		_ptr_;														   \
-	})
+# define CONTEXT_GET_TLS()                                              \
+        ({                                                              \
+                uintptr_t _ptr_;                                        \
+                THUMB_TMP_VAR;                                          \
+                                                                        \
+                asm (                                                   \
+                     THUMB_TO_ARM                                       \
+                     "mrc p15,0,%[ptr],c13,c0,4\n\t"                    \
+                     ARM_TO_THUMB                                       \
+                     : [ptr] "=r" (_ptr_) /*,*/ THUMB_OUT(,)            \
+                     );                                                 \
+                                                                        \
+                _ptr_;                                                  \
+        })
 
 
 #else /* not CONFIG_CPU_ARM_TLS_IN_C15 */

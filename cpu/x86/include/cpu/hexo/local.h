@@ -48,7 +48,13 @@
 
 # define CONTEXT_LOCAL_GET(n)    ({ typeof(n) _val_; __asm__ ("mov %%gs:%1, %0" : "=r" (_val_) : "m" (n)); _val_; })
 
-# define CONTEXT_GET_TLS()   ({ uintptr_t _ptr_; __asm__ ("movl %%gs:__context_data_base, %0" : "=r" (_ptr_)) ; _ptr_; })
+# define CONTEXT_GET_TLS()  
+({
+  uintptr_t _ptr_;
+  __asm__ ("movl %%gs:__context_data_base, %0"
+           : "=r" (_ptr_));
+  _ptr_;
+})
 
 /************************************************************************/
 
@@ -61,7 +67,15 @@
 
 #  define CPU_LOCAL_GET(n)    ({ typeof(n) _val_; __asm__ ("mov %%fs:%1, %0" : "=r" (_val_) : "m" (n)); _val_; })
 
-#  define CPU_GET_CLS()   ({ uintptr_t _ptr_; __asm__ ("movl %%fs:__cpu_data_base, %0" : "=r" (_ptr_)); _ptr_; })
+#  define CPU_GET_CLS()                         \
+({                                              \
+  uintptr_t _ptr_;                              \
+  __asm__ ("movl %%fs:%1, %0"                   \
+           : "=r" (_ptr_)                       \
+  /* use of memory in prevent optimize if reload is needed, %fs may have changed on ctx sw */ \
+           : "m" (__cpu_data_base));            \
+  _ptr_;                                        \
+})
 
 # else /* CONFIG_ARCH_SMP */
 

@@ -23,29 +23,20 @@
 #ifndef __HEXO_NIOS2_ASM_H_
 #define __HEXO_NIOS2_ASM_H_
 
-#ifdef __MUTEK_ASM__
-
-.macro GLOBAL_ACCESS op, name, rd, rt
-         movia  \rt,     \name
-         \op    \rd,     (\rt)
-.endm
+_ASM(.macro GLOBAL_ACCESS _0, _1, _2, _3                    )
+_ASM(         movia  p3,     p1                             )
+_ASM(         p0    p2,     (p3)                            )
+_ASM(.endm                                                  )
 
 #ifdef CONFIG_ARCH_SMP
-.macro CPU_LOCAL op, name, rd, rt
-        \op \rd, \name(CPU_NIOS2_CLS_REG)
-.endm
+_ASM(.macro CPU_LOCAL _0, _1, _2, _3                        )
+_ASM(        p0 p2, p1(CPU_NIOS2_CLS_REG)                   )
+_ASM(.endm                                                  )
 #else
-.macro CPU_LOCAL op, name, rd, rt
-	GLOBAL_ACCESS \op, \name, \rd, \rt
-.endm
+_ASM(.macro CPU_LOCAL _0, _1, _2, _3                        )
+_ASM(	GLOBAL_ACCESS p0, p1, p2, p3                        )
+_ASM(.endm                                                  )
 #endif
-
-#else /* not asm */
-
-#define ASM_SECTION(name)              \
-        ".section " name ",\"ax\",@progbits \n\t"
-
-# endif  /* __MUTEK_ASM__ */
 
 #endif
 

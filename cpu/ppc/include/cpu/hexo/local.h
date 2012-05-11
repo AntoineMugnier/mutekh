@@ -47,6 +47,8 @@
   asm (							\
 	   "	mfspr	%0, 0x105		\n"	\
 	   : "=&r" (_ptr_)				\
+  /* prevent optimize if memory has been reloaded (possible context switch) */ \
+           : "m" (*(reg_t*)4)                           \
 	   );						\
 							\
   _ptr_;						\
