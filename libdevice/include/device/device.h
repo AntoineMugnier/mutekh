@@ -362,6 +362,10 @@ struct device_s *device_get_cpu(uint_fast8_t major_id, uint_fast8_t minor_id);
 config_depend(CONFIG_DEVICE_TREE)
 struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i);
 
+/** @This returns child device by path. The @tt root parameter may be @tt NULL */
+config_depend(CONFIG_DEVICE_TREE)
+struct device_s *device_get_by_path(struct device_s *root, const char *path);
+
 #ifdef CONFIG_VMEM
 uintptr_t vpage_io_map(paddr_t paddr, size_t size);
 #endif

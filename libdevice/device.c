@@ -219,6 +219,37 @@ void device_detach(struct device_s *dev)
   dev->parent = 0;
 }
 
+struct device_s *device_get_by_path(struct device_s *root, const char *path)
+{
+  if (!root)
+    root = &device_enum_root;
+
+  // FIXME locking
+  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &root->children,
+  {
+    uint_fast8_t i;
+
+    if (!item->name)
+      CONTAINER_FOREACH_CONTINUE;
+
+    for (i = 0; ; i++)
+      {
+        if (item->name[i] == 0)
+          {
+            if (path[i] == 0)
+              return item;
+            if (path[i] == '/')
+              return device_get_by_path(item, path + i + 1);
+            break;
+          }
+        else if (item->name[i] != path[i])
+          break;
+      }
+  });
+
+  return NULL;
+}
+
 struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i)
 {
   struct device_s *res = NULL;
