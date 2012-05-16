@@ -188,52 +188,31 @@ static CONTEXT_ENTRY(sched_context_idle)
 
   /************************** single processor case */
 
-#if !defined(CONFIG_ARCH_SMP)
-      /* Unlock running queue before going to sleep */
+#ifdef CONFIG_HEXO_IPI
+      /* Declare processor as idle before unlocking scheduler */
+      idle_cpu_queue_push(&sched->idle_cpu, ipi_e);
+    still_idle:
+#endif
+
       sched_queue_unlock(&sched->root);
 
-# ifdef CONFIG_CPU_WAIT_IRQ
-      /* CPU sleep waiting for device IRQ */
-      cpu_interrupt_wait();
-      cpu_interrupt_disable();
-# endif
+  /***************************/
 
-  /************************** SMP case */
-
-#else /* CONFIG_ARCH_SMP */
-
+# if defined(CONFIG_CPU_WAIT_IRQ) && (!defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_IPI))
       /* Do not always make CPU sleep if SMP because context may be put
          in running queue by an other cpu with no signalling. IPI is the
          only way to solve this issue and wake a lazy processor. */
 
-# if defined(CONFIG_HEXO_IPI)
-
-      /* Declare processor as idle before unlocking scheduler */
-      idle_cpu_queue_push(&sched->idle_cpu, ipi_e);
-
-    still_idle:
-      sched_queue_unlock(&sched->root);
-
-      /* CPU sleep waiting for device IRQ or IPI */
+      /* Enable interrupts and sleep waiting for device IRQ */
       cpu_interrupt_wait();
-      cpu_interrupt_disable();
-
-# else  /* !CONFIG_HEXO_IPI */
-
-      /* We are obliged to actively poll the running queue on SMP
-         systems without IPI support, Ugh. */
-
-      sched_queue_unlock(&sched->root);
-
-# endif
-#endif
-
-  /***************************/
-
-      /* Let enough time for pending interrupts to execute and assume
-         memory is clobbered to force scheduler root queue
-         reloading after interrupts execution. */
+# else
+      /* Enable interrupts and let enough time for pending interrupts to execute */
       cpu_interrupt_process();
+# endif
+
+      /* Assume memory is clobbered to force scheduler root queue
+         reloading after interrupts execution. */
+      order_compiler_mem();
 
       /* WARNING: cpu_interrupt_wait and cpu_interrupt_process may
          reenable interrupts. We must disable interrupts again before

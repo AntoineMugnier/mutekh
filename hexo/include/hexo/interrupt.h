@@ -110,7 +110,8 @@ static inline void cpu_interrupt_process();
 # ifdef CONFIG_CPU_WAIT_IRQ
 /** @this enables interrupts and enters in interrupt wait state. The
     @ref #CONFIG_CPU_WAIT_IRQ token may be used to check for
-    availability.  */
+    availability. Memory is marked as clobbered by this function to
+    force global variable reload after interrupts occured. */
 __attribute__ ((always_inline))
 static inline void cpu_interrupt_wait();
 # endif

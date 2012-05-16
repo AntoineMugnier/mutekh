@@ -178,19 +178,23 @@ cpu_is_interruptible(void)
 static inline void cpu_interrupt_wait(void)
 {
 #  ifdef CONFIG_HEXO_IRQ
+  reg_t tmp;
 #   ifdef CONFIG_CPU_PPC_WAIT_OPCODE
   __asm__ volatile (
+                    "mfmsr %0		\n"
+                    "ori %0, %0, 0x8000     \n"
+                    "mtmsr %0		\n"
                     "wait\n"	/* Power ISA 2.0 */
-		    ::: "memory"
+		    : "=r" (tmp)
+		    :: "memory"
                     );
 #   elif defined(CONFIG_CPU_PPC_WAIT_MSRWE)
-  reg_t tmp;
   __asm__ volatile (
                     "mfmsr %0\n"
-                    "ori %0, %0, %1\n"
+                    "or %0, %0, %1\n"
                     "mtmsr %0\n"
-		    : "=r" (tmp)
-                    : "r" (1<<18) /* WE bit */
+		    : "=&r" (tmp)
+                    : "r" (0x48000) /* WE & int enable bits */
                     : "memory"
                     );
 #   else

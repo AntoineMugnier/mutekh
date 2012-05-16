@@ -219,10 +219,13 @@ cpu_is_interruptible(void)
 # ifdef CONFIG_CPU_WAIT_IRQ
 static inline void cpu_interrupt_wait(void)
 {
+#  ifdef CONFIG_HEXO_IRQ
+  cpu_interrupt_enable();
   __asm__ volatile (
                     "WAIT\n"	/* defined in asm.h */
 		    ::: "memory"
                     );
+#  endif
 }
 # endif
 

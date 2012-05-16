@@ -60,7 +60,7 @@ _ASM( .endm                                                                   )
 
 
 _ASM( .macro WAIT                                                             )
-# ifdef CONFIG_CPU_SPARC_LEON3
+# if defined (CONFIG_CPU_SPARC_LEON3) || defined (CONFIG_CPU_SPARC_SOCLIB)
 _ASM(         wr %g0, %asr19                                                  )
 # elif defined(CONFIG_CPU_WAIT_IRQ)
 #  error No wait opcode defined for selected sparc processor

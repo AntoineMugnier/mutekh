@@ -268,6 +268,7 @@ cpu_is_interruptible(void)
 static inline void cpu_interrupt_wait(void)
 {
 # ifdef CONFIG_HEXO_IRQ
+  cpu_interrupt_enable();
   __asm__ volatile ("wait"	/* Mips32 */
 		    ::: "memory");
 # endif

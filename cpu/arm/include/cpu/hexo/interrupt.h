@@ -207,6 +207,7 @@ cpu_is_interruptible(void)
 static inline void cpu_interrupt_wait(void)
 {
 #  ifdef CONFIG_HEXO_IRQ
+  cpu_interrupt_enable();
 #   if defined(__ARM_ARCH_6K__)
     THUMB_TMP_VAR;
 
