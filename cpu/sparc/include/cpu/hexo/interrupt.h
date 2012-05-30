@@ -220,11 +220,22 @@ cpu_is_interruptible(void)
 static inline void cpu_interrupt_wait(void)
 {
 #  ifdef CONFIG_HEXO_IRQ
-  cpu_interrupt_enable();
-  __asm__ volatile (
-                    "WAIT\n"	/* defined in asm.h */
-		    ::: "memory"
-                    );
+  reg_t tmp;
+
+#   if defined (CONFIG_CPU_SPARC_LEON3) || defined (CONFIG_CPU_SPARC_SOCLIB)
+# warning FIXME check atomicity on leon
+  asm volatile (
+		"rd %%psr, %0		\n\t"
+                "andn %0, 0xf00, %0      \n\t"
+		"wr %0, %%psr	         \n"
+                "wr %%g0, %%asr19        \n"
+                "nop \n nop \n"
+		: "=r" (tmp)
+                :: "memory"     /* compiler memory barrier */
+	  );
+#   else
+#    error No wait opcode defined for selected sparc processor
+#   endif
 #  endif
 }
 # endif
