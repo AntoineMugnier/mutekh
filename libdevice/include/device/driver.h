@@ -60,7 +60,7 @@ enum driver_class_e
 
 #define DRIVER_CLASS_NAMES                                         \
   "None", "Block", "Char", "Enumerator", "FrameBuffer",            \
-  "ICU", "Input", "Network", "Sound",                          \
+  "ICU", "DMA", "Input", "Network", "Sound",                       \
   "Timer", "SPI", "LCD", "GPIO", "I2C", "Memory", "CPU"
 
 enum dev_enum_type_e

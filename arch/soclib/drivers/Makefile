@@ -27,3 +27,6 @@ ifeq ($(CONFIG_DRIVER_SOCLIB_VCI_XICU), defined)
 subdirs += vci_xicu
 endif
 
+ifeq ($(CONFIG_DRIVER_SOCLIB_VCI_DMA), defined)
+subdirs += vci_dma
+endif

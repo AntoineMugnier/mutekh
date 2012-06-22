@@ -48,6 +48,7 @@ static void dma_soclib_start(struct device_s *dev, const struct dev_dma_rq_s *rq
 {
   struct dma_soclib_context_s	*pv = dev->drv_pv;
 
+  cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_NOIRQ, 0);
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_SRC, endian_le32((uintptr_t)rq->src));
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_DST, endian_le32((uintptr_t)rq->dst));
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_LEN, endian_le32(rq->size));
@@ -89,6 +90,9 @@ static DEV_IRQ_EP_PROCESS(dma_soclib_irq)
   dev_dma_queue_pop(&pv->queue);
 
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_RESET, 0);
+
+  if ((rq = dev_dma_queue_head(&pv->queue)))
+    dma_soclib_start(dev, rq);
 
   lock_release(&dev->lock);
 }

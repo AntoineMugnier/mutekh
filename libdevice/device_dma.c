@@ -64,6 +64,7 @@ static void dev_dma_lock_request(const struct device_dma_s *ddev, const uint8_t 
   rq.src = src;
   rq.dst = dst;
   rq.size = size;
+  rq.ddev = ddev;
 
   DEVICE_OP(ddev, request, &rq);
 
@@ -107,6 +108,7 @@ static void dev_dma_wait_request(const struct device_dma_s *ddev, const uint8_t 
   rq.src = src;
   rq.dst = dst;
   rq.size = size;
+  rq.ddev = ddev;
 
   DEVICE_OP(ddev, request, &rq);
 
