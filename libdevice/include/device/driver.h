@@ -66,6 +66,7 @@ enum driver_class_e
 enum dev_enum_type_e
 {
   DEVENUM_TYPE_INVALID,
+  DEVENUM_TYPE_GENERIC,
   DEVENUM_TYPE_PCI,
   DEVENUM_TYPE_ISA,
   DEVENUM_TYPE_ATA,
@@ -80,6 +81,12 @@ struct devenum_ident_s
 	uint_fast8_t type;   //< @see dev_enum_type_e
 
 	union {
+		struct {
+			uint16_t vendor;
+			uint16_t device;
+			uint16_t rev_minor;
+			uint16_t rev_major;
+		} generic;
 		struct {
 			uint16_t vendor;
 			uint16_t device;
@@ -155,6 +162,23 @@ struct devenum_ident_s
 #define DEVENUM_GAISLER_ENTRY(_vendor, _device)		\
 	{ .type = DEVENUM_TYPE_GAISLER, { .grlib = {				\
 				.vendor = _vendor, .device = _device } } }
+
+/**
+   Shortcut for creating a Generic with vendor/device ids and version
+   number in a static devenum_ident_s array.
+
+   @param _vendor the vendor id to match, -1 for wildcard
+   @param _device the device id to match, -1 for wildcard
+   @param _rev_major the device major revision, -1 for wildcard
+   @param _rev_minor the minimum supported minor revision, -1 for wildcard
+ */
+#define DEVENUM_GENERIC_ENTRY(_vendor, _device, _rev_major, _rev_minor)	\
+  { .type = DEVENUM_TYPE_GENERIC, { .generic = {                        \
+        .vendor = _vendor,                                              \
+        .device = _device,                                              \
+        .rev_minor = _rev_minor,                                        \
+        .rev_major = _rev_major,                                        \
+      } } }
 
 
 /** Common class init() function template. */
