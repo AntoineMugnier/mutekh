@@ -223,7 +223,6 @@ static inline void cpu_interrupt_wait(void)
   reg_t tmp;
 
 #   if defined (CONFIG_CPU_SPARC_LEON3) || defined (CONFIG_CPU_SPARC_SOCLIB)
-# warning FIXME check atomicity on leon
   asm volatile (
 		"rd %%psr, %0		\n\t"
                 "andn %0, 0xf00, %0      \n\t"

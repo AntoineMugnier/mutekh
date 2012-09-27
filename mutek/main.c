@@ -114,9 +114,12 @@ int_fast8_t mutek_start()  /* FIRST CPU only */
 
 #if defined(CONFIG_MUTEK_CONSOLE)
 
-# if !defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
-    if ( ctx.console )
-      printk_set_output(__printf_out_tty, &console_dev);
+        struct device_find_chosen_ctx_s ctx = {};
+        device_tree_walk(NULL, &device_find_chosen, &ctx);
+
+# if 0 // defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
+        if ( ctx.console )
+          printk_set_output(__printf_out_tty, &console_dev);
 # endif
 #endif
 
