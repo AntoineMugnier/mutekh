@@ -30,3 +30,7 @@ endif
 ifeq ($(CONFIG_DRIVER_SOCLIB_VCI_DMA), defined)
 subdirs += vci_dma
 endif
+
+ifeq ($(CONFIG_DRIVER_SOCLIB_VCI_ETHERNET), defined)
+subdirs += vci_ethernet
+endif
