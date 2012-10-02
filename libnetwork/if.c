@@ -23,6 +23,7 @@
 #include <network/packet.h>
 #include <network/protos.h>
 #include <network/if.h>
+#include <network/dispatch.h>
 
 #ifdef CONFIG_NETWORK_IPV4
 # include <netinet/ip.h>
@@ -78,18 +79,28 @@ OBJECT_CONSTRUCTOR(net_if_obj)
 {
   struct device_s	*dev = va_arg(ap, struct device_s *);
   net_if_type_t		type = va_arg(ap, net_if_type_t);
-  uint8_t		*mac = va_arg(ap, uint8_t *);
   uint_fast16_t		mtu = va_arg(ap, uint_fast16_t);
 
   /* initialize the object */
-  obj->dev = dev;
-  obj->mac = mac;
+  if (device_get_accessor(&obj->dev, dev, DRIVER_CLASS_NET, 0))
+    return -1;
+
+  if (DEVICE_OP(&obj->dev, getopt, DEV_NET_OPT_MAC,
+                &obj->mac, &obj->mac_len))
+    {
+      device_put_accessor(&obj->dev);
+      return -1;
+    }
+
   obj->mtu = mtu;
   obj->type = type;
   obj->rx_bytes = obj->rx_packets = obj->tx_bytes = obj->tx_packets = 0;
   obj->state = NET_IF_STATE_DOWN;
   if (net_protos_init(&obj->protocols))
-    return -1;
+    {
+      device_put_accessor(&obj->dev);
+      return -1;
+    }
 
   /* choose a funky name for the interface */
   if (type == IF_ETHERNET)
@@ -126,7 +137,6 @@ OBJECT_DESTRUCTOR(net_if_obj)
 
 struct net_if_s	*if_register(struct device_s	*dev,
 			     net_if_type_t	type,
-			     uint8_t		*mac,
 			     uint_fast16_t	mtu)
 {
 #ifdef CONFIG_NETWORK_UDP
@@ -138,7 +148,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
   struct net_if_s				*interface;
 
   /* create new device node */
-  if ((interface = net_if_obj_new(NULL, dev, type, mac, mtu)) == NULL)
+  if ((interface = net_if_obj_new(NULL, dev, type, mtu)) == NULL)
     return NULL;
 
   /* initialize standard protocols for the device */
@@ -168,7 +178,8 @@ struct net_if_s	*if_register(struct device_s	*dev,
       return NULL;
     }
 
-  printk("Registered new interface %s (MTU = %u)\n", interface->name, interface->mtu);
+  printk("Registered new interface %s (MTU: %u, MAC: %P)\n",
+         interface->name, interface->mtu, interface->mac, interface->mac_len);
 
   return interface;
 }
@@ -179,6 +190,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
 
 void if_unregister(struct net_if_s *interface)
 {
+  if_down(interface);
   route_flush(interface);
   net_if_remove(&net_interfaces, interface);
   net_if_obj_refdrop(interface);
@@ -188,11 +200,18 @@ void if_unregister(struct net_if_s *interface)
  * Bring an interface up.
  */
 
-void if_up(struct net_if_s *interface)
+error_t if_up(struct net_if_s *interface)
 {
   printk("Bringing up interface %s\n", interface->name);
 
+  /* start dispatch thread */
+  interface->dispatch = network_dispatch_create(interface);
+  if (interface->dispatch == NULL)
+    return -ENOMEM;
+
   interface->state = NET_IF_STATE_UP;
+
+  return 0;
 }
 
 /*
@@ -201,6 +220,9 @@ void if_up(struct net_if_s *interface)
 
 void if_down(struct net_if_s *interface)
 {
+  if (interface->dispatch != NULL)
+    network_dispatch_kill(interface->dispatch);
+
   interface->state = NET_IF_STATE_DOWN;
 }
 
@@ -350,6 +372,12 @@ error_t			if_register_proto(struct net_if_s	*interface,
   return 0;
 }
 
+void if_dispatch(struct net_if_s *interface, struct net_packet_s *packet)
+{
+  if (interface->dispatch)
+    network_dispatch_packet(interface->dispatch, packet);
+}
+
 /*
  * Push a packet.
  */
@@ -385,7 +413,7 @@ inline uint8_t		*if_preparepkt(struct net_if_s		*interface,
 				       size_t			size,
 				       size_t			max_padding)
 {
-  return dev_net_preparepkt(interface->dev, packet, size, max_padding);
+  return DEVICE_OP(&interface->dev, preparepkt, packet, size, max_padding);
 }
 
 /*
@@ -410,7 +438,9 @@ void			if_sendpkt(struct net_if_s	*interface,
       if_pushpkt(interface, packet);
     }
   else
-    dev_net_sendpkt(interface->dev, packet, proto);
+    {
+      DEVICE_OP(&interface->dev, sendpkt, packet, proto);
+    }
 }
 
 /*

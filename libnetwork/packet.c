@@ -25,7 +25,7 @@
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 
-#include <semaphore.h>
+#include <mutek/semaphore.h>
 
 #include <network/packet.h>
 #include <network/protos.h>

@@ -83,8 +83,9 @@ struct net_if_s
 {
   char					name[IFNAME_MAX_LEN];
   int_fast32_t				index;
-  struct device_s			*dev;
+  struct device_net_s			dev;
   const uint8_t				*mac;
+  size_t				mac_len;
   uint_fast16_t				mtu;
   net_protos_root_t			protocols;
   uint_fast16_t				type;
@@ -96,6 +97,7 @@ struct net_if_s
   uint_fast32_t				rx_packets;
   uint_fast32_t				tx_packets;
 
+  struct net_dispatch_s                 *dispatch;
   net_if_obj_entry_t			obj_entry;
   CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
 };
@@ -126,7 +128,6 @@ CONTAINER_KEY_TYPE(net_if, PTR, STRING, name);
  */
 struct net_if_s	*if_register(struct device_s	*dev,
 			     net_if_type_t	type,
-			     uint8_t		*mac,
 			     uint_fast16_t	mtu);
 
 /**
@@ -138,11 +139,11 @@ struct net_if_s	*if_register(struct device_s	*dev,
 void if_unregister(struct net_if_s *interface);
 
 /**
-   @this configures an interface to be able to exchange packets
+   @this set an interface up by starting a new kernel dispatch thread for this interface.
 
    @param interface Interface to configure
  */
-void if_up(struct net_if_s *interface);
+error_t if_up(struct net_if_s *interface);
 
 /**
    @this configures an interface to be unable to exchange packets
@@ -152,7 +153,7 @@ void if_up(struct net_if_s *interface);
 void if_down(struct net_if_s *interface);
 
 /**
-   @this configures addresses an interface
+   @this configures addresses of an interface. The interface must be up.
 
    @param interface Interface to configure
    @param action What to do with the address
@@ -197,6 +198,11 @@ inline uint8_t	*if_preparepkt(struct net_if_s		*interface,
 void	if_sendpkt(struct net_if_s	*interface,
 		   struct net_packet_s	*packet,
 		   net_proto_id_t	proto);
+
+/**
+   @This pushes a packet from device irq handler for dispatch by the kernel thread.
+ */
+void if_dispatch(struct net_if_s *interface, struct net_packet_s *packet);
 
 /**
    @this dumps interface state to console

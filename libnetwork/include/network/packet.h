@@ -208,7 +208,6 @@ uint16_t		packet_checksum(const void	*data,
 uint16_t		packet_memcpy(void		*dst,
 				      const void	*src,
 				      size_t		size);
-void			*packet_dispatch(void	*data);
 
 CONTAINER_PROTOTYPE(packet_queue, inline, packet_queue);
 CONTAINER_PROTOTYPE(packet_queue, inline, packet_queue_lock);
@@ -236,7 +235,7 @@ void	netprofile_show(void);
  * Disable log messages. Replace by a printk.
  */
 
-#if 0
+#if 1
 # define net_debug(...) printk(__VA_ARGS__)
 #else
 # define net_debug(...)

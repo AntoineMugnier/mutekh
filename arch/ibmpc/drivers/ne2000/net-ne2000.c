@@ -664,7 +664,7 @@ DEVNET_GETOPT(net_ne2000_getopt)
       case DEV_NET_OPT_BCAST:
 	if (*len < ETH_ALEN)
 	  return -1;
-	memcpy(value, "\xff\xff\xff\xff\xff\xff", ETH_ALEN);
+	*(const uint8_t**)value = "\xff\xff\xff\xff\xff\xff";
 	*len = ETH_ALEN;
 	break;
       default:

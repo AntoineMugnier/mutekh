@@ -227,10 +227,10 @@ static _SENDMSG(sendmsg_packet)
   else
     {
       uint8_t	*next;
-      uint8_t	bcast[8];
-      size_t	maclen = 8;
+      const uint8_t bcast;
+      size_t	maclen;
 
-      assert(!dev_net_getopt(interface->dev, DEV_NET_OPT_BCAST, bcast, &maclen));
+      ensure(!DEVICE_OP(&interface->dev, getopt, DEV_NET_OPT_BCAST, &bcast, &maclen));
 
       /* is broadcast allowed */
       if (!fd->broadcast && !memcmp(bcast, sll->sll_addr, maclen))
@@ -304,8 +304,8 @@ static _RECVMSG(recvmsg_packet)
   /* fill the address if required */
   if (sll != NULL)
     {
-      uint8_t	bcast[8];
-      size_t	maclen = 8;
+      const uint8_t *bcast;
+      size_t	maclen;
 
       if (message->msg_namelen < sizeof (struct sockaddr_ll))
 	{
@@ -322,7 +322,7 @@ static _RECVMSG(recvmsg_packet)
       memcpy(sll->sll_addr, packet->sMAC, packet->MAClen);
       if (!memcmp(packet->interface->mac, packet->tMAC, packet->MAClen))
 	sll->sll_pkttype = PACKET_HOST;
-      else if (!dev_net_getopt(packet->interface->dev, DEV_NET_OPT_BCAST, bcast, &maclen) &&
+      else if (!dev_net_getopt(packet->interface->dev, DEV_NET_OPT_BCAST, &bcast, &maclen) &&
 	       !memcmp(bcast, packet->tMAC, maclen))
 	sll->sll_pkttype = PACKET_BROADCAST;
       else
@@ -521,11 +521,11 @@ void		pf_packet_signal(struct net_if_s	*interface,
 				 struct net_packet_s	*packet,
 				 net_proto_id_t		protocol)
 {
-  uint8_t	bcast[packet->MAClen];
+  const uint8_t	*bcast;
   bool_t	is_bcast;
-  size_t	maclen = packet->MAClen;
+  size_t	maclen;
 
-  assert(!dev_net_getopt(interface->dev, DEV_NET_OPT_BCAST, bcast, &maclen));
+  ensure(!DEVICE_OP(&interface->dev, get_opt, DEV_NET_OPT_BCAST, bcast, &maclen));
   assert(maclen == packet->MAClen);
   is_bcast = !memcmp(packet->tMAC, bcast, maclen);
 

@@ -41,10 +41,10 @@
 
 struct net_dispatch_s
 {
+	uint8_t                stack[CONFIG_NET_DISPATCH_STACK_SIZE];
 	struct sched_context_s context;
 	struct sched_context_s *killer;
 	bool_t                 must_quit;
-	uint8_t                stack[CONFIG_NET_DISPATCH_STACK_SIZE];
 
     struct net_if_s     *interface;
 
@@ -118,7 +118,7 @@ struct net_dispatch_s *network_dispatch_create(struct net_if_s *interface)
 
 	packet_queue_init(&dispatch->queue);
 
-    lock_init(&dispatch->kill_lock);
+	lock_init(&dispatch->kill_lock);
 
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
 	context_init( &dispatch->context.context,
@@ -157,7 +157,7 @@ void network_dispatch_kill(struct net_dispatch_s *dispatch)
 }
 
 void network_dispatch_packet(struct net_dispatch_s *dispatch,
-							 struct net_packet_s *packet)
+			     struct net_packet_s *packet)
 {
 	packet_obj_refnew(packet);
 
