@@ -45,6 +45,7 @@ enum enum_fdt_section_e
   FDT_SECTION_CPUS,
   FDT_SECTION_DEVICE,
   FDT_SECTION_CHOSEN,
+  FDT_SECTION_ALIAS,
 };
 
 struct enum_fdt_stack_entry_s
@@ -117,12 +118,12 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
 
       if (d)
         {
-          d->name = strdup(name);
+          d->node.name = strdup(name);
           device_attach(d, p->dev);
 
           d->enum_pv = (void*)-1;
           if (p->section == FDT_SECTION_CPUS)
-            d->flags |= DEVICE_FLAG_CPU;
+            d->node.flags |= DEVICE_FLAG_CPU;
         }
 
       e->dev = d;
@@ -130,10 +131,23 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
         e->section = FDT_SECTION_DEVICE;
       return 1;
     }
-  else if (p->section == FDT_SECTION_NONE && !strcmp(name, "cpus"))
+  else if (p->section == FDT_SECTION_NONE)
     {
-      e->section = FDT_SECTION_CPUS;
-      return 1;
+      if (!strcmp(name, "cpus"))
+        {
+          e->section = FDT_SECTION_CPUS;
+          return 1;
+        }
+      else if (!strcmp(name, "chosen"))
+        {
+          e->section = FDT_SECTION_CHOSEN;
+          return 1;
+        }
+      else if (!strcmp(name, "aliases"))
+        {
+          e->section = FDT_SECTION_ALIAS;
+          return 1;
+        }
     }
 
   printk("enum-fdt: ignored node `%s'\n", path);
@@ -153,6 +167,26 @@ static FDT_ON_NODE_LEAVE_FUNC(enum_fdt_node_leave)
   ctx->stack_top--;
 }
 
+static struct device_s *enum_fdt_get_phandle(struct device_s *dev, uint32_t phandle)
+{
+  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->node.children, {
+
+      if (!(item->flags & DEVICE_FLAG_DEVICE))
+        CONTAINER_FOREACH_CONTINUE;
+
+      struct device_s *d = (struct device_s*)item;
+
+      if ((uint32_t)d->enum_pv == phandle)
+        return d;
+
+      struct device_s *r = enum_fdt_get_phandle(d, phandle);
+
+      if (r)
+        return r;
+    });
+  return NULL;
+}
+
 static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
 {
   struct enum_fdt_parse_ctx_s *ctx = priv;
@@ -162,6 +196,39 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
 
   struct enum_fdt_stack_entry_s *e = ctx->stack + ctx->stack_top;
   const uint8_t *data8 = data;
+
+  /* misc sections */
+
+  switch (e->section)
+    {
+    case FDT_SECTION_ALIAS:
+      if (datalen && !data8[datalen - 1])
+        {
+          char buf[128];
+          ssize_t l = device_get_path(NULL, buf, sizeof(buf), &ctx->dev->node, 0);
+          if (l >= 0 && l + 1 + datalen < sizeof(buf))
+            {
+              buf[l] = '/';
+              memcpy(buf + l + 1, data8, datalen);
+              buf[l + 1 + datalen] = 0;
+              device_new_alias_to_path(NULL, name, buf);
+            }
+          else
+            {
+              printk("enum-fdt: ignored entry in `aliases' section `%s : %P'\n", name, data, datalen);
+            }
+        }
+      return;
+
+    case FDT_SECTION_CHOSEN:
+      printk("enum-fdt: ignored entry in `chosen' section `%s : %P'\n", name, data, datalen);
+      return;
+
+    default:
+      break;
+    }
+
+  /* cpu and device sections */
 
   switch (name[0])
     {
@@ -348,11 +415,11 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
 
     }
 
-  printk("enum-fdt: device %p `%s', ignored node property `%s : %P'\n", e->dev, e->dev->name, name, data, datalen);
+  printk("enum-fdt: device %p `%s', ignored node property `%s : %P'\n", e->dev, e->dev->node.name, name, data, datalen);
   return;
 
  res_err:
-  printk("enum-fdt: device %p `%s', error adding resource entry\n", e->dev, e->dev->name);
+  printk("enum-fdt: device %p `%s', error adding resource entry\n", e->dev, e->dev->node.name);
 }
 
 static FDT_ON_MEM_RESERVE_FUNC(enum_fdt_mem_reserve)
@@ -403,28 +470,20 @@ const struct driver_s	enum_fdt_drv =
 };
 
 #ifdef CONFIG_HEXO_IRQ
-static struct device_s *enum_fdt_get_phandle(struct device_s *dev, uint32_t phandle)
-{
-  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
-      if ((uint32_t)item->enum_pv == phandle)
-        return item;
-
-      struct device_s *r = enum_fdt_get_phandle(item, phandle);
-
-      if (r)
-        return r;
-    });
-  return NULL;
-}
-
 static void resolve_icu_links(struct device_s *root, struct device_s *dev)
 {
-  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
+  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->node.children, {
+
+      if (!(item->flags & DEVICE_FLAG_DEVICE))
+        CONTAINER_FOREACH_CONTINUE;
+
+      struct device_s *d = (struct device_s*)item;
+
       uint_fast8_t i;
 
-      for (i = 0; i < item->res_count; i++)
+      for (i = 0; i < d->res_count; i++)
         {
-          struct dev_resource_s *r = item->res + i;
+          struct dev_resource_s *r = d->res + i;
 
           if (r->type == DEV_RES_IRQ)
             {
@@ -437,13 +496,13 @@ static void resolve_icu_links(struct device_s *root, struct device_s *dev)
                   d->ref_count++;
                 }
               else {
-                printk("enum-fdt: bad interrupt controller handle in %p `%s'\n", item, item->name);
+                printk("enum-fdt: bad interrupt controller handle in %p `%s'\n", d, d->node.name);
                 r->type = DEV_RES_UNUSED;
               }
             }
         }
 
-      resolve_icu_links(root, item);
+      resolve_icu_links(root, d);
   });
 }
 #endif

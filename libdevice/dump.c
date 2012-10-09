@@ -30,7 +30,7 @@ struct device_s device_enum_root;
 #endif
 
 static void
-device_dump_r(struct device_s *dev, uint_fast8_t indent)
+device_dump_device(struct device_s *dev, uint_fast8_t indent)
 {
   uint_fast8_t i, j;
   const char *status[] = { DEVICE_STATUS_NAMES };
@@ -38,7 +38,7 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
   printk("\n");
   for (i = 0; i < indent; i++)
     printk("  ");
-  printk("Device %p `%s'\n", dev, dev->name);
+  printk("Device %p `%s'\n", dev, dev->node.name);
   for (i = 0; i < indent; i++)
     printk("  ");
   printk("  status: %s, use: %i\n", status[dev->status], dev->ref_count);
@@ -91,7 +91,7 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
         case DEV_RES_IRQ: {
           struct device_s *icu = r->irq.icu;
           printk("  IRQ %u connected to input %u:%u of controller %p `%s'\n",
-                 r->irq.dev_out_id, r->irq.icu_in_id, r->irq.irq_id, icu, icu ? icu->name : "default");
+                 r->irq.dev_out_id, r->irq.icu_in_id, r->irq.irq_id, icu, icu ? icu->node.name : "default");
           break;
         }
 #endif
@@ -135,15 +135,33 @@ device_dump_r(struct device_s *dev, uint_fast8_t indent)
 void
 device_dump(struct device_s *dev)
 {
-  device_dump_r(dev, 0);
+  device_dump_device(dev, 0);
 }
 
 #ifdef CONFIG_DEVICE_TREE
 
 static void
-device_dump_tree_r(struct device_s *root, uint_fast8_t i)
+device_dump_alias(struct device_alias_s *alias, uint_fast8_t indent)
 {
-  device_dump_r(root, i);
+  uint_fast8_t i;
+  printk("\n");
+  for (i = 0; i < indent; i++)
+    printk("  ");
+  printk("Device alias %p `%s'\n", alias, alias->node.name);
+  for (i = 0; i < indent; i++)
+    printk("  ");
+  printk("  target: %s\n", alias->path);
+}
+
+static void
+device_dump_tree_r(struct device_node_s *root, uint_fast8_t i)
+{
+  if (root->flags & DEVICE_FLAG_DEVICE)
+    device_dump_device((struct device_s*)root, i);
+  else if (root->flags & DEVICE_FLAG_ALIAS)
+    device_dump_alias((struct device_alias_s*)root, i);
+  else
+    printk("Unknows device node %p `%s'\n", root, root->name);
 
   CONTAINER_FOREACH(device_list, CLIST, &root->children,
   {
@@ -152,12 +170,12 @@ device_dump_tree_r(struct device_s *root, uint_fast8_t i)
 }
 
 void
-device_dump_tree(struct device_s *root)
+device_dump_tree(struct device_node_s *root)
 {
   if (!root)
-    root = &device_enum_root;
+    root = &device_enum_root.node;
 
-  device_dump_tree_r(&device_enum_root, 0);
+  device_dump_tree_r(&device_enum_root.node, 0);
 }
 
 #endif

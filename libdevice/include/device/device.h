@@ -238,8 +238,8 @@ enum device_flags_e
   /** This device is a processor. Operations on this device may only
       be executed on the corresponding processor. */
   DEVICE_FLAG_CPU = 2,
-  /** This device must be retained as the default device of its class. */
-  DEVICE_FLAG_CHOSEN = 4,
+  DEVICE_FLAG_DEVICE = 8,
+  DEVICE_FLAG_ALIAS = 16,
 };
 
 
@@ -249,9 +249,36 @@ enum device_flags_e
 # define CONTAINER_LOCK_device_list HEXO_SPIN
 CONTAINER_TYPE(device_list, CLIST,
 #endif
-/** device object structure */
+/** device tree base node structure */
+struct device_node_s
+{
+  /** indicated if the device node has been dynamically allocated */
+  uint_fast8_t                  flags;
+
+#ifdef CONFIG_DEVICE_TREE
+  /** device name, freed on device object destruction if not NULL and
+      @tt allocated is set. */
+  const char *                  name;
+
+  struct device_node_s		*parent;
+  device_list_entry_t		list_entry;
+  device_list_root_t		children;
+#endif
+}
+#ifdef CONFIG_DEVICE_TREE
+, list_entry);
+
+CONTAINER_PROTOTYPE(device_list, inline, device_list);
+#endif
+;
+
+
+/** device node structure */
 struct device_s
 {
+  // must be first field
+  struct device_node_s          node;
+
   /** general purpose device lock */
   lock_t			lock;
 
@@ -269,22 +296,10 @@ struct device_s
   /** device uses counter */
   uint_fast8_t                  ref_count;
 
-  /** indicated if the device node has been dynamically allocated */
-  uint_fast8_t                  flags;
-
-  /** device name, freed on device object destruction if not NULL and
-      @tt allocated is set. */
-  const char *                  name;
-
 #ifdef CONFIG_DEVICE_TREE
-
   /** pointer to device enumerator private data if any */
   struct device_s               *enum_dev;
   void				*enum_pv;
-
-  struct device_s		*parent;
-  device_list_entry_t		list_entry;
-  device_list_root_t		children;
 #endif /* !CONFIG_DEVICE_TREE */
 
 #if defined(CONFIG_ARCH_SMP) && defined(CONFIG_DEVICE_IRQ)
@@ -293,16 +308,19 @@ struct device_s
 
   /** device resources table */
   struct dev_resource_s         res[DEVICE_STATIC_RESOURCE_COUNT];
-}
+};
+
 #ifdef CONFIG_DEVICE_TREE
-, list_entry);
+/** device alias node structure */
+struct device_alias_s
+{
+  // must be first field
+  struct device_node_s          node;
 
-CONTAINER_PROTOTYPE(device_list, inline, device_list);
+  /** alias path in device tree */
+  const char *path;
+};
 #endif
-;
-
-
-
 
 /** @This initializes a statically allocated device object. Number of
     resource slot is @ref #DEVICE_STATIC_RESOURCE_COUNT
@@ -323,11 +341,63 @@ void device_cleanup(struct device_s *dev);
     count. The device node is reallocated to save memory. */
 void device_shrink(struct device_s *dev);
 
+/** @This creates an alias in the device tree. The parent parameter
+    may be @tt NULL to attach the alias on the tree root. */
+config_depend(CONFIG_DEVICE_TREE)
+struct device_alias_s * device_new_alias_to_path(struct device_node_s *parent, const char *name, const char *path);
+
+/** @This creates an alias in the device tree. The target string is
+    obtained using the @ref device_get_path function. The parent
+    parameter may be @tt NULL to attach the alias on the tree root. */
+config_depend(CONFIG_DEVICE_TREE)
+struct device_alias_s * device_new_alias_to_node(struct device_node_s *parent, const char *name, struct device_node_s *node);
+
+config_depend(CONFIG_DEVICE_TREE)
+void device_alias_remove(struct device_alias_s *alias);
+
+/** @This returns child device by path. The @tt root parameter may be
+    @tt NULL to lookup from the device tree root. Multiple space
+    separated paths can be specified as fallbacks. The question mark
+    character can be used as wildcard.*/
+config_depend(CONFIG_DEVICE_TREE)
+struct device_s *device_get_by_path(struct device_node_s *root, const char *path);
+
+/** @This writes a null terminated device tree path in buffer. If the
+    @tt number parameter is not 0, the value is appended at the end
+    within a pair of square brackets. @return size of string excluding
+    null byte or a negative error code. */
+error_t device_get_path(struct device_node_s *root, char *buf,
+                        size_t buflen, struct device_node_s *dev, uint_fast8_t number);
+
+static inline struct device_s * device_from_node(struct device_node_s *node)
+{
+  return node && node->flags & DEVICE_FLAG_DEVICE ? (struct device_s*)node : NULL;
+}
+
+static inline struct device_alias_s * device_alias_from_node(struct device_node_s *node)
+{
+  return node && node->flags & DEVICE_FLAG_ALIAS ? (struct device_alias_s*)node : NULL;
+}
+
+static inline struct device_node_s * device_to_node(struct device_s *dev)
+{
+  return &dev->node;
+}
+
+static inline struct device_node_s * device_node_from_alias(struct device_alias_s *alias)
+{
+  return &alias->node;
+}
+
+/** @internal @This lookup a node in the device tree. */
+struct device_node_s *device_node_from_path(struct device_node_s *root, const char *path,
+                                            uint_fast8_t depth, const char **brackets);
+
 /** @This attaches a device to a parent enumerator device. If the
     parent device pointer is NULL, the device is attached on root enumerator. */
 config_depend(CONFIG_DEVICE_TREE)
 void device_attach(struct device_s *dev,
-                      struct device_s *parent);
+                   struct device_s *parent);
 
 /** @This detaches a device from its parent enumerator device */
 config_depend(CONFIG_DEVICE_TREE)
@@ -338,7 +408,7 @@ void device_dump(struct device_s *root);
 
 /** @This prints the current devices tree. */
 config_depend(CONFIG_DEVICE_TREE)
-void device_dump_tree(struct device_s *root);
+void device_dump_tree(struct device_node_s *root);
 
 /** @see device_tree_walker_t */
 #define DEVICE_TREE_WALKER(x) bool_t (x)(struct device_s *dev, void *priv)
@@ -350,21 +420,13 @@ typedef DEVICE_TREE_WALKER(device_tree_walker_t);
     function type foreach each node. Traversal stops if the provided
     function returns non-zero. */
 config_depend(CONFIG_DEVICE_TREE)
-bool_t device_tree_walk(struct device_s *root, device_tree_walker_t *walker, void *priv);
+bool_t device_tree_walk(struct device_node_s *root, device_tree_walker_t *walker, void *priv);
 
 /** @This returns first device with the @tt CPU flag set and matching
     specified numerical ids. The -1 value can be used as wildcard for
     both ids but the device still has to have an id resource attached. */
 config_depend(CONFIG_DEVICE_TREE)
 struct device_s *device_get_cpu(uint_fast8_t major_id, uint_fast8_t minor_id);
-
-/** @This returns child device at specified index */
-config_depend(CONFIG_DEVICE_TREE)
-struct device_s *device_get_child(struct device_s *dev, uint_fast8_t i);
-
-/** @This returns child device by path. The @tt root parameter may be @tt NULL */
-config_depend(CONFIG_DEVICE_TREE)
-struct device_s *device_get_by_path(struct device_s *root, const char *path);
 
 #ifdef CONFIG_VMEM
 uintptr_t vpage_io_map(paddr_t paddr, size_t size);

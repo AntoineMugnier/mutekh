@@ -43,7 +43,7 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
 {
   struct device_accessor_s *a = accessor;
   const struct driver_class_s *c;
-  uint_fast8_t i, n = number;
+  uint_fast8_t i;
 
   if (dev->status != DEVICE_DRIVER_INIT_DONE)
     return -EAGAIN;
@@ -51,7 +51,7 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
 
   for (i = 0; (c = dev->drv->classes[i]) != NULL; i++)
     {
-      if (c->class_ == cl && !n--)
+      if (c->class_ == cl)
         {
           a->dev = dev;
           a->api = c;
@@ -77,60 +77,78 @@ void device_put_accessor(void *accessor)
 
 #ifdef CONFIG_DEVICE_TREE
 
-static bool_t device_find_driver_r(struct device_s *dev)
+error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
+                                    const char *path, enum driver_class_e cl)
+{
+  const char *num;
+  struct device_s *dev = device_from_node(device_node_from_path(root, path, 5, &num));
+
+  if (!dev)
+    return -ENOENT;
+
+  return device_get_accessor(accessor, dev, cl, atoi(num));
+}
+
+
+static bool_t device_find_driver_r(struct device_node_s *node)
 {
   extern const struct driver_s * global_driver_registry[];
   extern const struct driver_s * global_driver_registry_end[];
 
   bool_t done = 0;
 
-  switch (dev->status)
+  struct device_s *dev = device_from_node(node);
+
+  if (dev)
     {
-    case DEVICE_NO_DRIVER: {
-      const struct driver_s **drv = global_driver_registry;
-
-      struct device_enum_s e;
-
-      /* get associated enumerator device */
-      if (!dev->enum_dev)
-        break;
-      if (device_get_accessor(&e, dev->enum_dev, DRIVER_CLASS_ENUM, 0))
-        break;
-
-      /* iterate over available drivers */
-      for ( ; drv < global_driver_registry_end ; drv++ )
+      switch (dev->status)
         {
-          /* driver entry may be NULL on heterogeneous systems */
-          if (!*drv)
-            continue;
+        case DEVICE_NO_DRIVER: {
+          const struct driver_s **drv = global_driver_registry;
 
-          /* use enumerator to decide if driver is appropriate for this device */
-          if (DEVICE_OP(&e, match_driver, *drv, dev))
+          struct device_enum_s e;
+
+          /* get associated enumerator device */
+          if (!dev->enum_dev)
+            break;
+          if (device_get_accessor(&e, dev->enum_dev, DRIVER_CLASS_ENUM, 0))
+            break;
+
+          /* iterate over available drivers */
+          for ( ; drv < global_driver_registry_end ; drv++ )
             {
-              device_bind_driver(dev, *drv);
-              done = 1;
-              break;
+              /* driver entry may be NULL on heterogeneous systems */
+              if (!*drv)
+                continue;
+
+              /* use enumerator to decide if driver is appropriate for this device */
+              if (DEVICE_OP(&e, match_driver, *drv, dev))
+                {
+                  device_bind_driver(dev, *drv);
+                  done = 1;
+                  break;
+                }
             }
+
+          device_put_accessor(&e);
+
+          if (dev->status != DEVICE_DRIVER_INIT_PENDING)
+            break;
         }
 
-      device_put_accessor(&e);
+          /* try to intialize device using associated driver */
+        case DEVICE_DRIVER_INIT_PENDING: 
 
-      if (dev->status != DEVICE_DRIVER_INIT_PENDING)
-        break;
+          if (device_init_driver(dev) != -EAGAIN)
+            if (dev->status != DEVICE_DRIVER_INIT_PENDING)
+              done = 1;
+
+        default:
+          break;
+        }
     }
 
-      /* try to intialize device using associated driver */
-    case DEVICE_DRIVER_INIT_PENDING: 
-
-      if (device_init_driver(dev) != -EAGAIN)
-        if (dev->status != DEVICE_DRIVER_INIT_PENDING)
-          done = 1;
-
-    default:
-      break;
-    }
-
-  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->children, {
+  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &node->children, {
       done |= device_find_driver_r(item);
   });
 
@@ -145,7 +163,7 @@ void device_find_driver(struct device_s *dev)
     dev = &device_enum_root;
 
   /* try to bind and init as many devices as possible */
-  while (device_find_driver_r(dev))
+  while (device_find_driver_r((struct device_node_s*)dev))
     ;
 }
 
@@ -160,7 +178,7 @@ error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv)
   dev->status = DEVICE_DRIVER_INIT_PENDING;      
 
   printk("device: %p `%s' uses %p `%s' driver\n",
-         dev, dev->name, drv, drv->desc);
+         dev, dev->node.name, drv, drv->desc);
 
   return 0;
 }
@@ -200,7 +218,7 @@ error_t device_init_driver(struct device_s *dev)
 
   if (err)
     printk("device: device %p `%s' initialization failed with return code %i\n",
-           dev, dev->name, err);
+           dev, dev->node.name, err);
 
   return err;
 }

@@ -337,6 +337,21 @@ struct driver_class_s
 error_t device_get_accessor(void *accessor, struct device_s *dev,
                             enum driver_class_e cl, uint_fast8_t number);
 
+/** 
+    @This initializes a device accessor object after lookup in the
+    device tree. The @tt root parameter may be @tt NULL to lookup from
+    the device tree root.
+
+    The path is of the form "@tt {node0/node1}". An additionnal
+    instance number may be added: "@tt {node0/node1[2]}" the default
+    instance number is 0. Multiple space separated paths can be
+    specified as fallbacks: "@tt {node0 node1[0] node1[1]}". The
+    question mark character can be used as wildcard.
+ */
+config_depend(CONFIG_DEVICE_TREE)
+error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
+                                    const char *path, enum driver_class_e cl);
+
 /**
    @This must be called when device driver accessor is
    discarded. @This is used to decrement device usage references
