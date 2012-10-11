@@ -22,8 +22,6 @@
 
 #include "tty.h"
 
-#include "tty_private.h"
-
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -32,6 +30,27 @@
 
 #include <device/device.h>
 #include <device/class/char.h>
+#include <device/irq.h>
+
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_ring.h>
+
+
+#ifdef CONFIG_DEVICE_IRQ
+CONTAINER_TYPE(tty_fifo, RING, uint8_t, 32);
+CONTAINER_FUNC(tty_fifo, RING, static inline, tty_fifo);
+#endif
+
+struct tty_soclib_context_s
+{
+  /* tty input request queue and char fifo */
+  dev_char_queue_root_t		read_q;
+#ifdef CONFIG_DEVICE_IRQ
+  tty_fifo_root_t		read_fifo;
+  struct dev_irq_ep_s           irq_ep;
+#endif
+  uintptr_t addr;
+};
 
 #define TTY_SOCLIB_REG_WRITE	0
 #define TTY_SOCLIB_REG_STATUS	4
