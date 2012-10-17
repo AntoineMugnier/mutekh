@@ -82,6 +82,9 @@ pthread_cond_broadcast(pthread_cond_t *cond)
   return 0;
 }
 
+#include <device/class/timer.h>
+#include <device/driver.h>
+
 error_t
 pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
@@ -100,23 +103,22 @@ pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 
       pthread_mutex_lock(mutex);
     }
-#ifdef CONFIG_PTHREAD_CHECK
   else
     {
       sched_queue_unlock(&cond->wait);
       res = EINVAL;
     }
-#endif
 
   CPU_INTERRUPT_RESTORESTATE;
 
   return res;
 }
 
-#ifdef CONFIG_PTHREAD_TIME
+#ifdef CONFIG_PTHREAD_COND_TIME
 
 #include <time.h>
-#include <mutek/timer.h>
+#include <device/class/timer.h>
+#include <device/driver.h>
 
 struct pthread_cond_timedwait_ctx_s
 {
@@ -124,9 +126,9 @@ struct pthread_cond_timedwait_ctx_s
   struct sched_context_s *sched_ctx;
 };
 
-static TIMER_CALLBACK(pthread_cond_timer)
+static DEVTIMER_CALLBACK(pthread_cond_timer)
 {
-  struct pthread_cond_timedwait_ctx_s *ev_ctx = pv;
+  struct pthread_cond_timedwait_ctx_s *ev_ctx = rq->pvdata;
   struct sched_context_s *sched_ctx = ev_ctx->sched_ctx;
   struct pthread_s *thread = sched_ctx->priv;
 
@@ -139,6 +141,8 @@ static TIMER_CALLBACK(pthread_cond_timer)
     }
 
   sched_queue_unlock(ev_ctx->wait);
+
+  return 0;
 }
 
 error_t
@@ -146,49 +150,60 @@ pthread_cond_timedwait(pthread_cond_t *cond,
 		       pthread_mutex_t *mutex,
 		       const struct timespec *delay)
 {
-  error_t	res = 0;
-
 #ifdef CONFIG_PTHREAD_CANCEL
   pthread_testcancel();
 #endif
 
+  struct dev_timer_rq_s rq;
+
+  rq.delay = 0;
+  if (libc_time_to_timer(delay, &rq.deadline))
+    return EINVAL;
+
+  error_t	res = 0;
+  struct pthread_cond_timedwait_ctx_s ev_ctx;
+
   CPU_INTERRUPT_SAVESTATE_DISABLE;
-  sched_queue_wrlock(&cond->wait);
 
   if (!pthread_mutex_unlock(mutex))
     {
-      struct timer_event_s ev;
-      struct pthread_cond_timedwait_ctx_s ev_ctx;
+      sched_queue_wrlock(&cond->wait);
 
       ev_ctx.wait = &cond->wait;
       ev_ctx.sched_ctx = sched_get_current();
-      struct pthread_s	*this = ev_ctx.sched_ctx->priv;
-
-      ev.callback = pthread_cond_timer;
-      ev.pv = &ev_ctx;
-      ev.delay = timer_sec2tu(delay->tv_sec)
-               + timer_nsec2tu(delay->tv_nsec);
+      struct pthread_s *this = ev_ctx.sched_ctx->priv;
 
       atomic_bit_set(&this->state, _PTHREAD_STATE_TIMEDWAIT);
+      atomic_bit_clr(&this->state, _PTHREAD_STATE_TIMEOUT);
 
-      timer_add_event(&timer_ms, &ev);
-      sched_wait_unlock(&cond->wait);
-      timer_cancel_event(&ev, 0);
+      rq.callback = pthread_cond_timer;
+      rq.pvdata = &ev_ctx;
 
-      if (atomic_bit_testclr(&this->state, _PTHREAD_STATE_TIMEOUT))
-        res = ETIMEDOUT;
+      if (DEVICE_OP(libc_timer(), request, &rq, 0) >= 0)
+        {
+          sched_wait_unlock(&cond->wait);
+
+          if (atomic_bit_testclr(&this->state, _PTHREAD_STATE_TIMEOUT))
+            res = ETIMEDOUT;
+          else
+            DEVICE_OP(libc_timer(), request, &rq, 1);
+        }
+      else
+        {
+          sched_queue_unlock(&cond->wait);
+          res = EINVAL;
+        }
 
       pthread_mutex_lock(mutex);
     }
-#ifdef CONFIG_PTHREAD_CHECK
   else
     {
-      sched_queue_unlock(&cond->wait);
       res = EINVAL;
     }
-#endif
 
   CPU_INTERRUPT_RESTORESTATE;
+
+  assert(!rq.drvdata);
 
   return res;
 }

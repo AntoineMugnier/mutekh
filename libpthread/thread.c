@@ -132,14 +132,12 @@ pthread_join(pthread_t thread, void **value_ptr)
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   lock_spin(&thread->lock);
 
-# ifdef CONFIG_PTHREAD_CHECK
   if (atomic_bit_test(&thread->state, _PTHREAD_STATE_DETACHED))
     {
       lock_release(&thread->lock);
       res = EINVAL;
     }
   else
-# endif
     {
       if (atomic_bit_test(&thread->state, _PTHREAD_STATE_JOINABLE))
         {

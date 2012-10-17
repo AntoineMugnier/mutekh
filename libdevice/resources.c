@@ -62,6 +62,22 @@ error_t device_res_get_uint(const struct device_s *dev,
   return -ENOENT;
 }
 
+error_t device_res_get_uint64(const struct device_s *dev,
+                              enum dev_resource_type_e type,
+                              uint_fast8_t id, uint64_t *a)
+{
+  uint_fast8_t i;
+
+  for (i = 0; i < dev->res_count; i++)
+    if (dev->res[i].type == type && !id--)
+      {
+        *a = dev->res[i].uint64;
+        return 0;
+      }
+
+  return -ENOENT;
+}
+
 inline error_t device_get_param_uint(const struct device_s *dev, const char *name, uintptr_t *a)
 {
   uint_fast8_t i;
@@ -237,6 +253,21 @@ error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char 
   r->type = DEV_RES_PRODUCTID;
   r->product.id = id;
   r->product.name = name;
+
+  return 0;
+}
+
+error_t device_res_add_frequency(struct device_s *dev, uint64_t f_40_24)
+{
+  struct dev_resource_s *r = device_res_unused(dev);
+
+  if (dev->status == DEVICE_DRIVER_INIT_DONE)
+    return -EBUSY;
+  if (!r)
+    return -ENOMEM;
+
+  r->type = DEV_RES_FREQ;  
+  r->uint64 = f_40_24;
 
   return 0;
 }

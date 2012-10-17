@@ -16,185 +16,437 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
     02110-1301 USA.
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+    Copyright (c) 2012 Alexandre Becoulet <alexandre.becoulet@telecom-paristech.fr>
+    Copyright (c) 2012 Institut Telecom / Telecom ParisTech
 
 */
 
+#include <string.h>
+#include <stdio.h>
 
 #include <hexo/types.h>
+#include <hexo/iospace.h>
+#include <hexo/endian.h>
 
-#include <device/class/timer.h>
-#include <device/class/icu.h>
 #include <device/device.h>
 #include <device/driver.h>
+#include <device/class/timer.h>
+#include <device/irq.h>
 
-#include <hexo/iospace.h>
 #include <mutek/mem_alloc.h>
-#include <string.h>
+#include <mutek/printk.h>
 
-#include "timer_private.h"
+#define  TIMER_VALUE		0
+#define  TIMER_MODE		4
+# define TIMER_MODE_EN          0x01
+# define TIMER_MODE_IRQEN	0x02
+#define  TIMER_PERIOD           8
+#define  TIMER_IRQ		12
 
-#include "timer.h"
+#define TIMER_REG_ADDR(a, r, n)  ((a) + (r) + (n) * 0x10)
+
+#define SOCLIB_TIMER_MIN_PERIOD     2000
+#define SOCLIB_TIMER_DEFAULT_PERIOD 250000
 
 /*
- * timer device callback setup
- */
 
-DEVTIMER_SETCALLBACK(timer_soclib_setcallback)
+  When interrutons are available, the timer value is a 64 bits
+  software counter and the hardware timer period is used as an input
+  frequency divider configured from current resolution.
+
+  When interrutons support is disabled in the configuration, the
+  timer value is taken from the hardware timer register, the
+  resolution is fixed to 1 and the max timer value is 2^32-1.
+
+*/
+
+struct soclib_timer_state_s
 {
-  struct timer_soclib_context_s	*pv = dev->drv_pv;
-  uintptr_t			base = dev->addr[0] + id * TIMER_SOCLIB_REGSPACE_SIZE;
-  uint32_t			mode = cpu_mem_read_32(base + TIMER_SOCLIB_REG_MODE);
+#ifdef CONFIG_DEVICE_IRQ
+  dev_timer_queue_root_t queue;
+  dev_timer_value_t value;
+  dev_timer_res_t   period;
+#endif
+  uint_fast8_t start_count;
+};
 
-  if (callback)
+struct soclib_timer_private_s
+{
+  uintptr_t addr;
+  uintptr_t t_count;
+  struct dev_irq_ep_s *irq_eps;
+  struct soclib_timer_state_s t[0];
+};
+
+#ifdef CONFIG_DEVICE_IRQ
+static DEV_IRQ_EP_PROCESS(soclib_timer_irq)
+{
+  struct device_s *dev = ep->dev;
+  struct soclib_timer_private_s *pv = dev->drv_pv;
+  uint_fast8_t number = ep - pv->irq_eps;
+
+  assert(number < pv->t_count);
+  lock_spin(&dev->lock);
+
+  while (1)
     {
-      pv->cb[id] = callback;
-      pv->pv[id] = priv;
+      if (!endian_le32(cpu_mem_read_32(TIMER_REG_ADDR(pv->addr, TIMER_IRQ, number))))
+        break;
 
-      cpu_mem_write_32(base + TIMER_SOCLIB_REG_MODE, mode | TIMER_SOCLIB_REG_MODE_IRQEN);
+      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_IRQ, number), 0);
+
+      struct soclib_timer_state_s *p = pv->t + number;
+
+      p->value++;
+
+      struct dev_timer_rq_s *rq = dev_timer_queue_head(&p->queue);
+
+      while (rq)
+        {
+          if (rq->deadline > p->value)
+            break;
+
+          rq->drvdata = 0;
+          dev_timer_queue_pop(&p->queue);
+
+          if (rq->callback(rq))
+            {
+              if (rq->delay)
+                rq->deadline = p->value + rq->delay;
+
+              rq->drvdata = p;
+              dev_timer_queue_insert_ascend(&p->queue, rq);
+            }
+          else
+            {
+              // stop timer if not in use
+              if (--p->start_count == 0)
+                cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, number), endian_le32(TIMER_MODE_IRQEN));
+            }
+
+          rq = dev_timer_queue_head(&p->queue);
+        }
+    }
+     
+  lock_release(&dev->lock);
+}
+#endif
+
+static DEVTIMER_REQUEST(soclib_timer_request)
+{
+# ifdef CONFIG_DEVICE_IRQ
+  struct device_s *dev = tdev->dev;
+  struct soclib_timer_private_s *pv = dev->drv_pv;
+  error_t err = 0;
+
+  if (tdev->number >= pv->t_count)
+    return -ENOENT;
+
+  rq->tdev = tdev;
+
+  struct soclib_timer_state_s *p = pv->t + tdev->number;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  uint64_t val = p->value;
+
+  if (cancel)
+    {
+      if (rq->drvdata == p)
+        {
+          dev_timer_queue_remove(&p->queue, rq);
+          rq->drvdata = 0;
+        }
+      else
+        {
+          err = -ETIMEDOUT;
+        }
     }
   else
     {
-      cpu_mem_write_32(base + TIMER_SOCLIB_REG_MODE, mode & ~TIMER_SOCLIB_REG_MODE_IRQEN);
-    }
+      do {
+        if (rq->delay)
+          rq->deadline = val + rq->delay;
 
-  return 0;
+        if (rq->deadline <= val)
+          {
+            if (rq->callback(rq))
+              continue;
+            err = ETIMEDOUT;
+            goto done;
+          }
+      } while (0);
+
+      rq->drvdata = p;
+      dev_timer_queue_insert_ascend(&p->queue, rq);
+
+      /* start timer if needed */
+      if (p->start_count++ == 0)
+        {
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_VALUE, tdev->number), 0);
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_PERIOD, tdev->number), endian_le32(p->period));
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, tdev->number), endian_le32(TIMER_MODE_EN | TIMER_MODE_IRQEN));
+        }
+    }
+ done:
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+# else
+  return -ENOTSUP;
+# endif
 }
 
-/*
- * timer device period setup
- */
-
-DEVTIMER_SETPERIOD(timer_soclib_setperiod)
+static DEVTIMER_START_STOP(soclib_timer_state_start_stop)
 {
-  uintptr_t	base = dev->addr[0] + id * TIMER_SOCLIB_REGSPACE_SIZE;
-  uint32_t	mode = cpu_mem_read_32(base + TIMER_SOCLIB_REG_MODE);
+  struct device_s *dev = tdev->dev;
+  struct soclib_timer_private_s *pv = dev->drv_pv;
 
-  if (period)
+  if (tdev->number >= pv->t_count)
+    return -ENOENT;
+
+  error_t err = 0;
+
+  struct soclib_timer_state_s *p = pv->t + tdev->number;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+# ifdef CONFIG_DEVICE_IRQ
+  if (start)
     {
-      cpu_mem_write_32(base + TIMER_SOCLIB_REG_MODE, mode | TIMER_SOCLIB_REG_MODE_EN);
-      cpu_mem_write_32(base + TIMER_SOCLIB_REG_PERIOD, period);
+      if (p->start_count++ == 0)
+        {
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_VALUE, tdev->number), 0);
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_PERIOD, tdev->number), endian_le32(p->period));
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, tdev->number), endian_le32(TIMER_MODE_EN | TIMER_MODE_IRQEN));
+        }
     }
   else
     {
-      cpu_mem_write_32(base + TIMER_SOCLIB_REG_MODE, mode & ~TIMER_SOCLIB_REG_MODE_EN);
+      if ((p->start_count == 0) || (p->start_count == 1 && !dev_timer_queue_isempty(&p->queue)))
+        err = -EINVAL;
+      else if (--p->start_count == 0)
+        cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, tdev->number), endian_le32(TIMER_MODE_IRQEN));
     }
-
-  return 0;
-}
-
-/*
- * timer device value change
- */
-
-DEVTIMER_SETVALUE(timer_soclib_setvalue)
-{
-  uintptr_t	base = dev->addr[0] + id * TIMER_SOCLIB_REGSPACE_SIZE;
-
-  cpu_mem_write_32(base + TIMER_SOCLIB_REG_VALUE, value);
-
-  return 0;
-}
-
-/*
- * timer device period setup
- */
-
-DEVTIMER_GETVALUE(timer_soclib_getvalue)
-{
-  uintptr_t	base = dev->addr[0] + id * TIMER_SOCLIB_REGSPACE_SIZE;
-
-  return cpu_mem_read_32(base + TIMER_SOCLIB_REG_VALUE);
-}
-
-/*
- * device irq
- */
-
-DEV_IRQ(timer_soclib_irq)
-{
-  struct timer_soclib_context_s	*pv = dev->drv_pv;
-  uint_fast16_t	id;
-
-  /* check irq for each timer */
-  for (id = 0; id < TIMER_SOCLIB_IDCOUNT; id++)
+# else
+  if (start)
     {
-      uintptr_t	base = dev->addr[0] + id * TIMER_SOCLIB_REGSPACE_SIZE;
-
-      if (cpu_mem_read_32(base + TIMER_SOCLIB_REG_IRQ))
-	{
-	  /* ack irq for this timer */
-	  cpu_mem_write_32(base + TIMER_SOCLIB_REG_IRQ, 0);
-
-	  /* invoke timer callback if any */
-	  if (pv->cb[id])
-	    pv->cb[id](pv->pv[id]);
-
-	  return 1;
-	}
+      if (p->start_count++ == 0)
+        cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, tdev->number), endian_le32(TIMER_MODE_EN));
     }
+  else
+    {
+      if (p->start_count == 0)
+        err = -EINVAL;
+      else if (--p->start_count == 0)
+        cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, tdev->number), 0);
+    }
+# endif
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+}
+
+static DEVTIMER_GET_VALUE(soclib_timer_get_value)
+{
+  struct device_s *dev = tdev->dev;
+  struct soclib_timer_private_s *pv = dev->drv_pv;
+
+  if (tdev->number >= pv->t_count)
+    return -ENOENT;
+ 
+# ifdef CONFIG_DEVICE_IRQ
+  struct soclib_timer_state_s *p = pv->t + tdev->number;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+  *value = p->value;
+  LOCK_RELEASE_IRQ(&dev->lock);
+#else
+  *value = endian_le32(cpu_mem_read_32(TIMER_REG_ADDR(pv->addr, TIMER_VALUE, tdev->number)));
+#endif
 
   return 0;
 }
 
-/* 
- * device close operation
- */
-
-DEV_CLEANUP(timer_soclib_cleanup)
+static DEVTIMER_RESOLUTION(soclib_timer_resolution)
 {
-  struct timer_soclib_context_s	*pv = dev->drv_pv;
+  struct device_s *dev = tdev->dev;
+  struct soclib_timer_private_s *pv = dev->drv_pv;
 
-  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, timer_soclib_irq);
+  if (tdev->number >= pv->t_count)
+    return -ENOENT;
+
+  error_t err = 0;
+
+# ifdef CONFIG_DEVICE_IRQ
+  struct soclib_timer_state_s *p = pv->t + tdev->number;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  if (res)
+    {
+      if (*res)
+        {
+          if (p->start_count)
+            {
+              err = -EBUSY;
+            }
+          else if (*res < SOCLIB_TIMER_MIN_PERIOD)
+            {
+              p->period = SOCLIB_TIMER_MIN_PERIOD;
+              err = -ERANGE;
+            }
+          else
+            {
+              p->period = *res;
+            }
+        }
+      *res = p->period;
+    }
+
+  if (max)
+    *max = 0xffffffffffffffffULL;
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+#else
+  if (res)
+    {
+      if (*res != 0)
+        err = -ENOTSUP;
+      *res = 1;
+    }
+
+  if (max)
+    *max = 0xffffffff;
+#endif
+
+  return err;
+}
+
+const struct driver_timer_s  soclib_timer_timer_drv =
+{
+  .class_         = DRIVER_CLASS_TIMER,
+  .f_request      = soclib_timer_request,
+  .f_start_stop   = soclib_timer_state_start_stop,
+  .f_get_value    = soclib_timer_get_value,
+  .f_resolution   = soclib_timer_resolution,
+};
+
+/************************************************************************/
+
+static const struct devenum_ident_s  soclib_timer_ids[] =
+{
+  DEVENUM_FDTNAME_ENTRY("soclib:vci_timer"),
+  { 0 }
+};
+
+static DEV_INIT(soclib_timer_init);
+static DEV_CLEANUP(soclib_timer_cleanup);
+
+const struct driver_s  soclib_timer_drv =
+{
+  .desc           = "Soclib VciTimer",
+  .id_table       = soclib_timer_ids,
+  .f_init         = soclib_timer_init,
+  .f_cleanup      = soclib_timer_cleanup,
+
+  .classes        = {
+    &soclib_timer_timer_drv,
+    0
+  }
+};
+
+
+static DEV_INIT(soclib_timer_init)
+{
+  struct soclib_timer_private_s  *pv;
+  uint_fast8_t i;
+
+  uintptr_t t_count = 1;
+
+  if (device_get_param_uint(dev, "count", &t_count))
+    printk("warning: vci_timer device `%p' has no `count' parameter, assuming only one timer is available.\n", dev);
+
+  dev->status = DEVICE_DRIVER_INIT_FAILED;
+
+  pv = mem_alloc(sizeof (*pv) + t_count * (sizeof(struct soclib_timer_state_s)
+#ifdef CONFIG_DEVICE_IRQ
+                                           + sizeof(struct dev_irq_ep_s)
+#endif
+                                           ), (mem_scope_sys));
+  if (!pv)
+    return -ENOMEM;
+
+  memset(pv, 0, sizeof(*pv));
+  pv->t_count = t_count;
+  dev->drv_pv = pv;
+
+  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
+    goto err_mem;
+
+#ifdef CONFIG_DEVICE_IRQ
+  dev_timer_res_t resolution = SOCLIB_TIMER_DEFAULT_PERIOD;
+  device_get_param_uint(dev, "period", &resolution);
+  if (resolution < SOCLIB_TIMER_MIN_PERIOD)
+    resolution = SOCLIB_TIMER_MIN_PERIOD;
+
+  pv->irq_eps = (void*)(pv->t + t_count);
+
+  device_irq_source_init(dev, pv->irq_eps, t_count, soclib_timer_irq);
+
+  if (device_irq_source_link(dev, pv->irq_eps, t_count, 1))
+    goto err_mem;
+#endif
+
+  for (i = 0; i < t_count; i++)
+    {
+      struct soclib_timer_state_s *p = pv->t + i;
+      p->start_count = 0;
+
+# ifdef CONFIG_DEVICE_IRQ
+      p->value = 0;
+      dev_timer_queue_init(&p->queue);
+      p->period = resolution;
+      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, i), endian_le32(TIMER_MODE_IRQEN));
+      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_IRQ, i), 0);
+# else
+      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_PERIOD, i), 0xffffffff);
+      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, i), 0);
+# endif
+    }
+
+  dev->drv = &soclib_timer_drv;
+  dev->status = DEVICE_DRIVER_INIT_DONE;
+  return 0;
+
+ err_mem:
+  mem_free(pv);
+  return -1;
+}
+
+static DEV_CLEANUP(soclib_timer_cleanup)
+{
+  struct soclib_timer_private_s *pv = dev->drv_pv;
+
+  uint_fast8_t i;
+  for (i = 0; i < pv->t_count; i++)
+    {
+      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, i), 0);
+#ifdef CONFIG_DEVICE_IRQ
+      struct soclib_timer_state_s *p = pv->t + i;
+      dev_timer_queue_destroy(&p->queue);
+#endif
+    }
+
+#ifdef CONFIG_DEVICE_IRQ
+  device_irq_source_unlink(dev, pv->irq_eps, pv->t_count);
+#endif
 
   mem_free(pv);
 }
 
-static const struct devenum_ident_s	timer_soclib_ids[] =
-{
-	DEVENUM_FDTNAME_ENTRY("soclib:timer", 0, 0),
-	{ 0 }
-};
-
-const struct driver_s	timer_soclib_drv =
-{
-  .class		= device_class_timer,
-  .id_table		= timer_soclib_ids,
-  .f_init		= timer_soclib_init,
-  .f_cleanup		= timer_soclib_cleanup,
-  .f_irq		= timer_soclib_irq,
-  .f.timer = {
-    .f_setcallback	= timer_soclib_setcallback,
-    .f_setperiod	= timer_soclib_setperiod,
-    .f_setvalue		= timer_soclib_setvalue,
-    .f_getvalue		= timer_soclib_getvalue,
-  }
-};
-
-REGISTER_DRIVER(timer_soclib_drv);
-
-/* 
- * device open operation
- */
-
-DEV_INIT(timer_soclib_init)
-{
-  struct timer_soclib_context_s	*pv;
-  device_mem_map( dev , 1 << 0 );
-  dev->drv = &timer_soclib_drv;
-
-  /* allocate private driver data */
-  pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
-
-  if (!pv)
-    return -1;
-
-  memset(pv, 0, sizeof(*pv));
-
-  dev->drv_pv = pv;
-
-  DEV_ICU_BIND(dev->icudev, dev, dev->irq, timer_soclib_irq);
-
-  return 0;
-}
+REGISTER_DRIVER(soclib_timer_drv);
 

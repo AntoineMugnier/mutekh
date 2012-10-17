@@ -69,6 +69,7 @@ struct dev_resource_s
   uint16_t type;                // resource descriptor type @see dev_resource_type_e
   union {
     uintptr_t uint[2];
+    uint64_t uint64;
     struct {
       uintptr_t start;
       uintptr_t end;
@@ -177,6 +178,11 @@ error_t device_res_add_vendorid(struct device_s *dev, uintptr_t id, const char *
     freed on cleanup. */
 error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char *name);
 
+/** @This attaches a frequency resource to the device. The frenquency
+    must be in 40.24 fixed point format. This value can be read by
+    calling the @ref device_res_get_uint64 function. */
+error_t device_res_add_frequency(struct device_s *dev, uint64_t f_40_24);
+
 /** @This attaches a string parameter resource to the device. The
     exact meaning of the value is driver dependent. When the device
     node has been dynamically allocated using @ref device_alloc, the
@@ -208,6 +214,11 @@ struct dev_resource_s *device_res_get(struct device_s *dev,
 error_t device_res_get_uint(const struct device_s *dev,
                             enum dev_resource_type_e type,
                             uint_fast8_t id, uintptr_t *a, uintptr_t *b);
+
+/** @This reads a 64 bits integer resource values. */
+error_t device_res_get_uint64(const struct device_s *dev,
+                              enum dev_resource_type_e type,
+                              uint_fast8_t id, uint64_t *a);
 
 error_t device_get_param_uint(const struct device_s *dev, const char *name, uintptr_t *a);
 

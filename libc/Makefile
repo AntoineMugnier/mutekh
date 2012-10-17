@@ -15,7 +15,7 @@ unistd.o					\
 formatter.o
 
 
-ifeq ($(CONFIG_MUTEK_TIMER), defined)
+ifeq ($(CONFIG_LIBC_TIME), defined)
 objs += time.o
 endif
 

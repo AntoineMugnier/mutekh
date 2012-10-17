@@ -115,10 +115,10 @@ error_t mkdir(const char *pathname, mode_t mode);
 
 /* ************************************************** */
 
-config_depend(CONFIG_MUTEK_TIMER_EVENTS)
+config_depend(CONFIG_LIBC_TIME)
 error_t usleep(uint_fast32_t usec);
 
-config_depend(CONFIG_MUTEK_TIMER_EVENTS)
+config_depend(CONFIG_LIBC_TIME)
 error_t sleep(uint_fast32_t usec);
 
 C_HEADER_END

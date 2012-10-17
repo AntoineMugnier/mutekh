@@ -183,18 +183,31 @@ const struct driver_cpu_s  lm32_cpu_drv =
         Timer driver part
 ************************************************************************/
 
+static DEVTIMER_REQUEST(lm32_timer_request)
+{
+  return -ENOTSUP;
+}
+
+static DEVTIMER_START_STOP(lm32_timer_start_stop)
+{
+  return -ENOTSUP;
+}
+
 static DEVTIMER_GET_VALUE(lm32_timer_get_value)
 {
   struct device_s *dev = tdev->dev;
   __unused__ struct lm32_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
-  assert(pv->id == cpu_id());
+  if (pv->id != cpu_id())
+    return -EIO;
 #endif
 
   uint32_t ret;
   asm volatile ("rcsr %0, CC" : "=r" (ret));
-  return ret;
+  *value = ret;
+
+  return 0;
 }
 
 static DEVTIMER_RESOLUTION(lm32_timer_resolution)
@@ -205,16 +218,20 @@ static DEVTIMER_RESOLUTION(lm32_timer_resolution)
     {
       if (*res != 0)
         err = -ENOTSUP;
-      *res = DEVTIMER_RES_FIXED_POINT(1.0);
+      *res = 1;
     }
 
   if (max)
     *max = 0xffffffff;
+
+  return err;
 }
 
 static const struct driver_timer_s  lm32_timer_drv =
 {
   .class_          = DRIVER_CLASS_TIMER,
+  .f_request       = lm32_timer_request,
+  .f_start_stop    = lm32_timer_start_stop,
   .f_get_value     = lm32_timer_get_value,
   .f_resolution    = lm32_timer_resolution,
 };

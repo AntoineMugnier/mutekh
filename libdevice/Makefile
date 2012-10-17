@@ -21,6 +21,10 @@ ifeq ($(CONFIG_DEVICE_CHAR), defined)
  objs += device_char.o
 endif
 
+ifeq ($(CONFIG_DEVICE_TIMER), defined)
+objs += device_timer.o
+endif
+
 ifeq ($(CONFIG_DEVICE_DMA), defined)
  objs += device_dma.o
 endif

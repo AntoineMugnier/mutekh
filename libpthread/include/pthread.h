@@ -477,7 +477,7 @@ pthread_cond_signal(pthread_cond_t *cond);
 
 struct timespec;
 
-config_depend_and2(CONFIG_PTHREAD_COND, CONFIG_PTHREAD_TIME)
+config_depend(CONFIG_PTHREAD_COND_TIME)
 error_t
 pthread_cond_timedwait(pthread_cond_t *cond, 
 		       pthread_mutex_t *mutex,

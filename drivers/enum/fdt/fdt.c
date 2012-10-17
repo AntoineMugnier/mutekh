@@ -282,6 +282,29 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
       break;
     }
 
+    case 'f': {
+      if (!strcmp(name + 1, "requency") && datalen >= 4 && e->dev != ctx->dev)
+        switch (e->section)
+          {
+            uintptr_t f;
+          case FDT_SECTION_DEVICE:
+          case FDT_SECTION_CPUS:
+            while (datalen >= 4)
+              {
+                f = 0;
+                fdt_parse_cell(data, e->addr_cells, &f);
+                if (device_res_add_frequency(e->dev, (uint64_t)f << 24))
+                  goto res_err;
+                datalen -= 4;
+                data8 += 4;
+              }
+            return;
+          default:
+            break;
+          }
+      break;
+    }
+
     case 'c':
       if (!strcmp(name + 1, "ompatible") && datalen && e->dev != ctx->dev)
         switch (e->section)

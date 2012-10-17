@@ -27,6 +27,7 @@
 
 C_HEADER_BEGIN
 
+#include <device/class/timer.h>
 #include <sys/types.h>
 #include <hexo/error.h>
 
@@ -50,13 +51,13 @@ struct timezone
   int_fast8_t tz_dsttime;             /* type of DST correction */
 };
 
-config_depend(CONFIG_MUTEK_TIMER)
+config_depend(CONFIG_LIBC_TIME)
 error_t gettimeofday(struct timeval *tv, struct timezone *tz);
 
-config_depend(CONFIG_MUTEK_TIMER)
+config_depend(CONFIG_LIBC_TIME)
 error_t settimeofday(const struct timeval *tv, const struct timezone *tz);
 
-config_depend(CONFIG_MUTEK_TIMER)
+config_depend(CONFIG_LIBC_TIME)
 time_t time(time_t *t);
 
 enum clockid_e
@@ -67,17 +68,25 @@ enum clockid_e
 
 typedef enum clockid_e clockid_t;
 
-config_depend(CONFIG_MUTEK_TIMER)
+config_depend(CONFIG_LIBC_TIME)
 error_t clock_getres(clockid_t clk_id, struct timespec *res);
 
-config_depend(CONFIG_MUTEK_TIMER)
+config_depend(CONFIG_LIBC_TIME)
 error_t clock_gettime(clockid_t clk_id, struct timespec *tp);
 
-config_depend(CONFIG_MUTEK_TIMER)
+config_depend(CONFIG_LIBC_TIME)
 error_t clock_settime(clockid_t clk_id, const struct timespec *tp);
 
-config_depend(CONFIG_MUTEK_TIMER_EVENTS)
+config_depend(CONFIG_LIBC_TIME)
 error_t nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+
+/** @internal @This returns a pointer to libc timer. */
+config_depend(CONFIG_LIBC_TIME)
+struct device_timer_s *libc_timer();
+
+/** @internal @This converts between libc time and libc timer value. */
+config_depend(CONFIG_LIBC_TIME)
+error_t libc_time_to_timer(const struct timespec *delay, dev_timer_value_t *value);
 
 C_HEADER_END
 

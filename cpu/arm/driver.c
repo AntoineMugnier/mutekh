@@ -207,13 +207,24 @@ const struct driver_cpu_s  arm_cpu_drv =
 
 #ifdef CONFIG_CPU_ARM_CYCLES_COUNTER
 
+static DEVTIMER_REQUEST(arm_timer_request)
+{
+  return -ENOTSUP;
+}
+
+static DEVTIMER_START_STOP(arm_timer_start_stop)
+{
+  return -ENOTSUP;
+}
+
 static DEVTIMER_GET_VALUE(arm_timer_get_value)
 {
   struct device_s *dev = tdev->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
 
 # ifdef CONFIG_ARCH_SMP
-  assert(pv->id == cpu_id());
+  if(pv->id != cpu_id())
+    return -EIO;
 # endif
 
   uint32_t ret;
@@ -224,8 +235,9 @@ static DEVTIMER_GET_VALUE(arm_timer_get_value)
                 "mrc p15, 0, %[ret], c15, c12, 1\n\t"
                 ARM_TO_THUMB
                 : [ret] "=r"(ret) /*,*/ THUMB_OUT(,));
+  *value = ret;
 
-  return ret;
+  return 0;
 }
 
 static DEVTIMER_RESOLUTION(arm_timer_resolution)
@@ -236,16 +248,20 @@ static DEVTIMER_RESOLUTION(arm_timer_resolution)
     {
       if (*res != 0)
         err = -ENOTSUP;
-      *res = DEVTIMER_RES_FIXED_POINT(1.0);
+      *res = 1;
     }
 
   if (max)
     *max = 0xffffffff;
+
+  return err;
 }
 
 static const struct driver_timer_s  arm_timer_drv =
 {
   .class_          = DRIVER_CLASS_TIMER,
+  .f_request       = arm_timer_request,
+  .f_start_stop    = arm_timer_start_stop,
   .f_get_value     = arm_timer_get_value,
   .f_resolution    = arm_timer_resolution,
 };
