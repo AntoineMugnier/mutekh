@@ -761,6 +761,8 @@ sub output_inits
         }
         print {$out} "\n";
 
+        next if ($init->{during});
+
         @calls = sort { $a->{num} > $b->{num} } @calls;
 
         print {$out} "#define $init->{name}_INIT(...) \\\n";
@@ -1937,7 +1939,7 @@ sub write_py
 
 sub write_inits
 {
-    my $file = "$bld_path/inits.c";
+    my $file = "$bld_path/inits.h";
 
     push @output_files, $file;
 

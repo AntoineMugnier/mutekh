@@ -80,7 +80,7 @@ INCS=-nostdinc -D__MUTEK__ \
 	-I$(CURRENT_DIR) \
 	-I$(BUILD_DIR) \
 	-I$(MUTEK_SRC_DIR) \
-	-include $(OBJ_DIR)/config.h
+	-include $(OBJ_DIR)/config.h -include $(OBJ_DIR)/inits.h
 
 cflags:
 	@echo $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS)
