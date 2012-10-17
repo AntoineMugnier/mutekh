@@ -109,7 +109,7 @@ cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
         : [mask] "r" (mask), [atomic] "r" (a)
 		);
 
-	return tmp != 0;
+	return (tmp & mask) != 0;
 }
 
 #define HAS_CPU_ATOMIC_WAITSET
@@ -166,7 +166,7 @@ cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
         : [mask] "r" (mask), [atomic] "r" (a)
 		);
 
-	return tmp != 0;
+	return (tmp & mask) != 0;
 }
 
 #define HAS_CPU_ATOMIC_WAITCLR
