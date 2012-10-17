@@ -361,6 +361,21 @@ error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
 void device_put_accessor(void *accessor);
 
 /**
+   @This returns true is the device accessor has been successfully
+   bound to a device by either the @ref device_get_accessor or @ref
+   device_get_accessor_by_path function. @This returns false if one of
+   these functions failed or if the accessor has not been touched
+   since it was cleaned-up by @ref device_put_accessor or initialized
+   with @ref #DEVICE_ACCESSOR_INIT.
+*/
+static inline bool_t device_check_accessor(void *accessor)
+{
+  struct device_accessor_s *a = accessor;
+
+  return a->dev != NULL;
+}
+
+/**
    @This walks down the device tree from specified node (from root if
    @tt dev is NULL) and try to find appropriate driver for each
    device and eventually initializes it provided that all resources

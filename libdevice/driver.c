@@ -61,6 +61,8 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
         }
     }
 
+  a->dev = NULL;
+
   return -ENOTSUP;
 }
 
