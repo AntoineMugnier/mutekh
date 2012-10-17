@@ -439,6 +439,9 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
   uint_fast8_t i;
   uint_fast8_t j = -1;
   error_t err;
+  bool_t done[src_count];
+
+  memset(done, 0, sizeof(done));
 
   for (i = 0; i < dev->res_count; i++)
     {
@@ -475,7 +478,8 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
           goto error;
         }
 
-      struct dev_irq_ep_s *src = srcs + r->irq.dev_out_id;
+      uint_fast8_t id = r->irq.dev_out_id;
+      struct dev_irq_ep_s *src = srcs + id;
       struct dev_irq_ep_s *sink = DEVICE_OP(&icu, get_endpoint, DEV_IRQ_EP_SINK, r->irq.icu_in_id);
 
       if (!sink)
@@ -502,8 +506,18 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
             goto error;
           }
 
+      done[id]++;
+
       j++;
     }
+
+  for (i = 0; i < src_count; i++)
+    if (!done[i])
+      {
+        printk("device: Unable to link IRQ source end-point %u of device %p, no IRQ resource entry.\n", i, dev);
+        err = -EINVAL;
+        goto error;
+      }
 
   return 0;
 
@@ -513,7 +527,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
 }
 
 bool_t device_icu_irq_enable(struct dev_irq_ep_s *local_src, uint_fast16_t target_irq_id,
-                             struct dev_irq_ep_s *target_src, struct dev_irq_ep_s *dev_src)
+                             struct dev_irq_ep_s *target_src, struct dev_irq_ep_s *dev_ep)
 {
   struct dev_irq_ep_s **array;
   uint_fast8_t count = local_src->links_count;
@@ -540,7 +554,7 @@ bool_t device_icu_irq_enable(struct dev_irq_ep_s *local_src, uint_fast16_t targe
 
 #warning should we enable all source or stop on the first success? use icu priority to decide order?
       ensure(device_get_accessor(&next_icu, next_sink->dev, DRIVER_CLASS_ICU, 0) == 0);
-      res |= DEVICE_OP(&next_icu, enable_irq, next_sink, target_irq_id, target_src, dev_src);
+      res |= DEVICE_OP(&next_icu, enable_irq, next_sink, target_irq_id, target_src, dev_ep);
       device_put_accessor(&next_icu);
     }
 
