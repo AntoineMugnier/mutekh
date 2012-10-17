@@ -28,7 +28,7 @@
 
 #if defined(CONFIG_MUTEK_CONSOLE)
 
-struct device_char_s console_dev = DEVICE_ACCESSOR_INIT;
+extern struct device_char_s console_dev;
 
 PRINTF_OUTPUT_FUNC(__printf_out_tty)
 {

@@ -38,7 +38,6 @@
 #endif
 
 #include <device/class/char.h>
-#include <device/class/timer.h>
 #include <device/class/enum.h>
 
 #include <device/device.h>
@@ -48,64 +47,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <mutek/timer.h>
 #include <mutek/printk.h>
 #include <mutek/console.h>
 
-#if defined(CONFIG_VFS)
-# include <vfs/vfs.h>
+INIT_LIBRARIES_PROTOTYPES;
+
+#if defined(CONFIG_MUTEK_CONSOLE)
+struct device_char_s console_dev = DEVICE_ACCESSOR_INIT;
 #endif
 
-#if defined (CONFIG_MUTEK_TIMER)
-struct device_s *timerms_dev = NULL;
-struct timer_s timer_ms;
+#if defined(CONFIG_VFS)
+# include <vfs/vfs.h>
 #endif
 
 #if defined(CONFIG_VFS)
 struct device_s *root_dev;
 #endif
 
-#if defined(CONFIG_MUTEK_TIMER)
-DEVTIMER_CALLBACK(timer_callback)
-{
-	//  printk("timer callback\n");
-# if defined(CONFIG_MUTEK_SCHEDULER_PREEMPT)
-        context_set_preempt(sched_preempt_switch, NULL);
-# endif
-
-	timer_inc_ticks(&timer_ms, 10);
-}
+#warning CONFIG_MUTEK_SCHEDULER_PREEMPT is not handled
+#ifdef CONFIG_MUTEK_SCHEDULER_PREEMPT
+#error CONFIG_MUTEK_SCHEDULER_PREEMPT is not handled
 #endif
 
 static CPU_EXCEPTION_HANDLER(fault_handler);
 
 static lock_t fault_lock;
-
-#if defined(CONFIG_MUTEK_CONSOLE)
-
-extern struct device_char_s console_dev;
-
-struct device_find_chosen_ctx_s
-{
-    struct device_s *console;
-};
-
-static DEVICE_TREE_WALKER(device_find_chosen)
-{
-    struct device_find_chosen_ctx_s *ctx = priv;
-
-    if (ctx->console == NULL)
-        {
-            if (device_get_accessor(&console_dev, dev, DRIVER_CLASS_CHAR, 0) == 0)
-                {
-                    ctx->console = dev;
-                    return 1;
-                }            
-        }
-
-    return 0;
-}
-#endif
 
 int_fast8_t mutek_start()  /* FIRST CPU only */
 {
@@ -113,33 +79,17 @@ int_fast8_t mutek_start()  /* FIRST CPU only */
 	cpu_exception_sethandler(fault_handler);
 
 #if defined(CONFIG_MUTEK_CONSOLE)
-
-        struct device_find_chosen_ctx_s ctx = {};
-        device_tree_walk(NULL, &device_find_chosen, &ctx);
-
-# if 0 // defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
-        if ( ctx.console )
+        if (device_get_accessor_by_path(&console_dev, NULL, "console", DRIVER_CLASS_CHAR))
+          {
+            printk("error: No `console' entry found in device tree\n");
+          }
+        else
           printk_set_output(__printf_out_tty, &console_dev);
-# endif
-#endif
-
-#if defined(CONFIG_LIBC_UNIXFD)
-	libc_unixfd_init();
 #endif
 
     cpu_interrupt_enable();
 
-#if 0 && defined (CONFIG_MUTEK_TIMER) && defined (CONFIG_DEVICE_TIMER)
-	timer_init(&timer_ms.root);
-	timer_ms.ticks = 0;
-
-	if ( timerms_dev ) {
-		dev_timer_setperiod(timerms_dev, 0, 1193180 / 100);
-		dev_timer_setcallback(timerms_dev, 0, timer_callback, 0);
-	} else {
-		printk("Warning: no timer device available\n");
-	}
-#endif
+    INIT_LIBRARIES_INIT();
 
   printk("MutekH is alive.\n");
 
@@ -234,6 +184,7 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
 #endif
 
   if (cpu_isbootstrap()) {
+
 #ifdef CONFIG_OPENMP
     void initialize_libgomp();
     initialize_libgomp();
@@ -256,5 +207,6 @@ void mutek_start_smp(void)  /* ALL CPUs execute this function */
     cpu_interrupt_disable();
     cpu_context_stack_use(sched_tmp_context(), other_cleanup, (void*)(uintptr_t)id);
 #endif
+
   }
 }

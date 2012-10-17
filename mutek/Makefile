@@ -7,7 +7,9 @@ doc_headers = mutek/mem_alloc.h mutek/page_alloc.h libc/formatter.h	\
 
 DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
-objs = timer.o console.o
+ifeq ($(CONFIG_MUTEK_CONSOLE), defined)
+objs += console.o
+endif
 
 ifeq ($(CONFIG_MUTEK_MEM_REGION), defined)
 objs += mem_region.o					
