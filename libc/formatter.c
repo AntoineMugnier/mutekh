@@ -26,7 +26,11 @@
 
 #include <libc/formatter.h>
 
+#ifdef CONFIG_LIBC_FORMATTER_SIMPLE
 typedef intptr_t __printf_int_t;
+#else
+typedef int64_t __printf_int_t;
+#endif
 
 #define PRINTF_INT_BUFFER_LEN	20
 
@@ -161,7 +165,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 	  break;
 
 	case 'l':
-	  typesize = CPU_SIZEOF_LONG / 8;
+	  typesize = format[-1] == 'l' ? CPU_SIZEOF_LONGLONG / 8 : CPU_SIZEOF_LONG / 8;
 	  format++;
 	  break;
 #endif
