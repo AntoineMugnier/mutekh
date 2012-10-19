@@ -48,5 +48,11 @@ ifeq ($(CONFIG_COMPILE_SOFTFLOAT), defined)
 CPUCFLAGS += -msoft-float
 endif
 
+ifeq ($(CONFIG_SOCLIB_MEMCHECK), defined)
+# prevent filling branch delay slot with memory load instructions
+# because some load may access non-initialized data
+CPUCFLAGS+= -fno-delayed-branch -Wa,-O0
+endif
+
 CPUCFLAGS+= -G0
 

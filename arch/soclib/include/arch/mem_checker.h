@@ -187,12 +187,11 @@ soclib_mem_check_enable(uint32_t flags)
 static inline __attribute__ ((always_inline)) void
 soclib_mem_mark_initialized(void* addr, size_t size)
 {
-  size_t i;
-
   order_compiler_mem();
   cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
-  for ( i = 0; i < size; i += 4 )
-    cpu_mem_write_32(SOCLIB_MC_INITIALIZED, (uintptr_t)addr + i);
+  cpu_mem_write_32(SOCLIB_MC_R1, (uintptr_t)addr);
+  cpu_mem_write_32(SOCLIB_MC_R2, size);
+  cpu_mem_write_32(SOCLIB_MC_INITIALIZED, 0);
   cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
   order_compiler_mem();
 }
