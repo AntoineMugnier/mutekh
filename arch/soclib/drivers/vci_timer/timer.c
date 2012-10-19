@@ -142,6 +142,9 @@ static DEVTIMER_REQUEST(soclib_timer_request)
   if (tdev->number >= pv->t_count)
     return -ENOENT;
 
+  if (!rq)
+    return 0;
+
   rq->tdev = tdev;
 
   struct soclib_timer_state_s *p = pv->t + tdev->number;
@@ -156,6 +159,10 @@ static DEVTIMER_REQUEST(soclib_timer_request)
         {
           dev_timer_queue_remove(&p->queue, rq);
           rq->drvdata = 0;
+
+          // stop timer if not in use
+          if (--p->start_count == 0)
+            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, tdev->number), endian_le32(TIMER_MODE_IRQEN));
         }
       else
         {

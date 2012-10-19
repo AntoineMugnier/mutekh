@@ -20,8 +20,6 @@
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2011
 */
 
-#ifdef CONFIG_LIBC_TIME
-
 INIT_LIBC_PROTOTYPES;
 
 #include <mutek/printk.h>
@@ -92,17 +90,18 @@ void libc_time_init()
                   libc_time_nsec_den = freq;
                   adjust_frac(&libc_time_nsec_num, &libc_time_nsec_den);
 
-                  uint64_t w = m * libc_time_usec_num / libc_time_usec_den / 1000000;
+                  uint64_t w = m / libc_time_sec_den * libc_time_sec_num;
 
                   printk("libc: using timer device `%p' for libc time functions, wrapping period is %llu seconds\n", libc_timer_dev.dev, w);
                   return;
                 }
             }
 
-          printk("libc: unable to use `%p' timer device for libc time.\n", libc_timer_dev.dev);
           DEVICE_OP(&libc_timer_dev, start_stop, 0);
-          device_put_accessor(&libc_timer_dev);
         }
+
+      printk("libc: unable to use `%p' timer device for libc time.\n", libc_timer_dev.dev);
+      device_put_accessor(&libc_timer_dev);
     }
 }
 
@@ -299,6 +298,4 @@ error_t nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 
   return 0;
 }
-
-#endif
 

@@ -108,7 +108,7 @@ struct dev_resource_s
     }   revision;
 
     struct {
-      uint64_t i:40, f:24;     //< frequency in 40.24 fixed point format
+      uint64_t f40_24;     //< frequency in 40.24 fixed point format
     }   freq;
 
     struct {

@@ -108,7 +108,8 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
           printk("  Revision %u.%u\n", r->revision.major, r->revision.minor);
           break;
         case DEV_RES_FREQ:
-          printk("  Frequency %u.%07u\n", r->freq.i, (r->freq.f*976) >> 14);
+          printk("  Frequency %u.%07u\n", (uint32_t)(r->freq.f40_24 >> 24),
+                 (uint32_t)((r->freq.f40_24 & 0xffffffULL) * 59604644 / 100000000));
           break;
         case DEV_RES_STR_PARAM:
           printk("  Custom parameter `%s' = `%s'\n", r->str_param.name, r->str_param.value);

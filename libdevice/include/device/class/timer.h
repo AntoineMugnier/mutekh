@@ -102,6 +102,11 @@ CONTAINER_KEY_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue, deadl
    the timer event queue. @This function returns @tt -ETIMEDOUT if the
    request was not found (already reached).
 
+   @This returns 0 on success. If the @tt rq parameter is @tt NULL ,
+   this function does nothing and returns 0 unless requests enqueuing
+   is not supported by the device, in which case it returns an error
+   code.
+
    When a request is removed from the driver queue, its @tt drvdata
    field becomes @tt NULL.
 
@@ -203,19 +208,35 @@ DRIVER_CLASS_TYPES(timer,
                    devtimer_resolution_t *f_resolution;
                    );
 
-/** @This initializes a request with the given timer delay. The delay
-    is specified in seconds when r_unit is 1, in msec when r_unit is
-    1000 and so on. Actual delay in timer units is computed from timer
-    frequency and current timer resolution.
+/** @This initializes a timer delay from the given delay value in
+    seconds unit. The delay is specified in seconds when r_unit is 1,
+    in msec when r_unit is 1000 and so on. Actual delay in timer units
+    is computed from timer frequency and current timer resolution.
 
     @This function uses the frequency resource entry of the device or
-    the value of the @ref CONFIG_DEVICE_TIMER_DEFAULT_FREQ macro if
-    such entry is available not available. For devices with multiple
-    timer instance, multiple frequency resource entries must be available.
-*/
+    the value of the @ref #CONFIG_DEVICE_TIMER_DEFAULT_FREQ macro if
+    no such entry is available. For devices with multiple timer
+    instance, multiple frequency resource entries are expected.
+
+    @This returns a negative error code if the timer value can not be
+    read (-EIO) or if the timer overlap period is to short for the
+    delay (-ERANGE). */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_init_rq_sec(struct device_timer_s *tdev, struct dev_timer_rq_s *rq,
-                              dev_timer_delay_t delay, uint32_t r_unit);
+error_t dev_timer_init_sec(struct device_timer_s *tdev, dev_timer_delay_t *delay,
+                           dev_timer_delay_t s_delay, uint32_t r_unit);
+
+/** @This checks if the time specified by @tt delay has elapsed since
+    the timer had the value specified in @tt start.
+
+    @This may return a negative error code. If the timer value can not
+    be read, @tt -EIO is returned. If the delay is too large to fit in
+    the @ref dev_timer_delay_t type, @tt -ERANGE is returned. On
+    success, 0 is returned if the time has not elapsed yet and 1 is
+    returned on timeout. */
+config_depend(CONFIG_DEVICE_TIMER)
+error_t dev_timer_check_timeout(struct device_timer_s *tdev,
+                                dev_timer_delay_t delay,
+                                const dev_timer_value_t *start);
 
 /** Synchronous timer sleep function. @This uses the scheduler API to
     put the current context in wait state waiting for the specified

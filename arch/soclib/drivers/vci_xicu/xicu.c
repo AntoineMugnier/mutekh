@@ -273,6 +273,9 @@ static DEVTIMER_REQUEST(soclib_xicu_timer_request)
   if (tdev->number >= pv->pti_count)
     return -ENOENT;
 
+  if (!rq)
+    return 0;
+
   rq->tdev = tdev;
 
   struct soclib_xicu_pti_s *p = pv->pti + tdev->number;
@@ -287,6 +290,10 @@ static DEVTIMER_REQUEST(soclib_xicu_timer_request)
         {
           dev_timer_queue_remove(&p->queue, rq);
           rq->drvdata = 0;
+
+          // stop timer if not in use
+          if (--p->start_count == 0)
+            cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_PTI_PER, tdev->number), 0);
         }
       else
         {
