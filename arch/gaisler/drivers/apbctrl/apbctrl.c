@@ -33,6 +33,8 @@
 #include <device/driver.h>
 #include <device/irq.h>
 
+#include <arch/device_ids.h>
+
 #include <string.h>
 
 static DEVENUM_MATCH_DRIVER(apbctrl_match_driver)
@@ -81,7 +83,7 @@ static DEVICE_TREE_WALKER(apbctrl_scan_cpu_irq)
 {
   struct apbctrl_scan_cpu_irq_ctx_s *ctx = priv;
 
-  if (dev->flags & DEVICE_FLAG_CPU)
+  if (dev->node.flags & DEVICE_FLAG_CPU)
     {
       uintptr_t maj, min;
       if (device_res_get_uint(dev, DEV_RES_ID, 0, &maj, &min))
@@ -128,8 +130,23 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
       if (!d)
         continue;
 
-      device_res_add_vendorid(d, vendor, NULL);
-      device_res_add_productid(d, device, NULL);
+#ifdef CONFIG_GAISLER_DEVICE_IDS
+      if (vendor < GAISLER_VENDOR_count &&
+          gaisler_vendors_longnames[vendor])
+        device_res_add_vendorid(d, vendor, strdup(gaisler_vendors_longnames[vendor]));
+      else
+#endif
+        device_res_add_vendorid(d, vendor, NULL);
+
+#ifdef CONFIG_GAISLER_DEVICE_IDS
+      if (vendor == GAISLER_VENDOR_GAISLER &&
+          device < GAISLER_DEVICE_count &&
+          gaisler_devices_longnames[device])
+        device_res_add_productid(d, device, strdup(gaisler_devices_longnames[device]));
+      else
+#endif
+        device_res_add_productid(d, device, NULL);
+
       device_res_add_revision(d, version, 0);
 
 #ifdef CONFIG_DEVICE_IRQ

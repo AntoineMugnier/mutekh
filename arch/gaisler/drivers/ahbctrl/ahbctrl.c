@@ -33,6 +33,8 @@
 #include <device/driver.h>
 #include <device/irq.h>
 
+#include <arch/device_ids.h>
+
 #include <string.h>
 #include <stdio.h>
 
@@ -91,20 +93,36 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
       if (!d)
         continue;
 
-      device_res_add_vendorid(d, vendor, NULL);
-      device_res_add_productid(d, device, NULL);
+#ifdef CONFIG_GAISLER_DEVICE_IDS
+        if (vendor < GAISLER_VENDOR_count &&
+            gaisler_vendors_longnames[vendor])
+          device_res_add_vendorid(d, vendor, strdup(gaisler_vendors_longnames[vendor]));
+        else
+#endif
+          device_res_add_vendorid(d, vendor, NULL);
+
+#ifdef CONFIG_GAISLER_DEVICE_IDS
+      if (vendor == GAISLER_VENDOR_GAISLER &&
+          device < GAISLER_DEVICE_count &&
+          gaisler_devices_longnames[device])
+        device_res_add_productid(d, device, strdup(gaisler_devices_longnames[device]));
+      else
+#endif
+        device_res_add_productid(d, device, NULL);
+
       device_res_add_revision(d, version, 0);
 
       /* processor case */
-      if (vendor == 1 && (device == 0x003 || device == 0x048))
+      if (vendor == GAISLER_VENDOR_GAISLER &&
+          (device == GAISLER_DEVICE_LEON3 || device == GAISLER_DEVICE_LEON4))
         {
           char name [16];
 
           device_res_add_id(d, i, 0);
-          d->flags |= DEVICE_FLAG_CPU;
+          d->node.flags |= DEVICE_FLAG_CPU;
 
           sprintf(name, "cpu%u", i);
-          d->name = strdup(name);
+          d->node.name = strdup(name);
         }
 
 #ifdef CONFIG_DEVICE_IRQ
