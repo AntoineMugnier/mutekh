@@ -250,6 +250,7 @@ my %config_cmd =
  "single" => \&args_single,
  "suggest" => \&args_list_concat,
  "suggest_when" => \&args_list_add,
+ "warn_when" => \&args_list_add,
  "when" => \&args_list_add,
  "module" => \&args_module,
  "provide" => \&args_list_concat,
@@ -516,6 +517,7 @@ my %config_tokens_resolvers =
  "require" => \&tokens_resolve_config_cond,
  "suggest" => \&tokens_resolve_config_cond,
  "suggest_when" => \&tokens_resolve_config_cond,
+ "warn_when" => \&tokens_resolve_config_cond,
  "when" => \&tokens_resolve_config_cond,
  "provide" => \&tokens_resolve_config_value,
  "parent" => \&tokens_resolve_config_bare,
@@ -808,6 +810,8 @@ sub check_condition
 	    return ($value >= $val);
 	} elsif  ($op eq "<=") {
 	    return ($value <= $val);
+	} elsif  ($op eq "!=") {
+	    return ($value ne $val);
 	}
 
     }
@@ -1235,6 +1239,17 @@ sub process_config_suggest
 	    return 1;
         });
 
+        if ( !$opt->{userdefined} ) {
+            foreach_and_list( $opt->{warn_when}, sub {
+                my $list = shift;
+
+                my $res = foreach_and_list( $list, \&check_rule );
+                notice("The `$opt->{name}' token is currently defined by default but ".
+                       get_rule_name_list( $list, " and " )." condition suggests to undefine it.") if $res;
+                return 1;
+            });
+        }
+
     } elsif ( !$opt->{userdefined} ) {
 	# suggest this token be defined
 
@@ -1242,8 +1257,8 @@ sub process_config_suggest
 	    my $list = shift;
 
 	    my $res = foreach_and_list( $list, \&check_rule ) && check_definable( $opt );
-	    notice("`$opt->{name}' token is currently undefined but suggested by: ".
-		   get_rule_name_list( $list, " and " ) )." condition" if $res;
+	    notice("The `$opt->{name}' token is currently undefined by default but ".
+		   get_rule_name_list( $list, " and " )." condition suggests to define it.") if $res;
 	    return 1;
         });
     }
@@ -1420,7 +1435,7 @@ sub tokens_check
 
 	if ($opt->{flags}->{value}) {
 
-	    foreach my $tag (qw(depend when require provide suggest suggest_when exclude single)) {
+	    foreach my $tag (qw(depend when require provide suggest suggest_when warn_when exclude single)) {
 		error_loc($opt, "token with `value' flag can't use the `$tag' tag.")
 		    if ($opt->{$tag});
 	    }
@@ -1432,14 +1447,14 @@ sub tokens_check
         }
 
 	if ($opt->{flags}->{meta}) {
-	    foreach my $tag (qw(default depend when require suggest_when single)) {
+	    foreach my $tag (qw(default depend when require suggest_when warn_when single)) {
 		error_loc($opt, "token with `meta' flag can't use the `$tag' tag.")
 		    if ($opt->{$tag});
 	    }
 	}
 
 	if ($opt->{flags}->{mandatory}) {
-	    foreach my $tag (qw(default when suggest_when suggest)) {
+	    foreach my $tag (qw(default when suggest_when warn_when suggest)) {
 		error_loc($opt, "token with `mandatory' flag can't use the `$tag' tag.")
 		    if ($opt->{$tag});
 	    }
@@ -2102,6 +2117,7 @@ sub write_token_doc
     print_list($out, $opt->{when}, "This token is automatically defined when", " and ", \&get_rule_name_list );
     print_list($out, $opt->{suggest}, "Defining this token suggest use of", " or ", \&get_rule_name );
     print_list($out, $opt->{suggest_when}, "Definition of this token is suggested when", " and ", \&get_rule_name_list );
+    print_list($out, $opt->{warn_when}, "Definition of this token is not advised when", " and ", \&get_rule_name_list );
     print_list($out, $opt->{exclude}, "This token can not be defined along with", "", \&get_token_name );
     print_list($out, $opt->{provide}, "Defining this token will also provide", "", \&get_rule_name );
     print_list($out, $opt->{providers}, "This token value is provided along with", "", \&get_token_name );
