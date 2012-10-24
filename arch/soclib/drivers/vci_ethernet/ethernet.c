@@ -29,6 +29,8 @@
 #include <device/driver.h>
 #include <mutek/mem_alloc.h>
 
+#include <arch/mem_checker.h>
+
 #include <mutek/printk.h>
 
 #include <hexo/interrupt.h>
@@ -237,14 +239,12 @@ static DEV_IRQ_EP_PROCESS(soclib_eth_irq)
   do {
     st = endian_le32(cpu_mem_read_32(pv->addr + ETHERNET_STATUS));
 
-//    printk("st %x\n", st);
-
     if (st & ETHERNET_ST_TX_DONE)
       {
         uint32_t tx_st = endian_le32(cpu_mem_read_32(pv->addr + ETHERNET_TX_FIFO));
 
         struct net_packet_s *packet = pv->tx_pkt[pv->tx_ptr++ % pv->fifo_size];
-        printk("Packet TX done: %p\n", packet);
+        // printk("Packet TX done: %p\n", packet);
 
         pv->tx_count--;
         packet_obj_refdrop(packet);
@@ -259,17 +259,19 @@ static DEV_IRQ_EP_PROCESS(soclib_eth_irq)
         pv->rx_count--;
         soclib_eth_fill_rx(pv, 1);
 
-        printk("Packet RX done: %u %P\n", size, packet->packet, size);
+        // printk("Packet RX done: %u %P\n", size, packet->packet, size);
 
         if (rx_st == ETHERNET_RX_DONE && size >= 42)
           {
             uint8_t *data = packet->packet;
+            soclib_mem_mark_initialized(data, size);
+
             struct net_header_s *nethdr = &packet->header[0];
             nethdr->data = data;
             nethdr->size = size;
 
             /* get the good header */
-            struct ether_header *hdr = (struct ether_header *)nethdr->data;
+            struct ether_header *hdr = (struct ether_header *)data;
 
             /* fill some info */
             packet->MAClen = ETH_ALEN;
@@ -346,7 +348,7 @@ static DEV_INIT(soclib_eth_init)
 
   uint_fast8_t i;
   for (i = 0; i < 6; i++)
-    pv->mac[i] = cpu_mem_read_8(pv->addr + ETHERNET_MAC_LOW + i) + 1;
+    pv->mac[i] = cpu_mem_read_8(pv->addr + ETHERNET_MAC_LOW + i);
 
   pv->fifo_size = endian_le32(cpu_mem_read_32(pv->addr + ETHERNET_FIFO_SIZE));
   if (pv->fifo_size == 0)
