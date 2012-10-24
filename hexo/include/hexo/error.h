@@ -69,9 +69,6 @@ typedef int_fast8_t		error_t;
 /** service temporarily unavailable */
 #define EAGAIN		9
 
-/** value out of range */
-//#define ERANGE		10
-
 /** io error */
 #define EIO		11
 
@@ -84,7 +81,7 @@ typedef int_fast8_t		error_t;
 /** operation canceled */
 #define ECANCELED 14
 
-/** operation canceled */
+/** permission denied */
 #define EACCES 15
 
 /** File exists */
@@ -98,6 +95,7 @@ typedef int_fast8_t		error_t;
 
 /** Math argument out of domain of func */
 #define EDOM        33
+
 /** Math result not representable */
 #define ERANGE      34
 
