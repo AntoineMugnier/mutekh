@@ -109,6 +109,15 @@ static DEVICU_GET_ENDPOINT(sparc_icu_get_endpoint)
     case DEV_IRQ_EP_SINK:
       if (id < ICU_SPARC_SINKS_COUNT)
         return pv->sinks + id;
+      return NULL;
+
+#if defined(CONFIG_CPU_SPARC_SINGLE_IRQ_EP) && defined(CONFIG_DEVICE_IRQ_BYPASS)
+    case DEV_IRQ_EP_BYPASS:
+      if (id < ICU_SPARC_MAX_VECTOR)
+        return pv->bypass + id;
+      return NULL;
+#endif
+
     default:
       return NULL;
     }

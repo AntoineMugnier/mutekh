@@ -108,6 +108,7 @@ DRIVER_CLASS_TYPES(char,
 
     @returns processed bytes count or negative error code.
 */
+config_depend(CONFIG_DEVICE_CHAR)
 ssize_t dev_char_wait_read(const struct device_char_s *cdev, uint8_t *data, size_t size);
 
 /** Synchronous helper read function. This function spins in a loop
@@ -115,6 +116,7 @@ ssize_t dev_char_wait_read(const struct device_char_s *cdev, uint8_t *data, size
 
     @returns processed bytes count or negative error code.
 */
+config_depend(CONFIG_DEVICE_CHAR)
 ssize_t dev_char_spin_read(const struct device_char_s *cdev, uint8_t *data, size_t size);
 
 /** Synchronous helper write function. This function uses the scheduler
@@ -124,6 +126,7 @@ ssize_t dev_char_spin_read(const struct device_char_s *cdev, uint8_t *data, size
 
     @returns processed bytes count or negative error code.
 */
+config_depend(CONFIG_DEVICE_CHAR)
 ssize_t dev_char_wait_write(const struct device_char_s *cdev, const uint8_t *data, size_t size);
 
 /** Synchronous helper write function. This function spins in a loop
@@ -131,6 +134,7 @@ ssize_t dev_char_wait_write(const struct device_char_s *cdev, const uint8_t *dat
 
     @returns processed bytes count or negative error code.
 */
+config_depend(CONFIG_DEVICE_CHAR)
 ssize_t dev_char_spin_write(const struct device_char_s *cdev, const uint8_t *data, size_t size);
 
 #endif

@@ -179,7 +179,7 @@ error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv)
   dev->drv = drv;
   dev->status = DEVICE_DRIVER_INIT_PENDING;      
 
-  printk("device: %p `%s' uses %p `%s' driver\n",
+  printk("device: %p `%s' uses driver %p `%s'\n",
          dev, dev->node.name, drv, drv->desc);
 
   return 0;

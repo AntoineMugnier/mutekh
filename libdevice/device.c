@@ -241,7 +241,7 @@ void device_alias_remove(struct device_alias_s *alias)
 }
 
 error_t device_get_path(struct device_node_s *root, char *buf, size_t buflen,
-                        struct device_node_s *node, uint_fast16_t number)
+                        struct device_node_s *node, uint_fast8_t number)
 {
   if (!node)
     return -EINVAL;
