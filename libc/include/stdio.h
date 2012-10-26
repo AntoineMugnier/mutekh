@@ -41,12 +41,16 @@ C_HEADER_BEGIN
 #include <stdarg.h>
 #include <unistd.h>
 
+/** @see formatter_printf */
 ssize_t sprintf(char *str, const char *format, ...);
 
+/** @see formatter_printf */
 ssize_t snprintf(char *str, size_t size, const char *format, ...);
 
+/** @see formatter_printf */
 ssize_t vsprintf(char *str, const char *format, va_list ap);
 
+/** @see formatter_printf */
 ssize_t vsnprintf(char *str, size_t size, const char *format, va_list ap);
 
 config_depend(CONFIG_LIBC_STREAM_STD)
@@ -238,6 +242,7 @@ int_fast16_t putchar(int_fast16_t c),
   return fputc(c, stdout);
 });
 
+/** @see printf */
 config_depend_inline(CONFIG_LIBC_STREAM_STD,
 ssize_t vprintf(const char *format, va_list ap),
 {
@@ -245,8 +250,8 @@ ssize_t vprintf(const char *format, va_list ap),
 });
 
 /** This function use libc buffered streams and thus require @ref
-    #CONFIG_LIBC_STREAM_STD enabled. Consider using @ref printk
-    instead for direct output. */
+    #CONFIG_LIBC_STREAM_STD to be enabled. Consider using @ref printk
+    instead for direct output. @see formatter_printf */
 config_depend(CONFIG_LIBC_STREAM_STD)
 ssize_t printf(const char *format, ...);
 

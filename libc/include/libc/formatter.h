@@ -35,9 +35,30 @@
 
 typedef PRINTF_OUTPUT_FUNC(printf_output_func_t);
 
+/** @This is used to produce output of @ref printk and @ref printf
+    family of functions. The output function will be called multiple
+    times to write the formatted string.
+
+    This function supports the standard printf format string syntax.
+
+    The following non standard conversion specifiers are supported:
+    @list
+      @item @tt %b output an unsigned integer in binary format
+      @item @tt %P output an hexadecimal dump of memory,
+            both address and size arguments must be passed.
+      @item @tt %S output an string with specified length,
+            both address and size arguments must be passed.
+    @end list
+
+    When the @ref #CONFIG_LIBC_FORMATTER_SIMPLE configuration token is
+    defined, the conversion features are reduced to bare minimum: no
+    padding support, only @tt{%d %i %u %s %p %c %x %o} are handled and
+    maximum integer value is limited to processor register width.
+    The precision is ignored too; this changes behavior of @tt {%.s}.
+*/
 ssize_t
 formatter_printf(void *ctx, printf_output_func_t * const fcn,
-				 const char *format, va_list ap);
+                 const char *format, va_list ap);
 
 void
 mutek_hexdump_arg(void *ctx, printf_output_func_t * const fcn,

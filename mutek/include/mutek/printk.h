@@ -27,6 +27,7 @@ void printk_set_output(printf_output_func_t *f, void *ctx);
 
    @param format Format syntax, and variadic parameters, like printf()
    @returns count of bytes actually emitted
+   @see formatter_printf
  */
 ssize_t printk(const char *format, ...);
 
@@ -38,6 +39,7 @@ ssize_t printk(const char *format, ...);
    @param format Format syntax
    @param ap variadic parameters, like vprintf()
    @returns count of bytes actually emitted
+   @see formatter_printf
  */
 inline ssize_t vprintk(const char *format, va_list ap);
 
