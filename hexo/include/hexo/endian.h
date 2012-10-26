@@ -312,19 +312,30 @@ static inline uint64_t endian_swap64(uint64_t x)
 
 /** @internal */
 #define __ALIGN_VALUE_UP(x, b)	((((x) - 1) | ((b) - 1)) + 1)
-/** @this aligns value on the next power of two */
+/** @this aligns value on the next power of two boundary  */
 #define ALIGN_VALUE_UP(x, b)	__ALIGN_CONSTANT(x, b, __ALIGN_VALUE_UP)
 
 /** @internal */
 #define __ALIGN_VALUE_LOW(x, b)	((x) & ~((b) - 1))
-/** @this aligns value on the next power of two */
+/** @this aligns value on the next power of two boundary */
 #define ALIGN_VALUE_LOW(x, b)	__ALIGN_CONSTANT(x, b, __ALIGN_VALUE_LOW)
 
-/** @this aligns address on the next power of two */
+/** @this aligns address on the next power of two boundary  */
 #define ALIGN_ADDRESS_UP(x, b)	((void*)ALIGN_VALUE_UP((uintptr_t)(x), (b)))
 
-/** @this aligns address on the next power of two */
+/** @this aligns address on the next power of two boundary  */
 #define ALIGN_ADDRESS_LOW(x, b)	((void*)ALIGN_VALUE_LOW((uintptr_t)(x), (b)))
+
+#define __POW2_M1_CONSTANT_UP1(x)  ((x) | ((x) >> 1))
+#define __POW2_M1_CONSTANT_UP2(x)  (__POW2_M1_CONSTANT_UP1(x) | (__POW2_M1_CONSTANT_UP1(x) >> 2))
+#define __POW2_M1_CONSTANT_UP4(x)  (__POW2_M1_CONSTANT_UP2(x) | (__POW2_M1_CONSTANT_UP2(x) >> 4))
+#define __POW2_M1_CONSTANT_UP8(x)  (__POW2_M1_CONSTANT_UP4(x) | (__POW2_M1_CONSTANT_UP4(x) >> (8 % (sizeof(x)*8))))
+#define __POW2_M1_CONSTANT_UP16(x) (__POW2_M1_CONSTANT_UP8(x) | (__POW2_M1_CONSTANT_UP8(x) >> (16 % (sizeof(x)*8))))
+/** @this returns a power of 2 minus one where the pow2 is greater than the specified value */
+#define POW2_M1_CONSTANT_UP(x)    (__POW2_M1_CONSTANT_UP16(x) | (__POW2_M1_CONSTANT_UP16(x) >> (32 % (sizeof(x)*8))))
+
+/** @this returns a power of 2 greater or equal to the specified value */
+#define POW2_CONSTANT_UP(x) (POW2_M1_CONSTANT_UP(x - 1) + 1)
 
 /***********************************************************************
  *		Bits extraction macro

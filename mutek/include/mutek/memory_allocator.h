@@ -50,7 +50,7 @@ memory_allocator_extend(struct memory_allocator_region_s *region, void *start, s
 void *memory_allocator_resize(void *address, size_t size);
 
 /** @this allocate a new memory block in given region */
-void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size);
+void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size, size_t align);
 
 /** @this free allocated memory block */
 void memory_allocator_push(void *address);
@@ -70,5 +70,11 @@ error_t memory_allocator_stats(struct memory_allocator_region_s *region,
 /** @this make memory region check depending to activated token: guard zone, headers' integrity (crc and size) 
     and if free space was used */
 void memory_allocator_region_check(struct memory_allocator_region_s *region);
+
+/** @this return the size of given memory region */
+size_t memory_allocator_region_size(struct memory_allocator_region_s *region);
+
+/** @this return the size of given memory region */
+void* memory_allocator_region_address(struct memory_allocator_region_s *region);
 
 #endif
