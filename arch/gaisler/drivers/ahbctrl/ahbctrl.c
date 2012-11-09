@@ -72,7 +72,7 @@ static DEVENUM_MATCH_DRIVER(ahbctrl_match_driver)
 
 static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
 {
-  uint_fast8_t i;
+  uint_fast8_t i, j;
 
   for (i = 0; i < 128; i++)
     {
@@ -132,16 +132,17 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
         device_res_add_irq(d, 0, irq - 1, 0, NULL);
 #endif
 
-      uint_fast8_t i;
-      for (i = 4; i < 8; i++)
+      uint8_t mtype = 0;
+      for (j = 4; j < 8; j++)
         {
-          uint8_t type = endian_be32(p[i]) & 0xf;
+          uint8_t type = endian_be32(p[j]) & 0xf;
+          mtype |= type;
 
           if (!type)
             continue;
 
-          uintptr_t start = ((endian_be32(p[i]) >> 20) & 0xfff) << 20;
-          uint32_t mask = (endian_be32(p[i]) >> 4) & 0xfff;
+          uintptr_t start = ((endian_be32(p[j]) >> 20) & 0xfff) << 20;
+          uint32_t mask = (endian_be32(p[j]) >> 4) & 0xfff;
 
           if (!mask)
             continue;
@@ -164,12 +165,19 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
             }
         }
 
+      /* skip entries without mem/io resource */
+      if (!mtype && !(d->node.flags & DEVICE_FLAG_CPU))
+        {
+          mem_free(d);
+          continue;
+        }
+
 #ifdef CONFIG_DRIVER_GAISLER_AHBCTRL_USERPARAMS
-      for (i = 1; i < 4; i++)
+      for (j = 1; j < 4; j++)
         {
           char pname[16];
-          sprintf(pname, "user_param_%u", i);
-          device_res_add_uint_param(d, strdup(pname), endian_be32(p[i]));
+          sprintf(pname, "user_param_%u", j);
+          device_res_add_uint_param(d, strdup(pname), endian_be32(p[j]));
         }
 #endif
 
