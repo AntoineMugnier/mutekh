@@ -58,9 +58,7 @@ struct gaisler_irqmp_private_s
   struct gaisler_irqmp_sink_s *sinks;
   struct dev_irq_ep_s *srcs;
   uint_fast8_t srcs_count;
-#ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
   uint_fast8_t eirq;
-#endif
 };
 
 static DEVICU_GET_ENDPOINT(gaisler_irqmp_icu_get_endpoint)
@@ -93,6 +91,20 @@ static DEVICU_ENABLE_IRQ(gaisler_irqmp_icu_enable_irq)
 
   if (irq_id > 0) // inputs are single wire, logical irq id must be 0
     return 0;
+
+#ifdef CONFIG_CPU_SPARC
+  if (icu_in_id == 14)
+    {
+      printk("irqmp: won't enable non maskable irq (line 15)\n");
+      return 0;
+    }
+#endif
+
+  if (pv->eirq && icu_in_id == pv->eirq - 1)
+    {
+      printk("irqmp: can't use eirq line as regular irq line\n");
+      return 0;
+    }
 
 #ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
   if (icu_in_id >= 31 || (icu_in_id >= 15 && !pv->eirq))
@@ -277,8 +289,17 @@ static DEV_INIT(gaisler_irqmp_init)
   if (!pv->srcs)
     goto err_mem;
 
-#ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
   pv->eirq = ((status >> 16) & 0xf);
+
+#ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
+# ifdef CONFIG_CPU_SPARC
+  if (pv->eirq == 15)
+    {
+      printk("irqmp: won't use non maskable irq (line 15) as eirq\n");
+      pv->eirq = 0;
+    }
+# endif
+
   if (pv->eirq)
     device_irq_source_init(dev, pv->srcs, pv->srcs_count, &gaisler_irqmp_source_process_eirq);
   else
@@ -308,7 +329,7 @@ static DEV_INIT(gaisler_irqmp_init)
   device_irq_source_unlink(dev, pv->srcs, pv->srcs_count);
  err_mem2:
   if (pv->srcs)
-    mem_free(pv->sinks);
+    mem_free(pv->srcs);
  err_mem:
   mem_free(pv);
   return -1;
