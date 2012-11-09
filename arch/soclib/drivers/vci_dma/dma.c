@@ -60,6 +60,9 @@ DEVDMA_REQUEST(dma_soclib_request)
   struct device_s               *dev = ddev->dev;
   struct dma_soclib_context_s	*pv = dev->drv_pv;
 
+  if (rq->flags)
+    return -ENOTSUP;
+
   assert(rq->size);
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -74,6 +77,8 @@ DEVDMA_REQUEST(dma_soclib_request)
     dma_soclib_start(dev, rq);
 
   LOCK_RELEASE_IRQ(&dev->lock);
+
+  return 0;
 }
 
 static DEV_IRQ_EP_PROCESS(dma_soclib_irq)
@@ -118,11 +123,11 @@ static DEV_CLEANUP(dma_soclib_cleanup);
 
 const struct driver_s	dma_soclib_drv =
 {
-  .desc                 = "SoCLib VciDma",
+  .desc       = "SoCLib VciDma",
   .id_table		= dma_soclib_ids,
-  .f_init		= dma_soclib_init,
-  .f_cleanup		= dma_soclib_cleanup,
-  .classes              = { &dma_soclib_dma_drv, 0 }
+  .f_init		  = dma_soclib_init,
+  .f_cleanup	= dma_soclib_cleanup,
+  .classes    = { &dma_soclib_dma_drv, 0 }
 };
 
 REGISTER_DRIVER(dma_soclib_drv);

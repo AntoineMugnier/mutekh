@@ -46,27 +46,32 @@ static DEVDMA_CALLBACK(dev_dma_lock_request_cb)
 {
   struct dev_dma_wait_rq_s *status = rq->pvdata;
   status->done = 1;
-  return 1;
 }
 
-static void dev_dma_lock_request(const struct device_dma_s *ddev, const uint8_t *src, uint8_t *dst,
-                                 size_t size, devdma_callback_t *callback)
+static error_t dev_dma_lock_request(const struct device_dma_s *ddev,
+                                    const void *src, void *dst,
+                                    size_t size, uint_fast8_t flags,
+                                    devdma_callback_t *callback)
 {
   struct dev_dma_rq_s rq;
   struct dev_dma_wait_rq_s status;
 
   if (size == 0)
-    return;
+    return 0;
 
   status.done = 0;
   rq.pvdata = &status;
   rq.callback = callback;
+  rq.error = 0;
+  rq.flags = 0;
   rq.src = src;
   rq.dst = dst;
   rq.size = size;
   rq.ddev = ddev;
 
-  DEVICE_OP(ddev, request, &rq);
+  error_t err = DEVICE_OP(ddev, request, &rq);
+  if (err)
+    return err;
 
 #ifdef CONFIG_DEVICE_IRQ
   assert(cpu_is_interruptible());
@@ -74,6 +79,8 @@ static void dev_dma_lock_request(const struct device_dma_s *ddev, const uint8_t 
 
   while (!status.done)
     order_compiler_mem();
+
+  return rq.error;
 }
 
 
@@ -87,30 +94,34 @@ static DEVDMA_CALLBACK(dev_dma_wait_request_cb)
 	  sched_context_start(status->ctx);
   status->done = 1;
   lock_release(&status->lock);
-
-  return 1;
 }
 
-static void dev_dma_wait_request(const struct device_dma_s *ddev, const uint8_t *src, uint8_t *dst,
-                                 size_t size, devdma_callback_t *callback)
+static error_t dev_dma_wait_request(const struct device_dma_s *ddev,
+                                    const void *src, void *dst,
+                                    size_t size, uint_fast8_t flags,
+                                    devdma_callback_t *callback)
 {
   struct dev_dma_rq_s rq;
   struct dev_dma_wait_rq_s status;
 
   if (size == 0)
-    return;
+    return 0;
 
   lock_init(&status.lock);
   status.ctx = NULL;
   status.done = 0;
   rq.pvdata = &status;
   rq.callback = callback;
+  rq.error = 0;
+  rq.flags = flags;
   rq.src = src;
   rq.dst = dst;
   rq.size = size;
   rq.ddev = ddev;
 
-  DEVICE_OP(ddev, request, &rq);
+  error_t err = DEVICE_OP(ddev, request, &rq);
+  if (err)
+    return err;
 
   /* ensure callback doesn't occur here */
 
@@ -127,21 +138,27 @@ static void dev_dma_wait_request(const struct device_dma_s *ddev, const uint8_t 
 
   CPU_INTERRUPT_RESTORESTATE;
   lock_destroy(&status.lock);
+
+  return rq.error;
 }
 #endif
 
 
-void dev_dma_wait_copy(const struct device_dma_s *ddev, const uint8_t *src, uint8_t *dst, size_t size)
+error_t dev_dma_wait_copy(const struct device_dma_s *ddev,
+                          const void *src, void *dst,
+                          size_t size, uint_fast8_t flags)
 {
 #ifdef CONFIG_MUTEK_SCHEDULER
-  return dev_dma_wait_request(ddev, src, dst, size, dev_dma_wait_request_cb);
+  return dev_dma_wait_request(ddev, src, dst, size, flags, dev_dma_wait_request_cb);
 #else
-  return dev_dma_lock_request(ddev, src, dst, size, dev_dma_lock_request_cb);
+  return dev_dma_lock_request(ddev, src, dst, size, flags, dev_dma_lock_request_cb);
 #endif
 }
 
-void dev_dma_spin_copy(const struct device_dma_s *ddev, const uint8_t *src, uint8_t *dst, size_t size)
+error_t dev_dma_spin_copy(const struct device_dma_s *ddev,
+                          const void *src, void *dst,
+                          size_t size, uint_fast8_t flags)
 {
-  return dev_dma_lock_request(ddev, src, dst, size, dev_dma_lock_request_cb);
+  return dev_dma_lock_request(ddev, src, dst, size, flags, dev_dma_lock_request_cb);
 }
 

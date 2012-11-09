@@ -39,7 +39,7 @@
 struct dev_dma_rq_s;
 
 /** Dma device read/write callback */
-#define DEVDMA_CALLBACK(n) bool_t (n) (const struct dev_dma_rq_s *rq)
+#define DEVDMA_CALLBACK(n) void (n) (const struct dev_dma_rq_s *rq)
 
 /**
    Dma device callback.
@@ -49,12 +49,22 @@ struct dev_dma_rq_s;
 */
 typedef DEVDMA_CALLBACK(devdma_callback_t);
 
-CONTAINER_TYPE(dev_dma_queue, CLIST,
+/** @This specifies use of fixed source address for dma transfer. */
+#define DEV_DMA_FLAG_FIXED_SRC    0x01
+/** @This specifies use of fixed destination address for dma transfer. */
+#define DEV_DMA_FLAG_FIXED_DST    0x02
+/** @This specifies use of constant source data for dma transfer. @see #DEV_DMA_FLAG_CONST_LEN */
+#define DEV_DMA_FLAG_CONST_DATA   0x04
+/** @This specifies len of constant source data for dma transfer. @see #DEV_DMA_FLAG_CONST_DATA */
+#define DEV_DMA_FLAG_CONST_LEN(n) ((n) << 3)
+
+/** Dma request @see devdma_request_t */
 struct dev_dma_rq_s
 {
   size_t			size;
-  const uint8_t			*src;
-  uint8_t			*dst;
+  const void			*src;
+  void          		*dst;
+  uint_fast8_t                  flags;
 
   devdma_callback_t		*callback;      //< callback function
   void				*pvdata;        //< private data for callback
@@ -63,20 +73,29 @@ struct dev_dma_rq_s
 
   const struct device_dma_s     *ddev;          //< associated dma device
   void				*drvdata;       //< driver private data
-  dev_dma_queue_entry_t	queue_entry;    //< used by driver to enqueue requests
-}, queue_entry);
+  CONTAINER_ENTRY_TYPE(CLIST)   queue_entry; //< used by driver to enqueue request
+};
 
+CONTAINER_TYPE(dev_dma_queue, CLIST, struct dev_dma_rq_s, queue_entry);
 CONTAINER_FUNC(dev_dma_queue, CLIST, static inline, dev_dma_queue);
 
 
 /** Dma device class @ref devdma_request_t function template. */
-#define DEVDMA_REQUEST(n)	void  (n) (const struct device_dma_s *cdev, struct dev_dma_rq_s *rq)
+#define DEVDMA_REQUEST(n)	error_t  (n) (const struct device_dma_s *cdev, struct dev_dma_rq_s *rq)
 
 /**
    Dma device class request() function type. Enqueue a dma transfert request.
 
+   The dma request flags can be set to perform a DMA transfert with
+   fixed source address, fixed destination address or constant source
+   data. When the @ref #DEV_DMA_FLAG_FIXED_DATA flag is used, the @tt
+   src field points to the constant data to copy repeatedly to the
+   destination and the @ref #DEV_DMA_FLAG_CONST_LEN macro must be used
+   to indicate length of the pattern.
+
    @param dev pointer to device descriptor
-   @param rq pointer to request. data, size and callback, field must be intialized.
+   @param rq pointer to request. src, dst, size, flags and callback must be initialized.
+   @returns zero if the request has been enqueued or @tt -ENOTSUP if the requested operation is not supported.
 */
 typedef DEVDMA_REQUEST(devdma_request_t);
 
@@ -85,9 +104,27 @@ DRIVER_CLASS_TYPES(dma,
                    devdma_request_t *f_request;
                    );
 
-void dev_dma_wait_copy(const struct device_dma_s *cdev, const uint8_t *src, uint8_t *dst, size_t size);
+/** Synchronous dma helper function. This function uses the scheduler
+    api to put the current context in wait state until the DMA
+    transfer has completed. This function spins in a loop waiting for
+    DMA transfer operation to complete when scheduler is disabled.
 
-void dev_dma_spin_copy(const struct device_dma_s *cdev, const uint8_t *src, uint8_t *dst, size_t size);
+    @returns error code.
+*/
+config_depend(CONFIG_DEVICE_DMA)
+error_t dev_dma_wait_copy(const struct device_dma_s *cdev,
+                          const void *src, void *dst,
+                          size_t size, uint_fast8_t flags);
+
+/** Synchronous dma helper function. This function spins in a loop
+    waiting for DMA transfer operation to complete.
+
+    @returns error code.
+*/
+config_depend(CONFIG_DEVICE_DMA)
+error_t dev_dma_spin_copy(const struct device_dma_s *cdev,
+                          const void *src, void *dst,
+                          size_t size, uint_fast8_t flags);
 
 #endif
 
