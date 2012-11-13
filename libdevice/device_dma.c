@@ -63,11 +63,10 @@ static error_t dev_dma_lock_request(const struct device_dma_s *ddev,
   rq.pvdata = &status;
   rq.callback = callback;
   rq.error = 0;
-  rq.flags = 0;
+  rq.flags = flags;
   rq.src = src;
   rq.dst = dst;
   rq.size = size;
-  rq.ddev = ddev;
 
   error_t err = DEVICE_OP(ddev, request, &rq);
   if (err)
@@ -117,7 +116,6 @@ static error_t dev_dma_wait_request(const struct device_dma_s *ddev,
   rq.src = src;
   rq.dst = dst;
   rq.size = size;
-  rq.ddev = ddev;
 
   error_t err = DEVICE_OP(ddev, request, &rq);
   if (err)

@@ -81,7 +81,7 @@ CONTAINER_FUNC(dev_dma_queue, CLIST, static inline, dev_dma_queue);
 
 
 /** Dma device class @ref devdma_request_t function template. */
-#define DEVDMA_REQUEST(n)	error_t  (n) (const struct device_dma_s *cdev, struct dev_dma_rq_s *rq)
+#define DEVDMA_REQUEST(n)	error_t  (n) (const struct device_dma_s *ddev, struct dev_dma_rq_s *rq)
 
 /**
    Dma device class request() function type. Enqueue a dma transfert request.

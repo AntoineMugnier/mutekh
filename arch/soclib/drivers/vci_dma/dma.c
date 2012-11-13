@@ -56,7 +56,6 @@ static void dma_soclib_start(struct device_s *dev, const struct dev_dma_rq_s *rq
 
 DEVDMA_REQUEST(dma_soclib_request)
 {
-  const struct device_dma_s           *ddev = rq->ddev;
   struct device_s               *dev = ddev->dev;
   struct dma_soclib_context_s	*pv = dev->drv_pv;
 
