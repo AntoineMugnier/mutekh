@@ -37,7 +37,7 @@
 #include <gpct/cont_hashlist.h>
 #include <gpct/object_simple.h>
 
-#include <mutek/timer.h>
+#include <device/class/timer.h>
 
 #define IP_DELIVERY_DIRECT	0
 #define IP_DELIVERY_INDIRECT	1
@@ -67,7 +67,7 @@ struct					ip_packet_s
   uint_fast16_t				size;
   uint_fast16_t				received;
   struct net_proto_s			*addressing;
-  struct timer_event_s			timeout;
+  struct dev_timer_rq_s			timeout;
   packet_queue_root_t			packets;
 
   fragment_obj_entry_t			obj_entry;
@@ -92,6 +92,7 @@ CONTAINER_KEY_TYPE(ip_packet, PTR, BLOB, id, 6);
 
 struct			net_pv_ip_s
 {
+  dev_timer_delay_t     reassembly_timeout;
   struct net_if_s	*interface;
   struct net_proto_s	*arp;
   struct net_proto_s	*icmp;
@@ -114,7 +115,7 @@ NET_MATCHADDR(ip_matchaddr);
 NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum);
 void		ip_route(struct net_packet_s	*packet,
 			 struct net_route_s	*route);
-TIMER_CALLBACK(ip_fragment_timeout);
+DEVTIMER_CALLBACK(ip_fragment_timeout);
 
 extern const struct net_proto_desc_s	ip_protocol;
 

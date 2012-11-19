@@ -38,7 +38,6 @@
 #include <hexo/gpct_lock_hexo.h>
 #include <gpct/object_simple.h>
 
-#include <mutek/timer.h>
 
 /*
  * Request timeout and retry count

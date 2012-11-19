@@ -35,7 +35,6 @@
 #include <mutek/printk.h>
 
 #include <mutek/semaphore.h>
-#include <mutek/timer.h>
 
 socket_table_root_t	pf_packet = CONTAINER_ROOT_INITIALIZER(socket_table, DLIST);
 

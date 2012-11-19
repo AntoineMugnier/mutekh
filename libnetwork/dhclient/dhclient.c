@@ -41,7 +41,6 @@
 #include <mutek/printk.h>
 
 #include <stdlib.h>
-#include <mutek/timer.h>
 #include <mutek/scheduler.h>
 #include <mutek/semaphore.h>
 
@@ -58,7 +57,6 @@ static bool_t		dhcp_ip_is_free(struct net_if_s	*interface,
   struct ether_arp	arp;
   bool_t		one = 1;
   struct timeval	tv;
-  timer_delay_t		t;
 
   /* create a PF_PACKET socket */
   if ((sock = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_ARP))) == NULL)
@@ -362,7 +360,6 @@ static error_t		dhcp_request(struct net_if_s	*interface,
   struct dhcphdr	*dhcp;
   struct dhcp_opt_s	*opt;
   bool_t		requested = 0;
-  timer_delay_t		t;
   uint8_t		*endptr;
 
   if ((packet = malloc(interface->mtu)) == NULL)
@@ -640,7 +637,7 @@ static CONTEXT_ENTRY(dhcp_renew_th)
 
 error_t			dhcp_client(const char	*ifname)
 {
-  struct timer_event_s	*timer;
+  struct dev_timer_rq_s	*timer;
   struct dhcp_lease_s	*lease;
   socket_t		sock = NULL;
   socket_t		sock_packet = NULL;
@@ -692,7 +689,7 @@ error_t			dhcp_client(const char	*ifname)
   CPU_INTERRUPT_RESTORESTATE;
   
   /* start DHCP renew timer */
-  if ((timer = malloc(sizeof (struct timer_event_s))) == NULL)
+  if ((timer = malloc(sizeof (struct dev_timer_rq_s))) == NULL)
     {
       lease->exit = 1;
       semaphore_give(&lease->sem, 1);

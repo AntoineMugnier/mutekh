@@ -42,8 +42,11 @@
 #include <network/route.h>
 
 #include <stdlib.h>
-#include <mutek/timer.h>
 #include <mutek/printk.h>
+
+#include <device/class/timer.h>
+
+extern struct device_timer_s libnetwork_timer_dev;
 
 /*
  * Fragment lists.
@@ -91,6 +94,10 @@ NET_INITPROTO(ip_init)
   assert(interface != NULL);
   assert(arp != NULL);
   assert(icmp != NULL);
+
+  if (dev_timer_init_sec(&libnetwork_timer_dev, &pv->reassembly_timeout,
+                         IP_REASSEMBLY_TIMEOUT, 1000))
+    return -1;
 
   pv->interface = interface;
   pv->arp = arp;
@@ -148,6 +155,8 @@ OBJECT_CONSTRUCTOR(fragment_obj)
   assert(addressing != NULL);
   assert(id != NULL);
 
+  struct net_pv_ip_s		*pv = (struct net_pv_ip_s *)addressing->pv;
+
   /* setup critical fields */
   obj->size = 0;
   obj->received = 0;
@@ -158,12 +167,11 @@ OBJECT_CONSTRUCTOR(fragment_obj)
 
   /* start timeout timer */
   obj->timeout.callback = ip_fragment_timeout;
-  obj->timeout.pv = (void *)obj;
-  obj->timeout.delay = IP_REASSEMBLY_TIMEOUT;
-  if (timer_add_event(&timer_ms, &obj->timeout))
+  obj->timeout.pvdata = (void *)obj;
+  obj->timeout.delay = pv->reassembly_timeout;
+  if (DEVICE_OP(&libnetwork_timer_dev, request, &obj->timeout, 0))
     {
       packet_queue_destroy(&obj->packets);
-
       return -1;
     }
 
@@ -180,7 +188,7 @@ OBJECT_CONSTRUCTOR(fragment_obj)
 
 OBJECT_DESTRUCTOR(fragment_obj)
 {
-  timer_cancel_event(&obj->timeout, 0);
+  DEVICE_OP(&libnetwork_timer_dev, request, &obj->timeout, 1);
 
   packet_queue_clear(&obj->packets);
   packet_queue_destroy(&obj->packets);
@@ -272,7 +280,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 
       /* disable timeout & remove the fragment structure */
       ip_packet_remove(&pv->fragments, p);
-      timer_cancel_event(&p->timeout, 0);
+      DEVICE_OP(&libnetwork_timer_dev, request, &p->timeout, 1);
 
       /* we received the whole packet, reassemble now */
       nethdr = &packet->header[packet->stage];
@@ -373,9 +381,9 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
  * Fragment reassembly timeout.
  */
 
-TIMER_CALLBACK(ip_fragment_timeout)
+DEVTIMER_CALLBACK(ip_fragment_timeout)
 {
-  struct ip_packet_s	*p = (struct ip_packet_s *)pv;
+  struct ip_packet_s	*p = (struct ip_packet_s *)rq->pvdata;
   struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)p->addressing->pv;
   struct net_packet_s	*packet;
 
@@ -393,6 +401,8 @@ TIMER_CALLBACK(ip_fragment_timeout)
 
   /* delete all the fragments */
   fragment_obj_delete(p);
+
+  return 0;
 }
 
 /*
@@ -834,7 +844,6 @@ void		ip_route(struct net_packet_s	*packet,
   if (hdr->ttl == 1)
     {
       pv->icmp->desc->f.control->errormsg(packet, ERROR_TIMEOUT);
-
       return ;
     }
 

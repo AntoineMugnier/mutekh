@@ -175,9 +175,6 @@ struct				socket_s
   error_t			error;
   bool_t			broadcast;
   bool_t			keepalive;
-  timer_delay_t			recv_timeout;
-  timer_delay_t			send_timeout;
-  timer_delay_t			linger;
   void				*pv;
 
   CONTAINER_ENTRY_TYPE(DLIST)	list_entry;

@@ -32,7 +32,6 @@
 #include <network/socket.h>
 
 #include <limits.h>
-#include <mutek/timer.h>
 #include <mutek/printk.h>
 
 #include <network/ping.h>
@@ -53,9 +52,6 @@ error_t			ping(struct net_addr_s	*host,
   struct sockaddr_in	from;
   socklen_t		len;
   ssize_t		recvd;
-  timer_delay_t		*t1;
-  timer_delay_t		*t2;
-  timer_delay_t		timeout;
   size_t		tot;
   struct icmp_filter	filt;
 
@@ -74,11 +70,7 @@ error_t			ping(struct net_addr_s	*host,
     }
 
   /* fill with junk bytes */
-  for (i = 0; i < size - sizeof (timer_delay_t); i++)
-    buf1[sizeof (struct icmphdr) + sizeof (timer_delay_t) + i] = 32 + i % 96;
 
-  t1 = (timer_delay_t *)&buf1[sizeof (struct icmphdr)];
-  t2 = (timer_delay_t *)&buf2[sizeof (struct icmphdr)];
 
   /* fill icmp header */
   hdr = (struct icmphdr *)buf1;
@@ -165,7 +157,6 @@ error_t			ping(struct net_addr_s	*host,
 	      if (hdr->type == ICMP_ECHOREPLY && ntohs(hdr->un.echo.id) == id &&
 		  from.sin_addr.s_addr == addr.sin_addr.s_addr)
 		{
-		  timer_delay_t	t = timer_get_tick(&timer_ms) - *t2;
 
 		  /* check size */
 		  if (recvd != tot)
@@ -175,8 +166,6 @@ error_t			ping(struct net_addr_s	*host,
 		    }
 
 		  /* check data */
-		  for (i = 0; i < size - sizeof (timer_delay_t); i++)
-		    if (buf2[sizeof (struct icmphdr) + sizeof (timer_delay_t) + i] != 32 + i % 96)
 		      {
 			printk("Reply %d bytes with incorrect data\n", recvd);
 			break;

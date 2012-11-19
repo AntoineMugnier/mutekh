@@ -34,7 +34,6 @@
 # endif
 
 # include <hexo/types.h>
-# include <mutek/timer.h>
 # include <netinet/packet.h>
 
 # define PING_INTERVAL	200	// ms
@@ -45,9 +44,6 @@ struct		ping_s
   uint_fast32_t	total;
   uint_fast32_t	lost;
   uint_fast32_t	error;
-  timer_delay_t	min;
-  timer_delay_t	max;
-  timer_delay_t	avg;
 };
 
 error_t		ping(struct net_addr_s	*host,

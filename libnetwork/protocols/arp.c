@@ -34,8 +34,11 @@
 
 #include <network/if.h>
 
-#include <mutek/timer.h>
 #include <mutek/printk.h>
+
+#include <device/class/timer.h>
+
+extern struct device_timer_s libnetwork_timer_dev;
 
 /**
    @this is the ARP Resolution structure
@@ -47,7 +50,7 @@ struct arp_resolution_s
   struct net_if_s			*interface;
   struct net_proto_s			*addressing;
   struct net_proto_s			*arp;
-  struct timer_event_s			timeout;
+  struct dev_timer_rq_s			timeout;
 };
 
 OBJECT_TYPE(arp_entry_obj, SIMPLE, struct arp_entry_s);
@@ -57,10 +60,10 @@ OBJECT_TYPE(arp_entry_obj, SIMPLE, struct arp_entry_s);
  */
 struct arp_entry_s
 {
+  dev_timer_value_t                     timestamp;
   uint_fast32_t				ip;
   uint8_t				mac[ETH_ALEN];
   bool_t				valid;
-  timer_delay_t				timestamp;
   struct arp_resolution_s		*resolution;
 
   arp_entry_obj_entry_t			obj_entry;
@@ -86,7 +89,9 @@ CONTAINER_KEY_TYPE(arp_table, PTR, SCALAR, ip);
 struct			net_pv_arp_s
 {
   arp_table_root_t	table;
-  struct timer_event_s	stale_timeout;
+  struct dev_timer_rq_s	stale_timeout;
+  dev_timer_delay_t     entry_timeout_delay;
+  dev_timer_delay_t     request_timeout_delay;
 };
 
 /*
@@ -98,8 +103,8 @@ struct			net_pv_rarp_s
   struct net_proto_s	*ip;
 };
 
-static TIMER_CALLBACK(arp_timeout);
-static TIMER_CALLBACK(arp_stale_timeout);
+static DEVTIMER_CALLBACK(arp_timeout);
+static DEVTIMER_CALLBACK(arp_stale_timeout);
 
 /*
  * ARP table functions.
@@ -133,10 +138,25 @@ NET_INITPROTO(arp_init)
 
   if (arp_table_init(&pv->table))
     return -1;
+
+  if (!device_check_accessor(&libnetwork_timer_dev))
+    return -1;
+
   pv->stale_timeout.callback = arp_stale_timeout;
-  pv->stale_timeout.pv = pv;
-  pv->stale_timeout.delay = ARP_STALE_TIMEOUT;
-  if (timer_add_event(&timer_ms, &pv->stale_timeout))
+  pv->stale_timeout.pvdata = pv;
+  if (dev_timer_init_sec(&libnetwork_timer_dev, &pv->stale_timeout.delay,
+                         ARP_STALE_TIMEOUT, 1000))
+    return -1;
+
+  if (dev_timer_init_sec(&libnetwork_timer_dev, &pv->entry_timeout_delay,
+                         ARP_ENTRY_TIMEOUT, 1000))
+    return -1;
+
+  if (dev_timer_init_sec(&libnetwork_timer_dev, &pv->request_timeout_delay,
+                         ARP_REQUEST_TIMEOUT, 1000))
+    return -1;
+
+  if (DEVICE_OP(&libnetwork_timer_dev, request, &pv->stale_timeout, 0))
     {
       arp_table_destroy(&pv->table);
       return -1;
@@ -154,7 +174,8 @@ NET_DESTROYPROTO(arp_destroy)
   struct arp_entry_s	*to_remove = NULL;
 
   /* clear timeout */
-  timer_cancel_event(&pv->stale_timeout, 0);
+  DEVICE_OP(&libnetwork_timer_dev, request, &pv->stale_timeout, 1);
+
   /* remove all items in the arp table */
   CONTAINER_FOREACH(arp_table, HASHLIST, &pv->table,
   {
@@ -206,7 +227,7 @@ OBJECT_DESTRUCTOR(arp_entry_obj)
 
   if (res != NULL)
     {
-      timer_cancel_event(&res->timeout, 0);
+      DEVICE_OP(&libnetwork_timer_dev, request, &res->timeout, 1);
       packet_queue_clear(&res->wait);
       packet_queue_destroy(&res->wait);
 
@@ -443,7 +464,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 	  struct net_packet_s	*waiting;
 
 	  /* cancel timeout */
-	  timer_cancel_event(&arp_entry->resolution->timeout, 0);
+          DEVICE_OP(&libnetwork_timer_dev, request, &arp_entry->resolution->timeout, 1);
 
 	  /* send waiting packets */
 	  while ((waiting = packet_queue_pop(&arp_entry->resolution->wait)))
@@ -463,7 +484,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 	}
     }
 
-  arp_entry->timestamp = timer_get_tick(&timer_ms);
+  DEVICE_OP(&libnetwork_timer_dev, get_value, &arp_entry->timestamp);
 
   return arp_entry;
 }
@@ -488,7 +509,7 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
     }
 
   if ((arp_entry = arp_table_lookup(&pv->table, ip)) != NULL &&
-      timer_get_tick(&timer_ms) - arp_entry->timestamp < ARP_ENTRY_TIMEOUT)
+      !dev_timer_check_timeout(&libnetwork_timer_dev, pv->entry_timeout_delay, &arp_entry->timestamp))
     {
       /* is the entry valid ? */
       if (arp_entry->valid)
@@ -500,7 +521,7 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
   else
     {
       struct arp_resolution_s	*res;
-      struct timer_event_s	*event;
+      struct dev_timer_rq_s	*event;
 
       net_debug("Looking for %P\n", &ip, 4);
 
@@ -530,9 +551,9 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
       res->retry = 0;
       event = &res->timeout;
       event->callback = arp_timeout;
-      event->pv = (void *)arp_entry;
-      event->delay = ARP_REQUEST_TIMEOUT;
-      timer_add_event(&timer_ms, event);
+      event->pvdata = (void *)arp_entry;
+      event->delay = pv->request_timeout_delay;
+      DEVICE_OP(&libnetwork_timer_dev, request, event, 0);
 
       /* and send the request */
       net_debug("Emitting request\n");
@@ -546,9 +567,9 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
  * Request timeout callback.
  */
 
-static TIMER_CALLBACK(arp_timeout)
+static DEVTIMER_CALLBACK(arp_timeout)
 {
-  struct arp_entry_s		*entry = (struct arp_entry_s *)pv;
+  struct arp_entry_s		*entry = (struct arp_entry_s *)rq->pvdata;
   struct arp_resolution_s	*res = entry->resolution;
   struct net_packet_s		*waiting;
   struct net_pv_arp_s		*pv_arp = (struct net_pv_arp_s *)res->arp->pv;
@@ -559,10 +580,7 @@ static TIMER_CALLBACK(arp_timeout)
     {
       /* retry */
       arp_request(res->interface, res->addressing, entry->ip);
-
-      /* set another timeout */
-      if (!timer_add_event(&timer_ms, timer))
-	return;
+      return 1;
     }
 
   /* otherwise, error */
@@ -580,18 +598,20 @@ static TIMER_CALLBACK(arp_timeout)
 
   /* free the arp entry */
   arp_entry_obj_delete(entry);
+
+  return 0;
 }
 
 /*
  * Stale entry timeout.
  */
 
-static TIMER_CALLBACK(arp_stale_timeout)
+static DEVTIMER_CALLBACK(arp_stale_timeout)
 {
-  struct net_pv_arp_s	*pv_arp = (struct net_pv_arp_s *)pv;
-  timer_delay_t		t = timer_get_tick(&timer_ms);
+  struct net_pv_arp_s	*pv_arp = (struct net_pv_arp_s *)rq->pvdata;
   struct arp_entry_s	*to_remove = NULL;
 
+  // FIXME use a sorted list
   CONTAINER_FOREACH(arp_table, HASHLIST, &pv_arp->table,
   {
     /* remove previously marked item */
@@ -604,7 +624,7 @@ static TIMER_CALLBACK(arp_stale_timeout)
       }
 
     /* look for an item to remove */
-    if (item->valid && t - item->timestamp > ARP_ENTRY_TIMEOUT)
+    if (item->valid && dev_timer_check_timeout(&libnetwork_timer_dev, pv_arp->entry_timeout_delay, &item->timestamp))
       {
 	to_remove = item;
       }
@@ -619,5 +639,5 @@ static TIMER_CALLBACK(arp_stale_timeout)
     }
 
   /* schedule the timer again */
-  timer_add_event(&timer_ms, &pv_arp->stale_timeout);
+  return 1;
 }

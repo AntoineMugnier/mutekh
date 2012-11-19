@@ -78,8 +78,8 @@ static uint_fast8_t	ethid = 0;
 OBJECT_CONSTRUCTOR(net_if_obj)
 {
   struct device_s	*dev = va_arg(ap, struct device_s *);
-  net_if_type_t		type = va_arg(ap, net_if_type_t);
-  uint_fast16_t		mtu = va_arg(ap, uint_fast16_t);
+  net_if_type_t		type = va_arg(ap, reg_t);
+  uint_fast16_t		mtu = va_arg(ap, reg_t);
 
   /* initialize the object */
   if (device_get_accessor(&obj->dev, dev, DRIVER_CLASS_NET, 0))
@@ -285,17 +285,20 @@ error_t			if_config(struct net_if_s *interface,
 	  /* add new set of protocols for IPv4 */
 	  if ((ip = net_proto_obj_new(NULL, &ip_protocol)) == NULL)
 	    {
+              net_debug("network: unable to create ip protocol\n");
 	      net_if_obj_refdrop(interface);
 	      return err;
 	    }
 	  if ((arp = net_proto_obj_new(NULL, &arp_protocol)) == NULL)
 	    {
+              net_debug("network: unable to create arp protocol\n");
 	      net_if_obj_refdrop(interface);
 	      net_proto_obj_refdrop(ip);
 	      return err;
 	    }
 	  if ((icmp = net_proto_obj_new(NULL, &icmp_protocol)) == NULL)
 	    {
+              net_debug("network: unable to create icmp protocol\n");
 	      net_if_obj_refdrop(interface);
 	      net_proto_obj_refdrop(ip);
 	      net_proto_obj_refdrop(arp);
@@ -305,13 +308,21 @@ error_t			if_config(struct net_if_s *interface,
 	  err = 0;
 	  /* if one of these fails, the refdrop will clean the memory */
 	  if (if_register_proto(interface, arp))
-	    err = -1;
-	  else
-	    if (if_register_proto(interface, icmp))
+            {
+              net_debug("network: unable to register arp protocol\n");
+              err = -1;
+            }
+	  else if (if_register_proto(interface, icmp))
+            {
+              net_debug("network: unable to register icmp protocol\n");
 	      err = -1;
-	    else
-	      err = if_register_proto(interface, ip, arp, icmp, IPV4_ADDR_GET(*address),
-				      IPV4_ADDR_GET(*mask));
+            }
+          else if (if_register_proto(interface, ip, arp, icmp, IPV4_ADDR_GET(*address),
+				      IPV4_ADDR_GET(*mask)))
+            {
+              net_debug("network: unable to register ip protocol\n");
+	      err = -1;
+            }
 
 	  net_proto_obj_refdrop(ip);
 	  net_proto_obj_refdrop(arp);

@@ -1,7 +1,7 @@
 
 DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
-objs += protocols.o packet.o if.o route.o dispatch.o
+objs += protocols.o packet.o if.o route.o dispatch.o init.o
 
 ifeq ($(CONFIG_NETWORK_FILTER), defined)
  objs += filter.o

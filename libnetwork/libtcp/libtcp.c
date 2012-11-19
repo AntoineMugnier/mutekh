@@ -50,7 +50,6 @@
 #include <netinet/tcp.h>
 #include <network/libtcp.h>
 
-#include <mutek/timer.h>
 #include <stdlib.h>
 
 #include <mutek/printk.h>
@@ -141,12 +140,12 @@ static TIMER_CALLBACK(tcp_close_session)
 
 static void	tcp_close_timeout(struct net_tcp_session_s	*session)
 {
-  struct timer_event_s	*timer;
+  struct dev_timer_rq_s	*timer;
 
   /* cancel periodical timer */
   timer_cancel_event(&session->period, 0);
 
-  if ((timer = mem_alloc(sizeof (struct timer_event_s), (mem_scope_sys))) == NULL)
+  if ((timer = mem_alloc(sizeof (struct dev_timer_rq_s), (mem_scope_sys))) == NULL)
     goto err;
   /* setup a timer */
   timer->callback = tcp_close_session;
@@ -413,7 +412,6 @@ static error_t		tcp_enqueue_send_buffer(struct net_tcp_session_s	*session)
 static void		tcp_do_send(struct net_tcp_session_s	*session)
 {
   struct net_tcp_seg_s	*seg;
-  timer_delay_t		rto;
 
   /* is there a waiting segment ? */
   if ((seg = tcp_segment_queue_pop(&session->unsent)) == NULL)
@@ -787,7 +785,6 @@ static void			tcp_acknowledge(struct net_tcp_session_s	*session)
 
       if (session->last_ack >= seg->seq + seg->size)
 	{
-	  timer_delay_t	rtt;
 
 	  net_debug("  Acknowledging segment %u\n", seg->seq);
 

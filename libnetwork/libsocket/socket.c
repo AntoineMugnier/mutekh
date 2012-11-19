@@ -24,7 +24,6 @@
 #include <network/socket.h>
 #include <network/socket_internals.h>
 #include <semaphore.h>
-#include <mutek/timer.h>
 
 /*
  * Shortcut macro to get an option verifying user arguments.
@@ -426,8 +425,7 @@ struct net_packet_s	*socket_grab_packet(socket_t			fd,
 					    struct semaphore_s		*recv_sem)
 {
   struct net_packet_s		*packet;
-  timer_delay_t			start;
-  struct timer_event_s		timeout;
+  struct dev_timer_rq_s		timeout;
   bool_t			timeout_started = 0;
 
   start = timer_get_tick(&timer_ms);
@@ -493,8 +491,7 @@ struct net_buffer_s	*socket_grab_buffer(socket_t			fd,
 					    struct semaphore_s		*recv_sem)
 {
   struct net_buffer_s		*buffer;
-  timer_delay_t			start;
-  struct timer_event_s		timeout;
+  struct dev_timer_rq_s		timeout;
   bool_t			timeout_started = 0;
 
   start = timer_get_tick(&timer_ms);

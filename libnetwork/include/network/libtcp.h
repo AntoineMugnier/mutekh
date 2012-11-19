@@ -40,7 +40,6 @@
 #include <gpct/cont_hashlist.h>
 #include <gpct/cont_clist.h>
 #include <gpct/object_simple.h>
-#include <mutek/timer.h>
 
 /*
  * A few constants
@@ -115,7 +114,7 @@ struct					net_tcp_seg_s
     struct
     {
       struct net_tcp_session_s		*session;
-      struct timer_event_s		timeout;
+      struct dev_timer_rq_s		timeout;
     }					send;
     struct
     {
@@ -158,7 +157,7 @@ struct					net_tcp_session_s
   uint_fast16_t				recv_offset;
   uint8_t				*send_buffer;
   uint_fast16_t				send_offset;
-  struct timer_event_s			period;
+  struct dev_timer_rq_s			period;
 
   /* callbacks */
   tcp_connect_t				*connect;
@@ -171,9 +170,7 @@ struct					net_tcp_session_s
   void					*accept_data;
 
   /* rtt & other variables */
-  timer_delay_t				srtt;		/* smoothed round-trip time */
   bool_t				backoff;	/* Karn's backoff enabled */
-  timer_delay_t				last_ack_time;	/* last ACK time */
   uint_fast32_t				last_ack;	/* last ACK value */
   uint_fast8_t				dup_acks;	/* number of duplicate ACKs */
 

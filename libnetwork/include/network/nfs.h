@@ -40,7 +40,6 @@
 #include <gpct/cont_hashlist.h>
 
 #include <semaphore.h>
-#include <mutek/timer.h>
 
 /*
  * RPC timeout.
@@ -161,7 +160,7 @@ typedef uint8_t nfs_handle_t[FHSIZE];
 struct					rpcb_s
 {
   uint_fast32_t				id;
-  struct timer_event_s			timeout;
+  struct dev_timer_rq_s			timeout;
   void					*data;
   size_t				size;
   struct semaphore_s					sem;

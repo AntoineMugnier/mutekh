@@ -56,7 +56,6 @@
 #include <mutek/printk.h>
 
 #include <semaphore.h>
-#include <mutek/timer.h>
 
 CONTAINER_FUNC(rpcb, HASHLIST, static inline, rpcb, id);
 CONTAINER_KEY_FUNC(rpcb, HASHLIST, static inline, rpcb, id);

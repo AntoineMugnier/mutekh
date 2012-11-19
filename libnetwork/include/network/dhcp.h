@@ -86,7 +86,6 @@
 #define DHCP_DFL_LEASE	120000 /* 2 minutes */
 
 #include <network/if.h>
-#include <mutek/timer.h>
 #include <mutek/scheduler.h>
 #include <mutek/semaphore.h>
 
@@ -98,10 +97,9 @@ struct dhcp_lease_s
   struct sched_context_s context;
   uint8_t stack[2000];
   struct net_if_s	*interface;
-  timer_delay_t		delay;
   uint_fast32_t		serv;
   uint_fast32_t		ip;
-  struct timer_event_s	*timer;
+  struct dev_timer_rq_s	*timer;
   struct semaphore_s			sem;
   bool_t		exit;
 };
