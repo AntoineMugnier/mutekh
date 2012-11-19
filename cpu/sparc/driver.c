@@ -41,7 +41,7 @@
 # include <arch/mem_checker.h>
 #endif
 
-#define ICU_SPARC_MAX_VECTOR    	15
+#define ICU_SPARC_MAX_VECTOR    	14  /* exclude nmi */
 
 #ifdef CONFIG_CPU_SPARC_SINGLE_IRQ_EP
 #define ICU_SPARC_SINKS_COUNT	1
@@ -134,7 +134,6 @@ static DEVICU_ENABLE_IRQ(sparc_icu_enable_irq)
 #endif
 
 #if defined(CONFIG_CPU_SPARC_SINGLE_IRQ_EP)
-
   if (irq_id >= ICU_SPARC_MAX_VECTOR)
     return 0;
 

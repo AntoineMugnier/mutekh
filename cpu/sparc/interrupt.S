@@ -95,9 +95,14 @@ __exception_base_ptr:
         PUT_ENTRIES     1,    11,   sparc_excep_entry
         PUT_EQ_ENTRIES  0x0c, 0x10, sparc_excep_entry,  0
 
-#ifdef CONFIG_HEXO_IRQ
       /* 15 irqs 0x11 - 0x1f */
+#ifdef CONFIG_HEXO_IRQ
+# ifdef CONFIG_CPU_SPARC_BLOCK_NMI
+        PUT_ENTRIES     0,    13,   sparc_irq_entry
+        PUT_ENTRY       14,         sparc_nmi_entry
+# else
         PUT_ENTRIES     0,    14,   sparc_irq_entry
+# endif
 #else
         PUT_EQ_ENTRIES  0,    14,   sparc_excep_entry, 0
 #endif
@@ -282,6 +287,12 @@ FUNC_END(sparc_syscall_entry)
 
 
 #ifdef CONFIG_HEXO_IRQ
+FUNC_START(.text, sparc_nmi_entry)
+        // FIXME handle nmi here
+        jmp     %l1
+        rett    %l2
+FUNC_END(sparc_nmi_entry)
+
 FUNC_START(.text, sparc_irq_entry)
 
         SPARC_EXCEPT_SAVE
