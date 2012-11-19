@@ -503,6 +503,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
         if (!device_icu_irq_enable(src, r->irq.irq_id, src, src))
           {
             printk("device: Unable to enable IRQ output %u of device %p, no suitable irq path found.\n", r->irq.irq_id, dev);
+            err = -EBUSY;
             goto error;
           }
 
@@ -515,7 +516,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
     if (!done[i])
       {
         printk("device: Unable to link IRQ source end-point %u of device %p, no IRQ resource entry.\n", i, dev);
-        err = -EINVAL;
+        err = -ENOENT;
         goto error;
       }
 
