@@ -19,3 +19,7 @@ ifeq ($(CONFIG_DRIVER_GAISLER_GPTIMER), defined)
 subdirs += gptimer
 endif
 
+ifeq ($(CONFIG_DRIVER_GAISLER_GRETH), defined)
+subdirs += greth
+endif
+

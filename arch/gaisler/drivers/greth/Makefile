@@ -1,0 +1,3 @@
+
+objs = greth.o
+
