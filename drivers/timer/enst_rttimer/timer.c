@@ -46,8 +46,6 @@
 # define RT_TIMER_ENDIAN32(x) endian_be32(x)
 #endif
 
-#define ENST_RTTIMER_DEFAULT_PERIOD 1
-
 struct enst_rttimer_state_s
 {
 #ifdef CONFIG_DEVICE_IRQ
@@ -430,7 +428,7 @@ static DEV_INIT(enst_rttimer_init)
   cpu_mem_write_32(pv->addr + RT_TIMER_IP_ADDR, 0xffffffff);
 
   /* set default resolution */
-  dev_timer_res_t resolution = ENST_RTTIMER_DEFAULT_PERIOD;
+  dev_timer_res_t resolution = CONFIG_DRIVER_ENST_RTTIMER_PERIOD;
   device_get_param_uint(dev, "period", &resolution);
   if (resolution < 1)
     resolution = 1;
