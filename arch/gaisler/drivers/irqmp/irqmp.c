@@ -306,6 +306,8 @@ static DEV_INIT(gaisler_irqmp_init)
 #endif
     device_irq_source_init(dev, pv->srcs, pv->srcs_count, &gaisler_irqmp_source_process);
 
+  cpu_mem_write_32(pv->addr + 0, 0);  // set level register
+
   if (device_irq_source_link(dev, pv->srcs, pv->srcs_count, 0))
     goto err_mem2;
 
