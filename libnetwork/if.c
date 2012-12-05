@@ -178,6 +178,8 @@ struct net_if_s	*if_register(struct device_s	*dev,
       return NULL;
     }
 
+  interface->dispatch = NULL;
+
   printk("Registered new interface %s (MTU: %u, MAC: %P)\n",
          interface->name, interface->mtu, interface->mac, interface->mac_len);
 
