@@ -37,10 +37,6 @@ typedef uintptr_t	size_t;
 typedef intptr_t	ssize_t;
 /** offset integer type */
 typedef intptr_t	off_t;
-/** biggest unsigned integer type available */
-typedef uint64_t	uintmax_t;
-/** biggest signed integer type available */
-typedef int64_t		intmax_t;
 /** cpu integer id */
 typedef uint8_t		cpu_id_t;
 
