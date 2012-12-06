@@ -11,10 +11,6 @@ ifeq ($(CONFIG_DRIVER_SOCLIB_VCI_ICU), defined)
 subdirs += vci_icu
 endif
 
-ifeq ($(CONFIG_DRIVER_SOCLIB_VCI_DMA), defined)
-subdirs += vci_dma
-endif
-
 ifeq ($(CONFIG_DRIVER_SOCLIB_VCI_MULTI_TTY), defined)
 subdirs += vci_multi_tty
 endif

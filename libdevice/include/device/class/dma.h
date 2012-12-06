@@ -62,8 +62,19 @@ typedef DEVDMA_CALLBACK(devdma_callback_t);
 struct dev_dma_rq_s
 {
   size_t			size;
-  const void			*src;
-  void          		*dst;
+
+  /** Source address in source address space */
+  uintptr_t			src;
+  /** Destination address in destination address space */
+  uintptr_t          		dst;
+
+#ifdef CONFIG_DEVICE_ADDRESS_SPACES
+  /** Source address space identifier */
+  address_space_id_t            src_as;
+  /** Destination address space identifier */
+  address_space_id_t            dst_as;
+#endif
+
   uint_fast8_t                  flags;
 
   devdma_callback_t		*callback;      //< callback function
@@ -112,8 +123,8 @@ DRIVER_CLASS_TYPES(dma,
     @returns error code.
 */
 config_depend(CONFIG_DEVICE_DMA)
-error_t dev_dma_wait_copy(const struct device_dma_s *cdev,
-                          const void *src, void *dst,
+error_t dev_dma_wait_copy(const struct device_dma_s *ddev,
+                          uintptr_t src, uintptr_t dst,
                           size_t size, uint_fast8_t flags);
 
 /** Synchronous dma helper function. This function spins in a loop
@@ -122,9 +133,27 @@ error_t dev_dma_wait_copy(const struct device_dma_s *cdev,
     @returns error code.
 */
 config_depend(CONFIG_DEVICE_DMA)
-error_t dev_dma_spin_copy(const struct device_dma_s *cdev,
-                          const void *src, void *dst,
+error_t dev_dma_spin_copy(const struct device_dma_s *ddev,
+                          uintptr_t src, uintptr_t dst,
                           size_t size, uint_fast8_t flags);
+
+/** Same as @ref dev_dma_wait_copy with explicit address spaces for
+    source and destination addresses. */
+config_depend_and2(CONFIG_DEVICE_DMA, CONFIG_DEVICE_ADDRESS_SPACES)
+error_t dev_dma_wait_copy_as(const struct device_dma_s *ddev,
+                             uintptr_t src, uintptr_t dst,
+                             size_t size, uint_fast8_t flags,
+                             address_space_id_t src_as,
+                             address_space_id_t dst_as);
+
+/** Same as @ref dev_dma_spin_copy with explicit address spaces for
+    source and destination addresses. */
+config_depend_and2(CONFIG_DEVICE_DMA, CONFIG_DEVICE_ADDRESS_SPACES)
+error_t dev_dma_spin_copy_as(const struct device_dma_s *ddev,
+                             uintptr_t src, uintptr_t dst,
+                             size_t size, uint_fast8_t flags,
+                             address_space_id_t src_as,
+                             address_space_id_t dst_as);
 
 #endif
 

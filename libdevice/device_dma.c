@@ -49,8 +49,12 @@ static DEVDMA_CALLBACK(dev_dma_lock_request_cb)
 }
 
 static error_t dev_dma_lock_request(const struct device_dma_s *ddev,
-                                    const void *src, void *dst,
+                                    uintptr_t src, uintptr_t dst,
                                     size_t size, uint_fast8_t flags,
+#ifdef CONFIG_DEVICE_ADDRESS_SPACES
+                                    address_space_id_t src_as,
+                                    address_space_id_t dst_as,
+#endif
                                     devdma_callback_t *callback)
 {
   struct dev_dma_rq_s rq;
@@ -64,6 +68,10 @@ static error_t dev_dma_lock_request(const struct device_dma_s *ddev,
   rq.callback = callback;
   rq.error = 0;
   rq.flags = flags;
+#ifdef CONFIG_DEVICE_ADDRESS_SPACES
+  rq.src_as = src_as;
+  rq.dst_as = dst_as;
+#endif
   rq.src = src;
   rq.dst = dst;
   rq.size = size;
@@ -96,8 +104,12 @@ static DEVDMA_CALLBACK(dev_dma_wait_request_cb)
 }
 
 static error_t dev_dma_wait_request(const struct device_dma_s *ddev,
-                                    const void *src, void *dst,
+                                    uintptr_t src, uintptr_t dst,
                                     size_t size, uint_fast8_t flags,
+# ifdef CONFIG_DEVICE_ADDRESS_SPACES
+                                    address_space_id_t src_as,
+                                    address_space_id_t dst_as,
+# endif
                                     devdma_callback_t *callback)
 {
   struct dev_dma_rq_s rq;
@@ -113,6 +125,10 @@ static error_t dev_dma_wait_request(const struct device_dma_s *ddev,
   rq.callback = callback;
   rq.error = 0;
   rq.flags = flags;
+# ifdef CONFIG_DEVICE_ADDRESS_SPACES
+  rq.src_as = src_as;
+  rq.dst_as = dst_as;
+# endif
   rq.src = src;
   rq.dst = dst;
   rq.size = size;
@@ -143,20 +159,61 @@ static error_t dev_dma_wait_request(const struct device_dma_s *ddev,
 
 
 error_t dev_dma_wait_copy(const struct device_dma_s *ddev,
-                          const void *src, void *dst,
+                          uintptr_t src, uintptr_t dst,
                           size_t size, uint_fast8_t flags)
 {
 #ifdef CONFIG_MUTEK_SCHEDULER
-  return dev_dma_wait_request(ddev, src, dst, size, flags, dev_dma_wait_request_cb);
+  return dev_dma_wait_request(ddev, src, dst, size, flags,
+# ifdef CONFIG_DEVICE_ADDRESS_SPACES
+                              0, 0,
+# endif
+                              dev_dma_wait_request_cb);
 #else
-  return dev_dma_lock_request(ddev, src, dst, size, flags, dev_dma_lock_request_cb);
+  return dev_dma_lock_request(ddev, src, dst, size, flags,
+# ifdef CONFIG_DEVICE_ADDRESS_SPACES
+                              0, 0,
+# endif
+                              dev_dma_lock_request_cb);
 #endif
 }
 
 error_t dev_dma_spin_copy(const struct device_dma_s *ddev,
-                          const void *src, void *dst,
+                          uintptr_t src, uintptr_t dst,
                           size_t size, uint_fast8_t flags)
 {
-  return dev_dma_lock_request(ddev, src, dst, size, flags, dev_dma_lock_request_cb);
+  return dev_dma_lock_request(ddev, src, dst, size, flags,
+# ifdef CONFIG_DEVICE_ADDRESS_SPACES
+                              0, 0,
+# endif
+                              dev_dma_lock_request_cb);
 }
+
+
+#ifdef CONFIG_DEVICE_ADDRESS_SPACES
+error_t dev_dma_wait_copy_as(const struct device_dma_s *ddev,
+                             uintptr_t src, uintptr_t dst,
+                             size_t size, uint_fast8_t flags,
+                             address_space_id_t src_as,
+                             address_space_id_t dst_as)
+{
+# ifdef CONFIG_MUTEK_SCHEDULER
+  return dev_dma_wait_request(ddev, src, dst, size, flags,
+                              src_as, dst_as, dev_dma_wait_request_cb);
+# else
+  return dev_dma_lock_request(ddev, src, dst, size, flags,
+                              src_as, dst_as, dev_dma_lock_request_cb);
+# endif
+}
+
+error_t dev_dma_spin_copy_as(const struct device_dma_s *ddev,
+                             uintptr_t src, uintptr_t dst,
+                             size_t size, uint_fast8_t flags,
+                             address_space_id_t src_as,
+                             address_space_id_t dst_as)
+{
+  return dev_dma_lock_request(ddev, src, dst, size, flags,
+                              src_as, dst_as, dev_dma_lock_request_cb);
+}
+
+#endif
 

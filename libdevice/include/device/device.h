@@ -35,6 +35,8 @@ struct driver_s;
 #include <hexo/types.h>
 #include <hexo/error.h>
 
+typedef uint8_t address_space_id_t;
+
 /** Number of resource slots for statically allocated @ref device_s objects */
 #define DEVICE_STATIC_RESOURCE_COUNT	2
 
@@ -459,6 +461,19 @@ error_t device_mem_map(struct device_s *dev, uint_fast8_t mask)
     return 0;
 }
 
+/** @This specifies type of access on address space of a device. */
+enum device_access_type_e
+{
+  DEVICE_ACCESS_READ  = 1,
+  DEVICE_ACCESS_WRITE = 2,
+};
+
+/** @This finds the master interface number (@tt id) of the device @tt dev
+    suitable to perform a memory access of types @tt ops on the device
+    @tt target. */
+config_depend(CONFIG_DEVICE_ADDRESS_SPACES)
+error_t device_get_address_route(struct device_s *dev, struct device_s *target,
+                                 enum device_access_type_e ops, uint_fast8_t *id);
 
 #endif
 
