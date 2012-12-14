@@ -13,4 +13,6 @@
 %include $(SRC_DIR)/examples/common/platforms.conf
 
   CONFIG_HEXO_IRQ defined
-  CONFIG_ARCH_SMP defined
+
+CONFIG_CPU_MAXCOUNT 5
+

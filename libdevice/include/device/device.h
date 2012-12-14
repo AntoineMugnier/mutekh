@@ -434,14 +434,8 @@ typedef DEVICE_TREE_WALKER(device_tree_walker_t);
 config_depend(CONFIG_DEVICE_TREE)
 bool_t device_tree_walk(struct device_node_s *root, device_tree_walker_t *walker, void *priv);
 
-/** @This returns first device with the @tt CPU flag set and matching
-    specified numerical ids. The -1 value can be used as wildcard for
-    both ids but the device still has to have an id resource attached. */
-config_depend(CONFIG_DEVICE_TREE)
-struct device_s *device_get_cpu(uint_fast8_t major_id, uint_fast8_t minor_id);
-
-/** @This returns the number of processor device present in the
-    devices tree. */
+/** @This returns the number of processor devices present in the
+    devices tree with a properly initialized driver attached. */
 uint_fast8_t device_get_cpu_count();
 
 #ifdef CONFIG_VMEM

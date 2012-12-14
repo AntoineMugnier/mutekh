@@ -41,28 +41,15 @@ C_HEADER_BEGIN
 #include "error.h"
 #include "interrupt.h"
 
-struct arch_lock_s;
+struct __arch_lock_s;
 
-/** @internal */
-static error_t arch_lock_init(struct arch_lock_s *lock);
-/** @internal */
-static void arch_lock_destroy(struct arch_lock_s *lock);
-/** @internal */
-static bool_t arch_lock_try(struct arch_lock_s *lock);
-/** @internal */
-static void arch_lock_spin(struct arch_lock_s *lock);
-/** @internal */
-static bool_t arch_lock_state(struct arch_lock_s *lock);
-/** @internal */
-static void arch_lock_release(struct arch_lock_s *lock);
-
-#include "arch/hexo/lock.h"
+#include <arch/hexo/lock.h>
 
 struct			lock_s
 {
 #ifdef CONFIG_ARCH_SMP
   /** architecture specific lock data */
-  struct arch_lock_s	arch;
+  struct __arch_lock_s	arch;
 #endif
 };
 
@@ -78,7 +65,7 @@ typedef struct lock_s	lock_t;
 static inline error_t lock_init(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
-  return arch_lock_init(&lock->arch);
+  return __arch_lock_init(&lock->arch);
 #else
   return 0;
 #endif
@@ -89,7 +76,7 @@ static inline error_t lock_init(lock_t *lock)
 static inline void lock_destroy(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
-  return arch_lock_destroy(&lock->arch);
+  return __arch_lock_destroy(&lock->arch);
 #endif
 }
 
@@ -99,7 +86,7 @@ static inline bool_t lock_try(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   order_smp_mem();
-  return arch_lock_try(&lock->arch);
+  return __arch_lock_try(&lock->arch);
 #else
   return 0;
 #endif
@@ -111,7 +98,7 @@ static inline void lock_spin(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   order_smp_mem();
-  arch_lock_spin(&lock->arch);
+  __arch_lock_spin(&lock->arch);
 #endif
 }
 
@@ -120,7 +107,7 @@ static inline void lock_spin(lock_t *lock)
 static inline bool_t lock_state(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
-  return arch_lock_state(&lock->arch);
+  return __arch_lock_state(&lock->arch);
 #else
   return 0;
 #endif
@@ -144,7 +131,7 @@ static inline void lock_release(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   order_smp_mem();
-  arch_lock_release(&lock->arch);
+  __arch_lock_release(&lock->arch);
 #endif
 }
 

@@ -467,45 +467,12 @@ bool_t device_tree_walk(struct device_node_s *root, device_tree_walker_t *walker
   return _device_tree_walk(root, walker, priv);
 }
 
-struct device_get_cpu_ctx_s
-{
-  struct device_s *cpu;
-  uint_fast8_t major;
-  uint_fast8_t minor;
-};
-
-static DEVICE_TREE_WALKER(device_get_cpu_r)
-{
-  struct device_get_cpu_ctx_s *ctx = priv;
-
-  if (dev->node.flags & DEVICE_FLAG_CPU)
-    {
-      uintptr_t maj, min;
-      if (device_res_get_uint(dev, DEV_RES_ID, 0, &maj, &min))
-        return 0;
-
-      if ((ctx->major == maj || ctx->major == -1) && (ctx->minor == min || ctx->minor == -1))
-        {
-          ctx->cpu = dev;
-          return 1;
-        }
-    }
-
-  return 0;
-}
-
-struct device_s *device_get_cpu(uint_fast8_t major_id, uint_fast8_t minor_id)
-{
-  struct device_get_cpu_ctx_s ctx = { NULL, major_id, minor_id };
-  device_tree_walk(NULL, &device_get_cpu_r, &ctx);
-  return ctx.cpu;
-}
-
 static DEVICE_TREE_WALKER(count_cpus_r)
 {
   uint_fast8_t *count = priv;
 
-  if (dev->node.flags & DEVICE_FLAG_CPU)
+  if ((dev->node.flags & DEVICE_FLAG_CPU) &&
+      dev->status == DEVICE_DRIVER_INIT_DONE)
     (*count)++;
 
   return 0;

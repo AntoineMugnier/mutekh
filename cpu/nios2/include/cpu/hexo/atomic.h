@@ -35,7 +35,7 @@
 #define HAS_CPU_ATOMIC_INC
 
 static inline bool_t
-cpu_atomic_inc(atomic_int_t *a)
+__cpu_atomic_inc(atomic_int_t *a)
 {
   reg_t result, tmp;
 
@@ -57,7 +57,7 @@ cpu_atomic_inc(atomic_int_t *a)
 #define HAS_CPU_ATOMIC_DEC
 
 static inline bool_t
-cpu_atomic_dec(atomic_int_t *a)
+__cpu_atomic_dec(atomic_int_t *a)
 {
   reg_t result, tmp;
 
@@ -78,7 +78,7 @@ cpu_atomic_dec(atomic_int_t *a)
 #define HAS_CPU_ATOMIC_TESTSET
 
 static inline bool_t
-cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
+__cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 {
   reg_t result, tmp, loaded;
   reg_t mask = 1 << n;
@@ -103,7 +103,7 @@ cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_WAITSET
 
 static inline void
-cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
+__cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
 {
   reg_t tmp, loaded;
   reg_t mask = 1 << n;
@@ -126,7 +126,7 @@ cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_TESTCLR
 
 static inline bool_t
-cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
+__cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 {
   reg_t result, tmp, loaded;
   reg_t mask = 1 << n;
@@ -151,7 +151,7 @@ cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_WAITCLR
 
 static inline void
-cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
+__cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 {
 
   reg_t tmp, loaded;
@@ -175,7 +175,7 @@ cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_SET
 
 static inline void
-cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
+__cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
 {
   reg_t tmp;
   reg_t mask = 1 << n;
@@ -195,7 +195,7 @@ cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
 #define HAS_CPU_ATOMIC_CLR
 
 static inline void
-cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
+__cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 {
   reg_t tmp;
   reg_t mask = ~(1 << n);
@@ -213,7 +213,7 @@ cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 }
 
 static inline bool_t
-cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
+__cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t new)
 {
     reg_t tmp, loaded;
 

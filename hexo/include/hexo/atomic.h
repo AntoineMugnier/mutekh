@@ -30,47 +30,18 @@
   @module{Hexo}
   @short Atomic memory operations primitives
 
-  CPU atomic functions @tt cpu_atomic_* use standard integer values of type
-  @ref atomic_int_t and provide atomic access when available.
+  When SMP is enabled, atomic operations are provided either by
+  processor atomic instructions or by spin locked access to a regular
+  integer value, depending on processor and platform support.
 
-  Atomicity is not garanted if system architecture does not handle
-  atomic bus access. Please consider using arch @ref atomic_t and @tt atomic_*
-  function instead in general case.
+  In the same way, spin lock implementation can either rely on
+  processor atomic operations or use an architecture specific locking
+  mechanism.
 
-  Some CPU may have partial or missing atomic access capabilities,
-  please check for @tt HAS_CPU_ATOMIC_* macro defined in @ref @hexo/atomic.h header.
-
-  Arch atomic functions use architecture specific structures of type
-  @ref atomic_t and provide locked access on atomic integer values. It may
-  use cpu atomic operations or additional spin lock depending on
-  system archicture hardware capabilities. Use it for general purpose
-  atomic values access.
-
-  CPU atomic functions include memory barriers to ensure the consistency of
-  memory accesses on weakly-ordered memory architectures.
- */
-
-#ifdef CONFIG_CPU_SMP_CAPABLE
-# include <cpu/hexo/atomic.h>
-#else
-/* 
-   We have better using processor atomic operations when supported
-   even for single processor systems because atomic_na implementation
-   need to disable and restore interrupts for each access.
- */
-# include <cpu/common/include/cpu/hexo/atomic_na.h>
-#endif
-
-/** @multiple @internal */
-static bool_t cpu_atomic_inc(atomic_int_t *a);
-static bool_t cpu_atomic_dec(atomic_int_t *a);
-static bool_t cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n);
-static void cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n);
-static bool_t cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n);
-static void cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n);
-static void cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n);
-static void cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n);
-static bool_t cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future);
+  Atomic functions may include some memory barriers to ensure the
+  consistency of memory accesses on weakly-ordered memory
+  architectures.
+*/
 
 /** Atomic value type */
 typedef struct arch_atomic_s atomic_t;
@@ -116,24 +87,40 @@ static bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_
 # define ATOMIC_INITIALIZER(n)	/* defined in implementation */
 #endif
 
-#include <arch/hexo/atomic.h>
 
-/* provide some default implementations based on compare and swap for
-   other atomic functions unless a better implementation is provided
-   by processor support code. */
+#if defined(CONFIG_CPU_SMP_CAPABLE) && defined(CONFIG_ARCH_SMP_CAPABLE)
+/* 
+   We have better using processor atomic operations when supported
+   even for single processor systems because atomic_na implementation
+   need to disable and restore interrupts for each access.
+ */
+# include <cpu/hexo/atomic.h>
+#else
+/*
+  Atomic operations are performed by disabling interrupts in other
+  single processor cases.
+ */
+# include <cpu/common/include/cpu/hexo/atomic_na.h>
+#endif
+
+
 
 #ifdef HAS_CPU_ATOMIC_COMPARE_AND_SWAP
+
+/* Provide some default implementations based on compare and swap for
+   other atomic functions unless a better implementation has been
+   defined in processor support code. */
 
 # ifndef HAS_CPU_ATOMIC_INC
 #  define HAS_CPU_ATOMIC_INC
 static inline bool_t
-cpu_atomic_inc(atomic_int_t *a)
+__cpu_atomic_inc(atomic_int_t *a)
 {
   atomic_int_t old;
   do {
     asm ("" : "+m" (*a));
     old = *a;
-  } while (!cpu_atomic_compare_and_swap(a, old, old + 1));
+  } while (!__cpu_atomic_compare_and_swap(a, old, old + 1));
 
   return old + 1 != 0;
 }
@@ -142,13 +129,13 @@ cpu_atomic_inc(atomic_int_t *a)
 # ifndef HAS_CPU_ATOMIC_DEC
 #  define HAS_CPU_ATOMIC_DEC
 static inline bool_t
-cpu_atomic_dec(atomic_int_t *a)
+__cpu_atomic_dec(atomic_int_t *a)
 {
   atomic_int_t old;
   do {
     asm ("" : "+m" (*a));
     old = *a;
-  } while (!cpu_atomic_compare_and_swap(a, old, old - 1));
+  } while (!__cpu_atomic_compare_and_swap(a, old, old - 1));
 
   return old - 1 != 0;
 }
@@ -157,7 +144,7 @@ cpu_atomic_dec(atomic_int_t *a)
 # ifndef HAS_CPU_ATOMIC_TESTSET
 #  define HAS_CPU_ATOMIC_TESTSET
 static inline bool_t
-cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
+__cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 {
   atomic_int_t mask = 1 << n;
   atomic_int_t old;
@@ -167,7 +154,7 @@ cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
     asm ("" : "+m" (*a));
     old = *a;
     res = (old & mask) != 0;
-  } while (!res && !cpu_atomic_compare_and_swap(a, old, old | mask));
+  } while (!res && !__cpu_atomic_compare_and_swap(a, old, old | mask));
 
   return res;
 }
@@ -176,7 +163,7 @@ cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 # ifndef HAS_CPU_ATOMIC_TESTCLR
 #  define HAS_CPU_ATOMIC_TESTCLR
 static inline bool_t
-cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
+__cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 {
   atomic_int_t mask = 1 << n;
   atomic_int_t old;
@@ -186,7 +173,7 @@ cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
     asm ("" : "+m" (*a));
     old = *a;
     res = (old & mask) != 0;
-  } while (res && !cpu_atomic_compare_and_swap(a, old, old & ~mask));
+  } while (res && !__cpu_atomic_compare_and_swap(a, old, old & ~mask));
 
   return res;
 }
@@ -196,9 +183,9 @@ cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 #if defined(HAS_CPU_ATOMIC_TESTSET) && !defined(HAS_CPU_ATOMIC_WAITSET)
 # define HAS_CPU_ATOMIC_WAITSET
 static inline void
-cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
+__cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
 {
-  while (cpu_atomic_bit_testset(a, n))
+  while (__cpu_atomic_bit_testset(a, n))
     ;
 }
 #endif
@@ -206,9 +193,9 @@ cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
 #if defined(HAS_CPU_ATOMIC_TESTCLR) && !defined(HAS_CPU_ATOMIC_WAITCLR)
 # define HAS_CPU_ATOMIC_WAITCLR
 static inline void
-cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
+__cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 {
-  while (!cpu_atomic_bit_testclr(a, n))
+  while (!__cpu_atomic_bit_testclr(a, n))
     ;
 }
 #endif
@@ -216,20 +203,22 @@ cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 #if defined(HAS_CPU_ATOMIC_TESTSET) && !defined(HAS_CPU_ATOMIC_SET)
 # define HAS_CPU_ATOMIC_SET
 static inline void
-cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
+__cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
 {
-  cpu_atomic_bit_testset(a, n);
+  __cpu_atomic_bit_testset(a, n);
 }
 #endif
 
 #if defined(HAS_CPU_ATOMIC_TESTCLR) && !defined(HAS_CPU_ATOMIC_CLR)
 #define HAS_CPU_ATOMIC_CLR
 static inline void
-cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
+__cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 {
-  cpu_atomic_bit_testclr(a, n);
+  __cpu_atomic_bit_testclr(a, n);
 }
 #endif
+
+#include <arch/hexo/atomic.h>
 
 #endif
 

@@ -805,19 +805,20 @@ sub output_inits_tree_
 
     foreach my $init (sort inits_sort_predicate @$actions) {
 
-        if (!$init->{defined}) {
-            print mycolor('red');
-        }
+         my $parent = $init->{parent};
+         if (defined $parent) {
+             $parent = 'when '.get_token_name_list( $parent, " & " );
+         }
 
-        my $parent = $init->{parent};
-        $parent = 'when '.get_token_name_list( $parent, " & " ) if defined $parent;
+         if (!$init->{defined}) {
+             print mycolor('red');
+         }
+         printf "%-50s %s\n", "    "x$depth." * ".$init->{name}, $parent;
+         print mycolor('reset');
 
-        printf "%-50s %s\n", "    "x$depth." * ".$init->{name}, $parent;
-        print mycolor('reset');
-
-        if ( my $chld = $init->{childs} ) {
-            output_inits_tree_( $chld, $depth + 1 );
-        }
+         if ( my $chld = $init->{childs} ) {
+             output_inits_tree_( $chld, $depth + 1 );
+         }
     }
 }
 

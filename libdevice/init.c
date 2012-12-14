@@ -33,6 +33,27 @@ void libdevice_drivers_init()
 
 #include <device/class/cpu.h>
 
+/* get pointer to current processor device from cpu_id() */
+static DEVICE_TREE_WALKER(device_get_cpu_r)
+{
+  struct device_s **cpu_dev = priv;
+
+  if (dev->node.flags & DEVICE_FLAG_CPU)
+    {
+      uintptr_t maj, min;
+      if (device_res_get_uint(dev, DEV_RES_ID, 0, &maj, &min))
+        return 0;
+
+      if (maj == cpu_id() && min == 0)
+        {
+          *cpu_dev = dev;
+          return 1;
+        }
+    }
+
+  return 0;
+}
+
 void libdevice_cpu_regs_initsmp()
 {
   if (cpu_isbootstrap())
@@ -42,8 +63,9 @@ void libdevice_cpu_regs_initsmp()
 
   uint_fast8_t id = cpu_id();
 
-  /* find processor device */
-  struct device_s *dev = device_get_cpu(id, 0);
+  /* find processor device from cpu_id */
+  struct device_s *dev = NULL;
+  device_tree_walk(NULL, &device_get_cpu_r, &dev);
 
   if (!dev)
     {
@@ -53,12 +75,14 @@ void libdevice_cpu_regs_initsmp()
 
   struct device_cpu_s cpu_dev;
 
+  /* get cpu API in processor device driver */
   if (device_get_accessor(&cpu_dev, dev, DRIVER_CLASS_CPU, 0))
     {
-      printk("\nerror: Unable to use driver of CPU %i (device %p).\n", id, dev);
+      printk("\nerror: Unable to use driver to initialize CPU %i (device %p).\n", id, dev);
       abort();
     }
 
+  /* perform initialization of processor registers */
   DEVICE_OP(&cpu_dev, reg_init);
 
   device_put_accessor(&cpu_dev);

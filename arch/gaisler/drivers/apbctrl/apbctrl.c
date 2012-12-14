@@ -60,9 +60,9 @@ static DEVENUM_MATCH_DRIVER(apbctrl_match_driver)
 }
 
 
-#ifdef CONFIG_DEVICE_IRQ 
-
 extern struct device_s *gaisler_icu;
+
+#ifdef CONFIG_DEVICE_IRQ 
 
 static DEVENUM_GET_DEFAULT_ICU(apbctrl_get_default_icu)
 {
@@ -120,8 +120,8 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
       uint16_t device = (endian_be32(p[0]) >> 12) & 0xfff;
       uint8_t version = (endian_be32(p[0]) >> 5) & 0x1f; 
 
-#ifdef CONFIG_DEVICE_IRQ
       bool_t is_icu = (vendor == 0x01 && device == 0x00d);
+#ifdef CONFIG_DEVICE_IRQ
       struct device_s *d = device_alloc(5 + (is_icu ? CONFIG_CPU_MAXCOUNT : 0));
 #else
       struct device_s *d = device_alloc(5);
@@ -154,20 +154,24 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
 
       if (irq)
         device_res_add_irq(d, 0, irq - 1, 0, NULL);
+#endif
 
       /* check for interrupt controller device */
       if (is_icu && gaisler_icu == NULL)
         {
-          struct apbctrl_scan_cpu_irq_ctx_s ctx = { d, 0 };
           // keep track of gaisler single irq controller
           gaisler_icu = d;
+
+#ifdef CONFIG_DEVICE_IRQ
+          struct apbctrl_scan_cpu_irq_ctx_s ctx = { d, 0 };
+
           // add irq links from irqmp to cpu
           device_tree_walk(NULL, &apbctrl_scan_cpu_irq, &ctx);
 
           if (ctx.count == 0)
             printk("apbctrl: no processor found to link to irqmp device.");
-        }
 #endif
+        }
 
       uint32_t start = begin + (((endian_be32(p[1]) >> 20) & 0xfff) << 8);
       uint32_t mask = ~(((endian_be32(p[1]) >> 4) & 0xfff) << 8) & 0xfffff;

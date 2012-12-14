@@ -688,45 +688,40 @@ error_t pthread_barrier_wait(pthread_barrier_t *barrier),
 		PThread Spinlock related public API
 ************************************************************************/
 
-typedef atomic_int_t pthread_spinlock_t;
+typedef lock_t pthread_spinlock_t;
 
 config_depend_inline(CONFIG_PTHREAD_SPIN,
 error_t pthread_spin_init(pthread_spinlock_t *spinlock,
-                  bool_t pshared),
+                          bool_t pshared),
 {
-  *spinlock = 0;
-  order_smp_write();
+  lock_init(spinlock);
   return 0;
 });
 
 config_depend_inline(CONFIG_PTHREAD_SPIN,
 error_t pthread_spin_destroy(pthread_spinlock_t *spinlock),
 {
+  lock_destroy(spinlock);
   return 0;
 });
 
 config_depend_inline(CONFIG_PTHREAD_SPIN,
 error_t pthread_spin_lock(pthread_spinlock_t *spinlock),
 {
-  cpu_atomic_bit_waitset(spinlock, 0);
-  order_smp_mem();
+  lock_spin(spinlock);
   return 0;
 });
 
 config_depend_inline(CONFIG_PTHREAD_SPIN,
 error_t pthread_spin_trylock(pthread_spinlock_t *spinlock),
 {
-  bool_t res = cpu_atomic_bit_testset(spinlock, 0);
-  order_smp_mem();
-  return res ? -EBUSY : 0;
+  return lock_try(spinlock) ? -EBUSY : 0;
 });
 
 config_depend_inline(CONFIG_PTHREAD_SPIN,
 error_t pthread_spin_unlock(pthread_spinlock_t *spinlock),
 {
-  order_smp_mem();
-  *spinlock = 0;
-  order_smp_write();
+  lock_release(spinlock);
   return 0;
 });
 

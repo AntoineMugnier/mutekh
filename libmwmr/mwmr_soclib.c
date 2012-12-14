@@ -89,18 +89,18 @@ static inline void mwmr_lock( struct mwmr_s *fifo )
 	}
 #else
 # if defined(CONFIG_SRL) && !defined(CONFIG_PTHREAD)
-	while (cpu_atomic_bit_testset((atomic_int_t*)&fifo->status->lock, 0)) {
+	while (__cpu_atomic_bit_testset((atomic_int_t*)&fifo->status->lock, 0)) {
 /* 		cpu_interrupt_disable(); */
 /* 		sched_context_switch(); */
 /* 		cpu_interrupt_enable(); */
 		srl_sched_wait_eq_le(&fifo->status->lock, 0);
 	}
 # elif defined(CONFIG_PTHREAD)
-	while (cpu_atomic_bit_testset((atomic_int_t*)&fifo->status->lock, 0)) {
+	while (__cpu_atomic_bit_testset((atomic_int_t*)&fifo->status->lock, 0)) {
 		pthread_yield();
 	}
 # else
-	cpu_atomic_bit_waitset((atomic_int_t*)&fifo->status->lock, 0);
+	__cpu_atomic_bit_waitset((atomic_int_t*)&fifo->status->lock, 0);
 # endif
 #endif
 }
@@ -110,7 +110,7 @@ static inline uint32_t mwmr_try_lock( struct mwmr_s *fifo )
 #ifdef CONFIG_MWMR_USE_RAMLOCKS
 	return !!cpu_mem_read_32((uintptr_t)fifo->lock);
 #else
-	return cpu_atomic_bit_testset((atomic_int_t*)&fifo->status->lock, 0);
+	return __cpu_atomic_bit_testset((atomic_int_t*)&fifo->status->lock, 0);
 #endif
 }
 

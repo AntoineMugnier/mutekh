@@ -28,14 +28,17 @@
 
 #include <device/device.h>
 #include <device/driver.h>
-#include <device/class/icu.h>
-#include <device/irq.h>
 
 #include <assert.h>
 #include <string.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+
+#ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
+
+#include <device/class/icu.h>
+#include <device/irq.h>
 
 #ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
 # define GAISLER_IRQMP_SINKS_COUNT 31
@@ -51,15 +54,21 @@ struct gaisler_irqmp_sink_s
   uint_fast8_t counter;
 };
 
+#endif
+
 struct gaisler_irqmp_private_s
 {
   uintptr_t addr;
 
+#ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
   struct gaisler_irqmp_sink_s *sinks;
   struct dev_irq_ep_s *srcs;
   uint_fast8_t srcs_count;
   uint_fast8_t eirq;
+#endif
 };
+
+#ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
 
 static DEVICU_GET_ENDPOINT(gaisler_irqmp_icu_get_endpoint)
 {
@@ -223,12 +232,6 @@ static DEV_IRQ_EP_PROCESS(gaisler_irqmp_source_process)
     }
 }
 
-static const struct devenum_ident_s	gaisler_irqmp_ids[] =
-{
-  DEVENUM_GAISLER_ENTRY(0x01, 0x00d),
-  { 0 }
-};
-
 const struct driver_icu_s  gaisler_irqmp_icu_drv =
 {
   .class_         = DRIVER_CLASS_ICU,
@@ -238,6 +241,14 @@ const struct driver_icu_s  gaisler_irqmp_icu_drv =
 # ifdef CONFIG_HEXO_IPI
   .f_setup_ipi_ep = gaisler_irqmp_icu_setup_ipi_ep,
 # endif
+};
+
+#endif /*  CONFIG_DRIVER_GAISLER_IRQMP_ICU */
+
+static const struct devenum_ident_s	gaisler_irqmp_ids[] =
+{
+  DEVENUM_GAISLER_ENTRY(0x01, 0x00d),
+  { 0 }
 };
 
 static DEV_CLEANUP(gaisler_irqmp_cleanup);
@@ -252,7 +263,9 @@ const struct driver_s  gaisler_irqmp_drv =
   .f_cleanup      = gaisler_irqmp_cleanup,
 
   .classes        = {
+#ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
     &gaisler_irqmp_icu_drv,
+#endif
     0
   }
 };
@@ -278,11 +291,13 @@ static DEV_INIT(gaisler_irqmp_init)
   __attribute__((unused))
   uint32_t status = endian_be32(cpu_mem_read_32(pv->addr + 0x10));
 
-#ifdef CONFIG_ARCH_SMP
+#ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
+
+# ifdef CONFIG_ARCH_SMP
   pv->srcs_count = (status >> 28) + 1; // number of cpus
-#else
+# else
   pv->srcs_count = 1;
-#endif
+# endif
 
   /* init gaisler_irqmp irq source end-points */
   pv->srcs = mem_alloc(sizeof(pv->srcs[0]) * pv->srcs_count, (mem_scope_sys));
@@ -291,19 +306,19 @@ static DEV_INIT(gaisler_irqmp_init)
 
   pv->eirq = ((status >> 16) & 0xf);
 
-#ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
-# ifdef CONFIG_CPU_SPARC
+# ifdef CONFIG_DRIVER_GAISLER_IRQMP_EIRQ
+#  ifdef CONFIG_CPU_SPARC
   if (pv->eirq == 15)
     {
       printk("irqmp: won't use non maskable irq (line 15) as eirq\n");
       pv->eirq = 0;
     }
-# endif
+#  endif
 
   if (pv->eirq)
     device_irq_source_init(dev, pv->srcs, pv->srcs_count, &gaisler_irqmp_source_process_eirq);
   else
-#endif
+# endif
     device_irq_source_init(dev, pv->srcs, pv->srcs_count, &gaisler_irqmp_source_process);
 
   cpu_mem_write_32(pv->addr + 0, 0);  // set level register
@@ -322,16 +337,19 @@ static DEV_INIT(gaisler_irqmp_init)
       device_irq_sink_init(dev, &pv->sinks[i].sink, 1);
       pv->sinks[i].affinity = 0;
     }
+#endif
 
   dev->drv = &gaisler_irqmp_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
+#ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
  err_unlink:
   device_irq_source_unlink(dev, pv->srcs, pv->srcs_count);
  err_mem2:
   if (pv->srcs)
     mem_free(pv->srcs);
+#endif
  err_mem:
   mem_free(pv);
   return -1;
@@ -341,6 +359,7 @@ static DEV_CLEANUP(gaisler_irqmp_cleanup)
 {
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
 
+#ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
   /* detach gaisler_irqmp irq end-points */
   uint_fast8_t i;
   for (i = 0; i < GAISLER_IRQMP_SINKS_COUNT; i++)
@@ -350,6 +369,46 @@ static DEV_CLEANUP(gaisler_irqmp_cleanup)
 
   mem_free(pv->srcs);
   mem_free(pv->sinks);
+#endif
   mem_free(pv);
 }
+
+#ifdef CONFIG_ARCH_SMP
+
+extern struct device_s *gaisler_icu;
+
+#include <mutek/startup.h>
+
+/* find mask of processors from device tree */
+static DEVICE_TREE_WALKER(irqmp_start_cpus_mask)
+{
+  uint32_t *mask = priv;
+
+  if (dev->node.flags & DEVICE_FLAG_CPU &&
+      dev->status == DEVICE_DRIVER_INIT_DONE)
+    {
+      uintptr_t maj, min;
+      if (!device_res_get_uint(dev, DEV_RES_ID, 0, &maj, &min))
+        *mask |= 1 << maj;
+    }
+
+  return 0;
+}
+
+void gaisler_irqmp_start_cpus()
+{
+  if (!gaisler_icu || gaisler_icu->drv != &gaisler_irqmp_drv)
+    {
+      printk("error: no default IRQMP device found to start other processors");
+      return;
+    }
+
+  uint32_t mask = 0;
+  device_tree_walk(NULL, &irqmp_start_cpus_mask, &mask);
+
+  struct gaisler_irqmp_private_s *pv = gaisler_icu->drv_pv;
+  cpu_mem_write_32(pv->addr + 0x10, mask);
+}
+
+#endif
 

@@ -31,14 +31,13 @@
 #define ARCH_LOCK_H_
 
 #include <assert.h>
-#include <hexo/atomic.h>
 #include <hexo/ordering.h>
 
 #define ARCH_HAS_ATOMIC
 
 struct		__arch_lock_s
 {
-  atomic_int_t a;
+  uint8_t       a;
 };
 
 #define ARCH_LOCK_INITIALIZER	{ .a = 0 }
@@ -56,25 +55,20 @@ static inline void __arch_lock_destroy(struct __arch_lock_s *lock)
 
 static inline bool_t __arch_lock_try(struct __arch_lock_s *lock)
 {
-  bool_t res = __cpu_atomic_bit_testset(&lock->a, 0);
-  order_smp_mem();
-  return res;
+  reg_t old;
+
+  asm volatile ("ldstub [%2], %1 \n"
+                : "+m" (lock->a), "=r" (old)
+                : "r" (&lock->a)
+                : "memory"
+                );
+  return old;
 }
 
 static inline void __arch_lock_spin(struct __arch_lock_s *lock)
 {
-#ifdef CONFIG_DEBUG_SPINLOCK_LIMIT
-  uint32_t deadline = CONFIG_DEBUG_SPINLOCK_LIMIT;
-
-  while (__cpu_atomic_bit_testset(&lock->a, 0))
-    {
-      asm volatile("nop");
-      assert(deadline-- > 0);
-    }
-#else
-  __cpu_atomic_bit_waitset(&lock->a, 0);
-#endif
-  order_smp_mem();
+  while (__arch_lock_try(lock))
+    ;
 }
 
 static inline bool_t __arch_lock_state(struct __arch_lock_s *lock)

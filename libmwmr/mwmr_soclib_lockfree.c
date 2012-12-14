@@ -67,7 +67,7 @@ uint32_t mwmr_status( void *coproc, size_t no )
 
 // returns substracted value
 static inline uint32_t
-cpu_atomic_sub_minz(uint32_t *a, uint32_t _tosub)
+__cpu_atomic_sub_minz(uint32_t *a, uint32_t _tosub)
 {
 	uint32_t oldval;
 	uint32_t tosub;
@@ -88,7 +88,7 @@ cpu_atomic_sub_minz(uint32_t *a, uint32_t _tosub)
 
 // returns previous value
 static inline uint32_t
-cpu_atomic_add(uint32_t *a, uint32_t val)
+__cpu_atomic_add(uint32_t *a, uint32_t val)
 {
 	uint32_t oldval;
 
@@ -102,7 +102,7 @@ cpu_atomic_add(uint32_t *a, uint32_t val)
 
 // returns previous value
 static inline uint32_t
-cpu_atomic_add_wrap(uint32_t *a, uint32_t val, uint32_t mod)
+__cpu_atomic_add_wrap(uint32_t *a, uint32_t val, uint32_t mod)
 {
 	uint32_t oldval, newval;
 
@@ -118,7 +118,7 @@ cpu_atomic_add_wrap(uint32_t *a, uint32_t val, uint32_t mod)
 }
 
 static inline void
-cpu_atomic_wait_and_swap(uint32_t *a, uint32_t old, uint32_t new)
+__cpu_atomic_wait_and_swap(uint32_t *a, uint32_t old, uint32_t new)
 {
 	do {
 	} while ( ! atomic_compare_and_swap((atomic_t*)a, old, new ) );
@@ -141,14 +141,14 @@ size_t mwmr_read_unit(
 	if ( user_len > gdepth )
 		user_len = gdepth;
 
-	uint32_t xfer_size = cpu_atomic_sub_minz(&status->data_size, user_len);
+	uint32_t xfer_size = __cpu_atomic_sub_minz(&status->data_size, user_len);
 	if ( xfer_size == 0 )
 		return 0;
 
 	assert( xfer_size <= gdepth );
 	assert( xfer_size <= user_len );
 
-	uint32_t rptr = cpu_atomic_add_wrap(&status->data_tail, xfer_size, gdepth);
+	uint32_t rptr = __cpu_atomic_add_wrap(&status->data_tail, xfer_size, gdepth);
 	uint32_t future_rptr;
 
 	assert( rptr < gdepth );
@@ -170,8 +170,8 @@ size_t mwmr_read_unit(
 			future_rptr = 0;
 	}
 	assert( future_rptr < gdepth );
-	cpu_atomic_wait_and_swap(&status->free_head, rptr, future_rptr);
-	cpu_atomic_add(&status->free_size, xfer_size);
+	__cpu_atomic_wait_and_swap(&status->free_head, rptr, future_rptr);
+	__cpu_atomic_add(&status->free_size, xfer_size);
 	return xfer_size;
 }
 
@@ -192,14 +192,14 @@ size_t mwmr_write_unit(
 	if ( user_len > gdepth )
 		user_len = gdepth;
 
-	uint32_t xfer_size = cpu_atomic_sub_minz(&status->free_size, user_len);
+	uint32_t xfer_size = __cpu_atomic_sub_minz(&status->free_size, user_len);
 	if ( xfer_size == 0 )
 		return 0;
 
 	assert( xfer_size <= gdepth );
 	assert( xfer_size <= user_len );
 
-	uint32_t wptr = cpu_atomic_add_wrap(&status->free_tail, xfer_size, gdepth);
+	uint32_t wptr = __cpu_atomic_add_wrap(&status->free_tail, xfer_size, gdepth);
 	uint32_t future_wptr;
 
 	assert( wptr < gdepth );
@@ -218,8 +218,8 @@ size_t mwmr_write_unit(
 			future_wptr = 0;
 	}
 	assert( future_wptr < gdepth );
-	cpu_atomic_wait_and_swap(&status->data_head, wptr, future_wptr);
-	cpu_atomic_add(&status->data_size, xfer_size);
+	__cpu_atomic_wait_and_swap(&status->data_head, wptr, future_wptr);
+	__cpu_atomic_add(&status->data_size, xfer_size);
 	return xfer_size;
 }
 

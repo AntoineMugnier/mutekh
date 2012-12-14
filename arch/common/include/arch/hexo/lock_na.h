@@ -32,41 +32,41 @@
 
 #include <hexo/cpu.h>
 
-struct		arch_lock_s
+struct		__arch_lock_s
 {
 };
 
 #define ARCH_LOCK_INITIALIZER	{ }
 
-static inline error_t arch_lock_init(struct arch_lock_s *lock)
+static inline error_t __arch_lock_init(struct __arch_lock_s *lock)
 {
   cpu_trap();
   return 0;
 }
 
-static inline void arch_lock_destroy(struct arch_lock_s *lock)
+static inline void __arch_lock_destroy(struct __arch_lock_s *lock)
 {
   cpu_trap();
 }
 
-static inline bool_t arch_lock_try(struct arch_lock_s *lock)
-{
-  cpu_trap();
-  return 0;
-}
-
-static inline void arch_lock_spin(struct arch_lock_s *lock)
-{
-  cpu_trap();
-}
-
-static inline bool_t arch_lock_state(struct arch_lock_s *lock)
+static inline bool_t __arch_lock_try(struct __arch_lock_s *lock)
 {
   cpu_trap();
   return 0;
 }
 
-static inline void arch_lock_release(struct arch_lock_s *lock)
+static inline void __arch_lock_spin(struct __arch_lock_s *lock)
+{
+  cpu_trap();
+}
+
+static inline bool_t __arch_lock_state(struct __arch_lock_s *lock)
+{
+  cpu_trap();
+  return 0;
+}
+
+static inline void __arch_lock_release(struct __arch_lock_s *lock)
 {
   cpu_trap();
 }

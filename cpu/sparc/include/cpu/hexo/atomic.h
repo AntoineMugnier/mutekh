@@ -29,10 +29,12 @@
 
 #define CPU_ATOMIC_H_
 
-#define HAS_CPU_ATOMIC_COMPARE_AND_SWAP
+
+#if defined(CONFIG_CPU_SPARC_LEON3_CASA) || defined(CONFIG_CPU_SPARC_SOCLIB)
+# define HAS_CPU_ATOMIC_COMPARE_AND_SWAP
 
 static inline bool_t
-cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)
+__cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)
 {
   asm volatile("casa [%4] 0, %3, %0        \n"
                : "=r" (future), "+m" (*a)
@@ -41,6 +43,7 @@ cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t futu
 
   return future == old;
 }
+#endif
 
 #endif
 

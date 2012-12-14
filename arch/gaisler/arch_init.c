@@ -24,6 +24,12 @@
 
 #include <string.h>
 
+#include <hexo/lock.h>
+
+#ifndef CONFIG_CPU_SPARC_LEON3_CASA
+lock_t __atomic_arch_lock;
+#endif
+
 /////////////////////////////////////////////////////////////////////
 
 void gaisler_bss_section_init()
@@ -55,9 +61,7 @@ void gaisler_mem_init()
 
 /////////////////////////////////////////////////////////////////////
 
-#ifdef CONFIG_DEVICE_IRQ
 struct device_s *gaisler_icu = NULL;
-#endif
 
 #ifdef CONFIG_GAISLER_AHB_ENUM
 
@@ -80,19 +84,6 @@ void gaisler_ahb_enum_init()
 
 #endif
 
-
-#ifdef CONFIG_ARCH_SMP
-
-#include <hexo/iospace.h>
-
-void gaisler_start_cpus()
-{
-// start other 4 CPUs hack
-#warning SMP start hack
-    cpu_mem_write_32(0x80000010, (1 << CONFIG_CPU_MAXCOUNT) - 1);
-}
-
-#endif
 
 /////////////////////////////////////////////////////////////////////
 
