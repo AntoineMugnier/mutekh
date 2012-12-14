@@ -32,7 +32,10 @@ FUNC_START(.text, cpu_boot)
         xor     r0,     r0,     r0
         /* get CPU id and adjust stack */
 
-        mv      r3,     r0 /* FIXME read cpu id */
+#ifdef CONFIG_ARCH_SMP
+# error FIXME read cpu id
+#endif
+        mv      r3,     r0 
         seta    sp,     __initial_stack
 
 #ifdef CONFIG_ARCH_SMP_CAPABLE
@@ -80,8 +83,8 @@ FUNC_START(.text, cpu_boot)
         seta    r1,     __exception_base_ptr
         wcsr    EBA,    r1
 
-        /* jump to architecture code */
-        bi      boot_from_reset_vector
+        /* jump to C code */
+        bi      mutekh_startup
 FUNC_END(cpu_boot)
 
 

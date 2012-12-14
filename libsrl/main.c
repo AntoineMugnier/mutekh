@@ -19,7 +19,7 @@
  *         Nicolas Pouillon <nipo@ssji.net>, 2008
  */
 
-#include <hexo/init.h>
+#include <mutek/startup.h>
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/segment.h>
@@ -33,6 +33,8 @@
 #if CONFIG_SOCLIB_MEMCHECKER
 # include "arch/mem_checker.h"
 #endif
+
+#define CONFIG_MUTEK_MAIN
 
 extern const srl_appdesc_s app_desc;
 lock_t fault_lock;

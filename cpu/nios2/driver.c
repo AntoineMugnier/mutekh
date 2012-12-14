@@ -249,7 +249,7 @@ static DEV_INIT(nios2_init);
 
 static const struct devenum_ident_s  nios2_ids[] =
 {
-#ifdef CONFIG_FDT
+#ifdef CONFIG_LIBFDT
   DEVENUM_FDTNAME_ENTRY("cpu:nios2"),
 #endif
   { 0 }

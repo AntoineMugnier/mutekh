@@ -501,5 +501,22 @@ struct device_s *device_get_cpu(uint_fast8_t major_id, uint_fast8_t minor_id)
   return ctx.cpu;
 }
 
+static DEVICE_TREE_WALKER(count_cpus_r)
+{
+  uint_fast8_t *count = priv;
+
+  if (dev->node.flags & DEVICE_FLAG_CPU)
+    (*count)++;
+
+  return 0;
+}
+
+uint_fast8_t device_get_cpu_count()
+{
+  uint_fast8_t count = 0;
+  device_tree_walk(NULL, count_cpus_r, &count);
+  return count;
+}
+
 #endif
 

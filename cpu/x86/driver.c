@@ -257,7 +257,7 @@ static DEV_INIT(x86_init);
 
 static const struct devenum_ident_s  x86_ids[] =
 {
-#ifdef CONFIG_FDT
+#ifdef CONFIG_LIBFDT
   DEVENUM_FDTNAME_ENTRY("cpu:x86"),
 #endif
   { 0 }

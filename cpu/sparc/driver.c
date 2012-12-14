@@ -253,7 +253,7 @@ static DEV_INIT(sparc_init);
 
 static const struct devenum_ident_s  sparc_ids[] =
 {
-#ifdef CONFIG_FDT
+#ifdef CONFIG_LIBFDT
   DEVENUM_FDTNAME_ENTRY("cpu:sparc"),
 #endif
 #ifdef CONFIG_ARCH_GAISLER

@@ -98,7 +98,7 @@ FUNC_START(.text, arm_boot)
 	    str  r0, [r1, # SOCLIB_MC_MAGIC_OFFSET ]
 # endif
 
-        ldr  r12, =boot_from_reset_vector
+        ldr  r12, =mutekh_startup
         bx   r12
 FUNC_END(arm_boot)
 

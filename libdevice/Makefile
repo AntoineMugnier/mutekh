@@ -7,7 +7,7 @@ doc_headers =  device/device.h  device/driver.h device/irq.h \
 	device/class/icu.h device/class/input.h device/class/lcd.h device/class/mem.h device/class/net.h	\
 	device/class/sound.h device/class/spi.h device/class/timer.h
 
-objs = driver.o device.o dump.o resources.o
+objs = driver.o device.o dump.o resources.o init.o
 
 ifeq ($(CONFIG_DEVICE_IRQ), defined)
  objs += irq.o

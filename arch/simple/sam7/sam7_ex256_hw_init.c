@@ -1,4 +1,4 @@
-#include <hexo/init.h>
+#include <mutek/startup.h>
 #include <hexo/types.h>
 
 #include <drivers/char/uart-us6089c/uart-us6089c.h>

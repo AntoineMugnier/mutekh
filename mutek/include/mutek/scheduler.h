@@ -208,16 +208,6 @@ struct sched_context_s *sched_wake(sched_queue_root_t *queue);
 config_depend(CONFIG_MUTEK_SCHEDULER)
 void sched_context_wake(sched_queue_root_t *queue, struct sched_context_s *sched_ctx);
 
-/** @internal @This function performs scheduler intialization, must be
-    called once. */
-config_depend(CONFIG_MUTEK_SCHEDULER)
-void sched_global_init(void);
-
-/** @internal @This function performs scheduler intialization, must be
-    called for each processor. */
-config_depend(CONFIG_MUTEK_SCHEDULER)
-void sched_cpu_init(void);
-
 /** @This function set processor affinity sothat scheduler context
     will run on this cpu */
 config_depend(CONFIG_MUTEK_SCHEDULER)

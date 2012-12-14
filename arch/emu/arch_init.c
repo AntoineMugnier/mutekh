@@ -22,7 +22,7 @@
 
 
 #include <hexo/types.h>
-#include <hexo/init.h>
+#include <mutek/startup.h>
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
 #include <hexo/endian.h>
@@ -98,7 +98,7 @@ void arch_init(uintptr_t init_sp)
 
     mem_init();
 
-    hexo_global_init();
+    device_tree_init();
 
     cpu_global_init();
 
@@ -185,7 +185,7 @@ void arch_start_other_cpu(void)
 {
 }
 
-size_t arch_get_cpu_count(void)
+size_t device_get_cpu_count(void)
 {
 #ifdef CONFIG_ARCH_SMP
   return cpu_count;

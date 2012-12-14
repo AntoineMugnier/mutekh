@@ -25,7 +25,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <hexo/interrupt.h>
-#include <hexo/init.h>
+#include <mutek/startup.h>
 #include <hexo/iospace.h>
 #include <hexo/lock.h>
 #include <hexo/segment.h>

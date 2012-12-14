@@ -1,8 +1,6 @@
 
 objs = 											\
 arch_init.o										\
-entry_points.o                                  \
-mem_init.o \
 power.o
 
 ifneq ($(CONFIG_SOCLIB_EARLY_CONSOLE),undefined)

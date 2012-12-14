@@ -20,8 +20,7 @@
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2011
 */
 
-INIT_LIBC_PROTOTYPES;
-
+#include <mutek/startup.h>
 #include <mutek/printk.h>
 #include <sys/time.h>
 #include <time.h>
@@ -56,8 +55,11 @@ static void adjust_frac(uint64_t *num, uint64_t *den)
   *den /= a;
 }
 
-void libc_time_init()
+void libc_time_initsmp()
 {
+  if (!cpu_isbootstrap())
+    return;
+
   if (device_get_accessor_by_path(&libc_timer_dev, NULL, "libc_timer timer", DRIVER_CLASS_TIMER))
     {
       printk("error: libc: No `libc_timer' or `timer' entry found in device tree.\n");
@@ -105,8 +107,11 @@ void libc_time_init()
     }
 }
 
-void libc_time_cleanup()
+void libc_time_cleanupsmp()
 {
+  if (!cpu_isbootstrap())
+    return;
+
   if (device_check_accessor(&libc_timer_dev))
     {
       DEVICE_OP(&libc_timer_dev, start_stop, 0);

@@ -32,7 +32,7 @@
 .macro CPU_ID reg
 # if defined(CONFIG_CPU_ARM_SOCLIB)
         mrc    p15, 0, \reg, c0, c0, 5
-# elif defined(CONFIG_ARCH_SMP)
+# elif defined(CONFIG_ARCH_SMP_CAPABLE)
         .emsg No CPUID
 # else
         mov    \reg, #0

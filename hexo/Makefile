@@ -3,7 +3,6 @@ DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
 objs =						\
 cpu.o						\
-init.o						\
 context.o					\
 interrupt.o
 

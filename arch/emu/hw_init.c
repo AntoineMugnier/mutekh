@@ -20,7 +20,7 @@
 
 */
 
-#include <hexo/init.h>
+#include <mutek/startup.h>
 #include <hexo/types.h>
 #include <hexo/endian.h>
 

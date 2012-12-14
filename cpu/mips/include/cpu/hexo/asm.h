@@ -58,7 +58,7 @@
 .endm
 
 .macro CPU_ID reg
-#ifdef CONFIG_ARCH_SMP
+#ifdef CONFIG_ARCH_SMP_CAPABLE
 # if CONFIG_CPU_MIPS_VERSION >= 32
         mfc0    \reg,    $15,    1
         andi    \reg,    \reg,    0x3ff

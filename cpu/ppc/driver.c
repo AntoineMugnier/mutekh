@@ -224,7 +224,7 @@ static DEV_INIT(ppc_init);
 
 static const struct devenum_ident_s  ppc_ids[] =
 {
-#ifdef CONFIG_FDT
+#ifdef CONFIG_LIBFDT
   DEVENUM_FDTNAME_ENTRY("cpu:ppc"),
   DEVENUM_FDTNAME_ENTRY("cpu:powerpc"),
 #endif

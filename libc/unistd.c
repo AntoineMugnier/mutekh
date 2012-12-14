@@ -89,8 +89,11 @@ static fd_t fd_add(const struct fileops_s *ops, void *hndl)
 	return fd;
 }
 
-void libc_unixfd_init()
+void libc_unixfd_initsmp()
 {
+  if (!cpu_isbootstrap())
+    return;
+
   fd_t fd;
 
   fd = fd_add(&console_file_ops, (void*)-1);

@@ -85,7 +85,7 @@ FUNC_START(.text, cpu_boot)
         mtevpr  2
 
         /* jump to architecture code */
-        LA32    2,              boot_from_reset_vector
+        LA32    2,              mutekh_startup
         mtctr   2
         bctrl
 FUNC_END(cpu_boot)

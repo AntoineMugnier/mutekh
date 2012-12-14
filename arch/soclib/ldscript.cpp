@@ -177,4 +177,4 @@ SECTIONS
 #endif
 }
 
-ENTRY(arch_init)
+ENTRY(mutekh_startup)

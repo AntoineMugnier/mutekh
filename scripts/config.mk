@@ -26,6 +26,11 @@ listallconfig:
 		--input=$(CONF) --list=all		\
 		--build=$(BUILD)
 
+listinit:
+	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
+		--src-path=$(MUTEK_SRC_DIR) \
+		--input=$(CONF) --list=init		\
+		--build=$(BUILD)
 
 showconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\

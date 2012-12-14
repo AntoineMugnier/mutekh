@@ -20,53 +20,13 @@
 
 */
 
-# include <device/driver.h>
-# include <device/device.h>
-# include <device/class/char.h>
-# include <device/class/cpu.h>
+#include <mutek/startup.h>
 
-#include <mutek/printk.h>
-#include <mutek/scheduler.h>
-#include <hexo/context.h>
-#include <hexo/init.h>
-#include <hexo/iospace.h>
-#include <mutek/memory_allocator.h>
+#include <string.h>
 
-#ifdef CONFIG_DEVICE_IRQ
-struct device_s *gaisler_icu = NULL;
-#endif
+/////////////////////////////////////////////////////////////////////
 
-#if defined(CONFIG_GAISLER_EARLY_CONSOLE)
-void gaisler_early_console(uintptr_t addr);
-#endif
-
-#if defined (CONFIG_MUTEK_SCHEDULER)
-extern struct sched_context_s main_ctx;
-#else
-struct context_s main_ctx;
-#endif
-
-extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
-
-static void cpu_reg_init()
-{
-    /* find processor device */
-    struct device_s *dev = device_get_cpu(cpu_id(), 0);
-
-    if (!dev)
-        return;
-
-    struct device_cpu_s cpu_dev;
-
-    if (device_get_accessor(&cpu_dev, dev, DRIVER_CLASS_CPU, 0))
-        return;
-
-    DEVICE_OP(&cpu_dev, reg_init);
-
-    device_put_accessor(&cpu_dev);
-}
-
-void arch_init_bootstrap(uintptr_t init_sp)
+void gaisler_bss_section_init()
 {
     extern __ldscript_symbol_t __bss_start;
     extern __ldscript_symbol_t __bss_end;
@@ -75,93 +35,66 @@ void arch_init_bootstrap(uintptr_t init_sp)
         (uint8_t*)&__bss_start,
         0,
         (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
+}
 
-#if defined(CONFIG_GAISLER_EARLY_CONSOLE)
-    gaisler_early_console(CONFIG_GAISLER_EARLY_CONSOLE_ADDR);
-#endif
+/////////////////////////////////////////////////////////////////////
+
+#include <mutek/mem_alloc.h>
+#include <mutek/mem_region.h>
+#include <mutek/memory_allocator.h>
+
+void gaisler_mem_init()
+{
+    extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
 
     default_region = memory_allocator_init(NULL, 
                                            &__system_uncached_heap_start, 
                                            (void*)((uintptr_t)&__system_uncached_heap_end -
-                                                   (1 << CONFIG_HEXO_RESET_STACK_SIZE) * CONFIG_CPU_MAXCOUNT));
+                                                   (1 << CONFIG_HEXO_RESET_STACK_SIZE) * CONFIG_CPU_MAXCOUNT));    
+}
 
-    hexo_global_init();
+/////////////////////////////////////////////////////////////////////
 
-#if 1
+#ifdef CONFIG_DEVICE_IRQ
+struct device_s *gaisler_icu = NULL;
+#endif
+
+#ifdef CONFIG_GAISLER_AHB_ENUM
+
+# include <device/driver.h>
+# include <device/device.h>
+# include <device/class/enum.h>
+
+void gaisler_ahb_enum_init()
+{
     extern const struct driver_s ahbctrl_drv;
     static struct device_s ahbctrl_dev;
 
     device_init(&ahbctrl_dev);
     device_attach(&ahbctrl_dev, NULL);
-    device_res_add_mem(&ahbctrl_dev, 0xfffff000, 0xffffffe0);
+    device_res_add_mem(&ahbctrl_dev, CONFIG_GAISLER_AHB_ENUM_ADDR,
+                       CONFIG_GAISLER_AHB_ENUM_ADDR + 0xe00);
     device_bind_driver(&ahbctrl_dev, &ahbctrl_drv);
     device_init_driver(&ahbctrl_dev);
+}
 
-    device_find_driver(NULL);
 #endif
 
-    cpu_reg_init();
 
-    // start other 4 CPUs hack
 #ifdef CONFIG_ARCH_SMP
+
+#include <hexo/iospace.h>
+
+void gaisler_start_cpus()
+{
+// start other 4 CPUs hack
 #warning SMP start hack
     cpu_mem_write_32(0x80000010, (1 << CONFIG_CPU_MAXCOUNT) - 1);
-#endif
-
-#if defined(CONFIG_MUTEK_SCHEDULER)
-    sched_global_init();
-    sched_cpu_init();
-
-    /* FIXME initial stack space will never be freed ! */
-    context_bootstrap(&main_ctx.context, 0, init_sp);
-    sched_context_init(&main_ctx);
-#else
-    context_bootstrap(&main_ctx, 0, init_sp);
-#endif
-
-    mutek_start();
 }
 
-#ifdef CONFIG_ARCH_SMP
-/**
-   @this is the function run by all CPUs other than the bootstrap one.
- */
-static
-void arch_init_other()
-{
-    assert(cpu_id() < CONFIG_CPU_MAXCOUNT);
-
-    cpu_reg_init();
-
-    /* run mutek_start_smp() */
-
-#if defined(CONFIG_MUTEK_SCHEDULER)
-    sched_cpu_init();
 #endif
 
-    /* FIXME should have context_bootstrap for non bsp processors,
-       especially when CONFIG_MUTEK_SMP_APP_START is defined. */
-
-    mutek_start_smp();
-}
-#endif
-
-void arch_init(uintptr_t init_sp)
-{
-#ifdef CONFIG_ARCH_SMP
-    if (cpu_id() == 0)
-        arch_init_bootstrap(init_sp);
-    else
-        arch_init_other();
-#else
-    arch_init_bootstrap(init_sp);
-#endif
-}
-
-void boot_from_reset_vector(uintptr_t init_sp)
-{
-  arch_init(init_sp);
-}
+/////////////////////////////////////////////////////////////////////
 
 #if defined(CONFIG_DEVICE_IRQ) && defined(CONFIG_ARCH_SMP)
 bool_t arch_cpu_irq_affinity_test(struct device_s *cpu, struct dev_irq_ep_s *src)
@@ -169,3 +102,4 @@ bool_t arch_cpu_irq_affinity_test(struct device_s *cpu, struct dev_irq_ep_s *src
     return 1;
 }
 #endif
+

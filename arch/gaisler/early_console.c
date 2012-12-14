@@ -21,11 +21,13 @@
 
 */
 
+#include <mutek/printk.h>
+#include <mutek/startup.h>
+
 #include <hexo/types.h>
 #include <hexo/cpu.h>
 #include <hexo/iospace.h>
 #include <hexo/endian.h>
-#include <mutek/printk.h>
 
 static void early_console_out_char(uintptr_t addr, uint8_t c)
 {
@@ -54,8 +56,10 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
     }
 }
 
-void gaisler_early_console(uintptr_t addr)
+void gaisler_early_console_init()
 {
+  uintptr_t addr = CONFIG_GAISLER_EARLY_CONSOLE_ADDR;
+
 #ifndef CONFIG_GAISLER_EARLY_CONSOLE_DEBUG
   /* uart scaler FIXME */
   cpu_mem_write_32(addr + 12, endian_be32(CONFIG_GAISLER_EARLY_CONSOLE_SCALER));
@@ -67,3 +71,4 @@ void gaisler_early_console(uintptr_t addr)
 
   printk_set_output(early_console_out, (void*)addr);
 }
+

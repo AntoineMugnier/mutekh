@@ -84,3 +84,8 @@ mutek_instrument_alloc_guard(bool_t state)
 #endif
 }
 
+# if defined(CONFIG_COMPILE_INSTRUMENT) // FIXME INIT
+  //  mutek_instrument_trace(1);
+  //  mutek_instrument_alloc_guard(1);
+# endif
+

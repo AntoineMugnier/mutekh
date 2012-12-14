@@ -85,7 +85,7 @@ FUNC_START(.text, cpu_boot)
         mov     %g1,    %tbr
 
         /* jump to architecture code */
-        set     boot_from_reset_vector, %g1
+        set     mutekh_startup, %g1
         call    %g1
         mov     %sp,            %o0
 FUNC_END(cpu_boot)

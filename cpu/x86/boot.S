@@ -119,8 +119,7 @@ cpu_boot:
 	movw	%ax,		%fs
 	movw	%ax,		%gs
         
-	/* call arch_init function */
-	call	arch_init
+	call	mutekh_startup
         
 	/* stop processor execution */
 	cli

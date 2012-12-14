@@ -258,7 +258,7 @@ static DEV_INIT(mips_init);
 
 static const struct devenum_ident_s  mips_ids[] =
 {
-#ifdef CONFIG_FDT
+#ifdef CONFIG_LIBFDT
   DEVENUM_FDTNAME_ENTRY("cpu:mips"),
 # ifdef CONFIG_CPU_ENDIAN_LITTLE
   DEVENUM_FDTNAME_ENTRY("cpu:mipsel"),

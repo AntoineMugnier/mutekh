@@ -26,6 +26,11 @@
 #include <mutek/printk.h>
 #include <mutek/fileops.h>
 
+#include <mutek/console.h>
+#include <device/class/char.h>
+#include <device/device.h>
+#include <device/driver.h>
+
 #if defined(CONFIG_MUTEK_CONSOLE)
 
 extern struct device_char_s console_dev;
@@ -73,4 +78,16 @@ const struct fileops_s console_file_ops =
   .read = &tty_read,
   .write = &tty_write,
 };
+
+
+
+struct device_char_s console_dev = DEVICE_ACCESSOR_INIT;
+
+void mutek_console_initsmp()
+{
+  if (cpu_isbootstrap())
+    {
+#warning missing code here
+    }
+}
 

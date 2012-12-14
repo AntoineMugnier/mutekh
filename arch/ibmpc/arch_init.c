@@ -22,7 +22,7 @@
 
 
 #include <hexo/types.h>
-#include <hexo/init.h>
+#include <mutek/startup.h>
 #include <hexo/cpu.h>
 
 # include <device/class/icu.h>
@@ -143,7 +143,7 @@ void arch_init(uintptr_t init_sp)
 
       mem_init();
 
-      hexo_global_init();
+      device_tree_init();
 
 #ifdef CONFIG_HEXO_MMU
 
@@ -252,7 +252,7 @@ void arch_start_other_cpu(void)
 #endif
 }
 
-size_t arch_get_cpu_count(void)
+size_t device_get_cpu_count(void)
 {
 #ifdef CONFIG_ARCH_SMP
   return cpu_count;

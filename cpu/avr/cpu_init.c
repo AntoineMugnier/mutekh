@@ -21,7 +21,7 @@
 */
 
 #include <hexo/interrupt.h>
-#include <hexo/init.h>
+#include <mutek/startup.h>
 
 /** pointer to context local storage in cpu local storage */
 CPU_LOCAL void *__context_data_base;

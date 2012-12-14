@@ -259,7 +259,6 @@ enum device_flags_e
 
 
 #ifdef CONFIG_DEVICE_TREE
-# define CONTAINER_LOCK_device_list HEXO_SPIN
 CONTAINER_TYPE(device_list, CLIST,
 #endif
 /** device tree base node structure */
@@ -440,6 +439,10 @@ bool_t device_tree_walk(struct device_node_s *root, device_tree_walker_t *walker
     both ids but the device still has to have an id resource attached. */
 config_depend(CONFIG_DEVICE_TREE)
 struct device_s *device_get_cpu(uint_fast8_t major_id, uint_fast8_t minor_id);
+
+/** @This returns the number of processor device present in the
+    devices tree. */
+uint_fast8_t device_get_cpu_count();
 
 #ifdef CONFIG_VMEM
 uintptr_t vpage_io_map(paddr_t paddr, size_t size);

@@ -23,7 +23,7 @@
 #include <mutek/scheduler.h>
 #include <gpct/cont_slist.h>
 
-#include <hexo/init.h>
+#include <mutek/startup.h>
 #include <hexo/local.h>
 #include <hexo/cpu.h>
 #include <hexo/segment.h>
@@ -378,45 +378,6 @@ struct sched_context_s *sched_wake(sched_queue_root_t *queue)
   return sched_ctx;
 }
 
-void sched_global_init(void)
-{
-#if defined(CONFIG_MUTEK_SCHEDULER_MIGRATION)
-    struct scheduler_s *sched = __scheduler_get();
-
-    sched_queue_init(&sched->root);
-# if defined(CONFIG_HEXO_IPI)
-    idle_cpu_queue_init(&sched->idle_cpu);
-# endif
-#endif
-}
-
-void sched_cpu_init(void)
-{
-  struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);
-  uint8_t *stack;
-  error_t err;
-
-  assert(CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE % sizeof(reg_t) == 0);
-  stack = arch_contextstack_alloc(CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE);
-
-  assert(stack != NULL);
-
-  err = context_init(&idle->context, stack,
-                     stack + CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE,
-                     sched_context_idle, 0);
-
-  assert(err == 0);
-
-#if defined(CONFIG_MUTEK_SCHEDULER_STATIC)
-    struct scheduler_s *sched = __scheduler_get();
-
-    sched_queue_init(&sched->root);
-# if defined(CONFIG_HEXO_IPI)
-    idle_cpu_queue_init(&sched->idle_cpu);
-# endif
-#endif
-}
-
 #ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
 
 void sched_affinity_add(struct sched_context_s *sched_ctx, cpu_id_t cpu)
@@ -489,4 +450,91 @@ void sched_context_candidate_fcn(struct sched_context_s *sched_ctx,
   sched_ctx->is_candidate = fcn;
 }
 #endif
+
+/***********************************************************************
+ *      Scheduler init
+ */
+
+static struct sched_context_s startup_sched_ctx;
+
+void mutek_scheduler_initsmp()
+{
+  if (cpu_isbootstrap())
+    {
+#if defined(CONFIG_MUTEK_SCHEDULER_MIGRATION)
+      /* init single shared scheduler queue */
+      struct scheduler_s *sched = __scheduler_get();
+
+      sched_queue_init(&sched->root);
+# if defined(CONFIG_HEXO_IPI)
+      idle_cpu_queue_init(&sched->idle_cpu);
+# endif
+#endif
+
+      /* initialize a scheduler startup context */
+      /* FIXME initial stack space will never be freed ! */
+      extern __ldscript_symbol_t __initial_stack;
+      context_bootstrap(&startup_sched_ctx.context, (uintptr_t)&__initial_stack, CONFIG_HEXO_RESET_STACK_SIZE);
+      sched_context_init(&startup_sched_ctx);
+    }
+
+#if defined(CONFIG_MUTEK_SCHEDULER_STATIC)
+  /* init a scheduler queue for each processor */
+  struct scheduler_s *sched = __scheduler_get();
+
+  sched_queue_init(&sched->root);
+# if defined(CONFIG_HEXO_IPI)
+  idle_cpu_queue_init(&sched->idle_cpu);
+# endif
+#endif
+
+
+  /* create the processor idle thread */
+  struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);
+  uint8_t *stack;
+  error_t err;
+
+  assert(CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE % sizeof(reg_t) == 0);
+  stack = arch_contextstack_alloc(CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE);
+
+  assert(stack != NULL);
+
+  err = context_init(&idle->context, stack,
+                     stack + CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE,
+                     sched_context_idle, 0);
+
+  assert(err == 0);
+
+  mutekh_startup_smp_barrier();
+
+  /* enable interrupts from now */
+  cpu_interrupt_enable();
+}
+
+static void startup_sched_ctx_cleanup(void *param)
+{
+#ifdef CONFIG_SOCLIB_MEMCHECK
+  if (param && cpu_isbootstrap())
+    {
+      cpu_id_t id = (uintptr_t)param;
+//      soclib_mem_check_delete_ctx(id);
+    }
+#endif
+
+  sched_context_exit();
+}
+
+void mutek_scheduler_start()
+{
+  mutekh_startup_smp_barrier();
+
+#if 0    // FIXME
+  if (cpu_isbootstrap())
+    mem_reclaim_initmem();
+#endif
+
+  cpu_interrupt_disable();
+  /* run cleanup on temporary context stack */
+  cpu_context_stack_use(sched_tmp_context(), startup_sched_ctx_cleanup, NULL);
+}
 

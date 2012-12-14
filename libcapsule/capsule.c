@@ -28,6 +28,8 @@
 #include <capsule_api.h>
 #include <capsule_abs_itf.h>
 
+#warning device_get_cpu_count is slow
+
 #define CAP_STACK_SIZE 4096*4
 
 #if 0
@@ -215,7 +217,7 @@ void app_start()
     memset(cpu_ctxts, 0, sizeof(*cpu_ctxts)*CONFIG_CPU_MAXCOUNT);
 
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
-    for ( i=0; i<arch_get_cpu_count(); ++i ) {
+    for ( i=0; i<device_get_cpu_count(); ++i ) {
         struct cpu_ctxt_s *ctx = mem_alloc(sizeof(*ctx), mem_scope_sys);
 
         memset(ctx, 0, sizeof(*ctx));
@@ -223,7 +225,7 @@ void app_start()
         cpu_ctxts[i] = ctx;
 
         dprintk("%s %d/%d %p\n",
-                __FUNCTION__, i, arch_get_cpu_count(),
+                __FUNCTION__, i, device_get_cpu_count(),
                 ctx);
 
         context_init( &ctx->context.context,
@@ -253,7 +255,7 @@ capsule_rc_t capsule_sys_init_warmup(void)
 {
     size_t i;
 
-    for ( i=0; i<arch_get_cpu_count()*2; ++i ) {
+    for ( i=0; i<device_get_cpu_count()*2; ++i ) {
         struct capsule_ctxt_s *job = mem_alloc(sizeof(*job), mem_scope_sys);
         capsule_queue_push(&free_jobs, job);
     }
@@ -288,7 +290,7 @@ void capsule_sys_dump_all_stats(FILE * stream)
     size_t i;
     fprintf(stream, "Where\tprobes\tjobs\tjoins\n");
 
-    for ( i=0; i<arch_get_cpu_count(); ++i ) {
+    for ( i=0; i<device_get_cpu_count(); ++i ) {
         fprintf(stream, "CPU%d\t%d\t%d\t%d\n",
                 i,
                 cpu_ctxts[i]->probes,
@@ -312,7 +314,7 @@ void capsule_sys_reset_all_stats()
 {
     size_t i;
 
-    for ( i=0; i<arch_get_cpu_count(); ++i ) {
+    for ( i=0; i<device_get_cpu_count(); ++i ) {
         cpu_ctxts[i]->probes = 0;
         cpu_ctxts[i]->job_count = 0;
         cpu_ctxts[i]->joins = 0;

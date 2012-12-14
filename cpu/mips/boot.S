@@ -93,8 +93,8 @@ FUNC_START(.boot, cpu_boot)
         mtc0    $4,     $15,    1
 #endif
 
-        /* jump to architecture code */
-        la      $8,             boot_from_reset_vector
+        /* jump to C code */
+        la      $8,             mutekh_startup
         jal     $8
         nop
 

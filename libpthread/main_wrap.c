@@ -21,7 +21,7 @@
 */
 
 #include <hexo/cpu.h>
-#include <hexo/init.h>
+#include <mutek/startup.h>
 #include <pthread.h>
 
 pthread_t pthread_main;

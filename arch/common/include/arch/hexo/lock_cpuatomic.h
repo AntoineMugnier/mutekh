@@ -68,7 +68,7 @@ static inline void arch_lock_spin(struct arch_lock_s *lock)
 
   while (cpu_atomic_bit_testset(&lock->a, 0))
     {
-      asm volatile("pause");
+      asm volatile("nop");
       assert(deadline-- > 0);
     }
 #else

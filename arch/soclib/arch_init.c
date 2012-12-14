@@ -19,83 +19,130 @@
 
 */
 
-#include <assert.h>
-
-# include <device/class/cpu.h>
-# include <device/driver.h>
-# include <device/device.h>
-
-#if defined(CONFIG_ARCH_DEVICE_TREE)
-# include <device/class/enum.h>
-#endif
-
+#include <mutek/startup.h>
 #include <arch/mem_checker.h>
-
-#if defined(CONFIG_SOCLIB_EARLY_CONSOLE)
-void soclib_early_console(uintptr_t addr);
-#endif
-
-#include <hexo/types.h>
-#include <hexo/init.h>
-#include <hexo/lock.h>
-#include <hexo/cpu.h>
-#include <mutek/printk.h>
-#include <mutek/scheduler.h>
-#include <hexo/context.h>
-
 #include <string.h>
 
-#if defined(CONFIG_ARCH_DEVICE_TREE)
-extern void *arch_fdt;
-#endif
-
-#ifdef CONFIG_HEXO_MMU
-#include <hexo/mmu.h>
-
-extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
-#endif
-
-#define START_MAGIC 0x67c51264
-
-#ifdef CONFIG_ARCH_SMP
-static uint_fast8_t cpu_count = 1;
-uint32_t     cpu_start_flag = 0;
-static lock_t       cpu_init_lock;    /* cpu intialization lock */
-/* integer atomic operations global spin lock */
-lock_t              __atomic_arch_lock;
-#endif
-
-#if defined (CONFIG_MUTEK_SCHEDULER)
-extern struct sched_context_s main_ctx;
-#else
-struct context_s main_ctx;
-#endif
-
-static
-void soclib_setup_memory()
-{
 #ifdef CONFIG_DATA_FROM_ROM
-    extern __ldscript_symbol_t __data_start;
-    extern __ldscript_symbol_t __data_load_start;
-    extern __ldscript_symbol_t __data_load_end;
+void soclib_data_section_init()
+{
+  extern __ldscript_symbol_t __data_start;
+  extern __ldscript_symbol_t __data_load_start;
+  extern __ldscript_symbol_t __data_load_end;
 
-    soclib_mem_check_region_status(
-        (uint8_t*)&__data_start,
-        (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start,
-        SOCLIB_MC_REGION_GLOBAL);
-    memcpy_from_code(
-        (uint8_t*)&__data_start,
-        (uint8_t*)&__data_load_start,
-        (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
+  soclib_mem_check_region_status(
+      (uint8_t*)&__data_start,
+      (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start,
+      SOCLIB_MC_REGION_GLOBAL);
+  memcpy_from_code(
+      (uint8_t*)&__data_start,
+      (uint8_t*)&__data_load_start,
+      (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
+}
 #endif
 
-#ifdef CONFIG_ARCH_SMP
-    lock_init(&__atomic_arch_lock);
-    lock_init(&cpu_init_lock);
-#endif
+/////////////////////////////////////////////////////////////////////
+
+void soclib_bss_section_init()
+{
+  extern __ldscript_symbol_t __bss_start;
+  extern __ldscript_symbol_t __bss_end;
+
+  soclib_mem_check_region_status(
+      (uint8_t*)&__bss_start,
+      (uint8_t*)&__bss_end-(uint8_t*)&__bss_start,
+      SOCLIB_MC_REGION_GLOBAL);
+  memset(
+      (uint8_t*)&__bss_start,
+      0,
+      (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
 }
 
-static
+
+/////////////////////////////////////////////////////////////////////
+
+#include <mutek/mem_alloc.h>
+#include <mutek/mem_region.h>
+#include <mutek/memory_allocator.h>
+
+void soclib_mem_init()
+{
+  extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
+
+#ifdef CONFIG_HEXO_MMU
+
+  uint32_t t = (uint32_t)(&__system_uncached_heap_start);
+
+  /* default_region is defined in mutek/include/mutek/mem_alloc.h */
+  default_region = memory_allocator_init(NULL,
+				      t, t + CONFIG_SOCLIB_VMEM_MALLOC_REGION_SIZE);
+
+#else
+
+  default_region = memory_allocator_init(NULL, 
+				      &__system_uncached_heap_start, 
+					 (void*)((uintptr_t)&__system_uncached_heap_end -
+                                                 (1 << CONFIG_HEXO_RESET_STACK_SIZE) * CONFIG_CPU_MAXCOUNT));
+
+#endif
+
+}
+
+
+/////////////////////////////////////////////////////////////////////
+
+
+#ifdef CONFIG_SOCLIB_FDT
+
+# include <device/driver.h>
+# include <device/device.h>
+# include <device/class/enum.h>
+# include <fdt/reader.h>
+
+void soclib_fdt_init()
+{
+    extern const struct driver_s enum_fdt_drv;
+    static struct device_s fdt_dev;
+    uintptr_t arch_fdt = CONFIG_SOCLIB_FDT_ROM_ADDRESS;
+
+    device_init(&fdt_dev);
+    device_attach(&fdt_dev, NULL);
+    device_res_add_mem(&fdt_dev, arch_fdt, arch_fdt + fdt_get_size((void*)arch_fdt));
+    device_bind_driver(&fdt_dev, &enum_fdt_drv);
+    device_init_driver(&fdt_dev);
+}
+#endif
+
+
+/////////////////////////////////////////////////////////////////////
+
+
+#ifdef CONFIG_SOCLIB_MEM_REGION
+void soclib_mem_region_init(void)
+{
+  cpu_id_t cpu;
+  uint_fast16_t i;
+  
+  for (cpu=0; cpu<device_get_cpu_count(); cpu++)
+    {
+      mem_region_id_init(cpu);
+      
+      for (i=0; i<mem_scope_e_count; i++)
+	{
+	  if (i == mem_scope_sys)
+	    mem_region_id_add(cpu, i, default_region, 0);
+	  else
+	    mem_region_id_add(cpu, i, default_region, 200);
+	}
+    }
+
+  default_region = NULL;
+}
+#endif
+
+/////////////////////////////////////////////////////////////////////
+
+#ifdef CONFIG_VMEM
 void soclib_vmem_init()
 {
 #ifdef CONFIG_HEXO_MMU
@@ -120,181 +167,10 @@ void soclib_vmem_init()
     mmu_cpu_init();
 #endif
 }
-
-static void cpu_reg_init()
-{
-    /* find processor device */
-    struct device_s *dev = device_get_cpu(cpu_id(), 0);
-
-    if (!dev)
-        return;
-
-    struct device_cpu_s cpu_dev;
-
-    if (device_get_accessor(&cpu_dev, dev, DRIVER_CLASS_CPU, 0))
-        return;
-
-    DEVICE_OP(&cpu_dev, reg_init);
-
-    device_put_accessor(&cpu_dev);
-}
-
-static
-void hw_init()
-{
-#if defined(CONFIG_ARCH_DEVICE_TREE)
-    //TODO: change with mem_parse_fdt when lib topology is done
-    mem_region_init();
-
-    extern const struct driver_s enum_fdt_drv;
-    static struct device_s fdt_dev;
-
-    device_init(&fdt_dev);
-    device_attach(&fdt_dev, NULL);
-    device_res_add_mem(&fdt_dev, (uintptr_t)arch_fdt, (uintptr_t)arch_fdt + fdt_get_size(arch_fdt));
-    device_bind_driver(&fdt_dev, &enum_fdt_drv);
-    device_init_driver(&fdt_dev);
-
-    device_find_driver(NULL);
-
-#elif defined(CONFIG_ARCH_HW_INIT_USER)
-    user_hw_init();
-#elif defined(CONFIG_ARCH_HW_INIT)
-# error CONFIG_ARCH_HW_INIT unsupported for SoCLib platforms
-#endif
-}
-
-static inline void start_other_cpus(void);
-
-/**
-   @this is the function run by the bootstrap CPU of the platform. It
-   initializes all the hardware.
- */
-static
-void arch_init_bootstrap(uintptr_t init_sp)
-{
-    soclib_setup_memory();
-
-#if defined(CONFIG_SOCLIB_EARLY_CONSOLE)
-    soclib_early_console(CONFIG_SOCLIB_EARLY_CONSOLE_ADDR);
 #endif
 
-    /* configure system wide cpu data */
-    mem_init();
-    hexo_global_init();
-    soclib_vmem_init();
+/////////////////////////////////////////////////////////////////////
 
-    hw_init();
-
-    /* configure first CPU */
-    cpu_reg_init();
-
-    start_other_cpus();
-
-#if defined(CONFIG_MUTEK_SCHEDULER)
-    sched_global_init();
-    sched_cpu_init();
-
-    /* FIXME initial stack space will never be freed ! */
-    context_bootstrap(&main_ctx.context, 0, init_sp);
-    sched_context_init(&main_ctx);
-#else
-    context_bootstrap(&main_ctx, 0, init_sp);
-#endif
-
-    /* run mutek_start() */
-    mutek_start();
-}
-
-#ifdef CONFIG_ARCH_SMP
-/**
-   @this is the function run by all CPUs other than the bootstrap one.
- */
-static
-void arch_init_other()
-{
-    assert(cpu_id() < CONFIG_CPU_MAXCOUNT);
-
-    /* configure other CPUs */
-    lock_spin(&cpu_init_lock);
-
-#ifdef CONFIG_HEXO_MMU
-    mmu_cpu_init();
-#endif      
-        
-    ++cpu_count;
-
-    lock_release(&cpu_init_lock);
-
-    /* wait for start signal */
-
-    while (cpu_start_flag != START_MAGIC)
-        order_compiler_mem();
-
-    cpu_reg_init();
-
-    /* run mutek_start_smp() */
-
-#if defined(CONFIG_MUTEK_SCHEDULER)
-    sched_cpu_init();
-#endif
-
-    /* FIXME should have context_bootstrap for non bsp processors,
-       especially when CONFIG_MUTEK_SMP_APP_START is defined. */
-
-    mutek_start_smp();
-}
-#endif
-
-static inline
-void start_other_cpus(void)
-{
-#ifdef CONFIG_ARCH_SMP
-    size_t i;
-    for ( i=0; i<CONFIG_CPU_MAXCOUNT; ++i ) {
-        if ( i == cpu_id() )
-            continue;
-# if defined(CONFIG_ARCH_SOCLIB_BOOTLOADER_MUTEKH)
-        error_t err = enum_fdt_wake_cpuid(&fdt_enum_dev, i, arch_init_other);
-        if (err)
-            printk("Error waking cpu %d from FDT: %s\n", i, strerror(err));
-# endif
-# if defined(CONFIG_CPU_RESET_HANDLER)
-        extern void start_barrier_release(cpu_id_t cpu);
-        start_barrier_release(i);
-# endif
-    }
-#endif
-}
-
-/* architecture specific init function */
-void arch_init(uintptr_t init_sp)
-{
-#ifdef CONFIG_ARCH_SMP
-    if (cpu_isbootstrap())
-        arch_init_bootstrap(init_sp);
-    else
-        arch_init_other();
-#else
-    arch_init_bootstrap(init_sp);
-#endif
-}
-
-void arch_start_other_cpu(void)
-{
-#ifdef CONFIG_ARCH_SMP
-    cpu_start_flag = START_MAGIC;
-#endif
-}
-
-inline size_t arch_get_cpu_count(void)
-{
-#ifdef CONFIG_ARCH_SMP
-    return cpu_count;
-#else
-    return 1;
-#endif
-}
 
 #if defined(CONFIG_DEVICE_IRQ) && defined(CONFIG_ARCH_SMP)
 bool_t arch_cpu_irq_affinity_test(struct device_s *cpu, struct dev_irq_ep_s *src)
@@ -303,12 +179,32 @@ bool_t arch_cpu_irq_affinity_test(struct device_s *cpu, struct dev_irq_ep_s *src
 }
 #endif
 
-// Local Variables:
-// tab-width: 4;
-// c-basic-offset: 4;
-// c-file-offsets:((innamespace . 0)(inline-open . 0));
-// indent-tabs-mode: nil;
-// End:
-//
-// vim: filetype=cpp:expandtab:shiftwidth=4:tabstop=4:softtabstop=4
+
+/////////////////////////////////////////////////////////////////////
+
+#ifdef CONFIG_ARCH_SMP
+
+#include <hexo/ordering.h>
+
+# define START_MAGIC 0x67c51264
+uint32_t cpu_magic = 0;
+
+void soclib_smp_wait_bootstrap()
+{
+    while (cpu_magic != START_MAGIC)
+        {
+            uint_fast8_t i = 255;
+            while (i--)
+                asm volatile ("nop");
+            order_compiler_mem();
+        }
+}
+
+void soclib_start_cpus()
+{
+    cpu_magic = START_MAGIC;
+    order_compiler_mem();
+}
+#endif
+
 

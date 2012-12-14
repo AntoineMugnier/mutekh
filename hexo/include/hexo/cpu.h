@@ -59,12 +59,6 @@ struct dev_irq_ep_s;
 bool_t arch_cpu_irq_affinity_test(struct device_s *cpu, struct dev_irq_ep_s *src);
 #endif
 
-/** return total cpus count */
-size_t arch_get_cpu_count(void);
-
-/** unlock non first CPUs so that they can enter main_smp() */
-void arch_start_other_cpu(void);
-
 /** cpu trap instruction */
 void cpu_trap();
 

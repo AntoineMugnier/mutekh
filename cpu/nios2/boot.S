@@ -89,7 +89,7 @@ FUNC_START(.boot, cpu_boot)
        movia   r4,              __exception_base_ptr
        wrctl   ctl17,           r4
 
-       movia   r16,             boot_from_reset_vector
+       movia   r16,             mutekh_startup
        callr   r16
 FUNC_END(cpu_boot)
 

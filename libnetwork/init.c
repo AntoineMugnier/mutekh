@@ -21,17 +21,19 @@
 */
 
 #include <mutek/printk.h>
+#include <mutek/startup.h>
 
 #include <device/class/timer.h>
 #include <device/device.h>
 #include <device/driver.h>
 
-INIT_LIBRARIES_PROTOTYPES;
-
 struct device_timer_s    libnetwork_timer_dev = DEVICE_ACCESSOR_INIT;
 
-void libnetwork_init()
+void libnetwork_initsmp()
 {
+  if (!cpu_isbootstrap())
+    return;
+
   if (device_get_accessor_by_path(&libnetwork_timer_dev, NULL, "network_timer timer", DRIVER_CLASS_TIMER))
     {
       printk("error: network: No `network_timer' or `timer' entry found in device tree.\n");
@@ -43,7 +45,7 @@ void libnetwork_init()
     }
 }
 
-void libnetwork_cleanup()
+void libnetwork_cleanupsmp()
 {
   if (device_check_accessor(&libnetwork_timer_dev))
     {

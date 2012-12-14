@@ -279,6 +279,28 @@ sub new_token_block
     return ($opts, \%config_cmd);
 }
 
+sub args_init_flags
+{
+    my ($location, $opts, $tag, @args) = @_;
+
+    foreach my $flag (@args)
+    {
+	if ( $flag !~ /^(notempty|calls)$/)
+	{
+	    error($location.": unknown flag `".$flag."' for `".$opts->{name}." token'");
+	    next;
+	}
+
+	if (defined $opts->{flags}->{$flag})
+	{
+	    warning($location.": flag `".$flag."' is already set for `".$opts->{name}." token'");
+	    next;
+	}
+
+	$opts->{flags}->{$flag} = 1;
+    }
+}
+
 my %init_cmd =
 (
  "parent" => \&args_list_concat,
@@ -288,6 +310,7 @@ my %init_cmd =
  "after" => \&args_list_concat,
  "during" => \&args_word,
  "desc" => \&args_text_block,
+ "flags" => \&args_init_flags,
 );
 
 sub new_init_block
@@ -586,149 +609,248 @@ sub tokens_resolve
 #	Initialization actions
 ###############################################################################
 
-my @init_actions;
+my @init_defined;
 
-sub process_inits_rec
+sub process_init
 {
-    my ( $init, $sinit, $order, $iorder ) = @_;
+    my ( $init, $sinit, $constraint, $iconstraint ) = @_;
 
     our %cycle;
 
-    if ( $cycle{$init} ) {
-	error_loc($init, "found cycle while processing `$order' tags");
+    if ( $cycle{$init}) {
+	error_loc($init, "found cycle in ordering constraints")
+            if (!$init->{ocycle_error}++);
 	return;
     }
 
     $cycle{$init} = 1;
 
-    sub process_inits_set
+    foreach my $name ( keys $init->{$constraint} )
     {
-        my ( $init, $sinit, $order, $iorder ) = @_;
-    
-        if ( $sinit->{"is$iorder"}->{$init} ) {
-	    error("initialization order conflict `$sinit->{name} $order $init->{name}'");
-	    return 1;
-        }
-    
-        debug(1, "$sinit->{name} $order $init->{name}");
-        $sinit->{"is$order"}->{$init} = 1;
-    
-        return 0;
-    }
-    
-    sub process_inits_chld
-    {
-        my ( $init, $sinit, $order, $iorder ) = @_;
-    
-        foreach my $c ( @{$init->{childs}} ) {
-	    process_inits_set( $c, $sinit, $order, $iorder );
-    	    process_inits_chld( $c, $sinit, $order, $iorder );
-        }
-    }
+        my $next = $inits{$name};
 
-    if ( $init->{$order} ) {
-	foreach my $c ( @{$init->{$order}} ) {
-	    next if process_inits_set( $c, $sinit, $order, $iorder );
+        $sinit->{$constraint}->{$name} ||= 3;
 
-	    process_inits_chld( $c, $sinit, $order, $iorder );
-	    process_inits_rec( $c, $sinit, $order, $iorder );
-	}
-    }
-
-    if ( $init->{during} ) {
-	my $during = $init->{during};
-
-#	process_inits_set( $during, $sinit, $order, $iorder ) if ( $init != $sinit );
-	process_inits_rec( $during, $sinit, $order, $iorder );
+        process_init( $next, $sinit, $constraint, $iconstraint );
     }
 
     $cycle{$init} = 0;
 }
 
+sub process_init2
+{
+    my ( $init, $constraint ) = @_;
+
+    foreach my $name ( keys $init->{$constraint} )
+    {
+        my $a = $inits{$name};
+
+        foreach_recurs( $a, "childs", sub {
+            my $c = shift;
+            $init->{$constraint}->{$c->{name}} = 4;
+        });
+    }
+}
+
+sub inits_sort_predicate
+{
+    return 1 if ($a->{isafter}->{$b->{name}});
+    return 1 if ($b->{isbefore}->{$a->{name}});
+    return -1 if ($b->{isafter}->{$a->{name}});
+    return -1 if ($a->{isbefore}->{$b->{name}});
+    return $a->{name} cmp $b->{name};
+}
+
 sub process_inits
 {
     foreach my $init ( values %inits ) {
-	$init->{defined} = !$init->{parent} || foreach_or_list( $init->{parent}, \&check_defined );
+
+        $init->{defined} = !$init->{parent} || foreach_and_list( $init->{parent}, \&check_defined );
+        $init->{isafter} = {};
+        $init->{isbefore} = {};
     }
 
     foreach my $init ( values %inits ) {
-	next if !$init->{defined};
 
 	# setup heirarchy
 	if ( my $during = $init->{during} ) {
 
-	    if ( $during->{defined} ) {
+            $during->{childs} ||= [];
+            push @{$during->{childs}}, $init;
 
-		$during->{childs} ||= [];
-		push @{$during->{childs}}, $init;
+            if ( $during->{constructor} ) {
+                error_loc($init, "init tokens used with `during' tag can not have `function' defined");
+            }
 
-		if ( $during->{constructor} ) {
-		    error_loc($init, "init tokens used with `during' tag can not have `function' defined");
-		}
+	} else {
+            $init->{calls} = [];
 
-	    } else {
-		warning_loc($init, "initialization will not take place because `$during->{name}' is disabled") ;
-		next;
-	    }
-
-	} elsif ( $init->{constructor} ) {
-            warning_loc($init, "init token has `function' defined but is not attached to a parent token");
+            if ( $init->{constructor} ) {
+                warning_loc($init, "init token has `function' defined but is not attached to a parent token");
+            }
         }
 
         if ( $init->{prototype} && $init->{constructor} ) {
             error_loc($init, "init `prototype' can only be defined for non-leaf tokens (without `function')");
         }
 
-	push @init_actions, $init;
+	push @init_defined, $init;
     }
 
-    foreach my $init ( @init_actions ) {
-	process_inits_rec( $init, $init, "before", "after" );
-	process_inits_rec( $init, $init, "after", "before" );
-    };
+    # disable some child inits
+    foreach my $init ( @init_defined ) {
+
+        foreach_recurs( $init, "childs", sub {
+            my $c = shift;
+
+	    if ( $c->{defined} && !$init->{defined} ) {
+		warning_loc($c, "initialization will not take place because `$init->{name}' is disabled");
+                $c->{defined} = 0;
+	    }
+        });
+    }
+
+    # fill isbefore/isafter hashes
+    foreach my $init ( @init_defined ) {
+
+        foreach my $c ( @{$init->{after}} ) {
+            $init->{isafter}->{$c->{name}} = 1;
+            $c->{isbefore}->{$init->{name}} ||= 2;
+        }
+
+        foreach my $c ( @{$init->{before}} ) {
+            $init->{isbefore}->{$c->{name}} = 1;
+            $c->{isafter}->{$init->{name}} ||= 2;
+        }
+    }
+
+    # setup indirect ordering constraints
+    foreach my $init ( @init_defined ) {
+
+        my %cycle;
+
+        for ( my $d = $init; $d; $d = $d->{during} ) {
+
+            if ( $cycle{$d}++ ) {
+                error_loc($d, "found cycle in init hierarchy");
+                undef $d->{during};
+                next;
+            }
+
+            process_init( $d, $init, "isbefore", "isafter" );
+            process_init( $d, $init, "isafter", "isbefore" );
+        }
+    }
+
+    # propagate ordering constraints in hierarchy
+    foreach my $init ( @init_defined ) {
+        process_init2( $init, "isbefore" );
+        process_init2( $init, "isafter" );
+    }
 
     return if $err_flag;
 
-    # reorder
+    # sort initialization calls
+    foreach my $init (sort { $a->{name} cmp $b->{name} } @init_defined) {
 
-    for ( my $chg = 1; $chg--; ) {
+        next if (!$init->{defined});
 
-	for (my $i = 0; $i < scalar @init_actions; $i++) {
-	    my $a = @init_actions[$i];
+        my @init_calls;
 
-	    for (my $j = 0; $j < scalar @init_actions; $j++) {
-		next if $i == $j;
-		my $b = @init_actions[$j];
+        foreach_recurs( $init, "childs", sub {
+            my $chld = shift;
+            push @init_calls, $chld if $chld->{constructor} && $chld->{defined};
+        });
 
-		if (($i < $j && $a->{isafter}->{$b}) ||
-		    ($i > $j && $a->{isbefore}->{$b})) {
-		    @init_actions[$i] = $b;
-		    @init_actions[$j] = $a;
-		    $chg = 1;
-		    last;
-		}
-	    }
-	}
-    }
+        if ( !@init_calls && $init->{flags}->{notempty} ) {
+            error_loc($init, "initialization stage can not be empty");
+        }
 
-    # number
+        $init->{calls} = [ sort inits_sort_predicate @init_calls ];
+#            debug(1, $a->{name}, " has no order constraint with ", $b->{name});
 
-    for (my $i = 0; $i < scalar @init_actions; $i++) {
-        my $a = @init_actions[$i];
-        $a->{num} = $i;
     }
 
 }
 
-sub output_inits_details
+sub output_inits_calls
+{
+    my ( $out, $actions, $prefix ) = @_;
+
+    foreach my $init (sort { $a->{name} cmp $b->{name} } @$actions) {
+
+        next if !$init->{flags}->{calls} || !$init->{calls};
+
+        my @calls = @{$init->{calls}};
+
+        print {$out} "$prefix $init->{name} (init):\n";
+        foreach my $call ( @calls ) {
+            printf {$out} "$prefix     %-32s %s()\n", $call->{name}, $call->{constructor}
+                if ( $call->{constructor} );
+        }
+        print {$out} "\n";
+
+        print {$out} "$prefix $init->{name} (cleanup):\n";
+        foreach my $call ( reverse @calls ) {
+            printf {$out} "$prefix     %-32s %s()\n", $call->{name}, $call->{destructor}
+                if ( $call->{destructor} );
+        }
+        print {$out} "\n";
+    }
+}
+
+sub output_inits_tree_
+{
+    my ( $actions, $depth ) = @_;
+
+    foreach my $init (sort inits_sort_predicate @$actions) {
+
+        if (!$init->{defined}) {
+            print mycolor('red');
+        }
+
+        my $parent = $init->{parent};
+        $parent = 'when '.get_token_name_list( $parent, " & " ) if defined $parent;
+
+        printf "%-50s %s\n", "    "x$depth." * ".$init->{name}, $parent;
+        print mycolor('reset');
+
+        if ( my $chld = $init->{childs} ) {
+            output_inits_tree_( $chld, $depth + 1 );
+        }
+    }
+}
+
+sub output_inits_tree
+{
+    foreach my $init (sort { $a->{name} cmp $b->{name} } values %inits) {
+
+        next if ($init->{during});
+
+        print "  ", $init->{name}, "\n";
+        if ( my $chld = $init->{childs} ) {
+            output_inits_tree_( $chld, 1 );
+        }
+        print "\n";
+    }
+}
+
+sub output_inits_constraints
 {
     my ( $out, $actions ) = @_;
 
-    foreach my $init (@$actions) {
-        print {$out} "  $init->{name} ";
-        print {$out} " $init->{constructor}(); " if ( $init->{constructor} );
-        print {$out} " $init->{destructor}(); " if ( $init->{destructor} );
-        print {$out} "\n";
+    foreach my $init (sort { $a->{name} cmp $b->{name} } @$actions) {
+
+        next if !$init->{constructor};
+
+        printf {$out} "\n  %-32s\n", $init->{name}; #, $init->{defined};
+
+        foreach (keys %{$init->{isafter}}) {
+            print {$out} "      after  $_ ($init->{isafter}->{$_})\n";
+        }
+        foreach (keys %{$init->{isbefore}}) {
+            print {$out} "      before $_ ($init->{isbefore}->{$_})\n";
+        }
     }
 }
 
@@ -738,15 +860,9 @@ sub output_inits
 
     foreach my $init (@$actions) {
 
-        next if ( ! $init->{childs} );
-        next if $init->{constructor};
+        next if !$init->{flags}->{calls} || !$init->{calls};
 
-        my @calls;
-
-        foreach_recurs( $init, "childs", sub {
-            my $chld = shift;
-            push @calls, $chld;
-        });
+        my @calls = @{$init->{calls}};
 
         print {$out} "#define $init->{name}_PROTOTYPES \\\n";
         foreach my $call ( @calls ) {
@@ -762,8 +878,6 @@ sub output_inits
                 if ( $call->{destructor} );
         }
         print {$out} "\n";
-
-        next if ($init->{during});
 
         @calls = sort { $a->{num} > $b->{num} } @calls;
 
@@ -1766,7 +1880,7 @@ sub read_build_config
 
 	    } else {
 		if ($opt->{flags}->{internal} || $opt->{flags}->{meta}  || $opt->{flags}->{mandatory}) {
-		    error("$file:$lnum: `".$opt->{name}."' token can not be defined in".
+		    error("$file:$lnum: The `".$opt->{name}."' token can not be defined in ".
 			  "build configuration file directly.");
 		}
 
@@ -1895,6 +2009,9 @@ sub write_makefile
 	print FILE "BUILD_$var=".$vars{$var}."\n";
     }
 
+    print FILE ("\n# inits\n\n");    # included in makefile for compare
+    output_inits_calls( \*FILE, \@init_defined, "#" );
+
     close(FILE);
 
     if ( ! -f $file_ || compare($file, $file_) ) {
@@ -1965,7 +2082,7 @@ sub write_inits
 	return 1;
     }
 
-    output_inits( \*FILE, \@init_actions );
+    output_inits( \*FILE, \@init_defined );
 
     close(FILE);
     return 0;
@@ -1988,8 +2105,8 @@ sub write_infos
     flat_config( \*FILE );
     print FILE "\n";
 
-    print FILE "Initialization order:\n\n";
-    output_inits_details( \*FILE, \@init_actions );
+    print FILE "Initialization calls order:\n\n";
+    output_inits_calls( \*FILE, \@init_defined );
     print FILE "\n";
 
     print FILE "Configuration used:\n\n";
@@ -2216,7 +2333,7 @@ Usage: config.pl [options]
 
         --config            Output .h, .py, .m4, .mk and .deps configuration in `config.*' files.
 	--check             Check configuration constraints without output.
-	--list[=all]        Display configuration tokens list.
+	--list[=all,init]   Display configuration ot init tokens list.
 	--info=token        Display informations about `token'.
 	--docheader=file    Output header with documentation tags in `file' file.
 	--quiet             Do not output diagnostic messages.
@@ -2268,7 +2385,8 @@ Usage: config.pl [options]
     }
 
     if ( !$param_h{input} ) {
-	error("no build configuration file specified.");
+	error("No build configuration file specified.\n".
+              "See: http://www.mutekh.org/trac/mutekh/wiki/BuildingExamples");
     }
 
     read_build_config( $_, $param_h{build} )
@@ -2289,6 +2407,18 @@ Usage: config.pl [options]
     debug(1, "help and info display actions");
 
     if ($param_h{list}) {
+        if ($param_h{list} eq "init") {
+            if ( $debug ) {
+                print "Initialization constraints:\n";
+                output_inits_constraints( \*STDOUT, \@init_defined );
+            }
+            print "\nInitialization hierarchy:\n\n";
+            output_inits_tree();
+            print "Initialization calls order:\n\n";
+            output_inits_calls( \*STDOUT, \@init_defined, "  " );
+            return;
+        }
+
 	return tokens_list( \*STDOUT, $param_h{list} eq "all" );
     }
 

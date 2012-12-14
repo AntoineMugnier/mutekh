@@ -23,7 +23,7 @@
 #define CPU_ASM_H_
 
 _ASM( .macro CPU_ID _0                                                        )
-# ifdef CONFIG_ARCH_SMP
+# ifdef CONFIG_ARCH_SMP_CAPABLE
 #  if defined (CONFIG_CPU_SPARC_SOCLIB) || defined (CONFIG_CPU_SPARC_LEON3)
 _ASM(        rd    %asr17, p0                                                 )
 _ASM(        srl   p0, 28, p0                                                 )

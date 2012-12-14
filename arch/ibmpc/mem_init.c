@@ -93,7 +93,7 @@ void mem_region_init(void)
   cpu_id_t cpu;
   uint_fast16_t i;
   
-  for (cpu=0; cpu<arch_get_cpu_count(); cpu++)
+  for (cpu=0; cpu<device_get_cpu_count(); cpu++)
     {
       mem_region_id_init(cpu);
       

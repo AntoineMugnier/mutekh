@@ -21,7 +21,7 @@
 */
 
 #include <hexo/types.h>
-#include <hexo/init.h>
+#include <mutek/startup.h>
 #include <hexo/cpu.h>
 #include <hexo/lock.h>
 #include <mutek/mem_alloc.h>
@@ -58,7 +58,7 @@ void arch_init(uintptr_t init_sp)
 
   mem_init();
 
-  hexo_global_init();
+  device_tree_init();
 
   /* configure first CPU */
   cpu_init();
@@ -87,7 +87,7 @@ void arch_start_other_cpu(void)
 {
 }
 
-inline size_t arch_get_cpu_count(void)
+inline size_t device_get_cpu_count(void)
 {
   return 1;
 }
