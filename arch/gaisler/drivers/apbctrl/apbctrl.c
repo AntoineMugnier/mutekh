@@ -24,6 +24,7 @@
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
+#include <hexo/iospace.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -120,15 +121,75 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
       uint16_t device = (endian_be32(p[0]) >> 12) & 0xfff;
       uint8_t version = (endian_be32(p[0]) >> 5) & 0x1f; 
 
-      bool_t is_icu = (vendor == 0x01 && device == 0x00d);
-#ifdef CONFIG_DEVICE_IRQ
-      struct device_s *d = device_alloc(5 + (is_icu ? CONFIG_CPU_MAXCOUNT : 0));
-#else
-      struct device_s *d = device_alloc(5);
-#endif
+      uint32_t start = begin + (((endian_be32(p[1]) >> 20) & 0xfff) << 8);
+      uint32_t mask = ~(((endian_be32(p[1]) >> 4) & 0xfff) << 8) & 0xfffff;
 
+      struct device_s *d = NULL;
+
+      /* some specific device node create */
+      if (vendor == GAISLER_VENDOR_GAISLER)
+        {
+          switch (device)
+            {
+            case GAISLER_DEVICE_IRQMP:
+#ifdef CONFIG_DEVICE_IRQ
+              d = device_alloc(5 + CONFIG_CPU_MAXCOUNT);
+#else
+              d = device_alloc(5);                               
+#endif
+              if (!d)
+                continue;
+
+              if (gaisler_icu == NULL)
+                {
+                  /* keep track of gaisler irq controller */
+                  gaisler_icu = d;
+
+#ifdef CONFIG_DEVICE_IRQ
+                  struct apbctrl_scan_cpu_irq_ctx_s ctx = { d, 0 };
+                  /* add irq links from IRQMP to cpus */
+                  device_tree_walk(NULL, &apbctrl_scan_cpu_irq, &ctx);
+                  if (ctx.count == 0)
+                    printk("apbctrl: no processor found to link to irqmp device.");
+#endif
+                }
+              else
+                {
+                  printk("apbctrl: warning: more than one IRQMP device found!");
+                }
+
+              break;
+
+#ifdef CONFIG_DEVICE_IRQ
+              /* GPTIMER may have multiple irq lines, not described in pnp table.
+                 This hack is needed to properly repport timer irqs in device tree. */
+            case GAISLER_DEVICE_GPTIMER: {
+              uint32_t gpt_cfg = endian_be32(cpu_mem_read_32(start + 0x8));
+              uint_fast8_t nirq = gpt_cfg & 0x100 ? gpt_cfg & 7 : 1;
+              d = device_alloc(4 + nirq);
+              if (!d)
+                continue;
+
+              uint8_t j, irq = endian_be32(p[0]) & 0x1f;
+              for (j = 0; j < nirq; j++)
+                device_res_add_irq(d, j, irq + j - 1, 0, NULL);
+            }
+#endif
+            }
+        }
+
+      /* default device node create */
       if (!d)
-        continue;
+        {
+          d = device_alloc(5);
+          if (!d)
+            continue;
+#ifdef CONFIG_DEVICE_IRQ
+          uint8_t irq = endian_be32(p[0]) & 0x1f;
+          if (irq)
+            device_res_add_irq(d, 0, irq - 1, 0, NULL);
+#endif
+        }
 
 #ifdef CONFIG_GAISLER_DEVICE_IDS
       if (vendor < GAISLER_VENDOR_count &&
@@ -149,35 +210,11 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
 
       device_res_add_revision(d, version, 0);
 
-#ifdef CONFIG_DEVICE_IRQ
-      uint8_t irq = endian_be32(p[0]) & 0x1f;
-
-      if (irq)
-        device_res_add_irq(d, 0, irq - 1, 0, NULL);
-#endif
-
-      /* check for interrupt controller device */
-      if (is_icu && gaisler_icu == NULL)
-        {
-          // keep track of gaisler single irq controller
-          gaisler_icu = d;
-
-#ifdef CONFIG_DEVICE_IRQ
-          struct apbctrl_scan_cpu_irq_ctx_s ctx = { d, 0 };
-
-          // add irq links from irqmp to cpu
-          device_tree_walk(NULL, &apbctrl_scan_cpu_irq, &ctx);
-
-          if (ctx.count == 0)
-            printk("apbctrl: no processor found to link to irqmp device.");
-#endif
-        }
-
-      uint32_t start = begin + (((endian_be32(p[1]) >> 20) & 0xfff) << 8);
-      uint32_t mask = ~(((endian_be32(p[1]) >> 4) & 0xfff) << 8) & 0xfffff;
-
       if (mask & (mask+1))
-        printk("apbctrl: %p device address mask with non contiguous range is not supported\n", d);
+        {
+          printk("apbctrl: %p device address mask with non contiguous range is not supported\n", d);
+          d->status = DEVICE_ENUM_ERROR;
+        }
       else
         {
           switch (endian_be32(p[1]) & 0xf)

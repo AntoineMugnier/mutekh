@@ -232,6 +232,8 @@ void device_get_param_str_default(const struct device_s *dev, const char *name, 
 
 enum device_status_e
 {
+  /** Device enumeration error, some resource entries may be wrong or missing. */
+  DEVICE_ENUM_ERROR,
   /** No driver is currently attached to the device */
   DEVICE_NO_DRIVER,
   /** A driver has been attached to the device but initialization has not been performed yet */
@@ -242,7 +244,7 @@ enum device_status_e
   DEVICE_DRIVER_INIT_FAILED,
 };
 
-#define DEVICE_STATUS_NAMES "no driver", "init pending", "init ok", "init failed"
+#define DEVICE_STATUS_NAMES "enum error", "no driver", "init pending", "init ok", "init failed"
 
 enum device_flags_e
 {
