@@ -28,6 +28,11 @@
 
 #ifndef CONFIG_CPU_SPARC_LEON3_CASA
 lock_t __atomic_arch_lock;
+
+void gaisler_arch_lock_init()
+{
+    lock_init(&__atomic_arch_lock);
+}
 #endif
 
 /////////////////////////////////////////////////////////////////////

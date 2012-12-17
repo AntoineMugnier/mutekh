@@ -150,7 +150,10 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
           mask = ~(mask << 20);
 
           if (mask & (mask+1))
-            printk("ahbctrl: %p device address mask with non contiguous range is not supported\n", d);
+            {
+              printk("ahbctrl: %p device address mask with non contiguous range is not supported\n", d);
+              d->status = DEVICE_ENUM_ERROR;
+            }
           else
             {
               switch (type)
