@@ -47,6 +47,7 @@ binutils_VER_sparc   = 2.20.1
 binutils_VER_avr     = 2.20.1
 binutils_VER_lm32    = 2.20.1
 binutils_VER_microblaze = 2.20.1
+binutils_VER_avr32   = 2.22
 
 binutils_VER=$(binutils_VER_$(TARGET))
 binutils_CONF=
@@ -62,6 +63,7 @@ gcc_VER_sparc   = 4.5.2
 gcc_VER_avr     = 4.5.2
 gcc_VER_lm32    = 4.5.2
 gcc_VER_microblaze = 4.5.2
+gcc_VER_avr32   = 4.4.3
 
 gcc_VER=$(gcc_VER_$(TARGET))
 gcc_CONF=--enable-languages=c --disable-libssp --enable-multilib
@@ -82,6 +84,7 @@ gdb_VER_sparc   = 7.2
 gdb_VER_avr     = 7.2
 gdb_VER_lm32    = 7.2
 gdb_VER_microblaze = 7.3
+gdb_VER_avr32   = 6.7.1
 
 gdb_VER=$(gdb_VER_$(TARGET))
 gdb_CONF=--with-python=no --disable-sim

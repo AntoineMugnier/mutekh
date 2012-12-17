@@ -14,5 +14,3 @@
 
   CONFIG_HEXO_IRQ defined
 
-CONFIG_CPU_MAXCOUNT 5
-
