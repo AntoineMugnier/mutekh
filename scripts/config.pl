@@ -304,6 +304,7 @@ sub args_init_flags
 my %init_cmd =
 (
  "parent" => \&args_list_concat,
+ "condition" => \&args_list_add,
  "function" => \&args_function,
  "prototype" => \&args_text_line,
  "before" => \&args_list_concat,
@@ -329,6 +330,7 @@ sub new_init_block
     $init->{location} = $lnum;
     $init->{file} = $file;
     $init->{name} = $name;
+    $init->{parent} = [];
 
     return ($init, \%init_cmd);
 }
@@ -552,6 +554,7 @@ my %config_tokens_resolvers =
 my %init_tokens_resolvers =
 (
  "parent" => \&tokens_resolve_config_bare,
+ "condition" => \&tokens_resolve_config_cond,
  "after" => \&tokens_resolve_init,
  "before" => \&tokens_resolve_init,
  "need" => \&tokens_resolve_init,
@@ -664,8 +667,15 @@ sub inits_sort_predicate
 sub process_inits
 {
     foreach my $init ( values %inits ) {
+        my $parents = $init->{parent};
 
-        $init->{defined} = !$init->{parent} || foreach_and_list( $init->{parent}, \&check_defined );
+        if (!@$parents) {
+            error_loc($init, "init token has no parent");            
+        }
+
+        $init->{defined} =
+            (!$init->{condition} || foreach_and_list( $init->{condition}, \&foreach_or_list, \&check_rule ))
+            && foreach_or_list( $parents, \&check_defined );
         $init->{isafter} = {};
         $init->{isbefore} = {};
     }
@@ -686,7 +696,7 @@ sub process_inits
             $init->{calls} = [];
 
             if ( $init->{constructor} ) {
-                warning_loc($init, "init token has `function' defined but is not attached to a parent token");
+                warning_loc($init, "init token has `function' defined but no `during' tag");
             }
         }
 
@@ -805,15 +815,25 @@ sub output_inits_tree_
 
     foreach my $init (sort inits_sort_predicate @$actions) {
 
-         my $parent = $init->{parent};
-         if (defined $parent) {
-             $parent = 'when '.get_token_name_list( $parent, " & " );
+        next if ( !foreach_or_list( $init->{parent}, \&check_defined ) );
+
+         my $condition = $init->{condition};
+         my $condstr;
+         if (defined $condition) {
+             foreach my $andlist ( @$condition ) {
+                 if ($condstr) {
+                     $condstr .= "\n".(" "x52)."| ";
+                 } else {
+                     $condstr .= 'if '
+                 }
+                 $condstr .= get_rule_name_list( $andlist, " & " );
+             }
          }
 
          if (!$init->{defined}) {
              print mycolor('red');
          }
-         printf "%-50s %s\n", "    "x$depth." * ".$init->{name}, $parent;
+         printf "%-50s %s\n", "    "x$depth." * ".$init->{name}, $condstr;
          print mycolor('reset');
 
          if ( my $chld = $init->{childs} ) {
