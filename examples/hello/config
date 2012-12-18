@@ -9,8 +9,6 @@
 
   # Libs
   CONFIG_PTHREAD
-%include $(SRC_DIR)/examples/common/build_options.conf
-%include $(SRC_DIR)/examples/common/platforms.conf
 
-  CONFIG_HEXO_IRQ defined
+  %include arch/arch.build
 

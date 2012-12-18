@@ -9,8 +9,8 @@
 
   # Libs
   CONFIG_PTHREAD
-%include $(SRC_DIR)/examples/common/build_options.conf
-%include $(SRC_DIR)/examples/common/platforms.conf
+  %include scripts/options.build
+  %include arch/arch.build
 
   CONFIG_VFS
   CONFIG_VFS_GLOBAL_ROOT

@@ -128,7 +128,7 @@ int app_start()
 {
   /* every processor execute the app_start function due to CONFIG_MUTEK_SMP_APP_START */
 
-#ifdef CONFIG_ARCH_SMP
+#ifdef 
   switch (cpu_id())
     {
     case 0:
@@ -136,20 +136,20 @@ int app_start()
       pthread_barrier_init(&start_barrier, NULL, 7);
       pthread_create((pthread_t*)&demux.thread, NULL, (start_routine_t)run_task, (void*)&demux);
       pthread_create((pthread_t*)&iqzz.thread, NULL, (start_routine_t)run_task, (void*)&iqzz);
-#ifdef CONFIG_ARCH_SMP
+#ifdef 
       start = 1234;
       break;
 
     case 1:
 #endif
       pthread_create((pthread_t*)&vld.thread, NULL, (start_routine_t)run_task, (void*)&vld);
-#ifdef CONFIG_ARCH_SMP
+#ifdef 
       break;
 
     case 2:
 #endif
       pthread_create((pthread_t*)&idct.thread, NULL, (start_routine_t)run_task, (void*)&idct);
-#ifdef CONFIG_ARCH_SMP
+#ifdef 
       break;
 
     case 3:
@@ -157,7 +157,7 @@ int app_start()
       pthread_create((pthread_t*)&libu.thread, NULL, (start_routine_t)run_task, (void*)&libu);
       pthread_create((pthread_t*)&tg.thread, NULL, (start_routine_t)run_task, (void*)&tg);
       pthread_create((pthread_t*)&ramdac.thread, NULL, (start_routine_t)run_task, (void*)&ramdac);
-#ifdef CONFIG_ARCH_SMP
+#ifdef 
     }
 
   while (start != 1234)

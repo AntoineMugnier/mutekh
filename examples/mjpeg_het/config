@@ -16,8 +16,8 @@
   CONFIG_HEXO_CONTEXT_STATS
   CONFIG_PTHREAD_STACK_SIZE 8192
 
-%include $(SRC_DIR)/examples/common/build_options.conf
-%include $(SRC_DIR)/examples/common/platforms.conf
+  %include scripts/options.build
+  %include arch/arch.build
 
 %section static
   CONFIG_MUTEK_SCHEDULER_STATIC

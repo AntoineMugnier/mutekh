@@ -10,13 +10,13 @@
   # Libs
   CONFIG_LIBTERMUI
 
-%include $(SRC_DIR)/examples/common/build_options.conf
-%include $(SRC_DIR)/examples/common/platforms.conf
+  %include scripts/options.build
+  %include arch/arch.build
 
   CONFIG_CPU_MAXCOUNT 4
   CONFIG_HEXO_IRQ defined
 
-  CONFIG_ARCH_SMP defined
+   defined
 
   CONFIG_MUTEK_PRINTK_KEEP_EARLY
 

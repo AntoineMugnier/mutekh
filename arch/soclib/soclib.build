@@ -179,3 +179,7 @@
   %end
 
   %requiretypes platform cpu
+
+%section memcheck
+  CONFIG_SOCLIB_MEMCHECK
+

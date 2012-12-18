@@ -20,6 +20,13 @@ listconfig:
 		--build=$(BUILD)
 
 
+listflatconfig:
+	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
+		--src-path=$(MUTEK_SRC_DIR) \
+		--input=$(CONF) --list=flat		\
+		--build=$(BUILD)
+
+
 listallconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--src-path=$(MUTEK_SRC_DIR) \

@@ -1,7 +1,4 @@
 
-%section assert
-  CONFIG_LIBC_ASSERT
-
 %section noassert
   CONFIG_LIBC_ASSERT undefined
 
@@ -22,39 +19,15 @@
 %else
   CONFIG_COMPILE_DEBUG
 
-%section memcheck
-  CONFIG_SOCLIB_MEMCHECK
-
 %section noopt
   CONFIG_COMPILE_OPTIMIZE 0
 
 %section savetemps
   CONFIG_COMPILE_SAVETEMPS
 
-%section thumb
-  CONFIG_CPU_ARM_THUMB
-
-%section ipi
-  CONFIG_HEXO_IPI 
-
-%section cpp
-  CONFIG_UCLIBCPP
-
 %section int
   CONFIG_HEXO_INTTYPES_DEPRECATED undefined
 
-%section stream
-  CONFIG_LIBC_STREAM
-  CONFIG_LIBC_STREAM_STD
-
-%section vfs
-  CONFIG_VFS
-
-%section vfs_verb
-  CONFIG_VFS_VERBOSE
-
-%section math
-  CONFIG_LIBM
-
 %section collect
   CONFIG_COMPILE_COLLECT
+

@@ -15,6 +15,6 @@
 
 %common
 
-%include $(SRC_DIR)/examples/common/platforms.conf
-%include $(SRC_DIR)/examples/common/build_options.conf
+  %include arch/arch.build
+  %include scripts/options.build
 

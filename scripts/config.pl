@@ -32,6 +32,7 @@ use Term::ANSIColor;
 my @config_files;
 my @output_files;
 my %config_opts;
+my @dirs;
 my %inits;
 my $enforce_deps;
 my $quiet_flag = 0;
@@ -1887,8 +1888,16 @@ sub read_build_config
 
 	if ($line =~ /^\s* %include \s+ (\S+)/x) {
 	    my $f = $1;
-	    $f = "$cd/$f" unless $f =~ /^\//;
-	    read_build_config( $f, $section );
+            foreach ($cd, @dirs) {
+                if ( -f "$_/$f" ) {
+                    debug(1, "trying `$_/$f' build configuration file");
+                    read_build_config( "$_/$f", $section );
+                    undef $f;
+                    last;
+                }
+            }
+            error("$file:$lnum: unable to find `$f' build configuration file.")
+                if (defined $f);
 	    next;
 	}
 
@@ -2354,7 +2363,9 @@ Usage: config.pl [options]
 
         --config            Output .h, .py, .m4, .mk and .deps configuration in `config.*' files.
 	--check             Check configuration constraints without output.
-	--list[=all,init]   Display configuration ot init tokens list.
+	--list[=all]        Display configuration tokens.
+	--list=init         Display init tokens.
+	--list=flat         Display flat configuration.
 	--info=token        Display informations about `token'.
 	--docheader=file    Output header with documentation tags in `file' file.
 	--quiet             Do not output diagnostic messages.
@@ -2376,7 +2387,8 @@ Usage: config.pl [options]
 
     debug(1, "explore source tree and parse .config token files");
 
-    explore_token_dirs($_) foreach (split(/:/, $param_h{src_path}));
+    @dirs = split(/:/, $param_h{src_path});
+    explore_token_dirs($_) foreach (@dirs);
 
     debug(1, "resolve and check tokens");
 
@@ -2438,6 +2450,9 @@ Usage: config.pl [options]
             print "Initialization calls order:\n\n";
             output_inits_calls( \*STDOUT, \@init_defined, "  " );
             return;
+        }
+        if ($param_h{list} eq "flat") {
+            return flat_config( \*STDOUT );
         }
 
 	return tokens_list( \*STDOUT, $param_h{list} eq "all" );

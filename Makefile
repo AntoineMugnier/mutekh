@@ -54,7 +54,7 @@ all: kernel
 mkmf: config
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/rules_main.mk $@ TARGET_MK=$(TARGET_MK) MAKEFLAGS=$(MAKEFLAGS)
 
-helpconfig listconfig showconfig listallconfig listinit:
+helpconfig listconfig showconfig listallconfig listinit listflatconfig:
 	$(MAKE) -f $(MUTEK_SRC_DIR)/scripts/config.mk $@
 
 # Test for heterogeneous builds

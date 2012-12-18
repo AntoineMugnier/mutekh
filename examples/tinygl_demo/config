@@ -55,8 +55,8 @@ CONFIG_LIBTINYGL_VGAFB
 # re-switch to common
 %common
 
-%include $(SRC_DIR)/examples/common/build_options.conf
-%include $(SRC_DIR)/examples/common/platforms.conf
+  %include scripts/options.build
+  %include arch/arch.build
 
 # tweaking for ibmpc
 %section ibmpc-*
