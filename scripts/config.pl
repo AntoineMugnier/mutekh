@@ -628,7 +628,7 @@ sub process_init
 
     $cycle{$init} = 1;
 
-    foreach my $name ( keys $init->{$constraint} )
+    foreach my $name ( keys %{$init->{$constraint}} )
     {
         my $next = $inits{$name};
 
@@ -644,7 +644,7 @@ sub process_init2
 {
     my ( $init, $constraint ) = @_;
 
-    foreach my $name ( keys $init->{$constraint} )
+    foreach my $name ( keys %{$init->{$constraint}} )
     {
         my $a = $inits{$name};
 
