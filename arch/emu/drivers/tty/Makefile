@@ -1,3 +1,3 @@
-objs = tty-emu.o
+objs = tty.o
 
 

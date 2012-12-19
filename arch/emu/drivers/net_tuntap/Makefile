@@ -1,4 +1,4 @@
 
-objs =	net-tuntap.o
+objs =	tuntap.o
 
 

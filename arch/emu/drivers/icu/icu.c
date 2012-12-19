@@ -38,8 +38,24 @@
 
 #include <mutek/printk.h>
 
-#include "icu-emu.h"
-#include "icu-emu-private.h"
+#include <device/device.h>
+#include <hexo/atomic.h>
+
+#define CONFIG_DRIVER_ICU_EMU_IRQCOUNT 32
+
+struct icu_emu_handler_s
+{
+  dev_irq_t		*hndl;
+  void			*data;
+};
+
+struct icu_emu_private_s
+{
+  cpu_id_t cpuid;
+  atomic_t mask;
+  atomic_t pending;
+  struct icu_emu_handler_s	table[CONFIG_DRIVER_ICU_EMU_IRQCOUNT];
+};
 
 #ifdef CONFIG_HEXO_IPI
 DEVICU_SETUP_IPI_EP(icu_emu_setup_ipi_ep)

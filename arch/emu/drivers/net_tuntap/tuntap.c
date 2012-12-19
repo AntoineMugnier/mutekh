@@ -43,8 +43,29 @@
 
 #include <arch/hexo/emu_syscalls.h>
 
-#include "net-tuntap.h"
-#include "net-tuntap-private.h"
+#include <hexo/types.h>
+#include <hexo/lock.h>
+
+#include <pthread.h>
+
+#include <network/packet.h>
+#include <netinet/ether.h>
+#include <network/protos.h>
+#include <network/if.h>
+
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_clist.h>
+
+struct				net_tuntap_context_s
+{
+  struct net_dispatch_s *dispatch;
+  lock_t			lock;
+  bool_t			run;
+
+  uint8_t			mac[ETH_ALEN];
+  struct net_if_s		*interface;
+  int				fd;
+};
 
 /*
  * Driver operations vector.

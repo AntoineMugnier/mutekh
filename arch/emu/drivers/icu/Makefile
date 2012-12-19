@@ -1,4 +1,4 @@
 
-objs = icu-emu.o
+objs = icu.o
 
 

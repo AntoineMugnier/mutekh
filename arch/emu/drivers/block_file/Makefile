@@ -1,3 +1,3 @@
 
-objs = block-file-emu.o
+objs = block.o
 

@@ -54,7 +54,9 @@ SECTIONS
 
 	__system_heap_start = __context_data_end;
 
+#warning bad __initial_stack
+__initial_stack = __data_end;
    }
 
-ENTRY(arch_init)
+ENTRY(mutekh_startup)
 

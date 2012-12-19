@@ -528,7 +528,8 @@ void mutek_scheduler_start()
 {
   mutekh_startup_smp_barrier();
 
-#if 0    // FIXME
+#warning  FIXME free startup memory
+#if 0    //
   if (cpu_isbootstrap())
     mem_reclaim_initmem();
 #endif
