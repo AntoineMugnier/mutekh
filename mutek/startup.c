@@ -121,20 +121,15 @@ void mutekh_startup_smp()
 
 /////////////////////////////////////// user application start
 
+#ifdef CONFIG_APP_START
 void mutek_app_initsmp()
 {
   mutekh_startup_smp_barrier();
 
+# ifndef CONFIG_APP_START_SMP
   if (cpu_isbootstrap())
-    {
-      printk("MutekH is alive.\n");
-      app_start();
-    }
-  else
-    {
-#ifdef CONFIG_MUTEK_SMP_APP_START
-      app_start();
-#endif
-    }
+# endif
+    app_start();
 }
+#endif
 

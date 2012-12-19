@@ -9,6 +9,7 @@
 
   # Libs
   CONFIG_PTHREAD
+  CONFIG_APP_START
 
   %include arch/arch.build
 

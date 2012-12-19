@@ -35,7 +35,7 @@ void * pthread_main_func(void *pv)
   return NULL;
 }
 
-void app_start()
+void libpthread_create_main_initsmp()
 {
   if (cpu_isbootstrap())
     pthread_create(&pthread_main, NULL, pthread_main_func, NULL);
