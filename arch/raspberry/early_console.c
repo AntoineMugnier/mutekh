@@ -30,13 +30,14 @@
 #include <hexo/iospace.h>
 #include <hexo/endian.h>
 
+extern volatile char toto;
+
 static void early_console_out_char(uintptr_t addr, uint8_t c)
 {
-  /* wait for transmit fifo empty */
   while ((cpu_mem_read_32(addr + 0x18) & 0x20))
     ;
 
-  cpu_mem_write_32(addr, endian_be32(c));
+  cpu_mem_write_32(addr, endian_le32((uint32_t)c));
 }
 
 static PRINTF_OUTPUT_FUNC(early_console_out)
