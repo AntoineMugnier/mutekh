@@ -63,6 +63,7 @@ void raspberry_hw_enum_init()
 
   device_init(&cpu_dev);
   cpu_dev.node.flags |= DEVICE_FLAG_CPU;
+  cpu_dev.node.name = "cpu";
   device_res_add_id(&cpu_dev, 0, 0);
   device_attach(&cpu_dev, NULL);
 
@@ -70,5 +71,38 @@ void raspberry_hw_enum_init()
 
   device_bind_driver(&cpu_dev, &arm_drv);
   device_init_driver(&cpu_dev);
+
+#ifdef CONFIG_DRIVER_ICU_BCM2835
+  static struct device_s icu_dev;
+
+  device_init(&icu_dev);
+  icu_dev.node.name = "icu";
+  device_res_add_mem(&icu_dev, 0x2000b000, 0x2000b400);
+  device_res_add_irq(&icu_dev, 0, 0, 0, &cpu_dev);  // irq
+  //  device_res_add_irq(&icu_dev, 1, 1, 0, &cpu_dev);  // fiq
+  device_attach(&icu_dev, NULL);
+
+  extern const struct driver_s bcm2835_icu_drv;
+
+  device_bind_driver(&icu_dev, &bcm2835_icu_drv);
+  device_init_driver(&icu_dev);
+#endif
+
+#ifdef CONFIG_DRIVER_CHAR_PL011
+  static struct device_s uart_dev;
+
+  device_init(&uart_dev);
+  uart_dev.node.name = "uart";
+  device_res_add_mem(&uart_dev, 0x20201000, 0x20202000);
+#ifdef CONFIG_DRIVER_ICU_BCM2835
+  device_res_add_irq(&uart_dev, 0, 8+57, 0, &icu_dev);
+#endif
+  device_attach(&uart_dev, NULL);
+
+  extern const struct driver_s pl011uart_drv;
+
+  device_bind_driver(&uart_dev, &pl011uart_drv);
+  device_init_driver(&uart_dev);
+#endif
 }
 
