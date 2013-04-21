@@ -240,6 +240,10 @@ DEV_INIT(gaisler_apbuart_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
+  uintptr_t scaler;
+  if (!device_get_param_uint(dev, "scaler", &scaler))
+    cpu_mem_write_32(pv->addr + APBUART_REG_SCALER, endian_be32(scaler));
+
   uint32_t c = endian_be32(cpu_mem_read_32(pv->addr + APBUART_REG_CTRL));
 
   /* enable transmitter and receiver */
