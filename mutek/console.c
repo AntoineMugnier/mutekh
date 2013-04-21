@@ -85,9 +85,19 @@ struct device_char_s console_dev = DEVICE_ACCESSOR_INIT;
 
 void mutek_console_initsmp()
 {
-  if (cpu_isbootstrap())
-    {
-#warning missing code here
-    }
+  if (!cpu_isbootstrap())
+    return;
+
+  if (device_get_accessor_by_path(&console_dev, NULL, "console uart", DRIVER_CLASS_CHAR))
+    printk("error: mutek console: No `console' or `uart' entry found in the device tree.\n");
+}
+
+void mutek_console_cleanupsmp()
+{
+  if (!cpu_isbootstrap())
+    return;
+
+  if (device_check_accessor(&console_dev))
+    device_put_accessor(&console_dev);
 }
 
