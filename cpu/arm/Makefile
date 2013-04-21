@@ -7,7 +7,7 @@ endif
 
 copy = ldscript
 
-subdirs = libc
+subdirs = libc drivers
 
 ifeq ($(CONFIG_CPU_ARM_THUMB), defined)
 objs += thumb_helpers.o
