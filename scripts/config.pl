@@ -2331,6 +2331,55 @@ sub write_doc_header
 }
 
 ###############################################################################
+#       Check source for bad token names
+###############################################################################
+
+sub find_bad_tokens
+{
+    my @dirs;
+
+    foreach my $opt (values %config_opts) {
+	if ( defined $opt->{module} ) {
+	    push @dirs, $opt->{module}->{path};
+        }
+    }
+
+    while (my $path = shift @dirs) {
+        debug("checking configuration tokens usage in `$path'");
+
+        foreach my $ent (<$path/*>) {
+
+            if (-d $ent) {
+                push @dirs, $ent;
+            } else {
+
+                next if ($ent !~ /(^Makefile|\.(c|h|S|s|cpp|mk|build))$/);
+
+                if (open(FILE, "<$ent")) {
+                    my $l = 1;
+                    foreach my $line (<FILE>) {
+                        while ($line =~ /\b(CONFIG_\w+)/g) {
+                            warning("$ent:$l: found unknown configuration token name `$1'.")
+                                if (!defined $config_opts{$1});
+                        }
+                        while ($line =~ /\b(INIT_\w+)/g) {
+                            warning("$ent:$l: found unknown initialization token name `$1'.")
+                                if (!defined $inits{$1});
+                        }
+                        $l++;
+                    }
+                    close(FILE);
+                } else {
+                    error("$ent:can not open file.")
+                }
+            }
+        }
+    }
+
+    return $err_flag;
+}
+
+###############################################################################
 #	Main function
 ###############################################################################
 
@@ -2363,6 +2412,7 @@ Usage: config.pl [options]
 
         --config            Output .h, .py, .m4, .mk and .deps configuration in `config.*' files.
 	--check             Check configuration constraints without output.
+	--find-bad-tokens   Check the source code of modules for use of undefined tokens.
 	--list[=all]        Display configuration tokens.
 	--list=init         Display init tokens.
 	--list=flat         Display flat configuration.
@@ -2397,6 +2447,10 @@ Usage: config.pl [options]
     tokens_resolve( \%inits, \%init_tokens_resolvers );
     tokens_provider();
     tokens_check();
+
+    if ($param_h{find_bad_tokens}) {
+        return find_bad_tokens();
+    }
 
     exit 1 if $err_flag;
 

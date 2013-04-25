@@ -13,6 +13,12 @@ checkconfig:
 		--input=$(CONF) --check		\
 		--build=$(BUILD)
 
+findbadtokens:
+	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
+		--src-path=$(MUTEK_SRC_DIR) \
+		--input=$(CONF) --find-bad-tokens		\
+		--build=$(BUILD)
+
 listconfig:
 	cd $(MUTEK_SRC_DIR) ; perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
 		--src-path=$(MUTEK_SRC_DIR) \
