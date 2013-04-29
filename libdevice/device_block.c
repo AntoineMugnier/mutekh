@@ -50,23 +50,24 @@ static DEVBLOCK_CALLBACK(dev_block_syncl_request)
     status->done = 1;
 }
 
-static error_t dev_block_lock_request(struct device_s *dev, uint8_t **data,
+static error_t dev_block_lock_request(struct device_block_s *dev, uint8_t **data,
 				      dev_block_lba_t lba, size_t count,
 				      enum dev_block_rq_type_e type)
 {
   struct dev_block_wait_rq_s status;
-  struct dev_block_rq_s *rq = alloca(dev_block_getrqsize(dev));
+  struct dev_block_rq_s rq;
 
   status.done = 0;
-  rq->data = data;
-  rq->lba = lba;
-  rq->count = count;
-  rq->type = type;
-  rq->pvdata = &status;
-  rq->callback = dev_block_syncl_request;
-  rq->progress = 0;
+  rq.data = data;
+  rq.lba = lba;
+  rq.count = count;
+  rq.type = type;
+  rq.pvdata = &status;
+  rq.callback = dev_block_syncl_request;
+  rq.progress = 0;
+  rq.bdev = dev;
 
-  dev_block_request(dev, rq);
+  DEVICE_OP(dev, request, &rq);
 
 #ifdef CONFIG_DEVICE_IRQ
   assert(cpu_is_interruptible());
@@ -75,7 +76,7 @@ static error_t dev_block_lock_request(struct device_s *dev, uint8_t **data,
   while (!status.done)
     order_compiler_mem();
 
-  return __MIN(rq->progress, 0);
+  return __MIN(rq.progress, 0);
 }
 
 #ifdef CONFIG_MUTEK_SCHEDULER
@@ -96,25 +97,26 @@ static DEVBLOCK_CALLBACK(dev_block_sync_request)
     }
 }
 
-static error_t dev_block_wait_request(struct device_s *dev, uint8_t **data,
+static error_t dev_block_wait_request(struct device_block_s *dev, uint8_t **data,
 				      dev_block_lba_t lba, size_t count,
 				      enum dev_block_rq_type_e type)
 {
   struct dev_block_wait_rq_s status;
-  struct dev_block_rq_s *rq = alloca(dev_block_getrqsize(dev));
+  struct dev_block_rq_s rq;
 
   lock_init(&status.lock);
   status.ctx = NULL;
   status.done = 0;
-  rq->data = data;
-  rq->lba = lba;
-  rq->count = count;
-  rq->type = type;
-  rq->pvdata = &status;
-  rq->callback = dev_block_sync_request;
-  rq->progress = 0;
+  rq.data = data;
+  rq.lba = lba;
+  rq.count = count;
+  rq.type = type;
+  rq.pvdata = &status;
+  rq.callback = dev_block_sync_request;
+  rq.progress = 0;
+  rq.bdev = dev;
 
-  dev_block_request(dev, rq);
+  DEVICE_OP(dev, request, &rq);
 
   /* ensure callback doesn't occur here */
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -133,11 +135,11 @@ static error_t dev_block_wait_request(struct device_s *dev, uint8_t **data,
 
   lock_destroy(&status.lock);
 
-  return __MIN(rq->progress, 0);
+  return __MIN(rq.progress, 0);
 }
 #endif
 
-error_t dev_block_wait_read(struct device_s *dev, uint8_t **data,
+error_t dev_block_wait_read(struct device_block_s *dev, uint8_t **data,
 			    dev_block_lba_t lba, size_t count)
 {
 #ifdef CONFIG_MUTEK_SCHEDULER
@@ -147,13 +149,13 @@ error_t dev_block_wait_read(struct device_s *dev, uint8_t **data,
 #endif
 }
 
-error_t dev_block_spin_read(struct device_s *dev, uint8_t **data,
+error_t dev_block_spin_read(struct device_block_s *dev, uint8_t **data,
 			    dev_block_lba_t lba, size_t count)
 {
   return dev_block_lock_request(dev, data, lba, count, DEV_BLOCK_READ);
 }
 
-error_t dev_block_wait_write(struct device_s *dev, uint8_t **data,
+error_t dev_block_wait_write(struct device_block_s *dev, uint8_t **data,
 			     dev_block_lba_t lba, size_t count)
 {
 #ifdef CONFIG_MUTEK_SCHEDULER
@@ -163,7 +165,7 @@ error_t dev_block_wait_write(struct device_s *dev, uint8_t **data,
 #endif
 }
 
-error_t dev_block_spin_write(struct device_s *dev, uint8_t **data,
+error_t dev_block_spin_write(struct device_block_s *dev, uint8_t **data,
 			     dev_block_lba_t lba, size_t count)
 {
   return dev_block_lock_request(dev, data, lba, count, DEV_BLOCK_WRITE);
