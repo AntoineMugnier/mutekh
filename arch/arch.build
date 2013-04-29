@@ -4,6 +4,7 @@
 %include ibmpc/ibmpc.build
 %include soclib/soclib.build
 %include gaisler/gaisler.build
+%include raspberry/raspberry.build
 
 %common
   %requiretypes architecture

@@ -16,8 +16,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
     02110-1301 USA.
 
-    Copyright (c) 2011 Alexandre Becoulet <alexandre.becoulet@telecom-paristech.fr>
-    Copyright (c) 2011 Institut Telecom / Telecom ParisTech
+    Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2013
 
 */
 
@@ -30,14 +29,35 @@
 
 #include <device/device.h>
 #include <device/driver.h>
+#include <device/irq.h>
 #include <device/class/char.h>
 
-#include "apbuart.h"
-#include "apbuart_private.h"
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_ring.h>
 
-static void gaisler_apbuart_try_read(struct device_s *dev)
+#include "pl011uart_regs.h"
+
+/**************************************************************/
+
+CONTAINER_TYPE(uart_fifo, RING, uint8_t, 32);
+CONTAINER_FUNC(uart_fifo, RING, static inline, uart_fifo);
+
+struct pl011uart_context_s
 {
-  struct gaisler_apbuart_context_s	*pv = dev->drv_pv;
+  uintptr_t addr;
+  /* tty input request queue and char fifo */
+  dev_char_queue_root_t		read_q;
+  dev_char_queue_root_t		write_q;
+  uart_fifo_root_t		read_fifo;
+#ifdef CONFIG_DEVICE_IRQ
+  uart_fifo_root_t		write_fifo;
+  struct dev_irq_ep_s           irq_ep;
+#endif
+};
+
+static void pl011uart_try_read(struct device_s *dev)
+{
+  struct pl011uart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
 
   while ((rq = dev_char_queue_head(&pv->read_q)))
@@ -48,10 +68,10 @@ static void gaisler_apbuart_try_read(struct device_s *dev)
       size = uart_fifo_pop_array(&pv->read_fifo, rq->data, rq->size);
 
       /* try to read more characters directly from device fifo */
-      while ( size < rq->size && (cpu_mem_read_32(pv->addr + APBUART_REG_STATUS)
-                                  & endian_be32(APBUART_REG_STATUS_DR)) )
+      while ( size < rq->size && !(cpu_mem_read_32(pv->addr + PL011_FR_ADDR)
+                                   & endian_le32(PL011_FR_RXFE)) )
         {
-          rq->data[size++] = endian_be32(cpu_mem_read_32(pv->addr + APBUART_REG_DATA));
+          rq->data[size++] = PL011_DR_DATA_GET(endian_le32(cpu_mem_read_32(pv->addr + PL011_DR_ADDR)));
         }
 
       if (size)
@@ -75,26 +95,26 @@ static void gaisler_apbuart_try_read(struct device_s *dev)
     }
 
   /* copy more data from device fifo to driver fifo if no request currently need it */
-  while (cpu_mem_read_32(pv->addr + APBUART_REG_STATUS)
-         & endian_be32(APBUART_REG_STATUS_DR))
+  while (!(cpu_mem_read_32(pv->addr + PL011_FR_ADDR)
+           & endian_le32(PL011_FR_RXFE)))
     {
-      uart_fifo_pushback(&pv->read_fifo, endian_be32(cpu_mem_read_32(pv->addr + APBUART_REG_DATA)));
+      uart_fifo_pushback(&pv->read_fifo, PL011_DR_DATA_GET(endian_le32(cpu_mem_read_32(pv->addr + PL011_DR_ADDR))));
     }
 }
 
-static void gaisler_apbuart_try_write(struct device_s *dev)
+static void pl011uart_try_write(struct device_s *dev)
 {
-  struct gaisler_apbuart_context_s	*pv = dev->drv_pv;
+  struct pl011uart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
 
 #ifdef CONFIG_DEVICE_IRQ
   /* try to write data from driver fifo to device */
   while (!uart_fifo_isempty(&pv->write_fifo) &&
-         !(cpu_mem_read_32(pv->addr + APBUART_REG_STATUS)
-           & endian_be32(APBUART_REG_STATUS_TF)) )
+         !(cpu_mem_read_32(pv->addr + PL011_FR_ADDR)
+           & endian_le32(PL011_FR_TXFF)) )
     {
       uint8_t c = uart_fifo_pop(&pv->write_fifo);
-      cpu_mem_write_32(pv->addr + APBUART_REG_DATA, endian_be32(c));
+      cpu_mem_write_32(pv->addr + PL011_DR_ADDR, endian_le32(PL011_DR_DATA(c)));
     }
 #endif
 
@@ -110,11 +130,11 @@ static void gaisler_apbuart_try_write(struct device_s *dev)
 #endif
           while (size < rq->size)
             {
-              if ( cpu_mem_read_32(pv->addr + APBUART_REG_STATUS)
-                   & endian_be32(APBUART_REG_STATUS_TF) )
+              if (cpu_mem_read_32(pv->addr + PL011_FR_ADDR)
+                   & endian_le32(PL011_FR_TXFF))
                 break;
 
-              cpu_mem_write_32(pv->addr + APBUART_REG_DATA, endian_be32(rq->data[size++]));
+              cpu_mem_write_32(pv->addr + PL011_DR_ADDR, endian_le32(PL011_DR_DATA(rq->data[size++])));
             }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -146,10 +166,10 @@ static void gaisler_apbuart_try_write(struct device_s *dev)
     }
 }
 
-DEVCHAR_REQUEST(gaisler_apbuart_request)
+DEVCHAR_REQUEST(pl011uart_request)
 {
   struct device_s               *dev = cdev->dev;
-  struct gaisler_apbuart_context_s	*pv = dev->drv_pv;
+  struct pl011uart_context_s	*pv = dev->drv_pv;
 
   assert(rq->size);
 
@@ -165,7 +185,7 @@ DEVCHAR_REQUEST(gaisler_apbuart_request)
 #ifdef CONFIG_DEVICE_IRQ
       if (empty)
 #endif
-	gaisler_apbuart_try_read(dev);
+	pl011uart_try_read(dev);
       break;
     }
 
@@ -177,7 +197,7 @@ DEVCHAR_REQUEST(gaisler_apbuart_request)
 #ifdef CONFIG_DEVICE_IRQ
       if (empty)
 #endif
-	gaisler_apbuart_try_write(dev);
+	pl011uart_try_write(dev);
       break;
     }
     }
@@ -187,46 +207,64 @@ DEVCHAR_REQUEST(gaisler_apbuart_request)
 
 #ifdef CONFIG_DEVICE_IRQ
 
-static DEV_IRQ_EP_PROCESS(gaisler_apbuart_irq)
+static DEV_IRQ_EP_PROCESS(pl011uart_irq)
 {
   struct device_s *dev = ep->dev;
+  struct pl011uart_context_s	*pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
 
-  gaisler_apbuart_try_read(dev);
-  gaisler_apbuart_try_write(dev);
+  while (1)
+    {
+      uint32_t ir = endian_le32(cpu_mem_read_32(pv->addr + PL011_MIS_ADDR));
+
+      if (!ir)
+        break;
+
+      if (ir & PL011_MIS_TXMIS)
+        {
+          pl011uart_try_write(dev);
+          cpu_mem_write_32(pv->addr + PL011_ICR_ADDR, endian_le32(PL011_MIS_TXMIS));
+        }
+
+      if (ir & (PL011_MIS_RXMIS | PL011_MIS_RTMIS))
+        pl011uart_try_read(dev);
+    }
 
   lock_release(&dev->lock);
 }
 
 #endif
 
-static const struct devenum_ident_s	gaisler_apbuart_ids[] =
+static const struct devenum_ident_s	pl011uart_ids[] =
 {
-	DEVENUM_GAISLER_ENTRY(0x1, 0x00c),
-	{ 0 }
+  DEVENUM_FDTNAME_ENTRY("pl011"),
+  { 0 }
 };
 
-static const struct driver_char_s	gaisler_apbuart_char_drv =
+static const struct driver_char_s	pl011uart_char_drv =
 {
   .class_		= DRIVER_CLASS_CHAR,
-  .f_request		= gaisler_apbuart_request,
+  .f_request		= pl011uart_request,
 };
 
-const struct driver_s	gaisler_apbuart_drv =
+static DEV_INIT(pl011uart_init);
+static DEV_CLEANUP(pl011uart_cleanup);
+
+const struct driver_s	pl011uart_drv =
 {
-  .desc                 = "Gaisler APB UART",
-  .id_table		= gaisler_apbuart_ids,
-  .f_init		= gaisler_apbuart_init,
-  .f_cleanup		= gaisler_apbuart_cleanup,
-  .classes              = { &gaisler_apbuart_char_drv, 0 }
+  .desc                 = "ARM PrimeCell pl011 uart",
+  .id_table		= pl011uart_ids,
+  .f_init		= pl011uart_init,
+  .f_cleanup		= pl011uart_cleanup,
+  .classes              = { &pl011uart_char_drv, 0 }
 };
 
-REGISTER_DRIVER(gaisler_apbuart_drv);
+REGISTER_DRIVER(pl011uart_drv);
 
-DEV_INIT(gaisler_apbuart_init)
+static DEV_INIT(pl011uart_init)
 {
-  struct gaisler_apbuart_context_s	*pv;
+  struct pl011uart_context_s	*pv;
   device_mem_map( dev , 1 << 0 );
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
@@ -240,14 +278,25 @@ DEV_INIT(gaisler_apbuart_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-  uintptr_t scaler;
-  if (!device_get_param_uint(dev, "scaler", &scaler))
-    cpu_mem_write_32(pv->addr + APBUART_REG_SCALER, endian_be32(scaler));
+#ifdef CONFIG_DEVICE_IRQ
+  uart_fifo_init(&pv->write_fifo);
 
-  uint32_t c = endian_be32(cpu_mem_read_32(pv->addr + APBUART_REG_CTRL));
+  device_irq_source_init(dev, &pv->irq_ep, 1, &pl011uart_irq);
 
-  /* enable transmitter and receiver */
-  c |= (APBUART_REG_CTRL_TE | APBUART_REG_CTRL_RE);
+  if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
+    goto err_fifo;
+#endif
+
+  /* wait for previous transfert completion */
+  if (((endian_le32(cpu_mem_read_32(pv->addr + PL011_CR_ADDR)) &
+    (PL011_CR_UARTEN | PL011_CR_TXE)) == (PL011_CR_UARTEN | PL011_CR_TXE)))
+    while (endian_le32(cpu_mem_read_32(pv->addr + PL011_FR_ADDR)) & PL011_FR_BUSY)
+      ;
+
+  /* disable the uart */
+  cpu_mem_write_32(pv->addr + PL011_CR_ADDR, 0);
+  cpu_mem_write_32(pv->addr + PL011_DMACR_ADDR, 0);
+  cpu_mem_write_32(pv->addr + PL011_LCRH_ADDR, 0);
 
   dev_char_queue_init(&pv->read_q);
   dev_char_queue_init(&pv->write_q);
@@ -255,27 +304,32 @@ DEV_INIT(gaisler_apbuart_init)
   uart_fifo_init(&pv->read_fifo);
 
 #ifdef CONFIG_DEVICE_IRQ
-
-  c |=  (APBUART_REG_CTRL_TI | APBUART_REG_CTRL_RI);
-  c &= ~(APBUART_REG_CTRL_DI | APBUART_REG_CTRL_BI | APBUART_REG_CTRL_SI | APBUART_REG_CTRL_RF | APBUART_REG_CTRL_TF);
-
-  uart_fifo_init(&pv->write_fifo);
-
-  device_irq_source_init(dev, &pv->irq_ep, 1, &gaisler_apbuart_irq);
-
-  if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
-    goto err_fifo;
-
+  /* enable irqs */
+  cpu_mem_write_32(pv->addr + PL011_IMSC_ADDR, endian_le32(PL011_IMSC_RXIM | PL011_IMSC_TXIM | PL011_IMSC_RTIM));
 #else
-
   /* disable irqs */
-  c &= ~(APBUART_REG_CTRL_RF | APBUART_REG_CTRL_TF | APBUART_REG_CTRL_DI |
-         APBUART_REG_CTRL_BI | APBUART_REG_CTRL_SI | APBUART_REG_CTRL_TI | APBUART_REG_CTRL_RI);
+  cpu_mem_write_32(pv->addr + PL011_IMSC_ADDR, 0);
 #endif
 
-  cpu_mem_write_32(pv->addr + APBUART_REG_CTRL, endian_be32(c));
+  /* configure uart */
+  cpu_mem_write_32(pv->addr + PL011_IFLS_ADDR,
+    endian_le32(PL011_IFLS_TXIFLSEL(PL011_IFLS_TXIFLSEL_1_8) |
+                PL011_IFLS_RXIFLSEL(PL011_IFLS_RXIFLSEL_7_8)));
 
-  dev->drv = &gaisler_apbuart_drv;
+  cpu_mem_write_32(pv->addr + PL011_LCRH_ADDR,
+    endian_le32(PL011_LCRH_FEN | PL011_LCRH_WLEN(PL011_LCRH_WLEN_8_BITS)));
+
+  uintptr_t divisor;
+  if (!device_get_param_uint(dev, "divisor", &divisor))
+    {
+      cpu_mem_write_32(pv->addr + PL011_IBRD_ADDR, endian_le32(divisor >> 6));
+      cpu_mem_write_32(pv->addr + PL011_FBRD_ADDR, endian_le32(divisor & 0x3f));
+    }
+
+  /* enable the uart */
+  cpu_mem_write_32(pv->addr + PL011_CR_ADDR, endian_le32(PL011_CR_TXE | PL011_CR_RXE | PL011_CR_UARTEN));
+
+  dev->drv = &pl011uart_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
@@ -292,28 +346,16 @@ DEV_INIT(gaisler_apbuart_init)
   return -1;
 }
 
-DEV_CLEANUP(gaisler_apbuart_cleanup)
+DEV_CLEANUP(pl011uart_cleanup)
 {
-  struct gaisler_apbuart_context_s	*pv = dev->drv_pv;
-
-  uint32_t c = endian_be32(cpu_mem_read_32(pv->addr + APBUART_REG_CTRL));
+  struct pl011uart_context_s	*pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
-
   /* disable irqs */
-  c &= ~(APBUART_REG_CTRL_RF | APBUART_REG_CTRL_TF | APBUART_REG_CTRL_DI |
-         APBUART_REG_CTRL_BI | APBUART_REG_CTRL_SI | APBUART_REG_CTRL_TI | APBUART_REG_CTRL_RI);
-
-  device_irq_source_unlink(dev, &pv->irq_ep, 1);
-
-  uart_fifo_destroy(&pv->write_fifo);
-
+  cpu_mem_write_32(pv->addr + PL011_IMSC_ADDR, 0);
 #endif
-
-  /* disable transmitter and receiver */
-  c &= ~(APBUART_REG_CTRL_TE | APBUART_REG_CTRL_RE);
-
-  cpu_mem_write_32(pv->addr + APBUART_REG_CTRL, endian_be32(c));
+  /* disable the uart */
+  cpu_mem_write_32(pv->addr + PL011_CR_ADDR, 0);
 
   uart_fifo_destroy(&pv->read_fifo);
 

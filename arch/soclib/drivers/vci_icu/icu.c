@@ -169,7 +169,7 @@ static DEV_INIT(soclib_icu_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-  device_get_param_uint_default(dev, "nirq", &pv->nirq, 32);
+  device_get_param_uint_default(dev, "nirq", &pv->nirq, ICU_SOCLIB_MAX_VECTOR);
 
   device_irq_source_init(dev, &pv->src, 1, &soclib_icu_source_process);
   if (device_irq_source_link(dev, &pv->src, 1, 0))
