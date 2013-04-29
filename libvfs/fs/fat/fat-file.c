@@ -272,7 +272,7 @@ ssize_t fat_file_read_aligned_sectors(
     void *buffer, size_t size)
 {
     struct fat_s *fat = ffile->extent->fat;
-    struct device_s *dev = fat->dev;
+    struct device_block_s *dev = fat->dev;
     sector_t max = size >> fat->sect_size_pow2;
 
     sector_t begin, end;

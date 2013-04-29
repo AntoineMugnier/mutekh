@@ -78,11 +78,11 @@ static const struct vfs_fs_ops_s iso9660_ops =
     .unlink = NULL,
 };
 
-error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
+error_t iso9660_open(struct device_block_s *bd, struct vfs_fs_s **fs)
 {
     error_t err;
     struct iso9660_fs_s *mnt;
-    const struct dev_block_params_s *bdp = dev_block_getparams(bd);
+    const struct dev_block_params_s *bdp = DEVICE_OP(bd, getparams);
     uint8_t *ptr;
 
     vfs_printk("iso9660: opening new iso9660 volume\n");
@@ -141,7 +141,7 @@ error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd)
         goto free_mnt;
     }
 
-    mnt->bd = device_obj_refnew(bd);
+    mnt->bd = bd;
 
     // TODO register destructor
 

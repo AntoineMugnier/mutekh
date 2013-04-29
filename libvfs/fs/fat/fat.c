@@ -54,7 +54,7 @@ extern const struct fat_ops_s fat32_fat_ops;
 static error_t fat_parse_bpb(struct fat_s *state, struct fat_tmp_sector_s *sector)
 {
 	struct fat_bpb_s *bpb = (struct fat_bpb_s *)sector->data;
-	const struct dev_block_params_s *params = dev_block_getparams(state->dev);
+	const struct dev_block_params_s *params = DEVICE_OP(state->dev, getparams);
 
 	error_t err = fat_sector_lock_and_load(sector, state->dev, 0);
 	if ( err )
@@ -171,10 +171,10 @@ static error_t fat_parse_bpb(struct fat_s *state, struct fat_tmp_sector_s *secto
 	return 0;
 }
 
-error_t fat_open(struct device_s *dev, struct vfs_fs_s **fs)
+error_t fat_open(struct device_block_s *dev, struct vfs_fs_s **fs)
 {
 	error_t err = -ENOMEM;
-	const struct dev_block_params_s *params = dev_block_getparams(dev);
+	const struct dev_block_params_s *params = DEVICE_OP(dev, getparams);
     struct fat_s *fat = mem_alloc(
         sizeof(struct fat_s)
         +sizeof(struct fat_tmp_sector_s)

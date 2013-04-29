@@ -31,7 +31,7 @@ struct fat_extent_s;
   @this opens a block device for reading as a FAT. It may return
   -EINVAL or -ENOENT if the FAT is not correctly detected.
  */
-#define FAT_BACKEND_OPEN(x) error_t (x)(struct device_s *dev, struct fat_s **fat, uint32_t flags)
+#define FAT_BACKEND_OPEN(x) error_t (x)(struct device_block_s *dev, struct fat_s **fat, uint32_t flags)
 
 /*
   @this writes back all extents chained lists. (free list and open

@@ -148,7 +148,7 @@ enum fat_type_e
 struct fat_s
 {
     struct vfs_fs_s fs;
-	struct device_s *dev;
+	struct device_block_s *dev;
     const struct fat_ops_s *ops;
 	common_cluster_t root_dir_secsize;
     // This holds a sector for fat16.
