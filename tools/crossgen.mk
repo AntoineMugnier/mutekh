@@ -228,7 +228,7 @@ $$($(1)_STAMP)-$$(TARGET)-patch: $$($(1)_DIR)
 
 $$($(1)_STAMP)-$$(TARGET)-conf: $$($(1)_DIR) $$($(1)_STAMP)-$$(TARGET)-patch $$($(1)_DEPS)
 	mkdir -p $$($(1)_BDIR)
-	( cd $$($(1)_BDIR) ; LD_LIBRARY_PATH=$$(PREFIX)/lib $$($(1)_DIR)/configure --disable-nls --prefix=$$(PREFIX) --target=$$(TARGET)-unknown-elf --disable-checking --disable-werror $$($(1)_CONF) ) && touch $$@
+	( cd $$($(1)_BDIR) ; LD_LIBRARY_PATH=$$(PREFIX)/lib $$($(1)_DIR)/configure MAKEINFO="makeinfo --version" --disable-nls --prefix=$$(PREFIX) --target=$$(TARGET)-unknown-elf --disable-checking --disable-werror $$($(1)_CONF) ) && touch $$@
 
 $$($(1)_STAMP)-$$(TARGET)-build: $$($(1)_STAMP)-$$(TARGET)-conf
 	LD_LIBRARY_PATH=$$(PREFIX)/lib make $$(BLDMAKE_OPTS) -C $$($(1)_BDIR) && touch $$@
