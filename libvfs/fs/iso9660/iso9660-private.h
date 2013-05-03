@@ -58,7 +58,7 @@ struct iso9660_fs_s
 {
   struct vfs_fs_s		fs; /* keep first field */
   struct fs_node_s		*root;
-  struct device_s		*bd;
+  struct device_block_s		*bd;
 
   union {
     uint8_t				voldesc_[ISO9660_BLOCK_SIZE];
@@ -75,7 +75,7 @@ VFS_FILE_SEEK(iso9660_file_seek);
 VFS_FILE_READ(iso9660_file_read);
 VFS_FILE_READ(iso9660_dir_read);
 
-error_t iso9660_read_direntry(struct device_s *bd,
+error_t iso9660_read_direntry(struct device_block_s *bd,
 			      const struct iso9660_dir_s *entry,
                               char *name, size_t *namelen);
 

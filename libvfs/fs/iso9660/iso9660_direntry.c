@@ -35,7 +35,7 @@
 #include "iso9660-private.h"
 
 /** read directory entry */
-error_t iso9660_read_direntry(struct device_s *bd,
+error_t iso9660_read_direntry(struct device_block_s *bd,
 			      const struct iso9660_dir_s *entry,
                               char *name, size_t *namelen)
 {

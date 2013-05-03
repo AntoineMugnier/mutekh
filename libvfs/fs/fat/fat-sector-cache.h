@@ -37,12 +37,12 @@ struct fat_tmp_sector_s
 };
 
 error_t fat_sector_lock_and_load(struct fat_tmp_sector_s *sector,
-                                 struct device_s *dev,
+                                 struct device_block_s *dev,
                                  dev_block_lba_t lba);
 
 void fat_sector_lock_release(struct fat_tmp_sector_s *sector);
 
 error_t fat_sector_flush(struct fat_tmp_sector_s *sector,
-                         struct device_s *dev);
+                         struct device_block_s *dev);
 
 #endif

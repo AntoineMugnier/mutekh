@@ -32,7 +32,7 @@
    @param bd Block device containing the file system
    @return 0 on success
  */
-error_t iso9660_open(struct vfs_fs_s **fs, struct device_s *bd);
+error_t iso9660_open(struct device_block_s *bd, struct vfs_fs_s **fs);
 
 #endif
 

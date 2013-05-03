@@ -38,66 +38,88 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "block.h"
-#include "block_private.h"
+struct soclib_block_context_s
+{
+  uintptr_t                 addr;
+  struct dev_irq_ep_s       irq_ep;
+  struct dev_block_params_s params;
+  dev_blk_queue_root_t      queue;
+};
+
+#define SOCLIB_BLOCK_BUFFER 0
+#define SOCLIB_BLOCK_LBA 4
+#define SOCLIB_BLOCK_COUNT 8
+#define SOCLIB_BLOCK_OP 12
+#define SOCLIB_BLOCK_STATUS 16
+#define SOCLIB_BLOCK_IRQ_ENABLE 20
+#define SOCLIB_BLOCK_SIZE 24
+#define SOCLIB_BLOCK_BLOCK_SIZE 28
+
+#define SOCLIB_BLOCK_OP_NOOP 0
+#define SOCLIB_BLOCK_OP_READ 1
+#define SOCLIB_BLOCK_OP_WRITE 2
+
+#define SOCLIB_BLOCK_STATUS_IDLE 0
+#define SOCLIB_BLOCK_STATUS_BUSY 1
+#define SOCLIB_BLOCK_STATUS_READ_SUCCESS 2
+#define SOCLIB_BLOCK_STATUS_WRITE_SUCCESS 3
+#define SOCLIB_BLOCK_STATUS_READ_ERROR 4
+#define SOCLIB_BLOCK_STATUS_WRITE_ERROR 5
+#define SOCLIB_BLOCK_STATUS_ERROR 6
 
 /**************************************************************/
 
-static void block_soclib_op_start(struct device_s *dev,
+static void soclib_block_op_start(struct soclib_block_context_s *pv,
 				  struct dev_block_rq_s *rq)
 {
-  struct block_soclib_rq_s *srq = (void*)(rq + 1);
+  printk("New op: %d %d\n", rq->lba, rq->type);
 
-/*   printk("New op: %d %d\n", rq->lba, srq->rq_code); */
-
-  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_BUFFER,
+  cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_BUFFER,
                    endian_le32((uint32_t)rq->data[rq->progress]));
-  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_LBA,
+  cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_LBA,
                    endian_le32(rq->lba + rq->progress));
-  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_COUNT,
+  cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_COUNT,
                    endian_le32(1));
-  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_OP,
-                   endian_le32((uint32_t)srq->rq_code));
+
+  switch (rq->type & DEV_BLOCK_OPMASK)
+    {
+    case DEV_BLOCK_READ:
+      cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_OP, endian_le32(SOCLIB_BLOCK_OP_READ));
+      break;
+    case DEV_BLOCK_WRITE:
+      cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_OP, endian_le32(SOCLIB_BLOCK_OP_WRITE));
+      break;
+    }
 }
 
 /* add a new request in queue and start if idle */
-static void block_soclib_rq_start(struct device_s *dev,
+static void soclib_block_rq_start(struct soclib_block_context_s *pv,
 				  struct dev_block_rq_s *rq)
 {
-  struct block_soclib_context_s *pv = dev->drv_pv;
   bool_t idle = dev_blk_queue_isempty(&pv->queue);
-
-/*   printk("%s\n", __FUNCTION__); */
 
   dev_blk_queue_pushback(&pv->queue, rq);
 
   if (idle)
-    block_soclib_op_start(dev, rq);
+    soclib_block_op_start(pv, rq);
 }
 
 /* drop current request and start next in queue if any */
-static void block_soclib_rq_end(struct device_s *dev)
+static void soclib_block_rq_end(struct soclib_block_context_s *pv)
 {
-  struct block_soclib_context_s *pv = dev->drv_pv;
   struct dev_block_rq_s *rq;
-
-/*   printk("%s\n", __FUNCTION__); */
 
   dev_blk_queue_pop(&pv->queue);
 
   if ((rq = dev_blk_queue_head(&pv->queue)) != NULL)
-    block_soclib_op_start(dev, rq);
+    soclib_block_op_start(pv, rq);
 }
 
-/* 
- * device read operation
- */
-
-DEVBLOCK_REQUEST(block_soclib_request)
+DEVBLOCK_REQUEST(soclib_block_request)
 {
-  struct block_soclib_context_s *pv = dev->drv_pv;
+  struct device_s *dev = bdev->dev;
+  struct soclib_block_context_s *pv = dev->drv_pv;
   struct dev_block_params_s *p = &pv->params;
-  struct block_soclib_rq_s *srq = (void*)(rq + 1);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -106,169 +128,157 @@ DEVBLOCK_REQUEST(block_soclib_request)
       switch (rq->type & DEV_BLOCK_OPMASK)
 	{
 	case DEV_BLOCK_READ:
-	  srq->rq_code = BLOCK_SOCLIB_OP_READ;
-	  block_soclib_rq_start(dev, rq);
-	  break;
-
 	case DEV_BLOCK_WRITE:
-	  srq->rq_code = BLOCK_SOCLIB_OP_WRITE;
-	  block_soclib_rq_start(dev, rq);
+	  soclib_block_rq_start(pv, rq);
 	  break;
 
 	default:
 	  rq->progress = -ENOTSUP;
-	  rq->callback(rq, 0, srq + 1);
+	  rq->callback(rq, 0);
 	  break;
 	}
     }
   else
     {
       rq->progress = -ERANGE;
-      rq->callback(rq, 0, srq + 1);
+      rq->callback(rq, 0);
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-/* 
- * device params
- */
-
-DEVBLOCK_GETPARAMS(block_soclib_getparams)
+DEVBLOCK_GETPARAMS(soclib_block_getparams)
 {
-  struct block_soclib_context_s *pv = dev->drv_pv;
+  struct device_s *dev = bdev->dev;
+  struct soclib_block_context_s *pv = dev->drv_pv;
   return &pv->params;
 }
 
-/* 
- * device close operation
- */
-
-DEV_CLEANUP(block_soclib_cleanup)
+static DEV_IRQ_EP_PROCESS(soclib_block_irq)
 {
-  struct block_soclib_context_s	*pv = dev->drv_pv;
-
-  DEV_ICU_UNBIND(dev->icudev, dev, dev->irq, block_soclib_irq);
-
-  mem_free(pv);
-}
-
-/*
- * IRQ handler
- */
-
-DEV_IRQ(block_soclib_irq)
-{
-  struct block_soclib_context_s	*pv = dev->drv_pv;
+  struct device_s *dev = ep->dev;
+  struct soclib_block_context_s	*pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
 
   struct dev_block_rq_s *rq = dev_blk_queue_head(&pv->queue);
-  struct block_soclib_rq_s *srq = (void*)(rq + 1);
 
-  uint32_t st = endian_le32(
-      cpu_mem_read_32(dev->addr[0] + BLOCK_SOCLIB_STATUS));
+  uint32_t st = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_BLOCK_STATUS));
 
-/*   printk("block dev irq %p, st: %x\n", dev, st); */
+  /* printk("block dev irq %p, st: %x\n", dev, st); */
 
   switch (st)
     {
-    case BLOCK_SOCLIB_STATUS_READ_SUCCESS:
-    case BLOCK_SOCLIB_STATUS_WRITE_SUCCESS:
+    case SOCLIB_BLOCK_STATUS_READ_SUCCESS:
+    case SOCLIB_BLOCK_STATUS_WRITE_SUCCESS:
       assert(rq != NULL);
 
       rq->progress++;
-      rq->callback(rq, 1, srq + 1);
+      rq->callback(rq, 1);
 
       if (rq->progress < rq->count)
-        block_soclib_op_start(dev, rq);
+        soclib_block_op_start(pv, rq);
       else
-        block_soclib_rq_end(dev);
+        soclib_block_rq_end(pv);
+      break;
 
-      lock_release(&dev->lock);
-      return 1;
-
-    case BLOCK_SOCLIB_STATUS_ERROR:
-    case BLOCK_SOCLIB_STATUS_READ_ERROR:
-    case BLOCK_SOCLIB_STATUS_WRITE_ERROR:
+    case SOCLIB_BLOCK_STATUS_ERROR:
+    case SOCLIB_BLOCK_STATUS_READ_ERROR:
+    case SOCLIB_BLOCK_STATUS_WRITE_ERROR:
       assert(rq != NULL);
 
       rq->progress = -EIO;
-      rq->callback(rq, 0, srq + 1);
-      block_soclib_rq_end(dev);
-
-      lock_release(&dev->lock);
-      return 1;
-
-    default:
-      lock_release(&dev->lock);
-      return 0;
+      rq->callback(rq, 0);
+      soclib_block_rq_end(pv);
+      break;
     }
 
+  lock_release(&dev->lock);
 }
 
-DEVBLOCK_GETRQSIZE(block_soclib_getrqsize)
+static const struct devenum_ident_s	soclib_block_ids[] =
 {
-  return sizeof(struct dev_block_rq_s) + sizeof(struct block_soclib_rq_s);
-}
-
-static const struct devenum_ident_s	block_soclib_ids[] =
-{
-	DEVENUM_FDTNAME_ENTRY("soclib:block_device", 0, 0),
+	DEVENUM_FDTNAME_ENTRY("soclib:vci_block_device"),
 	{ 0 }
 };
 
-const struct driver_s	block_soclib_drv =
+static const struct driver_block_s	soclib_block_block_drv =
 {
-  .class		= device_class_block,
-  .id_table		= block_soclib_ids,
-  .f_init		= block_soclib_init,
-  .f_cleanup		= block_soclib_cleanup,
-  .f_irq		= block_soclib_irq,
-  .f.blk = {
-    .f_request		= block_soclib_request,
-    .f_getparams	= block_soclib_getparams,
-    .f_getrqsize	= block_soclib_getrqsize,
-  }
+  .class_		= DRIVER_CLASS_BLOCK,
+  .f_request		= soclib_block_request,
+  .f_getparams          = soclib_block_getparams,
 };
 
-REGISTER_DRIVER(block_soclib_drv);
+static DEV_INIT(soclib_block_init);
+static DEV_CLEANUP(soclib_block_cleanup);
 
-DEV_INIT(block_soclib_init)
+const struct driver_s	soclib_block_drv =
 {
-  struct block_soclib_context_s	*pv;
+  .desc                 = "SoCLib VciBlockDevice",
+  .id_table		= soclib_block_ids,
+  .f_init		= soclib_block_init,
+  .f_cleanup		= soclib_block_cleanup,
+  .classes              = { &soclib_block_block_drv, 0 }
+};
 
-  dev->drv = &block_soclib_drv;
+REGISTER_DRIVER(soclib_block_drv);
+
+static DEV_INIT(soclib_block_init)
+{
+  struct soclib_block_context_s	*pv;
+
+  dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   /* allocate private driver data */
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
+  dev->drv_pv = pv;
 
   if (!pv)
-    goto err;
+    return -ENOMEM;
 
-  pv->params.blk_size = endian_le32(
-      cpu_mem_read_32(dev->addr[0] + BLOCK_SOCLIB_BLOCK_SIZE));
-  pv->params.blk_count = endian_le32(
-      cpu_mem_read_32(dev->addr[0] + BLOCK_SOCLIB_SIZE));
+  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
+    goto err_mem;
+
+  device_irq_source_init(dev, &pv->irq_ep, 1, &soclib_block_irq);
 
   dev_blk_queue_init(&pv->queue);
 
-  cpu_mem_write_32(dev->addr[0] + BLOCK_SOCLIB_IRQ_ENABLE,
+  if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
+    goto err_q;
+
+  pv->params.blk_size = endian_le32(
+      cpu_mem_read_32(pv->addr + SOCLIB_BLOCK_BLOCK_SIZE));
+  pv->params.blk_count = endian_le32(
+      cpu_mem_read_32(pv->addr + SOCLIB_BLOCK_SIZE));
+
+  cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_IRQ_ENABLE,
                    endian_le32(1));
 
   printk("Soclib block device : %u sectors %u bytes per block\n",
 	 pv->params.blk_count, pv->params.blk_size);
 
-  DEV_ICU_BIND(dev->icudev, dev, dev->irq, block_soclib_irq);
+  dev->drv = &soclib_block_drv;
+  dev->status = DEVICE_DRIVER_INIT_DONE;
 
-  dev->drv_pv = pv;
   return 0;
 
-#if 0
- err_pv:
+ err_q:
+  dev_blk_queue_destroy(&pv->queue);
+ err_mem:
   mem_free(pv);
-#endif
- err:
   return -1;
+}
+
+static DEV_CLEANUP(soclib_block_cleanup)
+{
+  struct soclib_block_context_s	*pv = dev->drv_pv;
+
+  cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_IRQ_ENABLE, 0);
+
+  device_irq_source_unlink(dev, &pv->irq_ep, 1);
+
+  dev_blk_queue_destroy(&pv->queue);
+
+  mem_free(pv);
 }
 
