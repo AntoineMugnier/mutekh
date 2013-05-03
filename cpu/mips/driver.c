@@ -37,6 +37,10 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
+#ifdef CONFIG_SOCLIB_MEMCHECK
+# include <arch/mem_checker.h>
+#endif
+
 CPU_LOCAL void *__context_data_base;
 
 struct mips_dev_private_s
@@ -91,7 +95,6 @@ static DEVICU_GET_ENDPOINT(mips_icu_get_endpoint)
 static DEVICU_ENABLE_IRQ(mips_icu_enable_irq)
 {
   struct device_s *dev = idev->dev;
-  struct mips_dev_private_s *pv = dev->drv_pv;
 
   // inputs are single wire, logical irq id must be 0
   if (irq_id > 0)
@@ -102,6 +105,7 @@ static DEVICU_ENABLE_IRQ(mips_icu_enable_irq)
     return 0;
 
 # else
+  struct mips_dev_private_s *pv = dev->drv_pv;
   /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
   uint_fast8_t icu_in_id = sink - pv->sinks;
   reg_t status = cpu_mips_mfc0(CPU_MIPS_STATUS, 0);
@@ -144,6 +148,10 @@ static const struct driver_icu_s  mips_icu_drv =
 
 CPU_LOCAL struct device_s *cpu_device = NULL;
 
+#if defined(CONFIG_ARCH_SMP) && defined(CONFIG_HEXO_USERMODE)
+void * cpu_local_storage[CONFIG_ARCH_LAST_CPU_ID + 1]; /* used to restore cls reg when back from user mode */
+#endif
+
 static DEVCPU_REG_INIT(mips_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
@@ -156,8 +164,8 @@ static DEVCPU_REG_INIT(mips_cpu_reg_init)
   asm volatile("move $27, %0" : : "r" (pv->cls));
 
   /* Set exception vector */
-  extern __ldscript_symbol_t __exception_base_ptr;
-  cpu_mips_mtc0(15, 1, (reg_t)&__exception_base_ptr);
+  extern __ldscript_symbol_t CPU_NAME_DECL(exception_vector);
+  cpu_mips_mtc0(15, 1, (reg_t)&CPU_NAME_DECL(exception_vector));
 
 # ifdef CONFIG_DEVICE_IRQ
   /* enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
@@ -165,6 +173,16 @@ static DEVCPU_REG_INIT(mips_cpu_reg_init)
   status |= 0xfc00;
   cpu_mips_mtc0(CPU_MIPS_STATUS, 0, status);
 # endif
+
+# ifdef CONFIG_HEXO_USERMODE
+  cpu_local_storage[pv->id] = pv->cls;
+# endif
+#endif
+
+#if defined(CONFIG_SOCLIB_MEMCHECK) && defined(CONFIG_HEXO_USERMODE)
+  void cpu_context_set_user();
+  void cpu_context_set_user_end();
+  soclib_mem_bypass_sp_check(&cpu_context_set_user, &cpu_context_set_user_end);
 #endif
 
   CPU_LOCAL_SET(cpu_device, dev);

@@ -54,5 +54,5 @@ ifeq ($(CONFIG_SOCLIB_MEMCHECK), defined)
 CPUCFLAGS+= -fno-delayed-branch -Wa,-O0
 endif
 
-CPUCFLAGS+= -G0
+CPUCFLAGS+= -G0 -Umips
 

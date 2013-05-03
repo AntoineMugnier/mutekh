@@ -30,10 +30,6 @@
 
 #define CPU_CPU_H_
 
-#ifdef CONFIG_ARCH_SMP
-extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-#endif
-
 #include "cpu/hexo/specific.h"
 
 /** general purpose regsiters count */
@@ -43,8 +39,6 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
     "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",     \
     "r8", "r9", "r10", "r11", "r12", "sp", "lr", "pc"
       
-
-#define CPU_TYPE_NAME arm
 
 static inline cpu_id_t
 cpu_id(void)
@@ -71,7 +65,7 @@ cpu_id(void)
 static inline bool_t
 cpu_isbootstrap(void)
 {
-  return cpu_id() == 0;
+  return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
 static inline

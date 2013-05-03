@@ -45,10 +45,6 @@
 
 #ifndef __MUTEK_ASM__
 
-# ifdef CONFIG_ARCH_SMP
-extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-# endif
-
 /** general purpose regsiters count */
 # define CPU_GPREG_COUNT	32
 
@@ -57,9 +53,6 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
                 "%o0", "%o1", "%o2", "%o3", "%o4", "%o5", "%o6", "%o7",             \
                 "%l0", "%l1", "%l2", "%l3", "%l4", "%l5", "%l6", "%l7",             \
                 "%i0", "%i1", "%i2", "%i3", "%i4", "%i5", "%i6", "%i7"
-
-# undef sparc
-# define CPU_TYPE_NAME sparc
 
 /** return sparc cpu windows count */
 static inline size_t
@@ -99,7 +92,7 @@ reg_t cpu_get_stackptr()
 static inline bool_t
 cpu_isbootstrap(void)
 {
-  return cpu_id() == 0;
+  return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
 static inline void

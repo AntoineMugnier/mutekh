@@ -26,78 +26,87 @@
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
+#ifdef CONFIG_LOAD_RESET_SEPARATE
+.section .reset,"ax",@progbits
+CPU_NAME_DECL(reset_vector):
+        .globl CPU_NAME_DECL(reset_vector)
+        movia   r16,            mutekh_entry
+        jmp     r16
 #endif
 
-FUNC_START(.boot, cpu_boot)
+#if defined(CONFIG_ARCH_SMP) && !defined(CONFIG_LOAD_SMP_RESET_MERGED)
+.section .smpreset,"ax",@progbits
+CPU_NAME_DECL(smp_reset_vector):
+        .globl CPU_NAME_DECL(smp_reset_vector)
+        movia   r16,            mutekh_entry
+        jmp     r16
+#endif
+
+
+FUNC_START(.text, mutekh_entry)
 
     .set noat
-
-        /* get CPU id and adjust stack */
-        rdctl   r16,            cpuid
-        andi    r16,    r16,    0x000003ff
-        movia   sp,             __initial_stack
 
         /* clear status */
         wrctl   status,         r0
 
+#ifdef CONFIG_CPU_NIOS2_EXEPT_BASE_CTL17
+        /* set exception base pointer */
+        movia   r4,             CPU_NAME_DECL(exception_vector)
+        wrctl   ctl17,          r4
+#endif
+
 #ifdef CONFIG_ARCH_SMP_CAPABLE
-        /* only CPU id below CONFIG_CPU_MAXCOUNT are allowed to boot */
-        movia   r2,     CONFIG_CPU_MAXCOUNT
-        cmplt   r3,     r16,    r2
-        beq     zero,   r3,     cpu_boot_idle
+
+        /* get cpu id */
+        rdctl   r16,            cpuid
+        andi    r16,    r16,    0x000003ff
+
+        /* bootstrap processor ? */
+        movia   r3,             CONFIG_ARCH_BOOTSTRAP_CPU_ID
+        beq     r16,    r3,     1f
+
+# ifdef CONFIG_ARCH_SMP
+
+        /* acceptable cpuid ? */
+        movia   r3,             CONFIG_ARCH_LAST_CPU_ID
+        bgt     r16,    r3,     2f
+
+        /* get address of the stacks pool array */
+        movia   r3,             cpu_stacks_pool
+        ldw     r3,             (r3)
+
+        /* get the stack pointer for this cpu */
+        slli    r4,     r16,    2
+        add     r3,     r4,     r3
+        ldw     sp,             (r3)
+        movia   r3,             CONFIG_HEXO_CPU_STACK_SIZE
+        add     sp,     sp,     r3
+#  ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     fp,     sp
+#  endif
+
+        /* jump to C code */
+        movia   r16,             mutekh_startup_smp
+        jmp     r16
+
+# endif
+2:
+        /* spin if this cpuid is not permitted */
+        br      2b
+1:
 #endif
 
-#ifdef CONFIG_ARCH_SMP
-        /* adjust initial stack from cpuid */
-        slli    r17,    r16,    CONFIG_HEXO_RESET_STACK_SIZE
-        sub     sp,     sp,     r17
-#endif
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-        movi    r17,            1 << CONFIG_HEXO_RESET_STACK_SIZE
-
-    /* enter memchecker command mode */
-        movia   r1,             SOCLIB_MC_MAGIC_VAL
-        stw     r1,             SOCLIB_MC_MAGIC(zero)
-
-    /* create a new initial memchecker context using cpuid as context id */
-        stw     r17,            SOCLIB_MC_R2(zero)
-        sub     r17,    sp,     r17
-        stw     r17,            SOCLIB_MC_R1(zero)
-        stw     r16,            SOCLIB_MC_CTX_CREATE(zero)
-
-    /* switch to new memchecker context */
-        stw     r16,            SOCLIB_MC_CTX_SET(zero)
-
-    /* enable all memchecker checks */
-        ori     r1,     zero,   SOCLIB_MC_CHECK_ALL
-        stw     r1,             SOCLIB_MC_ENABLE(zero)
-#endif
-
-        addi    sp,     sp,     -CONFIG_HEXO_STACK_ALIGN
+        /* set startup stack pointer */
+        movia   sp,     CONFIG_STARTUP_STACK_ADDR \
+                      + CONFIG_STARTUP_STACK_SIZE
 #ifdef CONFIG_COMPILE_FRAMEPTR
         mov     fp,     sp
 #endif
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-        /* leave memchecker command mode */
-        stw     r0,             SOCLIB_MC_MAGIC(zero)
-#endif
+        /* jump to C code */
+        movia   r16,             mutekh_startup
+        jmp     r16
 
-       movia   r4,              __exception_base_ptr
-       wrctl   ctl17,           r4
-
-       movia   r16,             mutekh_startup
-       callr   r16
-FUNC_END(cpu_boot)
-
-FUNC_START(.boot, cpu_boot_idle)
-#ifdef CONFIG_CPU_PPC_WAIT_OPCODE
-# error No hlt/wait opcode available on nios2
-#else
-        br      cpu_boot_idle
-#endif        
-FUNC_END(cpu_boot_idle)
+FUNC_END(mutekh_entry)
 

@@ -52,8 +52,8 @@ typedef SCHED_CANDIDATE_FCN(sched_candidate_fcn_t);
 struct sched_context_s
 {
   CONTAINER_ENTRY_TYPE(DLIST) list_entry;
-  struct scheduler_s *scheduler;		//< keep track of associated scheduler queue
-  struct context_s	context;	//< execution context
+  struct scheduler_s *scheduler;  //< keep track of associated scheduler queue
+  struct context_s   *context;	  //< execution context
 
   void			*priv;
 
@@ -97,7 +97,7 @@ struct sched_context_s *sched_get_current(void),
 config_depend_inline(CONFIG_MUTEK_SCHEDULER,
 struct context_s * sched_tmp_context(void),
 {
-  return &CPU_LOCAL_ADDR(sched_idle)->context;
+  return CPU_LOCAL_ADDR(sched_idle)->context;
 });
 
 /** @This is a context preemption handler.
@@ -132,10 +132,10 @@ config_depend(CONFIG_MUTEK_SCHEDULER)
 CONTEXT_PREEMPT(sched_preempt_wait_unlock);
 
 
-/** @This initializes scheduler context. The @ref context_init function must
-    have been called before on @ref sched_context_s::context. */
+/** @This initializes scheduler context. */
 config_depend(CONFIG_MUTEK_SCHEDULER)
-void sched_context_init(struct sched_context_s *sched_ctx);
+void sched_context_init(struct sched_context_s *sched_ctx,
+                        struct context_s *context);
 
 /** @This switches to next context. Must be called with interrupts
     disabled. @see sched_preempt_switch */

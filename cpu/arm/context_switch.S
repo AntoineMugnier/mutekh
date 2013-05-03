@@ -189,9 +189,6 @@ FUNC_START(.text, cpu_context_set)
     ldr  r4, =CONFIG_SOCLIB_MEMCHECK_ADDRESS 
     str  r3, [r4, #SOCLIB_MC_MAGIC_OFFSET]
 
-    /* switch to associated memchecker context */
-    str  r0, [r4, #SOCLIB_MC_CTX_SET_OFFSET]
-
     /* mark current memchecker context as invalid */
     mov  r3, #SOCLIB_MC_CTX_ID_CURRENT
     str  r3, [r4, #SOCLIB_MC_CTX_INVALIDATE_OFFSET]
@@ -199,9 +196,9 @@ FUNC_START(.text, cpu_context_set)
     /* create a new temporary memchecker context using passed stack */
     str  r0, [r4, #SOCLIB_MC_R1_OFFSET]
     str  r1, [r4, #SOCLIB_MC_R2_OFFSET]
-    str  r0, [r4, #SOCLIB_MC_CTX_CREATE_TMP_OFFSET]
+    str  r0, [r4, #SOCLIB_MC_CTX_CREATE_OFFSET]
 
-    /* switch to new temporary memchecker context */
+    /* switch to new memchecker context */
     str  r0, [r4, #SOCLIB_MC_CTX_SET_OFFSET]
 #endif
 

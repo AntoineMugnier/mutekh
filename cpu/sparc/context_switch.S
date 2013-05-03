@@ -225,12 +225,12 @@ FUNC_START(.text, cpu_context_set)
         mov     SOCLIB_MC_CTX_ID_CURRENT, %g1
         st      %g1,            [ SOCLIB_MC_CTX_INVALIDATE ]
 
-        // create a new temporary memchecker context using passed stack
+        // create a new memchecker context using passed stack
         st      %o0,            [ SOCLIB_MC_R1 ]
         st      %o1,            [ SOCLIB_MC_R2 ]
-        st      %o0,            [ SOCLIB_MC_CTX_CREATE_TMP ]
+        st      %o0,            [ SOCLIB_MC_CTX_CREATE ]
 
-        // switch to new temporary memchecker context
+        // switch to new memchecker context
         st      %o0,            [ SOCLIB_MC_CTX_SET ]
 #endif
 

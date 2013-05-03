@@ -24,45 +24,14 @@
 
 #include <string.h>
 
-/////////////////////////////////////////////////////////////////////
-
-void atmel_bss_section_init()
-{
-  extern __ldscript_symbol_t __bss_start;
-  extern __ldscript_symbol_t __bss_end;
-
-  memset((uint8_t*)&__bss_start, 0,
-         (uint8_t*)&__bss_end - (uint8_t*)&__bss_start);
-}
-
-/////////////////////////////////////////////////////////////////////
-
-#ifdef CONFIG_DATA_FROM_ROM
-void atmel_data_section_init()
-{
-  extern __ldscript_symbol_t __data_start;
-  extern __ldscript_symbol_t __data_load_start;
-  extern __ldscript_symbol_t __data_load_end;
-
-  memcpy_from_code((uint8_t*)&__data_start, 
-                   (uint8_t*)&__data_load_start,
-                   (uint8_t*)&__data_load_end - (uint8_t*)&__data_load_start);
-}
-#endif
-
-/////////////////////////////////////////////////////////////////////
-
 #include <mutek/mem_alloc.h>
 #include <mutek/memory_allocator.h>
 
 void atmel_mem_init()
 {
-    extern __ldscript_symbol_t __system_heap_start, __system_heap_end;
-
-    default_region = memory_allocator_init(NULL, 
-                                           &__system_heap_start, 
-                                           (void*)((uintptr_t)&__system_heap_end -
-                                                   (1 << CONFIG_HEXO_RESET_STACK_SIZE) * CONFIG_CPU_MAXCOUNT));    
+    default_region = memory_allocator_init(NULL, (void*)CONFIG_STARTUP_HEAP_ADDR,
+                                           (void*)(CONFIG_STARTUP_HEAP_ADDR +
+                                                   CONFIG_STARTUP_HEAP_SIZE));
 }
 
 /////////////////////////////////////////////////////////////////////

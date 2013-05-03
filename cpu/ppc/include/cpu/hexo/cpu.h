@@ -32,10 +32,6 @@
 
 #ifndef __MUTEK_ASM__
 
-# ifdef CONFIG_ARCH_SMP
-extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-# endif
-
 /** general purpose regsiters count */
 # define CPU_GPREG_COUNT	32
 
@@ -45,8 +41,6 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
     " l2", " l3", " l4", " l5", " l6", " l7", " l8", " l9",             \
     "l10", "l11", "l12", "l13", "l14", "l15", "l16", "l17"
 
-
-# define CPU_TYPE_NAME powerpc
 
 static inline cpu_id_t
 cpu_id(void)
@@ -72,7 +66,7 @@ reg_t cpu_get_stackptr()
 static inline bool_t
 cpu_isbootstrap(void)
 {
-  return cpu_id() == 0;
+  return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
 static inline void

@@ -20,11 +20,8 @@
 
 */
 
-.section        .boot,"ax",@progbits
-
-/*******************************************************
-*  16 bits initialization, switch to protected mode    *
-********************************************************/
+#include <hexo/asm.h>
+#include <hexo/cpu.h>
 
 /* 
  * 16 bits real mode initialisation code is used just after cpu
@@ -32,6 +29,7 @@
  * booting non master CPUs in SMP systems.
 */
 
+.macro  X86_ENTER_PMODE
 .code16
 	/* disable interrupts */
 	cli
@@ -66,62 +64,85 @@
         xorl    %eax,           %eax
 	movw	%ax,		%fs
 	movw	%ax,		%gs
+.endm
 
+#ifdef CONFIG_LOAD_RESET_SEPARATE
+.section  .reset,"ax",@progbits
+CPU_NAME_DECL(reset_vector):
+        .globl CPU_NAME_DECL(reset_vector)
+        X86_ENTER_PMODE
+        jmp mutekh_entry
+#endif
 
-/*******************************************************
-*  32 bits boot vector                                 *
-********************************************************/
+#if defined(CONFIG_ARCH_SMP) && !defined(CONFIG_LOAD_SMP_RESET_MERGED)
+.section  .smpreset,"ax",@progbits
+CPU_NAME_DECL(smp_reset_vector):
+        .globl CPU_NAME_DECL(smp_reset_vector)
+        X86_ENTER_PMODE
+        jmp mutekh_entry
+#endif
 
-/*
- * Entry point for already
- */
-
-.globl cpu_boot
-cpu_boot:
+FUNC_START(.text, mutekh_entry)
 	cli
+
+        /* enable normal cache mode */
 	movl	%cr0,		%eax
-	andl	$0x9fffffff,	%eax /* enable normal cache mode */
+	andl	$0x9fffffff,	%eax
 	movl	%eax,		%cr0
-
-	/* get CPU id */
-	mov	$0x1b, %ecx
-	rdmsr
-
-#ifndef CONFIG_ARCH_SMP
-	test	$0x100, %eax	; /* is bootstrap ? */
-	jnz 1f
-	hlt
-1:
-#endif
-
-#ifdef CONFIG_ARCH_SMP
-	andl	$0xfffff000, %eax /* get local APIC base address */
-	mov	0x20(%eax), %eax /* read local apic ID */
-	shrl	$24, %eax
-
-	cmpl	$CONFIG_CPU_MAXCOUNT, %eax
-	jl 1f
-	hlt
-1:	
-	/* change stack offset depending on CPU id */
-	shll	$CONFIG_HEXO_RESET_STACK_SIZE, %eax
-#endif
-
-	mov	$__initial_stack, %esp
-	xor	%ebp, %ebp
-
-#ifdef CONFIG_ARCH_SMP
-	subl	%eax, %esp
-#endif
 
         /* invalidate cls and tls segments */
         xorl    %eax,           %eax
 	movw	%ax,		%fs
 	movw	%ax,		%gs
         
-	call	mutekh_startup
-        
+#ifdef CONFIG_ARCH_SMP_CAPABLE
+
+        /* is bootstrap processor ? */
+	mov	$0x1b, %ecx
+	rdmsr
+
+	test	$0x100, %eax
+	jnz  1f
+
+# ifdef CONFIG_ARCH_SMP
+	/* get CPU id */
+	andl	$0xfffff000, %eax /* get local APIC base address */
+	mov	0x20(%eax), %eax /* read local apic ID */
+	shrl	$24, %eax
+
+        cmpl    $CONFIG_ARCH_LAST_CPU_ID, %eax
+        jg      2f
+
+        /* get address of the stacks pool array */
+        movl    cpu_stacks_pool, %ebx
+
+        /* get the stack pointer for this cpu */
+        movl    (%ebx,%eax,4), %esp
+        addl    $CONFIG_HEXO_CPU_STACK_SIZE, %esp
+#  ifdef CONFIG_COMPILE_FRAMEPTR
+        movl    %esp, %ebp
+#  endif
+
+        /* jump to C code */
+	jmp	mutekh_startup_smp
+
+# endif
+2:
 	/* stop processor execution */
 	cli
 	hlt
+1:      
+#endif
+
+        /* set startup stack pointer */
+        movl    CONFIG_STARTUP_STACK_ADDR \
+              + CONFIG_STARTUP_STACK_SIZE, %esp
+
+#ifdef CONFIG_COMPILE_FRAMEPTR
+        movl    %esp, %ebp
+#endif
+        /* jump to C code */
+	jmp	mutekh_startup
+
+FUNC_END(mutekh_entry)
 

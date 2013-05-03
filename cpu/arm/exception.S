@@ -27,6 +27,35 @@
 # include <arch/mem_checker.h>
 #endif
 
+.section .excep,"ax"
+
+CPU_NAME_DECL(exception_vector):
+        .globl CPU_NAME_DECL(exception_vector)
+#ifndef CONFIG_LOAD_RESET_SEPARATE
+CPU_NAME_DECL(reset_vector):
+        .globl CPU_NAME_DECL(reset_vector)
+#endif
+        ldr     pc, =mutekh_entry
+        ldr     pc, =arm_exc_undef
+#ifdef CONFIG_HEXO_USERMODE
+        ldr     pc, =arm_exc_swi
+#else
+        ldr     pc, =arm_exc_undef
+#endif
+        ldr     pc, =arm_exc_pabt
+        ldr     pc, =arm_exc_dabt
+        ldr     pc, =arm_exc_undef // reserved
+#ifdef CONFIG_HEXO_IRQ
+# if defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
+        ldr     pc, =arm_c_irq_handler
+        ldr     pc, =arm_c_fiq_handler
+# else
+        ldr     pc, =arm_exc_irq
+        ldr     pc, =arm_exc_fiq
+# endif
+#endif
+
+
 .macro PREPARE_EXCEPTION offset
     /* uniformize return address, but avoid a sub when 0 */
     .if \offset != 0
@@ -194,16 +223,6 @@ FUNC_START(.text, arm_exc_restore)
     bne   cpu_context_jumpto
 #endif
 
-#ifdef CONFIG_SOCLIB_MEMCHECK_
-    /* enter memchecker command mode */
-    ldr  r2, =SOCLIB_MC_MAGIC_VAL 
-    ldr  r1, =CONFIG_SOCLIB_MEMCHECK_ADDRESS 
-    str  r2, [r1, #SOCLIB_MC_MAGIC_OFFSET]
-
-    /* leave memchecker command mode */
-    ldr     r3, =2f
-    str     r3, [r1, #SOCLIB_MC_DELAYED_MAGIC_OFFSET]
-#endif
     // context registers save array
     CONTEXT_LOCAL_addr arm_context_regs, r2, r3
 

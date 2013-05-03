@@ -71,10 +71,6 @@
 
 #include <hexo/endian.h>
 
-# ifdef CONFIG_ARCH_SMP
-extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-# endif
-
 /** general purpose regsiters count */
 # define CPU_GPREG_COUNT	32
 
@@ -193,8 +189,6 @@ reg_t cpu_get_stackptr()
     return ret;
 }
 
-# define CPU_TYPE_NAME mips32
-
 static inline cpu_id_t
 cpu_id(void)
 {
@@ -204,7 +198,7 @@ cpu_id(void)
 static inline bool_t
 cpu_isbootstrap(void)
 {
-  return cpu_id() == 0;
+  return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
 static inline void

@@ -71,10 +71,6 @@
     "DTLB Modified"                             \
     }
 
-# ifdef CONFIG_DRIVER_ICU_AVR32
-struct device_s;
-extern CPU_LOCAL struct device_s cpu_icu_dev;
-# endif
 
 # include "hexo/local.h"
 

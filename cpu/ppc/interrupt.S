@@ -347,48 +347,41 @@
 
 .section .excep,"ax",@progbits
 
-
+CPU_NAME_DECL(exception_vector):
+        .globl CPU_NAME_DECL(exception_vector)
 
         /* critical interrupt (critical, async) */
-FUNC_START_ORG(ppc_critical_entry, 0x100)
+        .org 0x100
         PPC_EXCEPT_SAVE mfsrr2 mfsrr3
         PPC_EXCEPT_FAULT 0
 1:      b 1b
-FUNC_END(ppc_critical_entry)
-
 
 
         /* machine check (critical, async, imprecise) */
-FUNC_START_ORG(ppc_machine_entry, 0x200)
+        .org 0x200
         PPC_EXCEPT_SAVE mfsrr2 mfsrr3
         PPC_EXCEPT_FAULT 0
 1:      b 1b
-FUNC_END(ppc_machine_entry)
-
 
 
         /* data storage */
-FUNC_START_ORG(ppc_data_storage_entry, 0x300)
+        .org 0x300
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_DATA_ERROR
         b ppc_preempt_and_restore
-FUNC_END(ppc_data_storage_entry)
-
 
 
         /* instr storage */
-FUNC_START_ORG(ppc_instr_storage_entry, 0x400)
+        .org 0x400
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_INS_ERROR
         b ppc_preempt_and_restore
-FUNC_END(ppc_instr_storage_entry)
-
 
 
         /* external (async) */
-FUNC_START_ORG(ppc_external_entry, 0x500)
+        .org 0x500
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
 #ifdef CONFIG_HEXO_IRQ
@@ -397,22 +390,18 @@ FUNC_START_ORG(ppc_external_entry, 0x500)
         PPC_EXCEPT_FAULT CPU_EXCEPTION_IRQ        
 #endif
         b ppc_preempt_and_restore
-FUNC_END(ppc_external_entry)
-
 
 
         /* alignment */
-FUNC_START_ORG(ppc_align_entry, 0x600)
+        .org 0x600
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_DATA_ALIGN
         b ppc_preempt_and_restore
-FUNC_END(ppc_align_entry)
-
 
 
         /* program */
-FUNC_START_ORG(ppc_program_entry, 0x700)
+        .org 0x700
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
 #if defined(CONFIG_HEXO_LAZY_SWITCH) && defined(CONFIG_HEXO_FPU)
         // real error if fpu already enabled
@@ -427,22 +416,19 @@ FUNC_START_ORG(ppc_program_entry, 0x700)
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_ILLEGAL_INS
         b ppc_preempt_and_restore
-FUNC_END(ppc_program_entry)
 
 
 
         /* fpu unusable */
-FUNC_START_ORG(ppc_fpu_entry, 0x800)
+        .org 0x800
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
         PPC_EXCEPT_FAULT CPU_EXCEPTION_ILLEGAL_INS
         b ppc_preempt_and_restore
-FUNC_END(ppc_fpu_entry)
-
 
 
         /* syscall */
-FUNC_START_ORG(ppc_syscall_entry, 0xc00)
+        .org 0xc00
         PPC_EXCEPT_SAVE mfsrr0 mfsrr1
         PPC_EXCEPT_PREEMPT_CLEAR
 #ifdef CONFIG_HEXO_USERMODE
@@ -451,35 +437,34 @@ FUNC_START_ORG(ppc_syscall_entry, 0xc00)
 #else
         PPC_EXCEPT_FAULT CPU_EXCEPTION_SYSCALL
 #endif
-        b ppc_preempt_and_restore
-FUNC_END(ppc_syscall_entry)
+        ; b ppc_preempt_and_restore
 
-FUNC_START(.excep, ppc_preempt_and_restore)
+
+ppc_preempt_and_restore:
         PPC_EXCEPT_PREEMPT
   ppc_restore_only:
         PPC_EXCEPT_RESTORE
-FUNC_END(ppc_preempt_and_restore)
 
 /* apu unavailable */
-.org 0xf20
+// .org 0xf20
 
 /* programmable-interval timer (async) */
-.org 0x1000
+// .org 0x1000
 
 /* fixed-interval timer (async) */
-.org 0x1010
+// .org 0x1010
 
 /* watchdog (critical, async) */
-.org 0x1020
+// .org 0x1020
 
 /* data tlb */
-.org 0x1100
+// .org 0x1100
 
 /* ins tlb */
-.org 0x1200
+// .org 0x1200
 
 /* debug (critical, (a)sync) */
-.org 0x2000
+// .org 0x2000
 
 // Local Variables:
 // indent-tabs-mode: nil;

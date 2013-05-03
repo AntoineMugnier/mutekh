@@ -1,4 +1,4 @@
-CPUCFLAGS=-fsigned-char -mflat -Wa,-Av9
+CPUCFLAGS=-fsigned-char -mflat -Wa,-Av9 -Usparc
 CPUTOOLS=sparc-unknown-elf-
 
 ifeq ($(CONFIG_COMPILE_SOFTFLOAT), defined)

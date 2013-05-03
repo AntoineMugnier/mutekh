@@ -33,8 +33,6 @@
 #define CPU_GPREG_NAMES "edi", "esi", "ebp", "esp", "ebx", "edx", "ecx", "eax" \
     "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
 
-#define CPU_TYPE_NAME x86_64
-
 #ifndef __MUTEK_ASM__
 
 # ifdef CONFIG_ARCH_SMP
@@ -56,7 +54,7 @@ static inline bool_t
 cpu_isbootstrap(void)
 {
 # ifdef CONFIG_ARCH_SMP
-  return (cpu_id() == 0);
+  return (cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID);
 # endif
   return 1;
 }

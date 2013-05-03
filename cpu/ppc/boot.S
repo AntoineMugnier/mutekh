@@ -23,87 +23,86 @@
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
+#ifdef CONFIG_LOAD_RESET_SEPARATE
+.section .reset,"ax",@progbits
+CPU_NAME_DECL(reset_vector):
+        .globl CPU_NAME_DECL(reset_vector)
+1:      
+        LA32	3,	mutekh_entry
+        mtctr   3
+        bctr
+        .org 0x80 - 4
+        b      	1f
 #endif
 
-FUNC_START(.text, cpu_boot)
+#if defined(CONFIG_ARCH_SMP) && !defined(CONFIG_LOAD_SMP_RESET_MERGED)
+.section .smpreset,"ax",@progbits
+CPU_NAME_DECL(smp_reset_vector):
+        .globl CPU_NAME_DECL(smp_reset_vector)
+        LA32	3,	mutekh_entry
+        mtctr   3
+        bctr
+#endif
 
-        /* get CPU id and adjust stack */
-        lis     9,              __initial_stack@ha
-        la      1,              __initial_stack@l(9)
-        mfdcr   29,             0
+FUNC_START(.text, mutekh_entry)
 
         /* clear status */
         li      3,      0
         mtmsr   3
 
-#ifdef CONFIG_ARCH_SMP_CAPABLE
-        /* only first CPU is allowed to boot */
-        cmpwi   cr0,    29,     CONFIG_CPU_MAXCOUNT
-        bge     cr0,            cpu_boot_idle
-#endif
-
-#ifdef CONFIG_ARCH_SMP
-        /* adjust initial stack from cpuid */
-        slwi    3,      29,     CONFIG_HEXO_RESET_STACK_SIZE
-        sub     1,      1,      3
-#endif
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-        addi    2,      0,      1 << CONFIG_HEXO_RESET_STACK_SIZE
-
-        /* enter memchecker command mode */
-        LI32    0,              SOCLIB_MC_MAGIC_VAL
-        stw     0,              SOCLIB_MC_MAGIC (0)
-
-        /* create a new initial memchecker context using cpuid as context id */
-        stw     2,              SOCLIB_MC_R2 (0)
-        subf    2,      2,      1
-        stw     2,              SOCLIB_MC_R1 (0)
-        stw     29,             SOCLIB_MC_CTX_CREATE (0)
-
-        /* switch to new memchecker context */
-        stw     29,             SOCLIB_MC_CTX_SET (0)
-
-        /* enable all memchecker checks */
-        addi    0,      0,      SOCLIB_MC_CHECK_ALL
-        stw     0,              SOCLIB_MC_ENABLE (0)
-#endif
-
-        /* adjust stack pointer */
-        addi    1,      1,      -CONFIG_HEXO_STACK_ALIGN
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-        /* leave memchecker command mode */
-	li	3,		0
-        stw     3,              SOCLIB_MC_MAGIC (0)
-#endif
-
         /* set cpu interrupts entry point */
-        LA32    2,              __exception_base_ptr
-        mtevpr  2
+        LA32    3,              CPU_NAME_DECL(exception_vector)
+        mtevpr  3
 
-        /* jump to architecture code */
+#ifdef CONFIG_ARCH_SMP_CAPABLE
+
+        /* get CPU id */
+        mfdcr   29,             0
+
+        /* bootstrap processor ? */
+        cmpwi   cr0,    29,     CONFIG_ARCH_BOOTSTRAP_CPU_ID
+        beq     cr0,            1f
+
+# ifdef CONFIG_ARCH_SMP
+        /* acceptable cpuid ? */
+        cmpwi   cr0,    29,     CONFIG_ARCH_LAST_CPU_ID
+        bgt     cr0,            2f
+
+        /* get address of the stacks pool array */
+        LA32    2,              cpu_stacks_pool
+        lwz     2,              0(2)
+
+        /* get the stack pointer for this cpu */
+        slwi    3,      29,     2
+        add     3,      2,      3
+        lwz     1,              0(3)
+        LI32    2,              (CONFIG_HEXO_CPU_STACK_SIZE \
+                              - CONFIG_HEXO_STACK_ALIGN)
+        add     1,      1,      2
+
+        /* jump to C code */
+        LA32    2,              mutekh_startup_smp
+        mtctr   2
+        bctrl
+
+# endif
+2:
+# ifdef CONFIG_CPU_PPC_WAIT_OPCODE
+        wait
+# endif
+        b       2b
+1:
+#endif
+
+        /* set startup stack */
+        LI32    1       CONFIG_STARTUP_STACK_ADDR \
+                      + CONFIG_STARTUP_STACK_SIZE \
+                      - CONFIG_HEXO_STACK_ALIGN
+
+        /* jump to C code */
         LA32    2,              mutekh_startup
         mtctr   2
         bctrl
-FUNC_END(cpu_boot)
 
+FUNC_END(mutekh_entry)
 
-FUNC_START(.text, cpu_boot_idle)
-#ifdef CONFIG_CPU_PPC_WAIT_OPCODE
-        wait
-#endif
-        b               cpu_boot_idle
-FUNC_END(cpu_boot_idle)
-
-
-FUNC_START(.boot, cpu_boot_pointer)
-        1:
-        LA32	3,	cpu_boot
-        mtctr   3
-        bctr
-        .org 0x80-4
-        b      	1b
-FUNC_END(cpu_boot_pointer)

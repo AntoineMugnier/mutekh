@@ -164,9 +164,6 @@ FUNC_START(.text, cpu_context_set)
         movia   r1,             SOCLIB_MC_MAGIC_VAL
         stw     r1,             SOCLIB_MC_MAGIC(zero)
         
-        /* switch to associated memchecker context */
-        stw     r4,             SOCLIB_MC_CTX_SET(zero)
-
         /* mark current memchecker context as invalid */
         movi    r1,             SOCLIB_MC_CTX_ID_CURRENT
         stw     r1,             SOCLIB_MC_CTX_INVALIDATE(zero)
@@ -174,15 +171,14 @@ FUNC_START(.text, cpu_context_set)
         /* create a new temporary memchecker context using passed stack */
         stw     r4,             SOCLIB_MC_R1(zero)
         stw     r5,             SOCLIB_MC_R2(zero)
-        stw     r4,             SOCLIB_MC_CTX_CREATE_TMP(zero)
+        stw     r4,             SOCLIB_MC_CTX_CREATE(zero)
 
         /* switch to new temporary memchecker context */
         stw     r4,             SOCLIB_MC_CTX_SET(zero)
 #endif
 
         /* Set stack pointer */
-        add     r4,     r4,     r5
-        addi    sp,     r4,     -CONFIG_HEXO_STACK_ALIGN
+        add     sp,     r4,     r5
 #ifdef CONFIG_COMPILE_FRAMEPTR
         mov     fp,     sp
 #endif

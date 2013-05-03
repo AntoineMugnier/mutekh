@@ -50,11 +50,6 @@
 
 #ifndef __MUTEK_ASM__
 
-# ifdef CONFIG_DRIVER_ICU_ARM
-struct device_s;
-extern CPU_LOCAL struct device_s cpu_icu_dev;
-# endif
-
 void arm_interrupt_entry(void);
 
 static inline void

@@ -86,10 +86,15 @@
 
 .section .excep,"ax",@progbits
 
-__exception_base_ptr:
+CPU_NAME_DECL(exception_vector):
+        .globl CPU_NAME_DECL(exception_vector)
 
       /* reset 0x00 */
-        PUT_ENTRY       0,          cpu_boot
+#ifndef CONFIG_LOAD_RESET_SEPARATE
+CPU_NAME_DECL(reset_vector):
+        .globl CPU_NAME_DECL(reset_vector)
+#endif
+        PUT_ENTRY       0,          mutekh_entry
 
       /* 11 faults 0x01 - 0x0b */
         PUT_ENTRIES     1,    11,   sparc_excep_entry
@@ -124,12 +129,8 @@ __exception_base_ptr:
         PUT_EQ_ENTRIES  0x0, 0x7f, sparc_excep_entry, 0
 #endif
 
-__exception_base_ptr_end:
-        .globl __exception_base_ptr_end
 
-.section .text,"ax",@progbits
-
-
+/************************************************************************/
 
 /* This macro use all local regs to save caller saved register before calling C code */
 .macro SPARC_EXCEPT_SAVE

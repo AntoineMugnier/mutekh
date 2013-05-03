@@ -149,15 +149,12 @@ void __sched_context_push(struct sched_context_s *sched_ctx)
  *      Scheduler idle context
  */
 
-struct sched_context_s main_ctx;
-
 /* idle context runtime */
-static CONTEXT_ENTRY(sched_context_idle)
+static void sched_context_idle()
 {
   struct scheduler_s *sched = __scheduler_get();
 
   sched_queue_wrlock(&sched->root);
-  cpu_interrupt_disable();
 
 #ifdef CONFIG_HEXO_IPI
   /* Get scheduler IPI endpoint for this processor  */
@@ -177,7 +174,7 @@ static CONTEXT_ENTRY(sched_context_idle)
       if (next != NULL)
         {
           sched_queue_unlock(&sched->root);
-          context_switch_to(&next->context);
+          context_switch_to(next->context);
 
           /* A context might have been pushed in run queue during switch */
           sched_queue_wrlock(&sched->root);
@@ -191,7 +188,7 @@ static CONTEXT_ENTRY(sched_context_idle)
 #ifdef CONFIG_HEXO_IPI
       /* Declare processor as idle before unlocking scheduler */
       idle_cpu_queue_push(&sched->idle_cpu, ipi_e);
-    still_idle:
+    do {
 #endif
 
       sched_queue_unlock(&sched->root);
@@ -227,8 +224,7 @@ static CONTEXT_ENTRY(sched_context_idle)
          idle. Doing this also saves us from removing ourselves from the
          idle cpu list after cpu_interrupt_wait() call in case of IRQ and
          therefore allows use of a singly linked and non-locked list. */
-      if (!idle_cpu_queue_isorphan(ipi_e))
-        goto still_idle;
+      } while (!idle_cpu_queue_isorphan(ipi_e));
 #endif
     }
 }
@@ -254,7 +250,7 @@ CONTEXT_PREEMPT(sched_preempt_switch)
 
   if (next != NULL)
     {
-      struct context_s *ctx = &next->context;
+      struct context_s *ctx = next->context;
 
       /* push current context on exec queue */
       sched_queue_nolock_pushback(&sched->root, cur);
@@ -277,7 +273,7 @@ CONTEXT_PREEMPT(sched_preempt_stop)
   sched_queue_wrlock(&sched->root);
   next = __sched_candidate(&sched->root);
 
-  struct context_s *ctx = &next->context;
+  struct context_s *ctx = next->context;
   /* queue will be unlocked once context has been saved */
   context_set_unlock(ctx, &sched->root.lock);
 
@@ -305,7 +301,7 @@ CONTEXT_PREEMPT(sched_preempt_wait_unlock)
   /* get next running context */
   next = __sched_candidate(&sched->root);
 
-  struct context_s *ctx = &next->context;
+  struct context_s *ctx = next->context;
   /* queue will be unlocked once context has been saved */
   context_set_unlock(ctx, &sched->root.lock);
 
@@ -313,11 +309,13 @@ CONTEXT_PREEMPT(sched_preempt_wait_unlock)
 }
 
 
-void sched_context_init(struct sched_context_s *sched_ctx)
+void sched_context_init(struct sched_context_s *sched_ctx,
+                        struct context_s *ctx)
 {
+  sched_ctx->context = ctx;
+
   /* set sched_cur context local variable */
-  CONTEXT_LOCAL_TLS_SET(sched_ctx->context.tls,
-                        sched_cur, sched_ctx);
+  CONTEXT_LOCAL_TLS_SET(ctx->tls, sched_cur, sched_ctx);
 
   sched_ctx->priv = NULL;
   sched_ctx->scheduler = __scheduler_get();
@@ -349,7 +347,7 @@ void sched_stop_unlock(lock_t *lock)
   lock_release(lock);
   next = __sched_candidate(&sched->root);
  
-  struct context_s *ctx = &next->context;
+  struct context_s *ctx = next->context;
   /* queue will be unlocked once context has been saved */
   context_set_unlock(ctx, &sched->root.lock);
 
@@ -455,8 +453,6 @@ void sched_context_candidate_fcn(struct sched_context_s *sched_ctx,
  *      Scheduler init
  */
 
-static struct sched_context_s startup_sched_ctx;
-
 void mutek_scheduler_initsmp()
 {
   if (cpu_isbootstrap())
@@ -470,12 +466,6 @@ void mutek_scheduler_initsmp()
       idle_cpu_queue_init(&sched->idle_cpu);
 # endif
 #endif
-
-      /* initialize a scheduler startup context */
-      /* FIXME initial stack space will never be freed ! */
-      extern __ldscript_symbol_t __initial_stack;
-      context_bootstrap(&startup_sched_ctx.context, (uintptr_t)&__initial_stack, CONFIG_HEXO_RESET_STACK_SIZE);
-      sched_context_init(&startup_sched_ctx);
     }
 
 #if defined(CONFIG_MUTEK_SCHEDULER_STATIC)
@@ -488,54 +478,18 @@ void mutek_scheduler_initsmp()
 # endif
 #endif
 
-
-  /* create the processor idle thread */
-  struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);
-  uint8_t *stack;
-  error_t err;
-
-  assert(CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE % sizeof(reg_t) == 0);
-  stack = arch_contextstack_alloc(CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE);
-
-  assert(stack != NULL);
-
-  err = context_init(&idle->context, stack,
-                     stack + CONFIG_MUTEK_SCHEDULER_IDLE_STACK_SIZE,
-                     sched_context_idle, 0);
-
-  assert(err == 0);
-
   mutekh_startup_smp_barrier();
-
-  /* enable interrupts from now */
-  cpu_interrupt_enable();
-}
-
-static void startup_sched_ctx_cleanup(void *param)
-{
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  if (param && cpu_isbootstrap())
-    {
-      cpu_id_t id = (uintptr_t)param;
-//      soclib_mem_check_delete_ctx(id);
-    }
-#endif
-
-  sched_context_exit();
 }
 
 void mutek_scheduler_start()
 {
+  /* init the processor idle thread */
+  struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);
+  sched_context_init(idle, CPU_LOCAL_ADDR(cpu_main_context));
+
   mutekh_startup_smp_barrier();
 
-#warning  FIXME free startup memory
-#if 0    //
-  if (cpu_isbootstrap())
-    mem_reclaim_initmem();
-#endif
-
   cpu_interrupt_disable();
-  /* run cleanup on temporary context stack */
-  cpu_context_stack_use(sched_tmp_context(), startup_sched_ctx_cleanup, NULL);
+  sched_context_idle();
 }
 

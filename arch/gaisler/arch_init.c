@@ -37,31 +37,15 @@ void gaisler_arch_lock_init()
 
 /////////////////////////////////////////////////////////////////////
 
-void gaisler_bss_section_init()
-{
-    extern __ldscript_symbol_t __bss_start;
-    extern __ldscript_symbol_t __bss_end;
-
-    memset(
-        (uint8_t*)&__bss_start,
-        0,
-        (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
-}
-
-/////////////////////////////////////////////////////////////////////
-
 #include <mutek/mem_alloc.h>
 #include <mutek/mem_region.h>
 #include <mutek/memory_allocator.h>
 
 void gaisler_mem_init()
 {
-    extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
-
-    default_region = memory_allocator_init(NULL, 
-                                           &__system_uncached_heap_start, 
-                                           (void*)((uintptr_t)&__system_uncached_heap_end -
-                                                   (1 << CONFIG_HEXO_RESET_STACK_SIZE) * CONFIG_CPU_MAXCOUNT));    
+    default_region = memory_allocator_init(NULL, (void*)CONFIG_STARTUP_HEAP_ADDR,
+                                           (void*)(CONFIG_STARTUP_HEAP_ADDR +
+                                                   CONFIG_STARTUP_HEAP_SIZE));
 }
 
 /////////////////////////////////////////////////////////////////////

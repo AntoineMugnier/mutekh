@@ -35,9 +35,6 @@
     "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",   \
     "r24", "r25", "r26", "fp", "sp", "ra", "ea", "ba"
 
-# undef lm32
-# define CPU_TYPE_NAME lm32
-
 static inline cpu_id_t
 cpu_id(void)
 {
@@ -58,7 +55,7 @@ reg_t cpu_get_stackptr()
 static inline bool_t
 cpu_isbootstrap(void)
 {
-  return cpu_id() == 0;
+  return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
 static inline void

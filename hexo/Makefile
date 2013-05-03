@@ -1,10 +1,7 @@
 
 DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
-objs =						\
-cpu.o						\
-context.o					\
-interrupt.o
+objs = cpu.o context.o interrupt.o init.o
 
 ifeq ($(CONFIG_HEXO_IPI), defined)
 objs += ipi.o

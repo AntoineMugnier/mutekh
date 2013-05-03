@@ -16,10 +16,11 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
     02110-1301 USA.
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+    Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2013
 
 */
 
+#include <hexo/cpu.h>
 #include <hexo/types.h>
 #include <hexo/lock.h>
 
@@ -29,6 +30,70 @@
 #include <device/device.h>
 
 #include <stdlib.h>
+
+////////////////////////////////////////////////////// copy .data
+
+#ifdef CONFIG_LOAD_ROM
+void section_data_init()
+{
+  extern __ldscript_symbol_t __data_start;
+  extern __ldscript_symbol_t __data_load_start;
+  extern __ldscript_symbol_t __data_load_end;
+
+  memcpy_from_code((uint8_t*)&__data_start,
+                   (uint8_t*)&__data_load_start,
+                   (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
+}
+#endif
+
+///////////////////////////////////////////////////// zero .bss
+
+#if defined(CONFIG_LOAD_ROM) || defined(CONFIG_LOAD_BOOTLOAD)
+
+void section_bss_init()
+{
+  extern __ldscript_symbol_t __bss_start;
+  extern __ldscript_symbol_t __bss_end;
+
+  memset((uint8_t*)&__bss_start, 0,
+         (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
+}
+
+#endif
+
+////////////////////////////////////////////////////// copy .excep
+
+#ifdef CONFIG_LOAD_EXCEPTIONS_COPY
+
+void section_excep_init()
+{
+  extern __ldscript_symbol_t CPU_NAME_DECL(exception_vector);
+  extern __ldscript_symbol_t __exception_load_start;
+  extern __ldscript_symbol_t __exception_load_end;
+
+  memcpy_from_code((uint8_t*)&CPU_NAME_DECL(exception_vector),
+                   (uint8_t*)&__exception_load_start,
+                   (uint8_t*)&__exception_load_end - (uint8_t*)&__exception_load_start);
+}
+
+#endif
+
+////////////////////////////////////////////////////// copy .excep
+
+#ifdef CONFIG_LOAD_SMP_RESET_COPY
+
+void section_smpreset_init()
+{
+  extern __ldscript_symbol_t CPU_NAME_DECL(smp_reset_vector);
+  extern __ldscript_symbol_t __smp_reset_load_start;
+  extern __ldscript_symbol_t __smp_reset_load_end;
+
+  memcpy_from_code((uint8_t*)&CPU_NAME_DECL(smp_reset_vector),
+                   (uint8_t*)&__smp_reset_load_start,
+                   (uint8_t*)&__smp_reset_load_end - (uint8_t*)&__smp_reset_load_start);
+}
+
+#endif
 
 /////////////////////////////////// smp startup barrier implementation
 
@@ -97,18 +162,16 @@ void mutek_startup_barrier_init()
 
 ////////////////////////////////////// actual startup main functions
 
+#include <hexo/context.h>
 
 void mutekh_startup(void *arg)
 {
-#ifdef CONFIG_ARCH_SMP
-  if (!cpu_isbootstrap())
-    return mutekh_startup_smp();
-#endif
-
   /* call all bootstrap init functions */
-  INIT_MUTEKH_STARTUP_INIT();
+  INIT_BOOTSTRAP_INIT();
 
-  abort();
+  /* use processor stack instead of startup stack from now */
+  cpu_context_set(cpu_stacks_pool[CONFIG_ARCH_BOOTSTRAP_CPU_ID],
+                  CONFIG_HEXO_CPU_STACK_SIZE, &mutekh_startup_smp);
 }
 
 void mutekh_startup_smp()

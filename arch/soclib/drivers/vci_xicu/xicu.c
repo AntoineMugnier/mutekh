@@ -232,6 +232,15 @@ static DEV_IRQ_EP_PROCESS(soclib_xicu_source_process)
       }
 #endif
 
+#if defined(CONFIG_ARCH_SMP) || defined(CONFIG_HEXO_IPI)
+    if (XICU_PRIO_HAS_WTI(prio))
+      {
+        done = 0;
+        uint_fast8_t i = XICU_PRIO_HWI(prio);
+        cpu_mem_read_32(XICU_REG_ADDR(pv->addr, XICU_WTI_REG, i));  /* ack */
+      }
+#endif
+
   } while (!done);
 }
 
@@ -610,6 +619,12 @@ static DEV_INIT(soclib_xicu_init)
   device_get_param_uint_default(dev, "wti-count", &pv->wti_count, 0);
 # endif
 
+#endif
+
+#ifdef CONFIG_ARCH_SMP
+  /* enable WTI 0 for all outputs, used to start cpus */
+  for (i = 0; i < pv->irq_count; i++)
+    cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_WTI_ENABLE, i), endian_le32(1));
 #endif
 
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER

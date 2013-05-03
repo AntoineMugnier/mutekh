@@ -126,8 +126,8 @@ static DEVCPU_REG_INIT(ppc_cpu_reg_init)
   __unused__ struct ppc_dev_private_s *pv = dev->drv_pv;
 
   /* set exception vector */
-  extern __ldscript_symbol_t __exception_base_ptr;
-  asm volatile("mtevpr %0" : : "r"(&__exception_base_ptr));
+  extern __ldscript_symbol_t CPU_NAME_DECL(exception_vector);
+  asm volatile("mtevpr %0" : : "r"(&CPU_NAME_DECL(exception_vector)));
 
 #ifdef CONFIG_ARCH_SMP
   assert(pv->id == cpu_id());

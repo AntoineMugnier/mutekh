@@ -187,7 +187,7 @@ ifeq ($(wildcard $(2)/$(1).cpp),$(2)/$(1).cpp)
 $(3)/$(1): $(2)/$(1).cpp $(OBJ_DIR)/config.h
 	$(call prepare_command,CPP,$$@)
 	$(DEPCC) -E -M -MF $$@.deps -MT $$@ $$(INCS) -P -x c $$<
-	$(CC) -E $$(INCS) -P -x c - < $$< > $$@
+	$(CC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) -E $$(INCS) -P -x c $$< -o $$@
 
 else
 

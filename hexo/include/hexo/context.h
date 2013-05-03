@@ -184,6 +184,9 @@ static inline void context_set_unlock(struct context_s *context, lock_t *lock)
 /** @internal */
 extern CONTEXT_LOCAL struct context_s *context_cur;
 
+/** @internal */
+extern CPU_LOCAL struct context_s cpu_main_context;
+
 /** @This executes the given function using given existing context
     stack while the context is not actually running. @see sched_tmp_context */
 __attribute__((noreturn))

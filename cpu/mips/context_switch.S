@@ -227,24 +227,20 @@ FUNC_START(.text, cpu_context_set)
         li      $1,     SOCLIB_MC_MAGIC_VAL  
         sw      $1,     SOCLIB_MC_MAGIC($0) 
 
-        /* switch to associated memchecker context */
-        sw      $4,     SOCLIB_MC_CTX_SET($0) 
-
         /* mark current memchecker context as invalid */
         addiu   $1,     $0,     SOCLIB_MC_CTX_ID_CURRENT
         sw      $1,             SOCLIB_MC_CTX_INVALIDATE ($0) 
 
-        /* create a new temporary memchecker context using passed stack */
+        /* create a new memchecker context using passed stack */
         sw      $4,      SOCLIB_MC_R1 ($0) 
         sw      $5,      SOCLIB_MC_R2 ($0) 
-        sw      $4,      SOCLIB_MC_CTX_CREATE_TMP ($0) 
+        sw      $4,      SOCLIB_MC_CTX_CREATE ($0) 
 
-        /* switch to new temporary memchecker context */
+        /* switch to new memchecker context */
         sw      $4,      SOCLIB_MC_CTX_SET ($0) 
 #endif
 
-        /* Set stack pointer, 64 bits aligned */
-        addu    $4,     $4,     $5 
+        addu    $sp,     $4,     $5 
 #ifdef CONFIG_COMPILE_FRAMEPTR
         move    $fp,            $sp
 #endif
@@ -255,7 +251,7 @@ FUNC_START(.text, cpu_context_set)
 #endif
 
         /* Jump */
-        addiu   $sp,    $4,     -4 * INT_REG_SIZE/8
+        addiu   $sp,    $sp,     -4 * INT_REG_SIZE/8
         j       $6
         .set pop                        
 FUNC_END(cpu_context_set)

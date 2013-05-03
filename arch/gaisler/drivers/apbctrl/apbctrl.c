@@ -133,7 +133,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
             {
             case GAISLER_DEVICE_IRQMP:
 #ifdef CONFIG_DEVICE_IRQ
-              d = device_alloc(5 + CONFIG_CPU_MAXCOUNT);
+              d = device_alloc(5 + CONFIG_ARCH_LAST_CPU_ID + 1);
 #else
               d = device_alloc(5);                               
 #endif

@@ -35,8 +35,8 @@
 
 .endm
 
-__exception_base_ptr:
-        .globl __exception_base_ptr
+CPU_NAME_DECL(exception_vector):
+        .globl CPU_NAME_DECL(exception_vector)
         nop
       /* reset */
 

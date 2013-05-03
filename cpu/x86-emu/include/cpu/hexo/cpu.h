@@ -32,8 +32,6 @@
 #define CPU_GPREG_COUNT	8
 #define CPU_GPREG_NAMES "edi", "esi", "ebp", "esp", "ebx", "edx", "ecx", "eax"
 
-#define CPU_TYPE_NAME x86
-
 
 #ifndef __MUTEK_ASM__
 

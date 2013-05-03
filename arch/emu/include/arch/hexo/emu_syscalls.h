@@ -30,7 +30,7 @@
 #include "arch/hexo/syscalls_nums.h"
 #include "arch/hexo/syscalls_args.h"
 
-extern __compiler_sint_t cpu_pids[CONFIG_CPU_MAXCOUNT];
+extern __compiler_sint_t cpu_pids[CONFIG_ARCH_LAST_CPU_ID + 1];
 
 #if defined(CONFIG_ARCH_EMU_LINUX)
 

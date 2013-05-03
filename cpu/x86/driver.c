@@ -101,37 +101,32 @@ static CPU_INTERRUPT_HANDLER(x86_irq_handler)
   sink->process(sink, &id);
 }
 
-#ifdef CONFIG_HEXO_IPI
-static DEVICU_SETUP_IPI_EP(x86_icu_setup_ipi_ep)
-{
-  abort(); // FIXME
-  return -1;
-}
-#endif
-
-static DEVICU_DISABLE_SINK(x86_icu_disable_sink)
-{
-}
-
-static DEVICU_GET_SINK(x86_icu_get_sink)
+static DEVICU_GET_ENDPOINT(x86_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct x86_dev_private_s  *pv = dev->drv_pv;
 
-  if (icu_in_id >= CPU_X86_IRQ_SINKS)
-    return NULL;
+  switch (type)
+    {
+    case DEV_IRQ_EP_SINK:
+      if (id < CPU_X86_IRQ_SINKS)
+        return pv->sinks + id;
+    default:
+      return NULL;
+    }
+}
 
-  return &pv->sinks[icu_in_id];
+static DEVICU_ENABLE_IRQ(x86_icu_enable_irq)
+{
+#warning CPU IRQ ENABLE
+  return 0;
 }
 
 static const struct driver_icu_s  x86_icu_drv =
 {
   .class_          = DRIVER_CLASS_ICU,
-  .f_get_sink     = x86_icu_get_sink,
-  .f_disable_sink = x86_icu_disable_sink,
-#ifdef CONFIG_HEXO_IPI
-  .f_setup_ipi_ep = x86_icu_setup_ipi_ep,
-#endif
+  .f_get_endpoint  = x86_icu_get_endpoint,
+  .f_enable_irq    = x86_icu_enable_irq,
 };
 
 #endif
@@ -213,19 +208,32 @@ static const struct driver_cpu_s  x86_cpu_drv =
         Timer driver part
 ************************************************************************/
 
+static DEVTIMER_REQUEST(x86_timer_request)
+{
+  return -ENOTSUP;
+}
+
+static DEVTIMER_START_STOP(x86_timer_start_stop)
+{
+  return -ENOTSUP;
+}
+
 static DEVTIMER_GET_VALUE(x86_timer_get_value)
 {
-#ifdef CONFIG_ARCH_SMP
   struct device_s *dev = tdev->dev;
-  struct x86_dev_private_s *pv = dev->drv_pv;
+  __unused__ struct x86_dev_private_s *pv = dev->drv_pv;
 
-  assert(pv->id == cpu_id());
+#ifdef CONFIG_ARCH_SMP
+  if (pv->id != cpu_id())
+    return -EIO;
 #endif
 
   uint32_t      low, high;
   asm volatile("rdtsc" : "=a" (low), "=d" (high));
 
-  return (low | ((uint64_t)high << 32));
+  *value = low | ((uint64_t)high << 32);
+
+  return 0;
 }
 
 static DEVTIMER_RESOLUTION(x86_timer_resolution)
@@ -236,16 +244,20 @@ static DEVTIMER_RESOLUTION(x86_timer_resolution)
     {
       if (*res != 0)
         err = -ENOTSUP;
-      *res = DEVTIMER_RES_FIXED_POINT(1.0);
+      *res = 1;
     }
 
   if (max)
     *max = 0xffffffffffffffffULL;
+
+  return err;
 }
 
 static const struct driver_timer_s  x86_timer_drv =
 {
   .class_          = DRIVER_CLASS_TIMER,
+  .f_request       = x86_timer_request,
+  .f_start_stop    = x86_timer_start_stop,
   .f_get_value     = x86_timer_get_value,
   .f_resolution    = x86_timer_resolution,
 };
@@ -338,7 +350,7 @@ static DEV_INIT(x86_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init x86 irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, CPU_X86_IRQ_SINKS, NULL);
+  device_irq_sink_init(dev, pv->sinks, CPU_X86_IRQ_SINKS);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->cls, x86_icu_dev, dev);

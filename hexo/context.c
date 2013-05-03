@@ -19,6 +19,8 @@ CPU_LOCAL void *cpu_preempt_param;
 CPU_LOCAL cpu_cycle_t context_switch_time;
 #endif
 
+CPU_LOCAL struct context_s cpu_main_context;
+
 CONTEXT_LOCAL uintptr_t context_stack_start;
 CONTEXT_LOCAL uintptr_t context_stack_end;
 
@@ -50,11 +52,6 @@ context_bootstrap(struct context_s *context, uintptr_t stack, size_t stack_size)
 # ifdef CONFIG_ARCH_SMP
   context->unlock = NULL;
 # endif
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-    soclib_mem_check_change_id(cpu_id(), (uint32_t)context);
-#endif
-
 
 #ifdef CONFIG_HEXO_MMU
   context->mmu = mmu_get_kernel_context();

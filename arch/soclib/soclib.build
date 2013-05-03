@@ -5,31 +5,27 @@
   %types architecture
 
   CONFIG_ARCH_SOCLIB
-  CONFIG_CPU_MAXCOUNT 4
-
-  CONFIG_CPU_RESET_HANDLER
-
-  CONFIG_LIBFDT
-  CONFIG_ARCH_DEVICE_TREE
 
   #################################################
   # CPUs
 
-  %subsection soclib-mipsel soclib-mips
-    %warning -mipsel, -mipseb ans -mips are deprecated, use soclib-mips32el or soclib-mips32eb instead
-  %end
-
-  %subsection soclib-mips32el soclib-mipsel soclib-mips
+  %subsection soclib-mips32el
     %types cpu
 
     CONFIG_CPU_MIPS32EL_SOCLIB
+
+    # FIXME mips32 ebase should be > 2Go in soclib pf
+    CONFIG_LOAD_EXCEPTIONS_SEPARATE
+    CONFIG_LOAD_EXCEPTIONS_TEXT undefined
     %set BUILD_NAME soclib-mips32el
   %end
 
-  %subsection soclib-mips32eb soclib-mipseb
+  %subsection soclib-mips32eb
     %types cpu
 
     CONFIG_CPU_MIPS32EB_SOCLIB
+    CONFIG_LOAD_EXCEPTIONS_SEPARATE
+    CONFIG_LOAD_EXCEPTIONS_TEXT undefined
     %set BUILD_NAME soclib-mips32eb
   %end
 
@@ -40,11 +36,7 @@
     %set BUILD_NAME soclib-arm
   %end
 
-  %subsection soclib-powerpc
-    %warning soclib-powerpc is deprecated, use soclib-ppc instead
-  %end
-
-  %subsection soclib-ppc soclib-powerpc
+  %subsection soclib-ppc
     %types cpu
   
     CONFIG_CPU_PPC_SOCLIB
@@ -79,22 +71,31 @@
   #################################################
   # platforms
 
-  %subsection pf_soclib_tutorial pf_kernel_tutorial
-    %die $(CONFIGSUBSECTION) has been renamed, please use to pf-tutorial instead
-  %end
-  
   %subsection pf-tutorial
     %types platform
-  
-    %notice Targetting mutekh_soclib_tutorial and mutekh_kernel_tutorial SoCLib platforms
-  
-    # Memory layout
-    CONFIG_RAM_ADDR 0x7f000000
-    CONFIG_RAM_SIZE 0x01000000
-    CONFIG_ROM_ADDR 0x60000000
-    CONFIG_ROM_SIZE 0x00100000
 
-#    CONFIG_MUTEK_PRINTK_KEEP_EARLY
+    CONFIG_ARCH_SMP
+    CONFIG_ARCH_LAST_CPU_ID 31
+
+    # Memory layout
+    CONFIG_LOAD_ROM
+
+#    CONFIG_LOAD_SMP_RESET_MERGED undefined
+#    CONFIG_LOAD_SMP_RESET_COPY
+#    CONFIG_CPU_SMP_RESET_ADDR 0x02000000
+
+    CONFIG_LOAD_ROM_RO_ADDR 0x60000000
+    CONFIG_LOAD_ROM_RO_SIZE 0x00100000
+
+    CONFIG_LOAD_ROM_RW_ADDR 0x7f000000
+    CONFIG_LOAD_ROM_RW_SIZE 0x00100000
+
+    CONFIG_STARTUP_HEAP_ADDR  0x7f100000
+    CONFIG_STARTUP_HEAP_SIZE  0x00efe000
+
+    CONFIG_STARTUP_STACK_ADDR 0x7fffe000
+    CONFIG_STARTUP_STACK_SIZE 0x00001000
+
     CONFIG_SOCLIB_EARLY_CONSOLE
     CONFIG_SOCLIB_EARLY_CONSOLE_ADDR 0xd0200000
 
@@ -107,75 +108,6 @@
     CONFIG_DRIVER_SOCLIB_VCI_TIMER
     CONFIG_DRIVER_ENST_RTTIMER
     CONFIG_DRIVER_SOCLIB_VCI_ETHERNET
-  %end
-
-  %subsection pf-tutorial-numa
-    %types platform
-  
-    %notice Targetting mutekh_soclib_tutorial and mutekh_kernel_tutorial SoCLib platforms
-  
-    # Memory layout
-    CONFIG_RAM_ADDR 0x7f000000
-    CONFIG_RAM_SIZE 0x01000000
-    CONFIG_ROM_ADDR 0x60000000
-    CONFIG_ROM_SIZE 0x00100000
-
-#    CONFIG_MUTEK_PRINTK_KEEP_EARLY
-    CONFIG_SOCLIB_EARLY_CONSOLE
-    CONFIG_SOCLIB_EARLY_CONSOLE_ADDR 0xd0200000
-
-    CONFIG_MUTEK_MEM_REGION
-    CONFIG_MUTEK_MEM_REGION_AUTO_INIT undefined
-
-    # Device and drivers
-    CONFIG_DRIVER_SOCLIB_VCI_MULTI_TTY
-    CONFIG_DRIVER_SOCLIB_VCI_DMA
-    CONFIG_DRIVER_SOCLIB_VCI_ICU
-    CONFIG_DRIVER_SOCLIB_VCI_XICU
-    CONFIG_DRIVER_SOCLIB_VCI_BLOCK_DEVICE
-    CONFIG_DRIVER_SOCLIB_VCI_TIMER
-    CONFIG_DRIVER_ENST_RTTIMER
-    CONFIG_DRIVER_SOCLIB_VCI_ETHERNET
-  %end
-
-  # Heterogeneous SoCLib platform
-
-  %subsection pf-het
-    %types platform
-
-    %notice Targetting mutekh_kernel_tutorial SoCLib platforms with processor heterogeneity
-
-    CONFIG_HET_BUILD
-
-    # Memory layout
-    CONFIG_HEXO_IRQ undefined
-    CONFIG_RAM_ADDR 0x7f000000
-    CONFIG_RAM_SIZE 0x01000000
-    CONFIG_ROM_SIZE 0x00100000
-    CONFIG_HETROM_ADDR 0x60000000
-    CONFIG_HETROM_SIZE 0x00100000
-
-    CONFIG_SOCLIB_EARLY_CONSOLE
-    CONFIG_SOCLIB_EARLY_CONSOLE_ADDR 0xd0200000
-    # Device and drivers
-    CONFIG_DRIVER_SOCLIB_VCI_MULTI_TTY
-    CONFIG_DRIVER_SOCLIB_VCI_DMA
-
-    %subsection soclib-arm
-      %types supported_het_cpu
-      CONFIG_ROM_ADDR 0x80100000
-      CONFIG_DRIVER_ICU_ARM undefined
-      %set BUILD_NAME soclib-het/arm
-    %end
-
-    %subsection soclib-mips32el
-      %types supported_het_cpu
-      CONFIG_ROM_ADDR 0x80000000
-      CONFIG_DRIVER_ICU_MIPS undefined
-      %set BUILD_NAME soclib-het/mips32el
-    %end
-
-    %requiretypes supported_het_cpu
   %end
 
   %requiretypes platform cpu

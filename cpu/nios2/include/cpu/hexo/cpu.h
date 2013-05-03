@@ -48,10 +48,6 @@
 
 #include <hexo/endian.h>
 
-# ifdef CONFIG_ARCH_SMP
-extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-# endif
-
 /** general purpose registers count */
 # define CPU_GPREG_COUNT	32
 
@@ -83,9 +79,6 @@ extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
                      );                         \
   })
 
-# undef nios2
-# define CPU_TYPE_NAME nios2
-
 static inline cpu_id_t
 cpu_id(void)
 {
@@ -102,7 +95,7 @@ cpu_id(void)
 static inline bool_t
 cpu_isbootstrap(void)
 {
-  return cpu_id() == 0;
+  return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
 static inline void

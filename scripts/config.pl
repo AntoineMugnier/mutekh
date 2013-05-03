@@ -675,7 +675,7 @@ sub process_inits
         }
 
         $init->{defined} =
-            (!$init->{condition} || foreach_and_list( $init->{condition}, \&foreach_or_list, \&check_rule ))
+            (!$init->{condition} || foreach_or_list( $init->{condition}, \&foreach_and_list, \&check_rule ))
             && foreach_or_list( $parents, \&check_defined );
         $init->{isafter} = {};
         $init->{isbefore} = {};
@@ -1639,9 +1639,6 @@ sub tokens_check
 		my $pp = shift;
 		$res = 1 if ($pp == $opt);
 	    });
-	    if ( !$res ) {
-		error_loc($opt, "use of `single' tag on `$p->{name}' token which is not a direct child.");
-	    }
 	});
 
 	if (not $opt->{desc}) {

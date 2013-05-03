@@ -145,14 +145,14 @@ const struct driver_icu_s  nios2_icu_drv =
 
 CPU_LOCAL struct device_s *cpu_device = NULL;
 
+#if defined(CONFIG_ARCH_SMP) && defined(CONFIG_HEXO_USERMODE)
+void * cpu_local_storage[CONFIG_ARCH_LAST_CPU_ID + 1]; /* used to restore cls reg when back from user mode */
+#endif
+
 static DEVCPU_REG_INIT(nios2_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
   __unused__ struct nios2_dev_private_s *pv = dev->drv_pv;
-
-  /* Set exception vector */
-  extern __ldscript_symbol_t   __exception_base_ptr;
-  cpu_nios2_write_ctrl_reg(17, (reg_t)&__exception_base_ptr);
 
 #ifdef CONFIG_ARCH_SMP
   assert(pv->id == cpu_id());
@@ -163,6 +163,10 @@ static DEVCPU_REG_INIT(nios2_cpu_reg_init)
 # ifdef CONFIG_DEVICE_IRQ
   /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
   cpu_nios2_write_ctrl_reg(3, 0xffffffff);
+# endif
+
+# ifdef CONFIG_HEXO_USERMODE
+  cpu_local_storage[pv->id] = pv->cls;
 # endif
 #endif
 

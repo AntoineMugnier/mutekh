@@ -81,11 +81,6 @@
 
 # include "hexo/local.h"
 
-# ifdef CONFIG_DRIVER_ICU_SPARC
-struct device_s;
-extern CPU_LOCAL struct device_s cpu_icu_dev;
-# endif
-
 static inline void
 cpu_interrupt_disable(void)
 {

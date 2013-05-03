@@ -82,6 +82,7 @@ extern CONTEXT_LOCAL pthread_t __pthread_current;
 struct pthread_s
 {
   /** context */
+  struct context_s              ctx;
   struct sched_context_s	sched_ctx;
 
   /* thread state flags (detached, joinable, canceled ...) */
@@ -118,8 +119,10 @@ struct pthread_attr_s
 {
 #ifdef CONFIG_PTHREAD_ATTRIBUTES
   uint8_t flags;
+# ifdef CONFIG_ARCH_SMP
   cpu_id_t cpucount;
-  cpu_id_t cpulist[CONFIG_CPU_MAXCOUNT];
+  cpu_id_t cpulist[CONFIG_ARCH_LAST_CPU_ID+1];
+# endif
   void *stack_buf;
   size_t stack_size;
 #endif

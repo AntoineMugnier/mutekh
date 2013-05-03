@@ -171,6 +171,10 @@ const struct driver_icu_s  sparc_icu_drv =
 
 CPU_LOCAL struct device_s *cpu_device = NULL;
 
+#if defined(CONFIG_ARCH_SMP) && defined(CONFIG_HEXO_USERMODE)
+void * cpu_local_storage[CONFIG_ARCH_LAST_CPU_ID + 1]; /* used to restore cls reg when back from user mode */
+#endif
+
 static DEVCPU_REG_INIT(sparc_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
@@ -190,6 +194,10 @@ static DEVCPU_REG_INIT(sparc_cpu_reg_init)
 
   CPU_LOCAL_SET(cpu_device, dev);
 
+# ifdef CONFIG_HEXO_USERMODE
+  cpu_local_storage[pv->id] = pv->cls;
+# endif
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
   /* all these functions may execute with briefly invalid stack & frame
      pointer registers due to register window switch. */
@@ -198,9 +206,9 @@ static DEVCPU_REG_INIT(sparc_cpu_reg_init)
   void cpu_context_jumpto_end();
   soclib_mem_bypass_sp_check(&cpu_context_jumpto, &cpu_context_jumpto_end);
 
-  extern __ldscript_symbol_t __exception_base_ptr;
-  extern __ldscript_symbol_t __exception_base_ptr_end;
-  soclib_mem_bypass_sp_check(&__exception_base_ptr, &__exception_base_ptr_end);
+  extern __ldscript_symbol_t CPU_NAME_DECL(exception_vector);
+  extern __ldscript_symbol_t CPU_NAME_DECL(exception_vector_end);
+  soclib_mem_bypass_sp_check(&CPU_NAME_DECL(exception_vector), &CPU_NAME_DECL(exception_vector_end));
 
   void sparc_excep_entry();
   void sparc_excep_entry_end();

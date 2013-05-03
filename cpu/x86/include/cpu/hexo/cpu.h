@@ -66,8 +66,6 @@ cpu_isbootstrap(void)
   return msr & 0x100 ? 1 : 0;
 }
 
-#define CPU_TYPE_NAME x86
-
 cpu_id_t cpu_id(void);
 
 static inline void

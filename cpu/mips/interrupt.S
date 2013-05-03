@@ -49,22 +49,32 @@
    Caller saved: r1-r15, r24-r25, lo, hi
 */
 
-.section        .excep,"ax",@progbits         
+.section .excep,"ax",@progbits
+
+CPU_NAME_DECL(exception_vector):
+        .globl CPU_NAME_DECL(exception_vector)
 
         .set push                                       
         .set noreorder                                  
-        b       mips_interrupt_entry
-#if CONFIG_CPU_MIPS_VERSION >= 32
-        .space 0x17c                                    
-#else
-        .space 0x7c                                     
-#endif
+        .set noat
+
+        .org    0x80
+        la      $26,   mips_exception
+        j       $26
+        nop
+
+        .org    0x180
+        la      $26,   mips_exception
+        j       $26
+        nop
+
         .set pop                                        
 
-        .globl mips_interrupt_entry
-        .func mips_interrupt_entry
-        .type mips_interrupt_entry , %function
-mips_interrupt_entry:
+
+/************************************************************************/
+
+FUNC_START(.text, mips_exception)
+
         .set push                                       
         .set noat                                       
 
@@ -377,7 +387,8 @@ mips_restore:
         rfe                                          
 #endif
         .set pop                                        
-FUNC_END(mips_interrupt_entry)
+
+FUNC_END(mips_exception)
 
 // Local Variables:
 // indent-tabs-mode: nil;

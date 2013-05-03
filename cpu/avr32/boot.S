@@ -23,11 +23,16 @@
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
+#ifdef CONFIG_LOAD_RESET_SEPARATE
+.section .reset,"ax",@progbits
+CPU_NAME_DECL(reset_vector):
+        .globl CPU_NAME_DECL(reset_vector)
+        lddpc   r0, .entry
+        ijmp    r0
+.entry: .int    mutekh_entry
 #endif
 
-FUNC_START(.boot, cpu_boot)
+FUNC_START(.text, mutekh_entry)
 
         /* setup stack */
         lddpc   sp, .is
@@ -41,19 +46,16 @@ FUNC_START(.boot, cpu_boot)
         mtsr    4, r0     // EVBA register
 
         /* jump to C code */
-        lddpc   r0, .entry
+        lddpc   r0, .start
         icall   r0
 
         /* idle state */
 1:      sleep   0
         rjmp    1b
 
-.is:    .int __initial_stack
-.ex:    .int __exception_base_ptr
-.entry: .int mutekh_startup
+.is:    .int CONFIG_STARTUP_STACK_ADDR + CONFIG_STARTUP_STACK_SIZE
+.ex:    .int CPU_NAME_DECL(exception_vector)
+.start: .int mutekh_startup
 
-        /* set cpu interrupts entry point */
-
-        /* jump to architecture code */
-FUNC_END(cpu_boot)
+FUNC_END(mutekh_entry)
 

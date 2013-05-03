@@ -22,78 +22,91 @@
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
-#endif
-
-FUNC_START(.text, cpu_boot)
-
-        /* set wim and psr. window -1 is reserved for traps */
-        wr      %g0, SPARC_PSR_SUSER_MODE | SPARC_PSR_PIL_MASK | SPARC_PSR_TRAP_ENABLED, %psr
-        wr      %g0, 0, %wim
-
-        /* get CPU id and adjust stack */
-        CPU_ID  %g3
-        set     __initial_stack,        %sp
-
-#ifdef CONFIG_ARCH_SMP_CAPABLE
-        /* spin if cpuid >= CONFIG_CPU_MAXCOUNT */
-        cmp     %g3,    CONFIG_CPU_MAXCOUNT
-        bge     cpu_boot_idle
+#ifdef CONFIG_LOAD_RESET_SEPARATE
+.section .reset,"ax",@progbits
+CPU_NAME_DECL(reset_vector):
+        .globl CPU_NAME_DECL(reset_vector)
+        set     mutekh_entry, %g1
+        jmp     %g1
         nop
 #endif
 
-#ifdef CONFIG_ARCH_SMP
-        /* adjust initial stack from cpuid */
-        sll     %g3,    CONFIG_HEXO_RESET_STACK_SIZE, %g1
-        sub     %sp,    %g1,    %sp
+#if defined(CONFIG_ARCH_SMP) && !defined(CONFIG_LOAD_SMP_RESET_MERGED)
+.section .smpreset,"ax",@progbits
+CPU_NAME_DECL(smp_reset_vector):
+        .globl CPU_NAME_DECL(smp_reset_vector)
+        set     mutekh_entry, %g1
+        jmp     %g1
+        nop
 #endif
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-        /* enter memchecker command mode */
-        set     SOCLIB_MC_MAGIC_VAL, %g1
-        st      %g1,            [ SOCLIB_MC_MAGIC ]
+FUNC_START(.text, mutekh_entry)
 
-        /* create a new initial memchecker context using cpuid as context id */
-        set     1 << CONFIG_HEXO_RESET_STACK_SIZE, %g1
-        st      %g1,            [ SOCLIB_MC_R2 ]
-        sub     %sp,    %g1,    %g1
-        st      %g1,            [ SOCLIB_MC_R1 ]
-        st      %g3,            [ SOCLIB_MC_CTX_CREATE ]
+        /* set exception base pointer */
+        set     CPU_NAME_DECL(exception_vector), %g1
+        mov     %g1,    %tbr
 
-        /* switch to new memchecker context */
-        st      %g3,            [ SOCLIB_MC_CTX_SET ]
+        /* set wim and psr. window -1 is reserved for traps */
+        wr      %g0, SPARC_PSR_SUSER_MODE \
+                   | SPARC_PSR_PIL_MASK   \
+                   | SPARC_PSR_TRAP_ENABLED, %psr
+        
+        wr      %g0, 0, %wim
 
-        /* enable all memchecker checks */
-        mov     SOCLIB_MC_CHECK_ALL, %g1
-        st      %g1,            [ SOCLIB_MC_ENABLE ]
+#ifdef CONFIG_ARCH_SMP_CAPABLE
+
+        CPU_ID  %g3
+
+        /* bootstrap processor ? */
+        cmp     %g3,    CONFIG_ARCH_BOOTSTRAP_CPU_ID
+        be      1f
+        nop
+
+# ifdef CONFIG_ARCH_SMP
+        /* acceptable cpuid ? */
+        cmp     %g3,    CONFIG_ARCH_LAST_CPU_ID
+        bg      2f
+        nop
+
+        /* get address of the stacks pool array */
+        set     cpu_stacks_pool, %g1
+        ld      [%g1],  %g2
+
+        /* get the stack pointer for this cpu */
+        sll     %g3,     2,     %g1
+        ld      [%g2 + %g1],  %sp
+        set     CONFIG_HEXO_CPU_STACK_SIZE, %g2
+        add     %sp,    %g2,    %sp
+#  ifdef CONFIG_COMPILE_FRAMEPTR
+        mov     %sp,            %i7
+#  endif
+
+        /* jump to C code */
+        set     mutekh_startup_smp, %g1
+        jmp     %g1
+        nop
+
+# endif
+2:
+        /* spin if this cpuid is not permitted */
+        WAIT
+        b               2b
+        nop
+1:
 #endif
 
-        /* leave room for register window save */
-        add     %sp,            -INT_REG_SIZE/8*16,      %sp
+        /* set startup stack pointer */
+        set     CONFIG_STARTUP_STACK_ADDR \
+              + CONFIG_STARTUP_STACK_SIZE,        %sp
+
 #ifdef CONFIG_COMPILE_FRAMEPTR
         mov     %sp,            %i7
 #endif
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-        /* leave memchecker command mode */
-        st      %g0,            [ SOCLIB_MC_MAGIC ]
-#endif
-
-        /* set cpu interrupts entry point with simple window overflow handling */
-        set     __exception_base_ptr, %g1
-        mov     %g1,    %tbr
-
-        /* jump to architecture code */
+        /* jump to C code */
         set     mutekh_startup, %g1
-        call    %g1
-        mov     %sp,            %o0
-FUNC_END(cpu_boot)
-
-
-FUNC_START(.text, cpu_boot_idle)
-        WAIT
-        b               cpu_boot_idle
+        jmp     %g1
         nop
-FUNC_END(cpu_boot_idle)
+
+FUNC_END(mutekh_startup)
 

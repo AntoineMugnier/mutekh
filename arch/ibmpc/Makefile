@@ -1,9 +1,5 @@
 
-objs =											\
-arch_init.o										\
-mem_init.o \
-hw_init.o \
-power.o
+objs = arch_init.o power.o
 
 ifeq ($(CONFIG_ARCH_IBMPC_DMA), defined)
 objs += dma-8237.o

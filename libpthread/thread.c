@@ -56,7 +56,7 @@ __pthread_cleanup(void *param)
   struct pthread_s *thread = param;
 
   /* cleanup current context */
-  arch_contextstack_free(context_destroy(&thread->sched_ctx.context));
+  arch_contextstack_free(context_destroy(thread->sched_ctx.context));
 
   lock_destroy(&thread->lock);
 
@@ -230,7 +230,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   uint8_t		*stack = NULL;
   size_t		stack_size = CONFIG_PTHREAD_STACK_SIZE;
 
-#ifdef CONFIG_PTHREAD_ATTRIBUTES
+#if defined(CONFIG_PTHREAD_ATTRIBUTES) && defined(CONFIG_ARCH_SMP)
   if (attr && attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
     {
       thread = mem_alloc_cpu(sizeof (struct pthread_s), (mem_scope_cpu), attr->cpulist[0]);
@@ -258,10 +258,13 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
         {
           stack_size = attr->stack_size;
           stack = attr->stack_buf;
-        } else if (attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
+        }
+# ifdef CONFIG_ARCH_SMP
+      else if (attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
         {
           stack = mem_alloc_cpu(stack_size, mem_scope_cpu, attr->cpulist[0]);
         }
+# endif
     }
   if (stack == NULL)
 #endif
@@ -278,7 +281,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   assert(stack_size % sizeof(reg_t) == 0);
 
   /* setup context for new thread */
-  res = context_init(&thread->sched_ctx.context, stack,
+  res = context_init(&thread->ctx, stack,
 		     stack + stack_size, pthread_context_entry, thread);
 
   if (res)
@@ -288,7 +291,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
       return res;
     }
 
-  sched_context_init(&thread->sched_ctx);
+  sched_context_init(&thread->sched_ctx, &thread->ctx);
   thread->sched_ctx.priv = thread;
 
   thread->start_routine = start_routine;
@@ -300,18 +303,20 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   if (attr && attr->flags & _PTHREAD_ATTRFLAG_DETACHED)
     atomic_bit_set(&thread->state, _PTHREAD_STATE_DETACHED);
 
+# ifdef CONFIG_ARCH_SMP
   /* add cpu affinity */
   if (attr && attr->flags & _PTHREAD_ATTRFLAG_AFFINITY)
     {
       sched_affinity_single(&thread->sched_ctx, attr->cpulist[0]);
       
-#ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
+#  ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
       cpu_id_t i;
       for (i = 1; i < attr->cpucount; i++)
 	sched_affinity_add(&thread->sched_ctx, attr->cpulist[i]);
-#endif
+#  endif
 
     }
+# endif
 #endif
 
 #ifdef CONFIG_PTHREAD_KEYS
@@ -328,16 +333,18 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   return 0;
 }
 
+#warning affinity should use cpu device_s pointers
 #ifdef CONFIG_PTHREAD_ATTRIBUTES
 error_t pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu)
 {
+#ifdef CONFIG_ARCH_SMP
   if (!(attr->flags & _PTHREAD_ATTRFLAG_AFFINITY))
     {
       attr->flags |= _PTHREAD_ATTRFLAG_AFFINITY;
       attr->cpucount = 0;
     }
 
-  if (attr->cpucount >= CONFIG_CPU_MAXCOUNT)
+  if (attr->cpucount >= CONFIG_ARCH_LAST_CPU_ID+1)
     return ENOMEM;
 
 #ifdef CONFIG_MUTEK_SCHEDULER_MIGRATION
@@ -347,7 +354,7 @@ error_t pthread_attr_affinity(pthread_attr_t *attr, cpu_id_t cpu)
 #ifdef CONFIG_MUTEK_SCHEDULER_STATIC
   attr->cpulist[0] = cpu;
 #endif
-
+#endif
   return 0;
 }
 

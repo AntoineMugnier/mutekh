@@ -42,8 +42,7 @@ struct cpu_x86_gatedesc_s cpu_idt[CPU_MAX_INTERRUPTS];
 union cpu_x86_desc_s gdt[ARCH_GDT_SIZE];
 static lock_t        gdt_lock;
 
-error_t
-cpu_global_init(void)
+void x86_pmode_tables_init(void)
 {
   uint_fast16_t	i;
 
@@ -69,47 +68,24 @@ cpu_global_init(void)
   for (i = ARCH_GDT_FIRST_ALLOC; i < ARCH_GDT_SIZE; i++)
     gdt[i].seg.available = 1;
 
+  void CPU_NAME_DECL(exception_vector)();
+
   /* fill IDT with exceptions entry points */
-  for (i = 0; i < CPU_EXCEPT_VECTOR_COUNT; i++)
+  for (i = 0; i < CPU_EXCEPT_VECTOR_COUNT
+#ifdef CONFIG_HEXO_IRQ
+         + CPU_HWINT_VECTOR_COUNT
+#endif
+#ifdef CONFIG_HEXO_USERMODE
+         + CPU_SYSCALL_VECTOR_COUNT
+#endif
+         ; i++)
     {
-      uintptr_t	entry = ((uintptr_t)&x86_interrupt_ex_entry) + i * CPU_INTERRUPT_ENTRY_ALIGN;
+      uintptr_t	entry = ((uintptr_t)&CPU_NAME_DECL(exception_vector)) + i * CPU_INTERRUPT_ENTRY_ALIGN;
 
       cpu_x86_gate_setup(cpu_idt + i + CPU_EXCEPT_VECTOR,
 			 ARCH_GDT_CODE_INDEX, entry,
 			 CPU_X86_GATE_INT32, 0, 0);
     }
-
-#ifdef CONFIG_HEXO_IRQ
-  /* fill IDT with hardware interrupts entry points */
-  for (i = 0; i < CPU_HWINT_VECTOR_COUNT; i++)
-    {
-      uintptr_t	entry = ((uintptr_t)&x86_interrupt_hw_entry) + i * CPU_INTERRUPT_ENTRY_ALIGN;
-
-      cpu_x86_gate_setup(cpu_idt + i + CPU_HWINT_VECTOR,
-			 ARCH_GDT_CODE_INDEX, entry,
-			 CPU_X86_GATE_INT32, 0, 0);
-    }
-#endif
-
-#ifdef CONFIG_HEXO_USERMODE
-  /* fill IDT with syscall entry points */
-  for (i = 0; i < CPU_SYSCALL_VECTOR_COUNT; i++)
-    {
-      uintptr_t	entry = ((uintptr_t)&x86_interrupt_sys_entry) + i * CPU_INTERRUPT_ENTRY_ALIGN;
-
-      cpu_x86_gate_setup(cpu_idt + i + CPU_SYSCALL_VECTOR,
-			 ARCH_GDT_CODE_INDEX, entry,
-			 CPU_X86_GATE_INT32, 3, 0);
-    }
-#endif
-
-#ifdef CONFIG_ARCH_SMP
-  /* copy boot section below 1Mb for slave CPUs bootup */
-  memcpy((void*)CONFIG_CPU_X86_SMP_BOOT_ADDR,
-         (char*)&__boot_start, (char*)&__boot_end - (char*)&__boot_start);
-#endif
-
-  return 0;
 }
 
 static cpu_x86_segsel_t
@@ -158,9 +134,5 @@ cpu_x86_segdesc_free(cpu_x86_segsel_t sel)
   gdt[sel].seg.available = 1;
 
   lock_release(&gdt_lock);  
-}
-
-void cpu_init(void)
-{
 }
 

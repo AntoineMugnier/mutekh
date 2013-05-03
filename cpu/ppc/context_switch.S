@@ -235,13 +235,13 @@ FUNC_START(.text, cpu_context_set)
         // create a new temporary memchecker context using passed stack
         stw     3,              SOCLIB_MC_R1 (0)
         stw     4,              SOCLIB_MC_R2 (0)
-        stw     3,              SOCLIB_MC_CTX_CREATE_TMP (0)
+        stw     3,              SOCLIB_MC_CTX_CREATE (0)
 
         // switch to new temporary memchecker context
         stw     3,              SOCLIB_MC_CTX_SET (0)
 #endif
 
-        // Set stack pointer, 64 bits aligned
+        // Set stack pointer
         add     3,      3,      4
         addi    1,      3,      -CONFIG_HEXO_STACK_ALIGN
 

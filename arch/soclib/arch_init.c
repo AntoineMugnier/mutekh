@@ -21,10 +21,30 @@
 
 #include <mutek/startup.h>
 #include <arch/mem_checker.h>
+#include <hexo/cpu.h>
 #include <string.h>
 
-#ifdef CONFIG_DATA_FROM_ROM
-void soclib_data_section_init()
+#ifdef CONFIG_SOCLIB_MEMCHECK
+
+static void soclib_memcheck_cpu_init(uintptr_t id, uintptr_t stack, size_t size)
+{
+  /* create a new memchecker context */
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, SOCLIB_MC_MAGIC_VAL);
+  cpu_mem_write_32(SOCLIB_MC_R1, stack);
+  cpu_mem_write_32(SOCLIB_MC_R2, size);
+  cpu_mem_write_32(SOCLIB_MC_CTX_CREATE, id);
+
+  /* switch to new memchecker context */
+  cpu_mem_write_32(SOCLIB_MC_CTX_SET, id);
+
+  /* enable all memchecker checks */
+  cpu_mem_write_32(SOCLIB_MC_ENABLE, SOCLIB_MC_CHECK_ALL);
+
+  /* leave memchecker command mode */
+  cpu_mem_write_32(SOCLIB_MC_MAGIC, 0);
+}
+
+void soclib_memcheck_init()
 {
   extern __ldscript_symbol_t __data_start;
   extern __ldscript_symbol_t __data_load_start;
@@ -34,17 +54,7 @@ void soclib_data_section_init()
       (uint8_t*)&__data_start,
       (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start,
       SOCLIB_MC_REGION_GLOBAL);
-  memcpy_from_code(
-      (uint8_t*)&__data_start,
-      (uint8_t*)&__data_load_start,
-      (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
-}
-#endif
 
-/////////////////////////////////////////////////////////////////////
-
-void soclib_bss_section_init()
-{
   extern __ldscript_symbol_t __bss_start;
   extern __ldscript_symbol_t __bss_end;
 
@@ -52,12 +62,25 @@ void soclib_bss_section_init()
       (uint8_t*)&__bss_start,
       (uint8_t*)&__bss_end-(uint8_t*)&__bss_start,
       SOCLIB_MC_REGION_GLOBAL);
-  memset(
-      (uint8_t*)&__bss_start,
-      0,
-      (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
+
+  soclib_memcheck_cpu_init(0, CONFIG_STARTUP_STACK_ADDR,
+                           CONFIG_STARTUP_STACK_SIZE);
 }
 
+# ifdef CONFIG_ARCH_SMP
+void soclib_memcheck_initsmp()
+{
+  if (!cpu_isbootstrap())
+    {
+      cpu_id_t id = cpu_id();
+      soclib_memcheck_cpu_init(cpu_stacks_pool[id],
+                               cpu_stacks_pool[id],
+                               CONFIG_HEXO_CPU_STACK_SIZE);
+    }
+}
+# endif
+
+#endif
 
 /////////////////////////////////////////////////////////////////////
 
@@ -67,27 +90,10 @@ void soclib_bss_section_init()
 
 void soclib_mem_init()
 {
-  extern __ldscript_symbol_t __system_uncached_heap_start, __system_uncached_heap_end;
-
-#ifdef CONFIG_HEXO_MMU
-
-  uint32_t t = (uint32_t)(&__system_uncached_heap_start);
-
-  /* default_region is defined in mutek/include/mutek/mem_alloc.h */
-  default_region = memory_allocator_init(NULL,
-				      t, t + CONFIG_SOCLIB_VMEM_MALLOC_REGION_SIZE);
-
-#else
-
-  default_region = memory_allocator_init(NULL, 
-				      &__system_uncached_heap_start, 
-					 (void*)((uintptr_t)&__system_uncached_heap_end -
-                                                 (1 << CONFIG_HEXO_RESET_STACK_SIZE) * CONFIG_CPU_MAXCOUNT));
-
-#endif
-
+  default_region = memory_allocator_init(NULL, (void*)CONFIG_STARTUP_HEAP_ADDR,
+                                         (void*)(CONFIG_STARTUP_HEAP_ADDR +
+                                                 CONFIG_STARTUP_HEAP_SIZE));
 }
-
 
 /////////////////////////////////////////////////////////////////////
 
@@ -184,27 +190,13 @@ bool_t arch_cpu_irq_affinity_test(struct device_s *cpu, struct dev_irq_ep_s *src
 
 #ifdef CONFIG_ARCH_SMP
 
-#include <hexo/ordering.h>
-
-# define START_MAGIC 0x67c51264
-uint32_t cpu_magic = 0;
-
-void soclib_smp_wait_bootstrap()
-{
-    while (cpu_magic != START_MAGIC)
-        {
-            uint_fast8_t i = 255;
-            while (i--)
-                asm volatile ("nop");
-            order_compiler_mem();
-        }
-}
+#include <hexo/iospace.h>
 
 void soclib_start_cpus()
 {
-    cpu_magic = START_MAGIC;
-    order_compiler_mem();
+  // trigger WTI 0
+  // cpu_mem_write_32(0xd2200000, 42);
 }
-#endif
 
+#endif
 

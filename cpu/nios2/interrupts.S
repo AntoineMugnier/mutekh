@@ -28,15 +28,17 @@
 
 .section        .excep,"ax",@progbits         
 
-        nop
-nios2_interrupt_entry:
         .set noat
+CPU_NAME_DECL(exception_vector):
+        .globl CPU_NAME_DECL(exception_vector)
 
 #if defined(CONFIG_HEXO_USERMODE) && defined(CONFIG_ARCH_SMP)
         /* restore cpu local storage */
     	rdctl   r24,    cpuid                                    
         slli    r24,    r24,    2
-        ldw     CPU_NIOS2_CLS_REG, cpu_local_storage(r24)
+        movia   CPU_NIOS2_CLS_REG, cpu_local_storage
+        add     r24,    r24,    CPU_NIOS2_CLS_REG
+        ldw     CPU_NIOS2_CLS_REG, (r24)
 #endif
 
         // get context local storage
@@ -167,7 +169,8 @@ nios2_interrupt_hw:
 
         /* hw interrupt line id */
         rdctl   r4,     ipending
-        call    __ctzsi2
+        movia   r1,     __ctzsi2
+        callr   r1
         mov     r4,     r2
 
         CPU_LOCAL ldw cpu_interrupt_handler, r1, r1

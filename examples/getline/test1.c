@@ -11,7 +11,7 @@ static TERMUI_GETLINE_FCN_PROMPT(prompt)
   return termui_term_printf(tm, "[%31AMutekH%A] ");
 }
 
-void app_start()
+void main()
 {
   struct termui_term_s			*tm;
   struct termui_term_behavior_s	*bhv;

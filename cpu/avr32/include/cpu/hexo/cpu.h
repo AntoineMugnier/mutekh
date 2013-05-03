@@ -33,9 +33,6 @@
     "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",             \
     "r8", "r9", "r10", "r11", "r12", "sp", "lr", "pc"
 
-# undef avr32
-# define CPU_TYPE_NAME avr32
-
 static inline cpu_id_t
 cpu_id(void)
 {
@@ -55,7 +52,7 @@ reg_t cpu_get_stackptr()
 static inline bool_t
 cpu_isbootstrap(void)
 {
-  return cpu_id() == 0;
+  return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
 static inline void

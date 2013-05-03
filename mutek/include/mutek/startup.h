@@ -30,10 +30,11 @@
 #define INIT_H_
 
 #include <hexo/decls.h>
+#include <hexo/types.h>
 
 C_HEADER_BEGIN
 
-INIT_MUTEKH_STARTUP_PROTOTYPES;
+INIT_BOOTSTRAP_PROTOTYPES;
 INIT_SMP_PROTOTYPES;
 
 /** boot address, (located in cpu/current/boot.S) */

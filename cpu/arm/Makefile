@@ -1,11 +1,5 @@
 
-objs = context_switch.o cpu_context.o
-
-ifeq ($(CONFIG_CPU_RESET_HANDLER),defined)
-objs += boot.o exception.o
-endif
-
-copy = ldscript
+objs = context_switch.o cpu_context.o boot.o exception.o
 
 subdirs = libc drivers
 
@@ -21,3 +15,5 @@ endif
 ifeq ($(CONFIG_DRIVER_CPU_ARM),defined)
 objs += driver.o
 endif
+
+copy = ldscript

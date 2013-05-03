@@ -80,11 +80,6 @@
       "-",        "-",    "CacheErr", "-"       \
       }
 
-#ifdef CONFIG_DRIVER_ICU_MIPS
-struct device_s;
-extern CPU_LOCAL struct device_s cpu_icu_dev;
-#endif
-
 void mips_interrupt_entry(void);
 
 static inline void

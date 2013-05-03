@@ -1,9 +1,5 @@
 
-objs = interrupts.o context_switch.o cpu_context.o
-
-ifeq ($(CONFIG_CPU_RESET_HANDLER),defined)
-objs += boot.o
-endif
+objs = interrupts.o context_switch.o cpu_context.o boot.o
 
 copy = ldscript
 

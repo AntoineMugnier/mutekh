@@ -24,9 +24,8 @@
 #include <hexo/lock.h>
 #include <hexo/iospace.h>
 #include <hexo/ordering.h>
+#include <mutek/printk.h>
 #include <string.h>
-
-#include "early_console.h"
 
 static lock_t early_console_lock;
 
@@ -34,12 +33,7 @@ static lock_t early_console_lock;
 static uint_fast16_t cursor = 0;
 #endif
 
-void early_console_init()
-{
-  lock_init(&early_console_lock);
-}
-
-PRINTF_OUTPUT_FUNC(early_console_output)
+static PRINTF_OUTPUT_FUNC(early_console_output)
 {
   size_t i;
 
@@ -92,5 +86,11 @@ PRINTF_OUTPUT_FUNC(early_console_output)
 #endif
 
   lock_release(&early_console_lock);
+}
+
+void ibmpc_early_console_init()
+{
+  lock_init(&early_console_lock);
+  printk_set_output(early_console_output, NULL);
 }
 

@@ -40,7 +40,7 @@
 .endm
 
 .macro CPU_YIELD zero
-# if defined(CONFIG_CPU_ARM_SOCLIB) && defined(CONFIG_CPU_WAIT_IRQ)
+# if defined(CONFIG_CPU_WAIT_IRQ)
         mcr p15, 0, \zero, c7, c0, 4
 # endif
 .endm
