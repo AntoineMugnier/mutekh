@@ -151,9 +151,9 @@ error_t fat_get_next_dirent(struct fat_file_s *ffile,
             if ( id == LFN_ID_COMPLETED && flen )
                 vfs_name_mangle(fname, flen, vfs_mangled_name);
             else
-                fat_name_to_vfs(vfs_mangled_name, dirent->old.name);
+                fat_name_to_vfs(CONFIG_VFS_NAMELEN, vfs_mangled_name, dirent->old.name);
 
-            fat_name_to_vfs(name_83, dirent->old.name);
+            fat_name_to_vfs(FAT_83_NAMELEN, name_83, dirent->old.name);
 
             return 1;
         }

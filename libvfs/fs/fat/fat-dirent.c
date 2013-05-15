@@ -27,9 +27,10 @@
 #include "fat-defs.h"
 #include "fat-sector-cache.h"
 
-void fat_name_to_vfs(char *dst, const char *src)
+void fat_name_to_vfs(size_t dst_size, char *dst, const char *src)
 {
-    memset(dst, 0, FAT_83_NAMELEN);
+    assert(dst_size >= FAT_83_NAMELEN);
+    memset(dst, 0, dst_size);
     size_t i;
     for ( i=0; i<11; ++i ) {
         if ( src[i] != ' ' )

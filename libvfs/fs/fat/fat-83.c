@@ -71,8 +71,8 @@ error_t fat_get_next_dirent(struct fat_file_s *ffile,
         if ( dirent->old.ntres & NTRES_LOWER_EXT )
             fat_str_to_lower(dirent->old.name+8, 3);
 
-        fat_name_to_vfs(vfs_mangled_name, dirent->old.name);
-        fat_name_to_vfs(name_83, dirent->old.name);
+        fat_name_to_vfs(CONFIG_VFS_NAMELEN, vfs_mangled_name, dirent->old.name);
+        fat_name_to_vfs(FAT_83_NAMELEN, name_83, dirent->old.name);
 
         return 1;
     }

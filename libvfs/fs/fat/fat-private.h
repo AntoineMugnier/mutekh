@@ -172,7 +172,7 @@ struct fat_s *fs2fat(struct vfs_fs_s *fs)
     return (struct fat_s *)fs;
 }
 
-void fat_name_to_vfs(char *dst, const char *src);
+void fat_name_to_vfs(size_t dst_size, char *dst, const char *src);
 
 union fat_dirent_u;
 
