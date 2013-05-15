@@ -43,18 +43,18 @@ endif
 
 ifeq ($(CONFIG_MUTEK_SCHEDULER), defined)
 objs += scheduler.o
+
+ ifeq ($(CONFIG_MUTEK_SEMAPHORE), defined)
+  objs += semaphore.o
+ endif
+
+ ifeq ($(CONFIG_MUTEK_RWLOCK), defined)
+  objs += rwlock.o
+ endif
 endif
 
 ifeq ($(CONFIG_VMEM_KERNEL_ALLOC), defined)
 objs += vmem_kalloc.o
-endif
-
-ifeq ($(CONFIG_MUTEK_SEMAPHORE), defined)
-objs += semaphore.o
-endif
-
-ifeq ($(CONFIG_MUTEK_RWLOCK), defined)
-objs += rwlock.o
 endif
 
 ifeq ($(CONFIG_MUTEK_SLAB), defined)

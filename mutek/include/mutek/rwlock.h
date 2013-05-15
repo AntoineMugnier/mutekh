@@ -27,15 +27,22 @@
  * @file
  * @module{Mutek}
  * @short General purpose read/write lock primitives
+ *
+ * The rwlock functions are empty and always succeed when the
+ * scheduler is disabled in the configuration.
  */
 
+#include <hexo/decls.h>
+
+C_HEADER_BEGIN
+
+#include <mutek/scheduler.h>
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <hexo/lock.h>
-#include <mutek/scheduler.h>
 
 struct rwlock_s
 {
+#ifdef CONFIG_MUTEK_SCHEDULER
   /** lock counter:
       count < 0 is write locked,
       count > 0 is read locked. */
@@ -44,35 +51,78 @@ struct rwlock_s
   sched_queue_root_t                    wait_rd;
   /** blocked threads waiting for write */
   sched_queue_root_t                    wait_wr;
-};
-
-error_t
-rwlock_destroy(struct rwlock_s *rwlock);
-
-error_t
-rwlock_init(struct rwlock_s *rwlock);
-
-error_t
-rwlock_rdlock(struct rwlock_s *rwlock);
-
-error_t
-rwlock_wrlock(struct rwlock_s *rwlock);
-
-error_t
-rwlock_tryrdlock(struct rwlock_s *rwlock);
-
-error_t
-rwlock_trywrlock(struct rwlock_s *rwlock);
-
-error_t
-rwlock_unlock(struct rwlock_s *rwlock);
 
 /** normal rwlock object static initializer */
-#define RWLOCK_INITIALIZER                              \
+# define RWLOCK_INITIALIZER                                     \
   {                                                             \
      .count = 0,                                                \
      .wait_rd = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
      .wait_wr = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),	\
   }
+
+#else
+# define RWLOCK_INITIALIZER { }
+#endif
+};
+
+#ifndef CONFIG_MUTEK_SCHEDULER
+static inline error_t rwlock_destroy(struct rwlock_s *rwlock)
+{
+  return 0;
+}
+
+static inline error_t rwlock_init(struct rwlock_s *rwlock)
+{
+  return 0;
+}
+
+static inline error_t rwlock_rdlock(struct rwlock_s *rwlock)
+{
+  return 0;
+}
+
+static inline error_t rwlock_wrlock(struct rwlock_s *rwlock);
+{
+  return 0;
+}
+
+static inline error_t rwlock_tryrdlock(struct rwlock_s *rwlock);
+{
+  return 0;
+}
+
+static inline error_t rwlock_trywrlock(struct rwlock_s *rwlock);
+{
+  return 0;
+}
+
+static inline error_t rwlock_unlock(struct rwlock_s *rwlock);
+{
+  return 0;
+}
+#endif
+
+config_depend(CONFIG_MUTEK_RWLOCK)
+error_t rwlock_destroy(struct rwlock_s *rwlock);
+
+config_depend(CONFIG_MUTEK_RWLOCK)
+error_t rwlock_init(struct rwlock_s *rwlock);
+
+config_depend(CONFIG_MUTEK_RWLOCK)
+error_t rwlock_rdlock(struct rwlock_s *rwlock);
+
+config_depend(CONFIG_MUTEK_RWLOCK)
+error_t rwlock_wrlock(struct rwlock_s *rwlock);
+
+config_depend(CONFIG_MUTEK_RWLOCK)
+error_t rwlock_tryrdlock(struct rwlock_s *rwlock);
+
+config_depend(CONFIG_MUTEK_RWLOCK)
+error_t rwlock_trywrlock(struct rwlock_s *rwlock);
+
+config_depend(CONFIG_MUTEK_RWLOCK)
+error_t rwlock_unlock(struct rwlock_s *rwlock);
+
+C_HEADER_END
 
 #endif
