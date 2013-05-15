@@ -35,6 +35,8 @@
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 
+#include <arch/mem_checker.h>
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -72,7 +74,7 @@ struct soclib_block_context_s
 static void soclib_block_op_start(struct soclib_block_context_s *pv,
 				  struct dev_block_rq_s *rq)
 {
-  printk("New op: %d %d\n", rq->lba, rq->type);
+  //printk("New op: %d %d\n", rq->lba, rq->type);
 
   cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_BUFFER,
                    endian_le32((uint32_t)rq->data[rq->progress]));
@@ -87,6 +89,8 @@ static void soclib_block_op_start(struct soclib_block_context_s *pv,
       cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_OP, endian_le32(SOCLIB_BLOCK_OP_READ));
       break;
     case DEV_BLOCK_WRITE:
+      /* invalidate dcache, force dcache write before dma */
+      cpu_dcache_invld_buf(rq->data[rq->progress], pv->params.blk_size);
       cpu_mem_write_32(pv->addr + SOCLIB_BLOCK_OP, endian_le32(SOCLIB_BLOCK_OP_WRITE));
       break;
     }
@@ -170,6 +174,10 @@ static DEV_IRQ_EP_PROCESS(soclib_block_irq)
   switch (st)
     {
     case SOCLIB_BLOCK_STATUS_READ_SUCCESS:
+      soclib_mem_mark_initialized(rq->data[rq->progress], pv->params.blk_size);
+      /* invalidate dcache after dma */
+      cpu_dcache_invld_buf(rq->data[rq->progress], pv->params.blk_size);
+
     case SOCLIB_BLOCK_STATUS_WRITE_SUCCESS:
       assert(rq != NULL);
 

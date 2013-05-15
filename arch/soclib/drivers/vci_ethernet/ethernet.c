@@ -136,6 +136,9 @@ static DEVNET_SENDPKT(soclib_eth_sendpkt)
       packet_obj_refnew(packet);
       pv->tx_pkt[(pv->tx_ptr + pv->tx_count++) % pv->fifo_size] = packet;
 
+      /* invalidate dcache, force dcache write before dma */
+      cpu_dcache_invld_buf(nethdr->data, nethdr->size);
+      
       cpu_mem_write_32(pv->addr + ETHERNET_TX_SIZE, endian_le32(nethdr->size));
       cpu_mem_write_32(pv->addr + ETHERNET_TX_FIFO, endian_le32((uintptr_t)nethdr->data));
     }
@@ -265,6 +268,8 @@ static DEV_IRQ_EP_PROCESS(soclib_eth_irq)
           {
             uint8_t *data = packet->packet;
             soclib_mem_mark_initialized(data, size);
+            /* invalidate dcache after dma */
+            cpu_dcache_invld_buf(data, size);
 
             struct net_header_s *nethdr = &packet->header[0];
             nethdr->data = data;
