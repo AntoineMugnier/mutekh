@@ -88,24 +88,49 @@ FUNC_START(.text, mips_exception)
         // get context local storage
         CPU_LOCAL lw,   __context_data_base, $26, $26
         // get context registers save array
+#ifdef CONFIG_HEXO_CONTEXT_NESTED
+        lw      $26,            %lo(mips_context_regs_ptr)($26)
+#else
         addiu   $26,            %lo(mips_context_regs)
+#endif
 
         // save only 6 "caller saved" registers yet (syscall args ragtable)
         // save gp ptr, stack ptr, frame ptr, return address
-        .irp    r, 4, 5, 6, 7, 8, 9, 28, 29, 30, 31
+        .irp    r, 4, 5, 6, 7, 8, 9, 16, 28, 29, 30, 31
         sw      $\r,            CPU_MIPS_CONTEXT_GPR(\r)($26)
         .endr
 
+        // use $16 as a preserved register accross C functions to keep pointer to regs
+        move    $16,    $26
+
         // save status register
         mfc0    $9,     $CPU_MIPS_STATUS
-        sw      $9,     CPU_MIPS_CONTEXT_SR($26)
+        sw      $9,     CPU_MIPS_CONTEXT_SR($16)
 
-#if defined(CONFIG_HEXO_FPU) && !defined(CONFIG_RELEASE)
+#if (defined(CONFIG_HEXO_FPU) && !defined(CONFIG_RELEASE)) || defined(CONFIG_HEXO_CONTEXT_NESTED)
+        // we need to change the status register
+        move    $8,     $9
+
+# ifdef CONFIG_HEXO_CONTEXT_NESTED
+        // EI = EXL = ERL = KSU = 0, switch to normal kernel mode so
+	// that irqs can be re-enabled in C code
+        ori     $8,     $8,     31
+        xori    $8,     $8,     31
+
+        // nested regs context stack push
+        CPU_LOCAL lw,   __context_data_base, $7, $7
+        addiu   $26,            CPU_MIPS_CONTEXT_SIZE
+        sw      $26,            %lo(mips_context_regs_ptr)($7)
+# endif
+
+# if defined(CONFIG_HEXO_FPU) && !defined(CONFIG_RELEASE)
         // disable fpu access
         li      $5,     CPU_MIPS_STATUS_FPU
         nor     $6,     $0,     $5
-        and     $6,     $9,     $6
-        MTC0_   $6,     CPU_MIPS_STATUS
+        and     $8,     $8,     $6
+# endif
+
+        MTC0_   $8,     CPU_MIPS_STATUS
 #endif
 
 #ifdef CONFIG_HEXO_USERMODE
@@ -119,8 +144,7 @@ FUNC_START(.text, mips_exception)
         beq     $7,     $0,     1f
 
         // get tls
-        li      $8,     %lo(mips_context_regs)
-        sub     $8,     $26,    $8
+        CPU_LOCAL lw,   __context_data_base, $8, $8
 
         // use kernel context stack when from user mode
         lw      $sp,    context_stack_end($8)
@@ -145,13 +169,13 @@ FUNC_START(.text, mips_exception)
 
         // save all remaining "caller saved" registers (not syscall args)
         .irp    r, 1, 2, 3, 10, 11, 12, 13, 14, 15, 24, 25
-        sw      $\r,            CPU_MIPS_CONTEXT_GPR(\r)($26)
+        sw      $\r,            CPU_MIPS_CONTEXT_GPR(\r)($16)
         .endr
 
         mflo    $1
-        sw      $1,             CPU_MIPS_CONTEXT_LO($26)
+        sw      $1,             CPU_MIPS_CONTEXT_LO($16)
         mfhi    $1
-        sw      $1,             CPU_MIPS_CONTEXT_HI($26)
+        sw      $1,             CPU_MIPS_CONTEXT_HI($16)
 
 #ifdef CONFIG_HEXO_IRQ
         // handle irq ?
@@ -165,7 +189,7 @@ interrupt_ex:
 
         // get epc
         mfc0    $5,     $CPU_MIPS_EPC
-        sw      $5,     CPU_MIPS_CONTEXT_PC($26)
+        sw      $5,     CPU_MIPS_CONTEXT_PC($16)
 
         // faulty instruction is epc + 4 if 'cause branch delay' bit is set
         li      $7,     CPU_MIPS_CAUSE_BD
@@ -195,20 +219,20 @@ interrupt_ex:
 
         addiu   $sp,    $sp,    -5 * INT_REG_SIZE/8
 
-        lw      $6,             CPU_MIPS_CONTEXT_GPR(29)($26)
+        lw      $6,             CPU_MIPS_CONTEXT_GPR(29)($16)
         sw      $6,             (4 * INT_REG_SIZE/8)($sp) // arg5: stackptr
 
         srl     $4,     $4,     2                  // arg0 type
         //      arg1: $5 is execptr
         mfc0    $6,     $CPU_MIPS_BADADDR          // arg2 data error
-        move    $7,     $26                        // arg3 reg table
+        move    $7,     $16                        // arg3 reg table
 
         // call handler
         jalr    $1
 
 #ifdef CONFIG_CPU_MIPS_USE_ERET
         // read back pc
-        lw      $1,    CPU_MIPS_CONTEXT_PC($26)
+        lw      $1,    CPU_MIPS_CONTEXT_PC($16)
         MTC0_   $1,    CPU_MIPS_EPC
 #endif
 
@@ -224,10 +248,10 @@ interrupt_sys:
         mfc0    $5,     $CPU_MIPS_EPC
         // resume pc += 4
         addiu   $5,     $5,     4
-        sw      $5,     CPU_MIPS_CONTEXT_PC($26)
+        sw      $5,     CPU_MIPS_CONTEXT_PC($16)
 
         move    $4,     $0                             // arg0 id == 0
-        move    $5,     $26                            // arg1 reg table
+        move    $5,     $16                            // arg1 reg table
 
         lw      $1,     cpu_syscall_handler($8)
 
@@ -236,7 +260,7 @@ interrupt_sys:
 
 # ifdef CONFIG_CPU_MIPS_USE_ERET
         // read back pc
-        lw      $1,     CPU_MIPS_CONTEXT_PC($26)
+        lw      $1,     CPU_MIPS_CONTEXT_PC($16)
         MTC0_   $1,     CPU_MIPS_EPC
 # endif
 
@@ -254,7 +278,7 @@ interrupt_hw:
 #if defined (CONFIG_HEXO_CONTEXT_PREEMPT) || !defined (CONFIG_CPU_MIPS_USE_ERET)
         // get epc
         mfc0    $5,     $CPU_MIPS_EPC
-        sw      $5,     CPU_MIPS_CONTEXT_PC($26)
+        sw      $5,     CPU_MIPS_CONTEXT_PC($16)
 #endif
 
         /* pending hw irq enabled in status */
@@ -288,10 +312,16 @@ interrupt_hw:
         addiu   $sp,    $sp,    -4 * INT_REG_SIZE/8
         jalr    $1                                   
 
-        j       mips_preempt_and_restore
+        // j       mips_preempt_and_restore
 #endif
 
 mips_preempt_and_restore:
+
+#ifdef CONFIG_HEXO_CONTEXT_NESTED
+        // nested regs context stack pop
+        CPU_LOCAL lw,   __context_data_base, $8, $8
+        sw      $16,    %lo(mips_context_regs_ptr)($8)
+#endif
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
 
@@ -306,8 +336,8 @@ mips_preempt_and_restore:
         beq     $2,     $0,     mips_restore
 
         // save callee saved registers
-        .irp    r, 16, 17, 18, 19, 20, 21, 22, 23
-        sw      $\r,            CPU_MIPS_CONTEXT_GPR(\r)($26)
+        .irp    r, 17, 18, 19, 20, 21, 22, 23
+        sw      $\r,            CPU_MIPS_CONTEXT_GPR(\r)($16)
         .endr
 
         // prepare cpu_context_jumpto arg
@@ -320,32 +350,32 @@ mips_preempt_and_restore:
 
 # ifdef CONFIG_HEXO_FPU
         // test fpu enabled for previous context
-        lw      $9,     CPU_MIPS_CONTEXT_SR($26)
+        lw      $9,     CPU_MIPS_CONTEXT_SR($16)
         li      $7,     CPU_MIPS_STATUS_FPU
         and     $7,     $7,     $9
         beq     $7,     $0,     1f
 
 #  ifdef CONFIG_HEXO_LAZY_SWITCH
         // keep track of last context using fpu on this processor
-        CPU_LOCAL sw    mips_lazy_last, $26, $1
+        CPU_LOCAL sw    mips_lazy_last, $16, $1
 #  endif
 
         // save fpu registers 0 to 31
         .irp    r, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
-        SxC1    \r,            CPU_MIPS_CONTEXT_FR(\r)($26)
+        SxC1    \r,            CPU_MIPS_CONTEXT_FR(\r)($16)
         .endr
         .irp    r, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-        SxC1    \r,            CPU_MIPS_CONTEXT_FR(\r)($26)
+        SxC1    \r,            CPU_MIPS_CONTEXT_FR(\r)($16)
         .endr
 
         // save fpu status
         cfc1    $1,     $31
-        sw      $1,     CPU_MIPS_CONTEXT_FCSR($26)
+        sw      $1,     CPU_MIPS_CONTEXT_FCSR($16)
 1:
 # endif
 
         li      $1,     CPU_MIPS_CONTEXT_RESTORE_CALLER | CPU_MIPS_CONTEXT_RESTORE_CALLEE
-        sw      $1,     CPU_MIPS_CONTEXT_SAVE_MASK($26)
+        sw      $1,     CPU_MIPS_CONTEXT_SAVE_MASK($16)
 
         // switch to new context
         b       cpu_context_jumpto
@@ -353,19 +383,22 @@ mips_preempt_and_restore:
 
 mips_restore:
 
-#if defined(CONFIG_HEXO_FPU) && !defined(CONFIG_RELEASE)
-        // restore, fpu have been disabled during irq handling
-        lw      $4,     CPU_MIPS_CONTEXT_SR($26)
+#if (defined(CONFIG_HEXO_FPU) && !defined(CONFIG_RELEASE)) || defined(CONFIG_HEXO_CONTEXT_NESTED)
+        // we need to restore the status either because the fpu have
+	// been disabled during irq handling or because exl/erl flags have been cleared
+        lw      $4,     CPU_MIPS_CONTEXT_SR($16)
         MTC0_   $4,     CPU_MIPS_STATUS
 #endif
 
         // restore some "caller saved" registers
-        lw      $1,             CPU_MIPS_CONTEXT_LO($26)
+        lw      $1,             CPU_MIPS_CONTEXT_LO($16)
         mtlo    $1
-        lw      $1,             CPU_MIPS_CONTEXT_HI($26)
+        lw      $1,             CPU_MIPS_CONTEXT_HI($16)
         mthi    $1
 
-        .irp    r, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 24, 25
+        move    $26,    $16
+
+        .irp    r, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 24, 25
         lw      $\r,            CPU_MIPS_CONTEXT_GPR(\r)($26)
         .endr
 

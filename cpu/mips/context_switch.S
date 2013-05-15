@@ -40,7 +40,11 @@ FUNC_START(.text, cpu_context_switch)
         // get context local storage
         CPU_LOCAL lw,   __context_data_base, $1, $1
         // get context registers save array
+#ifdef CONFIG_HEXO_CONTEXT_NESTED
+        lw      $2,             %lo(mips_context_regs_ptr)($1)
+#else
         addiu   $2,     $1,     %lo(mips_context_regs)
+#endif
 
         // save "callee saved" registers
         // save gp ptr, stack ptr, frame ptr, return address
@@ -119,7 +123,11 @@ FUNC_START(.text, cpu_context_jumpto)
         CPU_LOCAL sw,   __context_data_base, $25, $1
 
         // context registers save array
+#ifdef CONFIG_HEXO_CONTEXT_NESTED
+        lw      $25,    %lo(mips_context_regs_ptr)($25)
+#else
         addiu   $25,    %lo(mips_context_regs)
+#endif
 
         // restore gp ptr, stack ptr, frame ptr, return address
         .irp    r, 28, 29, 30, 31
@@ -276,7 +284,11 @@ FUNC_START(.text, cpu_context_stack_use)
         // get tls pointer from context struct
         lw      $25,     HEXO_CONTEXT_S_TLS * 4 ($4)
         // get context registers save array
+#ifdef CONFIG_HEXO_CONTEXT_NESTED
+        lw      $25,    %lo(mips_context_regs_ptr)($25)
+#else
         addiu   $25,    %lo(mips_context_regs)
+#endif
 
         // use context stack
         lw      $sp,    CPU_MIPS_CONTEXT_GPR(CPU_MIPS_SP)($25)
