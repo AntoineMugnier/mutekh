@@ -28,7 +28,7 @@
 // rd and rt must be different for store
 .macro GLOBAL_ACCESS op, name, rd, rt
 	lui  \rt, %hi(\name)
-        ori \rt, %lo(\name)
+        addiu \rt, %lo(\name)
 	\op  \rd, 0(\rt)
 .endm
 
