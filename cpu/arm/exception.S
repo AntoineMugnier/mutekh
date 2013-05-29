@@ -35,28 +35,48 @@ CPU_NAME_DECL(exception_vector):
 CPU_NAME_DECL(reset_vector):
         .globl CPU_NAME_DECL(reset_vector)
 #endif
-        ldr     pc, =mutekh_entry
-        ldr     pc, =arm_exc_undef
-#ifdef CONFIG_HEXO_USERMODE
-        ldr     pc, =arm_exc_swi
-#else
-        ldr     pc, =arm_exc_undef
+
+#ifdef CONFIG_CPU_ARM_BIG_BE8
+        .irp t, 1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f
+        b     \t
+        .endr
 #endif
-        ldr     pc, =arm_exc_pabt
-        ldr     pc, =arm_exc_dabt
-        ldr     pc, =arm_exc_undef // reserved
+
+.macro ARM_EXCEP_ENTRY n, func
+\n:
+#ifdef CONFIG_CPU_ARM_BIG_BE8
+        setend  be
+#endif
+        ldr     pc, =\func
+.endm
+
+        ARM_EXCEP_ENTRY 1, mutekh_entry
+        ARM_EXCEP_ENTRY 2, arm_exc_undef
+#ifdef CONFIG_HEXO_USERMODE
+        ARM_EXCEP_ENTRY 3, arm_exc_swi
+#else
+        ARM_EXCEP_ENTRY 3, arm_exc_undef
+#endif
+        ARM_EXCEP_ENTRY 4, arm_exc_pabt
+        ARM_EXCEP_ENTRY 5, arm_exc_dabt
+        ARM_EXCEP_ENTRY 6, arm_exc_undef // reserved
 #ifdef CONFIG_HEXO_IRQ
 # if defined(CONFIG_CPU_ARM_CUSTOM_IRQ_HANDLER)
-        ldr     pc, =arm_c_irq_handler
-        ldr     pc, =arm_c_fiq_handler
+        ARM_EXCEP_ENTRY 7, arm_c_irq_handler
+        ARM_EXCEP_ENTRY 8, arm_c_fiq_handler
 # else
-        ldr     pc, =arm_exc_irq
-        ldr     pc, =arm_exc_fiq
+        ARM_EXCEP_ENTRY 7, arm_exc_irq
+        ARM_EXCEP_ENTRY 8, arm_exc_fiq
 # endif
+#else
+        ARM_EXCEP_ENTRY 7, arm_exc_undef
+        ARM_EXCEP_ENTRY 8, arm_exc_undef
 #endif
 
+/**********************************************************/
 
 .macro PREPARE_EXCEPTION offset
+
     /* uniformize return address, but avoid a sub when 0 */
     .if \offset != 0
         sub    lr, lr, #\offset
@@ -83,7 +103,7 @@ CPU_NAME_DECL(reset_vector):
        may involve shadowed registers */
 
     /* Switch to super (After taking sp+x in r1) */
-    msr      cpsr_c, #0xd3
+    msr    cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_SUPER)
 
     add    r2, r1, #CPU_ARM_CONTEXT_GPR(13)
 

@@ -16,14 +16,16 @@ ifeq ($(CONFIG_COMPILE_SOFTFLOAT),defined)
 CPUCFLAGS+=-msoft-float -mfpu=vfp
 endif
 
-ifeq ($(CONFIG_CPU_ENDIAN_LITTLE), defined)
+ifeq ($(CONFIG_CPU_ARM_LITTLE), defined)
 CPUCFLAGS+= -mlittle-endian
 CPULDFLAGS+= -EL
-endif
-
-ifeq ($(CONFIG_CPU_ENDIAN_BIG), defined)
+else
 CPUCFLAGS+= -mbig-endian
 CPULDFLAGS+= -EB
+endif
+
+ifeq ($(CONFIG_CPU_ARM_BIG_BE8), defined)
+LINK_LDFLAGS+= --be8
 endif
 
 ifeq ($(CONFIG_ARCH_SIMPLE), defined)

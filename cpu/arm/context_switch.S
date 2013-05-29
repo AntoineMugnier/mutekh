@@ -55,17 +55,16 @@ FUNC_END(cpu_context_switch)
 
 
 .macro CPU_EXC_SP_SETUP rsp
-    // IRQ
-    msr  cpsr_c, #0xd2
+#ifdef CONFIG_HEXO_IRQ
+    msr  cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_IRQ)
     mov  sp, \rsp
-    // Abort
-    msr  cpsr_c, #0xd7
+#endif
+    msr  cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_ABORT)
     mov  sp, \rsp
-    // Undef
-    msr  cpsr_c, #0xdb
+    msr  cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_UNDEF)
     mov  sp, \rsp
     // We're back
-    msr  cpsr_c, #0xd3
+    msr  cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_SUPER)
 .endm
 
 
@@ -123,6 +122,8 @@ FUNC_START(.text, cpu_context_jumpto)
     // Set sp to context &arm_context_regs for all error modes
     CPU_EXC_SP_SETUP r2
 
+    b   arm_context_jumpto_internal
+
 FUNC_END(cpu_context_jumpto)
 
         
@@ -164,14 +165,14 @@ FUNC_START(.text, arm_context_jumpto_internal)
 #endif
     
     // Switch to any error mode, say, abort
-    msr      cpsr_c, #0xd7
+    msr      cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_ABORT)
 
     // Stack pointer is now abort mode's one we set previously in
 	// CPU_EXC_SP_SETUP. It points to &r0
 
     // restore status
     ldr     lr, [sp, #CPU_ARM_CONTEXT_CPSR]
-    msr     spsr, lr
+    msr     spsr_cxsf, lr
 
     // Load pc
     ldr      lr, [sp, #CPU_ARM_CONTEXT_GPR(15)]
@@ -277,14 +278,25 @@ FUNC_START(.text, cpu_context_set_user)
     /* set arg */
     mov     r0,     r2
 
-    /* set previous state as user and restore */
-# ifdef CONFIG_HEXO_IRQ
-    msr     spsr,   #0x00
+    /* set user mode psr */
+# ifndef CONFIG_HEXO_IRQ
+    mov     r3,     #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_USER)
 # else
-    msr     spsr,   #0xd0
+    mov     r3,     #ARM_PSR_MODE_USER
 # endif
 
-    movs    pc,     r1
+# ifdef CONFIG_CPU_ARM_BIG_BE8
+    orr     r3,     #ARM_PSR_EE
+# endif
+
+    /* Switch to abort mode */
+    msr     cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_ABORT)
+
+    /* Restore to user mode */
+    msr     spsr_cxsf,   r3
+
+    mov     lr,     r1
+    movs    pc,     lr
 FUNC_END(cpu_context_set_user)
 
 #endif

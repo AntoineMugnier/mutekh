@@ -27,6 +27,9 @@
 .section .reset,"ax"
 CPU_NAME_DECL(reset_vector):
         .globl CPU_NAME_DECL(reset_vector)
+# ifdef CONFIG_CPU_ARM_BIG_BE8
+        setend  be
+# endif
         ldr     pc, =mutekh_entry
 #endif
 
@@ -34,10 +37,17 @@ CPU_NAME_DECL(reset_vector):
 .section .smpreset,"ax"
 CPU_NAME_DECL(smp_reset_vector):
         .globl CPU_NAME_DECL(smp_reset_vector)
+# ifdef CONFIG_CPU_ARM_BIG_BE8
+        setend  be
+# endif
         ldr     pc, =mutekh_entry
 #endif
 
 FUNC_START(.text, mutekh_entry)
+
+#ifdef CONFIG_CPU_ARM_BIG_BE8
+        setend  be
+#endif
 
 #ifdef CONFIG_CPU_EXCEPTION_RELOCATABLE
         /* set exception base pointer */

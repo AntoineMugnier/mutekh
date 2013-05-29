@@ -54,7 +54,11 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
 #endif
     regs->gpr[0] = (uintptr_t)param;
 
-    regs->cpsr = 0x000000d3;
+    regs->cpsr = ARM_PSR_MODE_SUPER | ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS;
+
+#ifdef CONFIG_CPU_ARM_BIG_BE8
+    regs->cpsr |= ARM_PSR_EE;
+#endif
 
     regs->gpr[14] = 0xa5a5a5a5; /* can not return from context entry */
     regs->gpr[15] = (uintptr_t)entry;

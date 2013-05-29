@@ -24,6 +24,18 @@
 #error This file can not be included directly
 #else
 
+#define ARM_PSR_IRQ_DIS     0x80
+#define ARM_PSR_FIQ_DIS     0x40
+
+#define ARM_PSR_MODE_USER   0x10
+#define ARM_PSR_MODE_FIQ    0x11
+#define ARM_PSR_MODE_IRQ    0x12
+#define ARM_PSR_MODE_SUPER  0x13
+#define ARM_PSR_MODE_ABORT  0x17
+#define ARM_PSR_MODE_UNDEF  0x1b
+
+#define ARM_PSR_EE          0x200
+
 #ifndef __MUTEK_ASM__
 
 #include <hexo/endian.h>
