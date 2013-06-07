@@ -52,6 +52,9 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
 
       early_console_out_char(addr, str[i]);
     }
+
+  while (endian_le32(cpu_mem_read_32(addr + 0x18)) & 0x8)
+    ;
 }
 
 void raspberry_early_console_init()

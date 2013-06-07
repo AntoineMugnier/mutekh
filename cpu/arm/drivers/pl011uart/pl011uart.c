@@ -32,15 +32,17 @@
 #include <device/irq.h>
 #include <device/class/char.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
-
 #include "pl011uart_regs.h"
 
 /**************************************************************/
 
+#if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
+#include <hexo/gpct_platform_hexo.h>
+#include <gpct/cont_ring.h>
+
 CONTAINER_TYPE(uart_fifo, RING, uint8_t, 32);
 CONTAINER_FUNC(uart_fifo, RING, static inline, uart_fifo);
+#endif
 
 struct pl011uart_context_s
 {
@@ -48,30 +50,39 @@ struct pl011uart_context_s
   /* tty input request queue and char fifo */
   dev_char_queue_root_t		read_q;
   dev_char_queue_root_t		write_q;
+#if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
   uart_fifo_root_t		read_fifo;
-#ifdef CONFIG_DEVICE_IRQ
+# ifdef CONFIG_DEVICE_IRQ
   uart_fifo_root_t		write_fifo;
+# endif
+#endif
+
+#ifdef CONFIG_DEVICE_IRQ
   struct dev_irq_ep_s           irq_ep;
 #endif
 };
 
-static void pl011uart_try_read(struct device_s *dev)
+static bool_t pl011uart_try_read(struct device_s *dev)
 {
   struct pl011uart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
+  bool_t ack_done = 0;
 
   while ((rq = dev_char_queue_head(&pv->read_q)))
     {
       size_t size = 0;
 
+#if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
       /* read as many characters as possible from driver fifo */
       size = uart_fifo_pop_array(&pv->read_fifo, rq->data, rq->size);
+#endif
 
       /* try to read more characters directly from device fifo */
       while ( size < rq->size && !(cpu_mem_read_32(pv->addr + PL011_FR_ADDR)
                                    & endian_le32(PL011_FR_RXFE)) )
         {
           rq->data[size++] = PL011_DR_DATA_GET(endian_le32(cpu_mem_read_32(pv->addr + PL011_DR_ADDR)));
+          ack_done = 1;
         }
 
       if (size)
@@ -90,16 +101,21 @@ static void pl011uart_try_read(struct device_s *dev)
 
 #ifdef CONFIG_DEVICE_IRQ
       /* more data will be available on next interrupt */
-      return;
+      return ack_done;
 #endif
     }
 
+#if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
   /* copy more data from device fifo to driver fifo if no request currently need it */
   while (!(cpu_mem_read_32(pv->addr + PL011_FR_ADDR)
            & endian_le32(PL011_FR_RXFE)))
     {
       uart_fifo_pushback(&pv->read_fifo, PL011_DR_DATA_GET(endian_le32(cpu_mem_read_32(pv->addr + PL011_DR_ADDR))));
+      ack_done = 1;
     }
+#endif
+
+  return ack_done;
 }
 
 static void pl011uart_try_write(struct device_s *dev)
@@ -107,7 +123,7 @@ static void pl011uart_try_write(struct device_s *dev)
   struct pl011uart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
 
-#ifdef CONFIG_DEVICE_IRQ
+#if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
   /* try to write data from driver fifo to device */
   while (!uart_fifo_isempty(&pv->write_fifo) &&
          !(cpu_mem_read_32(pv->addr + PL011_FR_ADDR)
@@ -122,7 +138,7 @@ static void pl011uart_try_write(struct device_s *dev)
     {
       size_t size = 0;
 
-#ifdef CONFIG_DEVICE_IRQ
+#if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
       if (uart_fifo_isempty(&pv->write_fifo))
         {
           /* driver fifo is empty, try to write as many characters as
@@ -137,7 +153,7 @@ static void pl011uart_try_write(struct device_s *dev)
               cpu_mem_write_32(pv->addr + PL011_DR_ADDR, endian_le32(PL011_DR_DATA(rq->data[size++])));
             }
 
-#ifdef CONFIG_DEVICE_IRQ
+#if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
         }
 
       /* some characters were not written to the device fifo, push to driver fifo */
@@ -216,19 +232,28 @@ static DEV_IRQ_EP_PROCESS(pl011uart_irq)
 
   while (1)
     {
-      uint32_t ir = endian_le32(cpu_mem_read_32(pv->addr + PL011_MIS_ADDR));
+      uint32_t ir = cpu_mem_read_32(pv->addr + PL011_MIS_ADDR);
 
       if (!ir)
         break;
 
-      if (ir & PL011_MIS_TXMIS)
+      if (ir & endian_le32(PL011_MIS_TXMIS))
         {
           pl011uart_try_write(dev);
           cpu_mem_write_32(pv->addr + PL011_ICR_ADDR, endian_le32(PL011_MIS_TXMIS));
         }
 
-      if (ir & (PL011_MIS_RXMIS | PL011_MIS_RTMIS))
-        pl011uart_try_read(dev);
+      if (ir & endian_le32(PL011_MIS_RXMIS))
+        {
+          if (!pl011uart_try_read(dev))
+            /* discard 1 byte to acknowledge RX fifo level irq */
+            cpu_mem_read_32(pv->addr + PL011_DR_ADDR);
+        }
+      else if (ir & endian_le32(PL011_MIS_RTMIS))
+        {
+          if (!pl011uart_try_read(dev))
+            cpu_mem_write_32(pv->addr + PL011_ICR_ADDR, endian_le32(PL011_MIS_RTMIS));
+        }
     }
 
   lock_release(&dev->lock);
@@ -278,21 +303,6 @@ static DEV_INIT(pl011uart_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-#ifdef CONFIG_DEVICE_IRQ
-  uart_fifo_init(&pv->write_fifo);
-
-  device_irq_source_init(dev, &pv->irq_ep, 1, &pl011uart_irq);
-
-  if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
-    goto err_fifo;
-#endif
-
-  /* wait for previous transfert completion */
-  if (((endian_le32(cpu_mem_read_32(pv->addr + PL011_CR_ADDR)) &
-    (PL011_CR_UARTEN | PL011_CR_TXE)) == (PL011_CR_UARTEN | PL011_CR_TXE)))
-    while (endian_le32(cpu_mem_read_32(pv->addr + PL011_FR_ADDR)) & PL011_FR_BUSY)
-      ;
-
   /* disable the uart */
   cpu_mem_write_32(pv->addr + PL011_CR_ADDR, 0);
   cpu_mem_write_32(pv->addr + PL011_DMACR_ADDR, 0);
@@ -301,7 +311,20 @@ static DEV_INIT(pl011uart_init)
   dev_char_queue_init(&pv->read_q);
   dev_char_queue_init(&pv->write_q);
 
+#if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
   uart_fifo_init(&pv->read_fifo);
+#endif
+
+#ifdef CONFIG_DEVICE_IRQ
+# if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
+  uart_fifo_init(&pv->write_fifo);
+# endif
+
+  device_irq_source_init(dev, &pv->irq_ep, 1, &pl011uart_irq);
+
+  if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
+    goto err_fifo;
+#endif
 
 #ifdef CONFIG_DEVICE_IRQ
   /* enable irqs */
@@ -336,8 +359,10 @@ static DEV_INIT(pl011uart_init)
 
 #ifdef CONFIG_DEVICE_IRQ
  err_fifo:
+# if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
   uart_fifo_destroy(&pv->write_fifo);
   uart_fifo_destroy(&pv->read_fifo);
+# endif
   dev_char_queue_destroy(&pv->read_q);
   dev_char_queue_destroy(&pv->write_q);
 #endif
@@ -357,7 +382,12 @@ DEV_CLEANUP(pl011uart_cleanup)
   /* disable the uart */
   cpu_mem_write_32(pv->addr + PL011_CR_ADDR, 0);
 
+#if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
+# ifdef CONFIG_DEVICE_IRQ
+  uart_fifo_destroy(&pv->write_fifo);
+#endif
   uart_fifo_destroy(&pv->read_fifo);
+#endif
 
   dev_char_queue_destroy(&pv->read_q);
   dev_char_queue_destroy(&pv->write_q);
