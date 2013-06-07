@@ -389,8 +389,10 @@ struct device_node_s *device_node_from_path(struct device_node_s *root, const ch
         for (i = 0; ; i++)
           {
             char c = path[i];
-            if (item->name[i] == 0)
+            if (item->name[i] == 0 || c == '*')
               {
+                if (c == '*')
+                  c = path[++i];
                 if (c <= ' ')
                   n = item;
                 else if (c == '/')

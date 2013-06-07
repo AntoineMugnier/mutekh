@@ -343,10 +343,12 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
     the device tree root.
 
     The path is of the form "@tt {node0/node1}". An additionnal
-    instance number may be added: "@tt {node0/node1[2]}" the default
+    instance number may be added: "@tt {node0/node1[2]}", the default
     instance number is 0. Multiple space separated paths can be
-    specified as fallbacks: "@tt {node0 node1[0] node1[1]}". The
-    question mark character can be used as wildcard.
+    specified as fallbacks: "@tt {node0 node1[0] node1[1]}".
+
+    See @ref device_get_by_path for more details in the path string
+    format.
  */
 config_depend(CONFIG_DEVICE_TREE)
 error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,

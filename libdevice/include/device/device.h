@@ -371,8 +371,9 @@ void device_alias_remove(struct device_alias_s *alias);
 
 /** @This returns child device by path. The @tt root parameter may be
     @tt NULL to lookup from the device tree root. Multiple space
-    separated paths can be specified as fallbacks. The question mark
-    character can be used as wildcard.*/
+    separated paths can be specified as fallbacks. The @tt ?
+    character can be used as a single character wildcard and the @tt *
+    character can be used to match any node name suffix. */
 config_depend(CONFIG_DEVICE_TREE)
 struct device_s *device_get_by_path(struct device_node_s *root, const char *path);
 
