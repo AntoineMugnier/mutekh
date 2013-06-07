@@ -11,3 +11,7 @@ ifeq ($(CONFIG_DRIVER_CHAR_NULL), defined)
  subdirs += null
 endif
 
+ifeq ($(CONFIG_DRIVER_CHAR_CADENCE_UART), defined)
+ subdirs += cadence_uart
+endif
+
