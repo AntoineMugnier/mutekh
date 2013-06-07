@@ -60,9 +60,12 @@ void libc_time_initsmp()
   if (!cpu_isbootstrap())
     return;
 
-  if (device_get_accessor_by_path(&libc_timer_dev, NULL, "libc_timer timer", DRIVER_CLASS_TIMER))
+  if (device_get_accessor_by_path(&libc_timer_dev, NULL,
+                                  CONFIG_LIBC_TIMER_DEVICE_PATHS,
+                                  DRIVER_CLASS_TIMER))
     {
-      printk("error: libc: No `libc_timer' or `timer' entry found in device tree.\n");
+      printk("error: libc: No entry found matching `"
+             CONFIG_LIBC_TIMER_DEVICE_PATHS "' in the device tree.\n");
     }
   else
     {

@@ -88,8 +88,11 @@ void mutek_console_initsmp()
   if (!cpu_isbootstrap())
     return;
 
-  if (device_get_accessor_by_path(&console_dev, NULL, "console uart", DRIVER_CLASS_CHAR))
-    printk("error: mutek console: No `console' or `uart' entry found in the device tree.\n");
+  if (device_get_accessor_by_path(&console_dev, NULL,
+                                  CONFIG_MUTEK_CONSOLE_DEVICE_PATHS,
+                                  DRIVER_CLASS_CHAR))
+    printk("error: mutek console: No entry found matching `"
+           CONFIG_MUTEK_CONSOLE_DEVICE_PATHS "' in the device tree.\n");
 }
 
 void mutek_console_cleanupsmp()
