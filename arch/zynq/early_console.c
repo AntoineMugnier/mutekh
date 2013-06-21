@@ -44,6 +44,10 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
   uintptr_t addr = (uintptr_t)ctx;
   size_t i;
 
+  /* enable TX if needed */
+  if ((endian_le32(cpu_mem_read_32(addr + 0)) & 0x30) != 0x10)
+    cpu_mem_write_32(addr + 0, endian_le32(0x110));
+
   for (i = 0; i < len; i++)
   {
     if (str[i] == '\n')
