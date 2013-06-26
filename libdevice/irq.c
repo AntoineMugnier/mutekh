@@ -458,9 +458,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
           goto error;
         }
 
-      struct device_s *icu_dev = r->irq.icu;
-      if (!icu_dev)
-        icu_dev = device_get_default_icu(dev);
+      struct device_s *icu_dev = device_get_by_path(dev->node.parent, r->irq.icu);
 
       if (!icu_dev)
         {
@@ -496,8 +494,6 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
         goto error;
 
       device_put_accessor(&icu);
-
-      r->irq.icu = icu_dev;
 
       if (enable)
         if (!device_icu_irq_enable(src, r->irq.irq_id, src, src))
@@ -560,28 +556,5 @@ bool_t device_icu_irq_enable(struct dev_irq_ep_s *local_src, uint_fast16_t targe
     }
 
   return res;
-}
-
-struct device_s * device_get_default_icu(struct device_s *dev)
-{
-#ifdef CONFIG_DEVICE_TREE
-  struct device_enum_s e;
-
-  if (!dev->enum_dev)
-    return NULL;
-  if (device_get_accessor(&e, dev->enum_dev, DRIVER_CLASS_ENUM, 0))
-    return NULL;
-
-  struct device_s *icu = NULL;
-
-  if (DEVICE_HAS_OP(&e, get_default_icu))
-    icu = DEVICE_OP(&e, get_default_icu, dev);
-
-  device_put_accessor(&e);
-
-  return icu;
-#else
-  return NULL;
-#endif
 }
 

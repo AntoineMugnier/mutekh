@@ -50,13 +50,6 @@ struct a9mpcore_private_s
   uintptr_t addr;
 };
 
-#ifdef CONFIG_DEVICE_IRQ
-static DEVENUM_GET_DEFAULT_ICU(a9mpcore_get_default_icu)
-{
-  return NULL;
-}
-#endif
-
 static DEVENUM_MATCH_DRIVER(a9mpcore_match_driver)
 {
   return 0;
@@ -69,9 +62,6 @@ static const struct driver_enum_s a9mpcore_enum_drv =
 {
   .class_	= DRIVER_CLASS_ENUM,
   .f_match_driver = a9mpcore_match_driver,
-#ifdef CONFIG_DEVICE_IRQ
-  .f_get_default_icu = a9mpcore_get_default_icu,
-#endif
 };
 
 const struct driver_s	a9mpcore_drv =

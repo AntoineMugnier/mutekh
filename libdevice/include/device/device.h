@@ -83,10 +83,14 @@ struct dev_resource_s
     }   io;
 
     struct {
-      uint8_t dev_out_id;        //< id of physical irq link going out of the device
-      uint8_t icu_in_id;         //< id of physical irq link going into the interrupt controller
-      uint16_t irq_id;            //< logical irq id
-      struct device_s *icu;       //< associated interrupt controller
+      /** id of physical irq link going out of the device */
+      uintptr_t dev_out_id:CONFIG_DEVICE_IRQ_MAX_OUTPUT_ID;
+      /** id of physical irq link going into the interrupt controller */
+      uintptr_t icu_in_id:CONFIG_DEVICE_IRQ_MAX_INPUT_ID;
+      /** logical irq id, used when multiple irqs are multiplexed on one physical link */
+      uintptr_t irq_id:CONFIG_DEVICE_IRQ_MAX_LOGICAL_ID;
+      /** device tree path to interrupt controller, relative to device */
+      const char *icu;
     }   irq;
 
     struct {
@@ -149,11 +153,15 @@ error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
     bus carrying an interrupt identifier; zero is used if the link is a
     single wire.
 
-    Actual binding will take place when the device driver is
-    initialized. Use count of the interrupt controller device is
-    increased. */
+    A device tree path to the interrupt controller relative to @tt dev
+    is expected for the @tt icu parameter. The path string will be
+    duplicated and later freed on cleanup only if the @ref
+    #DEVICE_FLAG_ALLOCATED flag of the device is set.
+
+    Interrupt controller look-up and end-point bindings will take
+    place when the device driver is initialized. */
 error_t device_res_add_irq(struct device_s *dev, uint_fast8_t dev_out_id, uint_fast8_t icu_in_id,
-                           uint_fast16_t irq_id, struct device_s *icu);
+                           uint_fast16_t irq_id, const char *icu);
 
 /** @This adds a numerical identifier which uniquely identify an
     instance of the device. This is generally used by device which are

@@ -38,16 +38,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef CONFIG_DEVICE_IRQ
-extern struct device_s *gaisler_icu;
-
-static DEVENUM_GET_DEFAULT_ICU(ahbctrl_get_default_icu)
-{
-  assert(dev->enum_dev == edev->dev);
-  return gaisler_icu;
-}
-#endif
-
 static DEVENUM_MATCH_DRIVER(ahbctrl_match_driver)
 {
   const struct devenum_ident_s *ident = drv->id_table;
@@ -129,7 +119,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
       uint8_t irq = endian_be32(p[0]) & 0x1f;
 
       if (irq)
-        device_res_add_irq(d, 0, irq - 1, 0, NULL);
+        device_res_add_irq(d, 0, irq - 1, 0, "/icu");
 #endif
 
       uint8_t mtype = 0;
@@ -197,9 +187,6 @@ static const struct driver_enum_s ahbctrl_enum_drv =
 {
   .class_	= DRIVER_CLASS_ENUM,
   .f_match_driver = ahbctrl_match_driver,
-#ifdef CONFIG_DEVICE_IRQ
-  .f_get_default_icu = ahbctrl_get_default_icu,
-#endif
 };
 
 const struct driver_s	ahbctrl_drv =

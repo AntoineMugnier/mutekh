@@ -50,8 +50,6 @@ void gaisler_mem_init()
 
 /////////////////////////////////////////////////////////////////////
 
-struct device_s *gaisler_icu = NULL;
-
 #ifdef CONFIG_GAISLER_AHB_ENUM
 
 # include <device/driver.h>

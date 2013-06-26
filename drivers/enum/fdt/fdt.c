@@ -513,18 +513,30 @@ static void resolve_icu_links(struct device_s *root, struct device_s *dev)
 
           if (r->type == DEV_RES_IRQ)
             {
-              struct device_s *d = enum_fdt_get_phandle(root, (uint32_t)r->irq.icu); 
+              struct device_s *icu = enum_fdt_get_phandle(root, (uint32_t)r->irq.icu);
 
-              /* set pointer to icu device or drop irq resource entry */
-              if (d)
+              /* set path to icu device or drop irq resource entry */
+              if (icu)
                 {
-                  r->irq.icu = d;
-                  d->ref_count++;
+                  char buf[128], *b = buf;
+                  struct device_node_s *p = d->node.parent;
+                  while (p && p != &root->node && b + 3 < buf + sizeof(buf))
+                    {
+                      printk("%p %s\n", p, p->name);
+                      p = p->parent;
+                      (*b++ = '.'), (*b++ = '.'), (*b++ = '/');
+                    }
+
+                  if (p && device_get_path(&root->node, b, buf + sizeof(buf) - b, &icu->node, 0) >= 0)
+                    {
+                      r->irq.icu = strdup(buf);
+                      if (r->irq.icu != NULL)
+                        continue;
+                    }
                 }
-              else {
-                printk("enum-fdt: bad interrupt controller handle in %p `%s'\n", d, d->node.name);
-                r->type = DEV_RES_UNUSED;
-              }
+
+              printk("enum-fdt: bad interrupt controller handle in %p `%s'\n", icu, icu->node.name);
+              r->type = DEV_RES_UNUSED;
             }
         }
 

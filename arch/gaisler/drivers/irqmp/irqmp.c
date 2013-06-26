@@ -375,8 +375,6 @@ static DEV_CLEANUP(gaisler_irqmp_cleanup)
 
 #ifdef CONFIG_ARCH_SMP
 
-extern struct device_s *gaisler_icu;
-
 #include <mutek/startup.h>
 
 /* find mask of processors from device tree */
@@ -397,16 +395,18 @@ static DEVICE_TREE_WALKER(irqmp_start_cpus_mask)
 
 void gaisler_irqmp_start_cpus()
 {
-  if (!gaisler_icu || gaisler_icu->drv != &gaisler_irqmp_drv)
+  struct device_s *icu = device_get_by_path(NULL, "/icu");
+
+  if (!icu || icu->drv != &gaisler_irqmp_drv)
     {
-      printk("error: no default IRQMP device found to start other processors");
+      printk("error: no default IRQMP device found to start other processors\n");
       return;
     }
 
   uint32_t mask = 0;
   device_tree_walk(NULL, &irqmp_start_cpus_mask, &mask);
 
-  struct gaisler_irqmp_private_s *pv = gaisler_icu->drv_pv;
+  struct gaisler_irqmp_private_s *pv = icu->drv_pv;
   cpu_mem_write_32(pv->addr + 0x10, mask);
 }
 

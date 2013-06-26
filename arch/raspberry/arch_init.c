@@ -65,8 +65,8 @@ void raspberry_hw_enum_init()
   device_init(&icu_dev);
   device_set_name(&icu_dev, "icu");
   device_res_add_mem(&icu_dev, 0x2000b000, 0x2000b400);
-  device_res_add_irq(&icu_dev, 0, 0, 0, &cpu_dev);  // irq
-  //  device_res_add_irq(&icu_dev, 1, 1, 0, &cpu_dev);  // fiq
+  device_res_add_irq(&icu_dev, 0, 0, 0, "/cpu");  // irq
+  //  device_res_add_irq(&icu_dev, 1, 1, 0, "/cpu");  // fiq
   device_attach(&icu_dev, NULL);
 
   extern const struct driver_s bcm2835_icu_drv;
@@ -82,7 +82,7 @@ void raspberry_hw_enum_init()
   device_set_name(&uart_dev, "uart");
   device_res_add_mem(&uart_dev, 0x20201000, 0x20202000);
 #ifdef CONFIG_DRIVER_ICU_BCM2835
-  device_res_add_irq(&uart_dev, 0, 8+57, 0, &icu_dev);
+  device_res_add_irq(&uart_dev, 0, 8+57, 0, "/icu");
 #endif
   device_attach(&uart_dev, NULL);
 

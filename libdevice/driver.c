@@ -203,9 +203,7 @@ error_t device_init_driver(struct device_s *dev)
 #ifdef CONFIG_DEVICE_IRQ
           /* check that interrupt controllers are initialized */
         case DEV_RES_IRQ: {
-          struct device_s *icu = r->irq.icu;
-          if (!icu)
-            icu = device_get_default_icu(dev);
+          struct device_s *icu = device_get_by_path(dev->node.parent, r->irq.icu);
           if (!icu || icu->status != DEVICE_DRIVER_INIT_DONE)
             return -EAGAIN;
         }

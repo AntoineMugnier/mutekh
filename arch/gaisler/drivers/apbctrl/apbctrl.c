@@ -61,16 +61,7 @@ static DEVENUM_MATCH_DRIVER(apbctrl_match_driver)
 }
 
 
-extern struct device_s *gaisler_icu;
-
-#ifdef CONFIG_DEVICE_IRQ 
-
-static DEVENUM_GET_DEFAULT_ICU(apbctrl_get_default_icu)
-{
-  assert(dev->enum_dev == edev->dev);
-  return gaisler_icu;
-}
-
+#ifdef CONFIG_DEVICE_IRQ
 
 /* Traverse device tree to add irq resource between irqmp and processors. */
 
@@ -94,8 +85,12 @@ static DEVICE_TREE_WALKER(apbctrl_scan_cpu_irq)
       if (maj > 0)
         return 0;
 #endif
-      device_res_add_irq(ctx->irqmp, maj, 0, 0, dev);
-      ctx->count++;
+      char buf[128];
+      if (device_get_path(NULL, buf, sizeof(buf), &dev->node, 0) > 0)
+        {
+          if (device_res_add_irq(ctx->irqmp, maj, 0, 0, buf) > 0)
+            ctx->count++;
+        }
     }
 
   return 0;
@@ -140,23 +135,13 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
               if (!d)
                 continue;
 
-              if (gaisler_icu == NULL)
-                {
-                  /* keep track of gaisler irq controller */
-                  gaisler_icu = d;
-
 #ifdef CONFIG_DEVICE_IRQ
-                  struct apbctrl_scan_cpu_irq_ctx_s ctx = { d, 0 };
-                  /* add irq links from IRQMP to cpus */
-                  device_tree_walk(NULL, &apbctrl_scan_cpu_irq, &ctx);
-                  if (ctx.count == 0)
-                    printk("apbctrl: no processor found to link to irqmp device.");
+              struct apbctrl_scan_cpu_irq_ctx_s ctx = { d, 0 };
+              /* add irq links from IRQMP to cpus */
+              device_tree_walk(NULL, &apbctrl_scan_cpu_irq, &ctx);
+              if (ctx.count == 0)
+                printk("apbctrl: no processor found to link to irqmp device.");
 #endif
-                }
-              else
-                {
-                  printk("apbctrl: warning: more than one IRQMP device found!");
-                }
 
               break;
 
@@ -172,7 +157,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
 
               uint8_t j, irq = endian_be32(p[0]) & 0x1f;
               for (j = 0; j < nirq; j++)
-                device_res_add_irq(d, j, irq + j - 1, 0, NULL);
+                device_res_add_irq(d, j, irq + j - 1, 0, "/icu");
             }
 #endif
             }
@@ -187,7 +172,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
 #ifdef CONFIG_DEVICE_IRQ
           uint8_t irq = endian_be32(p[0]) & 0x1f;
           if (irq)
-            device_res_add_irq(d, 0, irq - 1, 0, NULL);
+            device_res_add_irq(d, 0, irq - 1, 0, "/icu");
 #endif
         }
 
@@ -246,9 +231,6 @@ static const struct driver_enum_s apbctrl_enum_drv =
 {
   .class_	= DRIVER_CLASS_ENUM,
   .f_match_driver = apbctrl_match_driver,
-#ifdef CONFIG_DEVICE_IRQ
-  .f_get_default_icu = apbctrl_get_default_icu,
-#endif
 };
 
 const struct driver_s	apbctrl_drv =

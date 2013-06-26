@@ -121,8 +121,8 @@ void device_cleanup(struct device_s *dev)
         {
 #ifdef CONFIG_DEVICE_IRQ
         case DEV_RES_IRQ:
-          if (r->irq.icu)
-            r->irq.icu--;
+          if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
+            mem_free((void*)r->irq.icu);
           break;
 #endif
         case DEV_RES_VENDORID:
