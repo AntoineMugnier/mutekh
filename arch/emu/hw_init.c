@@ -81,7 +81,7 @@ void emu_device_enum_init()
   extern const struct driver_s emu_tty_drv;
   static struct device_s tty_dev;
   device_init(&tty_dev);
-  tty_dev.node.name = "tty";
+  device_set_name(&tty_dev, "tty");
   device_attach(&tty_dev, NULL);
   device_bind_driver(&tty_dev, &emu_tty_drv);
 #endif

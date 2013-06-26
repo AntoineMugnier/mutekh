@@ -64,6 +64,7 @@ void gaisler_ahb_enum_init()
     static struct device_s ahbctrl_dev;
 
     device_init(&ahbctrl_dev);
+    device_set_name(&ahbctrl_dev, "ahb0");
     device_attach(&ahbctrl_dev, NULL);
     device_res_add_mem(&ahbctrl_dev, CONFIG_GAISLER_AHB_ENUM_ADDR,
                        CONFIG_GAISLER_AHB_ENUM_ADDR + 0xe00);

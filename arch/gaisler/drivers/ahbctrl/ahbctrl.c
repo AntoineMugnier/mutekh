@@ -96,7 +96,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
 #ifdef CONFIG_GAISLER_DEVICE_IDS
         if (vendor < GAISLER_VENDOR_count &&
             gaisler_vendors_longnames[vendor])
-          device_res_add_vendorid(d, vendor, strdup(gaisler_vendors_longnames[vendor]));
+          device_res_add_vendorid(d, vendor, gaisler_vendors_longnames[vendor]);
         else
 #endif
           device_res_add_vendorid(d, vendor, NULL);
@@ -105,7 +105,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
       if (vendor == GAISLER_VENDOR_GAISLER &&
           device < GAISLER_DEVICE_count &&
           gaisler_devices_longnames[device])
-        device_res_add_productid(d, device, strdup(gaisler_devices_longnames[device]));
+        device_res_add_productid(d, device, gaisler_devices_longnames[device]);
       else
 #endif
         device_res_add_productid(d, device, NULL);
@@ -122,7 +122,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
           d->node.flags |= DEVICE_FLAG_CPU;
 
           sprintf(name, "cpu%u", i);
-          d->node.name = strdup(name);
+          device_set_name(d, name);
         }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -180,7 +180,7 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
         {
           char pname[16];
           sprintf(pname, "user_param_%u", j);
-          device_res_add_uint_param(d, strdup(pname), endian_be32(p[j]));
+          device_res_add_uint_param(d, pname, endian_be32(p[j]));
         }
 #endif
 

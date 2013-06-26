@@ -194,7 +194,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
 #ifdef CONFIG_GAISLER_DEVICE_IDS
       if (vendor < GAISLER_VENDOR_count &&
           gaisler_vendors_longnames[vendor])
-        device_res_add_vendorid(d, vendor, strdup(gaisler_vendors_longnames[vendor]));
+        device_res_add_vendorid(d, vendor, gaisler_vendors_longnames[vendor]);
       else
 #endif
         device_res_add_vendorid(d, vendor, NULL);
@@ -203,7 +203,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
       if (vendor == GAISLER_VENDOR_GAISLER &&
           device < GAISLER_DEVICE_count &&
           gaisler_devices_longnames[device])
-        device_res_add_productid(d, device, strdup(gaisler_devices_longnames[device]));
+        device_res_add_productid(d, device, gaisler_devices_longnames[device]);
       else
 #endif
         device_res_add_productid(d, device, NULL);

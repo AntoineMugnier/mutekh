@@ -191,6 +191,28 @@ void device_shrink(struct device_s *dev)
 
 #ifdef CONFIG_DEVICE_TREE
 
+error_t device_set_name(struct device_s *dev, const char *name)
+{
+  if (dev->node.parent)
+    return -EBUSY;
+
+  if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
+    {
+      if (dev->node.name)
+        mem_free((void*)dev->node.name);
+
+      dev->node.name = strdup(name);
+      if (!dev->node.name)
+        return -ENOMEM;
+    }
+  else
+    {
+      dev->node.name = name;
+    }
+
+  return 0;
+}
+
 void device_attach(struct device_s *dev,
                    struct device_s *parent)
 {
@@ -250,7 +272,7 @@ error_t device_get_path(struct device_node_s *root, char *buf, size_t buflen,
     {
       if (buflen < 1)
         return -ENOMEM;
-      buf[1] = 0;
+      buf[0] = 0;
       return 0;
     }
   else if (node == &device_enum_root.node)
@@ -324,10 +346,10 @@ struct device_alias_s * device_new_alias_to_path(struct device_node_s *parent, c
               return alias;
             }
 
-          free((void*)alias->path);
+          mem_free((void*)alias->path);
         }
 
-      free((void*)alias->node.name);
+      mem_free((void*)alias->node.name);
     }
 
   mem_free(alias);
@@ -361,25 +383,48 @@ struct device_node_s *device_node_from_path(struct device_node_s *root, const ch
 {
   struct device_node_s *n = NULL;
 
-  if (!root)
-    root = &device_enum_root.node;
-
   while (*path)
     {
+      struct device_node_s *r = root;
+
       while (*path && *path <= ' ')
         path++;
-      while (*path == '/')
+
+      if (*path == '/')
         {
           path++;
-          root = &device_enum_root.node;
+          r = &device_enum_root.node;
         }
 
       const char **b = brackets;
       if (b)
         *b = "";
 
+    next:
+      if (!r)
+        r = &device_enum_root.node;
+
+      while (*path == '/')
+        path++;
+
+      if (path[0] == '.' && path[1] == '.')
+        {
+          switch (path[2])
+            {
+            case '/':
+              r = r->parent;
+              path += 3;
+              goto next;
+            case 0:
+            case ' ':
+              n = r->parent;
+              path += 2;
+              goto end;
+            }
+        }
+
       // FIXME locking
-      CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &root->children,
+      CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &r->children,
       {
         uint_fast8_t i;
 
@@ -393,40 +438,44 @@ struct device_node_s *device_node_from_path(struct device_node_s *root, const ch
               {
                 if (c == '*')
                   c = path[++i];
-                if (c <= ' ')
-                  n = item;
+                if (c <= ' ' || (b && c == '['))
+                  {
+                    n = item;
+                    path += i;
+                    goto end;
+                  }
                 else if (c == '/')
                   {
-                    while (path[i] == '/')
-                      i++;
-                    n = device_node_from_path(item, path + i, depth, b);
+                    r = item;
+                    path += i + 1;
+                    goto next;
                   }
-                else if (c == '[' && b)
-                  {
-                    *b = path + ++i;
-                    b = NULL;
-                    while ((c = path[i]) > ' ')
-                      i++;
-                    if (path[i-1] == ']')
-                      n = item;
-                  }
-                path += i;
-                goto end;
               }
             else if (item->name[i] != c && c != '?')
               break;
           }
       });
 
+      while (*path > ' ')
+        path++;
+      continue;
+
     end:
+      if (b && *path == '[')
+        {
+          *b = ++path;
+          b = NULL;
+          while (*path > ' ')
+            path++;
+          if (path[-1] != ']')
+            return NULL;
+        }
+
       if (depth > 0)
         n = device_resolve_alias(n, depth, b);
 
       if (n)
         return n;
-
-      while (*path > ' ')
-        path++;
     }
 
   return NULL;

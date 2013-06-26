@@ -110,29 +110,9 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
   if (p->dev == NULL)
     return 0;
 
-  if ((p->section == FDT_SECTION_NONE || p->section == FDT_SECTION_CPUS) && strchr(name, '@'))
+  switch (p->section)
     {
-      struct device_s *d = device_alloc(CONFIG_DRIVER_ENUM_FDT_MAX_RESOURCES);
-
-      d->enum_dev = ctx->dev;
-
-      if (d)
-        {
-          d->node.name = strdup(name);
-          device_attach(d, p->dev);
-
-          d->enum_pv = (void*)-1;
-          if (p->section == FDT_SECTION_CPUS)
-            d->node.flags |= DEVICE_FLAG_CPU;
-        }
-
-      e->dev = d;
-      if (e->section == FDT_SECTION_NONE)
-        e->section = FDT_SECTION_DEVICE;
-      return 1;
-    }
-  else if (p->section == FDT_SECTION_NONE)
-    {
+    case FDT_SECTION_NONE:
       if (!strcmp(name, "cpus"))
         {
           e->section = FDT_SECTION_CPUS;
@@ -148,9 +128,34 @@ static FDT_ON_NODE_ENTRY_FUNC(enum_fdt_node_entry)
           e->section = FDT_SECTION_ALIAS;
           return 1;
         }
-    }
 
-  printk("enum-fdt: ignored node `%s'\n", path);
+    case FDT_SECTION_CPUS:
+    case FDT_SECTION_DEVICE:
+      if (strchr(name, '@'))
+        {
+          struct device_s *d = device_alloc(CONFIG_DRIVER_ENUM_FDT_MAX_RESOURCES);
+
+          d->enum_dev = ctx->dev;
+
+          if (d)
+            {
+              device_set_name(d, name);
+              device_attach(d, p->dev);
+
+              d->enum_pv = (void*)-1;
+              if (p->section == FDT_SECTION_CPUS)
+                d->node.flags |= DEVICE_FLAG_CPU;
+            }
+
+          e->dev = d;
+          if (e->section == FDT_SECTION_NONE)
+            e->section = FDT_SECTION_DEVICE;
+          return 1;
+        }
+
+    default:
+      printk("enum-fdt: ignored node `%s'\n", path);
+    }
 
   return 0;
 }
@@ -311,15 +316,11 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
           {
           case FDT_SECTION_CPUS:
           case FDT_SECTION_DEVICE: {
-            char *name = malloc(datalen + 1);
-            if (name)
-              {
-                memcpy(name, data, datalen);
-                name[datalen] = 0;
-                if (device_res_add_productid(e->dev, 0, name))
-                  goto res_err;
-                return;
-              }
+            if (((char*)data)[datalen])
+              goto res_err;
+            if (device_res_add_productid(e->dev, 0, data))
+              goto res_err;
+            return;
           }
           case FDT_SECTION_NONE:
             return;
@@ -341,25 +342,27 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
         {
           if (!strncmp(name + 1, "aram-str-", 9))
             {
-              char *value = malloc(datalen + 1);
-              memcpy(value, data, datalen);
-              value[datalen] = 0;
-              device_res_add_str_param(e->dev, strdup(name + 10), value);
+              if (((char*)data)[datalen])
+                goto res_err;
+              if (device_res_add_str_param(e->dev, name + 10, data))
+                goto res_err;
               return;
             }
           else if (!strncmp(name + 1, "aram-int-", 9) && datalen == 4)
             {
-              device_res_add_uint_param(e->dev, strdup(name + 10), endian_be32(*(const uint32_t*)data));
+              if (device_res_add_uint_param(e->dev, name + 10, endian_be32(*(const uint32_t*)data)))
+                goto res_err;
               return;
             }
           else if (!strncmp(name + 1, "aram-array-", 11))
             {
-              uintptr_t *value = malloc((datalen / 4 + 1) * sizeof(uintptr_t));
+              uintptr_t value[(datalen / 4 + 1) * sizeof(uintptr_t)];
               value[0] = datalen / 4;
               uint_fast8_t i;
               for (i = 0; i < datalen / 4; i++)
                 value[i + 1] = endian_be32(((const uint32_t*)data)[i]);
-              device_res_add_uint_array_param(e->dev, strdup(name + 12), value);
+              if (device_res_add_uint_array_param(e->dev, name + 12, value))
+                goto res_err;
               return;
             }
        }

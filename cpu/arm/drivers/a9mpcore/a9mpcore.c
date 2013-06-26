@@ -108,12 +108,12 @@ static DEV_INIT(a9mpcore_init)
       struct device_s *d = device_alloc(1);
       assert(d != NULL);
 
-      char name [16];
       device_res_add_id(d, i, 0);
       d->node.flags |= DEVICE_FLAG_CPU;
 
+      char name[16];
       sprintf(name, "cpu%u", i);
-      d->node.name = strdup(name);
+      device_set_name(d, name);
 
       d->enum_dev = dev;
       device_attach(d, dev);

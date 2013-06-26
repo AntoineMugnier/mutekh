@@ -234,6 +234,13 @@ error_t device_res_add_vendorid(struct device_s *dev, uintptr_t id, const char *
   if (!r)
     return -ENOMEM;
 
+  if (name && (dev->node.flags & DEVICE_FLAG_ALLOCATED))
+    {
+      name = strdup(name);
+      if (!name)
+        return -ENOMEM;
+    }
+
   r->type = DEV_RES_VENDORID;
   r->vendor.id = id;
   r->vendor.name = name;
@@ -249,6 +256,13 @@ error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char 
     return -EBUSY;
   if (!r)
     return -ENOMEM;
+
+  if (name && (dev->node.flags & DEVICE_FLAG_ALLOCATED))
+    {
+      name = strdup(name);
+      if (!name)
+        return -ENOMEM;
+    }
 
   r->type = DEV_RES_PRODUCTID;
   r->product.id = id;
@@ -281,6 +295,19 @@ error_t device_res_add_str_param(struct device_s *dev, const char *name, const c
   if (!r)
     return -ENOMEM;
 
+  if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
+    {
+      name = strdup(name);
+      if (!name)
+        return -ENOMEM;
+      value = strdup(value);
+      if (!value)
+        {
+          mem_free((void*)name);
+          return -ENOMEM;
+        }
+    }
+
   r->type = DEV_RES_STR_PARAM;
   r->str_param.name = name;
   r->str_param.value = value;
@@ -297,6 +324,13 @@ error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintpt
   if (!r)
     return -ENOMEM;
 
+  if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
+    {
+      name = strdup(name);
+      if (!name)
+        return -ENOMEM;
+    }
+
   r->type = DEV_RES_UINT_PARAM;
   r->uint_param.name = name;
   r->uint_param.value = value;
@@ -312,6 +346,26 @@ error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, 
     return -EBUSY;
   if (!r)
     return -ENOMEM;
+
+  if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
+    {
+      name = strdup(name);
+      if (!name)
+        return -ENOMEM;
+
+      uintptr_t i;
+      uintptr_t *v = mem_alloc(sizeof(uintptr_t) * (value[0] + 1), mem_scope_sys);
+
+      if (!v)
+        {
+          mem_free((void*)name);
+          return -ENOMEM;
+        }
+
+      for (i = 0; i <= value[0]; i++)
+        v[i] = value[i];
+      value = v;
+    }
 
   r->type = DEV_RES_UINT_ARRAY_PARAM;
   r->uint_array_param.name = name;

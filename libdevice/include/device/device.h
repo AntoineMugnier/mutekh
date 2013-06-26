@@ -166,18 +166,18 @@ error_t device_res_add_revision(struct device_s *dev, uintptr_t major, uintptr_t
 
 /** @This attaches a vendor identifier resource to the device. Both a
     numerical and a string values can be specified. The exact meaning
-    of the value depends on the parent enumerator device. When the
-    device node has been dynamically allocated using @ref device_alloc
-    and the @tt name string is not NULL, the string pointer will be
-    freed on cleanup. */
+    of the value depends on the parent enumerator device. 
+
+    The name string will be duplicated and later freed on cleanup only if
+    the @ref #DEVICE_FLAG_ALLOCATED flag of the device is set. */
 error_t device_res_add_vendorid(struct device_s *dev, uintptr_t id, const char *name);
 
 /** @This attaches a product identifier resource to the device. Both a
     numerical and a string values can be specified. The exact meaning
-    of the value depends on the parent enumerator device. When the
-    device node has been dynamically allocated using @ref device_alloc
-    and the @tt name string is not NULL, the string pointer will be
-    freed on cleanup. */
+    of the value depends on the parent enumerator device. 
+
+    The name string will be duplicated and later freed on cleanup only if
+    the @ref #DEVICE_FLAG_ALLOCATED flag of the device is set. */
 error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char *name);
 
 /** @This attaches a frequency resource to the device. The frenquency
@@ -186,23 +186,27 @@ error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char 
 error_t device_res_add_frequency(struct device_s *dev, uint64_t f_40_24);
 
 /** @This attaches a string parameter resource to the device. The
-    exact meaning of the value is driver dependent. When the device
-    node has been dynamically allocated using @ref device_alloc, the
-    name and value string pointers will be freed on cleanup. */
+    exact meaning of the value is driver dependent.
+
+    The name and value strings will be duplicated and later freed on cleanup
+    only if the @ref #DEVICE_FLAG_ALLOCATED flag of the device is set.  */
 error_t device_res_add_str_param(struct device_s *dev, const char *name, const char *value);
 
 /** @This attaches an integer parameter resource to the device. The
-    exact meaning of the value is driver dependent. When the device
-    node has been dynamically allocated using @ref device_alloc, the
-    name string pointer will be freed on cleanup. */
+    exact meaning of the value is driver dependent.
+
+    The name string will be duplicated and later freed on cleanup only if
+    the @ref #DEVICE_FLAG_ALLOCATED flag of the device is set. */
 error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintptr_t value);
 
 /** @This attaches an integer array parameter resource to the
     device. The first value of the array must indicate the number of
     subsequent entries in the array. The exact meaning of the value is
-    driver dependent. When the device node has been dynamically
-    allocated using @ref device_alloc, the name and value pointers
-    will be freed on cleanup. */
+    driver dependent.
+
+    The name string and the array will be duplicated and later freed
+    on cleanup only if the @ref #DEVICE_FLAG_ALLOCATED flag of the
+    device is set. */
 error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, uintptr_t *value);
 
 /** @This returns a pointer to resource of requested type with given position. */
@@ -338,17 +342,24 @@ struct device_alias_s
 
 /** @This initializes a statically allocated device object. Number of
     resource slot is @ref #DEVICE_STATIC_RESOURCE_COUNT
+
+    The device flag @ref #DEVICE_FLAG_ALLOCATED is cleared by this function.
+
     @see {device_init, device_cleanup} */
 void device_init(struct device_s *dev);
 
-/** @This allocates and initializes a device object. Requested number
-    of resource slots is allocated.
+/** @This allocates and initializes a device object. The specified
+    number of resource slots is allocated.
+
+    The device flag @ref #DEVICE_FLAG_ALLOCATED is set by this function.
+
     @see {device_alloc, device_cleanup} */
 struct device_s *device_alloc(size_t resources);
 
 /** @This cleanups a device object. Memory is freed if device has been
-    allocated using @ref device_alloc. Device must not be registered
-    or have registered children and references count must be zero. */
+    allocated using @ref device_alloc (@ref #DEVICE_FLAG_ALLOCATED is
+    set). The device must not be attached or have attached children
+    and references count must be zero. */
 void device_cleanup(struct device_s *dev);
 
 /** @This reduces resource slots count to number of used slots
@@ -371,9 +382,13 @@ void device_alias_remove(struct device_alias_s *alias);
 
 /** @This returns child device by path. The @tt root parameter may be
     @tt NULL to lookup from the device tree root. Multiple space
-    separated paths can be specified as fallbacks. The @tt ?
-    character can be used as a single character wildcard and the @tt *
-    character can be used to match any node name suffix. */
+    separated paths can be specified as fallbacks.
+
+    Paths with a leading @tt / are searched from the device tree root
+    regardless of the @tt root parameter. The special name @tt .. can
+    be used to write relative paths. The @tt ? character can be used
+    as a single character wildcard and the @tt * character can be used
+    to match any node name suffix. */
 config_depend(CONFIG_DEVICE_TREE)
 struct device_s *device_get_by_path(struct device_node_s *root, const char *path);
 
@@ -403,6 +418,13 @@ static inline struct device_node_s * device_node_from_alias(struct device_alias_
 {
   return &alias->node;
 }
+
+/** @This sets the name of the device. The device name can only be
+    changed if the device has not been attached to a parent node.
+
+    The name string will be duplicated and later freed on cleanup only if
+    the @ref #DEVICE_FLAG_ALLOCATED flag of the device is set. */
+error_t device_set_name(struct device_s *dev, const char *name);
 
 /** @internal @This lookup a node in the device tree. */
 struct device_node_s *device_node_from_path(struct device_node_s *root, const char *path,

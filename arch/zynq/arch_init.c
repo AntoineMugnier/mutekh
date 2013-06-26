@@ -58,7 +58,7 @@ void zynq_hw_enum_init()
 
   static struct device_s uart0_dev;
   device_init(&uart0_dev);
-  uart0_dev.node.name = "uart0";
+  device_set_name(&uart0_dev, "uart0");
   device_res_add_mem(&uart0_dev, 0xe0000000, 0xe0001000);
   device_attach(&uart0_dev, NULL);
 
@@ -66,7 +66,7 @@ void zynq_hw_enum_init()
 
   static struct device_s uart1_dev;
   device_init(&uart1_dev);
-  uart1_dev.node.name = "uart1";
+  device_set_name(&uart1_dev, "uart1");
   device_res_add_mem(&uart1_dev, 0xe0001000, 0xe0002000);
   device_attach(&uart1_dev, NULL);
 
