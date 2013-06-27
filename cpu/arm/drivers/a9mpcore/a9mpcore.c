@@ -93,6 +93,24 @@ static DEV_INIT(a9mpcore_init)
   uint32_t scu_cfg = endian_le32(cpu_mem_read_32(pv->addr + A9MPCORE_SCU_ADDR + A9MPCORE_SCU_CFG_ADDR));
   uint_fast8_t i, cpu_count = A9MPCORE_SCU_CFG_CPU_NUM_GET(scu_cfg) + 1;
 
+#ifdef CONFIG_DRIVER_ARM_A9MPCORE_IRQ
+  /* add interrupt controller distributor */
+  struct device_s *icu = device_alloc(cpu_count + 2);
+  assert(icu != NULL);
+
+  device_set_name(icu, "icu");
+
+  device_res_add_mem(icu, pv->addr + 0x1000, pv->addr + 0x2000); // gic distributor
+  device_res_add_mem(icu, pv->addr + 0x0100, pv->addr + 0x0200); // gic cpu interface
+
+  icu->enum_dev = dev;
+  device_attach(icu, dev);
+
+  extern const struct driver_s pl390_icu_drv;
+  device_bind_driver(icu, &pl390_icu_drv);
+#endif
+
+  /* add processors */
   for (i = 0; i < cpu_count; i++)
     {
       struct device_s *d = device_alloc(1);
@@ -107,6 +125,10 @@ static DEV_INIT(a9mpcore_init)
 
       d->enum_dev = dev;
       device_attach(d, dev);
+
+#ifdef CONFIG_DRIVER_ARM_A9MPCORE_IRQ
+      device_res_add_irq(icu, i, 0, 0, name);
+#endif
 
       extern const struct driver_s arm_drv;
       device_bind_driver(d, &arm_drv);

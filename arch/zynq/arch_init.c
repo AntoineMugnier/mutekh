@@ -46,6 +46,7 @@ void zynq_hw_enum_init()
   static struct device_s mpcore_dev;
 
   device_init(&mpcore_dev);
+  device_set_name(&mpcore_dev, "mpcore0");
   device_res_add_mem(&mpcore_dev, 0xf8f00000, 0xf8f02000);
   device_attach(&mpcore_dev, NULL);
 
@@ -60,6 +61,9 @@ void zynq_hw_enum_init()
   device_init(&uart0_dev);
   device_set_name(&uart0_dev, "uart0");
   device_res_add_mem(&uart0_dev, 0xe0000000, 0xe0001000);
+# ifdef CONFIG_DEVICE_IRQ
+  device_res_add_irq(&uart0_dev, 0, 59, 0, "/mpcore0/icu");
+# endif
   device_attach(&uart0_dev, NULL);
 
   device_bind_driver(&uart0_dev, &cadence_uart_drv);
@@ -68,6 +72,9 @@ void zynq_hw_enum_init()
   device_init(&uart1_dev);
   device_set_name(&uart1_dev, "uart1");
   device_res_add_mem(&uart1_dev, 0xe0001000, 0xe0002000);
+# ifdef CONFIG_DEVICE_IRQ
+  device_res_add_irq(&uart1_dev, 0, 82, 0, "/mpcore0/icu");
+# endif
   device_attach(&uart1_dev, NULL);
 
   device_bind_driver(&uart1_dev, &cadence_uart_drv);
