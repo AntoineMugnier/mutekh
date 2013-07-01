@@ -3,7 +3,7 @@ POST_TARGET=__foo.out
 LDFLAGS=
 TARGET_EXT ?= out
 
-TARGET_SECTIONS=.boot .text .rodata .excep .cpudata .contextdata .data
+TARGET_SECTIONS=.reset .smpreset .text .rodata .excep .cpudata .contextdata .data
 
 LINKING=1
 ifeq ($(TARGET_EXT),o)
