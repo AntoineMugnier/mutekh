@@ -103,16 +103,39 @@ static void ahbctrl_scan(struct device_s *dev, uintptr_t begin, uintptr_t end)
       device_res_add_revision(d, version, 0);
 
       /* processor case */
-      if (vendor == GAISLER_VENDOR_GAISLER &&
-          (device == GAISLER_DEVICE_LEON3 || device == GAISLER_DEVICE_LEON4))
+      if (vendor == GAISLER_VENDOR_GAISLER)
         {
-          char name [16];
+          char n[16];
+          switch (device)
+            {
+            case GAISLER_DEVICE_LEON3:
+            case GAISLER_DEVICE_LEON3FT:
+            case GAISLER_DEVICE_LEON4: {
+              device_res_add_id(d, i, 0);
+              d->node.flags |= DEVICE_FLAG_CPU;
 
-          device_res_add_id(d, i, 0);
-          d->node.flags |= DEVICE_FLAG_CPU;
+              sprintf(n, "cpu%u", i);
+              device_set_name(d, n);
+              break;
+            }
+            default: {
+              if (device >= GAISLER_DEVICE_count)
+                break;
 
-          sprintf(name, "cpu%u", i);
-          device_set_name(d, name);
+              const char *name = gaisler_devices_names[device];
+              if (!name)
+                break;
+
+              uint_fast8_t i = 0;
+              struct device_s *tmp;
+              do {
+                sprintf(n, "%s%u", name, i++);
+                tmp = dev;
+              } while (!device_get_by_path(&tmp, n, NULL));
+                  
+              device_set_name(d, n);
+            }
+            }
         }
 
 #ifdef CONFIG_DEVICE_IRQ

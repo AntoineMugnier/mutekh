@@ -37,6 +37,7 @@
 #include <arch/device_ids.h>
 
 #include <string.h>
+#include <stdio.h>
 
 static DEVENUM_MATCH_DRIVER(apbctrl_match_driver)
 {
@@ -71,6 +72,7 @@ struct apbctrl_scan_cpu_irq_ctx_s
   uint_fast8_t count;
 };
 
+
 static DEVICE_TREE_WALKER(apbctrl_scan_cpu_irq)
 {
   struct apbctrl_scan_cpu_irq_ctx_s *ctx = priv;
@@ -88,7 +90,7 @@ static DEVICE_TREE_WALKER(apbctrl_scan_cpu_irq)
       char buf[128];
       if (device_get_path(NULL, buf, sizeof(buf), &dev->node, 0) > 0)
         {
-          if (device_res_add_irq(ctx->irqmp, maj, 0, 0, buf) > 0)
+          if (device_res_add_irq(ctx->irqmp, maj, 0, 0, buf) == 0)
             ctx->count++;
         }
     }
@@ -121,9 +123,14 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
 
       struct device_s *d = NULL;
 
+      const char *name = NULL;
+
       /* some specific device node create */
       if (vendor == GAISLER_VENDOR_GAISLER)
         {
+          if (device < GAISLER_DEVICE_count)
+            name = gaisler_devices_names[device];
+
           switch (device)
             {
             case GAISLER_DEVICE_IRQMP:
@@ -140,7 +147,7 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
               /* add irq links from IRQMP to cpus */
               device_tree_walk(NULL, &apbctrl_scan_cpu_irq, &ctx);
               if (ctx.count == 0)
-                printk("apbctrl: no processor found to link to irqmp device.");
+                printk("apbctrl: no processor found to link to irqmp device.\n");
 #endif
 
               break;
@@ -174,6 +181,19 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
           if (irq)
             device_res_add_irq(d, 0, irq - 1, 0, "/icu");
 #endif
+        }
+
+      if (name)
+        {
+          uint_fast8_t i = 0;
+          char n[16];
+          struct device_s *tmp;
+          do {
+            sprintf(n, "%s%u", name, i++);
+            tmp = dev;
+          } while (!device_get_by_path(&tmp, n, NULL));
+
+          device_set_name(d, n);
         }
 
 #ifdef CONFIG_GAISLER_DEVICE_IDS
@@ -215,6 +235,23 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
       d->enum_dev = dev;
       device_attach(d, dev);
       device_shrink(d);
+
+      if (vendor == GAISLER_VENDOR_GAISLER)
+        {
+          switch (device)
+            {
+            case GAISLER_DEVICE_GPTIMER:
+            case GAISLER_DEVICE_APBUART:
+            case GAISLER_DEVICE_IRQMP: {
+              struct device_s *tmp = NULL;
+              if (device_get_by_path(&tmp, gaisler_devices_names[device], NULL))
+                device_new_alias_to_node(NULL, gaisler_devices_names[device], &d->node);
+              break;
+            }
+
+            }
+        }
+
     }
 }
 
@@ -223,7 +260,7 @@ DEV_INIT(apbctrl_init);
 
 static const struct devenum_ident_s	gaisler_apbctrl_ids[] =
 {
-  DEVENUM_GAISLER_ENTRY(0x1, 0x006),
+  DEVENUM_GAISLER_ENTRY(GAISLER_VENDOR_GAISLER, GAISLER_DEVICE_APBMST),
   { 0 }
 };
 

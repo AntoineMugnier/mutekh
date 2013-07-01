@@ -1,6 +1,47 @@
 
 #include <arch/device_ids.h>
 
+const char *gaisler_devices_names[GAISLER_DEVICE_count] =
+  {
+    [GAISLER_DEVICE_LEON3      ] = "cpu",
+    [GAISLER_DEVICE_ETHAHB     ] = "eth",
+    [GAISLER_DEVICE_APBMST     ] = "apb",
+    [GAISLER_DEVICE_AHBRAM     ] = "memory",
+    [GAISLER_DEVICE_AHBUART    ] = "uart",
+    [GAISLER_DEVICE_SRCTRL     ] = "memory",
+    [GAISLER_DEVICE_SDCTRL     ] = "memory",
+    [GAISLER_DEVICE_SSRCTRL    ] = "memory",
+    [GAISLER_DEVICE_APBUART    ] = "uart",
+    [GAISLER_DEVICE_IRQMP      ] = "icu",
+    [GAISLER_DEVICE_GPTIMER    ] = "timer",
+    [GAISLER_DEVICE_PCITRG     ] = "pci",
+    [GAISLER_DEVICE_PCISBRG    ] = "pci",
+    [GAISLER_DEVICE_PCIFBRG    ] = "pci",
+    [GAISLER_DEVICE_DMACTRL    ] = "dma",
+    [GAISLER_DEVICE_GRPULSE    ] = "gpio",
+    [GAISLER_DEVICE_GRTIMER    ] = "timer",
+    [GAISLER_DEVICE_GPIO       ] = "gpio",
+    [GAISLER_DEVICE_AHBROM     ] = "memory",
+    [GAISLER_DEVICE_FTAHBRAM   ] = "memory",
+    [GAISLER_DEVICE_FTSRCTRL   ] = "memory",
+    [GAISLER_DEVICE_LEON3FT    ] = "cpu",
+    [GAISLER_DEVICE_ETHMAC     ] = "eth",
+    [GAISLER_DEVICE_VGACTRL    ] = "fb",
+    [GAISLER_DEVICE_APBPS2     ] = "input",
+    [GAISLER_DEVICE_SVGACTRL   ] = "fb",
+    [GAISLER_DEVICE_AES        ] = "crypto",
+    [GAISLER_DEVICE_ECC        ] = "crypto",
+    [GAISLER_DEVICE_USBCTRL    ] = "usb",
+    [GAISLER_DEVICE_DDRMP      ] = "memory",
+    [GAISLER_DEVICE_ATACTRL    ] = "block",
+    [GAISLER_DEVICE_DDRSP      ] = "memory",
+    [GAISLER_DEVICE_LEON4      ] = "cpu",
+    [GAISLER_DEVICE_EHCI       ] = "usb",
+    [GAISLER_DEVICE_UHCI       ] = "usb",
+  };
+
+#ifdef CONFIG_GAISLER_DEVICE_IDS
+
 const char *gaisler_vendors_longnames[GAISLER_VENDOR_count] =
   {
     [GAISLER_VENDOR_GAISLER    ] = "Gaisler Research",
@@ -88,3 +129,4 @@ const char *gaisler_devices_longnames[GAISLER_DEVICE_count] =
     [GAISLER_DEVICE_UHCI       ] = "USB UHCI controller",
   };
 
+#endif
