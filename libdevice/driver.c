@@ -83,12 +83,12 @@ error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
                                     const char *path, enum driver_class_e cl)
 {
   const char *num;
-  struct device_s *dev = device_from_node(device_node_from_path(root, path, 5, &num));
 
-  if (!dev)
-    return -ENOENT;
+  error_t e = device_node_from_path(&root, path, 5, &num, &device_filter_init_done);
+  if (e)
+    return e;
 
-  return device_get_accessor(accessor, dev, cl, atoi(num));
+  return device_get_accessor(accessor, device_from_node(root), cl, num ? atoi(num) : 0);
 }
 
 
@@ -203,8 +203,8 @@ error_t device_init_driver(struct device_s *dev)
 #ifdef CONFIG_DEVICE_IRQ
           /* check that interrupt controllers are initialized */
         case DEV_RES_IRQ: {
-          struct device_s *icu = device_get_by_path(dev->node.parent, r->irq.icu);
-          if (!icu || icu->status != DEVICE_DRIVER_INIT_DONE)
+          struct device_s *icu = dev;
+          if (device_get_by_path(&icu, r->irq.icu, &device_filter_init_done))
             return -EAGAIN;
         }
 #endif

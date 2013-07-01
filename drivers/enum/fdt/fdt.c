@@ -519,15 +519,14 @@ static void resolve_icu_links(struct device_s *root, struct device_s *dev)
               if (icu)
                 {
                   char buf[128], *b = buf;
-                  struct device_node_s *p = d->node.parent;
+                  struct device_node_s *p = &d->node;
                   while (p && p != &root->node && b + 3 < buf + sizeof(buf))
                     {
-                      printk("%p %s\n", p, p->name);
                       p = p->parent;
                       (*b++ = '.'), (*b++ = '.'), (*b++ = '/');
                     }
 
-                  if (p && device_get_path(&root->node, b, buf + sizeof(buf) - b, &icu->node, 0) >= 0)
+                  if (p == &root->node && device_get_path(p, b, buf + sizeof(buf) - b, &icu->node, 0) >= 0)
                     {
                       r->irq.icu = strdup(buf);
                       if (r->irq.icu != NULL)

@@ -91,7 +91,7 @@ void mutek_console_initsmp()
   if (device_get_accessor_by_path(&console_dev, NULL,
                                   CONFIG_MUTEK_CONSOLE_DEVICE_PATHS,
                                   DRIVER_CLASS_CHAR))
-    printk("error: mutek console: No entry found matching `"
+    printk("error: mutek console: No initialized device found matching `"
            CONFIG_MUTEK_CONSOLE_DEVICE_PATHS "' in the device tree.\n");
 }
 

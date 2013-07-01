@@ -388,17 +388,38 @@ struct device_alias_s * device_new_alias_to_node(struct device_node_s *parent, c
 config_depend(CONFIG_DEVICE_TREE)
 void device_alias_remove(struct device_alias_s *alias);
 
-/** @This returns child device by path. The @tt root parameter may be
-    @tt NULL to lookup from the device tree root. Multiple space
-    separated paths can be specified as fallbacks.
+/** device lookup filter prototype */
+#define DEVICE_FILTER(n) bool_t n(struct device_node_s *)
+
+/** device lookup filter function type */
+typedef DEVICE_FILTER(device_filter_t);
+
+/** @internal @This lookup a node in the device tree. */
+error_t device_node_from_path(struct device_node_s **node, const char *path,
+                              uint_fast8_t depth, const char **brackets,
+                              device_filter_t *filter);
+
+/** @internal */
+DEVICE_FILTER(device_filter_init_done);
+
+/** @This returns child device by path. The @tt node parameter must
+    provide an initialized device pointer which will be updated is a
+    matching device is found. The initial value is the search root
+    node and may be @tt NULL to lookup from the device tree
+    root. Multiple paths separated by spaces can be specified, the
+    first match is retained.
 
     Paths with a leading @tt / are searched from the device tree root
-    regardless of the @tt root parameter. The special name @tt .. can
-    be used to write relative paths. The @tt ? character can be used
-    as a single character wildcard and the @tt * character can be used
-    to match any node name suffix. */
+    regardless of the @tt root parameter. The special name @tt .. and
+    @tt . can be used to write relative paths. The @tt ? character can
+    be used as a single character wildcard and the @tt * character can
+    be used to match any node name suffix.
+
+    The filter can be used to provide an additional filter
+    function. It may be NULL.
+ */
 config_depend(CONFIG_DEVICE_TREE)
-struct device_s *device_get_by_path(struct device_node_s *root, const char *path);
+error_t device_get_by_path(struct device_s **dev, const char *path, device_filter_t *filter);
 
 /** @This writes a null terminated device tree path in buffer. If the
     @tt number parameter is not 0, the value is appended at the end
@@ -433,10 +454,6 @@ static inline struct device_node_s * device_node_from_alias(struct device_alias_
     The name string will be duplicated and later freed on cleanup only if
     the @ref #DEVICE_FLAG_ALLOCATED flag of the device is set. */
 error_t device_set_name(struct device_s *dev, const char *name);
-
-/** @internal @This lookup a node in the device tree. */
-struct device_node_s *device_node_from_path(struct device_node_s *root, const char *path,
-                                            uint_fast8_t depth, const char **brackets);
 
 /** @This attaches a device to a parent enumerator device. If the
     parent device pointer is NULL, the device is attached on root enumerator. */

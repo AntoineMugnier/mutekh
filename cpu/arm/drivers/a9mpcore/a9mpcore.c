@@ -120,8 +120,8 @@ static DEV_INIT(a9mpcore_init)
       d->node.flags |= DEVICE_FLAG_CPU;
 
       char name[16];
-      sprintf(name, "cpu%u", i);
-      device_set_name(d, name);
+      sprintf(name, "../cpu%u", i);
+      device_set_name(d, name + 3);
 
       d->enum_dev = dev;
       device_attach(d, dev);

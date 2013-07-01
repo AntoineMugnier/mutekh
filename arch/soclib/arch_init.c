@@ -112,6 +112,7 @@ void soclib_fdt_init()
     uintptr_t arch_fdt = CONFIG_SOCLIB_FDT_ROM_ADDRESS;
 
     device_init(&fdt_dev);
+    device_set_name(&fdt_dev, "fdt");
     device_attach(&fdt_dev, NULL);
     device_res_add_mem(&fdt_dev, arch_fdt, arch_fdt + fdt_get_size((void*)arch_fdt));
     device_bind_driver(&fdt_dev, &enum_fdt_drv);

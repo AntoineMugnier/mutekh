@@ -64,7 +64,7 @@ void libc_time_initsmp()
                                   CONFIG_LIBC_TIMER_DEVICE_PATHS,
                                   DRIVER_CLASS_TIMER))
     {
-      printk("error: libc: No entry found matching `"
+      printk("error: libc: No initialized device found matching `"
              CONFIG_LIBC_TIMER_DEVICE_PATHS "' in the device tree.\n");
     }
   else

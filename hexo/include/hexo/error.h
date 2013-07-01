@@ -90,6 +90,9 @@ typedef int_fast8_t		error_t;
 /** Is a directory */
 #define EISDIR 21
 
+/** Too many symbolic links encountered */
+#define ELOOP 26
+
 /** broken pipe */
 #define EPIPE		32
 

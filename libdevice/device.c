@@ -367,20 +367,46 @@ struct device_alias_s * device_new_alias_to_node(struct device_node_s *parent, c
   return device_new_alias_to_path(parent, name, buf);
 }
 
-static struct device_node_s *device_resolve_alias(struct device_node_s *node, uint_fast8_t depth, const char **brackets)
+static error_t device_resolve_alias(struct device_node_s **node, uint_fast8_t depth, const char **brackets)
 {
-  while (node && node->flags & DEVICE_FLAG_ALIAS)
+  struct device_node_s *n = *node;
+  error_t e = 0;
+
+  while (!e)
     {
-      struct device_alias_s *a = (void*)node;
-      node = device_node_from_path(node->parent, a->path, depth - 1, brackets);
+      if (!n)
+        return -ENOENT;
+
+      if (n->flags & DEVICE_FLAG_ALIAS)
+        {
+          if (depth < 1)
+            return -ELOOP;
+
+          struct device_alias_s *a = (void*)n;
+          n = n->parent;
+          e = device_node_from_path(&n, a->path, depth - 1, brackets, NULL);
+        }
+      else
+        {      
+          *node = n;
+          return 0;
+        }
     }
 
-  return node;
+  return e;
 }
 
-struct device_node_s *device_node_from_path(struct device_node_s *root, const char *path,
-                                            uint_fast8_t depth, const char **brackets)
+bool_t device_filter_init_done(struct device_node_s *node)
 {
+  struct device_s *dev = device_from_node(node);
+  return dev && dev->status == DEVICE_DRIVER_INIT_DONE;
+}
+
+error_t device_node_from_path(struct device_node_s **node, const char *path,
+                              uint_fast8_t depth, const char **brackets,
+                              device_filter_t *filter)
+{
+  struct device_node_s *root = *node;
   struct device_node_s *n = NULL;
 
   while (*path)
@@ -396,9 +422,8 @@ struct device_node_s *device_node_from_path(struct device_node_s *root, const ch
           r = &device_enum_root.node;
         }
 
-      const char **b = brackets;
-      if (b)
-        *b = "";
+      if (brackets)
+        *brackets = NULL;
 
     next:
       if (!r)
@@ -407,19 +432,36 @@ struct device_node_s *device_node_from_path(struct device_node_s *root, const ch
       while (*path == '/')
         path++;
 
-      if (path[0] == '.' && path[1] == '.')
+      if (path[0] == '.')
         {
-          switch (path[2])
+          switch (path[1])
             {
             case '/':
-              r = r->parent;
-              path += 3;
+              path += 2;
               goto next;
             case 0:
             case ' ':
-              n = r->parent;
-              path += 2;
+              n = r;
+              path += 1;
+              if (!n || (filter && !filter(n)))
+                goto skip;
               goto end;
+            case '.':
+              switch (path[2])
+                {
+                case '/':
+                  r = r->parent;
+                  path += 3;
+                  goto next;
+                case 0:
+                case ' ':
+                  n = r->parent;
+                  path += 2;
+                  if (!n || (filter && !filter(n)))
+                    goto skip;
+                  goto end;
+                }
+              break;
             }
         }
 
@@ -431,6 +473,9 @@ struct device_node_s *device_node_from_path(struct device_node_s *root, const ch
         if (!item->name)
           CONTAINER_FOREACH_CONTINUE;
 
+        if (brackets)
+          *brackets = NULL;
+
         for (i = 0; ; i++)
           {
             char c = path[i];
@@ -438,9 +483,23 @@ struct device_node_s *device_node_from_path(struct device_node_s *root, const ch
               {
                 if (c == '*')
                   c = path[++i];
-                if (c <= ' ' || (b && c == '['))
+                if (c <= ' ' || (brackets && c == '['))
                   {
                     n = item;
+                    error_t e = device_resolve_alias(&n, depth, c == '[' ? NULL : brackets);
+                    switch (e)
+                      {
+                      default:
+                        return e;
+                      case -ENOENT:
+                        n = NULL;
+                      case 0:
+                        break;
+                      }
+
+                    if (!n || (filter && !filter(n)))
+                      break;
+
                     path += i;
                     goto end;
                   }
@@ -450,41 +509,48 @@ struct device_node_s *device_node_from_path(struct device_node_s *root, const ch
                     path += i + 1;
                     goto next;
                   }
+                break;
               }
             else if (item->name[i] != c && c != '?')
               break;
           }
       });
 
+    skip:
       while (*path > ' ')
         path++;
       continue;
 
     end:
-      if (b && *path == '[')
+
+      if (brackets && *path == '[')
         {
-          *b = ++path;
-          b = NULL;
+          *brackets = ++path;
           while (*path > ' ')
             path++;
           if (path[-1] != ']')
-            return NULL;
+            return -EINVAL;
         }
 
-      if (depth > 0)
-        n = device_resolve_alias(n, depth, b);
-
-      if (n)
-        return n;
+      *node = n;
+      return 0;
     }
 
-  return NULL;
+  return -ENOENT;
 }
 
-struct device_s * device_get_by_path(struct device_node_s *root, const char *path)
+error_t device_get_by_path(struct device_s **dev, const char *path, device_filter_t *filter)
 {
   const char *unused;
-  return device_from_node(device_node_from_path(root, path, 5, &unused));
+  struct device_node_s *node = &(*dev)->node;
+  error_t e = device_node_from_path(&node, path, 5, &unused, filter);
+  if (!e)
+    {
+      *dev = device_from_node(node);
+      if (!dev)
+        e = -ENOENT;
+    }
+  return e;
 }
 
 static bool_t _device_tree_walk(struct device_node_s *dev, device_tree_walker_t *walker, void *priv)

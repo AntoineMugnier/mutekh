@@ -458,11 +458,10 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
           goto error;
         }
 
-      struct device_s *icu_dev = device_get_by_path(dev->node.parent, r->irq.icu);
-
-      if (!icu_dev)
+      struct device_s *icu_dev = dev;
+      if (device_get_by_path(&icu_dev, r->irq.icu, &device_filter_init_done))
         {
-          printk("device: no interrupt controller available for %p device.\n", dev);
+          printk("device: no initialized interrupt controller available for %p device.\n", dev);
           err = -ENOENT;
           goto error;
         }
