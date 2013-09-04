@@ -119,7 +119,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 {
 
   size_t	offset = 0;
-  uint_fast8_t  flags = 0;
+  uint_fast8_t  flags;
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
   uint_fast8_t	typesize, padindex;
   ssize_t	padding[2];
@@ -150,6 +150,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
   return offset;
 
  printf_state_modifier:
+  flags = 0;
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
   padindex = 0;
   zeropad = rightpad = 0;
@@ -341,9 +342,24 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 	  }
 
         /* sign extend */
-        uint_fast8_t s = (sizeof(val) - typesize) * 8;
-        if (s)
-          val = ((__printf_int_t)val << s) >> s;
+        switch (typesize)
+          {
+# if PRINTF_SIZEOF_VAL > 8
+          case 1:
+            val = (__printf_int_t)(int8_t)val;
+            break;
+# endif
+# if PRINTF_SIZEOF_VAL > 16
+          case 2:
+            val = (__printf_int_t)(int16_t)val;
+            break;
+# endif
+# if PRINTF_SIZEOF_VAL > 32
+          case 4:
+            val = (__printf_int_t)(int32_t)val;
+            break;
+# endif
+          }
 #endif
 
         if ((__printf_int_t)val < 0)
