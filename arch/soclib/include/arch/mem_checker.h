@@ -59,17 +59,9 @@
 #define SOCLIB_MC_CTX_INVALIDATE_OFFSET 44
 #define SOCLIB_MC_CTX_INVALIDATE (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_CTX_INVALIDATE_OFFSET)
 
-/** Creates a temporary context */
-#define SOCLIB_MC_CTX_CREATE_TMP_OFFSET 48
-#define SOCLIB_MC_CTX_CREATE_TMP (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_CTX_CREATE_TMP_OFFSET)
-
 /** Declare a spinlock adress */
 #define SOCLIB_MC_LOCK_DECLARE_OFFSET 52
 #define SOCLIB_MC_LOCK_DECLARE (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_LOCK_DECLARE_OFFSET)
-
-/** Temporarily disable stack pointer range check until PC leaves [PC:val] range */
-#define SOCLIB_MC_DELAYED_MAGIC_OFFSET 56
-#define SOCLIB_MC_DELAYED_MAGIC (CONFIG_SOCLIB_MEMCHECK_ADDRESS + SOCLIB_MC_DELAYED_MAGIC_OFFSET)
 
 /** Update PC interval where stack pointer range check is ignored
     with [r1:r2] range. Add to interval set when val!=0 */
