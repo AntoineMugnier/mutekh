@@ -17,6 +17,26 @@
 SECTIONS
 {
 
+#ifdef CONFIG_LOAD_MULTIBOOT
+        .multiboot RO_START : AT(RO_START) {
+# undef RO_START
+# define RO_START LMAEND(.multiboot)
+                LONG(0x1badb002);     /* magic */
+# ifdef CONFIG_LOAD_MULTIBOOT_ELF
+                LONG(0);             /* flags */
+                LONG(-0x1badb002);   /* checksum */
+# else
+                LONG(0x00010000);             /* flags */
+                LONG(-(0x1badb002+0x00010000)); /* checksum */
+		LONG(LOADADDR(.multiboot));     /* header_addr */
+		LONG(LOADADDR(.multiboot));     /* load addr */
+		LONG(__cpu_data_end);           /* load addr end */
+		LONG(__bss_end);                /* bss addr end */
+		LONG(mutekh_entry);             /* entry point */
+# endif
+        }
+#endif
+
 /**************************************** reset vectors */
 
 #ifdef CONFIG_LOAD_RESET_SEPARATE
