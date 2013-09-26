@@ -48,7 +48,7 @@ static inline bool_t
 cpu_isbootstrap(void)
 {
 #ifdef CONFIG_ARCH_SMP
-  return emu_do_syscall(EMU_SYSCALL_GETPID, 0) == _bootstrap_pid;
+  return (cpu_id() == __bootstrap_pid);
 #endif
   return 1;
 }

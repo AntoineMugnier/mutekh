@@ -54,17 +54,17 @@ struct device_cpu_s;
     performed from an other processor on driver init. */
 typedef DEVCPU_REG_INIT(devcpu_reg_init_t);
 
-#define DEVCPU_GET_STORAGE(n)	void * (n) (struct device_cpu_s *cdev)
+#define DEVCPU_GET_NODE(n)	struct cpu_tree_s * (n) (struct device_cpu_s *cdev)
 
-/** @This returns pointer to the cpu local storage. */
-typedef DEVCPU_GET_STORAGE(devcpu_get_storage_t);
+/** @This returns pointer to the cpu tree node. @see cpu_tree_s. */
+typedef DEVCPU_GET_NODE(devcpu_get_node_t);
 
 /** ICU device class methodes */
 
 DRIVER_CLASS_TYPES(cpu, 
                    devcpu_reg_init_t *f_reg_init;
 #ifdef CONFIG_ARCH_SMP
-                   devcpu_get_storage_t *f_get_storage;
+                   devcpu_get_node_t *f_get_node;
 #endif
                    );
 

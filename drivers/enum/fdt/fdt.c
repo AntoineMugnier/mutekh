@@ -25,7 +25,6 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 #include <hexo/local.h>
-#include <hexo/segment.h>
 
 #include <device/class/enum.h>
 #include <device/class/icu.h>

@@ -26,7 +26,6 @@
 #include <hexo/types.h>
 #include <hexo/interrupt.h>
 #include <hexo/local.h>
-#include <hexo/segment.h>
 
 #include <device/device.h>
 #include <device/driver.h>
@@ -58,10 +57,7 @@ struct sparc_dev_private_s
 #endif
 #endif
 
-#ifdef CONFIG_ARCH_SMP
-  uint_fast8_t id;
-  void *cls;            //< cpu local storage
-#endif
+  struct cpu_tree_s node;
 };
 
 /************************************************************************
@@ -182,10 +178,10 @@ static DEVCPU_REG_INIT(sparc_cpu_reg_init)
 #ifdef CONFIG_ARCH_SMP
   struct sparc_dev_private_s *pv = dev->drv_pv;
 
-  assert(pv->id == cpu_id());
+  assert(pv->node.cpu_id == cpu_id());
 
   /* set cpu local storage register base pointer */
-  asm volatile("mov %0, %%g6" : : "r" (pv->cls));
+  asm volatile("mov %0, %%g6" : : "r" (pv->node.cls));
 
 # ifdef CONFIG_DEVICE_IRQ
   /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
@@ -195,7 +191,7 @@ static DEVCPU_REG_INIT(sparc_cpu_reg_init)
   CPU_LOCAL_SET(cpu_device, dev);
 
 # ifdef CONFIG_HEXO_USERMODE
-  cpu_local_storage[pv->id] = pv->cls;
+  cpu_local_storage[pv->node.cpu_id] = pv->node.cls;
 # endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
@@ -237,11 +233,11 @@ static DEVCPU_REG_INIT(sparc_cpu_reg_init)
 }
 
 #ifdef CONFIG_ARCH_SMP
-static DEVCPU_GET_STORAGE(sparc_cpu_get_storage)
+static DEVCPU_GET_NODE(sparc_cpu_get_node)
 {
   struct device_s *dev = cdev->dev;
   struct sparc_dev_private_s *pv = dev->drv_pv;
-  return pv->cls;
+  return &pv->node;
 }
 #endif
 
@@ -250,7 +246,7 @@ const struct driver_cpu_s  sparc_cpu_drv =
   .class_          = DRIVER_CLASS_CPU,
   .f_reg_init      = sparc_cpu_reg_init,
 #ifdef CONFIG_ARCH_SMP
-  .f_get_storage   = sparc_cpu_get_storage,
+  .f_get_node   = sparc_cpu_get_node,
 #endif
 };
 
@@ -301,30 +297,19 @@ static DEV_INIT(sparc_init)
   /* get processor device id specifed in resources */
   uintptr_t id = 0;
   if (device_res_get_uint(dev, DEV_RES_ID, 0, &id, NULL))
-#ifdef CONFIG_ARCH_SMP
     PRINTK_RET(-ENOENT, "sparc: device has no ID resource")
-#endif
       ;
 
-  if (sizeof(*pv))
-    {
-      /* FIXME allocation scope ? */
-      pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
+  pv = mem_alloc_cpu(sizeof (*pv), (mem_scope_sys), id);
 
-      if ( pv == NULL )
-        return -ENOMEM;
+  if ( pv == NULL )
+    return -ENOMEM;
 
-      memset(pv, 0, sizeof(*pv));
-      dev->drv_pv = pv;
-    }
+  memset(pv, 0, sizeof(*pv));
+  dev->drv_pv = pv;
 
-#ifdef CONFIG_ARCH_SMP
-  /* allocate cpu local storage */
-  pv->cls = arch_cpudata_alloc();
-  pv->id = id;
-  if (!pv->cls)
-    goto err_mem;
-#endif
+  if (cpu_tree_node_init(&pv->node, id, dev))
+    goto err_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init sparc irq sink end-points */
@@ -335,10 +320,10 @@ static DEV_INIT(sparc_init)
 # endif
 
 # ifdef CONFIG_ARCH_SMP
-  CPU_LOCAL_CLS_SET(pv->cls, sparc_icu_dev, dev);
-  cpu_interrupt_cls_sethandler(pv->cls, sparc_irq_handler);
+  CPU_LOCAL_CLS_SET(pv->node.cls, sparc_icu_dev, dev);
+  cpu_interrupt_cls_sethandler(pv->node.cls, sparc_irq_handler);
 # else
-  if (id == 0)
+  if (id == CONFIG_ARCH_BOOTSTRAP_CPU_ID)
     {
       CPU_LOCAL_SET(sparc_icu_dev, dev);
       cpu_interrupt_sethandler(sparc_irq_handler);
@@ -346,16 +331,19 @@ static DEV_INIT(sparc_init)
 # endif
 #endif
 
+  if (cpu_tree_insert(&pv->node))
+    goto err_node;
+
   dev->drv = &sparc_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
-#ifdef CONFIG_ARCH_SMP
- err_mem:
-  if (sizeof(*pv))
-    mem_free(pv);
+
+ err_node:
+  cpu_tree_node_cleanup(&pv->node);
+ err_pv:
+  mem_free(pv);
   return -1;
-#endif
 }
 
 static DEV_CLEANUP(sparc_cleanup)
@@ -373,7 +361,9 @@ static DEV_CLEANUP(sparc_cleanup)
   device_irq_sink_unlink(dev, pv->sinks, ICU_SPARC_SINKS_COUNT);
 #endif
 
-  if (sizeof(*pv))
-    mem_free(pv);
+  cpu_tree_remove(&pv->node);
+  cpu_tree_node_cleanup(&pv->node);
+
+  mem_free(pv);
 }
 

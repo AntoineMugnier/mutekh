@@ -68,18 +68,36 @@ FUNC_START(.text, mutekh_entry)
 
 # ifdef CONFIG_ARCH_SMP
 
-        /* acceptable cpuid ? */
-        movia   r3,             CONFIG_ARCH_LAST_CPU_ID
-        bgt     r16,    r3,     2f
+        /* get cpu tree root */
+        movia   r5,     cpu_tree
+        ldw     r5,     (r5)
 
-        /* get address of the stacks pool array */
-        movia   r3,             cpu_stacks_pool
-        ldw     r3,             (r3)
+        /* get xor scrambled cpu id */
+        movia   r2,     CPU_TREE_XOR_VALUE
+        xor     r4,     r2,     r16
 
-        /* get the stack pointer for this cpu */
-        slli    r4,     r16,    2
-        add     r3,     r4,     r3
-        ldw     sp,             (r3)
+4:
+        /* not in tree */
+        beq     zero,   r5,     2f
+
+        /* get node cpu id */
+        ldw     r3,     CPU_TREE_CPU_ID(r5)
+        xor     r3,     r2,     r3
+
+        /* matching node */
+        beq     r4,     r3,     3f
+
+        /* compare and get next child */
+        cmpltu  r6,     r3,     r4
+        slli    r6,     r6,     2
+        add     r6,     r6,     r5
+        ldw     r5,     CPU_TREE_CHILDS(0)(r6)
+
+        br      4b
+3:
+        
+        /* get address of the cpu stack */
+        ldw     sp,             CPU_TREE_STACK(r5)
         movia   r3,             CONFIG_HEXO_CPU_STACK_SIZE
         add     sp,     sp,     r3
 #  ifdef CONFIG_COMPILE_FRAMEPTR

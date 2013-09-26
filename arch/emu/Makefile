@@ -2,7 +2,6 @@
 objs =											\
 arch_init.o										\
 mem_init.o \
-hw_init.o \
 power.o
 
 ifeq ($(CONFIG_ARCH_EMU_DARWIN),defined)

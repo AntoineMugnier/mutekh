@@ -39,10 +39,10 @@
 CPU_LOCAL void *__context_data_base;
 CPU_LOCAL void *__cpu_data_base;
 
-struct x86_emu_dev_private_s
+struct x86_64_emu_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s	sinks[ICU_X86_EMU_MAX_VECTOR];
+  struct dev_irq_ep_s	sinks[ICU_X86_64_EMU_MAX_VECTOR];
 #endif
 
   struct cpu_tree_s node;
@@ -54,10 +54,10 @@ struct x86_emu_dev_private_s
 
 CPU_LOCAL struct device_s *cpu_device = NULL;
 
-static DEVCPU_REG_INIT(x86_emu_cpu_reg_init)
+static DEVCPU_REG_INIT(x86_64_emu_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
-  __unused__ struct x86_emu_dev_private_s *pv = dev->drv_pv;
+  __unused__ struct x86_64_emu_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
   assert(pv->node.cpu_id == cpu_id());
@@ -72,7 +72,7 @@ static DEVCPU_REG_INIT(x86_emu_cpu_reg_init)
 # endif
 #endif
 
-#if defined(CONFIG_CPU_X86_ALIGNCHECK)
+#if defined(CONFIG_CPU_X86_64_ALIGNCHECK)
    /* enable alignment check */
     asm volatile("	pushf						\n"
   	       "	orl	$0x40000, (%esp)			\n"
@@ -84,47 +84,47 @@ static DEVCPU_REG_INIT(x86_emu_cpu_reg_init)
 
 
 #ifdef CONFIG_ARCH_SMP
-static DEVCPU_GET_NODE(x86_emu_cpu_get_node)
+static DEVCPU_GET_NODE(x86_64_emu_cpu_get_node)
 {
   struct device_s *dev = cdev->dev;
-  struct x86_emu_dev_private_s *pv = dev->drv_pv;
+  struct x86_64_emu_dev_private_s *pv = dev->drv_pv;
   return &pv->node;
 }
 #endif
 
 
-static const struct driver_cpu_s  x86_emu_cpu_drv =
+static const struct driver_cpu_s  x86_64_emu_cpu_drv =
 {
   .class_          = DRIVER_CLASS_CPU,
-  .f_reg_init      = x86_emu_cpu_reg_init,
+  .f_reg_init      = x86_64_emu_cpu_reg_init,
 #ifdef CONFIG_ARCH_SMP
-  .f_get_node   = x86_emu_cpu_get_node,
+  .f_get_node   = x86_64_emu_cpu_get_node,
 #endif
 };
 
 /************************************************************************/
 
-static DEV_CLEANUP(x86_emu_cleanup);
-static DEV_INIT(x86_emu_init);
+static DEV_CLEANUP(x86_64_emu_cleanup);
+static DEV_INIT(x86_64_emu_init);
 
 const struct driver_s emu_cpu_drv =
 {
-  .desc           = "x86 32-bits UNIX process cpu",
+  .desc           = "x86_64 32-bits UNIX process cpu",
 
-  .f_init         = x86_emu_init,
-  .f_cleanup      = x86_emu_cleanup,
+  .f_init         = x86_64_emu_init,
+  .f_cleanup      = x86_64_emu_cleanup,
 
   .classes        = {
-    &x86_emu_cpu_drv,
+    &x86_64_emu_cpu_drv,
     0
   }
 };
 
 REGISTER_DRIVER(emu_cpu_drv);
 
-static DEV_INIT(x86_emu_init)
+static DEV_INIT(x86_64_emu_init)
 {
-  struct x86_emu_dev_private_s  *pv;
+  struct x86_64_emu_dev_private_s  *pv;
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
@@ -134,10 +134,8 @@ static DEV_INIT(x86_emu_init)
     PRINTK_RET(-ENOENT, "cpu: device has no ID resource")
       ;
 
-  /* allocate device private data */
   pv = mem_alloc_cpu(sizeof (*pv), (mem_scope_sys), id);
-
-  if ( pv == NULL )
+  if (pv == NULL)
     return -ENOMEM;
 
   memset(pv, 0, sizeof(*pv));
@@ -147,7 +145,7 @@ static DEV_INIT(x86_emu_init)
     goto err_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
-  device_irq_sink_init(dev, pv->sinks, ICU_X86_EMU_MAX_VECTOR);
+  device_irq_sink_init(dev, &pv->sink, 1);
 #endif
 
   if (cpu_tree_insert(&pv->node))
@@ -165,12 +163,12 @@ static DEV_INIT(x86_emu_init)
   return -1;
 }
 
-static DEV_CLEANUP(x86_emu_cleanup)
+static DEV_CLEANUP(x86_64_emu_cleanup)
 {
-  struct x86_emu_dev_private_s *pv = dev->drv_pv;
+  struct x86_64_emu_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
-  device_irq_sink_unlink(dev, pv->sinks, ICU_X86_EMU_MAX_VECTOR);
+  device_irq_sink_unlink(dev, pv->sinks, ICU_X86_64_EMU_MAX_VECTOR);
 #endif
 
   cpu_tree_remove(&pv->node);

@@ -115,11 +115,11 @@ FUNC_END(cpu_context_jumpto)
 FUNC_START(.text, cpu_context_set)
 
         // setup new stack
-        leaq    (%rsi, %rdx), %rsp
+        leaq    (%rsi, %rdi), %rsp
         xorq	%rbp, %rbp
 
         // jump
-        jmp	*%rdi
+        jmp	*%rdx
 
 FUNC_END(cpu_context_set)
 

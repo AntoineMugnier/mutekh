@@ -3,8 +3,11 @@
 #include <hexo/error.h>
 #include <hexo/context.h>
 #include <hexo/local.h>
-#include <hexo/segment.h>
 #include <hexo/interrupt.h>
+
+#include <mutek/mem_alloc.h>
+
+#include <string.h>
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
 # include <arch/mem_checker.h>
@@ -27,6 +30,20 @@ CONTEXT_LOCAL uintptr_t context_stack_end;
 /** pointer to current context */
 CONTEXT_LOCAL struct context_s *context_cur = NULL;
 
+static void * context_data_alloc(void)
+{
+  void			*tls;
+  extern __ldscript_symbol_t __context_data_start, __context_data_end;
+
+  /* allocate memory and copy from template */
+  if ((tls = mem_alloc((char*)&__context_data_end - (char*)&__context_data_start, (mem_scope_sys))))
+    {
+      memcpy(tls, (char*)&__context_data_start, (char*)&__context_data_end - (char*)&__context_data_start);
+    }
+
+  return tls;
+}
+
 /** init a context object using current execution context */
 error_t
 context_bootstrap(struct context_s *context, uintptr_t stack, size_t stack_size)
@@ -34,7 +51,7 @@ context_bootstrap(struct context_s *context, uintptr_t stack, size_t stack_size)
   error_t	res;
 
   /* allocate context local storage memory */
-  if (!(context->tls = arch_contextdata_alloc()))
+  if (!(context->tls = context_data_alloc()))
     return -ENOMEM;
 
   CONTEXT_LOCAL_TLS_SET(context->tls, context_cur, context);
@@ -45,7 +62,7 @@ context_bootstrap(struct context_s *context, uintptr_t stack, size_t stack_size)
   /* setup cpu specific context data */
   if ((res = cpu_context_bootstrap(context)))
     {
-      arch_contextdata_free(context->tls);
+      mem_free(context->tls);
       return res;
     }
 
@@ -73,7 +90,7 @@ context_init(struct context_s *context,
   error_t	res;
 
   /* allocate context local storage memory */
-  if (!(context->tls = arch_contextdata_alloc()))
+  if (!(context->tls = context_data_alloc()))
     return ENOMEM;
 
   assert((uintptr_t)context->tls % sizeof(reg_t) == 0);
@@ -100,7 +117,7 @@ context_init(struct context_s *context,
 #ifdef CONFIG_SOCLIB_MEMCHECK
       soclib_mem_check_delete_ctx((uint32_t)context);
 #endif
-      arch_contextdata_free(context->tls);
+      mem_free(context->tls);
       return res;
     }
 
@@ -135,7 +152,7 @@ context_destroy(struct context_s *context)
   soclib_mem_check_delete_ctx((uint32_t)context);
 #endif
 
-  arch_contextdata_free(context->tls);
+  mem_free(context->tls);
 
   return stack;
 }

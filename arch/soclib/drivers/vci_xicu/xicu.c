@@ -619,12 +619,12 @@ static DEV_INIT(soclib_xicu_init)
   device_get_param_uint_default(dev, "wti-count", &pv->wti_count, 0);
 # endif
 
-#endif
-
-#ifdef CONFIG_ARCH_SMP
+# ifdef CONFIG_ARCH_SMP
   /* enable WTI 0 for all outputs, used to start cpus */
   for (i = 0; i < pv->irq_count; i++)
     cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_WTI_ENABLE, i), endian_le32(1));
+# endif
+
 #endif
 
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER

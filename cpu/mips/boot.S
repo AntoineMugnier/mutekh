@@ -67,20 +67,40 @@ FUNC_START(.text, mutekh_entry)
 
 # ifdef CONFIG_ARCH_SMP
 
-        /* acceptable cpuid ? */
-        sltiu   $4,     $8,     CONFIG_ARCH_LAST_CPU_ID + 1
-        beq     $0,     $4,     2f
+        /* get cpu tree root */
+        la      $5,     cpu_tree
+        lw      $5,     ($5)
+
+        /* get xor scrambled cpu id */
+        li      $2,     CPU_TREE_XOR_VALUE
+        xor     $4,     $2,     $8
+
+4:
+        /* not in tree */
+        beq     $0,     $5,     2f
         nop
 
-        /* get address of the stacks pool array */
-        la      $5,     cpu_stacks_pool
-        lw      $4,     ($5)
+        /* get node cpu id */
+        lw      $3,     CPU_TREE_CPU_ID($5)
+        xor     $3,     $2,     $3
 
-        /* get the stack pointer for this cpu */
-        sll     $5,     $8,     2
-        add     $5,     $4,     $5
-        lw      $sp,    ($5)
-        li      $4,             CONFIG_HEXO_CPU_STACK_SIZE
+        /* matching node */
+        beq     $4,     $3,     3f
+        nop
+
+        /* compare and get next child */
+        slt     $6,     $3,     $4
+        sll     $6,     $6,     2
+        add     $6,     $6,     $5
+        lw      $5,     CPU_TREE_CHILDS(0)($6)
+
+        b       4b
+        nop
+
+3:        
+        /* get address of the cpu stack */
+        lw      $sp,    CPU_TREE_STACK($5)
+        li      $4,     CONFIG_HEXO_CPU_STACK_SIZE
         add     $sp,    $4,     $sp
 #  ifdef CONFIG_COMPILE_FRAMEPTR
         move    $fp,            $sp

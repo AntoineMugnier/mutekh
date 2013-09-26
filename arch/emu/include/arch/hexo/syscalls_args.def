@@ -69,6 +69,18 @@ EMU_CPP(#define) EMU_SIG_KILL		SIGKILL
 EMU_CPP(#define) EMU_SIG_BLOCK		SIG_BLOCK
 EMU_CPP(#define) EMU_SIG_UNBLOCK	SIG_UNBLOCK
 EMU_CPP(#define) EMU_SIG_SA_RESTART	SA_RESTART
+EMU_CPP(#define) EMU_SIG_CONT           SIGCONT
+EMU_CPP(#define) EMU_SIG_STOP           SIGSTOP
+
+/*
+ * waitpid
+ */
+
+#include <sys/wait.h>
+
+EMU_CPP(#define) EMU_WAITPID_WCONTINUED WCONTINUED
+EMU_CPP(#define) EMU_WAITPID_WNOHANG    WNOHANG
+EMU_CPP(#define) EMU_WAITPID_WUNTRACED  WUNTRACED
 
 /*
  * ioctl/tuntap syscalls arguments

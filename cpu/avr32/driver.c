@@ -44,10 +44,7 @@ struct avr32_dev_private_s
   struct dev_irq_ep_s	sinks[AVR32_IRQ_COUNT];
 #endif
 
-#ifdef CONFIG_ARCH_SMP
-  uint_fast8_t id;
-  void *cls;            //< cpu local storage
-#endif
+  struct cpu_tree_s node;
 };
 
 /************************************************************************
@@ -150,7 +147,7 @@ static DEVCPU_REG_INIT(avr32_cpu_reg_init)
   __unused__ struct avr32_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
-  assert(pv->id == cpu_id());
+  assert(pv->node.cpu_id == cpu_id());
 
 # error avr32 support has no CPU local storage register for SMP
 
@@ -167,11 +164,11 @@ static DEVCPU_REG_INIT(avr32_cpu_reg_init)
 }
 
 #ifdef CONFIG_ARCH_SMP
-static DEVCPU_GET_STORAGE(avr32_cpu_get_storage)
+static DEVCPU_GET_NODE(avr32_cpu_get_node)
 {
   struct device_s *dev = cdev->dev;
   struct avr32_dev_private_s *pv = dev->drv_pv;
-  return pv->cls;
+  return &pv->node;
 }
 #endif
 
@@ -180,7 +177,7 @@ const struct driver_cpu_s  avr32_cpu_drv =
   .class_          = DRIVER_CLASS_CPU,
   .f_reg_init      = avr32_cpu_reg_init,
 #ifdef CONFIG_ARCH_SMP
-  .f_get_storage   = avr32_cpu_get_storage,
+  .f_get_node   = avr32_cpu_get_node,
 #endif
 };
 
@@ -204,7 +201,7 @@ static DEVTIMER_GET_VALUE(avr32_timer_get_value)
   __unused__ struct avr32_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
-  if (pv->id != cpu_id())
+  if (pv->node.cpu_id != cpu_id())
     return -EIO;
 #endif
 
@@ -282,40 +279,30 @@ static DEV_INIT(avr32_init)
 
   uintptr_t id = 0;
   if (device_res_get_uint(dev, DEV_RES_ID, 0, &id, NULL))
-#ifdef CONFIG_ARCH_SMP
     PRINTK_RET(-ENOENT, "avr32: device has no ID resource")
-#endif
       ;
 
-  if (sizeof(*pv))
-    {
-      /* FIXME allocation scope ? */
-      pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
+  /* FIXME allocation scope ? */
+  pv = mem_alloc_cpu(sizeof (*pv), (mem_scope_sys), id);
 
-      if ( pv == NULL )
-        return -ENOMEM;
+  if ( pv == NULL )
+    return -ENOMEM;
 
-      memset(pv, 0, sizeof(*pv));
-      dev->drv_pv = pv;
-    }
+  memset(pv, 0, sizeof(*pv));
+  dev->drv_pv = pv;
 
-#ifdef CONFIG_ARCH_SMP
-  /* allocate cpu local storage */
-  pv->cls = arch_cpudata_alloc();
-  pv->id = id;
-  if (!pv->cls)
-    goto err_mem;
-#endif
+  if (cpu_tree_node_init(&pv->node, id, dev))
+    goto err_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init avr32 irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, AVR32_IRQ_COUNT);
 
 # ifdef CONFIG_ARCH_SMP
-  CPU_LOCAL_CLS_SET(pv->cls, avr32_icu_dev, dev);
-  cpu_interrupt_cls_sethandler(pv->cls, avr32_irq_handler);
+  CPU_LOCAL_CLS_SET(pv->node.cls, avr32_icu_dev, dev);
+  cpu_interrupt_cls_sethandler(pv->node.cls, avr32_irq_handler);
 # else
-  if (id == 0)
+  if (id == CONFIG_ARCH_BOOTSTRAP_CPU_ID)
     {
       CPU_LOCAL_SET(avr32_icu_dev, dev);
       cpu_interrupt_sethandler(avr32_irq_handler);
@@ -323,16 +310,19 @@ static DEV_INIT(avr32_init)
 # endif
 #endif
 
+  if (cpu_tree_insert(&pv->node))
+    goto err_node;
+
   dev->drv = &avr32_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
-#ifdef CONFIG_ARCH_SMP
- err_mem:
-  if (sizeof(*pv))
-    mem_free(pv);
+
+ err_node:
+  cpu_tree_node_cleanup(&pv->node);
+ err_pv:
+  mem_free(pv);
   return -1;
-#endif
 }
 
 static DEV_CLEANUP(avr32_cleanup)
@@ -351,7 +341,8 @@ static DEV_CLEANUP(avr32_cleanup)
   device_irq_sink_unlink(dev, pv->sinks, AVR32_IRQ_COUNT);
 #endif
 
-  if (sizeof(*pv))
-    mem_free(pv);
+  cpu_tree_node_cleanup(&pv->node);
+
+  mem_free(pv);
 }
 

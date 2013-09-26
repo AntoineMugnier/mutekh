@@ -26,7 +26,6 @@
 #include <mutek/startup.h>
 #include <hexo/local.h>
 #include <hexo/cpu.h>
-#include <hexo/segment.h>
 #include <hexo/ipi.h>
 
 /* processor current scheduler context */

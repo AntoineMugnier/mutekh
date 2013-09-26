@@ -27,7 +27,6 @@
 #include <mutek/mem_region.h>
 #endif
 
-#include <hexo/segment.h>
 #include <hexo/lock.h>
 #include <hexo/endian.h>
 

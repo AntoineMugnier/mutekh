@@ -109,15 +109,34 @@ FUNC_START(.text, mutekh_entry)
 	andl	$0xfffff000, %eax /* get local APIC base address */
 	mov	0x20(%eax), %eax /* read local apic ID */
 	shrl	$24, %eax
+        xorl    $CPU_TREE_XOR_VALUE, %eax
 
-        cmpl    $CONFIG_ARCH_LAST_CPU_ID, %eax
-        jg      2f
+        /* get cpu tree root */
+        movl    cpu_tree, %ebx
+        
+4:
+        /* not in tree */
+        test    %ebx, %ebx
+        jz      2f
 
-        /* get address of the stacks pool array */
-        movl    cpu_stacks_pool, %ebx
+        movl    CPU_TREE_CPU_ID(%ebx), %ecx
+        xorl    $CPU_TREE_XOR_VALUE, %ecx
+        cmp     %eax, %ecx
 
-        /* get the stack pointer for this cpu */
-        movl    (%ebx,%eax,4), %esp
+        /* matching node */
+        je      3f
+
+        /* get next child */
+        setb    %cl
+        movzx   %cl, %ecx
+        dec     %ecx
+        movl    CPU_TREE_CHILDS(0)(%ebx, %ecx, 4), %ebx
+
+        jmp     4b
+3:
+        
+        /* get address of the cpu stack */
+        movl    CPU_TREE_STACK(%ebx), %esp
         addl    $CONFIG_HEXO_CPU_STACK_SIZE, %esp
 #  ifdef CONFIG_COMPILE_FRAMEPTR
         movl    %esp, %ebp
@@ -135,8 +154,8 @@ FUNC_START(.text, mutekh_entry)
 #endif
 
         /* set startup stack pointer */
-        movl    CONFIG_STARTUP_STACK_ADDR \
-              + CONFIG_STARTUP_STACK_SIZE, %esp
+        movl    $(CONFIG_STARTUP_STACK_ADDR \
+                 + CONFIG_STARTUP_STACK_SIZE), %esp
 
 #ifdef CONFIG_COMPILE_FRAMEPTR
         movl    %esp, %ebp

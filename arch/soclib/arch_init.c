@@ -22,7 +22,9 @@
 #include <mutek/startup.h>
 #include <arch/mem_checker.h>
 #include <hexo/cpu.h>
+
 #include <string.h>
+#include <assert.h>
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
 
@@ -72,9 +74,9 @@ void soclib_memcheck_initsmp()
 {
   if (!cpu_isbootstrap())
     {
-      cpu_id_t id = cpu_id();
-      soclib_memcheck_cpu_init(cpu_stacks_pool[id],
-                               cpu_stacks_pool[id],
+      const struct cpu_tree_s *cpu = cpu_tree_lookup(cpu_id());
+      assert(cpu != NULL && "processor id not found in the cpu tree.");
+      soclib_memcheck_cpu_init(cpu->stack, cpu->stack,
                                CONFIG_HEXO_CPU_STACK_SIZE);
     }
 }

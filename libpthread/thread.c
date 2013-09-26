@@ -28,7 +28,6 @@
 #include <hexo/local.h>
 #include <hexo/types.h>
 #include <mutek/scheduler.h>
-#include <hexo/segment.h>
 
 /** pointer to current thread */
 CONTEXT_LOCAL pthread_t __pthread_current = NULL;
@@ -56,7 +55,7 @@ __pthread_cleanup(void *param)
   struct pthread_s *thread = param;
 
   /* cleanup current context */
-  arch_contextstack_free(context_destroy(thread->sched_ctx.context));
+  mem_free(context_destroy(thread->sched_ctx.context));
 
   lock_destroy(&thread->lock);
 
@@ -269,7 +268,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   if (stack == NULL)
 #endif
     {
-      stack = arch_contextstack_alloc(stack_size);
+      stack = mem_alloc(stack_size, mem_scope_sys);
 
       if (stack == NULL)
         {
@@ -287,7 +286,7 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   if (res)
     {
       mem_free(thread);
-      arch_contextstack_free(stack);
+      mem_free(stack);
       return res;
     }
 

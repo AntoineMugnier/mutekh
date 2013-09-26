@@ -25,7 +25,6 @@
 #include <hexo/types.h>
 #include <hexo/interrupt.h>
 #include <hexo/local.h>
-#include <hexo/segment.h>
 
 #include <device/device.h>
 #include <device/driver.h>
@@ -47,10 +46,7 @@ struct nios2_dev_private_s
   struct dev_irq_ep_s	sinks[ICU_NIOS2_MAX_VECTOR];
 #endif
 
-#ifdef CONFIG_ARCH_SMP
-  uint_fast8_t id;
-  void *cls;            //< cpu local storage
-#endif
+  struct cpu_tree_s node;
 };
 
 /************************************************************************
@@ -155,10 +151,10 @@ static DEVCPU_REG_INIT(nios2_cpu_reg_init)
   __unused__ struct nios2_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
-  assert(pv->id == cpu_id());
+  assert(pv->node.cpu_id == cpu_id());
 
   /* set cpu local storage register base pointer */
-  __asm__ volatile("mov " ASM_STR(CPU_NIOS2_CLS_REG) ", %0" : : "r" (pv->cls));
+  __asm__ volatile("mov " ASM_STR(CPU_NIOS2_CLS_REG) ", %0" : : "r" (pv->node.cls));
 
 # ifdef CONFIG_DEVICE_IRQ
   /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
@@ -166,7 +162,7 @@ static DEVCPU_REG_INIT(nios2_cpu_reg_init)
 # endif
 
 # ifdef CONFIG_HEXO_USERMODE
-  cpu_local_storage[pv->id] = pv->cls;
+  cpu_local_storage[pv->id] = pv->node.cls;
 # endif
 #endif
 
@@ -174,11 +170,11 @@ static DEVCPU_REG_INIT(nios2_cpu_reg_init)
 }
 
 #ifdef CONFIG_ARCH_SMP
-static DEVCPU_GET_STORAGE(nios2_cpu_get_storage)
+static DEVCPU_GET_NODE(nios2_cpu_get_node)
 {
   struct device_s *dev = cdev->dev;
   struct nios2_dev_private_s *pv = dev->drv_pv;
-  return pv->cls;
+  return &pv->node;
 }
 #endif
 
@@ -187,7 +183,7 @@ const struct driver_cpu_s  nios2_cpu_drv =
   .class_          = DRIVER_CLASS_CPU,
   .f_reg_init      = nios2_cpu_reg_init,
 #ifdef CONFIG_ARCH_SMP
-  .f_get_storage   = nios2_cpu_get_storage,
+  .f_get_node   = nios2_cpu_get_node,
 #endif
 };
 
@@ -211,7 +207,7 @@ static DEVTIMER_GET_VALUE(nios2_timer_get_value)
   __unused__ struct nios2_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
-  if (pv->id != cpu_id())
+  if (pv->node.cpu_id != cpu_id())
     return -EIO;
 #endif
 
@@ -288,40 +284,29 @@ static DEV_INIT(nios2_init)
   /* get processor device id specifed in resources */
   uintptr_t id = 0;
   if (device_res_get_uint(dev, DEV_RES_ID, 0, &id, NULL))
-#ifdef CONFIG_ARCH_SMP
     PRINTK_RET(-ENOENT, "nios2: device has no ID resource")
-#endif
       ;
 
-  if (sizeof(*pv))
-    {
-      /* FIXME allocation scope ? */
-      pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
+  pv = mem_alloc_cpu(sizeof (*pv), (mem_scope_sys), id);
 
-      if ( pv == NULL )
-        return -ENOMEM;
+  if ( pv == NULL )
+    return -ENOMEM;
 
-      memset(pv, 0, sizeof(*pv));
-      dev->drv_pv = pv;
-    }
+  memset(pv, 0, sizeof(*pv));
+  dev->drv_pv = pv;
 
-#ifdef CONFIG_ARCH_SMP
-  /* allocate cpu local storage */
-  pv->cls = arch_cpudata_alloc();
-  pv->id = id;
-  if (!pv->cls)
-    goto err_mem;
-#endif
+  if (cpu_tree_node_init(&pv->node, id, dev))
+    goto err_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init nios2 irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, ICU_NIOS2_MAX_VECTOR);
 
 # ifdef CONFIG_ARCH_SMP
-  CPU_LOCAL_CLS_SET(pv->cls, nios2_icu_dev, dev);
-  cpu_interrupt_cls_sethandler(pv->cls, nios2_irq_handler);
+  CPU_LOCAL_CLS_SET(pv->node.cls, nios2_icu_dev, dev);
+  cpu_interrupt_cls_sethandler(pv->node.cls, nios2_irq_handler);
 # else
-  if (id == 0)
+  if (id == CONFIG_ARCH_BOOTSTRAP_CPU_ID)
     {
       CPU_LOCAL_SET(nios2_icu_dev, dev);
       cpu_interrupt_sethandler(nios2_irq_handler);
@@ -329,16 +314,19 @@ static DEV_INIT(nios2_init)
 # endif
 #endif
 
+  if (cpu_tree_insert(&pv->node))
+    goto err_node;
+
   dev->drv = &nios2_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
-#ifdef CONFIG_ARCH_SMP
- err_mem:
-  if (sizeof(*pv))
-    mem_free(pv);
+
+ err_node:
+  cpu_tree_node_cleanup(&pv->node);
+ err_pv:
+  mem_free(pv);
   return -1;
-#endif
 }
 
 static DEV_CLEANUP(nios2_cleanup)
@@ -354,7 +342,9 @@ static DEV_CLEANUP(nios2_cleanup)
   device_irq_sink_unlink(dev, pv->sinks, ICU_NIOS2_MAX_VECTOR);
 #endif
 
-  if (sizeof(*pv))
-    mem_free(pv);
+  cpu_tree_remove(&pv->node);
+  cpu_tree_node_cleanup(&pv->node);
+
+  mem_free(pv);
 }
 

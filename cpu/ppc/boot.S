@@ -32,7 +32,7 @@ CPU_NAME_DECL(reset_vector):
         mtctr   3
         bctr
         .org 0x80 - 4
-        b      	1f
+        b      	1b
 #endif
 
 #if defined(CONFIG_ARCH_SMP) && !defined(CONFIG_LOAD_SMP_RESET_MERGED)
@@ -64,18 +64,42 @@ FUNC_START(.text, mutekh_entry)
         beq     cr0,            1f
 
 # ifdef CONFIG_ARCH_SMP
-        /* acceptable cpuid ? */
-        cmpwi   cr0,    29,     CONFIG_ARCH_LAST_CPU_ID
-        bgt     cr0,            2f
 
-        /* get address of the stacks pool array */
-        LA32    2,              cpu_stacks_pool
-        lwz     2,              0(2)
+        /* get cpu tree root */
+        LA32    5,              cpu_tree
+        lwz     5,              0(5)
 
-        /* get the stack pointer for this cpu */
-        slwi    3,      29,     2
-        add     3,      2,      3
-        lwz     1,              0(3)
+        /* get xor scrambled cpu id */
+        LI32    2,              CPU_TREE_XOR_VALUE
+        xor     4,      2,      29
+
+4:
+        /* not in tree */
+        cmpwi   5,      0
+        beq     2f
+
+        /* get node cpu id */
+        lwz     3,              CPU_TREE_CPU_ID(5)
+        xor     3,      2,      3
+
+        /* matching node */
+        cmpw    4,      3
+        beq     3f
+
+        /* compare and get next child */
+        subfc   6,      4,      3
+        subfe   6,      6,      6
+        neg     6,      6
+
+        slwi    6,      6,      2
+        add     6,      6,      5
+        lwz     5,              CPU_TREE_CHILDS(0)(6)
+
+        b       4b
+
+3:
+        /* get address of the cpu stack */        
+        lwz     1,              CPU_TREE_STACK(5)
         LI32    2,              (CONFIG_HEXO_CPU_STACK_SIZE \
                               - CONFIG_HEXO_STACK_ALIGN)
         add     1,      1,      2

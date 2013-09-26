@@ -25,7 +25,6 @@
 #include <hexo/types.h>
 #include <hexo/interrupt.h>
 #include <hexo/local.h>
-#include <hexo/segment.h>
 
 #include <device/device.h>
 #include <device/driver.h>
@@ -50,10 +49,7 @@ struct mips_dev_private_s
   struct dev_irq_ep_s	sinks[ICU_MIPS_MAX_VECTOR];
 #endif
 
-#ifdef CONFIG_ARCH_SMP
-  uint_fast8_t id;
-  void *cls;            //< cpu local storage
-#endif
+  struct cpu_tree_s node;
 };
 
 /************************************************************************
@@ -158,10 +154,10 @@ static DEVCPU_REG_INIT(mips_cpu_reg_init)
   __unused__ struct mips_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
-  assert(pv->id == cpu_id());
+  assert(pv->node.cpu_id == cpu_id());
 
   /* set cpu local storage register base pointer */
-  asm volatile("move $27, %0" : : "r" (pv->cls));
+  asm volatile("move $27, %0" : : "r" (pv->node.cls));
 
   /* Set exception vector */
   extern __ldscript_symbol_t CPU_NAME_DECL(exception_vector);
@@ -175,7 +171,7 @@ static DEVCPU_REG_INIT(mips_cpu_reg_init)
 # endif
 
 # ifdef CONFIG_HEXO_USERMODE
-  cpu_local_storage[pv->id] = pv->cls;
+  cpu_local_storage[pv->id] = pv->node.cls;
 # endif
 #endif
 
@@ -190,11 +186,11 @@ static DEVCPU_REG_INIT(mips_cpu_reg_init)
 
 
 #ifdef CONFIG_ARCH_SMP
-static DEVCPU_GET_STORAGE(mips_cpu_get_storage)
+static DEVCPU_GET_NODE(mips_cpu_get_node)
 {
   struct device_s *dev = cdev->dev;
   struct mips_dev_private_s *pv = dev->drv_pv;
-  return pv->cls;
+  return &pv->node;
 }
 #endif
 
@@ -204,7 +200,7 @@ static const struct driver_cpu_s  mips_cpu_drv =
   .class_          = DRIVER_CLASS_CPU,
   .f_reg_init      = mips_cpu_reg_init,
 #ifdef CONFIG_ARCH_SMP
-  .f_get_storage   = mips_cpu_get_storage,
+  .f_get_node   = mips_cpu_get_node,
 #endif
 };
 
@@ -232,7 +228,7 @@ static DEVTIMER_GET_VALUE(mips_timer_get_value)
   __unused__ struct mips_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
-  if (pv->id != cpu_id())
+  if (pv->node.cpu_id != cpu_id())
     return -EIO;
 #endif
 
@@ -321,41 +317,29 @@ static DEV_INIT(mips_init)
   /* get processor device id specifed in resources */
   uintptr_t id = 0;
   if (device_res_get_uint(dev, DEV_RES_ID, 0, &id, NULL))
-#ifdef CONFIG_ARCH_SMP
     PRINTK_RET(-ENOENT, "mips: device has no ID resource")
-#endif
       ;
 
   /* allocate device private data */
-  if (sizeof(*pv))
-    {
-      /* FIXME allocation scope ? */
-      pv = mem_alloc(sizeof (*pv), (mem_scope_sys));
+  pv = mem_alloc_cpu(sizeof (*pv), (mem_scope_sys), id);
+  if (pv == NULL)
+    return -ENOMEM;
 
-      if ( pv == NULL )
-        return -ENOMEM;
+  memset(pv, 0, sizeof(*pv));
+  dev->drv_pv = pv;
 
-      memset(pv, 0, sizeof(*pv));
-      dev->drv_pv = pv;
-    }
-
-#ifdef CONFIG_ARCH_SMP
-  /* allocate cpu local storage */
-  pv->cls = arch_cpudata_alloc();
-  pv->id = id;
-  if (!pv->cls)
-    goto err_mem;
-#endif
+  if (cpu_tree_node_init(&pv->node, id, dev))
+    goto err_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init mips irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, ICU_MIPS_MAX_VECTOR);
 
 # ifdef CONFIG_ARCH_SMP
-  CPU_LOCAL_CLS_SET(pv->cls, mips_icu_dev, dev);
-  cpu_interrupt_cls_sethandler(pv->cls, mips_irq_handler);
+  CPU_LOCAL_CLS_SET(pv->node.cls, mips_icu_dev, dev);
+  cpu_interrupt_cls_sethandler(pv->node.cls, mips_irq_handler);
 # else
-  if (id == 0)
+  if (id == CONFIG_ARCH_BOOTSTRAP_CPU_ID)
     {
       CPU_LOCAL_SET(mips_icu_dev, dev);
       cpu_interrupt_sethandler(mips_irq_handler);
@@ -363,16 +347,19 @@ static DEV_INIT(mips_init)
 # endif
 #endif
 
+  if (cpu_tree_insert(&pv->node))
+    goto err_node;
+
   dev->drv = &mips_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
-#ifdef CONFIG_ARCH_SMP
- err_mem:
-  if (sizeof(*pv))
-    mem_free(pv);
+
+ err_node:
+  cpu_tree_node_cleanup(&pv->node);
+ err_pv:
+  mem_free(pv);
   return -1;
-#endif
 }
 
 static DEV_CLEANUP(mips_cleanup)
@@ -390,7 +377,9 @@ static DEV_CLEANUP(mips_cleanup)
   device_irq_sink_unlink(dev, pv->sinks, ICU_MIPS_MAX_VECTOR);
 #endif
 
-  if (sizeof(*pv))
-    mem_free(pv);
+  cpu_tree_remove(&pv->node);
+  cpu_tree_node_cleanup(&pv->node);
+
+  mem_free(pv);
 }
 

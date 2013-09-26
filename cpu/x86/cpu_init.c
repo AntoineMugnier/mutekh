@@ -27,7 +27,6 @@
 #include <mutek/startup.h>
 #include <hexo/iospace.h>
 #include <hexo/lock.h>
-#include <hexo/segment.h>
 #include <hexo/cpu.h>
 
 #include "cpu_private.h"

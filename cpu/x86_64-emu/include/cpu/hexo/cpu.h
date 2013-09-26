@@ -35,45 +35,35 @@
 
 #ifndef __MUTEK_ASM__
 
-# ifdef CONFIG_ARCH_SMP
-extern CPU_LOCAL cpu_id_t _cpu_id;
-# endif  
+#include <arch/hexo/emu_syscalls.h>
 
 static inline cpu_id_t cpu_id(void)
 {
-# ifdef CONFIG_ARCH_SMP
-  /* do not use CPU_LOCAL_GET here as _cpu_id is stored in process
-     local memory and assigned before CLS allocation */
-  return _cpu_id;
-# else
-  return 0;
-# endif  
+  return emu_do_syscall(EMU_SYSCALL_GETPID, 0);
 }
+
+extern __compiler_sint_t __bootstrap_pid;
 
 static inline bool_t
 cpu_isbootstrap(void)
 {
 # ifdef CONFIG_ARCH_SMP
-  return (cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID);
+  return (cpu_id() == __bootstrap_pid);
 # endif
   return 1;
 }
 
-void cpu_trap();
-
-static inline cpu_cycle_t
-cpu_cycle_count(void)
+static inline void cpu_trap()
 {
-  uint64_t      low, high;
-
-  asm volatile("rdtsc" : "=a" (low), "=d" (high));
-
-  return (low | ((uint64_t)high << 32));
+#ifdef CONFIG_ARCH_EMU_TRAP_KILL
+  /* kill process group */
+  if (__bootstrap_pid > 1)
+    emu_do_syscall(EMU_SYSCALL_KILL, 2, -__bootstrap_pid, EMU_SIG_TERM);
+  emu_do_syscall(EMU_SYSCALL_EXIT, 1, 0);
+#else
+  asm volatile ("int3");
+#endif
 }
-
-# ifdef CONFIG_ARCH_SMP
-extern void * cpu_local_storage[CONFIG_CPU_MAXCOUNT];
-# endif
 
 static inline void cpu_dcache_invld(void *ptr)
 {
@@ -84,7 +74,7 @@ static inline void cpu_dcache_invld(void *ptr)
 
 static inline size_t cpu_dcache_line_size()
 {
-  return 0;
+  return 0;			/* FIXME */
 }
 
 # endif
