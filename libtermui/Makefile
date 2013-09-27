@@ -2,7 +2,7 @@
 DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
 objs = src/term.o src/term_none.o src/term_printf.o src/term_vt100.o	\
-       src/term_vt102.o src/term_xterm.o src/strings.o
+       src/term_vt102.o src/term_xterm.o src/strings.o termio_dev.o \
 
 ifeq ($(CONFIG_LIBTERMUI_GETLINE), defined)
 objs += src/getline.o src/getline_complete.o src/getline_edit.o	\
