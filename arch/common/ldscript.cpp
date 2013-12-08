@@ -206,6 +206,7 @@ SECTIONS
           .debug_srcinfo  0 : { *(.debug_srcinfo) }
           .debug_sfnames  0 : { *(.debug_sfnames) }
           /* DWARF 1.1 and DWARF 2 */
+          .debug_ranges  0 : { *(.debug_ranges) }
           .debug_aranges  0 : { *(.debug_aranges) }
           .debug_pubnames 0 : { *(.debug_pubnames) }
           /* DWARF 2 */
@@ -238,12 +239,18 @@ ASSERT(CPU_NAME_DECL(exception_vector) % CONFIG_CPU_EXCEPTION_ALIGN == 0,
 ASSERT(CPU_NAME_DECL(reset_vector) == CONFIG_CPU_RESET_ADDR,
         "The [CPU_NAME]_reset_vector symbol is not equal to CONFIG_CPU_RESET_ADDR.")
 
+ASSERT(LMAEND(.rodata) <= CONFIG_LOAD_ROM_RO_ADDR + CONFIG_LOAD_ROM_RO_SIZE,
+       ".text + .rodata do not fit in CONFIG_LOAD_ROM_RO_SIZE bytes");
+
+ASSERT(LMAEND(.bss) <= CONFIG_LOAD_ROM_RW_ADDR + CONFIG_LOAD_ROM_RW_SIZE,
+       ".data + .bss do not fit in CONFIG_LOAD_ROM_RW_SIZE bytes");
+
 # if defined(CONFIG_CPU_RESET_SEPARATE) && !defined(CONFIG_LOAD_RESET_SEPARATE)
 #  error CONFIG_LOAD_ROM: The selected processor requires a separate section for the reset vector
 # endif
 
 # if !defined(CONFIG_LOAD_RESET_SEPARATE) && !defined(CONFIG_LOAD_EXCEPTIONS_SEPARATE)
-#  error CONFIG_LOAD_ROM: No separate .reset or .except sections to hold the reset vector
+#  warning CONFIG_LOAD_ROM: No separate .reset or .except sections to hold the reset vector
 # endif
 #endif
 
