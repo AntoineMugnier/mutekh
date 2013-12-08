@@ -1898,7 +1898,7 @@ sub read_build_config
 	    next;
 	}
 
-	if ($line =~ /^\s* (\w[\w\d]*) (?: \s+(\S+) )?/x) {
+	if ($line =~ /^\s* (\w[\w\d]*) (?: \s+(.+?) )? \s*$/x) {
 	    my $opt = $config_opts{$1};
 	    my $val = $2;
 
