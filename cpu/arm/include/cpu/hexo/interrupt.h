@@ -57,23 +57,21 @@ cpu_interrupt_disable(void)
 {
 # ifdef CONFIG_HEXO_IRQ
 
-	uint32_t tmp;
-    THUMB_TMP_VAR;
-
-	asm volatile(
-#  if __thumb__ && !defined(CONFIG_CPU_ARM_7TDMI)
-        "cpsid i"
+#  if defined(CONFIG_CPU_ARM_ARCH_PROFILE_M) || (__thumb__ && CONFIG_CPU_ARM_ARCH_VERSION >= 7)
+	asm volatile ("cpsid i" ::: "memory");
 #  else
-        THUMB_TO_ARM
-		"mrs  %[tmp], cpsr            \n\t"
-		"orr  %[tmp], %[tmp], # 0x80   \n\t"
-		"msr  cpsr, %[tmp]            \n\t"
-        ARM_TO_THUMB
+	uint32_t tmp;
+        THUMB_TMP_VAR;
+	asm volatile (
+                      THUMB_TO_ARM
+                      "mrs  %[tmp], cpsr            \n\t"
+                      "orr  %[tmp], %[tmp], # 0x80   \n\t"
+                      "msr  cpsr, %[tmp]            \n\t"
+                      ARM_TO_THUMB
+                      : [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
+                      :: "memory"     /* compiler memory barrier */
+                     );
 #  endif
-		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
-                :
-                : "memory"     /* compiler memory barrier */
-        );
 # endif
 }
 
@@ -81,23 +79,22 @@ static inline void
 cpu_interrupt_enable(void)
 {
 # ifdef CONFIG_HEXO_IRQ
-	uint32_t tmp;
-    THUMB_TMP_VAR;
 
-	asm volatile(
-#  if __thumb__ && !defined(CONFIG_CPU_ARM_7TDMI)
-        "cpsie i"
+#  if defined(CONFIG_CPU_ARM_ARCH_PROFILE_M) || (__thumb__ && CONFIG_CPU_ARM_ARCH_VERSION >= 7)
+	asm volatile ("cpsie i" ::: "memory");
 #  else
-        THUMB_TO_ARM
-		"mrs  %[tmp], cpsr            \n\t"
-		"bic  %[tmp], %[tmp], #0x80   \n\t"
-		"msr  cpsr, %[tmp]            \n\t"
-        ARM_TO_THUMB
+	uint32_t tmp;
+        THUMB_TMP_VAR;
+	asm volatile (
+                      THUMB_TO_ARM
+                      "mrs  %[tmp], cpsr            \n\t"
+                      "bic  %[tmp], %[tmp], #0x80   \n\t"
+                      "msr  cpsr, %[tmp]            \n\t"
+                      ARM_TO_THUMB
+                      : [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
+                      :: "memory"     /* compiler memory barrier */
+                     );
 #  endif
-		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
-                :
-                : "memory"     /* compiler memory barrier */
-        );
 # endif
 }
 
@@ -106,13 +103,21 @@ cpu_interrupt_savestate(reg_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
 	uint32_t tmp;
-    THUMB_TMP_VAR;
 
-	asm volatile(
-        THUMB_TO_ARM
-		"mrs  %[tmp], cpsr        \n\t"
-        ARM_TO_THUMB
-		: [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,) );
+#  if defined(CONFIG_CPU_ARM_ARCH_PROFILE_M)
+	asm volatile (
+                      "mrs  %[tmp], primask     \n\t"
+                      : [tmp] "=l" (tmp)
+                     );
+#  else
+        THUMB_TMP_VAR;
+	asm volatile (
+                      THUMB_TO_ARM
+                      "mrs  %[tmp], cpsr        \n\t"
+                      ARM_TO_THUMB
+		      : [tmp] "=r" (tmp) /*,*/ THUMB_OUT(,)
+                     );
+#  endif
 
 	*state = tmp;
 # endif
@@ -122,19 +127,28 @@ static inline void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
-	uint32_t tmp, result;
-    THUMB_TMP_VAR;
+	uint32_t result;
 
-	asm volatile(
-        THUMB_TO_ARM
-		"mrs  %[result], cpsr        \n\t"
-		"orr  %[tmp], %[result], #0x80   \n\t"
-		"msr  cpsr, %[tmp]        \n\t"
-        ARM_TO_THUMB
-		: [tmp] "=r" (tmp), [result] "=r" (result) /*,*/ THUMB_OUT(,)
-                :
-                : "memory"     /* compiler memory barrier */
+#  if defined(CONFIG_CPU_ARM_ARCH_PROFILE_M)
+	asm volatile (
+                      "mrs  %[result], primask     \n\t"
+                      "cpsid i                     \n\t"
+		      : [result] "=l" (result)
+                      :: "memory"     /* compiler memory barrier */
                      );
+#  else
+	uint32_t tmp;
+        THUMB_TMP_VAR;
+	asm volatile (
+                      THUMB_TO_ARM
+		      "mrs  %[result], cpsr            \n\t"
+		      "orr  %[tmp], %[result], #0x80   \n\t"
+		      "msr  cpsr, %[tmp]               \n\t"
+                      ARM_TO_THUMB
+		      : [tmp] "=r" (tmp), [result] "=r" (result) /*,*/ THUMB_OUT(,)
+                      :: "memory"     /* compiler memory barrier */
+                     );
+#  endif
 	*state = result;
 # endif
 }
@@ -143,16 +157,24 @@ static inline void
 cpu_interrupt_restorestate(const reg_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
-    THUMB_TMP_VAR;
 
-	asm volatile(
-        THUMB_TO_ARM
-		"msr  cpsr, %[state]        \n\t"
-        ARM_TO_THUMB
-		/* : */ THUMB_OUT(:)
-        : [state] "r" (*state)
-        : "memory"     /* compiler memory barrier */
+#  if defined(CONFIG_CPU_ARM_ARCH_PROFILE_M)
+	asm volatile (
+                      "msr  primask, %[state]        \n\t"
+                      : : [state] "l" (*state)
+                      : "memory"     /* compiler memory barrier */
                      );
+#  else
+        THUMB_TMP_VAR;
+	asm volatile (
+                      THUMB_TO_ARM
+                      "msr  cpsr, %[state]        \n\t"
+                      ARM_TO_THUMB
+                      /* : */ THUMB_OUT(:)
+                      : [state] "r" (*state)
+                      : "memory"     /* compiler memory barrier */
+                     );
+#  endif
 # endif
 }
 
@@ -173,15 +195,24 @@ cpu_interrupt_getstate(void)
 {
 # ifdef CONFIG_HEXO_IRQ
 	reg_t		state;
-    THUMB_TMP_VAR;
 
-	asm volatile(
-        THUMB_TO_ARM
-		"mrs  %[state], cpsr        \n\t"
-        ARM_TO_THUMB
-		: [state] "=r" (state) /*,*/ THUMB_OUT(,) );
-
+#  if defined(CONFIG_CPU_ARM_ARCH_PROFILE_M)
+	asm volatile (
+                      "mrs  %[state], primask        \n\t"
+                      : [state] "=l" (state)
+                     );
+	return !(state & 0x01);
+#  else
+        THUMB_TMP_VAR;
+	asm volatile (
+                      THUMB_TO_ARM
+                      "mrs  %[state], cpsr        \n\t"
+                      ARM_TO_THUMB
+                      : [state] "=r" (state) /*,*/ THUMB_OUT(,)
+                     );
 	return !(state & 0x80);
+#  endif
+
 # else
 	return 0;
 # endif
@@ -191,7 +222,17 @@ static inline bool_t
 cpu_is_interruptible(void)
 {
 # ifdef CONFIG_HEXO_IRQ
+#  if defined(CONFIG_CPU_ARM_ARCH_PROFILE_M)
+	reg_t		primask, ipsr;
+	asm volatile (
+                      "mrs  %0, primask        \n\t"
+                      "mrs  %1, ipsr           \n\t"
+                      : "=l" (primask), "=l" (ipsr)
+                     );
+	return !(primask & 1) && !(ipsr & 0xff);
+#  else
 	return cpu_interrupt_getstate();
+#  endif
 # else
 	return 0;
 # endif
@@ -202,25 +243,29 @@ cpu_is_interruptible(void)
 static inline void cpu_interrupt_wait(void)
 {
 #  ifdef CONFIG_HEXO_IRQ
-  cpu_interrupt_enable();
-#   if defined(__ARM_ARCH_6K__)
-    THUMB_TMP_VAR;
 
-	asm volatile(
-        THUMB_TO_ARM
-		"mcr p15, 0, %[zero], c7, c0, 4  \n\t"
-        ARM_TO_THUMB
-		/*:*/  THUMB_OUT(:)
-        : [zero] "r" (0)
-	: "memory" );
+#   if defined(CONFIG_CPU_ARM_ARCH_PROFILE_M)
+        cpu_interrupt_enable();
+	asm volatile ("wfi \n\t" ::: "memory");
+
+#   elif (CONFIG_CPU_ARM_ARCH_VERSION >= 6)
+        cpu_interrupt_enable();
+        THUMB_TMP_VAR;
+	asm volatile (
+                      THUMB_TO_ARM
+		      "mcr p15, 0, %[zero], c7, c0, 4  \n\t"
+                      ARM_TO_THUMB
+                      /* : */  THUMB_OUT(:)
+                      : [zero] "r" (0)
+                      : "memory"
+                     );
 #   else
-#  error CONFIG_CPU_WAIT_IRQ should not be defined here
+#    error CONFIG_CPU_WAIT_IRQ should not be defined here
 #   endif
 #  endif
 }
 # endif
 
 # endif
-
 #endif
 

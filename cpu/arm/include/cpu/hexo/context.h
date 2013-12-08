@@ -16,7 +16,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
     02110-1301 USA.
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006-2013
 
 */
 
@@ -28,17 +28,21 @@
 #include "cpu/hexo/specific.h"
 
 /** @multiple @this specify context save mask values */
-# define CPU_ARM_CONTEXT_RESTORE_CALLEE   1
-# define CPU_ARM_CONTEXT_RESTORE_CALLER   2
+#define CPU_ARM_CONTEXT_RESTORE_CALLEE   1
+#define CPU_ARM_CONTEXT_RESTORE_CALLER   2
 
-# define CPU_ARM_CONTEXT_RESTORE_NONE     (~3)
+#define CPU_ARM_CONTEXT_RESTORE_NONE     (~3)
+
+
+
+#ifdef CONFIG_CPU_ARM_ARCH_PROFILE_A
 
 /** @multiple @this describes @ref cpu_context_s field offset */
-#define CPU_ARM_CONTEXT_GPR(n)         ((n)*4)
-#define CPU_ARM_CONTEXT_CPSR           CPU_ARM_CONTEXT_GPR(16)
-#define CPU_ARM_CONTEXT_SAVE_MASK      CPU_ARM_CONTEXT_GPR(17)
+# define CPU_ARM_CONTEXT_GPR(n)         ((n)*4)
+# define CPU_ARM_CONTEXT_CPSR           CPU_ARM_CONTEXT_GPR(16)
+# define CPU_ARM_CONTEXT_SAVE_MASK      CPU_ARM_CONTEXT_GPR(17)
 
-#ifndef __MUTEK_ASM__
+# ifndef __MUTEK_ASM__
 
 struct cpu_context_s
 {
@@ -47,11 +51,53 @@ struct cpu_context_s
     reg_t save_mask;       //< what is being saved and restored
 };
 
-# define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "cpsr", "savemask"
-# define CPU_CONTEXT_REG_FIRST 1
-# define CPU_CONTEXT_REG_COUNT 18
+#  define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "cpsr", "savemask"
+#  define CPU_CONTEXT_REG_FIRST 1
+#  define CPU_CONTEXT_REG_COUNT 18
 
-#endif
+# endif
+#endif /* CONFIG_CPU_ARM_ARCH_PROFILE_A */
+
+
+
+#ifdef CONFIG_CPU_ARM_ARCH_PROFILE_M
+
+/** @multiple @this describes @ref cpu_context_s field offset */
+# define CPU_ARM_CONTEXT_R0             0
+# define CPU_ARM_CONTEXT_R1             4
+# define CPU_ARM_CONTEXT_R2             8
+# define CPU_ARM_CONTEXT_R3             12
+# define CPU_ARM_CONTEXT_R4             16
+# define CPU_ARM_CONTEXT_R5             20
+# define CPU_ARM_CONTEXT_R6             24
+# define CPU_ARM_CONTEXT_R7             28
+# define CPU_ARM_CONTEXT_R8             32
+# define CPU_ARM_CONTEXT_R9             36
+# define CPU_ARM_CONTEXT_R10            40
+# define CPU_ARM_CONTEXT_R11            44
+# define CPU_ARM_CONTEXT_R12            48
+# define CPU_ARM_CONTEXT_SP             52
+# define CPU_ARM_CONTEXT_LR             56
+# define CPU_ARM_CONTEXT_PC             60
+# define CPU_ARM_CONTEXT_SYS            64
+
+# ifndef __MUTEK_ASM__
+
+struct cpu_context_s
+{
+    reg_t gpr[16];
+    struct {
+        uint16_t primask;
+        uint16_t exc_mode; /* indicate if the context has been interrupted */
+    }           sys;
+};
+
+#  define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "xpsr", "sys"
+#  define CPU_CONTEXT_REG_FIRST 1
+#  define CPU_CONTEXT_REG_COUNT 17
+
+# endif
+#endif /* CONFIG_CPU_ARM_ARCH_PROFILE_M */
 
 #endif
 

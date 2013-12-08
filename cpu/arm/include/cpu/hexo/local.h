@@ -34,16 +34,18 @@
 
 #include "cpu/hexo/specific.h"
 
-#if defined(CONFIG_CPU_ARM_TLS_IN_C15)
+#ifdef CONFIG_CPU_ARM_ARCH_PROFILE_A
 
-/************************************************************************/
+# if CONFIG_CPU_ARM_ARCH_VERSION >= 6
 
-# ifdef CONFIG_ARCH_SMP
+/**************************************/
 
-#  undef CPU_LOCAL
-#  define CPU_LOCAL	__attribute__((section (".cpudata")))
+#  ifdef CONFIG_ARCH_SMP
 
-# define CPU_GET_CLS()                                                  \
+#   undef CPU_LOCAL
+#   define CPU_LOCAL	__attribute__((section (".cpudata")))
+
+#   define CPU_GET_CLS()                                                  \
         ({                                                              \
                 uintptr_t _ptr_;                                        \
                 THUMB_TMP_VAR;                                          \
@@ -60,19 +62,19 @@
                 _ptr_;                                                  \
         })
 
-#else /* CONFIG_ARCH_SMP */
+#  else /* if !CONFIG_ARCH_SMP */
 
-# define CPU_LOCAL
+#   define CPU_LOCAL
 
-# endif /* !CONFIG_ARCH_SMP */
+#  endif /* CONFIG_ARCH_SMP */
 
-/************************************************************************/
+/**************************************/
 
 /** context local storage type attribute */
-# define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
+#  define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
 
 /** get address of cpu local object */
-# define CONTEXT_GET_TLS()                                              \
+#  define CONTEXT_GET_TLS()                                             \
         ({                                                              \
                 uintptr_t _ptr_;                                        \
                 THUMB_TMP_VAR;                                          \
@@ -88,30 +90,56 @@
         })
 
 
-#else /* not CONFIG_CPU_ARM_TLS_IN_C15 */
+# else /* CONFIG_CPU_ARM_ARCH_VERSION < 6 */
 
-# ifdef CONFIG_ARCH_SMP
-/*
- * We could support not having dedicated registers with an indirection
- * through a global table and cpuid(), but for now, we'll be lazy
- * without proper need for it.
- */
-#  error No SMP supported without TLS registers in c0
-# endif
+#  ifdef CONFIG_ARCH_SMP
+#   error No SMP supported without TLS register (arm arch < v6)
+#  endif
+
+#  define CPU_LOCAL
+
+#  ifndef __MUTEK_ASM__
+extern CPU_LOCAL void *__context_data_base;
+#  endif
+
+#  define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
+#  define CONTEXT_GET_TLS() ((uintptr_t)__context_data_base)
+
+# endif /* CONFIG_CPU_ARM_ARCH_VERSION */
+
+#endif /* defined(CONFIG_CPU_ARM_ARCH_PROFILE_A) */
+
+
+
+/************************************************************************/
+
+#ifdef CONFIG_CPU_ARM_ARCH_PROFILE_M
 
 # define CPU_LOCAL
-# define CPU_GET_TLS() ((uintptr_t)0)
 
-#ifndef __MUTEK_ASM__
+/** context local storage type attribute */
+#  define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
 
-extern CPU_LOCAL void *__context_data_base;
+#  ifndef __MUTEK_ASM__
+extern CONTEXT_LOCAL struct cpu_context_s arm_context_regs;
+#  endif
 
-#endif
+/** get address of cpu local object */
+#  define CONTEXT_GET_TLS()                                             \
+        ({                                                              \
+                uintptr_t _ptr_;                                        \
+                THUMB_TMP_VAR;                                          \
+                                                                        \
+                asm (                                                   \
+                     "mrs %0, psp\n\t"                                  \
+                     : [ptr] "=r" (_ptr_) /*,*/ THUMB_OUT(,)            \
+                     );                                                 \
+                                                                        \
+                _ptr_;                                                 \
+        })
 
-# define CONTEXT_LOCAL	__attribute__((section (".contextdata")))
-# define CONTEXT_GET_TLS() ((uintptr_t)__context_data_base)
+#endif /* defined(CONFIG_CPU_ARM_ARCH_PROFILE_A) */
 
-#endif /* end CONFIG_CPU_ARM_TLS_IN_C15 */
 
 #endif
 

@@ -24,10 +24,25 @@
 
 reg_t setjmp(jmp_buf env);
 asm(
+#if __thumb__
+        ".thumb                  \n\t"
+        ".thumb_func             \n\t"
+#endif
 	".type setjmp, %function \n"
 	".globl setjmp          \n\t"
 	"setjmp:                \n\t"
+#if __thumb__
+	"stmia   r0!, {r4, r5, r6, r7} \n\t"
+        "mov     r2, r9         \n\t"
+        "mov     r3, r10        \n\t"
+        "mov     r4, r11        \n\t"
+        "mov     r5, r12        \n\t"
+        "mov     r6, r13        \n\t"
+        "mov     r7, lr         \n\t"
+	"stmia   r0!, {r2, r3, r4, r5, r6, r7} \n\t"
+#else
 	"stmia   r0, {r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, lr} \n\t"
+#endif
 	"movs    r0, #0         \n\t"
 	"bx      lr             \n\t"
 	".size setjmp, .-setjmp \n\t"
@@ -36,13 +51,39 @@ asm(
 
 void longjmp(jmp_buf env, reg_t val);
 asm(
+#if __thumb__
+        ".thumb                  \n\t"
+        ".thumb_func             \n\t"
+#endif
 	".type longjmp, %function \n"
 	".globl longjmp          \n\t"
 	"longjmp:                \n\t"
+#if __thumb__
+	"mov    r2, r0           \n\t"
+
+	"mov    r0, r1           \n\t"
+	"cmp    r0, #0           \n\t"
+        "bne    1f               \n\t"
+	"mov    r0, #1           \n\t"
+	"1:                      \n\t"
+
+	"mov    r1, r2           \n\t"
+	"ldmia   r1!, {r2, r3, r4, r5, r6, r7} \n\t"
+        "mov     r9, r2         \n\t"
+        "mov     r10, r3        \n\t"
+        "mov     r11, r4        \n\t"
+        "mov     r12, r5        \n\t"
+        "mov     r13, r6        \n\t"
+        "mov     lr, r7         \n\t"
+	"ldmia   r1!, {r4, r5, r6, r7} \n\t"
+	"bx      lr             \n\t"
+#else
 	"mov    r2, r0           \n\t"
 	"cmp    r1, #0           \n\t"
 	"movne  r0, r1           \n\t"
 	"moveq  r0, #1           \n\t"
 	"ldmia  r2, {r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, pc} \n\t"
+#endif
 	".size longjmp, .-longjmp \n\t"
 	);
+

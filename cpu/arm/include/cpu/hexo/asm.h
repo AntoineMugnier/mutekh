@@ -24,8 +24,15 @@
 
 #ifdef __MUTEK_ASM__
 
+#ifdef CONFIG_CPU_ARM_ARCH_PROFILE_M
+# define ASM_SECTION(name)     \
+        .section name,"ax" ;   \
+        .thumb           ;     \
+        .thumb_func
+#else
 # define ASM_SECTION(name) \
         .section name,"ax"
+#endif
 
 # define CPU_ASM_FUNC_END .ltorg
 
@@ -86,7 +93,7 @@
 
 /* TLS stuff */
 
-# ifdef CONFIG_CPU_ARM_TLS_IN_C15
+# if defined(CONFIG_CPU_ARM_ARCH_PROFILE_A) && CONFIG_CPU_ARM_ARCH_VERSION >= 6
 
 .macro CONTEXT_LOCAL_ld name, rd, rt
      GET_CP15_REL \name, \rd, \rt, 4

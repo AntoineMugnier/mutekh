@@ -25,6 +25,7 @@
 #include <hexo/types.h>
 #include <hexo/interrupt.h>
 #include <hexo/local.h>
+#include <hexo/iospace.h>
 
 #include <device/device.h>
 #include <device/driver.h>
@@ -36,15 +37,10 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-#ifdef CONFIG_SOCLIB_MEMCHECK
-# include <arch/mem_checker.h>
-#endif
-
 struct arm_dev_private_s
 {
 #ifdef CONFIG_DEVICE_IRQ
-#define ICU_ARM_MAX_VECTOR	1
-  struct dev_irq_ep_s	sinks[ICU_ARM_MAX_VECTOR];
+  struct dev_irq_ep_s	sinks[CONFIG_CPU_ARM_M_IRQ_COUNT];
 #endif
 
   struct cpu_tree_s node;
@@ -63,12 +59,21 @@ static CPU_INTERRUPT_HANDLER(arm_irq_handler)
   struct device_s *dev = CPU_LOCAL_GET(arm_icu_dev);
   struct arm_dev_private_s  *pv = dev->drv_pv;
 
-  if ( irq < ICU_ARM_MAX_VECTOR ) {
-    struct dev_irq_ep_s *sink = pv->sinks + irq;
-    int_fast16_t id = 0;
+  switch (irq)
+    {
+    case 15: /* systick */
+      break;
 
-    sink->process(sink, &id);
-  }
+    case 16 ... 16+CONFIG_CPU_ARM_M_IRQ_COUNT-1: {
+      struct dev_irq_ep_s *sink = pv->sinks + irq - 16;
+      int_fast16_t id = 0;
+
+      sink->process(sink, &id);
+      break;
+    }
+    default:
+      break;
+    }
 }
 
 static DEVICU_GET_ENDPOINT(arm_icu_get_endpoint)
@@ -79,7 +84,7 @@ static DEVICU_GET_ENDPOINT(arm_icu_get_endpoint)
   switch (type)
     {
     case DEV_IRQ_EP_SINK:
-      if (id < ICU_ARM_MAX_VECTOR)
+      if (id < CONFIG_CPU_ARM_M_IRQ_COUNT)
         return pv->sinks + id;
     default:
       return NULL;
@@ -88,20 +93,28 @@ static DEVICU_GET_ENDPOINT(arm_icu_get_endpoint)
 
 static DEVICU_ENABLE_IRQ(arm_icu_enable_irq)
 {
-  __unused__ struct device_s *dev = idev->dev;
+  struct device_s *dev = idev->dev;
+  struct arm_dev_private_s  *pv = dev->drv_pv;
+  uint_fast8_t icu_in_id = sink - pv->sinks;
 
-  // inputs are single wire, logical irq id must be 0
+  /* inputs are single wire, logical irq id must be 0 */
   if (irq_id > 0)
     return 0;
 
-# ifdef CONFIG_ARCH_SMP
-  if (!arch_cpu_irq_affinity_test(dev, dev_ep))
-    return 0;
-# else
-  /* Enable irq line. On SMP platforms, all lines are already enabled on init. */
-# endif
+  /* configure NVIC */
+  cpu_mem_write_32(0xe000e100 + 4 * (icu_in_id / 32), endian_le32(1 << (icu_in_id % 32)));
 
   return 1;
+}
+
+static DEVICU_DISABLE_IRQ(arm_icu_disable_irq)
+{
+  struct device_s *dev = idev->dev;
+  struct arm_dev_private_s  *pv = dev->drv_pv;
+  uint_fast8_t icu_in_id = sink - pv->sinks;
+
+  /* configure NVIC */
+  cpu_mem_write_32(0xe000e180 + 4 * (icu_in_id / 32), endian_le32(1 << (icu_in_id % 32)));
 }
 
 const struct driver_icu_s  arm_icu_drv =
@@ -109,6 +122,7 @@ const struct driver_icu_s  arm_icu_drv =
   .class_          = DRIVER_CLASS_ICU,
   .f_get_endpoint  = arm_icu_get_endpoint,
   .f_enable_irq    = arm_icu_enable_irq,
+  .f_disable_irq    = arm_icu_disable_irq,
 };
 
 #endif
@@ -124,85 +138,18 @@ static DEVCPU_REG_INIT(arm_cpu_reg_init)
   struct device_s *dev = cdev->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
 
-#ifdef CONFIG_ARCH_SMP
-  assert(pv->node.cpu_id == cpu_id());
-
-# if CONFIG_CPU_ARM_ARCH_VERSION >= 6
-   asm volatile ("mcr p15,0,%0,c13,c0,3":: "r" (pv->node.cls));
-# else
-#  error SMP and TLS unsupported
-# endif
-
-# ifdef CONFIG_DEVICE_IRQ
-  /* Enable all irq lines. On SMP platforms other CPUs won't be able to enable these lines later. */
-# endif
-#endif
-
   CPU_LOCAL_SET(cpu_device, dev);
-
-#ifdef CONFIG_SOCLIB_MEMCHECK
-  /* all these function may execute with invalid stack pointer
-     register due to arm shadow registers bank switching. */
-  void CPU_NAME_DECL(exception_vector)();
-  void CPU_NAME_DECL(exception_vector_end)();
-  soclib_mem_bypass_sp_check(&CPU_NAME_DECL(exception_vector), &CPU_NAME_DECL(exception_vector_end));
-  void arm_exc_undef();
-  void arm_exc_undef_end();
-  soclib_mem_bypass_sp_check(&arm_exc_undef, &arm_exc_undef_end);
-  void arm_exc_pabt();
-  void arm_exc_pabt_end();
-  soclib_mem_bypass_sp_check(&arm_exc_pabt, &arm_exc_pabt_end);
-  void arm_exc_dabt();
-  void arm_exc_dabt_end();
-  soclib_mem_bypass_sp_check(&arm_exc_dabt, &arm_exc_dabt_end);
-# ifdef CONFIG_HEXO_IRQ
-  void arm_exc_irq();
-  void arm_exc_irq_end();
-  soclib_mem_bypass_sp_check(&arm_exc_irq, &arm_exc_irq_end);
-  void arm_exc_fiq();
-  void arm_exc_fiq_end();
-  soclib_mem_bypass_sp_check(&arm_exc_fiq, &arm_exc_fiq_end);
-# endif
-
-# ifdef CONFIG_HEXO_USERMODE
-  void arm_exc_swi();
-  void arm_exc_swi_end();
-  soclib_mem_bypass_sp_check(&arm_exc_swi, &arm_exc_swi_end);
-
-  void cpu_context_set_user();
-  void cpu_context_set_user_end();
-  soclib_mem_bypass_sp_check(&cpu_context_set_user, &cpu_context_set_user_end);
-# endif
-
-  void cpu_context_jumpto();
-  void arm_context_jumpto_internal_end();
-  soclib_mem_bypass_sp_check(&cpu_context_jumpto, &arm_context_jumpto_internal_end);
-#endif
 }
-
-#ifdef CONFIG_ARCH_SMP
-static DEVCPU_GET_NODE(arm_cpu_get_node)
-{
-  struct device_s *dev = cdev->dev;
-  struct arm_dev_private_s *pv = dev->drv_pv;
-  return &pv->node;
-}
-#endif
 
 const struct driver_cpu_s  arm_cpu_drv =
 {
   .class_          = DRIVER_CLASS_CPU,
   .f_reg_init      = arm_cpu_reg_init,
-#ifdef CONFIG_ARCH_SMP
-  .f_get_node   = arm_cpu_get_node,
-#endif
 };
 
 /************************************************************************
         Timer driver part
 ************************************************************************/
-
-#if CONFIG_CPU_ARM_ARCH_VERSION >= 6
 
 static DEVTIMER_REQUEST(arm_timer_request)
 {
@@ -219,27 +166,24 @@ static DEVTIMER_GET_VALUE(arm_timer_get_value)
   struct device_s *dev = tdev->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
 
-# ifdef CONFIG_ARCH_SMP
-  if(pv->node.cpu_id != cpu_id())
-    return -EIO;
-# endif
-
   switch (tdev->number)
     {
     case 0: {          /* cycle counter */
-      uint32_t ret;
-      THUMB_TMP_VAR;
-      asm volatile (
-                    THUMB_TO_ARM
-                    "mrc p15, 0, %[ret], c15, c12, 1\n\t"
-                    ARM_TO_THUMB
-                    : [ret] "=r"(ret) /*,*/ THUMB_OUT(,));
-      *value = ret;
+
+#if CONFIG_CPU_ARM_ARCH_VERSION >= 7
+      *value = cpu_mem_read_32(/* DWT_CYCCNT reg */ 0xe0001004);
+      return 0;
+#endif
+        return -ENOTSUP;
+    }
+
+    case 1: {
+#warning SYSTICK
       return 0;
     }
 
-    default:
-      return -ENOTSUP;
+      default:
+        return -ENOTSUP;
     }
 
   return 0;
@@ -252,6 +196,7 @@ static DEVTIMER_RESOLUTION(arm_timer_resolution)
   switch (tdev->number)
     {
     case 0: {          /* cycle counter */
+#if CONFIG_CPU_ARM_ARCH_VERSION >= 7
       if (res)
         {
           if (*res != 0)
@@ -262,6 +207,8 @@ static DEVTIMER_RESOLUTION(arm_timer_resolution)
       if (max)
         *max = 0xffffffff;
       return 0;
+#endif
+      return -ENOTSUP;
     }
 
     default:
@@ -280,8 +227,6 @@ static const struct driver_timer_s  arm_timer_drv =
   .f_resolution    = arm_timer_resolution,
 };
 
-#endif
-
 /************************************************************************/
 
 static DEV_CLEANUP(arm_cleanup);
@@ -297,7 +242,7 @@ static const struct devenum_ident_s  arm_ids[] =
 
 const struct driver_s  arm_drv =
 {
-  .desc           = "Arm processor",
+  .desc           = "Arm-m processor",
   .id_table       = arm_ids,
 
   .f_init         = arm_init,
@@ -308,9 +253,7 @@ const struct driver_s  arm_drv =
 #ifdef CONFIG_DEVICE_IRQ
     &arm_icu_drv,
 #endif
-#if CONFIG_CPU_ARM_ARCH_VERSION >= 6
     &arm_timer_drv,
-#endif
     0
   }
 };
@@ -342,19 +285,14 @@ static DEV_INIT(arm_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init arm irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, ICU_ARM_MAX_VECTOR);
+  device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_ARM_M_IRQ_COUNT);
 
   /* set processor interrupt handler */
-# ifdef CONFIG_ARCH_SMP
-  CPU_LOCAL_CLS_SET(pv->node.cls, arm_icu_dev, dev);
-  cpu_interrupt_cls_sethandler(pv->node.cls, arm_irq_handler);
-# else
   if (id == CONFIG_ARCH_BOOTSTRAP_CPU_ID)
     {
       CPU_LOCAL_SET(arm_icu_dev, dev);
       cpu_interrupt_sethandler(arm_irq_handler);
     }
-# endif
 #endif
 
   if (cpu_tree_insert(&pv->node))
@@ -377,11 +315,8 @@ static DEV_CLEANUP(arm_cleanup)
   struct arm_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
-# ifdef CONFIG_ARCH_SMP
-  /* Disable all irq lines. */
-# endif
   /* detach arm irq sink end-points */
-  device_irq_sink_unlink(dev, pv->sinks, ICU_ARM_MAX_VECTOR);
+  device_irq_sink_unlink(dev, pv->sinks, CONFIG_CPU_ARM_M_IRQ_COUNT);
 #endif
 
   cpu_tree_remove(&pv->node);

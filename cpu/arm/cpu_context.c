@@ -7,7 +7,7 @@
 
 CONTEXT_LOCAL struct cpu_context_s arm_context_regs;
 
-#if !defined(CONFIG_CPU_ARM_TLS_IN_C15)
+#if CONFIG_CPU_ARM_ARCH_VERSION < 6
 CPU_LOCAL void *__context_data_base;
 #endif
 
@@ -17,9 +17,9 @@ error_t
 cpu_context_bootstrap(struct context_s *context)
 {
     /* set context local storage register base pointer */
-#if defined(CONFIG_CPU_ARM_TLS_IN_C15)
+#if CONFIG_CPU_ARM_ARCH_VERSION >= 6
+
     THUMB_TMP_VAR;
-    
     asm volatile (
         THUMB_TO_ARM
         "mcr p15,0,%0,c13,c0,4 \n\t"

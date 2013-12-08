@@ -1,19 +1,15 @@
 
-objs = context_switch.o cpu_context.o boot.o exception.o
-
 subdirs = libc drivers
 
+ifeq ($(CONFIG_CPU_ARM_ARCH_PROFILE_A), defined)
+objs = context_switch.o cpu_context.o boot.o exception.o driver.o
 ifeq ($(CONFIG_CPU_ARM_THUMB), defined)
 objs += thumb_helpers.o
-exception.o_CFLAGS = -mno-thumb
-cpu_init.o_CFLAGS = -mno-thumb
-boot_m.o_CFLAGS = -mno-thumb
-boot.o_CFLAGS = -mno-thumb
-thumb_helpers.o_CFLAGS = -mno-thumb
+endif
 endif
 
-ifeq ($(CONFIG_DRIVER_CPU_ARM),defined)
-objs += driver.o
+ifeq ($(CONFIG_CPU_ARM_ARCH_PROFILE_M), defined)
+objs = context_switch_m.o cpu_context_m.o boot_m.o exception_m.o driver_m.o
 endif
 
 copy = ldscript
