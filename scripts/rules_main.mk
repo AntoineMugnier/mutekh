@@ -138,7 +138,7 @@ $(OBJ_DIR)/$(target).out: $(OBJ_DIR)/config.m4 \
 		$(filter-out %_before.o %_after.o,$(filter %.o,$^)) \
 		$(filter %.a,$^) \
 		$(filter %_after.o,$(filter %.o,$^)) \
-		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` \
+		-o $@ $(LIBGCC_PATH) \
 	-flat_namespace \
 	-e _arch_init \
 	-undefined warning $(LOG_REDIR)
@@ -157,7 +157,7 @@ $(OBJ_DIR)/$(target).out: $(OBJ_DIR)/config.m4 \
 		$(CFLAGS) $(CPUCFLAGS) \
 		$(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \
-		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` $(LOG_REDIR)
+		-o $@ $(LIBGCC_PATH) $(LOG_REDIR)
 endif
 else
 $(FINAL_LINK_TARGET): $(FINAL_LINK_SOURCE) FORCE \
@@ -183,7 +183,7 @@ $(OBJ_DIR)/$(target).o: $(OBJ_DIR)/config.m4 \
 		$(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		-q $(filter %.o,$^) $(filter %.a,$^) \
 		$(addprefix -T ,$(filter %ldscript,$^)) \
-		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` $(LOG_REDIR)
+		-o $@ $(LIBGCC_PATH) $(LOG_REDIR)
 
 $(OBJ_DIR)/$(target).pre.o: $(OBJ_DIR)/config.m4 $(TARGET_OBJECT_LIST) \
 	    FORCE $(arch_SRC_DIR)/ldscript_obj
@@ -192,7 +192,7 @@ $(OBJ_DIR)/$(target).pre.o: $(OBJ_DIR)/config.m4 $(TARGET_OBJECT_LIST) \
 		$(LDFLAGS) $(ARCHLDFLAGS) $(CPULDFLAGS) \
 		-q $(filter %.o,$^) $(filter %.a,$^) \
 		-T $(arch_SRC_DIR)/ldscript_obj \
-		-o $@ `$(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name` $(LOG_REDIR)
+		-o $@ $(LIBGCC_PATH) $(LOG_REDIR)
 
 kernel-postlink: $(POST_TARGET)
 

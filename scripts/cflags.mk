@@ -30,6 +30,9 @@ AR=$(CPUTOOLS)ar
 AS=$(CPUTOOLS)as
 OBJCOPY=$(CPUTOOLS)objcopy
 OBJDUMP=$(CPUTOOLS)objdump
+LIBGCC_PATH=$(if $(LIBGCC_DIR), \
+    $(dir $(shell $(CC) -print-libgcc-file-name))/$(subst $(_empty_before_space_) ,,$(LIBGCC_DIR))/libgcc.a, \
+    $(shell $(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name) )
 
 CFLAGS=	-nostdlib -fno-builtin -Wall -Wno-main -Wno-unused-label -O$(CONFIG_COMPILE_OPTIMIZE)
 DTC=dtc
