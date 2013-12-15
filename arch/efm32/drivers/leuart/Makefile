@@ -1,0 +1,3 @@
+
+objs = leuart.o
+

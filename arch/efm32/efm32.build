@@ -1,0 +1,163 @@
+%section efm32-*-*-*
+  %types architecture
+
+  CONFIG_ARCH_EFM32
+  CONFIG_DEVICE
+
+  # Memory layout
+
+  CONFIG_MUTEK_PRINTK_KEEP_EARLY
+
+  CONFIG_LOAD_ROM
+
+  CONFIG_LOAD_EXCEPTIONS_SEPARATE undefined
+  CONFIG_LOAD_EXCEPTIONS_TEXT
+
+  #################################################
+  # CPUs
+
+  %subsection efm32-zero-*-*
+    %types family
+
+    CONFIG_CPU_ARM_CORTEXM0
+    CONFIG_EFM32_ZERO_GECKO
+
+    CONFIG_HEXO_CPU_STACK_SIZE 0x200
+    CONFIG_PTHREAD_STACK_SIZE  0x200
+    CONFIG_STARTUP_STACK_SIZE  0x200
+    CONFIG_LOAD_ROM_RW_SIZE    0x200
+
+    CONFIG_DRIVER_EFM32_LEUART
+
+    CONFIG_CPU_ARM_M_IRQ_COUNT 17
+
+    %set BUILD_NAME efm32-zero
+
+    %subsection efm32-zero-*-f4
+      %types flash
+      CONFIG_LOAD_ROM_RO_ADDR 0x00000000
+      CONFIG_LOAD_ROM_RO_SIZE 0x00001000
+    %end
+
+    %subsection efm32-zero-*-f8
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_ADDR 0x00000000
+      CONFIG_LOAD_ROM_RO_SIZE 0x00002000
+    %end
+
+    %subsection efm32-zero-*-f16
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_ADDR 0x00000000
+      CONFIG_LOAD_ROM_RO_SIZE 0x00004000
+    %end
+
+    %subsection efm32-zero-*-f32
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_ADDR 0x00000000
+      CONFIG_LOAD_ROM_RO_SIZE 0x00008000
+    %end
+
+    %subsection efm32-zero-*-f4 efm32-zero-*-f8
+      %types sram
+
+      CONFIG_LOAD_ROM_RW_ADDR 0x20000000
+      CONFIG_STARTUP_HEAP_ADDR  (0x20000000 + CONFIG_LOAD_ROM_RW_SIZE)
+      CONFIG_STARTUP_HEAP_SIZE  (0x800 - CONFIG_LOAD_ROM_RW_SIZE - CONFIG_STARTUP_STACK_SIZE)
+      CONFIG_STARTUP_STACK_ADDR (0x20000800 - CONFIG_STARTUP_STACK_SIZE)
+    %end
+
+    %subsection efm32-zero-*-f16 efm32-zero-*-f32
+      %types sram
+
+      CONFIG_LOAD_ROM_RW_ADDR 0x20000000
+      CONFIG_STARTUP_HEAP_ADDR  (0x20000000 + CONFIG_LOAD_ROM_RW_SIZE)
+      CONFIG_STARTUP_HEAP_SIZE  (0x1000 - CONFIG_LOAD_ROM_RW_SIZE - CONFIG_STARTUP_STACK_SIZE)
+      CONFIG_STARTUP_STACK_ADDR (0x20001000 - CONFIG_STARTUP_STACK_SIZE)
+    %end
+
+    %subsection stk3200
+      CONFIG_EFM32_EARLY_CONSOLE_LEUART_STK3200
+      CONFIG_EFM32_EARLY_CONSOLE_LEUART_ADDR 0x40084000
+    %end
+
+  %end
+
+  %subsection efm32-leopard-*-*
+    %types family
+    %types sram
+
+    CONFIG_CPU_ARM_CORTEXM3
+    CONFIG_EFM32_LEOPARD_GECKO
+
+    CONFIG_CPU_ARM_M_IRQ_COUNT 39
+
+    CONFIG_HEXO_CPU_STACK_SIZE 0x400
+    CONFIG_PTHREAD_STACK_SIZE  0x800
+    CONFIG_STARTUP_STACK_SIZE  0x200
+    CONFIG_LOAD_ROM_RW_SIZE    0x1000
+
+    CONFIG_DRIVER_EFM32_LEUART
+
+    %set BUILD_NAME efm32-leopard
+
+    CONFIG_LOAD_ROM_RW_ADDR 0x20000000
+    CONFIG_STARTUP_HEAP_ADDR  (0x20000000 + CONFIG_LOAD_ROM_RW_SIZE)
+    CONFIG_STARTUP_HEAP_SIZE  (0x8000 - CONFIG_LOAD_ROM_RW_SIZE - CONFIG_STARTUP_STACK_SIZE)
+    CONFIG_STARTUP_STACK_ADDR (0x20008000 - CONFIG_STARTUP_STACK_SIZE)
+
+    %subsection efm32-leopard-*-f64
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_ADDR 0x00000000
+      CONFIG_LOAD_ROM_RO_SIZE 0x00010000
+    %end
+
+    %subsection efm32-leopard-*-f128
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_ADDR 0x00000000
+      CONFIG_LOAD_ROM_RO_SIZE 0x00020000
+    %end
+
+    %subsection efm32-leopard-*-f256
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_ADDR 0x00000000
+      CONFIG_LOAD_ROM_RO_SIZE 0x00040000
+    %end
+
+    %subsection stk3600
+      CONFIG_EFM32_EARLY_CONSOLE_LEUART_STK3600
+      CONFIG_EFM32_EARLY_CONSOLE_LEUART_ADDR 0x40084000
+    %end
+
+  %end
+
+  %subsection efm32-*-110-*
+    %types features
+  %end
+
+  %subsection efm32-*-108-*
+    %types features
+  %end
+
+  %subsection efm32-*-210-*
+    %types features
+  %end
+
+  %subsection efm32-*-222-*
+    %types features
+  %end
+
+  %subsection efm32-*-290-*
+    %types features
+  %end
+
+  %requiretypes family
+  %requiretypes sram
+  %requiretypes flash
+  %requiretypes features
+

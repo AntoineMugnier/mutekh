@@ -6,6 +6,7 @@
 %include gaisler/gaisler.build
 %include raspberry/raspberry.build
 %include zynq/zynq.build
+%include efm32/efm32.build
 
 %common
   %requiretypes architecture
