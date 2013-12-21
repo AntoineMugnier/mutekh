@@ -136,14 +136,22 @@ static inline void lock_release(lock_t *lock)
 }
 
 /** @this releases a lock and restore previous interrupts state. This macro
-    must be matched with the LOCK_SPIN_IRQ macro. */
+    must be matched with the LOCK_SPIN_IRQ macro. @multiple */
 #ifdef CONFIG_HEXO_IRQ
 # define LOCK_RELEASE_IRQ(lock)					\
   lock_release(lock);						\
   cpu_interrupt_restorestate(&__interrupt_state);		\
 }
+
+# define LOCK_RELEASE_IRQ_X(lock)				\
+  lock_release(lock);						\
+  cpu_interrupt_restorestate(&__interrupt_state);
+
 #else
 # define LOCK_RELEASE_IRQ(lock)					\
+  lock_release(lock);
+
+# define LOCK_RELEASE_IRQ_X(lock)				\
   lock_release(lock);
 #endif
 
