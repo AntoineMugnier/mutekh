@@ -61,3 +61,7 @@ ifeq ($(CONFIG_MUTEK_SLAB), defined)
  objs += slab_allocator.o
 endif
 
+ifeq ($(CONFIG_MUTEK_BYTECODE), defined)
+ objs += bytecode.o
+endif
+

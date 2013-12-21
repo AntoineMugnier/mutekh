@@ -1,0 +1,17 @@
+
+  %set OUTPUT_NAME bytecode
+
+  # New source code module to be compiled
+  %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+  # Application license
+  CONFIG_LICENSE_APP_LGPL
+
+  # Libs
+  CONFIG_COMPILE_OPTIMIZE s
+  CONFIG_COMPILE_DEBUG
+  CONFIG_MUTEK_BYTECODE
+  CONFIG_APP_START
+
+  %include arch/arch.build
+
