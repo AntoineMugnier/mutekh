@@ -109,7 +109,7 @@ static DEV_IRQ_EP_PROCESS(soclib_timer_irq)
           rq->drvdata = 0;
           dev_timer_queue_pop(&p->queue);
 
-          if (rq->callback(rq))
+          if (rq->callback(rq, 0))
             {
               if (rq->delay)
                 rq->deadline = p->value + rq->delay;
@@ -177,7 +177,7 @@ static DEVTIMER_REQUEST(soclib_timer_request)
 
         if (rq->deadline <= val)
           {
-            if (rq->callback(rq))
+            if (rq->callback(rq, 1))
               continue;
             err = ETIMEDOUT;
             goto done;

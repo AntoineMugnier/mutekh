@@ -112,7 +112,7 @@ static inline bool_t gptimer_irq_process(struct gptimer_private_s *pv, uint_fast
       rq->drvdata = 0;
       dev_timer_queue_pop(&p->queue);
 
-      if (rq->callback(rq))
+      if (rq->callback(rq, 0))
         {
           if (rq->delay)
             rq->deadline = p->value + rq->delay;
@@ -217,7 +217,7 @@ static DEVTIMER_REQUEST(gptimer_request)
 
         if (rq->deadline <= val)
           {
-            if (rq->callback(rq))
+            if (rq->callback(rq, 1))
               continue;
             err = ETIMEDOUT;
             goto done;

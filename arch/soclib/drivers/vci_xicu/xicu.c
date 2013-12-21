@@ -317,7 +317,7 @@ static DEVTIMER_REQUEST(soclib_xicu_timer_request)
 
         if (rq->deadline <= val)
           {
-            if (rq->callback(rq))
+            if (rq->callback(rq, 1))
               continue;
             err = ETIMEDOUT;
             goto done;
@@ -364,7 +364,7 @@ static void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t numbe
       rq->drvdata = 0;
       dev_timer_queue_pop(&p->queue);
 
-      if (rq->callback(rq))
+      if (rq->callback(rq, 0))
         {
           if (rq->delay)
             rq->deadline = p->value + rq->delay;

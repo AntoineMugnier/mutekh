@@ -47,7 +47,7 @@ typedef uint32_t dev_timer_delay_t;
 struct dev_timer_rq_s;
 
 /** timer device class callback function template */
-#define DEVTIMER_CALLBACK(n)    bool_t (n) (struct dev_timer_rq_s *rq)
+#define DEVTIMER_CALLBACK(n)    bool_t (n) (struct dev_timer_rq_s *rq, bool_t nested)
 /** Timer device request callback. This function is called when the
     timer deadline is reached.
 
@@ -55,7 +55,12 @@ struct dev_timer_rq_s;
     request @tt delay field was not zero when the request was first
     scheduled, the delay must not be changed and the next callback
     will be called with the same interval. If the delay field was
-    zero, the @tt deadline field value can be updated to a new value. */
+    zero, the @tt deadline field value can be updated to a new value.
+
+    The @tt nested parameter is set if the callback function is called
+    from the @ref devtimer_request_t function of the driver rather
+    than from an interrupt handler.
+*/
 typedef DEVTIMER_CALLBACK(devtimer_callback_t);
 
 /** Timer request @csee devtimer_request_t */

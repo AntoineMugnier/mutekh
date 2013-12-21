@@ -83,7 +83,7 @@ static inline void enst_rttimer_irq_process(struct enst_rttimer_private_s *pv, u
       rq->drvdata = 0;
       dev_timer_queue_pop(&p->queue);
 
-      if (rq->callback(rq))
+      if (rq->callback(rq, 0))
 	{
 	  if (rq->delay)
 	    rq->deadline += rq->delay;
@@ -215,7 +215,7 @@ static DEVTIMER_REQUEST(enst_rttimer_request)
 
         if (rq->deadline <= value)
           {
-            if (rq->callback(rq))
+            if (rq->callback(rq, 1))
               continue;
             err = ETIMEDOUT;
             goto done;
