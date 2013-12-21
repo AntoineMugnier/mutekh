@@ -378,6 +378,16 @@ static inline bool_t device_check_accessor(void *accessor)
 }
 
 /**
+   @This initializes an accessor so that the @ref
+   device_check_accessor function return false.
+*/
+static inline void device_init_accessor(void *accessor)
+{
+  struct device_accessor_s *a = accessor;
+  a->dev = NULL;
+}
+
+/**
    @This walks down the device tree from specified node (from root if
    @tt dev is NULL) and try to find appropriate driver for each
    device and eventually initializes it provided that all resources
