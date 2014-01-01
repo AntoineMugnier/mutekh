@@ -22,7 +22,6 @@
 */
 
 #include <string.h>
-#include <stdio.h>
 
 #include <hexo/types.h>
 #include <hexo/iospace.h>
@@ -50,31 +49,46 @@
 
 /*
 
-  When interrutons are available, the timer value is a 64 bits
-  software counter and the hardware timer period is used as an input
-  frequency divider configured from current resolution.
+  Each hardware timer have two different timer interfaces with
+  different modes. Hardware timer 0 has interface 0 and 1, timer 1 has
+  interface 2 and 3, and so on. The two modes work this way:
 
-  When interrutons support is disabled in the configuration, the
-  timer value is taken from the hardware timer register, the
-  resolution is fixed to 1 and the max timer value is 2^32-1.
+  - Timer driver interfaces with an even number provide exposes the
+    value of the free running counter directly. The value is 32 bits
+    if irq support is disabled and 64 bits if irq support is
+    enabled. This interface is not able to handle requests.
+
+  - Timer driver interfaces with an odd number provide a 64 bits
+    software timer which use the 32 bits hardware counter as a
+    prescaler. This interface is able to handle requests.
+
+  Timer start can be performed on a single interface of a pair at the
+  same time.
 
 */
 
 struct soclib_timer_state_s
 {
+  /* bit 0 indicates if some requests are using the timer, other bits
+     are start count. The start count is positive if the timer has
+     been started in mode 1 and negative if the timer has been started
+     in mode 0. */
+  int_fast8_t start_count;
+
 #ifdef CONFIG_DEVICE_IRQ
   dev_timer_queue_root_t queue;
   dev_timer_value_t value;
   dev_timer_res_t   period;
 #endif
-  uint_fast8_t start_count;
 };
 
 struct soclib_timer_private_s
 {
   uintptr_t addr;
   uintptr_t t_count;
+#ifdef CONFIG_DEVICE_IRQ
   struct dev_irq_ep_s *irq_eps;
+#endif
   struct soclib_timer_state_s t[0];
 };
 
@@ -90,7 +104,7 @@ static DEV_IRQ_EP_PROCESS(soclib_timer_irq)
 
   while (1)
     {
-      if (!endian_le32(cpu_mem_read_32(TIMER_REG_ADDR(pv->addr, TIMER_IRQ, number))))
+      if (!cpu_mem_read_32(TIMER_REG_ADDR(pv->addr, TIMER_IRQ, number)))
         break;
 
       cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_IRQ, number), 0);
@@ -99,10 +113,24 @@ static DEV_IRQ_EP_PROCESS(soclib_timer_irq)
 
       p->value++;
 
-      struct dev_timer_rq_s *rq = dev_timer_queue_head(&p->queue);
+      if (p->start_count <= 0)
+        break;
 
-      while (rq)
+      while (1)
         {
+          struct dev_timer_rq_s *rq = dev_timer_queue_head(&p->queue);
+
+          if (!rq)
+            {
+              /* stop timer */
+              p->start_count &= ~1;
+              if (p->start_count == 0)
+                cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, number), 0);
+              break;
+            }
+
+          assert(p->start_count & 1);
+
           if (rq->deadline > p->value)
             break;
 
@@ -117,29 +145,26 @@ static DEV_IRQ_EP_PROCESS(soclib_timer_irq)
               rq->drvdata = p;
               dev_timer_queue_insert_ascend(&p->queue, rq);
             }
-          else
-            {
-              // stop timer if not in use
-              if (--p->start_count == 0)
-                cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, number), endian_le32(TIMER_MODE_IRQEN));
-            }
-
-          rq = dev_timer_queue_head(&p->queue);
         }
     }
-     
+
   lock_release(&dev->lock);
 }
 #endif
 
 static DEVTIMER_REQUEST(soclib_timer_request)
 {
-# ifdef CONFIG_DEVICE_IRQ
+#ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = tdev->dev;
   struct soclib_timer_private_s *pv = dev->drv_pv;
   error_t err = 0;
+  uint_fast8_t number = tdev->number / 2;
+  uint_fast8_t mode = tdev->number % 2;
 
-  if (tdev->number >= pv->t_count)
+  if (mode == 0)
+    return -ENOTSUP;
+
+  if (number >= pv->t_count)
     return -ENOENT;
 
   if (!rq)
@@ -147,109 +172,164 @@ static DEVTIMER_REQUEST(soclib_timer_request)
 
   rq->tdev = tdev;
 
-  struct soclib_timer_state_s *p = pv->t + tdev->number;
+  struct soclib_timer_state_s *p = pv->t + number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
+  if (p->start_count < 0)  /* hardware timer already used in mode 0 */
+    {
+      err = -EBUSY;
+      goto done;
+    }
+
   uint64_t val = p->value;
 
-  if (cancel)
+  while (1)
     {
-      if (rq->drvdata == p)
-        {
-          dev_timer_queue_remove(&p->queue, rq);
-          rq->drvdata = 0;
+      if (rq->delay)
+        rq->deadline = val + rq->delay;
 
-          // stop timer if not in use
-          if (--p->start_count == 0)
-            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, tdev->number), endian_le32(TIMER_MODE_IRQEN));
-        }
-      else
+      if (rq->deadline > val)
+        break;
+
+      if (rq->callback(rq, 1))
+        continue;
+
+      err = ETIMEDOUT;
+      goto done;
+    }
+
+  rq->drvdata = p;
+  dev_timer_queue_insert_ascend(&p->queue, rq);
+
+  /* start timer if needed */
+  if (p->start_count == 0)
+    {
+      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_VALUE, number), 0);
+      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_PERIOD, number), endian_le32(p->period));
+      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, number), endian_le32(TIMER_MODE_EN | TIMER_MODE_IRQEN));
+    }
+  p->start_count |= 1;
+
+ done:;
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+#else
+  return -ENOTSUP;
+#endif
+}
+
+static DEVTIMER_CANCEL(soclib_timer_cancel)
+{
+#ifdef CONFIG_DEVICE_IRQ
+  struct device_s *dev = tdev->dev;
+  struct soclib_timer_private_s *pv = dev->drv_pv;
+  error_t err = 0;
+  uint_fast8_t number = tdev->number / 2;
+  uint_fast8_t mode = tdev->number % 2;
+
+  if (mode == 0)
+    return -ENOTSUP;
+
+  if (number >= pv->t_count)
+    return -ENOENT;
+
+  if (!rq)
+    return 0;
+
+  assert(rq->tdev->dev == dev && rq->tdev->number == tdev->number);
+
+  struct soclib_timer_state_s *p = pv->t + number;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  if (rq->drvdata == p)
+    {
+      assert(p->start_count & 1);
+
+      dev_timer_queue_remove(&p->queue, rq);
+      rq->drvdata = 0;
+
+      /* stop timer if not in use */
+      if (dev_timer_queue_isempty(&p->queue))
         {
-          err = -ETIMEDOUT;
+          p->start_count &= ~1;
+          if (p->start_count == 0)
+            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, number), 0);
         }
     }
   else
     {
-      do {
-        if (rq->delay)
-          rq->deadline = val + rq->delay;
-
-        if (rq->deadline <= val)
-          {
-            if (rq->callback(rq, 1))
-              continue;
-            err = ETIMEDOUT;
-            goto done;
-          }
-      } while (0);
-
-      rq->drvdata = p;
-      dev_timer_queue_insert_ascend(&p->queue, rq);
-
-      /* start timer if needed */
-      if (p->start_count++ == 0)
-        {
-          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_VALUE, tdev->number), 0);
-          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_PERIOD, tdev->number), endian_le32(p->period));
-          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, tdev->number), endian_le32(TIMER_MODE_EN | TIMER_MODE_IRQEN));
-        }
+      err = -ETIMEDOUT;
     }
- done:
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
-# else
+#else
   return -ENOTSUP;
-# endif
+#endif
 }
 
 static DEVTIMER_START_STOP(soclib_timer_state_start_stop)
 {
   struct device_s *dev = tdev->dev;
   struct soclib_timer_private_s *pv = dev->drv_pv;
+  uint_fast8_t number = tdev->number / 2;
+  uint_fast8_t mode = tdev->number % 2;
 
-  if (tdev->number >= pv->t_count)
+  if (number >= pv->t_count)
     return -ENOENT;
+
+#ifndef CONFIG_DEVICE_IRQ
+  if (mode != 0)
+    return -ENOTSUP;
+#endif
 
   error_t err = 0;
 
-  struct soclib_timer_state_s *p = pv->t + tdev->number;
+  struct soclib_timer_state_s *p = pv->t + number;
+  int_fast8_t st = mode ? 2 : -2;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-# ifdef CONFIG_DEVICE_IRQ
-  if (start)
+  if (p->start_count && ((p->start_count > 0) ^ mode))
     {
-      if (p->start_count++ == 0)
-        {
-          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_VALUE, tdev->number), 0);
-          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_PERIOD, tdev->number), endian_le32(p->period));
-          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, tdev->number), endian_le32(TIMER_MODE_EN | TIMER_MODE_IRQEN));
-        }
+      /* timer already used in the other mode */
+      err = -EBUSY;
     }
-  else
-    {
-      if ((p->start_count == 0) || (p->start_count == 1 && !dev_timer_queue_isempty(&p->queue)))
-        err = -EINVAL;
-      else if (--p->start_count == 0)
-        cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, tdev->number), endian_le32(TIMER_MODE_IRQEN));
-    }
-# else
-  if (start)
-    {
-      if (p->start_count++ == 0)
-        cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, tdev->number), endian_le32(TIMER_MODE_EN));
-    }
-  else
+  else if (start)
     {
       if (p->start_count == 0)
-        err = -EINVAL;
-      else if (--p->start_count == 0)
-        cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, tdev->number), 0);
+        {
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_VALUE, number), 0);
+#ifdef CONFIG_DEVICE_IRQ
+          p->value = 0;
+          if (mode)
+            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_PERIOD, number), endian_le32(p->period));
+          else
+#endif
+            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_PERIOD, number), 0xffffffff);
+#ifdef CONFIG_DEVICE_IRQ
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, number), endian_le32(TIMER_MODE_EN | TIMER_MODE_IRQEN));
+#else
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, number), endian_le32(TIMER_MODE_EN));
+#endif
+        }
+      p->start_count += st;
     }
-# endif
+  else
+    {
+      if ((p->start_count & ~1) == 0)
+        err = -EINVAL;
+      else
+        {
+          p->start_count -= st;
+          if (p->start_count == 0)
+            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, number), 0);
+        }
+    }
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -260,75 +340,111 @@ static DEVTIMER_GET_VALUE(soclib_timer_get_value)
 {
   struct device_s *dev = tdev->dev;
   struct soclib_timer_private_s *pv = dev->drv_pv;
+  uint_fast8_t number = tdev->number / 2;
+  uint_fast8_t mode = tdev->number % 2;
+  error_t err = 0;
 
-  if (tdev->number >= pv->t_count)
+  if (number >= pv->t_count)
     return -ENOENT;
- 
-# ifdef CONFIG_DEVICE_IRQ
-  struct soclib_timer_state_s *p = pv->t + tdev->number;
 
   LOCK_SPIN_IRQ(&dev->lock);
-  *value = p->value;
-  LOCK_RELEASE_IRQ(&dev->lock);
+
+  struct soclib_timer_state_s *p = pv->t + number;
+
+  if (!p->start_count || ((p->start_count > 0) ^ mode))
+    {
+      /* timer not started in this mode */
+      err = -EBUSY;
+    }
+  else if (mode)
+    {
+#ifdef CONFIG_DEVICE_IRQ
+      *value = p->value;
 #else
-  *value = endian_le32(cpu_mem_read_32(TIMER_REG_ADDR(pv->addr, TIMER_VALUE, tdev->number)));
+      err = -ENOTSUP;
+#endif
+    }
+  else
+    {
+      uint64_t v = endian_le32(cpu_mem_read_32(TIMER_REG_ADDR(pv->addr, TIMER_VALUE, number)));
+
+#ifdef CONFIG_DEVICE_IRQ
+      if (v < 0x80000000 && cpu_mem_read_32(TIMER_REG_ADDR(pv->addr, TIMER_IRQ, number)))
+        v += 0x100000000ULL;
+      v += p->value << 32;
 #endif
 
-  return 0;
+      *value = v;
+    }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
 }
 
 static DEVTIMER_RESOLUTION(soclib_timer_resolution)
 {
   struct device_s *dev = tdev->dev;
   struct soclib_timer_private_s *pv = dev->drv_pv;
+  uint_fast8_t number = tdev->number / 2;
+  uint_fast8_t mode = tdev->number % 2;
 
-  if (tdev->number >= pv->t_count)
+  if (number >= pv->t_count)
     return -ENOENT;
 
   error_t err = 0;
 
-# ifdef CONFIG_DEVICE_IRQ
-  struct soclib_timer_state_s *p = pv->t + tdev->number;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (res)
+  if (mode)
     {
-      if (*res)
+#ifdef CONFIG_DEVICE_IRQ
+      struct soclib_timer_state_s *p = pv->t + number;
+
+      LOCK_SPIN_IRQ(&dev->lock);
+
+      if (res)
         {
-          if (p->start_count)
+          if (*res)
             {
-              err = -EBUSY;
+              if (p->start_count)
+                {
+                  err = -EBUSY;
+                }
+              else if (*res < SOCLIB_TIMER_MIN_PERIOD)
+                {
+                  p->period = SOCLIB_TIMER_MIN_PERIOD;
+                  err = -ERANGE;
+                }
+              else
+                {
+                  p->period = *res;
+                }
             }
-          else if (*res < SOCLIB_TIMER_MIN_PERIOD)
-            {
-              p->period = SOCLIB_TIMER_MIN_PERIOD;
-              err = -ERANGE;
-            }
-          else
-            {
-              p->period = *res;
-            }
+          *res = p->period;
         }
-      *res = p->period;
-    }
 
-  if (max)
-    *max = 0xffffffffffffffffULL;
+      if (max)
+        *max = 0xffffffffffffffffULL;
 
-  LOCK_RELEASE_IRQ(&dev->lock);
-
+      LOCK_RELEASE_IRQ(&dev->lock);
 #else
-  if (res)
-    {
-      if (*res != 0)
-        err = -ENOTSUP;
-      *res = 1;
-    }
-
-  if (max)
-    *max = 0xffffffff;
+      err = -ENOTSUP;
 #endif
+    }
+  else
+    {
+      if (res)
+        {
+          if (*res != 0)
+            err = -ENOTSUP;
+          *res = 1;
+        }
+      if (max)
+#ifdef CONFIG_DEVICE_IRQ
+        *max = 0xffffffffffffffffULL;
+#else
+        *max = 0xffffffff;
+#endif
+    }
 
   return err;
 }
@@ -337,6 +453,7 @@ const struct driver_timer_s  soclib_timer_timer_drv =
 {
   .class_         = DRIVER_CLASS_TIMER,
   .f_request      = soclib_timer_request,
+  .f_cancel       = soclib_timer_cancel,
   .f_start_stop   = soclib_timer_state_start_stop,
   .f_get_value    = soclib_timer_get_value,
   .f_resolution   = soclib_timer_resolution,
@@ -413,15 +530,13 @@ static DEV_INIT(soclib_timer_init)
       struct soclib_timer_state_s *p = pv->t + i;
       p->start_count = 0;
 
+      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, i), 0);
+
 # ifdef CONFIG_DEVICE_IRQ
       p->value = 0;
       dev_timer_queue_init(&p->queue);
       p->period = resolution;
-      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, i), endian_le32(TIMER_MODE_IRQEN));
       cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_IRQ, i), 0);
-# else
-      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_PERIOD, i), 0xffffffff);
-      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, i), 0);
 # endif
     }
 

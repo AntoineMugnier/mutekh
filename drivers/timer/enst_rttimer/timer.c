@@ -154,6 +154,60 @@ static DEV_IRQ_EP_PROCESS(enst_rttimer_irq_separate)
 }
 #endif
 
+static DEVTIMER_CANCEL(enst_rttimer_cancel)
+{
+# ifdef CONFIG_DEVICE_IRQ
+  struct device_s *dev = tdev->dev;
+  struct enst_rttimer_private_s *pv = dev->drv_pv;
+  error_t err = 0;
+
+  if (tdev->number >= pv->t_count)
+    return -ENOENT;
+
+  if (!rq)
+    return 0;
+
+  struct enst_rttimer_state_s *p = pv->t + tdev->number;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+
+  if (rq->drvdata == p)
+    {
+      struct dev_timer_rq_s *rq0 = dev_timer_queue_head(&p->queue);
+
+      dev_timer_queue_remove(&p->queue, rq);
+      rq->drvdata = 0;
+
+      if (rq == rq0)  /* removed first ? */
+        {
+          cpu_mem_write_32(pv->addr + RT_TIMER_CANCEL_ADDR, RT_TIMER_ENDIAN32(1 << tdev->number));
+
+          rq0 = dev_timer_queue_head(&p->queue);
+          if (rq0)
+            {
+              /* schedule next rq */
+              cpu_mem_write_32(pv->addr + RT_TIMER_RTCTMP_ADDR, RT_TIMER_ENDIAN32(rq0->deadline >> 32));
+              cpu_mem_write_32(RT_TIMER_REG_ADDR(pv->addr, RT_TIMER_DLN1_ADDR, tdev->number), RT_TIMER_ENDIAN32(rq0->deadline));
+            }
+
+          /* stop timer if not in use */
+          if (--pv->start_count == 0)
+            cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_IEW_SMASK));
+        }
+    }
+  else
+    {
+      err = -ETIMEDOUT;
+    }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
+# else
+  return -ENOTSUP;
+# endif
+}
+
 static DEVTIMER_REQUEST(enst_rttimer_request)
 {
 # ifdef CONFIG_DEVICE_IRQ
@@ -173,74 +227,40 @@ static DEVTIMER_REQUEST(enst_rttimer_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (cancel)
+  uint64_t value = RT_TIMER_ENDIAN32(cpu_mem_read_32(pv->addr + RT_TIMER_RTCL_ADDR));
+  value |= (uint64_t)RT_TIMER_ENDIAN32(cpu_mem_read_32(pv->addr + RT_TIMER_RTCTMP_ADDR)) << 32;
+
+  do {
+    if (rq->delay)
+      rq->deadline = value + rq->delay;
+
+    if (rq->deadline <= value)
+      {
+        if (rq->callback(rq, 1))
+          continue;
+        err = ETIMEDOUT;
+        goto done;
+      }
+  } while (0);
+
+  rq->drvdata = p;
+  dev_timer_queue_insert_ascend(&p->queue, rq);
+
+  /* adjust earliest deadline if needed */
+  if (dev_timer_queue_head(&p->queue) == rq)
     {
-      if (rq->drvdata == p)
-        {
-	  struct dev_timer_rq_s *rq0 = dev_timer_queue_head(&p->queue);
-
-          dev_timer_queue_remove(&p->queue, rq);
-          rq->drvdata = 0;
-
-	  if (rq == rq0)  /* removed first ? */
-	    {
-	      cpu_mem_write_32(pv->addr + RT_TIMER_CANCEL_ADDR, RT_TIMER_ENDIAN32(1 << tdev->number));
-
-	      rq0 = dev_timer_queue_head(&p->queue);
-	      if (rq0)
-		{
-		  /* schedule next rq */
-		  cpu_mem_write_32(pv->addr + RT_TIMER_RTCTMP_ADDR, RT_TIMER_ENDIAN32(rq0->deadline >> 32));
-		  cpu_mem_write_32(RT_TIMER_REG_ADDR(pv->addr, RT_TIMER_DLN1_ADDR, tdev->number), RT_TIMER_ENDIAN32(rq0->deadline));
-		}
-
-	      /* stop timer if not in use */
-	      if (--pv->start_count == 0)
-		cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_IEW_SMASK));
-	    }
-        }
-      else
-        {
-          err = -ETIMEDOUT;
-        }
+      cpu_mem_write_32(pv->addr + RT_TIMER_RTCTMP_ADDR, RT_TIMER_ENDIAN32(rq->deadline >> 32));
+      cpu_mem_write_32(RT_TIMER_REG_ADDR(pv->addr, RT_TIMER_DLN1_ADDR, tdev->number), RT_TIMER_ENDIAN32(rq->deadline));
     }
-  else
+
+  /* start timer if needed */
+  if (pv->start_count++ == 0)
     {
-      uint64_t value = RT_TIMER_ENDIAN32(cpu_mem_read_32(pv->addr + RT_TIMER_RTCL_ADDR));
-      value |= (uint64_t)RT_TIMER_ENDIAN32(cpu_mem_read_32(pv->addr + RT_TIMER_RTCTMP_ADDR)) << 32;
-
-      do {
-        if (rq->delay)
-          rq->deadline = value + rq->delay;
-
-        if (rq->deadline <= value)
-          {
-            if (rq->callback(rq, 1))
-              continue;
-            err = ETIMEDOUT;
-            goto done;
-          }
-      } while (0);
-
-      rq->drvdata = p;
-      dev_timer_queue_insert_ascend(&p->queue, rq);
-
-      /* adjust earliest deadline if needed */
-      if (dev_timer_queue_head(&p->queue) == rq)
-	{
-	  cpu_mem_write_32(pv->addr + RT_TIMER_RTCTMP_ADDR, RT_TIMER_ENDIAN32(rq->deadline >> 32));
-	  cpu_mem_write_32(RT_TIMER_REG_ADDR(pv->addr, RT_TIMER_DLN1_ADDR, tdev->number), RT_TIMER_ENDIAN32(rq->deadline));
-	}
-
-      /* start timer if needed */
-      if (pv->start_count++ == 0)
-        {
-	  cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR,
-			   RT_TIMER_ENDIAN32(RT_TIMER_CTRL_CE_SMASK | RT_TIMER_CTRL_IEW_SMASK));
-        }
+      cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR,
+                       RT_TIMER_ENDIAN32(RT_TIMER_CTRL_CE_SMASK | RT_TIMER_CTRL_IEW_SMASK));
     }
- done:
 
+done:;
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
@@ -354,6 +374,7 @@ const struct driver_timer_s  enst_rttimer_timer_drv =
 {
   .class_         = DRIVER_CLASS_TIMER,
   .f_request      = enst_rttimer_request,
+  .f_cancel       = enst_rttimer_cancel,
   .f_start_stop   = enst_rttimer_state_start_stop,
   .f_get_value    = enst_rttimer_get_value,
   .f_resolution   = enst_rttimer_resolution,

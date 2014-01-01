@@ -132,6 +132,9 @@ static DEVTIMER_CALLBACK(pthread_cond_timer)
   struct sched_context_s *sched_ctx = ev_ctx->sched_ctx;
   struct pthread_s *thread = sched_ctx->priv;
 
+  if (nested)
+    return 0;
+
   sched_queue_wrlock(ev_ctx->wait);
 
   if (atomic_bit_testclr(&thread->state, _PTHREAD_STATE_TIMEDWAIT))
@@ -179,19 +182,25 @@ pthread_cond_timedwait(pthread_cond_t *cond,
       rq.callback = pthread_cond_timer;
       rq.pvdata = &ev_ctx;
 
-      if (DEVICE_OP(libc_timer(), request, &rq, 0) >= 0)
+      switch (DEVICE_SAFE_OP(libc_timer(), request, &rq))
         {
+        case 0:
           sched_wait_unlock(&cond->wait);
 
           if (atomic_bit_testclr(&this->state, _PTHREAD_STATE_TIMEOUT))
             res = ETIMEDOUT;
           else
-            DEVICE_OP(libc_timer(), request, &rq, 1);
-        }
-      else
-        {
+            DEVICE_SAFE_OP(libc_timer(), cancel, &rq);
+          assert(!rq.drvdata);
+          break;
+        case ETIMEDOUT:
+          res = ETIMEDOUT;
           sched_queue_unlock(&cond->wait);
+          break;
+        default:
           res = EINVAL;
+          sched_queue_unlock(&cond->wait);
+          break;
         }
 
       pthread_mutex_lock(mutex);
@@ -202,8 +211,6 @@ pthread_cond_timedwait(pthread_cond_t *cond,
     }
 
   CPU_INTERRUPT_RESTORESTATE;
-
-  assert(!rq.drvdata);
 
   return res;
 }

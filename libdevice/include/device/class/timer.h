@@ -82,10 +82,10 @@ CONTAINER_KEY_TYPE(dev_timer_queue, PTR, SCALAR, deadline);
 CONTAINER_KEY_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue, deadline);
 
 /** Timer device class request() function template. */
-#define DEVTIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq, bool_t cancel)
+#define DEVTIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
 
 /**
-   Timer device class request function. Enqueue or cancel a timer request.
+   Timer device class request function. Enqueue a timer request.
 
    @param rq pointer to request.
 
@@ -103,10 +103,6 @@ CONTAINER_KEY_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue, deadl
    devtimer_start_stop_t function, it will run until the request queue
    becomes empty again.
 
-   When the cancel operation is selected, the request is removed from
-   the timer event queue. @This function returns @tt -ETIMEDOUT if the
-   request was not found (already reached).
-
    @This returns 0 on success. If the @tt rq parameter is @tt NULL ,
    this function does nothing and returns 0 unless requests enqueuing
    is not supported by the device, in which case it returns an error
@@ -115,9 +111,33 @@ CONTAINER_KEY_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue, deadl
    When a request is removed from the driver queue, its @tt drvdata
    field becomes @tt NULL.
 
-   @This is mandatory.
+   @This may return @tt -EBUSY if the timer hardware resource is not
+   available. @This may return -ENOTSUP if there is no timer matching
+   the requested device number.
+
+   @This is optional and should be invoked using the @ref #DEVICE_SAFE_OP macro.
 */
 typedef DEVTIMER_REQUEST(devtimer_request_t);
+
+/** Timer device class request() function template. */
+#define DEVTIMER_CANCEL(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
+
+/**
+   Timer device class cancel function. Cancel a timer request.
+
+   @param rq pointer to request.
+
+   The request is removed from the timer event queue. @This function
+   returns @tt -ETIMEDOUT if the request was not found (already
+   reached).
+
+   When a request is removed from the driver queue, its @tt drvdata
+   field becomes @tt NULL.
+
+   @This returns 0 on success.
+   @This is optional and should be invoked using the @ref #DEVICE_SAFE_OP macro.
+*/
+typedef DEVTIMER_CANCEL(devtimer_cancel_t);
 
 
 /** Timer device class cancel() function template. */
@@ -136,8 +156,14 @@ typedef DEVTIMER_REQUEST(devtimer_request_t);
    value of 0 for the timer to actually stop. The timer value becomes
    undefined when the timer is stopped.
 
-   @This returns @tt -EINVAL if the timer has not be started or
-   -ENOTSUP if the timer does not support being stopped.
+   @This returns 0 on success or if the timer doesn't support being stopped.
+
+   @This returns @tt -EINVAL when trying to stop a timer that has not
+   been started.
+
+   @This returns @tt -EBUSY if the timer hardware resource is not
+   available. @This returns @tt -ENOTSUP if there is no timer matching
+   the requested device number.
 
    @This is mandatory.
 */
@@ -155,6 +181,11 @@ typedef DEVTIMER_START_STOP(devtimer_start_stop_t);
    @This function may returns @tt -EIO if the timer value can not be
    accessed. This can append when trying to access a processor local
    timer from the wrong processor.
+
+   The timer value may not be readable if the timer is currently
+   stooped. In this case this function will return @tt -EBUSY.  @This
+   returns @tt -ENOTSUP if there is no timer matching the requested
+   device number.
 
    @csee #DEVTIMER_GETVALUE @csee #dev_timer_getvalue
 
@@ -199,6 +230,9 @@ typedef uint32_t dev_timer_res_t;
    is returned. These error conditions can only occur when trying to
    change the resolution.
 
+   @This returns @tt -ENOTSUP if there is no timer matching the
+   requested device number.
+
    @This is mandatory.
 
    @see #DEVTIMER_RES_FIXED_POINT
@@ -208,6 +242,7 @@ typedef DEVTIMER_RESOLUTION(devtimer_resolution_t);
 
 DRIVER_CLASS_TYPES(timer,
                    devtimer_request_t *f_request;
+                   devtimer_request_t *f_cancel;
                    devtimer_start_stop_t *f_start_stop;
                    devtimer_get_value_t *f_get_value;
                    devtimer_resolution_t *f_resolution;

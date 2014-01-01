@@ -255,7 +255,7 @@ static void device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_valu
       /* cancel old timer request, if any */
       if (q->timeout)
         {
-          DEVICE_OP(&q->timer, request, &q->timer_rq, 1);
+          DEVICE_SAFE_OP(&q->timer, cancel, &q->timer_rq);
           q->timeout = 0;
         }
 
@@ -268,7 +268,7 @@ static void device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_valu
           trq->callback = &device_spi_ctrl_timeout;
           trq->pvdata = q;
 
-          err = DEVICE_OP(&q->timer, request, trq, 0);
+          err = DEVICE_SAFE_OP(&q->timer, request, trq);
         }
 
       switch (err)

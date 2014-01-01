@@ -156,7 +156,7 @@ NET_INITPROTO(arp_init)
                          ARP_REQUEST_TIMEOUT, 1000))
     return -1;
 
-  if (DEVICE_OP(&libnetwork_timer_dev, request, &pv->stale_timeout, 0))
+  if (DEVICE_SAFE_OP(&libnetwork_timer_dev, request, &pv->stale_timeout))
     {
       arp_table_destroy(&pv->table);
       return -1;
@@ -174,7 +174,7 @@ NET_DESTROYPROTO(arp_destroy)
   struct arp_entry_s	*to_remove = NULL;
 
   /* clear timeout */
-  DEVICE_OP(&libnetwork_timer_dev, request, &pv->stale_timeout, 1);
+  DEVICE_SAFE_OP(&libnetwork_timer_dev, cancel, &pv->stale_timeout);
 
   /* remove all items in the arp table */
   CONTAINER_FOREACH(arp_table, HASHLIST, &pv->table,
@@ -227,7 +227,7 @@ OBJECT_DESTRUCTOR(arp_entry_obj)
 
   if (res != NULL)
     {
-      DEVICE_OP(&libnetwork_timer_dev, request, &res->timeout, 1);
+      DEVICE_SAFE_OP(&libnetwork_timer_dev, cancel, &res->timeout);
       packet_queue_clear(&res->wait);
       packet_queue_destroy(&res->wait);
 
@@ -464,7 +464,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 	  struct net_packet_s	*waiting;
 
 	  /* cancel timeout */
-          DEVICE_OP(&libnetwork_timer_dev, request, &arp_entry->resolution->timeout, 1);
+          DEVICE_OP(&libnetwork_timer_dev, cancel, &arp_entry->resolution->timeout);
 
 	  /* send waiting packets */
 	  while ((waiting = packet_queue_pop(&arp_entry->resolution->wait)))
@@ -553,7 +553,7 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
       event->callback = arp_timeout;
       event->pvdata = (void *)arp_entry;
       event->delay = pv->request_timeout_delay;
-      DEVICE_OP(&libnetwork_timer_dev, request, event, 0);
+      DEVICE_SAFE_OP(&libnetwork_timer_dev, request, event);
 
       /* and send the request */
       net_debug("Emitting request\n");

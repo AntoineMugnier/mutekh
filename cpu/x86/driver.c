@@ -207,14 +207,9 @@ static const struct driver_cpu_s  x86_cpu_drv =
         Timer driver part
 ************************************************************************/
 
-static DEVTIMER_REQUEST(x86_timer_request)
-{
-  return -ENOTSUP;
-}
-
 static DEVTIMER_START_STOP(x86_timer_start_stop)
 {
-  return -ENOTSUP;
+  return 0;
 }
 
 static DEVTIMER_GET_VALUE(x86_timer_get_value)
@@ -255,7 +250,6 @@ static DEVTIMER_RESOLUTION(x86_timer_resolution)
 static const struct driver_timer_s  x86_timer_drv =
 {
   .class_          = DRIVER_CLASS_TIMER,
-  .f_request       = x86_timer_request,
   .f_start_stop    = x86_timer_start_stop,
   .f_get_value     = x86_timer_get_value,
   .f_resolution    = x86_timer_resolution,

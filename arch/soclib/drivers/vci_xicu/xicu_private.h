@@ -25,6 +25,81 @@
 #ifndef __SOCLIB_XICU_PRIVATE_H_
 #define __SOCLIB_XICU_PRIVATE_H_
 
+#include <hexo/types.h>
+
+#include <device/device.h>
+#include <device/driver.h>
+#include <device/irq.h>
+
+#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+
+#include <device/class/icu.h>
+
+DEV_IRQ_EP_PROCESS(soclib_xicu_source_process);
+
+extern const struct driver_icu_s  soclib_xicu_icu_drv;
+
+struct soclib_xicu_sink_s
+{
+  struct dev_irq_ep_s sink;
+  uint32_t     affinity;
+  uint_fast8_t current;
+  uint_fast8_t counter;
+};
+#endif
+
+#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+
+#include <device/class/timer.h>
+
+void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number);
+
+# define SOCLIB_XICU_PTI_MIN_PERIOD 2000
+# define SOCLIB_XICU_PTI_DEFAULT_PERIOD 250000
+
+extern const struct driver_timer_s  soclib_xicu_timer_drv;
+
+struct soclib_xicu_pti_s
+{
+  /* bit 0 indicates if some requests are using the timer, other bits
+     are start count. The start count is positive if the timer has
+     been started in mode 1 and negative if the timer has been started
+     in mode 0. */
+  int_fast8_t start_count;
+
+#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+  dev_timer_queue_root_t queue;
+  dev_timer_value_t value;
+  dev_timer_res_t   period;
+#endif
+};
+#endif
+
+struct soclib_xicu_private_s
+{
+  uintptr_t addr;
+
+#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+  uintptr_t hwi_count;
+  struct soclib_xicu_sink_s *sinks;
+
+  uintptr_t irq_count;
+  struct dev_irq_ep_s *srcs;
+
+# ifdef CONFIG_HEXO_IPI
+  uintptr_t wti_count;
+# endif
+#endif
+
+#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+  uintptr_t pti_count;
+  struct soclib_xicu_pti_s pti[0];
+#endif
+};
+
+
+/******** hw registers */
+
 #define XICU_WTI_REG 0
 #define XICU_PTI_PER 1
 #define XICU_PTI_VAL 2

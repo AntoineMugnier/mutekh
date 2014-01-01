@@ -66,48 +66,54 @@ void libc_time_initsmp()
     {
       printk("error: libc: No initialized device found matching `"
              CONFIG_LIBC_TIMER_DEVICE_PATHS "' in the device tree.\n");
+      goto err;
     }
-  else
-    {
-      DEVICE_OP(&libc_timer_dev, start_stop, 1);
 
-      if (!DEVICE_OP(&libc_timer_dev, get_value, &libc_timer_offset))
-        {
-          dev_timer_res_t r = 0;
-          dev_timer_value_t m;
-          if (!DEVICE_OP(&libc_timer_dev, resolution, &r, &m))
-            {
-              uint64_t freq = CONFIG_DEVICE_TIMER_DEFAULT_FREQ;
-              if (!device_res_get_uint64(libc_timer_dev.dev, DEV_RES_FREQ, libc_timer_dev.number, &freq))
-                freq >>= 24;
+  if (DEVICE_OP(&libc_timer_dev, start_stop, 1))
+    goto err_acc;
 
-              if (freq)
-                {
-                  libc_time_sec_num = r;
-                  libc_time_sec_den = freq;
-                  adjust_frac(&libc_time_sec_num, &libc_time_sec_den);
+  if (DEVICE_OP(&libc_timer_dev, get_value, &libc_timer_offset))
+    goto err_stop;
 
-                  libc_time_usec_num = 1000000ULL * r;
-                  libc_time_usec_den = freq;
-                  adjust_frac(&libc_time_usec_num, &libc_time_usec_den);
+  dev_timer_res_t r = 0;
+  dev_timer_value_t m;
 
-                  libc_time_nsec_num = 1000000000ULL * r;
-                  libc_time_nsec_den = freq;
-                  adjust_frac(&libc_time_nsec_num, &libc_time_nsec_den);
+  if (DEVICE_OP(&libc_timer_dev, resolution, &r, &m))
+    goto err_stop;
 
-                  uint64_t w = m / libc_time_sec_den * libc_time_sec_num;
+  uint64_t freq = CONFIG_DEVICE_TIMER_DEFAULT_FREQ;
+  if (!device_res_get_uint64(libc_timer_dev.dev, DEV_RES_FREQ, libc_timer_dev.number, &freq))
+    freq >>= 24;
 
-                  printk("libc: using timer device `%p' for libc time functions, wrapping period is %llu seconds\n", libc_timer_dev.dev, w);
-                  return;
-                }
-            }
+  if (freq == 0)
+    goto err_stop;
 
-          DEVICE_OP(&libc_timer_dev, start_stop, 0);
-        }
+  libc_time_sec_num = r;
+  libc_time_sec_den = freq;
+  adjust_frac(&libc_time_sec_num, &libc_time_sec_den);
 
-      printk("libc: unable to use `%p' timer device for libc time.\n", libc_timer_dev.dev);
-      device_put_accessor(&libc_timer_dev);
-    }
+  libc_time_usec_num = 1000000ULL * r;
+  libc_time_usec_den = freq;
+  adjust_frac(&libc_time_usec_num, &libc_time_usec_den);
+
+  libc_time_nsec_num = 1000000000ULL * r;
+  libc_time_nsec_den = freq;
+  adjust_frac(&libc_time_nsec_num, &libc_time_nsec_den);
+
+  uint64_t w = m < libc_time_sec_den
+    ? m * libc_time_sec_num / libc_time_sec_den
+    : m / libc_time_sec_den * libc_time_sec_num;
+
+  printk("libc: using timer device `%p' for libc time functions, wrapping period is %llu seconds\n", libc_timer_dev.dev, w);
+  return;
+
+ err_stop:
+  DEVICE_OP(&libc_timer_dev, start_stop, 0);
+ err_acc:
+  printk("libc: unable to use `%p' timer device for libc time.\n", libc_timer_dev.dev);
+  device_put_accessor(&libc_timer_dev);
+ err:
+  return;
 }
 
 void libc_time_cleanupsmp()
@@ -229,7 +235,8 @@ error_t clock_settime(clockid_t clk_id, const struct timespec *tp)
         return -1;
 
       dev_timer_value_t v;
-      libc_time_to_timer(tp, &v);
+      if (libc_time_to_timer(tp, &v))
+        return -1;
 
       libc_timer_offset = v - t;
       return 0;

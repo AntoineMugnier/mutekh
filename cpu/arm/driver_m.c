@@ -16,35 +16,16 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
     02110-1301 USA.
 
-    Copyright (c) Nicolas Pouillon <nipo@ssji.net>, 2009
+    Copyright (c) 2013 Alexandre Becoulet <alexandre.becoulet@free.fr>
 
 */
 
 #include <string.h>
 
-#include <hexo/types.h>
-#include <hexo/interrupt.h>
-#include <hexo/local.h>
-#include <hexo/iospace.h>
-
-#include <device/device.h>
-#include <device/driver.h>
-#include <device/class/icu.h>
-#include <device/class/cpu.h>
-#include <device/class/timer.h>
-#include <device/irq.h>
-
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-struct arm_dev_private_s
-{
-#ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_ep_s	sinks[CONFIG_CPU_ARM_M_IRQ_COUNT];
-#endif
-
-  struct cpu_tree_s node;
-};
+#include "driver_m.h"
 
 /************************************************************************
         Interrupts controller driver part
@@ -61,8 +42,11 @@ static CPU_INTERRUPT_HANDLER(arm_irq_handler)
 
   switch (irq)
     {
+#ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
     case 15: /* systick */
+      arm_timer_systick_irq(dev);
       break;
+#endif
 
     case 16 ... 16+CONFIG_CPU_ARM_M_IRQ_COUNT-1: {
       struct dev_irq_ep_s *sink = pv->sinks + irq - 16;
@@ -147,86 +131,6 @@ const struct driver_cpu_s  arm_cpu_drv =
   .f_reg_init      = arm_cpu_reg_init,
 };
 
-/************************************************************************
-        Timer driver part
-************************************************************************/
-
-static DEVTIMER_REQUEST(arm_timer_request)
-{
-  return -ENOTSUP;
-}
-
-static DEVTIMER_START_STOP(arm_timer_start_stop)
-{
-  return -ENOTSUP;
-}
-
-static DEVTIMER_GET_VALUE(arm_timer_get_value)
-{
-  struct device_s *dev = tdev->dev;
-  __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
-
-  switch (tdev->number)
-    {
-    case 0: {          /* cycle counter */
-
-#if CONFIG_CPU_ARM_ARCH_VERSION >= 7
-      *value = cpu_mem_read_32(/* DWT_CYCCNT reg */ 0xe0001004);
-      return 0;
-#endif
-        return -ENOTSUP;
-    }
-
-    case 1: {
-#warning SYSTICK
-      return 0;
-    }
-
-      default:
-        return -ENOTSUP;
-    }
-
-  return 0;
-}
-
-static DEVTIMER_RESOLUTION(arm_timer_resolution)
-{
-  error_t err = 0;
-
-  switch (tdev->number)
-    {
-    case 0: {          /* cycle counter */
-#if CONFIG_CPU_ARM_ARCH_VERSION >= 7
-      if (res)
-        {
-          if (*res != 0)
-            err = -ENOTSUP;
-          *res = 1;
-        }
-
-      if (max)
-        *max = 0xffffffff;
-      return 0;
-#endif
-      return -ENOTSUP;
-    }
-
-    default:
-      return -ENOTSUP;
-    }
-
-  return err;
-}
-
-static const struct driver_timer_s  arm_timer_drv =
-{
-  .class_          = DRIVER_CLASS_TIMER,
-  .f_request       = arm_timer_request,
-  .f_start_stop    = arm_timer_start_stop,
-  .f_get_value     = arm_timer_get_value,
-  .f_resolution    = arm_timer_resolution,
-};
-
 /************************************************************************/
 
 static DEV_CLEANUP(arm_cleanup);
@@ -253,7 +157,9 @@ const struct driver_s  arm_drv =
 #ifdef CONFIG_DEVICE_IRQ
     &arm_icu_drv,
 #endif
-    &arm_timer_drv,
+#if defined(CONFIG_CPU_ARM_TIMER_SYSTICK) || defined(CONFIG_CPU_ARM_TIMER_DWTCYC)
+    &arm_m_timer_drv,
+#endif
     0
   }
 };
@@ -282,6 +188,20 @@ static DEV_INIT(arm_init)
 
   if (cpu_tree_node_init(&pv->node, id, dev))
     goto err_pv;
+
+#ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
+  pv->systick_start = 0;
+  dev_timer_queue_init(&pv->systick_queue);
+  pv->systick_period = CONFIG_DEVICE_TIMER_DEFAULT_FREQ / 10; /* FIXME */
+# ifdef CONFIG_DEVICE_IRQ
+  /* enable systick in NVIC */
+  cpu_mem_write_32(0xe000e100, endian_le32(1 << 15));
+# endif
+#endif
+
+#ifdef CONFIG_CPU_ARM_TIMER_DWTCYC
+  pv->dwt_cycnt_start = 0;
+#endif
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init arm irq sink end-points */
@@ -313,6 +233,10 @@ static DEV_INIT(arm_init)
 static DEV_CLEANUP(arm_cleanup)
 {
   struct arm_dev_private_s *pv = dev->drv_pv;
+
+#ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
+  cpu_mem_write_32(ARM_M_SYSTICK_CSR_ADDR, 0);
+#endif
 
 #ifdef CONFIG_DEVICE_IRQ
   /* detach arm irq sink end-points */

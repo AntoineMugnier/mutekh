@@ -212,14 +212,9 @@ static const struct driver_cpu_s  mips_cpu_drv =
 
 #define MIPS_HAS_TIMER
 
-static DEVTIMER_REQUEST(mips_timer_request)
-{
-  return -ENOTSUP;
-}
-
 static DEVTIMER_START_STOP(mips_timer_start_stop)
 {
-  return -ENOTSUP;
+  return 0;
 }
 
 static DEVTIMER_GET_VALUE(mips_timer_get_value)
@@ -257,7 +252,6 @@ static DEVTIMER_RESOLUTION(mips_timer_resolution)
 static const struct driver_timer_s  mips_timer_drv =
 {
   .class_          = DRIVER_CLASS_TIMER,
-  .f_request       = mips_timer_request,
   .f_start_stop    = mips_timer_start_stop,
   .f_get_value     = mips_timer_get_value,
   .f_resolution    = mips_timer_resolution,

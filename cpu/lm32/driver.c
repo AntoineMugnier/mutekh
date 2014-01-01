@@ -180,14 +180,9 @@ const struct driver_cpu_s  lm32_cpu_drv =
         Timer driver part
 ************************************************************************/
 
-static DEVTIMER_REQUEST(lm32_timer_request)
-{
-  return -ENOTSUP;
-}
-
 static DEVTIMER_START_STOP(lm32_timer_start_stop)
 {
-  return -ENOTSUP;
+  return 0;
 }
 
 static DEVTIMER_GET_VALUE(lm32_timer_get_value)
@@ -227,7 +222,6 @@ static DEVTIMER_RESOLUTION(lm32_timer_resolution)
 static const struct driver_timer_s  lm32_timer_drv =
 {
   .class_          = DRIVER_CLASS_TIMER,
-  .f_request       = lm32_timer_request,
   .f_start_stop    = lm32_timer_start_stop,
   .f_get_value     = lm32_timer_get_value,
   .f_resolution    = lm32_timer_resolution,

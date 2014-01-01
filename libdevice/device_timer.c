@@ -147,7 +147,7 @@ error_t dev_timer_sleep(struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
   rq->pvdata = &status;
   rq->callback = dev_timer_wait_request_cb;
 
-  error_t e = DEVICE_OP(tdev, request, rq, 0);
+  error_t e = DEVICE_SAFE_OP(tdev, request, rq);
 
   if (e < 0)
     {

@@ -204,14 +204,9 @@ const struct driver_cpu_s  arm_cpu_drv =
 
 #if CONFIG_CPU_ARM_ARCH_VERSION >= 6
 
-static DEVTIMER_REQUEST(arm_timer_request)
-{
-  return -ENOTSUP;
-}
-
 static DEVTIMER_START_STOP(arm_timer_start_stop)
 {
-  return -ENOTSUP;
+  return 0;
 }
 
 static DEVTIMER_GET_VALUE(arm_timer_get_value)
@@ -274,7 +269,6 @@ static DEVTIMER_RESOLUTION(arm_timer_resolution)
 static const struct driver_timer_s  arm_timer_drv =
 {
   .class_          = DRIVER_CLASS_TIMER,
-  .f_request       = arm_timer_request,
   .f_start_stop    = arm_timer_start_stop,
   .f_get_value     = arm_timer_get_value,
   .f_resolution    = arm_timer_resolution,

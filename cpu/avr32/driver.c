@@ -185,14 +185,9 @@ const struct driver_cpu_s  avr32_cpu_drv =
         Timer driver part
 ************************************************************************/
 
-static DEVTIMER_REQUEST(avr32_timer_request)
-{
-  return -ENOTSUP;
-}
-
 static DEVTIMER_START_STOP(avr32_timer_start_stop)
 {
-  return -ENOTSUP;
+  return 0;
 }
 
 static DEVTIMER_GET_VALUE(avr32_timer_get_value)
@@ -232,7 +227,6 @@ static DEVTIMER_RESOLUTION(avr32_timer_resolution)
 static const struct driver_timer_s  avr32_timer_drv =
 {
   .class_          = DRIVER_CLASS_TIMER,
-  .f_request       = avr32_timer_request,
   .f_start_stop    = avr32_timer_start_stop,
   .f_get_value     = avr32_timer_get_value,
   .f_resolution    = avr32_timer_resolution,

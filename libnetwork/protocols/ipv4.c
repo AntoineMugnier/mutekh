@@ -169,7 +169,7 @@ OBJECT_CONSTRUCTOR(fragment_obj)
   obj->timeout.callback = ip_fragment_timeout;
   obj->timeout.pvdata = (void *)obj;
   obj->timeout.delay = pv->reassembly_timeout;
-  if (DEVICE_OP(&libnetwork_timer_dev, request, &obj->timeout, 0))
+  if (DEVICE_SAFE_OP(&libnetwork_timer_dev, request, &obj->timeout))
     {
       packet_queue_destroy(&obj->packets);
       return -1;
@@ -188,7 +188,7 @@ OBJECT_CONSTRUCTOR(fragment_obj)
 
 OBJECT_DESTRUCTOR(fragment_obj)
 {
-  DEVICE_OP(&libnetwork_timer_dev, request, &obj->timeout, 1);
+  DEVICE_SAFE_OP(&libnetwork_timer_dev, cancel, &obj->timeout);
 
   packet_queue_clear(&obj->packets);
   packet_queue_destroy(&obj->packets);
@@ -280,7 +280,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 
       /* disable timeout & remove the fragment structure */
       ip_packet_remove(&pv->fragments, p);
-      DEVICE_OP(&libnetwork_timer_dev, request, &p->timeout, 1);
+      DEVICE_SAFE_OP(&libnetwork_timer_dev, cancel, &p->timeout);
 
       /* we received the whole packet, reassemble now */
       nethdr = &packet->header[packet->stage];

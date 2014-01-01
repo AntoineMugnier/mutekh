@@ -191,14 +191,9 @@ const struct driver_cpu_s  nios2_cpu_drv =
         Timer driver part
 ************************************************************************/
 
-static DEVTIMER_REQUEST(nios2_timer_request)
-{
-  return -ENOTSUP;
-}
-
 static DEVTIMER_START_STOP(nios2_timer_start_stop)
 {
-  return -ENOTSUP;
+  return 0;
 }
 
 static DEVTIMER_GET_VALUE(nios2_timer_get_value)
@@ -236,7 +231,6 @@ static DEVTIMER_RESOLUTION(nios2_timer_resolution)
 static const struct driver_timer_s  nios2_timer_drv =
 {
   .class_          = DRIVER_CLASS_TIMER,
-  .f_request       = nios2_timer_request,
   .f_start_stop    = nios2_timer_start_stop,
   .f_get_value     = nios2_timer_get_value,
   .f_resolution    = nios2_timer_resolution,
