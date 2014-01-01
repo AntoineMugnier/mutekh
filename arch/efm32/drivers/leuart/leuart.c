@@ -174,7 +174,7 @@ static void efm32_leuart_try_write(struct device_s *dev)
     }
 }
 
-DEVCHAR_REQUEST(efm32_leuart_request)
+static DEVCHAR_REQUEST(efm32_leuart_request)
 {
   struct device_s               *dev = cdev->dev;
   struct efm32_leuart_context_s	*pv = dev->drv_pv;
@@ -348,6 +348,8 @@ DEV_CLEANUP(efm32_leuart_cleanup)
 #ifdef CONFIG_DEVICE_IRQ
   /* disable irqs */
   cpu_mem_write_32(pv->addr + EFM32_LEUART_IEN_ADDR, 0);
+
+  device_irq_source_unlink(dev, &pv->irq_ep, 1);
 #endif
 
   /* disable the uart */

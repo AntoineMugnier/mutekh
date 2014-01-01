@@ -12,11 +12,11 @@ static TERMUI_GETLINE_FCN_PROMPT(prompt)
   return termui_term_printf(tm, "[%31AMutekH%A] ");
 }
 
+struct termui_term_s tm;
+struct termui_term_behavior_s	bhv;
+
 void main()
 {
-  struct termui_term_s tm;
-  struct termui_term_behavior_s	bhv;
-
   assert(device_check_accessor(&console_dev));
 
   termui_dev_io_init(&tm, &console_dev, "xterm");

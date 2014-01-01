@@ -186,8 +186,8 @@ stpcpy(char *dest, const char *src);
 ({                                                                      \
   typedef typeof(n) _t;                                                 \
                                                                         \
-  __builtin_types_compatible_p(typeof(n), __compiler_slong_t) ? __builtin_ffsl(n) : \
-  __builtin_types_compatible_p(typeof(n), __compiler_slonglong_t) ? __builtin_ffsll(n) : \
+  __builtin_types_compatible_p(_t, __compiler_slong_t) ? __builtin_ffsl(n) : \
+  __builtin_types_compatible_p(_t, __compiler_slonglong_t) ? __builtin_ffsll(n) : \
   __builtin_ffs(n);                                                     \
 })
 
