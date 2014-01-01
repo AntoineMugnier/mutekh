@@ -988,6 +988,20 @@ sub foreach_or_list
     return 0;
 }
 
+sub foreach_orl_list
+{
+    my ( $list, $process, @args ) = @_;
+    my $res;
+
+    if ( $list ) {
+	foreach ( @$list ) {
+	    $res |= $process->( $_, @args );
+	}
+    }
+
+    return $res;
+}
+
 # return number of elements evaluating to true
 sub foreach_count_list
 {
@@ -1264,14 +1278,30 @@ sub process_config_depend
 
 sub process_config_when
 {
-    my ( $opt ) = @_;
+    my ( $opt, $done ) = @_;
+
+    if ( $done->{$opt} ) {
+        error("conditional loop found in `when' rule for the `$opt->{name}' token.");
+        return 0;
+    }
+
+    $done->{$opt}++;
+
+    my $res = foreach_orl_list( $opt->{when}, \&foreach_orl_list, sub {
+        my $opt = $_->{token};
+        my $res = process_config_when( $opt, $done );
+        foreach ( @{$opt->{providers}} ) {
+            $res |= process_config_when( $_, $done );
+        }
+        return $res;
+    });
+
+    $done->{$opt}--;
 
     return 0 if !$opt->{when} || $opt->{whendone};
     return 0 if ( check_defined( $opt ) || $opt->{userdefined} );
 
-    my $res = foreach_or_list( $opt->{when}, \&foreach_and_list, \&check_rule );
-
-    if ( $res ) {
+    if ( foreach_or_list( $opt->{when}, \&foreach_and_list, \&check_rule ) ) {
 	debug(1, "$opt->{name} defined thanks to one of its `when' rule");
 	$opt->{value} = 'defined';
 
@@ -1282,6 +1312,7 @@ sub process_config_when
 	$opt->{depnotice} = [];
 	$opt->{deperror} = [];
 	$opt->{depundef} = 0;
+        $res++;
     }
 
     return $res;
@@ -1673,7 +1704,8 @@ sub check_config
     for ( my $chg = 1; $chg--; ) {
 	# process `when' tags
 	foreach my $opt (values %config_opts) {
-	    if ( process_config_when($opt) ) {
+            my %done;
+	    if ( process_config_when($opt, \%done) ) {
 		$chg = 1;
 	    }
 	}
