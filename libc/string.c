@@ -26,6 +26,11 @@
 #include <string.h>
 #include <ctype.h> /* FIXME */
 
+#if (__GNUC__ * 100 + __GNUC_MINOR__) >= 406
+/* prevent gcc optimizer from generating recursive calls to memset, memcpy... */
+# pragma GCC optimize ("no-tree-loop-distribute-patterns")
+#endif
+
 #define reg_t_log2_m1 (sizeof(reg_t)-1)
 
 /********************************/
