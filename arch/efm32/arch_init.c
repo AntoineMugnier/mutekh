@@ -72,5 +72,39 @@ void efm32_hw_enum_init()
   device_init_driver(&leuart0_dev);
 #endif
 
+#ifdef CONFIG_DRIVER_EFM32_TIMER
+  static struct device_s timer0_dev;
+
+  device_init(&timer0_dev);
+  device_set_name(&timer0_dev, "timer0");
+  device_res_add_mem(&timer0_dev, 0x40010000, 0x40010400);
+  device_res_add_frequency(&timer0_dev, (uint64_t)HFRCO_FREQUENCY << 24);
+#ifdef CONFIG_HEXO_IRQ
+  device_res_add_irq(&timer0_dev, 0, EFM32_IRQ_TIMER0, 0, "/cpu");
+#endif
+  device_attach(&timer0_dev, NULL);
+
+  extern const struct driver_s efm32_timer_drv;
+
+  device_bind_driver(&timer0_dev, &efm32_timer_drv);
+  device_init_driver(&timer0_dev);
+#endif
+
+#ifdef CONFIG_DRIVER_EFM32_RTC
+  static struct device_s rtc_dev;
+
+  device_init(&rtc_dev);
+  device_set_name(&rtc_dev, "rtc");
+  device_res_add_mem(&rtc_dev, 0x40080000, 0x40080400);
+  device_res_add_frequency(&rtc_dev, (uint64_t)32768 << 24);
+#ifdef CONFIG_HEXO_IRQ
+  device_res_add_irq(&rtc_dev, 0, EFM32_IRQ_RTC, 0, "/cpu");
+#endif
+  device_attach(&rtc_dev, NULL);
+  extern const struct driver_s efm32_rtc_drv;
+  device_bind_driver(&rtc_dev, &efm32_rtc_drv);
+  device_init_driver(&rtc_dev);
+#endif
+
 }
 
