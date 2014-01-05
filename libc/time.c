@@ -27,6 +27,7 @@
 
 #include <device/class/timer.h>
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 
 struct device_timer_s    libc_timer_dev = DEVICE_ACCESSOR_INIT;

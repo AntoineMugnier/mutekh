@@ -256,7 +256,7 @@ struct driver_s
 };
 
 /**
-   Registers a driver (struct driver_s) in the global_driver_registry
+   Registers a driver (struct driver_s) in the dev_drivers_table
    table.
  */
 #if defined(CONFIG_ARCH_EMU_DARWIN)
@@ -366,7 +366,6 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
     See @ref device_get_by_path for more details in the path string
     format.
  */
-config_depend(CONFIG_DEVICE_TREE)
 error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
                                     const char *path, enum driver_class_e cl);
 
@@ -407,15 +406,14 @@ static inline void device_init_accessor(void *accessor)
    @This walks down the device tree from specified node (from root if
    @tt dev is NULL) and try to find appropriate driver for each
    device and eventually initializes it provided that all resources
-   are available. (The device initialization can be skipped if the
-   associated interrupt controller has not been initialized yet for
-   instance.)
+   are available.
 
-   The tree is traversed multiple times until no more actions can be
-   taken.
+   The device initialization can be skipped if dependencies have not
+   been initialized yet. The tree is traversed multiple times until no
+   more actions can be taken.
 */
 config_depend(CONFIG_DEVICE_TREE)
-void device_find_driver(struct device_s *dev);
+void device_find_driver(struct device_node_s *node);
 
 /** @This binds a device to a device driver. No check is performed to
     determine if the driver is appropriate. */

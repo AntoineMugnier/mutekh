@@ -103,23 +103,16 @@ void soclib_mem_init()
 #ifdef CONFIG_SOCLIB_FDT
 
 # include <device/driver.h>
+# include <device/resources.h>
 # include <device/device.h>
-# include <device/class/enum.h>
-# include <fdt/reader.h>
 
-void soclib_fdt_init()
-{
-    extern const struct driver_s enum_fdt_drv;
-    static struct device_s fdt_dev;
-    uintptr_t arch_fdt = CONFIG_SOCLIB_FDT_ROM_ADDRESS;
+DEV_DECLARE_STATIC_RESOURCES(fdt_dev_res, 1,
+  DEV_STATIC_RES_MEM( CONFIG_SOCLIB_FDT_ROM_ADDRESS,
+                      CONFIG_SOCLIB_FDT_ROM_ADDRESS + 4096 )
+);
 
-    device_init(&fdt_dev);
-    device_set_name(&fdt_dev, "fdt");
-    device_attach(&fdt_dev, NULL);
-    device_res_add_mem(&fdt_dev, arch_fdt, arch_fdt + fdt_get_size((void*)arch_fdt));
-    device_bind_driver(&fdt_dev, &enum_fdt_drv);
-    device_init_driver(&fdt_dev);
-}
+DEV_DECLARE_STATIC(fdt_dev, "fdt", 0, enum_fdt_drv, fdt_dev_res);
+
 #endif
 
 

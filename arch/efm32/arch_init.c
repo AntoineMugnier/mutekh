@@ -36,75 +36,71 @@ void efm32_mem_init()
 
 /////////////////////////////////////////////////////////////////////
 
+#define HFRCO_FREQUENCY         14000000
+
 # include <device/driver.h>
 # include <device/device.h>
+# include <device/resources.h>
 # include <device/class/cpu.h>
+# include <arch/efm32_irq.h>
 
-void efm32_hw_enum_init()
-{
-  static struct device_s cpu_dev;
+DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
+  DEV_STATIC_RES_ID(0, 0),
+);
 
-  device_init(&cpu_dev);
-  cpu_dev.node.flags |= DEVICE_FLAG_CPU;
-  device_res_add_id(&cpu_dev, 0, 0);
-  device_set_name(&cpu_dev, "cpu");
-  device_attach(&cpu_dev, NULL);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, cpu_dev_res);
 
-  extern const struct driver_s arm_drv;
 
-  device_bind_driver(&cpu_dev, &arm_drv);
-  device_init_driver(&cpu_dev);
+#ifdef CONFIG_DRIVER_EFM32_USART_SPI
+
+DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 3,
+  DEV_STATIC_RES_MEM(0x4000c400, 0x4000c800),
+  DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_RX, 0, "/cpu"),
+  DEV_STATIC_RES_IRQ(1, EFM32_IRQ_USART1_TX, 0, "/cpu"),
+);
+
+DEV_DECLARE_STATIC(usart1_dev, "usart1", 0, efm32_usart_spi_drv, usart1_dev_res);
+
+#endif
+
+
 
 #ifdef CONFIG_DRIVER_EFM32_LEUART
-  static struct device_s leuart0_dev;
 
-  device_init(&leuart0_dev);
-  device_set_name(&leuart0_dev, "uart0");
-  device_res_add_mem(&leuart0_dev, 0x40084000, 0x40084400);
-#ifdef CONFIG_HEXO_IRQ
-  device_res_add_irq(&leuart0_dev, 0, 24, 0, "/cpu");
+DEV_DECLARE_STATIC_RESOURCES(leuart0_dev_res, 2,
+  DEV_STATIC_RES_MEM(0x40084000, 0x40084400),
+  DEV_STATIC_RES_IRQ(0, EFM32_IRQ_LEUART0, 0, "/cpu"),
+);
+
+DEV_DECLARE_STATIC(leuart0_dev, "leuart0", 0, efm32_leuart_drv, leuart0_dev_res);
+
 #endif
-  device_attach(&leuart0_dev, NULL);
 
-  extern const struct driver_s efm32_leuart_drv;
 
-  device_bind_driver(&leuart0_dev, &efm32_leuart_drv);
-  device_init_driver(&leuart0_dev);
-#endif
 
 #ifdef CONFIG_DRIVER_EFM32_TIMER
-  static struct device_s timer0_dev;
 
-  device_init(&timer0_dev);
-  device_set_name(&timer0_dev, "timer0");
-  device_res_add_mem(&timer0_dev, 0x40010000, 0x40010400);
-  device_res_add_frequency(&timer0_dev, (uint64_t)HFRCO_FREQUENCY << 24);
-#ifdef CONFIG_HEXO_IRQ
-  device_res_add_irq(&timer0_dev, 0, EFM32_IRQ_TIMER0, 0, "/cpu");
+DEV_DECLARE_STATIC_RESOURCES(timer0_dev_res, 3,
+  DEV_STATIC_RES_MEM(0x40010000, 0x40010400),
+  DEV_STATIC_RES_FREQ((uint64_t)HFRCO_FREQUENCY << 24),
+  DEV_STATIC_RES_IRQ(0, EFM32_IRQ_TIMER0, 0, "/cpu"),
+);
+
+DEV_DECLARE_STATIC(timer0_dev, "timer0", 0, efm32_timer_drv, timer0_dev_res);
+
 #endif
-  device_attach(&timer0_dev, NULL);
 
-  extern const struct driver_s efm32_timer_drv;
 
-  device_bind_driver(&timer0_dev, &efm32_timer_drv);
-  device_init_driver(&timer0_dev);
-#endif
 
 #ifdef CONFIG_DRIVER_EFM32_RTC
-  static struct device_s rtc_dev;
 
-  device_init(&rtc_dev);
-  device_set_name(&rtc_dev, "rtc");
-  device_res_add_mem(&rtc_dev, 0x40080000, 0x40080400);
-  device_res_add_frequency(&rtc_dev, (uint64_t)32768 << 24);
-#ifdef CONFIG_HEXO_IRQ
-  device_res_add_irq(&rtc_dev, 0, EFM32_IRQ_RTC, 0, "/cpu");
-#endif
-  device_attach(&rtc_dev, NULL);
-  extern const struct driver_s efm32_rtc_drv;
-  device_bind_driver(&rtc_dev, &efm32_rtc_drv);
-  device_init_driver(&rtc_dev);
-#endif
+DEV_DECLARE_STATIC_RESOURCES(rtc_dev_res, 3,
+  DEV_STATIC_RES_MEM(0x40080000, 0x40080400),
+  DEV_STATIC_RES_FREQ((uint64_t)32768 << 24),
+  DEV_STATIC_RES_IRQ(0, EFM32_IRQ_RTC, 0, "/cpu"),
+);
 
-}
+DEV_DECLARE_STATIC(rtc_dev, "rtc", 0, efm32_rtc_drv, rtc_dev_res);
+
+#endif
 

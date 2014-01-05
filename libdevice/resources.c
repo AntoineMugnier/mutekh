@@ -24,359 +24,158 @@
 #include <hexo/error.h>
 
 #include <mutek/mem_alloc.h>
-#include <mutek/printk.h>
 
 #include <device/device.h>
+#include <device/resources.h>
 
 #include <string.h>
 
-struct dev_resource_s *device_res_get(struct device_s *dev,
+struct dev_resource_s *device_res_get(const struct device_s *dev,
                                       enum dev_resource_type_e type,
                                       uint_fast8_t id)
 {
-  uint_fast8_t i;
-
-  for (i = 0; i < dev->res_count; i++)
-    if (dev->res[i].type == type && !id--)
-      return dev->res + i;
-
-  return NULL;
-}
-
-error_t device_res_get_uint(const struct device_s *dev,
-                            enum dev_resource_type_e type,
-                            uint_fast8_t id, uintptr_t *a, uintptr_t *b)
-{
-  uint_fast8_t i;
-
-  for (i = 0; i < dev->res_count; i++)
-    if (dev->res[i].type == type && !id--)
-      {
-        if (a)
-          *a = dev->res[i].uint[0];
-        if (b)
-          *b = dev->res[i].uint[1];
-        return 0;
-      }
-
-  return -ENOENT;
-}
-
-error_t device_res_get_uint64(const struct device_s *dev,
-                              enum dev_resource_type_e type,
-                              uint_fast8_t id, uint64_t *a)
-{
-  uint_fast8_t i;
-
-  for (i = 0; i < dev->res_count; i++)
-    if (dev->res[i].type == type && !id--)
-      {
-        *a = dev->res[i].uint64;
-        return 0;
-      }
-
-  return -ENOENT;
-}
-
-inline error_t device_get_param_uint(const struct device_s *dev, const char *name, uintptr_t *a)
-{
-  uint_fast8_t i;
-
-  for (i = 0; i < dev->res_count; i++)
-    if (dev->res[i].type == DEV_RES_UINT_PARAM && !strcmp(name, dev->res[i].uint_param.name))
-      {
-        *a = dev->res[i].uint_param.value;
-        return 0;
-      }
-
-  return -ENOENT;
-}
-
-error_t device_get_param_str(const struct device_s *dev, const char *name, char * const *a)
-{
-  return device_get_param_uint(dev, name, (uintptr_t*)a);
-}
-
-inline void device_get_param_uint_default(const struct device_s *dev, const char *name, uintptr_t *a, uintptr_t def)
-{
-  uint_fast8_t i;
-
-  for (i = 0; i < dev->res_count; i++)
-    if (dev->res[i].type == DEV_RES_UINT_PARAM && !strcmp(name, dev->res[i].uint_param.name))
-      {
-        *a = dev->res[i].uint_param.value;
-        return;
-      }
-
-  *a = def;
-}
-
-void device_get_param_str_default(const struct device_s *dev, const char *name, char * const *a, const char *def)
-{
-  return device_get_param_uint_default(dev, name, (uintptr_t*)a, (uintptr_t)def);
-}
-
-struct dev_resource_s * device_res_unused(struct device_s *dev)
-{
-  uint_fast8_t i;
-
-  for (i = 0; i < dev->res_count; i++)
-    {
-      struct dev_resource_s *r = dev->res + i;
-
-      if (r->type == DEV_RES_UNUSED)
+  DEVICE_RES_FOREACH(dev, r, {
+      if (r->type == type && !id--)
         return r;
-    }
+  });
 
   return NULL;
 }
 
-error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end)
+struct dev_resource_s *device_res_get_from_name(const struct device_s *dev,
+                                                enum dev_resource_type_e type,
+                                                uint_fast8_t id, const char *name)
 {
-  struct dev_resource_s *r = device_res_unused(dev);
+  DEVICE_RES_FOREACH(dev, r, {
+      if (r->type == type && r->u.uint[0] &&
+          !strcmp(name, (const char*)r->u.uint[0]) && !id--)
+        return r;
+  });
 
-  if (dev->status == DEVICE_DRIVER_INIT_DONE)
-    return -EBUSY;
-  if (!r)
-    return -ENOMEM;
-  if (start >= end)
-    return -EINVAL;
-
-  r->type = DEV_RES_IO;
-  r->io.start = start;
-  r->io.end = end;
-
-  return 0;
+  return NULL;
 }
 
-error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
+error_t device_res_alloc(struct device_s *dev, struct dev_resource_s **res,
+                         enum dev_resource_type_e type)
 {
-  struct dev_resource_s *r = device_res_unused(dev);
-
   if (dev->status == DEVICE_DRIVER_INIT_DONE)
     return -EBUSY;
-  if (!r)
-    return -ENOMEM;
-  if (start >= end)
-    return -EINVAL;
 
-  r->type = DEV_RES_MEM;
-  r->mem.start = start;
-  r->mem.end = end;
-
-  return 0;
-}
-
-error_t device_res_add_irq(struct device_s *dev, uint_fast8_t dev_out_id,
-                           uint_fast8_t icu_in_id, uint_fast16_t irq_id, const char *icu)
-{
-#ifdef CONFIG_DEVICE_IRQ
-  struct dev_resource_s *r = device_res_unused(dev);
-
-  if (dev->status == DEVICE_DRIVER_INIT_DONE)
-    return -EBUSY;
-  if (!r)
-    return -ENOMEM;
-
-  if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
+  struct dev_resource_table_s *tbl, **tbl_;
+  uint_fast8_t i;
+  for (tbl_ = &dev->res_tbl; *tbl_ != NULL; tbl_ = &tbl->next)
     {
-      icu = strdup(icu);
-      if (!icu)
+      tbl = *tbl_;
+
+      if (tbl->flags & DEVICE_RES_TBL_FLAGS_STATIC_CONST)
+        return -EPERM;
+
+      for (i = 0; i < tbl->count; i++)
         {
-          mem_free((void*)icu);
-          return -ENOMEM;
+          struct dev_resource_s *r = &tbl->table[i];
+          if (r->type == DEV_RES_UNUSED)
+            {
+              r->type = type;
+              *res = r;
+              return 0;
+            }
         }
     }
 
-  r->type = DEV_RES_IRQ;
-  r->irq.dev_out_id = dev_out_id;
-  r->irq.icu_in_id = icu_in_id;
-  r->irq.irq_id = irq_id;
-  r->irq.icu = icu;
-
-  return 0;
-#else
-  return -EINVAL;
-#endif
-}
-
-error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor)
-{
-  struct dev_resource_s *r = device_res_unused(dev);
-
-  if (dev->status == DEVICE_DRIVER_INIT_DONE)
-    return -EBUSY;
-  if (!r)
+  const size_t s = 5;
+  tbl = mem_alloc(sizeof(struct dev_resource_table_s)
+                  + sizeof(struct dev_resource_s) * s, (mem_scope_sys));
+  if (tbl == NULL)
     return -ENOMEM;
 
-  r->type = DEV_RES_ID;
-  r->id.major = major;
-  r->id.minor = minor;
+  *tbl_ = tbl;
+  tbl->next = NULL;
+  tbl->flags = DEVICE_RES_TBL_FLAGS_ALLOCATED;
+  tbl->count = s;
+
+  memset(tbl->table, 0, sizeof(struct dev_resource_s) * s);
+  tbl->table[0].type = type;
+  *res = &tbl->table[0];
 
   return 0;
 }
 
-error_t device_res_add_revision(struct device_s *dev, uintptr_t major, uintptr_t minor)
+void device_res_cleanup(struct dev_resource_s *r)
 {
-  struct dev_resource_s *r = device_res_unused(dev);
-
-  if (dev->status == DEVICE_DRIVER_INIT_DONE)
-    return -EBUSY;
-  if (!r)
-    return -ENOMEM;
-
-  r->type = DEV_RES_REVISION;
-  r->revision.major = major;
-  r->revision.minor = minor;
-
-  return 0;
+  if (r->flags & DEVICE_RES_FLAGS_FREE_PTR0)
+    mem_free((void*)r->u.uint[0]);
+  if (r->flags & DEVICE_RES_FLAGS_FREE_PTR1)
+    mem_free((void*)r->u.uint[1]);
+  r->flags = 0;
+  r->type = DEV_RES_UNUSED;
 }
 
-error_t device_res_add_vendorid(struct device_s *dev, uintptr_t id, const char *name)
+error_t device_res_alloc_str(struct device_s *dev,
+                             enum dev_resource_type_e type,
+                             const char *a, const char *b,
+                             struct dev_resource_s **r_)
 {
-  struct dev_resource_s *r = device_res_unused(dev);
+  struct dev_resource_s *r;
+  error_t err = device_res_alloc(dev, &r, type);
+  if (err)
+    return err;
 
-  if (dev->status == DEVICE_DRIVER_INIT_DONE)
-    return -EBUSY;
-  if (!r)
-    return -ENOMEM;
-
-  if (name && (dev->node.flags & DEVICE_FLAG_ALLOCATED))
+  if (a != NULL)
     {
-      name = strdup(name);
-      if (!name)
+      if (!(a = strdup(a)))
         return -ENOMEM;
     }
 
-  r->type = DEV_RES_VENDORID;
-  r->vendor.id = id;
-  r->vendor.name = name;
-
-  return 0;
-}
-
-error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char *name)
-{
-  struct dev_resource_s *r = device_res_unused(dev);
-
-  if (dev->status == DEVICE_DRIVER_INIT_DONE)
-    return -EBUSY;
-  if (!r)
-    return -ENOMEM;
-
-  if (name && (dev->node.flags & DEVICE_FLAG_ALLOCATED))
+  if (b != NULL)
     {
-      name = strdup(name);
-      if (!name)
-        return -ENOMEM;
-    }
-
-  r->type = DEV_RES_PRODUCTID;
-  r->product.id = id;
-  r->product.name = name;
-
-  return 0;
-}
-
-error_t device_res_add_frequency(struct device_s *dev, uint64_t f_40_24)
-{
-  struct dev_resource_s *r = device_res_unused(dev);
-
-  if (dev->status == DEVICE_DRIVER_INIT_DONE)
-    return -EBUSY;
-  if (!r)
-    return -ENOMEM;
-
-  r->type = DEV_RES_FREQ;  
-  r->uint64 = f_40_24;
-
-  return 0;
-}
-
-error_t device_res_add_str_param(struct device_s *dev, const char *name, const char *value)
-{
-  struct dev_resource_s *r = device_res_unused(dev);
-
-  if (dev->status == DEVICE_DRIVER_INIT_DONE)
-    return -EBUSY;
-  if (!r)
-    return -ENOMEM;
-
-  if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
-    {
-      name = strdup(name);
-      if (!name)
-        return -ENOMEM;
-      value = strdup(value);
-      if (!value)
+      if (!(b = strdup(b)))
         {
-          mem_free((void*)name);
+          mem_free((void *)a);
           return -ENOMEM;
         }
+
+      r->flags |= DEVICE_RES_FLAGS_FREE_PTR1;
+      r->u.uint[1] = (uintptr_t)b;
     }
 
-  r->type = DEV_RES_STR_PARAM;
-  r->str_param.name = name;
-  r->str_param.value = value;
-
-  return 0;
-}
-
-error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintptr_t value)
-{
-  struct dev_resource_s *r = device_res_unused(dev);
-
-  if (dev->status == DEVICE_DRIVER_INIT_DONE)
-    return -EBUSY;
-  if (!r)
-    return -ENOMEM;
-
-  if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
+  if (a != NULL)
     {
-      name = strdup(name);
-      if (!name)
-        return -ENOMEM;
+      r->flags |= DEVICE_RES_FLAGS_FREE_PTR0;
+      r->u.uint[0] = (uintptr_t)a;
     }
 
-  r->type = DEV_RES_UINT_PARAM;
-  r->uint_param.name = name;
-  r->uint_param.value = value;
-
+  if (r_)
+    *r_ = r;
   return 0;
 }
 
 error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, uintptr_t *value)
 {
-  struct dev_resource_s *r = device_res_unused(dev);
+  struct dev_resource_s *r;
+  error_t err = device_res_alloc(dev, &r, DEV_RES_UINT_ARRAY_PARAM);
+  if (err)
+    return err;
 
-  if (dev->status == DEVICE_DRIVER_INIT_DONE)
-    return -EBUSY;
-  if (!r)
+  name = strdup(name);
+  if (!name)
     return -ENOMEM;
 
-  if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
+  uintptr_t i;
+  uintptr_t *v = mem_alloc(sizeof(uintptr_t) * (value[0] + 1), mem_scope_sys);
+
+  if (!v)
     {
-      name = strdup(name);
-      if (!name)
-        return -ENOMEM;
-
-      uintptr_t i;
-      uintptr_t *v = mem_alloc(sizeof(uintptr_t) * (value[0] + 1), mem_scope_sys);
-
-      if (!v)
-        {
-          mem_free((void*)name);
-          return -ENOMEM;
-        }
-
-      for (i = 0; i <= value[0]; i++)
-        v[i] = value[i];
-      value = v;
+      mem_free((void*)name);
+      return -ENOMEM;
     }
 
-  r->type = DEV_RES_UINT_ARRAY_PARAM;
-  r->uint_array_param.name = name;
-  r->uint_array_param.value = value;
+  for (i = 0; i <= value[0]; i++)
+    v[i] = value[i];
+  value = v;
+
+  r->flags = DEVICE_RES_FLAGS_FREE_PTR0 | DEVICE_RES_FLAGS_FREE_PTR1;
+  r->u.uint_array_param.name = name;
+  r->u.uint_array_param.value = value;
 
   return 0;
 }

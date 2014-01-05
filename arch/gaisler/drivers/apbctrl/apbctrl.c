@@ -31,6 +31,7 @@
 
 #include <device/class/enum.h>
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 #include <device/irq.h>
 
@@ -51,10 +52,11 @@ static DEVENUM_MATCH_DRIVER(apbctrl_match_driver)
       if (ident->type != DEVENUM_TYPE_GAISLER)
         continue;
 
-      const struct dev_resource_s *rp = device_res_get(dev, DEV_RES_PRODUCTID, 0);
-      const struct dev_resource_s *rv = device_res_get(dev, DEV_RES_VENDORID, 0);
+      const struct dev_resource_s *rp = device_res_get(dev, DEV_RES_PRODUCT, 0);
+      const struct dev_resource_s *rv = device_res_get(dev, DEV_RES_VENDOR, 0);
 
-      if (rv && rp && rv->vendor.id == ident->grlib.vendor && rp->product.id == ident->grlib.device)
+      if (rv && rp && rv->u.vendor.id == ident->grlib.vendor &&
+                      rp->u.product.id == ident->grlib.device)
         return 1;
     }
 
@@ -199,19 +201,19 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
 #ifdef CONFIG_GAISLER_DEVICE_IDS
       if (vendor < GAISLER_VENDOR_count &&
           gaisler_vendors_longnames[vendor])
-        device_res_add_vendorid(d, vendor, gaisler_vendors_longnames[vendor]);
+        device_res_add_vendor(d, vendor, gaisler_vendors_longnames[vendor]);
       else
 #endif
-        device_res_add_vendorid(d, vendor, NULL);
+        device_res_add_vendor(d, vendor, NULL);
 
 #ifdef CONFIG_GAISLER_DEVICE_IDS
       if (vendor == GAISLER_VENDOR_GAISLER &&
           device < GAISLER_DEVICE_count &&
           gaisler_devices_longnames[device])
-        device_res_add_productid(d, device, gaisler_devices_longnames[device]);
+        device_res_add_product(d, device, gaisler_devices_longnames[device]);
       else
 #endif
-        device_res_add_productid(d, device, NULL);
+        device_res_add_product(d, device, NULL);
 
       device_res_add_revision(d, version, 0);
 

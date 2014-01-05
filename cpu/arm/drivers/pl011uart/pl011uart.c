@@ -28,6 +28,7 @@
 #include <mutek/mem_alloc.h>
 
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/char.h>

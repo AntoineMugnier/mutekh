@@ -26,6 +26,7 @@
 
 #include <device/class/block.h>
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/class/icu.h>
 #include <device/driver.h>
 

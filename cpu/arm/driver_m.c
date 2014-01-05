@@ -144,7 +144,7 @@ static const struct devenum_ident_s  arm_ids[] =
   { 0 }
 };
 
-const struct driver_s  arm_drv =
+const struct driver_s  arm_m_drv =
 {
   .desc           = "Arm-m processor",
   .id_table       = arm_ids,
@@ -164,7 +164,7 @@ const struct driver_s  arm_drv =
   }
 };
 
-REGISTER_DRIVER(arm_drv);
+REGISTER_DRIVER(arm_m_drv);
 
 static DEV_INIT(arm_init)
 {
@@ -218,7 +218,7 @@ static DEV_INIT(arm_init)
   if (cpu_tree_insert(&pv->node))
     goto err_node;
 
-  dev->drv = &arm_drv;
+  dev->drv = &arm_m_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;

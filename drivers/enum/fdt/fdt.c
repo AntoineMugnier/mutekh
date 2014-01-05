@@ -29,6 +29,7 @@
 #include <device/class/enum.h>
 #include <device/class/icu.h>
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 
 #include <hexo/lock.h>
@@ -297,7 +298,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
               {
                 f = 0;
                 fdt_parse_cell(data, e->addr_cells, &f);
-                if (device_res_add_frequency(e->dev, (uint64_t)f << 24))
+                if (device_res_add_freq(e->dev, (uint64_t)f << 24))
                   goto res_err;
                 datalen -= 4;
                 data8 += 4;
@@ -317,7 +318,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
           case FDT_SECTION_DEVICE: {
             if (((char*)data)[datalen])
               goto res_err;
-            if (device_res_add_productid(e->dev, 0, data))
+            if (device_res_add_product(e->dev, 0, data))
               goto res_err;
             return;
           }
@@ -387,18 +388,20 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
 
           while (datalen >= elen)
             {
-              struct dev_resource_s *r = device_res_unused(e->dev);
-              if (!r)
+              struct dev_resource_s *r;
+              error_t err = device_res_alloc(e->dev, &r, DEV_RES_IRQ);
+              if (err)
                 goto res_err;
-              r->type = DEV_RES_IRQ;
-              r->irq.dev_out_id = j++;
-              r->irq.icu_in_id = endian_be32(*(const uint32_t*)data8);
+
+              r->u.irq.dev_out_id = j++;
+              r->u.irq.icu_in_id = endian_be32(*(const uint32_t*)data8);
 
               /* logical irq id is passed as second value if interrupt cells size > 4 */
-              r->irq.irq_id = elen > 4 ? endian_be32(*(const uint32_t*)(data8 + 4)) : 0;
+              r->u.irq.irq_id = elen > 4 ? endian_be32(*(const uint32_t*)(data8 + 4)) : 0;
 
               /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
-              r->irq.icu = (void*)phandle;
+              r->u.irq.icu = (void*)phandle;
+              r->flags |= DEVICE_RES_FLAGS_DEPEND;
 
               datalen -= elen;
               data8 += elen;
@@ -410,20 +413,19 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
         {
           while (datalen >= 8 + elen)
             {
-              /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
-
-              struct dev_resource_s *r = device_res_unused(e->dev);
-              if (!r)
+              struct dev_resource_s *r;
+              error_t err = device_res_alloc(e->dev, &r, DEV_RES_IRQ);
+              if (err)
                 goto res_err;
-              r->type = DEV_RES_IRQ;
-              r->irq.dev_out_id = endian_be32(*(const uint32_t*)data8);
-              r->irq.icu_in_id = endian_be32(*(const uint32_t*)(data8 + 8));
+              r->u.irq.dev_out_id = endian_be32(*(const uint32_t*)data8);
+              r->u.irq.icu_in_id = endian_be32(*(const uint32_t*)(data8 + 8));
 
               /* logical irq id is passed as fourth value if interrupt cells size > 12 */
-              r->irq.irq_id = elen > 12 ? endian_be32(*(const uint32_t*)(data8 + 12)) : 0;
+              r->u.irq.irq_id = elen > 12 ? endian_be32(*(const uint32_t*)(data8 + 12)) : 0;
 
               /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
-              r->irq.icu = (void*)endian_be32(*(const uint32_t*)(data8 + 4));
+              r->u.irq.icu = (void*)endian_be32(*(const uint32_t*)(data8 + 4));
+              r->flags |= DEVICE_RES_FLAGS_DEPEND;
 
               datalen -= 8 + elen;
               data8 += 8 + elen;
@@ -465,12 +467,12 @@ DEVENUM_MATCH_DRIVER(enum_fdt_match_driver)
       if (ident->type != DEVENUM_TYPE_FDTNAME)
         continue;
 
-      const struct dev_resource_s *r = device_res_get(dev, DEV_RES_PRODUCTID, 0);
+      const struct dev_resource_s *r = device_res_get(dev, DEV_RES_PRODUCT, 0);
 
-      if (!r || !r->product.name)
+      if (!r || !r->u.product.name)
         continue;
 
-      if (!strcmp(ident->fdtname.name, r->product.name))
+      if (!strcmp(ident->fdtname.name, r->u.product.name))
         return 1;
     }
 
@@ -494,8 +496,7 @@ const struct driver_s	enum_fdt_drv =
   .classes	= { &enum_fdt_enum_drv, 0 }
 };
 
-#ifdef CONFIG_HEXO_IRQ
-static void resolve_icu_links(struct device_s *root, struct device_s *dev)
+static void resolve_dev_links(struct device_s *root, struct device_s *dev)
 {
   CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->node.children, {
 
@@ -504,18 +505,14 @@ static void resolve_icu_links(struct device_s *root, struct device_s *dev)
 
       struct device_s *d = (struct device_s*)item;
 
-      uint_fast8_t i;
+      DEVICE_RES_FOREACH(d, r, {
 
-      for (i = 0; i < d->res_count; i++)
-        {
-          struct dev_resource_s *r = d->res + i;
-
-          if (r->type == DEV_RES_IRQ)
+          if (r->flags & DEVICE_RES_FLAGS_DEPEND)
             {
-              struct device_s *icu = enum_fdt_get_phandle(root, (uint32_t)r->irq.icu);
+              struct device_s *dep = enum_fdt_get_phandle(root, r->u.uint[0]);
 
-              /* set path to icu device or drop irq resource entry */
-              if (icu)
+              /* set path to device or drop resource entry */
+              if (dep != NULL)
                 {
                   char buf[128], *b = buf;
                   struct device_node_s *p = &d->node;
@@ -525,23 +522,26 @@ static void resolve_icu_links(struct device_s *root, struct device_s *dev)
                       (*b++ = '.'), (*b++ = '.'), (*b++ = '/');
                     }
 
-                  if (p == &root->node && device_get_path(p, b, buf + sizeof(buf) - b, &icu->node, 0) >= 0)
+                  if (p == &root->node && device_get_path(p, b, buf + sizeof(buf) - b, &dep->node, 0) >= 0)
                     {
-                      r->irq.icu = strdup(buf);
-                      if (r->irq.icu != NULL)
-                        continue;
+                      const char *path = strdup(buf);
+                      if (path != NULL)
+                        {
+                          r->u.uint[0] = (uintptr_t)path;
+                          r->flags |= DEVICE_RES_FLAGS_FREE_PTR0;
+                          continue;
+                        }
                     }
                 }
 
-              printk("enum-fdt: bad interrupt controller handle in %p `%s'\n", icu, icu->node.name);
-              r->type = DEV_RES_UNUSED;
+              printk("enum-fdt: bad node handle in %p `%s'\n", dep, dep->node.name);
+              device_res_cleanup(r);
             }
-        }
+        });
 
-      resolve_icu_links(root, d);
+      resolve_dev_links(root, d);
   });
 }
-#endif
 
 static DEV_INIT(enum_fdt_init)
 {
@@ -579,9 +579,7 @@ static DEV_INIT(enum_fdt_init)
     return -ENOENT;
 
   fdt_walk_blob((const void*)addr, &walker);
-#ifdef CONFIG_HEXO_IRQ
-  resolve_icu_links(dev, dev);
-#endif
+  resolve_dev_links(dev, dev);
 
   dev->status = DEVICE_DRIVER_INIT_DONE;
 

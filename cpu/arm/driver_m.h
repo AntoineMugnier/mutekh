@@ -29,6 +29,7 @@
 #include <hexo/iospace.h>
 
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 #include <device/class/icu.h>
 #include <device/class/cpu.h>

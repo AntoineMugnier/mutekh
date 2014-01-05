@@ -27,6 +27,7 @@
 #include <hexo/local.h>
 
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
@@ -38,6 +39,8 @@
 
 CPU_LOCAL void *__context_data_base;
 CPU_LOCAL void *__cpu_data_base;
+
+#define ICU_X86_64_EMU_MAX_VECTOR 1
 
 struct x86_64_emu_dev_private_s
 {
@@ -145,7 +148,7 @@ static DEV_INIT(x86_64_emu_init)
     goto err_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
-  device_irq_sink_init(dev, &pv->sink, 1);
+  device_irq_sink_init(dev, pv->sinks, ICU_X86_64_EMU_MAX_VECTOR);
 #endif
 
   if (cpu_tree_insert(&pv->node))

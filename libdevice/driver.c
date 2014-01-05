@@ -27,16 +27,14 @@
 #include <mutek/printk.h>
 
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/enum.h>
 
 #include <assert.h>
 #include <string.h>
-
-# ifdef CONFIG_DRIVER_ENUM_ROOT
-struct device_s device_enum_root;
-# endif
+#include <stdlib.h>
 
 error_t device_get_accessor(void *accessor, struct device_s *dev,
                             enum driver_class_e cl, uint_fast8_t number)
@@ -77,8 +75,6 @@ void device_put_accessor(void *accessor)
   a->api = NULL;
 }
 
-#ifdef CONFIG_DEVICE_TREE
-
 error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
                                     const char *path, enum driver_class_e cl)
 {
@@ -91,22 +87,23 @@ error_t device_get_accessor_by_path(void *accessor, struct device_node_s *root,
   return device_get_accessor(accessor, device_from_node(root), cl, num ? atoi(num) : 0);
 }
 
+#ifdef CONFIG_DEVICE_TREE
 
 static bool_t device_find_driver_r(struct device_node_s *node)
 {
-  extern const struct driver_s * global_driver_registry[];
-  extern const struct driver_s * global_driver_registry_end[];
+  extern const struct driver_s * dev_drivers_table[];
+  extern const struct driver_s * dev_drivers_table_end[];
 
   bool_t done = 0;
 
   struct device_s *dev = device_from_node(node);
 
-  if (dev)
+  if (dev && !(node->flags & DEVICE_FLAG_IGNORE))
     {
       switch (dev->status)
         {
         case DEVICE_NO_DRIVER: {
-          const struct driver_s **drv = global_driver_registry;
+          const struct driver_s **drv = dev_drivers_table;
 
           struct device_enum_s e;
 
@@ -117,7 +114,7 @@ static bool_t device_find_driver_r(struct device_node_s *node)
             break;
 
           /* iterate over available drivers */
-          for ( ; drv < global_driver_registry_end ; drv++ )
+          for ( ; drv < dev_drivers_table_end ; drv++ )
             {
               /* driver entry may be NULL on heterogeneous systems */
               if (!*drv)
@@ -150,22 +147,20 @@ static bool_t device_find_driver_r(struct device_node_s *node)
         }
     }
 
-  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &node->children, {
-      done |= device_find_driver_r(item);
+  DEVICE_NODE_FOREACH(node, child, {
+      done |= device_find_driver_r(child);
   });
 
   return done;
 }
 
-extern struct device_s device_enum_root;
-
-void device_find_driver(struct device_s *dev)
+void device_find_driver(struct device_node_s *node)
 {
-  if (!dev)
-    dev = &device_enum_root;
+  if (!node)
+    node = device_tree_root();
 
   /* try to bind and init as many devices as possible */
-  while (device_find_driver_r((struct device_node_s*)dev))
+  while (device_find_driver_r(node))
     ;
 }
 
@@ -179,9 +174,6 @@ error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv)
   dev->drv = drv;
   dev->status = DEVICE_DRIVER_INIT_PENDING;      
 
-  printk("device: %p `%s' uses driver %p `%s'\n",
-         dev, dev->node.name, drv, drv->desc);
-
   return 0;
 }
 
@@ -192,26 +184,18 @@ error_t device_init_driver(struct device_s *dev)
   if (dev->status != DEVICE_DRIVER_INIT_PENDING)
     return -EBUSY;
 
-  uint_fast8_t i;
-
-  /* check dependencies before try device initialization */
-  for (i = 0; i < dev->res_count; i++)
-    {
-      struct dev_resource_s *r = dev->res + i;
-      switch (r->type)
+  /* check dependencies before trying device initialization */
+  DEVICE_RES_FOREACH(dev, r, {
+      if (r->flags & DEVICE_RES_FLAGS_DEPEND)
         {
-#ifdef CONFIG_DEVICE_IRQ
-          /* check that interrupt controllers are initialized */
-        case DEV_RES_IRQ: {
-          struct device_s *icu = dev;
-          if (device_get_by_path(&icu, r->irq.icu, &device_filter_init_done))
+          struct device_s *dep = dev;
+          if (device_get_by_path(&dep, (const char*)r->u.uint[0], &device_filter_init_done))
             return -EAGAIN;
         }
-#endif
-        default:
-          break;
-        }
-    }
+  });
+
+  printk("device: initialization of device %p `%s' using driver %p `%s'\n",
+         dev, dev->node.name, drv, drv->desc);
 
   /* device init */
   error_t err = drv->f_init(dev);

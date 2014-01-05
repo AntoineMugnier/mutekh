@@ -83,6 +83,7 @@ void emu_mem_init(void)
 /////////////////////////////////////////////////////////////////////
 
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 #include <mutek/printk.h>
 
@@ -141,29 +142,10 @@ void emu_cpus_enum_init()
 
 /////////////////////////////////////////////////////////////////////
 
-void emu_device_enum_init()
-{
-#if defined(CONFIG_DRIVER_CHAR_EMUTTY)
-  extern const struct driver_s emu_tty_drv;
-  static struct device_s tty_dev;
-  device_init(&tty_dev);
-  device_set_name(&tty_dev, "tty");
-  device_attach(&tty_dev, NULL);
-  device_bind_driver(&tty_dev, &emu_tty_drv);
-#endif
+DEV_DECLARE_STATIC_RESOURCES(tty_dev_res, 0, );
 
-#ifdef CONFIG_DRIVER_ICU_EMU
-  static struct device_s icu_dev;
-#endif
+DEV_DECLARE_STATIC(tty_dev, "tty", 0, emu_tty_drv, tty_dev_res);
 
-#ifdef CONFIG_DEVICE_TIMER
-  static device_s timer_dev;
-#endif
-
-#ifdef CONFIG_DEVICE_BLOCK
-  static device_s block_dev;
-#endif
-}
 
 /////////////////////////////////////////////////////////////////////
 

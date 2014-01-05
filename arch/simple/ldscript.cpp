@@ -24,9 +24,9 @@ SECTIONS
 		*(.sdata*)
 		*(.data*)
 		*(.rodata*)
-		global_driver_registry = .;
+		dev_drivers_table = .;
 		KEEP(*(.drivers))
-		global_driver_registry_end = .;
+		dev_drivers_table_end = .;
 		*(.common*)
 
 		/* data depending on cpu architecture (fonction pointer variables, ...) */

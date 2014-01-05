@@ -27,6 +27,7 @@
 #include <hexo/interrupt.h>
 
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/irq.h>
 #include <device/class/dma.h>
 

@@ -23,22 +23,23 @@
 
 #include <mutek/printk.h>
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
-
-#ifdef CONFIG_DEVICE_TREE
-struct device_s device_enum_root;
-#endif
 
 static void
 device_dump_device(struct device_s *dev, uint_fast8_t indent)
 {
-  uint_fast8_t i, j;
+  uint_fast8_t i;
   const char *status[] = { DEVICE_STATUS_NAMES };
 
   printk("\n");
   for (i = 0; i < indent; i++)
     printk("  ");
-  printk("Device %p `%s'\n", dev, dev->node.name);
+  printk("Device %p `%s'", dev, dev->node.name);
+  if (dev->node.flags & DEVICE_FLAG_IGNORE)
+    printk(" (ignored)");
+  printk("\n");
+
   for (i = 0; i < indent; i++)
     printk("  ");
   printk("  status: %s, use: %i\n", status[dev->status], dev->ref_count);
@@ -65,9 +66,7 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
 
   uint_fast8_t count[DEV_RES_TYPES_COUNT] = { 0 };
 
-  for (j = 0; j < dev->res_count; j++)
-    {
-      struct dev_resource_s *r = dev->res + j;
+  DEVICE_RES_FOREACH(dev, r, {
 
       uint16_t type = r->type;
       uint_fast8_t c = 0;
@@ -82,54 +81,54 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
       switch (type)
         {
         case DEV_RES_MEM:
-          printk("  Memory range %i from %p to %p\n", c, r->mem.start, r->mem.end);
+          printk("  Memory range %i from %p to %p\n", c, r->u.mem.start, r->u.mem.end);
           break;
         case DEV_RES_IO:
-          printk("  I/O range %i from %p to %p\n", c, r->io.start, r->io.end);
+          printk("  I/O range %i from %p to %p\n", c, r->u.io.start, r->u.io.end);
           break;
 #ifdef CONFIG_DEVICE_IRQ
         case DEV_RES_IRQ: {
           printk("  IRQ %u connected to input %u:%u of controller `%s'\n",
-                 r->irq.dev_out_id, r->irq.icu_in_id, r->irq.irq_id, r->irq.icu);
+                 r->u.irq.dev_out_id, r->u.irq.icu_in_id, r->u.irq.irq_id, r->u.irq.icu);
           break;
         }
 #endif
         case DEV_RES_ID:
-          printk("  Numerical identifier %x %x\n", r->id.major, r->id.minor);
+          printk("  Numerical identifier %x %x\n", r->u.id.major, r->u.id.minor);
           break;
-        case DEV_RES_VENDORID:
-          printk("  Vendor ID 0x%04x `%s'\n", r->vendor.id, r->vendor.name);
+        case DEV_RES_VENDOR:
+          printk("  Vendor ID 0x%04x `%s'\n", r->u.vendor.id, r->u.vendor.name);
           break;
-        case DEV_RES_PRODUCTID:
-          printk("  Product ID 0x%04x `%s'\n", r->product.id, r->product.name);
+        case DEV_RES_PRODUCT:
+          printk("  Product ID 0x%04x `%s'\n", r->u.product.id, r->u.product.name);
           break;
         case DEV_RES_REVISION:
-          printk("  Revision %u.%u\n", r->revision.major, r->revision.minor);
+          printk("  Revision %u.%u\n", r->u.revision.major, r->u.revision.minor);
           break;
         case DEV_RES_FREQ:
-          printk("  Frequency %u.%07u\n", (uint32_t)(r->freq.f40_24 >> 24),
-                 (uint32_t)((r->freq.f40_24 & 0xffffffULL) * 59604644 / 100000000));
+          printk("  Frequency %u.%07u\n", (uint32_t)(r->u.freq.f40_24 >> 24),
+                 (uint32_t)((r->u.freq.f40_24 & 0xffffffULL) * 59604644 / 100000000));
           break;
         case DEV_RES_STR_PARAM:
-          printk("  Custom parameter `%s' = `%s'\n", r->str_param.name, r->str_param.value);
+          printk("  Custom parameter `%s' = `%s'\n", r->u.str_param.name, r->u.str_param.value);
           break;
         case DEV_RES_UINT_PARAM:
-          printk("  Custom parameter `%s' = %x\n", r->uint_param.name, r->uint_param.value);
+          printk("  Custom parameter `%s' = %x\n", r->u.uint_param.name, r->u.uint_param.value);
           break;
         case DEV_RES_UINT_ARRAY_PARAM: {
           uintptr_t i;
-          printk("  Custom parameter `%s' = [", r->uint_array_param.name);
-          for (i = 1; i <= r->uint_array_param.value[0]; i++)
-            printk(" 0x%x", r->uint_array_param.value[i]);
+          printk("  Custom parameter `%s' = [", r->u.uint_array_param.name);
+          for (i = 1; i <= r->u.uint_array_param.value[0]; i++)
+            printk(" 0x%x", r->u.uint_array_param.value[i]);
           printk(" ]\n");
           break;
           }
         default:
-          printk("  %i: unknown resource type %i\n", j, r->type);
+          printk("  %i: unknown resource type %i\n", _i, r->type);
         case DEV_RES_UNUSED:
           ;
         }
-    }
+    });
 }
 
 void
@@ -139,7 +138,6 @@ device_dump(struct device_s *dev)
 }
 
 #ifdef CONFIG_DEVICE_TREE
-
 static void
 device_dump_alias(struct device_alias_s *alias, uint_fast8_t indent)
 {
@@ -152,31 +150,38 @@ device_dump_alias(struct device_alias_s *alias, uint_fast8_t indent)
     printk("  ");
   printk("  target: %s\n", alias->path);
 }
+#endif
 
 static void
-device_dump_tree_r(struct device_node_s *root, uint_fast8_t i)
+device_dump_node(struct device_node_s *root, uint_fast8_t i)
 {
   if (root->flags & DEVICE_FLAG_DEVICE)
     device_dump_device((struct device_s*)root, i);
+#ifdef CONFIG_DEVICE_TREE
   else if (root->flags & DEVICE_FLAG_ALIAS)
     device_dump_alias((struct device_alias_s*)root, i);
+#endif
   else
     printk("Unknows device node %p `%s'\n", root, root->name);
 
-  CONTAINER_FOREACH(device_list, CLIST, &root->children,
-  {
-    device_dump_tree_r(item, i+1);
+#ifdef CONFIG_DEVICE_TREE
+  DEVICE_NODE_FOREACH(root, node, {
+    device_dump_node(node, i+1);
   });
+#endif
 }
 
 void
 device_dump_tree(struct device_node_s *root)
 {
+#ifdef CONFIG_DEVICE_TREE
   if (!root)
-    root = &device_enum_root.node;
-
-  device_dump_tree_r(&device_enum_root.node, 0);
-}
-
+    root = device_tree_root();
+  device_dump_node(root, 0);
+#else
+  DEVICE_NODE_FOREACH(, node, {
+    device_dump_node(node, 0);
+  });
 #endif
+}
 

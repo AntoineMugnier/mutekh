@@ -31,6 +31,7 @@
 
 #include <device/class/enum.h>
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 #include <device/irq.h>
 

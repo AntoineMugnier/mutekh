@@ -37,31 +37,23 @@ void atmel_mem_init()
 /////////////////////////////////////////////////////////////////////
 
 # include <device/driver.h>
+# include <device/resources.h>
 # include <device/device.h>
 # include <device/class/cpu.h>
 
-void atmel_hw_enum_init()
-{
-  static struct device_s cpu_dev;
-
-  device_init(&cpu_dev);
-  cpu_dev.node.flags |= DEVICE_FLAG_CPU;
-  device_res_add_id(&cpu_dev, 0, 0);
-  device_attach(&cpu_dev, NULL);
+DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
+  DEV_STATIC_RES_ID(0, 0),
+);
 
 #if defined (CONFIG_CPU_AVR32)
-  extern const struct driver_s avr32_drv;
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, avr32_drv, cpu_dev_res);
 
-  device_bind_driver(&cpu_dev, &avr32_drv);
-  device_init_driver(&cpu_dev);
+#elif defined (CONFIG_CPU_ARM_ARCH_PROFILE_A)
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_drv, cpu_dev_res);
 
-#elif defined (CONFIG_CPU_ARM)
-  extern const struct driver_s arm_drv;
+#elif defined (CONFIG_CPU_ARM_ARCH_PROFILE_M)
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, cpu_dev_res);
 
-  device_bind_driver(&cpu_dev, &arm_drv);
-  device_init_driver(&cpu_dev);
-#else
 # error Unknown ATMEL cpu
 #endif
-}
 

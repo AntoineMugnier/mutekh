@@ -39,46 +39,32 @@ void zynq_mem_init()
 
 # include <device/driver.h>
 # include <device/device.h>
+#include <device/resources.h>
 # include <device/class/cpu.h>
 
-void zynq_hw_enum_init()
-{
-  static struct device_s mpcore_dev;
+DEV_DECLARE_STATIC_RESOURCES(mpcore_dev_res, 1,
+  DEV_STATIC_RES_MEM(0xf8f00000, 0xf8f02000),
+);
 
-  device_init(&mpcore_dev);
-  device_set_name(&mpcore_dev, "mpcore0");
-  device_res_add_mem(&mpcore_dev, 0xf8f00000, 0xf8f02000);
-  device_attach(&mpcore_dev, NULL);
+DEV_DECLARE_STATIC(mpcore_dev, "mpcore0", 0, a9mpcore_drv, mpcore_dev_res);
 
-  extern const struct driver_s a9mpcore_drv;
-
-  device_bind_driver(&mpcore_dev, &a9mpcore_drv);
 
 #ifdef CONFIG_DRIVER_CHAR_CADENCE_UART
-  extern const struct driver_s cadence_uart_drv;
 
-  static struct device_s uart0_dev;
-  device_init(&uart0_dev);
-  device_set_name(&uart0_dev, "uart0");
-  device_res_add_mem(&uart0_dev, 0xe0000000, 0xe0001000);
-# ifdef CONFIG_DEVICE_IRQ
-  device_res_add_irq(&uart0_dev, 0, 59, 0, "/mpcore0/icu");
-# endif
-  device_attach(&uart0_dev, NULL);
+DEV_DECLARE_STATIC_RESOURCES(uart0_dev_res, 2,
+  DEV_STATIC_RES_MEM(0xe0000000, 0xe0001000),
+  DEV_STATIC_RES_IRQ(0, 59, 0, "/mpcore0/icu"),
+);
 
-  device_bind_driver(&uart0_dev, &cadence_uart_drv);
+DEV_DECLARE_STATIC(uart0_dev, "uart0", 0, cadence_uart_drv, uart0_dev_res);
 
-  static struct device_s uart1_dev;
-  device_init(&uart1_dev);
-  device_set_name(&uart1_dev, "uart1");
-  device_res_add_mem(&uart1_dev, 0xe0001000, 0xe0002000);
-# ifdef CONFIG_DEVICE_IRQ
-  device_res_add_irq(&uart1_dev, 0, 82, 0, "/mpcore0/icu");
-# endif
-  device_attach(&uart1_dev, NULL);
 
-  device_bind_driver(&uart1_dev, &cadence_uart_drv);
+DEV_DECLARE_STATIC_RESOURCES(uart1_dev_res, 2,
+  DEV_STATIC_RES_MEM(0xe0001000, 0xe0002000),
+  DEV_STATIC_RES_IRQ(0, 82, 0, "/mpcore0/icu"),
+);
+
+DEV_DECLARE_STATIC(uart1_dev, "uart1", 0, cadence_uart_drv, uart1_dev_res);
+
 #endif
-
-}
 

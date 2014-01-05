@@ -27,6 +27,7 @@
 #include <hexo/local.h>
 
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
@@ -38,6 +39,8 @@
 
 CPU_LOCAL void *__context_data_base;
 CPU_LOCAL void *__cpu_data_base;
+
+#define ICU_X86_EMU_MAX_VECTOR 1
 
 struct x86_emu_dev_private_s
 {

@@ -62,23 +62,15 @@ void ibmpc_mem_init()
 /////////////////////////////////////////////////////////////////////
 
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 #include <hexo/cpu.h>
 
-void ibmpc_hw_enum_init()
-{
-  static struct device_s cpu_dev;
+DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
+  DEV_STATIC_RES_ID(0, 0),
+);
 
-  device_init(&cpu_dev);
-  cpu_dev.node.flags |= DEVICE_FLAG_CPU;
-  device_res_add_id(&cpu_dev, 0, 0);
-  device_attach(&cpu_dev, NULL);
-
-  extern const struct driver_s x86_drv;
-
-  device_bind_driver(&cpu_dev, &x86_drv);
-  device_init_driver(&cpu_dev);
-}
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, x86_drv, cpu_dev_res);
 
 /////////////////////////////////////////////////////////////////////
 

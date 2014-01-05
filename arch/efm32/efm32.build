@@ -12,8 +12,12 @@
 
   CONFIG_COMPILE_OPTIMIZE s
 
+  CONFIG_MUTEK_CONSOLE_DEVICE_PATHS "leuart0 leuart* uart* usart*"
+
   CONFIG_LOAD_EXCEPTIONS_SEPARATE undefined
   CONFIG_LOAD_EXCEPTIONS_TEXT
+
+  CONFIG_DEVICE_TREE undefined
 
   #################################################
   # CPUs

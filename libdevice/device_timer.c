@@ -23,6 +23,7 @@
 #include <hexo/types.h>
 #include <device/driver.h>
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/class/timer.h>
 
 #ifdef CONFIG_MUTEK_SCHEDULER

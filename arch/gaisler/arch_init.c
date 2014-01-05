@@ -53,22 +53,15 @@ void gaisler_mem_init()
 #ifdef CONFIG_GAISLER_AHB_ENUM
 
 # include <device/driver.h>
+# include <device/resources.h>
 # include <device/device.h>
-# include <device/class/enum.h>
 
-void gaisler_ahb_enum_init()
-{
-    extern const struct driver_s ahbctrl_drv;
-    static struct device_s ahbctrl_dev;
+DEV_DECLARE_STATIC_RESOURCES(ahbctrl_dev_res, 1,
+  DEV_STATIC_RES_MEM(CONFIG_GAISLER_AHB_ENUM_ADDR,
+                     CONFIG_GAISLER_AHB_ENUM_ADDR + 0xe00),
+);
 
-    device_init(&ahbctrl_dev);
-    device_set_name(&ahbctrl_dev, "ahb0");
-    device_attach(&ahbctrl_dev, NULL);
-    device_res_add_mem(&ahbctrl_dev, CONFIG_GAISLER_AHB_ENUM_ADDR,
-                       CONFIG_GAISLER_AHB_ENUM_ADDR + 0xe00);
-    device_bind_driver(&ahbctrl_dev, &ahbctrl_drv);
-    device_init_driver(&ahbctrl_dev);
-}
+DEV_DECLARE_STATIC(ahbctrl_dev, "ahbctrl", 0, ahbctrl_drv, ahbctrl_dev_res);
 
 #endif
 

@@ -363,6 +363,8 @@ static inline void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq)
 }
 #endif /* 0 */
 
+#endif
+
 /***************************************** device class */
 
 DRIVER_CLASS_TYPES(spi_ctrl,
@@ -553,8 +555,6 @@ DRIVER_CLASS_TYPES(spi_ctrl,
 #define BC_SPI_SWPM32(raddr, rcnt) BC_CUSTOM(0x1f00 | ((raddr & 0xf) << 4) | (rcnt & 0xf))
 
 #endif /* CONFIG_DEVICE_SPI_REQUEST */
-
-#endif
 
 #endif
 

@@ -24,36 +24,51 @@
 
 #include <stdio.h>
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/enum.h>
 
 #include <mutek/mem_alloc.h>
 
-#include <mutek/printk.h>
-
 #ifdef CONFIG_DEVICE_TREE
-extern const struct driver_s device_enum_root_drv;
-struct device_s device_enum_root;
+
+DEV_DECLARE_STATIC_RESOURCES(device_enum_root_res, 0);
+DEV_DECLARE_STATIC(device_enum_root, "root", 0,
+                   device_enum_root_drv, device_enum_root_res);
+
+struct device_node_s *device_tree_root()
+{
+  return &device_enum_root.node;
+}
+
 CONTAINER_FUNC(device_list, CLIST, inline, device_list);
-#endif
 
 void device_tree_init()
 {
-#ifdef CONFIG_DEVICE_TREE
-  device_init(&device_enum_root);
-  device_enum_root.node.name = "root";
-  device_bind_driver(&device_enum_root, &device_enum_root_drv);
-  device_init_driver(&device_enum_root);
-#endif
-}
+  /* attach statically declared devices in the device tree */
 
-void device_init(struct device_s *dev)
+  extern struct device_s dev_devices_table;
+  extern struct device_s dev_devices_table_end;
+  struct device_s *d = &dev_devices_table;
+
+  for (d = &dev_devices_table; d < &dev_devices_table_end; d++)
+    {
+      if (d->node.flags & DEVICE_FLAG_IGNORE)
+        continue;
+      if (d == &device_enum_root)
+        continue;
+      device_attach(d, &device_enum_root);
+    }
+}
+#endif
+
+void device_init(struct device_s *dev, const struct dev_resource_table_s *tbl)
 {
   lock_init(&dev->lock);
   dev->status = DEVICE_NO_DRIVER;
   dev->drv = NULL;
-  dev->res_count = DEVICE_STATIC_RESOURCE_COUNT;
+  dev->res_tbl = (void*)tbl;
   dev->ref_count = 0;
   dev->node.flags = DEVICE_FLAG_DEVICE;
 
@@ -67,23 +82,41 @@ void device_init(struct device_s *dev)
 #if defined(CONFIG_ARCH_SMP) && defined(CONFIG_DEVICE_IRQ)
   //  cpu_set_init(&dev->cpu_irqs);
 #endif
-
-  memset(dev->res, 0, sizeof(dev->res));
 }
 
 struct device_s *device_alloc(size_t resources)
 {
-  struct device_s *dev = mem_alloc(sizeof(struct device_s) + sizeof(struct dev_resource_s)
-                                   * ((ssize_t)resources - DEVICE_STATIC_RESOURCE_COUNT), (mem_scope_sys));
+  size_t s = sizeof(struct device_s);
+
+  if (resources > 0)
+    s += sizeof(struct dev_resource_table_s)
+       + sizeof(struct dev_resource_s) * resources;
+
+  struct device_s *dev = mem_alloc(s, (mem_scope_sys));
 
   if (dev != NULL)
     {
       lock_init(&dev->lock);
       dev->status = DEVICE_NO_DRIVER;
       dev->drv = NULL;
-      dev->res_count = resources;
       dev->ref_count = 0;
       dev->node.flags = DEVICE_FLAG_ALLOCATED | DEVICE_FLAG_DEVICE;
+
+      if (resources > 0)
+        {
+          struct dev_resource_table_s *tbl = (void*)(dev + 1);
+
+          dev->res_tbl = tbl;
+          tbl->next = NULL;
+          tbl->flags = 0;
+          tbl->count = resources;
+
+          memset(tbl->table, 0, sizeof(struct dev_resource_s) * resources);
+        }
+      else
+        {
+          dev->res_tbl = NULL;
+        }
 
 #ifdef CONFIG_DEVICE_TREE
       dev->node.name = NULL;
@@ -95,8 +128,6 @@ struct device_s *device_alloc(size_t resources)
 #if defined(CONFIG_ARCH_SMP) && defined(CONFIG_DEVICE_IRQ)
       //      cpu_set_init(&dev->cpu_irqs);
 #endif
-
-      memset(dev->res, 0, sizeof(struct dev_resource_s) * resources);
     }
 
   return dev;
@@ -104,8 +135,6 @@ struct device_s *device_alloc(size_t resources)
 
 void device_cleanup(struct device_s *dev)
 {
-  uint_fast8_t i;
-
 #ifdef CONFIG_DEVICE_TREE
   assert(!dev->node.parent);
 #endif
@@ -114,39 +143,16 @@ void device_cleanup(struct device_s *dev)
   if (dev->status == DEVICE_DRIVER_INIT_DONE)
     dev->drv->f_cleanup(dev);
 
-  for (i = 0; i < dev->res_count; i++)
+  struct dev_resource_table_s *tbl, *next;
+  for (tbl = dev->res_tbl; tbl != NULL; tbl = next)
     {
-      struct dev_resource_s *r = dev->res + i;
-      switch (r->type)
-        {
-#ifdef CONFIG_DEVICE_IRQ
-        case DEV_RES_IRQ:
-          if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
-            mem_free((void*)r->irq.icu);
-          break;
-#endif
-        case DEV_RES_VENDORID:
-          if (r->vendor.name && (dev->node.flags & DEVICE_FLAG_ALLOCATED))
-            mem_free((void*)r->vendor.name);
-          break;
+      next = tbl->next;
+      uint_fast8_t i;
+      for (i = 0; i < tbl->count; i++)
+        device_res_cleanup(&tbl->table[i]);
 
-        case DEV_RES_PRODUCTID:
-          if (r->product.name && (dev->node.flags & DEVICE_FLAG_ALLOCATED))
-            mem_free((void*)r->product.name);
-          break;
-
-        case DEV_RES_STR_PARAM:
-        case DEV_RES_UINT_ARRAY_PARAM:
-          if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
-            mem_free((void*)r->str_param.value);
-        case DEV_RES_UINT_PARAM:
-          if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
-            mem_free((void*)r->str_param.name);
-          break;
-
-        default:
-          break;
-        }
+      if (tbl->flags & DEVICE_RES_TBL_FLAGS_ALLOCATED)
+        mem_free((void*)tbl);
     }
 
 #ifdef CONFIG_DEVICE_TREE
@@ -159,59 +165,88 @@ void device_cleanup(struct device_s *dev)
   //  cpu_set_destroy(&dev->cpu_irqs);
 #endif
 
+  if (dev->node.flags & DEVICE_FLAG_NAME_ALLOCATED)
+    mem_free((void*)dev->node.name);
   if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
-    {
-#ifdef CONFIG_DEVICE_TREE
-      if (dev->node.name)
-        mem_free((void*)dev->node.name);
-#endif
+    mem_free(dev);
+}
 
-      mem_free(dev);
+static void device_res_shrink(struct dev_resource_table_s **tbl_,
+                              size_t header)
+{
+  struct dev_resource_table_s *tbl = *tbl_;
+  if (tbl == NULL)
+    return;
+  if (tbl->flags & DEVICE_RES_TBL_FLAGS_STATIC_CONST)
+    return;
+
+  if (header || (tbl->flags & DEVICE_RES_TBL_FLAGS_ALLOCATED))
+    {
+      int_fast8_t i;
+      for (i = tbl->count; i > 0; i--)
+        if (tbl->table[i-1].type != DEV_RES_UNUSED)
+          break;
+
+      size_t s = header;
+      if (i < tbl->count)
+        {
+          if (i)
+            {
+              tbl->count = i;
+              s += sizeof(struct dev_resource_table_s)
+                + sizeof(struct dev_resource_s) * i;
+              tbl_ = &tbl->next;
+            }
+          else
+            {
+              *tbl_ = tbl->next;
+            }
+          if (s)
+            mem_resize((uint8_t*)tbl - header, s);
+          else
+            mem_free(tbl);
+        }
+      else
+        {
+          tbl_ = &tbl->next;
+        }
     }
+
+  device_res_shrink(tbl_, 0);
 }
 
 void device_shrink(struct device_s *dev)
 {
-  uint_fast8_t i;
+  struct dev_resource_table_s *tbl = dev->res_tbl;
 
-  assert(dev->node.flags & DEVICE_FLAG_ALLOCATED);
-
-  for (i = dev->res_count; i > 0; i--)
-    if (dev->res[i-1].type != DEV_RES_UNUSED)
-      break;
-
-  if (i < dev->res_count)
-    {
-      dev->res_count = i;
-
-      mem_resize(dev, sizeof(struct device_s) + sizeof(struct dev_resource_s)
-                 * ((ssize_t)i - DEVICE_STATIC_RESOURCE_COUNT));
-    }
+  if ((void*)tbl == (void*)(dev + 1) && (dev->node.flags & DEVICE_FLAG_ALLOCATED))
+    device_res_shrink(&dev->res_tbl, sizeof (struct device_s));
+  else
+    device_res_shrink(&dev->res_tbl, 0);
 }
-
-#ifdef CONFIG_DEVICE_TREE
 
 error_t device_set_name(struct device_s *dev, const char *name)
 {
+#ifdef CONFIG_DEVICE_TREE
   if (dev->node.parent)
     return -EBUSY;
+#endif
 
-  if (dev->node.flags & DEVICE_FLAG_ALLOCATED)
-    {
-      if (dev->node.name)
-        mem_free((void*)dev->node.name);
+  const char *old = dev->node.name;
 
-      dev->node.name = strdup(name);
-      if (!dev->node.name)
-        return -ENOMEM;
-    }
-  else
-    {
-      dev->node.name = name;
-    }
+  dev->node.name = strdup(name);
+  if (!dev->node.name)
+    return -ENOMEM;
+
+  if (dev->node.flags & DEVICE_FLAG_NAME_ALLOCATED)
+    mem_free((void*)old);
+
+  dev->node.flags |= DEVICE_FLAG_NAME_ALLOCATED;
 
   return 0;
 }
+
+#ifdef CONFIG_DEVICE_TREE
 
 void device_attach(struct device_s *dev,
                    struct device_s *parent)
@@ -230,6 +265,7 @@ void device_attach(struct device_s *dev,
     {
       sprintf(name, "dev%u", id++);
       dev->node.name = strdup(name);
+      dev->node.flags |= DEVICE_FLAG_NAME_ALLOCATED;
     }
 
   device_list_pushback(&parent->node.children, (struct device_node_s*)dev);
@@ -396,31 +432,32 @@ static error_t device_resolve_alias(struct device_node_s **node, uint_fast8_t de
   return e;
 }
 
+#endif
+
 bool_t device_filter_init_done(struct device_node_s *node)
 {
   struct device_s *dev = device_from_node(node);
-  return dev && dev->status == DEVICE_DRIVER_INIT_DONE;
+  return dev && dev->status == DEVICE_DRIVER_INIT_DONE
+    && !(dev->node.flags & DEVICE_FLAG_IGNORE);
 }
 
 error_t device_node_from_path(struct device_node_s **node, const char *path,
                               uint_fast8_t depth, const char **brackets,
                               device_filter_t *filter)
 {
-  struct device_node_s *root = *node;
+  __unused__ struct device_node_s *root = *node;
   struct device_node_s *n = NULL;
 
   while (*path)
     {
-      struct device_node_s *r = root;
+      __unused__ struct device_node_s *r = root;
 
       while (*path && *path <= ' ')
         path++;
 
+#ifdef CONFIG_DEVICE_TREE
       if (*path == '/')
-        {
-          path++;
-          r = &device_enum_root.node;
-        }
+        r = &device_enum_root.node;
 
       if (brackets)
         *brackets = NULL;
@@ -428,6 +465,7 @@ error_t device_node_from_path(struct device_node_s **node, const char *path,
     next:
       if (!r)
         r = &device_enum_root.node;
+#endif
 
       while (*path == '/')
         path++;
@@ -438,7 +476,11 @@ error_t device_node_from_path(struct device_node_s **node, const char *path,
             {
             case '/':
               path += 2;
+#ifdef CONFIG_DEVICE_TREE
               goto next;
+#else
+              goto skip;
+#endif
             case 0:
             case ' ':
               n = r;
@@ -447,6 +489,7 @@ error_t device_node_from_path(struct device_node_s **node, const char *path,
                 goto skip;
               goto end;
             case '.':
+#ifdef CONFIG_DEVICE_TREE
               switch (path[2])
                 {
                 case '/':
@@ -461,17 +504,18 @@ error_t device_node_from_path(struct device_node_s **node, const char *path,
                     goto skip;
                   goto end;
                 }
+#else
+              goto skip;
+#endif
               break;
             }
         }
 
-      // FIXME locking
-      CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &r->children,
-      {
+      DEVICE_NODE_FOREACH(r, node, {
         uint_fast8_t i;
 
-        if (!item->name)
-          CONTAINER_FOREACH_CONTINUE;
+        if (!node->name || (node->flags & DEVICE_FLAG_IGNORE))
+          continue;
 
         if (brackets)
           *brackets = NULL;
@@ -479,13 +523,14 @@ error_t device_node_from_path(struct device_node_s **node, const char *path,
         for (i = 0; ; i++)
           {
             char c = path[i];
-            if (item->name[i] == 0 || c == '*')
+            if (node->name[i] == 0 || c == '*')
               {
                 if (c == '*')
                   c = path[++i];
                 if (c <= ' ' || (brackets && c == '['))
                   {
-                    n = item;
+                    n = node;
+#ifdef CONFIG_DEVICE_TREE
                     error_t e = device_resolve_alias(&n, depth, c == '[' ? NULL : brackets);
                     switch (e)
                       {
@@ -496,6 +541,7 @@ error_t device_node_from_path(struct device_node_s **node, const char *path,
                       case 0:
                         break;
                       }
+#endif
 
                     if (!n || (filter && !filter(n)))
                       break;
@@ -505,13 +551,17 @@ error_t device_node_from_path(struct device_node_s **node, const char *path,
                   }
                 else if (c == '/')
                   {
-                    r = item;
+#ifdef CONFIG_DEVICE_TREE
+                    r = node;
                     path += i + 1;
                     goto next;
+#else
+                    goto skip;
+#endif
                   }
                 break;
               }
-            else if (item->name[i] != c && c != '?')
+            else if (node->name[i] != c && c != '?')
               break;
           }
       });
@@ -553,25 +603,27 @@ error_t device_get_by_path(struct device_s **dev, const char *path, device_filte
   return e;
 }
 
-static bool_t _device_tree_walk(struct device_node_s *dev, device_tree_walker_t *walker, void *priv)
+static inline bool_t _device_tree_walk(struct device_node_s *node, device_tree_walker_t *walker, void *priv)
 {
   bool_t res = 0;
+  struct device_s *d;
 
-  CONTAINER_FOREACH(device_list, CLIST, &dev->children,
-  {
-    struct device_s *d = device_from_node(item);
+  DEVICE_NODE_FOREACH(node, child, {
+    if (node->flags & DEVICE_FLAG_IGNORE)
+      continue;
+    if (!(d = device_from_node(child)))
+      continue;
 
-    if(d)
+    if (walker(d, priv))
+      return 1;
+
+#ifdef CONFIG_DEVICE_TREE
+    if (_device_tree_walk(child, walker, priv))
       {
-        if (walker(d, priv))
-          return 1;
-
-        if (_device_tree_walk(item, walker, priv))
-          {
-            res = 1;
-            CONTAINER_FOREACH_BREAK;
-          }
+        res = 1;
+        break;
       }
+#endif
   });
 
   return res;
@@ -579,8 +631,10 @@ static bool_t _device_tree_walk(struct device_node_s *dev, device_tree_walker_t 
 
 bool_t device_tree_walk(struct device_node_s *root, device_tree_walker_t *walker, void *priv)
 {
+#ifdef CONFIG_DEVICE_TREE
   if (!root)
     root = &device_enum_root.node;
+#endif
   return _device_tree_walk(root, walker, priv);
 }
 
@@ -601,6 +655,4 @@ uint_fast8_t device_get_cpu_count()
   device_tree_walk(NULL, count_cpus_r, &count);
   return count;
 }
-
-#endif
 

@@ -23,6 +23,7 @@
 */
 
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/icu.h>
@@ -443,23 +444,21 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
 
   memset(done, 0, sizeof(done));
 
-  for (i = 0; i < dev->res_count; i++)
-    {
-      struct dev_resource_s *r = dev->res + i;
+  DEVICE_RES_FOREACH(dev, r, {
 
       if (r->type != DEV_RES_IRQ)
         continue;
 
-      if (r->irq.dev_out_id >= src_count)
+      if (r->u.irq.dev_out_id >= src_count)
         {
           printk("device: driver for device %p does not provide source end-point for IRQ output %u.\n",
-                 dev, r->irq.dev_out_id);
+                 dev, r->u.irq.dev_out_id);
           err = -ENOENT;
           goto error;
         }
 
       struct device_s *icu_dev = dev;
-      if (device_get_by_path(&icu_dev, r->irq.icu, &device_filter_init_done))
+      if (device_get_by_path(&icu_dev, r->u.irq.icu, &device_filter_init_done))
         {
           printk("device: no initialized interrupt controller available for %p device.\n", dev);
           err = -ENOENT;
@@ -470,18 +469,18 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
 
       if (device_get_accessor(&icu, icu_dev, DRIVER_CLASS_ICU, 0))
         {
-          printk("device: can not use %p device as an interrupt controller.\n", r->irq.icu);
+          printk("device: can not use %p device as an interrupt controller.\n", r->u.irq.icu);
           err = -EINVAL;
           goto error;
         }
 
-      uint_fast8_t id = r->irq.dev_out_id;
+      uint_fast8_t id = r->u.irq.dev_out_id;
       struct dev_irq_ep_s *src = srcs + id;
-      struct dev_irq_ep_s *sink = DEVICE_OP(&icu, get_endpoint, DEV_IRQ_EP_SINK, r->irq.icu_in_id);
+      struct dev_irq_ep_s *sink = DEVICE_OP(&icu, get_endpoint, DEV_IRQ_EP_SINK, r->u.irq.icu_in_id);
 
       if (!sink)
         {
-          printk("device: interrupt controller %p does not have sink end-point for IRQ input %u.\n", icu_dev, r->irq.icu_in_id);
+          printk("device: interrupt controller %p does not have sink end-point for IRQ input %u.\n", icu_dev, r->u.irq.icu_in_id);
           err = -EINVAL;
         }
       else
@@ -495,9 +494,9 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
       device_put_accessor(&icu);
 
       if (enable)
-        if (!device_icu_irq_enable(src, r->irq.irq_id, src, src))
+        if (!device_icu_irq_enable(src, r->u.irq.irq_id, src, src))
           {
-            printk("device: Unable to enable IRQ output %u of device %p, no suitable irq path found.\n", r->irq.irq_id, dev);
+            printk("device: Unable to enable IRQ output %u of device %p, no suitable irq path found.\n", r->u.irq.irq_id, dev);
             err = -EBUSY;
             goto error;
           }
@@ -505,7 +504,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
       done[id]++;
 
       j++;
-    }
+  });
 
   for (i = 0; i < src_count; i++)
     if (!done[i])

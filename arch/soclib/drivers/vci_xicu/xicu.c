@@ -31,6 +31,7 @@
 #include <hexo/endian.h>
 
 #include <device/device.h>
+#include <device/resources.h>
 #include <device/driver.h>
 #include <device/class/icu.h>
 #include <device/class/timer.h>
@@ -176,7 +177,7 @@ static DEV_INIT(soclib_xicu_init)
   device_irq_source_unlink(dev, pv->srcs, pv->irq_count);
  err_mem2:
   if (pv->srcs)
-    mem_free(pv->sinks);
+    mem_free(pv->srcs);
 #endif
  err_mem:
   mem_free(pv);

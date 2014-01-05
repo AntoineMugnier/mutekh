@@ -13,9 +13,16 @@ SECTIONS
 			/* global variables and const data section */
 			*(.data*)
 			*(.rodata*)
-			global_driver_registry = .;
-			*(.drivers)
-			global_driver_registry_end = .;
+
+                        . = ALIGN(8);
+                        dev_devices_table = .;
+                        KEEP(*(.devices))
+                        dev_devices_table_end = .;
+
+                        . = ALIGN(8);
+			dev_drivers_table = .;
+			KEEP(*(.drivers))
+			dev_drivers_table_end = .;
 
 			/* data depending on cpu architecture (fonction pointer variables, ...) */
 			*(.cpuarchdata*)

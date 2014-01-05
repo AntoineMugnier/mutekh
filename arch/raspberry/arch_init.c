@@ -41,55 +41,34 @@ void raspberry_mem_init()
 /////////////////////////////////////////////////////////////////////
 
 # include <device/driver.h>
+# include <device/resources.h>
 # include <device/device.h>
-# include <device/class/cpu.h>
 
-void raspberry_hw_enum_init()
-{
-  static struct device_s cpu_dev;
+DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
+  DEV_STATIC_RES_ID(0, 0),
+);
 
-  device_init(&cpu_dev);
-  cpu_dev.node.flags |= DEVICE_FLAG_CPU;
-  device_set_name(&cpu_dev, "cpu");
-  device_res_add_id(&cpu_dev, 0, 0);
-  device_attach(&cpu_dev, NULL);
-
-  extern const struct driver_s arm_drv;
-
-  device_bind_driver(&cpu_dev, &arm_drv);
-  device_init_driver(&cpu_dev);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_drv, cpu_dev_res);
 
 #ifdef CONFIG_DRIVER_ICU_BCM2835
-  static struct device_s icu_dev;
 
-  device_init(&icu_dev);
-  device_set_name(&icu_dev, "icu");
-  device_res_add_mem(&icu_dev, 0x2000b000, 0x2000b400);
-  device_res_add_irq(&icu_dev, 0, 0, 0, "/cpu");  // irq
-  //  device_res_add_irq(&icu_dev, 1, 1, 0, "/cpu");  // fiq
-  device_attach(&icu_dev, NULL);
+DEV_DECLARE_STATIC_RESOURCES(icu_dev_res, 2,
+  DEV_STATIC_RES_MEM(0x2000b000, 0x2000b400),
+  DEV_STATIC_RES_IRQ(0, 0, 0, "/cpu"),
+);
 
-  extern const struct driver_s bcm2835_icu_drv;
+DEV_DECLARE_STATIC(icu_dev, "icu", 0, bcm2835_icu_drv, icu_dev_res);
 
-  device_bind_driver(&icu_dev, &bcm2835_icu_drv);
-  device_init_driver(&icu_dev);
 #endif
 
 #ifdef CONFIG_DRIVER_CHAR_PL011
-  static struct device_s uart_dev;
 
-  device_init(&uart_dev);
-  device_set_name(&uart_dev, "uart");
-  device_res_add_mem(&uart_dev, 0x20201000, 0x20202000);
-#ifdef CONFIG_DRIVER_ICU_BCM2835
-  device_res_add_irq(&uart_dev, 0, 8+57, 0, "/icu");
+DEV_DECLARE_STATIC_RESOURCES(uart_dev_res, 2,
+  DEV_STATIC_RES_MEM(0x20201000, 0x20202000),
+  DEV_STATIC_RES_IRQ(0, 8+57, 0, "/icu"),
+);
+
+DEV_DECLARE_STATIC(uart_dev, "uart", 0, pl011uart_drv, uart_dev_res);
+
 #endif
-  device_attach(&uart_dev, NULL);
-
-  extern const struct driver_s pl011uart_drv;
-
-  device_bind_driver(&uart_dev, &pl011uart_drv);
-  device_init_driver(&uart_dev);
-#endif
-}
 

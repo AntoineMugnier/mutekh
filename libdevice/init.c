@@ -25,9 +25,31 @@
 #include <device/device.h>
 #include <device/driver.h>
 
+#include <assert.h>
+#include <stdlib.h>
+
 void libdevice_drivers_init()
 {
+#ifdef CONFIG_DEVICE_TREE
   device_find_driver(NULL);
+#else
+  bool_t done;
+  struct device_s *dev;
+
+  do {
+    done = 1;
+    DEVICE_NODE_FOREACH(, node, {
+        if (node->flags & DEVICE_FLAG_IGNORE)
+          continue;
+        if (!(dev = device_from_node(node)))
+          continue;
+
+        if (dev->status == DEVICE_DRIVER_INIT_PENDING &&
+            device_init_driver(dev) != -EAGAIN)
+          done = 0;
+    });
+  } while (!done);
+#endif
 }
 
 

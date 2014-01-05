@@ -137,9 +137,11 @@ SECTIONS
 	.rodata VMAEND(.text) : AT(LMAEND(.text)) {
                 . = ALIGN(16);
 		*(.rodata*)
-		global_driver_registry = .;
+
+                . = ALIGN(8);
+		dev_drivers_table = .;
 		KEEP(*(.drivers))
-		global_driver_registry_end = .;
+		dev_drivers_table_end = .;
 	}
 
 /**************************************** data */
@@ -154,6 +156,11 @@ SECTIONS
 		*(.sdata*)
 		*(.data*)
 		*(.cpuarchdata*)
+
+                . = ALIGN(8);
+		dev_devices_table = .;
+		KEEP(*(.devices))
+		dev_devices_table_end = .;
 #ifndef CONFIG_ARCH_SMP
                 *(.cpudata*) 
 #endif
@@ -209,6 +216,7 @@ SECTIONS
           .debug_ranges  0 : { *(.debug_ranges) }
           .debug_aranges  0 : { *(.debug_aranges) }
           .debug_pubnames 0 : { *(.debug_pubnames) }
+          .debug_pubtypes 0 : { *(.debug_pubtypes) }
           /* DWARF 2 */
           .debug_info     0 : { *(.debug_info .gnu.linkonce.wi.*) }
           .debug_abbrev   0 : { *(.debug_abbrev) }

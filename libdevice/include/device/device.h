@@ -16,7 +16,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
     02110-1301 USA.
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
+    Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006-2013
 
 */
 
@@ -30,218 +30,25 @@
 #define __DEVICE_H__
 
 struct device_s;
+struct device_node_s;
+struct device_alias_s;
 struct driver_s;
+struct dev_resource_s;
+struct dev_resource_table_s;
 
 #include <hexo/types.h>
 #include <hexo/error.h>
 
 typedef uint8_t address_space_id_t;
 
-/** Number of resource slots for statically allocated @ref device_s objects */
-#define DEVICE_STATIC_RESOURCE_COUNT	2
-
 #include <hexo/gpct_platform_hexo.h>
 #include <hexo/gpct_lock_hexo.h>
 
 #ifdef CONFIG_DEVICE_TREE
 # include <gpct/cont_clist.h>
-# include <gpct/object_refcount.h>
 #endif
 
-enum dev_resource_type_e
-{
-    DEV_RES_UNUSED = 0,         //< Unused resource slot
-    DEV_RES_MEM,                //< Physical memory address mapping resource
-    DEV_RES_IO,                 //< Io space address mapping resource
-    DEV_RES_IRQ,                //< Interrupt line resource
-    DEV_RES_ID,                 //< Unique numeric id, meaning depends on parent device type
-    DEV_RES_VENDORID,           //< Vendor id, meaning depends on parent device type
-    DEV_RES_PRODUCTID,          //< Model id specific to current vendor id
-    DEV_RES_REVISION,
-    DEV_RES_FREQ,               //< frequency in Hertz
-    DEV_RES_STR_PARAM,
-    DEV_RES_UINT_PARAM,
-    DEV_RES_UINT_ARRAY_PARAM,
-
-    DEV_RES_TYPES_COUNT,              //< Number of resource types
-};
-
-struct dev_resource_s
-{
-  uint16_t type;                // resource descriptor type @see dev_resource_type_e
-  union {
-    uintptr_t uint[2];
-    uint64_t uint64;
-    struct {
-      uintptr_t start;
-      uintptr_t end;
-    }   mem;
-
-    struct {
-      uintptr_t start;
-      uintptr_t end;
-    }   io;
-
-    struct {
-      /** id of physical irq link going out of the device */
-      uintptr_t dev_out_id:CONFIG_DEVICE_IRQ_MAX_OUTPUT_ID;
-      /** id of physical irq link going into the interrupt controller */
-      uintptr_t icu_in_id:CONFIG_DEVICE_IRQ_MAX_INPUT_ID;
-      /** logical irq id, used when multiple irqs are multiplexed on one physical link */
-      uintptr_t irq_id:CONFIG_DEVICE_IRQ_MAX_LOGICAL_ID;
-      /** device tree path to interrupt controller, relative to device */
-      const char *icu;
-    }   irq;
-
-    struct {
-      uintptr_t major;          //< dynamic numeric id
-      uintptr_t minor;          //< dynamic numeric id
-    }   id;
-
-    struct {
-      uintptr_t id;          //< optional vendor numeric id, may be -1
-      const char *name;     //< optional vendor string id, may be NULL
-    }   vendor;
-
-    struct {
-      uintptr_t id;          //< optional device numeric id, may be -1
-      const char *name;     //< optional device string, may be NULL
-    }   product;
-
-    struct {
-      uintptr_t major;
-      uintptr_t minor;
-    }   revision;
-
-    struct {
-      uint64_t f40_24;     //< frequency in 40.24 fixed point format
-    }   freq;
-
-    struct {
-      const char *name;
-      const char *value;
-    }   str_param;
-
-    struct {
-      const char *name;
-      uintptr_t value;
-    }   uint_param;
-
-    struct {
-      const char *name;
-      uintptr_t *value;
-    }   uint_array_param;
-  };
-};
-
-
-/** @This returns a poiner to next unused resource slot. @internal */
-struct dev_resource_s * device_res_unused(struct device_s *dev);
-
-/** @This adds an IO space address range to the device resources list. */
-error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end);
-
-/** @This adds an memory space address range to the device resources list. */
-error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end);
-
-/** @This adds an IRQ binding to the device resources list.
-
-    The entry specifies how the physical output irq link of the device
-    must be connected to the specified input link of the given
-    interrupt controller and gives the logical irq number associated
-    to the device. The logical irq number is used when the link is a
-    bus carrying an interrupt identifier; zero is used if the link is a
-    single wire.
-
-    A device tree path to the interrupt controller relative to @tt dev
-    is expected for the @tt icu parameter. The path string will be
-    duplicated and later freed on cleanup only if the @ref
-    #DEVICE_FLAG_ALLOCATED flag of the device is set.
-
-    Interrupt controller look-up and end-point bindings will take
-    place when the device driver is initialized. */
-error_t device_res_add_irq(struct device_s *dev, uint_fast8_t dev_out_id, uint_fast8_t icu_in_id,
-                           uint_fast16_t irq_id, const char *icu);
-
-/** @This adds a numerical identifier which uniquely identify an
-    instance of the device. This is generally used by device which are
-    commonly referred to by using a number. Processor devices must
-    use this resource for the cpu id. */
-error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor);
-
-/** @This adds a revision information for the device. */
-error_t device_res_add_revision(struct device_s *dev, uintptr_t major, uintptr_t minor);
-
-/** @This attaches a vendor identifier resource to the device. Both a
-    numerical and a string values can be specified. The exact meaning
-    of the value depends on the parent enumerator device. 
-
-    The name string will be duplicated and later freed on cleanup only if
-    the @ref #DEVICE_FLAG_ALLOCATED flag of the device is set. */
-error_t device_res_add_vendorid(struct device_s *dev, uintptr_t id, const char *name);
-
-/** @This attaches a product identifier resource to the device. Both a
-    numerical and a string values can be specified. The exact meaning
-    of the value depends on the parent enumerator device. 
-
-    The name string will be duplicated and later freed on cleanup only if
-    the @ref #DEVICE_FLAG_ALLOCATED flag of the device is set. */
-error_t device_res_add_productid(struct device_s *dev, uintptr_t id, const char *name);
-
-/** @This attaches a frequency resource to the device. The frenquency
-    must be in 40.24 fixed point format. This value can be read by
-    calling the @ref device_res_get_uint64 function. */
-error_t device_res_add_frequency(struct device_s *dev, uint64_t f_40_24);
-
-/** @This attaches a string parameter resource to the device. The
-    exact meaning of the value is driver dependent.
-
-    The name and value strings will be duplicated and later freed on cleanup
-    only if the @ref #DEVICE_FLAG_ALLOCATED flag of the device is set.  */
-error_t device_res_add_str_param(struct device_s *dev, const char *name, const char *value);
-
-/** @This attaches an integer parameter resource to the device. The
-    exact meaning of the value is driver dependent.
-
-    The name string will be duplicated and later freed on cleanup only if
-    the @ref #DEVICE_FLAG_ALLOCATED flag of the device is set. */
-error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintptr_t value);
-
-/** @This attaches an integer array parameter resource to the
-    device. The first value of the array must indicate the number of
-    subsequent entries in the array. The exact meaning of the value is
-    driver dependent.
-
-    The name string and the array will be duplicated and later freed
-    on cleanup only if the @ref #DEVICE_FLAG_ALLOCATED flag of the
-    device is set. */
-error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, uintptr_t *value);
-
-/** @This returns a pointer to resource of requested type with given position. */
-struct dev_resource_s *device_res_get(struct device_s *dev,
-                                      enum dev_resource_type_e type,
-                                      uint_fast8_t number);
-
-/** @This reads integer resource values. @This can be used to read
-    ids, memory and io ranges resources. @tt a and @tt b pointers may
-    be @tt NULL. */
-error_t device_res_get_uint(const struct device_s *dev,
-                            enum dev_resource_type_e type,
-                            uint_fast8_t id, uintptr_t *a, uintptr_t *b);
-
-/** @This reads a 64 bits integer resource values. */
-error_t device_res_get_uint64(const struct device_s *dev,
-                              enum dev_resource_type_e type,
-                              uint_fast8_t id, uint64_t *a);
-
-error_t device_get_param_uint(const struct device_s *dev, const char *name, uintptr_t *a);
-
-error_t device_get_param_str(const struct device_s *dev, const char *name, char * const *a);
-
-void device_get_param_uint_default(const struct device_s *dev, const char *name, uintptr_t *a, uintptr_t def);
-
-void device_get_param_str_default(const struct device_s *dev, const char *name, char * const *a, const char *def);
-
+/** @This specifies the initialization status of a device */
 enum device_status_e
 {
   /** Device enumeration error, some resource entries may be wrong or missing. */
@@ -258,17 +65,25 @@ enum device_status_e
 
 #define DEVICE_STATUS_NAMES "enum error", "no driver", "init pending", "init ok", "init failed"
 
+/** @This specifies device node type and flags */
 enum device_flags_e
 {
   /** The device object has been dynamically allocated and must be freed on cleanup. */
   DEVICE_FLAG_ALLOCATED = 1,
+  /** The node name has been dynamically allocated and must be freed on cleanup. */
+  DEVICE_FLAG_NAME_ALLOCATED = 2,
+
   /** This device is a processor. Operations on this device may only
       be executed on the corresponding processor. */
-  DEVICE_FLAG_CPU = 2,
+  DEVICE_FLAG_CPU = 4,
+  /** The tree node is a device node */
   DEVICE_FLAG_DEVICE = 8,
+  /** The tree node is an alias node */
   DEVICE_FLAG_ALIAS = 16,
+  /** Mark the device as not available. The device will not be
+      initialized on startup and lookup functions will ignore the node. */
+  DEVICE_FLAG_IGNORE = 32,
 };
-
 
 
 
@@ -278,14 +93,13 @@ CONTAINER_TYPE(device_list, CLIST,
 /** device tree base node structure */
 struct device_node_s
 {
-  /** indicated if the device node has been dynamically allocated */
-  uint_fast8_t                  flags;
+  enum device_flags_e           flags;
 
-#ifdef CONFIG_DEVICE_TREE
   /** device name, freed on device object destruction if not NULL and
       @tt allocated is set. */
   const char *                  name;
 
+#ifdef CONFIG_DEVICE_TREE
   struct device_node_s		*parent;
   device_list_entry_t		list_entry;
   device_list_root_t		children;
@@ -302,7 +116,7 @@ CONTAINER_PROTOTYPE(device_list, inline, device_list);
 /** device node structure */
 struct device_s
 {
-  // must be first field
+  /* must be first field */
   struct device_node_s          node;
 
   /** general purpose device lock */
@@ -315,9 +129,6 @@ struct device_s
   const struct driver_s		*drv;
   /** pointer to device driver private data */
   void				*drv_pv;
-
-  /** device resources table */
-  uint_fast8_t                  res_count;
 
   /** device uses counter */
   uint_fast8_t                  ref_count;
@@ -333,14 +144,71 @@ struct device_s
 #endif
 
   /** device resources table */
-  struct dev_resource_s         res[DEVICE_STATIC_RESOURCE_COUNT];
+  struct dev_resource_table_s   *res_tbl;
 };
+
+#ifdef CONFIG_DEVICE_TREE
+/** @This statically declares and intializes a global @ref device_s
+    object. The device object is initialized as if the @ref
+    device_init, @ref device_set_name and @ref device_bind_driver
+    functions were called.
+
+    When @ref #CONFIG_DEVICE_TREE is defined, statically declared
+    devices are attached to the device tree on startup, unless the
+    @ref DEVICE_FLAG_IGNORE flag is used.
+
+    When @ref #CONFIG_DEVICE_TREE is not defined, statically declared
+    devices are part of the static device table. Devices in this table
+    are initialized on startup and can be searched using @ref
+    device_get_by_path and related functions, unless the @ref
+    DEVICE_FLAG_IGNORE flag is set.
+
+    @see #DEV_DECLARE_STATIC_RESOURCES
+    @see device_init @see device_alloc
+*/
+# define DEV_DECLARE_STATIC(declname_, name_, flags_, driver_, resources_) \
+    extern const struct driver_s driver_;                               \
+    __attribute__ ((aligned (sizeof(void*))))                           \
+    __attribute__((section (".devices")))                               \
+    struct device_s declname_ = {                                       \
+      .node = {                                                         \
+        .flags = flags_ | DEVICE_FLAG_DEVICE,                           \
+        .name = name_,                                                  \
+        .parent = NULL,                                                 \
+        .children = { .ht = { .next = &declname_.node.children.ht,      \
+                              .prev = &declname_.node.children.ht } },  \
+      },                                                                \
+      .lock = LOCK_INITIALIZER,                                         \
+      .status = DEVICE_DRIVER_INIT_PENDING,                             \
+      .drv = &driver_,                                                  \
+      .ref_count = 0,                                                   \
+      .enum_dev = NULL,                                                 \
+      .res_tbl = (void*)&resources_,                                    \
+    }
+#else
+# define DEV_DECLARE_STATIC(declname_, name_, flags_, driver_, resources_) \
+    extern const struct driver_s driver_;                               \
+    __attribute__ ((aligned (sizeof(void*))))                           \
+    __attribute__((section (".devices")))                               \
+    struct device_s declname_ = {                                       \
+      .node = {                                                         \
+        .flags = flags_ | DEVICE_FLAG_DEVICE,                           \
+        .name = name_,                                                  \
+      },                                                                \
+      .lock = LOCK_INITIALIZER,                                         \
+      .status = DEVICE_DRIVER_INIT_PENDING,                             \
+      .drv = &driver_,                                                  \
+      .ref_count = 0,                                                   \
+      .res_tbl = (void*)&resources_,                                    \
+    };
+#endif
+
 
 #ifdef CONFIG_DEVICE_TREE
 /** device alias node structure */
 struct device_alias_s
 {
-  // must be first field
+  /* must be first field */
   struct device_node_s          node;
 
   /** alias path in device tree */
@@ -348,31 +216,57 @@ struct device_alias_s
 };
 #endif
 
-/** @This initializes a statically allocated device object. Number of
-    resource slot is @ref #DEVICE_STATIC_RESOURCE_COUNT
+#ifdef CONFIG_DEVICE_TREE
+/** @This iterates over child nodes of a device tree node. */
+# define DEVICE_NODE_FOREACH(root_, rvar_, ... /* loop body */)         \
+  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &(root_)->children, {    \
+      struct device_node_s *rvar_ = item;                               \
+      __VA_ARGS__;                                                      \
+    })
+#else
+/** @This iterates over statically defined devices. */
+# define DEVICE_NODE_FOREACH(root_, rvar_, ... /* loop body */)         \
+  do {                                                                  \
+    extern struct device_s dev_devices_table;                           \
+    extern struct device_s dev_devices_table_end;                       \
+    struct device_s *_d;                                                \
+    for (_d = &dev_devices_table; _d < &dev_devices_table_end; _d++)    \
+      {                                                                 \
+        struct device_node_s *rvar_ = &_d->node;                        \
+        __VA_ARGS__;                                                    \
+      }                                                                 \
+  } while(0)
+#endif
 
-    The device flag @ref #DEVICE_FLAG_ALLOCATED is cleared by this function.
+/**
+   @This initializes a statically allocated device object. Devices
+   declared using the @ref #DEV_DECLARE_STATIC macro do not require
+   use of this function.
 
-    @see {device_init, device_cleanup} */
-void device_init(struct device_s *dev);
+   @see {device_init, device_cleanup} */
+void device_init(struct device_s *dev, const struct dev_resource_table_s *tbl);
 
-/** @This allocates and initializes a device object. The specified
-    number of resource slots is allocated.
+/** @This dynamically allocates and initializes a device object. The
+    specified number of resource slots are pre-allocated.
 
-    The device flag @ref #DEVICE_FLAG_ALLOCATED is set by this function.
-
-    @see {device_alloc, device_cleanup} */
+    @see {device_alloc, device_cleanup}
+    @see #DEV_DECLARE_STATIC
+*/
 struct device_s *device_alloc(size_t resources);
 
-/** @This cleanups a device object. Memory is freed if device has been
-    allocated using @ref device_alloc (@ref #DEVICE_FLAG_ALLOCATED is
-    set). The device must not be attached or have attached children
-    and references count must be zero. */
+/** @This cleanups a device object. Memory is freed if the device has
+    been allocated using the @ref device_alloc function. The device
+    must not be attached or have attached children and its reference
+    count must be zero when this function is called. */
 void device_cleanup(struct device_s *dev);
 
 /** @This reduces resource slots count to number of used slots
     count. The device node is reallocated to save memory. */
 void device_shrink(struct device_s *dev);
+
+/** @This returns the device tree root node. */
+config_depend(CONFIG_DEVICE_TREE)
+struct device_node_s *device_tree_root();
 
 /** @This creates an alias in the device tree. The parent parameter
     may be @tt NULL to attach the alias on the tree root. */
@@ -418,13 +312,13 @@ DEVICE_FILTER(device_filter_init_done);
     The filter can be used to provide an additional filter
     function. It may be NULL.
  */
-config_depend(CONFIG_DEVICE_TREE)
 error_t device_get_by_path(struct device_s **dev, const char *path, device_filter_t *filter);
 
 /** @This writes a null terminated device tree path in buffer. If the
     @tt number parameter is not 0, the value is appended at the end
     within a pair of square brackets. @return size of string excluding
     null byte or a negative error code. */
+config_depend(CONFIG_DEVICE_TREE)
 error_t device_get_path(struct device_node_s *root, char *buf,
                         size_t buflen, struct device_node_s *dev, uint_fast8_t number);
 
@@ -433,9 +327,14 @@ static inline struct device_s * device_from_node(struct device_node_s *node)
   return node && node->flags & DEVICE_FLAG_DEVICE ? (struct device_s*)node : NULL;
 }
 
+config_depend(CONFIG_DEVICE_TREE)
 static inline struct device_alias_s * device_alias_from_node(struct device_node_s *node)
 {
+#ifdef CONFIG_DEVICE_TREE
   return node && node->flags & DEVICE_FLAG_ALIAS ? (struct device_alias_s*)node : NULL;
+#else
+  return NULL;
+#endif
 }
 
 static inline struct device_node_s * device_to_node(struct device_s *dev)
@@ -443,9 +342,14 @@ static inline struct device_node_s * device_to_node(struct device_s *dev)
   return &dev->node;
 }
 
+config_depend(CONFIG_DEVICE_TREE)
 static inline struct device_node_s * device_node_from_alias(struct device_alias_s *alias)
 {
+#ifdef CONFIG_DEVICE_TREE
   return &alias->node;
+#else
+  return NULL;
+#endif
 }
 
 /** @This sets the name of the device. The device name can only be
@@ -469,7 +373,6 @@ void device_detach(struct device_s *dev);
 void device_dump(struct device_s *root);
 
 /** @This prints the current devices tree. */
-config_depend(CONFIG_DEVICE_TREE)
 void device_dump_tree(struct device_node_s *root);
 
 /** @see device_tree_walker_t */
@@ -481,7 +384,6 @@ typedef DEVICE_TREE_WALKER(device_tree_walker_t);
 /** @This traverse device tree calling @ref device_tree_walker_t
     function type foreach each node. Traversal stops if the provided
     function returns non-zero. */
-config_depend(CONFIG_DEVICE_TREE)
 bool_t device_tree_walk(struct device_node_s *root, device_tree_walker_t *walker, void *priv);
 
 /** @This returns the number of processor devices present in the
