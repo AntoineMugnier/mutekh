@@ -22,6 +22,7 @@
 #define MUTEK_BYTECODE_H_
 
 #include <hexo/types.h>
+#include <stdarg.h>
 
 /**
    @file
