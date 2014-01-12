@@ -34,15 +34,18 @@ struct memory_allocator_region_s
 struct memory_allocator_region_s *default_region;
 /***************** Memory allocation interface ******************/
 
-void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size)
+void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size, size_t align)
 {
   void *next, *res;
 
-  size = ALIGN_VALUE_UP(size, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  if (align < CONFIG_MUTEK_MEMALLOC_ALIGN)
+    align = CONFIG_MUTEK_MEMALLOC_ALIGN;
+
+  size = ALIGN_VALUE_UP(size, align);
 
   lock_spin(&region->lock);
 
-  res = ALIGN_ADDRESS_UP((size_t*)region->next + 1, CONFIG_MUTEK_MEMALLOC_ALIGN);
+  res = ALIGN_ADDRESS_UP((size_t*)region->next + 1, align);
   next = (uint8_t*)res + size;
 
   if (next <= region->last)
@@ -82,7 +85,8 @@ memory_allocator_init(struct memory_allocator_region_s *container_region,
     }
   else
     {
-      region = memory_allocator_pop (container_region, sizeof (struct memory_allocator_region_s));
+      region = memory_allocator_pop (container_region, sizeof (struct memory_allocator_region_s),
+                                     CONFIG_MUTEK_MEMALLOC_ALIGN);
     }
 
   lock_init(&region->lock);
