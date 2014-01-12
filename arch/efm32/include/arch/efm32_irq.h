@@ -22,7 +22,7 @@
 #define EFM32_IRQ_AES            16
 #endif
 
-#ifdef CONFIG_EFM32_LEOPARD_GECKO
+#if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
 #define EFM32_IRQ_DMA            0
 #define EFM32_IRQ_GPIO_EVEN      1
 #define EFM32_IRQ_TIMER0         2

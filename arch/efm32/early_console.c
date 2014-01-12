@@ -79,7 +79,9 @@ static void leuart_init()
   /* configure GPIO to route LEUART signals */
   b = 0x40006000;
 
-#if defined(CONFIG_EFM32_EARLY_CONSOLE_LEUART_STK3200) || defined(CONFIG_EFM32_EARLY_CONSOLE_LEUART_STK3600)
+#if defined(CONFIG_EFM32_EARLY_CONSOLE_LEUART_STK3200) \
+ || defined(CONFIG_EFM32_EARLY_CONSOLE_LEUART_STK3600) \
+ || defined(CONFIG_EFM32_EARLY_CONSOLE_LEUART_STK3800)
   /* RX routed on D.5 */ 
   x = cpu_mem_read_32(b + EFM32_GPIO_MODEL_ADDR(3));
   EFM32_GPIO_MODEL_MODE_SET(5, x, INPUT);
