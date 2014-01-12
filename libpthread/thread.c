@@ -76,14 +76,16 @@ pthread_exit(void *retval)
   _pthread_keys_cleanup(this);
 #endif
 
-  atomic_bit_set(&this->state, _PTHREAD_STATE_CANCELED);
-
   /* remove thread from runnable list */
   cpu_interrupt_disable();
   lock_spin(&this->lock);
 
+#ifdef CONFIG_PTHREAD_CANCEL
+  this->state |= _PTHREAD_STATE_CANCELED;
+#endif
+
 #ifdef CONFIG_PTHREAD_JOIN
-  if (!atomic_bit_test(&this->state, _PTHREAD_STATE_DETACHED))
+  if (!(this->state & _PTHREAD_STATE_DETACHED))
     {
       pthread_t joined_thread = this->joined;
 
@@ -91,7 +93,7 @@ pthread_exit(void *retval)
       /* thread not joined yet */
 	{
 	  /* mark thread as joinable */
-	  atomic_bit_set(&this->state, _PTHREAD_STATE_JOINABLE);
+	  this->state |= _PTHREAD_STATE_JOINABLE;
 
 	  this->joined_retval = retval;
 
@@ -131,14 +133,14 @@ pthread_join(pthread_t thread, void **value_ptr)
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   lock_spin(&thread->lock);
 
-  if (atomic_bit_test(&thread->state, _PTHREAD_STATE_DETACHED))
+  if (thread->state & _PTHREAD_STATE_DETACHED)
     {
       lock_release(&thread->lock);
       res = EINVAL;
     }
   else
     {
-      if (atomic_bit_test(&thread->state, _PTHREAD_STATE_JOINABLE))
+      if (thread->state & _PTHREAD_STATE_JOINABLE)
         {
           if (value_ptr)
             *value_ptr = thread->joined_retval;
@@ -186,9 +188,11 @@ pthread_detach(pthread_t thread)
 
   LOCK_SPIN_IRQ(&thread->lock);
 
-  if (!atomic_bit_testset(&thread->state, _PTHREAD_STATE_DETACHED))
+  if (!(thread->state & _PTHREAD_STATE_DETACHED))
     {
-      if (atomic_bit_test(&thread->state, _PTHREAD_STATE_JOINABLE))
+      thread->state |= _PTHREAD_STATE_DETACHED;
+
+      if (thread->state & _PTHREAD_STATE_JOINABLE)
 	sched_context_start(&thread->sched_ctx);
     }
   else
@@ -296,11 +300,11 @@ pthread_create(pthread_t *thread_, const pthread_attr_t *attr,
   thread->start_routine = start_routine;
   thread->arg = arg;
   thread->joined = NULL;
-  atomic_set(&thread->state, 0);
+  thread->state = 0;
 
 #ifdef CONFIG_PTHREAD_ATTRIBUTES
   if (attr && attr->flags & _PTHREAD_ATTRFLAG_DETACHED)
-    atomic_bit_set(&thread->state, _PTHREAD_STATE_DETACHED);
+    thread->state |= _PTHREAD_STATE_DETACHED;
 
 # ifdef CONFIG_ARCH_SMP
   /* add cpu affinity */

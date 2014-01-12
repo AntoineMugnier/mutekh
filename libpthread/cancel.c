@@ -26,35 +26,61 @@
 /** cancelation context linked list head */
 CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list = NULL;
 
-void __pthread_cancel_self(void)
+void pthread_testcancel(void)
 {
-  struct __pthread_cleanup_s		*c;
+  struct pthread_s	*this = pthread_self();
 
-  if (atomic_bit_test(&pthread_self()->state, _PTHREAD_STATE_NOCANCEL))
-    return;
+  LOCK_SPIN_IRQ(&this->lock);
 
-  cpu_interrupt_disable();
+  if ((this->state & _PTHREAD_STATE_CANCELED)
+      && !(this->state & _PTHREAD_STATE_NOCANCEL))
+    {
+      /* call thread cleanup handlers */
+      struct __pthread_cleanup_s *c;
+      for (c = CONTEXT_LOCAL_GET(__pthread_cleanup_list); c; c = c->prev)
+        c->fcn(c->arg);
 
-  /* call thread cleanup handlers */
-  for (c = CONTEXT_LOCAL_GET(__pthread_cleanup_list); c; c = c->prev)
-    c->fcn(c->arg);
+      return pthread_exit(PTHREAD_CANCELED);
+    }
 
-  pthread_exit(PTHREAD_CANCELED);
+  LOCK_RELEASE_IRQ(&this->lock);
+}
+
+error_t pthread_cancel(pthread_t thread)
+{
+  struct pthread_s	*this = pthread_self();
+  error_t err = 0;
+
+  LOCK_SPIN_IRQ(&this->lock);
+
+  if (thread->state & _PTHREAD_STATE_CANCELED)
+    err = EBUSY;
+  else
+    thread->state |= _PTHREAD_STATE_CANCELED;
+
+  LOCK_RELEASE_IRQ(&this->lock);
+
+  return err;
 }
 
 error_t
 pthread_setcancelstate(int_fast8_t state, int_fast8_t *oldstate)
 {
-  struct pthread_s	*self = pthread_self();
-  int_fast8_t o;
+  struct pthread_s	*this = pthread_self();
 
-  if (state == PTHREAD_CANCEL_ENABLE)
-    o = atomic_bit_testclr(&self->state, _PTHREAD_STATE_NOCANCEL);
-  else
-    o = atomic_bit_testset(&self->state, _PTHREAD_STATE_NOCANCEL);
+  LOCK_SPIN_IRQ(&this->lock);
 
   if (oldstate)
-    *oldstate = o;
+    *oldstate = this->state & _PTHREAD_STATE_NOCANCEL
+      ? PTHREAD_CANCEL_DISABLE
+      : PTHREAD_CANCEL_ENABLE;
+
+  if (state == PTHREAD_CANCEL_ENABLE)
+    this->state &= ~_PTHREAD_STATE_NOCANCEL;
+  else
+    this->state |= _PTHREAD_STATE_NOCANCEL;
+
+  LOCK_RELEASE_IRQ(&this->lock);
 
   return 0;
 }
@@ -62,16 +88,21 @@ pthread_setcancelstate(int_fast8_t state, int_fast8_t *oldstate)
 error_t
 pthread_setcanceltype(int_fast8_t type, int_fast8_t *oldtype)
 {
-  struct pthread_s	*self = pthread_self();
-  int_fast8_t o;
+  struct pthread_s	*this = pthread_self();
 
-  if (type == PTHREAD_CANCEL_DEFERRED)
-    o = atomic_bit_testclr(&self->state, _PTHREAD_STATE_CANCELASYNC);
-  else
-    o = atomic_bit_testset(&self->state, _PTHREAD_STATE_CANCELASYNC);
+  LOCK_SPIN_IRQ(&this->lock);
 
   if (oldtype)
-    *oldtype = o;
+    *oldtype = this->state & _PTHREAD_STATE_CANCELASYNC
+      ? PTHREAD_CANCEL_ASYNCHRONOUS
+      : PTHREAD_CANCEL_DEFERRED;
+
+  if (type == PTHREAD_CANCEL_DEFERRED)
+    this->state &= ~_PTHREAD_STATE_CANCELASYNC;
+  else
+    this->state |= _PTHREAD_STATE_CANCELASYNC;
+
+  LOCK_RELEASE_IRQ(&this->lock);
 
   return 0;
 }

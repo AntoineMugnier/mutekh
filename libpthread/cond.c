@@ -44,14 +44,17 @@ pthread_cond_signal(pthread_cond_t *cond)
 {
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   sched_queue_wrlock(&cond->wait);
-  struct sched_context_s *sched_ctx;
+  __unused__ struct sched_context_s *sched_ctx;
 
   sched_ctx = sched_wake(&cond->wait);
-#ifdef CONFIG_PTHREAD_TIME
+
+#ifdef CONFIG_PTHREAD_COND_TIME
   if (sched_ctx)
   {
     struct pthread_s *thread = sched_ctx->priv;
-    atomic_bit_clr(&thread->state, _PTHREAD_STATE_TIMEDWAIT);
+    lock_spin(&thread->lock);
+    thread->state &= ~_PTHREAD_STATE_TIMEDWAIT;
+    lock_release(&thread->lock);
   }
 #endif
 
@@ -70,9 +73,11 @@ pthread_cond_broadcast(pthread_cond_t *cond)
 
   while ((sched_ctx = sched_wake(&cond->wait)))
     {
-#ifdef CONFIG_PTHREAD_TIME
+#ifdef CONFIG_PTHREAD_COND_TIME
       struct pthread_s *thread = sched_ctx->priv;
-      atomic_bit_clr(&thread->state, _PTHREAD_STATE_TIMEDWAIT);
+      lock_spin(&thread->lock);
+      thread->state &= ~_PTHREAD_STATE_TIMEDWAIT;
+      lock_release(&thread->lock);
 #endif
     }
 
@@ -129,29 +134,34 @@ struct pthread_cond_timedwait_ctx_s
 static DEVTIMER_CALLBACK(pthread_cond_timer)
 {
   struct pthread_cond_timedwait_ctx_s *ev_ctx = rq->pvdata;
+
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(ev_ctx->wait);
+
   struct sched_context_s *sched_ctx = ev_ctx->sched_ctx;
   struct pthread_s *thread = sched_ctx->priv;
 
   if (nested)
     return 0;
-
-  sched_queue_wrlock(ev_ctx->wait);
-
-  if (atomic_bit_testclr(&thread->state, _PTHREAD_STATE_TIMEDWAIT))
+  if (thread->state & _PTHREAD_STATE_TIMEDWAIT)
     {
+      lock_spin(&thread->lock);
+      thread->state &= ~_PTHREAD_STATE_TIMEDWAIT;
+      thread->state |= _PTHREAD_STATE_TIMEOUT;
+      lock_release(&thread->lock);
       sched_context_wake(ev_ctx->wait, sched_ctx);
-      atomic_bit_set(&thread->state, _PTHREAD_STATE_TIMEOUT);
     }
 
   sched_queue_unlock(ev_ctx->wait);
 
   return 0;
+  CPU_INTERRUPT_RESTORESTATE;
 }
 
 error_t
 pthread_cond_timedwait(pthread_cond_t *cond, 
 		       pthread_mutex_t *mutex,
-		       const struct timespec *delay)
+		       const struct timespec *abstime)
 {
 #ifdef CONFIG_PTHREAD_CANCEL
   pthread_testcancel();
@@ -160,7 +170,7 @@ pthread_cond_timedwait(pthread_cond_t *cond,
   struct dev_timer_rq_s rq;
 
   rq.delay = 0;
-  if (libc_time_to_timer(delay, &rq.deadline))
+  if (libc_time_to_timer(abstime, &rq.deadline))
     return EINVAL;
 
   error_t	res = 0;
@@ -176,8 +186,10 @@ pthread_cond_timedwait(pthread_cond_t *cond,
       ev_ctx.sched_ctx = sched_get_current();
       struct pthread_s *this = ev_ctx.sched_ctx->priv;
 
-      atomic_bit_set(&this->state, _PTHREAD_STATE_TIMEDWAIT);
-      atomic_bit_clr(&this->state, _PTHREAD_STATE_TIMEOUT);
+      lock_spin(&this->lock);
+      this->state |= _PTHREAD_STATE_TIMEDWAIT;
+      this->state &= ~_PTHREAD_STATE_TIMEOUT;
+      lock_release(&this->lock);
 
       rq.callback = pthread_cond_timer;
       rq.pvdata = &ev_ctx;
@@ -187,11 +199,13 @@ pthread_cond_timedwait(pthread_cond_t *cond,
         case 0:
           sched_wait_unlock(&cond->wait);
 
-          if (atomic_bit_testclr(&this->state, _PTHREAD_STATE_TIMEOUT))
+          lock_spin(&this->lock);
+          if (this->state & _PTHREAD_STATE_TIMEOUT)
             res = ETIMEDOUT;
           else
             DEVICE_SAFE_OP(libc_timer(), cancel, &rq);
-          assert(!rq.drvdata);
+          lock_release(&this->lock);
+
           break;
         case ETIMEDOUT:
           res = ETIMEDOUT;

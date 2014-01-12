@@ -78,6 +78,17 @@ extern CONTEXT_LOCAL pthread_t __pthread_current;
 #define CONTEXT_LOCAL_PTHREAD_GET(th, n) \
   CONTEXT_LOCAL_TLS_GET((th)->sched_ctx.context.tls, n)
 
+enum pthread_state_e
+{
+  _PTHREAD_STATE_DETACHED        = 1, //< thread is marked as detached
+  _PTHREAD_STATE_JOINABLE        = 2, //< thread is joinable
+  _PTHREAD_STATE_CANCELED        = 4, //< thread has been canceled
+  _PTHREAD_STATE_NOCANCEL        = 8, //< thread ignore cancel
+  _PTHREAD_STATE_CANCELASYNC     = 16, //< thread use asynchronous cancelation
+  _PTHREAD_STATE_TIMEDWAIT       = 32, //< thread can be woken up by timer callback
+  _PTHREAD_STATE_TIMEOUT         = 64, //< thread timed wait has reached timeout
+};
+
 /** @internal pthread descriptor structure */
 struct pthread_s
 {
@@ -86,7 +97,7 @@ struct pthread_s
   struct sched_context_s	sched_ctx;
 
   /* thread state flags (detached, joinable, canceled ...) */
-  atomic_t                      state;
+  enum pthread_state_e          state;
   lock_t lock;
 
 #ifdef CONFIG_PTHREAD_JOIN
@@ -101,14 +112,6 @@ struct pthread_s
   /** start routine pointer */
   pthread_start_routine_t	*start_routine;
 };
-
-#define _PTHREAD_STATE_DETACHED         0 //< thread is marked as detached
-#define _PTHREAD_STATE_JOINABLE         1 //< thread is joinable
-#define _PTHREAD_STATE_CANCELED         2 //< thread has been canceled
-#define _PTHREAD_STATE_NOCANCEL         3 //< thread ignore cancel
-#define _PTHREAD_STATE_CANCELASYNC      4 //< thread use asynchronous cancelation
-#define _PTHREAD_STATE_TIMEDWAIT        5 //< thread can be woken up by timer callback
-#define _PTHREAD_STATE_TIMEOUT          6 //< thread timed wait has reached timeout
 
 #define _PTHREAD_ATTRFLAG_AFFINITY	0x01
 #define _PTHREAD_ATTRFLAG_STACK		0x02
@@ -163,6 +166,7 @@ pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 	       pthread_start_routine_t *start_routine, void *arg);
 
 /** @this ends pthread execution */
+__attribute__((noreturn))
 void pthread_exit(void *retval);
 
 /** @this returns current pthread */
@@ -257,14 +261,8 @@ extern CONTEXT_LOCAL struct __pthread_cleanup_s *__pthread_cleanup_list;
   cpu_interrupt_restorestate(&__irq_state);			\
 }
 
-config_depend_inline(CONFIG_PTHREAD_CANCEL,
-void pthread_testcancel(void),
-{
-  void __pthread_cancel_self(void);
-
-  if (atomic_bit_test(&pthread_self()->state, _PTHREAD_STATE_CANCELED))
-    __pthread_cancel_self();
-});
+config_depend(CONFIG_PTHREAD_CANCEL)
+void pthread_testcancel(void);
 
 config_depend(CONFIG_PTHREAD_CANCEL)
 error_t
@@ -274,11 +272,8 @@ config_depend(CONFIG_PTHREAD_CANCEL)
 error_t
 pthread_setcanceltype(int_fast8_t type, int_fast8_t *oldtype);
 
-config_depend_inline(CONFIG_PTHREAD_CANCEL,
-error_t pthread_cancel(pthread_t thread),
-{
-  return atomic_bit_testset(&thread->state, _PTHREAD_STATE_CANCELED);
-});
+config_depend(CONFIG_PTHREAD_CANCEL)
+error_t pthread_cancel(pthread_t thread);
 
 /************************************************************************
 		PThread Mutex related public API
@@ -484,7 +479,7 @@ config_depend(CONFIG_PTHREAD_COND_TIME)
 error_t
 pthread_cond_timedwait(pthread_cond_t *cond, 
 		       pthread_mutex_t *mutex,
-		       const struct timespec *delay);
+		       const struct timespec *abstime);
 
 config_depend(CONFIG_PTHREAD_COND)
 error_t
