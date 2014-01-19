@@ -49,7 +49,7 @@
     or                  r, r          0100 1000 rrrr rrrr	1
     xor                 r, r          0100 1001 rrrr rrrr	1
     and                 r, r          0100 1010 rrrr rrrr	1
-    ---                 r, r          0100 1011 rrrr rrrr	1
+    call                r, r          0100 1011 rrrr rrrr	1
     shl                 r, r          0100 1100 rrrr rrrr	1
     shr                 r, r          0100 1101 rrrr rrrr       1
     shra                r, r          0100 1110 rrrr rrrr       1
@@ -78,9 +78,10 @@ struct bc_context_s
   const bc_opcode_t *code;
 
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
-  uint_fast16_t op_count;
   uintptr_t min_addr;
   uintptr_t max_addr;
+  uint16_t op_count;
+  bool_t allow_call;
 #endif
 };
 
@@ -137,6 +138,17 @@ bc_set_addr_range(struct bc_context_s *ctx, uintptr_t min, uintptr_t max)
 #endif
 }
 
+/** @This can be used to disallow use of the @ref #BC_CALL instruction
+    in the bytecode. If the @ref #CONFIG_MUTEK_BYTECODE_CHECKING token
+    is not defined, this function has no effect. */
+static inline void
+bc_allow_call(struct bc_context_s *ctx, bool_t allow)
+{
+#ifdef CONFIG_MUTEK_BYTECODE_CHECKING
+  ctx->allow_call = allow;
+#endif
+}
+
 /** @This dumps the virtual machine state. */
 void bc_dump(const struct bc_context_s *ctx);
 
@@ -181,7 +193,7 @@ enum bc_opcode_e
     BC_OP_OR   = 0x48,
     BC_OP_XOR  = 0x49,
     BC_OP_AND  = 0x4a,
-    BC_OP_RES3 = 0x4b,
+    BC_OP_CALL = 0x4b,
     BC_OP_SHL  = 0x4c,
     BC_OP_SHR  = 0x4d,
     BC_OP_SHRA = 0x4e,
@@ -197,6 +209,11 @@ enum bc_opcode_e
     BC_OP_CST  = 0x70,
     BC_OP_ST2  = 0x78,
 };
+
+/** @see #BC_CALL_FUNCTION */
+#define BC_CALL_FUNCTION(n) uintptr_t (n)(struct bc_context_s *ctx, uintptr_t dst)
+/** C function type invoked by the @ref #BC_CALL instruction. */
+typedef BC_CALL_FUNCTION(bc_call_function_t);
 
 /** @multiple @internal */
 #define BC_FMT0(op, value, reg) (((op) << 8) | (((value) & 0xff) << 4) | ((reg) & 0xf))
@@ -244,6 +261,13 @@ enum bc_opcode_e
 #define BC_RSUB(dst, src)     BC_FMT1(BC_OP_RSUB, dst, src)
 /** Multiply the values of the source register and destination registers */
 #define BC_MUL(dst, src)      BC_FMT1(BC_OP_MUL, dst, src)
+
+/** Call a C function. The address of the function is in the source
+    register. The value of the destination register is passed to the
+    function and the return value is stored back in this same register. 
+    @see bc_call_function_t @see #BC_CALL_FUNCTION
+*/
+#define BC_CALL(dst, src)       BC_FMT1(BC_OP_CALL, dst, src)
 
 /** Bitwise or */
 #define BC_OR(dst, src)       BC_FMT1(BC_OP_OR, dst, src)

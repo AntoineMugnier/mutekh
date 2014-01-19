@@ -5,9 +5,21 @@
 #define BC_CUSTOM_PRINTI(r) BC_CUSTOM(0x1000 | r)
 #define BC_CUSTOM_PRINTS(r) BC_CUSTOM(0x2000 | r)
 
+static BC_CALL_FUNCTION(c_func)
+{
+    return dst * 13;
+}
+
 void app_start()
 {
   static const bc_opcode_t test[] = {
+
+    /* CST8, CALL, NEQ */
+    BC_CST8(2, 11),
+    BC_CALL(2, 1),
+    BC_CST8(3, 143),
+    BC_NEQ(3, 2),
+    BC_ABORT(),
 
     /* CST8, XOR, NEQ */
     BC_CST8(1, 0),
@@ -157,7 +169,7 @@ void app_start()
   struct bc_context_s vm;
   char buf[128] = "testbarx";
 
-  bc_init(&vm, test, sizeof(test), 1, buf);
+  bc_init(&vm, test, sizeof(test), 2, buf, &c_func);
   bc_set_addr_range(&vm, (uintptr_t)buf, (uintptr_t)buf + sizeof(buf) - 1);
   //  bc_dump(&vm);
 

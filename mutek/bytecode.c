@@ -40,6 +40,7 @@ void bc_init_va(struct bc_context_s *ctx,
   ctx->op_count = code_sizeof / 2;
   ctx->min_addr = 0;
   ctx->max_addr = (intptr_t)-1;
+  ctx->allow_call = 1;
 #endif
 }
 
@@ -149,7 +150,7 @@ static uint_fast8_t bc_run_ldst(struct bc_context_s *ctx, uint16_t op)
 }
 
 __attribute__((noinline))
-static void bc_run_alu(struct bc_context_s *ctx, uint16_t op)
+static uint_fast8_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
 {
   dispatch_begin:;
   uintptr_t *dstp = &ctx->v[op & 0xf];
@@ -165,7 +166,7 @@ static void bc_run_alu(struct bc_context_s *ctx, uint16_t op)
       [BC_OP_ADD & 0x0f] = BC_DISPATCH(ADD),   [BC_OP_SUB & 0x0f] = BC_DISPATCH(SUB),
       [BC_OP_RSB & 0x0f] = BC_DISPATCH(RSB),   [BC_OP_MUL & 0x0f] = BC_DISPATCH(MUL),
       [BC_OP_OR & 0x0f]  = BC_DISPATCH(OR),    [BC_OP_XOR & 0x0f] = BC_DISPATCH(XOR),
-      [BC_OP_AND & 0x0f] = BC_DISPATCH(AND),   [BC_OP_RES3 & 0x0f] = BC_DISPATCH(BAD),
+      [BC_OP_AND & 0x0f] = BC_DISPATCH(AND),   [BC_OP_CALL & 0x0f] = BC_DISPATCH(CALL),
       [BC_OP_SHL & 0x0f] = BC_DISPATCH(SHL),   [BC_OP_SHR & 0x0f] = BC_DISPATCH(SHR),
       [BC_OP_SHRA & 0x0f] = BC_DISPATCH(SHRA), [BC_OP_MOV & 0x0f] = BC_DISPATCH(MOV),
     };
@@ -209,9 +210,23 @@ static void bc_run_alu(struct bc_context_s *ctx, uint16_t op)
   dispatch_NEQ:
     if ((op ^ (dst != src)) & 1)
       ctx->v[15]++;
+    break;
+  dispatch_CALL:
+#ifdef CONFIG_MUTEK_BYTECODE_CHECKING
+    if (!ctx->allow_call)
+      {
+# ifdef CONFIG_MUTEK_BYTECODE_DEBUG
+        printk("bytecode: C function call is not allowed at pc=%u\n", ctx->v[15]);
+# endif
+        return -1;
+      }
+#endif
+    dst = ((bc_call_function_t*)src)(ctx, dst);
+    break;
   } while (0);
 
   *dstp = dst;
+  return 0;
 }
 
 uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles)
@@ -295,7 +310,8 @@ uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles)
 	}
 
       dispatch_alu:
-	bc_run_alu(ctx, op);
+	if (bc_run_alu(ctx, op))
+          return op;
 	break;
 
       dispatch_fmt2: {
