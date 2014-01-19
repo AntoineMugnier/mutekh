@@ -435,7 +435,8 @@ void device_irq_sink_unlink(struct device_s *dev, struct dev_irq_ep_s *sinks, ui
     }
 }
 
-error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, uint_fast8_t src_count, bool_t enable)
+error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs,
+                               uint_fast8_t src_count, uint32_t enable_mask)
 {
   uint_fast8_t i;
   uint_fast8_t j = -1;
@@ -493,7 +494,7 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs, 
 
       device_put_accessor(&icu);
 
-      if (enable)
+      if ((enable_mask >> id) & 1)
         if (!device_icu_irq_enable(src, r->u.irq.irq_id, src, src))
           {
             printk("device: Unable to enable IRQ output %u of device %p, no suitable irq path found.\n", r->u.irq.irq_id, dev);

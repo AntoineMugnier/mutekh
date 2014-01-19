@@ -309,7 +309,7 @@ static DEV_INIT(efm32_usart_char_init)
 
   device_irq_source_init(dev, pv->irq_ep, 2, &efm32_usart_irq);
 
-  if (device_irq_source_link(dev, pv->irq_ep, 2, 1))
+  if (device_irq_source_link(dev, pv->irq_ep, 2, -1))
     goto err_fifo;
 #endif
 

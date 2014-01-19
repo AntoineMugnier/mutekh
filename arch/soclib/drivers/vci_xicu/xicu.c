@@ -114,7 +114,7 @@ static DEV_INIT(soclib_xicu_init)
       device_irq_source_init(dev, pv->srcs, pv->irq_count, &soclib_xicu_source_process);
 
 # ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
-      if (device_irq_source_link(dev, pv->srcs, pv->irq_count, 1))
+      if (device_irq_source_link(dev, pv->srcs, pv->irq_count, -1))
         goto err_mem2;
 # else
       if (device_irq_source_link(dev, pv->srcs, pv->irq_count, 0))

@@ -468,7 +468,7 @@ static DEV_INIT(enst_rttimer_init)
   else
     device_irq_source_init(dev, pv->irq_eps, 1, enst_rttimer_irq_single);
 
-  if (device_irq_source_link(dev, pv->irq_eps, irq_count, 1))
+  if (device_irq_source_link(dev, pv->irq_eps, irq_count, -1))
     goto err_mem;
 
   uint_fast8_t i;

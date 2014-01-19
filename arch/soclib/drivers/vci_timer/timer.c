@@ -522,7 +522,7 @@ static DEV_INIT(soclib_timer_init)
 
   device_irq_source_init(dev, pv->irq_eps, t_count, soclib_timer_irq);
 
-  if (device_irq_source_link(dev, pv->irq_eps, t_count, 1))
+  if (device_irq_source_link(dev, pv->irq_eps, t_count, -1))
     goto err_mem;
 #endif
 

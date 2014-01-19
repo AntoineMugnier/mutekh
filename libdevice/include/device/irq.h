@@ -211,14 +211,15 @@ void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint
     allocated in the private driver data for the device.
 
     When called from interrupt controller driver code, the @tt enable
-    parameter must be set to false. When called from other device
-    drivers the @tt enable parameter must be true in order to enable
+    parameter must be 0. When called from other device drivers the
+    bits in the @tt enable parameter must be 1 in order to enable
     device interrupts in all interrupt controllers along the path to
-    the processor(s). Once this function has been called, device
-    drivers must be ready to receive interrupts. */
+    the processor(s). The lsb is used for the first entry of the
+    source end-points table. Once this function has been called,
+    device drivers must be ready to receive interrupts. */
 config_depend(CONFIG_DEVICE_IRQ)
 error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *sources,
-                               uint_fast8_t count, bool_t enable);
+                               uint_fast8_t count, uint32_t enable_mask);
 
 /** @This unlink device interrupt end-points. @This is usually
     called from device driver cleanup function passing an array
