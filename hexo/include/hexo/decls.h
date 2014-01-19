@@ -35,6 +35,11 @@
 #  define _CONFIG_DEPEND_AND_10(name, attr, proto, ...) _CONFIG_DEPEND_0(name, attr, proto, __VA_ARGS__)
 #  define _CONFIG_DEPEND_AND_11(name, attr, proto, ...) _CONFIG_DEPEND_1(name, attr, proto, __VA_ARGS__)
 
+#  define _CONFIG_DEPEND_OR_00(name, attr, proto, ...) _CONFIG_DEPEND_0(name, attr, proto, __VA_ARGS__)
+#  define _CONFIG_DEPEND_OR_01(name, attr, proto, ...) _CONFIG_DEPEND_1(name, attr, proto, __VA_ARGS__)
+#  define _CONFIG_DEPEND_OR_10(name, attr, proto, ...) _CONFIG_DEPEND_1(name, attr, proto, __VA_ARGS__)
+#  define _CONFIG_DEPEND_OR_11(name, attr, proto, ...) _CONFIG_DEPEND_1(name, attr, proto, __VA_ARGS__)
+
 #  define _CONFIG_DEPEND_PASTE2(a, b) a ## b
 #  define _CONFIG_DEPEND_PASTE3(a, b, c) a ## b ## c
 
@@ -42,6 +47,8 @@
   _CONFIG_DEPEND_PASTE2(_CONFIG_DEPEND_, b)(a, attr, proto, __VA_ARGS__)
 #  define _CONFIG_DEPEND_AND2(a1, a2, b1, b2, attr, proto, ...)            \
   _CONFIG_DEPEND_PASTE3(_CONFIG_DEPEND_AND_, b1, b2)(a1 " and " a2, attr, proto, __VA_ARGS__)
+#  define _CONFIG_DEPEND_OR2(a1, a2, b1, b2, attr, proto, ...)            \
+  _CONFIG_DEPEND_PASTE3(_CONFIG_DEPEND_OR_, b1, b2)(a1 " or " a2, attr, proto, __VA_ARGS__)
 
 #  define config_depend(token) \
   _CONFIG_DEPEND(#token, _##token, , , )
@@ -53,6 +60,11 @@
 #  define config_depend_and2_inline(token1, token2, proto, ...) \
   _CONFIG_DEPEND_AND2(#token1, #token2, _##token1, _##token2, static inline, proto, __VA_ARGS__)
 
+#  define config_depend_or2(token1, token2) \
+  _CONFIG_DEPEND_OR2(#token1, #token2, _##token1, _##token2, , , )
+#  define config_depend_or2_inline(token1, token2, proto, ...) \
+  _CONFIG_DEPEND_OR2(#token1, #token2, _##token1, _##token2, static inline, proto, __VA_ARGS__)
+
 # endif
 
 #ifdef __MKDOC__
@@ -60,6 +72,8 @@
 # define config_depend_inline(token, proto, ...) static inline proto __VA_ARGS__
 # define config_depend_and2(token1, token2)
 # define config_depend_and2_inline(token1, token2, proto, ...) static inline proto __VA_ARGS__
+# define config_depend_or2(token1, token2)
+# define config_depend_or2_inline(token1, token2, proto, ...) static inline proto __VA_ARGS__
 #endif
 
 #endif /* HEXO_DECLS_H_ */
