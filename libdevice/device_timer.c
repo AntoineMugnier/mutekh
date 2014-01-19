@@ -31,6 +31,8 @@
 # include <hexo/lock.h>
 #endif
 
+#include <mutek/kroutine.h>
+
 error_t dev_timer_init_sec(struct device_timer_s *tdev, dev_timer_delay_t *delay,
                            dev_timer_delay_t s_delay, uint32_t r_unit)
 {
@@ -118,17 +120,16 @@ struct dev_timer_wait_rq_s
 };
 
 #ifdef CONFIG_MUTEK_SCHEDULER
-static DEVTIMER_CALLBACK(dev_timer_wait_request_cb)
+static KROUTINE_EXEC(dev_timer_wait_request_cb)
 {
+  struct dev_timer_rq_s *rq = kr;
   struct dev_timer_wait_rq_s *status = rq->pvdata;
 
-  lock_spin(&status->lock);
+  LOCK_SPIN_IRQ(&status->lock);
   if (status->ctx != NULL)
     sched_context_start(status->ctx);
   status->done = 1;
-  lock_release(&status->lock);
-
-  return 0;
+  LOCK_RELEASE_IRQ(&status->lock);
 }
 #endif
 
@@ -146,7 +147,7 @@ error_t dev_timer_sleep(struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
   status.ctx = NULL;
   status.done = 0;
   rq->pvdata = &status;
-  rq->callback = dev_timer_wait_request_cb;
+  kroutine_init(&rq->kr, dev_timer_wait_request_cb, KROUTINE_IMMEDIATE);
 
   error_t e = DEVICE_SAFE_OP(tdev, request, rq);
 

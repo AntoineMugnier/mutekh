@@ -22,6 +22,8 @@
 
 #include "driver_m.h"
 
+#include <mutek/kroutine.h>
+
 /*
   The Arm-m profile may provide a cycle counter and a systick timer.
   This driver provides 3 device interfaces to access these timers:
@@ -47,21 +49,17 @@ void arm_timer_systick_irq(struct device_s *dev)
 {
   struct arm_dev_private_s  *pv = dev->drv_pv;
 
-  lock_spin(&dev->lock);
-
   if (!(cpu_mem_read_32(ARM_M_SYSTICK_CSR_ADDR) & ARM_M_SYSTICK_CSR_CNTFLAG))
     return;
 
+  lock_spin(&dev->lock);
   pv->systick_value++;
 
-  if (pv->systick_start <= 0)
-    return;
-
-  while (1)
+  while (pv->systick_start & 1)
     {
       struct dev_timer_rq_s *rq = dev_timer_queue_head(&pv->systick_queue);
 
-      if (!rq)
+      if (rq == NULL)
         {
           /* stop timer */
           pv->systick_start &= ~1;
@@ -70,22 +68,15 @@ void arm_timer_systick_irq(struct device_s *dev)
           break;
         }
 
-      assert(pv->systick_start & 1);
-
       if (rq->deadline > pv->systick_value)
         break;
 
-      rq->drvdata = 0;
+      rq->drvdata = NULL;
       dev_timer_queue_pop(&pv->systick_queue);
 
-      if (rq->callback(rq, 0))
-        {
-          if (rq->delay)
-            rq->deadline = pv->systick_value + rq->delay;
-
-          rq->drvdata = pv;
-          dev_timer_queue_insert_ascend(&pv->systick_queue, rq);
-        }
+      lock_release(&dev->lock);
+      kroutine_exec(&rq->kr, 0);
+      lock_spin(&dev->lock);
     }
 
   lock_release(&dev->lock);
@@ -102,49 +93,38 @@ static DEVTIMER_REQUEST(arm_timer_request)
 #if defined(CONFIG_CPU_ARM_TIMER_SYSTICK) && defined(CONFIG_DEVICE_IRQ)
     case 1: {
       error_t err = 0;
-      if (!rq)
-        return 0;
 
       rq->tdev = tdev;
       LOCK_SPIN_IRQ(&dev->lock);
 
       if (pv->systick_start < 0)  /* hardware timer already used in mode 0 */
+        err = -EBUSY;
+      else
         {
-          err = -EBUSY;
-          goto done;
-        }
+          uint64_t val = pv->systick_value;
 
-      uint64_t val = pv->systick_value;
-
-      while (1)
-        {
           if (rq->delay)
             rq->deadline = val + rq->delay;
 
-          if (rq->deadline > val)
-            break;
+          if (rq->deadline <= val)
+            err = ETIMEDOUT;
+          else
+            {
+              dev_timer_queue_insert_ascend(&pv->systick_queue, rq);
+              rq->drvdata = pv;
 
-          if (rq->callback(rq, 1))
-            continue;
-
-          err = ETIMEDOUT;
-          goto done;
+              /* start timer if needed */
+              if (pv->systick_start == 0)
+                {
+                  cpu_mem_write_32(ARM_M_SYSTICK_RVR_ADDR, pv->systick_period);
+                  cpu_mem_write_32(ARM_M_SYSTICK_CVR_ADDR, 0);
+                  cpu_mem_write_32(ARM_M_SYSTICK_CSR_ADDR, ARM_M_SYSTICK_CSR_CLKSRC |
+                                   ARM_M_SYSTICK_CSR_ENABLE | ARM_M_SYSTICK_CSR_TICKINT);
+                }
+              pv->systick_start |= 1;
+            }
         }
 
-      rq->drvdata = pv;
-      dev_timer_queue_insert_ascend(&pv->systick_queue, rq);
-
-      /* start timer if needed */
-      if (pv->systick_start == 0)
-        {
-          cpu_mem_write_32(ARM_M_SYSTICK_RVR_ADDR, 0xffffff);
-          cpu_mem_write_32(ARM_M_SYSTICK_CVR_ADDR, 0);
-          cpu_mem_write_32(ARM_M_SYSTICK_CSR_ADDR, ARM_M_SYSTICK_CSR_CLKSRC |
-                           ARM_M_SYSTICK_CSR_ENABLE | ARM_M_SYSTICK_CSR_TICKINT);
-        }
-      pv->systick_start |= 1;
-
-      done:;
       LOCK_RELEASE_IRQ(&dev->lock);
 
       return err;
@@ -166,8 +146,6 @@ static DEVTIMER_CANCEL(arm_timer_cancel)
 #if defined(CONFIG_CPU_ARM_TIMER_SYSTICK) && defined(CONFIG_DEVICE_IRQ)
     case 1: {
       error_t err = 0;
-      if (!rq)
-        return 0;
 
       assert(rq->tdev->dev == dev && rq->tdev->number == 1);
 
@@ -177,8 +155,8 @@ static DEVTIMER_CANCEL(arm_timer_cancel)
         {
           assert(pv->systick_start & 1);
 
+          rq->drvdata = NULL;
           dev_timer_queue_remove(&pv->systick_queue, rq);
-          rq->drvdata = 0;
 
           /* stop timer if not in use */
           if (dev_timer_queue_isempty(&pv->systick_queue))

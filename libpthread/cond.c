@@ -131,8 +131,9 @@ struct pthread_cond_timedwait_ctx_s
   struct sched_context_s *sched_ctx;
 };
 
-static DEVTIMER_CALLBACK(pthread_cond_timer)
+static KROUTINE_EXEC(pthread_cond_timer)
 {
+  struct dev_timer_rq_s *rq = kr;
   struct pthread_cond_timedwait_ctx_s *ev_ctx = rq->pvdata;
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -141,8 +142,6 @@ static DEVTIMER_CALLBACK(pthread_cond_timer)
   struct sched_context_s *sched_ctx = ev_ctx->sched_ctx;
   struct pthread_s *thread = sched_ctx->priv;
 
-  if (nested)
-    return 0;
   if (thread->state & _PTHREAD_STATE_TIMEDWAIT)
     {
       lock_spin(&thread->lock);
@@ -153,8 +152,6 @@ static DEVTIMER_CALLBACK(pthread_cond_timer)
     }
 
   sched_queue_unlock(ev_ctx->wait);
-
-  return 0;
   CPU_INTERRUPT_RESTORESTATE;
 }
 
@@ -191,7 +188,7 @@ pthread_cond_timedwait(pthread_cond_t *cond,
       this->state &= ~_PTHREAD_STATE_TIMEOUT;
       lock_release(&this->lock);
 
-      rq.callback = pthread_cond_timer;
+      kroutine_init(&rq.kr, pthread_cond_timer, KROUTINE_IMMEDIATE);
       rq.pvdata = &ev_ctx;
 
       switch (DEVICE_SAFE_OP(libc_timer(), request, &rq))

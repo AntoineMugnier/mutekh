@@ -35,6 +35,7 @@
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+#include <mutek/kroutine.h>
 
 #define  TIMER_VALUE		0
 #define  TIMER_MODE		4
@@ -135,17 +136,12 @@ static DEV_IRQ_EP_PROCESS(soclib_timer_irq)
           if (rq->deadline > p->value)
             break;
 
-          rq->drvdata = 0;
+          rq->drvdata = NULL;
           dev_timer_queue_pop(&p->queue);
 
-          if (rq->callback(rq, 0))
-            {
-              if (rq->delay)
-                rq->deadline = p->value + rq->delay;
-
-              rq->drvdata = p;
-              dev_timer_queue_insert_ascend(&p->queue, rq);
-            }
+          lock_release(&dev->lock);
+          kroutine_exec(&rq->kr, 0);
+          lock_spin(&dev->lock);
         }
     }
 
@@ -168,9 +164,6 @@ static DEVTIMER_REQUEST(soclib_timer_request)
   if (number >= pv->t_count)
     return -ENOENT;
 
-  if (!rq)
-    return 0;
-
   rq->tdev = tdev;
 
   struct soclib_timer_state_s *p = pv->t + number;
@@ -178,41 +171,32 @@ static DEVTIMER_REQUEST(soclib_timer_request)
   LOCK_SPIN_IRQ(&dev->lock);
 
   if (p->start_count < 0)  /* hardware timer already used in mode 0 */
-    {
       err = -EBUSY;
-      goto done;
-    }
-
-  uint64_t val = p->value;
-
-  while (1)
+  else
     {
+      uint64_t val = p->value;
+
       if (rq->delay)
         rq->deadline = val + rq->delay;
 
-      if (rq->deadline > val)
-        break;
+      if (rq->deadline <= val)
+        err = ETIMEDOUT;
+      else
+        {
+          rq->drvdata = p;
+          dev_timer_queue_insert_ascend(&p->queue, rq);
 
-      if (rq->callback(rq, 1))
-        continue;
-
-      err = ETIMEDOUT;
-      goto done;
+          /* start timer if needed */
+          if (p->start_count == 0)
+            {
+              cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_VALUE, number), 0);
+              cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_PERIOD, number), endian_le32(p->period));
+              cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, number), endian_le32(TIMER_MODE_EN | TIMER_MODE_IRQEN));
+            }
+          p->start_count |= 1;
+        }
     }
 
-  rq->drvdata = p;
-  dev_timer_queue_insert_ascend(&p->queue, rq);
-
-  /* start timer if needed */
-  if (p->start_count == 0)
-    {
-      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_VALUE, number), 0);
-      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_PERIOD, number), endian_le32(p->period));
-      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, number), endian_le32(TIMER_MODE_EN | TIMER_MODE_IRQEN));
-    }
-  p->start_count |= 1;
-
- done:;
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
@@ -235,9 +219,6 @@ static DEVTIMER_CANCEL(soclib_timer_cancel)
 
   if (number >= pv->t_count)
     return -ENOENT;
-
-  if (!rq)
-    return 0;
 
   assert(rq->tdev->dev == dev && rq->tdev->number == tdev->number);
 

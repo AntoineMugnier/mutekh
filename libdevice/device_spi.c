@@ -195,17 +195,13 @@ static void device_spi_ctrl_wait(struct dev_spi_ctrl_request_s *rq, dev_timer_va
   return device_spi_ctrl_sched(q, t, 0);
 }
 
-static DEVTIMER_CALLBACK(device_spi_ctrl_timeout)
+static KROUTINE_EXEC(device_spi_ctrl_timeout)
 {
-  if (nested)
-    return 0;
-
+  struct dev_timer_rq_s *rq = kr;
   struct dev_spi_ctrl_queue_s *q = rq->pvdata;
   dev_timer_value_t t = rq->deadline;
 
   device_spi_ctrl_sched(q, t, 0);
-
-  return 0;
 }
 
 static void device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t, bool_t in_thread)
@@ -231,6 +227,13 @@ static void device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_valu
               dev_spi_ctrl_queue_remove(&q->queue, item);
               q->current = item;
               item->noyield = 0;
+
+              /* cancel timer request, if any */
+              if (q->timeout != NULL)
+                  DEVICE_SAFE_OP(&q->timer, cancel, &q->timer_rq);
+              q->timeout = NULL;
+
+              /* restart exec */
               LOCK_RELEASE_IRQ_X(&q->lock);
               return device_spi_ctrl_exec(q, t, in_thread);
             }
@@ -245,19 +248,17 @@ static void device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_valu
             rq = item;
       });
 
-      /* no candidate request in queue */
-      if (rq == NULL)
+      if (rq == NULL ||     /* no candidate request in queue? */
+          q->timeout == rq) /* already waiting on the right request? */
         {
           LOCK_RELEASE_IRQ_X(&q->lock);
           return;
         }
 
       /* cancel old timer request, if any */
-      if (q->timeout)
-        {
+      if (q->timeout != NULL)
           DEVICE_SAFE_OP(&q->timer, cancel, &q->timer_rq);
-          q->timeout = 0;
-        }
+      q->timeout = NULL;
 
       /* rely on timer */
       err = -ETIMEDOUT;
@@ -265,7 +266,7 @@ static void device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_valu
         {
           trq->deadline = rq->sleep_before;
           trq->delay = 0;
-          trq->callback = &device_spi_ctrl_timeout;
+          kroutine_init(&trq->kr, device_spi_ctrl_timeout, KROUTINE_IMMEDIATE);
           trq->pvdata = q;
 
           err = DEVICE_SAFE_OP(&q->timer, request, trq);
@@ -274,7 +275,7 @@ static void device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_valu
       switch (err)
         {
         case 0:      /* wait for timeout interrupt */
-          q->timeout = 1;
+          q->timeout = rq;
           LOCK_RELEASE_IRQ_X(&q->lock);
           return;
 

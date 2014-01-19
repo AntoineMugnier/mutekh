@@ -34,7 +34,7 @@
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
-#include <mutek/printk.h>
+#include <mutek/kroutine.h>
 
 #include <arch/efm32_timer.h>
 
@@ -117,58 +117,34 @@ static inline void efm32_timer_disable_compare(struct efm32_timer_private_s *pv)
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(EFM32_TIMER_CHANNEL), 0);
 }
 
-static void efm32_timer_check_queue(struct efm32_timer_private_s *pv, bool_t nested, bool_t swupdate)
+static bool_t efm32_timer_request_start(struct efm32_timer_private_s *pv,
+                                      struct dev_timer_rq_s *rq,
+                                      dev_timer_value_t value)
 {
-  while (1)
-    {
-      struct dev_timer_rq_s *rq = dev_timer_queue_head(&pv->queue);
+  /* enable hw comparator if software part of the counter match */
+  if (((rq->deadline ^ value) & EFM32_TIMER_SW_MASK))
+    return 0;
 
-      if (!rq)
-        {
-          pv->start_count &= ~1;
-          if (pv->start_count == 0)
-            efm32_timer_stop_counter(pv);
-          break;
-        }
+  efm32_timer_enable_compare(pv, rq->deadline);
 
-      uint64_t value = get_timer_value(pv);
+  /* hw compare for == only, check for race condition */
+  if (rq->deadline <= get_timer_value(pv))
+    return 1;
 
-      if (rq->deadline > value)
-        {
-          if (swupdate && ((rq->deadline ^ value) & EFM32_TIMER_SW_MASK) == 0)
-            {
-              /* Configure compare for this request */
-              efm32_timer_enable_compare(pv, rq->deadline);
-              swupdate = 0;
+  return 0;
+}
 
-              /* Hw compare is for match only (==), must check again */
-              continue;
-            }
-          break;
-        } 
-
-      dev_timer_queue_pop(&pv->queue);
-      if (rq->callback(rq, 0))
-        {
-          if (rq->delay)
-            rq->deadline = value + rq->delay;
-
-          /* Put request in queue */
-          dev_timer_queue_insert_ascend(&pv->queue, rq);
-        }
-      else
-        {
-          rq->drvdata = 0;
-        }
-      swupdate = 1;
-    }
+static inline void efm32_timer_raise_irq(struct efm32_timer_private_s *pv)
+{
+  cpu_mem_write_32(pv->addr + EFM32_TIMER_IFS_ADDR,
+                   endian_le32(EFM32_TIMER_IF_CC(EFM32_TIMER_CHANNEL)));
 }
 
 static DEV_IRQ_EP_PROCESS(efm32_timer_irq)
 {
   struct device_s *dev = ep->dev;
   struct efm32_timer_private_s *pv = dev->drv_pv;
- 
+
   lock_spin(&dev->lock);
 
   while (1)
@@ -185,17 +161,39 @@ static DEV_IRQ_EP_PROCESS(efm32_timer_irq)
       if (irq & EFM32_TIMER_IF_CC(EFM32_TIMER_CHANNEL))
         efm32_timer_disable_compare(pv);
 
-      /* Top value reached */ 
+      /* Update the software part of the counter */
       if (irq & EFM32_TIMER_IF_OF)
+        pv->swvalue++;
+
+      struct dev_timer_rq_s *rq = dev_timer_queue_head(&pv->queue);
+
+      while (rq != NULL)
         {
-          /* Update the software part of the counter */
-          pv->swvalue++;
-          efm32_timer_check_queue(pv, 0, 1);
+          uint64_t value = get_timer_value(pv);
+
+          /* setup compare for first request */
+          if (rq->deadline > value)
+            if (!efm32_timer_request_start(pv, rq, value))
+              break;
+
+          dev_timer_queue_pop(&pv->queue);
+          efm32_timer_disable_compare(pv);
+          rq->drvdata = 0;
+
+          lock_release(&dev->lock);
+          kroutine_exec(&rq->kr, 0);
+          lock_spin(&dev->lock);
+
+          rq = dev_timer_queue_head(&pv->queue);
+          if (rq == NULL)
+            {
+              pv->start_count &= ~1;
+              if (pv->start_count == 0)
+                efm32_timer_stop_counter(pv);
+              break;
+            }
         }
-      else
-        {
-          efm32_timer_check_queue(pv, 0, 0);
-        }
+
     }
 
   lock_release(&dev->lock);
@@ -209,9 +207,6 @@ static DEVTIMER_CANCEL(efm32_timer_cancel)
   struct efm32_timer_private_s *pv = dev->drv_pv;
   error_t err = -ETIMEDOUT;
 
-  if (!rq)
-    return 0;
-
   assert(rq->tdev == tdev);
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -221,13 +216,27 @@ static DEVTIMER_CANCEL(efm32_timer_cancel)
       struct dev_timer_rq_s *rq0 = dev_timer_queue_head(&pv->queue);
      
       dev_timer_queue_remove(&pv->queue, rq);
-      rq->drvdata = 0;
+      rq->drvdata = NULL;
      
       if (rq == rq0)       /* removed first request ? */
         {
           efm32_timer_disable_compare(pv);
-          efm32_timer_check_queue(pv, 1, 1);
+          rq0 = dev_timer_queue_head(&pv->queue);
+
+          if (rq0 != NULL)
+            {
+              /* start next request, raise irq on race condition */
+              if (efm32_timer_request_start(pv, rq0, get_timer_value(pv)))
+                efm32_timer_raise_irq(pv);
+            }
+          else
+            {
+              pv->start_count &= ~1;
+              if (pv->start_count == 0)
+                efm32_timer_stop_counter(pv);
+            }
         }
+
       err = 0;
     }
 
@@ -246,35 +255,36 @@ static DEVTIMER_REQUEST(efm32_timer_request)
   struct efm32_timer_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  if (!rq)
-    return 0;
-
   rq->tdev = tdev;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   /* Start timer if needed */
-  if (dev_timer_queue_isempty(&pv->queue))
+  if (pv->start_count == 0)
+    efm32_timer_start_counter(pv);
+
+  uint64_t value = get_timer_value(pv);
+
+  if (rq->delay)
+    rq->deadline = value + rq->delay;
+
+  if (rq->deadline <= value)
+    err = ETIMEDOUT;
+  else
     {
-      if (pv->start_count == 0)
-        efm32_timer_start_counter(pv);
       pv->start_count |= 1;
+      dev_timer_queue_insert_ascend(&pv->queue, rq);
+      rq->drvdata = pv;
+
+      /* start request, raise irq on race condition */
+      if (dev_timer_queue_head(&pv->queue) == rq)
+        if (efm32_timer_request_start(pv, rq, value))
+          efm32_timer_raise_irq(pv);
     }
 
-  /* Put request in queue */
-  if (rq->delay)
-    rq->deadline = get_timer_value(pv) + rq->delay;
-  dev_timer_queue_insert_ascend(&pv->queue, rq);
-  rq->drvdata = pv;
+  if (pv->start_count == 0)
+    efm32_timer_stop_counter(pv);
 
-  /* Adjust earliest deadline if needed */
-  if (dev_timer_queue_head(&pv->queue) == rq)
-    efm32_timer_check_queue(pv, 1, 1);
-
-  if (rq->drvdata == 0)
-    err = ETIMEDOUT;
-
- done:;
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;

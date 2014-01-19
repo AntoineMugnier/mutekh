@@ -32,6 +32,7 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
+#include <mutek/kroutine.h>
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_clist.h>
 
@@ -49,33 +50,19 @@ typedef uint32_t dev_timer_delay_t;
 
 struct dev_timer_rq_s;
 
-/** timer device class callback function template */
-#define DEVTIMER_CALLBACK(n)    bool_t (n) (struct dev_timer_rq_s *rq, bool_t nested)
-/** Timer device request callback. This function is called when the
-    timer deadline is reached.
-
-    The request is rescheduled if the function returns true. If the
-    request @tt delay field was not zero when the request was first
-    scheduled, the delay must not be changed and the next callback
-    will be called with the same interval. If the delay field was
-    zero, the @tt deadline field value can be updated to a new value.
-
-    The @tt nested parameter is set if the callback function is called
-    from the @ref devtimer_request_t function of the driver rather
-    than from an interrupt handler.
-*/
-typedef DEVTIMER_CALLBACK(devtimer_callback_t);
-
 /** Timer request @csee devtimer_request_t */
 struct dev_timer_rq_s
 {
+  union {
+    CONTAINER_ENTRY_TYPE(CLIST) queue_entry; //< used by driver to enqueue requests
+    struct kroutine_s           kr;
+  };
+
   dev_timer_value_t             deadline;    //< absolute timer deadline
   dev_timer_delay_t             delay;       //< timer delay
-  devtimer_callback_t           *callback;   //< callback function
   void                          *pvdata;     //< pv data for callback
   void                          *drvdata;    //< driver private data
   struct device_timer_s         *tdev;       //< pointer to associated timer device
-  CONTAINER_ENTRY_TYPE(CLIST)   queue_entry; //< used by driver to enqueue requests
 };
 
 CONTAINER_TYPE(dev_timer_queue, CLIST, struct dev_timer_rq_s, queue_entry);
@@ -88,35 +75,26 @@ CONTAINER_KEY_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue, deadl
 #define DEVTIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
 
 /**
-   Timer device class request function. Enqueue a timer request.
+   @This enqueues a timeout event request. The @tt delay and @tt
+   kr fields of the request must have been initialized. If @tt delay
+   is zero, the @tt deadline field must specify an absolute deadline
+   timer value.
 
-   @param rq pointer to request.
+   If the function returns 0, the @ref kroutine_exec function will be
+   called when the deadline is reached. It's ok to call any of the
+   timer functions from the kroutine; especially the request can be
+   enqueued again.
 
-   When enqueuing a new event, the @tt delay and @tt callback fields
-   of the request must be initialized. If @tt delay is zero, the @tt
-   deadline field must be initialized with an absolute deadline timer
-   value.
-
-   The callback function will be called immediately from within this
-   function if the deadline has already been reached. In this case the
-   @tt ETIMEDOUT positive value is returned unless the callback asks to
-   reschedule the request by returning true.
+   If the deadline has already been reached, the function does nothing
+   and return @tt ETIMEDOUT.
 
    If the timer has not been started explicitly by calling the @ref
    devtimer_start_stop_t function, it will run until the request queue
    becomes empty again.
 
-   @This returns 0 on success. If the @tt rq parameter is @tt NULL ,
-   this function does nothing and returns 0 unless requests enqueuing
-   is not supported by the device, in which case it returns an error
-   code.
-
-   When a request is removed from the driver queue, its @tt drvdata
-   field becomes @tt NULL.
-
-   @This may return @tt -EBUSY if the timer hardware resource is not
-   available. @This may return -ENOTSUP if there is no timer matching
-   the requested device number.
+   @This returns 0 on success. @This may return @tt -EBUSY if the
+   timer hardware resource is not available. @This may return -ENOTSUP
+   if there is no timer matching the requested device number.
 
    @This is optional and should be invoked using the @ref #DEVICE_SAFE_OP macro.
 */
@@ -126,18 +104,14 @@ typedef DEVTIMER_REQUEST(devtimer_request_t);
 #define DEVTIMER_CANCEL(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
 
 /**
-   Timer device class cancel function. Cancel a timer request.
-
-   @param rq pointer to request.
+   @This cancel a timeout request event.
 
    The request is removed from the timer event queue. @This function
-   returns @tt -ETIMEDOUT if the request was not found (already
-   reached).
-
-   When a request is removed from the driver queue, its @tt drvdata
-   field becomes @tt NULL.
+   returns @tt -ETIMEDOUT if the request is not in the queue any more
+   (deadline already reached).
 
    @This returns 0 on success.
+
    @This is optional and should be invoked using the @ref #DEVICE_SAFE_OP macro.
 */
 typedef DEVTIMER_CANCEL(devtimer_cancel_t);
@@ -186,7 +160,7 @@ typedef DEVTIMER_START_STOP(devtimer_start_stop_t);
    timer from the wrong processor.
 
    The timer value may not be readable if the timer is currently
-   stooped. In this case this function will return @tt -EBUSY.  @This
+   stopped. In this case this function will return @tt -EBUSY.  @This
    returns @tt -ENOTSUP if there is no timer matching the requested
    device number.
 
@@ -211,10 +185,12 @@ typedef uint32_t dev_timer_res_t;
    Depending on timer hardware capabilities, setting the timer
    resolution will either configure an hardware prescaler to divide
    timer input clock or simply update the timer cyclic period. If the
-   timer hardware has been designed to handle deadlines addition and
+   timer hardware has been designed to support request insertion and
    removal without loss of accuracy or race condition, a tick-less
    approach is used. In this case the timer resolution can generally
-   be set as low as 1 for best time granularity.
+   be set as low as 1 for best time granularity. In case of a count to
+   zero type of timer, setting the resolution to a low value will
+   generate many interrupts.
 
    @This tries to set timer resolution to value pointed to by @tt res
    if the pointer is not @tt NULL and the value is not zero. The
@@ -227,7 +203,7 @@ typedef uint32_t dev_timer_res_t;
    must be a power of two minus one.
 
    The @tt -EBUSY value is returned when trying to change the
-   resolution while the timer has been started. If setting timer
+   resolution while the timer has been started. If setting the timer
    resolution is not supported, @tt -ENOTSUP is returned. If the new
    resolution value is different from the requested one, @tt -ERANGE
    is returned. These error conditions can only occur when trying to

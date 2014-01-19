@@ -58,19 +58,23 @@ struct enst_rttimer_private_s
 {
   uintptr_t addr;
   uint_fast8_t t_count;         // timers count
-  uint_fast8_t start_count;
+  uint32_t start_count;
   struct dev_irq_ep_s *irq_eps;
   struct enst_rttimer_state_s t[0];
 };
 
 #ifdef CONFIG_DEVICE_IRQ
-static inline void enst_rttimer_irq_process(struct enst_rttimer_private_s *pv, uint_fast8_t number)
+static inline void enst_rttimer_irq_process(struct device_s *dev, uint_fast8_t number)
 {
+  struct enst_rttimer_private_s *pv = dev->drv_pv;
   struct enst_rttimer_state_s *p = pv->t + number;
+
   struct dev_timer_rq_s *rq;
 
   while ((rq = dev_timer_queue_head(&p->queue)))
     {
+      assert(pv->start_count >= 0x10000);
+
       uint64_t value = RT_TIMER_ENDIAN32(cpu_mem_read_32(pv->addr + RT_TIMER_RTCL_ADDR));
       value |= (uint64_t)RT_TIMER_ENDIAN32(cpu_mem_read_32(pv->addr + RT_TIMER_RTCTMP_ADDR)) << 32;
 
@@ -84,21 +88,14 @@ static inline void enst_rttimer_irq_process(struct enst_rttimer_private_s *pv, u
       rq->drvdata = 0;
       dev_timer_queue_pop(&p->queue);
 
-      if (rq->callback(rq, 0))
-	{
-	  if (rq->delay)
-	    rq->deadline += rq->delay;
+      lock_release(&dev->lock);
+      kroutine_exec(&rq->kr, 0);
+      lock_spin(&dev->lock);
 
-	  rq->drvdata = p;
-	  dev_timer_queue_insert_ascend(&p->queue, rq);
-	}
-      else
-	--pv->start_count;
+      pv->start_count -= 0x10000;
+      if (pv->start_count == 0)
+        cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_IEW_SMASK));
     }
-
-  // stop timer if not in use
-  if (!rq && !pv->start_count)
-    cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_IEW_SMASK));
 }
 
 static DEV_IRQ_EP_PROCESS(enst_rttimer_irq_single)
@@ -123,7 +120,7 @@ static DEV_IRQ_EP_PROCESS(enst_rttimer_irq_single)
 
 	  assert(number < pv->t_count);
 
-	  enst_rttimer_irq_process(pv, number);
+	  enst_rttimer_irq_process(dev, number);
 
 	  ip &= ip - 1;
 	}
@@ -148,7 +145,7 @@ static DEV_IRQ_EP_PROCESS(enst_rttimer_irq_separate)
 	break;
 
       cpu_mem_write_32(pv->addr + RT_TIMER_IP_ADDR, RT_TIMER_ENDIAN32(ip));
-      enst_rttimer_irq_process(pv, number);
+      enst_rttimer_irq_process(dev, number);
     }
 
   lock_release(&dev->lock);
@@ -165,9 +162,6 @@ static DEVTIMER_CANCEL(enst_rttimer_cancel)
   if (tdev->number >= pv->t_count)
     return -ENOENT;
 
-  if (!rq)
-    return 0;
-
   struct enst_rttimer_state_s *p = pv->t + tdev->number;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -178,6 +172,11 @@ static DEVTIMER_CANCEL(enst_rttimer_cancel)
 
       dev_timer_queue_remove(&p->queue, rq);
       rq->drvdata = 0;
+
+      /* stop timer if not in use */
+      pv->start_count -= 0x10000;
+      if (pv->start_count == 0)
+        cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_IEW_SMASK));
 
       if (rq == rq0)  /* removed first ? */
         {
@@ -190,10 +189,6 @@ static DEVTIMER_CANCEL(enst_rttimer_cancel)
               cpu_mem_write_32(pv->addr + RT_TIMER_RTCTMP_ADDR, RT_TIMER_ENDIAN32(rq0->deadline >> 32));
               cpu_mem_write_32(RT_TIMER_REG_ADDR(pv->addr, RT_TIMER_DLN1_ADDR, tdev->number), RT_TIMER_ENDIAN32(rq0->deadline));
             }
-
-          /* stop timer if not in use */
-          if (--pv->start_count == 0)
-            cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_IEW_SMASK));
         }
     }
   else
@@ -219,9 +214,6 @@ static DEVTIMER_REQUEST(enst_rttimer_request)
   if (tdev->number >= pv->t_count)
     return -ENOENT;
 
-  if (!rq)
-    return 0;
-
   rq->tdev = tdev;
 
   struct enst_rttimer_state_s *p = pv->t + tdev->number;
@@ -231,37 +223,32 @@ static DEVTIMER_REQUEST(enst_rttimer_request)
   uint64_t value = RT_TIMER_ENDIAN32(cpu_mem_read_32(pv->addr + RT_TIMER_RTCL_ADDR));
   value |= (uint64_t)RT_TIMER_ENDIAN32(cpu_mem_read_32(pv->addr + RT_TIMER_RTCTMP_ADDR)) << 32;
 
-  do {
-    if (rq->delay)
-      rq->deadline = value + rq->delay;
+  if (rq->delay)
+    rq->deadline = value + rq->delay;
 
-    if (rq->deadline <= value)
-      {
-        if (rq->callback(rq, 1))
-          continue;
-        err = ETIMEDOUT;
-        goto done;
-      }
-  } while (0);
-
-  rq->drvdata = p;
-  dev_timer_queue_insert_ascend(&p->queue, rq);
-
-  /* adjust earliest deadline if needed */
-  if (dev_timer_queue_head(&p->queue) == rq)
+  if (rq->deadline <= value)
+    err = ETIMEDOUT;
+  else
     {
-      cpu_mem_write_32(pv->addr + RT_TIMER_RTCTMP_ADDR, RT_TIMER_ENDIAN32(rq->deadline >> 32));
-      cpu_mem_write_32(RT_TIMER_REG_ADDR(pv->addr, RT_TIMER_DLN1_ADDR, tdev->number), RT_TIMER_ENDIAN32(rq->deadline));
+      rq->drvdata = p;
+      dev_timer_queue_insert_ascend(&p->queue, rq);
+
+      /* adjust earliest deadline if needed */
+      if (dev_timer_queue_head(&p->queue) == rq)
+        {
+          cpu_mem_write_32(pv->addr + RT_TIMER_RTCTMP_ADDR, RT_TIMER_ENDIAN32(rq->deadline >> 32));
+          cpu_mem_write_32(RT_TIMER_REG_ADDR(pv->addr, RT_TIMER_DLN1_ADDR, tdev->number), RT_TIMER_ENDIAN32(rq->deadline));
+        }
+
+      /* start timer if needed */
+      if (pv->start_count == 0)
+        {
+          cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR,
+                           RT_TIMER_ENDIAN32(RT_TIMER_CTRL_CE_SMASK | RT_TIMER_CTRL_IEW_SMASK));
+        }
+      pv->start_count += 0x10000;
     }
 
-  /* start timer if needed */
-  if (pv->start_count++ == 0)
-    {
-      cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR,
-                       RT_TIMER_ENDIAN32(RT_TIMER_CTRL_CE_SMASK | RT_TIMER_CTRL_IEW_SMASK));
-    }
-
-done:;
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
@@ -293,10 +280,10 @@ static DEVTIMER_START_STOP(enst_rttimer_state_start_stop)
     }
   else
     {
-      if (pv->start_count == 0)
+      if ((pv->start_count & 0xffff) == 0)
 	err = -EINVAL;
       else if (--pv->start_count == 0)
-	cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_IEW_SMASK));
+        cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, RT_TIMER_ENDIAN32(RT_TIMER_CTRL_IEW_SMASK));
     }
 # else
   if (start)
@@ -306,7 +293,9 @@ static DEVTIMER_START_STOP(enst_rttimer_state_start_stop)
     }
   else
     {
-      if (--pv->start_count == 0)
+      if (pv->start_count == 0)
+	err = -EINVAL;
+      else if (--pv->start_count == 0)
 	cpu_mem_write_32(pv->addr + RT_TIMER_CTRL_ADDR, 0);
     }
 # endif

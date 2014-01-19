@@ -33,6 +33,7 @@
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+#include <mutek/kroutine.h>
 
 /*
   Each hardware timer have two different timer interfaces with
@@ -68,6 +69,7 @@ void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number)
 
       if (!rq)
         {
+          /* stop timer if not in use */
           p->start_count &= ~1;
           if (p->start_count == 0)
             cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_PTI_PER, number), 0);
@@ -82,14 +84,9 @@ void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number)
       rq->drvdata = 0;
       dev_timer_queue_pop(&p->queue);
 
-      if (rq->callback(rq, 0))
-        {
-          if (rq->delay)
-            rq->deadline = p->value + rq->delay;
-
-          rq->drvdata = p;
-          dev_timer_queue_insert_ascend(&p->queue, rq);
-        }
+      lock_release(&dev->lock);
+      kroutine_exec(&rq->kr, 0);
+      lock_spin(&dev->lock);
     }
 
   lock_release(&dev->lock);
@@ -111,9 +108,6 @@ static DEVTIMER_REQUEST(soclib_xicu_timer_request)
   if (number >= pv->pti_count)
     return -ENOENT;
 
-  if (!rq)
-    return 0;
-
   rq->tdev = tdev;
 
   struct soclib_xicu_pti_s *p = pv->pti + number;
@@ -121,40 +115,31 @@ static DEVTIMER_REQUEST(soclib_xicu_timer_request)
   LOCK_SPIN_IRQ(&dev->lock);
 
   if (p->start_count < 0)  /* hardware timer already used in mode 0 */
+    err = -EBUSY;
+  else
     {
-      err = -EBUSY;
-      goto done;
-    }
+      uint64_t val = p->value;
 
-  uint64_t val = p->value;
-
-  while (1)
-    {
       if (rq->delay)
         rq->deadline = val + rq->delay;
 
-      if (rq->deadline > val)
-        break;
+      if (rq->deadline <= val)
+        err = ETIMEDOUT;
+      else
+        {
+          rq->drvdata = p;
+          dev_timer_queue_insert_ascend(&p->queue, rq);
 
-      if (rq->callback(rq, 1))
-        continue;
-
-      err = ETIMEDOUT;
-      goto done;
+          /* start timer if needed */
+          if (p->start_count == 0)
+            {
+              cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_PTI_VAL, number), endian_le32(p->period));
+              cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_PTI_PER, number), endian_le32(p->period));
+            }
+          p->start_count |= 1;
+        }
     }
 
-  rq->drvdata = p;
-  dev_timer_queue_insert_ascend(&p->queue, rq);
-
-  /* start timer if needed */
-  if (p->start_count == 0)
-    {
-      cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_PTI_VAL, number), endian_le32(p->period));
-      cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_PTI_PER, number), endian_le32(p->period));
-    }
-  p->start_count |= 1;
-
- done:;
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;

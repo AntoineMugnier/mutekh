@@ -36,6 +36,7 @@
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+#include <mutek/kroutine.h>
 
 #define TIMER_REG_SCALER         0x00
 #define TIMER_REG_SC_RELOAD      0x04
@@ -88,8 +89,10 @@ struct gptimer_private_s
 };
 
 #ifdef CONFIG_DEVICE_IRQ
-static inline bool_t gptimer_irq_process(struct gptimer_private_s *pv, uint_fast8_t number)
+static inline bool_t gptimer_irq_process(struct device_s *dev, uint_fast8_t number)
 {
+  struct gptimer_private_s *pv = dev->drv_pv;
+
   assert(number < pv->t_count);
 
   if ((endian_be32(TIMER_CTRL_IP) & cpu_mem_read_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, number))) == 0)
@@ -103,32 +106,27 @@ static inline bool_t gptimer_irq_process(struct gptimer_private_s *pv, uint_fast
 
   p->value++;
 
-  struct dev_timer_rq_s *rq = dev_timer_queue_head(&p->queue);
-
-  while (rq)
+  while (1)
     {
+      struct dev_timer_rq_s *rq = dev_timer_queue_head(&p->queue);
+
+      if (rq == NULL)
+        {
+          /* stop timer if not in use */
+          p->start_count &= ~1;
+          if (p->start_count == 0)
+            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, number), endian_be32(TIMER_CTRL_IE));
+        }
+
       if (rq->deadline > p->value)
         break;
 
       rq->drvdata = 0;
       dev_timer_queue_pop(&p->queue);
 
-      if (rq->callback(rq, 0))
-        {
-          if (rq->delay)
-            rq->deadline = p->value + rq->delay;
-
-          rq->drvdata = p;
-          dev_timer_queue_insert_ascend(&p->queue, rq);
-        }
-      else
-        {
-          // stop timer if not in use
-          if (--p->start_count == 0)
-            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, number), endian_be32(TIMER_CTRL_IE));
-        }
-
-      rq = dev_timer_queue_head(&p->queue);
+      lock_release(&dev->lock);
+      kroutine_exec(&rq->kr, 0);
+      lock_spin(&dev->lock);
     }
 
   return 1;
@@ -183,9 +181,6 @@ static DEVTIMER_CANCEL(gptimer_cancel)
   if (tdev->number >= pv->t_count)
     return -ENOENT;
 
-  if (!rq)
-    return 0;
-
   assert(rq->tdev == tdev);
 
   struct gptimer_state_s *p = pv->t + tdev->number;
@@ -198,8 +193,12 @@ static DEVTIMER_CANCEL(gptimer_cancel)
       rq->drvdata = 0;
 
       // stop timer if not in use
-      if (--p->start_count == 0)
-        cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), endian_be32(TIMER_CTRL_IE));
+      if (dev_timer_queue_isempty(&p->queue))
+        {
+          p->start_count &= ~1;
+          if (p->start_count == 0)
+            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), endian_be32(TIMER_CTRL_IE));
+        }
     }
   else
     {
@@ -224,9 +223,6 @@ static DEVTIMER_REQUEST(gptimer_request)
   if (tdev->number >= pv->t_count)
     return -ENOENT;
 
-  if (!rq)
-    return 0;
-
   rq->tdev = tdev;
 
   struct gptimer_state_s *p = pv->t + tdev->number;
@@ -235,30 +231,24 @@ static DEVTIMER_REQUEST(gptimer_request)
 
   uint64_t val = p->value;
 
-  while (1)
+  if (rq->delay)
+    rq->deadline = val + rq->delay;
+
+  if (rq->deadline <= val)
+    err = ETIMEDOUT;
+  else
     {
-      if (rq->delay)
-        rq->deadline = val + rq->delay;
+      rq->drvdata = p;
+      dev_timer_queue_insert_ascend(&p->queue, rq);
 
-      if (rq->deadline > val)
-        break;
-
-      if (rq->callback(rq, 1))
-        continue;
-
-      err = ETIMEDOUT;
-      goto done;
-    }
-
-  rq->drvdata = p;
-  dev_timer_queue_insert_ascend(&p->queue, rq);
-
-  /* start timer if needed */
-  if (p->start_count++ == 0)
-    {
-      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_COUNTER, tdev->number), endian_be32(p->period));
-      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_RELOAD, tdev->number), endian_be32(p->period));
-      cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), endian_be32(TIMER_CTRL_ENABLED | TIMER_CTRL_RESTART | TIMER_CTRL_IE));
+      /* start timer if needed */
+      if (p->start_count == 0)
+        {
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_COUNTER, tdev->number), endian_be32(p->period));
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_RELOAD, tdev->number), endian_be32(p->period));
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), endian_be32(TIMER_CTRL_ENABLED | TIMER_CTRL_RESTART | TIMER_CTRL_IE));
+        }
+      p->start_count |= 1;
     }
 
  done:;
@@ -287,19 +277,24 @@ static DEVTIMER_START_STOP(gptimer_state_start_stop)
 # ifdef CONFIG_DEVICE_IRQ
   if (start)
     {
-      if (p->start_count++ == 0)
+      if (p->start_count == 0)
         {
           cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_COUNTER, tdev->number), endian_be32(p->period));
           cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_RELOAD, tdev->number), endian_be32(p->period));
           cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), endian_be32(TIMER_CTRL_ENABLED | TIMER_CTRL_RESTART | TIMER_CTRL_IE));
         }
+      p->start_count += 2;
     }
   else
     {
-      if ((p->start_count == 0) || (p->start_count == 1 && !dev_timer_queue_isempty(&p->queue)))
+      if (p->start_count < 2)
         err = -EINVAL;
-      else if (--p->start_count == 0)
-        cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), endian_be32(TIMER_CTRL_IE));
+      else
+        {
+          p->start_count -= 2;
+          if (p->start_count == 0)
+            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), endian_be32(TIMER_CTRL_IE));
+        }
     }
 # else
   if (start)

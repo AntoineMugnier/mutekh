@@ -281,9 +281,9 @@ struct dev_spi_ctrl_queue_s
   struct dev_spi_ctrl_config_s *config;
 
   struct dev_spi_ctrl_request_s *current;
+  struct dev_spi_ctrl_request_s *timeout;
   dev_spi_ctrl_queue_root_t     queue;
 
-  bool_t                        timeout;
   uint32_t                      slaves_mask;
   lock_t                        lock;
 };
@@ -294,8 +294,8 @@ dev_spi_queue_init(struct dev_spi_ctrl_queue_s *q)
   device_init_accessor(&q->timer);
   q->config = NULL;
   q->current = NULL;
+  q->timeout = NULL;
   dev_spi_ctrl_queue_init(&q->queue);
-  q->timeout = 0;
   q->slaves_mask = 0;
   lock_init(&q->lock);
   return 0;
@@ -326,7 +326,7 @@ dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q)
 error_t
 dev_spi_request_start(struct device_spi_ctrl_s *scdev,
                       struct dev_spi_ctrl_request_s *rq);
-#if 0
+# if 0
 /** @This initializes the SPI endpoint structure. It should be called
     from the slave driver initialization function. The @ref cs_gpio
     parameter may be @tt NULL. */
@@ -361,7 +361,9 @@ static inline void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq)
   device_put_accessor(&rq->gpio);
   device_put_accessor(&rq->timer);
 }
-#endif /* 0 */
+# endif /* 0 */
+
+#endif
 
 #endif
 
@@ -555,6 +557,4 @@ DRIVER_CLASS_TYPES(spi_ctrl,
 #define BC_SPI_SWPM32(raddr, rcnt) BC_CUSTOM(0x1f00 | ((raddr & 0xf) << 4) | (rcnt & 0xf))
 
 #endif /* CONFIG_DEVICE_SPI_REQUEST */
-
-#endif
 
