@@ -21,6 +21,7 @@
 */
 
 #include <mutek/scheduler.h>
+#include <mutek/kroutine.h>
 #include <gpct/cont_slist.h>
 
 #include <mutek/startup.h>
@@ -37,6 +38,14 @@ CPU_LOCAL struct sched_context_s sched_idle;
 /***********************************************************************
  *      Scheduler base operations
  */
+
+#ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
+CPU_LOCAL kroutine_queue_root_t kroutine_sched_switch;
+#endif
+
+#ifdef CONFIG_MUTEK_KROUTINE_IDLE
+CPU_LOCAL kroutine_queue_root_t kroutine_idle;
+#endif
 
 /************************** return next scheduler candidate except idle */
 
@@ -66,12 +75,19 @@ __sched_candidate_noidle(sched_queue_root_t *root)
 static inline struct sched_context_s *
 __sched_candidate(sched_queue_root_t *root)
 {
-  struct sched_context_s        *next;
+#ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
+  struct kroutine_s *kr = kroutine_queue_head(CPU_LOCAL_ADDR(kroutine_sched_switch));
 
-  if ((next = __sched_candidate_noidle(root)) == NULL)
-    next = CPU_LOCAL_ADDR(sched_idle);
+  if (kr == NULL)
+#endif
+    {
+      struct sched_context_s *next = __sched_candidate_noidle(root);
 
-  return next;
+      if (next != NULL)
+        return next;
+    }
+
+  return CPU_LOCAL_ADDR(sched_idle);
 }
 
 /************************** scheduler idle processors queue */
@@ -145,6 +161,58 @@ void __sched_context_push(struct sched_context_s *sched_ctx)
 }
 
 /***********************************************************************
+ *      Kroutine schedule
+ */
+
+# if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
+error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible)
+{
+  struct scheduler_s *sched = __scheduler_get();
+  error_t err = 0;
+
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  sched_queue_wrlock(&sched->root);
+
+  switch (kr->policy)
+    {
+    case KROUTINE_IMMEDIATE:
+      err = -EINVAL;
+      break;
+
+#ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
+    case KROUTINE_PREEMPT:
+    case KROUTINE_INTERRUPTIBLE:
+      if (interruptible)
+        err = -EBUSY;
+    case KROUTINE_SCHED_SWITCH:
+      kroutine_queue_pushback(CPU_LOCAL_ADDR(kroutine_sched_switch), kr);
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+      if (kr->policy == KROUTINE_PREEMPT)
+        context_set_preempt(sched_preempt_switch, NULL);
+# endif
+      break;
+#endif
+
+#ifdef CONFIG_MUTEK_KROUTINE_IDLE
+    case KROUTINE_IDLE:
+      kroutine_queue_pushback(CPU_LOCAL_ADDR(kroutine_idle), kr);
+      break;
+#endif
+
+    default:
+      err = -ENOTSUP;
+      break;
+    }
+
+  sched_queue_unlock(&sched->root);
+  CPU_INTERRUPT_RESTORESTATE;
+
+  return err;
+}
+#endif
+
+
+/***********************************************************************
  *      Scheduler idle context
  */
 
@@ -165,10 +233,25 @@ static void sched_context_idle()
 
   while (1)
     {
-      struct sched_context_s    *next;
+#ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
+      /* Execute KROUTINE_INTERRUPTIBLE, KROUTINE_PREEMPT, KROUTINE_SCHED_SWITCH kroutines */
+      struct kroutine_s *kr = kroutine_queue_pop(CPU_LOCAL_ADDR(kroutine_sched_switch));
+
+      if (kr != NULL)
+        {
+          sched_queue_unlock(&sched->root);
+          cpu_interrupt_enable();
+          kr->exec(kr, 1);
+          cpu_interrupt_disable();
+
+          /* A context might have been pushed in the run queue from a kroutine */
+          sched_queue_wrlock(&sched->root);
+          continue;
+        }
+#endif
 
       /* Try to get a runnable context from running queue */
-      next = __sched_candidate_noidle(&sched->root);
+      struct sched_context_s *next = __sched_candidate_noidle(&sched->root);
 
       if (next != NULL)
         {
@@ -181,6 +264,21 @@ static void sched_context_idle()
         }
 
       /* The processor is considered idle from this point */
+
+#ifdef CONFIG_MUTEK_KROUTINE_IDLE
+      /* Execute KROUTINE_IDLE kroutines */
+      struct kroutine_s *kri = kroutine_queue_pop(CPU_LOCAL_ADDR(kroutine_idle));
+
+      if (kri != NULL)
+        {
+          sched_queue_unlock(&sched->root);
+          cpu_interrupt_enable();
+          kri->exec(kri, 1);
+          cpu_interrupt_disable();
+          sched_queue_wrlock(&sched->root);
+          continue;
+        }
+#endif
 
   /************************** single processor case */
 
@@ -245,7 +343,15 @@ CONTEXT_PREEMPT(sched_preempt_switch)
   assert(sched == cur->scheduler);
 
   sched_queue_wrlock(&sched->root);
-  next = __sched_candidate_noidle(&sched->root);
+
+#ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
+  struct kroutine_s *kr = kroutine_queue_head(CPU_LOCAL_ADDR(kroutine_sched_switch));
+
+  if (kr != NULL)
+    next = CPU_LOCAL_ADDR(sched_idle);
+  else
+#endif
+    next = __sched_candidate_noidle(&sched->root);
 
   if (next != NULL)
     {
@@ -358,7 +464,7 @@ void sched_context_wake(sched_queue_root_t *queue, struct sched_context_s *sched
 {
   assert(!cpu_is_interruptible());
 
-  sched_queue_nolock_remove(queue, sched_ctx);
+  ensure(sched_queue_nolock_remove(queue, sched_ctx) == 0);
   __sched_context_push(sched_ctx);
 }
 
@@ -485,6 +591,14 @@ void mutek_scheduler_start()
   /* init the processor idle thread */
   struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);
   sched_context_init(idle, CPU_LOCAL_ADDR(cpu_main_context));
+
+#ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
+  kroutine_queue_init(CPU_LOCAL_ADDR(kroutine_sched_switch));
+#endif
+
+#ifdef CONFIG_MUTEK_KROUTINE_IDLE
+  kroutine_queue_init(CPU_LOCAL_ADDR(kroutine_idle));
+#endif
 
   mutekh_startup_smp_barrier();
 
