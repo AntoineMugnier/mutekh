@@ -205,7 +205,8 @@ static DEV_INIT(arm_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init arm irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_ARM_M_IRQ_COUNT);
+  device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_ARM_M_IRQ_COUNT,
+                       DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE);
 
   /* set processor interrupt handler */
   if (id == CONFIG_ARCH_BOOTSTRAP_CPU_ID)

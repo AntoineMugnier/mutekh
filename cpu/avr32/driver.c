@@ -291,7 +291,8 @@ static DEV_INIT(avr32_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init avr32 irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, AVR32_IRQ_COUNT);
+  device_irq_sink_init(dev, pv->sinks, AVR32_IRQ_COUNT,
+                       DEV_IRQ_SENSE_UNKNOWN_HARDWIRED);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->node.cls, avr32_icu_dev, dev);

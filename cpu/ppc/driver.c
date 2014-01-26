@@ -268,7 +268,7 @@ static DEV_INIT(ppc_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init ppc irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, ICU_PPC_MAX_VECTOR);
+  device_irq_sink_init(dev, pv->sinks, ICU_PPC_MAX_VECTOR, DEV_IRQ_SENSE_HIGH_LEVEL);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->node.cls, ppc_icu_dev, dev);

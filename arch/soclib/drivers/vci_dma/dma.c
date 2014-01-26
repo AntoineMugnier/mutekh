@@ -150,7 +150,8 @@ static DEV_INIT(dma_soclib_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &dma_soclib_irq);
+  device_irq_source_init(dev, &pv->irq_ep, 1,
+                         &dma_soclib_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_mem;

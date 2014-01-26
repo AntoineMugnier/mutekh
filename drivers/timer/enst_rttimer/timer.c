@@ -42,9 +42,13 @@
 #define RT_TIMER_REG_ADDR(a, r, n)  ((a) + (r) + (n) * 0x10)
 
 #if defined(CONFIG_ARCH_SOCLIB)
+# define RT_TIMER_IRQ_SENSE_MODE DEV_IRQ_SENSE_HIGH_LEVEL
 # define RT_TIMER_ENDIAN32(x) endian_le32(x)
 #elif defined(CONFIG_ARCH_GAISLER)
+# define RT_TIMER_IRQ_SENSE_MODE DEV_IRQ_SENSE_RISING_EDGE
 # define RT_TIMER_ENDIAN32(x) endian_be32(x)
+#else
+# error
 #endif
 
 struct enst_rttimer_state_s
@@ -453,9 +457,13 @@ static DEV_INIT(enst_rttimer_init)
   pv->irq_eps = (void*)(pv->t + t_count);
 
   if (RT_TIMER_CFG_SI_GET(cfg))
-    device_irq_source_init(dev, pv->irq_eps, irq_count, enst_rttimer_irq_separate);
+    device_irq_source_init(dev, pv->irq_eps, irq_count,
+                           enst_rttimer_irq_separate,
+                           RT_TIMER_IRQ_SENSE_MODE);
   else
-    device_irq_source_init(dev, pv->irq_eps, 1, enst_rttimer_irq_single);
+    device_irq_source_init(dev, pv->irq_eps, 1,
+                           enst_rttimer_irq_single,
+                           RT_TIMER_IRQ_SENSE_MODE);
 
   if (device_irq_source_link(dev, pv->irq_eps, irq_count, -1))
     goto err_mem;

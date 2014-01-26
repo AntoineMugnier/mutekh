@@ -114,6 +114,7 @@ static DEVICU_ENABLE_IRQ(pl390_icu_icu_enable_irq)
   struct pl390_icu_private_s *pv = dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sinks;
 
+#warning handle irq type edge/level
   if (icu_in_id < (pv->reg_count - 1) * 32)
     {
       uint_fast16_t id = icu_in_id + 32;
@@ -345,11 +346,13 @@ static DEV_INIT(pl390_icu_init)
   if (!pv->sinks)
     goto err_mem2;
 
-  device_irq_source_init(dev, pv->srcs, pv->cpu_count, &pl390_icu_source_process);
+  device_irq_source_init(dev, pv->srcs, pv->cpu_count,
+                         &pl390_icu_source_process, DEV_IRQ_SENSE_LOW_LEVEL);
   if (device_irq_source_link(dev, pv->srcs, pv->cpu_count, 0))
     goto err_mem3;
 
-  device_irq_sink_init(dev, pv->sinks, ((n - 1) * 32 + pv->cpu_count * 16));
+  device_irq_sink_init(dev, pv->sinks, ((n - 1) * 32 + pv->cpu_count * 16),
+                       DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE);
 
   dev->drv = &pl390_icu_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;

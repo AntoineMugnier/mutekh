@@ -150,7 +150,8 @@ static DEV_INIT(x86_emu_init)
     goto err_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
-  device_irq_sink_init(dev, pv->sinks, ICU_X86_EMU_MAX_VECTOR);
+  device_irq_sink_init(dev, pv->sinks, ICU_X86_EMU_MAX_VECTOR,
+                       DEV_IRQ_SENSE_UNKNOWN_HARDWIRED);
 #endif
 
   if (cpu_tree_insert(&pv->node))

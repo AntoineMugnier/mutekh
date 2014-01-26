@@ -111,7 +111,8 @@ static DEV_INIT(soclib_xicu_init)
       if (!pv->srcs)
         goto err_mem;
 
-      device_irq_source_init(dev, pv->srcs, pv->irq_count, &soclib_xicu_source_process);
+      device_irq_source_init(dev, pv->srcs, pv->irq_count,
+                             &soclib_xicu_source_process, DEV_IRQ_SENSE_HIGH_LEVEL);
 
 # ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
       if (device_irq_source_link(dev, pv->srcs, pv->irq_count, -1))
@@ -132,7 +133,7 @@ static DEV_INIT(soclib_xicu_init)
 
       for (i = 0; i < pv->hwi_count; i++)
         {
-          device_irq_sink_init(dev, &pv->sinks[i].sink, 1);
+          device_irq_sink_init(dev, &pv->sinks[i].sink, 1, DEV_IRQ_SENSE_HIGH_LEVEL);
           pv->sinks[i].affinity = 0;
         }
     }

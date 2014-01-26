@@ -360,7 +360,8 @@ static DEV_INIT(soclib_eth_init)
   if (pv->fifo_size == 0)
     goto err_mem;
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &soclib_eth_irq);
+  device_irq_source_init(dev, &pv->irq_ep, 1,
+                         &soclib_eth_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_mem;

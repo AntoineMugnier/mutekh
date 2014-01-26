@@ -248,7 +248,8 @@ static DEV_INIT(soclib_block_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &soclib_block_irq);
+  device_irq_source_init(dev, &pv->irq_ep, 1,
+                         &soclib_block_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   dev_blk_queue_init(&pv->queue);
 

@@ -370,7 +370,9 @@ error_t device_irq_ep_unlink(struct dev_irq_ep_s *source, struct dev_irq_ep_s *s
   return 0;
 }
 
-void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, uint_fast8_t src_count, dev_irq_ep_process_t *handler)
+void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources,
+                            uint_fast8_t src_count, dev_irq_ep_process_t *handler,
+                            enum dev_irq_sense_modes_e sense_capabilities)
 {
   uint_fast8_t i;
 
@@ -380,6 +382,7 @@ void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, 
       ep->dev = dev;
       ep->process = handler;
       ep->links_count = 0;
+      ep->sense = sense_capabilities;
 #ifdef CONFIG_DEVICE_IRQ_BYPASS
       ep->bypass_list = NULL;
 #endif
@@ -389,7 +392,8 @@ void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, 
     }
 }
 
-void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint_fast8_t sink_count)
+void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint_fast8_t sink_count,
+                          enum dev_irq_sense_modes_e sense_capabilities)
 {
   uint_fast8_t i;
 
@@ -398,6 +402,7 @@ void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint
       struct dev_irq_ep_s *ep = sinks + i;
       ep->dev = dev;
       ep->links_count = 0;
+      ep->sense = sense_capabilities;
 #ifdef CONFIG_DEBUG
       ep->type = DEV_IRQ_EP_SINK;
 #endif

@@ -236,11 +236,13 @@ static DEV_INIT(bcm2835_icu_init)
   /* enable pending regs 1 & 2 */
   cpu_mem_write_32(pv->addr + BCM2835ICU_BAS_ENA, endian_le32(3 << 8));
 
-  device_irq_source_init(dev, &pv->src, 1, &bcm2835_icu_source_process);
+  device_irq_source_init(dev, &pv->src, 1, &bcm2835_icu_source_process,
+                         DEV_IRQ_SENSE_LOW_LEVEL);
   if (device_irq_source_link(dev, &pv->src, 1, 0))
     goto err_mem;
 
-  device_irq_sink_init(dev, pv->sinks, BCM2835ICU_MAX_VECTOR);
+  device_irq_sink_init(dev, pv->sinks, BCM2835ICU_MAX_VECTOR,
+                       DEV_IRQ_SENSE_HIGH_LEVEL);
 
   dev->drv = &bcm2835_icu_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;

@@ -262,7 +262,7 @@ DEV_INIT(gaisler_apbuart_init)
 
   uart_fifo_init(&pv->write_fifo);
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &gaisler_apbuart_irq);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &gaisler_apbuart_irq, DEV_IRQ_SENSE_RISING_EDGE);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_fifo;

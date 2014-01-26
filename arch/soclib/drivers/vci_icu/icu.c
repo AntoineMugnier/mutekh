@@ -172,7 +172,8 @@ static DEV_INIT(soclib_icu_init)
 
   device_get_param_uint_default(dev, "nirq", &pv->nirq, ICU_SOCLIB_MAX_VECTOR);
 
-  device_irq_source_init(dev, &pv->src, 1, &soclib_icu_source_process);
+  device_irq_source_init(dev, &pv->src, 1,
+                         &soclib_icu_source_process, DEV_IRQ_SENSE_HIGH_LEVEL);
   if (device_irq_source_link(dev, &pv->src, 1, 0))
     goto err_mem;
 
@@ -181,7 +182,7 @@ static DEV_INIT(soclib_icu_init)
   if (!pv->sinks)
     goto err_unlink;
 
-  device_irq_sink_init(dev, pv->sinks, pv->nirq);
+  device_irq_sink_init(dev, pv->sinks, pv->nirq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   dev->drv = &soclib_icu_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;

@@ -501,7 +501,8 @@ static DEV_INIT(soclib_timer_init)
 
   pv->irq_eps = (void*)(pv->t + t_count);
 
-  device_irq_source_init(dev, pv->irq_eps, t_count, soclib_timer_irq);
+  device_irq_source_init(dev, pv->irq_eps, t_count,
+                         soclib_timer_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, pv->irq_eps, t_count, -1))
     goto err_mem;

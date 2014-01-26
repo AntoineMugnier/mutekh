@@ -321,7 +321,8 @@ static DEV_INIT(pl011uart_init)
   uart_fifo_init(&pv->write_fifo);
 # endif
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &pl011uart_irq);
+  device_irq_source_init(dev, &pv->irq_ep, 1,
+                         &pl011uart_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_fifo;

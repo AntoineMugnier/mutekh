@@ -337,7 +337,13 @@ static DEV_INIT(arm_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init arm irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, ICU_ARM_MAX_VECTOR);
+  device_irq_sink_init(dev, pv->sinks, ICU_ARM_MAX_VECTOR,
+# if defined(CONFIG_CPU_ARM_SOCLIB)
+                       DEV_IRQ_SENSE_HIGH_LEVEL
+# else
+                       DEV_IRQ_SENSE_LOW_LEVEL
+# endif
+                       );
 
   /* set processor interrupt handler */
 # ifdef CONFIG_ARCH_SMP

@@ -317,10 +317,12 @@ static DEV_INIT(gaisler_irqmp_init)
 #  endif
 
   if (pv->eirq)
-    device_irq_source_init(dev, pv->srcs, pv->srcs_count, &gaisler_irqmp_source_process_eirq);
+    device_irq_source_init(dev, pv->srcs, pv->srcs_count,
+                           &gaisler_irqmp_source_process_eirq, DEV_IRQ_SENSE_UNKNOWN_HARDWIRED);
   else
 # endif
-    device_irq_source_init(dev, pv->srcs, pv->srcs_count, &gaisler_irqmp_source_process);
+    device_irq_source_init(dev, pv->srcs, pv->srcs_count,
+                           &gaisler_irqmp_source_process, DEV_IRQ_SENSE_UNKNOWN_HARDWIRED);
 
   cpu_mem_write_32(pv->addr + 0, 0);  // set level register
 
@@ -335,7 +337,7 @@ static DEV_INIT(gaisler_irqmp_init)
   uint_fast8_t i;
   for (i = 0; i < GAISLER_IRQMP_SINKS_COUNT; i++)
     {
-      device_irq_sink_init(dev, &pv->sinks[i].sink, 1);
+      device_irq_sink_init(dev, &pv->sinks[i].sink, 1, DEV_IRQ_SENSE_RISING_EDGE);
       pv->sinks[i].affinity = 0;
     }
 #endif

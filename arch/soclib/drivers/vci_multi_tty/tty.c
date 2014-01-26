@@ -203,7 +203,8 @@ DEV_INIT(tty_soclib_init)
     goto err_mem;
 
 #ifdef CONFIG_DEVICE_IRQ
-  device_irq_source_init(dev, &pv->irq_ep, 1, &tty_soclib_irq);
+  device_irq_source_init(dev, &pv->irq_ep, 1,
+                         &tty_soclib_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   tty_fifo_init(&pv->read_fifo);
 

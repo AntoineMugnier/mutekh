@@ -477,9 +477,11 @@ static DEV_INIT(gptimer_init)
   pv->irq_eps = (void*)(pv->t + t_count);
 
   if (cfg & TIMER_CFG_SIRQ)
-    device_irq_source_init(dev, pv->irq_eps, irq_count, gptimer_irq_separate);
+    device_irq_source_init(dev, pv->irq_eps, irq_count,
+                           gptimer_irq_separate, DEV_IRQ_SENSE_RISING_EDGE);
   else
-    device_irq_source_init(dev, pv->irq_eps, irq_count, gptimer_irq_single);
+    device_irq_source_init(dev, pv->irq_eps, irq_count,
+                           gptimer_irq_single, DEV_IRQ_SENSE_RISING_EDGE);
 
   if (device_irq_source_link(dev, pv->irq_eps, irq_count, -1))
     goto err_mem;

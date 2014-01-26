@@ -284,7 +284,13 @@ static DEV_INIT(lm32_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init lm32 irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_LM32_IRQ_COUNT);
+  device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_LM32_IRQ_COUNT,
+#ifdef CONFIG_CPU_LM32_SOCLIB
+                       DEV_IRQ_SENSE_HIGH_LEVEL
+#else
+                       DEV_IRQ_SENSE_LOW_LEVEL
+#endif
+                       );
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->node.cls, lm32_icu_dev, dev);

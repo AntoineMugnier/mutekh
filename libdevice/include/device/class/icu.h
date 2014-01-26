@@ -47,6 +47,13 @@ struct dev_irq_ep_s;
 /** @This gets interrupt end-point of given type with given id in
     range [0-N]. @This returns @tt NULL if out of range.
 
+    If the hardware can be configured to handle various @ref
+    dev_irq_sense_modes_e mode but the end-point is already linked and
+    enabled, only the flags for the mode currently in use are set in
+    the end-point. This function must take care of resetting the
+    capabilities to all supported sense modes if the link count of the
+    end-point is 0.
+
     @This is mandatory.
  */
 typedef DEVICU_GET_ENDPOINT(devicu_get_endpoint_t);
@@ -86,6 +93,16 @@ typedef DEVICU_GET_ENDPOINT(devicu_get_endpoint_t);
     not performed in this controller, forwarding the @tt src argument
     allows bypassing one or more end-point connections traversal when
     the interrupt is raised.
+
+    This function must check capabilities of @tt src and @tt sink
+    end-points and return an error if end-points sense modes are not
+    compatibles (bitwise and == 0). If multiples modes are possibles,
+    the interrupt controller must chose one and update both end-points
+    so that only the flags of the selected mode remain set. If the
+    owner of the source end-point advertises multiple capabilities
+    before enabling interrupts on its source end-points, it must check
+    the selected configuration on return of the @ref device_irq_source_link
+    function and configure the hardware accordingly.
 
     @This is mandatory.
 */

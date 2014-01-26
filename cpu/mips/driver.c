@@ -328,7 +328,8 @@ static DEV_INIT(mips_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init mips irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, ICU_MIPS_MAX_VECTOR);
+  device_irq_sink_init(dev, pv->sinks, ICU_MIPS_MAX_VECTOR,
+                       DEV_IRQ_SENSE_HIGH_LEVEL);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->node.cls, mips_icu_dev, dev);

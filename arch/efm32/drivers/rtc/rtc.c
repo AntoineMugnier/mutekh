@@ -418,7 +418,8 @@ static DEV_INIT(efm32_rtc_init)
   dev->drv_pv = pv;
 
 #ifdef CONFIG_DEVICE_IRQ
-  device_irq_source_init(dev, &pv->irq_eps, 1, efm32_rtc_irq);
+  device_irq_source_init(dev, &pv->irq_eps, 1,
+                         efm32_rtc_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, &pv->irq_eps, 1, 1))
     goto err_mem;

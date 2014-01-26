@@ -294,7 +294,8 @@ static DEV_INIT(bcm2835_systimer_init)
   dev->drv_pv = pv;
 
 #ifdef CONFIG_DEVICE_IRQ
-  device_irq_source_init(dev, pv->irq_eps, 4, bcm2835_systimer_irq);
+  device_irq_source_init(dev, pv->irq_eps, 4,
+                         bcm2835_systimer_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, pv->irq_eps, 4, 1 << BCM2835_SYSTIMER_CMP_CHANNEL))
     goto err_mem;

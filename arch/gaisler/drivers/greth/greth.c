@@ -380,7 +380,7 @@ static DEV_INIT(greth_init)
 
   greth_fill_rx(pv, GRETH_DESC_COUNT);
 
-  device_irq_source_init(dev, &pv->irq_ep, 1, &greth_irq);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &greth_irq, DEV_IRQ_SENSE_RISING_EDGE);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_mem3;

@@ -355,7 +355,8 @@ static DEV_INIT(efm32_usart_spi_init)
 #warning FIXME hardwired location
 
 #ifdef CONFIG_DEVICE_IRQ
-  device_irq_source_init(dev, pv->irq_ep, 2, &efm32_usart_spi_irq);
+  device_irq_source_init(dev, pv->irq_ep, 2,
+                         &efm32_usart_spi_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, pv->irq_ep, 2, -1))
     goto err_fifo;

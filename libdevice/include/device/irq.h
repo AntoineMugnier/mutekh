@@ -102,6 +102,15 @@ enum dev_irq_ep_type_e
 
 struct dev_irq_bypass_s;
 
+enum dev_irq_sense_modes_e
+{
+  DEV_IRQ_SENSE_HIGH_LEVEL = 1,
+  DEV_IRQ_SENSE_LOW_LEVEL = 2,
+  DEV_IRQ_SENSE_RISING_EDGE = 4,
+  DEV_IRQ_SENSE_FALLING_EDGE = 8,
+  DEV_IRQ_SENSE_UNKNOWN_HARDWIRED = 16,
+};
+
 /** Device irq end-point object. Irq source and sink endpoints are
     linked together to make irqs topology graph */
 struct dev_irq_ep_s
@@ -114,9 +123,6 @@ struct dev_irq_ep_s
 #ifdef CONFIG_DEBUG
   enum dev_irq_ep_type_e type;
 #endif
-
-  /** Number of links */
-  uint_fast8_t links_count;
 
   union {
     /** Single link case */
@@ -132,6 +138,14 @@ struct dev_irq_ep_s
   /** pointer to first bypass end-point for this source end-point*/
   struct dev_irq_bypass_s *bypass_list;
 #endif
+
+  /** Number of links */
+  uint16_t links_count;
+
+  /** Interrupt sense mode capabilities
+      @see devicu_enable_irq_t
+      @see devicu_get_endpoint_t */
+  uint8_t sense;
 };
 
 #ifdef CONFIG_DEVICE_IRQ_BYPASS
@@ -198,11 +212,14 @@ error_t device_irq_ep_unlink(struct dev_irq_ep_s *source, struct dev_irq_ep_s *s
     device drivers must provide a function which implement the source
     end-point irq handler. */
 config_depend(CONFIG_DEVICE_IRQ)
-void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources, uint_fast8_t count, dev_irq_ep_process_t *process);
+void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources,
+                            uint_fast8_t count, dev_irq_ep_process_t *process,
+                            enum dev_irq_sense_modes_e sense_capabilities);
 
 /** @This initializes an array of device interrupt sink end-points */
 config_depend(CONFIG_DEVICE_IRQ)
-void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint_fast8_t count);
+void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint_fast8_t count,
+                          enum dev_irq_sense_modes_e sense_capabilities);
 
 /** @This links device interrupt source end-points to appropriate sink
     end-points of interrupt controllers as described in device
@@ -216,7 +233,14 @@ void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint
     device interrupts in all interrupt controllers along the path to
     the processor(s). The lsb is used for the first entry of the
     source end-points table. Once this function has been called,
-    device drivers must be ready to receive interrupts. */
+    device drivers must be ready to receive interrupts.
+
+    The source end-point sense mode capabilities flags must be set
+    properly before calling this function. If the owner of the source
+    end-point advertises multiple capabilities before enabling
+    interrupts on its source end-points, it must check the selected
+    configuration on return and configure the hardware
+    accordingly. */
 config_depend(CONFIG_DEVICE_IRQ)
 error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *sources,
                                uint_fast8_t count, uint32_t enable_mask);
