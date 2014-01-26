@@ -110,14 +110,17 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
                  (uint32_t)((r->u.freq.f40_24 & 0xffffffULL) * 59604644 / 100000000));
           break;
         case DEV_RES_STR_PARAM:
-          printk("  Custom parameter `%s' = `%s'\n", r->u.str_param.name, r->u.str_param.value);
+          printk("  String parameter `%s' = `%s'\n", r->u.str_param.name, r->u.str_param.value);
           break;
         case DEV_RES_UINT_PARAM:
-          printk("  Custom parameter `%s' = %x\n", r->u.uint_param.name, r->u.uint_param.value);
+          printk("  Integer parameter `%s' = %x\n", r->u.uint_param.name, r->u.uint_param.value);
+          break;
+        case DEV_RES_DEV_PARAM:
+          printk("  Device parameter `%s' = `%s'\n", r->u.dev_param.name, r->u.dev_param.dev);
           break;
         case DEV_RES_UINT_ARRAY_PARAM: {
           uintptr_t i;
-          printk("  Custom parameter `%s' = [", r->u.uint_array_param.name);
+          printk("  Array parameter `%s' = [", r->u.uint_array_param.name);
           for (i = 1; i <= r->u.uint_array_param.value[0]; i++)
             printk(" 0x%x", r->u.uint_array_param.value[i]);
           printk(" ]\n");

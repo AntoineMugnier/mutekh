@@ -297,7 +297,7 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
             while (datalen >= 4)
               {
                 f = 0;
-                fdt_parse_cell(data, e->addr_cells, &f);
+                fdt_parse_cell(data8, e->addr_cells, &f);
                 if (device_res_add_freq(e->dev, (uint64_t)f << 24))
                   goto res_err;
                 datalen -= 4;
@@ -340,10 +340,8 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
     case 'p':
       if (e->dev != ctx->dev)
         {
-          if (!strncmp(name + 1, "aram-str-", 9))
+          if (!strncmp(name + 1, "aram-str-", 9) && !((char*)data)[datalen])
             {
-              if (((char*)data)[datalen])
-                goto res_err;
               if (device_res_add_str_param(e->dev, name + 10, data))
                 goto res_err;
               return;
@@ -352,6 +350,22 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
             {
               if (device_res_add_uint_param(e->dev, name + 10, endian_be32(*(const uint32_t*)data)))
                 goto res_err;
+              return;
+            }
+          else if (!strncmp(name + 1, "aram-device-path-", 17) && !((char*)data)[datalen])
+            {
+              if (device_res_add_dev_param(e->dev, name + 18, data))
+                goto res_err;
+              return;
+            }
+          else if (!strncmp(name + 1, "aram-device-", 12) && datalen == 4)
+            {
+              struct dev_resource_s *r;
+              if (device_res_alloc_str(e->dev, DEV_RES_DEV_PARAM, NULL, name + 13, &r))
+                goto res_err;
+              r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
+              /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
+              r->u.uint[0] = endian_be32(*(const uint32_t*)data);
               return;
             }
           else if (!strncmp(name + 1, "aram-array-", 11))
@@ -399,9 +413,9 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
               /* logical irq id is passed as second value if interrupt cells size > 4 */
               r->u.irq.irq_id = elen > 4 ? endian_be32(*(const uint32_t*)(data8 + 4)) : 0;
 
-              /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
-              r->u.irq.icu = (void*)phandle;
-              r->flags |= DEVICE_RES_FLAGS_DEPEND;
+              /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
+              r->u.uint[0] = phandle;
+              r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
 
               datalen -= elen;
               data8 += elen;
@@ -423,9 +437,9 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
               /* logical irq id is passed as fourth value if interrupt cells size > 12 */
               r->u.irq.irq_id = elen > 12 ? endian_be32(*(const uint32_t*)(data8 + 12)) : 0;
 
-              /* pass fdt phandle instead of pointer, will be changed in resolve_icu_links */
-              r->u.irq.icu = (void*)endian_be32(*(const uint32_t*)(data8 + 4));
-              r->flags |= DEVICE_RES_FLAGS_DEPEND;
+              /* pass fdt phandle instead of pointer, will be changed in resolve_dev_links */
+              r->u.uint[0] = endian_be32(*(const uint32_t*)(data8 + 4));
+              r->flags |= DEVICE_RES_FLAGS_ENUM_RESERVED0;
 
               datalen -= 8 + elen;
               data8 += 8 + elen;
@@ -507,10 +521,11 @@ static void resolve_dev_links(struct device_s *root, struct device_s *dev)
 
       DEVICE_RES_FOREACH(d, r, {
 
-          if (r->flags & DEVICE_RES_FLAGS_DEPEND)
+          if (r->flags & DEVICE_RES_FLAGS_ENUM_RESERVED0)
             {
               struct device_s *dep = enum_fdt_get_phandle(root, r->u.uint[0]);
 
+              r->flags ^= DEVICE_RES_FLAGS_ENUM_RESERVED0 | DEVICE_RES_FLAGS_DEPEND;
               /* set path to device or drop resource entry */
               if (dep != NULL)
                 {

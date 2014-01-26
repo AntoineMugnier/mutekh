@@ -24,6 +24,9 @@
 #define __DEVICE_RESOURCES_H__
 
 #include <assert.h>
+#include <hexo/types.h>
+
+enum driver_class_e;
 
 /** @This specifies the types of device resource entries. */
 enum dev_resource_type_e
@@ -39,6 +42,7 @@ enum dev_resource_type_e
     DEV_RES_FREQ,
     DEV_RES_STR_PARAM,
     DEV_RES_UINT_PARAM,
+    DEV_RES_DEV_PARAM,
     DEV_RES_UINT_ARRAY_PARAM,
 
     DEV_RES_TYPES_COUNT,              //< Number of resource types
@@ -53,6 +57,8 @@ enum dev_resource_flags_e
   /** first resource field is a path string to an other device which
       must be initialized before initialization of this device. */
   DEVICE_RES_FLAGS_DEPEND = 4,
+  /** reserved for use by enumerator driver */
+  DEVICE_RES_FLAGS_ENUM_RESERVED0 = 8,
 };
 
 struct dev_resource_s
@@ -133,20 +139,26 @@ struct dev_resource_s
 
     /** @see DEV_STATIC_RES_STR_PARAM @see device_res_add_str_param */
     struct {
-      const char                *name;
       const char                *value;
+      const char                *name;
     }                           str_param;
 
     /** @see DEV_STATIC_RES_UINT_PARAM @see device_res_add_uint_param */
     struct {
-      const char                *name;
       uintptr_t                 value;
+      const char                *name;
     }                           uint_param;
+
+    /** @see DEV_STATIC_RES_DEV_PARAM @see device_res_add_dev_param */
+    struct {
+      const char                *dev;
+      const char                *name;
+    }                           dev_param;
 
     /** @see device_res_add_uint_array_param */
     struct {
-      const char                *name;
       uintptr_t                 *value;
+      const char                *name;
     }                           uint_array_param;
 
   }                             u;
@@ -543,13 +555,10 @@ static inline error_t device_res_add_freq(struct device_s *dev, uint64_t f_40_24
 
 
 /** @This attaches a string parameter resource to the device. The
-    exact meaning of the value is driver dependent.
-
-    The name and value strings will be duplicated and later freed on cleanup
-    only if the @ref #DEVICE_FLAG_ALLOCATED flag of the device is set.  */
+    exact meaning of the value is driver dependent. */
 static inline error_t device_res_add_str_param(struct device_s *dev, const char *name, const char *value)
 {
-  return device_res_alloc_str(dev, DEV_RES_STR_PARAM, name, value, NULL);
+  return device_res_alloc_str(dev, DEV_RES_STR_PARAM, value, name, NULL);
 }
 
 # define DEV_STATIC_RES_STR_PARAM(name_, value_)        \
@@ -572,7 +581,7 @@ static inline error_t device_get_param_str(const struct device_s *dev,
     return -ENOENT;
 
   if (a)
-    *a = (const char*)r->u.uint[1];
+    *a = (const char*)r->u.uint[0];
   return 0;
 }
 
@@ -587,7 +596,7 @@ static inline void device_get_param_str_default(const struct device_s *dev, cons
   if (!(r = device_res_get_from_name(dev, DEV_RES_STR_PARAM, 0, name)))
     *a = def;
   else
-    *a = (const char*)r->u.uint[1];
+    *a = (const char*)r->u.uint[0];
 }
 
 
@@ -598,7 +607,7 @@ static inline void device_get_param_str_default(const struct device_s *dev, cons
 static inline error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintptr_t value)
 {
   struct dev_resource_s *r;
-  error_t err = device_res_alloc_str(dev, DEV_RES_UINT_PARAM, name, NULL, &r);
+  error_t err = device_res_alloc_str(dev, DEV_RES_UINT_PARAM, NULL, name, &r);
   if (err)
     return err;
 
@@ -626,7 +635,7 @@ static inline error_t device_get_param_uint(const struct device_s *dev,
     return -ENOENT;
 
   if (a)
-    *a = r->u.uint[1];
+    *a = r->u.uint[0];
   return 0;
 }
 
@@ -641,8 +650,43 @@ static inline void device_get_param_uint_default(const struct device_s *dev, con
   if (!(r = device_res_get_from_name(dev, DEV_RES_UINT_PARAM, 0, name)))
     *a = def;
   else
-    *a = r->u.uint[1];
+    *a = r->u.uint[0];
 }
+
+
+/** @This attaches a device path parameter resource to the device. The
+    exact meaning of the value is driver dependent. The driver
+    initialization will not take place until the device path points to
+    an exisiting and properly initialized device. */
+static inline error_t device_res_add_dev_param(struct device_s *dev, const char *name, const char *path)
+{
+  struct dev_resource_s *r;
+  error_t err = device_res_alloc_str(dev, DEV_RES_DEV_PARAM, path, name, &r);
+  if (err)
+    return err;
+
+  r->flags |= DEVICE_RES_FLAGS_DEPEND;
+
+  return 0;
+}
+
+# define DEV_STATIC_RES_DEV_PARAM(name_, path_)          \
+  {                                                     \
+    .flags = DEVICE_RES_FLAGS_DEPEND,                   \
+    .type = DEV_RES_DEV_PARAM,                          \
+      .u = { .dev_param = {                             \
+        .name = (name_),                                \
+        .dev = (path_),                                 \
+      } }                                               \
+  }
+
+/** @This initializes a device accessor object from a device path
+    parameter resource of the device tree.
+    @see device_get_accessor_by_path
+ */
+error_t device_get_param_dev_accessor(const struct device_s *dev,
+                                      const char *name, void *accessor,
+                                      enum driver_class_e cl);
 
 
 /** @This attaches an integer array parameter resource to the

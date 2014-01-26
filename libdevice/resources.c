@@ -26,6 +26,7 @@
 #include <mutek/mem_alloc.h>
 
 #include <device/device.h>
+#include <device/driver.h>
 #include <device/resources.h>
 
 #include <string.h>
@@ -47,8 +48,8 @@ struct dev_resource_s *device_res_get_from_name(const struct device_s *dev,
                                                 uint_fast8_t id, const char *name)
 {
   DEVICE_RES_FOREACH(dev, r, {
-      if (r->type == type && r->u.uint[0] &&
-          !strcmp(name, (const char*)r->u.uint[0]) && !id--)
+      if (r->type == type && r->u.uint[1] &&
+          !strcmp(name, (const char*)r->u.uint[1]) && !id--)
         return r;
   });
 
@@ -180,3 +181,14 @@ error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, 
   return 0;
 }
 
+error_t device_get_param_dev_accessor(const struct device_s *dev,
+                                      const char *name, void *accessor,
+                                      enum driver_class_e cl)
+{
+  struct dev_resource_s *r;
+
+  if (!(r = device_res_get_from_name(dev, DEV_RES_DEV_PARAM, 0, name)))
+    return -ENOENT;
+
+  return device_get_accessor_by_path(accessor, NULL, (const char*)r->u.uint[0], cl);
+}
