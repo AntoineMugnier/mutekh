@@ -234,8 +234,12 @@ typedef BC_CALL_FUNCTION(bc_call_function_t);
 
 /** Jump relative. Jump offset is an 8 bits signed value.  Negative
     values jump backward, -1 jump to itself.  Some constant loading
-    instructions account for more than 1 instruction word. */
+    instructions account for more than 1 instruction word. 
+
+    Branch targets can be computed by the bc_labels.pl script.
+*/
 #define BC_JMP(d)           BC_FMT0(BC_OP_JMP,  d, 0)
+
 /** If the jump target is backward, this instruction decrements the
     register which should not be initially zero and branch if the
     result is not zero.
@@ -243,7 +247,10 @@ typedef BC_CALL_FUNCTION(bc_call_function_t);
     If the jump target is forward, this instruction decrement the
     register if its initial value is not zero. If the register initial
     value is zero, the branch is taken and the register is left
-    untouched. @see #BC_JMP */
+    untouched. @see #BC_JMP
+
+    Branch targets can be computed by the bc_labels.pl script.
+*/
 #define BC_LOOP(r, d)       BC_FMT0(BC_OP_LOOP, d, r)
 
 /** Compare two registers and skip the next instruction if not equal */

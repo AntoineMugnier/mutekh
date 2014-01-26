@@ -2,8 +2,10 @@
 #include <mutek/printk.h>
 #include <mutek/bytecode.h>
 
-#define BC_CUSTOM_PRINTI(r) BC_CUSTOM(0x1000 | r)
-#define BC_CUSTOM_PRINTS(r) BC_CUSTOM(0x2000 | r)
+#define BC_CUSTOM_PRINTI(r) \
+  BC_CUSTOM(0x1000 | r)
+#define BC_CUSTOM_PRINTS(r) \
+  BC_CUSTOM(0x2000 | r)
 
 static BC_CALL_FUNCTION(c_func)
 {
@@ -39,8 +41,9 @@ void app_start()
     /* LOOP backward, ADD8 positiv */
     BC_CST8(1, 0),
     BC_CST8(2, 5),
+  /* label:add */
     BC_ADD8(1, 2),
-    BC_LOOP(2, -2),
+    BC_LOOP(2, -2 /* goto:add */),
     BC_CST8(2, 10),
     BC_NEQ(1, 2),
     BC_ABORT(),
@@ -48,8 +51,9 @@ void app_start()
     /* ADD8 negative */
     BC_CST8(1, 15),
     BC_CST8(2, 5),
+  /* label:add8 */
     BC_ADD8(1, -2),
-    BC_LOOP(2, -2),
+    BC_LOOP(2, -2 /* goto:add8 */),
     BC_CST8(2, 5),
     BC_NEQ(1, 2),
     BC_ABORT(),
@@ -57,9 +61,11 @@ void app_start()
     /* LOOP forward, JMP */
     BC_CST8(1, 0),
     BC_CST8(2, 5),
-    BC_LOOP(2, 2),
+  /* label:re */
+    BC_LOOP(2, 2 /* goto:fwd */),
     BC_ADD8(1, 2),
-    BC_JMP(-3),
+    BC_JMP( -3 /* goto:re */),
+  /* label:fwd */
     BC_CST8(2, 10),
     BC_NEQ(1, 2),
     BC_ABORT(),
@@ -139,30 +145,32 @@ void app_start()
     BC_CUSTOM_PRINTS(2),
 
     /* recursive factorial invocation */
-    BC_MOV(13, 0),     /* setup stack ptr */
+    BC_MOV(13, 0),              /* setup stack ptr */
     BC_ADD8(13, 120),
-    BC_CST8(1, 5),     /* param */
-    BC_MOV(10, 15),    /* link reg */
-    BC_JMP(4),         /* call */
-    BC_CST8(3, 120),   /* check */
+    BC_CST8(1, 5),              /* param */
+    BC_MOV(10, 15),             /* link reg */
+    BC_JMP( 4 /* goto:fact */),  /* call */
+    BC_CST8(3, 120),            /* test return value */
     BC_NEQ(1, 3),
     BC_ABORT(),
     BC_END(),
 
     /* recursive factorial function */
+  /* label:fact */
     BC_ST16D(10, 13),
     BC_CST8(2, 1),   
     BC_EQ(1, 2),     
-    BC_JMP(6),       
+    BC_JMP( 6 /* goto:fact_end */),
     BC_ST16D(1, 13), 
     BC_ADD8(1, -1),  
-    BC_MOV(10, 15),    /* link reg */
-    BC_JMP(-8),        /* call */
+    BC_MOV(10, 15),             /* link register */
+    BC_JMP( -8 /* goto:fact*/),  /* call */
     BC_LD16I(2, 13), 
     BC_MUL(1, 2),    
+  /* label:fact_end */
     BC_CUSTOM_PRINTI(1),
     BC_LD16I(10, 13),
-    BC_ADD8(10, 1),    /* return */  
+    BC_ADD8(10, 1),             /* return */  
     BC_MOV(15, 10),
   };
 
