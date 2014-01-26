@@ -235,7 +235,7 @@ DRIVER_CLASS_TYPES(timer,
     @This function uses the frequency resource entry of the device or
     the value of the @ref #CONFIG_DEVICE_TIMER_DEFAULT_FREQ macro if
     no such entry is available. For devices with multiple timer
-    instance, multiple frequency resource entries are expected.
+    instances, multiple frequency resource entries are expected.
 
     @This returns a negative error code if the timer value can not be
     read (-EIO) or if the timer overlap period is to short for the
@@ -243,6 +243,37 @@ DRIVER_CLASS_TYPES(timer,
 config_depend(CONFIG_DEVICE_TIMER)
 error_t dev_timer_init_sec(struct device_timer_s *tdev, dev_timer_delay_t *delay,
                            dev_timer_delay_t s_delay, uint32_t r_unit);
+
+/** @This computes a shift amount which can be used for fast
+    conversion from a second based delay value to a delay value in
+    timer unit. Shifting will result in a delay which is not less than
+    the given delay in seconds. A negative shift amount indicates a
+    right shift.
+
+    The @ref dev_timer_shift function can be used to perform the
+    actual conversion.
+*/
+config_depend(CONFIG_DEVICE_TIMER)
+error_t dev_timer_shift_sec(struct device_timer_s *tdev, int_fast8_t *shift,
+                            dev_timer_delay_t s_delay, uint32_t r_unit);
+
+/** @This applies the shift amount computed by the @ref dev_timer_shift_sec function. */
+config_depend(CONFIG_DEVICE_TIMER)
+static inline dev_timer_delay_t
+dev_timer_delay_shift(int_fast8_t shift, dev_timer_delay_t sec)
+{
+  dev_timer_delay_t r;
+  if (shift > 0)
+    {
+      r = sec << shift;
+      return r ? : -1;
+    }
+  else
+    {
+      r = sec >> -shift; 
+      return r ? r : 1;
+    }
+}
 
 /** @This checks if the time specified by @tt delay has elapsed since
     the timer had the value specified in @tt start.

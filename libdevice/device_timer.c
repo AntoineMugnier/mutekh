@@ -53,6 +53,33 @@ error_t dev_timer_init_sec(struct device_timer_s *tdev, dev_timer_delay_t *delay
   return 0;
 }
 
+error_t dev_timer_shift_sec(struct device_timer_s *tdev, int_fast8_t *shift,
+                            dev_timer_delay_t s_delay, uint32_t r_unit)
+{
+  dev_timer_res_t r = 0;
+  if (DEVICE_OP(tdev, resolution, &r, NULL))
+    return -EIO;
+
+  uint64_t f = CONFIG_DEVICE_TIMER_DEFAULT_FREQ;
+  if (!device_res_get_uint64(tdev->dev, DEV_RES_FREQ, tdev->number, &f))
+    f >>= 24;
+
+  uint64_t a = f * s_delay;
+  uint64_t b = (uint64_t)r_unit * r;
+
+  if (a == 0 || b == 0)
+    return -ERANGE;
+
+  uint_fast8_t as = __builtin_clz(a);
+  uint_fast8_t bs = __builtin_clz(b);
+
+  *shift = bs - as;
+  if ((a << as) > (b << bs))
+    (*shift)++;
+
+  return 0;
+}
+
 error_t dev_timer_check_timeout(struct device_timer_s *tdev,
                                 dev_timer_delay_t delay,
                                 const dev_timer_value_t *start)
