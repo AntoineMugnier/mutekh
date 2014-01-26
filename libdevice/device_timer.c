@@ -176,7 +176,7 @@ error_t dev_timer_sleep(struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
   rq->pvdata = &status;
   kroutine_init(&rq->kr, dev_timer_wait_request_cb, KROUTINE_IMMEDIATE);
 
-  error_t e = DEVICE_SAFE_OP(tdev, request, rq);
+  error_t e = DEVICE_OP(tdev, request, rq);
 
   if (e < 0)
     {
