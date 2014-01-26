@@ -181,7 +181,7 @@ error_t device_res_add_uint_array_param(struct device_s *dev, const char *name, 
   return 0;
 }
 
-error_t device_get_param_dev_accessor(const struct device_s *dev,
+error_t device_get_param_dev_accessor(struct device_s *dev,
                                       const char *name, void *accessor,
                                       enum driver_class_e cl)
 {
@@ -190,5 +190,5 @@ error_t device_get_param_dev_accessor(const struct device_s *dev,
   if (!(r = device_res_get_from_name(dev, DEV_RES_DEV_PARAM, 0, name)))
     return -ENOENT;
 
-  return device_get_accessor_by_path(accessor, NULL, (const char*)r->u.uint[0], cl);
+  return device_get_accessor_by_path(accessor, &dev->node, (const char*)r->u.uint[0], cl);
 }

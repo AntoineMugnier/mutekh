@@ -684,7 +684,7 @@ static inline error_t device_res_add_dev_param(struct device_s *dev, const char 
     parameter resource of the device tree.
     @see device_get_accessor_by_path
  */
-error_t device_get_param_dev_accessor(const struct device_s *dev,
+error_t device_get_param_dev_accessor(struct device_s *dev,
                                       const char *name, void *accessor,
                                       enum driver_class_e cl);
 
