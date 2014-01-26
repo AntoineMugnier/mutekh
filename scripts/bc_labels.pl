@@ -54,12 +54,19 @@ my $longhelp = "
        BC_INSTRUCTION(.....), \\
        /* label:name */       \\
        BC_INSTRUCTION(.....),
- 
+
  When the macro is used in the middle of an other bytecode chunk, its
  computed bytecode size will be used to properly compute branch
  targets.
 
- label names are local to the macro or declaration they appear in.
+ Label names are local to the macro or declaration they appear in.
+
+ Absolute branch targets can also be adjusted outside bytecode,
+ in the C source code, by specifying the name of the bytecode
+ declaration they appear in:
+
+      /* change the bytecode entry point */
+      bc_set_reg(ctx, 15, /* addr:foo:name */);
 
 ";
 
@@ -90,34 +97,38 @@ my $state = 0;
 
 sub parse
 {
-    my ( $filter, $reset, $end ) = @_;
+    my ( $filter, $filter2, $reset, $end ) = @_;
 
     my $lnum = 0;
+    my $name;
     foreach my $line (@src)
     {
-	if ($state == 0 && $line =~ /^\s*static\s+const\s+bc_opcode_t\s+\w+\[\]\s*=\s*(\{)?\s*$/) {
+	if ($state == 0 && $line =~ /^\s*static\s+const\s+bc_opcode_t\s+(\w+)\[\]\s*=\s*(\{)?\s*$/) {
 
-	    if ($1) {
+            $name = $1;
+	    if ($2) {
 		$state = 2;
-		$reset->($lnum);
+		$reset->($lnum, undef, $name);
 	    } else {
 		$state = 1;
 	    }
 	} elsif ($state == 0 && $line =~ /^\s*#define\s+(\w*).*\\/) {
 	    $state = 3;
 	    $reset->($lnum, $1);
+        } elsif ($state == 0) {
+            $filter->($line, $lnum);
 	} elsif ($state == 1 && $line =~ /^\s*\{/) {
 	    $state = 2;
-	    $reset->($lnum);
+	    $reset->($lnum, undef, $name);
 	} elsif ($state == 2) {
 	    if ($line =~ /^\s*\}/) {
 		$state = 0;
 	    } else {
-		$filter->($line, $lnum);
+		$filter2->($line, $lnum);
 	    }
 	} elsif ($state == 3) {
 	    $line =~ /^(.*)(\\)\s*$/;
-	    $filter->($line, $lnum);
+	    $filter2->($line, $lnum);
 	    $state = 0 if !$2;
 	}
 
@@ -135,7 +146,7 @@ my $addr;
 my %opcodes = (
     "BC_END" => 1,    "BC_DUMP" => 1,  "BC_ABORT" => 1,
     "BC_ADD8" => 1,   "BC_CST8" => 1,
-    "BC_JMP" => 1,    "BC_LOOP" => 1,
+    "BC_JMP" => 1,    "BC_JMPL" => 1,    "BC_LOOP" => 1,
     "BC_EQ" => 1,     "BC_NEQ" => 1,
     "BC_MOV" => 1,    "BC_ADD" => 1,   "BC_SUB" => 1,     "BC_RSUB" => 1,
     "BC_MUL" => 1,    "BC_CALL" => 1,  "BC_OR" => 1,      "BC_XOR" => 1,
@@ -154,7 +165,9 @@ my %opcodes = (
     );
 
 parse( sub {
-           my ( $line, $lnum ) = @_;
+       },
+       sub {
+           my ( $line, $lnum, $name ) = @_;
 
 	   if ( $line =~ /^\s*\/\*\s*label:\s*(\w+)\s*\*\// )
 	   {
@@ -178,11 +191,11 @@ parse( sub {
 		   $addr += $macros{$1}->{size};
 	       }
 	   }
-	   elsif ( $line =~ /^\s+$/ )
+	   elsif ( $line =~ /^\s+\\?$/ )
 	   {
 	       return;
 	   }
-	   elsif ( $line =~ /^\s*\/\*.*\*\/\s*$/ || $line =~ /\s*\/\/ /)
+	   elsif ( $line =~ /^\s*\/\*.*\*\/\s*\\?$/ || $line =~ /\s*\/\/ /)
 	   {
 	       return;
 	   }
@@ -196,12 +209,13 @@ parse( sub {
 	   $block->{lines}->{$lnum} = $addr;
        }, 
        sub {
-           my ( $lnum, $macro ) = @_;
+           my ( $lnum, $macro, $name ) = @_;
 
 	   $block->{size} = $addr if ( $block );
 
 	   $block = { labels => {}, lines => {} };
 	   $blocks{$lnum} = $block;
+	   $blocks{$name} = $block if defined $name;
 	   $macros{$macro} = $block if defined $macro;
 	   $addr = 0;
        },
@@ -214,8 +228,22 @@ parse( sub {
 
 sub label_addr
 {
-    my ( $lbl, $lnum ) = @_;
-    if (not defined $block->{labels}->{$lbl})
+    my ( $lbl, $lnum, $bname ) = @_;
+
+    my $b = $block;
+
+    if (defined $bname)
+    {
+        $b = $blocks{$bname};
+        if (not defined $b)
+        {
+            print STDERR "error:".$in.":".($lnum+1).":undefined block `$bname'.\n";
+            $err = 1;
+            return;
+        }
+    }
+
+    if (not defined $b->{labels}->{$lbl})
     {
 	print STDERR "error:".$in.":".($lnum+1).":undefined label `$lbl'.\n";	
 	$err = 1;
@@ -238,9 +266,14 @@ sub label_goto
 
 parse( sub {
            my ( $line, $lnum ) = @_;
+	   $line =~ s/ (\s*)-?\d*\s* \/ \* \s*addr:(\w+):(\w+) /$1.label_addr($3,$lnum,$2).' \/* addr:'.$2.':'.$3/gex;
+	   @src[$lnum] = $line;
+       },
+       sub {
+           my ( $line, $lnum ) = @_;
 
-	   $line =~ s/ \s*-?\d*\s* \/ \* \s*goto:(\w+) /' '.label_goto($1,$lnum).' \/* goto:'.$1/gex;
-	   $line =~ s/ \s*-?\d*\s* \/ \* \s*addr:(\w+) /' '.label_addr($1,$lnum).' \/* addr:'.$1/gex;
+	   $line =~ s/ (\s*)-?\d*\s* \/ \* \s*goto:(\w+) /$1.label_goto($2,$lnum).' \/* goto:'.$2/gex;
+	   $line =~ s/ (\s*)-?\d*\s* \/ \* \s*addr:(\w+) /$1.label_addr($2,$lnum).' \/* addr:'.$2/gex;
 
 	   @src[$lnum] = $line;
        }, 

@@ -35,7 +35,8 @@
     abort                             0000 0000 0000 0002       0
     add8                r, +/-v       0000 vvvv vvvv rrrr       0
     cst8                r, v          0001 vvvv vvvv rrrr       0
-    jmp                 lbl           0010 llll llll ----       0
+    jmp                 lbl           0010 llll llll 1111       0
+    jmpl                lbl, r        0010 llll llll rrrr       0
     loop                lbl, r        0011 llll llll rrrr       0
 
     eq                  r, r          0100 0000 rrrr rrrr       1
@@ -238,7 +239,14 @@ typedef BC_CALL_FUNCTION(bc_call_function_t);
 
     Branch targets can be computed by the bc_labels.pl script.
 */
-#define BC_JMP(d)           BC_FMT0(BC_OP_JMP,  d, 0)
+#define BC_JMP(d)           BC_FMT0(BC_OP_JMP,  d, 15)
+
+/** Jump relative and save the return address in a register.
+
+    Branch targets can be computed by the bc_labels.pl script.
+    @see #BC_JMP
+*/
+#define BC_JMPL(r, d)       BC_FMT0(BC_OP_JMP,  d, r)
 
 /** If the jump target is backward, this instruction decrements the
     register which should not be initially zero and branch if the

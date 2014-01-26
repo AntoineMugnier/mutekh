@@ -285,9 +285,12 @@ uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles)
 	*dst = (uintptr_t)((op >> 4) & 0xff);
 	break;
 
-      dispatch_jmp:
-	ctx->v[15] += (int8_t)(op >> 4);
+      dispatch_jmp: {
+        uintptr_t pc = ctx->v[15];
+        *dst = pc;
+	ctx->v[15] = pc + (int8_t)(op >> 4);
 	break;
+        }
 
       dispatch_loop: {
 	  int8_t d = op >> 4;

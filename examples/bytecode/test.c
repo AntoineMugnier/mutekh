@@ -148,8 +148,7 @@ void app_start()
     BC_MOV(13, 0),              /* setup stack ptr */
     BC_ADD8(13, 120),
     BC_CST8(1, 5),              /* param */
-    BC_MOV(10, 15),             /* link reg */
-    BC_JMP( 4 /* goto:fact */),  /* call */
+    BC_JMPL(10, 4 /* goto:fact */),  /* call */
     BC_CST8(3, 120),            /* test return value */
     BC_NEQ(1, 3),
     BC_ABORT(),
@@ -160,17 +159,15 @@ void app_start()
     BC_ST16D(10, 13),
     BC_CST8(2, 1),   
     BC_EQ(1, 2),     
-    BC_JMP( 6 /* goto:fact_end */),
+    BC_JMP( 5 /* goto:fact_end */),
     BC_ST16D(1, 13), 
     BC_ADD8(1, -1),  
-    BC_MOV(10, 15),             /* link register */
-    BC_JMP( -8 /* goto:fact*/),  /* call */
+    BC_JMPL(10, -7 /* goto:fact*/),  /* call */
     BC_LD16I(2, 13), 
     BC_MUL(1, 2),    
   /* label:fact_end */
     BC_CUSTOM_PRINTI(1),
     BC_LD16I(10, 13),
-    BC_ADD8(10, 1),             /* return */  
     BC_MOV(15, 10),
   };
 
