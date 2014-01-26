@@ -55,14 +55,37 @@ struct			lock_s
 
 typedef struct lock_s	lock_t;
 
+struct			lock_irq_s
+{
+#ifdef CONFIG_HEXO_IRQ
+  reg_t	__interrupt_state;
+#endif
+#ifdef CONFIG_ARCH_SMP
+  /** architecture specific lock data */
+  struct __arch_lock_s	arch;
+#endif
+};
+
+typedef struct lock_irq_s lock_irq_t;
+
 #ifdef CONFIG_ARCH_SMP
 # define LOCK_INITIALIZER	{ .arch = ARCH_LOCK_INITIALIZER }
 #else
 # define LOCK_INITIALIZER	{ }
 #endif
 
-/** allocate a new lock and return associated atomic memory location */
+/** allocate a new lock */
 static inline error_t lock_init(lock_t *lock)
+{
+#ifdef CONFIG_ARCH_SMP
+  return __arch_lock_init(&lock->arch);
+#else
+  return 0;
+#endif
+}
+
+/** allocate a new lock with interrupt state */
+static inline error_t lock_init_irq(lock_irq_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   return __arch_lock_init(&lock->arch);
@@ -74,6 +97,14 @@ static inline error_t lock_init(lock_t *lock)
 
 /** @this frees lock ressources */
 static inline void lock_destroy(lock_t *lock)
+{
+#ifdef CONFIG_ARCH_SMP
+  return __arch_lock_destroy(&lock->arch);
+#endif
+}
+
+/** @this frees lock ressources */
+static inline void lock_destroy_irq(lock_irq_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   return __arch_lock_destroy(&lock->arch);
@@ -93,9 +124,21 @@ static inline bool_t lock_try(lock_t *lock)
 }
 
 
-/** @this spins to take lock */
+/** @this spins to take the lock */
 static inline void lock_spin(lock_t *lock)
 {
+#ifdef CONFIG_ARCH_SMP
+  order_smp_mem();
+  __arch_lock_spin(&lock->arch);
+#endif
+}
+
+/** @this save and disable interrupts then spins to take the lock */
+static inline void lock_spin_irq(lock_irq_t *lock)
+{
+#ifdef CONFIG_HEXO_IRQ
+  cpu_interrupt_savestate_disable(&lock->__interrupt_state);
+#endif
 #ifdef CONFIG_ARCH_SMP
   order_smp_mem();
   __arch_lock_spin(&lock->arch);
@@ -132,6 +175,18 @@ static inline void lock_release(lock_t *lock)
 #ifdef CONFIG_ARCH_SMP
   order_smp_mem();
   __arch_lock_release(&lock->arch);
+#endif
+}
+
+/** @this releases a lock and restore previous interrupt state */
+static inline void lock_release_irq(lock_irq_t *lock)
+{
+#ifdef CONFIG_ARCH_SMP
+  order_smp_mem();
+  __arch_lock_release(&lock->arch);
+#endif
+#ifdef CONFIG_HEXO_IRQ
+  cpu_interrupt_restorestate(&lock->__interrupt_state);
 #endif
 }
 
