@@ -113,7 +113,8 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
           printk("  String parameter `%s' = `%s'\n", r->u.str_param.name, r->u.str_param.value);
           break;
         case DEV_RES_UINT_PARAM:
-          printk("  Integer parameter `%s' = %x\n", r->u.uint_param.name, r->u.uint_param.value);
+          printk("  Integer parameter `%s' = %u (0x%x)\n", r->u.uint_param.name,
+                 r->u.uint_param.value, r->u.uint_param.value);
           break;
         case DEV_RES_DEV_PARAM:
           printk("  Device parameter `%s' = `%s'\n", r->u.dev_param.name, r->u.dev_param.dev);
