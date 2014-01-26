@@ -206,6 +206,8 @@ static const struct driver_timer_s  ppc_timer_drv =
   .f_start_stop    = ppc_timer_start_stop,
   .f_get_value     = ppc_timer_get_value,
   .f_resolution    = ppc_timer_resolution,
+  .f_request       = (devtimer_request_t*)&dev_driver_notsup_fcn,
+  .f_cancel        = (devtimer_request_t*)&dev_driver_notsup_fcn,
 };
 
 /************************************************************************/

@@ -95,8 +95,6 @@ CONTAINER_KEY_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue, deadl
    @This returns 0 on success. @This may return @tt -EBUSY if the
    timer hardware resource is not available. @This may return -ENOTSUP
    if there is no timer matching the requested device number.
-
-   @This is optional and should be invoked using the @ref #DEVICE_SAFE_OP macro.
 */
 typedef DEVTIMER_REQUEST(devtimer_request_t);
 
@@ -111,8 +109,6 @@ typedef DEVTIMER_REQUEST(devtimer_request_t);
    (deadline already reached).
 
    @This returns 0 on success.
-
-   @This is optional and should be invoked using the @ref #DEVICE_SAFE_OP macro.
 */
 typedef DEVTIMER_CANCEL(devtimer_cancel_t);
 

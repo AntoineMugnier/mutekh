@@ -191,7 +191,7 @@ pthread_cond_timedwait(pthread_cond_t *cond,
       kroutine_init(&rq.kr, pthread_cond_timer, KROUTINE_IMMEDIATE);
       rq.pvdata = &ev_ctx;
 
-      switch (DEVICE_SAFE_OP(libc_timer(), request, &rq))
+      switch (DEVICE_OP(libc_timer(), request, &rq))
         {
         case 0:
           sched_wait_unlock(&cond->wait);
@@ -200,7 +200,7 @@ pthread_cond_timedwait(pthread_cond_t *cond,
           if (this->state & _PTHREAD_STATE_TIMEOUT)
             res = ETIMEDOUT;
           else
-            DEVICE_SAFE_OP(libc_timer(), cancel, &rq);
+            DEVICE_OP(libc_timer(), cancel, &rq);
           lock_release(&this->lock);
 
           break;

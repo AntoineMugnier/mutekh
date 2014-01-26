@@ -320,16 +320,6 @@ struct driver_class_s
 })
 
 /**
-   @This invokes the requested operation on a device accessor object.
-   If the function is not provided by the driver, this evaluates to @tt -ENOTSUP.
-*/
-#define DEVICE_SAFE_OP(dev_accessor, op, ...)        \
-({                                            \
-  typeof(dev_accessor) __a__ = (dev_accessor);  \
-  __a__->api->f_##op ? __a__->api->f_##op(__a__, ## __VA_ARGS__) : -ENOTSUP;     \
-})
-
-/**
    @This checks if the driver behind the given device accessor
    provides the specified operation.
 */
@@ -421,6 +411,9 @@ error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv);
 
 /** @This performs device initialization using previously bound driver. */
 error_t device_init_driver(struct device_s *dev);
+
+/** @This function does nothing but returning @tt -ENOTUP */
+error_t dev_driver_notsup_fcn();
 
 #endif
 

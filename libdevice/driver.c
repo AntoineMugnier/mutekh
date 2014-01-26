@@ -207,3 +207,8 @@ error_t device_init_driver(struct device_s *dev)
   return err;
 }
 
+error_t dev_driver_notsup_fcn()
+{
+  return -ENOTSUP;
+}
+

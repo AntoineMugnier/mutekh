@@ -231,6 +231,8 @@ static const struct driver_timer_s  avr32_timer_drv =
   .f_start_stop    = avr32_timer_start_stop,
   .f_get_value     = avr32_timer_get_value,
   .f_resolution    = avr32_timer_resolution,
+  .f_request       = (devtimer_request_t*)&dev_driver_notsup_fcn,
+  .f_cancel        = (devtimer_request_t*)&dev_driver_notsup_fcn,
 };
 
 /************************************************************************/

@@ -256,6 +256,8 @@ static const struct driver_timer_s  mips_timer_drv =
   .f_start_stop    = mips_timer_start_stop,
   .f_get_value     = mips_timer_get_value,
   .f_resolution    = mips_timer_resolution,
+  .f_request       = (devtimer_request_t*)&dev_driver_notsup_fcn,
+  .f_cancel        = (devtimer_request_t*)&dev_driver_notsup_fcn,
 };
 
 #endif
