@@ -14,3 +14,7 @@ endif
 ifeq ($(CONFIG_DRIVER_EFM32_RTC), defined)
 subdirs += rtc 
 endif
+
+ifeq ($(CONFIG_DRIVER_EFM32_GPIO), defined)
+subdirs += gpio
+endif

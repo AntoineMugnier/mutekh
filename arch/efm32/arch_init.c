@@ -104,3 +104,15 @@ DEV_DECLARE_STATIC(rtc_dev, "rtc", 0, efm32_rtc_drv, rtc_dev_res);
 
 #endif
 
+
+#ifdef CONFIG_DRIVER_EFM32_GPIO
+
+DEV_DECLARE_STATIC_RESOURCES(gpio_dev_res, 3,
+  DEV_STATIC_RES_MEM(0x40006000, 0x40007000),
+  DEV_STATIC_RES_IRQ(0, EFM32_IRQ_GPIO_EVEN, 0, "/cpu"),
+  DEV_STATIC_RES_IRQ(1, EFM32_IRQ_GPIO_ODD, 0, "/cpu"),
+);
+
+DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, efm32_gpio_drv, gpio_dev_res);
+
+#endif
