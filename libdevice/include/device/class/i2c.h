@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Device drivers}
+ * @module{Devices support library}
  * @short I2c bus driver API
  */
 

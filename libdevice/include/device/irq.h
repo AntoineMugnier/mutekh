@@ -22,8 +22,8 @@
 
 /**
  * @file
- * @module{Device drivers}
- * @short Devices definitions
+ * @module{Devices support library}
+ * @short Device interrupts graph
  */
 
 #ifndef __DEVICE_IRQ_H__

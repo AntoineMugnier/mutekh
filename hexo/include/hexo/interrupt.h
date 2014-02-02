@@ -154,7 +154,7 @@ struct cpu_context_s;
    @param dataptr Bad memory data access address, validity depends on
     processor and fault.
 
-   @param regs Can be used with the @ref cpu_exception_set_resume
+   @param regs Can be used with the @ref cpu_exception_resume_pc
     function. Some general purpose registers may be saved depending on
     processor.
 
@@ -164,7 +164,7 @@ struct cpu_context_s;
    instance and will be used when a fault occurs in user mode. The cpu
    local handler is used for other cases.
 
-   @see #CPU_EXCEPTION_HANDLER @see cpu_exception_set_resume
+   @see #CPU_EXCEPTION_HANDLER @see cpu_exception_resume_pc
 */
 typedef CPU_EXCEPTION_HANDLER(cpu_exception_handler_t);
 
@@ -207,7 +207,7 @@ void cpu_user_exception_sethandler_ctx(struct context_s *context,
 
     @param regs Contains valid values for argument passing registers
      on current processor ABI and can be used with the @ref
-     cpu_exception_set_resume function.  The return value register is
+     cpu_exception_resume_pc function.  The return value register is
      restored from this object on syscall return.
 
     Syscall handler is context local and must be defined for each @ref

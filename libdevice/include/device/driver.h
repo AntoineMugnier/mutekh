@@ -21,10 +21,10 @@
 */
 
 /**                                                                 
- * @file                                                            
- * @module{Device drivers}
- * @short Driver classes definitions
- */                                                                 
+ * @file
+ * @module {Devices support library}
+ * @short Driver structures and driver API classes
+ */
 
 #ifndef __DRIVER_H__
 #define __DRIVER_H__
@@ -338,7 +338,7 @@ struct driver_class_s
    used when the device provides more than one api instance of the
    requested class type.
 
-   @see {#DEVICE_ACCESSOR, #DEVICE_OP, device_put_accessor}
+   @see {#DEVICE_ACCESSOR_INIT, #DEVICE_OP, device_put_accessor}
  */
 error_t device_get_accessor(void *accessor, struct device_s *dev,
                             enum driver_class_e cl, uint_fast8_t number);

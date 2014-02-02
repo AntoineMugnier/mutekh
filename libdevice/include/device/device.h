@@ -22,8 +22,8 @@
 
 /**
  * @file
- * @module{Device drivers}
- * @short Devices definitions
+ * @module{Devices support library}
+ * @short Device structures and device tree
  */
 
 #ifndef __DEVICE_H__
@@ -356,7 +356,7 @@ static inline struct device_node_s * device_node_from_alias(struct device_alias_
     changed if the device has not been attached to a parent node.
 
     The name string will be duplicated and later freed on cleanup only if
-    the @ref #DEVICE_FLAG_ALLOCATED flag of the device is set. */
+    the @ref DEVICE_FLAG_NAME_ALLOCATED flag of the device node is set. */
 error_t device_set_name(struct device_s *dev, const char *name);
 
 /** @This attaches a device to a parent enumerator device. If the

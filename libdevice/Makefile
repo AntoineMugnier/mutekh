@@ -1,11 +1,11 @@
 
 DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
-doc_headers =  device/device.h  device/driver.h device/irq.h \
+doc_headers =  device/device.h  device/driver.h device/irq.h device/resources.h \
 	device/class/block.h device/class/char.h			\
-	device/class/enum.h device/class/fb.h device/class/gpio.h device/class/i2c.h			\
-	device/class/icu.h device/class/input.h device/class/lcd.h device/class/mem.h device/class/net.h	\
-	device/class/sound.h device/class/spi.h device/class/timer.h
+	device/class/enum.h device/class/gpio.h			\
+	device/class/icu.h device/class/net.h device/class/cpu.h	\
+	device/class/timer.h device/class/dma.h
 
 objs = driver.o device.o dump.o resources.o init.o
 

@@ -8,9 +8,13 @@
  @order 99
 @end moduledef
 
-@moduledef{Device drivers}
- @short Hardware device driver classes API
+@moduledef{Devices support library}
+  @short Devices and drivers management library
  @order 98
+@end moduledef
+
+@moduledef{Device drivers}
+  @internal
 @end moduledef
 
 @moduledef{C library}
@@ -77,6 +81,7 @@
 
 @moduledef{MWMR}
   @short Multi-Writer Multi-Reader channels API
+  @hidden
 
   Multi-Writer Multi-Reader API is designed for streaming
   applications.
@@ -96,6 +101,7 @@
 
 @moduledef{SRL}
   @short MutekS API
+  @hidden
 
   This module implements the MutekS API,
   mainly used by the DSX software.
@@ -121,10 +127,12 @@
 
 @moduledef{Elf loader library}
  @short dynamic Elf object files loader
+  @hidden
 @end moduledef
 
 @moduledef{OpenMP runtime library}
   @short GNU OpenMP runtime library
+  @hidden
 @end moduledef
 
 @moduledef{Terminal driver library}

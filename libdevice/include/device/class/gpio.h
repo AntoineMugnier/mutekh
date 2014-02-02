@@ -22,8 +22,8 @@
 
 /**
  * @file
- * @module{Device drivers}
- * @short General purpose IO drievr API
+ * @module{Devices support library}
+ * @short General purpose IO driver API
  */
 
 #ifndef __DEVICE_GPIO_H__

@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Device drivers}
+ * @module{Devices support library}
  * @short Event driven input device driver API
  */
 

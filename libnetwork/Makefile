@@ -37,7 +37,7 @@ ifeq ($(CONFIG_NETWORK_DHCLIENT), defined)
  subdirs += dhclient
 endif
 
-doc_headers = netinet/arp.h netinet/ether.h netinet/filter.h		\
+doc_headers = netinet/arp.h netinet/ether.h		\
 netinet/icmp.h netinet/in.h netinet/ip.h netinet/sockaddr.h			\
 netinet/socket.h netinet/sockios.h netinet/tcp.h netinet/udp.h		\
 network/arp.h network/dhcp.h network/dispatch.h network/icmp.h		\

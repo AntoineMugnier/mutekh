@@ -23,6 +23,12 @@
 #ifndef __DEVICE_RESOURCES_H__
 #define __DEVICE_RESOURCES_H__
 
+/**
+ * @file
+ * @module{Devices support library}
+ * @short Device resources
+ */
+
 #include <assert.h>
 #include <hexo/types.h>
 
@@ -73,7 +79,7 @@ struct dev_resource_s
     /** @internal */
     uint64_t                    uint64;
 
-    /** @see ##DEV_STATIC_RES_MEM @see device_res_add_mem */
+    /** @see #DEV_STATIC_RES_MEM @see device_res_add_mem */
     struct {
       uintptr_t                 start;
       uintptr_t                 end;
@@ -137,19 +143,19 @@ struct dev_resource_s
       uint64_t                  f40_24;
     }                           freq;
 
-    /** @see DEV_STATIC_RES_STR_PARAM @see device_res_add_str_param */
+    /** @see #DEV_STATIC_RES_STR_PARAM @see device_res_add_str_param */
     struct {
       const char                *value;
       const char                *name;
     }                           str_param;
 
-    /** @see DEV_STATIC_RES_UINT_PARAM @see device_res_add_uint_param */
+    /** @see #DEV_STATIC_RES_UINT_PARAM @see device_res_add_uint_param */
     struct {
       uintptr_t                 value;
       const char                *name;
     }                           uint_param;
 
-    /** @see DEV_STATIC_RES_DEV_PARAM @see device_res_add_dev_param */
+    /** @see #DEV_STATIC_RES_DEV_PARAM @see device_res_add_dev_param */
     struct {
       const char                *dev;
       const char                *name;

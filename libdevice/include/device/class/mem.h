@@ -21,7 +21,7 @@
 
 /**
  * @file
- * @module{Device drivers}
+ * @module{Devices support library}
  * @short Memory device driver API
  */
 

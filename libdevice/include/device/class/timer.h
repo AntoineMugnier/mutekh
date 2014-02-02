@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Device drivers}
+ * @module{Devices support library}
  * @short Timer device driver API
  */
 
@@ -71,7 +71,7 @@ CONTAINER_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue);
 CONTAINER_KEY_TYPE(dev_timer_queue, PTR, SCALAR, deadline);
 CONTAINER_KEY_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue, deadline);
 
-/** Timer device class request() function template. */
+/** @see devtimer_request_t */
 #define DEVTIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
 
 /**
@@ -98,7 +98,7 @@ CONTAINER_KEY_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue, deadl
 */
 typedef DEVTIMER_REQUEST(devtimer_request_t);
 
-/** Timer device class request() function template. */
+/** @see devtimer_cancel_t */
 #define DEVTIMER_CANCEL(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
 
 /**
@@ -113,7 +113,7 @@ typedef DEVTIMER_REQUEST(devtimer_request_t);
 typedef DEVTIMER_CANCEL(devtimer_cancel_t);
 
 
-/** Timer device class cancel() function template. */
+/** @see devtimer_start_stop_t */
 #define DEVTIMER_START_STOP(n)	error_t  (n) (struct device_timer_s *tdev, bool_t start)
 
 /**
@@ -144,7 +144,7 @@ typedef DEVTIMER_START_STOP(devtimer_start_stop_t);
 
 
 
-/** Timer device class getvalue() function template */
+/** @see #devtimer_get_value_t */
 #define DEVTIMER_GET_VALUE(n)	error_t (n) (struct device_timer_s *tdev, dev_timer_value_t *value)
 
 /**
@@ -160,17 +160,15 @@ typedef DEVTIMER_START_STOP(devtimer_start_stop_t);
    returns @tt -ENOTSUP if there is no timer matching the requested
    device number.
 
-   @csee #DEVTIMER_GETVALUE @csee #dev_timer_getvalue
-
    @This is mandatory.
 */
 typedef DEVTIMER_GET_VALUE(devtimer_get_value_t);
 
 
-/** Timer device resolution @see #DEVTIMER_RES_FIXED_POINT */
+/** Timer device resolution type */
 typedef uint32_t dev_timer_res_t;
 
-/** Timer device resolution() function template */
+/** @see devtimer_resolution_t */
 #define DEVTIMER_RESOLUTION(n)	error_t (n) (struct device_timer_s *tdev, dev_timer_res_t *res, dev_timer_value_t *max)
 
 /**
@@ -209,8 +207,6 @@ typedef uint32_t dev_timer_res_t;
    requested device number.
 
    @This is mandatory.
-
-   @see #DEVTIMER_RES_FIXED_POINT
 */
 typedef DEVTIMER_RESOLUTION(devtimer_resolution_t);
 
@@ -246,7 +242,7 @@ error_t dev_timer_init_sec(struct device_timer_s *tdev, dev_timer_delay_t *delay
     the given delay in seconds. A negative shift amount indicates a
     right shift.
 
-    The @ref dev_timer_shift function can be used to perform the
+    The @ref dev_timer_shift_sec function can be used to perform the
     actual conversion.
 */
 config_depend(CONFIG_DEVICE_TIMER)
@@ -292,8 +288,7 @@ error_t dev_timer_check_timeout(struct device_timer_s *tdev,
     (@ref devtimer_request_t operation).
 
     The request can be first initialized by calling @ref
-    dev_timer_init_rq, @ref dev_timer_init_rq_sec or @ref
-    dev_timer_init_rq_usec. It can then be reused multiple times to
+    dev_timer_init_sec. It can then be reused multiple times to
     save timer units conversion computation.
 */
 config_depend(CONFIG_DEVICE_TIMER)

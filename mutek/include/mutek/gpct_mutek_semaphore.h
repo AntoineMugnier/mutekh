@@ -22,9 +22,9 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Mutek}
  * @internal
- * @short Hexo specific platform definition for GPCT
+ * @short Semaphore for GPCT
  */
 
 #ifndef __GPCT_MUTEKH_SEMAPHORE_H__

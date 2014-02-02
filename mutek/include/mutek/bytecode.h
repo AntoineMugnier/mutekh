@@ -15,7 +15,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301 USA
  *
- * Alexandre Becoulet <alexandre.becoulet@free.fr>
+ * Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2013
  */
 
 #ifndef MUTEK_BYTECODE_H_
@@ -26,6 +26,18 @@
 
 /**
    @file
+   @module{Mutek}
+   @short Generic bytecode
+
+   This module provides a simple and small bytecode virtual machine
+   with a customisable instruction set. Bytecode instruction are 16
+   bits wide.
+
+   A set of generic instructions is provided. The MSB of the generic
+   instructions is always sero, leaving half the opcode space for
+   application specific opcodes.
+
+   See @sourcelink example/bytecode/test.c for an example application.
 
    @code R
     instruction         params        opcode                  format
@@ -174,7 +186,7 @@ void bc_dump(const struct bc_context_s *ctx);
 */
 uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles);
 
-/** @This specifies operation codes. */
+/** @internal @This specifies opcode values. */
 enum bc_opcode_e
 {
   BC_OP_ADD8 = 0x00,
@@ -347,7 +359,7 @@ typedef BC_CALL_FUNCTION(bc_call_function_t);
 #define BC_ST64D(r, a)        BC_FMT3(BC_OP_ST2, 3, r, a, 0)
 
 /** Load/Store operations with access width matching pointer
-    width. @multiple @see {BC_LD32, BC_LD32I, BC_ST32, BC_ST32I, BC_ST32I, BC_ST32D} */
+    width. @multiple @see {#BC_LD32, #BC_LD32I, #BC_ST32, #BC_ST32I, #BC_ST32I, #BC_ST32D} */
 #if INT_PTR_SIZE == 64
 # define BC_LDPTR(r, a)        BC_LD64(r, a)
 # define BC_LDPTRI(r, a)       BC_LD64I(r, a)

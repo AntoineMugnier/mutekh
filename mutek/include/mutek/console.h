@@ -20,6 +20,13 @@
 
 */
 
+/**
+ * @file
+ * @module{Mutek}
+ * @short Console device defs
+ * @internal
+ */
+
 #ifndef MUTEK_CONSOLE_H_
 #define MUTEK_CONSOLE_H_
 

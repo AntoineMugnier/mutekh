@@ -22,7 +22,7 @@
 
 /**
  * @file
- * @module{Hexo}
+ * @module{Mutek}
  * @short System initialization and statup functions
  */
 
