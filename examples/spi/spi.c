@@ -2,18 +2,22 @@
 #include <mutek/printk.h>
 #include <mutek/bytecode.h>
 
+#include <device/resources.h>
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/class/spi.h>
+#include <hexo/iospace.h>
 
 #ifndef CONFIG_DEVICE_SPI_REQUEST
 
 static const uint8_t tx[7] = { 0x0f, 0xcc, 0xaa, 0x57, 0x28, 0x49, 0x35 };
 static uint8_t rx[7] = {};
 
-static DEVSPI_CTRL_TRANSFER_CALLBACK(tr_callback)
+static KROUTINE_EXEC(tr_callback)
 {
-  printk("tr callback: %P\n", rx, sizeof(rx));
+  struct dev_spi_ctrl_transfer_s *tr = (void*)kr;
+
+  printk("tr callback: err=%i, %P\n", tr->err, rx, sizeof(rx));
 }
 
 void main()
@@ -22,7 +26,7 @@ void main()
 
   device_dump_tree(0);
 
-  if (device_get_accessor_by_path(&spi, NULL, "spi*", DRIVER_CLASS_SPI_CTRL))
+  if (device_get_accessor_by_path(&spi, NULL, "usart1", DRIVER_CLASS_SPI_CTRL))
     abort();
 
   printk("spi found\n");
@@ -41,13 +45,13 @@ void main()
     .count = sizeof(tx),
     .in = rx,
     .out = tx,
-    .callback = tr_callback,
     .in_width = sizeof (rx[0]),
     .out_width = sizeof (tx[0]),
   };
 
-  if (DEVICE_OP(&spi, transfer, &tr, 1))
-    abort();
+  kroutine_init(&tr.kr, &tr_callback, KROUTINE_IMMEDIATE);
+
+  DEVICE_OP(&spi, transfer, &tr);
 
   while (1)
     ;
@@ -57,11 +61,26 @@ void main()
 
 static const bc_opcode_t bytecode[] =
   {
+    BC_SPI_GPIOMODE(66, DEV_GPIO_OUTPUT),
+    BC_CST16(3, 10000),
     BC_CST8(0, 0x55),
+  /* label:re */
+    BC_ADD8(0, 1),
     BC_SPI_SWP(0, 1),
-    BC_DUMP(),
+    // BC_DUMP(),
+    BC_CST32(2, 100000),
+    BC_SPI_YIELD_DELAY(2),
+    BC_SPI_GPIOSET(66, 0),
+    BC_LOOP(3, -8 /* goto:re */),
     BC_END(),
   };
+
+static KROUTINE_EXEC(rq_callback)
+{
+  struct dev_spi_ctrl_request_s *rq = (void*)kr;
+
+  printk("rq callback: err=%i\n", rq->err);
+}
 
 void main()
 {
@@ -69,7 +88,7 @@ void main()
 
   device_dump_tree(0);
 
-  if (device_get_accessor_by_path(&spi, NULL, "spi*", DRIVER_CLASS_SPI_CTRL))
+  if (device_get_accessor_by_path(&spi, NULL, "usart1", DRIVER_CLASS_SPI_CTRL))
     abort();
 
   printk("spi found\n");
@@ -78,20 +97,28 @@ void main()
     .config = {
       .bit_rate = 100000,
       .word_width = 8,
-      .miso_pol = DEV_SPI_CS_ACTIVE_LOW,
+      //      .miso_pol = DEV_SPI_CS_ACTIVE_LOW,
     },
     .cs_id = 0,
-    .slave_id = 0,
-    .delay_unit = 1,
+    .cs_gpio = 1,
   };
 
   bc_init(&rq.vm, bytecode, sizeof(bytecode), 1, 0);
 
   device_init_accessor(&rq.gpio);
 
-  error_t err = dev_spi_request_start(&spi, &rq);
+  if (device_get_accessor_by_path(&rq.gpio, NULL, "gpio*", DRIVER_CLASS_GPIO))
+    abort();
 
-  printk("done! %i\n", err);
+  kroutine_init(&rq.kr, &rq_callback, KROUTINE_IMMEDIATE);
+
+  DEVICE_OP(&spi, request, &rq);
+
+  while (1)
+    ;
+
+  printk("done! %i\n", rq.err);
 }
+
 
 #endif

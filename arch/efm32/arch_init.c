@@ -53,10 +53,11 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, cpu_dev_res);
 
 #ifdef CONFIG_DRIVER_EFM32_USART_SPI
 
-DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 3,
+DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 4,
   DEV_STATIC_RES_MEM(0x4000c400, 0x4000c800),
   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_RX, 0, "/cpu"),
   DEV_STATIC_RES_IRQ(1, EFM32_IRQ_USART1_TX, 0, "/cpu"),
+  DEV_STATIC_RES_DEV_PARAM("spi-timer", "/timer0"),
 );
 
 DEV_DECLARE_STATIC(usart1_dev, "usart1", 0, efm32_usart_spi_drv, usart1_dev_res);
