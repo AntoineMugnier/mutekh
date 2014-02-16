@@ -53,29 +53,30 @@
 
     eq                  r, r          0100 0000 rrrr rrrr       1
     neq                 r, r          0100 0001 rrrr rrrr	1
-    ---                 r, r          0100 0010 rrrr rrrr       1
-    ---                 r, r          0100 0011 rrrr rrrr	1
+    lt                  r, r          0100 0010 rrrr rrrr       1
+    lteq                r, r          0100 0011 rrrr rrrr	1
     add                 r, r          0100 0100 rrrr rrrr	1
     sub                 r, r          0100 0101 rrrr rrrr	1
-    rsb                 r, r          0100 0110 rrrr rrrr	1
+    ---                 r, r          0100 0110 rrrr rrrr	1
     mul                 r, r          0100 0111 rrrr rrrr	1
     or                  r, r          0100 1000 rrrr rrrr	1
     xor                 r, r          0100 1001 rrrr rrrr	1
     and                 r, r          0100 1010 rrrr rrrr	1
-    call                r, r          0100 1011 rrrr rrrr	1
+    ccall               r, r          0100 1011 rrrr rrrr	1
     shl                 r, r          0100 1100 rrrr rrrr	1
     shr                 r, r          0100 1101 rrrr rrrr       1
     shra                r, r          0100 1110 rrrr rrrr       1
     mov                 r, r          0100 1111 rrrr rrrr	1
 
-    tst[c,s]            r, bit        0101 0cbb bbbb rrrr       2
+    tst[c,s]            r, bit        0101 00cb bbbb rrrr       2
+    bit[c,s]            r, bit        0101 01cb bbbb rrrr       2
     shi[l,r]            r, bit        0101 1lbb bbbb rrrr       2
 
-    ld[8,16,32,64][++]  r, ra         0110 0ssi aaaa rrrr       3
-    st[8,16,32,64][++]  r, ra         0110 1ssi aaaa rrrr       3
+    ld[8,16,32,64][i]   r, ra         0110 0ssi aaaa rrrr       3
+    st[8,16,32,64][i]   r, ra         0110 1ssi aaaa rrrr       3
     cst[16,32,64][c]    r, v          0111 0ssc bbbb rrrr       3
-    st[8,16,32,64][--]  r             0111 1ss0 bbbb rrrr       3
-    ---                               0111 1--1 ---- ----
+    st[8,16,32,64][d]   r, ra         0111 1ss0 bbbb rrrr       3
+    call                              0111 1-s1 ---- rrrr
 
     custom                            1--- ---- ---- ----
    @end code
@@ -94,7 +95,7 @@ struct bc_context_s
   uintptr_t min_addr;
   uintptr_t max_addr;
   uint16_t op_count;
-  bool_t allow_call;
+  bool_t allow_ccall;
 #endif
 };
 
@@ -151,14 +152,14 @@ bc_set_addr_range(struct bc_context_s *ctx, uintptr_t min, uintptr_t max)
 #endif
 }
 
-/** @This can be used to disallow use of the @ref #BC_CALL instruction
+/** @This can be used to disallow use of the @ref #BC_CCALL instruction
     in the bytecode. If the @ref #CONFIG_MUTEK_BYTECODE_CHECKING token
     is not defined, this function has no effect. */
 static inline void
-bc_allow_call(struct bc_context_s *ctx, bool_t allow)
+bc_allow_ccall(struct bc_context_s *ctx, bool_t allow)
 {
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
-  ctx->allow_call = allow;
+  ctx->allow_ccall = allow;
 #endif
 }
 
@@ -197,36 +198,42 @@ enum bc_opcode_e
   BC_OP_FMT1 = 0x40,
     BC_OP_EQ   = 0x40,
     BC_OP_NEQ  = 0x41,
-    BC_OP_RES1 = 0x42,
-    BC_OP_RES2 = 0x43,
+    BC_OP_LT   = 0x42,
+    BC_OP_LTEQ = 0x43,
     BC_OP_ADD  = 0x44,
     BC_OP_SUB  = 0x45,
-    BC_OP_RSB  = 0x46,
+    BC_OP_RES  = 0x46,
     BC_OP_MUL  = 0x47,
     BC_OP_OR   = 0x48,
     BC_OP_XOR  = 0x49,
     BC_OP_AND  = 0x4a,
-    BC_OP_CALL = 0x4b,
+    BC_OP_CCALL = 0x4b,
     BC_OP_SHL  = 0x4c,
     BC_OP_SHR  = 0x4d,
     BC_OP_SHRA = 0x4e,
     BC_OP_MOV  = 0x4f,
   BC_OP_FMT2 = 0x50,
     BC_OP_TSTC = 0x50,
-    BC_OP_TSTS = 0x54,
+    BC_OP_TSTS = 0x52,
+    BC_OP_BITC = 0x54,
+    BC_OP_BITS = 0x56,
     BC_OP_SHIL = 0x58,
     BC_OP_SHIR = 0x5c,
   BC_OP_FMT3 = 0x60,
     BC_OP_LD   = 0x60,
+    BC_OP_LDI  = 0x61,
     BC_OP_ST   = 0x68,
+    BC_OP_STI  = 0x69,
     BC_OP_CST  = 0x70,
-    BC_OP_ST2  = 0x78,
+    BC_OP_CSTC = 0x71,
+    BC_OP_STD  = 0x78,
+    BC_OP_CALL = 0x79,
 };
 
-/** @see #BC_CALL_FUNCTION */
-#define BC_CALL_FUNCTION(n) uintptr_t (n)(struct bc_context_s *ctx, uintptr_t dst)
-/** C function type invoked by the @ref #BC_CALL instruction. */
-typedef BC_CALL_FUNCTION(bc_call_function_t);
+/** @see #BC_CCALL_FUNCTION */
+#define BC_CCALL_FUNCTION(n) uintptr_t (n)(struct bc_context_s *ctx, uintptr_t dst)
+/** C function type invoked by the @ref #BC_CCALL instruction. */
+typedef BC_CCALL_FUNCTION(bc_ccall_function_t);
 
 /** @multiple @internal */
 #define BC_FMT0(op, value, reg) (((op) << 8) | (((value) & 0xff) << 4) | ((reg) & 0xf))
@@ -255,10 +262,17 @@ typedef BC_CALL_FUNCTION(bc_call_function_t);
 
 /** Jump relative and save the return address in a register.
 
-    Branch targets can be computed by the bc_labels.pl script.
+    Relative branch targets can be computed by the bc_labels.pl script.
     @see #BC_JMP
 */
 #define BC_JMPL(r, d)       BC_FMT0(BC_OP_JMP,  d, r)
+
+/** Jump absolute and save the return address in a register.
+
+    Absolute branch targets can be computed by the bc_labels.pl script.
+    This instruction is 2 words long.
+*/
+#define BC_CALL(r, pc)      BC_FMT3(BC_OP_CALL, 0, r, 0, 0), ((pc) & 0xffff)
 
 /** If the jump target is backward, this instruction decrements the
     register which should not be initially zero and branch if the
@@ -273,10 +287,17 @@ typedef BC_CALL_FUNCTION(bc_call_function_t);
 */
 #define BC_LOOP(r, d)       BC_FMT0(BC_OP_LOOP, d, r)
 
-/** Compare two registers and skip the next instruction if not equal */
+/** Compare two registers and skip the next instruction if they are not equal. */
 #define BC_EQ(r1, r2)         BC_FMT1(BC_OP_EQ, r1, r2)
-/** Compare two registers and skip the next instruction if equal */
+/** Compare two registers and skip the next instruction if thay are equal. */
 #define BC_NEQ(r1, r2)        BC_FMT1(BC_OP_NEQ, r1, r2)
+
+/** Compare two registers and skip the next instruction if
+    first reg >= second reg. */
+#define BC_LT(r1, r2)         BC_FMT1(BC_OP_LT, r1, r2)
+/** Compare two registers and skip the next instruction if
+    first reg > second reg. */
+#define BC_LTEQ(r1, r2)       BC_FMT1(BC_OP_LTEQ, r1, r2)
 
 /** Copy value between 2 registers */
 #define BC_MOV(dst, src)      BC_FMT1(BC_OP_MOV, dst, src)
@@ -284,17 +305,15 @@ typedef BC_CALL_FUNCTION(bc_call_function_t);
 #define BC_ADD(dst, src)      BC_FMT1(BC_OP_ADD, dst, src)
 /** Subtract the value of the source register from the destination register */
 #define BC_SUB(dst, src)      BC_FMT1(BC_OP_SUB, dst, src)
-/** Subtract the value of the destination register from the source register */
-#define BC_RSUB(dst, src)     BC_FMT1(BC_OP_RSUB, dst, src)
 /** Multiply the values of the source register and destination registers */
 #define BC_MUL(dst, src)      BC_FMT1(BC_OP_MUL, dst, src)
 
 /** Call a C function. The address of the function is in the source
     register. The value of the destination register is passed to the
     function and the return value is stored back in this same register. 
-    @see bc_call_function_t @see #BC_CALL_FUNCTION
+    @see bc_call_function_t @see #BC_CCALL_FUNCTION
 */
-#define BC_CALL(dst, src)       BC_FMT1(BC_OP_CALL, dst, src)
+#define BC_CCALL(dst, src)       BC_FMT1(BC_OP_CCALL, dst, src)
 
 /** Bitwise or */
 #define BC_OR(dst, src)       BC_FMT1(BC_OP_OR, dst, src)
@@ -310,16 +329,23 @@ typedef BC_CALL_FUNCTION(bc_call_function_t);
 #define BC_SHRA(dst, src)     BC_FMT1(BC_OP_SHRA, dst, src)
 
 /** Extract a bit from a register and skip the next instruction if the
-    bit is not cleared. */
+    bit is not cleared. Bit index is in the range [0,31]. */
 #define BC_TSTC(r, bit)       BC_FMT2(BC_OP_TSTC, r, bit)
 /** Extract a bit from a register and skip the next instruction if the
-    bit is not set. */
+    bit is not set. Bit index is in the range [0,31]. */
 #define BC_TSTS(r, bit)       BC_FMT2(BC_OP_TSTS, r, bit)
 
-/** Left shift a register by a constant amount */
-#define BC_SHIL(r, bit)       BC_FMT2(BC_OP_SHIL, r, bit)
-/** Right shift a register by a constant amount */
-#define BC_SHIR(r, bit)       BC_FMT2(BC_OP_SHIR, r, bit)
+/** Clear a bit in a register. Bit index is in the range [0,31]. */
+#define BC_BITC(r, bit)       BC_FMT2(BC_OP_BITC, r, bit)
+/** Set a bit in a register. Bit index is in the range [0,31]. */
+#define BC_BITS(r, bit)       BC_FMT2(BC_OP_BITS, r, bit)
+
+/** Left shift a register by a constant amount.
+    Amount must be in the range [0,63]. */
+#define BC_SHIL(r, amount)    BC_FMT2(BC_OP_SHIL, r, amount)
+/** Right shift a register by a constant amount.
+    Amount must be in the range [0,63]. */
+#define BC_SHIR(r, amount)    BC_FMT2(BC_OP_SHIR, r, amount)
 
 /** Load a value from a memory address given by a register into an
     other register. @multiple */
@@ -353,10 +379,10 @@ typedef BC_CALL_FUNCTION(bc_call_function_t);
 /** Subtract the width of the access to the address register then
     store a value from an other register to the resulting memory
     address. @multiple */
-#define BC_ST8D(r, a)         BC_FMT3(BC_OP_ST2, 0, r, a, 0)
-#define BC_ST16D(r, a)        BC_FMT3(BC_OP_ST2, 1, r, a, 0)
-#define BC_ST32D(r, a)        BC_FMT3(BC_OP_ST2, 2, r, a, 0)
-#define BC_ST64D(r, a)        BC_FMT3(BC_OP_ST2, 3, r, a, 0)
+#define BC_ST8D(r, a)         BC_FMT3(BC_OP_STD, 0, r, a, 0)
+#define BC_ST16D(r, a)        BC_FMT3(BC_OP_STD, 1, r, a, 0)
+#define BC_ST32D(r, a)        BC_FMT3(BC_OP_STD, 2, r, a, 0)
+#define BC_ST64D(r, a)        BC_FMT3(BC_OP_STD, 3, r, a, 0)
 
 /** Load/Store operations with access width matching pointer
     width. @multiple @see {#BC_LD32, #BC_LD32I, #BC_ST32, #BC_ST32I, #BC_ST32I, #BC_ST32D} */
@@ -381,17 +407,17 @@ typedef BC_CALL_FUNCTION(bc_call_function_t);
 #endif
 
 /** Set a register to an unsigned 16 bits constant. This instruction
-    is 2 instruction words long. */
+    is 2 words long. */
 #define BC_CST16(r, v)        BC_FMT3(BC_OP_CST, 0, r, 0, 0), ((v) & 0xffff)
 /** Set a register to an unsigned 16 bits constant. The constant may
     be shifted by a mulitple of 4 bits and complemented. This
-    instruction is 2 instruction words long. */
+    instruction is 2 words long. */
 #define BC_CST16X(r, v, s, c) BC_FMT3(BC_OP_CST, 0, r, (s)/4, c), ((v) & 0xffff)
 /** Set a register to an unsigned 32 bits constant. This instruction
-    is 3 instruction words long. */
+    is 3 words long. */
 #define BC_CST32(r, v)        BC_FMT3(BC_OP_CST, 1, r, 0, 0), (((v) >> 16) & 0xffff), ((v) & 0xffff)
 /** Set a register to an unsigned 32 bits constant. This instruction
-    is 5 instruction words long. */
+    is 5 words long. */
 #define BC_CST64(r, v)        BC_FMT3(BC_OP_CST, 3, r, 0, 0), (((v) >> 48) & 0xffff), (((v) >> 32) & 0xffff), (((v) >> 16) & 0xffff), ((v) & 0xffff)
 
 /** Custom bytecode instruction */

@@ -44,10 +44,15 @@ my $longhelp = "
  Branch targets values will be inserted or adjusted when the proper
  comment is used inside bytecode instruction parameters:
  
-     BC_BRANCH_INSTRUCTION(..., -18 /* goto:name */),
- 
-     BC_MOV(..., 42 /* addr:name */),
- 
+     BC_JMP(...,  -18 /* :name */),       /* relative */
+     BC_JMPL(..., -18 /* :name */),       /* relative */
+     BC_LOOP(..., -18 /* :name */),       /* relative */
+
+     BC_CALL(...,  42 /* :name */),       /* absolute - 1 */
+     BC_CST16(..., 42 /* :name */),       /* absolute - 1 */
+
+     BC_ANY(... 42 /* abs:name */ ...),   /* absolute */
+
  Branch targets are also updated inside macros defined like this:
  
      #define MACRO(........)  \\
@@ -66,7 +71,7 @@ my $longhelp = "
  declaration they appear in:
 
       /* change the bytecode entry point */
-      bc_set_reg(ctx, 15, /* addr:foo:name */);
+      bc_set_reg(ctx, 15, /* :foo:name */);
 
 ";
 
@@ -146,13 +151,13 @@ my $addr;
 my %opcodes = (
     "BC_END" => 1,    "BC_DUMP" => 1,  "BC_ABORT" => 1,
     "BC_ADD8" => 1,   "BC_CST8" => 1,
-    "BC_JMP" => 1,    "BC_JMPL" => 1,    "BC_LOOP" => 1,
-    "BC_EQ" => 1,     "BC_NEQ" => 1,
-    "BC_MOV" => 1,    "BC_ADD" => 1,   "BC_SUB" => 1,     "BC_RSUB" => 1,
-    "BC_MUL" => 1,    "BC_CALL" => 1,  "BC_OR" => 1,      "BC_XOR" => 1,
+    "BC_JMP" => 1,    "BC_JMPL" => 1,  "BC_LOOP" => 1,   "BC_CALL" => 2,
+    "BC_LT" => 1,     "BC_LTEQ" => 1,  "BC_EQ" => 1,     "BC_NEQ" => 1,
+    "BC_MOV" => 1,    "BC_ADD" => 1,   "BC_SUB" => 1,
+    "BC_MUL" => 1,    "BC_CCALL" => 1, "BC_OR" => 1,      "BC_XOR" => 1,
     "BC_AND" => 1,    "BC_SHL" => 1,   "BC_SHR" => 1,     "BC_SHRA" => 1,
-    "BC_SHRA" => 1,   "BC_TSTC" => 1,  "BC_TSTS" => 1,    "BC_SHIL" => 1,
-    "BC_SHIR" => 1,  
+    "BC_TSTC" => 1,   "BC_TSTS" => 1,
+    "BC_BITS" => 1,   "BC_BITC" => 1,  "BC_SHIL" => 1,   "BC_SHIR" => 1,
     "BC_LD8" => 1,    "BC_LD16" => 1,  "BC_LD32" => 1,    "BC_LD64" => 1,
     "BC_LD8I" => 1,   "BC_LD16I" => 1, "BC_LD32I" => 1,   "BC_LD64I" => 1,
     "BC_ST8" => 1,    "BC_ST16" => 1,  "BC_ST32" => 1,    "BC_ST64" => 1,
@@ -264,16 +269,25 @@ sub label_goto
     return $block->{labels}->{$lbl} - $block->{lines}->{$lnum};
 }
 
+sub label_call
+{
+    my ( $lbl, $lnum ) = @_;
+    return label_addr($lbl, $lnum) - 1;
+}
+
 parse( sub {
            my ( $line, $lnum ) = @_;
-	   $line =~ s/ (\s*)-?\d*\s* \/ \* \s*addr:(\w+):(\w+) /$1.label_addr($3,$lnum,$2).' \/* addr:'.$2.':'.$3/gex;
+	   $line =~ s/ (\s*)-?\d*\s* \/ \* \s*:(\w+):(\w+) /$1.label_addr($3,$lnum,$2).' \/* :'.$2.':'.$3/gex;
 	   @src[$lnum] = $line;
        },
        sub {
            my ( $line, $lnum ) = @_;
 
-	   $line =~ s/ (\s*)-?\d*\s* \/ \* \s*goto:(\w+) /$1.label_goto($2,$lnum).' \/* goto:'.$2/gex;
-	   $line =~ s/ (\s*)-?\d*\s* \/ \* \s*addr:(\w+) /$1.label_addr($2,$lnum).' \/* addr:'.$2/gex;
+	   unless ( $line =~ s/ (\s*\bBC_(?:JMPL?|JMP|LOOP)\b.*?) -?\d*\s* \/\* \s*:(\w+) /$1.label_goto($2,$lnum).' \/* :'.$2/gex ) {
+               unless ( $line =~ s/ (\s*\bBC_(?:CALL|CST\d\d)\b.*?)           -?\d*\s* \/\* \s*:(\w+) /$1.label_call($2,$lnum).' \/* :'.$2/gex ) {
+                   $line =~ s/ (\s*)-?\d*\s* \/ \* \s*abs:(\w+) /$1.label_addr($2,$lnum).' \/* abs:'.$2/gex;
+               }
+           }
 
 	   @src[$lnum] = $line;
        }, 

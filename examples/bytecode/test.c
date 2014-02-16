@@ -7,7 +7,7 @@
 #define BC_CUSTOM_PRINTS(r) \
   BC_CUSTOM(0x2000 | r)
 
-static BC_CALL_FUNCTION(c_func)
+static BC_CCALL_FUNCTION(c_func)
 {
     return dst * 13;
 }
@@ -16,26 +16,50 @@ void app_start()
 {
   static const bc_opcode_t test[] = {
 
-    /* CST8, CALL, NEQ */
+    /* CST8, CCALL, NEQ */
     BC_CST8(2, 11),
-    BC_CALL(2, 1),
+    BC_CCALL(2, 1),
     BC_CST8(3, 143),
     BC_NEQ(3, 2),
     BC_ABORT(),
 
-    /* CST8, XOR, NEQ */
+    /* CST8, XOR, NEQ, EQ */
     BC_CST8(1, 0),
     BC_XOR(2, 2),
     BC_NEQ(1, 2),
+    BC_ABORT(),
+    BC_EQ(1, 2),
+    BC_JMP(1),
     BC_ABORT(),
 
     /* CST8, EQ, ADD */
     BC_CST8(1, 42),
     BC_EQ(1, 2),
     BC_ABORT(),
+    BC_NEQ(1, 2),
+    BC_JMP(1),
+    BC_ABORT(),
     BC_ADD8(2, 21),
     BC_ADD8(2, 21),
     BC_NEQ(1, 2),
+    BC_ABORT(),
+
+    /* LT, LTEQ */
+    BC_LT(1, 2),
+    BC_ABORT(),
+    BC_LTEQ(1, 2),
+    BC_JMP(1),
+    BC_ABORT(),
+    BC_ADD8(1, 1),
+    BC_LT(1, 2),
+    BC_ABORT(),
+    BC_LTEQ(1, 2),
+    BC_ABORT(),
+    BC_LT(2, 1),
+    BC_JMP(1),
+    BC_ABORT(),
+    BC_LTEQ(2, 1),
+    BC_JMP(1),
     BC_ABORT(),
 
     /* LOOP backward, ADD8 positiv */
@@ -43,7 +67,7 @@ void app_start()
     BC_CST8(2, 5),
   /* label:add */
     BC_ADD8(1, 2),
-    BC_LOOP(2, -2 /* goto:add */),
+    BC_LOOP(2, -2 /* :add */),
     BC_CST8(2, 10),
     BC_NEQ(1, 2),
     BC_ABORT(),
@@ -53,7 +77,7 @@ void app_start()
     BC_CST8(2, 5),
   /* label:add8 */
     BC_ADD8(1, -2),
-    BC_LOOP(2, -2 /* goto:add8 */),
+    BC_LOOP(2, -2 /* :add8 */),
     BC_CST8(2, 5),
     BC_NEQ(1, 2),
     BC_ABORT(),
@@ -62,9 +86,9 @@ void app_start()
     BC_CST8(1, 0),
     BC_CST8(2, 5),
   /* label:re */
-    BC_LOOP(2, 2 /* goto:fwd */),
+    BC_LOOP(2, 2 /* :fwd */),
     BC_ADD8(1, 2),
-    BC_JMP( -3 /* goto:re */),
+    BC_JMP(-3 /* :re */),
   /* label:fwd */
     BC_CST8(2, 10),
     BC_NEQ(1, 2),
@@ -74,13 +98,37 @@ void app_start()
     BC_CST8(1, 0x55),
     BC_TSTC(1, 2),
     BC_ABORT(),
+    BC_TSTS(1, 2),
+    BC_JMP(1),
+    BC_ABORT(),
     BC_TSTS(1, 1),
+    BC_ABORT(),
+    BC_TSTC(1, 1),
+    BC_JMP(1),
     BC_ABORT(),
     BC_TSTC(1, 1),
     BC_ADD(1, 1),
     BC_TSTC(1, 1),
     BC_ABORT(),
+    BC_TSTS(1, 1),
+    BC_JMP(1),
+    BC_ABORT(),
     BC_TSTS(1, 2),
+    BC_ABORT(),
+    BC_TSTC(1, 2),
+    BC_JMP(1),
+    BC_ABORT(),
+
+    /* BITC, BITS */
+    BC_CST8(1, 0x0f),
+    BC_BITS(1, 5),
+    BC_TSTC(1, 5),
+    BC_ABORT(),
+    BC_BITC(1, 2),
+    BC_TSTS(1, 2),
+    BC_ABORT(),
+    BC_CST8(2, 0x2b),
+    BC_NEQ(1, 2),
     BC_ABORT(),
 
     /* LD8, LD8I */
@@ -148,7 +196,7 @@ void app_start()
     BC_MOV(13, 0),              /* setup stack ptr */
     BC_ADD8(13, 120),
     BC_CST8(1, 5),              /* param */
-    BC_JMPL(10, 4 /* goto:fact */),  /* call */
+    BC_CALL(10, 165 /* :fact */),
     BC_CST8(3, 120),            /* test return value */
     BC_NEQ(1, 3),
     BC_ABORT(),
@@ -159,10 +207,10 @@ void app_start()
     BC_ST16D(10, 13),
     BC_CST8(2, 1),   
     BC_EQ(1, 2),     
-    BC_JMP( 5 /* goto:fact_end */),
+    BC_JMP(5 /* :fact_end */),
     BC_ST16D(1, 13), 
     BC_ADD8(1, -1),  
-    BC_JMPL(10, -7 /* goto:fact*/),  /* call */
+    BC_JMPL(10, -7 /* :fact */),  /* call */
     BC_LD16I(2, 13), 
     BC_MUL(1, 2),    
   /* label:fact_end */

@@ -40,7 +40,7 @@ void bc_init_va(struct bc_context_s *ctx,
   ctx->op_count = code_sizeof / 2;
   ctx->min_addr = 0;
   ctx->max_addr = (intptr_t)-1;
-  ctx->allow_call = 1;
+  ctx->allow_ccall = 1;
 #endif
 }
 
@@ -55,6 +55,65 @@ bc_init(struct bc_context_s *ctx,
   va_end(ap);
 }
 
+#ifdef CONFIG_MUTEK_BYTECODE_DEBUG
+static const char * bc_opname(uint16_t op)
+{
+  struct op_s
+  {
+    uint16_t   mask;
+    uint16_t   op;
+    const char *name;
+  };
+  static const struct op_s ops[] =
+  {
+    { 0x8000, 0x8000, "custom" },
+    { 0xffff, 0x0000, "end" },
+    { 0xffff, 0x0001, "dump" },
+    { 0xffff, 0x0002, "abort" },
+    { 0xf000, BC_OP_ADD8  << 8, "add8" },
+    { 0xf000, BC_OP_CST8  << 8, "cst8" },
+    { 0xf00f, (BC_OP_JMP  << 8) | 0xf, "jmp" },
+    { 0xf000, BC_OP_JMP   << 8, "jmpl" },
+    { 0xf000, BC_OP_LOOP  << 8, "loop" },
+    { 0xff00, BC_OP_EQ    << 8, "eq" },
+    { 0xff00, BC_OP_NEQ   << 8, "neq" },
+    { 0xff00, BC_OP_LT    << 8, "lt" },
+    { 0xff00, BC_OP_LTEQ  << 8, "lteq" },
+    { 0xff00, BC_OP_ADD   << 8, "add" },
+    { 0xff00, BC_OP_SUB   << 8, "sub" },
+    { 0xff00, BC_OP_MUL   << 8, "mul" },
+    { 0xff00, BC_OP_OR    << 8, "or" },
+    { 0xff00, BC_OP_XOR   << 8, "xor" },
+    { 0xff00, BC_OP_AND   << 8, "and" },
+    { 0xff00, BC_OP_CCALL << 8, "ccall" },
+    { 0xff00, BC_OP_SHL   << 8, "shl" },
+    { 0xff00, BC_OP_SHR   << 8, "shr" },
+    { 0xff00, BC_OP_SHRA  << 8, "shra" },
+    { 0xff00, BC_OP_MOV   << 8, "mov" },
+    { 0xfe00, BC_OP_TSTC  << 8, "tstc" },
+    { 0xfe00, BC_OP_TSTS  << 8, "tsts" },
+    { 0xfe00, BC_OP_BITC  << 8, "bitc" },
+    { 0xfe00, BC_OP_BITS  << 8, "bits" },
+    { 0xfc00, BC_OP_SHIL  << 8, "shil" },
+    { 0xfc00, BC_OP_SHIR  << 8, "shir" },
+    { 0xf900, BC_OP_LD    << 8, "ld" },
+    { 0xf900, BC_OP_LDI   << 8, "ldi" },
+    { 0xf900, BC_OP_ST    << 8, "st" },
+    { 0xf900, BC_OP_STI   << 8, "sti" },
+    { 0xf900, BC_OP_CST   << 8, "cst" },
+    { 0xf900, BC_OP_CSTC  << 8, "cstc" },
+    { 0xf900, BC_OP_STD   << 8, "std" },
+    { 0xf900, BC_OP_CALL  << 8, "call" },
+    { 0x0000, 0x0000, "invalid" },
+  };
+  uint_fast8_t i;
+  for (i = 0; ; i++)
+    if ((op & ops[i].mask) == ops[i].op)
+      return ops[i].name;
+  return NULL;
+}
+#endif
+
 void bc_dump(const struct bc_context_s *ctx)
 {
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
@@ -62,12 +121,13 @@ void bc_dump(const struct bc_context_s *ctx)
   uint16_t op = 0;
 # ifdef CONFIG_MUTEK_BYTECODE_CHECKING
   if (ctx->v[15] < ctx->op_count)
-    op = ctx->code[ctx->v[15]];
 # endif
+    op = ctx->code[ctx->v[15]];
 
-  printk("\nbytecode: dump: pc=%u, opcode=%04x\n", ctx->v[15], op);
+  printk("\nbytecode: pc=%u, opcode=%04x (%s), state before op:\n",
+         ctx->v[15], op, bc_opname(op));
   for (i = 0; i < 16; i++)
-    printk("r%02u=%016lx%c", i, ctx->v[i], (i + 1) % 4 ? ' ' : '\n');
+    printk("r%02u=%p%c", i, ctx->v[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
 }
 
@@ -162,11 +222,11 @@ static uint_fast8_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
   do {
     static const bs_dispatch_t dispatch[16] = {
       [BC_OP_EQ & 0x0f] =  BC_DISPATCH(EQ),    [BC_OP_NEQ & 0x0f] = BC_DISPATCH(NEQ),
-      [BC_OP_RES1 & 0x0f] = BC_DISPATCH(BAD),  [BC_OP_RES2 & 0x0f] = BC_DISPATCH(BAD),
+      [BC_OP_LT & 0x0f] =  BC_DISPATCH(LT),    [BC_OP_LTEQ & 0x0f] = BC_DISPATCH(LTEQ),
       [BC_OP_ADD & 0x0f] = BC_DISPATCH(ADD),   [BC_OP_SUB & 0x0f] = BC_DISPATCH(SUB),
-      [BC_OP_RSB & 0x0f] = BC_DISPATCH(RSB),   [BC_OP_MUL & 0x0f] = BC_DISPATCH(MUL),
+      [BC_OP_RES & 0x0f] = BC_DISPATCH(RES),   [BC_OP_MUL & 0x0f] = BC_DISPATCH(MUL),
       [BC_OP_OR & 0x0f]  = BC_DISPATCH(OR),    [BC_OP_XOR & 0x0f] = BC_DISPATCH(XOR),
-      [BC_OP_AND & 0x0f] = BC_DISPATCH(AND),   [BC_OP_CALL & 0x0f] = BC_DISPATCH(CALL),
+      [BC_OP_AND & 0x0f] = BC_DISPATCH(AND),   [BC_OP_CCALL & 0x0f] = BC_DISPATCH(CCALL),
       [BC_OP_SHL & 0x0f] = BC_DISPATCH(SHL),   [BC_OP_SHR & 0x0f] = BC_DISPATCH(SHR),
       [BC_OP_SHRA & 0x0f] = BC_DISPATCH(SHRA), [BC_OP_MOV & 0x0f] = BC_DISPATCH(MOV),
     };
@@ -178,9 +238,6 @@ static uint_fast8_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
     break;
   dispatch_SUB:
     dst -= src;
-    break;
-  dispatch_RSB:
-    dst = src - dst;
     break;
   dispatch_MUL:
     dst *= src;
@@ -211,9 +268,14 @@ static uint_fast8_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
     if ((op ^ (dst != src)) & 1)
       ctx->v[15]++;
     break;
-  dispatch_CALL:
+  dispatch_LT:
+  dispatch_LTEQ:
+    if (!((dst < src) | (op & 1 & (dst == src))))
+      ctx->v[15]++;
+    break;
+  dispatch_CCALL:
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
-    if (!ctx->allow_call)
+    if (!ctx->allow_ccall)
       {
 # ifdef CONFIG_MUTEK_BYTECODE_DEBUG
         printk("bytecode: C function call is not allowed at pc=%u\n", ctx->v[15]);
@@ -221,7 +283,8 @@ static uint_fast8_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
         return -1;
       }
 #endif
-    dst = ((bc_call_function_t*)src)(ctx, dst);
+    dst = ((bc_ccall_function_t*)src)(ctx, dst);
+  dispatch_RES:
     break;
   } while (0);
 
@@ -231,7 +294,7 @@ static uint_fast8_t bc_run_alu(struct bc_context_s *ctx, uint16_t op)
 
 uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles)
 {
-  uint16_t op;
+  uint16_t op = 0;
 
   for (;; ctx->v[15]++)
     {
@@ -264,7 +327,7 @@ uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles)
 	  [BC_OP_ADD8 >> 4] = BC_DISPATCH(add8), [BC_OP_CST8 >> 4] = BC_DISPATCH(cst8),
 	  [BC_OP_JMP  >> 4]  = BC_DISPATCH(jmp), [BC_OP_LOOP >> 4] = BC_DISPATCH(loop),
 	  [BC_OP_FMT1 >> 4] = BC_DISPATCH(alu),  [BC_OP_FMT2 >> 4] = BC_DISPATCH(fmt2),
-	  [BC_OP_LD >> 4]   = BC_DISPATCH(ldst), [BC_OP_CST >> 4] = BC_DISPATCH(cstn),
+	  [BC_OP_LD >> 4]   = BC_DISPATCH(ldst), [BC_OP_CST >> 4] = BC_DISPATCH(cstn_call),
 	};
 	BC_DISPATCH_GOTO((op >> 12) & 0x7);
 
@@ -320,15 +383,21 @@ uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles)
       dispatch_fmt2: {
 	  uint_fast8_t bit = (op >> 4) & 0x3f;
 	  if (op & 0x0800)
-	    *dst = op & 0x0400 ? *dst >> bit : *dst << bit; /* shil */
-	  else
-	    if (((*dst >> bit) ^ (op >> 10)) & 1)           /* tst */
+	    *dst = op & 0x0400 ? *dst >> bit : *dst << bit; /* BC_SHI* */
+	  else {
+            bit &= 0x1f;
+            uintptr_t mask = 1U << bit;
+            uintptr_t vmask = op & 0x0200 ? mask : 0;
+            if (op & 0x0400)                                /* BC_BIT* */
+              *dst = (*dst & ~mask) | vmask;
+	    else if (((*dst ^ vmask) >> bit) & 1)           /* BC_TST* */
 	      ctx->v[15]++;
+          }
 	  break;
 	}
 
-      dispatch_cstn: {
-	  if (!(op & 0x0800))
+      dispatch_cstn_call: {
+	  if ((op & 0x0900) != 0x0800)
 	    {
 	      uint_fast8_t c = ((op >> 9) & 0x3) + 1;
 	      uintptr_t x = 0;
@@ -339,12 +408,20 @@ uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles)
 	      while (c--)
 		x = (x << 16) | ctx->code[++ctx->v[15]];
 	      x <<= ((op & 0x00f0) >> 2);
-	      if (op & 0x0100)
-		x = ~x;
-	      *dst = x;
+              if (op & 0x0800)  /* BC_CALL */
+                {
+                  *dst = ctx->v[15];
+                  ctx->v[15] = x;
+                }
+	      else              /* BC_CSTN */
+                {
+                  if (op & 0x0100)
+                    x = ~x;
+                  *dst = x;
+                }
 	      break;
 	    }
-	}
+        }
 
       dispatch_ldst:
 	if (bc_run_ldst(ctx, op))
