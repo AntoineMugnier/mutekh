@@ -173,9 +173,9 @@ error_t system(const char *cmd);
   typedef typeof(n) _t;                                                 \
   _t gpct_n = (n);                                                      \
                                                                         \
-  __builtin_types_compatible_p(typeof(n), __compiler_slong_t) ? __builtin_absl(n) : \
-  __builtin_types_compatible_p(typeof(n), __compiler_slonglong_t) ? __builtin_absll(n) : \
-  __builtin_abs(n);                                                     \
+  __builtin_types_compatible_p(typeof(gpct_n), __compiler_slong_t) ? __builtin_labs(gpct_n) : \
+  __builtin_types_compatible_p(typeof(gpct_n), __compiler_slonglong_t) ? __builtin_llabs(gpct_n) : \
+  __builtin_abs(gpct_n);                                                \
 })
 
 #define labs(x) abs(x)
