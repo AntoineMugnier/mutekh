@@ -76,6 +76,7 @@ my $longhelp = "
 ";
 
 use strict;
+use File::Copy;
 
 my $err = 0;
 
@@ -83,6 +84,7 @@ if (not defined @ARGV[0])
 {
     print STDERR "usages: bc_labels.pl file.c\n";
     print STDERR "        bc_labels.pl input_file.c output_file.c\n";
+    print STDERR "        bc_labels.pl input_file.c stdout\n";
     print STDERR "        bc_labels.pl help\n";
     exit 2;
 }
@@ -174,9 +176,17 @@ parse( sub {
        sub {
            my ( $line, $lnum, $name ) = @_;
 
-	   if ( $line =~ /^\s*\/\*\s*label:\s*(\w+)\s*\*\// )
+	   if ( $line =~ /^\s*\/\*\s*label:\s*(\w+)\s*\d*\s*\*\// )
 	   {
-	       $block->{labels}->{$1} = $addr;
+	       if (defined $block->{labels}->{$1})
+               {
+                   print STDERR "error:".$in.":".($lnum+1).":label `$1' defined multiple times.\n";
+                   $err = 1;
+               }
+               else
+               {
+                   $block->{labels}->{$1} = $addr;
+               }
 	   }
 	   elsif ( $line =~ /\/\* \s*size:\s*(\d+)\s* \*\//x )
 	   {
@@ -283,11 +293,26 @@ parse( sub {
        sub {
            my ( $line, $lnum ) = @_;
 
-	   unless ( $line =~ s/ (\s*\bBC_(?:JMPL?|JMP|LOOP)\b.*?) -?\d*\s* \/\* \s*:(\w+) /$1.label_goto($2,$lnum).' \/* :'.$2/gex ) {
+	   if ( $line =~ /^(\s*\bBC_(?:JMPL?|JMP|LOOP)\b.*?) -?\d*\s* \/\* \s*:(\w+)(.*)$/x ) {
+
+               my $d = label_goto($2, $lnum);
+
+               $line = $1.$d.' /* :'.$2.$3;
+
+               if ($d > 127 || $d < -128)
+               {
+                   print STDERR "error:".$in.":".($lnum+1).":displacement exceed 8 bits signed value.\n";
+                   $err = 1;
+               }
+
+           } else {
+
                unless ( $line =~ s/ (\s*\bBC_(?:CALL|CST\d\d)\b.*?)           -?\d*\s* \/\* \s*:(\w+) /$1.label_call($2,$lnum).' \/* :'.$2/gex ) {
                    $line =~ s/ (\s*)-?\d*\s* \/ \* \s*abs:(\w+) /$1.label_addr($2,$lnum).' \/* abs:'.$2/gex;
                }
            }
+
+	   $line =~ s/^(\s*\/\*\s*label:\s*)(\w+)\s*\d*\s*(\s*\*\/)/$1.$2.' '.label_addr($2,$lnum).' '.$3/gex;
 
 	   @src[$lnum] = $line;
        }, 
@@ -301,9 +326,18 @@ parse( sub {
 
 if (!$err) {
     my $out = defined @ARGV[1] ? @ARGV[1] : @ARGV[0];
-    open(OUT, ">$out") || die "unable to open output file `$out'.\n";
-    print OUT @src;
-    close(OUT);
+
+    if ($out eq "stdout")
+    {
+        print @src;
+    }
+    else
+    {
+        copy($out, $out.'~') or die "unable to create $out~" if -e $out;
+        open(OUT, ">$out") || die "unable to open output file `$out'.\n";
+        print OUT @src;
+        close(OUT);
+    }
 }
 
 exit $err;
