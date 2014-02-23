@@ -236,35 +236,70 @@ config_depend(CONFIG_DEVICE_TIMER)
 error_t dev_timer_init_sec(struct device_timer_s *tdev, dev_timer_delay_t *delay,
                            dev_timer_delay_t s_delay, uint32_t r_unit);
 
-/** @This computes a shift amount which can be used for fast
-    conversion from a second based delay value to a delay value in
-    timer unit. Shifting will result in a delay which is not less than
-    the given delay in seconds. A negative shift amount indicates a
-    right shift.
+/** @This computes two shift amounts which can be used for fast
+    conversion between a delay in second based unit and a delay in
+    timer unit. Shifting will result in a delay rounded to the lower
+    or higher power of 2.
 
-    The @ref dev_timer_shift_sec function can be used to perform the
-    actual conversion.
+    Left shifting by the @tt shift_a value when converting from a
+    second based delay will yield a timer delay which can be up to 2
+    times longer. Left shifting by the @tt shift_b value when
+    converting from a second based delay will yield a timer delay
+    which will be divided by 2 in the worst case. A negative value
+    implies a right shift in this case. The @ref dev_timer_delay_shift_s2t
+    function can be used to perform those conversions.
+
+    Right shifting by the @tt shift_b value when converting from a
+    timer delay will yield a second based delay which can be up to 2
+    times longer. Right shifting by the @tt shift_a value when
+    converting from a timer delay will yield a second based delay
+    which will be divided by 2 in the worst case. A negative value
+    implies a left shift in this case. The @ref dev_timer_delay_shift_t2s
+    function can be used to perform those conversions.
+
+    Either the @tt shift_a or the @tt shift_b pointer may be @tt NULL.
 */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_shift_sec(struct device_timer_s *tdev, int_fast8_t *shift,
+error_t dev_timer_shift_sec(struct device_timer_s *tdev,
+                            int8_t *shift_a, int8_t *shift_b,
                             dev_timer_delay_t s_delay, uint32_t r_unit);
 
-/** @This applies the shift amount computed by the @ref dev_timer_shift_sec function. */
+/** @This applies the shift amount computed by the @ref
+    dev_timer_shift_sec function. The conversion range can be checked
+    by calling @ref dev_timer_delay_check_s2t. */
 config_depend(CONFIG_DEVICE_TIMER)
 static inline dev_timer_delay_t
-dev_timer_delay_shift(int_fast8_t shift, dev_timer_delay_t sec)
+dev_timer_delay_shift_s2t(int_fast8_t shift, dev_timer_delay_t delay)
 {
-  dev_timer_delay_t r;
-  if (shift > 0)
-    {
-      r = sec << shift;
-      return r ? : -1;
-    }
-  else
-    {
-      r = sec >> -shift; 
-      return r ? r : 1;
-    }
+  return shift > 0 ? delay << shift : delay >> -shift;
+}
+
+/** @This checks the range of the specified delay value for conversion
+    by the @ref dev_timer_delay_shift_s2t function. */
+config_depend(CONFIG_DEVICE_TIMER)
+static inline error_t
+dev_timer_delay_check_s2t(int_fast8_t shift, dev_timer_delay_t delay)
+{
+  return shift > 0 && __builtin_clz(delay) < shift ? -ERANGE : 0;
+}
+
+/** @This applies the shift amount computed by the @ref
+    dev_timer_shift_sec function. The conversion range can be checked
+    by calling @ref dev_timer_delay_check_s2t. */
+config_depend(CONFIG_DEVICE_TIMER)
+static inline dev_timer_delay_t
+dev_timer_delay_shift_t2s(int_fast8_t shift, dev_timer_delay_t delay)
+{
+  return shift > 0 ? delay >> shift : delay << -shift;
+}
+
+/** @This checks the range of the specified delay value for conversion
+    by the @ref dev_timer_delay_shift_t2s function. */
+config_depend(CONFIG_DEVICE_TIMER)
+static inline error_t
+dev_timer_delay_check_t2s(int_fast8_t shift, dev_timer_delay_t delay)
+{
+  return shift < 0 && __builtin_clz(delay) < -shift ? -ERANGE : 0;
 }
 
 /** @This checks if the time specified by @tt delay has elapsed since

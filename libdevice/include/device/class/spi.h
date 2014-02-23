@@ -297,9 +297,11 @@ struct dev_spi_ctrl_queue_s
   struct dev_spi_ctrl_request_s *timeout;
   dev_spi_ctrl_queue_root_t     queue;
 
-  int_fast8_t                   delay_shift;
-
   lock_irq_t                    lock;
+
+  /** 1us delay shift, computed by @ref dev_timer_shift_sec @multiple */
+  int8_t                        delay_shift_a;
+  int8_t                        delay_shift_b;
 };
 
 /** This helper function initializes a SPI request queue struct for

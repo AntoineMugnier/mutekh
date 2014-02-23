@@ -32,6 +32,7 @@
 #endif
 
 #include <mutek/kroutine.h>
+#include <stdlib.h> /* abs */
 
 error_t dev_timer_init_sec(struct device_timer_s *tdev, dev_timer_delay_t *delay,
                            dev_timer_delay_t s_delay, uint32_t r_unit)
@@ -53,7 +54,8 @@ error_t dev_timer_init_sec(struct device_timer_s *tdev, dev_timer_delay_t *delay
   return 0;
 }
 
-error_t dev_timer_shift_sec(struct device_timer_s *tdev, int_fast8_t *shift,
+error_t dev_timer_shift_sec(struct device_timer_s *tdev,
+                            int8_t *shift_a, int8_t *shift_b,
                             dev_timer_delay_t s_delay, uint32_t r_unit)
 {
   dev_timer_res_t r = 0;
@@ -70,12 +72,24 @@ error_t dev_timer_shift_sec(struct device_timer_s *tdev, int_fast8_t *shift,
   if (a == 0 || b == 0)
     return -ERANGE;
 
-  uint_fast8_t as = __builtin_clz(a);
-  uint_fast8_t bs = __builtin_clz(b);
+  uint_fast8_t as = __builtin_clzll(a);
+  uint_fast8_t bs = __builtin_clzll(b);
+  a <<= as;
+  b <<= bs;
 
-  *shift = bs - as;
-  if ((a << as) > (b << bs))
-    (*shift)++;
+  int_fast8_t d = bs - as;
+  if (shift_a != NULL)
+    {
+      *shift_a = d + (a > b);
+      if (abs(*shift_a) >= sizeof(dev_timer_delay_t) * 8)
+        return -ERANGE;
+    }
+  if (shift_b != NULL)
+    {
+      *shift_b = d - (a < b);
+      if (abs(*shift_b) >= sizeof(dev_timer_delay_t) * 8)
+        return -ERANGE;
+    }
 
   return 0;
 }

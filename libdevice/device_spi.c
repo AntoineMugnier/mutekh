@@ -347,7 +347,8 @@ static void device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value
             {
             case 0x0000:
               if (op & 0x0080)
-                rq->sleep_before = t + dev_timer_delay_shift(q->delay_shift, bc_get_reg(&rq->vm, op & 0xf));
+                rq->sleep_before = t + dev_timer_delay_shift_s2t(
+                   q->delay_shift_a, bc_get_reg(&rq->vm, op & 0xf));
               switch (op & 0x0300)
                 {
                 case 0x0000:    /* yield */
@@ -521,8 +522,15 @@ dev_spi_request_start(struct device_spi_ctrl_s *scdev,
 
 error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q)
 {
-  if (device_get_param_dev_accessor(dev, "spi-timer", &q->timer, DRIVER_CLASS_TIMER) ||
-      dev_timer_shift_sec(&q->timer, &q->delay_shift, 1, 1000000))
+  error_t err;
+
+  if (!device_get_param_dev_accessor(dev, "spi-timer", &q->timer, DRIVER_CLASS_TIMER))
+    {
+      err = dev_timer_shift_sec(&q->timer, &q->delay_shift_a, &q->delay_shift_b, 1, 1000000);
+      if (err)
+        return err;
+    }
+  else
     device_init_accessor(&q->timer);
 
   q->config = NULL;
