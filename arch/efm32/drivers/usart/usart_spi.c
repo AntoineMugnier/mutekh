@@ -222,31 +222,38 @@ static DEVSPI_CTRL_SELECT(efm32_usart_spi_select)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  /* set polarity */
-  EFM32_USART_CTRL_CSINV_SETVAL(pv->ctrl, !pt);
-
-  switch (pc)
+  if (pv->tr != NULL)
     {
-    case DEV_SPI_CS_TRANSFER:
-      pv->ctrl |= EFM32_USART_CTRL_AUTOCS;
-      pv->route |= EFM32_USART_ROUTE_CSPEN;
-      break;
-
-    case DEV_SPI_CS_DEASSERT:
-      pv->ctrl &= ~EFM32_USART_CTRL_AUTOCS;
-      pv->route |= EFM32_USART_ROUTE_CSPEN;
-      break;
-
-    case DEV_SPI_CS_RELEASE:
-      pv->ctrl &= ~EFM32_USART_CTRL_AUTOCS;
-      pv->route &= ~EFM32_USART_ROUTE_CSPEN;
-      break;
-
-    case DEV_SPI_CS_ASSERT:
-      err = -ENOTSUP;
+      err = -EBUSY;
     }
+  else
+    {
+      /* set polarity */
+      EFM32_USART_CTRL_CSINV_SETVAL(pv->ctrl, !pt);
 
-  cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
+      switch (pc)
+        {
+        case DEV_SPI_CS_TRANSFER:
+          pv->ctrl |= EFM32_USART_CTRL_AUTOCS;
+          pv->route |= EFM32_USART_ROUTE_CSPEN;
+          break;
+
+        case DEV_SPI_CS_DEASSERT:
+          pv->ctrl &= ~EFM32_USART_CTRL_AUTOCS;
+          pv->route |= EFM32_USART_ROUTE_CSPEN;
+          break;
+
+        case DEV_SPI_CS_RELEASE:
+          pv->ctrl &= ~EFM32_USART_CTRL_AUTOCS;
+          pv->route &= ~EFM32_USART_ROUTE_CSPEN;
+          break;
+
+        case DEV_SPI_CS_ASSERT:
+          err = -ENOTSUP;
+        }
+
+      cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
+    }
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -288,11 +295,11 @@ static DEVSPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 
-static DEVSPI_CTRL_REQUEST(efm32_usart_spi_request)
+static DEVSPI_CTRL_QUEUE(efm32_usart_spi_queue)
 {
   struct device_s *dev = scdev->dev;
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;
-  return dev_spi_request_start(scdev, &pv->queue, rq);
+  return &pv->queue;
 }
 
 #endif
@@ -304,7 +311,7 @@ static const struct driver_spi_ctrl_s	efm32_usart_spi_ctrl_drv =
   .f_select		= efm32_usart_spi_select,
   .f_transfer		= efm32_usart_spi_transfer,
 #ifdef CONFIG_DEVICE_SPI_REQUEST
-  .f_request		= efm32_usart_spi_request,
+  .f_queue		= efm32_usart_spi_queue,
 #endif
 };
 

@@ -208,15 +208,26 @@ typedef DEVSPI_CTRL_TRANSFER(devspi_ctrl_transfer_t);
 
 /***************************************** queue getter */
 
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-#define DEVSPI_CTRL_REQUEST(n) void (n)(struct device_spi_ctrl_s *scdev, \
-                                        struct dev_spi_ctrl_request_s *rq)
+#define DEVSPI_CTRL_QUEUE(n) struct dev_spi_ctrl_queue_s * (n)(struct device_spi_ctrl_s *scdev)
 
 /**
-A GPIO device can be used
-      along with the SPI controller in order to support this.
-*/
-typedef DEVSPI_CTRL_REQUEST(devspi_ctrl_request_t);
+   @This returns SPI request queue allocated in the SPI controller
+   device private data.
+ */
+typedef DEVSPI_CTRL_QUEUE(devspi_ctrl_queue_t);
+
+/***************************************** device class */
+
+DRIVER_CLASS_TYPES(spi_ctrl,
+		   devspi_ctrl_config_t         *f_config;
+		   devspi_ctrl_select_t         *f_select;
+		   devspi_ctrl_transfer_t       *f_transfer;
+#ifdef CONFIG_DEVICE_SPI_REQUEST
+		   devspi_ctrl_queue_t        *f_queue;
+#endif
+		   );
+
+#ifdef CONFIG_DEVICE_SPI_REQUEST
 
 /***************************************** request */
 
@@ -241,7 +252,7 @@ struct dev_spi_ctrl_request_s
 
   dev_timer_value_t       sleep_before;
 
-  struct device_spi_ctrl_s *scdev;
+  struct device_spi_ctrl_s scdev;
   struct dev_spi_ctrl_queue_s *queue;
 
   /** If the @ref cs_gpio field is set, this indicates the gpio pin id
@@ -260,8 +271,14 @@ struct dev_spi_ctrl_request_s
   /** Use the controller to driver the chip select pin of the slave */
   bool_t                  cs_ctrl:1;
 
+  /** This flag indicates that the request has not ended yet. */
+  bool_t                  enqueued:1;
+
+  bool_t                  wakeup:1;
+  bool_t                  wakeup_able:1;
+
   /** If this device accessor refers to a gpio device, it will be used
-      to driver the chip select pin and aux pins for this SPI slave. If
+      to drive the chip select pin and aux pins for this SPI slave. If
       it's not valid, the controller chip select mechanism will be
       used if available. */
   struct device_gpio_s    gpio;
@@ -337,14 +354,16 @@ void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q);
    @param scdev pointer to controller device accessor
    @param ep pointer to the SPI endpoint.
 */
-void dev_spi_request_start(struct device_spi_ctrl_s *scdev,
-                           struct dev_spi_ctrl_queue_s *q,
-                           struct dev_spi_ctrl_request_s *rq);
+void dev_spi_request_start(struct dev_spi_ctrl_request_s *rq);
+
 /** This helper function initializes a SPI request structure for use
     in a SPI slave device driver. It is usually called from the slave
     driver initialization function to initialize a request stored in
     the driver private context.
 
+    The @ref dev_spi_ctrl_request_s::scdev accessor is initialized
+    using the device pointed to by the @tt{'spi'} device resource
+    entry of the slave.
 
     The @ref dev_spi_ctrl_request_s::gpio accessor is initialized
     using the device pointed to by the @tt{'gpio'} device resource
@@ -371,18 +390,18 @@ error_t dev_spi_request_init(struct device_s *slave,
     the SPI slave request. @see dev_spi_request_init */
 void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq);
 
-#endif
+/** This function cancels the delay of the current or next @ref
+    #BC_SPI_YIELDC instruction in the bytecode. If this function is
+    called before the next cancelable yield instruction, the
+    instruction will be skipped and no yield will be performed.
 
-/***************************************** device class */
+    This is reset when either a delay is canceled or the request is
+    restarted. This returns an error if the request is not currently
+    running.
+ */
+error_t device_spi_request_wakeup(struct dev_spi_ctrl_request_s *rq);
 
-DRIVER_CLASS_TYPES(spi_ctrl,
-		   devspi_ctrl_config_t         *f_config;
-		   devspi_ctrl_select_t         *f_select;
-		   devspi_ctrl_transfer_t       *f_transfer;
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-		   devspi_ctrl_request_t        *f_request;
 #endif
-		   );
 
 /*************************************************************** SPI bytecode */
 
@@ -399,8 +418,10 @@ DRIVER_CLASS_TYPES(spi_ctrl,
     delay               r             1000 0011 10-- rrrr
     nodelay                           1000 0011 00-- ----
 
-    yield                             1000 0000 00-- ----
-    yield_delay         r             1000 0000 10-- rrrr
+    yield                             1000 0000 001- ----
+    yield_delay         r             1000 0000 101- rrrr
+    yieldc                            1000 0000 000- ----
+    yieldc_delay        r             1000 0000 100- rrrr
 
     wait                cs            1000 0010 00cc ----
     wait_delay          r, cs         1000 0010 10cc rrrr
@@ -453,12 +474,25 @@ DRIVER_CLASS_TYPES(spi_ctrl,
    If a @ref #BC_SPI_DELAY instruction has been executed previously,
    the bytecode execution will not resume until the delay has elapsed.
  */
-#define BC_SPI_YIELD() BC_CUSTOM(0x0000)
+#define BC_SPI_YIELD() BC_CUSTOM(0x0020)
+
+/**
+   This works like @ref #BC_SPI_YIELD but the delay can be canceled by
+   @ref device_spi_request_wakeup. When the delay is canceled, the
+   next instruction is skipped.
+ */
+#define BC_SPI_YIELDC() BC_CUSTOM(0x0000)
 
 /**
    This instruction acts as @ref #BC_SPI_DELAY followed by @ref #BC_SPI_YIELD.
  */
-#define BC_SPI_YIELD_DELAY(r)  BC_CUSTOM(0x0080 | (r & 0xf))
+#define BC_SPI_YIELD_DELAY(r)  BC_CUSTOM(0x00a0 | (r & 0xf))
+
+/**
+   This works like @ref #BC_SPI_YIELD_DELAY but the delay can be
+   canceled by @ref device_spi_request_wakeup.
+ */
+#define BC_SPI_YIELDC_DELAY(r)  BC_CUSTOM(0x0080 | (r & 0xf))
 
 /**
    This instruction instructs the controller to wait before resuming
@@ -503,15 +537,22 @@ DRIVER_CLASS_TYPES(spi_ctrl,
 /**
    This instruction transfers a single word on the SPI bus. The word
    value of the @tt wr register is transmitted. The @tt rd register is
-   used to store the received word value.
+   used to store the received word value, unless @tt rd is 15.
  */
 #define BC_SPI_SWP(wr, rd) BC_CUSTOM(0x0800 | ((wr & 0xf) << 4) | (rd & 0xf))
 
 /**
-   This instruction transfers up to 8 words on the SPI bus. The word
+   This instruction transfers up to 8 words on the SPI bus. Word
+   values are loaded and stored in contiguous registers. The word
    values of the registers starting at @tt wr are transmitted. The
    registers starting at @tt rd are used to store the received word
    values.
+
+   If the index of the last register to transmit is greater than 14,
+   the content of the register 14 is used as padding value for all
+   transmitted words. If the index of the last destination register is
+   greater than 14, incoming data are discarded and no register is
+   modified.
  */
 #define BC_SPI_SWPL(wr, rd, count) BC_CUSTOM(0x0800 | ((wr & 0xf) << 4) | (rd & 0xf) | (((count) - 1) << 8))
 

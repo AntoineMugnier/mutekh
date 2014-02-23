@@ -45,7 +45,7 @@ static error_t device_spi_ctrl_select(struct dev_spi_ctrl_request_s *rq,
                                       enum dev_spi_cs_policy_e pc)
 {
   if (rq->cs_ctrl)
-    return DEVICE_OP(rq->scdev, select, pc, rq->cs_polarity, rq->cs_id);
+    return DEVICE_OP(&rq->scdev, select, pc, rq->cs_polarity, rq->cs_id);
 
   if (rq->cs_gpio)
     {
@@ -111,7 +111,7 @@ static void device_spi_ctrl_transfer(struct dev_spi_ctrl_request_s *rq, dev_time
 
   if (q->config != &rq->config)
     {
-      if ((err = DEVICE_OP(rq->scdev, config, &rq->config)))
+      if ((err = DEVICE_OP(&rq->scdev, config, &rq->config)))
         {
           lock_spin_irq(&q->lock);
           return device_spi_ctrl_end(rq, err);
@@ -127,7 +127,7 @@ static void device_spi_ctrl_transfer(struct dev_spi_ctrl_request_s *rq, dev_time
   tr->pvdata = rq;
   kroutine_init(&tr->kr, &device_spi_ctrl_transfer_end, KROUTINE_IMMEDIATE);
 
-  return DEVICE_OP(rq->scdev, transfer, tr);
+  return DEVICE_OP(&rq->scdev, transfer, tr);
 }
 
 #if 0
@@ -184,6 +184,7 @@ static void device_spi_ctrl_end(struct dev_spi_ctrl_request_s *rq, error_t err)
     }
 
   rq->err = err;
+  rq->enqueued = 0;
 
   if (device_check_accessor(&q->timer))
     DEVICE_OP(&q->timer, start_stop, 0);
@@ -352,6 +353,13 @@ static void device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value
               switch (op & 0x0300)
                 {
                 case 0x0000:    /* yield */
+                  rq->wakeup_able = !(op & 0x0020);
+                  if (rq->wakeup_able && rq->wakeup)
+                    {
+                      rq->wakeup = 0;
+                      bc_skip(&rq->vm);
+                      continue;
+                    }
                   if (rq->cs_gpio || rq->cs_ctrl)
                     device_spi_ctrl_select(rq, DEV_SPI_CS_DEASSERT);
                   lock_spin_irq(&q->lock);
@@ -399,15 +407,19 @@ static void device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value
                   q->config = NULL;
                 }
               continue;
-            case 0x0800:        /* swp */
+            case 0x0800:        /* swp, swpl */
             case 0x0c00: {
               uint_fast8_t l = ((op >> 8) & 7) + 1;
               uint_fast8_t src = op & 0xf;
               uint_fast8_t dst = (op >> 4) & 0xf;
-              if (src + l >= 16 || dst + l >= 16)
-                continue;
-              return device_spi_ctrl_transfer(rq, t, sizeof(rq->vm.v[0]), sizeof(rq->vm.v[0]),
-                                              &rq->vm.v[src], &rq->vm.v[dst], l);
+              void *addr = src + l >= 16 ? NULL : &rq->vm.v[src];
+              uint32_t dummy = bc_get_reg(&rq->vm, 14);
+              if (dst + l >= 16)
+                return device_spi_ctrl_transfer(rq, t, sizeof(rq->vm.v[0]), 0,
+                                                addr, &dummy, l);
+              else
+                return device_spi_ctrl_transfer(rq, t, sizeof(rq->vm.v[0]),
+                         sizeof(rq->vm.v[0]), addr, &rq->vm.v[dst], l);
             }
             }
           continue;
@@ -476,10 +488,9 @@ static void device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value
 }
 
 void
-dev_spi_request_start(struct device_spi_ctrl_s *scdev,
-                      struct dev_spi_ctrl_queue_s *q,
-                      struct dev_spi_ctrl_request_s *rq)
+dev_spi_request_start(struct dev_spi_ctrl_request_s *rq)
 {
+  struct dev_spi_ctrl_queue_s *q = rq->queue;
   error_t err = 0;
 
   assert(!rq->cs_gpio || device_check_accessor(&rq->gpio));
@@ -496,10 +507,11 @@ dev_spi_request_start(struct device_spi_ctrl_s *scdev,
 
   if (!err)
     {
-      rq->queue = q;
       rq->sleep_before = 0;
       rq->err = 0;
-      rq->scdev = scdev;
+      rq->enqueued = 1;
+      rq->wakeup = 0;
+      rq->wakeup_able = 0;
 
       if (rq->priority)
         dev_spi_ctrl_queue_push(&q->queue, rq);
@@ -518,6 +530,39 @@ dev_spi_request_start(struct device_spi_ctrl_s *scdev,
       kroutine_exec(&rq->kr, cpu_is_interruptible());
       return;
     }
+}
+
+error_t device_spi_request_wakeup(struct dev_spi_ctrl_request_s *rq)
+{
+  struct dev_spi_ctrl_queue_s *q = rq->queue;
+
+  lock_spin_irq(&q->lock);
+
+  if (!rq->enqueued)
+    {
+      lock_release_irq(&q->lock);
+      return -EBUSY;
+    }
+  else if (q->current != rq && rq->wakeup_able)
+    {
+      rq->sleep_before = 0;
+      bc_skip(&rq->vm);
+      if (q->current == NULL)
+        {
+          dev_timer_value_t t = 0;
+          if (device_check_accessor(&q->timer))
+              DEVICE_OP(&q->timer, get_value, &t);
+
+          device_spi_ctrl_sched(q, t);
+        }
+    }
+  else
+    {
+      rq->wakeup = 1;
+      lock_release_irq(&q->lock);
+    }
+
+  return 0;
 }
 
 error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q)
@@ -556,6 +601,11 @@ error_t dev_spi_request_init(struct device_s *slave,
 
   memset(rq, 0, sizeof(*rq));
 
+  if (device_get_param_dev_accessor(slave, "spi", &rq->scdev, DRIVER_CLASS_SPI_CTRL))
+    return -ENOENT;
+
+  rq->queue = DEVICE_OP(&rq->scdev, queue);
+
   if (!device_get_param_uint(slave, "cs-id", &x))
     {
       rq->cs_ctrl = 1;
@@ -565,7 +615,7 @@ error_t dev_spi_request_init(struct device_s *slave,
   if (device_get_param_dev_accessor(slave, "gpio", &rq->gpio, DRIVER_CLASS_GPIO))
     {
       if (require_gpio)
-        return -ENOENT;
+        goto err_ctrl;
     }
   else
     {
@@ -591,6 +641,8 @@ error_t dev_spi_request_init(struct device_s *slave,
 
   return 0;
 
+ err_ctrl:
+  device_put_accessor(&rq->scdev);
  err_gpio:
   device_put_accessor(&rq->gpio);
   return -ENOENT;
@@ -598,6 +650,7 @@ error_t dev_spi_request_init(struct device_s *slave,
 
 void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq)
 {
+  device_put_accessor(&rq->scdev);
   device_put_accessor(&rq->gpio);
 }
 
