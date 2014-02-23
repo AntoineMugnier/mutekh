@@ -133,15 +133,37 @@ static inline void lock_spin(lock_t *lock)
 #endif
 }
 
-/** @this save and disable interrupts then spins to take the lock */
+/** @This disables interrupts, spins to take the lock and store the
+    previous irq state in @tt *lock */
 static inline void lock_spin_irq(lock_irq_t *lock)
 {
 #ifdef CONFIG_HEXO_IRQ
-  cpu_interrupt_savestate_disable(&lock->__interrupt_state);
+  reg_t state;
+  cpu_interrupt_savestate_disable(&state);
 #endif
 #ifdef CONFIG_ARCH_SMP
   order_smp_mem();
   __arch_lock_spin(&lock->arch);
+#endif
+#ifdef CONFIG_HEXO_IRQ
+  lock->__interrupt_state = state;
+#endif
+}
+
+/** @This disables interrupts, spins to take the lock and store the
+    previous irq state in @tt *irq_state */
+static inline void lock_spin_irq2(lock_t *lock, reg_t *irq_state)
+{
+#ifdef CONFIG_HEXO_IRQ
+  reg_t state;
+  cpu_interrupt_savestate_disable(&state);
+#endif
+#ifdef CONFIG_ARCH_SMP
+  order_smp_mem();
+  __arch_lock_spin(&lock->arch);
+#endif
+#ifdef CONFIG_HEXO_IRQ
+  *irq_state = state;
 #endif
 }
 
@@ -178,15 +200,33 @@ static inline void lock_release(lock_t *lock)
 #endif
 }
 
-/** @this releases a lock and restore previous interrupt state */
+/** @This releases a lock and restore previous interrupt state */
 static inline void lock_release_irq(lock_irq_t *lock)
 {
+#ifdef CONFIG_HEXO_IRQ
+  reg_t state = lock->__interrupt_state;
+#endif
 #ifdef CONFIG_ARCH_SMP
   order_smp_mem();
   __arch_lock_release(&lock->arch);
 #endif
 #ifdef CONFIG_HEXO_IRQ
-  cpu_interrupt_restorestate(&lock->__interrupt_state);
+  cpu_interrupt_restorestate(&state);
+#endif
+}
+
+/** @This releases a lock and restore interrupt state from @tt *irq_state */
+static inline void lock_release_irq2(lock_t *lock, const reg_t *irq_state)
+{
+#ifdef CONFIG_HEXO_IRQ
+  reg_t state = *irq_state;
+#endif
+#ifdef CONFIG_ARCH_SMP
+  order_smp_mem();
+  __arch_lock_release(&lock->arch);
+#endif
+#ifdef CONFIG_HEXO_IRQ
+  cpu_interrupt_restorestate(&state);
 #endif
 }
 
