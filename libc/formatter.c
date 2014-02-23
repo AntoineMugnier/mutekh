@@ -464,7 +464,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
         flags |= PRINTF_FLAG_ALTERNATE;
 	zeropad = 1;
-	padding[0] = sizeof(void*) * 2;
+	padding[0] = /* 0x */ 2 + /* ptr digits */ sizeof(void*) * 2;
 	rightpad = 0;
 #endif
 
@@ -476,7 +476,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
         if (zeropad)
           {
-            if (val && (flags & PRINTF_FLAG_ALTERNATE))
+            if ((val || format[-1] == 'p') && (flags & PRINTF_FLAG_ALTERNATE))
               {
                 fcn(ctx, base + 16, offset, 2);
                 offset += 2;
