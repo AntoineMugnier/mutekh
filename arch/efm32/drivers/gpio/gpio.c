@@ -79,6 +79,9 @@ static DEVGPIO_SET_MODE(efm32_gpio_set_mode)
   struct device_s *dev = gpio->dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
 
+  if (io_last >= GPIO_BANK_SIZE * 6)
+    return -ERANGE;
+
   LOCK_SPIN_IRQ(&dev->lock);
 
   uint32_t mde;
@@ -156,6 +159,9 @@ static DEVGPIO_SET_OUTPUT(efm32_gpio_set_output)
 {
   struct device_s *dev = gpio->dev;
 
+  if (io_last >= GPIO_BANK_SIZE * 6)
+    return -ERANGE;
+
   LOCK_SPIN_IRQ(&dev->lock);
 
   struct efm32_gpio_private_s *pv = dev->drv_pv;
@@ -187,9 +193,10 @@ static DEVGPIO_SET_OUTPUT(efm32_gpio_set_output)
   /* update DOUT register */
   uintptr_t a = pv->addr + EFM32_GPIO_DOUT_ADDR(io_first / GPIO_BANK_SIZE);
   uint32_t x = endian_le32(cpu_mem_read_32(a));
-  x = (((x ^ (cmp & smp)) & ~cmp) | smp) & EFM32_GPIO_DOUT_MASK;
+  uint32_t tg = cmp & smp;
+  x = ((x ^ tg) & (~cmp | smp)) | smp;
   //  printk("gpio set : reg=%08x value=%08x clr=%08x set=%08x\n", a, x, cmp, smp);
-  cpu_mem_write_32(a, endian_le32(x));
+  cpu_mem_write_32(a, endian_le32(x & EFM32_GPIO_DOUT_MASK));
 
   cmp >>= GPIO_BANK_SIZE; 
   smp >>= GPIO_BANK_SIZE;
@@ -221,6 +228,9 @@ static DEVGPIO_SET_OUTPUT(efm32_gpio_set_output)
 static DEVGPIO_GET_INPUT(efm32_gpio_get_input)
 {
   struct device_s *dev = gpio->dev;
+
+  if (io_last >= GPIO_BANK_SIZE * 6)
+    return -ERANGE;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
