@@ -210,19 +210,19 @@ static inline uint64_t endian_swap64(uint64_t x)
 #else
 
 /** @internal @multiple */
-# define __ENDIAN_NAL_L(addr, index, shift)		(((uint8_t*)addr)[index] << shift)
+# define __ENDIAN_NAL_L(addr, type, index, shift)	((type)((uint8_t*)addr)[index] << shift)
 # define __ENDIAN_NAS_R(addr, index, value, shift)	(((uint8_t*)addr)[index] = (uint8_t)(value >> shift))
 
 /** @multiple @this allows memory access with endian permutation using multiple bytes access */
-# define endian_le16_na_load(a)		(__ENDIAN_NAL_L(a, 0, 0)  | __ENDIAN_NAL_L(a, 1, 8))
+# define endian_le16_na_load(a)		(__ENDIAN_NAL_L(a, uint16_t, 0, 0)  | __ENDIAN_NAL_L(a, uint16_t, 1, 8))
 
-# define endian_le32_na_load(a)		(__ENDIAN_NAL_L(a, 0, 0)  | __ENDIAN_NAL_L(a, 1, 8)  | \
-				         __ENDIAN_NAL_L(a, 2, 16) | __ENDIAN_NAL_L(a, 3, 24))
+# define endian_le32_na_load(a)		(__ENDIAN_NAL_L(a, uint32_t, 0, 0)  | __ENDIAN_NAL_L(a, uint32_t, 1, 8)  | \
+				         __ENDIAN_NAL_L(a, uint32_t, 2, 16) | __ENDIAN_NAL_L(a, uint32_t, 3, 24))
 
-# define endian_le64_na_load(a)		(__ENDIAN_NAL_L(a, 0, 0)  | __ENDIAN_NAL_L(a, 1, 8)  | \
-					 __ENDIAN_NAL_L(a, 2, 16) | __ENDIAN_NAL_L(a, 3, 24) | \
-					 __ENDIAN_NAL_L(a, 4, 32) | __ENDIAN_NAL_L(a, 5, 40) | \
-					 __ENDIAN_NAL_L(a, 6, 48) | __ENDIAN_NAL_L(a, 7, 56))
+# define endian_le64_na_load(a)		(__ENDIAN_NAL_L(a, uint64_t, 0, 0)  | __ENDIAN_NAL_L(a, uint64_t, 1, 8)  | \
+					 __ENDIAN_NAL_L(a, uint64_t, 2, 16) | __ENDIAN_NAL_L(a, uint64_t, 3, 24) | \
+					 __ENDIAN_NAL_L(a, uint64_t, 4, 32) | __ENDIAN_NAL_L(a, uint64_t, 5, 40) | \
+					 __ENDIAN_NAL_L(a, uint64_t, 6, 48) | __ENDIAN_NAL_L(a, uint64_t, 7, 56))
 
 # define endian_le16_na_store(a, x)	({ const uint16_t __val = (x);			\
 					 __ENDIAN_NAS_R(a, 0, __val, 0);		\
@@ -244,15 +244,15 @@ static inline uint64_t endian_swap64(uint64_t x)
 					 __ENDIAN_NAS_R(a, 6, __val, 48);		\
 					 __ENDIAN_NAS_R(a, 7, __val, 56); __val; })
 
-# define endian_be16_na_load(a)		(__ENDIAN_NAL_L(a, 0, 8)  | __ENDIAN_NAL_L(a, 1, 0))
+# define endian_be16_na_load(a)		(__ENDIAN_NAL_L(a, uint16_t,  0, 8)  | __ENDIAN_NAL_L(a, uint16_t, 1, 0))
 
-# define endian_be32_na_load(a)		(__ENDIAN_NAL_L(a, 0, 24)  | __ENDIAN_NAL_L(a, 1, 16)  | \
-				         __ENDIAN_NAL_L(a, 2, 8) | __ENDIAN_NAL_L(a, 3, 0))
+# define endian_be32_na_load(a)		(__ENDIAN_NAL_L(a, uint32_t, 0, 24)  | __ENDIAN_NAL_L(a, uint32_t, 1, 16)  | \
+				         __ENDIAN_NAL_L(a, uint32_t, 2, 8) | __ENDIAN_NAL_L(a, uint32_t, 3, 0))
 
-# define endian_be64_na_load(a)		(__ENDIAN_NAL_L(a, 0, 56)  | __ENDIAN_NAL_L(a, 1, 48)  | \
-					 __ENDIAN_NAL_L(a, 2, 40) | __ENDIAN_NAL_L(a, 3, 32) | \
-					 __ENDIAN_NAL_L(a, 4, 24) | __ENDIAN_NAL_L(a, 5, 16) | \
-					 __ENDIAN_NAL_L(a, 6, 8) | __ENDIAN_NAL_L(a, 7, 0))
+# define endian_be64_na_load(a)		(__ENDIAN_NAL_L(a, uint64_t, 0, 56)  | __ENDIAN_NAL_L(a, uint64_t, 1, 48)  | \
+					 __ENDIAN_NAL_L(a, uint64_t, 2, 40) | __ENDIAN_NAL_L(a, uint64_t, 3, 32) | \
+					 __ENDIAN_NAL_L(a, uint64_t, 4, 24) | __ENDIAN_NAL_L(a, uint64_t, 5, 16) | \
+					 __ENDIAN_NAL_L(a, uint64_t, 6, 8) | __ENDIAN_NAL_L(a, uint64_t, 7, 0))
 
 # define endian_be16_na_store(a, x)	({ const uint16_t __val = (x);			\
 					 __ENDIAN_NAS_R(a, 0, __val, 8);		\
