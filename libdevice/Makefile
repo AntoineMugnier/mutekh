@@ -45,3 +45,7 @@ ifeq ($(CONFIG_DEVICE_LCD), defined)
 objs += device_lcd.o
 endif
 
+ifeq ($(CONFIG_DEVICE_GPIO), defined)
+objs += device_gpio.o
+endif
+

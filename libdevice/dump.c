@@ -93,6 +93,13 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
           break;
         }
 #endif
+#ifdef CONFIG_DEVICE_GPIO
+        case DEV_RES_GPIO: {
+          printk("  Pin `%s' connected to GPIO line %u (%u bit wide)\n",
+                 r->u.gpio.label, r->u.gpio.id, r->u.gpio.width);
+          break;
+        };
+#endif
         case DEV_RES_ID:
           printk("  Numerical identifier %x %x\n", r->u.id.major, r->u.id.minor);
           break;

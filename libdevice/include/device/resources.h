@@ -41,6 +41,7 @@ enum dev_resource_type_e
     DEV_RES_MEM,
     DEV_RES_IO,
     DEV_RES_IRQ,
+    DEV_RES_GPIO,
     DEV_RES_ID,
     DEV_RES_VENDOR,
     DEV_RES_PRODUCT,
@@ -103,10 +104,11 @@ struct dev_resource_s
       /** device tree path to interrupt controller, relative to device */
     }                           irq;
 
-    /** @see #DEV_STATIC_RES_IO @see device_res_add_io */
+    /** @see #DEV_STATIC_RES_GPIO @see device_res_add_gpio */
     struct {
-      const char                *dev;
-      uint_fast16_t             line_id;
+      uintptr_t                 id:CONFIG_DEVICE_GPIO_MAX_ID;
+      uintptr_t                 width:CONFIG_DEVICE_GPIO_MAX_WIDTH;
+      const char                *label;
     }                           gpio;
 
     /** @see #DEV_STATIC_RES_ID @see device_res_add_id */
@@ -244,7 +246,8 @@ struct dev_resource_s * device_res_get(const struct device_s *dev,
 /** @internal @This looks up a resource entry with given type and
     name. The first resource field must be a string. The @tt index
     parameter can be used to find different resources of the same
-    type. */
+    type. The comparison stops on the first character which does not
+    match @tt {[-_A-Za-z0-9]} in @tt name. */
 struct dev_resource_s * device_res_get_from_name(const struct device_s *dev,
                                                  enum dev_resource_type_e type,
                                                  uint_fast8_t index, const char *name);

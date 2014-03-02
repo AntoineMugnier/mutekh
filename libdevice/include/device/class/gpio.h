@@ -38,10 +38,24 @@
 #include <gpct/cont_clist.h>
 
 #include <device/driver.h>
+#include <device/resources.h>
 
 struct dev_gpio_request_s;
 struct device_gpio_s;
-typedef uint_fast8_t gpio_id_t;
+
+#if CONFIG_DEVICE_GPIO_MAX_ID < 255
+typedef uint8_t gpio_id_t;
+#define GPIO_INVALID_ID 255
+#else
+typedef uint16_t gpio_id_t;
+#define GPIO_INVALID_ID 65535
+#endif
+
+#if CONFIG_DEVICE_GPIO_MAX_WIDTH < 255
+typedef uint8_t gpio_width_t;
+#else
+typedef uint16_t gpio_width_t;
+#endif
 
 enum dev_gpio_mode_e
 {
@@ -213,5 +227,80 @@ DRIVER_CLASS_TYPES(gpio,
                    devgpio_cancel_t *f_cancel;
 		   );
 
+/** @This changes the mode of multiple GPIO pins. */
+config_depend(CONFIG_DEVICE_GPIO)
+error_t device_gpio_map_set_mode(struct device_gpio_s *gpdev,
+                                 const gpio_id_t *map, const gpio_width_t *wmap,
+                                 uint_fast8_t count, /* enum dev_gpio_mode_e */ ...);
+
+
+/** @This adds a GPIO pins binding to the device resources list.
+
+    This entry specifies a pin label name along with a range of
+    contiguous pin ids associated to the label. It used to specify how
+    a range of pins of the device with its device specific function
+    identified by the label, are connected to a GPIO controller. A
+    link to the GPIO controller for which the pin id range is relevant
+    must be specified in a separate @ref DEV_RES_DEV_PARAM resource
+    entry named @tt gpio.
+
+    @see #DEV_STATIC_RES_GPIO
+*/
+static inline error_t device_res_add_gpio(struct device_s *dev, const char *label,
+                                          gpio_id_t id, gpio_width_t width)
+{
+#ifdef CONFIG_DEVICE_GPIO
+  struct dev_resource_s *r;
+  error_t err = device_res_alloc_str(dev, DEV_RES_GPIO, NULL, label, &r);
+  if (err)
+    return err;
+
+  r->u.gpio.id = id;
+  r->u.gpio.width = width;
+
+  return 0;
+#else
+  return -EINVAL;
 #endif
+}
+
+#ifdef CONFIG_DEVICE_GPIO
+/** @This can be used to include a GPIO resource entry in a static
+    device resources table declaration. The label name must be a static
+    string. @see device_res_add_gpio @see #DEV_DECLARE_STATIC_RESOURCES */
+# define DEV_STATIC_RES_GPIO(label_, id_, width_)                       \
+  {                                                                     \
+      .type = DEV_RES_GPIO,                                             \
+         .u = { .gpio = {                                               \
+        .label = (label_),                                              \
+        .id = (id_),                                                    \
+        .width = (width_),                                              \
+      } }                                                               \
+  }
+#else
+# define DEV_STATIC_RES_GPIO(label_, id_, width_)                       \
+  {                                                                     \
+    .type = DEV_RES_UNUSED,                                             \
+  }
+#endif
+/**
+   This initializes an array of GPIO ids from a list of pin labels. If
+   the @tt wmap parameter is not @tt NULL, the associated size of pin
+   range is also stored.
+
+   The list is composed by space separated pin label names. All pin
+   names present in the list must match an available device resource
+   unless the name is suffixed by @tt{?}. A value of -1 is stored in
+   the array if the pin is not available in the device tree.
+
+   If a label in the list is suffixed by @em {:width}, the pin width
+   declared in the resource must match the @em width number.
+*/
+config_depend(CONFIG_DEVICE_GPIO)
+error_t device_res_gpio_map(struct device_s *dev, const char *pin_list,
+                            gpio_id_t *map, gpio_width_t *wmap);
+
+
+#endif
+
 

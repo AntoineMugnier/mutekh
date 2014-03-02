@@ -43,13 +43,22 @@ struct dev_resource_s *device_res_get(const struct device_s *dev,
   return NULL;
 }
 
+static inline bool_t device_res_strcmp(const char *a, const char *b)
+{
+  while (*a && *a == *b)
+    a++, b++;
+  return *b || ((uint8_t)((*a | 32) - 'a') < 26 ||
+		(uint8_t)(*a - '0') < 10 ||
+		 *a == '_' || *a == '-');
+}
+
 struct dev_resource_s *device_res_get_from_name(const struct device_s *dev,
                                                 enum dev_resource_type_e type,
                                                 uint_fast8_t id, const char *name)
 {
   DEVICE_RES_FOREACH(dev, r, {
       if (r->type == type && r->u.uint[1] &&
-          !strcmp(name, (const char*)r->u.uint[1]) && !id--)
+          !device_res_strcmp(name, (const char*)r->u.uint[1]) && !id--)
         return r;
   });
 

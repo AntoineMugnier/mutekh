@@ -255,10 +255,25 @@ struct dev_spi_ctrl_request_s
   struct device_spi_ctrl_s scdev;
   struct dev_spi_ctrl_queue_s *queue;
 
-  /** If the @ref cs_gpio field is set, this indicates the gpio pin id
-      to use to select this SPI slave. In the other case, this value
-      is used by the SPI controller to select the chip select output. */
-  uint_fast8_t            cs_id;
+  /** Callback private data */
+  void                     *pvdata;
+
+  /** If this device accessor refers to a gpio device, it will be used
+      to drive the chip select pin and aux pins for this SPI slave. If
+      it's not valid, the controller chip select mechanism will be
+      used if available. */
+  struct device_gpio_s    gpio;
+
+  /** If the @ref gpio device accessor is valid, these tables give the
+      index of gpio pin to use when a @tt BC_SPI_GPIO* instruction is
+      encountered. If the @ref cs_gpio field is set, the first entry
+      of the table is used to drive the chip select signal. */
+  const gpio_id_t         *gpio_map;
+  const gpio_width_t      *gpio_wmap;
+
+  /** If the @ref cs_ctrl field is set, this value is used by the SPI
+      controller to select the chip select output. */
+  uint8_t                 cs_id;
 
   /** Current cs policy */
   enum dev_spi_cs_policy_e cs_policy:2;
@@ -277,18 +292,7 @@ struct dev_spi_ctrl_request_s
   bool_t                  wakeup:1;
   bool_t                  wakeup_able:1;
 
-  /** If this device accessor refers to a gpio device, it will be used
-      to drive the chip select pin and aux pins for this SPI slave. If
-      it's not valid, the controller chip select mechanism will be
-      used if available. */
-  struct device_gpio_s    gpio;
-
-  /** If the @ref gpio device accessor is valid, this gives the index
-      of the first gpio pin to drive when a @ref #BC_SPI_GPIO
-      instruction is encountered. */
-  uint_fast8_t            gpio_id;
-
-  bool_t                  priority;
+  bool_t                  priority:1;
 };
 
 CONTAINER_TYPE(dev_spi_ctrl_queue, CLIST, struct dev_spi_ctrl_request_s, queue_entry);
@@ -365,26 +369,13 @@ void dev_spi_request_start(struct dev_spi_ctrl_request_s *rq);
     using the device pointed to by the @tt{'spi'} device resource
     entry of the slave.
 
-    The @ref dev_spi_ctrl_request_s::gpio accessor is initialized
-    using the device pointed to by the @tt{'gpio'} device resource
-    entry of the slave if available.
-
-    If the @tt require_gpio parameter is set, the gpio device can be
-    used by the @ref #BC_SPI_GPIOSET, @ref #BC_SPI_GPIOGET and @ref
-    #BC_SPI_GPIOMODE instruction of the request bytecode. This
-    requires the @tt{'gpio-id'} resource entry to specify the index of
-    the first gpio pin to drive.
-
-    If a @tt{'cs-id'} entry is present in the device tree, the request
+    If a @tt{'spi-cs-id'} entry is present in the device tree, the request
     is configured to use the chip select feature of the SPI
-    controller.  In the other case, if a @tt{'cs-gpio-id'} entry is
-    present and a gpio device is specified, the request is configured
-    to use an external gpio device to drive the chip select of the
-    slave and the gpio line is configured as output.
+    controller.  In the other case, the @ref dev_spi_ctrl_request_s::cs_gpio
+    field can still be used to drive the chip select using a GPIO pin.
 */
 error_t dev_spi_request_init(struct device_s *slave,
-                             struct dev_spi_ctrl_request_s *rq,
-                             bool_t require_gpio);
+                             struct dev_spi_ctrl_request_s *rq);
 
 /** This helper function release the device accessors associated with
     the SPI slave request. @see dev_spi_request_init */

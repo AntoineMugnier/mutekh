@@ -65,7 +65,8 @@ static error_t device_spi_ctrl_select(struct dev_spi_ctrl_request_s *rq,
           break;
         }
 
-      return DEVICE_OP(&rq->gpio, set_output, rq->cs_id, rq->cs_id, value, value);
+      return DEVICE_OP(&rq->gpio, set_output, rq->gpio_map[0],
+                       rq->gpio_map[0], value, value);
     }
 
   return pc == DEV_SPI_CS_RELEASE ? 0 : -ENOTSUP;
@@ -446,30 +447,31 @@ static void device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value
           continue;
         }
 
-        case 0x4000:            /* iomode */
-        case 0x2000:            /* ioset */
-        case 0x3000: {          /* ioget */
+        case 0x4000:            /* gpio* */
+        case 0x2000:
+        case 0x3000: {
           err = 0;
           if (!device_check_accessor(&rq->gpio))
             err = -ENOTSUP;
           else
             {
-              uint_fast8_t id = rq->gpio_id + ((op >> 4) & 0xff);
+              gpio_id_t id = rq->gpio_map[(op >> 4) & 0xff];
+              gpio_width_t w = rq->gpio_wmap[(op >> 4) & 0xff];
               uint8_t value[8];
 
-              if (op & 0x1000)
+              if (op & 0x1000)  /* gpioget */
                 {
-                  err = DEVICE_OP(&rq->gpio, get_input, id, id, value);
-                  bc_set_reg(&rq->vm, op & 0xf, value[0]);
+                  err = DEVICE_OP(&rq->gpio, get_input, id, id + w - 1, value);
+                  bc_set_reg(&rq->vm, op & 0xf, endian_le32_na_load(value) & ((1 << w) - 1));
                 }
-              else if (op & 0x4000)
+              else if (op & 0x4000) /* gpiomode */
                 {
-                  err = DEVICE_OP(&rq->gpio, set_mode, id, id, dev_gpio_mask1, op & 0xf);
+                  err = DEVICE_OP(&rq->gpio, set_mode, id, id + w - 1, dev_gpio_mask1, op & 0xf);
                 }
-              else
+              else              /* gpioset */
                 {
-                  value[0] = bc_get_reg(&rq->vm, op & 0xf);
-                  err = DEVICE_OP(&rq->gpio, set_output, id, id, value, value);
+                  endian_le32_na_store(value, bc_get_reg(&rq->vm, op & 0xf));
+                  err = DEVICE_OP(&rq->gpio, set_output, id, id + w - 1, value, value);
                 }
             }
           if (!err)
@@ -494,6 +496,11 @@ dev_spi_request_start(struct dev_spi_ctrl_request_s *rq)
   error_t err = 0;
 
   assert(!rq->cs_gpio || device_check_accessor(&rq->gpio));
+
+  if (rq->cs_gpio || rq->cs_ctrl)
+    rq->cs_policy = DEV_SPI_CS_TRANSFER;
+  else
+    rq->cs_policy = DEV_SPI_CS_RELEASE;
 
   lock_spin_irq(&q->lock);
 
@@ -583,6 +590,7 @@ error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q)
   q->timeout = NULL;
   dev_spi_ctrl_queue_init(&q->queue);
   lock_init_irq(&q->lock);
+  memset(&q->transfer, 0, sizeof(q->transfer));
   return 0;
 }
 
@@ -594,8 +602,7 @@ void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q)
 }
 
 error_t dev_spi_request_init(struct device_s *slave,
-                             struct dev_spi_ctrl_request_s *rq,
-                             bool_t require_gpio)
+                             struct dev_spi_ctrl_request_s *rq)
 {
   uintptr_t x;
 
@@ -606,46 +613,13 @@ error_t dev_spi_request_init(struct device_s *slave,
 
   rq->queue = DEVICE_OP(&rq->scdev, queue);
 
-  if (!device_get_param_uint(slave, "cs-id", &x))
+  if (!device_get_param_uint(slave, "spi-cs-id", &x))
     {
       rq->cs_ctrl = 1;
       rq->cs_id = x;      
     }
 
-  if (device_get_param_dev_accessor(slave, "gpio", &rq->gpio, DRIVER_CLASS_GPIO))
-    {
-      if (require_gpio)
-        goto err_ctrl;
-    }
-  else
-    {
-      if (!device_get_param_uint(slave, "gpio-id", &x))
-        rq->gpio_id = x;
-      else if (require_gpio)
-        goto err_gpio;
-
-      if (!rq->cs_ctrl && !device_get_param_uint(slave, "cs-gpio-id", &x))
-        {
-          rq->cs_gpio = 1;
-          rq->cs_id = x;
-
-          if (DEVICE_OP(&rq->gpio, set_mode, x, x, dev_gpio_mask1, DEV_GPIO_OUTPUT))
-            goto err_gpio;
-        }
-    }
-
-  if (rq->cs_gpio || rq->cs_ctrl)
-    rq->cs_policy = DEV_SPI_CS_TRANSFER;
-  else
-    rq->cs_policy = DEV_SPI_CS_RELEASE;
-
   return 0;
-
- err_ctrl:
-  device_put_accessor(&rq->scdev);
- err_gpio:
-  device_put_accessor(&rq->gpio);
-  return -ENOENT;
 }
 
 void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq)
