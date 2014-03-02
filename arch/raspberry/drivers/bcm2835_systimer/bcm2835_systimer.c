@@ -263,7 +263,7 @@ static DEV_CLEANUP(bcm2835_systimer_cleanup);
 
 const struct driver_s  bcm2835_systimer_drv =
 {
-  .desc           = "EFM32 Timer",
+  .desc           = "BCM2835 system timer",
   .f_init         = bcm2835_systimer_init,
   .f_cleanup      = bcm2835_systimer_cleanup,
 
