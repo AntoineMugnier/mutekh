@@ -42,17 +42,90 @@ typedef int64_t __printf_int_t;
 # define PRINTF_INT_BUFFER_LEN	PRINTF_SIZEOF_VAL+2 // large enough for binary format with 0b prefix
 #endif
 
-static inline size_t
-__printf_putint(char *buf, __printf_uint_t val,
-		const char *base, uint_fast8_t basesize)
+static size_t
+printf_base10(char *buf, __printf_uint_t x)
 {
   int_fast8_t	i;
 
   for (i = PRINTF_INT_BUFFER_LEN; i > 0; )
     {
-      buf[--i] = base[val % basesize];
+#ifdef CONFIG_LIBC_FORMATTER_DIV10
+      uint8_t z = x % 10;
+#else
+      /* B. Arazi and D. Naccache, Binary to Decimal Conversion Based on
+         the Divisibility of 255 by 5, Electronic Letters, Vol. 28, Num. 23, 1992 */
 
-      if (!(val /= basesize))
+      /* mod 255 */
+      uint16_t sum;
+      __printf_uint_t y;
+      for (y = x; y > 255; y = sum)
+        for (sum = 0; y != 0; y >>= 8)
+          sum += y & 0xff;
+
+      /* mod 5 */
+      uint8_t z = y;
+# if 1
+      z -= ((z * 205) >> 10) * 5;
+# else
+      z = (z & 15) + (z >> 4);
+      z = (z & 15) + (z >> 4);
+      z = (z &  3) - (z >> 2);
+      z += (((int8_t)z >> 7) & 5);
+# endif
+
+      /* mod 10 */
+      uint8_t w = ((x ^ z) & 1);
+      w |= w << 2;
+      z += w;
+#endif
+
+      buf[--i] = z + '0';
+
+      x -= z;
+      if (x == 0)
+        break;
+
+#ifdef CONFIG_LIBC_FORMATTER_DIV10
+      x = x / 10;
+#else
+
+      /* multiply by 510 / 20 */
+# if 0
+      x = x / 2 * 3 * 17;   /* 64 bits mul */
+# else
+      x >>= 1;
+      x += x << 1;
+      x += x << 4;
+# endif
+
+      /* div by 255 */
+      __printf_uint_t s = -x;
+      __printf_uint_t r = 0;
+      uint_fast8_t i;
+
+      for (i = 0; i < sizeof(x); i++)
+        {
+          r = (r >> 8) | (s << (8 * sizeof(__printf_uint_t) - 8));
+          s = ((s & 0xff) + (s >> 8));
+        }
+      x = r;
+#endif
+    }
+
+  return PRINTF_INT_BUFFER_LEN - i;
+}
+
+static size_t
+printf_base_pow2(char *buf, __printf_uint_t val,
+                 const char *base, uint_fast8_t base_shift)
+{
+  int_fast8_t	i;
+
+  for (i = PRINTF_INT_BUFFER_LEN; i > 0; )
+    {
+      buf[--i] = base[val & ((1ULL << base_shift) - 1)];
+
+      if (!(val >>= base_shift))
 	break;
     }
 
@@ -388,7 +461,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
           }
         else
           {
-            buf = buf_ + PRINTF_INT_BUFFER_LEN - __printf_putint(buf_, val, hex_lower_base, 10);
+            buf = buf_ + PRINTF_INT_BUFFER_LEN - printf_base10(buf_, val);
           }
 
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
@@ -408,7 +481,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 
 	/* octal integer */
       case ('o'):
-	len = __printf_putint(buf_, val, hex_lower_base, 8);
+	len = printf_base_pow2(buf_, val, hex_lower_base, 3);
 	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
         if (val && (flags & PRINTF_FLAG_ALTERNATE))
@@ -422,7 +495,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 	/* binary integer */
       case ('b'):
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
-	len = __printf_putint(buf_, val, hex_lower_base, 2);
+	len = printf_base_pow2(buf_, val, hex_lower_base, 1);
 	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
         if (zeropad)
           {
@@ -454,7 +527,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 	    padding[0] = padding[1];
 	  }
 #endif
-	len = __printf_putint(buf_, val, hex_lower_base, 10);
+	len = printf_base10(buf_, val);
 	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
 	break;
 
@@ -472,7 +545,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
       case ('X'): {
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
         const char *base = format[-1] == 'X' ? hex_upper_base : hex_lower_base;
-	len = __printf_putint(buf_, val, base, 16);
+	len = printf_base_pow2(buf_, val, base, 4);
 	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
         if (zeropad)
           {
@@ -492,7 +565,7 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
             len += 2;
           }
 #else
-	len = __printf_putint(buf_, val, hex_lower_base, 16);
+	len = printf_base_pow2(buf_, val, hex_lower_base, 4);
 	buf = buf_ + PRINTF_INT_BUFFER_LEN - len;
 #endif
 	break;
