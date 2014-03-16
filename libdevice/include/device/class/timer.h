@@ -53,10 +53,8 @@ struct dev_timer_rq_s;
 /** Timer request @csee devtimer_request_t */
 struct dev_timer_rq_s
 {
-  union {
-    CONTAINER_ENTRY_TYPE(CLIST) queue_entry; //< used by driver to enqueue requests
-    struct kroutine_s           kr;
-  };
+  struct kroutine_s             kr;
+  CONTAINER_ENTRY_TYPE(CLIST)   queue_entry; //< used by driver to enqueue requests
 
   dev_timer_value_t             deadline;    //< absolute timer deadline
   dev_timer_delay_t             delay;       //< timer delay

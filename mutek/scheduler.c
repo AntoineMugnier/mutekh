@@ -175,19 +175,16 @@ error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible)
 
   switch (kr->policy)
     {
-    case KROUTINE_IMMEDIATE:
-      err = -EINVAL;
-      break;
-
 #ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
-    case KROUTINE_PREEMPT:
     case KROUTINE_INTERRUPTIBLE:
+    case KROUTINE_PREEMPT_INTERRUPTIBLE:
       if (interruptible)
         err = -EBUSY;
     case KROUTINE_SCHED_SWITCH:
+    case KROUTINE_PREEMPT:
       kroutine_queue_pushback(CPU_LOCAL_ADDR(kroutine_sched_switch), kr);
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-      if (kr->policy == KROUTINE_PREEMPT)
+      if (kr->policy == KROUTINE_PREEMPT || kr->policy == KROUTINE_PREEMPT_INTERRUPTIBLE)
         context_set_preempt(sched_preempt_switch, NULL);
 # endif
       break;
@@ -200,8 +197,7 @@ error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible)
 #endif
 
     default:
-      err = -ENOTSUP;
-      break;
+      assert(!"unexpected kroutine policy");
     }
 
   sched_queue_unlock(&sched->root);

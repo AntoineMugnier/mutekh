@@ -163,7 +163,7 @@ struct dev_timer_wait_rq_s
 #ifdef CONFIG_MUTEK_SCHEDULER
 static KROUTINE_EXEC(dev_timer_wait_request_cb)
 {
-  struct dev_timer_rq_s *rq = kr;
+  struct dev_timer_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
   struct dev_timer_wait_rq_s *status = rq->pvdata;
 
   LOCK_SPIN_IRQ(&status->lock);

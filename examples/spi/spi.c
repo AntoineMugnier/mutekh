@@ -15,7 +15,7 @@ static uint8_t rx[7] = {};
 
 static KROUTINE_EXEC(tr_callback)
 {
-  struct dev_spi_ctrl_transfer_s *tr = (void*)kr;
+  struct dev_spi_ctrl_transfer_s *tr = KROUTINE_CONTAINER(kr, *tr, kr);
 
   printk("tr callback: err=%i, %P\n", tr->err, rx, sizeof(rx));
 }
@@ -77,7 +77,7 @@ static const bc_opcode_t bytecode[] =
 
 static KROUTINE_EXEC(rq_callback)
 {
-  struct dev_spi_ctrl_request_s *rq = (void*)kr;
+  struct dev_spi_ctrl_request_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
 
   printk("rq callback: err=%i\n", rq->err);
 }

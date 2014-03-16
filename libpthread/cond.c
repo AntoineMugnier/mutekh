@@ -133,7 +133,7 @@ struct pthread_cond_timedwait_ctx_s
 
 static KROUTINE_EXEC(pthread_cond_timer)
 {
-  struct dev_timer_rq_s *rq = kr;
+  struct dev_timer_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
   struct pthread_cond_timedwait_ctx_s *ev_ctx = rq->pvdata;
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;

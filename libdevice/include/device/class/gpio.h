@@ -185,12 +185,10 @@ enum dev_gpio_event_type_e
 
 struct dev_gpio_request_s
 {
-  union {
-    struct kroutine_s         kr;
+  struct kroutine_s         kr;
 
-    /** used by driver to enqueue requests */
-    CONTAINER_ENTRY_TYPE(CLIST) queue_entry;
-  };
+  /** used by driver to enqueue requests */
+  CONTAINER_ENTRY_TYPE(CLIST) queue_entry;
 
   /** index of the first io to monitor */
   gpio_id_t                   io_first;

@@ -42,40 +42,63 @@
    kroutine_policy_e enum specifies the various available execution
    policies.
 
-   The interruptible parameter indicates if the function is called
-   from an interruptible context. The information must be passed
-   initially when calling the @ref kroutine_exec function but deferred
-   execution policy may result in a call to the the actual routine
-   with a different value of the interruptible parameter.
+   The @tt interruptible parameter indicates if the function is called
+   from an interruptible context. This information must be passed
+   when calling the @ref kroutine_exec function but chosen
+   policy may result in a defered call to the the actual routine
+   with a different value of the @tt interruptible parameter.
 */
 
 #include <hexo/gpct_platform_hexo.h>
 #include <gpct/cont_clist.h>
 
+#include <hexo/atomic.h>
+
+struct kroutine_s;
+
 /** @see kroutine_exec_t */
-#define KROUTINE_EXEC(n) void (n) (void *kr, bool_t interruptible)
+#define KROUTINE_EXEC(n) void (n) (struct kroutine_s *kr, bool_t interruptible)
 /** Actual routine callback function. */
 typedef KROUTINE_EXEC(kroutine_exec_t);
 
+/** @This can be used to retreive a pointer to the structure
+    containing a @ref kroutine_s object. */
+#define KROUTINE_CONTAINER(kr, conttype, field) \
+  ((typeof(conttype)*)((uint8_t*)kr - \
+   __builtin_offsetof(typeof(conttype), field)))
+
+/** @This specify kroutine defered execution policies. */
 enum kroutine_policy_e
 {
-  /** The routine is executed immediately when the the @ref
+  /** This policy makes the routine execute immediately when the @ref
       kroutine_exec function is called. The value of the @tt
-      interruptible parameter is passed directly to the callback. */
+      interruptible parameter is passed directly to the @ref
+      kroutine_exec_t function. */
   KROUTINE_IMMEDIATE,
 
+#ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
+  /** This policy requires an additional function call in order to
+      allow execution of the routine. This may be used to defer
+      execution of a routine up to a point in the code where the
+      stack has unwound and avoid cases of deep function call nesting.
+
+      The @ref kroutine_exec function and the @ref kroutine_trigger
+      function have both to be called in order for the routine to be
+      executed. The @ref kroutine_triggered_1st function can be used
+      inside the routine to find which function has been called first.
+  */
+  KROUTINE_TRIGGER,
+#endif
+
+#ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
   /** If the @ref kroutine_exec function is called with the @tt
-      interruptible parmeter set, the routine is executed immediately.
+      interruptible parameter set, the routine is executed immediately.
 
       In the other case, the routine is scheduled for execution on the
       next context switch. The routine will be executed with the
       interruptible parameter set on the stack of the processor idle
       context. The execution will take place on the processor where
       the @ref kroutine_exec function has been called.
-
-      If the @ref #CONFIG_MUTEK_KROUTINE_SCHED_SWITCH token is not
-      defined, the routine is executed immediately with the @tt
-      interruptible parameter cleared.
   */
   KROUTINE_INTERRUPTIBLE,
 
@@ -84,10 +107,11 @@ enum kroutine_policy_e
 
       In the other case, it has the additional behavior of preempting
       the current context: If the @ref kroutine_exec function is called
-      from an interrupt handler, the context switch will occur on
-      interrupt return.
+      from an interrupt handler, a context switch to the processor idle
+      context will occur on interrupt return in order to execute the
+      kroutine.
   */
-  KROUTINE_PREEMPT,
+  KROUTINE_PREEMPT_INTERRUPTIBLE,
 
   /** The routine is scheduled for execution on the next context
       switch.  The routine will be executed with interrupts enabled on
@@ -101,6 +125,47 @@ enum kroutine_policy_e
   */
   KROUTINE_SCHED_SWITCH,
 
+  /** If the @ref #CONFIG_HEXO_CONTEXT_PREEMPT configuration token is
+      not defined, this is the same as @ref KROUTINE_SCHED_SWITCH.
+
+      In the other case, it has the additional behavior of preempting
+      the current context: If the @ref kroutine_exec function is called
+      from an interrupt handler, a context switch to the processor idle
+      context will occur on interrupt return in order to execute the
+      kroutine.
+  */
+  KROUTINE_PREEMPT,
+
+  /** @multiple If the @ref #CONFIG_MUTEK_KROUTINE_SCHED_SWITCH token
+      is not defined, the policy defaults to KROUTINE_IMMEDIATE. */
+  KROUTINE_INTERRUPTIBLE_OR_IMMEDIATE          = KROUTINE_INTERRUPTIBLE,
+  KROUTINE_PREEMPT_INTERRUPTIBLE_OR_IMMEDIATE  = KROUTINE_PREEMPT_INTERRUPTIBLE,
+  KROUTINE_SCHED_SWITCH_OR_IMMEDIATE           = KROUTINE_SCHED_SWITCH,
+  KROUTINE_PREEMPT_OR_IMMEDIATE                = KROUTINE_PREEMPT,
+
+# ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
+  /** @multiple If the @ref #CONFIG_MUTEK_KROUTINE_SCHED_SWITCH token
+      is not defined, the policy defaults to KROUTINE_TRIGGER. */
+  KROUTINE_INTERRUPTIBLE_OR_TRIGGER            = KROUTINE_INTERRUPTIBLE,
+  KROUTINE_PREEMPT_INTERRUPTIBLE_OR_TRIGGER    = KROUTINE_PREEMPT_INTERRUPTIBLE,
+  KROUTINE_SCHED_SWITCH_OR_TRIGGER             = KROUTINE_SCHED_SWITCH,
+  KROUTINE_PREEMPT_OR_TRIGGER                  = KROUTINE_PREEMPT,     
+# endif
+#else
+  KROUTINE_INTERRUPTIBLE_OR_IMMEDIATE          = KROUTINE_IMMEDIATE,
+  KROUTINE_PREEMPT_INTERRUPTIBLE_OR_IMMEDIATE  = KROUTINE_IMMEDIATE,
+  KROUTINE_SCHED_SWITCH_OR_IMMEDIATE           = KROUTINE_IMMEDIATE,
+  KROUTINE_PREEMPT_OR_IMMEDIATE                = KROUTINE_IMMEDIATE,
+
+# ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
+  KROUTINE_INTERRUPTIBLE_OR_TRIGGER            = KROUTINE_TRIGGER,
+  KROUTINE_PREEMPT_INTERRUPTIBLE_OR_TRIGGER    = KROUTINE_TRIGGER,
+  KROUTINE_SCHED_SWITCH_OR_TRIGGER             = KROUTINE_TRIGGER,
+  KROUTINE_PREEMPT_OR_TRIGGER                  = KROUTINE_TRIGGER,
+# endif
+#endif
+
+#ifdef CONFIG_MUTEK_KROUTINE_IDLE
   /** The routine is scheduled for execution when the processor
       becomes idle. The routine will be executed with interrupts
       enabled on the stack of idle context. The execution will take
@@ -112,17 +177,52 @@ enum kroutine_policy_e
       parameter cleared.
   */
   KROUTINE_IDLE,
+
+  /** @multiple If the @ref #CONFIG_MUTEK_KROUTINE_IDLE token
+      is not defined, the policy defaults to KROUTINE_IMMEDIATE. */
+  KROUTINE_IDLE_OR_IMMEDIATE            = KROUTINE_IDLE,
+# ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
+  /** @multiple If the @ref #CONFIG_MUTEK_KROUTINE_IDLE token
+      is not defined, the policy defaults to KROUTINE_TRIGGER. */
+  KROUTINE_IDLE_OR_TRIGGER              = KROUTINE_IDLE,
+# endif
+#else
+  KROUTINE_IDLE_OR_IMMEDIATE            = KROUTINE_IMMEDIATE,
+# ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
+  KROUTINE_IDLE_OR_TRIGGER              = KROUTINE_TRIGGER,
+# endif
+#endif
 };
 
 struct kroutine_s
 {
-  CONTAINER_ENTRY_TYPE(CLIST) queue_entry;
-  kroutine_exec_t             *exec;
+  union {
+#if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
+    CONTAINER_ENTRY_TYPE(CLIST) queue_entry;
+#endif
+#ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
+    atomic_t                    state;
+#endif
+  };
+  kroutine_exec_t              *exec;
   enum kroutine_policy_e       policy;
 };
 
+#if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
 CONTAINER_TYPE       (kroutine_queue, CLIST, struct kroutine_s, queue_entry);
 CONTAINER_FUNC       (kroutine_queue, CLIST, static inline, kroutine_queue, queue_entry);
+#endif
+
+/** @This changes the scheduling policy of a kroutine . */
+static inline void kroutine_set_policy(struct kroutine_s *kr,
+                                       enum kroutine_policy_e policy)
+{
+  kr->policy = policy;
+#ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
+  if (policy == KROUTINE_TRIGGER)
+    atomic_set(&kr->state, 0);
+#endif
+}
 
 /** @This initializes a routine with the given callback and scheduling policy. */
 static inline void kroutine_init(struct kroutine_s *kr,
@@ -130,31 +230,8 @@ static inline void kroutine_init(struct kroutine_s *kr,
                                  enum kroutine_policy_e policy)
 {
   kr->exec = exec;
-  kr->policy = policy;
+  kroutine_set_policy(kr, policy);
 }
-
-/** @This changes the execution policy of a routine. The policy can be
-    changed before calling the @ref kroutine_exec or @ref
-    kroutine_schedule functions. */
-static inline void kroutine_set_policy(struct kroutine_s *kr,
-                                       enum kroutine_policy_e policy)
-{
-  kr->policy = policy;
-}
-
-/** @This schedules execution of a routine.
-
-    It is not permitted to schedule execution of a routine multiple
-    times. This function must not be called again before the callback
-    function is actually executed. It's ok to call this function from
-    the callback function itself in order to reschedule a routine.
-
-    This function returns an error code if the current routine policy
-    is @ref KROUTINE_IMMEDIATE or if the requested policy is not
-    supported with the current configuration.
-*/
-config_depend_or2(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH, CONFIG_MUTEK_KROUTINE_IDLE)
-error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible);
 
 /** @This either schedules the given routine by calling @ref
     kroutine_schedule or executes the routine immediately if it's not
@@ -162,13 +239,68 @@ error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible);
     the routine has been executed immediately. */
 static inline bool_t kroutine_exec(struct kroutine_s *kr, bool_t interruptible)
 {
+  error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible);
   bool_t r = 1;
-# if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
-  r = (kr->policy == KROUTINE_IMMEDIATE || kroutine_schedule(kr, interruptible));
-  if (r)
+
+  switch (kr->policy)
+    {
+#ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
+    case KROUTINE_TRIGGER:
+      r = !atomic_compare_and_swap(&kr->state, 0, 1);
+      if (r)
+        atomic_set(&kr->state, 0); /* reset state */
+      break;
 #endif
+#ifdef CONFIG_MUTEK_KROUTINE_IDLE
+    case KROUTINE_IDLE:
+#endif
+#ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
+    case KROUTINE_PREEMPT:
+    case KROUTINE_INTERRUPTIBLE:
+    case KROUTINE_SCHED_SWITCH:
+#endif
+#if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
+      r = kroutine_schedule(kr, interruptible);
+#endif
+    default:
+      break;
+    }
+  if (r)
     kr->exec(kr, interruptible);
   return r;
+}
+
+/** When the kroutine has been initialized using the @ref
+    KROUTINE_TRIGGER policy, this function permit execution of the
+    routine by the @ref kroutine_exec function. @This returns 0 if
+    the call to @ref kroutine_exec has not been performed yet.
+
+    When a different policy is in use, this function does nothing and
+    returns 0.
+*/
+config_depend(CONFIG_MUTEK_KROUTINE_TRIGGER)
+static inline bool_t kroutine_trigger(struct kroutine_s *kr, bool_t interruptible)
+{
+  bool_t r = kr->policy == KROUTINE_TRIGGER &&
+    !atomic_compare_and_swap(&kr->state, 0, 2);
+  if (r)
+    {
+      kr->exec(kr, interruptible);
+      atomic_set(&kr->state, 0); /* reset state */
+    }
+  return r;
+}
+
+/** @This is designed to be called from within the @ref kroutine_exec_t
+    handler function.
+
+    This function returns 1 if the @ref kroutine_trigger function has
+    been called before the @ref kroutine_exec function. It also returns
+    1 when the kroutine policy is not @ref KROUTINE_TRIGGER. */
+config_depend(CONFIG_MUTEK_KROUTINE_TRIGGER)
+static inline bool_t kroutine_triggered_1st(struct kroutine_s *kr)
+{
+  return kr->policy != KROUTINE_TRIGGER || atomic_get(&kr->state) != 1;
 }
 
 #endif
