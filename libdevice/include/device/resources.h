@@ -401,7 +401,6 @@ static inline error_t device_res_add_irq(struct device_s *dev, uint_fast8_t dev_
     return err;
 
   r->flags |= DEVICE_RES_FLAGS_DEPEND;
-  r->u.irq.icu = icu;
 
   r->u.irq.dev_out_id = dev_out_id;
   r->u.irq.icu_in_id = icu_in_id;

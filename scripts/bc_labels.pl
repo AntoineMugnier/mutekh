@@ -297,7 +297,7 @@ parse( sub {
 
                my $d = label_goto($2, $lnum);
 
-               $line = $1.$d.' /* :'.$2.$3;
+               $line = $1.$d.' /* :'.$2.$3."\n";
 
                if ($d > 127 || $d < -128)
                {
