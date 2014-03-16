@@ -37,9 +37,25 @@
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 
-static void device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t);
-static void device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t);
+enum device_spi_ret_e {
+  DEVICE_SPI_IDLE,
+  DEVICE_SPI_CONTINUE,
+  DEVICE_SPI_CONTINUE_GET_TIME,
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+  DEVICE_SPI_WAIT_TIMER,
+#endif
+  DEVICE_SPI_WAIT_TRANSFER,
+};
+
+static enum device_spi_ret_e device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t);
+static enum device_spi_ret_e device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t);
+static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q);
 static void device_spi_ctrl_end(struct dev_spi_ctrl_request_s *rq, error_t err);
+
+static enum device_spi_ret_e
+device_spi_ctrl_transfer(struct dev_spi_ctrl_request_s *rq, dev_timer_value_t t,
+                         uint_fast8_t in_width, uint_fast8_t out_width,
+                         void *in, const void *out, size_t count);
 
 static error_t device_spi_ctrl_select(struct dev_spi_ctrl_request_s *rq,
                                       enum dev_spi_cs_policy_e pc)
@@ -74,30 +90,26 @@ static error_t device_spi_ctrl_select(struct dev_spi_ctrl_request_s *rq,
 
 static KROUTINE_EXEC(device_spi_ctrl_transfer_end)
 {
-  struct dev_spi_ctrl_transfer_s *tr = (void*)kr;
+  struct dev_spi_ctrl_transfer_s *tr = KROUTINE_CONTAINER(kr, *tr, kr);
   struct dev_spi_ctrl_request_s *rq = tr->pvdata;
   struct dev_spi_ctrl_queue_s *q = rq->queue;
-
-  lock_spin_irq(&q->lock);
 
   if (rq->cs_gpio && rq->cs_policy == DEV_SPI_CS_TRANSFER)
     device_spi_ctrl_select(rq, DEV_SPI_CS_DEASSERT);
 
   if (tr->err != 0)
-    return device_spi_ctrl_end(rq, tr->err);
+    device_spi_ctrl_end(rq, tr->err);
+  else
+    bc_skip(&rq->vm);
 
-  dev_timer_value_t t = 0;
-  if (device_check_accessor(&q->timer))
-    DEVICE_OP(&q->timer, get_value, &t);
-
-  bc_skip(&rq->vm);
-
-  return device_spi_ctrl_exec(q, t);
+  if (kroutine_triggered_1st(kr))
+    device_spi_ctrl_run(q);
 }
 
-static void device_spi_ctrl_transfer(struct dev_spi_ctrl_request_s *rq, dev_timer_value_t t,
-                                     uint_fast8_t in_width, uint_fast8_t out_width,
-                                     void *in, const void *out, size_t count)
+static enum device_spi_ret_e
+device_spi_ctrl_transfer(struct dev_spi_ctrl_request_s *rq, dev_timer_value_t t,
+                         uint_fast8_t in_width, uint_fast8_t out_width,
+                         void *in, const void *out, size_t count)
 {
   struct dev_spi_ctrl_queue_s *q = rq->queue;
   struct dev_spi_ctrl_transfer_s *tr = &q->transfer;
@@ -105,18 +117,12 @@ static void device_spi_ctrl_transfer(struct dev_spi_ctrl_request_s *rq, dev_time
 
   if (rq->cs_gpio && rq->cs_policy == DEV_SPI_CS_TRANSFER &&
       (err = device_spi_ctrl_select(rq, DEV_SPI_CS_ASSERT)))
-    {
-      lock_spin_irq(&q->lock);
-      return device_spi_ctrl_end(rq, err);
-    }
+    goto err;
 
   if (q->config != &rq->config)
     {
       if ((err = DEVICE_OP(&rq->scdev, config, &rq->config)))
-        {
-          lock_spin_irq(&q->lock);
-          return device_spi_ctrl_end(rq, err);
-        }
+        goto err;
       q->config = &rq->config;
     }
 
@@ -126,15 +132,22 @@ static void device_spi_ctrl_transfer(struct dev_spi_ctrl_request_s *rq, dev_time
   tr->in_width = in_width;
   tr->out_width = out_width;
   tr->pvdata = rq;
-  kroutine_init(&tr->kr, &device_spi_ctrl_transfer_end, KROUTINE_IMMEDIATE);
+  kroutine_init(&tr->kr, &device_spi_ctrl_transfer_end, KROUTINE_TRIGGER);
 
-  return DEVICE_OP(&rq->scdev, transfer, tr);
+  DEVICE_OP(&rq->scdev, transfer, tr);
+
+  lock_spin_irq(&q->lock);
+  return DEVICE_SPI_WAIT_TRANSFER;
+ err:
+  lock_spin_irq(&q->lock);
+  device_spi_ctrl_end(rq, err);
+  return DEVICE_SPI_CONTINUE;
 }
 
 #if 0
 static KROUTINE_EXEC(device_spi_ctrl_next_kr)
 {
-  struct dev_spi_ctrl_transfer_s *tr = (void*)kr;
+  struct dev_spi_ctrl_transfer_s *tr = KROUTINE_CONTAINER(kr, *tr, kr);
   struct dev_spi_ctrl_queue_s *q = tr->pvdata;
 
   lock_spin_irq(&q->lock);
@@ -146,8 +159,10 @@ static KROUTINE_EXEC(device_spi_ctrl_next_kr)
     }
 
   dev_timer_value_t t = 0;
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   if (device_check_accessor(&q->timer))
     DEVICE_OP(&q->timer, get_value, &t);
+#endif
 
   return device_spi_ctrl_sched(q, t);
 }
@@ -169,7 +184,9 @@ static void device_spi_ctrl_end(struct dev_spi_ctrl_request_s *rq, error_t err)
 {
   struct dev_spi_ctrl_queue_s *q = rq->queue;
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   assert(q->timeout == NULL);
+#endif
 
   if (rq == q->current)
     {
@@ -187,30 +204,20 @@ static void device_spi_ctrl_end(struct dev_spi_ctrl_request_s *rq, error_t err)
   rq->err = err;
   rq->enqueued = 0;
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   if (device_check_accessor(&q->timer))
     DEVICE_OP(&q->timer, start_stop, 0);
+#endif
 
   lock_release_irq(&q->lock);
-
   kroutine_exec(&rq->kr, cpu_is_interruptible());
-
   lock_spin_irq(&q->lock);
-
-  if (q->current == NULL && q->timeout == NULL     /* no rq started from kroutine ? */
-      && !dev_spi_ctrl_queue_isempty(&q->queue))   /* rq to start */
-    {
-      dev_timer_value_t t = 0;
-      if (device_check_accessor(&q->timer))
-        DEVICE_OP(&q->timer, get_value, &t);
-      return device_spi_ctrl_sched(q, t);
-    }
-
-  lock_release_irq(&q->lock);
 }
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
 static KROUTINE_EXEC(device_spi_ctrl_timeout)
 {
-  struct dev_timer_rq_s *trq = (void*)kr;
+  struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, kr);
   struct dev_spi_ctrl_request_s *tm, *rq = trq->pvdata;
   struct dev_spi_ctrl_queue_s *q = rq->queue;
 
@@ -220,21 +227,14 @@ static KROUTINE_EXEC(device_spi_ctrl_timeout)
   tm = q->timeout;
   q->timeout = NULL;
 
-  if (tm != rq)
-    {
-      lock_release_irq(&q->lock);
-      return;
-    }
-
-  dev_timer_value_t t = 0;
-  DEVICE_OP(&q->timer, get_value, &t);
-
-  if (q->current != NULL)
-    return device_spi_ctrl_exec(q, t);
-  return device_spi_ctrl_sched(q, t);
+  if (tm != rq || !kroutine_triggered_1st(kr))
+    lock_release_irq(&q->lock);
+  else
+    device_spi_ctrl_run(q);
 }
 
-static void device_spi_ctrl_delay(struct dev_spi_ctrl_request_s *rq)
+static enum device_spi_ret_e
+device_spi_ctrl_delay(struct dev_spi_ctrl_request_s *rq)
 {
   struct dev_spi_ctrl_queue_s *q = rq->queue;
   struct dev_timer_rq_s *trq = &q->timer_rq;
@@ -242,10 +242,7 @@ static void device_spi_ctrl_delay(struct dev_spi_ctrl_request_s *rq)
 
   /* cancel old timer request */
   if (q->timeout != NULL && DEVICE_OP(&q->timer, cancel, &q->timer_rq))
-    {
-      lock_release_irq(&q->lock);
-      return;
-    }
+    return DEVICE_SPI_IDLE;
   q->timeout = NULL;
 
   /* enqueue new timer request */
@@ -253,7 +250,7 @@ static void device_spi_ctrl_delay(struct dev_spi_ctrl_request_s *rq)
     {
       trq->deadline = rq->sleep_before;
       trq->delay = 0;
-      kroutine_init(&trq->kr, device_spi_ctrl_timeout, KROUTINE_IMMEDIATE);
+      kroutine_init(&trq->kr, device_spi_ctrl_timeout, KROUTINE_TRIGGER);
       trq->pvdata = rq;
 
       err = DEVICE_OP(&q->timer, request, trq);
@@ -263,35 +260,27 @@ static void device_spi_ctrl_delay(struct dev_spi_ctrl_request_s *rq)
     {
     case 0:      /* wait for timeout interrupt */
       q->timeout = rq;
-      lock_release_irq(&q->lock);
-      return;
+      return DEVICE_SPI_WAIT_TIMER;
 
-    case ETIMEDOUT: {    /* update time and retry */
-      dev_timer_value_t t = 0;
-
-      if (device_check_accessor(&q->timer) &&
-          DEVICE_OP(&q->timer, get_value, &t) == 0)
-        {
-          if (q->current != NULL)
-            return device_spi_ctrl_exec(q, t);
-          return device_spi_ctrl_sched(q, t);
-        }
-
-      err = -ETIMEDOUT;
-    }
+    case ETIMEDOUT:    /* update time and retry */
+      return DEVICE_SPI_CONTINUE_GET_TIME;
 
     default:
-      return device_spi_ctrl_end(rq, err);
+      device_spi_ctrl_end(rq, err);
+      return DEVICE_SPI_CONTINUE;
     }
 }
+#endif
 
-static void device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t)
+static enum device_spi_ret_e
+device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t)
 {
   error_t err;
   struct dev_spi_ctrl_request_s *rq = NULL;
   assert(q->current == NULL);
 
   /* find next candidate request in queue */
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   CONTAINER_FOREACH_NOLOCK(dev_spi_ctrl_queue, CLIST, &q->queue, {
 
       /* FIXME use dev_timer_check_timeout */
@@ -299,35 +288,43 @@ static void device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_valu
         {
           /* cancel old timer request */
           if (q->timeout != NULL && DEVICE_OP(&q->timer, cancel, &q->timer_rq))
-            {
-              lock_release_irq(&q->lock);
-              return;
-            }
+            return DEVICE_SPI_IDLE;
+
           q->timeout = NULL;
-
           dev_spi_ctrl_queue_remove(&q->queue, item);
-          q->current = item;
-
-          if ((err = device_spi_ctrl_select(item, item->cs_policy)))
-            return device_spi_ctrl_end(rq, err);
-
-          return device_spi_ctrl_exec(q, t);
+          rq = item;
+          goto found;
         }
 
       if (rq == NULL || item->sleep_before < rq->sleep_before)
         rq = item;
     });
 
-  if (rq != NULL && q->timeout != rq)
-    return device_spi_ctrl_delay(rq);
+  if (rq == NULL || q->timeout == rq)
+    return DEVICE_SPI_IDLE;
 
-  lock_release_irq(&q->lock);
+  return device_spi_ctrl_delay(rq);
+
+#else
+  rq = dev_spi_ctrl_queue_pop(&q->queue);
+  if (rq == NULL)
+    return DEVICE_SPI_IDLE;
+#endif
+
+found:
+  q->current = rq;
+
+  if ((err = device_spi_ctrl_select(rq, rq->cs_policy)))
+    device_spi_ctrl_end(rq, err);
+
+  return DEVICE_SPI_CONTINUE;
 }
 
-static void device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t)
+static enum device_spi_ret_e
+device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t)
 {
   struct dev_spi_ctrl_request_s *rq;
-  error_t err = 0;
+  error_t err;
   uint16_t op;
 
   rq = q->current;
@@ -335,12 +332,16 @@ static void device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value
 
   lock_release_irq(&q->lock);
 
-  for (;; bc_skip(&rq->vm))
+  for (err = 0; err == 0; bc_skip(&rq->vm))
     {
       op = bc_run(&rq->vm, -1);
 
-      if (!(op & 0x8000))
-        break;
+      if (!(op & 0x8000))       /* bytecode end */
+        {
+          if (op)
+            err = -EINVAL;
+          break;
+        }
 
       switch (op & 0x7000)
         {
@@ -349,8 +350,10 @@ static void device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value
             {
             case 0x0000:
               if (op & 0x0080)
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
                 rq->sleep_before = t + dev_timer_delay_shift_s2t(
                    q->delay_shift_a, bc_get_reg(&rq->vm, op & 0xf));
+#endif
               switch (op & 0x0300)
                 {
                 case 0x0000:    /* yield */
@@ -367,15 +370,12 @@ static void device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value
                   dev_spi_ctrl_queue_pushback(&q->queue, rq);
                   q->current = NULL;
                   bc_skip(&rq->vm);
-                  return device_spi_ctrl_sched(q, t);
+                  return DEVICE_SPI_CONTINUE;
 
                 case 0x0200: {  /* wait, setcs */
                   uint8_t csp = (op >> 4) & 3;
                   if ((err = device_spi_ctrl_select(rq, csp)))
-                    {
-                      lock_spin_irq(&q->lock);
-                      return device_spi_ctrl_end(rq, err);
-                    }
+                    continue;
                   if (op & 0x0040) /* setcs */
                     {
                       rq->cs_policy = csp;
@@ -383,13 +383,19 @@ static void device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value
                     }
                   lock_spin_irq(&q->lock);
                   bc_skip(&rq->vm);
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
                   return device_spi_ctrl_delay(rq);
+#else
+                  return DEVICE_SPI_CONTINUE;
+#endif
                 }
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
                 case 0x0300:    /* delay */
                   if (!(op & 0x0080))
                     rq->sleep_before = 0;
                   continue;
+#endif
 
                 default:
                   continue;
@@ -474,19 +480,63 @@ static void device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value
                   err = DEVICE_OP(&rq->gpio, set_output, id, id + w - 1, value, value);
                 }
             }
-          if (!err)
-            continue;
-          lock_spin_irq(&q->lock);
-          return device_spi_ctrl_end(rq, err);
+          continue;
         }
 
         }
 
-      break;
+      err = -EINVAL;            /* invalid op */
     }
 
   lock_spin_irq(&q->lock);
-  return device_spi_ctrl_end(rq, op ? -EINVAL : 0);
+  device_spi_ctrl_end(rq, err);
+  return DEVICE_SPI_CONTINUE;
+}
+
+static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q)
+{
+  while (1)
+    {
+      enum device_spi_ret_e r = DEVICE_SPI_IDLE;
+      dev_timer_value_t t = 0;
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+      if (device_check_accessor(&q->timer))
+        DEVICE_OP(&q->timer, get_value, &t);
+#endif
+
+      while (r != DEVICE_SPI_CONTINUE_GET_TIME)
+        {
+          if (q->current != NULL)
+            r = device_spi_ctrl_exec(q, t);
+          else if (!dev_spi_ctrl_queue_isempty(&q->queue))
+            r = device_spi_ctrl_sched(q, t);
+          else
+            r = DEVICE_SPI_IDLE;
+
+          lock_release_irq(&q->lock);
+
+          switch (r)
+            {
+            case DEVICE_SPI_CONTINUE_GET_TIME:
+            case DEVICE_SPI_CONTINUE:
+              break;
+            case DEVICE_SPI_IDLE:
+              return;
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+            case DEVICE_SPI_WAIT_TIMER:
+              if (!kroutine_trigger(&q->timer_rq.kr, 0))
+                return;
+              break;
+#endif
+            case DEVICE_SPI_WAIT_TRANSFER:
+              if (!kroutine_trigger(&q->transfer.kr, 0))
+                return;
+              break;
+            }
+
+          lock_spin_irq(&q->lock);
+        }
+    }
 }
 
 void
@@ -504,17 +554,16 @@ dev_spi_request_start(struct dev_spi_ctrl_request_s *rq)
 
   lock_spin_irq(&q->lock);
 
-  dev_timer_value_t t = 0;
-
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   if (device_check_accessor(&q->timer))
-    {
-      err = DEVICE_OP(&q->timer, start_stop, 1);
-      DEVICE_OP(&q->timer, get_value, &t);
-    }
+    err = DEVICE_OP(&q->timer, start_stop, 1);
+#endif
 
   if (!err)
     {
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
       rq->sleep_before = 0;
+#endif
       rq->err = 0;
       rq->enqueued = 1;
       rq->wakeup = 0;
@@ -526,56 +575,55 @@ dev_spi_request_start(struct dev_spi_ctrl_request_s *rq)
         dev_spi_ctrl_queue_pushback(&q->queue, rq);
 
       if (q->current == NULL)
-        return device_spi_ctrl_sched(q, t);
+        device_spi_ctrl_run(q);
+      else
+        lock_release_irq(&q->lock);
     }
-
-  lock_release_irq(&q->lock);
-
-  if (err)
+  else
     {
+      lock_release_irq(&q->lock);
       rq->err = err;
       kroutine_exec(&rq->kr, cpu_is_interruptible());
-      return;
     }
 }
 
 error_t device_spi_request_wakeup(struct dev_spi_ctrl_request_s *rq)
 {
   struct dev_spi_ctrl_queue_s *q = rq->queue;
+  error_t err = 0;
 
   lock_spin_irq(&q->lock);
 
   if (!rq->enqueued)
     {
-      lock_release_irq(&q->lock);
-      return -EBUSY;
+      err = -EBUSY;
     }
   else if (q->current != rq && rq->wakeup_able)
     {
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
       rq->sleep_before = 0;
+#endif
       bc_skip(&rq->vm);
       if (q->current == NULL)
         {
-          dev_timer_value_t t = 0;
-          if (device_check_accessor(&q->timer))
-              DEVICE_OP(&q->timer, get_value, &t);
-
-          device_spi_ctrl_sched(q, t);
+          device_spi_ctrl_run(q);
+          return 0;
         }
     }
   else
     {
       rq->wakeup = 1;
-      lock_release_irq(&q->lock);
     }
 
-  return 0;
+  lock_release_irq(&q->lock);
+  return err;
 }
 
 error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q)
 {
-  error_t err;
+  __unused__ error_t err;
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   if (!device_get_param_dev_accessor(dev, "spi-timer", &q->timer, DRIVER_CLASS_TIMER))
     {
       err = dev_timer_shift_sec(&q->timer, &q->delay_shift_a, &q->delay_shift_b, 1, 1000000);
@@ -585,9 +633,11 @@ error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q)
   else
     device_init_accessor(&q->timer);
 
+  q->timeout = NULL;
+#endif
+
   q->config = NULL;
   q->current = NULL;
-  q->timeout = NULL;
   dev_spi_ctrl_queue_init(&q->queue);
   lock_init_irq(&q->lock);
   memset(&q->transfer, 0, sizeof(q->transfer));
@@ -598,7 +648,9 @@ void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q)
 {
   lock_destroy_irq(&q->lock);
   dev_spi_ctrl_queue_destroy(&q->queue);
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   device_put_accessor(&q->timer);
+#endif
 }
 
 error_t dev_spi_request_init(struct device_s *slave,

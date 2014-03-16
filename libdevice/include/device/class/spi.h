@@ -60,8 +60,8 @@ struct dev_spi_ctrl_queue_s;
 
 enum dev_spi_bit_order_e
 {
-  DEV_SPI_LSB_FIRST,
   DEV_SPI_MSB_FIRST,
+  DEV_SPI_LSB_FIRST,
 };
 
 enum dev_spi_polarity_e
@@ -198,10 +198,9 @@ struct dev_spi_ctrl_transfer_s
    with @tt -EBUSY if an other transfer is currently being processed.
 
    The @ref kroutine_exec function will be called on @tt tr->kr when
-   the transfer ends. This can happen before this function returns; in
-   this case @ref kroutine_exec is invoked using a tail call. It's ok
-   to start a new transfer from the kroutine. The @tt tr->err value
-   indicates the error status of the transfer.
+   the transfer ends. This can happen before this function
+   returns. It's ok to start a new transfer from the kroutine. The @tt
+   tr->err value indicates the error status of the transfer.
 */
 typedef DEVSPI_CTRL_TRANSFER(devspi_ctrl_transfer_t);
 
@@ -234,13 +233,12 @@ DRIVER_CLASS_TYPES(spi_ctrl,
 /** @This structure describes actions to perform on a SPI slave device. */
 struct dev_spi_ctrl_request_s
 {
-  union {
-    /** used by driver to enqueue requests */
-    CONTAINER_ENTRY_TYPE(CLIST)	queue_entry;
-    /** The @ref kroutine_exec function is called on this kroutine when
-        the bytecode execution ends. */
-    struct kroutine_s        kr;
-  };
+  /** The @ref kroutine_exec function is called on this kroutine when
+      the bytecode execution ends. */
+  struct kroutine_s        kr;
+
+  /** used by driver to enqueue requests */
+  CONTAINER_ENTRY_TYPE(CLIST)	queue_entry;
 
   /** bytecode virtual machine context */
   struct bc_context_s      vm;
@@ -250,7 +248,9 @@ struct dev_spi_ctrl_request_s
   /** request end callback */
   error_t                  err;
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   dev_timer_value_t       sleep_before;
+#endif
 
   struct device_spi_ctrl_s scdev;
   struct dev_spi_ctrl_queue_s *queue;
@@ -304,10 +304,14 @@ struct dev_spi_ctrl_queue_s
       instructions. It may not be valid, in this case any delay
       instruction with a delay greater than zero will make the request
       fail. */
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   struct device_timer_s         timer;
+#endif
 
   union {
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
     struct dev_timer_rq_s         timer_rq;
+#endif
     struct dev_spi_ctrl_transfer_s transfer;
   };
 
@@ -320,9 +324,11 @@ struct dev_spi_ctrl_queue_s
 
   lock_irq_t                    lock;
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   /** 1us delay shift, computed by @ref dev_timer_shift_sec @multiple */
   int8_t                        delay_shift_a;
   int8_t                        delay_shift_b;
+#endif
 };
 
 /** This helper function initializes a SPI request queue struct for
@@ -444,7 +450,8 @@ error_t device_spi_request_wakeup(struct dev_spi_ctrl_request_s *rq);
    executed. The execution of the bytecode will not be suspended. When
    a @ref #BC_SPI_YIELD or @ref #BC_SPI_WAIT instruction is
    encountered, the execution is suspended if the delay has not
-   elapsed at that time.
+   elapsed at that time. The @ref #CONFIG_DEVICE_SPI_REQUEST_TIMER
+   must be defined in order to use this instruction.
 
    The delay given in the register is expressed microsecond unit.
  */
