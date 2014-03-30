@@ -44,7 +44,8 @@
  -------------------------------------------------------------------
     end                               0000 0000 0000 0000       0
     dump                              0000 0000 0000 0001       0
-    abort                             0000 0000 0000 0002       0
+    abort                             0000 0000 0000 0010       0
+    trace                             0000 0000 0000 01xx       0
     add8                r, +/-v       0000 vvvv vvvv rrrr       0
     cst8                r, v          0001 vvvv vvvv rrrr       0
     jmp                 lbl           0010 llll llll 1111       0
@@ -97,6 +98,10 @@ struct bc_context_s
   uint16_t op_count;
   bool_t allow_ccall;
 #endif
+#ifdef CONFIG_MUTEK_BYTECODE_TRACE
+  bool_t trace;
+  bool_t trace_regs;
+#endif
 };
 
 /** @see bc_init */
@@ -132,6 +137,18 @@ bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, uintptr_t value)
   ctx->v[i] = value;
 }
 
+/** @This function enables or disable the bytecode execution trace
+    debug output. If the @ref #CONFIG_MUTEK_BYTECODE_TRACE token is
+    not defined, this function has no effect. @see #BC_TRACE */
+static inline void
+bc_set_trace(struct bc_context_s *ctx, bool_t enabled, bool_t regs)
+{
+#ifdef CONFIG_MUTEK_BYTECODE_TRACE
+  ctx->trace = enabled;
+  ctx->trace_regs = regs;
+#endif
+}
+
 /** @This increments the program counter */
 static inline void
 bc_skip(struct bc_context_s *ctx)
@@ -163,8 +180,10 @@ bc_allow_ccall(struct bc_context_s *ctx, bool_t allow)
 #endif
 }
 
-/** @This dumps the virtual machine state. */
-void bc_dump(const struct bc_context_s *ctx);
+/** @This dumps the virtual machine state. If the @ref
+    #CONFIG_MUTEK_BYTECODE_DEBUG token is not defined, this
+    function has no effect. */
+void bc_dump(const struct bc_context_s *ctx, bool_t regs);
 
 /** This function starts or resumes executions of the bytecode. It
     stops when an instruction which is not handled is encountered and
@@ -247,6 +266,8 @@ typedef BC_CCALL_FUNCTION(bc_ccall_function_t);
 #define BC_DUMP()           BC_FMT0(BC_OP_ADD8, 0, 1)
 /** Terminate bytecode execution and report an error */
 #define BC_ABORT()          BC_FMT0(BC_OP_ADD8, 0, 2)
+/** Enable or disable debug trace. @see bc_set_trace */
+#define BC_TRACE(enabled, regs)   BC_FMT0(BC_OP_ADD8, 0, 8 | (enabled & 1) | (regs & 1) << 1)
 /** Add a signed 8 bits value to a register */
 #define BC_ADD8(r, v)       BC_FMT0(BC_OP_ADD8, v, r)
 /** Set a register to an unsigned 8 bits constant */

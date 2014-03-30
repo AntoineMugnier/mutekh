@@ -42,6 +42,10 @@ void bc_init_va(struct bc_context_s *ctx,
   ctx->max_addr = (intptr_t)-1;
   ctx->allow_ccall = 1;
 #endif
+#ifdef CONFIG_MUTEK_BYTECODE_TRACE
+  ctx->trace = 0;
+  ctx->trace_regs = 0;
+#endif
 }
 
 void
@@ -68,8 +72,13 @@ static const char * bc_opname(uint16_t op)
   {
     { 0x8000, 0x8000, "custom" },
     { 0xffff, 0x0000, "end" },
+#ifdef CONFIG_MUTEK_BYTECODE_DEBUG
     { 0xffff, 0x0001, "dump" },
+#endif
     { 0xffff, 0x0002, "abort" },
+#ifdef CONFIG_MUTEK_BYTECODE_TRACE
+    { 0xfffc, 0x0008, "trace" },
+#endif
     { 0xf000, BC_OP_ADD8  << 8, "add8" },
     { 0xf000, BC_OP_CST8  << 8, "cst8" },
     { 0xf00f, (BC_OP_JMP  << 8) | 0xf, "jmp" },
@@ -114,7 +123,7 @@ static const char * bc_opname(uint16_t op)
 }
 #endif
 
-void bc_dump(const struct bc_context_s *ctx)
+void bc_dump(const struct bc_context_s *ctx, bool_t regs)
 {
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
   uint_fast8_t i;
@@ -124,10 +133,11 @@ void bc_dump(const struct bc_context_s *ctx)
 # endif
     op = ctx->code[ctx->v[15]];
 
-  printk("\nbytecode: pc=%u, opcode=%04x (%s), state before op:\n",
+  printk("bytecode: pc=%u, opcode=%04x (%s), state before op:\n",
          ctx->v[15], op, bc_opname(op));
-  for (i = 0; i < 16; i++)
-    printk("r%02u=%p%c", i, ctx->v[i], (i + 1) % 4 ? ' ' : '\n');
+  if (regs)
+    for (i = 0; i < 16; i++)
+      printk("r%02u=%p%c", i, ctx->v[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
 }
 
@@ -306,7 +316,8 @@ uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles)
       op = ctx->code[ctx->v[15]];
 
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
-      bc_dump(ctx);
+      if (ctx->trace)
+        bc_dump(ctx, ctx->trace_regs);
 #endif
 
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
@@ -336,12 +347,20 @@ uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles)
 	if (op == BC_END())
 	  return op;
 #ifdef CONFIG_MUTEK_BYTECODE_DEBUG
-	if (op == BC_DUMP())
-	  bc_dump(ctx);
+	else if (op == BC_DUMP())
+	  bc_dump(ctx, 1);
 #endif
-	if (op == BC_ABORT())
+#ifdef CONFIG_MUTEK_BYTECODE_TRACE
+	else if ((op & 0xfffc) == 8)
+          {
+            ctx->trace = op & 1;
+            ctx->trace_regs = (op & 2) >> 1;
+          }
+#endif
+	else if (op == BC_ABORT())
 	  goto err_abort;
-	*dst += (intptr_t)(int8_t)((op >> 4) & 0xff);
+        else
+          *dst += (intptr_t)(int8_t)((op >> 4) & 0xff);
 	break;
 
       dispatch_cst8:
@@ -450,7 +469,7 @@ uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles)
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
   printk("bytecode: abort\n", ctx->v[15]);
 # ifdef CONFIG_MUTEK_BYTECODE_DEBUG
-  bc_dump(ctx);
+  bc_dump(ctx, 1);
 # endif
 #endif
   return op;
