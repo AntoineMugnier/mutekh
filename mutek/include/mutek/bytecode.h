@@ -75,9 +75,11 @@
 
     ld[8,16,32,64][i]   r, ra         0110 0ssi aaaa rrrr       3
     st[8,16,32,64][i]   r, ra         0110 1ssi aaaa rrrr       3
-    cst[16,32,64][c]    r, v          0111 0ssc bbbb rrrr       3
-    st[8,16,32,64][d]   r, ra         0111 1ss0 bbbb rrrr       3
-    call                              0111 1-s1 ---- rrrr
+    cst[16,32,64][c]    r, v          0111 0ss0 bbbc rrrr       3
+    st[8,16,32,64]d     r, ra         0111 1ss0 aaaa rrrr       3
+    call                r             0111 0000 ---- rrrr       3
+    ld[8,16,32,64]e     r, ra         0111 0ss1 aaaa rrrr       3
+    st[8,16,32,64]e     r, ra         0111 1ss1 aaaa rrrr       3
 
     custom                            1--- ---- ---- ----
    @end code
@@ -244,9 +246,10 @@ enum bc_opcode_e
     BC_OP_ST   = 0x68,
     BC_OP_STI  = 0x69,
     BC_OP_CST  = 0x70,
-    BC_OP_CSTC = 0x71,
+    BC_OP_CALL = 0x70,
     BC_OP_STD  = 0x78,
-    BC_OP_CALL = 0x79,
+    BC_OP_LDE  = 0x71,
+    BC_OP_STE  = 0x79,
 };
 
 /** @see #BC_CCALL_FUNCTION */
@@ -293,7 +296,7 @@ typedef BC_CCALL_FUNCTION(bc_ccall_function_t);
     Absolute branch targets can be computed by the bc_labels.pl script.
     This instruction is 2 words long.
 */
-#define BC_CALL(r, pc)      BC_FMT3(BC_OP_CALL, 0, r, 0, 0), ((pc) & 0xffff)
+#define BC_CALL(r, pc)      BC_FMT3(BC_OP_CALL, 0, r, 0, 0), (((pc) >> 16) & 0xffff), ((pc) & 0xffff)
 
 /** If the jump target is backward, this instruction decrements the
     register which should not be initially zero and branch if the
@@ -382,6 +385,13 @@ typedef BC_CCALL_FUNCTION(bc_ccall_function_t);
 #define BC_LD32I(r, a)        BC_FMT3(BC_OP_LD, 2, r, a, 1)
 #define BC_LD64I(r, a)        BC_FMT3(BC_OP_LD, 3, r, a, 1)
 
+/** Load a value from a memory address given by a register and a 16
+    bits signed offset into an other register. @multiple */
+#define BC_LD8E(r, a, v)      BC_FMT3(BC_OP_LDE, 0, r, a, 1), ((v) & 0xffff)
+#define BC_LD16E(r, a, v)     BC_FMT3(BC_OP_LDE, 1, r, a, 1), ((v) & 0xffff)
+#define BC_LD32E(r, a, v)     BC_FMT3(BC_OP_LDE, 2, r, a, 1), ((v) & 0xffff)
+#define BC_LD64E(r, a, v)     BC_FMT3(BC_OP_LDE, 3, r, a, 1), ((v) & 0xffff)
+
 /** Store a value to a memory address given by a register from an
     other register. @multiple */
 #define BC_ST8(r, a)          BC_FMT3(BC_OP_ST, 0, r, a, 0)
@@ -404,6 +414,13 @@ typedef BC_CCALL_FUNCTION(bc_ccall_function_t);
 #define BC_ST16D(r, a)        BC_FMT3(BC_OP_STD, 1, r, a, 0)
 #define BC_ST32D(r, a)        BC_FMT3(BC_OP_STD, 2, r, a, 0)
 #define BC_ST64D(r, a)        BC_FMT3(BC_OP_STD, 3, r, a, 0)
+
+/** Store a value from a register to a memory address given by an
+    other register and a 16 bits signed offset. @multiple */
+#define BC_ST8E(r, a, v)      BC_FMT3(BC_OP_STE, 0, r, a, 1), ((v) & 0xffff)
+#define BC_ST16E(r, a, v)     BC_FMT3(BC_OP_STE, 1, r, a, 1), ((v) & 0xffff)
+#define BC_ST32E(r, a, v)     BC_FMT3(BC_OP_STE, 2, r, a, 1), ((v) & 0xffff)
+#define BC_ST64E(r, a, v)     BC_FMT3(BC_OP_STE, 3, r, a, 1), ((v) & 0xffff)
 
 /** Load/Store operations with access width matching pointer
     width. @multiple @see {#BC_LD32, #BC_LD32I, #BC_ST32, #BC_ST32I, #BC_ST32I, #BC_ST32D} */
@@ -429,14 +446,14 @@ typedef BC_CCALL_FUNCTION(bc_ccall_function_t);
 
 /** Set a register to an unsigned 16 bits constant. This instruction
     is 2 words long. */
-#define BC_CST16(r, v)        BC_FMT3(BC_OP_CST, 0, r, 0, 0), ((v) & 0xffff)
+#define BC_CST16(r, v)        BC_FMT3(BC_OP_CST, 1, r, 0, 0), ((v) & 0xffff)
 /** Set a register to an unsigned 16 bits constant. The constant may
-    be shifted by a mulitple of 4 bits and complemented. This
+    be shifted by a mulitple of 8 bits and complemented. This
     instruction is 2 words long. */
-#define BC_CST16X(r, v, s, c) BC_FMT3(BC_OP_CST, 0, r, (s)/4, c), ((v) & 0xffff)
+#define BC_CST16X(r, v, s, c) BC_FMT3(BC_OP_CST, 1, r, (s)/4 + c, 0), ((v) & 0xffff)
 /** Set a register to an unsigned 32 bits constant. This instruction
     is 3 words long. */
-#define BC_CST32(r, v)        BC_FMT3(BC_OP_CST, 1, r, 0, 0), (((v) >> 16) & 0xffff), ((v) & 0xffff)
+#define BC_CST32(r, v)        BC_FMT3(BC_OP_CST, 2, r, 0, 0), (((v) >> 16) & 0xffff), ((v) & 0xffff)
 /** Set a register to an unsigned 32 bits constant. This instruction
     is 5 words long. */
 #define BC_CST64(r, v)        BC_FMT3(BC_OP_CST, 3, r, 0, 0), (((v) >> 48) & 0xffff), (((v) >> 32) & 0xffff), (((v) >> 16) & 0xffff), ((v) & 0xffff)

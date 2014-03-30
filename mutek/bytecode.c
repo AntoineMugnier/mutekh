@@ -109,10 +109,11 @@ static const char * bc_opname(uint16_t op)
     { 0xf900, BC_OP_LDI   << 8, "ldi" },
     { 0xf900, BC_OP_ST    << 8, "st" },
     { 0xf900, BC_OP_STI   << 8, "sti" },
+    { 0xff00, BC_OP_CALL  << 8, "call" },
     { 0xf900, BC_OP_CST   << 8, "cst" },
-    { 0xf900, BC_OP_CSTC  << 8, "cstc" },
     { 0xf900, BC_OP_STD   << 8, "std" },
-    { 0xf900, BC_OP_CALL  << 8, "call" },
+    { 0xf900, BC_OP_LDE   << 8, "lde" },
+    { 0xf900, BC_OP_STE   << 8, "ste" },
     { 0x0000, 0x0000, "invalid" },
   };
   uint_fast8_t i;
@@ -158,10 +159,18 @@ static uint_fast8_t bc_run_ldst(struct bc_context_s *ctx, uint16_t op)
   op >>= 1;
   uint_fast8_t w = 1 << (op & 3);
 
-  if (inc) /* post increment */
-    *addrp += w;
-  else if (op & 8) /* pre decrement */
-    addr = (*addrp -= w);
+  if (op & 8)
+    {
+      if (inc)                  /* BC_LDnE/BC_STnE */
+        addr += (intptr_t)(int16_t)ctx->code[++ctx->v[15]];
+      else                      /* BC_STnD */
+        addr = (*addrp -= w);
+    }
+  else                          /* BC_LDn/BC_STn */
+    {
+      if (inc)                  /* BC_LDnI/BC_STnI */
+        *addrp += w;
+    }
 
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
   if (addr < ctx->min_addr || addr > ctx->max_addr)
@@ -416,9 +425,9 @@ uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles)
 	}
 
       dispatch_cstn_call: {
-	  if ((op & 0x0900) != 0x0800)
+	  if ((op & 0x0900) == 0x0000)
 	    {
-	      uint_fast8_t c = ((op >> 9) & 0x3) + 1;
+	      uint_fast8_t c = (0x4212 >> ((op >> 7) & 0xc)) & 7;
 	      uintptr_t x = 0;
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
 	      if (ctx->v[15] + c >= ctx->op_count)
@@ -426,17 +435,17 @@ uint16_t bc_run(struct bc_context_s *ctx, int_fast32_t max_cycles)
 #endif
 	      while (c--)
 		x = (x << 16) | ctx->code[++ctx->v[15]];
-	      x <<= ((op & 0x00f0) >> 2);
-              if (op & 0x0800)  /* BC_CALL */
+	      x <<= ((op & 0x00e0) >> 2);
+              if (op & 0x0600)  /* BC_CSTN */
+                {
+                  if (op & 0x0010)
+                    x = ~x;
+                  *dst = x;
+                }
+	      else              /* BC_CALL */
                 {
                   *dst = ctx->v[15];
                   ctx->v[15] = x;
-                }
-	      else              /* BC_CSTN */
-                {
-                  if (op & 0x0100)
-                    x = ~x;
-                  *dst = x;
                 }
 	      break;
 	    }

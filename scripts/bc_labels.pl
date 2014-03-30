@@ -151,9 +151,9 @@ my $block;
 my $addr;
 
 my %opcodes = (
-    "BC_END" => 1,    "BC_DUMP" => 1,  "BC_ABORT" => 1,
+    "BC_END" => 1,    "BC_DUMP" => 1,  "BC_ABORT" => 1,  "BC_TRACE" => 1,
     "BC_ADD8" => 1,   "BC_CST8" => 1,
-    "BC_JMP" => 1,    "BC_JMPL" => 1,  "BC_LOOP" => 1,   "BC_CALL" => 2,
+    "BC_JMP" => 1,    "BC_JMPL" => 1,  "BC_LOOP" => 1,   "BC_CALL" => 3,
     "BC_LT" => 1,     "BC_LTEQ" => 1,  "BC_EQ" => 1,     "BC_NEQ" => 1,
     "BC_MOV" => 1,    "BC_ADD" => 1,   "BC_SUB" => 1,
     "BC_MUL" => 1,    "BC_CCALL" => 1, "BC_OR" => 1,      "BC_XOR" => 1,
@@ -162,9 +162,11 @@ my %opcodes = (
     "BC_BITS" => 1,   "BC_BITC" => 1,  "BC_SHIL" => 1,   "BC_SHIR" => 1,
     "BC_LD8" => 1,    "BC_LD16" => 1,  "BC_LD32" => 1,    "BC_LD64" => 1,
     "BC_LD8I" => 1,   "BC_LD16I" => 1, "BC_LD32I" => 1,   "BC_LD64I" => 1,
+    "BC_LD8E" => 2,   "BC_LD16E" => 2, "BC_LD32E" => 2,   "BC_LD64E" => 2,
     "BC_ST8" => 1,    "BC_ST16" => 1,  "BC_ST32" => 1,    "BC_ST64" => 1,
     "BC_ST8I" => 1,   "BC_ST16I" => 1, "BC_ST32I" => 1,   "BC_ST64I" => 1,
     "BC_ST8D" => 1,   "BC_ST16D" => 1, "BC_ST32D" => 1,   "BC_ST64D" => 1,
+    "BC_ST8E" => 2,   "BC_ST16E" => 2, "BC_ST32E" => 2,   "BC_ST64E" => 2,
     "BC_LDPTR" => 1,  "BC_LDPTRI" => 1,"BC_STPTR" => 1,   "BC_STPTRI" => 1,
     "BC_STPTRD" => 1, "BC_CST16" => 2, "BC_CST16X" => 2,
     "BC_CST32" => 3,   "BC_CST64" => 5,
