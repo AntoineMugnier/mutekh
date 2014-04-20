@@ -16,6 +16,8 @@ void app_start()
 {
   static const bc_opcode_t test[] = {
 
+    BC_TRACE(1, 1),
+
     /* CST8, CCALL, NEQ */
     BC_CST8(2, 11),
     BC_CCALL(2, 1),
@@ -65,7 +67,7 @@ void app_start()
     /* LOOP backward, ADD8 positiv */
     BC_CST8(1, 0),
     BC_CST8(2, 5),
-  /* label:add */
+  /* label:add 41 */
     BC_ADD8(1, 2),
     BC_LOOP(2, -2 /* :add */),
     BC_CST8(2, 10),
@@ -75,7 +77,7 @@ void app_start()
     /* ADD8 negative */
     BC_CST8(1, 15),
     BC_CST8(2, 5),
-  /* label:add8 */
+  /* label:add8 48 */
     BC_ADD8(1, -2),
     BC_LOOP(2, -2 /* :add8 */),
     BC_CST8(2, 5),
@@ -85,11 +87,11 @@ void app_start()
     /* LOOP forward, JMP */
     BC_CST8(1, 0),
     BC_CST8(2, 5),
-  /* label:re */
+  /* label:re 55 */
     BC_LOOP(2, 2 /* :fwd */),
     BC_ADD8(1, 2),
     BC_JMP(-3 /* :re */),
-  /* label:fwd */
+  /* label:fwd 58 */
     BC_CST8(2, 10),
     BC_NEQ(1, 2),
     BC_ABORT(),
@@ -164,8 +166,8 @@ void app_start()
     BC_ADD(2, 2),
     BC_ST32(2, 1),
     BC_LD32(3, 1),
-    BC_CST32(2, 0x2468acf0),
-    BC_NEQ(3, 2),
+    BC_CST32(5, 0x2468acf0),
+    BC_NEQ(5, 2),
     BC_ABORT(),
     BC_ADD8(1, -4),
     BC_NEQ(1, 0),
@@ -173,6 +175,18 @@ void app_start()
     BC_LD32(4, 1),
     BC_CST32(2, 0x12345678),
     BC_NEQ(4, 2),
+    BC_ABORT(),
+
+    /* STE32, LDE32 */
+    BC_LD32E(4, 0, 4),
+    BC_NEQ(5, 4),
+    BC_ABORT(),
+    BC_ADD8(1, 12),
+    BC_ADD(4, 4),
+    BC_ST32E(4, 1, -8),
+    BC_LD32E(5, 0, 4),
+    BC_CST32(2, 0x48d159e0),
+    BC_NEQ(5, 2),
     BC_ABORT(),
 
     /* hello world using custom instruction */
@@ -196,14 +210,14 @@ void app_start()
     BC_MOV(13, 0),              /* setup stack ptr */
     BC_ADD8(13, 120),
     BC_CST8(1, 5),              /* param */
-    BC_CALL(10, 165 /* :fact */),
+    BC_CALL(10, 182 /* :fact */),
     BC_CST8(3, 120),            /* test return value */
     BC_NEQ(1, 3),
     BC_ABORT(),
     BC_END(),
 
     /* recursive factorial function */
-  /* label:fact */
+  /* label:fact 183 */
     BC_ST16D(10, 13),
     BC_CST8(2, 1),   
     BC_EQ(1, 2),     
@@ -213,7 +227,7 @@ void app_start()
     BC_JMPL(10, -7 /* :fact */),  /* call */
     BC_LD16I(2, 13), 
     BC_MUL(1, 2),    
-  /* label:fact_end */
+  /* label:fact_end 192 */
     BC_CUSTOM_PRINTI(1),
     BC_LD16I(10, 13),
     BC_MOV(15, 10),
