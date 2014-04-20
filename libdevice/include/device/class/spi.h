@@ -323,6 +323,7 @@ struct dev_spi_ctrl_queue_s
   dev_spi_ctrl_queue_root_t     queue;
 
   lock_irq_t                    lock;
+  bool_t                        running;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   /** 1us delay shift, computed by @ref dev_timer_shift_sec @multiple */

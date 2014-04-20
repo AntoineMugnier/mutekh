@@ -94,6 +94,8 @@ static KROUTINE_EXEC(device_spi_ctrl_transfer_end)
   struct dev_spi_ctrl_request_s *rq = tr->pvdata;
   struct dev_spi_ctrl_queue_s *q = rq->queue;
 
+  lock_spin_irq(&q->lock);
+
   if (rq->cs_gpio && rq->cs_policy == DEV_SPI_CS_TRANSFER)
     device_spi_ctrl_select(rq, DEV_SPI_CS_DEASSERT);
 
@@ -104,6 +106,8 @@ static KROUTINE_EXEC(device_spi_ctrl_transfer_end)
 
   if (kroutine_triggered_1st(kr))
     device_spi_ctrl_run(q);
+  else
+    lock_release_irq(&q->lock);
 }
 
 static enum device_spi_ret_e
@@ -495,6 +499,9 @@ device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t)
 
 static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q)
 {
+  assert(!q->running);
+  q->running = 1;
+
   while (1)
     {
       enum device_spi_ret_e r = DEVICE_SPI_IDLE;
@@ -513,28 +520,35 @@ static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q)
           else
             r = DEVICE_SPI_IDLE;
 
-          lock_release_irq(&q->lock);
-
           switch (r)
             {
             case DEVICE_SPI_CONTINUE_GET_TIME:
             case DEVICE_SPI_CONTINUE:
               break;
             case DEVICE_SPI_IDLE:
+              q->running = 0;
+              lock_release_irq(&q->lock);
               return;
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
             case DEVICE_SPI_WAIT_TIMER:
+              q->running = 0;
+              lock_release_irq(&q->lock);
               if (!kroutine_trigger(&q->timer_rq.kr, 0))
                 return;
+              lock_spin_irq(&q->lock);
+              q->running = 1;
               break;
 #endif
             case DEVICE_SPI_WAIT_TRANSFER:
+              q->running = 0;
+              lock_release_irq(&q->lock);
               if (!kroutine_trigger(&q->transfer.kr, 0))
                 return;
+              lock_spin_irq(&q->lock);
+              q->running = 1;
               break;
             }
 
-          lock_spin_irq(&q->lock);
         }
     }
 }
@@ -569,12 +583,14 @@ dev_spi_request_start(struct dev_spi_ctrl_request_s *rq)
       rq->wakeup = 0;
       rq->wakeup_able = 0;
 
+      bool_t empty = dev_spi_ctrl_queue_isempty(&q->queue);
+
       if (rq->priority)
         dev_spi_ctrl_queue_push(&q->queue, rq);
       else
         dev_spi_ctrl_queue_pushback(&q->queue, rq);
 
-      if (q->current == NULL)
+      if (q->current == NULL && empty && !q->running)
         device_spi_ctrl_run(q);
       else
         lock_release_irq(&q->lock);
@@ -638,6 +654,7 @@ error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q)
 
   q->config = NULL;
   q->current = NULL;
+  q->running = 0;
   dev_spi_ctrl_queue_init(&q->queue);
   lock_init_irq(&q->lock);
   memset(&q->transfer, 0, sizeof(q->transfer));
