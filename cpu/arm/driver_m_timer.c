@@ -110,7 +110,7 @@ static DEVTIMER_REQUEST(arm_timer_request)
             err = ETIMEDOUT;
           else
             {
-              dev_timer_queue_insert_ascend(&pv->systick_queue, rq);
+              dev_timer_queue_insert(&pv->systick_queue, rq);
               rq->drvdata = pv;
 
               /* start timer if needed */

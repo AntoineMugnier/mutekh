@@ -32,8 +32,8 @@
 #include <network/protos.h>
 #include <network/route.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/object_simple.h>
 
@@ -71,7 +71,7 @@ struct					ip_packet_s
   packet_queue_root_t			packets;
 
   fragment_obj_entry_t			obj_entry;
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(HASHLIST)	list_entry;
 };
 
 OBJECT_CONSTRUCTOR(fragment_obj);
@@ -82,9 +82,9 @@ OBJECT_FUNC(fragment_obj, SIMPLE, static inline, fragment_obj, obj_entry);
  * Fragments list.
  */
 
-#define CONTAINER_LOCK_ip_packet	HEXO_SPIN
-CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, list_entry, 64);
-CONTAINER_KEY_TYPE(ip_packet, PTR, BLOB, id, 6);
+#define CONTAINER_LOCK_ip_packet	HEXO_LOCK
+GCT_CONTAINER_TYPES(ip_packet, HASHLIST, struct ip_packet_s, list_entry, 64);
+GCT_CONTAINER_KEY_TYPES(ip_packet, PTR, BLOB, id, 6);
 
 /*
  * IP private data.

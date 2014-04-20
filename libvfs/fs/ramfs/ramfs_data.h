@@ -24,26 +24,21 @@
 
 #include <hexo/types.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/object_refcount.h>
-
-struct ramfs_data_s;
-
-OBJECT_TYPE     (ramfs_data, REFCOUNT, struct ramfs_data_s);
-OBJECT_PROTOTYPE(ramfs_data, static inline, ramfs_data);
+#include <gct_platform.h>
+#include <gct/refcount.h>
 
 struct ramfs_data_s
 {
     uint32_t magic;
-	ramfs_data_entry_t obj_entry;
+    GCT_REFCOUNT_ENTRY(obj_entry);
 	void *data;
 	size_t allocated_size;
 	size_t actual_size;
 };
 
-static inline OBJECT_CONSTRUCTOR(ramfs_data)
+static inline struct ramfs_data_s * ramfs_data_create()
 {
+    struct ramfs_data_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
 	obj->data = NULL;
 	obj->magic = 0x1ada1ada;
 	obj->allocated_size = 0;
@@ -52,13 +47,14 @@ static inline OBJECT_CONSTRUCTOR(ramfs_data)
 	return 0;
 }
 
-static inline OBJECT_DESTRUCTOR(ramfs_data)
+static inline void ramfs_data_destroy(struct ramfs_data_s *obj)
 {
 	if ( obj->data )
 		mem_free(obj->data);
+    mem_free(obj);
 }
 
-OBJECT_FUNC   (ramfs_data, REFCOUNT, static inline, ramfs_data, obj_entry);
+GCT_REFCOUNT(ramfs_data, struct ramfs_data_s *, obj_entry);
 
 error_t ramfs_data_realloc(struct ramfs_data_s *db, size_t new_size);
 

@@ -33,7 +33,7 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_dlist.h>
 
 #include <libelf/elf.h>
@@ -102,12 +102,12 @@ struct dynobj_rtld_s
 
     /** gpct pointer for double-linked list */
     /* we are forced to have dlist since link order is important */
-    CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
+    GCT_CONTAINER_ENTRY(DLIST)	list_entry;
 };
 
 /** @internal List type for rtld objects */
-CONTAINER_TYPE(dynobj_list, DLIST, struct dynobj_rtld_s, list_entry);
-CONTAINER_FUNC(dynobj_list, DLIST, static inline, dynobj_list, list_entry);
+GCT_CONTAINER_TYPES(dynobj_list, DLIST, struct dynobj_rtld_s, list_entry);
+GCT_CONTAINER_FCNS(dynobj_list, DLIST, static inline, dynobj_list, list_entry);
 
 /* 
  * Scanning callback

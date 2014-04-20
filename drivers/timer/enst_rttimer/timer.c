@@ -235,7 +235,7 @@ static DEVTIMER_REQUEST(enst_rttimer_request)
   else
     {
       rq->drvdata = p;
-      dev_timer_queue_insert_ascend(&p->queue, rq);
+      dev_timer_queue_insert(&p->queue, rq);
 
       /* adjust earliest deadline if needed */
       if (dev_timer_queue_head(&p->queue) == rq)

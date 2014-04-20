@@ -25,8 +25,8 @@
 #include <hexo/types.h>
 
 #define GPCT_CONFIG_NODEPRECATED
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/object_refcount.h>
 

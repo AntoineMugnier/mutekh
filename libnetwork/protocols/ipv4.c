@@ -52,8 +52,8 @@ extern struct device_timer_s libnetwork_timer_dev;
  * Fragment lists.
  */
 
-CONTAINER_FUNC_NOLOCK(ip_packet, HASHLIST, static inline, ip_packet, id);
-CONTAINER_KEY_FUNC(ip_packet, HASHLIST, static inline, ip_packet, id);
+GCT_CONTAINER_NOLOCK_FCNS(ip_packet, HASHLIST, static inline, ip_packet, id);
+GCT_CONTAINER_KEY_FCNS(ip_packet, HASHLIST, static inline, ip_packet, id);
 
 /*
  * Structures for declaring the protocol's properties & interface.

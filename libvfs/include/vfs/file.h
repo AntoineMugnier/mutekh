@@ -59,8 +59,10 @@
 C_HEADER_BEGIN
 
 #include <hexo/types.h>
-#include <gpct/object_refcount.h>
 #include <vfs/defs.h>
+
+#include <gct_platform.h>
+#include <gct/refcount.h>
 
 enum vfs_open_flags_e
 {
@@ -182,13 +184,9 @@ typedef VFS_FILE_SEEK(vfs_file_seek_t);
  */
 typedef VFS_FILE_TRUNCATE(vfs_file_truncate_t);
 
-
-OBJECT_TYPE     (vfs_file, REFCOUNT, struct vfs_file_s);
-OBJECT_PROTOTYPE(vfs_file, static inline, vfs_file);
-
 struct vfs_file_s
 {
-	vfs_file_entry_t obj_entry;         
+    GCT_REFCOUNT_ENTRY(obj_entry);
 	struct fs_node_s *node;            //< Corresponding node in the FS
 	vfs_fs_node_refdrop_t *node_refdrop; //< Function to call on close
 	vfs_file_close_t *close;            //< Close operation for this file  
@@ -199,6 +197,8 @@ struct vfs_file_s
 	off_t offset;                       //< Current access position in file
 	void *priv;                         //< File system private data
 };
+
+GCT_REFCOUNT(vfs_file, struct vfs_file_s *, obj_entry);
 
 struct vfs_dirent_s
 {
@@ -211,12 +211,12 @@ struct vfs_dirent_s
 	size_t size;
 };
 
-OBJECT_CONSTRUCTOR(vfs_file);
-OBJECT_DESTRUCTOR(vfs_file);
+void vfs_file_destroy(struct vfs_file_s *);
+struct vfs_file_s * vfs_file_create(struct vfs_node_s *node,
+                                    vfs_fs_node_refnew_t *node_refnew,
+                                    vfs_fs_node_refdrop_t *node_refdrop);
 
-OBJECT_FUNC   (vfs_file, REFCOUNT, static inline, vfs_file, obj_entry);
 
-#ifdef __MKDOC__
 /**
    @this creates a new opened file object. All file access operations are
    initialized with default error returning functions. The close operation
@@ -229,7 +229,6 @@ OBJECT_FUNC   (vfs_file, REFCOUNT, static inline, vfs_file, obj_entry);
    @return the new file object.
  */
 struct file_s * vfs_file_new(void *storage, struct vfs_node_s * node, vfs_fs_node_refnew_t *node_refnew, vfs_fs_node_refdrop_t *node_refdrop);
-#endif
 
 /** @this increases the file reference count and return the file itself. */
 struct vfs_file_s * vfs_file_refnew(struct vfs_file_s * file);

@@ -32,8 +32,8 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 #include <gpct/object_refcount.h>
 #include <gpct/cont_dlist.h>
 
@@ -58,7 +58,7 @@ struct				net_route_s
   bool_t			invalidated;
 
   route_obj_entry_t		obj_entry;
-  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(DLIST)	list_entry;
 };
 
 OBJECT_CONSTRUCTOR(route_obj);
@@ -70,8 +70,8 @@ OBJECT_FUNC(route_obj, REFCOUNT, static inline, route_obj, obj_entry);
  */
 
 #define CONTAINER_OBJ_route_table	route_obj
-#define CONTAINER_LOCK_route_table	HEXO_SPIN
-CONTAINER_TYPE(route_table, DLIST, struct net_route_s, list_entry);
+#define CONTAINER_LOCK_route_table	HEXO_LOCK
+GCT_CONTAINER_TYPES(route_table, DLIST, struct net_route_s, list_entry);
 
 /*
  * Prototypes

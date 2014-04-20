@@ -60,20 +60,20 @@
  * Session container.
  */
 
-CONTAINER_FUNC(tcp_session, HASHLIST, static inline, tcp_session, remote);
-CONTAINER_KEY_FUNC(tcp_session, HASHLIST, static inline, tcp_session, remote);
+GCT_CONTAINER_FCNS(tcp_session, HASHLIST, static inline, tcp_session, remote);
+GCT_CONTAINER_KEY_FCNS(tcp_session, HASHLIST, static inline, tcp_session, remote);
 
 /*
  * Segment queues
  */
 
-CONTAINER_FUNC(tcp_segment_queue, CLIST, static inline, tcp_segment_queue);
+GCT_CONTAINER_FCNS(tcp_segment_queue, CLIST, static inline, tcp_segment_queue);
 
 /*
  * TCP session list.
  */
 
-static CONTAINER_ROOT_DECLARATOR(tcp_session, HASHLIST, sessions);
+static GCT_CONTAINER_ROOT_DECLARATOR(tcp_session, HASHLIST, sessions);
 
 /*
  * Session objects

@@ -43,15 +43,16 @@ typedef SCHED_CANDIDATE_FCN(sched_candidate_fcn_t);
 
 #ifdef CONFIG_MUTEK_SCHEDULER
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_dlist.h>
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
+#include <gct/container_dlist.h>
 
-# define CONTAINER_LOCK_sched_queue HEXO_SPIN
+# define GCT_CONTAINER_ALGO_sched_queue DLIST
+# define GCT_CONTAINER_LOCK_sched_queue HEXO_LOCK
 
 struct sched_context_s
 {
-  CONTAINER_ENTRY_TYPE(DLIST) list_entry;
+  GCT_CONTAINER_ENTRY(sched_queue, list_entry);
   struct scheduler_s *scheduler;  //< keep track of associated scheduler queue
   struct context_s   *context;	  //< execution context
 
@@ -67,12 +68,15 @@ struct sched_context_s
 
 };
 
-CONTAINER_TYPE       (sched_queue, DLIST, struct sched_context_s, list_entry);
+GCT_CONTAINER_TYPES      (sched_queue, struct sched_context_s *, list_entry);
 
-CONTAINER_FUNC       (sched_queue, DLIST, static inline, sched_queue, list_entry);
-CONTAINER_FUNC_NOLOCK(sched_queue, DLIST, static inline, sched_queue_nolock, list_entry);
+GCT_CONTAINER_FCNS       (sched_queue, static inline, sched_queue,
+                          init, destroy, isempty, pushback, pop, head, wrlock, unlock);
 
-# define SCHED_QUEUE_INITIALIZER CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST)
+GCT_CONTAINER_NOLOCK_FCNS(sched_queue, static inline, sched_queue_nolock,
+                          isempty, pushback, pop, head, remove);
+
+# define SCHED_QUEUE_INITIALIZER GCT_CONTAINER_ROOT_INITIALIZER(sched_queue)
 
 /** @internal */
 extern CONTEXT_LOCAL struct sched_context_s *sched_cur;

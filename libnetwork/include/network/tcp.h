@@ -33,7 +33,7 @@
 #include <network/if.h>
 #include <network/libtcp.h>
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_hashlist.h>
 
 /**

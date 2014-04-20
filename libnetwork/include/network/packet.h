@@ -110,8 +110,8 @@ struct		net_header_s
 };
 
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 #include <gpct/object_refcount.h>
 #include <gpct/cont_dlist.h>
 
@@ -183,7 +183,7 @@ struct				net_packet_s
   uint_fast16_t			proto;		/* level 2 protocol id */
 
   packet_obj_entry_t		obj_entry;
-  CONTAINER_ENTRY_TYPE(DLIST)	queue_entry;
+  GCT_CONTAINER_ENTRY(DLIST)	queue_entry;
 };
 
 OBJECT_CONSTRUCTOR(packet_obj);
@@ -195,8 +195,8 @@ OBJECT_FUNC(packet_obj, REFCOUNT, static inline, packet_obj, obj_entry);
  */
 
 #define CONTAINER_OBJ_packet_queue	packet_obj
-#define CONTAINER_LOCK_packet_queue	HEXO_SPIN_IRQ
-CONTAINER_TYPE(packet_queue, DLIST, struct net_packet_s, queue_entry);
+#define CONTAINER_LOCK_packet_queue	HEXO_LOCK_IRQ
+GCT_CONTAINER_TYPES(packet_queue, DLIST, struct net_packet_s, queue_entry);
 
 /*
  * The packet object.
@@ -209,8 +209,8 @@ uint16_t		packet_memcpy(void		*dst,
 				      const void	*src,
 				      size_t		size);
 
-CONTAINER_PROTOTYPE(packet_queue, inline, packet_queue);
-CONTAINER_PROTOTYPE(packet_queue, inline, packet_queue_lock);
+GCT_CONTAINER_PROTOTYPES(packet_queue, inline, packet_queue);
+GCT_CONTAINER_PROTOTYPES(packet_queue, inline, packet_queue_lock);
 
 /*
  * Profiling info.

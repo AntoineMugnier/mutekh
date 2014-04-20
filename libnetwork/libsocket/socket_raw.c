@@ -39,7 +39,7 @@
 
 #include <semaphore.h>
 
-static socket_table_root_t	sock_raw = CONTAINER_ROOT_INITIALIZER(socket_table, DLIST);
+static socket_table_root_t	sock_raw = GCT_CONTAINER_ROOT_INITIALIZER(socket_table, DLIST);
 
 /*
  * Receive timeout callback.

@@ -31,7 +31,7 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_clist.h>
 
 #include <device/driver.h>
@@ -72,7 +72,7 @@ enum dev_i2c_rq_type_e
 #define DEV_I2C_IADDR_24BITS 0x300000
 #define DEV_I2C_IADDR_MASK   0x300000
 
-CONTAINER_TYPE(dev_i2c_queue, CLIST,
+GCT_CONTAINER_TYPES(dev_i2c_queue, CLIST,
 struct dev_i2c_rq_s
 {
 	dev_i2c_queue_entry_t	queue_entry; /* used by driver to enqueue requests */
@@ -87,7 +87,7 @@ struct dev_i2c_rq_s
 	enum dev_i2c_rq_type_e	type;
 }, queue_entry);
 
-CONTAINER_FUNC(dev_i2c_queue, CLIST, static inline, dev_i2c_queue);
+GCT_CONTAINER_FCNS(dev_i2c_queue, CLIST, static inline, dev_i2c_queue);
 
 
 /** I2c device class request() function tempate. */

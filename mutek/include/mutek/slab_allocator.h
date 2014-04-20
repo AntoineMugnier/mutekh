@@ -42,22 +42,22 @@ is created.
 #include <hexo/lock.h>
 #include <string.h>
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_clist.h>
 
 
 struct slab_pool_header_s
 {
-  CONTAINER_ENTRY_TYPE(CLIST) pool_entry;
+  GCT_CONTAINER_ENTRY(CLIST) pool_entry;
   void* head; 
 };
 
-CONTAINER_TYPE(pool_list, CLIST, struct slab_pool_header_s, pool_entry);
+GCT_CONTAINER_TYPES(pool_list, CLIST, struct slab_pool_header_s, pool_entry);
 
 struct slab_allocator_header_s
 {
  #ifdef CONFIG_MUTEK_SLAB_GLOBAL
-  CONTAINER_ENTRY_TYPE(CLIST) global_entry;
+  GCT_CONTAINER_ENTRY(CLIST) global_entry;
  #endif
   lock_t lock;
 
@@ -80,7 +80,7 @@ static const size_t pool_hdr_size = sizeof (struct slab_pool_header_s);
 static const size_t slab_hdr_size = sizeof (struct slab_allocator_header_s);
 
 
-CONTAINER_FUNC(pool_list, CLIST, static inline, pool_list, pool_entry);
+GCT_CONTAINER_FCNS(pool_list, CLIST, static inline, pool_list, pool_entry);
 
 struct slab_allocator_header_s* slab_init(size_t size,
                                           uint_fast32_t count,
@@ -89,12 +89,12 @@ struct slab_allocator_header_s* slab_init(size_t size,
 
 
  #ifdef CONFIG_MUTEK_SLAB_GLOBAL
-CONTAINER_TYPE(slab_list, CLIST, struct slab_allocator_header_s, global_entry);
+GCT_CONTAINER_TYPES(slab_list, CLIST, struct slab_allocator_header_s, global_entry);
 
 extern slab_list_root_t slab_root;
 extern lock_t slab_lock;
 
-CONTAINER_FUNC(slab_list, CLIST, static inline, slab_list, global_entry);
+GCT_CONTAINER_FCNS(slab_list, CLIST, static inline, slab_list, global_entry);
 
 /**
    @this init the global slab list.

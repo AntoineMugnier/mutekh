@@ -28,7 +28,7 @@
 #include <device/class/char.h>
 #include <device/irq.h>
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_ring.h>
 
 #define APBUART_REG_DATA	0
@@ -56,8 +56,8 @@
 
 /**************************************************************/
 
-CONTAINER_TYPE(uart_fifo, RING, uint8_t, 32);
-CONTAINER_FUNC(uart_fifo, RING, static inline, uart_fifo);
+GCT_CONTAINER_TYPES(uart_fifo, RING, uint8_t, 32);
+GCT_CONTAINER_FCNS(uart_fifo, RING, static inline, uart_fifo);
 
 struct gaisler_apbuart_context_s
 {

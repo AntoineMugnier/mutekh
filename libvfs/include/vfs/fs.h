@@ -60,10 +60,6 @@ C_HEADER_BEGIN
 #include <hexo/atomic.h>
 #include <hexo/error.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_dlist.h>
-#include <gpct/object_simple.h>
-
 /** @hidden */
 struct vfs_fs_s;
 

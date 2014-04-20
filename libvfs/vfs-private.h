@@ -66,12 +66,12 @@ struct vfs_node_s *vfs_node_createnew(
  */
 void vfs_node_use(struct vfs_node_s *node);
 
-// CONTAINER_FUNC(vfs_dir_hash, HASHLIST, static inline, vfs_dir);
+// GCT_CONTAINER_FCNS(vfs_dir_hash, HASHLIST, static inline, vfs_dir);
 
-CONTAINER_KEY_TYPE(vfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
+GCT_CONTAINER_KEY_TYPES(vfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
 
-CONTAINER_KEY_FUNC(vfs_dir_hash, HASHLIST, static inline, vfs_dir, name);
-CONTAINER_FUNC    (vfs_dir_hash, HASHLIST, static inline, vfs_dir, name);
+GCT_CONTAINER_KEY_FCNS(vfs_dir_hash, ASC, static inline, vfs_dir, name,
+                       init, destroy);
 
 static inline void vfs_node_dirlock(struct vfs_node_s *node)
 {

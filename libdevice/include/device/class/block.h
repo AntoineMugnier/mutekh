@@ -31,8 +31,8 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
+#include <gct_platform.h>
+#include <gct/container_slist.h>
 
 #include <device/driver.h>
 
@@ -71,10 +71,12 @@ enum dev_block_rq_type_e
     DEV_BLOCK_NOCACHE = 4,
   };
 
+#define GCT_CONTAINER_ALGO_dev_blk_queue CLIST
+
 /** Block device request object. */
 struct dev_block_rq_s
 {  
-  CONTAINER_ENTRY_TYPE(CLIST)	queue_entry;
+  GCT_CONTAINER_ENTRY(dev_blk_queue, queue_entry);
 
   enum dev_block_rq_type_e	type;    //< request type and flags
   dev_block_lba_t		lba;     //< logical block address
@@ -89,8 +91,9 @@ struct dev_block_rq_s
   void				*drvdata;       //< driver private data
 };
 
-CONTAINER_TYPE(dev_blk_queue, CLIST, struct dev_block_rq_s, queue_entry);
-CONTAINER_FUNC(dev_blk_queue, CLIST, static inline, dev_blk_queue);
+GCT_CONTAINER_TYPES(dev_blk_queue, struct dev_block_rq_s *, queue_entry);
+GCT_CONTAINER_FCNS(dev_blk_queue, static inline, dev_blk_queue,
+                   init, destroy, pushback, pop, isempty, head);
 
 /** Block device class request() function tempate. */
 #define DEVBLOCK_REQUEST(n)	void (n) (struct device_block_s *bdev,	\

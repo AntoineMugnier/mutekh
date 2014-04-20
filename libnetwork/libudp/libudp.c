@@ -42,7 +42,7 @@
 
 #include <network/libudp.h>
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/cont_clist.h>
 
@@ -52,10 +52,10 @@
  * The descriptors set.
  */
 
-CONTAINER_FUNC(udp_desc, HASHLIST, static inline, udp_desc, port);
-CONTAINER_KEY_FUNC(udp_desc, HASHLIST, static inline, udp_desc, port);
+GCT_CONTAINER_FCNS(udp_desc, HASHLIST, static inline, udp_desc, port);
+GCT_CONTAINER_KEY_FCNS(udp_desc, HASHLIST, static inline, udp_desc, port);
 
-static udp_desc_root_t	descriptors = CONTAINER_ROOT_INITIALIZER(udp_desc, HASHLIST);
+static udp_desc_root_t	descriptors = GCT_CONTAINER_ROOT_INITIALIZER(udp_desc, HASHLIST);
 
 /*
  * Descriptors contructor and destructor.

@@ -40,12 +40,12 @@
 
 static bool_t probes_blocked = 0;
 
-#define CONTAINER_LOCK_group_queue HEXO_SPIN
+#define CONTAINER_LOCK_group_queue HEXO_LOCK
 
-CONTAINER_TYPE(group_queue, SLIST,
+GCT_CONTAINER_TYPES(group_queue, SLIST,
 struct capsule_group_s
 {
-    CONTAINER_ENTRY_TYPE(SLIST) list_entry;
+    GCT_CONTAINER_ENTRY(SLIST) list_entry;
 
     struct capsule_group_s *parent;
     struct semaphore_s join;
@@ -62,8 +62,8 @@ struct cpu_ctxt_s
     size_t probes;
 };
 
-CONTAINER_FUNC(capsule_queue, SLIST, static inline, capsule_queue, list_entry);
-CONTAINER_FUNC(group_queue, SLIST, static inline, group_queue, list_entry);
+GCT_CONTAINER_FCNS(capsule_queue, SLIST, static inline, capsule_queue, list_entry);
+GCT_CONTAINER_FCNS(group_queue, SLIST, static inline, group_queue, list_entry);
 
 int_fast8_t main(int_fast8_t, char**);
 

@@ -148,12 +148,12 @@ endif
 
 endef
 
-define declare_gpct_header
+define declare_gct_header
 
 $(3)/$(1): $(2)/$(1:.h=.t)
 	$(call prepare_command,\\,$$@)
 	cp $$< $$@ $(LOG_REDIR)
-	perl $(MUTEK_SRC_DIR)/gpct/gpct/build/backslash.pl < $$< > $$@ 2>> $(LOG_FILE)
+	perl $(MUTEK_SRC_DIR)/gct/gct/build/backslash.pl $$< $$@ 2>> $(LOG_FILE)
 #	sed -e 's!^warning:\([0-9]*\):!$$<:\1:warning:!g' < $(LOG_FILE) 1>&2
 
 endef
@@ -263,7 +263,7 @@ $$(eval $$(foreach tometa,$$(filter %.h,$$(meta)),$$(call declare_meta_h,$$(tome
 
 $$(eval $$(foreach tometa,$$(filter-out %.h,$$(meta)),$$(call declare_meta_cpp,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
-$$(eval $$(foreach ph,$$(pre_headers),$$(call declare_gpct_header,$$(ph),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
+$$(eval $$(foreach ph,$$(pre_headers),$$(call declare_gct_header,$$(ph),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
 $$(eval \
 $$(foreach h,$$(doc_headers),\

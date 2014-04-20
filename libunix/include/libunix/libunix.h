@@ -24,7 +24,7 @@
 #ifndef LIBUNIX_H_
 #define LIBUNIX_H_
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_array.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/cont_clist.h>
@@ -60,8 +60,8 @@ struct libunix_fd_s
 
 #define CONTAINER_OBJ_libunix_fd_table libunix_fd
 
-CONTAINER_TYPE(libunix_fd_table, ARRAY, struct libunix_fd_s *, CONFIG_LIBUNIX_MAX_FD)
-CONTAINER_PROTOTYPE(libunix_fd_table, ARRAY, , libunix_fd);
+GCT_CONTAINER_TYPES(libunix_fd_table, ARRAY, struct libunix_fd_s *, CONFIG_LIBUNIX_MAX_FD)
+GCT_CONTAINER_PROTOTYPES(libunix_fd_table, ARRAY, , libunix_fd);
 
 
 /***********************************************************************
@@ -81,13 +81,13 @@ struct libunix_vmarea_s
   uintptr_t				end;
   libunix_proc_pgfault_t		*pgfault;
 
-  CONTAINER_ENTRY_TYPE(CLIST)		list_entry;
+  GCT_CONTAINER_ENTRY(CLIST)		list_entry;
 };
 
-CONTAINER_TYPE(libunix_vma_table, CLIST, struct libunix_vmarea_s, list_entry)
-CONTAINER_KEY_TYPE(libunix_vma_table, PTR, SCALAR, start);
+GCT_CONTAINER_TYPES(libunix_vma_table, CLIST, struct libunix_vmarea_s, list_entry)
+GCT_CONTAINER_KEY_TYPES(libunix_vma_table, PTR, SCALAR, start);
 
-CONTAINER_PROTOTYPE(libunix_vma_table, CLIST, , libunix_vma);
+GCT_CONTAINER_PROTOTYPES(libunix_vma_table, CLIST, , libunix_vma);
 CONTAINER_KEY_PROTOTYPE(libunix_vma_table, CLIST, , libunix_vma, start);
 
 
@@ -111,17 +111,17 @@ struct libunix_process_s
   /* sched */
   libunix_pid_t				pid;
   struct sched_context_s		sched_ctx;
-  CONTAINER_ENTRY_TYPE(HASHLIST)	pid_entry;
+  GCT_CONTAINER_ENTRY(HASHLIST)	pid_entry;
 
   struct libunix_process_s		*parent;
-  CONTAINER_ENTRY_TYPE(CLIST)		child_entry;
+  GCT_CONTAINER_ENTRY(CLIST)		child_entry;
 
   /* owner */
   libunix_uid_t				uid;
 };
 
-CONTAINER_TYPE     (libunix_proc_tree, CLIST, struct libunix_process_s, child_entry);
-CONTAINER_PROTOTYPE(libunix_proc_tree, CLIST, , libunix_proc_chld);
+GCT_CONTAINER_TYPES     (libunix_proc_tree, CLIST, struct libunix_process_s, child_entry);
+GCT_CONTAINER_PROTOTYPES(libunix_proc_tree, CLIST, , libunix_proc_chld);
 
 
 /***********************************************************************
@@ -136,10 +136,10 @@ struct libunix_s
 };
 
 
-CONTAINER_TYPE    (libunix_proc_table, HASHLIST, struct libunix_process_s, pid_entry, 11);
-CONTAINER_KEY_TYPE(libunix_proc_table, PTR, SCALAR, pid);
+GCT_CONTAINER_TYPES    (libunix_proc_table, HASHLIST, struct libunix_process_s, pid_entry, 11);
+GCT_CONTAINER_KEY_TYPES(libunix_proc_table, PTR, SCALAR, pid);
 
-CONTAINER_PROTOTYPE    (libunix_proc_table, HASHLIST, , libunix_proc, pid);
+GCT_CONTAINER_PROTOTYPES    (libunix_proc_table, HASHLIST, , libunix_proc, pid);
 CONTAINER_KEY_PROTOTYPE(libunix_proc_table, HASHLIST, , libunix_proc, pid);
 
 

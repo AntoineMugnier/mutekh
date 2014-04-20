@@ -23,8 +23,8 @@
 
 #include <libunix.h>
 
-CONTAINER_FUNC    (libunix_proc_table, HASHLIST, , libunix_proc, pid);
-CONTAINER_KEY_FUNC(libunix_proc_table, HASHLIST, , libunix_proc, pid);
+GCT_CONTAINER_FCNS    (libunix_proc_table, HASHLIST, , libunix_proc, pid);
+GCT_CONTAINER_KEY_FCNS(libunix_proc_table, HASHLIST, , libunix_proc, pid);
 
-CONTAINER_FUNC    (libunix_proc_tree, CLIST, , libunix_chld);
+GCT_CONTAINER_FCNS    (libunix_proc_tree, CLIST, , libunix_chld);
 

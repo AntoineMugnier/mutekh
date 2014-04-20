@@ -52,7 +52,7 @@
 #include <stdio.h>
 #include <mutek/printk.h>
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/cont_clist.h>
 
@@ -60,14 +60,14 @@
  * Functions for the interface container.
  */
 
-CONTAINER_FUNC(net_if, HASHLIST, static inline, net_if, name);
-CONTAINER_KEY_FUNC(net_if, HASHLIST, static inline, net_if, name);
+GCT_CONTAINER_FCNS(net_if, HASHLIST, static inline, net_if, name);
+GCT_CONTAINER_KEY_FCNS(net_if, HASHLIST, static inline, net_if, name);
 
 /*
  * Some local variables.
  */
 
-net_if_root_t		net_interfaces = CONTAINER_ROOT_INITIALIZER(net_if, HASHLIST);
+net_if_root_t		net_interfaces = GCT_CONTAINER_ROOT_INITIALIZER(net_if, HASHLIST);
 static uint_fast8_t	ifid = 0;
 static uint_fast8_t	ethid = 0;
 

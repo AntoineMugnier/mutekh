@@ -9,8 +9,8 @@
 
 #include <stdio.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 #include <gpct/cont_clist.h>
 
 extern struct device_s dev_mt5f;
@@ -18,9 +18,9 @@ extern struct device_s dev_gpio_piob;
 
 struct semaphore_s sem;
 
-#define CONTAINER_LOCK_j_queue HEXO_SPIN
+#define CONTAINER_LOCK_j_queue HEXO_LOCK
 
-CONTAINER_TYPE(j_queue, CLIST,
+GCT_CONTAINER_TYPES(j_queue, CLIST,
 struct joy_event_s
 {
 	devinput_ctrlid_t id;
@@ -29,7 +29,7 @@ struct joy_event_s
 	j_queue_entry_t queue_entry; /* used by driver to enqueue requests */
 }, queue_entry);
 
-CONTAINER_FUNC(j_queue, CLIST, static inline, j_queue);
+GCT_CONTAINER_FCNS(j_queue, CLIST, static inline, j_queue);
 
 static j_queue_root_t j_list;
 

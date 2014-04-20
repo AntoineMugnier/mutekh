@@ -49,8 +49,8 @@
    with a different value of the @tt interruptible parameter.
 */
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
+#include <gct_platform.h>
+#include <gct/container_clist.h>
 
 #include <hexo/atomic.h>
 
@@ -194,11 +194,13 @@ enum kroutine_policy_e
 #endif
 };
 
+#define GCT_CONTAINER_ALGO_kroutine_queue CLIST
+
 struct kroutine_s
 {
   union {
 #if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
-    CONTAINER_ENTRY_TYPE(CLIST) queue_entry;
+    GCT_CONTAINER_ENTRY(kroutine_queue, queue_entry);
 #endif
 #ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
     atomic_t                    state;
@@ -209,8 +211,9 @@ struct kroutine_s
 };
 
 #if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
-CONTAINER_TYPE       (kroutine_queue, CLIST, struct kroutine_s, queue_entry);
-CONTAINER_FUNC       (kroutine_queue, CLIST, static inline, kroutine_queue, queue_entry);
+GCT_CONTAINER_TYPES       (kroutine_queue, struct kroutine_s, queue_entry);
+GCT_CONTAINER_FCNS       (kroutine_queue, static inline, kroutine_queue, queue_entry,
+                          init, destroy, head, pushback, pop);
 #endif
 
 /** @This changes the scheduling policy of a kroutine . */
@@ -278,7 +281,7 @@ static inline bool_t kroutine_exec(struct kroutine_s *kr, bool_t interruptible)
     When a different policy is in use, this function does nothing and
     returns 0.
 */
-config_depend(CONFIG_MUTEK_KROUTINE_TRIGGER)
+#ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
 static inline bool_t kroutine_trigger(struct kroutine_s *kr, bool_t interruptible)
 {
   bool_t r = kr->policy == KROUTINE_TRIGGER &&
@@ -290,6 +293,10 @@ static inline bool_t kroutine_trigger(struct kroutine_s *kr, bool_t interruptibl
     }
   return r;
 }
+#endif
+
+config_depend(CONFIG_MUTEK_KROUTINE_TRIGGER)
+bool_t kroutine_trigger(struct kroutine_s *kr, bool_t interruptible);
 
 /** @This is designed to be called from within the @ref kroutine_exec_t
     handler function.
@@ -297,11 +304,16 @@ static inline bool_t kroutine_trigger(struct kroutine_s *kr, bool_t interruptibl
     This function returns 1 if the @ref kroutine_trigger function has
     been called before the @ref kroutine_exec function. It also returns
     1 when the kroutine policy is not @ref KROUTINE_TRIGGER. */
-config_depend(CONFIG_MUTEK_KROUTINE_TRIGGER)
+#ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
 static inline bool_t kroutine_triggered_1st(struct kroutine_s *kr)
 {
   return kr->policy != KROUTINE_TRIGGER || atomic_get(&kr->state) != 1;
 }
+
+config_depend(CONFIG_MUTEK_KROUTINE_TRIGGER)
+bool_t kroutine_triggered_1st(struct kroutine_s *kr);
+
+#endif
 
 #endif
 

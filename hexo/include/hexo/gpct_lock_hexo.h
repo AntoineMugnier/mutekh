@@ -34,89 +34,89 @@
 
 C_HEADER_BEGIN
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 
 #include <hexo/lock.h>
 
 /*************************************************************
- *	HEXO_SPIN mutex lock functions to use with container
+ *	HEXO_LOCK mutex lock functions to use with container
  */
 
-#define GPCT_LOCK_HEXO_SPIN_INITIALIZER	LOCK_INITIALIZER
-#define gpct_lock_HEXO_SPIN_initializer	LOCK_INITIALIZER
+#define GPCT_LOCK_HEXO_LOCK_INITIALIZER	LOCK_INITIALIZER
+#define gpct_lock_HEXO_LOCK_initializer	LOCK_INITIALIZER
 
-typedef lock_t gpct_lock_HEXO_SPIN_type_t;
+typedef lock_t gpct_lock_HEXO_LOCK_type_t;
 
 static inline gpct_error_t
-gpct_lock_HEXO_SPIN_init(lock_t *lock)
+gpct_lock_HEXO_LOCK_init(lock_t *lock)
 {
   return lock_init(lock);
 }
 
 static inline void
-gpct_lock_HEXO_SPIN_destroy(lock_t *lock)
+gpct_lock_HEXO_LOCK_destroy(lock_t *lock)
 {
   lock_destroy(lock);
 }
 
 static inline void
-gpct_lock_HEXO_SPIN_wrlock(lock_t *lock)
+gpct_lock_HEXO_LOCK_wrlock(lock_t *lock)
 {
   lock_spin(lock);
 }
 
 static inline void
-gpct_lock_HEXO_SPIN_rdlock(lock_t *lock)
+gpct_lock_HEXO_LOCK_rdlock(lock_t *lock)
 {
   lock_spin(lock);
 }
 
 static inline void
-gpct_lock_HEXO_SPIN_unlock(lock_t *lock)
+gpct_lock_HEXO_LOCK_unlock(lock_t *lock)
 {
   lock_release(lock);
 }
 
 /*************************************************************
- *	HEXO_SPIN_IRQ mutex lock functions to use with container
+ *	HEXO_LOCK_IRQ mutex lock functions to use with container
  */
 
-#define GPCT_LOCK_HEXO_SPIN_IRQ_INITIALIZER	LOCK_INITIALIZER
-#define gpct_lock_HEXO_SPIN_IRQ_initializer	LOCK_INITIALIZER
+#define GPCT_LOCK_HEXO_LOCK_IRQ_INITIALIZER	LOCK_INITIALIZER
+#define gpct_lock_HEXO_LOCK_IRQ_initializer	LOCK_INITIALIZER
 
 typedef struct 
 {
   lock_t lock;
   reg_t irq;
-} gpct_lock_HEXO_SPIN_IRQ_type_t;
+} gpct_lock_HEXO_LOCK_IRQ_type_t;
 
 static inline gpct_error_t
-gpct_lock_HEXO_SPIN_IRQ_init(gpct_lock_HEXO_SPIN_IRQ_type_t *lock)
+gpct_lock_HEXO_LOCK_IRQ_init(gpct_lock_HEXO_LOCK_IRQ_type_t *lock)
 {
   return lock_init(&lock->lock);
 }
 
 static inline void
-gpct_lock_HEXO_SPIN_IRQ_destroy(gpct_lock_HEXO_SPIN_IRQ_type_t *lock)
+gpct_lock_HEXO_LOCK_IRQ_destroy(gpct_lock_HEXO_LOCK_IRQ_type_t *lock)
 {
   lock_destroy(&lock->lock);
 }
 
 static inline void
-gpct_lock_HEXO_SPIN_IRQ_wrlock(gpct_lock_HEXO_SPIN_IRQ_type_t *lock)
+gpct_lock_HEXO_LOCK_IRQ_wrlock(gpct_lock_HEXO_LOCK_IRQ_type_t *lock)
 {
   cpu_interrupt_savestate_disable(&lock->irq);
   lock_spin(&lock->lock);
 }
 
 static inline void
-gpct_lock_HEXO_SPIN_IRQ_rdlock(gpct_lock_HEXO_SPIN_IRQ_type_t *lock)
+gpct_lock_HEXO_LOCK_IRQ_rdlock(gpct_lock_HEXO_LOCK_IRQ_type_t *lock)
 {
-  gpct_lock_HEXO_SPIN_IRQ_wrlock(lock);
+  gpct_lock_HEXO_LOCK_IRQ_wrlock(lock);
 }
 
 static inline void
-gpct_lock_HEXO_SPIN_IRQ_unlock(gpct_lock_HEXO_SPIN_IRQ_type_t *lock)
+gpct_lock_HEXO_LOCK_IRQ_unlock(gpct_lock_HEXO_LOCK_IRQ_type_t *lock)
 {
   lock_release(&lock->lock);
   cpu_interrupt_restorestate(&lock->irq);

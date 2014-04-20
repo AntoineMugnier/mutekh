@@ -28,9 +28,9 @@
 
 #include <mutek/printk.h>
 
-CONTAINER_FUNC(route_table, DLIST, static inline, route_table);
+GCT_CONTAINER_FCNS(route_table, DLIST, static inline, route_table);
 
-static route_table_root_t	route_table = CONTAINER_ROOT_INITIALIZER(route_table, DLIST);
+static route_table_root_t	route_table = GCT_CONTAINER_ROOT_INITIALIZER(route_table, DLIST);
 
 /*
  * Route object constructor.

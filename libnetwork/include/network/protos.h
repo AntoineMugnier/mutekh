@@ -33,8 +33,8 @@
 #include <hexo/error.h>
 #include <mutek/mem_alloc.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/object_refcount.h>
 
@@ -251,7 +251,7 @@ struct					net_proto_s
   bool_t				initialized;
 
   net_proto_obj_entry_t			obj_entry;
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(HASHLIST)	list_entry;
 };
 
 OBJECT_CONSTRUCTOR(net_proto_obj);
@@ -263,15 +263,15 @@ OBJECT_FUNC(net_proto_obj, REFCOUNT, static inline, net_proto_obj, obj_entry);
  */
 
 #define CONTAINER_OBJ_net_protos	net_proto_obj
-CONTAINER_TYPE(net_protos, HASHLIST, struct net_proto_s, list_entry, 8);
-CONTAINER_KEY_TYPE(net_protos, PTR, SCALAR, id);
+GCT_CONTAINER_TYPES(net_protos, HASHLIST, struct net_proto_s, list_entry, 8);
+GCT_CONTAINER_KEY_TYPES(net_protos, PTR, SCALAR, id);
 
 /*
  * Container functions.
  */
 
-CONTAINER_FUNC(net_protos, HASHLIST, static inline, net_protos, id);
-CONTAINER_KEY_FUNC(net_protos, HASHLIST, static inline, net_protos, id);
+GCT_CONTAINER_FCNS(net_protos, HASHLIST, static inline, net_protos, id);
+GCT_CONTAINER_KEY_FCNS(net_protos, HASHLIST, static inline, net_protos, id);
 
 /*
  * Foreach

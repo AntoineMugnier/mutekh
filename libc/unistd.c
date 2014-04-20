@@ -20,8 +20,8 @@
 
 */
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_array.h>
+#include <gct_platform.h>
+#include <gct/container_array.h>
 
 #include <unistd.h>
 #include <mutek/fileops.h>
@@ -43,13 +43,15 @@ struct fd_entry_s
   void *hndl;
 };
 
-CONTAINER_TYPE(fdarray, ARRAY, struct fd_entry_s, CONFIG_LIBC_MAX_FD)
-CONTAINER_FUNC(fdarray, ARRAY, static, fdarray);
+#define GCT_CONTAINER_ALGO_fdarray ARRAY
+
+GCT_CONTAINER_TYPES(fdarray, struct fd_entry_s, CONFIG_LIBC_MAX_FD)
+GCT_CONTAINER_FCNS(fdarray, static, fdarray);
 
 /* This removes a tedious warning... */
 #define gpct_lock_CONTAINER_LOCK_fdarray_initializer {}
 
-static fdarray_root_t fd_array = CONTAINER_ROOT_INITIALIZER(fdarray, ARRAY);
+static fdarray_root_t fd_array = GCT_CONTAINER_ROOT_INITIALIZER(fdarray, ARRAY);
 
 static fd_t fd_new(fdarray_root_t *fda)
 {

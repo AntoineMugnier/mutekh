@@ -36,35 +36,34 @@ C_HEADER_BEGIN
 #include <vfs/fs.h>
 
 #include <mutek/semaphore.h>
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_hashlist.h>
-#include <gpct/cont_clist.h>
-#include <gpct/object_refcount.h>
 
-OBJECT_TYPE     (vfs_node, REFCOUNT, struct vfs_node_s);
-OBJECT_PROTOTYPE(vfs_node, , vfs_node);
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock_irq.h>
 
-/** @see vfs_node_createnew */
-OBJECT_CONSTRUCTOR(vfs_node);
-OBJECT_DESTRUCTOR(vfs_node);
+#include <gct/container_avl.h>
+#include <gct/container_clist.h>
+#include <gct/refcount.h>
+
+#define GCT_CONTAINER_REFCOUNT_vfs_dir_hash vfs_node
+
+void vfs_node_destroy(struct vfs_node_s *);
 
 //#define CONTAINER_LOCK_vfs_dir_hash MUTEK_SEMAPHORE
-#define CONTAINER_LOCK_vfs_lru HEXO_SPIN_IRQ
+#define GCT_CONTAINER_LOCK_vfs_lru HEXO_LOCK_IRQ
 
-CONTAINER_TYPE    (vfs_dir_hash, HASHLIST,
-/**
-   @this is a node in the VFS.
- */
+#define GCT_CONTAINER_ALGO_vfs_dir_hash AVL
+#define GCT_CONTAINER_ALGO_vfs_lru      CLIST
+
+GCT_CONTAINER_TYPES    (vfs_dir_hash,
+/**  @this is a node in the VFS. */
 struct vfs_node_s
 {
     /** @internal */
-    CONTAINER_ENTRY_TYPE(HASHLIST) hash_entry;
+    GCT_CONTAINER_ENTRY(vfs_dir_hash, hash_entry);
     /** @internal */
-    CONTAINER_ENTRY_TYPE(CLIST)    lru_entry;
-    /** @internal
-        Object-management related */
-    vfs_node_entry_t obj_entry;
+    GCT_CONTAINER_ENTRY(vfs_lru, lru_entry);
+    /** @internal Object-management related */
+    GCT_REFCOUNT_ENTRY(obj_entry);
 
     /** File system the node is in */
     struct vfs_fs_s *fs;
@@ -119,16 +118,16 @@ struct vfs_node_s
     /** @internal
         Semaphore protecting @tt children */
     struct semaphore_s dir_semaphore;
-}
-, hash_entry, 5);
+} *, hash_entry);
 
-#define CONTAINER_OBJ_vfs_dir_hash vfs_node
+GCT_REFCOUNT(vfs_node, struct vfs_node_s *, obj_entry);
 
-CONTAINER_TYPE(vfs_lru, CLIST, struct vfs_node_s, lru_entry);
+GCT_CONTAINER_TYPES(vfs_lru, struct vfs_node_s *, lru_entry);
 
 struct vfs_fs_ops_s;
 
-OBJECT_TYPE     (vfs_fs, SIMPLE, struct vfs_fs_s);
+struct vfs_fs_s * vfs_fs_create();
+void vfs_fs_destroy(struct vfs_fs_s *);
 
 /**
    @this is an opened filesystem state.
@@ -147,7 +146,7 @@ struct vfs_fs_s
     uint8_t flag_ro:1;
 
     /** Object-management-related */
-    vfs_fs_entry_t obj_entry;
+    GCT_REFCOUNT_ENTRY(obj_entry);
 
     /**
        Mountpoint that was replaced with this filesystem's root on
@@ -176,13 +175,6 @@ struct vfs_fs_s
     atomic_t file_close_count;
 #endif
 };
-
-OBJECT_PROTOTYPE(vfs_fs, , vfs_fs);
-
-/** @see vfs_fs_new */
-OBJECT_CONSTRUCTOR(vfs_fs);
-OBJECT_DESTRUCTOR(vfs_fs);
-
 
 
 /**

@@ -35,10 +35,10 @@
 #include "block-cache.h"
 #include "block-cache-private.h"
 
-CONTAINER_FUNC(blk_cache_lba, BLIST, static inline, lba);
-CONTAINER_KEY_FUNC(blk_cache_lba, BLIST, static inline, lba, lba);
+GCT_CONTAINER_FCNS(blk_cache_lba, BLIST, static inline, lba);
+GCT_CONTAINER_KEY_FCNS(blk_cache_lba, BLIST, static inline, lba, lba);
 
-CONTAINER_FUNC(blk_cache_age, BLIST, static inline, age);
+GCT_CONTAINER_FCNS(blk_cache_age, BLIST, static inline, age);
 
 /**************************************************************/
 

@@ -425,7 +425,7 @@ void vfs_dump_item(struct vfs_node_s *node,
 //           , node->obj_entry.storage_free
         );
 
-    CONTAINER_FOREACH(vfs_dir_hash, HASHLIST, &node->children, {
+    GCT_FOREACH(vfs_dir_hash, &node->children, item, {
             vfs_dump_item(item, pfx+2);
         });
 }
@@ -442,7 +442,7 @@ void vfs_dump_lru(struct vfs_node_s *root)
 	printk("VFS LRU dump for root %p, fsroot: %p\n",
 		   root, root->fs->root);
     
-    CONTAINER_FOREACH(vfs_lru, CLIST, &root->fs->lru_list, {
+    GCT_FOREACH(vfs_lru, &root->fs->lru_list, item, {
             vfs_dump_item(item, 2);
         });
 }

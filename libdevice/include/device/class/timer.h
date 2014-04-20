@@ -33,8 +33,8 @@
 #include <hexo/error.h>
 
 #include <mutek/kroutine.h>
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
+#include <gct_platform.h>
+#include <gct/container_clist.h>
 
 #include <device/driver.h>
 
@@ -50,24 +50,29 @@ typedef uint32_t dev_timer_delay_t;
 
 struct dev_timer_rq_s;
 
+#define GCT_CONTAINER_ALGO_dev_timer_queue CLIST
+
 /** Timer request @csee devtimer_request_t */
 struct dev_timer_rq_s
 {
   struct kroutine_s             kr;
-  CONTAINER_ENTRY_TYPE(CLIST)   queue_entry; //< used by driver to enqueue requests
 
   dev_timer_value_t             deadline;    //< absolute timer deadline
   dev_timer_delay_t             delay;       //< timer delay
   void                          *pvdata;     //< pv data for callback
   void                          *drvdata;    //< driver private data
   struct device_timer_s         *tdev;       //< pointer to associated timer device
+
+  GCT_CONTAINER_ENTRY(dev_timer_queue, queue_entry); //< used by driver to enqueue requests
 };
 
-CONTAINER_TYPE(dev_timer_queue, CLIST, struct dev_timer_rq_s, queue_entry);
-CONTAINER_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue);
+GCT_CONTAINER_TYPES(dev_timer_queue, struct dev_timer_rq_s *, queue_entry);
+GCT_CONTAINER_FCNS(dev_timer_queue, static inline, dev_timer_queue,
+                   init, destroy, isempty, pop, head, remove);
 
-CONTAINER_KEY_TYPE(dev_timer_queue, PTR, SCALAR, deadline);
-CONTAINER_KEY_FUNC(dev_timer_queue, CLIST, static inline, dev_timer_queue, deadline);
+GCT_CONTAINER_KEY_TYPES(dev_timer_queue, PTR, SCALAR, deadline);
+GCT_CONTAINER_KEY_FCNS(dev_timer_queue, ASC, static inline, dev_timer_queue, deadline,
+                       insert);
 
 /** @see devtimer_request_t */
 #define DEVTIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)

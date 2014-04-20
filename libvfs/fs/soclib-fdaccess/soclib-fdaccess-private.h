@@ -56,7 +56,7 @@ OBJECT_FUNC   (soclib_fdaccess_node, REFCOUNT, static inline, soclib_fdaccess_no
 struct soclib_fdaccess_rq_s
 {
 #ifdef CONFIG_HEXO_IRQ
-  CONTAINER_ENTRY_TYPE(CLIST)	queue_entry;
+  GCT_CONTAINER_ENTRY(CLIST)	queue_entry;
 # ifndef CONFIG_MUTEK_SCHEDULER
   bool_t done;
 # endif
@@ -77,8 +77,8 @@ struct soclib_fdaccess_rq_s
 };
 
 #ifdef CONFIG_HEXO_IRQ
-CONTAINER_TYPE(soclib_fdaccess_rq_queue, CLIST, struct soclib_fdaccess_rq_s, queue_entry);
-CONTAINER_FUNC(soclib_fdaccess_rq_queue, CLIST, static inline, soclib_fdaccess_rq);
+GCT_CONTAINER_TYPES(soclib_fdaccess_rq_queue, CLIST, struct soclib_fdaccess_rq_s, queue_entry);
+GCT_CONTAINER_FCNS(soclib_fdaccess_rq_queue, CLIST, static inline, soclib_fdaccess_rq);
 #endif
 
 int32_t soclib_fdaccess_rq(struct device_s *dev,

@@ -31,16 +31,16 @@
 #include <hexo/lock.h>
 #include <hexo/endian.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 #include <gpct/cont_slist.h>
 
-CONTAINER_TYPE(region_list, SLIST, struct mem_region_s, list_entry);
-CONTAINER_KEY_TYPE(region_list, PTR, SCALAR, priority);
+GCT_CONTAINER_TYPES(region_list, SLIST, struct mem_region_s, list_entry);
+GCT_CONTAINER_KEY_TYPES(region_list, PTR, SCALAR, priority);
 
-CONTAINER_FUNC(region_list, SLIST, static inline, region_list);
-CONTAINER_FUNC_NOLOCK(region_list, SLIST, static inline, region_list_nolock);
-CONTAINER_KEY_FUNC_NOLOCK(region_list, SLIST, static inline, region_priority, priority);
+GCT_CONTAINER_FCNS(region_list, SLIST, static inline, region_list);
+GCT_CONTAINER_NOLOCK_FCNS(region_list, SLIST, static inline, region_list_nolock);
+GCT_CONTAINER_KEY_FCNS_NOLOCK(region_list, SLIST, static inline, region_priority, priority);
 
 CPU_LOCAL region_list_root_t region_root[mem_scope_e_count];
 

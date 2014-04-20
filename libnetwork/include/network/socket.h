@@ -163,8 +163,8 @@ struct			socket_api_s
  * A socket.
  */
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 #include <gpct/cont_dlist.h>
 
 struct				socket_s
@@ -177,12 +177,12 @@ struct				socket_s
   bool_t			keepalive;
   void				*pv;
 
-  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(DLIST)	list_entry;
 };
 
-#define CONTAINER_LOCK_socket_table	HEXO_SPIN
-CONTAINER_TYPE(socket_table, DLIST, struct socket_s, list_entry);
-CONTAINER_FUNC(socket_table, DLIST, static inline, socket_table);
+#define CONTAINER_LOCK_socket_table	HEXO_LOCK
+GCT_CONTAINER_TYPES(socket_table, DLIST, struct socket_s, list_entry);
+GCT_CONTAINER_FCNS(socket_table, DLIST, static inline, socket_table);
 
 #include "socket_hexo.h"
 

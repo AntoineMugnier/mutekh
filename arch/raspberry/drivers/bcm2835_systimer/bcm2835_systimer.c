@@ -195,7 +195,7 @@ static DEVTIMER_REQUEST(bcm2835_systimer_request)
     err = ETIMEDOUT;
   else
     {
-      dev_timer_queue_insert_ascend(&pv->queue, rq);
+      dev_timer_queue_insert(&pv->queue, rq);
       rq->drvdata = pv;
 
       if (dev_timer_queue_head(&pv->queue) == rq)

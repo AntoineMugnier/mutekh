@@ -22,8 +22,8 @@
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 
 #include <mutek/semaphore.h>
 
@@ -158,8 +158,8 @@ struct net_packet_s		*packet_dup(struct net_packet_s	*orig)
  * packet queue functions.
  */
 
-CONTAINER_FUNC_NOLOCK(packet_queue, DLIST, inline, packet_queue);
-CONTAINER_FUNC_LOCK(packet_queue, DLIST, inline, packet_queue_lock, HEXO_SPIN_IRQ);
+GCT_CONTAINER_NOLOCK_FCNS(packet_queue, DLIST, inline, packet_queue);
+GCT_CONTAINER_LOCK_FCNS(packet_queue, DLIST, inline, packet_queue_lock, HEXO_LOCK_IRQ);
 
 #ifdef CONFIG_NETWORK_PROFILING
 /*

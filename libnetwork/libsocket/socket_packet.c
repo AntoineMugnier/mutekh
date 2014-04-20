@@ -36,7 +36,7 @@
 
 #include <mutek/semaphore.h>
 
-socket_table_root_t	pf_packet = CONTAINER_ROOT_INITIALIZER(socket_table, DLIST);
+socket_table_root_t	pf_packet = GCT_CONTAINER_ROOT_INITIALIZER(socket_table, DLIST);
 
 /*
  * Receive timeout callback.

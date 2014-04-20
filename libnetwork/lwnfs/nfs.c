@@ -57,8 +57,8 @@
 
 #include <semaphore.h>
 
-CONTAINER_FUNC(rpcb, HASHLIST, static inline, rpcb, id);
-CONTAINER_KEY_FUNC(rpcb, HASHLIST, static inline, rpcb, id);
+GCT_CONTAINER_FCNS(rpcb, HASHLIST, static inline, rpcb, id);
+GCT_CONTAINER_KEY_FCNS(rpcb, HASHLIST, static inline, rpcb, id);
 
 /*
  * RPC timeout.

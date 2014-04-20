@@ -36,10 +36,10 @@
 #include "ramfs_data.h"
 #include "ramfs_file.h"
 
-CONTAINER_FUNC           (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir, name);
-CONTAINER_FUNC_NOLOCK    (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir_nolock, name);
-CONTAINER_KEY_FUNC       (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir, name);
-CONTAINER_KEY_FUNC_NOLOCK(ramfs_dir_hash, HASHLIST, static inline, ramfs_dir_nolock, name);
+GCT_CONTAINER_FCNS           (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir, name);
+GCT_CONTAINER_NOLOCK_FCNS    (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir_nolock, name);
+GCT_CONTAINER_KEY_FCNS       (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir, name);
+GCT_CONTAINER_KEY_FCNS_NOLOCK(ramfs_dir_hash, HASHLIST, static inline, ramfs_dir_nolock, name);
 
 /*
   Here are two helpers when we need to take two locks at the same time

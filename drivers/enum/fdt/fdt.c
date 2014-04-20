@@ -174,10 +174,10 @@ static FDT_ON_NODE_LEAVE_FUNC(enum_fdt_node_leave)
 
 static struct device_s *enum_fdt_get_phandle(struct device_s *dev, uint32_t phandle)
 {
-  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->node.children, {
+  GCT_FOREACH_NOLOCK(device_list, &dev->node.children, item, {
 
       if (!(item->flags & DEVICE_FLAG_DEVICE))
-        CONTAINER_FOREACH_CONTINUE;
+        GCT_FOREACH_CONTINUE;
 
       struct device_s *d = (struct device_s*)item;
 
@@ -512,10 +512,10 @@ const struct driver_s	enum_fdt_drv =
 
 static void resolve_dev_links(struct device_s *root, struct device_s *dev)
 {
-  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &dev->node.children, {
+  GCT_FOREACH_NOLOCK(device_list, &dev->node.children, item, {
 
       if (!(item->flags & DEVICE_FLAG_DEVICE))
-        CONTAINER_FOREACH_CONTINUE;
+        GCT_FOREACH_CONTINUE;
 
       struct device_s *d = (struct device_s*)item;
 

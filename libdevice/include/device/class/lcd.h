@@ -31,7 +31,7 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_clist.h>
 
 #include <device/driver.h>
@@ -86,7 +86,7 @@ enum lcd_req_type_e
 	LCD_REQ_SET_CONTRAST,
 };
 
-CONTAINER_TYPE(dev_lcd_queue, CLIST,
+GCT_CONTAINER_TYPES(dev_lcd_queue, CLIST,
 struct lcd_req_s
 {
 	enum lcd_req_type_e type;
@@ -116,7 +116,7 @@ struct lcd_req_s
 	dev_lcd_queue_entry_t	queue_entry; /* used by driver to enqueue requests */
 }, queue_entry);
 
-CONTAINER_FUNC(dev_lcd_queue, CLIST, static inline, dev_lcd_queue);
+GCT_CONTAINER_FCNS(dev_lcd_queue, CLIST, static inline, dev_lcd_queue);
 
 /** Lcd device class request() function tempate. */
 #define DEVLCD_REQUEST(n)	error_t  (n) (struct device_lcd_s *ldev, struct lcd_req_s *req)

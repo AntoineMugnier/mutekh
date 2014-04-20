@@ -26,11 +26,11 @@
 #include <hexo/types.h>
 #include <hexo/lock.h>
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_bitmap.h>
 
-CONTAINER_TYPE(input_state, BITMAP, uint32_t, INPUT_8042_KEYCOUNT);
-CONTAINER_FUNC(input_state, BITMAP, static inline, input_state);
+GCT_CONTAINER_TYPES(input_state, BITMAP, uint32_t, INPUT_8042_KEYCOUNT);
+GCT_CONTAINER_FCNS(input_state, BITMAP, static inline, input_state);
 
 struct input_8042_context_s;
 

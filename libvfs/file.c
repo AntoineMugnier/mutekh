@@ -21,6 +21,8 @@
 
 #include <mutek/fileops.h>
 #include <mutek/printk.h>
+#include <mutek/mem_alloc.h>
+
 #include <vfs/vfs.h>
 
 static VFS_FILE_READ(default_vfs_file_read)
@@ -50,28 +52,32 @@ static VFS_FILE_CLOSE(default_vfs_file_close)
 	return 0;
 }
 
-OBJECT_CONSTRUCTOR(vfs_file)
+struct vfs_file_s * vfs_file_create(struct vfs_node_s *node,
+				    vfs_fs_node_refnew_t *node_refnew,
+				    vfs_fs_node_refdrop_t *node_refdrop)
 {
-	struct fs_node_s *node = va_arg(ap, struct fs_node_s*);
-	vfs_fs_node_refnew_t *node_refnew = va_arg(ap, vfs_fs_node_refnew_t *);
-	vfs_fs_node_refdrop_t *node_refdrop = va_arg(ap, vfs_fs_node_refdrop_t *);
+	struct vfs_file_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
 
-	vfs_printk("<file open %p>", node);
-	obj->offset = 0;
-	obj->node = node_refnew(node);
-	obj->node_refdrop = node_refdrop;
-	obj->close = default_vfs_file_close;
-	obj->read = default_vfs_file_read;
-	obj->write = default_vfs_file_write;
-	obj->seek = default_vfs_file_seek;
-	obj->truncate = default_vfs_file_truncate;
+	if (obj != NULL)
+	    {
+		vfs_printk("<file open %p>", node);
+		obj->offset = 0;
+		obj->node = node_refnew(node);
+		obj->node_refdrop = node_refdrop;
+		obj->close = default_vfs_file_close;
+		obj->read = default_vfs_file_read;
+		obj->write = default_vfs_file_write;
+		obj->seek = default_vfs_file_seek;
+		obj->truncate = default_vfs_file_truncate;
+	    }
 
-	return 0;
+	return obj;
 }
 
-OBJECT_DESTRUCTOR(vfs_file)
+void vfs_file_destroy(struct vfs_file_s *obj)
 {
 	vfs_printk("<file close %p>", obj->node);
+	mem_free(obj);
 
 	obj->node_refdrop(obj->node);
 }

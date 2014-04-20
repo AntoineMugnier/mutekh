@@ -23,45 +23,43 @@
 #define _RAMFS_PRIVATE_H_
 
 #include <hexo/types.h>
-#define GPCT_CONFIG_NODEPRECATED
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_hashlist.h>
-#include <gpct/object_refcount.h>
+
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock_irq.h>
+#include <gct/container_avl.h>
+#include <gct/refcount.h>
 
 #include <vfs/types.h>
 #include <vfs/file.h>
 
 VFS_FS_NODE_OPEN(ramfs_node_open);
 
-OBJECT_TYPE     (ramfs_node, REFCOUNT, struct fs_node_s);
+#define GCT_CONTAINER_LOCK_ramfs_dir_hash HEXO_LOCK_IRQ
+#define GCT_CONTAINER_ALGO_ramfs_dir_hash AVL
 
-#define CONTAINER_LOCK_ramfs_dir_hash HEXO_SPIN_IRQ
-
-CONTAINER_TYPE    (ramfs_dir_hash, HASHLIST,
+GCT_CONTAINER_TYPES    (ramfs_dir_hash,
 struct fs_node_s
 {
-    ramfs_node_entry_t obj_entry;
+    GCT_REFCOUNT_ENTRY(obj_entry);
     char name[CONFIG_VFS_NAMELEN];
-	CONTAINER_ENTRY_TYPE(HASHLIST) hash_entry;
+	GCT_CONTAINER_ENTRY(ramfs_dir_hash, hash_entry);
     enum vfs_node_type_e type;
     struct fs_node_s *parent;
     union {
         struct ramfs_data_s *data;
         ramfs_dir_hash_root_t children;
     };
-}, hash_entry, 5);
+} *, hash_entry);
 
 #define CONTAINER_OBJ_ramfs_dir_hash ramfs_node
 
-CONTAINER_KEY_TYPE(ramfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
-//CONTAINER_PROTOTYPE(ramfs_dir_hash, HASHLIST, static inline);
+GCT_CONTAINER_KEY_TYPES(ramfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
+//GCT_CONTAINER_PROTOTYPES(ramfs_dir_hash, HASHLIST, static inline);
 
-OBJECT_CONSTRUCTOR(ramfs_node);
-OBJECT_DESTRUCTOR(ramfs_node);
+struct fs_node_s * ramfs_node_create();
+void ramfs_node_destroy(struct fs_node_s *);
 
-OBJECT_PROTOTYPE         (ramfs_node, static inline, ramfs_node);
-OBJECT_FUNC              (ramfs_node, REFCOUNT, static inline, ramfs_node, obj_entry);
+GCT_REFCOUNT(ramfs_node, struct fs_node_s *, obj_entry);
 
 struct fs_node_s;
 

@@ -38,8 +38,8 @@
 #include <netinet/udp.h>
 #include <network/route.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/object_simple.h>
 
@@ -125,16 +125,16 @@ struct					net_udp_desc_s
   bool_t				checksum;
 
   udp_desc_obj_entry_t			obj_entry;
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(HASHLIST)	list_entry;
 };
 
 OBJECT_CONSTRUCTOR(udp_desc_obj);
 OBJECT_DESTRUCTOR(udp_desc_obj);
 OBJECT_FUNC(udp_desc_obj, SIMPLE, static inline, udp_desc_obj, obj_entry);
 
-#define CONTAINER_LOCK_udp_desc	HEXO_SPIN
-CONTAINER_TYPE(udp_desc, HASHLIST, struct net_udp_desc_s, list_entry, 64);
-CONTAINER_KEY_TYPE(udp_desc, PTR, SCALAR, port);
+#define CONTAINER_LOCK_udp_desc	HEXO_LOCK
+GCT_CONTAINER_TYPES(udp_desc, HASHLIST, struct net_udp_desc_s, list_entry, 64);
+GCT_CONTAINER_KEY_TYPES(udp_desc, PTR, SCALAR, port);
 
 /*
  * Prototypes

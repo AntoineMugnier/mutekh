@@ -35,8 +35,8 @@
 #include <network/packet.h>
 #include <netinet/arp.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/object_refcount.h>
 
@@ -99,7 +99,7 @@ struct net_if_s
 
   struct net_dispatch_s                 *dispatch;
   net_if_obj_entry_t			obj_entry;
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(HASHLIST)	list_entry;
 };
 
 OBJECT_CONSTRUCTOR(net_if_obj);
@@ -111,9 +111,9 @@ OBJECT_FUNC(net_if_obj, REFCOUNT, static inline, net_if_obj, obj_entry);
  */
 
 #define CONTAINER_OBJ_net_if		net_if_obj
-#define CONTAINER_LOCK_net_if		HEXO_SPIN
-CONTAINER_TYPE(net_if, HASHLIST, struct net_if_s, list_entry, 4);
-CONTAINER_KEY_TYPE(net_if, PTR, STRING, name);
+#define CONTAINER_LOCK_net_if		HEXO_LOCK
+GCT_CONTAINER_TYPES(net_if, HASHLIST, struct net_if_s, list_entry, 4);
+GCT_CONTAINER_KEY_TYPES(net_if, PTR, STRING, name);
 
 
 /**

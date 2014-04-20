@@ -36,11 +36,11 @@
 #include <arch/efm32_leuart.h>
 
 #if CONFIG_DRIVER_EFM32_LEUART_SWFIFO > 0
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_ring.h>
 
-CONTAINER_TYPE(uart_fifo, RING, uint8_t, CONFIG_DRIVER_EFM32_LEUART_SWFIFO);
-CONTAINER_FUNC(uart_fifo, RING, static inline, uart_fifo);
+GCT_CONTAINER_TYPES(uart_fifo, RING, uint8_t, CONFIG_DRIVER_EFM32_LEUART_SWFIFO);
+GCT_CONTAINER_FCNS(uart_fifo, RING, static inline, uart_fifo);
 #endif
 
 struct efm32_leuart_context_s

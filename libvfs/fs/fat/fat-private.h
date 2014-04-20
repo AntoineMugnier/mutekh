@@ -29,8 +29,8 @@
 
 #include <mutek/semaphore.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 #include <gpct/cont_hashlist.h>
 #include <gpct/cont_clist.h>
 #include <gpct/object_refcount.h>
@@ -46,13 +46,13 @@ struct fat_file_s;
 OBJECT_TYPE     (fat_file, REFCOUNT, struct fat_file_s);
 OBJECT_PROTOTYPE(fat_file, static inline, fat_file);
 
-#define CONTAINER_LOCK_fat_file_list HEXO_SPIN_IRQ
+#define CONTAINER_LOCK_fat_file_list HEXO_LOCK_IRQ
 #define CONTAINER_OBJ_fat_file_list fat_file
 
-CONTAINER_TYPE(fat_file_list, CLIST,
+GCT_CONTAINER_TYPES(fat_file_list, CLIST,
 struct fat_file_s
 {
-    CONTAINER_ENTRY_TYPE(CLIST) list_entry;
+    GCT_CONTAINER_ENTRY(CLIST) list_entry;
     common_cluster_t cluster_index;      // index from start of *file*
 	common_cluster_t zone_start; // index of first contiguous block in fat
 	common_cluster_t zone_end;   // index of last contiguous block in fat + 1
@@ -63,7 +63,7 @@ struct fat_file_s
 OBJECT_CONSTRUCTOR(fat_file);
 OBJECT_DESTRUCTOR(fat_file);
 
-CONTAINER_FUNC(fat_file_list, CLIST, static inline, fat_file_list, list_entry);
+GCT_CONTAINER_FCNS(fat_file_list, CLIST, static inline, fat_file_list, list_entry);
 
 #ifdef __MKDOC__
 struct fat_file_s *
@@ -76,13 +76,13 @@ fat_file_new(void *storage, struct fs_node_s *node);
 OBJECT_TYPE     (fat_node, REFCOUNT, struct fs_node_s);
 OBJECT_PROTOTYPE(fat_node, static inline, fat_node);
 
-#define CONTAINER_LOCK_fat_node_pool HEXO_SPIN_IRQ
+#define CONTAINER_LOCK_fat_node_pool HEXO_LOCK_IRQ
 #define CONTAINER_OBJ_fat_node_pool fat_node
 
-CONTAINER_TYPE(fat_node_pool, HASHLIST,
+GCT_CONTAINER_TYPES(fat_node_pool, HASHLIST,
 struct fs_node_s
 {
-    CONTAINER_ENTRY_TYPE(HASHLIST) hash_entry;
+    GCT_CONTAINER_ENTRY(HASHLIST) hash_entry;
     fat_node_entry_t obj_entry;
     struct fat_s *fat;
     fat_file_list_root_t files;
@@ -92,13 +92,13 @@ struct fs_node_s
     enum vfs_node_type_e type;
 }, hash_entry, 5);
 
-CONTAINER_KEY_TYPE(fat_node_pool, PTR, SCALAR, first_cluster);
+GCT_CONTAINER_KEY_TYPES(fat_node_pool, PTR, SCALAR, first_cluster);
 
 OBJECT_CONSTRUCTOR(fat_node);
 OBJECT_DESTRUCTOR(fat_node);
 
-CONTAINER_FUNC(fat_node_pool, HASHLIST, static inline, fat_node_pool, first_cluster);
-CONTAINER_KEY_FUNC(fat_node_pool, HASHLIST, static inline, fat_node_pool, first_cluster);
+GCT_CONTAINER_FCNS(fat_node_pool, HASHLIST, static inline, fat_node_pool, first_cluster);
+GCT_CONTAINER_KEY_FCNS(fat_node_pool, HASHLIST, static inline, fat_node_pool, first_cluster);
 
 #ifdef __MKDOC__
 struct fs_node_s *

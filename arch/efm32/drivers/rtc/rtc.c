@@ -275,7 +275,7 @@ static DEVTIMER_REQUEST(efm32_rtc_request)
   else
     {
       pv->start_count |= 1;
-      dev_timer_queue_insert_ascend(&pv->queue, rq);
+      dev_timer_queue_insert(&pv->queue, rq);
       rq->drvdata = pv;
 
       /* start request, raise irq on race condition */

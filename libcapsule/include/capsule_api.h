@@ -37,8 +37,8 @@
 #include <mutek/scheduler.h>
 #include <mutek/semaphore.h>
 #include <hexo/context.h>
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock.h>
 #include <gpct/cont_slist.h>
 
 #include <capsule_types.h>
@@ -68,9 +68,9 @@ typedef void (*capsule_ctxt_func_t)(void *);
  */
 struct capsule_group_s;
 
-#define CONTAINER_LOCK_capsule_queue HEXO_SPIN
+#define CONTAINER_LOCK_capsule_queue HEXO_LOCK
 
-CONTAINER_TYPE(capsule_queue, SLIST,
+GCT_CONTAINER_TYPES(capsule_queue, SLIST,
 /**
    @this is a capsule context.
  */
@@ -80,7 +80,7 @@ struct capsule_ctxt_s
        @internal
        list entry for chaining
      */
-    CONTAINER_ENTRY_TYPE(SLIST) list_entry;
+    GCT_CONTAINER_ENTRY(SLIST) list_entry;
     /**
        @internal
        group

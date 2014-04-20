@@ -67,7 +67,7 @@ struct arp_entry_s
   struct arp_resolution_s		*resolution;
 
   arp_entry_obj_entry_t			obj_entry;
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(HASHLIST)	list_entry;
 };
 
 OBJECT_CONSTRUCTOR(arp_entry_obj);
@@ -78,9 +78,9 @@ OBJECT_FUNC(arp_entry_obj, SIMPLE, static inline, arp_entry_obj, obj_entry);
  * ARP table types.
  */
 
-#define CONTAINER_LOCK_arp_table	HEXO_SPIN
-CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, list_entry, 64);
-CONTAINER_KEY_TYPE(arp_table, PTR, SCALAR, ip);
+#define CONTAINER_LOCK_arp_table	HEXO_LOCK
+GCT_CONTAINER_TYPES(arp_table, HASHLIST, struct arp_entry_s, list_entry, 64);
+GCT_CONTAINER_KEY_TYPES(arp_table, PTR, SCALAR, ip);
 
 /*
  * ARP private data.
@@ -110,8 +110,8 @@ static DEVTIMER_CALLBACK(arp_stale_timeout);
  * ARP table functions.
  */
 
-CONTAINER_FUNC_NOLOCK(arp_table, HASHLIST, static inline, arp_table, ip);
-CONTAINER_KEY_FUNC(arp_table, HASHLIST, static inline, arp_table, ip);
+GCT_CONTAINER_NOLOCK_FCNS(arp_table, HASHLIST, static inline, arp_table, ip);
+GCT_CONTAINER_KEY_FCNS(arp_table, HASHLIST, static inline, arp_table, ip);
 
 /*
  * Structures for declaring the protocol's properties & interface.
