@@ -73,6 +73,9 @@ my $longhelp = "
       /* change the bytecode entry point */
       bc_set_reg(ctx, 15, /* :foo:name */);
 
+ C conditional directives are used to ignore parts of the bytecode
+ when computing instruction addresses but are not striped in
+ the output.
 ";
 
 use strict;
@@ -80,19 +83,45 @@ use File::Copy;
 
 my $err = 0;
 
-if (not defined @ARGV[0])
-{
-    print STDERR "usages: bc_labels.pl file.c\n";
-    print STDERR "        bc_labels.pl input_file.c output_file.c\n";
-    print STDERR "        bc_labels.pl input_file.c stdout\n";
-    print STDERR "        bc_labels.pl help\n";
-    exit 2;
+my $state = 0;
+my @cond = (1);
+
+my %blocks;
+my %macros;
+my $block;
+my $addr;
+my $insert_addr;
+
+while ($ARGV[0] =~ /^-/) {
+    my $opt = shift @ARGV;
+    if ($opt =~ /^-D(\w+)(?:=(.*))?/) {
+        $macros{$1} = { content => $2 };
+    } elsif ($opt =~ /^-i(.*)/) {
+        my $fname = $1 ne '' ? $1 : shift @ARGV;
+        open(HDR, "<$fname") or die "unable to open input file `$fname'.\n";
+        foreach (<HDR>) {
+            if (/^\s*#define\s+(\w+)\b(.*?)\s*$/) {
+                $macros{$1} = { content => $2 };
+            }
+        }
+        close(HDR);
+    } elsif ($opt =~ /^(-h|--help)$/) {
+        print STDERR $longhelp;
+        exit 2;
+    } elsif ($opt eq '-a') {
+        $insert_addr++;
+    } else {
+        die "unknown option `$opt'\n";
+    }
 }
 
-if (@ARGV[0] eq "help")
+if (not defined @ARGV[0])
 {
-    print STDERR $longhelp;
-    exit 2;    
+    print STDERR "usages: bc_labels.pl [-DMACRO -ifile] file.c\n";
+    print STDERR "        bc_labels.pl [-DMACRO -ifile] input_file.c output_file.c\n";
+    print STDERR "        bc_labels.pl [-DMACRO -ifile] input_file.c stdout\n";
+    print STDERR "        bc_labels.pl --help | -h\n";
+    exit 2;
 }
 
 my $in = @ARGV[0];
@@ -100,7 +129,43 @@ open(IN, "<$in") || die "unable to open input file `$in'.\n";
 my @src = <IN>;
 close(IN);
 
-my $state = 0;
+sub eval_cond
+{
+    my ( $expr, $lnum ) = @_;
+    our $num = qr/(?>[-+]?\b\d+\b)/xs;
+
+    while (1) {
+	next if ($expr =~ s/\bdefined\(\s*([a-zA-Z_]\w*)\s*\)/defined $macros{$1} ? 1 : 0/ge);
+	next if ($expr =~ s/\b([a-zA-Z_]\w*)\b/defined $macros{$1} ? $macros{$1}->{content} : 0/ge);
+	next if ($expr =~ s/\!\s*($num)/$1 ? 0 : 1/ge);
+	next if ($expr =~ s/\(\s*($num)\s*\)/$1/ge);
+	next if ($expr =~ s/($num)\s*\*\s*($num)/$1*$2/ge);
+	next if ($expr =~ s/($num)\s*\/\s*($num)/$2 ? int($1\/$2) : 0/ge);
+	next if ($expr =~ s/($num)\s*\%\s*($num)/$2 ? $1%$2 : 0/ge);
+	next if ($expr =~ s/($num)\s*\+\s*($num)/$1+$2/ge);
+	next if ($expr =~ s/($num)\s*\-\s*($num)/$1-$2/ge);
+	next if ($expr =~ s/($num)\s*\<\s*($num)/int($1)<int($2) ? 1 : 0/ge);
+	next if ($expr =~ s/($num)\s*\>\s*($num)/int($1)>int($2) ? 1 : 0/ge);
+	next if ($expr =~ s/($num)\s*\<=\s*($num)/int($1)<=int($2) ? 1 : 0/ge);
+	next if ($expr =~ s/($num)\s*\>=\s*($num)/int($1)>=int($2) ? 1 : 0/ge);
+	next if ($expr =~ s/($num)\s*\==\s*($num)/int($1)==int($2) ? 1 : 0/ge);
+	next if ($expr =~ s/($num)\s*\!=\s*($num)/int($1)!=int($2) ? 1 : 0/ge);
+	next if ($expr =~ s/($num)\s*&&\s*($num)/$1 && $2 ? 1 : 0/ge);
+	next if ($expr =~ s/($num)\s*\|\|\s*($num)/$1 || $2 ? 1 : 0/ge);
+
+	last;
+    }
+
+    if ($expr eq "0") {
+	return 0;
+    } elsif ($expr =~ /^$num$/) {
+	return 1;
+    } else {
+        print STDERR "error:".$in.":".($lnum+1).":invalid conditional expression `$expr'\n";
+        $err++;
+	return 0;
+    }
+}
 
 sub parse
 {
@@ -110,8 +175,31 @@ sub parse
     my $name;
     foreach my $line (@src)
     {
-	if ($state == 0 && $line =~ /^\s*static\s+const\s+bc_opcode_t\s+(\w+)\[\]\s*=\s*(\{)?\s*$/) {
+        if ($line =~ /^\s*#if(n?)def\s+(\w+)/) {
+            push @cond, $cond[-1] != 1 ? 2 : (($1 eq 'n') ^ (defined $macros{$2}));
+        } elsif ($line =~ /^\s*#if\s+(.+?)\s*$/) {
+            push @cond, $cond[-1] != 1 ? 2 : eval_cond($1, $lnum);
+        } elsif ($line =~ /^\s*#else\b/) {
+            $cond[-1] = $cond[-1] != 0 ? 2 : 1;
+        } elsif ($line =~ /^\s*#elif\s+(.+?)\s*$\b/) {
+            $cond[-1] = $cond[-1] != 0 ? 2 : eval_cond($1, $lnum);
+        } elsif ($line =~ /^\s*#endif\b/) {
+            if (1 == scalar @cond) {
+	       print STDERR "error:".$in.":".($lnum+1).":unexpected #endif\n";
+               $err++;
+            } else {
+                pop @cond;
+            }
+        } elsif ($cond[-1] == 1) {
 
+	if ($line =~ /^\s*#define\s+(\w+)\b(.*?)(\\)?\s*$/) {
+            if ($3 && $state == 0) {
+                $state = 3;
+                $reset->($lnum, $1);
+            } else {
+                $macros{$1} = { content => $2 };
+            }
+	} elsif ($state == 0 && $line =~ /^\s*static\s+const\s+bc_opcode_t\s+(\w+)\[\]\s*=\s*(\{)?\s*$/) {
             $name = $1;
 	    if ($2) {
 		$state = 2;
@@ -119,9 +207,6 @@ sub parse
 	    } else {
 		$state = 1;
 	    }
-	} elsif ($state == 0 && $line =~ /^\s*#define\s+(\w*).*\\/) {
-	    $state = 3;
-	    $reset->($lnum, $1);
         } elsif ($state == 0) {
             $filter->($line, $lnum);
 	} elsif ($state == 1 && $line =~ /^\s*\{/) {
@@ -138,17 +223,13 @@ sub parse
 	    $filter2->($line, $lnum);
 	    $state = 0 if !$2;
 	}
+        }
 
 	$lnum++;
     }
 
     $end->($lnum);
 }
-
-my %blocks;
-my %macros;
-my $block;
-my $addr;
 
 my %opcodes = (
     "BC_END" => 1,    "BC_DUMP" => 1,  "BC_ABORT" => 1,  "BC_TRACE" => 1,
@@ -178,6 +259,7 @@ parse( sub {
        sub {
            my ( $line, $lnum, $name ) = @_;
 
+           my $caddr = $addr;
 	   if ( $line =~ /^\s*\/\*\s*label:\s*(\w+)\s*\d*\s*\*\// )
 	   {
 	       if (defined $block->{labels}->{$1})
@@ -204,7 +286,9 @@ parse( sub {
 	       {
 		   print STDERR $in.":".($lnum+1).":unknown instruction/macro `$1', assuming size is 1.\n";
 		   $addr++;
-	       } else {
+	       } elsif ($macros{$1}->{size} == 0) {
+		   print STDERR $in.":".($lnum+1).":macro `$1', of size 0.\n";
+               } else {
 		   $addr += $macros{$1}->{size};
 	       }
 	   }
@@ -224,13 +308,17 @@ parse( sub {
 	   }
 
 	   $block->{lines}->{$lnum} = $addr;
+           if ($insert_addr && $state == 2) {
+               chop $line;
+               @src[$lnum] = sprintf("%-75s/* $caddr */\n", $line);
+           }
        }, 
        sub {
            my ( $lnum, $macro, $name ) = @_;
 
 	   $block->{size} = $addr if ( $block );
 
-	   $block = { labels => {}, lines => {} };
+	   $block = { labels => {}, lines => {}, content => "" };
 	   $blocks{$lnum} = $block;
 	   $blocks{$name} = $block if defined $name;
 	   $macros{$macro} = $block if defined $macro;

@@ -32,7 +32,7 @@ define compute_depfile_c
 	( cd $$(dir $(value 1)) ; \
 		$(DEPCC) \
 			$$(CFLAGS) $$(DEPINC) $(value 4) \
-			-M -MT $(value 2) -MF $(value 1) $(value 3) \
+			-M -MT $(value 2) -MF $(value 1) -x c $(value 3) \
 	) $(LOG_REDIR)
 endef
 
@@ -133,6 +133,15 @@ $(3)/$(1): $(2)/$(1:.o=.cpp) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_lis
 	$(call compile,$(CXX),$$@,$$<,$($(1)_CXXFLAGS) $(DIR_CXXFLAGS))
 	$(value do_hetlink_mangling)
 
+else ifeq ($(wildcard $(2)/$(1:.o=.bc)),$(2)/$(1:.o=.bc))
+
+$(3)/$(1): $(2)/$(1:.o=.bc) $(OBJ_DIR)/config.h $(OBJ_DIR)/.done_pre_header_list
+	$(call prepare_command,BC+CC,$$@)
+	$(call compute_depfile_c,$$(@:.o=.deps),$(3)/$(1),$$<,$(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) \
+		$($(1)_CFLAGS) $(DIR_CFLAGS))
+	$(call run_command,$$@,perl $(MUTEK_SRC_DIR)/scripts/bc_labels.pl -a -i$(OBJ_DIR)/config.h $$< $$@.c)
+	$(call compile,$(CC),$$@,$$@.c,$($(1)_CFLAGS) $(DIR_CFLAGS))
+	$(value do_hetlink_mangling)
 else
 
 #$$( # info  ======== declare_obj, $(1), $(2), $(3), found to be C file)
