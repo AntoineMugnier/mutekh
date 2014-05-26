@@ -231,8 +231,11 @@
   #define STM32F4xx_I2C_CCR_DUTY_SET(x, v)         do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)
   #define STM32F4xx_I2C_CCR_DUTY_GET(x)            (((x) >> 14) & 0x1)
   #define STM32F4xx_I2C_CCR_FS_MASK                0x00000001
-  #define STM32F4xx_I2C_CCR_FS                     0x00008000
-  #define STM32F4xx_I2C_CCR_FS_SET(x, v)           do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
+  #define STM32F4xx_I2C_CCR_FS(v)                  ((STM32F4xx_I2C_CCR_FS_##v) << 15)
+  #define STM32F4xx_I2C_CCR_FS_SET(x, v)           do { (x) = (((x) & ~0x8000) | ((STM32F4xx_I2C_CCR_FS_##v) << 15)); } while(0)
+  #define STM32F4xx_I2C_CCR_FS_GET(x)              (((x) >> 15) & 0x1)
+    #define STM32F4xx_I2C_CCR_FS_SM                  0x00000000
+    #define STM32F4xx_I2C_CCR_FS_FM                  0x00000001
 
 #define STM32F4xx_I2C_TRISE_ADDR                     0x00000020
 #define STM32F4xx_I2C_TRISE_MASK                     0x00000000

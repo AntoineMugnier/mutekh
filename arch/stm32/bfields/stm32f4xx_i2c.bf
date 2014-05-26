@@ -216,8 +216,11 @@ swap: 0b111000
   %%duty
     longname: Fm mode duty cycle
 
-  %%fs
+  %%fs: 1
     longname: I2C master mode selection (Fm/Sm)
+
+    0b0: Sm
+    0b1: Fm
 
 %trise: 32
   longname: I2C TRISE register
