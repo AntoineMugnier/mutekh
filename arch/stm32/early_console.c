@@ -46,8 +46,14 @@
 #define STM32F4xx_USART2_CR3    0x14
 #define STM32F4xx_USART2_GTPR   0x18
 
-/* Define a baudrate of 9600 Kbps @ 16MHz (see Reference manual p. 508). */
-#define STM32F4xx_USART2_BRR_9600           0x683
+extern uint32_t stm32f4xx_clock_freq_ahb1;
+extern uint32_t stm32f4xx_clock_freq_apb1;
+extern uint32_t stm32f4xx_clock_freq_apb2;
+
+/* Define the baudrate of the USART according to the bus clock. */
+#define STM32F4xx_USART2_BRR_VALUE(bps)                         \
+    ( (int)(stm32f4xx_clock_freq_apb1 / (bps) + 0.5) & 0xffff ) \
+/**/
 
 /* Enable oversampling (x16). */
 #define STM32F4xx_USART2_CR1_OVER_16        0
@@ -128,7 +134,7 @@ void stm32_early_console_init()
   /* configure baud rate tp 9600 Kbps. */
   cpu_mem_write_32(
     _STM32F4xx_USART2_ADDR(STM32F4xx_USART2_BRR),
-    STM32F4xx_USART2_BRR_9600
+    STM32F4xx_USART2_BRR_VALUE(CONFIG_STM32_EARLY_CONSOLE_UART_BAUDRATE)
   );
 
   /* oversampling x16. */
