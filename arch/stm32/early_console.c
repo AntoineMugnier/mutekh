@@ -105,6 +105,11 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
       stm32_usart_tx_wait_ready();
 
       /* write the byte to the data register of the USART. */
+      if (str[i] == '\n')
+      {
+        cpu_mem_write_32(_STM32F4xx_USART2_ADDR(STM32F4xx_USART2_DR), '\r');
+        stm32_usart_tx_wait_ready();
+      }
       cpu_mem_write_32(_STM32F4xx_USART2_ADDR(STM32F4xx_USART2_DR), str[i]);
     }
 }
@@ -112,6 +117,10 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
 void stm32_early_console_init()
 {
   reg_t cr1 = 0, cr2 = 0, cfg;
+
+#if !defined(CONFIG_STM32_EARLY_CONSOLE_UART)
+# error
+#endif
 
   /* enable clock on USART bus. */
   cpu_mem_write_32(0x40023830, (1 << 0)); /* enable AHB1 GPIO port A. */

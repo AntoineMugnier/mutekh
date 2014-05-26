@@ -44,11 +44,30 @@ void stm32_mem_init()
 # include <device/resources.h>
 # include <device/device.h>
 
+/* CPU. */
 DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
   DEV_STATIC_RES_ID(0, 0),
 );
 
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, cpu_dev_res);
+
+#if defined(CONFIG_DRIVER_STM32_USART)
+
+/* USART1. */
+DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 2,
+  DEV_STATIC_RES_MEM(0x40011000, 0x400113ff),
+  DEV_STATIC_RES_IRQ(0, 37, 0, "/cpu"),
+);
+
+DEV_DECLARE_STATIC(
+  usart1_dev,
+  "uart1",
+  0,
+  stm32f4xx_usart_drv,
+  usart1_dev_res
+);
+
+#endif
 
 /////////////////////////////////////////////////////////////////////
 
@@ -132,7 +151,7 @@ void stm32_freq_scaling_init()
 
   /* reset configuration. */
   rcc_dev->RCC_CR = 0x1; /* PLL OFF, PLLI2S OFF, HSE OFF, HSI ON. */
-  rcc_dev->RCC_CR |= (16 << 3); /* set trim for HSI clock. */
+  //rcc_dev->RCC_CR |= (16 << 3); /* set trim for HSI clock. */
 
   /* configure the pll parameters (HSI 16MHz -> 84MHz). */
   rcc_dev->RCC_PLLCFGR =

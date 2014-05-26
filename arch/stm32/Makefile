@@ -8,3 +8,5 @@ endif
 
 meta = ldscript
 
+subdirs = drivers
+
