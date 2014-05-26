@@ -29,6 +29,7 @@
 
 #include <arch/stm32f4xx_gpio.h>
 #include <arch/stm32f4xx_i2c.h>
+#include <arch/stm32f4xx_rcc.h>
 #include <arch/stm32f4xx_usart.h>
 
 #include <arch/stm32f4xx_irq.h>
