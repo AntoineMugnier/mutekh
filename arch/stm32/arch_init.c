@@ -44,6 +44,8 @@ void stm32_mem_init()
 # include <device/resources.h>
 # include <device/device.h>
 
+#include <arch/stm32f4xx_irq.h>
+
 /* CPU. */
 DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
   DEV_STATIC_RES_ID(0, 0),
@@ -56,7 +58,7 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, cpu_dev_res);
 /* USART1. */
 DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 2,
   DEV_STATIC_RES_MEM(0x40011000, 0x400113ff),
-  DEV_STATIC_RES_IRQ(0, 37, 0, "/cpu"),
+  DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_USART1, 0, "/cpu"),
 );
 
 DEV_DECLARE_STATIC(
