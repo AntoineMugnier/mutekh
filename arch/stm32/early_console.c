@@ -127,15 +127,15 @@ void stm32_early_console_init()
   cpu_mem_write_32(0x40023840, (1 << 17)); /* enable APB1 USART2. */
 
   /* configure PA2/PA3 as TX/RX. */
-  cfg = cpu_mem_read_32(0x40020000);
-  cfg |= ( 2 << 4 ) | ( 2 << 6 );
-  cpu_mem_write_32(0x40020000, cfg); /* MODER */
-  cfg = cpu_mem_read_32(0x40020020);
-  cfg |= ( 7 << 8 ) | ( 7 << 12 ); /* AF7 = USART */
-  cpu_mem_write_32(0x40020020, cfg);
+  cfg = STM32F4xx_REG_VALUE(GPIO, A, MODER);
+  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 2, ALT, cfg);
+  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 3, ALT, cfg);
+  STM32F4xx_REG_UPDATE(GPIO, A, MODER, cfg);
 
-  /* make sure to deactivate the USART port before configuration. */
-  cpu_mem_write_32(_STM32F4xx_USART2_ADDR(STM32F4xx_USART2_CR1), 0);
+  cfg = STM32F4xx_REG_VALUE(GPIO, A, AFRL);
+  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRL, AF, 2, 7, cfg);
+  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRL, AF, 3, 7, cfg);
+  STM32F4xx_REG_UPDATE(GPIO, A, AFRL, cfg);
 
   /* wait for the last byte to be send just in case. */
   stm32_usart_tx_wait_ready();
@@ -147,23 +147,23 @@ void stm32_early_console_init()
   );
 
   /* oversampling x16. */
-  cr1 |= STM32F4xx_USART2_CR1_OVER_16;
+  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, CR1, OVER8, 16, cr1);
 
   /* configure USART 8 bits, no parity, 1 stop bit. */
-  cr1 |= STM32F4xx_USART2_CR1_8_BITS;
-  cr1 |= STM32F4xx_USART2_CR1_PARITY_NONE;
-  cr2 |= STM32F4xx_USART2_CR2_STOP_1_BIT;
+  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, CR1, M, 8_BITS, cr1);
+  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, CR1, PCE, NONE, cr1);
+  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, CR2, STOP, 1_BIT, cr2);
 
   /* enable TX. */
-  cr1 |= STM32F4xx_USART2_CR1_TXEN;
+  STM32F4xx_REG_FIELD_SET_VAR(USART, CR1, TE, cr1);
 
   /* propagate the configuration. */
   cpu_mem_write_32(_STM32F4xx_USART2_ADDR(STM32F4xx_USART2_CR1), cr1);
   cpu_mem_write_32(_STM32F4xx_USART2_ADDR(STM32F4xx_USART2_CR2), cr2);
 
   /* enable USART2. */
-  cr1 |= STM32F4xx_USART2_CR1_ENABLE;
-  cpu_mem_write_32(_STM32F4xx_USART2_ADDR(STM32F4xx_USART2_CR1), cr1);
+  STM32F4xx_REG_FIELD_SET_VAR(USART, CR1, UE, cr1);
+  STM32F4xx_REG_UPDATE(USART, 2, CR1, cr1);
 
   printk_set_output(early_console_out, NULL);
 }
