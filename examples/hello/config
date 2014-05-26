@@ -9,7 +9,8 @@
 
   # Libs
   CONFIG_PTHREAD
-  CONFIG_APP_START
+  CONFIG_PTHREAD_MAIN
 
+  %include scripts/options.build
   %include arch/arch.build
 
