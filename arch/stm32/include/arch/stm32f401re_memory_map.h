@@ -50,13 +50,13 @@
 #define STM32F4xx_GPIOE_ADDR            0x40021000
 #define STM32F4xx_GPIOE_SIZE            0x00000400
 
-#define STM32F4xx_GPIOD_ADDR            0x4001c000
+#define STM32F4xx_GPIOD_ADDR            0x40020c00
 #define STM32F4xx_GPIOD_SIZE            0x00000400
 
-#define STM32F4xx_GPIOC_ADDR            0x40028000
+#define STM32F4xx_GPIOC_ADDR            0x40020800
 #define STM32F4xx_GPIOC_SIZE            0x00000400
 
-#define STM32F4xx_GPIOB_ADDR            0x40024000
+#define STM32F4xx_GPIOB_ADDR            0x40020400
 #define STM32F4xx_GPIOB_SIZE            0x00000400
 
 #define STM32F4xx_GPIOA_ADDR            0x40020000
