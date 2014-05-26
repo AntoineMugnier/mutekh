@@ -53,6 +53,7 @@
     # Drivers
 
     CONFIG_DRIVER_STM32_USART
+    CONFIG_DRIVER_STM32_I2C
 
   %end
 
