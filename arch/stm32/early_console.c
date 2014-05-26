@@ -75,13 +75,13 @@ void stm32_early_console_init()
 
   /* configure PA2/PA3 as TX/RX. */
   cfg = STM32F4xx_REG_VALUE(GPIO, A, MODER);
-  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, A, MODER, MODE, 2, ALT, cfg);
-  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, A, MODER, MODE, 3, ALT, cfg);
+  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 2, ALT, cfg);
+  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 3, ALT, cfg);
   STM32F4xx_REG_UPDATE(GPIO, A, MODER, cfg);
 
   cfg = STM32F4xx_REG_VALUE(GPIO, A, AFRL);
-  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, A, AFRL, AF, 2, 7, cfg);
-  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, A, AFRL, AF, 3, 7, cfg);
+  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRL, AF, 2, 7, cfg);
+  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRL, AF, 3, 7, cfg);
   STM32F4xx_REG_UPDATE(GPIO, A, AFRL, cfg);
 
   /* wait for the last byte to be send just in case. */
@@ -101,22 +101,22 @@ void stm32_early_console_init()
   );
 
   /* oversampling x16. */
-  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, 2, CR1, OVER8, 16, cr1);
+  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, CR1, OVER8, 16, cr1);
 
   /* configure USART 8 bits, no parity, 1 stop bit. */
-  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, 2, CR1, M, 8_BITS, cr1);
-  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, 2, CR1, PCE, NONE, cr1);
-  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, 2, CR2, STOP, 1_BIT, cr2);
+  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, CR1, M, 8_BITS, cr1);
+  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, CR1, PCE, NONE, cr1);
+  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, CR2, STOP, 1_BIT, cr2);
 
   /* enable TX. */
-  STM32F4xx_REG_FIELD_SET_VAR(USART, 2, CR1, TE, cr1);
+  STM32F4xx_REG_FIELD_SET_VAR(USART, CR1, TE, cr1);
 
   /* propagate the configuration. */
   STM32F4xx_REG_UPDATE(USART, 2, CR1, cr1);
   STM32F4xx_REG_UPDATE(USART, 2, CR2, cr2);
 
   /* enable USART2. */
-  STM32F4xx_REG_FIELD_SET_VAR(USART, 2, CR1, UE, cr1);
+  STM32F4xx_REG_FIELD_SET_VAR(USART, CR1, UE, cr1);
   STM32F4xx_REG_UPDATE(USART, 2, CR1, cr1);
 
   printk_set_output(early_console_out, NULL);
