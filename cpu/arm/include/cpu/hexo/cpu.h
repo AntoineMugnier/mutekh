@@ -91,7 +91,11 @@ reg_t cpu_get_stackptr()
 static inline void
 cpu_trap()
 {
-	asm volatile ("swi 0");
+#ifdef CONFIG_CPU_ARM_ARCH_PROFILE_M
+  asm volatile ("bkpt");
+#else
+  asm volatile ("swi 0");
+#endif
 }
 
 static inline void cpu_dcache_invld(void *ptr)
