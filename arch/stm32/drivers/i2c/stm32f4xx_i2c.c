@@ -28,8 +28,8 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-#include <device/device.h>
 #include <device/resources.h>
+#include <device/device.h>
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/i2c.h>
@@ -38,25 +38,117 @@
 
 struct stm32f4xx_i2c_context_s
 {
-  uintptr_t            addr;
-  dev_i2c_queue_root_t queue;
+  uintptr_t addr;
 };
 
-DEVI2C_REQUEST(stm32f4xx_i2c_request)
-{
 
+/***************************************** config */
+
+DEVI2C_CTRL_CONFIG(stm32f4xx_i2c_config)
+{
+  return -ENOTSUP;
 }
 
-DEVI2C_SET_BAUDRATE(stm32f4xx_i2c_set_baudrate)
+
+/***************************************** transfer */
+
+static void stm32f4xx_i2c_start(const struct device_i2c_ctrl_s *i2cdev,
+                                struct dev_i2c_ctrl_transfer_s *tr)
 {
-  return 0;
+  struct stm32f4xx_i2c_context_s    *pv = i2cdev->dev->drv_pv;
+
+  /* 10 bits addressing not supported by the driver. */
+  if (tr->amode == DEV_I2C_ADDR_10_BITS)
+    {
+      tr->error = ENOTSUP;
+      return;
+    }
+
+  /* see p. 466 of Reference manual. */
+
+  /* 0. wait if the bus is busy. */
+  if (STM32F4xx_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR2, BUSY) != 0)
+    {
+      tr->error = EBUSY;
+      return;
+    }
+
+  /* 1. generate the start condition and wait for the start condition to be
+   * sent. This force the master mode.
+   */
+  STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, START);
+  while (STM32F4xx_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, SB) == 0);
+
+  /* 2. send the address. */
+  STM32F4xx_REG_UPDATE_DEV(
+    I2C,
+    pv->addr,
+    DR,
+    (tr->saddr << 1) | (tr->dir == DEV_I2C_TR_READ ? 0x1 : 0x0)
+  );
+
+  /* 3. wait for the acknowledge. */
+  while(STM32F4xx_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, ADDRESS) == 0)
+  {
+    uint32_t sr1 = STM32F4xx_REG_VALUE_DEV(I2C, pv->addr, SR1);
+
+    if ((sr1 & (STM32F4xx_I2C_SR1_TIMEOUT | STM32F4xx_I2C_SR1_AF)) != 0)
+    {
+      STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, SR1, TIMEOUT);
+      STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, SR1, AF);
+      STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
+
+      if (sr1 & STM32F4xx_I2C_SR1_AF)
+        tr->error = EADDRNOTAVAIL;
+
+      if (sr1 & STM32F4xx_I2C_SR1_TIMEOUT)
+        tr->error = ETIMEDOUT;
+
+      kroutine_exec(&tr->kr, cpu_is_interruptible());
+      return;
+    }
+  }
+
+  /* 4. clear the acknowledge. */
+  (void) STM32F4xx_REG_VALUE_DEV(I2C, pv->addr, SR2);
 }
 
-static const struct driver_i2c_s stm32f4xx_i2c_drv_cls =
+static void stm32f4xx_i2c_stop (const struct device_i2c_ctrl_s *i2cdev)
 {
-  .cl               = DRIVER_CLASS_I2C,
-  .f_request        = &stm32f4xx_i2c_request,
-  .f_set_baudrate   = &stm32f4xx_i2c_set_baudrate
+  struct stm32f4xx_i2c_context_s    *pv = i2cdev->dev->drv_pv;
+
+  STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
+}
+
+DEVI2C_CTRL_TRANSFER(stm32f4xx_i2c_transfer)
+{
+  switch (tr->dir)
+    {
+    case DEV_I2C_TR_WRITE:
+      /* scan. */
+      if (tr->count == 0)
+        {
+          stm32f4xx_i2c_start(i2cdev, tr);
+          stm32f4xx_i2c_stop(i2cdev);
+          break;
+        }
+
+      /* write. */
+
+    case DEV_I2C_TR_READ:
+      /* read. */
+
+    default:
+      tr->error = ENOTSUP;
+      break;
+    }
+}
+
+static const struct driver_i2c_ctrl_s stm32f4xx_i2c_drv_cls =
+{
+  .class_       = DRIVER_CLASS_I2C,
+  .f_config     = &stm32f4xx_i2c_config,
+  .f_transfer   = &stm32f4xx_i2c_transfer,
 };
 
 static DEV_INIT(stm32f4xx_i2c_init);
@@ -109,67 +201,107 @@ static DEV_INIT(stm32f4xx_i2c_init)
 
   case STM32F4xx_I2C1_ADDR:
   {
-    /* set pin mode to alternate functions. */
+    /* enable GPIO B. */
+    STM32F4xx_REG_FIELD_SET(RCC, , AHB1ENR, GPIOBEN);
+
+    /* set pin mode to alternate functions for PB8/PB9. */
     uint32_t register cfg = STM32F4xx_REG_VALUE(GPIO, B, MODER);
-    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 6, ALT, cfg);
-    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 7, ALT, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 8, ALT, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 9, ALT, cfg);
     STM32F4xx_REG_UPDATE(GPIO, B, MODER, cfg);
 
-    /* set alternate function to 4 (I2C) on pins. */
-    cfg = STM32F4xx_REG_VALUE(GPIO, B, AFRL);
-    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRL, AF, 6, 4, cfg);
-    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRL, AF, 7, 4, cfg);
-    STM32F4xx_REG_UPDATE(GPIO, B, AFRL, cfg);
+    /* set alternate function to 4 (I2C) on pins PB8/PB9. */
+    cfg = STM32F4xx_REG_VALUE(GPIO, B, AFRH);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRH, AF, 0, 4, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRH, AF, 1, 4, cfg);
+    STM32F4xx_REG_UPDATE(GPIO, B, AFRH, cfg);
 
-    /* set pin as pull-up as required by the I2C bus (we are the master). */
+    /* set pins PB8/PB9 as open-drain as required by the I2C bu
+     * (we are the master).
+     */
+    cfg = STM32F4xx_REG_VALUE(GPIO, B, OTYPER);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, OTYPER, OT, 8, OPEN, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, OTYPER, OT, 9, OPEN, cfg);
+    STM32F4xx_REG_UPDATE(GPIO, B, OTYPER, cfg);
+
+    /* set pins PB8/PB9 as pull-up as required by the I2C bu
+     * (we are the master).
+     */
     cfg = STM32F4xx_REG_VALUE(GPIO, B, PUPDR);
-    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 6, PULLUP, cfg);
-    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 7, PULLUP, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 8, PULLUP, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 9, PULLUP, cfg);
     STM32F4xx_REG_UPDATE(GPIO, B, PUPDR, cfg);
+
     break;
   }
 
   case STM32F4xx_I2C2_ADDR:
   {
-    /* set pin mode to alternate functions. */
+    /* enable GPIO B. */
+    STM32F4xx_REG_FIELD_SET(RCC, , AHB1ENR, GPIOBEN);
+
+    /* set pin mode to alternate functions for pins PB10/PB3. */
     uint32_t register cfg = STM32F4xx_REG_VALUE(GPIO, B, MODER);
     STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 10, ALT, cfg);
     STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 3, ALT, cfg);
     STM32F4xx_REG_UPDATE(GPIO, B, MODER, cfg);
 
-    /* set alternate function to 4 (I2C) on SCL. */
-    STM32F4xx_REG_FIELD_IDX_UPDATE(GPIO, B, AFRH, AF, 2 /* 10 */, 4);
+    /* set alternate function to 4 (I2C) on SCL on PB10. */
+    STM32F4xx_REG_FIELD_IDX_UPDATE(GPIO, B, AFRH, AF, 2, 4);
 
-    /* set alternate function to 9 (I2C) on SDA. */
+    /* set alternate function to 9 (I2C) on SDA on PB3. */
     STM32F4xx_REG_FIELD_IDX_UPDATE(GPIO, B, AFRL, AF, 3, 9);
 
-    /* set pin as pull-up as required by the I2C bus (we are the master). */
+    /* set pins PB10/PB3 as open-drain as required by the I2C bu
+     * (we are the master).
+     */
+    cfg = STM32F4xx_REG_VALUE(GPIO, B, OTYPER);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, OTYPER, OT, 10, OPEN, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, OTYPER, OT, 3, OPEN, cfg);
+    STM32F4xx_REG_UPDATE(GPIO, B, OTYPER, cfg);
+
+    /* set pin PB10/PB3 as pull-up as required by the I2C bus
+     * (we are the master). */
     cfg = STM32F4xx_REG_VALUE(GPIO, B, PUPDR);
-    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 6, PULLUP, cfg);
-    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 7, PULLUP, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 10, PULLUP, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 3, PULLUP, cfg);
     STM32F4xx_REG_UPDATE(GPIO, B, PUPDR, cfg);
+
     break;
   }
 
   case STM32F4xx_I2C3_ADDR:
   {
-    /* set pin mode to alternate functions. */
+    /* enable GPIO A. */
+    STM32F4xx_REG_FIELD_SET(RCC, , AHB1ENR, GPIOAEN);
+
+    /* set pin mode to alternate functions for pins PA8/PA4. */
     uint32_t register cfg = STM32F4xx_REG_VALUE(GPIO, A, MODER);
     STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 8, ALT, cfg);
     STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 4, ALT, cfg);
     STM32F4xx_REG_UPDATE(GPIO, A, MODER, cfg);
 
-    /* set alternate function to 4 (I2C) on pins. */
-    STM32F4xx_REG_FIELD_IDX_UPDATE(GPIO, B, AFRH, AF, 0 /* 8 */, 4);
+    /* set alternate function to 4 (I2C) on PA8. */
+    STM32F4xx_REG_FIELD_IDX_UPDATE(GPIO, A, AFRH, AF, 0 /* 8 */, 4);
 
-    /* set alternate function to 9 (I2C) on SDA. */
-    STM32F4xx_REG_FIELD_IDX_UPDATE(GPIO, B, AFRL, AF, 4, 9);
+    /* set alternate function to 9 (I2C) on PA4 . */
+    STM32F4xx_REG_FIELD_IDX_UPDATE(GPIO, A, AFRL, AF, 4, 9);
 
-    /* set pin as pull-up as required by the I2C bus (we are the master). */
-    cfg = STM32F4xx_REG_VALUE(GPIO, B, PUPDR);
-    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 6, PULLUP, cfg);
-    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 7, PULLUP, cfg);
-    STM32F4xx_REG_UPDATE(GPIO, B, PUPDR, cfg);
+    /* set pins PA8/PA4 as open-drain as required by the I2C bu
+     * (we are the master).
+     */
+    cfg = STM32F4xx_REG_VALUE(GPIO, A, OTYPER);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, OTYPER, OT, 8, OPEN, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, OTYPER, OT, 4, OPEN, cfg);
+    STM32F4xx_REG_UPDATE(GPIO, A, OTYPER, cfg);
+
+    /* set pin PA8/PA4 as pull-up as required by the I2C bus
+     * (we are the master). */
+    cfg = STM32F4xx_REG_VALUE(GPIO, A, PUPDR);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 8, PULLUP, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 4, PULLUP, cfg);
+    STM32F4xx_REG_UPDATE(GPIO, A, PUPDR, cfg);
+
     break;
   }
   }
@@ -179,8 +311,6 @@ static DEV_INIT(stm32f4xx_i2c_init)
   switch (pv->addr)
   {
   default: assert(0 && "unknown I2C controller");
-
-#define EMPTY()
 
   case STM32F4xx_I2C1_ADDR:
     STM32F4xx_REG_FIELD_SET(RCC, , APB1ENR, I2C1EN);
@@ -205,7 +335,10 @@ static DEV_INIT(stm32f4xx_i2c_init)
   STM32F4xx_REG_FIELD_UPDATE_DEV(I2C, pv->addr, CCR, FS, SM);
 
   /* initialize the I2C bus speed (100kHz in standard mode). */
-  STM32F4xx_REG_FIELD_UPDATE_DEV(I2C, pv->addr, CR2, FREQ, 5 * freq_in_mhz);
+  STM32F4xx_REG_FIELD_UPDATE_DEV(I2C, pv->addr, CCR, CCR, 5 * freq_in_mhz);
+
+  /* initialize the rise time (p. 491 of Reference manual). */
+  STM32F4xx_REG_UPDATE_DEV(I2C, pv->addr, TRISE, freq_in_mhz + 1);
 
   /* enable I2C device. */
   STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, PE);
@@ -239,28 +372,48 @@ static DEV_CLEANUP(stm32f4xx_i2c_cleanup)
 
   case STM32F4xx_I2C1_ADDR:
   {
+    /* reset pin PB8/PB9. */
     uint32_t register cfg = STM32F4xx_REG_VALUE(GPIO, B, MODER);
-    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 6, INPUT, cfg);
-    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 7, INPUT, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 8, INPUT, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 9, INPUT, cfg);
     STM32F4xx_REG_UPDATE(GPIO, B, MODER, cfg);
+
+    cfg = STM32F4xx_REG_VALUE(GPIO, B, PUPDR);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 6, NONE, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 7, NONE, cfg);
+    STM32F4xx_REG_UPDATE(GPIO, B, PUPDR, cfg);
+
     break;
   }
 
   case STM32F4xx_I2C2_ADDR:
   {
+    /* reset pins PB10/PB3. */
     uint32_t register cfg = STM32F4xx_REG_VALUE(GPIO, B, MODER);
     STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 10, INPUT, cfg);
     STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 3, INPUT, cfg);
     STM32F4xx_REG_UPDATE(GPIO, B, MODER, cfg);
+
+    cfg = STM32F4xx_REG_VALUE(GPIO, B, PUPDR);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 10, PULLUP, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 3, PULLUP, cfg);
+    STM32F4xx_REG_UPDATE(GPIO, B, PUPDR, cfg);
+
     break;
   }
 
   case STM32F4xx_I2C3_ADDR:
   {
+    /* reset pins PA8/PA4. */
     uint32_t register cfg = STM32F4xx_REG_VALUE(GPIO, A, MODER);
     STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 8, INPUT, cfg);
     STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 4, INPUT, cfg);
     STM32F4xx_REG_UPDATE(GPIO, A, MODER, cfg);
+
+    cfg = STM32F4xx_REG_VALUE(GPIO, A, PUPDR);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 8, PULLUP, cfg);
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, PUPDR, PUPD, 4, PULLUP, cfg);
+    STM32F4xx_REG_UPDATE(GPIO, A, PUPDR, cfg);
     break;
   }
   }
