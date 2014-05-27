@@ -44,6 +44,7 @@ void stm32_mem_init()
 # include <device/resources.h>
 # include <device/device.h>
 
+#include <arch/stm32f4xx_memory_map.h>
 #include <arch/stm32f4xx_irq.h>
 
 /* CPU. */
@@ -67,6 +68,26 @@ DEV_DECLARE_STATIC(
   0,
   stm32f4xx_usart_drv,
   usart1_dev_res
+);
+
+#endif
+
+#if defined(CONFIG_DRIVER_STM32_I2C)
+
+/* USART1. */
+DEV_DECLARE_STATIC_RESOURCES(i2c1_dev_res, 1,
+  DEV_STATIC_RES_MEM(
+    STM32F4xx_DEV_MEM_START(I2C, 1),
+    STM32F4xx_DEV_MEM_END(I2C, 1)
+  ),
+);
+
+DEV_DECLARE_STATIC(
+  i2c1_dev,
+  "i2c1",
+  0,
+  stm32f4xx_i2c_drv,
+  i2c1_dev_res
 );
 
 #endif
