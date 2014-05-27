@@ -32,6 +32,7 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/char.h>
+#include <device/class/iomux.h>
 
 #include <arch/efm32_leuart.h>
 
@@ -106,7 +107,7 @@ static void efm32_leuart_try_read(struct device_s *dev)
   if (cpu_mem_read_32(pv->addr + EFM32_LEUART_STATUS_ADDR)
            & endian_le32(EFM32_LEUART_STATUS_RXDATAV))
     {
-      uint32_t c = endian_le32(cpu_mem_read_32(pv->addr + EFM32_LEUART_RXDATAX_ADDR));
+      __unused__ uint32_t c = endian_le32(cpu_mem_read_32(pv->addr + EFM32_LEUART_RXDATAX_ADDR));
 #if CONFIG_DRIVER_EFM32_LEUART_SWFIFO > 0
       uart_fifo_pushback(&pv->read_fifo, c);
 #endif
@@ -295,6 +296,25 @@ static DEV_INIT(efm32_leuart_init)
   cpu_mem_write_32(pv->addr + EFM32_LEUART_CMD_ADDR,
                    endian_le32(EFM32_LEUART_CMD_CLEARRX | EFM32_LEUART_CMD_CLEARTX));
 
+  /* setup pinmux */
+  iomux_demux_t loc[2];
+  if (device_iomux_setup(dev, "<rx? >tx?", loc, NULL, NULL))
+    goto err_mem;
+
+  uint32_t route = 0;
+  if (loc[0] != IOMUX_INVALID_DEMUX)
+    route |= EFM32_LEUART_ROUTE_RXPEN;
+  if (loc[1] != IOMUX_INVALID_DEMUX)
+    route |= EFM32_LEUART_ROUTE_TXPEN;
+
+  if (route == 0)
+    goto err_mem;
+
+  EFM32_LEUART_ROUTE_LOCATION_SETVAL(route, loc[0] != IOMUX_INVALID_DEMUX ? loc[0] : loc[1]);
+
+  cpu_mem_write_32(pv->addr + EFM32_LEUART_ROUTE_ADDR, endian_le32(route));
+
+  /* init software fifos */
   dev_char_queue_init(&pv->read_q);
   dev_char_queue_init(&pv->write_q);
 
@@ -307,6 +327,7 @@ static DEV_INIT(efm32_leuart_init)
   uart_fifo_init(&pv->write_fifo);
 # endif
 
+  /* init irq endpoint */
   device_irq_source_init(dev, &pv->irq_ep, 1,
                          &efm32_leuart_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 

@@ -3,7 +3,8 @@
 ***************************************/
 
 /*
-   bfgen -o cdefs -O include/arch/efm32_leuart.h cdefs_use_reg_mask=1
+   bfgen -o cdefs -O include/arch/efm32_leuart.h cdefs_use_reg_mask=1          \
+     cdefs_use_field_setval=1
 */
 
 #ifndef _EFM32_LEUART_BFGEN_DEFS_
@@ -15,12 +16,14 @@
    @multiple */
   #define EFM32_LEUART_CTRL_AUTOTRI(v)               ((EFM32_LEUART_CTRL_AUTOTRI_##v) << 0)
   #define EFM32_LEUART_CTRL_AUTOTRI_SET(x, v)        do { (x) = (((x) & ~0x1) | ((EFM32_LEUART_CTRL_AUTOTRI_##v) << 0)); } while(0)
+  #define EFM32_LEUART_CTRL_AUTOTRI_SETVAL(x, v)     do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define EFM32_LEUART_CTRL_AUTOTRI_GET(x)           (((x) >> 0) & 0x1)
     #define EFM32_LEUART_CTRL_AUTOTRI_HIGH             0x00000000
     #define EFM32_LEUART_CTRL_AUTOTRI_TRISTATED        0x00000001
 /** This register sets the number of data bits. @multiple */
   #define EFM32_LEUART_CTRL_DATABITS(v)              ((EFM32_LEUART_CTRL_DATABITS_##v) << 1)
   #define EFM32_LEUART_CTRL_DATABITS_SET(x, v)       do { (x) = (((x) & ~0x2) | ((EFM32_LEUART_CTRL_DATABITS_##v) << 1)); } while(0)
+  #define EFM32_LEUART_CTRL_DATABITS_SETVAL(x, v)    do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
   #define EFM32_LEUART_CTRL_DATABITS_GET(x)          (((x) >> 1) & 0x1)
     #define EFM32_LEUART_CTRL_DATABITS_EIGHT           0x00000000
     #define EFM32_LEUART_CTRL_DATABITS_NINE            0x00000001
@@ -28,6 +31,7 @@
    should be used. @multiple */
   #define EFM32_LEUART_CTRL_PARITY(v)                ((EFM32_LEUART_CTRL_PARITY_##v) << 2)
   #define EFM32_LEUART_CTRL_PARITY_SET(x, v)         do { (x) = (((x) & ~0xc) | ((EFM32_LEUART_CTRL_PARITY_##v) << 2)); } while(0)
+  #define EFM32_LEUART_CTRL_PARITY_SETVAL(x, v)      do { (x) = (((x) & ~0xc) | ((v) << 2)); } while(0)
   #define EFM32_LEUART_CTRL_PARITY_GET(x)            (((x) >> 2) & 0x3)
     #define EFM32_LEUART_CTRL_PARITY_NONE              0x00000000
     #define EFM32_LEUART_CTRL_PARITY_EVEN              0x00000002
@@ -36,12 +40,14 @@
    The receiver only verifies that one stop bit is present. @multiple */
   #define EFM32_LEUART_CTRL_STOPBITS(v)              ((EFM32_LEUART_CTRL_STOPBITS_##v) << 4)
   #define EFM32_LEUART_CTRL_STOPBITS_SET(x, v)       do { (x) = (((x) & ~0x10) | ((EFM32_LEUART_CTRL_STOPBITS_##v) << 4)); } while(0)
+  #define EFM32_LEUART_CTRL_STOPBITS_SETVAL(x, v)    do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
   #define EFM32_LEUART_CTRL_STOPBITS_GET(x)          (((x) >> 4) & 0x1)
     #define EFM32_LEUART_CTRL_STOPBITS_ONE             0x00000000
     #define EFM32_LEUART_CTRL_STOPBITS_TWO             0x00000001
 /** Set to invert the output on LEUn_TX and input on LEUn_RX. @multiple */
   #define EFM32_LEUART_CTRL_INV(v)                   ((EFM32_LEUART_CTRL_INV_##v) << 5)
   #define EFM32_LEUART_CTRL_INV_SET(x, v)            do { (x) = (((x) & ~0x20) | ((EFM32_LEUART_CTRL_INV_##v) << 5)); } while(0)
+  #define EFM32_LEUART_CTRL_INV_SETVAL(x, v)         do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
   #define EFM32_LEUART_CTRL_INV_GET(x)               (((x) >> 5) & 0x1)
     #define EFM32_LEUART_CTRL_INV_H1L0                 0x00000000
     #define EFM32_LEUART_CTRL_INV_H0L1                 0x00000001
@@ -54,12 +60,14 @@
    start-frame is loaded into the receive buffer. @multiple */
   #define EFM32_LEUART_CTRL_SFUBRX(v)                ((EFM32_LEUART_CTRL_SFUBRX_##v) << 8)
   #define EFM32_LEUART_CTRL_SFUBRX_SET(x, v)         do { (x) = (((x) & ~0x100) | ((EFM32_LEUART_CTRL_SFUBRX_##v) << 8)); } while(0)
+  #define EFM32_LEUART_CTRL_SFUBRX_SETVAL(x, v)      do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
   #define EFM32_LEUART_CTRL_SFUBRX_GET(x)            (((x) >> 8) & 0x1)
     #define EFM32_LEUART_CTRL_SFUBRX_NONE              0x00000000
     #define EFM32_LEUART_CTRL_SFUBRX_CLEAR             0x00000001
 /** Set to enable multi-processor mode. @multiple */
   #define EFM32_LEUART_CTRL_MPM(v)                   ((EFM32_LEUART_CTRL_MPM_##v) << 9)
   #define EFM32_LEUART_CTRL_MPM_SET(x, v)            do { (x) = (((x) & ~0x200) | ((EFM32_LEUART_CTRL_MPM_##v) << 9)); } while(0)
+  #define EFM32_LEUART_CTRL_MPM_SETVAL(x, v)         do { (x) = (((x) & ~0x200) | ((v) << 9)); } while(0)
   #define EFM32_LEUART_CTRL_MPM_GET(x)               (((x) >> 9) & 0x1)
     #define EFM32_LEUART_CTRL_MPM_NONE                 0x00000000
     #define EFM32_LEUART_CTRL_MPM_INTERRUPT            0x00000001
@@ -77,6 +85,7 @@
    receive buffer. @multiple */
   #define EFM32_LEUART_CTRL_RXDMAWU(v)               ((EFM32_LEUART_CTRL_RXDMAWU_##v) << 12)
   #define EFM32_LEUART_CTRL_RXDMAWU_SET(x, v)        do { (x) = (((x) & ~0x1000) | ((EFM32_LEUART_CTRL_RXDMAWU_##v) << 12)); } while(0)
+  #define EFM32_LEUART_CTRL_RXDMAWU_SETVAL(x, v)     do { (x) = (((x) & ~0x1000) | ((v) << 12)); } while(0)
   #define EFM32_LEUART_CTRL_RXDMAWU_GET(x)           (((x) >> 12) & 0x1)
     #define EFM32_LEUART_CTRL_RXDMAWU_NONE             0x00000000
     #define EFM32_LEUART_CTRL_RXDMAWU_WAKE             0x00000001
@@ -84,6 +93,7 @@
    transmit buffer. @multiple */
   #define EFM32_LEUART_CTRL_TXDMAWU(v)               ((EFM32_LEUART_CTRL_TXDMAWU_##v) << 13)
   #define EFM32_LEUART_CTRL_TXDMAWU_SET(x, v)        do { (x) = (((x) & ~0x2000) | ((EFM32_LEUART_CTRL_TXDMAWU_##v) << 13)); } while(0)
+  #define EFM32_LEUART_CTRL_TXDMAWU_SETVAL(x, v)     do { (x) = (((x) & ~0x2000) | ((v) << 13)); } while(0)
   #define EFM32_LEUART_CTRL_TXDMAWU_GET(x)           (((x) >> 13) & 0x1)
     #define EFM32_LEUART_CTRL_TXDMAWU_NONE             0x00000000
     #define EFM32_LEUART_CTRL_TXDMAWU_WAKE             0x00000001
@@ -91,6 +101,7 @@
    delayed. @multiple */
   #define EFM32_LEUART_CTRL_TXDELAY(v)               ((EFM32_LEUART_CTRL_TXDELAY_##v) << 14)
   #define EFM32_LEUART_CTRL_TXDELAY_SET(x, v)        do { (x) = (((x) & ~0xc000) | ((EFM32_LEUART_CTRL_TXDELAY_##v) << 14)); } while(0)
+  #define EFM32_LEUART_CTRL_TXDELAY_SETVAL(x, v)     do { (x) = (((x) & ~0xc000) | ((v) << 14)); } while(0)
   #define EFM32_LEUART_CTRL_TXDELAY_GET(x)           (((x) >> 14) & 0x3)
     #define EFM32_LEUART_CTRL_TXDELAY_NONE             0x00000000
     #define EFM32_LEUART_CTRL_TXDELAY_SINGLE           0x00000001
@@ -207,6 +218,7 @@
    condition depending on its configuration and the value of TXDATA. @multiple */
   #define EFM32_LEUART_TXDATAX_TXBREAK(v)            ((EFM32_LEUART_TXDATAX_TXBREAK_##v) << 13)
   #define EFM32_LEUART_TXDATAX_TXBREAK_SET(x, v)     do { (x) = (((x) & ~0x2000) | ((EFM32_LEUART_TXDATAX_TXBREAK_##v) << 13)); } while(0)
+  #define EFM32_LEUART_TXDATAX_TXBREAK_SETVAL(x, v)  do { (x) = (((x) & ~0x2000) | ((v) << 13)); } while(0)
   #define EFM32_LEUART_TXDATAX_TXBREAK_GET(x)        (((x) >> 13) & 0x1)
     #define EFM32_LEUART_TXDATAX_TXBREAK_NONE          0x00000000
     #define EFM32_LEUART_TXDATAX_TXBREAK_BREAK         0x00000001
@@ -214,6 +226,7 @@
    @multiple */
   #define EFM32_LEUART_TXDATAX_TXDIASAT(v)           ((EFM32_LEUART_TXDATAX_TXDIASAT_##v) << 14)
   #define EFM32_LEUART_TXDATAX_TXDIASAT_SET(x, v)    do { (x) = (((x) & ~0x4000) | ((EFM32_LEUART_TXDATAX_TXDIASAT_##v) << 14)); } while(0)
+  #define EFM32_LEUART_TXDATAX_TXDIASAT_SETVAL(x, v) do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)
   #define EFM32_LEUART_TXDATAX_TXDIASAT_GET(x)       (((x) >> 14) & 0x1)
     #define EFM32_LEUART_TXDATAX_TXDIASAT_NONE         0x00000000
     #define EFM32_LEUART_TXDATAX_TXDIASAT_DISABLED     0x00000001
@@ -346,6 +359,7 @@
    Use this bit to update several registers simultaneously. @multiple */
   #define EFM32_LEUART_FREEZE_REGFREEZE(v)           ((EFM32_LEUART_FREEZE_REGFREEZE_##v) << 0)
   #define EFM32_LEUART_FREEZE_REGFREEZE_SET(x, v)    do { (x) = (((x) & ~0x1) | ((EFM32_LEUART_FREEZE_REGFREEZE_##v) << 0)); } while(0)
+  #define EFM32_LEUART_FREEZE_REGFREEZE_SETVAL(x, v) do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
   #define EFM32_LEUART_FREEZE_REGFREEZE_GET(x)       (((x) >> 0) & 0x1)
     #define EFM32_LEUART_FREEZE_REGFREEZE_UPDATE       0x00000000
     #define EFM32_LEUART_FREEZE_REGFREEZE_FREEZE       0x00000001
@@ -378,6 +392,7 @@
 /** Decides the location of the LEUART I/O pins. @multiple */
   #define EFM32_LEUART_ROUTE_LOCATION(v)             ((EFM32_LEUART_ROUTE_LOCATION_##v) << 8)
   #define EFM32_LEUART_ROUTE_LOCATION_SET(x, v)      do { (x) = (((x) & ~0x700) | ((EFM32_LEUART_ROUTE_LOCATION_##v) << 8)); } while(0)
+  #define EFM32_LEUART_ROUTE_LOCATION_SETVAL(x, v)   do { (x) = (((x) & ~0x700) | ((v) << 8)); } while(0)
   #define EFM32_LEUART_ROUTE_LOCATION_GET(x)         (((x) >> 8) & 0x7)
     #define EFM32_LEUART_ROUTE_LOCATION_LOC0           0x00000000
     #define EFM32_LEUART_ROUTE_LOCATION_LOC1           0x00000001
@@ -390,6 +405,7 @@
 /** Select PRS channel as input to RX. @multiple */
   #define EFM32_LEUART_INPUT_RXPRSSEL(v)             ((EFM32_LEUART_INPUT_RXPRSSEL_##v) << 0)
   #define EFM32_LEUART_INPUT_RXPRSSEL_SET(x, v)      do { (x) = (((x) & ~0x3) | ((EFM32_LEUART_INPUT_RXPRSSEL_##v) << 0)); } while(0)
+  #define EFM32_LEUART_INPUT_RXPRSSEL_SETVAL(x, v)   do { (x) = (((x) & ~0x3) | ((v) << 0)); } while(0)
   #define EFM32_LEUART_INPUT_RXPRSSEL_GET(x)         (((x) >> 0) & 0x3)
     #define EFM32_LEUART_INPUT_RXPRSSEL_PRSCH0         0x00000000
     #define EFM32_LEUART_INPUT_RXPRSSEL_PRSCH1         0x00000001

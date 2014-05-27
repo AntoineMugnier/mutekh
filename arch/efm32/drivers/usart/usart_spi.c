@@ -33,6 +33,7 @@
 #include <device/irq.h>
 #include <device/class/spi.h>
 #include <device/class/timer.h>
+#include <device/class/iomux.h>
 
 #include <arch/efm32_usart.h>
 
@@ -365,17 +366,30 @@ static DEV_INIT(efm32_usart_spi_init)
   cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(pv->ctrl));
   cpu_mem_write_32(pv->addr + EFM32_USART_FRAME_ADDR, endian_le32(8 - 3));
 
-#warning FIXME hardwired location
-  pv->route = EFM32_USART_ROUTE_RXPEN | EFM32_USART_ROUTE_TXPEN |
-    EFM32_USART_ROUTE_CLKPEN | EFM32_USART_ROUTE_LOCATION(LOC1);
+  /* setup pinmux */
+  iomux_demux_t loc[4];
+  if (device_iomux_setup(dev, ">clk <miso? >mosi? >cs?", loc, NULL, NULL))
+    goto err_mem;
+
+  EFM32_USART_ROUTE_LOCATION_SETVAL(pv->route, loc[0]);
+
+  pv->route =  EFM32_USART_ROUTE_CLKPEN;
+  if (loc[1] != IOMUX_INVALID_DEMUX)
+    pv->route |= EFM32_USART_ROUTE_RXPEN;
+  if (loc[2] != IOMUX_INVALID_DEMUX)
+    pv->route |= EFM32_USART_ROUTE_TXPEN;
+  if (loc[3] != IOMUX_INVALID_DEMUX)
+    pv->route |= EFM32_USART_ROUTE_CSPEN;
+
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
 
+  /* init irq endpoint */
 #ifdef CONFIG_DEVICE_IRQ
   device_irq_source_init(dev, pv->irq_ep, 2,
                          &efm32_usart_spi_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, pv->irq_ep, 2, -1))
-    goto err_fifo;
+    goto err_mem;
 #endif
 
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
@@ -387,9 +401,6 @@ static DEV_INIT(efm32_usart_spi_init)
 
   return 0;
 
-#ifdef CONFIG_DEVICE_IRQ
- err_fifo:
-#endif
  err_mem:
   mem_free(pv);
   return -1;
