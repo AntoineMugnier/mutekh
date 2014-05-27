@@ -424,5 +424,38 @@ config_depend(CONFIG_DEVICE_ADDRESS_SPACES)
 error_t device_get_address_route(struct device_s *dev, struct device_s *target,
                                  enum device_access_type_e ops, uint_fast8_t *id);
 
+/** @This specifies IO signal driving modes */
+enum dev_pin_driving_e
+{
+  DEV_PIN_DISABLED              = 0,
+  DEV_PIN_ENABLED_              = 1,
+
+  DEV_PIN_RESISTOR_UP_          = 2,
+  DEV_PIN_RESISTOR_DOWN_        = 4,
+  DEV_PIN_DRIVE_UP_             = 8,
+  DEV_PIN_DRIVE_DOWN_           = 16,
+
+  /** output (symbol: @tt{>}) */
+  DEV_PIN_PUSHPULL              = DEV_PIN_ENABLED_ | DEV_PIN_DRIVE_UP_ | DEV_PIN_DRIVE_DOWN_,
+
+  /** input (symbol: @tt{<}) */
+  DEV_PIN_INPUT                 = DEV_PIN_ENABLED_,
+  /** input with pull resistor, pull direction depends on output value (symbol: @tt{=}) */
+  DEV_PIN_INPUT_PULL            = DEV_PIN_ENABLED_ | DEV_PIN_RESISTOR_UP_ | DEV_PIN_RESISTOR_DOWN_,
+  /** input with pullupup resistor (symbol: @tt{+}) */
+  DEV_PIN_INPUT_PULLUP          = DEV_PIN_ENABLED_ | DEV_PIN_RESISTOR_UP_,
+  /** input with pullupdown resistor (symbol: @tt{-}) */
+  DEV_PIN_INPUT_PULLDOWN        = DEV_PIN_ENABLED_ | DEV_PIN_RESISTOR_DOWN_,
+
+  /** open drain output (symbol: @tt{_}) */
+  DEV_PIN_OPENDRAIN             = DEV_PIN_ENABLED_ | DEV_PIN_DRIVE_DOWN_,
+  /** open source output (symbol: @tt{^}) */
+  DEV_PIN_OPENSOURCE            = DEV_PIN_ENABLED_ | DEV_PIN_DRIVE_UP_,
+  /** open drain output with pullup resistor (symbol: @tt{,}) */
+  DEV_PIN_OPENDRAIN_PULLUP      = DEV_PIN_ENABLED_ | DEV_PIN_DRIVE_DOWN_ | DEV_PIN_RESISTOR_UP_,
+  /** open source output with pulldown resistor (symbol: @tt{`}) */
+  DEV_PIN_OPENSOURCE_PULLDOWN   = DEV_PIN_ENABLED_ | DEV_PIN_DRIVE_UP_ | DEV_PIN_RESISTOR_DOWN_,
+};
+
 #endif
 

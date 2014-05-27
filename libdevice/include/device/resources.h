@@ -42,6 +42,7 @@ enum dev_resource_type_e
     DEV_RES_IO,
     DEV_RES_IRQ,
     DEV_RES_GPIO,
+    DEV_RES_IOMUX,
     DEV_RES_ID,
     DEV_RES_VENDOR,
     DEV_RES_PRODUCT,
@@ -110,6 +111,15 @@ struct dev_resource_s
       uintptr_t                 width:CONFIG_DEVICE_GPIO_MAX_WIDTH;
       const char                *label;
     }                           gpio;
+
+    /** @see #DEV_STATIC_RES_IOMUX @see device_res_add_iomux */
+    struct {
+      uintptr_t                 demux:CONFIG_DEVICE_IOMUX_MAX_DEMUX;
+      uintptr_t                 io_id:CONFIG_DEVICE_IOMUX_MAX_ID;
+      uintptr_t                 mux:CONFIG_DEVICE_IOMUX_MAX_MUX;
+      uintptr_t                 config:CONFIG_DEVICE_IOMUX_MAX_CONFIG;
+      const char                *label;
+    }                           iomux;
 
     /** @see #DEV_STATIC_RES_ID @see device_res_add_id */
     struct {
