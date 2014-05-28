@@ -109,7 +109,7 @@ struct dev_i2c_ctrl_transfer_s
   size_t                            count;
 
   /** Pointer to I2C buffer data */
-  void                              *data;
+  uint8_t                           *data;
 
   /** Callback private data. */
   void                              *pvdata;
