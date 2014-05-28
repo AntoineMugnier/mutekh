@@ -1,5 +1,5 @@
 
-  %set OUTPUT_NAME hello
+  %set OUTPUT_NAME hello2
 
   # New source code module to be compiled
   %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
@@ -10,6 +10,9 @@
   # Libs
   CONFIG_PTHREAD
   CONFIG_PTHREAD_MAIN
+  CONFIG_MUTEK_CONSOLE
+  CONFIG_LIBC_STREAM
+  CONFIG_LIBC_STREAM_STD
 
   %include scripts/options.build
   %include arch/arch.build

@@ -244,8 +244,11 @@ ASSERT(CPU_NAME_DECL(exception_vector) % CONFIG_CPU_EXCEPTION_ALIGN == 0,
        "The address of the [CPU_NAME]_exception_vector symbol is not aligned on CONFIG_CPU_EXCEPTION_ALIGN.")
 
 #ifdef CONFIG_LOAD_ROM
+
+#if CONFIG_CPU_RESET_SIZE != 0
 ASSERT(CPU_NAME_DECL(reset_vector) == CONFIG_CPU_RESET_ADDR,
         "The [CPU_NAME]_reset_vector symbol is not equal to CONFIG_CPU_RESET_ADDR.")
+#endif
 
 ASSERT(LMAEND(.rodata) <= CONFIG_LOAD_ROM_RO_ADDR + CONFIG_LOAD_ROM_RO_SIZE,
        ".text + .rodata do not fit in CONFIG_LOAD_ROM_RO_SIZE bytes");
@@ -257,7 +260,7 @@ ASSERT(LMAEND(.bss) <= CONFIG_LOAD_ROM_RW_ADDR + CONFIG_LOAD_ROM_RW_SIZE,
 #  error CONFIG_LOAD_ROM: The selected processor requires a separate section for the reset vector
 # endif
 
-# if !defined(CONFIG_LOAD_RESET_SEPARATE) && !defined(CONFIG_LOAD_EXCEPTIONS_SEPARATE)
+# if !defined(CONFIG_LOAD_RESET_SEPARATE) && !defined(CONFIG_LOAD_EXCEPTIONS_SEPARATE) && CONFIG_CPU_RESET_SIZE != 0
 #  warning CONFIG_LOAD_ROM: No separate .reset or .except sections to hold the reset vector
 # endif
 #endif

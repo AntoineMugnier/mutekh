@@ -7,6 +7,7 @@
 %include raspberry/raspberry.build
 %include zynq/zynq.build
 %include efm32/efm32.build
+%include stm32/stm32.build
 
 %common
   %requiretypes architecture

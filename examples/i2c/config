@@ -1,5 +1,5 @@
 
-  %set OUTPUT_NAME hello
+  %set OUTPUT_NAME i2c
 
   # New source code module to be compiled
   %append MODULES $(OUTPUT_NAME):$(CONFIGPATH)

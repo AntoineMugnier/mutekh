@@ -1,6 +1,7 @@
 
 #include <pthread.h>
-#include <mutek/printk.h>
+#include <device/device.h>
+#include <stdio.h>
 
 #define THREAD_COUNT 4
 
@@ -13,7 +14,7 @@ void main()
   pthread_mutex_init(&m, NULL);
   pthread_mutex_lock(&m);
 
-  printk("(%s:%i) %s\n", cpu_type_name(), cpu_id(), "Hello World!");
+  printf("(%s:%i) %s\r\n", cpu_type_name(), cpu_id(), "Hello World!");
 
   pthread_mutex_unlock(&m);
 
