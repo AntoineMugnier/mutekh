@@ -104,7 +104,6 @@ static void stm32f4xx_i2c_start(const struct device_i2c_ctrl_s *i2cdev,
       if (sr1 & STM32F4xx_I2C_SR1_TIMEOUT)
         tr->error = ETIMEDOUT;
 
-      kroutine_exec(&tr->kr, cpu_is_interruptible());
       return;
     }
   }
@@ -142,6 +141,7 @@ DEVI2C_CTRL_TRANSFER(stm32f4xx_i2c_transfer)
       tr->error = ENOTSUP;
       break;
     }
+  kroutine_exec(&tr->kr, cpu_is_interruptible());
 }
 
 static const struct driver_i2c_ctrl_s stm32f4xx_i2c_drv_cls =
