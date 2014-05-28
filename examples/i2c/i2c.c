@@ -17,20 +17,25 @@ void main()
       abort();
 
     printk("i2c: start scanning ...\n");
-    for (addr = 0; addr < 128; addr++)
+    for (addr = 0; addr < 128; ++addr)
       {
         error_t err;
-        if (!(err = dev_i2c_spin_scan(&i2c, DEV_I2C_ADDR_7_BITS, addr)))
+        do
           {
-            printk("i2c: found a device with address 0x%lx.\n", addr);
-            ++count;
+            if (!(err = dev_i2c_wait_scan(&i2c, DEV_I2C_ADDR_7_BITS, addr)))
+              {
+                printk("i2c: found a device with address 0x%lx.\n", addr);
+                ++count;
+              }
           }
-
+        while (err == -EBUSY);
+#if 0
 #if defined(CONFIG_DEVICE_TIMER)
         usleep(200);
 #else
         int i;
         for (i = 0; i < 1000; ++i);
+#endif
 #endif
       }
     printk("i2c: done.\n");
