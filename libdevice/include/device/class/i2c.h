@@ -173,8 +173,9 @@ error_t dev_i2c_set_bit_rate(struct device_i2c_ctrl_s *i2cdev,
     error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
-error_t dev_i2c_wait_scan(const struct device_i2c_ctrl_s *i2cdev,
-                          uint16_t                       saddr);
+error_t dev_i2c_wait_scan(const struct device_i2c_ctrl_s    *i2cdev,
+                          enum dev_i2c_ctrl_transfer_addr_e amode,
+                          uint16_t                          saddr);
 
 /** Synchronous helper scan function. This function spins in a loop
     waiting for read operation to complete.
@@ -185,8 +186,9 @@ error_t dev_i2c_wait_scan(const struct device_i2c_ctrl_s *i2cdev,
     error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
-error_t dev_i2c_spin_scan(const struct device_i2c_ctrl_s *i2cdev,
-                          uint16_t                       saddr);
+error_t dev_i2c_spin_scan(const struct device_i2c_ctrl_s    *i2cdev,
+                          enum dev_i2c_ctrl_transfer_addr_e amode,
+                          uint16_t                          saddr);
 
 /** Synchronous helper read function. This function uses the scheduler
     api to put current context in wait state if no data is currently
@@ -199,11 +201,12 @@ error_t dev_i2c_spin_scan(const struct device_i2c_ctrl_s *i2cdev,
     @returns processed bytes count or negative error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
-ssize_t dev_i2c_wait_read(const struct device_i2c_ctrl_s *i2cdev,
-                          uint16_t                       saddr,
-                          uint8_t                        sraddr,
-                          uint8_t                        *data,
-                          size_t                         size);
+ssize_t dev_i2c_wait_read(const struct device_i2c_ctrl_s    *i2cdev,
+                          enum dev_i2c_ctrl_transfer_addr_e amode,
+                          uint16_t                          saddr,
+                          uint8_t                           sraddr,
+                          uint8_t                           *data,
+                          size_t                            size);
 
 /** Synchronous helper read function. This function spins in a loop
     waiting for read operation to complete.
@@ -214,11 +217,12 @@ ssize_t dev_i2c_wait_read(const struct device_i2c_ctrl_s *i2cdev,
     @returns processed bytes count or negative error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
-ssize_t dev_i2c_spin_read(const struct device_i2c_ctrl_s *i2cdev,
-                          uint16_t                       saddr,
-                          uint8_t                        sraddr,
-                          uint8_t                        *data,
-                          size_t                         size);
+ssize_t dev_i2c_spin_read(const struct device_i2c_ctrl_s    *i2cdev,
+                          enum dev_i2c_ctrl_transfer_addr_e amode,
+                          uint16_t                          saddr,
+                          uint8_t                           sraddr,
+                          uint8_t                           *data,
+                          size_t                            size);
 
 /** Synchronous helper write function. This function uses the scheduler
     api to put current context in wait state if some data is currently
@@ -231,11 +235,12 @@ ssize_t dev_i2c_spin_read(const struct device_i2c_ctrl_s *i2cdev,
     @returns processed bytes count or negative error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
-ssize_t dev_i2c_wait_write(const struct device_i2c_ctrl_s *i2cdev,
-                           uint16_t                       saddr,
-                           uint8_t                        sraddr,
-                           const uint8_t                  *data,
-                           size_t                         size);
+ssize_t dev_i2c_wait_write(const struct device_i2c_ctrl_s    *i2cdev,
+                           enum dev_i2c_ctrl_transfer_addr_e amode,
+                           uint16_t                          saddr,
+                           uint8_t                           sraddr,
+                           const uint8_t                     *data,
+                           size_t                            size);
 
 /** Synchronous helper write function. This function spins in a loop
     waiting for write operation to complete.
@@ -246,11 +251,12 @@ ssize_t dev_i2c_wait_write(const struct device_i2c_ctrl_s *i2cdev,
     @returns processed bytes count or negative error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
-ssize_t dev_i2c_spin_write(const struct device_i2c_ctrl_s *i2cdev,
-                           uint16_t                       saddr,
-                           uint8_t                        sraddr,
-                           const uint8_t                  *data,
-                           size_t                         size);
+ssize_t dev_i2c_spin_write(const struct device_i2c_ctrl_s    *i2cdev,
+                           enum dev_i2c_ctrl_transfer_addr_e amode,
+                           uint16_t                          saddr,
+                           uint8_t                           sraddr,
+                           const uint8_t                     *data,
+                           size_t                            size);
 
 #endif
 
