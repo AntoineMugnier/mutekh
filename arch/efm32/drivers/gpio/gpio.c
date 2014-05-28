@@ -31,6 +31,7 @@
 #include <device/device.h>
 #include <device/irq.h>
 #include <device/class/gpio.h>
+#include <device/class/iomux.h>
 #include <device/class/icu.h>
 
 #include <mutek/printk.h>
@@ -74,6 +75,43 @@ static inline uint32_t get_mask(uint8_t msk)
   return r;
 }
 
+static error_t efm32_gpio_mode(enum dev_pin_driving_e mode,
+                               uint32_t *mde)
+{
+  switch (mode)
+    {
+    case DEV_PIN_DISABLED:
+      *mde = EFM32_GPIO_MODEL_MODE_DISABLED;
+      break;
+    case DEV_PIN_PUSHPULL:
+      *mde = EFM32_GPIO_MODEL_MODE_PUSHPULL;
+      break;
+    case DEV_PIN_INPUT:
+      *mde = EFM32_GPIO_MODEL_MODE_INPUT;
+      break; 
+    case DEV_PIN_INPUT_PULL:
+      *mde = EFM32_GPIO_MODEL_MODE_INPUTPULL;
+      break;
+      /* FIXME support for DEV_PIN_INPUT_PULLUP and
+         DEV_PIN_INPUT_PULLDOWN would require updating DOUT regs too. */
+    case DEV_PIN_OPENDRAIN:
+      *mde = EFM32_GPIO_MODEL_MODE_WIREDAND;
+      break;
+    case DEV_PIN_OPENSOURCE:
+      *mde = EFM32_GPIO_MODEL_MODE_WIREDOR;
+      break;
+    case DEV_PIN_OPENDRAIN_PULLUP:
+      *mde = EFM32_GPIO_MODEL_MODE_WIREDANDPULLUP;
+      break;
+    case DEV_PIN_OPENSOURCE_PULLDOWN:
+      *mde = EFM32_GPIO_MODEL_MODE_WIREDANDPULLUP;
+      break;
+    default:
+      return -ENOTSUP;
+    }
+  return 0;
+}
+
 static DEVGPIO_SET_MODE(efm32_gpio_set_mode)
 {
   struct device_s *dev = gpio->dev;
@@ -82,29 +120,11 @@ static DEVGPIO_SET_MODE(efm32_gpio_set_mode)
   if (io_last >= GPIO_BANK_SIZE * 6)
     return -ERANGE;
 
-  LOCK_SPIN_IRQ(&dev->lock);
-
   uint32_t mde;
+  if (efm32_gpio_mode(mode, &mde))
+    return -ENOTSUP;
 
-  switch (mode)
-    {
-    case DEV_GPIO_INPUT:
-      mde = EFM32_GPIO_MODEL_MODE_INPUT;
-      break; 
-    case DEV_GPIO_OUTPUT:
-      mde = EFM32_GPIO_MODEL_MODE_PUSHPULL;
-      break;
-    case DEV_GPIO_TRISTATE:
-      mde = EFM32_GPIO_MODEL_MODE_DISABLED;
-      break;
-    case DEV_GPIO_PULLUP:
-      mde = EFM32_GPIO_MODEL_MODE_WIREDANDPULLUP;
-      break;
-    case DEV_GPIO_PULLDOWN:
-      mde = EFM32_GPIO_MODEL_MODE_WIREDORPULLDOWN;
-    default:
-      return -EINVAL;
-    }
+  LOCK_SPIN_IRQ(&dev->lock);
 
   /* Build a 32 bits mode value */ 
   mde *= 0x11111111;
@@ -269,6 +289,40 @@ static const struct driver_gpio_s efm32_gpio_gpio_drv =
     .f_get_input    = efm32_gpio_get_input,
     .f_watch        = (devgpio_watch_t*)&dev_driver_notsup_fcn,
     .f_cancel       = (devgpio_cancel_t*)&dev_driver_notsup_fcn,
+  };
+
+/******** GPIO iomux controller driver part *********************/
+
+static DEVIOMUX_SETUP(efm32_gpio_iomux_setup)
+{
+  struct device_s *dev = imdev->dev;
+  struct efm32_gpio_private_s *pv = dev->drv_pv;
+
+  if (io_id >= GPIO_BANK_SIZE * 6)
+    return -ERANGE;
+
+  uint32_t mde;
+  if (efm32_gpio_mode(dir, &mde))
+    return -ENOTSUP;
+
+  uintptr_t a = pv->addr + EFM32_GPIO_MODEL_ADDR(io_id / GPIO_BANK_SIZE)
+              + ((io_id & 8) >> 1);
+
+  uint_fast8_t shift = (io_id % 8) * 4;
+  uint32_t mp = 0xf << shift;
+
+  uint32_t x = endian_le32(cpu_mem_read_32(a));
+  x = (x & ~mp) | (mde << shift);
+
+  cpu_mem_write_32(a, endian_le32(x));
+
+  return 0;
+}
+
+static const struct driver_iomux_s efm32_gpio_iomux_drv =
+  {
+    .class_         = DRIVER_CLASS_IOMUX,
+    .f_setup        = efm32_gpio_iomux_setup,
   };
 
 /******** GPIO irq controller driver part *********************/
@@ -447,6 +501,7 @@ const struct driver_s efm32_gpio_drv =
     .f_cleanup  = efm32_gpio_cleanup,
     .classes    = {
       &efm32_gpio_gpio_drv,
+      &efm32_gpio_iomux_drv,
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
       &efm32_gpio_icu_drv,
 #endif

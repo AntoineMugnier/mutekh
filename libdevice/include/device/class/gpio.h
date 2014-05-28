@@ -57,22 +57,13 @@ typedef uint8_t gpio_width_t;
 typedef uint16_t gpio_width_t;
 #endif
 
-enum dev_gpio_mode_e
-{
-  DEV_GPIO_INPUT,
-  DEV_GPIO_OUTPUT,
-  DEV_GPIO_TRISTATE,
-  DEV_GPIO_PULLUP,
-  DEV_GPIO_PULLDOWN,
-};
-
 static const uint8_t dev_gpio_mask1[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 static const uint8_t dev_gpio_mask0[8] = { };
 
 /** @see devgpio_set_mode_t */
 #define DEVGPIO_SET_MODE(n) error_t (n)(const struct device_gpio_s *gpio, \
                                         gpio_id_t io_first, gpio_id_t io_last, \
-                                        const uint8_t *mask, enum dev_gpio_mode_e mode)
+                                        const uint8_t *mask, enum dev_pin_driving_e mode)
 /**
    This function changes the mode of one or several IOs.
 
@@ -229,7 +220,7 @@ DRIVER_CLASS_TYPES(gpio,
 config_depend(CONFIG_DEVICE_GPIO)
 error_t device_gpio_map_set_mode(struct device_gpio_s *gpdev,
                                  const gpio_id_t *map, const gpio_width_t *wmap,
-                                 uint_fast8_t count, /* enum dev_gpio_mode_e */ ...);
+                                 uint_fast8_t count, /* enum dev_pin_driving_e */ ...);
 
 
 /** @This adds a GPIO pins binding to the device resources list.
@@ -281,6 +272,7 @@ static inline error_t device_res_add_gpio(struct device_s *dev, const char *labe
     .type = DEV_RES_UNUSED,                                             \
   }
 #endif
+
 /**
    This initializes an array of GPIO ids from a list of pin labels. If
    the @tt wmap parameter is not @tt NULL, the associated size of pin

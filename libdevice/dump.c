@@ -100,6 +100,14 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
           break;
         };
 #endif
+#ifdef CONFIG_DEVICE_IOMUX
+        case DEV_RES_IOMUX: {
+          printk("  IO `%s' muxing: demux %u, id %u, mux %u, config %u\n",
+                 r->u.iomux.label, r->u.iomux.demux,
+                 r->u.iomux.io_id, r->u.iomux.mux, r->u.iomux.config);
+          break;          
+        }
+#endif
         case DEV_RES_ID:
           printk("  Numerical identifier %x %x\n", r->u.id.major, r->u.id.minor);
           break;

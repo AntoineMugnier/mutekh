@@ -49,3 +49,7 @@ ifeq ($(CONFIG_DEVICE_GPIO), defined)
 objs += device_gpio.o
 endif
 
+ifeq ($(CONFIG_DEVICE_IOMUX), defined)
+objs += device_iomux.o
+endif
+

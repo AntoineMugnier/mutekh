@@ -28,7 +28,7 @@
 
 error_t device_gpio_map_set_mode(struct device_gpio_s *gpdev,
                                  const gpio_id_t *map, const gpio_width_t *wmap,
-                                 uint_fast8_t count, /* enum dev_gpio_mode_e */ ...)
+                                 uint_fast8_t count, /* enum dev_pin_driving_e */ ...)
 {
   va_list ap;
   uint_fast8_t i;
@@ -39,7 +39,7 @@ error_t device_gpio_map_set_mode(struct device_gpio_s *gpdev,
   for (i = 0; i < count; i++)
     {
       gpio_id_t id = map[i];
-      enum dev_gpio_mode_e mode = va_arg(ap, __compiler_sint_t);
+      enum dev_pin_driving_e mode = va_arg(ap, __compiler_sint_t);
 
       if (id != GPIO_INVALID_ID)
         if (DEVICE_OP(gpdev, set_mode, id, id + wmap[i] - 1, dev_gpio_mask1, mode))
