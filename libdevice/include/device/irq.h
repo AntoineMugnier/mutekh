@@ -108,7 +108,9 @@ enum dev_irq_sense_modes_e
   DEV_IRQ_SENSE_LOW_LEVEL = 2,
   DEV_IRQ_SENSE_RISING_EDGE = 4,
   DEV_IRQ_SENSE_FALLING_EDGE = 8,
-  DEV_IRQ_SENSE_UNKNOWN_HARDWIRED = 16,
+  DEV_IRQ_SENSE_ASYNCH_RISING_EDGE = 16,
+  DEV_IRQ_SENSE_ASYNCH_FALLING_EDGE = 32,
+  DEV_IRQ_SENSE_UNKNOWN_HARDWIRED = 64,
 };
 
 /** Device irq end-point object. Irq source and sink endpoints are
