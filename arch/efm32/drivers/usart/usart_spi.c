@@ -73,15 +73,25 @@ static DEVSPI_CTRL_CONFIG(efm32_usart_spi_config)
         {
           cpu_mem_write_32(pv->addr + EFM32_USART_FRAME_ADDR, endian_le32(cfg->word_width - 3));
 
-          EFM32_USART_CTRL_CLKPOL_SETVAL(pv->ctrl, (cfg->ck_mode >> 1) & 1);
-          EFM32_USART_CTRL_CLKPHA_SETVAL(pv->ctrl, (cfg->ck_mode >> 0) & 1);
-          EFM32_USART_CTRL_MSBF_SETVAL(pv->ctrl, cfg->bit_order);
-          EFM32_USART_CTRL_RXINV_SETVAL(pv->ctrl, cfg->miso_pol);
-          EFM32_USART_CTRL_TXINV_SETVAL(pv->ctrl, cfg->mosi_pol);
+          EFM32_USART_CTRL_CLKPOL_SETVAL(pv->ctrl, cfg->ck_mode == DEV_SPI_CK_HIGH_LEADING ||
+                                                   cfg->ck_mode == DEV_SPI_CK_HIGH_TRAILING);
+          EFM32_USART_CTRL_CLKPHA_SETVAL(pv->ctrl, cfg->ck_mode == DEV_SPI_CK_LOW_TRAILING ||
+                                                   cfg->ck_mode == DEV_SPI_CK_HIGH_TRAILING);
+
+          EFM32_USART_CTRL_RXINV_SETVAL(pv->ctrl, cfg->miso_pol == DEV_SPI_CS_ACTIVE_HIGH);
+          EFM32_USART_CTRL_TXINV_SETVAL(pv->ctrl, cfg->mosi_pol == DEV_SPI_CS_ACTIVE_HIGH);
+          EFM32_USART_CTRL_MSBF_SETVAL(pv->ctrl,  cfg->bit_order == DEV_SPI_MSB_FIRST);
+
           cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(pv->ctrl));
 
-#warning freq
-          uint32_t div = 128 * (14000000 / cfg->bit_rate - 2);
+          uint64_t freq = 14000000ULL << 24;
+          if (!device_res_get_uint64(dev, DEV_RES_FREQ, 0, &freq))
+            freq >>= 24;
+    
+          if (freq == 0)
+            return -ENOTSUP;
+
+          uint32_t div = 128 * (freq / cfg->bit_rate - 2);
           cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(div));
         }
     }
@@ -147,7 +157,11 @@ static bool_t efm32_usart_spi_transfer_tx(struct device_s *dev)
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;
   struct dev_spi_ctrl_transfer_s *tr = pv->tr;
 
-  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, 0);
+  /* enable expected irq */
+  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR,
+                   tr->count >= EFM32_USART_FIFO_SIZE
+                   ? endian_le32(EFM32_USART_IEN_RXFULL)
+                   : endian_le32(EFM32_USART_IEN_RXDATAV));
 
   while (tr->count > 0 && pv->fifo_lvl < EFM32_USART_FIFO_SIZE)
     {
@@ -174,11 +188,6 @@ static bool_t efm32_usart_spi_transfer_tx(struct device_s *dev)
     }
 
 #ifdef CONFIG_DEVICE_IRQ
-  if (pv->fifo_lvl == EFM32_USART_FIFO_SIZE)
-    cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, endian_le32(EFM32_USART_IEN_RXFULL));
-  else
-    cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, endian_le32(EFM32_USART_IEN_RXDATAV));
-
   return 0;
 #else
   return efm32_usart_spi_transfer_rx(dev);
@@ -194,7 +203,8 @@ static DEV_IRQ_EP_PROCESS(efm32_usart_spi_irq)
 
   lock_spin(&dev->lock);
 
-  while (cpu_mem_read_32(pv->addr + EFM32_USART_IF_ADDR) & endian_le32(EFM32_USART_IF_RXDATAV))
+  while (cpu_mem_read_32(pv->addr + EFM32_USART_IF_ADDR) &
+         endian_le32(EFM32_USART_IF_RXDATAV | EFM32_USART_IF_RXFULL))
     {
       cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
       struct dev_spi_ctrl_transfer_s *tr = pv->tr;
