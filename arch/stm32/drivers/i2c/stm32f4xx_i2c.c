@@ -749,7 +749,7 @@ static DEV_CLEANUP(stm32f4xx_i2c_cleanup);
 
 const struct driver_s stm32f4xx_i2c_drv =
 {
-  .desc         = "STMF4xx I2C",
+  .desc         = "STM32F4xx I2C",
   .f_init       = &stm32f4xx_i2c_init,
   .f_cleanup    = &stm32f4xx_i2c_cleanup,
   .classes      =
