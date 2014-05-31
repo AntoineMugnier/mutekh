@@ -94,6 +94,20 @@ DEV_DECLARE_STATIC(
 
 #endif
 
+#if defined(CONFIG_DRIVER_STM32_GPIO)
+
+/* GPIO A..E. */
+DEV_DECLARE_STATIC_RESOURCES(gpio_dev_res, 1,
+  DEV_STATIC_RES_MEM(
+    STM32F4xx_DEV_MEM_START(GPIO, A),
+    STM32F4xx_DEV_MEM_END(GPIO, E)
+  ),
+);
+
+DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32f4xx_gpio_drv, gpio_dev_res);
+
+#endif
+
 /////////////////////////////////////////////////////////////////////
 
 uint32_t stm32f4xx_clock_freq_ahb1 = 16000000; /* 16MHz on reset. */
