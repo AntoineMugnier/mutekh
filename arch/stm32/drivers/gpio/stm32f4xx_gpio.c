@@ -40,6 +40,7 @@
 #include <arch/stm32f4xx_memory_map.h>
 
 
+#define STM32F4xx_GPIO_BANK_WIDTH   0x400
 #define STM32F4xx_GPIO_BANK_SIZE    16
 #define STM32F4xx_GPIO_BANK_COUNT   5
 #define STM32F4xx_GPIO_MAX_ID                                \
@@ -96,11 +97,15 @@ static error_t stm32f4xx_gpio_gpio_make_mode(enum dev_pin_driving_e mode,
       break;
 
     case DEV_PIN_OPENDRAIN_PULLUP:
-      *bf = STM32_GPIO_MODE_OUTPUT | STM32_GPIO_MODE_PULLUP;
+      *bf = STM32_GPIO_MODE_OUTPUT |
+        STM32_GPIO_MODE_OPENDRAIN  |
+        STM32_GPIO_MODE_PULLUP;
       break;
 
     case DEV_PIN_OPENSOURCE_PULLDOWN:
-      *bf = STM32_GPIO_MODE_OUTPUT | STM32_GPIO_MODE_PULLDOWN;
+      *bf = STM32_GPIO_MODE_OUTPUT |
+        STM32_GPIO_MODE_OPENDRAIN  |
+        STM32_GPIO_MODE_PULLDOWN;
       break;
     }
   return 0;
@@ -114,7 +119,7 @@ static void stm32f4xx_gpio_gpio_apply_mode(struct device_s *dev,
 
   uint8_t bank              = iopin / STM32F4xx_GPIO_BANK_SIZE;
   uint8_t io_in_bank        = iopin % STM32F4xx_GPIO_BANK_SIZE;
-  uintptr_t const bkaddr    = pv->addr + (bank * 0x28);
+  uintptr_t const bkaddr    = pv->addr + (bank * STM32F4xx_GPIO_BANK_WIDTH);
 
   /* Input/output. */
   if (bf & STM32_GPIO_MODE_OUTPUT)
@@ -221,7 +226,8 @@ static DEVGPIO_SET_OUTPUT(stm32f4xx_gpio_gpio_set_output)
     {
       uint8_t bank              = io_first / STM32F4xx_GPIO_BANK_SIZE;
       uint8_t io_in_bank        = io_first % STM32F4xx_GPIO_BANK_SIZE;
-      uintptr_t const bkaddr    = pv->addr + (bank * 0x28);
+      uintptr_t const bkaddr    =
+        pv->addr + (bank * STM32F4xx_GPIO_BANK_WIDTH);
 
       uint8_t sval = (set_mask[msk_idx/8] >> (msk_idx % 8)) & 0x1;
       uint8_t cval = (clear_mask[msk_idx/8] >> (msk_idx % 8)) & 0x1;
@@ -287,7 +293,8 @@ static DEVGPIO_GET_INPUT(stm32f4xx_gpio_gpio_get_input)
   for (; io_first <= io_last; io_first += 32)
     {
       uint8_t bank              = io_first / STM32F4xx_GPIO_BANK_SIZE;
-      uintptr_t const bkaddr    = pv->addr + (bank * 0x28);
+      uintptr_t const bkaddr    =
+        pv->addr + (bank * STM32F4xx_GPIO_BANK_WIDTH);
 
       uint32_t register value = STM32F4xx_REG_VALUE_DEV(GPIO, bkaddr, IDR);
       *(uint32_t*)data = value >> io_first;
@@ -323,7 +330,7 @@ static DEVIOMUX_SETUP(stm32f4xx_gpio_iomux_setup)
 
   uint8_t bank              = io_id / STM32F4xx_GPIO_BANK_SIZE;
   uint8_t io_in_bank        = io_id % STM32F4xx_GPIO_BANK_SIZE;
-  uintptr_t const bkaddr    = pv->addr + (bank * 0x28);
+  uintptr_t const bkaddr    = pv->addr + (bank * STM32F4xx_GPIO_BANK_WIDTH);
 
   if (io_id > STM32F4xx_GPIO_MAX_ID)
     return -ERANGE;
@@ -346,14 +353,24 @@ static DEVIOMUX_SETUP(stm32f4xx_gpio_iomux_setup)
     ALT
   );
 
-  STM32F4xx_REG_FIELD_IDX_UPDATE_DEV(
-    GPIO,
-    bkaddr,
-    AFRL,
-    AF,
-    (io_in_bank % 8),
-    mux
-  );
+  if (io_in_bank > 7)
+    STM32F4xx_REG_FIELD_IDX_UPDATE_DEV(
+      GPIO,
+      bkaddr,
+      AFRH,
+      AF,
+      (io_in_bank - 8),
+      mux
+    );
+  else
+    STM32F4xx_REG_FIELD_IDX_UPDATE_DEV(
+      GPIO,
+      bkaddr,
+      AFRL,
+      AF,
+      io_in_bank,
+      mux
+    );
 
   /* remove input/output in bitfield as we use here alternate function. */
   bf &= ~(STM32_GPIO_MODE_INPUT | STM32_GPIO_MODE_OUTPUT);
