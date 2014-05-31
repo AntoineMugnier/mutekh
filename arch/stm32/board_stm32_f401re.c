@@ -40,9 +40,10 @@ void stm32_mem_init()
 
 /////////////////////////////////////////////////////////////////////
 
-# include <device/driver.h>
-# include <device/resources.h>
-# include <device/device.h>
+#include <device/device.h>
+#include <device/driver.h>
+#include <device/resources.h>
+#include <device/class/iomux.h>
 
 #include <arch/stm32f4xx_memory_map.h>
 #include <arch/stm32f4xx_irq.h>
@@ -74,14 +75,19 @@ DEV_DECLARE_STATIC(
 
 #if defined(CONFIG_DRIVER_STM32_I2C)
 
-/* USART1. */
-DEV_DECLARE_STATIC_RESOURCES(i2c1_dev_res, 3,
+/* I2C1. */
+DEV_DECLARE_STATIC_RESOURCES(i2c1_dev_res, 6,
   DEV_STATIC_RES_MEM(
     STM32F4xx_DEV_MEM_START(I2C, 1),
     STM32F4xx_DEV_MEM_END(I2C, 1)
   ),
+
   DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_I2C1_EV, 0, "/cpu"),
   DEV_STATIC_RES_IRQ(1, STM32F4xx_IRQ_I2C1_ER, 0, "/cpu"),
+
+  DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+  DEV_STATIC_RES_IOMUX("scl", 0, /* PB8 */ 1*16+8, /* AF4 */ 4, 0),
+  DEV_STATIC_RES_IOMUX("sda", 0, /* PB9 */ 1*16+9, /* AF4 */ 4, 0),
 );
 
 DEV_DECLARE_STATIC(
