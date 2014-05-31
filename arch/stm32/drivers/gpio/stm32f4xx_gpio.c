@@ -404,6 +404,8 @@ struct driver_s stm32f4xx_gpio_drv =
       },
   };
 
+REGISTER_DRIVER(stm32f4xx_gpio_drv);
+
 static DEV_INIT(stm32f4xx_gpio_init)
 {
   struct stm32f4xx_gpio_context_s   *pv;
