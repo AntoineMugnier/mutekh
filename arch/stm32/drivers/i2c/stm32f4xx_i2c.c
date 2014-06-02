@@ -499,8 +499,7 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_read2)
     return;
 #endif
 
-  assert(pv->nbytes < tr->count);
-  assert((tr->count - pv->nbytes) == 2);
+  assert(tr->count == 2);
 
   /* step to next phase. */
   pv->state = DEV_I2C_ST_STOP;
@@ -509,7 +508,7 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_read2)
   STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
 
   /* read the two last data. */
-  while (pv->nbytes < tr->count)
+  while (tr->count > 0)
     {
       tr->data[pv->nbytes++] = STM32F4xx_REG_FIELD_VALUE_DEV(
         I2C,
