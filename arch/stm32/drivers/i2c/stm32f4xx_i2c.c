@@ -172,13 +172,7 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_start)
 #if defined(CONFIG_DEVICE_IRQ)
   /* check for state consistency. */
   if (!STM32F4xx_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, SB))
-    {
-      /* step to end state. */
-      pv->state = DEV_I2C_ST_STOP;
-
-      tr->error = EIO;
-      return;
-    }
+    return;
 #endif
 
   /* step to next phase. */
