@@ -637,6 +637,7 @@ static DEV_INIT(stm32f4xx_gpio_init)
   if (!pv)
     return -ENOMEM;
 
+  memset(pv, 0, sizeof(*pv));
   dev->drv_pv = pv;
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
