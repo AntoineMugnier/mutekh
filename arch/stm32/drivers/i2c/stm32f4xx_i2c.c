@@ -247,6 +247,9 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_slave_addr)
       STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITBUFEN);
 #endif
 
+      /* prepare. */
+      pv->nbytes = 0;
+
       /* 1-byte read. */
       if (tr->count == 1)
         {
