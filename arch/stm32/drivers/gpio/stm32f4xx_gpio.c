@@ -610,7 +610,7 @@ static DEV_IRQ_EP_PROCESS(stm32f4xx_gpio_irq)
 static DEV_INIT(stm32f4xx_gpio_init);
 static DEV_CLEANUP(stm32f4xx_gpio_cleanup);
 
-struct driver_s stm32f4xx_gpio_drv =
+const struct driver_s stm32f4xx_gpio_drv =
   {
     .desc       = "STM32F4xx GPIO",
     .f_init     = &stm32f4xx_gpio_init,
