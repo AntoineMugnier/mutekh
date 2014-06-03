@@ -103,11 +103,19 @@ DEV_DECLARE_STATIC(
 #if defined(CONFIG_DRIVER_STM32_GPIO)
 
 /* GPIO A..E. */
-DEV_DECLARE_STATIC_RESOURCES(gpio_dev_res, 1,
+DEV_DECLARE_STATIC_RESOURCES(gpio_dev_res, 8,
   DEV_STATIC_RES_MEM(
     STM32F4xx_DEV_MEM_START(GPIO, A),
     STM32F4xx_DEV_MEM_END(GPIO, E)
   ),
+
+  DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_EXTI0,      0, "/cpu"),
+  DEV_STATIC_RES_IRQ(1, STM32F4xx_IRQ_EXTI1,      0, "/cpu"),
+  DEV_STATIC_RES_IRQ(2, STM32F4xx_IRQ_EXTI2,      0, "/cpu"),
+  DEV_STATIC_RES_IRQ(3, STM32F4xx_IRQ_EXTI3,      0, "/cpu"),
+  DEV_STATIC_RES_IRQ(4, STM32F4xx_IRQ_EXTI4,      0, "/cpu"),
+  DEV_STATIC_RES_IRQ(5, STM32F4xx_IRQ_EXTI_9_5,   0, "/cpu"),
+  DEV_STATIC_RES_IRQ(6, STM32F4xx_IRQ_EXTI_15_10, 0, "/cpu"),
 );
 
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32f4xx_gpio_drv, gpio_dev_res);
