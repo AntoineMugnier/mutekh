@@ -200,6 +200,45 @@ static void stm32f4xx_gpio_gpio_apply_mode(struct device_s *dev,
       io_in_bank,
       PULLDOWN
     );
+
+  /* set gpio speed. */
+  extern uint32_t stm32f4xx_clock_freq_ahb1;
+  if (stm32f4xx_clock_freq_ahb1 >= 80000000)
+    STM32F4xx_REG_FIELD_IDX_UPDATE_DEV(
+      GPIO,
+      bkaddr,
+      OSPEEDR,
+      OSPEED,
+      io_in_bank,
+      HIGH
+    );
+  else if (stm32f4xx_clock_freq_ahb1 >= 50000000)
+    STM32F4xx_REG_FIELD_IDX_UPDATE_DEV(
+      GPIO,
+      bkaddr,
+      OSPEEDR,
+      OSPEED,
+      io_in_bank,
+      FAST
+    );
+  else if (stm32f4xx_clock_freq_ahb1 >= 25000000)
+    STM32F4xx_REG_FIELD_IDX_UPDATE_DEV(
+      GPIO,
+      bkaddr,
+      OSPEEDR,
+      OSPEED,
+      io_in_bank,
+      MEDIUM
+    );
+  else
+    STM32F4xx_REG_FIELD_IDX_UPDATE_DEV(
+      GPIO,
+      bkaddr,
+      OSPEEDR,
+      OSPEED,
+      io_in_bank,
+      LOW
+    );
 }
 
 static DEVGPIO_SET_MODE(stm32f4xx_gpio_gpio_set_mode)
@@ -622,6 +661,7 @@ const struct driver_s stm32f4xx_gpio_drv =
 #if defined(CONFIG_DRIVER_STM32_GPIO_ICU)
         &stm32f4xx_gpio_icu_drv,
 #endif
+        0
       },
   };
 
