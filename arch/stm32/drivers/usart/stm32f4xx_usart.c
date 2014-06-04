@@ -42,6 +42,13 @@
 #include <arch/stm32f4xx_helpers.h>
 #include <arch/stm32f4xx_memory_map.h>
 
+#if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
+# include <hexo/gpct_platform_hexo.h>
+# include <gpct/cont_ring.h>
+
+CONTAINER_TYPE(usart_fifo, RING, uint8_t, CONFIG_DRIVER_STM32_USART_SWFIFO);
+CONTAINER_FUNC(usart_fifo, RING, static inline, usart_fifo);
+#endif
 
 extern uint32_t stm32f4xx_clock_freq_ahb1;
 extern uint32_t stm32f4xx_clock_freq_apb1;
@@ -59,112 +66,161 @@ struct stm32f4xx_usart_context_s
   /* usart request queue for write requests. */
   dev_char_queue_root_t write_q;
 
+#if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
+  /* read fifo for incoming data. */
+  usart_fifo_root_t     read_fifo;
+
+#if defined(CONFIG_DEVICE_IRQ)
+  /* write fifo for outgoing data (only necessary in interruptible mode). */
+  usart_fifo_root_t     write_fifo;
+#endif
+#endif
+
   /* interrupt end-points (TX and RX on the same wire). */
   struct dev_irq_ep_s   irq_ep[1];
 };
 
-static bool_t stm32f4xx_usart_try_read(struct device_s *dev)
+static void stm32f4xx_usart_try_read(struct device_s *dev)
 {
   struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
   struct dev_char_rq_s              *rq;
 
   while ((rq = dev_char_queue_head(&pv->read_q)))
-  {
-    size_t size = 0;
+    {
+      size_t size = 0;
+
+#if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
+      /* read as much as possible from fifo. */
+      size = usart_fifo_pop_array(&pv->read_fifo, rq->data, rq->size);
+#endif
 
     /* read characters if the request asked for more. */
-    if (size < rq->size &&
-        STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, RXNE))
-      rq->data[size++] =
-        STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, DR, DATA);
+      if (size < rq->size &&
+          STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, RXNE))
+        rq->data[size++] =
+          STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, DR, DATA);
 
-    /* if a data was read, then process the read request. */
-    if (size)
-    {
-      rq->size -= size;
-      rq->error = 0;
+      /* if a data was read, then process the read request. */
+      if (size)
+        {
+          rq->size -= size;
+          rq->error = 0;
 
-      if (rq->callback(rq, size) || rq->size == 0)
-      {
-        dev_char_queue_remove(&pv->read_q, rq);
+          if (rq->callback(rq, size) || rq->size == 0)
+            {
+              dev_char_queue_remove(&pv->read_q, rq);
 
-        /* look for another pending read request. */
-        continue;
-      }
+              /* look for another pending read request. */
+              continue;
+            }
 
-      rq->data += size;
-    }
+          rq->data += size;
+        }
 
 #if defined(CONFIG_DEVICE_IRQ)
-    /* otherwise, return and wait for another interrupt. */
-    return 1;
+      /* otherwise, return and wait for another interrupt. */
+      return;
 #endif
-  }
+    }
 
-  /* if no request need the data, discard it. */
+  /* if no request need the data, discard it or save it in the read fifo. */
   if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, RXNE))
-    (void) STM32F4xx_REG_VALUE_DEV(USART, pv->addr, DR);
-
-  /* return true if requests are pending. */
-  return rq != NULL;
+    {
+      __unused__ uint8_t c =
+        STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, DR, DATA);
+#if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
+      usart_fifo_pushback(&pv->read_fifo, c);
+#endif
+    }
 }
 
-static bool_t stm32f4xx_usart_try_write(struct device_s *dev)
+static void stm32f4xx_usart_try_write(struct device_s *dev)
 {
   struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
   struct dev_char_rq_s              *rq;
 
+#if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_STM32_USART_SWFIFO > 0
+  /* try to write as much as possible data from the fifo first. */
+  if (!usart_fifo_isempty(&pv->write_fifo) &&
+      STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC))
+    {
+      uint8_t c = usart_fifo_pop(&pv->write_fifo);
+      STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, DR, DATA, c);
+    }
+#endif
+
   while ((rq = dev_char_queue_head(&pv->write_q)))
+    {
+      size_t size = 0;
+
+#if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_STM32_USART_SWFIFO > 0
+      if (usart_fifo_isempty(&pv->write_fifo))
+        {
+          /* driver fifo is empty, so try to write as many characters as
+             possible from request directly. */
+#endif
+
+          /* write data if some are pending and the controller is ready for
+             it. */
+          if (size < rq->size &&
+              STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC))
+          {
+            STM32F4xx_REG_FIELD_UPDATE_DEV(
+              USART,
+              pv->addr,
+              DR,
+              DATA,
+              rq->data[size++]
+            );
+          }
+
+#if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_STM32_USART_SWFIFO > 0
+        }
+
+      if (size < rq->size)
+        size += usart_fifo_pushback_array(
+          &pv->write_fifo,
+          &rq->data[size],
+          rq->size - size
+        );
+#endif
+
+      if (size)
+        {
+          rq->size -= size;
+          rq->error = 0;
+
+          if (rq->callback(rq, size) || rq->size == 0)
+            {
+              dev_char_queue_remove(&pv->write_q, rq);
+
+              /* look for another pending write request. */
+              continue;
+            }
+
+          /* update the buffer pointer. */
+          rq->data += size;
+        }
+
+#if defined(CONFIG_DEVICE_IRQ)
+      /* wait for the next interrupt, when the controller will be ready to
+         send. */
+      STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TCIE);
+      return;
+#endif
+    }
+
+#if defined(CONFIG_DEVICE_IRQ)
+  /* if there is no more write request in the queue or fifo, then
+     disable TX interrupt. */
+# if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
+  if (usart_fifo_isempty(&pv->write_fifo))
+# endif
   {
-    size_t size = 0;
-
-    /* write data if some are pending and the controller is ready for it. */
-    if (size < rq->size &&
-        STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE))
-    {
-      STM32F4xx_REG_FIELD_UPDATE_DEV(
-        USART,
-        pv->addr,
-        DR,
-        DATA,
-        rq->data[size++]
-      );
-    }
-
-    if (size)
-    {
-      rq->size -= size;
-      rq->error = 0;
-
-      if (rq->callback(rq, size) || rq->size == 0)
-      {
-        dev_char_queue_remove(&pv->write_q, rq);
-
-        /* look for another pending write request. */
-        continue;
-      }
-
-      /* update the buffer pointer. */
-      rq->data += size;
-    }
-
-#if defined(CONFIG_DEVICE_IRQ)
-    /* wait for the next interrupt, when the controller will be ready to
-     * send.
-     */
-    STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TXEIE);
-    break;
-#endif
+    STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, SR, TC);
+    STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, TCIE);
   }
-
-#if defined(CONFIG_DEVICE_IRQ)
-  /* if there is no more write request in the queue, disable TX interrupt. */
-  if (dev_char_queue_isempty(&pv->write_q))
-    STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, TXEIE);
 #endif
-
-  /* return true if requests are pending. */
-  return rq != NULL;
 }
 
 static DEVCHAR_REQUEST(stm32f4xx_usart_request)
@@ -225,21 +281,14 @@ static DEV_IRQ_EP_PROCESS(stm32f4xx_usart_irq)
     /* if the controller has no pending data and cannot send data, then
      * break and wait for another interrupt.
      */
-    if ((ir & ( STM32F4xx_USART_SR_RXNE | STM32F4xx_USART_SR_TXE )) == 0)
+    if ((ir & ( STM32F4xx_USART_SR_RXNE | STM32F4xx_USART_SR_TC )) == 0)
       break;
 
-    bool_t next = 0;
+    if (ir & STM32F4xx_USART_SR_TC)
+      stm32f4xx_usart_try_write(dev);
 
-    if ((ir & STM32F4xx_USART_SR_TXE) && stm32f4xx_usart_try_write(dev))
-      next = 1;
-
-    if ((ir & STM32F4xx_USART_SR_RXNE) && stm32f4xx_usart_try_read(dev))
-      next = 1;
-
-    /* if there is no opportunity to run pending requests or there is no
-       request pending, then break the loop. */
-    if (!next)
-      break;
+    if (ir & STM32F4xx_USART_SR_RXNE)
+      stm32f4xx_usart_try_read(dev);
   }
 
   lock_release(&dev->lock);
@@ -326,7 +375,7 @@ static DEV_INIT(stm32f4xx_usart_init)
 
   /* wait for previous TX to complete. */
   if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, TE))
-    while (!STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE));
+    while (!STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC));
 
   /* disable and reset the usart. */
   STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR1, 0);
@@ -337,16 +386,23 @@ static DEV_INIT(stm32f4xx_usart_init)
   dev_char_queue_init(&pv->read_q);
   dev_char_queue_init(&pv->write_q);
 
+#if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
+  usart_fifo_init(&pv->read_fifo);
+# if defined(CONFIG_DEVICE_IRQ)
+  usart_fifo_init(&pv->write_fifo);
+# endif
+#endif
+
   /* configure clocks. */
   stm32f4xx_usart_clock_init(dev);
 
   /* configure gpio. */
   iomux_demux_t loc[2];
   if (device_iomux_setup(dev, "<rx? >tx?", loc, NULL, NULL))
-    goto err_mem;
+    goto err_fifo;
 
   if (loc[0] == IOMUX_INVALID_DEMUX && loc[1] == IOMUX_INVALID_DEMUX)
-    goto err_mem;
+    goto err_fifo;
 
   /* configure usart . */
   STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, M,    8_BITS);
@@ -390,7 +446,7 @@ static DEV_INIT(stm32f4xx_usart_init)
   );
 
   if (device_irq_source_link(dev, pv->irq_ep, 1, -1))
-    goto err_irq;
+    goto err_fifo;
 
   /* enable RX irq. TX irq is activated on on demand. */
   if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, RE))
@@ -408,7 +464,11 @@ static DEV_INIT(stm32f4xx_usart_init)
   return 0;
 
 #if defined(CONFIG_DEVICE_IRQ)
-err_irq:
+err_fifo:
+# if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
+  usart_fifo_destroy(&pv->read_fifo);
+  usart_fifo_destroy(&pv->write_fifo);
+# endif
   dev_char_queue_destroy(&pv->read_q);
   dev_char_queue_destroy(&pv->write_q);
 #endif
@@ -429,6 +489,11 @@ static DEV_CLEANUP(stm32f4xx_usart_cleanup)
 
 #if defined(CONFIG_DEVICE_IRQ)
   device_irq_source_unlink(dev, pv->irq_ep, 1);
+
+# if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
+  usart_fifo_destroy(&pv->read_fifo);
+  usart_fifo_destroy(&pv->write_fifo);
+# endif
 #endif
 
   /* destroy request queues. */
