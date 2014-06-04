@@ -4,8 +4,8 @@
 
 /*
    bfgen -o cdefs cdefs_use_reg_mask=1 cdefs_use_field_set=1                   \
-     reg_prefix=STM32F4xx field_prefix=STM32F4xx cdefs_use_field_mask=1        \
-     cdefs_use_field_get=1
+     cdefs_use_field_get=1 reg_prefix=STM32F4xx field_prefix=STM32F4xx         \
+     cdefs_use_field_mask=1
 */
 
 #ifndef _I2C_BFGEN_DEFS_
