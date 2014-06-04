@@ -32,6 +32,7 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/char.h>
+#include <device/class/iomux.h>
 
 #include "pl011uart_regs.h"
 
@@ -303,6 +304,12 @@ static DEV_INIT(pl011uart_init)
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
+
+#ifdef CONFIG_DEVICE_IOMUX
+  /* setup pinmux */
+  if (device_iomux_setup(dev, "<rx? >tx?", NULL, NULL, NULL))
+    goto err_mem;
+#endif
 
   /* disable the uart */
   cpu_mem_write_32(pv->addr + PL011_CR_ADDR, 0);
