@@ -78,6 +78,48 @@ DEV_DECLARE_STATIC(
   usart1_dev_res
 );
 
+/* USART2. */
+DEV_DECLARE_STATIC_RESOURCES(usart2_dev_res, 5,
+  DEV_STATIC_RES_MEM(
+    STM32F4xx_DEV_MEM_START(USART, 2),
+    STM32F4xx_DEV_MEM_END(USART, 2)
+  ),
+  DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_USART1, 0, "/cpu"),
+
+  DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+  DEV_STATIC_RES_IOMUX("tx", 0, /* PB2 */ 1*16+2, /* AF4. */ 4, 0),
+  DEV_STATIC_RES_IOMUX("rx", 0, /* PB3 */ 1*16+3, /* AF4. */ 4, 0),
+);
+
+DEV_DECLARE_STATIC(
+  usart2_dev,
+  "uart3",
+  0,
+  stm32f4xx_usart_drv,
+  usart2_dev_res
+);
+
+/* USART6. */
+DEV_DECLARE_STATIC_RESOURCES(usart6_dev_res, 5,
+  DEV_STATIC_RES_MEM(
+    STM32F4xx_DEV_MEM_START(USART, 6),
+    STM32F4xx_DEV_MEM_END(USART, 6)
+  ),
+  DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_USART1, 0, "/cpu"),
+
+  DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+  DEV_STATIC_RES_IOMUX("tx", 0, /* PA11 */ 0*16+11, /* AF8. */ 8, 0),
+  DEV_STATIC_RES_IOMUX("rx", 0, /* PA12 */ 0*16+12, /* AF8. */ 8, 0),
+);
+
+DEV_DECLARE_STATIC(
+  usart6_dev,
+  "uart3",
+  0,
+  stm32f4xx_usart_drv,
+  usart6_dev_res
+);
+
 #endif
 
 #if defined(CONFIG_DRIVER_STM32_I2C)
