@@ -93,7 +93,7 @@ DEV_DECLARE_STATIC_RESOURCES(usart2_dev_res, 5,
 
 DEV_DECLARE_STATIC(
   usart2_dev,
-  "uart3",
+  "uart2",
   0,
   stm32f4xx_usart_drv,
   usart2_dev_res
