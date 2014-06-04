@@ -34,72 +34,19 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/char.h>
+#include <device/class/iomux.h>
 
-#define STM32F4xx_USART_SR      0x00
-#define STM32F4xx_USART_DR      0x04
-#define STM32F4xx_USART_BRR     0x08
-#define STM32F4xx_USART_CR1     0x0c
-#define STM32F4xx_USART_CR2     0x10
-#define STM32F4xx_USART_CR3     0x14
-#define STM32F4xx_USART_GPTR    0x18
+#include <arch/stm32f4xx_rcc.h>
+#include <arch/stm32f4xx_usart.h>
 
-#define STM32F4xx_USART_REG_ADDR(base, offset) \
-    ( (base) + (offset) )                      \
-/**/
+#include <arch/stm32f4xx_helpers.h>
+#include <arch/stm32f4xx_memory_map.h>
 
-#define STM32F4xx_USART_SR_RXNE             (1 << 5)
-#define STM32F4xx_USART_SR_TXE              (1 << 7)
-
-#define STM32F4xx_USART_CR1_RE              (1 << 2)
-#define STM32F4xx_USART_CR1_TE              (1 << 3)
-#define STM32F4xx_USART_CR1_TXEIE           (1 << 7)
-#define STM32F4xx_USART_CR1_RXNEIE          (1 << 5)
-#define STM32F4xx_USART_CR1_OVER_16         0
-#define STM32F4xx_USART_CR1_OVER_8          (1 << 15)
-#define STM32F4xx_USART_CR1_EN              (1 << 13)
-#define STM32F4xx_USART_CR1_8_BITS          0
-#define STM32F4xx_USART_CR1_9_BITS          (1 << 12)
-
-#define STM32F4xx_USART_CR1_PAR_NONE        0
-#define STM32F4xx_USART_CR1_PAR_EN          (1 << 10)
-#define STM32F4xx_USART_CR1_PAR_EVEN        0
-#define STM32F4xx_USART_CR1_PAR_ODD         (1 << 19)
-
-#define STM32F4xx_USART_CR2_STOP_1_BIT      0
-#define STM32F4xx_USART_CR2_STOP_05_BIT     (1 << 12)
-#define STM32F4xx_USART_CR2_STOP_2_BIT      (1 << 13)
-
-#define __STM32F4xx_USART_HAS_RDY_RX(base)                    \
-  ( (cpu_mem_read_32(                                         \
-      STM32F4xx_USART_REG_ADDR((base), STM32F4xx_USART_SR)) & \
-    STM32F4xx_USART_SR_RXNE) != 0                             \
-  ) \
-/**/
-
-#define __STM32F4xx_USART_HAS_RDY_TX(base)                    \
-  ( (cpu_mem_read_32(                                         \
-      STM32F4xx_USART_REG_ADDR((base), STM32F4xx_USART_SR)) & \
-    STM32F4xx_USART_SR_TXE) != 0                              \
-  ) \
-/**/
-
-#define __STM32F4xx_USART_IS_TX_EN(base)                       \
-  ( (cpu_mem_read_32(                                          \
-      STM32F4xx_USART_REG_ADDR((base), STM32F4xx_USART_CR1)) & \
-    STM32F4xx_USART_CR1_TE) != 0                               \
-  ) \
-/**/
-
-#define __STM32F4xx_USART_IS_RX_EN(base)                       \
-  ( (cpu_mem_read_32(                                          \
-      STM32F4xx_USART_REG_ADDR((base), STM32F4xx_USART_CR1)) & \
-    STM32F4xx_USART_CR1_RE) != 0                               \
-  ) \
-/**/
 
 extern uint32_t stm32f4xx_clock_freq_ahb1;
 extern uint32_t stm32f4xx_clock_freq_apb1;
 extern uint32_t stm32f4xx_clock_freq_apb2;
+
 
 struct stm32f4xx_usart_context_s
 {
@@ -116,7 +63,7 @@ struct stm32f4xx_usart_context_s
   struct dev_irq_ep_s   irq_ep[1];
 };
 
-static void stm32f4xx_usart_try_read(struct device_s *dev)
+static bool_t stm32f4xx_usart_try_read(struct device_s *dev)
 {
   struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
   struct dev_char_rq_s              *rq;
@@ -126,12 +73,10 @@ static void stm32f4xx_usart_try_read(struct device_s *dev)
     size_t size = 0;
 
     /* read characters if the request asked for more. */
-    if (size < rq->size && __STM32F4xx_USART_HAS_RDY_RX(pv->addr))
-    {
-      rq->data[size++] = endian_le32(
-        cpu_mem_read_32(
-          STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_DR)));
-    }
+    if (size < rq->size &&
+        STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, RXNE))
+      rq->data[size++] =
+        STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, DR, DATA);
 
     /* if a data was read, then process the read request. */
     if (size)
@@ -152,19 +97,19 @@ static void stm32f4xx_usart_try_read(struct device_s *dev)
 
 #if defined(CONFIG_DEVICE_IRQ)
     /* otherwise, return and wait for another interrupt. */
-    return;
+    return 1;
 #endif
   }
 
   /* if no request need the data, discard it. */
-  if (__STM32F4xx_USART_HAS_RDY_RX(pv->addr))
-  {
-    (void) cpu_mem_read_32(
-      STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_DR));
-  }
+  if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, RXNE))
+    (void) STM32F4xx_REG_VALUE_DEV(USART, pv->addr, DR);
+
+  /* return true if requests are pending. */
+  return rq != NULL;
 }
 
-static void stm32f4xx_usart_try_write(struct device_s *dev)
+static bool_t stm32f4xx_usart_try_write(struct device_s *dev)
 {
   struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
   struct dev_char_rq_s              *rq;
@@ -174,11 +119,15 @@ static void stm32f4xx_usart_try_write(struct device_s *dev)
     size_t size = 0;
 
     /* write data if some are pending and the controller is ready for it. */
-    if (size < rq->size && __STM32F4xx_USART_HAS_RDY_TX(pv->addr))
+    if (size < rq->size &&
+        STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE))
     {
-      cpu_mem_write_32(
-        STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_DR),
-        endian_le32(rq->data[size++])
+      STM32F4xx_REG_FIELD_UPDATE_DEV(
+        USART,
+        pv->addr,
+        DR,
+        DATA,
+        rq->data[size++]
       );
     }
 
@@ -203,6 +152,7 @@ static void stm32f4xx_usart_try_write(struct device_s *dev)
     /* wait for the next interrupt, when the controller will be ready to
      * send.
      */
+    STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TXEIE);
     break;
 #endif
   }
@@ -210,16 +160,11 @@ static void stm32f4xx_usart_try_write(struct device_s *dev)
 #if defined(CONFIG_DEVICE_IRQ)
   /* if there is no more write request in the queue, disable TX interrupt. */
   if (dev_char_queue_isempty(&pv->write_q))
-  {
-    uint32_t cr1 = endian_le32(
-      cpu_mem_read_32(STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR1))
-    );
-    cpu_mem_write_32(
-      STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR1),
-      (cr1 & ~STM32F4xx_USART_CR1_TXEIE)
-    );
-  }
+    STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, TXEIE);
 #endif
+
+  /* return true if requests are pending. */
+  return rq != NULL;
 }
 
 static DEVCHAR_REQUEST(stm32f4xx_usart_request)
@@ -255,21 +200,8 @@ static DEVCHAR_REQUEST(stm32f4xx_usart_request)
     dev_char_queue_pushback(&pv->write_q, rq);
 #if defined(CONFIG_DEVICE_IRQ)
     if (empty)
-    {
-      uint32_t cr1 = endian_le32(
-        cpu_mem_read_32(
-          STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR1)
-        )
-      );
-      cpu_mem_write_32(
-        STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR1),
-        (cr1 | STM32F4xx_USART_CR1_TXEIE)
-      );
 #endif
     stm32f4xx_usart_try_write(dev);
-#if defined(CONFIG_DEVICE_IRQ)
-    }
-#endif
     break;
   }
   }
@@ -288,28 +220,26 @@ static DEV_IRQ_EP_PROCESS(stm32f4xx_usart_irq)
 
   while (1)
   {
-    uint32_t ir =
-    endian_le32(
-      cpu_mem_read_32(STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_SR))
-    );
+    uint32_t ir = STM32F4xx_REG_VALUE_DEV(USART, pv->addr, SR);
 
     /* if the controller has no pending data and cannot send data, then
      * break and wait for another interrupt.
      */
     if ((ir & ( STM32F4xx_USART_SR_RXNE | STM32F4xx_USART_SR_TXE )) == 0)
-    {
       break;
-    }
 
-    if ((ir & STM32F4xx_USART_SR_TXE) && !dev_char_queue_isempty(&pv->write_q))
-    {
-      stm32f4xx_usart_try_write(dev);
-    }
+    bool_t next = 0;
 
-    if (ir & STM32F4xx_USART_SR_RXNE)
-    {
-      stm32f4xx_usart_try_read(dev);
-    }
+    if ((ir & STM32F4xx_USART_SR_TXE) && stm32f4xx_usart_try_write(dev))
+      next = 1;
+
+    if ((ir & STM32F4xx_USART_SR_RXNE) && stm32f4xx_usart_try_read(dev))
+      next = 1;
+
+    /* if there is no opportunity to run pending requests or there is no
+       request pending, then break the loop. */
+    if (!next)
+      break;
   }
 
   lock_release(&dev->lock);
@@ -352,15 +282,6 @@ REGISTER_DRIVER(stm32f4xx_usart_drv);
 #define STM32F4xx_USART2_BASE       0x40004400
 #define STM32F4xx_USART6_BASE       0x40011400
 
-#define STM32F4xx_RCC_AHB1ENR_ADDR  0x40023830
-#define STM32F4xx_RCC_APB1ENR_ADDR  0x40023840
-#define STM32F4xx_RCC_APB2ENR_ADDR  0x40023844
-
-#define STM32F4xx_GPIOA_MODER_ADDR  0x40020000
-
-#define STM32F4xx_GPIOA_AFRL_ADDR   0x40020020
-#define STM32F4xx_GPIOA_AFRH_ADDR   0x40020024
-
 static inline void stm32f4xx_usart_clock_init(struct device_s *dev)
 {
   struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
@@ -372,225 +293,17 @@ static inline void stm32f4xx_usart_clock_init(struct device_s *dev)
   default:
     break;
 
-  case STM32F4xx_USART1_BASE: {
-    uint32_t cfg;
-
-    /* enable clock on AHB1 (GPIOA). */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_RCC_AHB1ENR_ADDR));
-    cfg |= (1 << 0);
-    cpu_mem_write_32(STM32F4xx_RCC_AHB1ENR_ADDR, endian_le32(cfg));
-
-    /* enable clock on APB2 (USART1). */
-    cfg = cpu_mem_read_32(STM32F4xx_RCC_APB2ENR_ADDR);
-    cfg |= (1 << 4);
-    cpu_mem_write_32(STM32F4xx_RCC_APB2ENR_ADDR, endian_le32(cfg));
-
-    break;
-  }
-
-  case STM32F4xx_USART2_BASE: {
-    uint32_t cfg;
-
-    /* enable clock on AHB1 (GPIOA). */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_RCC_AHB1ENR_ADDR));
-    cfg |= (1 << 0);
-    cpu_mem_write_32(STM32F4xx_RCC_AHB1ENR_ADDR, endian_le32(cfg));
-
-    /* enable clock on APB1 (USART2). */
-    cfg = cpu_mem_read_32(STM32F4xx_RCC_APB1ENR_ADDR);
-    cfg |= (1 << 17);
-    cpu_mem_write_32(STM32F4xx_RCC_APB1ENR_ADDR, endian_le32(cfg));
-
-    break;
-  }
-
-  case STM32F4xx_USART6_BASE: {
-    uint32_t cfg;
-
-    /* enable clock on AHB1 (GPIOA). */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_RCC_AHB1ENR_ADDR));
-    cfg |= (1 << 0);
-    cpu_mem_write_32(STM32F4xx_RCC_AHB1ENR_ADDR, endian_le32(cfg));
-
-    /* enable clock on APB2 (USART6). */
-    cfg = cpu_mem_read_32(STM32F4xx_RCC_APB2ENR_ADDR);
-    cfg |= (1 << 5);
-    cpu_mem_write_32(STM32F4xx_RCC_APB2ENR_ADDR, endian_le32(cfg));
-
-    break;
-  }
-
-  }
-}
-
-static inline void stm32f4xx_usart_clock_cleanup(struct device_s *dev)
-{
-  struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
-
-  assert(pv != 0);
-
-  switch (pv->addr)
-  {
-  default:
+  case STM32F4xx_USART1_BASE:
+    STM32F4xx_REG_FIELD_SET(RCC, , APB2ENR, USART1EN);
     break;
 
-  case STM32F4xx_USART1_BASE: {
-    uint32_t cfg;
-
-    /* enable clock on APB2 (USART1). */
-    cfg = cpu_mem_read_32(STM32F4xx_RCC_APB2ENR_ADDR);
-    cfg &= ~(1 << 4);
-    cpu_mem_write_32(STM32F4xx_RCC_APB2ENR_ADDR, endian_le32(cfg));
-
-    break;
-  }
-
-  case STM32F4xx_USART2_BASE: {
-    uint32_t cfg;
-
-    /* enable clock on APB1 (USART2). */
-    cfg = cpu_mem_read_32(STM32F4xx_RCC_APB1ENR_ADDR);
-    cfg &= ~(1 << 17);
-    cpu_mem_write_32(STM32F4xx_RCC_APB1ENR_ADDR, endian_le32(cfg));
-
-    break;
-  }
-
-  case STM32F4xx_USART6_BASE: {
-    uint32_t cfg;
-
-    /* enable clock on APB2 (USART6). */
-    cfg = cpu_mem_read_32(STM32F4xx_RCC_APB2ENR_ADDR);
-    cfg &= ~(1 << 5);
-    cpu_mem_write_32(STM32F4xx_RCC_APB2ENR_ADDR, endian_le32(cfg));
-
-    break;
-  }
-
-  }
-}
-
-static inline void stm32f4xx_usart_gpio_init(struct device_s *dev)
-{
-  struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
-
-  assert(pv != 0);
-
-  switch (pv->addr)
-  {
-  default:
+  case STM32F4xx_USART2_BASE:
+    STM32F4xx_REG_FIELD_SET(RCC, , APB1ENR, USART2EN);
     break;
 
-  case STM32F4xx_USART1_BASE: {
-    uint32_t cfg;
-
-    /* configure PA2/PA3 as TX/RX (MODER). */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_GPIOA_MODER_ADDR));
-    cfg |= (2 << 18) | (2 << 20);
-    cpu_mem_write_32(STM32F4xx_GPIOA_MODER_ADDR, endian_le32(cfg));
-    
-    /* configure PA2/PA3 function to USART. */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_GPIOA_AFRH_ADDR));
-    cfg |= (7 << 4) | (7 << 8);
-    cpu_mem_write_32(STM32F4xx_GPIOA_AFRH_ADDR, endian_le32(cfg));
-
+  case STM32F4xx_USART6_BASE:
+    STM32F4xx_REG_FIELD_SET(RCC, , APB2ENR, USART6EN);
     break;
-  }
-
-  case STM32F4xx_USART2_BASE: {
-    uint32_t cfg;
-
-    /* configure PA2/PA3 as TX/RX (MODER). */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_GPIOA_MODER_ADDR));
-    cfg |= (2 << 4) | (2 << 6);
-    cpu_mem_write_32(STM32F4xx_GPIOA_MODER_ADDR, endian_le32(cfg));
-    
-    /* configure PA2/PA3 function to USART. */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_GPIOA_AFRL_ADDR));
-    cfg |= (7 << 8) | (7 << 12);
-    cpu_mem_write_32(STM32F4xx_GPIOA_AFRL_ADDR, endian_le32(cfg));
-
-    break;
-  }
-
-  case STM32F4xx_USART6_BASE: {
-    uint32_t cfg;
-
-    /* configure PA2/PA3 as TX/RX (MODER). */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_GPIOA_MODER_ADDR));
-    cfg |= (2 << 22) | (2 << 24);
-    cpu_mem_write_32(STM32F4xx_GPIOA_MODER_ADDR, endian_le32(cfg));
-    
-    /* configure PA2/PA3 function to USART. */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_GPIOA_AFRH_ADDR));
-    cfg |= (8 << 12) | (8 << 16);
-    cpu_mem_write_32(STM32F4xx_GPIOA_AFRH_ADDR, endian_le32(cfg));
-
-    break;
-  }
-
-  }
-}
-
-static inline void stm32f4xx_usart_gpio_cleanup(struct device_s *dev)
-{
-  struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
-
-  assert(pv != 0);
-
-  switch (pv->addr)
-  {
-  default:
-    break;
-
-  case STM32F4xx_USART1_BASE: {
-    uint32_t cfg;
-
-    /* configure PA2/PA3 as TX/RX (MODER). */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_GPIOA_MODER_ADDR));
-    cfg &= ~((2 << 18) | (2 << 20));
-    cpu_mem_write_32(STM32F4xx_GPIOA_MODER_ADDR, endian_le32(cfg));
-    
-    /* configure PA2/PA3 function to USART. */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_GPIOA_AFRH_ADDR));
-    cfg &= ~((7 << 4) | (7 << 8));
-    cpu_mem_write_32(STM32F4xx_GPIOA_AFRH_ADDR, endian_le32(cfg));
-
-    break;
-  }
-
-  case STM32F4xx_USART2_BASE: {
-    uint32_t cfg;
-
-    /* configure PA2/PA3 as TX/RX (MODER). */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_GPIOA_MODER_ADDR));
-    cfg &= ~((2 << 4) | (2 << 6));
-    cpu_mem_write_32(STM32F4xx_GPIOA_MODER_ADDR, endian_le32(cfg));
-    
-    /* configure PA2/PA3 function to USART. */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_GPIOA_AFRL_ADDR));
-    cfg &= ~((7 << 8) | (7 << 12));
-    cpu_mem_write_32(STM32F4xx_GPIOA_AFRL_ADDR, endian_le32(cfg));
-
-    break;
-  }
-
-  case STM32F4xx_USART6_BASE: {
-    uint32_t cfg;
-
-    /* configure PA2/PA3 as TX/RX (MODER). */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_GPIOA_MODER_ADDR));
-    cfg &= ~((2 << 22) | (2 << 24));
-    cpu_mem_write_32(STM32F4xx_GPIOA_MODER_ADDR, endian_le32(cfg));
-    
-    /* configure PA2/PA3 function to USART. */
-    cfg = endian_le32(cpu_mem_read_32(STM32F4xx_GPIOA_AFRH_ADDR));
-    cfg &= ~((8 << 12) | (8 << 16));
-    cpu_mem_write_32(STM32F4xx_GPIOA_AFRH_ADDR, endian_le32(cfg));
-
-    break;
-  }
-
   }
 }
 
@@ -599,33 +312,26 @@ static inline void stm32f4xx_usart_gpio_cleanup(struct device_s *dev)
 static DEV_INIT(stm32f4xx_usart_init)
 {
   struct stm32f4xx_usart_context_s  *pv;
-  uint32_t                          cr1 = 0, cr2 = 0, brr = 0;
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof(*pv), (mem_scope_sys));
+  if (!pv)
+    return -ENOMEM;
+
   dev->drv_pv = pv;
 
-  if (!pv)
-  {
-    return -ENOMEM;
-  }
-
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
-  {
     goto err_mem;
-  }
 
   /* wait for previous TX to complete. */
-  if (__STM32F4xx_USART_IS_TX_EN(pv->addr))
-  {
-    while (!__STM32F4xx_USART_HAS_RDY_TX(pv->addr));
-  }
+  if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, TE))
+    while (!STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE));
 
   /* disable and reset the usart. */
-  cpu_mem_write_32(STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR1), 0);
-  cpu_mem_write_32(STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR2), 0);
-  cpu_mem_write_32(STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR3), 0);
+  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR1, 0);
+  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR2, 0);
+  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR3, 0);
 
   /* initialize request queues. */
   dev_char_queue_init(&pv->read_q);
@@ -635,17 +341,27 @@ static DEV_INIT(stm32f4xx_usart_init)
   stm32f4xx_usart_clock_init(dev);
 
   /* configure gpio. */
-  stm32f4xx_usart_gpio_init(dev);
+  iomux_demux_t loc[2];
+  if (device_iomux_setup(dev, "<rx? >tx?", loc, NULL, NULL))
+    goto err_mem;
+
+  if (loc[0] == IOMUX_INVALID_DEMUX && loc[1] == IOMUX_INVALID_DEMUX)
+    goto err_mem;
 
   /* configure usart . */
-  cr1 |= STM32F4xx_USART_CR1_8_BITS;        //> 8 bits.
-  cr1 |= STM32F4xx_USART_CR1_PAR_NONE;      //> no parity.
-  cr2 |= STM32F4xx_USART_CR2_STOP_1_BIT;    //> 1 stop bit. 
+  STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, M,    8_BITS);
+  STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, PCE,  NONE);
+  STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR2, STOP, 1_BIT);
 
-  cr1 |= STM32F4xx_USART_CR1_TE | STM32F4xx_USART_CR1_RE;
+  if (loc[0] != IOMUX_INVALID_DEMUX)
+    STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, RE);
+  if (loc[1] != IOMUX_INVALID_DEMUX)
+    STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TE);
 
   /* configure baudrate. */
-  cr1 |= STM32F4xx_USART_CR1_OVER_16;       //> oversampling.
+  STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, OVER8, 16);
+
+  uint32_t brr = 0;
   switch (pv->addr)
   {
   default:
@@ -662,6 +378,8 @@ static DEV_INIT(stm32f4xx_usart_init)
     break;
   }
 
+  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, BRR, brr);
+
 #if defined(CONFIG_DEVICE_IRQ)
   device_irq_source_init(
     dev,
@@ -672,34 +390,15 @@ static DEV_INIT(stm32f4xx_usart_init)
   );
 
   if (device_irq_source_link(dev, pv->irq_ep, 1, -1))
-  {
     goto err_irq;
-  }
 
   /* enable RX irq. TX irq is activated on on demand. */
-  cr1 |= STM32F4xx_USART_CR1_RXNEIE;
+  if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, RE))
+    STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, RXNEIE);
 #endif
 
-  /* write configuration. */
-  cpu_mem_write_32(
-    STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR1),
-    cr1
-  );
-  cpu_mem_write_32(
-    STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR2),
-    cr2
-  );
-  cpu_mem_write_32(
-    STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_BRR),
-    brr
-  );
-
   /* enable usart. */
-  cr1 |= STM32F4xx_USART_CR1_EN;
-  cpu_mem_write_32(
-    STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR1),
-    cr1
-  );
+  STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, UE);
 
   /* link the driver. */
   dev->drv = &stm32f4xx_usart_drv;
@@ -723,10 +422,10 @@ static DEV_CLEANUP(stm32f4xx_usart_cleanup)
 {
   struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
 
-  /* disable the uart. */
-  cpu_mem_write_32(STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR1), 0);
-  cpu_mem_write_32(STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR2), 0);
-  cpu_mem_write_32(STM32F4xx_USART_REG_ADDR(pv->addr, STM32F4xx_USART_CR3), 0);
+  /* disable and reset the usart. */
+  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR1, 0);
+  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR2, 0);
+  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR3, 0);
 
 #if defined(CONFIG_DEVICE_IRQ)
   device_irq_source_unlink(dev, pv->irq_ep, 1);
