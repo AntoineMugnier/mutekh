@@ -50,6 +50,21 @@
 #define STM32F4xx_IRQ_DMA1_STR7     47
 #define STM32F4xx_IRQ_SDIO          49
 #define STM32F4xx_IRQ_TIM5          50
+#define STM32F4xx_IRQ_SPI3          51
+#define STM32F4xx_IRQ_DMA2_STR0     56
+#define STM32F4xx_IRQ_DMA2_STR1     57
+#define STM32F4xx_IRQ_DMA2_STR2     58
+#define STM32F4xx_IRQ_DMA2_STR3     59
+#define STM32F4xx_IRQ_DMA2_STR4     60
+#define STM32F4xx_IRQ_OTG_FS        67
+#define STM32F4xx_IRQ_DMA2_STR5     68
+#define STM32F4xx_IRQ_DMA2_STR6     69
+#define STM32F4xx_IRQ_DMA2_STR7     70
+#define STM32F4xx_IRQ_USART6        71
+#define STM32F4xx_IRQ_I2C3_EV       72
+#define STM32F4xx_IRQ_I2C3_ER       73
+#define STM32F4xx_IRQ_FPU           81
+#define STM32F4xx_IRQ_SPI4          84
 
 #endif
 
