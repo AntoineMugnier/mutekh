@@ -87,6 +87,17 @@
   STM32F4xx_REG_ADDR_DEV(dev, STM32F4xx_DEV_ADDR(dev, id), reg) \
 /**/
 
+#define STM32F4xx_REG_IDX_ADDR_DEV(dev, base, reg, ridx)            \
+  __STM32F4xx_REG_ADDR(                                             \
+    (base),                                                         \
+    __STM32F4xx_REG_PASTE_4(STM32F4xx, _##dev, _##reg, _ADDR)(ridx) \
+  )                                                                 \
+/**/
+
+#define STM32F4xx_REG_IDX_ADDR(dev, id, reg, ridx)                        \
+  STM32F4xx_REG_IDX_ADDR_DEV(dev, STM32F4xx_DEV_ADDR(dev, id), reg, ridx) \
+/**/
+
 #define STM32F4xx_REG_MASK(dev, reg)                        \
   __STM32F4xx_REG_PASTE_4(STM32F4xx, _##dev, _##reg, _MASK) \
 /**/
@@ -95,8 +106,18 @@
   endian_le32(cpu_mem_read_32(STM32F4xx_REG_ADDR_DEV(dev, (base), reg))) \
 /**/
 
+#define STM32F4xx_REG_IDX_VALUE_DEV(dev, base, reg, ridx)               \
+  endian_le32(                                                          \
+    cpu_mem_read_32(STM32F4xx_REG_IDX_ADDR_DEV(dev, (base), reg, ridx)) \
+  )                                                                     \
+/**/
+
 #define STM32F4xx_REG_VALUE(dev, id, reg)                        \
   STM32F4xx_REG_VALUE_DEV(dev, STM32F4xx_DEV_ADDR(dev, id), reg) \
+/**/
+
+#define STM32F4xx_REG_IDX_VALUE(dev, id, reg, ridx)                        \
+  STM32F4xx_REG_IDX_VALUE_DEV(dev, STM32F4xx_DEV_ADDR(dev, id), reg, ridx) \
 /**/
 
 #define STM32F4xx_REG_UPDATE_DEV(dev, base, reg, val) \
@@ -106,8 +127,25 @@
   )                                                   \
 /**/
 
+#define STM32F4xx_REG_IDX_UPDATE_DEV(dev, base, reg, ridx, val) \
+  cpu_mem_write_32(                                             \
+    STM32F4xx_REG_IDX_ADDR_DEV(dev, (base), reg, ridx),         \
+    endian_le32(val)                                            \
+  )                                                             \
+/**/
+
 #define STM32F4xx_REG_UPDATE(dev, id, reg, val)                        \
   STM32F4xx_REG_UPDATE_DEV(dev, STM32F4xx_DEV_ADDR(dev, id), reg, val) \
+/**/
+
+#define STM32F4xx_REG_IDX_UPDATE(dev, id, reg, ridx, val) \
+  STM32F4xx_REG_IDX_UPDATE_DEV(                           \
+    dev,                                                  \
+    STM32F4xx_DEV_ADDR(dev, id),                          \
+    reg,                                                  \
+    ridx,                                                 \
+    val                                                   \
+  )                                                       \
 /**/
 
 #define STM32F4xx_REG_FIELD_MAKE(dev, reg, field, val)              \
@@ -120,17 +158,43 @@
   )                                                                   \
 /**/
 
+#define STM32F4xx_REG_IDX_FIELD_VALUE_DEV(dev, base, reg, ridx, field) \
+  __STM32F4xx_REG_PASTE_5(STM32F4xx, _##dev, _##reg, _##field, _GET)(  \
+    STM32F4xx_REG_IDX_VALUE_DEV(dev, (base), reg, ridx)                \
+  )                                                                    \
+/**/
+
 #define STM32F4xx_REG_FIELD_VALUE(dev, id, reg, field)                        \
   STM32F4xx_REG_FIELD_VALUE_DEV(dev, STM32F4xx_DEV_ADDR(dev, id), reg, field) \
 /**/
 
-#define STM32F4xx_REG_FIELD_UPDATE_DEV(dev, base, reg, field, val) \
-  do                                                               \
-  {                                                                \
-    uint32_t _reg = STM32F4xx_REG_VALUE_DEV(dev, (base), reg);     \
-    STM32F4xx_REG_FIELD_UPDATE_VAR(dev, reg, field, val, _reg);    \
-    STM32F4xx_REG_UPDATE_DEV(dev, (base), reg, _reg);              \
-  } while (0)                                                      \
+#define STM32F4xx_REG_IDX_FIELD_VALUE(dev, id, reg, ridx, field) \
+  STM32F4xx_REG_IDX_FIELD_VALUE_DEV(                             \
+    dev,                                                         \
+    STM32F4xx_DEV_ADDR(dev, id),                                 \
+    reg,                                                         \
+    ridx,                                                        \
+    field                                                        \
+  )                                                              \
+/**/
+
+#define STM32F4xx_REG_FIELD_UPDATE_DEV(dev, base, reg, field, val)          \
+  do                                                                        \
+  {                                                                         \
+    uint32_t register _reg = STM32F4xx_REG_VALUE_DEV(dev, (base), reg);     \
+    STM32F4xx_REG_FIELD_UPDATE_VAR(dev, reg, field, val, _reg);             \
+    STM32F4xx_REG_UPDATE_DEV(dev, (base), reg, _reg);                       \
+  } while (0)                                                               \
+/**/
+
+#define STM32F4xx_REG_IDX_FIELD_UPDATE_DEV(dev, base, reg, ridx, field, val) \
+  do                                                                         \
+  {                                                                          \
+    uint32_t register _reg =                                                 \
+      STM32F4xx_REG_IDX_VALUE_DEV(dev, (base), reg, ridx);                   \
+    STM32F4xx_REG_FIELD_UPDATE_VAR(dev, reg, field, val, _reg);              \
+    STM32F4xx_REG_IDX_UPDATE_DEV(dev, (base), reg, ridx, _reg);              \
+  } while (0)                                                                \
 /**/
 
 #define STM32F4xx_REG_FIELD_UPDATE(dev, id, reg, field, val) \
@@ -141,6 +205,17 @@
     field,                                                   \
     val                                                      \
   )                                                          \
+/**/
+
+#define STM32F4xx_REG_IDX_FIELD_UPDATE(dev, id, reg, ridx, field, val) \
+  STM32F4xx_REG_IDX_FIELD_UPDATE_DEV(                                  \
+    dev,                                                               \
+    STM32F4xx_DEV_ADDR(dev, id),                                       \
+    reg,                                                               \
+    ridx,                                                              \
+    field,                                                             \
+    val                                                                \
+  )                                                                    \
 /**/
 
 #define STM32F4xx_REG_FIELD_UPDATE_VAR(dev, reg, field, val, var)     \
@@ -159,8 +234,28 @@
   } while (0)                                                           \
 /**/
 
+#define STM32F4xx_REG_IDX_FIELD_SET_DEV(dev, base, reg, ridx, field) \
+  do                                                                 \
+  {                                                                  \
+    uint32_t register _reg =                                         \
+      STM32F4xx_REG_IDX_VALUE_DEV(dev, (base), reg, ridx);           \
+    STM32F4xx_REG_FIELD_SET_VAR(dev, reg, field, _reg);              \
+    STM32F4xx_REG_IDX_UPDATE_DEV(dev, (base), reg, ridx, _reg);      \
+  } while (0)                                                        \
+/**/
+
 #define STM32F4xx_REG_FIELD_SET(dev, id, reg, field)                        \
   STM32F4xx_REG_FIELD_SET_DEV(dev, STM32F4xx_DEV_ADDR(dev, id), reg, field) \
+/**/
+
+#define STM32F4xx_REG_IDX_FIELD_SET(dev, id, reg, ridx, field) \
+  STM32F4xx_REG_IDX_FIELD_SET_DEV(                             \
+    dev,                                                       \
+    STM32F4xx_DEV_ADDR(dev, id),                               \
+    reg,                                                       \
+    ridx,                                                      \
+    field                                                      \
+  )                                                            \
 /**/
 
 #define STM32F4xx_REG_FIELD_SET_VAR(dev, reg, field, var)             \
@@ -170,17 +265,37 @@
   )                                                                   \
 /**/
 
-#define STM32F4xx_REG_FIELD_CLR_DEV(dev, base, reg, field)     \
-  do                                                           \
-  {                                                            \
-    uint32_t _reg = STM32F4xx_REG_VALUE_DEV(dev, (base), reg); \
-    STM32F4xx_REG_FIELD_CLR_VAR(dev, reg, field, _reg);        \
-    STM32F4xx_REG_UPDATE_DEV(dev, (base), reg, _reg);          \
-  } while (0)                                                  \
+#define STM32F4xx_REG_FIELD_CLR_DEV(dev, base, reg, field)              \
+  do                                                                    \
+  {                                                                     \
+    uint32_t register _reg = STM32F4xx_REG_VALUE_DEV(dev, (base), reg); \
+    STM32F4xx_REG_FIELD_CLR_VAR(dev, reg, field, _reg);                 \
+    STM32F4xx_REG_UPDATE_DEV(dev, (base), reg, _reg);                   \
+  } while (0)                                                           \
+/**/
+
+#define STM32F4xx_REG_IDX_FIELD_CLR_DEV(dev, base, reg, ridx, field) \
+  do                                                                 \
+  {                                                                  \
+    uint32_t register _reg =                                         \
+      STM32F4xx_REG_IDX_VALUE_DEV(dev, (base), reg, ridx);           \
+    STM32F4xx_REG_FIELD_CLR_VAR(dev, reg, field, _reg);              \
+    STM32F4xx_REG_IDX_UPDATE_DEV(dev, (base), reg, ridx, _reg);      \
+  } while (0)                                                        \
 /**/
 
 #define STM32F4xx_REG_FIELD_CLR(dev, id, reg, field)                        \
   STM32F4xx_REG_FIELD_CLR_DEV(dev, STM32F4xx_DEV_ADDR(dev, id), reg, field) \
+/**/
+
+#define STM32F4xx_REG_IDX_FIELD_CLR(dev, id, reg, ridx, field) \
+  STM32F4xx_REG_IDX_FIELD_CLR_DEV(                             \
+    dev,                                                       \
+    STM32F4xx_DEV_ADDR(dev, id),                               \
+    reg,                                                       \
+    ridx,                                                      \
+    field                                                      \
+  )                                                            \
 /**/
 
 #define STM32F4xx_REG_FIELD_CLR_VAR(dev, reg, field, var)             \
@@ -201,22 +316,53 @@
   )                                                                    \
 /**/
 
+#define STM32F4xx_REG_IDX_FIELD_IDX_VALUE_DEV(                        \
+    dev, base, reg, ridx, field, fidx)                                \
+  __STM32F4xx_REG_PASTE_5(STM32F4xx, _##dev, _##reg, _##field, _GET)( \
+    fidx,                                                             \
+    STM32F4xx_REG_VALUE_DEV(dev, (base), reg, ridx)                   \
+  )                                                                   \
+/**/
+
 #define STM32F4xx_REG_FIELD_IDX_VALUE(dev, id, reg, field, fidx) \
   STM32F4xx_REG_FIELD_IDX_VALUE_DEV(                             \
     dev,                                                         \
     STM32F4xx_DEV_ADDR(dev, id),                                 \
+    reg,                                                         \
     field,                                                       \
     fidx                                                         \
   )                                                              \
 /**/
 
+#define STM32F4xx_REG_IDX_FIELD_IDX_VALUE(dev, id, reg, ridx, field, fidx) \
+  STM32F4xx_REG_IDX_FIELD_IDX_VALUE_DEV(                                   \
+    dev,                                                                   \
+    STM32F4xx_DEV_ADDR(dev, id),                                           \
+    reg,                                                                   \
+    ridx,                                                                  \
+    field,                                                                 \
+    fidx                                                                   \
+  )                                                                        \
+/**/
+
 #define STM32F4xx_REG_FIELD_IDX_UPDATE_DEV(dev, base, reg, field, fidx, val) \
   do                                                                         \
   {                                                                          \
-    uint32_t _reg = STM32F4xx_REG_VALUE_DEV(dev, (base), reg);               \
+    uint32_t register _reg = STM32F4xx_REG_VALUE_DEV(dev, (base), reg);      \
     STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(dev, reg, field, fidx, val, _reg);    \
     STM32F4xx_REG_UPDATE_DEV(dev, (base), reg, _reg);                        \
   } while (0)                                                                \
+/**/
+
+#define STM32F4xx_REG_IDX_FIELD_IDX_UPDATE_DEV(                           \
+    dev, base, reg, ridx, field, fidx, val)                               \
+  do                                                                      \
+  {                                                                       \
+    uint32_t register _reg =                                              \
+      STM32F4xx_REG_IDX_VALUE_DEV(dev, (base), reg, ridx);                \
+    STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(dev, reg, field, fidx, val, _reg); \
+    STM32F4xx_REG_IDX_UPDATE_DEV(dev, (base), reg, ridx, _reg);           \
+  } while (0)                                                             \
 /**/
 
 #define STM32F4xx_REG_FIELD_IDX_UPDATE(dev, id, reg, field, fidx, val) \
@@ -230,6 +376,19 @@
   ) \
 /**/
 
+#define STM32F4xx_REG_IDX_FIELD_IDX_UPDATE( \
+    dev, id, reg, ridx, field, fidx, val)   \
+  STM32F4xx_REG_IDX_FIELD_IDX_UPDATE_DEV(   \
+    dev,                                    \
+    STM32F4xx_DEV_ADDR(dev, id),            \
+    reg,                                    \
+    ridx,                                   \
+    field,                                  \
+    fidx,                                   \
+    val                                     \
+  )                                         \
+/**/
+
 #define STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(dev, reg, field, fidx, val, var) \
   __STM32F4xx_REG_PASTE_5(STM32F4xx, _##dev, _##reg, _##field, _SET)(       \
     fidx,                                                                   \
@@ -241,10 +400,21 @@
 #define STM32F4xx_REG_FIELD_IDX_SET_DEV(dev, base, reg, field, fidx)  \
   do                                                                  \
   {                                                                   \
-    uint32_t _reg = STM32F4xx_REG_VALUE_DEV(dev, (base), reg);        \
+    uint32_t register _reg = STM32F4xx_REG_VALUE_DEV(dev, (base), reg);        \
     STM32F4xx_REG_FIELD_IDX_SET_VAR(dev, reg, field, fidx, _reg);     \
     STM32F4xx_REG_UPDATE_DEV(dev, (base), reg, _reg);                 \
   } while (0)                                                         \
+/**/
+
+#define STM32F4xx_REG_IDX_FIELD_IDX_SET_DEV(                      \
+    dev, base, reg, ridx, field, fidx)                            \
+  do                                                              \
+  {                                                               \
+    uint32_t register _reg =                                      \
+      STM32F4xx_REG_IDX_VALUE_DEV(dev, (base), reg, ridx);        \
+    STM32F4xx_REG_FIELD_IDX_SET_VAR(dev, reg, field, fidx, _reg); \
+    STM32F4xx_REG_IDX_UPDATE_DEV(dev, (base), reg, ridx, _reg);   \
+  } while (0)                                                     \
 /**/
 
 #define STM32F4xx_REG_FIELD_IDX_SET(dev, id, reg, field, fidx) \
@@ -257,6 +427,17 @@
   )                                                            \
 /**/
 
+#define STM32F4xx_REG_IDX_FIELD_IDX_SET(dev, id, reg, ridx, field, fidx) \
+  STM32F4xx_REG_IDX_FIELD_IDX_SET_DEV(                                   \
+    dev,                                                                 \
+    STM32F4xx_DEV_ADDR(dev, id),                                         \
+    reg,                                                                 \
+    ridx,                                                                \
+    field,                                                               \
+    fidx                                                                 \
+  )                                                                      \
+/**/
+
 #define STM32F4xx_REG_FIELD_IDX_SET_VAR(dev, reg, field, fidx, var)   \
   __STM32F4xx_REG_PASTE_5(STM32F4xx, _##dev, _##reg, _##field, _SET)( \
     fidx,                                                             \
@@ -265,13 +446,24 @@
   )                                                                   \
 /**/
 
-#define STM32F4xx_REG_FIELD_IDX_CLR_DEV(dev, base, reg, field, fidx) \
-  do                                                                 \
-  {                                                                  \
-    uint32_t _reg = STM32F4xx_REG_VALUE_DEV(dev, (base), reg);       \
-    STM32F4xx_REG_FIELD_IDX_SET_VAR(dev, reg, field, fidx, _reg);    \
-    STM32F4xx_REG_UPDATE_DEV(dev, (base), reg, _reg);                \
-  } while (0)                                                        \
+#define STM32F4xx_REG_FIELD_IDX_CLR_DEV(dev, base, reg, field, fidx)    \
+  do                                                                    \
+  {                                                                     \
+    uint32_t register _reg = STM32F4xx_REG_VALUE_DEV(dev, (base), reg); \
+    STM32F4xx_REG_FIELD_IDX_SET_VAR(dev, reg, field, fidx, _reg);       \
+    STM32F4xx_REG_UPDATE_DEV(dev, (base), reg, _reg);                   \
+  } while (0)                                                           \
+/**/
+
+#define STM32F4xx_REG_IDX_FIELD_IDX_CLR_DEV(                      \
+    dev, base, reg, ridx, field, fidx)                            \
+  do                                                              \
+  {                                                               \
+    uint32_t register _reg =                                      \
+      STM32F4xx_REG_IDX_VALUE_DEV(dev, (base), reg, ridx);        \
+    STM32F4xx_REG_FIELD_IDX_SET_VAR(dev, reg, field, fidx, _reg); \
+    STM32F4xx_REG_IDX_UPDATE_DEV(dev, (base), reg, ridx, _reg);   \
+  } while (0)                                                     \
 /**/
 
 #define STM32F4xx_REG_FIELD_IDX_CLR(dev, id, reg, field, fidx) \
@@ -282,6 +474,17 @@
     field,                                                     \
     fidx                                                       \
   )                                                            \
+/**/
+
+#define STM32F4xx_REG_IDX_FIELD_IDX_CLR(dev, id, reg, ridx, field, fidx) \
+  STM32F4xx_REG_IDX_FIELD_IDX_CLR_DEV(                                   \
+    dev,                                                                 \
+    STM32F4xx_DEV_ADDR(dev, id),                                         \
+    reg,                                                                 \
+    ridx,                                                                \
+    field,                                                               \
+    fidx                                                                 \
+  )                                                                      \
 /**/
 
 #define STM32F4xx_REG_FIELD_IDX_CLR_VAR(dev, reg, field, fidx, var)   \

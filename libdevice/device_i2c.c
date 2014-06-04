@@ -27,14 +27,14 @@
 #include <device/driver.h>
 #include <device/class/i2c.h>
 
-#ifdef CONFIG_MUTEK_SCHEDULER
+#if defined(CONFIG_MUTEK_SCHEDULER)
 # include <mutek/scheduler.h>
 # include <hexo/lock.h>
 #endif
 
 struct dev_i2c_ctrl_wait_rq_s
 {
-#ifdef CONFIG_MUTEK_SCHEDULER
+#if defined(CONFIG_MUTEK_SCHEDULER)
   lock_t                 lock;
   struct sched_context_s *ctx;
 #endif
@@ -75,6 +75,8 @@ static ssize_t dev_i2c_lock_transfer(const struct device_i2c_ctrl_s *i2cdev,
   /* setup the associated device. */
   tr->i2cdev = (struct device_i2c_ctrl_s *)i2cdev;
 
+  status.done = 0;
+
   /* save requested byte count. */
   size = tr->count;
 
@@ -93,6 +95,7 @@ static ssize_t dev_i2c_lock_transfer(const struct device_i2c_ctrl_s *i2cdev,
 }
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
+
 KROUTINE_EXEC(dev_i2c_ctrl_wait_transfer_end)
 {
   struct dev_i2c_ctrl_transfer_s *tr     = KROUTINE_CONTAINER(kr, *tr, kr);
@@ -107,7 +110,7 @@ KROUTINE_EXEC(dev_i2c_ctrl_wait_transfer_end)
 
 KROUTINE_EXEC(dev_i2c_ctrl_wait_transfer_whole_end)
 {
-  struct dev_i2c_ctrl_transfer_s *tr = KROUTINE_CONTAINER(kr, *tr, kr);
+  struct dev_i2c_ctrl_transfer_s *tr     = KROUTINE_CONTAINER(kr, *tr, kr);
   struct dev_i2c_ctrl_wait_rq_s  *status = tr->pvdata;
 
   if ( tr->count == 0 || tr->error )
@@ -180,52 +183,14 @@ error_t dev_i2c_wait_scan(const struct device_i2c_ctrl_s    *i2cdev,
                           enum dev_i2c_ctrl_transfer_addr_e amode,
                           uint16_t                          saddr)
 {
-  /* prepare the I2C transfer. */
-  struct dev_i2c_ctrl_transfer_s tr =
-  {
-    .amode  = amode,
-    .saddr  = saddr,
-    .sraddr = 0x0,
-    .dir    = DEV_I2C_TR_WRITE,
-    .count  = 0,
-    .data   = NULL,
-  };
-
-#if defined(CONFIG_MUTEK_SCHEDULER)
-  return dev_i2c_wait_transfer(
-    i2cdev,                                 /* device. */
-    &tr,                                    /* transfer. */
-    &dev_i2c_ctrl_wait_transfer_whole_end   /* kroutine. */
-  );
-#else
-  return dev_i2c_lock_transfer(
-    i2cdev,                                 /* device. */
-    &tr,                                    /* transfer. */
-    &dev_i2c_ctrl_lock_transfer_whole_end   /* kroutine. */
-  );
-#endif
+  return dev_i2c_wait_write(i2cdev, amode, saddr, 0x0, NULL, 0);
 }
 
 error_t dev_i2c_spin_scan(const struct device_i2c_ctrl_s    *i2cdev,
                           enum dev_i2c_ctrl_transfer_addr_e amode,
                           uint16_t                          saddr)
 {
-  /* prepare the I2C transfer. */
-  struct dev_i2c_ctrl_transfer_s tr =
-  {
-    .amode  = amode,
-    .saddr  = saddr,
-    .sraddr = 0x0,
-    .dir    = DEV_I2C_TR_WRITE,
-    .count  = 0,
-    .data   = NULL,
-  };
-
-  return dev_i2c_lock_transfer(
-    i2cdev,                                 /* device. */
-    &tr,                                    /* transfer. */
-    &dev_i2c_ctrl_lock_transfer_whole_end   /* kroutine. */
-  );
+  return dev_i2c_spin_write(i2cdev, amode, saddr, 0x0, NULL, 0);
 }
 
 ssize_t dev_i2c_wait_read(const struct device_i2c_ctrl_s    *i2cdev,

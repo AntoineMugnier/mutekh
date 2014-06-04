@@ -8,7 +8,7 @@
 
 void main()
 {
-  uint8_t                  addr, count = 0;
+  uint8_t                  addr, count;
   struct device_i2c_ctrl_s i2c;
 
   if (cpu_isbootstrap())
@@ -16,32 +16,46 @@ void main()
     if (device_get_accessor_by_path(&i2c, 0, "i2c*", DRIVER_CLASS_I2C))
       abort();
 
-    printk("i2c: start scanning ...\n");
-    for (addr = 0; addr < 128; ++addr)
+    printk("i2c: start scanning (spin)...\n");
+    count = 0;
+    for (addr = 0x0; addr < 0x7f; ++addr)
       {
-        error_t err;
+        ssize_t nb;
         do
           {
-            if (!(err = dev_i2c_wait_scan(&i2c, DEV_I2C_ADDR_7_BITS, addr)))
+            if ((nb = dev_i2c_spin_scan(&i2c, DEV_I2C_ADDR_7_BITS, addr)) == 0)
               {
                 printk("i2c: found a device with address 0x%lx.\n", addr);
                 ++count;
               }
           }
-        while (err == -EBUSY);
-#if 0
-#if defined(CONFIG_DEVICE_TIMER)
-        usleep(200);
-#else
-        int i;
-        for (i = 0; i < 1000; ++i);
-#endif
-#endif
+        while (nb == -EBUSY);
+      }
+    printk("i2c: done.\n");
+    printk("i2c: found %u devices.\n", count);
+
+    printk("\n");
+
+    printk("i2c: start scanning (wait)...\n");
+    count = 0;
+    for (addr = 0x0; addr < 0x7f; ++addr)
+      {
+        ssize_t nb;
+        do
+          {
+            if ((nb = dev_i2c_wait_scan(&i2c, DEV_I2C_ADDR_7_BITS, addr)) == 0)
+              {
+                printk("i2c: found a device with address 0x%lx.\n", addr);
+                ++count;
+              }
+          }
+        while (nb == -EBUSY);
       }
     printk("i2c: done.\n");
     printk("i2c: found %u devices.\n", count);
   }
 
-  pthread_yield();
+  while (1)
+    ;
 }
 

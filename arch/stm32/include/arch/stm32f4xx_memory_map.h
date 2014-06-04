@@ -23,7 +23,7 @@
 #ifndef _STM32F4xx_MEMORY_MAP_H_
 #define _STM32F4xx_MEMORY_MAP_H_
 
-#if defined(CONFIG_STM32_BOARD_STM32F401RE)
+#if defined(CONFIG_BOARD_STM32_F401RE)
 # include <arch/stm32f401re_memory_map.h>
 #else
 # error Unknown STM32 board definition
