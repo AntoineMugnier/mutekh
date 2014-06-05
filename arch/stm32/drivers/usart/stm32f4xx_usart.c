@@ -385,7 +385,10 @@ static DEV_INIT(stm32f4xx_usart_init)
 
   /* wait for previous TX to complete. */
   if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, TE))
-    while (!STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE));
+    {
+      while (!STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC));
+      STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, SR, TC);
+    }
 
   /* disable and reset the usart. */
   STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR1, 0);
