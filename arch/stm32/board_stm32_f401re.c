@@ -58,9 +58,16 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, cpu_dev_res);
 #if defined(CONFIG_DRIVER_STM32_USART)
 
 /* USART1. */
-DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 2,
-  DEV_STATIC_RES_MEM(0x40011000, 0x400113ff),
+DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 5,
+  DEV_STATIC_RES_MEM(
+    STM32F4xx_DEV_MEM_START(USART, 1),
+    STM32F4xx_DEV_MEM_END(USART, 1)
+  ),
   DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_USART1, 0, "/cpu"),
+
+  DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+  DEV_STATIC_RES_IOMUX("tx", 0, /* PA9 */ 0*16+9, /* AF7. */ 7, 0),
+  DEV_STATIC_RES_IOMUX("rx", 0, /* PA10 */ 0*16+10, /* AF7. */ 7, 0),
 );
 
 DEV_DECLARE_STATIC(
@@ -69,6 +76,48 @@ DEV_DECLARE_STATIC(
   0,
   stm32f4xx_usart_drv,
   usart1_dev_res
+);
+
+/* USART2. */
+DEV_DECLARE_STATIC_RESOURCES(usart2_dev_res, 5,
+  DEV_STATIC_RES_MEM(
+    STM32F4xx_DEV_MEM_START(USART, 2),
+    STM32F4xx_DEV_MEM_END(USART, 2)
+  ),
+  DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_USART1, 0, "/cpu"),
+
+  DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+  DEV_STATIC_RES_IOMUX("tx", 0, /* PB2 */ 1*16+2, /* AF4. */ 4, 0),
+  DEV_STATIC_RES_IOMUX("rx", 0, /* PB3 */ 1*16+3, /* AF4. */ 4, 0),
+);
+
+DEV_DECLARE_STATIC(
+  usart2_dev,
+  "uart2",
+  0,
+  stm32f4xx_usart_drv,
+  usart2_dev_res
+);
+
+/* USART6. */
+DEV_DECLARE_STATIC_RESOURCES(usart6_dev_res, 5,
+  DEV_STATIC_RES_MEM(
+    STM32F4xx_DEV_MEM_START(USART, 6),
+    STM32F4xx_DEV_MEM_END(USART, 6)
+  ),
+  DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_USART1, 0, "/cpu"),
+
+  DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+  DEV_STATIC_RES_IOMUX("tx", 0, /* PA11 */ 0*16+11, /* AF8. */ 8, 0),
+  DEV_STATIC_RES_IOMUX("rx", 0, /* PA12 */ 0*16+12, /* AF8. */ 8, 0),
+);
+
+DEV_DECLARE_STATIC(
+  usart6_dev,
+  "uart3",
+  0,
+  stm32f4xx_usart_drv,
+  usart6_dev_res
 );
 
 #endif
@@ -103,11 +152,19 @@ DEV_DECLARE_STATIC(
 #if defined(CONFIG_DRIVER_STM32_GPIO)
 
 /* GPIO A..E. */
-DEV_DECLARE_STATIC_RESOURCES(gpio_dev_res, 1,
+DEV_DECLARE_STATIC_RESOURCES(gpio_dev_res, 8,
   DEV_STATIC_RES_MEM(
     STM32F4xx_DEV_MEM_START(GPIO, A),
     STM32F4xx_DEV_MEM_END(GPIO, E)
   ),
+
+  DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_EXTI0,      0, "/cpu"),
+  DEV_STATIC_RES_IRQ(1, STM32F4xx_IRQ_EXTI1,      0, "/cpu"),
+  DEV_STATIC_RES_IRQ(2, STM32F4xx_IRQ_EXTI2,      0, "/cpu"),
+  DEV_STATIC_RES_IRQ(3, STM32F4xx_IRQ_EXTI3,      0, "/cpu"),
+  DEV_STATIC_RES_IRQ(4, STM32F4xx_IRQ_EXTI4,      0, "/cpu"),
+  DEV_STATIC_RES_IRQ(5, STM32F4xx_IRQ_EXTI_9_5,   0, "/cpu"),
+  DEV_STATIC_RES_IRQ(6, STM32F4xx_IRQ_EXTI_15_10, 0, "/cpu"),
 );
 
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32f4xx_gpio_drv, gpio_dev_res);

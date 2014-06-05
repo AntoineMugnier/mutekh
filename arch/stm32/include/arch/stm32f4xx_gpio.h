@@ -4,8 +4,8 @@
 
 /*
    bfgen -o cdefs cdefs_use_reg_mask=1 cdefs_use_field_set=1                   \
-     reg_prefix=STM32F4xx field_prefix=STM32F4xx cdefs_use_field_mask=1        \
-     cdefs_use_field_get=1
+     cdefs_use_field_get=1 reg_prefix=STM32F4xx field_prefix=STM32F4xx         \
+     cdefs_use_field_mask=1
 */
 
 #ifndef _GPIO_BFGEN_DEFS_
@@ -33,17 +33,17 @@
   #define STM32F4xx_GPIO_OTYPER_OT_PUSHPULL        0x00000000
   #define STM32F4xx_GPIO_OTYPER_OT_OPEN            0x00000001
 
-#define STM32F4xx_GPIO_OSPEEDER_ADDR                 0x00000008
-#define STM32F4xx_GPIO_OSPEEDER_MASK                 0xffffffff
-  #define STM32F4xx_GPIO_OSPEEDER_OSPEED_MASK      0x00000003
-  #define STM32F4xx_GPIO_OSPEEDER_OSPEED_COUNT     16
-  #define STM32F4xx_GPIO_OSPEEDER_OSPEED(fidx, v)  ((STM32F4xx_GPIO_OSPEEDER_OSPEED_##v) << ((fidx) * 2 + 0))
-  #define STM32F4xx_GPIO_OSPEEDER_OSPEED_SET(fidx, x, v) do { (x) = (((x) & ~(0x3 << ((fidx) * 2))) | ((STM32F4xx_GPIO_OSPEEDER_OSPEED_##v) << ((fidx) * 2 + 0))); } while(0)
-  #define STM32F4xx_GPIO_OSPEEDER_OSPEED_GET(fidx, x) (((x) >> ((fidx) * 2 + 0)) & 0x3)
-  #define STM32F4xx_GPIO_OSPEEDER_OSPEED_LOW       0x00000000
-  #define STM32F4xx_GPIO_OSPEEDER_OSPEED_MEDIUM    0x00000001
-  #define STM32F4xx_GPIO_OSPEEDER_OSPEED_FAST      0x00000002
-  #define STM32F4xx_GPIO_OSPEEDER_OSPEED_HIGH      0x00000003
+#define STM32F4xx_GPIO_OSPEEDR_ADDR                  0x00000008
+#define STM32F4xx_GPIO_OSPEEDR_MASK                  0xffffffff
+  #define STM32F4xx_GPIO_OSPEEDR_OSPEED_MASK       0x00000003
+  #define STM32F4xx_GPIO_OSPEEDR_OSPEED_COUNT      16
+  #define STM32F4xx_GPIO_OSPEEDR_OSPEED(fidx, v)   ((STM32F4xx_GPIO_OSPEEDR_OSPEED_##v) << ((fidx) * 2 + 0))
+  #define STM32F4xx_GPIO_OSPEEDR_OSPEED_SET(fidx, x, v) do { (x) = (((x) & ~(0x3 << ((fidx) * 2))) | ((STM32F4xx_GPIO_OSPEEDR_OSPEED_##v) << ((fidx) * 2 + 0))); } while(0)
+  #define STM32F4xx_GPIO_OSPEEDR_OSPEED_GET(fidx, x) (((x) >> ((fidx) * 2 + 0)) & 0x3)
+  #define STM32F4xx_GPIO_OSPEEDR_OSPEED_LOW        0x00000000
+  #define STM32F4xx_GPIO_OSPEEDR_OSPEED_MEDIUM     0x00000001
+  #define STM32F4xx_GPIO_OSPEEDR_OSPEED_FAST       0x00000002
+  #define STM32F4xx_GPIO_OSPEEDR_OSPEED_HIGH       0x00000003
 
 #define STM32F4xx_GPIO_PUPDR_ADDR                    0x0000000c
 #define STM32F4xx_GPIO_PUPDR_MASK                    0xffffffff

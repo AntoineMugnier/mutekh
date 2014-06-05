@@ -4,7 +4,8 @@
 
 /*
    bfgen -o cdefs cdefs_use_reg_mask=1 cdefs_use_field_set=1                   \
-     reg_prefix=STM32F4xx field_prefix=STM32F4xx cdefs_use_field_mask=1
+     cdefs_use_field_get=1 reg_prefix=STM32F4xx field_prefix=STM32F4xx         \
+     cdefs_use_field_mask=1
 */
 
 #ifndef _USART_BFGEN_DEFS_
@@ -15,33 +16,43 @@
   #define STM32F4xx_USART_SR_PE_MASK               0x00000001
   #define STM32F4xx_USART_SR_PE                    0x00000001
   #define STM32F4xx_USART_SR_PE_SET(x, v)          do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
+  #define STM32F4xx_USART_SR_PE_GET(x)             (((x) >> 0) & 0x1)
   #define STM32F4xx_USART_SR_FE_MASK               0x00000001
   #define STM32F4xx_USART_SR_FE                    0x00000002
   #define STM32F4xx_USART_SR_FE_SET(x, v)          do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
+  #define STM32F4xx_USART_SR_FE_GET(x)             (((x) >> 1) & 0x1)
   #define STM32F4xx_USART_SR_NF_MASK               0x00000001
   #define STM32F4xx_USART_SR_NF                    0x00000004
   #define STM32F4xx_USART_SR_NF_SET(x, v)          do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
+  #define STM32F4xx_USART_SR_NF_GET(x)             (((x) >> 2) & 0x1)
   #define STM32F4xx_USART_SR_ORE_MASK              0x00000001
   #define STM32F4xx_USART_SR_ORE                   0x00000008
   #define STM32F4xx_USART_SR_ORE_SET(x, v)         do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
+  #define STM32F4xx_USART_SR_ORE_GET(x)            (((x) >> 3) & 0x1)
   #define STM32F4xx_USART_SR_IDLE_MASK             0x00000001
   #define STM32F4xx_USART_SR_IDLE                  0x00000010
   #define STM32F4xx_USART_SR_IDLE_SET(x, v)        do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
+  #define STM32F4xx_USART_SR_IDLE_GET(x)           (((x) >> 4) & 0x1)
   #define STM32F4xx_USART_SR_RXNE_MASK             0x00000001
   #define STM32F4xx_USART_SR_RXNE                  0x00000020
   #define STM32F4xx_USART_SR_RXNE_SET(x, v)        do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
+  #define STM32F4xx_USART_SR_RXNE_GET(x)           (((x) >> 5) & 0x1)
   #define STM32F4xx_USART_SR_TC_MASK               0x00000001
   #define STM32F4xx_USART_SR_TC                    0x00000040
   #define STM32F4xx_USART_SR_TC_SET(x, v)          do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
+  #define STM32F4xx_USART_SR_TC_GET(x)             (((x) >> 6) & 0x1)
   #define STM32F4xx_USART_SR_TXE_MASK              0x00000001
   #define STM32F4xx_USART_SR_TXE                   0x00000080
   #define STM32F4xx_USART_SR_TXE_SET(x, v)         do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
+  #define STM32F4xx_USART_SR_TXE_GET(x)            (((x) >> 7) & 0x1)
   #define STM32F4xx_USART_SR_LBD_MASK              0x00000001
   #define STM32F4xx_USART_SR_LBD                   0x00000100
   #define STM32F4xx_USART_SR_LBD_SET(x, v)         do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
+  #define STM32F4xx_USART_SR_LBD_GET(x)            (((x) >> 8) & 0x1)
   #define STM32F4xx_USART_SR_CTS_MASK              0x00000001
   #define STM32F4xx_USART_SR_CTS                   0x00000200
   #define STM32F4xx_USART_SR_CTS_SET(x, v)         do { (x) = (((x) & ~0x200) | ((v) << 9)); } while(0)
+  #define STM32F4xx_USART_SR_CTS_GET(x)            (((x) >> 9) & 0x1)
 
 #define STM32F4xx_USART_DR_ADDR                      0x00000004
 #define STM32F4xx_USART_DR_MASK                      0x000001ff
@@ -66,30 +77,39 @@
   #define STM32F4xx_USART_CR1_SBK_MASK             0x00000001
   #define STM32F4xx_USART_CR1_SBK                  0x00000001
   #define STM32F4xx_USART_CR1_SBK_SET(x, v)        do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
+  #define STM32F4xx_USART_CR1_SBK_GET(x)           (((x) >> 0) & 0x1)
   #define STM32F4xx_USART_CR1_RWU_MASK             0x00000001
   #define STM32F4xx_USART_CR1_RWU                  0x00000002
   #define STM32F4xx_USART_CR1_RWU_SET(x, v)        do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
+  #define STM32F4xx_USART_CR1_RWU_GET(x)           (((x) >> 1) & 0x1)
   #define STM32F4xx_USART_CR1_RE_MASK              0x00000001
   #define STM32F4xx_USART_CR1_RE                   0x00000004
   #define STM32F4xx_USART_CR1_RE_SET(x, v)         do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
+  #define STM32F4xx_USART_CR1_RE_GET(x)            (((x) >> 2) & 0x1)
   #define STM32F4xx_USART_CR1_TE_MASK              0x00000001
   #define STM32F4xx_USART_CR1_TE                   0x00000008
   #define STM32F4xx_USART_CR1_TE_SET(x, v)         do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
+  #define STM32F4xx_USART_CR1_TE_GET(x)            (((x) >> 3) & 0x1)
   #define STM32F4xx_USART_CR1_IDLEIE_MASK          0x00000001
   #define STM32F4xx_USART_CR1_IDLEIE               0x00000010
   #define STM32F4xx_USART_CR1_IDLEIE_SET(x, v)     do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
+  #define STM32F4xx_USART_CR1_IDLEIE_GET(x)        (((x) >> 4) & 0x1)
   #define STM32F4xx_USART_CR1_RXNEIE_MASK          0x00000001
   #define STM32F4xx_USART_CR1_RXNEIE               0x00000020
   #define STM32F4xx_USART_CR1_RXNEIE_SET(x, v)     do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
+  #define STM32F4xx_USART_CR1_RXNEIE_GET(x)        (((x) >> 5) & 0x1)
   #define STM32F4xx_USART_CR1_TCIE_MASK            0x00000001
   #define STM32F4xx_USART_CR1_TCIE                 0x00000040
   #define STM32F4xx_USART_CR1_TCIE_SET(x, v)       do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
+  #define STM32F4xx_USART_CR1_TCIE_GET(x)          (((x) >> 6) & 0x1)
   #define STM32F4xx_USART_CR1_TXEIE_MASK           0x00000001
   #define STM32F4xx_USART_CR1_TXEIE                0x00000080
   #define STM32F4xx_USART_CR1_TXEIE_SET(x, v)      do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
+  #define STM32F4xx_USART_CR1_TXEIE_GET(x)         (((x) >> 7) & 0x1)
   #define STM32F4xx_USART_CR1_PEIE_MASK            0x00000001
   #define STM32F4xx_USART_CR1_PEIE                 0x00000100
   #define STM32F4xx_USART_CR1_PEIE_SET(x, v)       do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
+  #define STM32F4xx_USART_CR1_PEIE_GET(x)          (((x) >> 8) & 0x1)
   #define STM32F4xx_USART_CR1_PS_MASK              0x00000001
   #define STM32F4xx_USART_CR1_PS(v)                ((STM32F4xx_USART_CR1_PS_##v) << 9)
   #define STM32F4xx_USART_CR1_PS_SET(x, v)         do { (x) = (((x) & ~0x200) | ((STM32F4xx_USART_CR1_PS_##v) << 9)); } while(0)
@@ -117,6 +137,7 @@
   #define STM32F4xx_USART_CR1_UE_MASK              0x00000001
   #define STM32F4xx_USART_CR1_UE                   0x00002000
   #define STM32F4xx_USART_CR1_UE_SET(x, v)         do { (x) = (((x) & ~0x2000) | ((v) << 13)); } while(0)
+  #define STM32F4xx_USART_CR1_UE_GET(x)            (((x) >> 13) & 0x1)
   #define STM32F4xx_USART_CR1_OVER8_MASK           0x00000001
   #define STM32F4xx_USART_CR1_OVER8(v)             ((STM32F4xx_USART_CR1_OVER8_##v) << 15)
   #define STM32F4xx_USART_CR1_OVER8_SET(x, v)      do { (x) = (((x) & ~0x8000) | ((STM32F4xx_USART_CR1_OVER8_##v) << 15)); } while(0)
@@ -133,21 +154,27 @@
   #define STM32F4xx_USART_CR2_LBDL_MASK            0x00000001
   #define STM32F4xx_USART_CR2_LBDL                 0x00000020
   #define STM32F4xx_USART_CR2_LBDL_SET(x, v)       do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
+  #define STM32F4xx_USART_CR2_LBDL_GET(x)          (((x) >> 5) & 0x1)
   #define STM32F4xx_USART_CR2_LBDIE_MASK           0x00000001
   #define STM32F4xx_USART_CR2_LBDIE                0x00000040
   #define STM32F4xx_USART_CR2_LBDIE_SET(x, v)      do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
+  #define STM32F4xx_USART_CR2_LBDIE_GET(x)         (((x) >> 6) & 0x1)
   #define STM32F4xx_USART_CR2_LBCL_MASK            0x00000001
   #define STM32F4xx_USART_CR2_LBCL                 0x00000100
   #define STM32F4xx_USART_CR2_LBCL_SET(x, v)       do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
+  #define STM32F4xx_USART_CR2_LBCL_GET(x)          (((x) >> 8) & 0x1)
   #define STM32F4xx_USART_CR2_CPHA_MASK            0x00000001
   #define STM32F4xx_USART_CR2_CPHA                 0x00000200
   #define STM32F4xx_USART_CR2_CPHA_SET(x, v)       do { (x) = (((x) & ~0x200) | ((v) << 9)); } while(0)
+  #define STM32F4xx_USART_CR2_CPHA_GET(x)          (((x) >> 9) & 0x1)
   #define STM32F4xx_USART_CR2_CPOL_MASK            0x00000001
   #define STM32F4xx_USART_CR2_CPOL                 0x00000400
   #define STM32F4xx_USART_CR2_CPOL_SET(x, v)       do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
+  #define STM32F4xx_USART_CR2_CPOL_GET(x)          (((x) >> 10) & 0x1)
   #define STM32F4xx_USART_CR2_CLKEN_MASK           0x00000001
   #define STM32F4xx_USART_CR2_CLKEN                0x00000800
   #define STM32F4xx_USART_CR2_CLKEN_SET(x, v)      do { (x) = (((x) & ~0x800) | ((v) << 11)); } while(0)
+  #define STM32F4xx_USART_CR2_CLKEN_GET(x)         (((x) >> 11) & 0x1)
   #define STM32F4xx_USART_CR2_STOP_MASK            0x00000003
   #define STM32F4xx_USART_CR2_STOP(v)              ((STM32F4xx_USART_CR2_STOP_##v) << 12)
   #define STM32F4xx_USART_CR2_STOP_SET(x, v)       do { (x) = (((x) & ~0x3000) | ((STM32F4xx_USART_CR2_STOP_##v) << 12)); } while(0)
@@ -159,42 +186,54 @@
   #define STM32F4xx_USART_CR2_LINEN_MASK           0x00000001
   #define STM32F4xx_USART_CR2_LINEN                0x00004000
   #define STM32F4xx_USART_CR2_LINEN_SET(x, v)      do { (x) = (((x) & ~0x4000) | ((v) << 14)); } while(0)
+  #define STM32F4xx_USART_CR2_LINEN_GET(x)         (((x) >> 14) & 0x1)
 
 #define STM32F4xx_USART_CR3_ADDR                     0x00000014
 #define STM32F4xx_USART_CR3_MASK                     0x000007ff
   #define STM32F4xx_USART_CR3_EIE_MASK             0x00000001
   #define STM32F4xx_USART_CR3_EIE                  0x00000001
   #define STM32F4xx_USART_CR3_EIE_SET(x, v)        do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
+  #define STM32F4xx_USART_CR3_EIE_GET(x)           (((x) >> 0) & 0x1)
   #define STM32F4xx_USART_CR3_IREN_MASK            0x00000001
   #define STM32F4xx_USART_CR3_IREN                 0x00000002
   #define STM32F4xx_USART_CR3_IREN_SET(x, v)       do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
+  #define STM32F4xx_USART_CR3_IREN_GET(x)          (((x) >> 1) & 0x1)
   #define STM32F4xx_USART_CR3_IRLP_MASK            0x00000001
   #define STM32F4xx_USART_CR3_IRLP                 0x00000004
   #define STM32F4xx_USART_CR3_IRLP_SET(x, v)       do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
+  #define STM32F4xx_USART_CR3_IRLP_GET(x)          (((x) >> 2) & 0x1)
   #define STM32F4xx_USART_CR3_HDSEL_MASK           0x00000001
   #define STM32F4xx_USART_CR3_HDSEL                0x00000008
   #define STM32F4xx_USART_CR3_HDSEL_SET(x, v)      do { (x) = (((x) & ~0x8) | ((v) << 3)); } while(0)
+  #define STM32F4xx_USART_CR3_HDSEL_GET(x)         (((x) >> 3) & 0x1)
   #define STM32F4xx_USART_CR3_NACK_MASK            0x00000001
   #define STM32F4xx_USART_CR3_NACK                 0x00000010
   #define STM32F4xx_USART_CR3_NACK_SET(x, v)       do { (x) = (((x) & ~0x10) | ((v) << 4)); } while(0)
+  #define STM32F4xx_USART_CR3_NACK_GET(x)          (((x) >> 4) & 0x1)
   #define STM32F4xx_USART_CR3_SCEN_MASK            0x00000001
   #define STM32F4xx_USART_CR3_SCEN                 0x00000020
   #define STM32F4xx_USART_CR3_SCEN_SET(x, v)       do { (x) = (((x) & ~0x20) | ((v) << 5)); } while(0)
+  #define STM32F4xx_USART_CR3_SCEN_GET(x)          (((x) >> 5) & 0x1)
   #define STM32F4xx_USART_CR3_DMAR_MASK            0x00000001
   #define STM32F4xx_USART_CR3_DMAR                 0x00000040
   #define STM32F4xx_USART_CR3_DMAR_SET(x, v)       do { (x) = (((x) & ~0x40) | ((v) << 6)); } while(0)
+  #define STM32F4xx_USART_CR3_DMAR_GET(x)          (((x) >> 6) & 0x1)
   #define STM32F4xx_USART_CR3_DMAT_MASK            0x00000001
   #define STM32F4xx_USART_CR3_DMAT                 0x00000080
   #define STM32F4xx_USART_CR3_DMAT_SET(x, v)       do { (x) = (((x) & ~0x80) | ((v) << 7)); } while(0)
+  #define STM32F4xx_USART_CR3_DMAT_GET(x)          (((x) >> 7) & 0x1)
   #define STM32F4xx_USART_CR3_RTSE_MASK            0x00000001
   #define STM32F4xx_USART_CR3_RTSE                 0x00000100
   #define STM32F4xx_USART_CR3_RTSE_SET(x, v)       do { (x) = (((x) & ~0x100) | ((v) << 8)); } while(0)
+  #define STM32F4xx_USART_CR3_RTSE_GET(x)          (((x) >> 8) & 0x1)
   #define STM32F4xx_USART_CR3_CTSE_MASK            0x00000001
   #define STM32F4xx_USART_CR3_CTSE                 0x00000200
   #define STM32F4xx_USART_CR3_CTSE_SET(x, v)       do { (x) = (((x) & ~0x200) | ((v) << 9)); } while(0)
+  #define STM32F4xx_USART_CR3_CTSE_GET(x)          (((x) >> 9) & 0x1)
   #define STM32F4xx_USART_CR3_ONEBIT_MASK          0x00000001
   #define STM32F4xx_USART_CR3_ONEBIT               0x00000400
   #define STM32F4xx_USART_CR3_ONEBIT_SET(x, v)     do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
+  #define STM32F4xx_USART_CR3_ONEBIT_GET(x)        (((x) >> 10) & 0x1)
 
 #define STM32F4xx_USART_GTPR_ADDR                    0x00000018
 #define STM32F4xx_USART_GTPR_MASK                    0x0000ffff
