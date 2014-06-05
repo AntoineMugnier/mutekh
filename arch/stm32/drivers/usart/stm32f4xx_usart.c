@@ -142,7 +142,7 @@ static void stm32f4xx_usart_try_write(struct device_s *dev)
 #if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_STM32_USART_SWFIFO > 0
   /* try to write as much as possible data from the fifo first. */
   if (!usart_fifo_isempty(&pv->write_fifo) &&
-      STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC))
+      STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE))
     {
       uint8_t c = usart_fifo_pop(&pv->write_fifo);
       STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, DR, DATA, c);
@@ -163,7 +163,7 @@ static void stm32f4xx_usart_try_write(struct device_s *dev)
           /* write data if some are pending and the controller is ready for
              it. */
           if (size < rq->size &&
-              STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC))
+              STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE))
           {
             STM32F4xx_REG_FIELD_UPDATE_DEV(
               USART,
@@ -205,7 +205,7 @@ static void stm32f4xx_usart_try_write(struct device_s *dev)
 #if defined(CONFIG_DEVICE_IRQ)
       /* wait for the next interrupt, when the controller will be ready to
          send. */
-      STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TCIE);
+      STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TXEIE);
       return;
 #endif
     }
@@ -214,12 +214,13 @@ static void stm32f4xx_usart_try_write(struct device_s *dev)
   /* if there is no more write request in the queue or fifo, then
      disable TX interrupt. */
 # if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
-  if (usart_fifo_isempty(&pv->write_fifo))
+    if (usart_fifo_isempty(&pv->write_fifo))
+# else
+    if (dev_char_queue_isempty(&pv->write_q))
 # endif
-  {
-    STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, SR, TC);
-    STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, TCIE);
-  }
+      STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, TXEIE);
+    else
+      STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TXEIE);
 #endif
 }
 
@@ -281,14 +282,23 @@ static DEV_IRQ_EP_PROCESS(stm32f4xx_usart_irq)
     /* if the controller has no pending data and cannot send data, then
      * break and wait for another interrupt.
      */
-    if ((ir & ( STM32F4xx_USART_SR_RXNE | STM32F4xx_USART_SR_TC )) == 0)
+    if ((ir & ( STM32F4xx_USART_SR_RXNE | STM32F4xx_USART_SR_TXE )) == 0)
       break;
 
-    if (ir & STM32F4xx_USART_SR_TC)
+    if (ir & STM32F4xx_USART_SR_TXE)
       stm32f4xx_usart_try_write(dev);
 
     if (ir & STM32F4xx_USART_SR_RXNE)
       stm32f4xx_usart_try_read(dev);
+
+#if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
+    if (usart_fifo_isempty(&pv->write_fifo) &&
+        usart_fifo_isempty(&pv->read_fifo))
+#else
+    if (dev_char_queue_isempty(&pv->write_q) &&
+        dev_char_queue_isempty(&pv->read_q))
+#endif
+      break;
   }
 
   lock_release(&dev->lock);
@@ -375,7 +385,7 @@ static DEV_INIT(stm32f4xx_usart_init)
 
   /* wait for previous TX to complete. */
   if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, TE))
-    while (!STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC));
+    while (!STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE));
 
   /* disable and reset the usart. */
   STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR1, 0);
@@ -415,7 +425,7 @@ static DEV_INIT(stm32f4xx_usart_init)
     STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TE);
 
   /* configure baudrate. */
-  STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, OVER8, 16);
+  STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, OVER8, 8);
 
   uint32_t brr = 0;
   switch (pv->addr)
@@ -426,14 +436,16 @@ static DEV_INIT(stm32f4xx_usart_init)
 
   case STM32F4xx_USART1_BASE:
   case STM32F4xx_USART6_BASE:
-    brr = ((int)(stm32f4xx_clock_freq_apb2 / 115200.0 + 0.5)) & 0xffff;
+    brr = ((int)(stm32f4xx_clock_freq_apb2 / 115200.0 * 2 + 0.5)) & 0xffff;
     break;
 
   case STM32F4xx_USART2_BASE:
-    brr = ((int)(stm32f4xx_clock_freq_apb1 / 115200.0 + 0.5)) & 0xffff;
+    brr = ((int)(stm32f4xx_clock_freq_apb1 / 115200.0 * 2 + 0.5)) & 0xffff;
     break;
   }
 
+  /* when using oversampling 8, the brr[4] bit must be 0. */
+  brr &= ~(1 << 4);
   STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, BRR, brr);
 
 #if defined(CONFIG_DEVICE_IRQ)
@@ -448,9 +460,8 @@ static DEV_INIT(stm32f4xx_usart_init)
   if (device_irq_source_link(dev, pv->irq_ep, 1, -1))
     goto err_fifo;
 
-  /* enable RX irq. TX irq is activated on on demand. */
-  if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, RE))
-    STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, RXNEIE);
+  /* enable RX and TX irqs. */
+  STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, RXNEIE);
 #endif
 
   /* enable usart. */
@@ -463,8 +474,8 @@ static DEV_INIT(stm32f4xx_usart_init)
 
   return 0;
 
-#if defined(CONFIG_DEVICE_IRQ)
 err_fifo:
+#if defined(CONFIG_DEVICE_IRQ)
 # if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
   usart_fifo_destroy(&pv->read_fifo);
   usart_fifo_destroy(&pv->write_fifo);
