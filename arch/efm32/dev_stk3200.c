@@ -24,6 +24,7 @@
 #include <device/class/iomux.h>
 
 #include <arch/efm32_irq.h>
+#include <arch/efm32_pin.h>
 
 
 DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
@@ -42,17 +43,19 @@ DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 8,
   DEV_STATIC_RES_IRQ(1, EFM32_IRQ_USART1_TX, 0, "/cpu"),
 
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
-  DEV_STATIC_RES_IOMUX("clk",  /* LOC3 */ 3, /* PC15 */ 2*16+15, 0, 0),
-  DEV_STATIC_RES_IOMUX("miso", /* LOC3 */ 3, /* PD6 */ 3*16+6, 0, 0),
-  DEV_STATIC_RES_IOMUX("mosi", /* LOC3 */ 3, /* PD7 */ 3*16+7, 0, 0),
+  DEV_STATIC_RES_IOMUX("clk",  EFM32_LOC3, EFM32_PC15, 0, 0),
+  DEV_STATIC_RES_IOMUX("miso", EFM32_LOC3, EFM32_PD6, 0, 0),
+  DEV_STATIC_RES_IOMUX("mosi", EFM32_LOC3, EFM32_PD7, 0, 0),
 #if 0
-  DEV_STATIC_RES_IOMUX("cs",   /* LOC3 */ 3, /* PC14 */ 2*16+14),
+  DEV_STATIC_RES_IOMUX("cs",   EFM32_LOC3, EFM32_PC14, 0, 0),
 #endif
 
+#ifdef CONFIG_DRIVER_EFM32_TIMER
   DEV_STATIC_RES_DEV_PARAM("spi-timer", "/timer0"),
+#endif
 );
 
-DEV_DECLARE_STATIC(usart1_dev, "usart1", 0, efm32_usart_spi_drv, usart1_dev_res);
+DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv, usart1_dev_res);
 
 #endif
 
@@ -65,11 +68,11 @@ DEV_DECLARE_STATIC_RESOURCES(leuart0_dev_res, 5,
   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_LEUART0, 0, "/cpu"),
 
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
-  DEV_STATIC_RES_IOMUX("tx",  /* LOC0 */ 0, /* PD4 */ 3*16+4, 0, 0),
-  DEV_STATIC_RES_IOMUX("rx",  /* LOC0 */ 0, /* PD5 */ 3*16+5, 0, 0),
+  DEV_STATIC_RES_IOMUX("tx", EFM32_LOC0, EFM32_PD4, 0, 0),
+  DEV_STATIC_RES_IOMUX("rx", EFM32_LOC0, EFM32_PD5, 0, 0),
 );
 
-DEV_DECLARE_STATIC(leuart0_dev, "leuart0", 0, efm32_leuart_drv, leuart0_dev_res);
+DEV_DECLARE_STATIC(leuart0_dev, "uart0", 0, efm32_leuart_drv, leuart0_dev_res);
 
 #endif
 

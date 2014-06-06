@@ -10,7 +10,7 @@
 #define _EFM32_CMU_BFGEN_DEFS_
 
 #define EFM32_CMU_CTRL_ADDR                          0x00000000
-#define EFM32_CMU_CTRL_MASK                          0x03fe3eef
+#define EFM32_CMU_CTRL_MASK                          0x007e3eef
 /** Set this to configure the external source for the HFXO. The oscillator
    setting takes effect when 1 is written to HFXOEN in CMU_OSCENCMD. The
    oscillator setting is reset to default when 1 is written to HFXODIS in
@@ -93,6 +93,16 @@
     #define EFM32_CMU_CTRL_CLKOUTSEL0_HFCLK16        0x00000005
     #define EFM32_CMU_CTRL_CLKOUTSEL0_ULFRCO         0x00000006
     #define EFM32_CMU_CTRL_CLKOUTSEL0_AUXHFRC0       0x00000007
+# if defined(CONFIG_EFM32_GECKO)
+/** Controls the clock output multiplexer. To actually output on the pin, set
+   CLKOUT1PEN in CMU_ROUTE. @multiple */
+  #define EFM32_CMU_CTRL_CLKOUTSEL1(v)             ((EFM32_CMU_CTRL_CLKOUTSEL1_##v) << 23)
+  #define EFM32_CMU_CTRL_CLKOUTSEL1_SET(x, v)      do { (x) = (((x) & ~0x800000) | ((EFM32_CMU_CTRL_CLKOUTSEL1_##v) << 23)); } while(0)
+  #define EFM32_CMU_CTRL_CLKOUTSEL1_GET(x)         (((x) >> 23) & 0x1)
+    #define EFM32_CMU_CTRL_CLKOUTSEL1_LFRCO          0x00000000
+    #define EFM32_CMU_CTRL_CLKOUTSEL1_LFX0           0x00000001
+# endif
+# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO) || defined(CONFIG_EFM32_ZERO_GECKO)
 /** Controls the clock output multiplexer. To actually output on the pin, set
    CLKOUT1PEN in CMU_ROUTE. @multiple */
   #define EFM32_CMU_CTRL_CLKOUTSEL1(v)             ((EFM32_CMU_CTRL_CLKOUTSEL1_##v) << 23)
@@ -106,6 +116,7 @@
     #define EFM32_CMU_CTRL_CLKOUTSEL1_LFRCOQ         0x00000005
     #define EFM32_CMU_CTRL_CLKOUTSEL1_HFRCOQ         0x00000006
     #define EFM32_CMU_CTRL_CLKOUTSEL1_AUXHFCOQ       0x00000007
+# endif
 # if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
 /** Select clock used for the debug system @multiple */
   #define EFM32_CMU_CTRL_DBGCLK(v)                 ((EFM32_CMU_CTRL_DBGCLK_##v) << 28)
@@ -196,7 +207,7 @@
   #define EFM32_CMU_LFRCOCTRL_TUNNING_GET(x)       (((x) >> 0) & 0x7f)
 
 #define EFM32_CMU_AUXHFRCOCTRL_ADDR                  0x00000014
-#define EFM32_CMU_AUXHFRCOCTRL_MASK                  0x000007ff
+#define EFM32_CMU_AUXHFRCOCTRL_MASK                  0x000000ff
 /** Writing this field adjusts the AUXHFRCO frequency (the higher value, the
    higher frequency). This field is updated with the production calibrated value
    during reset, and the reset value might therefore vary between devices.
@@ -204,6 +215,7 @@
   #define EFM32_CMU_AUXHFRCOCTRL_TUNNING(v)        ((v) << 0)
   #define EFM32_CMU_AUXHFRCOCTRL_TUNNING_SET(x, v) do { (x) = (((x) & ~0xff) | ((v) << 0)); } while(0)
   #define EFM32_CMU_AUXHFRCOCTRL_TUNNING_GET(x)    (((x) >> 0) & 0xff)
+# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO) || defined(CONFIG_EFM32_ZERO_GECKO)
 /** Write this field to set the frequency band in which the HFRCO is to operate.
    When changing this setting there will be no glitches on the AUXHFRCO output,
    hence it is safe to change this setting even while the system is running on
@@ -223,9 +235,10 @@
 /** not available on all devices */
     #define EFM32_CMU_AUXHFRCOCTRL_BAND_28MHZ        0x00000006
     #define EFM32_CMU_AUXHFRCOCTRL_BAND_21MHZ        0x00000007
+# endif
 
 #define EFM32_CMU_CALCTRL_ADDR                       0x00000018
-#define EFM32_CMU_CALCTRL_MASK                       0x00000fff
+#define EFM32_CMU_CALCTRL_MASK                       0x00000007
 /** Selects clock source for the calibration up-counter. @multiple */
   #define EFM32_CMU_CALCTRL_UPSEL(v)               ((EFM32_CMU_CALCTRL_UPSEL_##v) << 0)
   #define EFM32_CMU_CALCTRL_UPSEL_SET(x, v)        do { (x) = (((x) & ~0x7) | ((EFM32_CMU_CALCTRL_UPSEL_##v) << 0)); } while(0)
@@ -235,6 +248,7 @@
     #define EFM32_CMU_CALCTRL_UPSEL_HFRCO            0x00000002
     #define EFM32_CMU_CALCTRL_UPSEL_LFRCO            0x00000003
     #define EFM32_CMU_CALCTRL_UPSEL_AUXHFRCO         0x00000004
+# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO) || defined(CONFIG_EFM32_ZERO_GECKO)
 /** Selects clock source for the calibration down-counter. @multiple */
   #define EFM32_CMU_CALCTRL_DOWNSEL(v)             ((EFM32_CMU_CALCTRL_DOWNSEL_##v) << 3)
   #define EFM32_CMU_CALCTRL_DOWNSEL_SET(x, v)      do { (x) = (((x) & ~0x38) | ((EFM32_CMU_CALCTRL_DOWNSEL_##v) << 3)); } while(0)
@@ -246,9 +260,8 @@
     #define EFM32_CMU_CALCTRL_DOWNSEL_LFRCO          0x00000004
     #define EFM32_CMU_CALCTRL_DOWNSEL_AUXHFRCO       0x00000005
 /** Set this bit to enable continuous calibration. @multiple */
-  #define EFM32_CMU_CALCTRL_CONT(v)                ((v) << 6)
-  #define EFM32_CMU_CALCTRL_CONT_SET(x, v)         do { (x) = (((x) & ~0xfc0) | ((v) << 6)); } while(0)
-  #define EFM32_CMU_CALCTRL_CONT_GET(x)            (((x) >> 6) & 0x3f)
+  #define EFM32_CMU_CALCTRL_CONT                   0x00000040
+# endif
 
 #define EFM32_CMU_CALCNT_ADDR                        0x0000001c
 #define EFM32_CMU_CALCNT_MASK                        0x000fffff
@@ -290,7 +303,7 @@
   #define EFM32_CMU_OSCENCMD_LFXODIS               0x00000200
 
 #define EFM32_CMU_CMD_ADDR                           0x00000024
-#define EFM32_CMU_CMD_MASK                           0x0000001f
+#define EFM32_CMU_CMD_MASK                           0x0000000f
 /** Selects the clock source for HFCLK. Note that selecting an oscillator that is
    disabled will cause the system clock to stop. Check the status register and
    confirm that oscillator is ready before switching. @multiple */
@@ -304,8 +317,10 @@
 /** Starts the calibration, effectively loading the CMU_CALCNT into the
    down-counter and start decrementing. @multiple */
   #define EFM32_CMU_CMD_CALSTART                   0x00000008
+# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO) || defined(CONFIG_EFM32_ZERO_GECKO)
 /** Stops the calibration counters. @multiple */
   #define EFM32_CMU_CMD_CALSTOP                    0x00000010
+# endif
 # if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
 /** Selects the clock for HFCORECLKUSBC. Thes tatus register is updated chen the
    clock switch has taken effect. @multiple */
@@ -318,7 +333,7 @@
 # endif
 
 #define EFM32_CMU_LFCLKSEL_ADDR                      0x00000028
-#define EFM32_CMU_LFCLKSEL_MASK                      0x0011000f
+#define EFM32_CMU_LFCLKSEL_MASK                      0x0000000f
 /** Selects the clock source for LFACLK. Tied to LFAE. @multiple */
   #define EFM32_CMU_LFCLKSEL_LFA(v)                ((EFM32_CMU_LFCLKSEL_LFA_##v) << 0)
   #define EFM32_CMU_LFCLKSEL_LFA_SET(x, v)         do { (x) = (((x) & ~0x3) | ((EFM32_CMU_LFCLKSEL_LFA_##v) << 0)); } while(0)
@@ -335,6 +350,7 @@
     #define EFM32_CMU_LFCLKSEL_LFB_LFRCO             0x00000001
     #define EFM32_CMU_LFCLKSEL_LFB_LFXO              0x00000002
     #define EFM32_CMU_LFCLKSEL_LFB_HFCORECLKLEDIV2   0x00000003
+# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO) || defined(CONFIG_EFM32_ZERO_GECKO)
 /** This bit redefines the meaning of the LFA field. @multiple */
   #define EFM32_CMU_LFCLKSEL_LFAE(v)               ((EFM32_CMU_LFCLKSEL_LFAE_##v) << 16)
   #define EFM32_CMU_LFCLKSEL_LFAE_SET(x, v)        do { (x) = (((x) & ~0x10000) | ((EFM32_CMU_LFCLKSEL_LFAE_##v) << 16)); } while(0)
@@ -347,6 +363,7 @@
   #define EFM32_CMU_LFCLKSEL_LFBE_GET(x)           (((x) >> 20) & 0x1)
     #define EFM32_CMU_LFCLKSEL_LFBE_DISABLED         0x00000000
     #define EFM32_CMU_LFCLKSEL_LFBE_ULFRCO           0x00000001
+# endif
 
 #define EFM32_CMU_STATUS_ADDR                        0x0000002c
 #define EFM32_CMU_STATUS_MASK                        0x00007fff
@@ -390,7 +407,7 @@
 # endif
 
 #define EFM32_CMU_IF_ADDR                            0x00000030
-#define EFM32_CMU_IF_MASK                            0x0000007f
+#define EFM32_CMU_IF_MASK                            0x0000003f
 /** Set when HFRCO is ready (start-up time exceeded). @multiple */
   #define EFM32_CMU_IF_HFRCORDY                    0x00000001
 /** Set when HFXO is ready (start-up time exceeded). @multiple */
@@ -403,15 +420,17 @@
   #define EFM32_CMU_IF_AUXHFRCORDY                 0x00000010
 /** Set when calibration is completed. @multiple */
   #define EFM32_CMU_IF_CALRDY                      0x00000020
+# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO) || defined(CONFIG_EFM32_ZERO_GECKO)
 /** Set when calibration overflow has occurred @multiple */
   #define EFM32_CMU_IF_CALOF                       0x00000040
+# endif
 # if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
 /** set when HFCLK is selected as HFCORECLKUSBC @multiple */
   #define EFM32_CMU_IF_USBCHFCLKSEL                0x00000080
 # endif
 
 #define EFM32_CMU_IFS_ADDR                           0x00000034
-#define EFM32_CMU_IFS_MASK                           0x0000007f
+#define EFM32_CMU_IFS_MASK                           0x0000003f
 /** Write to 1 to set the HFRCO Ready Interrupt Flag. @multiple */
   #define EFM32_CMU_IFS_HFRCORDY                   0x00000001
 /** Write to 1 to set the HFXO Ready Interrupt Flag. @multiple */
@@ -425,15 +444,17 @@
 /** Write to 1 to set the Calibration Ready(completed) Interrupt Flag. @multiple
    */
   #define EFM32_CMU_IFS_CALRDY                     0x00000020
+# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO) || defined(CONFIG_EFM32_ZERO_GECKO)
 /** Write to 1 to set the Calibration Overflow Interrupt Flag. @multiple */
   #define EFM32_CMU_IFS_CALOF                      0x00000040
+# endif
 # if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
 /** set when HFCLK is selected as HFCORECLKUSBC @multiple */
   #define EFM32_CMU_IFS_USBCHFCLKSEL               0x00000080
 # endif
 
 #define EFM32_CMU_IFC_ADDR                           0x00000038
-#define EFM32_CMU_IFC_MASK                           0x0000007f
+#define EFM32_CMU_IFC_MASK                           0x0000003f
 /** Write to 1 to clear the HFRCO Ready Interrupt Flag. @multiple */
   #define EFM32_CMU_IFC_HFRCORDY                   0x00000001
 /** Write to 1 to clear the HFXO Ready Interrupt Flag. @multiple */
@@ -447,15 +468,17 @@
 /** Write to 1 to clear the Calibration Ready(completed) Interrupt Flag.
    @multiple */
   #define EFM32_CMU_IFC_CALRDY                     0x00000020
+# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO) || defined(CONFIG_EFM32_ZERO_GECKO)
 /** Write to 1 to clear the Calibration Overflow Interrupt Flag. @multiple */
   #define EFM32_CMU_IFC_CALOF                      0x00000040
+# endif
 # if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
 /** set when HFCLK is selected as HFCORECLKUSBC @multiple */
   #define EFM32_CMU_IFC_USBCHFCLKSEL               0x00000080
 # endif
 
 #define EFM32_CMU_IEN_ADDR                           0x0000003c
-#define EFM32_CMU_IEN_MASK                           0x0000007f
+#define EFM32_CMU_IEN_MASK                           0x0000003f
 /** Set to enable the HFRCO Ready Interrupt. @multiple */
   #define EFM32_CMU_IEN_HFRCORDY                   0x00000001
 /** Set to enable the HFXO Ready Interrupt. @multiple */
@@ -468,11 +491,27 @@
   #define EFM32_CMU_IEN_AUXHFRCORDY                0x00000010
 /** Set to enable the Calibration Ready(completed) Interrupt. @multiple */
   #define EFM32_CMU_IEN_CALRDY                     0x00000020
+# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO) || defined(CONFIG_EFM32_ZERO_GECKO)
 /** Set to enable the Calibration Overflow Interrupt. @multiple */
   #define EFM32_CMU_IEN_CALOF                      0x00000040
+# endif
 # if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
 /** set when HFCLK is selected as HFCORECLKUSBC @multiple */
   #define EFM32_CMU_IEN_USBCHFCLKSEL               0x00000080
+# endif
+
+# if defined(CONFIG_EFM32_GECKO)
+#define EFM32_CMU_HFCORECLKEN0_ADDR                  0x00000040
+#define EFM32_CMU_HFCORECLKEN0_MASK                  0x0000000f
+/** Set to enable the clock for AES. @multiple */
+  #define EFM32_CMU_HFCORECLKEN0_AES               0x00000001
+/** Set to enable the clock for DMA. @multiple */
+  #define EFM32_CMU_HFCORECLKEN0_DMA               0x00000002
+/** Set to enable the clock for LE. Interface used for bus access to Low Energy
+   peripherals. @multiple */
+  #define EFM32_CMU_HFCORECLKEN0_LE                0x00000004
+/** Set to enable the clock for EBI. @multiple */
+  #define EFM32_CMU_HFCORECLKEN0_EBI               0x00000008
 # endif
 
 # if defined(CONFIG_EFM32_ZERO_GECKO)
@@ -503,6 +542,41 @@
   #define EFM32_CMU_HFCORECLKEN0_LE                0x00000010
 /** Set to enable the clock for EBI. @multiple */
   #define EFM32_CMU_HFCORECLKEN0_EBI               0x00000020
+# endif
+
+# if defined(CONFIG_EFM32_GECKO)
+#define EFM32_CMU_HFPERCLKEN0_ADDR                   0x00000044
+#define EFM32_CMU_HFPERCLKEN0_MASK                   0x0000fdff
+/** Set to enable the clock for USART1. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_USART0             0x00000001
+/** Set to enable the clock for USART1. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_USART1             0x00000002
+/** Set to enable the clock for USART1. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_USART2             0x00000004
+/** Set to enable the clock for USART1. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_UART0              0x00000008
+/** Set to enable the clock for TIMER0. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_TIMER0             0x00000010
+/** Set to enable the clock for TIMER1. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_TIMER1             0x00000020
+/** Set to enable the clock for TIMER1. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_TIMER2             0x00000040
+/** Set to enable the clock for ACMP0. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_ACMP0              0x00000080
+/** Set to enable the clock for ACMP0. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_ACMP1              0x00000100
+/** Set to enable the clock for PRS. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_PRS                0x00000400
+/** Set to enable the clock for DAC0. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_DAC0               0x00000800
+/** Set to enable the clock for GPIO. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_GPIO               0x00001000
+/** Set to enable the clock for VCMP. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_VCMP               0x00002000
+/** Set to enable the clock for ADC0. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_ADC0               0x00004000
+/** Set to enable the clock for I2C0. @multiple */
+  #define EFM32_CMU_HFPERCLKEN0_I2C0               0x00008000
 # endif
 
 # if defined(CONFIG_EFM32_ZERO_GECKO)
@@ -609,6 +683,17 @@
     #define EFM32_CMU_FREEZE_REGFREEZE_UPDATE        0x00000000
     #define EFM32_CMU_FREEZE_REGFREEZE_FREEZE        0x00000001
 
+# if defined(CONFIG_EFM32_GECKO)
+#define EFM32_CMU_LFACLKEN0_ADDR                     0x00000058
+#define EFM32_CMU_LFACLKEN0_MASK                     0x00000007
+/** Set to enable the clock for RTC. @multiple */
+  #define EFM32_CMU_LFACLKEN0_RTC                  0x00000001
+/** Set to enable the clock for LETIMER0. @multiple */
+  #define EFM32_CMU_LFACLKEN0_LETIMER0             0x00000002
+/** Set to enable the clock for LCD. @multiple */
+  #define EFM32_CMU_LFACLKEN0_LCD                  0x00000004
+# endif
+
 # if defined(CONFIG_EFM32_ZERO_GECKO)
 #define EFM32_CMU_LFACLKEN0_ADDR                     0x00000058
 #define EFM32_CMU_LFACLKEN0_MASK                     0x00000001
@@ -636,13 +721,66 @@
   #define EFM32_CMU_LFBCLKEN0_LEUART0              0x00000001
 # endif
 
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
+# if defined(CONFIG_EFM32_GECKO) || defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
 #define EFM32_CMU_LFBCLKEN0_ADDR                     0x00000060
 #define EFM32_CMU_LFBCLKEN0_MASK                     0x00000003
 /** Set to enable the clock for LEUART0. @multiple */
   #define EFM32_CMU_LFBCLKEN0_LEUART0              0x00000001
 /** Set to enable the clock for LEUART1. @multiple */
   #define EFM32_CMU_LFBCLKEN0_LEUART1              0x00000002
+# endif
+
+# if defined(CONFIG_EFM32_GECKO)
+#define EFM32_CMU_LFAPRESC0_ADDR                     0x00000068
+#define EFM32_CMU_LFAPRESC0_MASK                     0x000003ff
+/** Configure Real-Time Counter prescaler @multiple */
+  #define EFM32_CMU_LFAPRESC0_RTC(v)               ((EFM32_CMU_LFAPRESC0_RTC_##v) << 0)
+  #define EFM32_CMU_LFAPRESC0_RTC_SET(x, v)        do { (x) = (((x) & ~0xf) | ((EFM32_CMU_LFAPRESC0_RTC_##v) << 0)); } while(0)
+  #define EFM32_CMU_LFAPRESC0_RTC_GET(x)           (((x) >> 0) & 0xf)
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV1             0x00000000
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV2             0x00000001
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV4             0x00000002
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV8             0x00000003
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV16            0x00000004
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV32            0x00000005
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV64            0x00000006
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV128           0x00000007
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV256           0x00000008
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV512           0x00000009
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV1024          0x0000000a
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV2048          0x0000000b
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV4096          0x0000000c
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV8192          0x0000000d
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV16384         0x0000000e
+    #define EFM32_CMU_LFAPRESC0_RTC_DIV32768         0x0000000f
+/** Configure Real-Time Counter prescaler @multiple */
+  #define EFM32_CMU_LFAPRESC0_LETIMER0(v)          ((EFM32_CMU_LFAPRESC0_LETIMER0_##v) << 4)
+  #define EFM32_CMU_LFAPRESC0_LETIMER0_SET(x, v)   do { (x) = (((x) & ~0xf0) | ((EFM32_CMU_LFAPRESC0_LETIMER0_##v) << 4)); } while(0)
+  #define EFM32_CMU_LFAPRESC0_LETIMER0_GET(x)      (((x) >> 4) & 0xf)
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV1        0x00000000
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV2        0x00000001
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV4        0x00000002
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV8        0x00000003
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV16       0x00000004
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV32       0x00000005
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV64       0x00000006
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV128      0x00000007
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV256      0x00000008
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV512      0x00000009
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV1024     0x0000000a
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV2048     0x0000000b
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV4096     0x0000000c
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV8192     0x0000000d
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV16384    0x0000000e
+    #define EFM32_CMU_LFAPRESC0_LETIMER0_DIV32768    0x0000000f
+/** Configure LCD controller prescaler @multiple */
+  #define EFM32_CMU_LFAPRESC0_LCD(v)               ((EFM32_CMU_LFAPRESC0_LCD_##v) << 8)
+  #define EFM32_CMU_LFAPRESC0_LCD_SET(x, v)        do { (x) = (((x) & ~0x300) | ((EFM32_CMU_LFAPRESC0_LCD_##v) << 8)); } while(0)
+  #define EFM32_CMU_LFAPRESC0_LCD_GET(x)           (((x) >> 8) & 0x3)
+    #define EFM32_CMU_LFAPRESC0_LCD_DIV16            0x00000000
+    #define EFM32_CMU_LFAPRESC0_LCD_DIV32            0x00000001
+    #define EFM32_CMU_LFAPRESC0_LCD_DIV64            0x00000002
+    #define EFM32_CMU_LFAPRESC0_LCD_DIV128           0x00000003
 # endif
 
 # if defined(CONFIG_EFM32_ZERO_GECKO)
@@ -744,7 +882,7 @@
     #define EFM32_CMU_LFBPRESC0_LEUART0_DIV8         0x00000003
 # endif
 
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
+# if defined(CONFIG_EFM32_GECKO) || defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
 #define EFM32_CMU_LFBPRESC0_ADDR                     0x00000070
 #define EFM32_CMU_LFBPRESC0_MASK                     0x00000033
 /** Configure LEUART0 prescaler @multiple */
@@ -765,7 +903,6 @@
     #define EFM32_CMU_LFBPRESC0_LEUART1_DIV8         0x00000003
 # endif
 
-# if defined(CONFIG_EFM32_ZERO_GECKO)
 #define EFM32_CMU_PCNTCTRL_ADDR                      0x00000078
 #define EFM32_CMU_PCNTCTRL_MASK                      0x00000003
 /** This bit enables/disables the clock to the PCNT. @multiple */
@@ -776,19 +913,7 @@
   #define EFM32_CMU_PCNTCTRL_PCNT0CLKSEL_GET(x)    (((x) >> 1) & 0x1)
     #define EFM32_CMU_PCNTCTRL_PCNT0CLKSEL_LFACLK    0x00000000
     #define EFM32_CMU_PCNTCTRL_PCNT0CLKSEL_PCNT0S0   0x00000001
-# endif
-
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
-#define EFM32_CMU_PCNTCTRL_ADDR                      0x00000078
-#define EFM32_CMU_PCNTCTRL_MASK                      0x0000003f
-/** This bit enables/disables the clock to the PCNT. @multiple */
-  #define EFM32_CMU_PCNTCTRL_PCNT0CLKEN            0x00000001
-/** This bit controls which clock that is used for the PCNT. @multiple */
-  #define EFM32_CMU_PCNTCTRL_PCNT0CLKSEL(v)        ((EFM32_CMU_PCNTCTRL_PCNT0CLKSEL_##v) << 1)
-  #define EFM32_CMU_PCNTCTRL_PCNT0CLKSEL_SET(x, v) do { (x) = (((x) & ~0x2) | ((EFM32_CMU_PCNTCTRL_PCNT0CLKSEL_##v) << 1)); } while(0)
-  #define EFM32_CMU_PCNTCTRL_PCNT0CLKSEL_GET(x)    (((x) >> 1) & 0x1)
-    #define EFM32_CMU_PCNTCTRL_PCNT0CLKSEL_LFACLK    0x00000000
-    #define EFM32_CMU_PCNTCTRL_PCNT0CLKSEL_PCNT0S0   0x00000001
+# if defined(CONFIG_EFM32_GECKO) || defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
 /** This bit enables/disables the clock to the PCNT. @multiple */
   #define EFM32_CMU_PCNTCTRL_PCNT1CLKEN            0x00000004
 /** This bit controls which clock that is used for the PCNT. @multiple */
@@ -807,7 +932,7 @@
     #define EFM32_CMU_PCNTCTRL_PCNT2CLKSEL_PCNT2S0   0x00000001
 # endif
 
-# if defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
+# if defined(CONFIG_EFM32_GECKO) || defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
 #define EFM32_CMU_LCDCTRL_ADDR                       0x0000007c
 #define EFM32_CMU_LCDCTRL_MASK                       0x0000007f
 /** These bits controls the framerate according to this formula: LFACLKLCD =
@@ -832,11 +957,19 @@
 # endif
 
 #define EFM32_CMU_ROUTE_ADDR                         0x00000080
-#define EFM32_CMU_ROUTE_MASK                         0x0000001f
+#define EFM32_CMU_ROUTE_MASK                         0x00000003
 /** When set, the CLKOUT0 pin is enabled. @multiple */
   #define EFM32_CMU_ROUTE_CLKOUT0PEN               0x00000001
 /** When set, the CLKOUT1 pin is enabled. @multiple */
   #define EFM32_CMU_ROUTE_CLKOUT1PEN               0x00000002
+# if defined(CONFIG_EFM32_GECKO)
+/** Decides the location of the CMU I/O pins. @multiple */
+  #define EFM32_CMU_ROUTE_LOCATION(v)              ((EFM32_CMU_ROUTE_LOCATION_##v) << 2)
+  #define EFM32_CMU_ROUTE_LOCATION_SET(x, v)       do { (x) = (((x) & ~0x4) | ((EFM32_CMU_ROUTE_LOCATION_##v) << 2)); } while(0)
+  #define EFM32_CMU_ROUTE_LOCATION_GET(x)          (((x) >> 2) & 0x1)
+    #define EFM32_CMU_ROUTE_LOCATION_LOC0            0x00000000
+# endif
+# if defined(CONFIG_EFM32_ZERO_GECKO) || defined(CONFIG_EFM32_LEOPARD_GECKO) || defined(CONFIG_EFM32_WONDER_GECKO)
 /** Decides the location of the CMU I/O pins. @multiple */
   #define EFM32_CMU_ROUTE_LOCATION(v)              ((EFM32_CMU_ROUTE_LOCATION_##v) << 2)
   #define EFM32_CMU_ROUTE_LOCATION_SET(x, v)       do { (x) = (((x) & ~0x1c) | ((EFM32_CMU_ROUTE_LOCATION_##v) << 2)); } while(0)
@@ -844,6 +977,7 @@
     #define EFM32_CMU_ROUTE_LOCATION_LOC0            0x00000000
     #define EFM32_CMU_ROUTE_LOCATION_LOC1            0x00000001
     #define EFM32_CMU_ROUTE_LOCATION_LOC2            0x00000002
+# endif
 
 #define EFM32_CMU_LOCK_ADDR                          0x00000084
 #define EFM32_CMU_LOCK_MASK                          0x0000ffff

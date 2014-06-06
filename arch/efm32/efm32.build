@@ -13,7 +13,6 @@
 
   CONFIG_COMPILE_OPTIMIZE s
 
-  CONFIG_MUTEK_CONSOLE_DEVICE_PATHS "leuart0 leuart* uart* usart*"
   CONFIG_DEVICE_TIMER_DEFAULT_FREQ 14000000
 
   CONFIG_LOAD_EXCEPTIONS_SEPARATE undefined
@@ -108,6 +107,101 @@
     %end
 
   %end
+
+  %subsection efm32-gecko-*-* efm32-g8xxstk
+    %types family
+
+    CONFIG_CPU_ARM_CORTEXM3
+    CONFIG_EFM32_GECKO
+
+    CONFIG_HEXO_CPU_STACK_SIZE 0x400
+    CONFIG_PTHREAD_STACK_SIZE  0x800
+    CONFIG_STARTUP_STACK_SIZE  0x200
+    CONFIG_LOAD_ROM_RW_SIZE    0x1000
+
+    CONFIG_DRIVER_EFM32_LEUART
+    CONFIG_DRIVER_EFM32_USART
+    CONFIG_DRIVER_EFM32_TIMER
+    CONFIG_DRIVER_EFM32_RTC
+    CONFIG_DRIVER_EFM32_GPIO
+
+    CONFIG_CPU_ARM_M_IRQ_COUNT 20
+
+    %set BUILD_NAME efm32-gecko
+
+    %subsection efm32-gecko-*-f16
+      %types flash
+      CONFIG_LOAD_ROM_RO_ADDR 0x00000000
+      CONFIG_LOAD_ROM_RO_SIZE 0x00004000
+    %end
+
+    %subsection efm32-gecko-*-f32
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_ADDR 0x00000000
+      CONFIG_LOAD_ROM_RO_SIZE 0x00008000
+    %end
+
+    %subsection efm32-gecko-*-f64
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_ADDR 0x00000000
+      CONFIG_LOAD_ROM_RO_SIZE 0x00010000
+    %end
+
+    %subsection efm32-gecko-*-f128 efm32-g8xxstk
+      %types flash
+
+      CONFIG_LOAD_ROM_RO_ADDR 0x00000000
+      CONFIG_LOAD_ROM_RO_SIZE 0x00020000
+    %end
+
+    %subsection efm32-gecko-*-f16 efm32-gecko-*-f32
+      %types sram
+
+      CONFIG_LOAD_ROM_RW_ADDR 0x20000000
+      CONFIG_STARTUP_HEAP_ADDR  (0x20000000 + CONFIG_LOAD_ROM_RW_SIZE)
+      CONFIG_STARTUP_HEAP_SIZE  (0x2000 - CONFIG_LOAD_ROM_RW_SIZE - CONFIG_STARTUP_STACK_SIZE)
+      CONFIG_STARTUP_STACK_ADDR (0x20002000 - CONFIG_STARTUP_STACK_SIZE)
+    %end
+
+    %subsection efm32-gecko-*-f64 efm32-gecko-*-f128 efm32-g8xxstk
+      %types sram
+
+      CONFIG_LOAD_ROM_RW_ADDR 0x20000000
+      CONFIG_STARTUP_HEAP_ADDR  (0x20000000 + CONFIG_LOAD_ROM_RW_SIZE)
+      CONFIG_STARTUP_HEAP_SIZE  (0x4000 - CONFIG_LOAD_ROM_RW_SIZE - CONFIG_STARTUP_STACK_SIZE)
+      CONFIG_STARTUP_STACK_ADDR (0x20004000 - CONFIG_STARTUP_STACK_SIZE)
+    %end
+
+    %subsection efm32-gecko-200-* efm32-gecko-210-*
+      %types features
+    %end
+  
+    %subsection efm32-gecko-230-*
+      %types features
+    %end
+
+    %subsection efm32-gecko-280-* efm32-gecko-290-*
+      %types features
+    %end
+
+    %subsection efm32-gecko-840-*
+      %types features
+    %end
+
+    %subsection efm32-gecko-880-* efm32-gecko-890-* efm32-g8xxstk
+      %types features
+    %end
+
+    %subsection efm32-g8xxstk
+      CONFIG_EFM32_G8XX_STK
+      CONFIG_EFM32_EARLY_CONSOLE_LEUART_ADDR 0x40084000
+    %end
+
+  %end
+
+
 
   %subsection efm32-leopard-*-* efm32-stk3600
     %types family

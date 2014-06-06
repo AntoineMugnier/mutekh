@@ -26,6 +26,7 @@
 #include <arch/efm32_irq.h>
 #include <arch/efm32_pin.h>
 
+
 DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
   DEV_STATIC_RES_ID(0, 0),
 );
@@ -37,6 +38,7 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, cpu_dev_res);
 
 DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 8,
   DEV_STATIC_RES_MEM(0x4000c400, 0x4000c800),
+
   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_RX, 0, "/cpu"),
   DEV_STATIC_RES_IRQ(1, EFM32_IRQ_USART1_TX, 0, "/cpu"),
 
@@ -114,4 +116,6 @@ DEV_DECLARE_STATIC_RESOURCES(gpio_dev_res, 3,
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, efm32_gpio_drv, gpio_dev_res);
 
 #endif
+
+
 
