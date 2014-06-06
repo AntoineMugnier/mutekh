@@ -84,7 +84,7 @@ static DEVSPI_CTRL_CONFIG(efm32_usart_spi_config)
 
           cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(pv->ctrl));
 
-          uint64_t freq = 14000000ULL << 24;
+          uint64_t freq = 14000000;
           if (!device_res_get_uint64(dev, DEV_RES_FREQ, 0, &freq))
             freq >>= 24;
     
@@ -381,8 +381,6 @@ static DEV_INIT(efm32_usart_spi_init)
   if (device_iomux_setup(dev, ">clk <miso? >mosi? >cs?", loc, NULL, NULL))
     goto err_mem;
 
-  EFM32_USART_ROUTE_LOCATION_SETVAL(pv->route, loc[0]);
-
   pv->route =  EFM32_USART_ROUTE_CLKPEN;
   if (loc[1] != IOMUX_INVALID_DEMUX)
     pv->route |= EFM32_USART_ROUTE_RXPEN;
@@ -390,6 +388,8 @@ static DEV_INIT(efm32_usart_spi_init)
     pv->route |= EFM32_USART_ROUTE_TXPEN;
   if (loc[3] != IOMUX_INVALID_DEMUX)
     pv->route |= EFM32_USART_ROUTE_CSPEN;
+
+  EFM32_USART_ROUTE_LOCATION_SETVAL(pv->route, loc[0]);
 
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
 
