@@ -123,6 +123,7 @@ static DEVSPI_CTRL_CONFIG(soclib_spi_config)
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
+
   return err;
 }
 
@@ -319,8 +320,8 @@ static const struct driver_spi_ctrl_s	soclib_spi_ctrl_drv =
 
 static DEVGPIO_SET_MODE(soclib_spi_gpio_set_mode)
 {
-  return ((io_first < 32 && mode != DEV_GPIO_INPUT) ||
-          (io_first >= 32 && mode != DEV_GPIO_OUTPUT) ||
+  return ((io_first < 32 && mode != DEV_PIN_INPUT) ||
+          (io_first >= 32 && mode != DEV_PIN_PUSHPULL) ||
           (io_first >= 64))
     ? -ENOTSUP : 0;
 }
@@ -330,8 +331,9 @@ static DEVGPIO_SET_OUTPUT(soclib_spi_gpio_set_output)
   struct device_s *dev = gpio->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
 
-  if (io_first < 32 || io_last - 32 >= pv->gpin_cnt)
+  if (io_first < 32 || (io_last - io_first) >= pv->gpout_cnt)
     return -ERANGE;
+
   io_first -= 32;
   io_last -= 32;
 
@@ -356,7 +358,7 @@ static DEVGPIO_GET_INPUT(soclib_spi_gpio_get_input)
   struct device_s *dev = gpio->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
 
-  if (io_last >= pv->gpout_cnt)
+  if (io_first > 32 || (io_last - io_first) >= pv->gpin_cnt)
     return -ERANGE;
 
   LOCK_SPIN_IRQ(&dev->lock);
