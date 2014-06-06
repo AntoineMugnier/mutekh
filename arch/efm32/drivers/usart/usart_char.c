@@ -258,7 +258,7 @@ static DEV_CLEANUP(efm32_usart_char_cleanup);
 
 const struct driver_s	efm32_usart_drv =
 {
-  .desc                 = "EFM32 USART (char)",
+  .desc                 = "EFM32 UART and USART (char)",
   .f_init		= efm32_usart_char_init,
   .f_cleanup		= efm32_usart_char_cleanup,
   .classes              = { &efm32_usart_char_drv, 0 }
@@ -342,8 +342,19 @@ static DEV_INIT(efm32_usart_char_init)
                    endian_le32(EFM32_USART_IEN_TXC | EFM32_USART_IEN_RXDATAV));
 #endif
 
-  cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(0));
-  cpu_mem_write_32(pv->addr + EFM32_USART_FRAME_ADDR, endian_le32(8 - 3));
+  cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR,
+                   endian_le32(EFM32_USART_CTRL_SYNC(ASYNC) | EFM32_USART_CTRL_OVS(X4)));
+
+  cpu_mem_write_32(pv->addr + EFM32_USART_FRAME_ADDR,
+                   endian_le32(EFM32_USART_FRAME_DATABITS(EIGHT) |
+                               EFM32_USART_FRAME_PARITY(NONE) |
+                               EFM32_USART_FRAME_STOPBITS(ONE)));
+
+  uint64_t freq = 14000000;
+  if (!device_res_get_uint64(dev, DEV_RES_FREQ, 0, &freq))
+    freq >>= 24;
+  uint32_t div = 256 * (freq / (4*230400) - 1);
+  cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(div));
 
   /* enable the uart */
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
@@ -395,5 +406,4 @@ DEV_CLEANUP(efm32_usart_char_cleanup)
 
   mem_free(pv);
 }
-
 
