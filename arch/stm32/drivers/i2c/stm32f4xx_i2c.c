@@ -98,20 +98,20 @@ DEVI2C_CTRL_CONFIG(stm32f4xx_i2c_config)
 
 typedef DEVI2C_CTRL_FSM(stm32f4xx_i2c_fsm_callback_t);
 
-static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_start);
-static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_slave_addr);
-static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_slave_reg_addr0);
-static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_slave_reg_addr1);
+static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_start_sent);
+static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_addr_sent);
+static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_reg_ready);
+static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_reg_sent);
 static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_writeN);
 static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_read2);
 static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_readN);
 
 static stm32f4xx_i2c_fsm_callback_t * const stm32f4xx_i2c_fsm[] =
 {
-  [DEV_I2C_ST_START]   = &stm32f4xx_i2c_ev_start,
-  [DEV_I2C_ST_ADDR]    = &stm32f4xx_i2c_ev_slave_addr,
-  [DEV_I2C_ST_RREADY]  = &stm32f4xx_i2c_ev_slave_reg_addr0,
-  [DEV_I2C_ST_RADDR]   = &stm32f4xx_i2c_ev_slave_reg_addr1,
+  [DEV_I2C_ST_START]   = &stm32f4xx_i2c_ev_start_sent,
+  [DEV_I2C_ST_ADDR]    = &stm32f4xx_i2c_ev_addr_sent,
+  [DEV_I2C_ST_RREADY]  = &stm32f4xx_i2c_ev_reg_ready,
+  [DEV_I2C_ST_RADDR]   = &stm32f4xx_i2c_ev_reg_sent,
   [DEV_I2C_ST_WRITE_N] = &stm32f4xx_i2c_ev_writeN,
   [DEV_I2C_ST_READ_2]  = &stm32f4xx_i2c_ev_read2,
   [DEV_I2C_ST_READ_N]  = &stm32f4xx_i2c_ev_readN,
@@ -164,7 +164,7 @@ static bool_t stm32f4xx_i2c_check_error(struct device_s *dev, uint32_t status)
 
 /****************************************** START SENT */
 
-static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_start)
+static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_start_sent)
 {
   struct stm32f4xx_i2c_context_s    *pv = dev->drv_pv;
   struct dev_i2c_ctrl_transfer_s    *tr = pv->tr;
@@ -205,7 +205,7 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_start)
 
 /****************************************** ADDR SENT (EV6) */
 
-static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_slave_addr)
+static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_addr_sent)
 {
   struct stm32f4xx_i2c_context_s    *pv = dev->drv_pv;
   struct dev_i2c_ctrl_transfer_s    *tr = pv->tr;
@@ -225,13 +225,13 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_slave_addr)
 
     /********************* Phase 1: read/write. */
     case DEV_I2C_PHASE_RW:
-#if defined(CONFIG_DEVICE_IRQ)
-      /* disable buffer interrupt. */
-      STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR2, ITBUFEN);
-#endif
       /* clear address sent interrupt. */
       (void) STM32F4xx_REG_VALUE_DEV(I2C, pv->addr, SR2);
 
+#if defined(CONFIG_DEVICE_IRQ)
+      /* enable buffer interrupt. */
+      STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR2, ITBUFEN);
+#endif
       /* step to next phase. */
       pv->state = DEV_I2C_ST_RREADY;
 
@@ -242,11 +242,6 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_slave_addr)
 
     /********************* Phase 2: read only. */
     case DEV_I2C_PHASE_R:
-#if defined(CONFIG_DEVICE_IRQ)
-      /* disable buffer interrupt. */
-      STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITBUFEN);
-#endif
-
       /* prepare. */
       pv->nbytes = 0;
 
@@ -317,7 +312,7 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_slave_addr)
 
 /****************************************** REG ADDR READY (EV8_1) */
 
-static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_slave_reg_addr0)
+static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_reg_ready)
 {
   struct stm32f4xx_i2c_context_s    *pv = dev->drv_pv;
   struct dev_i2c_ctrl_transfer_s    *tr = pv->tr;
@@ -351,7 +346,7 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_slave_reg_addr0)
 
 /****************************************** REG ADDR SENT (EV_8) */
 
-static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_slave_reg_addr1)
+static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_reg_sent)
 {
   struct stm32f4xx_i2c_context_s    *pv = dev->drv_pv;
   struct dev_i2c_ctrl_transfer_s    *tr = pv->tr;
@@ -389,9 +384,16 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_slave_reg_addr1)
       pv->state = DEV_I2C_ST_START;
       pv->phase = DEV_I2C_PHASE_R;
 
+#if defined(CONFIG_DEVICE_IRQ)
+      /* disable buffer interrupt. */
+      STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITBUFEN);
+#endif
       /* send START condition. */
       STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, START);
 
+#if !defined(CONFIG_DEVICE_IRQ)
+      STM32F4xx_I2C_CHECK_ERROR(dev, pv, SB);
+#endif
       return;
     }
 
@@ -609,7 +611,12 @@ DEVI2C_CTRL_TRANSFER(stm32f4xx_i2c_transfer)
       pv->tr    = tr;
       pv->state = DEV_I2C_ST_START;
       pv->phase = DEV_I2C_PHASE_RW;
-      STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, ACK);
+
+#if defined(CONFIG_DEVICE_IRQ)
+      /* disable buffer interrupt. */
+      STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITBUFEN);
+#endif
+      /* send START condition. */
       STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, START);
 
 #if !defined(CONFIG_DEVICE_IRQ)
@@ -679,7 +686,13 @@ static DEV_IRQ_EP_PROCESS(stm32f4xx_i2c_irq)
   /* clear interrupt (read SR1 + read SR2). */
   uint32_t volatile status = STM32F4xx_REG_VALUE_DEV(I2C, pv->addr, SR1);
 
+#if 0
   assert(status);
+#else
+  //if (status == 0)
+  //  return;
+#endif
+
   assert(pv->tr != NULL);
   assert(pv->state < DEV_I2C_ST_COUNT);
 
@@ -778,6 +791,13 @@ static DEV_INIT(stm32f4xx_i2c_init)
 
   /* reset current transfer. */
   pv->tr = NULL;
+
+  /* if the bus is busy, fix blocked state using a soft reset. */
+  if (STM32F4xx_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR2, BUSY))
+    {
+      STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, SWRST);
+      STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, CR1, SWRST);
+    }
 
   /* reset the device. */
   STM32F4xx_REG_UPDATE_DEV(I2C, pv->addr, CR1, 0);
