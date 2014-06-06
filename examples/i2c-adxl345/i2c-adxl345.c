@@ -2,6 +2,9 @@
 #include <hexo/types.h>
 #include <mutek/printk.h>
 
+#include <device/device.h>
+#include <device/driver.h>
+#include <device/class/char.h>
 #include <device/class/i2c.h>
 
 #include <pthread.h>
@@ -52,23 +55,46 @@ static error_t adxl345_write_bytes(struct device_i2c_ctrl_s *bus,
   return nbytes;
 }
 
+/* data sent through serial link. */
+struct adxl345_data_s
+  {
+    uint8_t header;
+    struct
+      {
+        int16_t x;
+        int16_t y;
+        int16_t z;
+      }
+    data;
+    uint8_t __padding;
+  } __attribute__((packed));
+
 void main()
 {
+  struct device_char_s     serial;
   struct device_i2c_ctrl_s i2c;
 
-  if (cpu_isbootstrap())
-  {
-    if (device_get_accessor_by_path(&i2c, 0, "i2c*", DRIVER_CLASS_I2C))
-      abort();
-  }
+  if (!cpu_isbootstrap())
+    while(1)
+      ;
+
+  printk("i2c-adxl345: start !\n");
+
+  if (device_get_accessor_by_path(&i2c, 0, "i2c1 i2c*", DRIVER_CLASS_I2C))
+    {
+      printk("i2c-adxl345: failed to get i2c accessor.\n");
+      goto err_global;
+    }
 
   uint8_t data[16];
+
+  printk("i2c-adxl345: check device id.\n");
 
   /* check device id. */
   if (adxl345_read_bytes(&i2c, 0x00, data, 1) < 0)
     {
       printk("i2c-adxl345: cannot read device id register.\n");
-      abort();
+      goto err_i2c;
     }
 
   printk("i2c-adxl345: device id is 0x%lx.\n", (int32_t)data[0]);
@@ -78,7 +104,7 @@ void main()
   if (adxl345_write_bytes(&i2c, 0x31, data, 1) < 0)
     {
       printk("i2c-adxl345: failed to setup full-mode and range.\n");
-      abort();
+      goto err_i2c;
     }
 
   /* enable measuring (leave in FIFO bypass) and link. */
@@ -86,7 +112,7 @@ void main()
   if (adxl345_write_bytes(&i2c, 0x2d, data, 1) < 0)
     {
       printk("i2c-adxl345: failed to enable measuring and link.\n");
-      abort();
+      goto err_i2c;
     }
 
   int16_t calib[16][3];
@@ -106,7 +132,7 @@ void main()
   if (adxl345_write_bytes(&i2c, 0x2d, data, 1) < 0)
     {
       printk("i2c-adxl345: failed to pause measuring.\n");
-      abort();
+      goto err_i2c;
     }
 
   /* compute calibration. */
@@ -133,7 +159,7 @@ void main()
   if (adxl345_write_bytes(&i2c, 0x1e, data, 3) < 0)
     {
       printk("i2c-adxl345: failed to set axis offsets.\n");
-      abort();
+      goto err_i2c;
     }
 
   printk("i2c-adxl345: calibration done.\n");
@@ -143,24 +169,50 @@ void main()
   if (adxl345_write_bytes(&i2c, 0x2d, data, 1) < 0)
     {
       printk("i2c-adxl345: failed to resume measuring.\n");
-      abort();
+      goto err_i2c;
     }
 
   printk("i2c-adxl345: start measuring ...\n");
 
+  if (device_get_accessor_by_path(
+    &serial,
+    0,
+    "uart1 uart*",
+    DRIVER_CLASS_CHAR)
+  )
+    {
+      printk("i2c-adxl345: failed to get serial accessor.\n");
+      goto err_serial;
+    }
+
+  int16_t samples[3];
   while (1)
     {
-      if (adxl345_read_bytes(&i2c, 0x32, data, 6) < 0)
-        {
-          printk("i2c-adxl345: error %d while reading data.\n");
-        }
+      if (adxl345_read_bytes(&i2c, 0x32, (uint8_t *)samples, 6) < 0)
+        printk("i2c-adxl345: error %d while reading data.\n");
       else
         {
-          printk("i2c-adxl345: X = %d, Y = %d, Z = %d.\n",
-                 *(int16_t *)&data[0],
-                 *(int16_t *)&data[2],
-                 *(int16_t *)&data[4]);
+          static struct adxl345_data_s val;
+          val.header = 124;
+          val.data.x = samples[0];
+          val.data.y = samples[1];
+          val.data.z = samples[2];
+
+          dev_char_wait_write(&serial, (const uint8_t *)&val, sizeof(val));
+          printk(".");
         }
     }
+
+err_serial:
+  printk("i2c-adxl345: error while seting up serial.\n");
+  device_put_accessor(&serial);
+
+err_i2c:
+  printk("i2c-adxl345: error while seting up i2c.\n");
+  device_put_accessor(&i2c);
+
+err_global:
+  printk("i2c-adxl345: cannot start !\n");
+  pthread_yield();
 }
 
