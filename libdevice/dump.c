@@ -108,6 +108,46 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
           break;          
         }
 #endif
+#ifdef CONFIG_DEVICE_CLOCK
+        case DEV_RES_CLOCK_RTE: {
+          printk(
+            "  Clock route: src %u -> sink %u, scale %u/%u, config %u\n",
+            r->u.clock_rte.in, r->u.clock_rte.out, r->u.clock_rte.num,
+            r->u.clock_rte.denum, r->u.clock_rte.cfg
+          );
+          break;
+        }
+
+        case DEV_RES_CLOCK_OSC: {
+          uint32_t integral = r->u.clock_osc.integral;
+          uint32_t frac = 0;
+
+          if (r->u.clock_osc.num < r->u.clock_osc.denum)
+            frac = 1000 * r->u.clock_osc.num / r->u.clock_osc.denum;
+          else
+            {
+              integral += r->u.clock_osc.num / r->u.clock_osc.denum;
+              frac      = 1000 * (r->u.clock_osc.num % r->u.clock_osc.denum) /
+                r->u.clock_osc.denum;
+            }
+
+          printk(
+            "  Clock oscillator: src %u, freq %u + %u/%u (%u.%03u) Hz\n",
+            r->u.clock_osc.id,
+            r->u.clock_osc.integral, r->u.clock_osc.num, r->u.clock_osc.denum,
+            integral, frac
+          );
+          break;
+        }
+
+        case DEV_RES_CLOCK_SRC: {
+          printk(
+            "  Clock source `%s': src %u, sink %u\n",
+            r->u.clock_src.src, r->u.clock_src.in, r->u.clock_src.out
+          );
+          break;
+        }
+#endif
         case DEV_RES_ID:
           printk("  Numerical identifier %x %x\n", r->u.id.major, r->u.id.minor);
           break;
