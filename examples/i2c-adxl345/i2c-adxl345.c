@@ -58,15 +58,13 @@ static error_t adxl345_write_bytes(struct device_i2c_ctrl_s *bus,
 /* data sent through serial link. */
 struct adxl345_data_s
   {
-    uint8_t header;
     struct
       {
-        int16_t x;
-        int16_t y;
-        int16_t z;
-      }
-    data;
-    uint8_t __padding;
+        uint16_t const magic;
+        uint16_t       __padding__:12;
+        size_t         count:4;
+      } __attribute__((packed)) hdr;
+    uint16_t data[16];
   } __attribute__((packed));
 
 void main()
@@ -192,13 +190,17 @@ void main()
         printk("i2c-adxl345: error %d while reading data.\n");
       else
         {
-          static struct adxl345_data_s val;
-          val.header = 124;
-          val.data.x = samples[0];
-          val.data.y = samples[1];
-          val.data.z = samples[2];
+          static struct adxl345_data_s val = { .hdr.magic = 0x123 };
+          val.hdr.count = 3;
+          val.data[0] = samples[0];
+          val.data[1] = samples[1];
+          val.data[2] = samples[2];
 
-          dev_char_wait_write(&serial, (const uint8_t *)&val, sizeof(val));
+          dev_char_wait_write(
+            &serial,
+            (const uint8_t *)&val,
+            sizeof(val.hdr) + (val.hdr.count * sizeof(val.data[0]))
+          );
           printk(".");
         }
     }
