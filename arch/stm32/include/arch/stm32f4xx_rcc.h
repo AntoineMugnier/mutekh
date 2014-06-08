@@ -82,10 +82,10 @@
   #define STM32F4xx_RCC_PLLCFGR_P(v)               ((STM32F4xx_RCC_PLLCFGR_P_##v) << 15)
   #define STM32F4xx_RCC_PLLCFGR_P_SET(x, v)        do { (x) = (((x) & ~0x18000) | ((STM32F4xx_RCC_PLLCFGR_P_##v) << 15)); } while(0)
   #define STM32F4xx_RCC_PLLCFGR_P_GET(x)           (((x) >> 15) & 0x3)
-    #define STM32F4xx_RCC_PLLCFGR_P_2                0x00000000
-    #define STM32F4xx_RCC_PLLCFGR_P_4                0x00000001
-    #define STM32F4xx_RCC_PLLCFGR_P_6                0x00000002
-    #define STM32F4xx_RCC_PLLCFGR_P_8                0x00000003
+    #define STM32F4xx_RCC_PLLCFGR_P_DIV_2            0x00000000
+    #define STM32F4xx_RCC_PLLCFGR_P_DIV_4            0x00000001
+    #define STM32F4xx_RCC_PLLCFGR_P_DIV_6            0x00000002
+    #define STM32F4xx_RCC_PLLCFGR_P_DIV_8            0x00000003
   #define STM32F4xx_RCC_PLLCFGR_PLLSRC_MASK        0x00000001
   #define STM32F4xx_RCC_PLLCFGR_PLLSRC(v)          ((STM32F4xx_RCC_PLLCFGR_PLLSRC_##v) << 21)
   #define STM32F4xx_RCC_PLLCFGR_PLLSRC_SET(x, v)   do { (x) = (((x) & ~0x200000) | ((STM32F4xx_RCC_PLLCFGR_PLLSRC_##v) << 21)); } while(0)
@@ -114,44 +114,21 @@
     #define STM32F4xx_RCC_CFGR_SWS_HSE               0x00000001
     #define STM32F4xx_RCC_CFGR_SWS_PLL               0x00000002
   #define STM32F4xx_RCC_CFGR_HPRE_MASK             0x0000000f
-  #define STM32F4xx_RCC_CFGR_HPRE(v)               ((STM32F4xx_RCC_CFGR_HPRE_##v) << 4)
-  #define STM32F4xx_RCC_CFGR_HPRE_SET(x, v)        do { (x) = (((x) & ~0xf0) | ((STM32F4xx_RCC_CFGR_HPRE_##v) << 4)); } while(0)
+  #define STM32F4xx_RCC_CFGR_HPRE(v)               ((v) << 4)
+  #define STM32F4xx_RCC_CFGR_HPRE_SET(x, v)        do { (x) = (((x) & ~0xf0) | ((v) << 4)); } while(0)
   #define STM32F4xx_RCC_CFGR_HPRE_GET(x)           (((x) >> 4) & 0xf)
-    #define STM32F4xx_RCC_CFGR_HPRE_DIV_1            0x00000000
-    #define STM32F4xx_RCC_CFGR_HPRE_DIV_2            0x00000008
-    #define STM32F4xx_RCC_CFGR_HPRE_DIV_4            0x00000009
-    #define STM32F4xx_RCC_CFGR_HPRE_DIV_8            0x0000000a
-    #define STM32F4xx_RCC_CFGR_HPRE_DIV_16           0x0000000b
-    #define STM32F4xx_RCC_CFGR_HPRE_DIV_64           0x0000000c
-    #define STM32F4xx_RCC_CFGR_HPRE_DIV_128          0x0000000d
-    #define STM32F4xx_RCC_CFGR_HPRE_DIV_256          0x0000000e
-    #define STM32F4xx_RCC_CFGR_HPRE_DIV_512          0x0000000f
   #define STM32F4xx_RCC_CFGR_PPRE1_MASK            0x00000007
-  #define STM32F4xx_RCC_CFGR_PPRE1(v)              ((STM32F4xx_RCC_CFGR_PPRE1_##v) << 8)
-  #define STM32F4xx_RCC_CFGR_PPRE1_SET(x, v)       do { (x) = (((x) & ~0x700) | ((STM32F4xx_RCC_CFGR_PPRE1_##v) << 8)); } while(0)
+  #define STM32F4xx_RCC_CFGR_PPRE1(v)              ((v) << 8)
+  #define STM32F4xx_RCC_CFGR_PPRE1_SET(x, v)       do { (x) = (((x) & ~0x700) | ((v) << 8)); } while(0)
   #define STM32F4xx_RCC_CFGR_PPRE1_GET(x)          (((x) >> 8) & 0x7)
-    #define STM32F4xx_RCC_CFGR_PPRE1_DIV_1           0x00000000
-    #define STM32F4xx_RCC_CFGR_PPRE1_DIV_2           0x00000004
-    #define STM32F4xx_RCC_CFGR_PPRE1_DIV_4           0x00000005
-    #define STM32F4xx_RCC_CFGR_PPRE1_DIV_8           0x00000006
-    #define STM32F4xx_RCC_CFGR_PPRE1_DIV_16          0x00000007
   #define STM32F4xx_RCC_CFGR_PPRE2_MASK            0x00000007
-  #define STM32F4xx_RCC_CFGR_PPRE2(v)              ((STM32F4xx_RCC_CFGR_PPRE2_##v) << 11)
-  #define STM32F4xx_RCC_CFGR_PPRE2_SET(x, v)       do { (x) = (((x) & ~0x3800) | ((STM32F4xx_RCC_CFGR_PPRE2_##v) << 11)); } while(0)
+  #define STM32F4xx_RCC_CFGR_PPRE2(v)              ((v) << 11)
+  #define STM32F4xx_RCC_CFGR_PPRE2_SET(x, v)       do { (x) = (((x) & ~0x3800) | ((v) << 11)); } while(0)
   #define STM32F4xx_RCC_CFGR_PPRE2_GET(x)          (((x) >> 11) & 0x7)
-    #define STM32F4xx_RCC_CFGR_PPRE2_DIV_1           0x00000000
-    #define STM32F4xx_RCC_CFGR_PPRE2_DIV_2           0x00000004
-    #define STM32F4xx_RCC_CFGR_PPRE2_DIV_4           0x00000005
-    #define STM32F4xx_RCC_CFGR_PPRE2_DIV_8           0x00000006
-    #define STM32F4xx_RCC_CFGR_PPRE2_DIV_16          0x00000007
   #define STM32F4xx_RCC_CFGR_RTCPRE_MASK           0x0000001f
-  #define STM32F4xx_RCC_CFGR_RTCPRE(v)             ((STM32F4xx_RCC_CFGR_RTCPRE_##v) << 14)
-  #define STM32F4xx_RCC_CFGR_RTCPRE_SET(x, v)      do { (x) = (((x) & ~0x7c000) | ((STM32F4xx_RCC_CFGR_RTCPRE_##v) << 14)); } while(0)
+  #define STM32F4xx_RCC_CFGR_RTCPRE(v)             ((v) << 14)
+  #define STM32F4xx_RCC_CFGR_RTCPRE_SET(x, v)      do { (x) = (((x) & ~0x7c000) | ((v) << 14)); } while(0)
   #define STM32F4xx_RCC_CFGR_RTCPRE_GET(x)         (((x) >> 14) & 0x1f)
-    #define STM32F4xx_RCC_CFGR_RTCPRE_NO_CLOCK       0x00000000
-    #define STM32F4xx_RCC_CFGR_RTCPRE_HSE_DIV_2      0x00000002
-    #define STM32F4xx_RCC_CFGR_RTCPRE_HSE_DIV_3      0x00000003
-    #define STM32F4xx_RCC_CFGR_RTCPRE_HSE_DIV_4      0x00000004
   #define STM32F4xx_RCC_CFGR_MCO1_MASK             0x00000003
   #define STM32F4xx_RCC_CFGR_MCO1(v)               ((STM32F4xx_RCC_CFGR_MCO1_##v) << 19)
   #define STM32F4xx_RCC_CFGR_MCO1_SET(x, v)        do { (x) = (((x) & ~0x180000) | ((STM32F4xx_RCC_CFGR_MCO1_##v) << 19)); } while(0)

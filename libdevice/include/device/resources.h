@@ -48,6 +48,9 @@ enum dev_resource_type_e
     DEV_RES_PRODUCT,
     DEV_RES_REVISION,
     DEV_RES_FREQ,
+    DEV_RES_CLOCK_RTE,
+    DEV_RES_CLOCK_OSC,
+    DEV_RES_CLOCK_SRC,
     DEV_RES_STR_PARAM,
     DEV_RES_UINT_PARAM,
     DEV_RES_DEV_PARAM,
@@ -154,6 +157,30 @@ struct dev_resource_s
       /** frequency in 40.24 fixed point format */
       uint64_t                  f40_24;
     }                           freq;
+
+    /**  */
+    struct {
+      uintptr_t                 in:8;
+      uintptr_t                 out:8;
+      uintptr_t                 cfg:8;
+      uintptr_t                 num:16;
+      uintptr_t                 denum:16;
+    }                           clock_rte;
+
+    /**  */
+    struct {
+      uintptr_t                 id:8;
+      uintptr_t                 integral:32;
+      uintptr_t                 num:16;
+      uintptr_t                 denum:16;
+    }                           clock_osc;
+
+    /**  */
+    struct {
+      const char                *src;
+      uintptr_t                 in:16;
+      uintptr_t                 out:16;
+    }                           clock_src;
 
     /** @see #DEV_STATIC_RES_STR_PARAM @see device_res_add_str_param */
     struct {

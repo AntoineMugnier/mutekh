@@ -172,7 +172,7 @@ error_t device_bind_driver(struct device_s *dev, const struct driver_s *drv)
     return -EBUSY;
 
   dev->drv = drv;
-  dev->status = DEVICE_DRIVER_INIT_PENDING;      
+  dev->status = DEVICE_DRIVER_INIT_PENDING;
 
   return 0;
 }

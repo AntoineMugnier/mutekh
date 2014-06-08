@@ -11,3 +11,7 @@ ifeq ($(CONFIG_DRIVER_STM32_GPIO), defined)
 subdirs += gpio
 endif
 
+ifeq ($(CONFIG_DRIVER_STM32_RCC), defined)
+subdirs += rcc
+endif
+
