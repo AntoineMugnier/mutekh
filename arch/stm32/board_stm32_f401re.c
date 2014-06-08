@@ -44,6 +44,7 @@ void stm32_mem_init()
 #include <device/driver.h>
 #include <device/resources.h>
 #include <device/class/iomux.h>
+#include <device/class/clock.h>
 
 #include <arch/stm32f4xx_memory_map.h>
 #include <arch/stm32f4xx_irq.h>
@@ -55,10 +56,52 @@ DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
 
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, cpu_dev_res);
 
+#if defined(CONFIG_DRIVER_STM32_RCC)
+
+DEV_DECLARE_STATIC_RESOURCES(rcc_dev_res, 8,
+  DEV_STATIC_RES_MEM(
+    STM32F4xx_DEV_MEM_START(RCC,),
+    STM32F4xx_DEV_MEM_END(RCC,)
+  ),
+
+  /* 16MHz internal oscillator. */
+  DEV_STATIC_RES_CLK_OSC(0, 16000000, 1, 1),
+
+  /** ID's:
+        0: HSI  (osc)
+        1: M
+        2: PLL-P
+        3: PLL-Q
+        4: AHB  (src)
+        5: APB1 (src)
+        6: APB2 (src)
+   */
+
+  /*
+   * Configuration 0 (default).
+   */
+
+  /* PLL. */
+  DEV_STATIC_RES_CLK_RTE(0, 1, 0 /* cfg */, 1,           16 /* M */),
+  DEV_STATIC_RES_CLK_RTE(1, 2, 0 /* cfg */, 336 /* N */, 4  /* P */),
+  DEV_STATIC_RES_CLK_RTE(1, 3, 0 /* cfg */, 336 /* N */, 7  /* Q */),
+
+  /* AHB prescaler. */
+  DEV_STATIC_RES_CLK_RTE(2, 4, 0 /* cfg */, 1, 1 /* AHB presc. */),
+
+  /* APB1 prescaler. */
+  DEV_STATIC_RES_CLK_RTE(4, 5, 0 /* cfg */, 1, 2 /* APB1 presc. */),
+
+  /* APB2 prescaler. */
+  DEV_STATIC_RES_CLK_RTE(4, 6, 0 /* cfg */, 1, 1 /* APB2 presc. */),
+);
+
+#endif
+
 #if defined(CONFIG_DRIVER_STM32_USART)
 
 /* USART1. */
-DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 5,
+DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 6,
   DEV_STATIC_RES_MEM(
     STM32F4xx_DEV_MEM_START(USART, 1),
     STM32F4xx_DEV_MEM_END(USART, 1)
@@ -68,6 +111,8 @@ DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 5,
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
   DEV_STATIC_RES_IOMUX("tx", 0, /* PA9 */ 0*16+9, /* AF7. */ 7, 0),
   DEV_STATIC_RES_IOMUX("rx", 0, /* PA10 */ 0*16+10, /* AF7. */ 7, 0),
+
+  DEV_STATIC_RES_CLK_SRC("/rcc", 6 /* APB2 */, 0),
 );
 
 DEV_DECLARE_STATIC(
