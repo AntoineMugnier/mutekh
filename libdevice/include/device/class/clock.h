@@ -32,20 +32,25 @@
 
 #include <mutek/kroutine.h>
 
+
 /** Index of the clock tree node inside a device. Nodes are numbered
     as follow: source eps nodes, sink eps nodes, internal nodes,
     oscillator nodes. */
 typedef uint_fast8_t dev_clock_node_id_t;
 
+/** @This helpers provide a numerical representation of an internal node
+    signal. */
+#define DEV_CLOCK_NODE_EDGE(src, dst) ((((dst) & 0xff) << 8) | ((src) & 0xff))
 
 /** Index of the config associated with a set of @ref
     DEV_RES_CLOCK_RTE resources in the device tree.
     @see dev_clock_ep_enable */
 typedef uint_fast8_t dev_clock_config_id_t;
 
-/** Representation of the numerator or denumerator of a fractional frequency.
-    */
+/** Representation of the numerator or denumerator of a fractional
+    frequency. */
 typedef uint_fast16_t dev_clock_frac_t;
+
 
 /** @This specifies clock tree node types. */
 enum dev_clock_node_type_e
