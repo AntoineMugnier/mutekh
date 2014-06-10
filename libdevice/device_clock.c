@@ -244,7 +244,7 @@ error_t dev_clock_find_ep_source(struct device_clock_s *ckdev,
                                  struct dev_clock_ep_s **src)
 {
   *src = DEVICE_OP(ckdev, get_endpoint, DEV_CLOCK_NODE_EP_SOURCE, src_id);
-  if (src == NULL)
+  if (*src == NULL)
     {
       printk(
         "device: clock source %p does not have source endpoint %u.\n",
