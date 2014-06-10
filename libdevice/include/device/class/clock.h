@@ -93,13 +93,19 @@ typedef DEV_CLOCK_EP_CONFIG(dev_clock_ep_config_t);
 /** @This notifies the callee that its clock must be enabled. */
 typedef DEV_CLOCK_EP_GATING(dev_clock_ep_gating_t);
 
-struct dev_clock_ep_s
+struct dev_clock_node_s
 {
   struct device_s            *dev;
 
 #ifdef CONFIG_DEBUG
   enum dev_clock_node_type_e type;
 #endif
+};
+
+struct dev_clock_ep_s
+{
+  /** the node in clock tree. */
+  struct dev_clock_node_s   node;
 
   union {
     struct {
@@ -111,7 +117,6 @@ struct dev_clock_ep_s
       bool_t                enabled;
 
       dev_clock_ep_config_t *config;
-      dev_clock_ep_gating_t *gating;
     } sink;
 
     struct {
@@ -144,10 +149,10 @@ typedef DEVCLOCK_GATING(devclock_gating_t);
 typedef DEVCLOCK_SET_CONFIG(devclock_set_config_t);
 
 
-#define DEVCLOCK_GET_ENDPOINT(n) struct dev_clock_ep_s * (n) ( \
-  struct device_clock_s      *ckdev,                           \
-  enum dev_clock_node_type_e type,                             \
-  dev_clock_node_id_t        node_id                           \
+#define DEVCLOCK_GET_NODE(n) struct dev_clock_node_s * (n) ( \
+  struct device_clock_s      *ckdev,                         \
+  enum dev_clock_node_type_e type,                           \
+  dev_clock_node_id_t        node_id                         \
 )
 
 /** @This returns a pointer to the end-point with given node id. This
@@ -155,12 +160,12 @@ typedef DEVCLOCK_SET_CONFIG(devclock_set_config_t);
 
     If the @tt type parameter is not @tt NULL, it is updated with the
     type of node. */
-typedef DEVCLOCK_GET_ENDPOINT(devclock_get_endpoint_t);
+typedef DEVCLOCK_GET_NODE(devclock_get_node_t);
 
 DRIVER_CLASS_TYPES(clock,
-                   devclock_gating_t       *f_gating;
-                   devclock_set_config_t   *f_set_config;
-                   devclock_get_endpoint_t *f_get_endpoint;
+                   devclock_gating_t     *f_gating;
+                   devclock_set_config_t *f_set_config;
+                   devclock_get_node_t   *f_get_node;
                    );
 
 /** @This increases the clock source use count. If the clock can not
@@ -188,7 +193,18 @@ error_t dev_clock_get_freq(struct dev_clock_ep_s   *sink,
                            struct dev_clock_freq_s *freq);
 
 /** @This initializes a clock source end-point. */
-void dev_clock_source_init(struct device_s *dev, struct dev_clock_ep_s *src);
+static inline
+void dev_clock_source_init(struct device_s *dev, struct dev_clock_ep_s *src)
+{
+  src->node.dev            = dev;
+#if defined(CONFIG_DEBUG)
+  src->node.type           = DEV_CLOCK_NODE_EP_SOURCE;
+#endif
+  src->u.src.sink_head     = NULL;
+  src->u.src.freq.integral = 0;
+  src->u.src.freq.num      = 0;
+  src->u.src.freq.denum    = 0;
+}
 
 /** @This initializes a device clock oscillator with its configuration in the
     device resource list. The arguments @tt integral, @tt num and @tt denum are
@@ -197,29 +213,38 @@ void dev_clock_source_init(struct device_s *dev, struct dev_clock_ep_s *src);
     This function is typically called from device initialization function that
     needs to have its internal oscillator node configured.
  */
+static inline
 void dev_clock_osc_init(struct device_s       *dev,
                         struct dev_clock_ep_s *osc,
                         uint_fast32_t         integral,
                         dev_clock_frac_t      num,
-                        dev_clock_frac_t      denum);
-
-/** @This initializes a device clock oscillator with its configuration in the
-    device resource list. The @tt osc_id is used to retreive the frequency
-    information from the device tree.
-
-    This function is typically called from device initialization function that
-    needs to have its internal oscillator node configured.
-
-    @return 0 in case of success or a negative error code.
- */
-error_t dev_clock_osc_init_by_id(struct device_s       *dev,
-                                 struct dev_clock_ep_s *osc,
-                                 dev_clock_node_id_t   osc_id);
+                        dev_clock_frac_t      denum)
+{
+  osc->node.dev            = dev;
+#if defined(CONFIG_DEBUG)
+  osc->node.type           = DEV_CLOCK_NODE_OSCILLATOR;
+#endif
+  osc->u.src.sink_head     = NULL;
+  osc->u.src.freq.integral = integral;
+  osc->u.src.freq.num      = num;
+  osc->u.src.freq.denum    = denum;
+}
 
 /** @This initializes a clock sink end-point. */
+static inline
 void dev_clock_sink_init(struct device_s       *dev,
                          struct dev_clock_ep_s *sink,
-                         dev_clock_ep_config_t *config);
+                         dev_clock_ep_config_t *config)
+{
+  sink->node.dev       = dev;
+#if defined(CONFIG_DEBUG)
+  sink->node.type      = DEV_CLOCK_NODE_EP_SINK;
+#endif
+  sink->u.sink.src     = NULL;
+  sink->u.sink.next    = NULL;
+  sink->u.sink.enabled = 0;
+  sink->u.sink.config  = config;
+}
 
 /** @This links a device clock sink end-points to the appropriate source
     end-point of a clock generator device as described in the device
