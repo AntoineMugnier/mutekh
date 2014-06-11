@@ -251,6 +251,17 @@ void dev_clock_sink_init(struct device_s       *dev,
   sink->u.sink.config  = config;
 }
 
+/** @This initializes an internal clock node. */
+static inline
+void dev_clock_internal_node_init(struct device_s         *dev,
+                                  struct dev_clock_node_s *node)
+{
+  node->dev = dev;
+#if defined(CONFIG_DEBUG)
+  node->type = DEV_CLOCK_NODE_INTERNAL;
+#endif
+}
+
 /** @This links a device clock sink end-points to the appropriate source
     end-point of a clock generator device as described in the device
     resources.
