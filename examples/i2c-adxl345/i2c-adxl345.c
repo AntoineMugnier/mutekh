@@ -175,7 +175,7 @@ void main()
   if (device_get_accessor_by_path(
     &serial,
     0,
-    "uart1 uart*",
+    "uart1",
     DRIVER_CLASS_CHAR)
   )
     {
