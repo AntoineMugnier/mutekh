@@ -577,7 +577,7 @@ static DEV_INIT(stm32f4xx_usart_init)
           .data_bits   = r->u.uart.data_bits,
           .stop_bits   = r->u.uart.stop_bits,
           .parity      = r->u.uart.parity,
-          .flow_ctrl   = r->u.iuart.flow_ctrl,
+          .flow_ctrl   = r->u.uart.flow_ctrl,
           .half_duplex = r->u.uart.half_duplex
         };
 
