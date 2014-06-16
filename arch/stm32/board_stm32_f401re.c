@@ -100,6 +100,8 @@ DEV_DECLARE_STATIC_RESOURCES(rcc_dev_res, 8,
 
 #if defined(CONFIG_DRIVER_STM32_USART)
 
+#include <device/class/uart.h>
+
 /* USART1. */
 DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 6,
   DEV_STATIC_RES_MEM(
@@ -124,16 +126,27 @@ DEV_DECLARE_STATIC(
 );
 
 /* USART2. */
-DEV_DECLARE_STATIC_RESOURCES(usart2_dev_res, 5,
+DEV_DECLARE_STATIC_RESOURCES(usart2_dev_res, 6,
   DEV_STATIC_RES_MEM(
     STM32F4xx_DEV_MEM_START(USART, 2),
     STM32F4xx_DEV_MEM_END(USART, 2)
   ),
-  DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_USART1, 0, "/cpu"),
+
+  DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_USART2, 0, "/cpu"),
 
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
   DEV_STATIC_RES_IOMUX("tx", 0, /* PB2 */ 1*16+2, /* AF4. */ 4, 0),
   DEV_STATIC_RES_IOMUX("rx", 0, /* PB3 */ 1*16+3, /* AF4. */ 4, 0),
+
+  /* default configuration. */
+  DEV_STATIC_RES_UART(
+    DEV_UART_BAUD_115200,
+    DEV_UART_DATA_8_BITS,
+    DEV_UART_STOP_1_BIT,
+    DEV_UART_PARITY_NONE,
+    0, /* flow control. */
+    0  /* half duplex.  */
+  ),
 );
 
 DEV_DECLARE_STATIC(
@@ -150,7 +163,7 @@ DEV_DECLARE_STATIC_RESOURCES(usart6_dev_res, 5,
     STM32F4xx_DEV_MEM_START(USART, 6),
     STM32F4xx_DEV_MEM_END(USART, 6)
   ),
-  DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_USART1, 0, "/cpu"),
+  DEV_STATIC_RES_IRQ(0, STM32F4xx_IRQ_USART6, 0, "/cpu"),
 
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
   DEV_STATIC_RES_IOMUX("tx", 0, /* PA11 */ 0*16+11, /* AF8. */ 8, 0),

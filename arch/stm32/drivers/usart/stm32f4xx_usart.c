@@ -35,6 +35,7 @@
 #include <device/irq.h>
 #include <device/class/char.h>
 #include <device/class/iomux.h>
+#include <device/class/uart.h>
 
 #include <arch/stm32f4xx_rcc.h>
 #include <arch/stm32f4xx_usart.h>
@@ -312,6 +313,148 @@ static const struct driver_char_s stm32f4xx_usart_char_drv =
   .f_request    = stm32f4xx_usart_request
 };
 
+static error_t stm32f4xx_usart_check_config(struct dev_uart_config_s *cfg)
+{
+  /* check data bits. */
+  switch (cfg->data_bits)
+    {
+    default:
+      return -ENOTSUP;
+
+    case DEV_UART_DATA_8_BITS:
+    case DEV_UART_DATA_9_BITS:
+      break;
+    }
+
+  /* check stop bits (all supported). */
+  
+  /* check parity (not supported). */
+  switch (cfg->parity)
+    {
+    default:
+      return -ENOTSUP;
+
+    case DEV_UART_PARITY_NONE:
+      break;
+    }
+
+  /* check flow control (not supported). */
+  if (cfg->flow_ctrl)
+    return -ENOTSUP;
+
+  return 0;
+}
+
+static error_t stm32f4xx_usart_config_simple(struct device_s          *dev,
+                                             struct dev_uart_config_s *cfg)
+{
+  struct stm32f4xx_usart_context_s *pv  = dev->drv_pv;
+
+  /* check baudrate. */
+  error_t err = stm32f4xx_usart_check_config(cfg);
+  if (err)
+    return err;
+
+  /* configure data, stop and parity. */
+  switch (cfg->data_bits)
+  {
+  default:
+    break;
+
+  case DEV_UART_DATA_8_BITS:
+    STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, M, 8_BITS);
+    break;
+
+  case DEV_UART_DATA_9_BITS:
+    STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, M, 9_BITS);
+    break;
+  }
+
+  switch (cfg->stop_bits)
+  {
+  default:
+    break;
+
+  case DEV_UART_STOP_1_BIT:
+    STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR2, STOP, 1_BIT);
+    break;
+
+  case DEV_UART_STOP_2_BITS:
+    STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR2, STOP, 2_BITS);
+    break;
+  }
+
+  switch (cfg->parity)
+  {
+  default:
+    break;
+
+  case DEV_UART_PARITY_NONE:
+    STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, PCE, NONE);
+    break;
+  }
+
+  /* configure the baudrate. */
+  uint32_t brr = 0;
+  switch (pv->addr)
+  {
+  default:
+    assert(0 && "unknown USART base address");
+    break;
+
+  case STM32F4xx_USART1_ADDR:
+  case STM32F4xx_USART6_ADDR:
+    brr = ((int)(stm32f4xx_clock_freq_apb2 / 115200.0 * 2 + 0.5)) & 0xffff;
+    break;
+
+  case STM32F4xx_USART2_ADDR:
+    brr = ((int)(stm32f4xx_clock_freq_apb1 / 115200.0 * 2 + 0.5)) & 0xffff;
+    break;
+  }
+
+  /* when using oversampling 8, the brr[4] bit must be 0. */
+  brr &= ~(1 << 4);
+  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, BRR, brr);
+
+  return 0;
+}
+
+static DEVUART_CONFIG(stm32f4xx_usart_config)
+{
+  struct device_s                  *dev = udev->dev;
+  struct stm32f4xx_usart_context_s *pv  = dev->drv_pv;
+
+  /* wait for previous TX to complete. */
+  if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, TE))
+    {
+      while (!STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC));
+      STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, SR, TC);
+    }
+
+  /* disable the usart. */
+  bool_t enabled = STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, UE);
+  STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, UE);
+
+  error_t err = stm32f4xx_usart_config_simple(dev, cfg);
+
+  /* (re-)enable the usart. */
+  if (!err || enabled)
+    STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, UE);
+
+#if defined(CONFIG_DEBUG)
+  if (err && enabled)
+    printk("uart: configuration left unchanged.\n");
+#endif
+
+  return err;
+}
+
+static const struct driver_uart_s stm32f4xx_usart_uart_drv =
+{
+  .class_   = DRIVER_CLASS_UART,
+  .f_config = &stm32f4xx_usart_config
+};
+
 static DEV_INIT(stm32f4xx_usart_init);
 static DEV_CLEANUP(stm32f4xx_usart_cleanup);
 
@@ -322,6 +465,7 @@ const struct driver_s stm32f4xx_usart_drv =
   .f_cleanup    = stm32f4xx_usart_cleanup,
   .classes      = {
     &stm32f4xx_usart_char_drv,
+    &stm32f4xx_usart_uart_drv,
     0
   }
 };
@@ -337,10 +481,6 @@ REGISTER_DRIVER(stm32f4xx_usart_drv);
  * pins.
  */
 
-#define STM32F4xx_USART1_BASE       0x40011000
-#define STM32F4xx_USART2_BASE       0x40004400
-#define STM32F4xx_USART6_BASE       0x40011400
-
 static inline void stm32f4xx_usart_clock_init(struct device_s *dev)
 {
   struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
@@ -352,15 +492,15 @@ static inline void stm32f4xx_usart_clock_init(struct device_s *dev)
   default:
     break;
 
-  case STM32F4xx_USART1_BASE:
+  case STM32F4xx_USART1_ADDR:
     STM32F4xx_REG_FIELD_SET(RCC, , APB2ENR, USART1EN);
     break;
 
-  case STM32F4xx_USART2_BASE:
+  case STM32F4xx_USART2_ADDR:
     STM32F4xx_REG_FIELD_SET(RCC, , APB1ENR, USART2EN);
     break;
 
-  case STM32F4xx_USART6_BASE:
+  case STM32F4xx_USART6_ADDR:
     STM32F4xx_REG_FIELD_SET(RCC, , APB2ENR, USART6EN);
     break;
   }
@@ -417,39 +557,34 @@ static DEV_INIT(stm32f4xx_usart_init)
   if (loc[0] == IOMUX_INVALID_DEMUX && loc[1] == IOMUX_INVALID_DEMUX)
     goto err_fifo;
 
-  /* configure usart . */
-  STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, M,    8_BITS);
-  STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, PCE,  NONE);
-  STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR2, STOP, 1_BIT);
-
   if (loc[0] != IOMUX_INVALID_DEMUX)
     STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, RE);
   if (loc[1] != IOMUX_INVALID_DEMUX)
     STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TE);
 
-  /* configure baudrate. */
+  /* configure over-sampling. */
   STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, OVER8, 8);
 
-  uint32_t brr = 0;
-  switch (pv->addr)
-  {
-  default:
-    assert(0 && "unknown USART base address");
-    break;
+  /* check for default configuration resource. */
+  struct dev_resource_s *r = device_res_get(dev, DEV_RES_UART, 0);
 
-  case STM32F4xx_USART1_BASE:
-  case STM32F4xx_USART6_BASE:
-    brr = ((int)(stm32f4xx_clock_freq_apb2 / 115200.0 * 2 + 0.5)) & 0xffff;
-    break;
+  error_t err = -1;
+  if (r != NULL)
+    {
+      struct dev_uart_config_s cfg =
+        {
+          .baudrate    = r->u.uart.baudrate,
+          .data_bits   = r->u.uart.data_bits,
+          .stop_bits   = r->u.uart.stop_bits,
+          .parity      = r->u.uart.parity,
+          .flow_ctrl   = r->u.iuart.flow_ctrl,
+          .half_duplex = r->u.uart.half_duplex
+        };
 
-  case STM32F4xx_USART2_BASE:
-    brr = ((int)(stm32f4xx_clock_freq_apb1 / 115200.0 * 2 + 0.5)) & 0xffff;
-    break;
-  }
-
-  /* when using oversampling 8, the brr[4] bit must be 0. */
-  brr &= ~(1 << 4);
-  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, BRR, brr);
+      err = stm32f4xx_usart_config_simple(dev, &cfg);
+      if (err)
+        printk("uart: failed to configure uart with default configuration.\n");
+    }
 
 #if defined(CONFIG_DEVICE_IRQ)
   device_irq_source_init(
@@ -467,8 +602,9 @@ static DEV_INIT(stm32f4xx_usart_init)
   STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, RXNEIE);
 #endif
 
-  /* enable usart. */
-  STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, UE);
+  /* enable usart if configured. */
+  if (!err)
+    STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, UE);
 
   /* link the driver. */
   dev->drv = &stm32f4xx_usart_drv;
