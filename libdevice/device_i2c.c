@@ -135,7 +135,7 @@ static ssize_t dev_i2c_wait_transfer(const struct device_i2c_ctrl_s *i2cdev,
   tr->pvdata = &status;
 
   /* clear error. */
-  tr->error  = 0;
+  tr->error = 0;
 
   /* setup associated device. */
   tr->i2cdev = (struct device_i2c_ctrl_s *)i2cdev;
@@ -180,32 +180,28 @@ error_t dev_i2c_set_bit_rate(struct device_i2c_ctrl_s *i2cdev,
 }
 
 error_t dev_i2c_wait_scan(const struct device_i2c_ctrl_s    *i2cdev,
-                          enum dev_i2c_ctrl_transfer_addr_e amode,
-                          uint16_t                          saddr)
+                          uint8_t                           saddr)
 {
-  return dev_i2c_wait_write(i2cdev, amode, saddr, 0x0, NULL, 0);
+  return dev_i2c_wait_write(i2cdev, DEV_I2C_OP_START_STOP, saddr, NULL, 0);
 }
 
 error_t dev_i2c_spin_scan(const struct device_i2c_ctrl_s    *i2cdev,
-                          enum dev_i2c_ctrl_transfer_addr_e amode,
-                          uint16_t                          saddr)
+                          uint8_t                           saddr)
 {
-  return dev_i2c_spin_write(i2cdev, amode, saddr, 0x0, NULL, 0);
+  return dev_i2c_spin_write(i2cdev, DEV_I2C_OP_START_STOP, saddr, NULL, 0);
 }
 
 ssize_t dev_i2c_wait_read(const struct device_i2c_ctrl_s    *i2cdev,
-                          enum dev_i2c_ctrl_transfer_addr_e amode,
-                          uint16_t                          saddr,
-                          uint8_t                           sraddr,
+                          enum dev_i2c_ctrl_transfer_op_e   op,
+                          uint8_t                           saddr,
                           uint8_t                           *data,
                           size_t                            size)
 {
   /* prepare the I2C transfer. */
   struct dev_i2c_ctrl_transfer_s tr =
   {
-    .amode  = amode,
+    .op     = op,
     .saddr  = saddr,
-    .sraddr = sraddr,
     .dir    = DEV_I2C_TR_READ,
     .count  = size,
     .data   = data,
@@ -227,18 +223,16 @@ ssize_t dev_i2c_wait_read(const struct device_i2c_ctrl_s    *i2cdev,
 }
 
 ssize_t dev_i2c_spin_read(const struct device_i2c_ctrl_s    *i2cdev,
-                          enum dev_i2c_ctrl_transfer_addr_e amode,
-                          uint16_t                          saddr,
-                          uint8_t                           sraddr,
+                          enum dev_i2c_ctrl_transfer_op_e   op,
+                          uint8_t                           saddr,
                           uint8_t                           *data,
                           size_t                            size)
 {
   /* prepare the I2C transfer. */
   struct dev_i2c_ctrl_transfer_s tr =
   {
-    .amode  = amode,
+    .op     = op,
     .saddr  = saddr,
-    .sraddr = sraddr,
     .dir    = DEV_I2C_TR_READ,
     .count  = size,
     .data   = data,
@@ -252,18 +246,16 @@ ssize_t dev_i2c_spin_read(const struct device_i2c_ctrl_s    *i2cdev,
 }
 
 ssize_t dev_i2c_wait_write(const struct device_i2c_ctrl_s    *i2cdev,
-                           enum dev_i2c_ctrl_transfer_addr_e amode,
-                           uint16_t                          saddr,
-                           uint8_t                           sraddr,
+                           enum dev_i2c_ctrl_transfer_op_e   op,
+                           uint8_t                           saddr,
                            const uint8_t                     *data,
                            size_t                            size)
 {
   /* prepare the I2C transfer. */
   struct dev_i2c_ctrl_transfer_s tr =
   {
-    .amode  = amode,
+    .op     = op,
     .saddr  = saddr,
-    .sraddr = sraddr,
     .dir    = DEV_I2C_TR_WRITE,
     .count  = size,
     .data   = (uint8_t*)data,
@@ -285,18 +277,16 @@ ssize_t dev_i2c_wait_write(const struct device_i2c_ctrl_s    *i2cdev,
 }
 
 ssize_t dev_i2c_spin_write(const struct device_i2c_ctrl_s    *i2cdev,
-                           enum dev_i2c_ctrl_transfer_addr_e amode,
-                           uint16_t                          saddr,
-                           uint8_t                           sraddr,
+                           enum dev_i2c_ctrl_transfer_op_e   op,
+                           uint8_t                           saddr,
                            const uint8_t                     *data,
                            size_t                            size)
 {
   /* prepare the I2C transfer. */
   struct dev_i2c_ctrl_transfer_s tr =
   {
-    .amode  = amode,
+    .op     = op,
     .saddr  = saddr,
-    .sraddr = sraddr,
     .dir    = DEV_I2C_TR_WRITE,
     .count  = size,
     .data   = (uint8_t*)data,

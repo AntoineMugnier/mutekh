@@ -8,7 +8,7 @@
 
 void main()
 {
-  uint8_t                  addr, count;
+  uint8_t addr, count;
   struct device_i2c_ctrl_s i2c;
 
   if (cpu_isbootstrap())
@@ -23,7 +23,7 @@ void main()
         ssize_t nb;
         do
           {
-            if ((nb = dev_i2c_spin_scan(&i2c, DEV_I2C_ADDR_7_BITS, addr)) == 0)
+            if ((nb = dev_i2c_spin_scan(&i2c, addr)) == 0)
               {
                 printk("i2c: found a device with address 0x%lx.\n", addr);
                 ++count;
@@ -43,7 +43,7 @@ void main()
         ssize_t nb;
         do
           {
-            if ((nb = dev_i2c_wait_scan(&i2c, DEV_I2C_ADDR_7_BITS, addr)) == 0)
+            if ((nb = dev_i2c_wait_scan(&i2c, addr)) == 0)
               {
                 printk("i2c: found a device with address 0x%lx.\n", addr);
                 ++count;

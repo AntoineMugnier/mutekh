@@ -73,16 +73,18 @@ typedef DEVI2C_CTRL_CONFIG(devi2c_ctrl_config_t);
 
 /***************************************** transfer */
 
-enum dev_i2c_ctrl_transfer_addr_e
+enum dev_i2c_ctrl_transfer_op_e
 {
-  DEV_I2C_ADDR_7_BITS,
-  DEV_I2C_ADDR_10_BITS
+  DEV_I2C_OP_NONE,
+  DEV_I2C_OP_START,
+  DEV_I2C_OP_STOP,
+  DEV_I2C_OP_START_STOP
 };
 
 enum dev_i2c_ctrl_transfer_dir_e
 {
-  DEV_I2C_TR_READ,
-  DEV_I2C_TR_WRITE
+  DEV_I2C_TR_WRITE,
+  DEV_I2C_TR_READ
 };
 
 struct dev_i2c_ctrl_transfer_s
@@ -92,20 +94,17 @@ struct dev_i2c_ctrl_transfer_s
       transfer is zero or the @tt err field is set. */
   struct kroutine_s                 kr;
 
-  /** Addressing mode of the I2C slave device. */
-  enum dev_i2c_ctrl_transfer_addr_e amode;
-
-  /** Address of the I2C slave device. */
-  uint16_t                          saddr;
-
-  /** Address of the I2C slave internal register. */
-  uint8_t                           sraddr;
+  /** Enable start/stop phase */
+  enum dev_i2c_ctrl_transfer_op_e   op:2;
 
   /** Direction of the I2C transfer. */
-  enum dev_i2c_ctrl_transfer_dir_e  dir;
+  enum dev_i2c_ctrl_transfer_dir_e  dir:1;
+
+  /** Address of the I2C slave device. */
+  uint8_t                           saddr;
 
   /** Number of bytes to transfer. This field will be updated during the
-      transfer. */
+      transfer. If 0 no data phase*/
   size_t                            count;
 
   /** Pointer to I2C buffer data */
@@ -174,8 +173,7 @@ error_t dev_i2c_set_bit_rate(struct device_i2c_ctrl_s *i2cdev,
 */
 config_depend(CONFIG_DEVICE_I2C)
 error_t dev_i2c_wait_scan(const struct device_i2c_ctrl_s    *i2cdev,
-                          enum dev_i2c_ctrl_transfer_addr_e amode,
-                          uint16_t                          saddr);
+                          uint8_t                           saddr);
 
 /** Synchronous helper scan function. This function spins in a loop
     waiting for read operation to complete.
@@ -187,40 +185,35 @@ error_t dev_i2c_wait_scan(const struct device_i2c_ctrl_s    *i2cdev,
 */
 config_depend(CONFIG_DEVICE_I2C)
 error_t dev_i2c_spin_scan(const struct device_i2c_ctrl_s    *i2cdev,
-                          enum dev_i2c_ctrl_transfer_addr_e amode,
-                          uint16_t                          saddr);
+                          uint8_t                           saddr);
 
 /** Synchronous helper read function. This function uses the scheduler
     api to put current context in wait state if no data is currently
     available. This function spins in a loop waiting for read
     operation to complete when scheduler is disabled.
 
-    The slave address is given in @tt saddr argument and the slave
-    register address is given in @tt sraddr argument.
+    The slave address is given in @tt saddr argument.
 
     @returns processed bytes count or negative error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
 ssize_t dev_i2c_wait_read(const struct device_i2c_ctrl_s    *i2cdev,
-                          enum dev_i2c_ctrl_transfer_addr_e amode,
-                          uint16_t                          saddr,
-                          uint8_t                           sraddr,
+                          enum dev_i2c_ctrl_transfer_op_e   op,
+                          uint8_t                           saddr,
                           uint8_t                           *data,
                           size_t                            size);
 
 /** Synchronous helper read function. This function spins in a loop
     waiting for read operation to complete.
 
-    The slave address is given in @tt saddr argument and the slave
-    register address is given in @tt sraddr argument.
+    The slave address is given in @tt saddr argument.
 
     @returns processed bytes count or negative error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
 ssize_t dev_i2c_spin_read(const struct device_i2c_ctrl_s    *i2cdev,
-                          enum dev_i2c_ctrl_transfer_addr_e amode,
-                          uint16_t                          saddr,
-                          uint8_t                           sraddr,
+                          enum dev_i2c_ctrl_transfer_op_e   op,
+                          uint8_t                           saddr,
                           uint8_t                           *data,
                           size_t                            size);
 
@@ -229,32 +222,28 @@ ssize_t dev_i2c_spin_read(const struct device_i2c_ctrl_s    *i2cdev,
     pending. This function spins in a loop waiting for write
     operation to complete when scheduler is disabled.
 
-    The slave address is given in @tt saddr argument and the slave
-    register address is given in @tt sraddr argument.
+    The slave address is given in @tt saddr argument.
 
     @returns processed bytes count or negative error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
 ssize_t dev_i2c_wait_write(const struct device_i2c_ctrl_s    *i2cdev,
-                           enum dev_i2c_ctrl_transfer_addr_e amode,
-                           uint16_t                          saddr,
-                           uint8_t                           sraddr,
+                           enum dev_i2c_ctrl_transfer_op_e   op,
+                           uint8_t                           saddr,
                            const uint8_t                     *data,
                            size_t                            size);
 
 /** Synchronous helper write function. This function spins in a loop
     waiting for write operation to complete.
 
-    The slave address is given in @tt saddr argument and the slave
-    register address is given in @tt sraddr argument.
+    The slave address is given in @tt saddr argument.
 
     @returns processed bytes count or negative error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
 ssize_t dev_i2c_spin_write(const struct device_i2c_ctrl_s    *i2cdev,
-                           enum dev_i2c_ctrl_transfer_addr_e amode,
-                           uint16_t                          saddr,
-                           uint8_t                           sraddr,
+                           enum dev_i2c_ctrl_transfer_op_e   op,
+                           uint8_t                           saddr,
                            const uint8_t                     *data,
                            size_t                            size);
 
