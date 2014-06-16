@@ -53,6 +53,7 @@ enum driver_class_e
   DRIVER_CLASS_CLOCK,
   DRIVER_CLASS_GPIO,
   DRIVER_CLASS_IOMUX,
+  DRIVER_CLASS_UART,
   DRIVER_CLASS_I2C,
   DRIVER_CLASS_MEM,
   DRIVER_CLASS_CPU,
@@ -60,11 +61,11 @@ enum driver_class_e
   DRIVER_CLASS_User_First = 128,            //< First user defined device class id
 };
 
-#define DRIVER_CLASS_NAMES                                         \
-  "None", "Block", "Char", "Enumerator", "FrameBuffer",            \
-  "ICU", "DMA", "Input", "Network", "Sound",                       \
-    "Timer", "SPI Controller" , "LCD", "Clock", "GPIO", "IoMux", "I2C",     \
-    "Memory", "CPU"
+#define DRIVER_CLASS_NAMES                                                    \
+  "None", "Block", "Char", "Enumerator", "FrameBuffer",                       \
+  "ICU", "DMA", "Input", "Network", "Sound",                                  \
+  "Timer", "SPI Controller" , "LCD", "Clock", "GPIO", "IoMux", "UART", "I2C", \
+  "Memory", "CPU"
 
 enum dev_enum_type_e
 {

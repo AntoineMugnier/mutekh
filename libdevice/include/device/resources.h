@@ -43,6 +43,7 @@ enum dev_resource_type_e
     DEV_RES_IRQ,
     DEV_RES_GPIO,
     DEV_RES_IOMUX,
+    DEV_RES_UART,
     DEV_RES_ID,
     DEV_RES_VENDOR,
     DEV_RES_PRODUCT,
@@ -123,6 +124,16 @@ struct dev_resource_s
       uintptr_t                 config:CONFIG_DEVICE_IOMUX_MAX_CONFIG;
       const char                *label;
     }                           iomux;
+
+    /** @see #DEV_STATIC_RES_UART @see device_res_add_uart */
+    struct {
+      uintptr_t                 baudrate:CONFIG_DEVICE_UART_MAX_BAUDRATE;
+      uintptr_t                 data_bits:CONFIG_DEVICE_UART_MAX_DATA_BITS;
+      uintptr_t                 stop_bits:CONFIG_DEVICE_UART_MAX_STOP_BITS;
+      uintptr_t                 parity:CONFIG_DEVICE_UART_MAX_PARITY;
+      uintptr_t                 flow_ctrl:CONFIG_DEVICE_UART_MAX_FLOW_CTRL;
+      uintptr_t                 half_duplex:CONFIG_DEVICE_UART_MAX_HALF_DUPLEX;
+    }                           uart;
 
     /** @see #DEV_STATIC_RES_ID @see device_res_add_id */
     struct {

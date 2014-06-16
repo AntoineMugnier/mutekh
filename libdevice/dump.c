@@ -148,6 +148,34 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
           break;
         }
 #endif
+#ifdef CONFIG_DEVICE_UART
+        case DEV_RES_UART: {
+          static const char * uart_baudrates[] = {
+            "110", "300", "600", "1200", "2400", "4800", "9600", "14400",
+            "19200", "28800", "38400", "56000", "57600", "115200"
+          };
+          static const char * uart_data_bits[] = {
+            "6 bits", "7 bits", "8 bits", "9 bits"
+          };
+          static const char * uart_stop_bits[] = {
+            "1 bit", "2 bits"
+          };
+          static const char * uart_parity[] = {
+            "none", "odd", "even"
+          };
+          printk(
+            "  UART: baudrate %s, data %s, stop %s, parity %s,"
+              " flow ctrl %s, half dup %s\n",
+            uart_baudrates[r->u.uart.baudrate],
+            uart_data_bits[r->u.uart.data_bits],
+            uart_stop_bits[r->u.uart.stop_bits],
+            uart_parity[r->u.uart.parity],
+            (r->u.uart.flow_ctrl == 0 ? "false" : "true"),
+            (r->u.uart.half_duplex == 0 ? "false" : "true")
+          );
+          break;
+        }
+#endif
         case DEV_RES_ID:
           printk("  Numerical identifier %x %x\n", r->u.id.major, r->u.id.minor);
           break;
