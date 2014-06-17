@@ -192,7 +192,11 @@ error_t dev_i2c_wait_scan(const struct device_i2c_ctrl_s *i2cdev,
     sizeof(__device_i2c_scan_data)
   );
 
-  return nbytes == sizeof(__device_i2c_scan_data) ? 0 : -EADDRNOTAVAIL;
+  if (nbytes == sizeof(__device_i2c_scan_data))
+    return 0;
+  if (nbytes == -EAGAIN)
+    return -EADDRNOTAVAIL;
+  return nbytes;
 }
 
 error_t dev_i2c_spin_scan(const struct device_i2c_ctrl_s *i2cdev,
@@ -206,7 +210,11 @@ error_t dev_i2c_spin_scan(const struct device_i2c_ctrl_s *i2cdev,
     sizeof(__device_i2c_scan_data)
   );
 
-  return nbytes == sizeof(__device_i2c_scan_data) ? 0 : -EADDRNOTAVAIL;
+  if (nbytes == sizeof(__device_i2c_scan_data))
+    return 0;
+  if (nbytes == -EAGAIN)
+    return -EADDRNOTAVAIL;
+  return nbytes;
 }
 
 ssize_t dev_i2c_wait_read(const struct device_i2c_ctrl_s  *i2cdev,
