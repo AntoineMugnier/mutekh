@@ -6,6 +6,7 @@
 #include <device/driver.h>
 #include <device/class/char.h>
 #include <device/class/i2c.h>
+#include <device/class/uart.h>
 
 #include <pthread.h>
 #include <string.h>
@@ -13,46 +14,74 @@
 
 #define ADXL345_I2C_ADDR    0x53
 
-static error_t adxl345_read_bytes(struct device_i2c_ctrl_s *bus,
-                                  uint8_t                  reg,
-                                  uint8_t                  *buffer,
-                                  size_t                   count)
+static
+error_t adxl345_read_bytes(struct device_i2c_ctrl_s *bus,
+                           uint8_t                  *buffer,
+                           size_t                   size,
+                           bool_t                   stop)
 {
   ssize_t nbytes;
   do
     {
       nbytes = dev_i2c_wait_read(
         bus,
-        DEV_I2C_ADDR_7_BITS,
+        stop ? DEV_I2C_OP_START_STOP : DEV_I2C_OP_START,
         ADXL345_I2C_ADDR,
-        reg,
         buffer,
-        count
+        size
       );
     }
-  while (nbytes < count || nbytes == -EBUSY);
+  while (nbytes < size || nbytes == -EBUSY);
   return nbytes;
 }
 
-static error_t adxl345_write_bytes(struct device_i2c_ctrl_s *bus,
-                                   uint8_t                  reg,
-                                   uint8_t const            *buffer,
-                                   size_t                   count)
+static
+error_t adxl345_write_bytes(struct device_i2c_ctrl_s *bus,
+                            uint8_t const            *buffer,
+                            size_t                   size,
+                            bool_t                   stop)
 {
   ssize_t nbytes;
   do
     {
       nbytes = dev_i2c_wait_write(
         bus,
-        DEV_I2C_ADDR_7_BITS,
+        stop ? DEV_I2C_OP_START_STOP : DEV_I2C_OP_START,
         ADXL345_I2C_ADDR,
-        reg,
         buffer,
-        count
+        size
       );
     }
-  while (nbytes < count || nbytes == -EBUSY);
+  while (nbytes < size || nbytes == -EBUSY);
   return nbytes;
+}
+
+static
+error_t adxl345_read_reg(struct device_i2c_ctrl_s *bus,
+                         uint8_t                  reg,
+                         uint8_t                  *buffer,
+                         size_t                   size)
+{
+  ssize_t nbytes = adxl345_write_bytes(bus, &reg, 1, 0 /* no stop */);
+
+  if (nbytes != 1)
+    return nbytes;
+
+  return adxl345_read_bytes(bus, buffer, size, 1 /* stop */);
+}
+
+static
+error_t adxl345_write_reg(struct device_i2c_ctrl_s *bus,
+                          uint8_t                  reg,
+                          uint8_t                  *buffer,
+                          size_t                   size)
+{
+  ssize_t nbytes = adxl345_write_bytes(bus, &reg, 1, 0 /* no stop */);
+
+  if (nbytes != 1)
+    return nbytes;
+
+  return adxl345_write_bytes(bus, buffer, size, 1 /* stop */);
 }
 
 /* data sent through serial link. */
@@ -89,7 +118,7 @@ void main()
   printk("i2c-adxl345: check device id.\n");
 
   /* check device id. */
-  if (adxl345_read_bytes(&i2c, 0x00, data, 1) < 0)
+  if (adxl345_read_reg(&i2c, 0x00, data, 1) < 0)
     {
       printk("i2c-adxl345: cannot read device id register.\n");
       goto err_i2c;
@@ -99,7 +128,7 @@ void main()
 
   /* configuration resolution to full-mode and range +/- 16g. */
   data[0] = (0x1 << 3) | 0x3;
-  if (adxl345_write_bytes(&i2c, 0x31, data, 1) < 0)
+  if (adxl345_write_reg(&i2c, 0x31, data, 1) < 0)
     {
       printk("i2c-adxl345: failed to setup full-mode and range.\n");
       goto err_i2c;
@@ -107,7 +136,7 @@ void main()
 
   /* enable measuring (leave in FIFO bypass) and link. */
   data[0] = (0x1 << 5) | (0x1 << 3);
-  if (adxl345_write_bytes(&i2c, 0x2d, data, 1) < 0)
+  if (adxl345_write_reg(&i2c, 0x2d, data, 1) < 0)
     {
       printk("i2c-adxl345: failed to enable measuring and link.\n");
       goto err_i2c;
@@ -118,7 +147,7 @@ void main()
   for (s = 0; s < 16; ++s)
     {
       ssize_t err;
-      if ((err = adxl345_read_bytes(&i2c, 0x32, (uint8_t*)calib[s], 6)) < 0)
+      if ((err = adxl345_read_reg(&i2c, 0x32, (uint8_t*)calib[s], 6)) < 0)
         {
           printk("i2c-adxl345: error %d while reading data.\n", -err);
           memset(calib[s], 6, 0);
@@ -127,7 +156,7 @@ void main()
 
   /* disable measuring (leave in FIFO bypass) and link. */
   data[0] = 0x0;
-  if (adxl345_write_bytes(&i2c, 0x2d, data, 1) < 0)
+  if (adxl345_write_reg(&i2c, 0x2d, data, 1) < 0)
     {
       printk("i2c-adxl345: failed to pause measuring.\n");
       goto err_i2c;
@@ -154,7 +183,7 @@ void main()
   *(int8_t *)&data[2] = (int8_t) -off_z;
 
   /* write offset registers. */
-  if (adxl345_write_bytes(&i2c, 0x1e, data, 3) < 0)
+  if (adxl345_write_reg(&i2c, 0x1e, data, 3) < 0)
     {
       printk("i2c-adxl345: failed to set axis offsets.\n");
       goto err_i2c;
@@ -164,7 +193,7 @@ void main()
 
   /* re-enable measuring (leave in FIFO bypass) and link. */
   data[0] = (0x1 << 5) | (0x1 << 3);
-  if (adxl345_write_bytes(&i2c, 0x2d, data, 1) < 0)
+  if (adxl345_write_reg(&i2c, 0x2d, data, 1) < 0)
     {
       printk("i2c-adxl345: failed to resume measuring.\n");
       goto err_i2c;
@@ -183,10 +212,24 @@ void main()
       goto err_serial;
     }
 
+  struct dev_uart_config_s uart_cfg =
+    {
+      .baudrate    = DEV_UART_BAUD_115200,
+      .data_bits   = DEV_UART_DATA_8_BITS,
+      .stop_bits   = DEV_UART_STOP_1_BIT,
+      .flow_ctrl   = 0,
+      .half_duplex = 0,
+    };
+
+  struct device_uart_s uart;
+  device_get_accessor_by_path(&uart, 0, "uart1", DRIVER_CLASS_UART);
+  dev_uart_config(&uart, &uart_cfg);
+  device_put_accessor(&uart);
+
   int16_t samples[3];
   while (1)
     {
-      if (adxl345_read_bytes(&i2c, 0x32, (uint8_t *)samples, 6) < 0)
+      if (adxl345_read_reg(&i2c, 0x32, (uint8_t *)samples, 6) < 0)
         printk("i2c-adxl345: error %d while reading data.\n");
       else
         {
