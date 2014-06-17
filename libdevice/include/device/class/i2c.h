@@ -47,18 +47,30 @@ struct dev_i2c_ctrl_transfer_s;
 
 /***************************************** config */
 
+enum dev_i2c_speed_e
+{
+  /** I2C standard mode (100kHz). */
+  DEV_I2C_SPEED_STD,
+
+  /** I2C fast mode (400kHz). */
+  DEV_I2C_SPEED_FAST,
+
+  /** I2C ultra-fast mode (1MHz). */
+  DEV_I2C_SPEED_HIGH,
+};
+
 /** @This structure contains the information used to configure the I2C
     controller. **/
 struct dev_i2c_ctrl_config_s
 {
-  /** This field gives the bitrate in bits per seconds. */
-  uint32_t bit_rate;
+  /** bit rate */
+  enum dev_i2c_speed_e bit_rate;
 };
 
 /** @see devi2c_ctrl_config_t */
 #define DEVI2C_CTRL_CONFIG(n) error_t (n) ( \
   const struct device_i2c_ctrl_s *i2cdev,   \
-  struct dev_i2c_ctrl_config_s *cfg)        \
+  struct dev_i2c_ctrl_config_s   *cfg)      \
 /**/
 
 /**
@@ -75,10 +87,10 @@ typedef DEVI2C_CTRL_CONFIG(devi2c_ctrl_config_t);
 
 enum dev_i2c_ctrl_transfer_op_e
 {
-  DEV_I2C_OP_NONE,
-  DEV_I2C_OP_START,
-  DEV_I2C_OP_STOP,
-  DEV_I2C_OP_START_STOP
+  DEV_I2C_OP_NONE       = 0,
+  DEV_I2C_OP_START      = 1,
+  DEV_I2C_OP_STOP       = 2,
+  DEV_I2C_OP_START_STOP = DEV_I2C_OP_START | DEV_I2C_OP_STOP,
 };
 
 enum dev_i2c_ctrl_transfer_dir_e
@@ -169,7 +181,8 @@ error_t dev_i2c_set_bit_rate(struct device_i2c_ctrl_s *i2cdev,
     The slave address is given in @tt saddr argument.
 
     @returns 0 if the address matches with a slave device or negative
-    error code.
+    error code. If the selected address does not correspond to a device
+    the error code is EADDRNOTAVAIL.
 */
 config_depend(CONFIG_DEVICE_I2C)
 error_t dev_i2c_wait_scan(const struct device_i2c_ctrl_s    *i2cdev,
@@ -181,7 +194,8 @@ error_t dev_i2c_wait_scan(const struct device_i2c_ctrl_s    *i2cdev,
     The slave address is given in @tt saddr argument.
 
     @returns 0 if the address matches with a slave device or negative
-    error code.
+    error code. If the selected address does not correspond to a device
+    the error code is EADDRNOTAVAIL.
 */
 config_depend(CONFIG_DEVICE_I2C)
 error_t dev_i2c_spin_scan(const struct device_i2c_ctrl_s    *i2cdev,
@@ -194,7 +208,8 @@ error_t dev_i2c_spin_scan(const struct device_i2c_ctrl_s    *i2cdev,
 
     The slave address is given in @tt saddr argument.
 
-    @returns processed bytes count or negative error code.
+    @returns processed bytes count or negative error code. If the slave
+    device cannot provide data at the moment, the error code is EAGAIN.
 */
 config_depend(CONFIG_DEVICE_I2C)
 ssize_t dev_i2c_wait_read(const struct device_i2c_ctrl_s    *i2cdev,
@@ -208,7 +223,8 @@ ssize_t dev_i2c_wait_read(const struct device_i2c_ctrl_s    *i2cdev,
 
     The slave address is given in @tt saddr argument.
 
-    @returns processed bytes count or negative error code.
+    @returns processed bytes count or negative error code. If the slave
+    device cannot provide data at the moment, the error code is EAGAIN.
 */
 config_depend(CONFIG_DEVICE_I2C)
 ssize_t dev_i2c_spin_read(const struct device_i2c_ctrl_s    *i2cdev,
@@ -224,7 +240,10 @@ ssize_t dev_i2c_spin_read(const struct device_i2c_ctrl_s    *i2cdev,
 
     The slave address is given in @tt saddr argument.
 
-    @returns processed bytes count or negative error code.
+    @returns processed bytes count or negative error code. If the return
+    value is positive but less than the given buffer size, the slave
+    was not able to handle all the data (i.e. NACK the last sent data).
+    If the slave device does not accept writes, the error code is EAGAIN.
 */
 config_depend(CONFIG_DEVICE_I2C)
 ssize_t dev_i2c_wait_write(const struct device_i2c_ctrl_s    *i2cdev,
@@ -238,7 +257,10 @@ ssize_t dev_i2c_wait_write(const struct device_i2c_ctrl_s    *i2cdev,
 
     The slave address is given in @tt saddr argument.
 
-    @returns processed bytes count or negative error code.
+    @returns processed bytes count or negative error code. If the return
+    value is positive but less than the given buffer size, the slave
+    was not able to handle all the data (i.e. NACK the last sent data).
+    If the slave device does not accept writes, the error code is EAGAIN.
 */
 config_depend(CONFIG_DEVICE_I2C)
 ssize_t dev_i2c_spin_write(const struct device_i2c_ctrl_s    *i2cdev,
