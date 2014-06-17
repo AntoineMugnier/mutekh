@@ -39,25 +39,16 @@
 
 enum stm32f4xx_i2c_state_e
 {
-  DEV_I2C_ST_START   = 0,
-  DEV_I2C_ST_ADDR    = 1,
-  DEV_I2C_ST_RREADY  = 2,
-  DEV_I2C_ST_RADDR   = 3,
-  DEV_I2C_ST_WRITE_N = 4,
-  DEV_I2C_ST_READ_2  = 5,
-  DEV_I2C_ST_READ_N  = 6,
-  DEV_I2C_ST_STOP    = 7,
+  DEV_I2C_ST_START     = 0,
+  DEV_I2C_ST_ADDR      = 1,
+  DEV_I2C_ST_WRITE_RDY = 2,
+  DEV_I2C_ST_WRITE_N   = 3,
+  DEV_I2C_ST_READ_2    = 4,
+  DEV_I2C_ST_READ_N    = 5,
+  DEV_I2C_ST_STOP      = 6,
 
-  DEV_I2C_ST_NONE    = 8,
-  DEV_I2C_ST_COUNT   = DEV_I2C_ST_NONE
-};
-
-/* the phase is used to detect first or second sending of slave
-   address in the case of read transfer. */
-enum stm32f4xx_i2c_phase_e
-{
-  DEV_I2C_PHASE_RW,
-  DEV_I2C_PHASE_R,
+  DEV_I2C_ST_NONE,
+  DEV_I2C_ST_COUNT = DEV_I2C_ST_NONE
 };
 
 struct stm32f4xx_i2c_context_s
@@ -70,9 +61,6 @@ struct stm32f4xx_i2c_context_s
 
   /* current fsm state. */
   enum stm32f4xx_i2c_state_e     state;
-
-  /* current fsm phase (rw = phase 1, r = phase 2). */
-  enum stm32f4xx_i2c_phase_e     phase;
 
   /* byte count. */
   size_t                         nbytes;
@@ -100,21 +88,19 @@ typedef DEVI2C_CTRL_FSM(stm32f4xx_i2c_fsm_callback_t);
 
 static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_start_sent);
 static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_addr_sent);
-static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_reg_ready);
-static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_reg_sent);
+static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_write_ready);
 static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_writeN);
 static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_read2);
 static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_readN);
 
 static stm32f4xx_i2c_fsm_callback_t * const stm32f4xx_i2c_fsm[] =
 {
-  [DEV_I2C_ST_START]   = &stm32f4xx_i2c_ev_start_sent,
-  [DEV_I2C_ST_ADDR]    = &stm32f4xx_i2c_ev_addr_sent,
-  [DEV_I2C_ST_RREADY]  = &stm32f4xx_i2c_ev_reg_ready,
-  [DEV_I2C_ST_RADDR]   = &stm32f4xx_i2c_ev_reg_sent,
-  [DEV_I2C_ST_WRITE_N] = &stm32f4xx_i2c_ev_writeN,
-  [DEV_I2C_ST_READ_2]  = &stm32f4xx_i2c_ev_read2,
-  [DEV_I2C_ST_READ_N]  = &stm32f4xx_i2c_ev_readN,
+  [DEV_I2C_ST_START]     = &stm32f4xx_i2c_ev_start_sent,
+  [DEV_I2C_ST_ADDR]      = &stm32f4xx_i2c_ev_addr_sent,
+  [DEV_I2C_ST_WRITE_RDY] = &stm32f4xx_i2c_ev_write_ready,
+  [DEV_I2C_ST_WRITE_N]   = &stm32f4xx_i2c_ev_writeN,
+  [DEV_I2C_ST_READ_2]    = &stm32f4xx_i2c_ev_read2,
+  [DEV_I2C_ST_READ_N]    = &stm32f4xx_i2c_ev_readN,
 };
 
 static bool_t stm32f4xx_i2c_check_error(struct device_s *dev, uint32_t status)
@@ -126,7 +112,7 @@ static bool_t stm32f4xx_i2c_check_error(struct device_s *dev, uint32_t status)
       if (status & STM32F4xx_I2C_SR1_TIMEOUT)
         pv->tr->error = ETIMEDOUT;
       else if (status & STM32F4xx_I2C_SR1_AF)
-        pv->tr->error = EBADDATA;
+        pv->tr->error = EAGAIN;
       else if (status & STM32F4xx_I2C_SR1_BERR)
         pv->tr->error = EIO;
       else if (status & STM32F4xx_I2C_SR1_ARLO)
@@ -179,21 +165,7 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_start_sent)
   pv->state = DEV_I2C_ST_ADDR;
 
   /* write the slave address. */
-  uint8_t saddr = tr->saddr << 1;
-  switch (pv->phase)
-    {
-    default: break;
-
-    case DEV_I2C_PHASE_RW:
-      //saddr |= 0x0; /* always do a write in phase 1. */
-      break;
-
-    case DEV_I2C_PHASE_R:
-      saddr |= 0x1; /* do a read in phase 2. */
-      break;
-    }
-
-  /* write the slave address. */
+  uint8_t const saddr = (tr->saddr << 1) | tr->dir;
   STM32F4xx_REG_FIELD_UPDATE_DEV(I2C, pv->addr, DR, DATA, saddr);
 
 #if !defined(CONFIG_DEVICE_IRQ)
@@ -216,15 +188,17 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_addr_sent)
     return;
 #endif
 
-  /* step to next phase. */
-  switch (pv->phase)
+  /* reset private state. */
+  pv->nbytes = 0;
+
+  /* handle direction. */
+  switch (tr->dir)
     {
     default:
       assert(0 && "non reachable.");
       break;
 
-    /********************* Phase 1: read/write. */
-    case DEV_I2C_PHASE_RW:
+    case DEV_I2C_TR_WRITE:
       /* clear address sent interrupt. */
       (void) STM32F4xx_REG_VALUE_DEV(I2C, pv->addr, SR2);
 
@@ -233,15 +207,14 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_addr_sent)
       STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR2, ITBUFEN);
 #endif
       /* step to next phase. */
-      pv->state = DEV_I2C_ST_RREADY;
+      pv->state = DEV_I2C_ST_WRITE_RDY;
 
 #if !defined(CONFIG_DEVICE_IRQ)
       STM32F4xx_I2C_CHECK_ERROR(dev, pv, TXE);
 #endif
       break;
 
-    /********************* Phase 2: read only. */
-    case DEV_I2C_PHASE_R:
+    case DEV_I2C_TR_READ:
       /* prepare. */
       pv->nbytes = 0;
 
@@ -254,11 +227,14 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_addr_sent)
           /* clear address sent interrupt. */
           (void) STM32F4xx_REG_VALUE_DEV(I2C, pv->addr, SR2);
 
-          /* step to next phase. */
-          pv->state = DEV_I2C_ST_STOP;
-
-          /* send STOP condition. */
-          STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
+          if (tr->op & DEV_I2C_OP_STOP)
+            {
+              /* step to next phase. */
+              pv->state = DEV_I2C_ST_STOP;
+    
+              /* send STOP condition. */
+              STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
+            }
 
           /* read the data. */
           tr->data[0] = STM32F4xx_REG_FIELD_VALUE_DEV(I2C, pv->addr, DR, DATA);
@@ -310,9 +286,9 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_addr_sent)
 }
 
 
-/****************************************** REG ADDR READY (EV8_1) */
+/****************************************** WRITE READY (EV8_1) */
 
-static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_reg_ready)
+static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_write_ready)
 {
   struct stm32f4xx_i2c_context_s    *pv = dev->drv_pv;
   struct dev_i2c_ctrl_transfer_s    *tr = pv->tr;
@@ -324,94 +300,15 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_reg_ready)
 #endif
 
   /* step to next phase. */
-  pv->state = DEV_I2C_ST_RADDR;
+  pv->state = DEV_I2C_ST_WRITE_N;
 
 #if defined(CONFIG_DEVICE_IRQ)
-  if (tr->count > 0 && tr->dir == DEV_I2C_TR_WRITE)
+  if (tr->count > 1)
     /* enable buffer interrupt. */
     STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR2, ITBUFEN);
 #endif
 
-  /* write the slave register address. */
-  STM32F4xx_REG_FIELD_UPDATE_DEV(I2C, pv->addr, DR, DATA, tr->sraddr);
-
-#if !defined(CONFIG_DEVICE_IRQ)
-  if (tr->count == 0 || tr->dir == DEV_I2C_TR_READ)
-    STM32F4xx_I2C_CHECK_ERROR(dev, pv, BTF);
-  else
-    STM32F4xx_I2C_CHECK_ERROR(dev, pv, TXE);
-#endif
-}
-
-
-/****************************************** REG ADDR SENT (EV_8) */
-
-static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_reg_sent)
-{
-  struct stm32f4xx_i2c_context_s    *pv = dev->drv_pv;
-  struct dev_i2c_ctrl_transfer_s    *tr = pv->tr;
-
-#if defined(CONFIG_DEVICE_IRQ)
-  /* check for state consistency. */
-  if ((tr->count == 0 || tr->dir == DEV_I2C_TR_READ) &&
-      !STM32F4xx_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, BTF))
-    {
-      return;
-    }
-  if (tr->count > 0 && tr->dir == DEV_I2C_TR_WRITE &&
-      !STM32F4xx_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, TXE))
-    {
-      return;
-    }
-#endif
-
-  /* if there is no data, stop here. */
-  if (tr->count == 0)
-    {
-      /* step to next phase. */
-      pv->state = DEV_I2C_ST_STOP;
-
-      /* send STOP condition. */
-      STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
-
-      return;
-    }
-
-  /* if this is a read transfer, then a restart is required. */
-  if (tr->dir == DEV_I2C_TR_READ)
-    {
-      /* step to next phase. */
-      pv->state = DEV_I2C_ST_START;
-      pv->phase = DEV_I2C_PHASE_R;
-
-#if defined(CONFIG_DEVICE_IRQ)
-      /* disable buffer interrupt. */
-      STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITBUFEN);
-#endif
-      /* send START condition. */
-      STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, START);
-
-#if !defined(CONFIG_DEVICE_IRQ)
-      STM32F4xx_I2C_CHECK_ERROR(dev, pv, SB);
-#endif
-      return;
-    }
-
-  /* here we are sure the transfer is a write of at least 1 byte. */
-
-  /* prepare. */
-  pv->nbytes = 0;
-
-#if defined(CONFIG_DEVICE_IRQ)
-  if (tr->count == 1)
-    /* disable buffer interrupt. */
-    STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITBUFEN);
-#endif
-
-  /* step to next phase. */
-  pv->state = DEV_I2C_ST_WRITE_N;
-
-  /* write first byte. */
+  /* write the next byte to data register. */
   STM32F4xx_REG_FIELD_UPDATE_DEV(
     I2C,
     pv->addr,
@@ -431,7 +328,7 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_reg_sent)
 }
 
 
-/****************************************** WRITE N */
+/****************************************** WRITE N (EV_8) */
 
 static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_writeN)
 {
@@ -456,12 +353,14 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_writeN)
   /* we reached the end of the transfer. */
   if (tr->count == 0)
     {
-      /* step to the next phase. */
-      pv->state = DEV_I2C_ST_STOP;
+      if (tr->op & DEV_I2C_OP_STOP)
+        {
+          /* step to the next phase. */
+          pv->state = DEV_I2C_ST_STOP;
 
-      /* send STOP condition. */
-      STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
-
+          /* send STOP condition. */
+          STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
+        }
       return;
     }
 
@@ -506,11 +405,14 @@ static DEVI2C_CTRL_FSM(stm32f4xx_i2c_ev_read2)
 
   assert(tr->count == 2);
 
-  /* step to next phase. */
-  pv->state = DEV_I2C_ST_STOP;
+  if (tr->op & DEV_I2C_OP_STOP)
+    {
+      /* step to next phase. */
+      pv->state = DEV_I2C_ST_STOP;
 
-  /* send STOP condition. */
-  STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
+      /* send STOP condition. */
+      STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
+    }
 
   /* read the two last data. */
   while (tr->count > 0)
@@ -595,74 +497,103 @@ DEVI2C_CTRL_TRANSFER(stm32f4xx_i2c_transfer)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (pv->tr != NULL ||
+  if ((pv->tr != NULL && pv->tr != tr) ||
       STM32F4xx_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR2, BUSY) != 0)
     {
       tr->error = EBUSY;
     }
-  else if (pv->tr->amode == DEV_I2C_ADDR_10_BITS)
+  if (tr->count == 0)
     {
-      tr->error = ENOTSUP;
+      tr->error = EINVAL;
     }
   else
     {
       /* start the transfer. */
       tr->error = 0;
       pv->tr    = tr;
-      pv->state = DEV_I2C_ST_START;
-      pv->phase = DEV_I2C_PHASE_RW;
 
 #if defined(CONFIG_DEVICE_IRQ)
+      /* restore events if disabled. */
+      STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR2, ITEVTEN);
+      STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR2, ITERREN);
+
       /* disable buffer interrupt. */
       STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITBUFEN);
 #endif
-      /* send START condition. */
-      STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, START);
+
+      if (tr->op & DEV_I2C_OP_START)
+        {
+          pv->state = DEV_I2C_ST_START;
+
+          /* send START condition. */
+          STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, START);
 
 #if !defined(CONFIG_DEVICE_IRQ)
-      /* wait for the start condition to be sent (and check for errors). */
-      STM32F4xx_I2C_CHECK_ERROR(dev, pv, SB);
+          /* wait for the start condition to be sent (and check for errors). */
+          STM32F4xx_I2C_CHECK_ERROR(dev, pv, SB);
+#endif
+        }
+      else
+        {
+          /* as if the address was sent. */
+          pv->state = DEV_I2C_ST_ADDR;
+        }
 
-      stm32f4xx_i2c_fsm_callback_t * trans;
-      while (pv->state != DEV_I2C_ST_STOP)
+#if !defined(CONFIG_DEVICE_IRQ)
+      bool_t const need_stop = tr->op & DEV_I2C_OP_STOP;
+      bool_t stopped         = 0;
+
+      stm32f4xx_i2c_fsm_callback_t *trans;
+      while (!(need_stop && stopped) &&
+             (need_stop || tr->count > 0) &&
+             !tr->error)
         {
           assert (pv->state < DEV_I2C_ST_COUNT);
 
-          if (tr->error)
-            {
-              /* step to end state. */
-              enum stm32f4xx_i2c_state_e current = pv->state;
-              pv->state = DEV_I2C_ST_STOP;
+          /* apply the transition on the fsm. */
+          trans = stm32f4xx_i2c_fsm[pv->state];
+          trans(dev);
 
-              /* send a stop condition if a transfer is active. */
-              if (current > DEV_I2C_ST_START)
-                STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
-            }
-          else
-            {
-              /* apply the transition on the fsm. */
-              trans = stm32f4xx_i2c_fsm[pv->state];
-              trans(dev);
-            }
+          /* do we reach the end? */
+          stopped = pv->state == DEV_I2C_ST_STOP;
+        }
+
+      /* check for errors. */
+      if (tr->error)
+        {
+          /* step to end state. */
+          enum stm32f4xx_i2c_state_e current = pv->state;
+          pv->state = DEV_I2C_ST_STOP;
+
+          /* send a stop condition if a transfer is active. */
+          if (current > DEV_I2C_ST_START)
+            STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR1, STOP);
         }
 
       /* we reached the end, then call the routine. */
+      if (pv->state == DEV_I2C_ST_STOP)
+        {
+          /* reset current transfer. */
+          pv->tr = NULL;
 
-      /* reset current transfer. */
-      pv->tr = NULL;
+          /* reset state. */
+          pv->state = DEV_I2C_ST_NONE;
 
-      /* reset state. */
-      pv->state = DEV_I2C_ST_NONE;
-
-      /* wait to return in slave mode. */
-      /* FIXME: this is a hack that is not mentioned in the datasheet.
-         However, unless this, the controller looks to produce unexpected
-         interrupts even after the STOP condition is sent. */
-      while (STM32F4xx_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR2, MSL));
+          /* wait to return in slave mode. */
+          /* FIXME: this is a hack that is not mentioned in the datasheet.
+             However, unless this, the controller looks to produce unexpected
+             interrupts even after the STOP condition is sent. */
+          while (STM32F4xx_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR2, MSL));
+        }
 
       /* call routine. */
+      assert(
+        (need_stop && stopped) || (!need_stop && tr->count == 0) || tr->error
+      );
+
       LOCK_RELEASE_IRQ(&dev->lock);
       kroutine_exec(&tr->kr, cpu_is_interruptible());
+
       return;
 #endif
     }
@@ -718,10 +649,16 @@ static DEV_IRQ_EP_PROCESS(stm32f4xx_i2c_irq)
     }
 
   /* if we reached the end, then call the routine (tail call). */
+  bool_t const need_stop = tr->op & DEV_I2C_OP_STOP;
+  bool_t stopped         = 0;
+
   if (pv->state == DEV_I2C_ST_STOP)
     {
       /* reset current transfer. */
       pv->tr = NULL;
+
+      /* is it a normal stop? */
+      stopped = 1;
 
       /* reset state. */
       pv->state = DEV_I2C_ST_NONE;
@@ -731,15 +668,21 @@ static DEV_IRQ_EP_PROCESS(stm32f4xx_i2c_irq)
          However, unless this, the controller looks to produce unexpected
          interrupts even after the STOP condition is sent. */
       while (STM32F4xx_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR2, MSL));
+    }
 
-      /* call routine. */
-      lock_release(&dev->lock);
-      kroutine_exec(&tr->kr, cpu_is_interruptible());
-
-      return;
+  /* if the transmission is partially ended, pause the events. */
+  if (!need_stop && tr->count == 0)
+    {
+      STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITEVTEN);
+      STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITERREN);
+      STM32F4xx_REG_FIELD_CLR_DEV(I2C, pv->addr, CR2, ITBUFEN);
     }
 
   lock_release(&dev->lock);
+
+  /* call routine. */
+  if ((need_stop && stopped) || (!need_stop && tr->count == 0) || tr->error)
+    kroutine_exec(&tr->kr, cpu_is_interruptible());
 }
 
 #endif
@@ -837,9 +780,6 @@ static DEV_INIT(stm32f4xx_i2c_init)
 
   if (device_irq_source_link(dev, pv->irq_ep, 2, -1))
     goto err_irq;
-
-  STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR2, ITEVTEN);
-  STM32F4xx_REG_FIELD_SET_DEV(I2C, pv->addr, CR2, ITERREN);
 #endif
 
   /* initialize the input clock frequency. */
