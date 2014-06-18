@@ -115,3 +115,18 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, efm32_gpio_drv, gpio_dev_res);
 
 #endif
 
+#ifdef CONFIG_DRIVER_EFM32_I2C
+
+DEV_DECLARE_STATIC_RESOURCES(i2c_dev_res, 5,
+    DEV_STATIC_RES_MEM(0x4000a400, 0x4000a800),
+    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_I2C1, 0, "/cpu"),
+    DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+    DEV_STATIC_RES_FREQ((uint64_t)14000000 << 24),
+
+    DEV_STATIC_RES_IOMUX("scl", EFM32_LOC0, EFM32_PC5, 0, 0),
+    DEV_STATIC_RES_IOMUX("sda", EFM32_LOC0, EFM32_PC4, 0, 0),
+    );
+
+DEV_DECLARE_STATIC(i2c_dev, "i2c1", 0, efm32_i2c_drv, i2c_dev_res);
+
+#endif
