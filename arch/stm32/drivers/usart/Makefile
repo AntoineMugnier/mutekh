@@ -1,3 +1,3 @@
 
-objs += stm32f4xx_usart.o
+objs += usart.o
 

@@ -20,21 +20,21 @@
 
 */
 
-#ifndef _STM32F4xx_REGS_H_
-#define _STM32F4xx_REGS_H_
+#ifndef _STM32_REGS_H_
+#define _STM32_REGS_H_
 
 #include <hexo/iospace.h>
 
-#include <arch/stm32f4xx_memory_map.h>
+#include <arch/stm32_gpio.h>
+#include <arch/stm32_i2c.h>
+#include <arch/stm32_rcc.h>
+#include <arch/stm32_usart.h>
 
-#include <arch/stm32f4xx_gpio.h>
-#include <arch/stm32f4xx_i2c.h>
-#include <arch/stm32f4xx_rcc.h>
-#include <arch/stm32f4xx_usart.h>
+#include <arch/stm32_irq.h>
 
-#include <arch/stm32f4xx_irq.h>
+#include <arch/stm32_memory_map.h>
 
-#include <arch/stm32f4xx_helpers.h>
+#include <cpp/device/helpers.h>
 
 #endif
 

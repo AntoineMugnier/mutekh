@@ -29,12 +29,12 @@
 # error Unknown STM32 board definition
 #endif
 
-#define STM32F4xx_DEV_MEM_START(dev, id) \
-  STM32F4xx_##dev##id##_ADDR             \
+#define STM32_DEV_MEM_START(dev, id) \
+  STM32_ ## dev ## id ## _ADDR       \
 /**/
 
-#define STM32F4xx_DEV_MEM_END(dev, id)                                 \
-  ( STM32F4xx_DEV_MEM_START(dev, id) + STM32F4xx_##dev##id##_SIZE - 1) \
+#define STM32_DEV_MEM_END(dev, id)                                    \
+  ( STM32_DEV_MEM_START(dev, id) + STM32_ ## dev ## id ## _SIZE - 1 ) \
 /**/
 
 #endif
