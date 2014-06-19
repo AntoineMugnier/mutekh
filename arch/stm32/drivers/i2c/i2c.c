@@ -47,8 +47,8 @@ enum stm32_i2c_state_e
   DEV_I2C_ST_READ_N    = 5,
   DEV_I2C_ST_STOP      = 6,
 
-  DEV_I2C_ST_NONE,
-  DEV_I2C_ST_COUNT = DEV_I2C_ST_NONE
+  DEV_I2C_ST_IDLE,
+  DEV_I2C_ST_COUNT = DEV_I2C_ST_IDLE
 };
 
 struct stm32_i2c_context_s
@@ -574,7 +574,7 @@ DEVI2C_CTRL_TRANSFER(stm32_i2c_transfer)
           pv->tr = NULL;
 
           /* reset state. */
-          pv->state = DEV_I2C_ST_NONE;
+          pv->state = DEV_I2C_ST_IDLE;
 
           /* wait to return in slave mode. */
           /* FIXME: this is a hack that is not mentioned in the datasheet.
@@ -659,7 +659,7 @@ DEV_IRQ_EP_PROCESS(stm32_i2c_irq)
       stopped = 1;
 
       /* reset state. */
-      pv->state = DEV_I2C_ST_NONE;
+      pv->state = DEV_I2C_ST_IDLE;
 
       /* wait to return in slave mode. */
       /* FIXME: this is a hack that is not mentioned in the datasheet.
