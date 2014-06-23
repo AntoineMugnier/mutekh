@@ -131,3 +131,18 @@ DEV_DECLARE_STATIC(spi_dev, "spi0", 0, bcm2835_spi_drv, spi_dev_res);
 
 #endif
 
+#ifdef CONFIG_DRIVER_I2C_BCM2835
+
+DEV_DECLARE_STATIC_RESOURCES(i2c_dev_res, 6,
+  DEV_STATIC_RES_MEM(0x20804000, 0x20804020),
+  DEV_STATIC_RES_IRQ(0, 8+53, 0, "/icu"),
+
+  DEV_STATIC_RES_DEV_PARAM("i2c-timer", "/timer"),
+  DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+  DEV_STATIC_RES_IOMUX("scl", 0, 1, BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
+  DEV_STATIC_RES_IOMUX("sda", 0, 0, BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
+);
+
+DEV_DECLARE_STATIC(i2c_dev, "i2c", 0, bcm2835_i2c_drv, i2c_dev_res);
+
+#endif

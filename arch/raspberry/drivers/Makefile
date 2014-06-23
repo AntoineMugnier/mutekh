@@ -14,3 +14,7 @@ endif
 ifeq ($(CONFIG_DRIVER_SPI_BCM2835), defined)
 subdirs += bcm2835_spi
 endif
+
+ifeq ($(CONFIG_DRIVER_I2C_BCM2835), defined)
+subdirs += bcm2835_i2c
+endif
