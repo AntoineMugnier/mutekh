@@ -170,8 +170,8 @@ DRIVER_CLASS_TYPES(i2c_ctrl,
     @returns 0 if the configuration succeeded or a negative error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
-error_t dev_i2c_set_bit_rate(struct device_i2c_ctrl_s *i2cdev,
-                             uint32_t                 bps);
+error_t dev_i2c_config(struct device_i2c_ctrl_s     *i2cdev,
+                       struct dev_i2c_ctrl_config_s *cfg);
 
 /** Synchronous helper scan function. This function uses the scheduler
     api to put current context in wait state if the acknowledge is pending

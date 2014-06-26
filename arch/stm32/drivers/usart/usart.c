@@ -1,16 +1,16 @@
 /*
     This file is part of MutekH.
-    
+
     MutekH is free software; you can redistribute it and/or modify it
     under the terms of the GNU Lesser General Public License as
     published by the Free Software Foundation; version 2.1 of the
     License.
-    
+
     MutekH is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     Lesser General Public License for more details.
-    
+
     You should have received a copy of the GNU Lesser General Public
     License along with MutekH; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
@@ -37,11 +37,10 @@
 #include <device/class/iomux.h>
 #include <device/class/uart.h>
 
-#include <arch/stm32f4xx_rcc.h>
-#include <arch/stm32f4xx_usart.h>
-
-#include <arch/stm32f4xx_helpers.h>
-#include <arch/stm32f4xx_memory_map.h>
+#include <cpp/device/helpers.h>
+#include <arch/stm32_rcc.h>
+#include <arch/stm32_usart.h>
+#include <arch/stm32_memory_map.h>
 
 #if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
 # include <hexo/gpct_platform_hexo.h>
@@ -56,7 +55,7 @@ extern uint32_t stm32f4xx_clock_freq_apb1;
 extern uint32_t stm32f4xx_clock_freq_apb2;
 
 
-struct stm32f4xx_usart_context_s
+struct stm32_usart_context_s
 {
   /* usart controller address. */
   uintptr_t             addr;
@@ -81,10 +80,12 @@ struct stm32f4xx_usart_context_s
   struct dev_irq_ep_s   irq_ep[1];
 };
 
-static void stm32f4xx_usart_try_read(struct device_s *dev)
+
+static
+void stm32_usart_try_read(struct device_s *dev)
 {
-  struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
-  struct dev_char_rq_s              *rq;
+  struct stm32_usart_context_s *pv = dev->drv_pv;
+  struct dev_char_rq_s         *rq;
 
   while ((rq = dev_char_queue_head(&pv->read_q)))
     {
@@ -97,9 +98,9 @@ static void stm32f4xx_usart_try_read(struct device_s *dev)
 
     /* read characters if the request asked for more. */
       if (size < rq->size &&
-          STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, RXNE))
+          DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, RXNE))
         rq->data[size++] =
-          STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, DR, DATA);
+          DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, DR, DATA);
 
       /* if a data was read, then process the read request. */
       if (size)
@@ -125,28 +126,29 @@ static void stm32f4xx_usart_try_read(struct device_s *dev)
     }
 
   /* if no request need the data, discard it or save it in the read fifo. */
-  if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, RXNE))
+  if (DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, RXNE))
     {
       __unused__ uint8_t c =
-        STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, DR, DATA);
+        DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, DR, DATA);
 #if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
       usart_fifo_pushback(&pv->read_fifo, c);
 #endif
     }
 }
 
-static void stm32f4xx_usart_try_write(struct device_s *dev)
+static
+void stm32_usart_try_write(struct device_s *dev)
 {
-  struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
-  struct dev_char_rq_s              *rq;
+  struct stm32_usart_context_s *pv = dev->drv_pv;
+  struct dev_char_rq_s         *rq;
 
 #if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_STM32_USART_SWFIFO > 0
   /* try to write as much as possible data from the fifo first. */
   if (!usart_fifo_isempty(&pv->write_fifo) &&
-      STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE))
+      DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE))
     {
       uint8_t c = usart_fifo_pop(&pv->write_fifo);
-      STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, DR, DATA, c);
+      DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, DR, DATA, c);
     }
 #endif
 
@@ -164,9 +166,9 @@ static void stm32f4xx_usart_try_write(struct device_s *dev)
           /* write data if some are pending and the controller is ready for
              it. */
           if (size < rq->size &&
-              STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE))
+              DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE))
           {
-            STM32F4xx_REG_FIELD_UPDATE_DEV(
+            DEVICE_REG_FIELD_UPDATE_DEV(
               USART,
               pv->addr,
               DR,
@@ -206,7 +208,7 @@ static void stm32f4xx_usart_try_write(struct device_s *dev)
 #if defined(CONFIG_DEVICE_IRQ)
       /* wait for the next interrupt, when the controller will be ready to
          send. */
-      STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TXEIE);
+      DEVICE_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TXEIE);
       return;
 #endif
     }
@@ -219,16 +221,17 @@ static void stm32f4xx_usart_try_write(struct device_s *dev)
 # else
     if (dev_char_queue_isempty(&pv->write_q))
 # endif
-      STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, TXEIE);
+      DEVICE_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, TXEIE);
     else
-      STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TXEIE);
+      DEVICE_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TXEIE);
 #endif
 }
 
-static DEVCHAR_REQUEST(stm32f4xx_usart_request)
+static
+DEVCHAR_REQUEST(stm32_usart_request)
 {
-  struct device_s                   *dev = cdev->dev;
-  struct stm32f4xx_usart_context_s  *pv  = dev->drv_pv;
+  struct device_s              *dev = cdev->dev;
+  struct stm32_usart_context_s *pv  = dev->drv_pv;
 
   assert(rq->size);
 
@@ -247,7 +250,7 @@ static DEVCHAR_REQUEST(stm32f4xx_usart_request)
 #if defined(CONFIG_DEVICE_IRQ)
     if (empty)
 #endif
-    stm32f4xx_usart_try_read(dev);
+    stm32_usart_try_read(dev);
     break;
   }
 
@@ -259,7 +262,7 @@ static DEVCHAR_REQUEST(stm32f4xx_usart_request)
 #if defined(CONFIG_DEVICE_IRQ)
     if (empty)
 #endif
-    stm32f4xx_usart_try_write(dev);
+    stm32_usart_try_write(dev);
     break;
   }
   }
@@ -269,28 +272,29 @@ static DEVCHAR_REQUEST(stm32f4xx_usart_request)
 
 #if defined(CONFIG_DEVICE_IRQ)
 
-static DEV_IRQ_EP_PROCESS(stm32f4xx_usart_irq)
+static
+DEV_IRQ_EP_PROCESS(stm32_usart_irq)
 {
-  struct device_s                   *dev = ep->dev;
-  struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
+  struct device_s              *dev = ep->dev;
+  struct stm32_usart_context_s *pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
 
   while (1)
   {
-    uint32_t ir = STM32F4xx_REG_VALUE_DEV(USART, pv->addr, SR);
+    uint32_t ir = DEVICE_REG_VALUE_DEV(USART, pv->addr, SR);
 
     /* if the controller has no pending data and cannot send data, then
      * break and wait for another interrupt.
      */
-    if ((ir & ( STM32F4xx_USART_SR_RXNE | STM32F4xx_USART_SR_TXE )) == 0)
+    if ((ir & ( STM32_USART_SR_RXNE | STM32_USART_SR_TXE )) == 0)
       break;
 
-    if (ir & STM32F4xx_USART_SR_TXE)
-      stm32f4xx_usart_try_write(dev);
+    if (ir & STM32_USART_SR_TXE)
+      stm32_usart_try_write(dev);
 
-    if (ir & STM32F4xx_USART_SR_RXNE)
-      stm32f4xx_usart_try_read(dev);
+    if (ir & STM32_USART_SR_RXNE)
+      stm32_usart_try_read(dev);
 
 #if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
     if (usart_fifo_isempty(&pv->write_fifo) &&
@@ -307,13 +311,14 @@ static DEV_IRQ_EP_PROCESS(stm32f4xx_usart_irq)
 
 #endif
 
-static const struct driver_char_s stm32f4xx_usart_char_drv =
+static const struct driver_char_s stm32_usart_char_cls =
 {
-  .class_       = DRIVER_CLASS_CHAR,
-  .f_request    = stm32f4xx_usart_request
+  .class_    = DRIVER_CLASS_CHAR,
+  .f_request = stm32_usart_request
 };
 
-static error_t stm32f4xx_usart_check_config(struct dev_uart_config_s *cfg)
+static
+error_t stm32_usart_check_config(struct dev_uart_config_s *cfg)
 {
   /* check data bits. */
   switch (cfg->data_bits)
@@ -327,7 +332,7 @@ static error_t stm32f4xx_usart_check_config(struct dev_uart_config_s *cfg)
     }
 
   /* check stop bits (all supported). */
-  
+
   /* check parity (not supported). */
   switch (cfg->parity)
     {
@@ -345,13 +350,14 @@ static error_t stm32f4xx_usart_check_config(struct dev_uart_config_s *cfg)
   return 0;
 }
 
-static error_t stm32f4xx_usart_config_simple(struct device_s          *dev,
-                                             struct dev_uart_config_s *cfg)
+static
+error_t stm32_usart_config_simple(struct device_s          *dev,
+                                  struct dev_uart_config_s *cfg)
 {
-  struct stm32f4xx_usart_context_s *pv  = dev->drv_pv;
+  struct stm32_usart_context_s *pv = dev->drv_pv;
 
   /* check baudrate. */
-  error_t err = stm32f4xx_usart_check_config(cfg);
+  error_t err = stm32_usart_check_config(cfg);
   if (err)
     return err;
 
@@ -362,11 +368,11 @@ static error_t stm32f4xx_usart_config_simple(struct device_s          *dev,
     break;
 
   case DEV_UART_DATA_8_BITS:
-    STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, M, 8_BITS);
+    DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, M, 8_BITS);
     break;
 
   case DEV_UART_DATA_9_BITS:
-    STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, M, 9_BITS);
+    DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, M, 9_BITS);
     break;
   }
 
@@ -376,11 +382,11 @@ static error_t stm32f4xx_usart_config_simple(struct device_s          *dev,
     break;
 
   case DEV_UART_STOP_1_BIT:
-    STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR2, STOP, 1_BIT);
+    DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR2, STOP, 1_BIT);
     break;
 
   case DEV_UART_STOP_2_BITS:
-    STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR2, STOP, 2_BITS);
+    DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR2, STOP, 2_BITS);
     break;
   }
 
@@ -390,7 +396,7 @@ static error_t stm32f4xx_usart_config_simple(struct device_s          *dev,
     break;
 
   case DEV_UART_PARITY_NONE:
-    STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, PCE, NONE);
+    DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, PCE, NONE);
     break;
   }
 
@@ -402,44 +408,45 @@ static error_t stm32f4xx_usart_config_simple(struct device_s          *dev,
     assert(0 && "unknown USART base address");
     break;
 
-  case STM32F4xx_USART1_ADDR:
-  case STM32F4xx_USART6_ADDR:
+  case STM32_USART1_ADDR:
+  case STM32_USART6_ADDR:
     brr = ((int)(stm32f4xx_clock_freq_apb2 / 115200.0 * 2 + 0.5)) & 0xffff;
     break;
 
-  case STM32F4xx_USART2_ADDR:
+  case STM32_USART2_ADDR:
     brr = ((int)(stm32f4xx_clock_freq_apb1 / 115200.0 * 2 + 0.5)) & 0xffff;
     break;
   }
 
   /* when using oversampling 8, the brr[4] bit must be 0. */
   brr &= ~(1 << 4);
-  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, BRR, brr);
+  DEVICE_REG_UPDATE_DEV(USART, pv->addr, BRR, brr);
 
   return 0;
 }
 
-static DEVUART_CONFIG(stm32f4xx_usart_config)
+static
+DEVUART_CONFIG(stm32_usart_config)
 {
-  struct device_s                  *dev = udev->dev;
-  struct stm32f4xx_usart_context_s *pv  = dev->drv_pv;
+  struct device_s              *dev = udev->dev;
+  struct stm32_usart_context_s *pv  = dev->drv_pv;
 
   /* wait for previous TX to complete. */
-  if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, TE))
+  if (DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, TE))
     {
-      while (!STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC));
-      STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, SR, TC);
+      while (!DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC));
+      DEVICE_REG_FIELD_CLR_DEV(USART, pv->addr, SR, TC);
     }
 
   /* disable the usart. */
-  bool_t enabled = STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, UE);
-  STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, UE);
+  bool_t enabled = DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, UE);
+  DEVICE_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, UE);
 
-  error_t err = stm32f4xx_usart_config_simple(dev, cfg);
+  error_t err = stm32_usart_config_simple(dev, cfg);
 
   /* (re-)enable the usart. */
   if (!err || enabled)
-    STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, UE);
+    DEVICE_REG_FIELD_SET_DEV(USART, pv->addr, CR1, UE);
 
 #if defined(CONFIG_DEBUG)
   if (err && enabled)
@@ -449,28 +456,28 @@ static DEVUART_CONFIG(stm32f4xx_usart_config)
   return err;
 }
 
-static const struct driver_uart_s stm32f4xx_usart_uart_drv =
+static const struct driver_uart_s stm32_usart_uart_cls =
 {
   .class_   = DRIVER_CLASS_UART,
-  .f_config = &stm32f4xx_usart_config
+  .f_config = &stm32_usart_config
 };
 
-static DEV_INIT(stm32f4xx_usart_init);
-static DEV_CLEANUP(stm32f4xx_usart_cleanup);
+static DEV_INIT(stm32_usart_init);
+static DEV_CLEANUP(stm32_usart_cleanup);
 
-const struct driver_s stm32f4xx_usart_drv =
+const struct driver_s stm32_usart_drv =
 {
-  .desc         = "STM32F4xx USART",
-  .f_init       = stm32f4xx_usart_init,
-  .f_cleanup    = stm32f4xx_usart_cleanup,
-  .classes      = {
-    &stm32f4xx_usart_char_drv,
-    &stm32f4xx_usart_uart_drv,
+  .desc      = "STM32 USART",
+  .f_init    = stm32_usart_init,
+  .f_cleanup = stm32_usart_cleanup,
+  .classes   = {
+    &stm32_usart_char_cls,
+    &stm32_usart_uart_cls,
     0
   }
 };
 
-REGISTER_DRIVER(stm32f4xx_usart_drv);
+REGISTER_DRIVER(stm32_usart_drv);
 
 /* ****************************************************************************
  *
@@ -481,9 +488,10 @@ REGISTER_DRIVER(stm32f4xx_usart_drv);
  * pins.
  */
 
-static inline void stm32f4xx_usart_clock_init(struct device_s *dev)
+static inline
+void stm32_usart_clock_init(struct device_s *dev)
 {
-  struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
+  struct stm32_usart_context_s *pv = dev->drv_pv;
 
   assert(pv != 0);
 
@@ -492,25 +500,26 @@ static inline void stm32f4xx_usart_clock_init(struct device_s *dev)
   default:
     break;
 
-  case STM32F4xx_USART1_ADDR:
-    STM32F4xx_REG_FIELD_SET(RCC, , APB2ENR, USART1EN);
+  case STM32_USART1_ADDR:
+    DEVICE_REG_FIELD_SET(RCC, , APB2ENR, USART1EN);
     break;
 
-  case STM32F4xx_USART2_ADDR:
-    STM32F4xx_REG_FIELD_SET(RCC, , APB1ENR, USART2EN);
+  case STM32_USART2_ADDR:
+    DEVICE_REG_FIELD_SET(RCC, , APB1ENR, USART2EN);
     break;
 
-  case STM32F4xx_USART6_ADDR:
-    STM32F4xx_REG_FIELD_SET(RCC, , APB2ENR, USART6EN);
+  case STM32_USART6_ADDR:
+    DEVICE_REG_FIELD_SET(RCC, , APB2ENR, USART6EN);
     break;
   }
 }
 
 /* ************************************************************************* */
 
-static DEV_INIT(stm32f4xx_usart_init)
+static
+DEV_INIT(stm32_usart_init)
 {
-  struct stm32f4xx_usart_context_s  *pv;
+  struct stm32_usart_context_s *pv;
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
@@ -524,16 +533,16 @@ static DEV_INIT(stm32f4xx_usart_init)
     goto err_mem;
 
   /* wait for previous TX to complete. */
-  if (STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, TE))
+  if (DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, CR1, TE))
     {
-      while (!STM32F4xx_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC));
-      STM32F4xx_REG_FIELD_CLR_DEV(USART, pv->addr, SR, TC);
+      while (!DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TC));
+      DEVICE_REG_FIELD_CLR_DEV(USART, pv->addr, SR, TC);
     }
 
   /* disable and reset the usart. */
-  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR1, 0);
-  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR2, 0);
-  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR3, 0);
+  DEVICE_REG_UPDATE_DEV(USART, pv->addr, CR1, 0);
+  DEVICE_REG_UPDATE_DEV(USART, pv->addr, CR2, 0);
+  DEVICE_REG_UPDATE_DEV(USART, pv->addr, CR3, 0);
 
   /* initialize request queues. */
   dev_char_queue_init(&pv->read_q);
@@ -547,7 +556,7 @@ static DEV_INIT(stm32f4xx_usart_init)
 #endif
 
   /* configure clocks. */
-  stm32f4xx_usart_clock_init(dev);
+  stm32_usart_clock_init(dev);
 
   /* configure gpio. */
   iomux_demux_t loc[2];
@@ -558,12 +567,12 @@ static DEV_INIT(stm32f4xx_usart_init)
     goto err_fifo;
 
   if (loc[0] != IOMUX_INVALID_DEMUX)
-    STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, RE);
+    DEVICE_REG_FIELD_SET_DEV(USART, pv->addr, CR1, RE);
   if (loc[1] != IOMUX_INVALID_DEMUX)
-    STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TE);
+    DEVICE_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TE);
 
   /* configure over-sampling. */
-  STM32F4xx_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, OVER8, 8);
+  DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, OVER8, 8);
 
   /* check for default configuration resource. */
   struct dev_resource_s *r = device_res_get(dev, DEV_RES_UART, 0);
@@ -581,7 +590,7 @@ static DEV_INIT(stm32f4xx_usart_init)
           .half_duplex = r->u.uart.half_duplex
         };
 
-      err = stm32f4xx_usart_config_simple(dev, &cfg);
+      err = stm32_usart_config_simple(dev, &cfg);
       if (err)
         printk("uart: failed to configure uart with default configuration.\n");
     }
@@ -591,7 +600,7 @@ static DEV_INIT(stm32f4xx_usart_init)
     dev,
     pv->irq_ep,
     1,
-    &stm32f4xx_usart_irq,
+    &stm32_usart_irq,
     DEV_IRQ_SENSE_HIGH_LEVEL
   );
 
@@ -599,15 +608,15 @@ static DEV_INIT(stm32f4xx_usart_init)
     goto err_fifo;
 
   /* enable RX and TX irqs. */
-  STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, RXNEIE);
+  DEVICE_REG_FIELD_SET_DEV(USART, pv->addr, CR1, RXNEIE);
 #endif
 
   /* enable usart if configured. */
   if (!err)
-    STM32F4xx_REG_FIELD_SET_DEV(USART, pv->addr, CR1, UE);
+    DEVICE_REG_FIELD_SET_DEV(USART, pv->addr, CR1, UE);
 
   /* link the driver. */
-  dev->drv = &stm32f4xx_usart_drv;
+  dev->drv = &stm32_usart_drv;
 
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
@@ -628,14 +637,14 @@ err_mem:
   return -1;
 }
 
-static DEV_CLEANUP(stm32f4xx_usart_cleanup)
+static DEV_CLEANUP(stm32_usart_cleanup)
 {
-  struct stm32f4xx_usart_context_s  *pv = dev->drv_pv;
+  struct stm32_usart_context_s *pv = dev->drv_pv;
 
   /* disable and reset the usart. */
-  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR1, 0);
-  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR2, 0);
-  STM32F4xx_REG_UPDATE_DEV(USART, pv->addr, CR3, 0);
+  DEVICE_REG_UPDATE_DEV(USART, pv->addr, CR1, 0);
+  DEVICE_REG_UPDATE_DEV(USART, pv->addr, CR2, 0);
+  DEVICE_REG_UPDATE_DEV(USART, pv->addr, CR3, 0);
 
 #if defined(CONFIG_DEVICE_IRQ)
   device_irq_source_unlink(dev, pv->irq_ep, 1);

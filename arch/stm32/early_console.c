@@ -26,7 +26,7 @@
 #include <hexo/endian.h>
 #include <mutek/printk.h>
 
-#include <arch/stm32f4xx_regs.h>
+#include <arch/stm32_regs.h>
 
 #ifdef CONFIG_STM32_EARLY_CONSOLE_UART
 
@@ -37,9 +37,9 @@ static inline void stm32_usart_tx_wait_ready()
   reg_t status;
   do
     {
-      status = STM32F4xx_REG_VALUE(USART, 2, SR);
+      status = DEVICE_REG_VALUE(USART, 2, SR);
     }
-  while ((status & STM32F4xx_USART_SR_TXE) == 0);
+  while ((status & STM32_USART_SR_TXE) == 0);
 }
 
 static PRINTF_OUTPUT_FUNC(early_console_out)
@@ -54,10 +54,10 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
       /* write the byte to the data register of the USART. */
       if (str[i] == '\n')
       {
-        STM32F4xx_REG_UPDATE(USART, 2, DR, '\r');
+        DEVICE_REG_UPDATE(USART, 2, DR, '\r');
         stm32_usart_tx_wait_ready();
       }
-      STM32F4xx_REG_UPDATE(USART, 2, DR, str[i]);
+      DEVICE_REG_UPDATE(USART, 2, DR, str[i]);
     }
 }
 
@@ -74,26 +74,26 @@ void stm32_early_console_init()
   cpu_mem_write_32(0x40023840, (1 << 17)); /* enable APB1 USART2. */
 
   /* configure PA2/PA3 as TX/RX. */
-  cfg = STM32F4xx_REG_VALUE(GPIO, A, MODER);
-  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 2, ALT, cfg);
-  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 3, ALT, cfg);
-  STM32F4xx_REG_UPDATE(GPIO, A, MODER, cfg);
+  cfg = DEVICE_REG_VALUE(GPIO, A, MODER);
+  DEVICE_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 2, ALT, cfg);
+  DEVICE_REG_FIELD_IDX_UPDATE_VAR(GPIO, MODER, MODE, 3, ALT, cfg);
+  DEVICE_REG_UPDATE(GPIO, A, MODER, cfg);
 
-  cfg = STM32F4xx_REG_VALUE(GPIO, A, AFRL);
-  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRL, AF, 2, 7, cfg);
-  STM32F4xx_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRL, AF, 3, 7, cfg);
-  STM32F4xx_REG_UPDATE(GPIO, A, AFRL, cfg);
+  cfg = DEVICE_REG_VALUE(GPIO, A, AFRL);
+  DEVICE_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRL, AF, 2, 7, cfg);
+  DEVICE_REG_FIELD_IDX_UPDATE_VAR(GPIO, AFRL, AF, 3, 7, cfg);
+  DEVICE_REG_UPDATE(GPIO, A, AFRL, cfg);
 
   /* wait for the last byte to be send just in case. */
   stm32_usart_tx_wait_ready();
 
   /* deactivate the USART and reset configuration. */
-  STM32F4xx_REG_UPDATE(USART, 2, CR1, 0);
-  STM32F4xx_REG_UPDATE(USART, 2, CR2, 0);
-  STM32F4xx_REG_UPDATE(USART, 2, CR3, 0);
+  DEVICE_REG_UPDATE(USART, 2, CR1, 0);
+  DEVICE_REG_UPDATE(USART, 2, CR2, 0);
+  DEVICE_REG_UPDATE(USART, 2, CR3, 0);
 
   /* configure baud rate tp 9600 Kbps. */
-  STM32F4xx_REG_UPDATE(USART, 2, BRR,
+  DEVICE_REG_UPDATE(USART, 2, BRR,
     (int)(
       stm32f4xx_clock_freq_apb1 / CONFIG_STM32_EARLY_CONSOLE_UART_BAUDRATE
       + 0.5
@@ -101,23 +101,23 @@ void stm32_early_console_init()
   );
 
   /* oversampling x16. */
-  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, CR1, OVER8, 16, cr1);
+  DEVICE_REG_FIELD_UPDATE_VAR(USART, CR1, OVER8, 16, cr1);
 
   /* configure USART 8 bits, no parity, 1 stop bit. */
-  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, CR1, M, 8_BITS, cr1);
-  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, CR1, PCE, NONE, cr1);
-  STM32F4xx_REG_FIELD_UPDATE_VAR(USART, CR2, STOP, 1_BIT, cr2);
+  DEVICE_REG_FIELD_UPDATE_VAR(USART, CR1, M, 8_BITS, cr1);
+  DEVICE_REG_FIELD_UPDATE_VAR(USART, CR1, PCE, NONE, cr1);
+  DEVICE_REG_FIELD_UPDATE_VAR(USART, CR2, STOP, 1_BIT, cr2);
 
   /* enable TX. */
-  STM32F4xx_REG_FIELD_SET_VAR(USART, CR1, TE, cr1);
+  DEVICE_REG_FIELD_SET_VAR(USART, CR1, TE, cr1);
 
   /* propagate the configuration. */
-  STM32F4xx_REG_UPDATE(USART, 2, CR1, cr1);
-  STM32F4xx_REG_UPDATE(USART, 2, CR2, cr2);
+  DEVICE_REG_UPDATE(USART, 2, CR1, cr1);
+  DEVICE_REG_UPDATE(USART, 2, CR2, cr2);
 
   /* enable USART2. */
-  STM32F4xx_REG_FIELD_SET_VAR(USART, CR1, UE, cr1);
-  STM32F4xx_REG_UPDATE(USART, 2, CR1, cr1);
+  DEVICE_REG_FIELD_SET_VAR(USART, CR1, UE, cr1);
+  DEVICE_REG_UPDATE(USART, 2, CR1, cr1);
 
   printk_set_output(early_console_out, NULL);
 }
