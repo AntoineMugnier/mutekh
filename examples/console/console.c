@@ -60,15 +60,13 @@ void main()
 {
   struct termui_term_s tm;
   struct termui_console_s con;
-  TERMUI_CON_EMPTY_ROOT(root);
 
   assert(device_check_accessor(&console_dev));
 
   termui_dev_io_init(&tm, &console_dev, "xterm");
-  termui_con_init(&con, &tm, &root);
+  termui_con_init(&con, &tm, root_group);
 
   termui_con_set_prompt(&con, "[%31Aconsole%A] ");
-  termui_con_register(&con, root_group);
 
   termui_term_printf(&tm, "libtermui console ui example. You may type `list' and `help'.\n\n");
 
