@@ -105,4 +105,10 @@
 # define config_depend_or2_inline(token1, token2, proto, ...) static inline proto __VA_ARGS__
 #endif
 
+#ifndef FIRST_FIELD_ASSERT
+#define FIRST_FIELD_ASSERT(struct_name, field)                        \
+  typedef int field##_must_be_the_first_field_in_struct_##struct_name \
+  [-(int)__builtin_offsetof(struct struct_name, field)];
+#endif
+
 #endif /* HEXO_DECLS_H_ */
