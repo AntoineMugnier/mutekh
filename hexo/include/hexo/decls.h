@@ -107,8 +107,8 @@
 
 #ifndef FIRST_FIELD_ASSERT
 #define FIRST_FIELD_ASSERT(struct_name, field)                        \
-  typedef int field##_must_be_the_first_field_in_struct_##struct_name \
-  [-(int)__builtin_offsetof(struct struct_name, field)];
+  typedef char field##_must_be_the_first_field_in_struct_##struct_name \
+  [-(char)!!__builtin_offsetof(struct struct_name, field)];
 #endif
 
 #endif /* HEXO_DECLS_H_ */
