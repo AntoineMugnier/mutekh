@@ -38,20 +38,25 @@ CPUCFLAGS += -mfpu=vfp
 endif
 
 ifeq ($(CONFIG_CPU_ARM_ARCH_PROFILE_A), defined)
- ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 4)
+ ifeq ($(CONFIG_COMPILE_MCPU), undefined)
+  ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 4)
 CPUCFLAGS += -march=armv4t
- endif
- ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 5)
+  endif
+  ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 5)
 CPUCFLAGS += -march=armv5
- endif
- ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 6)
+  endif
+  ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 6)
 CPUCFLAGS += -march=armv6
- endif
- ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 7)
+  endif
+  ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 7)
 CPUCFLAGS += -march=armv7-a
- endif
- ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 8)
+  endif
+  ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 8)
 CPUCFLAGS += -march=armv8-a
+  endif
+ endif
+
+ ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 8)
 LIBGCC_DIR += /v8a
  endif
 
@@ -62,12 +67,21 @@ LIBGCC_DIR += /thumb
 endif
 
 ifeq ($(CONFIG_CPU_ARM_ARCH_PROFILE_M), defined)
+CPUCFLAGS += -mthumb
+
+ ifeq ($(CONFIG_COMPILE_MCPU), undefined)
+  ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 6)
+CPUCFLAGS += -march=armv6-m
+  endif
+  ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 7)
+CPUCFLAGS += -march=armv7-m
+  endif
+ endif
+
  ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 6)
-CPUCFLAGS += -march=armv6-m -mthumb
 LIBGCC_DIR += /v6m/thumb
  endif
  ifeq ($(CONFIG_CPU_ARM_ARCH_VERSION), 7)
-CPUCFLAGS += -march=armv7-m -mthumb
 LIBGCC_DIR += /v7m/thumb
  endif
 endif
