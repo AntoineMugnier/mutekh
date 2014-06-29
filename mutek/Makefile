@@ -12,6 +12,10 @@ ifeq ($(CONFIG_MUTEK_CONSOLE), defined)
 objs += console.o
 endif
 
+ifeq ($(CONFIG_MUTEK_SHELL), defined)
+objs += shell.o
+endif
+
 ifeq ($(CONFIG_MUTEK_MEM_REGION), defined)
 objs += mem_region.o					
 endif

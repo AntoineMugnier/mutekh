@@ -1,4 +1,7 @@
 
+#define TYPES_H_
+#include <cpu/hexo/types.h>
+
 #define __CPU_NAME_DECL(t, x) t##_##x
 #define _CPU_NAME_DECL(t, x) __CPU_NAME_DECL(t, x)
 #define CPU_NAME_DECL(x) _CPU_NAME_DECL(CONFIG_CPU_NAME, x)
@@ -142,6 +145,14 @@ SECTIONS
 		dev_drivers_table = .;
 		KEEP(*(.drivers))
 		dev_drivers_table_end = .;
+#ifdef CONFIG_MUTEK_SHELL
+                shell_cmd_table = .;
+		KEEP(*(.shell))
+                LONG(0);        /* NULL terminated array */
+# if INT_PTR_SIZE == 64
+                LONG(0);
+# endif
+#endif
 	}
 
 /**************************************** data */
