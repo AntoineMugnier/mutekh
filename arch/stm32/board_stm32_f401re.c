@@ -159,7 +159,7 @@ DEV_DECLARE_STATIC(
   i2c1_dev,
   "i2c1",
   0,
-  stm32_i2c_drv,
+  stm32_i2c_ctrl_drv,
   i2c1_dev_res
 );
 
