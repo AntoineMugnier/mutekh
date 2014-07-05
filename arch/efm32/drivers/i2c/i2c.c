@@ -317,7 +317,7 @@ DEVI2C_CTRL_TRANSFER(efm32_i2c_transfer)
 
 static const struct driver_i2c_ctrl_s efm32_i2c_drv_cls =
 {
-  .class_       = DRIVER_CLASS_I2C,
+  .class_       = DRIVER_CLASS_I2C_CTRL,
   .f_config     = &efm32_i2c_config,
   .f_transfer   = &efm32_i2c_transfer,
 };

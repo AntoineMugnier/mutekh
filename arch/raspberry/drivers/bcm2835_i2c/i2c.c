@@ -394,7 +394,7 @@ DEVI2C_CTRL_TRANSFER(bcm2835_i2c_transfer)
 
 static const struct driver_i2c_ctrl_s bcm2835_i2c_drv_cls =
 {
-  .class_       = DRIVER_CLASS_I2C,
+  .class_       = DRIVER_CLASS_I2C_CTRL,
   .f_config     = &bcm2835_i2c_config,
   .f_transfer   = &bcm2835_i2c_transfer,
 };

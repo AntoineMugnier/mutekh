@@ -1,16 +1,16 @@
 /*
     This file is part of MutekH.
-    
+
     MutekH is free software; you can redistribute it and/or modify it
     under the terms of the GNU Lesser General Public License as
     published by the Free Software Foundation; version 2.1 of the
     License.
-    
+
     MutekH is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     Lesser General Public License for more details.
-    
+
     You should have received a copy of the GNU Lesser General Public
     License along with MutekH; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
@@ -20,7 +20,7 @@
 
 */
 
-/**                                                                 
+/**
  * @file
  * @module {Devices support library}
  * @short Driver structures and driver API classes
@@ -54,17 +54,19 @@ enum driver_class_e
   DRIVER_CLASS_GPIO,
   DRIVER_CLASS_IOMUX,
   DRIVER_CLASS_UART,
-  DRIVER_CLASS_I2C,
+  DRIVER_CLASS_I2C_CTRL,
+  DRIVER_CLASS_I2C_DEV,
   DRIVER_CLASS_MEM,
   DRIVER_CLASS_CPU,
   DRIVER_CLASS_Sys_Last = DRIVER_CLASS_CPU, //< last MutekH reserved value in use
   DRIVER_CLASS_User_First = 128,            //< First user defined device class id
 };
 
-#define DRIVER_CLASS_NAMES                                                    \
-  "None", "Block", "Char", "Enumerator", "FrameBuffer",                       \
-  "ICU", "DMA", "Input", "Network", "Sound",                                  \
-  "Timer", "SPI Controller" , "LCD", "Clock", "GPIO", "IoMux", "UART", "I2C", \
+#define DRIVER_CLASS_NAMES                                             \
+  "None", "Block", "Char", "Enumerator", "FrameBuffer",                \
+  "ICU", "DMA", "Input", "Network", "Sound",                           \
+  "Timer", "SPI Controller" , "LCD", "Clock", "GPIO", "IoMux", "UART", \
+    "I2C Controller", "I2C Device",                                         \
   "Memory", "CPU"
 
 enum dev_enum_type_e
