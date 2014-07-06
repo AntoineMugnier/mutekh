@@ -208,6 +208,8 @@ static const struct driver_cpu_s  x86_cpu_drv =
         Timer driver part
 ************************************************************************/
 
+#ifdef CONFIG_CPU_X86_TIMER_CYCLECOUNTER
+
 static DEVTIMER_START_STOP(x86_timer_start_stop)
 {
   return 0;
@@ -253,10 +255,13 @@ static const struct driver_timer_s  x86_timer_drv =
   .class_          = DRIVER_CLASS_TIMER,
   .f_start_stop    = x86_timer_start_stop,
   .f_get_value     = x86_timer_get_value,
+  .f_get_freq      = dev_timer_drv_get_freq,
   .f_resolution    = x86_timer_resolution,
   .f_request       = (devtimer_request_t*)&dev_driver_notsup_fcn,
   .f_cancel        = (devtimer_request_t*)&dev_driver_notsup_fcn,
 };
+
+#endif
 
 /************************************************************************/
 
@@ -284,7 +289,9 @@ const struct driver_s  x86_drv =
 #ifdef CONFIG_DEVICE_IRQ
     &x86_icu_drv,
 #endif
+#ifdef CONFIG_CPU_X86_TIMER_CYCLECOUNTER
     &x86_timer_drv,
+#endif
     0
   }
 };

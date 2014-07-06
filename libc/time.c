@@ -82,23 +82,20 @@ void libc_time_initsmp()
   if (DEVICE_OP(&libc_timer_dev, resolution, &r, &m))
     goto err_stop;
 
-  uint64_t freq = CONFIG_DEVICE_TIMER_DEFAULT_FREQ;
-  if (!device_res_get_uint64(libc_timer_dev.dev, DEV_RES_FREQ, libc_timer_dev.number, &freq))
-    freq >>= 24;
-
-  if (freq == 0)
+  struct dev_freq_s freq;
+  if (DEVICE_OP(tdev, get_freq, &f))
     goto err_stop;
 
-  libc_time_sec_num = r;
-  libc_time_sec_den = freq;
+  libc_time_sec_num = r * freq.denom;
+  libc_time_sec_den = freq.num;
   adjust_frac(&libc_time_sec_num, &libc_time_sec_den);
 
-  libc_time_usec_num = 1000000ULL * r;
-  libc_time_usec_den = freq;
+  libc_time_usec_num = 1000000ULL * r * freq.denom;
+  libc_time_usec_den = freq.num;
   adjust_frac(&libc_time_usec_num, &libc_time_usec_den);
 
-  libc_time_nsec_num = 1000000000ULL * r;
-  libc_time_nsec_den = freq;
+  libc_time_nsec_num = 1000000000ULL * r * freq.denom;
+  libc_time_nsec_den = freq.num;
   adjust_frac(&libc_time_nsec_num, &libc_time_nsec_den);
 
   uint64_t w = m < libc_time_sec_den

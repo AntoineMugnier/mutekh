@@ -253,6 +253,7 @@ const struct driver_timer_s  bcm2835_systimer_timer_drv =
   .f_cancel       = bcm2835_systimer_cancel,
   .f_start_stop   = bcm2835_systimer_state_start_stop,
   .f_get_value    = bcm2835_systimer_get_value,
+  .f_get_freq     = dev_timer_drv_get_freq,
   .f_resolution   = bcm2835_systimer_resolution,
 };
 

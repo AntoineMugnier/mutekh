@@ -181,6 +181,8 @@ const struct driver_cpu_s  lm32_cpu_drv =
         Timer driver part
 ************************************************************************/
 
+#ifdef CONFIG_CPU_LM32_TIMER_CYCLECOUNTER
+
 static DEVTIMER_START_STOP(lm32_timer_start_stop)
 {
   return 0;
@@ -225,10 +227,13 @@ static const struct driver_timer_s  lm32_timer_drv =
   .class_          = DRIVER_CLASS_TIMER,
   .f_start_stop    = lm32_timer_start_stop,
   .f_get_value     = lm32_timer_get_value,
+  .f_get_freq      = dev_timer_drv_get_freq,
   .f_resolution    = lm32_timer_resolution,
   .f_request       = (devtimer_request_t*)&dev_driver_notsup_fcn,
   .f_cancel        = (devtimer_request_t*)&dev_driver_notsup_fcn,
 };
+
+#endif
 
 /************************************************************************/
 
@@ -256,7 +261,9 @@ const struct driver_s  lm32_drv =
 #ifdef CONFIG_DEVICE_IRQ
     &lm32_icu_drv,
 #endif
+#ifdef CONFIG_CPU_LM32_TIMER_CYCLECOUNTER
     &lm32_timer_drv,
+#endif
     0
   }
 };

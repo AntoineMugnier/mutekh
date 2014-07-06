@@ -371,6 +371,7 @@ const struct driver_timer_s  enst_rttimer_timer_drv =
   .f_cancel       = enst_rttimer_cancel,
   .f_start_stop   = enst_rttimer_state_start_stop,
   .f_get_value    = enst_rttimer_get_value,
+  .f_get_freq     = dev_timer_drv_get_freq,
   .f_resolution   = enst_rttimer_resolution,
 };
 

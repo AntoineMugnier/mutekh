@@ -278,7 +278,7 @@ static DEVTIMER_GET_VALUE(arm_timer_get_value)
     {
 #ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
     case 0:
-      if (!pv->systick_start)
+      if (pv->systick_start >= 0)
         err = -EBUSY;
       else
         {
@@ -296,7 +296,7 @@ static DEVTIMER_GET_VALUE(arm_timer_get_value)
 
 # ifdef CONFIG_DEVICE_IRQ
     case 1:
-      if (!pv->systick_start)
+      if (pv->systick_start <= 0)
         err = -EBUSY;
       else
         *value = pv->systick_value;
@@ -411,6 +411,7 @@ const struct driver_timer_s  arm_m_timer_drv =
   .f_cancel        = arm_timer_cancel,
   .f_start_stop    = arm_timer_start_stop,
   .f_get_value     = arm_timer_get_value,
+  .f_get_freq      = dev_timer_drv_get_freq,
   .f_resolution    = arm_timer_resolution,
 };
 

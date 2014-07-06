@@ -82,7 +82,6 @@ DEV_DECLARE_STATIC(leuart0_dev, "uart0", 0, efm32_leuart_drv, leuart0_dev_res);
 
 DEV_DECLARE_STATIC_RESOURCES(timer0_dev_res, 3,
   DEV_STATIC_RES_MEM(0x40010000, 0x40010400),
-  DEV_STATIC_RES_FREQ(14000000 << 24),
   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_TIMER0, 0, "/cpu"),
 );
 
@@ -96,7 +95,6 @@ DEV_DECLARE_STATIC(timer0_dev, "timer0", 0, efm32_timer_drv, timer0_dev_res);
 
 DEV_DECLARE_STATIC_RESOURCES(rtc_dev_res, 3,
   DEV_STATIC_RES_MEM(0x40080000, 0x40080400),
-  DEV_STATIC_RES_FREQ((uint64_t)32768 << 24),
   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_RTC, 0, "/cpu"),
 );
 
@@ -122,7 +120,6 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, efm32_gpio_drv, gpio_dev_res);
 DEV_DECLARE_STATIC_RESOURCES(i2c_dev_res, 6,
     DEV_STATIC_RES_MEM(0x4000a000, 0x4000a400),
     DEV_STATIC_RES_IRQ(0, EFM32_IRQ_I2C0, 0, "/cpu"),
-    DEV_STATIC_RES_FREQ((uint64_t)28000000 << 24),
 
     DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
 

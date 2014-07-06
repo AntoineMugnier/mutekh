@@ -192,7 +192,7 @@ static DEV_INIT(arm_init)
 #ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
   pv->systick_start = 0;
   dev_timer_queue_init(&pv->systick_queue);
-  pv->systick_period = CONFIG_DEVICE_TIMER_DEFAULT_FREQ / 10; /* FIXME */
+  pv->systick_period = CONFIG_CPU_ARM_TIMER_SYSTICK_PERIOD;
 # ifdef CONFIG_DEVICE_IRQ
   /* enable systick in NVIC */
   cpu_mem_write_32(0xe000e100, endian_le32(1 << 15));

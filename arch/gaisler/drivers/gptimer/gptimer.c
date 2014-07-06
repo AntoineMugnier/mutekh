@@ -406,6 +406,7 @@ const struct driver_timer_s  gptimer_timer_drv =
   .f_request      = gptimer_request,
   .f_start_stop   = gptimer_state_start_stop,
   .f_get_value    = gptimer_get_value,
+  .f_get_freq     = dev_timer_drv_get_freq,
   .f_resolution   = gptimer_resolution,
 };
 

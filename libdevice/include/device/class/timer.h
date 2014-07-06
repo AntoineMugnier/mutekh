@@ -48,7 +48,7 @@ typedef uint64_t dev_timer_value_t;
 /** Timer relative value type */
 typedef uint32_t dev_timer_delay_t;
 
-struct dev_timer_rq_s;
+struct dev_freq_s;
 
 /** Timer request @csee devtimer_request_t */
 struct dev_timer_rq_s
@@ -163,6 +163,20 @@ typedef DEVTIMER_START_STOP(devtimer_start_stop_t);
 typedef DEVTIMER_GET_VALUE(devtimer_get_value_t);
 
 
+
+/** @see #devtimer_get_freq_t */
+#define DEVTIMER_GET_FREQ(n)	error_t (n) (struct device_timer_s *tdev, \
+                                             struct dev_freq_s *freq)
+
+/**
+   @This reads the current timer frequency. @This may return @tt -ENOTSUP
+   if the frequency is not known.
+
+   @This is mandatory.
+*/
+typedef DEVTIMER_GET_FREQ(devtimer_get_freq_t);
+
+
 /** Timer device resolution type */
 typedef uint32_t dev_timer_res_t;
 
@@ -214,18 +228,20 @@ DRIVER_CLASS_TYPES(timer,
                    devtimer_request_t *f_cancel;
                    devtimer_start_stop_t *f_start_stop;
                    devtimer_get_value_t *f_get_value;
+                   devtimer_get_freq_t *f_get_freq;
                    devtimer_resolution_t *f_resolution;
                    );
+
+/** @This is a default implementation of the @ref devtimer_get_freq_t
+    timer driver API which relies on @ref DEV_RES_FREQ resource
+    entries of the device. For devices with multiple timer instances,
+    multiple frequency resource entries are expected. */
+DEVTIMER_GET_FREQ(dev_timer_drv_get_freq);
 
 /** @This initializes a timer delay from the given delay value in
     seconds unit. The delay is specified in seconds when r_unit is 1,
     in msec when r_unit is 1000 and so on. Actual delay in timer units
     is computed from timer frequency and current timer resolution.
-
-    @This function uses the frequency resource entry of the device or
-    the value of the @ref #CONFIG_DEVICE_TIMER_DEFAULT_FREQ macro if
-    no such entry is available. For devices with multiple timer
-    instances, multiple frequency resource entries are expected.
 
     @This returns a negative error code if the timer value can not be
     read (-EIO) or if the timer overlap period is to short for the

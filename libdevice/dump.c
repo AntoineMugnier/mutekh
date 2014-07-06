@@ -25,6 +25,7 @@
 #include <device/device.h>
 #include <device/resources.h>
 #include <device/driver.h>
+#include <inttypes.h>
 
 static void
 device_dump_device(struct device_s *dev, uint_fast8_t indent)
@@ -188,10 +189,13 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
         case DEV_RES_REVISION:
           printk("  Revision %u.%u\n", r->u.revision.major, r->u.revision.minor);
           break;
-        case DEV_RES_FREQ:
-          printk("  Frequency %u.%07u\n", (uint32_t)(r->u.freq.f40_24 >> 24),
-                 (uint32_t)((r->u.freq.f40_24 & 0xffffffULL) * 59604644 / 100000000));
+        case DEV_RES_FREQ: {
+          uint64_t integral  = r->u.freq.num / r->u.freq.denom;
+          uint32_t frac      = 1000 * (r->u.freq.num % r->u.freq.denom) /
+                                 r->u.freq.denom;
+          printk("  Frequency %"PRIu64".%03"PRIu32" Hz\n", (uint64_t)integral, (uint32_t)frac);
           break;
+        }
         case DEV_RES_STR_PARAM:
           printk("  String parameter `%s' = `%s'\n", r->u.str_param.name, r->u.str_param.value);
           break;

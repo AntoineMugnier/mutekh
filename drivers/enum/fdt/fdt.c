@@ -298,7 +298,10 @@ static FDT_ON_NODE_PROP_FUNC(enum_fdt_node_prop)
               {
                 f = 0;
                 fdt_parse_cell(data8, e->addr_cells, &f);
-                if (device_res_add_freq(e->dev, (uint64_t)f << 24))
+                struct dev_freq_s freq = {
+                  .num = f, .denom = 1
+                };
+                if (device_res_add_freq(e->dev, &freq))
                   goto res_err;
                 datalen -= 4;
                 data8 += 4;

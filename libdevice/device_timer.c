@@ -41,11 +41,11 @@ error_t dev_timer_init_sec(struct device_timer_s *tdev, dev_timer_delay_t *delay
   if (DEVICE_OP(tdev, resolution, &r, NULL))
     return -EIO;
 
-  uint64_t f = CONFIG_DEVICE_TIMER_DEFAULT_FREQ;
-  if (!device_res_get_uint64(tdev->dev, DEV_RES_FREQ, tdev->number, &f))
-    f >>= 24;
+  struct dev_freq_s f;
+  if (DEVICE_OP(tdev, get_freq, &f))
+    return -EIO;
 
-  uint64_t d = f * s_delay / ((uint64_t)r_unit * r);
+  uint64_t d = f.num * s_delay / ((uint64_t)r_unit * r * f.denom);
   if (d > (uint64_t)(dev_timer_delay_t)-1)
     return -ERANGE;
 
@@ -62,11 +62,11 @@ error_t dev_timer_shift_sec(struct device_timer_s *tdev,
   if (DEVICE_OP(tdev, resolution, &r, NULL))
     return -EIO;
 
-  uint64_t f = CONFIG_DEVICE_TIMER_DEFAULT_FREQ;
-  if (!device_res_get_uint64(tdev->dev, DEV_RES_FREQ, tdev->number, &f))
-    f >>= 24;
+  struct dev_freq_s f;
+  if (DEVICE_OP(tdev, get_freq, &f))
+    return -EIO;
 
-  uint64_t a = f * s_delay;
+  uint64_t a = f.num * s_delay / f.denom;
   uint64_t b = (uint64_t)r_unit * r;
 
   if (a == 0 || b == 0)
@@ -219,5 +219,12 @@ error_t dev_timer_sleep(struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
 
   return e;
 #endif
+}
+
+DEVTIMER_GET_FREQ(dev_timer_drv_get_freq)
+{
+  if (device_get_res_freq(tdev->dev, freq, tdev->number))
+    return -ENOTSUP;
+  return 0;
 }
 

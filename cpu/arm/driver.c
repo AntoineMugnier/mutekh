@@ -203,7 +203,7 @@ const struct driver_cpu_s  arm_cpu_drv =
         Timer driver part
 ************************************************************************/
 
-#if CONFIG_CPU_ARM_ARCH_VERSION >= 6
+#ifdef CONFIG_CPU_ARM_TIMER_CYCLECOUNTER
 
 static DEVTIMER_START_STOP(arm_timer_start_stop)
 {
@@ -272,6 +272,7 @@ static const struct driver_timer_s  arm_timer_drv =
   .class_          = DRIVER_CLASS_TIMER,
   .f_start_stop    = arm_timer_start_stop,
   .f_get_value     = arm_timer_get_value,
+  .f_get_freq      = dev_timer_drv_get_freq,
   .f_resolution    = arm_timer_resolution,
   .f_request       = (devtimer_request_t*)&dev_driver_notsup_fcn,
   .f_cancel        = (devtimer_request_t*)&dev_driver_notsup_fcn,
@@ -305,7 +306,7 @@ const struct driver_s  arm_drv =
 #ifdef CONFIG_DEVICE_IRQ
     &arm_icu_drv,
 #endif
-#if CONFIG_CPU_ARM_ARCH_VERSION >= 6
+#ifdef CONFIG_CPU_ARM_TIMER_CYCLECOUNTER
     &arm_timer_drv,
 #endif
     0

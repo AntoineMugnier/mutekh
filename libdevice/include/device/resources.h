@@ -163,12 +163,7 @@ struct dev_resource_s
       const char                *name;
     }                           product;
 
-    /** @see #DEV_STATIC_RES_FREQ @see device_res_add_freq */
     struct {
-      /** frequency in 40.24 fixed point format */
-      uint64_t                  f40_24;
-    }                           freq;
-
     /**  */
     struct {
       uintptr_t                 in:8;
@@ -192,6 +187,14 @@ struct dev_resource_s
       uintptr_t                 in:16;
       uintptr_t                 out:16;
     }                           clock_src;
+
+    /** @see #DEV_STATIC_RES_FREQ @see device_add_res_freq */
+    struct {
+      /** numerator of the frequency fractional part */
+      uint64_t                  num:64-CONFIG_DEVICE_CLOCK_OSCD_WIDTH;
+      /** denominator of the frequency fractional part */
+      uint64_t                  denom:CONFIG_DEVICE_CLOCK_OSCD_WIDTH;
+    }                           freq;
 
     /** @see #DEV_STATIC_RES_STR_PARAM @see device_res_add_str_param */
     struct {
@@ -590,24 +593,59 @@ static inline error_t device_res_add_product(struct device_s *dev, uintptr_t id,
   }
 
 
-/** @This attaches a frequency resource to the device. The frenquency
-    must be in 40.24 fixed point format. This value can be read by
-    calling the @ref device_res_get_uint64 function. @see #DEV_STATIC_RES_FREQ */
-static inline error_t device_res_add_freq(struct device_s *dev, uint64_t f_40_24)
+/** Clock freq in Hz = num / denom */
+struct dev_freq_s
 {
-  return device_res_alloc_uint64(dev, DEV_RES_FREQ, f_40_24, NULL);
+  uint64_t num:CONFIG_DEVICE_CLOCK_OSCN_WIDTH;
+  uint64_t denom:64-CONFIG_DEVICE_CLOCK_OSCN_WIDTH;
+};
+
+/** Clock ratio */
+struct dev_freq_ratio_s
+{
+  uint32_t num:CONFIG_DEVICE_CLOCK_FRAC_WIDTH;
+  uint32_t denom:CONFIG_DEVICE_CLOCK_FRAC_WIDTH;
+};
+
+/** @This attaches a frequency resource to the device. */
+static inline error_t device_res_add_freq(struct device_s *dev,
+                                          const struct dev_freq_s *freq)
+{
+  struct dev_resource_s *r;
+  error_t err = device_res_alloc(dev, &r, DEV_RES_FREQ);
+  if (err)
+    return err;
+
+  r->u.freq.num = freq->num;
+  r->u.freq.denom = freq->denom;
+  return 0;
 }
 
-/** @This can be used to include a frequency resource entry in a
-    static device resources table declaration. @see
-    #DEV_DECLARE_STATIC_RESOURCES @see device_res_add_freq */
-# define DEV_STATIC_RES_FREQ(f40_24_)           \
+/** @see #DEV_DECLARE_STATIC_RESOURCES @see device_res_add_freq */
+# define DEV_STATIC_RES_FREQ(num_, denom_)      \
   {                                             \
     .type = DEV_RES_FREQ,                       \
       .u = { .freq = {                          \
-        .f40_24 = (f40_24_),                    \
+        .num = (num_),                          \
+        .denom = (denom_),                      \
       } }                                       \
   }
+
+static inline error_t device_get_res_freq(const struct device_s *dev,
+                                          struct dev_freq_s *freq,
+                                          uint_fast8_t index)
+{
+  struct dev_resource_s *r;
+
+  r = device_res_get(dev, DEV_RES_FREQ, index);
+  if (r == NULL)
+    return -ENOENT;
+
+  freq->num = r->u.freq.num;
+  freq->denom = r->u.freq.denom;
+
+  return 0;
+}
 
 
 /** @This attaches a string parameter resource to the device. The

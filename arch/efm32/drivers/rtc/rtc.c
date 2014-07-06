@@ -375,6 +375,7 @@ const struct driver_timer_s efm32_rtc_timer_drv =
   .f_cancel       = efm32_rtc_cancel,
   .f_start_stop   = efm32_rtc_state_start_stop,
   .f_get_value    = efm32_rtc_get_value,
+  .f_get_freq     = dev_timer_drv_get_freq,
   .f_resolution   = efm32_rtc_resolution,
 };
 

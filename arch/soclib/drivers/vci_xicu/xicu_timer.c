@@ -370,6 +370,7 @@ const struct driver_timer_s  soclib_xicu_timer_drv =
   .f_cancel       = soclib_xicu_timer_cancel,
   .f_start_stop   = soclib_xicu_timer_start_stop,
   .f_get_value    = soclib_xicu_timer_get_value,
+  .f_get_freq     = dev_timer_drv_get_freq,
   .f_resolution   = soclib_xicu_timer_resolution,
 };
 

@@ -84,7 +84,7 @@ DEV_DECLARE_STATIC(uart_dev, "uart", 0, pl011uart_drv, uart_dev_res);
 
 DEV_DECLARE_STATIC_RESOURCES(systimer_dev_res, 6,
   DEV_STATIC_RES_MEM(0x20003000, 0x20003020),
-  DEV_STATIC_RES_FREQ((uint64_t)1000000 << 24),
+  DEV_STATIC_RES_FREQ(1000000, 1),
   DEV_STATIC_RES_IRQ(0, 8+0, 0, "/icu"),
   DEV_STATIC_RES_IRQ(1, 8+1, 0, "/icu"),
   DEV_STATIC_RES_IRQ(2, 8+2, 0, "/icu"),
