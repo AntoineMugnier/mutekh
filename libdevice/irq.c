@@ -444,7 +444,6 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs,
                                uint_fast8_t src_count, uint32_t enable_mask)
 {
   uint_fast8_t i;
-  uint_fast8_t j = -1;
   error_t err;
   bool_t done[src_count];
 
@@ -455,10 +454,19 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs,
       if (r->type != DEV_RES_IRQ)
         continue;
 
-      if (r->u.irq.dev_out_id >= src_count)
+      uint_fast8_t id = r->u.irq.dev_out_id;
+
+      if (id >= src_count)
         {
           printk("device: driver for device %p does not provide source end-point for IRQ output %u.\n",
-                 dev, r->u.irq.dev_out_id);
+                 dev, id);
+          err = -ENOENT;
+          goto error;
+        }
+
+      if (done[id])
+        {
+          printk("device: multiple resource entries for IRQ source end-point %u.\n", dev, id);
           err = -ENOENT;
           goto error;
         }
@@ -480,7 +488,6 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs,
           goto error;
         }
 
-      uint_fast8_t id = r->u.irq.dev_out_id;
       struct dev_irq_ep_s *src = srcs + id;
       struct dev_irq_ep_s *sink = DEVICE_OP(&icu, get_endpoint, DEV_IRQ_EP_SINK, r->u.irq.icu_in_id);
 
@@ -494,10 +501,10 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs,
           err = device_irq_ep_link(src, sink);
         }
 
+      device_put_accessor(&icu);
+
       if (err)
         goto error;
-
-      device_put_accessor(&icu);
 
       if ((enable_mask >> id) & 1)
         if (!device_icu_irq_enable(src, r->u.irq.irq_id, src, src))
@@ -508,8 +515,6 @@ error_t device_irq_source_link(struct device_s *dev, struct dev_irq_ep_s *srcs,
           }
 
       done[id]++;
-
-      j++;
   });
 
   for (i = 0; i < src_count; i++)
