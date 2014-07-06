@@ -163,29 +163,42 @@ struct dev_resource_s
       const char                *name;
     }                           product;
 
+    /** @see #DEV_STATIC_RES_CLK_RTE @see device_add_res_clock_route */
     struct {
-    /**  */
-    struct {
-      uintptr_t                 in:8;
-      uintptr_t                 out:8;
-      uintptr_t                 cfg:8;
-      uintptr_t                 num:16;
-      uintptr_t                 denum:16;
+      /** node id of the input clock signal */
+      uint64_t                  parent:CONFIG_DEVICE_CLOCK_MAX_ID;
+      /** node id of the output clock signal */
+      uint64_t                  node:CONFIG_DEVICE_CLOCK_MAX_ID;
+      /** numerator of the frequency scaling */
+      uint64_t                  num:CONFIG_DEVICE_CLOCK_FRAC_WIDTH;
+      /** denominator of the frequency scaling */
+      uint64_t                  denom:CONFIG_DEVICE_CLOCK_FRAC_WIDTH;
+      /** mask of associated configurations */
+      uint64_t                  config:CONFIG_DEVICE_CLOCK_MAX_CONFIG;
     }                           clock_rte;
 
-    /**  */
+    /** @see #DEV_STATIC_RES_CLK_OSC @see device_add_res_clock_osc */
     struct {
-      uintptr_t                 id:8;
-      uintptr_t                 integral:32;
-      uintptr_t                 num:16;
-      uintptr_t                 denum:16;
+      /** node id */
+      uint64_t                  node:CONFIG_DEVICE_CLOCK_MAX_ID;
+      /** numerator of the frequency fractional part */
+      uint64_t                  num:CONFIG_DEVICE_CLOCK_OSCN_WIDTH;
+      /** denominator of the frequency fractional part */
+      uint64_t                  denom:CONFIG_DEVICE_CLOCK_OSCD_WIDTH;
+      /** mask of associated configurations */
+      uint64_t                  config:CONFIG_DEVICE_CLOCK_MAX_CONFIG;
     }                           clock_osc;
 
-    /**  */
+    /** @see #DEV_STATIC_RES_CLK_SRC @see device_add_res_clock_src */
     struct {
+      /** path to the clock source device */
       const char                *src;
-      uintptr_t                 in:16;
-      uintptr_t                 out:16;
+      /** node id of the source end-point, relevant to the device
+          pointed to by @ref src. */
+      uintptr_t                 src_ep:CONFIG_DEVICE_CLOCK_MAX_ID;
+      /** node id of the sink end-point, relevant to the device which
+          holds this resource. */
+      uintptr_t                 sink_ep:CONFIG_DEVICE_CLOCK_MAX_ID;
     }                           clock_src;
 
     /** @see #DEV_STATIC_RES_FREQ @see device_add_res_freq */

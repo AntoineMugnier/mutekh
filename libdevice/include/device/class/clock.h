@@ -38,145 +38,246 @@
     oscillator nodes. */
 typedef uint_fast8_t dev_clock_node_id_t;
 
+/** @This specify a reserved invalid node id value */
+#define DEV_CLOCK_INVALID_NODE_ID ((1 << CONFIG_DEVICE_CLOCK_MAX_ID) - 1)
+
 /** @This helpers provide a numerical representation of an internal node
     signal. */
-#define DEV_CLOCK_NODE_EDGE(src, dst) ((((dst) & 0xff) << 8) | ((src) & 0xff))
+#define DEV_CLOCK_NODE_EDGE(src, dst) (((dst) << CONFIG_DEVICE_CLOCK_MAX_ID) | (src))
 
-/** Index of the config associated with a set of @ref
-    DEV_RES_CLOCK_RTE resources in the device tree.
-    @see dev_clock_ep_enable */
+/** Index of the configuration associated with a set of @ref
+    DEV_RES_CLOCK_RTE and @ref DEV_RES_CLOCK_OSC resources in the
+    device tree. */
 typedef uint_fast8_t dev_clock_config_id_t;
 
-/** Representation of the numerator or denumerator of a fractional
-    frequency. */
-typedef uint_fast16_t dev_clock_frac_t;
+/** Mask of configuration ids @see dev_clock_config_id_t */
+typedef uint32_t dev_clock_config_mask_t;
 
 
-/** @This specifies clock tree node types. */
-enum dev_clock_node_type_e
-{
-  DEV_CLOCK_NODE_NONE,
-
-  /** Device source end-point node. Source end-points represent clock
-      signal output from a device. They can be dynamically linked to
-      multiple sink end-points of clock receiver devices. */
-  DEV_CLOCK_NODE_EP_SOURCE,
-
-  /** Device sink end-point node. Sink end-points represent clock
-      inputs of a device. One sink end-point can be dynamically linked
-      to a single source end-point. */
-  DEV_CLOCK_NODE_EP_SINK,
-
-  /** Device internal clock signal node. */
-  DEV_CLOCK_NODE_INTERNAL,
-
-  /** Device internal clock signal wired to a fixed frequency oscillator. */
-  DEV_CLOCK_NODE_OSCILLATOR,
-};
-
-/** freq in Hz = integral + num / denum */
-struct dev_clock_freq_s
-{
-  uint32_t integral;
-  uint16_t num;
-  uint16_t denum;
-};
 
 /* forward declaration. */
 struct device_clock_s;
-struct dev_clock_ep_s;
+struct dev_clock_src_ep_s;
+struct dev_clock_sink_ep_s;
 
-#define DEV_CLOCK_EP_CONFIG(n) void (n) (struct dev_clock_ep_s *ep)
-
-/** @This notifies the callee that the clock frequency has
-    changed on an end-point. */
-typedef DEV_CLOCK_EP_CONFIG(dev_clock_ep_config_t);
-
-#define DEV_CLOCK_EP_GATING(n) void (n) (struct dev_clock_ep_s *ep, \
-                                         bool_t enable)
-
-/** @This notifies the callee that its clock must be enabled. */
-typedef DEV_CLOCK_EP_GATING(dev_clock_ep_gating_t);
-
-struct dev_clock_node_s
+/** @This is used by dev_clock_src_use_t to notify */
+struct dev_clock_ready_s
 {
-  struct device_s            *dev;
-
-#ifdef CONFIG_DEBUG
-  enum dev_clock_node_type_e type;
-#endif
+  struct kroutine_s kr;
+  void *pv;
 };
 
-struct dev_clock_ep_s
+/** @This specifies the action performed by the @ref
+    dev_clock_src_use_t function. */
+enum dev_clock_src_use_e
 {
-  /** the node in clock tree. */
-  struct dev_clock_node_s   node;
-
-  union {
-    struct {
-      /** pointer to linked source ep */
-      struct dev_clock_ep_s *src;
-      /** pointer to sibling sink ep */
-      struct dev_clock_ep_s *next;
-      /** specify if the sink ep currently needs a clock */
-      bool_t                enabled;
-
-      dev_clock_ep_config_t *config;
-    } sink;
-
-    struct {
-      /** pointer to first sink ep in linked list */
-      struct dev_clock_ep_s   *sink_head;
-      /** current frequency on the link, updated on configuration. */
-      struct dev_clock_freq_s freq;
-    } src;
-  } u;
+  DEV_CLOCK_SRC_USE_HOLD,
+  DEV_CLOCK_SRC_USE_RELEASE,
+  DEV_CLOCK_SRC_USE_NOTIFY,
+  DEV_CLOCK_SRC_USE_IGNORE,
 };
 
-#define DEVCLOCK_GATING(n) error_t (n) (struct device_clock_s *ckdev, \
-                                        struct dev_clock_ep_s *sink,  \
-                                        bool_t                enable)
+/** @see dev_clock_ep_use_t */
+#define DEV_CLOCK_SRC_USE(n) error_t (n) (struct dev_clock_src_ep_s *src, \
+                                          struct dev_clock_ready_s *ready, \
+                                          enum dev_clock_src_use_e action)
 
-/** @This enables or disables the clock gating which drives the specified
-    clock signal node. */
-typedef DEVCLOCK_GATING(devclock_gating_t);
+/** @This tells a driver with a clock source end-point if the
+    associated clock signal is enabled and has changes notification.
+
+    This is called by @ref dev_clock_sink_hold with @ref
+    DEV_CLOCK_SRC_USE_HOLD when @tt src->running is false. This is
+    called by @ref dev_clock_sink_release with @ref
+    DEV_CLOCK_SRC_USE_RELEASE when @tt src->use_count becomes zero.
+
+    This function is called with the lock of the source end-point
+    device held. The @tt use_count field of the end-point is
+    updated before the call. The function is responsible for
+    updating the @ref dev_clock_src_ep_s::running field.
+*/
+typedef DEV_CLOCK_SRC_USE(dev_clock_src_use_t);
+
+/** Clock signal source end-point structure. A source end-point is a
+    type of clock tree node which can be used as a connection point
+    between two devices. Source end-points can be dynamically linked
+    to multiple sink end-points so that a clock provider device can
+    feed a clock signal to multiple clock consumer devices. */
+struct dev_clock_src_ep_s
+{
+  struct device_s         *dev;
+
+  /** pointer to the first linked sink ep in the linked list */
+  struct dev_clock_sink_ep_s *sink_head;
+
+  /** pointer to the use/release function of the clock signal provider */
+  dev_clock_src_use_t     *f_use;
+
+  /** indicates if the clock is currently running. This can be 0
+      when the clock is not ready yet even if @tt use_count > 0.
+      @see dev_clock_sink_hold @see dev_clock_sink_release
+      @see dev_clock_src_use_t
+  */
+  bool_t                  running:1;
+
+  /** indicates if at least one linked sink end-point has a non @tt
+      NULL @ref dev_clock_sink_ep_s::f_changed function pointer. */
+  bool_t                  notify:1;
+
+  /** number of sink endpoints which currently need to have this
+      clock running. This counter is protected by @tt dev->lock.
+      @see dev_clock_sink_hold @see dev_clock_sink_release
+      @see dev_clock_src_use_t
+  */
+  uint16_t                use_count;
+};
+
+/** @see dev_clock_sink_changed_t */
+#define DEV_CLOCK_SINK_CHANGED(n) void (n) (struct dev_clock_sink_ep_s *ep, \
+                                            const struct dev_freq_s *freq)
+
+/** @This notifies a driver with a clock sink end-point that the
+    frequency has changed. */
+typedef DEV_CLOCK_SINK_CHANGED(dev_clock_sink_changed_t);
 
 
-#define DEVCLOCK_SET_CONFIG(n) error_t (n) (struct device_clock_s *ckdev, \
-                                            dev_clock_node_id_t   src_id, \
-                                            dev_clock_node_id_t   dst_id, \
-                                            dev_clock_frac_t      num,    \
-                                            dev_clock_frac_t      denum)
+/** Clock signal sink end-point structure. A sink end-point is a
+    type of clock tree node which can be used as a connection point
+    between two devices. Sink end-points can be dynamically linked
+    to a single clock source end-point. */
+struct dev_clock_sink_ep_s
+{
+  struct device_s         *dev;
 
-/** @This activates an internal route between two clock signal nodes
-    inside the device and sets the clock factor fraction associated to
-    this route. Alternate routes to the destination node are discarded. */
-typedef DEVCLOCK_SET_CONFIG(devclock_set_config_t);
+  /** pointer to linked source ep in clock provider device */
+  struct dev_clock_src_ep_s *src;
+
+  /** pointer to sibling sink ep in device sharing the same clock signal */
+  struct dev_clock_sink_ep_s *next;
+
+  /** pointer to the clock change notification callback, may be NULL. */
+  dev_clock_sink_changed_t *f_changed;
+};
 
 
-#define DEVCLOCK_GET_NODE(n) struct dev_clock_node_s * (n) ( \
-  struct device_clock_s      *ckdev,                         \
-  enum dev_clock_node_type_e type,                           \
-  dev_clock_node_id_t        node_id                         \
+
+/** @see devclock_config_node_t */
+union dev_clock_config_value_u
+{
+  struct dev_freq_s    freq;
+  struct dev_freq_ratio_s    ratio;
+};
+
+/** @see devclock_config_node_t */
+#define DEVCLOCK_CONFIG_NODE(n) error_t (n) (                \
+    struct device_clock_s *ckdev,                            \
+    dev_clock_node_id_t   node_id,                           \
+    dev_clock_node_id_t   parent_id,                         \
+    union dev_clock_config_value_u *value                    \
 )
 
-/** @This returns a pointer to the end-point with given node id. This
-    function returns @tt NULL for internal nodes.
+/** @This set the next configuration of a clock node internal to the
+    device.
 
-    If the @tt type parameter is not @tt NULL, it is updated with the
-    type of node. */
-typedef DEVCLOCK_GET_NODE(devclock_get_node_t);
+    For oscillator nodes, this function sets the oscillator frequency
+    value. The @tt parent_id parameter is not relevant in this case.
+
+    For other types of node (end-point and internal clock signals),
+    the function have to select the route to the parent clock node
+    inside the device and optionally update the clock scale factor
+    associated to this route. The @tt value parameter may be @tt NULL.
+
+    No hardware configuration actually takes place before the call to
+    the @ref devclock_commit_t function.
+*/
+typedef DEVCLOCK_CONFIG_NODE(devclock_config_node_t);
+
+
+
+/** @see devclock_commit_t */
+#define DEVCLOCK_COMMIT(n) error_t (n) (struct device_clock_s *ckdev)
+
+/** @This starts the configuration of the clocks based on parameters
+    passed to previous calls to the @ref devclock_config_node_t
+    function.
+
+    The driver may further delay the configuration of some clock
+    signals and make it effective only when appropriate. Depending on
+    the hardware, this may happen immediately or may be delayed until
+    the clock signal is not used anymore. The driver may also choose
+    to internally switch to an alternate clock source during the PLL
+    lock period. In any case the clock provider must ensure that
+    clock signals keep running smoothly if currently in use.
+
+    The @ref dev_clock_src_changed function is called by the driver
+    for all impacted source end-points once the change has occurred.
+ */
+typedef DEVCLOCK_COMMIT(devclock_commit_t);
+
+
+
+/** @see devclock_rollback_t */
+#define DEVCLOCK_ROLLBACK(n) error_t (n) (struct device_clock_s *ckdev)
+
+/** @This discard all configuration changes requests made by calling
+    the @ref devclock_config_node_t function. This can be used to
+    revert to a known state in case of error.
+ */
+typedef DEVCLOCK_ROLLBACK(devclock_rollback_t);
+
+
+/** @This specifies node information to retrieve for the @ref
+    devclock_node_info_t function. */
+enum dev_clock_node_info_e
+{
+  DEV_CLOCK_INFO_FREQ    = 0x01,
+  DEV_CLOCK_INFO_NAME    = 0x02,
+  DEV_CLOCK_INFO_PARENT  = 0x04,
+  DEV_CLOCK_INFO_RUNNING = 0x08,
+  DEV_CLOCK_INFO_SINK    = 0x10,
+  DEV_CLOCK_INFO_SRC     = 0x20,
+};
+
+/** @This stores node information retrieved by the @ref
+    devclock_node_info_t function. */
+struct dev_clock_node_info_s
+{
+  struct dev_freq_s    freq;
+  const char                 *name;
+  dev_clock_node_id_t        parent_id;
+  bool_t                     running;
+  struct dev_clock_sink_ep_s *sink;
+  struct dev_clock_src_ep_s  *src;
+};
+
+/** @This retrieves information about an internal clock node. The @tt
+    mask parameter indicates which information are fetched and is
+    updated according to what is actually available.
+    @see dev_clock_node_info_s @see dev_clock_node_info_e */
+#define DEVCLOCK_NODE_INFO(n) error_t (n) (                             \
+    struct device_clock_s *ckdev,                                       \
+    dev_clock_node_id_t node_id,                                        \
+    enum dev_clock_node_info_e *mask,                                   \
+    struct dev_clock_node_info_s *info                                  \
+)
+
+/** @This returns the requested node information */
+typedef DEVCLOCK_NODE_INFO(devclock_node_info_t);
+
+
 
 DRIVER_CLASS_TYPES(clock,
-                   devclock_gating_t     *f_gating;
-                   devclock_set_config_t *f_set_config;
-                   devclock_get_node_t   *f_get_node;
+                   devclock_node_info_t   *f_node_info;
+                   devclock_config_node_t *f_config_node;
+                   devclock_commit_t      *f_commit;
+                   devclock_rollback_t    *f_rollback;
                    );
 
-/** @This increases the clock source use count. If the clock can not
-    be enabled immediately, @tt EAGAIN is returned and the kroutine is
-    invoked when the clock source is running again. */
-error_t dev_clock_ep_use(struct dev_clock_ep_s *sink, struct kroutine_s *done);
+/** @This increases the clock source use count. The kroutine inside
+    @tt ready is invoked when the clock source is running. If @tt
+    ready is @tt NULL, the function spins until the clock is running. */
+config_depend(CONFIG_DEVICE_CLOCK)
+error_t dev_clock_sink_hold(struct dev_clock_sink_ep_s *sink,
+                            struct dev_clock_ready_s *ready);
 
 /** @This decreases the clock source use count.
 
@@ -184,118 +285,123 @@ error_t dev_clock_ep_use(struct dev_clock_ep_s *sink, struct kroutine_s *done);
     the device stack may walks up the clock tree in order to disable
     the clock. Depending on the number of enabled shared clocks,
     multiple level of clocks in the tree might be disabled. */
-error_t dev_clock_ep_release(struct dev_clock_ep_s *sink);
+config_depend(CONFIG_DEVICE_CLOCK)
+void dev_clock_sink_release(struct dev_clock_sink_ep_s *sink);
 
-/** This helper function calls the driver @ref devclock_set_config_t
-    for all nodes associated to a specific configuration id in the
-    device tree. */
+/** @This is convenience wrapper for the @ref devclock_node_info_t
+    function. An error is returned if the requested information are
+    not available. */
+config_depend(CONFIG_DEVICE_CLOCK)
+error_t dev_clock_node_info(struct device_s *dev,
+                            dev_clock_node_id_t node_id,
+                            enum dev_clock_node_info_e mask,
+                            struct dev_clock_node_info_s *info);
+
+/** This function updates the configuration of the device internal
+    nodes using resource entries from the device tree associated with
+    a given configuration id.
+
+    The configuration id selects all resources with the corresponding
+    bit set in the config mask. */
+config_depend(CONFIG_DEVICE_CLOCK)
 error_t dev_clock_config(struct device_clock_s *ckdev,
                          dev_clock_config_id_t config_id);
 
-/** This helper function provide the frequency at a given sink in the clock
-    path. */
-error_t dev_clock_get_freq(struct dev_clock_ep_s   *sink,
-                           struct dev_clock_freq_s *freq);
+/** @This function is called by the clock provider device driver when
+    the frequency of a clock source end-point change if the @ref
+    dev_clock_src_ep_s::notify field is set.
 
-/** @This initializes a clock source end-point. */
-static inline
-void dev_clock_source_init(struct device_s *dev, struct dev_clock_ep_s *src)
-{
-  src->node.dev            = dev;
-#if defined(CONFIG_DEBUG)
-  src->node.type           = DEV_CLOCK_NODE_EP_SOURCE;
-#endif
-  src->u.src.sink_head     = NULL;
-  src->u.src.freq.integral = 0;
-  src->u.src.freq.num      = 0;
-  src->u.src.freq.denum    = 0;
-}
-
-/** @This initializes a device clock oscillator with its configuration in the
-    device resource list. The arguments @tt integral, @tt num and @tt denum are
-    provided from information stored in the device tree.
-
-    This function is typically called from device initialization function that
-    needs to have its internal oscillator node configured.
+    This function will propagate the change to all connected sink
+    end-points by calling the @ref dev_clock_sink_changed_t function
+    of the sinks.
  */
+config_depend(CONFIG_DEVICE_CLOCK)
+void dev_clock_src_changed(struct device_clock_s *ckdev,
+                           struct dev_clock_src_ep_s *src,
+                           const struct dev_freq_s *freq);
+
+/** @This initializes a clock source end-point node. */
+config_depend(CONFIG_DEVICE_CLOCK)
 static inline
-void dev_clock_osc_init(struct device_s       *dev,
-                        struct dev_clock_ep_s *osc,
-                        uint_fast32_t         integral,
-                        dev_clock_frac_t      num,
-                        dev_clock_frac_t      denum)
+void dev_clock_source_init(struct device_s *dev,
+                           struct dev_clock_src_ep_s *src,
+                           dev_clock_src_use_t *use)
 {
-  osc->node.dev            = dev;
-#if defined(CONFIG_DEBUG)
-  osc->node.type           = DEV_CLOCK_NODE_OSCILLATOR;
-#endif
-  osc->u.src.sink_head     = NULL;
-  osc->u.src.freq.integral = integral;
-  osc->u.src.freq.num      = num;
-  osc->u.src.freq.denum    = denum;
+  memset(src, 0, sizeof(*src));
+  src->dev           = dev;
+  src->f_use         = use;
 }
 
-/** @This initializes a clock sink end-point. */
+/** @This initializes a clock sink end-point node. The @tt changed
+    parameter may be @tt NULL. */
+config_depend(CONFIG_DEVICE_CLOCK)
 static inline
 void dev_clock_sink_init(struct device_s       *dev,
-                         struct dev_clock_ep_s *sink,
-                         dev_clock_ep_config_t *config)
+                         struct dev_clock_sink_ep_s *sink,
+                         dev_clock_sink_changed_t *changed)
 {
-  sink->node.dev       = dev;
-#if defined(CONFIG_DEBUG)
-  sink->node.type      = DEV_CLOCK_NODE_EP_SINK;
-#endif
-  sink->u.sink.src     = NULL;
-  sink->u.sink.next    = NULL;
-  sink->u.sink.enabled = 0;
-  sink->u.sink.config  = config;
+  memset(sink, 0, sizeof(*sink));
+  sink->dev           = dev;
+  sink->f_changed     = changed;
 }
 
-/** @This initializes an internal clock node. */
-static inline
-void dev_clock_internal_node_init(struct device_s         *dev,
-                                  struct dev_clock_node_s *node)
-{
-  node->dev = dev;
-#if defined(CONFIG_DEBUG)
-  node->type = DEV_CLOCK_NODE_INTERNAL;
-#endif
-}
+/** @This links multiple clock sink end-points to the appropriate
+    source end-point of a clock provider device as described in the
+    device resources. An array of sink end-points must be passed along
+    with the range of node ids associated to the sink end-points.
 
-/** @This links a device clock sink end-points to the appropriate source
-    end-point of a clock generator device as described in the device
-    resources.
+    If the @tt freqs pointer is not @tt NULL, the array is filled with
+    the current frenquency values of end-points. If the @tt src_id
+    pointer is not @tt NULL, the array is filled with node id of the
+    source end-point relevant to the clock provider device.
 
-    This function is typically called from device initialization function which
-    needs to have its clock input configured. This function also updates the
-    end-point with the current clock frequency value.
+    This function is typically called from device driver
+    initialization function.
  */
-error_t dev_clock_sink_link(struct device_s       *dev,
-                            struct dev_clock_ep_s *sink,
-                            bool_t                enable);
+config_depend(CONFIG_DEVICE_CLOCK)
+error_t dev_clock_sink_link(struct device_s *dev,
+                            struct dev_clock_sink_ep_s *sinks,
+                            struct dev_freq_s *freqs,
+                            dev_clock_node_id_t *src_id,
+                            dev_clock_node_id_t first_sink,
+                            dev_clock_node_id_t last_sink);
+
+/** @This unlinks all clock sink end-points in the array. End-points
+     which are not linked are skipped. */
+config_depend(CONFIG_DEVICE_CLOCK)
+void dev_clock_sink_unlink(struct device_s *dev,
+                           struct dev_clock_sink_ep_s *sinks,
+                           size_t count);
 
 /** @This adds an internal clock route entry in the device resource list.
 
-    This entry specifies a clock route from a @tt src clock source node to
-    a @tt sink clock consumer node. This route belongs to a predefined
-    configuration that is identified by @tt id.
+    This entry specifies the parent clock signal used to generate the
+    clock for an other clock signal node. This route belongs to a
+    configuration set that is defined by @tt config_mask. All clock
+    related resources associated with a given configuration id can be
+    applied by calling @ref dev_clock_config.
 
-    The clock source can be scaled up or down using a fraction that is
-    represented by two 16-bit integral values @tt fnum and @tt fdenum.
+    The parent clock can be scaled up or down by a fraction defined by
+    @tt fnum and @tt fdenom parameters.
 
-    IMPORTANT note: the validity of the route and scaling factor is the
-    responsibility of the programmer. There is no internal validity check
-    on clocking configurations.
+    Depending on the clock device driver and clock signal, a default
+    route may be used if no resource entry is present for a given
+    node.
+
+    @b note: the validity of the route and scaling factor is the
+    responsibility of the programmer. There may be no internal
+    validity check on clocking configurations.
 
     @see #DEV_STATIC_RES_CLK_RTE
  */
+config_depend(CONFIG_DEVICE_CLOCK)
 static inline
-error_t device_add_res_clock_route(struct device_s       *dev,
-                                   dev_clock_node_id_t   src,
-                                   dev_clock_node_id_t   sink,
-                                   dev_clock_config_id_t config_id,
-                                   uint16_t              fnum,
-                                   uint16_t              fdenum)
+error_t device_add_res_clock_route(struct device_s     *dev,
+                                   dev_clock_node_id_t parent_id,
+                                   dev_clock_node_id_t node_id,
+                                   dev_clock_config_mask_t config_mask,
+                                   uint32_t            fnum,
+                                   uint32_t            fdenom)
 {
 #if defined(CONFIG_DEVICE_CLOCK)
   struct dev_resource_s *r;
@@ -304,11 +410,11 @@ error_t device_add_res_clock_route(struct device_s       *dev,
   if (err)
     return err;
 
-  r->u.clock_rte.in    = src;
-  r->u.clock_rte.out   = sink;
-  r->u.clock_rte.cfg   = config_id;
-  r->u.clock_rte.num   = fnum;
-  r->u.clock_rte.denum = fdenum;
+  r->u.clock_rte.parent = parent_id;
+  r->u.clock_rte.node   = node_id;
+  r->u.clock_rte.config = config_mask;
+  r->u.clock_rte.num    = fnum;
+  r->u.clock_rte.denom  = fdenom;
 
   return 0;
 #else
@@ -319,56 +425,55 @@ error_t device_add_res_clock_route(struct device_s       *dev,
 #ifdef CONFIG_DEVICE_CLOCK
 
 /** @This can be used to include a clock route resource entry in a static
-    device resources table declaration. The config parameter must be a valid
-    configuration id as well as the source and sink identifiers.
+    device resources table declaration.
+
     @see device_res_add_clock_rte @see #DEV_DECLARE_STATIC_RESOURCES
  */
-# define DEV_STATIC_RES_CLK_RTE(__src_id, __sink_id, __cfg, __num, __denum) \
-  {                                                                         \
-    .type = DEV_RES_CLOCK_RTE,                                              \
-    .u = { .clock_rte = {                                                   \
-      .in    = (__src_id),                                                  \
-      .out   = (__sink_id),                                                 \
-      .cfg   = (__cfg),                                                     \
-      .num   = (__num),                                                     \
-      .denum = (__denum),                                                   \
-    } }                                                                     \
+# define DEV_STATIC_RES_CLK_RTE(__parent_id, __node_id,                 \
+                                __config_mask, __num, __denom)          \
+  {                                                                     \
+    .type = DEV_RES_CLOCK_RTE,                                          \
+      .u = { .clock_rte = {                                             \
+        .parent = (__parent_id),                                        \
+        .node   = (__node_id),                                          \
+        .config = (__config_mask),                                      \
+        .num    = (__num),                                              \
+        .denom  = (__denom),                                            \
+      } }                                                               \
   }
 
 #else
 
-# define DEV_STATIC_RES_CLK_RTE(__src_id, __sink_id, __cfg, __num, __denum) \
-  {                                                                         \
-    .type = DEV_RES_UNUSED,                                                 \
+# define DEV_STATIC_RES_CLK_RTE(__parent_id, __node_id,                 \
+                                __config_mask, __num, __denom)          \
+  {                                                                     \
+    .type = DEV_RES_UNUSED,                                             \
   }
 
 #endif
 
-/** @This adds a internal clock source oscillator in the device resources.
+/** @This adds a clock frequency resource entry to a device.
 
-    This entry specifies a clock source oscillator with frequency information.
+    This entry specifies a frequency value for an internal oscillator
+    node. This route belongs to a configuration set that is defined by
+    @tt config_mask. All clock related resources associated with a
+    given configuration id can be applied by calling @ref
+    dev_clock_config.
 
-    The node id can be used as a clock source in clock routing (@see
-    device_add_res_clock_route).
-
-    The frequency is represented using a fraction of integral numbers and of
-    the form: a + b / c. The parameters are detailed as follows:
-
-    @list
-      @item An @em integral i32-bit value, representing the integral
-      part of the frequency.
-      @item A @em num 16-bit value as the numerator of the fractional part.
-      @item A @em denum 16-bit value as the denumerator of the fractional part.
-    @end list
+    This may be used to specify the frequency of an external clock
+    source or to configure the frequency of an internal oscillator.
+    In the later case, the internal oscillator may have a default
+    frequency value and the resource entry is not mandatory.
 
     @see #DEV_STATIC_RES_CLK_OSC
  */
+config_depend(CONFIG_DEVICE_CLOCK)
 static inline
 error_t device_add_res_clock_osc(struct device_s     *dev,
                                  dev_clock_node_id_t node_id,
-                                 uint32_t            integral,
-                                 dev_clock_frac_t    num,
-                                 dev_clock_frac_t    denum)
+                                 dev_clock_config_mask_t config_mask,
+                                 uint64_t            num,
+                                 uint32_t            denom)
 {
 #if defined(CONFIG_DEVICE_CLOCK)
   struct dev_resource_s *r;
@@ -377,10 +482,10 @@ error_t device_add_res_clock_osc(struct device_s     *dev,
   if (err)
     return err;
 
-  r->u.clock_osc.id       = node_id;
-  r->u.clock_osc.integral = integral;
+  r->u.clock_osc.node     = node_id;
+  r->u.clock_osc.config   = config_mask;
   r->u.clock_osc.num      = num;
-  r->u.clock_osc.denum    = denum;
+  r->u.clock_osc.denom    = denom;
 
   return 0;
 #else
@@ -392,36 +497,38 @@ error_t device_add_res_clock_osc(struct device_s     *dev,
 
 /** @This can be used to include a clock source oscillator resource entry in a
     static device resources table declaration.
-    @see device_res_add_clock_rte @see #DEV_DECLARE_STATIC_RESOURCES
+    @see device_res_add_clock_osc @see #DEV_DECLARE_STATIC_RESOURCES
  */
-# define DEV_STATIC_RES_CLK_OSC(__id, __integral, __num, __denum) \
+# define DEV_STATIC_RES_CLK_OSC(__node_id, __config_id, __num, __denom) \
   {                                                               \
     .type = DEV_RES_CLOCK_OSC,                                    \
-    .u = { .clock_osc = {                                         \
-      .id       = (__id),                                         \
-      .integral = (__integral),                                   \
-      .num      = (__num),                                        \
-      .denum    = (__denum),                                      \
-    } }                                                           \
+      .u = { .clock_osc = {                                       \
+        .node     = (__node_id),                                  \
+        .config   = (__config_id),                                \
+        .num      = (__num),                                      \
+        .denom    = (__denom),                                    \
+      } }                                                         \
   }
 
 #else
 
-# define DEV_STATIC_RES_CLK_OSC(__id, __integral, __num, __denum) \
-  {                                                                     \
-    .type = DEV_RES_UNUSED,                                             \
+# define DEV_STATIC_RES_CLK_OSC(__node_id, __config_id, __num, __denom) \
+  {                                                               \
+    .type = DEV_RES_UNUSED,                                       \
   }
 
 #endif
 
-/** @This adds a clock source in the device resources.
+/** @This adds a clock end-point link in the device resources.
 
-    This entry specifies a clock source link from@tt src_id
-    source id in the device denominated by @tt src to @tt sink_id in the
-    present device.
+    This entry defines a link between the source end-point with the
+    node id @tt src_id (relevant to clock provider device) and the
+    sink end-point with node id @tt sink_id (relevant to the present
+    device).
 
     @see #DEV_STATIC_RES_CLK_SRC
  */
+config_depend(CONFIG_DEVICE_CLOCK)
 static inline
 error_t device_add_res_clock_src(struct device_s     *dev,
                                  const char          *src_name,
@@ -441,8 +548,8 @@ error_t device_add_res_clock_src(struct device_s     *dev,
   /* force dependence checking for clock source using source name. */
   r->flags |= DEVICE_RES_FLAGS_DEPEND;
 
-  r->u.clock_src.in  = src_id;
-  r->u.clock_src.out = sink_id;
+  r->u.clock_src.src_ep  = src_id;
+  r->u.clock_src.sink_ep = sink_id;
 
   return 0;
 #else
@@ -455,7 +562,7 @@ error_t device_add_res_clock_src(struct device_s     *dev,
 /** @This can be used to include a clock source oscillator resource entry in a
     static device resources table declaration. The @tt src parameter must be
     statically allocated.
-    @see device_res_add_clock_rte @see #DEV_DECLARE_STATIC_RESOURCES
+    @see device_res_add_clock_src @see #DEV_DECLARE_STATIC_RESOURCES
  */
 # define DEV_STATIC_RES_CLK_SRC(__src, __src_id, __sink_id) \
   {                                                         \
@@ -463,8 +570,8 @@ error_t device_add_res_clock_src(struct device_s     *dev,
     .flags = DEVICE_RES_FLAGS_DEPEND,                       \
     .u = { .clock_src = {                                   \
       .src = (__src),                                       \
-      .in  = (__src_id),                                    \
-      .out = (__sink_id),                                   \
+      .src_ep  = (__src_id),                                \
+      .sink_ep = (__sink_id),                               \
     } }                                                     \
   }
 

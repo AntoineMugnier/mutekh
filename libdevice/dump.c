@@ -27,6 +27,8 @@
 #include <device/driver.h>
 #include <inttypes.h>
 
+#include <device/class/clock.h>
+
 static void
 device_dump_device(struct device_s *dev, uint_fast8_t indent)
 {
@@ -103,7 +105,7 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
 #endif
 #ifdef CONFIG_DEVICE_IOMUX
         case DEV_RES_IOMUX: {
-          printk("  IO `%s' muxing: demux %u, id %u, mux %u, config %u\n",
+          printk("  IO `%s' muxing: demux %u, id %u, mux %u, config %x\n",
                  r->u.iomux.label, r->u.iomux.demux,
                  r->u.iomux.io_id, r->u.iomux.mux, r->u.iomux.config);
           break;          
@@ -111,32 +113,32 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
 #endif
 #ifdef CONFIG_DEVICE_CLOCK
         case DEV_RES_CLOCK_RTE: {
-          printk(
-            "  Clock route: src %u -> sink %u, scale %u/%u, config %u\n",
-            r->u.clock_rte.in, r->u.clock_rte.out, r->u.clock_rte.num,
-            r->u.clock_rte.denum, r->u.clock_rte.cfg
+          struct dev_clock_node_info_s info;
+          const char *nname = "unknown";
+          const char *pname = "unknown";
+          if (!dev_clock_node_info(dev, r->u.clock_rte.node, DEV_CLOCK_INFO_NAME, &info))
+            nname = info.name;
+          if (!dev_clock_node_info(dev, r->u.clock_rte.parent, DEV_CLOCK_INFO_NAME, &info))
+            pname = info.name;
+          printk("  Clock route: node %u `%s': parent %u `%s', scale %"PRIu64"/%"PRIu64", config mask 0x%x\n",
+                 r->u.clock_rte.node, nname, r->u.clock_rte.parent, pname,
+                 (uint64_t)r->u.clock_rte.num, (uint64_t)r->u.clock_rte.denom,
+                 r->u.clock_rte.config
           );
           break;
         }
 
         case DEV_RES_CLOCK_OSC: {
-          uint32_t integral = r->u.clock_osc.integral;
-          uint32_t frac = 0;
-
-          if (r->u.clock_osc.num < r->u.clock_osc.denum)
-            frac = 1000 * r->u.clock_osc.num / r->u.clock_osc.denum;
-          else
-            {
-              integral += r->u.clock_osc.num / r->u.clock_osc.denum;
-              frac      = 1000 * (r->u.clock_osc.num % r->u.clock_osc.denum) /
-                r->u.clock_osc.denum;
-            }
-
-          printk(
-            "  Clock oscillator: src %u, freq %u + %u/%u (%u.%03u) Hz\n",
-            r->u.clock_osc.id,
-            r->u.clock_osc.integral, r->u.clock_osc.num, r->u.clock_osc.denum,
-            integral, frac
+          struct dev_clock_node_info_s info;
+          const char *nname = "unknown";
+          if (!dev_clock_node_info(dev, r->u.clock_rte.node, DEV_CLOCK_INFO_NAME, &info))
+            nname = info.name;
+          uint64_t integral  = r->u.clock_osc.num / r->u.clock_osc.denom;
+          uint32_t frac      = 1000 * (r->u.clock_osc.num % r->u.clock_osc.denom) /
+                                 r->u.clock_osc.denom;
+          printk("  Clock oscillator: node %"PRIuFAST8" `%s' @ %"PRIu64".%03"PRIu32" Hz, config mask 0x%x\n",
+                 (uint_fast8_t)r->u.clock_osc.node, nname, (uint64_t)integral, (uint32_t)frac,
+                 r->u.clock_osc.config
           );
           break;
         }
@@ -144,7 +146,7 @@ device_dump_device(struct device_s *dev, uint_fast8_t indent)
         case DEV_RES_CLOCK_SRC: {
           printk(
             "  Clock source `%s': src %u, sink %u\n",
-            r->u.clock_src.src, r->u.clock_src.in, r->u.clock_src.out
+            r->u.clock_src.src, r->u.clock_src.src_ep, r->u.clock_src.sink_ep
           );
           break;
         }

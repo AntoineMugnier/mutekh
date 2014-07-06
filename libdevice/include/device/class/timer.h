@@ -172,6 +172,13 @@ typedef DEVTIMER_GET_VALUE(devtimer_get_value_t);
    @This reads the current timer frequency. @This may return @tt -ENOTSUP
    if the frequency is not known.
 
+   There are two common ways for the driver of finding the timer
+   frequency. When the timer contains a clock sink end-point, the
+   associated frequency will be computed by the clock provider device
+   and may be stored by the driver of the timer. If @ref
+   #CONFIG_DEVICE_CLOCK is not used, the @ref dev_timer_drv_get_freq
+   implementation can be used.
+
    @This is mandatory.
 */
 typedef DEVTIMER_GET_FREQ(devtimer_get_freq_t);
