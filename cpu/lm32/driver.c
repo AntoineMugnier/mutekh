@@ -281,7 +281,7 @@ static DEV_INIT(lm32_init)
     PRINTK_RET(-ENOENT, "lm32: device has no ID resource")
       ;
 
-  pv = mem_alloc_cpu(sizeof (*pv), (mem_scope_sys), cpu);
+  pv = mem_alloc_cpu(sizeof (*pv), (mem_scope_sys), id);
   if (pv == NULL)
     return -ENOMEM;
 
