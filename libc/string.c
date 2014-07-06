@@ -352,12 +352,12 @@ inline int_fast8_t strcasecmp(const char* s1, const char* s2)
   uint_fast8_t  x1;
 
     while (1) {
-        x2 = *s2 - 'A'; if (__unlikely(x2 < 26u)) x2 += 32;
-        x1 = *s1 - 'A'; if (__unlikely(x1 < 26u)) x1 += 32;
+        x2 = (uint_fast8_t)*s2 - 'A'; if (__unlikely(x2 < 26u)) x2 += 32;
+        x1 = (uint_fast8_t)*s1 - 'A'; if (__unlikely(x1 < 26u)) x1 += 32;
 	s1++; s2++;
         if ( __unlikely(x2 != x1) )
             break;
-        if ( __unlikely(x1 == (uint32_t)-'A') )
+        if ( __unlikely(x1 == (uint_fast8_t)-'A') )
             break;
     }
 
@@ -378,12 +378,12 @@ inline int_fast8_t strncasecmp(const char* s1, const char* s2, size_t len)
     while (1) {
         if ( __unlikely(s1 >= end) )
             return 0;
-        x2 = *s2 - 'A'; if (__unlikely(x2 < 26u)) x2 += 32;
-        x1 = *s1 - 'A'; if (__unlikely(x1 < 26u)) x1 += 32;
+        x2 = (uint_fast8_t)*s2 - 'A'; if (__unlikely(x2 < 26u)) x2 += 32;
+        x1 = (uint_fast8_t)*s1 - 'A'; if (__unlikely(x1 < 26u)) x1 += 32;
 	s1++; s2++;
         if ( __unlikely(x2 != x1) )
             break;
-        if ( __unlikely(x1 == (uint32_t)-'A') )
+        if ( __unlikely(x1 == (uint_fast8_t)-'A') )
             break;
     }
 
