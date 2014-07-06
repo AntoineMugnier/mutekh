@@ -326,6 +326,17 @@ static DEVTIMER_GET_VALUE(arm_timer_get_value)
   return err;
 }
 
+#ifdef CONFIG_DEVICE_CLOCK
+static DEVTIMER_GET_FREQ(arm_timer_get_freq)
+{
+  struct device_s *dev = tdev->dev;
+  struct arm_dev_private_s *pv = dev->drv_pv;
+
+  *freq = pv->freq;
+  return 0;
+}
+#endif
+
 static DEVTIMER_RESOLUTION(arm_timer_resolution)
 {
   struct device_s *dev = tdev->dev;
@@ -411,7 +422,11 @@ const struct driver_timer_s  arm_m_timer_drv =
   .f_cancel        = arm_timer_cancel,
   .f_start_stop    = arm_timer_start_stop,
   .f_get_value     = arm_timer_get_value,
+#ifdef CONFIG_DEVICE_CLOCK
+  .f_get_freq      = arm_timer_get_freq,
+#else
   .f_get_freq      = dev_timer_drv_get_freq,
+#endif
   .f_resolution    = arm_timer_resolution,
 };
 

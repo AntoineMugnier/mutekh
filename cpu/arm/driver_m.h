@@ -34,6 +34,7 @@
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
 #include <device/class/timer.h>
+#include <device/class/clock.h>
 #include <device/irq.h>
 
 struct arm_dev_private_s
@@ -52,6 +53,11 @@ struct arm_dev_private_s
 #endif
 #ifdef CONFIG_CPU_ARM_TIMER_DWTCYC
   int_fast8_t dwt_cycnt_start;
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK
+  struct dev_clock_sink_ep_s clk_ep;
+  struct dev_freq_s    freq;
 #endif
 };
 
