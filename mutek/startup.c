@@ -30,6 +30,7 @@
 #include <device/device.h>
 
 #include <stdlib.h>
+#include <string.h>
 
 ////////////////////////////////////////////////////// copy .data
 
@@ -169,7 +170,7 @@ void mutekh_startup(void *arg)
   /* call all bootstrap init functions */
   INIT_BOOTSTRAP_INIT();
 
-  struct cpu_tree_s *cpu = cpu_tree_lookup(CONFIG_ARCH_BOOTSTRAP_CPU_ID);
+  const struct cpu_tree_s *cpu = cpu_tree_lookup(CONFIG_ARCH_BOOTSTRAP_CPU_ID);
   assert(cpu != NULL && "processor id not found in the cpu tree.");
 
   /* use processor stack instead of startup stack from now */

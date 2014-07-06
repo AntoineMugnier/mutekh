@@ -55,6 +55,7 @@ inline ssize_t vprintk(const char *format, va_list ap);
    @param data Data buffer to print
    @param len Length of buffer to print
  */
+config_depend(CONFIG_MUTEK_PRINTK_HEXDUMP)
 void hexdumpk(uintptr_t address, const void *data, size_t len);
 
 /**
