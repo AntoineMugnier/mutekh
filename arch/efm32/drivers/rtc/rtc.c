@@ -32,6 +32,7 @@
 #include <device/driver.h>
 #include <device/class/timer.h>
 #include <device/irq.h>
+#include <device/class/clock.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
@@ -56,7 +57,20 @@ struct efm32_rtc_private_s
   /* Request queue */
   dev_timer_queue_root_t queue;
 #endif
+
+#ifdef CONFIG_DEVICE_CLOCK
+  struct dev_freq_s    freq;
+  struct dev_clock_sink_ep_s clk_ep;
+#endif
 };
+
+#ifdef CONFIG_DEVICE_CLOCK
+static DEV_CLOCK_SINK_CHANGED(efm32_rtc_clk_changed)
+{
+  struct efm32_rtc_private_s *pv = ep->dev->drv_pv;
+  pv->freq = *freq;
+}
+#endif
 
 /* This function starts the hardware rtc counter. */
 static inline void efm32_rtc_start_counter(struct efm32_rtc_private_s *pv)
@@ -341,6 +355,17 @@ static DEVTIMER_GET_VALUE(efm32_rtc_get_value)
   return 0;
 }
 
+#ifdef CONFIG_DEVICE_CLOCK
+static DEVTIMER_GET_FREQ(efm32_rtc_get_freq)
+{
+  struct device_s *dev = tdev->dev;
+  struct efm32_rtc_private_s *pv = dev->drv_pv;
+
+  *freq = pv->freq;
+  return 0;
+}
+#endif
+
 static DEVTIMER_RESOLUTION(efm32_rtc_resolution)
 {
   struct device_s *dev = tdev->dev;
@@ -375,7 +400,11 @@ const struct driver_timer_s efm32_rtc_timer_drv =
   .f_cancel       = efm32_rtc_cancel,
   .f_start_stop   = efm32_rtc_state_start_stop,
   .f_get_value    = efm32_rtc_get_value,
+#ifdef CONFIG_DEVICE_CLOCK
+  .f_get_freq     = efm32_rtc_get_freq,
+#else
   .f_get_freq     = dev_timer_drv_get_freq,
+#endif
   .f_resolution   = efm32_rtc_resolution,
 };
 
@@ -418,12 +447,23 @@ static DEV_INIT(efm32_rtc_init)
   pv->start_count = 0;
   dev->drv_pv = pv;
 
+#ifdef CONFIG_DEVICE_CLOCK
+  /* enable clock */
+  dev_clock_sink_init(dev, &pv->clk_ep, &efm32_rtc_clk_changed);
+
+  if (dev_clock_sink_link(dev, &pv->clk_ep, &pv->freq, NULL, 0, 0))
+    goto err_mem;
+
+  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
+    goto err_clku;
+#endif
+
 #ifdef CONFIG_DEVICE_IRQ
   device_irq_source_init(dev, &pv->irq_eps, 1,
                          efm32_rtc_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, &pv->irq_eps, 1, 1))
-    goto err_mem;
+    goto err_clk;
 
   dev_timer_queue_init(&pv->queue);
 #endif
@@ -449,11 +489,20 @@ static DEV_INIT(efm32_rtc_init)
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
+
 #ifdef CONFIG_DEVICE_IRQ
+ err_clk:
+# ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+# endif
+#endif
+ err_clku:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+#endif
  err_mem:
   mem_free(pv);
   return -1;
-#endif
 }
 
 static DEV_CLEANUP(efm32_rtc_cleanup)
@@ -462,6 +511,11 @@ static DEV_CLEANUP(efm32_rtc_cleanup)
 
   /* Stop rtc */ 
   efm32_rtc_stop_counter(pv);
+
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+#endif
 
 #ifdef CONFIG_DEVICE_IRQ
   dev_timer_queue_destroy(&pv->queue);

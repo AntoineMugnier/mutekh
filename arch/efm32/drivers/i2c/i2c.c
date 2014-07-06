@@ -34,6 +34,7 @@
 #include <device/irq.h>
 #include <device/class/i2c.h>
 #include <device/class/iomux.h>
+#include <device/class/clock.h>
 
 #include <arch/efm32_i2c.h>
 
@@ -68,7 +69,24 @@ struct efm32_i2c_context_s
   size_t count;
   /* Fsm state */
   enum efm32_i2c_state_e state;
+
+  struct dev_freq_s freq;
+  uint32_t bit_rate;
+
+#ifdef CONFIG_DEVICE_CLOCK
+  struct dev_clock_sink_ep_s clk_ep;
+#endif
 };
+
+static void efm32_i2c_update_rate(struct efm32_i2c_context_s *pv)
+{
+  /* NLOW + NHIGH */ 
+  static const uint32_t clhr = 4 + 4;
+
+  /* FSCL = FHFPERCLK /(((NLOW + NHIGH ) x (DIV + 1)) + 4) */ 
+  uint32_t div = ((pv->freq.num / (pv->bit_rate * pv->freq.denom)) - 4) / clhr - 1;
+  cpu_mem_write_32(pv->addr + EFM32_I2C_CLKDIV_ADDR, endian_le32(div));
+}
 
 static inline uint32_t efm32_i2c_get_txc(struct efm32_i2c_context_s *pv)
 {
@@ -217,24 +235,11 @@ DEVI2C_CTRL_CONFIG(efm32_i2c_config)
 
   if (pv->tr != NULL)
     err = -EBUSY;
-  else
+  else if (pv->bit_rate != cfg->bit_rate)
     {
-       uint64_t freq = 14000000;
-       if (!device_res_get_uint64(dev, DEV_RES_FREQ, 0, &freq))
-         freq >>= 24;
-       
-       if (freq == 0)
-         err = -EINVAL;
-       else     
-         {
-           /* NLOW + NHIGH */ 
-           uint32_t clhr = 4 + 4;
-           /* FSCL = FHFPERCLK /(((NLOW + NHIGH ) x (DIV + 1)) + 4) */ 
-           uint32_t div = ((freq /cfg->bit_rate) - 4)/clhr  - 1;
-         
-           cpu_mem_write_32(pv->addr + EFM32_I2C_CLKDIV_ADDR, endian_le32(div));
-         }
-     }
+      pv->bit_rate = cfg->bit_rate;
+      efm32_i2c_update_rate(pv);
+    }
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -339,6 +344,16 @@ const struct driver_s efm32_i2c_drv =
 
 REGISTER_DRIVER(efm32_i2c_drv);
 
+#ifdef CONFIG_DEVICE_CLOCK
+static DEV_CLOCK_SINK_CHANGED(efm32_i2c_clk_changed)
+{
+  struct efm32_i2c_context_s *pv = ep->dev->drv_pv;
+
+  pv->freq = *freq;
+  efm32_i2c_update_rate(pv);
+}
+#endif
+
 static DEV_INIT(efm32_i2c_init)
 {
   struct efm32_i2c_context_s    *pv;
@@ -352,9 +367,23 @@ static DEV_INIT(efm32_i2c_init)
 
   dev->drv_pv = pv;
 
+#ifdef CONFIG_DEVICE_CLOCK
+  /* enable clock */
+  dev_clock_sink_init(dev, &pv->clk_ep, &efm32_i2c_clk_changed);
+
+  if (dev_clock_sink_link(dev, &pv->clk_ep, &pv->freq, NULL, 0, 0))
+    goto err_mem;
+
+  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
+    goto err_clku;
+#else
+  if (device_get_res_freq(dev, &pv->freq, 0))
+    goto err_mem;
+#endif
+
   /* retreive the device base address from device tree. */
   if(device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
-    goto err_mem;
+    goto err_clk;
 
   /* reset current transfer. */
   pv->tr = NULL;
@@ -371,7 +400,7 @@ static DEV_INIT(efm32_i2c_init)
   /* setup pinmux */
   iomux_demux_t loc[2];
   if (device_iomux_setup(dev, ",scl ,sda", loc, NULL, NULL))
-    goto err_mem;
+    goto err_clk;
 
   uint32_t route = EFM32_I2C_ROUTE_SCLPEN | EFM32_I2C_ROUTE_SDAPEN;
 
@@ -383,7 +412,10 @@ static DEV_INIT(efm32_i2c_init)
                          DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
-    goto err_mem;
+    goto err_clk;
+
+  pv->bit_rate = 100000;
+  efm32_i2c_update_rate(pv);
 
   /* Enable controller - Send stop on nack reception */
   uint32_t x = EFM32_I2C_CTRL_EN | EFM32_I2C_CTRL_AUTOSN;
@@ -399,7 +431,15 @@ static DEV_INIT(efm32_i2c_init)
 
   return 0;
 
-err_mem:
+ err_clk:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+#endif
+ err_clku:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+#endif
+ err_mem:
   mem_free(pv);
   return -EINVAL;
 }
@@ -414,6 +454,11 @@ static DEV_CLEANUP(efm32_i2c_cleanup)
   cpu_mem_write_32(pv->addr + EFM32_I2C_CTRL_ADDR, 0);  
   cpu_mem_write_32(pv->addr + EFM32_I2C_IEN_ADDR, 0);  
   cpu_mem_write_32(pv->addr + EFM32_I2C_IF_ADDR, 0);  
+
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+#endif
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 

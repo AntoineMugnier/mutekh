@@ -33,6 +33,7 @@
 #include <device/class/gpio.h>
 #include <device/class/iomux.h>
 #include <device/class/icu.h>
+#include <device/class/clock.h>
 
 #include <mutek/printk.h>
 #include <string.h>
@@ -56,6 +57,10 @@ struct efm32_gpio_private_s
   }                   irq[CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT];
 
   struct dev_irq_ep_s src[2];
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK
+  struct dev_clock_sink_ep_s    clk_ep;
 #endif
 };
 
@@ -528,12 +533,23 @@ static DEV_INIT(efm32_gpio_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
+#ifdef CONFIG_DEVICE_CLOCK
+  /* enable clock */
+  dev_clock_sink_init(dev, &pv->clk_ep, NULL);
+
+  if (dev_clock_sink_link(dev, &pv->clk_ep, NULL, NULL, 0, 0))
+    goto err_mem;
+
+  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
+    goto err_clku;
+#endif
+
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
   device_irq_source_init(dev, pv->src, GPIO_SRC_IRQ_COUNT,
                     &efm32_gpio_source_process, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, pv->src, GPIO_SRC_IRQ_COUNT, 0))
-    goto err_mem;
+    goto err_clk;
 
   device_irq_sink_init(dev, pv->sink, CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT,
                     DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE);
@@ -543,8 +559,18 @@ static DEV_INIT(efm32_gpio_init)
   dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
+#if 0
  err_unlink:
   device_irq_source_unlink(dev, pv->src, GPIO_SRC_IRQ_COUNT);
+#endif
+ err_clk:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+#endif
+ err_clku:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+#endif
  err_mem:
   mem_free(pv);
   return -1;
@@ -559,6 +585,11 @@ static DEV_CLEANUP(efm32_gpio_cleanup)
 
   device_irq_source_unlink(dev, pv->src, GPIO_SRC_IRQ_COUNT);
   device_irq_source_unlink(dev, pv->sink, CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT);
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
 #endif
 
   mem_free(pv);

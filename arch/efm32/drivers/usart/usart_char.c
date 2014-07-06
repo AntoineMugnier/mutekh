@@ -33,6 +33,7 @@
 #include <device/irq.h>
 #include <device/class/char.h>
 #include <device/class/iomux.h>
+#include <device/class/clock.h>
 
 #include <arch/efm32_usart.h>
 
@@ -60,7 +61,21 @@ struct efm32_usart_context_s
   struct dev_irq_ep_s           irq_ep[2];
 #endif
   uint32_t                      mode;
+
+  uint32_t                      bauds;
+  struct dev_freq_s       freq;
+
+#ifdef CONFIG_DEVICE_CLOCK
+  struct dev_clock_sink_ep_s    clk_ep;
+#endif
 };
+
+static void efm32_usart_char_update_bauds(struct efm32_usart_context_s *pv)
+{
+  uint32_t div = (256 * pv->freq.num) / (4 * pv->bauds * pv->freq.denom) - 256;
+  cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(div));
+}
+
 
 static void efm32_usart_try_read(struct device_s *dev)
 {
@@ -266,6 +281,15 @@ const struct driver_s	efm32_usart_drv =
 
 REGISTER_DRIVER(efm32_usart_drv);
 
+#ifdef CONFIG_DEVICE_CLOCK
+static DEV_CLOCK_SINK_CHANGED(efm32_usart_char_clk_changed)
+{
+  struct efm32_usart_context_s	*pv = ep->dev->drv_pv;
+  pv->freq = *freq;
+  efm32_usart_char_update_bauds(pv);
+}
+#endif
+
 static DEV_INIT(efm32_usart_char_init)
 {
   struct efm32_usart_context_s	*pv;
@@ -281,6 +305,20 @@ static DEV_INIT(efm32_usart_char_init)
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
+
+#ifdef CONFIG_DEVICE_CLOCK
+  /* enable clock */
+  dev_clock_sink_init(dev, &pv->clk_ep, &efm32_usart_char_clk_changed);
+
+  if (dev_clock_sink_link(dev, &pv->clk_ep, &pv->freq, NULL, 0, 0))
+    goto err_mem;
+
+  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
+    goto err_clku;
+#else
+  if (device_get_res_freq(dev, &pv->freq, 0))
+    goto err_mem;
+#endif
 
   /* wait for current TX to complete */
   if (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
@@ -299,7 +337,7 @@ static DEV_INIT(efm32_usart_char_init)
   /* setup pinmux */
   iomux_demux_t loc[2];
   if (device_iomux_setup(dev, "<rx? >tx?", loc, NULL, NULL))
-    goto err_mem;
+    goto err_clk;
 
   uint32_t route = 0;
   if (loc[0] != IOMUX_INVALID_DEMUX)
@@ -308,7 +346,7 @@ static DEV_INIT(efm32_usart_char_init)
     route |= EFM32_USART_ROUTE_TXPEN;
 
   if (route == 0)
-    goto err_mem;
+    goto err_clk;
 
   EFM32_USART_ROUTE_LOCATION_SETVAL(route, loc[0] != IOMUX_INVALID_DEMUX ? loc[0] : loc[1]);
 
@@ -350,11 +388,9 @@ static DEV_INIT(efm32_usart_char_init)
                                EFM32_USART_FRAME_PARITY(NONE) |
                                EFM32_USART_FRAME_STOPBITS(ONE)));
 
-  uint64_t freq = 14000000;
-  if (!device_res_get_uint64(dev, DEV_RES_FREQ, 0, &freq))
-    freq >>= 24;
-  uint32_t div = 256 * (freq / (4*230400) - 1);
-  cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(div));
+  /* setup baud rate */
+  pv->bauds = 9600;
+  efm32_usart_char_update_bauds(pv);
 
   /* enable the uart */
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
@@ -373,6 +409,14 @@ static DEV_INIT(efm32_usart_char_init)
 # endif
   dev_char_queue_destroy(&pv->read_q);
   dev_char_queue_destroy(&pv->write_q);
+#endif
+ err_clk:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+#endif
+ err_clku:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
 #endif
  err_mem:
   mem_free(pv);
@@ -393,6 +437,11 @@ DEV_CLEANUP(efm32_usart_char_cleanup)
   /* disable the uart */
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_RXDIS | EFM32_USART_CMD_TXDIS));
+
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+#endif
 
 #if CONFIG_DRIVER_EFM32_USART_SWFIFO > 0
 # ifdef CONFIG_DEVICE_IRQ

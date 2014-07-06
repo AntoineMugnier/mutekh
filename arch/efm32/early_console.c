@@ -29,30 +29,58 @@
 #include <arch/efm32_leuart.h>
 #include <arch/efm32_cmu.h>
 
-#define HFRCO_FREQUENCY         14000000
 #define LEUART_CLOCK            32768
 #define LEUART_RATE             9600
 
-static void cmu_init()
+static void early_console_out_char(char c)
 {
-  uint32_t b = 0x400c8000;
+  uint32_t b = CONFIG_EFM32_EARLY_CONSOLE_LEUART_ADDR;
+
+  while (!(cpu_mem_read_32(b + EFM32_LEUART_STATUS_ADDR)
+           & EFM32_LEUART_STATUS_TXBL))
+    ;
+
+  cpu_mem_write_32(b + EFM32_LEUART_TXDATA_ADDR, c);
+}
+
+static PRINTF_OUTPUT_FUNC(early_console_out)
+{
+  uint_fast8_t i;
+
+  for (i = 0; i < len; i++)
+  {
+    if (str[i] == '\n')
+      early_console_out_char('\r');
+    early_console_out_char(str[i]);
+  }
+}
+
+void efm32_early_console_leuart_init()
+{
+  uint32_t b;
   uint32_t x;
+
+#if defined(CONFIG_EFM32_STK3200) \
+ || defined(CONFIG_EFM32_STK3600) \
+ || defined(CONFIG_EFM32_STK3800) \
+ || defined(CONFIG_EFM32_G8XX_STK)
+
+  /* configure CMU for LEUART */
+  b = 0x400c8000;
 
   /* Enable clock for LE interface */
   cpu_mem_write_32(b + EFM32_CMU_HFCORECLKEN0_ADDR, EFM32_CMU_HFCORECLKEN0_LE);
 
-  /* Enable LFXO */
-  x = cpu_mem_read_32(b + EFM32_CMU_OSCENCMD_ADDR);
-  x |= EFM32_CMU_OSCENCMD_LFXOEN;
-  cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, x);
+  /* Enable LFRCO */
+  cpu_mem_write_32(b + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_LFRCOEN);
 
-  /* Wait LFXO for stabilizing */
-  while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFXORDY))
+  /* Wait LFRCO for stabilizing */
+  while (!(cpu_mem_read_32(b + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFRCORDY))
         ;
 
-  /* Select LXF0 32,768KHZ for CLKLFB */
+  /* Select LFRCO for CLKLFB */
   x = cpu_mem_read_32(b + EFM32_CMU_LFCLKSEL_ADDR);
-  EFM32_CMU_LFCLKSEL_LFB_SET(x, LFXO);
+  EFM32_CMU_LFCLKSEL_LFB_SET(x, LFRCO);
   cpu_mem_write_32(b + EFM32_CMU_LFCLKSEL_ADDR, x);
 
   /* Enable clock for LEUART0 */
@@ -69,36 +97,48 @@ static void cmu_init()
   x = cpu_mem_read_32(b + EFM32_CMU_HFPERCLKEN0_ADDR);
   x |= EFM32_CMU_HFPERCLKEN0_GPIO;
   cpu_mem_write_32(b + EFM32_CMU_HFPERCLKEN0_ADDR, x);
-}
-
-static void leuart_init()
-{
-  uint32_t b;
-  uint32_t x;
 
   /* configure GPIO to route LEUART signals */
   b = 0x40006000;
 
-#if defined(CONFIG_EFM32_STK3200) \
- || defined(CONFIG_EFM32_STK3600) \
- || defined(CONFIG_EFM32_STK3800)
-#if 0
-  /* RX routed on D.5 */ 
   x = cpu_mem_read_32(b + EFM32_GPIO_MODEL_ADDR(3));
+
+# if 0
+  /* RX routed on D.5 */ 
   EFM32_GPIO_MODEL_MODE_SET(5, x, INPUT);
-#endif
+# endif
 
   /* TX routed on D.4 */ 
   EFM32_GPIO_MODEL_MODE_SET(4, x, PUSHPULL);
   cpu_mem_write_32(b + EFM32_GPIO_MODEL_ADDR(3), x);
-#else
-# error
-#endif
+
+# if defined(CONFIG_EFM32_STK3200)
+  /* wait for user button 0 (PC8) to be released */
+  x = cpu_mem_read_32(b + EFM32_GPIO_MODEH_ADDR(2));
+  EFM32_GPIO_MODEH_MODE_SET(0, x, INPUT);
+  cpu_mem_write_32(b + EFM32_GPIO_MODEH_ADDR(2), x);
+
+  while (!(cpu_mem_read_32(b + EFM32_GPIO_DIN_ADDR(2)) & EFM32_GPIO_DIN_DIN(8)))
+    ;
+
+# elif defined(CONFIG_EFM32_STK3600) \
+  || defined(CONFIG_EFM32_STK3800)  \
+  || defined(CONFIG_EFM32_G8XX_STK)
+
+  /* wait for user button 0 (PB9) to be released */
+  x = cpu_mem_read_32(b + EFM32_GPIO_MODEH_ADDR(1));
+  EFM32_GPIO_MODEH_MODE_SET(1, x, INPUT);
+  cpu_mem_write_32(b + EFM32_GPIO_MODEH_ADDR(1), x);
+
+  while (!(cpu_mem_read_32(b + EFM32_GPIO_DIN_ADDR(1)) & EFM32_GPIO_DIN_DIN(9)))
+    ;
+# endif
 
   b = CONFIG_EFM32_EARLY_CONSOLE_LEUART_ADDR;
 
   /* Check that there is no on-going synchronization */
-  while (cpu_mem_read_32(b + EFM32_LEUART_SYNCBUSY_ADDR) & EFM32_LEUART_SYNCBUSY_MASK)
+  while (cpu_mem_read_32(b + EFM32_LEUART_SYNCBUSY_ADDR)
+         & EFM32_LEUART_SYNCBUSY_MASK)
     ;
 
   /* Freeze Registers */
@@ -130,36 +170,13 @@ static void leuart_init()
   cpu_mem_write_32(b + EFM32_LEUART_FREEZE_ADDR, x);
 
   /* Enable TX and RX */
-  cpu_mem_write_32(b + EFM32_LEUART_CMD_ADDR, EFM32_LEUART_CMD_TXEN | EFM32_LEUART_CMD_RXEN);
-}
+  cpu_mem_write_32(b + EFM32_LEUART_CMD_ADDR, EFM32_LEUART_CMD_TXEN |
+                   EFM32_LEUART_CMD_RXEN);
 
-static void early_console_out_char(char c)
-{
-  uint32_t b = CONFIG_EFM32_EARLY_CONSOLE_LEUART_ADDR;
-
-  while (!(cpu_mem_read_32(b + EFM32_LEUART_STATUS_ADDR) & EFM32_LEUART_STATUS_TXBL))
-    ;
-
-  cpu_mem_write_32(b + EFM32_LEUART_TXDATA_ADDR, c);
-}
-
-static PRINTF_OUTPUT_FUNC(early_console_out)
-{
-  uint32_t b = CONFIG_EFM32_EARLY_CONSOLE_LEUART_ADDR;
-  uint_fast8_t i;
-
-  for (i = 0; i < len; i++)
-  {
-    if (str[i] == '\n')
-      early_console_out_char('\r');
-    early_console_out_char(str[i]);
-  }
-}
-
-void efm32_early_console_leuart_init()
-{
-  cmu_init();
-  leuart_init();
   printk_set_output(early_console_out, NULL);
+
+#else
+# error No support for early console on this efm32 board
+#endif
 }
 

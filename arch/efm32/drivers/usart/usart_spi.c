@@ -34,6 +34,7 @@
 #include <device/class/spi.h>
 #include <device/class/timer.h>
 #include <device/class/iomux.h>
+#include <device/class/clock.h>
 
 #include <arch/efm32_usart.h>
 
@@ -53,7 +54,20 @@ struct efm32_usart_spi_context_s
 #ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_queue_s    queue;
 #endif
+
+  struct dev_freq_s        freq;
+  uint32_t                       bit_rate;
+
+#ifdef CONFIG_DEVICE_CLOCK
+  struct dev_clock_sink_ep_s     clk_ep;
+#endif
 };
+
+static void efm32_usart_spi_update_rate(struct efm32_usart_spi_context_s *pv)
+{
+  uint32_t div = (128 * pv->freq.num) / (pv->bit_rate * pv->freq.denom) - 256;
+  cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(div));
+}
 
 static DEVSPI_CTRL_CONFIG(efm32_usart_spi_config)
 {
@@ -84,15 +98,11 @@ static DEVSPI_CTRL_CONFIG(efm32_usart_spi_config)
 
           cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(pv->ctrl));
 
-          uint64_t freq = 14000000;
-          if (!device_res_get_uint64(dev, DEV_RES_FREQ, 0, &freq))
-            freq >>= 24;
-    
-          if (freq == 0)
-            return -ENOTSUP;
-
-          uint32_t div = 128 * (freq / cfg->bit_rate - 2);
-          cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(div));
+          if (pv->bit_rate != cfg->bit_rate)
+            {
+              pv->bit_rate = cfg->bit_rate;
+              efm32_usart_spi_update_rate(pv);
+            }
         }
     }
 
@@ -339,6 +349,15 @@ const struct driver_s	efm32_usart_spi_drv =
 
 REGISTER_DRIVER(efm32_usart_spi_drv);
 
+#ifdef CONFIG_DEVICE_CLOCK
+static DEV_CLOCK_SINK_CHANGED(efm32_usart_spi_clk_changed)
+{
+  struct efm32_usart_spi_context_s *pv = ep->dev->drv_pv;
+  pv->freq = *freq;
+  efm32_usart_spi_update_rate(pv);
+}
+#endif
+
 static DEV_INIT(efm32_usart_spi_init)
 {
   struct efm32_usart_spi_context_s	*pv;
@@ -355,19 +374,32 @@ static DEV_INIT(efm32_usart_spi_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
+#ifdef CONFIG_DEVICE_CLOCK
+  /* enable clock */
+  dev_clock_sink_init(dev, &pv->clk_ep, &efm32_usart_spi_clk_changed);
+
+  if (dev_clock_sink_link(dev, &pv->clk_ep, &pv->freq, NULL, 0, 0))
+    goto err_mem;
+
+  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
+    goto err_clku;
+#else
+  if (device_get_res_freq(dev, &pv->freq, 0))
+    goto err_mem;
+#endif
+
+  /* init state */
   pv->tr = NULL;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
   if (dev_spi_queue_init(dev, &pv->queue))
-    goto err_mem;
+    goto err_clk;
 #endif
 
+  /* disable and clear irqs */
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_RXDIS | EFM32_USART_CMD_TXDIS |
                                EFM32_USART_CMD_CLEARRX | EFM32_USART_CMD_CLEARTX));
-
-  /* disable and clear irqs */
-  cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR, endian_le32(EFM32_USART_CMD_CLEARRX | EFM32_USART_CMD_CLEARTX));
   cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, 0);
   cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
 
@@ -379,7 +411,7 @@ static DEV_INIT(efm32_usart_spi_init)
   /* setup pinmux */
   iomux_demux_t loc[4];
   if (device_iomux_setup(dev, ">clk <miso? >mosi? >cs?", loc, NULL, NULL))
-    goto err_mem;
+    goto err_clk;
 
   pv->route =  EFM32_USART_ROUTE_CLKPEN;
   if (loc[1] != IOMUX_INVALID_DEMUX)
@@ -399,9 +431,14 @@ static DEV_INIT(efm32_usart_spi_init)
                          &efm32_usart_spi_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, pv->irq_ep, 2, -1))
-    goto err_mem;
+    goto err_clk;
 #endif
 
+  /* setup bit rate */
+  pv->bit_rate = 100000;
+  efm32_usart_spi_update_rate(pv);
+
+  /* enable the uart */
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_RXEN | EFM32_USART_CMD_TXEN |
                                EFM32_USART_CMD_MASTEREN));
@@ -411,6 +448,14 @@ static DEV_INIT(efm32_usart_spi_init)
 
   return 0;
 
+ err_clk:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+#endif
+ err_clku:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+#endif
  err_mem:
   mem_free(pv);
   return -1;
@@ -429,6 +474,11 @@ DEV_CLEANUP(efm32_usart_spi_cleanup)
   /* disable the usart */
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_RXDIS | EFM32_USART_CMD_TXDIS));
+
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+#endif
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
   dev_spi_queue_cleanup(&pv->queue);

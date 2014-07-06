@@ -17,7 +17,13 @@ endif
 
 ifeq ($(CONFIG_DRIVER_EFM32_GPIO), defined)
 subdirs += gpio
+endif
 
 ifeq ($(CONFIG_DRIVER_EFM32_I2C), defined)
 subdirs += i2c
 endif
+
+ifeq ($(CONFIG_DRIVER_EFM32_RECMU), defined)
+subdirs += recmu
+endif
+

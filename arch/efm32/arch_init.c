@@ -34,22 +34,3 @@ void efm32_mem_init()
                                                    CONFIG_STARTUP_HEAP_SIZE));
 }
 
-/////////////////////////////////////////////////////////////////////
-
-# include <device/driver.h>
-# include <device/device.h>
-# include <device/resources.h>
-# include <device/class/cpu.h>
-
-
-#define HFRCO_FREQUENCY         14000000
-
-
-
-
-
-#endif
-
-
-
-
