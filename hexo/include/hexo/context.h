@@ -67,9 +67,6 @@ struct context_s
 # endif
 
 # ifdef CONFIG_HEXO_CONTEXT_STATS
-  /** number of cpu cycles spent executing this context */
-  __attribute__((aligned(8)))
-  cpu_cycle_t cycles;
   size_t      enter_cnt;
 #  ifdef CONFIG_HEXO_CONTEXT_PREEMPT
   size_t      preempt_cnt;
@@ -211,9 +208,6 @@ void * context_destroy(struct context_s *context);
 
 
 #ifdef CONFIG_HEXO_CONTEXT_STATS
-/** @internal timestamp of last context switch on this processor */
-extern CPU_LOCAL cpu_cycle_t context_switch_time;
-
 /** @internal @This updates context stats when current context is preempted */
 void context_preempt_stats(struct context_s *context);
 /** @internal @This updates context stats when leaving current context on switch. */
