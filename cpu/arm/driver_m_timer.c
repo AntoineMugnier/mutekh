@@ -22,6 +22,8 @@
 
 #include "driver_m.h"
 
+#include <cpu/arm_v7m.h>
+
 #include <mutek/kroutine.h>
 
 /*
@@ -49,7 +51,8 @@ void arm_timer_systick_irq(struct device_s *dev)
 {
   struct arm_dev_private_s  *pv = dev->drv_pv;
 
-  if (!(cpu_mem_read_32(ARM_M_SYSTICK_CSR_ADDR) & ARM_M_SYSTICK_CSR_CNTFLAG))
+  if (!(cpu_mem_read_32(ARMV7M_SYST_CSR_ADDR) &
+      ARMV7M_SYST_CSR_COUNTFLAG))
     return;
 
   lock_spin(&dev->lock);
@@ -64,7 +67,8 @@ void arm_timer_systick_irq(struct device_s *dev)
           /* stop timer */
           pv->systick_start &= ~1;
           if (pv->systick_start == 0)
-            cpu_mem_write_32(ARM_M_SYSTICK_CSR_ADDR, ARM_M_SYSTICK_CSR_CLKSRC);
+            cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR,
+              ARMV7M_SYST_CSR_CLKSOURCE(CPU));
           break;
         }
 
@@ -116,10 +120,11 @@ static DEVTIMER_REQUEST(arm_timer_request)
               /* start timer if needed */
               if (pv->systick_start == 0)
                 {
-                  cpu_mem_write_32(ARM_M_SYSTICK_RVR_ADDR, pv->systick_period);
-                  cpu_mem_write_32(ARM_M_SYSTICK_CVR_ADDR, 0);
-                  cpu_mem_write_32(ARM_M_SYSTICK_CSR_ADDR, ARM_M_SYSTICK_CSR_CLKSRC |
-                                   ARM_M_SYSTICK_CSR_ENABLE | ARM_M_SYSTICK_CSR_TICKINT);
+                  cpu_mem_write_32(ARMV7M_SYST_RVR_ADDR, pv->systick_period);
+                  cpu_mem_write_32(ARMV7M_SYST_CVR_ADDR, 0);
+                  cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR,
+                      ARMV7M_SYST_CSR_CLKSOURCE(CPU) |
+                      ARMV7M_SYST_CSR_ENABLE | ARMV7M_SYST_CSR_TICKINT);
                 }
               pv->systick_start |= 1;
             }
@@ -163,7 +168,8 @@ static DEVTIMER_CANCEL(arm_timer_cancel)
             {
               pv->systick_start &= ~1;
               if (pv->systick_start == 0)
-                cpu_mem_write_32(ARM_M_SYSTICK_CSR_ADDR, ARM_M_SYSTICK_CSR_CLKSRC);
+                cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR,
+                  ARMV7M_SYST_CSR_CLKSOURCE(CPU));
             }
         }
       else
@@ -211,14 +217,17 @@ static DEVTIMER_START_STOP(arm_timer_start_stop)
               if (mode)
                 top = pv->systick_period;
 # endif
-              cpu_mem_write_32(ARM_M_SYSTICK_RVR_ADDR, top);
-              cpu_mem_write_32(ARM_M_SYSTICK_CVR_ADDR, 0);
+              cpu_mem_write_32(ARMV7M_SYST_RVR_ADDR, top);
+              cpu_mem_write_32(ARMV7M_SYST_CVR_ADDR, 0);
 
 # ifdef CONFIG_DEVICE_IRQ
-              cpu_mem_write_32(ARM_M_SYSTICK_CSR_ADDR, ARM_M_SYSTICK_CSR_CLKSRC |
-                               ARM_M_SYSTICK_CSR_ENABLE | ARM_M_SYSTICK_CSR_TICKINT);
+              cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR,
+                  ARMV7M_SYST_CSR_CLKSOURCE(CPU) |
+                  ARMV7M_SYST_CSR_ENABLE | ARMV7M_SYST_CSR_TICKINT);
 # else
-              cpu_mem_write_32(ARM_M_SYSTICK_CSR_ADDR, ARM_M_SYSTICK_CSR_ENABLE | ARM_M_SYSTICK_CSR_CLKSRC);
+              cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR,
+                  ARMV7M_SYST_CSR_CLKSOURCE(CPU) |
+                  ARMV7M_SYST_CSR_ENABLE);
 # endif
             }
           pv->systick_start += st;
@@ -231,7 +240,8 @@ static DEVTIMER_START_STOP(arm_timer_start_stop)
             {
               pv->systick_start -= st;
               if (pv->systick_start == 0)
-                cpu_mem_write_32(ARM_M_SYSTICK_CSR_ADDR, ARM_M_SYSTICK_CSR_CLKSRC);
+                cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR,
+                  ARMV7M_SYST_CSR_CLKSOURCE(CPU));
             }
         }
       break;
@@ -246,12 +256,14 @@ static DEVTIMER_START_STOP(arm_timer_start_stop)
       else if (start)
         {
           if (pv->dwt_cycnt_start++ == 0)
-            cpu_mem_write_32(ARM_M_DWT_CTRL_ADDR, ctrl | ARM_M_DWT_CTRL_CYCCNTENA);
+            cpu_mem_write_32(ARM_M_DWT_CTRL_ADDR,
+              ctrl | ARM_M_DWT_CTRL_CYCCNTENA);
         }
       else
         {
           if (--pv->dwt_cycnt_start == 0)
-            cpu_mem_write_32(ARM_M_DWT_CTRL_ADDR, ctrl & ~ARM_M_DWT_CTRL_CYCCNTENA);
+            cpu_mem_write_32(ARM_M_DWT_CTRL_ADDR,
+              ctrl & ~ARM_M_DWT_CTRL_CYCCNTENA);
         }
       break;
     }
@@ -282,11 +294,12 @@ static DEVTIMER_GET_VALUE(arm_timer_get_value)
         err = -EBUSY;
       else
         {
-          uint64_t v = cpu_mem_read_32(ARM_M_SYSTICK_CVR_ADDR) ^ 0xffffff;
+          uint64_t v = cpu_mem_read_32(ARMV7M_SYST_CVR_ADDR) ^ 0xffffff;
 
 # ifdef CONFIG_DEVICE_IRQ
           if (v < 0x800000)
-            if (cpu_mem_read_32(ARM_M_SYSTICK_CSR_ADDR) & ARM_M_SYSTICK_CSR_CNTFLAG)
+            if (cpu_mem_read_32(ARMV7M_SYST_CSR_ADDR) &
+              ARMV7M_SYST_CSR_COUNTFLAG)
               pv->systick_value++;
           v += pv->systick_value << 24;
 # endif

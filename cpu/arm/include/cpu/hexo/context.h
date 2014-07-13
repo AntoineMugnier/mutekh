@@ -52,7 +52,7 @@ struct cpu_context_s
 };
 
 #  define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "cpsr", "savemask"
-#  define CPU_CONTEXT_REG_FIRST 1
+#  define CPU_CONTEXT_REG_FIRST 0
 #  define CPU_CONTEXT_REG_COUNT 18
 
 # endif
@@ -80,6 +80,9 @@ struct cpu_context_s
 # define CPU_ARM_CONTEXT_LR             56
 # define CPU_ARM_CONTEXT_PC             60
 # define CPU_ARM_CONTEXT_SYS            64
+# if CONFIG_CPU_ARM_ARCH_VERSION >= 7
+#  define CPU_ARM_CONTEXT_CFSR          68
+# endif
 
 # ifndef __MUTEK_ASM__
 
@@ -90,10 +93,13 @@ struct cpu_context_s
         uint16_t primask;
         uint16_t exc_mode; /* indicate if the context has been interrupted */
     }           sys;
+#  if CONFIG_CPU_ARM_ARCH_VERSION >= 7
+    uint32_t cfsr;
+#  endif
 };
 
-#  define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "xpsr", "sys"
-#  define CPU_CONTEXT_REG_FIRST 1
+#  define CPU_CONTEXT_REG_FIRST 0
+#  define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "xpsr"
 #  define CPU_CONTEXT_REG_COUNT 17
 
 # endif

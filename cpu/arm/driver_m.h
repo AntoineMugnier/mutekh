@@ -23,6 +23,8 @@
 #ifndef _ARM_DRIVER_M_H_
 #define _ARM_DRIVER_M_H_
 
+#ifndef __MUTEK_ASM__
+
 #include <hexo/types.h>
 #include <hexo/interrupt.h>
 #include <hexo/local.h>
@@ -65,15 +67,8 @@ void arm_timer_systick_irq(struct device_s *dev);
 
 extern const struct driver_timer_s  arm_m_timer_drv;
 
+#endif /* !defined(__MUTEK_ASM__) */
 
-#define ARM_M_SYSTICK_CSR_ADDR              0xe000e010
-# define ARM_M_SYSTICK_CSR_ENABLE           0x00000001
-# define ARM_M_SYSTICK_CSR_TICKINT          0x00000002
-# define ARM_M_SYSTICK_CSR_CLKSRC           0x00000004
-# define ARM_M_SYSTICK_CSR_CNTFLAG          0x00010000
-#define ARM_M_SYSTICK_RVR_ADDR              0xe000e014
-#define ARM_M_SYSTICK_CVR_ADDR              0xe000e018
-#define ARM_M_SYSTICK_CALIB_ADDR            0xe000e01c
 
 #define ARM_M_SYSTICK_MIN_PERIOD            10000
 

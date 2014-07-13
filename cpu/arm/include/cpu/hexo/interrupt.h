@@ -37,16 +37,37 @@
 
 #include "cpu/hexo/specific.h"
 
-#define CPU_EXCEPTION_ILLEGAL_INS  0
-#define CPU_EXCEPTION_DATA_ERROR   1
-#define CPU_EXCEPTION_INS_ERROR    2
-#define CPU_FAULT_COUNT 3
+#if defined(CONFIG_CPU_ARM_ARCH_PROFILE_A)
+# define CPU_EXCEPTION_ILLEGAL_INS  0
+# define CPU_EXCEPTION_DATA_ERROR   1
+# define CPU_EXCEPTION_INS_ERROR    2
+# define CPU_FAULT_COUNT 3
 
-#define CPU_FAULT_NAMES {			\
+# define CPU_FAULT_NAMES {			\
       "Illegal instruction",                    \
       "Data abort",				\
       "Ins abort",                              \
       }
+
+#elif defined(CONFIG_CPU_ARM_ARCH_PROFILE_M)
+# define CPU_EXCEPTION_NMI          2
+# define CPU_EXCEPTION_HARDFAULT    3
+# define CPU_EXCEPTION_MEMMANAGE    4
+# define CPU_EXCEPTION_BUSFAULT     5
+# define CPU_EXCEPTION_USAGEFAULT   6
+# define CPU_FAULT_COUNT 7
+
+# define CPU_FAULT_NAMES {			\
+      "", "",                                   \
+      "NMI",                                    \
+      "HardFault",                              \
+      "MemManage",                              \
+      "BusFault",                               \
+      "UsageFault",                             \
+      }
+#else
+# error
+#endif
 
 #ifndef __MUTEK_ASM__
 

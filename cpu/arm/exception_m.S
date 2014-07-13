@@ -23,9 +23,13 @@
 #include <hexo/cpu.h>
 #include <hexo/context.h>
 
+#include <cpu/arm_v7m.h>
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
 # include <arch/mem_checker.h>
 #endif
+
+.syntax unified
 
 .section .excep,"ax"
 
@@ -43,12 +47,13 @@ CPU_NAME_DECL(reset_vector):
         .word arm_exc_dummy
 
         /* faults */
-        .word arm_exc_fault /* hardfault */
 #if CONFIG_CPU_ARM_ARCH_VERSION >= 7
-        .word arm_exc_fault /* memmanage */
-        .word arm_exc_fault /* busfault */
-        .word arm_exc_fault /* usagefault */
+        .word arm_exc_hardfault /* hardfault */
+        .word arm_exc_memmanage /* memmanage */
+        .word arm_exc_busfault /* busfault */
+        .word arm_exc_usagefault /* usagefault */
 #else
+        .word arm_exc_fault /* hardfault */
         .irp r, 4, 5, 6,
          .word arm_exc_dummy
         .endr
@@ -103,8 +108,8 @@ FUNC_END(arm_exc_dummy)
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         /* clear context preempt handler */
         ldr     r0,     = cpu_preempt_handler
-        mov     r1,     #0
-        str     r1,     [r0]
+        movs    r3,     #0
+        str     r3,     [r0]
 # endif
 .endm
 
@@ -128,7 +133,7 @@ FUNC_START(.text, arm_exc_irq)
         /* context registers save array from tls */
         mrs     r1,     psp
         ldr     r2,     = arm_context_regs /* skip r0 - r3 */ + 16
-        add     r2,     r1
+        add     r1,     r2
 
         b       arm_exc_preempt
 # else
@@ -142,50 +147,101 @@ FUNC_END(arm_exc_irq)
 
 /********************************************************** fault */
 
+#if CONFIG_CPU_ARM_ARCH_VERSION >= 7
+FUNC_START(.text, arm_exc_hardfault)
+        ldr     r1,     = ARMV7M_HFSR_ADDR
+        ldr     r1,     [r1]
+
+        /* third arg, dataptr */
+        mvn     r2,     #0
+
+        b       arm_exc_fault
+FUNC_END(arm_exc_hardfault)
+
+FUNC_START(.text, arm_exc_memmanage)
+        ldr     r1,     = ARMV7M_CFSR_ADDR
+        ldr     r1,     [r1]
+
+        /* third arg, dataptr */
+        ldr     r2,     = ARMV7M_MMFAR_ADDR
+        ldr     r2,     [r2]
+
+        b       arm_exc_fault
+FUNC_END(arm_exc_memmanage)
+
+FUNC_START(.text, arm_exc_busfault)
+        ldr     r1,     = ARMV7M_CFSR_ADDR
+        ldr     r1,     [r1]
+
+        /* third arg, dataptr */
+        ldr     r2,     = ARMV7M_BFAR_ADDR
+        ldr     r2,     [r2]
+
+        b       arm_exc_fault
+FUNC_END(arm_exc_busfault)
+
+FUNC_START(.text, arm_exc_usagefault)
+        ldr     r1,     = ARMV7M_CFSR_ADDR
+        ldr     r1,     [r1]
+
+        /* third arg, dataptr */
+        mvn     r2,     #0
+
+        b       arm_exc_fault
+FUNC_END(arm_exc_usagefault)
+#endif
+
 FUNC_START(.text, arm_exc_fault)
 
         ARM_EXC_PREEMPT_CLEAR
 
-        ldr     r1,     = cpu_exception_handler
-        ldr     r1,     [r1]
-        mov     r12,    r1
+        ldr     r0,     = cpu_exception_handler
+        ldr     r0,     [r0]
+        mov     r12,    r0
 
         /* tls */
         mrs     r3,     psp
+
+        /* fourth arg is cpu_context_s */
+        ldr     r0,     = arm_context_regs
+        add     r3,     r0
+
+#if CONFIG_CPU_ARM_ARCH_VERSION >= 7
+        str     r1,     [r3, #CPU_ARM_CONTEXT_CFSR]
+#endif
+
+        /* second arg is pc */
+        ldr     r1,     [sp, #20]
+
+        str     r1,     [r3, #CPU_ARM_CONTEXT_PC]
+
+        /* fifth arg is stack pointer */
+        mov     r0,     r13
+        push    {r0}
 
         /* first arg is interrupt number */
         mrs     r0,     ipsr
         uxtb    r0,     r0
 
-        /* second arg is pc */
-        ldr     r1,     [sp, #24]
-
-        /* fourth arg is cpu_context_s */
-        ldr     r2,     = arm_context_regs
-        add     r3,     r2
-
-        str     r1,     [r3, #CPU_ARM_CONTEXT_PC]
-
-        /* arg4 is stack pointer */
-        mov     r2,     r13
-        push    {r2}
-
+#if CONFIG_CPU_ARM_ARCH_VERSION < 7
         /* third arg, dataptr */
-        mov     r2,     #0
+        movs    r2,     #0
+        mvns    r2,     r2
+#endif
 
         blx     r12
         add     sp,     #4
 
         mrs     r1,     psp
         ldr     r2,     = arm_context_regs
-        add     r2,     r1
+        add     r1,     r2
 
         ldr     r3,     [r1, #CPU_ARM_CONTEXT_PC]
-        str     r3,     [sp, #24]
+        str     r3,     [sp, #20]
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         /* context registers save array from tls */
-        add     r1,     #16  /* skip r0 - r3 */
+        adds    r1,     #16  /* skip r0 - r3 */
         b       arm_exc_preempt
 # else
         /* return */
@@ -207,7 +263,7 @@ FUNC_START(.text, arm_exc_svcall)
 
         /* first arg is syscall number */
         mov     r0,     r13
-        ldr     r0,     [r0, #24]    /* get return address */
+        ldr     r0,     [r0, #20]    /* get return address */
         sub     r0,     #2           /* get svc instruction opcode */
         ldrh    r0,     [r0]
         uxtb    r0,     r0           /* extract imm8 value */
@@ -225,7 +281,7 @@ FUNC_START(.text, arm_exc_svcall)
         str     r3,     [r1, #CPU_ARM_CONTEXT_R2]
         ldr     r3,     [sp, #12]
         str     r3,     [r1, #CPU_ARM_CONTEXT_R3]
-        ldr     r3,     [sp, #24]
+        ldr     r3,     [sp, #20]
         str     r3,     [r1, #CPU_ARM_CONTEXT_PC]
 
         /* call interrupt handler */
@@ -240,7 +296,7 @@ FUNC_START(.text, arm_exc_svcall)
         ldr     r3,     [r1, #CPU_ARM_CONTEXT_R0]
         str     r3,     [sp, #0]
         ldr     r3,     [r1, #CPU_ARM_CONTEXT_PC]
-        str     r3,     [sp, #24]
+        str     r3,     [sp, #20]
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         add     r1,     #16  /* skip r0 - r3 */
@@ -288,36 +344,21 @@ FUNC_START(.text, arm_exc_preempt)        /* args: r1 = &arm_context_regs + 16 *
         /* save primask and set ret_code to 1 */
         ldr     r6,     = 0xffff0000
         mrs     r7,     primask
-        orr     r7,     r6
+        orrs    r7,     r6
         str     r7,     [r1, #16]
 
-        /* restore tls pointer from context struct */
-        ldr     r0,     [r0, #(HEXO_CONTEXT_S_TLS * 4)]
-        msr     psp,    r0
+# ifdef CONFIG_HEXO_CONTEXT_STATS
+        mov     r4,     r0
+        bl      context_preempt_stats
+        mov     r0,     r4
+# endif
 
-        /* context registers save array */
-        ldr     r1,     = arm_context_regs /* skip r0 - r3 */ + 16
-        add     r0,     r1
+        bl      cpu_context_jumpto_restore
 
-        /* restore callee saved regs */
-        ldmia   r0!,    {r4, r5, r6, r7}
-        ldmia   r0!,    {r1, r2}
-        mov     r8,     r1
-        mov     r9,     r2
-        ldmia   r0!,    {r1, r2}
-        mov     r10,    r1
-        mov     r11,    r2
-
-        /* restore sp */
-        ldr     r3,     [r0, #4]
-        mov     r13,    r3
-
-        /* restore primask and get ret_code */
-        ldr     r1,     [r0, #16]
         msr     primask, r1
 
         /* test ret_code to determine if we a are restoring an interrupted context */
-        lsr     r1,     #17
+        lsrs    r1,     r1,     #17
         bcs     1f
 
         /* push exception return data: xpsr and pc, r0-r3,r12,r14 are garbage */

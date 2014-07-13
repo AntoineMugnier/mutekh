@@ -25,6 +25,8 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
+#include <cpu/arm_v7m.h>
+
 #include "driver_m.h"
 
 /************************************************************************
@@ -86,7 +88,8 @@ static DEVICU_ENABLE_IRQ(arm_icu_enable_irq)
     return 0;
 
   /* configure NVIC */
-  cpu_mem_write_32(0xe000e100 + 4 * (icu_in_id / 32), endian_le32(1 << (icu_in_id % 32)));
+  cpu_mem_write_32(ARMV7M_NVIC_ISER_ADDR(icu_in_id / 32),
+    ARMV7M_NVIC_ISER_SETENA(icu_in_id % 32));
 
   return 1;
 }
@@ -98,7 +101,8 @@ static DEVICU_DISABLE_IRQ(arm_icu_disable_irq)
   uint_fast8_t icu_in_id = sink - pv->sinks;
 
   /* configure NVIC */
-  cpu_mem_write_32(0xe000e180 + 4 * (icu_in_id / 32), endian_le32(1 << (icu_in_id % 32)));
+  cpu_mem_write_32(ARMV7M_NVIC_ICER_ADDR(icu_in_id / 32),
+    ARMV7M_NVIC_ICER_CLRENA(icu_in_id % 32));
 }
 
 const struct driver_icu_s  arm_icu_drv =
@@ -123,6 +127,12 @@ static DEVCPU_REG_INIT(arm_cpu_reg_init)
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
 
   CPU_LOCAL_SET(cpu_device, dev);
+
+#if CONFIG_CPU_ARM_ARCH_VERSION >= 7
+  /* enable all types of fault */
+  cpu_mem_write_32(ARMV7M_SHCSR_ADDR,
+    ARMV7M_SHCSR_MEMFAULTENA | ARMV7M_SHCSR_BUSFAULTENA | ARMV7M_SHCSR_USGFAULTENA);
+#endif
 }
 
 const struct driver_cpu_s  arm_cpu_drv =
@@ -213,7 +223,8 @@ static DEV_INIT(arm_init)
   pv->systick_period = CONFIG_CPU_ARM_TIMER_SYSTICK_PERIOD;
 # ifdef CONFIG_DEVICE_IRQ
   /* enable systick in NVIC */
-  cpu_mem_write_32(0xe000e100, endian_le32(1 << 15));
+  cpu_mem_write_32(ARMV7M_NVIC_ISER_ADDR(0),
+    ARMV7M_NVIC_ISER_SETENA(15));
 # endif
 #endif
 
@@ -262,7 +273,7 @@ static DEV_CLEANUP(arm_cleanup)
   struct arm_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
-  cpu_mem_write_32(ARM_M_SYSTICK_CSR_ADDR, 0);
+  cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR, 0);
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ

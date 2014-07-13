@@ -23,6 +23,9 @@
 #include <hexo/asm.h>
 #include <hexo/cpu.h>
 
+#include <cpu/arm_v7m.h>
+#include "driver_m.h"
+
 #ifdef CONFIG_SOCLIB_MEMCHECK
 # include <arch/mem_checker.h>
 #endif
@@ -32,6 +35,8 @@
    Caller saved: r12
     + Arguments: r0-r3
 */
+
+.syntax unified
 
 FUNC_START(.text, cpu_context_switch)
 
@@ -67,7 +72,12 @@ FUNC_END(cpu_context_switch)
 
 
 
-FUNC_START(.text, cpu_context_jumpto)
+
+/* in:  r0 = struct context_s*
+   out: r0 = &arm_context_regs[r12]
+        r1 = primask
+*/
+FUNC_START(.text, cpu_context_jumpto_restore)
 
         /* restore tls pointer from context struct */
         ldr     r0,     [r0, #(HEXO_CONTEXT_S_TLS * 4)]
@@ -93,10 +103,19 @@ FUNC_START(.text, cpu_context_jumpto)
         /* get primask and exc_return */
         ldr     r1,     [r0, #16]
 
+        bx      r14
+
+FUNC_END(cpu_context_jumpto_restore)
+
+
+/* in: r0 = struct context_s* */
+FUNC_START(.text, cpu_context_jumpto)
+
+        bl      cpu_context_jumpto_restore
+
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         /* test exc_return */
-        mov     r3,     r1
-        lsr     r3,     #17
+        lsrs    r3,     r1,     #17
         bcs     1f
 #endif
 
@@ -109,8 +128,8 @@ FUNC_START(.text, cpu_context_jumpto)
 1:
         /* trigger pendsv irq, jump to cpu_context_jumpto_irq.
            pendsv must have a higher priority than other irqs. */
-        ldr     r2, = 0x10000000
-        ldr     r3, = 0xe000ed04
+        ldr     r2, = ARMV7M_ICSR_PENDSVSET
+        ldr     r3, = ARMV7M_ICSR_ADDR
         str     r2, [r3]
         nop
         cpsie   i
