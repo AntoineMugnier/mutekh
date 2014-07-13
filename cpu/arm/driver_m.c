@@ -133,6 +133,50 @@ static DEVCPU_REG_INIT(arm_cpu_reg_init)
   cpu_mem_write_32(ARMV7M_SHCSR_ADDR,
     ARMV7M_SHCSR_MEMFAULTENA | ARMV7M_SHCSR_BUSFAULTENA | ARMV7M_SHCSR_USGFAULTENA);
 #endif
+
+#if defined(CONFIG_CPU_ARM_MPU_STACK_GUARD) || defined(CONFIG_CPU_ARM_MPU_NULL_PTR)
+  uint32_t type = cpu_mem_read_32(ARMV7M_MPU_TYPE_ADDR);
+  uint_fast8_t r = 0;
+
+# ifdef CONFIG_CPU_ARM_MPU_STACK_GUARD
+  r += ARM_M_STACK_GUARD_MPU_REGION_COUNT;
+# endif
+# ifdef CONFIG_CPU_ARM_MPU_NULL_PTR
+  r++;
+# endif
+
+  if (r > ARMV7M_MPU_TYPE_DREGION_GET(type))
+    {
+      printk("warning: not enough ARM MPU regions available (%u) "
+        "to enable MPU_STACK_GUARD/MPU_NULL_PTR features.\n");
+    }
+  else
+    {
+# ifdef CONFIG_CPU_ARM_MPU_NULL_PTR
+      cpu_mem_write_32(ARMV7M_MPU_RNR_ADDR,
+          ARMV7M_MPU_RNR_REGION(r-1));
+
+      /* Prevent memory access at address 0. 32 bytes sub-regions are
+         enabled in order to cover the exception vector table. At
+         least 64 bytes are covered. */
+      cpu_mem_write_32(ARMV7M_MPU_RBAR_ADDR,
+          ARMV7M_MPU_RBAR_ADDRESS(0));
+
+      cpu_mem_write_32(ARMV7M_MPU_RASR_ADDR,
+          ARMV7M_MPU_RASR_SIZE(7) | ARMV7M_MPU_RASR_ENABLE |
+          ARMV7M_MPU_RASR_SRD(0xc0 |
+            ((CONFIG_CPU_ARM_M_IRQ_COUNT < 8) << 2) |
+            ((CONFIG_CPU_ARM_M_IRQ_COUNT < 16) << 3) |
+            ((CONFIG_CPU_ARM_M_IRQ_COUNT < 24) << 4) |
+            ((CONFIG_CPU_ARM_M_IRQ_COUNT < 32) << 5)));
+# endif
+
+      /* enable MPU */
+      cpu_mem_write_32(ARMV7M_MPU_CTRL_ADDR,
+          ARMV7M_MPU_CTRL_ENABLE | ARMV7M_MPU_CTRL_PRIVDEFENA);
+    }
+
+#endif
 }
 
 const struct driver_cpu_s  arm_cpu_drv =

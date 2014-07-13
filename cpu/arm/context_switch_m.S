@@ -71,7 +71,57 @@ FUNC_START(.text, cpu_context_switch)
 FUNC_END(cpu_context_switch)
 
 
+#ifdef CONFIG_CPU_ARM_MPU_STACK_GUARD
+/* in: r1 = stack top address */
+FUNC_START(.text, cpu_context_stack_guard)
 
+        /* disable guard if stack is not 32 bytes aligned */
+        movs    r7,     0
+        lsls    r3,     r1,     #27
+        bne     2f
+
+        /* mask */
+        ldr     r7,     = (1 << ARM_M_STACK_GUARD_MPU_SUBREGION_COUNT) - 1
+        uxtb    r3,     r1
+        lsrs    r3,     r3,     #5
+        lsls    r7,     r7,     r3
+2:
+        /* MPU base */
+        ldr     r5,     = ARMV7M_MPU_TYPE_ADDR
+
+        /* region index */
+        movs    r3,     #0
+1:
+        /* MPU_RNR = index */
+        str     r3,     [r5, #8]
+        adds    r3,     r3,     #1
+
+        /* MPU_RBAR */
+        lsrs    r6,     r1,     #8
+        lsls    r6,     r6,     #8
+        str     r6,     [r5, #12]
+
+        /* MPU_RASR:srd = (mask << 8) & 0xff */
+        mvns    r6,     r7
+        lsls    r6,     r6,     #24
+        lsrs    r6,     r6,     #16
+        /* MPU_RASR:attr = region enabled, 256 bytes, no access */
+        adds    r6,     #15
+        str     r6,     [r5, #16]
+
+        /* next region */
+        lsrs    r7,     r7,     #8
+        adds    r1,     #128
+        adds    r1,     #128
+
+        /* regions count */
+        cmp     r3,     #ARM_M_STACK_GUARD_MPU_REGION_COUNT
+        bcc     1b
+
+        bx      r14
+
+FUNC_END(cpu_context_stack_guard)
+#endif
 
 /* in:  r0 = struct context_s*
    out: r0 = &arm_context_regs[r12]
@@ -82,6 +132,16 @@ FUNC_START(.text, cpu_context_jumpto_restore)
         /* restore tls pointer from context struct */
         ldr     r0,     [r0, #(HEXO_CONTEXT_S_TLS * 4)]
         msr     psp,    r0
+
+#ifdef CONFIG_CPU_ARM_MPU_STACK_GUARD
+        /* context stack top */
+        ldr     r1,     = context_stack_start
+        ldr     r1,     [r0, r1]
+
+        mov     r2,     r14
+        bl      cpu_context_stack_guard
+        mov     r14,     r2
+#endif
 
         /* context registers save array */
         ldr     r1,     = arm_context_regs /* skip r0 - r3 */ + 16
@@ -152,9 +212,17 @@ FUNC_END(cpu_context_jumpto_irq)
 
 
 FUNC_START(.text, cpu_context_set)
-	add  r1, r0, r1
-	mov  r13, r1
-	bx   r2
+
+	add     r1,     r0,     r1
+        mov     r13,    r1
+
+#ifdef CONFIG_CPU_ARM_MPU_STACK_GUARD
+	mov     r1,     r0
+        bl      cpu_context_stack_guard
+#endif
+
+	bx      r2
+
 FUNC_END(cpu_context_set)
 
 
@@ -166,12 +234,22 @@ FUNC_END(cpu_context_entry)
 
 FUNC_START(.text, cpu_context_stack_use)
 
+        mov     r14,    r1
+
         /* get tls pointer from context struct */
         ldr     r0,     [r0, #(HEXO_CONTEXT_S_TLS * 4)]
 
+#ifdef CONFIG_CPU_ARM_MPU_STACK_GUARD
+        /* context stack top */
+        ldr     r1,     = context_stack_start
+        ldr     r1,     [r0, r1]
+
+        bl      cpu_context_stack_guard
+#endif
+
         /* context registers save array */
-        ldr     r3,     = arm_context_regs
-        add     r0,     r3
+        ldr     r1,     = arm_context_regs
+        add     r0,     r1
 
         /* get context sp */
         ldr     r0,     [r0, #CPU_ARM_CONTEXT_SP]
@@ -179,7 +257,7 @@ FUNC_START(.text, cpu_context_stack_use)
 
         /* function call */
         mov     r0,     r2
-        bx      r1
+        bx      r14
 
 FUNC_END(cpu_context_stack_use)
 
