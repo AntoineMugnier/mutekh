@@ -342,10 +342,11 @@ mips_preempt_and_restore:
 
         // prepare cpu_context_jumpto arg
         move    $4,     $2
+
 # ifdef CONFIG_HEXO_CONTEXT_STATS
-        move    $16,    $2
+        move    $17,    $2
         jal     context_preempt_stats
-        move    $4,     $16
+        move    $4,     $17
 # endif
 
 # ifdef CONFIG_HEXO_FPU
