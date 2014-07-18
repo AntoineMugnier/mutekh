@@ -6,11 +6,15 @@ objs += dev_stk3200.o
 endif
 
 ifeq ($(CONFIG_EFM32_STK3600),defined)
-objs += dev_stk3600_3800.o
+objs += dev_stk3x00_678.o
+endif
+
+ifeq ($(CONFIG_EFM32_STK3700),defined)
+objs += dev_stk3x00_678.o
 endif
 
 ifeq ($(CONFIG_EFM32_STK3800),defined)
-objs += dev_stk3600_3800.o
+objs += dev_stk3x00_678.o
 endif
 
 ifeq ($(CONFIG_EFM32_G8XX_STK),defined)

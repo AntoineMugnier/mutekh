@@ -62,6 +62,7 @@ void efm32_early_console_leuart_init()
 
 #if defined(CONFIG_EFM32_STK3200) \
  || defined(CONFIG_EFM32_STK3600) \
+ || defined(CONFIG_EFM32_STK3700) \
  || defined(CONFIG_EFM32_STK3800) \
  || defined(CONFIG_EFM32_G8XX_STK)
 
@@ -122,6 +123,7 @@ void efm32_early_console_leuart_init()
     ;
 
 # elif defined(CONFIG_EFM32_STK3600) \
+  || defined(CONFIG_EFM32_STK3700)  \
   || defined(CONFIG_EFM32_STK3800)  \
   || defined(CONFIG_EFM32_G8XX_STK)
 
