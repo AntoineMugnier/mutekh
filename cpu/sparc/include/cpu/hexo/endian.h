@@ -25,12 +25,6 @@
 
 #define __CPU_ENDIAN_H_
 
-/** SPARC CPU is big endian */
-#define CPU_ENDIAN_ISBIG
-#undef CPU_ENDIAN_ISLITTLE
-
-#undef CPU_NATIVE_NONALIGNED_ACCESS
-
 //#define HAS_CPU_ENDIAN_SWAP16
 //#define HAS_CPU_ENDIAN_SWAP32
 //#define HAS_CPU_ENDIAN_SWAP64

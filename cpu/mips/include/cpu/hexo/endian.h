@@ -26,12 +26,6 @@
 
 #define __CPU_ENDIAN_H_
 
-/** x86 CPU is little endian */
-#undef CPU_ENDIAN_ISBIG
-#define CPU_ENDIAN_ISLITTLE
-
-#undef CPU_NATIVE_NONALIGNED_ACCESS
-
 //#define HAS_CPU_ENDIAN_SWAP16
 //#define HAS_CPU_ENDIAN_SWAP32
 //#define HAS_CPU_ENDIAN_SWAP64
