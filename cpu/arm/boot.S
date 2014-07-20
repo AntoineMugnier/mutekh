@@ -55,6 +55,14 @@ FUNC_START(.text, mutekh_entry)
         mcr    p15, 0, r4, c12, c0, 0    /* VBAR register */
 #endif
 
+#if CONFIG_CPU_ARM_ARCH_VERSION == 6 && defined(CONFIG_CPU_NONALIGNED_ACCESS)
+        /* enable non aligned memory access on ARMv6 */
+        mrc    p15, 0, r4, c1, c0, 0 /* system control register */
+        orr    r4, r4, #(1 << 22)    /* set bit U */
+        bic    r4, r4, #(1 << 1)     /* clear bit A */
+        mcr    p15, 0, r4, c1, c0, 0
+#endif
+
 #ifdef CONFIG_ARCH_SMP_CAPABLE
 
         CPU_ID r4

@@ -26,14 +26,38 @@
 
 #define __CPU_ENDIAN_H_
 
-/** x86 CPU is little endian */
-#undef CPU_ENDIAN_ISBIG
-#define CPU_ENDIAN_ISLITTLE
+#if CONFIG_CPU_ARM_ARCH_VERSION >= 6
 
-#undef CPU_NATIVE_NONALIGNED_ACCESS
+# define HAS_CPU_ENDIAN_SWAP16
 
-//#define HAS_CPU_ENDIAN_SWAP16
-//#define HAS_CPU_ENDIAN_SWAP32
+static inline uint16_t cpu_endian_swap16(uint16_t x)
+{
+  uint16_t r;
+
+  asm ("rev16	%0, %1"
+       : "=l" (r)
+       : "l" (x)
+       );
+
+  return r;
+}
+
+# define HAS_CPU_ENDIAN_SWAP32
+
+static inline uint32_t cpu_endian_swap32(uint32_t x)
+{
+  uint32_t r;
+
+  asm ("rev	%0, %1"
+       : "=l" (r)
+       : "l" (x)
+       );
+
+  return r;
+}
+
+#endif
+
 //#define HAS_CPU_ENDIAN_SWAP64
 
 #endif
