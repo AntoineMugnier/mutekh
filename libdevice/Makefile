@@ -5,7 +5,8 @@ doc_headers =  device/device.h  device/driver.h device/irq.h device/resources.h 
 	device/class/block.h device/class/char.h			\
 	device/class/enum.h device/class/gpio.h			\
 	device/class/icu.h device/class/net.h device/class/cpu.h	\
-	device/class/timer.h device/class/dma.h
+	device/class/timer.h device/class/dma.h \
+    device/class/i2c.h device/class/spi.h
 
 enum_headers = device/driver.h device/device.h device/class/mem.h \
 			   device/class/pwm.h
