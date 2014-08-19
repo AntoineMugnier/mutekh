@@ -256,7 +256,7 @@ error_t mkdir(const char *pathname, mode_t mode)
     struct vfs_node_s *node = NULL;
     error_t err = vfs_create(vfs_get_root(), vfs_get_cwd(), pathname, VFS_NODE_DIR, &node);
     if ( err == 0 )
-        vfs_node_refdrop(node);
+        vfs_node_refdec(node);
     return err;
 }
 

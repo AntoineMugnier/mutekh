@@ -16,7 +16,8 @@
             Internal buffered stream API
 ***********************************************************************/
 
-GCT_CONTAINER_FCNS(stream_fifo, RING, static inline, stream_fifo);
+GCT_CONTAINER_FCNS(stream_fifo, static inline, stream_fifo,
+  init, clear, count, push, pushback_array, pop_array);
 
 static error_t	__stdio_no_flush(FILE *stream)
 {
