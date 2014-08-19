@@ -71,7 +71,7 @@ struct sched_context_s
 GCT_CONTAINER_TYPES      (sched_queue, struct sched_context_s *, list_entry);
 
 GCT_CONTAINER_FCNS       (sched_queue, static inline, sched_queue,
-                          init, destroy, isempty, pushback, pop, head, wrlock, unlock);
+                          init, destroy, isempty, pushback, pop, head, wrlock, rdlock, unlock);
 
 GCT_CONTAINER_NOLOCK_FCNS(sched_queue, static inline, sched_queue_nolock,
                           isempty, pushback, pop, head, remove);
