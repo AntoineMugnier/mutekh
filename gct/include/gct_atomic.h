@@ -37,6 +37,9 @@ C_HEADER_BEGIN
 
 #define GCT_CONFIG_ATOMIC_OTHER
 
+typedef atomic_int_t gct_atomic_int_t;
+typedef atomic_t gct_atomic_t;
+
 /* static value init */
 #define GCT_ATOMIC_INITIALIZER(v)	ATOMIC_INITIALIZER(v)
 
