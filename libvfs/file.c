@@ -47,29 +47,31 @@ static VFS_FILE_TRUNCATE(default_vfs_file_truncate)
 
 static VFS_FILE_CLOSE(default_vfs_file_close)
 {
-	vfs_file_refdrop(file);
+	vfs_file_refdec(file);
 	
 	return 0;
 }
 
-struct vfs_file_s * vfs_file_create(struct vfs_node_s *node,
+struct vfs_file_s * vfs_file_create(struct fs_node_s *node,
 				    vfs_fs_node_refnew_t *node_refnew,
 				    vfs_fs_node_refdrop_t *node_refdrop)
 {
 	struct vfs_file_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
 
-	if (obj != NULL)
-	    {
-		vfs_printk("<file open %p>", node);
-		obj->offset = 0;
-		obj->node = node_refnew(node);
-		obj->node_refdrop = node_refdrop;
-		obj->close = default_vfs_file_close;
-		obj->read = default_vfs_file_read;
-		obj->write = default_vfs_file_write;
-		obj->seek = default_vfs_file_seek;
-		obj->truncate = default_vfs_file_truncate;
-	    }
+	if (!obj)
+		return NULL;
+
+	vfs_file_refinit(obj);
+
+	vfs_printk("<file open %p>", node);
+	obj->offset = 0;
+	obj->node = node_refnew(node);
+	obj->node_refdrop = node_refdrop;
+	obj->close = default_vfs_file_close;
+	obj->read = default_vfs_file_read;
+	obj->write = default_vfs_file_write;
+	obj->seek = default_vfs_file_seek;
+	obj->truncate = default_vfs_file_truncate;
 
 	return obj;
 }
@@ -77,9 +79,12 @@ struct vfs_file_s * vfs_file_create(struct vfs_node_s *node,
 void vfs_file_destroy(struct vfs_file_s *obj)
 {
 	vfs_printk("<file close %p>", obj->node);
-	mem_free(obj);
+
+	vfs_file_refcleanup(obj);
 
 	obj->node_refdrop(obj->node);
+
+	mem_free(obj);
 }
 
 const struct fileops_s vfs_file_fops = {

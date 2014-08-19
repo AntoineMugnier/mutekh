@@ -25,39 +25,34 @@
 #include <mutek/printk.h>
 
 
-GCT_CONTAINER_FCNS(vfs_lru, static inline, vfs_lru,
-                   init, destroy);
-
 struct vfs_fs_s * vfs_fs_create()
 {
     struct vfs_fs_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
 
-    if (obj != NULL)
-        {
-            atomic_set(&obj->ref, 0);
-            vfs_lru_init(&obj->lru_list);
+    if (!obj)
+        return NULL;
+
+    atomic_set(&obj->ref, 0);
 
 #if defined(CONFIG_VFS_STATS)
-            atomic_set(&obj->node_open_count, 0);
-            atomic_set(&obj->lookup_count, 0);
-            atomic_set(&obj->create_count, 0);
-            atomic_set(&obj->link_count, 0);
-            atomic_set(&obj->move_count, 0);
-            atomic_set(&obj->unlink_count, 0);
-            atomic_set(&obj->stat_count, 0);
-            atomic_set(&obj->node_create_count, 0);
-            atomic_set(&obj->node_destroy_count, 0);
-            atomic_set(&obj->file_open_count, 0);
-            atomic_set(&obj->file_close_count, 0);
+    atomic_set(&obj->node_open_count, 0);
+    atomic_set(&obj->lookup_count, 0);
+    atomic_set(&obj->create_count, 0);
+    atomic_set(&obj->link_count, 0);
+    atomic_set(&obj->move_count, 0);
+    atomic_set(&obj->unlink_count, 0);
+    atomic_set(&obj->stat_count, 0);
+    atomic_set(&obj->node_create_count, 0);
+    atomic_set(&obj->node_destroy_count, 0);
+    atomic_set(&obj->file_open_count, 0);
+    atomic_set(&obj->file_close_count, 0);
 #endif
-        }
 
 	return obj;
 }
 
 void vfs_fs_destroy(struct vfs_fs_s *obj)
 {
-    vfs_lru_destroy(&obj->lru_list);
     mem_free(obj);
 }
 

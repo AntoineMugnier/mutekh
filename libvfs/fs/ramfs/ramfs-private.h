@@ -24,18 +24,18 @@
 
 #include <hexo/types.h>
 
-#include <gct_platform.h>
-#include <gct_lock_hexo_lock_irq.h>
-#include <gct/container_avl.h>
-#include <gct/refcount.h>
-
 #include <vfs/types.h>
 #include <vfs/file.h>
+
+#include <gct/container_avl_p.h>
 
 VFS_FS_NODE_OPEN(ramfs_node_open);
 
 #define GCT_CONTAINER_LOCK_ramfs_dir_hash HEXO_LOCK_IRQ
-#define GCT_CONTAINER_ALGO_ramfs_dir_hash AVL
+#define GCT_CONTAINER_ALGO_ramfs_dir_hash AVL_P
+#define GCT_CONTAINER_COUNTER_ramfs_dir_hash
+
+#define CONTAINER_OBJ_ramfs_dir_hash ramfs_node
 
 GCT_CONTAINER_TYPES    (ramfs_dir_hash,
 struct fs_node_s
@@ -51,15 +51,13 @@ struct fs_node_s
     };
 } *, hash_entry);
 
-#define CONTAINER_OBJ_ramfs_dir_hash ramfs_node
+GCT_REFCOUNT(ramfs_node, struct fs_node_s *, obj_entry);
 
 GCT_CONTAINER_KEY_TYPES(ramfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
 //GCT_CONTAINER_PROTOTYPES(ramfs_dir_hash, HASHLIST, static inline);
 
-struct fs_node_s * ramfs_node_create();
+struct fs_node_s *ramfs_node_create(enum vfs_node_type_e type, struct ramfs_data_s *data);
 void ramfs_node_destroy(struct fs_node_s *);
-
-GCT_REFCOUNT(ramfs_node, struct fs_node_s *, obj_entry);
 
 struct fs_node_s;
 

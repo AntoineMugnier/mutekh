@@ -75,7 +75,7 @@ VFS_FS_NODE_OPEN(devfs_node_open)
 {
 	vfs_printk("<devfs_node_open %p %x ", node, flags);
 
-	struct vfs_file_s *f = vfs_file_new(NULL, node, devfs_node_refnew, devfs_node_refdrop);
+	struct vfs_file_s *f = vfs_file_new(NULL, node, devfs_node_refinc, devfs_node_refdec);
 	if ( f == NULL ) {
 		vfs_printk("err>");
 		return -ENOMEM;

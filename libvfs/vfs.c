@@ -61,7 +61,7 @@ vfs_node_parent_nolock_set_for_root(struct vfs_node_s *node, struct vfs_node_s *
 {
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&node->parent_lock);
-    node->parent = vfs_node_refnew(parent);
+    node->parent = vfs_node_refinc(parent);
     vfs_dir_push(&parent->children, node);
     lock_release(&node->parent_lock);
     CPU_INTERRUPT_RESTORESTATE;
@@ -73,10 +73,9 @@ vfs_node_parent_nolock_set(struct vfs_node_s *node, struct vfs_node_s *parent)
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&node->parent_lock);
 	assert( vfs_node_is_dandling(node) );
-    node->parent = vfs_node_refnew(parent);
+    node->parent = vfs_node_refinc(parent);
     vfs_dir_push(&parent->children, node);
     lock_release(&node->parent_lock);
-    vfs_node_lru_rehash(node);
     CPU_INTERRUPT_RESTORESTATE;
 }
 
@@ -129,11 +128,10 @@ error_t vfs_mount(struct vfs_node_s *mountpoint,
 		return -EINVAL;
 
 	/* Keep a reference to the mountpoint node, it may be open */
-	fs->old_node = vfs_node_refnew(mountpoint);
-    /* Keep another reference for the lru not to trash it */
-    vfs_node_refnew(mountpoint);
+	fs->old_node = vfs_node_refinc(mountpoint);
+    vfs_node_refinc(mountpoint);
 
-    struct vfs_node_s *new_node = vfs_node_createnew(
+    struct vfs_node_s *new_node = vfs_node_create(
         fs, mountpoint->name,
         fs->root);
 
@@ -147,7 +145,7 @@ error_t vfs_mount(struct vfs_node_s *mountpoint,
     vfs_node_parent_nolock_set_for_root(new_node, parent);
 	vfs_node_dirunlock(parent);
 
-    vfs_node_refdrop(parent);
+    vfs_node_refdec(parent);
 
 	vfs_printk("<mount ok>");
 
@@ -175,7 +173,7 @@ error_t vfs_umount(struct vfs_node_s *mountpoint)
 	vfs_node_dirlock(parent);
 	if ( !fs->ops->can_unmount(fs) ) {
         vfs_node_dirunlock(parent);
-        vfs_node_refdrop(parent);
+        vfs_node_refdec(parent);
         return -EBUSY;
     }
         
@@ -186,14 +184,13 @@ error_t vfs_umount(struct vfs_node_s *mountpoint)
     vfs_node_dirunlock(parent);
 
     /* Do the refdrop without the parent locked */
-    vfs_node_refdrop(mountpoint);
+    vfs_node_refdec(mountpoint);
     /* Yes, we did have two refs */
-    vfs_node_refdrop(mountpoint);
-    vfs_node_refdrop(fs->old_node);
+    vfs_node_refdec(mountpoint);
+    vfs_node_refdec(fs->old_node);
     fs->old_node = NULL;
 
-    vfs_node_refdrop(parent);
-    vfs_node_lru_rehash(mountpoint);
+    vfs_node_refdec(parent);
 	return 0;
 }
 
@@ -205,7 +202,7 @@ error_t vfs_create_root(struct vfs_fs_s *fs,
 		return -EBUSY;
 
     struct vfs_node_s *new_node =
-        vfs_node_createnew(fs, NULL, fs->root);
+        vfs_node_create(fs, NULL, fs->root);
 
     if ( new_node == NULL )
         return -ENOMEM;
@@ -265,7 +262,7 @@ error_t vfs_node_lookup(struct vfs_node_s *parent,
 		goto fini;
 	}
 
-    *node = vfs_node_createnew(parent->fs, mangled_name, fs_node);
+    *node = vfs_node_create(parent->fs, mangled_name, fs_node);
     parent->fs->ops->node_refdrop(fs_node);
     if ( *node == NULL ) {
         err = -ENOMEM;
@@ -282,7 +279,7 @@ error_t vfs_node_lookup(struct vfs_node_s *parent,
 	return err;
 }
 
-error_t vfs_node_create(struct vfs_fs_s *fs,
+error_t vfs_node_anon_create(struct vfs_fs_s *fs,
 						enum vfs_node_type_e type,
 						struct vfs_node_s **node)
 {
@@ -300,7 +297,7 @@ error_t vfs_node_create(struct vfs_fs_s *fs,
     if ( err )
         return err;
 
-    *node = vfs_node_createnew(fs, NULL, fs_node);
+    *node = vfs_node_create(fs, NULL, fs_node);
     fs->ops->node_refdrop(fs_node);
 
     if ( *node == NULL ) {
@@ -322,8 +319,6 @@ error_t vfs_node_open(struct vfs_node_s *node,
         return -EPERM;
 
 	VFS_STATS_INC(node->fs, node_open_count);
-
-    vfs_node_lru_rehash(node);
 
     return node->fs->ops->node_open(node->fs_node, flags, file);
 }
@@ -370,7 +365,7 @@ error_t vfs_node_link(struct vfs_node_s *node,
     if ( prev_node != NULL )
         vfs_node_parent_nolock_unset(prev_node);
 
-    *rnode = vfs_node_createnew(parent->fs, mangled_name, rfs_node);
+    *rnode = vfs_node_create(parent->fs, mangled_name, rfs_node);
     parent->fs->ops->node_refdrop(rfs_node);
 
     if ( *rnode == NULL ) {
@@ -399,7 +394,7 @@ error_t vfs_node_link(struct vfs_node_s *node,
   fini:
 	vfs_node_dirunlock(parent);
     if ( prev_node != NULL )
-        vfs_node_refdrop(prev_node);
+        vfs_node_refdec(prev_node);
 	return err;
 }
 
@@ -453,7 +448,7 @@ error_t vfs_node_move(struct vfs_node_s *node,
   fini:
 	vfs_node_2dirunlock(parent, parent_src);
     if ( prev_node != NULL )
-        vfs_node_refdrop(prev_node);
+        vfs_node_refdec(prev_node);
 	return err;
 }
 
@@ -486,7 +481,7 @@ error_t vfs_node_unlink(struct vfs_node_s *parent,
   fini:
 	vfs_node_dirunlock(parent);
 	if ( node )
-        vfs_node_refdrop(node);
+        vfs_node_refdec(node);
 	vfs_printk(" %s>", strerror(err));
 	return err;
 }
@@ -496,8 +491,6 @@ error_t vfs_node_stat(struct vfs_node_s *node,
 {
 	VFS_STATS_INC(node->fs, stat_count);
 	VFS_STATS_INC(node, stat_count);
-
-    vfs_node_lru_rehash(node);
 
 	return node->fs->ops->stat(node->fs_node, stat);
 }

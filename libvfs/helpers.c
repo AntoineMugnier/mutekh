@@ -106,7 +106,7 @@ error_t vfs_lookup_part(
 		cwd = root;
 	}
 
-	*node = vfs_node_refnew(cwd);
+	*node = vfs_node_refinc(cwd);
 
     vfs_printk("start %p ", *node);
 
@@ -126,7 +126,7 @@ error_t vfs_lookup_part(
                 struct vfs_node_s *parent = vfs_node_get_parent(*node);
                 if ( ! parent )
                     break;
-                vfs_node_refdrop(*node);
+                vfs_node_refdec(*node);
                 *node = parent;
             }
             vfs_printk("parent->%p ", *node);
@@ -141,7 +141,7 @@ error_t vfs_lookup_part(
                 vfs_printk("other failed ");
                 break;
             }
-			vfs_node_refdrop(*node);
+			vfs_node_refdec(*node);
 			*node = nnode;
             vfs_printk("other->%p ", *node);
 		}
@@ -167,7 +167,7 @@ error_t vfs_lookup(struct vfs_node_s *root,
 	error_t err = vfs_lookup_part(root, cwd, path, end, &where, node);
     if ( !err && (where >= end) )
         return 0;
-    vfs_node_refdrop(*node);
+    vfs_node_refdec(*node);
     if ( err )
         return err;
     else
@@ -205,7 +205,7 @@ error_t vfs_create(struct vfs_node_s *root,
         goto do_create;
 
     vfs_printk(" ! exists>\n");
-    vfs_node_refdrop(parent);
+    vfs_node_refdec(parent);
     if ( err )
         return err;
     return -EEXISTS;
@@ -215,17 +215,17 @@ error_t vfs_create(struct vfs_node_s *root,
     {
         struct vfs_node_s *rnode;
 
-        err = vfs_node_create(parent->fs, type, &rnode);
+        err = vfs_node_anon_create(parent->fs, type, &rnode);
         vfs_printk("create %d %p ", err, rnode);
         if ( err ) {
-            vfs_node_refdrop(parent);
+            vfs_node_refdec(parent);
             vfs_printk(" err>\n");
             return err;
         }
 
         err = vfs_node_link(rnode, parent, last_part, end-last_part, node);
-        vfs_node_refdrop(parent);
-        vfs_node_refdrop(rnode);
+        vfs_node_refdec(parent);
+        vfs_node_refdec(rnode);
         vfs_printk("link %d %p>", err, *node);
         return err;
     }
@@ -256,7 +256,7 @@ error_t vfs_open(struct vfs_node_s *root,
         goto do_open;
 
     vfs_printk(" parent %s>\n", strerror(err));
-    vfs_node_refdrop(node);
+    vfs_node_refdec(node);
     return err;
 
   do_create:
@@ -269,16 +269,16 @@ error_t vfs_open(struct vfs_node_s *root,
         struct vfs_node_s *created_node;
         struct vfs_node_s *linked_node;
 
-        err = vfs_node_create(node->fs, VFS_NODE_FILE, &created_node);
+        err = vfs_node_anon_create(node->fs, VFS_NODE_FILE, &created_node);
         if ( err ) {
             vfs_printk(" create error>\n");
-            vfs_node_refdrop(node);
+            vfs_node_refdec(node);
             return err;
         }
 
         err = vfs_node_link(created_node, node, last_part, end-last_part, &linked_node);
-        vfs_node_refdrop(node);
-        vfs_node_refdrop(created_node);
+        vfs_node_refdec(node);
+        vfs_node_refdec(created_node);
 
         if ( err ) {
             vfs_printk(" link error>\n");
@@ -294,7 +294,7 @@ error_t vfs_open(struct vfs_node_s *root,
     // node is node to open
 
 	err = vfs_node_open(node, flags, file);
-	vfs_node_refdrop(node);
+	vfs_node_refdec(node);
 	vfs_printk("%d %p>\n", err, *file);
 	return err;
 }
@@ -311,7 +311,7 @@ error_t vfs_stat(struct vfs_node_s *root,
 		return err;
 
 	err = vfs_node_stat(node, stat);
-	vfs_node_refdrop(node);
+	vfs_node_refdec(node);
 	return err;
 }
 
@@ -344,7 +344,7 @@ error_t vfs_link(struct vfs_node_s *root,
         goto do_link;
 
     vfs_printk(" exists>\n");
-    vfs_node_refdrop(parent);
+    vfs_node_refdec(parent);
     return err;
 
   do_link:
@@ -355,7 +355,7 @@ error_t vfs_link(struct vfs_node_s *root,
         err = vfs_lookup(root, cwd, src, &rnode);
         vfs_printk("src lookup %d %p ", err, rnode);
         if ( err ) {
-            vfs_node_refdrop(parent);
+            vfs_node_refdec(parent);
             vfs_printk(" err>\n");
             return err;
         }
@@ -363,9 +363,9 @@ error_t vfs_link(struct vfs_node_s *root,
         struct vfs_node_s *new_node;
         err = vfs_node_link(rnode, parent, dst_last_part, dst_end-dst_last_part, &new_node);
         if ( err == 0 )
-            vfs_node_refdrop(new_node);
-        vfs_node_refdrop(parent);
-        vfs_node_refdrop(rnode);
+            vfs_node_refdec(new_node);
+        vfs_node_refdec(parent);
+        vfs_node_refdec(rnode);
         vfs_printk("link %d %p>", err, new_node);
         return err;
     }
@@ -384,19 +384,19 @@ error_t vfs_unlink(struct vfs_node_s *root,
     // TODO also check we dont try to delete parent of any mountpoint
     // in the system.
 	if ( node->fs->root == node->fs_node ) {
-		vfs_node_refdrop(node);
+		vfs_node_refdec(node);
 		return -EBUSY;
 	}
 
     struct vfs_node_s *parent = vfs_node_get_parent(node);
     if ( parent == NULL ) {
-        vfs_node_refdrop(node);
+        vfs_node_refdec(node);
         return -EUNKNOWN;
     }
 
 	err = vfs_node_unlink(parent, node->name, strlen(node->name));
-	vfs_node_refdrop(node);
-    vfs_node_refdrop(parent);    
+	vfs_node_refdec(node);
+    vfs_node_refdec(parent);    
 	return err;
 }
 
@@ -435,16 +435,6 @@ void vfs_dump(struct vfs_node_s *root)
 	printk("VFS dump for root %p, fsroot: %p, refcount: %d\n",
 		   root, root->fs->root, atomic_get(&root->fs->ref));
 	vfs_dump_item(root, 0);
-}
-
-void vfs_dump_lru(struct vfs_node_s *root)
-{
-	printk("VFS LRU dump for root %p, fsroot: %p\n",
-		   root, root->fs->root);
-    
-    GCT_FOREACH(vfs_lru, &root->fs->lru_list, item, {
-            vfs_dump_item(item, 2);
-        });
 }
 
 void vfs_fs_dump_stats(struct vfs_fs_s *fs)

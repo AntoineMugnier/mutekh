@@ -165,7 +165,7 @@ typedef VFS_FS_LOOKUP(vfs_fs_lookup_t);
    This function transfers the ownership of @tt *node to the caller
 
    @csee #VFS_FS_CREATE
-   @see vfs_node_create @see vfs_create
+   @see vfs_node_anon_create @see vfs_create
  */
 typedef VFS_FS_CREATE(vfs_fs_create_t);
 
@@ -277,12 +277,12 @@ typedef VFS_FS_STAT(vfs_fs_stat_t);
    @param node Node not used any more
 
    @csee #VFS_FS_NODE_REFNEW
-   @see vfs_node_refnew
+   @see vfs_node_refinc
  */
 typedef VFS_FS_NODE_REFNEW(vfs_fs_node_refnew_t);
 
 /** @this defines the fs node refdrop operation prototype */
-#define VFS_FS_NODE_REFDROP(x) void (x)(struct fs_node_s *node)
+#define VFS_FS_NODE_REFDROP(x) bool_t (x)(struct fs_node_s *node)
 
 /**
    This function notifies the file system a node is not referenced any
@@ -291,7 +291,7 @@ typedef VFS_FS_NODE_REFNEW(vfs_fs_node_refnew_t);
    @param node Node not used any more
 
    @csee #VFS_FS_NODE_REFDROP
-   @see vfs_node_refdrop
+   @see vfs_node_refdec
  */
 typedef VFS_FS_NODE_REFDROP(vfs_fs_node_refdrop_t);
 

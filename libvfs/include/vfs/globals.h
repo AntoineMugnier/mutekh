@@ -88,10 +88,10 @@ static inline void vfs_set_cwd(struct vfs_node_s *cwd)
 {
 	struct vfs_node_s *old = _vfs_cwd;
 
-    _vfs_cwd = cwd ? vfs_node_refnew(cwd) : NULL;
+    _vfs_cwd = cwd ? vfs_node_refinc(cwd) : NULL;
 
 	if ( old )
-		vfs_node_refdrop( old );
+		vfs_node_refdec( old );
 }
 
 #else
@@ -112,10 +112,10 @@ static inline void vfs_set_cwd(struct vfs_node_s *cwd)
 {
 	struct vfs_node_s *old = CONTEXT_LOCAL_GET(_vfs_cwd);
 
-    CONTEXT_LOCAL_SET(_vfs_cwd, cwd ? vfs_node_refnew(cwd) : NULL);
+    CONTEXT_LOCAL_SET(_vfs_cwd, cwd ? vfs_node_refinc(cwd) : NULL);
 
 	if ( old )
-		vfs_node_refdrop( old );
+		vfs_node_refdec( old );
 }
 #endif
 
@@ -136,10 +136,10 @@ static inline void vfs_set_root(struct vfs_node_s *root)
 {
 	struct vfs_node_s *old = _vfs_root;
 
-    _vfs_root = root ? vfs_node_refnew(root) : NULL;
+    _vfs_root = root ? vfs_node_refinc(root) : NULL;
 
 	if ( old )
-		vfs_node_refdrop( old );
+		vfs_node_refdec( old );
 }
 #else
 /** @hidden */
@@ -159,10 +159,10 @@ static inline void vfs_set_root(struct vfs_node_s *root)
 	struct vfs_node_s *old = CONTEXT_LOCAL_GET(_vfs_root);
 
     CONTEXT_LOCAL_SET(_vfs_root,
-                      root ? vfs_node_refnew(root) : NULL);
+                      root ? vfs_node_refinc(root) : NULL);
 
 	if ( old )
-		vfs_node_refdrop( old );
+		vfs_node_refdec( old );
 }
 #endif
 

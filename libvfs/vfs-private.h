@@ -28,7 +28,7 @@
 #ifndef _VFS_PRIVATE_H_
 #define _VFS_PRIVATE_H_
 
-
+#include <vfs/types.h>
 
 static inline
 bool_t vfs_node_is_dandling(struct vfs_node_s *node)
@@ -53,25 +53,17 @@ struct vfs_node_s * vfs_node_new(void *storage, struct vfs_fs_s *fs,
 
    @see vfs_name_mangle
  */
-struct vfs_node_s *vfs_node_createnew(
+struct vfs_node_s *vfs_node_create(
     struct vfs_fs_s *fs,
     const char *mangled_name,
     struct fs_node_s *fs_node);
-
-/**
-   @this marks the node as being used. This updates the LRU list of
-   nodes.
-
-   @param node used node
- */
-void vfs_node_use(struct vfs_node_s *node);
 
 // GCT_CONTAINER_FCNS(vfs_dir_hash, HASHLIST, static inline, vfs_dir);
 
 GCT_CONTAINER_KEY_TYPES(vfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
 
 GCT_CONTAINER_KEY_FCNS(vfs_dir_hash, ASC, static inline, vfs_dir, name,
-                       init, destroy);
+                       init, destroy, push, lookup, remove);
 
 static inline void vfs_node_dirlock(struct vfs_node_s *node)
 {

@@ -137,8 +137,8 @@ static const struct vfs_fs_ops_s devfs_ops =
     .lookup = devfs_lookup,
     .stat = devfs_stat,
     .can_unmount = devfs_can_unmount,
-    .node_refdrop = devfs_node_refdrop,
-    .node_refnew = devfs_node_refnew,
+    .node_refdrop = devfs_node_refdec,
+    .node_refnew = devfs_node_refinc,
 };
 
 extern struct device_s enum_root;

@@ -28,17 +28,6 @@
 
 #include <string.h>
 
-OBJECT_FUNC   (vfs_node, REFCOUNT, , vfs_node, obj_entry);
-
-GCT_CONTAINER_KEY_TYPES(vfs_lru, CUSTOM, SCALAR, vfs_node_refcount(vfs_lru_item), vfs_lru_refcount);
-
-GCT_CONTAINER_FCNS       (vfs_lru, CLIST, static, vfs_lru, lru_entry);
-GCT_CONTAINER_NOLOCK_FCNS(vfs_lru, CLIST, static, vfs_lru_nolock, lru_entry);
-
-GCT_CONTAINER_KEY_FCNS_NOLOCK(vfs_lru, CLIST, static, vfs_lru, vfs_lru_refcount);
-GCT_CONTAINER_KEY_FCNS_NOLOCK(vfs_lru, CLIST, static, vfs_lru_nolock, vfs_lru_refcount);
-
-
 ssize_t vfs_node_get_name(struct vfs_node_s *node,
                           char *name,
                           size_t namelen)
@@ -52,10 +41,17 @@ struct vfs_fs_s *vfs_node_get_fs(struct vfs_node_s *node)
     return node->fs;
 }
 
-OBJECT_CONSTRUCTOR(vfs_node)
+struct vfs_node_s *vfs_node_create(
+    struct vfs_fs_s *fs,
+    const char *mangled_name,
+    struct fs_node_s *fs_node)
 {
-	struct vfs_fs_s *fs = va_arg(ap, struct vfs_fs_s *);
-	const char *mangled_name = va_arg(ap, const char *);
+    struct vfs_node_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
+
+    if (!obj)
+        return NULL;
+
+    vfs_node_refinit(obj);
 
     if ( mangled_name )
         memcpy(obj->name, mangled_name, CONFIG_VFS_NAMELEN);
@@ -63,10 +59,8 @@ OBJECT_CONSTRUCTOR(vfs_node)
         memset(obj->name, 0, CONFIG_VFS_NAMELEN);
 	obj->fs = fs;
 
-    obj->fs_node = obj->fs->ops->node_refnew(va_arg(ap, struct fs_node_s *));
+    obj->fs_node = obj->fs->ops->node_refnew(fs_node);
 
-	obj->in_lru = 0;
-        
 	obj->parent = NULL;
     lock_init(&obj->parent_lock);
 
@@ -88,10 +82,10 @@ OBJECT_CONSTRUCTOR(vfs_node)
                fs, obj, obj->name,
                obj->obj_entry.storage_free);
 
-	return 0;
+	return obj;
 }
 
-OBJECT_DESTRUCTOR(vfs_node)
+void vfs_node_destroy(struct vfs_node_s *obj)
 {
 	vfs_printk("<node delete %p '%s' free: %p", obj, obj->name,
                obj->obj_entry.storage_free);
@@ -101,13 +95,10 @@ OBJECT_DESTRUCTOR(vfs_node)
         vfs_node_dirlock(parent);
         vfs_node_parent_nolock_unset(obj);
         vfs_node_dirunlock(parent);
-        vfs_node_refdrop(parent);
+        vfs_node_refdec(parent);
     }
     
     vfs_dir_destroy(&obj->children);
-
-    if ( obj->in_lru )
-        vfs_lru_remove(&obj->fs->lru_list, obj);
 
     semaphore_destroy(&obj->dir_semaphore);
 
@@ -117,113 +108,11 @@ OBJECT_DESTRUCTOR(vfs_node)
 
     obj->fs->ops->node_refdrop(obj->fs_node);
     lock_destroy(&obj->parent_lock);
+
+    vfs_node_refcleanup(obj);
+    mem_free(obj);
+
     vfs_printk(" done>");
-}
-
-void vfs_node_lru_drop(struct vfs_node_s *node)
-{
-    vfs_lru_wrlock(&node->fs->lru_list);
-    if ( node->in_lru )
-        vfs_lru_nolock_remove(&node->fs->lru_list, node);
-    node->in_lru = 0;
-    vfs_lru_unlock(&node->fs->lru_list);
-}
-
-void vfs_node_lru_rehash(struct vfs_node_s *node)
-{
-    vfs_lru_wrlock(&node->fs->lru_list);
-    if ( node->in_lru )
-        vfs_lru_nolock_remove(&node->fs->lru_list, node);
-    node->in_lru = 1;
-    vfs_lru_nolock_insert_ascend(&node->fs->lru_list, node);
-    vfs_lru_unlock(&node->fs->lru_list);
-}
-
-struct vfs_node_s *vfs_node_createnew(
-    struct vfs_fs_s *fs,
-    const char *mangled_name,
-    struct fs_node_s *fs_node)
-{
-    object_storage_free_t *old_storage_free = NULL;
-    struct vfs_node_s *node = NULL;
-
-    vfs_printk("<node createnew ");
-
-    assert( vfs_lru_check(&fs->lru_list) == 0 );
-
-    for (;;) {
-        node = vfs_lru_pop(&fs->lru_list);
-
-        if ( node == NULL ) {
-            vfs_printk("empty lru ");
-            break;
-        }
-
-        node->in_lru = 0;
-
-        if ( vfs_node_refcount(node) > 1 ) {
-            vfs_printk("first is reffed ");
-            vfs_node_lru_rehash(node);
-            node = NULL;
-            break;
-        }
-
-        struct vfs_node_s *parent = vfs_node_get_parent(node);
-        if ( !parent ) {
-            vfs_printk("first is dandling ");
-            node = NULL;
-            break;
-        }
-
-        if ( vfs_node_dirtrylock(parent) != 0 ) {
-            vfs_printk("first is locked ");
-            vfs_node_lru_rehash(node);
-            vfs_node_refdrop(parent);
-            node = NULL;
-            break;
-        }
-
-        /*
-          Check whether we have the last reference and
-          parent did not change while we did the few lines above...
-        */
-        if ( vfs_node_refcount(node) == 1
-             && parent == node->parent )
-        {
-            vfs_node_refnew(node);
-            vfs_node_parent_nolock_unset(node);
-            vfs_node_dirunlock(parent);
-
-            /* We must have the last ref */
-            assert( vfs_node_refcount(node) == 1 );
-            old_storage_free = node->obj_entry.storage_free;
-            node->obj_entry.storage_free = NULL;
-
-            vfs_node_refdrop(node);
-
-            /* Now node is distroyed, and ready to be created again */
-            break;
-        } else {
-            vfs_node_dirunlock(parent);
-
-            vfs_printk("first got dandling ");
-
-            vfs_node_lru_rehash(node);
-            node = NULL;
-        }
-
-        vfs_node_refdrop(parent);
-    }
-
-    vfs_printk("used %p from lru ", node);
-    node = vfs_node_new(node, fs, mangled_name, fs_node);
-
-    if ( old_storage_free != NULL )
-        node->obj_entry.storage_free = old_storage_free;
-
-    vfs_printk(">");
-
-    return node;
 }
 
 struct vfs_node_s *vfs_node_get_parent(struct vfs_node_s *node)
@@ -233,7 +122,7 @@ struct vfs_node_s *vfs_node_get_parent(struct vfs_node_s *node)
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&node->parent_lock);
 	if ( !vfs_node_is_dandling(node) )
-        parent = vfs_node_refnew(node->parent);
+        parent = vfs_node_refinc(node->parent);
     lock_release(&node->parent_lock);
     CPU_INTERRUPT_RESTORESTATE;
 
@@ -249,8 +138,7 @@ vfs_node_parent_nolock_unset(struct vfs_node_s *node)
         struct vfs_node_s *parent = node->parent;
         vfs_dir_remove(&parent->children, node);
         node->parent = NULL;
-        vfs_node_refdrop(parent);
-        vfs_node_lru_drop(node);
+        vfs_node_refdec(parent);
     }
     lock_release(&node->parent_lock);
     CPU_INTERRUPT_RESTORESTATE;

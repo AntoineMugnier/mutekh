@@ -36,10 +36,11 @@
 #include "ramfs_data.h"
 #include "ramfs_file.h"
 
-GCT_CONTAINER_FCNS           (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir, name);
-GCT_CONTAINER_NOLOCK_FCNS    (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir_nolock, name);
-GCT_CONTAINER_KEY_FCNS       (ramfs_dir_hash, HASHLIST, static inline, ramfs_dir, name);
-GCT_CONTAINER_KEY_FCNS_NOLOCK(ramfs_dir_hash, HASHLIST, static inline, ramfs_dir_nolock, name);
+GCT_CONTAINER_KEY_FCNS       (ramfs_dir_hash, ASC, static inline, ramfs_dir, name,
+                              init, destroy, clear, count, wrlock, unlock, lookup, rdlock);
+
+GCT_CONTAINER_KEY_NOLOCK_FCNS(ramfs_dir_hash, ASC, static inline, ramfs_dir_nolock, name,
+                              push, head, remove, next, lookup, count);
 
 /*
   Here are two helpers when we need to take two locks at the same time
@@ -71,38 +72,48 @@ void ramfs_2dir_unlock(ramfs_dir_hash_root_t *d1,
     }
 }
 
-OBJECT_CONSTRUCTOR(ramfs_node)
+struct fs_node_s *ramfs_node_create(enum vfs_node_type_e type, struct ramfs_data_s *data)
 {
+    struct fs_node_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
+
+    if (!obj)
+        return NULL;
+
     vfs_printk("<ramfs_node_ctor");
-    enum vfs_node_type_e type = va_arg(ap, enum vfs_node_type_e);
+
+    ramfs_node_refinit(obj);
+
     obj->type = type;
     obj->parent = NULL;
     if ( type == VFS_NODE_FILE ) {
-        struct ramfs_data_s *data = va_arg(ap, struct ramfs_data_s*);
         if ( data == NULL ) {
-            obj->data = ramfs_data_new(NULL);
+            obj->data = ramfs_data_create();
             if ( obj->data == NULL ) {
-                return -ENOMEM;
+                return NULL;
             }
         } else
-            obj->data = ramfs_data_refnew(data);
+            obj->data = ramfs_data_refinc(data);
     } else {
         ramfs_dir_init(&obj->children);
     }
     vfs_printk(">");
-    return 0;
+    return obj;
 }
 
-OBJECT_DESTRUCTOR(ramfs_node)
+void ramfs_node_destroy(struct fs_node_s *obj)
 {
     vfs_printk("<ramfs_node_dtor");
     if ( obj->type == VFS_NODE_DIR ) {
         ramfs_dir_clear(&obj->children);
         ramfs_dir_destroy(&obj->children);
     } else {
-        ramfs_data_refdrop(obj->data);
+        ramfs_data_refdec(obj->data);
     }
     vfs_printk(">");
+
+    ramfs_node_refcleanup(obj);
+
+    mem_free(obj);
 }
 
 void ramfs_dump_item(struct fs_node_s *node, size_t pf)
@@ -112,13 +123,13 @@ void ramfs_dump_item(struct fs_node_s *node, size_t pf)
         printk(" ");
     printk(" %s %d '%s': %d\n",
            node->type == VFS_NODE_DIR ? ">" : "-",
-           node->obj_entry.refcnt.value,
+           ramfs_node_refcount(node),
            node->name,
            node->type == VFS_NODE_FILE
            ? ramfs_data_refcount(node->data)
            : 0);
     if ( node->type == VFS_NODE_DIR )
-		CONTAINER_FOREACH(ramfs_dir_hash, HASHLIST, &node->children, {
+		GCT_FOREACH(ramfs_dir_hash, &node->children, item, {
                 ramfs_dump_item(item, pf+2);
             });
 }
@@ -162,7 +173,7 @@ VFS_FS_CREATE(ramfs_create)
 	vfs_printk("<%s ", __FUNCTION__);
 
     struct fs_node_s *rfs_node;
-    rfs_node = ramfs_node_new(NULL, type, NULL);
+    rfs_node = ramfs_node_create(type, NULL);
 	if ( !rfs_node )
 		goto err_priv;
 
@@ -202,14 +213,14 @@ VFS_FS_LINK(ramfs_link)
     struct fs_node_s *ret_node;
 	if ( node->parent != NULL ) {
 		vfs_printk("clone ");
-        ret_node = ramfs_node_new(NULL, VFS_NODE_FILE, node->data);
+        ret_node = ramfs_node_create(VFS_NODE_FILE, node->data);
         if ( ret_node == NULL ) {
 			vfs_printk("node_new fail>");
 			return -ENOMEM;
         }
 	} else {
 		vfs_printk("use ");
-		ret_node = ramfs_node_refnew(node);
+		ret_node = ramfs_node_refinc(node);
 	}
 
     vfs_name_mangle(name, namelen, mangled_name);
@@ -226,7 +237,7 @@ VFS_FS_LINK(ramfs_link)
     ramfs_dir_unlock(&parent->children);
 
     if ( old_file )
-        ramfs_node_refdrop(old_file);
+        ramfs_node_refdec(old_file);
 
 	vfs_printk("ok>");
 
@@ -271,7 +282,7 @@ VFS_FS_MOVE(ramfs_move)
     ramfs_2dir_unlock(&parent->children, &parent_src->children);
 
     if ( old_file )
-        ramfs_node_refdrop(old_file);
+        ramfs_node_refdec(old_file);
 
 	vfs_printk("ok>");
 
@@ -297,7 +308,7 @@ VFS_FS_UNLINK(ramfs_unlink)
 
     if ( (node->type == VFS_NODE_DIR)
          && (ramfs_dir_nolock_count(&node->children) != 0) ) {
-        ramfs_node_refdrop(node);
+        ramfs_node_refdec(node);
         ramfs_dir_unlock(&parent->children);
         vfs_printk("nonempty>");
 		return -EBUSY;
@@ -307,7 +318,7 @@ VFS_FS_UNLINK(ramfs_unlink)
     ramfs_dir_nolock_remove(&parent->children, node);
     ramfs_dir_unlock(&parent->children);
 
-    ramfs_node_refdrop(node);
+    ramfs_node_refdec(node);
 
 	vfs_printk("ok>");
 
@@ -347,13 +358,13 @@ static const struct vfs_fs_ops_s ramfs_ops =
     .unlink = ramfs_unlink,
     .stat = ramfs_stat,
     .can_unmount = ramfs_can_unmount,
-    .node_refdrop = ramfs_node_refdrop,
-    .node_refnew = ramfs_node_refnew,
+    .node_refdrop = ramfs_node_refdec,
+    .node_refnew = ramfs_node_refinc,
 };
 
 error_t ramfs_open(struct vfs_fs_s **fs)
 {
-	struct vfs_fs_s *mnt = vfs_fs_new(NULL);
+	struct vfs_fs_s *mnt = vfs_fs_create();
 	if ( mnt == NULL )
 		goto nomem_fs;
 
@@ -365,7 +376,7 @@ error_t ramfs_open(struct vfs_fs_s **fs)
 	mnt->old_node = NULL;
     mnt->flag_ro = 0;
 
-    struct fs_node_s *root = ramfs_node_new(NULL, VFS_NODE_DIR);
+    struct fs_node_s *root = ramfs_node_create(VFS_NODE_DIR, NULL);
 	if ( root == NULL )
 		goto nomem_dir;
 
@@ -397,7 +408,7 @@ bool_t ramfs_dir_get_nth(struct fs_node_s *node, struct vfs_dirent_s *dirent, si
         i++;
         struct fs_node_s *nent;
         nent = ramfs_dir_nolock_next(&node->children, ent);
-        ramfs_node_refdrop(ent);
+        ramfs_node_refdec(ent);
         ent = nent;
     }
 
@@ -414,7 +425,7 @@ bool_t ramfs_dir_get_nth(struct fs_node_s *node, struct vfs_dirent_s *dirent, si
 
 	ramfs_dir_unlock(&node->children);
 
-    ramfs_node_refdrop(ent);
+    ramfs_node_refdec(ent);
 
     return 1;
 }

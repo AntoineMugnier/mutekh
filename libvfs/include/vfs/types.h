@@ -39,8 +39,9 @@ C_HEADER_BEGIN
 
 #include <gct_platform.h>
 #include <gct_lock_hexo_lock_irq.h>
+#include <gct_atomic.h>
 
-#include <gct/container_avl.h>
+#include <gct/container_avl_p.h>
 #include <gct/container_clist.h>
 #include <gct/refcount.h>
 
@@ -49,10 +50,8 @@ C_HEADER_BEGIN
 void vfs_node_destroy(struct vfs_node_s *);
 
 //#define CONTAINER_LOCK_vfs_dir_hash MUTEK_SEMAPHORE
-#define GCT_CONTAINER_LOCK_vfs_lru HEXO_LOCK_IRQ
 
-#define GCT_CONTAINER_ALGO_vfs_dir_hash AVL
-#define GCT_CONTAINER_ALGO_vfs_lru      CLIST
+#define GCT_CONTAINER_ALGO_vfs_dir_hash AVL_P
 
 GCT_CONTAINER_TYPES    (vfs_dir_hash,
 /**  @this is a node in the VFS. */
@@ -60,8 +59,6 @@ struct vfs_node_s
 {
     /** @internal */
     GCT_CONTAINER_ENTRY(vfs_dir_hash, hash_entry);
-    /** @internal */
-    GCT_CONTAINER_ENTRY(vfs_lru, lru_entry);
     /** @internal Object-management related */
     GCT_REFCOUNT_ENTRY(obj_entry);
 
@@ -87,10 +84,6 @@ struct vfs_node_s
     /** @internal
         Lock protecting accesses to parent */
     lock_t parent_lock;
-
-    /** @internal
-        Whether this node is present in LRU */
-    bool_t in_lru;
 
     /** @internal
         Private file system data attached to this node */
@@ -122,8 +115,6 @@ struct vfs_node_s
 
 GCT_REFCOUNT(vfs_node, struct vfs_node_s *, obj_entry);
 
-GCT_CONTAINER_TYPES(vfs_lru, struct vfs_node_s *, lru_entry);
-
 struct vfs_fs_ops_s;
 
 struct vfs_fs_s * vfs_fs_create();
@@ -134,8 +125,6 @@ void vfs_fs_destroy(struct vfs_fs_s *);
  */
 struct vfs_fs_s
 {
-    /** LRU of @ref vfs_node_s used for this filesystem */
-    vfs_lru_root_t lru_list;
     /** Root node of the filesystem. This is filled when opening the filesystem */
     struct fs_node_s *root;
     /** A pointer to supported operations table */

@@ -76,10 +76,10 @@ error_t vfs_umount(struct vfs_node_s *mountpoint);
 /* Node operations */
 
 /** @this increases the node reference count and return the node itself. */
-struct vfs_node_s * vfs_node_refnew(struct vfs_node_s * node);
+struct vfs_node_s * vfs_node_refinc(struct vfs_node_s * node);
 
 /** @this decreases the node reference count and may delete the node if no more reference exist. */
-void vfs_node_refdrop(struct vfs_node_s * node);
+bool_t vfs_node_refdec(struct vfs_node_s * node);
 
 /**
    @this looks for a node named @tt name as a child of @tt
@@ -134,9 +134,9 @@ error_t vfs_node_open(struct vfs_node_s *node,
    @this transfers the ownership of @tt node to caller.
    @see vfs_create
  */
-error_t vfs_node_create(struct vfs_fs_s *fs,
-						enum vfs_node_type_e type,
-						struct vfs_node_s **node);
+error_t vfs_node_anon_create(struct vfs_fs_s *fs,
+						     enum vfs_node_type_e type,
+						     struct vfs_node_s **node);
 
 /**
    @this links a node in a given parent. As a node must be unique in

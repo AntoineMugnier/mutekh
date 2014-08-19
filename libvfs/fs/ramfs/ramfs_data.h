@@ -24,8 +24,9 @@
 
 #include <hexo/types.h>
 
-#include <gct_platform.h>
-#include <gct/refcount.h>
+#include <vfs/types.h>
+
+#include <stdlib.h>
 
 struct ramfs_data_s
 {
@@ -36,6 +37,10 @@ struct ramfs_data_s
 	size_t actual_size;
 };
 
+static inline void ramfs_data_destroy(struct ramfs_data_s *obj);
+
+GCT_REFCOUNT(ramfs_data, struct ramfs_data_s *, obj_entry);
+
 static inline struct ramfs_data_s * ramfs_data_create()
 {
     struct ramfs_data_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
@@ -43,6 +48,7 @@ static inline struct ramfs_data_s * ramfs_data_create()
 	obj->magic = 0x1ada1ada;
 	obj->allocated_size = 0;
 	obj->actual_size = 0;
+    ramfs_data_refinit(obj);
 
 	return 0;
 }
@@ -50,11 +56,10 @@ static inline struct ramfs_data_s * ramfs_data_create()
 static inline void ramfs_data_destroy(struct ramfs_data_s *obj)
 {
 	if ( obj->data )
-		mem_free(obj->data);
+		free(obj->data);
+    ramfs_data_refcleanup(obj);
     mem_free(obj);
 }
-
-GCT_REFCOUNT(ramfs_data, struct ramfs_data_s *, obj_entry);
 
 error_t ramfs_data_realloc(struct ramfs_data_s *db, size_t new_size);
 

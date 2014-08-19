@@ -80,7 +80,6 @@ void *_main(void *root_ptr)
 
 		printk("Tree:\n");
 		vfs_dump(root);
-		vfs_dump_lru(root);
 		ramfs_dump(root->fs);
 
 		printk("Cleaning up /...\n");

@@ -212,7 +212,7 @@ struct vfs_dirent_s
 };
 
 void vfs_file_destroy(struct vfs_file_s *);
-struct vfs_file_s * vfs_file_create(struct vfs_node_s *node,
+struct vfs_file_s * vfs_file_create(struct fs_node_s *node,
                                     vfs_fs_node_refnew_t *node_refnew,
                                     vfs_fs_node_refdrop_t *node_refdrop);
 

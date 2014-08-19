@@ -70,7 +70,7 @@ error_t vfs_lookup(struct vfs_node_s *root,
    @param node Found node, if no error (return value)
    @return 0 if created, or an error
    @this transfers the ownership to caller.
-   @see vfs_node_create
+   @see vfs_node_anon_create
 */
 error_t vfs_create(struct vfs_node_s *root,
 				   struct vfs_node_s *cwd,
@@ -159,14 +159,6 @@ error_t vfs_link(struct vfs_node_s *root,
    @param root Where to start dump from
  */
 void vfs_dump(struct vfs_node_s *root);
-
-/**
-   @this dumps the present node LRU state, using @ref vfs_dump for
-   each node in LRU.
-
-   @param root File-system root to use for LRU walking.
- */
-void vfs_dump_lru(struct vfs_node_s *root);
 
 C_HEADER_END
 

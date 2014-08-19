@@ -35,9 +35,9 @@ VFS_FILE_CLOSE(ramfs_file_close)
 {
 	if ( file->node->type == VFS_NODE_FILE ) {
         struct ramfs_data_s *rfs_data = file->priv;
-		ramfs_data_refdrop(rfs_data);
+		ramfs_data_refdec(rfs_data);
     }
-	vfs_file_refdrop(file);
+	vfs_file_refdec(file);
 	
 	return 0;
 }
@@ -155,7 +155,7 @@ VFS_FS_NODE_OPEN(ramfs_node_open)
 {
 	vfs_printk("<ramfs_node_open %p %x ", node, flags);
 
-	struct vfs_file_s *f = vfs_file_new(NULL, node, ramfs_node_refnew, ramfs_node_refdrop);
+	struct vfs_file_s *f = vfs_file_create(node, ramfs_node_refinc, ramfs_node_refdec);
 	if ( f == NULL ) {
 		vfs_printk("err>");
 		return -ENOMEM;
@@ -171,7 +171,7 @@ VFS_FS_NODE_OPEN(ramfs_node_open)
         if ( flags & VFS_OPEN_APPEND )
             f->write = ramfs_file_append;
 		f->seek = ramfs_file_seek;
-		f->priv = ramfs_data_refnew(node->data);
+		f->priv = ramfs_data_refinc(node->data);
         f->close = ramfs_file_close;
         f->truncate = ramfs_file_truncate;
         if ( flags & VFS_OPEN_TRUNCATE )

@@ -73,7 +73,7 @@ static void post_print(struct vfs_node_s *node)
         if ( parent != node )
             post_print(parent);
 		printk("/");
-        vfs_node_refdrop(parent);
+        vfs_node_refdec(parent);
 	}
 	printk("%s", node->name);
 }
@@ -117,7 +117,7 @@ void action_cwd()
         dprintk("\n");
 		vfs_set_cwd(node);
     }
-	vfs_node_refdrop(node);
+	vfs_node_refdec(node);
 }
 
 void action_mkdir()
@@ -131,7 +131,7 @@ void action_mkdir()
 	error_t err = vfs_create(vfs_get_root(), vfs_get_cwd(),
 							 name, VFS_NODE_DIR, &node);
 	if (err == 0) {
-		vfs_node_refdrop(node);
+		vfs_node_refdec(node);
 	} else {
 		dprintk("%s error %s\n", __FUNCTION__, strerror(err));
 	}
@@ -171,7 +171,7 @@ void action_rm()
 
 error_t action_rmrf_inner(struct vfs_node_s *_cwd, const char *name)
 {
-	struct vfs_node_s *cwd = vfs_node_refnew(_cwd);
+	struct vfs_node_s *cwd = vfs_node_refinc(_cwd);
 	struct vfs_stat_s stat = {0};
 	error_t err;
 
@@ -205,14 +205,14 @@ error_t action_rmrf_inner(struct vfs_node_s *_cwd, const char *name)
                     break;
 			}
 
-			vfs_node_refdrop(node);
+			vfs_node_refdec(node);
 		}
 	}
 	err = vfs_unlink(vfs_get_root(), cwd, name);
     dprintk(" unlink '%s': %s\n", name, strerror(err));
 
   end:
-	vfs_node_refdrop(cwd);
+	vfs_node_refdec(cwd);
     return err;
 }
 
