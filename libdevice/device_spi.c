@@ -269,7 +269,7 @@ device_spi_ctrl_delay(struct dev_spi_ctrl_request_s *rq)
       q->timeout = rq;
       return DEVICE_SPI_WAIT_TIMER;
 
-    case ETIMEDOUT:    /* update time and retry */
+    case -ETIMEDOUT:    /* update time and retry */
       return DEVICE_SPI_CONTINUE_GET_TIME;
 
     default:

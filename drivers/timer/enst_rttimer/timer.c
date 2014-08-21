@@ -231,7 +231,7 @@ static DEVTIMER_REQUEST(enst_rttimer_request)
     rq->deadline = value + rq->delay;
 
   if (rq->deadline <= value)
-    err = ETIMEDOUT;
+    err = -ETIMEDOUT;
   else
     {
       rq->drvdata = p;

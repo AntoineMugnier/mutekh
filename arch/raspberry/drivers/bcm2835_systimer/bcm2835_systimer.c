@@ -192,7 +192,7 @@ static DEVTIMER_REQUEST(bcm2835_systimer_request)
     rq->deadline = value + rq->delay;
 
   if (rq->deadline <= value)
-    err = ETIMEDOUT;
+    err = -ETIMEDOUT;
   else
     {
       dev_timer_queue_insert(&pv->queue, rq);

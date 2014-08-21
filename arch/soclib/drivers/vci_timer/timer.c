@@ -180,7 +180,7 @@ static DEVTIMER_REQUEST(soclib_timer_request)
         rq->deadline = val + rq->delay;
 
       if (rq->deadline <= val)
-        err = ETIMEDOUT;
+        err = -ETIMEDOUT;
       else
         {
           rq->drvdata = p;

@@ -111,7 +111,7 @@ static DEVTIMER_REQUEST(arm_timer_request)
             rq->deadline = val + rq->delay;
 
           if (rq->deadline <= val)
-            err = ETIMEDOUT;
+            err = -ETIMEDOUT;
           else
             {
               dev_timer_queue_insert(&pv->systick_queue, rq);

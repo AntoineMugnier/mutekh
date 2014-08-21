@@ -86,7 +86,7 @@ GCT_CONTAINER_KEY_FCNS(dev_timer_queue, ASC, inline, dev_timer_queue, deadline,
    enqueued again.
 
    If the deadline has already been reached, the function does nothing
-   and return @tt ETIMEDOUT.
+   and return @tt -ETIMEDOUT.
 
    If the timer has not been started explicitly by calling the @ref
    devtimer_start_stop_t function, it will run until the request queue

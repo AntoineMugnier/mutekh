@@ -235,7 +235,7 @@ static DEVTIMER_REQUEST(gptimer_request)
     rq->deadline = val + rq->delay;
 
   if (rq->deadline <= val)
-    err = ETIMEDOUT;
+    err = -ETIMEDOUT;
   else
     {
       rq->drvdata = p;

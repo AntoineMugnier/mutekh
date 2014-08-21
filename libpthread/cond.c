@@ -204,7 +204,7 @@ pthread_cond_timedwait(pthread_cond_t *cond,
           lock_release(&this->lock);
 
           break;
-        case ETIMEDOUT:
+        case -ETIMEDOUT:
           res = ETIMEDOUT;
           sched_queue_unlock(&cond->wait);
           break;

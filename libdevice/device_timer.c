@@ -195,7 +195,10 @@ error_t dev_timer_sleep(struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
 
   error_t e = DEVICE_OP(tdev, request, rq);
 
-  if (e < 0)
+  if (e == -ETIMEDOUT)
+    {
+    }
+  else if (e < 0)
     {
       e = dev_timer_busy_wait(tdev, rq);
     }

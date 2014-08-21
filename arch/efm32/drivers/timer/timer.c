@@ -283,7 +283,7 @@ static DEVTIMER_REQUEST(efm32_timer_request)
     rq->deadline = value + rq->delay;
 
   if (rq->deadline <= value)
-    err = ETIMEDOUT;
+    err = -ETIMEDOUT;
   else
     {
       pv->start_count |= 1;

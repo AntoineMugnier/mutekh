@@ -285,7 +285,7 @@ static DEVTIMER_REQUEST(efm32_rtc_request)
   //  printk("%p %llu %llu\n", sched_get_current(), rq->deadline, value);
 
   if (rq->deadline <= value)
-    err = ETIMEDOUT;
+    err = -ETIMEDOUT;
   else
     {
       pv->start_count |= 1;
