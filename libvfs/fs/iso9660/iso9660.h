@@ -16,14 +16,13 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Alexandre Becoulet, <alexandre.becoulet@free.fr>, 2009
+  Copyright Alexandre Becoulet, <alexandre.becoulet@free.fr>, 2009,2014
 */
 
 #ifndef _ISO9660_H_
 #define _ISO9660_H_
 
 #include <vfs/fs.h>
-#include <vfs/ops.h>
 
 /**
    @this creates a new ISO9660 file system instance.
@@ -33,6 +32,12 @@
    @return 0 on success
  */
 error_t iso9660_open(struct device_block_s *bd, struct vfs_fs_s **fs);
+
+VFS_FS_CAN_UNMOUNT(iso9660_can_unmount);
+VFS_FS_NODE_OPEN(iso9660_node_open);
+VFS_FS_LOOKUP(iso9660_lookup);
+VFS_FS_STAT(iso9660_stat);
+VFS_FS_CLEANUP(iso9660_cleanup);
 
 #endif
 

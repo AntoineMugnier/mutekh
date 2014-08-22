@@ -16,12 +16,17 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
-#include <vfs/vfs.h>
+#include <vfs/path.h>
+#include <vfs/node.h>
+#include <vfs/file.h>
+#include <vfs/fs.h>
+
 #include "vfs-private.h"
-#include <mutek/printk.h>
+
+#include <string.h>
 
 static const char *next_nonslash(const char *str)
 {
@@ -94,31 +99,31 @@ error_t vfs_lookup_part(
     const char **next_place,
     struct vfs_node_s **node)
 {
-	const char *token = path;
+    const char *token = path;
     error_t err = 0;
 
     vfs_printk("<%s '%s'->'%s' ", __FUNCTION__, path, end);
 
     /* Absolute lookup */
-	if ( token[0] == '/' ) {
+    if ( token[0] == '/' ) {
         vfs_printk("absolute ");
-		token = next_nonslash(token);
-		cwd = root;
-	}
+        token = next_nonslash(token);
+        cwd = root;
+    }
 
-	*node = vfs_node_refinc(cwd);
+    *node = vfs_node_refinc(cwd);
 
     vfs_printk("start %p ", *node);
 
-	while ( token < end ) {
+    while ( token < end ) {
         const char *slash_or_end = next_slash(token);
         err = 0;
 
         vfs_printk("part \"%s\"/%d ", token, slash_or_end-token);
 
         if ( ((slash_or_end-token) == 2)
-			 && (token[0] == '.')
-			 && (token[1] == '.') ) {
+            && (token[0] == '.')
+            && (token[1] == '.') ) {
             if ( *node == root ) {
                 // Trying to go above root, this is not permitted
                 // Do nothing
@@ -130,27 +135,27 @@ error_t vfs_lookup_part(
                 *node = parent;
             }
             vfs_printk("parent->%p ", *node);
-		} else if ( ((slash_or_end-token) == 1)
-                    && (token[0] == '.') ) {
+        } else if ( ((slash_or_end-token) == 1)
+            && (token[0] == '.') ) {
             // Self, do nothing
             vfs_printk("self->%p ", *node);
         } else {
             struct vfs_node_s *nnode;
             err = vfs_node_lookup(*node, token, slash_or_end-token, &nnode);
-			if ( err ) {
+            if ( err ) {
                 vfs_printk("other failed ");
                 break;
             }
-			vfs_node_refdec(*node);
-			*node = nnode;
+            vfs_node_refdec(*node);
+            *node = nnode;
             vfs_printk("other->%p ", *node);
-		}
+        }
 
-		token = next_nonslash(slash_or_end);
-	}
+        token = next_nonslash(slash_or_end);
+    }
     *next_place = token;
     vfs_printk("stopped at '%s'->'%s' n: %p : %d>", *next_place, end, *node, err);
-	return err;
+    return err;
 }
 
 error_t vfs_lookup(struct vfs_node_s *root,
@@ -231,24 +236,25 @@ error_t vfs_create(struct vfs_node_s *root,
     }
 }
 
-error_t vfs_open(struct vfs_node_s *root,
-				 struct vfs_node_s *cwd,
-				 const char *path,
-				 enum vfs_open_flags_e flags,
-				 struct vfs_file_s **file)
+error_t vfs_open(
+    struct vfs_node_s *root,
+    struct vfs_node_s *cwd,
+    const char *path,
+    enum vfs_open_flags_e flags,
+    struct vfs_file_s **file)
 {
-	if ( !path || !root || !cwd || !file )
-		return -EINVAL;
+    if ( !path || !root || !cwd || !file )
+        return -EINVAL;
 
-	const char *end = last_slash_or_end(path);
-	const char *prev = prev_slash(path, end);
+    const char *end = last_slash_or_end(path);
+    const char *prev = prev_slash(path, end);
 
-	const char *last_part = next_nonslash(prev);
+    const char *last_part = next_nonslash(prev);
 
     struct vfs_node_s *node;
-	const char *stopped_at;
+    const char *stopped_at;
 
-	error_t err = vfs_lookup_part(root, cwd, path, end, &stopped_at, &node);
+    error_t err = vfs_lookup_part(root, cwd, path, end, &stopped_at, &node);
     if ( (err == -ENOENT) && (stopped_at >= last_part) && (flags & VFS_OPEN_CREATE) )
         goto do_create;
 
@@ -259,7 +265,7 @@ error_t vfs_open(struct vfs_node_s *root,
     vfs_node_refdec(node);
     return err;
 
-  do_create:
+ do_create:
 
     vfs_printk("creating %s in %s", last_part, node->name);
 
@@ -288,15 +294,15 @@ error_t vfs_open(struct vfs_node_s *root,
         node = linked_node;
     }
     
-  do_open:
+ do_open:
     vfs_printk("opening %s ", node->name);
 
     // node is node to open
 
-	err = vfs_node_open(node, flags, file);
-	vfs_node_refdec(node);
-	vfs_printk("%d %p>\n", err, *file);
-	return err;
+    err = vfs_node_open(node, flags, file);
+    vfs_node_refdec(node);
+    vfs_printk("%d %p>\n", err, *file);
+    return err;
 }
 
 error_t vfs_stat(struct vfs_node_s *root,
@@ -372,18 +378,18 @@ error_t vfs_link(struct vfs_node_s *root,
 }
 
 error_t vfs_unlink(struct vfs_node_s *root,
-				   struct vfs_node_s *cwd,
-				   const char *path)
+                   struct vfs_node_s *cwd,
+                   const char *path)
 {
 	struct vfs_node_s *node;
 
 	error_t err = vfs_lookup(root, cwd, path, &node);
-	if ( err )
+	if (err)
 		return err;
 
     // TODO also check we dont try to delete parent of any mountpoint
     // in the system.
-	if ( node->fs->root == node->fs_node ) {
+	if (node->fs->root == node) {
 		vfs_node_refdec(node);
 		return -EBUSY;
 	}
@@ -399,66 +405,3 @@ error_t vfs_unlink(struct vfs_node_s *root,
     vfs_node_refdec(parent);    
 	return err;
 }
-
-static
-void vfs_dump_item(struct vfs_node_s *node,
-				   size_t pfx)
-{
-	size_t i;
-	for (i=0; i<pfx; ++i)
-		printk(" ");
-    printk(" + %d \"%s\" %p (%p)"
-#if defined(CONFIG_VFS_STATS)
-           ", lu: %d, open: %d, close: %d, stat: %d"
-#endif
-//           ", free: %p"
-           "\n"
-           , vfs_node_refcount(node)
-           , node->name
-           , node, node->parent
-#if defined(CONFIG_VFS_STATS)
-           , atomic_get(&node->lookup_count)
-           , atomic_get(&node->open_count)
-           , atomic_get(&node->close_count)
-           , atomic_get(&node->stat_count)
-#endif
-//           , node->obj_entry.storage_free
-        );
-
-    GCT_FOREACH(vfs_dir_hash, &node->children, item, {
-            vfs_dump_item(item, pfx+2);
-        });
-}
-
-void vfs_dump(struct vfs_node_s *root)
-{
-	printk("VFS dump for root %p, fsroot: %p, refcount: %d\n",
-		   root, root->fs->root, atomic_get(&root->fs->ref));
-	vfs_dump_item(root, 0);
-}
-
-void vfs_fs_dump_stats(struct vfs_fs_s *fs)
-{
-#if defined(CONFIG_VFS_STATS)
-    printk(" node_open:    %d\n", atomic_get(&fs->node_open_count));
-    printk(" lookup:       %d\n", atomic_get(&fs->lookup_count));
-    printk(" create:       %d\n", atomic_get(&fs->create_count));
-    printk(" link:         %d\n", atomic_get(&fs->link_count));
-    printk(" unlink:       %d\n", atomic_get(&fs->unlink_count));
-    printk(" stat:         %d\n", atomic_get(&fs->stat_count));
-    printk(" node_create:  %d\n", atomic_get(&fs->node_create_count));
-    printk(" node_destroy: %d\n", atomic_get(&fs->node_destroy_count));
-    printk(" file_open:    %d\n", atomic_get(&fs->file_open_count));
-    printk(" file_close:   %d\n", atomic_get(&fs->file_close_count));
-#endif
-}
-
-// Local Variables:
-// tab-width: 4
-// c-basic-offset: 4
-// c-file-offsets:((innamespace . 0)(inline-open . 0))
-// indent-tabs-mode: nil
-// End:
-
-// vim: filetype=cpp:expandtab:shiftwidth=4:tabstop=4:softtabstop=4
-

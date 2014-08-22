@@ -113,7 +113,7 @@ void __stdio_stream_init(FILE *stream);
 typedef struct file_s { } FILE;
 #endif /* CONFIG_LIBC_STREAM */
 
-config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_VFS)
+config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_LIBC_VFS)
 FILE *fopen(const char *path, const char *mode);
 
 config_depend(CONFIG_LIBC_STREAM)

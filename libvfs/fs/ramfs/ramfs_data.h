@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #ifndef _RAMFS_DATA_H_
@@ -24,7 +24,7 @@
 
 #include <hexo/types.h>
 
-#include <vfs/types.h>
+#include <vfs/node.h>
 
 #include <stdlib.h>
 
@@ -44,13 +44,14 @@ GCT_REFCOUNT(ramfs_data, struct ramfs_data_s *, obj_entry);
 static inline struct ramfs_data_s * ramfs_data_create()
 {
     struct ramfs_data_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
+
 	obj->data = NULL;
 	obj->magic = 0x1ada1ada;
 	obj->allocated_size = 0;
 	obj->actual_size = 0;
     ramfs_data_refinit(obj);
 
-	return 0;
+	return obj;
 }
 
 static inline void ramfs_data_destroy(struct ramfs_data_s *obj)

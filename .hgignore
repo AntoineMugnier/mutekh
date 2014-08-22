@@ -3,3 +3,4 @@ glob:*.o
 glob:obj-*
 glob:*.log
 glob:*.diff
+glob:*~

@@ -21,17 +21,17 @@
 #ifndef _SOCLIB_FDACCESS_PRIVATE_H_
 #define _SOCLIB_FDACCESS_PRIVATE_H_
 
-#include <vfs/types.h>
+#include <vfs/node.h>
 #include <vfs/fs.h>
 #include <vfs/ops.h>
 #include <vfs/file.h>
 
 struct soclib_fdaccess_devpv_s;
 
-OBJECT_TYPE     (soclib_fdaccess_node, REFCOUNT, struct fs_node_s);
+OBJECT_TYPE     (soclib_fdaccess_node, REFCOUNT, struct soclib_fdaccess_node_s);
 OBJECT_PROTOTYPE(soclib_fdaccess_node, static inline, soclib_fdaccess_node);
 
-struct fs_node_s
+struct soclib_fdaccess_node_s
 {
   soclib_fdaccess_node_entry_t obj_entry;
 
@@ -47,7 +47,7 @@ OBJECT_DESTRUCTOR(soclib_fdaccess_node);
 struct soclib_fdaccess_fs_s
 {
   struct vfs_fs_s		 fs; /* keep first field */
-  struct fs_node_s		 *root;
+  struct soclib_fdaccess_node_s		 *root;
   struct device_s                *dev;
 };
 

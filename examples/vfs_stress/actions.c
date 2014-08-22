@@ -4,9 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <vfs/vfs.h>
+#include <vfs/node.h>
+#include <vfs/file.h>
+#include <vfs/path.h>
 
 #include "my_rand.h"
+#include "cwd.h"
 
 //#define dprintk(...) do{}while(0)
 #define dprintk(...) printk(__VA_ARGS__)
@@ -257,7 +260,7 @@ void action_ls()
 	}
 
     while ( vfs_file_read(dir, &dirent, sizeof(dirent)) == sizeof(dirent) ) {
-//        printk("%s [%s] %d\n", dirent.name, dirent.type == VFS_NODE_DIR ? "dir" : "reg", dirent.size);
+        printk("%s [%s] %d\n", dirent.name, dirent.type == VFS_NODE_DIR ? "dir" : "reg", dirent.size);
     }
 
     vfs_file_close(dir);

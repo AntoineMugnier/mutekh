@@ -6,8 +6,8 @@
 #include <string.h>
 #include <mutek/fileops.h>
 
-#ifdef CONFIG_VFS
-#include <vfs/vfs.h>
+#ifdef CONFIG_LIBC_VFS
+#include <vfs/path.h>
 #include <vfs/file.h>
 #include <mutek/mem_alloc.h>
 #endif
@@ -436,7 +436,7 @@ void __stdio_stream_init(FILE *file)
   file->eof = 0;
 }
 
-#if defined(CONFIG_VFS)
+#if defined(CONFIG_LIBC_VFS)
 
 static enum vfs_open_flags_e	open_flags(const char *str)
 {
@@ -488,9 +488,7 @@ FILE *fopen(const char *path, const char *mode)
   file->ops = ops;
 
   struct vfs_file_s *hndl;
-  error_t error = vfs_open(vfs_get_root(),
-						   vfs_get_cwd(),
-						   path, flags, &hndl);
+  error_t error = vfs_open(libc_vfs_root, libc_vfs_cwd, path, flags, &hndl);
 
   if (error) {
 	  errno = -error;
@@ -498,10 +496,10 @@ FILE *fopen(const char *path, const char *mode)
   }
   file->hndl = (void*)hndl;
 
-  ops->read =  (fileops_read_t*)hndl->read;
-  ops->write = (fileops_write_t*)hndl->write;
-  ops->lseek = (fileops_lseek_t*)hndl->seek;
-  ops->close = (fileops_close_t*)hndl->close;
+  ops->read =  vfs_file_read;
+  ops->write = vfs_file_write;
+  ops->lseek = vfs_file_seek;
+  ops->close = vfs_file_close;
 
   __stdio_stream_init(file);
 
@@ -517,7 +515,7 @@ FILE *fopen(const char *path, const char *mode)
   return NULL;
 }
 
-#endif /* CONFIG_VFS */
+#endif /* CONFIG_LIBC_VFS */
 
 
 /* ************************************************** standard streams */

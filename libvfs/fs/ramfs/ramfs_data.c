@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #include <hexo/types.h>

@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Alexandre Becoulet, <alexandre.becounet@lip6.fr>, 2009
+  Copyright Alexandre Becoulet, <alexandre.becounet@lip6.fr>, 2009,2014
 */
 
 #include <hexo/endian.h>
@@ -27,10 +27,11 @@
 #include <device/class/block.h>
 #include <device/driver.h>
 #include <device/device.h>
-#include <vfs/types.h>
+
+#include <vfs/node.h>
 #include <vfs/file.h>
-#include <vfs/ops.h>
 #include <vfs/fs.h>
+#include <vfs/name.h>
 
 #include "fat-sector-cache.h"
 #include "fat.h"

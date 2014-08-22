@@ -16,81 +16,89 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #include <mutek/fileops.h>
 #include <mutek/printk.h>
 #include <mutek/mem_alloc.h>
 
-#include <vfs/vfs.h>
+#include <vfs/file.h>
+#include <vfs/node.h>
 
-static VFS_FILE_READ(default_vfs_file_read)
+error_t vfs_file_init(struct vfs_file_s *file,
+	              const struct vfs_file_ops_s *ops,
+                      enum vfs_open_flags_e flags,
+	              struct vfs_node_s *node)
 {
-	return -ENOTSUP;
+  vfs_printk("<file %p init node: %p>", file, node);
+
+  vfs_file_refinit(file);
+
+  vfs_node_refinc(node);
+
+  file->flags = flags;
+  file->node = node;
+  file->ops = ops;
+  file->offset = 0;
+
+  return 0;
 }
 
-static VFS_FILE_WRITE(default_vfs_file_write)
+void vfs_file_cleanup(struct vfs_file_s *file)
 {
-	return -ENOTSUP;
+  vfs_file_refcleanup(file);
+  vfs_node_refdec(file->node);
+
+  vfs_printk("<file %p cleanup node: %p>", file, file->node);
 }
 
-static VFS_FILE_SEEK(default_vfs_file_seek)
+void vfs_file_destroy(struct vfs_file_s *file)
 {
-	return -ENOTSUP;
+  if (file->ops->cleanup)
+    file->ops->cleanup(file);
+
+  vfs_file_cleanup(file);
+
+  mem_free(file);
 }
 
-static VFS_FILE_TRUNCATE(default_vfs_file_truncate)
+ssize_t vfs_file_read(struct vfs_file_s *file,
+			  void *buffer,
+			  size_t size)
 {
-	return -ENOTSUP;
+  if (!file->ops->read)
+    return -ENOTSUP;
+  return file->ops->read(file, buffer, size);
 }
 
-static VFS_FILE_CLOSE(default_vfs_file_close)
+ssize_t vfs_file_write(struct vfs_file_s *file,
+			   const void *buffer,
+			   size_t size)
 {
-	vfs_file_refdec(file);
-	
-	return 0;
+  if (!file->ops->write)
+    return -ENOTSUP;
+  return file->ops->write(file, buffer, size);
 }
 
-struct vfs_file_s * vfs_file_create(struct fs_node_s *node,
-				    vfs_fs_node_refnew_t *node_refnew,
-				    vfs_fs_node_refdrop_t *node_refdrop)
+void vfs_file_close(struct vfs_file_s *file)
 {
-	struct vfs_file_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
-
-	if (!obj)
-		return NULL;
-
-	vfs_file_refinit(obj);
-
-	vfs_printk("<file open %p>", node);
-	obj->offset = 0;
-	obj->node = node_refnew(node);
-	obj->node_refdrop = node_refdrop;
-	obj->close = default_vfs_file_close;
-	obj->read = default_vfs_file_read;
-	obj->write = default_vfs_file_write;
-	obj->seek = default_vfs_file_seek;
-	obj->truncate = default_vfs_file_truncate;
-
-	return obj;
+  vfs_file_refdec(file);
 }
 
-void vfs_file_destroy(struct vfs_file_s *obj)
+off_t vfs_file_seek(struct vfs_file_s *file,
+			  off_t offset,
+			  enum vfs_whence_e whence)
 {
-	vfs_printk("<file close %p>", obj->node);
-
-	vfs_file_refcleanup(obj);
-
-	obj->node_refdrop(obj->node);
-
-	mem_free(obj);
+  if (!file->ops->seek)
+    return -ENOTSUP;
+  return file->ops->seek(file, offset, whence);
 }
 
-const struct fileops_s vfs_file_fops = {
-	.read =  (fileops_read_t *)vfs_file_read,
-	.write = (fileops_write_t*)vfs_file_write,
-	.lseek = (fileops_lseek_t*)vfs_file_seek,
-	.close = (fileops_close_t*)vfs_file_close,
-};
-
+off_t vfs_file_truncate(struct vfs_file_s *file,
+			  off_t new_size)
+{
+  if (!file->ops->truncate)
+    return -ENOTSUP;
+  return file->ops->truncate(file, new_size);
+}

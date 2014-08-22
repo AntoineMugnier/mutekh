@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 /**
@@ -28,37 +28,13 @@
 #ifndef _VFS_PRIVATE_H_
 #define _VFS_PRIVATE_H_
 
-#include <vfs/types.h>
+#include <vfs/node.h>
 
 static inline
 bool_t vfs_node_is_dandling(struct vfs_node_s *node)
 {
     return node->parent == NULL;
 }
-
-#if 0
-struct vfs_node_s * vfs_node_new(void *storage, struct vfs_fs_s *fs,
-                                 const char *fullname, size_t fullnamelen,
-                                 struct fs_node_s *fs_node);
-#endif
-
-/**
-   @this creates a new vfs node.
-
-   @param fs associated file system instance
-   @param type node type
-   @param mangled_name Entry mangled name. Must be exactly
-   #CONFIG_VFS_NAMELEN long.
-   @return the new vfs node.
-
-   @see vfs_name_mangle
- */
-struct vfs_node_s *vfs_node_create(
-    struct vfs_fs_s *fs,
-    const char *mangled_name,
-    struct fs_node_s *fs_node);
-
-// GCT_CONTAINER_FCNS(vfs_dir_hash, HASHLIST, static inline, vfs_dir);
 
 GCT_CONTAINER_KEY_TYPES(vfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
 

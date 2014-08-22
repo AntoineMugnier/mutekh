@@ -4,11 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <vfs/vfs.h>
+#include <vfs/node.h>
 
 #include <libvfs/fs/ramfs/ramfs.h>
 
 #include "my_rand.h"
+#include "cwd.h"
 
 #define ACTIONS 128
 

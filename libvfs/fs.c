@@ -16,44 +16,69 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
-#include <vfs/vfs.h>
+#include <vfs/fs.h>
+
 #include "vfs-private.h"
+
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-
-struct vfs_fs_s * vfs_fs_create()
+error_t vfs_fs_init(struct vfs_fs_s *fs, const struct vfs_fs_ops_s *ops, bool_t ro)
 {
-    struct vfs_fs_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
+    vfs_printk("<fs %p init>", fs);
 
-    if (!obj)
-        return NULL;
+    fs->ops = ops;
+	fs->old_node = NULL;
+    fs->root = NULL;
+    fs->flag_ro = ro;
 
-    atomic_set(&obj->ref, 0);
+    vfs_fs_refinit(fs);
 
 #if defined(CONFIG_VFS_STATS)
-    atomic_set(&obj->node_open_count, 0);
-    atomic_set(&obj->lookup_count, 0);
-    atomic_set(&obj->create_count, 0);
-    atomic_set(&obj->link_count, 0);
-    atomic_set(&obj->move_count, 0);
-    atomic_set(&obj->unlink_count, 0);
-    atomic_set(&obj->stat_count, 0);
-    atomic_set(&obj->node_create_count, 0);
-    atomic_set(&obj->node_destroy_count, 0);
-    atomic_set(&obj->file_open_count, 0);
-    atomic_set(&obj->file_close_count, 0);
+    atomic_set(&fs->node_open_count, 0);
+    atomic_set(&fs->lookup_count, 0);
+    atomic_set(&fs->create_count, 0);
+    atomic_set(&fs->link_count, 0);
+    atomic_set(&fs->move_count, 0);
+    atomic_set(&fs->unlink_count, 0);
+    atomic_set(&fs->stat_count, 0);
+    atomic_set(&fs->node_create_count, 0);
+    atomic_set(&fs->node_destroy_count, 0);
+    atomic_set(&fs->file_open_count, 0);
+    atomic_set(&fs->file_close_count, 0);
 #endif
 
-	return obj;
+    return 0;
 }
 
-void vfs_fs_destroy(struct vfs_fs_s *obj)
+void vfs_fs_root_set(struct vfs_fs_s *fs, struct vfs_node_s *root)
 {
-    mem_free(obj);
+    vfs_printk("<fs %p root %p>", fs, root);
+
+    fs->root = root;
+    root->parent = vfs_node_refinc(root);
+}
+
+void vfs_fs_cleanup(struct vfs_fs_s *fs)
+{
+    vfs_fs_refcleanup(fs);
+
+    assert(fs->root == NULL);
+
+    vfs_printk("<fs %p cleanup>", fs);
+}
+
+void vfs_fs_destroy(struct vfs_fs_s *fs)
+{
+    if (fs->ops->cleanup)
+        fs->ops->cleanup(fs);
+
+    vfs_fs_cleanup(fs);
+
+    mem_free(fs);
 }
 
 // Local Variables:

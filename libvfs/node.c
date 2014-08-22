@@ -16,12 +16,12 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
-#define GPCT_CONFIG_NODEPRECATED
-
-#include <vfs/vfs.h>
+#include <vfs/node.h>
+#include <vfs/file.h>
+#include <vfs/fs.h>
 #include "vfs-private.h"
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -41,78 +41,75 @@ struct vfs_fs_s *vfs_node_get_fs(struct vfs_node_s *node)
     return node->fs;
 }
 
-struct vfs_node_s *vfs_node_create(
-    struct vfs_fs_s *fs,
-    const char *mangled_name,
-    struct fs_node_s *fs_node)
+error_t vfs_node_init(struct vfs_node_s *node,
+                      struct vfs_fs_s *fs,
+                      enum vfs_node_type_e type,
+                      const char *mangled_name)
 {
-    struct vfs_node_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
-
-    if (!obj)
-        return NULL;
-
-    vfs_node_refinit(obj);
+    vfs_node_refinit(node);
 
     if ( mangled_name )
-        memcpy(obj->name, mangled_name, CONFIG_VFS_NAMELEN);
+        memcpy(node->name, mangled_name, CONFIG_VFS_NAMELEN);
     else
-        memset(obj->name, 0, CONFIG_VFS_NAMELEN);
-	obj->fs = fs;
+        memset(node->name, 0, CONFIG_VFS_NAMELEN);
+	node->fs = vfs_fs_refinc(fs);
+    node->type = type;
+	node->parent = NULL;
+    lock_init(&node->parent_lock);
 
-    obj->fs_node = obj->fs->ops->node_refnew(fs_node);
-
-	obj->parent = NULL;
-    lock_init(&obj->parent_lock);
-
-	atomic_inc(&fs->ref);
 	VFS_STATS_INC(fs, node_create_count);
 
-    semaphore_init(&obj->dir_semaphore, 1);
+    semaphore_init(&node->dir_semaphore, 1);
 
 #if defined(CONFIG_VFS_STATS)
-    atomic_set(&obj->lookup_count, 0);
-    atomic_set(&obj->open_count, 0);
-    atomic_set(&obj->close_count, 0);
-    atomic_set(&obj->stat_count, 0);
+    atomic_set(&node->lookup_count, 0);
+    atomic_set(&node->open_count, 0);
+    atomic_set(&node->close_count, 0);
+    atomic_set(&node->stat_count, 0);
 #endif
 
-    vfs_dir_init(&obj->children);
+    vfs_dir_init(&node->children);
 
-	vfs_printk("<node create %p %p '%s' free: %p>",
-               fs, obj, obj->name,
-               obj->obj_entry.storage_free);
+	vfs_printk("<node init %p %p '%s'>",
+               fs, node, node->name);
 
-	return obj;
+    return 0;
 }
 
-void vfs_node_destroy(struct vfs_node_s *obj)
+void vfs_node_cleanup(struct vfs_node_s *node)
 {
-	vfs_printk("<node delete %p '%s' free: %p", obj, obj->name,
-               obj->obj_entry.storage_free);
+	vfs_printk("<node cleanup %p '%s'", node, node->name);
 
-    struct vfs_node_s *parent = vfs_node_get_parent(obj);
+    struct vfs_node_s *parent = vfs_node_get_parent(node);
     if ( parent ) {
         vfs_node_dirlock(parent);
-        vfs_node_parent_nolock_unset(obj);
+        vfs_node_parent_nolock_unset(node);
         vfs_node_dirunlock(parent);
         vfs_node_refdec(parent);
     }
     
-    vfs_dir_destroy(&obj->children);
+    vfs_dir_destroy(&node->children);
 
-    semaphore_destroy(&obj->dir_semaphore);
+    semaphore_destroy(&node->dir_semaphore);
 
-    atomic_dec(&obj->fs->ref);
+    VFS_STATS_INC(node->fs, node_destroy_count);
 
-    VFS_STATS_INC(obj->fs, node_destroy_count);
+    lock_destroy(&node->parent_lock);
 
-    obj->fs->ops->node_refdrop(obj->fs_node);
-    lock_destroy(&obj->parent_lock);
-
-    vfs_node_refcleanup(obj);
-    mem_free(obj);
+	vfs_fs_refdec(node->fs);
+    vfs_node_refcleanup(node);
 
     vfs_printk(" done>");
+}
+
+void vfs_node_destroy(struct vfs_node_s *node)
+{
+    if (node->fs->ops->node_cleanup)
+        node->fs->ops->node_cleanup(node);
+
+    vfs_node_cleanup(node);
+
+    mem_free(node);
 }
 
 struct vfs_node_s *vfs_node_get_parent(struct vfs_node_s *node)
@@ -142,6 +139,470 @@ vfs_node_parent_nolock_unset(struct vfs_node_s *node)
     }
     lock_release(&node->parent_lock);
     CPU_INTERRUPT_RESTORESTATE;
+}
+
+
+static
+void vfs_dump_item(struct vfs_node_s *node,
+				   size_t pfx)
+{
+	size_t i;
+	for (i=0; i<pfx; ++i)
+		printk(" ");
+    printk(" + %d \"%s\" %p (%p)"
+#if defined(CONFIG_VFS_STATS)
+           ", lu: %d, open: %d, close: %d, stat: %d"
+#endif
+//           ", free: %p"
+           "\n"
+           , vfs_node_refcount(node)
+           , node->name
+           , node, node->parent
+#if defined(CONFIG_VFS_STATS)
+           , atomic_get(&node->lookup_count)
+           , atomic_get(&node->open_count)
+           , atomic_get(&node->close_count)
+           , atomic_get(&node->stat_count)
+#endif
+//           , node->obj_entry.storage_free
+        );
+
+    GCT_FOREACH(vfs_dir_hash, &node->children, item, {
+            vfs_dump_item(item, pfx+2);
+        });
+}
+
+/*
+  Here are two helpers when we need to take two locks at the same time
+  in two directories. We MUST always take them in the same order to
+  avoid deadlocks. So we take them in pointer order, and release them
+  in the opposite order.
+ */
+void vfs_node_2dirlock(struct vfs_node_s *d1,
+                       struct vfs_node_s *d2)
+{
+    if ( d1 < d2 ) {
+        vfs_node_dirlock(d1);
+        vfs_node_dirlock(d2);
+    } else {
+        vfs_node_dirlock(d2);
+        vfs_node_dirlock(d1);
+    }
+}
+
+void vfs_node_2dirunlock(struct vfs_node_s *d1,
+                         struct vfs_node_s *d2)
+{
+    if ( d1 < d2 ) {
+        vfs_node_dirunlock(d2);
+        vfs_node_dirunlock(d1);
+    } else {
+        vfs_node_dirunlock(d1);
+        vfs_node_dirunlock(d2);
+    }
+}
+
+static void
+vfs_node_parent_nolock_set_for_root(struct vfs_node_s *node, struct vfs_node_s *parent)
+{
+    CPU_INTERRUPT_SAVESTATE_DISABLE;
+    lock_spin(&node->parent_lock);
+    node->parent = vfs_node_refinc(parent);
+    vfs_dir_push(&parent->children, node);
+    lock_release(&node->parent_lock);
+    CPU_INTERRUPT_RESTORESTATE;
+}
+
+static void
+vfs_node_parent_nolock_set(struct vfs_node_s *node, struct vfs_node_s *parent)
+{
+    CPU_INTERRUPT_SAVESTATE_DISABLE;
+    lock_spin(&node->parent_lock);
+	assert( vfs_node_is_dandling(node) );
+    node->parent = vfs_node_refinc(parent);
+    vfs_dir_push(&parent->children, node);
+    lock_release(&node->parent_lock);
+    CPU_INTERRUPT_RESTORESTATE;
+}
+
+static struct vfs_node_s *
+vfs_dir_mangled_lookup(struct vfs_node_s *node,
+                              const char *fullname, size_t fullnamelen)
+{
+	char tmpname[CONFIG_VFS_NAMELEN];
+    vfs_name_mangle(fullname, fullnamelen, tmpname);
+
+	VFS_STATS_INC(node, lookup_count);
+
+	return vfs_dir_lookup(&node->children, tmpname);
+}
+
+error_t vfs_mount(struct vfs_node_s *mountpoint,
+				  struct vfs_fs_s *fs)
+{
+    struct vfs_stat_s stat;
+    vfs_node_stat(mountpoint, &stat);
+    /* Must mount on a directory */
+    if (stat.type != VFS_NODE_DIR)
+        return -EINVAL;
+
+	/* Cant mount a mounted fs */
+	if (fs->old_node != NULL)
+		return -EBUSY;
+
+	/* Cant mount at the root of the filesystem */
+	if (mountpoint->parent == mountpoint)
+		return -EINVAL;
+
+	/* Cant mount at the root of another mount */
+	if (mountpoint->fs->root == mountpoint)
+		return -EINVAL;
+
+	/* Keep a reference to the mountpoint node, it may be open */
+	fs->old_node = vfs_node_refinc(mountpoint);
+
+    memcpy(fs->root->name, mountpoint->name, CONFIG_VFS_NAMELEN);
+    fs->root->parent = NULL;
+
+    struct vfs_node_s *parent = vfs_node_get_parent(mountpoint);
+
+	vfs_node_dirlock(parent);
+    vfs_node_parent_nolock_unset(mountpoint);
+    vfs_node_parent_nolock_set_for_root(fs->root, parent);
+	vfs_node_dirunlock(parent);
+
+    vfs_node_refdec(parent);
+
+    /* Reference root had on itself */
+    vfs_node_refdec(fs->root);
+
+	vfs_printk("<mount ok>");
+
+	return 0;
+}
+
+error_t vfs_umount(struct vfs_node_s *mountpoint)
+{
+    struct vfs_fs_s *fs = mountpoint->fs;
+
+    /* Ensure mountpoint is a root */
+    if (fs->root != mountpoint)
+        return -EINVAL;
+
+	/* Cant umount the global root */
+	if (fs->old_node == NULL)
+		return -EINVAL;
+
+	struct vfs_node_s *parent = vfs_node_get_parent(mountpoint);
+
+	/* Is user playing with us ? */
+	if ( parent == NULL )
+		return -EINVAL;
+
+	vfs_node_dirlock(parent);
+	if ( !fs->ops->can_unmount(fs) ) {
+        vfs_node_dirunlock(parent);
+        vfs_node_refdec(parent);
+        return -EBUSY;
+    }
+
+    /* Take reference for fs->root->parent now */
+    fd_node_refinc(fs->root);
+
+    /* Reput the old node where it belongs */
+    vfs_node_parent_nolock_unset(mountpoint);
+    vfs_node_parent_nolock_set(fs->old_node, parent);
+    
+    memset(mountpoint->name, 0, CONFIG_VFS_NAMELEN);
+
+    vfs_node_dirunlock(parent);
+
+    fs->root->parent = fs->root;
+
+    vfs_node_refdec(fs->old_node);
+    fs->old_node = NULL;
+
+    vfs_node_refdec(parent);
+	return 0;
+}
+
+/* Node operations */
+
+error_t vfs_node_lookup(struct vfs_node_s *parent,
+						const char *name,
+						size_t namelen,
+						struct vfs_node_s **node)
+{
+	error_t err = 0;
+
+    struct vfs_node_s *fs_node;
+
+	VFS_STATS_INC(parent->fs, lookup_count);
+
+	vfs_printk("<lookup \"%s\"/%d parent: %p [%s]... ", name, namelen, parent, parent->name);
+
+	/* Dandling nodes are valid, but no lookup is authorized on them... */
+    if ( vfs_node_is_dandling(parent) )
+		return -EINVAL;
+
+	vfs_node_dirlock(parent);
+
+	/* Now lookup inside the hash */
+	*node = vfs_dir_mangled_lookup(parent, name, namelen);
+	if ( *node ) {
+		vfs_printk("ok %p [%s]>", (*node), (*node)->name);
+		err = 0;
+		goto fini;
+	}
+
+    char mangled_name[CONFIG_VFS_NAMELEN];
+
+	/* Last call: ask the FS */
+	err = parent->fs->ops->lookup(parent, name, namelen, &fs_node, mangled_name);
+
+	if ( err ) {
+		vfs_printk("err %d>", err);
+		goto fini;
+	}
+
+    *node = fs_node;
+
+	/* As FS got a node for this, we can register it in the hash */
+    vfs_node_parent_nolock_set(*node, parent);
+
+	vfs_printk("fs %p [%s]>", (*node), (*node)->name);
+
+  fini:
+	vfs_node_dirunlock(parent);
+	return err;
+}
+
+error_t vfs_node_anon_create(struct vfs_fs_s *fs,
+						enum vfs_node_type_e type,
+						struct vfs_node_s **node)
+{
+    if ( fs->ops->create == NULL )
+        return -ENOTSUP;
+
+    if ( fs->flag_ro )
+        return -EPERM;
+
+	VFS_STATS_INC(fs, create_count);
+
+	error_t err = fs->ops->create(fs, type, node);
+    if (err)
+        return err;
+
+    if (*node == NULL)
+        return -ENOMEM;
+
+    return 0;
+}
+
+error_t vfs_node_open(struct vfs_node_s *node,
+                      enum vfs_open_flags_e flags,
+                      struct vfs_file_s **file)
+{
+	vfs_printk(" node_open(%p): ", node);
+
+    assert( node->fs->ops->node_open != NULL );
+
+    if ( (flags & VFS_OPEN_WRITE) && (node->fs->flag_ro) )
+        return -EPERM;
+
+	VFS_STATS_INC(node->fs, node_open_count);
+
+    return node->fs->ops->node_open(node, flags, file);
+}
+
+error_t vfs_node_link(struct vfs_node_s *node,
+					  struct vfs_node_s *parent,
+					  const char *name,
+					  size_t namelen,
+					  struct vfs_node_s **rnode)
+{
+	error_t err = 0;
+
+	vfs_printk("<%s '%s' %p [%s] in %p [%s]... ", __FUNCTION__, name, node, node->name, parent, parent->name);
+
+    if ( parent->fs->ops->link == NULL )
+        return -ENOTSUP;
+
+    if ( parent->fs != node->fs )
+        return -ENOTSUP;
+
+    if ( vfs_node_is_dandling(parent) )
+        return -ENOTSUP;
+
+    if ( parent->fs->flag_ro )
+        return -EPERM;
+
+	vfs_node_dirlock(parent);
+
+	struct vfs_node_s *prev_node = vfs_dir_mangled_lookup(
+        parent, name, namelen);
+
+	VFS_STATS_INC(parent->fs, link_count);
+
+    char mangled_name[CONFIG_VFS_NAMELEN];
+
+	err = parent->fs->ops->link(node, parent,
+                                name, namelen, rnode, mangled_name);
+	if ( err ) {
+		vfs_printk("fail %d>\n", err);
+		goto fini;
+	}
+
+    if ( prev_node != NULL )
+        vfs_node_parent_nolock_unset(prev_node);
+
+    if ( *rnode == NULL ) {
+        /*
+          TODO
+          Argh ! we did it on the FS, but we cant create the node
+          what should we do ?
+
+          We should not return an error, but if we dont, we must
+          provide a valid node. There are options:
+
+          * Change the prototype in order not to return the new node ?
+          * Allocate the new node before, but we break the ctor/dtor
+            which take valid fs_nodes
+         */
+        err = -ENOMEM;
+        goto fini;
+    }
+
+    /* As FS got a node for this, we can register it in the hash */
+    vfs_node_parent_nolock_set(*rnode, parent);
+
+	vfs_printk("ok>\n");
+
+	err = 0;
+  fini:
+	vfs_node_dirunlock(parent);
+    if ( prev_node != NULL )
+        vfs_node_refdec(prev_node);
+	return err;
+}
+
+error_t vfs_node_move(struct vfs_node_s *node,
+					  struct vfs_node_s *parent,
+					  const char *name,
+					  size_t namelen)
+{
+	error_t err = 0;
+
+	vfs_printk("<%s '%s' %p [%s] in %p [%s]... ", __FUNCTION__, name, node, node->name, parent, parent->name);
+
+    if ( parent->fs->ops->move == NULL )
+        return -ENOTSUP;
+
+    if ( parent->fs != node->fs )
+        return -ENOTSUP;
+
+    if ( vfs_node_is_dandling(parent) )
+        return -ENOTSUP;
+
+    if ( parent->fs->flag_ro )
+        return -EPERM;
+
+	VFS_STATS_INC(parent->fs, move_count);
+
+    struct vfs_node_s *parent_src = vfs_node_get_parent(node);
+    if ( !parent_src )
+        return -EINVAL;
+
+	vfs_node_2dirlock(parent, parent_src);
+	struct vfs_node_s *prev_node = vfs_dir_mangled_lookup(parent, name, namelen);
+
+	err = parent->fs->ops->move(node, parent, name, namelen);
+	if ( err ) {
+		vfs_printk("fail %d>\n", err);
+		goto fini;
+	}
+
+    vfs_node_parent_nolock_unset(node);
+
+    if ( prev_node != NULL )
+        vfs_node_parent_nolock_unset(prev_node);
+
+    vfs_node_parent_nolock_set(node, parent);
+
+	vfs_printk("ok>\n");
+
+	err = 0;
+  fini:
+	vfs_node_2dirunlock(parent, parent_src);
+    if ( prev_node != NULL )
+        vfs_node_refdec(prev_node);
+	return err;
+}
+
+error_t vfs_node_unlink(struct vfs_node_s *parent,
+						const char *name,
+						size_t namelen)
+{
+    if ( parent->fs->ops->unlink == NULL )
+        return -ENOTSUP;
+
+    if ( parent->fs->flag_ro )
+        return -EPERM;
+
+	vfs_printk("<%s '%s'... ", __FUNCTION__, name);
+
+	VFS_STATS_INC(parent->fs, unlink_count);
+
+	vfs_node_dirlock(parent);
+
+	struct vfs_node_s *node = vfs_dir_mangled_lookup(parent, name, namelen);
+
+	error_t err = parent->fs->ops->unlink(parent, name, namelen);
+	if ( err )
+		goto fini;
+
+	if ( node )
+        vfs_node_parent_nolock_unset(node);
+
+	err = 0;
+  fini:
+	vfs_node_dirunlock(parent);
+	if ( node )
+        vfs_node_refdec(node);
+	vfs_printk(" %s>", strerror(err));
+	return err;
+}
+
+error_t vfs_node_stat(struct vfs_node_s *node,
+					  struct vfs_stat_s *stat)
+{
+	VFS_STATS_INC(node->fs, stat_count);
+	VFS_STATS_INC(node, stat_count);
+
+	return node->fs->ops->stat(node, stat);
+}
+
+void vfs_dump(struct vfs_node_s *root)
+{
+	printk("VFS dump for root %p, fsroot: %p, refcount: %d\n",
+		   root, root->fs->root, vfs_fs_refcount(root->fs));
+	vfs_dump_item(root, 0);
+}
+
+void vfs_fs_dump_stats(struct vfs_fs_s *fs)
+{
+#if defined(CONFIG_VFS_STATS)
+    printk(" node_open:    %d\n", atomic_get(&fs->node_open_count));
+    printk(" lookup:       %d\n", atomic_get(&fs->lookup_count));
+    printk(" create:       %d\n", atomic_get(&fs->create_count));
+    printk(" link:         %d\n", atomic_get(&fs->link_count));
+    printk(" unlink:       %d\n", atomic_get(&fs->unlink_count));
+    printk(" stat:         %d\n", atomic_get(&fs->stat_count));
+    printk(" node_create:  %d\n", atomic_get(&fs->node_create_count));
+    printk(" node_destroy: %d\n", atomic_get(&fs->node_destroy_count));
+    printk(" file_open:    %d\n", atomic_get(&fs->file_open_count));
+    printk(" file_close:   %d\n", atomic_get(&fs->file_close_count));
+#endif
 }
 
 // Local Variables:

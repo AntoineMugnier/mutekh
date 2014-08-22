@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Alexandre Becoulet, <alexandre.becoulet@free.fr>, 2009
+  Copyright Alexandre Becoulet, <alexandre.becoulet@free.fr>, 2009,2014
 */
 
 #include <hexo/types.h>
@@ -26,8 +26,9 @@
 #include <mutek/printk.h>
 
 #include <device/class/block.h>
-#include <vfs/types.h>
+#include <vfs/node.h>
 #include <vfs/fs.h>
+#include <vfs/name.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -38,7 +39,7 @@
 
 VFS_FILE_SEEK(iso9660_file_seek)
 {
-    struct fs_node_s *isonode = (void*)file->node;
+    struct iso9660_node_s *isonode = (void*)file->node;
 
 	switch (whence) {
 	case VFS_SEEK_SET:
@@ -63,8 +64,8 @@ VFS_FILE_SEEK(iso9660_file_seek)
 
 VFS_FILE_READ(iso9660_file_read)
 {
-    struct fs_node_s *isonode = file->node;
-    struct iso9660_fs_s *isofs = isonode->fs;
+    struct iso9660_node_s *isonode = (void*)file->node;
+    struct iso9660_fs_s *isofs = (void*)file->node->fs;
     uint8_t *buffer_ = buffer;
 
     /* block lba */
@@ -120,8 +121,8 @@ VFS_FILE_READ(iso9660_file_read)
 
 VFS_FILE_READ(iso9660_dir_read)
 {
-    struct fs_node_s *isonode = file->node;
-    struct iso9660_fs_s *isofs = isonode->fs;
+    struct iso9660_node_s *isonode = (void*)file->node;
+    struct iso9660_fs_s *isofs = (void*)file->node->fs;
     struct vfs_dirent_s *dirent = buffer;
 
     size_t count = ALIGN_VALUE_UP(isonode->entry.file_size, ISO9660_BLOCK_SIZE) / ISO9660_BLOCK_SIZE;

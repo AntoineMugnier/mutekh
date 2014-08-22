@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 /**
@@ -58,10 +58,8 @@
 
 C_HEADER_BEGIN
 
-#include <hexo/types.h>
 #include <vfs/defs.h>
 
-#include <gct_platform.h>
 #include <gct/refcount.h>
 
 enum vfs_open_flags_e
@@ -93,22 +91,6 @@ enum vfs_whence_e
 
 struct vfs_node_s;
 struct vfs_file_s;
-
-/** @this defines the file close operation prototype.
-    Compatible with @ref #FILEOPS_CLOSE */
-#define VFS_FILE_CLOSE(x) error_t (x)(struct vfs_file_s *file)
-
-/**
-   @this closes an open file descriptor.  The file descriptor must not
-   be used afterwards.
-
-   @param file File descriptor to close
-   @return 0 on successful close
-
-   @csee #VFS_FILE_CLOSE
- */
-typedef VFS_FILE_CLOSE(vfs_file_close_t);
-
 
 /** @this defines the file read operation prototype.
     Compatible with @ref #FILEOPS_READ */
@@ -184,57 +166,54 @@ typedef VFS_FILE_SEEK(vfs_file_seek_t);
  */
 typedef VFS_FILE_TRUNCATE(vfs_file_truncate_t);
 
-struct vfs_file_s
+
+/** @This defines the VFS file cleanup prototype */
+#define VFS_FILE_CLEANUP(x) void (x) (struct vfs_file_s *file)
+
+/** @This free resources associated with a fs file. */
+typedef VFS_FILE_CLEANUP(vfs_file_cleanup_t);
+
+struct vfs_file_ops_s
 {
-    GCT_REFCOUNT_ENTRY(obj_entry);
-	struct fs_node_s *node;            //< Corresponding node in the FS
-	vfs_fs_node_refdrop_t *node_refdrop; //< Function to call on close
-	vfs_file_close_t *close;            //< Close operation for this file  
 	vfs_file_read_t *read;              //< Read operation for this file   
 	vfs_file_write_t *write;            //< Write operation for this file  
 	vfs_file_seek_t *seek;              //< Seek operation for this file   
 	vfs_file_truncate_t *truncate;      //< Truncate operation for this file   
+	vfs_file_cleanup_t *cleanup;        //< Cleanup operation for this file, optional
+};
+
+struct vfs_file_s
+{
+    GCT_REFCOUNT_ENTRY(obj_entry);
+	struct vfs_node_s *node;            //< Corresponding node in the FS
 	off_t offset;                       //< Current access position in file
-	void *priv;                         //< File system private data
+    enum vfs_open_flags_e flags;
+    const struct vfs_file_ops_s *ops;
 };
 
 GCT_REFCOUNT(vfs_file, struct vfs_file_s *, obj_entry);
 
-struct vfs_dirent_s
-{
-    /** Name of the directory entry, asciiZ */
-	char name[CONFIG_VFS_NAMELEN + 1];
-    /** Type of node */
-	enum vfs_node_type_e type;
-    /** Size of file in bytes, or count of children nodes excluding
-        "." and ".." */
-	size_t size;
-};
+/** @This initializes common fields of a file object. */
+error_t vfs_file_init(struct vfs_file_s *file,
+	                  const struct vfs_file_ops_s *ops,
+                      enum vfs_open_flags_e flags,
+                      struct vfs_node_s *node);
 
-void vfs_file_destroy(struct vfs_file_s *);
-struct vfs_file_s * vfs_file_create(struct fs_node_s *node,
-                                    vfs_fs_node_refnew_t *node_refnew,
-                                    vfs_fs_node_refdrop_t *node_refdrop);
+/** @This frees resources allocated by @ref vfs_file_init. */
+void vfs_file_cleanup(struct vfs_file_s *file);
 
+/** @This calls the @ref vfs_file_s::close and the @ref
+    vfs_file_cleanup functions then free the file object. This is
+    called when the file refcount reaches 0. */
+void vfs_file_destroy(struct vfs_file_s *file);
 
-/**
-   @this creates a new opened file object. All file access operations are
-   initialized with default error returning functions. The close operation
-   defaults to a @ref vfs_file_refdrop call.
-
-   @param storage pointer to pre-allocated memory for new vfs node, may be NULL.
-   @param node associated fs node
-   @param node_refnew fs node refnew func
-   @param node_refdrop fs node refdrop func
-   @return the new file object.
- */
-struct file_s * vfs_file_new(void *storage, struct vfs_node_s * node, vfs_fs_node_refnew_t *node_refnew, vfs_fs_node_refdrop_t *node_refdrop);
 
 /** @this increases the file reference count and return the file itself. */
-struct vfs_file_s * vfs_file_refnew(struct vfs_file_s * file);
+struct vfs_file_s * vfs_file_refinc(struct vfs_file_s * file);
 
-/** @this decreases the file reference count and may delete the file if no more reference exist. */
-void vfs_file_refdrop(struct vfs_file_s * file);
+/** @this decreases the file reference count and may delete the file
+    if no more reference exist. */
+bool_t vfs_file_refdec(struct vfs_file_s * file);
 
 /**
    @this reads from an opened file
@@ -244,12 +223,8 @@ void vfs_file_refdrop(struct vfs_file_s * file);
    @param size Size of the transfer
    @return the size of buffer actually read
 */
-static inline ssize_t vfs_file_read(struct vfs_file_s *file,
-					  void *buffer,
-					  size_t size)
-{
-	return file->read(file, buffer, size);
-}
+ssize_t vfs_file_read(struct vfs_file_s *file,
+					  void *buffer, size_t size);
 
 /**
    @this writes from an opened file
@@ -259,23 +234,15 @@ static inline ssize_t vfs_file_read(struct vfs_file_s *file,
    @param size Size of the transfer
    @return the size of buffer actually written
 */
-static inline ssize_t vfs_file_write(struct vfs_file_s *file,
+ssize_t vfs_file_write(struct vfs_file_s *file,
 					   const void *buffer,
-					   size_t size)
-{
-	return file->write(file, buffer, size);
-}
+					   size_t size);
 
 /**
-   @this closes an opened file
-
+   @this closes an opened file.
    @param file File descriptor to close
-   @return 0 if closed correctly
 */
-static inline error_t vfs_file_close(struct vfs_file_s *file)
-{
-	return file->close(file);
-}
+void vfs_file_close(struct vfs_file_s *file);
 
 /**
    @this seeks to the given position into an opened file
@@ -285,12 +252,9 @@ static inline error_t vfs_file_close(struct vfs_file_s *file)
    @param whence Reference point to seek from
    @return new absolute position from the beginning of file
 */
-static inline off_t vfs_file_seek(struct vfs_file_s *file,
-					  off_t offset,
-					  enum vfs_whence_e whence)
-{
-	return file->seek(file, offset, whence);
-}
+off_t vfs_file_seek(struct vfs_file_s *file,
+                    off_t offset,
+					enum vfs_whence_e whence);
 
 /**
    @this truncates the file to the exact size @tt new_size
@@ -299,14 +263,8 @@ static inline off_t vfs_file_seek(struct vfs_file_s *file,
    @param new_size New file size
    @return 0 if done
 */
-static inline off_t vfs_file_truncate(struct vfs_file_s *file,
-					  off_t new_size)
-{
-	return file->truncate(file, new_size);
-}
-
-/** @this provides a file operations function set */
-extern const struct fileops_s vfs_file_fops;
+off_t vfs_file_truncate(struct vfs_file_s *file,
+					    off_t new_size);
 
 C_HEADER_END
 

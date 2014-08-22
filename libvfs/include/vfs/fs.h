@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 /**
@@ -32,7 +32,7 @@
    filesystem. This structure is used to mount a filesystem in
    another (with @ref vfs_mount).
 
-   @item @ref fs_node_s: A filesystem-level node. It represents an
+   @item @ref vfs_node_s: A filesystem-level node. It represents an
    actual node in a filesystem. This type is
    filesystem-implementation dependant, VFS sees it as an abstract
    type. Is is also refcounted through @tt node_refnew and @tt
@@ -56,25 +56,72 @@
 
 C_HEADER_BEGIN
 
-#include <hexo/types.h>
-#include <hexo/atomic.h>
-#include <hexo/error.h>
+#include <vfs/defs.h>
 
-/** @hidden */
-struct vfs_fs_s;
+#include <gct/refcount.h>
 
-/** @hidden */
-enum vfs_node_type_e;
-/** @hidden */
-enum vfs_open_flags_e;
+/**
+   @this is an opened filesystem state.
+ */
+struct vfs_fs_s
+{
+    /** Root node of the filesystem. This is filled when opening the filesystem */
+    struct vfs_node_s *root;
+    /** A pointer to supported operations table */
+    const struct vfs_fs_ops_s *ops;
+    /** Whether filesystem is read-only */
+    uint8_t flag_ro:1;
 
-/** @hidden */
-struct fs_node_s;
-/** @hidden */
-struct vfs_file_s;
+    /** Object-management-related */
+    GCT_REFCOUNT_ENTRY(obj_entry);
 
-/** @hidden */
-struct vfs_stat_s;
+    /**
+       Mountpoint that was replaced with this filesystem's root on
+       mount. NULL for non-mounted filesystems
+    */
+    struct vfs_node_s *old_node;
+
+#if defined(CONFIG_VFS_STATS)
+    /**
+       @multiple
+       Statistics counter
+    */
+    atomic_t node_open_count;
+
+    atomic_t lookup_count;
+    atomic_t create_count;
+    atomic_t link_count;
+    atomic_t move_count;
+    atomic_t unlink_count;
+    atomic_t stat_count;
+
+    atomic_t node_create_count;
+    atomic_t node_destroy_count;
+
+    atomic_t file_open_count;
+    atomic_t file_close_count;
+#endif
+};
+
+GCT_REFCOUNT(vfs_fs, struct vfs_fs_s *, obj_entry);
+
+
+
+/** @This initializes common fields of a file system object.  It is
+    mandatory to call @ref vfs_fs_root_set once after this call. */
+error_t vfs_fs_init(struct vfs_fs_s *fs, const struct vfs_fs_ops_s *ops, bool_t ro);
+
+/** @This sets root node for file system. This may be called only once
+    from fs open function . */
+void vfs_fs_root_set(struct vfs_fs_s *fs, struct vfs_node_s *root);
+
+/** @This free resources allocated by @ref vfs_fs_init. */
+void vfs_fs_cleanup(struct vfs_fs_s *fs);
+
+/** @This calls the @ref vfs_fs_ops_s::cleanup and the @ref
+    vfs_fs_cleanup functions then free the fs object. This is called
+    when the fs refcount reaches 0. */
+void vfs_fs_destroy(struct vfs_fs_s *fs);
 
 /** @this defines the fs unmountable test prototype */
 #define VFS_FS_CAN_UNMOUNT(x) bool_t (x)(struct vfs_fs_s *fs)
@@ -96,7 +143,7 @@ struct vfs_stat_s;
 typedef VFS_FS_CAN_UNMOUNT(vfs_fs_can_unmount_t);
 
 /** @this defines the fs node open operation prototype */
-#define VFS_FS_NODE_OPEN(x) error_t (x)(struct fs_node_s *node,	\
+#define VFS_FS_NODE_OPEN(x) error_t (x)(struct vfs_node_s *node,	\
 										enum vfs_open_flags_e flags,			\
 										struct vfs_file_s **file)
 
@@ -120,10 +167,10 @@ typedef VFS_FS_NODE_OPEN(vfs_fs_node_open_t);
 
 
 /** @this defines the fs lookup operation prototype */
-#define VFS_FS_LOOKUP(x) error_t (x)(struct fs_node_s *ref,             \
+#define VFS_FS_LOOKUP(x) error_t (x)(struct vfs_node_s *ref,             \
                                      const char *name,                  \
                                      size_t namelen,					\
-                                     struct fs_node_s **node,           \
+                                     struct vfs_node_s **node,           \
                                      char *mangled_name)
 
 /**
@@ -152,7 +199,7 @@ typedef VFS_FS_LOOKUP(vfs_fs_lookup_t);
 /** @this defines the fs create operation prototype */
 #define VFS_FS_CREATE(x) error_t (x)(struct vfs_fs_s *fs,	\
 									   enum vfs_node_type_e type,		\
-									   struct fs_node_s **node)
+									   struct vfs_node_s **node)
 
 /**
    This function creates a new anonymous node in a given file system.
@@ -170,11 +217,11 @@ typedef VFS_FS_LOOKUP(vfs_fs_lookup_t);
 typedef VFS_FS_CREATE(vfs_fs_create_t);
 
 /** @this defines the fs link operation prototype */
-#define VFS_FS_LINK(x) error_t (x)(struct fs_node_s *node,             \
-                                   struct fs_node_s *parent,           \
+#define VFS_FS_LINK(x) error_t (x)(struct vfs_node_s *node,             \
+                                   struct vfs_node_s *parent,           \
                                    const char *name,				   \
                                    size_t namelen,                     \
-                                   struct fs_node_s **rnode,           \
+                                   struct vfs_node_s **rnode,           \
                                    char *mangled_name)
 
 /**
@@ -207,8 +254,8 @@ typedef VFS_FS_LINK(vfs_fs_link_t);
 
 
 /** @this defines the fs move operation prototype */
-#define VFS_FS_MOVE(x) error_t (x)(struct fs_node_s *node,             \
-                                   struct fs_node_s *parent,           \
+#define VFS_FS_MOVE(x) error_t (x)(struct vfs_node_s *node,             \
+                                   struct vfs_node_s *parent,           \
                                    const char *name,				   \
                                    size_t namelen)
 
@@ -228,7 +275,7 @@ typedef VFS_FS_MOVE(vfs_fs_move_t);
 
 
 /** @this defines the fs unlink operation prototype */
-#define VFS_FS_UNLINK(x) error_t (x)(struct fs_node_s *parent,  \
+#define VFS_FS_UNLINK(x) error_t (x)(struct vfs_node_s *parent,  \
 									   const char *name,			   \
 									   size_t namelen)
 
@@ -249,7 +296,7 @@ typedef VFS_FS_UNLINK(vfs_fs_unlink_t);
 
 
 /** @this defines the fs stat operation prototype */
-#define VFS_FS_STAT(x) error_t (x)(struct fs_node_s *node,  \
+#define VFS_FS_STAT(x) error_t (x)(struct vfs_node_s *node,  \
 								   struct vfs_stat_s *stat)
 
 /**
@@ -267,61 +314,34 @@ typedef VFS_FS_STAT(vfs_fs_stat_t);
 
 
 
-/** @this defines the fs node refnew operation prototype */
-#define VFS_FS_NODE_REFNEW(x) struct fs_node_s * (x)(struct fs_node_s *node)
+/** @This defines the fs cleanup prototype */
+#define VFS_FS_CLEANUP(x) void (x) (struct vfs_fs_s *fs)
 
-/**
-   This function notifies the file system a node is not referenced any
-   more.
-
-   @param node Node not used any more
-
-   @csee #VFS_FS_NODE_REFNEW
-   @see vfs_node_refinc
- */
-typedef VFS_FS_NODE_REFNEW(vfs_fs_node_refnew_t);
-
-/** @this defines the fs node refdrop operation prototype */
-#define VFS_FS_NODE_REFDROP(x) bool_t (x)(struct fs_node_s *node)
-
-/**
-   This function notifies the file system a node is not referenced any
-   more.
-
-   @param node Node not used any more
-
-   @csee #VFS_FS_NODE_REFDROP
-   @see vfs_node_refdec
- */
-typedef VFS_FS_NODE_REFDROP(vfs_fs_node_refdrop_t);
+/** @This free resources associated with a file system. */
+typedef VFS_FS_CLEANUP(vfs_fs_cleanup_t);
 
 
-#ifdef __MKDOC__
-/**
-   @this creates a new FS object and initializes all its common
-   fields.
+/** @This defines the VFS node cleanup prototype */
+#define VFS_FS_NODE_CLEANUP(x) void (x) (struct vfs_node_s *node)
 
-   @param storage Optional pre-allocated buffer to use as fs. @this
-   allocates a new bufer if NULL.
-   @return a new fs, NULL on error.
- */
-struct vfs_fs_s *vfs_fs_new(void *storage);
-#endif
+/** @This free resources associated with a fs node. */
+typedef VFS_FS_NODE_CLEANUP(vfs_fs_node_cleanup_t);
+
 
 void vfs_fs_dump_stats(struct vfs_fs_s *fs);
 
 struct vfs_fs_ops_s
 {
-    vfs_fs_node_open_t *node_open;  //< mandatory
-    vfs_fs_lookup_t *lookup;        //< mandatory
-    vfs_fs_create_t *create;        //< optional, may be NULL
-    vfs_fs_link_t *link;            //< optional, may be NULL
-    vfs_fs_move_t *move;            //< optional, may be NULL
-    vfs_fs_unlink_t *unlink;        //< optional, may be NULL
-    vfs_fs_stat_t *stat;            //< mandatory
-    vfs_fs_can_unmount_t *can_unmount; //< mandatory
-    vfs_fs_node_refnew_t *node_refnew; //< mandatory
-    vfs_fs_node_refdrop_t *node_refdrop; //< mandatory
+    vfs_fs_node_open_t    *node_open;    //< mandatory
+    vfs_fs_lookup_t       *lookup;       //< mandatory
+    vfs_fs_create_t       *create;       //< optional, may be NULL
+    vfs_fs_link_t         *link;         //< optional, may be NULL
+    vfs_fs_move_t         *move;         //< optional, may be NULL
+    vfs_fs_unlink_t       *unlink;       //< optional, may be NULL
+    vfs_fs_stat_t         *stat;         //< mandatory
+    vfs_fs_can_unmount_t  *can_unmount;  //< mandatory
+    vfs_fs_cleanup_t      *cleanup;      //< optional, may be NULL
+    vfs_fs_node_cleanup_t *node_cleanup; //< optional, may be NULL
 };
 
 C_HEADER_END
