@@ -73,9 +73,11 @@ void ramfs_2dir_unlock(ramfs_dir_hash_root_t *d1,
     }
 }
 
-struct ramfs_node_s *ramfs_node_create(enum vfs_node_type_e type, 
-                                       struct vfs_fs_s *fs,
-                                       struct ramfs_data_s *data)
+struct ramfs_node_s *ramfs_node_create(
+    enum vfs_node_type_e type, 
+    struct vfs_fs_s *fs,
+    struct ramfs_data_s *data,
+    const char *name, size_t namelen)
 {
     struct ramfs_node_s *node = mem_alloc(sizeof(*node), mem_scope_sys);
 
@@ -84,7 +86,7 @@ struct ramfs_node_s *ramfs_node_create(enum vfs_node_type_e type,
 
     vfs_printk("<ramfs_node_ctor");
 
-    vfs_node_init(&node->node, fs, type, NULL);
+    vfs_node_init(&node->node, fs, type, name, namelen);
 
     switch (type) {
     case VFS_NODE_FILE:
@@ -183,7 +185,7 @@ VFS_FS_CREATE(ramfs_create)
 	vfs_printk("<%s ", __FUNCTION__);
 
     struct ramfs_node_s *rfs_node;
-    rfs_node = ramfs_node_create(type, fs, NULL);
+    rfs_node = ramfs_node_create(type, fs, NULL, NULL, 0);
 	if ( !rfs_node )
 		goto err_priv;
 
@@ -224,9 +226,11 @@ VFS_FS_LINK(ramfs_link)
     }
 
     struct ramfs_node_s *ret_node;
-	if ( rfs_node->parent != NULL ) {
+	if (rfs_node->parent != NULL) {
 		vfs_printk("clone ");
-        ret_node = ramfs_node_create(VFS_NODE_FILE, rfs_node->node.fs, rfs_node->data);
+        ret_node = ramfs_node_create(
+            VFS_NODE_FILE, rfs_node->node.fs, rfs_node->data,
+            name, namelen);
         if ( ret_node == NULL ) {
 			vfs_printk("node_new fail>");
 			return -ENOMEM;
@@ -236,10 +240,7 @@ VFS_FS_LINK(ramfs_link)
 		ret_node = (struct ramfs_node_s *)vfs_node_refinc(node);
 	}
 
-    vfs_name_mangle(name, namelen, mangled_name);
-	memcpy(ret_node->name, mangled_name, CONFIG_VFS_NAMELEN);
-
-    vfs_printk("file linked as %s ", mangled_name);
+    vfs_printk("file linked as %s ", rfs_node->node.name);
 
     ramfs_dir_wrlock(&rparent->children);
     struct ramfs_node_s *old_file = ramfs_dir_nolock_lookup(&rparent->children, ret_node->name);
@@ -400,7 +401,7 @@ error_t ramfs_open(struct vfs_fs_s **_fs)
     if (err)
         goto release_fs;
 
-    struct ramfs_node_s *root = ramfs_node_create(VFS_NODE_DIR, &fs->fs, NULL);
+    struct ramfs_node_s *root = ramfs_node_create(VFS_NODE_DIR, &fs->fs, NULL, NULL, 0);
 	if ( root == NULL )
 		goto nomem_dir;
 

@@ -72,9 +72,11 @@ static const bool_t _gct_refcount_ramfs_dir_hash_ramfs_node_enabled = 1;
 GCT_CONTAINER_KEY_TYPES(ramfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
 //GCT_CONTAINER_PROTOTYPES(ramfs_dir_hash, HASHLIST, static inline);
 
-struct ramfs_node_s *ramfs_node_create(enum vfs_node_type_e type,
-                                       struct vfs_fs_s *fs,
-                                       struct ramfs_data_s *data);
+struct ramfs_node_s *ramfs_node_create(
+    enum vfs_node_type_e type,
+    struct vfs_fs_s *fs,
+    struct ramfs_data_s *data,
+    const char *name, size_t namelen);
 
 struct ramfs_node_s;
 

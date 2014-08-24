@@ -221,8 +221,7 @@ typedef VFS_FS_CREATE(vfs_fs_create_t);
                                    struct vfs_node_s *parent,           \
                                    const char *name,				   \
                                    size_t namelen,                     \
-                                   struct vfs_node_s **rnode,           \
-                                   char *mangled_name)
+                                   struct vfs_node_s **rnode)
 
 /**
    This function links a node in a parent directory node.  Filesystem may not

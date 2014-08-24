@@ -39,7 +39,7 @@ struct fat_node_s *fat_node_create(struct fat_s *fat,
     if (!node)
         return NULL;
 
-    if (vfs_node_init(&node->node, &fat->fs, type, NULL)) {
+    if (vfs_node_init(&node->node, &fat->fs, type, NULL, 0)) {
         mem_free(node);
         return NULL;
     }

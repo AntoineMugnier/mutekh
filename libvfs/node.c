@@ -21,6 +21,7 @@
 
 #include <vfs/node.h>
 #include <vfs/file.h>
+#include <vfs/name.h>
 #include <vfs/fs.h>
 #include "vfs-private.h"
 #include <mutek/mem_alloc.h>
@@ -36,6 +37,15 @@ ssize_t vfs_node_get_name(struct vfs_node_s *node,
     return (strlen(name) < CONFIG_VFS_NAMELEN) ? 0 : -ENOMEM;
 }
 
+void vfs_node_name_set(struct vfs_node_s *node, const char *name, size_t size)
+{
+    assert(vfs_node_is_dandling(node));
+    if (name && size)
+        vfs_name_mangle(name, size, node->name);
+    else
+        memset(node->name, 0, CONFIG_VFS_NAMELEN);
+}
+
 struct vfs_fs_s *vfs_node_get_fs(struct vfs_node_s *node)
 {
     return node->fs;
@@ -44,14 +54,10 @@ struct vfs_fs_s *vfs_node_get_fs(struct vfs_node_s *node)
 error_t vfs_node_init(struct vfs_node_s *node,
                       struct vfs_fs_s *fs,
                       enum vfs_node_type_e type,
-                      const char *mangled_name)
+                      const char *name, size_t name_size)
 {
     vfs_node_refinit(node);
 
-    if ( mangled_name )
-        memcpy(node->name, mangled_name, CONFIG_VFS_NAMELEN);
-    else
-        memset(node->name, 0, CONFIG_VFS_NAMELEN);
 	node->fs = vfs_fs_refinc(fs);
     node->type = type;
 	node->parent = NULL;
@@ -67,6 +73,8 @@ error_t vfs_node_init(struct vfs_node_s *node,
     atomic_set(&node->close_count, 0);
     atomic_set(&node->stat_count, 0);
 #endif
+
+    vfs_node_name_set(node, name, name_size);
 
     vfs_dir_init(&node->children);
 
@@ -129,6 +137,8 @@ struct vfs_node_s *vfs_node_get_parent(struct vfs_node_s *node)
 void
 vfs_node_parent_nolock_unset(struct vfs_node_s *node)
 {
+    vfs_printk("<node %p: unsetting parent>", node);
+
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&node->parent_lock);
 	if ( !vfs_node_is_dandling(node) ) {
@@ -216,6 +226,7 @@ vfs_node_parent_nolock_set_for_root(struct vfs_node_s *node, struct vfs_node_s *
 static void
 vfs_node_parent_nolock_set(struct vfs_node_s *node, struct vfs_node_s *parent)
 {
+    vfs_printk("<node %p: setting parent %p \"%s\">", node, parent, node->name);
     CPU_INTERRUPT_SAVESTATE_DISABLE;
     lock_spin(&node->parent_lock);
 	assert( vfs_node_is_dandling(node) );
@@ -447,7 +458,7 @@ error_t vfs_node_link(struct vfs_node_s *node,
     char mangled_name[CONFIG_VFS_NAMELEN];
 
 	err = parent->fs->ops->link(node, parent,
-                                name, namelen, rnode, mangled_name);
+                                name, namelen, rnode);
 	if ( err ) {
 		vfs_printk("fail %d>\n", err);
 		goto fini;
@@ -456,24 +467,7 @@ error_t vfs_node_link(struct vfs_node_s *node,
     if ( prev_node != NULL )
         vfs_node_parent_nolock_unset(prev_node);
 
-    if ( *rnode == NULL ) {
-        /*
-          TODO
-          Argh ! we did it on the FS, but we cant create the node
-          what should we do ?
-
-          We should not return an error, but if we dont, we must
-          provide a valid node. There are options:
-
-          * Change the prototype in order not to return the new node ?
-          * Allocate the new node before, but we break the ctor/dtor
-            which take valid fs_nodes
-         */
-        err = -ENOMEM;
-        goto fini;
-    }
-
-    /* As FS got a node for this, we can register it in the hash */
+    vfs_node_name_set(*rnode, name, namelen);
     vfs_node_parent_nolock_set(*rnode, parent);
 
 	vfs_printk("ok>\n");

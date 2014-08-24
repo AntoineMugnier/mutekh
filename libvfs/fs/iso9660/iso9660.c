@@ -52,7 +52,7 @@ iso9660_node_create(struct iso9660_fs_s *fs, const struct iso9660_dir_s *entry,
     if (!node)
         return NULL;
 
-    if (vfs_node_init(&node->node, &fs->fs, type, NULL)) {
+    if (vfs_node_init(&node->node, &fs->fs, type, name, namelen)) {
         mem_free(node);
         return NULL;
     }

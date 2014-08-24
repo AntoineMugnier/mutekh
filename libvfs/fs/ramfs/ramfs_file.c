@@ -55,14 +55,14 @@ VFS_FILE_READ(ramfs_dir_read)
 	if ( size != sizeof(struct vfs_dirent_s) )
 		return -EINVAL;
 
-	uintptr_t cur = (uintptr_t)rnode->data;
+	uintptr_t cur = file->offset;
 
     bool_t gotit = ramfs_dir_get_nth(rnode, buffer, cur);
 
     if ( gotit )
-        rnode->data = (void *)(uintptr_t)(cur+1);
+        file->offset++;
     else
-        rnode->data = (void *)(uintptr_t)0;
+        file->offset = 0;
 
 	return gotit ? sizeof(struct vfs_dirent_s) : 0;
 }

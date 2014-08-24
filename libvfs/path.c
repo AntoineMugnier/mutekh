@@ -170,6 +170,8 @@ error_t vfs_lookup(struct vfs_node_s *root,
 	const char *where;
 
 	error_t err = vfs_lookup_part(root, cwd, path, end, &where, node);
+    vfs_printk("<%s got %p %d %p %s %p %s %p %s>", __FUNCTION__, *node, err,
+               path, path, end, end, where, where);
     if ( !err && (where >= end) )
         return 0;
     vfs_node_refdec(*node);

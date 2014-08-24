@@ -56,8 +56,8 @@ static error_t get_random_name(struct vfs_node_s *base, char *name)
         ssize_t rlen = vfs_file_read(dir, &dirent, sizeof(dirent));
         if ( rlen != sizeof(dirent) )
             break;
+        printk("Dir dir %d \"%s\"\n", n, dirent.name);
         done = 1;
-//        printk("readdir %d: %s\n", n, dirent.name);
         if ( n == 0 )
             break;
         --n;
@@ -109,6 +109,8 @@ void action_cwd()
 		return;
 
     assert(node);
+
+	dprintk("got node %p...\n", __FUNCTION__, node);
 
     struct vfs_stat_s stat;
     vfs_node_stat(node, &stat);
@@ -179,7 +181,7 @@ error_t action_rmrf_inner(struct vfs_node_s *_cwd, const char *name)
 	error_t err;
 
 	err = vfs_stat(vfs_get_root(), cwd, name, &stat);
-    dprintk("rmrf stat 'name': %s\n", name, strerror(err));
+    dprintk("rmrf stat \"%s\": %s\n", name, strerror(-err));
 	if ( err )
 		goto end;
 

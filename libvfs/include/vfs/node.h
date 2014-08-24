@@ -50,13 +50,12 @@ enum vfs_node_type_e
     VFS_NODE_FILE,
 };
 
-/** @This initializes common fields of a VFS node object. The @tt
-   mangled_name parameter must be exactly #CONFIG_VFS_NAMELEN
-   long. @return the new vfs node.  @see vfs_name_mangle*/
+/** @This initializes common fields of a VFS node object.
+ Name may be NULL or 0-sized. */
 error_t vfs_node_init(struct vfs_node_s *node,
                       struct vfs_fs_s *fs,
                       enum vfs_node_type_e type,
-                      const char *mangled_name);
+                      const char *name, size_t name_size);
 
 /** @This frees resources allocated by @ref vfs_node_init. */
 void vfs_node_cleanup(struct vfs_node_s *node);
