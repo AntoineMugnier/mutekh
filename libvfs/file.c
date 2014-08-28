@@ -26,79 +26,84 @@
 #include <vfs/file.h>
 #include <vfs/node.h>
 
-error_t vfs_file_init(struct vfs_file_s *file,
-	              const struct vfs_file_ops_s *ops,
-                      enum vfs_open_flags_e flags,
-	              struct vfs_node_s *node)
+error_t vfs_file_init(
+    struct vfs_file_s *file,
+    const struct vfs_file_ops_s *ops,
+    enum vfs_open_flags_e flags,
+    struct vfs_node_s *node)
 {
-  vfs_printk("<file %p init node: %p>", file, node);
+    vfs_printk("<file %p init node: %p>", file, node);
 
-  vfs_file_refinit(file);
+    vfs_file_refinit(file);
 
-  vfs_node_refinc(node);
+    file->flags = flags;
+    file->node = vfs_node_refinc(node);
+    file->ops = ops;
+    file->offset = 0;
 
-  file->flags = flags;
-  file->node = node;
-  file->ops = ops;
-  file->offset = 0;
-
-  return 0;
+    return 0;
 }
 
 void vfs_file_cleanup(struct vfs_file_s *file)
 {
-  vfs_file_refcleanup(file);
-  vfs_node_refdec(file->node);
+    vfs_printk("<file %p cleanup node: %p>", file, file->node);
 
-  vfs_printk("<file %p cleanup node: %p>", file, file->node);
+    vfs_file_refcleanup(file);
+    vfs_node_refdec(file->node);
 }
 
 void vfs_file_destroy(struct vfs_file_s *file)
 {
-  if (file->ops->cleanup)
-    file->ops->cleanup(file);
+    vfs_printk("<file %p destroy node: %p>", file, file->node);
 
-  vfs_file_cleanup(file);
+    if (file->ops->cleanup)
+        file->ops->cleanup(file);
 
-  mem_free(file);
+    vfs_file_cleanup(file);
+
+    mem_free(file);
 }
 
 ssize_t vfs_file_read(struct vfs_file_s *file,
-			  void *buffer,
-			  size_t size)
+                      void *buffer,
+                      size_t size)
 {
-  if (!file->ops->read)
-    return -ENOTSUP;
-  return file->ops->read(file, buffer, size);
+    if (!file->ops->read)
+        return -ENOTSUP;
+
+    return file->ops->read(file, buffer, size);
 }
 
 ssize_t vfs_file_write(struct vfs_file_s *file,
-			   const void *buffer,
-			   size_t size)
+                       const void *buffer,
+                       size_t size)
 {
-  if (!file->ops->write)
-    return -ENOTSUP;
-  return file->ops->write(file, buffer, size);
+    if (!file->ops->write)
+        return -ENOTSUP;
+
+    return file->ops->write(file, buffer, size);
 }
 
 void vfs_file_close(struct vfs_file_s *file)
 {
-  vfs_file_refdec(file);
+    vfs_file_refdec(file);
 }
 
 off_t vfs_file_seek(struct vfs_file_s *file,
-			  off_t offset,
-			  enum vfs_whence_e whence)
+                    off_t offset,
+                    enum vfs_whence_e whence)
 {
-  if (!file->ops->seek)
-    return -ENOTSUP;
-  return file->ops->seek(file, offset, whence);
+    if (!file->ops->seek)
+        return -ENOTSUP;
+
+    return file->ops->seek(file, offset, whence);
 }
 
 off_t vfs_file_truncate(struct vfs_file_s *file,
-			  off_t new_size)
+                        off_t new_size)
 {
-  if (!file->ops->truncate)
-    return -ENOTSUP;
-  return file->ops->truncate(file, new_size);
+    if (!file->ops->truncate)
+        return -ENOTSUP;
+
+    return file->ops->truncate(file, new_size);
 }

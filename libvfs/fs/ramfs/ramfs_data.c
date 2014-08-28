@@ -29,9 +29,12 @@
 error_t ramfs_data_realloc(struct ramfs_data_s *db, size_t new_size)
 {
 	void *data = realloc(db->data, new_size);
-	if ( ! data )
+
+	if (!data)
 		return ENOMEM;
+
 	db->data = data;
 	db->allocated_size = new_size;
+
 	return 0;
 }

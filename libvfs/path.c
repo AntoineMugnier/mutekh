@@ -77,7 +77,7 @@ static const char *last_slash_or_end(const char *str)
    @this goes as far as it can in an iterative lookup. It always
    returns a node, and pointer to the token where lookup failed.
 
-   If this returns an error, this is juste an informative error level
+   If this returns an error, this is just an informative error level
    about the failed lookup.
 
    @param root Process's root
@@ -86,7 +86,7 @@ static const char *last_slash_or_end(const char *str)
    @param end Where to end lookup. @tt end must be between @tt path
    and @tt{path + strlen(path)}
    @param next_place Next token to lookup (where lookup failed)
-   @param node Node just before failed lookup
+   @param last_found Node just before failed lookup
 
    @this transfers the ownership of @tt node to caller
  */
@@ -97,64 +97,63 @@ error_t vfs_lookup_part(
     const char *path,
     const char *end,
     const char **next_place,
-    struct vfs_node_s **node)
+    struct vfs_node_s **last_found)
 {
-    const char *token = path;
+    const char *to_lookup = path;
     error_t err = 0;
 
     vfs_printk("<%s '%s'->'%s' ", __FUNCTION__, path, end);
 
     /* Absolute lookup */
-    if ( token[0] == '/' ) {
+    if (to_lookup[0] == '/') {
         vfs_printk("absolute ");
-        token = next_nonslash(token);
+        to_lookup = next_nonslash(to_lookup);
         cwd = root;
     }
 
-    *node = vfs_node_refinc(cwd);
+    *last_found = vfs_node_refinc(cwd);
 
-    vfs_printk("start %p ", *node);
+    vfs_printk("start %p ", *last_found);
 
-    while ( token < end ) {
-        const char *slash_or_end = next_slash(token);
+    while (to_lookup < end) {
+        const char *slash_or_end = next_slash(to_lookup);
+        size_t to_lookup_len = slash_or_end - to_lookup;
+        struct vfs_node_s *next_found = NULL;
         err = 0;
 
-        vfs_printk("part \"%s\"/%d ", token, slash_or_end-token);
+        vfs_printk("part \"%s\"/%d ", to_lookup, to_lookup_len);
 
-        if ( ((slash_or_end-token) == 2)
-            && (token[0] == '.')
-            && (token[1] == '.') ) {
-            if ( *node == root ) {
-                // Trying to go above root, this is not permitted
-                // Do nothing
-            } else {
-                struct vfs_node_s *parent = vfs_node_get_parent(*node);
-                if ( ! parent )
-                    break;
-                vfs_node_refdec(*node);
-                *node = parent;
-            }
-            vfs_printk("parent->%p ", *node);
-        } else if ( ((slash_or_end-token) == 1)
-            && (token[0] == '.') ) {
-            // Self, do nothing
-            vfs_printk("self->%p ", *node);
+        if (to_lookup_len == 2 && to_lookup[0] == '.' && to_lookup[1] == '.') {
+            vfs_printk(".. ");
+            // Trying to go above root, this is not permitted
+            if (*last_found == root)
+                next_found = vfs_node_refinc(root);
+            else
+                next_found = vfs_node_get_parent(*last_found);
+
+        } else if (to_lookup_len == 1 && to_lookup[0] == '.') {
+            vfs_printk(". ");
+            next_found = vfs_node_refinc(*last_found);
+
         } else {
-            struct vfs_node_s *nnode;
-            err = vfs_node_lookup(*node, token, slash_or_end-token, &nnode);
-            if ( err ) {
-                vfs_printk("other failed ");
-                break;
-            }
-            vfs_node_refdec(*node);
-            *node = nnode;
-            vfs_printk("other->%p ", *node);
+            vfs_printk("[vfs] ");
+            err = vfs_node_lookup(*last_found, to_lookup, to_lookup_len, &next_found);
+            if (err)
+                next_found = NULL;
         }
 
-        token = next_nonslash(slash_or_end);
+        if (!next_found)
+            break;
+
+        vfs_node_refdec(*last_found);
+        *last_found = next_found;
+
+        to_lookup = next_nonslash(slash_or_end);
     }
-    *next_place = token;
-    vfs_printk("stopped at '%s'->'%s' n: %p : %d>", *next_place, end, *node, err);
+
+    *next_place = to_lookup < end ? to_lookup : end;
+
+    vfs_printk("stopped at '%s'->'%s' n: %p : %d>", *next_place, end, *last_found, err);
     return err;
 }
 
@@ -163,79 +162,81 @@ error_t vfs_lookup(struct vfs_node_s *root,
 				   const char *path,
 				   struct vfs_node_s **node)
 {
-	if ( !path || !root || !cwd || !node )
+	if (!path || !root || !cwd || !node)
 		return -EINVAL;
 
 	const char *end = last_slash_or_end(path);
 	const char *where;
 
 	error_t err = vfs_lookup_part(root, cwd, path, end, &where, node);
-    vfs_printk("<%s got %p %d %p %s %p %s %p %s>", __FUNCTION__, *node, err,
-               path, path, end, end, where, where);
-    if ( !err && (where >= end) )
+    vfs_printk("<%s %d got %p reffed %d %p/%p %s/%s>", __FUNCTION__, err, *node,
+               vfs_node_refcount(*node), where, end, where, end);
+
+    assert(where <= end);
+
+    if (!err && where == end) {
+        vfs_printk("<%s did valid lookup %p %d>", __FUNCTION__, *node,
+                   vfs_node_refcount(*node));
         return 0;
+    }
+
     vfs_node_refdec(*node);
-    if ( err )
+    *node = NULL;
+
+    if (err)
         return err;
     else
         return -ENOENT;
 }
 
-
 error_t vfs_create(struct vfs_node_s *root,
 				   struct vfs_node_s *cwd,
 				   const char *path,
 				   enum vfs_node_type_e type,
-				   struct vfs_node_s **node)
+				   struct vfs_node_s **linked_node)
 {
-	if ( !path || !root || !cwd || !node )
+	if (!path || !root || !cwd || !linked_node)
 		return -EINVAL;
 
 	const char *end = last_slash_or_end(path);
 	const char *prev = prev_slash(path, end);
-
 	const char *last_part = next_nonslash(prev);
-
-    /* We wont create "." or ".." */
-    if ( last_part[0] == '.'
-         && (((end-last_part) == 1)
-             || ((last_part[1] == '.')
-                 && ((end-last_part) == 2))
-             ))
-        return -EINVAL;
-
+    size_t last_part_len = end - last_part;
     struct vfs_node_s *parent;
 	const char *stopped_at;
+    error_t err;
+    struct vfs_node_s *created_node;
 
-	error_t err = vfs_lookup_part(root, cwd, path, end, &stopped_at, &parent);
-    if ( (err == -ENOENT) && (stopped_at >= last_part) )
-        goto do_create;
+    /* We wont create "." or ".." */
+    if (last_part[0] == '.'
+        && (last_part_len == 1 || (last_part[1] == '.' && last_part_len == 2)))
+        return -EINVAL;
 
-    vfs_printk(" ! exists>\n");
-    vfs_node_refdec(parent);
-    if ( err )
-        return err;
-    return -EEXISTS;
+	err = vfs_lookup_part(root, cwd, path, end, &stopped_at, &parent);
 
-  do_create:
-
-    {
-        struct vfs_node_s *rnode;
-
-        err = vfs_node_anon_create(parent->fs, type, &rnode);
-        vfs_printk("create %d %p ", err, rnode);
-        if ( err ) {
-            vfs_node_refdec(parent);
-            vfs_printk(" err>\n");
-            return err;
-        }
-
-        err = vfs_node_link(rnode, parent, last_part, end-last_part, node);
+    if (err != -ENOENT || stopped_at != last_part) {
+        vfs_printk(" ! exists>\n");
         vfs_node_refdec(parent);
-        vfs_node_refdec(rnode);
-        vfs_printk("link %d %p>", err, *node);
+
+        if (err)
+            return err;
+
+        return -EEXISTS;
+    }
+
+    err = vfs_node_anon_create(parent->fs, type, &created_node);
+    vfs_printk("create %d %p ", err, created_node);
+    if (err) {
+        vfs_node_refdec(parent);
+        vfs_printk(" err>\n");
         return err;
     }
+
+    err = vfs_node_link(created_node, parent, last_part, last_part_len, linked_node);
+    vfs_node_refdec(parent);
+    vfs_node_refdec(created_node);
+    vfs_printk("link %d %p>", err, *linked_node);
+    return err;
 }
 
 error_t vfs_open(
@@ -245,64 +246,58 @@ error_t vfs_open(
     enum vfs_open_flags_e flags,
     struct vfs_file_s **file)
 {
-    if ( !path || !root || !cwd || !file )
+    if (!path || !root || !cwd || !file)
         return -EINVAL;
 
     const char *end = last_slash_or_end(path);
     const char *prev = prev_slash(path, end);
-
     const char *last_part = next_nonslash(prev);
-
-    struct vfs_node_s *node;
+    struct vfs_node_s *created_node;
+    struct vfs_node_s *linked_node;
+    struct vfs_node_s *node_or_parent;
     const char *stopped_at;
 
-    error_t err = vfs_lookup_part(root, cwd, path, end, &stopped_at, &node);
-    if ( (err == -ENOENT) && (stopped_at >= last_part) && (flags & VFS_OPEN_CREATE) )
+    error_t err = vfs_lookup_part(root, cwd, path, end, &stopped_at, &node_or_parent);
+    if (err == -ENOENT && stopped_at >= last_part && flags & VFS_OPEN_CREATE)
         goto do_create;
 
-    if ( err == 0 )
+    if (!err)
         goto do_open;
 
     vfs_printk(" parent %s>\n", strerror(err));
-    vfs_node_refdec(node);
+    vfs_node_refdec(node_or_parent);
     return err;
 
  do_create:
+    // node_or_parent is parent
 
-    vfs_printk("creating %s in %s", last_part, node->name);
+    vfs_printk("creating %s in %s", last_part, node_or_parent->name);
 
-    {
-        // node is the parent directory
-
-        struct vfs_node_s *created_node;
-        struct vfs_node_s *linked_node;
-
-        err = vfs_node_anon_create(node->fs, VFS_NODE_FILE, &created_node);
-        if ( err ) {
-            vfs_printk(" create error>\n");
-            vfs_node_refdec(node);
-            return err;
-        }
-
-        err = vfs_node_link(created_node, node, last_part, end-last_part, &linked_node);
-        vfs_node_refdec(node);
-        vfs_node_refdec(created_node);
-
-        if ( err ) {
-            vfs_printk(" link error>\n");
-            return err;
-        }
-
-        node = linked_node;
+    err = vfs_node_anon_create(node_or_parent->fs, VFS_NODE_FILE, &created_node);
+    if (err) {
+        vfs_printk(" create error>\n");
+        vfs_node_refdec(node_or_parent);
+        return err;
     }
+
+    err = vfs_node_link(created_node, node_or_parent, last_part, end-last_part, &linked_node);
+    vfs_node_refdec(node_or_parent);
+    vfs_node_refdec(created_node);
+
+    if (err) {
+        vfs_printk(" link error>\n");
+        return err;
+    }
+
+    node_or_parent = linked_node;
     
  do_open:
-    vfs_printk("opening %s ", node->name);
+    // node_or_parent is node to open
 
-    // node is node to open
+    vfs_printk("opening %s ", node_or_parent->name);
 
-    err = vfs_node_open(node, flags, file);
-    vfs_node_refdec(node);
+    err = vfs_node_open(node_or_parent, flags, file);
+    vfs_node_refdec(node_or_parent);
     vfs_printk("%d %p>\n", err, *file);
     return err;
 }
@@ -315,11 +310,12 @@ error_t vfs_stat(struct vfs_node_s *root,
 	struct vfs_node_s *node;
 
 	error_t err = vfs_lookup(root, cwd, path, &node);
-	if ( err )
+	if (err)
 		return err;
 
 	err = vfs_node_stat(node, stat);
 	vfs_node_refdec(node);
+
 	return err;
 }
 

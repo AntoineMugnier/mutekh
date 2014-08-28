@@ -105,12 +105,12 @@ void action_cwd()
 	dprintk("%s \"%s\"...\n", __FUNCTION__, name);
 
 	err = vfs_lookup(vfs_get_root(), base, name, &node);
-	if ( err )
+	if (err)
 		return;
 
     assert(node);
 
-	dprintk("got node %p...\n", __FUNCTION__, node);
+	dprintk("%s got node %p ref %d...\n", __FUNCTION__, node, vfs_node_refcount(node));
 
     struct vfs_stat_s stat;
     vfs_node_stat(node, &stat);
@@ -182,37 +182,40 @@ error_t action_rmrf_inner(struct vfs_node_s *_cwd, const char *name)
 
 	err = vfs_stat(vfs_get_root(), cwd, name, &stat);
     dprintk("rmrf stat \"%s\": %s\n", name, strerror(-err));
-	if ( err )
+	if (err)
 		goto end;
 
-	if ( stat.type == VFS_NODE_DIR ) {
+	if (stat.type == VFS_NODE_DIR) {
         dprintk(" is directory\n");
 		struct vfs_node_s *node = NULL;
-		if ( vfs_lookup(vfs_get_root(), cwd, name, &node) == 0 ) {
+
+		if (!vfs_lookup(vfs_get_root(), cwd, name, &node)) {
 			assert(node);
 
-			while ( 1 ) {
+			for (;;) {
 				struct vfs_file_s *dir = NULL;
 				struct vfs_dirent_s dirent;
 		
 				err = vfs_open(vfs_get_root(), node, ".",
 							   VFS_OPEN_READ | VFS_OPEN_DIR, &dir);
-				if ( err )
+				if (err)
 					break;
+
 				ssize_t len = vfs_file_read(dir, &dirent, sizeof(dirent));
                 dprintk("Read len: %d\n", len);
 				vfs_file_close(dir);
-				if ( !len )
+				if (!len)
 					break;
 
 				err = action_rmrf_inner(node, dirent.name);
-                if ( err )
+                if (err)
                     break;
 			}
 
 			vfs_node_refdec(node);
 		}
 	}
+
 	err = vfs_unlink(vfs_get_root(), cwd, name);
     dprintk(" unlink '%s': %s\n", name, strerror(err));
 

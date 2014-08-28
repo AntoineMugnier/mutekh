@@ -52,7 +52,7 @@ GCT_CONTAINER_KEY_NOLOCK_FCNS(ramfs_dir_hash, ASC, static inline, ramfs_dir_nolo
 void ramfs_2dir_wrlock(ramfs_dir_hash_root_t *d1,
                        ramfs_dir_hash_root_t *d2)
 {
-    if ( d1 < d2 ) {
+    if (d1 < d2) {
         ramfs_dir_wrlock(d1);
         ramfs_dir_wrlock(d2);
     } else {
@@ -64,7 +64,7 @@ void ramfs_2dir_wrlock(ramfs_dir_hash_root_t *d1,
 void ramfs_2dir_unlock(ramfs_dir_hash_root_t *d1,
                        ramfs_dir_hash_root_t *d2)
 {
-    if ( d1 < d2 ) {
+    if (d1 < d2) {
         ramfs_dir_unlock(d2);
         ramfs_dir_unlock(d1);
     } else {
@@ -86,22 +86,29 @@ struct ramfs_node_s *ramfs_node_create(
 
     vfs_printk("<ramfs_node_ctor");
 
-    vfs_node_init(&node->node, fs, type, name, namelen);
+    memset(node->name, 0, sizeof(node->name));
+    memcpy(node->name, name, namelen);
 
     switch (type) {
     case VFS_NODE_FILE:
-        if ( data == NULL ) {
+        if (data) {
+            node->data = ramfs_data_refinc(data);
+        } else {
             node->data = ramfs_data_create();
-            if ( node->data == NULL ) {
+
+            if (!node->data) {
+                free(node);
                 return NULL;
             }
-        } else {
-            node->data = ramfs_data_refinc(data);
         }
         break;
+
     case VFS_NODE_DIR:
         ramfs_dir_init(&node->children);
+        break;
     }
+
+    vfs_node_init(&node->node, fs, type, name, namelen);
 
     vfs_printk(">");
 
@@ -110,17 +117,18 @@ struct ramfs_node_s *ramfs_node_create(
 
 VFS_FS_NODE_CLEANUP(ramfs_node_cleanup)
 {
-    struct ramfs_node_s *rnode = (void*)node;
+    struct ramfs_node_s *to_cleanup = ramfs_node_from_vfs(node);
 
     vfs_printk("<ramfs_node_dtor %p", node);
 
     switch (node->type) {
     case VFS_NODE_DIR:
-        ramfs_dir_clear(&rnode->children);
-        ramfs_dir_destroy(&rnode->children);
+        ramfs_dir_clear(&to_cleanup->children);
+        ramfs_dir_destroy(&to_cleanup->children);
         break;
+
     case VFS_NODE_FILE:
-        ramfs_data_refdec(rnode->data);
+        ramfs_data_refdec(to_cleanup->data);
         break;
     }
 
@@ -130,8 +138,10 @@ VFS_FS_NODE_CLEANUP(ramfs_node_cleanup)
 void ramfs_dump_item(struct ramfs_node_s *node, size_t pf)
 {
     size_t i;
-    for ( i=0; i<pf; ++i )
+
+    for (i = 0; i < pf; ++i)
         printk(" ");
+
     printk(" %s %d '%s': %d\n",
            node->node.type == VFS_NODE_DIR ? ">" : "-",
            vfs_node_refcount(&node->node),
@@ -139,7 +149,8 @@ void ramfs_dump_item(struct ramfs_node_s *node, size_t pf)
            node->node.type == VFS_NODE_FILE
            ? ramfs_data_refcount(node->data)
            : 0);
-    if ( node->node.type == VFS_NODE_DIR )
+
+    if (node->node.type == VFS_NODE_DIR)
 		GCT_FOREACH(ramfs_dir_hash, &node->children, item, {
                 ramfs_dump_item(item, pf+2);
             });
@@ -148,12 +159,13 @@ void ramfs_dump_item(struct ramfs_node_s *node, size_t pf)
 void ramfs_dump(struct vfs_fs_s *fs)
 {
     printk("Ramfs dump. ref: %d\n", vfs_fs_refcount(fs));
+
     vfs_fs_dump_stats(fs);
-    struct ramfs_node_s *root = (struct ramfs_node_s *)fs->root;
+
+    struct ramfs_node_s *root = ramfs_node_from_vfs(fs->root);
+
     ramfs_dump_item(root, 0);
 }
-
-
 
 VFS_FS_CAN_UNMOUNT(ramfs_can_unmount)
 {
@@ -162,147 +174,183 @@ VFS_FS_CAN_UNMOUNT(ramfs_can_unmount)
 
 VFS_FS_LOOKUP(ramfs_lookup)
 {
-    struct ramfs_node_s *rref = (struct ramfs_node_s *)ref;
-    vfs_printk("<%s %s/%d ", __FUNCTION__, name, namelen);
+    struct ramfs_node_s *directory = ramfs_node_from_vfs(ref);
+    struct ramfs_node_s *found;
 
-    if ( rref->node.type != VFS_NODE_DIR )
+    vfs_printk("<%s %s/%d in %p ", __FUNCTION__, name, namelen, directory);
+
+    if (directory->node.type != VFS_NODE_DIR)
         return -EINVAL;
 
     vfs_name_mangle(name, namelen, mangled_name);
 
-    struct ramfs_node_s *child = ramfs_dir_lookup(&rref->children, mangled_name);
-    if ( child ) {
-        *node = &child->node;
-        vfs_printk(" ok>");
-        return 0;
+    found = ramfs_dir_lookup(&directory->children, mangled_name);
+    if (!found) {
+        vfs_printk(" noent>");
+        return -ENOENT;
     }
-    vfs_printk(" noent>");
-    return -ENOENT;
+
+    *node = &found->node;
+    vfs_printk(" ok %p %d>", found, vfs_node_refcount(*node));
+    return 0;
 }
 
 VFS_FS_CREATE(ramfs_create)
 {
+    struct ramfs_node_s *created;
+
 	vfs_printk("<%s ", __FUNCTION__);
 
-    struct ramfs_node_s *rfs_node;
-    rfs_node = ramfs_node_create(type, fs, NULL, NULL, 0);
-	if ( !rfs_node )
-		goto err_priv;
+    created = ramfs_node_create(type, fs, NULL, NULL, 0);
+	if (!created) {
+        vfs_printk("err>\n");
+        return -ENOMEM;
+    }
 
-	*node = &rfs_node->node;
+	*node = &created->node;
 
 	vfs_printk("ok>\n");
 
 	return 0;
-
-  err_priv:
-	vfs_printk("err>\n");
-	return -ENOMEM;
 }
 
 VFS_FS_LINK(ramfs_link)
 {
-    struct ramfs_node_s *rparent = (struct ramfs_node_s *)parent;
-    struct ramfs_node_s *rfs_node = (struct ramfs_node_s *)node;
+    struct ramfs_node_s *target_dir = ramfs_node_from_vfs(parent);
+    struct ramfs_node_s *to_link = ramfs_node_from_vfs(node);
+    struct ramfs_node_s *linked;
+    struct ramfs_node_s *prev_entry;
 
-	if ( namelen >= CONFIG_VFS_NAMELEN )
+	if (namelen >= CONFIG_VFS_NAMELEN)
 		return -EINVAL;
     
-    if ( rparent->node.type != VFS_NODE_DIR )
+    if (target_dir->node.type != VFS_NODE_DIR)
         return -EINVAL;
-    
+
 	vfs_printk("<%s %s ", __FUNCTION__, name);
 
-    if ( rparent->parent == NULL ) {
+    if (target_dir->parent == NULL) {
         vfs_printk("dandling>");
         return -ENOTSUP;
     }
 
 	/* We cant support hardlinks of directories */
-	if ( (rfs_node->parent != NULL)
-         && (rfs_node->node.type == VFS_NODE_DIR) ) {
+	if (to_link->parent && to_link->node.type == VFS_NODE_DIR) {
         vfs_printk("isdir>");
         return -EISDIR;
     }
 
-    struct ramfs_node_s *ret_node;
-	if (rfs_node->parent != NULL) {
+	if (to_link->parent) {
 		vfs_printk("clone ");
-        ret_node = ramfs_node_create(
-            VFS_NODE_FILE, rfs_node->node.fs, rfs_node->data,
+        linked = ramfs_node_create(
+            VFS_NODE_FILE, to_link->node.fs, to_link->data,
             name, namelen);
-        if ( ret_node == NULL ) {
+        if (!linked) {
 			vfs_printk("node_new fail>");
 			return -ENOMEM;
         }
 	} else {
 		vfs_printk("use ");
-		ret_node = (struct ramfs_node_s *)vfs_node_refinc(node);
+		linked = to_link;
 	}
 
-    vfs_printk("file linked as %s ", rfs_node->node.name);
+	memset(linked->name, 0, CONFIG_VFS_NAMELEN);
+	memcpy(linked->name, name, namelen);
 
-    ramfs_dir_wrlock(&rparent->children);
-    struct ramfs_node_s *old_file = ramfs_dir_nolock_lookup(&rparent->children, ret_node->name);
-    if ( old_file ) {
-        old_file->parent = NULL;
-        ramfs_dir_nolock_remove(&rparent->children, old_file);
+    ramfs_dir_wrlock(&target_dir->children);
+
+    prev_entry = ramfs_dir_nolock_lookup(&target_dir->children, linked->name);
+
+    if (prev_entry) {
+        if (prev_entry->node.type == VFS_NODE_DIR) {
+            vfs_printk("target is dir>");
+            ramfs_node_refdec(prev_entry);
+            ramfs_dir_unlock(&target_dir->children);
+            return -EISDIR;
+        }
+
+        prev_entry->parent = NULL;
+        ramfs_dir_nolock_remove(&target_dir->children, prev_entry);
         vfs_printk("replaces another ");
     }
-    ret_node->parent = rparent;
-    ramfs_dir_nolock_push(&rparent->children, ret_node);
-    ramfs_dir_unlock(&rparent->children);
 
-    if ( old_file )
-        vfs_node_refdec(&old_file->node);
+    linked->parent = target_dir;
+    ramfs_dir_nolock_push(&target_dir->children, linked);
+    ramfs_dir_unlock(&target_dir->children);
+
+    vfs_printk("file linked as %s ", linked->name);
+
+    /* Removing from children dropped ref, but we still have local one */
+    if (prev_entry)
+        ramfs_node_refdec(prev_entry);
 
 	vfs_printk("ok>");
 
-    *rnode = &ret_node->node;
+    *rnode = &linked->node;
 
 	return 0;
 }
 
 VFS_FS_MOVE(ramfs_move)
 {
-    struct ramfs_node_s *rparent = (struct ramfs_node_s *)parent;
-    struct ramfs_node_s *rnode = (struct ramfs_node_s *)node;
+    struct ramfs_node_s *target_dir = ramfs_node_from_vfs(parent);
+    struct ramfs_node_s *to_move = ramfs_node_from_vfs(node);
+    struct ramfs_node_s *source_parent;
+    struct ramfs_node_s *prev_entry;
+	char tmpname[CONFIG_VFS_NAMELEN];
 
-	if ( namelen >= CONFIG_VFS_NAMELEN )
+	if (namelen >= CONFIG_VFS_NAMELEN)
 		return -EINVAL;
+
+	memset(tmpname, 0, CONFIG_VFS_NAMELEN);
+	memcpy(tmpname, name, namelen);
     
-    if ( rparent->node.type != VFS_NODE_DIR )
+    if (target_dir->node.type != VFS_NODE_DIR)
         return -EINVAL;
 
-    if ( rnode->parent == NULL
-         || rnode->parent == rnode )
+    if (!to_move->parent || to_move->parent == to_move)
         return -EINVAL;
-    
+
 	vfs_printk("<%s %s ", __FUNCTION__, name);
 
-    if ( rparent->parent == NULL ) {
+    if (!target_dir->parent) {
         vfs_printk("dandling>");
         return -ENOTSUP;
     }
 
-    struct ramfs_node_s *parent_src = rnode->parent;
-    ramfs_2dir_wrlock(&parent_src->children, &rparent->children);
-    ramfs_dir_nolock_remove(&parent_src->children, rnode);
-	memset(rnode->name, 0, CONFIG_VFS_NAMELEN);
-	memcpy(rnode->name, name, namelen);
+    source_parent = to_move->parent;
+    ramfs_2dir_wrlock(&source_parent->children, &target_dir->children);
 
-    struct ramfs_node_s *old_file = ramfs_dir_nolock_lookup(&rparent->children, rnode->name);
-    if ( old_file ) {
-        old_file->parent = NULL;
-        ramfs_dir_nolock_remove(&rparent->children, old_file);
+    /* Did someone manage to move the file just before locking ? */
+    if (source_parent != to_move->parent) {
+        ramfs_2dir_unlock(&target_dir->children, &source_parent->children);
+        vfs_printk("stolen>");
+        return -EIO;
     }
 
-    rnode->parent = rparent;
-    ramfs_dir_nolock_push(&rparent->children, rnode);
-    ramfs_2dir_unlock(&rparent->children, &parent_src->children);
+    prev_entry = ramfs_dir_nolock_lookup(&target_dir->children, tmpname);
+    if (prev_entry) {
+        if (prev_entry->node.type == VFS_NODE_DIR) {
+            vfs_printk("target is dir>");
+            ramfs_node_refdec(prev_entry);
+            ramfs_2dir_unlock(&target_dir->children, &source_parent->children);
+            return -EISDIR;
+        }
 
-    if ( old_file )
-        vfs_node_refdec(&old_file->node);
+        prev_entry->parent = NULL;
+        ramfs_dir_nolock_remove(&target_dir->children, prev_entry);
+    }
+
+    ramfs_dir_nolock_remove(&source_parent->children, to_move);
+	memcpy(to_move->name, tmpname, CONFIG_VFS_NAMELEN);
+
+    to_move->parent = target_dir;
+    ramfs_dir_nolock_push(&target_dir->children, to_move);
+
+    ramfs_2dir_unlock(&target_dir->children, &source_parent->children);
+
+    if (prev_entry)
+        ramfs_node_refdec(prev_entry);
 
 	vfs_printk("ok>");
 
@@ -311,36 +359,37 @@ VFS_FS_MOVE(ramfs_move)
 
 VFS_FS_UNLINK(ramfs_unlink)
 {
-    struct ramfs_node_s *rparent = (struct ramfs_node_s *)parent;
-
+    struct ramfs_node_s *directory = ramfs_node_from_vfs(parent);
+    struct ramfs_node_s *to_remove;
 	char tmpname[CONFIG_VFS_NAMELEN];
+
 	memset(tmpname, 0, CONFIG_VFS_NAMELEN);
 	memcpy(tmpname, name, namelen);
 
 	vfs_printk("<%s %s ", __FUNCTION__, tmpname);
 
-    ramfs_dir_wrlock(&rparent->children);
+    ramfs_dir_wrlock(&directory->children);
 
-    struct ramfs_node_s *node = ramfs_dir_nolock_lookup(&rparent->children, tmpname);
-	if ( node == NULL ) {
-        ramfs_dir_unlock(&rparent->children);
+    to_remove = ramfs_dir_nolock_lookup(&directory->children, tmpname);
+	if (!to_remove) {
+        ramfs_dir_unlock(&directory->children);
         vfs_printk("not found>");
 		return -ENOENT;
     }
 
-    if ( (node->node.type == VFS_NODE_DIR)
-         && (ramfs_dir_nolock_count(&node->children) != 0) ) {
-        vfs_node_refdec(&node->node);
-        ramfs_dir_unlock(&rparent->children);
+    if (to_remove->node.type == VFS_NODE_DIR
+        && ramfs_dir_nolock_count(&to_remove->children)) {
+        ramfs_node_refdec(to_remove);
+        ramfs_dir_unlock(&directory->children);
         vfs_printk("nonempty>");
 		return -EBUSY;
     }
 
-    node->parent = NULL;
-    ramfs_dir_nolock_remove(&rparent->children, node);
-    ramfs_dir_unlock(&rparent->children);
+    to_remove->parent = NULL;
+    ramfs_dir_nolock_remove(&directory->children, to_remove);
+    ramfs_dir_unlock(&directory->children);
 
-    vfs_node_refdec(&node->node);
+    ramfs_node_refdec(to_remove);
 
 	vfs_printk("ok>");
 
@@ -349,18 +398,19 @@ VFS_FS_UNLINK(ramfs_unlink)
 
 VFS_FS_STAT(ramfs_stat)
 {
-    struct ramfs_node_s *rnode = (struct ramfs_node_s *)node;
+    struct ramfs_node_s *to_stat = ramfs_node_from_vfs(node);
 
-	stat->type = rnode->node.type;
+	stat->type = to_stat->node.type;
 
-	switch ( rnode->node.type ) {
+	switch (to_stat->node.type) {
 	case VFS_NODE_DIR:
-		stat->size = ramfs_dir_count(&rnode->children);
+		stat->size = ramfs_dir_count(&to_stat->children);
         stat->nlink = 1;
 		break;
+
 	case VFS_NODE_FILE:
-		stat->size = rnode->data->actual_size;
-		stat->nlink = ramfs_data_refcount(rnode->data);
+		stat->size = to_stat->data->actual_size;
+		stat->nlink = ramfs_data_refcount(to_stat->data);
 		break;
 	}
 
@@ -369,9 +419,12 @@ VFS_FS_STAT(ramfs_stat)
 
 VFS_FS_CLEANUP(ramfs_cleanup)
 {
-    struct ramfs_fs_s *rfs = (struct ramfs_fs_s *)fs;
-    vfs_fs_cleanup(&rfs->fs);
-	mem_free(rfs);
+    struct ramfs_fs_s *ramfs = ramfs_fs_from_vfs(fs);
+    struct ramfs_node_s *root = ramfs_node_from_vfs(ramfs->fs.root);
+
+    ramfs_node_refdec(root);
+    vfs_fs_cleanup(&ramfs->fs);
+	mem_free(ramfs);
 }
 
 static const struct vfs_fs_ops_s ramfs_ops =
@@ -388,35 +441,38 @@ static const struct vfs_fs_ops_s ramfs_ops =
     .node_cleanup = ramfs_node_cleanup,
 };
 
-error_t ramfs_open(struct vfs_fs_s **_fs)
+error_t ramfs_open(struct vfs_fs_s **fs)
 {
     error_t err = -ENOMEM;
-	struct ramfs_fs_s *fs = mem_alloc(sizeof(*fs), mem_scope_sys);
-	if (!fs)
+	struct ramfs_fs_s *ramfs;
+    struct ramfs_node_s *root;
+
+    ramfs = mem_alloc(sizeof(*ramfs), mem_scope_sys);
+	if (!ramfs)
 		goto nomem_fs;
 
     vfs_printk("ramfs: opening new ramfs volume\n");
 
-    err = vfs_fs_init(&fs->fs, &ramfs_ops, 0);
+    err = vfs_fs_init(&ramfs->fs, &ramfs_ops, 0);
     if (err)
         goto release_fs;
 
-    struct ramfs_node_s *root = ramfs_node_create(VFS_NODE_DIR, &fs->fs, NULL, NULL, 0);
-	if ( root == NULL )
+    root = ramfs_node_create(VFS_NODE_DIR, &ramfs->fs, NULL, NULL, 0);
+	if (!root)
 		goto nomem_dir;
 
     root->parent = root;
 
-    vfs_fs_root_set(&fs->fs, &root->node);
+    vfs_fs_root_set(&ramfs->fs, &root->node);
 
-	*_fs = &fs->fs;
+	*fs = &ramfs->fs;
 
 	return 0;
 
   nomem_dir:
-    vfs_fs_cleanup(&fs->fs);
+    vfs_fs_cleanup(&ramfs->fs);
  release_fs:
-	mem_free(fs);
+	mem_free(ramfs);
   nomem_fs:
 	return err;
 }
@@ -432,20 +488,21 @@ bool_t ramfs_dir_get_nth(struct ramfs_node_s *node, struct vfs_dirent_s *dirent,
 
 	i = 0;
     ent = ramfs_dir_nolock_head(&node->children);
-    while ( (i < n) && (ent != NULL) ) {
-        i++;
+    while (i < n && ent) {
         struct ramfs_node_s *nent;
+
+        i++;
         nent = ramfs_dir_nolock_next(&node->children, ent);
         ramfs_node_refdec(ent);
         ent = nent;
     }
 
-    if ( ent == NULL ) {
+    if (!ent) {
         ramfs_dir_unlock(&node->children);
         return 0;
     }
 
-	memcpy( dirent->name, ent->name, CONFIG_VFS_NAMELEN );
+	memcpy(dirent->name, ent->name, CONFIG_VFS_NAMELEN);
 	dirent->type = ent->node.type;
 	dirent->size = ent->node.type == VFS_NODE_FILE
 		? ent->data->actual_size

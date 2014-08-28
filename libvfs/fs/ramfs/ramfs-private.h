@@ -38,7 +38,6 @@ VFS_FS_NODE_OPEN(ramfs_node_open);
 #define GCT_CONTAINER_LOCK_ramfs_dir_hash HEXO_LOCK_IRQ
 #define GCT_CONTAINER_ALGO_ramfs_dir_hash AVL_P
 #define GCT_CONTAINER_COUNTER_ramfs_dir_hash
-
 #define GCT_CONTAINER_REFCOUNT_ramfs_dir_hash ramfs_node
 
 GCT_CONTAINER_TYPES    (ramfs_dir_hash,
@@ -54,23 +53,36 @@ struct ramfs_node_s
 
     char name[CONFIG_VFS_NAMELEN];
 	GCT_CONTAINER_ENTRY(ramfs_dir_hash, hash_entry);
-
 } *, hash_entry);
 
-static inline struct ramfs_node_s *ramfs_node_refinc(struct ramfs_node_s *node)
+static inline struct ramfs_node_s *ramfs_node_from_vfs(struct vfs_node_s *node)
 {
-    return (struct ramfs_node_s *) vfs_node_refinc(&node->node);
+    return (void*)node;
 }
 
-static inline bool_t ramfs_node_refdec(struct ramfs_node_s *node)
+static inline struct ramfs_fs_s *ramfs_fs_from_vfs(struct vfs_fs_s *fs)
 {
+    return (void*)fs;
+}
+
+#define ramfs_node_refinc(n) ramfs_node_refinc_(n, __FUNCTION__)
+#define ramfs_node_refdec(n) ramfs_node_refdec_(n, __FUNCTION__)
+
+static inline struct ramfs_node_s *ramfs_node_refinc_(struct ramfs_node_s *node, const char *func)
+{
+    vfs_printk("<%s %s %p %d>", __FUNCTION__, func, node, vfs_node_refcount(&node->node));
+    return ramfs_node_from_vfs(vfs_node_refinc(&node->node));
+}
+
+static inline bool_t ramfs_node_refdec_(struct ramfs_node_s *node, const char *func)
+{
+    vfs_printk("<%s %s %p %d>", __FUNCTION__, func, node, vfs_node_refcount(&node->node));
     return vfs_node_refdec(&node->node);
 }
 
 static const bool_t _gct_refcount_ramfs_dir_hash_ramfs_node_enabled = 1;
 
 GCT_CONTAINER_KEY_TYPES(ramfs_dir_hash, PTR, BLOB, name, CONFIG_VFS_NAMELEN);
-//GCT_CONTAINER_PROTOTYPES(ramfs_dir_hash, HASHLIST, static inline);
 
 struct ramfs_node_s *ramfs_node_create(
     enum vfs_node_type_e type,
@@ -78,9 +90,10 @@ struct ramfs_node_s *ramfs_node_create(
     struct ramfs_data_s *data,
     const char *name, size_t namelen);
 
-struct ramfs_node_s;
-
-bool_t ramfs_dir_get_nth(struct ramfs_node_s *node, struct vfs_dirent_s *dirent, size_t n);
+bool_t ramfs_dir_get_nth(
+    struct ramfs_node_s *node,
+    struct vfs_dirent_s *dirent,
+    size_t n);
 
 #endif
 

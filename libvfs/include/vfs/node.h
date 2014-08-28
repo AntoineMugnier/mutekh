@@ -39,7 +39,6 @@ C_HEADER_BEGIN
 #include <gct/container_avl_p.h>
 #include <gct/refcount.h>
 
-// #define GCT_CONTAINER_REFCOUNT_vfs_dir_hash vfs_node
 #define GCT_CONTAINER_ALGO_vfs_dir_hash AVL_P
 
 enum vfs_node_type_e
@@ -128,6 +127,20 @@ struct vfs_node_s
 
 GCT_REFCOUNT(vfs_node, struct vfs_node_s *, obj_entry);
 
+static inline struct vfs_node_s *vfs_node__refinc(struct vfs_node_s *node, const char *func)
+{
+    vfs_printk("<%s %s %p %d>", __FUNCTION__, func, node, vfs_node_refcount(node));
+    return vfs_node_refinc(node);
+}
+
+static inline bool_t vfs_node__refdec(struct vfs_node_s *node, const char *func)
+{
+    vfs_printk("<%s %s %p %d>", __FUNCTION__, func, node, vfs_node_refcount(node));
+    return vfs_node_refdec(node);
+}
+
+#define vfs_node_refinc(x) vfs_node__refinc(x, __FUNCTION__)
+#define vfs_node_refdec(x) vfs_node__refdec(x, __FUNCTION__)
 
 /**
    @this is the vfs_node_stat() operation response buffer.
@@ -196,10 +209,10 @@ error_t vfs_umount(struct vfs_node_s *mountpoint);
 /* Node operations */
 
 /** @this increases the node reference count and return the node itself. */
-struct vfs_node_s * vfs_node_refinc(struct vfs_node_s * node);
+//struct vfs_node_s * vfs_node_refinc(struct vfs_node_s * node);
 
 /** @this decreases the node reference count and may delete the node if no more reference exist. */
-bool_t vfs_node_refdec(struct vfs_node_s * node);
+//bool_t vfs_node_refdec(struct vfs_node_s * node);
 
 /**
    @this looks for a node named @tt name as a child of @tt
