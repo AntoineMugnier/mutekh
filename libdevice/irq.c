@@ -417,7 +417,7 @@ void device_irq_source_unlink(struct device_s *dev, struct dev_irq_ep_s *sources
   for (i = 0; i < src_count; i++)
     {
 #ifdef CONFIG_DEBUG
-      assert(src[i].type != DEV_IRQ_EP_SINK);
+      assert(sources[i].type != DEV_IRQ_EP_SINK);
 #endif
       device_irq_ep_unlink_all(sources + i);
 #ifdef CONFIG_DEVICE_IRQ_BYPASS
@@ -433,7 +433,7 @@ void device_irq_sink_unlink(struct device_s *dev, struct dev_irq_ep_s *sinks, ui
   for (i = 0; i < sink_count; i++)
     {
 #ifdef CONFIG_DEBUG
-      assert(src[i].type != DEV_IRQ_EP_SOURCE);
+      assert(sinks[i].type != DEV_IRQ_EP_SOURCE);
 #endif
       device_irq_ep_unlink_all(sinks + i);
       device_irq_sink_fcn_set(sinks + i);
