@@ -112,7 +112,7 @@ GCT_CONTAINER_FCNS(block_list, static inline, block_list,
                    init, destroy, head, next, prev, push, pushback, insert_next, remove);
 
 GCT_CONTAINER_FCNS(free_list, static inline, free_list,
-                   init, destroy, push, remove);
+                   init, destroy, push, remove, prev, next);
 
 /********************************************************/
 
