@@ -64,6 +64,10 @@ ifeq ($(CONFIG_MUTEK_SLAB), defined)
  objs += slab.o
 endif
 
+ifeq ($(CONFIG_MUTEK_BUFFER_POOL), defined)
+ objs += buffer_pool.o
+endif
+
 ifeq ($(CONFIG_MUTEK_BYTECODE), defined)
  objs += bytecode.o
 endif
