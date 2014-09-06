@@ -61,7 +61,7 @@ objs += vmem_kalloc.o
 endif
 
 ifeq ($(CONFIG_MUTEK_SLAB), defined)
- objs += slab_allocator.o
+ objs += slab.o
 endif
 
 ifeq ($(CONFIG_MUTEK_BYTECODE), defined)
