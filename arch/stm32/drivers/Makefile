@@ -15,3 +15,7 @@ ifeq ($(CONFIG_DRIVER_STM32_RCC), defined)
 subdirs += rcc
 endif
 
+ifeq ($(CONFIG_DRIVER_STM32_PWM), defined)
+subdirs += pwm
+endif
+

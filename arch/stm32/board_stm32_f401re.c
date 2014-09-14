@@ -187,6 +187,40 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv, gpio_dev_res);
 
 #endif
 
+#if defined(CONFIG_DRIVER_STM32_PWM)
+
+/* PWM on TIMER 2. */
+DEV_DECLARE_STATIC_RESOURCES(pwm2_dev_res, 4,
+  DEV_STATIC_RES_MEM(
+    STM32_DEV_MEM_START(TIM, 2),
+    STM32_DEV_MEM_END(TIM, 2)
+  ),
+
+  DEV_STATIC_RES_FREQ(84000000, 1),
+
+  DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+  DEV_STATIC_RES_IOMUX("oc1", 0, /* PA5 */ 0*16+5, /* AF1 */ 1, 0),
+);
+
+DEV_DECLARE_STATIC(pwm2_dev, "pwm2", 0, stm32_pwm_drv, pwm2_dev_res);
+
+/* PWM on TIMER 3. */
+DEV_DECLARE_STATIC_RESOURCES(pwm3_dev_res, 4,
+  DEV_STATIC_RES_MEM(
+    STM32_DEV_MEM_START(TIM, 3),
+    STM32_DEV_MEM_END(TIM, 3)
+  ),
+
+  DEV_STATIC_RES_FREQ(84000000, 1),
+
+  DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+  DEV_STATIC_RES_IOMUX("oc1", 0, /* PC6 */ 2*16+6, /* AF1 */ 2, 0),
+);
+
+DEV_DECLARE_STATIC(pwm3_dev, "pwm3", 0, stm32_pwm_drv, pwm3_dev_res);
+
+#endif
+
 /////////////////////////////////////////////////////////////////////
 
 uint32_t stm32f4xx_clock_freq_ahb1 = 16000000; /* 16MHz on reset. */
