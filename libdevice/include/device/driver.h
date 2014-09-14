@@ -48,6 +48,7 @@ enum driver_class_e
   DRIVER_CLASS_NET,
   DRIVER_CLASS_SOUND,
   DRIVER_CLASS_TIMER,
+  DRIVER_CLASS_PWM,
   DRIVER_CLASS_SPI_CTRL,
   DRIVER_CLASS_LCD,
   DRIVER_CLASS_CLOCK,
@@ -65,7 +66,7 @@ enum driver_class_e
 #define DRIVER_CLASS_NAMES                                             \
   "None", "Block", "Char", "Enumerator", "FrameBuffer",                \
   "ICU", "DMA", "Input", "Network", "Sound",                           \
-  "Timer", "SPI Controller" , "LCD", "Clock", "GPIO", "IoMux", "UART", \
+  "Timer", "PWM", "SPI Controller" , "LCD", "Clock", "GPIO", "IoMux", "UART", \
     "I2C Controller", "I2C Device",                                         \
   "Memory", "CPU"
 
