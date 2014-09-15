@@ -23,18 +23,21 @@
 #include <string.h>
 
 #include <hexo/types.h>
-#include <hexo/iospace.h>
 #include <hexo/endian.h>
+#include <hexo/iospace.h>
+#include <hexo/interrupt.h>
 
 #include <device/device.h>
 #include <device/resources.h>
 #include <device/driver.h>
+#include <device/irq.h>
 #include <device/class/pwm.h>
 #include <device/class/timer.h>
 #include <device/class/iomux.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
+#include <mutek/printk.h>
 
 #include <cpp/device/helpers.h>
 #include <arch/stm32_rcc.h>
@@ -76,49 +79,69 @@ DEVPWM_FREQ(stm32_pwm_freq)
   struct device_s            *dev = pdev->dev;
   struct stm32_pwm_private_s *pv  = dev->drv_pv;
 
+  error_t err = 0;
+  LOCK_SPIN_IRQ(&dev->lock);
+
   if (!freq)
-    return -ENOMEM;
+    {
+      err = -ENOMEM;
+      goto freq_end;
+    }
 
   if (freq->num == 0)
     {
       *freq = pv->freq;
-      return 0;
+      goto freq_end;
     }
 
   /* Get input frequency. */
   struct dev_freq_s freq_res;
   if (device_get_res_freq(dev, &freq_res, 0))
-    return -ENOTSUP;
+    {
+      err = -ENOTSUP;
+      goto freq_end;
+    }
 
   /* Compute scale factor to the requested frequency. */
-  uint64_t denom = freq_res.denom * freq->num;
-  uint64_t scale = (freq_res.num * freq->denom + (denom >> 2)) / denom;
+  uint64_t scale = freq_res.num * freq->denom / (freq_res.denom * freq->num);
 
-  /* Check if prescaler can handle the high part of the scale factor. */
-  if ((scale >> pv->hw_width) & 0xffff)
-    return -ENOTSUP;
+  /* Compute part of the scale factor the period register cannot handle. */
+  uint32_t scale_high = scale >> pv->hw_width;
+  if (scale_high & 0xffff0000)
+    {
+      err = -ENOTSUP;
+      goto freq_end;
+    }
 
   uint32_t presc, period;
 
-  /* Compute prescaler and period of the timer. */
-  if (scale < (1ULL << pv->hw_width))
-    presc  = 0;
+  if (scale_high)
+    {
+      uint_fast8_t bcnt = sizeof(scale_high) * 8 - __builtin_clz(scale_high);
+      presc   = 1     << bcnt;
+      period  = scale >> bcnt;
+    }
   else
-    presc  = scale >> pv->hw_width;
-
-  period = scale & ((1ULL << pv->hw_width) - 1);
+    {
+      presc  = 1;
+      period = scale;
+    }
 
   /* Save configuration. */
   pv->freq   = *freq;
-  pv->period = period + 1;
+  pv->period = period;
 
   /* Configure the prescaler. */
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, PSC, presc);
+  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, PSC, presc - 1);
 
   /* Configure the period. */
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, ARR, period);
+  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, ARR, period - 1);
 
-  return 0;
+freq_end:
+  LOCK_RELEASE_IRQ(&dev->lock);
+  if (!err && kr)
+    kroutine_exec(kr, cpu_is_interruptible());
+  return err;
 }
 
 static
@@ -127,19 +150,31 @@ DEVPWM_DUTY(stm32_pwm_duty)
   struct device_s            *dev = pdev->dev;
   struct stm32_pwm_private_s *pv  = dev->drv_pv;
 
+  error_t err = 0;
+  LOCK_SPIN_IRQ(&dev->lock);
+
   if (!duty)
-    return -ENOMEM;
+    {
+      err = -ENOMEM;
+      goto duty_end;
+    }
 
   if (channel > pv->count)
-    return -EIO;
+    {
+      err = -EIO;
+      goto duty_end;
+    }
 
   if (duty->num > duty->denom)
-    return -ENOTSUP;
+    {
+      err = -ENOTSUP;
+      goto duty_end;
+    }
 
   if (duty->num == 0)
     {
       *duty = pv->duty[channel];
-      return 0;
+      goto duty_end;
     }
 
   pv->duty[channel] = *duty;
@@ -147,7 +182,11 @@ DEVPWM_DUTY(stm32_pwm_duty)
   uint32_t d = pv->duty[channel].num * pv->period / pv->duty[channel].denom;
   DEVICE_REG_IDX_UPDATE_DEV(TIMER, pv->addr, CCR, channel, d);
 
-  return 0;
+duty_end:
+  LOCK_RELEASE_IRQ(&dev->lock);
+  if (!err && kr)
+    kroutine_exec(kr, cpu_is_interruptible());
+  return err;
 }
 
 static
@@ -156,8 +195,14 @@ DEVPWM_POLARITY(stm32_pwm_polarity)
   struct device_s            *dev = pdev->dev;
   struct stm32_pwm_private_s *pv  = dev->drv_pv;
 
+  error_t err = 0;
+  LOCK_SPIN_IRQ(&dev->lock);
+
   if (!pol)
-    return -ENOMEM;
+    {
+      err = -ENOMEM;
+      goto pol_end;
+    }
 
   if (*pol == DEV_PWM_POL_NONE)
     {
@@ -167,7 +212,7 @@ DEVPWM_POLARITY(stm32_pwm_polarity)
         *pol = DEV_PWM_POL_LOW;
       else
         *pol = DEV_PWM_POL_HIGH;
-      return 0;
+      goto pol_end;
     }
 
   if ( *pol == DEV_PWM_POL_HIGH )
@@ -175,7 +220,11 @@ DEVPWM_POLARITY(stm32_pwm_polarity)
   else
     DEVICE_REG_FIELD_IDX_UPDATE_DEV(TIMER, pv->addr, CCER, CCP, channel, LOW);
 
-  return 0;
+pol_end:
+  LOCK_RELEASE_IRQ(&dev->lock);
+  if (!err && kr)
+    kroutine_exec(kr, cpu_is_interruptible());
+  return err;
 }
 
 static
@@ -184,8 +233,14 @@ DEVPWM_START_STOP(stm32_pwm_start_stop)
   struct device_s            *dev = pdev->dev;
   struct stm32_pwm_private_s *pv  = dev->drv_pv;
 
+  error_t err = 0;
+  LOCK_SPIN_IRQ(&dev->lock);
+
   if (channel > pv->count || pv->freq.num == 0 || pv->duty[channel].num == 0)
-    return -EIO;
+    {
+      err = -EIO;
+      goto start_stop_end;
+    }
 
   if (start)
     {
@@ -211,6 +266,10 @@ DEVPWM_START_STOP(stm32_pwm_start_stop)
         DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CR1, CEN);
     }
 
+start_stop_end:
+  LOCK_RELEASE_IRQ(&dev->lock);
+  if (!err && kr)
+    kroutine_exec(kr, cpu_is_interruptible());
   return 0;
 }
 
@@ -356,9 +415,6 @@ DEV_INIT(stm32_pwm_init)
   /* Disable interrupts. */
   DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, DIER, 0);
 
-  /* Set auto-reload preload value. */
-  DEVICE_REG_FIELD_SET_DEV(TIMER, pv->addr, CR1, ARPE);
-
   /* Set capture/icompare channel PWM mode. */
   DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CCMR1OC, OC1M, PWM_MODE_1);
 
@@ -397,25 +453,6 @@ DEV_INIT(stm32_pwm_init)
 
   /* Set repeat counter to 0, then generate update at each overflow. */
   DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, RCR, REP, 0);
-
-#if 0
-  uint16_t presc = ( stm32f4xx_clock_freq_ahb1 / 10000 );
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, PSC, presc);
-
-  uint16_t period = ( 10000 / 480 ) - 1;
-  DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, ARR, period);
-
-  uint16_t duty = (period + 1) / 2;
-  DEVICE_REG_IDX_UPDATE_DEV(TIMER, pv->addr, CCR, 0 /* channel */, duty);
-
-#if 0
-  DEVICE_REG_FIELD_IDX_SET_DEV(TIMER, pv->addr, CCER, CCE, 0 /* channel */);
-  DEVICE_REG_FIELD_SET_DEV(TIMER, pv->addr, CR1, CEN);
-#else
-  pv->freq.num = 1;
-  pv->duty[0].num = 1;
-#endif
-#endif
 
   dev->drv    = &stm32_pwm_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;

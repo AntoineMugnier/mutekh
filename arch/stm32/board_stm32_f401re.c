@@ -199,7 +199,7 @@ DEV_DECLARE_STATIC_RESOURCES(pwm2_dev_res, 4,
   DEV_STATIC_RES_FREQ(84000000, 1),
 
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
-  DEV_STATIC_RES_IOMUX("oc1", 0, /* PA5 */ 0*16+5, /* AF1 */ 1, 0),
+  DEV_STATIC_RES_IOMUX("oc1", 0, /* PA0 */ 0*16+0, /* AF1 */ 1, 0),
 );
 
 DEV_DECLARE_STATIC(pwm2_dev, "pwm2", 0, stm32_pwm_drv, pwm2_dev_res);
