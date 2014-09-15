@@ -33,6 +33,8 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
+#include <mutek/kroutine.h>
+
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/resources.h>
@@ -58,7 +60,8 @@ struct dev_pwm_fract_s
 };
 
 #define DEVPWM_FREQ(n) error_t (n)(struct device_pwm_s    *pdev, \
-                                   struct dev_pwm_fract_s *freq) \
+                                   struct dev_pwm_fract_s *freq, \
+                                   struct kroutine_s      *kr)   \
 /**/
 
 /** @This configures the frequency of the PWM output. If the PWM device has
@@ -69,13 +72,16 @@ struct dev_pwm_fract_s
 
     If the required frequency is impossible to configure, the return value is
     @tt -ENOTSUP.
+
+    In case of setting success the kroutine is called if not null.
 */
 typedef DEVPWM_FREQ(devpwm_freq_t);
 
 
 #define DEVPWM_DUTY(n) error_t (n)(struct device_pwm_s    *pdev,   \
                                    uint_fast8_t           channel, \
-                                   struct dev_pwm_fract_s *duty)   \
+                                   struct dev_pwm_fract_s *duty,   \
+                                   struct kroutine_s      *kr)     \
 /**/
 
 /** @This configures the duty cycle of a given channel of the PWM device.
@@ -88,6 +94,8 @@ typedef DEVPWM_FREQ(devpwm_freq_t);
 
     If the duty cycle cannot be configured the return value is -ENOTSUP.
 
+    In case of setting success the kroutine is called if not null.
+
     Note: The duty cycle must be give as a value in the range (0,1].
 **/
 typedef DEVPWM_DUTY(devpwm_duty_t);
@@ -95,7 +103,8 @@ typedef DEVPWM_DUTY(devpwm_duty_t);
 
 #define DEVPWM_POLARITY(n) error_t (n)(struct device_pwm_s     *pdev,   \
                                        uint_fast8_t            channel, \
-                                       enum dev_pwm_polarity_e *pol)    \
+                                       enum dev_pwm_polarity_e *pol,    \
+                                       struct kroutine_s       *kr)     \
 /**/
 
 /** @This configures the duty cycle of a given channel of the PWM device.
@@ -106,6 +115,8 @@ typedef DEVPWM_DUTY(devpwm_duty_t);
     If the @tt channel value is out of bounds of the PWM device, the return
     value is @tt -EIO.
 
+    In case of setting success the kroutine is called if not null.
+
     If the duty cycle cannot be configured the return value is -ENOTSUP.
 **/
 typedef DEVPWM_POLARITY(devpwm_polarity_t);
@@ -113,10 +124,15 @@ typedef DEVPWM_POLARITY(devpwm_polarity_t);
 
 #define DEVPWM_START_STOP(n) error_t (n) (struct device_pwm_s *pdev,   \
                                           uint_fast8_t        channel, \
-                                          bool_t              start)   \
+                                          bool_t              start,   \
+                                          struct kroutine_s   *kr)     \
 /**/
 
-/** @This starts/stops the given PWM channel. */
+/** @This starts/stops the given PWM channel.
+
+    The kroutine is called when the PWM channel is started/stopped if
+    not null.
+*/
 typedef DEVPWM_START_STOP(devpwm_start_stop_t);
 
 /** Driver types. */
