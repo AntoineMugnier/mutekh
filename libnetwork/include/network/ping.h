@@ -34,7 +34,7 @@
 # endif
 
 # include <hexo/types.h>
-# include <netinet/packet.h>
+# include <network/packet.h>
 
 # define PING_INTERVAL	200	// ms
 # define PING_TIMEOUT	10000	// ms

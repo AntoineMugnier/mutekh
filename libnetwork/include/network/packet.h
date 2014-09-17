@@ -111,9 +111,10 @@ struct		net_header_s
 
 
 #include <gct_platform.h>
-#include <gct_lock.h>
-#include <gpct/object_refcount.h>
-#include <gpct/cont_dlist.h>
+#include <gct_atomic.h>
+#include <gct_lock_hexo_lock_irq.h>
+#include <gct/refcount.h>
+#include <gct/container_dlist.h>
 
 #include <network/protos.h>
 #include <netinet/ether.h>
@@ -165,7 +166,9 @@ struct			net_addr_s
  * This structure defines a packet.
  */
 
-OBJECT_TYPE(packet_obj, REFCOUNT, struct net_packet_s);
+#define GCT_CONTAINER_REFCOUNT_packet_queue packet_obj
+#define GCT_CONTAINER_LOCK_packet_queue	HEXO_LOCK_IRQ
+#define GCT_CONTAINER_ALGO_packet_queue	DLIST
 
 struct				net_packet_s
 {
@@ -182,21 +185,20 @@ struct				net_packet_s
   uint_fast8_t			MAClen;		/* length of MAC addresses */
   uint_fast16_t			proto;		/* level 2 protocol id */
 
-  packet_obj_entry_t		obj_entry;
-  GCT_CONTAINER_ENTRY(DLIST)	queue_entry;
+  GCT_REFCOUNT_ENTRY(obj_entry);
+  GCT_CONTAINER_ENTRY(packet_queue, queue_entry);
 };
 
-OBJECT_CONSTRUCTOR(packet_obj);
-OBJECT_DESTRUCTOR(packet_obj);
-OBJECT_FUNC(packet_obj, REFCOUNT, static inline, packet_obj, obj_entry);
+GCT_REFCOUNT(packet_obj, struct net_packet_s *, obj_entry);
+
+struct net_packet_s * packet_obj_new();
+void packet_obj_destroy(struct net_packet_s *obj);
 
 /*
  * Packet list.
  */
 
-#define CONTAINER_OBJ_packet_queue	packet_obj
-#define CONTAINER_LOCK_packet_queue	HEXO_LOCK_IRQ
-GCT_CONTAINER_TYPES(packet_queue, DLIST, struct net_packet_s, queue_entry);
+GCT_CONTAINER_TYPES(packet_queue, struct net_packet_s *, queue_entry);
 
 /*
  * The packet object.
@@ -209,7 +211,8 @@ uint16_t		packet_memcpy(void		*dst,
 				      const void	*src,
 				      size_t		size);
 
-GCT_CONTAINER_PROTOTYPES(packet_queue, inline, packet_queue);
+GCT_CONTAINER_PROTOTYPES(packet_queue, inline, packet_queue,
+                         init, destroy, pop, pushback, push, clear);
 GCT_CONTAINER_PROTOTYPES(packet_queue, inline, packet_queue_lock);
 
 /*

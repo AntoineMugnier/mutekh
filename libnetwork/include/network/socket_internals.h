@@ -31,6 +31,9 @@
  * Buffers
  */
 
+#define GCT_CONTAINER_LOCK_buffer_queue	HEXO_LOCK_IRQ
+#define GCT_CONTAINER_ALGO_buffer_queue	DLIST
+
 struct				net_buffer_s
 {
   void				*data;
@@ -38,12 +41,12 @@ struct				net_buffer_s
   struct net_addr_s		address;
   net_port_t			port;
 
-  GCT_CONTAINER_ENTRY(DLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(buffer_queue, list_entry);
 };
 
-#define CONTAINER_LOCK_buffer_queue	HEXO_LOCK_IRQ
-GCT_CONTAINER_TYPES(buffer_queue, DLIST, struct net_buffer_s, list_entry);
-GCT_CONTAINER_FCNS(buffer_queue, DLIST, static inline, buffer_queue_lock);
+GCT_CONTAINER_TYPES(buffer_queue, struct net_buffer_s *, list_entry);
+GCT_CONTAINER_FCNS(buffer_queue, static inline, buffer_queue_lock,
+  init, destroy, pushback);
 
 /*
  * Common operations.
@@ -68,13 +71,13 @@ int_fast32_t getsockopt_inet(socket_t		fd,
 
 struct net_packet_s	*socket_grab_packet(socket_t			fd,
 					    int_fast32_t		flags,
-					    timer_event_callback_t	*recv_timeout,
+					    struct kroutine_s	*recv_timeout,
 					    packet_queue_root_t		*recv_q,
 					    struct semaphore_s			*recv_sem);
 
 struct net_buffer_s	*socket_grab_buffer(socket_t			fd,
 					    int_fast32_t		flags,
-					    timer_event_callback_t	*recv_timeout,
+					    struct kroutine_s	*recv_timeout,
 					    buffer_queue_root_t		*recv_q,
 					    struct semaphore_s			*recv_sem);
 

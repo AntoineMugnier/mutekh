@@ -36,7 +36,7 @@
 
 #include <mutek/semaphore.h>
 
-socket_table_root_t	pf_packet = GCT_CONTAINER_ROOT_INITIALIZER(socket_table, DLIST);
+socket_table_root_t	pf_packet = GCT_CONTAINER_ROOT_INITIALIZER(socket_table);
 
 /*
  * Receive timeout callback.
@@ -103,7 +103,7 @@ static _BIND(bind_packet)
 
   pv->interface = interface->index;
 
-  net_if_obj_refdrop(interface);
+  net_if_obj_refdec(interface);
 
   pv->proto = ntohs(sll->sll_protocol);
 
@@ -206,8 +206,8 @@ static _SENDMSG(sendmsg_packet)
       /* alloc a buffer to copy the packet content */
       if ((packet->packet = mem_alloc(n, (mem_scope_sys))) == NULL)
 	{
-	  net_if_obj_refdrop(interface);
-	  packet_obj_refdrop(packet);
+	  net_if_obj_refdec(interface);
+	  packet_obj_refdec(packet);
 	  fd->error = ENOMEM;
 	  return -1;
 	}
@@ -234,8 +234,8 @@ static _SENDMSG(sendmsg_packet)
       /* is broadcast allowed */
       if (!fd->broadcast && !memcmp(bcast, sll->sll_addr, maclen))
 	{
-	  net_if_obj_refdrop(interface);
-	  packet_obj_refdrop(packet);
+	  net_if_obj_refdec(interface);
+	  packet_obj_refdec(packet);
 	  fd->error = EINVAL;
 	  return -1;
 	}
@@ -243,8 +243,8 @@ static _SENDMSG(sendmsg_packet)
       /* prepare the packet */
       if ((next = if_preparepkt(interface, packet, n, 0)) == NULL)
 	{
-	  net_if_obj_refdrop(interface);
-	  packet_obj_refdrop(packet);
+	  net_if_obj_refdec(interface);
+	  packet_obj_refdec(packet);
 	  fd->error = ENOMEM;
 	  return -1;
 	}
@@ -264,8 +264,8 @@ static _SENDMSG(sendmsg_packet)
       if_sendpkt(interface, packet, ntohs(sll->sll_protocol));
     }
 
-  packet_obj_refdrop(packet);
-  net_if_obj_refdrop(interface);
+  packet_obj_refdec(packet);
+  net_if_obj_refdec(interface);
 
   return n;
 }
@@ -309,7 +309,7 @@ static _RECVMSG(recvmsg_packet)
       if (message->msg_namelen < sizeof (struct sockaddr_ll))
 	{
 	  fd->error = ENOMEM;
-	  packet_obj_refdrop(packet);
+	  packet_obj_refdec(packet);
 	  return -1;
 	}
 
@@ -361,7 +361,7 @@ static _RECVMSG(recvmsg_packet)
     }
 
   /* drop the packet */
-  packet_obj_refdrop(packet);
+  packet_obj_refdec(packet);
 
   return sz;
 }
@@ -406,7 +406,7 @@ static _SETSOCKOPT(setsockopt_packet)
 		    return -1;
 		  }
 		dev_net_setopt(interface->dev, DEV_NET_OPT_PROMISC, &enabled, sizeof (bool_t));
-		net_if_obj_refdrop(interface);
+		net_if_obj_refdec(interface);
 	      }
 	      break;
 	    /* other options not supported (multicast) */
@@ -529,19 +529,19 @@ void		pf_packet_signal(struct net_if_s	*interface,
   is_bcast = !memcmp(packet->tMAC, bcast, maclen);
 
   /* deliver packet to all sockets matching interface and protocol id */
-  CONTAINER_FOREACH(socket_table, DLIST, &pf_packet,
+  GCT_FOREACH(socket_table, &pf_packet, item,
   {
     struct socket_packet_pv_s	*pv = (struct socket_packet_pv_s *)item->pv;
 
     if (item->shutdown == SHUT_RD || item->shutdown == SHUT_RDWR)
-      CONTAINER_FOREACH_CONTINUE;
+      GCT_FOREACH_CONTINUE;
 
     if (pv->interface == 0 || pv->interface == interface->index)
       {
 	if (pv->proto == protocol || pv->proto == ETH_P_ALL)
 	  {
 	    if (!item->broadcast && is_bcast)
-	      CONTAINER_FOREACH_CONTINUE;
+	      GCT_FOREACH_CONTINUE;
 
 	    if (packet_queue_lock_pushback(&pv->recv_q, packet))
 	      semaphore_give(&pv->recv_sem, 1);

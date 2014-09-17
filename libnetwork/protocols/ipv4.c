@@ -46,14 +46,16 @@
 
 #include <device/class/timer.h>
 
+KROUTINE_EXEC(ip_fragment_timeout);
+
 extern struct device_timer_s libnetwork_timer_dev;
 
 /*
  * Fragment lists.
  */
 
-GCT_CONTAINER_NOLOCK_FCNS(ip_packet, HASHLIST, static inline, ip_packet, id);
-GCT_CONTAINER_KEY_FCNS(ip_packet, HASHLIST, static inline, ip_packet, id);
+GCT_CONTAINER_KEY_FCNS(ip_packet, ASC, static inline, ip_packet, id,
+                       init, destroy, remove, push, lookup);
 
 /*
  * Structures for declaring the protocol's properties & interface.
@@ -121,7 +123,7 @@ NET_DESTROYPROTO(ip_destroy)
   struct ip_packet_s	*to_remove = NULL;
 
   /* remove all items in the reassembly table */
-  CONTAINER_FOREACH(ip_packet, HASHLIST, &pv->fragments,
+  GCT_FOREACH_UNORDERED(ip_packet, &pv->fragments, item,
   {
     /* remove previous item */
     if (to_remove != NULL)
@@ -147,10 +149,10 @@ NET_DESTROYPROTO(ip_destroy)
  * Fragment object constructor.
  */
 
-OBJECT_CONSTRUCTOR(fragment_obj)
+struct ip_packet_s *fragment_obj_new(struct net_proto_s *addressing,
+                                     const uint8_t *id)
 {
-  struct net_proto_s	*addressing = va_arg(ap, struct net_proto_s *);
-  uint8_t		*id = va_arg(ap, uint8_t *);
+  struct ip_packet_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
 
   assert(addressing != NULL);
   assert(id != NULL);
@@ -163,30 +165,34 @@ OBJECT_CONSTRUCTOR(fragment_obj)
   obj->addressing = addressing;
   memcpy(obj->id, id, 6);
   if (packet_queue_init(&obj->packets))
-    return -1;
+    {
+      mem_free(obj);
+      return NULL;
+    }
 
   /* start timeout timer */
-  obj->timeout.callback = ip_fragment_timeout;
+  kroutine_init(&obj->timeout.kr, ip_fragment_timeout, KROUTINE_IMMEDIATE);
   obj->timeout.pvdata = (void *)obj;
   obj->timeout.delay = pv->reassembly_timeout;
   if (DEVICE_OP(&libnetwork_timer_dev, request, &obj->timeout))
     {
+      mem_free(obj);
       packet_queue_destroy(&obj->packets);
-      return -1;
+      return NULL;
     }
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_new[NETWORK_PROFILING_FRAGMENT]++;
 #endif
 
-  return 0;
+  return obj;
 }
 
 /*
  * Fragment object destructor.
  */
 
-OBJECT_DESTRUCTOR(fragment_obj)
+void fragment_obj_delete(struct ip_packet_s *obj)
 {
   DEVICE_OP(&libnetwork_timer_dev, cancel, &obj->timeout);
 
@@ -196,6 +202,8 @@ OBJECT_DESTRUCTOR(fragment_obj)
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_del[NETWORK_PROFILING_FRAGMENT]++;
 #endif
+
+  mem_free(obj);
 }
 
 /*
@@ -248,7 +256,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
   if ((p = ip_packet_lookup(&pv->fragments, id)) == NULL)
     {
       /* initialize the reassembly structure */
-      if ((p = fragment_obj_new(NULL, ip, id)) == NULL)
+      if ((p = fragment_obj_new(ip, id)) == NULL)
 	return 0;
 
       if (!ip_packet_push(&pv->fragments, p))
@@ -338,7 +346,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	      pv->icmp->desc->f.control->errormsg(frag, ERROR_BAD_HEADER);
 
 	      /* delete all the packets */
-	      packet_obj_refdrop(frag);
+	      packet_obj_refdec(frag);
 	      fragment_obj_delete(p);
 
 	      return 0;
@@ -348,7 +356,7 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
 	  memcpy(data + offs, nethdr->data, nethdr->size);
 
 	  /* release our reference to the packet */
-	  packet_obj_refdrop(frag);
+	  packet_obj_refdec(frag);
 	}
 
       /* release memory */
@@ -381,8 +389,9 @@ static inline bool_t	ip_fragment_pushpkt(struct net_proto_s	*ip,
  * Fragment reassembly timeout.
  */
 
-DEVTIMER_CALLBACK(ip_fragment_timeout)
+KROUTINE_EXEC(ip_fragment_timeout)
 {
+  struct dev_timer_rq_s         *rq = (void*)kr;
   struct ip_packet_s	*p = (struct ip_packet_s *)rq->pvdata;
   struct net_pv_ip_s	*pv_ip = (struct net_pv_ip_s *)p->addressing->pv;
   struct net_packet_s	*packet;
@@ -396,13 +405,11 @@ DEVTIMER_CALLBACK(ip_fragment_timeout)
     {
       packet->stage--;
       pv_ip->icmp->desc->f.control->errormsg(packet, ERROR_FRAGMENT_TIMEOUT);
-      packet_obj_refdrop(packet);
+      packet_obj_refdec(packet);
     }
 
   /* delete all the fragments */
   fragment_obj_delete(p);
-
-  return 0;
 }
 
 /*
@@ -477,7 +484,7 @@ NET_PUSHPKT(ip_pushpkt)
 	      /* route the packet */
 	      net_debug("routing to host %P\n", &packet->tADDR.addr.ipv4, 4);
 	      ip_route(packet, route_entry);
-	      route_obj_refdrop(route_entry);
+	      route_obj_refdec(route_entry);
 	    }
 	  else
 	    {
@@ -550,7 +557,7 @@ NET_PUSHPKT(ip_pushpkt)
   if ((p = net_protos_lookup(&interface->protocols, proto)))
     {
       p->desc->pushpkt(interface, packet, p);
-      net_proto_obj_refdrop(p);
+      net_proto_obj_refdec(p);
     }
   else
     pv->icmp->desc->f.control->errormsg(packet, ERROR_PROTO_UNREACHABLE);
@@ -611,12 +618,12 @@ static inline bool_t	 ip_send_fragment(struct net_proto_s	*ip,
   /* prepare a new (child) IP packet */
   if ((frag = packet_obj_new(NULL)) == NULL)
     return 0;
-  packet_obj_refnew(packet);
+  packet_obj_refinc(packet);
   frag->parent = packet;
   frag->header[frag->stage + 1].data = NULL;
   if ((dest = ip_preparepkt(interface, frag, 0, 0)) == NULL)
     {
-      packet_obj_refdrop(frag);
+      packet_obj_refdec(frag);
       return 0;
     }
 
@@ -672,7 +679,7 @@ static inline bool_t	 ip_send_fragment(struct net_proto_s	*ip,
   /* send the packet to the driver */
   frag->stage--;
   if_sendpkt(interface, frag, ETHERTYPE_IP);
-  packet_obj_refdrop(frag);
+  packet_obj_refdec(frag);
 
   return 1;
 }
@@ -766,7 +773,7 @@ NET_SENDPKT(ip_send)
 
 #ifdef CONFIG_NETWORK_FORWARDING
       if (route_entry != NULL)
-	route_obj_refdrop(route_entry);
+	route_obj_refdec(route_entry);
 #endif
 
       return ;
@@ -789,7 +796,7 @@ NET_SENDPKT(ip_send)
       if ((route_entry = route_get(&packet->tADDR)) != NULL)
 	{
 	  ip_route(packet, route_entry);
-	  route_obj_refdrop(route_entry);
+	  route_obj_refdec(route_entry);
 	}
       else
 	{

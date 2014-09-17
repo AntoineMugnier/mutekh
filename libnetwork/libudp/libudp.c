@@ -43,8 +43,8 @@
 #include <network/libudp.h>
 
 #include <gct_platform.h>
-#include <gpct/cont_hashlist.h>
-#include <gpct/cont_clist.h>
+#include <gct/container_chainedhash.h>
+#include <gct/container_clist.h>
 
 #include <stdlib.h>
 
@@ -52,23 +52,27 @@
  * The descriptors set.
  */
 
-GCT_CONTAINER_FCNS(udp_desc, HASHLIST, static inline, udp_desc, port);
-GCT_CONTAINER_KEY_FCNS(udp_desc, HASHLIST, static inline, udp_desc, port);
+GCT_CONTAINER_KEY_FCNS(udp_desc, ASC, static inline, udp_desc, port,
+                       init, destroy, push, remove, lookup, lookup_next);
 
-static udp_desc_root_t	descriptors = GCT_CONTAINER_ROOT_INITIALIZER(udp_desc, HASHLIST);
+static udp_desc_root_t	descriptors = GCT_CONTAINER_ROOT_INITIALIZER(udp_desc);
 
 /*
  * Descriptors contructor and destructor.
  */
 
-OBJECT_CONSTRUCTOR(udp_desc_obj)
+struct net_udp_desc_s *udp_desc_obj_new()
 {
-  return 0;
+  struct net_udp_desc_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
+
+  return obj;
 }
 
-OBJECT_DESTRUCTOR(udp_desc_obj)
+void udp_desc_obj_delete(struct net_udp_desc_s *obj)
 {
+  mem_free(obj);
 }
+
 
 /*
  * Create or connect a connected UDP descriptor.
@@ -88,7 +92,7 @@ error_t			udp_connect(struct net_udp_desc_s	**desc,
     {
       if ((*desc = udp_desc_obj_new(NULL)) == NULL)
 	{
-	  route_obj_refdrop(route);
+	  route_obj_refdec(route);
 	  return -ENOMEM;
 	}
       (*desc)->bound = 0;
@@ -172,7 +176,7 @@ static inline bool_t udp_send_if(struct net_udp_desc_s	*desc,
     return 0;
   if ((dest = udp_preparepkt(interface, addressing, packet, size, 0)) == NULL)
     {
-      packet_obj_refdrop(packet);
+      packet_obj_refdec(packet);
 
       return 0;
     }
@@ -186,7 +190,7 @@ static inline bool_t udp_send_if(struct net_udp_desc_s	*desc,
   /* send UDP packet */
   udp_sendpkt(interface, addressing, packet, local_port, remote->port,
 	      (desc != NULL ? desc->checksum : 1));
-  packet_obj_refdrop(packet);
+  packet_obj_refdec(packet);
 
   return 1;
 }
@@ -267,7 +271,7 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
 
   if (global_bcast)
     {
-      CONTAINER_FOREACH(net_if, HASHLIST, &net_interfaces,
+      GCT_FOREACH_UNORDERED(net_if, &net_interfaces, item,
       {
 	interface = item;
 	NET_FOREACH_PROTO(&interface->protocols, remote->address.family,
@@ -280,7 +284,7 @@ error_t			udp_send(struct net_udp_desc_s		*desc,
     err = !udp_send_if(desc, remote, route->interface, route->addressing, local_port, data, size);
 
   if (drop_route)
-    route_obj_refdrop(route);
+    route_obj_refdec(route);
 
   return err;
 }
@@ -295,7 +299,7 @@ void			udp_close(struct net_udp_desc_s		*desc)
     udp_desc_remove(&descriptors, desc);
 
   if (desc->connected)
-    route_obj_refdrop(desc->route);
+    route_obj_refdec(desc->route);
 
   udp_desc_obj_delete(desc);
 }
@@ -357,7 +361,7 @@ void		libudp_destroy(void)
   struct net_udp_desc_s	*to_remove = NULL;
 
   /* remove all opened descriptors */
-  CONTAINER_FOREACH(udp_desc, HASHLIST, &descriptors,
+  GCT_FOREACH_UNORDERED(udp_desc, &descriptors, item,
   {
     /* remove previous item */
     if (to_remove != NULL)

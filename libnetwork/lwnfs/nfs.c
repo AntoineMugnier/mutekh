@@ -57,16 +57,17 @@
 
 #include <semaphore.h>
 
-GCT_CONTAINER_FCNS(rpcb, HASHLIST, static inline, rpcb, id);
-GCT_CONTAINER_KEY_FCNS(rpcb, HASHLIST, static inline, rpcb, id);
+GCT_CONTAINER_KEY_FCNS(rpcb, ASC, static inline, rpcb, id,
+                       init, destroy, lookup, push, remove);
 
 /*
  * RPC timeout.
  */
 
-TIMER_CALLBACK(rpc_timeout)
+KROUTINE_EXEC(rpc_timeout)
 {
-  struct rpcb_s	*rpcb = (struct rpcb_s *)pv;
+  struct dev_timer_rq_s         *rq = (void*)kr;
+  struct rpcb_s	*rpcb = (struct rpcb_s *)rq->pvdata;
 
   if (rpcb->data == NULL)
     {

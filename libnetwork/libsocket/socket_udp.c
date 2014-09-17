@@ -72,9 +72,10 @@ static UDP_ERROR_CALLBACK(socket_err_callback)
   /* XXX */
 }
 
-static TIMER_CALLBACK(recv_timeout)
+static KROUTINE_EXEC(recv_timeout)
 {
-  socket_t			fd = (socket_t)pv;
+  struct dev_timer_rq_s         *rq = (void*)kr;
+  socket_t			fd = (socket_t)rq->pvdata;
   struct socket_udp_pv_s	*pv_udp = (struct socket_udp_pv_s *)fd->pv;
 
   semaphore_give(&pv_udp->recv_sem, 1);

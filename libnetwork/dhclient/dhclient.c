@@ -487,7 +487,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 			  def->is_routed = 1;
 			  IPV4_ADDR_SET(def->router, gateway);
 			  route_add(def);
-			  route_obj_refdrop(def);
+			  route_obj_refdec(def);
 			}
 		    }
 
@@ -497,7 +497,7 @@ static error_t		dhcp_request(struct net_if_s	*interface,
 		    {
 		      route->is_routed = 0;
 		      route_add(route);
-		      route_obj_refdrop(route);
+		      route_obj_refdec(route);
 		    }
 
 		  /* we've got an address :-)) */
@@ -660,7 +660,7 @@ error_t			dhcp_client(const char	*ifname)
   if ((route = route_obj_new(NULL, &null, &null, interface)) == NULL)
     goto leave;
   route_add(route);
-  route_obj_refdrop(route);
+  route_obj_refdec(route);
 
   /* create sockets */
   if (dhcp_init(interface, &sock, &sock_packet))

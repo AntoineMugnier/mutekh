@@ -53,21 +53,21 @@
 #include <mutek/printk.h>
 
 #include <gct_platform.h>
-#include <gpct/cont_hashlist.h>
-#include <gpct/cont_clist.h>
+#include <gct/container_chainedhash.h>
+#include <gct/container_clist.h>
 
 /*
  * Functions for the interface container.
  */
 
-GCT_CONTAINER_FCNS(net_if, HASHLIST, static inline, net_if, name);
-GCT_CONTAINER_KEY_FCNS(net_if, HASHLIST, static inline, net_if, name);
+GCT_CONTAINER_KEY_FCNS(net_if, ASC, static inline, net_if, name,
+                       init, destroy, push, remove, lookup);
 
 /*
  * Some local variables.
  */
 
-net_if_root_t		net_interfaces = GCT_CONTAINER_ROOT_INITIALIZER(net_if, HASHLIST);
+net_if_root_t		net_interfaces = GCT_CONTAINER_ROOT_INITIALIZER(net_if);
 static uint_fast8_t	ifid = 0;
 static uint_fast8_t	ethid = 0;
 
@@ -75,21 +75,28 @@ static uint_fast8_t	ethid = 0;
  * Interface object constructor.
  */
 
-OBJECT_CONSTRUCTOR(net_if_obj)
+struct net_if_s * net_if_obj_new(struct device_s *dev,
+                                 net_if_type_t type,
+                                 uint_fast16_t mtu)
 {
-  struct device_s	*dev = va_arg(ap, struct device_s *);
-  net_if_type_t		type = va_arg(ap, reg_t);
-  uint_fast16_t		mtu = va_arg(ap, reg_t);
+  struct net_if_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
+
+  if (!obj)
+    return NULL;
 
   /* initialize the object */
   if (device_get_accessor(&obj->dev, dev, DRIVER_CLASS_NET, 0))
-    return -1;
+    {
+      mem_free(obj);
+      return NULL;
+    }
 
   if (DEVICE_OP(&obj->dev, getopt, DEV_NET_OPT_MAC,
                 &obj->mac, &obj->mac_len))
     {
+      mem_free(obj);
       device_put_accessor(&obj->dev);
-      return -1;
+      return NULL;
     }
 
   obj->mtu = mtu;
@@ -98,8 +105,9 @@ OBJECT_CONSTRUCTOR(net_if_obj)
   obj->state = NET_IF_STATE_DOWN;
   if (net_protos_init(&obj->protocols))
     {
+      mem_free(obj);
       device_put_accessor(&obj->dev);
-      return -1;
+      return NULL;
     }
 
   /* choose a funky name for the interface */
@@ -114,14 +122,14 @@ OBJECT_CONSTRUCTOR(net_if_obj)
   netobj_new[NETWORK_PROFILING_IF]++;
 #endif
 
-  return 0;
+  return obj;
 }
 
 /*
  * Interface object destructor
  */
 
-OBJECT_DESTRUCTOR(net_if_obj)
+void net_if_obj_destroy(struct net_if_s *obj)
 {
   net_protos_clear(&obj->protocols);
   net_protos_destroy(&obj->protocols);
@@ -129,6 +137,8 @@ OBJECT_DESTRUCTOR(net_if_obj)
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_del[NETWORK_PROFILING_IF]++;
 #endif
+
+  mem_free(obj);
 }
 
 /*
@@ -148,19 +158,19 @@ struct net_if_s	*if_register(struct device_s	*dev,
   struct net_if_s				*interface;
 
   /* create new device node */
-  if ((interface = net_if_obj_new(NULL, dev, type, mtu)) == NULL)
+  if ((interface = net_if_obj_new(dev, type, mtu)) == NULL)
     return NULL;
 
   /* initialize standard protocols for the device */
 #ifdef CONFIG_NETWORK_UDP
-  if ((udp = net_proto_obj_new(NULL, &udp_protocol)) != NULL)
+  if ((udp = net_proto_obj_new(&udp_protocol)) != NULL)
     if_register_proto(interface, udp);
-  net_proto_obj_refdrop(udp);
+  net_proto_obj_refdec(udp);
 #endif
 #ifdef CONFIG_NETWORK_TCP
-  if ((tcp = net_proto_obj_new(NULL, &tcp_protocol)) != NULL)
+  if ((tcp = net_proto_obj_new(&tcp_protocol)) != NULL)
     if_register_proto(interface, tcp);
-  net_proto_obj_refdrop(tcp);
+  net_proto_obj_refdec(tcp);
 #endif
 
   /* add to the interface list */
@@ -174,7 +184,7 @@ struct net_if_s	*if_register(struct device_s	*dev,
       if (tcp != NULL)
 	net_protos_remove(&interface->protocols, tcp);
 #endif
-      net_if_obj_refdrop(interface);
+      net_if_obj_refdec(interface);
       return NULL;
     }
 
@@ -195,7 +205,7 @@ void if_unregister(struct net_if_s *interface)
   if_down(interface);
   route_flush(interface);
   net_if_remove(&net_interfaces, interface);
-  net_if_obj_refdrop(interface);
+  net_if_obj_refdec(interface);
 }
 
 /*
@@ -285,25 +295,25 @@ error_t			if_config(struct net_if_s *interface,
       if (action == IF_SET || action == IF_ADD)
 	{
 	  /* add new set of protocols for IPv4 */
-	  if ((ip = net_proto_obj_new(NULL, &ip_protocol)) == NULL)
+	  if ((ip = net_proto_obj_new(&ip_protocol)) == NULL)
 	    {
               net_debug("network: unable to create ip protocol\n");
-	      net_if_obj_refdrop(interface);
+	      net_if_obj_refdec(interface);
 	      return err;
 	    }
-	  if ((arp = net_proto_obj_new(NULL, &arp_protocol)) == NULL)
+	  if ((arp = net_proto_obj_new(&arp_protocol)) == NULL)
 	    {
               net_debug("network: unable to create arp protocol\n");
-	      net_if_obj_refdrop(interface);
-	      net_proto_obj_refdrop(ip);
+	      net_if_obj_refdec(interface);
+	      net_proto_obj_refdec(ip);
 	      return err;
 	    }
-	  if ((icmp = net_proto_obj_new(NULL, &icmp_protocol)) == NULL)
+	  if ((icmp = net_proto_obj_new(&icmp_protocol)) == NULL)
 	    {
               net_debug("network: unable to create icmp protocol\n");
-	      net_if_obj_refdrop(interface);
-	      net_proto_obj_refdrop(ip);
-	      net_proto_obj_refdrop(arp);
+	      net_if_obj_refdec(interface);
+	      net_proto_obj_refdec(ip);
+	      net_proto_obj_refdec(arp);
 	      return err;
 	    }
 
@@ -326,9 +336,9 @@ error_t			if_config(struct net_if_s *interface,
 	      err = -1;
             }
 
-	  net_proto_obj_refdrop(ip);
-	  net_proto_obj_refdrop(arp);
-	  net_proto_obj_refdrop(icmp);
+	  net_proto_obj_refdec(ip);
+	  net_proto_obj_refdec(arp);
+	  net_proto_obj_refdec(icmp);
 	}
       else
 	{
@@ -347,7 +357,7 @@ error_t			if_config(struct net_if_s *interface,
 
  leave:
 
-  net_if_obj_refdrop(interface);
+  net_if_obj_refdec(interface);
 
   return err;
 }

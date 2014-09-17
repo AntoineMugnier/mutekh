@@ -60,29 +60,29 @@
  * Session container.
  */
 
-GCT_CONTAINER_FCNS(tcp_session, HASHLIST, static inline, tcp_session, remote);
-GCT_CONTAINER_KEY_FCNS(tcp_session, HASHLIST, static inline, tcp_session, remote);
+GCT_CONTAINER_KEY_FCNS(tcp_session, ASC, static inline, tcp_session, remote,
+                       init, destroy, remove, push, lookup);
 
 /*
  * Segment queues
  */
 
-GCT_CONTAINER_FCNS(tcp_segment_queue, CLIST, static inline, tcp_segment_queue);
+GCT_CONTAINER_FCNS(tcp_segment_queue, static inline, tcp_segment_queue,
+                   init, destroy, head, next, pushback, insert_prev);
 
 /*
  * TCP session list.
  */
 
-static GCT_CONTAINER_ROOT_DECLARATOR(tcp_session, HASHLIST, sessions);
+static GCT_CONTAINER_DECLARATOR(tcp_session, sessions);
 
 /*
  * Session objects
  */
 
-OBJECT_CONSTRUCTOR(tcp_session_obj)
+struct net_tcp_session_s *tcp_session_obj_new()
 {
-  #warning
-  //  tcp_session_obj_init(obj);
+  struct net_tcp_session_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
 
   obj->route = NULL;
   tcp_segment_queue_init(&obj->unacked);
@@ -92,10 +92,10 @@ OBJECT_CONSTRUCTOR(tcp_session_obj)
   return obj;
 }
 
-OBJECT_DESTRUCTOR(tcp_session_obj)
+void tcp_session_obj_delete(struct net_tcp_session_s *obj)
 {
   if (obj->route != NULL)
-    route_obj_refdrop(obj->route);
+    route_obj_refdec(obj->route);
 
   mem_free(obj);
 }
@@ -117,7 +117,7 @@ static error_t		insert_segment(tcp_segment_queue_root_t	*root,
   if (e == NULL)
     err = !tcp_segment_queue_pushback(root, segment);
   else
-    err = !tcp_segment_queue_insert_pre(root, e, segment);
+    err = !tcp_segment_queue_insert_prev(root, e, segment);
 
   return err;
 }
@@ -126,16 +126,17 @@ static error_t		insert_segment(tcp_segment_queue_root_t	*root,
  * Close timeout.
  */
 
-static TIMER_CALLBACK(tcp_close_session)
+static KROUTINE_EXEC(tcp_close_session)
 {
-  struct net_tcp_session_s	*session = (struct net_tcp_session_s *)pv;
+  struct dev_timer_rq_s *rq = (void*)kr;
+  struct net_tcp_session_s	*session = (struct net_tcp_session_s *)rq->pvdata;
 
   tcp_session_remove(&sessions, session);
   tcp_session_obj_delete(session);
 
   net_debug("session deleted\n");
 
-  mem_free(timer);
+  mem_free(rq);
 }
 
 static void	tcp_close_timeout(struct net_tcp_session_s	*session)
@@ -148,8 +149,8 @@ static void	tcp_close_timeout(struct net_tcp_session_s	*session)
   if ((timer = mem_alloc(sizeof (struct dev_timer_rq_s), (mem_scope_sys))) == NULL)
     goto err;
   /* setup a timer */
-  timer->callback = tcp_close_session;
-  timer->pv = session;
+  kroutine_init(&timer->kr, tcp_close_session, KROUTINE_IMMEDIATE);
+  timer->pvdata = session;
   timer->delay = 2 * TCP_MSL;
   if (timer_add_event(&timer_ms, timer))
     goto err;
@@ -956,7 +957,7 @@ void				libtcp_push(struct net_packet_s	*packet,
 	    break;
 
 	next:
-	  packet_obj_refdrop(seg->u.recv.packet);
+	  packet_obj_refdec(seg->u.recv.packet);
 	  mem_free(seg);
 	}
 

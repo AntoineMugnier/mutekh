@@ -35,8 +35,7 @@
 #include <network/protos.h>
 
 #include <gct_platform.h>
-#include <gct_lock.h>
-#include <gpct/object_simple.h>
+#include <gct_lock_hexo_lock.h>
 
 
 /*

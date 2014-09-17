@@ -34,9 +34,11 @@
 #include <mutek/mem_alloc.h>
 
 #include <gct_platform.h>
-#include <gct_lock.h>
-#include <gpct/cont_hashlist.h>
-#include <gpct/object_refcount.h>
+#include <gct_lock_hexo_lock.h>
+#include <gct_atomic.h>
+
+#include <gct/container_chainedhash.h>
+#include <gct/refcount.h>
 
 struct net_if_s;
 struct net_packet_s;
@@ -238,7 +240,8 @@ struct					net_proto_desc_s
   size_t				pv_size;
 };
 
-OBJECT_TYPE(net_proto_obj, REFCOUNT, struct net_proto_s);
+#define GCT_CONTAINER_REFCOUNT_net_protos	net_proto_obj
+#define GCT_CONTAINER_ALGO_net_protos	        CHAINEDHASH
 
 /**
    @this is a protocol state.
@@ -250,28 +253,28 @@ struct					net_proto_s
   struct net_proto_pv_s			*pv;	//< private data 
   bool_t				initialized;
 
-  net_proto_obj_entry_t			obj_entry;
-  GCT_CONTAINER_ENTRY(HASHLIST)	list_entry;
+  GCT_REFCOUNT_ENTRY(obj_entry);
+  GCT_CONTAINER_ENTRY(net_protos, list_entry);
 };
 
-OBJECT_CONSTRUCTOR(net_proto_obj);
-OBJECT_DESTRUCTOR(net_proto_obj);
-OBJECT_FUNC(net_proto_obj, REFCOUNT, static inline, net_proto_obj, obj_entry);
+GCT_REFCOUNT(net_proto_obj, struct net_proto_s *, obj_entry);
+
+struct net_proto_s * net_proto_obj_new(const struct net_proto_desc_s *desc);
+void net_proto_obj_destroy(struct net_proto_s *obj);
 
 /*
  * Container type for protocols list.
  */
 
-#define CONTAINER_OBJ_net_protos	net_proto_obj
-GCT_CONTAINER_TYPES(net_protos, HASHLIST, struct net_proto_s, list_entry, 8);
+GCT_CONTAINER_TYPES(net_protos, struct net_proto_s *, list_entry, 8);
 GCT_CONTAINER_KEY_TYPES(net_protos, PTR, SCALAR, id);
 
 /*
  * Container functions.
  */
 
-GCT_CONTAINER_FCNS(net_protos, HASHLIST, static inline, net_protos, id);
-GCT_CONTAINER_KEY_FCNS(net_protos, HASHLIST, static inline, net_protos, id);
+GCT_CONTAINER_KEY_FCNS(net_protos, ASC, static inline, net_protos, id,
+                       init, destroy, lookup, lookup_next, clear, push, remove);
 
 /*
  * Foreach
@@ -291,13 +294,13 @@ GCT_CONTAINER_KEY_FCNS(net_protos, HASHLIST, static inline, net_protos, id);
 												\
 	__item = item;										\
 	item = net_protos_lookup_next((Protocols), item, (Id));					\
-	net_proto_obj_refdrop(__item);								\
+	net_proto_obj_refdec(__item);								\
       }												\
   }
 
 #define NET_FOREACH_PROTO_BREAK									\
   {												\
-    net_proto_obj_refdrop(item);								\
+    net_proto_obj_refdec(item);								\
     break;											\
   }
 

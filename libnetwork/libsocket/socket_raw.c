@@ -39,7 +39,7 @@
 
 #include <semaphore.h>
 
-static socket_table_root_t	sock_raw = GCT_CONTAINER_ROOT_INITIALIZER(socket_table, DLIST);
+static socket_table_root_t	sock_raw = GCT_CONTAINER_ROOT_INITIALIZER(socket_table);
 
 /*
  * Receive timeout callback.
@@ -150,7 +150,7 @@ static _BIND(bind_raw)
   if (!any)
     {
       /* look for address validity */
-      CONTAINER_FOREACH(net_if, HASHLIST, &net_interfaces,
+      GCT_FOREACH(net_if, &net_interfaces, item,
       {
 	interface = item;
 	NET_FOREACH_PROTO(&interface->protocols, id,
@@ -164,7 +164,7 @@ static _BIND(bind_raw)
 	});
 
 	if (addressing != NULL)
-	  CONTAINER_FOREACH_BREAK;
+	  GCT_FOREACH_BREAK;
       });
 
       if (interface == NULL || addressing == NULL)
@@ -336,11 +336,11 @@ static inline bool_t sendmsg_if(socket_t		fd,
   packet->stage--;
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, pv->proto);
 
-  packet_obj_refdrop(packet);
+  packet_obj_refdec(packet);
   return 1;
 
  error:
-  packet_obj_refdrop(packet);
+  packet_obj_refdec(packet);
   return 0;
 }
 
@@ -489,7 +489,7 @@ static _SENDMSG(sendmsg_raw)
 
   if (global_bcast)
     {
-      CONTAINER_FOREACH(net_if, HASHLIST, &net_interfaces,
+      GCT_FOREACH(net_if, &net_interfaces, item,
       {
 	interface = item;
 	NET_FOREACH_PROTO(&interface->protocols, dest.family,
@@ -510,13 +510,13 @@ static _SENDMSG(sendmsg_raw)
     }
 
   if (route != NULL && !pv->connected)
-    route_obj_refdrop(route);
+    route_obj_refdec(route);
 
   return n;
 
  error:
   if (route != NULL && pv->connected)
-    route_obj_refdrop(route);
+    route_obj_refdec(route);
 
   return -1;
 }
@@ -556,7 +556,7 @@ static _RECVMSG(recvmsg_raw)
     {
       if (socket_addr_in(fd, &packet->sADDR, addr, &message->msg_namelen, htons(pv->proto)))
 	{
-	  packet_obj_refdrop(packet);
+	  packet_obj_refdec(packet);
 	  return -1;
 	}
     }
@@ -589,7 +589,7 @@ static _RECVMSG(recvmsg_raw)
     }
 
   /* drop the packet */
-  packet_obj_refdrop(packet);
+  packet_obj_refdec(packet);
 
   return sz;
 }
@@ -763,10 +763,10 @@ static _SHUTDOWN(shutdown_raw)
 	  packet_queue_lock_destroy(&pv->recv_q);
 
 	  if (pv->connected)
-	    route_obj_refdrop(pv->route);
+	    route_obj_refdec(pv->route);
 
 	  if (pv->local_interface != NULL)
-	    net_if_obj_refdrop(pv->local_interface);
+	    net_if_obj_refdec(pv->local_interface);
 
 	  mem_free(pv);
 	  mem_free(fd);
@@ -831,19 +831,19 @@ void		sock_raw_signal(struct net_if_s		*interface,
     }
 
   /* deliver packet to all sockets matching interface and protocol id */
-  CONTAINER_FOREACH(socket_table, DLIST, &sock_raw,
+  GCT_FOREACH(socket_table, &sock_raw, item,
   {
     struct socket_raw_pv_s	*pv = (struct socket_raw_pv_s *)item->pv;
 
     if (item->shutdown == SHUT_RD || item->shutdown == SHUT_RDWR)
-      CONTAINER_FOREACH_CONTINUE;
+      GCT_FOREACH_CONTINUE;
 
     if (pv->any || addressing->desc->f.addressing->matchaddr(addressing, &packet->tADDR, &pv->local, NULL) || pv->local_interface == interface)
       {
 	if (pv->proto == protocol || pv->proto == IPPROTO_RAW)
 	  {
 	    if (!item->broadcast && is_bcast)
-	      CONTAINER_FOREACH_CONTINUE;
+	      GCT_FOREACH_CONTINUE;
 
 	    /* do ICMP type filtering */
 	    if (protocol == IPPROTO_ICMP)
@@ -857,7 +857,7 @@ void		sock_raw_signal(struct net_if_s		*interface,
 
 		    icmp = (struct icmphdr *)nethdr->data;
 		    if (pv->icmp_mask & (1 << icmp->type))
-		      CONTAINER_FOREACH_CONTINUE;
+		      GCT_FOREACH_CONTINUE;
 		  }
 	      }
 

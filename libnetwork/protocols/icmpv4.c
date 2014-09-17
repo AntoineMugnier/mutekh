@@ -104,7 +104,7 @@ static inline void	icmp_echo(struct net_if_s	*interface,
   packet->stage--;
   /* send the packet to IP */
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_ICMP);
-  packet_obj_refdrop(packet);
+  packet_obj_refdec(packet);
 }
 
 
@@ -359,7 +359,7 @@ NET_ERRORMSG(icmp_errormsg)
     return ;
   if ((dest = icmp_preparepkt(interface, packet, offs + size, 0)) == NULL)
     {
-      packet_obj_refdrop(packet);
+      packet_obj_refdec(packet);
       return ;
     }
 
@@ -439,7 +439,7 @@ NET_ERRORMSG(icmp_errormsg)
   packet->stage--;
   /* send the packet to the interface */
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_ICMP);
-  packet_obj_refdrop(packet);
+  packet_obj_refdec(packet);
 
   va_end(va);
 }

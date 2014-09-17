@@ -42,7 +42,8 @@
 struct net_dispatch_s
 {
 	uint8_t                stack[CONFIG_NET_DISPATCH_STACK_SIZE];
-	struct sched_context_s context;
+	struct sched_context_s sched_context;
+	struct context_s       context;
 	struct sched_context_s *killer;
 	bool_t                 must_quit;
 
@@ -62,7 +63,7 @@ static CONTEXT_ENTRY(packet_dispatch_thread)
 	struct net_dispatch_s *dispatch = (struct net_dispatch_s *)param;
 	struct net_packet_s *packet;
 
-	net_if_obj_refnew(dispatch->interface);
+	net_if_obj_refinc(dispatch->interface);
 
 	cpu_interrupt_enable();
 
@@ -79,12 +80,12 @@ static CONTEXT_ENTRY(packet_dispatch_thread)
 		if ( packet != NULL ) {
 			net_debug("[%s] handling %p\n", dispatch->interface->name, packet);
 			if_pushpkt(dispatch->interface, packet);
-			packet_obj_refdrop(packet);
+			packet_obj_refdec(packet);
 		} else {
 			if (dispatch->must_quit) {
                 cpu_interrupt_disable();
                 lock_spin(&dispatch->kill_lock);
-				net_if_obj_refdrop(dispatch->interface);
+				net_if_obj_refdec(dispatch->interface);
 				sched_context_start(dispatch->killer);
 				sched_stop_unlock(&dispatch->kill_lock);
 			}
@@ -108,7 +109,7 @@ struct net_dispatch_s *network_dispatch_create(struct net_if_s *interface)
 	if ( dispatch == NULL )
 		return NULL;
 
-	dispatch->interface = net_if_obj_refnew(interface);
+	dispatch->interface = net_if_obj_refinc(interface);
 
 	net_debug("[%s] Creating dispatch thread, pv=%p\n", dispatch->interface->name, dispatch);
 
@@ -121,13 +122,13 @@ struct net_dispatch_s *network_dispatch_create(struct net_if_s *interface)
 	lock_init(&dispatch->kill_lock);
 
 	CPU_INTERRUPT_SAVESTATE_DISABLE;
-	context_init( &dispatch->context.context,
+	context_init( &dispatch->context,
 				  &dispatch->stack[0],
 				  &dispatch->stack[CONFIG_NET_DISPATCH_STACK_SIZE],
 				  packet_dispatch_thread,
 				  dispatch );
-	sched_context_init( &dispatch->context );
-	sched_context_start( &dispatch->context );
+	sched_context_init( &dispatch->sched_context, &dispatch->context );
+	sched_context_start( &dispatch->sched_context );
 	CPU_INTERRUPT_RESTORESTATE;
 
 	return dispatch;
@@ -149,7 +150,7 @@ void network_dispatch_kill(struct net_dispatch_s *dispatch)
 
 	packet_queue_destroy(&dispatch->queue);
 
-	net_if_obj_refdrop(dispatch->interface);
+	net_if_obj_refdec(dispatch->interface);
 
     lock_destroy(&dispatch->kill_lock);
 
@@ -159,7 +160,7 @@ void network_dispatch_kill(struct net_dispatch_s *dispatch)
 void network_dispatch_packet(struct net_dispatch_s *dispatch,
 			     struct net_packet_s *packet)
 {
-	packet_obj_refnew(packet);
+	packet_obj_refinc(packet);
 
 	dispatch_wakeup(dispatch, packet);
 }

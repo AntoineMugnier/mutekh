@@ -30,9 +30,9 @@
  * Protocol instance constructor
  */
 
-OBJECT_CONSTRUCTOR(net_proto_obj)
+struct net_proto_s * net_proto_obj_new(const struct net_proto_desc_s *desc)
 {
-  const struct net_proto_desc_s		*desc = va_arg(ap, const struct net_proto_desc_s *);
+  struct net_proto_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
 
   obj->desc = desc;
   obj->id = desc->id;
@@ -40,7 +40,10 @@ OBJECT_CONSTRUCTOR(net_proto_obj)
   if (desc->pv_size)
     {
       if ((obj->pv = mem_alloc(desc->pv_size, (mem_scope_context))) == NULL)
-	return -1;
+        {
+          mem_free(obj);
+          return NULL;
+        }
     }
   else
     obj->pv = NULL;
@@ -49,14 +52,14 @@ OBJECT_CONSTRUCTOR(net_proto_obj)
   netobj_new[NETWORK_PROFILING_PROTO]++;
 #endif
 
-  return 0;
+  return obj;
 }
 
 /*
  * Protocol instance destructor
  */
 
-OBJECT_DESTRUCTOR(net_proto_obj)
+void net_proto_obj_destroy(struct net_proto_s *obj)
 {
   if (obj->desc->destroyproto != NULL && obj->initialized)
     obj->desc->destroyproto(obj);
@@ -64,4 +67,6 @@ OBJECT_DESTRUCTOR(net_proto_obj)
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_del[NETWORK_PROFILING_PROTO]++;
 #endif
+
+  mem_free(obj);
 }

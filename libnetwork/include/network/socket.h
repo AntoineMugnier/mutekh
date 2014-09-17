@@ -164,8 +164,11 @@ struct			socket_api_s
  */
 
 #include <gct_platform.h>
-#include <gct_lock.h>
-#include <gpct/cont_dlist.h>
+#include <gct_lock_hexo_lock.h>
+#include <gct/container_dlist.h>
+
+#define GCT_CONTAINER_LOCK_socket_table	HEXO_LOCK
+#define GCT_CONTAINER_ALGO_socket_table	DLIST
 
 struct				socket_s
 {
@@ -176,13 +179,15 @@ struct				socket_s
   bool_t			broadcast;
   bool_t			keepalive;
   void				*pv;
+  dev_timer_delay_t             recv_timeout;
+  dev_timer_delay_t             send_timeout;
+  dev_timer_delay_t             linger;
 
-  GCT_CONTAINER_ENTRY(DLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(socket_table, list_entry);
 };
 
-#define CONTAINER_LOCK_socket_table	HEXO_LOCK
-GCT_CONTAINER_TYPES(socket_table, DLIST, struct socket_s, list_entry);
-GCT_CONTAINER_FCNS(socket_table, DLIST, static inline, socket_table);
+GCT_CONTAINER_TYPES(socket_table, struct socket_s *, list_entry);
+GCT_CONTAINER_FCNS(socket_table, static inline, socket_table);
 
 #include "socket_hexo.h"
 
