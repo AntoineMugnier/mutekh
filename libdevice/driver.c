@@ -42,6 +42,7 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
   struct device_accessor_s *a = accessor;
   const struct driver_class_s *c;
   uint_fast8_t i;
+  error_t err = -ENOTSUP;
 
   if (dev->status != DEVICE_DRIVER_INIT_DONE)
     return -EAGAIN;
@@ -54,12 +55,15 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
           a->dev = dev;
           a->api = c;
           a->number = number;
-          dev->ref_count++;
-          return 0;
+          err = 0;
+          if (dev->drv->f_use == NULL ||
+            !(err = dev->drv->f_use(accessor, DEV_USE_GET_ACCESSOR)))
+            dev->ref_count++;
+          else
+            a->dev = NULL;
+          return err;
         }
     }
-
-  a->dev = NULL;
 
   return -ENOTSUP;
 }
@@ -67,10 +71,13 @@ error_t device_get_accessor(void *accessor, struct device_s *dev,
 void device_put_accessor(void *accessor)
 {
   struct device_accessor_s *a = accessor;
+  struct device_s *dev = a->dev;
 
-  assert(a->dev && a->dev->ref_count);
+  assert(dev && dev->ref_count);
 
-  a->dev->ref_count--;
+  dev->ref_count--;
+  if (dev->drv->f_use != NULL)
+    dev->drv->f_use(accessor, DEV_USE_PUT_ACCESSOR);
   a->dev = NULL;
   a->api = NULL;
 }

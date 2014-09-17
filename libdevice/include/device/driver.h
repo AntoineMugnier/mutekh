@@ -221,25 +221,42 @@ typedef DEV_INIT(dev_init_t);
 */
 typedef DEV_CLEANUP(dev_cleanup_t);
 
+/** @This specifies device use and start/stop operations. @see dev_use_t */
+enum dev_use_op_e
+{
+  DEV_USE_GET_ACCESSOR,
+  DEV_USE_PUT_ACCESSOR,
+  DEV_USE_START,
+  DEV_USE_STOP,
+};
 
+struct device_accessor_s;
 
-/** Common device class ioctl() function template. */
-#define DEV_IOCTL(n) void (n) (struct device_s *dev, uint_fast8_t id, void *param)
-
+/** Common device class use() function template. */
+#define DEV_USE(n) error_t (n) (struct device_accessor_s *acc,  \
+                                enum dev_use_op_e op)
 
 /**
-   @This is device ioctl() function type. This function may be used to
-   tweak device specific features which are not available using driver
-   class API. This function should be used to access optional device
-   features only, relying on this function for operations which are
-   mandatory to make the device work indicates design error or wrong
-   driver class usage.
+   @This is called when the usage status of a device changes.
 
-   @param dev pointer to device descriptor
-   @param id device specific operation id
-   @param param device specific operation parameters
+   This function is optional and may not be provided by all device
+   drivers.
+
+   When the @ref device_get_accessor function is called, this function
+   is called with the @tt op parameter set to @ref
+   DEV_USE_GET_ACCESSOR and the @tt acc parameter pointing to the
+   initialized accessor. The function may return an error code in
+   order to make the process fail. The device use count is updated
+   after this function call.
+
+   When the @ref device_put_accessor function is called, this function
+   is called with the @tt op parameter set to @ref DEV_USE_PUT_ACCESSOR.
+
+   The @ref device_start and @ref device_stop function call this
+   function with the @ref DEV_USE_START and @ref DEV_USE_STOP
+   operation values.
 */
-typedef DEV_IOCTL(dev_ioctl_t);
+typedef DEV_USE(dev_use_t);
 
 
 
@@ -253,10 +270,9 @@ struct driver_s
   /** driver description string */
   const char *desc;
 
-  /** driver initialization function */
   dev_init_t	*f_init;
-  /** driver cleanup function */
   dev_cleanup_t	*f_cleanup;
+  dev_use_t     *f_use;
 
   /** NULL terminated array of pointers to driver classes structs */
   const void	*classes[];
@@ -397,6 +413,36 @@ static inline void device_init_accessor(void *accessor)
 {
   struct device_accessor_s *a = accessor;
   a->dev = NULL;
+}
+
+/** @This starts the device operation.
+
+    Depending on the device class, the device operation may be started
+    and stopped by submitting requests. This function can be used when
+    the device active state needs to be changed explicitly. A counter
+    must be used internally to match the number of calls with the @ref
+    device_stop function.
+
+    @see device_stop.
+*/
+static inline error_t device_start(void *accessor)
+{
+  struct device_accessor_s *acc = accessor;
+  dev_use_t *use = acc->dev->drv->f_use;
+  return use != NULL ? use(accessor, DEV_USE_START) : -ENOTSUP;
+}
+
+/** @This stops the device operation. This function return 0 if the
+    device has actually been stopped. If the internal use count has
+    not reached zero, @tt -EBUSY is returned.
+
+    @see device_start.
+*/
+static inline error_t device_stop(void *accessor)
+{
+  struct device_accessor_s *acc = accessor;
+  dev_use_t *use = acc->dev->drv->f_use;
+  return use != NULL ? use(accessor, DEV_USE_STOP) : -ENOTSUP;
 }
 
 /**
