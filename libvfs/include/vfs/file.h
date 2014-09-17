@@ -48,7 +48,6 @@
    filesystem is responsible for implementing this flag.
    
    @end section
-
  */
 
 #ifndef _VFS_FILE_H_

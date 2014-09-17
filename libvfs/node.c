@@ -24,8 +24,8 @@
 #include <vfs/name.h>
 #include <vfs/fs.h>
 #include "vfs-private.h"
-#include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+#include <mutek/mem_alloc.h>
 
 #include <string.h>
 

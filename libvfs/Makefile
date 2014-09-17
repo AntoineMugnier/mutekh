@@ -4,8 +4,8 @@ DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 objs = \
 	file.o \
 	node.o \
-        path.o \
-        name.o \
+    path.o \
+    name.o \
 	fs.o
 
 doc_headers = vfs/file.h vfs/fs.h \

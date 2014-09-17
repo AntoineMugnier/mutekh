@@ -19,12 +19,11 @@
   Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
-#include <vfs/fs.h>
-
-#include "vfs-private.h"
-
-#include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
+#include <mutek/mem_alloc.h>
+
+#include <vfs/fs.h>
+#include "vfs-private.h"
 
 error_t vfs_fs_init(struct vfs_fs_s *fs, const struct vfs_fs_ops_s *ops, bool_t ro)
 {
