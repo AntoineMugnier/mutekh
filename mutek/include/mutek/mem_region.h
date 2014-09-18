@@ -32,14 +32,14 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/memory_allocator.h>
 
-#define GCT_CONTAINER_LOCK_region_list HEXO_LOCK_IRQ
-#define GCT_CONTAINER_ALGO_region_list SLIST
-
 #include <gct_platform.h>
 #include <gct_lock_hexo_lock_irq.h>
 #include <gct/container_slist.h>
 
 enum mem_scope_e;
+
+#define GCT_CONTAINER_LOCK_region_list HEXO_LOCK_IRQ
+#define GCT_CONTAINER_ALGO_region_list SLIST
 
 struct mem_region_s
 {
