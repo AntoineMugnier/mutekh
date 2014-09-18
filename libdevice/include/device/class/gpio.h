@@ -57,8 +57,8 @@ typedef uint8_t gpio_width_t;
 typedef uint16_t gpio_width_t;
 #endif
 
-static const uint8_t dev_gpio_mask1[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
-static const uint8_t dev_gpio_mask0[8] = { };
+extern const uint8_t dev_gpio_mask1[8];
+extern const uint8_t dev_gpio_mask0[8];
 
 /** @see devgpio_set_mode_t */
 #define DEVGPIO_SET_MODE(n) error_t (n)(const struct device_gpio_s *gpio, \
@@ -70,9 +70,9 @@ static const uint8_t dev_gpio_mask0[8] = { };
    The @tt mask parameter is a bit vector which specifies IOs that
    will have their mode changed. The lsb of the first byte in the
    vector specifies the mode change for the IO at index @tt
-   io_first. The size of the @tt mask array must be aligned on a 64
-   bits boundary. Padding bits at the end of the mask vectors can have
-   any value.
+   io_first. The size of the @tt mask array must be a multiple of 8
+   bytes.  Padding bits at the end of the mask vectors can have any
+   value.
 
    When a single IO needs to be modified, the @tt io_first and @tt
    io_last parameters must be equal and the predefined vector @ref
@@ -103,8 +103,8 @@ typedef DEVGPIO_SET_MODE(devgpio_set_mode_t);
 
    The lsb of the first byte in the @tt set_mask and @tt clear_mask
    vectors specify the value change for the IO at index @tt
-   io_first. The size of the bit vector arrays must be aligned on a 64
-   bits boundary. Padding bits at the end of the mask vectors can have
+   io_first. The size of the bit vector arrays must be be a multiple
+   of 8 bytes. Padding bits at the end of the mask vectors can have
    any value.
 
    When a single IO needs to be modified, the @tt io_first and @tt
@@ -125,9 +125,8 @@ typedef DEVGPIO_SET_OUTPUT(devgpio_set_output_t);
    The lsb of the first byte in the @tt data vector contains the value
    of the IO at index @tt io_first.
 
-   The size of the @tt data array must be aligned on a 64 bits
-   boundary. The values of the unused bits at the end of the array are
-   undefined.
+   The size of the @tt data array must be a multiple of 8 bytes. The
+   values of the unused bits at the end of the array are undefined.
 */
 typedef DEVGPIO_GET_INPUT(devgpio_get_input_t);
 
