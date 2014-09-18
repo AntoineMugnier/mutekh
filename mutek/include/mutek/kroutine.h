@@ -70,6 +70,8 @@ typedef KROUTINE_EXEC(kroutine_exec_t);
 /** @This specify kroutine defered execution policies. */
 enum kroutine_policy_e
 {
+  KROUTINE_NONE,
+
   /** This policy makes the routine execute immediately when the @ref
       kroutine_exec function is called. The value of the @tt
       interruptible parameter is passed directly to the @ref
@@ -247,6 +249,8 @@ static inline bool_t kroutine_exec(struct kroutine_s *kr, bool_t interruptible)
 
   switch (kr->policy)
     {
+    case KROUTINE_NONE:
+      return 0;
 #ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
     case KROUTINE_TRIGGER:
       r = !atomic_compare_and_swap(&kr->state, 0, 1);
