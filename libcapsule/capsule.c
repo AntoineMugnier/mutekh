@@ -40,20 +40,23 @@
 
 static bool_t probes_blocked = 0;
 
-#define CONTAINER_LOCK_group_queue HEXO_LOCK
+#define GCT_CONTAINER_LOCK_group_queue HEXO_LOCK
+#define GCT_CONTAINER_ALGO_group_queue SLIST
 
-GCT_CONTAINER_TYPES(group_queue, SLIST,
 struct capsule_group_s
 {
-    GCT_CONTAINER_ENTRY(SLIST) list_entry;
+    GCT_CONTAINER_ENTRY(group_queue, list_entry);
 
     struct capsule_group_s *parent;
     struct semaphore_s join;
-}, list_entry);
+};
+
+GCT_CONTAINER_TYPES(group_queue, struct capsule_group_s *, list_entry);
 
 struct cpu_ctxt_s
 {
-    struct sched_context_s context;
+    struct sched_context_s sched_context;
+    struct context_s context;
 
     char stack[CAP_STACK_SIZE];
 
@@ -62,8 +65,10 @@ struct cpu_ctxt_s
     size_t probes;
 };
 
-GCT_CONTAINER_FCNS(capsule_queue, SLIST, static inline, capsule_queue, list_entry);
-GCT_CONTAINER_FCNS(group_queue, SLIST, static inline, group_queue, list_entry);
+GCT_CONTAINER_FCNS(capsule_queue, static inline, capsule_queue,
+                   init, destroy, push, pop, count);
+GCT_CONTAINER_FCNS(group_queue, static inline, group_queue,
+                   init, destroy, push, pop);
 
 int_fast8_t main(int_fast8_t, char**);
 
@@ -228,15 +233,15 @@ void app_start()
                 __FUNCTION__, i, device_get_cpu_count(),
                 ctx);
 
-        context_init( &ctx->context.context,
+        context_init( &ctx->context,
                       ctx->stack,
                       ctx->stack + CAP_STACK_SIZE,
                       capsule_sys_runner,
                       ctx );
 
-        sched_context_init( &ctx->context );
-        sched_affinity_single( &ctx->context, i );
-        sched_context_start( &ctx->context );
+        sched_context_init( &ctx->sched_context, &ctx->context );
+        sched_affinity_single( &ctx->sched_context, i );
+        sched_context_start( &ctx->sched_context );
 
 
         group_queue_push(&free_groups, mem_alloc(sizeof(struct capsule_group_s), mem_scope_sys));
