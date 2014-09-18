@@ -147,7 +147,7 @@ static DEV_IRQ_EP_PROCESS(gptimer_irq_single)
 
     for (i = 0; i < pv->t_count; i++)
       {
-        if (gptimer_irq_process(pv, i))
+        if (gptimer_irq_process(dev, i))
           done = 0;
       }
   } while (!done);
@@ -163,7 +163,7 @@ static DEV_IRQ_EP_PROCESS(gptimer_irq_separate)
 
   lock_spin(&dev->lock);
 
-  while (gptimer_irq_process(pv, number))
+  while (gptimer_irq_process(dev, number))
     ;
 
   lock_release(&dev->lock);
