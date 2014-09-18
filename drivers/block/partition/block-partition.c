@@ -31,7 +31,7 @@
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_array.h>
 
 #include <stdlib.h>
@@ -117,8 +117,8 @@ struct block_partition_list_s
   uint8_t		type;
 };
 
-CONTAINER_TYPE(block_partition_list, ARRAY, struct block_partition_list_s, CONFIG_DRIVER_BLOCK_PARTITION_MAXCOUNT);
-CONTAINER_FUNC(block_partition_list, ARRAY, static inline, block_partition_list);
+GCT_CONTAINER_TYPES(block_partition_list, ARRAY, struct block_partition_list_s, CONFIG_DRIVER_BLOCK_PARTITION_MAXCOUNT);
+GCT_CONTAINER_FCNS(block_partition_list, ARRAY, static inline, block_partition_list);
 
 static void block_partition_parse_extended(struct device_s *parent,
 					   dev_block_lba_t last,

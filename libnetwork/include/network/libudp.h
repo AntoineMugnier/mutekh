@@ -38,10 +38,9 @@
 #include <netinet/udp.h>
 #include <network/route.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_hashlist.h>
-#include <gpct/object_simple.h>
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
+#include <gct/container_chainedhash.h>
 
 /*
  * Temporary ports boundaries.
@@ -96,8 +95,8 @@ typedef UDP_CALLBACK(udp_callback_t);
 
 typedef UDP_ERROR_CALLBACK(udp_error_callback_t);
 
-/** Connection descriptors container. */
-OBJECT_TYPE(udp_desc_obj, SIMPLE, struct net_udp_desc_s);
+#define GCT_CONTAINER_LOCK_udp_desc	HEXO_LOCK
+#define GCT_CONTAINER_ALGO_udp_desc	CHAINEDHASH
 
 /**
    LibUDP internal state
@@ -124,17 +123,15 @@ struct					net_udp_desc_s
   /** options */
   bool_t				checksum;
 
-  udp_desc_obj_entry_t			obj_entry;
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(udp_desc, list_entry);
 };
 
-OBJECT_CONSTRUCTOR(udp_desc_obj);
-OBJECT_DESTRUCTOR(udp_desc_obj);
-OBJECT_FUNC(udp_desc_obj, SIMPLE, static inline, udp_desc_obj, obj_entry);
+struct net_udp_desc_s *udp_desc_obj_new();
 
-#define CONTAINER_LOCK_udp_desc	HEXO_SPIN
-CONTAINER_TYPE(udp_desc, HASHLIST, struct net_udp_desc_s, list_entry, 64);
-CONTAINER_KEY_TYPE(udp_desc, PTR, SCALAR, port);
+void udp_desc_obj_delete(struct net_udp_desc_s *);
+
+GCT_CONTAINER_TYPES(udp_desc, struct net_udp_desc_s *, list_entry, 64);
+GCT_CONTAINER_KEY_TYPES(udp_desc, PTR, SCALAR, port);
 
 /*
  * Prototypes

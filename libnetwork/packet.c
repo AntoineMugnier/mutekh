@@ -22,14 +22,15 @@
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
 
 #include <mutek/semaphore.h>
 
 #include <network/packet.h>
 #include <network/protos.h>
 #include <network/if.h>
+#include <mutek/printk.h>
 
 #ifdef CONFIG_NETWORK_PROFILING
 uint_fast32_t	netobj_new[NETWORK_PROFILING_NB_OBJS] = { 0, 0, 0 };
@@ -40,8 +41,10 @@ uint_fast32_t	netobj_del[NETWORK_PROFILING_NB_OBJS] = { 0, 0, 0 };
  * The packet object constructor.
  */
 
-OBJECT_CONSTRUCTOR(packet_obj)
+struct net_packet_s * packet_obj_new()
 {
+  struct net_packet_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
+
   memset(obj->header, 0, sizeof (obj->header));
   obj->parent = NULL;
   obj->stage = 0;
@@ -51,18 +54,18 @@ OBJECT_CONSTRUCTOR(packet_obj)
   netobj_new[NETWORK_PROFILING_PACKET]++;
 #endif
 
-  return 0;
+  return obj;
 }
 
 /*
  * The packet object destructor.
  */
 
-OBJECT_DESTRUCTOR(packet_obj)
+void packet_obj_destroy(struct net_packet_s *obj)
 {
   /* if the packet refers to another packet, decrement the ref count */
   if (obj->parent)
-    packet_obj_refdrop(obj->parent);
+    packet_obj_refdec(obj->parent);
 
   /* if the packet has data, free it */
   if (obj->packet)
@@ -71,6 +74,8 @@ OBJECT_DESTRUCTOR(packet_obj)
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_del[NETWORK_PROFILING_PACKET]++;
 #endif
+
+  mem_free(obj);
 }
 
 /*
@@ -150,7 +155,7 @@ uint16_t		packet_memcpy(void		*dst,
 
 struct net_packet_s		*packet_dup(struct net_packet_s	*orig)
 {
-  packet_obj_refnew(orig);
+  packet_obj_refinc(orig);
   return orig; /* XXX */
 }
 
@@ -158,8 +163,9 @@ struct net_packet_s		*packet_dup(struct net_packet_s	*orig)
  * packet queue functions.
  */
 
-CONTAINER_FUNC_NOLOCK(packet_queue, DLIST, inline, packet_queue);
-CONTAINER_FUNC_LOCK(packet_queue, DLIST, inline, packet_queue_lock, HEXO_SPIN_IRQ);
+GCT_CONTAINER_NOLOCK_FCNS(packet_queue, inline, packet_queue,
+                          init, destroy, pop, pushback);
+GCT_CONTAINER_FCNS(packet_queue, inline, packet_queue_lock);
 
 #ifdef CONFIG_NETWORK_PROFILING
 /*

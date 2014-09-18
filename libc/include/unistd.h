@@ -36,6 +36,13 @@ C_HEADER_BEGIN
 #include <hexo/error.h>
 #include <mutek/fileops.h>
 
+#ifdef CONFIG_LIBC_VFS
+#include <vfs/node.h>
+
+extern struct vfs_node_s *libc_vfs_root;
+extern struct vfs_node_s *libc_vfs_cwd;
+#endif
+
 #define PATH_MAX 512
 
 typedef int_fast8_t fd_t;
@@ -58,10 +65,10 @@ enum open_flags_e
     O_APPEND	= 0x40,
   };
 
-config_depend_and2(CONFIG_LIBC_UNIXFD, CONFIG_VFS)
+config_depend_and2(CONFIG_LIBC_UNIXFD, CONFIG_LIBC_VFS)
 fd_t creat(const char *pathname, mode_t mode);
 
-config_depend_and2(CONFIG_LIBC_UNIXFD, CONFIG_VFS)
+config_depend_and2(CONFIG_LIBC_UNIXFD, CONFIG_LIBC_VFS)
 fd_t open(const char *pathname, enum open_flags_e flags, /* mode_t mode */...);
 
 config_depend(CONFIG_LIBC_UNIXFD)
@@ -88,10 +95,10 @@ typedef uint_fast32_t blkcnt_t;
 
 #include <sys/stat.h>
 
-config_depend(CONFIG_VFS)
+config_depend(CONFIG_LIBC_VFS)
 error_t stat(const char *path, struct stat *buf);
 
-config_depend(CONFIG_VFS)
+config_depend(CONFIG_LIBC_VFS)
 error_t lstat(const char *path, struct stat *buf);
 
 enum access_perm_e
@@ -102,15 +109,15 @@ enum access_perm_e
     F_OK,               /* Test for existence.  */
   };
 
-config_depend(CONFIG_VFS)
+config_depend(CONFIG_LIBC_VFS)
 error_t access(const char *pathname, enum access_perm_e mode);
 
 /* ************************************************** */
 
-config_depend(CONFIG_VFS)
+config_depend(CONFIG_LIBC_VFS)
 error_t remove(const char *pathname);
 
-config_depend(CONFIG_VFS)
+config_depend(CONFIG_LIBC_VFS)
 error_t mkdir(const char *pathname, mode_t mode);
 
 /* ************************************************** */

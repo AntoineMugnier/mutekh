@@ -20,15 +20,18 @@
 
 */
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_array.h>
+#include <gct_platform.h>
+#include <gct/container_array.h>
 
 #include <unistd.h>
 #include <mutek/fileops.h>
 #include <mutek/console.h>
 
-#ifdef CONFIG_VFS
-#include <vfs/vfs.h>
+#ifdef CONFIG_LIBC_VFS
+#include <vfs/path.h>
+
+struct vfs_node_s *libc_vfs_root = NULL;
+struct vfs_node_s *libc_vfs_cwd = NULL;
 #endif
 
 /* **********************************************************************
@@ -43,13 +46,15 @@ struct fd_entry_s
   void *hndl;
 };
 
-CONTAINER_TYPE(fdarray, ARRAY, struct fd_entry_s, CONFIG_LIBC_MAX_FD)
-CONTAINER_FUNC(fdarray, ARRAY, static, fdarray);
+#define GCT_CONTAINER_ALGO_fdarray ARRAY
+
+GCT_CONTAINER_TYPES(fdarray, struct fd_entry_s, CONFIG_LIBC_MAX_FD)
+GCT_CONTAINER_FCNS(fdarray, static, fdarray);
 
 /* This removes a tedious warning... */
 #define gpct_lock_CONTAINER_LOCK_fdarray_initializer {}
 
-static fdarray_root_t fd_array = CONTAINER_ROOT_INITIALIZER(fdarray, ARRAY);
+static fdarray_root_t fd_array = GCT_CONTAINER_ROOT_INITIALIZER(fdarray, ARRAY);
 
 static fd_t fd_new(fdarray_root_t *fda)
 {
@@ -106,7 +111,7 @@ void libc_unixfd_initsmp()
   assert(fd == 2);
 }
 
-# if defined(CONFIG_VFS)
+# if defined(CONFIG_LIBC_VFS)
 
 inline fd_t creat(const char *pathname, mode_t mode)
 {
@@ -152,8 +157,8 @@ fd_t open(const char *pathname, enum open_flags_e flags, ...)
     }
 
   struct vfs_file_s *hndl;
-  if (vfs_open(vfs_get_root(), vfs_get_cwd(),
-			   pathname, flags_to_vfs(flags), &hndl))
+  if (vfs_open(lib_vfs_root, libc_vfs_cwd,
+	       pathname, flags_to_vfs(flags), &hndl))
     {
       fd_free(&fd_array, e);
       return -1;
@@ -164,7 +169,7 @@ fd_t open(const char *pathname, enum open_flags_e flags, ...)
   return fd;
 }
 
-# endif /* CONFIG_VFS */
+# endif /* CONFIG_LIBC_VFS */
 
 off_t lseek(fd_t fd, off_t offset, enum seek_whence_e whence)
 {
@@ -209,14 +214,13 @@ error_t close(fd_t fd)
                   VFS operations
    ********************************************************************** */
 
-#if defined(CONFIG_VFS)
+#if defined(CONFIG_LIBS_VFS)
 
 error_t stat(const char *path, struct stat *st)
 {
   struct vfs_stat_s vst;
 
-  if (vfs_stat(vfs_get_root(), vfs_get_cwd(),
-			   path, &vst))
+  if (vfs_stat(libc_vfs_root, libc_vfs_cwd, path, &vst))
     return -1;
 
   memset(st, 0, sizeof(*st));
@@ -246,17 +250,17 @@ error_t access(const char *pathname, enum access_perm_e mode)
 
 error_t remove(const char *pathname)
 {
-    return vfs_unlink(vfs_get_root(), vfs_get_cwd(), pathname);
+    return vfs_unlink(libc_vfs_root, libc_vfs_cwd, pathname);
 }
 
 error_t mkdir(const char *pathname, mode_t mode)
 {
     struct vfs_node_s *node = NULL;
-    error_t err = vfs_create(vfs_get_root(), vfs_get_cwd(), pathname, VFS_NODE_DIR, &node);
+    error_t err = vfs_create(libc_vfs_root, libc_vfs_cwd, pathname, VFS_NODE_DIR, &node);
     if ( err == 0 )
-        vfs_node_refdrop(node);
+        vfs_node_refdec(node);
     return err;
 }
 
-#endif /* CONFIG_VFS */
+#endif /* CONFIG_LIBC_VFS */
 

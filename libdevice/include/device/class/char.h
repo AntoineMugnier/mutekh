@@ -31,8 +31,8 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
+#include <gct_platform.h>
+#include <gct/container_clist.h>
 
 #include <device/driver.h>
 
@@ -64,7 +64,8 @@ enum dev_char_rq_type_e
     DEV_CHAR_READ, DEV_CHAR_WRITE,
   };
 
-CONTAINER_TYPE(dev_char_queue, CLIST,
+#define GCT_CONTAINER_ALGO_dev_char_queue CLIST
+
 struct dev_char_rq_s
 {
   enum dev_char_rq_type_e	type;           //< request type
@@ -78,10 +79,14 @@ struct dev_char_rq_s
 
   const struct device_char_s    *cdev;          //< associated character device
   void				*drvdata;       //< driver private data
-  dev_char_queue_entry_t	queue_entry;    //< used by driver to enqueue requests
-}, queue_entry);
 
-CONTAINER_FUNC(dev_char_queue, CLIST, static inline, dev_char_queue);
+  GCT_CONTAINER_ENTRY           (dev_char_queue, queue_entry);    //< used by driver to enqueue requests
+};
+
+GCT_CONTAINER_TYPES(dev_char_queue, struct dev_char_rq_s *, queue_entry)
+
+GCT_CONTAINER_FCNS(dev_char_queue, static inline, dev_char_queue,
+                   init, destroy, isempty, pushback, pop, head, remove);
 
 
 /** Char device class @ref devchar_request_t function template. */

@@ -28,8 +28,8 @@
 #include <device/class/char.h>
 #include <device/irq.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
+#include <gct_platform.h>
+#include <gct/container_ring.h>
 
 #define APBUART_REG_DATA	0
 #define APBUART_REG_STATUS	4
@@ -56,8 +56,11 @@
 
 /**************************************************************/
 
-CONTAINER_TYPE(uart_fifo, RING, uint8_t, 32);
-CONTAINER_FUNC(uart_fifo, RING, static inline, uart_fifo);
+#define GCT_CONTAINER_ALGO_uart_fifo RING
+
+GCT_CONTAINER_TYPES(uart_fifo, uint8_t, 32);
+GCT_CONTAINER_FCNS(uart_fifo, static inline, uart_fifo,
+                   init, destroy, isempty, pop, pop_array, pushback, pushback_array);
 
 struct gaisler_apbuart_context_s
 {

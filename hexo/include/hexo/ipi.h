@@ -33,10 +33,10 @@
 
 C_HEADER_BEGIN
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_dlist.h>
-#include <gpct/cont_slist.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
+#include <gct/container_dlist.h>
+#include <gct/container_slist.h>
 
 #include "error.h"
 #include "local.h"
@@ -46,26 +46,35 @@ C_HEADER_BEGIN
 
 typedef IPI_MSG_FUNC(ipi_msg_func_t);
 
-#define CONTAINER_LOCK_ipi_queue HEXO_SPIN
+#define GCT_CONTAINER_ALGO_idle_cpu_queue SLIST
+#define GCT_CONTAINER_ORPHAN_idle_cpu_queue
 
-CONTAINER_TYPE(ipi_queue, DLIST,
+#define GCT_CONTAINER_LOCK_ipi_queue HEXO_LOCK
+#define GCT_CONTAINER_ALGO_ipi_queue DLIST
+
 struct ipi_request_s
 {
   ipi_msg_func_t *func;
   void *priv;
-  ipi_queue_entry_t queue_entry;
-}, queue_entry);
+
+  GCT_CONTAINER_ENTRY(ipi_queue, queue_entry);
+};
+
+GCT_CONTAINER_TYPES(ipi_queue, struct ipi_request_s *, queue_entry);
 
 struct ipi_endpoint_s
 {
     struct device_s *icu_dev;
     void *priv;
     ipi_queue_root_t ipi_fifo;
-    CONTAINER_ENTRY_TYPE(SLIST) idle_cpu_queue_list_entry;
+    GCT_CONTAINER_ENTRY(idle_cpu_queue, list_entry);
 };
 
-CONTAINER_FUNC(ipi_queue, DLIST, static inline, ipi_queue);
-CONTAINER_FUNC_NOLOCK(ipi_queue, DLIST, static inline, ipi_queue_nolock);
+GCT_CONTAINER_FCNS(ipi_queue, static inline, ipi_queue,
+                   init, destroy, pushback, pop, wrlock, unlock);
+
+GCT_CONTAINER_NOLOCK_FCNS(ipi_queue, static inline, ipi_queue_nolock,
+                          isempty);
 
 extern CPU_LOCAL struct ipi_endpoint_s ipi_endpoint;
 

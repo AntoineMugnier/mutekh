@@ -184,7 +184,7 @@ static DEVTIMER_REQUEST(soclib_timer_request)
       else
         {
           rq->drvdata = p;
-          dev_timer_queue_insert_ascend(&p->queue, rq);
+          dev_timer_queue_insert(&p->queue, rq);
 
           /* start timer if needed */
           if (p->start_count == 0)

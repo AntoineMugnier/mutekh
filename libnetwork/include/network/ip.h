@@ -32,10 +32,9 @@
 #include <network/protos.h>
 #include <network/route.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_hashlist.h>
-#include <gpct/object_simple.h>
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
+#include <gct/container_chainedhash.h>
 
 #include <device/class/timer.h>
 
@@ -59,7 +58,8 @@ struct ip_pseudoheader_s
  * Fragmentation structures.
  */
 
-OBJECT_TYPE(fragment_obj, SIMPLE, struct ip_packet_s);
+#define GCT_CONTAINER_LOCK_ip_packet	HEXO_LOCK
+#define GCT_CONTAINER_ALGO_ip_packet	CHAINEDHASH
 
 struct					ip_packet_s
 {
@@ -70,21 +70,20 @@ struct					ip_packet_s
   struct dev_timer_rq_s			timeout;
   packet_queue_root_t			packets;
 
-  fragment_obj_entry_t			obj_entry;
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(ip_packet, list_entry);
 };
 
-OBJECT_CONSTRUCTOR(fragment_obj);
-OBJECT_DESTRUCTOR(fragment_obj);
-OBJECT_FUNC(fragment_obj, SIMPLE, static inline, fragment_obj, obj_entry);
+struct ip_packet_s *fragment_obj_new(struct net_proto_s *addressing,
+                                     const uint8_t *id);
+
+void fragment_obj_delete(struct ip_packet_s *obj);
 
 /*
  * Fragments list.
  */
 
-#define CONTAINER_LOCK_ip_packet	HEXO_SPIN
-CONTAINER_TYPE(ip_packet, HASHLIST, struct ip_packet_s, list_entry, 64);
-CONTAINER_KEY_TYPE(ip_packet, PTR, BLOB, id, 6);
+GCT_CONTAINER_TYPES(ip_packet, struct ip_packet_s *, list_entry, 64);
+GCT_CONTAINER_KEY_TYPES(ip_packet, PTR, BLOB, id, 6);
 
 /*
  * IP private data.
@@ -113,9 +112,9 @@ NET_PREPAREPKT(ip_preparepkt);
 NET_SENDPKT(ip_send);
 NET_MATCHADDR(ip_matchaddr);
 NET_PSEUDOHEADER_CHECKSUM(ip_pseudoheader_checksum);
+
 void		ip_route(struct net_packet_s	*packet,
 			 struct net_route_s	*route);
-DEVTIMER_CALLBACK(ip_fragment_timeout);
 
 extern const struct net_proto_desc_s	ip_protocol;
 

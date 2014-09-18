@@ -33,13 +33,14 @@
 # warning TCP support is not enabled in configuration file
 #endif
 
+#include <device/class/timer.h>
+
 #include <network/protos.h>
 #include <network/packet.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_hashlist.h>
-#include <gpct/cont_clist.h>
-#include <gpct/object_simple.h>
+#include <gct_platform.h>
+#include <gct/container_chainedhash.h>
+#include <gct/container_clist.h>
 
 /*
  * A few constants
@@ -101,13 +102,16 @@ typedef TCP_ACCEPT(tcp_accept_t);
  * TCP segments and segment queues.
  */
 
+#define GCT_CONTAINER_LOCK_tcp_segment_queue HEXO_LOCK_IRQ
+#define GCT_CONTAINER_ALGO_tcp_segment_queue CLIST
+
 struct					net_tcp_seg_s
 {
   void					*data;
   size_t				size;
   uint_fast32_t				seq;
 
-  CONTAINER_ENTRY_TYPE(CLIST)		list_entry;
+  GCT_CONTAINER_ENTRY(tcp_segment_queue, list_entry);
 
   union
   {
@@ -124,14 +128,14 @@ struct					net_tcp_seg_s
   }					u;
 };
 
-#define CONTAINER_LOCK_tcp_segment_queue HEXO_SPIN_IRQ
-CONTAINER_TYPE(tcp_segment_queue, CLIST, struct net_tcp_seg_s, list_entry);
+GCT_CONTAINER_TYPES(tcp_segment_queue, struct net_tcp_seg_s *, list_entry);
 
 /*
  * This structure defines a TCP session.
  */
 
-OBJECT_TYPE(tcp_session_obj, SIMPLE, struct net_tcp_session_s);
+#define GCT_CONTAINER_LOCK_tcp_session NOLOCK
+#define GCT_CONTAINER_ALGO_tcp_session CHAINEDHASH
 
 struct					net_tcp_session_s
 {
@@ -176,20 +180,18 @@ struct					net_tcp_session_s
 
   uint_fast8_t				state;
 
-  tcp_session_obj_entry_t		obj_entry;
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(tcp_session, list_entry);
 };
 
-OBJECT_CONSTRUCTOR(tcp_session_obj);
-OBJECT_DESTRUCTOR(tcp_session_obj);
-OBJECT_FUNC(tcp_session_obj, SIMPLE, static inline, tcp_session_obj, obj_entry);
+struct net_tcp_session_s *tcp_session_obj_new();
+void tcp_session_obj_delete(struct net_tcp_session_s *obj);
 
 /*
  * Container types for tcp session list.
  */
 
-CONTAINER_TYPE(tcp_session, HASHLIST, struct net_tcp_session_s, list_entry, 64);
-CONTAINER_KEY_TYPE(tcp_session, PTR, AGGREGATE, remote);
+GCT_CONTAINER_TYPES(tcp_session, struct net_tcp_session_s *, list_entry, 64);
+GCT_CONTAINER_KEY_TYPES(tcp_session, PTR, AGGREGATE, remote);
 
 /*
  * Prototypes

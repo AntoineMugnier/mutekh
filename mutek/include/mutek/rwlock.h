@@ -56,8 +56,8 @@ struct rwlock_s
 # define RWLOCK_INITIALIZER                                     \
   {                                                             \
      .count = 0,                                                \
-     .wait_rd = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
-     .wait_wr = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),	\
+     .wait_rd = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
+     .wait_wr = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),	\
   }
 
 #else

@@ -39,11 +39,12 @@
 /**************************************************************/
 
 #if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
-
-CONTAINER_TYPE(uart_fifo, RING, uint8_t, 32);
-CONTAINER_FUNC(uart_fifo, RING, static inline, uart_fifo);
+#include <gct_platform.h>
+#include <gct/container_ring.h>
+#define GCT_CONTAINER_ALGO_uart_fifo RING
+GCT_CONTAINER_TYPES(uart_fifo, uint8_t, 32);
+GCT_CONTAINER_FCNS(uart_fifo, static inline, uart_fifo,
+                   init, destroy, isempty, pop, pop_array, pushback, pushback_array);
 #endif
 
 struct pl011uart_context_s

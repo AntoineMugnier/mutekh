@@ -38,14 +38,14 @@ struct dev_resource_table_s;
 
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <hexo/lock.h>
 
 typedef uint8_t address_space_id_t;
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
 
 #ifdef CONFIG_DEVICE_TREE
-# include <gpct/cont_clist.h>
+# include <gct/container_clist.h>
 #endif
 
 /** @This specifies the initialization status of a device */
@@ -85,10 +85,10 @@ enum device_flags_e
   DEVICE_FLAG_IGNORE = 32,
 };
 
-
+#define GCT_CONTAINER_ALGO_device_list CLIST
 
 #ifdef CONFIG_DEVICE_TREE
-CONTAINER_TYPE(device_list, CLIST,
+GCT_CONTAINER_TYPES(device_list,
 #endif
 /** device tree base node structure */
 struct device_node_s
@@ -106,9 +106,10 @@ struct device_node_s
 #endif
 }
 #ifdef CONFIG_DEVICE_TREE
-, list_entry);
+ *, list_entry);
 
-CONTAINER_PROTOTYPE(device_list, inline, device_list);
+GCT_CONTAINER_PROTOTYPES(device_list, , device_list,
+                         init, destroy, pushback, remove);
 #endif
 ;
 
@@ -219,7 +220,7 @@ struct device_alias_s
 #ifdef CONFIG_DEVICE_TREE
 /** @This iterates over child nodes of a device tree node. */
 # define DEVICE_NODE_FOREACH(root_, rvar_, ... /* loop body */)         \
-  CONTAINER_FOREACH_NOLOCK(device_list, CLIST, &(root_)->children, {    \
+  GCT_FOREACH_NOLOCK(device_list, &(root_)->children, item, { \
       struct device_node_s *rvar_ = item;                               \
       __VA_ARGS__;                                                      \
     })

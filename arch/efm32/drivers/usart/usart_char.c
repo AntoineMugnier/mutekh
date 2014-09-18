@@ -37,12 +37,13 @@
 
 #include <arch/efm32_usart.h>
 
-#if CONFIG_DRIVER_EFM32_USART_SWFIFO > 0
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
-
-CONTAINER_TYPE(uart_fifo, RING, uint8_t, CONFIG_DRIVER_EFM32_USART_SWFIFO);
-CONTAINER_FUNC(uart_fifo, RING, static inline, uart_fifo);
+#if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
+#include <gct_platform.h>
+#include <gct/container_ring.h>
+#define GCT_CONTAINER_ALGO_uart_fifo RING
+GCT_CONTAINER_TYPES(uart_fifo, uint8_t, CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO);
+GCT_CONTAINER_FCNS(uart_fifo, static inline, uart_fifo,
+                   init, destroy, isempty, pop, pop_array, pushback, pushback_array);
 #endif
 
 struct efm32_usart_context_s
@@ -51,7 +52,7 @@ struct efm32_usart_context_s
   /* tty input request queue and char fifo */
   dev_char_queue_root_t		read_q;
   dev_char_queue_root_t		write_q;
-#if CONFIG_DRIVER_EFM32_USART_SWFIFO > 0
+#if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
   uart_fifo_root_t		read_fifo;
 # ifdef CONFIG_DEVICE_IRQ
   uart_fifo_root_t		write_fifo;
@@ -86,7 +87,7 @@ static void efm32_usart_try_read(struct device_s *dev)
     {
       size_t size = 0;
 
-#if CONFIG_DRIVER_EFM32_USART_SWFIFO > 0
+#if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
       /* read as many characters as possible from driver fifo */
       size = uart_fifo_pop_array(&pv->read_fifo, rq->data, rq->size);
 #endif
@@ -123,7 +124,7 @@ static void efm32_usart_try_read(struct device_s *dev)
            & endian_le32(EFM32_USART_STATUS_RXDATAV))
     {
       __unused__ uint32_t c = endian_le32(cpu_mem_read_32(pv->addr + EFM32_USART_RXDATAX_ADDR));
-#if CONFIG_DRIVER_EFM32_USART_SWFIFO > 0
+#if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
       uart_fifo_pushback(&pv->read_fifo, c);
 #endif
     }
@@ -134,7 +135,7 @@ static void efm32_usart_try_write(struct device_s *dev)
   struct efm32_usart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
 
-#if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_EFM32_USART_SWFIFO > 0
+#if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
   /* try to write data from driver fifo to device */
   if (!uart_fifo_isempty(&pv->write_fifo) &&
          (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
@@ -149,7 +150,7 @@ static void efm32_usart_try_write(struct device_s *dev)
     {
       size_t size = 0;
 
-#if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_EFM32_USART_SWFIFO > 0
+#if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
       if (uart_fifo_isempty(&pv->write_fifo))
         {
           /* driver fifo is empty, try to write as many characters as
@@ -162,7 +163,7 @@ static void efm32_usart_try_write(struct device_s *dev)
                                endian_le32(rq->data[size++]));
             }
 
-#if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_EFM32_USART_SWFIFO > 0
+#if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
         }
 
       /* some characters were not written to the device buffer, push to driver fifo */
@@ -356,12 +357,12 @@ static DEV_INIT(efm32_usart_char_init)
   dev_char_queue_init(&pv->read_q);
   dev_char_queue_init(&pv->write_q);
 
-#if CONFIG_DRIVER_EFM32_USART_SWFIFO > 0
+#if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
   uart_fifo_init(&pv->read_fifo);
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-# if CONFIG_DRIVER_EFM32_USART_SWFIFO > 0
+# if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
   uart_fifo_init(&pv->write_fifo);
 # endif
 
@@ -403,7 +404,7 @@ static DEV_INIT(efm32_usart_char_init)
 
 #ifdef CONFIG_DEVICE_IRQ
  err_fifo:
-# if CONFIG_DRIVER_EFM32_USART_SWFIFO > 0
+# if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
   uart_fifo_destroy(&pv->write_fifo);
   uart_fifo_destroy(&pv->read_fifo);
 # endif
@@ -443,7 +444,7 @@ DEV_CLEANUP(efm32_usart_char_cleanup)
   dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
 #endif
 
-#if CONFIG_DRIVER_EFM32_USART_SWFIFO > 0
+#if CONFIG_DRIVER_EFM32_USART_CHAR_SWFIFO > 0
 # ifdef CONFIG_DEVICE_IRQ
   uart_fifo_destroy(&pv->write_fifo);
 # endif

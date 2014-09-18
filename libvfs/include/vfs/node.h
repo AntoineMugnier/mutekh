@@ -16,27 +16,174 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 /**
    @file
    @module {Virtual File System}
-   @short Core operations on file system nodes
+   @short Core file system node
  */
 
-#ifndef _VFS_OPS_H_
-#define _VFS_OPS_H_
+#ifndef _VFS_NODE_H_
+#define _VFS_NODE_H_
 
 #include <hexo/decls.h>
 
 C_HEADER_BEGIN
 
-#include <vfs/types.h>
-#include <vfs/fs.h>
+#include <vfs/defs.h>
 
+#include <mutek/semaphore.h>
 
-/* VFS operations */
+#include <gct/container_avl_p.h>
+#include <gct/refcount.h>
+
+#define GCT_CONTAINER_ALGO_vfs_dir_hash AVL_P
+
+enum vfs_node_type_e
+{
+    /** A directory node */
+    VFS_NODE_DIR,
+    /** A regular file node */
+    VFS_NODE_FILE,
+};
+
+/** @This initializes common fields of a VFS node object.
+ Name may be NULL or 0-sized. */
+error_t vfs_node_init(struct vfs_node_s *node,
+                      struct vfs_fs_s *fs,
+                      enum vfs_node_type_e type,
+                      const char *name, size_t name_size);
+
+/** @This frees resources allocated by @ref vfs_node_init. */
+void vfs_node_cleanup(struct vfs_node_s *node);
+
+/** @This calls the @ref vfs_node_s::close and the @ref
+    vfs_node_cleanup functions then free the node object. This is
+    called when the node refcount reaches 0. */
+void vfs_node_destroy(struct vfs_node_s *node);
+
+//#define CONTAINER_LOCK_vfs_dir_hash MUTEK_SEMAPHORE
+
+GCT_CONTAINER_TYPES    (vfs_dir_hash,
+/**  @this is a node in the VFS. */
+struct vfs_node_s
+{
+    /** File system the node is in */
+    struct vfs_fs_s *fs;
+
+    enum vfs_node_type_e type;
+
+    /** Name of the node in its parent directory structure.  Anonymous
+        (dandling) nodes should not have any name.  Any unused
+        characters in the name should be filled with @tt '\0' */
+    char name[CONFIG_VFS_NAMELEN];
+
+    /** @internal
+        Parent node.
+
+        Root has its own pointer here, dandling nodes have NULL.
+
+        Accesses to this value must be protected for atomicity with
+        @tt parent_lock.
+
+        Code external to VFS code MUST use @ref vfs_node_get_parent.
+    */
+    struct vfs_node_s *parent;
+    /** @internal
+        Lock protecting accesses to parent */
+    lock_t parent_lock;
+
+#if defined(CONFIG_VFS_STATS)
+    /** @multiple
+        Statistics counter
+     */
+    atomic_t lookup_count;
+    atomic_t open_count;
+    atomic_t close_count;
+    atomic_t stat_count;
+#endif
+
+    /**
+       @internal
+       Children cache hash.
+       
+       Accesses to this value must be protected through @tt
+       dir_semaphore.
+    */
+    vfs_dir_hash_root_t children;
+
+    /** @internal
+        Semaphore protecting @tt children */
+    struct semaphore_s dir_semaphore;
+
+    /** @internal */
+    GCT_CONTAINER_ENTRY(vfs_dir_hash, hash_entry);
+    /** @internal Object-management related */
+    GCT_REFCOUNT_ENTRY(obj_entry);
+
+} *, hash_entry);
+
+GCT_REFCOUNT(vfs_node, struct vfs_node_s *, obj_entry);
+
+static inline struct vfs_node_s *vfs_node__refinc(struct vfs_node_s *node, const char *func)
+{
+    vfs_printk("<%s %s %p %d>", __FUNCTION__, func, node, vfs_node_refcount(node));
+    return vfs_node_refinc(node);
+}
+
+static inline bool_t vfs_node__refdec(struct vfs_node_s *node, const char *func)
+{
+    vfs_printk("<%s %s %p %d>", __FUNCTION__, func, node, vfs_node_refcount(node));
+    return vfs_node_refdec(node);
+}
+
+#define vfs_node_refinc(x) vfs_node__refinc(x, __FUNCTION__)
+#define vfs_node_refdec(x) vfs_node__refdec(x, __FUNCTION__)
+
+/**
+   @this is the vfs_node_stat() operation response buffer.
+ */
+struct vfs_stat_s
+{
+    /** File or directory */
+    enum vfs_node_type_e type;
+
+    /** File size in bytes, or directory entry count excluding "." and
+        ".." */
+    vfs_file_size_t size;
+
+    /** Count of links to the data on disk */
+    size_t nlink;
+
+//  /** Creation timestamp */
+//  time_t ctime;
+//  /** Access timestamp */
+//  time_t atime;
+//  /** Modification timestamp */
+//  time_t mtime;
+//  /** Modes, ... */
+//  vfs_node_attr_t attr;
+//  /** User ID */
+//  uid_t uid;
+//  /** Group ID */
+//  gid_t gid;
+//  /** Device number */
+//  dev_t dev;
+};
+
+struct vfs_dirent_s
+{
+    /** Name of the directory entry, asciiZ */
+	char name[CONFIG_VFS_NAMELEN + 1];
+    /** Type of node */
+	enum vfs_node_type_e type;
+    /** Size of file in bytes, or count of children nodes excluding
+        "." and ".." */
+	size_t size;
+};
+
 
 /**
    @this mounts a file system inside another, replacing the @tt
@@ -51,20 +198,6 @@ error_t vfs_mount(struct vfs_node_s *mountpoint,
 				  struct vfs_fs_s *fs);
 
 /**
-   @this mounts a file system as the root of all.
-
-   @param fs new filesystem to attach at root
-   @param mountpoint New node where the filesystem root lies
-
-   If #CONFIG_VFS_GLOBAL_ROOT is set, this call sets global system
-   root.
-
-   @return 0 if mounted correctly
- */
-error_t vfs_create_root(struct vfs_fs_s *fs,
-                        struct vfs_node_s **mountpoint);
-
-/**
    @this unmounts a file system. @tt fs must not have any files
    left open. Old directory node will be restored in VFS.
 
@@ -76,10 +209,10 @@ error_t vfs_umount(struct vfs_node_s *mountpoint);
 /* Node operations */
 
 /** @this increases the node reference count and return the node itself. */
-struct vfs_node_s * vfs_node_refnew(struct vfs_node_s * node);
+//struct vfs_node_s * vfs_node_refinc(struct vfs_node_s * node);
 
 /** @this decreases the node reference count and may delete the node if no more reference exist. */
-void vfs_node_refdrop(struct vfs_node_s * node);
+//bool_t vfs_node_refdec(struct vfs_node_s * node);
 
 /**
    @this looks for a node named @tt name as a child of @tt
@@ -134,9 +267,9 @@ error_t vfs_node_open(struct vfs_node_s *node,
    @this transfers the ownership of @tt node to caller.
    @see vfs_create
  */
-error_t vfs_node_create(struct vfs_fs_s *fs,
-						enum vfs_node_type_e type,
-						struct vfs_node_s **node);
+error_t vfs_node_anon_create(struct vfs_fs_s *fs,
+						     enum vfs_node_type_e type,
+						     struct vfs_node_s **node);
 
 /**
    @this links a node in a given parent. As a node must be unique in
@@ -207,33 +340,6 @@ error_t vfs_node_unlink(struct vfs_node_s *parent,
 error_t vfs_node_stat(struct vfs_node_s *node,
 					  struct vfs_stat_s *stat);
 
-/**
-   @this compares a full name as described by the on disk file
-   system directory entry with a possibly shortened and mangled node
-   name as seen by the vfs.
-
-   @param fullname entry full name as described by file system
-   @param fullnamelen lenght of full name
-   @param vfsname possibly shortened node name
-   @param vfsnamelen possibly shortened node name lenght
-   @return true if equal
-   @see vfs_name_mangle
- */
-bool_t vfs_name_compare(const char *fullname, size_t fullnamelen,
-                            const char *vfsname, size_t vfsnamelen);
-
-/**
-   @this setup a possibly mangled and shortened vfs node name from a
-   full lenght file system entry name. No extra @tt '\0' is added to mangled name.
-
-   @param fullname entry full name as described by file system
-   @param fullnamelen lenght of full name
-   @param vfsname possibly shortened node name
-   @return length of resulting mangled name.
-   @see vfs_name_compare @see vfs_node_new
- */
-size_t vfs_name_mangle(const char *fullname, size_t fullnamelen, char *vfsname);
-
 struct vfs_node_s *vfs_node_get_parent(struct vfs_node_s *node);
 
 ssize_t vfs_node_get_name(struct vfs_node_s *node,
@@ -254,3 +360,4 @@ C_HEADER_END
 // End:
 
 // vim: filetype=cpp:expandtab:shiftwidth=4:tabstop=4:softtabstop=4
+

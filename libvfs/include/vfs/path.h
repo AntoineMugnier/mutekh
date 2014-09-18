@@ -16,28 +16,23 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 /**
    @file
    @module {Virtual File System}
-   @short Operations on path strings
-
-   These operations implements the layer typically used by a @tt
-   libunix or a @tt libc. These functions use null-terminated strings,
-   don't rely on hardwired root and cwd nodes, and return errors
-   directly usable for errno.
+   @short Core file system node
  */
 
-#ifndef _VFS_HELPERS_H_
-#define _VFS_HELPERS_H_
+#ifndef _VFS_PATH_H_
+#define _VFS_PATH_H_
 
 #include <hexo/decls.h>
 
 C_HEADER_BEGIN
 
-#include <vfs/types.h>
+#include <vfs/node.h>
 
 /**
    @this gets a path relative to the parent node.
@@ -53,9 +48,9 @@ C_HEADER_BEGIN
    @see vfs_node_lookup
 */
 error_t vfs_lookup(struct vfs_node_s *root,
-				   struct vfs_node_s *cwd,
-				   const char *path,
-				   struct vfs_node_s **node);
+		   struct vfs_node_s *cwd,
+		   const char *path,
+		   struct vfs_node_s **node);
 
 /**
    @this creates a path relative to the parent node. The path may be a
@@ -70,13 +65,13 @@ error_t vfs_lookup(struct vfs_node_s *root,
    @param node Found node, if no error (return value)
    @return 0 if created, or an error
    @this transfers the ownership to caller.
-   @see vfs_node_create
+   @see vfs_node_anon_create
 */
 error_t vfs_create(struct vfs_node_s *root,
-				   struct vfs_node_s *cwd,
-				   const char *path,
-				   enum vfs_node_type_e type,
-				   struct vfs_node_s **node);
+		   struct vfs_node_s *cwd,
+		   const char *path,
+		   enum vfs_node_type_e type,
+		   struct vfs_node_s **node);
 
 
 /**
@@ -97,10 +92,10 @@ error_t vfs_create(struct vfs_node_s *root,
    @see vfs_node_open
 */
 error_t vfs_open(struct vfs_node_s *root,
-				 struct vfs_node_s *cwd,
-				 const char *path,
-				 enum vfs_open_flags_e flags,
-				 struct vfs_file_s **file);
+		 struct vfs_node_s *cwd,
+		 const char *path,
+		 enum vfs_open_flags_e flags,
+		 struct vfs_file_s **file);
 
 /**
    @this retrieves information about a given file.
@@ -115,9 +110,9 @@ error_t vfs_open(struct vfs_node_s *root,
    @see vfs_node_stat
 */
 error_t vfs_stat(struct vfs_node_s *root,
-				 struct vfs_node_s *cwd,
-				 const char *path,
-				 struct vfs_stat_s *stat);
+		 struct vfs_node_s *cwd,
+		 const char *path,
+		 struct vfs_stat_s *stat);
 
 /**
    @this deletes a node from the file system.
@@ -131,8 +126,8 @@ error_t vfs_stat(struct vfs_node_s *root,
    @see vfs_node_unlink
 */
 error_t vfs_unlink(struct vfs_node_s *root,
-				   struct vfs_node_s *cwd,
-				   const char *path);
+		   struct vfs_node_s *cwd,
+		   const char *path);
 
 /**
    @this links a path to another
@@ -159,14 +154,6 @@ error_t vfs_link(struct vfs_node_s *root,
    @param root Where to start dump from
  */
 void vfs_dump(struct vfs_node_s *root);
-
-/**
-   @this dumps the present node LRU state, using @ref vfs_dump for
-   each node in LRU.
-
-   @param root File-system root to use for LRU walking.
- */
-void vfs_dump_lru(struct vfs_node_s *root);
 
 C_HEADER_END
 

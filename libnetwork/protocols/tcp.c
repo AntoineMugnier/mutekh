@@ -149,7 +149,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   if (tcp_preparepkt(interface, addressing, packet, (operation == TCP_SYN || operation == TCP_SYN_ACK) ? 4 : 0, 0) == NULL)
     {
       /* out of memory */
-      packet_obj_refdrop(packet);
+      packet_obj_refdec(packet);
       return;
     }
   nethdr = &packet->header[packet->stage];
@@ -231,7 +231,7 @@ void	tcp_send_controlpkt(struct net_tcp_session_s	*session,
   session->acked = session->to_ack;
   /* send the packet to IP */
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_TCP);
-  packet_obj_refdrop(packet);
+  packet_obj_refdec(packet);
 }
 
 /*
@@ -258,7 +258,7 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   if ((dest = tcp_preparepkt(interface, addressing, packet, size, 0)) == NULL)
     {
       /* no more memory */
-      packet_obj_refdrop(packet);
+      packet_obj_refdec(packet);
       return;
     }
   nethdr = &packet->header[packet->stage];
@@ -292,6 +292,6 @@ void	tcp_send_datapkt(struct net_tcp_session_s	*session,
   session->acked = session->to_ack;
   /* send the packet to IP */
   addressing->desc->f.addressing->sendpkt(interface, packet, addressing, IPPROTO_TCP);
-  packet_obj_refdrop(packet);
+  packet_obj_refdec(packet);
 }
 

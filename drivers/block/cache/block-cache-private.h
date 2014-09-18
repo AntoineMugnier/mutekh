@@ -23,7 +23,7 @@
 #ifndef BLOCK_CACHE_PRIVATE_H_
 #define BLOCK_CACHE_PRIVATE_H_
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_blist.h>
 
 #include <hexo/types.h>
@@ -31,8 +31,8 @@
 
 struct cache_entry_s
 {
-  CONTAINER_ENTRY_TYPE(BLIST) list_entry_lba;
-  CONTAINER_ENTRY_TYPE(BLIST) list_entry_age;
+  GCT_CONTAINER_ENTRY(BLIST) list_entry_lba;
+  GCT_CONTAINER_ENTRY(BLIST) list_entry_age;
 
   /** lba of first cached block */
   dev_block_lba_t lba;
@@ -47,10 +47,10 @@ struct cache_entry_s
 #endif
 };
 
-CONTAINER_TYPE(blk_cache_lba, BLIST, struct cache_entry_s, list_entry_lba);
-CONTAINER_KEY_TYPE(blk_cache_lba, PTR, SCALAR, lba);
+GCT_CONTAINER_TYPES(blk_cache_lba, BLIST, struct cache_entry_s, list_entry_lba);
+GCT_CONTAINER_KEY_TYPES(blk_cache_lba, PTR, SCALAR, lba);
 
-CONTAINER_TYPE(blk_cache_age, BLIST, struct cache_entry_s, list_entry_age);
+GCT_CONTAINER_TYPES(blk_cache_age, BLIST, struct cache_entry_s, list_entry_age);
 
 struct block_cache_context_s
 {

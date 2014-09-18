@@ -27,8 +27,8 @@
 #include <hexo/endian.h>
 #include <mutek/printk.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
+#include <gct_platform.h>
+#include <gct/container_clist.h>
 
 #ifdef CONFIG_MUTEK_MEMALLOC_CRC
 #include <crypto/crc32.h>
@@ -45,12 +45,15 @@
 /********************************************************/
 /*********** Structure and global declaration ***********/
 
+#define GCT_CONTAINER_ALGO_free_list CLIST
+#define GCT_CONTAINER_ALGO_block_list CLIST
+
 /** memory block header */
 struct memory_allocator_header_s
 {
   union
   {
-    CONTAINER_ENTRY_TYPE(CLIST)	free_entry;
+    GCT_CONTAINER_ENTRY(free_list, free_entry);
     struct
     {
       struct memory_allocator_region_s	*region;    
@@ -58,7 +61,7 @@ struct memory_allocator_header_s
     };
   };
 
-  CONTAINER_ENTRY_TYPE(CLIST)	block_entry;
+  GCT_CONTAINER_ENTRY(block_list, block_entry);
 
 #ifdef CONFIG_MUTEK_MEMALLOC_CRC
   uint32_t crc;
@@ -76,8 +79,8 @@ static const size_t mem_hdr_size_no_crc = sizeof (struct memory_allocator_header
 static const size_t	mem_hdr_size_align = POW2_M1_CONSTANT_UP((sizeof (struct memory_allocator_header_s) - 1) |
                                                                  (CONFIG_MUTEK_MEMALLOC_ALIGN - 1)) + 1;
 
-CONTAINER_TYPE(free_list, CLIST, struct memory_allocator_header_s, free_entry);
-CONTAINER_TYPE(block_list, CLIST, struct memory_allocator_header_s, block_entry);
+GCT_CONTAINER_TYPES(free_list, struct memory_allocator_header_s *, free_entry);
+GCT_CONTAINER_TYPES(block_list, struct memory_allocator_header_s *, block_entry);
 
 #define MEMALLOC_SPLIT_SIZE	( mem_hdr_size_align + 16 + CONFIG_MUTEK_MEMALLOC_GUARD_SIZE * 2 )
 
@@ -105,8 +108,11 @@ struct memory_allocator_region_s *default_region;
 /********************************************************/
 /******************* GPCT function **********************/
 
-CONTAINER_FUNC(block_list, CLIST, static inline, block_list, block_entry);
-CONTAINER_FUNC(free_list, CLIST, static inline, free_list, free_entry);
+GCT_CONTAINER_FCNS(block_list, static inline, block_list,
+                   init, destroy, head, next, prev, push, pushback, insert_next, remove);
+
+GCT_CONTAINER_FCNS(free_list, static inline, free_list,
+                   init, destroy, push, remove, prev, next);
 
 /********************************************************/
 
@@ -497,7 +503,7 @@ mmu_region_nolock_extend(struct memory_allocator_region_s *region, size_t size)
 static inline struct memory_allocator_header_s *
 memory_allocator_candidate(struct memory_allocator_region_s *region, size_t size)
 {
-  CONTAINER_FOREACH(free_list, CLIST, &region->free_root,
+  GCT_FOREACH(free_list, &region->free_root, item,
   {
     if ( header_get_size(&region->block_root, item) >= size)
       return item;
@@ -515,7 +521,7 @@ memory_allocator_candidate(struct memory_allocator_region_s *region, size_t size
 {
   struct memory_allocator_header_s	*best = NULL;
   size_t item_size, best_size;
-  CONTAINER_FOREACH(free_list, CLIST, &region->free_root,
+  GCT_FOREACH(free_list, &region->free_root, item,
   {
     item_size = header_get_size(&region->block_root, item);
     if ( item_size >= size &&
@@ -534,7 +540,7 @@ memory_allocator_candidate(struct memory_allocator_region_s *region, size_t size
 static inline 
 struct memory_allocator_header_s *get_hdr_for_rsv(struct memory_allocator_region_s *region, void *start, size_t size)
 {
-  CONTAINER_FOREACH(free_list, CLIST, &region->free_root,
+  GCT_FOREACH(free_list, &region->free_root, item,
   {
     if (((void *)(item + 1) <= start ) &&
 	( ((void*)item + header_get_size(&region->block_root, item)) >= (start + size) ))
@@ -612,7 +618,7 @@ void *memory_allocator_resize(void *address, size_t size)
 	      next = (void*)((uintptr_t)hdr + size);
 	      next_size -= diff;
 
-	      MEM_LIST_FUNCTION_INS(insert_post, block, next, hdr);
+	      MEM_LIST_FUNCTION_INS(insert_next, block, next, hdr);
 	      MEM_LIST_FUNCTION_PUSH(push, free, next);
 
 	      memory_allocator_crc_set(next);
@@ -652,7 +658,7 @@ void *memory_allocator_resize(void *address, size_t size)
 
 	      next = (void*)((uintptr_t)hdr + size);
 	      size_t next_size = -diff;
-	      MEM_LIST_FUNCTION_INS(insert_post, block, next, hdr);
+	      MEM_LIST_FUNCTION_INS(insert_next, block, next, hdr);
 	      MEM_LIST_FUNCTION_PUSH(push, free, next);
 
 	      memory_allocator_crc_set(next);
@@ -715,7 +721,7 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
               assert(offset >= mem_hdr_size_align);
 
               struct memory_allocator_header_s *next = mem2hdr(amem);
-              MEM_LIST_FUNCTION_INS(insert_post, block, next, hdr);
+              MEM_LIST_FUNCTION_INS(insert_next, block, next, hdr);
 
               memory_allocator_crc_set(hdr);
               memory_allocator_scramble_set_free(offset, hdr);
@@ -737,7 +743,7 @@ void *memory_allocator_pop(struct memory_allocator_region_s *region, size_t size
 	{
 	  struct memory_allocator_header_s	*next = (void*)((uintptr_t)hdr + size);
 
-	  MEM_LIST_FUNCTION_INS(insert_post, block, next, hdr);
+	  MEM_LIST_FUNCTION_INS(insert_next, block, next, hdr);
 	  MEM_LIST_FUNCTION_PUSH(push, free, next);
 
           memory_allocator_crc_set(next);
@@ -898,7 +904,7 @@ void *memory_allocator_reserve(struct memory_allocator_region_s *region, void *s
 	  hdr = mem2hdr(start);
 
 	  size_t prev_size = (uint8_t*)hdr - (uint8_t*)prev;
-	  MEM_LIST_FUNCTION_INS(insert_post, block, hdr, prev);
+	  MEM_LIST_FUNCTION_INS(insert_next, block, hdr, prev);
 
           memory_allocator_crc_set(prev);
           memory_allocator_scramble_set_free(prev_size, prev);
@@ -920,7 +926,7 @@ void *memory_allocator_reserve(struct memory_allocator_region_s *region, void *s
         {
           struct memory_allocator_header_s *next = (void*)((uintptr_t)hdr + size);
 	      
-          MEM_LIST_FUNCTION_INS(insert_post, block, next, hdr);
+          MEM_LIST_FUNCTION_INS(insert_next, block, next, hdr);
           MEM_LIST_FUNCTION_PUSH(push, free, next); 
 
           memory_allocator_crc_set(next);
@@ -1024,7 +1030,7 @@ void memory_allocator_region_check(struct memory_allocator_region_s *region)
   lock_spin(&region->lock);
   disable_memchecker();
 
-  CONTAINER_FOREACH(block_list, CLIST, &region->block_root,
+  GCT_FOREACH(block_list, &region->block_root, item,
   {
     memory_allocator_crc_check(item);
     if (! header_is_endblock(item) )

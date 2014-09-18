@@ -35,10 +35,10 @@
 #include <network/packet.h>
 #include <netinet/arp.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_hashlist.h>
-#include <gpct/object_refcount.h>
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
+#include <gct/container_chainedhash.h>
+#include <gct/refcount.h>
 
 /*
  * Misc.
@@ -77,7 +77,9 @@ typedef uint_fast8_t	net_if_type_t;
  * An interface.
  */
 
-OBJECT_TYPE(net_if_obj, REFCOUNT, struct net_if_s);
+#define GCT_CONTAINER_REFCOUNT_net_if		net_if_obj
+#define GCT_CONTAINER_LOCK_net_if		HEXO_LOCK
+#define GCT_CONTAINER_ALGO_net_if		CHAINEDHASH
 
 struct net_if_s
 {
@@ -98,22 +100,25 @@ struct net_if_s
   uint_fast32_t				tx_packets;
 
   struct net_dispatch_s                 *dispatch;
-  net_if_obj_entry_t			obj_entry;
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+  GCT_REFCOUNT_ENTRY(obj_entry);
+  GCT_CONTAINER_ENTRY(net_if, list_entry);
 };
 
-OBJECT_CONSTRUCTOR(net_if_obj);
-OBJECT_DESTRUCTOR(net_if_obj);
-OBJECT_FUNC(net_if_obj, REFCOUNT, static inline, net_if_obj, obj_entry);
+GCT_REFCOUNT(net_if_obj, struct net_if_s *, obj_entry);
+
+struct net_if_s * net_if_obj_new(struct device_s *dev,
+                               net_if_type_t type,
+                               uint_fast16_t mtu);
+
+void net_if_obj_destroy(struct net_if_s *);
+
 
 /*
  * Interface container types.
  */
 
-#define CONTAINER_OBJ_net_if		net_if_obj
-#define CONTAINER_LOCK_net_if		HEXO_SPIN
-CONTAINER_TYPE(net_if, HASHLIST, struct net_if_s, list_entry, 4);
-CONTAINER_KEY_TYPE(net_if, PTR, STRING, name);
+GCT_CONTAINER_TYPES(net_if, struct net_if_s *, list_entry, 4);
+GCT_CONTAINER_KEY_TYPES(net_if, PTR, STRING, name);
 
 
 /**

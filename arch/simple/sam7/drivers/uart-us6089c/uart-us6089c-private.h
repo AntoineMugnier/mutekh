@@ -27,7 +27,7 @@
 #include <hexo/types.h>
 #include <device/device.h>
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 
 /**************************************************************/
 

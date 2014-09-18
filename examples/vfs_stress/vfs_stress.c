@@ -4,11 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <vfs/vfs.h>
+#include <vfs/node.h>
 
 #include <libvfs/fs/ramfs/ramfs.h>
 
 #include "my_rand.h"
+#include "cwd.h"
 
 #define ACTIONS 128
 
@@ -25,7 +26,7 @@ static void post_print(struct vfs_node_s *node)
         if ( parent != node )
             post_print(parent);
 		printk("/");
-        vfs_node_refdrop(parent);
+        vfs_node_refdec(parent);
 	}
 	printk("%s", node->name);
 }

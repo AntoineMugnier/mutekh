@@ -31,8 +31,8 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
+#include <gct_platform.h>
+#include <gct/container_clist.h>
 
 #include <device/driver.h>
 
@@ -57,6 +57,8 @@ typedef DEVDMA_CALLBACK(devdma_callback_t);
 #define DEV_DMA_FLAG_CONST_DATA   0x04
 /** @This specifies len of constant source data for dma transfer. @see #DEV_DMA_FLAG_CONST_DATA */
 #define DEV_DMA_FLAG_CONST_LEN(n) ((n) << 3)
+
+#define GCT_CONTAINER_ALGO_dev_dma_queue CLIST
 
 /** Dma request @see devdma_request_t */
 struct dev_dma_rq_s
@@ -84,11 +86,13 @@ struct dev_dma_rq_s
 
   const struct device_dma_s     *ddev;          //< associated dma device
   void				*drvdata;       //< driver private data
-  CONTAINER_ENTRY_TYPE(CLIST)   queue_entry; //< used by driver to enqueue request
+
+  GCT_CONTAINER_ENTRY(dev_dma_queue, queue_entry); //< used by driver to enqueue request
 };
 
-CONTAINER_TYPE(dev_dma_queue, CLIST, struct dev_dma_rq_s, queue_entry);
-CONTAINER_FUNC(dev_dma_queue, CLIST, static inline, dev_dma_queue);
+GCT_CONTAINER_TYPES(dev_dma_queue, struct dev_dma_rq_s *, queue_entry);
+GCT_CONTAINER_FCNS(dev_dma_queue, static inline, dev_dma_queue,
+                   init, destroy, isempty, pushback, pop, head, remove);
 
 
 /** Dma device class @ref devdma_request_t function template. */

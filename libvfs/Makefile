@@ -2,15 +2,14 @@
 DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
 objs = \
-	vfs.o \
-	helpers.o \
-	globals.o \
 	file.o \
 	node.o \
+    path.o \
+    name.o \
 	fs.o
 
-doc_headers = vfs/file.h vfs/fs.h vfs/globals.h vfs/helpers.h	\
-vfs/defs.h vfs/ops.h vfs/types.h vfs/vfs.h
+doc_headers = vfs/file.h vfs/fs.h \
+vfs/defs.h vfs/ops.h vfs/node.h vfs/path.h vfs/name.h
 
 subdirs = fs
 

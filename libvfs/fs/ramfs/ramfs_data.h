@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #ifndef _RAMFS_DATA_H_
@@ -24,41 +24,43 @@
 
 #include <hexo/types.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/object_refcount.h>
+#include <vfs/node.h>
 
-struct ramfs_data_s;
-
-OBJECT_TYPE     (ramfs_data, REFCOUNT, struct ramfs_data_s);
-OBJECT_PROTOTYPE(ramfs_data, static inline, ramfs_data);
+#include <stdlib.h>
 
 struct ramfs_data_s
 {
     uint32_t magic;
-	ramfs_data_entry_t obj_entry;
+    GCT_REFCOUNT_ENTRY(obj_entry);
 	void *data;
 	size_t allocated_size;
 	size_t actual_size;
 };
 
-static inline OBJECT_CONSTRUCTOR(ramfs_data)
+static inline void ramfs_data_destroy(struct ramfs_data_s *obj);
+
+GCT_REFCOUNT(ramfs_data, struct ramfs_data_s *, obj_entry);
+
+static inline struct ramfs_data_s * ramfs_data_create()
 {
+    struct ramfs_data_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
+
 	obj->data = NULL;
 	obj->magic = 0x1ada1ada;
 	obj->allocated_size = 0;
 	obj->actual_size = 0;
+    ramfs_data_refinit(obj);
 
-	return 0;
+	return obj;
 }
 
-static inline OBJECT_DESTRUCTOR(ramfs_data)
+static inline void ramfs_data_destroy(struct ramfs_data_s *obj)
 {
 	if ( obj->data )
-		mem_free(obj->data);
+		free(obj->data);
+    ramfs_data_refcleanup(obj);
+    mem_free(obj);
 }
-
-OBJECT_FUNC   (ramfs_data, REFCOUNT, static inline, ramfs_data, obj_entry);
 
 error_t ramfs_data_realloc(struct ramfs_data_s *db, size_t new_size);
 

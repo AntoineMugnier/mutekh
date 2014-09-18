@@ -16,7 +16,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #ifndef _FAT_H_
@@ -32,19 +32,7 @@
    @param fs New fat instance (return value)
    @return 0 on successful FAT creation
  */
-error_t fat_open(struct device_block_s *dev, struct vfs_fs_s **fs);
-
-/**
-   @this closes an existing FAT instance.
-
-   File system must already be unmounted and all files must be closed
-   prior to this operation.
-
-   @param fs FAT to close.
-
-   @return 0 on successful close
- */
-error_t fat_close(struct vfs_fs_s *fs);
+error_t fat_open(struct device_block_s *dev, struct vfs_fs_s **fs, bool_t ro);
 
 VFS_FS_CAN_UNMOUNT(fat_can_unmount);
 VFS_FS_NODE_OPEN(fat_node_open);
@@ -54,6 +42,8 @@ VFS_FS_MOVE(fat_move);
 VFS_FS_LINK(fat_link);
 VFS_FS_UNLINK(fat_unlink);
 VFS_FS_STAT(fat_stat);
+VFS_FS_CLEANUP(fat_cleanup);
+VFS_FS_NODE_CLEANUP(fat_node_cleanup);
 
 #endif
 

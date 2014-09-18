@@ -78,7 +78,7 @@ typedef struct srl_barrier_s
 #if 0
 # define SRL_BARRIER_INITIALIZER(n)										\
 	{																	\
-		.wait = CONTAINER_ROOT_INITIALIZER(sched_queue, CLIST),	\
+		.wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, CLIST),	\
 		.count = (n),												\
 		.max = (n),												\
 	}

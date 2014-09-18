@@ -34,10 +34,11 @@
 #endif
 
 #include <hexo/types.h>
-#include <netinet/libudp.h>
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/cont_hashlist.h>
+#include <network/libudp.h>
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
+#include <gct/container_chainedhash.h>
+#include <device/class/timer.h>
 
 #include <semaphore.h>
 
@@ -157,6 +158,8 @@ typedef uint8_t nfs_handle_t[FHSIZE];
  * RPC block.
  */
 
+#define GCT_CONTAINER_ALGO_rpcb CHAINEDHASH
+
 struct					rpcb_s
 {
   uint_fast32_t				id;
@@ -165,11 +168,11 @@ struct					rpcb_s
   size_t				size;
   struct semaphore_s					sem;
 
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(rpcb, list_entry);
 };
 
-CONTAINER_TYPE(rpcb, HASHLIST, struct rpcb_s, list_entry, 64);
-CONTAINER_KEY_TYPE(rpcb, PTR, SCALAR, id);
+GCT_CONTAINER_TYPES(rpcb, struct rpcb_s *, list_entry, 64);
+GCT_CONTAINER_KEY_TYPES(rpcb, PTR, SCALAR, id);
 
 /*
  * NFS connection descriptor.

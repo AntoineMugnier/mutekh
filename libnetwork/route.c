@@ -28,23 +28,24 @@
 
 #include <mutek/printk.h>
 
-CONTAINER_FUNC(route_table, DLIST, static inline, route_table);
+GCT_CONTAINER_FCNS(route_table, static inline, route_table,
+  init, destroy, head, next, push, insert_next, remove);
 
-static route_table_root_t	route_table = CONTAINER_ROOT_INITIALIZER(route_table, DLIST);
+static route_table_root_t	route_table = GCT_CONTAINER_ROOT_INITIALIZER(route_table);
 
 /*
  * Route object constructor.
  */
 
-OBJECT_CONSTRUCTOR(route_obj)
+struct net_route_s *route_obj_new(struct net_addr_s *target,
+                                  struct net_addr_s *mask,
+                                  struct net_if_s *interface)
 {
-  struct net_addr_s	*target = va_arg(ap, struct net_addr_s *);
-  struct net_addr_s	*mask = va_arg(ap, struct net_addr_s *);
-  struct net_if_s	*interface = va_arg(ap, struct net_if_s *);
+  struct net_route_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
 
   memcpy(&obj->target, target, sizeof (struct net_addr_s));
   memcpy(&obj->mask, mask, sizeof (struct net_addr_s));
-  net_if_obj_refnew(interface);
+  net_if_obj_refinc(interface);
   obj->interface = interface;
   obj->addressing = NULL;
   obj->is_routed = 0;
@@ -61,15 +62,17 @@ OBJECT_CONSTRUCTOR(route_obj)
  * Route object destructor.
  */
 
-OBJECT_DESTRUCTOR(route_obj)
+void route_obj_destroy(struct net_route_s * obj)
 {
-  net_if_obj_refdrop(obj->interface);
+  net_if_obj_refdec(obj->interface);
   if (obj->addressing != NULL)
-    net_proto_obj_refdrop(obj->addressing);
+    net_proto_obj_refdec(obj->addressing);
 
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_del[NETWORK_PROFILING_ROUTE]++;
 #endif
+
+  mem_free(obj);
 }
 
 /*
@@ -111,7 +114,7 @@ error_t			route_add(struct net_route_s	*route)
 	struct net_route_s	*rt;
 	struct net_route_s	*prec;
 
-	net_proto_obj_refnew(item);
+	net_proto_obj_refinc(item);
 	route->addressing = item;
 
 	/* push the route into the routing table */
@@ -132,7 +135,7 @@ error_t			route_add(struct net_route_s	*route)
 	if (prec == NULL)
 	  err = -(!route_table_push(&route_table, route));
 	else
-	  err = -(!route_table_insert_post(&route_table, prec, route));
+	  err = -(!route_table_insert_next(&route_table, prec, route));
 
 	NET_FOREACH_PROTO_BREAK;
       }
@@ -150,15 +153,15 @@ struct net_route_s	*route_get(struct net_addr_s	*addr)
   struct net_route_s	*ret = NULL;
 
   /* look into the route table */
-  CONTAINER_FOREACH(route_table, DLIST, &route_table,
+  GCT_FOREACH(route_table, &route_table, item,
   {
     struct net_proto_s	*addressing = item->addressing;
 
     if (addressing->desc->f.addressing->matchaddr(addressing, &item->target, addr, &item->mask))
       {
-	route_obj_refnew(item);
+	route_obj_refinc(item);
 	ret = item;
-	CONTAINER_FOREACH_BREAK;
+	GCT_FOREACH_BREAK;
       }
   });
 
@@ -174,7 +177,7 @@ void			route_flush(struct net_if_s	*interface)
   struct net_route_s	*prev = NULL;
 
   /* look into the route table */
-  CONTAINER_FOREACH(route_table, DLIST, &route_table,
+  GCT_FOREACH(route_table, &route_table, item,
   {
     if (prev != NULL)
       {
@@ -218,7 +221,7 @@ void			route_dump(void)
   printk("Target            Gateway           Mask              Interface\n");
 
   /* look into the route table */
-  CONTAINER_FOREACH(route_table, DLIST, &route_table,
+  GCT_FOREACH(route_table, &route_table, item,
   {
     switch (item->target.family)
       {

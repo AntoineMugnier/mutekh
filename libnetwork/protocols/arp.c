@@ -53,11 +53,12 @@ struct arp_resolution_s
   struct dev_timer_rq_s			timeout;
 };
 
-OBJECT_TYPE(arp_entry_obj, SIMPLE, struct arp_entry_s);
-
 /**
    @this is the ARP table entry
  */
+#define GCT_CONTAINER_LOCK_arp_table	HEXO_LOCK
+#define GCT_CONTAINER_ALGO_arp_table	CHAINEDHASH
+
 struct arp_entry_s
 {
   dev_timer_value_t                     timestamp;
@@ -66,21 +67,18 @@ struct arp_entry_s
   bool_t				valid;
   struct arp_resolution_s		*resolution;
 
-  arp_entry_obj_entry_t			obj_entry;
-  CONTAINER_ENTRY_TYPE(HASHLIST)	list_entry;
+  GCT_CONTAINER_ENTRY(arp_table, list_entry);
 };
 
-OBJECT_CONSTRUCTOR(arp_entry_obj);
-OBJECT_DESTRUCTOR(arp_entry_obj);
-OBJECT_FUNC(arp_entry_obj, SIMPLE, static inline, arp_entry_obj, obj_entry);
+struct arp_entry_s * arp_entry_obj_new(uint_fast32_t ip);
+void arp_entry_obj_delete(struct arp_entry_s *);
 
 /*
  * ARP table types.
  */
 
-#define CONTAINER_LOCK_arp_table	HEXO_SPIN
-CONTAINER_TYPE(arp_table, HASHLIST, struct arp_entry_s, list_entry, 64);
-CONTAINER_KEY_TYPE(arp_table, PTR, SCALAR, ip);
+GCT_CONTAINER_TYPES(arp_table, struct arp_entry_s *, list_entry, 64);
+GCT_CONTAINER_KEY_TYPES(arp_table, PTR, SCALAR, ip);
 
 /*
  * ARP private data.
@@ -103,15 +101,15 @@ struct			net_pv_rarp_s
   struct net_proto_s	*ip;
 };
 
-static DEVTIMER_CALLBACK(arp_timeout);
-static DEVTIMER_CALLBACK(arp_stale_timeout);
+static KROUTINE_EXEC(arp_timeout);
+static KROUTINE_EXEC(arp_stale_timeout);
 
 /*
  * ARP table functions.
  */
 
-CONTAINER_FUNC_NOLOCK(arp_table, HASHLIST, static inline, arp_table, ip);
-CONTAINER_KEY_FUNC(arp_table, HASHLIST, static inline, arp_table, ip);
+GCT_CONTAINER_KEY_FCNS(arp_table, ASC, static inline, arp_table, ip,
+                         init, destroy, remove, lookup, push, clear);
 
 /*
  * Structures for declaring the protocol's properties & interface.
@@ -142,7 +140,7 @@ NET_INITPROTO(arp_init)
   if (!device_check_accessor(&libnetwork_timer_dev))
     return -1;
 
-  pv->stale_timeout.callback = arp_stale_timeout;
+  kroutine_init(&pv->stale_timeout.kr, arp_stale_timeout, KROUTINE_IMMEDIATE);
   pv->stale_timeout.pvdata = pv;
   if (dev_timer_init_sec(&libnetwork_timer_dev, &pv->stale_timeout.delay,
                          ARP_STALE_TIMEOUT, 1000))
@@ -177,7 +175,7 @@ NET_DESTROYPROTO(arp_destroy)
   DEVICE_OP(&libnetwork_timer_dev, cancel, &pv->stale_timeout);
 
   /* remove all items in the arp table */
-  CONTAINER_FOREACH(arp_table, HASHLIST, &pv->table,
+  GCT_FOREACH_UNORDERED(arp_table, &pv->table, item,
   {
     /* remove previous item */
     if (to_remove != NULL)
@@ -202,9 +200,9 @@ NET_DESTROYPROTO(arp_destroy)
  * ARP entry constructor.
  */
 
-OBJECT_CONSTRUCTOR(arp_entry_obj)
+struct arp_entry_s * arp_entry_obj_new(uint_fast32_t ip)
 {
-  uint_fast32_t		ip = va_arg(ap, uint_fast32_t);
+  struct arp_entry_s *obj = mem_alloc(sizeof(*obj), mem_scope_sys);
 
   assert(ip != 0 && ip != 0xffffffff && ip != 0x7f000001);
 
@@ -214,14 +212,14 @@ OBJECT_CONSTRUCTOR(arp_entry_obj)
   netobj_new[NETWORK_PROFILING_ARP_ENTRY]++;
 #endif
 
-  return 0;
+  return obj;
 }
 
 /*
  * ARP entry destructor.
  */
 
-OBJECT_DESTRUCTOR(arp_entry_obj)
+void arp_entry_obj_delete(struct arp_entry_s *obj)
 {
   struct arp_resolution_s	*res = obj->resolution;
 
@@ -237,6 +235,8 @@ OBJECT_DESTRUCTOR(arp_entry_obj)
 #ifdef CONFIG_NETWORK_PROFILING
   netobj_del[NETWORK_PROFILING_ARP_ENTRY]++;
 #endif
+
+  mem_free(obj);
 }
 
 /*
@@ -257,7 +257,7 @@ static inline void	arp_request(struct net_if_s	*interface,
 
   if (arp_preparepkt(interface, packet, 0, 0) == NULL)
     {
-      packet_obj_refdrop(packet);
+      packet_obj_refdec(packet);
       return ;
     }
 
@@ -280,7 +280,7 @@ static inline void	arp_request(struct net_if_s	*interface,
   /* send the packet to the interface */
   packet->stage--;
   if_sendpkt(interface, packet, ETHERTYPE_ARP);
-  packet_obj_refdrop(packet);
+  packet_obj_refdec(packet);
 }
 
 /*
@@ -314,7 +314,7 @@ static inline void	arp_reply(struct net_if_s		*interface,
   /* send the packet to the interface */
   packet->stage--;
   if_sendpkt(interface, packet, ETHERTYPE_ARP);
-  packet_obj_refdrop(packet);
+  packet_obj_refdec(packet);
 }
 
 /*
@@ -443,7 +443,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
   else
     {
       /* otherwise, allocate a new entry */
-      if ((arp_entry = arp_entry_obj_new(NULL, ip)) == NULL)
+      if ((arp_entry = arp_entry_obj_new(ip)) == NULL)
 	return NULL;
       arp_entry->resolution = NULL;
       if (!arp_table_push(&pv->table, arp_entry))
@@ -474,7 +474,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 
 	      /* send the packet */
 	      if_sendpkt(arp_entry->resolution->interface, waiting, ETHERTYPE_IP);
-	      packet_obj_refdrop(waiting);
+	      packet_obj_refdec(waiting);
 	    }
 
 	  /* clear the resolution structure */
@@ -550,7 +550,7 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
       /* setup request time out */
       res->retry = 0;
       event = &res->timeout;
-      event->callback = arp_timeout;
+      kroutine_init(&event->kr, arp_timeout, KROUTINE_IMMEDIATE);
       event->pvdata = (void *)arp_entry;
       event->delay = pv->request_timeout_delay;
       DEVICE_OP(&libnetwork_timer_dev, request, event);
@@ -567,8 +567,9 @@ const uint8_t		*arp_get_mac(struct net_proto_s		*addressing,
  * Request timeout callback.
  */
 
-static DEVTIMER_CALLBACK(arp_timeout)
+static KROUTINE_EXEC(arp_timeout)
 {
+  struct dev_timer_rq_s         *rq = (void*)kr;
   struct arp_entry_s		*entry = (struct arp_entry_s *)rq->pvdata;
   struct arp_resolution_s	*res = entry->resolution;
   struct net_packet_s		*waiting;
@@ -580,7 +581,6 @@ static DEVTIMER_CALLBACK(arp_timeout)
     {
       /* retry */
       arp_request(res->interface, res->addressing, entry->ip);
-      return 1;
     }
 
   /* otherwise, error */
@@ -593,26 +593,25 @@ static DEVTIMER_CALLBACK(arp_timeout)
   while ((waiting = packet_queue_pop(&res->wait)))
     {
       res->addressing->desc->f.addressing->errormsg(waiting, ERROR_HOST_UNREACHABLE);
-      packet_obj_refdrop(waiting);
+      packet_obj_refdec(waiting);
     }
 
   /* free the arp entry */
   arp_entry_obj_delete(entry);
-
-  return 0;
 }
 
 /*
  * Stale entry timeout.
  */
 
-static DEVTIMER_CALLBACK(arp_stale_timeout)
+static KROUTINE_EXEC(arp_stale_timeout)
 {
+  struct dev_timer_rq_s *rq = (void*)kr;
   struct net_pv_arp_s	*pv_arp = (struct net_pv_arp_s *)rq->pvdata;
   struct arp_entry_s	*to_remove = NULL;
 
   // FIXME use a sorted list
-  CONTAINER_FOREACH(arp_table, HASHLIST, &pv_arp->table,
+  GCT_FOREACH_UNORDERED(arp_table, &pv_arp->table, item,
   {
     /* remove previously marked item */
     if (to_remove != NULL)
@@ -638,6 +637,5 @@ static DEVTIMER_CALLBACK(arp_stale_timeout)
       arp_entry_obj_delete(to_remove);
     }
 
-  /* schedule the timer again */
-  return 1;
+#warning schedule the timer again
 }

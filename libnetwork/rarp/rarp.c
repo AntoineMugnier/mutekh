@@ -131,14 +131,14 @@ error_t			rarp_client(const char	*ifname)
 	    {
 	      route->is_routed = 0;
 	      route_add(route);
-	      route_obj_refdrop(route);
+	      route_obj_refdec(route);
 	    }
 	  printk("Assigned IP: %d.%d.%d.%d, netmask: %d.%d.%d.%d\n", EXTRACT_IPV4(ip), EXTRACT_IPV4(mask));
 	  break;
 	}
     }
 
-  net_if_obj_refdrop(interface);
+  net_if_obj_refdec(interface);
   shutdown(sock, SHUT_RDWR);
 
   return 0;
@@ -146,7 +146,7 @@ error_t			rarp_client(const char	*ifname)
  leave:
   printk("rarp: error\n");
 
-  net_if_obj_refdrop(interface);
+  net_if_obj_refdec(interface);
   shutdown(sock, SHUT_RDWR);
 
   return -1;

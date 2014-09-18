@@ -23,6 +23,6 @@
 
 #include <libunix.h>
 
-CONTAINER_FUNC(libunix_vma_table, CLIST, , libunix_vma);
-CONTAINER_KEY_FUNC(libunix_vma_table, CLIST, , libunix_vma, start);
+GCT_CONTAINER_FCNS(libunix_vma_table, CLIST, , libunix_vma);
+GCT_CONTAINER_KEY_FCNS(libunix_vma_table, CLIST, , libunix_vma, start);
 

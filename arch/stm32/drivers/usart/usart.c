@@ -43,11 +43,12 @@
 #include <arch/stm32_memory_map.h>
 
 #if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
-# include <hexo/gpct_platform_hexo.h>
-# include <gpct/cont_ring.h>
-
-CONTAINER_TYPE(usart_fifo, RING, uint8_t, CONFIG_DRIVER_STM32_USART_SWFIFO);
-CONTAINER_FUNC(usart_fifo, RING, static inline, usart_fifo);
+# include <gct_platform.h>
+# include <gct/container_ring.h>
+#define GCT_CONTAINER_ALGO_usart_fifo RING
+GCT_CONTAINER_TYPES(usart_fifo, uint8_t, CONFIG_DRIVER_STM32_USART_SWFIFO);
+GCT_CONTAINER_FCNS(usart_fifo, static inline, usart_fifo,
+                   init, destroy, pop_array, pushback, pushback_array, isempty, pop);
 #endif
 
 extern uint32_t stm32f4xx_clock_freq_ahb1;

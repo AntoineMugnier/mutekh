@@ -34,7 +34,7 @@ extern struct device_s *soclib_fdaccess_device; /* FIXME use device api to find 
 
 VFS_FILE_READ(soclib_fdaccess_file_read)
 {
-  struct fs_node_s *node = file->node;
+  struct soclib_fdaccess_node_s *node = file->node;
   struct soclib_fdaccess_fs_s *pfs = node->fs;
 
   struct soclib_fdaccess_rq_s rq = {
@@ -55,7 +55,7 @@ VFS_FILE_READ(soclib_fdaccess_file_read)
 
 VFS_FILE_WRITE(soclib_fdaccess_file_write)
 {
-  struct fs_node_s *node = file->node;
+  struct soclib_fdaccess_node_s *node = file->node;
   struct soclib_fdaccess_fs_s *pfs = node->fs;
 
   struct soclib_fdaccess_rq_s rq = {
@@ -79,7 +79,7 @@ VFS_FILE_WRITE(soclib_fdaccess_file_write)
 
 VFS_FILE_SEEK(soclib_fdaccess_file_seek)
 {
-  struct fs_node_s *node = file->node;
+  struct soclib_fdaccess_node_s *node = file->node;
 
   switch (whence) {
   case VFS_SEEK_SET:
@@ -184,7 +184,7 @@ VFS_FS_CREATE(soclib_fdaccess_create)
   if (soclib_fdaccess_rq(pfs->dev, &rq))
     return -ENOTSUP; /* FIXME switch on errno */
 
-  struct fs_node_s *n = soclib_fdaccess_node_new(NULL, pfs, type, rq.fd);
+  struct soclib_fdaccess_node_s *n = soclib_fdaccess_node_new(NULL, pfs, type, rq.fd);
 
   *node = (void*)n;
   return *node ? 0 : -ENOMEM;
@@ -250,7 +250,7 @@ static const struct vfs_fs_ops_s soclib_fdaccess_fs_ops =
 };
 
 #if 0
-struct fs_node_s *
+struct soclib_fdaccess_node_s *
 soclib_fdaccess_node_new(void *mem, struct soclib_fdaccess_fs_s *fs,
                          enum vfs_node_type_e type, int32_t host_fd);
 #endif

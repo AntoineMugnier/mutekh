@@ -46,9 +46,9 @@
 # define __unused__ __attribute__((unused))
 
 # if _GNUC_VERSION >= 40500
-#  define deprecated(message)   __attribute__((deprecated(message)))
+#  define DEPRECATED(message)   __attribute__((deprecated(message)))
 # else
-#  define deprecated(message)   __attribute__((deprecated))
+#  define DEPRECATED(message)   __attribute__((deprecated))
 # endif
 
 # ifndef __MUTEK_ASM__ // mkdoc:skip
@@ -57,7 +57,7 @@
   attr proto __VA_ARGS__
 
 #   define _CONFIG_DEPEND_0(name, attr, proto, ...) \
-  deprecated("this symbol depends on " name ", not defined in configuration") proto
+  DEPRECATED("this symbol depends on " name ", not defined in configuration") proto
 
 #  define _CONFIG_DEPEND_AND_00(name, attr, proto, ...) _CONFIG_DEPEND_0(name, attr, proto, __VA_ARGS__)
 #  define _CONFIG_DEPEND_AND_01(name, attr, proto, ...) _CONFIG_DEPEND_0(name, attr, proto, __VA_ARGS__)

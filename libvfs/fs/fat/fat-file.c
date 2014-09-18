@@ -16,10 +16,10 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
-#include <hexo/types.h>
+#include <vfs/node.h>
 #include <vfs/fs.h>
 #include <vfs/file.h>
 
@@ -27,53 +27,57 @@
 #include "fat-defs.h"
 #include "fat-sector-cache.h"
 
-OBJECT_CONSTRUCTOR(fat_file)
+#include <hexo/types.h>
+#include <mutek/mem_alloc.h>
+
+struct fat_node_s *fat_node_create(struct fat_s *fat,
+                                   common_cluster_t first_cluster,
+                                   size_t file_size,
+                                   enum vfs_node_type_e type)
 {
-    obj->extent = fat_node_refnew(va_arg(ap, struct fs_node_s *));
+    struct fat_node_s *node = mem_alloc(sizeof(*node), mem_scope_sys);
+    if (!node)
+        return NULL;
 
-    obj->cluster_index = 0;
-    obj->zone_start = obj->extent->first_cluster;
-    obj->zone_end = obj->extent->first_cluster + 1;
-    fat_file_list_pushback(&obj->extent->files, obj);
+    if (vfs_node_init(&node->node, &fat->fs, type, NULL, 0)) {
+        mem_free(node);
+        return NULL;
+    }
 
-    return 0;
-}
-
-OBJECT_DESTRUCTOR(fat_file)
-{
-    fat_file_list_remove(&obj->extent->files, obj);
-    fat_node_refdrop(obj->extent);
-}
-
-OBJECT_CONSTRUCTOR(fat_node)
-{
-    obj->fat = va_arg(ap, struct fat_s *);
-    obj->first_cluster = va_arg(ap, uint32_t);
-    obj->file_size = va_arg(ap, size_t);
-    obj->type = va_arg(ap, enum vfs_node_type_e);
+    node->first_cluster = first_cluster;
+    node->file_size = file_size;
 
     vfs_printk("<%s: fc: %d size: %d %s>",
-               __FUNCTION__, obj->first_cluster,
-               obj->file_size, obj->type == VFS_NODE_DIR ? "dir" : "file");
+               __FUNCTION__, node->first_cluster,
+               node->file_size, node->node.type == VFS_NODE_DIR ? "dir" : "file");
 
-    fat_file_list_init(&obj->files);
-    semaphore_init(&obj->lock, 1);
+    fat_file_list_init(&node->files);
+    semaphore_init(&node->lock, 1);
 
-    fat_node_pool_push(&obj->fat->nodes, obj);
+    fat_node_pool_push(&fat->nodes, node);
 
-    return 0;
+    return node;
 }
 
-OBJECT_DESTRUCTOR(fat_node)
+VFS_FS_NODE_CLEANUP(fat_node_cleanup)
 {
-    fat_file_list_destroy(&obj->files);
-    semaphore_destroy(&obj->lock);
+    struct fat_node_s *fnode = (void*)node;
+    struct fat_s *fat = (void*)node->fs;
+
+    fat_node_pool_remove(&fat->nodes, fnode);
+
+    assert(fat_file_list_isempty(&fnode->files));
+    fat_file_list_destroy(&fnode->files);
+
+    semaphore_destroy(&fnode->lock);
 }
 
 static inline void dump_file(const struct fat_file_s *file)
 {
+    struct fat_node_s *fnode = (void*)file->file.node;
+
     vfs_printk("<fat file: first cluster: %d, size: %d, zone: @%d %d-%d>",
-               file->extent->first_cluster, file->extent->file_size,
+               fnode->first_cluster, fnode->file_size,
                file->cluster_index, file->zone_start, file->zone_end);
 }
 
@@ -98,7 +102,8 @@ common_cluster_t fat_file_get_cluster(
     struct fat_file_s *file,
     common_cluster_t cluster)
 {
-    struct fs_node_s *node = file->extent;
+    struct fat_node_s *node = (void*)file->file.node;
+    struct fat_s *fat = (void*)node->node.fs;
     common_cluster_t ret = 0;
 
     ret = fat_file_translate_cluster(file, cluster);
@@ -107,7 +112,7 @@ common_cluster_t fat_file_get_cluster(
 
     /* First, get the most advanced in all other file for the same node */
     struct fat_file_s *best = NULL;
-    CONTAINER_FOREACH(fat_file_list, CLIST, &node->files, {
+    GCT_FOREACH(fat_file_list, &node->files, item, {
             if ( (item->cluster_index < cluster) &&
                  ((best == NULL) || (item->cluster_index > best->cluster_index)) )
                 best = item;
@@ -128,7 +133,7 @@ common_cluster_t fat_file_get_cluster(
 
     /* Walk for the rest */
     while ( (ret = fat_file_translate_cluster(file, cluster)) == 0 ) {
-        ret = node->fat->ops->entry_get(node->fat, file->zone_end - 1);
+        ret = fat->ops->entry_get(fat, file->zone_end - 1);
         if ( fat_entry_is_end(ret) ) {
             ret = 0;
             break;
@@ -157,8 +162,8 @@ error_t fat_file_get_biggest_sector_range(
     sector_t *first_sector, sector_t *last_sector)
 {
     error_t err = -EUNKNOWN;
-    struct fs_node_s *node = ffile->extent;
-    struct fat_s *fat = node->fat;
+    struct fat_node_s *node = (void*)ffile->file.node;
+    struct fat_s *fat = (void*)node->node.fs;
 
     sector_t vsector = offset >> fat->sect_size_pow2;
     common_cluster_t vcluster = vsector >> fat->sect_per_clust_pow2;
@@ -200,9 +205,9 @@ error_t fat_file_get_biggest_sector_range(
 
 static
 sector_t fat_file_get_sector(struct fat_file_s *ffile, off_t offset)
-{
-    struct fs_node_s *node = ffile->extent;
-    struct fat_s *fat = node->fat;
+{ 
+    struct fat_node_s *node = (void*)ffile->file.node;
+    struct fat_s *fat = (void*)node->node.fs;
 
     sector_t vsector = offset >> fat->sect_size_pow2;
     common_cluster_t vcluster = vsector >> fat->sect_per_clust_pow2;
@@ -229,19 +234,13 @@ sector_t fat_file_get_sector(struct fat_file_s *ffile, off_t offset)
     return psector_offset + (pcluster << fat->sect_per_clust_pow2) + fat->cluster0_sector;
 }
 
-VFS_FILE_CLOSE(fat_file_close)
-{
-    struct fat_file_s *ffile = file->priv;
-    fat_file_refdrop(ffile);
-    return 0;
-}
-
 static
 ssize_t fat_file_read_part(struct fat_file_s *ffile,
                            off_t offset,
                            void *buffer, size_t size)
 {
-    struct fat_s *fat = ffile->extent->fat;
+    struct fat_node_s *node = (void*)ffile->file.node;
+    struct fat_s *fat = (void*)node->node.fs;
 
     assert(size < (1<<fat->sect_size_pow2));
 
@@ -271,7 +270,8 @@ ssize_t fat_file_read_aligned_sectors(
     off_t offset,
     void *buffer, size_t size)
 {
-    struct fat_s *fat = ffile->extent->fat;
+    struct fat_node_s *node = (void*)ffile->file.node;
+    struct fat_s *fat = (void*)node->node.fs;
     struct device_block_s *dev = fat->dev;
     sector_t max = size >> fat->sect_size_pow2;
 
@@ -304,7 +304,8 @@ ssize_t fat_root_read(
     off_t offset,
     void *buffer, size_t size)
 {
-    struct fat_s *fat = ffile->extent->fat;
+    struct fat_node_s *node = (void*)ffile->file.node;
+    struct fat_s *fat = (void*)node->node.fs;
 
     size_t block_size = (1 << fat->sect_size_pow2);
     size_t block_mask = (block_size - 1);
@@ -312,7 +313,7 @@ ssize_t fat_root_read(
     sector_t sect = (offset >> fat->sect_size_pow2)
         + fat->root_dir_base;
 
-    if ( offset >= ffile->extent->file_size )
+    if ( offset >= node->file_size )
         return 0;
 
     if ( size + block_offset > block_size )
@@ -336,13 +337,16 @@ ssize_t fat_data_read(
     off_t offset,
     void *buffer, size_t size)
 {
+    struct fat_node_s *node = (void*)ffile->file.node;
+    struct fat_s *fat = (void*)node->node.fs;
+
 #if defined(CONFIG_DRIVER_FS_FAT16)
-    if ( ffile->extent->first_cluster == 0 )
+    if ( node->first_cluster == 0 )
         return fat_root_read(ffile, offset, buffer, size);
 #endif
 
     uint8_t *data = buffer;
-    size_t sector_size = (1 << ffile->extent->fat->sect_size_pow2);
+    size_t sector_size = (1 << fat->sect_size_pow2);
     size_t sector_mask = sector_size - 1;
     size_t sect_offset = offset & sector_mask;
     ssize_t left = size;
@@ -395,12 +399,16 @@ ssize_t fat_data_read(
 
 VFS_FILE_READ(fat_file_read)
 {
-    struct fat_file_s *ffile = file->priv;
+    struct fat_file_s *ffile = (void*)file;
+    struct fat_node_s *node = (void*)ffile->file.node;
 
-    if ( file->offset >= ffile->extent->file_size )
+    if (!(ffile->file.flags & VFS_OPEN_READ))
+        return -EPERM;
+
+    if ( file->offset >= node->file_size )
         return 0;
 
-    size = __MIN(ffile->extent->file_size - file->offset, size);
+    size = __MIN(node->file_size - file->offset, size);
 
     ssize_t r = fat_data_read(ffile, file->offset, buffer, size);
     if ( r > 0 )
@@ -411,15 +419,19 @@ VFS_FILE_READ(fat_file_read)
 #if defined(CONFIG_DRIVER_FS_FAT_RW)
 VFS_FILE_WRITE(fat_file_write)
 {
-    struct fat_file_s *ffile = file->priv;
-    (void)ffile;
+    struct fat_file_s *ffile = (void*)file;
+
+    if (!(ffile->file.flags & VFS_OPEN_WRITE))
+        return -EPERM;
+
     return -ENOTSUP;
 }
 #endif
 
 VFS_FILE_SEEK(fat_file_seek)
 {
-    struct fat_file_s *ffile = file->priv;
+    struct fat_file_s *ffile = (void*)file;
+    struct fat_node_s *node = (void*)ffile->file.node;
 
 	switch (whence) {
 	case VFS_SEEK_SET:
@@ -428,12 +440,12 @@ VFS_FILE_SEEK(fat_file_seek)
 		offset += file->offset;
 		break;
 	case VFS_SEEK_END:
-		offset += ffile->extent->file_size;
+		offset += node->file_size;
 		break;
 	}
 
-	if ( offset > (off_t)ffile->extent->file_size )
-		offset = ffile->extent->file_size;
+	if ( offset > (off_t)node->file_size )
+		offset = node->file_size;
 	if ( offset < 0 )
 		offset = 0;
 
@@ -442,40 +454,69 @@ VFS_FILE_SEEK(fat_file_seek)
 	return offset;
 }
 
+VFS_FILE_CLEANUP(fat_file_cleanup)
+{
+    struct fat_file_s *ffile = (void*)file;
+    struct fat_node_s *node = (void*)file->node;
+
+    fat_file_list_remove(&node->files, ffile);
+}
+
+static const struct vfs_file_ops_s fat_file_ops =
+{
+    .read = fat_file_read,
+    .write = fat_file_write,
+    .seek = fat_file_seek,
+    .cleanup = fat_file_cleanup,
+};
+
+static const struct vfs_file_ops_s fat_dir_ops =
+{
+    .read = fat_dir_read,
+    .cleanup = fat_file_cleanup,
+};
+
+struct fat_file_s *fat_file_create(struct fat_node_s *node,
+                                   enum vfs_open_flags_e flags)
+{
+    struct fat_file_s *file = mem_alloc(sizeof(*file), mem_scope_sys);
+    if (!file)
+        return NULL;
+
+    const struct vfs_file_ops_s *ops = NULL;
+
+    switch (node->node.type) {
+	case VFS_NODE_FILE:
+        ops = &fat_file_ops;
+        break;
+	case VFS_NODE_DIR:
+        ops = &fat_dir_ops;
+		break;
+    }
+
+    if (vfs_file_init(&file->file, ops, flags, &node->node)) {
+        mem_free(file);
+        return NULL;
+    }
+
+    file->cluster_index = 0;
+    file->zone_start = node->first_cluster;
+    file->zone_end = node->first_cluster + 1;
+    fat_file_list_push(&node->files, file);
+
+    return file;
+}
+
 VFS_FS_NODE_OPEN(fat_node_open)
 {
-    struct fat_file_s *ffile = fat_file_new(NULL, node);
+    struct fat_node_s *fnode = (void*)node;
+    struct fat_file_s *ffile = fat_file_create(fnode, flags);
+
     if (ffile == NULL)
         return -ENOMEM;
 
-    struct vfs_file_s *rfile = vfs_file_new(
-        NULL, ffile, fat_file_refnew, fat_file_refdrop);
-    if (rfile == NULL) {
-        fat_file_refdrop(ffile);
-        return -ENOMEM;
-    }
+    *file = &ffile->file;
 
-    switch (node->type) {
-	case VFS_NODE_FILE: {
-		if ( flags & VFS_OPEN_READ )
-            rfile->read = fat_file_read;
-#if defined(CONFIG_DRIVER_FS_FAT_RW)
-		if ( flags & VFS_OPEN_WRITE )
-            rfile->write = fat_file_write;
-#endif
-		rfile->seek = fat_file_seek;
-        break;
-    }
-	case VFS_NODE_DIR:
-		rfile->read = fat_dir_read;
-		break;
-    }
-    rfile->offset = 0;
-    rfile->close = fat_file_close;
-
-    rfile->priv = ffile;
-
-    *file = rfile;
     return 0;
 }
 

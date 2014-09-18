@@ -10,10 +10,6 @@ ifeq ($(CONFIG_DRIVER_FS_ISO9660), defined)
  subdirs += iso9660
 endif
 
-ifeq ($(CONFIG_DRIVER_FS_DEVFS), defined)
- subdirs += devfs
-endif
-
 ifeq ($(CONFIG_DRIVER_FS_SOCLIB_FDACCESS), defined)
  subdirs += soclib-fdaccess
 endif

@@ -34,8 +34,8 @@
 #include <hexo/error.h>
 
 #include <mutek/kroutine.h>
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_clist.h>
+#include <gct_platform.h>
+#include <gct/container_clist.h>
 
 #include <device/driver.h>
 #include <device/resources.h>
@@ -174,12 +174,11 @@ enum dev_gpio_event_type_e
   DEV_GPIO_EVENT_FALLING      = 4,
 };
 
+#define GCT_CONTAINER_ALGO_dev_gpio_queue CLIST
+
 struct dev_gpio_request_s
 {
   struct kroutine_s         kr;
-
-  /** used by driver to enqueue requests */
-  CONTAINER_ENTRY_TYPE(CLIST) queue_entry;
 
   /** index of the first io to monitor */
   gpio_id_t                   io_first;
@@ -205,6 +204,8 @@ struct dev_gpio_request_s
 
   const struct device_gpio_s  *gdev;
   void                        *drv_pv;
+
+  GCT_CONTAINER_ENTRY(dev_gpio_queue, queue_entry);
 };
 
 

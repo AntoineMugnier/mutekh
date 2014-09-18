@@ -35,8 +35,8 @@ C_HEADER_BEGIN
 #include <hexo/types.h>
 #include <hexo/error.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
+#include <gct_platform.h>
+#include <gct/container_ring.h>
 
 #include <stdarg.h>
 #include <unistd.h>
@@ -78,7 +78,9 @@ enum				stdio_buf_mode_e
 
 #ifdef CONFIG_LIBC_STREAM
 
-CONTAINER_TYPE(stream_fifo, RING, uint8_t, CONFIG_LIBC_STREAM_BUFFER_SIZE);
+#define GCT_CONTAINER_ALGO_stream_fifo RING
+
+GCT_CONTAINER_TYPES(stream_fifo, uint8_t, CONFIG_LIBC_STREAM_BUFFER_SIZE);
 
 typedef struct			file_s
 {
@@ -111,7 +113,7 @@ void __stdio_stream_init(FILE *stream);
 typedef struct file_s { } FILE;
 #endif /* CONFIG_LIBC_STREAM */
 
-config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_VFS)
+config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_LIBC_VFS)
 FILE *fopen(const char *path, const char *mode);
 
 config_depend(CONFIG_LIBC_STREAM)

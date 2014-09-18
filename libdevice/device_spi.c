@@ -285,7 +285,7 @@ device_spi_ctrl_sched(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t)
 
   /* find next candidate request in queue */
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
-  CONTAINER_FOREACH_NOLOCK(dev_spi_ctrl_queue, CLIST, &q->queue, {
+  GCT_FOREACH_NOLOCK(dev_spi_ctrl_queue, &q->queue, item, {
 
       /* FIXME use dev_timer_check_timeout */
       if (item->sleep_before <= t)

@@ -25,6 +25,8 @@
 #include <network/socket_internals.h>
 #include <semaphore.h>
 
+#include <sys/time.h>
+
 /*
  * Shortcut macro to get an option verifying user arguments.
  */
@@ -135,11 +137,11 @@ socket_t			socket(int_fast32_t domain, int_fast32_t type, int_fast32_t protocol)
   sock->error = 0;
   sock->shutdown = -1;
   sock->type = type;
-  sock->broadcast = 0;
-  sock->keepalive = 0;
   sock->recv_timeout = 0;
   sock->send_timeout = 0;
   sock->linger = 0;
+  sock->broadcast = 0;
+  sock->keepalive = 0;
   sock->f = api;
   api->socket(sock, domain, type, protocol);
   return sock;
@@ -420,7 +422,7 @@ int_fast32_t getsockopt_inet(socket_t		fd,
 
 struct net_packet_s	*socket_grab_packet(socket_t			fd,
 					    int_fast32_t		flags,
-					    timer_event_callback_t	*recv_timeout,
+					    struct kroutine_s	*recv_timeout,
 					    packet_queue_root_t		*recv_q,
 					    struct semaphore_s		*recv_sem)
 {
@@ -486,7 +488,7 @@ struct net_packet_s	*socket_grab_packet(socket_t			fd,
 
 struct net_buffer_s	*socket_grab_buffer(socket_t			fd,
 					    int_fast32_t		flags,
-					    timer_event_callback_t	*recv_timeout,
+					    struct kroutine_s	*recv_timeout,
 					    buffer_queue_root_t		*recv_q,
 					    struct semaphore_s		*recv_sem)
 {

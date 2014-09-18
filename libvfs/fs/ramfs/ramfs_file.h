@@ -16,15 +16,14 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301 USA
 
-  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009
+  Copyright Nicolas Pouillon, <nipo@ssji.net>, 2009,2014
 */
 
 #ifndef _RAMFS_FILE_H_
 #define _RAMFS_FILE_H_
 
 #include <hexo/types.h>
-#include <vfs/types.h>
-#include <vfs/file.h>
+#include <vfs/fs.h>
 
 VFS_FS_NODE_OPEN(ramfs_node_open);
 

@@ -39,7 +39,7 @@
 # include <mutek/bytecode.h>
 # include <device/class/gpio.h>
 # include <device/class/timer.h>
-# include <hexo/gpct_platform_hexo.h>
+# include <gct_platform.h>
 # include <gpct/cont_clist.h>
 #endif
 
@@ -238,7 +238,7 @@ struct dev_spi_ctrl_request_s
   struct kroutine_s        kr;
 
   /** used by driver to enqueue requests */
-  CONTAINER_ENTRY_TYPE(CLIST)	queue_entry;
+  GCT_CONTAINER_ENTRY(CLIST)	queue_entry;
 
   /** bytecode virtual machine context */
   struct bc_context_s      vm;
@@ -295,8 +295,8 @@ struct dev_spi_ctrl_request_s
   bool_t                  priority:1;
 };
 
-CONTAINER_TYPE(dev_spi_ctrl_queue, CLIST, struct dev_spi_ctrl_request_s, queue_entry);
-CONTAINER_FUNC(dev_spi_ctrl_queue, CLIST, static inline, dev_spi_ctrl_queue);
+GCT_CONTAINER_TYPES(dev_spi_ctrl_queue, CLIST, struct dev_spi_ctrl_request_s, queue_entry);
+GCT_CONTAINER_FCNS(dev_spi_ctrl_queue, CLIST, static inline, dev_spi_ctrl_queue);
 
 struct dev_spi_ctrl_queue_s
 {

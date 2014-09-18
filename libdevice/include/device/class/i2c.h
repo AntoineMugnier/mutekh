@@ -34,6 +34,9 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
+#include <gct_platform.h>
+#include <gct/container_clist.h>
+
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/resources.h>
@@ -42,9 +45,7 @@
 #if defined(CONFIG_DEVICE_I2C_REQUEST)
 # include <mutek/bytecode.h>
 # include <hexo/gpct_platform_hexo.h>
-# include <gpct/cont_clist.h>
 #endif
-
 
 struct device_s;
 struct driver_s;
@@ -251,6 +252,8 @@ enum dev_i2c_ctrl_request_type_e
   DEV_I2C_REQ_INFO,
 };
 
+#define GCT_CONTAINER_ALGO_dev_i2c_ctrl_queue CLIST
+
 /** @This structure describes actions to perform on a I2C slave device. */
 struct dev_i2c_ctrl_request_s
 {
@@ -259,7 +262,7 @@ struct dev_i2c_ctrl_request_s
   struct kroutine_s                    kr;
 
   /** Queue entry that is used by the driver to enqueue requests. */
-  CONTAINER_ENTRY_TYPE(CLIST)          queue_entry;
+  GCT_CONTAINER_ENTRY(dev_i2c_ctrl_queue, queue_entry);
 
   union {
     /** The bytecode vm if request is used with bytecode. */
@@ -298,8 +301,9 @@ struct dev_i2c_ctrl_request_s
   bool_t                               priority:1;
 };
 
-CONTAINER_TYPE(dev_i2c_ctrl_queue, CLIST, struct dev_i2c_ctrl_request_s, queue_entry);
-CONTAINER_FUNC(dev_i2c_ctrl_queue, CLIST, static inline, dev_i2c_ctrl_queue);
+GCT_CONTAINER_TYPES(dev_i2c_ctrl_queue, struct dev_i2c_ctrl_request_s *, queue_entry);
+GCT_CONTAINER_FCNS(dev_i2c_ctrl_queue, static inline, dev_i2c_ctrl_queue,
+                   init, destroy, pop, remove, push, push_back, isempty);
 
 /** @This structure defines a scheduler that is associated with a I2C
     controller. */

@@ -53,7 +53,7 @@
 #include <network/protos.h>
 #include <network/if.h>
 
-#include <hexo/gpct_platform_hexo.h>
+#include <gct_platform.h>
 #include <gpct/cont_clist.h>
 
 struct				net_tuntap_context_s

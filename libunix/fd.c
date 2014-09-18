@@ -24,5 +24,5 @@
 #include <libunix.h>
 
 OBJECT_FUNC   (libunix_fd_obj, REFCOUNT, , libunix_fd, obj_entry);
-CONTAINER_FUNC(libunix_fd_table, ARRAY, , libunix_fd);
+GCT_CONTAINER_FCNS(libunix_fd_table, ARRAY, , libunix_fd);
 

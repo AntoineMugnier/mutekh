@@ -34,9 +34,8 @@
 #include <network/packet.h>
 #include <network/protos.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/object_simple.h>
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
 
 
 /*

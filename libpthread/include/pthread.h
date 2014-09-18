@@ -331,21 +331,21 @@ extern pthread_mutexattr_t __pthread_mutex_attr_recursive;
 /** @this is the normal mutex object static initializer */
 #  define PTHREAD_MUTEX_INITIALIZER						       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
+    .wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
     .attr = &__pthread_mutex_attr_normal					       \
   }
 
 /** @this is the recurvive mutex object static initializer */
 #  define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP				      \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
+    .wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
     .attr = &__pthread_mutex_attr_recursive						\
   }
 
 /** @this is error checking mutex object static initializer */
 #  define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP				       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
+    .wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
     .attr = &__pthread_mutex_attr_errorcheck					       \
   }
 
@@ -353,7 +353,7 @@ extern pthread_mutexattr_t __pthread_mutex_attr_recursive;
 
 #  define PTHREAD_MUTEX_INITIALIZER						       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
+    .wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
   }
 
 #  define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP				      \
@@ -488,7 +488,7 @@ pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 /** normal cond object static initializer */
 # define PTHREAD_COND_INITIALIZER						       \
   {										       \
-    .wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
+    .wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST), \
   }
 
 /************************************************************************
@@ -667,7 +667,7 @@ error_t pthread_barrier_wait(pthread_barrier_t *barrier),
 # define PTHREAD_BARRIER_INITIALIZER(n)                                 \
   {                                                                     \
     .funcs = barrier_normal_funcs,                                      \
-      .normal.wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),    \
+      .normal.wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),    \
       .normal.count = (n),                                              \
   }
 
@@ -676,7 +676,7 @@ error_t pthread_barrier_wait(pthread_barrier_t *barrier),
 /** normal rwlock object static initializer */
 # define PTHREAD_BARRIER_INITIALIZER(n)							  \
   {											  \
-    .normal.wait = CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),	  \
+    .normal.wait = GCT_CONTAINER_ROOT_INITIALIZER(sched_queue, DLIST),	  \
     .normal.count = (n),									  \
   }
 

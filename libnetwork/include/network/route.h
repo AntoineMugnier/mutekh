@@ -32,10 +32,10 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <hexo/gpct_lock_hexo.h>
-#include <gpct/object_refcount.h>
-#include <gpct/cont_dlist.h>
+#include <gct_platform.h>
+#include <gct_lock_hexo_lock.h>
+#include <gct/refcount.h>
+#include <gct/container_dlist.h>
 
 #include <network/packet.h>
 
@@ -45,7 +45,9 @@ struct net_if_s;
  * Structure defining a route.
  */
 
-OBJECT_TYPE(route_obj, REFCOUNT, struct net_route_s);
+#define GCT_CONTAINER_REFCOUNT_route_table	route_obj
+#define GCT_CONTAINER_LOCK_route_table	HEXO_LOCK
+#define GCT_CONTAINER_ALGO_route_table	DLIST
 
 struct				net_route_s
 {
@@ -57,21 +59,22 @@ struct				net_route_s
   struct net_addr_s		router;
   bool_t			invalidated;
 
-  route_obj_entry_t		obj_entry;
-  CONTAINER_ENTRY_TYPE(DLIST)	list_entry;
+  GCT_REFCOUNT_ENTRY(obj_entry);
+  GCT_CONTAINER_ENTRY(route_table, list_entry);
 };
 
-OBJECT_CONSTRUCTOR(route_obj);
-OBJECT_DESTRUCTOR(route_obj);
-OBJECT_FUNC(route_obj, REFCOUNT, static inline, route_obj, obj_entry);
+GCT_REFCOUNT(route_obj, struct net_route_s *, obj_entry);
+
+struct net_route_s *route_obj_new(struct net_addr_s *target,
+                                  struct net_addr_s *mask,
+                                  struct net_if_s *interface);
+void route_obj_destroy(struct net_route_s * obj);
 
 /*
  * Route table container.
  */
 
-#define CONTAINER_OBJ_route_table	route_obj
-#define CONTAINER_LOCK_route_table	HEXO_SPIN
-CONTAINER_TYPE(route_table, DLIST, struct net_route_s, list_entry);
+GCT_CONTAINER_TYPES(route_table, struct net_route_s*, list_entry);
 
 /*
  * Prototypes

@@ -22,7 +22,7 @@
 
 #include <mutek/scheduler.h>
 #include <mutek/kroutine.h>
-#include <gpct/cont_slist.h>
+#include <gct/container_slist.h>
 
 #include <mutek/startup.h>
 #include <hexo/local.h>
@@ -55,12 +55,12 @@ __sched_candidate_noidle(sched_queue_root_t *root)
 #ifdef CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN
   struct sched_context_s *c = NULL;
 
-  CONTAINER_FOREACH_NOLOCK(sched_queue, DLIST, root, {
+  GCT_FOREACH_NOLOCK(sched_queue, root, item, {
     if (item->is_candidate == NULL || item->is_candidate(item))
       {
         sched_queue_nolock_remove(root, item);
         c = item;
-        CONTAINER_FOREACH_BREAK;
+        GCT_FOREACH_BREAK;
       }
   });
 
@@ -93,12 +93,12 @@ __sched_candidate(sched_queue_root_t *root)
 /************************** scheduler idle processors queue */
 
 #if defined(CONFIG_HEXO_IPI)
-# define CONTAINER_ORPHAN_CHK_idle_cpu_queue
+
 /* We use a singly linked list here as idle cpu pick up order doesn't
    matter. No lock is needed as we only access this list when the
    running queue lock is held. */
-CONTAINER_TYPE(idle_cpu_queue, SLIST, struct ipi_endpoint_s, idle_cpu_queue_list_entry);
-CONTAINER_FUNC(idle_cpu_queue, SLIST, static inline, idle_cpu_queue, list_entry);
+GCT_CONTAINER_TYPES(idle_cpu_queue, struct ipi_endpoint_s, idle_cpu_queue_list_entry);
+GCT_CONTAINER_FCNS(idle_cpu_queue, static inline, idle_cpu_queue, list_entry);
 #endif
 
 /************************** scheduler running contexts queue */

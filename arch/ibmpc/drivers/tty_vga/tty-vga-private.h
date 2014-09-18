@@ -28,9 +28,9 @@
 #include <device/device.h>
 #include <hexo/lock.h>
 
-#include <hexo/gpct_platform_hexo.h>
-#include <gpct/cont_ring.h>
-#include <hexo/gpct_lock_hexo.h>
+#include <gct_platform.h>
+#include <gpt/container_ring.h>
+#include <gct_lock.h>
 
 #if defined(CONFIG_DRIVER_CHAR_VGATTY_KEYBOARD) || defined(CONFIG_DRIVER_CHAR_VGATTY_ANSI)
 # define DRIVER_CHAR_VGATTY_HAS_FIFO
@@ -72,8 +72,10 @@ typedef void tty_vga_char_process_t (struct device_s *dev, uint8_t c);
 typedef void tty_vga_key_process_t  (struct device_s *dev, uint8_t scancode);
 #endif
 
-CONTAINER_TYPE(tty_fifo, RING, uint8_t, 32);
-CONTAINER_FUNC(tty_fifo, RING, static inline, tty_fifo);
+#define GCT_CONTAINER_ALGO_tty_fifo RING
+GCT_CONTAINER_TYPES(tty_fifo, uint8_t, 32);
+GCT_CONTAINER_FCNS(tty_fifo, static inline, tty_fifo,
+                   init, destroy, pop_array, pushback, pushback_array);
 
 #define VGA_TTY_MAX_ANSI_PARAMS		4
 
