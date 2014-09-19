@@ -58,6 +58,7 @@ enum driver_class_e
   DRIVER_CLASS_I2C_CTRL,
   DRIVER_CLASS_I2C_DEV,
   DRIVER_CLASS_MEM,
+  DRIVER_CLASS_RFPACKET,
   DRIVER_CLASS_CPU,
   DRIVER_CLASS_Sys_Last = DRIVER_CLASS_CPU, //< last MutekH reserved value in use
   DRIVER_CLASS_User_First = 128,            //< First user defined device class id
@@ -68,7 +69,7 @@ enum driver_class_e
   "ICU", "DMA", "Input", "Network", "Sound",                           \
   "Timer", "PWM", "SPI Controller" , "LCD", "Clock", "GPIO", "IoMux", "UART", \
     "I2C Controller", "I2C Device",                                         \
-  "Memory", "CPU"
+  "Memory", "RfPacket", "CPU"
 
 enum dev_enum_type_e
 {
