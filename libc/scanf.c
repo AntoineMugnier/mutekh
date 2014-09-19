@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h> /* for __MIN __MAX macros */
 
 #define EOFIELD -2
 
