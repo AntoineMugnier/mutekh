@@ -40,7 +40,7 @@
 # include <device/class/gpio.h>
 # include <device/class/timer.h>
 # include <gct_platform.h>
-# include <gpct/cont_clist.h>
+# include <gct/container_clist.h>
 #endif
 
 struct device_s;
@@ -230,6 +230,8 @@ DRIVER_CLASS_TYPES(spi_ctrl,
 
 /***************************************** request */
 
+#define GCT_CONTAINER_ALGO_dev_spi_ctrl_queue CLIST
+
 /** @This structure describes actions to perform on a SPI slave device. */
 struct dev_spi_ctrl_request_s
 {
@@ -238,7 +240,7 @@ struct dev_spi_ctrl_request_s
   struct kroutine_s        kr;
 
   /** used by driver to enqueue requests */
-  GCT_CONTAINER_ENTRY(CLIST)	queue_entry;
+  GCT_CONTAINER_ENTRY(dev_spi_ctrl_queue, queue_entry);
 
   /** bytecode virtual machine context */
   struct bc_context_s      vm;
@@ -295,8 +297,9 @@ struct dev_spi_ctrl_request_s
   bool_t                  priority:1;
 };
 
-GCT_CONTAINER_TYPES(dev_spi_ctrl_queue, CLIST, struct dev_spi_ctrl_request_s, queue_entry);
-GCT_CONTAINER_FCNS(dev_spi_ctrl_queue, CLIST, static inline, dev_spi_ctrl_queue);
+GCT_CONTAINER_TYPES(dev_spi_ctrl_queue, struct dev_spi_ctrl_request_s *, queue_entry);
+GCT_CONTAINER_FCNS(dev_spi_ctrl_queue, static inline, dev_spi_ctrl_queue,
+                   init, destroy, remove, push, pushback, pop, isempty);
 
 struct dev_spi_ctrl_queue_s
 {

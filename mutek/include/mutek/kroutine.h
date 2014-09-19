@@ -212,9 +212,11 @@ struct kroutine_s
   enum kroutine_policy_e       policy;
 };
 
+#define GCT_CONTAINER_ALGO_kroutine_queue CLIST
+
 #if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
-GCT_CONTAINER_TYPES       (kroutine_queue, struct kroutine_s, queue_entry);
-GCT_CONTAINER_FCNS       (kroutine_queue, static inline, kroutine_queue, queue_entry,
+GCT_CONTAINER_TYPES       (kroutine_queue, struct kroutine_s *, queue_entry);
+GCT_CONTAINER_FCNS       (kroutine_queue, static inline, kroutine_queue,
                           init, destroy, head, pushback, pop);
 #endif
 
