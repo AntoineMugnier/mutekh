@@ -77,13 +77,13 @@ CFLAGS += -finstrument-functions
 endif
 
 INCS=-nostdinc -D__MUTEK__ \
-	-I$(MUTEK_SRC_DIR)/include \
+	-I$(MUTEK_SRC_DIR)/include -I $(OBJ_DIR) \
 	$(foreach mod,$(MODULE_NAMES),-I$($(mod)_SRC_DIR)/include) \
 	$(foreach mod,$(MODULE_NAMES),-I$($(mod)_OBJ_DIR)/include) \
 	-I$(CURRENT_DIR) \
 	-I$(BUILD_DIR) \
 	-I$(MUTEK_SRC_DIR) \
-	-include $(OBJ_DIR)/config.h -include $(OBJ_DIR)/inits.h
+	-include $(OBJ_DIR)/config.h
 
 cflags:
 	@echo $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS)

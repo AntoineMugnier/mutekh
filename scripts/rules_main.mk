@@ -37,6 +37,9 @@ DEP_FILE_LIST:=
 include $(MUTEK_SRC_DIR)/scripts/config.mk
 include $(MUTEK_SRC_DIR)/scripts/discover.mk
 
+$(OBJ_DIR)/enums.h: $(ENUM_HEADER_LIST) $(MUTEK_SRC_DIR)/scripts/enum.pl
+	perl $(MUTEK_SRC_DIR)/scripts/enum.pl -o $@ $(ENUM_HEADER_LIST)
+
 ifneq ($(CLEANING),1)
 define do_inc_dep
 

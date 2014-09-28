@@ -248,6 +248,7 @@ subdirs:=
 pre_headers:=
 doc_headers:=
 doc_files:=
+enum_headers:=
 
 include $$(LOCAL_SRC_DIR)/Makefile
 
@@ -257,6 +258,7 @@ TARGET_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs))
 COPY_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(copy))
 META_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(meta))
 PRE_HEADER_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(pre_headers))
+ENUM_HEADER_LIST+=$$(addprefix $$(LOCAL_SRC_DIR)/include/,$$(enum_headers))
 CLEAN_FILE_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(copy) $$(meta))
 
 PRE_HEADER_LIST+=$$(filter %.h,$$(COPY_OBJECT_LIST))

@@ -111,4 +111,7 @@
   [-(char)!!__builtin_offsetof(struct struct_name, field)];
 #endif
 
+#undef ENUM_DESCRIPTOR
+#define ENUM_DESCRIPTOR(name, ...) extern const char name[];
+
 #endif /* HEXO_DECLS_H_ */

@@ -31,6 +31,7 @@
 #define MUTEK_SHELL_H_
 
 #include <termui/console.h>
+#include <termui/console_opt.h>
 
 struct device_char_s;
 

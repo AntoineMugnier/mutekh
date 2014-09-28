@@ -31,6 +31,7 @@
 
 #include <hexo/decls.h>
 #include <hexo/types.h>
+#include <inits.h>
 
 C_HEADER_BEGIN
 
