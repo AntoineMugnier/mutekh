@@ -109,7 +109,7 @@ struct device_node_s
  *, list_entry);
 
 GCT_CONTAINER_PROTOTYPES(device_list, , device_list,
-                         init, destroy, pushback, remove);
+                         init, destroy, pushback, remove, isempty);
 #endif
 ;
 
@@ -293,6 +293,10 @@ typedef DEVICE_FILTER(device_filter_t);
 error_t device_node_from_path(struct device_node_s **node, const char *path,
                               uint_fast8_t depth, const char **brackets,
                               device_filter_t *filter);
+
+/** @internal */
+error_t device_resolve_alias(struct device_node_s **node, uint_fast8_t depth,
+                             const char **brackets);
 
 /** @internal */
 DEVICE_FILTER(device_filter_init_done);

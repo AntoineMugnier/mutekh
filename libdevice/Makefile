@@ -23,6 +23,9 @@ endif
 
 ifeq ($(CONFIG_DEVICE_TIMER), defined)
 objs += device_timer.o
+ifeq ($(CONFIG_DEVICE_SHELL), defined)
+objs += shell_timer.o
+endif
 endif
 
 ifeq ($(CONFIG_DEVICE_DMA), defined)
@@ -55,5 +58,12 @@ endif
 
 ifeq ($(CONFIG_DEVICE_CLOCK), defined)
 objs += device_clock.o
+ifeq ($(CONFIG_DEVICE_SHELL), defined)
+objs += shell_clock.o
+endif
+endif
+
+ifeq ($(CONFIG_DEVICE_SHELL), defined)
+objs += shell.o
 endif
 

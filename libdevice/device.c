@@ -43,7 +43,7 @@ struct device_node_s *device_tree_root()
 }
 
 GCT_CONTAINER_FCNS(device_list, inline, device_list,
-                   init, destroy, pushback, remove);
+                   init, destroy, pushback, remove, isempty);
 
 void device_tree_init()
 {
@@ -404,7 +404,7 @@ struct device_alias_s * device_new_alias_to_node(struct device_node_s *parent, c
   return device_new_alias_to_path(parent, name, buf);
 }
 
-static error_t device_resolve_alias(struct device_node_s **node, uint_fast8_t depth, const char **brackets)
+error_t device_resolve_alias(struct device_node_s **node, uint_fast8_t depth, const char **brackets)
 {
   struct device_node_s *n = *node;
   error_t e = 0;
@@ -554,6 +554,8 @@ error_t device_node_from_path(struct device_node_s **node, const char *path,
                   {
 #ifdef CONFIG_DEVICE_TREE
                     r = node;
+                    if (device_resolve_alias(&r, depth, NULL))
+                      goto skip;
                     path += i + 1;
                     goto next;
 #else
