@@ -291,7 +291,7 @@ foreach my $filein (@ARGV) {
     }
 
     foreach my $name (keys %enums) {
-        my $e = %enums{$name};
+        my $e = $enums{$name};
         if (!$e->{defined}) {
             die "error:$e->{mlnum}: enum `$e->{name}' never defined\n";
         }
