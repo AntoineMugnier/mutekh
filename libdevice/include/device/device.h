@@ -48,6 +48,8 @@ typedef uint8_t address_space_id_t;
 # include <gct/container_clist.h>
 #endif
 
+ENUM_DESCRIPTOR(device_status_e, strip:DEVICE_, upper);
+
 /** @This specifies the initialization status of a device */
 enum device_status_e
 {
@@ -62,8 +64,6 @@ enum device_status_e
   /** A driver has been attached to the device but initialization failed */
   DEVICE_DRIVER_INIT_FAILED,
 };
-
-#define DEVICE_STATUS_NAMES "enum error", "no driver", "init pending", "init ok", "init failed"
 
 /** @This specifies device node type and flags */
 enum device_flags_e
@@ -373,12 +373,6 @@ void device_attach(struct device_s *dev,
 /** @This detaches a device from its parent enumerator device */
 config_depend(CONFIG_DEVICE_TREE)
 void device_detach(struct device_s *dev);
-
-/** @This prints the current devices tree. */
-void device_dump(struct device_s *root);
-
-/** @This prints the current devices tree. */
-void device_dump_tree(struct device_node_s *root);
 
 /** @see device_tree_walker_t */
 #define DEVICE_TREE_WALKER(x) bool_t (x)(struct device_s *dev, void *priv)

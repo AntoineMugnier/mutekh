@@ -31,10 +31,13 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/enum.h>
+#include <enums.h>
 
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+
+const char driver_class_e[] = ENUM_DESC_DRIVER_CLASS_E;
 
 error_t device_get_accessor(void *accessor, struct device_s *dev,
                             enum driver_class_e cl, uint_fast8_t number)

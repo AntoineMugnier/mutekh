@@ -28,8 +28,11 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/enum.h>
+#include <enums.h>
 
 #include <mutek/mem_alloc.h>
+
+const char device_status_e[] = ENUM_DESC_DEVICE_STATUS_E;
 
 #ifdef CONFIG_DEVICE_TREE
 

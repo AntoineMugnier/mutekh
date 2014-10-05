@@ -26,6 +26,11 @@
 
 #include <device/class/timer.h>
 
+enum timer_opts_e
+{
+  TIMER_OPT_DEV = 0x01,
+};
+
 struct termui_optctx_dev_timer_opts
 {
   struct device_timer_s timer;
@@ -72,9 +77,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_stop)
 static TERMUI_CON_OPT_DECL(dev_timer_opts) =
 {
   /* option 0, mask is 0x1 */
-  TERMUI_CON_OPT_DEV_ACCESSOR_ENTRY("-d", "--timer-dev", 0x1,
+  TERMUI_CON_OPT_DEV_ACCESSOR_ENTRY("-d", "--timer-dev", TIMER_OPT_DEV,
                                     struct termui_optctx_dev_timer_opts, timer, DRIVER_CLASS_TIMER,
-                                    TERMUI_CON_OPT_CONSTRAINTS(0x1, 0)
+                                    TERMUI_CON_OPT_CONSTRAINTS(TIMER_OPT_DEV, 0)
                                     )
 
   TERMUI_CON_LIST_END
@@ -83,13 +88,13 @@ static TERMUI_CON_OPT_DECL(dev_timer_opts) =
 TERMUI_CON_GROUP_DECL(dev_shell_timer_group) =
 {
   TERMUI_CON_ENTRY(dev_shell_timer_value, "value",
-		   TERMUI_CON_OPTS_CTX(dev_timer_opts, 0x1, 0, timer_opts_cleanup)
+		   TERMUI_CON_OPTS_CTX(dev_timer_opts, TIMER_OPT_DEV, 0, timer_opts_cleanup)
                    )
   TERMUI_CON_ENTRY(dev_shell_timer_start, "start",
-		   TERMUI_CON_OPTS_CTX(dev_timer_opts, 0x1, 0, timer_opts_cleanup)
+		   TERMUI_CON_OPTS_CTX(dev_timer_opts, TIMER_OPT_DEV, 0, timer_opts_cleanup)
                    )
   TERMUI_CON_ENTRY(dev_shell_timer_stop, "stop",
-		   TERMUI_CON_OPTS_CTX(dev_timer_opts, 0x1, 0, timer_opts_cleanup)
+		   TERMUI_CON_OPTS_CTX(dev_timer_opts, TIMER_OPT_DEV, 0, timer_opts_cleanup)
                    )
 
   TERMUI_CON_LIST_END

@@ -11,8 +11,7 @@ endif
 
 ifeq ($(CONFIG_LIBTERMUI_CONSOLE), defined)
 objs += src/console_builtin.o src/console.o src/console_process.o \
-	src/console_entries.o src/console_parse.o \
-        src/console_opt_integer.o src/console_opt_enum.o
+	src/console_parse.o src/console_opt.o
 ifeq ($(CONFIG_LIBTERMUI_CON_COMPLETION), defined)
 objs += src/console_complete.o
 endif

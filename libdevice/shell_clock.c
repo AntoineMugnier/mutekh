@@ -26,6 +26,11 @@
 
 #include <device/class/clock.h>
 
+enum mem_opts_e
+{
+  CLOCK_OPT_DEV    = 0x01,
+};
+
 struct termui_optctx_dev_clock_opts
 {
   struct device_clock_s clock;
@@ -76,9 +81,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_freqs)
 static TERMUI_CON_OPT_DECL(dev_clock_opts) =
 {
   /* option 0, mask is 0x1 */
-  TERMUI_CON_OPT_DEV_ACCESSOR_ENTRY("-d", "--clock-dev", 0x1,
+  TERMUI_CON_OPT_DEV_ACCESSOR_ENTRY("-d", "--clock-dev", CLOCK_OPT_DEV,
                                     struct termui_optctx_dev_clock_opts, clock, DRIVER_CLASS_CLOCK,
-                                    TERMUI_CON_OPT_CONSTRAINTS(0x1, 0)
+                                    TERMUI_CON_OPT_CONSTRAINTS(CLOCK_OPT_DEV, 0)
                                     )
 
   TERMUI_CON_LIST_END
@@ -87,12 +92,12 @@ static TERMUI_CON_OPT_DECL(dev_clock_opts) =
 TERMUI_CON_GROUP_DECL(dev_shell_clock_group) =
 {
   TERMUI_CON_ENTRY(dev_shell_clock_config, "config",
-		   TERMUI_CON_OPTS_CTX(dev_clock_opts, 0x1, 0, clock_opts_cleanup)
+		   TERMUI_CON_OPTS_CTX(dev_clock_opts, CLOCK_OPT_DEV, 0, clock_opts_cleanup)
                    TERMUI_CON_ARGS(1, 1)
                    )
 
   TERMUI_CON_ENTRY(dev_shell_clock_freqs, "freqs",
-		   TERMUI_CON_OPTS_CTX(dev_clock_opts, 0x1, 0, clock_opts_cleanup)
+		   TERMUI_CON_OPTS_CTX(dev_clock_opts, CLOCK_OPT_DEV, 0, clock_opts_cleanup)
                    TERMUI_CON_ARGS(0, 0)
                    )
 

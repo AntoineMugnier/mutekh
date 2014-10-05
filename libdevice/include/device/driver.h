@@ -33,11 +33,12 @@
 #include <hexo/error.h>
 #include <device/device.h>
 
+ENUM_DESCRIPTOR(driver_class_e, strip:DRIVER_CLASS_, upper);
+
 /** @This specifies device driver personality class. */
 enum driver_class_e
 {
   DRIVER_CLASS_NONE = 0,
-
   DRIVER_CLASS_BLOCK,
   DRIVER_CLASS_CHAR,
   DRIVER_CLASS_ENUM,
@@ -60,16 +61,9 @@ enum driver_class_e
   DRIVER_CLASS_MEM,
   DRIVER_CLASS_RFPACKET,
   DRIVER_CLASS_CPU,
-  DRIVER_CLASS_Sys_Last = DRIVER_CLASS_CPU, //< last MutekH reserved value in use
-  DRIVER_CLASS_User_First = 128,            //< First user defined device class id
+  /** First user defined device class id */
+  DRIVER_CLASS_User_First = 128,
 };
-
-#define DRIVER_CLASS_NAMES                                             \
-  "None", "Block", "Char", "Enumerator", "FrameBuffer",                \
-  "ICU", "DMA", "Input", "Network", "Sound",                           \
-  "Timer", "PWM", "SPI Controller" , "LCD", "Clock", "GPIO", "IoMux", "UART", \
-    "I2C Controller", "I2C Device",                                         \
-  "Memory", "RfPacket", "CPU"
 
 enum dev_enum_type_e
 {

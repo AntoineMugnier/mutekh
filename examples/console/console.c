@@ -5,6 +5,7 @@
 #include <termui/getline.h>
 #include <termui/mutekh.h>
 #include <termui/console.h>
+#include <termui/console_opt.h>
 
 #include <mutek/console.h>
 
@@ -32,12 +33,12 @@ static TERMUI_CON_COMMAND_PROTOTYPE(test_command)
 static TERMUI_CON_GROUP_DECL(root_group) =
 {
   /* Some useful commands provided by the library */
-  TERMUI_CON_BUILTIN_HELP(-1),
-  TERMUI_CON_BUILTIN_LIST(-1),
-  TERMUI_CON_BUILTIN_QUIT(-1),
+  TERMUI_CON_BUILTIN_HELP(-1)
+  TERMUI_CON_BUILTIN_LIST(-1)
+  TERMUI_CON_BUILTIN_QUIT(-1)
 
   /* Bare simple command */
-  TERMUI_CON_ENTRY(bar_command, "bar"),
+  TERMUI_CON_ENTRY(bar_command, "bar")
 
   /* Simple command with short help and allowed argc range */
   TERMUI_CON_ENTRY(foo_command, "foo",
@@ -45,13 +46,13 @@ static TERMUI_CON_GROUP_DECL(root_group) =
 		   TERMUI_CON_HELP("The foo command", NULL)
 		   /* Valid argc range is [0, 10] */
 		   TERMUI_CON_ARGS(0, 10)
-		   ),
+		   )
 
   /* Simple command with short and long help message */
   TERMUI_CON_ENTRY(test_command, "test",
 		   TERMUI_CON_HELP("The test command",
 				   "This is the long help text")
-		   ),
+		   )
 
   TERMUI_CON_LIST_END
 };
