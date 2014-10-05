@@ -8,8 +8,6 @@ pthread_mutex_t m;
 
 void main()
 {
-  device_dump_tree(0);
-
   pthread_mutex_init(&m, NULL);
   pthread_mutex_lock(&m);
 

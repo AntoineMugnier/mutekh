@@ -24,8 +24,6 @@ void main()
 {
   struct device_spi_ctrl_s spi;
 
-  device_dump_tree(0);
-
   if (device_get_accessor_by_path(&spi, NULL, "usart1", DRIVER_CLASS_SPI_CTRL))
     abort();
 
@@ -85,8 +83,6 @@ static KROUTINE_EXEC(rq_callback)
 void main()
 {
   struct device_spi_ctrl_s spi;
-
-  device_dump_tree(0);
 
   if (device_get_accessor_by_path(&spi, NULL, "usart1", DRIVER_CLASS_SPI_CTRL))
     abort();
