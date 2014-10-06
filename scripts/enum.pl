@@ -241,7 +241,7 @@ foreach my $filein (@ARGV) {
                 $state = 2;
                 next;
             } else {
-                die "error:$lnum: enum parse error\n";
+                die "error:$lnum: enum parse error, looking for opening braces\n";
             }
         }
 
@@ -274,8 +274,9 @@ foreach my $filein (@ARGV) {
             } elsif ($line =~ /^\s*\/\*.*\*\/\s*$/) {
             } elsif ($line =~ /^\s*\/\*/) {
                 $state = 3;
+            } elsif ($line =~ /^$/) {
             } else {
-                die "error:$lnum: enum parse error\n";
+                die "error:$lnum: enum parse error, unexpected enum content line\n";
             }
         }
 
