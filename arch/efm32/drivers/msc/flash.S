@@ -24,6 +24,13 @@
 
 .syntax unified
 
+/*
+  This function erases a page of flash. The msc_addr parameter
+  must point to the Memory System Controller registers.
+
+  The size of the page is device dependent. The return value
+  contains the error bits of the MSC status register.
+*/
 #define EFM32_FLASH_ERASE_CODESIZE 0x14
 FUNC_START(.text, efm32_flash_erase)
 
@@ -96,6 +103,14 @@ FUNC_START(.text, efm32_flash_erase)
 
 FUNC_END(efm32_flash_erase)
 
+/*
+  This function writes data to a page of flash. The msc_addr
+  parameter must point to the Memory System Controller
+  registers. The write operation can not span across multiple pages.
+
+  The return value indicates if the new data in flash is different
+  from the passed data buffer.
+*/
 #define EFM32_FLASH_WRITE_CODESIZE 0x28
 FUNC_START(.text, efm32_flash_write)
 

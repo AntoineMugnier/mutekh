@@ -1,5 +1,5 @@
 
-objs = arch_init.o flash.o
+objs = arch_init.o
 
 ifeq ($(CONFIG_EFM32_STK3200),defined)
 objs += dev_stk3200.o

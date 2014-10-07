@@ -67,6 +67,17 @@ DEV_DECLARE_STATIC(recmu_dev, "recmu", 0, efm32_recmu_drv, recmu_dev_res);
 #endif
 
 
+#ifdef CONFIG_DRIVER_EFM32_MSC
+
+DEV_DECLARE_STATIC_RESOURCES(msc_dev_res, 1,
+  DEV_STATIC_RES_MEM(0x400c0000, 0x400c0400),
+);
+
+DEV_DECLARE_STATIC(msc_dev, "mem", 0, efm32_msc_drv, msc_dev_res);
+
+#endif
+
+
 #if defined(CONFIG_DRIVER_EFM32_USART_SPI)
 
 DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 9,
