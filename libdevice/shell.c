@@ -23,6 +23,10 @@
 #include <device/shell.h>
 #include <device/device.h>
 #include <device/driver.h>
+#include <device/resources.h>
+#include <inttypes.h>
+
+/******************************************** device path completion & parser */
 
 struct termui_optctx_dev_opts
 {
@@ -137,7 +141,6 @@ static void dev_console_opt_comp(struct termui_con_complete_ctx_s *cctx,
   });
 }
 
-/* enum option completion handler */
 TERMUI_CON_ARGS_COLLECT_PROTOTYPE(dev_console_opt_accessor_comp)
 {
   const struct dev_console_opt_accessor_s *optd = (void*)entry;
@@ -169,11 +172,252 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_alias)
 }
 #endif
 
+/*************************************************** device tree dump */
+
+#include <device/class/clock.h>
+
+static void
+dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_fast8_t indent)
+{
+  uint_fast8_t i;
+
+  termui_con_printf(con, "\n");
+  for (i = 0; i < indent; i++)
+    termui_con_printf(con, "  ");
+  termui_con_printf(con, "Device %p `%s'", dev, dev->node.name);
+  if (dev->node.flags & DEVICE_FLAG_IGNORE)
+    termui_con_printf(con, " (ignored)");
+  termui_con_printf(con, "\n");
+
+  for (i = 0; i < indent; i++)
+    termui_con_printf(con, "  ");
+  termui_con_printf(con, "  status: ");
+  termui_con_print_enum(con, device_status_e, dev->status);
+  termui_con_printf(con, ", use: %i\n", dev->ref_count);
+
+  if (dev->drv)
+    {
+      const struct driver_class_s *c;
+      for (i = 0; i < indent + 1; i++)
+        termui_con_printf(con, "  ");
+      termui_con_printf(con, "Driver: %p `%s'\n", dev->drv, dev->drv->desc);
+      for (i = 0; i < indent + 2; i++)
+        termui_con_printf(con, "  ");
+      termui_con_printf(con, "Classes: ");
+      for (i = 0; (c = dev->drv->classes[i]); i++)
+        {
+          if (i > 0)
+            termui_con_printf(con, ", ");
+          termui_con_print_enum(con, driver_class_e, c->class_);
+        }
+      termui_con_printf(con, "\n");
+    }
+
+  uint_fast8_t count[DEV_RES_TYPES_COUNT] = { 0 };
+
+  DEVICE_RES_FOREACH(dev, r, {
+
+      uint16_t type = r->type;
+      uint_fast8_t c = 0;
+
+      if (type < DEV_RES_TYPES_COUNT)
+        c = count[type]++;
+
+      if (type == DEV_RES_UNUSED)
+          continue;
+      for (i = 0; i < indent; i++)
+        termui_con_printf(con, "  ");
+      switch (type)
+        {
+        case DEV_RES_MEM:
+          termui_con_printf(con, "  Memory range %i from %p to %p\n", c, r->u.mem.start, r->u.mem.end);
+          break;
+        case DEV_RES_IO:
+          termui_con_printf(con, "  I/O range %i from %p to %p\n", c, r->u.io.start, r->u.io.end);
+          break;
+#ifdef CONFIG_DEVICE_IRQ
+        case DEV_RES_IRQ: {
+          termui_con_printf(con, "  IRQ %u connected to input %u:%u of controller `%s'\n",
+                 r->u.irq.dev_out_id, r->u.irq.icu_in_id, r->u.irq.irq_id, r->u.irq.icu);
+          break;
+        }
+#endif
+#ifdef CONFIG_DEVICE_GPIO
+        case DEV_RES_GPIO: {
+          termui_con_printf(con, "  Pin `%s' connected to GPIO line %u (%u bit wide)\n",
+                 r->u.gpio.label, r->u.gpio.id, r->u.gpio.width);
+          break;
+        };
+#endif
+#ifdef CONFIG_DEVICE_IOMUX
+        case DEV_RES_IOMUX: {
+          termui_con_printf(con, "  IO `%s' muxing: demux %u, id %u, mux %u, config %x\n",
+                 r->u.iomux.label, r->u.iomux.demux,
+                 r->u.iomux.io_id, r->u.iomux.mux, r->u.iomux.config);
+          break;          
+        }
+#endif
+#ifdef CONFIG_DEVICE_CLOCK
+        case DEV_RES_CLOCK_RTE: {
+          struct dev_clock_node_info_s info;
+          const char *nname = "unknown";
+          const char *pname = "unknown";
+          if (!dev_clock_node_info(dev, r->u.clock_rte.node, DEV_CLOCK_INFO_NAME, &info))
+            nname = info.name;
+          if (!dev_clock_node_info(dev, r->u.clock_rte.parent, DEV_CLOCK_INFO_NAME, &info))
+            pname = info.name;
+          termui_con_printf(con, "  Clock route: node %u `%s': parent %u `%s', scale %"PRIu64"/%"PRIu64", config mask 0x%x\n",
+                 r->u.clock_rte.node, nname, r->u.clock_rte.parent, pname,
+                 (uint64_t)r->u.clock_rte.num, (uint64_t)r->u.clock_rte.denom,
+                 r->u.clock_rte.config
+          );
+          break;
+        }
+
+        case DEV_RES_CLOCK_OSC: {
+          struct dev_clock_node_info_s info;
+          const char *nname = "unknown";
+          if (!dev_clock_node_info(dev, r->u.clock_rte.node, DEV_CLOCK_INFO_NAME, &info))
+            nname = info.name;
+          uint64_t integral  = r->u.clock_osc.num / r->u.clock_osc.denom;
+          uint32_t frac      = 1000 * (r->u.clock_osc.num % r->u.clock_osc.denom) /
+                                 r->u.clock_osc.denom;
+          termui_con_printf(con, "  Clock oscillator: node %"PRIuFAST8" `%s' @ %"PRIu64".%03"PRIu32" Hz, config mask 0x%x\n",
+                 (uint_fast8_t)r->u.clock_osc.node, nname, (uint64_t)integral, (uint32_t)frac,
+                 r->u.clock_osc.config
+          );
+          break;
+        }
+
+        case DEV_RES_CLOCK_SRC: {
+          termui_con_printf(con, 
+            "  Clock source `%s': src %u, sink %u\n",
+            r->u.clock_src.src, r->u.clock_src.src_ep, r->u.clock_src.sink_ep
+          );
+          break;
+        }
+#endif
+#ifdef CONFIG_DEVICE_UART
+        case DEV_RES_UART: {
+          static const char * uart_baudrates[] = {
+            "110", "300", "600", "1200", "2400", "4800", "9600", "14400",
+            "19200", "28800", "38400", "56000", "57600", "115200"
+          };
+          static const char * uart_data_bits[] = {
+            "6 bits", "7 bits", "8 bits", "9 bits"
+          };
+          static const char * uart_stop_bits[] = {
+            "1 bit", "2 bits"
+          };
+          static const char * uart_parity[] = {
+            "none", "odd", "even"
+          };
+          termui_con_printf(con, 
+            "  UART: baudrate %s, data %s, stop %s, parity %s,"
+              " flow ctrl %s, half dup %s\n",
+            uart_baudrates[r->u.uart.baudrate],
+            uart_data_bits[r->u.uart.data_bits],
+            uart_stop_bits[r->u.uart.stop_bits],
+            uart_parity[r->u.uart.parity],
+            (r->u.uart.flow_ctrl == 0 ? "false" : "true"),
+            (r->u.uart.half_duplex == 0 ? "false" : "true")
+          );
+          break;
+        }
+#endif
+        case DEV_RES_ID:
+          termui_con_printf(con, "  Numerical identifier %x %x\n", r->u.id.major, r->u.id.minor);
+          break;
+        case DEV_RES_VENDOR:
+          termui_con_printf(con, "  Vendor ID 0x%04x `%s'\n", r->u.vendor.id, r->u.vendor.name);
+          break;
+        case DEV_RES_PRODUCT:
+          termui_con_printf(con, "  Product ID 0x%04x `%s'\n", r->u.product.id, r->u.product.name);
+          break;
+        case DEV_RES_REVISION:
+          termui_con_printf(con, "  Revision %u.%u\n", r->u.revision.major, r->u.revision.minor);
+          break;
+        case DEV_RES_FREQ: {
+          uint64_t integral  = r->u.freq.num / r->u.freq.denom;
+          uint32_t frac      = 1000 * (r->u.freq.num % r->u.freq.denom) /
+                                 r->u.freq.denom;
+          termui_con_printf(con, "  Frequency %"PRIu64".%03"PRIu32" Hz\n", (uint64_t)integral, (uint32_t)frac);
+          break;
+        }
+        case DEV_RES_STR_PARAM:
+          termui_con_printf(con, "  String parameter `%s' = `%s'\n", r->u.str_param.name, r->u.str_param.value);
+          break;
+        case DEV_RES_UINT_PARAM:
+          termui_con_printf(con, "  Integer parameter `%s' = %u (0x%x)\n", r->u.uint_param.name,
+                 r->u.uint_param.value, r->u.uint_param.value);
+          break;
+        case DEV_RES_DEV_PARAM:
+          termui_con_printf(con, "  Device parameter `%s' = `%s'\n", r->u.dev_param.name, r->u.dev_param.dev);
+          break;
+        case DEV_RES_UINT_ARRAY_PARAM: {
+          uintptr_t i;
+          termui_con_printf(con, "  Array parameter `%s' = [", r->u.uint_array_param.name);
+          for (i = 1; i <= r->u.uint_array_param.value[0]; i++)
+            termui_con_printf(con, " 0x%x", r->u.uint_array_param.value[i]);
+          termui_con_printf(con, " ]\n");
+          break;
+          }
+        default:
+          termui_con_printf(con, "  %i: unknown resource type %i\n", _i, r->type);
+        case DEV_RES_UNUSED:
+          ;
+        }
+    });
+}
+
+#ifdef CONFIG_DEVICE_TREE
+static void
+dev_shell_dump_alias(struct termui_console_s *con, struct device_alias_s *alias, uint_fast8_t indent)
+{
+  uint_fast8_t i;
+  termui_con_printf(con, "\n");
+  for (i = 0; i < indent; i++)
+    termui_con_printf(con, "  ");
+  termui_con_printf(con, "Device alias %p `%s'\n", alias, alias->node.name);
+  for (i = 0; i < indent; i++)
+    termui_con_printf(con, "  ");
+  termui_con_printf(con, "  target: %s\n", alias->path);
+}
+#endif
+
+static void
+dev_shell_dump_node(struct termui_console_s *con, struct device_node_s *root, uint_fast8_t i)
+{
+  if (root->flags & DEVICE_FLAG_DEVICE)
+    dev_shell_dump_device(con, (struct device_s*)root, i);
+#ifdef CONFIG_DEVICE_TREE
+  else if (root->flags & DEVICE_FLAG_ALIAS)
+    dev_shell_dump_alias(con, (struct device_alias_s*)root, i);
+#endif
+  else
+    termui_con_printf(con, "Unknows device node %p `%s'\n", root, root->name);
+
+#ifdef CONFIG_DEVICE_TREE
+  DEVICE_NODE_FOREACH(root, node, {
+    dev_shell_dump_node(con, node, i+1);
+  });
+#endif
+}
+
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_tree)
 {
-  device_dump_tree(NULL);
+#ifdef CONFIG_DEVICE_TREE
+  struct device_node_s *root = device_tree_root();
+  dev_shell_dump_node(con, root, 0);
+#else
+  DEVICE_NODE_FOREACH(, node, {
+    dev_shell_dump_node(con, node, 0);
+  });
+#endif
   return 0;
 }
+
+/*************************************************** device command groups */
 
 extern TERMUI_CON_GROUP_DECL(dev_shell_clock_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_timer_group);

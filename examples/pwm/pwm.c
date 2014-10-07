@@ -5,8 +5,6 @@
 
 void main()
 {
-  device_dump_tree(0);
-
   struct device_pwm_s pwm;
   if (device_get_accessor_by_path(&pwm, 0, "/pwm2", DRIVER_CLASS_PWM))
     {

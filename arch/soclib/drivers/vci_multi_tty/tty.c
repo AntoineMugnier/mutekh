@@ -38,7 +38,7 @@
 
 #ifdef CONFIG_DEVICE_IRQ
 #define GCT_CONTAINER_ALGO_tty_fifo RING
-GCT_CONTAINER_TYPES(tty_fifo, uint8_t, 32);
+GCT_CONTAINER_TYPES(tty_fifo, uint8_t, 256);
 GCT_CONTAINER_FCNS(tty_fifo, static inline, tty_fifo,
                    init, destroy, pop_array, pushback);
 #endif

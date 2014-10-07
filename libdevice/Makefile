@@ -7,7 +7,9 @@ doc_headers =  device/device.h  device/driver.h device/irq.h device/resources.h 
 	device/class/icu.h device/class/net.h device/class/cpu.h	\
 	device/class/timer.h device/class/dma.h
 
-objs = driver.o device.o dump.o resources.o init.o
+enum_headers = device/driver.h device/device.h device/class/mem.h
+
+objs = driver.o device.o resources.o init.o
 
 ifeq ($(CONFIG_DEVICE_IRQ), defined)
  objs += irq.o
@@ -60,6 +62,13 @@ ifeq ($(CONFIG_DEVICE_CLOCK), defined)
 objs += device_clock.o
 ifeq ($(CONFIG_DEVICE_SHELL), defined)
 objs += shell_clock.o
+endif
+endif
+
+ifeq ($(CONFIG_DEVICE_MEM), defined)
+objs += device_mem.o
+ifeq ($(CONFIG_DEVICE_SHELL), defined)
+objs += shell_mem.o
 endif
 endif
 

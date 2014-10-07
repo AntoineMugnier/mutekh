@@ -27,3 +27,7 @@ ifeq ($(CONFIG_DRIVER_EFM32_RECMU), defined)
 subdirs += recmu
 endif
 
+ifeq ($(CONFIG_DRIVER_EFM32_MSC), defined)
+subdirs += msc
+endif
+

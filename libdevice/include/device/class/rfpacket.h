@@ -32,6 +32,7 @@
 #include <hexo/gpct_platform_hexo.h>
 
 #include <device/driver.h>
+#include <device/class/timer.h>
 
 /** @This specifies modulation type */
 enum dev_rfpacket_modulation_e
@@ -128,10 +129,6 @@ struct dev_rfpacket_config_s
 
   /** Size of sync word in bits minus one */
   uint32_t                      sw_len:5;
-
-  /** RX when buffers in RX queue */
-  uint8_t                       always_rx:1;
-
 };
 
 struct dev_rfpacket_statistics_s
@@ -207,20 +204,20 @@ struct dev_rfpacket_rq_s
       uint32_t                      lifetime;      //< request timeout in 1us unit
       enum dev_rfpacket_time_anchor_e anchor:2;
 
-      union {
-        struct {
-          dev_timer_value_t         timestamp;
+      struct {
+        dev_timer_value_t         timestamp;
 
-          const uint8_t             *buf;
-          uint16_t                  size;            //< length of TX packet in bytes
+        const uint8_t             *buf;
+        uint16_t                  size;            //< length of TX packet in bytes
 
-          int16_t                   pwr;             //< value of TX power in 0.1 dBm unit
-        } tx;
-      };
+        int16_t                   pwr;             //< value of TX power in 0.125 dBm unit
+      } tx;
     };
 
-    const struct dev_rfpacket_config_s *cfg;        //< configuration
-    enum dev_rfpacket_cfg_msk_e         msk;        //< configuration mask
+    struct {
+      const struct dev_rfpacket_config_s *param;
+      enum dev_rfpacket_cfg_msk_e         mask;
+    } cfg;
   };
 
   void                              *pvdata;        //< private data for callback
@@ -344,7 +341,7 @@ typedef DEVRFPACKET_REQUEST(devrfpacket_request_t);
   The @ref dev_rfpacket_rx_s::kr field of the buffer must always be
   initialized.
 
-  If the @tt always_rx field in the configuration is set, the transceiver
+  If the device has been started by calling @ref device_start, the transceiver
   is able to receive packets when some @ref dev_rfpacket_rx_s objects are
   available in the RX queue, even if the @ref dev_rfpacket_rq_s queue is
   empty, provided that no @ref DEV_RFPACKET_RQ_IDLE request is currently
@@ -352,7 +349,7 @@ typedef DEVRFPACKET_REQUEST(devrfpacket_request_t);
   a TX request if the CCA is enabled in the configuration and supported
   by the transcieiver.
 
-  When @tt always_rx is disabled, the transceiver is able to receive
+  When the device is not started, the transceiver is able to receive
   packets only during DEV_RFPACKET_RQ_RX requests.
 
   When a packet is received successfully, the next @ref

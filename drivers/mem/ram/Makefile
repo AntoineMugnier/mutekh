@@ -1,0 +1,3 @@
+
+objs = ram.o
+
