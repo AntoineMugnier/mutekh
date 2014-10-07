@@ -174,6 +174,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_alias)
 
 /*************************************************** device tree dump */
 
+#include <device/class/clock.h>
+
 static void
 dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_fast8_t indent)
 {
