@@ -32,6 +32,18 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
 
 #endif
 
+#ifdef CONFIG_DRIVER_NRF51_CLOCK
+
+DEV_DECLARE_STATIC_RESOURCES(
+    clock_res, 2,
+    NRF_STATIC_RES_PERIPHERAL_MEM(NRF51_CLOCK),
+    DEV_STATIC_RES_IRQ(0, NRF51_CLOCK, 0, "/cpu"),
+);
+
+DEV_DECLARE_STATIC(clock_dev, "clock", 0, nrf51_clock_drv, &clock_res);
+
+#endif
+
 #if defined(CONFIG_DRIVER_NRF51_GPIO)
 
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, nrf51_gpio_drv,
@@ -40,6 +52,16 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, nrf51_gpio_drv,
                    NRF_STATIC_RES_PERIPHERAL_MEM(NRF51_GPIOTE),
                    DEV_STATIC_RES_IRQ(0, NRF51_GPIOTE, 0, "/cpu"),
 # endif
+                   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_NRF51_RTC)
+
+DEV_DECLARE_STATIC(rtc1, "rtc1", 0, nrf51_rtc_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF51_RTC1),
+                   DEV_STATIC_RES_IRQ(0, NRF51_RTC1, 0, "/cpu"),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF51_CLOCK_LF_CALIBRATED, NRF51_BLE_RADIO_CLK_SLEEP)
                    );
 
 #endif
