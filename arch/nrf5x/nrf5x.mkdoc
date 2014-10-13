@@ -50,6 +50,13 @@ Nordic's nRF51 and nRF52 architecture support.
     Hardware I2C block is available with full interrupt support.  It
     only supports master operation.
   @end section
+
+  @section SPI
+    Hardware SPI-master block is available with full interrupt
+    support.
+
+    Slave SPI block is unsupported.
+  @end section
   
 @end section
 
