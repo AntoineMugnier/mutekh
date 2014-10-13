@@ -62,4 +62,6 @@ enum nrf51_peripheral {
     NRF51_PPI = 31,
 };
 
+#define NRF51_GPIO_RANGE_IRQ_ID 32
+
 #endif

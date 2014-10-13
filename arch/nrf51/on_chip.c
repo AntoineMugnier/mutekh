@@ -21,11 +21,25 @@
 #include <device/resources.h>
 #include <device/class/iomux.h>
 #include <device/class/clock.h>
+#include <arch/nrf51/peripheral.h>
+#include <arch/nrf51/ids.h>
 
 #if defined(CONFIG_DRIVER_CPU_ARM32M)
 
 DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
                    DEV_STATIC_RES_ID(0, 0)
+                   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_NRF51_GPIO)
+
+DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, nrf51_gpio_drv,
+                   DEV_STATIC_RES_MEM(0x50000000, 0x50001000),
+# if defined(CONFIG_DRIVER_NRF51_GPIO_ICU)
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF51_GPIOTE),
+                   DEV_STATIC_RES_IRQ(0, NRF51_GPIOTE, 0, "/cpu"),
+# endif
                    );
 
 #endif
