@@ -39,6 +39,11 @@ Nordic's nRF51 architecture support.
     number as arguments.  These accessors make the code obvious about
     what the driver intends to do.
   @end section
+  
+  @section PPI
+    PPIs are statically allocated by drivers as needed.  This is done
+    through the @tt CONFIG_DRIVER_NRF5X_PPI_ENUM enum config token.
+  @end section
 
   @section GPIOTE
     GPIOTE channels are partitioned between GPIO ICU input and PWM
