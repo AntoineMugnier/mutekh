@@ -1,0 +1,49 @@
+@section TP {nRF51 Architecture support}
+
+Nordic's nRF51 architecture support.
+
+@section {Implementation notes}
+
+  @section {Device register access}
+    nRF51 devices all look the same and regular.  Device at address
+    0x4000000 has number 0 and interrupt 0, device at address 0x40001000
+    has number 1 and interrupt 1, and so on.  Inside a device register
+    map, there are tasks, events, shorts, interrupt handling, and then
+    configuration registers.
+
+    This regular pattern explains why nRF51 architecture declaration
+    adds an overlay on top of cpu_mem_read_32 and cpu_mem_write_32 to
+    access hardware registers.  nRF51 code use the following accessors:
+    @list
+      @item nrf_task_trigger,
+      @item nrf_event_check,
+      @item nrf_event_clear,
+      @item nrf_event_wait,
+      @item nrf_event_wait_clear,
+      @item nrf_it_is_enabled,
+      @item nrf_it_set_mask,
+      @item nrf_it_enable,
+      @item nrf_it_enable_mask,
+      @item nrf_it_disable,
+      @item nrf_it_disable_mask,
+      @item nrf_short_set,
+      @item nrf_short_enable,
+      @item nrf_short_enable_mask,
+      @item nrf_short_disable,
+      @item nrf_short_disable_mask,
+      @item nrf_reg_get,
+      @item nrf_reg_set.
+    @end list
+
+    All these accessors take device base address and task/event/register
+    number as arguments.  These accessors make the code obvious about
+    what the driver intends to do.
+  @end section
+
+  @section GPIOTE
+    GPIOTE channels are partitioned between GPIO ICU input and PWM
+    outputs.  Allocation between those two modules is static.
+  @end section
+
+@end section
+@end section

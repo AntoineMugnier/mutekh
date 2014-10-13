@@ -1,0 +1,102 @@
+%section nrf51-??aa
+  %inherit nrf5x-51822-256-16
+
+%section nrf51-??ab
+  %inherit nrf5x-51822-128-16
+
+%section nrf51-??ac
+  %inherit nrf5x-51822-256-32
+
+%section nrf5x-*-*-*
+  %types architecture
+
+  CONFIG_ARCH_NRF5X
+
+  # Memory layout
+
+  CONFIG_LOAD_ROM
+
+  CONFIG_COMPILE_OPTIMIZE s
+
+  CONFIG_LOAD_EXCEPTIONS_SEPARATE undefined
+  CONFIG_LOAD_EXCEPTIONS_TEXT
+
+  CONFIG_DEVICE_TREE undefined
+
+  CONFIG_MUTEK_DEFAULT_MEMALLOC_INIT
+
+  CONFIG_LOAD_ROM_RO_ADDR   0x00000000
+  CONFIG_LOAD_ROM_RW_ADDR   0x20000000
+  CONFIG_LOAD_ROM_RW_SIZE   (CONFIG_NRF5X_RAMSIZE - CONFIG_STARTUP_STACK_SIZE)
+
+  CONFIG_STARTUP_STACK_ADDR (CONFIG_LOAD_ROM_RW_ADDR + CONFIG_LOAD_ROM_RW_SIZE)
+  CONFIG_STARTUP_STACK_SIZE  0x400
+  CONFIG_STARTUP_HEAP_SIZE  0
+
+  CONFIG_BLE_SLEEP_CLOCK_HZ 32768
+  CONFIG_HEXO_CPU_STACK_SIZE 0x200
+  CONFIG_PTHREAD_STACK_SIZE  0x200
+
+  CONFIG_MUTEK_MEMALLOC_ALIGN CONFIG_HEXO_STACK_ALIGN
+  CONFIG_HEXO_STACK_ALIGN 8
+
+  %subsection nrf5x-51822-*-*
+    %types family
+    %set BUILD_NAME nrf51822
+
+    CONFIG_ARCH_NRF51
+    CONFIG_CPU_ARM32M_CORTEXM0
+    CONFIG_CPU_ARM32M_TIMER_SYSTICK undefined
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 31
+  %end
+
+  %subsection nrf5x-51422-*-*
+    %types family
+    %set BUILD_NAME nrf51422
+
+    CONFIG_ARCH_NRF51
+    CONFIG_CPU_ARM32M_CORTEXM0
+    CONFIG_CPU_ARM32M_TIMER_SYSTICK undefined
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 31
+  %end
+
+  %subsection nrf5x-*-128-*
+    %types flash
+
+    CONFIG_LOAD_ROM_RO_SIZE 0x00020000
+  %end
+
+  %subsection nrf5x-*-256-*
+    %types flash
+
+    CONFIG_LOAD_ROM_RO_SIZE 0x00040000
+  %end
+
+  %subsection nrf5x-*-512-*
+    %types flash
+
+    CONFIG_LOAD_ROM_RO_SIZE 0x00080000
+  %end
+
+  %subsection nrf5x-*-*-16
+    %types sram
+
+    CONFIG_NRF5X_RAMSIZE 0x4000
+  %end
+
+  %subsection nrf5x-*-*-32
+    %types sram
+
+    CONFIG_NRF5X_RAMSIZE 0x8000
+  %end
+
+  %subsection nrf5x-*-*-64
+    %types sram
+
+    CONFIG_NRF5X_RAMSIZE 0x10000
+  %end
+
+  %requiretypes family
+  %requiretypes sram
+  %requiretypes flash
+%end
