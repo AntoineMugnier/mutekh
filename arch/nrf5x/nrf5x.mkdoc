@@ -76,6 +76,13 @@ arch/nrf5x/peripheral.h
     Hardware I2C block is available with full interrupt support.  It
     only supports master operation, this is a hardware limitation.
   @end section
+
+  @section {SPI}
+    Hardware SPI-master block is available with full interrupt
+    support.
+
+    Slave SPI block is unsupported.
+  @end section
   
 @end section
 
