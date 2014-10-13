@@ -34,6 +34,17 @@ Nordic's nRF51 and nRF52 architecture support.
     PWM is a composite device using a timer, PPIs and GPIOTE channels.
     GPIOTE are used in Task mode.  @see GPIOTE.
   @end section
+
+  @section UART
+    UART is implemented as a Character Device, fully interrupt driven.
+    Optionnally, UART class may also be enabled to handle dynamic port
+    reconfiguration.
+
+    Printk support is also implemented, it has transparent coexistence
+    support with char/uart device driver on the same hardware block.
+
+    Declaration of UART device is board-specific.
+  @end section
   
 @end section
 
