@@ -58,11 +58,11 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
 
 void gaisler_early_console_init()
 {
-  uintptr_t addr = CONFIG_GAISLER_EARLY_CONSOLE_ADDR;
+  uintptr_t addr = CONFIG_MUTEK_PRINTK_ADDR;
 
-#ifndef CONFIG_GAISLER_EARLY_CONSOLE_DEBUG
+#ifndef CONFIG_GAISLER_PRINTK_DEBUG
   /* uart scaler FIXME */
-  cpu_mem_write_32(addr + 12, endian_be32(CONFIG_GAISLER_EARLY_CONSOLE_SCALER));
+  cpu_mem_write_32(addr + 12, endian_be32(CONFIG_GAISLER_PRINTK_SCALER));
   /* uart control */
   cpu_mem_write_32(addr + 8, endian_be32(0x3));
   /* clear uart status */

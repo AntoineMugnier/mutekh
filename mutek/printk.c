@@ -50,7 +50,7 @@ inline ssize_t vprintk(const char *format, va_list ap)
 #endif
 	error_t err = EIO;
 
-#if defined(CONFIG_MUTEK_CONSOLE) || defined(CONFIG_MUTEK_EARLY_CONSOLE)
+#if defined(CONFIG_MUTEK_CONSOLE) || defined(CONFIG_MUTEK_PRINTK)
 	if ( printk_output ) {
 #ifdef CONFIG_MUTEK_PRINTK_LOCK
                 lock_spin(&printk_lock);

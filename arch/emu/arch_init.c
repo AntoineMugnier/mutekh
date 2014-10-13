@@ -181,7 +181,7 @@ void emu_start_cpus()
 
 #include <mutek/printk.h>
 
-#ifdef CONFIG_EMU_EARLY_CONSOLE
+#ifdef CONFIG_EMU_PRINTK
 static PRINTF_OUTPUT_FUNC(early_console_fd1)
 {
   emu_do_syscall(EMU_SYSCALL_WRITE, 3, 1, str, len);  

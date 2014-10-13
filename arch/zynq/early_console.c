@@ -63,7 +63,7 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
 
 void zynq_early_console_init()
 {
-  uintptr_t addr = CONFIG_ZYNQ_EARLY_CONSOLE_UART_ADDR;
+  uintptr_t addr = CONFIG_MUTEK_PRINTK_ADDR;
 
   printk_set_output(early_console_out, (void*)addr);
 }

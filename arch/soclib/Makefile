@@ -3,7 +3,7 @@ objs = 											\
 arch_init.o										\
 power.o
 
-ifneq ($(CONFIG_SOCLIB_EARLY_CONSOLE),undefined)
+ifneq ($(CONFIG_SOCLIB_PRINTK),undefined)
 objs += early_console.o
 endif
 

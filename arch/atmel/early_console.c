@@ -25,10 +25,10 @@
 #include <hexo/endian.h>
 #include <mutek/printk.h>
 
-#ifdef CONFIG_ATMEL_EARLY_CONSOLE_AVR32_SIM
+#ifdef CONFIG_ATMEL_PRINTK_AVR32_SIM
 static PRINTF_OUTPUT_FUNC(early_console_out)
 {
-#ifdef CONFIG_ATMEL_EARLY_CONSOLE_AVR32_SIM
+#ifdef CONFIG_ATMEL_PRINTK_AVR32_SIM
   asm volatile("mov r12, 1  \n"
                "mov r11, %0  \n"
                "mov r10, %1  \n"
@@ -48,7 +48,7 @@ void atmel_early_console_avr32sim_init()
 
 /*********************************************************************************/
 
-#ifdef CONFIG_ATMEL_EARLY_CONSOLE_USART
+#ifdef CONFIG_ATMEL_PRINTK_USART
 
 #define AVR32_USART_THR                0x0000001c
 
@@ -73,20 +73,20 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
 
   for (i = 0; i < len; i++)
     {
-      while (!(cpu_mem_read_32(CONFIG_ATMEL_EARLY_CONSOLE_USART_ADDR + AVR32_USART_CSR) & AVR32_USART_CSR_TXRDY_MASK))
+      while (!(cpu_mem_read_32(CONFIG_MUTEK_PRINTK_ADDR + AVR32_USART_CSR) & AVR32_USART_CSR_TXRDY_MASK))
         ;
-      cpu_mem_write_32(CONFIG_ATMEL_EARLY_CONSOLE_USART_ADDR + AVR32_USART_THR, str[i]);
+      cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + AVR32_USART_THR, str[i]);
     }
 }
 
 void atmel_early_console_usart_init()
 {
-  cpu_mem_write_32(CONFIG_ATMEL_EARLY_CONSOLE_USART_ADDR + AVR32_USART_CR, AVR32_USART_CR_RSTTX_MASK);
-  cpu_mem_write_32(CONFIG_ATMEL_EARLY_CONSOLE_USART_ADDR + AVR32_USART_MR,
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + AVR32_USART_CR, AVR32_USART_CR_RSTTX_MASK);
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + AVR32_USART_MR,
                    (AVR32_USART_MR_CHRL_8 << AVR32_USART_MR_CHRL_OFFSET)     |
                    (AVR32_USART_MR_PAR_NONE << AVR32_USART_MR_PAR_OFFSET)    |
                    (AVR32_USART_MR_NBSTOP_1 << AVR32_USART_MR_NBSTOP_OFFSET));
-  cpu_mem_write_32(CONFIG_ATMEL_EARLY_CONSOLE_USART_ADDR + AVR32_USART_CR, AVR32_USART_CR_TXEN_MASK);
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + AVR32_USART_CR, AVR32_USART_CR_TXEN_MASK);
   printk_set_output(early_console_out, NULL);
 }
 #endif

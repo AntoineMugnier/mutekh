@@ -34,7 +34,7 @@
 
 static void early_console_out_char(char c)
 {
-  uint32_t b = CONFIG_EFM32_EARLY_CONSOLE_LEUART_ADDR;
+  uint32_t b = CONFIG_MUTEK_PRINTK_ADDR;
 
   while (!(cpu_mem_read_32(b + EFM32_LEUART_STATUS_ADDR)
            & EFM32_LEUART_STATUS_TXBL))
@@ -136,7 +136,7 @@ void efm32_early_console_leuart_init()
     ;
 # endif
 
-  b = CONFIG_EFM32_EARLY_CONSOLE_LEUART_ADDR;
+  b = CONFIG_MUTEK_PRINTK_ADDR;
 
   /* Check that there is no on-going synchronization */
   while (cpu_mem_read_32(b + EFM32_LEUART_SYNCBUSY_ADDR)

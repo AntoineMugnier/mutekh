@@ -28,7 +28,7 @@
 
 #include <arch/stm32_regs.h>
 
-#ifdef CONFIG_STM32_EARLY_CONSOLE_UART
+#ifdef CONFIG_STM32_PRINTK_UART
 
 extern uint32_t stm32f4xx_clock_freq_apb1;
 
@@ -65,7 +65,7 @@ void stm32_early_console_init()
 {
   reg_t cr1 = 0, cr2 = 0, cfg;
 
-#if !defined(CONFIG_STM32_EARLY_CONSOLE_UART)
+#if !defined(CONFIG_STM32_PRINTK_UART)
 # error
 #endif
 
@@ -95,7 +95,7 @@ void stm32_early_console_init()
   /* configure baud rate tp 9600 Kbps. */
   DEVICE_REG_UPDATE(USART, 2, BRR,
     (int)(
-      stm32f4xx_clock_freq_apb1 / CONFIG_STM32_EARLY_CONSOLE_UART_BAUDRATE
+      stm32f4xx_clock_freq_apb1 / CONFIG_STM32_PRINTK_UART_BAUDRATE
       + 0.5
     )
   );

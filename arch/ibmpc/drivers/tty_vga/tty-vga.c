@@ -169,7 +169,7 @@ tty_vga_reset(struct device_s *dev)
   pv->xsave = 0;
 #endif
 
-#ifndef CONFIG_IBMPC_EARLY_CONSOLE_VGA
+#ifndef CONFIG_IBMPC_PRINTK_VGA
   tty_vga_clear(dev, 0, pv->height);
 #endif
   tty_vga_setcursor(dev, 0, 0);

@@ -59,7 +59,7 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
 
 void raspberry_early_console_init()
 {
-  uintptr_t addr = CONFIG_RASPBERRY_EARLY_CONSOLE_UART_ADDR;
+  uintptr_t addr = CONFIG_MUTEK_PRINTK_ADDR;
 
   /* before init disable uart */
   cpu_mem_write_32(addr + 0x30, 0);

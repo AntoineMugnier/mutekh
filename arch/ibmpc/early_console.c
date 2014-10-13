@@ -29,7 +29,7 @@
 
 static lock_t early_console_lock;
 
-#ifdef CONFIG_IBMPC_EARLY_CONSOLE_VGA
+#ifdef CONFIG_IBMPC_PRINTK_VGA
 static uint_fast16_t cursor = 0;
 #endif
 
@@ -39,12 +39,12 @@ static PRINTF_OUTPUT_FUNC(early_console_output)
 
   lock_spin(&early_console_lock);
 
-#ifdef CONFIG_IBMPC_EARLY_CONSOLE_E9HACK
+#ifdef CONFIG_IBMPC_PRINTK_E9HACK
   for (i = 0; i < len; ++i)
     cpu_io_write_8(0xe9, str[i]);
 #endif
 
-#ifdef CONFIG_IBMPC_EARLY_CONSOLE_VGA
+#ifdef CONFIG_IBMPC_PRINTK_VGA
   {
     uint16_t *ptr = (void*)0xb8000;
     static const size_t width = 80;
@@ -75,13 +75,13 @@ static PRINTF_OUTPUT_FUNC(early_console_output)
   }
 #endif
 
-#ifdef CONFIG_IBMPC_EARLY_CONSOLE_UART
+#ifdef CONFIG_IBMPC_PRINTK_UART
   for (i = 0; i < len; ++i)
     {
-# warning CONFIG_IBMPC_EARLY_CONSOLE_UART may block on busy wait loop
-      while(!(cpu_io_read_8(CONFIG_IBMPC_EARLY_CONSOLE_UART_PORT + 5) & (1<<6)))
+# warning CONFIG_IBMPC_PRINTK_UART may block on busy wait loop
+      while(!(cpu_io_read_8(CONFIG_IBMPC_PRINTK_UART_PORT + 5) & (1<<6)))
         ;
-      cpu_io_write_8(CONFIG_IBMPC_EARLY_CONSOLE_UART_PORT, str[i]);
+      cpu_io_write_8(CONFIG_IBMPC_PRINTK_UART_PORT, str[i]);
     }
 #endif
 

@@ -40,5 +40,5 @@ static void soclib_early_console(uintptr_t addr)
 
 void soclib_early_console_init()
 {
-	soclib_early_console(CONFIG_SOCLIB_EARLY_CONSOLE_ADDR);
+	soclib_early_console(CONFIG_MUTEK_PRINTK_ADDR);
 }

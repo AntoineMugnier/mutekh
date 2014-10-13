@@ -21,5 +21,3 @@
   %include scripts/options.build
   %include arch/arch.build
 
-  CONFIG_MUTEK_PRINTK_KEEP_EARLY
-

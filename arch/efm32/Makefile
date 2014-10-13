@@ -21,7 +21,7 @@ ifeq ($(CONFIG_EFM32_G8XX_STK),defined)
 objs += dev_g8xxstk.o
 endif
 
-ifeq ($(CONFIG_MUTEK_EARLY_CONSOLE),defined)
+ifeq ($(CONFIG_MUTEK_PRINTK),defined)
 objs += early_console.o
 endif
 

@@ -1,7 +1,7 @@
 
 objs = arch_init.o device_ids.o
 
-ifneq ($(CONFIG_GAISLER_EARLY_CONSOLE),undefined)
+ifneq ($(CONFIG_GAISLER_PRINTK),undefined)
 objs += early_console.o
 endif
 

@@ -109,7 +109,7 @@ void arch_specific_hw_init()
 	uart_us6089c_init(&uart_dev, NULL);
 
 	console_dev = &uart_dev;
-#if !(defined(CONFIG_DRIVER_CHAR_SAM7DBGU) && defined(CONFIG_MUTEK_CONSOLE)) && !defined(CONFIG_MUTEK_PRINTK_KEEP_EARLY)
+#if !(defined(CONFIG_DRIVER_CHAR_SAM7DBGU) && defined(CONFIG_MUTEK_CONSOLE))
 	printk_set_output(__printf_out_tty, console_dev);
 #endif
 
