@@ -60,6 +60,17 @@ arch/nrf5x/peripheral.h
     PWM is a composite device using a timer, PPIs and GPIOTE channels.
     GPIOTE are used in Task mode.  @see GPIOTE.
   @end section
+
+  @section {UART}
+    UART is implemented as a Character Device, fully interrupt driven.
+    Optionnally, nRF UART driver may also be enabled to handle the
+    UART class to support dynamic port reconfiguration.
+
+    Printk support is also implemented, it has transparent coexistence
+    support with char/uart device driver on the same hardware block.
+
+    Declaration of UART device is board-specific.
+  @end section
   
 @end section
 
