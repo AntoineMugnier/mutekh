@@ -22,6 +22,9 @@
 #include <device/irq.h>
 #include <device/class/iomux.h>
 #include <device/class/clock.h>
+#include <arch/nrf5x/peripheral.h>
+#include <arch/nrf5x/ids.h>
+#include <arch/nrf5x/gpiote.h>
 
 #if defined(CONFIG_DRIVER_CPU_ARM32M)
 
@@ -44,6 +47,19 @@ DEV_DECLARE_STATIC(clock_dev, "clock", 0, nrf5x_clock_drv,
 #if !defined(CONFIG_DRIVER_NRF5X_CLOCK_LFCLK_XOSC)
                    DEV_STATIC_RES_IRQ(1, NRF5X_TEMP, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 #endif
+                   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_NRF5X_GPIO)
+
+DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, nrf5x_gpio_drv,
+                   DEV_STATIC_RES_MEM(0x50000000, 0x50001000),
+# if defined(CONFIG_DRIVER_NRF5X_GPIO_ICU)
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_GPIOTE),
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_GPIOTE, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+# endif
                    );
 
 #endif
