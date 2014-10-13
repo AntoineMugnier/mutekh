@@ -57,6 +57,12 @@ Nordic's nRF51 and nRF52 architecture support.
 
     Slave SPI block is unsupported.
   @end section
+
+  @section {RTC}
+    RTC is supported as a Timer device.  When driver is compiled in,
+    RTC1 instance is declared built-in as "rtc1".  User may
+    instantiate RTC0 on its own if radio driver is unused.
+  @end section
   
 @end section
 

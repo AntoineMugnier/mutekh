@@ -67,3 +67,14 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, nrf5x_gpio_drv,
 #if (CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT + CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT) > NRF_GPIOTE_COUNT
 # error nRF51 ICU channel count + GPIO_PWM channel count may not use more than total GPIOTE channel count on the platform
 #endif
+
+#if defined(CONFIG_DRIVER_NRF5X_RTC)
+
+DEV_DECLARE_STATIC(rtc1, "rtc1", 0, nrf5x_rtc_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_RTC1),
+                   DEV_STATIC_RES_DEV_PARAM("icu", "/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_RTC1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_LF, 0),
+                   );
+
+#endif
