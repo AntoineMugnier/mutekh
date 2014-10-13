@@ -45,6 +45,11 @@ Nordic's nRF51 and nRF52 architecture support.
 
     Declaration of UART device is board-specific.
   @end section
+
+  @section I2C
+    Hardware I2C block is available with full interrupt support.  It
+    only supports master operation.
+  @end section
   
 @end section
 
