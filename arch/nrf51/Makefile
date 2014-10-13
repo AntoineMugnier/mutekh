@@ -4,4 +4,4 @@ objs-$(CONFIG_DEVICE) += on_chip.o
 
 meta = ldscript
 
-subdirs = drivers
+subdirs = drivers board

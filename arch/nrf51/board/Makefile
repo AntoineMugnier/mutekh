@@ -1,0 +1,1 @@
+objs-$(CONFIG_NRF51_PCA10000) += pca10000.o
