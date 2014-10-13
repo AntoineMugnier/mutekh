@@ -10,6 +10,7 @@
   @include zynq/zynq.mkdoc
   @include pic32/pic32.mkdoc
   @include cc26xx/cc26xx.mkdoc
+  @include nrf5x/nrf5x.mkdoc
 
 @end section
 
