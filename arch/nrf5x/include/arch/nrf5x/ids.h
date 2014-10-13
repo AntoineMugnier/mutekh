@@ -1,0 +1,113 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2014
+*/
+
+#ifndef ARCH_NRF5X_IDS_H_
+#define ARCH_NRF5X_IDS_H_
+
+/**
+   @file
+   @module {Hexo}
+   @short nRF51/nRF52 peripheral IDs
+
+   nRF5x devices all look the same and regular.  Device at address
+   0x4000000 has number 0 and interrupt 0, device at address
+   0x40001000 has number 1 and interrupt 1, and so on.
+
+   @ref nrf5x_peripheral_id_e defines available peripheral IDs. All of
+   them map to an address range, and an interrupt source to NVIC.
+
+   @ref #NRF_PERIPHERAL_ADDR and @ref nrf_peripheral_addr allow to
+   retrieve device base address, @ref #NRF_STATIC_RES_PERIPHERAL_MEM
+   is a shortcut for declaring a @ref #DEV_STATIC_RES_MEM for a
+   device.
+*/
+
+#if !defined(CONFIG_ARCH_NRF5X)
+# error You should not include this header on non-nRF builds
+#endif
+
+#include <hexo/types.h>
+#include <hexo/decls.h>
+
+/**
+   @this statically computes the device base address from its @ref
+   {nrf5x_peripheral} {device number}.
+
+   @see nrf_peripheral_addr
+ */
+#define NRF_PERIPHERAL_ADDR(no) (0x40000000 | ((uintptr_t)(no) << 12))
+
+/**
+   @this statically retrieves device ID from its base address.
+   Address is assumed to be existing.
+ */
+#define NRF_PERIPHERAL_ID(addr) ((uint8_t)((addr) >> 12) & 0x7f)
+
+/**
+   @this expands to @ref #DEV_STATIC_RES_MEM for a given peripheral
+   ID.
+ */
+#define NRF_STATIC_RES_PERIPHERAL_MEM(x) DEV_STATIC_RES_MEM(NRF_PERIPHERAL_ADDR((x)), NRF_PERIPHERAL_ADDR((x) + 1))
+
+/**
+   @this computes the device base address from its @ref
+   {nrf5x_peripheral} {device number}.
+
+   @see NRF_PERIPHERAL_ADDR
+ */
+ALWAYS_INLINE uintptr_t nrf_peripheral_addr(uint8_t no)
+{
+    return 0x40000000 | ((uintptr_t)no << 12);
+}
+
+/**
+   @this defines the list of peripheral IDs for nRF51/nRF52 chips.
+ */
+enum nrf5x_peripheral_id_e
+{
+    NRF5X_POWER = 0,
+    NRF5X_CLOCK = 0,
+    NRF5X_RADIO = 1,
+    NRF5X_UART0 = 2,
+    NRF5X_SPI0 = 3,
+    NRF5X_TWI0 = 3,
+    NRF5X_SPI1 = 4,
+    NRF5X_TWI1 = 4,
+    NRF5X_SPIS1 = 4,
+    NRF5X_GPIOTE = 6,
+    NRF5X_ADC = 7,
+    NRF5X_TIMER0 = 8,
+    NRF5X_TIMER1 = 9,
+    NRF5X_TIMER2 = 10,
+    NRF5X_RTC0 = 11,
+    NRF5X_TEMP = 12,
+    NRF5X_RNG = 13,
+    NRF5X_ECB = 14,
+    NRF5X_CCM = 15,
+    NRF5X_AAR = 15,
+    NRF5X_WDT = 16,
+    NRF5X_RTC1 = 17,
+    NRF5X_QDEC = 18,
+    NRF5X_LPCOMP = 19,
+    NRF5X_NVMC = 30,
+    NRF5X_PPI = 31,
+};
+
+#endif

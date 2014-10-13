@@ -9,6 +9,7 @@
 %include stm32/stm32.build
 %include pic32/pic32.build
 %include cc26xx/cc26xx.build
+%include nrf5x/nrf5x.build
 
 %common
   %requiretypes architecture
