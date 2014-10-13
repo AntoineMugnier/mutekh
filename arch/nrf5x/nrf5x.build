@@ -1,3 +1,5 @@
+%include arch/nrf5x/board/board.build
+
 %section nrf51-??aa
   %inherit nrf5x-51822-256-16
 

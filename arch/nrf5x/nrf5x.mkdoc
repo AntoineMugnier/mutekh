@@ -141,6 +141,15 @@ arch/nrf5x/peripheral.h
 
 @end section
 
+@section {Boards}
+
+  @section {nRF51822-Dongle}
+    PCA10000 is the most simple board.  UART is driven as a character
+    device, RGB LED can be controlled through GPIOs or PWM drivers.
+  @end section
+
+@end section
+
 @section {Implementation notes}
 
   @section {Device register access}
