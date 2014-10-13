@@ -18,8 +18,7 @@
 
     Copyright Alexandre Becoulet <alexandre.becoulet@lip6.fr> (c) 2006
 
-    Synchronous read and write functions for block device.
-
+    Synchronous read and write functions for character device.
 */
 
 #include <device/device.h>
@@ -31,11 +30,9 @@
 # include <hexo/lock.h>
 #endif
 
-GCT_CONTAINER_PROTOTYPES(dev_char_queue, extern inline, dev_char_queue,
-                   init, destroy, isempty, pushback, pop, head, remove);
-
-struct dev_char_wait_rq_s
+struct dev_char_helper_s
 {
+  struct dev_char_rq_s rq;
 #ifdef CONFIG_MUTEK_SCHEDULER
   lock_t lock;
   struct sched_context_s *ctx;
@@ -43,158 +40,136 @@ struct dev_char_wait_rq_s
   bool_t done;
 };
 
-
-static DEVCHAR_CALLBACK(dev_char_lock_request_cb)
+static KROUTINE_EXEC(dev_char_helper_spin_kr)
 {
-  struct dev_char_wait_rq_s *status = rq->pvdata;
-  status->done = 1;
-  return 1;
+  struct dev_char_helper_s *helper = KROUTINE_CONTAINER(kr, *helper, rq.kr);
+
+  helper->done = 1;
 }
 
-static DEVCHAR_CALLBACK(dev_char_lock_request_whole_cb)
+#if defined(CONFIG_MUTEK_SCHEDULER)
+static KROUTINE_EXEC(dev_char_helper_wait_kr)
 {
-  struct dev_char_wait_rq_s *status = rq->pvdata;
+  struct dev_char_helper_s *helper = KROUTINE_CONTAINER(kr, *helper, rq.kr);
 
-  if ( rq->size == 0 || rq->error ) {
-	  status->done = 1;
-	  return 1;
-  }
-  return 0;
+  lock_spin(&helper->lock);
+
+  helper->done = 1;
+  if (helper->ctx != NULL)
+    sched_context_start(helper->ctx);
+
+  lock_release(&helper->lock);
 }
-
-static ssize_t dev_char_lock_request(const struct device_char_s *cdev, uint8_t *data,
-				     size_t size, enum dev_char_rq_type_e type,
-				     devchar_callback_t *callback)
-{
-  struct dev_char_rq_s rq;
-  struct dev_char_wait_rq_s status;
-
-  if (size == 0)
-    return 0;
-
-  status.done = 0;
-  rq.type = type;
-  rq.pvdata = &status;
-  rq.callback = callback;
-  rq.error = 0;
-  rq.data = data;
-  rq.size = size;
-
-  DEVICE_OP(cdev, request, &rq);
-
-#ifdef CONFIG_DEVICE_IRQ
-  assert(cpu_is_interruptible());
 #endif
 
-  while (!status.done)
-    order_compiler_mem();
+static error_t dev_char_spin_request(
+  const struct device_char_s *cdev,
+  struct dev_char_helper_s *helper)
+{
+  kroutine_init(&helper->rq.kr, dev_char_helper_spin_kr, KROUTINE_IMMEDIATE);
 
-  assert(rq.error >= 0);
-  return rq.error ? -rq.error : size - rq.size;
+  helper->done = 0;
+
+  DEVICE_OP(cdev, request, &helper->rq);
+
+  while (!helper->done)
+    order_smp_read();
+
+  return helper->rq.error;
 }
 
-
-#ifdef CONFIG_MUTEK_SCHEDULER
-static DEVCHAR_CALLBACK(dev_char_wait_request_cb)
+static error_t dev_char_wait_request(
+  const struct device_char_s *cdev,
+  struct dev_char_helper_s *helper)
 {
-  struct dev_char_wait_rq_s *status = rq->pvdata;
+#if !defined(CONFIG_MUTEK_SCHEDULER)
+  return dev_i2c_spin_transfer(i2cdev, helper);
+#else
+  kroutine_init(&helper->rq.kr, dev_char_helper_wait_kr, KROUTINE_IMMEDIATE);
 
-  lock_spin(&status->lock);
-  if (status->ctx != NULL)
-	  sched_context_start(status->ctx);
-  status->done = 1;
-  lock_release(&status->lock);
+  lock_init(&helper->lock);
+  helper->ctx  = NULL;
+  helper->done = 0;
 
-  return 1;
-}
-
-static DEVCHAR_CALLBACK(dev_char_wait_request_whole_cb)
-{
-  struct dev_char_wait_rq_s *status = rq->pvdata;
-
-  if ( rq->size == 0 || rq->error ) {
-	  lock_spin(&status->lock);
-	  if (status->ctx != NULL)
-		  sched_context_start(status->ctx);
-	  status->done = 1;
-	  lock_release(&status->lock);
-	  return 1;
-  }
-  return 0;
-}
-
-static ssize_t dev_char_wait_request(const struct device_char_s *cdev, uint8_t *data,
-				     size_t size, enum dev_char_rq_type_e type,
-				     devchar_callback_t *callback)
-{
-  struct dev_char_rq_s rq;
-  struct dev_char_wait_rq_s status;
-
-  if (size == 0)
-    return 0;
-
-  lock_init(&status.lock);
-  status.ctx = NULL;
-  status.done = 0;
-  rq.type = type;
-  rq.pvdata = &status;
-  rq.callback = callback;
-  rq.error = 0;
-  rq.data = data;
-  rq.size = size;
-
-  DEVICE_OP(cdev, request, &rq);
-
-  /* ensure callback doesn't occur here */
+  DEVICE_OP(cdev, request, &helper->rq);
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
-  lock_spin(&status.lock);
+  lock_spin(&helper->lock);
 
-  if (!status.done)
-    {
-      status.ctx = sched_get_current();
-      sched_stop_unlock(&status.lock);
-    }
-  else
-    lock_release(&status.lock);
+  if (!helper->done) {
+    helper->ctx = sched_get_current();
+    sched_stop_unlock(&helper->lock);
+  } else {
+    lock_release(&helper->lock);
+  }
 
   CPU_INTERRUPT_RESTORESTATE;
-  lock_destroy(&status.lock);
+  lock_destroy(&helper->lock);
 
-  assert(rq.error >= 0);
-  return rq.error ? -rq.error : size - rq.size;
-
-}
+  return helper->rq.error;
 #endif
+}
 
-
-
-
-ssize_t dev_char_wait_read(const struct device_char_s *cdev, uint8_t *data, size_t size)
+error_t dev_char_wait_read(const struct device_char_s *cdev, uint8_t *data, size_t size)
 {
-#ifdef CONFIG_MUTEK_SCHEDULER
-	return dev_char_wait_request(cdev, data, size, DEV_CHAR_READ, dev_char_wait_request_cb);
+#if !defined(CONFIG_MUTEK_SCHEDULER)
+  return dev_char_spin_read(cdev, data, size);
 #else
-	return dev_char_lock_request(cdev, data, size, DEV_CHAR_READ, dev_char_lock_request_cb);
+  struct dev_char_helper_s req =
+  {
+    .rq = {
+      .type = DEV_CHAR_READ,
+      .data = data,
+      .size = size,
+    },
+  };
+
+  return dev_char_wait_request(cdev, &req);
 #endif
 }
 
-ssize_t dev_char_spin_read(const struct device_char_s *cdev, uint8_t *data, size_t size)
+error_t dev_char_spin_read(const struct device_char_s *cdev, uint8_t *data, size_t size)
 {
-	return dev_char_lock_request(cdev, data, size, DEV_CHAR_READ, dev_char_lock_request_cb);
+  struct dev_char_helper_s req =
+  {
+    .rq = {
+      .type = DEV_CHAR_READ,
+      .data = data,
+      .size = size,
+    },
+  };
+
+  return dev_char_spin_request(cdev, &req);
 }
 
-ssize_t dev_char_wait_write(const struct device_char_s *cdev, const uint8_t *data, size_t size)
+error_t dev_char_wait_write(const struct device_char_s *cdev, const uint8_t *data, size_t size)
 {
-#ifdef CONFIG_MUTEK_SCHEDULER
-	return dev_char_wait_request(cdev, (uint8_t*)data, size, DEV_CHAR_WRITE, dev_char_wait_request_whole_cb);
+#if !defined(CONFIG_MUTEK_SCHEDULER)
+  return dev_char_spin_write(cdev, data, size);
 #else
-	return dev_char_lock_request(cdev, (uint8_t*)data, size, DEV_CHAR_WRITE, dev_char_lock_request_whole_cb);
+  struct dev_char_helper_s req =
+  {
+    .rq = {
+      .type = DEV_CHAR_WRITE,
+      .data = (uint8_t *)data,
+      .size = size,
+    },
+  };
+
+  return dev_char_wait_request(cdev, &req);
 #endif
 }
 
-ssize_t dev_char_spin_write(const struct device_char_s *cdev, const uint8_t *data, size_t size)
+error_t dev_char_spin_write(const struct device_char_s *cdev, const uint8_t *data, size_t size)
 {
-	return dev_char_lock_request(cdev, (uint8_t*)data, size, DEV_CHAR_WRITE, dev_char_lock_request_whole_cb);
-}
+  struct dev_char_helper_s req =
+  {
+    .rq = {
+      .type = DEV_CHAR_WRITE,
+      .data = (uint8_t *)data,
+      .size = size,
+    },
+  };
 
+  return dev_char_spin_request(cdev, &req);
+}
