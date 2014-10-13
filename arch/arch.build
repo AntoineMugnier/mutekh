@@ -8,6 +8,7 @@
 %include zynq/zynq.build
 %include efm32/efm32.build
 %include stm32/stm32.build
+%include nrf51/nrf51.build
 
 %common
   %requiretypes architecture
