@@ -101,6 +101,8 @@ enum nrf5x_peripheral {
 #endif
 };
 
+#define NRF_GPIO_RANGE_IRQ_ID 32
+
 enum nrf5x_clock
 {
   NRF_CLOCK_LF,
