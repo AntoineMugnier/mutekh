@@ -152,6 +152,13 @@ Nordic's nRF51 and nRF52 architecture support.
     nRFgo mother board has not been explored.
   @end section
 
+  @section {nRF51822-mKit}
+    This board is mBed-based development board for nRF51.  It has all
+    IO ports routed to external headers, user may use IOs as needed.
+    UART is routed to USB controller and declared.  All other IOs
+    (including LEDs and buttons) are left to user code.
+  @end section
+
 @end section
 
 @section {Implementation notes}
