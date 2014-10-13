@@ -25,10 +25,40 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/memory_allocator.h>
 
+#include <arch/nrf51/clock.h>
+
 void nrf51_mem_init()
 {
     default_region = memory_allocator_init(
         NULL,
         (void*)CONFIG_STARTUP_HEAP_ADDR,
         (void*)(CONFIG_STARTUP_HEAP_ADDR + CONFIG_STARTUP_HEAP_SIZE));
+}
+
+void nrf51_clock_init()
+{
+    uintptr_t clock = nrf_peripheral_addr(NRF51_CLOCK);
+
+#if defined(CONFIG_NRF51_LFCLK_XOSC)
+    nrf_reg_set(clock, NRF51_CLOCK_LFCLKSRC, NRF51_CLOCK_LFCLKSTAT_SRC_XTAL);
+// Cannot run synth until HF is started
+#elif defined(CONFIG_NRF51_LFCLK_RC) || defined(CONFIG_NRF51_LFCLK_SYNTH)
+    nrf_reg_set(clock, NRF51_CLOCK_LFCLKSRC, NRF51_CLOCK_LFCLKSTAT_SRC_RC);
+//#elif defined(CONFIG_NRF51_LFCLK_SYNTH)
+//    nrf_reg_set(clock, NRF51_CLOCK_LFCLKSRC, NRF51_CLOCK_LFCLKSTAT_SRC_SYNTH);
+#else
+# error "No LF clock declared"
+#endif
+
+    nrf_task_trigger(
+        clock,
+        NRF51_CLOCK_LFCLKSTART);
+
+    while (!nrf_event_check(clock, NRF51_CLOCK_LFCLKSTARTED))
+        ;
+
+    nrf_task_trigger(clock, NRF51_CLOCK_HFCLKSTART);
+
+    while (!nrf_event_check(clock, NRF51_CLOCK_HFCLKSTARTED))
+        ;
 }
