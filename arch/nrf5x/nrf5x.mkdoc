@@ -48,6 +48,13 @@ arch/nrf5x/peripheral.h
     connect either the low precision or high precision clock,
     depending on needs.
   @end section
+
+  @section {GPIO}
+    GPIO controller implements both the GPIO class and the ICU class,
+    so that an external peripheral can use a GPIO as an interrupt
+    sink.  This feature uses GPIOTE channels in Event mode.  @see
+    GPIOTE.
+  @end section
   
 @end section
 
@@ -98,5 +105,16 @@ arch/nrf5x/peripheral.h
     through the @tt CONFIG_DRIVER_NRF5X_PPI_ENUM enum config token.
   @end section
 
+  @section {GPIOTE}
+    GPIOTE channels are partitioned between GPIO ICU input and PWM
+    outputs.  Allocation between those two modules is static.
+  @end section
+
+  @section GPIOTE
+    GPIOTE channels are partitioned between GPIO ICU input and PWM
+    outputs.  Allocation between those two modules is static.
+  @end section
+
 @end section
+
 @end section

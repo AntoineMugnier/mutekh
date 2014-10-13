@@ -149,6 +149,12 @@ enum nrf5x_peripheral_id_e
 };
 
 /**
+   @this is the @em {input range} interrupt endpoint ID in GPIO
+   driver.
+ */
+#define NRF_GPIO_RANGE_IRQ_ID 32
+
+/**
    @this defines identifiers for nRF51/nRF52 clocks as modeled by
    clock driver in MutekH.
  */
