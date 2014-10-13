@@ -71,6 +71,11 @@ arch/nrf5x/peripheral.h
 
     Declaration of UART device is board-specific.
   @end section
+
+  @section {I2C}
+    Hardware I2C block is available with full interrupt support.  It
+    only supports master operation, this is a hardware limitation.
+  @end section
   
 @end section
 
