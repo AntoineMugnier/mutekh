@@ -36,26 +36,6 @@
 #include <device/driver.h>
 #include <device/resources.h>
 
-
-/** UART baudrates. */
-enum dev_uart_baudrate_e
-{
-  DEV_UART_BAUD_110,
-  DEV_UART_BAUD_300,
-  DEV_UART_BAUD_600,
-  DEV_UART_BAUD_1200,
-  DEV_UART_BAUD_2400,
-  DEV_UART_BAUD_4800,
-  DEV_UART_BAUD_9600,
-  DEV_UART_BAUD_14400,
-  DEV_UART_BAUD_19200,
-  DEV_UART_BAUD_28800,
-  DEV_UART_BAUD_38400,
-  DEV_UART_BAUD_56000,
-  DEV_UART_BAUD_57600,
-  DEV_UART_BAUD_115200,
-};
-
 /** UART data bits modes. */
 enum dev_uart_data_bits_e
 {
@@ -84,7 +64,7 @@ enum dev_uart_parity_e
 struct dev_uart_config_s
 {
   /** baud rate in bps. */
-  enum dev_uart_baudrate_e  baudrate;
+  uint32_t baudrate;
 
   /** data bits. */
   enum dev_uart_data_bits_e data_bits;
@@ -107,7 +87,7 @@ struct dev_uart_config_s
 struct device_uart_s;
 
 #define DEVUART_CONFIG(n) error_t (n)(struct device_uart_s     *udev, \
-                                      struct dev_uart_config_s *cfg)  \
+                                      struct dev_uart_config_s *cfg)
 /**/
 
 /** @This defines the prototype of the configuration function. */
@@ -138,7 +118,7 @@ error_t dev_uart_config(struct device_uart_s     *udev,
  */
 ALWAYS_INLINE
 error_t device_add_res_uart(struct device_s           *dev,
-                            enum dev_uart_baudrate_e  baudrate,
+                            uint32_t                  baudrate,
                             enum dev_uart_data_bits_e data_bits,
                             enum dev_uart_stop_bits_e stop_bits,
                             enum dev_uart_parity_e    parity,
