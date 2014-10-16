@@ -11,3 +11,4 @@ endif
 objs-$(CONFIG_DRIVER_NRF51_RAM) += ram.o
 objs-$(CONFIG_DRIVER_NRF51_TIMER) += timer.o
 objs += clock.o
+objs-$(CONFIG_DRIVER_NRF51_BLE_RADIO) += ble_radio.o ble_radio_handler.o

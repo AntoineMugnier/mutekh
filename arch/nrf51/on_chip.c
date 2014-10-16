@@ -89,3 +89,18 @@ DEV_DECLARE_STATIC(timer1, "timer1", 0, nrf51_timer_drv,
                    );
 
 #endif
+
+#if defined(CONFIG_DRIVER_NRF51_BLE_RADIO)
+
+DEV_DECLARE_STATIC(ble_radio, "ble-radio", 0, nrf51_ble_radio_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF51_RADIO),
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF51_TIMER0),
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF51_RTC0),
+                   DEV_STATIC_RES_IRQ(NRF51_BLE_RADIO_IRQ_RADIO, NRF51_RADIO, 0, "/cpu"),
+                   DEV_STATIC_RES_IRQ(NRF51_BLE_RADIO_IRQ_TIMER, NRF51_TIMER0, 0, "/cpu"),
+                   DEV_STATIC_RES_IRQ(NRF51_BLE_RADIO_IRQ_RTC, NRF51_RTC0, 0, "/cpu"),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF51_CLOCK_LF_CALIBRATED, NRF51_BLE_RADIO_CLK_SLEEP),
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF51_CLOCK_HF_PRECISE, NRF51_BLE_RADIO_CLK_RADIO)
+                   );
+
+#endif
