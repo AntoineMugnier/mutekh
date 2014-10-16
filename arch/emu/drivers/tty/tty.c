@@ -64,60 +64,68 @@ static DEVCHAR_REQUEST(emu_tty_request)
 {
   //  struct device_s *dev = cdev->dev;
 
+  bool_t nonblock = 0;
   reg_t fd;
   reg_t id;
 
   assert(rq->size);
 
   switch (rq->type)
-    {
-    case DEV_CHAR_READ:
-      fd = 0;
-      id = EMU_SYSCALL_READ;
-      break;
-    case DEV_CHAR_WRITE:
-      fd = 1;
-      id = EMU_SYSCALL_WRITE;
-      break;
-    default:
+  {
+  case DEV_CHAR_READ_NONBLOCK:
+    nonblock = 1;
+  case DEV_CHAR_READ:
+    fd = 0;
+    id = EMU_SYSCALL_READ;
+    break;
+
+  case DEV_CHAR_WRITE_NONBLOCK:
+    nonblock = 1;
+  case DEV_CHAR_WRITE:
+    fd = 1;
+    id = EMU_SYSCALL_WRITE;
+    break;
+
+  default:
+    rq->error = -EINVAL;
+    kroutine_exec(&rq->kr, cpu_is_interruptible());
+    return;
+  }
+
+  while (1) {
+    ssize_t size = emu_do_syscall(id, 3, fd, rq->data, rq->size);
+
+    if (size == 0)
+      rq->error = EEOF;
+    else if (size < 0)
+      rq->error = EIO;
+    else {
+      rq->data += size;
+      rq->size -= size;
+      rq->error = 0;
+    }
+
+    if (rq->size == 0 || rq->error || nonblock) {
+      kroutine_exec(&rq->kr, cpu_is_interruptible());
       return;
     }
-
-  while (1)
-    {
-      ssize_t size = emu_do_syscall(id, 3, fd, rq->data, rq->size);
-
-      if (size == 0)
-	rq->error = EEOF;
-      else if (size < 0)
-	rq->error = EIO;
-      else
-	{
-	  rq->size -= size;
-	  rq->error = 0;
-	}
-
-      if (rq->callback(rq, size) || rq->size == 0 || rq->error)
-	return;
-
-      rq->data += size;
-    }
+  }
 }
 
-static const struct driver_char_s	emu_tty_char_drv =
+static const struct driver_char_s        emu_tty_char_drv =
 {
-  .class_		= DRIVER_CLASS_CHAR,
-  .f_request		= emu_tty_request,
+  .class_               = DRIVER_CLASS_CHAR,
+  .f_request            = emu_tty_request,
 };
 
 static DEV_INIT(emu_tty_init);
 static DEV_CLEANUP(emu_tty_cleanup);
 
-const struct driver_s	emu_tty_drv =
+const struct driver_s   emu_tty_drv =
 {
   .desc                 = "Unix TTY",
-  .f_init		= emu_tty_init,
-  .f_cleanup		= emu_tty_cleanup,
+  .f_init               = emu_tty_init,
+  .f_cleanup            = emu_tty_cleanup,
   .classes              = { &emu_tty_char_drv, 0 }
 };
 
