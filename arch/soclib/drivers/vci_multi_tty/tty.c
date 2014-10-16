@@ -64,72 +64,75 @@ void tty_soclib_try_read(struct device_s *dev)
   struct dev_char_rq_s		*rq;
 
   while ((rq = dev_char_queue_head(&pv->read_q)))
-    {
-      size_t size;
+  {
+    size_t size;
 
 #ifdef CONFIG_DEVICE_IRQ
-      size = tty_fifo_pop_array(&pv->read_fifo, rq->data, rq->size);
+    size = tty_fifo_pop_array(&pv->read_fifo, rq->data, rq->size);
 #else
-      /* use polling if no IRQ support available */
-      size = 0;
-      while (cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_STATUS) && size < rq->size)
-	rq->data[size++] = cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_READ);
+    /* use polling if no IRQ support available */
+    size = 0;
+    while (cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_STATUS) && size < rq->size)
+      rq->data[size++] = cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_READ);
 #endif
 
-      if (!size)
-	break;
+    if (!size)
+      break;
 
-      rq->size -= size;
-      rq->error = 0;
+    rq->size -= size;
+    rq->error = 0;
+    rq->data += size;
 
-      if (rq->callback(rq, size) || rq->size == 0)
-	dev_char_queue_remove(&pv->read_q, rq);
-      else
-	rq->data += size;
+    if (rq->size == 0 || rq->type == DEV_CHAR_READ_NONBLOCK) {
+      lock_release(&dev->lock);
+      kroutine_exec(&rq->kr, cpu_is_interruptible());
+      lock_spin(&dev->lock);
     }
+  }
 }
 
 DEVCHAR_REQUEST(tty_soclib_request)
 {
   struct device_s               *dev = cdev->dev;
   struct tty_soclib_context_s	*pv = dev->drv_pv;
+  struct dev_char_rq_s *done_rq = NULL;
 
   assert(rq->size);
   assert(cdev->number == 0);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  rq->cdev = cdev;
-
   switch (rq->type)
-    {
-    case DEV_CHAR_READ: {
-      bool_t empty;
+  {
+  case DEV_CHAR_READ_NONBLOCK:
+  case DEV_CHAR_READ: {
+    bool_t empty;
 
-      empty = dev_char_queue_isempty(&pv->read_q);
-      dev_char_queue_pushback(&pv->read_q, rq);
-      if (empty)
-	tty_soclib_try_read(dev);
-      break;
-    }
+    empty = dev_char_queue_isempty(&pv->read_q);
+    dev_char_queue_pushback(&pv->read_q, rq);
+    if (empty)
+      tty_soclib_try_read(dev);
+    break;
+  }
 
-    case DEV_CHAR_WRITE: {
-      size_t i;
-      size_t size = rq->size;
+  case DEV_CHAR_WRITE_NONBLOCK:
+  case DEV_CHAR_WRITE: {
+    size_t i;
 
-      for (i = 0; i < rq->size; i++)
-	cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_WRITE, endian_le32(rq->data[i]));
+    for (i = 0; i < rq->size; i++)
+      cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_WRITE, endian_le32(rq->data[i]));
 
-      rq->size = 0;
-      rq->error = 0;
-      rq->callback(rq, size);
-
-      break;
-    }
-
-    }
+    rq->size = 0;
+    rq->error = 0;
+    done_rq = rq;
+    break;
+  }
+  }
 
   LOCK_RELEASE_IRQ(&dev->lock);
+
+  if (done_rq)
+    kroutine_exec(&done_rq->kr, cpu_is_interruptible());
 }
 
 #ifdef CONFIG_DEVICE_IRQ
