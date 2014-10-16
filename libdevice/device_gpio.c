@@ -26,7 +26,9 @@
 
 #include <stdarg.h>
 
+__attribute__((aligned(8)))
 const uint8_t dev_gpio_mask1[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+__attribute__((aligned(8)))
 const uint8_t dev_gpio_mask0[8] = { };
 
 error_t device_gpio_map_set_mode(struct device_gpio_s *gpdev,
@@ -89,3 +91,31 @@ error_t device_res_gpio_map(struct device_s *dev, const char *pin_list,
   return 0;
 }
 
+DEVGPIO_REQUEST(devgpio_request_async_to_sync)
+{
+  switch (req->type) {
+  case DEV_GPIO_MODE:
+    req->error = DEVICE_OP(gpio, set_mode,
+                          req->io_first, req->io_last,
+                          req->mode.mask, req->mode.mode);
+    break;
+
+  case DEV_GPIO_SET_OUTPUT:
+    req->error = DEVICE_OP(gpio, set_output,
+                          req->io_first, req->io_last,
+                          req->output.set_mask, req->output.clear_mask);
+    break;
+
+  case DEV_GPIO_GET_INPUT:
+    req->error = DEVICE_OP(gpio, get_input,
+                          req->io_first, req->io_last,
+                          req->input.data);
+    break;
+
+  default:
+    return -EINVAL;
+  }
+
+  kroutine_exec(&req->base.kr, cpu_is_interruptible());
+  return 0;
+}

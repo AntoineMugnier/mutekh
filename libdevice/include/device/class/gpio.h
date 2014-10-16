@@ -39,6 +39,7 @@
 
 #include <device/driver.h>
 #include <device/resources.h>
+#include <device/request.h>
 
 struct dev_gpio_request_s;
 struct device_gpio_s;
@@ -131,90 +132,75 @@ typedef DEVGPIO_SET_OUTPUT(devgpio_set_output_t);
 typedef DEVGPIO_GET_INPUT(devgpio_get_input_t);
 
 
-
-/** @see devgpio_watch_t */
-#define DEVGPIO_WATCH(n) error_t (n)(const struct device_gpio_s *gpio, \
-                                       struct dev_gpio_request_s *rq)
+/** @see devgpio_request_t */
+#define DEVGPIO_REQUEST(n) error_t (n)(const struct device_gpio_s *gpio, \
+                                       struct dev_gpio_request_s *req)
 /**
-   This function registers an IO watch request.
+   This function enqueues a request to the GPIO driver.
 
-   The request kroutine is invoked when a change matching the request
-   is detected. The @tt io_first, @tt io_last, @tt mask, @tt watch,
-   @tt one_shot and @tt kr fields of the request must be set before
-   calling this function. If the @tt one_shot is set, a single event
-   will be reported.
-
-   It's implementation defined if the same IO pin can be watched by
-   multiple requests at the same time. If the driver is not able to
-   accept multiple such requests, it must return @tt -EBUSY.
-
-   The @ref kroutine_exec function is called on @tt rq->kr when a
-   watched event occurs. Other functions of the driver API can be
-   called from the kroutine.
-
-   Depending on the hardware and the watched event types, this operation
-   may not be supported by all devices; in this case the function will
-   return @tt -ENOTSUP.
+   Kroutine is callen upon completion.  You may enqueue a request from
+   kroutine code.
 */
-typedef DEVGPIO_WATCH(devgpio_watch_t);
+typedef DEVGPIO_REQUEST(devgpio_request_t);
 
-/** @see devgpio_cancel_t */
-#define DEVGPIO_CANCEL(n) error_t (n)(const struct device_gpio_s *gpio, \
-                                      struct dev_gpio_request_s *rq)
-/**
-   This function cancels a previously registered IO watch request.
- */
-typedef DEVGPIO_CANCEL(devgpio_cancel_t);
 
-enum dev_gpio_event_type_e
+enum dev_gpio_request_type
 {
-  DEV_GPIO_EVENT_TOGGLE       = 1,
-  DEV_GPIO_EVENT_RAISING      = 2,
-  DEV_GPIO_EVENT_FALLING      = 4,
+  DEV_GPIO_MODE,
+  DEV_GPIO_SET_OUTPUT,
+  DEV_GPIO_GET_INPUT,
 };
 
 #define GCT_CONTAINER_ALGO_dev_gpio_queue CLIST
 
 struct dev_gpio_request_s
 {
-  struct kroutine_s         kr;
+  struct dev_request_s base;
 
-  /** index of the first io to monitor */
+  error_t error;
+
+  /** index of the first io to act on */
   gpio_id_t                   io_first;
-  /** index of the last io to monitor */
+  /** index of the last io to act on */
   gpio_id_t                   io_last;
 
-  /** mask of ios to watch in the given range. May be @tt NULL. */
-  const uint8_t               *mask;
+  enum dev_gpio_request_type type;
 
-  /** callback private data */
-  void                        *pv;
+  union {
+    struct {
+      /** mask of ios to set mode for. */
+      const uint8_t               *mask;
+      enum dev_pin_driving_e      mode;
+    } mode;
 
-  /** type of event to watch, multiple values from @ref
-     dev_gpio_event_type_e can be order together. */
-  enum dev_gpio_event_type_e  watch:8;
+    struct {
+      /** mask to set, @see devgpio_set_output_t */
+      const uint8_t               *set_mask;
+      /** mask to clear, @see devgpio_set_output_t */
+      const uint8_t               *clear_mask;
+    } output;
 
-  /** type of event detected, updated by the driver before invocation
-      of the callback. */
-  enum dev_gpio_event_type_e  occur:8;
-
-  /** specifies if the request must be canceled after the next event. */
-  bool_t                      one_shot;
-
-  const struct device_gpio_s  *gdev;
-  void                        *drv_pv;
-
-  GCT_CONTAINER_ENTRY(dev_gpio_queue, queue_entry);
+    struct {
+      /** data buffer to read */
+      uint8_t                     *data;
+    } input;
+  };
 };
+
+STRUCT_COMPOSE(dev_gpio_request_s, base);
+
+/** Helper that implements asynchronous f_request from other
+    synchronous primitives.
+*/
+extern DEVGPIO_REQUEST(devgpio_request_async_to_sync);
 
 
 DRIVER_CLASS_TYPES(gpio,
                    devgpio_set_mode_t *f_set_mode;
                    devgpio_set_output_t *f_set_output;
                    devgpio_get_input_t *f_get_input;
-                   devgpio_watch_t *f_watch;
-                   devgpio_cancel_t *f_cancel;
-		   );
+                   devgpio_request_t *f_request;
+  );
 
 /** @This changes the mode of multiple GPIO pins. */
 config_depend(CONFIG_DEVICE_GPIO)
