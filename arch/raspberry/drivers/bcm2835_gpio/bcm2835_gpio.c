@@ -286,8 +286,7 @@ static const struct driver_gpio_s bcm2835_gpio_gpio_drv =
     .f_set_mode     = bcm2835_gpio_set_mode,
     .f_set_output   = bcm2835_gpio_set_output,
     .f_get_input    = bcm2835_gpio_get_input,
-    .f_watch        = (devgpio_watch_t*)&dev_driver_notsup_fcn,
-    .f_cancel       = (devgpio_cancel_t*)&dev_driver_notsup_fcn,
+    .f_request      = devgpio_request_async_to_sync,
   };
 
 /********************** iomux controller driver part *********************/

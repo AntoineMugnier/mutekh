@@ -374,8 +374,7 @@ static const struct driver_gpio_s stm32_gpio_gpio_cls =
   .f_set_mode   = &stm32_gpio_gpio_set_mode,
   .f_set_output = &stm32_gpio_gpio_set_output,
   .f_get_input  = &stm32_gpio_gpio_get_input,
-  .f_watch      = (devgpio_watch_t*)&dev_driver_notsup_fcn,
-  .f_cancel     = (devgpio_cancel_t*)&dev_driver_notsup_fcn,
+  .f_request     = devgpio_request_async_to_sync,
 };
 
 

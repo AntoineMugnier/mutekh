@@ -377,8 +377,7 @@ const struct driver_gpio_s  soclib_spi_gpio_drv =
   .f_set_mode     = soclib_spi_gpio_set_mode,
   .f_set_output   = soclib_spi_gpio_set_output,
   .f_get_input    = soclib_spi_gpio_get_input,
-  .f_watch        = (devgpio_watch_t*)&dev_driver_notsup_fcn,
-  .f_cancel       = (devgpio_cancel_t*)&dev_driver_notsup_fcn,
+  .f_request      = devgpio_request_async_to_sync,
 };
 
 #endif
