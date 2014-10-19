@@ -72,6 +72,16 @@ DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 6,
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
   DEV_STATIC_RES_IOMUX("tx", 0, /* PA9 */ 0*16+9, /* AF7. */ 7, 0),
   DEV_STATIC_RES_IOMUX("rx", 0, /* PA10 */ 0*16+10, /* AF7. */ 7, 0),
+
+  /* default configuration. */
+  DEV_STATIC_RES_UART(
+    DEV_UART_BAUD_115200,
+    DEV_UART_DATA_8_BITS,
+    DEV_UART_STOP_1_BIT,
+    DEV_UART_PARITY_NONE,
+    0, /* flow control. */
+    0  /* half duplex.  */
+  ),
 );
 
 DEV_DECLARE_STATIC(
@@ -115,7 +125,7 @@ DEV_DECLARE_STATIC(
 );
 
 /* USART6. */
-DEV_DECLARE_STATIC_RESOURCES(usart6_dev_res, 5,
+DEV_DECLARE_STATIC_RESOURCES(usart6_dev_res, 6,
   DEV_STATIC_RES_MEM(
     STM32_DEV_MEM_START(USART, 6),
     STM32_DEV_MEM_END(USART, 6)
@@ -126,11 +136,21 @@ DEV_DECLARE_STATIC_RESOURCES(usart6_dev_res, 5,
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
   DEV_STATIC_RES_IOMUX("tx", 0, /* PA11 */ 0*16+11, /* AF8. */ 8, 0),
   DEV_STATIC_RES_IOMUX("rx", 0, /* PA12 */ 0*16+12, /* AF8. */ 8, 0),
+
+  /* default configuration. */
+  DEV_STATIC_RES_UART(
+    DEV_UART_BAUD_115200,
+    DEV_UART_DATA_8_BITS,
+    DEV_UART_STOP_1_BIT,
+    DEV_UART_PARITY_NONE,
+    0, /* flow control. */
+    0  /* half duplex.  */
+  ),
 );
 
 DEV_DECLARE_STATIC(
   usart6_dev,
-  "uart3",
+  "uart6",
   0,
   stm32_usart_drv,
   usart6_dev_res
@@ -190,7 +210,7 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv, gpio_dev_res);
 #if defined(CONFIG_DRIVER_STM32_PWM)
 
 /* PWM on TIMER 2. */
-DEV_DECLARE_STATIC_RESOURCES(pwm2_dev_res, 4,
+DEV_DECLARE_STATIC_RESOURCES(pwm2_dev_res, 5,
   DEV_STATIC_RES_MEM(
     STM32_DEV_MEM_START(TIM, 2),
     STM32_DEV_MEM_END(TIM, 2)
@@ -199,13 +219,14 @@ DEV_DECLARE_STATIC_RESOURCES(pwm2_dev_res, 4,
   DEV_STATIC_RES_FREQ(84000000, 1),
 
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
-  DEV_STATIC_RES_IOMUX("oc1", 0, /* PA0 */ 0*16+0, /* AF1 */ 1, 0),
+  DEV_STATIC_RES_IOMUX("oc1", 0, /* PA5 */ 0*16+5, /* AF1 */ 1, 0),
+  DEV_STATIC_RES_IOMUX("oc2", 0, /* PB3 */ 1*16+3, /* AF1 */ 1, 0),
 );
 
 DEV_DECLARE_STATIC(pwm2_dev, "pwm2", 0, stm32_pwm_drv, pwm2_dev_res);
 
 /* PWM on TIMER 3. */
-DEV_DECLARE_STATIC_RESOURCES(pwm3_dev_res, 4,
+DEV_DECLARE_STATIC_RESOURCES(pwm3_dev_res, 5,
   DEV_STATIC_RES_MEM(
     STM32_DEV_MEM_START(TIM, 3),
     STM32_DEV_MEM_END(TIM, 3)
@@ -215,9 +236,26 @@ DEV_DECLARE_STATIC_RESOURCES(pwm3_dev_res, 4,
 
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
   DEV_STATIC_RES_IOMUX("oc1", 0, /* PA6 */ 0*16+6, /* AF2 */ 2, 0),
+  DEV_STATIC_RES_IOMUX("oc2", 0, /* PA7 */ 0*16+7, /* AF2 */ 2, 0),
 );
 
 DEV_DECLARE_STATIC(pwm3_dev, "pwm3", 0, stm32_pwm_drv, pwm3_dev_res);
+
+/* PWM on TIMER 5. */
+DEV_DECLARE_STATIC_RESOURCES(pwm5_dev_res, 5,
+  DEV_STATIC_RES_MEM(
+    STM32_DEV_MEM_START(TIM, 5),
+    STM32_DEV_MEM_END(TIM, 5)
+  ),
+
+  DEV_STATIC_RES_FREQ(84000000, 1),
+
+  DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+  DEV_STATIC_RES_IOMUX("oc1", 0, /* PA0 */ 0*16+0, /* AF2 */ 2, 0),
+  DEV_STATIC_RES_IOMUX("oc2", 0, /* PA1 */ 0*16+1, /* AF2 */ 2, 0),
+);
+
+DEV_DECLARE_STATIC(pwm5_dev, "pwm5", 0, stm32_pwm_drv, pwm5_dev_res);
 
 #endif
 
