@@ -20,13 +20,14 @@
 
 */
 
+#include <stdlib.h>
+#include <limits.h>
+
 #include <device/shell.h>
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/resources.h>
 #include <inttypes.h>
-
-/******************************************** device path completion & parser */
 
 struct termui_optctx_dev_opts
 {
@@ -163,6 +164,82 @@ TERMUI_CON_ARGS_COLLECT_PROTOTYPE(dev_console_device_comp)
   return NULL;
 }
 #endif
+
+struct dev_console_fract_s
+{
+    uint64_t num;
+    uint64_t denom;
+};
+
+static error_t dev_console_parse_fract(const char                 *arg,
+                                       struct dev_console_fract_s *fract)
+{
+  char *ptr;
+
+  fract->num = strtoll(arg, &ptr, 0);
+  if (fract->num == LONG_MAX || fract->num == LONG_MIN || arg == ptr)
+    return -EINVAL;
+
+  fract->denom = *ptr == '\0' ? 1 : strtoll(ptr+1, NULL, 0);
+  if (fract->denom == LONG_MAX || fract->denom == LONG_MIN)
+    return -EINVAL;
+
+  if (fract->denom > 1)
+    {
+      uint32_t div;
+      size_t   divlen = strlen(ptr+1);
+
+      for (div = 1; divlen--; )
+        div *= 10;
+
+      fract->num   = fract->num * div + fract->denom;
+      fract->denom = div;
+    }
+
+  return 0;
+}
+
+TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_freq_parse)
+{
+  struct dev_console_opt_freq_s *optf = (void*)opt;
+  struct dev_freq_s             *freq = (void*)((uint8_t*)ctx + optf->offset);
+
+  struct dev_console_fract_s fract;
+  if (dev_console_parse_fract(argv[0], &fract))
+    return -ECANCELED;
+
+  /* check coersion consistency. */
+  if (fract.num & ~((1ULL << CONFIG_DEVICE_CLOCK_OSCN_WIDTH) - 1))
+    return -ECANCELED;
+
+  if (fract.denom & ~((1ULL << (64-CONFIG_DEVICE_CLOCK_OSCN_WIDTH)) - 1))
+    return -ECANCELED;
+
+  freq->num   = fract.num;
+  freq->denom = fract.denom;
+  return 0;
+}
+
+TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_freq_ratio_parse)
+{
+  struct dev_console_opt_freq_s *optf  = (void*)opt;
+  struct dev_freq_ratio_s       *ratio = (void*)((uint8_t*)ctx + optf->offset);
+
+  struct dev_console_fract_s fract;
+  if (dev_console_parse_fract(argv[0], &fract))
+    return -ECANCELED;
+
+  /* check coersion consistency. */
+  if (fract.num & ~((1ULL << CONFIG_DEVICE_CLOCK_FRAC_WIDTH) - 1))
+    return -ECANCELED;
+
+  if (fract.denom & ~((1ULL << CONFIG_DEVICE_CLOCK_FRAC_WIDTH) - 1 ))
+    return -ECANCELED;
+
+  ratio->num   = fract.num;
+  ratio->denom = fract.denom;
+  return 0;
+}
 
 #ifdef CONFIG_DEVICE_TREE
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_alias)
@@ -422,6 +499,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_tree)
 extern TERMUI_CON_GROUP_DECL(dev_shell_clock_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_timer_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_mem_group);
+extern TERMUI_CON_GROUP_DECL(dev_shell_pwm_group);
 
 static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 {
@@ -440,6 +518,9 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 #endif
 #ifdef CONFIG_DEVICE_MEM
   TERMUI_CON_GROUP_ENTRY(dev_shell_mem_group, "mem")
+#endif
+#ifdef CONFIG_DEVICE_PWM
+  TERMUI_CON_GROUP_ENTRY(dev_shell_pwm_group, "pwm")
 #endif
   TERMUI_CON_LIST_END
 };

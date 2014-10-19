@@ -7,7 +7,8 @@ doc_headers =  device/device.h  device/driver.h device/irq.h device/resources.h 
 	device/class/icu.h device/class/net.h device/class/cpu.h	\
 	device/class/timer.h device/class/dma.h
 
-enum_headers = device/driver.h device/device.h device/class/mem.h
+enum_headers = device/driver.h device/device.h device/class/mem.h \
+			   device/class/pwm.h
 
 objs = driver.o device.o resources.o init.o
 
@@ -74,5 +75,12 @@ endif
 
 ifeq ($(CONFIG_DEVICE_SHELL), defined)
 objs += shell.o
+endif
+
+ifeq ($(CONFIG_DEVICE_PWM), defined)
+objs += device_pwm.o
+ifeq ($(CONFIG_DEVICE_SHELL), defined)
+objs += shell_pwm.o
+endif
 endif
 

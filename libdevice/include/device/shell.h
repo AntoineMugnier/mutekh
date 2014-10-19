@@ -64,6 +64,28 @@ FIRST_FIELD_ASSERT(dev_console_opt_accessor_s, opt);
     __VA_ARGS__                                                         \
   )
 
+struct dev_console_opt_freq_s
+{
+  struct termui_con_opts_s opt;
+  uint16_t                 offset;
+};
+
+FIRST_FIELD_ASSERT(dev_console_opt_freq_s, opt);
+
+#define TERMUI_CON_OPT_FREQ_ENTRY(sname_, lname_, id_, type_, field_, ...) \
+  TERMUI_CON_OPT_CUSTOM_ENTRY(dev_console_opt_freq_s, sname_, lname_, id_, \
+    TERMUI_CON_OPT_PARSE(dev_console_opt_freq_parse, 1)                    \
+    .offset = offsetof(type_, field_),                                     \
+    __VA_ARGS__                                                            \
+  )
+
+#define TERMUI_CON_OPT_FREQ_RATIO_ENTRY(sname_, lname_, id_, type_, field_, ...) \
+  TERMUI_CON_OPT_CUSTOM_ENTRY(dev_console_opt_freq_s, sname_, lname_, id_,       \
+    TERMUI_CON_OPT_PARSE(dev_console_opt_freq_ratio_parse, 1)                    \
+    .offset = offsetof(type_, field_),                                           \
+    __VA_ARGS__                                                                  \
+  )
+
 /* generic parsing function for our custom option */
 TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_device_parse);
 
@@ -74,6 +96,10 @@ TERMUI_CON_ARGS_COLLECT_PROTOTYPE(dev_console_opt_device_comp);
 TERMUI_CON_ARGS_COLLECT_PROTOTYPE(dev_console_opt_accessor_comp);
 
 TERMUI_CON_ARGS_COLLECT_PROTOTYPE(dev_console_device_comp);
+
+TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_freq_parse);
+
+TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_console_opt_freq_ratio_parse);
 
 #endif
 
