@@ -15,6 +15,8 @@
   CONFIG_LOAD_EXCEPTIONS_SEPARATE undefined
   CONFIG_LOAD_EXCEPTIONS_TEXT
 
+  CONFIG_COMPILE_OPTIMIZE s
+
   %subsection stm32-m4-*
     %types cpu
 
