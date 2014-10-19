@@ -56,65 +56,53 @@ struct stm32_pwm_private_s
   /* PWM/timer base address. */
   uintptr_t                 addr;
 
-  /* PWM common frequency. */
-  struct dev_pwm_fract_s    freq;
-
   /* PWM channel actual count. */
   uint_fast8_t              count;
 
-  /* PWM/timer width. */
+  /* PWM hardware counter width. */
   uint_fast8_t              hw_width;
 
-  /* PWM duty cycle per channel. */
-  struct dev_pwm_fract_s    duty[STM32_PWM_CHANNEL_MAX];
+  /* PWM channel selection. */
+  struct dev_freq_ratio_s   duty[STM32_PWM_CHANNEL_MAX];
   uint_fast8_t              mask;
 
-  /* PWM period after prescaling. */
+  /* PWM cached period. */
   uint32_t                  period;
+
+  /* PWM request queue. */
+  struct dev_pwm_rq_queue_s queue;
+
+  /* PWM configuration mode. */
+  enum dev_pwm_mode_e       mode;
+  struct device_pwm_s       *owner;
 };
 
 static
-DEVPWM_FREQ(stm32_pwm_freq)
+error_t stm32_pwm_duty(struct device_s         *dev,
+                       uint_fast8_t            channel,
+                       struct dev_freq_ratio_s *duty);
+
+static
+error_t stm32_pwm_freq(struct device_s   *dev,
+                       struct dev_freq_s *freq)
 {
-  struct device_s            *dev = pdev->dev;
-  struct stm32_pwm_private_s *pv  = dev->drv_pv;
-
-  error_t err = 0;
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (!freq)
-    {
-      err = -ENOMEM;
-      goto freq_end;
-    }
-
-  if (freq->num == 0)
-    {
-      *freq = pv->freq;
-      goto freq_end;
-    }
+  struct stm32_pwm_private_s *pv = dev->drv_pv;
 
   /* Get input frequency. */
   struct dev_freq_s freq_res;
   if (device_get_res_freq(dev, &freq_res, 0))
-    {
-      err = -ENOTSUP;
-      goto freq_end;
-    }
+    return -ENOTSUP;
 
   /* Compute scale factor to the requested frequency. */
   uint64_t scale = freq_res.num * freq->denom / (freq_res.denom * freq->num);
+  scale -= scale >> 4;
 
   /* Compute part of the scale factor the period register cannot handle. */
   uint32_t scale_high = scale >> pv->hw_width;
   if (scale_high & 0xffff0000)
-    {
-      err = -ENOTSUP;
-      goto freq_end;
-    }
+    return -ENOTSUP;
 
   uint32_t presc, period;
-
   if (scale_high)
     {
       uint_fast8_t bcnt = sizeof(scale_high) * 8 - __builtin_clz(scale_high);
@@ -128,7 +116,6 @@ DEVPWM_FREQ(stm32_pwm_freq)
     }
 
   /* Save configuration. */
-  pv->freq   = *freq;
   pv->period = period;
 
   /* Configure the prescaler. */
@@ -137,110 +124,131 @@ DEVPWM_FREQ(stm32_pwm_freq)
   /* Configure the period. */
   DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, ARR, period - 1);
 
-freq_end:
-  LOCK_RELEASE_IRQ(&dev->lock);
-  if (!err && kr)
-    kroutine_exec(kr, cpu_is_interruptible());
-  return err;
+  /* Compute new value of active channels. */
+  if (pv->mask)
+    {
+      uint_fast8_t chan;
+      for (chan = 0; chan < pv->count; ++chan)
+        {
+          if ((pv->mask >> chan) & 0x1)
+            stm32_pwm_duty(dev, chan, &pv->duty[chan]);
+        }
+    }
+
+  return 0;
 }
 
 static
-DEVPWM_DUTY(stm32_pwm_duty)
+error_t stm32_pwm_duty(struct device_s         *dev,
+                       uint_fast8_t            channel,
+                       struct dev_freq_ratio_s *duty)
 {
-  struct device_s            *dev = pdev->dev;
-  struct stm32_pwm_private_s *pv  = dev->drv_pv;
-
-  error_t err = 0;
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (!duty)
-    {
-      err = -ENOMEM;
-      goto duty_end;
-    }
-
-  if (channel > pv->count)
-    {
-      err = -EIO;
-      goto duty_end;
-    }
+  struct stm32_pwm_private_s *pv = dev->drv_pv;
 
   if (duty->num > duty->denom)
-    {
-      err = -ENOTSUP;
-      goto duty_end;
-    }
-
-  if (duty->num == 0)
-    {
-      *duty = pv->duty[channel];
-      goto duty_end;
-    }
+    return -ENOTSUP;
 
   pv->duty[channel] = *duty;
 
-  uint32_t d = pv->duty[channel].num * pv->period / pv->duty[channel].denom;
+  uint32_t d = duty->num * pv->period / duty->denom;
   DEVICE_REG_IDX_UPDATE_DEV(TIMER, pv->addr, CCR, channel, d);
 
-duty_end:
-  LOCK_RELEASE_IRQ(&dev->lock);
-  if (!err && kr)
-    kroutine_exec(kr, cpu_is_interruptible());
-  return err;
+  return 0;
 }
 
 static
-DEVPWM_POLARITY(stm32_pwm_polarity)
+void stm32_pwm_polarity(struct device_s         *dev,
+                        uint_fast8_t            channel,
+                        enum dev_pwm_polarity_e pol)
 {
-  struct device_s            *dev = pdev->dev;
-  struct stm32_pwm_private_s *pv  = dev->drv_pv;
+  struct stm32_pwm_private_s *pv = dev->drv_pv;
 
-  error_t err = 0;
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  if (!pol)
-    {
-      err = -ENOMEM;
-      goto pol_end;
-    }
-
-  if (*pol == DEV_PWM_POL_NONE)
-    {
-      uint32_t x =
-        DEVICE_REG_FIELD_IDX_VALUE_DEV(TIMER, pv->addr, CCER, CCP, channel);
-      if (x & STM32_TIMER_CCER_CCP_LOW)
-        *pol = DEV_PWM_POL_LOW;
-      else
-        *pol = DEV_PWM_POL_HIGH;
-      goto pol_end;
-    }
-
-  if ( *pol == DEV_PWM_POL_HIGH )
+  if ( pol == DEV_PWM_POL_HIGH )
     DEVICE_REG_FIELD_IDX_UPDATE_DEV(TIMER, pv->addr, CCER, CCP, channel, HIGH);
   else
     DEVICE_REG_FIELD_IDX_UPDATE_DEV(TIMER, pv->addr, CCER, CCP, channel, LOW);
-
-pol_end:
-  LOCK_RELEASE_IRQ(&dev->lock);
-  if (!err && kr)
-    kroutine_exec(kr, cpu_is_interruptible());
-  return err;
 }
 
 static
-DEVPWM_START_STOP(stm32_pwm_start_stop)
+DEVPWM_CONFIG(stm32_pwm_config)
 {
   struct device_s            *dev = pdev->dev;
   struct stm32_pwm_private_s *pv  = dev->drv_pv;
 
+  uint32_t saved_presc, saved_period;
+
   error_t err = 0;
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (channel > pv->count || pv->freq.num == 0 || pv->duty[channel].num == 0)
+  if (pv->mode == DEV_PWM_MODE_FIXED)
     {
-      err = -EIO;
-      goto start_stop_end;
+      err = -ECANCELED;
+      goto cfg_end;
     }
+
+  if (pv->mode == DEV_PWM_MODE_EXCL && pv->owner != pdev)
+    {
+      err = -EBUSY;
+      goto cfg_end;
+    }
+
+  saved_presc  = DEVICE_REG_VALUE_DEV(TIMER, pv->addr, PSC);
+  saved_period = DEVICE_REG_VALUE_DEV(TIMER, pv->addr, ARR);
+
+  if (cfg->mask & DEV_PWM_MASK_FREQ)
+    {
+      err = stm32_pwm_freq(dev, &cfg->freq);
+      if (err)
+        goto cfg_end;
+    }
+
+  if (cfg->mask & DEV_PWM_MASK_DUTY)
+    {
+      err = stm32_pwm_duty(dev, pdev->number, &cfg->duty);
+      if (err)
+        {
+          DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, PSC, saved_presc);
+          DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, ARR, saved_period);
+          goto cfg_end;
+        }
+    }
+
+  if (cfg->mask & DEV_PWM_MASK_POL)
+    stm32_pwm_polarity(dev, pdev->number, cfg->pol);
+
+  if (cfg->mask & DEV_PWM_MASK_MODE)
+    pv->mode = cfg->mode;
+
+cfg_end:
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  cfg->error = err;
+
+  lock_release(&dev->lock);
+  kroutine_exec(&cfg->kr, 0);
+  lock_spin(&dev->lock);
+
+  return 0;
+}
+
+DEVPWM_QUEUE(stm32_pwm_queue)
+{
+  struct device_s            *dev = pdev->dev;
+  struct stm32_pwm_private_s *pv  = dev->drv_pv;
+  return &pv->queue;
+}
+
+static
+error_t stm32_pwm_start_stop(struct device_s *dev,
+                             uint_fast8_t    channel,
+                             bool_t          start)
+{
+  struct stm32_pwm_private_s *pv = dev->drv_pv;
+
+  if (channel > pv->count || pv->period == 0)
+    return -EIO;
+
+  LOCK_SPIN_IRQ(&dev->lock);
 
   if (start)
     {
@@ -266,20 +274,15 @@ DEVPWM_START_STOP(stm32_pwm_start_stop)
         DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CR1, CEN);
     }
 
-start_stop_end:
   LOCK_RELEASE_IRQ(&dev->lock);
-  if (!err && kr)
-    kroutine_exec(kr, cpu_is_interruptible());
   return 0;
 }
 
 static const struct driver_pwm_s stm32_pwm_pwm_drv =
 {
-  .class_       = DRIVER_CLASS_PWM,
-  .f_freq       = stm32_pwm_freq,
-  .f_duty       = stm32_pwm_duty,
-  .f_polarity   = stm32_pwm_polarity,
-  .f_start_stop = stm32_pwm_start_stop,
+  .class_   = DRIVER_CLASS_PWM,
+  .f_config = stm32_pwm_config,
+  .f_queue  = stm32_pwm_queue,
 };
 
 static inline
@@ -332,12 +335,14 @@ void stm32_pwm_clock_init(struct device_s *dev)
 
 static DEV_INIT(stm32_pwm_init);
 static DEV_CLEANUP(stm32_pwm_cleanup);
+static DEV_USE(stm32_pwm_use);
 
 const struct driver_s stm32_pwm_drv =
 {
   .desc      = "STM32 PWM",
   .f_init    = stm32_pwm_init,
   .f_cleanup = stm32_pwm_cleanup,
+  .f_use     = stm32_pwm_use,
   .classes   = {
     &stm32_pwm_pwm_drv,
     0
@@ -404,6 +409,9 @@ DEV_INIT(stm32_pwm_init)
 
   /* FIXME: check iomux declarations against pv->count. */
 
+  /* Setup request queue. */
+  dev_pwm_rq_queue_init(&pv->queue);
+
   /* Check timer width. */
   DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, CNT, 0xffffffff);
 
@@ -448,7 +456,7 @@ DEV_INIT(stm32_pwm_init)
   /* Upcounting. */
   DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CR1, DIR);
 
-  /* Master mode and internal clock selection. */
+  /* ster mode and internal clock selection. */
   DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, SMCR, 0);
 
   /* Set repeat counter to 0, then generate update at each overflow. */
@@ -470,6 +478,36 @@ DEV_CLEANUP(stm32_pwm_cleanup)
   struct stm32_pwm_private_s *pv = dev->drv_pv;
 
   DEVICE_REG_FIELD_CLR_DEV(TIMER, pv->addr, CR1, CEN);
+  dev_pwm_rq_queue_cleanup(&pv->queue);
   mem_free(pv);
+}
+
+static
+DEV_USE(stm32_pwm_use)
+{
+    struct device_s            *dev = acc->dev;
+    struct stm32_pwm_private_s *pv  = dev->drv_pv;
+
+    switch (op)
+      {
+      default:
+        return 0;
+
+      case DEV_USE_START:
+        return stm32_pwm_start_stop(dev, acc->number, 1);
+
+      case DEV_USE_STOP:
+        return stm32_pwm_start_stop(dev, acc->number, 0);
+
+      case DEV_USE_PUT_ACCESSOR:
+        if (pv->mode == DEV_PWM_MODE_EXCL && pv->owner == (void*)acc)
+          {
+            struct dev_pwm_rq_queue_s *q = &pv->queue;
+            lock_spin_irq(&q->lock);
+            dev_pwm_execute(q);
+            lock_release_irq(&q->lock);
+          }
+        return 0;
+      }
 }
 
