@@ -32,7 +32,6 @@ error_t dev_pwm_rq_queue_init(struct dev_pwm_rq_queue_s *q)
 {
     dev_pwm_queue_init(&q->queue);
     lock_init_irq(&q->lock);
-    memset(&q->cfg, 0, sizeof(q->cfg));
     return 0;
 }
 
