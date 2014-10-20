@@ -36,12 +36,8 @@
 C_HEADER_BEGIN
 
 #include <gct_platform.h>
-#include <gct/_platform.h>
 
-#if !defined(_GCT_LIBRARY_BUILD)
-# include <gct/_container_access.h>
-#endif
-
+#include <gct/_container_access.h>
 #include <hexo/lock.h>
 
 #define _GCT_LOCK_HEXO_LOCK_IRQ_SPINNING 1
