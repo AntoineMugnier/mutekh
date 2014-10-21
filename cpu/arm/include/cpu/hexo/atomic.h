@@ -34,7 +34,7 @@
 
 #define HAS_CPU_ATOMIC_INC
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_inc(atomic_int_t *a)
 {
 	reg_t tmp = 0, tmp2;
@@ -59,7 +59,7 @@ __cpu_atomic_inc(atomic_int_t *a)
 
 #define HAS_CPU_ATOMIC_DEC
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_dec(atomic_int_t *a)
 {
 	reg_t tmp = 0, tmp2;
@@ -84,7 +84,7 @@ __cpu_atomic_dec(atomic_int_t *a)
 
 #define HAS_CPU_ATOMIC_TESTSET
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
@@ -114,7 +114,7 @@ __cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 
 #define HAS_CPU_ATOMIC_WAITSET
 
-static inline void
+ALWAYS_INLINE void
 __cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
@@ -141,7 +141,7 @@ __cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
 
 #define HAS_CPU_ATOMIC_TESTCLR
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
@@ -171,7 +171,7 @@ __cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 
 #define HAS_CPU_ATOMIC_WAITCLR
 
-static inline void
+ALWAYS_INLINE void
 __cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
@@ -197,7 +197,7 @@ __cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 
 #define HAS_CPU_ATOMIC_SET
 
-static inline void
+ALWAYS_INLINE void
 __cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
@@ -221,7 +221,7 @@ __cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
 
 #define HAS_CPU_ATOMIC_CLR
 
-static inline void
+ALWAYS_INLINE void
 __cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 {
 	reg_t mask = 1 << n;
@@ -243,7 +243,7 @@ __cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 		);
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)
 {
 	atomic_int_t tmp, loaded;

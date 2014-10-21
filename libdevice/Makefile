@@ -59,6 +59,10 @@ ifeq ($(CONFIG_DEVICE_IOMUX), defined)
 objs += device_iomux.o
 endif
 
+ifeq ($(CONFIG_DEVICE_RFPACKET), defined)
+objs += device_rfpacket.o
+endif
+
 ifeq ($(CONFIG_DEVICE_CLOCK), defined)
 objs += device_clock.o
 ifeq ($(CONFIG_DEVICE_SHELL), defined)

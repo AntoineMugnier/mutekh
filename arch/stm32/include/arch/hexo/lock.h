@@ -38,35 +38,35 @@ struct		__arch_lock_s
 
 #define ARCH_LOCK_INITIALIZER	{ }
 
-static inline error_t __arch_lock_init(struct __arch_lock_s *lock)
+ALWAYS_INLINE error_t __arch_lock_init(struct __arch_lock_s *lock)
 {
   cpu_trap();
   return 0;
 }
 
-static inline void __arch_lock_destroy(struct __arch_lock_s *lock)
+ALWAYS_INLINE void __arch_lock_destroy(struct __arch_lock_s *lock)
 {
   cpu_trap();
 }
 
-static inline bool_t __arch_lock_try(struct __arch_lock_s *lock)
-{
-  cpu_trap();
-  return 0;
-}
-
-static inline void __arch_lock_spin(struct __arch_lock_s *lock)
-{
-  cpu_trap();
-}
-
-static inline bool_t __arch_lock_state(struct __arch_lock_s *lock)
+ALWAYS_INLINE bool_t __arch_lock_try(struct __arch_lock_s *lock)
 {
   cpu_trap();
   return 0;
 }
 
-static inline void __arch_lock_release(struct __arch_lock_s *lock)
+ALWAYS_INLINE void __arch_lock_spin(struct __arch_lock_s *lock)
+{
+  cpu_trap();
+}
+
+ALWAYS_INLINE bool_t __arch_lock_state(struct __arch_lock_s *lock)
+{
+  cpu_trap();
+  return 0;
+}
+
+ALWAYS_INLINE void __arch_lock_release(struct __arch_lock_s *lock)
 {
   cpu_trap();
 }

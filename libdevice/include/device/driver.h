@@ -393,7 +393,7 @@ void device_put_accessor(void *accessor);
    since it was cleaned-up by @ref device_put_accessor or initialized
    with @ref #DEVICE_ACCESSOR_INIT.
 */
-static inline bool_t device_check_accessor(void *accessor)
+ALWAYS_INLINE bool_t device_check_accessor(void *accessor)
 {
   struct device_accessor_s *a = accessor;
 
@@ -404,7 +404,7 @@ static inline bool_t device_check_accessor(void *accessor)
    @This initializes an accessor so that the @ref
    device_check_accessor function return false.
 */
-static inline void device_init_accessor(void *accessor)
+ALWAYS_INLINE void device_init_accessor(void *accessor)
 {
   struct device_accessor_s *a = accessor;
   a->dev = NULL;
@@ -420,7 +420,7 @@ static inline void device_init_accessor(void *accessor)
 
     @see device_stop.
 */
-static inline error_t device_start(void *accessor)
+ALWAYS_INLINE error_t device_start(void *accessor)
 {
   struct device_accessor_s *acc = accessor;
   dev_use_t *use = acc->dev->drv->f_use;
@@ -433,7 +433,7 @@ static inline error_t device_start(void *accessor)
 
     @see device_start.
 */
-static inline error_t device_stop(void *accessor)
+ALWAYS_INLINE error_t device_stop(void *accessor)
 {
   struct device_accessor_s *acc = accessor;
   dev_use_t *use = acc->dev->drv->f_use;

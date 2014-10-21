@@ -59,35 +59,35 @@ struct semaphore_s
 };
 
 #ifndef CONFIG_MUTEK_SCHEDULER
-static inline error_t
+ALWAYS_INLINE error_t
 semaphore_init(struct semaphore_s *semaphore, semaphore_count_t value)
 {
   return 0;
 }
 
-static inline void
+ALWAYS_INLINE void
 semaphore_take(struct semaphore_s *semaphore, semaphore_count_t n)
 {
 }
 
-static inline error_t
+ALWAYS_INLINE error_t
 semaphore_try_take(struct semaphore_s *semaphore, semaphore_count_t n)
 {
   return 0;
 }
 
-static inline void
+ALWAYS_INLINE void
 semaphore_give(struct semaphore_s *semaphore, semaphore_count_t n)
 {
 }
 
-static inline semaphore_count_t
+ALWAYS_INLINE semaphore_count_t
 semaphore_value(struct semaphore_s *semaphore)
 {
   return 1;
 }
 
-static inline void
+ALWAYS_INLINE void
 semaphore_destroy(struct semaphore_s *semaphore)
 {
 }

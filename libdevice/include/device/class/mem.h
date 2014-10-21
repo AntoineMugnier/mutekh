@@ -228,7 +228,7 @@ struct dev_mem_rq_s
 };
 
 GCT_CONTAINER_TYPES(dev_mem_queue, struct dev_mem_rq_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_mem_queue, static inline, dev_mem_queue,
+GCT_CONTAINER_FCNS(dev_mem_queue, inline, dev_mem_queue,
                    init, destroy, pushback, pop, isempty, head);
 
 /** Memory device info() function tempate. @see devmem_info_t */

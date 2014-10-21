@@ -39,6 +39,17 @@ CPU_LOCAL struct sched_context_s sched_idle;
  *      Scheduler base operations
  */
 
+GCT_CONTAINER_PROTOTYPES(sched_queue, extern inline, sched_queue,
+        init, destroy, isempty, pushback, pop, head, wrlock, rdlock, unlock);
+
+GCT_CONTAINER_PROTOTYPES(sched_queue, extern inline, sched_queue_nolock,
+                          isempty, pushback, pop, head, remove);
+
+#if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
+GCT_CONTAINER_PROTOTYPES(kroutine_queue, extern inline, kroutine_queue,
+        init, destroy, head, pushback, pop);
+#endif
+
 #ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
 CPU_LOCAL kroutine_queue_root_t kroutine_sched_switch;
 #endif

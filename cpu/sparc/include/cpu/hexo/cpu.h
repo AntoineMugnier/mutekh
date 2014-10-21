@@ -55,7 +55,7 @@
                 "%i0", "%i1", "%i2", "%i3", "%i4", "%i5", "%i6", "%i7"
 
 /** return sparc cpu windows count */
-static inline size_t
+ALWAYS_INLINE size_t
 cpu_sparc_wincount(void)
 {
   uint32_t wim_mask = 0xffffffff;
@@ -72,7 +72,7 @@ cpu_sparc_wincount(void)
   return __builtin_popcount(wim_mask);
 }
 
-static inline cpu_id_t
+ALWAYS_INLINE cpu_id_t
 cpu_id(void)
 {
   reg_t ret;
@@ -80,7 +80,7 @@ cpu_id(void)
   return ret;
 }
 
-static inline
+ALWAYS_INLINE
 reg_t cpu_get_stackptr()
 {
     reg_t ret;
@@ -89,13 +89,13 @@ reg_t cpu_get_stackptr()
     return ret;
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_isbootstrap(void)
 {
   return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_trap()
 {
   asm volatile ("ta %0 \n"
@@ -103,11 +103,11 @@ cpu_trap()
                 : : "i" (SPARC_TRAP_USERBREAK) );
 }
 
-static inline void cpu_dcache_invld(void *ptr)
+ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
 }
 
-static inline size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size()
 {
   return CONFIG_CPU_CACHE_LINE;
 }

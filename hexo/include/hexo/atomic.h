@@ -23,7 +23,8 @@
 #ifndef ATOMIC_H_
 #define ATOMIC_H_
 
-#include "types.h"
+#include <hexo/decls.h>
+#include <hexo/types.h>
 
 /**
   @file
@@ -47,43 +48,43 @@
 typedef struct arch_atomic_s atomic_t;
 
 /** @this sets atomic integer value in memory */
-static void atomic_set(atomic_t *a, atomic_int_t value);
+ALWAYS_INLINE void atomic_set(atomic_t *a, atomic_int_t value);
 
 /** @this gets atomic integer value in memory */
-static atomic_int_t atomic_get(atomic_t *a);
+ALWAYS_INLINE atomic_int_t atomic_get(atomic_t *a);
 
 /** @this atomicaly increments integer value in memory.
    @return 0 if new atomic value is 0. */
-static bool_t atomic_inc(atomic_t *a);
+ALWAYS_INLINE bool_t atomic_inc(atomic_t *a);
 
 /** @this atomicaly decrements integer value in memory
    @return 0 if new atomic value is 0. */
-static bool_t atomic_dec(atomic_t *a);
+ALWAYS_INLINE bool_t atomic_dec(atomic_t *a);
 
 /** @this atomicaly sets bit in integer value in memory */
-static void atomic_bit_set(atomic_t *a, uint_fast8_t n);
+ALWAYS_INLINE void atomic_bit_set(atomic_t *a, uint_fast8_t n);
 
 /** @this atomicaly tests and sets bit in integer value in memory
    @return 0 if bit was cleared before. */
-static bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n);
+ALWAYS_INLINE bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n);
 
 /** @this atomicaly clears bit in integer value in memory */
-static void atomic_bit_clr(atomic_t *a, uint_fast8_t n);
+ALWAYS_INLINE void atomic_bit_clr(atomic_t *a, uint_fast8_t n);
 
 /** @this atomicaly tests and clears bit in integer value in memory
    @return 0 if bit was cleared before. */
-static bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n);
+ALWAYS_INLINE bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n);
 
 /** @this tests bit in integer value in memory
    @return 0 if bit is cleared. */
-static bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n);
+ALWAYS_INLINE bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n);
 
 /** @this compares memory to old and replace with future if they are the same.
    @return true if exchanged */
-static bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t future);
+ALWAYS_INLINE bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t future);
 
 #if 0
-/** Static atomic value initializer */
+/** ALWAYS_INLINE atomic value initializer */
 # define ATOMIC_INITIALIZER(n)	/* defined in implementation */
 #endif
 
@@ -113,7 +114,7 @@ static bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_
 
 # ifndef HAS_CPU_ATOMIC_INC
 #  define HAS_CPU_ATOMIC_INC
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_inc(atomic_int_t *a)
 {
   atomic_int_t old;
@@ -128,7 +129,7 @@ __cpu_atomic_inc(atomic_int_t *a)
 
 # ifndef HAS_CPU_ATOMIC_DEC
 #  define HAS_CPU_ATOMIC_DEC
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_dec(atomic_int_t *a)
 {
   atomic_int_t old;
@@ -143,7 +144,7 @@ __cpu_atomic_dec(atomic_int_t *a)
 
 # ifndef HAS_CPU_ATOMIC_TESTSET
 #  define HAS_CPU_ATOMIC_TESTSET
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 {
   atomic_int_t mask = 1 << n;
@@ -162,7 +163,7 @@ __cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 
 # ifndef HAS_CPU_ATOMIC_TESTCLR
 #  define HAS_CPU_ATOMIC_TESTCLR
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 {
   atomic_int_t mask = 1 << n;
@@ -182,7 +183,7 @@ __cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 
 #if defined(HAS_CPU_ATOMIC_TESTSET) && !defined(HAS_CPU_ATOMIC_WAITSET)
 # define HAS_CPU_ATOMIC_WAITSET
-static inline void
+ALWAYS_INLINE void
 __cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
 {
   while (__cpu_atomic_bit_testset(a, n))
@@ -192,7 +193,7 @@ __cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
 
 #if defined(HAS_CPU_ATOMIC_TESTCLR) && !defined(HAS_CPU_ATOMIC_WAITCLR)
 # define HAS_CPU_ATOMIC_WAITCLR
-static inline void
+ALWAYS_INLINE void
 __cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 {
   while (!__cpu_atomic_bit_testclr(a, n))
@@ -202,7 +203,7 @@ __cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 
 #if defined(HAS_CPU_ATOMIC_TESTSET) && !defined(HAS_CPU_ATOMIC_SET)
 # define HAS_CPU_ATOMIC_SET
-static inline void
+ALWAYS_INLINE void
 __cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
 {
   __cpu_atomic_bit_testset(a, n);
@@ -211,7 +212,7 @@ __cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
 
 #if defined(HAS_CPU_ATOMIC_TESTCLR) && !defined(HAS_CPU_ATOMIC_CLR)
 #define HAS_CPU_ATOMIC_CLR
-static inline void
+ALWAYS_INLINE void
 __cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 {
   __cpu_atomic_bit_testclr(a, n);

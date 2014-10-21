@@ -70,10 +70,10 @@ struct sched_context_s
 
 GCT_CONTAINER_TYPES      (sched_queue, struct sched_context_s *, list_entry);
 
-GCT_CONTAINER_FCNS       (sched_queue, static inline, sched_queue,
+GCT_CONTAINER_FCNS       (sched_queue, inline, sched_queue,
                           init, destroy, isempty, pushback, pop, head, wrlock, rdlock, unlock);
 
-GCT_CONTAINER_NOLOCK_FCNS(sched_queue, static inline, sched_queue_nolock,
+GCT_CONTAINER_NOLOCK_FCNS(sched_queue, inline, sched_queue_nolock,
                           isempty, pushback, pop, head, remove);
 
 # define SCHED_QUEUE_INITIALIZER GCT_CONTAINER_ROOT_INITIALIZER(sched_queue)
@@ -181,21 +181,25 @@ void sched_context_start(struct sched_context_s *sched_ctx);
 config_depend(CONFIG_MUTEK_SCHEDULER)
 void sched_stop_unlock(lock_t *lock);
 
-/** @This locks context queue. */
+/** @This locks context queue for writting. */
 config_depend(CONFIG_MUTEK_SCHEDULER)
-error_t sched_queue_lock(sched_queue_root_t *queue);
+inline void sched_queue_wrlock(sched_queue_root_t *queue);
+
+/** @This locks context queue for reading. */
+config_depend(CONFIG_MUTEK_SCHEDULER)
+inline void sched_queue_rdlock(sched_queue_root_t *queue);
 
 /** @This unlocks context queue. */
 config_depend(CONFIG_MUTEK_SCHEDULER)
-void sched_queue_unlock(sched_queue_root_t *queue);
+inline void sched_queue_unlock(sched_queue_root_t *queue);
 
 /** @This initializes context queue. */
 config_depend(CONFIG_MUTEK_SCHEDULER)
-error_t sched_queue_init(sched_queue_root_t *queue);
+inline error_t sched_queue_init(sched_queue_root_t *queue);
 
 /** @This frees resources associated with context queue. */
 config_depend(CONFIG_MUTEK_SCHEDULER)
-void sched_queue_destroy(sched_queue_root_t *queue);
+inline void sched_queue_destroy(sched_queue_root_t *queue);
 
 typedef void (sched_wait_cb_t)(void *ctx);
 

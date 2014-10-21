@@ -51,6 +51,8 @@
 #  define DEPRECATED(message)   __attribute__((deprecated))
 # endif
 
+# define ALWAYS_INLINE inline __attribute__((always_inline))
+
 # ifndef __MUTEK_ASM__ // mkdoc:skip
 
 #  define _CONFIG_DEPEND_1(name, attr, proto, ...) \
@@ -82,27 +84,27 @@
 #  define config_depend(token) \
   _CONFIG_DEPEND(#token, _##token, , , )
 #  define config_depend_inline(token, proto, ...) \
-  _CONFIG_DEPEND(#token, _##token, static inline, proto, __VA_ARGS__)
+  _CONFIG_DEPEND(#token, _##token, ALWAYS_INLINE, proto, __VA_ARGS__)
 
 #  define config_depend_and2(token1, token2) \
   _CONFIG_DEPEND_AND2(#token1, #token2, _##token1, _##token2, , , )
 #  define config_depend_and2_inline(token1, token2, proto, ...) \
-  _CONFIG_DEPEND_AND2(#token1, #token2, _##token1, _##token2, static inline, proto, __VA_ARGS__)
+  _CONFIG_DEPEND_AND2(#token1, #token2, _##token1, _##token2, ALWAYS_INLINE, proto, __VA_ARGS__)
 
 #  define config_depend_or2(token1, token2) \
   _CONFIG_DEPEND_OR2(#token1, #token2, _##token1, _##token2, , , )
 #  define config_depend_or2_inline(token1, token2, proto, ...) \
-  _CONFIG_DEPEND_OR2(#token1, #token2, _##token1, _##token2, static inline, proto, __VA_ARGS__)
+  _CONFIG_DEPEND_OR2(#token1, #token2, _##token1, _##token2, ALWAYS_INLINE, proto, __VA_ARGS__)
 
 # endif
 
 #ifdef __MKDOC__
 # define config_depend(token)
-# define config_depend_inline(token, proto, ...) static inline proto __VA_ARGS__
+# define config_depend_inline(token, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
 # define config_depend_and2(token1, token2)
-# define config_depend_and2_inline(token1, token2, proto, ...) static inline proto __VA_ARGS__
+# define config_depend_and2_inline(token1, token2, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
 # define config_depend_or2(token1, token2)
-# define config_depend_or2_inline(token1, token2, proto, ...) static inline proto __VA_ARGS__
+# define config_depend_or2_inline(token1, token2, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
 #endif
 
 #ifndef FIRST_FIELD_ASSERT

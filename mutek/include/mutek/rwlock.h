@@ -66,37 +66,37 @@ struct rwlock_s
 };
 
 #ifndef CONFIG_MUTEK_SCHEDULER
-static inline error_t rwlock_destroy(struct rwlock_s *rwlock)
+ALWAYS_INLINE error_t rwlock_destroy(struct rwlock_s *rwlock)
 {
   return 0;
 }
 
-static inline error_t rwlock_init(struct rwlock_s *rwlock)
+ALWAYS_INLINE error_t rwlock_init(struct rwlock_s *rwlock)
 {
   return 0;
 }
 
-static inline error_t rwlock_rdlock(struct rwlock_s *rwlock)
+ALWAYS_INLINE error_t rwlock_rdlock(struct rwlock_s *rwlock)
 {
   return 0;
 }
 
-static inline error_t rwlock_wrlock(struct rwlock_s *rwlock);
+ALWAYS_INLINE error_t rwlock_wrlock(struct rwlock_s *rwlock);
 {
   return 0;
 }
 
-static inline error_t rwlock_tryrdlock(struct rwlock_s *rwlock);
+ALWAYS_INLINE error_t rwlock_tryrdlock(struct rwlock_s *rwlock);
 {
   return 0;
 }
 
-static inline error_t rwlock_trywrlock(struct rwlock_s *rwlock);
+ALWAYS_INLINE error_t rwlock_trywrlock(struct rwlock_s *rwlock);
 {
   return 0;
 }
 
-static inline error_t rwlock_unlock(struct rwlock_s *rwlock);
+ALWAYS_INLINE error_t rwlock_unlock(struct rwlock_s *rwlock);
 {
   return 0;
 }

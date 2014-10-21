@@ -47,31 +47,31 @@ C_HEADER_BEGIN
 
 typedef lock_t gpct_lock_HEXO_LOCK_type_t;
 
-static inline gpct_error_t
+ALWAYS_INLINE gpct_error_t
 gpct_lock_HEXO_LOCK_init(lock_t *lock)
 {
   return lock_init(lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_HEXO_LOCK_destroy(lock_t *lock)
 {
   lock_destroy(lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_HEXO_LOCK_wrlock(lock_t *lock)
 {
   lock_spin(lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_HEXO_LOCK_rdlock(lock_t *lock)
 {
   lock_spin(lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_HEXO_LOCK_unlock(lock_t *lock)
 {
   lock_release(lock);
@@ -90,32 +90,32 @@ typedef struct
   reg_t irq;
 } gpct_lock_HEXO_LOCK_IRQ_type_t;
 
-static inline gpct_error_t
+ALWAYS_INLINE gpct_error_t
 gpct_lock_HEXO_LOCK_IRQ_init(gpct_lock_HEXO_LOCK_IRQ_type_t *lock)
 {
   return lock_init(&lock->lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_HEXO_LOCK_IRQ_destroy(gpct_lock_HEXO_LOCK_IRQ_type_t *lock)
 {
   lock_destroy(&lock->lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_HEXO_LOCK_IRQ_wrlock(gpct_lock_HEXO_LOCK_IRQ_type_t *lock)
 {
   cpu_interrupt_savestate_disable(&lock->irq);
   lock_spin(&lock->lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_HEXO_LOCK_IRQ_rdlock(gpct_lock_HEXO_LOCK_IRQ_type_t *lock)
 {
   gpct_lock_HEXO_LOCK_IRQ_wrlock(lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_HEXO_LOCK_IRQ_unlock(gpct_lock_HEXO_LOCK_IRQ_type_t *lock)
 {
   lock_release(&lock->lock);

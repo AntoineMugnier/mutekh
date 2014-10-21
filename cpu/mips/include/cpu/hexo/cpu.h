@@ -181,7 +181,7 @@
 
 # endif
 
-static inline
+ALWAYS_INLINE
 reg_t cpu_get_stackptr()
 {
     reg_t ret;
@@ -189,25 +189,25 @@ reg_t cpu_get_stackptr()
     return ret;
 }
 
-static inline cpu_id_t
+ALWAYS_INLINE cpu_id_t
 cpu_id(void)
 {
 	return (reg_t)cpu_mips_mfc0(15, 1) & (reg_t)0x000003ff;
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_isbootstrap(void)
 {
   return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_trap()
 {
   asm volatile ("break 0");
 }
 
-static inline void cpu_dcache_invld(void *ptr)
+ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
   asm volatile (
 # if CONFIG_CPU_MIPS_VERSION >= 32
@@ -225,7 +225,7 @@ static inline void cpu_dcache_invld(void *ptr)
 		);
 }
 
-static inline size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size()
 {
   reg_t r0 = cpu_mips_mfc0(16, 0);
   reg_t r1 = cpu_mips_mfc0(16, 1);

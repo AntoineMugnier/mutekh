@@ -93,7 +93,7 @@ VMEM_VPAGE_INIT(vpage_init);
 # error Add kernel virtual memory allocator here 
 #endif
 
-static inline
+ALWAYS_INLINE
 void vmem_ppage_ops_init(struct vmem_ops_s *vmem_ops)
 {
   vmem_ops->ppage_alloc = &ppage_alloc;
@@ -103,7 +103,7 @@ void vmem_ppage_ops_init(struct vmem_ops_s *vmem_ops)
   vmem_ops->ppage_initial_region_get = &ppage_initial_region_get;
 }
 
-static inline
+ALWAYS_INLINE
 void vmem_vpage_ops_init(struct vmem_ops_s *vmem_ops)
 {
   vmem_ops->vpage_alloc = &vpage_kalloc;

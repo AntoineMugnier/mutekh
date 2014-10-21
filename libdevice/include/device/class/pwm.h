@@ -53,7 +53,6 @@ struct dev_pwm_rq_queue_s;
 
 /** PWM polarity. */
 ENUM_DESCRIPTOR(dev_pwm_polarity_e, strip:DEV_PWM_POL_, lower);
-static const char dev_pwm_polarity_e_str[] = ENUM_DESC_DEV_PWM_POLARITY_E;
 
 enum dev_pwm_polarity_e
 {
@@ -68,7 +67,6 @@ enum dev_pwm_polarity_e
 
 /* Configuration mode. */
 ENUM_DESCRIPTOR(dev_pwm_mode_e, strip:DEV_PWM_MODE_, lower);
-static const char dev_pwm_mode_e_str[] = ENUM_DESC_DEV_PWM_MODE_E;
 
 enum dev_pwm_mode_e
 {
@@ -204,7 +202,7 @@ struct dev_pwm_request_s
 
 /* GCT stuff. */
 GCT_CONTAINER_TYPES(dev_pwm_queue, struct dev_pwm_request_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_pwm_queue, static inline, dev_pwm_queue,
+GCT_CONTAINER_FCNS(dev_pwm_queue, inline, dev_pwm_queue,
                    init, destroy, isempty, head, remove, push, pushback);
 
 /** Configuration queue. */

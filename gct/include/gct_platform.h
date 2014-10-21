@@ -42,6 +42,7 @@ C_HEADER_BEGIN
 
 #define GCT_CONFIG_LIBRARY
 #define GCT_CONFIG_NOPLATFORM
+#define GCT_CONFIG_COMPACT_BINTREE
 
 #define _GCT_INT	int_fast8_t
 #define _GCT_UINT	uint_fast8_t
@@ -57,6 +58,7 @@ typedef ssize_t		_gct_sindex_t;
 #define _gct_realloc(p, s) realloc(p, s)
 #define _gct_free(p) free(p)
 
+#include <gct_atomic.h>
 
 C_HEADER_END
 

@@ -81,7 +81,7 @@
 # include <hexo/local.h>
 
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_disable(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -99,7 +99,7 @@ cpu_interrupt_disable(void)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_enable(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -117,7 +117,7 @@ cpu_interrupt_enable(void)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_process(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -139,7 +139,7 @@ cpu_interrupt_process(void)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_savestate(reg_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -152,7 +152,7 @@ cpu_interrupt_savestate(reg_t *state)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_savestate_disable(reg_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -170,7 +170,7 @@ cpu_interrupt_savestate_disable(reg_t *state)
 # endif
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_restorestate(const reg_t *state)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -183,7 +183,7 @@ cpu_interrupt_restorestate(const reg_t *state)
 # endif
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_interrupt_getstate(void)
 {
 # ifdef CONFIG_HEXO_IRQ
@@ -200,14 +200,14 @@ cpu_interrupt_getstate(void)
 # endif
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_is_interruptible(void)
 {
   return cpu_interrupt_getstate();
 }
 
 # ifdef CONFIG_CPU_WAIT_IRQ
-static inline void
+ALWAYS_INLINE void
 cpu_interrupt_wait(void)
 {
 #  ifdef CONFIG_HEXO_IRQ

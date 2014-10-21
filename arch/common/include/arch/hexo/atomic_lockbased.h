@@ -36,14 +36,14 @@ struct arch_atomic_s
   atomic_int_t	value;
 };
 
-static inline  void atomic_set(atomic_t *a, atomic_int_t value)
+ALWAYS_INLINE  void atomic_set(atomic_t *a, atomic_int_t value)
 {
   LOCK_SPIN_IRQ(&__atomic_arch_lock);
   a->value = value;
   LOCK_RELEASE_IRQ(&__atomic_arch_lock);
 }
 
-static inline  atomic_int_t atomic_get(atomic_t *a)
+ALWAYS_INLINE  atomic_int_t atomic_get(atomic_t *a)
 {
   atomic_int_t	res;
 
@@ -54,7 +54,7 @@ static inline  atomic_int_t atomic_get(atomic_t *a)
   return res;
 }
 
-static inline  bool_t atomic_inc(atomic_t *a)
+ALWAYS_INLINE  bool_t atomic_inc(atomic_t *a)
 {
   atomic_int_t	res;
 
@@ -65,7 +65,7 @@ static inline  bool_t atomic_inc(atomic_t *a)
   return res;
 }
 
-static inline  bool_t atomic_dec(atomic_t *a)
+ALWAYS_INLINE  bool_t atomic_dec(atomic_t *a)
 {
   atomic_int_t	res;
 
@@ -76,14 +76,14 @@ static inline  bool_t atomic_dec(atomic_t *a)
   return res;
 }
 
-static inline  void atomic_bit_set(atomic_t *a, uint_fast8_t n)
+ALWAYS_INLINE  void atomic_bit_set(atomic_t *a, uint_fast8_t n)
 {
   LOCK_SPIN_IRQ(&__atomic_arch_lock);
   a->value |= 1 << n;
   LOCK_RELEASE_IRQ(&__atomic_arch_lock);
 }
 
-static inline  bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n)
+ALWAYS_INLINE  bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n)
 {
   bool_t		res;
   const atomic_int_t	bit = 1 << n;
@@ -96,14 +96,14 @@ static inline  bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n)
   return res;
 }
 
-static inline  void atomic_bit_clr(atomic_t *a, uint_fast8_t n)
+ALWAYS_INLINE  void atomic_bit_clr(atomic_t *a, uint_fast8_t n)
 {
   LOCK_SPIN_IRQ(&__atomic_arch_lock);
   a->value &= ~(1 << n);
   LOCK_RELEASE_IRQ(&__atomic_arch_lock);
 }
 
-static inline  bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n)
+ALWAYS_INLINE  bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n)
 {
   bool_t		res;
   const atomic_int_t	bit = 1 << n;
@@ -116,7 +116,7 @@ static inline  bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n)
   return res;
 }
 
-static inline  bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n)
+ALWAYS_INLINE  bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n)
 {
   bool_t		res;
   const atomic_int_t	bit = 1 << n;
@@ -128,7 +128,7 @@ static inline  bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n)
   return res;
 }
 
-static inline bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t future)
+ALWAYS_INLINE bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t future)
 {
   bool_t res = 0;
 

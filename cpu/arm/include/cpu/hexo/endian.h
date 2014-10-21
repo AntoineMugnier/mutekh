@@ -30,7 +30,7 @@
 
 # define HAS_CPU_ENDIAN_SWAP16
 
-static inline uint16_t cpu_endian_swap16(uint16_t x)
+ALWAYS_INLINE uint16_t cpu_endian_swap16(uint16_t x)
 {
   uint16_t r;
 
@@ -44,7 +44,7 @@ static inline uint16_t cpu_endian_swap16(uint16_t x)
 
 # define HAS_CPU_ENDIAN_SWAP32
 
-static inline uint32_t cpu_endian_swap32(uint32_t x)
+ALWAYS_INLINE uint32_t cpu_endian_swap32(uint32_t x)
 {
   uint32_t r;
 

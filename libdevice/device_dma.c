@@ -31,6 +31,8 @@
 # include <hexo/lock.h>
 #endif
 
+GCT_CONTAINER_PROTOTYPES(dev_dma_queue, extern inline, dev_dma_queue,
+                   init, destroy, isempty, pushback, pop, head, remove);
 
 struct dev_dma_wait_rq_s
 {

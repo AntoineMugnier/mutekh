@@ -33,55 +33,55 @@ struct arch_atomic_s
   atomic_int_t	value;
 };
 
-static inline void atomic_set(atomic_t *a, atomic_int_t value)
+ALWAYS_INLINE void atomic_set(atomic_t *a, atomic_int_t value)
 {
   a->value = value;
   order_smp_write();
 }
 
-static inline atomic_int_t atomic_get(atomic_t *a)
+ALWAYS_INLINE atomic_int_t atomic_get(atomic_t *a)
 {
   order_compiler_mem();
   return a->value;
 }
 
-static inline bool_t atomic_inc(atomic_t *a)
+ALWAYS_INLINE bool_t atomic_inc(atomic_t *a)
 {
   return __cpu_atomic_inc(&a->value);
 }
 
-static inline bool_t atomic_dec(atomic_t *a)
+ALWAYS_INLINE bool_t atomic_dec(atomic_t *a)
 {
   return __cpu_atomic_dec(&a->value);
 }
 
-static inline void atomic_bit_set(atomic_t *a, uint_fast8_t n)
+ALWAYS_INLINE void atomic_bit_set(atomic_t *a, uint_fast8_t n)
 {
   __cpu_atomic_bit_set(&a->value, n);
 }
 
-static inline bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n)
+ALWAYS_INLINE bool_t atomic_bit_testset(atomic_t *a, uint_fast8_t n)
 {
   return __cpu_atomic_bit_testset(&a->value, n);
 }
 
-static inline void atomic_bit_clr(atomic_t *a, uint_fast8_t n)
+ALWAYS_INLINE void atomic_bit_clr(atomic_t *a, uint_fast8_t n)
 {
   __cpu_atomic_bit_clr(&a->value, n);
 }
 
-static inline bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n)
+ALWAYS_INLINE bool_t atomic_bit_testclr(atomic_t *a, uint_fast8_t n)
 {
   return __cpu_atomic_bit_testclr(&a->value, n);
 }
 
-static inline bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n)
+ALWAYS_INLINE bool_t atomic_bit_test(atomic_t *a, uint_fast8_t n)
 {
   order_compiler_mem();
   return ((1 << n) & a->value) != 0;
 }
 
-static inline bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t future)
+ALWAYS_INLINE bool_t atomic_compare_and_swap(atomic_t *a, atomic_int_t old, atomic_int_t future)
 {
   return __cpu_atomic_compare_and_swap(&a->value, old, future);
 }

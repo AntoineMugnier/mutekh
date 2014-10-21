@@ -36,7 +36,7 @@
 /* System global heap memory */
 extern __ldscript_symbol_t __system_heap_start, __system_heap_end;
 
-static inline void *
+ALWAYS_INLINE void *
 __attribute__((deprecated))
 arch_cpudata_alloc(void)
 {
@@ -47,7 +47,7 @@ arch_cpudata_alloc(void)
 /* context template segment load address defined in ld script*/
 extern __ldscript_symbol_t __context_data_start, __context_data_end;
 
-static inline void *
+ALWAYS_INLINE void *
 arch_contextdata_alloc(void)
 {
   void			*tls;
@@ -61,19 +61,19 @@ arch_contextdata_alloc(void)
   return tls;
 }
 
-static inline void
+ALWAYS_INLINE void
 arch_contextdata_free(void *ptr)
 {
   mem_free(ptr);
 }
 
-static inline void *
+ALWAYS_INLINE void *
 arch_contextstack_alloc(size_t size)
 {
   return mem_alloc(size, (mem_scope_sys));
 }
 
-static inline void
+ALWAYS_INLINE void
 arch_contextstack_free(void *ptr)
 {
   mem_free(ptr);

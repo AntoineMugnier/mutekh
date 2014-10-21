@@ -131,7 +131,7 @@ TERMUI_CON_OPT_DECL(dev_pwm_opts) =
   )
 
   TERMUI_CON_OPT_ENUM_ENTRY("-m", "--mode", PWM_OPT_MODE,
-    struct termui_optctx_dev_pwm_opts, mode, dev_pwm_mode_e_str,
+    struct termui_optctx_dev_pwm_opts, mode, dev_pwm_mode_e,
     TERMUI_CON_OPT_CONSTRAINTS(PWM_OPT_MODE, PWM_OPT_DEV)
     TERMUI_CON_OPT_HELP("This option selects the configuration mode", NULL)
   )
@@ -152,7 +152,7 @@ TERMUI_CON_OPT_DECL(dev_pwm_opts) =
   )
 
   TERMUI_CON_OPT_ENUM_ENTRY("-p", "--polarity", PWM_OPT_POL,
-    struct termui_optctx_dev_pwm_opts, pol, dev_pwm_polarity_e_str,
+    struct termui_optctx_dev_pwm_opts, pol, dev_pwm_polarity_e,
     TERMUI_CON_OPT_CONSTRAINTS(PWM_OPT_POL, PWM_OPT_DEV)
     TERMUI_CON_OPT_HELP("This option defines the polarity of the pwm signal",
                         NULL)

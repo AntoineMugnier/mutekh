@@ -42,18 +42,18 @@ struct		__arch_lock_s
 
 #define ARCH_LOCK_INITIALIZER	{ .a = 0 }
 
-static inline error_t __arch_lock_init(struct __arch_lock_s *lock)
+ALWAYS_INLINE error_t __arch_lock_init(struct __arch_lock_s *lock)
 {
   lock->a = 0;
   order_smp_write();
   return 0;
 }
 
-static inline void __arch_lock_destroy(struct __arch_lock_s *lock)
+ALWAYS_INLINE void __arch_lock_destroy(struct __arch_lock_s *lock)
 {
 }
 
-static inline bool_t __arch_lock_try(struct __arch_lock_s *lock)
+ALWAYS_INLINE bool_t __arch_lock_try(struct __arch_lock_s *lock)
 {
   reg_t old;
 
@@ -65,20 +65,20 @@ static inline bool_t __arch_lock_try(struct __arch_lock_s *lock)
   return old;
 }
 
-static inline void __arch_lock_spin(struct __arch_lock_s *lock)
+ALWAYS_INLINE void __arch_lock_spin(struct __arch_lock_s *lock)
 {
   while (__arch_lock_try(lock))
     ;
 }
 
-static inline bool_t __arch_lock_state(struct __arch_lock_s *lock)
+ALWAYS_INLINE bool_t __arch_lock_state(struct __arch_lock_s *lock)
 {
   bool_t res = lock->a & 1;
   order_smp_read();
   return res;
 }
 
-static inline void __arch_lock_release(struct __arch_lock_s *lock)
+ALWAYS_INLINE void __arch_lock_release(struct __arch_lock_s *lock)
 {
   order_smp_mem();
   lock->a = 0;

@@ -235,7 +235,7 @@ error_t device_gpio_map_set_mode(struct device_gpio_s *gpdev,
 
     @see #DEV_STATIC_RES_GPIO
 */
-static inline error_t device_res_add_gpio(struct device_s *dev, const char *label,
+ALWAYS_INLINE error_t device_res_add_gpio(struct device_s *dev, const char *label,
                                           gpio_id_t id, gpio_width_t width)
 {
 #ifdef CONFIG_DEVICE_GPIO

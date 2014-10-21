@@ -71,7 +71,7 @@ extern struct vmem_ops_s vmem_ops;
 extern struct vmem_page_region_s *initial_ppage_region;
 
 /* get current memory context */
-static inline struct mmu_context_s * mmu_context_get(void)
+ALWAYS_INLINE struct mmu_context_s * mmu_context_get(void)
 {
   return CPU_LOCAL_GET(mmu_context_cur);
 }
@@ -118,16 +118,16 @@ bool_t mmu_is_user_vaddr(uintptr_t vaddr);
 
 
 /* get the data exception type*/
-static inline error_t mmu_get_data_error_type(void);
+ALWAYS_INLINE error_t mmu_get_data_error_type(void);
 
 /* get the instruction exception type*/
-static inline error_t mmu_get_ins_error_type(void);
+ALWAYS_INLINE error_t mmu_get_ins_error_type(void);
 
 /* get the data exception faulty address*/
-static inline uintptr_t mmu_get_data_bad_address(void);
+ALWAYS_INLINE uintptr_t mmu_get_data_bad_address(void);
 
 /* get the instruction exception faulty address*/
-static inline uintptr_t mmu_get_ins_bad_address(void);
+ALWAYS_INLINE uintptr_t mmu_get_ins_bad_address(void);
 
 
 

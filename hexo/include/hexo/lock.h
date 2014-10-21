@@ -75,7 +75,7 @@ typedef struct lock_irq_s lock_irq_t;
 #endif
 
 /** allocate a new lock */
-static inline error_t lock_init(lock_t *lock)
+ALWAYS_INLINE error_t lock_init(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   return __arch_lock_init(&lock->arch);
@@ -85,7 +85,7 @@ static inline error_t lock_init(lock_t *lock)
 }
 
 /** allocate a new lock with interrupt state */
-static inline error_t lock_init_irq(lock_irq_t *lock)
+ALWAYS_INLINE error_t lock_init_irq(lock_irq_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   return __arch_lock_init(&lock->arch);
@@ -96,7 +96,7 @@ static inline error_t lock_init_irq(lock_irq_t *lock)
 
 
 /** @this frees lock ressources */
-static inline void lock_destroy(lock_t *lock)
+ALWAYS_INLINE void lock_destroy(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   return __arch_lock_destroy(&lock->arch);
@@ -104,7 +104,7 @@ static inline void lock_destroy(lock_t *lock)
 }
 
 /** @this frees lock ressources */
-static inline void lock_destroy_irq(lock_irq_t *lock)
+ALWAYS_INLINE void lock_destroy_irq(lock_irq_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   return __arch_lock_destroy(&lock->arch);
@@ -113,7 +113,7 @@ static inline void lock_destroy_irq(lock_irq_t *lock)
 
 
 /** @this tries to take lock */
-static inline bool_t lock_try(lock_t *lock)
+ALWAYS_INLINE bool_t lock_try(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   order_smp_mem();
@@ -125,7 +125,7 @@ static inline bool_t lock_try(lock_t *lock)
 
 
 /** @this spins to take the lock */
-static inline void lock_spin(lock_t *lock)
+ALWAYS_INLINE void lock_spin(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   order_smp_mem();
@@ -135,7 +135,7 @@ static inline void lock_spin(lock_t *lock)
 
 /** @This disables interrupts, spins to take the lock and store the
     previous irq state in @tt *lock */
-static inline void lock_spin_irq(lock_irq_t *lock)
+ALWAYS_INLINE void lock_spin_irq(lock_irq_t *lock)
 {
 #ifdef CONFIG_HEXO_IRQ
   reg_t state;
@@ -152,7 +152,7 @@ static inline void lock_spin_irq(lock_irq_t *lock)
 
 /** @This disables interrupts, spins to take the lock and store the
     previous irq state in @tt *irq_state */
-static inline void lock_spin_irq2(lock_t *lock, reg_t *irq_state)
+ALWAYS_INLINE void lock_spin_irq2(lock_t *lock, reg_t *irq_state)
 {
 #ifdef CONFIG_HEXO_IRQ
   reg_t state;
@@ -169,7 +169,7 @@ static inline void lock_spin_irq2(lock_t *lock, reg_t *irq_state)
 
 
 /** @this returns the current lock state */
-static inline bool_t lock_state(lock_t *lock)
+ALWAYS_INLINE bool_t lock_state(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   return __arch_lock_state(&lock->arch);
@@ -192,7 +192,7 @@ static inline bool_t lock_state(lock_t *lock)
 #endif
 
 /** @this releases a lock */
-static inline void lock_release(lock_t *lock)
+ALWAYS_INLINE void lock_release(lock_t *lock)
 {
 #ifdef CONFIG_ARCH_SMP
   order_smp_mem();
@@ -201,7 +201,7 @@ static inline void lock_release(lock_t *lock)
 }
 
 /** @This releases a lock and restore previous interrupt state */
-static inline void lock_release_irq(lock_irq_t *lock)
+ALWAYS_INLINE void lock_release_irq(lock_irq_t *lock)
 {
 #ifdef CONFIG_HEXO_IRQ
   reg_t state = lock->__interrupt_state;
@@ -216,7 +216,7 @@ static inline void lock_release_irq(lock_irq_t *lock)
 }
 
 /** @This releases a lock and restore interrupt state from @tt *irq_state */
-static inline void lock_release_irq2(lock_t *lock, const reg_t *irq_state)
+ALWAYS_INLINE void lock_release_irq2(lock_t *lock, const reg_t *irq_state)
 {
 #ifdef CONFIG_HEXO_IRQ
   reg_t state = *irq_state;

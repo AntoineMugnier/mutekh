@@ -116,7 +116,7 @@ struct lcd_req_s
 	dev_lcd_queue_entry_t	queue_entry; /* used by driver to enqueue requests */
 }, queue_entry);
 
-GCT_CONTAINER_FCNS(dev_lcd_queue, CLIST, static inline, dev_lcd_queue);
+GCT_CONTAINER_FCNS(dev_lcd_queue, CLIST, ALWAYS_INLINE, dev_lcd_queue);
 
 /** Lcd device class request() function tempate. */
 #define DEVLCD_REQUEST(n)	error_t  (n) (struct device_lcd_s *ldev, struct lcd_req_s *req)

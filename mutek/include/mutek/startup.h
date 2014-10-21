@@ -57,7 +57,7 @@ void mutekh_startup_smp();
     performing intializations of the @ref #INIT_SMP group. */
 void mutekh_startup_smp_barrier();
 #else
-static inline void mutekh_startup_smp_barrier()
+ALWAYS_INLINE void mutekh_startup_smp_barrier()
 {
 }
 #endif

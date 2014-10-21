@@ -39,6 +39,11 @@
 # include <mutek/scheduler.h>
 #endif
 
+#if defined(CONFIG_DEVICE_I2C_REQUEST)
+GCT_CONTAINER_PROTOTYPES(dev_i2c_ctrl_queue, extern inline, dev_i2c_ctrl_queue,
+                   init, destroy, pop, remove, push, push_back, isempty);
+#endif
+
 /* structure that is used for blocking calls. */
 struct dev_i2c_ctrl_wait_rq_s
 {

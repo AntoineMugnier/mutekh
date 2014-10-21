@@ -36,7 +36,7 @@ C_HEADER_BEGIN
 
 #include <hexo/types.h>
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 isalpha(int_fast8_t ch)
 {
   return (uint8_t)((ch | 0x20) - 'a') < 26u;
@@ -44,7 +44,7 @@ isalpha(int_fast8_t ch)
 
 // #define isalpha __builtin_isalpha
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 isdigit(int_fast8_t ch)
 {
   return (uint8_t)(ch - '0') < 10u;
@@ -52,7 +52,7 @@ isdigit(int_fast8_t ch)
 
 // #define isdigit __builtin_isdigit
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 isalnum(int_fast8_t ch)
 {
   return isalpha(ch) || isdigit(ch);
@@ -60,7 +60,7 @@ isalnum(int_fast8_t ch)
 
 // #define isalnum __builtin_isalnum
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 isascii(int_fast8_t ch)
 {
   return (uint8_t)ch < 128u;
@@ -68,7 +68,7 @@ isascii(int_fast8_t ch)
 
 // #define isascii __builtin_isascii
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 isblank(int_fast8_t ch)
 {
   return (ch == ' ') || (ch == '\t');
@@ -76,7 +76,7 @@ isblank(int_fast8_t ch)
 
 // #define isblank __builtin_isblank
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 iscntrl(int_fast8_t ch)
 {
   return ((uint8_t)ch < 32u) || (ch == 127);
@@ -84,7 +84,7 @@ iscntrl(int_fast8_t ch)
 
 // #define iscntrl __builtin_iscntrl
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 isgraph(int_fast8_t ch)
 {
   return (uint8_t)(ch - '!') < (127u - '!');
@@ -92,7 +92,7 @@ isgraph(int_fast8_t ch)
 
 // #define isgraph __builtin_isgraph
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 islower(int_fast8_t ch)
 {
   return (uint8_t)(ch - 'a') < 26u;
@@ -100,7 +100,7 @@ islower(int_fast8_t ch)
 
 // #define islower __builtin_islower
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 isupper(int_fast8_t ch)
 {
   return (uint8_t)(ch - 'A') < 26u;
@@ -108,7 +108,7 @@ isupper(int_fast8_t ch)
 
 // #define isupper __builtin_isupper
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 isprint(int_fast8_t ch)
 {
   return (uint8_t)(ch - ' ') < (127u - ' ');
@@ -116,7 +116,7 @@ isprint(int_fast8_t ch)
 
 // #define isprint __builtin_isprint
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 isspace(int_fast8_t ch)
 {
   return ((uint8_t)(ch - 9) < 5u) || (ch == ' ');
@@ -124,7 +124,7 @@ isspace(int_fast8_t ch)
 
 // #define isspace __builtin_isspace
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 ispunct(int_fast8_t ch)
 {
   return isprint(ch) && !isalnum(ch) && !isspace(ch);
@@ -132,7 +132,7 @@ ispunct(int_fast8_t ch)
 
 // #define ispunct __builtin_ispunct
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 isxdigit(int_fast8_t ch)
 {
   return isdigit(ch) || ((uint8_t)((ch | 0x20) - 'a') < 6u);
@@ -140,7 +140,7 @@ isxdigit(int_fast8_t ch)
 
 // #define isxdigit __builtin_isxdigit
 
-static inline int_fast8_t
+ALWAYS_INLINE int_fast8_t
 toupper(int_fast8_t c)
 {
   return isalpha(c) ? c & ~0x20 : c;
@@ -148,7 +148,7 @@ toupper(int_fast8_t c)
 
 // #define toupper __builtin_toupper
 
-static inline int_fast8_t
+ALWAYS_INLINE int_fast8_t
 tolower(int_fast8_t c)
 {
   return isalpha(c) ? c | 0x20 : c;

@@ -26,6 +26,12 @@
 #include <device/device.h>
 #include <hexo/ipi.h>
 
+GCT_CONTAINER_PROTOTYPES(ipi_queue, extern inline, ipi_queue,
+                   init, destroy, pushback, pop, wrlock, unlock);
+
+GCT_CONTAINER_PROTOTYPES(ipi_queue, extern inline, ipi_queue_nolock,
+                          isempty);
+
 CPU_LOCAL struct ipi_endpoint_s ipi_endpoint = {};
 
 error_t ipi_post(struct ipi_endpoint_s *endpoint)

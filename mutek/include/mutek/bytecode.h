@@ -126,14 +126,14 @@ bc_init(struct bc_context_s *ctx,
         uint_fast8_t pcount, ...);
 
 /** @This returns the value of one of the 16 virtual machine registers */
-static inline uintptr_t
+ALWAYS_INLINE uintptr_t
 bc_get_reg(struct bc_context_s *ctx, uint_fast8_t i)
 {
   return ctx->v[i];
 }
 
 /** @This sets the value of one of the 16 virtual machine registers */
-static inline void
+ALWAYS_INLINE void
 bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, uintptr_t value)
 {
   ctx->v[i] = value;
@@ -142,7 +142,7 @@ bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, uintptr_t value)
 /** @This function enables or disable the bytecode execution trace
     debug output. If the @ref #CONFIG_MUTEK_BYTECODE_TRACE token is
     not defined, this function has no effect. @see #BC_TRACE */
-static inline void
+ALWAYS_INLINE void
 bc_set_trace(struct bc_context_s *ctx, bool_t enabled, bool_t regs)
 {
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
@@ -152,7 +152,7 @@ bc_set_trace(struct bc_context_s *ctx, bool_t enabled, bool_t regs)
 }
 
 /** @This increments the program counter */
-static inline void
+ALWAYS_INLINE void
 bc_skip(struct bc_context_s *ctx)
 {
   ctx->v[15]++;  
@@ -162,7 +162,7 @@ bc_skip(struct bc_context_s *ctx)
     can be accessed by the bytecode. If the @ref
     #CONFIG_MUTEK_BYTECODE_CHECKING token is not defined, this
     function has no effect. */
-static inline void
+ALWAYS_INLINE void
 bc_set_addr_range(struct bc_context_s *ctx, uintptr_t min, uintptr_t max)
 {
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING
@@ -174,7 +174,7 @@ bc_set_addr_range(struct bc_context_s *ctx, uintptr_t min, uintptr_t max)
 /** @This can be used to disallow use of the @ref #BC_CCALL instruction
     in the bytecode. If the @ref #CONFIG_MUTEK_BYTECODE_CHECKING token
     is not defined, this function has no effect. */
-static inline void
+ALWAYS_INLINE void
 bc_allow_ccall(struct bc_context_s *ctx, bool_t allow)
 {
 #ifdef CONFIG_MUTEK_BYTECODE_CHECKING

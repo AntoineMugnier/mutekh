@@ -40,21 +40,21 @@ C_HEADER_BEGIN
  */
 
 /*
-static inline uint16_t cpu_endian_swap16(uint16_t x);
-static inline uint32_t cpu_endian_swap32(uint32_t x);
-static inline uint64_t cpu_endian_swap64(uint64_t x);
+ALWAYS_INLINE uint16_t cpu_endian_swap16(uint16_t x);
+ALWAYS_INLINE uint32_t cpu_endian_swap32(uint32_t x);
+ALWAYS_INLINE uint64_t cpu_endian_swap64(uint64_t x);
 */
 
 #include "cpu/hexo/endian.h"
 
 /** @internal */
-static inline uint16_t __endian_swap16(uint16_t x)
+ALWAYS_INLINE uint16_t __endian_swap16(uint16_t x)
 {
   return (x >> 8) | (x << 8);
 }
 
 /** @this swaps bytes in 16 bits value */
-static inline uint16_t endian_swap16(uint16_t x)
+ALWAYS_INLINE uint16_t endian_swap16(uint16_t x)
 {
 # ifdef HAS_CPU_ENDIAN_SWAP16
   return __builtin_constant_p(x) ? __endian_swap16(x) : cpu_endian_swap16(x);
@@ -64,7 +64,7 @@ static inline uint16_t endian_swap16(uint16_t x)
 }
 
 /** @internal */
-static inline uint32_t __endian_swap32(uint32_t x)
+ALWAYS_INLINE uint32_t __endian_swap32(uint32_t x)
 {
   return (((x >> 24) & 0x000000ff) |
 	  ((x >> 8 ) & 0x0000ff00) |
@@ -73,7 +73,7 @@ static inline uint32_t __endian_swap32(uint32_t x)
 }
 
 /** @this swaps bytes in 32 bits value */
-static inline uint32_t endian_swap32(uint32_t x)
+ALWAYS_INLINE uint32_t endian_swap32(uint32_t x)
 {
 # ifdef HAS_CPU_ENDIAN_SWAP32
   return __builtin_constant_p(x) ? __endian_swap32(x) : cpu_endian_swap32(x);
@@ -83,14 +83,14 @@ static inline uint32_t endian_swap32(uint32_t x)
 }
 
 /** @internal */
-static inline uint64_t __endian_swap64(uint64_t x)
+ALWAYS_INLINE uint64_t __endian_swap64(uint64_t x)
 {
   return (((uint64_t)endian_swap32(x      ) << 32) |
 	  ((uint64_t)endian_swap32(x >> 32)      ));
 }
 
 /** @this swaps bytes in 64 bits value */
-static inline uint64_t endian_swap64(uint64_t x)
+ALWAYS_INLINE uint64_t endian_swap64(uint64_t x)
 {
 # ifdef HAS_CPU_ENDIAN_SWAP64
   return __builtin_constant_p(x) ? __endian_swap64(x) : cpu_endian_swap64(x);

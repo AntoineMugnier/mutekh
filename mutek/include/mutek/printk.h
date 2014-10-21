@@ -41,7 +41,7 @@ ssize_t printk(const char *format, ...);
    @returns count of bytes actually emitted
    @see formatter_printf
  */
-inline ssize_t vprintk(const char *format, va_list ap);
+ssize_t vprintk(const char *format, va_list ap);
 
 /**
    @this prints a binary memory dump of memory to the current printk()
@@ -68,28 +68,28 @@ void writek(const char *data, size_t len);
 
 #else /* no printk */
 
-static inline
+ALWAYS_INLINE
 void printk_set_output(printf_output_func_t *f, void *ctx)
 {}
 
-static inline
+ALWAYS_INLINE
 ssize_t printk(const char *format, ...)
 {
 	return 0;
 }
 
-static inline
+ALWAYS_INLINE
 void hexdumpk(uintptr_t address, const void *data, size_t len)
 {
 }
 
-static inline
+ALWAYS_INLINE
 inline ssize_t vprintk(const char *format, va_list ap)
 {
 	return 0;
 }
 
-static inline
+ALWAYS_INLINE
 void writek(const char *data, size_t len)
 {
 }

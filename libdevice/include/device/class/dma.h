@@ -91,7 +91,7 @@ struct dev_dma_rq_s
 };
 
 GCT_CONTAINER_TYPES(dev_dma_queue, struct dev_dma_rq_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_dma_queue, static inline, dev_dma_queue,
+GCT_CONTAINER_FCNS(dev_dma_queue, inline, dev_dma_queue,
                    init, destroy, isempty, pushback, pop, head, remove);
 
 

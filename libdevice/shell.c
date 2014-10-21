@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <limits.h>
+#include <string.h>
 
 #include <device/shell.h>
 #include <device/device.h>

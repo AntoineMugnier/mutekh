@@ -67,12 +67,9 @@ struct dev_timer_rq_s
 };
 
 GCT_CONTAINER_TYPES(dev_timer_queue, struct dev_timer_rq_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_timer_queue, static inline, dev_timer_queue,
-                   init, destroy, isempty, pop, head, remove);
-
 GCT_CONTAINER_KEY_TYPES(dev_timer_queue, PTR, SCALAR, deadline);
-GCT_CONTAINER_KEY_FCNS(dev_timer_queue, ASC, static inline, dev_timer_queue, deadline,
-                       insert);
+GCT_CONTAINER_KEY_FCNS(dev_timer_queue, ASC, inline, dev_timer_queue, deadline,
+                       init, destroy, isempty, pop, head, remove, insert);
 
 /** @see devtimer_request_t */
 #define DEVTIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
@@ -294,7 +291,7 @@ error_t dev_timer_shift_sec(struct device_timer_s *tdev,
     dev_timer_shift_sec function. The conversion range can be checked
     by calling @ref dev_timer_delay_check_s2t. */
 config_depend(CONFIG_DEVICE_TIMER)
-static inline dev_timer_delay_t
+ALWAYS_INLINE dev_timer_delay_t
 dev_timer_delay_shift_s2t(int_fast8_t shift, dev_timer_delay_t delay)
 {
   return shift > 0 ? delay << shift : delay >> -shift;
@@ -303,7 +300,7 @@ dev_timer_delay_shift_s2t(int_fast8_t shift, dev_timer_delay_t delay)
 /** @This checks the range of the specified delay value for conversion
     by the @ref dev_timer_delay_shift_s2t function. */
 config_depend(CONFIG_DEVICE_TIMER)
-static inline error_t
+ALWAYS_INLINE error_t
 dev_timer_delay_check_s2t(int_fast8_t shift, dev_timer_delay_t delay)
 {
   return shift > 0 && __builtin_clz(delay) < shift ? -ERANGE : 0;
@@ -313,7 +310,7 @@ dev_timer_delay_check_s2t(int_fast8_t shift, dev_timer_delay_t delay)
     dev_timer_shift_sec function. The conversion range can be checked
     by calling @ref dev_timer_delay_check_s2t. */
 config_depend(CONFIG_DEVICE_TIMER)
-static inline dev_timer_delay_t
+ALWAYS_INLINE dev_timer_delay_t
 dev_timer_delay_shift_t2s(int_fast8_t shift, dev_timer_delay_t delay)
 {
   return shift > 0 ? delay >> shift : delay << -shift;
@@ -322,7 +319,7 @@ dev_timer_delay_shift_t2s(int_fast8_t shift, dev_timer_delay_t delay)
 /** @This checks the range of the specified delay value for conversion
     by the @ref dev_timer_delay_shift_t2s function. */
 config_depend(CONFIG_DEVICE_TIMER)
-static inline error_t
+ALWAYS_INLINE error_t
 dev_timer_delay_check_t2s(int_fast8_t shift, dev_timer_delay_t delay)
 {
   return shift < 0 && __builtin_clz(delay) < -shift ? -ERANGE : 0;

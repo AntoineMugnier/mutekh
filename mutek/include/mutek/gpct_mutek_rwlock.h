@@ -41,31 +41,31 @@
 
 typedef struct rwlock_s gpct_lock_MUTEK_RWLOCK_type_t;
 
-static inline gpct_error_t
+ALWAYS_INLINE gpct_error_t
 gpct_lock_MUTEK_RWLOCK_init(struct rwlock_s *lock)
 {
   return rwlock_init(lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_MUTEK_RWLOCK_destroy(struct rwlock_s *lock)
 {
   rwlock_destroy(lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_MUTEK_RWLOCK_wrlock(struct rwlock_s *lock)
 {
   rwlock_wrlock(lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_MUTEK_RWLOCK_rdlock(struct rwlock_s *lock)
 {
   rwlock_rdlock(lock);
 }
 
-static inline void
+ALWAYS_INLINE void
 gpct_lock_MUTEK_RWLOCK_unlock(struct rwlock_s *lock)
 {
   rwlock_unlock(lock);

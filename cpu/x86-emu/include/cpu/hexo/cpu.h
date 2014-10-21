@@ -37,14 +37,14 @@
 
 #include <arch/hexo/emu_syscalls.h>
 
-static inline cpu_id_t cpu_id(void)
+ALWAYS_INLINE cpu_id_t cpu_id(void)
 {
   return emu_do_syscall(EMU_SYSCALL_GETPID, 0);
 }
 
 extern __compiler_sint_t __bootstrap_pid;
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_isbootstrap(void)
 {
 #ifdef CONFIG_ARCH_SMP
@@ -53,7 +53,7 @@ cpu_isbootstrap(void)
   return 1;
 }
 
-static inline void cpu_trap()
+ALWAYS_INLINE void cpu_trap()
 {
 #ifdef CONFIG_ARCH_EMU_TRAP_KILL
   /* kill process group */
@@ -65,14 +65,14 @@ static inline void cpu_trap()
 #endif
 }
 
-static inline void cpu_dcache_invld(void *ptr)
+ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
 #ifndef CONFIG_CPU_CACHE_COHERENCY
 # error
 #endif
 }
 
-static inline size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size()
 {
   return 0;			/* FIXME */
 }

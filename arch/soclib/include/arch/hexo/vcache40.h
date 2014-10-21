@@ -146,13 +146,13 @@ struct cpu_vcache_page4k_entry_s
   } __attribute__((packed));
 };
 
-static inline struct cpu_vcache_page4k_entry_s *
+ALWAYS_INLINE struct cpu_vcache_page4k_entry_s *
 mmu_vcache_get_vpage_entry( uint_fast16_t pde, uint_fast16_t pte )
 {
   return ( void* )( uintptr_t )( MMU_MIRROR_ADDR | ( pde << 12 ) | ( pte << 3 ) );
 }
 
-static inline struct cpu_vcache_page4k_entry_s *
+ALWAYS_INLINE struct cpu_vcache_page4k_entry_s *
 mmu_vcache_get_vpage_entry_vaddr( uintptr_t vaddr )
 {
   return ( void* )( uintptr_t )( MMU_MIRROR_ADDR | ( ( vaddr >> ( MMU_OFFSET_SIZE ) ) << 3 ) );
@@ -161,56 +161,56 @@ mmu_vcache_get_vpage_entry_vaddr( uintptr_t vaddr )
 
 /*Read*/
 
-static inline paddr_t
+ALWAYS_INLINE paddr_t
 mmu_vcache_get_pagedir( void )
 {
   paddr_t pd = cpu_soclib_mmu_get_register( 0 );
   return MMU_PDR_TO_PADDR( pd );
 }
 
-static inline uint32_t
+ALWAYS_INLINE uint32_t
 mmu_vcache_get_tlb_mode( void )
 {
   uint32_t mode = cpu_soclib_mmu_get_register( 1 );
   return mode;
 }
 
-static inline uint32_t
+ALWAYS_INLINE uint32_t
 mmu_vcache_get_iexcep_type( void )
 {
   uint32_t iexcep = cpu_soclib_mmu_get_register( 11 );
   return iexcep;
 }
 
-static inline uint32_t
+ALWAYS_INLINE uint32_t
 mmu_vcache_get_dexcep_type( void )
 {
   uint32_t dexcep = cpu_soclib_mmu_get_register( 12 );
   return dexcep;
 }
 
-static inline uint32_t
+ALWAYS_INLINE uint32_t
 mmu_vcache_get_ins_bad_vaddr( void )
 {
   uint32_t bvaddr = cpu_soclib_mmu_get_register( 13 );
   return bvaddr;
 }
 
-static inline uint32_t
+ALWAYS_INLINE uint32_t
 mmu_vcache_get_data_bad_vaddr( void )
 {
   uint32_t bvaddr = cpu_soclib_mmu_get_register( 14 );
   return bvaddr;
 }
 
-static inline uint32_t
+ALWAYS_INLINE uint32_t
 mmu_vcache_get_mmu_param( void )
 {
   uint32_t param = cpu_soclib_mmu_get_register( 15 );
   return param;
 }
 
-static inline uint32_t
+ALWAYS_INLINE uint32_t
 mmu_vcache_get_mmu_version( void )
 {
   uint32_t version = cpu_soclib_mmu_get_register( 16 );
@@ -219,67 +219,67 @@ mmu_vcache_get_mmu_version( void )
 
 /*Write*/
 
-static inline void
+ALWAYS_INLINE void
 mmu_vcache_set_pagedir( paddr_t paddr )
 {
   cpu_soclib_mmu_set_register( 0, MMU_PADDR_TO_PDR( paddr ) );
 }
 
-static inline void
+ALWAYS_INLINE void
 mmu_vcache_set_tlb_mode( uint32_t mode )
 {
   cpu_soclib_mmu_set_register( 1, mode );
 }
 
-static inline void
+ALWAYS_INLINE void
 mmu_vcache_icache_flush( )
 {
  cpu_soclib_mmu_set_register( 2, 1 );
 }
 
-static inline void
+ALWAYS_INLINE void
 mmu_vcache_dcache_flush( )
 {
  cpu_soclib_mmu_set_register( 3,1 );
 }
 
-static inline void
+ALWAYS_INLINE void
 mmu_vcache_invalidate_instruction_page( uintptr_t vaddr )
 {
   cpu_soclib_mmu_set_register( 4,vaddr );
 }
 
-static inline void
+ALWAYS_INLINE void
 mmu_vcache_invalidate_data_page( uintptr_t vaddr )
 {
   cpu_soclib_mmu_set_register( 5,vaddr );
 }
 
-static inline void
+ALWAYS_INLINE void
 mmu_vcache_invalidate_instruction_line( uintptr_t vaddr )
 {
   cpu_soclib_mmu_set_register( 6,vaddr );
 }
 
-static inline void
+ALWAYS_INLINE void
 mmu_vcache_invalidate_data_line( uintptr_t vaddr )
 {
   cpu_soclib_mmu_set_register( 7,vaddr );
 }
 
-static inline void
+ALWAYS_INLINE void
 mmu_vcache_prefetch_instruction_line( uintptr_t vaddr )
 {
   cpu_soclib_mmu_set_register( 8,vaddr );
 }
 
-static inline void
+ALWAYS_INLINE void
 mmu_vcache_prefetch_data_line( uintptr_t vaddr )
 {
   cpu_soclib_mmu_set_register( 9,vaddr );
 }
 
-static inline void
+ALWAYS_INLINE void
 mmu_vcache_sync( )
 {
   cpu_soclib_mmu_set_register( 10,1 );

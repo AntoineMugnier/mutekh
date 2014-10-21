@@ -42,7 +42,7 @@ typedef jmp_buf sigjmp_buf;
 
 reg_t setjmp(jmp_buf env);
 
-static inline reg_t
+ALWAYS_INLINE reg_t
 __attribute__ ((deprecated))
 sigsetjmp(sigjmp_buf env, reg_t savesigs)
 {
@@ -51,7 +51,7 @@ sigsetjmp(sigjmp_buf env, reg_t savesigs)
 
 void longjmp(jmp_buf env, reg_t val);
 
-static inline void
+ALWAYS_INLINE void
 __attribute__ ((deprecated))
 siglongjmp(sigjmp_buf env, reg_t val)
 {

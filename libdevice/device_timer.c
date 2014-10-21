@@ -34,6 +34,9 @@
 #include <mutek/kroutine.h>
 #include <stdlib.h> /* abs */
 
+GCT_CONTAINER_KEY_PROTOTYPES(dev_timer_queue, extern inline, dev_timer_queue, deadline,
+        init, destroy, isempty, pop, head, remove, insert);
+
 error_t dev_timer_init_sec(struct device_timer_s *tdev, dev_timer_delay_t *delay,
                            dev_timer_delay_t s_delay, uint32_t r_unit)
 {

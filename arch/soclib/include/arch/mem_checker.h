@@ -99,7 +99,7 @@
 # include <hexo/interrupt.h>
 # include <hexo/ordering.h>
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_declare_lock(void *lock, uint32_t islock)
 {
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -110,7 +110,7 @@ soclib_mem_check_declare_lock(void *lock, uint32_t islock)
   CPU_INTERRUPT_RESTORESTATE;
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_change_id(uint32_t old_id, uint32_t new_id)
 {
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -122,7 +122,7 @@ soclib_mem_check_change_id(uint32_t old_id, uint32_t new_id)
   CPU_INTERRUPT_RESTORESTATE;
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_create_ctx(uint32_t ctx_id, void *stack_start, void *stack_end)
 {
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -134,7 +134,7 @@ soclib_mem_check_create_ctx(uint32_t ctx_id, void *stack_start, void *stack_end)
   CPU_INTERRUPT_RESTORESTATE;
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_delete_ctx(uint32_t ctx_id)
 {
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -144,7 +144,7 @@ soclib_mem_check_delete_ctx(uint32_t ctx_id)
   CPU_INTERRUPT_RESTORESTATE;
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_region_status(void *region, size_t size, uint32_t status)
 {
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -156,7 +156,7 @@ soclib_mem_check_region_status(void *region, size_t size, uint32_t status)
   CPU_INTERRUPT_RESTORESTATE;
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_disable(uint32_t flags)
 {
   order_compiler_mem();
@@ -166,7 +166,7 @@ soclib_mem_check_disable(uint32_t flags)
   order_compiler_mem();
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_enable(uint32_t flags)
 {
   order_compiler_mem();
@@ -176,7 +176,7 @@ soclib_mem_check_enable(uint32_t flags)
   order_compiler_mem();
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_mark_initialized(void* addr, size_t size)
 {
   order_compiler_mem();
@@ -188,7 +188,7 @@ soclib_mem_mark_initialized(void* addr, size_t size)
   order_compiler_mem();
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_bypass_sp_check(void* pc_start, void *pc_end)
 {
   order_compiler_mem();
@@ -202,47 +202,47 @@ soclib_mem_bypass_sp_check(void* pc_start, void *pc_end)
 
 #  else /* CONFIG_SOCLIB_MEMCHECK */
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_declare_lock(void *lock, uint32_t islock)
 {
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_change_id(uint32_t old_id, uint32_t new_id)
 {
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_create_ctx(uint32_t ctx_id, void *stack_start, void *stack_end)
 {
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_delete_ctx(uint32_t ctx_id)
 {
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_region_status(void *region, size_t size, uint32_t status)
 {
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_disable(uint32_t flags)
 {
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_check_enable(uint32_t flags)
 {
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_mark_initialized(void* addr, size_t size)
 {
 }
 
-static inline __attribute__ ((always_inline)) void
+ALWAYS_INLINE __attribute__ ((always_inline)) void
 soclib_mem_bypass_sp_check(uintptr_t pc_start, uintptr_t pc_end)
 {
 }

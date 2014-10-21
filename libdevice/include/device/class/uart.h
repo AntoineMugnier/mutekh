@@ -125,7 +125,7 @@ DRIVER_CLASS_TYPES(uart,
     Note: if the device is busy or already in use, the function returns a
     EBUSY error.
  */
-static inline
+ALWAYS_INLINE
 error_t dev_uart_config(struct device_uart_s     *udev,
                         struct dev_uart_config_s *cfg)
 {
@@ -136,7 +136,7 @@ error_t dev_uart_config(struct device_uart_s     *udev,
 /** @This specify a UART device configuration to store in the device tree.
     @see #DEV_STATIC_RES_UART
  */
-static inline
+ALWAYS_INLINE
 error_t device_add_res_uart(struct device_s           *dev,
                             enum dev_uart_baudrate_e  baudrate,
                             enum dev_uart_data_bits_e data_bits,

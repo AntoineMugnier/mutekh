@@ -55,7 +55,7 @@ enum mem_scope_e
     @see #CONFIG_MUTEK_MEMALLOC_SCRAMBLE
     @see #CONFIG_MUTEK_MEMALLOC_STATS
 */
-static inline
+ALWAYS_INLINE
 void mem_check()
 {
   memory_allocator_region_check(default_region);
@@ -65,7 +65,7 @@ void mem_check()
     alignment constraint. 
     @see #CONFIG_MUTEK_MEMALLOC_ALIGN
 */
-static inline
+ALWAYS_INLINE
 void *mem_alloc_align(size_t size, size_t align, enum mem_scope_e scope)
 {
   if (size == 0) 
@@ -98,14 +98,14 @@ void *mem_alloc_align(size_t size, size_t align, enum mem_scope_e scope)
 }
 
 /** @This allocates a new memory block in given scope. */
-static inline
+ALWAYS_INLINE
 void *mem_alloc(size_t size, enum mem_scope_e scope)
 {
   return mem_alloc_align(size, 1, scope);
 }
 
 /** @This allocate a new memory block for another cpu in given scope*/
-static inline
+ALWAYS_INLINE
 void *mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
 {
   if (size == 0)
@@ -138,14 +138,14 @@ void *mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
 }
 
 /** @This frees allocated memory block */
-static inline
+ALWAYS_INLINE
 void mem_free(void *ptr)
 {
   memory_allocator_push(ptr);
 }
 
 /** @This returns the size of given memory block */
-static inline
+ALWAYS_INLINE
 size_t mem_getsize(void *ptr)
 {
   return memory_allocator_getsize(ptr);
@@ -155,7 +155,7 @@ size_t mem_getsize(void *ptr)
     allocated memory block is not moved; if not enough free memory
     blocks are available next to allocated memory, this function
     fails. */
-static inline
+ALWAYS_INLINE
 void *mem_resize(void *ptr, size_t size)
 {
   return memory_allocator_resize(ptr, size);

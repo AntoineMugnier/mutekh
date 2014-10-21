@@ -49,47 +49,40 @@ C_HEADER_BEGIN
 
 typedef lock_irq_t _gct_lock_HEXO_LOCK_IRQ_type_t;
 
-_GCT_INTERNAL_INLINE(
-  gct_err_t _gct_lock_HEXO_LOCK_IRQ_init(lock_irq_t *lock),
+ALWAYS_INLINE gct_err_t _gct_lock_HEXO_LOCK_IRQ_init(lock_irq_t *lock)
 {
   lock_init_irq(lock);
   return 0;
-});
+}
 
-_GCT_INTERNAL_INLINE(
-  void _gct_lock_HEXO_LOCK_IRQ_destroy(lock_irq_t *lock),
+ALWAYS_INLINE void _gct_lock_HEXO_LOCK_IRQ_destroy(lock_irq_t *lock)
 {
   lock_destroy_irq(lock);
-});
+}
 
-_GCT_INTERNAL_INLINE(
-  void _gct_lock_HEXO_LOCK_IRQ_wrlock(lock_irq_t *lock),
+ALWAYS_INLINE void _gct_lock_HEXO_LOCK_IRQ_wrlock(lock_irq_t *lock)
 {
   lock_spin_irq(lock);
-});
+}
 
-_GCT_INTERNAL_INLINE(
-  void _gct_lock_HEXO_LOCK_IRQ_rdlock(lock_irq_t *lock),
+ALWAYS_INLINE void _gct_lock_HEXO_LOCK_IRQ_rdlock(lock_irq_t *lock)
 {
   lock_spin_irq(lock);
-});
+}
 
-_GCT_INTERNAL_INLINE(
-  void _gct_lock_HEXO_LOCK_IRQ_rdwrlock(lock_irq_t *lock),
+ALWAYS_INLINE void _gct_lock_HEXO_LOCK_IRQ_rdwrlock(lock_irq_t *lock)
 {
   lock_spin_irq(lock);
-});
+}
 
-_GCT_INTERNAL_INLINE(
-  void _gct_lock_HEXO_LOCK_IRQ_promotelock(lock_irq_t *lock),
+ALWAYS_INLINE void _gct_lock_HEXO_LOCK_IRQ_promotelock(lock_irq_t *lock)
 {
-});
+}
 
-_GCT_INTERNAL_INLINE(
-  void _gct_lock_HEXO_LOCK_IRQ_unlock(lock_irq_t *lock),
+ALWAYS_INLINE void _gct_lock_HEXO_LOCK_IRQ_unlock(lock_irq_t *lock)
 {
   lock_release_irq(lock);
-});
+}
 
 C_HEADER_END
 

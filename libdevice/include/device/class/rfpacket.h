@@ -162,7 +162,7 @@ struct dev_rfpacket_rx_s
 };
 
 GCT_CONTAINER_TYPES(dev_rfpacket_rx_queue, struct dev_rfpacket_rx_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_rfpacket_rx_queue, static inline, dev_rfpacket_rx_queue,
+GCT_CONTAINER_FCNS(dev_rfpacket_rx_queue, inline, dev_rfpacket_rx_queue,
 	           init, destroy, isempty, pushback, pop, head);
 
 enum dev_rfpacket_rq_rtype_e
@@ -227,7 +227,7 @@ struct dev_rfpacket_rq_s
 };
 
 GCT_CONTAINER_TYPES(dev_rfpacket_rq_queue, struct dev_rfpacket_rq_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_rfpacket_rq_queue, static inline, dev_rfpacket_rq_queue,
+GCT_CONTAINER_FCNS(dev_rfpacket_rq_queue, inline, dev_rfpacket_rq_queue,
 		   init, destroy, isempty, pushback, pop, head);
 
 /** @see devrfpacket_request_t */

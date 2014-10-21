@@ -31,6 +31,8 @@
 # include <hexo/lock.h>
 #endif
 
+GCT_CONTAINER_PROTOTYPES(dev_char_queue, extern inline, dev_char_queue,
+                   init, destroy, isempty, pushback, pop, head, remove);
 
 struct dev_char_wait_rq_s
 {

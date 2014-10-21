@@ -92,7 +92,7 @@ struct dev_block_rq_s
 };
 
 GCT_CONTAINER_TYPES(dev_blk_queue, struct dev_block_rq_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_blk_queue, static inline, dev_blk_queue,
+GCT_CONTAINER_FCNS(dev_blk_queue, inline, dev_blk_queue,
                    init, destroy, pushback, pop, isempty, head);
 
 /** Block device class request() function tempate. */

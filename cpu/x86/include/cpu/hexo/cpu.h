@@ -53,7 +53,7 @@
 #define CPU_GPREG_COUNT	8
 #define CPU_GPREG_NAMES "edi", "esi", "ebp", "esp", "ebx", "edx", "ecx", "eax"
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_isbootstrap(void)
 {
   uint64_t	msr;
@@ -68,20 +68,20 @@ cpu_isbootstrap(void)
 
 cpu_id_t cpu_id(void);
 
-static inline void
+ALWAYS_INLINE void
 cpu_trap()
 {
   asm volatile ("int3");
 }
 
-static inline void cpu_dcache_invld(void *ptr)
+ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
 #ifndef CONFIG_CPU_CACHE_COHERENCY
 # error
 #endif
 }
 
-static inline size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size()
 {
   return 0;			/* FIXME */
 }

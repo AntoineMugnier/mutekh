@@ -298,7 +298,7 @@ struct dev_spi_ctrl_request_s
 };
 
 GCT_CONTAINER_TYPES(dev_spi_ctrl_queue, struct dev_spi_ctrl_request_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_spi_ctrl_queue, static inline, dev_spi_ctrl_queue,
+GCT_CONTAINER_FCNS(dev_spi_ctrl_queue, inline, dev_spi_ctrl_queue,
                    init, destroy, remove, push, pushback, pop, isempty);
 
 struct dev_spi_ctrl_queue_s

@@ -33,6 +33,9 @@
 
 #include <alloca.h>
 
+GCT_CONTAINER_PROTOTYPES(dev_blk_queue, extern inline, dev_blk_queue,
+                   init, destroy, pushback, pop, isempty, head);
+
 struct dev_block_wait_rq_s
 {
 #ifdef CONFIG_MUTEK_SCHEDULER

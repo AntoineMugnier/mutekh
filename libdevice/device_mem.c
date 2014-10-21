@@ -38,6 +38,9 @@ const char dev_mem_type_e[] = ENUM_DESC_DEV_MEM_TYPE_E;
 const char dev_mem_flags_e[] = ENUM_DESC_DEV_MEM_FLAGS_E;
 const char dev_mem_rq_type_e[] = ENUM_DESC_DEV_MEM_RQ_TYPE_E;
 
+GCT_CONTAINER_PROTOTYPES(dev_mem_queue, extern inline, dev_mem_queue,
+                   init, destroy, pushback, pop, isempty, head);
+
 struct dev_mem_wait_rq_s
 {
 #ifdef CONFIG_MUTEK_SCHEDULER

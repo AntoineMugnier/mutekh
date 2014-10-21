@@ -33,7 +33,7 @@
 
 #define CPU_IOSPACE_H_
 
-static inline void
+ALWAYS_INLINE void
 cpu_io_write_8(uintptr_t addr, uint8_t data)
 {
   __asm__ volatile (
@@ -44,7 +44,7 @@ cpu_io_write_8(uintptr_t addr, uint8_t data)
 		    );
 }
 
-static inline uint8_t
+ALWAYS_INLINE uint8_t
 cpu_io_read_8(uintptr_t addr)
 {
   uint8_t	data;
@@ -58,7 +58,7 @@ cpu_io_read_8(uintptr_t addr)
   return data;
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_io_write_16(uintptr_t addr, uint16_t data)
 {
   __asm__ volatile (
@@ -69,7 +69,7 @@ cpu_io_write_16(uintptr_t addr, uint16_t data)
 		    );
 }
 
-static inline uint16_t
+ALWAYS_INLINE uint16_t
 cpu_io_read_16(uintptr_t addr)
 {
   uint16_t	data;
@@ -83,7 +83,7 @@ cpu_io_read_16(uintptr_t addr)
   return data;
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_io_write_32(uintptr_t addr, uint32_t data)
 {
   __asm__ volatile (
@@ -94,7 +94,7 @@ cpu_io_write_32(uintptr_t addr, uint32_t data)
 		    );
 }
 
-static inline uint32_t
+ALWAYS_INLINE uint32_t
 cpu_io_read_32(uintptr_t addr)
 {
   uint32_t	data;
@@ -110,7 +110,7 @@ cpu_io_read_32(uintptr_t addr)
 
 /****************************************************/
 
-static inline void
+ALWAYS_INLINE void
 cpu_mem_write_8(uintptr_t addr, uint8_t data)
 {
   __asm__ volatile (
@@ -120,7 +120,7 @@ cpu_mem_write_8(uintptr_t addr, uint8_t data)
 		    );
 }
 
-static inline uint8_t
+ALWAYS_INLINE uint8_t
 cpu_mem_read_8(uintptr_t addr)
 {
   uint8_t	data;
@@ -134,7 +134,7 @@ cpu_mem_read_8(uintptr_t addr)
   return data;
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_mem_write_16(uintptr_t addr, uint16_t data)
 {
   __asm__ volatile (
@@ -144,7 +144,7 @@ cpu_mem_write_16(uintptr_t addr, uint16_t data)
 		    );
 }
 
-static inline uint16_t
+ALWAYS_INLINE uint16_t
 cpu_mem_read_16(uintptr_t addr)
 {
   uint16_t	data;
@@ -158,7 +158,7 @@ cpu_mem_read_16(uintptr_t addr)
   return data;
 }
 
-static inline uint32_t
+ALWAYS_INLINE uint32_t
 cpu_mem_read_32(uintptr_t addr)
 {
   uint32_t	data;
@@ -173,7 +173,7 @@ cpu_mem_read_32(uintptr_t addr)
 }
 
 
-static inline void
+ALWAYS_INLINE void
 cpu_mem_write_32(uintptr_t addr, uint32_t data)
 {
   __asm__ volatile (
@@ -183,13 +183,13 @@ cpu_mem_write_32(uintptr_t addr, uint32_t data)
 		    );
 }
 
-static inline uint64_t
+ALWAYS_INLINE uint64_t
 cpu_mem_read_64(uintptr_t addr)
 {
   return cpu_mem_read_32(addr) | ((uint64_t)cpu_mem_read_32(addr + 4) << 32);
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_mem_write_64(uintptr_t addr, uint64_t data)
 {
   cpu_mem_write_32(addr, data);

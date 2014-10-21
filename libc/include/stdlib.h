@@ -85,7 +85,7 @@ int_fast64_t ato_intl64(const char *nptr);
 
 double strtod(const char *d, const char **ret);
 
-static inline
+ALWAYS_INLINE
 float atof(const char *f)
 {
   return strtod(f, NULL);

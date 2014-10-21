@@ -59,55 +59,55 @@ typedef ssize_t		gpct_sindex_t;
 /* static value init */
 #define GPCT_ATOMIC_INITIALIZER(v)	ATOMIC_INITIALIZER(v)
 
-static inline void gpct_atomic_init(gpct_atomic_t *a)
+ALWAYS_INLINE void gpct_atomic_init(gpct_atomic_t *a)
 {
 }
 
-static inline void gpct_atomic_destroy(gpct_atomic_t *a)
+ALWAYS_INLINE void gpct_atomic_destroy(gpct_atomic_t *a)
 {
 }
 
-static inline void gpct_atomic_set(gpct_atomic_t *a, gpct_atomic_int_t v)
+ALWAYS_INLINE void gpct_atomic_set(gpct_atomic_t *a, gpct_atomic_int_t v)
 {
   atomic_set(a, v);
 }
 
-static inline gpct_atomic_int_t gpct_atomic_get(gpct_atomic_t *a)
+ALWAYS_INLINE gpct_atomic_int_t gpct_atomic_get(gpct_atomic_t *a)
 {
   return atomic_get(a);
 }
 
-static inline gpct_bool_t gpct_atomic_inc(gpct_atomic_t *a)
+ALWAYS_INLINE gpct_bool_t gpct_atomic_inc(gpct_atomic_t *a)
 {
   return atomic_inc(a);
 }
 
-static inline gpct_bool_t gpct_atomic_dec(gpct_atomic_t *a)
+ALWAYS_INLINE gpct_bool_t gpct_atomic_dec(gpct_atomic_t *a)
 {
   return atomic_dec(a);
 }
 
-static inline gpct_bool_t gpct_atomic_bit_test(gpct_atomic_t *a, gpct_atomic_int_t n)
+ALWAYS_INLINE gpct_bool_t gpct_atomic_bit_test(gpct_atomic_t *a, gpct_atomic_int_t n)
 {
   return atomic_bit_test(a, n);
 }
 
-static inline gpct_bool_t gpct_atomic_bit_test_set(gpct_atomic_t *a, gpct_atomic_int_t n)
+ALWAYS_INLINE gpct_bool_t gpct_atomic_bit_test_set(gpct_atomic_t *a, gpct_atomic_int_t n)
 {
   return atomic_bit_testset(a, n);
 }
 
-static inline gpct_bool_t gpct_atomic_bit_test_clr(gpct_atomic_t *a, gpct_atomic_int_t n)
+ALWAYS_INLINE gpct_bool_t gpct_atomic_bit_test_clr(gpct_atomic_t *a, gpct_atomic_int_t n)
 {
   return atomic_bit_testclr(a, n);
 }
 
-static inline void gpct_atomic_bit_clr(gpct_atomic_t *a, gpct_atomic_int_t n)
+ALWAYS_INLINE void gpct_atomic_bit_clr(gpct_atomic_t *a, gpct_atomic_int_t n)
 {
   return atomic_bit_clr(a, n);
 }
 
-static inline void gpct_atomic_bit_set(gpct_atomic_t *a, gpct_atomic_int_t n)
+ALWAYS_INLINE void gpct_atomic_bit_set(gpct_atomic_t *a, gpct_atomic_int_t n)
 {
   return atomic_bit_set(a, n);
 }

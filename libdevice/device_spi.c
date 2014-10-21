@@ -37,6 +37,9 @@
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 
+GCT_CONTAINER_PROTOTYPES(dev_spi_ctrl_queue, extern inline, dev_spi_ctrl_queue,
+                   init, destroy, remove, push, pushback, pop, isempty);
+
 enum device_spi_ret_e {
   DEVICE_SPI_IDLE,
   DEVICE_SPI_CONTINUE,

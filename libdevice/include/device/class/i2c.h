@@ -302,7 +302,7 @@ struct dev_i2c_ctrl_request_s
 };
 
 GCT_CONTAINER_TYPES(dev_i2c_ctrl_queue, struct dev_i2c_ctrl_request_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_i2c_ctrl_queue, static inline, dev_i2c_ctrl_queue,
+GCT_CONTAINER_FCNS(dev_i2c_ctrl_queue, inline, dev_i2c_ctrl_queue,
                    init, destroy, pop, remove, push, push_back, isempty);
 
 /** @This structure defines a scheduler that is associated with a I2C

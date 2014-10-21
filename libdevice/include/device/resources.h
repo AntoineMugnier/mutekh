@@ -318,7 +318,7 @@ struct dev_resource_s * device_res_get_from_name(const struct device_s *dev,
 
 /** @internal @This allocates a new device resource and setups 2
     integer or pointers fields. */
-static inline error_t device_res_alloc_uint(struct device_s *dev,
+ALWAYS_INLINE error_t device_res_alloc_uint(struct device_s *dev,
 					    enum dev_resource_type_e type,
 					    uintptr_t a, uintptr_t b, struct dev_resource_s **r_)
 {
@@ -337,7 +337,7 @@ static inline error_t device_res_alloc_uint(struct device_s *dev,
 
 /** @internal @This looks up a resource entry and reads one or two
     integer fields. @tt a and @tt b pointers may be @tt NULL. */
-static inline error_t device_res_get_uint(const struct device_s *dev,
+ALWAYS_INLINE error_t device_res_get_uint(const struct device_s *dev,
                                           enum dev_resource_type_e type,
                                           uint_fast8_t id, uintptr_t *a, uintptr_t *b)
 {
@@ -355,7 +355,7 @@ static inline error_t device_res_get_uint(const struct device_s *dev,
 
 /** @internal @This allocates a new device resource and setups a 64
     bits integer field. */
-static inline error_t device_res_alloc_uint64(struct device_s *dev,
+ALWAYS_INLINE error_t device_res_alloc_uint64(struct device_s *dev,
 					      enum dev_resource_type_e type,
 					      uint64_t a, struct dev_resource_s **r_)
 {
@@ -373,7 +373,7 @@ static inline error_t device_res_alloc_uint64(struct device_s *dev,
 
 /** @internal @This looks up a resource entry and reads a 64 bits
     integer resource field. */
-static inline error_t device_res_get_uint64(const struct device_s *dev,
+ALWAYS_INLINE error_t device_res_get_uint64(const struct device_s *dev,
                                             enum dev_resource_type_e type,
                                             uint_fast8_t id, uint64_t *a)
 {
@@ -399,7 +399,7 @@ error_t device_res_alloc_str(struct device_s *dev,
 
 /** @This adds an IO space address range to the device resources list.
     @see #DEV_STATIC_RES_IO */
-static inline error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end)
+ALWAYS_INLINE error_t device_res_add_io(struct device_s *dev, uintptr_t start, uintptr_t end)
 {
   assert(start < end);
   return device_res_alloc_uint(dev, DEV_RES_IO, start, end, NULL);
@@ -420,7 +420,7 @@ static inline error_t device_res_add_io(struct device_s *dev, uintptr_t start, u
 
 /** @This adds an memory space address range to the device resources list.
     @see #DEV_STATIC_RES_MEM */
-static inline error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
+ALWAYS_INLINE error_t device_res_add_mem(struct device_s *dev, uintptr_t start, uintptr_t end)
 {
   assert(start < end);
   return device_res_alloc_uint(dev, DEV_RES_MEM, start, end, NULL);
@@ -454,7 +454,7 @@ static inline error_t device_res_add_mem(struct device_s *dev, uintptr_t start, 
 
     @see #DEV_STATIC_RES_IRQ
 */
-static inline error_t device_res_add_irq(struct device_s *dev, uint_fast8_t dev_out_id,
+ALWAYS_INLINE error_t device_res_add_irq(struct device_s *dev, uint_fast8_t dev_out_id,
 					 uint_fast8_t icu_in_id, uint_fast16_t irq_id,
 					 const char *icu)
 {
@@ -505,7 +505,7 @@ static inline error_t device_res_add_irq(struct device_s *dev, uint_fast8_t dev_
    commonly referred to by using a number. Processor devices must
    use this resource for the cpu id. @see #DEV_STATIC_RES_ID
 */
-static inline error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor)
+ALWAYS_INLINE error_t device_res_add_id(struct device_s *dev, uintptr_t major, uintptr_t minor)
 {
   return device_res_alloc_uint(dev, DEV_RES_ID, major, minor, NULL);
 }
@@ -526,7 +526,7 @@ static inline error_t device_res_add_id(struct device_s *dev, uintptr_t major, u
 /**
    @This adds a revision information for the device.
 */
-static inline error_t device_res_add_revision(struct device_s *dev, uintptr_t major, uintptr_t minor)
+ALWAYS_INLINE error_t device_res_add_revision(struct device_s *dev, uintptr_t major, uintptr_t minor)
 {
   return device_res_alloc_uint(dev, DEV_RES_REVISION, major, minor, NULL);
 }
@@ -550,7 +550,7 @@ static inline error_t device_res_add_revision(struct device_s *dev, uintptr_t ma
    of the value depends on the parent enumerator device. The string
    will be duplicated if not @tt NULL.
 */
-static inline error_t device_res_add_vendor(struct device_s *dev, uintptr_t id, const char *name)
+ALWAYS_INLINE error_t device_res_add_vendor(struct device_s *dev, uintptr_t id, const char *name)
 {
   struct dev_resource_s *r;
   error_t err = device_res_alloc_str(dev, DEV_RES_VENDOR, NULL, name, &r);
@@ -581,7 +581,7 @@ static inline error_t device_res_add_vendor(struct device_s *dev, uintptr_t id, 
    of the value depends on the parent enumerator device.  The string
    will be duplicated if not @tt NULL.
 */
-static inline error_t device_res_add_product(struct device_s *dev, uintptr_t id, const char *name)
+ALWAYS_INLINE error_t device_res_add_product(struct device_s *dev, uintptr_t id, const char *name)
 {
   struct dev_resource_s *r;
   error_t err = device_res_alloc_str(dev, DEV_RES_PRODUCT, NULL, name, &r);
@@ -621,7 +621,7 @@ struct dev_freq_ratio_s
 };
 
 /** @This attaches a frequency resource to the device. */
-static inline error_t device_res_add_freq(struct device_s *dev,
+ALWAYS_INLINE error_t device_res_add_freq(struct device_s *dev,
                                           const struct dev_freq_s *freq)
 {
   struct dev_resource_s *r;
@@ -644,7 +644,7 @@ static inline error_t device_res_add_freq(struct device_s *dev,
       } }                                       \
   }
 
-static inline error_t device_get_res_freq(const struct device_s *dev,
+ALWAYS_INLINE error_t device_get_res_freq(const struct device_s *dev,
                                           struct dev_freq_s *freq,
                                           uint_fast8_t index)
 {
@@ -663,7 +663,7 @@ static inline error_t device_get_res_freq(const struct device_s *dev,
 
 /** @This attaches a string parameter resource to the device. The
     exact meaning of the value is driver dependent. */
-static inline error_t device_res_add_str_param(struct device_s *dev, const char *name, const char *value)
+ALWAYS_INLINE error_t device_res_add_str_param(struct device_s *dev, const char *name, const char *value)
 {
   return device_res_alloc_str(dev, DEV_RES_STR_PARAM, value, name, NULL);
 }
@@ -679,7 +679,7 @@ static inline error_t device_res_add_str_param(struct device_s *dev, const char 
 
 /** @This retrieves the value of a string parameter resource entry
     from the associated parameter name. */
-static inline error_t device_get_param_str(const struct device_s *dev,
+ALWAYS_INLINE error_t device_get_param_str(const struct device_s *dev,
                                            const char *name, const char **a)
 {
   struct dev_resource_s *r;
@@ -695,7 +695,7 @@ static inline error_t device_get_param_str(const struct device_s *dev,
 /** @This retrieves the value of a string parameter resource entry
     from the associated parameter name. A default value is returned
     when not found. */
-static inline void device_get_param_str_default(const struct device_s *dev, const char *name,
+ALWAYS_INLINE void device_get_param_str_default(const struct device_s *dev, const char *name,
                                                 const char **a, const char *def)
 {
   struct dev_resource_s *r;
@@ -711,7 +711,7 @@ static inline void device_get_param_str_default(const struct device_s *dev, cons
 /** @This attaches an integer parameter resource to the device. The
     exact meaning of the value is driver dependent. The name string
     will be duplicated. */
-static inline error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintptr_t value)
+ALWAYS_INLINE error_t device_res_add_uint_param(struct device_s *dev, const char *name, uintptr_t value)
 {
   struct dev_resource_s *r;
   error_t err = device_res_alloc_str(dev, DEV_RES_UINT_PARAM, NULL, name, &r);
@@ -733,7 +733,7 @@ static inline error_t device_res_add_uint_param(struct device_s *dev, const char
 
 /** @This retrieves the value of a integer parameter resource entry
     from the associated parameter name. */
-static inline error_t device_get_param_uint(const struct device_s *dev,
+ALWAYS_INLINE error_t device_get_param_uint(const struct device_s *dev,
                                             const char *name, uintptr_t *a)
 {
   struct dev_resource_s *r;
@@ -749,7 +749,7 @@ static inline error_t device_get_param_uint(const struct device_s *dev,
 /** @This retrieves the value of an integer parameter resource entry
     from the associated parameter name. A default value is returned
     when not found. */
-static inline void device_get_param_uint_default(const struct device_s *dev, const char *name,
+ALWAYS_INLINE void device_get_param_uint_default(const struct device_s *dev, const char *name,
                                                  uintptr_t *a, uintptr_t def)
 {
   struct dev_resource_s *r;
@@ -765,7 +765,7 @@ static inline void device_get_param_uint_default(const struct device_s *dev, con
     exact meaning of the value is driver dependent. The driver
     initialization will not take place until the device path points to
     an exisiting and properly initialized device. */
-static inline error_t device_res_add_dev_param(struct device_s *dev, const char *name, const char *path)
+ALWAYS_INLINE error_t device_res_add_dev_param(struct device_s *dev, const char *name, const char *path)
 {
   struct dev_resource_s *r;
   error_t err = device_res_alloc_str(dev, DEV_RES_DEV_PARAM, path, name, &r);

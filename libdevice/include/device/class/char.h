@@ -85,7 +85,7 @@ struct dev_char_rq_s
 
 GCT_CONTAINER_TYPES(dev_char_queue, struct dev_char_rq_s *, queue_entry)
 
-GCT_CONTAINER_FCNS(dev_char_queue, static inline, dev_char_queue,
+GCT_CONTAINER_FCNS(dev_char_queue, inline, dev_char_queue,
                    init, destroy, isempty, pushback, pop, head, remove);
 
 

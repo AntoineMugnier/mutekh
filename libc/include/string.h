@@ -87,7 +87,7 @@ int_fast8_t __attribute__ ((pure))
 strcmp(const char *s1, const char *s2);
 #define strcmp __builtin_strcmp
 
-static inline int_fast8_t
+ALWAYS_INLINE int_fast8_t
 __attribute__ ((deprecated,pure))
 strcoll(const char *s1, const char *s2)
 {

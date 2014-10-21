@@ -79,7 +79,7 @@
                      );                         \
   })
 
-static inline cpu_id_t
+ALWAYS_INLINE cpu_id_t
 cpu_id(void)
 {
   reg_t		reg;
@@ -92,20 +92,20 @@ cpu_id(void)
   return reg;
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 cpu_isbootstrap(void)
 {
   return cpu_id() == CONFIG_ARCH_BOOTSTRAP_CPU_ID;
 }
 
-static inline void
+ALWAYS_INLINE void
 cpu_trap()
 {
   __asm__ volatile ("trap");
 }
 
 
-static inline void cpu_dcache_invld(void *ptr)
+ALWAYS_INLINE void cpu_dcache_invld(void *ptr)
 {
   __asm__ volatile (
 # ifdef CONFIG_ARCH_SOCLIB
@@ -118,7 +118,7 @@ static inline void cpu_dcache_invld(void *ptr)
 		    );
 }
 
-static inline size_t cpu_dcache_line_size()
+ALWAYS_INLINE size_t cpu_dcache_line_size()
 {
   return 8;
 }

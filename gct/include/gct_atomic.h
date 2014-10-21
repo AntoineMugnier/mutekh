@@ -43,55 +43,55 @@ typedef atomic_t gct_atomic_t;
 /* static value init */
 #define GCT_ATOMIC_INITIALIZER(v)	ATOMIC_INITIALIZER(v)
 
-static inline void gct_atomic_init(gct_atomic_t *a)
+ALWAYS_INLINE void gct_atomic_init(gct_atomic_t *a)
 {
 }
 
-static inline void gct_atomic_destroy(gct_atomic_t *a)
+ALWAYS_INLINE void gct_atomic_destroy(gct_atomic_t *a)
 {
 }
 
-static inline void gct_atomic_set(gct_atomic_t *a, gct_atomic_int_t v)
+ALWAYS_INLINE void gct_atomic_set(gct_atomic_t *a, gct_atomic_int_t v)
 {
   atomic_set(a, v);
 }
 
-static inline gct_atomic_int_t gct_atomic_get(gct_atomic_t *a)
+ALWAYS_INLINE gct_atomic_int_t gct_atomic_get(gct_atomic_t *a)
 {
   return atomic_get(a);
 }
 
-static inline gct_bool_t gct_atomic_inc(gct_atomic_t *a)
+ALWAYS_INLINE gct_bool_t gct_atomic_inc(gct_atomic_t *a)
 {
   return atomic_inc(a);
 }
 
-static inline gct_bool_t gct_atomic_dec(gct_atomic_t *a)
+ALWAYS_INLINE gct_bool_t gct_atomic_dec(gct_atomic_t *a)
 {
   return atomic_dec(a);
 }
 
-static inline gct_bool_t gct_atomic_bit_test(gct_atomic_t *a, gct_atomic_int_t n)
+ALWAYS_INLINE gct_bool_t gct_atomic_bit_test(gct_atomic_t *a, gct_atomic_int_t n)
 {
   return atomic_bit_test(a, n);
 }
 
-static inline gct_bool_t gct_atomic_bit_test_set(gct_atomic_t *a, gct_atomic_int_t n)
+ALWAYS_INLINE gct_bool_t gct_atomic_bit_test_set(gct_atomic_t *a, gct_atomic_int_t n)
 {
   return atomic_bit_testset(a, n);
 }
 
-static inline gct_bool_t gct_atomic_bit_test_clr(gct_atomic_t *a, gct_atomic_int_t n)
+ALWAYS_INLINE gct_bool_t gct_atomic_bit_test_clr(gct_atomic_t *a, gct_atomic_int_t n)
 {
   return atomic_bit_testclr(a, n);
 }
 
-static inline void gct_atomic_bit_clr(gct_atomic_t *a, gct_atomic_int_t n)
+ALWAYS_INLINE void gct_atomic_bit_clr(gct_atomic_t *a, gct_atomic_int_t n)
 {
   return atomic_bit_clr(a, n);
 }
 
-static inline void gct_atomic_bit_set(gct_atomic_t *a, gct_atomic_int_t n)
+ALWAYS_INLINE void gct_atomic_bit_set(gct_atomic_t *a, gct_atomic_int_t n)
 {
   return atomic_bit_set(a, n);
 }

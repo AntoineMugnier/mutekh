@@ -28,6 +28,12 @@
 
 #include <device/class/pwm.h>
 
+const char dev_pwm_polarity_e[] = ENUM_DESC_DEV_PWM_POLARITY_E;
+const char dev_pwm_mode_e[] = ENUM_DESC_DEV_PWM_MODE_E;
+
+GCT_CONTAINER_PROTOTYPES(dev_pwm_queue, extern inline, dev_pwm_queue,
+                   init, destroy, isempty, head, remove, push, pushback);
+
 error_t dev_pwm_rq_queue_init(struct dev_pwm_rq_queue_s *q)
 {
     dev_pwm_queue_init(&q->queue);

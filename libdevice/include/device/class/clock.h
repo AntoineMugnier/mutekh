@@ -322,7 +322,7 @@ void dev_clock_src_changed(struct device_clock_s *ckdev,
 
 /** @This initializes a clock source end-point node. */
 config_depend(CONFIG_DEVICE_CLOCK)
-static inline
+ALWAYS_INLINE
 void dev_clock_source_init(struct device_s *dev,
                            struct dev_clock_src_ep_s *src,
                            dev_clock_src_use_t *use)
@@ -335,7 +335,7 @@ void dev_clock_source_init(struct device_s *dev,
 /** @This initializes a clock sink end-point node. The @tt changed
     parameter may be @tt NULL. */
 config_depend(CONFIG_DEVICE_CLOCK)
-static inline
+ALWAYS_INLINE
 void dev_clock_sink_init(struct device_s       *dev,
                          struct dev_clock_sink_ep_s *sink,
                          dev_clock_sink_changed_t *changed)
@@ -395,7 +395,7 @@ void dev_clock_sink_unlink(struct device_s *dev,
     @see #DEV_STATIC_RES_CLK_RTE
  */
 config_depend(CONFIG_DEVICE_CLOCK)
-static inline
+ALWAYS_INLINE
 error_t device_add_res_clock_route(struct device_s     *dev,
                                    dev_clock_node_id_t parent_id,
                                    dev_clock_node_id_t node_id,
@@ -468,7 +468,7 @@ error_t device_add_res_clock_route(struct device_s     *dev,
     @see #DEV_STATIC_RES_CLK_OSC
  */
 config_depend(CONFIG_DEVICE_CLOCK)
-static inline
+ALWAYS_INLINE
 error_t device_add_res_clock_osc(struct device_s     *dev,
                                  dev_clock_node_id_t node_id,
                                  dev_clock_config_mask_t config_mask,
@@ -529,7 +529,7 @@ error_t device_add_res_clock_osc(struct device_s     *dev,
     @see #DEV_STATIC_RES_CLK_SRC
  */
 config_depend(CONFIG_DEVICE_CLOCK)
-static inline
+ALWAYS_INLINE
 error_t device_add_res_clock_src(struct device_s     *dev,
                                  const char          *src_name,
                                  dev_clock_node_id_t src_id,

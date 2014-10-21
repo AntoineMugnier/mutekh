@@ -108,8 +108,8 @@ struct device_node_s
 #ifdef CONFIG_DEVICE_TREE
  *, list_entry);
 
-GCT_CONTAINER_PROTOTYPES(device_list, , device_list,
-                         init, destroy, pushback, remove, isempty);
+GCT_CONTAINER_FCNS(device_list, inline, device_list,
+                   init, destroy, pushback, remove, isempty);
 #endif
 ;
 
@@ -327,13 +327,13 @@ config_depend(CONFIG_DEVICE_TREE)
 error_t device_get_path(struct device_node_s *root, char *buf,
                         size_t buflen, struct device_node_s *dev, uint_fast8_t number);
 
-static inline struct device_s * device_from_node(struct device_node_s *node)
+ALWAYS_INLINE struct device_s * device_from_node(struct device_node_s *node)
 {
   return node && node->flags & DEVICE_FLAG_DEVICE ? (struct device_s*)node : NULL;
 }
 
 config_depend(CONFIG_DEVICE_TREE)
-static inline struct device_alias_s * device_alias_from_node(struct device_node_s *node)
+ALWAYS_INLINE struct device_alias_s * device_alias_from_node(struct device_node_s *node)
 {
 #ifdef CONFIG_DEVICE_TREE
   return node && node->flags & DEVICE_FLAG_ALIAS ? (struct device_alias_s*)node : NULL;
@@ -342,13 +342,13 @@ static inline struct device_alias_s * device_alias_from_node(struct device_node_
 #endif
 }
 
-static inline struct device_node_s * device_to_node(struct device_s *dev)
+ALWAYS_INLINE struct device_node_s * device_to_node(struct device_s *dev)
 {
   return &dev->node;
 }
 
 config_depend(CONFIG_DEVICE_TREE)
-static inline struct device_node_s * device_node_from_alias(struct device_alias_s *alias)
+ALWAYS_INLINE struct device_node_s * device_node_from_alias(struct device_alias_s *alias)
 {
 #ifdef CONFIG_DEVICE_TREE
   return &alias->node;
@@ -393,7 +393,7 @@ uint_fast8_t device_get_cpu_count();
 uintptr_t vpage_io_map(paddr_t paddr, size_t size);
 #endif
 
-static inline
+ALWAYS_INLINE
 error_t device_mem_map(struct device_s *dev, uint_fast8_t mask)
 {
 #if defined( CONFIG_VMEM )

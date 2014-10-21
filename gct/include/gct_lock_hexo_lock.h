@@ -49,47 +49,40 @@ C_HEADER_BEGIN
 
 typedef lock_t _gct_lock_HEXO_LOCK_type_t;
 
-_GCT_INTERNAL_INLINE(
-  gct_err_t _gct_lock_HEXO_LOCK_init(lock_t *lock),
+ALWAYS_INLINE gct_err_t _gct_lock_HEXO_LOCK_init(lock_t *lock)
 {
   lock_init(lock);
   return 0;
-});
+}
 
-_GCT_INTERNAL_INLINE(
-  void _gct_lock_HEXO_LOCK_destroy(lock_t *lock),
+ALWAYS_INLINE void _gct_lock_HEXO_LOCK_destroy(lock_t *lock)
 {
   lock_destroy(lock);
-});
+}
 
-_GCT_INTERNAL_INLINE(
-  void _gct_lock_HEXO_LOCK_wrlock(lock_t *lock),
+ALWAYS_INLINE void _gct_lock_HEXO_LOCK_wrlock(lock_t *lock)
 {
   lock_spin(lock);
-});
+}
 
-_GCT_INTERNAL_INLINE(
-  void _gct_lock_HEXO_LOCK_rdlock(lock_t *lock),
+ALWAYS_INLINE void _gct_lock_HEXO_LOCK_rdlock(lock_t *lock)
 {
   lock_spin(lock);
-});
+}
 
-_GCT_INTERNAL_INLINE(
-  void _gct_lock_HEXO_LOCK_rdwrlock(lock_t *lock),
+ALWAYS_INLINE void _gct_lock_HEXO_LOCK_rdwrlock(lock_t *lock)
 {
   lock_spin(lock);
-});
+}
 
-_GCT_INTERNAL_INLINE(
-  void _gct_lock_HEXO_LOCK_promotelock(lock_t *lock),
+ALWAYS_INLINE void _gct_lock_HEXO_LOCK_promotelock(lock_t *lock)
 {
-});
+}
 
-_GCT_INTERNAL_INLINE(
-  void _gct_lock_HEXO_LOCK_unlock(lock_t *lock),
+ALWAYS_INLINE void _gct_lock_HEXO_LOCK_unlock(lock_t *lock)
 {
   lock_release(lock);
-});
+}
 
 C_HEADER_END
 

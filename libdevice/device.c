@@ -45,8 +45,8 @@ struct device_node_s *device_tree_root()
   return &device_enum_root.node;
 }
 
-GCT_CONTAINER_FCNS(device_list, inline, device_list,
-                   init, destroy, pushback, remove, isempty);
+GCT_CONTAINER_PROTOTYPES(device_list, extern inline, device_list,
+                         init, destroy, pushback, remove, isempty);
 
 void device_tree_init()
 {

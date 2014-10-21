@@ -54,7 +54,7 @@ struct cpu_context_s
  */
 #endif
 
-static inline void
+ALWAYS_INLINE void
 cpu_context_switch(struct context_s *old, struct context_s *future)
 {
   register void	*tmp0, *tmp1;
@@ -118,7 +118,7 @@ cpu_context_switch(struct context_s *old, struct context_s *future)
 		);
 }
 
-static inline void
+ALWAYS_INLINE void
 __attribute__((always_inline, noreturn))
 cpu_context_jumpto(struct context_s *future)
 {
@@ -150,7 +150,7 @@ cpu_context_jumpto(struct context_s *future)
 		);
 }
 
-static inline void
+ALWAYS_INLINE void
 __attribute__((always_inline, noreturn))
 cpu_context_set(uintptr_t stack, size_t stack_size, void *jumpto)
 {

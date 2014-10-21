@@ -106,10 +106,10 @@ error_t cpu_tree_node_init(struct cpu_tree_s *node, cpu_id_t id, struct device_s
 void cpu_tree_node_cleanup(struct cpu_tree_s *node);
 
 /** return CPU architecture type name */
-static const char *cpu_type_name(void);
+ALWAYS_INLINE const char *cpu_type_name(void);
 
 /** return true if bootstap processor */
-static bool_t cpu_isbootstrap(void);
+ALWAYS_INLINE bool_t cpu_isbootstrap(void);
 
 # if defined(CONFIG_DEVICE_IRQ) && defined(CONFIG_ARCH_SMP)
 struct device_s;
@@ -121,13 +121,13 @@ bool_t arch_cpu_irq_affinity_test(struct device_s *cpu, struct dev_irq_ep_s *src
 # endif
 
 /** cpu trap instruction */
-void cpu_trap();
+ALWAYS_INLINE void cpu_trap();
 
 /** get cpu cache line size, return 0 if no dcache */
-static size_t cpu_dcache_line_size();
+ALWAYS_INLINE size_t cpu_dcache_line_size();
 
 /** invalidate the cpu data cache line containing this address */
-static void cpu_dcache_invld(void *ptr);
+ALWAYS_INLINE void cpu_dcache_invld(void *ptr);
 
 # if defined(CONFIG_CPU_CACHE)
 
@@ -137,7 +137,7 @@ void cpu_dcache_invld_buf(void *ptr, size_t size);
 
 # else
 
-static inline void
+ALWAYS_INLINE void
 cpu_dcache_invld_buf(void *ptr, size_t size)
 {
 }
@@ -148,7 +148,7 @@ cpu_dcache_invld_buf(void *ptr, size_t size)
 # define TO_STR(x) _TO_STR(x)
 
 /** @this returns the cpu type name */
-static inline const char *
+ALWAYS_INLINE const char *
 cpu_type_name(void)
 {
   return TO_STR(CONFIG_CPU_NAME);

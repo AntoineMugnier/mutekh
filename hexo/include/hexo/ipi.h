@@ -70,10 +70,10 @@ struct ipi_endpoint_s
     GCT_CONTAINER_ENTRY(idle_cpu_queue, list_entry);
 };
 
-GCT_CONTAINER_FCNS(ipi_queue, static inline, ipi_queue,
+GCT_CONTAINER_FCNS(ipi_queue, inline, ipi_queue,
                    init, destroy, pushback, pop, wrlock, unlock);
 
-GCT_CONTAINER_NOLOCK_FCNS(ipi_queue, static inline, ipi_queue_nolock,
+GCT_CONTAINER_NOLOCK_FCNS(ipi_queue, inline, ipi_queue_nolock,
                           isempty);
 
 extern CPU_LOCAL struct ipi_endpoint_s ipi_endpoint;
@@ -110,7 +110,7 @@ void ipi_process_rq();
    @param endpoint IPI endpoint to check
    @return whether endpoint may receive IPIs
 */
-static inline
+ALWAYS_INLINE
 bool_t ipi_endpoint_isvalid(struct ipi_endpoint_s *endpoint)
 {
     return endpoint != NULL && endpoint->icu_dev != NULL;

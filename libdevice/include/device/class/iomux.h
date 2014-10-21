@@ -115,7 +115,7 @@ error_t device_iomux_setup(struct device_s *dev, const char *io_list,
 
     @see #DEV_STATIC_RES_IOMUX
 */
-static inline error_t device_res_add_iomux(struct device_s *dev, const char *label,
+ALWAYS_INLINE error_t device_res_add_iomux(struct device_s *dev, const char *label,
                                            iomux_demux_t demux, iomux_io_id_t io_id,
                                            iomux_mux_t mux, iomux_config_t config)
 {

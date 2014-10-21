@@ -38,7 +38,7 @@
 
 #define CPU_ATOMIC_H_
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_inc(atomic_int_t *a)
 {
   bool_t res;
@@ -51,7 +51,7 @@ __cpu_atomic_inc(atomic_int_t *a)
   return res;
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_dec(atomic_int_t *a)
 {
   bool_t res;
@@ -64,7 +64,7 @@ __cpu_atomic_dec(atomic_int_t *a)
   return res;
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
 {
   bool_t res;
@@ -79,14 +79,14 @@ __cpu_atomic_bit_testset(atomic_int_t *a, uint_fast8_t n)
   return res;
 }
 
-static inline void
+ALWAYS_INLINE void
 __cpu_atomic_bit_waitset(atomic_int_t *a, uint_fast8_t n)
 {
   while (!__cpu_atomic_bit_testset(a, n))
     ;
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
 {
   bool_t res;
@@ -101,14 +101,14 @@ __cpu_atomic_bit_testclr(atomic_int_t *a, uint_fast8_t n)
   return res;
 }
 
-static inline void
+ALWAYS_INLINE void
 __cpu_atomic_bit_waitclr(atomic_int_t *a, uint_fast8_t n)
 {
   while (__cpu_atomic_bit_testclr(a, n))
     ;
 }
 
-static inline void
+ALWAYS_INLINE void
 __cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
 {
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -116,7 +116,7 @@ __cpu_atomic_bit_set(atomic_int_t *a, uint_fast8_t n)
   CPU_INTERRUPT_RESTORESTATE;
 }
 
-static inline void
+ALWAYS_INLINE void
 __cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
 {
   CPU_INTERRUPT_SAVESTATE_DISABLE;
@@ -124,7 +124,7 @@ __cpu_atomic_bit_clr(atomic_int_t *a, uint_fast8_t n)
   CPU_INTERRUPT_RESTORESTATE;
 }
 
-static inline bool_t
+ALWAYS_INLINE bool_t
 __cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t future)
 {
   bool_t res = 0;
