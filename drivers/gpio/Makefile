@@ -1,0 +1,1 @@
+objs-$(CONFIG_DRIVER_PCA9557) += pca9557.o
