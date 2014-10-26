@@ -34,9 +34,7 @@
 #include <mutek/kroutine.h>
 
 #include <device/driver.h>
-
-#include <gct_platform.h>
-#include <gct/container_clist.h>
+#include <device/request.h>
 
 struct device_s;
 struct driver_s;
@@ -183,23 +181,20 @@ enum dev_mem_rq_type_e
 
 struct dev_mem_config_s;
 
-#define GCT_CONTAINER_ALGO_dev_mem_queue CLIST
-
 struct dev_mem_rq_s
-{  
-  struct kroutine_s             kr;
+{
+  struct dev_request_s          rq;
 
   /* Requested operation */
   enum dev_mem_rq_type_e        type:8;
+
+  error_t                       err;
 
   /* Mask of bands present in data */
   uint8_t                       band_mask;
 
   /* log2 of the number of pages in a single @ref sc_data buffer. */
   uint8_t                       sc_log2;
-
-  /* Request error status */
-  error_t                       err;
 
   /* Size of data, granularity depends on the requested operation. */
   size_t                        size;
@@ -217,19 +212,9 @@ struct dev_mem_rq_s
 
     struct dev_mem_config_s    *cfg;
   };
-
-  /** caller private data */
-  void                          *pvdata;
-
-  /** driver private data */
-  void                          *drvdata;
-
-  GCT_CONTAINER_ENTRY(dev_mem_queue, queue_entry);
 };
 
-GCT_CONTAINER_TYPES(dev_mem_queue, struct dev_mem_rq_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_mem_queue, inline, dev_mem_queue,
-                   init, destroy, pushback, pop, isempty, head);
+STRUCT_INHERIT(dev_mem_rq_s, dev_request_s, rq);
 
 /** Memory device info() function tempate. @see devmem_info_t */
 #define DEVMEM_INFO(n)	error_t  (n) (struct device_mem_s *mdev, \
@@ -286,6 +271,19 @@ DRIVER_CLASS_TYPES(mem,
                    devmem_request_t *f_request;
                    );
 
+/** Synchronous memory device operation function. This function use a
+    busy wait loop during the request. @see dev_mem_wait_op */
+config_depend(CONFIG_DEVICE_MEM)
+inline error_t dev_mem_spin_op(struct device_mem_s *mdev,
+                               struct dev_mem_rq_s *rq)
+{
+  struct dev_request_status_s st;
+  dev_request_spin_init(&rq->rq, &st);
+  DEVICE_OP(mdev, request, rq);
+  dev_request_spin_wait(&st);
+  return rq->err;
+}
+
 /** Synchronous memory device operation function. This function use
     the scheduler api to put current context in wait state during the
     request. This is equivalent to @ref dev_mem_spin_op when the @ref
@@ -295,15 +293,16 @@ DRIVER_CLASS_TYPES(mem,
     request, the @tt type, @tt band_mask, @tt page_count,
     @tt sc_log2 and @tt page_index fields must be initialized by the
     caller. */
-config_depend(CONFIG_DEVICE_MEM)
-error_t dev_mem_wait_op(struct device_mem_s *mdev,
-                        struct dev_mem_rq_s *rq);
-
-/** Synchronous memory device operation function. This function use a
-    busy wait loop during the request. @see dev_mem_wait_op */
-config_depend(CONFIG_DEVICE_MEM)
-error_t dev_mem_spin_op(struct device_mem_s *mdev,
-                        struct dev_mem_rq_s *rq);
+config_depend_and2(CONFIG_DEVICE_MEM, CONFIG_MUTEK_SCHEDULER)
+inline error_t dev_mem_wait_op(struct device_mem_s *mdev,
+                               struct dev_mem_rq_s *rq)
+{
+  struct dev_request_status_s st;
+  dev_request_sched_init(&rq->rq, &st);
+  DEVICE_OP(mdev, request, rq);
+  dev_request_sched_wait(&st);
+  return rq->err;
+}
 
 /** @internal @This handles read/write operations to mapped memories
     using the @ref memcpy function. */

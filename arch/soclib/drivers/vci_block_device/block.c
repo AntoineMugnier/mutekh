@@ -87,7 +87,7 @@ struct soclib_block_context_s
 {
   uintptr_t                 addr;
   struct dev_irq_ep_s       irq_ep;
-  dev_mem_queue_root_t      queue;
+  dev_request_queue_root_t  queue;
 
   uint_fast8_t              blk_log2;
   uint32_t                  blk_count;
@@ -167,7 +167,7 @@ static void soclib_block_rq_end(struct device_s *dev);
 static void soclib_block_rq_start(struct device_s *dev)
 {
   struct soclib_block_context_s *pv = dev->drv_pv;
-  struct dev_mem_rq_s *rq = dev_mem_queue_head(&pv->queue);
+  struct dev_mem_rq_s *rq = dev_mem_rq_s_cast(dev_request_queue_head(&pv->queue));
 
   if (!pv->running)
     {
@@ -217,20 +217,20 @@ static void soclib_block_rq_start(struct device_s *dev)
 static void soclib_block_rq_end(struct device_s *dev)
 {
   struct soclib_block_context_s *pv = dev->drv_pv;
-  struct dev_mem_rq_s *rq = dev_mem_queue_head(&pv->queue);
+  struct dev_mem_rq_s *rq = dev_mem_rq_s_cast(dev_request_queue_head(&pv->queue));
 
   pv->rqtype = pv->rqtype & (pv->rqtype - 1);
 
   if (rq->err || !pv->rqtype)
     {
-      dev_mem_queue_pop(&pv->queue);
+      dev_request_queue_pop(&pv->queue);
       lock_release(&dev->lock);
-      kroutine_exec(&rq->kr, 0);
+      kroutine_exec(&rq->rq.kr, 0);
       lock_spin(&dev->lock);
       pv->running = 0;
     }
 
-  if (!dev_mem_queue_isempty(&pv->queue))
+  if (!dev_request_queue_isempty(&pv->queue))
     soclib_block_rq_start(dev);
 }
 
@@ -241,7 +241,7 @@ static DEVMEM_REQUEST(soclib_block_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  dev_mem_queue_pushback(&pv->queue, rq);
+  dev_request_queue_pushback(&pv->queue, dev_mem_rq_s_base(rq));
 
   if (!pv->running)
     soclib_block_rq_start(dev);
@@ -286,7 +286,7 @@ static DEV_IRQ_EP_PROCESS(soclib_block_irq)
 
   lock_spin(&dev->lock);
 
-  struct dev_mem_rq_s *rq = dev_mem_queue_head(&pv->queue);
+  struct dev_mem_rq_s *rq = dev_mem_rq_s_cast(dev_request_queue_head(&pv->queue));
 
   enum soclib_block_status_e st = endian_le32(cpu_mem_read_32(pv->addr + SOCLIB_BLOCK_STATUS));
 
@@ -377,7 +377,7 @@ static DEV_INIT(soclib_block_init)
   device_irq_source_init(dev, &pv->irq_ep, 1,
                          &soclib_block_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
 
-  dev_mem_queue_init(&pv->queue);
+  dev_request_queue_init(&pv->queue);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, 1))
     goto err_q;
@@ -397,7 +397,7 @@ static DEV_INIT(soclib_block_init)
   return 0;
 
  err_q:
-  dev_mem_queue_destroy(&pv->queue);
+  dev_request_queue_destroy(&pv->queue);
  err_mem:
   mem_free(pv);
   return -1;
@@ -411,7 +411,7 @@ static DEV_CLEANUP(soclib_block_cleanup)
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
-  dev_mem_queue_destroy(&pv->queue);
+  dev_request_queue_destroy(&pv->queue);
 
   mem_free(pv);
 }

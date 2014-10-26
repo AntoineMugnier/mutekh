@@ -38,103 +38,15 @@ const char dev_mem_type_e[] = ENUM_DESC_DEV_MEM_TYPE_E;
 const char dev_mem_flags_e[] = ENUM_DESC_DEV_MEM_FLAGS_E;
 const char dev_mem_rq_type_e[] = ENUM_DESC_DEV_MEM_RQ_TYPE_E;
 
-GCT_CONTAINER_PROTOTYPES(dev_mem_queue, extern inline, dev_mem_queue,
-                   init, destroy, pushback, pop, isempty, head);
-
-struct dev_mem_wait_rq_s
-{
-#ifdef CONFIG_MUTEK_SCHEDULER
-  lock_t lock;
-  struct sched_context_s *ctx;
-#endif
-  bool_t done;
-};
-
-static KROUTINE_EXEC(dev_mem_syncl_request)
-{
-  struct dev_mem_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
-  struct dev_mem_wait_rq_s *status = rq->pvdata;
-
-  status->done = 1;
-}
-
-error_t dev_mem_spin_op(struct device_mem_s *mdev,
-                        struct dev_mem_rq_s *rq)
-{
-  struct dev_mem_wait_rq_s status;
-
-  status.done = 0;
-  rq->pvdata = &status;
-  kroutine_init(&rq->kr, &dev_mem_syncl_request, KROUTINE_IMMEDIATE);
-
-  DEVICE_OP(mdev, request, rq);
-
-#ifdef CONFIG_DEVICE_IRQ
-  assert(cpu_is_interruptible());
+# ifdef CONFIG_MUTEK_SCHEDULER
+extern inline error_t
+dev_mem_wait_op(struct device_mem_s *mdev,
+                struct dev_mem_rq_s *rq);
 #endif
 
-  while (!status.done)
-    order_compiler_mem();
-
-  return rq->err;
-}
-
-#ifdef CONFIG_MUTEK_SCHEDULER
-static KROUTINE_EXEC(dev_mem_sync_request)
-{
-  struct dev_mem_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
-  struct dev_mem_wait_rq_s *status = rq->pvdata;
-
-  lock_spin(&status->lock);
-  if (status->ctx != NULL)
-    sched_context_start(status->ctx);
-  status->done = 1;
-  lock_release(&status->lock);
-}
-
-error_t dev_mem_wait_op(struct device_mem_s *mdev,
-                        struct dev_mem_rq_s *rq)
-{
-  struct dev_mem_wait_rq_s status;
-
-  lock_init(&status.lock);
-  status.ctx = NULL;
-  status.done = 0;
-
-  rq->pvdata = &status;
-  kroutine_init(&rq->kr, &dev_mem_sync_request, KROUTINE_IMMEDIATE);
-
-  DEVICE_OP(mdev, request, rq);
-
-  /* ensure callback doesn't occur here */
-  CPU_INTERRUPT_SAVESTATE_DISABLE;
-  lock_spin(&status.lock);
-
-  if (!status.done)
-    {
-      status.ctx = sched_get_current();
-/*       printk("Stopping %p\n", status.ctx); */
-      sched_stop_unlock(&status.lock);
-    }
-  else
-    lock_release(&status.lock);
-
-  CPU_INTERRUPT_RESTORESTATE;
-
-  lock_destroy(&status.lock);
-
-  return rq->err;
-}
-
-#else
-
-error_t dev_mem_wait_op(struct device_mem_s *mdev,
-                        struct dev_mem_rq_s *rq)
-{
-  return dev_mem_spin_op(mdev, rq);
-}
-
-#endif
+extern inline error_t
+dev_mem_spin_op(struct device_mem_s *mdev,
+                struct dev_mem_rq_s *rq);
 
 void dev_mem_mapped_op_helper(uintptr_t base, uint_fast8_t page_log2, struct dev_mem_rq_s *rq)
 {

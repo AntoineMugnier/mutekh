@@ -166,7 +166,7 @@ static DEVMEM_REQUEST(efm32_msc_request)
       rq->err = -EINVAL;
     }
 
-  kroutine_exec(&rq->kr, cpu_is_interruptible());
+  kroutine_exec(&rq->rq.kr, cpu_is_interruptible());
 }
 
 static const struct driver_mem_s	efm32_msc_mem_drv =
