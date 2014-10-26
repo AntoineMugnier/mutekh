@@ -399,7 +399,7 @@ static DEVICU_GET_ENDPOINT(soclib_spi_icu_get_endpoint)
       if (id >= pv->gpin_cnt)
         return NULL;
       struct dev_irq_ep_s *ep = pv->sinks + id;
-      if (!ep->links_count)
+      if (!ep->link_count)
         ep->sense = DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_LOW_LEVEL |
           DEV_IRQ_SENSE_RISING_EDGE | DEV_IRQ_SENSE_FALLING_EDGE;
       return ep;

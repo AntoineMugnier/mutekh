@@ -356,7 +356,7 @@ static DEVICU_GET_ENDPOINT(bcm2835_gpio_icu_get_endpoint)
 
       struct dev_irq_ep_s *ep = pv->sink + id;
 
-      if (!ep->links_count)
+      if (!ep->link_count)
         {
           ep->sense = DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE |
                   DEV_IRQ_SENSE_LOW_LEVEL | DEV_IRQ_SENSE_HIGH_LEVEL |

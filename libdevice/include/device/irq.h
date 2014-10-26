@@ -142,7 +142,7 @@ struct dev_irq_ep_s
 #endif
 
   /** Number of links */
-  uint16_t links_count;
+  uint16_t link_count;
 
   /** Interrupt sense mode capabilities
       @see devicu_enable_irq_t

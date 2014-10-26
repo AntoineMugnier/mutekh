@@ -494,7 +494,7 @@ DEVICU_GET_ENDPOINT(stm32_gpio_icu_get_endpoint)
       /* We actually keep only one end-point object per line for all
          banks. We have to keep track of which bank the end-point is
          associated to. */
-      if (ep->links_count == 0)
+      if (ep->link_count == 0)
         {
           pv->irq[io_in_bank].bank    = bank;
           pv->irq[io_in_bank].enabled = 0;

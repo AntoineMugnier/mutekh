@@ -68,7 +68,7 @@ static DEV_IRQ_EP_PROCESS(device_irq_sink_process)
   assert(sink->type != DEV_IRQ_EP_SOURCE);
 #endif
 
-  switch (sink->links_count)
+  switch (sink->link_count)
     {
       struct dev_irq_ep_s *src;
 
@@ -83,7 +83,7 @@ static DEV_IRQ_EP_PROCESS(device_irq_sink_process)
 
     default: { /* multiple source end-points sharing the same irq line */
       uint_fast8_t i;
-      for (i = 0; i < sink->links_count; i++)
+      for (i = 0; i < sink->link_count; i++)
         {
           src = sink->links.array[i];
           src->process(src, id);
@@ -114,7 +114,7 @@ static DEV_IRQ_EP_PROCESS(device_irq_sink_process_N)
 {
   struct dev_irq_ep_s  *sink = ep;
   uint_fast8_t i;
-  for (i = 0; i < sink->links_count; i++)
+  for (i = 0; i < sink->link_count; i++)
     {
       struct dev_irq_ep_s *src = sink->links.array[i];
       //  printk("irqN %u %p\n", id, src->dev);
@@ -124,7 +124,7 @@ static DEV_IRQ_EP_PROCESS(device_irq_sink_process_N)
 
 static void device_irq_sink_fcn_set(struct dev_irq_ep_s *sink)
 {
-  switch (sink->links_count)
+  switch (sink->link_count)
     {
     case 0: {
       struct device_icu_s icu;
@@ -235,13 +235,13 @@ void device_irq_bypass_src_cleanup(struct dev_irq_ep_s *src)
 
 static error_t device_irq_ep_link_half(struct dev_irq_ep_s *a, struct dev_irq_ep_s *b)
 {
-  uint_fast8_t c = a->links_count;
+  uint_fast8_t c = a->link_count;
 
   switch (c)
     {
     case 0:
       a->links.single = b;
-      a->links_count = 1;
+      a->link_count = 1;
       return 0;
 
     case 1: {
@@ -252,7 +252,7 @@ static error_t device_irq_ep_link_half(struct dev_irq_ep_s *a, struct dev_irq_ep
       r[0] = t;
       r[1] = b;
       a->links.array = r;
-      a->links_count = 2;
+      a->link_count = 2;
       return 0;
     }
 
@@ -263,7 +263,7 @@ static error_t device_irq_ep_link_half(struct dev_irq_ep_s *a, struct dev_irq_ep
         return -ENOMEM;
       r[c] = b;
       a->links.array = r;
-      a->links_count++;
+      a->link_count++;
       return 0;
     }
 
@@ -274,7 +274,7 @@ static error_t device_irq_ep_unlink_half(struct dev_irq_ep_s *a, struct dev_irq_
 {
   struct dev_irq_ep_s **r = a->links.array;
 
-  switch (a->links_count)
+  switch (a->link_count)
     {
     case 0:
       return -ENOENT;
@@ -282,7 +282,7 @@ static error_t device_irq_ep_unlink_half(struct dev_irq_ep_s *a, struct dev_irq_
     case 1:
       if (a->links.single != b)
         return -ENOENT;
-      a->links_count = 0;
+      a->link_count = 0;
       return 0;
 
     case 2: {
@@ -293,17 +293,17 @@ static error_t device_irq_ep_unlink_half(struct dev_irq_ep_s *a, struct dev_irq_
       else
         return -ENOENT;
       mem_free(r);
-      a->links_count = 1;
+      a->link_count = 1;
       return 0;
     }
 
     default: {
       uint_fast8_t i;
-      for (i = 0; i < a->links_count; i++)
+      for (i = 0; i < a->link_count; i++)
         if (r[i] == b)
           {
-            memmove(r + i, r + i + 1, (a->links_count - i - 1) * sizeof(struct dev_irq_ep_s *));
-            a->links_count--;
+            memmove(r + i, r + i + 1, (a->link_count - i - 1) * sizeof(struct dev_irq_ep_s *));
+            a->link_count--;
             return 0;
           }
       return -ENOENT;
@@ -314,23 +314,23 @@ static error_t device_irq_ep_unlink_half(struct dev_irq_ep_s *a, struct dev_irq_
 
 static void device_irq_ep_unlink_all(struct dev_irq_ep_s *a)
 {
-  switch (a->links_count)
+  switch (a->link_count)
     {
     case 0:
       return;
 
     case 1:
       device_irq_ep_unlink_half(a->links.single, a);
-      a->links_count = 0;
+      a->link_count = 0;
       return;
 
     default: {
       struct dev_irq_ep_s **r = a->links.array;
       uint_fast8_t i;
-      for (i = 0; i < a->links_count; i++)
+      for (i = 0; i < a->link_count; i++)
         ensure(device_irq_ep_unlink_half(r[i], a));
       mem_free(r);
-      a->links_count = 0;
+      a->link_count = 0;
       return;
     }
     }
@@ -381,7 +381,7 @@ void device_irq_source_init(struct device_s *dev, struct dev_irq_ep_s *sources,
       struct dev_irq_ep_s *ep = sources + i;
       ep->dev = dev;
       ep->process = handler;
-      ep->links_count = 0;
+      ep->link_count = 0;
       ep->sense = sense_capabilities;
 #ifdef CONFIG_DEVICE_IRQ_BYPASS
       ep->bypass_list = NULL;
@@ -401,7 +401,7 @@ void device_irq_sink_init(struct device_s *dev, struct dev_irq_ep_s *sinks, uint
     {
       struct dev_irq_ep_s *ep = sinks + i;
       ep->dev = dev;
-      ep->links_count = 0;
+      ep->link_count = 0;
       ep->sense = sense_capabilities;
 #ifdef CONFIG_DEBUG
       ep->type = DEV_IRQ_EP_SINK;
@@ -536,7 +536,7 @@ bool_t device_icu_irq_enable(struct dev_irq_ep_s *local_src, uint_fast16_t targe
                              struct dev_irq_ep_s *target_src, struct dev_irq_ep_s *dev_ep)
 {
   struct dev_irq_ep_s **array;
-  uint_fast8_t count = local_src->links_count;
+  uint_fast8_t count = local_src->link_count;
 
   switch (count)
     {
