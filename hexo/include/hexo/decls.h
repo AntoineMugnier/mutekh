@@ -113,6 +113,29 @@
   [-(char)!!__builtin_offsetof(struct struct_name, field)];
 #endif
 
+#define STRUCT_INHERIT(type_s, base_s, field)                           \
+                                                                        \
+ALWAYS_INLINE struct base_s *                                           \
+type_s##_base(struct type_s *x)                                         \
+{                                                                       \
+  return &x->field;                                                     \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE struct type_s *                                           \
+type_s##_cast(struct base_s *x)                                         \
+{                                                                       \
+  return (void*)((uint8_t*)x - __builtin_offsetof(struct type_s, field)); \
+}
+
+#define STRUCT_COMPOSE(cont_s, field)                                   \
+                                                                        \
+ALWAYS_INLINE struct cont_s *                                           \
+cont_s##_from_##field(typeof(((struct cont_s*)0)->field) *x)            \
+{                                                                       \
+  return (void*)((uint8_t*)x - __builtin_offsetof(struct cont_s, field)); \
+}
+
+
 #undef ENUM_DESCRIPTOR
 #define ENUM_DESCRIPTOR(name, ...) extern const char name[];
 
