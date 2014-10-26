@@ -129,7 +129,8 @@ static void device_irq_sink_fcn_set(struct dev_irq_ep_s *sink)
     case 0: {
       struct device_icu_s icu;
 
-      if (!device_get_accessor(&icu, sink->dev, DRIVER_CLASS_ICU, 0))
+      if (sink->dev &&
+          !device_get_accessor(&icu, sink->dev, DRIVER_CLASS_ICU, 0))
         {
           if (DEVICE_HAS_OP(&icu, disable_irq))
             DEVICE_OP(&icu, disable_irq, sink);
