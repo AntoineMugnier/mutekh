@@ -10,7 +10,7 @@ doc_headers =  device/device.h  device/driver.h device/irq.h device/resources.h 
 enum_headers = device/driver.h device/device.h device/class/mem.h \
 			   device/class/pwm.h
 
-objs = driver.o device.o resources.o init.o
+objs = driver.o device.o resources.o init.o request.o
 
 ifeq ($(CONFIG_DEVICE_IRQ), defined)
  objs += irq.o
