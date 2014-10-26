@@ -372,7 +372,7 @@ foreach my $filein (@ARGV) {
             $out .= sprintf "\"\"%s\\0", $v->{name};
             $first = 0;
         }
-        $out .=  "\\0\";\n";
+        $out .=  "\\0\"\n";
 
     }
 
