@@ -159,6 +159,15 @@ Nordic's nRF51 and nRF52 architecture support.
     (including LEDs and buttons) are left to user code.
   @end section
 
+  @section {nRF51-SmartRemote}
+    PCA20002 is daugther-board for SmartRemote.  This board only
+    contains the nRF51 chip and an I2C extender (PCA9557).  It is
+    meant to be plugged to a SmartRemote motherboard.
+
+    In PCA20002 defintion, all SmartRemote peripherals are declared as
+    well.  Not all of them are driven by MutekH yet, though.
+  @end section
+
 @end section
 
 @section {Implementation notes}
