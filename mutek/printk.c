@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <mutek/printk.h>
+#include <libc/formatter.h>
 
 static printf_output_func_t *printk_output = NULL;
 static void *printk_output_arg;

@@ -69,4 +69,8 @@ ssize_t
 formatter_dtostr(double d, char *buf, size_t maxlen,
                  size_t prec, size_t prec2, ssize_t g);
 
+void
+formatter_hexdump(void *ctx, printf_output_func_t * const fcn,
+                  uintptr_t address, const void *base, size_t size);
+
 #endif
