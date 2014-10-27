@@ -568,3 +568,36 @@ bool_t device_icu_irq_enable(struct dev_irq_ep_s *local_src, uint_fast16_t targe
   return res;
 }
 
+error_t device_icu_irq_bind(
+    struct dev_irq_ep_s *source,
+    const char *icu_name,
+    uint8_t channel,
+    uint8_t io)
+{
+    error_t err;
+    struct device_icu_s icu;
+    struct dev_irq_ep_s *sink;
+
+    err = device_get_accessor_by_path(&icu, NULL, icu_name, DRIVER_CLASS_ICU);
+    if (err) {
+        printk("Error while getting icu \"%s\": %d\n", icu_name, err);
+        return err;
+    }
+
+    sink = DEVICE_OP(&icu, get_endpoint, DEV_IRQ_EP_SINK, channel);
+
+    if (!sink) {
+        err = -ENOENT;
+        goto out;
+    }
+
+    device_irq_ep_link(source, sink);
+    DEVICE_OP(&icu, enable_irq, sink, io, source, source);
+
+    err = 0;
+
+  out:
+    device_put_accessor(&icu);
+
+    return err;
+}

@@ -136,5 +136,20 @@ config_depend(CONFIG_DEVICE_IRQ)
 bool_t device_icu_irq_enable(struct dev_irq_ep_s *local_src, uint_fast16_t target_irq_id,
                              struct dev_irq_ep_s *target_src, struct dev_irq_ep_s *dev_src);
 
+/** @This is used to bind a source endpoint to a sink in a icu device.
+
+    @param source Endpoint to bind, may be defined outside a device
+    @param icu_name Name of ICU device to lookup in device tree
+    @param channel ICU sink endpoint index
+    @param io ICU irq id to enable
+    @returns 0 on success or a negative error
+*/
+config_depend(CONFIG_DEVICE_IRQ)
+error_t device_icu_irq_bind(
+    struct dev_irq_ep_s *source,
+    const char *icu_name,
+    uint8_t channel,
+    uint8_t io);
+
 #endif
 
