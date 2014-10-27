@@ -710,31 +710,31 @@ formatter_hexdump(void *ctx, printf_output_func_t * const fcn,
     const uint8_t *data = base;
     const uint8_t *end = data + size;
 
-    for ( ; data < end; ++data, ++address ) {
+    for ( ; data < end; ++data, ++address) {
         size_t index = (uintptr_t)address % w;
         hexdump_put_char(line, index, *data, w);
 
-        if ( index == w-1 ) {
+        if (index == w - 1) {
             fcn(ctx, line, 0, line_width);
             bool_t once = 0;
 
-            while ( memcstcmp(data+1, 0, w) == 0 ) {
+            while (data + 1 + w < end && memcstcmp(data + 1, 0, w) == 0) {
                 data += w;
                 address += w;
                 once = 1;
             }
 
-            if ( once ) {
+            if (once) {
                 fcn(ctx, "***\n", 0, 4);
             }
 
-            if ( data+1 < end )
-                hexdump_new_line(line, address+1, w);
+            if (data + 1 < end)
+                hexdump_new_line(line, address + 1, w);
         }
                       
     }
 
-    if ( (uintptr_t)data & (w-1) )
+    if ((uintptr_t)data & (w - 1))
         fcn(ctx, line, 0, line_width);
 }
 
