@@ -131,7 +131,7 @@ dev_request_sched_init(struct dev_request_s *rq,
   lock_init(&status->lock);
   status->ctx = NULL;
   rq->pvdata = status;
-  kroutine_init(&rq->kr, &dev_request_spin_done, KROUTINE_IMMEDIATE);
+  kroutine_init(&rq->kr, &dev_request_sched_done, KROUTINE_IMMEDIATE);
 }
 
 inline void
