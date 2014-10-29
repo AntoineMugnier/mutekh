@@ -36,6 +36,7 @@
 #include <mutek/kroutine.h>
 
 #include <device/driver.h>
+#include <device/request.h>
 
 struct driver_s;
 struct dev_char_rq_s;
@@ -61,9 +62,7 @@ enum dev_char_rq_type_e {
 
 struct dev_char_rq_s
 {
-  /** The @ref kroutine_exec function is called on this kroutine when
-      a transfer ends. */
-  struct kroutine_s kr;
+  struct dev_request_s base;
 
   /** request type */
   enum dev_char_rq_type_e type;
@@ -72,26 +71,14 @@ struct dev_char_rq_s
   uint8_t *data;
   /** character buffer size */
   size_t size;
-  /** characters actually transferred */
-  size_t transferred;
 
   // Driver-controlled data
 
   /** error code set by driver */
   error_t error;
-
-  /** driver private data */
-  void *drvdata;
-
-  /** used by driver to enqueue requests */
-  GCT_CONTAINER_ENTRY(dev_char_queue, queue_entry);
 };
 
-GCT_CONTAINER_TYPES(dev_char_queue, struct dev_char_rq_s *, queue_entry)
-
-GCT_CONTAINER_FCNS(dev_char_queue, inline, dev_char_queue,
-                   init, destroy, isempty, pushback, pop, head, remove);
-
+STRUCT_COMPOSE(dev_char_rq_s, base);
 
 /** Char device class @ref devchar_request_t function template. */
 #define DEVCHAR_REQUEST(n)                                             \
@@ -112,48 +99,124 @@ DRIVER_CLASS_TYPES(char,
                    );
 
 
+inline ssize_t dev_char_spin_request(
+    const struct device_char_s *cdev,
+    struct dev_char_rq_s *rq)
+{
+    struct dev_request_status_s status;
+    ssize_t todo = rq->size;
+
+    dev_request_spin_init(&rq->base, &status);
+
+    DEVICE_OP(cdev, request, rq);
+
+    dev_request_spin_wait(&status);
+
+    return rq->error ? rq->error : (todo - rq->size);
+}
+
+#if defined(CONFIG_MUTEK_SCHEDULER)
+
+inline ssize_t dev_char_wait_request(
+    const struct device_char_s *cdev,
+    struct dev_char_rq_s *rq)
+{
+    struct dev_request_status_s status;
+    ssize_t todo = rq->size;
+
+    dev_request_sched_init(&rq->base, &status);
+
+    DEVICE_OP(cdev, request, rq);
+
+    dev_request_sched_wait(&status);
+
+    return rq->error ? rq->error : (todo - rq->size);
+}
+
 /** Synchronous helper read function. This function uses the scheduler
     api to put current context in wait state if no data is available
     from device yet. This function spins in a loop waiting for read
     operation to complete when scheduler is disabled.
 
-    @returns an error code.
+    @returns transferred size or a negative error code
 */
 config_depend(CONFIG_DEVICE_CHAR)
-error_t dev_char_wait_read(
-  const struct device_char_s *cdev,
-  uint8_t *data, size_t size);
+inline ssize_t dev_char_wait_read(
+    const struct device_char_s *cdev,
+    uint8_t *data, size_t size)
+{
+    struct dev_char_rq_s rq =
+    {
+        .type = DEV_CHAR_READ,
+        .data = data,
+        .size = size,
+    };
 
-/** Synchronous helper read function. This function spins in a loop
-    waiting for read operation to complete.
-
-    @returns an error code.
-*/
-config_depend(CONFIG_DEVICE_CHAR)
-error_t dev_char_spin_read(
-  const struct device_char_s *cdev,
-  uint8_t *data, size_t size);
+    return dev_char_wait_request(cdev, &rq);
+}
 
 /** Synchronous helper write function. This function uses the scheduler
     api to put current context in wait state if no data is available
     from device yet. This function spins in a loop waiting for write
     operation to complete when scheduler is disabled.
 
-    @returns an error code.
+    @returns transferred size or a negative error code
 */
 config_depend(CONFIG_DEVICE_CHAR)
-error_t dev_char_wait_write(
-  const struct device_char_s *cdev,
-  const uint8_t *data, size_t size);
+inline ssize_t dev_char_wait_write(
+    const struct device_char_s *cdev,
+    const uint8_t *data, size_t size)
+{
+    struct dev_char_rq_s rq =
+    {
+        .type = DEV_CHAR_WRITE,
+        .data = (uint8_t *)data,
+        .size = size,
+    };
+
+    return dev_char_wait_request(cdev, &rq);
+}
+
+#endif
+
+/** Synchronous helper read function. This function spins in a loop
+    waiting for read operation to complete.
+
+    @returns transferred size or a negative error code
+*/
+config_depend(CONFIG_DEVICE_CHAR)
+inline ssize_t dev_char_spin_read(
+    const struct device_char_s *cdev,
+    uint8_t *data, size_t size)
+{
+    struct dev_char_rq_s rq =
+    {
+        .type = DEV_CHAR_READ,
+        .data = data,
+        .size = size,
+    };
+
+    return dev_char_spin_request(cdev, &rq);
+}
 
 /** Synchronous helper write function. This function spins in a loop
     waiting for write operation to complete.
 
-    @returns an error code.
+    @returns transferred size or a negative error code
 */
 config_depend(CONFIG_DEVICE_CHAR)
-error_t dev_char_spin_write(
-  const struct device_char_s *cdev,
-  const uint8_t *data, size_t size);
+inline ssize_t dev_char_spin_write(
+    const struct device_char_s *cdev,
+    const uint8_t *data, size_t size)
+{
+    struct dev_char_rq_s rq =
+    {
+        .type = DEV_CHAR_WRITE,
+        .data = (uint8_t *)data,
+        .size = size,
+    };
+
+    return dev_char_spin_request(cdev, &rq);
+}
 
 #endif
