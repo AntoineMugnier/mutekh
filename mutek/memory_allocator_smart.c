@@ -82,8 +82,11 @@ static const size_t	mem_hdr_size_align = POW2_M1_CONSTANT_UP((sizeof (struct mem
 GCT_CONTAINER_TYPES(free_list, struct memory_allocator_header_s *, free_entry);
 GCT_CONTAINER_TYPES(block_list, struct memory_allocator_header_s *, block_entry);
 
-#define MEMALLOC_SPLIT_SIZE	( mem_hdr_size_align + 16 + CONFIG_MUTEK_MEMALLOC_GUARD_SIZE * 2 )
-
+#if defined(CONFIG_MUTEK_MEMALLOC_GUARD)
+# define MEMALLOC_SPLIT_SIZE	( mem_hdr_size_align + 16 + CONFIG_MUTEK_MEMALLOC_GUARD_SIZE * 2 )
+#else
+# define MEMALLOC_SPLIT_SIZE	( mem_hdr_size_align + 16 )
+#endif
 /*************************/
 
 /** memory region handler */
