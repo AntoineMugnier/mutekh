@@ -40,6 +40,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/resources.h>
+#include <device/request.h>
 #include <mutek/kroutine.h>
 
 struct device_s;
@@ -47,57 +48,49 @@ struct driver_s;
 struct device_i2c_s;
 struct driver_i2c_s;
 
-struct dev_i2c_config_s {
-  /** Device bit rate in Hz. */
-  uint32_t bit_rate;
+struct dev_i2c_config_s
+{
+    /** Device bit rate in Hz. */
+    uint32_t bit_rate;
 };
 
 #define GCT_CONTAINER_ALGO_dev_i2c_request_queue CLIST
 
 struct dev_i2c_request_s
 {
-  /** The @ref kroutine_exec function is called on this kroutine when a
-      request ends. */
-  struct kroutine_s kr;
+    struct dev_request_s base;
 
-  /** Address of the I2C slave device. */
-  uint8_t saddr;
+    /** Address of the I2C slave device. */
+    uint8_t saddr;
 
-  /** Pointer to data to write. May be @tt NULL if @tt wdata_len is 0. */
-  const uint8_t *wdata;
+    /** Pointer to data to write. May be @tt NULL if @tt wdata_len is 0. */
+    const uint8_t *wdata;
 
-  /** Number of bytes to write. May be 0 is no data is to write. */
-  size_t wdata_len;
+    /** Number of bytes to write. May be 0 is no data is to write. */
+    size_t wdata_len;
 
-  /** Pointer to data to read. May be @tt NULL if @tt rdata_len is 0. */
-  uint8_t *rdata;
+    /** Pointer to data to read. May be @tt NULL if @tt rdata_len is 0. */
+    uint8_t *rdata;
 
-  /** Number of bytes to read. May be 0 if no data is to read. */
-  size_t rdata_len;
+    /** Number of bytes to read. May be 0 if no data is to read. */
+    size_t rdata_len;
 
-  // Device controlled from here.
+    // Device controlled from here.
 
-  /** Driver's private data. */
-  void *drvdata;
+    /** Error offset in bytes from start of request:
+        @list
+        @item 0 after address
+        @item 1 after first data bytes (whether read or write)
+        @item (wdata_len + rdata_len) at last byte
+        @end{list}
+     */
+    size_t error_offset;
 
-  GCT_CONTAINER_ENTRY(dev_i2c_request_queue, queue_entry);
-
-  /** Error offset in bytes from start of request:
-      @list
-      @item 0 after address
-      @item 1 after first data bytes (whether read or write)
-      @item (wdata_len + rdata_len) at last byte
-      @end{list}
-   */
-  size_t error_offset;
-
-  /** Request completion error. */
-  error_t error;
+    /** Request completion error. */
+    error_t error;
 };
 
-GCT_CONTAINER_TYPES(dev_i2c_request_queue, struct dev_i2c_request_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_i2c_request_queue, inline, dev_i2c_request_queue,
-	           init, destroy, isempty, pushback, pop, head);
+STRUCT_COMPOSE(dev_i2c_request_s, base);
 
 /** @see devi2c_config_t */
 #define DEVI2C_CONFIG(n) error_t (n) (                            \
@@ -107,7 +100,7 @@ GCT_CONTAINER_FCNS(dev_i2c_request_queue, inline, dev_i2c_request_queue,
 /** @see devi2c_request_t */
 #define DEVI2C_REQUEST(n) void (n) (                              \
     const struct device_i2c_s *i2cdev,                            \
-    struct dev_i2c_request_s *tr)
+    struct dev_i2c_request_s *req)
 
 /** @This configures an I2C controller.
 
@@ -145,8 +138,8 @@ typedef DEVI2C_CONFIG(devi2c_config_t);
 typedef DEVI2C_REQUEST(devi2c_request_t);
 
 DRIVER_CLASS_TYPES(i2c,
-  devi2c_config_t *f_config;
-  devi2c_request_t *f_request;
+    devi2c_config_t *f_config;
+    devi2c_request_t *f_request;
 );
 
 /** @this reconfigures the i2c controller configuration.
@@ -160,6 +153,96 @@ error_t dev_i2c_config(
   const struct dev_i2c_config_s *config)
 {
   return DEVICE_OP(i2cdev, config, config);
+}
+
+
+
+
+inline ssize_t dev_i2c_spin_request(
+    const struct device_i2c_s *i2cdev,
+    struct dev_i2c_request_s *req)
+{
+    struct dev_request_status_s status;
+
+    dev_request_spin_init(&req->base, &status);
+
+    DEVICE_OP(i2cdev, request, req);
+
+    dev_request_spin_wait(&status);
+
+    return req->error;
+}
+
+
+/** @this does the same as @fn dev_i2c_wait_write_read but does not
+    use the scheduler.  @this always spins on completion.
+*/
+config_depend(CONFIG_DEVICE_I2C)
+inline ssize_t dev_i2c_spin_write_read(
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    const uint8_t *wdata,
+    size_t wsize,
+    uint8_t *rdata,
+    size_t rsize)
+{
+    struct dev_i2c_request_s req =
+    {
+        .saddr = saddr,
+        .wdata = wdata,
+        .wdata_len = wsize,
+        .rdata = rdata,
+        .rdata_len = rsize,
+    };
+
+    return dev_i2c_spin_request(i2cdev, &req);
+}
+
+/** Synchronous helper read function.
+
+    Shortcut for @tt dev_i2c_spin_write_read(i2cdev, saddr, NULL, 0, data, size).
+*/
+config_depend(CONFIG_DEVICE_I2C)
+static inline
+ssize_t dev_i2c_spin_read(
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    uint8_t *data,
+    size_t size)
+{
+    return dev_i2c_spin_write_read(i2cdev, saddr, NULL, 0, data, size);
+}
+
+/** Synchronous helper write function.
+
+    Shortcut for @tt dev_i2c_spin_write_read(i2cdev, saddr, data, size, NULL, 0).
+*/
+config_depend(CONFIG_DEVICE_I2C)
+static inline
+ssize_t dev_i2c_spin_write(
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    const uint8_t *data,
+    size_t size)
+{
+    return dev_i2c_spin_write_read(i2cdev, saddr, data, size, NULL, 0);
+}
+
+#if defined(CONFIG_MUTEK_SCHEDULER)
+
+inline ssize_t dev_i2c_wait_request(
+    const struct device_i2c_s *i2cdev,
+    struct dev_i2c_request_s *req)
+{
+      struct dev_request_status_s status;
+
+      dev_request_sched_init(&req->base, &status);
+
+      DEVICE_OP(i2cdev, request, req);
+
+      dev_request_sched_wait(&status);
+
+      return req->error;
 }
 
 /** @this does a request to/from the i2c slave device targetted by
@@ -182,25 +265,25 @@ error_t dev_i2c_config(
     @returns 0 on success or an error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
-ssize_t dev_i2c_wait_write_read(
-  const struct device_i2c_s *i2cdev,
-  uint8_t saddr,
-  const uint8_t *wdata,
-  size_t wdata_len,
-  uint8_t *rdata,
-  size_t rdata_len);
+inline ssize_t dev_i2c_wait_write_read(
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    const uint8_t *wdata,
+    size_t wsize,
+    uint8_t *rdata,
+    size_t rsize)
+{
+    struct dev_i2c_request_s req =
+    {
+        .saddr = saddr,
+        .wdata = wdata,
+        .wdata_len = wsize,
+        .rdata = rdata,
+        .rdata_len = rsize,
+    };
 
-/** @this does the same as @fn dev_i2c_wait_write_read but does not
-    use the scheduler.  @this always spins on completion.
-*/
-config_depend(CONFIG_DEVICE_I2C)
-ssize_t dev_i2c_spin_write_read(
-  const struct device_i2c_s *i2cdev,
-  uint8_t saddr,
-  const uint8_t *wdata,
-  size_t wdata_len,
-  uint8_t *rdata,
-  size_t rdata_len);
+    return dev_i2c_wait_request(i2cdev, &req);
+}
 
 /** Synchronous helper read function.
 
@@ -209,27 +292,12 @@ ssize_t dev_i2c_spin_write_read(
 config_depend(CONFIG_DEVICE_I2C)
 static inline
 ssize_t dev_i2c_wait_read(
-  const struct device_i2c_s *i2cdev,
-  uint8_t saddr,
-  uint8_t *data,
-  size_t size)
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    uint8_t *data,
+    size_t size)
 {
-  return dev_i2c_wait_write_read(i2cdev, saddr, NULL, 0, data, size);
-}
-
-/** Synchronous helper read function.
-
-    Shortcut for @tt dev_i2c_spin_write_read(i2cdev, saddr, NULL, 0, data, size).
-*/
-config_depend(CONFIG_DEVICE_I2C)
-static inline
-ssize_t dev_i2c_spin_read(
-  const struct device_i2c_s *i2cdev,
-  uint8_t saddr,
-  uint8_t *data,
-  size_t size)
-{
-  return dev_i2c_spin_write_read(i2cdev, saddr, NULL, 0, data, size);
+    return dev_i2c_wait_write_read(i2cdev, saddr, NULL, 0, data, size);
 }
 
 /** Synchronous helper write function.
@@ -239,27 +307,45 @@ ssize_t dev_i2c_spin_read(
 config_depend(CONFIG_DEVICE_I2C)
 static inline
 ssize_t dev_i2c_wait_write(
-  const struct device_i2c_s *i2cdev,
-  uint8_t saddr,
-  const uint8_t *data,
-  size_t size)
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    const uint8_t *data,
+    size_t size)
 {
-  return dev_i2c_wait_write_read(i2cdev, saddr, data, size, NULL, 0);
+    return dev_i2c_wait_write_read(i2cdev, saddr, data, size, NULL, 0);
 }
 
-/** Synchronous helper write function.
+#endif
 
-    Shortcut for @tt dev_i2c_spin_write_read(i2cdev, saddr, data, size, NULL, 0).
-*/
-config_depend(CONFIG_DEVICE_I2C)
-static inline
-ssize_t dev_i2c_spin_write(
-  const struct device_i2c_s *i2cdev,
-  uint8_t saddr,
-  const uint8_t *data,
-  size_t size)
+/* Resource stuff */
+
+ALWAYS_INLINE error_t dev_i2c_res_add_address(struct device_s *dev, uint8_t saddr)
 {
-  return dev_i2c_spin_write_read(i2cdev, saddr, data, size, NULL, 0);
+    return device_res_alloc_uint(dev, DEV_RES_I2C_ADDR, saddr, 0, NULL);
+}
+
+#define DEV_STATIC_RES_I2C_ADDRESS(addr_)      \
+  {                                             \
+    .type = DEV_RES_I2C_ADDR,                   \
+      .u = { .id = {                            \
+        .major = (addr_),                       \
+        .minor = 0,                             \
+      } }                                       \
+  }
+
+ALWAYS_INLINE error_t dev_i2c_res_get_addr(const struct device_s *dev,
+                                           uint8_t *addr,
+                                           uint_fast8_t index)
+{
+    struct dev_resource_s *r;
+
+    r = device_res_get(dev, DEV_RES_I2C_ADDR, index);
+    if (r == NULL)
+        return -ENOENT;
+
+    *addr = r->u.id.major;
+
+    return 0;
 }
 
 #endif

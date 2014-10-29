@@ -56,6 +56,7 @@ enum dev_resource_type_e
     DEV_RES_UINT_PARAM,
     DEV_RES_DEV_PARAM,
     DEV_RES_UINT_ARRAY_PARAM,
+    DEV_RES_I2C_ADDR,
 
     DEV_RES_TYPES_COUNT,              //< Number of resource types
 };
