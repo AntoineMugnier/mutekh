@@ -8,4 +8,5 @@ gpio \
 lcd \
 mem \
 spi \
-timer
+timer \
+valio

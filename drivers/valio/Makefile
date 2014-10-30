@@ -1,0 +1,1 @@
+objs-$(CONFIG_DRIVER_MTCH6102) += mtch6102.o
