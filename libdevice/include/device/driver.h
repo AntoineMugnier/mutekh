@@ -60,6 +60,7 @@ enum driver_class_e
   DRIVER_CLASS_MEM,
   DRIVER_CLASS_RFPACKET,
   DRIVER_CLASS_CPU,
+  DRIVER_CLASS_VALIO,
   /** First user defined device class id */
   DRIVER_CLASS_User_First = 128,
 };
