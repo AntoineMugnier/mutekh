@@ -246,5 +246,11 @@ void sched_affinity_clear(struct sched_context_s *sched_ctx);
 config_depend(CONFIG_MUTEK_SCHEDULER_CANDIDATE_FCN)
 void sched_context_candidate_fcn(struct sched_context_s *sched_ctx, sched_candidate_fcn_t *fcn);
 
+#define SCHED_CONTEXT_CLEANUP(n) void (n)(struct sched_context_s *ctx)
+
+typedef SCHED_CONTEXT_CLEANUP(sched_context_cleanup_fcn);
+
+void sched_context_destroy(sched_context_cleanup_fcn *cleanup);
+
 #endif
 
