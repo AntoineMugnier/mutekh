@@ -5,6 +5,4 @@ copy = ldscript
 
 subdirs = libc
 
-ifeq ($(CONFIG_DRIVER_CPU_AVR32),defined)
-objs += driver.o
-endif
+objs-$(CONFIG_DRIVER_CPU_AVR32) += driver.o

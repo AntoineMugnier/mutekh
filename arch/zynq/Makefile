@@ -1,9 +1,6 @@
 
-objs =											\
-			 arch_init.o
-ifeq ($(CONFIG_MUTEK_PRINTK),defined)
-objs += early_console.o
-endif
+objs = arch_init.o
+objs-$(CONFIG_MUTEK_PRINTK) += early_console.o
 
 meta = ldscript
 

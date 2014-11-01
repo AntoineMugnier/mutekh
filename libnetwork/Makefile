@@ -2,40 +2,16 @@
 DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
 objs += protocols.o packet.o if.o route.o dispatch.o init.o
-
-ifeq ($(CONFIG_NETWORK_FILTER), defined)
- objs += filter.o
-endif
+objs-$(CONFIG_NETWORK_FILTER) += filter.o
 
 subdirs = protocols
-
-ifeq ($(CONFIG_NETWORK_UDP), defined)
- subdirs += libudp
-endif
-
-ifeq ($(CONFIG_NETWORK_TCP), defined)
- subdirs += libtcp
-endif
-
-ifeq ($(CONFIG_NETWORK_SOCKET), defined)
- subdirs += libsocket
-endif
-
-ifeq ($(CONFIG_NETWORK_NFS), defined)
- subdirs += lwnfs
-endif
-
-ifeq ($(CONFIG_NETWORK_RARP), defined)
- subdirs += rarp
-endif
-
-ifeq ($(CONFIG_NETWORK_PING), defined)
- subdirs += ping
-endif
-
-ifeq ($(CONFIG_NETWORK_DHCLIENT), defined)
- subdirs += dhclient
-endif
+subdirs-$(CONFIG_NETWORK_UDP) += libudp
+subdirs-$(CONFIG_NETWORK_TCP) += libtcp
+subdirs-$(CONFIG_NETWORK_SOCKET) += libsocket
+subdirs-$(CONFIG_NETWORK_NFS) += lwnfs
+subdirs-$(CONFIG_NETWORK_RARP) += rarp
+subdirs-$(CONFIG_NETWORK_PING) += ping
+subdirs-$(CONFIG_NETWORK_DHCLIENT) += dhclient
 
 doc_headers = netinet/arp.h netinet/ether.h		\
 netinet/icmp.h netinet/in.h netinet/ip.h netinet/sockaddr.h			\

@@ -1,6 +1,1 @@
-
-ifeq ($(CONFIG_LIBELF_RTLD), defined)
-  objs = reloc.o
-endif
-
-
+objs-$(CONFIG_LIBELF_RTLD) = reloc.o

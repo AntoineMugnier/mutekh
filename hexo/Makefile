@@ -3,9 +3,7 @@ DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
 objs = cpu.o context.o interrupt.o init.o
 
-ifeq ($(CONFIG_HEXO_IPI), defined)
-objs += ipi.o
-endif
+objs-$(CONFIG_HEXO_IPI) += ipi.o
 
 doc_headers = hexo/asm.h hexo/atomic.h hexo/context.h hexo/cpu.h        \
         hexo/decls.h hexo/endian.h hexo/error.h hexo/interrupt.h        \

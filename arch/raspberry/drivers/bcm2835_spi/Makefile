@@ -1,4 +1,1 @@
-
-ifeq ($(CONFIG_DRIVER_SPI_BCM2835), defined)
-objs += bcm2835_spi.o
-endif
+objs-$(CONFIG_DRIVER_SPI_BCM2835) += bcm2835_spi.o

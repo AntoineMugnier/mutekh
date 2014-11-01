@@ -14,79 +14,38 @@ enum_headers = device/driver.h device/device.h device/class/mem.h \
 
 objs = driver.o device.o resources.o init.o request.o
 
-ifeq ($(CONFIG_DEVICE_IRQ), defined)
- objs += irq.o
-endif
-
-ifeq ($(CONFIG_DEVICE_TREE), defined)
- objs += enum_root.o
-endif
-
-ifeq ($(CONFIG_DEVICE_CHAR), defined)
- objs += device_char.o
-endif
+objs-$(CONFIG_DEVICE_IRQ) += irq.o
+objs-$(CONFIG_DEVICE_TREE) += enum_root.o
+objs-$(CONFIG_DEVICE_CHAR) += device_char.o
 
 ifeq ($(CONFIG_DEVICE_TIMER), defined)
 objs += device_timer.o
-ifeq ($(CONFIG_DEVICE_SHELL), defined)
-objs += shell_timer.o
-endif
+objs-$(CONFIG_DEVICE_SHELL) += shell_timer.o
 endif
 
-ifeq ($(CONFIG_DEVICE_DMA), defined)
- objs += device_dma.o
-endif
-
-ifeq ($(CONFIG_DEVICE_BLOCK), defined)
-objs += device_block.o
-endif
-
-ifeq ($(CONFIG_DEVICE_I2C), defined)
-objs += device_i2c.o
-endif
-
-ifeq ($(CONFIG_DEVICE_SPI), defined)
-objs += device_spi.o
-endif
-
-ifeq ($(CONFIG_DEVICE_LCD), defined)
-objs += device_lcd.o
-endif
-
-ifeq ($(CONFIG_DEVICE_GPIO), defined)
-objs += device_gpio.o
-endif
-
-ifeq ($(CONFIG_DEVICE_IOMUX), defined)
-objs += device_iomux.o
-endif
-
-ifeq ($(CONFIG_DEVICE_RFPACKET), defined)
-objs += device_rfpacket.o
-endif
+objs-$(CONFIG_DEVICE_DMA) += device_dma.o
+objs-$(CONFIG_DEVICE_BLOCK) += device_block.o
+objs-$(CONFIG_DEVICE_I2C) += device_i2c.o
+objs-$(CONFIG_DEVICE_SPI) += device_spi.o
+objs-$(CONFIG_DEVICE_LCD) += device_lcd.o
+objs-$(CONFIG_DEVICE_GPIO) += device_gpio.o
+objs-$(CONFIG_DEVICE_IOMUX) += device_iomux.o
+objs-$(CONFIG_DEVICE_RFPACKET) += device_rfpacket.o
 
 ifeq ($(CONFIG_DEVICE_CLOCK), defined)
 objs += device_clock.o
-ifeq ($(CONFIG_DEVICE_SHELL), defined)
-objs += shell_clock.o
-endif
+objs-$(CONFIG_DEVICE_SHELL) += shell_clock.o
 endif
 
 ifeq ($(CONFIG_DEVICE_MEM), defined)
 objs += device_mem.o
-ifeq ($(CONFIG_DEVICE_SHELL), defined)
-objs += shell_mem.o
-endif
+objs-$(CONFIG_DEVICE_SHELL) += shell_mem.o
 endif
 
-ifeq ($(CONFIG_DEVICE_SHELL), defined)
-objs += shell.o
-endif
+objs-$(CONFIG_DEVICE_SHELL) += shell.o
 
 ifeq ($(CONFIG_DEVICE_PWM), defined)
 objs += device_pwm.o
-ifeq ($(CONFIG_DEVICE_SHELL), defined)
-objs += shell_pwm.o
-endif
+objs-$(CONFIG_DEVICE_SHELL) += shell_pwm.o
 endif
 

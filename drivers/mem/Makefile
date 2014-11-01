@@ -1,5 +1,2 @@
-
-ifeq ($(CONFIG_DRIVER_MEM_RAM),defined)
-subdirs=ram
-endif
+subdirs-$(CONFIG_DRIVER_MEM_RAM) += ram
 

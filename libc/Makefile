@@ -15,21 +15,10 @@ unistd.o					\
 formatter.o
 
 
-ifeq ($(CONFIG_LIBC_TIME), defined)
-objs += time.o
-endif
-
-ifeq ($(CONFIG_LIBC_ASSERT), defined)
-objs += assert.o
-endif
-
-ifeq ($(CONFIG_LIBC_STREAM), defined)
-objs += stdio.o
-endif
-
-ifeq ($(CONFIG_LIBC_FORMATTER_FLOAT), defined)
-objs += formatter_float.o
-endif
+objs-$(CONFIG_LIBC_TIME) += time.o
+objs-$(CONFIG_LIBC_ASSERT) += assert.o
+objs-$(CONFIG_LIBC_STREAM) += stdio.o
+objs-$(CONFIG_LIBC_FORMATTER_FLOAT) += formatter_float.o
 
 doc_headers = alloca.h assert.h ctype.h errno.h fcntl.h limits.h        \
 	semaphore.h setjmp.h stdarg.h stdbool.h stddef.h stdint.h       \

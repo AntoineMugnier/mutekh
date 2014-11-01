@@ -1,13 +1,6 @@
-
 objs = arch_init.o power.o
-
-ifeq ($(CONFIG_ARCH_IBMPC_DMA), defined)
-objs += dma-8237.o
-endif
-
-ifeq ($(CONFIG_MUTEK_PRINTK), defined)
-objs += early_console.o
-endif
+objs-$(CONFIG_ARCH_IBMPC_DMA) += dma-8237.o
+objs-$(CONFIG_MUTEK_PRINTK) += early_console.o
 
 meta = ldscript
 

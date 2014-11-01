@@ -3,9 +3,7 @@ DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
 objs = main.o
 
-ifeq ($(CONFIG_SRL_SOCLIB),defined)
-objs += srl_log.o hw_init.o
-endif
+objs-$(CONFIG_SRL_SOCLIB) += srl_log.o hw_init.o
 
 ifeq ($(CONFIG_PTHREAD),defined)
 objs += posix_wait_cycles.o

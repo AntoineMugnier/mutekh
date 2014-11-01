@@ -3,17 +3,9 @@ DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
 objs = elf.o 
 
-ifeq ($(CONFIG_LIBELF_RTLD), defined)
-  objs += rtld.o user.o
-endif
-
-ifeq ($(CONFIG_LIBELF_RTLD_TLS), defined)
-  objs += tls.o
-endif
-
-ifeq ($(CONFIG_LIBELF_RTLD_KERNEL), defined)
-  objs += kernel.o
-endif
+objs-$(CONFIG_LIBELF_RTLD) += rtld.o user.o
+objs-$(CONFIG_LIBELF_RTLD_TLS) += tls.o
+objs-$(CONFIG_LIBELF_RTLD_KERNEL) += kernel.o
 
 doc_headers = libelf/elf.h \
 			  libelf/rtld.h

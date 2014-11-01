@@ -1,9 +1,7 @@
 
 DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
-ifeq ($(CONFIG_MWMR_PTHREAD),defined)
-objs += mwmr_pthread.o
-endif
+objs-$(CONFIG_MWMR_PTHREAD) += mwmr_pthread.o
 
 ifeq ($(CONFIG_MWMR_SOCLIB),defined)
 ifeq ($(CONFIG_MWMR_LOCKFREE),defined)

@@ -5,13 +5,7 @@ entry_points.o										\
 mem_init.o \
 hw_init.o
 
-ifeq ($(CONFIG_ARCH_SIMPLE_SAM7),defined)
-subdirs+=sam7
-endif
-
-ifeq ($(CONFIG_ARCH_SIMPLE_ATMEGA),defined)
-subdirs+=atmega
-endif
-
+subdirs-$(CONFIG_ARCH_SIMPLE_SAM7)+=sam7
+subdirs-$(CONFIG_ARCH_SIMPLE_ATMEGA)+=atmega
 meta = ldscript
 

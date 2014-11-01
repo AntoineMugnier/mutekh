@@ -3,9 +3,7 @@ subdirs = libc drivers
 
 ifeq ($(CONFIG_CPU_ARM_ARCH_PROFILE_A), defined)
 objs = context_switch.o cpu_context.o boot.o exception.o driver.o
-ifeq ($(CONFIG_CPU_ARM_THUMB), defined)
-objs += thumb_helpers.o
-endif
+objs-$(CONFIG_CPU_ARM_THUMB) += thumb_helpers.o
 endif
 
 ifeq ($(CONFIG_CPU_ARM_ARCH_PROFILE_M), defined)

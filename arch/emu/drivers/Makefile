@@ -1,21 +1,5 @@
-
-ifeq ($(CONFIG_DRIVER_BLOCK_EMU), defined)
-subdirs += block_file
-endif
-
-ifeq ($(CONFIG_DRIVER_CHAR_EMUTTY), defined)
-subdirs += tty
-endif
-
-ifeq ($(CONFIG_DRIVER_ICU_EMU), defined)
-subdirs += icu
-endif
-
-ifeq ($(CONFIG_DRIVER_ICU_NET_TUNTAP), defined)
-subdirs += net_tuntap
-endif
-
-ifeq ($(CONFIG_DRIVER_ICU_TIMER_EMU), defined)
-subdirs += timer
-endif
-
+subdirs-$(CONFIG_DRIVER_BLOCK_EMU) += block_file
+subdirs-$(CONFIG_DRIVER_CHAR_EMUTTY) += tty
+subdirs-$(CONFIG_DRIVER_ICU_EMU) += icu
+subdirs-$(CONFIG_DRIVER_ICU_NET_TUNTAP) += net_tuntap
+subdirs-$(CONFIG_DRIVER_ICU_TIMER_EMU) += timer

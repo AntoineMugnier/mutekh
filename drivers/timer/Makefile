@@ -1,5 +1,1 @@
-
-ifeq ($(CONFIG_DRIVER_ENST_RTTIMER), defined)
- subdirs += enst_rttimer
-endif
-
+subdirs-$(CONFIG_DRIVER_ENST_RTTIMER) += enst_rttimer

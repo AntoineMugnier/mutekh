@@ -7,7 +7,4 @@ objs = api.o list.o vertex.o init.o matrix.o texture.o \
 	   zmath.o image_util.o msghandling.o \
 	   arrays.o specbuf.o memory.o
 
-ifeq ($(CONFIG_LIBTINYGL_VGAFB), defined)
-objs += vgafb.o
-endif
-
+objs-$(CONFIG_LIBTINYGL_VGAFB) += vgafb.o
