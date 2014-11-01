@@ -249,45 +249,51 @@ pre_headers:=
 doc_headers:=
 doc_files:=
 enum_headers:=
+objs-defined:=
+meta-defined:=
+copy-defined:=
+subdirs-defined:=
+pre_headers-defined:=
+doc_headers-defined:=
+doc_files-defined:=
+enum_headers-defined:=
 
 include $$(LOCAL_SRC_DIR)/Makefile
 
-#$$( # info  OBJS=$$(objs))
-
-TARGET_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs))
-COPY_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(copy))
-META_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(meta))
-PRE_HEADER_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(pre_headers))
-ENUM_HEADER_LIST+=$$(addprefix $$(LOCAL_SRC_DIR)/include/,$$(enum_headers))
-CLEAN_FILE_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(copy) $$(meta))
+TARGET_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(objs-defined))
+COPY_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(copy) $$(copy-defined))
+META_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(meta) $$(meta-defined))
+PRE_HEADER_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(pre_headers) $$(pre_headers-defined))
+ENUM_HEADER_LIST+=$$(addprefix $$(LOCAL_SRC_DIR)/include/,$$(enum_headers) $$(enum_headers-defined))
+CLEAN_FILE_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(copy) $$(meta) $$(objs-defined) $$(copy-defined) $$(meta-defined))
 
 PRE_HEADER_LIST+=$$(filter %.h,$$(COPY_OBJECT_LIST))
 
 $$(LOCAL_OBJ_DIR):
 	mkdir -p $$@
 
-$$(eval $$(foreach obj,$$(objs),$$(call declare_obj,$$(obj),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
+$$(eval $$(foreach obj,$$(objs) $$(objs-defined),$$(call declare_obj,$$(obj),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
-$$(eval $$(foreach tocopy,$$(copy),$$(call declare_copy,$$(tocopy),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
+$$(eval $$(foreach tocopy,$$(copy) $$(copy-defined),$$(call declare_copy,$$(tocopy),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
-$$(eval $$(foreach tometa,$$(filter %.h,$$(meta)),$$(call declare_meta_h,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
+$$(eval $$(foreach tometa,$$(filter %.h,$$(meta) $$(meta-defined)),$$(call declare_meta_h,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
-$$(eval $$(foreach tometa,$$(filter-out %.h,$$(meta)),$$(call declare_meta_cpp,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
+$$(eval $$(foreach tometa,$$(filter-out %.h,$$(meta) $$(meta-defined)),$$(call declare_meta_cpp,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
-$$(eval $$(foreach ph,$$(pre_headers),$$(call declare_gct_header,$$(ph),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
+$$(eval $$(foreach ph,$$(pre_headers) $$(pre_headers-defined),$$(call declare_gct_header,$$(ph),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
 $$(eval \
-$$(foreach h,$$(doc_headers),\
+$$(foreach h,$$(doc_headers) $$(doc_headers-defined),\
 $$(call declare_doc_header,$$(h))))
 
 $$(eval \
-$$(foreach f,$$(doc_files),\
+$$(foreach f,$$(doc_files) $$(doc_files-defined),\
 $$(call declare_doc_files,$$(f),$$(LOCAL_SRC_DIR))))
 
 # Beware this must be left last in calls
 
 $$(eval \
-$$(foreach m,$$(subdirs),\
+$$(foreach m,$$(subdirs) $$(subdirs-defined),\
 $$(call scan_local_makefile,$$(LOCAL_SRC_DIR)/$$(m),$$(LOCAL_OBJ_DIR)/$$(m))))
 
 endef
