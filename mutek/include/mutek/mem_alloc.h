@@ -65,8 +65,8 @@ void mem_check()
     alignment constraint. 
     @see #CONFIG_MUTEK_MEMALLOC_ALIGN
 */
-ALWAYS_INLINE
-void *mem_alloc_align(size_t size, size_t align, enum mem_scope_e scope)
+inline void *
+mem_alloc_align(size_t size, size_t align, enum mem_scope_e scope)
 {
   if (size == 0) 
     return NULL;
@@ -105,8 +105,8 @@ void *mem_alloc(size_t size, enum mem_scope_e scope)
 }
 
 /** @This allocate a new memory block for another cpu in given scope*/
-ALWAYS_INLINE
-void *mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
+inline void *
+mem_alloc_cpu(size_t size, enum mem_scope_e scope, cpu_id_t cpu_id)
 {
   if (size == 0)
     return NULL;

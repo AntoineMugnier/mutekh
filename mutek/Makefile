@@ -6,7 +6,7 @@ doc_headers = mutek/bytecode.h mutek/console.h mutek/fileops.h  \
 
 DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
-objs += fault.o startup.o
+objs += fault.o startup.o mem_alloc.o
 
 objs-$(CONFIG_MUTEK_CONSOLE) += console.o
 objs-$(CONFIG_MUTEK_SHELL) += shell.o
