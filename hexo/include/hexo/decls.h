@@ -51,6 +51,12 @@
 #  define DEPRECATED(message)   __attribute__((deprecated))
 # endif
 
+# ifdef CONFIG_RELEASE
+#  define UNREACHABLE()  __builtin_unreachable()
+# else
+#  define UNREACHABLE()  abort();
+# endif
+
 # define ALWAYS_INLINE inline __attribute__((always_inline))
 
 # ifndef __MUTEK_ASM__ // mkdoc:skip
