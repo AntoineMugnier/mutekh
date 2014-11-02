@@ -368,7 +368,11 @@ CONTEXT_PREEMPT(sched_preempt_switch)
   struct kroutine_s *kr = kroutine_queue_head(CPU_LOCAL_ADDR(kroutine_sched_switch));
 
   if (kr != NULL)
-    next = CPU_LOCAL_ADDR(sched_idle);
+    {
+      next = CPU_LOCAL_ADDR(sched_idle);
+      if (next == cur)
+        goto end;
+    }
   else
 #endif
     next = __sched_candidate_noidle(&sched->root);
@@ -384,6 +388,7 @@ CONTEXT_PREEMPT(sched_preempt_switch)
       return ctx;
     }
 
+ end:
   sched_queue_unlock(&sched->root);
   return NULL;
 }
