@@ -1142,7 +1142,7 @@ sub check_definable
     return 1;
 }
 
-# check dependencies expressed with the `depend' and `parent' tags
+# define tokens flagged `auto' when they are referred to by `suggest' or `depend'
 sub process_config_auto
 {
     # try to recursively define tokens marked with the `auto' flag
@@ -1190,7 +1190,25 @@ sub process_config_auto
 
     return 0 if ( !check_defined( $opt ) );
     return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} );
-    return 0 if !$opt->{depend};
+
+    my $dlist = [];
+    push @$dlist, @{$opt->{depend}} if $opt->{depend};
+
+    # include suggested tokens
+    my $l = [];
+    if ( foreach_orl_list( $opt->{suggest}, sub {
+	my $s = shift;
+        if ( not $s->{condition} ) {
+            push @$l, $s->{token};
+            return 1;
+        } else {
+            return 0;
+        }
+    })) {
+        push @$dlist, $l if @$l;
+    }
+
+    return 0 if !@$dlist;
 
     # check if at least one parent is defined
     if ( $opt->{parent} && !foreach_or_list( $opt->{parent}, \&check_defined ) ) {
@@ -1198,7 +1216,7 @@ sub process_config_auto
     }
 
     # check if all dependencies tags have at least one token defined
-    foreach_and_list( $opt->{depend}, sub {
+    foreach_and_list( $dlist, sub {
 	my $or_list = shift;
 
 	return 1 if ( foreach_or_list( $or_list, \&check_defined ) );
