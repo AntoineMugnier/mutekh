@@ -33,6 +33,7 @@
 
 #include <device/driver.h>
 #include <device/class/timer.h>
+#include <device/request.h>
 
 /** @This specifies modulation type */
 enum dev_rfpacket_modulation_e
@@ -55,7 +56,7 @@ enum dev_rfpacket_preamble_e
 enum dev_rfpacket_encoding_e
 {
   DEV_RFPACKET_MANCHESTER,
-  DEV_RFPACKET_LFSR32,
+  DEV_RFPACKET_LFSR8,
 };
 
 enum dev_rfpacket_crc_e
@@ -63,6 +64,7 @@ enum dev_rfpacket_crc_e
   DEV_RFPACKET_CRC_NONE,
   DEV_RFPACKET_CRC8,
   DEV_RFPACKET_CRC16,
+  DEV_RFPACKET_CRC24,
   DEV_RFPACKET_CRC32,
 };
 
@@ -143,27 +145,16 @@ struct dev_rfpacket_statistics_s
   uint32_t                      tx_err_count;
 };
 
-#define GCT_CONTAINER_ALGO_dev_rfpacket_rx_queue CLIST
-
 /** Rf packet RX buffer */
 struct dev_rfpacket_rx_s
 {
-  struct kroutine_s                 kr;             //< Callback routine
-  GCT_CONTAINER_ENTRY(dev_rfpacket_rx_queue, queue_entry);    //< used by driver to enqueue requests
+  struct dev_request_s base;
 
   uint8_t                           *buf;           //< RX buffer, may be NULL
   uint16_t                          size;           //< Length of RX buffer, updated on packet reception
   int16_t                           rssi;           //< value of retrieved rssi in 0.125 dBm unit
   dev_timer_value_t                 timestamp;
-
-  void                              *pvdata;        //< private data for callback
-
-  void                              *drvdata;       //< driver private data
 };
-
-GCT_CONTAINER_TYPES(dev_rfpacket_rx_queue, struct dev_rfpacket_rx_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_rfpacket_rx_queue, inline, dev_rfpacket_rx_queue,
-	           init, destroy, isempty, pushback, pop, head);
 
 enum dev_rfpacket_rq_rtype_e
 {
@@ -188,12 +179,9 @@ enum dev_rfpacket_time_anchor_e
 };
 
 
-#define GCT_CONTAINER_ALGO_dev_rfpacket_rq_queue CLIST
-
 struct dev_rfpacket_rq_s
 {
-  struct kroutine_s                 kr;             //< Callback routine
-  GCT_CONTAINER_ENTRY(dev_rfpacket_rq_queue, queue_entry);    //< used by driver to enqueue requests
+  struct dev_request_s base;
 
   error_t                           err;            //< error code set by driver
   bool_t                            err_group:1;
@@ -220,15 +208,8 @@ struct dev_rfpacket_rq_s
     } cfg;
   };
 
-  void                              *pvdata;        //< private data for callback
-
   const struct device_rfpacket_s    *rfdev;         //< associated rfp device
-  void                              *drvdata;       //< driver private data
 };
-
-GCT_CONTAINER_TYPES(dev_rfpacket_rq_queue, struct dev_rfpacket_rq_s *, queue_entry);
-GCT_CONTAINER_FCNS(dev_rfpacket_rq_queue, inline, dev_rfpacket_rq_queue,
-		   init, destroy, isempty, pushback, pop, head);
 
 /** @see devrfpacket_request_t */
 #define DEVRFPACKET_REQUEST(n)	void  (n) (const struct device_rfpacket_s *rfdev, ...)
