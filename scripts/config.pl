@@ -196,7 +196,7 @@ sub args_flags
 
     foreach my $flag (@args)
     {
-	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private|maxval|minval|sumval|deprecated|experimental)$/)
+	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private|maxval|minval|sumval|single|deprecated|experimental)$/)
 	{
 	    error($location.": unknown flag `".$flag."' for `".$opts->{name}." token'");
 	    next;
@@ -1442,11 +1442,17 @@ sub tokens_set_methods
 	    # meta token getvalue method returns 'defined' if one of its provider is defined
 	    $opt->{getvalue} = sub {
 		my ( $token ) = @_;
+                my @l;
 
 		foreach my $p (@{$token->{providers}}) {
-		    return 'defined' if check_defined( $p );
+		    push @l, $p if check_defined( $p );
 		}
-		return 'undefined';
+		return 'undefined' if ( scalar @l == 0 );
+		return 'defined' if ( scalar @l == 1 );
+                if ($opt->{flags}->{single} and not $opt->{proverr}++ ) {
+                    push @{$opt->{deperror}}, "Conflict between ".get_token_name_list(\@l, " and ")." for `provide' on `$opt->{name}' token";
+                }
+                return 'defined'
 	    }
 
 	} elsif ($opt->{flags}->{value}) {
