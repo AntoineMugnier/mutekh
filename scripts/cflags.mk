@@ -35,7 +35,7 @@ LIBGCC_PATH=$(if $(LIBGCC_DIR), \
     $(shell $(CC) $(CFLAGS) $(CPUCFLAGS) -print-libgcc-file-name) )
 
 CFLAGS=	-std=gnu99 -nostdlib -fno-builtin -foptimize-sibling-calls \
-        -Wfatal-errors -Wall -Wno-main -Wno-unused-label -O$(CONFIG_COMPILE_OPTIMIZE)
+        -Wall -Wno-main -Wno-unused-label -O$(CONFIG_COMPILE_OPTIMIZE)
 DTC=dtc
 
 ifeq ($(CONFIG_OPENMP), defined)
