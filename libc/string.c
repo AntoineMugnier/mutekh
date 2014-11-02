@@ -69,7 +69,9 @@ void *memcpy( void *_dst, const void *_src, size_t size )
 {
 	reg_t *dst = _dst;
 	const reg_t *src = _src;
+# ifndef CONFIG_CPU_NONALIGNED_ACCESS
 	if ( ! ((uintptr_t)dst & reg_t_log2_m1) && ! ((uintptr_t)src & reg_t_log2_m1) )
+# endif
 		while (size >= sizeof(reg_t)) {
 			*dst++ = *src++;
 			size -= sizeof(reg_t);
@@ -128,9 +130,10 @@ inline void *
 memmove(void *dst, const void *src, size_t size)
 {
   if (dst > src)
-    return __memcpy_reverse(dst, src, size);
-  else
-    return memcpy(dst, src, size);
+    __memcpy_reverse(dst, src, size);
+  else if (dst < src)
+    memcpy(dst, src, size);
+  return dst;
 }
 
 /********************************/
