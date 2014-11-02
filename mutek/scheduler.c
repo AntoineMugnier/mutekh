@@ -176,7 +176,8 @@ void __sched_context_push(struct sched_context_s *sched_ctx)
  */
 
 # if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
-error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible)
+error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible,
+                          enum kroutine_policy_e policy)
 {
   struct scheduler_s *sched = __scheduler_get();
   error_t err = 0;
@@ -184,7 +185,7 @@ error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible)
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   sched_queue_wrlock(&sched->root);
 
-  switch (kr->policy)
+  switch (policy)
     {
 #ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
     case KROUTINE_INTERRUPTIBLE:
@@ -195,7 +196,7 @@ error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible)
     case KROUTINE_PREEMPT:
       kroutine_queue_pushback(CPU_LOCAL_ADDR(kroutine_sched_switch), kr);
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-      if (kr->policy == KROUTINE_PREEMPT || kr->policy == KROUTINE_PREEMPT_INTERRUPTIBLE)
+      if (policy == KROUTINE_PREEMPT || policy == KROUTINE_PREEMPT_INTERRUPTIBLE)
         context_set_preempt(sched_preempt_switch, NULL);
 # endif
       break;
@@ -218,6 +219,12 @@ error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible)
 }
 #endif
 
+extern inline bool_t kroutine_exec(struct kroutine_s *kr, bool_t interruptible);
+
+#ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
+extern inline bool_t kroutine_trigger(struct kroutine_s *kr, bool_t interruptible,
+                                      enum kroutine_policy_e policy);
+#endif
 
 /***********************************************************************
  *      Scheduler idle context
@@ -248,6 +255,9 @@ static void sched_context_idle()
         {
           sched_queue_unlock(&sched->root);
           cpu_interrupt_enable();
+           /* reset state after pop and before the call so that no
+              call to kroutine_exec is discarded. */
+          atomic_set(&kr->state, KROUTINE_INVALID);
           kr->exec(kr, 1);
           cpu_interrupt_disable();
 
@@ -280,6 +290,9 @@ static void sched_context_idle()
         {
           sched_queue_unlock(&sched->root);
           cpu_interrupt_enable();
+           /* reset state after pop and before the call so that no
+              call to kroutine_exec is discarded. */
+          atomic_set(&kri->state, KROUTINE_INVALID);
           kri->exec(kri, 1);
           cpu_interrupt_disable();
           sched_queue_wrlock(&sched->root);

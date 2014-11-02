@@ -70,6 +70,9 @@ typedef KROUTINE_EXEC(kroutine_exec_t);
 /** @This specify kroutine defered execution policies. */
 enum kroutine_policy_e
 {
+  KROUTINE_INVALID = 0,
+
+  /** No routine is executed. */
   KROUTINE_NONE,
 
   /** This policy makes the routine execute immediately when the @ref
@@ -204,15 +207,11 @@ struct kroutine_s
 #if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
     GCT_CONTAINER_ENTRY(kroutine_queue, queue_entry);
 #endif
-#ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
     atomic_t                    state;
-#endif
   };
   kroutine_exec_t              *exec;
   enum kroutine_policy_e       policy;
 };
-
-#define GCT_CONTAINER_ALGO_kroutine_queue CLIST
 
 #if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
 GCT_CONTAINER_TYPES       (kroutine_queue, struct kroutine_s *, queue_entry);
@@ -225,10 +224,7 @@ ALWAYS_INLINE void kroutine_set_policy(struct kroutine_s *kr,
                                        enum kroutine_policy_e policy)
 {
   kr->policy = policy;
-#ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
-  if (policy == KROUTINE_TRIGGER)
-    atomic_set(&kr->state, 0);
-#endif
+  atomic_set(&kr->state, KROUTINE_INVALID);
 }
 
 /** @This initializes a routine with the given callback and scheduling policy. */
@@ -240,86 +236,146 @@ ALWAYS_INLINE void kroutine_init(struct kroutine_s *kr,
   kroutine_set_policy(kr, policy);
 }
 
-/** @This either schedules the given routine by calling @ref
-    kroutine_schedule or executes the routine immediately if it's not
-    possible to defer its execution. This function returns @em true if
-    the routine has been executed immediately. */
-ALWAYS_INLINE bool_t kroutine_exec(struct kroutine_s *kr, bool_t interruptible)
-{
-  error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible);
-  bool_t r = 1;
+error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible,
+                          enum kroutine_policy_e policy);
 
-  switch (kr->policy)
+/** @This either schedules execution of the routine or executes the
+    routine immediately depending on the policy and value of the @tt
+    interruptible argument. This function returns @em true if the
+    routine has been executed immediately.
+
+    For policies other than @ref KROUTINE_TRIGGER, it is ok to call
+    this function multiple times before the routine is actually
+    executed. When deferred execution is used, the routine may be
+    executed only once in this case.
+*/
+inline bool_t kroutine_exec(struct kroutine_s *kr, bool_t interruptible)
+{
+  enum kroutine_policy_e policy = kr->policy;
+
+  assert(policy != KROUTINE_INVALID);
+  switch (policy)
     {
+    default:
+      UNREACHABLE();
     case KROUTINE_NONE:
       return 0;
 #ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
     case KROUTINE_TRIGGER:
-      r = !atomic_compare_and_swap(&kr->state, 0, 1);
-      if (r)
-        atomic_set(&kr->state, 0); /* reset state */
-      break;
-#endif
-#ifdef CONFIG_MUTEK_KROUTINE_IDLE
-    case KROUTINE_IDLE:
-#endif
-#ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
-    case KROUTINE_PREEMPT:
-    case KROUTINE_INTERRUPTIBLE:
-    case KROUTINE_SCHED_SWITCH:
+      if (atomic_compare_and_swap(&kr->state, KROUTINE_INVALID, KROUTINE_TRIGGER))
+        return 0;
+      policy = atomic_get(&kr->state);
+      assert(policy != KROUTINE_TRIGGER && policy != KROUTINE_NONE);
+# if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
+      if (policy != KROUTINE_IMMEDIATE)
+        goto sched;
+# endif
+      goto imm;
 #endif
 #if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
-      r = kroutine_schedule(kr, interruptible);
+# ifdef CONFIG_MUTEK_KROUTINE_IDLE
+    case KROUTINE_IDLE:
+# endif
+# ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
+    case KROUTINE_PREEMPT:
+    case KROUTINE_PREEMPT_INTERRUPTIBLE:
+    case KROUTINE_INTERRUPTIBLE:
+    case KROUTINE_SCHED_SWITCH:
+# endif
+      if (!atomic_compare_and_swap(&kr->state, KROUTINE_INVALID, !KROUTINE_INVALID))
+        return 0;
+    sched:
+      if (!kroutine_schedule(kr, interruptible, policy))
+        return 0;
 #endif
-    default:
-      break;
-    }
-  if (r)
-    kr->exec(kr, interruptible);
-  return r;
-}
-
-/** When the kroutine has been initialized using the @ref
-    KROUTINE_TRIGGER policy, this function permit execution of the
-    routine by the @ref kroutine_exec function. @This returns 0 if
-    the call to @ref kroutine_exec has not been performed yet.
-
-    When a different policy is in use, this function does nothing and
-    returns 0.
-*/
-#ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
-ALWAYS_INLINE bool_t kroutine_trigger(struct kroutine_s *kr, bool_t interruptible)
-{
-  bool_t r = kr->policy == KROUTINE_TRIGGER &&
-    !atomic_compare_and_swap(&kr->state, 0, 2);
-  if (r)
-    {
+    imm:
+      atomic_set(&kr->state, KROUTINE_INVALID); /* reset state */
+    case KROUTINE_IMMEDIATE:
       kr->exec(kr, interruptible);
-      atomic_set(&kr->state, 0); /* reset state */
+      return 1;
     }
-  return r;
 }
-#else
-config_depend(CONFIG_MUTEK_KROUTINE_TRIGGER)
-bool_t kroutine_trigger(struct kroutine_s *kr, bool_t interruptible);
+
+/** @This should be used on a kroutine initialized with the @ref
+    KROUTINE_TRIGGER policy. If it is not the case, this function does
+    nothing and returns @em false.
+
+    @This makes the next call to the @ref kroutine_exec function to
+    handle the kroutine using the @tt policy passed as argument. This
+    function return @em false if the @ref kroutine_exec function has
+    not been called yet.
+
+    If the @ref kroutine_exec function has already been called,
+    nothing happened yet and this function will take care of handling
+    the kroutine according to the values of the @tt interruptible and
+    @tt policy arguments. @em true is returned in this case. */
+config_depend_inline(CONFIG_MUTEK_KROUTINE_TRIGGER,
+bool_t kroutine_trigger(struct kroutine_s *kr, bool_t interruptible,
+                        enum kroutine_policy_e policy),
+{
+  if (kr->policy != KROUTINE_TRIGGER ||
+      atomic_compare_and_swap(&kr->state, KROUTINE_INVALID, policy))
+    return 0;
+
+  assert(atomic_get(&kr->state) == KROUTINE_TRIGGER);
+  switch (policy)
+    {
+    default:
+      UNREACHABLE();
+    case KROUTINE_NONE:
+      break;
+#if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
+# ifdef CONFIG_MUTEK_KROUTINE_IDLE
+    case KROUTINE_IDLE:
+# endif
+# ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
+    case KROUTINE_PREEMPT:
+    case KROUTINE_PREEMPT_INTERRUPTIBLE:
+    case KROUTINE_INTERRUPTIBLE:
+    case KROUTINE_SCHED_SWITCH:
+# endif
+      if (!kroutine_schedule(kr, interruptible, policy))
+        break;
 #endif
+    case KROUTINE_IMMEDIATE:
+      kr->exec(kr, interruptible);
+       /* reset state after the call so that the
+          kroutine_triggered_1st function can test the state value. */
+      atomic_set(&kr->state, KROUTINE_INVALID);
+    }
+  return 1;
+});
+
+/** @This function is similar to @ref kroutine_trigger but does
+    nothing when the @ref kroutine_exec function has already been
+    called. The routine will only be executed if the call to @ref
+    kroutine_exec if performed after the call to this function.
+
+    This can be used to leave then resume a FSM loop when an
+    asynchronous operation as not already completed. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_TRIGGER,
+bool_t kroutine_postpone(struct kroutine_s *kr, enum kroutine_policy_e policy),
+{
+  assert(policy != KROUTINE_TRIGGER && kr->policy == KROUTINE_TRIGGER);
+  bool_t r = atomic_compare_and_swap(&kr->state, KROUTINE_INVALID, policy);
+  if (!r)
+    atomic_set(&kr->state, KROUTINE_INVALID); /* reset state */
+  return r;
+});
 
 /** @This is designed to be called from within the @ref kroutine_exec_t
     handler function.
 
-    This function returns 1 if the @ref kroutine_trigger function has
-    been called before the @ref kroutine_exec function. It also returns
-    1 when the kroutine policy is not @ref KROUTINE_TRIGGER. */
-#ifdef CONFIG_MUTEK_KROUTINE_TRIGGER
-ALWAYS_INLINE bool_t kroutine_triggered_1st(struct kroutine_s *kr)
+    This function returns @em true if the @ref kroutine_trigger
+    function has been called before the @ref kroutine_exec
+    function. It also returns @em true when the kroutine policy is not
+    @ref KROUTINE_TRIGGER. */
+config_depend_alwaysinline(CONFIG_MUTEK_KROUTINE_TRIGGER,
+bool_t kroutine_triggered_1st(struct kroutine_s *kr),
 {
-  return kr->policy != KROUTINE_TRIGGER || atomic_get(&kr->state) != 1;
-}
-#else
-config_depend(CONFIG_MUTEK_KROUTINE_TRIGGER)
-bool_t kroutine_triggered_1st(struct kroutine_s *kr);
-#endif
+  return kr->policy != KROUTINE_TRIGGER ||
+    atomic_get(&kr->state) != KROUTINE_TRIGGER;
+});
 
 #endif
-
 
