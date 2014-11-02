@@ -167,57 +167,57 @@ int_fast16_t ungetc(int_fast16_t c, FILE *file);
 config_depend(CONFIG_LIBC_STREAM)
 error_t setvbuf(FILE *file, char *buf, enum stdio_buf_mode_e mode, size_t size);
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 fpos_t ftell(FILE *file),
 {
   return file->pos;
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 void rewind(FILE *file),
 {
   fseek(file, 0, SEEK_SET);
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 error_t fgetpos(FILE *file, fpos_t *pos),
 {
   *pos = file->pos;
   return 0;
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 error_t fsetpos(FILE *file, const fpos_t *pos),
 {
   return fseek(file, *pos, SEEK_SET);
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 int_fast16_t getc(FILE *file),
 {
   return fgetc(file);
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 int_fast16_t putc(int_fast16_t c, FILE *file),
 {
   return fputc(c, file);
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 void clearerr(FILE *stream),
 {
   stream->error = 0;
   stream->eof = 0;
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 bool_t ferror(FILE *stream),
 {
   return stream->error;
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM,
 bool_t feof(FILE *stream),
 {
   return stream->eof;
@@ -232,20 +232,20 @@ extern FILE * const stdout;
 config_depend(CONFIG_LIBC_STREAM_STD)
 extern FILE * const stderr;
 
-config_depend_inline(CONFIG_LIBC_STREAM_STD,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM_STD,
 int_fast16_t getchar(),
 {
   return fgetc(stdin);
 });
 
-config_depend_inline(CONFIG_LIBC_STREAM_STD,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM_STD,
 int_fast16_t putchar(int_fast16_t c),
 {
   return fputc(c, stdout);
 });
 
 /** @see printf */
-config_depend_inline(CONFIG_LIBC_STREAM_STD,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM_STD,
 ssize_t vprintf(const char *format, va_list ap),
 {
   return vfprintf(stdout, format, ap);
@@ -257,7 +257,7 @@ ssize_t vprintf(const char *format, va_list ap),
 config_depend(CONFIG_LIBC_STREAM_STD)
 ssize_t printf(const char *format, ...);
 
-config_depend_inline(CONFIG_LIBC_STREAM_STD,
+config_depend_alwaysinline(CONFIG_LIBC_STREAM_STD,
 char *gets(char *s),
 {
   return fgets(s, 1024, stdin);
