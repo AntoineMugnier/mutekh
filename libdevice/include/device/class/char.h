@@ -31,10 +31,6 @@
 #include <hexo/types.h>
 #include <hexo/error.h>
 
-#include <gct_platform.h>
-#include <gct/container_clist.h>
-#include <mutek/kroutine.h>
-
 #include <device/driver.h>
 #include <device/request.h>
 
@@ -43,7 +39,8 @@ struct dev_char_rq_s;
 struct driver_char_s;
 struct device_char_s;
 
-enum dev_char_rq_type_e {
+enum dev_char_rq_type_e
+{
     /** Copy characters from device to caller, wait for total
         completion or error */
     DEV_CHAR_READ,
@@ -57,8 +54,6 @@ enum dev_char_rq_type_e {
         blocking cause */
     DEV_CHAR_WRITE_NONBLOCK,
 };
-
-#define GCT_CONTAINER_ALGO_dev_char_queue CLIST
 
 struct dev_char_rq_s
 {
@@ -78,7 +73,7 @@ struct dev_char_rq_s
   error_t error;
 };
 
-STRUCT_COMPOSE(dev_char_rq_s, base);
+STRUCT_INHERIT(dev_char_rq_s, dev_request_s, base);
 
 /** Char device class @ref devchar_request_t function template. */
 #define DEVCHAR_REQUEST(n)                                             \
