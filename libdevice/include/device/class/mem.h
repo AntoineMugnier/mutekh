@@ -183,7 +183,7 @@ struct dev_mem_config_s;
 
 struct dev_mem_rq_s
 {
-  struct dev_request_s          rq;
+  struct dev_request_s          base;
 
   /* Requested operation */
   enum dev_mem_rq_type_e        type:8;
@@ -214,7 +214,7 @@ struct dev_mem_rq_s
   };
 };
 
-STRUCT_INHERIT(dev_mem_rq_s, dev_request_s, rq);
+STRUCT_COMPOSE(dev_mem_rq_s, base);
 
 /** Memory device info() function tempate. @see devmem_info_t */
 #define DEVMEM_INFO(n)	error_t  (n) (struct device_mem_s *mdev, \
@@ -278,7 +278,7 @@ inline error_t dev_mem_spin_op(struct device_mem_s *mdev,
                                struct dev_mem_rq_s *rq)
 {
   struct dev_request_status_s st;
-  dev_request_spin_init(&rq->rq, &st);
+  dev_request_spin_init(&rq->base, &st);
   DEVICE_OP(mdev, request, rq);
   dev_request_spin_wait(&st);
   return rq->err;
@@ -298,7 +298,7 @@ inline error_t dev_mem_wait_op(struct device_mem_s *mdev,
                                struct dev_mem_rq_s *rq)
 {
   struct dev_request_status_s st;
-  dev_request_sched_init(&rq->rq, &st);
+  dev_request_sched_init(&rq->base, &st);
   DEVICE_OP(mdev, request, rq);
   dev_request_sched_wait(&st);
   return rq->err;
