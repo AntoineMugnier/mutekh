@@ -225,7 +225,7 @@ static void soclib_block_rq_end(struct device_s *dev)
     {
       dev_request_queue_pop(&pv->queue);
       lock_release(&dev->lock);
-      kroutine_exec(&rq->rq.kr, 0);
+      kroutine_exec(&rq->base.kr, 0);
       lock_spin(&dev->lock);
       pv->running = 0;
     }

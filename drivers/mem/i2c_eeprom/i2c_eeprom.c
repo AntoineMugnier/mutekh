@@ -92,7 +92,7 @@ static void i2c_eeprom_request_run(
     if (!drq)
         return;
 
-    rq = dev_mem_rq_s_from_base(drq);
+    rq = dev_mem_rq_s_cast(drq);
 
     pv->page = 0;
     pv->sc = 0;
@@ -113,7 +113,7 @@ static KROUTINE_EXEC(i2c_eeprom_done)
     LOCK_SPIN_IRQ(&dev->lock);
 
     drq = dev_request_queue_head(&pv->queue);
-    rq = dev_mem_rq_s_from_base(drq);
+    rq = dev_mem_rq_s_cast(drq);
 
     if (pv->i2c_req.error) {
         // Write ACK polling

@@ -214,7 +214,7 @@ struct dev_mem_rq_s
   };
 };
 
-STRUCT_COMPOSE(dev_mem_rq_s, base);
+STRUCT_INHERIT(dev_mem_rq_s, dev_request_s, base);
 
 /** Memory device info() function tempate. @see devmem_info_t */
 #define DEVMEM_INFO(n)	error_t  (n) (struct device_mem_s *mdev, \

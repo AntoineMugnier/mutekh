@@ -85,7 +85,7 @@ static DEVMEM_REQUEST(ram_request)
       dev_mem_mapped_op_helper(b->addr, 1, rq);
     }
 
-  kroutine_exec(&rq->rq.kr, cpu_is_interruptible());
+  kroutine_exec(&rq->base.kr, cpu_is_interruptible());
 }
 
 static const struct driver_mem_s	ram_mem_drv =
