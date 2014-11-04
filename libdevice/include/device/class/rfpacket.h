@@ -29,7 +29,6 @@
 #include <mutek/kroutine.h>
 #include <hexo/types.h>
 #include <hexo/error.h>
-#include <hexo/gpct_platform_hexo.h>
 
 #include <device/driver.h>
 #include <device/class/timer.h>
@@ -156,6 +155,8 @@ struct dev_rfpacket_rx_s
   dev_timer_value_t                 timestamp;
 };
 
+STRUCT_INHERIT(dev_rfpacket_rx_s, dev_request_s, base);
+
 enum dev_rfpacket_rq_rtype_e
 {
   /* change the configuration of the transceiver. */
@@ -210,6 +211,8 @@ struct dev_rfpacket_rq_s
 
   const struct device_rfpacket_s    *rfdev;         //< associated rfp device
 };
+
+STRUCT_INHERIT(dev_rfpacket_rq_s, dev_request_s, base);
 
 /** @see devrfpacket_request_t */
 #define DEVRFPACKET_REQUEST(n)	void  (n) (const struct device_rfpacket_s *rfdev, ...)
