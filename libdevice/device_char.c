@@ -28,20 +28,25 @@
 #ifdef CONFIG_MUTEK_SCHEDULER
 # include <mutek/scheduler.h>
 
-ssize_t dev_char_wait_read(
+extern inline ssize_t dev_char_wait_read(
     const struct device_char_s *cdev,
     uint8_t *data, size_t size);
 
-ssize_t dev_char_wait_write(
+extern inline ssize_t dev_char_wait_write(
     const struct device_char_s *cdev,
     const uint8_t *data, size_t size);
 
 #endif
 
-inline ssize_t dev_char_spin_read(
+extern inline ssize_t dev_char_spin_read(
     const struct device_char_s *cdev,
     uint8_t *data, size_t size);
 
-inline ssize_t dev_char_spin_write(
+extern inline ssize_t dev_char_spin_write(
     const struct device_char_s *cdev,
     const uint8_t *data, size_t size);
+
+extern inline ssize_t dev_char_wait_request(
+    const struct device_char_s *cdev,
+    struct dev_char_rq_s *rq);
+
