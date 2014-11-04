@@ -118,12 +118,16 @@
 ALWAYS_INLINE struct base_s *                                           \
 type_s##_base(struct type_s *x)                                         \
 {                                                                       \
+  if (__builtin_offsetof(struct type_s, field) && x == NULL)            \
+    return NULL;                                                        \
   return &x->field;                                                     \
 }                                                                       \
                                                                         \
 ALWAYS_INLINE struct type_s *                                           \
 type_s##_cast(struct base_s *x)                                         \
 {                                                                       \
+  if (__builtin_offsetof(struct type_s, field) && x == NULL)            \
+    return NULL;                                                        \
   return (void*)((uint8_t*)x - __builtin_offsetof(struct type_s, field)); \
 }
 
@@ -132,6 +136,8 @@ type_s##_cast(struct base_s *x)                                         \
 ALWAYS_INLINE struct cont_s *                                           \
 cont_s##_from_##field(typeof(((struct cont_s*)0)->field) *x)            \
 {                                                                       \
+  if (__builtin_offsetof(struct cont_s, field) && x == NULL)            \
+    return NULL;                                                        \
   return (void*)((uint8_t*)x - __builtin_offsetof(struct cont_s, field)); \
 }
 
