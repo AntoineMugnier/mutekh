@@ -116,11 +116,11 @@ inline KROUTINE_EXEC(dev_request_sched_done)
   struct dev_request_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
   struct dev_request_status_s *status = rq->pvdata;
 
-  lock_spin(&status->lock);
+  LOCK_SPIN_IRQ(&status->lock);
   if (status->ctx != NULL)
     sched_context_start(status->ctx);
   status->done = 1;
-  lock_release(&status->lock);
+  LOCK_RELEASE_IRQ(&status->lock);
 }
 
 inline void
