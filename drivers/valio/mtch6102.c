@@ -258,7 +258,7 @@ static void mtch6102_request_run(
     pv->i2c_transfer[1].data = pv->rdata;
     pv->i2c_transfer[1].size = 4;
     pv->i2c_transfer[1].type = DEV_I2C_READ;
-    pv->i2c_req.transfer_count = 0;
+    pv->i2c_req.transfer_count = 2;
 
     pv->wdata[0] = MTCH6102_REG_TOUCHSTATE;
 
