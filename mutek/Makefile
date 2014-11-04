@@ -18,6 +18,7 @@ objs-$(CONFIG_MUTEK_PRINTK) += printk.o
 objs-$(CONFIG_MUTEK_LOGO) += mutek_logo_320x200.o
 objs-$(CONFIG_VMEM_PHYS_ALLOC) += page_alloc.o
 
+objs-$(CONFIG_MUTEK_THREAD) += thread.o
 ifeq ($(CONFIG_MUTEK_SCHEDULER), defined)
  objs += scheduler.o
  objs-$(CONFIG_MUTEK_SEMAPHORE) += semaphore.o

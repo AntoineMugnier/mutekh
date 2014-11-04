@@ -613,30 +613,3 @@ void mutek_scheduler_start()
   sched_context_idle();
 }
 
-struct sched_context_cleanup_param_s
-{
-  struct sched_context_s *ctx;
-  sched_context_cleanup_fcn *cleanup;
-};
-
-static void sched_context_cleanup(void *_param)
-{
-  struct sched_context_cleanup_param_s *param = _param;
-
-  if (param->cleanup)
-    param->cleanup(param->ctx);
-
-  /* scheduler context switch without saving */
-  sched_context_exit();
-}
-
-void sched_context_destroy(sched_context_cleanup_fcn *cleanup)
-{
-  struct sched_context_cleanup_param_s param = {
-    .ctx = sched_get_current(),
-    .cleanup = cleanup,
-  };
-
-  /* run sched_context_cleanup() on temporary context stack */
-  cpu_context_stack_use(sched_tmp_context(), sched_context_cleanup, &param);
-}
