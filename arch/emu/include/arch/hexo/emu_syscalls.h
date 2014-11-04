@@ -36,7 +36,7 @@ extern __compiler_sint_t cpu_pids[CONFIG_ARCH_EMU_CPUS];
 
 # if defined(CONFIG_CPU_X86_EMU)
 
-ALWAYS_INLINE reg_t
+inline reg_t
 emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 {
   reg_t		res;
@@ -74,7 +74,7 @@ emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 
 # elif defined (CONFIG_CPU_X86_64_EMU)
 
-ALWAYS_INLINE reg_t
+inline reg_t
 emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 {
   reg_t		res;
@@ -136,7 +136,7 @@ emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 #endif
 
 
-ALWAYS_INLINE reg_t
+inline reg_t
 emu_do_syscall(uint_fast16_t id, size_t argc, ...)
 {
   va_list	ap;

@@ -1,7 +1,8 @@
 objs =											\
 arch_init.o										\
 mem_init.o \
-power.o
+power.o \
+syscalls.o
 
 objs-$(CONFIG_ARCH_EMU_DARWIN) += darwin_before.o darwin_after.o
 objs-$(CONFIG_HEXO_IRQ) += interrupts.o
