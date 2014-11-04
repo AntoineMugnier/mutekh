@@ -54,7 +54,7 @@ DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
   DEV_STATIC_RES_ID(0, 0),
 );
 
-DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, cpu_dev_res);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, &cpu_dev_res);
 
 #if defined(CONFIG_DRIVER_STM32_USART)
 
@@ -89,7 +89,7 @@ DEV_DECLARE_STATIC(
   "uart1",
   0,
   stm32_usart_drv,
-  usart1_dev_res
+  &usart1_dev_res
 );
 
 /* USART2. */
@@ -121,7 +121,7 @@ DEV_DECLARE_STATIC(
   "uart2",
   0,
   stm32_usart_drv,
-  usart2_dev_res
+  &usart2_dev_res
 );
 
 /* USART6. */
@@ -153,7 +153,7 @@ DEV_DECLARE_STATIC(
   "uart6",
   0,
   stm32_usart_drv,
-  usart6_dev_res
+  &usart6_dev_res
 );
 
 #endif
@@ -180,7 +180,7 @@ DEV_DECLARE_STATIC(
   "i2c1",
   0,
   stm32_i2c_ctrl_drv,
-  i2c1_dev_res
+  &i2c1_dev_res
 );
 
 #endif
@@ -203,7 +203,7 @@ DEV_DECLARE_STATIC_RESOURCES(gpio_dev_res, 8,
   DEV_STATIC_RES_IRQ(6, STM32_IRQ_EXTI_15_10, 0, "/cpu"),
 );
 
-DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv, gpio_dev_res);
+DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv, &gpio_dev_res);
 
 #endif
 
@@ -223,7 +223,7 @@ DEV_DECLARE_STATIC_RESOURCES(pwm2_dev_res, 5,
   DEV_STATIC_RES_IOMUX("oc2", 0, /* PB3 */ 1*16+3, /* AF1 */ 1, 0),
 );
 
-DEV_DECLARE_STATIC(pwm2_dev, "pwm2", 0, stm32_pwm_drv, pwm2_dev_res);
+DEV_DECLARE_STATIC(pwm2_dev, "pwm2", 0, stm32_pwm_drv, &pwm2_dev_res);
 
 /* PWM on TIMER 3. */
 DEV_DECLARE_STATIC_RESOURCES(pwm3_dev_res, 5,
@@ -239,7 +239,7 @@ DEV_DECLARE_STATIC_RESOURCES(pwm3_dev_res, 5,
   DEV_STATIC_RES_IOMUX("oc2", 0, /* PA7 */ 0*16+7, /* AF2 */ 2, 0),
 );
 
-DEV_DECLARE_STATIC(pwm3_dev, "pwm3", 0, stm32_pwm_drv, pwm3_dev_res);
+DEV_DECLARE_STATIC(pwm3_dev, "pwm3", 0, stm32_pwm_drv, &pwm3_dev_res);
 
 /* PWM on TIMER 5. */
 DEV_DECLARE_STATIC_RESOURCES(pwm5_dev_res, 5,
@@ -255,7 +255,7 @@ DEV_DECLARE_STATIC_RESOURCES(pwm5_dev_res, 5,
   DEV_STATIC_RES_IOMUX("oc2", 0, /* PA1 */ 0*16+1, /* AF2 */ 2, 0),
 );
 
-DEV_DECLARE_STATIC(pwm5_dev, "pwm5", 0, stm32_pwm_drv, pwm5_dev_res);
+DEV_DECLARE_STATIC(pwm5_dev, "pwm5", 0, stm32_pwm_drv, &pwm5_dev_res);
 
 #endif
 

@@ -34,7 +34,7 @@ DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 2,
   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_CPU, 0),
 );
 
-DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, cpu_dev_res);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, &cpu_dev_res);
 
 
 #ifdef CONFIG_DRIVER_EFM32_RECMU
@@ -62,7 +62,7 @@ DEV_DECLARE_STATIC_RESOURCES(recmu_dev_res, 9,
   DEV_STATIC_RES_CLK_RTE(EFM32_CLOCK_HFXO, EFM32_CLOCK_HFCLK, 4, 1, 1),
 );
 
-DEV_DECLARE_STATIC(recmu_dev, "recmu", 0, efm32_recmu_drv, recmu_dev_res);
+DEV_DECLARE_STATIC(recmu_dev, "recmu", 0, efm32_recmu_drv, &recmu_dev_res);
 
 #endif
 
@@ -73,7 +73,7 @@ DEV_DECLARE_STATIC_RESOURCES(msc_dev_res, 1,
   DEV_STATIC_RES_MEM(0x400c0000, 0x400c0400),
 );
 
-DEV_DECLARE_STATIC(msc_dev, "mem", 0, efm32_msc_drv, msc_dev_res);
+DEV_DECLARE_STATIC(msc_dev, "mem", 0, efm32_msc_drv, &msc_dev_res);
 
 #endif
 
@@ -100,7 +100,7 @@ DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 9,
 #endif
 );
 
-DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv, usart1_dev_res);
+DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv, &usart1_dev_res);
 
 #elif defined(CONFIG_DRIVER_EFM32_USART_CHAR)
 
@@ -116,7 +116,7 @@ DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 9,
   DEV_STATIC_RES_IOMUX("tx", EFM32_LOC3, EFM32_PD7, 0, 0),
 );
 
-DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, efm32_usart_drv, usart1_dev_res);
+DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, efm32_usart_drv, &usart1_dev_res);
 
 #endif
 
@@ -134,7 +134,7 @@ DEV_DECLARE_STATIC_RESOURCES(leuart0_dev_res, 6,
   DEV_STATIC_RES_IOMUX("rx", EFM32_LOC0, EFM32_PD5, 0, 0),
 );
 
-DEV_DECLARE_STATIC(leuart0_dev, "uart0", 0, efm32_leuart_drv, leuart0_dev_res);
+DEV_DECLARE_STATIC(leuart0_dev, "uart0", 0, efm32_leuart_drv, &leuart0_dev_res);
 
 #endif
 
@@ -148,7 +148,7 @@ DEV_DECLARE_STATIC_RESOURCES(timer0_dev_res, 3,
   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_TIMER0, 0, "/cpu"),
 );
 
-DEV_DECLARE_STATIC(timer0_dev, "timer0", 0, efm32_timer_drv, timer0_dev_res);
+DEV_DECLARE_STATIC(timer0_dev, "timer0", 0, efm32_timer_drv, &timer0_dev_res);
 
 #endif
 
@@ -162,7 +162,7 @@ DEV_DECLARE_STATIC_RESOURCES(rtc_dev_res, 3,
   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_RTC, 0, "/cpu"),
 );
 
-DEV_DECLARE_STATIC(rtc_dev, "rtc", 0, efm32_rtc_drv, rtc_dev_res);
+DEV_DECLARE_STATIC(rtc_dev, "rtc", 0, efm32_rtc_drv, &rtc_dev_res);
 
 #endif
 
@@ -176,7 +176,7 @@ DEV_DECLARE_STATIC_RESOURCES(gpio_dev_res, 4,
   DEV_STATIC_RES_IRQ(1, EFM32_IRQ_GPIO_ODD, 0, "/cpu"),
 );
 
-DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, efm32_gpio_drv, gpio_dev_res);
+DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, efm32_gpio_drv, &gpio_dev_res);
 
 #endif
 

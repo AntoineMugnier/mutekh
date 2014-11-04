@@ -36,9 +36,7 @@ const char device_status_e[] = ENUM_DESC_DEVICE_STATUS_E;
 
 #ifdef CONFIG_DEVICE_TREE
 
-DEV_DECLARE_STATIC_RESOURCES(device_enum_root_res, 0);
-DEV_DECLARE_STATIC(device_enum_root, "root", 0,
-                   device_enum_root_drv, device_enum_root_res);
+DEV_DECLARE_STATIC(device_enum_root, "root", 0, device_enum_root_drv, NULL);
 
 struct device_node_s *device_tree_root()
 {

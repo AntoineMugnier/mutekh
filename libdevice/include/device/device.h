@@ -184,7 +184,7 @@ struct device_s
       .drv = &driver_,                                                  \
       .ref_count = 0,                                                   \
       .enum_dev = NULL,                                                 \
-      .res_tbl = (void*)&resources_,                                    \
+      .res_tbl = (void*)(resources_),                                   \
     }
 #else
 # define DEV_DECLARE_STATIC(declname_, name_, flags_, driver_, resources_) \
@@ -200,7 +200,7 @@ struct device_s
       .status = DEVICE_DRIVER_INIT_PENDING,                             \
       .drv = &driver_,                                                  \
       .ref_count = 0,                                                   \
-      .res_tbl = (void*)&resources_,                                    \
+      .res_tbl = (void*)(resources_),                                   \
     };
 #endif
 

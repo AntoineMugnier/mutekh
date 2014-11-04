@@ -46,13 +46,13 @@ DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
 );
 
 #if defined (CONFIG_CPU_AVR32)
-DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, avr32_drv, cpu_dev_res);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, avr32_drv, &cpu_dev_res);
 
 #elif defined (CONFIG_CPU_ARM_ARCH_PROFILE_A)
-DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_drv, cpu_dev_res);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_drv, &cpu_dev_res);
 
 #elif defined (CONFIG_CPU_ARM_ARCH_PROFILE_M)
-DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, cpu_dev_res);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, &cpu_dev_res);
 
 # error Unknown ATMEL cpu
 #endif

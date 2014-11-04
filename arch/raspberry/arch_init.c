@@ -50,7 +50,7 @@ DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
   DEV_STATIC_RES_ID(0, 0),
 );
 
-DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_drv, cpu_dev_res);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_drv, &cpu_dev_res);
 
 #ifdef CONFIG_DRIVER_ICU_BCM2835
 
@@ -59,7 +59,7 @@ DEV_DECLARE_STATIC_RESOURCES(icu_dev_res, 2,
   DEV_STATIC_RES_IRQ(0, 0, 0, "/cpu"),
 );
 
-DEV_DECLARE_STATIC(icu_dev, "icu", 0, bcm2835_icu_drv, icu_dev_res);
+DEV_DECLARE_STATIC(icu_dev, "icu", 0, bcm2835_icu_drv, &icu_dev_res);
 
 #endif
 
@@ -75,7 +75,7 @@ DEV_DECLARE_STATIC_RESOURCES(uart_dev_res, 5,
   DEV_STATIC_RES_IOMUX("tx",  0, 14,  BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
 );
 
-DEV_DECLARE_STATIC(uart_dev, "uart", 0, pl011uart_drv, uart_dev_res);
+DEV_DECLARE_STATIC(uart_dev, "uart", 0, pl011uart_drv, &uart_dev_res);
 
 #endif
 
@@ -91,7 +91,7 @@ DEV_DECLARE_STATIC_RESOURCES(systimer_dev_res, 6,
   DEV_STATIC_RES_IRQ(3, 8+3, 0, "/icu"),
 );
 
-DEV_DECLARE_STATIC(systimer_dev, "timer", 0, bcm2835_systimer_drv, systimer_dev_res);
+DEV_DECLARE_STATIC(systimer_dev, "timer", 0, bcm2835_systimer_drv, &systimer_dev_res);
 
 #endif
 
@@ -104,7 +104,7 @@ DEV_DECLARE_STATIC_RESOURCES(gpio_dev_res, 3,
   DEV_STATIC_RES_IRQ(1, 8+50, 0, "/icu"),
 );
 
-DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, bcm2835_gpio_drv, gpio_dev_res);
+DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, bcm2835_gpio_drv, &gpio_dev_res);
 
 #endif
 
@@ -127,7 +127,7 @@ DEV_DECLARE_STATIC_RESOURCES(spi_dev_res, 9,
 #endif
 );
 
-DEV_DECLARE_STATIC(spi_dev, "spi0", 0, bcm2835_spi_drv, spi_dev_res);
+DEV_DECLARE_STATIC(spi_dev, "spi0", 0, bcm2835_spi_drv, &spi_dev_res);
 
 #endif
 
@@ -143,6 +143,6 @@ DEV_DECLARE_STATIC_RESOURCES(i2c_dev_res, 6,
   DEV_STATIC_RES_IOMUX("sda", 0, 0, BCM2835_GPIO_GPFSEL_FSEL_FUNCTION0, 0),
 );
 
-DEV_DECLARE_STATIC(i2c_dev, "i2c", 0, bcm2835_i2c_drv, i2c_dev_res);
+DEV_DECLARE_STATIC(i2c_dev, "i2c", 0, bcm2835_i2c_drv, &i2c_dev_res);
 
 #endif

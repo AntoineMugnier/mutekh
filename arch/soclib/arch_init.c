@@ -111,7 +111,7 @@ DEV_DECLARE_STATIC_RESOURCES(fdt_dev_res, 1,
                       CONFIG_SOCLIB_FDT_ROM_ADDRESS + 4096 )
 );
 
-DEV_DECLARE_STATIC(fdt_dev, "fdt", 0, enum_fdt_drv, fdt_dev_res);
+DEV_DECLARE_STATIC(fdt_dev, "fdt", 0, enum_fdt_drv, &fdt_dev_res);
 
 #endif
 

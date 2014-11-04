@@ -61,7 +61,7 @@ DEV_DECLARE_STATIC_RESOURCES(ahbctrl_dev_res, 1,
                      CONFIG_GAISLER_AHB_ENUM_ADDR + 0xe00),
 );
 
-DEV_DECLARE_STATIC(ahbctrl_dev, "ahbctrl", 0, ahbctrl_drv, ahbctrl_dev_res);
+DEV_DECLARE_STATIC(ahbctrl_dev, "ahbctrl", 0, ahbctrl_drv, &ahbctrl_dev_res);
 
 #endif
 
