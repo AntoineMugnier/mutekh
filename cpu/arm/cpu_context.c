@@ -79,7 +79,7 @@ cpu_context_destroy(struct context_s *context)
 __attribute__((noreturn))
 extern void arm_context_jumpto_back();
 
-inline struct context_s *arm_except_preempt()
+static inline struct context_s *arm_except_preempt()
 {
     struct context_s *ctx = NULL;
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
