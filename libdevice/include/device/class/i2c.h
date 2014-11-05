@@ -26,6 +26,123 @@
    @file
    @module{Devices support library}
    @short I2c bus driver API
+
+   @section {Description}
+
+   I2C controller class abstracts access to an I2C bus.
+
+   I2C bus only has one configuration parameter: bus speed.  Bus speed
+   is shared for the whole bus as all devices need to be able to
+   decode their own addresses and monitor Start and Stop conditions.
+
+   I2C requests are atomic, they may not be interleaved.  There is one
+   request queue by device, all requests are handled in order.  A
+   request starts with a Start condition, ends with a Stop condition.
+   A request may imply Restart conditions if needed.
+
+   A request structure contains the following information:
+   @list
+   @item Slave address,
+   @item An array of transfers and its count of entries. Each transfer
+     defines:
+     @list
+     @item Way of transfer (Read or Write),
+     @item Some data buffer to exchange (written to or read from),
+     @item Size of said buffer.
+     @end list
+   @end list
+
+   Consecutive transfers in a request are concatenated if they operate
+   the same way, or a restart is issued in-between if they are in
+   different ways.
+
+   @end section
+
+   @section {Example}
+
+   The following code creates a request to read first 128 bytes of an
+   I2C eeprom at address 0x50:
+
+   @code
+   struct device_i2c_s i2c_dev;
+
+   // Lookup accessor for i2c_dev here...
+
+   uint8_t addr[2] = {0, 0};
+   uint8_t data[128];
+   struct dev_i2c_transfer_s transfer[2] =
+   {
+       {
+           .type = DEV_I2C_WRITE,
+           .data = addr,
+           .size = sizeof(addr),
+       },
+       {
+           .type = DEV_I2C_READ,
+           .data = data,
+           .size = sizeof(data),
+       },
+   };
+   struct dev_i2c_req_s rq =
+   {
+       .saddr = 0x50,
+       .transfer = transfer,
+       .transfer_count = 2,
+   };
+
+   kroutine_init(&rq.base.kr, my_callback, KROUTINE_IMMEDIATE);
+
+   DEVICE_OP(&i2c_dev, request, &rq);
+   @end code
+
+   This will create the following transaction on the bus:
+   @list
+   @item Start condition
+   @item Slave selection, address 0x50, Write
+   @item Write byte (twice)
+   @item Restart condition
+   @item Slave selection, address 0x50, Read
+   @item Read byte (128 times)
+   @item Stop condition
+   @end list
+
+   @end section
+
+   @section {Error handling}
+
+   When kroutine is called back after a transaction completion, @tt
+   error field of the request contains the completion status.  Normal
+   operation completion has @tt error field set to @tt 0.
+
+   Usual I2C error conditions are NACK after some byte.  They may
+   occur on any byte of the transaction, including address selection
+   bytes.  In case this happens, @tt error field may take one of the
+   following values:
+
+   @list
+   @item @tt -EIO: NACK occurred after a data byte,
+   @item @tt -EHOSTUNREACH: NACK occurred after a slave selection byte.
+   @end list
+
+   Then, @tt error_transfer field of the request corresponds to the
+   failed transfer, @tt error_offset contains the actually transferred
+   data bytes before NACK. @tt error_offset counts from the start of
+   transfer (not request).
+
+   If caller needs to retry a request, it may resubmit again the same
+   request structure without modification from the kroutine.
+
+   Other error conditions include the following values:
+
+   @list
+   @item @tt -ENOTSUP: Enqueued request is not supported by device
+   (most probably because of some hardware-dependant limitations),
+   @item @tt -ETIMEDOUT: Slave did some clock-stretching and bus
+   controlled issued a timeout condition.  Timeout value is
+   driver-dependant.
+   @end list
+
+   @end section
 */
 
 #ifndef __DEVICE_I2C_H__
@@ -48,24 +165,42 @@ struct driver_s;
 struct device_i2c_s;
 struct driver_i2c_s;
 
+/** @this is an I2C controller master configuration structure */
 struct dev_i2c_config_s
 {
     /** Device bit rate in Hz. */
     uint32_t bit_rate;
 };
 
+/** Way of an I2C elementary transfer */
 enum dev_i2c_way_e
 {
+    /** From slave to master */
     DEV_I2C_READ,
+    /** From master to slave */
     DEV_I2C_WRITE,
 };
 
+/** @this is an elementary transfer in an I2C request */
 struct dev_i2c_transfer_s {
+    /** Data buffer to transfer (either read or write) */
     uint8_t *data;
+    /** Size of @tt data buffer */
     uint16_t size;
+    /** Way of transfer */
     enum dev_i2c_way_e type:1;
 };
 
+/**
+   @this is an I2C Request structure.
+
+   Caller must initialize @tt base, @tt saddr, @tt transfer and @tt
+   transfer_count fields.  Driver may not modify them.
+
+   Driver fills @tt error, @tt error_transfer and @tt error_offset
+   before calling the kroutine. @tt error_transfer and @tt
+   error_offset fields have no meaning if @tt error is @tt 0.
+ */
 struct dev_i2c_request_s
 {
     struct dev_request_s base;
@@ -81,10 +216,10 @@ struct dev_i2c_request_s
 
     // Device controlled from here.
 
-    /** Request completion error.
+    /** Request completion error:
         @list
-        @item -EHOSTUNREACH Got a NACK after slave address
-        @item -EIO Got a NACK after some data byte
+        @item -EHOSTUNREACH Got a NACK after slave address,
+        @item -EIO Got a NACK after some data byte.
         @end list
      */
     error_t error;
@@ -100,7 +235,7 @@ struct dev_i2c_request_s
     uint16_t error_offset;
 };
 
-STRUCT_COMPOSE(dev_i2c_request_s, base);
+STRUCT_INHERIT(dev_i2c_request_s, dev_request_s, base);
 
 /** @see devi2c_config_t */
 #define DEVI2C_CONFIG(n) error_t (n) (                            \
@@ -127,7 +262,7 @@ typedef DEVI2C_CONFIG(devi2c_config_t);
     @item address selection,
     @item an optional written buffer,
     @item an optional read buffer.
-    @end{list}
+    @end list
 
     Buffers must be initialized and their corresponding data length
     must be set accordingly.
@@ -157,7 +292,7 @@ DRIVER_CLASS_TYPES(i2c,
     @param config Configuration structure.
     @returns 0 or -ENOTSUP if unsupported configuration.
  */
-static inline
+inline
 error_t dev_i2c_config(
   struct device_i2c_s *i2cdev,
   const struct dev_i2c_config_s *config)
@@ -192,8 +327,22 @@ inline ssize_t dev_i2c_spin_request(
 }
 
 
-/** @this does the same as @fn dev_i2c_wait_write_read but does not
-    use the scheduler.  @this always spins on completion.
+/** @this does a request to/from the i2c slave device targetted by
+    @tt saddr.  Sequence is:
+    @list
+    @item Start condition, saddr + W
+    @item Write of @tt wdata for @tt wdata_len bytes
+    @item Restart condition, saddr + R
+    @item Read of @tt rdata for @tt rdata_len bytes
+    @item Stop condition
+    @end list
+
+    Both read and write buffers are mandatory.
+
+    @this is a synchronous helper write/read function. @this makes the
+    calling context spin while operation completes.
+
+    @returns 0 on success or an error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
 inline ssize_t dev_i2c_spin_write_read(
@@ -225,7 +374,7 @@ inline ssize_t dev_i2c_spin_write_read(
     Shortcut for @tt dev_i2c_spin_request(i2cdev, saddr, NULL, 0, data, size).
 */
 config_depend(CONFIG_DEVICE_I2C)
-static inline
+inline
 ssize_t dev_i2c_spin_read(
     const struct device_i2c_s *i2cdev,
     uint8_t saddr,
@@ -248,7 +397,7 @@ ssize_t dev_i2c_spin_read(
     Shortcut for @tt dev_i2c_spin_request(i2cdev, saddr, data, size, NULL, 0).
 */
 config_depend(CONFIG_DEVICE_I2C)
-static inline
+inline
 ssize_t dev_i2c_spin_write(
     const struct device_i2c_s *i2cdev,
     uint8_t saddr,
@@ -299,7 +448,7 @@ inline ssize_t dev_i2c_wait_request(
     @item Restart condition, saddr + R
     @item Read of @tt rdata for @tt rdata_len bytes
     @item Stop condition
-    @end{list}
+    @end list
 
     Both read and write buffers are mandatory.
 
@@ -339,7 +488,7 @@ inline ssize_t dev_i2c_wait_write_read(
     @item Start condition, saddr + R
     @item Read of @tt data for @tt size bytes
     @item Stop condition
-    @end{list}
+    @end list
 
     @this is a synchronous helper write/read function. @this makes the
     calling context wait while operation completes.
@@ -347,7 +496,7 @@ inline ssize_t dev_i2c_wait_write_read(
     @returns 0 on success or an error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
-static inline
+inline
 ssize_t dev_i2c_wait_read(
     const struct device_i2c_s *i2cdev,
     uint8_t saddr,
@@ -371,7 +520,7 @@ ssize_t dev_i2c_wait_read(
     @item Start condition, saddr + W
     @item Write of @tt data for @tt size bytes
     @item Stop condition
-    @end{list}
+    @end list
 
     @this is a synchronous helper write/read function. @this makes the
     calling context wait while operation completes.
@@ -379,7 +528,7 @@ ssize_t dev_i2c_wait_read(
     @returns 0 on success or an error code.
 */
 config_depend(CONFIG_DEVICE_I2C)
-static inline
+inline
 ssize_t dev_i2c_wait_write(
     const struct device_i2c_s *i2cdev,
     uint8_t saddr,

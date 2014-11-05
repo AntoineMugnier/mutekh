@@ -39,14 +39,71 @@ GCT_CONTAINER_PROTOTYPES(dev_i2c_ctrl_queue, extern inline, dev_i2c_ctrl_queue,
                    init, destroy, pop, remove, push, push_back, isempty);
 #endif
 
-/* structure that is used for blocking calls. */
-struct dev_i2c_helper_rq_s
-{
-  struct dev_i2c_request_s request;
-  bool_t done;
+extern inline
+error_t dev_i2c_config(
+  struct device_i2c_s *i2cdev,
+  const struct dev_i2c_config_s *config);
+
+extern inline
+ssize_t dev_i2c_spin_request(
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    struct dev_i2c_transfer_s *tr,
+    uint8_t tr_count);
+
+extern inline
+ssize_t dev_i2c_spin_write_read(
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    const uint8_t *wdata,
+    size_t wsize,
+    uint8_t *rdata,
+    size_t rsize);
+
+extern inline
+ssize_t dev_i2c_spin_read(
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    uint8_t *data,
+    size_t size);
+
+extern inline
+ssize_t dev_i2c_spin_write(
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    const uint8_t *data,
+    size_t size);
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
-  lock_t lock;
-  struct sched_context_s *ctx;
+
+extern inline
+ssize_t dev_i2c_wait_request(
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    struct dev_i2c_transfer_s *tr,
+    uint8_t tr_count);
+
+extern inline
+ssize_t dev_i2c_wait_write_read(
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    const uint8_t *wdata,
+    size_t wsize,
+    uint8_t *rdata,
+    size_t rsize);
+
+extern inline
+ssize_t dev_i2c_wait_read(
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    uint8_t *data,
+    size_t size);
+
+extern inline
+ssize_t dev_i2c_wait_write(
+    const struct device_i2c_s *i2cdev,
+    uint8_t saddr,
+    const uint8_t *data,
+    size_t size);
+
 #endif
-};
