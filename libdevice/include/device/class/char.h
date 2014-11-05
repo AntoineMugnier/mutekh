@@ -20,9 +20,80 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short Character device driver API
+   @file
+   @module{Devices support library}
+   @short Character device driver API
+
+   @section {Description}
+
+   Character device class abstracts access to a byte-stream oriented
+   device.
+
+   Two main types of requests are available on this driver: Read and
+   Write.
+
+   Each request targets a data buffer and a direction for transfer,
+   either @tt DEV_CHAR_READ or @tt DEV_CHAR_WRITE.
+
+   A variant of read and write operations permits to return from
+   request with as-much data as possible, but without more waiting
+   than necessary if no new data is available from hardware.  These
+   are @tt DEV_CHAR_READ_PARTIAL or @tt DEV_CHAR_WRITE_PARTIAL.  This
+   is not a non-blocking transfer.  Request may block, but as soon as
+   it is considered and as soon as at least one byte has been
+   transferred, it may return.
+
+   @end section
+
+   @section {Example}
+
+   The following code reads 32 characters from a device, but accepts
+   to get less if less data is available from the underlying hardware:
+
+   @code
+   struct device_char_s char_dev;
+
+   // Lookup accessor for char_dev here...
+
+   uint8_t data[32];
+   struct dev_char_rq_s rq =
+   {
+       .type = DEV_CHAR_READ_PARTIAL,
+       .data = data,
+       .size = sizeof(data),
+   };
+
+   kroutine_init(&rq.base.kr, my_callback, KROUTINE_IMMEDIATE);
+
+   DEVICE_OP(&char_dev, request, &rq);
+   @end code
+
+   @end section
+
+   @section {Error handling}
+
+   When kroutine is called back after a request completion, @tt error
+   field of the request contains the completion status.  Normal
+   operation completion has @tt error field set to @tt 0.
+
+   For a partial read or write, completion without the whole buffer
+   tranferred is a normal completion.
+
+   If underlying hardware gets an error condition, @tt error is set to
+   -EIO.
+
+   @end section
+
+   @section {Request Completion Information}
+
+   Driver updates @tt data and @tt size fields of the request in order
+   to indicate what is left to transfer.
+
+   In kroutine called after a partial transfer, caller may resubmit
+   the same request untouched from the kroutine to request for more
+   data.
+
+   @end section
  */                                                                 
 
 #ifndef __DEVICE_CHAR_H__
@@ -43,6 +114,7 @@ struct dev_char_rq_s;
 struct driver_char_s;
 struct device_char_s;
 
+/** @this defines possible request types */
 enum dev_char_rq_type_e {
     /** Copy characters from device to caller, wait for total
         completion or error */
@@ -51,14 +123,12 @@ enum dev_char_rq_type_e {
         completion or error */
     DEV_CHAR_WRITE,
     /** Copy characters from device to caller, finish on first
-        blocking cause */
-    DEV_CHAR_READ_NONBLOCK,
+        blocking cause after some byte transfer */
+    DEV_CHAR_READ_PARTIAL,
     /** Copy characters from caller to device, finish on first
-        blocking cause */
-    DEV_CHAR_WRITE_NONBLOCK,
+        blocking cause after some byte transfer */
+    DEV_CHAR_WRITE_PARTIAL,
 };
-
-#define GCT_CONTAINER_ALGO_dev_char_queue CLIST
 
 struct dev_char_rq_s
 {
@@ -67,12 +137,11 @@ struct dev_char_rq_s
   /** request type */
   enum dev_char_rq_type_e type;
 
-  /** character buffer */
+  /** character buffer, updated by the driver to point to the next
+      unprocessed character. */
   uint8_t *data;
-  /** character buffer size */
+  /** character buffer size, updated by the driver. */
   size_t size;
-
-  // Driver-controlled data
 
   /** error code set by driver */
   error_t error;
@@ -90,7 +159,7 @@ STRUCT_COMPOSE(dev_char_rq_s, base);
    Char device class request() function type. Enqueue a read or write request.
 
    @param dev pointer to device descriptor
-   @param rq pointer to request. data, size and callback, field must be intialized.
+   @param rq pointer to request.
 */
 typedef DEVCHAR_REQUEST(devchar_request_t);
 
