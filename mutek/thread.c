@@ -42,7 +42,9 @@ static CONTEXT_ENTRY(thread_entry)
 {
   struct thread_s *th = param;
 
+  cpu_interrupt_enable();
   th->entry(th->arg);
+  cpu_interrupt_disable();
 
   cpu_context_stack_use(sched_tmp_context(),
                         thread_cleanup, th);
