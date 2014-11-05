@@ -56,7 +56,7 @@ struct		fb_pal_s
 
 
 /** Fb device class graphic mode setup function tempate. */
-#define DEVFB_SETMODE(n)	error_t  (n) (struct device_s *dev, uint_fast16_t xres, uint_fast16_t yres, \
+#define DEV_FB_SETMODE(n)	error_t  (n) (struct device_s *dev, uint_fast16_t xres, uint_fast16_t yres, \
 					      uint_fast8_t bpp, uint_fast8_t packing)
 
 /**
@@ -70,12 +70,12 @@ struct		fb_pal_s
     @param packing pixel color information packing
     @return error code
 */
-typedef DEVFB_SETMODE(devfb_setmode_t);
+typedef DEV_FB_SETMODE(dev_fb_setmode_t);
 
 
 
 /** Fb device class getbuffer() function tempate. */
-#define DEVFB_GETBUFFER(n)	uintptr_t  (n) (struct device_s *dev, uint_fast8_t page)
+#define DEV_FB_GETBUFFER(n)	uintptr_t  (n) (struct device_s *dev, uint_fast8_t page)
 
 /**
     Fb device class getbuffer() function type.
@@ -85,12 +85,12 @@ typedef DEVFB_SETMODE(devfb_setmode_t);
     @param page page index for multiple pages frame buffers
     @return frame buffer address
 */
-typedef DEVFB_GETBUFFER(devfb_getbuffer_t);
+typedef DEV_FB_GETBUFFER(dev_fb_getbuffer_t);
 
 
 
 /** Fb device class flippage() function tempate. */
-#define DEVFB_FLIPPAGE(n)	error_t  (n) (struct device_s *dev, uint_fast8_t page)
+#define DEV_FB_FLIPPAGE(n)	error_t  (n) (struct device_s *dev, uint_fast8_t page)
 
 /**
     Fb device class flippage() function type.
@@ -100,12 +100,12 @@ typedef DEVFB_GETBUFFER(devfb_getbuffer_t);
     @param page page index
     @return error code
 */
-typedef DEVFB_FLIPPAGE(devfb_flippage_t);
+typedef DEV_FB_FLIPPAGE(dev_fb_flippage_t);
 
 
 
 /** Fb device class setpalette() function tempate. */
-#define DEVFB_SETPALETTE(n)	void  (n) (struct device_s *dev, struct fb_pal_s *pal, size_t count)
+#define DEV_FB_SETPALETTE(n)	void  (n) (struct device_s *dev, struct fb_pal_s *pal, size_t count)
 
 /**
     Fb device class setpalette() function type.
@@ -116,17 +116,17 @@ typedef DEVFB_FLIPPAGE(devfb_flippage_t);
     @param count number of element in palette
     @return error code
 */
-typedef DEVFB_SETPALETTE(devfb_setpalette_t);
+typedef DEV_FB_SETPALETTE(dev_fb_setpalette_t);
 
 
 /** Fb device class methodes */
 struct driver_fb_s
 {
   enum driver_class_e cl;
-  devfb_setmode_t	*f_setmode;
-  devfb_getbuffer_t	*f_getbuffer;
-  devfb_flippage_t	*f_flippage;
-  devfb_setpalette_t	*f_setpalette;
+  dev_fb_setmode_t	*f_setmode;
+  dev_fb_getbuffer_t	*f_getbuffer;
+  dev_fb_flippage_t	*f_flippage;
+  dev_fb_setpalette_t	*f_setpalette;
 };
 
 

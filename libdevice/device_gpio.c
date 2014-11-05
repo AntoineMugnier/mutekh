@@ -31,7 +31,7 @@ const uint8_t dev_gpio_mask1[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x
 __attribute__((aligned(8)))
 const uint8_t dev_gpio_mask0[8] = { };
 
-error_t device_gpio_map_set_mode(struct device_gpio_s *gpdev,
+error_t device_gpio_map_set_mode(struct device_gpio_s *accessor,
                                  const gpio_id_t *map, const gpio_width_t *wmap,
                                  uint_fast8_t count, /* enum dev_pin_driving_e */ ...)
 {
@@ -47,7 +47,7 @@ error_t device_gpio_map_set_mode(struct device_gpio_s *gpdev,
       enum dev_pin_driving_e mode = va_arg(ap, __compiler_sint_t);
 
       if (id != GPIO_INVALID_ID)
-        if (DEVICE_OP(gpdev, set_mode, id, id + wmap[i] - 1, dev_gpio_mask1, mode))
+        if (DEVICE_OP(accessor, set_mode, id, id + wmap[i] - 1, dev_gpio_mask1, mode))
           {
             err = -EINVAL;
             break;
@@ -91,7 +91,7 @@ error_t device_res_gpio_map(struct device_s *dev, const char *pin_list,
   return 0;
 }
 
-DEVGPIO_REQUEST(devgpio_request_async_to_sync)
+DEV_GPIO_REQUEST(dev_gpio_request_async_to_sync)
 {
   switch (req->type) {
   case DEV_GPIO_MODE:

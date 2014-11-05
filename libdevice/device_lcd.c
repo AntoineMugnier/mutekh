@@ -41,7 +41,7 @@ struct dev_lcd_wait_rq_s
   bool_t done;
 };
 
-static DEVLCD_CALLBACK(dev_lcd_handle_request_cb)
+static DEV_LCD_CALLBACK(dev_lcd_handle_request_cb)
 {
 	struct dev_lcd_wait_rq_s *status = context;
 

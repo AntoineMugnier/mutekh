@@ -41,7 +41,7 @@ struct i2c_eeprom_priv_s
     uint8_t addr_size;
     uint32_t size;
     uint32_t page_size_l2;
-    struct dev_i2c_request_s i2c_req;
+    struct dev_i2c_rq_s i2c_req;
     struct dev_i2c_transfer_s i2c_transfer[2];
     dev_request_queue_root_t queue;
 
@@ -51,12 +51,12 @@ struct i2c_eeprom_priv_s
     bool_t last_was_write;
 };
 
-static DEVMEM_INFO(i2c_eeprom_info)
+static DEV_MEM_INFO(i2c_eeprom_info)
 {
-    struct device_s *dev = mdev->dev;
+    struct device_s *dev = accessor->dev;
     struct i2c_eeprom_priv_s *pv = dev->drv_pv;
 
-    if (mdev->number > 0)
+    if (accessor->number > 0)
         return -ENOENT;
 
     if (band_index > 0)
@@ -236,9 +236,9 @@ static void i2c_rq_run(
     DEVICE_OP(&pv->bus, request, &pv->i2c_req);
 }
 
-static DEVMEM_REQUEST(i2c_eeprom_request)
+static DEV_MEM_REQUEST(i2c_eeprom_request)
 {
-    struct device_s *dev = mdev->dev;
+    struct device_s *dev = accessor->dev;
     struct i2c_eeprom_priv_s *pv = dev->drv_pv;
 
     LOCK_SPIN_IRQ(&dev->lock);

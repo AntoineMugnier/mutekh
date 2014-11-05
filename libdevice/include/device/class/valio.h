@@ -22,10 +22,8 @@
    @file
    @module{Devices support library}
    @short Value IO class
-*/
 
-/**
-   Conceptual
+   @section{Conceptual}
 
    Value IO class abstracts access to a set of values of
    non-normalized format and encoding.
@@ -34,7 +32,7 @@
    @list
    @item a static identifier,
    @item a fixed size.
-   @end{list}
+   @end list
 
    User may request reading, writing, or wait for update on any
    relevant attribute value.
@@ -45,6 +43,30 @@
    libray may define identifiers, data encoding, and allowed subset of
    access methods for each attribute.  This is out of the scope of
    this class.
+
+   @end section
+
+   @section{Goals, non-goals}
+
+   Goal of this class is to provide a driver framework for all devices
+   where there is no standard class.  This is mostly useful for
+   sensors that retrieve application-specific data.
+
+   As this class is bi-directionnal, setting attribute values may be
+   used to control actuators, or even set parameters for other
+   attributes.
+
+   Non-goal of the class is to provide a totally generic framework
+   able to replace need for all other classes.  This class is not an
+   abstraction of the class abstraction.  We may not try to fit
+   everything in this class, even if it may sound cool.  In
+   particular, streaming data sources (like ADC and sound devices) are
+   not expected to use this class.
+
+   Having just a data pointer with an implied size enforces this
+   non-goal.
+
+   @end section
  */
 
 #ifndef __DEVICE_VALIO_H__
@@ -75,7 +97,7 @@ enum dev_valio_request_type_e {
 /**
    @this defines a request on an attribute.
  */
-struct dev_valio_request_s
+struct dev_valio_rq_s
 {
     struct dev_request_s base;
 
@@ -93,31 +115,31 @@ struct dev_valio_request_s
     error_t error;
 };
 
-STRUCT_COMPOSE(dev_valio_request_s, base);
+STRUCT_COMPOSE(dev_valio_rq_s, base);
 
-/** @see devvalio_request_t */
-#define DEVVALIO_REQUEST(n) void (n) (                             \
-    const struct device_valio_s *vdev,                           \
-    struct dev_valio_request_s *req)
+/** @see dev_valio_request_t */
+#define DEV_VALIO_REQUEST(n) void (n) (                             \
+    const struct device_valio_s *accessor,                           \
+    struct dev_valio_rq_s *req)
 
 /** @This enqueues an attribute query.
 */
-typedef DEVVALIO_REQUEST(devvalio_request_t);
+typedef DEV_VALIO_REQUEST(dev_valio_request_t);
 
 DRIVER_CLASS_TYPES(valio,
-    devvalio_request_t *f_request;
+    dev_valio_request_t *f_request;
 );
 
 
 inline error_t dev_valio_spin_request(
-    const struct device_valio_s *vdev,
-    struct dev_valio_request_s *req)
+    const struct device_valio_s *accessor,
+    struct dev_valio_rq_s *req)
 {
     struct dev_request_status_s status;
 
     dev_request_spin_init(&req->base, &status);
 
-    DEVICE_OP(vdev, request, req);
+    DEVICE_OP(accessor, request, req);
 
     dev_request_spin_wait(&status);
 
@@ -125,74 +147,74 @@ inline error_t dev_valio_spin_request(
 }
 
 
-/** @this does the same as @fn dev_valio_wait_read but does not
+/** @this does the same as @tt dev_valio_wait_read but does not
     use the scheduler.  @this always spins on completion.
 */
 config_depend(CONFIG_DEVICE_VALIO)
 inline error_t dev_valio_spin_read(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     uint16_t attribute,
     void *data)
 {
-    struct dev_valio_request_s req =
+    struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_READ,
         .attribute = attribute,
         .data = data,
     };
 
-    return dev_valio_spin_request(vdev, &req);
+    return dev_valio_spin_request(accessor, &req);
 }
 
-/** @this does the same as @fn dev_valio_wait_write but does not
+/** @this does the same as @tt dev_valio_wait_write but does not
     use the scheduler.  @this always spins on completion.
 */
 config_depend(CONFIG_DEVICE_VALIO)
 inline error_t dev_valio_spin_write(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     uint16_t attribute,
     const void *data)
 {
-    struct dev_valio_request_s req =
+    struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_WRITE,
         .attribute = attribute,
         .data = (void*)data,
     };
 
-    return dev_valio_spin_request(vdev, &req);
+    return dev_valio_spin_request(accessor, &req);
 }
 
-/** @this does the same as @fn dev_valio_wait_update but does not use
+/** @this does the same as @tt dev_valio_wait_update but does not use
     the scheduler.  @this always spins on completion.
 */
 config_depend(CONFIG_DEVICE_VALIO)
 inline error_t dev_valio_spin_update(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     uint16_t attribute,
     void *data)
 {
-    struct dev_valio_request_s req =
+    struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_WAIT_UPDATE,
         .attribute = attribute,
         .data = data,
     };
 
-    return dev_valio_spin_request(vdev, &req);
+    return dev_valio_spin_request(accessor, &req);
 }
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
 
 inline error_t dev_valio_wait_request(
-    const struct device_valio_s *vdev,
-    struct dev_valio_request_s *req)
+    const struct device_valio_s *accessor,
+    struct dev_valio_rq_s *req)
 {
       struct dev_request_status_s status;
 
       dev_request_sched_init(&req->base, &status);
 
-      DEVICE_OP(vdev, request, req);
+      DEVICE_OP(accessor, request, req);
 
       dev_request_sched_wait(&status);
 
@@ -208,18 +230,18 @@ inline error_t dev_valio_wait_request(
 */
 config_depend(CONFIG_DEVICE_VALIO)
 inline error_t dev_valio_wait_read(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     uint16_t attribute,
     void *data)
 {
-    struct dev_valio_request_s req =
+    struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_READ,
         .attribute = attribute,
         .data = data,
     };
 
-    return dev_valio_wait_request(vdev, &req);
+    return dev_valio_wait_request(accessor, &req);
 }
 
 /** @this does a write request on an attribute.
@@ -231,18 +253,18 @@ inline error_t dev_valio_wait_read(
 */
 config_depend(CONFIG_DEVICE_VALIO)
 inline error_t dev_valio_wait_write(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     uint16_t attribute,
     const void *data)
 {
-    struct dev_valio_request_s req =
+    struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_WRITE,
         .attribute = attribute,
         .data = (void*)data,
     };
 
-    return dev_valio_wait_request(vdev, &req);
+    return dev_valio_wait_request(accessor, &req);
 }
 
 /** @this waits for the attribute to change.
@@ -254,18 +276,18 @@ inline error_t dev_valio_wait_write(
 */
 config_depend(CONFIG_DEVICE_VALIO)
 inline error_t dev_valio_wait_update(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     uint16_t attribute,
     void *data)
 {
-    struct dev_valio_request_s req =
+    struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_WAIT_UPDATE,
         .attribute = attribute,
         .data = data,
     };
 
-    return dev_valio_wait_request(vdev, &req);
+    return dev_valio_wait_request(accessor, &req);
 }
 
 #endif

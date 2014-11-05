@@ -42,18 +42,18 @@ struct ram_context_s
   struct ram_bank_s bank[0];
 };
 
-static DEVMEM_INFO(ram_info)
+static DEV_MEM_INFO(ram_info)
 {
-  struct device_s *dev = mdev->dev;
+  struct device_s *dev = accessor->dev;
   struct ram_context_s *pv = dev->drv_pv;
 
-  if (mdev->number >= pv->bank_count)
+  if (accessor->number >= pv->bank_count)
     return -ENOENT;
 
   if (band_index > 0)
     return -ENOENT;
 
-  const struct ram_bank_s *b = pv->bank + mdev->number;
+  const struct ram_bank_s *b = pv->bank + accessor->number;
 
   memset(info, 0, sizeof(*info));
   
@@ -68,20 +68,20 @@ static DEVMEM_INFO(ram_info)
   return 0;
 }
 
-static DEVMEM_REQUEST(ram_request)
+static DEV_MEM_REQUEST(ram_request)
 {
-  struct device_s *dev = mdev->dev;
+  struct device_s *dev = accessor->dev;
   struct ram_context_s *pv = dev->drv_pv;
 
   rq->err = 0;
 
-  if (mdev->number >= pv->bank_count)
+  if (accessor->number >= pv->bank_count)
     rq->err = -ENOENT;
   else if (rq->band_mask & 0xfe)
     rq->err = -ENOENT;
   else if (rq->band_mask & 1)
     {
-      const struct ram_bank_s *b = pv->bank + mdev->number;
+      const struct ram_bank_s *b = pv->bank + accessor->number;
       dev_mem_mapped_op_helper(b->addr, 1, rq);
     }
 
@@ -98,9 +98,9 @@ static const struct driver_mem_s	ram_mem_drv =
 static DEV_INIT(ram_init);
 static DEV_CLEANUP(ram_cleanup);
 
-static const struct devenum_ident_s	ram_ids[] =
+static const struct dev_enum_ident_s	ram_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("generic:ram"),
+  DEV_ENUM_FDTNAME_ENTRY("generic:ram"),
   { 0 }
 };
 

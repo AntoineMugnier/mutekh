@@ -35,10 +35,10 @@
 DEV_IRQ(net_ne2000_irq);
 DEV_INIT(net_ne2000_init);
 DEV_CLEANUP(net_ne2000_cleanup);
-DEVNET_PREPAREPKT(net_ne2000_preparepkt);
-DEVNET_SENDPKT(net_ne2000_sendpkt);
-DEVNET_SETOPT(net_ne2000_setopt);
-DEVNET_GETOPT(net_ne2000_getopt);
+DEV_NET_PREPAREPKT(net_ne2000_preparepkt);
+DEV_NET_SENDPKT(net_ne2000_sendpkt);
+DEV_NET_SETOPT(net_ne2000_setopt);
+DEV_NET_GETOPT(net_ne2000_getopt);
 
 extern const struct driver_s	net_ne2000_drv;
 

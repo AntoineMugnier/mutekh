@@ -87,7 +87,7 @@ struct block_cache_context_s
 struct block_cache_rq_s
 {
   struct block_cache_context_s  *pv;
-  devblock_callback_t		*old_callback;
+  dev_block_callback_t		*old_callback;
   bool_t			update_only;
 };
 

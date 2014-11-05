@@ -87,18 +87,18 @@ void arm_timer_systick_irq(struct device_s *dev)
 }
 #endif
 
-static DEVTIMER_REQUEST(arm_timer_request)
+static DEV_TIMER_REQUEST(arm_timer_request)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
 
-  switch (tdev->number)
+  switch (accessor->number)
     {
 #if defined(CONFIG_CPU_ARM_TIMER_SYSTICK) && defined(CONFIG_DEVICE_IRQ)
     case 1: {
       error_t err = 0;
 
-      rq->tdev = tdev;
+      rq->accessor = accessor;
       LOCK_SPIN_IRQ(&dev->lock);
 
       if (pv->systick_start < 0)  /* hardware timer already used in mode 0 */
@@ -141,18 +141,18 @@ static DEVTIMER_REQUEST(arm_timer_request)
     }
 }
 
-static DEVTIMER_CANCEL(arm_timer_cancel)
+static DEV_TIMER_CANCEL(arm_timer_cancel)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
 
-  switch (tdev->number)
+  switch (accessor->number)
     {
 #if defined(CONFIG_CPU_ARM_TIMER_SYSTICK) && defined(CONFIG_DEVICE_IRQ)
     case 1: {
       error_t err = 0;
 
-      assert(rq->tdev->dev == dev && rq->tdev->number == 1);
+      assert(rq->accessor->dev == dev && rq->accessor->number == 1);
 
       LOCK_SPIN_IRQ(&dev->lock);
 
@@ -188,20 +188,20 @@ static DEVTIMER_CANCEL(arm_timer_cancel)
     }
 }
 
-static DEVTIMER_START_STOP(arm_timer_start_stop)
+static DEV_TIMER_START_STOP(arm_timer_start_stop)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  switch (tdev->number)
+  switch (accessor->number)
     {
 #ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
     case 0:
     case 1: {
-      uint_fast8_t mode = tdev->number;
+      uint_fast8_t mode = accessor->number;
       int_fast8_t st = mode ? 2 : -2;
       if (pv->systick_start && ((pv->systick_start > 0) ^ mode))
         {
@@ -278,15 +278,15 @@ static DEVTIMER_START_STOP(arm_timer_start_stop)
   return err;
 }
 
-static DEVTIMER_GET_VALUE(arm_timer_get_value)
+static DEV_TIMER_GET_VALUE(arm_timer_get_value)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  switch (tdev->number)
+  switch (accessor->number)
     {
 #ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
     case 0:
@@ -340,9 +340,9 @@ static DEVTIMER_GET_VALUE(arm_timer_get_value)
 }
 
 #ifdef CONFIG_DEVICE_CLOCK
-static DEVTIMER_GET_FREQ(arm_timer_get_freq)
+static DEV_TIMER_GET_FREQ(arm_timer_get_freq)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct arm_dev_private_s *pv = dev->drv_pv;
 
   *freq = pv->freq;
@@ -350,15 +350,15 @@ static DEVTIMER_GET_FREQ(arm_timer_get_freq)
 }
 #endif
 
-static DEVTIMER_RESOLUTION(arm_timer_resolution)
+static DEV_TIMER_RESOLUTION(arm_timer_resolution)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  switch (tdev->number)
+  switch (accessor->number)
     {
 #ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
     case 0:    /* systick as a free running counter */

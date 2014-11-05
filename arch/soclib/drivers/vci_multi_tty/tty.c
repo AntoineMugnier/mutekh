@@ -93,14 +93,14 @@ void tty_soclib_try_read(struct device_s *dev)
   }
 }
 
-DEVCHAR_REQUEST(tty_soclib_request)
+DEV_CHAR_REQUEST(tty_soclib_request)
 {
-  struct device_s               *dev = cdev->dev;
+  struct device_s               *dev = accessor->dev;
   struct tty_soclib_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s          *done_rq = NULL;
 
   assert(rq->size);
-  assert(cdev->number == 0);
+  assert(accessor->number == 0);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -174,9 +174,9 @@ static DEV_IRQ_EP_PROCESS(tty_soclib_irq)
  * device open operation
  */
 
-static const struct devenum_ident_s	tty_soclib_ids[] =
+static const struct dev_enum_ident_s	tty_soclib_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("soclib:vci_multi_tty"),
+	DEV_ENUM_FDTNAME_ENTRY("soclib:vci_multi_tty"),
 	{ 0 }
 };
 

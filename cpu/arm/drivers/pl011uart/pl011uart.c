@@ -185,9 +185,9 @@ static void pl011uart_try_write(struct device_s *dev)
     }
 }
 
-DEVCHAR_REQUEST(pl011uart_request)
+DEV_CHAR_REQUEST(pl011uart_request)
 {
-  struct device_s               *dev = cdev->dev;
+  struct device_s               *dev = accessor->dev;
   struct pl011uart_context_s	*pv = dev->drv_pv;
 
   assert(rq->size);
@@ -264,9 +264,9 @@ static DEV_IRQ_EP_PROCESS(pl011uart_irq)
 
 #endif
 
-static const struct devenum_ident_s	pl011uart_ids[] =
+static const struct dev_enum_ident_s	pl011uart_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("pl011"),
+  DEV_ENUM_FDTNAME_ENTRY("pl011"),
   { 0 }
 };
 

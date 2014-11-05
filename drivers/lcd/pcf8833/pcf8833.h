@@ -27,8 +27,8 @@
 #include <hexo/types.h>
 #include <device/driver.h>
 
-DEVLCD_REQUEST(pcf8833_request);
-DEVLCD_GETINFO(pcf8833_getinfo);
+DEV_LCD_REQUEST(pcf8833_request);
+DEV_LCD_GETINFO(pcf8833_getinfo);
 DEV_CLEANUP(pcf8833_cleanup);
 
 #define PCF8833_ADHOC_FUNC(x) void (x)(bool_t value)

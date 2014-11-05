@@ -70,14 +70,14 @@ GCT_CONTAINER_FCNS(dev_request_queue, static, dev_request_queue,
 struct mtch6102_priv_s
 {
     struct valio_touchpad_state_s last_state;
-    struct dev_i2c_request_s i2c_req;
+    struct dev_i2c_rq_s i2c_req;
     struct dev_i2c_transfer_s i2c_transfer[2];
     uint8_t wdata[4];
     uint8_t rdata[4];
     struct device_i2c_s i2c;
     uint8_t saddr;
     struct dev_irq_ep_s irq;
-    struct dev_valio_request_s *pending;
+    struct dev_valio_rq_s *pending;
     uint8_t width, height;
 
     dev_request_queue_root_t queue;
@@ -168,7 +168,7 @@ static KROUTINE_EXEC(mtch6102_state_done)
 {
     struct mtch6102_priv_s *pv;
     struct valio_touchpad_state_s st;
-    struct dev_valio_request_s *rq = NULL;
+    struct dev_valio_rq_s *rq = NULL;
     struct device_s *dev;
 
     pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
@@ -184,7 +184,7 @@ static KROUTINE_EXEC(mtch6102_state_done)
     if (!rq) {
         struct dev_request_s *drq = dev_request_queue_head(&pv->queue);
         if (drq)
-            rq = dev_valio_request_s_from_base(drq);
+            rq = dev_valio_rq_s_from_base(drq);
     }
 
     st.touch = pv->rdata[0] & 0x1;
@@ -235,7 +235,7 @@ static void mtch6102_request_run(
 
     assert(drq);
 
-    struct dev_valio_request_s *rq = dev_valio_request_s_from_base(drq);
+    struct dev_valio_rq_s *rq = dev_valio_rq_s_from_base(drq);
 
     dprintk("%s %p %d\n", __FUNCTION__, rq, rq->type);
 
@@ -258,7 +258,7 @@ static void mtch6102_request_run(
     pv->i2c_transfer[1].data = pv->rdata;
     pv->i2c_transfer[1].size = 4;
     pv->i2c_transfer[1].type = DEV_I2C_READ;
-    pv->i2c_req.transfer_count = 0;
+    pv->i2c_req.transfer_count = 2;
 
     pv->wdata[0] = MTCH6102_REG_TOUCHSTATE;
 
@@ -267,9 +267,9 @@ static void mtch6102_request_run(
     DEVICE_OP(&pv->i2c, request, &pv->i2c_req);
 }
 
-static DEVVALIO_REQUEST(mtch6102_request)
+static DEV_VALIO_REQUEST(mtch6102_request)
 {
-    struct device_s *dev = vdev->dev;
+    struct device_s *dev = accessor->dev;
     struct mtch6102_priv_s *pv = dev->drv_pv;
     error_t err = -EINVAL;
 

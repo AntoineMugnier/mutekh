@@ -44,20 +44,20 @@ struct dev_dma_wait_rq_s
 };
 
 
-static DEVDMA_CALLBACK(dev_dma_lock_request_cb)
+static DEV_DMA_CALLBACK(dev_dma_lock_request_cb)
 {
   struct dev_dma_wait_rq_s *status = rq->pvdata;
   status->done = 1;
 }
 
-static error_t dev_dma_lock_request(const struct device_dma_s *ddev,
+static error_t dev_dma_lock_request(const struct device_dma_s *accessor,
                                     uintptr_t src, uintptr_t dst,
                                     size_t size, uint_fast8_t flags,
 #ifdef CONFIG_DEVICE_ADDRESS_SPACES
                                     address_space_id_t src_as,
                                     address_space_id_t dst_as,
 #endif
-                                    devdma_callback_t *callback)
+                                    dev_dma_callback_t *callback)
 {
   struct dev_dma_rq_s rq;
   struct dev_dma_wait_rq_s status;
@@ -78,7 +78,7 @@ static error_t dev_dma_lock_request(const struct device_dma_s *ddev,
   rq.dst = dst;
   rq.size = size;
 
-  error_t err = DEVICE_OP(ddev, request, &rq);
+  error_t err = DEVICE_OP(accessor, request, &rq);
   if (err)
     return err;
 
@@ -94,7 +94,7 @@ static error_t dev_dma_lock_request(const struct device_dma_s *ddev,
 
 
 #ifdef CONFIG_MUTEK_SCHEDULER
-static DEVDMA_CALLBACK(dev_dma_wait_request_cb)
+static DEV_DMA_CALLBACK(dev_dma_wait_request_cb)
 {
   struct dev_dma_wait_rq_s *status = rq->pvdata;
 
@@ -105,14 +105,14 @@ static DEVDMA_CALLBACK(dev_dma_wait_request_cb)
   lock_release(&status->lock);
 }
 
-static error_t dev_dma_wait_request(const struct device_dma_s *ddev,
+static error_t dev_dma_wait_request(const struct device_dma_s *accessor,
                                     uintptr_t src, uintptr_t dst,
                                     size_t size, uint_fast8_t flags,
 # ifdef CONFIG_DEVICE_ADDRESS_SPACES
                                     address_space_id_t src_as,
                                     address_space_id_t dst_as,
 # endif
-                                    devdma_callback_t *callback)
+                                    dev_dma_callback_t *callback)
 {
   struct dev_dma_rq_s rq;
   struct dev_dma_wait_rq_s status;
@@ -135,7 +135,7 @@ static error_t dev_dma_wait_request(const struct device_dma_s *ddev,
   rq.dst = dst;
   rq.size = size;
 
-  error_t err = DEVICE_OP(ddev, request, &rq);
+  error_t err = DEVICE_OP(accessor, request, &rq);
   if (err)
     return err;
 
@@ -160,18 +160,18 @@ static error_t dev_dma_wait_request(const struct device_dma_s *ddev,
 #endif
 
 
-error_t dev_dma_wait_copy(const struct device_dma_s *ddev,
+error_t dev_dma_wait_copy(const struct device_dma_s *accessor,
                           uintptr_t src, uintptr_t dst,
                           size_t size, uint_fast8_t flags)
 {
 #ifdef CONFIG_MUTEK_SCHEDULER
-  return dev_dma_wait_request(ddev, src, dst, size, flags,
+  return dev_dma_wait_request(accessor, src, dst, size, flags,
 # ifdef CONFIG_DEVICE_ADDRESS_SPACES
                               0, 0,
 # endif
                               dev_dma_wait_request_cb);
 #else
-  return dev_dma_lock_request(ddev, src, dst, size, flags,
+  return dev_dma_lock_request(accessor, src, dst, size, flags,
 # ifdef CONFIG_DEVICE_ADDRESS_SPACES
                               0, 0,
 # endif
@@ -179,11 +179,11 @@ error_t dev_dma_wait_copy(const struct device_dma_s *ddev,
 #endif
 }
 
-error_t dev_dma_spin_copy(const struct device_dma_s *ddev,
+error_t dev_dma_spin_copy(const struct device_dma_s *accessor,
                           uintptr_t src, uintptr_t dst,
                           size_t size, uint_fast8_t flags)
 {
-  return dev_dma_lock_request(ddev, src, dst, size, flags,
+  return dev_dma_lock_request(accessor, src, dst, size, flags,
 # ifdef CONFIG_DEVICE_ADDRESS_SPACES
                               0, 0,
 # endif
@@ -192,28 +192,28 @@ error_t dev_dma_spin_copy(const struct device_dma_s *ddev,
 
 
 #ifdef CONFIG_DEVICE_ADDRESS_SPACES
-error_t dev_dma_wait_copy_as(const struct device_dma_s *ddev,
+error_t dev_dma_wait_copy_as(const struct device_dma_s *accessor,
                              uintptr_t src, uintptr_t dst,
                              size_t size, uint_fast8_t flags,
                              address_space_id_t src_as,
                              address_space_id_t dst_as)
 {
 # ifdef CONFIG_MUTEK_SCHEDULER
-  return dev_dma_wait_request(ddev, src, dst, size, flags,
+  return dev_dma_wait_request(accessor, src, dst, size, flags,
                               src_as, dst_as, dev_dma_wait_request_cb);
 # else
-  return dev_dma_lock_request(ddev, src, dst, size, flags,
+  return dev_dma_lock_request(accessor, src, dst, size, flags,
                               src_as, dst_as, dev_dma_lock_request_cb);
 # endif
 }
 
-error_t dev_dma_spin_copy_as(const struct device_dma_s *ddev,
+error_t dev_dma_spin_copy_as(const struct device_dma_s *accessor,
                              uintptr_t src, uintptr_t dst,
                              size_t size, uint_fast8_t flags,
                              address_space_id_t src_as,
                              address_space_id_t dst_as)
 {
-  return dev_dma_lock_request(ddev, src, dst, size, flags,
+  return dev_dma_lock_request(accessor, src, dst, size, flags,
                               src_as, dst_as, dev_dma_lock_request_cb);
 }
 

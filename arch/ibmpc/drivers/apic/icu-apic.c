@@ -52,7 +52,7 @@ CPU_LOCAL struct device_s apic_dev;
 #ifdef CONFIG_HEXO_IRQ
 
 # ifdef CONFIG_HEXO_IPI
-DEVICU_SETUP_IPI_EP(icu_apic_setup_ipi_ep)
+DEV_ICU_SETUP_IPI_EP(icu_apic_setup_ipi_ep)
 {
   endpoint->icu_dev = dev;
   endpoint->priv = (void*)ipi_no;
@@ -60,7 +60,7 @@ DEVICU_SETUP_IPI_EP(icu_apic_setup_ipi_ep)
   return 0;
 }
 
-DEVICU_SENDIPI(icu_apic_sendipi)
+DEV_ICU_SENDIPI(icu_apic_sendipi)
 {
   uint32_t icr_low;
   uint32_t dst_id = (uint32_t)endpoint->priv;
@@ -99,7 +99,7 @@ DEVICU_SENDIPI(icu_apic_sendipi)
 }
 #endif
 
-DEVICU_ENABLE(icu_apic_enable)
+DEV_ICU_ENABLE(icu_apic_enable)
 {
 #ifdef CONFIG_DRIVER_ICU_8259
   if (irq < ICU_8259_MAX_LINES)
@@ -113,7 +113,7 @@ DEVICU_ENABLE(icu_apic_enable)
   return -EINVAL;
 }
 
-DEVICU_SETHNDL(icu_apic_sethndl)
+DEV_ICU_SETHNDL(icu_apic_sethndl)
 {
   struct icu_apic_private_s	*pv = dev->drv_pv;
   struct icu_apic_handler_s	*h = pv->table + irq;
@@ -130,7 +130,7 @@ DEVICU_SETHNDL(icu_apic_sethndl)
   return 0;
 }
 
-DEVICU_DELHNDL(icu_apic_delhndl)
+DEV_ICU_DELHNDL(icu_apic_delhndl)
 {
   struct icu_apic_private_s	*pv = dev->drv_pv;
   struct icu_apic_handler_s	*h = pv->table + irq;

@@ -160,16 +160,16 @@ struct dev_clock_sink_ep_s
 
 
 
-/** @see devclock_config_node_t */
+/** @see dev_clock_config_node_t */
 union dev_clock_config_value_u
 {
   struct dev_freq_s    freq;
   struct dev_freq_ratio_s    ratio;
 };
 
-/** @see devclock_config_node_t */
-#define DEVCLOCK_CONFIG_NODE(n) error_t (n) (                \
-    struct device_clock_s *ckdev,                            \
+/** @see dev_clock_config_node_t */
+#define DEV_CLOCK_CONFIG_NODE(n) error_t (n) (                \
+    struct device_clock_s *accessor,                            \
     dev_clock_node_id_t   node_id,                           \
     dev_clock_node_id_t   parent_id,                         \
     union dev_clock_config_value_u *value                    \
@@ -187,17 +187,17 @@ union dev_clock_config_value_u
     associated to this route. The @tt value parameter may be @tt NULL.
 
     No hardware configuration actually takes place before the call to
-    the @ref devclock_commit_t function.
+    the @ref dev_clock_commit_t function.
 */
-typedef DEVCLOCK_CONFIG_NODE(devclock_config_node_t);
+typedef DEV_CLOCK_CONFIG_NODE(dev_clock_config_node_t);
 
 
 
-/** @see devclock_commit_t */
-#define DEVCLOCK_COMMIT(n) error_t (n) (struct device_clock_s *ckdev)
+/** @see dev_clock_commit_t */
+#define DEV_CLOCK_COMMIT(n) error_t (n) (struct device_clock_s *accessor)
 
 /** @This starts the configuration of the clocks based on parameters
-    passed to previous calls to the @ref devclock_config_node_t
+    passed to previous calls to the @ref dev_clock_config_node_t
     function.
 
     The driver may further delay the configuration of some clock
@@ -211,22 +211,22 @@ typedef DEVCLOCK_CONFIG_NODE(devclock_config_node_t);
     The @ref dev_clock_src_changed function is called by the driver
     for all impacted source end-points once the change has occurred.
  */
-typedef DEVCLOCK_COMMIT(devclock_commit_t);
+typedef DEV_CLOCK_COMMIT(dev_clock_commit_t);
 
 
 
-/** @see devclock_rollback_t */
-#define DEVCLOCK_ROLLBACK(n) error_t (n) (struct device_clock_s *ckdev)
+/** @see dev_clock_rollback_t */
+#define DEV_CLOCK_ROLLBACK(n) error_t (n) (struct device_clock_s *accessor)
 
 /** @This discard all configuration changes requests made by calling
-    the @ref devclock_config_node_t function. This can be used to
+    the @ref dev_clock_config_node_t function. This can be used to
     revert to a known state in case of error.
  */
-typedef DEVCLOCK_ROLLBACK(devclock_rollback_t);
+typedef DEV_CLOCK_ROLLBACK(dev_clock_rollback_t);
 
 
 /** @This specifies node information to retrieve for the @ref
-    devclock_node_info_t function. */
+    dev_clock_node_info_t function. */
 enum dev_clock_node_info_e
 {
   DEV_CLOCK_INFO_FREQ    = 0x01,
@@ -238,7 +238,7 @@ enum dev_clock_node_info_e
 };
 
 /** @This stores node information retrieved by the @ref
-    devclock_node_info_t function. */
+    dev_clock_node_info_t function. */
 struct dev_clock_node_info_s
 {
   struct dev_freq_s    freq;
@@ -253,23 +253,23 @@ struct dev_clock_node_info_s
     mask parameter indicates which information are fetched and is
     updated according to what is actually available.
     @see dev_clock_node_info_s @see dev_clock_node_info_e */
-#define DEVCLOCK_NODE_INFO(n) error_t (n) (                             \
-    struct device_clock_s *ckdev,                                       \
+#define DEV_CLOCK_NODE_INFO(n) error_t (n) (                             \
+    struct device_clock_s *accessor,                                       \
     dev_clock_node_id_t node_id,                                        \
     enum dev_clock_node_info_e *mask,                                   \
     struct dev_clock_node_info_s *info                                  \
 )
 
 /** @This returns the requested node information */
-typedef DEVCLOCK_NODE_INFO(devclock_node_info_t);
+typedef DEV_CLOCK_NODE_INFO(dev_clock_node_info_t);
 
 
 
 DRIVER_CLASS_TYPES(clock,
-                   devclock_node_info_t   *f_node_info;
-                   devclock_config_node_t *f_config_node;
-                   devclock_commit_t      *f_commit;
-                   devclock_rollback_t    *f_rollback;
+                   dev_clock_node_info_t   *f_node_info;
+                   dev_clock_config_node_t *f_config_node;
+                   dev_clock_commit_t      *f_commit;
+                   dev_clock_rollback_t    *f_rollback;
                    );
 
 /** @This increases the clock source use count. The kroutine inside
@@ -288,7 +288,7 @@ error_t dev_clock_sink_hold(struct dev_clock_sink_ep_s *sink,
 config_depend(CONFIG_DEVICE_CLOCK)
 void dev_clock_sink_release(struct dev_clock_sink_ep_s *sink);
 
-/** @This is convenience wrapper for the @ref devclock_node_info_t
+/** @This is convenience wrapper for the @ref dev_clock_node_info_t
     function. An error is returned if the requested information are
     not available. */
 config_depend(CONFIG_DEVICE_CLOCK)
@@ -304,7 +304,7 @@ error_t dev_clock_node_info(struct device_s *dev,
     The configuration id selects all resources with the corresponding
     bit set in the config mask. */
 config_depend(CONFIG_DEVICE_CLOCK)
-error_t dev_clock_config(struct device_clock_s *ckdev,
+error_t dev_clock_config(struct device_clock_s *accessor,
                          dev_clock_config_id_t config_id);
 
 /** @This function is called by the clock provider device driver when
@@ -316,7 +316,7 @@ error_t dev_clock_config(struct device_clock_s *ckdev,
     of the sinks.
  */
 config_depend(CONFIG_DEVICE_CLOCK)
-void dev_clock_src_changed(struct device_clock_s *ckdev,
+void dev_clock_src_changed(struct device_clock_s *accessor,
                            struct dev_clock_src_ep_s *src,
                            const struct dev_freq_s *freq);
 

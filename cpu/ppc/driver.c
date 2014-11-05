@@ -68,9 +68,9 @@ static CPU_INTERRUPT_HANDLER(ppc_irq_handler)
   }
 }
 
-static DEVICU_GET_ENDPOINT(ppc_icu_get_endpoint)
+static DEV_ICU_GET_ENDPOINT(ppc_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct ppc_dev_private_s  *pv = dev->drv_pv;
 
   switch (type)
@@ -83,9 +83,9 @@ static DEVICU_GET_ENDPOINT(ppc_icu_get_endpoint)
     }
 }
 
-static DEVICU_ENABLE_IRQ(ppc_icu_enable_irq)
+static DEV_ICU_ENABLE_IRQ(ppc_icu_enable_irq)
 {
-  __unused__ struct device_s *dev = idev->dev;
+  __unused__ struct device_s *dev = accessor->dev;
 
   // inputs are single wire, logical irq id must be 0
   if (irq_id > 0)
@@ -117,9 +117,9 @@ const struct driver_icu_s  ppc_icu_drv =
 
 CPU_LOCAL struct device_s *cpu_device = NULL;
 
-static DEVCPU_REG_INIT(ppc_cpu_reg_init)
+static DEV_CPU_REG_INIT(ppc_cpu_reg_init)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct ppc_dev_private_s *pv = dev->drv_pv;
 
   /* set exception vector */
@@ -140,9 +140,9 @@ static DEVCPU_REG_INIT(ppc_cpu_reg_init)
 }
 
 #ifdef CONFIG_ARCH_SMP
-static DEVCPU_GET_NODE(ppc_cpu_get_node)
+static DEV_CPU_GET_NODE(ppc_cpu_get_node)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   struct ppc_dev_private_s *pv = dev->drv_pv;
   return &pv->node;
 }
@@ -163,14 +163,14 @@ const struct driver_cpu_s  ppc_cpu_drv =
 
 #ifdef CONFIG_CPU_PPC_TIMER_CYCLECOUNTER
 
-static DEVTIMER_START_STOP(ppc_timer_start_stop)
+static DEV_TIMER_START_STOP(ppc_timer_start_stop)
 {
   return 0;
 }
 
-static DEVTIMER_GET_VALUE(ppc_timer_get_value)
+static DEV_TIMER_GET_VALUE(ppc_timer_get_value)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct ppc_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
@@ -185,7 +185,7 @@ static DEVTIMER_GET_VALUE(ppc_timer_get_value)
   return 0;
 }
 
-static DEVTIMER_RESOLUTION(ppc_timer_resolution)
+static DEV_TIMER_RESOLUTION(ppc_timer_resolution)
 {
   error_t err = 0;
 
@@ -209,8 +209,8 @@ static const struct driver_timer_s  ppc_timer_drv =
   .f_get_value     = ppc_timer_get_value,
   .f_get_freq      = dev_timer_drv_get_freq,
   .f_resolution    = ppc_timer_resolution,
-  .f_request       = (devtimer_request_t*)&dev_driver_notsup_fcn,
-  .f_cancel        = (devtimer_request_t*)&dev_driver_notsup_fcn,
+  .f_request       = (dev_timer_request_t*)&dev_driver_notsup_fcn,
+  .f_cancel        = (dev_timer_request_t*)&dev_driver_notsup_fcn,
 };
 
 #endif
@@ -220,11 +220,11 @@ static const struct driver_timer_s  ppc_timer_drv =
 static DEV_CLEANUP(ppc_cleanup);
 static DEV_INIT(ppc_init);
 
-static const struct devenum_ident_s  ppc_ids[] =
+static const struct dev_enum_ident_s  ppc_ids[] =
 {
 #ifdef CONFIG_LIBFDT
-  DEVENUM_FDTNAME_ENTRY("cpu:ppc"),
-  DEVENUM_FDTNAME_ENTRY("cpu:powerpc"),
+  DEV_ENUM_FDTNAME_ENTRY("cpu:ppc"),
+  DEV_ENUM_FDTNAME_ENTRY("cpu:powerpc"),
 #endif
   { 0 }
 };

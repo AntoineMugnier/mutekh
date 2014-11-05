@@ -36,7 +36,7 @@
 DEV_IRQ(tty_vga_irq);
 DEV_INIT(tty_vga_init);
 DEV_CLEANUP(tty_vga_cleanup);
-DEVCHAR_REQUEST(tty_vga_request);
+DEV_CHAR_REQUEST(tty_vga_request);
 
 #endif
 

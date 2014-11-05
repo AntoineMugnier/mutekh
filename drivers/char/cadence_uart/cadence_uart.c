@@ -180,9 +180,9 @@ static void cadence_uart_try_write(struct device_s *dev)
     }
 }
 
-DEVCHAR_REQUEST(cadence_uart_request)
+DEV_CHAR_REQUEST(cadence_uart_request)
 {
-  struct device_s               *dev = cdev->dev;
+  struct device_s               *dev = accessor->dev;
   struct cadence_uart_context_s	*pv = dev->drv_pv;
 
   assert(rq->size);
@@ -249,9 +249,9 @@ static DEV_IRQ_EP_PROCESS(cadence_uart_irq)
 
 #endif
 
-static const struct devenum_ident_s	cadence_uart_ids[] =
+static const struct dev_enum_ident_s	cadence_uart_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("cadence_uart"),
+  DEV_ENUM_FDTNAME_ENTRY("cadence_uart"),
   { 0 }
 };
 

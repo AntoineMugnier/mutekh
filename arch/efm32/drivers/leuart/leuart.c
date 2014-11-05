@@ -198,9 +198,9 @@ static void efm32_leuart_try_write(struct device_s *dev)
     }
 }
 
-static DEVCHAR_REQUEST(efm32_leuart_request)
+static DEV_CHAR_REQUEST(efm32_leuart_request)
 {
-  struct device_s               *dev = cdev->dev;
+  struct device_s               *dev = accessor->dev;
   struct efm32_leuart_context_s	*pv = dev->drv_pv;
 
   assert(rq->size);

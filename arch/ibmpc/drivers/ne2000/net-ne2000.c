@@ -47,19 +47,19 @@
  * PCI identifiers of compatible cards.
  */
 
-static const struct devenum_ident_s	net_ne2000_ids[] =
+static const struct dev_enum_ident_s	net_ne2000_ids[] =
   {
-    DEVENUM_PCI_ENTRY( 0x10ec, 0x8029, -1 ),	/* Realtek 8029 */
-    DEVENUM_PCI_ENTRY( 0x10ec, 0x8028, -1 ),	/* Realtek 8029 */
-    DEVENUM_PCI_ENTRY( 0x1050, 0x0940, -1 ),	/* Winbond 89C940 */
-    DEVENUM_PCI_ENTRY( 0x1050, 0x5a5a, -1 ),	/* Winbond 89C940F */
-    DEVENUM_PCI_ENTRY( 0x8c4a, 0x1980, -1 ),	/* Winbond 89C940 (bad ROM) */
-    DEVENUM_PCI_ENTRY( 0x11f6, 0x1401, -1 ),	/* Compex ReadyLink 2000 */
-    DEVENUM_PCI_ENTRY( 0x8e2e, 0x3000, -1 ),	/* KTI ET32P2 */
-    DEVENUM_PCI_ENTRY( 0x4a14, 0x5000, -1 ),	/* NetVin NV5000SC */
-    DEVENUM_PCI_ENTRY( 0x12c3, 0x0058, -1 ),	/* HolTek HT80232 */
-    DEVENUM_PCI_ENTRY( 0x1106, 0x0926, -1 ),	/* Via 86C926 */
-    DEVENUM_PCI_ENTRY( 0x10bd, 0x0e34, -1 ),	/* SureCom NE34 */
+    DEV_ENUM_PCI_ENTRY( 0x10ec, 0x8029, -1 ),	/* Realtek 8029 */
+    DEV_ENUM_PCI_ENTRY( 0x10ec, 0x8028, -1 ),	/* Realtek 8029 */
+    DEV_ENUM_PCI_ENTRY( 0x1050, 0x0940, -1 ),	/* Winbond 89C940 */
+    DEV_ENUM_PCI_ENTRY( 0x1050, 0x5a5a, -1 ),	/* Winbond 89C940F */
+    DEV_ENUM_PCI_ENTRY( 0x8c4a, 0x1980, -1 ),	/* Winbond 89C940 (bad ROM) */
+    DEV_ENUM_PCI_ENTRY( 0x11f6, 0x1401, -1 ),	/* Compex ReadyLink 2000 */
+    DEV_ENUM_PCI_ENTRY( 0x8e2e, 0x3000, -1 ),	/* KTI ET32P2 */
+    DEV_ENUM_PCI_ENTRY( 0x4a14, 0x5000, -1 ),	/* NetVin NV5000SC */
+    DEV_ENUM_PCI_ENTRY( 0x12c3, 0x0058, -1 ),	/* HolTek HT80232 */
+    DEV_ENUM_PCI_ENTRY( 0x1106, 0x0926, -1 ),	/* Via 86C926 */
+    DEV_ENUM_PCI_ENTRY( 0x10bd, 0x0e34, -1 ),	/* SureCom NE34 */
     { 0 }
   };
 
@@ -538,7 +538,7 @@ DEV_CLEANUP(net_ne2000_cleanup)
  * preparing a packet.
  */
 
-DEVNET_PREPAREPKT(net_ne2000_preparepkt)
+DEV_NET_PREPAREPKT(net_ne2000_preparepkt)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
   struct net_header_s		*nethdr;
@@ -579,7 +579,7 @@ DEVNET_PREPAREPKT(net_ne2000_preparepkt)
  * sending a packet.
  */
 
-DEVNET_SENDPKT(net_ne2000_sendpkt)
+DEV_NET_SENDPKT(net_ne2000_sendpkt)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
   struct ether_header		*hdr;
@@ -621,7 +621,7 @@ DEVNET_SENDPKT(net_ne2000_sendpkt)
  * Setup driver level options.
  */
 
-DEVNET_SETOPT(net_ne2000_setopt)
+DEV_NET_SETOPT(net_ne2000_setopt)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
 
@@ -657,7 +657,7 @@ DEVNET_SETOPT(net_ne2000_setopt)
  * Get driver level options / info.
  */
 
-DEVNET_GETOPT(net_ne2000_getopt)
+DEV_NET_GETOPT(net_ne2000_getopt)
 {
   switch (option)
     {

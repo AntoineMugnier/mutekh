@@ -92,7 +92,7 @@ block_cache_newent(struct block_cache_context_s *pv,
  * add new cache entries for data
  */
 
-static DEVBLOCK_CALLBACK(block_cache_update)
+static DEV_BLOCK_CALLBACK(block_cache_update)
 {
   struct block_cache_rq_s *crq = rq_extra;
   struct block_cache_context_s *pv = crq->pv;
@@ -172,7 +172,7 @@ static DEVBLOCK_CALLBACK(block_cache_update)
   return crq->callback(rq, count, crq + 1);
 }
 
-DEVBLOCK_REQUEST(block_cache_request)
+DEV_BLOCK_REQUEST(block_cache_request)
 {
   struct block_cache_context_s	*pv = dev->drv_pv;
   struct block_cache_rq_s *crq = (void*)((uint8_t*)rq + pv->parent_rq_size);
@@ -300,14 +300,14 @@ DEVBLOCK_REQUEST(block_cache_request)
     }
 }
 
-DEVBLOCK_GETRQSIZE(block_cache_getrqsize)
+DEV_BLOCK_GETRQSIZE(block_cache_getrqsize)
 {
   struct block_cache_context_s	*pv = dev->drv_pv;
 
   return pv->parent_rq_size + sizeof(struct block_cache_rq_s);
 }
 
-DEVBLOCK_GETPARAMS(block_cache_getparams)
+DEV_BLOCK_GETPARAMS(block_cache_getparams)
 {
   struct block_cache_context_s	*pv = dev->drv_pv;
 

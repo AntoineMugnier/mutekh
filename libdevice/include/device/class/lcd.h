@@ -74,9 +74,9 @@ struct		lcd_pal_s
 
 struct lcd_req_s;
 
-#define DEVLCD_CALLBACK(x) void (x)(void *context, struct lcd_req_s *req)
+#define DEV_LCD_CALLBACK(x) void (x)(void *context, struct lcd_req_s *req)
 
-typedef DEVLCD_CALLBACK(devlcd_callback_t);
+typedef DEV_LCD_CALLBACK(dev_lcd_callback_t);
 
 enum lcd_req_type_e
 {
@@ -111,7 +111,7 @@ struct lcd_req_s
 			uint_fast8_t value;
 		} contrast;
 	};
-	devlcd_callback_t *callback;
+	dev_lcd_callback_t *callback;
 	void *callback_data;
 	dev_lcd_queue_entry_t	queue_entry; /* used by driver to enqueue requests */
 }, queue_entry);
@@ -119,14 +119,14 @@ struct lcd_req_s
 GCT_CONTAINER_FCNS(dev_lcd_queue, CLIST, ALWAYS_INLINE, dev_lcd_queue);
 
 /** Lcd device class request() function tempate. */
-#define DEVLCD_REQUEST(n)	error_t  (n) (struct device_lcd_s *ldev, struct lcd_req_s *req)
+#define DEV_LCD_REQUEST(n)	error_t  (n) (struct device_lcd_s *accessor, struct lcd_req_s *req)
 
-typedef DEVLCD_REQUEST(devlcd_request_t);
+typedef DEV_LCD_REQUEST(dev_lcd_request_t);
 
 
 
 /** Lcd device class getinfo() function tempate. */
-#define DEVLCD_GETINFO(n)	const struct lcd_info_s * (n) (struct device_lcd_s *ldev)
+#define DEV_LCD_GETINFO(n)	const struct lcd_info_s * (n) (struct device_lcd_s *accessor)
 
 /**
     Lcd device class getinfo() function type.  Get a device
@@ -135,17 +135,17 @@ typedef DEVLCD_REQUEST(devlcd_request_t);
     @param dev pointer to device descriptor
     @return the information struct
 */
-typedef DEVLCD_GETINFO(devlcd_getinfo_t);
+typedef DEV_LCD_GETINFO(dev_lcd_getinfo_t);
 
 
 
 DRIVER_CLASS_TYPES(lcd,
-                    devlcd_request_t	*f_request;
-                    devlcd_getinfo_t	*f_getinfo;
+                    dev_lcd_request_t	*f_request;
+                    dev_lcd_getinfo_t	*f_getinfo;
                     );
 
 
-ssize_t dev_lcd_set_palette(struct device_lcd_s *ldev, struct lcd_pal_s *palette, size_t count);
+ssize_t dev_lcd_set_palette(struct device_lcd_s *accessor, struct lcd_pal_s *palette, size_t count);
 
 /**
     Lcd device class blit() function type.  Blit the rectangle from
@@ -163,7 +163,7 @@ ssize_t dev_lcd_set_palette(struct device_lcd_s *ldev, struct lcd_pal_s *palette
     @return error level
 */
 
-ssize_t dev_lcd_blit(struct device_lcd_s *ldev,
+ssize_t dev_lcd_blit(struct device_lcd_s *accessor,
 					 lcd_coord_t xmin,
 					 lcd_coord_t ymin,
 					 lcd_coord_t xmax,
@@ -178,7 +178,7 @@ ssize_t dev_lcd_blit(struct device_lcd_s *ldev,
     @param packing pixel color information packing
     @return error code
 */
-ssize_t dev_lcd_setmode(struct device_lcd_s *ldev,
+ssize_t dev_lcd_setmode(struct device_lcd_s *accessor,
 						uint_fast8_t bpp, uint_fast8_t packing,
 						uint_fast8_t flags);
 
@@ -190,7 +190,7 @@ ssize_t dev_lcd_setmode(struct device_lcd_s *ldev,
     @param contrast contrast value
     @return error code
 */
-ssize_t dev_lcd_setcontrast(struct device_lcd_s *ldev, uint_fast8_t contrast);
+ssize_t dev_lcd_setcontrast(struct device_lcd_s *accessor, uint_fast8_t contrast);
 
 #endif
 

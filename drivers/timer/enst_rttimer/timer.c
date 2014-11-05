@@ -156,17 +156,17 @@ static DEV_IRQ_EP_PROCESS(enst_rttimer_irq_separate)
 }
 #endif
 
-static DEVTIMER_CANCEL(enst_rttimer_cancel)
+static DEV_TIMER_CANCEL(enst_rttimer_cancel)
 {
 # ifdef CONFIG_DEVICE_IRQ
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct enst_rttimer_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  if (tdev->number >= pv->t_count)
+  if (accessor->number >= pv->t_count)
     return -ENOENT;
 
-  struct enst_rttimer_state_s *p = pv->t + tdev->number;
+  struct enst_rttimer_state_s *p = pv->t + accessor->number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -184,14 +184,14 @@ static DEVTIMER_CANCEL(enst_rttimer_cancel)
 
       if (rq == rq0)  /* removed first ? */
         {
-          cpu_mem_write_32(pv->addr + RT_TIMER_CANCEL_ADDR, RT_TIMER_ENDIAN32(1 << tdev->number));
+          cpu_mem_write_32(pv->addr + RT_TIMER_CANCEL_ADDR, RT_TIMER_ENDIAN32(1 << accessor->number));
 
           rq0 = dev_timer_queue_head(&p->queue);
           if (rq0)
             {
               /* schedule next rq */
               cpu_mem_write_32(pv->addr + RT_TIMER_RTCTMP_ADDR, RT_TIMER_ENDIAN32(rq0->deadline >> 32));
-              cpu_mem_write_32(RT_TIMER_REG_ADDR(pv->addr, RT_TIMER_DLN1_ADDR, tdev->number), RT_TIMER_ENDIAN32(rq0->deadline));
+              cpu_mem_write_32(RT_TIMER_REG_ADDR(pv->addr, RT_TIMER_DLN1_ADDR, accessor->number), RT_TIMER_ENDIAN32(rq0->deadline));
             }
         }
     }
@@ -208,19 +208,19 @@ static DEVTIMER_CANCEL(enst_rttimer_cancel)
 # endif
 }
 
-static DEVTIMER_REQUEST(enst_rttimer_request)
+static DEV_TIMER_REQUEST(enst_rttimer_request)
 {
 # ifdef CONFIG_DEVICE_IRQ
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct enst_rttimer_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  if (tdev->number >= pv->t_count)
+  if (accessor->number >= pv->t_count)
     return -ENOENT;
 
-  rq->tdev = tdev;
+  rq->accessor = accessor;
 
-  struct enst_rttimer_state_s *p = pv->t + tdev->number;
+  struct enst_rttimer_state_s *p = pv->t + accessor->number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -241,7 +241,7 @@ static DEVTIMER_REQUEST(enst_rttimer_request)
       if (dev_timer_queue_head(&p->queue) == rq)
         {
           cpu_mem_write_32(pv->addr + RT_TIMER_RTCTMP_ADDR, RT_TIMER_ENDIAN32(rq->deadline >> 32));
-          cpu_mem_write_32(RT_TIMER_REG_ADDR(pv->addr, RT_TIMER_DLN1_ADDR, tdev->number), RT_TIMER_ENDIAN32(rq->deadline));
+          cpu_mem_write_32(RT_TIMER_REG_ADDR(pv->addr, RT_TIMER_DLN1_ADDR, accessor->number), RT_TIMER_ENDIAN32(rq->deadline));
         }
 
       /* start timer if needed */
@@ -261,12 +261,12 @@ static DEVTIMER_REQUEST(enst_rttimer_request)
 # endif
 }
 
-static DEVTIMER_START_STOP(enst_rttimer_state_start_stop)
+static DEV_TIMER_START_STOP(enst_rttimer_state_start_stop)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct enst_rttimer_private_s *pv = dev->drv_pv;
 
-  if (tdev->number >= pv->t_count)
+  if (accessor->number >= pv->t_count)
     return -ENOENT;
 
   error_t err = 0;
@@ -309,12 +309,12 @@ static DEVTIMER_START_STOP(enst_rttimer_state_start_stop)
   return err;
 }
 
-static DEVTIMER_GET_VALUE(enst_rttimer_get_value)
+static DEV_TIMER_GET_VALUE(enst_rttimer_get_value)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct enst_rttimer_private_s *pv = dev->drv_pv;
 
-  if (tdev->number >= pv->t_count)
+  if (accessor->number >= pv->t_count)
     return -ENOENT;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -327,12 +327,12 @@ static DEVTIMER_GET_VALUE(enst_rttimer_get_value)
   return 0;
 }
 
-static DEVTIMER_RESOLUTION(enst_rttimer_resolution)
+static DEV_TIMER_RESOLUTION(enst_rttimer_resolution)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct enst_rttimer_private_s *pv = dev->drv_pv;
 
-  if (tdev->number >= pv->t_count)
+  if (accessor->number >= pv->t_count)
     return -ENOENT;
 
   error_t err = 0;
@@ -377,13 +377,13 @@ const struct driver_timer_s  enst_rttimer_timer_drv =
 
 /************************************************************************/
 
-static const struct devenum_ident_s  enst_rttimer_ids[] =
+static const struct dev_enum_ident_s  enst_rttimer_ids[] =
 {
 #ifdef CONFIG_ARCH_SOCLIB
-  DEVENUM_FDTNAME_ENTRY("soclib:vci_rttimer"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_rttimer"),
 #endif
 #ifdef CONFIG_ARCH_GAISLER
-  DEVENUM_GAISLER_ENTRY(0x09, 0x003),
+  DEV_ENUM_GAISLER_ENTRY(0x09, 0x003),
 #endif
   { 0 }
 };

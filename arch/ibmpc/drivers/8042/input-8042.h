@@ -35,10 +35,10 @@
 DEV_IRQ(input_8042_irq);
 DEV_INIT(input_8042_init);
 DEV_CLEANUP(input_8042_cleanup);
-DEVINPUT_INFO(input_8042_info);
-DEVINPUT_READ(input_8042_read);
-DEVINPUT_WRITE(input_8042_write);
-DEVINPUT_SETCALLBACK(input_8042_setcallback);
+DEV_INPUT_INFO(input_8042_info);
+DEV_INPUT_READ(input_8042_read);
+DEV_INPUT_WRITE(input_8042_write);
+DEV_INPUT_SETCALLBACK(input_8042_setcallback);
 
 /* PC keyboard keys */
 

@@ -171,19 +171,19 @@ static DEV_IRQ_EP_PROCESS(gptimer_irq_separate)
 
 #endif
 
-static DEVTIMER_CANCEL(gptimer_cancel)
+static DEV_TIMER_CANCEL(gptimer_cancel)
 {
 # ifdef CONFIG_DEVICE_IRQ
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct gptimer_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  if (tdev->number >= pv->t_count)
+  if (accessor->number >= pv->t_count)
     return -ENOENT;
 
-  assert(rq->tdev == tdev);
+  assert(rq->accessor == accessor);
 
-  struct gptimer_state_s *p = pv->t + tdev->number;
+  struct gptimer_state_s *p = pv->t + accessor->number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -197,7 +197,7 @@ static DEVTIMER_CANCEL(gptimer_cancel)
         {
           p->start_count &= ~1;
           if (p->start_count == 0)
-            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), endian_be32(TIMER_CTRL_IE));
+            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, accessor->number), endian_be32(TIMER_CTRL_IE));
         }
     }
   else
@@ -213,19 +213,19 @@ static DEVTIMER_CANCEL(gptimer_cancel)
 # endif
 }
 
-static DEVTIMER_REQUEST(gptimer_request)
+static DEV_TIMER_REQUEST(gptimer_request)
 {
 # ifdef CONFIG_DEVICE_IRQ
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct gptimer_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  if (tdev->number >= pv->t_count)
+  if (accessor->number >= pv->t_count)
     return -ENOENT;
 
-  rq->tdev = tdev;
+  rq->accessor = accessor;
 
-  struct gptimer_state_s *p = pv->t + tdev->number;
+  struct gptimer_state_s *p = pv->t + accessor->number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -244,9 +244,9 @@ static DEVTIMER_REQUEST(gptimer_request)
       /* start timer if needed */
       if (p->start_count == 0)
         {
-          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_COUNTER, tdev->number), endian_be32(p->period));
-          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_RELOAD, tdev->number), endian_be32(p->period));
-          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), endian_be32(TIMER_CTRL_ENABLED | TIMER_CTRL_RESTART | TIMER_CTRL_IE));
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_COUNTER, accessor->number), endian_be32(p->period));
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_RELOAD, accessor->number), endian_be32(p->period));
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, accessor->number), endian_be32(TIMER_CTRL_ENABLED | TIMER_CTRL_RESTART | TIMER_CTRL_IE));
         }
       p->start_count |= 1;
     }
@@ -260,17 +260,17 @@ static DEVTIMER_REQUEST(gptimer_request)
 # endif
 }
 
-static DEVTIMER_START_STOP(gptimer_state_start_stop)
+static DEV_TIMER_START_STOP(gptimer_state_start_stop)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct gptimer_private_s *pv = dev->drv_pv;
 
-  if (tdev->number >= pv->t_count)
+  if (accessor->number >= pv->t_count)
     return -ENOENT;
 
   error_t err = 0;
 
-  struct gptimer_state_s *p = pv->t + tdev->number;
+  struct gptimer_state_s *p = pv->t + accessor->number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -279,9 +279,9 @@ static DEVTIMER_START_STOP(gptimer_state_start_stop)
     {
       if (p->start_count == 0)
         {
-          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_COUNTER, tdev->number), endian_be32(p->period));
-          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_RELOAD, tdev->number), endian_be32(p->period));
-          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), endian_be32(TIMER_CTRL_ENABLED | TIMER_CTRL_RESTART | TIMER_CTRL_IE));
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_COUNTER, accessor->number), endian_be32(p->period));
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_RELOAD, accessor->number), endian_be32(p->period));
+          cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, accessor->number), endian_be32(TIMER_CTRL_ENABLED | TIMER_CTRL_RESTART | TIMER_CTRL_IE));
         }
       p->start_count += 2;
     }
@@ -293,21 +293,21 @@ static DEVTIMER_START_STOP(gptimer_state_start_stop)
         {
           p->start_count -= 2;
           if (p->start_count == 0)
-            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), endian_be32(TIMER_CTRL_IE));
+            cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, accessor->number), endian_be32(TIMER_CTRL_IE));
         }
     }
 # else
   if (start)
     {
       if (p->start_count++ == 0)
-        cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), endian_be32(TIMER_CTRL_ENABLED | TIMER_CTRL_RESTART));
+        cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, accessor->number), endian_be32(TIMER_CTRL_ENABLED | TIMER_CTRL_RESTART));
     }
   else
     {
       if (p->start_count == 0)
         err = -EINVAL;
       else if (--p->start_count == 0)
-        cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, tdev->number), 0);
+        cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_CTRL, accessor->number), 0);
     }
 # endif
 
@@ -316,40 +316,40 @@ static DEVTIMER_START_STOP(gptimer_state_start_stop)
   return err;
 }
 
-static DEVTIMER_GET_VALUE(gptimer_get_value)
+static DEV_TIMER_GET_VALUE(gptimer_get_value)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct gptimer_private_s *pv = dev->drv_pv;
 
-  if (tdev->number >= pv->t_count)
+  if (accessor->number >= pv->t_count)
     return -ENOENT;
  
 # ifdef CONFIG_DEVICE_IRQ
-  struct gptimer_state_s *p = pv->t + tdev->number;
+  struct gptimer_state_s *p = pv->t + accessor->number;
 
   LOCK_SPIN_IRQ(&dev->lock);
   *value = p->value;
   LOCK_RELEASE_IRQ(&dev->lock);
 #else
-  *value = ~endian_be32(cpu_mem_read_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_COUNTER, tdev->number)));
+  *value = ~endian_be32(cpu_mem_read_32(TIMER_REG_ADDR(pv->addr, TIMER_REG_COUNTER, accessor->number)));
 #endif
 
   return 0;
 }
 
-static DEVTIMER_RESOLUTION(gptimer_resolution)
+static DEV_TIMER_RESOLUTION(gptimer_resolution)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct gptimer_private_s *pv = dev->drv_pv;
 
-  if (tdev->number >= pv->t_count)
+  if (accessor->number >= pv->t_count)
     return -ENOENT;
 
   error_t err = 0;
   uint32_t sc = endian_be32(cpu_mem_read_32(pv->addr + TIMER_REG_SC_RELOAD)) + 1;
 
 # ifdef CONFIG_DEVICE_IRQ
-  struct gptimer_state_s *p = pv->t + tdev->number;
+  struct gptimer_state_s *p = pv->t + accessor->number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -412,9 +412,9 @@ const struct driver_timer_s  gptimer_timer_drv =
 
 /************************************************************************/
 
-static const struct devenum_ident_s  gptimer_ids[] =
+static const struct dev_enum_ident_s  gptimer_ids[] =
 {
-  DEVENUM_GAISLER_ENTRY(0x1, 0x011),
+  DEV_ENUM_GAISLER_ENTRY(0x1, 0x011),
   { 0 }
 };
 

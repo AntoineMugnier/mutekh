@@ -27,8 +27,8 @@
 #include <hexo/types.h>
 #include <device/class/lcd.h>
 
-DEVLCD_REQUEST(s1d15g00_request);
-DEVLCD_GETINFO(s1d15g00_getinfo);
+DEV_LCD_REQUEST(s1d15g00_request);
+DEV_LCD_GETINFO(s1d15g00_getinfo);
 DEV_CLEANUP(s1d15g00_cleanup);
 
 struct device_s;

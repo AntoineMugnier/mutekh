@@ -9,7 +9,7 @@ objs = \
 	fs.o
 
 doc_headers = vfs/file.h vfs/fs.h \
-vfs/defs.h vfs/ops.h vfs/node.h vfs/path.h vfs/name.h
+ vfs/node.h vfs/path.h vfs/name.h
 
 subdirs = fs
 

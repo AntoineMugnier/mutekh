@@ -209,13 +209,13 @@ struct dev_rfpacket_rq_s
     } cfg;
   };
 
-  const struct device_rfpacket_s    *rfdev;         //< associated rfp device
+  const struct device_rfpacket_s    *accessor;         //< associated rfp device
 };
 
 STRUCT_INHERIT(dev_rfpacket_rq_s, dev_request_s, base);
 
-/** @see devrfpacket_request_t */
-#define DEVRFPACKET_REQUEST(n)	void  (n) (const struct device_rfpacket_s *rfdev, ...)
+/** @see dev_rfpacket_request_t */
+#define DEV_RFPACKET_REQUEST(n)	void  (n) (const struct device_rfpacket_s *accessor, ...)
 
 /**
   This function enqueues multiple @ref dev_rfpacket_rq_s requests
@@ -313,11 +313,11 @@ STRUCT_INHERIT(dev_rfpacket_rq_s, dev_request_s, base);
   @end table
 
 */
-typedef DEVRFPACKET_REQUEST(devrfpacket_request_t);
+typedef DEV_RFPACKET_REQUEST(dev_rfpacket_request_t);
 
 
-/** @see devrfpacket_request_t */
-#define DEVRFPACKET_RECEIVE(n) void  (n) (const struct device_rfpacket_s *rfdev, \
+/** @see dev_rfpacket_request_t */
+#define DEV_RFPACKET_RECEIVE(n) void  (n) (const struct device_rfpacket_s *accessor, \
                                             struct dev_rfpacket_rx_s *rx)
 /**
   This function enqueues a @ref dev_rfpacket_rx_s buffer.
@@ -341,11 +341,11 @@ typedef DEVRFPACKET_REQUEST(devrfpacket_request_t);
   @tt timestamp field is set to the date of the beginning of frame.
 
  */
-typedef DEVRFPACKET_RECEIVE(devrfpacket_receive_t);
+typedef DEV_RFPACKET_RECEIVE(dev_rfpacket_receive_t);
 
 DRIVER_CLASS_TYPES(rfpacket,
-                   devrfpacket_request_t *f_request;
-                   devrfpacket_receive_t *f_receive;
+                   dev_rfpacket_request_t *f_request;
+                   dev_rfpacket_receive_t *f_receive;
                   );
 
 #endif

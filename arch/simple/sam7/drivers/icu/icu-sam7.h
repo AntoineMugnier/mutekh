@@ -30,9 +30,9 @@
 /* icu device functions */
 
 DEV_INIT(icu_sam7_init);
-DEVICU_ENABLE(icu_sam7_enable);
-DEVICU_SETHNDL(icu_sam7_sethndl);
-DEVICU_DELHNDL(icu_sam7_delhndl);
+DEV_ICU_ENABLE(icu_sam7_enable);
+DEV_ICU_SETHNDL(icu_sam7_sethndl);
+DEV_ICU_DELHNDL(icu_sam7_delhndl);
 DEV_CLEANUP(icu_sam7_cleanup);
 
 #define ICU_SAM7_ID_PITC 20

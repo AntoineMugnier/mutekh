@@ -53,9 +53,9 @@ struct soclib_icu_private_s
   struct dev_irq_ep_s src;
 };
 
-static DEVICU_GET_ENDPOINT(soclib_icu_icu_get_endpoint)
+static DEV_ICU_GET_ENDPOINT(soclib_icu_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_icu_private_s *pv = dev->drv_pv;
 
   switch (type)
@@ -74,9 +74,9 @@ static DEVICU_GET_ENDPOINT(soclib_icu_icu_get_endpoint)
     }
 }
 
-static DEVICU_ENABLE_IRQ(soclib_icu_icu_enable_irq)
+static DEV_ICU_ENABLE_IRQ(soclib_icu_icu_enable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_icu_private_s *pv = dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sinks;
 
@@ -97,9 +97,9 @@ static DEVICU_ENABLE_IRQ(soclib_icu_icu_enable_irq)
   return 1;
 }
 
-static DEVICU_DISABLE_IRQ(soclib_icu_icu_disable_irq)
+static DEV_ICU_DISABLE_IRQ(soclib_icu_icu_disable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_icu_private_s *pv = dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sinks;
 
@@ -131,9 +131,9 @@ const struct driver_icu_s  soclib_icu_icu_drv =
   .f_disable_irq  = soclib_icu_icu_disable_irq,
 };
 
-static const struct devenum_ident_s  soclib_icu_ids[] =
+static const struct dev_enum_ident_s  soclib_icu_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("soclib:vci_icu"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_icu"),
   { 0 }
 };
 

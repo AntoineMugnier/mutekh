@@ -58,10 +58,10 @@ struct bcm2835_spi_context_s
 #endif
 };
 
-static DEVSPI_CTRL_CONFIG(bcm2835_spi_config)
+static DEV_SPI_CTRL_CONFIG(bcm2835_spi_config)
 {
 //  printk("CONFIG\n");
-  struct device_s *dev = scdev->dev;
+  struct device_s *dev = accessor->dev;
   struct bcm2835_spi_context_s *pv = dev->drv_pv;
   error_t err = 0;
 
@@ -230,9 +230,9 @@ static DEV_IRQ_EP_PROCESS(bcm2835_spi_irq)
 
 #endif
 
-static DEVSPI_CTRL_SELECT(bcm2835_spi_select)
+static DEV_SPI_CTRL_SELECT(bcm2835_spi_select)
 {
-  struct device_s *dev = scdev->dev;
+  struct device_s *dev = accessor->dev;
   struct bcm2835_spi_context_s *pv = dev->drv_pv;
   error_t err = 0;
 
@@ -271,9 +271,9 @@ static DEVSPI_CTRL_SELECT(bcm2835_spi_select)
   return err;
 }
 
-static DEVSPI_CTRL_TRANSFER(bcm2835_spi_transfer)
+static DEV_SPI_CTRL_TRANSFER(bcm2835_spi_transfer)
 {
-  struct device_s *dev = scdev->dev;
+  struct device_s *dev = accessor->dev;
   struct bcm2835_spi_context_s *pv = dev->drv_pv;
   bool_t done = 1;
 
@@ -288,7 +288,7 @@ static DEVSPI_CTRL_TRANSFER(bcm2835_spi_transfer)
       pv->tr = tr;
       pv->fifo_lvl = 0;
       tr->err = 0;
-      tr->scdev = scdev;
+      tr->accessor = accessor;
 
       BCM2835_SPI_CS_TA_SET(pv->ctrl, ACTIVE); 
       BCM2835_SPI_CS_CLEAR_SET(pv->ctrl, NONE);
@@ -305,9 +305,9 @@ static DEVSPI_CTRL_TRANSFER(bcm2835_spi_transfer)
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 
-static DEVSPI_CTRL_QUEUE(bcm2835_spi_queue)
+static DEV_SPI_CTRL_QUEUE(bcm2835_spi_queue)
 {
-  struct device_s *dev = scdev->dev;
+  struct device_s *dev = accessor->dev;
   struct bcm2835_spi_context_s *pv = dev->drv_pv;
   return &pv->queue;
 }

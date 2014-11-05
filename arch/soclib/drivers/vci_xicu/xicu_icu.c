@@ -36,9 +36,9 @@
 
 #define XICU_RR_COUNT 5
 
-static DEVICU_GET_ENDPOINT(soclib_xicu_icu_get_endpoint)
+static DEV_ICU_GET_ENDPOINT(soclib_xicu_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
 
   switch (type)
@@ -84,9 +84,9 @@ static void soclib_xicu_rr_mask(struct soclib_xicu_private_s *pv, struct soclib_
 #endif
 }
 
-static DEVICU_ENABLE_IRQ(soclib_xicu_icu_enable_irq)
+static DEV_ICU_ENABLE_IRQ(soclib_xicu_icu_enable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
   struct soclib_xicu_sink_s *xsink = (struct soclib_xicu_sink_s*)sink;
   uint_fast8_t i, icu_in_id = xsink - pv->sinks;
@@ -126,9 +126,9 @@ static DEVICU_ENABLE_IRQ(soclib_xicu_icu_enable_irq)
   return 1;
 }
 
-static DEVICU_DISABLE_IRQ(soclib_xicu_icu_disable_irq)
+static DEV_ICU_DISABLE_IRQ(soclib_xicu_icu_disable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
   struct soclib_xicu_sink_s *xsink = (struct soclib_xicu_sink_s*)sink;
   uint_fast8_t icu_in_id = xsink - pv->sinks;

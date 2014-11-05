@@ -55,7 +55,7 @@ static DEV_IRQ(icu_sam7_handle_sysctrl)
 	return 0;
 }
 
-DEVICU_SETHNDL(icu_sam7_sethndl)
+DEV_ICU_SETHNDL(icu_sam7_sethndl)
 {
 	assert(irq < 32 && "Only 32 irq line are available on SAM7");
 
@@ -68,7 +68,7 @@ DEVICU_SETHNDL(icu_sam7_sethndl)
 	return 0;
 }
 
-DEVICU_DELHNDL(icu_sam7_delhndl)
+DEV_ICU_DELHNDL(icu_sam7_delhndl)
 {
 	assert(irq < 32 && "Only 32 irq line are available on SAM7");
 
@@ -121,9 +121,9 @@ DEV_CLEANUP(icu_sam7_cleanup)
 }
 
 #ifdef CONFIG_DRIVER_ENUM_FDT
-static const struct devenum_ident_s	icu_sam7_ids[] =
+static const struct dev_enum_ident_s	icu_sam7_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("sam7:icu", 0, 0),
+	DEV_ENUM_FDTNAME_ENTRY("sam7:icu", 0, 0),
 	{ 0 }
 };
 #endif
@@ -224,7 +224,7 @@ DEV_INIT(icu_sam7_init)
 	return -ENOMEM;
 }
 
-DEVICU_ENABLE(icu_sam7_enable)
+DEV_ICU_ENABLE(icu_sam7_enable)
 {
 	AT91PS_AIC registers = (void*)dev->addr[0];
 	struct icu_sam7_private_s	*pv = sam7_c_irq_dev->drv_pv;

@@ -28,7 +28,7 @@
 
 DEV_INIT(dev_null_init);
 DEV_CLEANUP(dev_null_cleanup);
-DEVCHAR_REQUEST(dev_null_request);
+DEV_CHAR_REQUEST(dev_null_request);
 
 #endif
 

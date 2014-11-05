@@ -30,7 +30,7 @@
 
 DEV_INIT(dev_random_init);
 DEV_CLEANUP(dev_random_cleanup);
-DEVCHAR_REQUEST(dev_random_request);
+DEV_CHAR_REQUEST(dev_random_request);
 
 #endif
 

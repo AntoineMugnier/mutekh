@@ -225,9 +225,9 @@ static bool_t efm32_i2c_fsm(struct efm32_i2c_context_s *pv, bool_t stop)
 
 /***************************************** config */
 
-DEVI2C_CTRL_CONFIG(efm32_i2c_config)
+DEV_I2C_CTRL_CONFIG(efm32_i2c_config)
 {
-  struct device_s               *dev = i2cdev->dev;
+  struct device_s               *dev = accessor->dev;
   struct efm32_i2c_context_s    *pv  = dev->drv_pv;
   error_t err = 0;
 
@@ -292,9 +292,9 @@ static DEV_IRQ_EP_PROCESS(efm32_i2c_irq)
   lock_release(&dev->lock);
 }
 
-DEVI2C_CTRL_TRANSFER(efm32_i2c_transfer)
+DEV_I2C_CTRL_TRANSFER(efm32_i2c_transfer)
 {
-  struct device_s               *dev = i2cdev->dev;
+  struct device_s               *dev = accessor->dev;
   struct efm32_i2c_context_s    *pv  = dev->drv_pv;
   bool_t done = 1;
 

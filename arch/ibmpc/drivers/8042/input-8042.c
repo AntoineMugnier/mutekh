@@ -47,7 +47,7 @@
  * device info query
  */
 
-DEVINPUT_INFO(input_8042_info)
+DEV_INPUT_INFO(input_8042_info)
 {
   info->name = "8042 PC Keyboard controller";
   info->ctrl_button_count = INPUT_8042_KEYCOUNT;
@@ -58,7 +58,7 @@ DEVINPUT_INFO(input_8042_info)
  * device read operation
  */
 
-DEVINPUT_READ(input_8042_read)
+DEV_INPUT_READ(input_8042_read)
 {
   struct input_8042_context_s	*pv = dev->drv_pv;
 
@@ -71,7 +71,7 @@ DEVINPUT_READ(input_8042_read)
  * device write operations
  */
 
-DEVINPUT_WRITE(input_8042_write)
+DEV_INPUT_WRITE(input_8042_write)
 {
   // struct input_8042_context_s	*pv = dev->drv_pv;
 
@@ -86,15 +86,15 @@ DEVINPUT_WRITE(input_8042_write)
  * device read operation
  */
 
-DEVINPUT_SETCALLBACK(input_8042_setcallback)
+DEV_INPUT_SETCALLBACK(input_8042_setcallback)
 {
   struct input_8042_context_s	*pv = dev->drv_pv;
 
-  assert((id == DEVINPUT_CTRLID_ALL) || (id < INPUT_8042_KEYCOUNT));
+  assert((id == DEV_INPUT_CTRLID_ALL) || (id < INPUT_8042_KEYCOUNT));
 
-  if (id == DEVINPUT_CTRLID_ALL)
+  if (id == DEV_INPUT_CTRLID_ALL)
     {
-      devinput_ctrlid_t	i;
+      dev_input_ctrlid_t	i;
 
       for (i = 0; i < INPUT_8042_KEYCOUNT; i++)
 	{
@@ -114,15 +114,15 @@ DEVINPUT_SETCALLBACK(input_8042_setcallback)
 }
 
 static inline void
-input_8042_keyevent(struct input_8042_context_s *pv, devinput_ctrlid_t keyid, bool_t down)
+input_8042_keyevent(struct input_8042_context_s *pv, dev_input_ctrlid_t keyid, bool_t down)
 {
   input_state_set(&pv->key_state, keyid, down);
 
   if (pv->events[keyid].callback != NULL)
     {
-      if (down && (pv->events[keyid].type & DEVINPUT_EVENT_BUTTON_DOWN))
+      if (down && (pv->events[keyid].type & DEV_INPUT_EVENT_BUTTON_DOWN))
 	pv->events[keyid].callback(keyid, down, pv->events[keyid].priv);
-      if (!down && (pv->events[keyid].type & DEVINPUT_EVENT_BUTTON_UP))
+      if (!down && (pv->events[keyid].type & DEV_INPUT_EVENT_BUTTON_UP))
 	pv->events[keyid].callback(keyid, down, pv->events[keyid].priv);
     }
 
@@ -147,7 +147,7 @@ static void
 input_8042_scancode_ext(struct device_s *dev, uint8_t scancode)
 {
   struct input_8042_context_s	*pv = dev->drv_pv;
-  static const devinput_ctrlid_t keycodes[INPUT_8042_KEYCOUNT] =
+  static const dev_input_ctrlid_t keycodes[INPUT_8042_KEYCOUNT] =
     {
       [0x38] = INPUT_8042_KEY_RALT,
       [0x1d] = INPUT_8042_KEY_RCTRL,
@@ -183,7 +183,7 @@ static void
 input_8042_scancode_default(struct device_s *dev, uint8_t scancode)
 {
   struct input_8042_context_s	*pv = dev->drv_pv;
-  static const devinput_ctrlid_t keycodes[INPUT_8042_KEYCOUNT] =
+  static const dev_input_ctrlid_t keycodes[INPUT_8042_KEYCOUNT] =
     {
       [0x01] = INPUT_8042_KEY_ESCAPE,
       [0x3b] = INPUT_8042_KEY_F1,
@@ -377,7 +377,7 @@ DEV_INIT(input_8042_init)
     return -ENOMEM;
 
   {
-    devinput_ctrlid_t	i;
+    dev_input_ctrlid_t	i;
 
     for (i = 0; i < INPUT_8042_KEYCOUNT; i++)
       pv->events[i].callback = NULL;

@@ -40,16 +40,16 @@
 #include <string.h>
 #include <stdio.h>
 
-static DEVENUM_MATCH_DRIVER(apbctrl_match_driver)
+static DEV_ENUM_MATCH_DRIVER(apbctrl_match_driver)
 {
-  const struct devenum_ident_s *ident = drv->id_table;
+  const struct dev_enum_ident_s *ident = drv->id_table;
 
   if (!ident)
     return 0;
 
   for ( ; ident->type != 0; ident++ )
     {
-      if (ident->type != DEVENUM_TYPE_GAISLER)
+      if (ident->type != DEV_ENUM_TYPE_GAISLER)
         continue;
 
       const struct dev_resource_s *rp = device_res_get(dev, DEV_RES_PRODUCT, 0);
@@ -260,9 +260,9 @@ static void apbctrl_scan(struct device_s *dev, uintptr_t begin)
 DEV_CLEANUP(apbctrl_cleanup);
 DEV_INIT(apbctrl_init);
 
-static const struct devenum_ident_s	gaisler_apbctrl_ids[] =
+static const struct dev_enum_ident_s	gaisler_apbctrl_ids[] =
 {
-  DEVENUM_GAISLER_ENTRY(GAISLER_VENDOR_GAISLER, GAISLER_DEVICE_APBMST),
+  DEV_ENUM_GAISLER_ENTRY(GAISLER_VENDOR_GAISLER, GAISLER_DEVICE_APBMST),
   { 0 }
 };
 

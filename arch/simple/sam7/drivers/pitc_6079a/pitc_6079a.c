@@ -39,7 +39,7 @@
  * timer device callback setup
  */
 
-DEVTIMER_SETCALLBACK(pitc_6079a_setcallback)
+DEV_TIMER_SETCALLBACK(pitc_6079a_setcallback)
 {
 	struct pitc_6079a_context_s *pv = dev->drv_pv;
 	uintptr_t registers = (uintptr_t)dev->addr[0];
@@ -63,7 +63,7 @@ DEVTIMER_SETCALLBACK(pitc_6079a_setcallback)
  * timer device period setup
  */
 
-DEVTIMER_SETPERIOD(pitc_6079a_setperiod)
+DEV_TIMER_SETPERIOD(pitc_6079a_setperiod)
 {
 	uintptr_t registers = (uintptr_t)dev->addr[0];
 
@@ -86,7 +86,7 @@ DEVTIMER_SETPERIOD(pitc_6079a_setperiod)
  * timer device value change
  */
 
-DEVTIMER_SETVALUE(pitc_6079a_setvalue)
+DEV_TIMER_SETVALUE(pitc_6079a_setvalue)
 {
 	return ENOTSUP;
 }
@@ -95,7 +95,7 @@ DEVTIMER_SETVALUE(pitc_6079a_setvalue)
  * timer device period setup
  */
 
-DEVTIMER_GETVALUE(pitc_6079a_getvalue)
+DEV_TIMER_GETVALUE(pitc_6079a_getvalue)
 {
 	uintptr_t registers = (uintptr_t)dev->addr[0];
 
@@ -137,9 +137,9 @@ DEV_CLEANUP(pitc_6079a_cleanup)
 }
 
 #ifdef CONFIG_DRIVER_ENUM_FDT
-static const struct devenum_ident_s	pitc_6079a_ids[] =
+static const struct dev_enum_ident_s	pitc_6079a_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("pitc6079a", 0, 0),
+	DEV_ENUM_FDTNAME_ENTRY("pitc6079a", 0, 0),
 	{ 0 }
 };
 #endif

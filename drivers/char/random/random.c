@@ -28,7 +28,7 @@
 #include <device/driver.h>
 #include <mutek/mem_alloc.h>
 
-DEVCHAR_REQUEST(dev_random_request)
+DEV_CHAR_REQUEST(dev_random_request)
 {
   struct random_context_s	*pv = dev->drv_pv;
 

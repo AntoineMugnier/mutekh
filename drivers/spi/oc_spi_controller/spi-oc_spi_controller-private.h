@@ -40,7 +40,7 @@ struct spi_oc_spi_controller_context_s
   dev_spi_queue_root_t queue;
   cmd_handler_f *tx_handler;
   cmd_handler_f *rx_handler;
-  devspi_wait_value_callback_t *wait_cb;
+  dev_spi_wait_value_callback_t *wait_cb;
   uint_fast8_t lun_count;
 
   struct spi_oc_spi_controller_dev_config_s *dev_config;

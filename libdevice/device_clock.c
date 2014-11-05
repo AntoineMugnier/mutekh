@@ -56,10 +56,10 @@ void dev_clock_sink_release(struct dev_clock_sink_ep_s *sink)
   LOCK_RELEASE_IRQ(&src->dev->lock);
 }
 
-error_t dev_clock_config(struct device_clock_s *ckdev,
+error_t dev_clock_config(struct device_clock_s *accessor,
                          dev_clock_config_id_t config_id)
 {
-  struct device_s *dev = ckdev->dev;
+  struct device_s *dev = accessor->dev;
   bool_t done = 0;
   error_t err;
 
@@ -79,7 +79,7 @@ error_t dev_clock_config(struct device_clock_s *ckdev,
               v = &val;
             }
 
-          err = DEVICE_OP(ckdev, config_node, r->u.clock_rte.node,
+          err = DEVICE_OP(accessor, config_node, r->u.clock_rte.node,
                           r->u.clock_rte.parent, v);
           if (err)
             goto err;
@@ -96,7 +96,7 @@ error_t dev_clock_config(struct device_clock_s *ckdev,
           val.freq.num = r->u.clock_osc.num;
           val.freq.denom = r->u.clock_osc.denom;
 
-          err = DEVICE_OP(ckdev, config_node, r->u.clock_osc.node,
+          err = DEVICE_OP(accessor, config_node, r->u.clock_osc.node,
                           DEV_CLOCK_INVALID_NODE_ID, &val);
           if (err)
             goto err;
@@ -113,14 +113,14 @@ error_t dev_clock_config(struct device_clock_s *ckdev,
   if (!done)
     return -ENOENT;
 
-  return DEVICE_OP(ckdev, commit);
+  return DEVICE_OP(accessor, commit);
 
  err:
-  DEVICE_OP(ckdev, rollback);
+  DEVICE_OP(accessor, rollback);
   return err;
 }
 
-void dev_clock_src_changed(struct device_clock_s *ckdev,
+void dev_clock_src_changed(struct device_clock_s *accessor,
                            struct dev_clock_src_ep_s *src,
                            const struct dev_freq_s *freq)
 {
@@ -288,15 +288,15 @@ error_t dev_clock_node_info(struct device_s *dev, dev_clock_node_id_t node_id,
                             enum dev_clock_node_info_e mask,
                             struct dev_clock_node_info_s *info)
 {
-  struct device_clock_s ckdev;
+  struct device_clock_s accessor;
 
-  if (device_get_accessor(&ckdev, dev, DRIVER_CLASS_CLOCK, 0))
+  if (device_get_accessor(&accessor, dev, DRIVER_CLASS_CLOCK, 0))
     return -EINVAL;
 
   enum dev_clock_node_info_e m = mask;
-  error_t err = DEVICE_OP(&ckdev, node_info, node_id, &m, info);
+  error_t err = DEVICE_OP(&accessor, node_info, node_id, &m, info);
 
-  device_put_accessor(&ckdev);
+  device_put_accessor(&accessor);
 
   if (!err && m != mask)
     return -EINVAL;

@@ -45,7 +45,7 @@ struct dev_block_wait_rq_s
   bool_t done;
 };
 
-static DEVBLOCK_CALLBACK(dev_block_syncl_request)
+static DEV_BLOCK_CALLBACK(dev_block_syncl_request)
 {
   struct dev_block_wait_rq_s *status = rq->pvdata;
 
@@ -68,7 +68,7 @@ static error_t dev_block_lock_request(struct device_block_s *dev, uint8_t **data
   rq.pvdata = &status;
   rq.callback = dev_block_syncl_request;
   rq.progress = 0;
-  rq.bdev = dev;
+  rq.accessor = dev;
 
   DEVICE_OP(dev, request, &rq);
 
@@ -83,7 +83,7 @@ static error_t dev_block_lock_request(struct device_block_s *dev, uint8_t **data
 }
 
 #ifdef CONFIG_MUTEK_SCHEDULER
-static DEVBLOCK_CALLBACK(dev_block_sync_request)
+static DEV_BLOCK_CALLBACK(dev_block_sync_request)
 {
   struct dev_block_wait_rq_s *status = rq->pvdata;
 
@@ -117,7 +117,7 @@ static error_t dev_block_wait_request(struct device_block_s *dev, uint8_t **data
   rq.pvdata = &status;
   rq.callback = dev_block_sync_request;
   rq.progress = 0;
-  rq.bdev = dev;
+  rq.accessor = dev;
 
   DEVICE_OP(dev, request, &rq);
 

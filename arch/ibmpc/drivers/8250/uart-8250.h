@@ -40,7 +40,7 @@ struct uart_8250_param_s {
 DEV_IRQ(uart_8250_irq);
 DEV_INIT(uart_8250_init);
 DEV_CLEANUP(uart_8250_cleanup);
-DEVCHAR_REQUEST(uart_8250_request);
+DEV_CHAR_REQUEST(uart_8250_request);
 
 #endif
 

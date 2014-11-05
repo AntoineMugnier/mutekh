@@ -202,7 +202,7 @@ static error_t fb_vga_setmode_(const struct fb_vga_mode_s *mode)
   return 0;
 }
 
-DEVFB_SETMODE(fb_vga_setmode)
+DEV_FB_SETMODE(fb_vga_setmode)
 {
   struct fb_vga_context_s	*pv = dev->drv_pv;
   const struct fb_vga_mode_s	*m;
@@ -220,7 +220,7 @@ DEVFB_SETMODE(fb_vga_setmode)
   return -EINVAL;
 }
 
-DEVFB_FLIPPAGE(fb_vga_flippage)
+DEV_FB_FLIPPAGE(fb_vga_flippage)
 {
   struct fb_vga_context_s	*pv = dev->drv_pv;
 
@@ -232,7 +232,7 @@ DEVFB_FLIPPAGE(fb_vga_flippage)
   return 0;
 }
 
-DEVFB_SETPALETTE(fb_vga_setpalette)
+DEV_FB_SETPALETTE(fb_vga_setpalette)
 {
   uint_fast16_t	i;
 

@@ -41,7 +41,7 @@
 
 #include "s1d15g00-private.h"
 
-static DEVSPI_CALLBACK(__s1d15g00_cmd_done)
+static DEV_SPI_CALLBACK(__s1d15g00_cmd_done)
 {
 	bool_t *done = priv;
 
@@ -54,7 +54,7 @@ static
 void __s1d15g00_send_cmd(struct device_s *dev,
 						 uint8_t cmd,
 						 const uint8_t *data, size_t dlen,
-						 devspi_callback_t *cb, void *cb_data)
+						 dev_spi_callback_t *cb, void *cb_data)
 {
 	struct s1d15g00_context_s *pv = dev->drv_pv;
 
@@ -177,7 +177,7 @@ void __s1d15g00_init_lcd(struct device_s *dev)
 }
 
 
-static DEVSPI_CALLBACK(__s1d15g00_req_done);
+static DEV_SPI_CALLBACK(__s1d15g00_req_done);
 
 static error_t __s1d15g00_handle_one_req(struct device_s *dev, struct lcd_req_s *req)
 {
@@ -302,7 +302,7 @@ static error_t __s1d15g00_handle_one_req(struct device_s *dev, struct lcd_req_s 
 
 
 
-static DEVSPI_CALLBACK(__s1d15g00_req_done)
+static DEV_SPI_CALLBACK(__s1d15g00_req_done)
 {
 #ifdef NO_QUEUE
 	struct lcd_req_s *req = priv;
@@ -330,7 +330,7 @@ static DEVSPI_CALLBACK(__s1d15g00_req_done)
 #endif
 }
 
-DEVLCD_REQUEST(s1d15g00_request)
+DEV_LCD_REQUEST(s1d15g00_request)
 {
 #ifdef NO_QUEUE
 	return __s1d15g00_handle_one_req(dev, req);
@@ -349,7 +349,7 @@ DEVLCD_REQUEST(s1d15g00_request)
 #endif
 }
 
-DEVLCD_GETINFO(s1d15g00_getinfo)
+DEV_LCD_GETINFO(s1d15g00_getinfo)
 {
 	struct s1d15g00_context_s *pv = dev->drv_pv;
 	return &pv->info;
@@ -369,9 +369,9 @@ static const struct driver_param_binder_s s1d15g00_binder[] =
 	{ 0 }
 };
 
-static const struct devenum_ident_s	s1d15g00_ids[] =
+static const struct dev_enum_ident_s	s1d15g00_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("s1d15g00", sizeof(struct s1d15g00_param_s), s1d15g00_binder),
+	DEV_ENUM_FDTNAME_ENTRY("s1d15g00", sizeof(struct s1d15g00_param_s), s1d15g00_binder),
 	{ 0 }
 };
 #endif

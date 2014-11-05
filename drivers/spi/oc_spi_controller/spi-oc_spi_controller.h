@@ -34,9 +34,9 @@ struct spi_oc_spi_controller_param_s
 DEV_INIT(spi_oc_spi_controller_init);
 DEV_CLEANUP(spi_oc_spi_controller_cleanup);
 DEV_IRQ(spi_oc_spi_controller_irq);
-DEVSPI_SET_BAUDRATE(spi_oc_spi_controller_set_baudrate);
-DEVSPI_SET_DATA_FORMAT(spi_oc_spi_controller_set_data_format);
-DEVSPI_REQUEST(spi_oc_spi_controller_request);
+DEV_SPI_SET_BAUDRATE(spi_oc_spi_controller_set_baudrate);
+DEV_SPI_SET_DATA_FORMAT(spi_oc_spi_controller_set_data_format);
+DEV_SPI_REQUEST(spi_oc_spi_controller_request);
 
 #endif
 

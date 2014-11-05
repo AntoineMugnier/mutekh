@@ -23,7 +23,7 @@ struct semaphore_s sem;
 GCT_CONTAINER_TYPES(j_queue, CLIST,
 struct joy_event_s
 {
-	devinput_ctrlid_t id;
+	dev_input_ctrlid_t id;
 	bool_t new_val;
 
 	j_queue_entry_t queue_entry; /* used by driver to enqueue requests */
@@ -33,7 +33,7 @@ GCT_CONTAINER_FCNS(j_queue, CLIST, static inline, j_queue);
 
 static j_queue_root_t j_list;
 
-static DEVINPUT_CALLBACK(joystick_moved)
+static DEV_INPUT_CALLBACK(joystick_moved)
 {
 	struct joy_event_s *n = malloc(sizeof(*n));
 	n->id = id;
@@ -43,7 +43,7 @@ static DEVINPUT_CALLBACK(joystick_moved)
 	semaphore_give(&sem, 1);
 }
 
-static DEVGPIO_IRQ(button_pressed)
+static DEV_GPIO_IRQ(button_pressed)
 {
 	struct joy_event_s *n = malloc(sizeof(*n));
 	n->id = (uintptr_t)priv;
@@ -89,8 +89,8 @@ void *joystick_main(void *unused)
 	dev_gpio_assign_to_peripheral(&dev_gpio_piob, 25, 0);
 	dev_gpio_register_irq(&dev_gpio_piob, 25, GPIO_EVENT_ALL, button_pressed, (void*)6);
 
-	dev_input_setcallback(&dev_mt5f, DEVINPUT_CTRLID_ALL, 0, joystick_moved, NULL);
-	dev_input_setcallback(&dev_mt5f, DEVINPUT_CTRLID_ALL, 0, joystick_moved, NULL);
+	dev_input_setcallback(&dev_mt5f, DEV_INPUT_CTRLID_ALL, 0, joystick_moved, NULL);
+	dev_input_setcallback(&dev_mt5f, DEV_INPUT_CTRLID_ALL, 0, joystick_moved, NULL);
 
 	while (1) {
 		semaphore_take(&sem, 1);

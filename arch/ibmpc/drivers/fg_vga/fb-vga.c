@@ -50,7 +50,7 @@ DEV_CLEANUP(fb_vga_cleanup)
   mem_free(pv);
 }
 
-DEVFB_GETBUFFER(fb_vga_getbuffer)
+DEV_FB_GETBUFFER(fb_vga_getbuffer)
 {
   struct fb_vga_context_s	*pv = dev->drv_pv;
 

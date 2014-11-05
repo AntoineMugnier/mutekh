@@ -58,7 +58,7 @@ struct pca9557_private_s
     dev_request_queue_root_t pending;
 
     // Outgoing request
-    struct dev_i2c_request_s i2c_req;
+    struct dev_i2c_rq_s i2c_req;
     struct dev_i2c_transfer_s i2c_transfer[2];
 };
 
@@ -68,7 +68,7 @@ static void pca9557_req_next(struct device_s *dev);
 
 static void pca9557_req_done(
     struct device_s *dev,
-    struct dev_gpio_request_s *req)
+    struct dev_gpio_rq_s *req)
 {
     struct pca9557_private_s *pv = dev->drv_pv;
 
@@ -84,8 +84,8 @@ static KROUTINE_EXEC(pca9557_i2c_write_done)
 {
     struct pca9557_private_s *pv
         = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
-    struct dev_gpio_request_s *req
-        = dev_gpio_request_s_from_base(
+    struct dev_gpio_rq_s *req
+        = dev_gpio_rq_s_from_base(
             dev_request_queue_head(&pv->pending));
     struct device_s *dev = pv->i2c_req.base.pvdata;
 
@@ -101,8 +101,8 @@ static KROUTINE_EXEC(pca9557_i2c_read_done)
 {
     struct pca9557_private_s *pv
         = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
-    struct dev_gpio_request_s *req
-        = dev_gpio_request_s_from_base(
+    struct dev_gpio_rq_s *req
+        = dev_gpio_rq_s_from_base(
             dev_request_queue_head(&pv->pending));
     struct device_s *dev = pv->i2c_req.base.pvdata;
 
@@ -169,7 +169,7 @@ static void pca9557_input_get(
 
 static void pca9557_req_serve(
     struct device_s *dev,
-    struct dev_gpio_request_s *req)
+    struct dev_gpio_rq_s *req)
 {
     struct pca9557_private_s *pv = dev->drv_pv;
 
@@ -222,15 +222,15 @@ static void pca9557_req_serve(
 static void pca9557_req_next(struct device_s *dev)
 {
     struct pca9557_private_s *pv = dev->drv_pv;
-    struct dev_gpio_request_s *req
-        = dev_gpio_request_s_from_base(
+    struct dev_gpio_rq_s *req
+        = dev_gpio_rq_s_from_base(
             dev_request_queue_head(&pv->pending));
 
     if (req)
         pca9557_req_serve(dev, req);
 }
 
-static DEVGPIO_REQUEST(pca9557_request)
+static DEV_GPIO_REQUEST(pca9557_request)
 {
     struct device_s *dev = gpio->dev;
     struct pca9557_private_s *pv = dev->drv_pv;
@@ -254,9 +254,9 @@ static DEVGPIO_REQUEST(pca9557_request)
 const struct driver_gpio_s pca9557_gpio_drv =
 {
     .class_         = DRIVER_CLASS_GPIO,
-    .f_set_mode     = (devgpio_set_mode_t*)dev_driver_notsup_fcn,
-    .f_set_output   = (devgpio_set_output_t*)dev_driver_notsup_fcn,
-    .f_get_input    = (devgpio_get_input_t*)dev_driver_notsup_fcn,
+    .f_set_mode     = (dev_gpio_set_mode_t*)dev_driver_notsup_fcn,
+    .f_set_output   = (dev_gpio_set_output_t*)dev_driver_notsup_fcn,
+    .f_get_input    = (dev_gpio_get_input_t*)dev_driver_notsup_fcn,
     .f_request      = pca9557_request,
 };
 

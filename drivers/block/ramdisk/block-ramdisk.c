@@ -40,7 +40,7 @@
 
 /**************************************************************/
 
-DEVBLOCK_REQUEST(block_ramdisk_request)
+DEV_BLOCK_REQUEST(block_ramdisk_request)
 {
   struct block_ramdisk_context_s *pv = dev->drv_pv;
   struct dev_block_params_s *p = &pv->params;
@@ -85,12 +85,12 @@ DEVBLOCK_REQUEST(block_ramdisk_request)
   lock_release(&dev->lock);
 }
 
-DEVBLOCK_GETPARAMS(block_ramdisk_getparams)
+DEV_BLOCK_GETPARAMS(block_ramdisk_getparams)
 {
   return &(((struct block_ramdisk_context_s *)(dev->drv_pv))->params);
 }
 
-DEVBLOCK_GETRQSIZE(block_rmadisk_getrqsize)
+DEV_BLOCK_GETRQSIZE(block_rmadisk_getrqsize)
 {
   return sizeof(struct dev_block_rq_s);
 }
@@ -104,9 +104,9 @@ DEV_CLEANUP(block_ramdisk_cleanup)
   mem_free(pv);
 }
 
-static const struct devenum_ident_s	block_ramdisk_ids[] =
+static const struct dev_enum_ident_s	block_ramdisk_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("ramdisk", 0, 0),
+	DEV_ENUM_FDTNAME_ENTRY("ramdisk", 0, 0),
 	{ 0 }
 };
 

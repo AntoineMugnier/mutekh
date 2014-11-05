@@ -57,9 +57,9 @@ struct x86_64_emu_dev_private_s
 
 CPU_LOCAL struct device_s *cpu_device = NULL;
 
-static DEVCPU_REG_INIT(x86_64_emu_cpu_reg_init)
+static DEV_CPU_REG_INIT(x86_64_emu_cpu_reg_init)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct x86_64_emu_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
@@ -87,9 +87,9 @@ static DEVCPU_REG_INIT(x86_64_emu_cpu_reg_init)
 
 
 #ifdef CONFIG_ARCH_SMP
-static DEVCPU_GET_NODE(x86_64_emu_cpu_get_node)
+static DEV_CPU_GET_NODE(x86_64_emu_cpu_get_node)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   struct x86_64_emu_dev_private_s *pv = dev->drv_pv;
   return &pv->node;
 }

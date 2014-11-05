@@ -31,7 +31,7 @@
 
 struct pitc_6079a_context_s
 {
-	devtimer_callback_t	*cb;
+	dev_timer_callback_t	*cb;
 	void			*pv;
 };
 

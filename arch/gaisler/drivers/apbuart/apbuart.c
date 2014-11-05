@@ -147,9 +147,9 @@ static void gaisler_apbuart_try_write(struct device_s *dev)
     }
 }
 
-DEVCHAR_REQUEST(gaisler_apbuart_request)
+DEV_CHAR_REQUEST(gaisler_apbuart_request)
 {
-  struct device_s               *dev = cdev->dev;
+  struct device_s               *dev = accessor->dev;
   struct gaisler_apbuart_context_s	*pv = dev->drv_pv;
 
   assert(rq->size);
@@ -202,9 +202,9 @@ static DEV_IRQ_EP_PROCESS(gaisler_apbuart_irq)
 
 #endif
 
-static const struct devenum_ident_s	gaisler_apbuart_ids[] =
+static const struct dev_enum_ident_s	gaisler_apbuart_ids[] =
 {
-	DEVENUM_GAISLER_ENTRY(0x1, 0x00c),
+	DEV_ENUM_GAISLER_ENTRY(0x1, 0x00c),
 	{ 0 }
 };
 

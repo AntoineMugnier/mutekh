@@ -71,9 +71,9 @@ struct gaisler_irqmp_private_s
 
 #ifdef CONFIG_DRIVER_GAISLER_IRQMP_ICU
 
-static DEVICU_GET_ENDPOINT(gaisler_irqmp_icu_get_endpoint)
+static DEV_ICU_GET_ENDPOINT(gaisler_irqmp_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
 
   switch (type)
@@ -92,9 +92,9 @@ static DEVICU_GET_ENDPOINT(gaisler_irqmp_icu_get_endpoint)
     }
 };
 
-static DEVICU_ENABLE_IRQ(gaisler_irqmp_icu_enable_irq)
+static DEV_ICU_ENABLE_IRQ(gaisler_irqmp_icu_enable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
   struct gaisler_irqmp_sink_s *xsink = (struct gaisler_irqmp_sink_s*)sink;
   uint_fast8_t icu_in_id = xsink - pv->sinks;
@@ -174,9 +174,9 @@ static DEVICU_ENABLE_IRQ(gaisler_irqmp_icu_enable_irq)
   return 1;
 }
 
-static DEVICU_DISABLE_IRQ(gaisler_irqmp_icu_disable_irq)
+static DEV_ICU_DISABLE_IRQ(gaisler_irqmp_icu_disable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
   struct gaisler_irqmp_sink_s *xsink = (struct gaisler_irqmp_sink_s*)sink;
   uint_fast8_t icu_in_id = xsink - pv->sinks;
@@ -246,9 +246,9 @@ const struct driver_icu_s  gaisler_irqmp_icu_drv =
 
 #endif /*  CONFIG_DRIVER_GAISLER_IRQMP_ICU */
 
-static const struct devenum_ident_s	gaisler_irqmp_ids[] =
+static const struct dev_enum_ident_s	gaisler_irqmp_ids[] =
 {
-  DEVENUM_GAISLER_ENTRY(0x01, 0x00d),
+  DEV_ENUM_GAISLER_ENTRY(0x01, 0x00d),
   { 0 }
 };
 

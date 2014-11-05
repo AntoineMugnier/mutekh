@@ -26,7 +26,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 
-DEVCHAR_REQUEST(dev_null_request)
+DEV_CHAR_REQUEST(dev_null_request)
 {
   switch (rq->type)
     {

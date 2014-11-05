@@ -40,7 +40,7 @@
  * timer device callback setup
  */
 
-DEVTIMER_SETCALLBACK(timer_8253_setcallback)
+DEV_TIMER_SETCALLBACK(timer_8253_setcallback)
 {
   struct timer_8253_context_s	*pv = dev->drv_pv;
 
@@ -57,7 +57,7 @@ DEVTIMER_SETCALLBACK(timer_8253_setcallback)
  * timer device period setup
  */
 
-DEVTIMER_SETPERIOD(timer_8253_setperiod)
+DEV_TIMER_SETPERIOD(timer_8253_setperiod)
 {
   if (period)
     {
@@ -78,7 +78,7 @@ DEVTIMER_SETPERIOD(timer_8253_setperiod)
  * timer device value change
  */
 
-DEVTIMER_SETVALUE(timer_8253_setvalue)
+DEV_TIMER_SETVALUE(timer_8253_setvalue)
 {
   return -ENOTSUP;
 }
@@ -87,7 +87,7 @@ DEVTIMER_SETVALUE(timer_8253_setvalue)
  * timer device period setup
  */
 
-DEVTIMER_GETVALUE(timer_8253_getvalue)
+DEV_TIMER_GETVALUE(timer_8253_getvalue)
 {
   cpu_io_write_8(dev->addr[0] + 3, TIMER_8253_CHANID(id) | TIMER_8253_CTRL_LOADMODE_READ | TIMER_8253_CTRL_CNTMODE_SQWRGEN);
 

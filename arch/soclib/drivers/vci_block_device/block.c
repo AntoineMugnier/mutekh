@@ -234,9 +234,9 @@ static void soclib_block_rq_end(struct device_s *dev)
     soclib_block_rq_start(dev);
 }
 
-static DEVMEM_REQUEST(soclib_block_request)
+static DEV_MEM_REQUEST(soclib_block_request)
 {
-  struct device_s *dev = mdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_block_context_s *pv = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -249,12 +249,12 @@ static DEVMEM_REQUEST(soclib_block_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static DEVMEM_INFO(soclib_block_info)
+static DEV_MEM_INFO(soclib_block_info)
 {
-  struct device_s *dev = mdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_block_context_s	*pv = dev->drv_pv;
 
-  if (band_index > 0 || mdev->number > 0)
+  if (band_index > 0 || accessor->number > 0)
     return -ENOENT;
 
   memset(info, 0, sizeof(*info));
@@ -331,9 +331,9 @@ static DEV_IRQ_EP_PROCESS(soclib_block_irq)
   lock_release(&dev->lock);
 }
 
-static const struct devenum_ident_s	soclib_block_ids[] =
+static const struct dev_enum_ident_s	soclib_block_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("soclib:vci_block_device"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_block_device"),
   { 0 }
 };
 

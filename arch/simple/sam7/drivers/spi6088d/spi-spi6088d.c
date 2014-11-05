@@ -135,7 +135,7 @@ static CMD_HANDLER(spi_spi6088d_wait_value_rx)
 	struct dev_spi_rq_s *rq = dev_spi_queue_head(&pv->queue);
 
     uint32_t data = cpu_mem_read_32(registers + SPI_RDR);
-	enum devspi_wait_value_answer_e ret = pv->wait_cb(dev, rq, data);
+	enum dev_spi_wait_value_answer_e ret = pv->wait_cb(dev, rq, data);
 	switch (ret) {
 	case DEV_SPI_VALUE_FAIL:
 		pv->abort = 1;
@@ -314,7 +314,7 @@ struct dev_spi_rq_cmd_s *spi_spi6088d_get_next_cmd(struct device_s *dev)
 	return NULL;
 }
 
-DEVSPI_REQUEST(spi_spi6088d_request)
+DEV_SPI_REQUEST(spi_spi6088d_request)
 {
     struct spi_spi6088d_context_s *pv = dev->drv_pv;
 	uintptr_t registers = (uintptr_t)dev->addr[0];
@@ -361,7 +361,7 @@ DEV_IRQ(spi_spi6088d_irq)
 	return 0;
 }
 
-DEVSPI_SET_BAUDRATE(spi_spi6088d_set_baudrate)
+DEV_SPI_SET_BAUDRATE(spi_spi6088d_set_baudrate)
 {
     struct spi_spi6088d_context_s *pv = dev->drv_pv;
 	uintptr_t registers = (uintptr_t)dev->addr[0];
@@ -393,7 +393,7 @@ DEVSPI_SET_BAUDRATE(spi_spi6088d_set_baudrate)
 	return MCK/divisor;
 }
 
-DEVSPI_SET_DATA_FORMAT(spi_spi6088d_set_data_format)
+DEV_SPI_SET_DATA_FORMAT(spi_spi6088d_set_data_format)
 {
     struct spi_spi6088d_context_s *pv = dev->drv_pv;
 	uintptr_t registers = (uintptr_t)dev->addr[0];
@@ -436,9 +436,9 @@ static const struct driver_param_binder_s spi_spi6088d_param_binder[] =
 	{ 0 }
 };
 
-static const struct devenum_ident_s	spi_spi6088d_ids[] =
+static const struct dev_enum_ident_s	spi_spi6088d_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("spi6088d", sizeof(struct spi_spi6088d_param_s), spi_spi6088d_param_binder),
+	DEV_ENUM_FDTNAME_ENTRY("spi6088d", sizeof(struct spi_spi6088d_param_s), spi_spi6088d_param_binder),
 	{ 0 }
 };
 #endif

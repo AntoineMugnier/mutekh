@@ -21,9 +21,20 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short UART driver configuration API
+   @file
+   @module{Devices support library}
+   @short UART driver configuration API
+
+   UART class only defines configuration parameters for UART devices.
+   Data path of UART devices goes through the Character device class.
+
+   Parameters addresed by this class are:
+   @list
+   @item Baud rate,
+   @item Character bit size,
+   @item Character framing (Start, stop bits, parity),
+   @item Line control (flow control)
+   @end list
  */
 
 #ifndef __DEVICE_UART_H__
@@ -86,30 +97,30 @@ struct dev_uart_config_s
 /* forward declarations. */
 struct device_uart_s;
 
-#define DEVUART_CONFIG(n) error_t (n)(struct device_uart_s     *udev, \
+#define DEV_UART_CONFIG(n) error_t (n)(struct device_uart_s     *accessor, \
                                       struct dev_uart_config_s *cfg)
 /**/
 
 /** @This defines the prototype of the configuration function. */
-typedef DEVUART_CONFIG(devuart_config_t);
+typedef DEV_UART_CONFIG(dev_uart_config_t);
 
 /** Driver types. */
 DRIVER_CLASS_TYPES(uart,
-                   devuart_config_t *f_config;
+                   dev_uart_config_t *f_config;
                   );
 
 
-/** @this helper configures the @tt udev uart device with the given
+/** @this helper configures the @tt accessor uart device with the given
     configuration @tt cfg (and returns 0) or returns a negative error code.
 
     Note: if the device is busy or already in use, the function returns a
     EBUSY error.
  */
 ALWAYS_INLINE
-error_t dev_uart_config(struct device_uart_s     *udev,
+error_t dev_uart_config(struct device_uart_s     *accessor,
                         struct dev_uart_config_s *cfg)
 {
-  return DEVICE_OP(udev, config, cfg);
+  return DEVICE_OP(accessor, config, cfg);
 }
 
 

@@ -40,13 +40,13 @@ GCT_CONTAINER_FCNS(dev_request_queue, static, dev_request_queue,
 
 struct ds3231_priv_s
 {
-    struct dev_i2c_request_s i2c_req;
+    struct dev_i2c_rq_s i2c_req;
     struct dev_i2c_transfer_s i2c_transfer[2];
     struct ds3231_regs regs;
     struct device_i2c_s i2c;
     uint8_t saddr;
     uint8_t reg;
-    struct dev_valio_request_s *pending;
+    struct dev_valio_rq_s *pending;
 
     dev_request_queue_root_t queue;
 };
@@ -78,7 +78,7 @@ static inline uint8_t dec2year(uint16_t x)
 static KROUTINE_EXEC(ds3231_state_done)
 {
     struct ds3231_priv_s *pv;
-    struct dev_valio_request_s *rq = NULL;
+    struct dev_valio_rq_s *rq = NULL;
     struct device_s *dev;
 
     pv = KROUTINE_CONTAINER(kr, *pv, i2c_req.base.kr);
@@ -127,7 +127,7 @@ static void ds3231_request_run(
 
     assert(drq);
 
-    struct dev_valio_request_s *rq = dev_valio_request_s_from_base(drq);
+    struct dev_valio_rq_s *rq = dev_valio_rq_s_from_base(drq);
 
     kroutine_init(&pv->i2c_req.base.kr, ds3231_state_done,
                   KROUTINE_IMMEDIATE);
@@ -165,9 +165,9 @@ static void ds3231_request_run(
     DEVICE_OP(&pv->i2c, request, &pv->i2c_req);
 }
 
-static DEVVALIO_REQUEST(ds3231_request)
+static DEV_VALIO_REQUEST(ds3231_request)
 {
-    struct device_s *dev = vdev->dev;
+    struct device_s *dev = accessor->dev;
     struct ds3231_priv_s *pv = dev->drv_pv;
     error_t err = -EINVAL;
 

@@ -102,9 +102,9 @@ struct greth_context_s
   struct net_if_s *interface;
 };
 
-static DEVNET_PREPAREPKT(greth_preparepkt)
+static DEV_NET_PREPAREPKT(greth_preparepkt)
 {
-  struct device_s             *dev = ndev->dev;
+  struct device_s             *dev = accessor->dev;
   struct greth_context_s *pv = dev->drv_pv;
 
   if (size > GRETH_MAX_ETHLEN)
@@ -128,9 +128,9 @@ static DEVNET_PREPAREPKT(greth_preparepkt)
   return buff + sizeof (struct ether_header);
 }
 
-static DEVNET_SENDPKT(greth_sendpkt)
+static DEV_NET_SENDPKT(greth_sendpkt)
 {
-  struct device_s             *dev = ndev->dev;
+  struct device_s             *dev = accessor->dev;
   struct greth_context_s      *pv = dev->drv_pv;
   struct ether_header         *hdr;
   struct net_header_s         *nethdr = &packet->header[0];
@@ -169,9 +169,9 @@ static DEVNET_SENDPKT(greth_sendpkt)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static DEVNET_SETOPT(greth_setopt)
+static DEV_NET_SETOPT(greth_setopt)
 {
-  struct device_s               *dev = ndev->dev;
+  struct device_s               *dev = accessor->dev;
   struct greth_context_s *pv = dev->drv_pv;
 
   switch (option)
@@ -190,9 +190,9 @@ static DEVNET_SETOPT(greth_setopt)
     }
 }
 
-static DEVNET_GETOPT(greth_getopt)
+static DEV_NET_GETOPT(greth_getopt)
 {
-  struct device_s               *dev = ndev->dev;
+  struct device_s               *dev = accessor->dev;
   struct greth_context_s *pv = dev->drv_pv;
 
   switch (option)
@@ -316,9 +316,9 @@ static DEV_IRQ_EP_PROCESS(greth_irq)
   lock_release(&dev->lock);
 }
 
-static const struct devenum_ident_s	greth_ids[] =
+static const struct dev_enum_ident_s	greth_ids[] =
 {
-  DEVENUM_GAISLER_ENTRY(0x1, 0x01d),
+  DEV_ENUM_GAISLER_ENTRY(0x1, 0x01d),
   { 0 }
 };
 

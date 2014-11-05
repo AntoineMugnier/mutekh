@@ -71,7 +71,7 @@ struct stm32_rcc_private_s
   struct dev_clock_ep_s srcs[STM32_CLOCK_SRC_COUNT];
 };
 
-static DEVCLOCK_GATING(stm32_rcc_gating)
+static DEV_CLOCK_GATING(stm32_rcc_gating)
 {
   /* FIXME: what should we really do here? */
   sink->u.sink.gating(sink, enable);
@@ -99,9 +99,9 @@ void stm32_rcc_update_sinks(struct device_s *dev, uint_fast8_t src_id)
     }
 }
 
-static DEVCLOCK_SET_CONFIG(stm32_rcc_set_config)
+static DEV_CLOCK_SET_CONFIG(stm32_rcc_set_config)
 {
-  struct device_s            *dev = ckdev->dev;
+  struct device_s            *dev = accessor->dev;
   struct stm32_rcc_private_s *pv  = dev->drv_pv;
 
   switch (STM32_CLOCK_EDGE(src_id, dst_id))
@@ -207,9 +207,9 @@ static DEVCLOCK_SET_CONFIG(stm32_rcc_set_config)
 
 #undef STM32_CLOCK_EDGE
 
-static DEVCLOCK_GET_ENDPOINT(stm32_rcc_get_endpoint)
+static DEV_CLOCK_GET_ENDPOINT(stm32_rcc_get_endpoint)
 {
-  struct device_s            *dev = ckdev->dev;
+  struct device_s            *dev = accessor->dev;
   struct stm32_rcc_private_s *pv  = dev->drv_pv;
 
   switch (type)
