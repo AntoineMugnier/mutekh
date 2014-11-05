@@ -21,9 +21,20 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short UART driver configuration API
+   @file
+   @module{Devices support library}
+   @short UART driver configuration API
+
+   UART class only defines configuration parameters for UART devices.
+   Data path of UART devices goes through the Character device class.
+
+   Parameters addresed by this class are:
+   @list
+   @item Baud rate,
+   @item Character bit size,
+   @item Character framing (Start, stop bits, parity),
+   @item Line control (flow control)
+   @end list
  */
 
 #ifndef __DEVICE_UART_H__
