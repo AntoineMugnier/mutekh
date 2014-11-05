@@ -42,7 +42,7 @@
 #include <gct_platform.h>
 #include <gct/container_ring.h>
 #define GCT_CONTAINER_ALGO_uart_fifo RING
-GCT_CONTAINER_TYPES(uart_fifo, uint8_t, 32);
+GCT_CONTAINER_TYPES(uart_fifo, uint8_t, CONFIG_DRIVER_CHAR_PL011_SWFIFO);
 GCT_CONTAINER_FCNS(uart_fifo, static inline, uart_fifo,
                    init, destroy, isempty, pop, pop_array, pushback, pushback_array);
 #endif
@@ -51,8 +51,8 @@ struct pl011uart_context_s
 {
   uintptr_t addr;
   /* tty input request queue and char fifo */
-  dev_char_queue_root_t		read_q;
-  dev_char_queue_root_t		write_q;
+  dev_request_queue_root_t	read_q;
+  dev_request_queue_root_t	write_q;
 #if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
   uart_fifo_root_t		read_fifo;
 # ifdef CONFIG_DEVICE_IRQ
@@ -63,6 +63,9 @@ struct pl011uart_context_s
 #ifdef CONFIG_DEVICE_IRQ
   struct dev_irq_ep_s           irq_ep;
 #endif
+
+  bool_t                        read_started:1;
+  bool_t                        write_started:1;
 };
 
 static bool_t pl011uart_try_read(struct device_s *dev)
@@ -71,7 +74,7 @@ static bool_t pl011uart_try_read(struct device_s *dev)
   struct dev_char_rq_s		*rq;
   bool_t ack_done = 0;
 
-  while ((rq = dev_char_queue_head(&pv->read_q)))
+  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q))))
     {
       size_t size = 0;
 
@@ -91,15 +94,17 @@ static bool_t pl011uart_try_read(struct device_s *dev)
       if (size)
         {
           rq->size -= size;
+          rq->data += size;
           rq->error = 0;
 
-          if (rq->callback(rq, size) || rq->size == 0)
+          if (rq->type == DEV_CHAR_READ_PARTIAL || rq->size == 0)
             {
-              dev_char_queue_remove(&pv->read_q, rq);
+              dev_request_queue_pop(&pv->read_q);
+              lock_release(&dev->lock);
+              kroutine_exec(&rq->base.kr, 0);
+              lock_spin(&dev->lock);
               continue;
             }
-
-          rq->data += size;
         }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -107,6 +112,8 @@ static bool_t pl011uart_try_read(struct device_s *dev)
       return ack_done;
 #endif
     }
+
+  pv->read_started = 0;
 
 #if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
   /* copy more data from device fifo to driver fifo if no request currently need it */
@@ -137,7 +144,7 @@ static void pl011uart_try_write(struct device_s *dev)
     }
 #endif
 
-  while ((rq = dev_char_queue_head(&pv->write_q)))
+  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q))))
     {
       size_t size = 0;
 
@@ -167,15 +174,17 @@ static void pl011uart_try_write(struct device_s *dev)
       if (size)
         {
           rq->size -= size;
+          rq->data += size;
           rq->error = 0;
 
-          if (rq->callback(rq, size) || rq->size == 0)
+          if (rq->type == DEV_CHAR_WRITE_PARTIAL || rq->size == 0)
             {
-              dev_char_queue_remove(&pv->write_q, rq);
+              dev_request_queue_pop(&pv->write_q);
+              lock_release(&dev->lock);
+              kroutine_exec(&rq->base.kr, 0);
+              lock_spin(&dev->lock);
               continue;
             }
-
-          rq->data += size;
         }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -183,6 +192,8 @@ static void pl011uart_try_write(struct device_s *dev)
       return;
 #endif
     }
+
+  pv->write_started = 0;
 }
 
 DEV_CHAR_REQUEST(pl011uart_request)
@@ -196,27 +207,25 @@ DEV_CHAR_REQUEST(pl011uart_request)
 
   switch (rq->type)
     {
+    case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ: {
-#ifdef CONFIG_DEVICE_IRQ
-      bool_t empty = dev_char_queue_isempty(&pv->read_q);
-#endif
-      dev_char_queue_pushback(&pv->read_q, rq);
-#ifdef CONFIG_DEVICE_IRQ
-      if (empty)
-#endif
-	pl011uart_try_read(dev);
+      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      if (!pv->read_started)
+        {
+          pv->read_started = 1;
+          pl011uart_try_read(dev);
+        }
       break;
     }
 
+    case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
-#ifdef CONFIG_DEVICE_IRQ
-      bool_t empty = dev_char_queue_isempty(&pv->write_q);
-#endif
-      dev_char_queue_pushback(&pv->write_q, rq);
-#ifdef CONFIG_DEVICE_IRQ
-      if (empty)
-#endif
-	pl011uart_try_write(dev);
+      dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+      if (!pv->write_started)
+        {
+          pv->write_started = 1;
+          pl011uart_try_write(dev);
+        }
       break;
     }
     }
@@ -312,13 +321,15 @@ static DEV_INIT(pl011uart_init)
     goto err_mem;
 #endif
 
+  pv->read_started = pv->write_started = 0;
+
   /* disable the uart */
   cpu_mem_write_32(pv->addr + PL011_CR_ADDR, 0);
   cpu_mem_write_32(pv->addr + PL011_DMACR_ADDR, 0);
   cpu_mem_write_32(pv->addr + PL011_LCRH_ADDR, 0);
 
-  dev_char_queue_init(&pv->read_q);
-  dev_char_queue_init(&pv->write_q);
+  dev_request_queue_init(&pv->read_q);
+  dev_request_queue_init(&pv->write_q);
 
 #if CONFIG_DRIVER_CHAR_PL011_SWFIFO > 0
   uart_fifo_init(&pv->read_fifo);
@@ -373,8 +384,8 @@ static DEV_INIT(pl011uart_init)
   uart_fifo_destroy(&pv->write_fifo);
   uart_fifo_destroy(&pv->read_fifo);
 # endif
-  dev_char_queue_destroy(&pv->read_q);
-  dev_char_queue_destroy(&pv->write_q);
+  dev_request_queue_destroy(&pv->read_q);
+  dev_request_queue_destroy(&pv->write_q);
 #endif
  err_mem:
   mem_free(pv);
@@ -399,8 +410,8 @@ DEV_CLEANUP(pl011uart_cleanup)
   uart_fifo_destroy(&pv->read_fifo);
 #endif
 
-  dev_char_queue_destroy(&pv->read_q);
-  dev_char_queue_destroy(&pv->write_q);
+  dev_request_queue_destroy(&pv->read_q);
+  dev_request_queue_destroy(&pv->write_q);
 
   mem_free(pv);
 }

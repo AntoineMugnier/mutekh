@@ -66,13 +66,16 @@ struct gaisler_apbuart_context_s
 {
   uintptr_t addr;
   /* tty input request queue and char fifo */
-  dev_char_queue_root_t		read_q;
-  dev_char_queue_root_t		write_q;
+  dev_request_queue_root_t	read_q;
+  dev_request_queue_root_t	write_q;
   uart_fifo_root_t		read_fifo;
 #ifdef CONFIG_DEVICE_IRQ
   uart_fifo_root_t		write_fifo;
   struct dev_irq_ep_s           irq_ep;
 #endif
+
+  bool_t                        read_started:1;
+  bool_t                        write_started:1;
 };
 
 #endif

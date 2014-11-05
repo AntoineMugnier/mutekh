@@ -50,8 +50,8 @@ struct efm32_leuart_context_s
 {
   uintptr_t addr;
   /* tty input request queue and char fifo */
-  dev_char_queue_root_t		read_q;
-  dev_char_queue_root_t		write_q;
+  dev_request_queue_root_t	read_q;
+  dev_request_queue_root_t	write_q;
 #if CONFIG_DRIVER_EFM32_LEUART_SWFIFO > 0
   uart_fifo_root_t		read_fifo;
 # ifdef CONFIG_DEVICE_IRQ
@@ -64,11 +64,14 @@ struct efm32_leuart_context_s
   uint32_t                      mode;
 
   uint32_t                      bauds;
-  struct dev_freq_s       freq;
+  struct dev_freq_s             freq;
 
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s    clk_ep;
 #endif
+
+  bool_t                        read_started:1;
+  bool_t                        write_started:1;
 };
 
 static void efm32_leuart_write_reg(const struct efm32_leuart_context_s *pv,
@@ -93,7 +96,7 @@ static void efm32_leuart_try_read(struct device_s *dev)
   struct efm32_leuart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
 
-  while ((rq = dev_char_queue_head(&pv->read_q)))
+  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q))))
     {
       size_t size = 0;
 
@@ -112,15 +115,11 @@ static void efm32_leuart_try_read(struct device_s *dev)
       if (size)
         {
           rq->size -= size;
+          rq->data += size;
           rq->error = 0;
 
-          if (rq->callback(rq, size) || rq->size == 0)
-            {
-              dev_char_queue_remove(&pv->read_q, rq);
               continue;
             }
-
-          rq->data += size;
         }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -129,7 +128,9 @@ static void efm32_leuart_try_read(struct device_s *dev)
 #endif
     }
 
-  /* if no request currently need incoming data, copy to driver fifo or discard. */
+  pv->read_started = 0;
+
+/* if no request currently need incoming data, copy to driver fifo or discard. */
   if (cpu_mem_read_32(pv->addr + EFM32_LEUART_STATUS_ADDR)
            & endian_le32(EFM32_LEUART_STATUS_RXDATAV))
     {
@@ -154,7 +155,7 @@ static void efm32_leuart_try_write(struct device_s *dev)
                            endian_le32(uart_fifo_pop(&pv->write_fifo)));
 #endif
 
-  while ((rq = dev_char_queue_head(&pv->write_q)))
+  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q))))
     {
       size_t size = 0;
 
@@ -180,15 +181,17 @@ static void efm32_leuart_try_write(struct device_s *dev)
       if (size)
         {
           rq->size -= size;
+          rq->data += size;
           rq->error = 0;
 
-          if (rq->callback(rq, size) || rq->size == 0)
+          if (rq->type == DEV_CHAR_WRITE_PARTIAL || rq->size == 0)
             {
-              dev_char_queue_remove(&pv->write_q, rq);
+              dev_request_queue_pop(&pv->write_q);
+              lock_release(&dev->lock);
+              kroutine_exec(&rq->base.kr, 0);
+              lock_spin(&dev->lock);
               continue;
             }
-
-          rq->data += size;
         }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -196,6 +199,8 @@ static void efm32_leuart_try_write(struct device_s *dev)
       return;
 #endif
     }
+
+  pv->write_started = 0;
 }
 
 static DEV_CHAR_REQUEST(efm32_leuart_request)
@@ -209,27 +214,25 @@ static DEV_CHAR_REQUEST(efm32_leuart_request)
 
   switch (rq->type)
     {
+    case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ: {
-#ifdef CONFIG_DEVICE_IRQ
-      bool_t empty = dev_char_queue_isempty(&pv->read_q);
-#endif
-      dev_char_queue_pushback(&pv->read_q, rq);
-#ifdef CONFIG_DEVICE_IRQ
-      if (empty)
-#endif
-	efm32_leuart_try_read(dev);
+      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      if (!pv->read_started)
+        {
+          pv->read_started = 1;
+          efm32_leuart_try_read(dev);
+        }
       break;
     }
 
+    case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
-#ifdef CONFIG_DEVICE_IRQ
-      bool_t empty = dev_char_queue_isempty(&pv->write_q);
-#endif
-      dev_char_queue_pushback(&pv->write_q, rq);
-#ifdef CONFIG_DEVICE_IRQ
-      if (empty)
-#endif
-	efm32_leuart_try_write(dev);
+      dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+      if (!pv->write_started)
+        {
+          pv->write_started = 1;
+          efm32_leuart_try_write(dev);
+        }
       break;
     }
     }
@@ -310,6 +313,8 @@ static DEV_INIT(efm32_leuart_init)
   if (!pv)
     return -ENOMEM;
 
+  pv->read_started = pv->write_started = 0;
+
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 #ifdef CONFIG_DEVICE_CLOCK
@@ -359,8 +364,8 @@ static DEV_INIT(efm32_leuart_init)
   efm32_leuart_write_reg(pv, EFM32_LEUART_ROUTE_ADDR, endian_le32(route));
 
   /* init software fifos */
-  dev_char_queue_init(&pv->read_q);
-  dev_char_queue_init(&pv->write_q);
+  dev_request_queue_init(&pv->read_q);
+  dev_request_queue_init(&pv->write_q);
 
 #if CONFIG_DRIVER_EFM32_LEUART_SWFIFO > 0
   uart_fifo_init(&pv->read_fifo);
@@ -405,8 +410,8 @@ static DEV_INIT(efm32_leuart_init)
   uart_fifo_destroy(&pv->write_fifo);
   uart_fifo_destroy(&pv->read_fifo);
 # endif
-  dev_char_queue_destroy(&pv->read_q);
-  dev_char_queue_destroy(&pv->write_q);
+  dev_request_queue_destroy(&pv->read_q);
+  dev_request_queue_destroy(&pv->write_q);
 #endif
  err_clk:
 #ifdef CONFIG_DEVICE_CLOCK
@@ -448,8 +453,8 @@ DEV_CLEANUP(efm32_leuart_cleanup)
   uart_fifo_destroy(&pv->read_fifo);
 #endif
 
-  dev_char_queue_destroy(&pv->read_q);
-  dev_char_queue_destroy(&pv->write_q);
+  dev_request_queue_destroy(&pv->read_q);
+  dev_request_queue_destroy(&pv->write_q);
 
   mem_free(pv);
 }

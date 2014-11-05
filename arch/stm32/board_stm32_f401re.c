@@ -75,7 +75,7 @@ DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 6,
 
   /* default configuration. */
   DEV_STATIC_RES_UART(
-    DEV_UART_BAUD_115200,
+    115200,
     DEV_UART_DATA_8_BITS,
     DEV_UART_STOP_1_BIT,
     DEV_UART_PARITY_NONE,
@@ -139,7 +139,7 @@ DEV_DECLARE_STATIC_RESOURCES(usart6_dev_res, 6,
 
   /* default configuration. */
   DEV_STATIC_RES_UART(
-    DEV_UART_BAUD_115200,
+    115200,
     DEV_UART_DATA_8_BITS,
     DEV_UART_STOP_1_BIT,
     DEV_UART_PARITY_NONE,

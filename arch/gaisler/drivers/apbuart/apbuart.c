@@ -41,7 +41,7 @@ static void gaisler_apbuart_try_read(struct device_s *dev)
   struct gaisler_apbuart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
 
-  while ((rq = dev_char_queue_head(&pv->read_q)))
+  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q))))
     {
       size_t size = 0;
 
@@ -59,14 +59,16 @@ static void gaisler_apbuart_try_read(struct device_s *dev)
         {
           rq->size -= size;
           rq->error = 0;
+          rq->data += size;
 
-          if (rq->callback(rq, size) || rq->size == 0)
+          if (rq->type == DEV_CHAR_READ_PARTIAL || rq->size == 0)
             {
-              dev_char_queue_remove(&pv->read_q, rq);
+              dev_request_queue_pop(&pv->read_q);
+              lock_release(&dev->lock);
+              kroutine_exec(&rq->base.kr, 0);
+              lock_spin(&dev->lock);
               continue;
             }
-
-          rq->data += size;
         }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -74,6 +76,8 @@ static void gaisler_apbuart_try_read(struct device_s *dev)
       return;
 #endif
     }
+
+  pv->read_started = 0;
 
   /* copy more data from device fifo to driver fifo if no request currently need it */
   while (cpu_mem_read_32(pv->addr + APBUART_REG_STATUS)
@@ -99,7 +103,7 @@ static void gaisler_apbuart_try_write(struct device_s *dev)
     }
 #endif
 
-  while ((rq = dev_char_queue_head(&pv->write_q)))
+  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q))))
     {
       size_t size = 0;
 
@@ -130,14 +134,16 @@ static void gaisler_apbuart_try_write(struct device_s *dev)
         {
           rq->size -= size;
           rq->error = 0;
+          rq->data += size;
 
-          if (rq->callback(rq, size) || rq->size == 0)
+          if (rq->type == DEV_CHAR_WRITE_PARTIAL || rq->size == 0)
             {
-              dev_char_queue_remove(&pv->write_q, rq);
+              dev_request_queue_pop(&pv->write_q);
+              lock_release(&dev->lock);
+              kroutine_exec(&rq->base.kr, 0);
+              lock_spin(&dev->lock);
               continue;
             }
-
-          rq->data += size;
         }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -145,6 +151,8 @@ static void gaisler_apbuart_try_write(struct device_s *dev)
       return;
 #endif
     }
+
+  pv->write_started = 0;
 }
 
 DEV_CHAR_REQUEST(gaisler_apbuart_request)
@@ -158,27 +166,25 @@ DEV_CHAR_REQUEST(gaisler_apbuart_request)
 
   switch (rq->type)
     {
+    case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ: {
-#ifdef CONFIG_DEVICE_IRQ
-      bool_t empty = dev_char_queue_isempty(&pv->read_q);
-#endif
-      dev_char_queue_pushback(&pv->read_q, rq);
-#ifdef CONFIG_DEVICE_IRQ
-      if (empty)
-#endif
-	gaisler_apbuart_try_read(dev);
+      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      if (!pv->read_started)
+        {
+          pv->read_started = 1;
+          gaisler_apbuart_try_read(dev);
+        }
       break;
     }
 
+    case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
-#ifdef CONFIG_DEVICE_IRQ
-      bool_t empty = dev_char_queue_isempty(&pv->write_q);
-#endif
-      dev_char_queue_pushback(&pv->write_q, rq);
-#ifdef CONFIG_DEVICE_IRQ
-      if (empty)
-#endif
-	gaisler_apbuart_try_write(dev);
+      dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+      if (!pv->write_started)
+        {
+          pv->write_started = 1;
+          gaisler_apbuart_try_write(dev);
+        }
       break;
     }
     }
@@ -238,6 +244,8 @@ DEV_INIT(gaisler_apbuart_init)
   if (!pv)
     return -ENOMEM;
 
+  pv->read_started = pv->write_started = 0;
+
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
@@ -250,8 +258,8 @@ DEV_INIT(gaisler_apbuart_init)
   /* enable transmitter and receiver */
   c |= (APBUART_REG_CTRL_TE | APBUART_REG_CTRL_RE);
 
-  dev_char_queue_init(&pv->read_q);
-  dev_char_queue_init(&pv->write_q);
+  dev_request_queue_init(&pv->read_q);
+  dev_request_queue_init(&pv->write_q);
 
   uart_fifo_init(&pv->read_fifo);
 
@@ -285,8 +293,8 @@ DEV_INIT(gaisler_apbuart_init)
  err_fifo:
   uart_fifo_destroy(&pv->write_fifo);
   uart_fifo_destroy(&pv->read_fifo);
-  dev_char_queue_destroy(&pv->read_q);
-  dev_char_queue_destroy(&pv->write_q);
+  dev_request_queue_destroy(&pv->read_q);
+  dev_request_queue_destroy(&pv->write_q);
 #endif
  err_mem:
   mem_free(pv);
@@ -318,8 +326,8 @@ DEV_CLEANUP(gaisler_apbuart_cleanup)
 
   uart_fifo_destroy(&pv->read_fifo);
 
-  dev_char_queue_destroy(&pv->read_q);
-  dev_char_queue_destroy(&pv->write_q);
+  dev_request_queue_destroy(&pv->read_q);
+  dev_request_queue_destroy(&pv->write_q);
 
   mem_free(pv);
 }

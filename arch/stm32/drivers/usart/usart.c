@@ -62,10 +62,10 @@ struct stm32_usart_context_s
   uintptr_t             addr;
 
   /* usart request queue for read requests. */
-  dev_char_queue_root_t read_q;
+  dev_request_queue_root_t read_q;
 
   /* usart request queue for write requests. */
-  dev_char_queue_root_t write_q;
+  dev_request_queue_root_t write_q;
 
 #if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
   /* read fifo for incoming data. */
@@ -79,6 +79,9 @@ struct stm32_usart_context_s
 
   /* interrupt end-points (TX and RX on the same wire). */
   struct dev_irq_ep_s   irq_ep[1];
+
+  bool_t                read_started:1;
+  bool_t                write_started:1;
 };
 
 
@@ -88,7 +91,7 @@ void stm32_usart_try_read(struct device_s *dev)
   struct stm32_usart_context_s *pv = dev->drv_pv;
   struct dev_char_rq_s         *rq;
 
-  while ((rq = dev_char_queue_head(&pv->read_q)))
+  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q))))
     {
       size_t size = 0;
 
@@ -108,16 +111,17 @@ void stm32_usart_try_read(struct device_s *dev)
         {
           rq->size -= size;
           rq->error = 0;
+          rq->data += size;
 
-          if (rq->callback(rq, size) || rq->size == 0)
+          if (rq->type == DEV_CHAR_READ_PARTIAL || rq->size == 0)
             {
-              dev_char_queue_remove(&pv->read_q, rq);
-
+              dev_request_queue_pop(&pv->read_q);
+              lock_release(&dev->lock);
+              kroutine_exec(&rq->base.kr, 0);
+              lock_spin(&dev->lock);
               /* look for another pending read request. */
               continue;
             }
-
-          rq->data += size;
         }
 
 #if defined(CONFIG_DEVICE_IRQ)
@@ -125,6 +129,8 @@ void stm32_usart_try_read(struct device_s *dev)
       return;
 #endif
     }
+
+  pv->read_started = 0;
 
   /* if no request need the data, discard it or save it in the read fifo. */
   if (DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, RXNE))
@@ -153,7 +159,7 @@ void stm32_usart_try_write(struct device_s *dev)
     }
 #endif
 
-  while ((rq = dev_char_queue_head(&pv->write_q)))
+  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q))))
     {
       size_t size = 0;
 
@@ -193,17 +199,18 @@ void stm32_usart_try_write(struct device_s *dev)
         {
           rq->size -= size;
           rq->error = 0;
+          /* update the buffer pointer. */
+          rq->data += size;
 
-          if (rq->callback(rq, size) || rq->size == 0)
+          if (rq->type == DEV_CHAR_WRITE_PARTIAL || rq->size == 0)
             {
-              dev_char_queue_remove(&pv->write_q, rq);
-
+              dev_request_queue_pop(&pv->write_q);
+              lock_release(&dev->lock);
+              kroutine_exec(&rq->base.kr, 0);
+              lock_spin(&dev->lock);
               /* look for another pending write request. */
               continue;
             }
-
-          /* update the buffer pointer. */
-          rq->data += size;
         }
 
 #if defined(CONFIG_DEVICE_IRQ)
@@ -214,17 +221,15 @@ void stm32_usart_try_write(struct device_s *dev)
 #endif
     }
 
+  pv->write_started = 0;
+
 #if defined(CONFIG_DEVICE_IRQ)
   /* if there is no more write request in the queue or fifo, then
      disable TX interrupt. */
 # if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
-    if (usart_fifo_isempty(&pv->write_fifo))
-# else
-    if (dev_char_queue_isempty(&pv->write_q))
+  if (usart_fifo_isempty(&pv->write_fifo))
 # endif
-      DEVICE_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, TXEIE);
-    else
-      DEVICE_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TXEIE);
+    DEVICE_REG_FIELD_CLR_DEV(USART, pv->addr, CR1, TXEIE);
 #endif
 }
 
@@ -240,32 +245,27 @@ DEV_CHAR_REQUEST(stm32_usart_request)
 
   switch (rq->type)
   {
-  default:
-    break;
+    case DEV_CHAR_READ_PARTIAL:
+    case DEV_CHAR_READ: {
+      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      if (!pv->read_started)
+        {
+          pv->read_started = 1;
+          stm32_usart_try_read(dev);
+        }
+      break;
+    }
 
-  case DEV_CHAR_READ: {
-#if defined(CONFIG_DEVICE_IRQ)
-    bool_t empty = dev_char_queue_isempty(&pv->read_q);
-#endif
-    dev_char_queue_pushback(&pv->read_q, rq);
-#if defined(CONFIG_DEVICE_IRQ)
-    if (empty)
-#endif
-    stm32_usart_try_read(dev);
-    break;
-  }
-
-  case DEV_CHAR_WRITE: {
-#if defined(CONFIG_DEVICE_IRQ)
-    bool_t empty = dev_char_queue_isempty(&pv->write_q);
-#endif
-    dev_char_queue_pushback(&pv->write_q, rq);
-#if defined(CONFIG_DEVICE_IRQ)
-    if (empty)
-#endif
-    stm32_usart_try_write(dev);
-    break;
-  }
+    case DEV_CHAR_WRITE_PARTIAL:
+    case DEV_CHAR_WRITE: {
+      dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+      if (!pv->write_started)
+        {
+          pv->write_started = 1;
+          stm32_usart_try_write(dev);
+        }
+      break;
+    }
   }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -301,8 +301,8 @@ DEV_IRQ_EP_PROCESS(stm32_usart_irq)
     if (usart_fifo_isempty(&pv->write_fifo) &&
         usart_fifo_isempty(&pv->read_fifo))
 #else
-    if (dev_char_queue_isempty(&pv->write_q) &&
-        dev_char_queue_isempty(&pv->read_q))
+    if (dev_request_queue_isempty(&pv->write_q) &&
+        dev_request_queue_isempty(&pv->read_q))
 #endif
       break;
   }
@@ -528,6 +528,8 @@ DEV_INIT(stm32_usart_init)
   if (!pv)
     return -ENOMEM;
 
+  pv->read_started = pv->write_started = 0;
+
   dev->drv_pv = pv;
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
@@ -546,8 +548,8 @@ DEV_INIT(stm32_usart_init)
   DEVICE_REG_UPDATE_DEV(USART, pv->addr, CR3, 0);
 
   /* initialize request queues. */
-  dev_char_queue_init(&pv->read_q);
-  dev_char_queue_init(&pv->write_q);
+  dev_request_queue_init(&pv->read_q);
+  dev_request_queue_init(&pv->write_q);
 
 #if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
   usart_fifo_init(&pv->read_fifo);
@@ -629,8 +631,8 @@ err_fifo:
   usart_fifo_destroy(&pv->read_fifo);
   usart_fifo_destroy(&pv->write_fifo);
 # endif
-  dev_char_queue_destroy(&pv->read_q);
-  dev_char_queue_destroy(&pv->write_q);
+  dev_request_queue_destroy(&pv->read_q);
+  dev_request_queue_destroy(&pv->write_q);
 #endif
 
 err_mem:
@@ -657,8 +659,8 @@ static DEV_CLEANUP(stm32_usart_cleanup)
 #endif
 
   /* destroy request queues. */
-  dev_char_queue_destroy(&pv->read_q);
-  dev_char_queue_destroy(&pv->write_q);
+  dev_request_queue_destroy(&pv->read_q);
+  dev_request_queue_destroy(&pv->write_q);
 
   mem_free(pv);
 }

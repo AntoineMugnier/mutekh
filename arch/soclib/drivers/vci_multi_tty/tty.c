@@ -73,8 +73,9 @@ void tty_soclib_try_read(struct device_s *dev)
 #else
     /* use polling if no IRQ support available */
     size = 0;
-    while (cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_STATUS) && size < rq->size)
-      rq->data[size++] = cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_READ);
+    while (size < rq->size)
+      if (cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_STATUS))
+        rq->data[size++] = cpu_mem_read_8(pv->addr + TTY_SOCLIB_REG_READ);
 #endif
 
     if (!size)
@@ -84,10 +85,10 @@ void tty_soclib_try_read(struct device_s *dev)
     rq->error = 0;
     rq->data += size;
 
-    if (rq->size == 0 || rq->type == DEV_CHAR_READ_NONBLOCK) {
+    if (rq->size == 0 || rq->type == DEV_CHAR_READ_PARTIAL) {
       dev_request_queue_pop(&pv->read_q);
       lock_release(&dev->lock);
-      kroutine_exec(&rq->base.kr, cpu_is_interruptible());
+      kroutine_exec(&rq->base.kr, 0);
       lock_spin(&dev->lock);
     }
   }
@@ -108,19 +109,14 @@ DEV_CHAR_REQUEST(tty_soclib_request)
 
   switch (rq->type)
   {
-  case DEV_CHAR_READ_NONBLOCK:
-    if (!empty)
-      {
-        done_rq = rq;
-        break;
-      }
+  case DEV_CHAR_READ_PARTIAL:
   case DEV_CHAR_READ:
     dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
     if (empty)
       tty_soclib_try_read(dev);
     break;
 
-  case DEV_CHAR_WRITE_NONBLOCK:
+  case DEV_CHAR_WRITE_PARTIAL:
   case DEV_CHAR_WRITE: {
     size_t i;
 

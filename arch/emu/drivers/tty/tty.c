@@ -64,7 +64,7 @@ static DEV_CHAR_REQUEST(emu_tty_request)
 {
   //  struct device_s *dev = accessor->dev;
 
-  bool_t nonblock = 0;
+  bool_t partial = 0;
   reg_t fd;
   reg_t id;
 
@@ -72,15 +72,15 @@ static DEV_CHAR_REQUEST(emu_tty_request)
 
   switch (rq->type)
   {
-  case DEV_CHAR_READ_NONBLOCK:
-    nonblock = 1;
+  case DEV_CHAR_READ_PARTIAL:
+    partial = 1;
   case DEV_CHAR_READ:
     fd = 0;
     id = EMU_SYSCALL_READ;
     break;
 
-  case DEV_CHAR_WRITE_NONBLOCK:
-    nonblock = 1;
+  case DEV_CHAR_WRITE_PARTIAL:
+    partial = 1;
   case DEV_CHAR_WRITE:
     fd = 1;
     id = EMU_SYSCALL_WRITE;
@@ -88,28 +88,27 @@ static DEV_CHAR_REQUEST(emu_tty_request)
 
   default:
     rq->error = -EINVAL;
-    kroutine_exec(&rq->kr, cpu_is_interruptible());
-    return;
+    goto end;
   }
 
-  while (1) {
-    ssize_t size = emu_do_syscall(id, 3, fd, rq->data, rq->size);
+  do {
+    ssize_t size;
+    do {
+      size = emu_do_syscall(id, 3, fd, rq->data, rq->size);
+    } while (size == -4 /* -EINTR */);
 
-    if (size == 0)
-      rq->error = EEOF;
-    else if (size < 0)
-      rq->error = EIO;
+    if (size <= 0)
+      rq->error = -EIO;
     else {
       rq->data += size;
       rq->size -= size;
       rq->error = 0;
     }
 
-    if (rq->size == 0 || rq->error || nonblock) {
-      kroutine_exec(&rq->kr, cpu_is_interruptible());
-      return;
-    }
-  }
+  } while (rq->size > 0 && !rq->error && !partial);
+
+ end:
+  kroutine_exec(&rq->base.kr, cpu_is_interruptible());
 }
 
 static const struct driver_char_s        emu_tty_char_drv =

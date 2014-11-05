@@ -51,8 +51,8 @@ struct cadence_uart_context_s
 {
   uintptr_t addr;
   /* tty input request queue and char fifo */
-  dev_char_queue_root_t		read_q;
-  dev_char_queue_root_t		write_q;
+  dev_request_queue_root_t		read_q;
+  dev_request_queue_root_t		write_q;
 #if CONFIG_DRIVER_CHAR_CADENCE_UART_SWFIFO > 0
   uart_fifo_root_t		read_fifo;
 # ifdef CONFIG_DEVICE_IRQ
@@ -63,6 +63,9 @@ struct cadence_uart_context_s
   struct dev_irq_ep_s           irq_ep;
 #endif
   uint32_t                      mode;
+
+  bool_t                        read_started:1;
+  bool_t                        write_started:1;
 };
 
 static void cadence_uart_try_read(struct device_s *dev)
@@ -70,7 +73,7 @@ static void cadence_uart_try_read(struct device_s *dev)
   struct cadence_uart_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s		*rq;
 
-  while ((rq = dev_char_queue_head(&pv->read_q)))
+  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->read_q))))
     {
       size_t size = 0;
 
@@ -90,14 +93,16 @@ static void cadence_uart_try_read(struct device_s *dev)
         {
           rq->size -= size;
           rq->error = 0;
+          rq->data += size;
 
-          if (rq->callback(rq, size) || rq->size == 0)
+          if (rq->type == DEV_CHAR_READ_PARTIAL || rq->size == 0)
             {
-              dev_char_queue_remove(&pv->read_q, rq);
+              dev_request_queue_pop(&pv->read_q);
+              lock_release(&dev->lock);
+              kroutine_exec(&rq->base.kr, 0);
+              lock_spin(&dev->lock);
               continue;
             }
-
-          rq->data += size;
         }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -105,6 +110,8 @@ static void cadence_uart_try_read(struct device_s *dev)
       return;
 #endif
     }
+
+  pv->read_started = 0;
 
 #if CONFIG_DRIVER_CHAR_CADENCE_UART_SWFIFO > 0
   /* copy more data from device fifo to driver fifo if no request currently need it */
@@ -132,7 +139,7 @@ static void cadence_uart_try_write(struct device_s *dev)
     }
 #endif
 
-  while ((rq = dev_char_queue_head(&pv->write_q)))
+  while ((rq = dev_char_rq_s_cast(dev_request_queue_head(&pv->write_q))))
     {
       size_t size = 0;
 
@@ -162,15 +169,17 @@ static void cadence_uart_try_write(struct device_s *dev)
       if (size)
         {
           rq->size -= size;
+          rq->data += size;
           rq->error = 0;
 
-          if (rq->callback(rq, size) || rq->size == 0)
+          if (rq->type == DEV_CHAR_WRITE_PARTIAL || rq->size == 0)
             {
-              dev_char_queue_remove(&pv->write_q, rq);
+              dev_request_queue_pop(&pv->write_q);
+              lock_release(&dev->lock);
+              kroutine_exec(&rq->base.kr, 0);
+              lock_spin(&dev->lock);
               continue;
             }
-
-          rq->data += size;
         }
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -178,6 +187,8 @@ static void cadence_uart_try_write(struct device_s *dev)
       return;
 #endif
     }
+
+  pv->write_started = 0;
 }
 
 DEV_CHAR_REQUEST(cadence_uart_request)
@@ -191,27 +202,25 @@ DEV_CHAR_REQUEST(cadence_uart_request)
 
   switch (rq->type)
     {
+    case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ: {
-#ifdef CONFIG_DEVICE_IRQ
-      bool_t empty = dev_char_queue_isempty(&pv->read_q);
-#endif
-      dev_char_queue_pushback(&pv->read_q, rq);
-#ifdef CONFIG_DEVICE_IRQ
-      if (empty)
-#endif
-	cadence_uart_try_read(dev);
+      dev_request_queue_pushback(&pv->read_q, dev_char_rq_s_base(rq));
+      if (!pv->read_started)
+        {
+          pv->read_started = 1;
+          cadence_uart_try_read(dev);
+        }
       break;
     }
 
+    case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
-#ifdef CONFIG_DEVICE_IRQ
-      bool_t empty = dev_char_queue_isempty(&pv->write_q);
-#endif
-      dev_char_queue_pushback(&pv->write_q, rq);
-#ifdef CONFIG_DEVICE_IRQ
-      if (empty)
-#endif
-	cadence_uart_try_write(dev);
+      dev_request_queue_pushback(&pv->write_q, dev_char_rq_s_base(rq));
+      if (!pv->write_started)
+        {
+          pv->write_started = 1;
+          cadence_uart_try_write(dev);
+        }
       break;
     }
     }
@@ -328,6 +337,8 @@ static DEV_INIT(cadence_uart_init)
   if (!pv)
     return -ENOMEM;
 
+  pv->read_started = pv->write_started = 0;
+
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
@@ -343,8 +354,8 @@ static DEV_INIT(cadence_uart_init)
          endian_le32(CADENCE_UART_CONTROL_TXRES | CADENCE_UART_CONTROL_RXRES))
     ;
 
-  dev_char_queue_init(&pv->read_q);
-  dev_char_queue_init(&pv->write_q);
+  dev_request_queue_init(&pv->read_q);
+  dev_request_queue_init(&pv->write_q);
 
 #if CONFIG_DRIVER_CHAR_CADENCE_UART_SWFIFO > 0
   uart_fifo_init(&pv->read_fifo);
@@ -410,8 +421,8 @@ static DEV_INIT(cadence_uart_init)
   uart_fifo_destroy(&pv->write_fifo);
   uart_fifo_destroy(&pv->read_fifo);
 # endif
-  dev_char_queue_destroy(&pv->read_q);
-  dev_char_queue_destroy(&pv->write_q);
+  dev_request_queue_destroy(&pv->read_q);
+  dev_request_queue_destroy(&pv->write_q);
 #endif
  err_mem:
   mem_free(pv);
@@ -437,8 +448,8 @@ DEV_CLEANUP(cadence_uart_cleanup)
   uart_fifo_destroy(&pv->read_fifo);
 #endif
 
-  dev_char_queue_destroy(&pv->read_q);
-  dev_char_queue_destroy(&pv->write_q);
+  dev_request_queue_destroy(&pv->read_q);
+  dev_request_queue_destroy(&pv->write_q);
 
   mem_free(pv);
 }
