@@ -22,9 +22,53 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short General purpose IO driver API
+   @file
+   @module{Devices support library}
+   @short General purpose IO driver API
+
+   @section {Description}
+
+   GPIO Controller class abstracts explicit access to input/output
+   pins.
+
+   This class does not provide any notification framework.  This
+   feature is provided by ICU class.  A GPIO device may implement both
+   classes.
+
+   GPIOs may be accessed through this class for three basic
+   operations:
+   @list
+   @item Setting mode,
+   @item Reading current value,
+   @item Setting a value.
+   @end list
+
+   All operations can be done atomically on an set of pins, the only
+   constraint is that they must all reside in the same pin bank.  Pin
+   banking constraints are implementation dependant.
+
+   @end section
+
+   @section {Asynchronous Operations}
+
+   Most GPIO devices are memory-mapped. Most client use cases are
+   synchronous.  Nevertheless, some GPIO devices are behind
+   asynchronous busses (like I2C, SPI).
+
+   As most driver do not care for asynchronous operations, @tt
+   libdevice provides a generic asynchonous wrapper that relies on
+   synchronous operations.  This way, all synchronous drivers are able
+   to provide asynchonous request handling.
+
+   On the other hand, devices behind asynchonous busses cannot
+   implement synchronous operations and can only provide asynchonous
+   request handling.
+
+   Client code relying upon GPIO class should consider whether
+   supporting only synchonous devices is a strong limitation for code
+   portability.
+
+   @end section
  */
 
 #ifndef __DEVICE_GPIO_H__
