@@ -8,6 +8,7 @@ doc_headers =  device/device.h  device/driver.h device/irq.h device/resources.h 
 	device/class/timer.h device/class/dma.h \
     device/class/i2c.h device/class/spi.h \
     device/class/uart.h \
+    device/class/mem.h \
     device/class/valio.h
 
 enum_headers = device/driver.h device/device.h device/class/mem.h \
