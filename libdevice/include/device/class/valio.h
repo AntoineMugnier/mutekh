@@ -22,10 +22,8 @@
    @file
    @module{Devices support library}
    @short Value IO class
-*/
 
-/**
-   Conceptual
+   @section{Conceptual}
 
    Value IO class abstracts access to a set of values of
    non-normalized format and encoding.
@@ -34,7 +32,7 @@
    @list
    @item a static identifier,
    @item a fixed size.
-   @end{list}
+   @end list
 
    User may request reading, writing, or wait for update on any
    relevant attribute value.
@@ -45,6 +43,30 @@
    libray may define identifiers, data encoding, and allowed subset of
    access methods for each attribute.  This is out of the scope of
    this class.
+
+   @end section
+
+   @section{Goals, non-goals}
+
+   Goal of this class is to provide a driver framework for all devices
+   where there is no standard class.  This is mostly useful for
+   sensors that retrieve application-specific data.
+
+   As this class is bi-directionnal, setting attribute values may be
+   used to control actuators, or even set parameters for other
+   attributes.
+
+   Non-goal of the class is to provide a totally generic framework
+   able to replace need for all other classes.  This class is not an
+   abstraction of the class abstraction.  We may not try to fit
+   everything in this class, even if it may sound cool.  In
+   particular, streaming data sources (like ADC and sound devices) are
+   not expected to use this class.
+
+   Having just a data pointer with an implied size enforces this
+   non-goal.
+
+   @end section
  */
 
 #ifndef __DEVICE_VALIO_H__
@@ -125,7 +147,7 @@ inline error_t dev_valio_spin_request(
 }
 
 
-/** @this does the same as @fn dev_valio_wait_read but does not
+/** @this does the same as @tt dev_valio_wait_read but does not
     use the scheduler.  @this always spins on completion.
 */
 config_depend(CONFIG_DEVICE_VALIO)
@@ -144,7 +166,7 @@ inline error_t dev_valio_spin_read(
     return dev_valio_spin_request(vdev, &req);
 }
 
-/** @this does the same as @fn dev_valio_wait_write but does not
+/** @this does the same as @tt dev_valio_wait_write but does not
     use the scheduler.  @this always spins on completion.
 */
 config_depend(CONFIG_DEVICE_VALIO)
@@ -163,7 +185,7 @@ inline error_t dev_valio_spin_write(
     return dev_valio_spin_request(vdev, &req);
 }
 
-/** @this does the same as @fn dev_valio_wait_update but does not use
+/** @this does the same as @tt dev_valio_wait_update but does not use
     the scheduler.  @this always spins on completion.
 */
 config_depend(CONFIG_DEVICE_VALIO)
