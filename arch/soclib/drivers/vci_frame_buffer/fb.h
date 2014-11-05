@@ -33,10 +33,10 @@
 //DEV_IRQ(fb_soclib_irq);
 DEV_INIT(fb_soclib_init);
 DEV_CLEANUP(fb_soclib_cleanup);
-DEVFB_SETMODE(fb_soclib_setmode);
-DEVFB_GETBUFFER(fb_soclib_getbuffer);
-DEVFB_FLIPPAGE(fb_soclib_flippage);
-DEVFB_SETPALETTE(fb_soclib_setpalette);
+DEV_FB_SETMODE(fb_soclib_setmode);
+DEV_FB_GETBUFFER(fb_soclib_getbuffer);
+DEV_FB_FLIPPAGE(fb_soclib_flippage);
+DEV_FB_SETPALETTE(fb_soclib_setpalette);
 
 #endif
 

@@ -229,7 +229,7 @@ void stm32_usart_try_write(struct device_s *dev)
 }
 
 static
-DEVCHAR_REQUEST(stm32_usart_request)
+DEV_CHAR_REQUEST(stm32_usart_request)
 {
   struct device_s              *dev = cdev->dev;
   struct stm32_usart_context_s *pv  = dev->drv_pv;
@@ -427,7 +427,7 @@ error_t stm32_usart_config_simple(struct device_s          *dev,
 }
 
 static
-DEVUART_CONFIG(stm32_usart_config)
+DEV_UART_CONFIG(stm32_usart_config)
 {
   struct device_s              *dev = udev->dev;
   struct stm32_usart_context_s *pv  = dev->drv_pv;

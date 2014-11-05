@@ -101,7 +101,7 @@ static CPU_INTERRUPT_HANDLER(x86_irq_handler)
   sink->process(sink, &id);
 }
 
-static DEVICU_GET_ENDPOINT(x86_icu_get_endpoint)
+static DEV_ICU_GET_ENDPOINT(x86_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct x86_dev_private_s  *pv = dev->drv_pv;
@@ -116,7 +116,7 @@ static DEVICU_GET_ENDPOINT(x86_icu_get_endpoint)
     }
 }
 
-static DEVICU_ENABLE_IRQ(x86_icu_enable_irq)
+static DEV_ICU_ENABLE_IRQ(x86_icu_enable_irq)
 {
 #warning CPU IRQ ENABLE
   return 0;
@@ -142,7 +142,7 @@ CPU_LOCAL void *__cpu_data_base;
 /** pointer to context local storage */
 CONTEXT_LOCAL void *__context_data_base;
 
-static DEVCPU_REG_INIT(x86_cpu_reg_init)
+static DEV_CPU_REG_INIT(x86_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
   struct x86_dev_private_s *pv = dev->drv_pv;
@@ -186,7 +186,7 @@ static DEVCPU_REG_INIT(x86_cpu_reg_init)
 
 
 #ifdef CONFIG_ARCH_SMP
-static DEVCPU_GET_NODE(x86_cpu_get_node)
+static DEV_CPU_GET_NODE(x86_cpu_get_node)
 {
   struct device_s *dev = cdev->dev;
   struct x86_dev_private_s *pv = dev->drv_pv;
@@ -210,12 +210,12 @@ static const struct driver_cpu_s  x86_cpu_drv =
 
 #ifdef CONFIG_CPU_X86_TIMER_CYCLECOUNTER
 
-static DEVTIMER_START_STOP(x86_timer_start_stop)
+static DEV_TIMER_START_STOP(x86_timer_start_stop)
 {
   return 0;
 }
 
-static DEVTIMER_GET_VALUE(x86_timer_get_value)
+static DEV_TIMER_GET_VALUE(x86_timer_get_value)
 {
   struct device_s *dev = tdev->dev;
   __unused__ struct x86_dev_private_s *pv = dev->drv_pv;
@@ -233,7 +233,7 @@ static DEVTIMER_GET_VALUE(x86_timer_get_value)
   return 0;
 }
 
-static DEVTIMER_RESOLUTION(x86_timer_resolution)
+static DEV_TIMER_RESOLUTION(x86_timer_resolution)
 {
   error_t err = 0;
 
@@ -257,8 +257,8 @@ static const struct driver_timer_s  x86_timer_drv =
   .f_get_value     = x86_timer_get_value,
   .f_get_freq      = dev_timer_drv_get_freq,
   .f_resolution    = x86_timer_resolution,
-  .f_request       = (devtimer_request_t*)&dev_driver_notsup_fcn,
-  .f_cancel        = (devtimer_request_t*)&dev_driver_notsup_fcn,
+  .f_request       = (dev_timer_request_t*)&dev_driver_notsup_fcn,
+  .f_cancel        = (dev_timer_request_t*)&dev_driver_notsup_fcn,
 };
 
 #endif
@@ -268,10 +268,10 @@ static const struct driver_timer_s  x86_timer_drv =
 static DEV_CLEANUP(x86_cleanup);
 static DEV_INIT(x86_init);
 
-static const struct devenum_ident_s  x86_ids[] =
+static const struct dev_enum_ident_s  x86_ids[] =
 {
 #ifdef CONFIG_LIBFDT
-  DEVENUM_FDTNAME_ENTRY("cpu:x86"),
+  DEV_ENUM_FDTNAME_ENTRY("cpu:x86"),
 #endif
   { 0 }
 };

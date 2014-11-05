@@ -40,9 +40,9 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
-static const struct devenum_ident_s  soclib_xicu_ids[] =
+static const struct dev_enum_ident_s  soclib_xicu_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("soclib:vci_xicu"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_xicu"),
   { 0 }
 };
 

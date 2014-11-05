@@ -39,7 +39,7 @@
 
 #include "arch/sam7/at91sam7x256.h"
 
-DEVGPIO_SET_WAY(gpio_sam7_set_way)
+DEV_GPIO_SET_WAY(gpio_sam7_set_way)
 {
 	AT91PS_PIO registers = (void*)dev->addr[0];
 	
@@ -64,7 +64,7 @@ DEVGPIO_SET_WAY(gpio_sam7_set_way)
 }
 
 
-DEVGPIO_SET_VALUE(gpio_sam7_set_value)
+DEV_GPIO_SET_VALUE(gpio_sam7_set_value)
 {
 	AT91PS_PIO registers = (void*)dev->addr[0];
 
@@ -77,7 +77,7 @@ DEVGPIO_SET_VALUE(gpio_sam7_set_value)
 }
 
 
-DEVGPIO_SET_PULLUP(gpio_sam7_set_pullup)
+DEV_GPIO_SET_PULLUP(gpio_sam7_set_pullup)
 {
 	AT91PS_PIO registers = (void*)dev->addr[0];
 
@@ -90,7 +90,7 @@ DEVGPIO_SET_PULLUP(gpio_sam7_set_pullup)
 }
 
 
-DEVGPIO_ASSIGN_TO_PERIPHERAL(gpio_sam7_assign_to_peripheral)
+DEV_GPIO_ASSIGN_TO_PERIPHERAL(gpio_sam7_assign_to_peripheral)
 {
 	AT91PS_PIO registers = (void*)dev->addr[0];
 
@@ -117,7 +117,7 @@ DEVGPIO_ASSIGN_TO_PERIPHERAL(gpio_sam7_assign_to_peripheral)
 }
 
 
-DEVGPIO_GET_VALUE(gpio_sam7_get_value)
+DEV_GPIO_GET_VALUE(gpio_sam7_get_value)
 {
 	AT91PS_PIO registers = (void*)dev->addr[0];
 
@@ -125,7 +125,7 @@ DEVGPIO_GET_VALUE(gpio_sam7_get_value)
 }
 
 
-DEVGPIO_REGISTER_IRQ(gpio_sam7_register_irq)
+DEV_GPIO_REGISTER_IRQ(gpio_sam7_register_irq)
 {
     struct gpio_sam7_context_s *pv = dev->drv_pv;
 	AT91PS_PIO registers = (void*)dev->addr[0];
@@ -176,7 +176,7 @@ DEV_IRQ(gpio_sam7_irq)
 		return 0;
 
 	while (state & mask) {
-		devgpio_id_t gpio = __builtin_ctz(state & mask);
+		dev_gpio_id_t gpio = __builtin_ctz(state & mask);
 		uint32_t mgpio = 1<<gpio;
 		struct gpio_sam7_handler_s *h = &pv->handler[gpio];
 
@@ -193,9 +193,9 @@ DEV_IRQ(gpio_sam7_irq)
 
 
 #ifdef CONFIG_DRIVER_ENUM_FDT
-static const struct devenum_ident_s	gpio_sam7_ids[] =
+static const struct dev_enum_ident_s	gpio_sam7_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("sam7:gpio", 0, 0),
+	DEV_ENUM_FDTNAME_ENTRY("sam7:gpio", 0, 0),
 	{ 0 }
 };
 #endif

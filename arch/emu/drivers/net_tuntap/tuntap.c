@@ -232,7 +232,7 @@ DEV_CLEANUP(net_tuntap_cleanup)
 	network_dispatch_kill(pv->dispatch);
 }
 
-DEVNET_PREPAREPKT(net_tuntap_preparepkt)
+DEV_NET_PREPAREPKT(net_tuntap_preparepkt)
 {
   struct net_tuntap_context_s	*pv = dev->drv_pv;
   struct net_header_s		*nethdr;
@@ -259,7 +259,7 @@ DEVNET_PREPAREPKT(net_tuntap_preparepkt)
  * sending a packet.
  */
 
-DEVNET_SENDPKT(net_tuntap_sendpkt)
+DEV_NET_SENDPKT(net_tuntap_sendpkt)
 {
   struct net_tuntap_context_s	*pv = dev->drv_pv;
   struct ether_header		*hdr;
@@ -303,7 +303,7 @@ DEVNET_SENDPKT(net_tuntap_sendpkt)
  * Setup driver level options.
  */
 
-DEVNET_SETOPT(net_tuntap_setopt)
+DEV_NET_SETOPT(net_tuntap_setopt)
 {
   struct net_ne2000_context_s	*pv = dev->drv_pv;
 
@@ -323,7 +323,7 @@ DEVNET_SETOPT(net_tuntap_setopt)
  * Get driver level options / info.
  */
 
-DEVNET_GETOPT(net_tuntap_getopt)
+DEV_NET_GETOPT(net_tuntap_getopt)
 {
   switch (option)
     {

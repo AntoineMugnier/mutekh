@@ -52,7 +52,7 @@ struct dev_freq_s;
 
 #define GCT_CONTAINER_ALGO_dev_timer_queue CLIST
 
-/** Timer request @csee devtimer_request_t */
+/** Timer request @csee dev_timer_request_t */
 struct dev_timer_rq_s
 {
   struct kroutine_s             kr;
@@ -71,8 +71,8 @@ GCT_CONTAINER_KEY_TYPES(dev_timer_queue, PTR, SCALAR, deadline);
 GCT_CONTAINER_KEY_FCNS(dev_timer_queue, ASC, inline, dev_timer_queue, deadline,
                        init, destroy, isempty, pop, head, remove, insert);
 
-/** @see devtimer_request_t */
-#define DEVTIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
+/** @see dev_timer_request_t */
+#define DEV_TIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
 
 /**
    @This enqueues a timeout event request. The @tt delay and @tt
@@ -89,17 +89,17 @@ GCT_CONTAINER_KEY_FCNS(dev_timer_queue, ASC, inline, dev_timer_queue, deadline,
    and return @tt -ETIMEDOUT.
 
    If the timer has not been started explicitly by calling the @ref
-   devtimer_start_stop_t function, it will run until the request queue
+   dev_timer_start_stop_t function, it will run until the request queue
    becomes empty again.
 
    @This returns 0 on success. @This may return @tt -EBUSY if the
    timer hardware resource is not available. @This may return -ENOTSUP
    if there is no timer matching the requested device number.
 */
-typedef DEVTIMER_REQUEST(devtimer_request_t);
+typedef DEV_TIMER_REQUEST(dev_timer_request_t);
 
-/** @see devtimer_cancel_t */
-#define DEVTIMER_CANCEL(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
+/** @see dev_timer_cancel_t */
+#define DEV_TIMER_CANCEL(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
 
 /**
    @This cancel a timeout request event.
@@ -110,11 +110,11 @@ typedef DEVTIMER_REQUEST(devtimer_request_t);
 
    @This returns 0 on success.
 */
-typedef DEVTIMER_CANCEL(devtimer_cancel_t);
+typedef DEV_TIMER_CANCEL(dev_timer_cancel_t);
 
 
-/** @see devtimer_start_stop_t */
-#define DEVTIMER_START_STOP(n)	error_t  (n) (struct device_timer_s *tdev, bool_t start)
+/** @see dev_timer_start_stop_t */
+#define DEV_TIMER_START_STOP(n)	error_t  (n) (struct device_timer_s *tdev, bool_t start)
 
 /**
    Timer device class start/stop function.
@@ -140,12 +140,12 @@ typedef DEVTIMER_CANCEL(devtimer_cancel_t);
 
    @This is mandatory.
 */
-typedef DEVTIMER_START_STOP(devtimer_start_stop_t);
+typedef DEV_TIMER_START_STOP(dev_timer_start_stop_t);
 
 
 
-/** @see #devtimer_get_value_t */
-#define DEVTIMER_GET_VALUE(n)	error_t (n) (struct device_timer_s *tdev, dev_timer_value_t *value)
+/** @see #dev_timer_get_value_t */
+#define DEV_TIMER_GET_VALUE(n)	error_t (n) (struct device_timer_s *tdev, dev_timer_value_t *value)
 
 /**
    @This reads the current raw timer value. The timer value is
@@ -162,12 +162,12 @@ typedef DEVTIMER_START_STOP(devtimer_start_stop_t);
 
    @This is mandatory.
 */
-typedef DEVTIMER_GET_VALUE(devtimer_get_value_t);
+typedef DEV_TIMER_GET_VALUE(dev_timer_get_value_t);
 
 
 
-/** @see #devtimer_get_freq_t */
-#define DEVTIMER_GET_FREQ(n)	error_t (n) (struct device_timer_s *tdev, \
+/** @see #dev_timer_get_freq_t */
+#define DEV_TIMER_GET_FREQ(n)	error_t (n) (struct device_timer_s *tdev, \
                                              struct dev_freq_s *freq)
 
 /**
@@ -183,14 +183,14 @@ typedef DEVTIMER_GET_VALUE(devtimer_get_value_t);
 
    @This is mandatory.
 */
-typedef DEVTIMER_GET_FREQ(devtimer_get_freq_t);
+typedef DEV_TIMER_GET_FREQ(dev_timer_get_freq_t);
 
 
 /** Timer device resolution type */
 typedef uint32_t dev_timer_res_t;
 
-/** @see devtimer_resolution_t */
-#define DEVTIMER_RESOLUTION(n)	error_t (n) (struct device_timer_s *tdev, dev_timer_res_t *res, dev_timer_value_t *max)
+/** @see dev_timer_resolution_t */
+#define DEV_TIMER_RESOLUTION(n)	error_t (n) (struct device_timer_s *tdev, dev_timer_res_t *res, dev_timer_value_t *max)
 
 /**
    @This can be used to query and change how the timer input clock is
@@ -229,23 +229,23 @@ typedef uint32_t dev_timer_res_t;
 
    @This is mandatory.
 */
-typedef DEVTIMER_RESOLUTION(devtimer_resolution_t);
+typedef DEV_TIMER_RESOLUTION(dev_timer_resolution_t);
 
 
 DRIVER_CLASS_TYPES(timer,
-                   devtimer_request_t *f_request;
-                   devtimer_request_t *f_cancel;
-                   devtimer_start_stop_t *f_start_stop;
-                   devtimer_get_value_t *f_get_value;
-                   devtimer_get_freq_t *f_get_freq;
-                   devtimer_resolution_t *f_resolution;
+                   dev_timer_request_t *f_request;
+                   dev_timer_request_t *f_cancel;
+                   dev_timer_start_stop_t *f_start_stop;
+                   dev_timer_get_value_t *f_get_value;
+                   dev_timer_get_freq_t *f_get_freq;
+                   dev_timer_resolution_t *f_resolution;
                    );
 
-/** @This is a default implementation of the @ref devtimer_get_freq_t
+/** @This is a default implementation of the @ref dev_timer_get_freq_t
     timer driver API which relies on @ref DEV_RES_FREQ resource
     entries of the device. For devices with multiple timer instances,
     multiple frequency resource entries are expected. */
-DEVTIMER_GET_FREQ(dev_timer_drv_get_freq);
+DEV_TIMER_GET_FREQ(dev_timer_drv_get_freq);
 
 /** @This initializes a timer delay from the given delay value in
     seconds unit. The delay is specified in seconds when r_unit is 1,
@@ -343,7 +343,7 @@ error_t dev_timer_check_timeout(struct device_timer_s *tdev,
     delay. This function acts as @ref dev_timer_busy_wait if either
     the scheduler is disabled in configuration, irqs are disabled in
     configuration, or the timer do not support enqueuing requests
-    (@ref devtimer_request_t operation).
+    (@ref dev_timer_request_t operation).
 
     The request can be first initialized by calling @ref
     dev_timer_init_sec. It can then be reused multiple times to

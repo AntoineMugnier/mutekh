@@ -137,7 +137,7 @@ struct dev_pwm_config_s
 };
 
 
-#define DEVPWM_CONFIG(n) error_t (n)(struct device_pwm_s     *pdev, \
+#define DEV_PWM_CONFIG(n) error_t (n)(struct device_pwm_s     *pdev, \
                                      struct dev_pwm_config_s *cfg)  \
 /**/
 
@@ -168,12 +168,12 @@ struct dev_pwm_config_s
     If the @tt error field value is -EINVAL, the configuration failed to
     be applied.
 */
-typedef DEVPWM_CONFIG(devpwm_config_t);
+typedef DEV_PWM_CONFIG(dev_pwm_config_t);
 
 
 #define GCT_CONTAINER_ALGO_dev_pwm_queue CLIST
 
-struct dev_pwm_request_s
+struct dev_pwm_rq_s
 {
   /* Kroutine called on completion. */
   struct kroutine_s         kr;
@@ -201,7 +201,7 @@ struct dev_pwm_request_s
 };
 
 /* GCT stuff. */
-GCT_CONTAINER_TYPES(dev_pwm_queue, struct dev_pwm_request_s *, queue_entry);
+GCT_CONTAINER_TYPES(dev_pwm_queue, struct dev_pwm_rq_s *, queue_entry);
 GCT_CONTAINER_FCNS(dev_pwm_queue, inline, dev_pwm_queue,
                    init, destroy, isempty, head, remove, push, pushback);
 
@@ -215,23 +215,23 @@ struct dev_pwm_rq_queue_s
     lock_irq_t               lock;
 
     /** request marker to prevent infinite loops. */
-    struct dev_pwm_request_s *marker;
+    struct dev_pwm_rq_s *marker;
 };
 
 
-#define DEVPWM_QUEUE(n) struct dev_pwm_rq_queue_s * (n) ( \
+#define DEV_PWM_QUEUE(n) struct dev_pwm_rq_queue_s * (n) ( \
     struct device_pwm_s *pdev)                            \
 /**/
 
 /** @This gives access to the request queue allocated in the PWM device driver
     private data.
  */
-typedef DEVPWM_QUEUE(devpwm_queue_t);
+typedef DEV_PWM_QUEUE(dev_pwm_queue_t);
 
 /** Driver types. */
 DRIVER_CLASS_TYPES(pwm,
-                   devpwm_config_t *f_config;
-                   devpwm_queue_t  *f_queue;
+                   dev_pwm_config_t *f_config;
+                   dev_pwm_queue_t  *f_queue;
                   );
 
 
@@ -248,14 +248,14 @@ void dev_pwm_rq_queue_cleanup(struct dev_pwm_rq_queue_s *q);
 
 /** @This initializes a configuration request. */
 error_t dev_pwm_request_init(struct device_pwm_s      *pdev,
-                             struct dev_pwm_request_s *rq);
+                             struct dev_pwm_rq_s *rq);
 
 
 /** @This starts a configuration request. When this function is called the
     request is pushed in the processing queue according to the request
     priority.
  */
-error_t dev_pwm_request_start(struct dev_pwm_request_s *rq);
+error_t dev_pwm_rq_start(struct dev_pwm_rq_s *rq);
 
 
 /** @This execute pending requests in the given queue. @This should be called

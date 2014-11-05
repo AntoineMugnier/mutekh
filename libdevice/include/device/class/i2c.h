@@ -83,7 +83,7 @@
            .size = sizeof(data),
        },
    };
-   struct dev_i2c_req_s rq =
+   struct dev_i2c_rq_s rq =
    {
        .saddr = 0x50,
        .transfer = transfer,
@@ -201,7 +201,7 @@ struct dev_i2c_transfer_s {
    before calling the kroutine. @tt error_transfer and @tt
    error_offset fields have no meaning if @tt error is @tt 0.
  */
-struct dev_i2c_request_s
+struct dev_i2c_rq_s
 {
     struct dev_request_s base;
 
@@ -235,17 +235,17 @@ struct dev_i2c_request_s
     uint16_t error_offset;
 };
 
-STRUCT_INHERIT(dev_i2c_request_s, dev_request_s, base);
+STRUCT_INHERIT(dev_i2c_rq_s, dev_request_s, base);
 
-/** @see devi2c_config_t */
-#define DEVI2C_CONFIG(n) error_t (n) (                            \
+/** @see dev_i2c_config_t */
+#define DEV_I2C_CONFIG(n) error_t (n) (                            \
     struct device_i2c_s *i2cdev,                                 \
     const struct dev_i2c_config_s *config)
 
-/** @see devi2c_request_t */
-#define DEVI2C_REQUEST(n) void (n) (                              \
+/** @see dev_i2c_request_t */
+#define DEV_I2C_REQUEST(n) void (n) (                              \
     const struct device_i2c_s *i2cdev,                            \
-    struct dev_i2c_request_s *req)
+    struct dev_i2c_rq_s *req)
 
 /** @This configures an I2C controller.
 
@@ -253,7 +253,7 @@ STRUCT_INHERIT(dev_i2c_request_s, dev_request_s, base);
     configuration while there are requests in queue has undefined
     behavior.
 */
-typedef DEVI2C_CONFIG(devi2c_config_t);
+typedef DEV_I2C_CONFIG(dev_i2c_config_t);
 
 /** @This starts an I2C request.
 
@@ -280,11 +280,11 @@ typedef DEVI2C_CONFIG(devi2c_config_t);
     tr->error, tr->error_offset and tr->error_request indicates error
     position.
 */
-typedef DEVI2C_REQUEST(devi2c_request_t);
+typedef DEV_I2C_REQUEST(dev_i2c_request_t);
 
 DRIVER_CLASS_TYPES(i2c,
-    devi2c_config_t *f_config;
-    devi2c_request_t *f_request;
+    dev_i2c_config_t *f_config;
+    dev_i2c_request_t *f_request;
 );
 
 /** @this reconfigures the i2c controller configuration.
@@ -310,7 +310,7 @@ inline ssize_t dev_i2c_spin_request(
     uint8_t tr_count)
 {
     struct dev_request_status_s status;
-    struct dev_i2c_request_s req =
+    struct dev_i2c_rq_s req =
     {
         .saddr = saddr,
         .transfer = tr,
@@ -424,7 +424,7 @@ inline ssize_t dev_i2c_wait_request(
     uint8_t tr_count)
 {
     struct dev_request_status_s status;
-    struct dev_i2c_request_s req =
+    struct dev_i2c_rq_s req =
     {
         .saddr = saddr,
         .transfer = tr,

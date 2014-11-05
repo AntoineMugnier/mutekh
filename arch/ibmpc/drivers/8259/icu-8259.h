@@ -30,9 +30,9 @@
 /* icu device functions */
 
 DEV_INIT(icu_8259_init);
-DEVICU_ENABLE(icu_8259_enable);
-DEVICU_SETHNDL(icu_8259_sethndl);
-DEVICU_DELHNDL(icu_8259_delhndl);
+DEV_ICU_ENABLE(icu_8259_enable);
+DEV_ICU_SETHNDL(icu_8259_sethndl);
+DEV_ICU_DELHNDL(icu_8259_delhndl);
 DEV_CLEANUP(icu_8259_cleanup);
 
 #define ICU_8259_MAX_LINES 16

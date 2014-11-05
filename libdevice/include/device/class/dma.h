@@ -39,7 +39,7 @@
 struct dev_dma_rq_s;
 
 /** Dma device read/write callback */
-#define DEVDMA_CALLBACK(n) void (n) (const struct dev_dma_rq_s *rq)
+#define DEV_DMA_CALLBACK(n) void (n) (const struct dev_dma_rq_s *rq)
 
 /**
    Dma device callback.
@@ -47,7 +47,7 @@ struct dev_dma_rq_s;
    @param dev pointer to device descriptor
    @param rq pointer to request data.
 */
-typedef DEVDMA_CALLBACK(devdma_callback_t);
+typedef DEV_DMA_CALLBACK(dev_dma_callback_t);
 
 /** @This specifies use of fixed source address for dma transfer. */
 #define DEV_DMA_FLAG_FIXED_SRC    0x01
@@ -60,7 +60,7 @@ typedef DEVDMA_CALLBACK(devdma_callback_t);
 
 #define GCT_CONTAINER_ALGO_dev_dma_queue CLIST
 
-/** Dma request @see devdma_request_t */
+/** Dma request @see dev_dma_request_t */
 struct dev_dma_rq_s
 {
   size_t			size;
@@ -79,7 +79,7 @@ struct dev_dma_rq_s
 
   uint_fast8_t                  flags;
 
-  devdma_callback_t		*callback;      //< callback function
+  dev_dma_callback_t		*callback;      //< callback function
   void				*pvdata;        //< private data for callback
 
   error_t			error;          //< error code set by driver
@@ -95,8 +95,8 @@ GCT_CONTAINER_FCNS(dev_dma_queue, inline, dev_dma_queue,
                    init, destroy, isempty, pushback, pop, head, remove);
 
 
-/** Dma device class @ref devdma_request_t function template. */
-#define DEVDMA_REQUEST(n)	error_t  (n) (const struct device_dma_s *ddev, struct dev_dma_rq_s *rq)
+/** Dma device class @ref dev_dma_request_t function template. */
+#define DEV_DMA_REQUEST(n)	error_t  (n) (const struct device_dma_s *ddev, struct dev_dma_rq_s *rq)
 
 /**
    Dma device class request() function type. Enqueue a dma transfert request.
@@ -112,11 +112,11 @@ GCT_CONTAINER_FCNS(dev_dma_queue, inline, dev_dma_queue,
    @param rq pointer to request. src, dst, size, flags and callback must be initialized.
    @returns zero if the request has been enqueued or @tt -ENOTSUP if the requested operation is not supported.
 */
-typedef DEVDMA_REQUEST(devdma_request_t);
+typedef DEV_DMA_REQUEST(dev_dma_request_t);
 
 
 DRIVER_CLASS_TYPES(dma, 
-                   devdma_request_t *f_request;
+                   dev_dma_request_t *f_request;
                    );
 
 /** Synchronous dma helper function. This function uses the scheduler

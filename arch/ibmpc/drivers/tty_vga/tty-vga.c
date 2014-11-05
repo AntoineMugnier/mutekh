@@ -420,7 +420,7 @@ void tty_vga_try_read(struct device_s *dev)
 }
 #endif
 
-DEVCHAR_REQUEST(tty_vga_request)
+DEV_CHAR_REQUEST(tty_vga_request)
 {
   struct tty_vga_context_s	*pv = dev->drv_pv;
 

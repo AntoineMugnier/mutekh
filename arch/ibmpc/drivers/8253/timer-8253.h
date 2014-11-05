@@ -28,10 +28,10 @@
 
 /* timer device functions */
 
-DEVTIMER_SETCALLBACK(timer_8253_setcallback);
-DEVTIMER_SETPERIOD(timer_8253_setperiod);
-DEVTIMER_SETVALUE(timer_8253_setvalue);
-DEVTIMER_GETVALUE(timer_8253_getvalue);
+DEV_TIMER_SETCALLBACK(timer_8253_setcallback);
+DEV_TIMER_SETPERIOD(timer_8253_setperiod);
+DEV_TIMER_SETVALUE(timer_8253_setvalue);
+DEV_TIMER_GETVALUE(timer_8253_getvalue);
 DEV_IRQ(timer_8253_irq);
 DEV_CLEANUP(timer_8253_cleanup);
 DEV_INIT(timer_8253_init);

@@ -93,7 +93,7 @@ struct stm32_i2c_private_s
 
 /***************************************** config */
 
-DEVI2C_CTRL_CONFIG(stm32_i2c_config)
+DEV_I2C_CTRL_CONFIG(stm32_i2c_config)
 {
   struct device_s *dev = i2cdev->dev;
   error_t err          = 0;
@@ -112,11 +112,11 @@ DEVI2C_CTRL_CONFIG(stm32_i2c_config)
 /***************************************** transfer */
 
 // FSM callbacks.
-#define DEVI2C_CTRL_FSM(n) bool_t (n) (struct stm32_i2c_private_s *pv)
+#define DEV_I2C_CTRL_FSM(n) bool_t (n) (struct stm32_i2c_private_s *pv)
 
 /** @This function defines a callback for the i2c controller FSM. The
     return value is 0 if the callback as not been processed. */
-typedef DEVI2C_CTRL_FSM(stm32_i2c_fsm_callback_t);
+typedef DEV_I2C_CTRL_FSM(stm32_i2c_fsm_callback_t);
 
 static inline
 bool_t stm32_i2c_check_error(struct dev_i2c_ctrl_transfer_s *tr,
@@ -140,7 +140,7 @@ bool_t stm32_i2c_check_error(struct dev_i2c_ctrl_transfer_s *tr,
 }
 
 static inline
-DEVI2C_CTRL_FSM(stm32_i2c_data_cb)
+DEV_I2C_CTRL_FSM(stm32_i2c_data_cb)
 {
   struct dev_i2c_ctrl_transfer_s *tr = pv->tr;
 
@@ -223,7 +223,7 @@ DEVI2C_CTRL_FSM(stm32_i2c_data_cb)
 /****************************************** WRITE READY (EV8_1) */
 
 static inline
-DEVI2C_CTRL_FSM(stm32_i2c_write_rdy_cb)
+DEV_I2C_CTRL_FSM(stm32_i2c_write_rdy_cb)
 {
   struct dev_i2c_ctrl_transfer_s *tr = pv->tr;
 
@@ -253,7 +253,7 @@ DEVI2C_CTRL_FSM(stm32_i2c_write_rdy_cb)
 /****************************************** WRITE N (EV_8) */
 
 static inline
-DEVI2C_CTRL_FSM(stm32_i2c_write_n_cb)
+DEV_I2C_CTRL_FSM(stm32_i2c_write_n_cb)
 {
   struct dev_i2c_ctrl_transfer_s *tr = pv->tr;
 
@@ -286,7 +286,7 @@ DEVI2C_CTRL_FSM(stm32_i2c_write_n_cb)
 /****************************************** READ 2 bytes */
 
 static inline
-DEVI2C_CTRL_FSM(stm32_i2c_read_2_and_stop_cb)
+DEV_I2C_CTRL_FSM(stm32_i2c_read_2_and_stop_cb)
 {
   struct dev_i2c_ctrl_transfer_s *tr = pv->tr;
 
@@ -332,7 +332,7 @@ DEVI2C_CTRL_FSM(stm32_i2c_read_2_and_stop_cb)
 /****************************************** READ N bytes */
 
 static inline
-DEVI2C_CTRL_FSM(stm32_i2c_read_n_cb)
+DEV_I2C_CTRL_FSM(stm32_i2c_read_n_cb)
 {
   struct dev_i2c_ctrl_transfer_s *tr = pv->tr;
 
@@ -578,7 +578,7 @@ static DEV_IRQ_EP_PROCESS(stm32_i2c_irq)
   lock_release(&dev->lock);
 }
 
-DEVI2C_CTRL_TRANSFER(stm32_i2c_transfer)
+DEV_I2C_CTRL_TRANSFER(stm32_i2c_transfer)
 {
   struct device_s            *dev = i2cdev->dev;
   struct stm32_i2c_private_s *pv  = dev->drv_pv;
@@ -613,7 +613,7 @@ DEVI2C_CTRL_TRANSFER(stm32_i2c_transfer)
 /****************************************** scheduler */
 
 static
-DEVI2C_CTRL_SCHED(stm32_i2c_sched)
+DEV_I2C_CTRL_SCHED(stm32_i2c_sched)
 {
   struct device_s            *dev = i2cdev->dev;
   struct stm32_i2c_private_s *pv  = dev->drv_pv;

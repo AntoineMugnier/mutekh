@@ -231,7 +231,7 @@ static DRIVE_ATA_IRQ_FUNC(drive_ata_write_irq)
   return 0;
 }
 
-DEVBLOCK_REQUEST(drive_ata_request)
+DEV_BLOCK_REQUEST(drive_ata_request)
 {
 //  struct controller_ata_context_s *cpv = dev->parent->drv_pv;
   struct drive_ata_context_s *dpv = dev->drv_pv;
@@ -270,14 +270,14 @@ DEVBLOCK_REQUEST(drive_ata_request)
   LOCK_RELEASE_IRQ(&dev->parent->lock);
 }
 
-DEVBLOCK_GETPARAMS(drive_ata_getparams)
+DEV_BLOCK_GETPARAMS(drive_ata_getparams)
 {
   struct drive_ata_context_s	*pv = dev->drv_pv;
 
   return &pv->drv_params;
 }
 
-DEVBLOCK_GETRQSIZE(block_soclib_getrqsize)
+DEV_BLOCK_GETRQSIZE(block_soclib_getrqsize)
 {
   return sizeof(struct dev_block_rq_s) + sizeof(struct drive_ata_rq_s);
 }

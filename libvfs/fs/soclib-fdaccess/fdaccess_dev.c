@@ -105,9 +105,9 @@ int32_t soclib_fdaccess_rq(struct device_s *dev,
   return rq->retval;
 }
 
-static const struct devenum_ident_s	soclib_fdaccess_ids[] =
+static const struct dev_enum_ident_s	soclib_fdaccess_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("soclib:fdaccess", 0, 0),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:fdaccess", 0, 0),
   { 0 }
 };
 

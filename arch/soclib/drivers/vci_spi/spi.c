@@ -82,7 +82,7 @@ struct soclib_spi_context_s
 
 /****************************************************** SPI controller */
 
-static DEVSPI_CTRL_CONFIG(soclib_spi_config)
+static DEV_SPI_CTRL_CONFIG(soclib_spi_config)
 {
   struct device_s *dev = scdev->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
@@ -213,7 +213,7 @@ static bool_t soclib_spi_transfer_tx(struct device_s *dev)
 #endif
 }
 
-static DEVSPI_CTRL_SELECT(soclib_spi_select)
+static DEV_SPI_CTRL_SELECT(soclib_spi_select)
 {
   struct device_s *dev = scdev->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
@@ -259,7 +259,7 @@ static DEVSPI_CTRL_SELECT(soclib_spi_select)
   return err;
 }
 
-static DEVSPI_CTRL_TRANSFER(soclib_spi_transfer)
+static DEV_SPI_CTRL_TRANSFER(soclib_spi_transfer)
 {
   struct device_s *dev = scdev->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
@@ -294,7 +294,7 @@ static DEVSPI_CTRL_TRANSFER(soclib_spi_transfer)
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 
-static DEVSPI_CTRL_QUEUE(soclib_spi_queue)
+static DEV_SPI_CTRL_QUEUE(soclib_spi_queue)
 {
   struct device_s *dev = scdev->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
@@ -318,7 +318,7 @@ static const struct driver_spi_ctrl_s	soclib_spi_ctrl_drv =
 
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_SPI_GPIO
 
-static DEVGPIO_SET_MODE(soclib_spi_gpio_set_mode)
+static DEV_GPIO_SET_MODE(soclib_spi_gpio_set_mode)
 {
   return ((io_first < 32 && mode != DEV_PIN_INPUT) ||
           (io_first >= 32 && mode != DEV_PIN_PUSHPULL) ||
@@ -326,7 +326,7 @@ static DEVGPIO_SET_MODE(soclib_spi_gpio_set_mode)
     ? -ENOTSUP : 0;
 }
 
-static DEVGPIO_SET_OUTPUT(soclib_spi_gpio_set_output)
+static DEV_GPIO_SET_OUTPUT(soclib_spi_gpio_set_output)
 {
   struct device_s *dev = gpio->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
@@ -353,7 +353,7 @@ static DEVGPIO_SET_OUTPUT(soclib_spi_gpio_set_output)
   return 0;
 }
 
-static DEVGPIO_GET_INPUT(soclib_spi_gpio_get_input)
+static DEV_GPIO_GET_INPUT(soclib_spi_gpio_get_input)
 {
   struct device_s *dev = gpio->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
@@ -377,7 +377,7 @@ const struct driver_gpio_s  soclib_spi_gpio_drv =
   .f_set_mode     = soclib_spi_gpio_set_mode,
   .f_set_output   = soclib_spi_gpio_set_output,
   .f_get_input    = soclib_spi_gpio_get_input,
-  .f_request      = devgpio_request_async_to_sync,
+  .f_request      = dev_gpio_request_async_to_sync,
 };
 
 #endif
@@ -386,7 +386,7 @@ const struct driver_gpio_s  soclib_spi_gpio_drv =
 
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_SPI_ICU
 
-static DEVICU_GET_ENDPOINT(soclib_spi_icu_get_endpoint)
+static DEV_ICU_GET_ENDPOINT(soclib_spi_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
@@ -413,7 +413,7 @@ static DEVICU_GET_ENDPOINT(soclib_spi_icu_get_endpoint)
     }
 }
 
-static DEVICU_ENABLE_IRQ(soclib_spi_icu_enable_irq)
+static DEV_ICU_ENABLE_IRQ(soclib_spi_icu_enable_irq)
 {
   struct device_s *dev = idev->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
@@ -466,7 +466,7 @@ static DEVICU_ENABLE_IRQ(soclib_spi_icu_enable_irq)
   return done;
 }
 
-static DEVICU_DISABLE_IRQ(soclib_spi_icu_disable_irq)
+static DEV_ICU_DISABLE_IRQ(soclib_spi_icu_disable_irq)
 {
   struct device_s *dev = idev->dev;
   struct soclib_spi_context_s *pv = idev->dev->drv_pv;
@@ -492,9 +492,9 @@ const struct driver_icu_s  soclib_spi_icu_drv =
 
 /*******************************************************/
 
-static const struct devenum_ident_s  soclib_spi_ids[] =
+static const struct dev_enum_ident_s  soclib_spi_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("soclib:vci_spi"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_spi"),
   { 0 }
 };
 

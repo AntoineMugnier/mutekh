@@ -156,7 +156,7 @@ static DEV_IRQ_EP_PROCESS(enst_rttimer_irq_separate)
 }
 #endif
 
-static DEVTIMER_CANCEL(enst_rttimer_cancel)
+static DEV_TIMER_CANCEL(enst_rttimer_cancel)
 {
 # ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = tdev->dev;
@@ -208,7 +208,7 @@ static DEVTIMER_CANCEL(enst_rttimer_cancel)
 # endif
 }
 
-static DEVTIMER_REQUEST(enst_rttimer_request)
+static DEV_TIMER_REQUEST(enst_rttimer_request)
 {
 # ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = tdev->dev;
@@ -261,7 +261,7 @@ static DEVTIMER_REQUEST(enst_rttimer_request)
 # endif
 }
 
-static DEVTIMER_START_STOP(enst_rttimer_state_start_stop)
+static DEV_TIMER_START_STOP(enst_rttimer_state_start_stop)
 {
   struct device_s *dev = tdev->dev;
   struct enst_rttimer_private_s *pv = dev->drv_pv;
@@ -309,7 +309,7 @@ static DEVTIMER_START_STOP(enst_rttimer_state_start_stop)
   return err;
 }
 
-static DEVTIMER_GET_VALUE(enst_rttimer_get_value)
+static DEV_TIMER_GET_VALUE(enst_rttimer_get_value)
 {
   struct device_s *dev = tdev->dev;
   struct enst_rttimer_private_s *pv = dev->drv_pv;
@@ -327,7 +327,7 @@ static DEVTIMER_GET_VALUE(enst_rttimer_get_value)
   return 0;
 }
 
-static DEVTIMER_RESOLUTION(enst_rttimer_resolution)
+static DEV_TIMER_RESOLUTION(enst_rttimer_resolution)
 {
   struct device_s *dev = tdev->dev;
   struct enst_rttimer_private_s *pv = dev->drv_pv;
@@ -377,13 +377,13 @@ const struct driver_timer_s  enst_rttimer_timer_drv =
 
 /************************************************************************/
 
-static const struct devenum_ident_s  enst_rttimer_ids[] =
+static const struct dev_enum_ident_s  enst_rttimer_ids[] =
 {
 #ifdef CONFIG_ARCH_SOCLIB
-  DEVENUM_FDTNAME_ENTRY("soclib:vci_rttimer"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_rttimer"),
 #endif
 #ifdef CONFIG_ARCH_GAISLER
-  DEVENUM_GAISLER_ENTRY(0x09, 0x003),
+  DEV_ENUM_GAISLER_ENTRY(0x09, 0x003),
 #endif
   { 0 }
 };

@@ -192,7 +192,7 @@ static void efm32_usart_try_write(struct device_s *dev)
     }
 }
 
-static DEVCHAR_REQUEST(efm32_usart_request)
+static DEV_CHAR_REQUEST(efm32_usart_request)
 {
   struct device_s               *dev = cdev->dev;
   struct efm32_usart_context_s	*pv = dev->drv_pv;

@@ -74,9 +74,9 @@ struct		lcd_pal_s
 
 struct lcd_req_s;
 
-#define DEVLCD_CALLBACK(x) void (x)(void *context, struct lcd_req_s *req)
+#define DEV_LCD_CALLBACK(x) void (x)(void *context, struct lcd_req_s *req)
 
-typedef DEVLCD_CALLBACK(devlcd_callback_t);
+typedef DEV_LCD_CALLBACK(dev_lcd_callback_t);
 
 enum lcd_req_type_e
 {
@@ -111,7 +111,7 @@ struct lcd_req_s
 			uint_fast8_t value;
 		} contrast;
 	};
-	devlcd_callback_t *callback;
+	dev_lcd_callback_t *callback;
 	void *callback_data;
 	dev_lcd_queue_entry_t	queue_entry; /* used by driver to enqueue requests */
 }, queue_entry);
@@ -119,14 +119,14 @@ struct lcd_req_s
 GCT_CONTAINER_FCNS(dev_lcd_queue, CLIST, ALWAYS_INLINE, dev_lcd_queue);
 
 /** Lcd device class request() function tempate. */
-#define DEVLCD_REQUEST(n)	error_t  (n) (struct device_lcd_s *ldev, struct lcd_req_s *req)
+#define DEV_LCD_REQUEST(n)	error_t  (n) (struct device_lcd_s *ldev, struct lcd_req_s *req)
 
-typedef DEVLCD_REQUEST(devlcd_request_t);
+typedef DEV_LCD_REQUEST(dev_lcd_request_t);
 
 
 
 /** Lcd device class getinfo() function tempate. */
-#define DEVLCD_GETINFO(n)	const struct lcd_info_s * (n) (struct device_lcd_s *ldev)
+#define DEV_LCD_GETINFO(n)	const struct lcd_info_s * (n) (struct device_lcd_s *ldev)
 
 /**
     Lcd device class getinfo() function type.  Get a device
@@ -135,13 +135,13 @@ typedef DEVLCD_REQUEST(devlcd_request_t);
     @param dev pointer to device descriptor
     @return the information struct
 */
-typedef DEVLCD_GETINFO(devlcd_getinfo_t);
+typedef DEV_LCD_GETINFO(dev_lcd_getinfo_t);
 
 
 
 DRIVER_CLASS_TYPES(lcd,
-                    devlcd_request_t	*f_request;
-                    devlcd_getinfo_t	*f_getinfo;
+                    dev_lcd_request_t	*f_request;
+                    dev_lcd_getinfo_t	*f_getinfo;
                     );
 
 

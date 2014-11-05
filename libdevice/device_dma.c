@@ -44,7 +44,7 @@ struct dev_dma_wait_rq_s
 };
 
 
-static DEVDMA_CALLBACK(dev_dma_lock_request_cb)
+static DEV_DMA_CALLBACK(dev_dma_lock_request_cb)
 {
   struct dev_dma_wait_rq_s *status = rq->pvdata;
   status->done = 1;
@@ -57,7 +57,7 @@ static error_t dev_dma_lock_request(const struct device_dma_s *ddev,
                                     address_space_id_t src_as,
                                     address_space_id_t dst_as,
 #endif
-                                    devdma_callback_t *callback)
+                                    dev_dma_callback_t *callback)
 {
   struct dev_dma_rq_s rq;
   struct dev_dma_wait_rq_s status;
@@ -94,7 +94,7 @@ static error_t dev_dma_lock_request(const struct device_dma_s *ddev,
 
 
 #ifdef CONFIG_MUTEK_SCHEDULER
-static DEVDMA_CALLBACK(dev_dma_wait_request_cb)
+static DEV_DMA_CALLBACK(dev_dma_wait_request_cb)
 {
   struct dev_dma_wait_rq_s *status = rq->pvdata;
 
@@ -112,7 +112,7 @@ static error_t dev_dma_wait_request(const struct device_dma_s *ddev,
                                     address_space_id_t src_as,
                                     address_space_id_t dst_as,
 # endif
-                                    devdma_callback_t *callback)
+                                    dev_dma_callback_t *callback)
 {
   struct dev_dma_rq_s rq;
   struct dev_dma_wait_rq_s status;

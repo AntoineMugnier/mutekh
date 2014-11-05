@@ -170,7 +170,7 @@ void stm32_pwm_polarity(struct device_s         *dev,
 }
 
 static
-DEVPWM_CONFIG(stm32_pwm_config)
+DEV_PWM_CONFIG(stm32_pwm_config)
 {
   struct device_s            *dev = pdev->dev;
   struct stm32_pwm_private_s *pv  = dev->drv_pv;
@@ -231,7 +231,7 @@ cfg_end:
   return 0;
 }
 
-DEVPWM_QUEUE(stm32_pwm_queue)
+DEV_PWM_QUEUE(stm32_pwm_queue)
 {
   struct device_s            *dev = pdev->dev;
   struct stm32_pwm_private_s *pv  = dev->drv_pv;

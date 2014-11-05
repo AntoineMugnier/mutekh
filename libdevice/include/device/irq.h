@@ -145,8 +145,8 @@ struct dev_irq_ep_s
   uint16_t link_count;
 
   /** Interrupt sense mode capabilities
-      @see devicu_enable_irq_t
-      @see devicu_get_endpoint_t */
+      @see dev_icu_enable_irq_t
+      @see dev_icu_get_endpoint_t */
   uint8_t sense;
 };
 
@@ -154,7 +154,7 @@ struct dev_irq_ep_s
 /** Device irq bypass end-point. This end-point type can be used to
     bypass parts of the irq topology graph when an interrupt is
     raised. It is setup when interrupts are enabled from the @ref
-    devicu_enable_irq_t function if one or more interrupt controllers
+    dev_icu_enable_irq_t function if one or more interrupt controllers
     agree on being bypassed for interrupts handling.
 
     A bypass end-point can not be used to point to multiple source

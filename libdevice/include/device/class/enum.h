@@ -36,16 +36,16 @@
 
 struct device_enum_s;
 
-#define DEVENUM_MATCH_DRIVER(n) bool_t (n)(struct device_enum_s *edev, const struct driver_s *drv, struct device_s *dev)
+#define DEV_ENUM_MATCH_DRIVER(n) bool_t (n)(struct device_enum_s *edev, const struct driver_s *drv, struct device_s *dev)
 
 /** @This determines if the @tt drv driver is suitable to drive the
     @tt dev device. The device must have been enumerated by the @tt
     edev device. @This generally relies on the enumeration ids table
     provided by the driver. */
-typedef DEVENUM_MATCH_DRIVER(devenum_match_driver_t);
+typedef DEV_ENUM_MATCH_DRIVER(dev_enum_match_driver_t);
 
 DRIVER_CLASS_TYPES(enum,
-                   devenum_match_driver_t *f_match_driver;
+                   dev_enum_match_driver_t *f_match_driver;
                    );
 
 #endif

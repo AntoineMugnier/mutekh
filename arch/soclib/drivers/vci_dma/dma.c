@@ -55,7 +55,7 @@ static void dma_soclib_start(struct device_s *dev, const struct dev_dma_rq_s *rq
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_LEN, endian_le32(rq->size));
 }
 
-DEVDMA_REQUEST(dma_soclib_request)
+DEV_DMA_REQUEST(dma_soclib_request)
 {
   struct device_s               *dev = ddev->dev;
   struct dma_soclib_context_s	*pv = dev->drv_pv;
@@ -106,9 +106,9 @@ static DEV_IRQ_EP_PROCESS(dma_soclib_irq)
  * device open operation
  */
 
-static const struct devenum_ident_s	dma_soclib_ids[] =
+static const struct dev_enum_ident_s	dma_soclib_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("soclib:vci_dma"),
+	DEV_ENUM_FDTNAME_ENTRY("soclib:vci_dma"),
 	{ 0 }
 };
 

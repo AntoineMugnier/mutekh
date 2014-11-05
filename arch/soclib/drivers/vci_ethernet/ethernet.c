@@ -85,7 +85,7 @@ struct soclib_eth_context_s
 #define ETHERNET_CTRL_RX_IRQ    4
 #define ETHERNET_CTRL_LINK_IRQ  8
 
-static DEVNET_PREPAREPKT(soclib_eth_preparepkt)
+static DEV_NET_PREPAREPKT(soclib_eth_preparepkt)
 {
   struct device_s             *dev = ndev->dev;
   struct soclib_eth_context_s *pv = dev->drv_pv;
@@ -111,7 +111,7 @@ static DEVNET_PREPAREPKT(soclib_eth_preparepkt)
   return buff + sizeof (struct ether_header);
 }
 
-static DEVNET_SENDPKT(soclib_eth_sendpkt)
+static DEV_NET_SENDPKT(soclib_eth_sendpkt)
 {
   struct device_s             *dev = ndev->dev;
   struct soclib_eth_context_s *pv = dev->drv_pv;
@@ -147,7 +147,7 @@ static DEVNET_SENDPKT(soclib_eth_sendpkt)
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static DEVNET_SETOPT(soclib_eth_setopt)
+static DEV_NET_SETOPT(soclib_eth_setopt)
 {
   struct device_s               *dev = ndev->dev;
   struct soclib_eth_context_s *pv = dev->drv_pv;
@@ -168,7 +168,7 @@ static DEVNET_SETOPT(soclib_eth_setopt)
     }
 }
 
-static DEVNET_GETOPT(soclib_eth_getopt)
+static DEV_NET_GETOPT(soclib_eth_getopt)
 {
   struct device_s               *dev = ndev->dev;
   struct soclib_eth_context_s *pv = dev->drv_pv;
@@ -305,9 +305,9 @@ static DEV_IRQ_EP_PROCESS(soclib_eth_irq)
  * device open operation
  */
 
-static const struct devenum_ident_s	soclib_eth_ids[] =
+static const struct dev_enum_ident_s	soclib_eth_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("soclib:vci_ethernet"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_ethernet"),
   { 0 }
 };
 

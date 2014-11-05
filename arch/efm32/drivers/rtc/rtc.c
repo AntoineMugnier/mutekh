@@ -212,7 +212,7 @@ static DEV_IRQ_EP_PROCESS(efm32_rtc_irq)
 }
 #endif
 
-static DEVTIMER_CANCEL(efm32_rtc_cancel)
+static DEV_TIMER_CANCEL(efm32_rtc_cancel)
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = tdev->dev;
@@ -262,7 +262,7 @@ static DEVTIMER_CANCEL(efm32_rtc_cancel)
 
 #include <mutek/scheduler.h>
 
-static DEVTIMER_REQUEST(efm32_rtc_request)
+static DEV_TIMER_REQUEST(efm32_rtc_request)
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = tdev->dev;
@@ -309,7 +309,7 @@ static DEVTIMER_REQUEST(efm32_rtc_request)
 #endif
 }
 
-static DEVTIMER_START_STOP(efm32_rtc_state_start_stop)
+static DEV_TIMER_START_STOP(efm32_rtc_state_start_stop)
 {
   struct device_s *dev = tdev->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
@@ -341,7 +341,7 @@ static DEVTIMER_START_STOP(efm32_rtc_state_start_stop)
   return err;
 }
 
-static DEVTIMER_GET_VALUE(efm32_rtc_get_value)
+static DEV_TIMER_GET_VALUE(efm32_rtc_get_value)
 {
   struct device_s *dev = tdev->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
@@ -356,7 +356,7 @@ static DEVTIMER_GET_VALUE(efm32_rtc_get_value)
 }
 
 #ifdef CONFIG_DEVICE_CLOCK
-static DEVTIMER_GET_FREQ(efm32_rtc_get_freq)
+static DEV_TIMER_GET_FREQ(efm32_rtc_get_freq)
 {
   struct device_s *dev = tdev->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
@@ -366,7 +366,7 @@ static DEVTIMER_GET_FREQ(efm32_rtc_get_freq)
 }
 #endif
 
-static DEVTIMER_RESOLUTION(efm32_rtc_resolution)
+static DEV_TIMER_RESOLUTION(efm32_rtc_resolution)
 {
   struct device_s *dev = tdev->dev;
 

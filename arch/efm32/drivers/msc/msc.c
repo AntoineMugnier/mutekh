@@ -45,7 +45,7 @@ struct efm32_msc_context_s
 
 #define EFM32_MSC_ADDR 0x400c0000
 
-static DEVMEM_INFO(efm32_msc_info)
+static DEV_MEM_INFO(efm32_msc_info)
 {
   struct device_s *dev = mdev->dev;
   struct efm32_msc_context_s *pv = dev->drv_pv;
@@ -141,7 +141,7 @@ static uint32_t efm32_msc_flash_op(uintptr_t base, uint_fast8_t page_log2, struc
   return err;
 }
 
-static DEVMEM_REQUEST(efm32_msc_request)
+static DEV_MEM_REQUEST(efm32_msc_request)
 {
   struct device_s *dev = mdev->dev;
   struct efm32_msc_context_s *pv = dev->drv_pv;

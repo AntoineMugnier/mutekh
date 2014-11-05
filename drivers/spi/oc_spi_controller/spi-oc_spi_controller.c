@@ -208,7 +208,7 @@ static CMD_HANDLER(spi_oc_spi_controller_wait_value_rx)
 #ifdef OC_SPI_CTRL_DEBUG
 	printk("SPI wait_value_rx data : %x\n", data);
 #endif
-	enum devspi_wait_value_answer_e ret = pv->wait_cb(dev, rq, data);
+	enum dev_spi_wait_value_answer_e ret = pv->wait_cb(dev, rq, data);
 	switch (ret) {
 	case DEV_SPI_VALUE_FAIL:
 		pv->abort = 1;
@@ -438,7 +438,7 @@ struct dev_spi_rq_cmd_s *spi_oc_spi_controller_get_next_cmd(struct device_s *dev
 	return NULL;
 }
 
-DEVSPI_REQUEST(spi_oc_spi_controller_request)
+DEV_SPI_REQUEST(spi_oc_spi_controller_request)
 {
 	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
   bool_t queue_empty;
@@ -484,7 +484,7 @@ DEV_IRQ(spi_oc_spi_controller_irq)
 	return 0;
 }
 
-DEVSPI_SET_BAUDRATE(spi_oc_spi_controller_set_baudrate)
+DEV_SPI_SET_BAUDRATE(spi_oc_spi_controller_set_baudrate)
 {
     	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
 	struct spi_oc_spi_controller_dev_config_s *config = pv->dev_config;
@@ -519,7 +519,7 @@ uint32_t return_value = br;
 	return return_value;
 }
 
-DEVSPI_SET_DATA_FORMAT(spi_oc_spi_controller_set_data_format)
+DEV_SPI_SET_DATA_FORMAT(spi_oc_spi_controller_set_data_format)
 {
 	struct spi_oc_spi_controller_context_s *pv = dev->drv_pv;
 	struct spi_oc_spi_controller_dev_config_s *config = pv->dev_config;
@@ -552,9 +552,9 @@ static const struct driver_param_binder_s spi_oc_spi_controller_param_binder[] =
 	{ 0 }
 };
 
-static const struct devenum_ident_s	spi_oc_spi_controller_ids[] =
+static const struct dev_enum_ident_s	spi_oc_spi_controller_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("oc_spi_controller", sizeof(struct spi_oc_spi_controller_param_s), spi_oc_spi_controller_param_binder),
+	DEV_ENUM_FDTNAME_ENTRY("oc_spi_controller", sizeof(struct spi_oc_spi_controller_param_s), spi_oc_spi_controller_param_binder),
 	{ 0 }
 };
 #endif

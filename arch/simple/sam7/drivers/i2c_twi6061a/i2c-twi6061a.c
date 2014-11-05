@@ -205,7 +205,7 @@ void i2c_twi6061a_handle_req(struct device_s *dev, struct dev_i2c_rq_s *rq)
 }
 #endif
 
-DEVI2C_REQUEST(i2c_twi6061a_request)
+DEV_I2C_REQUEST(i2c_twi6061a_request)
 {
     struct i2c_twi6061a_context_s *pv = dev->drv_pv;
 
@@ -253,7 +253,7 @@ DEV_IRQ(i2c_twi6061a_irq)
 	return 0;
 }
 
-DEVI2C_SET_BAUDRATE(i2c_twi6061a_set_baudrate)
+DEV_I2C_SET_BAUDRATE(i2c_twi6061a_set_baudrate)
 {
 	uintptr_t registers = (uintptr_t)dev->addr[0];
 
@@ -281,9 +281,9 @@ DEVI2C_SET_BAUDRATE(i2c_twi6061a_set_baudrate)
 }
 
 #ifdef CONFIG_DRIVER_ENUM_FDT
-static const struct devenum_ident_s	i2c_twi6061a_ids[] =
+static const struct dev_enum_ident_s	i2c_twi6061a_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("twi6061a", 0, 0),
+	DEV_ENUM_FDTNAME_ENTRY("twi6061a", 0, 0),
 	{ 0 }
 };
 #endif

@@ -48,7 +48,7 @@ void dev_pwm_rq_queue_cleanup(struct dev_pwm_rq_queue_s *q)
 }
 
 error_t dev_pwm_request_init(struct device_pwm_s      *pdev,
-                             struct dev_pwm_request_s *rq)
+                             struct dev_pwm_rq_s *rq)
 {
     memset(rq, 0, sizeof(*rq));
     rq->pdev  = pdev;
@@ -61,7 +61,7 @@ static
 KROUTINE_EXEC(dev_pwm_config_end)
 {
   struct dev_pwm_config_s *cfg = KROUTINE_CONTAINER(kr, *cfg, kr);
-  struct dev_pwm_request_s *rq = cfg->pvdata;
+  struct dev_pwm_rq_s *rq = cfg->pvdata;
   struct dev_pwm_rq_queue_s *q = rq->queue;
 
   lock_spin_irq(&q->lock);
@@ -104,7 +104,7 @@ void dev_pwm_execute(struct dev_pwm_rq_queue_s *q)
            q->marker != dev_pwm_queue_head(&q->queue));
       {
         /* apply the next configuration from the queue. */
-        struct dev_pwm_request_s *rq  = dev_pwm_queue_head(&q->queue);
+        struct dev_pwm_rq_s *rq  = dev_pwm_queue_head(&q->queue);
         struct dev_pwm_config_s  *cfg = rq->cfg;
         assert(cfg != NULL);
 
@@ -122,7 +122,7 @@ void dev_pwm_execute(struct dev_pwm_rq_queue_s *q)
       }
 }
 
-error_t dev_pwm_request_start(struct dev_pwm_request_s *rq)
+error_t dev_pwm_rq_start(struct dev_pwm_rq_s *rq)
 {
   struct dev_pwm_rq_queue_s *q = rq->queue;
 
@@ -164,7 +164,7 @@ struct dev_pwm_wait_rq_s
 static
 KROUTINE_EXEC(dev_pwm_wait_request)
 {
-  struct dev_pwm_request_s *rq     = KROUTINE_CONTAINER(kr, *rq, kr);
+  struct dev_pwm_rq_s *rq     = KROUTINE_CONTAINER(kr, *rq, kr);
   struct dev_pwm_wait_rq_s *status = rq->pvdata;
 
   lock_spin(&status->lock);
@@ -177,7 +177,7 @@ KROUTINE_EXEC(dev_pwm_wait_request)
 error_t dev_pwm_config(struct device_pwm_s     *pdev,
                        struct dev_pwm_config_s *cfg)
 {
-  struct dev_pwm_request_s rq;
+  struct dev_pwm_rq_s rq;
   struct dev_pwm_wait_rq_s status;
 
 
@@ -190,7 +190,7 @@ error_t dev_pwm_config(struct device_pwm_s     *pdev,
   rq.pvdata = &status;
   rq.cfg    = cfg;
 
-  dev_pwm_request_start(&rq);
+  dev_pwm_rq_start(&rq);
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   lock_spin(&status.lock);

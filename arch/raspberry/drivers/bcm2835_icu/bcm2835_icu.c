@@ -70,7 +70,7 @@ struct bcm2835_icu_private_s
   struct dev_irq_ep_s src;
 };
 
-static DEVICU_GET_ENDPOINT(bcm2835_icu_icu_get_endpoint)
+static DEV_ICU_GET_ENDPOINT(bcm2835_icu_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct bcm2835_icu_private_s *pv = dev->drv_pv;
@@ -91,7 +91,7 @@ static DEVICU_GET_ENDPOINT(bcm2835_icu_icu_get_endpoint)
     }
 }
 
-static DEVICU_ENABLE_IRQ(bcm2835_icu_icu_enable_irq)
+static DEV_ICU_ENABLE_IRQ(bcm2835_icu_icu_enable_irq)
 {
   struct device_s *dev = idev->dev;
   struct bcm2835_icu_private_s *pv = dev->drv_pv;
@@ -126,7 +126,7 @@ static DEVICU_ENABLE_IRQ(bcm2835_icu_icu_enable_irq)
     }
 }
 
-static DEVICU_DISABLE_IRQ(bcm2835_icu_icu_disable_irq)
+static DEV_ICU_DISABLE_IRQ(bcm2835_icu_icu_disable_irq)
 {
   struct device_s *dev = idev->dev;
   struct bcm2835_icu_private_s *pv = dev->drv_pv;
@@ -189,9 +189,9 @@ const struct driver_icu_s  bcm2835_icu_icu_drv =
   .f_disable_irq  = bcm2835_icu_icu_disable_irq,
 };
 
-static const struct devenum_ident_s  bcm2835_icu_ids[] =
+static const struct dev_enum_ident_s  bcm2835_icu_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("bcm2835_icu"),
+  DEV_ENUM_FDTNAME_ENTRY("bcm2835_icu"),
   { 0 }
 };
 

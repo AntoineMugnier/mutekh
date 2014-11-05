@@ -67,18 +67,18 @@ enum driver_class_e
 
 enum dev_enum_type_e
 {
-  DEVENUM_TYPE_INVALID,
-  DEVENUM_TYPE_GENERIC,
-  DEVENUM_TYPE_PCI,
-  DEVENUM_TYPE_ISA,
-  DEVENUM_TYPE_ATA,
-  DEVENUM_TYPE_FDTNAME,
-  DEVENUM_TYPE_GAISLER,
+  DEV_ENUM_TYPE_INVALID,
+  DEV_ENUM_TYPE_GENERIC,
+  DEV_ENUM_TYPE_PCI,
+  DEV_ENUM_TYPE_ISA,
+  DEV_ENUM_TYPE_ATA,
+  DEV_ENUM_TYPE_FDTNAME,
+  DEV_ENUM_TYPE_GAISLER,
 };
 
 /** device structure identification informations. wildcard values are
     enum driver dependent */
-struct devenum_ident_s
+struct dev_enum_ident_s
 {
 	uint_fast8_t type;   //< @see dev_enum_type_e
 
@@ -112,70 +112,70 @@ struct devenum_ident_s
 
 
 /**
-   Shortcut for creating a PCI entry in a static devenum_ident_s
+   Shortcut for creating a PCI entry in a static dev_enum_ident_s
    array.
 
    @param _vendor the vendor id to match, -1 for wildcard
    @param _device the device id to match, -1 for wildcard
    @param _class the class to match, -1 for wildcard
  */
-#define DEVENUM_PCI_ENTRY(_vendor, _device, _class)		\
-	{ .type = DEVENUM_TYPE_PCI, { .pci = {				\
+#define DEV_ENUM_PCI_ENTRY(_vendor, _device, _class)		\
+	{ .type = DEV_ENUM_TYPE_PCI, { .pci = {				\
 				.vendor = _vendor, .device = _device,	\
 				.class = _class } } }
 
 /**
-   Shortcut for creating an ISA entry in a static devenum_ident_s
+   Shortcut for creating an ISA entry in a static dev_enum_ident_s
    array.
 
    @param _vendor the vendor id to match
  */
-#define DEVENUM_ISA_ENTRY(_vendor)						\
-	{ .type = DEVENUM_TYPE_PCI, { .isa = {				\
+#define DEV_ENUM_ISA_ENTRY(_vendor)						\
+	{ .type = DEV_ENUM_TYPE_PCI, { .isa = {				\
 				.vendor = _vendor } } }
 
 /**
-   Shortcut for creating an ATA entry in a static devenum_ident_s
+   Shortcut for creating an ATA entry in a static dev_enum_ident_s
    array.
 
    @param _str the string to match from the device
  */
-#define DEVENUM_ATA_ENTRY(_str)							\
-	{ .type = DEVENUM_TYPE_ATA, { .ata = {				\
+#define DEV_ENUM_ATA_ENTRY(_str)							\
+	{ .type = DEV_ENUM_TYPE_ATA, { .ata = {				\
 				.str = _str } } }
 
 /**
    Shortcut for creating a flat-device-tree entry in a static
-   devenum_ident_s array.
+   dev_enum_ident_s array.
 
    @param _name The string to match from the device-tree
  */
-#define DEVENUM_FDTNAME_ENTRY(_name)	\
-	{ .type = DEVENUM_TYPE_FDTNAME, { .fdtname = {		\
+#define DEV_ENUM_FDTNAME_ENTRY(_name)	\
+	{ .type = DEV_ENUM_TYPE_FDTNAME, { .fdtname = {		\
 				.name = _name } } }
 
 /**
-   Shortcut for creating a Gaisler GAISLER entry in a static devenum_ident_s
+   Shortcut for creating a Gaisler GAISLER entry in a static dev_enum_ident_s
    array.
 
    @param _vendor the vendor id to match, -1 for wildcard
    @param _device the device id to match, -1 for wildcard
  */
-#define DEVENUM_GAISLER_ENTRY(_vendor, _device)		\
-	{ .type = DEVENUM_TYPE_GAISLER, { .grlib = {				\
+#define DEV_ENUM_GAISLER_ENTRY(_vendor, _device)		\
+	{ .type = DEV_ENUM_TYPE_GAISLER, { .grlib = {				\
 				.vendor = _vendor, .device = _device } } }
 
 /**
    Shortcut for creating a Generic with vendor/device ids and version
-   number in a static devenum_ident_s array.
+   number in a static dev_enum_ident_s array.
 
    @param _vendor the vendor id to match, -1 for wildcard
    @param _device the device id to match, -1 for wildcard
    @param _rev_major the device major revision, -1 for wildcard
    @param _rev_minor the minimum supported minor revision, -1 for wildcard
  */
-#define DEVENUM_GENERIC_ENTRY(_vendor, _device, _rev_major, _rev_minor)	\
-  { .type = DEVENUM_TYPE_GENERIC, { .generic = {                        \
+#define DEV_ENUM_GENERIC_ENTRY(_vendor, _device, _rev_major, _rev_minor)	\
+  { .type = DEV_ENUM_TYPE_GENERIC, { .generic = {                        \
         .vendor = _vendor,                                              \
         .device = _device,                                              \
         .rev_minor = _rev_minor,                                        \
@@ -260,7 +260,7 @@ typedef DEV_USE(dev_use_t);
 struct driver_s
 {
   /** device identifier table for detection (optional) */
-  const struct devenum_ident_s	*id_table;
+  const struct dev_enum_ident_s	*id_table;
 
   /** driver description string */
   const char *desc;

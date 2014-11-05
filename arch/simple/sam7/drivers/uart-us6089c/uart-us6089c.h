@@ -31,7 +31,7 @@
 DEV_IRQ(uart_us6089c_irq);
 DEV_INIT(uart_us6089c_init);
 DEV_CLEANUP(uart_us6089c_cleanup);
-DEVCHAR_REQUEST(uart_us6089c_request);
+DEV_CHAR_REQUEST(uart_us6089c_request);
 
 #endif
 

@@ -149,7 +149,7 @@ static DEV_IRQ_EP_PROCESS(soclib_timer_irq)
 }
 #endif
 
-static DEVTIMER_REQUEST(soclib_timer_request)
+static DEV_TIMER_REQUEST(soclib_timer_request)
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = tdev->dev;
@@ -205,7 +205,7 @@ static DEVTIMER_REQUEST(soclib_timer_request)
 #endif
 }
 
-static DEVTIMER_CANCEL(soclib_timer_cancel)
+static DEV_TIMER_CANCEL(soclib_timer_cancel)
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = tdev->dev;
@@ -254,7 +254,7 @@ static DEVTIMER_CANCEL(soclib_timer_cancel)
 #endif
 }
 
-static DEVTIMER_START_STOP(soclib_timer_state_start_stop)
+static DEV_TIMER_START_STOP(soclib_timer_state_start_stop)
 {
   struct device_s *dev = tdev->dev;
   struct soclib_timer_private_s *pv = dev->drv_pv;
@@ -318,7 +318,7 @@ static DEVTIMER_START_STOP(soclib_timer_state_start_stop)
   return err;
 }
 
-static DEVTIMER_GET_VALUE(soclib_timer_get_value)
+static DEV_TIMER_GET_VALUE(soclib_timer_get_value)
 {
   struct device_s *dev = tdev->dev;
   struct soclib_timer_private_s *pv = dev->drv_pv;
@@ -364,7 +364,7 @@ static DEVTIMER_GET_VALUE(soclib_timer_get_value)
   return err;
 }
 
-static DEVTIMER_RESOLUTION(soclib_timer_resolution)
+static DEV_TIMER_RESOLUTION(soclib_timer_resolution)
 {
   struct device_s *dev = tdev->dev;
   struct soclib_timer_private_s *pv = dev->drv_pv;
@@ -444,9 +444,9 @@ const struct driver_timer_s  soclib_timer_timer_drv =
 
 /************************************************************************/
 
-static const struct devenum_ident_s  soclib_timer_ids[] =
+static const struct dev_enum_ident_s  soclib_timer_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("soclib:vci_timer"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_timer"),
   { 0 }
 };
 

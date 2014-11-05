@@ -67,7 +67,7 @@ static CPU_INTERRUPT_HANDLER(lm32_irq_handler)
   }
 }
 
-static DEVICU_GET_ENDPOINT(lm32_icu_get_endpoint)
+static DEV_ICU_GET_ENDPOINT(lm32_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct lm32_dev_private_s  *pv = dev->drv_pv;
@@ -82,7 +82,7 @@ static DEVICU_GET_ENDPOINT(lm32_icu_get_endpoint)
     }
 }
 
-static DEVICU_ENABLE_IRQ(lm32_icu_enable_irq)
+static DEV_ICU_ENABLE_IRQ(lm32_icu_enable_irq)
 {
   struct device_s *dev = idev->dev;
   struct lm32_dev_private_s  *pv = dev->drv_pv;
@@ -109,7 +109,7 @@ static DEVICU_ENABLE_IRQ(lm32_icu_enable_irq)
 
 # ifndef CONFIG_ARCH_SMP
 /* Disable irq line. On SMP platforms, all lines must remain enabled. */
-static DEVICU_DISABLE_IRQ(lm32_icu_disable_irq)
+static DEV_ICU_DISABLE_IRQ(lm32_icu_disable_irq)
 {
   struct device_s *dev = idev->dev;
   struct lm32_dev_private_s  *pv = dev->drv_pv;
@@ -140,7 +140,7 @@ const struct driver_icu_s  lm32_icu_drv =
 
 CPU_LOCAL struct device_s *cpu_device = NULL;
 
-static DEVCPU_REG_INIT(lm32_cpu_reg_init)
+static DEV_CPU_REG_INIT(lm32_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
   __unused__ struct lm32_dev_private_s *pv = dev->drv_pv;
@@ -160,7 +160,7 @@ static DEVCPU_REG_INIT(lm32_cpu_reg_init)
 }
 
 #ifdef CONFIG_ARCH_SMP
-static DEVCPU_GET_NODE(lm32_cpu_get_node)
+static DEV_CPU_GET_NODE(lm32_cpu_get_node)
 {
   struct device_s *dev = cdev->dev;
   struct lm32_dev_private_s *pv = dev->drv_pv;
@@ -183,12 +183,12 @@ const struct driver_cpu_s  lm32_cpu_drv =
 
 #ifdef CONFIG_CPU_LM32_TIMER_CYCLECOUNTER
 
-static DEVTIMER_START_STOP(lm32_timer_start_stop)
+static DEV_TIMER_START_STOP(lm32_timer_start_stop)
 {
   return 0;
 }
 
-static DEVTIMER_GET_VALUE(lm32_timer_get_value)
+static DEV_TIMER_GET_VALUE(lm32_timer_get_value)
 {
   struct device_s *dev = tdev->dev;
   __unused__ struct lm32_dev_private_s *pv = dev->drv_pv;
@@ -205,7 +205,7 @@ static DEVTIMER_GET_VALUE(lm32_timer_get_value)
   return 0;
 }
 
-static DEVTIMER_RESOLUTION(lm32_timer_resolution)
+static DEV_TIMER_RESOLUTION(lm32_timer_resolution)
 {
   error_t err = 0;
 
@@ -229,8 +229,8 @@ static const struct driver_timer_s  lm32_timer_drv =
   .f_get_value     = lm32_timer_get_value,
   .f_get_freq      = dev_timer_drv_get_freq,
   .f_resolution    = lm32_timer_resolution,
-  .f_request       = (devtimer_request_t*)&dev_driver_notsup_fcn,
-  .f_cancel        = (devtimer_request_t*)&dev_driver_notsup_fcn,
+  .f_request       = (dev_timer_request_t*)&dev_driver_notsup_fcn,
+  .f_cancel        = (dev_timer_request_t*)&dev_driver_notsup_fcn,
 };
 
 #endif
@@ -240,10 +240,10 @@ static const struct driver_timer_s  lm32_timer_drv =
 static DEV_CLEANUP(lm32_cleanup);
 static DEV_INIT(lm32_init);
 
-static const struct devenum_ident_s  lm32_ids[] =
+static const struct dev_enum_ident_s  lm32_ids[] =
 {
 #ifdef CONFIG_LIBFDT
-  DEVENUM_FDTNAME_ENTRY("cpu:lm32"),
+  DEV_ENUM_FDTNAME_ENTRY("cpu:lm32"),
 #endif
   { 0 }
 };

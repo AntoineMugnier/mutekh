@@ -62,7 +62,7 @@ static CPU_INTERRUPT_HANDLER(arm_irq_handler)
     }
 }
 
-static DEVICU_GET_ENDPOINT(arm_icu_get_endpoint)
+static DEV_ICU_GET_ENDPOINT(arm_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct arm_dev_private_s  *pv = dev->drv_pv;
@@ -77,7 +77,7 @@ static DEVICU_GET_ENDPOINT(arm_icu_get_endpoint)
     }
 }
 
-static DEVICU_ENABLE_IRQ(arm_icu_enable_irq)
+static DEV_ICU_ENABLE_IRQ(arm_icu_enable_irq)
 {
   struct device_s *dev = idev->dev;
   struct arm_dev_private_s  *pv = dev->drv_pv;
@@ -94,7 +94,7 @@ static DEVICU_ENABLE_IRQ(arm_icu_enable_irq)
   return 1;
 }
 
-static DEVICU_DISABLE_IRQ(arm_icu_disable_irq)
+static DEV_ICU_DISABLE_IRQ(arm_icu_disable_irq)
 {
   struct device_s *dev = idev->dev;
   struct arm_dev_private_s  *pv = dev->drv_pv;
@@ -121,7 +121,7 @@ const struct driver_icu_s  arm_icu_drv =
 
 CPU_LOCAL struct device_s *cpu_device = NULL;
 
-static DEVCPU_REG_INIT(arm_cpu_reg_init)
+static DEV_CPU_REG_INIT(arm_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
@@ -190,10 +190,10 @@ const struct driver_cpu_s  arm_cpu_drv =
 static DEV_CLEANUP(arm_cleanup);
 static DEV_INIT(arm_init);
 
-static const struct devenum_ident_s  arm_ids[] =
+static const struct dev_enum_ident_s  arm_ids[] =
 {
 #ifdef CONFIG_LIBFDT
-  DEVENUM_FDTNAME_ENTRY("cpu:arm"),
+  DEV_ENUM_FDTNAME_ENTRY("cpu:arm"),
 #endif
   { 0 }
 };

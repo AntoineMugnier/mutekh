@@ -58,7 +58,7 @@ struct icu_emu_private_s
 };
 
 #ifdef CONFIG_HEXO_IPI
-DEVICU_SETUP_IPI_EP(icu_emu_setup_ipi_ep)
+DEV_ICU_SETUP_IPI_EP(icu_emu_setup_ipi_ep)
 {
   endpoint->icu_dev = dev;
   endpoint->priv = (void*)(uintptr_t)ipi_no;
@@ -66,7 +66,7 @@ DEVICU_SETUP_IPI_EP(icu_emu_setup_ipi_ep)
   return 0;
 }
 
-DEVICU_SENDIPI(icu_emu_sendipi)
+DEV_ICU_SENDIPI(icu_emu_sendipi)
 {
   uint32_t dst_id = (uintptr_t)endpoint->priv;
 
@@ -76,7 +76,7 @@ DEVICU_SENDIPI(icu_emu_sendipi)
 }
 #endif
 
-DEVICU_ENABLE(icu_emu_enable)
+DEV_ICU_ENABLE(icu_emu_enable)
 {
   struct icu_emu_private_s	*pv = dev->drv_pv;
 
@@ -98,7 +98,7 @@ DEVICU_ENABLE(icu_emu_enable)
   return 0;
 }
 
-DEVICU_SETHNDL(icu_emu_sethndl)
+DEV_ICU_SETHNDL(icu_emu_sethndl)
 {
   struct icu_emu_private_s	*pv = dev->drv_pv;
   struct icu_emu_handler_s	*h = pv->table + irq;
@@ -115,7 +115,7 @@ DEVICU_SETHNDL(icu_emu_sethndl)
   return 0;
 }
 
-DEVICU_DELHNDL(icu_emu_delhndl)
+DEV_ICU_DELHNDL(icu_emu_delhndl)
 {
   struct icu_emu_private_s	*pv = dev->drv_pv;
   struct icu_emu_handler_s	*h = pv->table + irq;

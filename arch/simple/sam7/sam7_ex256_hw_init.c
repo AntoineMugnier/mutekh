@@ -44,7 +44,7 @@ static void set_gpio(
 	struct device_s *pio,
 	uint_fast8_t gpio,
 	uint_fast8_t dev,
-	enum devgpio_way_e way)
+	enum dev_gpio_way_e way)
 {
 	dev_gpio_set_value(pio, gpio, 1);
 	dev_gpio_set_way(pio, gpio, way);

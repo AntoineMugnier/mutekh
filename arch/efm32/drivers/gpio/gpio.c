@@ -117,7 +117,7 @@ static error_t efm32_gpio_mode(enum dev_pin_driving_e mode,
   return 0;
 }
 
-static DEVGPIO_SET_MODE(efm32_gpio_set_mode)
+static DEV_GPIO_SET_MODE(efm32_gpio_set_mode)
 {
   struct device_s *dev = gpio->dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
@@ -180,7 +180,7 @@ static DEVGPIO_SET_MODE(efm32_gpio_set_mode)
   return 0;
 }
 
-static DEVGPIO_SET_OUTPUT(efm32_gpio_set_output)
+static DEV_GPIO_SET_OUTPUT(efm32_gpio_set_output)
 {
   struct device_s *dev = gpio->dev;
 
@@ -250,7 +250,7 @@ static DEVGPIO_SET_OUTPUT(efm32_gpio_set_output)
    multiple of 4 bytes. We do not care about bits outside range in 
    data
 */
-static DEVGPIO_GET_INPUT(efm32_gpio_get_input)
+static DEV_GPIO_GET_INPUT(efm32_gpio_get_input)
 {
   struct device_s *dev = gpio->dev;
 
@@ -292,12 +292,12 @@ static const struct driver_gpio_s efm32_gpio_gpio_drv =
     .f_set_mode     = efm32_gpio_set_mode,
     .f_set_output   = efm32_gpio_set_output,
     .f_get_input    = efm32_gpio_get_input,
-    .f_request      = devgpio_request_async_to_sync,
+    .f_request      = dev_gpio_request_async_to_sync,
   };
 
 /******** GPIO iomux controller driver part *********************/
 
-static DEVIOMUX_SETUP(efm32_gpio_iomux_setup)
+static DEV_IOMUX_SETUP(efm32_gpio_iomux_setup)
 {
   struct device_s *dev = imdev->dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
@@ -333,7 +333,7 @@ static const struct driver_iomux_s efm32_gpio_iomux_drv =
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
 
-static DEVICU_GET_ENDPOINT(efm32_gpio_icu_get_endpoint)
+static DEV_ICU_GET_ENDPOINT(efm32_gpio_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
@@ -372,7 +372,7 @@ static DEVICU_GET_ENDPOINT(efm32_gpio_icu_get_endpoint)
     }
 }
 
-static DEVICU_ENABLE_IRQ(efm32_gpio_icu_enable_irq)
+static DEV_ICU_ENABLE_IRQ(efm32_gpio_icu_enable_irq)
 {
   struct device_s *dev = idev->dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
@@ -448,7 +448,7 @@ static DEVICU_ENABLE_IRQ(efm32_gpio_icu_enable_irq)
   return 1;
 }
 
-static DEVICU_DISABLE_IRQ(efm32_gpio_icu_disable_irq)
+static DEV_ICU_DISABLE_IRQ(efm32_gpio_icu_disable_irq)
 {
   struct efm32_gpio_private_s *pv = idev->dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sink;

@@ -46,17 +46,17 @@ typedef uint32_t iomux_config_t;
 #define IOMUX_INVALID_ID 65535
 #define IOMUX_INVALID_MUX 255
 
-#define DEVIOMUX_SETUP(n) error_t (n)(const struct device_iomux_s *imdev, \
+#define DEV_IOMUX_SETUP(n) error_t (n)(const struct device_iomux_s *imdev, \
                                       iomux_io_id_t io_id,              \
                                       enum dev_pin_driving_e dir,   \
                                       iomux_mux_t mux, iomux_config_t config)
 
 /** @This function configures the IO specified by the @tt io_id
     parameter. The meaning of the @tt config parameter is driver specific. */
-typedef DEVIOMUX_SETUP(deviomux_setup_t);
+typedef DEV_IOMUX_SETUP(dev_iomux_setup_t);
 
 DRIVER_CLASS_TYPES(iomux,
-                   deviomux_setup_t *f_setup;
+                   dev_iomux_setup_t *f_setup;
 		   );
 
 /**
@@ -66,7 +66,7 @@ DRIVER_CLASS_TYPES(iomux,
 
    If the device has a @ref DEV_RES_DEV_PARAM resource entry named @tt
    iomux, the target IO mux controller, will be configured by calling
-   the @ref deviomux_setup_t function for each IO in the list.
+   the @ref dev_iomux_setup_t function for each IO in the list.
 
    When not @tt NULL, the @tt demux, @tt io_id and @tt config arrays
    are updated with the associated values from the device resources

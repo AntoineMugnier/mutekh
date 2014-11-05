@@ -86,9 +86,9 @@ DEV_IRQ(controller_ata_irq)
  * PCI identifiers of compatible cards.
  */
 
-static const struct devenum_ident_s	controller_ata_ids[] =
+static const struct dev_enum_ident_s	controller_ata_ids[] =
   {
-	  DEVENUM_PCI_ENTRY(-1, -1, 0x0101), /* PCI IDE controller */
+	  DEV_ENUM_PCI_ENTRY(-1, -1, 0x0101), /* PCI IDE controller */
 	  { 0 },
   };
 

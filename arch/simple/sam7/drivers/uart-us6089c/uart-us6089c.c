@@ -102,7 +102,7 @@ static void try_recv(struct device_s *dev, bool_t continuous)
 		cpu_mem_read_32(registers + US_RHR);
 }
 
-DEVCHAR_REQUEST(uart_us6089c_request)
+DEV_CHAR_REQUEST(uart_us6089c_request)
 {
 	struct uart_us6089c_context_s	*pv = dev->drv_pv;
 	uintptr_t registers = (uintptr_t)dev->addr[0];
@@ -170,9 +170,9 @@ DEV_IRQ(uart_us6089c_irq)
  */
 
 #ifdef CONFIG_DRIVER_ENUM_FDT
-static const struct devenum_ident_s	uart_us6089c_ids[] =
+static const struct dev_enum_ident_s	uart_us6089c_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("us6889c", 0, 0),
+	DEV_ENUM_FDTNAME_ENTRY("us6889c", 0, 0),
 	{ 0 }
 };
 #endif

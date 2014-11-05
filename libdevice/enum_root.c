@@ -25,7 +25,7 @@
 #include <device/device.h>
 #include <device/driver.h>
 
-DEVENUM_MATCH_DRIVER(device_enum_root_match_driver)
+DEV_ENUM_MATCH_DRIVER(device_enum_root_match_driver)
 {
 	return 0;
 }

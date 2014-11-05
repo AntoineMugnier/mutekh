@@ -227,7 +227,7 @@ error_t dev_timer_sleep(struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
 #endif
 }
 
-DEVTIMER_GET_FREQ(dev_timer_drv_get_freq)
+DEV_TIMER_GET_FREQ(dev_timer_drv_get_freq)
 {
   if (device_get_res_freq(tdev->dev, freq, tdev->number))
     return -ENOTSUP;

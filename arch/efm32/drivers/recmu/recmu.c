@@ -470,7 +470,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   return 0;
 }
 
-static DEVCLOCK_CONFIG_NODE(efm32_recmu_config_node)
+static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
 {
   struct device_s *dev = ckdev->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
@@ -986,7 +986,7 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
 }
 
 
-static DEVCLOCK_COMMIT(efm32_recmu_commit)
+static DEV_CLOCK_COMMIT(efm32_recmu_commit)
 {
   struct device_s *dev = ckdev->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
@@ -1106,7 +1106,7 @@ static void efm32_recmu_read_config(struct efm32_recmu_private_s *pv)
   pv->hfclk_new_parent = pv->hfclk_parent;
 }
 
-static DEVCLOCK_ROLLBACK(efm32_recmu_rollback)
+static DEV_CLOCK_ROLLBACK(efm32_recmu_rollback)
 {
   struct device_s *dev = ckdev->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
@@ -1119,7 +1119,7 @@ static DEVCLOCK_ROLLBACK(efm32_recmu_rollback)
   return 0;
 }
 
-static DEVCLOCK_NODE_INFO(efm32_recmu_node_info)
+static DEV_CLOCK_NODE_INFO(efm32_recmu_node_info)
 {
   struct device_s *dev = ckdev->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;

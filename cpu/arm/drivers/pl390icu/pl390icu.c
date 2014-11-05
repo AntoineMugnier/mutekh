@@ -65,7 +65,7 @@ struct pl390_icu_private_s
   struct dev_irq_ep_s *srcs;
 };
 
-static DEVICU_GET_ENDPOINT(pl390_icu_icu_get_endpoint)
+static DEV_ICU_GET_ENDPOINT(pl390_icu_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct pl390_icu_private_s *pv = dev->drv_pv;
@@ -108,7 +108,7 @@ pl390_get_current_cpu(struct pl390_icu_private_s *pv, uint_fast8_t ppi_id)
   return __builtin_ctz(mask);
 }
 
-static DEVICU_ENABLE_IRQ(pl390_icu_icu_enable_irq)
+static DEV_ICU_ENABLE_IRQ(pl390_icu_icu_enable_irq)
 {
   struct device_s *dev = idev->dev;
   struct pl390_icu_private_s *pv = dev->drv_pv;
@@ -147,7 +147,7 @@ static DEVICU_ENABLE_IRQ(pl390_icu_icu_enable_irq)
     }
 }
 
-static DEVICU_DISABLE_IRQ(pl390_icu_icu_disable_irq)
+static DEV_ICU_DISABLE_IRQ(pl390_icu_icu_disable_irq)
 {
   struct device_s *dev = idev->dev;
   struct pl390_icu_private_s *pv = dev->drv_pv;
@@ -222,9 +222,9 @@ const struct driver_icu_s  pl390_icu_icu_drv =
   .f_disable_irq  = pl390_icu_icu_disable_irq,
 };
 
-static const struct devenum_ident_s  pl390_icu_ids[] =
+static const struct dev_enum_ident_s  pl390_icu_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("pl390"),
+  DEV_ENUM_FDTNAME_ENTRY("pl390"),
   { 0 }
 };
 

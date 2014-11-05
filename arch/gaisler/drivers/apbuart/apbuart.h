@@ -32,7 +32,7 @@
 
 DEV_INIT(gaisler_apbuart_init);
 DEV_CLEANUP(gaisler_apbuart_cleanup);
-DEVCHAR_REQUEST(gaisler_apbuart_request);
+DEV_CHAR_REQUEST(gaisler_apbuart_request);
 
 #endif
 

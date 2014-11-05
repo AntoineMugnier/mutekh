@@ -37,12 +37,12 @@
 struct device_s;
 struct driver_s;
 
-#define DEVSOUND_CALLBACK(n)	void (n)(void *priv)
-typedef DEVSOUND_CALLBACK(devsound_callback_t);
+#define DEV_SOUND_CALLBACK(n)	void (n)(void *priv)
+typedef DEV_SOUND_CALLBACK(dev_sound_callback_t);
 
 /** Sound device class read() function tempate. */
-#define DEVSOUND_READ(n)	ssize_t  (n) (struct device_s *dev, uint8_t *data, size_t count, \
-					      devsound_callback_t *cback, void *priv)
+#define DEV_SOUND_READ(n)	ssize_t  (n) (struct device_s *dev, uint8_t *data, size_t count, \
+					      dev_sound_callback_t *cback, void *priv)
 
 /**
    Sound device class read() function type.  Read bytes data from the
@@ -54,14 +54,14 @@ typedef DEVSOUND_CALLBACK(devsound_callback_t);
    @param cback function called when reading done
    @return data bytes count read from the device or negative error code
 */
-typedef DEVSOUND_READ(devsound_read_t);
+typedef DEV_SOUND_READ(dev_sound_read_t);
 
 
 
 
 /** Sound device class write() function tempate. */
-#define DEVSOUND_WRITE(n)	ssize_t  (n) (struct device_s *dev, const uint8_t *data, size_t count, \
-					      devsound_callback_t *cback, void *priv)
+#define DEV_SOUND_WRITE(n)	ssize_t  (n) (struct device_s *dev, const uint8_t *data, size_t count, \
+					      dev_sound_callback_t *cback, void *priv)
 
 /** 
     Sound device class write() function type.  Write bytes data to the
@@ -73,7 +73,7 @@ typedef DEVSOUND_READ(devsound_read_t);
     @param count data bytes count
     @return data bytes count written to the device or negative error code
 */
-typedef DEVSOUND_WRITE(devsound_write_t);
+typedef DEV_SOUND_WRITE(dev_sound_write_t);
 
 
 
@@ -86,7 +86,7 @@ enum dev_sound_mode_e
   };
 
 /** Sound device class write() function tempate. */
-#define DEVSOUND_MODE(n)	error_t  (n) (struct device_s *dev,	\
+#define DEV_SOUND_MODE(n)	error_t  (n) (struct device_s *dev,	\
 					      enum dev_sound_mode_e mode, \
 					      uint_fast8_t chan_count)
 
@@ -98,7 +98,7 @@ enum dev_sound_mode_e
     @param chan_count number of channels
     @return non zero value on error
 */
-typedef DEVSOUND_MODE(devsound_mode_t);
+typedef DEV_SOUND_MODE(dev_sound_mode_t);
 
 
 
@@ -106,9 +106,9 @@ typedef DEVSOUND_MODE(devsound_mode_t);
 struct driver_sound_s
 {
   enum driver_class_e cl;
-  devsound_read_t		*f_read;
-  devsound_write_t		*f_write;
-  devsound_mode_t		*f_mode;
+  dev_sound_read_t		*f_read;
+  dev_sound_write_t		*f_write;
+  dev_sound_mode_t		*f_mode;
 };
 
 

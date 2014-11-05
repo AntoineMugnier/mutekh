@@ -149,8 +149,8 @@ struct dev_char_rq_s
 
 STRUCT_COMPOSE(dev_char_rq_s, base);
 
-/** Char device class @ref devchar_request_t function template. */
-#define DEVCHAR_REQUEST(n)                                             \
+/** Char device class @ref dev_char_request_t function template. */
+#define DEV_CHAR_REQUEST(n)                                             \
   void (n)(                                                            \
     const struct device_char_s *cdev,                                  \
     struct dev_char_rq_s *rq)
@@ -161,10 +161,10 @@ STRUCT_COMPOSE(dev_char_rq_s, base);
    @param dev pointer to device descriptor
    @param rq pointer to request.
 */
-typedef DEVCHAR_REQUEST(devchar_request_t);
+typedef DEV_CHAR_REQUEST(dev_char_request_t);
 
 DRIVER_CLASS_TYPES(char, 
-                   devchar_request_t *f_request;
+                   dev_char_request_t *f_request;
                    );
 
 

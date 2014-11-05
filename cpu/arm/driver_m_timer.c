@@ -87,7 +87,7 @@ void arm_timer_systick_irq(struct device_s *dev)
 }
 #endif
 
-static DEVTIMER_REQUEST(arm_timer_request)
+static DEV_TIMER_REQUEST(arm_timer_request)
 {
   struct device_s *dev = tdev->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
@@ -141,7 +141,7 @@ static DEVTIMER_REQUEST(arm_timer_request)
     }
 }
 
-static DEVTIMER_CANCEL(arm_timer_cancel)
+static DEV_TIMER_CANCEL(arm_timer_cancel)
 {
   struct device_s *dev = tdev->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
@@ -188,7 +188,7 @@ static DEVTIMER_CANCEL(arm_timer_cancel)
     }
 }
 
-static DEVTIMER_START_STOP(arm_timer_start_stop)
+static DEV_TIMER_START_STOP(arm_timer_start_stop)
 {
   struct device_s *dev = tdev->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
@@ -278,7 +278,7 @@ static DEVTIMER_START_STOP(arm_timer_start_stop)
   return err;
 }
 
-static DEVTIMER_GET_VALUE(arm_timer_get_value)
+static DEV_TIMER_GET_VALUE(arm_timer_get_value)
 {
   struct device_s *dev = tdev->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
@@ -340,7 +340,7 @@ static DEVTIMER_GET_VALUE(arm_timer_get_value)
 }
 
 #ifdef CONFIG_DEVICE_CLOCK
-static DEVTIMER_GET_FREQ(arm_timer_get_freq)
+static DEV_TIMER_GET_FREQ(arm_timer_get_freq)
 {
   struct device_s *dev = tdev->dev;
   struct arm_dev_private_s *pv = dev->drv_pv;
@@ -350,7 +350,7 @@ static DEVTIMER_GET_FREQ(arm_timer_get_freq)
 }
 #endif
 
-static DEVTIMER_RESOLUTION(arm_timer_resolution)
+static DEV_TIMER_RESOLUTION(arm_timer_resolution)
 {
   struct device_s *dev = tdev->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;

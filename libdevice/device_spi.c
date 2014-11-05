@@ -557,7 +557,7 @@ static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q)
 }
 
 void
-dev_spi_request_start(struct dev_spi_ctrl_request_s *rq)
+dev_spi_rq_start(struct dev_spi_ctrl_request_s *rq)
 {
   struct dev_spi_ctrl_queue_s *q = rq->queue;
   error_t err = 0;

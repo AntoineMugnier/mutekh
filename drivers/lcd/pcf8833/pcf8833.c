@@ -35,7 +35,7 @@
 #include "pcf8833.h"
 #include "pcf8833-private.h"
 
-static DEVSPI_CALLBACK(__pcf8833_cmd_done)
+static DEV_SPI_CALLBACK(__pcf8833_cmd_done)
 {
 	bool_t *done = priv;
 
@@ -48,7 +48,7 @@ static
 void __pcf8833_send_cmd(struct device_s *dev,
 						uint8_t cmd,
 						const uint8_t *data, size_t dlen,
-						devspi_callback_t *cb, void *cb_data)
+						dev_spi_callback_t *cb, void *cb_data)
 {
 	struct pcf8833_context_s *pv = dev->drv_pv;
 
@@ -151,14 +151,14 @@ void __pcf8833_init_lcd(struct device_s *dev)
 	__pcf8833_send_cmd_sync(dev, PCF8833_DISPON, 0, 0);
 }
 
-static DEVSPI_CALLBACK(__pcf8833_req_done)
+static DEV_SPI_CALLBACK(__pcf8833_req_done)
 {
 	struct lcd_req_s *req = priv;
 
 	req->callback(req->callback_data, req);
 }
 
-DEVLCD_REQUEST(pcf8833_request)
+DEV_LCD_REQUEST(pcf8833_request)
 {
 	struct pcf8833_context_s *pv = dev->drv_pv;
 
@@ -256,7 +256,7 @@ DEVLCD_REQUEST(pcf8833_request)
 	return 0;
 }
 
-DEVLCD_GETINFO(pcf8833_getinfo)
+DEV_LCD_GETINFO(pcf8833_getinfo)
 {
 	struct pcf8833_context_s *pv = dev->drv_pv;
 	return &pv->info;

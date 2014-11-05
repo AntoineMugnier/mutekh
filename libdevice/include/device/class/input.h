@@ -39,19 +39,19 @@ struct driver_s;
 struct device_input_s;
 struct driver_input_s;
 
-#define DEVINPUT_EVENT_BUTTON_UP	0x01
-#define DEVINPUT_EVENT_BUTTON_DOWN	0x02
-#define DEVINPUT_EVENT_AXIS_MOVED	0x04
+#define DEV_INPUT_EVENT_BUTTON_UP	0x01
+#define DEV_INPUT_EVENT_BUTTON_DOWN	0x02
+#define DEV_INPUT_EVENT_AXIS_MOVED	0x04
 
-#define DEVINPUT_CTRLID_ALL		((devinput_ctrlid_t)-1)
+#define DEV_INPUT_CTRLID_ALL		((dev_input_ctrlid_t)-1)
 
 /** id of a control (button or axe) for an input device */
-typedef uint_fast8_t devinput_ctrlid_t;
+typedef uint_fast8_t dev_input_ctrlid_t;
 /** control value type. This can be a simple boolean value for button,
     a position or a move offset for an axis control */
-typedef uint_fast16_t devinput_value_t;
+typedef uint_fast16_t dev_input_value_t;
 
-struct devinput_info_s
+struct dev_input_info_s
 {
   const char	*name;
   size_t	ctrl_button_count;
@@ -60,14 +60,14 @@ struct devinput_info_s
 
 
 /** input device class callback function template */
-#define DEVINPUT_CALLBACK(n)	void (n) (devinput_ctrlid_t id, devinput_value_t value, void *priv)
+#define DEV_INPUT_CALLBACK(n)	void (n) (dev_input_ctrlid_t id, dev_input_value_t value, void *priv)
 /** input device class callback function type */
-typedef DEVINPUT_CALLBACK(devinput_callback_t);
+typedef DEV_INPUT_CALLBACK(dev_input_callback_t);
 
 
 /** Input device class info function tempate. */
-#define DEVINPUT_INFO(n)	void  (n) (struct device_input_s *idev,		\
-					   struct devinput_info_s *info)
+#define DEV_INPUT_INFO(n)	void  (n) (struct device_input_s *idev,		\
+					   struct dev_input_info_s *info)
 
 /**
    Input device class info() function type. This function get
@@ -76,12 +76,12 @@ typedef DEVINPUT_CALLBACK(devinput_callback_t);
    @param dev pointer to device descriptor
    @param info pointer to information structure to fill in
 */
-typedef DEVINPUT_INFO(devinput_info_t);
+typedef DEV_INPUT_INFO(dev_input_info_t);
 
 
 /** Input device class read function tempate. */
-#define DEVINPUT_READ(n)	devinput_value_t (n) (struct device_input_s *idev,	\
-						      devinput_ctrlid_t id)
+#define DEV_INPUT_READ(n)	dev_input_value_t (n) (struct device_input_s *idev,	\
+						      dev_input_ctrlid_t id)
 
 /**
    Input device class read() function type. This function read control
@@ -90,14 +90,14 @@ typedef DEVINPUT_INFO(devinput_info_t);
    @param dev pointer to device descriptor
    @param id id of the controle to read
 */
-typedef DEVINPUT_READ(devinput_read_t);
+typedef DEV_INPUT_READ(dev_input_read_t);
 
 
 
 /** Input device class write function tempate. */
-#define DEVINPUT_WRITE(n)	error_t (n) (struct device_input_s *idev,	\
-					     devinput_ctrlid_t id,	\
-					     devinput_value_t value)
+#define DEV_INPUT_WRITE(n)	error_t (n) (struct device_input_s *idev,	\
+					     dev_input_ctrlid_t id,	\
+					     dev_input_value_t value)
 
 /**
    Input device class write() function type. This function set control
@@ -107,20 +107,20 @@ typedef DEVINPUT_READ(devinput_read_t);
    @param id id of the controle to write
    @param value new status value for the control
 */
-typedef DEVINPUT_WRITE(devinput_write_t);
+typedef DEV_INPUT_WRITE(dev_input_write_t);
 
 
 
 /** Input device class event setcallback function tempate. */
-#define DEVINPUT_SETCALLBACK(n)	error_t (n) (struct device_input_s *idev, \
+#define DEV_INPUT_SETCALLBACK(n)	error_t (n) (struct device_input_s *idev, \
 					     uint_fast8_t type,			\
-					     devinput_ctrlid_t id,		\
-					     devinput_callback_t *callback,	\
+					     dev_input_ctrlid_t id,		\
+					     dev_input_callback_t *callback,	\
 					     void *priv)
 
 /**
    Input device class setcallback() function type. This function set
-   a new event handler for a control. Special DEVINPUT_CTRLID_ALL
+   a new event handler for a control. Special DEV_INPUT_CTRLID_ALL
    value can be used to get events for all controls available on this
    device. a NULL function pointer disable callback.
 
@@ -131,13 +131,13 @@ typedef DEVINPUT_WRITE(devinput_write_t);
    @param priv private data passed to callback function
    @return non zero value on error
 */
-typedef DEVINPUT_SETCALLBACK(devinput_setcallback_t);
+typedef DEV_INPUT_SETCALLBACK(dev_input_setcallback_t);
 
 DRIVER_CLASS_STRUCT(input, 
-                    devinput_info_t *f_info;
-                    devinput_read_t *f_read;
-                    devinput_write_t *f_write;
-                    devinput_setcallback_t *f_setcallback;
+                    dev_input_info_t *f_info;
+                    dev_input_read_t *f_read;
+                    dev_input_write_t *f_write;
+                    dev_input_setcallback_t *f_setcallback;
                     );
 
 #endif

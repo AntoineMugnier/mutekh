@@ -101,7 +101,7 @@ static CPU_INTERRUPT_HANDLER(sparc_irq_handler)
 #endif
 }
 
-static DEVICU_GET_ENDPOINT(sparc_icu_get_endpoint)
+static DEV_ICU_GET_ENDPOINT(sparc_icu_get_endpoint)
 {
   struct device_s *dev = idev->dev;
   struct sparc_dev_private_s  *pv = dev->drv_pv;
@@ -125,7 +125,7 @@ static DEVICU_GET_ENDPOINT(sparc_icu_get_endpoint)
     }
 }
 
-static DEVICU_ENABLE_IRQ(sparc_icu_enable_irq)
+static DEV_ICU_ENABLE_IRQ(sparc_icu_enable_irq)
 {
   struct device_s *dev = idev->dev;
   __unused__ struct sparc_dev_private_s *pv = dev->drv_pv;
@@ -177,7 +177,7 @@ CPU_LOCAL struct device_s *cpu_device = NULL;
 void * cpu_local_storage[CONFIG_ARCH_LAST_CPU_ID + 1]; /* used to restore cls reg when back from user mode */
 #endif
 
-static DEVCPU_REG_INIT(sparc_cpu_reg_init)
+static DEV_CPU_REG_INIT(sparc_cpu_reg_init)
 {
   struct device_s *dev = cdev->dev;
 
@@ -239,7 +239,7 @@ static DEVCPU_REG_INIT(sparc_cpu_reg_init)
 }
 
 #ifdef CONFIG_ARCH_SMP
-static DEVCPU_GET_NODE(sparc_cpu_get_node)
+static DEV_CPU_GET_NODE(sparc_cpu_get_node)
 {
   struct device_s *dev = cdev->dev;
   struct sparc_dev_private_s *pv = dev->drv_pv;
@@ -261,14 +261,14 @@ const struct driver_cpu_s  sparc_cpu_drv =
 static DEV_CLEANUP(sparc_cleanup);
 static DEV_INIT(sparc_init);
 
-static const struct devenum_ident_s  sparc_ids[] =
+static const struct dev_enum_ident_s  sparc_ids[] =
 {
 #ifdef CONFIG_LIBFDT
-  DEVENUM_FDTNAME_ENTRY("cpu:sparc"),
+  DEV_ENUM_FDTNAME_ENTRY("cpu:sparc"),
 #endif
 #ifdef CONFIG_ARCH_GAISLER
-  DEVENUM_GAISLER_ENTRY(0x1, 0x003), /* leon 3 */
-  DEVENUM_GAISLER_ENTRY(0x1, 0x048), /* leon 4 */
+  DEV_ENUM_GAISLER_ENTRY(0x1, 0x003), /* leon 3 */
+  DEV_ENUM_GAISLER_ENTRY(0x1, 0x048), /* leon 4 */
 #endif
   { 0 }
 };

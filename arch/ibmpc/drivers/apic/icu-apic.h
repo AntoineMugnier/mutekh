@@ -34,9 +34,9 @@ extern CPU_LOCAL struct device_s apic_dev;
 /* icu device functions */
 
 DEV_INIT(icu_apic_init);
-DEVICU_ENABLE(icu_apic_enable);
-DEVICU_SETHNDL(icu_apic_sethndl);
-DEVICU_DELHNDL(icu_apic_delhndl);
+DEV_ICU_ENABLE(icu_apic_enable);
+DEV_ICU_SETHNDL(icu_apic_sethndl);
+DEV_ICU_DELHNDL(icu_apic_delhndl);
 DEV_CLEANUP(icu_apic_cleanup);
 
 #endif

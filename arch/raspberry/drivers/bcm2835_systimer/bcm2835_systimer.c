@@ -138,7 +138,7 @@ static DEV_IRQ_EP_PROCESS(bcm2835_systimer_irq)
 }
 #endif
 
-static DEVTIMER_CANCEL(bcm2835_systimer_cancel)
+static DEV_TIMER_CANCEL(bcm2835_systimer_cancel)
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = tdev->dev;
@@ -175,7 +175,7 @@ static DEVTIMER_CANCEL(bcm2835_systimer_cancel)
 #endif
 }
 
-static DEVTIMER_REQUEST(bcm2835_systimer_request)
+static DEV_TIMER_REQUEST(bcm2835_systimer_request)
 {
 #ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = tdev->dev;
@@ -210,12 +210,12 @@ static DEVTIMER_REQUEST(bcm2835_systimer_request)
 #endif
 }
 
-static DEVTIMER_START_STOP(bcm2835_systimer_state_start_stop)
+static DEV_TIMER_START_STOP(bcm2835_systimer_state_start_stop)
 {
   return 0;
 }
 
-static DEVTIMER_GET_VALUE(bcm2835_systimer_get_value)
+static DEV_TIMER_GET_VALUE(bcm2835_systimer_get_value)
 {
   struct device_s *dev = tdev->dev;
   struct bcm2835_systimer_private_s *pv = dev->drv_pv;
@@ -229,7 +229,7 @@ static DEVTIMER_GET_VALUE(bcm2835_systimer_get_value)
   return 0;
 }
 
-static DEVTIMER_RESOLUTION(bcm2835_systimer_resolution)
+static DEV_TIMER_RESOLUTION(bcm2835_systimer_resolution)
 {
   error_t err = 0;
 

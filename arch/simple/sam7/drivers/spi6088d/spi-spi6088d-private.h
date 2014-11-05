@@ -35,7 +35,7 @@ struct spi_spi6088d_context_s
 	cmd_handler_f *tx_handler;
 	cmd_handler_f *rx_handler;
 	size_t cur_cmd;
-	devspi_wait_value_callback_t *wait_cb;
+	dev_spi_wait_value_callback_t *wait_cb;
 	size_t count;
 	uint32_t permanent;
 	uint_fast8_t increment;

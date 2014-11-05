@@ -51,7 +51,7 @@ struct a9mpcore_private_s
   uintptr_t addr;
 };
 
-static DEVENUM_MATCH_DRIVER(a9mpcore_match_driver)
+static DEV_ENUM_MATCH_DRIVER(a9mpcore_match_driver)
 {
   return 0;
 }

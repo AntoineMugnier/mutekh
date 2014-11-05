@@ -27,10 +27,10 @@
 
 /* timer device functions */
 
-DEVTIMER_SETCALLBACK(pitc_6079a_setcallback);
-DEVTIMER_SETPERIOD(pitc_6079a_setperiod);
-DEVTIMER_SETVALUE(pitc_6079a_setvalue);
-DEVTIMER_GETVALUE(pitc_6079a_getvalue);
+DEV_TIMER_SETCALLBACK(pitc_6079a_setcallback);
+DEV_TIMER_SETPERIOD(pitc_6079a_setperiod);
+DEV_TIMER_SETVALUE(pitc_6079a_setvalue);
+DEV_TIMER_GETVALUE(pitc_6079a_getvalue);
 DEV_IRQ(pitc_6079a_irq);
 DEV_CLEANUP(pitc_6079a_cleanup);
 DEV_INIT(pitc_6079a_init);

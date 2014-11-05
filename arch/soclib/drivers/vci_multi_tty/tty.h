@@ -30,7 +30,7 @@
 
 DEV_INIT(tty_soclib_init);
 DEV_CLEANUP(tty_soclib_cleanup);
-DEVCHAR_REQUEST(tty_soclib_request);
+DEV_CHAR_REQUEST(tty_soclib_request);
 
 #endif
 

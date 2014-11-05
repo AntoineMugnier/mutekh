@@ -472,16 +472,16 @@ static FDT_ON_MEM_RESERVE_FUNC(enum_fdt_mem_reserve)
 }
 
 
-DEVENUM_MATCH_DRIVER(enum_fdt_match_driver)
+DEV_ENUM_MATCH_DRIVER(enum_fdt_match_driver)
 {
-  const struct devenum_ident_s *ident = drv->id_table;
+  const struct dev_enum_ident_s *ident = drv->id_table;
 
   if (!ident)
     return 0;
 
   for ( ; ident->type != 0; ident++ )
     {
-      if (ident->type != DEVENUM_TYPE_FDTNAME)
+      if (ident->type != DEV_ENUM_TYPE_FDTNAME)
         continue;
 
       const struct dev_resource_s *r = device_res_get(dev, DEV_RES_PRODUCT, 0);

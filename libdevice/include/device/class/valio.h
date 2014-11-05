@@ -97,7 +97,7 @@ enum dev_valio_request_type_e {
 /**
    @this defines a request on an attribute.
  */
-struct dev_valio_request_s
+struct dev_valio_rq_s
 {
     struct dev_request_s base;
 
@@ -115,25 +115,25 @@ struct dev_valio_request_s
     error_t error;
 };
 
-STRUCT_COMPOSE(dev_valio_request_s, base);
+STRUCT_COMPOSE(dev_valio_rq_s, base);
 
-/** @see devvalio_request_t */
-#define DEVVALIO_REQUEST(n) void (n) (                             \
+/** @see dev_valio_request_t */
+#define DEV_VALIO_REQUEST(n) void (n) (                             \
     const struct device_valio_s *vdev,                           \
-    struct dev_valio_request_s *req)
+    struct dev_valio_rq_s *req)
 
 /** @This enqueues an attribute query.
 */
-typedef DEVVALIO_REQUEST(devvalio_request_t);
+typedef DEV_VALIO_REQUEST(dev_valio_request_t);
 
 DRIVER_CLASS_TYPES(valio,
-    devvalio_request_t *f_request;
+    dev_valio_request_t *f_request;
 );
 
 
 inline error_t dev_valio_spin_request(
     const struct device_valio_s *vdev,
-    struct dev_valio_request_s *req)
+    struct dev_valio_rq_s *req)
 {
     struct dev_request_status_s status;
 
@@ -156,7 +156,7 @@ inline error_t dev_valio_spin_read(
     uint16_t attribute,
     void *data)
 {
-    struct dev_valio_request_s req =
+    struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_READ,
         .attribute = attribute,
@@ -175,7 +175,7 @@ inline error_t dev_valio_spin_write(
     uint16_t attribute,
     const void *data)
 {
-    struct dev_valio_request_s req =
+    struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_WRITE,
         .attribute = attribute,
@@ -194,7 +194,7 @@ inline error_t dev_valio_spin_update(
     uint16_t attribute,
     void *data)
 {
-    struct dev_valio_request_s req =
+    struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_WAIT_UPDATE,
         .attribute = attribute,
@@ -208,7 +208,7 @@ inline error_t dev_valio_spin_update(
 
 inline error_t dev_valio_wait_request(
     const struct device_valio_s *vdev,
-    struct dev_valio_request_s *req)
+    struct dev_valio_rq_s *req)
 {
       struct dev_request_status_s status;
 
@@ -234,7 +234,7 @@ inline error_t dev_valio_wait_read(
     uint16_t attribute,
     void *data)
 {
-    struct dev_valio_request_s req =
+    struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_READ,
         .attribute = attribute,
@@ -257,7 +257,7 @@ inline error_t dev_valio_wait_write(
     uint16_t attribute,
     const void *data)
 {
-    struct dev_valio_request_s req =
+    struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_WRITE,
         .attribute = attribute,
@@ -280,7 +280,7 @@ inline error_t dev_valio_wait_update(
     uint16_t attribute,
     void *data)
 {
-    struct dev_valio_request_s req =
+    struct dev_valio_rq_s req =
     {
         .type = DEVICE_VALIO_WAIT_UPDATE,
         .attribute = attribute,

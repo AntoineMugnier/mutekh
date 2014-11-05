@@ -107,7 +107,7 @@ static void try_write(struct device_s *dev, struct dev_char_rq_s *rq)
     }
 }
 
-DEVCHAR_REQUEST(uart_8250_request)
+DEV_CHAR_REQUEST(uart_8250_request)
 {
     struct uart_8250_context_s	*pv = dev->drv_pv;
     bool_t must_start = 0;
@@ -224,12 +224,12 @@ static const struct driver_param_binder_s binder[] =
     { 0 }
 };
 
-static const struct devenum_ident_s	uart_8250_ids[] =
+static const struct dev_enum_ident_s	uart_8250_ids[] =
 {
-    DEVENUM_FDTNAME_ENTRY("uart8250", sizeof(struct uart_8250_param_s), binder),
-    DEVENUM_FDTNAME_ENTRY("uart8250", 0, 0),
-    DEVENUM_FDTNAME_ENTRY("uart16550", sizeof(struct uart_8250_param_s), binder),
-    DEVENUM_FDTNAME_ENTRY("uart16550", 0, 0),
+    DEV_ENUM_FDTNAME_ENTRY("uart8250", sizeof(struct uart_8250_param_s), binder),
+    DEV_ENUM_FDTNAME_ENTRY("uart8250", 0, 0),
+    DEV_ENUM_FDTNAME_ENTRY("uart16550", sizeof(struct uart_8250_param_s), binder),
+    DEV_ENUM_FDTNAME_ENTRY("uart16550", 0, 0),
     { 0 }
 };
 #endif

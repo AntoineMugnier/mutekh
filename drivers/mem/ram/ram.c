@@ -42,7 +42,7 @@ struct ram_context_s
   struct ram_bank_s bank[0];
 };
 
-static DEVMEM_INFO(ram_info)
+static DEV_MEM_INFO(ram_info)
 {
   struct device_s *dev = mdev->dev;
   struct ram_context_s *pv = dev->drv_pv;
@@ -68,7 +68,7 @@ static DEVMEM_INFO(ram_info)
   return 0;
 }
 
-static DEVMEM_REQUEST(ram_request)
+static DEV_MEM_REQUEST(ram_request)
 {
   struct device_s *dev = mdev->dev;
   struct ram_context_s *pv = dev->drv_pv;
@@ -98,9 +98,9 @@ static const struct driver_mem_s	ram_mem_drv =
 static DEV_INIT(ram_init);
 static DEV_CLEANUP(ram_cleanup);
 
-static const struct devenum_ident_s	ram_ids[] =
+static const struct dev_enum_ident_s	ram_ids[] =
 {
-  DEVENUM_FDTNAME_ENTRY("generic:ram"),
+  DEV_ENUM_FDTNAME_ENTRY("generic:ram"),
   { 0 }
 };
 

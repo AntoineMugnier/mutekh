@@ -60,7 +60,7 @@
 #include <device/driver.h>
 #include <device/class/char.h>
 
-static DEVCHAR_REQUEST(emu_tty_request)
+static DEV_CHAR_REQUEST(emu_tty_request)
 {
   //  struct device_s *dev = cdev->dev;
 

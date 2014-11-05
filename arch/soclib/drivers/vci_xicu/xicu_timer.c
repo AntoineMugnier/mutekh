@@ -93,7 +93,7 @@ void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number)
 }
 #endif
 
-static DEVTIMER_REQUEST(soclib_xicu_timer_request)
+static DEV_TIMER_REQUEST(soclib_xicu_timer_request)
 {
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
   struct device_s *dev = tdev->dev;
@@ -148,7 +148,7 @@ static DEVTIMER_REQUEST(soclib_xicu_timer_request)
 #endif
 }
 
-static DEVTIMER_CANCEL(soclib_xicu_timer_cancel)
+static DEV_TIMER_CANCEL(soclib_xicu_timer_cancel)
 {
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
   struct device_s *dev = tdev->dev;
@@ -200,7 +200,7 @@ static DEVTIMER_CANCEL(soclib_xicu_timer_cancel)
 #endif
 }
 
-static DEVTIMER_START_STOP(soclib_xicu_timer_start_stop)
+static DEV_TIMER_START_STOP(soclib_xicu_timer_start_stop)
 {
   struct device_s *dev = tdev->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
@@ -262,7 +262,7 @@ static DEVTIMER_START_STOP(soclib_xicu_timer_start_stop)
   return err;
 }
 
-static DEVTIMER_GET_VALUE(soclib_xicu_timer_get_value)
+static DEV_TIMER_GET_VALUE(soclib_xicu_timer_get_value)
 {
   struct device_s *dev = tdev->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
@@ -300,7 +300,7 @@ static DEVTIMER_GET_VALUE(soclib_xicu_timer_get_value)
   return err;
 }
 
-static DEVTIMER_RESOLUTION(soclib_xicu_timer_resolution)
+static DEV_TIMER_RESOLUTION(soclib_xicu_timer_resolution)
 {
   struct device_s *dev = tdev->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;

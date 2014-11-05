@@ -69,7 +69,7 @@ static void efm32_usart_spi_update_rate(struct efm32_usart_spi_context_s *pv)
   cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(div));
 }
 
-static DEVSPI_CTRL_CONFIG(efm32_usart_spi_config)
+static DEV_SPI_CTRL_CONFIG(efm32_usart_spi_config)
 {
   struct device_s *dev = scdev->dev;
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;
@@ -232,7 +232,7 @@ static DEV_IRQ_EP_PROCESS(efm32_usart_spi_irq)
 
 #endif
 
-static DEVSPI_CTRL_SELECT(efm32_usart_spi_select)
+static DEV_SPI_CTRL_SELECT(efm32_usart_spi_select)
 {
   struct device_s *dev = scdev->dev;
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;
@@ -281,7 +281,7 @@ static DEVSPI_CTRL_SELECT(efm32_usart_spi_select)
   return err;
 }
 
-static DEVSPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
+static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
 {
   struct device_s *dev = scdev->dev;
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;
@@ -316,7 +316,7 @@ static DEVSPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 
-static DEVSPI_CTRL_QUEUE(efm32_usart_spi_queue)
+static DEV_SPI_CTRL_QUEUE(efm32_usart_spi_queue)
 {
   struct device_s *dev = scdev->dev;
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;

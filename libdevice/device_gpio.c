@@ -91,7 +91,7 @@ error_t device_res_gpio_map(struct device_s *dev, const char *pin_list,
   return 0;
 }
 
-DEVGPIO_REQUEST(devgpio_request_async_to_sync)
+DEV_GPIO_REQUEST(dev_gpio_request_async_to_sync)
 {
   switch (req->type) {
   case DEV_GPIO_MODE:

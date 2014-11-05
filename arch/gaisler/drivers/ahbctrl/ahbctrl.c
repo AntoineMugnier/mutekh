@@ -39,16 +39,16 @@
 #include <string.h>
 #include <stdio.h>
 
-static DEVENUM_MATCH_DRIVER(ahbctrl_match_driver)
+static DEV_ENUM_MATCH_DRIVER(ahbctrl_match_driver)
 {
-  const struct devenum_ident_s *ident = drv->id_table;
+  const struct dev_enum_ident_s *ident = drv->id_table;
 
   if (!ident)
     return 0;
 
   for ( ; ident->type != 0; ident++ )
     {
-      if (ident->type != DEVENUM_TYPE_GAISLER)
+      if (ident->type != DEV_ENUM_TYPE_GAISLER)
         continue;
 
       const struct dev_resource_s *rp = device_res_get(dev, DEV_RES_PRODUCT, 0);

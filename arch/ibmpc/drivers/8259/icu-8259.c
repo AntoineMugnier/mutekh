@@ -115,7 +115,7 @@ pic_8259_init(uintptr_t master, uintptr_t slave, uint8_t base)
   pic_8259_setmask(slave, 0xff);
 }
 
-DEVICU_ENABLE(icu_8259_enable)
+DEV_ICU_ENABLE(icu_8259_enable)
 {
   uintptr_t addr = irq < 8 ? 0x20 : 0xa0;
 
@@ -127,7 +127,7 @@ DEVICU_ENABLE(icu_8259_enable)
   return 0;
 }
 
-DEVICU_SETHNDL(icu_8259_sethndl)
+DEV_ICU_SETHNDL(icu_8259_sethndl)
 {
   struct icu_8259_private_s	*pv = dev->drv_pv;
   struct icu_8259_handler_s	*h = pv->table + irq;
@@ -146,7 +146,7 @@ DEVICU_SETHNDL(icu_8259_sethndl)
   return 0;
 }
 
-DEVICU_DELHNDL(icu_8259_delhndl)
+DEV_ICU_DELHNDL(icu_8259_delhndl)
 {
   struct icu_8259_private_s	*pv = dev->drv_pv;
   struct icu_8259_handler_s	*h = pv->table + irq;

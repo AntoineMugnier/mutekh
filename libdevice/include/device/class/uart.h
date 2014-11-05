@@ -97,16 +97,16 @@ struct dev_uart_config_s
 /* forward declarations. */
 struct device_uart_s;
 
-#define DEVUART_CONFIG(n) error_t (n)(struct device_uart_s     *udev, \
+#define DEV_UART_CONFIG(n) error_t (n)(struct device_uart_s     *udev, \
                                       struct dev_uart_config_s *cfg)
 /**/
 
 /** @This defines the prototype of the configuration function. */
-typedef DEVUART_CONFIG(devuart_config_t);
+typedef DEV_UART_CONFIG(dev_uart_config_t);
 
 /** Driver types. */
 DRIVER_CLASS_TYPES(uart,
-                   devuart_config_t *f_config;
+                   dev_uart_config_t *f_config;
                   );
 
 

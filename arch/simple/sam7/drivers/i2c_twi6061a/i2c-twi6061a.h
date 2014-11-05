@@ -29,8 +29,8 @@
 DEV_INIT(i2c_twi6061a_init);
 DEV_CLEANUP(i2c_twi6061a_cleanup);
 DEV_IRQ(i2c_twi6061a_irq);
-DEVI2C_SET_BAUDRATE(i2c_twi6061a_set_baudrate);
-DEVI2C_REQUEST(i2c_twi6061a_request);
+DEV_I2C_SET_BAUDRATE(i2c_twi6061a_set_baudrate);
+DEV_I2C_REQUEST(i2c_twi6061a_request);
 
 #endif
 

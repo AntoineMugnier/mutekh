@@ -38,10 +38,10 @@
 //DEV_IRQ(fb_vga_irq);
 DEV_INIT(fb_vga_init);
 DEV_CLEANUP(fb_vga_cleanup);
-DEVFB_SETMODE(fb_vga_setmode);
-DEVFB_GETBUFFER(fb_vga_getbuffer);
-DEVFB_FLIPPAGE(fb_vga_flippage);
-DEVFB_SETPALETTE(fb_vga_setpalette);
+DEV_FB_SETMODE(fb_vga_setmode);
+DEV_FB_GETBUFFER(fb_vga_getbuffer);
+DEV_FB_FLIPPAGE(fb_vga_flippage);
+DEV_FB_SETPALETTE(fb_vga_setpalette);
 
 #endif
 

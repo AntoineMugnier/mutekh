@@ -85,7 +85,7 @@
 #include <device/resources.h>
 #include <device/request.h>
 
-struct dev_gpio_request_s;
+struct dev_gpio_rq_s;
 struct device_gpio_s;
 
 #if CONFIG_DEVICE_GPIO_MAX_ID < 255
@@ -105,8 +105,8 @@ typedef uint16_t gpio_width_t;
 extern const uint8_t dev_gpio_mask1[8];
 extern const uint8_t dev_gpio_mask0[8];
 
-/** @see devgpio_set_mode_t */
-#define DEVGPIO_SET_MODE(n) error_t (n)(const struct device_gpio_s *gpio, \
+/** @see dev_gpio_set_mode_t */
+#define DEV_GPIO_SET_MODE(n) error_t (n)(const struct device_gpio_s *gpio, \
                                         gpio_id_t io_first, gpio_id_t io_last, \
                                         const uint8_t *mask, enum dev_pin_driving_e mode)
 /**
@@ -123,12 +123,12 @@ extern const uint8_t dev_gpio_mask0[8];
    io_last parameters must be equal and the predefined vector @ref
    dev_gpio_mask1 can be used.
 */
-typedef DEVGPIO_SET_MODE(devgpio_set_mode_t);
+typedef DEV_GPIO_SET_MODE(dev_gpio_set_mode_t);
 
 
 
-/** @see devgpio_set_output_t */
-#define DEVGPIO_SET_OUTPUT(n) error_t (n)(const struct device_gpio_s *gpio, \
+/** @see dev_gpio_set_output_t */
+#define DEV_GPIO_SET_OUTPUT(n) error_t (n)(const struct device_gpio_s *gpio, \
                                           gpio_id_t io_first, gpio_id_t io_last, \
                                           const uint8_t *set_mask, const uint8_t *clear_mask)
 
@@ -156,12 +156,12 @@ typedef DEVGPIO_SET_MODE(devgpio_set_mode_t);
    io_last parameters must be equal and the predefined vector @ref
    dev_gpio_mask1 can be used.
 */
-typedef DEVGPIO_SET_OUTPUT(devgpio_set_output_t);
+typedef DEV_GPIO_SET_OUTPUT(dev_gpio_set_output_t);
 
 
 
-/** @see devgpio_get_input_t */
-#define DEVGPIO_GET_INPUT(n) error_t (n)(const struct device_gpio_s *gpio, \
+/** @see dev_gpio_get_input_t */
+#define DEV_GPIO_GET_INPUT(n) error_t (n)(const struct device_gpio_s *gpio, \
                                          gpio_id_t io_first, gpio_id_t io_last, \
                                          uint8_t *data)
 /**
@@ -173,19 +173,19 @@ typedef DEVGPIO_SET_OUTPUT(devgpio_set_output_t);
    The size of the @tt data array must be a multiple of 8 bytes. The
    values of the unused bits at the end of the array are undefined.
 */
-typedef DEVGPIO_GET_INPUT(devgpio_get_input_t);
+typedef DEV_GPIO_GET_INPUT(dev_gpio_get_input_t);
 
 
-/** @see devgpio_request_t */
-#define DEVGPIO_REQUEST(n) error_t (n)(const struct device_gpio_s *gpio, \
-                                       struct dev_gpio_request_s *req)
+/** @see dev_gpio_request_t */
+#define DEV_GPIO_REQUEST(n) error_t (n)(const struct device_gpio_s *gpio, \
+                                       struct dev_gpio_rq_s *req)
 /**
    This function enqueues a request to the GPIO driver.
 
    Kroutine is callen upon completion.  You may enqueue a request from
    kroutine code.
 */
-typedef DEVGPIO_REQUEST(devgpio_request_t);
+typedef DEV_GPIO_REQUEST(dev_gpio_request_t);
 
 
 enum dev_gpio_request_type
@@ -197,7 +197,7 @@ enum dev_gpio_request_type
 
 #define GCT_CONTAINER_ALGO_dev_gpio_queue CLIST
 
-struct dev_gpio_request_s
+struct dev_gpio_rq_s
 {
   struct dev_request_s base;
 
@@ -218,9 +218,9 @@ struct dev_gpio_request_s
     } mode;
 
     struct {
-      /** mask to set, @see devgpio_set_output_t */
+      /** mask to set, @see dev_gpio_set_output_t */
       const uint8_t               *set_mask;
-      /** mask to clear, @see devgpio_set_output_t */
+      /** mask to clear, @see dev_gpio_set_output_t */
       const uint8_t               *clear_mask;
     } output;
 
@@ -231,19 +231,19 @@ struct dev_gpio_request_s
   };
 };
 
-STRUCT_COMPOSE(dev_gpio_request_s, base);
+STRUCT_COMPOSE(dev_gpio_rq_s, base);
 
 /** Helper that implements asynchronous f_request from other
     synchronous primitives.
 */
-extern DEVGPIO_REQUEST(devgpio_request_async_to_sync);
+extern DEV_GPIO_REQUEST(dev_gpio_request_async_to_sync);
 
 
 DRIVER_CLASS_TYPES(gpio,
-                   devgpio_set_mode_t *f_set_mode;
-                   devgpio_set_output_t *f_set_output;
-                   devgpio_get_input_t *f_get_input;
-                   devgpio_request_t *f_request;
+                   dev_gpio_set_mode_t *f_set_mode;
+                   dev_gpio_set_output_t *f_set_output;
+                   dev_gpio_get_input_t *f_get_input;
+                   dev_gpio_request_t *f_request;
   );
 
 /** @This changes the mode of multiple GPIO pins. */

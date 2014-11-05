@@ -46,17 +46,17 @@ DEV_CLEANUP(fb_soclib_cleanup)
   //  mem_free(pv);
 }
 
-DEVFB_GETBUFFER(fb_soclib_getbuffer)
+DEV_FB_GETBUFFER(fb_soclib_getbuffer)
 {
   return dev->addr[0];
 }
 
-DEVFB_SETMODE(fb_soclib_setmode)
+DEV_FB_SETMODE(fb_soclib_setmode)
 {
   return 0;
 }
 
-DEVFB_FLIPPAGE(fb_soclib_flippage)
+DEV_FB_FLIPPAGE(fb_soclib_flippage)
 {
 	uint8_t *flip = (uintptr_t)(dev->addr[0]) + 320*200 + 256*3;
         
@@ -65,7 +65,7 @@ DEVFB_FLIPPAGE(fb_soclib_flippage)
 	return 0;
 }
 
-DEVFB_SETPALETTE(fb_soclib_setpalette)
+DEV_FB_SETPALETTE(fb_soclib_setpalette)
 {
   uint_fast16_t	i;
   uint8_t *palette = (uintptr_t)(dev->addr[0]) + 320*200;
@@ -83,9 +83,9 @@ DEVFB_SETPALETTE(fb_soclib_setpalette)
  * device open operation
  */
 
-static const struct devenum_ident_s	fb_soclib_ids[] =
+static const struct dev_enum_ident_s	fb_soclib_ids[] =
 {
-	DEVENUM_FDTNAME_ENTRY("soclib:fb", 0, 0),
+	DEV_ENUM_FDTNAME_ENTRY("soclib:fb", 0, 0),
 	{ 0 }
 };
 

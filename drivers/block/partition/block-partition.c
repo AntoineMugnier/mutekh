@@ -42,7 +42,7 @@
 
 /**************************************************************/
 
-DEVBLOCK_REQUEST(block_partition_request)
+DEV_BLOCK_REQUEST(block_partition_request)
 {
   struct block_partition_context_s	*pv = dev->drv_pv;
 
@@ -62,7 +62,7 @@ DEVBLOCK_REQUEST(block_partition_request)
  * device params
  */
 
-DEVBLOCK_GETPARAMS(block_partition_getparams)
+DEV_BLOCK_GETPARAMS(block_partition_getparams)
 {
   struct block_partition_context_s	*pv = dev->drv_pv;
 
@@ -253,7 +253,7 @@ DEV_CREATE(block_partition_create)
   return count;
 }
 
-DEVBLOCK_GETRQSIZE(block_partition_getrqsize)
+DEV_BLOCK_GETRQSIZE(block_partition_getrqsize)
 {
   return dev_block_getrqsize(dev->parent);
 }
