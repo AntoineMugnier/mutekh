@@ -96,11 +96,11 @@ void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number)
 static DEV_TIMER_REQUEST(soclib_xicu_timer_request)
 {
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
   error_t err = 0;
-  uint_fast8_t number = tdev->number / 2;
-  uint_fast8_t mode = tdev->number % 2;
+  uint_fast8_t number = accessor->number / 2;
+  uint_fast8_t mode = accessor->number % 2;
 
   if (mode == 0)
     return -ENOTSUP;
@@ -108,7 +108,7 @@ static DEV_TIMER_REQUEST(soclib_xicu_timer_request)
   if (number >= pv->pti_count)
     return -ENOENT;
 
-  rq->tdev = tdev;
+  rq->accessor = accessor;
 
   struct soclib_xicu_pti_s *p = pv->pti + number;
 
@@ -151,11 +151,11 @@ static DEV_TIMER_REQUEST(soclib_xicu_timer_request)
 static DEV_TIMER_CANCEL(soclib_xicu_timer_cancel)
 {
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
   error_t err = 0;
-  uint_fast8_t number = tdev->number / 2;
-  uint_fast8_t mode = tdev->number % 2;
+  uint_fast8_t number = accessor->number / 2;
+  uint_fast8_t mode = accessor->number % 2;
 
   if (mode == 0)
     return -ENOTSUP;
@@ -166,7 +166,7 @@ static DEV_TIMER_CANCEL(soclib_xicu_timer_cancel)
   if (!rq)
     return 0;
 
-  assert(rq->tdev->dev == dev && rq->tdev->number == tdev->number);
+  assert(rq->accessor->dev == dev && rq->accessor->number == accessor->number);
 
   struct soclib_xicu_pti_s *p = pv->pti + number;
 
@@ -202,10 +202,10 @@ static DEV_TIMER_CANCEL(soclib_xicu_timer_cancel)
 
 static DEV_TIMER_START_STOP(soclib_xicu_timer_start_stop)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
-  uint_fast8_t number = tdev->number / 2;
-  uint_fast8_t mode = tdev->number % 2;
+  uint_fast8_t number = accessor->number / 2;
+  uint_fast8_t mode = accessor->number % 2;
 
   if (number >= pv->pti_count)
     return -ENOENT;
@@ -264,10 +264,10 @@ static DEV_TIMER_START_STOP(soclib_xicu_timer_start_stop)
 
 static DEV_TIMER_GET_VALUE(soclib_xicu_timer_get_value)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
-  uint_fast8_t number = tdev->number / 2;
-  uint_fast8_t mode = tdev->number % 2;
+  uint_fast8_t number = accessor->number / 2;
+  uint_fast8_t mode = accessor->number % 2;
   error_t err = 0;
 
   if (number >= pv->pti_count)
@@ -302,10 +302,10 @@ static DEV_TIMER_GET_VALUE(soclib_xicu_timer_get_value)
 
 static DEV_TIMER_RESOLUTION(soclib_xicu_timer_resolution)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
-  uint_fast8_t number = tdev->number / 2;
-  uint_fast8_t mode = tdev->number % 2;
+  uint_fast8_t number = accessor->number / 2;
+  uint_fast8_t mode = accessor->number % 2;
 
   if (number >= pv->pti_count)
     return -ENOENT;

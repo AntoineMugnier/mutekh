@@ -29,19 +29,19 @@
 # include <mutek/scheduler.h>
 
 ssize_t dev_char_wait_read(
-    const struct device_char_s *cdev,
+    const struct device_char_s *accessor,
     uint8_t *data, size_t size);
 
 ssize_t dev_char_wait_write(
-    const struct device_char_s *cdev,
+    const struct device_char_s *accessor,
     const uint8_t *data, size_t size);
 
 #endif
 
 inline ssize_t dev_char_spin_read(
-    const struct device_char_s *cdev,
+    const struct device_char_s *accessor,
     uint8_t *data, size_t size);
 
 inline ssize_t dev_char_spin_write(
-    const struct device_char_s *cdev,
+    const struct device_char_s *accessor,
     const uint8_t *data, size_t size);

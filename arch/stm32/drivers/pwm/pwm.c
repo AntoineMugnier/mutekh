@@ -172,7 +172,7 @@ void stm32_pwm_polarity(struct device_s         *dev,
 static
 DEV_PWM_CONFIG(stm32_pwm_config)
 {
-  struct device_s            *dev = pdev->dev;
+  struct device_s            *dev = accessor->dev;
   struct stm32_pwm_private_s *pv  = dev->drv_pv;
 
   uint32_t saved_presc, saved_period;
@@ -186,7 +186,7 @@ DEV_PWM_CONFIG(stm32_pwm_config)
       goto cfg_end;
     }
 
-  if (pv->mode == DEV_PWM_MODE_EXCL && pv->owner != pdev)
+  if (pv->mode == DEV_PWM_MODE_EXCL && pv->owner != accessor)
     {
       err = -EBUSY;
       goto cfg_end;
@@ -204,7 +204,7 @@ DEV_PWM_CONFIG(stm32_pwm_config)
 
   if (cfg->mask & DEV_PWM_MASK_DUTY)
     {
-      err = stm32_pwm_duty(dev, pdev->number, &cfg->duty);
+      err = stm32_pwm_duty(dev, accessor->number, &cfg->duty);
       if (err)
         {
           DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, PSC, saved_presc);
@@ -214,7 +214,7 @@ DEV_PWM_CONFIG(stm32_pwm_config)
     }
 
   if (cfg->mask & DEV_PWM_MASK_POL)
-    stm32_pwm_polarity(dev, pdev->number, cfg->pol);
+    stm32_pwm_polarity(dev, accessor->number, cfg->pol);
 
   if (cfg->mask & DEV_PWM_MASK_MODE)
     pv->mode = cfg->mode;
@@ -233,7 +233,7 @@ cfg_end:
 
 DEV_PWM_QUEUE(stm32_pwm_queue)
 {
-  struct device_s            *dev = pdev->dev;
+  struct device_s            *dev = accessor->dev;
   struct stm32_pwm_private_s *pv  = dev->drv_pv;
   return &pv->queue;
 }

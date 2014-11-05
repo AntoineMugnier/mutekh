@@ -53,10 +53,10 @@ struct i2c_eeprom_priv_s
 
 static DEV_MEM_INFO(i2c_eeprom_info)
 {
-    struct device_s *dev = mdev->dev;
+    struct device_s *dev = accessor->dev;
     struct i2c_eeprom_priv_s *pv = dev->drv_pv;
 
-    if (mdev->number > 0)
+    if (accessor->number > 0)
         return -ENOENT;
 
     if (band_index > 0)
@@ -238,7 +238,7 @@ static void i2c_rq_run(
 
 static DEV_MEM_REQUEST(i2c_eeprom_request)
 {
-    struct device_s *dev = mdev->dev;
+    struct device_s *dev = accessor->dev;
     struct i2c_eeprom_priv_s *pv = dev->drv_pv;
 
     LOCK_SPIN_IRQ(&dev->lock);

@@ -40,12 +40,12 @@ const char dev_mem_rq_type_e[] = ENUM_DESC_DEV_MEM_RQ_TYPE_E;
 
 # ifdef CONFIG_MUTEK_SCHEDULER
 extern inline error_t
-dev_mem_wait_op(struct device_mem_s *mdev,
+dev_mem_wait_op(struct device_mem_s *accessor,
                 struct dev_mem_rq_s *rq);
 #endif
 
 extern inline error_t
-dev_mem_spin_op(struct device_mem_s *mdev,
+dev_mem_spin_op(struct device_mem_s *accessor,
                 struct dev_mem_rq_s *rq);
 
 void dev_mem_mapped_op_helper(uintptr_t base, uint_fast8_t page_log2, struct dev_mem_rq_s *rq)

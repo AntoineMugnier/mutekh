@@ -97,7 +97,7 @@ struct dev_uart_config_s
 /* forward declarations. */
 struct device_uart_s;
 
-#define DEV_UART_CONFIG(n) error_t (n)(struct device_uart_s     *udev, \
+#define DEV_UART_CONFIG(n) error_t (n)(struct device_uart_s     *accessor, \
                                       struct dev_uart_config_s *cfg)
 /**/
 
@@ -110,17 +110,17 @@ DRIVER_CLASS_TYPES(uart,
                   );
 
 
-/** @this helper configures the @tt udev uart device with the given
+/** @this helper configures the @tt accessor uart device with the given
     configuration @tt cfg (and returns 0) or returns a negative error code.
 
     Note: if the device is busy or already in use, the function returns a
     EBUSY error.
  */
 ALWAYS_INLINE
-error_t dev_uart_config(struct device_uart_s     *udev,
+error_t dev_uart_config(struct device_uart_s     *accessor,
                         struct dev_uart_config_s *cfg)
 {
-  return DEVICE_OP(udev, config, cfg);
+  return DEVICE_OP(accessor, config, cfg);
 }
 
 

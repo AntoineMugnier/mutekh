@@ -217,7 +217,7 @@ struct dev_mem_rq_s
 STRUCT_COMPOSE(dev_mem_rq_s, base);
 
 /** Memory device info() function tempate. @see dev_mem_info_t */
-#define DEV_MEM_INFO(n)	error_t  (n) (struct device_mem_s *mdev, \
+#define DEV_MEM_INFO(n)	error_t  (n) (struct device_mem_s *accessor, \
                                       struct dev_mem_info_s *info,      \
                                       uint8_t band_index)
 
@@ -239,7 +239,7 @@ typedef DEV_MEM_INFO(dev_mem_info_t);
 
 
 /* Memory device request function template. @see dev_mem_request_t */
-#define DEV_MEM_REQUEST(n)	void  (n) (struct device_mem_s *mdev,   \
+#define DEV_MEM_REQUEST(n)	void  (n) (struct device_mem_s *accessor,   \
                                            struct dev_mem_rq_s *rq)
 
 /** @This enqueues a memory device operation request.
@@ -274,12 +274,12 @@ DRIVER_CLASS_TYPES(mem,
 /** Synchronous memory device operation function. This function use a
     busy wait loop during the request. @see dev_mem_wait_op */
 config_depend(CONFIG_DEVICE_MEM)
-inline error_t dev_mem_spin_op(struct device_mem_s *mdev,
+inline error_t dev_mem_spin_op(struct device_mem_s *accessor,
                                struct dev_mem_rq_s *rq)
 {
   struct dev_request_status_s st;
   dev_request_spin_init(&rq->base, &st);
-  DEVICE_OP(mdev, request, rq);
+  DEVICE_OP(accessor, request, rq);
   dev_request_spin_wait(&st);
   return rq->err;
 }
@@ -294,12 +294,12 @@ inline error_t dev_mem_spin_op(struct device_mem_s *mdev,
     @tt sc_log2 and @tt page_index fields must be initialized by the
     caller. */
 config_depend_and2(CONFIG_DEVICE_MEM, CONFIG_MUTEK_SCHEDULER)
-inline error_t dev_mem_wait_op(struct device_mem_s *mdev,
+inline error_t dev_mem_wait_op(struct device_mem_s *accessor,
                                struct dev_mem_rq_s *rq)
 {
   struct dev_request_status_s st;
   dev_request_sched_init(&rq->base, &st);
-  DEVICE_OP(mdev, request, rq);
+  DEVICE_OP(accessor, request, rq);
   dev_request_sched_wait(&st);
   return rq->err;
 }

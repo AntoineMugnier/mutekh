@@ -187,7 +187,7 @@ static void pl011uart_try_write(struct device_s *dev)
 
 DEV_CHAR_REQUEST(pl011uart_request)
 {
-  struct device_s               *dev = cdev->dev;
+  struct device_s               *dev = accessor->dev;
   struct pl011uart_context_s	*pv = dev->drv_pv;
 
   assert(rq->size);

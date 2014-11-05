@@ -167,7 +167,7 @@ static void ds3231_request_run(
 
 static DEV_VALIO_REQUEST(ds3231_request)
 {
-    struct device_s *dev = vdev->dev;
+    struct device_s *dev = accessor->dev;
     struct ds3231_priv_s *pv = dev->drv_pv;
     error_t err = -EINVAL;
 

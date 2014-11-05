@@ -62,7 +62,7 @@
 
 static DEV_CHAR_REQUEST(emu_tty_request)
 {
-  //  struct device_s *dev = cdev->dev;
+  //  struct device_s *dev = accessor->dev;
 
   bool_t nonblock = 0;
   reg_t fd;

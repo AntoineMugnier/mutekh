@@ -95,7 +95,7 @@ struct stm32_i2c_private_s
 
 DEV_I2C_CTRL_CONFIG(stm32_i2c_config)
 {
-  struct device_s *dev = i2cdev->dev;
+  struct device_s *dev = accessor->dev;
   error_t err          = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -580,7 +580,7 @@ static DEV_IRQ_EP_PROCESS(stm32_i2c_irq)
 
 DEV_I2C_CTRL_TRANSFER(stm32_i2c_transfer)
 {
-  struct device_s            *dev = i2cdev->dev;
+  struct device_s            *dev = accessor->dev;
   struct stm32_i2c_private_s *pv  = dev->drv_pv;
   bool_t done = 1;
 
@@ -615,7 +615,7 @@ DEV_I2C_CTRL_TRANSFER(stm32_i2c_transfer)
 static
 DEV_I2C_CTRL_SCHED(stm32_i2c_sched)
 {
-  struct device_s            *dev = i2cdev->dev;
+  struct device_s            *dev = accessor->dev;
   struct stm32_i2c_private_s *pv  = dev->drv_pv;
   return &pv->sched;
 }

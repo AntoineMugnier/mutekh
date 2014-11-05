@@ -383,7 +383,7 @@ static const struct driver_gpio_s stm32_gpio_gpio_cls =
 static
 DEV_IOMUX_SETUP(stm32_gpio_iomux_setup)
 {
-  struct device_s             *dev = imdev->dev;
+  struct device_s             *dev = accessor->dev;
   struct stm32_gpio_context_s *pv  = dev->drv_pv;
   uint8_t                     bf;
 
@@ -473,7 +473,7 @@ uint_fast8_t stm32_gpio_icu_source_of_sink(uint_fast8_t icu_sink_id)
 static
 DEV_ICU_GET_ENDPOINT(stm32_gpio_icu_get_endpoint)
 {
-  struct device_s             *dev = idev->dev;
+  struct device_s             *dev = accessor->dev;
   struct stm32_gpio_context_s *pv = dev->drv_pv;
 
   switch (type)
@@ -517,7 +517,7 @@ DEV_ICU_GET_ENDPOINT(stm32_gpio_icu_get_endpoint)
 static
 DEV_ICU_ENABLE_IRQ(stm32_gpio_icu_enable_irq)
 {
-  struct device_s             *dev        = idev->dev;
+  struct device_s             *dev        = accessor->dev;
   struct stm32_gpio_context_s *pv         = dev->drv_pv;
   uint_fast8_t                icu_sink_id = sink - pv->sink;
 
@@ -600,7 +600,7 @@ DEV_ICU_ENABLE_IRQ(stm32_gpio_icu_enable_irq)
 static
 DEV_ICU_DISABLE_IRQ(stm32_gpio_icu_disable_irq)
 {
-  struct device_s             *dev        = idev->dev;
+  struct device_s             *dev        = accessor->dev;
   struct stm32_gpio_context_s *pv         = dev->drv_pv;
   uint_fast8_t                icu_sink_id = sink - pv->sink;
 

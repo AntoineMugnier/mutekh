@@ -47,12 +47,12 @@ void dev_pwm_rq_queue_cleanup(struct dev_pwm_rq_queue_s *q)
     dev_pwm_queue_destroy(&q->queue);
 }
 
-error_t dev_pwm_request_init(struct device_pwm_s      *pdev,
+error_t dev_pwm_request_init(struct device_pwm_s      *accessor,
                              struct dev_pwm_rq_s *rq)
 {
     memset(rq, 0, sizeof(*rq));
-    rq->pdev  = pdev;
-    rq->queue = DEVICE_OP(pdev, queue);
+    rq->accessor  = accessor;
+    rq->queue = DEVICE_OP(accessor, queue);
     return 0;
 }
 
@@ -113,7 +113,7 @@ void dev_pwm_execute(struct dev_pwm_rq_queue_s *q)
 
         /* call the driver. */
         lock_release_irq(&q->lock);
-        DEVICE_OP(rq->pdev, config, cfg);
+        DEVICE_OP(rq->accessor, config, cfg);
 
         /* if the kroutine_exec is not already called, return. */
         if (!kroutine_trigger(&cfg->kr, 0))
@@ -126,7 +126,7 @@ error_t dev_pwm_rq_start(struct dev_pwm_rq_s *rq)
 {
   struct dev_pwm_rq_queue_s *q = rq->queue;
 
-  rq->cfg->pdev = rq->pdev;
+  rq->cfg->accessor = rq->accessor;
 
   lock_spin_irq(&q->lock);
 
@@ -174,7 +174,7 @@ KROUTINE_EXEC(dev_pwm_wait_request)
   lock_release(&status->lock);
 }
 
-error_t dev_pwm_config(struct device_pwm_s     *pdev,
+error_t dev_pwm_config(struct device_pwm_s     *accessor,
                        struct dev_pwm_config_s *cfg)
 {
   struct dev_pwm_rq_s rq;
@@ -185,7 +185,7 @@ error_t dev_pwm_config(struct device_pwm_s     *pdev,
   status.ctx  = NULL;
   status.done = 0;
 
-  dev_pwm_request_init(pdev, &rq);
+  dev_pwm_request_init(accessor, &rq);
   kroutine_init(&rq.kr, &dev_pwm_wait_request, KROUTINE_IMMEDIATE);
   rq.pvdata = &status;
   rq.cfg    = cfg;

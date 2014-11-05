@@ -103,7 +103,7 @@ static CPU_INTERRUPT_HANDLER(x86_irq_handler)
 
 static DEV_ICU_GET_ENDPOINT(x86_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct x86_dev_private_s  *pv = dev->drv_pv;
 
   switch (type)
@@ -144,7 +144,7 @@ CONTEXT_LOCAL void *__context_data_base;
 
 static DEV_CPU_REG_INIT(x86_cpu_reg_init)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   struct x86_dev_private_s *pv = dev->drv_pv;
 
   /* set GDT pointer */
@@ -188,7 +188,7 @@ static DEV_CPU_REG_INIT(x86_cpu_reg_init)
 #ifdef CONFIG_ARCH_SMP
 static DEV_CPU_GET_NODE(x86_cpu_get_node)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   struct x86_dev_private_s *pv = dev->drv_pv;
   return &pv->node;
 }
@@ -217,7 +217,7 @@ static DEV_TIMER_START_STOP(x86_timer_start_stop)
 
 static DEV_TIMER_GET_VALUE(x86_timer_get_value)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct x86_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP

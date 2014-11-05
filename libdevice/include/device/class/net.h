@@ -46,7 +46,7 @@ struct net_packet_s;
 #define DEV_NET_OPT_MAC         3 //< mac adress, data is const uint8_t **
 
 /** Network device class packet creation function template. */
-#define DEV_NET_PREPAREPKT(n)	uint8_t  *(n) (const struct device_net_s *ndev, struct net_packet_s *packet, size_t size, size_t max_padding)
+#define DEV_NET_PREPAREPKT(n)	uint8_t  *(n) (const struct device_net_s *accessor, struct net_packet_s *packet, size_t size, size_t max_padding)
 
 /**
     Network device class preparepkt() function type.
@@ -62,7 +62,7 @@ typedef DEV_NET_PREPAREPKT(dev_net_preparepkt_t);
 
 
 /** Network device class packet sending function template. */
-#define DEV_NET_SENDPKT(n)	void  (n) (const struct device_net_s *ndev, struct net_packet_s *packet, uint_fast16_t proto)
+#define DEV_NET_SENDPKT(n)	void  (n) (const struct device_net_s *accessor, struct net_packet_s *packet, uint_fast16_t proto)
 
 /**
     Network device class sendpkt() function type.
@@ -76,7 +76,7 @@ typedef DEV_NET_SENDPKT(dev_net_sendpkt_t);
 
 
 /** Network device class device set option function template. */
-#define DEV_NET_SETOPT(n)	error_t (n) (const struct device_net_s *ndev, uint_fast32_t option, void *value, size_t len)
+#define DEV_NET_SETOPT(n)	error_t (n) (const struct device_net_s *accessor, uint_fast32_t option, void *value, size_t len)
 
 /**
     Network device class setopt() function type.
@@ -92,7 +92,7 @@ typedef DEV_NET_SETOPT(dev_net_setopt_t);
 
 
 /** Network device class device get option function template. */
-#define DEV_NET_GETOPT(n)	error_t (n) (const struct device_net_s *ndev, uint_fast32_t option, void *value, size_t *len)
+#define DEV_NET_GETOPT(n)	error_t (n) (const struct device_net_s *accessor, uint_fast32_t option, void *value, size_t *len)
 
 /**
     Network device class getopt() function type.

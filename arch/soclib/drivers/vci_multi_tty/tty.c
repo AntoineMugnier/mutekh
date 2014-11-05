@@ -93,12 +93,12 @@ void tty_soclib_try_read(struct device_s *dev)
 
 DEV_CHAR_REQUEST(tty_soclib_request)
 {
-  struct device_s               *dev = cdev->dev;
+  struct device_s               *dev = accessor->dev;
   struct tty_soclib_context_s	*pv = dev->drv_pv;
   struct dev_char_rq_s *done_rq = NULL;
 
   assert(rq->size);
-  assert(cdev->number == 0);
+  assert(accessor->number == 0);
 
   LOCK_SPIN_IRQ(&dev->lock);
 

@@ -47,7 +47,7 @@ struct efm32_msc_context_s
 
 static DEV_MEM_INFO(efm32_msc_info)
 {
-  struct device_s *dev = mdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_msc_context_s *pv = dev->drv_pv;
 
   if (band_index > 0)
@@ -55,7 +55,7 @@ static DEV_MEM_INFO(efm32_msc_info)
 
   memset(info, 0, sizeof(*info));
 
-  switch (mdev->number)
+  switch (accessor->number)
     {
     case 0:                     /* RAM */
       info->type = DEV_MEM_RAM;
@@ -75,7 +75,7 @@ static DEV_MEM_INFO(efm32_msc_info)
         DEV_MEM_CROSS_READ;
       info->erase_cycles_p = 12; /* 20480 cycles */
       info->erase_cycles_m = 5;
-      if (mdev->number == 1)
+      if (accessor->number == 1)
         {
           info->page_log2 = pv->page_log2;
           info->size = (cpu_mem_read_16(0x0fe081f8) << 10) >> info->page_log2;
@@ -143,11 +143,11 @@ static uint32_t efm32_msc_flash_op(uintptr_t base, uint_fast8_t page_log2, struc
 
 static DEV_MEM_REQUEST(efm32_msc_request)
 {
-  struct device_s *dev = mdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_msc_context_s *pv = dev->drv_pv;
 
   rq->err = 0;
-  switch (mdev->number)
+  switch (accessor->number)
     {
     case 0:                     /* RAM */
       if (rq->type & (DEV_MEM_OP_PARTIAL_READ | DEV_MEM_OP_PARTIAL_WRITE |

@@ -472,7 +472,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
 
 static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
 {
-  struct device_s *dev = ckdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
 
   if (pv->busy)
@@ -988,7 +988,7 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
 
 static DEV_CLOCK_COMMIT(efm32_recmu_commit)
 {
-  struct device_s *dev = ckdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
 
   if (pv->busy)
@@ -1075,7 +1075,7 @@ static DEV_CLOCK_COMMIT(efm32_recmu_commit)
       struct dev_freq_s freq;
       if (efm32_recmu_get_node_freq(pv, &freq, id))
         abort();
-      dev_clock_src_changed(ckdev, src, &freq);
+      dev_clock_src_changed(accessor, src, &freq);
 
       m = m & (m - 1);          /* clear lsb */
     }
@@ -1108,7 +1108,7 @@ static void efm32_recmu_read_config(struct efm32_recmu_private_s *pv)
 
 static DEV_CLOCK_ROLLBACK(efm32_recmu_rollback)
 {
-  struct device_s *dev = ckdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
 
   if (pv->busy)
@@ -1121,7 +1121,7 @@ static DEV_CLOCK_ROLLBACK(efm32_recmu_rollback)
 
 static DEV_CLOCK_NODE_INFO(efm32_recmu_node_info)
 {
-  struct device_s *dev = ckdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_recmu_private_s *pv = dev->drv_pv;
 
   if (node_id >= EFM32_CLOCK_count)

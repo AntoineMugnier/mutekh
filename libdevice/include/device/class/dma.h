@@ -84,7 +84,7 @@ struct dev_dma_rq_s
 
   error_t			error;          //< error code set by driver
 
-  const struct device_dma_s     *ddev;          //< associated dma device
+  const struct device_dma_s     *accessor;          //< associated dma device
   void				*drvdata;       //< driver private data
 
   GCT_CONTAINER_ENTRY(dev_dma_queue, queue_entry); //< used by driver to enqueue request
@@ -96,7 +96,7 @@ GCT_CONTAINER_FCNS(dev_dma_queue, inline, dev_dma_queue,
 
 
 /** Dma device class @ref dev_dma_request_t function template. */
-#define DEV_DMA_REQUEST(n)	error_t  (n) (const struct device_dma_s *ddev, struct dev_dma_rq_s *rq)
+#define DEV_DMA_REQUEST(n)	error_t  (n) (const struct device_dma_s *accessor, struct dev_dma_rq_s *rq)
 
 /**
    Dma device class request() function type. Enqueue a dma transfert request.
@@ -127,7 +127,7 @@ DRIVER_CLASS_TYPES(dma,
     @returns error code.
 */
 config_depend(CONFIG_DEVICE_DMA)
-error_t dev_dma_wait_copy(const struct device_dma_s *ddev,
+error_t dev_dma_wait_copy(const struct device_dma_s *accessor,
                           uintptr_t src, uintptr_t dst,
                           size_t size, uint_fast8_t flags);
 
@@ -137,14 +137,14 @@ error_t dev_dma_wait_copy(const struct device_dma_s *ddev,
     @returns error code.
 */
 config_depend(CONFIG_DEVICE_DMA)
-error_t dev_dma_spin_copy(const struct device_dma_s *ddev,
+error_t dev_dma_spin_copy(const struct device_dma_s *accessor,
                           uintptr_t src, uintptr_t dst,
                           size_t size, uint_fast8_t flags);
 
 /** Same as @ref dev_dma_wait_copy with explicit address spaces for
     source and destination addresses. */
 config_depend_and2(CONFIG_DEVICE_DMA, CONFIG_DEVICE_ADDRESS_SPACES)
-error_t dev_dma_wait_copy_as(const struct device_dma_s *ddev,
+error_t dev_dma_wait_copy_as(const struct device_dma_s *accessor,
                              uintptr_t src, uintptr_t dst,
                              size_t size, uint_fast8_t flags,
                              address_space_id_t src_as,
@@ -153,7 +153,7 @@ error_t dev_dma_wait_copy_as(const struct device_dma_s *ddev,
 /** Same as @ref dev_dma_spin_copy with explicit address spaces for
     source and destination addresses. */
 config_depend_and2(CONFIG_DEVICE_DMA, CONFIG_DEVICE_ADDRESS_SPACES)
-error_t dev_dma_spin_copy_as(const struct device_dma_s *ddev,
+error_t dev_dma_spin_copy_as(const struct device_dma_s *accessor,
                              uintptr_t src, uintptr_t dst,
                              size_t size, uint_fast8_t flags,
                              address_space_id_t src_as,

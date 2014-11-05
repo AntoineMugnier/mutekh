@@ -236,7 +236,7 @@ static void soclib_block_rq_end(struct device_s *dev)
 
 static DEV_MEM_REQUEST(soclib_block_request)
 {
-  struct device_s *dev = mdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_block_context_s *pv = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -251,10 +251,10 @@ static DEV_MEM_REQUEST(soclib_block_request)
 
 static DEV_MEM_INFO(soclib_block_info)
 {
-  struct device_s *dev = mdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_block_context_s	*pv = dev->drv_pv;
 
-  if (band_index > 0 || mdev->number > 0)
+  if (band_index > 0 || accessor->number > 0)
     return -ENOENT;
 
   memset(info, 0, sizeof(*info));

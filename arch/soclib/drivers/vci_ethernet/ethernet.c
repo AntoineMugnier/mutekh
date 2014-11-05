@@ -87,7 +87,7 @@ struct soclib_eth_context_s
 
 static DEV_NET_PREPAREPKT(soclib_eth_preparepkt)
 {
-  struct device_s             *dev = ndev->dev;
+  struct device_s             *dev = accessor->dev;
   struct soclib_eth_context_s *pv = dev->drv_pv;
 
   if (size > ETHERMTU)
@@ -113,7 +113,7 @@ static DEV_NET_PREPAREPKT(soclib_eth_preparepkt)
 
 static DEV_NET_SENDPKT(soclib_eth_sendpkt)
 {
-  struct device_s             *dev = ndev->dev;
+  struct device_s             *dev = accessor->dev;
   struct soclib_eth_context_s *pv = dev->drv_pv;
   struct ether_header         *hdr;
   struct net_header_s         *nethdr = &packet->header[0];
@@ -149,7 +149,7 @@ static DEV_NET_SENDPKT(soclib_eth_sendpkt)
 
 static DEV_NET_SETOPT(soclib_eth_setopt)
 {
-  struct device_s               *dev = ndev->dev;
+  struct device_s               *dev = accessor->dev;
   struct soclib_eth_context_s *pv = dev->drv_pv;
 
   switch (option)
@@ -170,7 +170,7 @@ static DEV_NET_SETOPT(soclib_eth_setopt)
 
 static DEV_NET_GETOPT(soclib_eth_getopt)
 {
-  struct device_s               *dev = ndev->dev;
+  struct device_s               *dev = accessor->dev;
   struct soclib_eth_context_s *pv = dev->drv_pv;
 
   switch (option)

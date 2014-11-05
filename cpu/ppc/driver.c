@@ -70,7 +70,7 @@ static CPU_INTERRUPT_HANDLER(ppc_irq_handler)
 
 static DEV_ICU_GET_ENDPOINT(ppc_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct ppc_dev_private_s  *pv = dev->drv_pv;
 
   switch (type)
@@ -85,7 +85,7 @@ static DEV_ICU_GET_ENDPOINT(ppc_icu_get_endpoint)
 
 static DEV_ICU_ENABLE_IRQ(ppc_icu_enable_irq)
 {
-  __unused__ struct device_s *dev = idev->dev;
+  __unused__ struct device_s *dev = accessor->dev;
 
   // inputs are single wire, logical irq id must be 0
   if (irq_id > 0)
@@ -119,7 +119,7 @@ CPU_LOCAL struct device_s *cpu_device = NULL;
 
 static DEV_CPU_REG_INIT(ppc_cpu_reg_init)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct ppc_dev_private_s *pv = dev->drv_pv;
 
   /* set exception vector */
@@ -142,7 +142,7 @@ static DEV_CPU_REG_INIT(ppc_cpu_reg_init)
 #ifdef CONFIG_ARCH_SMP
 static DEV_CPU_GET_NODE(ppc_cpu_get_node)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   struct ppc_dev_private_s *pv = dev->drv_pv;
   return &pv->node;
 }
@@ -170,7 +170,7 @@ static DEV_TIMER_START_STOP(ppc_timer_start_stop)
 
 static DEV_TIMER_GET_VALUE(ppc_timer_get_value)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct ppc_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP

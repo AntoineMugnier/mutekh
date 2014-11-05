@@ -208,11 +208,11 @@ struct dev_rfpacket_rq_s
     } cfg;
   };
 
-  const struct device_rfpacket_s    *rfdev;         //< associated rfp device
+  const struct device_rfpacket_s    *accessor;         //< associated rfp device
 };
 
 /** @see dev_rfpacket_request_t */
-#define DEV_RFPACKET_REQUEST(n)	void  (n) (const struct device_rfpacket_s *rfdev, ...)
+#define DEV_RFPACKET_REQUEST(n)	void  (n) (const struct device_rfpacket_s *accessor, ...)
 
 /**
   This function enqueues multiple @ref dev_rfpacket_rq_s requests
@@ -314,7 +314,7 @@ typedef DEV_RFPACKET_REQUEST(dev_rfpacket_request_t);
 
 
 /** @see dev_rfpacket_request_t */
-#define DEV_RFPACKET_RECEIVE(n) void  (n) (const struct device_rfpacket_s *rfdev, \
+#define DEV_RFPACKET_RECEIVE(n) void  (n) (const struct device_rfpacket_s *accessor, \
                                             struct dev_rfpacket_rx_s *rx)
 /**
   This function enqueues a @ref dev_rfpacket_rx_s buffer.

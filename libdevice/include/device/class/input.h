@@ -66,7 +66,7 @@ typedef DEV_INPUT_CALLBACK(dev_input_callback_t);
 
 
 /** Input device class info function tempate. */
-#define DEV_INPUT_INFO(n)	void  (n) (struct device_input_s *idev,		\
+#define DEV_INPUT_INFO(n)	void  (n) (struct device_input_s *accessor,		\
 					   struct dev_input_info_s *info)
 
 /**
@@ -80,7 +80,7 @@ typedef DEV_INPUT_INFO(dev_input_info_t);
 
 
 /** Input device class read function tempate. */
-#define DEV_INPUT_READ(n)	dev_input_value_t (n) (struct device_input_s *idev,	\
+#define DEV_INPUT_READ(n)	dev_input_value_t (n) (struct device_input_s *accessor,	\
 						      dev_input_ctrlid_t id)
 
 /**
@@ -95,7 +95,7 @@ typedef DEV_INPUT_READ(dev_input_read_t);
 
 
 /** Input device class write function tempate. */
-#define DEV_INPUT_WRITE(n)	error_t (n) (struct device_input_s *idev,	\
+#define DEV_INPUT_WRITE(n)	error_t (n) (struct device_input_s *accessor,	\
 					     dev_input_ctrlid_t id,	\
 					     dev_input_value_t value)
 
@@ -112,7 +112,7 @@ typedef DEV_INPUT_WRITE(dev_input_write_t);
 
 
 /** Input device class event setcallback function tempate. */
-#define DEV_INPUT_SETCALLBACK(n)	error_t (n) (struct device_input_s *idev, \
+#define DEV_INPUT_SETCALLBACK(n)	error_t (n) (struct device_input_s *accessor, \
 					     uint_fast8_t type,			\
 					     dev_input_ctrlid_t id,		\
 					     dev_input_callback_t *callback,	\

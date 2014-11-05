@@ -323,7 +323,7 @@ static DEV_IRQ_EP_PROCESS(bcm2835_i2c_irq)
 
 DEV_I2C_CTRL_CONFIG(bcm2835_i2c_config)
 {
-  struct device_s               *dev = i2cdev->dev;
+  struct device_s               *dev = accessor->dev;
   struct bcm2835_i2c_context_s    *pv  = dev->drv_pv;
   error_t err = 0;
 
@@ -361,7 +361,7 @@ DEV_I2C_CTRL_CONFIG(bcm2835_i2c_config)
 DEV_I2C_CTRL_TRANSFER(bcm2835_i2c_transfer)
 {
 //      printk("tr start : %d stop : %d\n", tr->op & 0x1, (tr->op & 0x2) >> 1);
-  struct device_s                 *dev = i2cdev->dev;
+  struct device_s                 *dev = accessor->dev;
   struct bcm2835_i2c_context_s    *pv  = dev->drv_pv;
   bool_t done = 1;
 

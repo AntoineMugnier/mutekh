@@ -295,7 +295,7 @@ static const struct driver_gpio_s bcm2835_gpio_gpio_drv =
 
 static DEV_IOMUX_SETUP(bcm2835_gpio_iomux_setup)
 {
-  struct device_s *dev = imdev->dev;
+  struct device_s *dev = accessor->dev;
   struct bcm2835_gpio_private_s *pv = dev->drv_pv;
 
   if (io_id >= GPIO_IO_COUNT)
@@ -343,7 +343,7 @@ static const struct driver_iomux_s bcm2835_gpio_iomux_drv =
 
 static DEV_ICU_GET_ENDPOINT(bcm2835_gpio_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct bcm2835_gpio_private_s *pv = dev->drv_pv;
 
   switch (type)
@@ -421,7 +421,7 @@ static void bcm2835_gpio_icu_disall_irq(struct bcm2835_gpio_private_s *pv)
 
 static DEV_ICU_ENABLE_IRQ(bcm2835_gpio_icu_enable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct bcm2835_gpio_private_s *pv = dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sink;
 
@@ -504,7 +504,7 @@ static DEV_ICU_ENABLE_IRQ(bcm2835_gpio_icu_enable_irq)
 
 static DEV_ICU_DISABLE_IRQ(bcm2835_gpio_icu_disable_irq)
 {
-  struct bcm2835_gpio_private_s *pv = idev->dev->drv_pv;
+  struct bcm2835_gpio_private_s *pv = accessor->dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sink;
 
   bcm2835_gpio_icu_dis_irq(pv, icu_in_id);

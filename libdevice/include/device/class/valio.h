@@ -119,7 +119,7 @@ STRUCT_COMPOSE(dev_valio_rq_s, base);
 
 /** @see dev_valio_request_t */
 #define DEV_VALIO_REQUEST(n) void (n) (                             \
-    const struct device_valio_s *vdev,                           \
+    const struct device_valio_s *accessor,                           \
     struct dev_valio_rq_s *req)
 
 /** @This enqueues an attribute query.
@@ -132,14 +132,14 @@ DRIVER_CLASS_TYPES(valio,
 
 
 inline error_t dev_valio_spin_request(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     struct dev_valio_rq_s *req)
 {
     struct dev_request_status_s status;
 
     dev_request_spin_init(&req->base, &status);
 
-    DEVICE_OP(vdev, request, req);
+    DEVICE_OP(accessor, request, req);
 
     dev_request_spin_wait(&status);
 
@@ -152,7 +152,7 @@ inline error_t dev_valio_spin_request(
 */
 config_depend(CONFIG_DEVICE_VALIO)
 inline error_t dev_valio_spin_read(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     uint16_t attribute,
     void *data)
 {
@@ -163,7 +163,7 @@ inline error_t dev_valio_spin_read(
         .data = data,
     };
 
-    return dev_valio_spin_request(vdev, &req);
+    return dev_valio_spin_request(accessor, &req);
 }
 
 /** @this does the same as @tt dev_valio_wait_write but does not
@@ -171,7 +171,7 @@ inline error_t dev_valio_spin_read(
 */
 config_depend(CONFIG_DEVICE_VALIO)
 inline error_t dev_valio_spin_write(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     uint16_t attribute,
     const void *data)
 {
@@ -182,7 +182,7 @@ inline error_t dev_valio_spin_write(
         .data = (void*)data,
     };
 
-    return dev_valio_spin_request(vdev, &req);
+    return dev_valio_spin_request(accessor, &req);
 }
 
 /** @this does the same as @tt dev_valio_wait_update but does not use
@@ -190,7 +190,7 @@ inline error_t dev_valio_spin_write(
 */
 config_depend(CONFIG_DEVICE_VALIO)
 inline error_t dev_valio_spin_update(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     uint16_t attribute,
     void *data)
 {
@@ -201,20 +201,20 @@ inline error_t dev_valio_spin_update(
         .data = data,
     };
 
-    return dev_valio_spin_request(vdev, &req);
+    return dev_valio_spin_request(accessor, &req);
 }
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
 
 inline error_t dev_valio_wait_request(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     struct dev_valio_rq_s *req)
 {
       struct dev_request_status_s status;
 
       dev_request_sched_init(&req->base, &status);
 
-      DEVICE_OP(vdev, request, req);
+      DEVICE_OP(accessor, request, req);
 
       dev_request_sched_wait(&status);
 
@@ -230,7 +230,7 @@ inline error_t dev_valio_wait_request(
 */
 config_depend(CONFIG_DEVICE_VALIO)
 inline error_t dev_valio_wait_read(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     uint16_t attribute,
     void *data)
 {
@@ -241,7 +241,7 @@ inline error_t dev_valio_wait_read(
         .data = data,
     };
 
-    return dev_valio_wait_request(vdev, &req);
+    return dev_valio_wait_request(accessor, &req);
 }
 
 /** @this does a write request on an attribute.
@@ -253,7 +253,7 @@ inline error_t dev_valio_wait_read(
 */
 config_depend(CONFIG_DEVICE_VALIO)
 inline error_t dev_valio_wait_write(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     uint16_t attribute,
     const void *data)
 {
@@ -264,7 +264,7 @@ inline error_t dev_valio_wait_write(
         .data = (void*)data,
     };
 
-    return dev_valio_wait_request(vdev, &req);
+    return dev_valio_wait_request(accessor, &req);
 }
 
 /** @this waits for the attribute to change.
@@ -276,7 +276,7 @@ inline error_t dev_valio_wait_write(
 */
 config_depend(CONFIG_DEVICE_VALIO)
 inline error_t dev_valio_wait_update(
-    const struct device_valio_s *vdev,
+    const struct device_valio_s *accessor,
     uint16_t attribute,
     void *data)
 {
@@ -287,7 +287,7 @@ inline error_t dev_valio_wait_update(
         .data = data,
     };
 
-    return dev_valio_wait_request(vdev, &req);
+    return dev_valio_wait_request(accessor, &req);
 }
 
 #endif

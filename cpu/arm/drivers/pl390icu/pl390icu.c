@@ -67,7 +67,7 @@ struct pl390_icu_private_s
 
 static DEV_ICU_GET_ENDPOINT(pl390_icu_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct pl390_icu_private_s *pv = dev->drv_pv;
 
   switch (type)
@@ -110,7 +110,7 @@ pl390_get_current_cpu(struct pl390_icu_private_s *pv, uint_fast8_t ppi_id)
 
 static DEV_ICU_ENABLE_IRQ(pl390_icu_icu_enable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct pl390_icu_private_s *pv = dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sinks;
 
@@ -149,7 +149,7 @@ static DEV_ICU_ENABLE_IRQ(pl390_icu_icu_enable_irq)
 
 static DEV_ICU_DISABLE_IRQ(pl390_icu_icu_disable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct pl390_icu_private_s *pv = dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sinks;
 

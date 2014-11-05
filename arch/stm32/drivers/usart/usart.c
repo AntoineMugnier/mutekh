@@ -231,7 +231,7 @@ void stm32_usart_try_write(struct device_s *dev)
 static
 DEV_CHAR_REQUEST(stm32_usart_request)
 {
-  struct device_s              *dev = cdev->dev;
+  struct device_s              *dev = accessor->dev;
   struct stm32_usart_context_s *pv  = dev->drv_pv;
 
   assert(rq->size);
@@ -429,7 +429,7 @@ error_t stm32_usart_config_simple(struct device_s          *dev,
 static
 DEV_UART_CONFIG(stm32_usart_config)
 {
-  struct device_s              *dev = udev->dev;
+  struct device_s              *dev = accessor->dev;
   struct stm32_usart_context_s *pv  = dev->drv_pv;
 
   /* wait for previous TX to complete. */

@@ -269,7 +269,7 @@ static void mtch6102_request_run(
 
 static DEV_VALIO_REQUEST(mtch6102_request)
 {
-    struct device_s *dev = vdev->dev;
+    struct device_s *dev = accessor->dev;
     struct mtch6102_priv_s *pv = dev->drv_pv;
     error_t err = -EINVAL;
 

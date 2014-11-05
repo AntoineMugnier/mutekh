@@ -103,7 +103,7 @@ static CPU_INTERRUPT_HANDLER(sparc_irq_handler)
 
 static DEV_ICU_GET_ENDPOINT(sparc_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct sparc_dev_private_s  *pv = dev->drv_pv;
 
   switch (type)
@@ -127,7 +127,7 @@ static DEV_ICU_GET_ENDPOINT(sparc_icu_get_endpoint)
 
 static DEV_ICU_ENABLE_IRQ(sparc_icu_enable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct sparc_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
@@ -179,7 +179,7 @@ void * cpu_local_storage[CONFIG_ARCH_LAST_CPU_ID + 1]; /* used to restore cls re
 
 static DEV_CPU_REG_INIT(sparc_cpu_reg_init)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
 
 #ifdef CONFIG_ARCH_SMP
   struct sparc_dev_private_s *pv = dev->drv_pv;
@@ -241,7 +241,7 @@ static DEV_CPU_REG_INIT(sparc_cpu_reg_init)
 #ifdef CONFIG_ARCH_SMP
 static DEV_CPU_GET_NODE(sparc_cpu_get_node)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   struct sparc_dev_private_s *pv = dev->drv_pv;
   return &pv->node;
 }

@@ -61,7 +61,7 @@ struct dev_timer_rq_s
   dev_timer_delay_t             delay;       //< timer delay
   void                          *pvdata;     //< pv data for callback
   void                          *drvdata;    //< driver private data
-  struct device_timer_s         *tdev;       //< pointer to associated timer device
+  struct device_timer_s         *accessor;       //< pointer to associated timer device
 
   GCT_CONTAINER_ENTRY(dev_timer_queue, queue_entry); //< used by driver to enqueue requests
 };
@@ -72,7 +72,7 @@ GCT_CONTAINER_KEY_FCNS(dev_timer_queue, ASC, inline, dev_timer_queue, deadline,
                        init, destroy, isempty, pop, head, remove, insert);
 
 /** @see dev_timer_request_t */
-#define DEV_TIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
+#define DEV_TIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *accessor, struct dev_timer_rq_s *rq)
 
 /**
    @This enqueues a timeout event request. The @tt delay and @tt
@@ -99,7 +99,7 @@ GCT_CONTAINER_KEY_FCNS(dev_timer_queue, ASC, inline, dev_timer_queue, deadline,
 typedef DEV_TIMER_REQUEST(dev_timer_request_t);
 
 /** @see dev_timer_cancel_t */
-#define DEV_TIMER_CANCEL(n)	error_t  (n) (struct device_timer_s *tdev, struct dev_timer_rq_s *rq)
+#define DEV_TIMER_CANCEL(n)	error_t  (n) (struct device_timer_s *accessor, struct dev_timer_rq_s *rq)
 
 /**
    @This cancel a timeout request event.
@@ -114,7 +114,7 @@ typedef DEV_TIMER_CANCEL(dev_timer_cancel_t);
 
 
 /** @see dev_timer_start_stop_t */
-#define DEV_TIMER_START_STOP(n)	error_t  (n) (struct device_timer_s *tdev, bool_t start)
+#define DEV_TIMER_START_STOP(n)	error_t  (n) (struct device_timer_s *accessor, bool_t start)
 
 /**
    Timer device class start/stop function.
@@ -145,7 +145,7 @@ typedef DEV_TIMER_START_STOP(dev_timer_start_stop_t);
 
 
 /** @see #dev_timer_get_value_t */
-#define DEV_TIMER_GET_VALUE(n)	error_t (n) (struct device_timer_s *tdev, dev_timer_value_t *value)
+#define DEV_TIMER_GET_VALUE(n)	error_t (n) (struct device_timer_s *accessor, dev_timer_value_t *value)
 
 /**
    @This reads the current raw timer value. The timer value is
@@ -167,7 +167,7 @@ typedef DEV_TIMER_GET_VALUE(dev_timer_get_value_t);
 
 
 /** @see #dev_timer_get_freq_t */
-#define DEV_TIMER_GET_FREQ(n)	error_t (n) (struct device_timer_s *tdev, \
+#define DEV_TIMER_GET_FREQ(n)	error_t (n) (struct device_timer_s *accessor, \
                                              struct dev_freq_s *freq)
 
 /**
@@ -190,7 +190,7 @@ typedef DEV_TIMER_GET_FREQ(dev_timer_get_freq_t);
 typedef uint32_t dev_timer_res_t;
 
 /** @see dev_timer_resolution_t */
-#define DEV_TIMER_RESOLUTION(n)	error_t (n) (struct device_timer_s *tdev, dev_timer_res_t *res, dev_timer_value_t *max)
+#define DEV_TIMER_RESOLUTION(n)	error_t (n) (struct device_timer_s *accessor, dev_timer_res_t *res, dev_timer_value_t *max)
 
 /**
    @This can be used to query and change how the timer input clock is
@@ -256,7 +256,7 @@ DEV_TIMER_GET_FREQ(dev_timer_drv_get_freq);
     read (-EIO) or if the timer overlap period is to short for the
     delay (-ERANGE). */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_init_sec(struct device_timer_s *tdev, dev_timer_delay_t *delay,
+error_t dev_timer_init_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
                            dev_timer_delay_t s_delay, uint32_t r_unit);
 
 /** @This computes two shift amounts which can be used for fast
@@ -283,7 +283,7 @@ error_t dev_timer_init_sec(struct device_timer_s *tdev, dev_timer_delay_t *delay
     Either the @tt shift_a or the @tt shift_b pointer may be @tt NULL.
 */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_shift_sec(struct device_timer_s *tdev,
+error_t dev_timer_shift_sec(struct device_timer_s *accessor,
                             int8_t *shift_a, int8_t *shift_b,
                             dev_timer_delay_t s_delay, uint32_t r_unit);
 
@@ -334,7 +334,7 @@ dev_timer_delay_check_t2s(int_fast8_t shift, dev_timer_delay_t delay)
     success, 0 is returned if the time has not elapsed yet and 1 is
     returned on timeout. */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_check_timeout(struct device_timer_s *tdev,
+error_t dev_timer_check_timeout(struct device_timer_s *accessor,
                                 dev_timer_delay_t delay,
                                 const dev_timer_value_t *start);
 
@@ -350,7 +350,7 @@ error_t dev_timer_check_timeout(struct device_timer_s *tdev,
     save timer units conversion computation.
 */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_sleep(struct device_timer_s *tdev, struct dev_timer_rq_s *rq);
+error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
 
 /** Synchronous timer busy-wait function. @This spins in a loop
     waiting for the requested delay. @This returns @tt -ERANGE if the
@@ -358,7 +358,7 @@ error_t dev_timer_sleep(struct device_timer_s *tdev, struct dev_timer_rq_s *rq);
     because counter overlap can not be handled properly in this
     case. @see dev_timer_sleep */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_busy_wait(struct device_timer_s *tdev, struct dev_timer_rq_s *rq);
+error_t dev_timer_busy_wait(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
 
 
 #endif

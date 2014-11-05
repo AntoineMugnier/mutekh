@@ -112,7 +112,7 @@ struct dev_pwm_config_s
   struct kroutine_s       kr;
 
   /* Associated device. */
-  struct device_pwm_s     *pdev;
+  struct device_pwm_s     *accessor;
 
   /* Kroutine private data. */
   void                    *pvdata;
@@ -137,7 +137,7 @@ struct dev_pwm_config_s
 };
 
 
-#define DEV_PWM_CONFIG(n) error_t (n)(struct device_pwm_s     *pdev, \
+#define DEV_PWM_CONFIG(n) error_t (n)(struct device_pwm_s     *accessor, \
                                      struct dev_pwm_config_s *cfg)  \
 /**/
 
@@ -179,7 +179,7 @@ struct dev_pwm_rq_s
   struct kroutine_s         kr;
 
   /* PWM device. */
-  struct device_pwm_s       *pdev;
+  struct device_pwm_s       *accessor;
 
   /* Kroutine private data. */
   void                      *pvdata;
@@ -220,7 +220,7 @@ struct dev_pwm_rq_queue_s
 
 
 #define DEV_PWM_QUEUE(n) struct dev_pwm_rq_queue_s * (n) ( \
-    struct device_pwm_s *pdev)                            \
+    struct device_pwm_s *accessor)                            \
 /**/
 
 /** @This gives access to the request queue allocated in the PWM device driver
@@ -247,7 +247,7 @@ void dev_pwm_rq_queue_cleanup(struct dev_pwm_rq_queue_s *q);
 
 
 /** @This initializes a configuration request. */
-error_t dev_pwm_request_init(struct device_pwm_s      *pdev,
+error_t dev_pwm_request_init(struct device_pwm_s      *accessor,
                              struct dev_pwm_rq_s *rq);
 
 
@@ -272,7 +272,7 @@ void dev_pwm_execute(struct dev_pwm_rq_queue_s *q);
 
     If the configuration cannot be applied, the function returns -EINVAL.
  */
-error_t dev_pwm_config(struct device_pwm_s     *pdev,
+error_t dev_pwm_config(struct device_pwm_s     *accessor,
                        struct dev_pwm_config_s *cfg);
 
 #endif

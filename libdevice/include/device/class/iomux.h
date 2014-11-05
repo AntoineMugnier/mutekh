@@ -46,7 +46,7 @@ typedef uint32_t iomux_config_t;
 #define IOMUX_INVALID_ID 65535
 #define IOMUX_INVALID_MUX 255
 
-#define DEV_IOMUX_SETUP(n) error_t (n)(const struct device_iomux_s *imdev, \
+#define DEV_IOMUX_SETUP(n) error_t (n)(const struct device_iomux_s *accessor, \
                                       iomux_io_id_t io_id,              \
                                       enum dev_pin_driving_e dir,   \
                                       iomux_mux_t mux, iomux_config_t config)

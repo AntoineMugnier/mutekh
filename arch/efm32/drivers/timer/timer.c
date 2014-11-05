@@ -217,11 +217,11 @@ static DEV_IRQ_EP_PROCESS(efm32_timer_irq)
 static DEV_TIMER_CANCEL(efm32_timer_cancel)
 {
 #ifdef CONFIG_DEVICE_IRQ
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_timer_private_s *pv = dev->drv_pv;
   error_t err = -ETIMEDOUT;
 
-  assert(rq->tdev == tdev);
+  assert(rq->accessor == accessor);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -265,11 +265,11 @@ static DEV_TIMER_CANCEL(efm32_timer_cancel)
 static DEV_TIMER_REQUEST(efm32_timer_request)
 {
 #ifdef CONFIG_DEVICE_IRQ
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_timer_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  rq->tdev = tdev;
+  rq->accessor = accessor;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -309,7 +309,7 @@ static DEV_TIMER_REQUEST(efm32_timer_request)
 
 static DEV_TIMER_START_STOP(efm32_timer_state_start_stop)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_timer_private_s *pv = dev->drv_pv;
 
   error_t err = 0;
@@ -341,7 +341,7 @@ static DEV_TIMER_START_STOP(efm32_timer_state_start_stop)
 
 static DEV_TIMER_GET_VALUE(efm32_timer_get_value)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_timer_private_s *pv = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -356,7 +356,7 @@ static DEV_TIMER_GET_VALUE(efm32_timer_get_value)
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_TIMER_GET_FREQ(efm32_timer_get_freq)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_timer_private_s *pv = dev->drv_pv;
 
   *freq = pv->freq;
@@ -366,7 +366,7 @@ static DEV_TIMER_GET_FREQ(efm32_timer_get_freq)
 
 static DEV_TIMER_RESOLUTION(efm32_timer_resolution)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_timer_private_s *pv = dev->drv_pv;
   uint32_t ctrl, r, div;
 

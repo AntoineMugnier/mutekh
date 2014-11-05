@@ -104,7 +104,7 @@ struct greth_context_s
 
 static DEV_NET_PREPAREPKT(greth_preparepkt)
 {
-  struct device_s             *dev = ndev->dev;
+  struct device_s             *dev = accessor->dev;
   struct greth_context_s *pv = dev->drv_pv;
 
   if (size > GRETH_MAX_ETHLEN)
@@ -130,7 +130,7 @@ static DEV_NET_PREPAREPKT(greth_preparepkt)
 
 static DEV_NET_SENDPKT(greth_sendpkt)
 {
-  struct device_s             *dev = ndev->dev;
+  struct device_s             *dev = accessor->dev;
   struct greth_context_s      *pv = dev->drv_pv;
   struct ether_header         *hdr;
   struct net_header_s         *nethdr = &packet->header[0];
@@ -171,7 +171,7 @@ static DEV_NET_SENDPKT(greth_sendpkt)
 
 static DEV_NET_SETOPT(greth_setopt)
 {
-  struct device_s               *dev = ndev->dev;
+  struct device_s               *dev = accessor->dev;
   struct greth_context_s *pv = dev->drv_pv;
 
   switch (option)
@@ -192,7 +192,7 @@ static DEV_NET_SETOPT(greth_setopt)
 
 static DEV_NET_GETOPT(greth_getopt)
 {
-  struct device_s               *dev = ndev->dev;
+  struct device_s               *dev = accessor->dev;
   struct greth_context_s *pv = dev->drv_pv;
 
   switch (option)

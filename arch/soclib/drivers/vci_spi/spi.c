@@ -84,7 +84,7 @@ struct soclib_spi_context_s
 
 static DEV_SPI_CTRL_CONFIG(soclib_spi_config)
 {
-  struct device_s *dev = scdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
   error_t err = 0;
 
@@ -215,7 +215,7 @@ static bool_t soclib_spi_transfer_tx(struct device_s *dev)
 
 static DEV_SPI_CTRL_SELECT(soclib_spi_select)
 {
-  struct device_s *dev = scdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
   error_t err = 0;
 
@@ -261,7 +261,7 @@ static DEV_SPI_CTRL_SELECT(soclib_spi_select)
 
 static DEV_SPI_CTRL_TRANSFER(soclib_spi_transfer)
 {
-  struct device_s *dev = scdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
   bool_t done = 1;
 
@@ -276,7 +276,7 @@ static DEV_SPI_CTRL_TRANSFER(soclib_spi_transfer)
       assert(tr->count > 0);
 
       pv->tr = tr;
-      tr->scdev = scdev;
+      tr->accessor = accessor;
 
       pv->fifo_lvl = 0;
       tr->err = 0;
@@ -296,7 +296,7 @@ static DEV_SPI_CTRL_TRANSFER(soclib_spi_transfer)
 
 static DEV_SPI_CTRL_QUEUE(soclib_spi_queue)
 {
-  struct device_s *dev = scdev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
   return &pv->queue;
 }
@@ -388,7 +388,7 @@ const struct driver_gpio_s  soclib_spi_gpio_drv =
 
 static DEV_ICU_GET_ENDPOINT(soclib_spi_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
 
   switch (type)
@@ -415,7 +415,7 @@ static DEV_ICU_GET_ENDPOINT(soclib_spi_icu_get_endpoint)
 
 static DEV_ICU_ENABLE_IRQ(soclib_spi_icu_enable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct soclib_spi_context_s *pv = dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sinks;
   bool_t done = 0;
@@ -468,8 +468,8 @@ static DEV_ICU_ENABLE_IRQ(soclib_spi_icu_enable_irq)
 
 static DEV_ICU_DISABLE_IRQ(soclib_spi_icu_disable_irq)
 {
-  struct device_s *dev = idev->dev;
-  struct soclib_spi_context_s *pv = idev->dev->drv_pv;
+  struct device_s *dev = accessor->dev;
+  struct soclib_spi_context_s *pv = accessor->dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sinks;
 
   LOCK_SPIN_IRQ(&dev->lock);

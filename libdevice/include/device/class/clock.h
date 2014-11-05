@@ -169,7 +169,7 @@ union dev_clock_config_value_u
 
 /** @see dev_clock_config_node_t */
 #define DEV_CLOCK_CONFIG_NODE(n) error_t (n) (                \
-    struct device_clock_s *ckdev,                            \
+    struct device_clock_s *accessor,                            \
     dev_clock_node_id_t   node_id,                           \
     dev_clock_node_id_t   parent_id,                         \
     union dev_clock_config_value_u *value                    \
@@ -194,7 +194,7 @@ typedef DEV_CLOCK_CONFIG_NODE(dev_clock_config_node_t);
 
 
 /** @see dev_clock_commit_t */
-#define DEV_CLOCK_COMMIT(n) error_t (n) (struct device_clock_s *ckdev)
+#define DEV_CLOCK_COMMIT(n) error_t (n) (struct device_clock_s *accessor)
 
 /** @This starts the configuration of the clocks based on parameters
     passed to previous calls to the @ref dev_clock_config_node_t
@@ -216,7 +216,7 @@ typedef DEV_CLOCK_COMMIT(dev_clock_commit_t);
 
 
 /** @see dev_clock_rollback_t */
-#define DEV_CLOCK_ROLLBACK(n) error_t (n) (struct device_clock_s *ckdev)
+#define DEV_CLOCK_ROLLBACK(n) error_t (n) (struct device_clock_s *accessor)
 
 /** @This discard all configuration changes requests made by calling
     the @ref dev_clock_config_node_t function. This can be used to
@@ -254,7 +254,7 @@ struct dev_clock_node_info_s
     updated according to what is actually available.
     @see dev_clock_node_info_s @see dev_clock_node_info_e */
 #define DEV_CLOCK_NODE_INFO(n) error_t (n) (                             \
-    struct device_clock_s *ckdev,                                       \
+    struct device_clock_s *accessor,                                       \
     dev_clock_node_id_t node_id,                                        \
     enum dev_clock_node_info_e *mask,                                   \
     struct dev_clock_node_info_s *info                                  \
@@ -304,7 +304,7 @@ error_t dev_clock_node_info(struct device_s *dev,
     The configuration id selects all resources with the corresponding
     bit set in the config mask. */
 config_depend(CONFIG_DEVICE_CLOCK)
-error_t dev_clock_config(struct device_clock_s *ckdev,
+error_t dev_clock_config(struct device_clock_s *accessor,
                          dev_clock_config_id_t config_id);
 
 /** @This function is called by the clock provider device driver when
@@ -316,7 +316,7 @@ error_t dev_clock_config(struct device_clock_s *ckdev,
     of the sinks.
  */
 config_depend(CONFIG_DEVICE_CLOCK)
-void dev_clock_src_changed(struct device_clock_s *ckdev,
+void dev_clock_src_changed(struct device_clock_s *accessor,
                            struct dev_clock_src_ep_s *src,
                            const struct dev_freq_s *freq);
 

@@ -215,11 +215,11 @@ static DEV_IRQ_EP_PROCESS(efm32_rtc_irq)
 static DEV_TIMER_CANCEL(efm32_rtc_cancel)
 {
 #ifdef CONFIG_DEVICE_IRQ
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
   error_t err = -ETIMEDOUT;
 
-  assert(rq->tdev == tdev);
+  assert(rq->accessor == accessor);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -265,11 +265,11 @@ static DEV_TIMER_CANCEL(efm32_rtc_cancel)
 static DEV_TIMER_REQUEST(efm32_rtc_request)
 {
 #ifdef CONFIG_DEVICE_IRQ
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  rq->tdev = tdev;
+  rq->accessor = accessor;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -311,7 +311,7 @@ static DEV_TIMER_REQUEST(efm32_rtc_request)
 
 static DEV_TIMER_START_STOP(efm32_rtc_state_start_stop)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
 
   error_t err = 0;
@@ -343,7 +343,7 @@ static DEV_TIMER_START_STOP(efm32_rtc_state_start_stop)
 
 static DEV_TIMER_GET_VALUE(efm32_rtc_get_value)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -358,7 +358,7 @@ static DEV_TIMER_GET_VALUE(efm32_rtc_get_value)
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_TIMER_GET_FREQ(efm32_rtc_get_freq)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
 
   *freq = pv->freq;
@@ -368,7 +368,7 @@ static DEV_TIMER_GET_FREQ(efm32_rtc_get_freq)
 
 static DEV_TIMER_RESOLUTION(efm32_rtc_resolution)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
 
   error_t err = 0;
 

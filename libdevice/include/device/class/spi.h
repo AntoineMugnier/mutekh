@@ -113,7 +113,7 @@ struct dev_spi_ctrl_config_s
 };
 
 /** @csee dev_spi_ctrl_config_t */
-#define DEV_SPI_CTRL_CONFIG(n) error_t (n) (struct device_spi_ctrl_s *scdev, \
+#define DEV_SPI_CTRL_CONFIG(n) error_t (n) (struct device_spi_ctrl_s *accessor, \
                                            struct dev_spi_ctrl_config_s *cfg)
 /**
    @This changes the configuration of the controller. If the
@@ -127,7 +127,7 @@ typedef DEV_SPI_CTRL_CONFIG(dev_spi_ctrl_config_t);
 
 /***************************************** select */
 
-#define DEV_SPI_CTRL_SELECT(n) error_t (n) (struct device_spi_ctrl_s *scdev, \
+#define DEV_SPI_CTRL_SELECT(n) error_t (n) (struct device_spi_ctrl_s *accessor, \
                                            enum dev_spi_cs_policy_e pc, \
                                            enum dev_spi_polarity_e pt,  \
                                            uint_fast8_t cs_id)
@@ -170,7 +170,7 @@ struct dev_spi_ctrl_transfer_s
   error_t                  err;
 
   /** Associated SPI controller device */
-  struct device_spi_ctrl_s *scdev;
+  struct device_spi_ctrl_s *accessor;
 
   /** Width in bytes of the data type used to store a single input SPI
       word. */
@@ -182,7 +182,7 @@ struct dev_spi_ctrl_transfer_s
 };
 
 /** @see dev_spi_ctrl_transfer_t */
-#define DEV_SPI_CTRL_TRANSFER(n) void (n) (struct device_spi_ctrl_s *scdev, \
+#define DEV_SPI_CTRL_TRANSFER(n) void (n) (struct device_spi_ctrl_s *accessor, \
                                           struct dev_spi_ctrl_transfer_s *tr)
 
 /**
@@ -193,7 +193,7 @@ struct dev_spi_ctrl_transfer_s
    same bus.
 
    All fields of the transfer object except @tt pvdata, @tt err and
-   @tt scdev must be properly initialized before calling this
+   @tt accessor must be properly initialized before calling this
    function. The @tt count field can not be 0. The transfer will fail
    with @tt -EBUSY if an other transfer is currently being processed.
 
@@ -207,7 +207,7 @@ typedef DEV_SPI_CTRL_TRANSFER(dev_spi_ctrl_transfer_t);
 
 /***************************************** queue getter */
 
-#define DEV_SPI_CTRL_QUEUE(n) struct dev_spi_ctrl_queue_s * (n)(struct device_spi_ctrl_s *scdev)
+#define DEV_SPI_CTRL_QUEUE(n) struct dev_spi_ctrl_queue_s * (n)(struct device_spi_ctrl_s *accessor)
 
 /**
    @This returns SPI request queue allocated in the SPI controller
@@ -254,7 +254,7 @@ struct dev_spi_ctrl_request_s
   dev_timer_value_t       sleep_before;
 #endif
 
-  struct device_spi_ctrl_s scdev;
+  struct device_spi_ctrl_s accessor;
   struct dev_spi_ctrl_queue_s *queue;
 
   /** Callback private data */
@@ -365,7 +365,7 @@ void dev_spi_queue_cleanup(struct dev_spi_ctrl_queue_s *q);
    with the same @ref dev_spi_endpoint_s::ep_id field is currently
    being processed.
 
-   @param scdev pointer to controller device accessor
+   @param accessor pointer to controller device accessor
    @param ep pointer to the SPI endpoint.
 */
 void dev_spi_rq_start(struct dev_spi_ctrl_request_s *rq);
@@ -375,7 +375,7 @@ void dev_spi_rq_start(struct dev_spi_ctrl_request_s *rq);
     driver initialization function to initialize a request stored in
     the driver private context.
 
-    The @ref dev_spi_ctrl_request_s::scdev accessor is initialized
+    The @ref dev_spi_ctrl_request_s::accessor accessor is initialized
     using the device pointed to by the @tt{'spi'} device resource
     entry of the slave.
 

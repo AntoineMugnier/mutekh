@@ -74,7 +74,7 @@ static CPU_INTERRUPT_HANDLER(arm_irq_handler)
 
 static DEV_ICU_GET_ENDPOINT(arm_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct arm_dev_private_s  *pv = dev->drv_pv;
 
   switch (type)
@@ -89,7 +89,7 @@ static DEV_ICU_GET_ENDPOINT(arm_icu_get_endpoint)
 
 static DEV_ICU_ENABLE_IRQ(arm_icu_enable_irq)
 {
-  __unused__ struct device_s *dev = idev->dev;
+  __unused__ struct device_s *dev = accessor->dev;
 
   // inputs are single wire, logical irq id must be 0
   if (irq_id > 0)
@@ -122,7 +122,7 @@ CPU_LOCAL struct device_s *cpu_device = NULL;
 
 static DEV_CPU_REG_INIT(arm_cpu_reg_init)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
@@ -184,7 +184,7 @@ static DEV_CPU_REG_INIT(arm_cpu_reg_init)
 #ifdef CONFIG_ARCH_SMP
 static DEV_CPU_GET_NODE(arm_cpu_get_node)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   struct arm_dev_private_s *pv = dev->drv_pv;
   return &pv->node;
 }
@@ -212,7 +212,7 @@ static DEV_TIMER_START_STOP(arm_timer_start_stop)
 
 static DEV_TIMER_GET_VALUE(arm_timer_get_value)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
 
 # ifdef CONFIG_ARCH_SMP
@@ -220,7 +220,7 @@ static DEV_TIMER_GET_VALUE(arm_timer_get_value)
     return -EIO;
 # endif
 
-  switch (tdev->number)
+  switch (accessor->number)
     {
     case 0: {          /* cycle counter */
       uint32_t ret;
@@ -245,7 +245,7 @@ static DEV_TIMER_RESOLUTION(arm_timer_resolution)
 {
   error_t err = 0;
 
-  switch (tdev->number)
+  switch (accessor->number)
     {
     case 0: {          /* cycle counter */
       if (res)

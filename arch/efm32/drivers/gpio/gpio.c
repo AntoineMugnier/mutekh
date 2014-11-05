@@ -299,7 +299,7 @@ static const struct driver_gpio_s efm32_gpio_gpio_drv =
 
 static DEV_IOMUX_SETUP(efm32_gpio_iomux_setup)
 {
-  struct device_s *dev = imdev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
 
   if (io_id >= GPIO_BANK_SIZE * 6)
@@ -335,7 +335,7 @@ static const struct driver_iomux_s efm32_gpio_iomux_drv =
 
 static DEV_ICU_GET_ENDPOINT(efm32_gpio_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
 
   switch (type)
@@ -374,7 +374,7 @@ static DEV_ICU_GET_ENDPOINT(efm32_gpio_icu_get_endpoint)
 
 static DEV_ICU_ENABLE_IRQ(efm32_gpio_icu_enable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct efm32_gpio_private_s *pv = dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sink;
 
@@ -450,7 +450,7 @@ static DEV_ICU_ENABLE_IRQ(efm32_gpio_icu_enable_irq)
 
 static DEV_ICU_DISABLE_IRQ(efm32_gpio_icu_disable_irq)
 {
-  struct efm32_gpio_private_s *pv = idev->dev->drv_pv;
+  struct efm32_gpio_private_s *pv = accessor->dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sink;
 
   uint_fast8_t line = icu_in_id % 16;

@@ -73,7 +73,7 @@ struct gaisler_irqmp_private_s
 
 static DEV_ICU_GET_ENDPOINT(gaisler_irqmp_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
 
   switch (type)
@@ -94,7 +94,7 @@ static DEV_ICU_GET_ENDPOINT(gaisler_irqmp_icu_get_endpoint)
 
 static DEV_ICU_ENABLE_IRQ(gaisler_irqmp_icu_enable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
   struct gaisler_irqmp_sink_s *xsink = (struct gaisler_irqmp_sink_s*)sink;
   uint_fast8_t icu_in_id = xsink - pv->sinks;
@@ -176,7 +176,7 @@ static DEV_ICU_ENABLE_IRQ(gaisler_irqmp_icu_enable_irq)
 
 static DEV_ICU_DISABLE_IRQ(gaisler_irqmp_icu_disable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct gaisler_irqmp_private_s *pv = dev->drv_pv;
   struct gaisler_irqmp_sink_s *xsink = (struct gaisler_irqmp_sink_s*)sink;
   uint_fast8_t icu_in_id = xsink - pv->sinks;

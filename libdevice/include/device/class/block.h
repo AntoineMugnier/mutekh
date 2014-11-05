@@ -84,7 +84,7 @@ struct dev_block_rq_s
   uint8_t			**data;  //< table of pointer to data blocks
   ssize_t			progress; //< number of processed blocks or negative error code
 
-  const struct device_block_s   *bdev;     //< associated block device
+  const struct device_block_s   *accessor;     //< associated block device
   dev_block_callback_t		*callback; //< callback function
   void				*pvdata;   //< pv data for callback
 
@@ -96,14 +96,14 @@ GCT_CONTAINER_FCNS(dev_blk_queue, inline, dev_blk_queue,
                    init, destroy, pushback, pop, isempty, head);
 
 /** Block device class request() function tempate. */
-#define DEV_BLOCK_REQUEST(n)	void (n) (struct device_block_s *bdev,	\
+#define DEV_BLOCK_REQUEST(n)	void (n) (struct device_block_s *accessor,	\
 					  struct dev_block_rq_s *rq)
 
 /**
    Block device request function type. Request count data blocks
    from the block device.
 
-   @param bdev pointer to block device descriptor
+   @param accessor pointer to block device descriptor
    @param rq pointer to request. @tt lba , @tt count , @tt data ,
           @tt progress and @tt callback field must be intialized.
 	  @tt progress field may not be zero.
@@ -121,13 +121,13 @@ struct dev_block_params_s
 };
 
 /** Block device class getparams() function tempate. */
-#define DEV_BLOCK_GETPARAMS(n)	const struct dev_block_params_s * (n) (struct device_block_s *bdev)
+#define DEV_BLOCK_GETPARAMS(n)	const struct dev_block_params_s * (n) (struct device_block_s *accessor)
 
 
 /**
    Block device getparams function type.
 
-   @param ndev pointer to block device descriptor
+   @param accessor pointer to block device descriptor
    @return pointer to block device parameters structure
    @see #DEV_BLOCK_GETPARAMS
 */
@@ -145,13 +145,13 @@ DRIVER_CLASS_TYPES(block,
     dev_block_spin_read() when scheduler is disabled.
 */
 config_depend(CONFIG_DEVICE_BLOCK)
-error_t dev_block_wait_read(struct device_block_s *bdev, uint8_t **data, dev_block_lba_t lba, size_t count);
+error_t dev_block_wait_read(struct device_block_s *accessor, uint8_t **data, dev_block_lba_t lba, size_t count);
 
 /** Synchronous helper read function. This function spin in a loop
     waiting for read operation to complete.
 */
 config_depend(CONFIG_DEVICE_BLOCK)
-error_t dev_block_spin_read(struct device_block_s *bdev, uint8_t **data, dev_block_lba_t lba, size_t count);
+error_t dev_block_spin_read(struct device_block_s *accessor, uint8_t **data, dev_block_lba_t lba, size_t count);
 
 /** Synchronous helper write function. This function use the scheduler
     api to put current context in wait state if no data is available
@@ -159,13 +159,13 @@ error_t dev_block_spin_read(struct device_block_s *bdev, uint8_t **data, dev_blo
     dev_block_spin_write() when scheduler is disabled.
 */
 config_depend(CONFIG_DEVICE_BLOCK)
-error_t dev_block_wait_write(struct device_block_s *bdev, uint8_t **data, dev_block_lba_t lba, size_t count);
+error_t dev_block_wait_write(struct device_block_s *accessor, uint8_t **data, dev_block_lba_t lba, size_t count);
 
 /** Synchronous helper write function. This function spin in a loop
     waiting for write operation to complete.
 */
 config_depend(CONFIG_DEVICE_BLOCK)
-error_t dev_block_spin_write(struct device_block_s *bdev, uint8_t **data, dev_block_lba_t lba, size_t count);
+error_t dev_block_spin_write(struct device_block_s *accessor, uint8_t **data, dev_block_lba_t lba, size_t count);
 
 
 #endif

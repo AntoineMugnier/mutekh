@@ -42,7 +42,7 @@ struct ipi_endpoint_s;
 struct dev_irq_ep_s;
 
 /** Interrupt controller device class @ref dev_icu_get_endpoint_t function template. */
-#define DEV_ICU_GET_ENDPOINT(n)	void * (n) (struct device_icu_s *idev, enum dev_irq_ep_type_e type, uint_fast8_t id)
+#define DEV_ICU_GET_ENDPOINT(n)	void * (n) (struct device_icu_s *accessor, enum dev_irq_ep_type_e type, uint_fast8_t id)
 
 /** @This gets interrupt end-point of given type with given id in
     range [0-N]. @This returns @tt NULL if out of range.
@@ -60,7 +60,7 @@ typedef DEV_ICU_GET_ENDPOINT(dev_icu_get_endpoint_t);
 
 
 /** Interrupt controller device class @ref dev_icu_enable_irq_t function template. */
-#define DEV_ICU_ENABLE_IRQ(n)	bool_t (n) (struct device_icu_s *idev, struct dev_irq_ep_s *sink, \
+#define DEV_ICU_ENABLE_IRQ(n)	bool_t (n) (struct device_icu_s *accessor, struct dev_irq_ep_s *sink, \
                                             uint_fast16_t irq_id, struct dev_irq_ep_s *src, struct dev_irq_ep_s *dev_ep)
 
 /** @This enables interrupt associated with given sink end-point and
@@ -75,7 +75,7 @@ typedef DEV_ICU_GET_ENDPOINT(dev_icu_get_endpoint_t);
     information about processor affinity for device interrupt
     handling.
 
-    @param idev a pointer to the interrupt controller device.
+    @param accessor a pointer to the interrupt controller device.
     @param sink a pointer to the local sink end-point associated with irq to enable.
     @param irq_id the logical id of the irq to enable.
     @param src a pointer to a remote source end-point which must be processed on interrupt, may be NULL.
@@ -110,7 +110,7 @@ typedef DEV_ICU_ENABLE_IRQ(dev_icu_enable_irq_t);
 
 
 /** Interrupt controller device class @ref dev_icu_disable_irq_t function template. */
-#define DEV_ICU_DISABLE_IRQ(n)	void (n) (struct device_icu_s *idev, struct dev_irq_ep_s *sink)
+#define DEV_ICU_DISABLE_IRQ(n)	void (n) (struct device_icu_s *accessor, struct dev_irq_ep_s *sink)
 
 /** @This disables interrupt associated with given sink
     end-point. This function is called when a sink end-point links

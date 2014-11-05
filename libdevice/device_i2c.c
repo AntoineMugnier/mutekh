@@ -41,19 +41,19 @@ GCT_CONTAINER_PROTOTYPES(dev_i2c_ctrl_queue, extern inline, dev_i2c_ctrl_queue,
 
 extern inline
 error_t dev_i2c_config(
-  struct device_i2c_s *i2cdev,
+  struct device_i2c_s *accessor,
   const struct dev_i2c_config_s *config);
 
 extern inline
 ssize_t dev_i2c_spin_request(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     struct dev_i2c_transfer_s *tr,
     uint8_t tr_count);
 
 extern inline
 ssize_t dev_i2c_spin_write_read(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     const uint8_t *wdata,
     size_t wsize,
@@ -62,14 +62,14 @@ ssize_t dev_i2c_spin_write_read(
 
 extern inline
 ssize_t dev_i2c_spin_read(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     uint8_t *data,
     size_t size);
 
 extern inline
 ssize_t dev_i2c_spin_write(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     const uint8_t *data,
     size_t size);
@@ -78,14 +78,14 @@ ssize_t dev_i2c_spin_write(
 
 extern inline
 ssize_t dev_i2c_wait_request(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     struct dev_i2c_transfer_s *tr,
     uint8_t tr_count);
 
 extern inline
 ssize_t dev_i2c_wait_write_read(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     const uint8_t *wdata,
     size_t wsize,
@@ -94,14 +94,14 @@ ssize_t dev_i2c_wait_write_read(
 
 extern inline
 ssize_t dev_i2c_wait_read(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     uint8_t *data,
     size_t size);
 
 extern inline
 ssize_t dev_i2c_wait_write(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     const uint8_t *data,
     size_t size);

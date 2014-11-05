@@ -119,14 +119,14 @@ struct lcd_req_s
 GCT_CONTAINER_FCNS(dev_lcd_queue, CLIST, ALWAYS_INLINE, dev_lcd_queue);
 
 /** Lcd device class request() function tempate. */
-#define DEV_LCD_REQUEST(n)	error_t  (n) (struct device_lcd_s *ldev, struct lcd_req_s *req)
+#define DEV_LCD_REQUEST(n)	error_t  (n) (struct device_lcd_s *accessor, struct lcd_req_s *req)
 
 typedef DEV_LCD_REQUEST(dev_lcd_request_t);
 
 
 
 /** Lcd device class getinfo() function tempate. */
-#define DEV_LCD_GETINFO(n)	const struct lcd_info_s * (n) (struct device_lcd_s *ldev)
+#define DEV_LCD_GETINFO(n)	const struct lcd_info_s * (n) (struct device_lcd_s *accessor)
 
 /**
     Lcd device class getinfo() function type.  Get a device
@@ -145,7 +145,7 @@ DRIVER_CLASS_TYPES(lcd,
                     );
 
 
-ssize_t dev_lcd_set_palette(struct device_lcd_s *ldev, struct lcd_pal_s *palette, size_t count);
+ssize_t dev_lcd_set_palette(struct device_lcd_s *accessor, struct lcd_pal_s *palette, size_t count);
 
 /**
     Lcd device class blit() function type.  Blit the rectangle from
@@ -163,7 +163,7 @@ ssize_t dev_lcd_set_palette(struct device_lcd_s *ldev, struct lcd_pal_s *palette
     @return error level
 */
 
-ssize_t dev_lcd_blit(struct device_lcd_s *ldev,
+ssize_t dev_lcd_blit(struct device_lcd_s *accessor,
 					 lcd_coord_t xmin,
 					 lcd_coord_t ymin,
 					 lcd_coord_t xmax,
@@ -178,7 +178,7 @@ ssize_t dev_lcd_blit(struct device_lcd_s *ldev,
     @param packing pixel color information packing
     @return error code
 */
-ssize_t dev_lcd_setmode(struct device_lcd_s *ldev,
+ssize_t dev_lcd_setmode(struct device_lcd_s *accessor,
 						uint_fast8_t bpp, uint_fast8_t packing,
 						uint_fast8_t flags);
 
@@ -190,7 +190,7 @@ ssize_t dev_lcd_setmode(struct device_lcd_s *ldev,
     @param contrast contrast value
     @return error code
 */
-ssize_t dev_lcd_setcontrast(struct device_lcd_s *ldev, uint_fast8_t contrast);
+ssize_t dev_lcd_setcontrast(struct device_lcd_s *accessor, uint_fast8_t contrast);
 
 #endif
 

@@ -71,7 +71,7 @@ static CPU_INTERRUPT_HANDLER(avr32_irq_handler)
 
 static DEV_ICU_GET_ENDPOINT(avr32_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct avr32_dev_private_s  *pv = dev->drv_pv;
 
   switch (type)
@@ -86,7 +86,7 @@ static DEV_ICU_GET_ENDPOINT(avr32_icu_get_endpoint)
 
 static DEV_ICU_ENABLE_IRQ(avr32_icu_enable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct avr32_dev_private_s  *pv = dev->drv_pv;
 
   // inputs are single wire, logical irq id must be 0
@@ -113,7 +113,7 @@ static DEV_ICU_ENABLE_IRQ(avr32_icu_enable_irq)
 /* Disable irq line. On SMP platforms, all lines must remain enabled. */
 static DEV_ICU_DISABLE_IRQ(avr32_icu_disable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct avr32_dev_private_s  *pv = dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sinks;
 
@@ -144,7 +144,7 @@ CPU_LOCAL struct device_s *cpu_device = NULL;
 
 static DEV_CPU_REG_INIT(avr32_cpu_reg_init)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct avr32_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP
@@ -167,7 +167,7 @@ static DEV_CPU_REG_INIT(avr32_cpu_reg_init)
 #ifdef CONFIG_ARCH_SMP
 static DEV_CPU_GET_NODE(avr32_cpu_get_node)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   struct avr32_dev_private_s *pv = dev->drv_pv;
   return &pv->node;
 }
@@ -195,7 +195,7 @@ static DEV_TIMER_START_STOP(avr32_timer_start_stop)
 
 static DEV_TIMER_GET_VALUE(avr32_timer_get_value)
 {
-  struct device_s *dev = tdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct avr32_dev_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_ARCH_SMP

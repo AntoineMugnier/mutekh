@@ -149,7 +149,7 @@ static void gaisler_apbuart_try_write(struct device_s *dev)
 
 DEV_CHAR_REQUEST(gaisler_apbuart_request)
 {
-  struct device_s               *dev = cdev->dev;
+  struct device_s               *dev = accessor->dev;
   struct gaisler_apbuart_context_s	*pv = dev->drv_pv;
 
   assert(rq->size);

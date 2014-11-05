@@ -64,7 +64,7 @@ static CPU_INTERRUPT_HANDLER(arm_irq_handler)
 
 static DEV_ICU_GET_ENDPOINT(arm_icu_get_endpoint)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct arm_dev_private_s  *pv = dev->drv_pv;
 
   switch (type)
@@ -79,7 +79,7 @@ static DEV_ICU_GET_ENDPOINT(arm_icu_get_endpoint)
 
 static DEV_ICU_ENABLE_IRQ(arm_icu_enable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct arm_dev_private_s  *pv = dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sinks;
 
@@ -96,7 +96,7 @@ static DEV_ICU_ENABLE_IRQ(arm_icu_enable_irq)
 
 static DEV_ICU_DISABLE_IRQ(arm_icu_disable_irq)
 {
-  struct device_s *dev = idev->dev;
+  struct device_s *dev = accessor->dev;
   struct arm_dev_private_s  *pv = dev->drv_pv;
   uint_fast8_t icu_in_id = sink - pv->sinks;
 
@@ -123,7 +123,7 @@ CPU_LOCAL struct device_s *cpu_device = NULL;
 
 static DEV_CPU_REG_INIT(arm_cpu_reg_init)
 {
-  struct device_s *dev = cdev->dev;
+  struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
 
   CPU_LOCAL_SET(cpu_device, dev);

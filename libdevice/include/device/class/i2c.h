@@ -239,12 +239,12 @@ STRUCT_INHERIT(dev_i2c_rq_s, dev_request_s, base);
 
 /** @see dev_i2c_config_t */
 #define DEV_I2C_CONFIG(n) error_t (n) (                            \
-    struct device_i2c_s *i2cdev,                                 \
+    struct device_i2c_s *accessor,                                 \
     const struct dev_i2c_config_s *config)
 
 /** @see dev_i2c_request_t */
 #define DEV_I2C_REQUEST(n) void (n) (                              \
-    const struct device_i2c_s *i2cdev,                            \
+    const struct device_i2c_s *accessor,                            \
     struct dev_i2c_rq_s *req)
 
 /** @This configures an I2C controller.
@@ -294,17 +294,17 @@ DRIVER_CLASS_TYPES(i2c,
  */
 inline
 error_t dev_i2c_config(
-  struct device_i2c_s *i2cdev,
+  struct device_i2c_s *accessor,
   const struct dev_i2c_config_s *config)
 {
-  return DEVICE_OP(i2cdev, config, config);
+  return DEVICE_OP(accessor, config, config);
 }
 
 
 
 
 inline ssize_t dev_i2c_spin_request(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     struct dev_i2c_transfer_s *tr,
     uint8_t tr_count)
@@ -319,7 +319,7 @@ inline ssize_t dev_i2c_spin_request(
 
     dev_request_spin_init(&req.base, &status);
 
-    DEVICE_OP(i2cdev, request, &req);
+    DEVICE_OP(accessor, request, &req);
 
     dev_request_spin_wait(&status);
 
@@ -346,7 +346,7 @@ inline ssize_t dev_i2c_spin_request(
 */
 config_depend(CONFIG_DEVICE_I2C)
 inline ssize_t dev_i2c_spin_write_read(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     const uint8_t *wdata,
     size_t wsize,
@@ -366,17 +366,17 @@ inline ssize_t dev_i2c_spin_write_read(
         },
     };
 
-    return dev_i2c_spin_request(i2cdev, saddr, tr, 2);
+    return dev_i2c_spin_request(accessor, saddr, tr, 2);
 }
 
 /** Synchronous helper read function.
 
-    Shortcut for @tt dev_i2c_spin_request(i2cdev, saddr, NULL, 0, data, size).
+    Shortcut for @tt dev_i2c_spin_request(accessor, saddr, NULL, 0, data, size).
 */
 config_depend(CONFIG_DEVICE_I2C)
 inline
 ssize_t dev_i2c_spin_read(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     uint8_t *data,
     size_t size)
@@ -389,17 +389,17 @@ ssize_t dev_i2c_spin_read(
         },
     };
 
-    return dev_i2c_spin_request(i2cdev, saddr, tr, 1);
+    return dev_i2c_spin_request(accessor, saddr, tr, 1);
 }
 
 /** Synchronous helper write function.
 
-    Shortcut for @tt dev_i2c_spin_request(i2cdev, saddr, data, size, NULL, 0).
+    Shortcut for @tt dev_i2c_spin_request(accessor, saddr, data, size, NULL, 0).
 */
 config_depend(CONFIG_DEVICE_I2C)
 inline
 ssize_t dev_i2c_spin_write(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     const uint8_t *data,
     size_t size)
@@ -412,13 +412,13 @@ ssize_t dev_i2c_spin_write(
         },
     };
 
-    return dev_i2c_spin_request(i2cdev, saddr, tr, 1);
+    return dev_i2c_spin_request(accessor, saddr, tr, 1);
 }
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
 
 inline ssize_t dev_i2c_wait_request(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     struct dev_i2c_transfer_s *tr,
     uint8_t tr_count)
@@ -433,7 +433,7 @@ inline ssize_t dev_i2c_wait_request(
 
     dev_request_sched_init(&req.base, &status);
 
-    DEVICE_OP(i2cdev, request, &req);
+    DEVICE_OP(accessor, request, &req);
 
     dev_request_sched_wait(&status);
 
@@ -459,7 +459,7 @@ inline ssize_t dev_i2c_wait_request(
 */
 config_depend(CONFIG_DEVICE_I2C)
 inline ssize_t dev_i2c_wait_write_read(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     const uint8_t *wdata,
     size_t wsize,
@@ -479,7 +479,7 @@ inline ssize_t dev_i2c_wait_write_read(
         },
     };
 
-    return dev_i2c_wait_request(i2cdev, saddr, tr, 2);
+    return dev_i2c_wait_request(accessor, saddr, tr, 2);
 }
 
 /** @this does a request from the i2c slave device targetted by @tt
@@ -498,7 +498,7 @@ inline ssize_t dev_i2c_wait_write_read(
 config_depend(CONFIG_DEVICE_I2C)
 inline
 ssize_t dev_i2c_wait_read(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     uint8_t *data,
     size_t size)
@@ -511,7 +511,7 @@ ssize_t dev_i2c_wait_read(
         },
     };
 
-    return dev_i2c_wait_request(i2cdev, saddr, tr, 1);
+    return dev_i2c_wait_request(accessor, saddr, tr, 1);
 }
 
 /** @this does a request from the i2c slave device targetted by @tt
@@ -530,7 +530,7 @@ ssize_t dev_i2c_wait_read(
 config_depend(CONFIG_DEVICE_I2C)
 inline
 ssize_t dev_i2c_wait_write(
-    const struct device_i2c_s *i2cdev,
+    const struct device_i2c_s *accessor,
     uint8_t saddr,
     const uint8_t *data,
     size_t size)
@@ -543,7 +543,7 @@ ssize_t dev_i2c_wait_write(
         },
     };
 
-    return dev_i2c_wait_request(i2cdev, saddr, tr, 1);
+    return dev_i2c_wait_request(accessor, saddr, tr, 1);
 }
 
 #endif

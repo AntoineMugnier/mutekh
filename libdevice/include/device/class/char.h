@@ -152,7 +152,7 @@ STRUCT_COMPOSE(dev_char_rq_s, base);
 /** Char device class @ref dev_char_request_t function template. */
 #define DEV_CHAR_REQUEST(n)                                             \
   void (n)(                                                            \
-    const struct device_char_s *cdev,                                  \
+    const struct device_char_s *accessor,                                  \
     struct dev_char_rq_s *rq)
 
 /**
@@ -169,7 +169,7 @@ DRIVER_CLASS_TYPES(char,
 
 
 inline ssize_t dev_char_spin_request(
-    const struct device_char_s *cdev,
+    const struct device_char_s *accessor,
     struct dev_char_rq_s *rq)
 {
     struct dev_request_status_s status;
@@ -177,7 +177,7 @@ inline ssize_t dev_char_spin_request(
 
     dev_request_spin_init(&rq->base, &status);
 
-    DEVICE_OP(cdev, request, rq);
+    DEVICE_OP(accessor, request, rq);
 
     dev_request_spin_wait(&status);
 
@@ -187,7 +187,7 @@ inline ssize_t dev_char_spin_request(
 #if defined(CONFIG_MUTEK_SCHEDULER)
 
 inline ssize_t dev_char_wait_request(
-    const struct device_char_s *cdev,
+    const struct device_char_s *accessor,
     struct dev_char_rq_s *rq)
 {
     struct dev_request_status_s status;
@@ -195,7 +195,7 @@ inline ssize_t dev_char_wait_request(
 
     dev_request_sched_init(&rq->base, &status);
 
-    DEVICE_OP(cdev, request, rq);
+    DEVICE_OP(accessor, request, rq);
 
     dev_request_sched_wait(&status);
 
@@ -211,7 +211,7 @@ inline ssize_t dev_char_wait_request(
 */
 config_depend(CONFIG_DEVICE_CHAR)
 inline ssize_t dev_char_wait_read(
-    const struct device_char_s *cdev,
+    const struct device_char_s *accessor,
     uint8_t *data, size_t size)
 {
     struct dev_char_rq_s rq =
@@ -221,7 +221,7 @@ inline ssize_t dev_char_wait_read(
         .size = size,
     };
 
-    return dev_char_wait_request(cdev, &rq);
+    return dev_char_wait_request(accessor, &rq);
 }
 
 /** Synchronous helper write function. This function uses the scheduler
@@ -233,7 +233,7 @@ inline ssize_t dev_char_wait_read(
 */
 config_depend(CONFIG_DEVICE_CHAR)
 inline ssize_t dev_char_wait_write(
-    const struct device_char_s *cdev,
+    const struct device_char_s *accessor,
     const uint8_t *data, size_t size)
 {
     struct dev_char_rq_s rq =
@@ -243,7 +243,7 @@ inline ssize_t dev_char_wait_write(
         .size = size,
     };
 
-    return dev_char_wait_request(cdev, &rq);
+    return dev_char_wait_request(accessor, &rq);
 }
 
 #endif
@@ -255,7 +255,7 @@ inline ssize_t dev_char_wait_write(
 */
 config_depend(CONFIG_DEVICE_CHAR)
 inline ssize_t dev_char_spin_read(
-    const struct device_char_s *cdev,
+    const struct device_char_s *accessor,
     uint8_t *data, size_t size)
 {
     struct dev_char_rq_s rq =
@@ -265,7 +265,7 @@ inline ssize_t dev_char_spin_read(
         .size = size,
     };
 
-    return dev_char_spin_request(cdev, &rq);
+    return dev_char_spin_request(accessor, &rq);
 }
 
 /** Synchronous helper write function. This function spins in a loop
@@ -275,7 +275,7 @@ inline ssize_t dev_char_spin_read(
 */
 config_depend(CONFIG_DEVICE_CHAR)
 inline ssize_t dev_char_spin_write(
-    const struct device_char_s *cdev,
+    const struct device_char_s *accessor,
     const uint8_t *data, size_t size)
 {
     struct dev_char_rq_s rq =
@@ -285,7 +285,7 @@ inline ssize_t dev_char_spin_write(
         .size = size,
     };
 
-    return dev_char_spin_request(cdev, &rq);
+    return dev_char_spin_request(accessor, &rq);
 }
 
 #endif

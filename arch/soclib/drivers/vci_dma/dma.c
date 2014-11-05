@@ -57,7 +57,7 @@ static void dma_soclib_start(struct device_s *dev, const struct dev_dma_rq_s *rq
 
 DEV_DMA_REQUEST(dma_soclib_request)
 {
-  struct device_s               *dev = ddev->dev;
+  struct device_s               *dev = accessor->dev;
   struct dma_soclib_context_s	*pv = dev->drv_pv;
 
   if (rq->flags)
@@ -67,7 +67,7 @@ DEV_DMA_REQUEST(dma_soclib_request)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  rq->ddev = ddev;
+  rq->accessor = accessor;
 
   bool_t empty = dev_dma_queue_isempty(&pv->queue);
 

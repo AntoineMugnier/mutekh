@@ -64,7 +64,7 @@ static error_t device_spi_ctrl_select(struct dev_spi_ctrl_request_s *rq,
                                       enum dev_spi_cs_policy_e pc)
 {
   if (rq->cs_ctrl)
-    return DEVICE_OP(&rq->scdev, select, pc, rq->cs_polarity, rq->cs_id);
+    return DEVICE_OP(&rq->accessor, select, pc, rq->cs_polarity, rq->cs_id);
 
   if (rq->cs_gpio)
     {
@@ -128,7 +128,7 @@ device_spi_ctrl_transfer(struct dev_spi_ctrl_request_s *rq, dev_timer_value_t t,
 
   if (q->config != &rq->config)
     {
-      if ((err = DEVICE_OP(&rq->scdev, config, &rq->config)))
+      if ((err = DEVICE_OP(&rq->accessor, config, &rq->config)))
         goto err;
       q->config = &rq->config;
     }
@@ -141,7 +141,7 @@ device_spi_ctrl_transfer(struct dev_spi_ctrl_request_s *rq, dev_timer_value_t t,
   tr->pvdata = rq;
   kroutine_init(&tr->kr, &device_spi_ctrl_transfer_end, KROUTINE_TRIGGER);
 
-  DEVICE_OP(&rq->scdev, transfer, tr);
+  DEVICE_OP(&rq->accessor, transfer, tr);
 
   lock_spin_irq(&q->lock);
   return DEVICE_SPI_WAIT_TRANSFER;
@@ -680,10 +680,10 @@ error_t dev_spi_request_init(struct device_s *slave,
 
   memset(rq, 0, sizeof(*rq));
 
-  if (device_get_param_dev_accessor(slave, "spi", &rq->scdev, DRIVER_CLASS_SPI_CTRL))
+  if (device_get_param_dev_accessor(slave, "spi", &rq->accessor, DRIVER_CLASS_SPI_CTRL))
     return -ENOENT;
 
-  rq->queue = DEVICE_OP(&rq->scdev, queue);
+  rq->queue = DEVICE_OP(&rq->accessor, queue);
 
   if (!device_get_param_uint(slave, "spi-cs-id", &x))
     {
@@ -696,7 +696,7 @@ error_t dev_spi_request_init(struct device_s *slave,
 
 void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq)
 {
-  device_put_accessor(&rq->scdev);
+  device_put_accessor(&rq->accessor);
   device_put_accessor(&rq->gpio);
 }
 

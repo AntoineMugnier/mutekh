@@ -44,16 +44,16 @@ struct ram_context_s
 
 static DEV_MEM_INFO(ram_info)
 {
-  struct device_s *dev = mdev->dev;
+  struct device_s *dev = accessor->dev;
   struct ram_context_s *pv = dev->drv_pv;
 
-  if (mdev->number >= pv->bank_count)
+  if (accessor->number >= pv->bank_count)
     return -ENOENT;
 
   if (band_index > 0)
     return -ENOENT;
 
-  const struct ram_bank_s *b = pv->bank + mdev->number;
+  const struct ram_bank_s *b = pv->bank + accessor->number;
 
   memset(info, 0, sizeof(*info));
   
@@ -70,18 +70,18 @@ static DEV_MEM_INFO(ram_info)
 
 static DEV_MEM_REQUEST(ram_request)
 {
-  struct device_s *dev = mdev->dev;
+  struct device_s *dev = accessor->dev;
   struct ram_context_s *pv = dev->drv_pv;
 
   rq->err = 0;
 
-  if (mdev->number >= pv->bank_count)
+  if (accessor->number >= pv->bank_count)
     rq->err = -ENOENT;
   else if (rq->band_mask & 0xfe)
     rq->err = -ENOENT;
   else if (rq->band_mask & 1)
     {
-      const struct ram_bank_s *b = pv->bank + mdev->number;
+      const struct ram_bank_s *b = pv->bank + accessor->number;
       dev_mem_mapped_op_helper(b->addr, 1, rq);
     }
 

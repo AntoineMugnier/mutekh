@@ -48,13 +48,13 @@ struct device_s;
 struct driver_s;
 struct device_cpu_s;
 
-#define DEV_CPU_REG_INIT(n)	void (n) (struct device_cpu_s *cdev)
+#define DEV_CPU_REG_INIT(n)	void (n) (struct device_cpu_s *accessor)
 
 /** @This executes processor registers initialization which can not be
     performed from an other processor on driver init. */
 typedef DEV_CPU_REG_INIT(dev_cpu_reg_init_t);
 
-#define DEV_CPU_GET_NODE(n)	struct cpu_tree_s * (n) (struct device_cpu_s *cdev)
+#define DEV_CPU_GET_NODE(n)	struct cpu_tree_s * (n) (struct device_cpu_s *accessor)
 
 /** @This returns pointer to the cpu tree node. @see cpu_tree_s. */
 typedef DEV_CPU_GET_NODE(dev_cpu_get_node_t);
