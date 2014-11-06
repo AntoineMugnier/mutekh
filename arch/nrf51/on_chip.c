@@ -65,3 +65,15 @@ DEV_DECLARE_STATIC(rtc1, "rtc1", 0, nrf51_rtc_drv,
                    );
 
 #endif
+
+#if defined(CONFIG_DRIVER_NRF51_NVMC) || defined(CONFIG_DRIVER_NRF51_PERSIST)
+
+DEV_DECLARE_STATIC(nvmc_dev, "nvmc", 0, nrf51_nvmc_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF51_NVMC),
+#if defined(CONFIG_DRIVER_NRF51_PERSIST)
+                   DEV_STATIC_RES_MEM(CONFIG_LOAD_ROM_RO_SIZE - CONFIG_DRIVER_NRF51_PERSIST_SIZE,
+                                      CONFIG_DRIVER_NRF51_PERSIST_SIZE)
+#endif
+                   );
+
+#endif

@@ -5,3 +5,6 @@ objs-$(CONFIG_DRIVER_NRF51_PRINTK) += printk.o
 objs-$(CONFIG_DRIVER_NRF51_SPI) += spi.o
 objs-$(CONFIG_DRIVER_NRF51_I2C) += i2c.o
 objs-$(CONFIG_DRIVER_NRF51_RTC) += rtc.o
+ifneq ($(CONFIG_DRIVER_NRF51_NVMC)$(CONFIG_DRIVER_NRF51_PERSIST),undefinedundefined)
+objs += nvmc.o
+endif
