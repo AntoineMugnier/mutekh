@@ -1254,8 +1254,7 @@ static DEV_INIT(efm32_recmu_init)
   for (i = 0; i < EFM32_CLOCK_EP_COUNT; i++)
     dev_clock_source_init(dev, &pv->src[i], &efm32_recmu_ep_use);
 
-  pv->lfclksel = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR +
-                                             EFM32_CMU_LFCLKSEL_ADDR));
+  pv->lfclksel = EFM32_CMU_LFCLKSEL_LFA(LFRCO) | EFM32_CMU_LFCLKSEL_LFB(LFRCO);
   pv->hfclk_parent = EFM32_CLOCK_HFRCO;
   pv->lfaclk_parent = EFM32_CLOCK_LFRCO;
   pv->lfbclk_parent = EFM32_CLOCK_LFRCO;
