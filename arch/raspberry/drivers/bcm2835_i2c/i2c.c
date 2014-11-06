@@ -21,15 +21,16 @@
 */
 
 /**
-    This driver can be used to generate most of I2C transfers. Transfers 
-    with a START and a STOP condition are always processed. Transfers
-    without START condition are not managed and return a -ENOTSUP error
-    code. Transfers without STOP condition are only processed if a timer
-    ressource is available in device tree. Otherwise -ENOTSUP is returned.
-*/
-    
-    
+    This driver can be used to generate most of I2C transfers. 
+    Transfers with a START and a STOP condition are always processed.
+    RESTART condition between a write and a read transfer can only be
+    generated if a timer ressource is available in device tree. Otherwise
+    -ENOTSUP is returned.
 
+    The BCM2835 I2C controller does not support clock stretching in the
+    middle of a byte exchange. Clock stretching is supported only after 
+    a acknoledge bit and before the fisrt bit of a new data byte.
+*/
 
 #include <hexo/types.h>
 #include <hexo/endian.h>
@@ -44,32 +45,40 @@
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/i2c.h>
-#include <device/class/iomux.h>
 #include <device/class/timer.h>
+#include <device/class/iomux.h>
 
 #include <arch/bcm2835_i2c.h>
 
-#define BCM2835_I2C_CORE_CLK         150000000
-#define BCM2835_I2C_IRQ_MASK         0x30E
-#define BCM2835_I2C_IRQ_CLR_ON_WRITE 0x302
+#define BCM2835_I2C_CORE_CLK          150000000
+#define BCM2835_I2C_IRQ_MASK          0x30E
+#define BCM2835_I2C_IRQ_CLR_ON_WRITE  0x302
 
 enum bcm2835_i2c_state_e
 {
   DEV_I2C_BCM2835_IDLE,
-  DEV_I2C_BCM2835_DATA,
-  DEV_I2C_BCM2835_ERROR,
+  DEV_I2C_BCM2835_START,
+  DEV_I2C_BCM2835_WRITE_DATA,
+  DEV_I2C_BCM2835_WAIT_END_WRITE,
+  DEV_I2C_BCM2835_READ_DATA,
   DEV_I2C_BCM2835_END,
 };
 
 struct bcm2835_i2c_context_s
 {
   uintptr_t addr;
-  /* current transfer */
-  struct dev_i2c_ctrl_transfer_s *tr;
   /* Interrupt end-point */
   struct dev_irq_ep_s irq_ep;
-  /* Initial buffer size */
-  size_t count;
+  /* request queue */
+  dev_request_queue_root_t queue;
+  /* global transfert size */
+  uint16_t glen;
+  /* local transfert size */
+  uint16_t len;
+  /* transfert count */
+  uint8_t cnt;
+  /* Restart */
+  bool_t restart;
   /* Fsm state */
   enum bcm2835_i2c_state_e state;
   /* Timer accessor */
@@ -78,10 +87,8 @@ struct bcm2835_i2c_context_s
   uint32_t timeout;
   /* timer request */
   struct dev_timer_rq_s rq;
-  bool_t data;
 };
 
-static void bcm2835_i2c_timer_rq(struct device_s *dev);
 
 static inline uint32_t bcm2835_i2c_get_rxd(struct bcm2835_i2c_context_s *pv)
 {
@@ -103,118 +110,237 @@ static inline uint32_t bcm2835_i2c_get_txe(struct bcm2835_i2c_context_s *pv)
 
 static inline void bcm2835_i2c_reset(struct bcm2835_i2c_context_s *pv)
 {
+   /* Disable controller */
+   cpu_mem_write_32(pv->addr + BCM2835_I2C_C_ADDR, endian_le32(0));  
+
    uint32_t x = BCM2835_I2C_C_I2CEN |
                 BCM2835_I2C_C_INTR  |
                 BCM2835_I2C_C_INTD  |
-                BCM2835_I2C_C_INTT  |
                 BCM2835_I2C_C_CLEAR;
    
    cpu_mem_write_32(pv->addr + BCM2835_I2C_C_ADDR, endian_le32(x));  
 }
 
-static inline void bcm2835_i2c_fifo_irq(struct bcm2835_i2c_context_s *pv, bool_t enable)
+static inline uint32_t bcm2835_i2c_get_dlen(struct bcm2835_i2c_context_s *pv)
+{
+  return endian_le32(cpu_mem_read_32(pv->addr + BCM2835_I2C_DLEN_ADDR));
+}
+
+static inline void bcm2835_i2c_txw_irq(struct bcm2835_i2c_context_s *pv, bool_t enable)
 {
    uint32_t x = cpu_mem_read_32(pv->addr + BCM2835_I2C_C_ADDR);
    if (enable)
-     x |= BCM2835_I2C_C_INTR | BCM2835_I2C_C_INTT;
+     x |= BCM2835_I2C_C_INTT;
    else  
-     x &= ~(BCM2835_I2C_C_INTR | BCM2835_I2C_C_INTT);
+     x &= ~BCM2835_I2C_C_INTT;
    cpu_mem_write_32(pv->addr + BCM2835_I2C_C_ADDR, endian_le32(x));  
 }
 
-static bool_t bcm2835_i2c_fsm(struct device_s *dev, bool_t stop)
+static void bcm2835_i2c_set_transfer_parameter(struct bcm2835_i2c_context_s *pv)
+{
+  struct dev_request_s *base = dev_request_queue_head(&pv->queue);
+  struct dev_i2c_rq_s *rq = dev_i2c_rq_s_cast(base);
+  struct dev_i2c_transfer_s *ctr = rq->transfer + pv->cnt;
+
+  enum dev_i2c_way_e type = ctr->type;
+
+  pv->len = ctr->size;
+  pv->glen = ctr->size;
+  pv->restart = 0;
+
+  uint8_t cnt = pv->cnt;
+
+  while (cnt < rq->transfer_count - 1)
+    {
+      cnt++;
+
+      struct dev_i2c_transfer_s *tr = rq->transfer + cnt;
+
+      if (tr->type != type)
+        {
+          pv->restart = 1;
+          break;
+        }
+      pv->glen += tr->size;
+    }
+
+}
+
+static bool_t bcm2835_i2c_valid_request(struct bcm2835_i2c_context_s *pv)
+{
+  struct dev_request_s *base = dev_request_queue_head(&pv->queue);
+  struct dev_i2c_rq_s *rq = dev_i2c_rq_s_cast(base);
+
+  for (uint8_t i = 1; i < rq->transfer_count; i++)
+    {
+      struct dev_i2c_transfer_s *tr = rq->transfer + i - 1;
+
+      if (((tr + 1)->type == DEV_I2C_WRITE) && (tr->type == DEV_I2C_READ))
+        return 0;
+       
+      if (((tr + 1)->type == DEV_I2C_READ) && (tr->type == DEV_I2C_WRITE))
+        {
+          /* Restart is only possible with a timer */
+          if (!device_check_accessor(&pv->timer))
+            return 0;
+        }
+    }
+
+  return 1; 
+}
+
+static void bcm2835_i2c_timer_rq(struct device_s *dev);
+
+static void bcm2835_i2c_fsm(struct device_s *dev, bool_t stop)
 {
   struct bcm2835_i2c_context_s   *pv  = dev->drv_pv;
   uint32_t x;
 
   while(1)
     {
+
+      struct dev_request_s *base = dev_request_queue_head(&pv->queue);
+      struct dev_i2c_rq_s *rq = dev_i2c_rq_s_cast(base);
+      struct dev_i2c_transfer_s *ctr = rq->transfer + pv->cnt;
+
+      if (rq == NULL)
+        return;
+
+    //  printk("state :%d\n", pv->state);
+
       switch (pv->state)
         {
           case DEV_I2C_BCM2835_IDLE: /* 0 */
+            rq->error = 0;
+            rq->error_transfer = 0;
+            rq->error_offset = 0;
+            pv->cnt = 0;
+            pv->state = DEV_I2C_BCM2835_START;
+            break;
+
+          case DEV_I2C_BCM2835_START: /* 1 */
+           
+            /* Get length and restart parameters */
+            bcm2835_i2c_set_transfer_parameter(pv);
+
+            pv->state = DEV_I2C_BCM2835_END;
+
+            x = pv->glen;
+
+            if (pv->glen)
+              {  
+                if (ctr->type == DEV_I2C_WRITE)
+                  {
+                    pv->state = DEV_I2C_BCM2835_WRITE_DATA;
+                    if (pv->restart)
+                      x += 1;
+                  }
+                else
+                  pv->state = DEV_I2C_BCM2835_READ_DATA;
+              }
 
             /* Set DLEN */
-            x = pv->tr->count;
-
-            if (!(pv->tr->op & DEV_I2C_OP_STOP))
-              x = pv->tr->count + 1;
             cpu_mem_write_32(pv->addr + BCM2835_I2C_DLEN_ADDR, endian_le32(x));
 
+            /* Address on 7 bits */
+            x = rq->saddr & 0x7F;
             /* Set address byte */
-            x = pv->tr->saddr & 0x7F;
             cpu_mem_write_32(pv->addr + BCM2835_I2C_A_ADDR, endian_le32(x));
-
-            /* Start transfer */
+            
             x = endian_le32(cpu_mem_read_32(pv->addr + BCM2835_I2C_C_ADDR));
             x |= BCM2835_I2C_C_ST | BCM2835_I2C_C_CLEAR;
-            if (pv->tr->dir == DEV_I2C_TR_READ) 
-              x |= BCM2835_I2C_C_READ;
-            else
+
+            if (ctr->type == DEV_I2C_WRITE || !pv->glen)
               x &= ~BCM2835_I2C_C_READ;
+            else
+              x |= BCM2835_I2C_C_READ;
+
+            /* Start transfer */
             cpu_mem_write_32(pv->addr + BCM2835_I2C_C_ADDR, endian_le32(x));
 
-            pv->state = DEV_I2C_BCM2835_DATA;
-            if (!pv->data)
-              {
-                pv->state = DEV_I2C_BCM2835_END;
-                /* Start timer if no stop */
-                if (!(pv->tr->op & DEV_I2C_OP_STOP))
-                  bcm2835_i2c_timer_rq(dev);
-              }
-            else
-              /* Enable fifo irq */
-              bcm2835_i2c_fifo_irq(pv, 1);
             break;
           
-          case DEV_I2C_BCM2835_DATA: /* 1 */
-            if (!pv->tr->count)
+          case DEV_I2C_BCM2835_WRITE_DATA: /* 2 */
+            if (!pv->glen)
               {
-                /* disable fifo irq */
-                bcm2835_i2c_fifo_irq(pv, 0);
+                pv->cnt++;
                 pv->state = DEV_I2C_BCM2835_END;
-                /* Start timer if no stop */
-                if (!(pv->tr->op & DEV_I2C_OP_STOP))
-                  bcm2835_i2c_timer_rq(dev);
+                /* disable TXW irq */
+                bcm2835_i2c_txw_irq(pv, 0);
+
+                if (pv->restart)
+                  pv->state = DEV_I2C_BCM2835_WAIT_END_WRITE;
+
                 break;
               }
-            if (pv->tr->dir == DEV_I2C_TR_READ)
-              {
-                if (!bcm2835_i2c_get_rxd(pv))
-                  return 0;
 
-                 x = cpu_mem_read_32(pv->addr + BCM2835_I2C_FIFO_ADDR);
-                 pv->tr->data[pv->count - pv->tr->count] = endian_le32(x);
-                 pv->tr->count--;
-              }
-            else
+            if (!pv->len)
               {
-                if (!bcm2835_i2c_get_txd(pv))
-                  return 0;
-
-                x = pv->tr->data[pv->count - pv->tr->count];
-                cpu_mem_write_32(pv->addr + BCM2835_I2C_FIFO_ADDR, endian_le32(x)); 
-                pv->tr->count--;
+                pv->cnt++;
+                ctr += 1;
+                pv->len = ctr->size;
               }
+
+              if (!bcm2835_i2c_get_txd(pv))
+              {
+                /* Enable TXW irq */
+                bcm2835_i2c_txw_irq(pv, 1);
+                return;
+              }
+              
+              x = ctr->data[ctr->size - pv->len];
+              cpu_mem_write_32(pv->addr + BCM2835_I2C_FIFO_ADDR, endian_le32(x)); 
+
+              pv->glen--;
+              pv->len--;
+
              break;
 
-          case DEV_I2C_BCM2835_ERROR: /* 2 */
-             bcm2835_i2c_reset(pv);
-             if (!(pv->tr->op & DEV_I2C_OP_STOP))
-             /* remove request from timer queue */
-               DEVICE_OP(&pv->timer, cancel, &pv->rq);
-             pv->tr = NULL;
-             return 1;
-          
-          case DEV_I2C_BCM2835_END: /* 3 */
-            if (!stop)
-              return 0;
-            
-            if (!(pv->tr->op & DEV_I2C_OP_STOP))
-            /* remove request from timer queue */
-              DEVICE_OP(&pv->timer, cancel, &pv->rq);
+          case DEV_I2C_BCM2835_WAIT_END_WRITE: /* 3 */
+             if (bcm2835_i2c_get_txe(pv))
+               /* Fifo empty */
+               {
+                 pv->state = DEV_I2C_BCM2835_START;
+                 break;
+               }
+             else
+               bcm2835_i2c_timer_rq(dev);
+             return;
 
-            pv->tr = NULL;
-            return 1;
+          case DEV_I2C_BCM2835_READ_DATA: /* 4 */
+            if (!pv->glen)
+              {
+                pv->state = DEV_I2C_BCM2835_END;
+                break;
+              }
+
+            if (!pv->len)
+              {
+                pv->cnt++;
+                ctr += 1;
+                pv->len = ctr->size;
+              }
+
+            if (!bcm2835_i2c_get_rxd(pv))
+              return;
+
+            x = cpu_mem_read_31(pv->addr + BCM2835_I2C_FIFO_ADDR);
+            ctr->data[ctr->size - pv->len] = endian_le32(x);
+
+            pv->glen--;
+            pv->len--;
+
+            break;
+
+          case DEV_I2C_BCM2835_END: /* 5 */
+            if (!stop)
+              return;
+            /* Reset controller */
+            bcm2835_i2c_reset(pv);
+            /* remove request from timer queue */
+            DEVICE_OP(&pv->timer, cancel, &pv->rq);
+            pv->state = DEV_I2C_BCM2835_IDLE;
+            return;
         } 
     }
 }
@@ -224,52 +350,33 @@ static KROUTINE_EXEC(bcm2835_i2c_timeout)
    struct dev_timer_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
    struct device_s *dev = rq->pvdata;
    struct bcm2835_i2c_context_s *pv  = dev->drv_pv;
-   struct dev_i2c_ctrl_transfer_s *tr = pv->tr;
  
-   bool_t done = 0;
-
    LOCK_SPIN_IRQ(&dev->lock);
 
-   if (pv->tr != NULL)
+   if (pv->state == DEV_I2C_BCM2835_WAIT_END_WRITE)
      {
        /* get status */
        uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + BCM2835_I2C_S_ADDR));
-       /* Reset interrupts flags */
-       cpu_mem_write_32(pv->addr + BCM2835_I2C_S_ADDR, endian_le32(x & BCM2835_I2C_IRQ_CLR_ON_WRITE));
- 
-       bool_t stop = bcm2835_i2c_get_txe(pv) >> BCM2835_I2C_S_TXE_SHIFT; 
-       
-       if (x & BCM2835_I2C_S_ERR)
-         {
-            tr->error = -EAGAIN;
-            pv->state = DEV_I2C_BCM2835_ERROR;
-         }
-       if ((x & BCM2835_I2C_S_CLKT) || !stop)
-         {
-            tr->error = -ETIMEDOUT;
-            pv->state = DEV_I2C_BCM2835_ERROR;
-         }
-       done = bcm2835_i2c_fsm(dev, stop);
+
+       if (!(x & (BCM2835_I2C_S_ERR | BCM2835_I2C_S_CLKT)))
+       /* No pending interrupt */
+         bcm2835_i2c_fsm(dev, 0);
      }
 
    LOCK_RELEASE_IRQ(&dev->lock);
- 
-   if (done)
-     kroutine_exec(&tr->kr, 0); 
 }
 
 static void bcm2835_i2c_timer_rq(struct device_s *dev)
 {
    struct bcm2835_i2c_context_s    *pv  = dev->drv_pv;
+   uint32_t len = bcm2835_i2c_get_dlen(pv);
 
-   kroutine_init(&pv->rq.kr, bcm2835_i2c_timeout, KROUTINE_IMMEDIATE);
+   pv->rq.delay = (len + 1) * pv->timeout;
 
-   pv->rq.delay = pv->timeout;
-   pv->rq.pvdata = dev;
+   if (DEVICE_OP(&pv->timer, request, &pv->rq) < 0)
+     printk("BCM2835 I2C driver: Error on timer post request\n");
 
-   DEVICE_OP(&pv->timer, request, &pv->rq);
 }
-
 
 /***************************************** interrupt */
 
@@ -277,11 +384,13 @@ static DEV_IRQ_EP_PROCESS(bcm2835_i2c_irq)
 {
   struct device_s                *dev = ep->dev;
   struct bcm2835_i2c_context_s   *pv  = dev->drv_pv;
-  struct dev_i2c_ctrl_transfer_s *tr = pv->tr;
 
-  bool_t done = 0;
+  bool_t stop = 0;
    
   lock_spin(&dev->lock);
+
+  struct dev_request_s *base = dev_request_queue_head(&pv->queue);
+  struct dev_i2c_rq_s *rq = dev_i2c_rq_s_cast(base);
 
   while (1)
     {
@@ -291,112 +400,96 @@ static DEV_IRQ_EP_PROCESS(bcm2835_i2c_irq)
       /* Reset interrupts flags */
       cpu_mem_write_32(pv->addr + BCM2835_I2C_S_ADDR, endian_le32(x & BCM2835_I2C_IRQ_CLR_ON_WRITE));
 
-      if (!(x & BCM2835_I2C_IRQ_MASK) || (pv->tr == NULL))
+      if (!(x & BCM2835_I2C_IRQ_MASK) && rq != NULL)
         break;
-    
-      bool_t stop = (x & BCM2835_I2C_S_DONE) >> BCM2835_I2C_S_DONE_SHIFT;
-      
-      if (x & BCM2835_I2C_S_ERR)
+
+      if (x & (BCM2835_I2C_S_DONE | BCM2835_I2C_S_ERR | BCM2835_I2C_S_CLKT))
+        stop = 1;
+
+      if (x & (BCM2835_I2C_S_ERR | BCM2835_I2C_S_CLKT))
         {
-           tr->error = -EAGAIN;
-           pv->state = DEV_I2C_BCM2835_ERROR;
-        }
-      if (x & BCM2835_I2C_S_CLKT)
-        {
-           tr->error = -ETIMEDOUT;
-           pv->state = DEV_I2C_BCM2835_ERROR;
+           rq->error = -EHOSTUNREACH;
+           rq->error_transfer = pv->cnt;
+           rq->error_offset = 0;
+           pv->state = DEV_I2C_BCM2835_END;
         }
 
-      done = bcm2835_i2c_fsm(dev, stop);
+      bcm2835_i2c_fsm(dev, stop);
 
-      if (done)
-        break;
+      if (stop)
+        {
+          dev_request_queue_pop(&pv->queue);
+          break;
+        }
+    }
+   
+  lock_release(&dev->lock);
+
+  if (stop)
+    {
+      kroutine_exec(&base->kr, 0);
+
+      lock_spin(&dev->lock); 
+
+      base = dev_request_queue_head(&pv->queue);
+      rq = dev_i2c_rq_s_cast(base);
+
+      if (rq != NULL && (pv->state == DEV_I2C_BCM2835_IDLE))
+        bcm2835_i2c_fsm(dev, 0);
+
+      lock_release(&dev->lock);
     }
 
-  lock_release(&dev->lock);
-   
-  if (done)
-    kroutine_exec(&tr->kr, 0); 
 }
 
 /***************************************** config */
 
-DEV_I2C_CTRL_CONFIG(bcm2835_i2c_config)
+DEV_I2C_CONFIG(bcm2835_i2c_config)
 {
   struct device_s               *dev = accessor->dev;
-  struct bcm2835_i2c_context_s    *pv  = dev->drv_pv;
-  error_t err = 0;
+  struct bcm2835_i2c_context_s  *pv  = dev->drv_pv;
 
-  LOCK_SPIN_IRQ(&dev->lock);
+  uint32_t div = (BCM2835_I2C_CORE_CLK/config->bit_rate);
+  cpu_mem_write_32(pv->addr + BCM2835_I2C_DIV_ADDR, endian_le32(div));
+  /* Byte period in us */
+  uint32_t bperiod = 8000000/config->bit_rate;
+  dev_timer_init_sec(&pv->timer, &pv->timeout, bperiod, 1000000);
 
-  if (pv->tr != NULL)
-    err = -EBUSY;
-  else
-    {
-       uint32_t div = 0;
-       /* Fifo size is 16 * 8 bits */
-       switch (cfg->bit_rate)
-         {
-           case DEV_I2C_SPEED_STD:
-             div = (BCM2835_I2C_CORE_CLK/100000);
-             dev_timer_init_sec(&pv->timer, &pv->timeout, 1920, 1000000);
-             break;
-           case DEV_I2C_SPEED_FAST:
-             div = (BCM2835_I2C_CORE_CLK/400000);
-             dev_timer_init_sec(&pv->timer, &pv->timeout, 480, 1000000);
-             break;
-           case DEV_I2C_SPEED_HIGH:
-             div = (BCM2835_I2C_CORE_CLK/1000000);
-             dev_timer_init_sec(&pv->timer, &pv->timeout, 192, 1000000);
-             break;
-         }
-       cpu_mem_write_32(pv->addr + BCM2835_I2C_DIV_ADDR, endian_le32(div));
-     }
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  return err;
+  return 0;
 }
 
-DEV_I2C_CTRL_TRANSFER(bcm2835_i2c_transfer)
+DEV_I2C_REQUEST(bcm2835_i2c_request)
 {
-//      printk("tr start : %d stop : %d\n", tr->op & 0x1, (tr->op & 0x2) >> 1);
   struct device_s                 *dev = accessor->dev;
   struct bcm2835_i2c_context_s    *pv  = dev->drv_pv;
-  bool_t done = 1;
 
-  assert(pv->tr == NULL);
+  assert(req->transfer_count);
+
+  if (!bcm2835_i2c_valid_request(pv))
+    {
+      req->error = -ENOTSUP;
+      kroutine_exec(&req->base.kr, 0);
+      return;
+    }
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (!(tr->op & DEV_I2C_OP_STOP) &&
-     (!device_check_accessor(&pv->timer) || (tr->dir == DEV_I2C_TR_READ)))
-    tr->error = -ENOTSUP;
-  else if (!(tr->op & DEV_I2C_OP_START))
-    tr->error = -ENOTSUP;
-  else
-    {
-      tr->error = 0;
-      pv->tr    = tr;
-      pv->count = tr->count;
-      pv->state = DEV_I2C_BCM2835_IDLE;
-      pv->data  = ((tr->data != NULL) && tr->count);
+  bool_t start = dev_request_queue_isempty(&pv->queue);
+ 
+  dev_request_queue_pushback(&pv->queue, &req->base);
 
-      done = bcm2835_i2c_fsm(dev, 0);
-    }
+  if (start)
+    bcm2835_i2c_fsm(dev, 0);
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  if (done)
-    kroutine_exec(&tr->kr, 0); 
-
 }
 
-static const struct driver_i2c_ctrl_s bcm2835_i2c_drv_cls =
+static const struct driver_i2c_s bcm2835_i2c_mst_drv =
 {
-  .class_       = DRIVER_CLASS_I2C_CTRL,
+  .class_       = DRIVER_CLASS_I2C,
   .f_config     = &bcm2835_i2c_config,
-  .f_transfer   = &bcm2835_i2c_transfer,
+  .f_request    = &bcm2835_i2c_request,
 };
 
 static DEV_INIT(bcm2835_i2c_init);
@@ -409,7 +502,7 @@ const struct driver_s bcm2835_i2c_drv =
   .f_cleanup    = &bcm2835_i2c_cleanup,
   .classes      =
   {
-    &bcm2835_i2c_drv_cls,
+    &bcm2835_i2c_mst_drv,
     0
   }
 };
@@ -427,21 +520,23 @@ static DEV_INIT(bcm2835_i2c_init)
   if (!pv)
     return -ENOMEM;
 
+  memset(pv, 0, sizeof(*pv));
+
   dev->drv_pv = pv;
 
-  /* retreive the device base address from device tree. */
+  /* retrieve device base address from device tree. */
   if(device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-  /* reset current transfer. */
-  pv->tr = NULL;
-  /* Set default timeout */
-  pv->timeout = 1920;
-
-  bcm2835_i2c_reset(pv);
+  dev_request_queue_init(&pv->queue);
 
   /* Set timeout to maximum value */
   cpu_mem_write_32(pv->addr + BCM2835_I2C_CLKT_ADDR, endian_le32(0xFFFF));
+
+  /* Clear interrupts */
+  cpu_mem_write_32(pv->addr + BCM2835_I2C_S_ADDR, endian_le32(BCM2835_I2C_IRQ_CLR_ON_WRITE));
+
+  bcm2835_i2c_reset(pv);
 
   /* setup pinmux */
   if (device_iomux_setup(dev, ",scl ,sda", NULL, NULL, NULL))
@@ -456,6 +551,14 @@ static DEV_INIT(bcm2835_i2c_init)
   /* Get accessor on timer */
   if (device_get_param_dev_accessor(dev, "i2c-timer", &pv->timer, DRIVER_CLASS_TIMER))
     device_init_accessor(&pv->timer);
+
+  pv->rq.pvdata = dev;
+  pv->rq.drvdata = NULL;
+  pv->rq.deadline = 0;
+  pv->rq.accessor = &pv->timer;
+  /* Set default timeout in counter cycle for 1 byte @ 100 KHz */
+  dev_timer_init_sec(&pv->timer, &pv->timeout, 80, 1000000);
+  kroutine_init(&pv->rq.kr, bcm2835_i2c_timeout, KROUTINE_IMMEDIATE);
 
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
@@ -477,6 +580,9 @@ static DEV_CLEANUP(bcm2835_i2c_cleanup)
 
   /* disable interrupt. */
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
+
+  /* Destroy request queue */
+  dev_request_queue_destroy(&pv->queue);
 
   /* deallocate private driver context. */
   mem_free(pv);
