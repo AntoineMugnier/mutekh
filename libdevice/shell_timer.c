@@ -29,11 +29,13 @@
 enum timer_opts_e
 {
   TIMER_OPT_DEV = 0x01,
+  TIMER_OPT_DELAY = 0x02,
 };
 
 struct termui_optctx_dev_timer_opts
 {
   struct device_timer_s timer;
+  dev_timer_delay_t delay;
 };
 
 static TERMUI_CON_ARGS_CLEANUP_PROTOTYPE(timer_opts_cleanup)
@@ -74,6 +76,19 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_stop)
   return 0;
 }
 
+static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_timer_sleep)
+{
+  struct termui_optctx_dev_timer_opts *c = ctx;
+
+  struct dev_timer_rq_s rq = {
+    .delay = c->delay
+  };
+
+  if (dev_timer_sleep(&c->timer, &rq))
+    return -EINVAL;
+  return 0;
+}
+
 static TERMUI_CON_OPT_DECL(dev_timer_opts) =
 {
   /* option 0, mask is 0x1 */
@@ -81,6 +96,9 @@ static TERMUI_CON_OPT_DECL(dev_timer_opts) =
                                     struct termui_optctx_dev_timer_opts, timer, DRIVER_CLASS_TIMER,
                                     TERMUI_CON_OPT_CONSTRAINTS(TIMER_OPT_DEV, 0)
                                     )
+
+  TERMUI_CON_OPT_INTEGER_ENTRY("-D", "--delay", TIMER_OPT_DELAY, struct termui_optctx_dev_timer_opts, delay, 1,
+                               TERMUI_CON_OPT_CONSTRAINTS(TIMER_OPT_DELAY, 0))
 
   TERMUI_CON_LIST_END
 };
@@ -95,6 +113,9 @@ TERMUI_CON_GROUP_DECL(dev_shell_timer_group) =
                    )
   TERMUI_CON_ENTRY(dev_shell_timer_stop, "stop",
 		   TERMUI_CON_OPTS_CTX(dev_timer_opts, TIMER_OPT_DEV, 0, timer_opts_cleanup)
+                   )
+  TERMUI_CON_ENTRY(dev_shell_timer_sleep, "sleep",
+		   TERMUI_CON_OPTS_CTX(dev_timer_opts, TIMER_OPT_DEV | TIMER_OPT_DELAY, 0, timer_opts_cleanup)
                    )
 
   TERMUI_CON_LIST_END
