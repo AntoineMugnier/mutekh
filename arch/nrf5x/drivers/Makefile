@@ -7,3 +7,4 @@ objs-$(CONFIG_DRIVER_NRF5X_SPI) += spi.o
 objs-$(CONFIG_DRIVER_NRF5X_I2C) += i2c.o
 objs-$(CONFIG_DRIVER_NRF5X_RTC) += rtc.o
 objs += nvmc.o
+objs-$(CONFIG_DRIVER_NRF5X_RAM) += ram.o
