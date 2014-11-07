@@ -103,3 +103,9 @@ DEV_DECLARE_STATIC(nvmc_dev, "nvmc", 0, nrf5x_nvmc_drv,
                    );
 
 #endif
+
+#ifdef CONFIG_DRIVER_NRF5X_RAM
+
+DEV_DECLARE_STATIC(ram_dev, "ram", 0, nrf5x_ram_drv);
+
+#endif
