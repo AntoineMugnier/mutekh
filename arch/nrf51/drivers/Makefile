@@ -8,3 +8,4 @@ objs-$(CONFIG_DRIVER_NRF51_RTC) += rtc.o
 ifneq ($(CONFIG_DRIVER_NRF51_NVMC)$(CONFIG_DRIVER_NRF51_PERSIST),undefinedundefined)
 objs += nvmc.o
 endif
+objs-$(CONFIG_DRIVER_NRF51_RAM) += ram.o

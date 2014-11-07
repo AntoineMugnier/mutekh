@@ -77,3 +77,9 @@ DEV_DECLARE_STATIC(nvmc_dev, "nvmc", 0, nrf51_nvmc_drv,
                    );
 
 #endif
+
+#ifdef CONFIG_DRIVER_NRF51_RAM
+
+DEV_DECLARE_STATIC(ram_dev, "ram", 0, nrf51_ram_drv);
+
+#endif
