@@ -59,6 +59,7 @@ enum driver_class_e
   DRIVER_CLASS_I2C,
   DRIVER_CLASS_MEM,
   DRIVER_CLASS_RFPACKET,
+  DRIVER_CLASS_CRYPTO,
   DRIVER_CLASS_CPU,
   DRIVER_CLASS_VALIO,
   /** First user defined device class id */

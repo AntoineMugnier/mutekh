@@ -507,6 +507,7 @@ extern TERMUI_CON_GROUP_DECL(dev_shell_clock_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_timer_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_mem_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_pwm_group);
+extern TERMUI_CON_GROUP_DECL(dev_shell_crypto_group);
 
 static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 {
@@ -528,6 +529,9 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 #endif
 #ifdef CONFIG_DEVICE_PWM
   TERMUI_CON_GROUP_ENTRY(dev_shell_pwm_group, "pwm")
+#endif
+#ifdef CONFIG_DEVICE_CRYPTO
+  TERMUI_CON_GROUP_ENTRY(dev_shell_crypto_group, "crypto")
 #endif
   TERMUI_CON_LIST_END
 };

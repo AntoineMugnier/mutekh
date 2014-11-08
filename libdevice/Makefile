@@ -12,7 +12,7 @@ doc_headers =  device/device.h  device/driver.h device/irq.h device/resources.h 
     device/class/valio.h
 
 enum_headers = device/driver.h device/device.h device/class/mem.h \
-			   device/class/pwm.h
+               device/class/pwm.h device/class/crypto.h
 
 objs = driver.o device.o resources.o init.o request.o
 
@@ -49,5 +49,10 @@ objs-$(CONFIG_DEVICE_SHELL) += shell.o
 ifeq ($(CONFIG_DEVICE_PWM), defined)
 objs += device_pwm.o
 objs-$(CONFIG_DEVICE_SHELL) += shell_pwm.o
+endif
+
+ifeq ($(CONFIG_DEVICE_CRYPTO), defined)
+objs += device_crypto.o
+objs-$(CONFIG_DEVICE_SHELL) += shell_crypto.o
 endif
 
