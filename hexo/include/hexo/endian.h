@@ -184,13 +184,13 @@ ALWAYS_INLINE uint64_t endian_swap64(uint64_t x)
 
 #if defined (CONFIG_CPU_NONALIGNED_ACCESS)
 /** @multiple @this loads from non aligned memory location with native endianess */
-# define endian_16_na_load(a)		({ *((uint16_t*)(a)); })
-# define endian_32_na_load(a)		({ *((uint32_t*)(a)); })
-# define endian_64_na_load(a)		({ *((uint64_t*)(a)); })
+# define endian_16_na_load(a)		({ void * __a = (void*)(a); *((uint16_t*)(__a)); })
+# define endian_32_na_load(a)		({ void * __a = (void*)(a); *((uint32_t*)(__a)); })
+# define endian_64_na_load(a)		({ void * __a = (void*)(a); *((uint64_t*)(__a)); })
 /** @multiple @this stores to non aligned memory location with native endianess */
-# define endian_16_na_store(a, x)	({ *((uint16_t*)(a)) = (x); })
-# define endian_32_na_store(a, x)	({ *((uint32_t*)(a)) = (x); })
-# define endian_64_na_store(a, x)	({ *((uint64_t*)(a)) = (x); })
+# define endian_16_na_store(a, x)	({ void * __a = (void*)(a); *((uint16_t*)(__a)) = (x); })
+# define endian_32_na_store(a, x)	({ void * __a = (void*)(a); *((uint32_t*)(__a)) = (x); })
+# define endian_64_na_store(a, x)	({ void * __a = (void*)(a); *((uint64_t*)(__a)) = (x); })
 
 /** @multiple @this allows direct non aligned word width memory access with endian permutation */
 # define endian_le16_na_load(a)		endian_le16(endian_16_na_load(a))
