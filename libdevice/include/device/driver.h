@@ -312,7 +312,19 @@ struct driver_##cl##_s                                                  \
 {                                                                       \
   enum driver_class_e class_;                                           \
   __VA_ARGS__                                                           \
-};
+};                                                                      \
+                                                                        \
+ALWAYS_INLINE struct device_##cl##_s *                                  \
+device_##cl##_s_cast(struct device_accessor_s *x)                       \
+{                                                                       \
+  return (void*)x;                                                      \
+}                                                                       \
+                                                                        \
+ALWAYS_INLINE struct device_accessor_s *                                \
+device_##cl##_s_base(struct device_##cl##_s *x)                         \
+{                                                                       \
+  return (void*)x;                                                      \
+}
 
 struct device_accessor_s
 {
