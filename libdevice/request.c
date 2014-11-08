@@ -23,7 +23,7 @@
 #include <device/request.h>
 
 GCT_CONTAINER_PROTOTYPES(dev_request_queue, extern inline, dev_request_queue,
-                        init, destroy, pushback, pop, isempty, head);
+                         init, destroy, pushback, pop, remove, isempty, head);
 
 GCT_CONTAINER_PROTOTYPES(dev_request_pqueue, extern inline, dev_request_pqueue,
                         init, destroy, pop, isempty, head);
@@ -49,6 +49,19 @@ dev_request_sched_init(struct dev_request_s *rq,
 
 extern inline void
 dev_request_sched_wait(struct dev_request_status_s *status);
+
+extern inline void
+dev_request_delayed_push(struct device_accessor_s *accessor,
+                         struct dev_request_dlqueue_s *d,
+                         struct dev_request_s *rq, bool_t critical);
+extern inline void
+dev_request_delayed_end(struct dev_request_dlqueue_s *q,
+                        struct dev_request_s *rq);
+
+#ifdef CONFIG_DEVICE_DELAYED_REQUEST
+/** @internal */
+extern inline KROUTINE_EXEC(dev_request_delayed_kr);
+#endif
 
 #endif
 
