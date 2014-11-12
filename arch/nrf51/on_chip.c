@@ -83,3 +83,12 @@ DEV_DECLARE_STATIC(nvmc_dev, "nvmc", 0, nrf51_nvmc_drv,
 DEV_DECLARE_STATIC(ram_dev, "ram", 0, nrf51_ram_drv);
 
 #endif
+
+#if defined(CONFIG_DRIVER_NRF51_TIMER)
+
+DEV_DECLARE_STATIC(timer1, "timer1", 0, nrf51_timer_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF51_TIMER1),
+                   DEV_STATIC_RES_IRQ(0, NRF51_TIMER1, 0, "/cpu")
+                   );
+
+#endif

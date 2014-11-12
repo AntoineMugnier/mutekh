@@ -9,3 +9,4 @@ ifneq ($(CONFIG_DRIVER_NRF51_NVMC)$(CONFIG_DRIVER_NRF51_PERSIST),undefinedundefi
 objs += nvmc.o
 endif
 objs-$(CONFIG_DRIVER_NRF51_RAM) += ram.o
+objs-$(CONFIG_DRIVER_NRF51_TIMER) += timer.o
