@@ -1,5 +1,5 @@
 #ifndef MUTEK_BUFFER_POOL_H_
-#define MUTEK_BUFFER_POOLg_H_
+#define MUTEK_BUFFER_POOL_H_
 
 #include <gct_platform.h>
 #include <gct_lock_hexo_lock_irq.h>
