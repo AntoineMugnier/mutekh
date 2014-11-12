@@ -78,6 +78,11 @@ Nordic's nRF51 and nRF52 architecture support.
     hardware-enforced requirement.
   @end section
 
+  @section Timer
+    Timers are implemented as Timer devices.  When driver is enabled,
+    Timer1 is instantiated as "timer1".
+  @end section
+
 @end section
 
 @section {Implementation notes}
