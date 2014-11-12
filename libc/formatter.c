@@ -679,7 +679,7 @@ static inline void hexdump_new_line(
     }
 
     memset(line+addrw+3, ' ', w*3);
-    memset(line+addrw+3+w*3+3, '.', w);
+    memset(line+addrw+3+w*3+3, ' ', w);
 }
 
 static inline void hexdump_put_char(
@@ -690,9 +690,7 @@ static inline void hexdump_put_char(
 
     line[addrw+3+index*3]   = hex_lower_base[val >> 4];
     line[addrw+3+index*3+1] = hex_lower_base[val & 0xf];
-
-    if ( (val >= 32) && (val < 128) )
-        line[addrw+3+w*3+3+index] = val;
+    line[addrw+3+w*3+3+index] = (val >= 32 && val < 128) ? val : '.';
 }
 
 void
@@ -734,7 +732,7 @@ formatter_hexdump(void *ctx, printf_output_func_t * const fcn,
                       
     }
 
-    if ((uintptr_t)data & (w - 1))
+    if (address & (w - 1))
         fcn(ctx, line, 0, line_width);
 }
 
