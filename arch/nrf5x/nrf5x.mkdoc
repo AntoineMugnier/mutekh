@@ -103,6 +103,11 @@ arch/nrf5x/peripheral.h
     hardware-enforced requirement.
   @end section
 
+  @section Timer
+    Timers are implemented as Timer devices.  When driver is enabled,
+    Timer1 is instantiated as "timer1".
+  @end section
+
 @end section
 
 @section {Implementation notes}
