@@ -94,3 +94,16 @@ DEV_DECLARE_STATIC(nvmc_dev, "nvmc", 0, nrf5x_nvmc_drv,
 DEV_DECLARE_STATIC(ram_dev, "ram", 0, nrf5x_ram_drv);
 
 #endif
+
+#if defined(CONFIG_DRIVER_NRF5X_TIMER)
+
+DEV_DECLARE_STATIC(timer1, "timer1", 0, nrf5x_timer_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_TIMER1),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_TIMER1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+#if defined(CONFIG_DEVICE_CLOCK)
+                   DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_HF, 0),
+#endif
+                   );
+
+#endif
