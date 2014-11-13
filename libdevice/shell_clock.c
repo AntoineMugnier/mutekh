@@ -70,6 +70,10 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_clock_freqs)
       if (err == -EINVAL)
         break;
 
+      if (!(mask & DEV_CLOCK_INFO_PARENT))
+        info.parent_id = -1;
+      if (!(mask & DEV_CLOCK_INFO_FREQ))
+        info.freq.num = info.freq.denom = 0;
       termui_con_printf(con, "  node %-3u : %16s @ %llu/%llu Hz, parent %u, %s\n",
         i, info.name, (uint64_t)info.freq.num,
         (uint64_t)info.freq.denom, info.parent_id, info.running ? "running" : "");
