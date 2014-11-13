@@ -32,11 +32,10 @@
 
 enum pwm_opt_e
 {
-  PWM_OPT_DEV  = 0x01,
-  PWM_OPT_MODE = 0x02,
-  PWM_OPT_FREQ = 0x04,
-  PWM_OPT_DUTY = 0x08,
-  PWM_OPT_POL  = 0x10
+  PWM_OPT_DEV  = 0x1,
+  PWM_OPT_FREQ = 0x2,
+  PWM_OPT_DUTY = 0x4,
+  PWM_OPT_POL  = 0x8
 };
 
 struct termui_optctx_dev_pwm_opts
@@ -48,8 +47,6 @@ struct termui_optctx_dev_pwm_opts
   {
     /* FIXME: should add selectable option in libtermui. */
     struct {
-      uint8_t __padding[offsetof(struct dev_pwm_config_s, freq)];
-
       /* pwm frequency. */
       struct dev_freq_s       freq;
 
@@ -58,9 +55,6 @@ struct termui_optctx_dev_pwm_opts
 
       /* pwm channel polarity. */
       enum dev_pwm_polarity_e pol;
-
-      /* pwm mode. */
-      enum dev_pwm_mode_e     mode;
     };
     struct dev_pwm_config_s   cfg;
   };
@@ -82,9 +76,6 @@ TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_config)
 
   data->cfg.mask = 0;
 
-  if (used & PWM_OPT_MODE)
-    data->cfg.mask |= DEV_PWM_MASK_MODE;
-
   if (used & PWM_OPT_FREQ)
     data->cfg.mask |= DEV_PWM_MASK_FREQ;
 
@@ -94,15 +85,19 @@ TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_config)
   if (used & PWM_OPT_POL)
     data->cfg.mask |= DEV_PWM_MASK_POL;
 
-  error_t err = dev_pwm_config(&data->pwm, &data->cfg);
+#if defined(CONFIG_MUTEK_SCHEDULER)
+  error_t err = dev_pwm_wait_config(&data->pwm, &data->cfg);
+#else
+  error_t err = dev_pwm_spin_config(&data->pwm, &data->cfg);
+#endif
+
   if (err)
     termui_con_printf(con, "error: failed to apply pwm configuration.\n");
 
   return err;
 }
 
-static
-TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_start)
+static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_start)
 {
   struct termui_optctx_dev_pwm_opts *data = ctx;
 
@@ -111,8 +106,7 @@ TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_start)
   return 0;
 }
 
-static
-TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_stop)
+static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_stop)
 {
   struct termui_optctx_dev_pwm_opts *data = ctx;
 
@@ -121,19 +115,12 @@ TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_pwm_stop)
   return 0;
 }
 
-static
-TERMUI_CON_OPT_DECL(dev_pwm_opts) =
+static TERMUI_CON_OPT_DECL(dev_pwm_opts) =
 {
   TERMUI_CON_OPT_DEV_ACCESSOR_ENTRY("-d", "--pwm-dev", PWM_OPT_DEV,
     struct termui_optctx_dev_pwm_opts, pwm, DRIVER_CLASS_PWM,
     TERMUI_CON_OPT_CONSTRAINTS(PWM_OPT_DEV, 0)
     TERMUI_CON_OPT_HELP("This option selects a pwm device", NULL)
-  )
-
-  TERMUI_CON_OPT_ENUM_ENTRY("-m", "--mode", PWM_OPT_MODE,
-    struct termui_optctx_dev_pwm_opts, mode, dev_pwm_mode_e,
-    TERMUI_CON_OPT_CONSTRAINTS(PWM_OPT_MODE, PWM_OPT_DEV)
-    TERMUI_CON_OPT_HELP("This option selects the configuration mode", NULL)
   )
 
   TERMUI_CON_OPT_FREQ_ENTRY("-f", "--freq", PWM_OPT_FREQ,
@@ -166,7 +153,7 @@ TERMUI_CON_GROUP_DECL(dev_shell_pwm_group) =
   TERMUI_CON_ENTRY(dev_shell_pwm_config, "config",
     TERMUI_CON_OPTS_CTX(dev_pwm_opts,
                         PWM_OPT_DEV,
-                        PWM_OPT_MODE | PWM_OPT_FREQ | PWM_OPT_DUTY | PWM_OPT_POL,
+                        PWM_OPT_FREQ | PWM_OPT_DUTY | PWM_OPT_POL,
                         pwm_opts_cleanup)
   )
 
