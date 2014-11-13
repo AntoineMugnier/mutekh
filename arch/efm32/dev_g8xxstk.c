@@ -141,13 +141,13 @@ DEV_DECLARE_STATIC(leuart0_dev, "uart0", 0, efm32_leuart_drv, &leuart0_dev_res);
 
 #ifdef CONFIG_DRIVER_EFM32_TIMER
 
-DEV_DECLARE_STATIC_RESOURCES(timer0_dev_res, 3,
-  DEV_STATIC_RES_MEM(0x40010000, 0x40010400),
-  DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_TIMER0, 0),
-  DEV_STATIC_RES_IRQ(0, EFM32_IRQ_TIMER0, 0, "/cpu"),
+DEV_DECLARE_STATIC_RESOURCES(timer1_dev_res, 3,
+  DEV_STATIC_RES_MEM(0x40010400, 0x40010800),
+  DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_TIMER1, 0),
+  DEV_STATIC_RES_IRQ(0, EFM32_IRQ_TIMER1, 0, "/cpu"),
 );
 
-DEV_DECLARE_STATIC(timer0_dev, "timer0", 0, efm32_timer_drv, &timer0_dev_res);
+DEV_DECLARE_STATIC(timer1_dev, "timer1", 0, efm32_timer_drv, &timer1_dev_res);
 
 #endif
 
@@ -195,6 +195,18 @@ DEV_DECLARE_STATIC(i2c_dev, "i2c0", 0, efm32_i2c_drv, &i2c_dev_res);
 
 #endif
 
+#ifdef CONFIG_DRIVER_EFM32_PWM
 
+DEV_DECLARE_STATIC_RESOURCES(pwm_dev_res, 6,
+  DEV_STATIC_RES_MEM(0x40010000, 0x40010400),
+  DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_TIMER0, 0),
+  DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
+  DEV_STATIC_RES_IOMUX("cc0", EFM32_LOC3, EFM32_PD1, 0, 0),
+  DEV_STATIC_RES_IOMUX("cc1", EFM32_LOC3, EFM32_PD2, 0, 0),
+  DEV_STATIC_RES_IOMUX("cc2", EFM32_LOC3, EFM32_PD3, 0, 0),
+);
 
+DEV_DECLARE_STATIC(pwm_dev, "pwm", 0, efm32_pwm_drv, &pwm_dev_res);
+
+#endif
 
