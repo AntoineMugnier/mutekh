@@ -177,20 +177,26 @@ static error_t dev_console_parse_fract(const char                 *arg,
 {
   char *ptr;
 
-  fract->num = strtoll(arg, &ptr, 0);
+  fract->num = strtoll(arg, &ptr, 10);
   if (fract->num == LONG_MAX || fract->num == LONG_MIN || arg == ptr)
     return -EINVAL;
 
-  fract->denom = *ptr == '\0' ? 1 : strtoll(ptr+1, NULL, 0);
+  if (*ptr == '\0')
+    fract->denom = 1;
+  else if ((*ptr == '/') || (*ptr == '.'))
+    fract->denom = strtoll(ptr+1, NULL, 10);
+  else
+    return -EINVAL;
+
   if (fract->denom == LONG_MAX || fract->denom == LONG_MIN)
     return -EINVAL;
 
-  if (fract->denom > 1)
+  if (*ptr == '.')
     {
-      uint32_t div;
+      uint32_t div = 1;
       size_t   divlen = strlen(ptr+1);
 
-      for (div = 1; divlen--; )
+      for (uint32_t i = 0; i < divlen; i++)
         div *= 10;
 
       fract->num   = fract->num * div + fract->denom;
