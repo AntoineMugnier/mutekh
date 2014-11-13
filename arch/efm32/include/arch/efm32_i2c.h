@@ -121,7 +121,7 @@
     #define EFM32_I2C_CTRL_CLTO_80PCC                0x00000002
     #define EFM32_I2C_CTRL_CLTO_160PCC               0x00000003
     #define EFM32_I2C_CTRL_CLTO_320PCC               0x00000004
-    #define EFM32_I2C_CTRL_CLTO_1024PCC0             0x00000005
+    #define EFM32_I2C_CTRL_CLTO_1024PCC              0x00000005
 
 #define EFM32_I2C_CMD_ADDR                           0x00000004
 #define EFM32_I2C_CMD_MASK                           0x000000ff
