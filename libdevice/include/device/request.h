@@ -218,7 +218,9 @@ dev_request_delayed_init(struct dev_request_dlqueue_s *q,
 ALWAYS_INLINE void
 dev_request_delayed_cleanup(struct dev_request_dlqueue_s *q)
 {
+#ifdef CONFIG_DEVICE_DELAYED_REQUEST
   dev_request_queue_destroy(&q->queue);
+#endif
 }
 
 /** @This removes the request from the queue, schedules execution of
