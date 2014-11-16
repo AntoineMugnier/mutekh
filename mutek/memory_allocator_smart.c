@@ -30,10 +30,6 @@
 #include <gct_platform.h>
 #include <gct/container_clist.h>
 
-#ifdef CONFIG_MUTEK_MEMALLOC_CRC
-#include <crypto/crc32.h>
-#endif
-
 #ifdef CONFIG_HEXO_MMU
 #include <hexo/mmu.h>
 #endif
@@ -194,17 +190,32 @@ size_t header_get_size( block_list_root_t *root, struct memory_allocator_header_
 
 /*@this set the header's crc field*/
 
+#ifdef CONFIG_MUTEK_MEMALLOC_CRC
+static uint32_t memory_allocator_crc(const uint8_t *data, size_t len)
+{
+  uint32_t crc = 0;
+
+  while (len--)
+    {
+      uint32_t w = *data++;
+      uint_fast8_t j;
+
+      for (j = 0; j < 8; j++)
+        {
+          crc = (crc >> 1) ^ (0x04c11db7 & ~(((w ^ crc) & 1) - 1));
+          w >>= 1;
+        }
+    }
+
+  return crc;
+}
+#endif
+
 static inline
 void memory_allocator_crc_set(struct memory_allocator_header_s *hdr)
 {
 #ifdef CONFIG_MUTEK_MEMALLOC_CRC
-
-  struct crypto_crc32_ctx_s crc;
-
-  crypto_crc32_init(&crc);
-  crypto_crc32_update(&crc, (uint8_t*)hdr, mem_hdr_size_no_crc );
-  crypto_crc32_get(&crc, (uint8_t*)&hdr->crc);
-
+  hdr->crc = memory_allocator_crc((uint8_t*)hdr, mem_hdr_size_no_crc);
 #endif
 }
 
@@ -215,16 +226,11 @@ void memory_allocator_crc_check(struct memory_allocator_header_s *hdr)
 {
 #ifdef CONFIG_MUTEK_MEMALLOC_CRC
 
-  struct crypto_crc32_ctx_s crc;
-  uint32_t result;
-
-  crypto_crc32_init(&crc);
-  crypto_crc32_update(&crc, (uint8_t*)hdr, mem_hdr_size_no_crc );
-  crypto_crc32_get(&crc, (uint8_t*)&result);
-
-  if ( memcmp(&hdr->crc, &result, 4) )
+  uint32_t crc = memory_allocator_crc((uint8_t*)hdr, mem_hdr_size_no_crc);
+  if (hdr->crc != crc)
     {
-      printk("Memory allocator error: Header crc check failed at %p\n", hdr);
+      printk("Memory allocator error: Header crc check failed at %p. Expected 0x%08x, got 0x%08x\n",
+             hdr, hdr->crc, crc);
       abort();
     }
 #endif
