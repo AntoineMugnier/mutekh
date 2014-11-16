@@ -9,4 +9,6 @@ lcd \
 mem \
 spi \
 timer \
-valio
+valio \
+crypto
+
