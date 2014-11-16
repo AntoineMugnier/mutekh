@@ -6,4 +6,5 @@ subdirs-$(CONFIG_DRIVER_EFM32_GPIO) += gpio
 subdirs-$(CONFIG_DRIVER_EFM32_I2C) += i2c
 subdirs-$(CONFIG_DRIVER_EFM32_RECMU) += recmu
 subdirs-$(CONFIG_DRIVER_EFM32_MSC) += msc
+subdirs-$(CONFIG_DRIVER_EFM32_AES) += aes
 subdirs-$(CONFIG_DRIVER_EFM32_PWM) += pwm

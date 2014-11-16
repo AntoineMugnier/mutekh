@@ -180,3 +180,15 @@ DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, efm32_gpio_drv, &gpio_dev_res);
 
 #endif
 
+
+#ifdef CONFIG_DRIVER_EFM32_AES
+
+DEV_DECLARE_STATIC_RESOURCES(aes_dev_res, 6,
+    DEV_STATIC_RES_MEM(0x400e0000, 0x400e0400),
+    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_AES, 0),
+    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_AES, 0, "/cpu"),
+    );
+
+DEV_DECLARE_STATIC(aes_dev, "aes", 0, efm32_aes_drv, &aes_dev_res);
+
+#endif
