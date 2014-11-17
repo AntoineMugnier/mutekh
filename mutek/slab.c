@@ -49,32 +49,28 @@ void slab_cleanup(struct slab_s *slab)
 void *slab_nolock_grow(struct slab_s *slab)
 {
     struct slab_group_s *group;
-    struct slab_unit_s *unit;
-    size_t i;
+    uintptr_t base, unit;
     size_t next_count;
+    size_t unit_bytes;
 
     next_count = slab->grow(slab, slab->current_count);
 
     if (next_count == 0)
         return NULL;
 
-    group = mem_alloc(sizeof(*group) + slab->item_size * next_count,
-                      slab->scope);
+    unit_bytes = slab->unit_size * next_count;
+    group = mem_alloc(sizeof(*group) + unit_bytes, slab->scope);
 
     if (!group)
         return NULL;
 
-    slab_group_list_wrlock(&slab->group_list);
-
     slab_group_list_nolock_push(&slab->group_list, group);
 
-    unit = (void *)(group + 1);
+    base = (uintptr_t)(group + 1);
 
-    for (i = 1; i < next_count; ++i)
-        slab_unit_list_push(&slab->unit_list, &unit[i]);
+    for (unit = slab->unit_size; unit < unit_bytes; unit += slab->unit_size)
+      slab_unit_list_push(&slab->unit_list, (struct slab_unit_s *)(base + unit));
 
-    slab_group_list_unlock(&slab->group_list);
-
-    return unit;
+    return (void *)base;
 }
 

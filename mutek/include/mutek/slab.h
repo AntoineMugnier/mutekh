@@ -39,6 +39,8 @@
 
 #include <gct/container_slist.h>
 
+#include "mem_alloc.h"
+
 /** @internal */
 #define GCT_CONTAINER_ALGO_slab_unit_list SLIST
 /** @internal */
@@ -62,6 +64,8 @@ struct slab_group_s {
 /** @internal */
 GCT_CONTAINER_TYPES(slab_group_list, struct slab_group_s *, entry);
 
+struct slab_s;
+
 /**
    @this defines the grow policy function prototype for a slab.
 
@@ -80,7 +84,7 @@ struct slab_s {
     slab_unit_list_root_t unit_list;
     size_t unit_size;
     size_t current_count;
-    slab_grow_func_t grow;
+    slab_grow_func_t *grow;
     enum mem_scope_e scope;
 };
 
@@ -89,6 +93,9 @@ GCT_CONTAINER_FCNS(slab_unit_list, static inline, slab_unit_list,
 
 GCT_CONTAINER_FCNS(slab_group_list, static inline, slab_group_list,
                    init, destroy, push, pop, wrlock, unlock);
+
+GCT_CONTAINER_NOLOCK_FCNS(slab_group_list, static inline, slab_group_list_nolock,
+                          push);
 
 /**
    @this initializes a new slab.
@@ -101,7 +108,7 @@ GCT_CONTAINER_FCNS(slab_group_list, static inline, slab_group_list,
 void slab_init(
   struct slab_s *slab,
   size_t unit_size,
-  slab_allocator_grow_func_t grow,
+  slab_grow_func_t *grow,
   enum mem_scope_e scope);
 
 /**
