@@ -214,9 +214,9 @@ void main()
 
   struct dev_uart_config_s uart_cfg =
     {
-      .baudrate    = DEV_UART_BAUD_115200,
-      .data_bits   = DEV_UART_DATA_8_BITS,
-      .stop_bits   = DEV_UART_STOP_1_BIT,
+      .baudrate    = 115200,
+      .data_bits   = 8,
+      .stop_bits   = 1,
       .flow_ctrl   = 0,
       .half_duplex = 0,
     };
