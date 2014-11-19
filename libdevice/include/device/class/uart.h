@@ -47,22 +47,6 @@
 #include <device/driver.h>
 #include <device/resources.h>
 
-/** UART data bits modes. */
-enum dev_uart_data_bits_e
-{
-  DEV_UART_DATA_6_BITS,
-  DEV_UART_DATA_7_BITS,
-  DEV_UART_DATA_8_BITS,
-  DEV_UART_DATA_9_BITS,
-};
-
-/** UART stop bits. */
-enum dev_uart_stop_bits_e
-{
-  DEV_UART_STOP_1_BIT,
-  DEV_UART_STOP_2_BITS,
-};
-
 /** UART parity. */
 enum dev_uart_parity_e
 {
@@ -78,19 +62,19 @@ struct dev_uart_config_s
   uint32_t baudrate;
 
   /** data bits. */
-  enum dev_uart_data_bits_e data_bits;
+  uint8_t data_bits;
 
   /** stop bits. */
-  enum dev_uart_stop_bits_e stop_bits;
-
-  /** parity. */
-  enum dev_uart_parity_e    parity;
+  uint8_t stop_bits;
 
   /** flow control. */
   bool_t                    flow_ctrl;
 
   /** half duplex. */
   bool_t                    half_duplex;
+
+  /** parity. */
+  enum dev_uart_parity_e    parity;
 };
 
 
@@ -130,9 +114,9 @@ error_t dev_uart_config(struct device_uart_s     *accessor,
 ALWAYS_INLINE
 error_t device_add_res_uart(struct device_s           *dev,
                             uint32_t                  baudrate,
-                            enum dev_uart_data_bits_e data_bits,
-                            enum dev_uart_stop_bits_e stop_bits,
+                            uint8_t                   data_bits,
                             enum dev_uart_parity_e    parity,
+                            uint8_t                   stop_bits,
                             bool_t                    flow_ctrl,
                             bool_t                    half_duplex)
 {
@@ -163,7 +147,7 @@ error_t device_add_res_uart(struct device_s           *dev,
     @see device_res_add_uart @see #DEV_DECLARE_STATIC_RESOURCES
  */
 # define DEV_STATIC_RES_UART(                               \
-    __baudrate, __data, __stop, __parity, __flow, __duplex) \
+    __baudrate, __data, __parity, __stop, __flow, __duplex) \
   {                                                         \
     .type = DEV_RES_UART,                                   \
     .u    = { .uart = {                                     \
@@ -179,7 +163,7 @@ error_t device_add_res_uart(struct device_s           *dev,
 #else
 
 # define DEV_STATIC_RES_UART(                               \
-    __baudrate, __data, __stop, __parity, __flow, __duplex) \
+    __baudrate, __data, __parity, __stop, __flow, __duplex) \
   {                                                         \
     .type = DEV_RES_UNUSED,                                 \
   }
