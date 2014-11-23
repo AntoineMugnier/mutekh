@@ -34,11 +34,6 @@
 # include <mutek/scheduler.h>
 #endif
 
-#if defined(CONFIG_DEVICE_I2C_REQUEST)
-GCT_CONTAINER_PROTOTYPES(dev_i2c_ctrl_queue, extern inline, dev_i2c_ctrl_queue,
-                   init, destroy, pop, remove, push, push_back, isempty);
-#endif
-
 extern inline
 error_t dev_i2c_config(
   struct device_i2c_s *accessor,
