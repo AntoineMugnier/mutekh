@@ -536,7 +536,7 @@ static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q)
             case DEVICE_SPI_WAIT_TIMER:
               q->running = 0;
               lock_release_irq(&q->lock);
-              if (!kroutine_trigger(&q->timer_rq.kr, 0))
+              if (!kroutine_trigger(&q->timer_rq.rq.kr, 0, KROUTINE_IMMEDIATE))
                 return;
               lock_spin_irq(&q->lock);
               q->running = 1;
@@ -545,7 +545,7 @@ static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q)
             case DEVICE_SPI_WAIT_TRANSFER:
               q->running = 0;
               lock_release_irq(&q->lock);
-              if (!kroutine_trigger(&q->transfer.kr, 0))
+              if (!kroutine_trigger(&q->transfer.kr, 0, KROUTINE_IMMEDIATE))
                 return;
               lock_spin_irq(&q->lock);
               q->running = 1;
