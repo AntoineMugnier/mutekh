@@ -229,7 +229,7 @@ enum dev_use_op_e
 struct device_accessor_s;
 
 /** Common device class use() function template. */
-#define DEV_USE(n) error_t (n) (struct device_accessor_s *acc,  \
+#define DEV_USE(n) error_t (n) (struct device_accessor_s *accessor,  \
                                 enum dev_use_op_e op)
 
 /**
@@ -327,17 +327,17 @@ device_##cl##_s_base(struct device_##cl##_s *x)                         \
   return (void*)x;                                                      \
 }
 
-struct device_accessor_s
-{
-  struct device_s *dev;
-  const void *api;
-  uint_fast8_t number;
-};
-
 struct driver_class_s
 {
   enum driver_class_e class_;
   void *functions[];
+};
+
+struct device_accessor_s
+{
+  struct device_s *dev;
+  const struct driver_class_s *api;
+  uint_fast8_t number;
 };
 
 /**
