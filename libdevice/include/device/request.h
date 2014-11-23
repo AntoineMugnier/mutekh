@@ -33,7 +33,7 @@
 
 #include <gct_platform.h>
 #include <gct/container_clist.h>
-#include <gct/container_avl.h>
+#include <gct/container_avl_p.h>
 #include <device/device.h>
 #include <device/driver.h>
 
@@ -50,7 +50,7 @@
 #define GCT_CONTAINER_ALGO_dev_request_queue CLIST
 
 /* Container algorithm used for priority queue of device requests */
-#define GCT_CONTAINER_ALGO_dev_request_pqueue AVL
+#define GCT_CONTAINER_ALGO_dev_request_pqueue AVL_P
 
 struct dev_request_s
 {
@@ -79,7 +79,7 @@ GCT_CONTAINER_FCNS(dev_request_queue, inline, dev_request_queue,
 
 GCT_CONTAINER_TYPES(dev_request_pqueue, struct dev_request_s *, pqueue_entry);
 GCT_CONTAINER_FCNS(dev_request_pqueue, inline, dev_request_pqueue,
-                   init, destroy, pop, isempty, head);
+                   init, destroy, pop, isempty, head, prev, next);
 
 struct dev_request_status_s
 {
@@ -218,7 +218,9 @@ dev_request_delayed_init(struct dev_request_dlqueue_s *q,
 ALWAYS_INLINE void
 dev_request_delayed_cleanup(struct dev_request_dlqueue_s *q)
 {
+#ifdef CONFIG_DEVICE_DELAYED_REQUEST
   dev_request_queue_destroy(&q->queue);
+#endif
 }
 
 /** @This removes the request from the queue, schedules execution of

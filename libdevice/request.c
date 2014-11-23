@@ -26,7 +26,7 @@ GCT_CONTAINER_PROTOTYPES(dev_request_queue, extern inline, dev_request_queue,
                          init, destroy, pushback, pop, remove, isempty, head);
 
 GCT_CONTAINER_PROTOTYPES(dev_request_pqueue, extern inline, dev_request_pqueue,
-                        init, destroy, pop, isempty, head);
+                         init, destroy, pop, isempty, head, prev, next);
 
 extern inline KROUTINE_EXEC(dev_request_spin_done);
 
