@@ -36,6 +36,7 @@
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
 #include <device/class/timer.h>
+#include <device/class/clock.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
@@ -70,6 +71,9 @@ struct x86_dev_private_s
 #endif
 
   struct cpu_tree_s node;
+#ifdef CONFIG_DEVICE_CLOCK
+  struct dev_clock_sink_ep_s clk_ep;
+#endif
 };
 
 cpu_id_t cpu_id(void)
@@ -268,6 +272,17 @@ static const struct driver_timer_s  x86_timer_drv =
 static DEV_CLEANUP(x86_cleanup);
 static DEV_INIT(x86_init);
 
+#ifdef CONFIG_DEVICE_CLOCK
+static DEV_CLOCK_SINK_CHANGED(x86_clk_changed)
+{
+  struct device_s *dev = ep->dev;
+  struct x86_dev_private_s *pv = dev->drv_pv;
+  LOCK_SPIN_IRQ(&dev->lock);
+  pv->freq = *freq;
+  LOCK_RELEASE_IRQ(&dev->lock);
+}
+#endif
+
 static const struct dev_enum_ident_s  x86_ids[] =
 {
 #ifdef CONFIG_LIBFDT
@@ -321,6 +336,21 @@ static DEV_INIT(x86_init)
   if (cpu_tree_node_init(&pv->node, id, dev))
     goto err_pv;
 
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_init(dev, &pv->clk_ep, &x86_clk_changed);
+
+  struct dev_clock_link_info_s ckinfo;
+  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
+    goto err_node;
+  pv->freq = ckinfo.freq;
+
+  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
+    goto err_clku;
+#else
+  if (device_get_res_freq(dev, &pv->freq, 0))
+    pv->freq = DEV_FREQ_INVALID;
+#endif
+
 #ifdef CONFIG_ARCH_SMP
   extern __ldscript_symbol_t __cpu_data_start, __cpu_data_end;
 
@@ -328,7 +358,7 @@ static DEV_INIT(x86_init)
                                       (char*)&__cpu_data_end - (char*)&__cpu_data_start,
                                       CPU_X86_SEG_DATA_UP_RW);
   if (!pv->cls_seg)
-    goto err_node;
+    goto err_clk;
 #endif
 
 #ifdef CONFIG_HEXO_USERMODE
@@ -378,6 +408,14 @@ static DEV_INIT(x86_init)
 #ifdef CONFIG_ARCH_SMP
   cpu_x86_segdesc_free(pv->cls_seg);
 #endif
+ err_clk:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+#endif
+ err_clku:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+#endif
  err_node:
   cpu_tree_node_cleanup(&pv->node);
  err_pv:
@@ -406,6 +444,11 @@ static DEV_CLEANUP(x86_cleanup)
 
 #ifdef CONFIG_ARCH_SMP
   cpu_x86_segdesc_free(pv->cls_seg);
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
 #endif
 
   cpu_tree_remove(&pv->node);

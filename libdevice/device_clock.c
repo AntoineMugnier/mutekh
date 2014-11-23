@@ -36,7 +36,7 @@ error_t dev_clock_sink_hold(struct dev_clock_sink_ep_s *sink,
   LOCK_SPIN_IRQ(&src->dev->lock);
 
   src->use_count++;
-  if (!src->running)
+  if (!(src->flags & DEV_CLOCK_SRC_EP_RUNNING))
     err = src->f_use(src, ready, DEV_CLOCK_SRC_USE_HOLD);
 
   LOCK_RELEASE_IRQ(&src->dev->lock);
@@ -95,6 +95,7 @@ error_t dev_clock_config(struct device_clock_s *accessor,
           union dev_clock_config_value_u val;
           val.freq.num = r->u.clock_osc.num;
           val.freq.denom = r->u.clock_osc.denom;
+          val.acc = DEV_FREQ_ACC_INVALID;
 
           err = DEVICE_OP(accessor, config_node, r->u.clock_osc.node,
                           DEV_CLOCK_INVALID_NODE_ID, &val);
@@ -122,22 +123,22 @@ error_t dev_clock_config(struct device_clock_s *accessor,
 
 void dev_clock_src_changed(struct device_clock_s *accessor,
                            struct dev_clock_src_ep_s *src,
-                           const struct dev_freq_s *freq)
+                           const struct dev_freq_s *freq,
+                           const struct dev_freq_accuracy_s *acc)
 {
   struct dev_clock_sink_ep_s *s = src->sink_head;
 
   while (s != NULL)
     {
       if (s->f_changed != NULL)
-        s->f_changed(s, freq);
+        s->f_changed(s, freq, acc);
       s = s->next;
     }
 }
 
 error_t dev_clock_sink_link(struct device_s *dev,
                             struct dev_clock_sink_ep_s *sinks,
-                            struct dev_freq_s *freqs,
-                            dev_clock_node_id_t *src_id,
+                            struct dev_clock_link_info_s *lkinfo,
                             dev_clock_node_id_t first_sink,
                             dev_clock_node_id_t last_sink)
 {
@@ -164,6 +165,7 @@ error_t dev_clock_sink_link(struct device_s *dev,
       }
 
     struct dev_clock_sink_ep_s *sink = &sinks[id - first_sink];
+    struct dev_clock_link_info_s *li = &lkinfo[id - first_sink];
 
     struct device_s *clock_dev;
 
@@ -183,13 +185,13 @@ error_t dev_clock_sink_link(struct device_s *dev,
         goto error;
       }
 
-    if (src_id != NULL)
-      src_id[id - first_sink] = r->u.clock_src.src_ep;
-
     struct dev_clock_node_info_s info;
     enum dev_clock_node_info_e mask = DEV_CLOCK_INFO_SRC;
-    if (freqs != NULL)
-      mask |= DEV_CLOCK_INFO_FREQ;
+    if (lkinfo != NULL)
+      {
+        li->src_id = r->u.clock_src.src_ep;
+        mask |= DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_ACCURACY;
+      }
 
     if (DEVICE_OP(&clock, node_info, r->u.clock_src.src_ep, &mask, &info) ||
         !(mask & DEV_CLOCK_INFO_SRC))
@@ -202,22 +204,28 @@ error_t dev_clock_sink_link(struct device_s *dev,
       {
         struct dev_clock_src_ep_s  *src = info.src;
 
-        assert(sink->next == NULL);
         sink->src = src;
         sink->next = src->sink_head;
         src->sink_head = sink;
-        if (sink->f_changed != NULL && src->notify == 0)
+        if (sink->f_changed != NULL
+            && (src->flags & DEV_CLOCK_SRC_EP_VARFREQ)
+            && !(src->flags & DEV_CLOCK_SRC_EP_NOTIFY))
           {
-            src->notify = 1;
+            src->flags |= DEV_CLOCK_SRC_EP_NOTIFY;
             src->f_use(src, NULL, DEV_CLOCK_SRC_USE_NOTIFY);
           }
 
-        if (freqs != NULL)
+        if (lkinfo != NULL)
           {
-            if (!(mask & DEV_CLOCK_INFO_FREQ))
-              err = -EINVAL;
+            li->src_flags = src->flags;
+            if (mask & DEV_CLOCK_INFO_FREQ)
+              li->freq = info.freq;
             else
-              freqs[id] = info.freq;
+              li->freq = DEV_FREQ_INVALID;
+            if (mask & DEV_CLOCK_INFO_ACCURACY)
+              li->acc = info.acc;
+            else
+              li->acc = DEV_FREQ_ACC_INVALID;
           }
       }
 
@@ -276,9 +284,9 @@ void dev_clock_sink_unlink(struct device_s *dev,
             }
         }
 
-      if (src->notify != notify)
+      if ((src->flags & DEV_CLOCK_SRC_EP_NOTIFY) && !notify)
         {
-          src->notify = notify;
+          src->flags ^= DEV_CLOCK_SRC_EP_NOTIFY;
           src->f_use(src, NULL, DEV_CLOCK_SRC_USE_IGNORE);
         }
     }

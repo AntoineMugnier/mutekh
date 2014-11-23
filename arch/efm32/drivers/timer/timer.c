@@ -62,16 +62,21 @@ struct efm32_timer_private_s
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK
-  struct dev_freq_s    freq;
   struct dev_clock_sink_ep_s clk_ep;
+  struct dev_freq_s freq;
+  struct dev_freq_accuracy_s acc;
 #endif
 };
 
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_CLOCK_SINK_CHANGED(efm32_timer_clk_changed)
 {
-  struct efm32_timer_private_s *pv = ep->dev->drv_pv;
+  struct device_s *dev = ep->dev;
+  struct efm32_timer_private_s *pv = dev->drv_pv;
+  LOCK_SPIN_IRQ(&dev->lock);
   pv->freq = *freq;
+  pv->acc = *acc;
+  LOCK_RELEASE_IRQ(&dev->lock);
 }
 #endif
 
@@ -474,8 +479,14 @@ static DEV_INIT(efm32_timer_init)
   /* enable clock */
   dev_clock_sink_init(dev, &pv->clk_ep, &efm32_timer_clk_changed);
 
-  if (dev_clock_sink_link(dev, &pv->clk_ep, &pv->freq, NULL, 0, 0))
+  struct dev_clock_link_info_s ckinfo;
+  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
     goto err_mem;
+
+  if (!DEV_FREQ_IS_VALID(ckinfo.freq))
+    goto err_mem;
+  pv->freq = ckinfo.freq;
+  pv->acc = ckinfo.acc;
 
   if (dev_clock_sink_hold(&pv->clk_ep, NULL))
     goto err_clku;

@@ -57,8 +57,8 @@ struct efm32_pwm_private_s
   /* PWM configuration. */
   struct dev_freq_s         pwm_freq;
   struct dev_freq_ratio_s   duty[EFM32_PWM_CHANNEL_MAX];
+  struct dev_freq_s         core_freq;
 #ifdef CONFIG_DEVICE_CLOCK
-  struct dev_freq_s          core_freq;
   struct dev_clock_sink_ep_s clk_ep;
 #endif
 };
@@ -344,11 +344,19 @@ static DEV_INIT(efm32_pwm_init)
   /* enable clock */
   dev_clock_sink_init(dev, &pv->clk_ep, &efm32_pwm_clk_changed);
 
-  if (dev_clock_sink_link(dev, &pv->clk_ep, &pv->core_freq, NULL, 0, 0))
+  struct dev_clock_link_info_s ckinfo;
+  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
     goto err_mem;
+
+  if (!DEV_FREQ_IS_VALID(ckinfo.freq))
+    goto err_mem;
+  pv->core_freq = ckinfo.freq;
 
   if (dev_clock_sink_hold(&pv->clk_ep, NULL))
     goto err_clku;
+#else
+  if (device_get_res_freq(dev, &pv->core_freq, 0))
+    goto err_mem;
 #endif
 
   /* Stop pwm and clear interrupt */

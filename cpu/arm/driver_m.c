@@ -223,8 +223,14 @@ REGISTER_DRIVER(arm_m_drv);
 #ifdef CONFIG_DEVICE_CLOCK
 static DEV_CLOCK_SINK_CHANGED(arm_clk_changed)
 {
-  struct arm_dev_private_s *pv = ep->dev->drv_pv;
+  struct device_s *dev = ep->dev;
+  struct arm_dev_private_s *pv = dev->drv_pv;
+  LOCK_SPIN_IRQ(&dev->lock);
   pv->freq = *freq;
+# ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
+  pv->acc = *acc;
+# endif
+  LOCK_RELEASE_IRQ(&dev->lock);
 }
 #endif
 
@@ -254,11 +260,22 @@ static DEV_INIT(arm_init)
 #ifdef CONFIG_DEVICE_CLOCK
   dev_clock_sink_init(dev, &pv->clk_ep, &arm_clk_changed);
 
-  if (dev_clock_sink_link(dev, &pv->clk_ep, &pv->freq, NULL, 0, 0))
+  struct dev_clock_link_info_s ckinfo;
+  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
     goto err_node;
+  pv->freq = ckinfo.freq;
+# ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
+  pv->acc = ckinfo.acc;
+# endif
 
   if (dev_clock_sink_hold(&pv->clk_ep, NULL))
     goto err_clku;
+#else
+  if (device_get_res_freq(dev, &pv->freq, 0))
+    pv->freq = DEV_FREQ_INVALID;
+# ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
+  pv->acc = DEV_FREQ_ACC_INVALID;
+# endif
 #endif
 
 #ifdef CONFIG_CPU_ARM_TIMER_SYSTICK

@@ -32,6 +32,7 @@
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
 #include <device/class/timer.h>
+#include <device/class/clock.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
@@ -48,6 +49,10 @@ struct nios2_dev_private_s
 #endif
 
   struct cpu_tree_s node;
+  struct dev_freq_s freq;
+#ifdef CONFIG_DEVICE_CLOCK
+  struct dev_clock_sink_ep_s clk_ep;
+#endif
 };
 
 /************************************************************************
@@ -89,7 +94,7 @@ static DEV_ICU_GET_ENDPOINT(nios2_icu_get_endpoint)
 static DEV_ICU_ENABLE_IRQ(nios2_icu_enable_irq)
 {
   struct device_s *dev = CPU_LOCAL_GET(nios2_icu_dev);
-  struct nios2_dev_private_s  *pv = dev->drv_pv;
+  __unused__ struct nios2_dev_private_s  *pv = dev->drv_pv;
 
   // inputs are single wire, logical irq id must be 0
   if (irq_id > 0)
@@ -249,6 +254,15 @@ static const struct driver_timer_s  nios2_timer_drv =
 static DEV_CLEANUP(nios2_cleanup);
 static DEV_INIT(nios2_init);
 
+#ifdef CONFIG_DEVICE_CLOCK
+static DEV_CLOCK_SINK_CHANGED(nios2_clk_changed)
+{
+  struct device_s *dev = ep->dev;
+  struct nios2_dev_private_s *pv = dev->drv_pv;
+  LOCK_SPIN_IRQ(&dev->lock);
+  pv->freq = *freq;
+  LOCK_RELEASE_IRQ(&dev->lock);
+}
 static const struct dev_enum_ident_s  nios2_ids[] =
 {
 #ifdef CONFIG_LIBFDT
@@ -302,6 +316,21 @@ static DEV_INIT(nios2_init)
   if (cpu_tree_node_init(&pv->node, id, dev))
     goto err_pv;
 
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_init(dev, &pv->clk_ep, &nios2_clk_changed);
+
+  struct dev_clock_link_info_s ckinfo;
+  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
+    goto err_node;
+  pv->freq = ckinfo.freq;
+
+  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
+    goto err_clku;
+#else
+  if (device_get_res_freq(dev, &pv->freq, 0))
+    pv->freq = DEV_FREQ_INVALID;
+#endif
+
 #ifdef CONFIG_DEVICE_IRQ
   /* init nios2 irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, ICU_NIOS2_MAX_VECTOR,
@@ -320,13 +349,21 @@ static DEV_INIT(nios2_init)
 #endif
 
   if (cpu_tree_insert(&pv->node))
-    goto err_node;
+    goto err_clk;
 
   dev->drv = &nios2_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
+ err_clk:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+#endif
+ err_clku:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+#endif
  err_node:
   cpu_tree_node_cleanup(&pv->node);
  err_pv:
@@ -345,6 +382,11 @@ static DEV_CLEANUP(nios2_cleanup)
 # endif
   /* detach nios2 irq sink end-points */
   device_irq_sink_unlink(dev, pv->sinks, ICU_NIOS2_MAX_VECTOR);
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
 #endif
 
   cpu_tree_remove(&pv->node);

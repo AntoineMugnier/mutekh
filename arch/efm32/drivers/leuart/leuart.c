@@ -327,14 +327,19 @@ static DEV_INIT(efm32_leuart_init)
   /* enable clock */
   dev_clock_sink_init(dev, &pv->clk_ep, &efm32_leuart_char_clk_changed);
 
-  if (dev_clock_sink_link(dev, &pv->clk_ep, &pv->freq, NULL, 0, 0))
+  struct dev_clock_link_info_s ckinfo;
+  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
     goto err_mem;
+
+  if (!DEV_FREQ_IS_VALID(ckinfo.freq))
+    goto err_mem;
+  pv->freq = ckinfo.freq;
 
   if (dev_clock_sink_hold(&pv->clk_ep, NULL))
     goto err_clku;
 #else
   if (device_get_res_freq(dev, &pv->freq, 0))
-    goto err_mem;    
+    goto err_mem;
 #endif
 
   /* wait for current TX to complete */

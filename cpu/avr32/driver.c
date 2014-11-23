@@ -32,6 +32,7 @@
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
 #include <device/class/timer.h>
+#include <device/class/clock.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
@@ -46,6 +47,10 @@ struct avr32_dev_private_s
 #endif
 
   struct cpu_tree_s node;
+  struct dev_freq_s freq;
+#ifdef CONFIG_DEVICE_CLOCK
+  struct dev_clock_sink_ep_s clk_ep;
+#endif
 };
 
 /************************************************************************
@@ -245,6 +250,17 @@ static const struct driver_timer_s  avr32_timer_drv =
 static DEV_CLEANUP(avr32_cleanup);
 static DEV_INIT(avr32_init);
 
+#ifdef CONFIG_DEVICE_CLOCK
+static DEV_CLOCK_SINK_CHANGED(arv32_clk_changed)
+{
+  struct device_s *dev = ep->dev;
+  struct arv32_dev_private_s *pv = dev->drv_pv;
+  LOCK_SPIN_IRQ(&dev->lock);
+  pv->freq = *freq;
+  LOCK_RELEASE_IRQ(&dev->lock);
+}
+#endif
+
 static const struct dev_enum_ident_s  avr32_ids[] =
 {
 #ifdef CONFIG_FDT
@@ -298,6 +314,21 @@ static DEV_INIT(avr32_init)
   if (cpu_tree_node_init(&pv->node, id, dev))
     goto err_pv;
 
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_init(dev, &pv->clk_ep, &arv32_clk_changed);
+
+  struct dev_clock_link_info_s ckinfo;
+  if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
+    goto err_node;
+  pv->freq = ckinfo.freq;
+
+  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
+    goto err_clku;
+#else
+  if (device_get_res_freq(dev, &pv->freq, 0))
+    pv->freq = DEV_FREQ_INVALID;
+#endif
+
 #ifdef CONFIG_DEVICE_IRQ
   /* init avr32 irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, AVR32_IRQ_COUNT,
@@ -316,13 +347,21 @@ static DEV_INIT(avr32_init)
 #endif
 
   if (cpu_tree_insert(&pv->node))
-    goto err_node;
+    goto err_clk;
 
   dev->drv = &avr32_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
+ err_clk:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+#endif
+ err_clku:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+#endif
  err_node:
   cpu_tree_node_cleanup(&pv->node);
  err_pv:
@@ -344,6 +383,11 @@ static DEV_CLEANUP(avr32_cleanup)
 # endif
   /* detach avr32 irq sink end-points */
   device_irq_sink_unlink(dev, pv->sinks, AVR32_IRQ_COUNT);
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
 #endif
 
   cpu_tree_node_cleanup(&pv->node);

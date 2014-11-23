@@ -57,9 +57,12 @@ struct arm_dev_private_s
   int_fast8_t dwt_cycnt_start;
 #endif
 
+  struct dev_freq_s freq;
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
-  struct dev_freq_s    freq;
+#endif
+#ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
+  struct dev_freq_accuracy_s acc;
 #endif
 };
 

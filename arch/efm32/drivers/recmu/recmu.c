@@ -41,19 +41,19 @@
 typedef uint64_t efm32_node_mask_t;
 
 #define EFM32_CLOCK_HFCORECLK_CHILDMASK \
-  (((1 << (EFM32_CLOCK_HFCORECLK_last - EFM32_CLOCK_HFCORECLK_first + 1)) - 1) \
+  (((1ULL << (EFM32_CLOCK_HFCORECLK_last - EFM32_CLOCK_HFCORECLK_first + 1)) - 1) \
    << EFM32_CLOCK_HFCORECLK_first)
 
 #define EFM32_CLOCK_HFPERCLK_CHILDMASK \
-  (((1 << (EFM32_CLOCK_HFPERCLK_last - EFM32_CLOCK_HFPERCLK_first + 1)) - 1) \
+  (((1ULL << (EFM32_CLOCK_HFPERCLK_last - EFM32_CLOCK_HFPERCLK_first + 1)) - 1) \
    << EFM32_CLOCK_HFPERCLK_first)
 
 #define EFM32_CLOCK_LFACLK_CHILDMASK \
-  (((1 << (EFM32_CLOCK_LFACLK_last - EFM32_CLOCK_LFACLK_first + 1)) - 1) \
+  (((1ULL << (EFM32_CLOCK_LFACLK_last - EFM32_CLOCK_LFACLK_first + 1)) - 1) \
    << EFM32_CLOCK_LFACLK_first)
 
 #define EFM32_CLOCK_LFBCLK_CHILDMASK \
-  (((1 << (EFM32_CLOCK_LFBCLK_last - EFM32_CLOCK_LFBCLK_first + 1)) - 1) \
+  (((1ULL << (EFM32_CLOCK_LFBCLK_last - EFM32_CLOCK_LFBCLK_first + 1)) - 1) \
    << EFM32_CLOCK_LFBCLK_first)
 
 #ifdef CONFIG_DRIVER_EFM32_RECMU_NAMES
@@ -242,7 +242,9 @@ struct efm32_recmu_private_s
   struct dev_clock_src_ep_s src[EFM32_CLOCK_EP_COUNT];
 
   struct dev_freq_s hfxo_freq;
+  struct dev_freq_accuracy_s hfxo_acc;
   struct dev_freq_s lfxo_freq;
+  struct dev_freq_accuracy_s lfxo_acc;
 
   enum efm32_clock_node_e hfclk_parent:8;
   enum efm32_clock_node_e hfclk_new_parent:8;
@@ -285,6 +287,7 @@ struct efm32_recmu_private_s
 static error_t
 efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
                           struct dev_freq_s *freq,
+                          struct dev_freq_accuracy_s *acc,
                           dev_clock_node_id_t node)
 {
   uint32_t div;
@@ -404,7 +407,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   switch (node)
     {
     case EFM32_CLOCK_LE:
-      if (efm32_recmu_get_node_freq(pv, freq, EFM32_CLOCK_HFCORECLK))
+      if (efm32_recmu_get_node_freq(pv, freq, acc, EFM32_CLOCK_HFCORECLK))
         return -EINVAL;
 # if defined(CONFIG_EFM32_LEOPARD_GECKO) \
   || defined(CONFIG_EFM32_WONDER_GECKO) \
@@ -419,10 +422,12 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
 
     case EFM32_CLOCK_HFXO:
       *freq = pv->hfxo_freq;
+      *acc = pv->hfxo_acc;
       break;
 
     case EFM32_CLOCK_LFXO:
       *freq = pv->lfxo_freq;
+      *acc = pv->lfxo_acc;
       break;
 
     case EFM32_CLOCK_HFRCO: {
@@ -430,6 +435,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
       freq->denom = 1;
       freq->num = hfrcoband[EFM32_CMU_HFRCOCTRL_BAND_GET(endian_le32(
         cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFRCOCTRL_ADDR)))] * 1000000;
+      *acc = DEV_FREQ_ACC(4, 27); /* 1% */
       break;
     }
 
@@ -439,6 +445,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
       freq->denom = 1;
       freq->num = auxfrcoband[EFM32_CMU_AUXHFRCOCTRL_BAND_GET(endian_le32(
         cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR)))] * 1000000;
+      *acc = DEV_FREQ_ACC(4, 27); /* 1% */
       break;
     }
 #endif
@@ -446,11 +453,13 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_LFRCO:
       freq->denom = 1;
       freq->num = 32768;
+      *acc = DEV_FREQ_ACC(4, 27); /* 1% */
       break;
 
     case EFM32_CLOCK_ULFRCO:
       freq->denom = 1;
       freq->num = 1000;
+      *acc = DEV_FREQ_ACC(4, 27); /* 1% */
       break;
 
     default:
@@ -482,10 +491,19 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
   switch (node_id)
     {
     case EFM32_CLOCK_HFRCO: {
-      if (value->freq.denom != 1)
-        return -ENOTSUP;
+      switch (value->freq.denom)
+        {
+        case 1:
+          break;
+        case 0:
+          return 0;
+        default:
+          return -ENOTSUP;
+        }
       switch (value->freq.num)
         {
+        case 0:
+          break;
         case 1000000:
           EFM32_CMU_HFRCOCTRL_BAND_SET(pv->r_hfrcoctrl, 1MHZ);
           break;
@@ -521,10 +539,19 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
   || defined(CONFIG_EFM32_GIANT_GECKO) \
   || defined(CONFIG_EFM32_ZERO_GECKO)
     case EFM32_CLOCK_AUXHFRCO: {
-      if (value->freq.denom != 1)
-        return -ENOTSUP;
+      switch (value->freq.denom)
+        {
+        case 1:
+          break;
+        case 0:
+          return 0;
+        default:
+          return -ENOTSUP;
+        }
       switch (value->freq.num)
         {
+        case 0:
+          break;
         case 1000000:
           EFM32_CMU_AUXHFRCOCTRL_BAND_SET(pv->r_auxhfrcoctrl, 1MHZ);
           break;
@@ -556,20 +583,30 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
 #endif
 
     case EFM32_CLOCK_HFXO:
-      pv->hfxo_freq = value->freq;
+      if (DEV_FREQ_IS_VALID(value->freq))
+        pv->hfxo_freq = value->freq;
+      if (DEV_FREQ_ACC_IS_VALID(value->acc))
+        pv->hfxo_acc = value->acc;
       pv->chg_mask |= 1 << node_id;
       return 0;
 
     case EFM32_CLOCK_LFXO:
-      pv->lfxo_freq = value->freq;
+      if (DEV_FREQ_IS_VALID(value->freq))
+        pv->lfxo_freq = value->freq;
+      if (DEV_FREQ_ACC_IS_VALID(value->acc))
+        pv->lfxo_acc = value->acc;
       pv->chg_mask |= 1 << node_id;
       return 0;
 
     case EFM32_CLOCK_LFRCO:
-      return -ENOTSUP;
-
     case EFM32_CLOCK_ULFRCO:
-      return -ENOTSUP;
+      switch (value->freq.denom)
+        {
+        case 0:
+          return 0;
+        default:
+          return -ENOTSUP;
+        }
 
     default:
       break;
@@ -1102,13 +1139,14 @@ static DEV_CLOCK_COMMIT(efm32_recmu_commit)
     {
       dev_clock_node_id_t id = ffs(m) - 1;
       struct dev_clock_src_ep_s *src = pv->src + id;
-      assert(src->notify);
+      assert(src->flags & DEV_CLOCK_SRC_EP_NOTIFY);
       id += EFM32_CLOCK_FIRST_EP;
 
       struct dev_freq_s freq;
-      if (efm32_recmu_get_node_freq(pv, &freq, id))
+      struct dev_freq_accuracy_s acc;
+      if (efm32_recmu_get_node_freq(pv, &freq, &acc, id))
         abort();
-      dev_clock_src_changed(accessor, src, &freq);
+      dev_clock_src_changed(accessor, src, &freq, &acc);
 
       m = m & (m - 1);          /* clear lsb */
     }
@@ -1163,9 +1201,9 @@ static DEV_CLOCK_NODE_INFO(efm32_recmu_node_info)
   if (node_id >= EFM32_CLOCK_count)
     return -EINVAL;
 
-  if (*mask & DEV_CLOCK_INFO_FREQ)
-    if (efm32_recmu_get_node_freq(pv, &info->freq, node_id))
-      *mask ^= DEV_CLOCK_INFO_FREQ;
+  if (*mask & (DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_ACCURACY))
+    if (efm32_recmu_get_node_freq(pv, &info->freq, &info->acc, node_id))
+      *mask &= ~(DEV_CLOCK_INFO_FREQ | DEV_CLOCK_INFO_ACCURACY);
 
 #ifdef CONFIG_DRIVER_EFM32_RECMU_NAMES
   info->name = efm32_clock_names[node_id];
@@ -1220,9 +1258,11 @@ static DEV_CLOCK_SRC_USE(efm32_recmu_ep_use)
     {
       case DEV_CLOCK_SRC_USE_HOLD:
         pv->use_mask |= 1 << id;
+        src->flags |= DEV_CLOCK_SRC_EP_RUNNING;
         break;
       case DEV_CLOCK_SRC_USE_RELEASE:
         pv->use_mask &= ~(1 << id);
+        src->flags &= ~DEV_CLOCK_SRC_EP_RUNNING;
         break;
       case DEV_CLOCK_SRC_USE_NOTIFY:
         pv->notify_mask |= 1 << id;
@@ -1288,12 +1328,51 @@ static DEV_INIT(efm32_recmu_init)
 
   memset(pv, 0, sizeof (*pv));
 
+  pv->lfxo_acc = DEV_FREQ_ACC(4, 17); /* default to 100ppm */
+  pv->hfxo_acc = DEV_FREQ_ACC(4, 17);
   dev->drv_pv = pv;
 
-  /* init oscilator nodes */
+  /* find nodes which can have multiple clock sources with the
+     defined set of resources. */
   uint_fast8_t i;
+  efm32_node_mask_t once, mult = 0, o;
+  do {
+    o = mult;
+    once = 0;
+
+    DEVICE_RES_FOREACH(dev, r, {
+        switch (r->type)
+          {
+          case DEV_RES_CLOCK_RTE:
+            i = r->u.clock_rte.node;
+            if ((mult >> r->u.clock_rte.parent) & 1)
+              mult |= 1ULL << i;
+            break;
+          case DEV_RES_CLOCK_OSC:
+            i = r->u.clock_osc.node;
+            break;
+          default:
+            continue;
+          }
+        mult |= once & (1ULL << i);
+        once |= 1ULL << i;
+    });
+
+    if ((mult >> EFM32_CLOCK_HFCLK) & 1)
+      mult |= EFM32_CLOCK_HFCORECLK_CHILDMASK | EFM32_CLOCK_HFPERCLK_CHILDMASK;
+    if ((mult >> EFM32_CLOCK_LFACLK) & 1)
+      mult |= EFM32_CLOCK_LFACLK_CHILDMASK;
+    if ((mult >> EFM32_CLOCK_LFBCLK) & 1)
+      mult |= EFM32_CLOCK_LFBCLK_CHILDMASK;
+  } while (o != mult);
+
+  /* init oscilator nodes */
   for (i = 0; i < EFM32_CLOCK_EP_COUNT; i++)
-    dev_clock_source_init(dev, &pv->src[i], &efm32_recmu_ep_use);
+    {
+      dev_clock_source_init(dev, &pv->src[i], &efm32_recmu_ep_use);
+      if ((mult >> (i + EFM32_CLOCK_FIRST_EP)) & 1)
+        pv->src[i].flags |= DEV_CLOCK_SRC_EP_VARFREQ;
+    }
 
   pv->lfclksel = EFM32_CMU_LFCLKSEL_LFA(LFRCO) | EFM32_CMU_LFCLKSEL_LFB(LFRCO);
   pv->hfclk_parent = EFM32_CLOCK_HFRCO;

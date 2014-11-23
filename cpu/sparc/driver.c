@@ -32,6 +32,7 @@
 #include <device/driver.h>
 #include <device/class/icu.h>
 #include <device/class/cpu.h>
+#include <device/class/clock.h>
 #include <device/irq.h>
 
 #include <mutek/mem_alloc.h>
@@ -64,6 +65,9 @@ struct sparc_dev_private_s
 #endif
 
   struct cpu_tree_s node;
+#ifdef CONFIG_DEVICE_CLOCK
+  struct dev_clock_sink_ep_s clk_ep;
+#endif
 };
 
 /************************************************************************
@@ -317,6 +321,16 @@ static DEV_INIT(sparc_init)
   if (cpu_tree_node_init(&pv->node, id, dev))
     goto err_pv;
 
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_init(dev, &pv->clk_ep, NULL);
+
+  if (dev_clock_sink_link(dev, &pv->clk_ep, NULL, 0, 0))
+    goto err_node;
+
+  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
+    goto err_clku;
+#endif
+
 #ifdef CONFIG_DEVICE_IRQ
   /* init sparc irq sink end-points */
   device_irq_sink_init(dev, pv->sinks, ICU_SPARC_SINKS_COUNT,
@@ -339,13 +353,21 @@ static DEV_INIT(sparc_init)
 #endif
 
   if (cpu_tree_insert(&pv->node))
-    goto err_node;
+    goto err_clk;
 
   dev->drv = &sparc_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
 
   return 0;
 
+ err_clk:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+#endif
+ err_clku:
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
+#endif
  err_node:
   cpu_tree_node_cleanup(&pv->node);
  err_pv:
@@ -366,6 +388,11 @@ static DEV_CLEANUP(sparc_cleanup)
 # endif
   /* detach sparc irq sink end-points */
   device_irq_sink_unlink(dev, pv->sinks, ICU_SPARC_SINKS_COUNT);
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK
+  dev_clock_sink_release(&pv->clk_ep);
+  dev_clock_sink_unlink(dev, &pv->clk_ep, 1);
 #endif
 
   cpu_tree_remove(&pv->node);

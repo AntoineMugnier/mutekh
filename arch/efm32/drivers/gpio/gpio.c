@@ -536,7 +536,7 @@ static DEV_INIT(efm32_gpio_init)
   /* enable clock */
   dev_clock_sink_init(dev, &pv->clk_ep, NULL);
 
-  if (dev_clock_sink_link(dev, &pv->clk_ep, NULL, NULL, 0, 0))
+  if (dev_clock_sink_link(dev, &pv->clk_ep, NULL, 0, 0))
     goto err_mem;
 
   if (dev_clock_sink_hold(&pv->clk_ep, NULL))

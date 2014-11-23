@@ -85,17 +85,34 @@ enum dev_clock_src_use_e
 /** @This tells a driver with a clock source end-point if the
     associated clock signal is enabled and has changes notification.
 
-    This is called by @ref dev_clock_sink_hold with @ref
-    DEV_CLOCK_SRC_USE_HOLD when @tt src->running is false. This is
-    called by @ref dev_clock_sink_release with @ref
-    DEV_CLOCK_SRC_USE_RELEASE when @tt src->use_count becomes zero.
+    This is called by @ref dev_clock_sink_hold with the @ref
+    DEV_CLOCK_SRC_USE_HOLD action when the @ref DEV_CLOCK_SRC_EP_RUNNING
+    flag of the source end-point is not set. This is called by @ref
+    dev_clock_sink_release with the @ref DEV_CLOCK_SRC_USE_RELEASE action
+    when @tt src->use_count becomes zero.
 
     This function is called with the lock of the source end-point
-    device held. The @tt use_count field of the end-point is
-    updated before the call. The function is responsible for
-    updating the @ref dev_clock_src_ep_s::running field.
+    device held. The @tt use_count field of the end-point is updated
+    before the call. The function is responsible for updating the @ref
+    DEV_CLOCK_SRC_EP_RUNNING flag.
 */
 typedef DEV_CLOCK_SRC_USE(dev_clock_src_use_t);
+
+enum dev_clock_src_ep_flags_e
+{
+  /** indicates if the clock is currently running. This can be 0
+      when the clock is not ready yet even if @tt use_count > 0.
+      @see dev_clock_sink_hold @see dev_clock_sink_release
+      @see dev_clock_src_use_t
+  */
+  DEV_CLOCK_SRC_EP_RUNNING  = 0x01,
+  /** indicates if at least one linked sink end-point has a non @tt
+      NULL @ref dev_clock_sink_ep_s::f_changed function pointer. */
+  DEV_CLOCK_SRC_EP_NOTIFY   = 0x02,
+  /** indicates if there are configurations end-point can be
+      configured with multiple frequencies */
+  DEV_CLOCK_SRC_EP_VARFREQ  = 0x04,
+};
 
 /** Clock signal source end-point structure. A source end-point is a
     type of clock tree node which can be used as a connection point
@@ -112,28 +129,20 @@ struct dev_clock_src_ep_s
   /** pointer to the use/release function of the clock signal provider */
   dev_clock_src_use_t     *f_use;
 
-  /** indicates if the clock is currently running. This can be 0
-      when the clock is not ready yet even if @tt use_count > 0.
-      @see dev_clock_sink_hold @see dev_clock_sink_release
-      @see dev_clock_src_use_t
-  */
-  bool_t                  running:1;
-
-  /** indicates if at least one linked sink end-point has a non @tt
-      NULL @ref dev_clock_sink_ep_s::f_changed function pointer. */
-  bool_t                  notify:1;
-
   /** number of sink endpoints which currently need to have this
       clock running. This counter is protected by @tt dev->lock.
       @see dev_clock_sink_hold @see dev_clock_sink_release
       @see dev_clock_src_use_t
   */
   uint16_t                use_count;
+
+  enum dev_clock_src_ep_flags_e flags:8;
 };
 
 /** @see dev_clock_sink_changed_t */
 #define DEV_CLOCK_SINK_CHANGED(n) void (n) (struct dev_clock_sink_ep_s *ep, \
-                                            const struct dev_freq_s *freq)
+                                            const struct dev_freq_s *freq, \
+                                            const struct dev_freq_accuracy_s *acc)
 
 /** @This notifies a driver with a clock sink end-point that the
     frequency has changed. */
@@ -163,8 +172,13 @@ struct dev_clock_sink_ep_s
 /** @see dev_clock_config_node_t */
 union dev_clock_config_value_u
 {
-  struct dev_freq_s    freq;
-  struct dev_freq_ratio_s    ratio;
+  struct {
+    /** updated when valid */
+    struct dev_freq_s          freq;
+    /** updated when valid */
+    struct dev_freq_accuracy_s acc;
+  };
+  struct dev_freq_ratio_s      ratio;
 };
 
 /** @see dev_clock_config_node_t */
@@ -235,13 +249,15 @@ enum dev_clock_node_info_e
   DEV_CLOCK_INFO_RUNNING = 0x08,
   DEV_CLOCK_INFO_SINK    = 0x10,
   DEV_CLOCK_INFO_SRC     = 0x20,
+  DEV_CLOCK_INFO_ACCURACY = 0x40,
 };
 
 /** @This stores node information retrieved by the @ref
     dev_clock_node_info_t function. */
 struct dev_clock_node_info_s
 {
-  struct dev_freq_s    freq;
+  struct dev_freq_s          freq;
+  struct dev_freq_accuracy_s acc;
   const char                 *name;
   dev_clock_node_id_t        parent_id;
   bool_t                     running;
@@ -309,7 +325,7 @@ error_t dev_clock_config(struct device_clock_s *accessor,
 
 /** @This function is called by the clock provider device driver when
     the frequency of a clock source end-point change if the @ref
-    dev_clock_src_ep_s::notify field is set.
+    DEV_CLOCK_SRC_EP_NOTIFY flag is set.
 
     This function will propagate the change to all connected sink
     end-points by calling the @ref dev_clock_sink_changed_t function
@@ -318,7 +334,8 @@ error_t dev_clock_config(struct device_clock_s *accessor,
 config_depend(CONFIG_DEVICE_CLOCK)
 void dev_clock_src_changed(struct device_clock_s *accessor,
                            struct dev_clock_src_ep_s *src,
-                           const struct dev_freq_s *freq);
+                           const struct dev_freq_s *freq,
+                           const struct dev_freq_accuracy_s *acc);
 
 /** @This initializes a clock source end-point node. */
 config_depend(CONFIG_DEVICE_CLOCK)
@@ -327,9 +344,11 @@ void dev_clock_source_init(struct device_s *dev,
                            struct dev_clock_src_ep_s *src,
                            dev_clock_src_use_t *use)
 {
-  memset(src, 0, sizeof(*src));
   src->dev           = dev;
+  src->sink_head     = NULL;
   src->f_use         = use;
+  src->use_count     = 0;
+  src->flags         = 0;
 }
 
 /** @This initializes a clock sink end-point node. The @tt changed
@@ -340,20 +359,28 @@ void dev_clock_sink_init(struct device_s       *dev,
                          struct dev_clock_sink_ep_s *sink,
                          dev_clock_sink_changed_t *changed)
 {
-  memset(sink, 0, sizeof(*sink));
   sink->dev           = dev;
   sink->f_changed     = changed;
 }
+
+struct dev_clock_link_info_s
+{
+  /** Current frenquency of the clock signal associated to the end-points. */
+  struct dev_freq_s          freq;
+  /** Current frenquency accuracy of the clock signal associated to the end-points. */
+  struct dev_freq_accuracy_s acc;
+  /** Node id of the source end-point relevant to the clock provider
+      device */
+  dev_clock_node_id_t src_id;
+
+  /** Flags of the source end-point */
+  enum dev_clock_src_ep_flags_e src_flags:8;
+};
 
 /** @This links multiple clock sink end-points to the appropriate
     source end-point of a clock provider device as described in the
     device resources. An array of sink end-points must be passed along
     with the range of node ids associated to the sink end-points.
-
-    If the @tt freqs pointer is not @tt NULL, the array is filled with
-    the current frenquency values of end-points. If the @tt src_id
-    pointer is not @tt NULL, the array is filled with node id of the
-    source end-point relevant to the clock provider device.
 
     This function is typically called from device driver
     initialization function.
@@ -361,8 +388,7 @@ void dev_clock_sink_init(struct device_s       *dev,
 config_depend(CONFIG_DEVICE_CLOCK)
 error_t dev_clock_sink_link(struct device_s *dev,
                             struct dev_clock_sink_ep_s *sinks,
-                            struct dev_freq_s *freqs,
-                            dev_clock_node_id_t *src_id,
+                            struct dev_clock_link_info_s *info,
                             dev_clock_node_id_t first_sink,
                             dev_clock_node_id_t last_sink);
 
@@ -559,9 +585,7 @@ error_t device_add_res_clock_src(struct device_s     *dev,
 
 #ifdef CONFIG_DEVICE_CLOCK
 
-/** @This can be used to include a clock source oscillator resource entry in a
-    static device resources table declaration. The @tt src parameter must be
-    statically allocated.
+/** @This can be used to define a clock end-point link.
     @see device_res_add_clock_src @see #DEV_DECLARE_STATIC_RESOURCES
  */
 # define DEV_STATIC_RES_CLK_SRC(__src, __src_id, __sink_id) \
