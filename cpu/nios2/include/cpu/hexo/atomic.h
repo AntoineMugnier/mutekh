@@ -220,9 +220,9 @@ __cpu_atomic_compare_and_swap(atomic_int_t *a, atomic_int_t old, atomic_int_t ne
     asm volatile (
 	       "1:     custom  0, %[loaded], %[addr_a], zero     \n"
 	       "       bne     %[loaded], %[old], 2f             \n"
-	       "       move    %[tmp], %[new]                    \n"
+	       "       mov     %[tmp], %[new]                    \n"
 	       "       custom  1, %[tmp], %[addr_a], zero        \n"
-	       "       beq    %[tmp], 1b                         \n"
+	       "       beq    %[tmp], zero, 1b                   \n"
 	       "       nop                                       \n"
 	       "2:                                               \n"
 	       : [tmp] "=&r" (tmp), [loaded] "=&r" (loaded), "=m" (*a)
