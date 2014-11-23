@@ -276,8 +276,8 @@ typedef DEV_I2C_CONFIG(dev_i2c_config_t);
 
     The @ref kroutine_exec function will be called on @tt tr->base.kr
     when the request ends. This can happen before this function
-    returns.  A new request may be started from the kroutine.  @tt
-    tr->error, tr->error_offset and tr->error_request indicates error
+    returns.  A new request may be started from the kroutine. @tt
+    rq->error, tr->error_offset and tr->error_request indicates error
     position.
 */
 typedef DEV_I2C_REQUEST(dev_i2c_request_t);
