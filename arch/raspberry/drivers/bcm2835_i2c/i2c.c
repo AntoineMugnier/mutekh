@@ -86,7 +86,8 @@ struct bcm2835_i2c_context_s
   /* Timeout for tx fifo in timer cycles*/
   uint32_t timeout;
   /* timer request */
-  struct dev_timer_rq_s rq;
+  struct dev_timer_rq_s trq;
+  uint32_t bperiod;
 };
 
 
@@ -189,7 +190,7 @@ static bool_t bcm2835_i2c_valid_request(struct bcm2835_i2c_context_s *pv)
   return 1; 
 }
 
-static void bcm2835_i2c_timer_rq(struct device_s *dev);
+static bool_t bcm2835_i2c_timer_rq(struct device_s *dev);
 
 static void bcm2835_i2c_fsm(struct device_s *dev, bool_t stop)
 {
@@ -296,16 +297,19 @@ static void bcm2835_i2c_fsm(struct device_s *dev, bool_t stop)
 
              break;
 
-          case DEV_I2C_BCM2835_WAIT_END_WRITE: /* 3 */
-             if (bcm2835_i2c_get_txe(pv))
-               /* Fifo empty */
-               {
-                 pv->state = DEV_I2C_BCM2835_START;
-                 break;
-               }
-             else
-               bcm2835_i2c_timer_rq(dev);
-             return;
+        case DEV_I2C_BCM2835_WAIT_END_WRITE: /* 3 */
+          while (1)
+            {
+              if (bcm2835_i2c_get_txe(pv))
+                /* Fifo empty */
+                {
+                  pv->state = DEV_I2C_BCM2835_START;
+                  break;
+                }
+              if (!bcm2835_i2c_timer_rq(dev))
+                return;
+            }
+          break;
 
           case DEV_I2C_BCM2835_READ_DATA: /* 4 */
             if (!pv->glen)
@@ -324,7 +328,7 @@ static void bcm2835_i2c_fsm(struct device_s *dev, bool_t stop)
             if (!bcm2835_i2c_get_rxd(pv))
               return;
 
-            x = cpu_mem_read_31(pv->addr + BCM2835_I2C_FIFO_ADDR);
+            x = cpu_mem_read_32(pv->addr + BCM2835_I2C_FIFO_ADDR);
             ctr->data[ctr->size - pv->len] = endian_le32(x);
 
             pv->glen--;
@@ -338,7 +342,7 @@ static void bcm2835_i2c_fsm(struct device_s *dev, bool_t stop)
             /* Reset controller */
             bcm2835_i2c_reset(pv);
             /* remove request from timer queue */
-            DEVICE_OP(&pv->timer, cancel, &pv->rq);
+            DEVICE_OP(&pv->timer, cancel, &pv->trq);
             pv->state = DEV_I2C_BCM2835_IDLE;
             return;
         } 
@@ -347,8 +351,8 @@ static void bcm2835_i2c_fsm(struct device_s *dev, bool_t stop)
 
 static KROUTINE_EXEC(bcm2835_i2c_timeout)
 {
-   struct dev_timer_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
-   struct device_s *dev = rq->pvdata;
+   struct dev_timer_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, rq.kr);
+   struct device_s *dev = rq->rq.pvdata;
    struct bcm2835_i2c_context_s *pv  = dev->drv_pv;
  
    LOCK_SPIN_IRQ(&dev->lock);
@@ -366,16 +370,30 @@ static KROUTINE_EXEC(bcm2835_i2c_timeout)
    LOCK_RELEASE_IRQ(&dev->lock);
 }
 
-static void bcm2835_i2c_timer_rq(struct device_s *dev)
+static bool_t bcm2835_i2c_timer_rq(struct device_s *dev)
 {
    struct bcm2835_i2c_context_s    *pv  = dev->drv_pv;
    uint32_t len = bcm2835_i2c_get_dlen(pv);
 
-   pv->rq.delay = (len + 1) * pv->timeout;
-
-   if (DEVICE_OP(&pv->timer, request, &pv->rq) < 0)
-     printk("BCM2835 I2C driver: Error on timer post request\n");
-
+   assert(pv->trq.rq.drvdata == NULL);
+   while (1)
+     {
+       pv->trq.delay = (len + 1) * pv->timeout;
+       switch (DEVICE_OP(&pv->timer, request, &pv->trq))
+         {
+         case -EAGAIN:
+           if (!dev_timer_init_sec(&pv->timer, &pv->timeout, &pv->trq.rev,
+                                   pv->bperiod, 1000000))
+             continue;
+         default:
+           printk("BCM2835 I2C driver: Timer error\n");
+           return 1;
+         case -ETIMEDOUT:
+           return 1;
+         case 0:
+           return 0;
+         }
+     }
 }
 
 /***************************************** interrupt */
@@ -449,11 +467,15 @@ DEV_I2C_CONFIG(bcm2835_i2c_config)
   struct device_s               *dev = accessor->dev;
   struct bcm2835_i2c_context_s  *pv  = dev->drv_pv;
 
+  LOCK_SPIN_IRQ(&dev->lock);
+
   uint32_t div = (BCM2835_I2C_CORE_CLK/config->bit_rate);
   cpu_mem_write_32(pv->addr + BCM2835_I2C_DIV_ADDR, endian_le32(div));
   /* Byte period in us */
-  uint32_t bperiod = 8000000/config->bit_rate;
-  dev_timer_init_sec(&pv->timer, &pv->timeout, bperiod, 1000000);
+  pv->bperiod = 8000000 / config->bit_rate;
+  pv->trq.rev = 2;
+
+  LOCK_RELEASE_IRQ(&dev->lock);
 
   return 0;
 }
@@ -542,23 +564,23 @@ static DEV_INIT(bcm2835_i2c_init)
   if (device_iomux_setup(dev, ",scl ,sda", NULL, NULL, NULL))
     goto err_mem;
 
+  /* Get accessor on timer */
+  if (device_get_param_dev_accessor(dev, "i2c-timer", &pv->timer, DRIVER_CLASS_TIMER))
+    device_init_accessor(&pv->timer);
+
+  pv->trq.rq.pvdata = dev;
+  pv->trq.rq.drvdata = NULL;
+  pv->trq.deadline = 0;
+  pv->trq.rev = 2;
+  kroutine_init(&pv->trq.rq.kr, bcm2835_i2c_timeout, KROUTINE_IMMEDIATE);
+  /* Set default timeout in counter cycle for 1 byte @ 100 KHz */
+  pv->bperiod = 80;
+
   device_irq_source_init(dev, &pv->irq_ep, 1, &bcm2835_i2c_irq,
                          DEV_IRQ_SENSE_HIGH_LEVEL);
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto err_mem;
-
-  /* Get accessor on timer */
-  if (device_get_param_dev_accessor(dev, "i2c-timer", &pv->timer, DRIVER_CLASS_TIMER))
-    device_init_accessor(&pv->timer);
-
-  pv->rq.pvdata = dev;
-  pv->rq.drvdata = NULL;
-  pv->rq.deadline = 0;
-  pv->rq.accessor = &pv->timer;
-  /* Set default timeout in counter cycle for 1 byte @ 100 KHz */
-  dev_timer_init_sec(&pv->timer, &pv->timeout, 80, 1000000);
-  kroutine_init(&pv->rq.kr, bcm2835_i2c_timeout, KROUTINE_IMMEDIATE);
 
   dev->status = DEVICE_DRIVER_INIT_DONE;
 

@@ -21,10 +21,81 @@
 */
 
 /**
- * @file
- * @module{Devices support library}
- * @short Timer device driver API
- */
+   @file
+   @module{Devices support library}
+   @short Timer device driver API
+
+   The timer device API allows, reading the current counter value and
+   the current configuration of a timer device as well as queuing
+   delay requests. Some timer implementations may no support requests
+   and may only provide a counter value. The counter value exposed by
+   the API is increasing.
+
+   The timer need to be started by calling the @ref device_start
+   function in order to have it running when no request are
+   queued. Depending on hardware design, some timer can't be put in
+   stopped state or lose the current timer value when stopped.
+
+   A configuration function is provided to read the timer parameters
+   useful to perform time unit conversion and to change the
+   resolution. This also provides some hints about timer hardware
+   capabilities.
+
+   @section {Timer resolution}
+
+   The resolution specifies the divider between the timer input clock
+   and the timer counter value.
+
+   @end section
+
+   @section {Timer frequency}
+
+   There are two common ways for the driver to find the timer input
+   frequency. When the driver contains a clock sink end-point, the
+   associated frequency will be computed by the clock provider device
+   and may be stored by the driver of the timer. In this case the
+   configuration will be updated when the clock frequency changes.
+
+   When @ref #CONFIG_DEVICE_CLOCK token is not defined, the @ref
+   device_get_res_freq function can be used by the driver. This
+   function relies on the @ref DEV_RES_FREQ resources attached to the
+   device. Multiple such resources are needed when the device as
+   multiple input clocks.
+
+   @end section
+
+   @section {Hardware implementation}
+
+   There are basically two types of timer hardware design. Those with
+   a counter register which generate a periodic interrupts when it
+   wraps and those with an ever increasing counter along with an
+   hardware deadline comparator. There are also simple cycle counters
+   with no interrupt generation capabilities.
+
+   Depending on timer hardware design, setting the timer resolution
+   will either configure an hardware prescaler which divide the timer
+   input clock or simply update the timer interrupt tick period. In
+   the former case, the timer hardware generally support insertion and
+   cancellation of requests without loss of accuracy or race condition
+   and a tick-less approach is used by the driver. The timer
+   resolution can then be set as low as 1 for best time granularity.
+
+   In case of a periodic interrupt based timer which increases a
+   software counter, setting the resolution to a low value will
+   generate many interrupts. The driver should then bound the usable
+   resolution range. This kind of timer can also be used as a high
+   resolution counter which is not able the handle requests. This is
+   done by exposing the hardware counter value directly. Drivers may
+   choose to provide both implementations using two different device
+   numbers.
+
+   Some timers can be driven using a mixed approach when a hardware
+   deadline comparator is available with a somewhat limited bits
+   width. This often provides a good trade-off between resolution and
+   periodic interrupt interval.
+
+   @end section
+*/
 
 #ifndef __DEVICE_TIMER_H__
 #define __DEVICE_TIMER_H__
@@ -37,6 +108,8 @@
 #include <gct/container_clist.h>
 
 #include <device/driver.h>
+#include <device/request.h>
+#include <device/resources.h>
 
 struct device_s;
 struct driver_s;
@@ -47,32 +120,89 @@ struct device_timer_s;
 typedef uint64_t dev_timer_value_t;
 /** Timer relative value type */
 typedef uint32_t dev_timer_delay_t;
+/** Timer device resolution type */
+typedef uint32_t dev_timer_res_t;
+/** Timer configuration revision number */
+typedef uint32_t dev_timer_cfgrev_t;
+
+#define PRItimerDelay PRIu32
+#define PRItimerRes   PRIu32
+#define PRItimerValue PRIu64
+#define PRItimerRev   PRIu32
 
 struct dev_freq_s;
-
-#define GCT_CONTAINER_ALGO_dev_timer_queue CLIST
 
 /** Timer request @csee dev_timer_request_t */
 struct dev_timer_rq_s
 {
-  struct kroutine_s             kr;
+  struct dev_request_s          rq;
 
-  dev_timer_value_t             deadline;    //< absolute timer deadline
-  dev_timer_delay_t             delay;       //< timer delay
-  void                          *pvdata;     //< pv data for callback
-  void                          *drvdata;    //< driver private data
-  struct device_timer_s         *accessor;       //< pointer to associated timer device
-
-  GCT_CONTAINER_ENTRY(dev_timer_queue, queue_entry); //< used by driver to enqueue requests
+  /** absolute timer deadline, used when @tt delay is 0 */
+  dev_timer_value_t             deadline;
+  /** timer delay */
+  dev_timer_delay_t             delay;
+  /** expected configuration revision, ignored if 0 */
+  dev_timer_cfgrev_t            rev;
 };
 
-GCT_CONTAINER_TYPES(dev_timer_queue, struct dev_timer_rq_s *, queue_entry);
-GCT_CONTAINER_KEY_TYPES(dev_timer_queue, PTR, SCALAR, deadline);
-GCT_CONTAINER_KEY_FCNS(dev_timer_queue, ASC, inline, dev_timer_queue, deadline,
-                       init, destroy, isempty, pop, head, remove, insert);
+STRUCT_INHERIT(dev_timer_rq_s, dev_request_s, rq);
+
+/* expand the dev_timer_pqueue_insert function usable with generic
+   device request priority queue. */
+GCT_CONTAINER_KEY_TYPES(dev_request_pqueue, CUSTOM, SCALAR,
+                        dev_timer_rq_s_cast(dev_request_pqueue_item)->deadline, dev_timer_pqueue);
+
+GCT_CONTAINER_KEY_FCNS(dev_request_pqueue, ASC, inline, dev_timer_pqueue, dev_timer_pqueue,
+                       remove, insert);
+
+ENUM_DESCRIPTOR(dev_timer_capabilities_e, strip:DEV_TIMER_CAP_, upper, or);
+
+enum dev_timer_capabilities_e
+{
+  /** The timer device is able to handle requests. */
+  DEV_TIMER_CAP_REQUEST = 1,
+  /** The timer device can be stopped. */
+  DEV_TIMER_CAP_STOPPABLE = 2,
+  /** The timer counter value is not lost and can be read when the
+      timer is stopped. This flag is set if @ref
+      DEV_TIMER_CAP_STOPPABLE is cleared. */
+  DEV_TIMER_CAP_KEEPVALUE = 4,
+  /** The timer input frequency may be changed dynamically. */
+  DEV_TIMER_CAP_VARFREQ = 8,
+  /** Deadline of enqueued requests are not adjusted properly when the
+      timer input frequency changes. This implies @ref
+      DEV_TIMER_CAP_VARFREQ. */
+  DEV_TIMER_CAP_CLKSKEW = 16,
+  /** The timer support resolution as low as 1. If @ref
+      DEV_TIMER_CAP_REQUEST is set, an hardware deadline comparator is
+      used. */
+  DEV_TIMER_CAP_HIGHRES = 32,
+  /** The timer never generates an irq for the sole purpose of
+      increasing a counter. */
+  DEV_TIMER_CAP_TICKLESS = 64,
+};
+
+/** Timer configuration @csee dev_timer_config_t */
+struct dev_timer_config_s
+{
+  /** timer input frequency */
+  struct dev_freq_s             freq;
+  /** timer input clock accuracy */
+  struct dev_freq_accuracy_s    acc;
+  /** timer maximum value */
+  dev_timer_value_t             max;
+  /** revision id associated with this configuration, increased on
+      configuration update. Can not be even. */
+  dev_timer_cfgrev_t            rev;
+  /** timer resolution */
+  dev_timer_res_t               res;
+  /** timer device capabilities */
+  enum dev_timer_capabilities_e cap:8;
+};
 
 /** @see dev_timer_request_t */
-#define DEV_TIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *accessor, struct dev_timer_rq_s *rq)
+#define DEV_TIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *accessor, \
+                                              struct dev_timer_rq_s *rq)
 
 /**
    @This enqueues a timeout event request. The @tt delay and @tt
@@ -88,64 +218,44 @@ GCT_CONTAINER_KEY_FCNS(dev_timer_queue, ASC, inline, dev_timer_queue, deadline,
    If the deadline has already been reached, the function does nothing
    and return @tt -ETIMEDOUT.
 
-   If the timer has not been started explicitly by calling the @ref
-   dev_timer_start_stop_t function, it will run until the request queue
-   becomes empty again.
+   If the @tt revision field of the request is not 0 and doesn't match
+   the internal value of the configuration revision number, the
+   request is rejected and @tt -EAGAIN is returned. This allows
+   ensuring time converted delays of the request is consistent with
+   the current timer configuration. Valid revision numbers are odd.
 
-   @This returns 0 on success. @This may return @tt -EBUSY if the
-   timer hardware resource is not available. @This may return -ENOTSUP
-   if there is no timer matching the requested device number.
+   If the timer has not been started explicitly by calling the @ref
+   device_start function, it will run until the request queue becomes
+   empty again.
+
+   @This may return @tt -EBUSY if the timer hardware resource is not
+   available. @This may return -ENOTSUP if either there is no timer
+   matching the requested device number or the timer implementation
+   doesn't support requests.
 */
 typedef DEV_TIMER_REQUEST(dev_timer_request_t);
 
 /** @see dev_timer_cancel_t */
-#define DEV_TIMER_CANCEL(n)	error_t  (n) (struct device_timer_s *accessor, struct dev_timer_rq_s *rq)
+#define DEV_TIMER_CANCEL(n)	error_t  (n) (struct device_timer_s *accessor, \
+                                              struct dev_timer_rq_s *rq)
 
 /**
    @This cancel a timeout request event.
 
    The request is removed from the timer event queue. @This function
    returns @tt -ETIMEDOUT if the request is not in the queue any more
-   (deadline already reached).
+   (deadline already reached). Requests with the @tt drvdata field set
+   to @tt NULL are considered not queued.
 
    @This returns 0 on success.
 */
 typedef DEV_TIMER_CANCEL(dev_timer_cancel_t);
 
 
-/** @see dev_timer_start_stop_t */
-#define DEV_TIMER_START_STOP(n)	error_t  (n) (struct device_timer_s *accessor, bool_t start)
-
-/**
-   Timer device class start/stop function.
-
-   @This starts or stop the timer. The timer will be automatically
-   started when the requests queue is not empty but will return to
-   stopped state unless it has been explicitly started by calling this
-   function.
-
-   If the this function is called more than once with the @tt start
-   parameter set, it must be called the same number of times with a
-   value of 0 for the timer to actually stop. The timer value becomes
-   undefined when the timer is stopped.
-
-   @This returns 0 on success or if the timer doesn't support being stopped.
-
-   @This returns @tt -EINVAL when trying to stop a timer that has not
-   been started.
-
-   @This returns @tt -EBUSY if the timer hardware resource is not
-   available. @This returns @tt -ENOTSUP if there is no timer matching
-   the requested device number.
-
-   @This is mandatory.
-*/
-typedef DEV_TIMER_START_STOP(dev_timer_start_stop_t);
-
-
-
 /** @see #dev_timer_get_value_t */
-#define DEV_TIMER_GET_VALUE(n)	error_t (n) (struct device_timer_s *accessor, dev_timer_value_t *value)
+#define DEV_TIMER_GET_VALUE(n)	error_t (n) (struct device_timer_s *accessor, \
+                                             dev_timer_value_t *value,  \
+                                             dev_timer_cfgrev_t rev)
 
 /**
    @This reads the current raw timer value. The timer value is
@@ -155,97 +265,58 @@ typedef DEV_TIMER_START_STOP(dev_timer_start_stop_t);
    accessed. This can append when trying to access a processor local
    timer from the wrong processor.
 
-   The timer value may not be readable if the timer is currently
-   stopped. In this case this function will return @tt -EBUSY.  @This
-   returns @tt -ENOTSUP if there is no timer matching the requested
-   device number.
+   If the @tt rev argument is not 0 and doesn't match the internal
+   value of the configuration revision number, @tt -EAGAIN is returned.
 
-   @This is mandatory.
+   @This may return @tt -EBUSY if the timer hardware resource is not
+   available. @This returns @tt -ENOTSUP if there is no timer matching the
+   requested device number.
 */
 typedef DEV_TIMER_GET_VALUE(dev_timer_get_value_t);
 
 
 
 /** @see #dev_timer_get_freq_t */
-#define DEV_TIMER_GET_FREQ(n)	error_t (n) (struct device_timer_s *accessor, \
-                                             struct dev_freq_s *freq)
+#define DEV_TIMER_CONFIG(n)	error_t (n) (struct device_timer_s *accessor, \
+                                             struct dev_timer_config_s *cfg, \
+                                             dev_timer_res_t res)
 
 /**
-   @This reads the current timer frequency. @This may return @tt -ENOTSUP
-   if the frequency is not known.
+   @This reads the current timer configuration and optionally sets the
+   resolution. The @ref dev_timer_config_s object is updated with the
+   current configuration if the @tt cfg parameter is not @tt NULL.
 
-   There are two common ways for the driver of finding the timer
-   frequency. When the timer contains a clock sink end-point, the
-   associated frequency will be computed by the clock provider device
-   and may be stored by the driver of the timer. If @ref
-   #CONFIG_DEVICE_CLOCK is not used, the @ref dev_timer_drv_get_freq
-   implementation can be used.
+   The @ref dev_timer_rq_s::freq field is set to 0 if the frequency is
+   not known.
 
-   @This is mandatory.
-*/
-typedef DEV_TIMER_GET_FREQ(dev_timer_get_freq_t);
-
-
-/** Timer device resolution type */
-typedef uint32_t dev_timer_res_t;
-
-/** @see dev_timer_resolution_t */
-#define DEV_TIMER_RESOLUTION(n)	error_t (n) (struct device_timer_s *accessor, dev_timer_res_t *res, dev_timer_value_t *max)
-
-/**
-   @This can be used to query and change how the timer input clock is
-   divided. The timer resolution can not be changed if the timer is
-   not in stopped state.
-
-   Depending on timer hardware capabilities, setting the timer
-   resolution will either configure an hardware prescaler to divide
-   timer input clock or simply update the timer cyclic period. If the
-   timer hardware has been designed to support request insertion and
-   removal without loss of accuracy or race condition, a tick-less
-   approach is used. In this case the timer resolution can generally
-   be set as low as 1 for best time granularity. In case of a count to
-   zero type of timer, setting the resolution to a low value will
-   generate many interrupts.
-
-   @This tries to set timer resolution to value pointed to by @tt res
-   if the pointer is not @tt NULL and the value is not zero. The
+   The resolution is set when the @tt res parameter is not 0. The
    actual resolution can be different from the requested resolution
-   depending on hardware capabilities. The current and possibly new
-   resolution is stored in @tt *res if the pointer is not @tt NULL .
+   depending on hardware design of the timer. The current and possibly
+   new resolution is stored in the @tt res field.
 
-   @This also stores the maximum timer value reached when the timer
-   overlaps in @tt *max if the pointer is not @tt NULL. This value
-   must be a power of two minus one.
+   The maximum timer value reached when the timer overlaps is stored
+   in the @tt max field. This value is a power of two minus one.
 
-   The @tt -EBUSY value is returned when trying to change the
-   resolution while the timer has been started. If setting the timer
-   resolution is not supported, @tt -ENOTSUP is returned. If the new
-   resolution value is different from the requested one, @tt -ERANGE
-   is returned. These error conditions can only occur when trying to
-   change the resolution.
+   The timer resolution can not be changed if the timer has been
+   started by calling @ref device_start or by queuing a request. @This
+   returns @tt -EBUSY in this case.
+
+   If the new resolution value is different from the requested one,
+   @tt -ERANGE is returned. This can only occur when trying to change
+   the resolution.
 
    @This returns @tt -ENOTSUP if there is no timer matching the
    requested device number.
-
-   @This is mandatory.
 */
-typedef DEV_TIMER_RESOLUTION(dev_timer_resolution_t);
+typedef DEV_TIMER_CONFIG(dev_timer_config_t);
 
 
 DRIVER_CLASS_TYPES(timer,
                    dev_timer_request_t *f_request;
                    dev_timer_request_t *f_cancel;
-                   dev_timer_start_stop_t *f_start_stop;
                    dev_timer_get_value_t *f_get_value;
-                   dev_timer_get_freq_t *f_get_freq;
-                   dev_timer_resolution_t *f_resolution;
+                   dev_timer_config_t *f_config;
                    );
-
-/** @This is a default implementation of the @ref dev_timer_get_freq_t
-    timer driver API which relies on @ref DEV_RES_FREQ resource
-    entries of the device. For devices with multiple timer instances,
-    multiple frequency resource entries are expected. */
-DEV_TIMER_GET_FREQ(dev_timer_drv_get_freq);
 
 /** @This initializes a timer delay from the given delay value in
     seconds unit. The delay is specified in seconds when r_unit is 1,
@@ -257,7 +328,10 @@ DEV_TIMER_GET_FREQ(dev_timer_drv_get_freq);
     delay (-ERANGE). */
 config_depend(CONFIG_DEVICE_TIMER)
 error_t dev_timer_init_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
-                           dev_timer_delay_t s_delay, uint32_t r_unit);
+                           dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
+
+error_t dev_timer_get_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
+                          dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
 
 /** @This computes two shift amounts which can be used for fast
     conversion between a delay in second based unit and a delay in
@@ -285,6 +359,7 @@ error_t dev_timer_init_sec(struct device_timer_s *accessor, dev_timer_delay_t *d
 config_depend(CONFIG_DEVICE_TIMER)
 error_t dev_timer_shift_sec(struct device_timer_s *accessor,
                             int8_t *shift_a, int8_t *shift_b,
+                            dev_timer_cfgrev_t *rev,
                             dev_timer_delay_t s_delay, uint32_t r_unit);
 
 /** @This applies the shift amount computed by the @ref
@@ -340,16 +415,13 @@ error_t dev_timer_check_timeout(struct device_timer_s *accessor,
 
 /** Synchronous timer sleep function. @This uses the scheduler API to
     put the current context in wait state waiting for the specified
-    delay. This function acts as @ref dev_timer_busy_wait if either
-    the scheduler is disabled in configuration, irqs are disabled in
-    configuration, or the timer do not support enqueuing requests
-    (@ref dev_timer_request_t operation).
+    delay.
 
     The request can be first initialized by calling @ref
     dev_timer_init_sec. It can then be reused multiple times to
     save timer units conversion computation.
 */
-config_depend(CONFIG_DEVICE_TIMER)
+config_depend_and2(CONFIG_DEVICE_TIMER, CONFIG_MUTEK_SCHEDULER)
 error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
 
 /** Synchronous timer busy-wait function. @This spins in a loop
@@ -358,7 +430,7 @@ error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *
     because counter overlap can not be handled properly in this
     case. @see dev_timer_sleep */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_busy_wait(struct device_timer_s *accessor, struct dev_timer_rq_s *rq);
+error_t dev_timer_busy_wait(struct device_timer_s *accessor, dev_timer_delay_t delay);
 
 
 #endif

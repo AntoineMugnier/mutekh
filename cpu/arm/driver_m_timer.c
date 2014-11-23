@@ -60,7 +60,8 @@ void arm_timer_systick_irq(struct device_s *dev)
 
   while (pv->systick_start & 1)
     {
-      struct dev_timer_rq_s *rq = dev_timer_queue_head(&pv->systick_queue);
+      struct dev_timer_rq_s *rq =
+        dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->systick_queue));
 
       if (rq == NULL)
         {
@@ -75,11 +76,11 @@ void arm_timer_systick_irq(struct device_s *dev)
       if (rq->deadline > pv->systick_value)
         break;
 
-      rq->drvdata = NULL;
-      dev_timer_queue_pop(&pv->systick_queue);
+      rq->rq.drvdata = NULL;
+      dev_timer_pqueue_remove(&pv->systick_queue, dev_timer_rq_s_base(rq));
 
       lock_release(&dev->lock);
-      kroutine_exec(&rq->kr, 0);
+      kroutine_exec(&rq->rq.kr, 0);
       lock_spin(&dev->lock);
     }
 
@@ -91,54 +92,62 @@ static DEV_TIMER_REQUEST(arm_timer_request)
 {
   struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
+  error_t err = 0;
+
+  LOCK_SPIN_IRQ(&dev->lock);
 
   switch (accessor->number)
     {
 #if defined(CONFIG_CPU_ARM_TIMER_SYSTICK) && defined(CONFIG_DEVICE_IRQ)
     case 1: {
-      error_t err = 0;
-
-      rq->accessor = accessor;
-      LOCK_SPIN_IRQ(&dev->lock);
 
       if (pv->systick_start < 0)  /* hardware timer already used in mode 0 */
-        err = -EBUSY;
-      else
         {
-          uint64_t val = pv->systick_value;
-
-          if (rq->delay)
-            rq->deadline = val + rq->delay;
-
-          if (rq->deadline <= val)
-            err = -ETIMEDOUT;
-          else
-            {
-              dev_timer_queue_insert(&pv->systick_queue, rq);
-              rq->drvdata = pv;
-
-              /* start timer if needed */
-              if (pv->systick_start == 0)
-                {
-                  cpu_mem_write_32(ARMV7M_SYST_RVR_ADDR, pv->systick_period);
-                  cpu_mem_write_32(ARMV7M_SYST_CVR_ADDR, 0);
-                  cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR,
-                      ARMV7M_SYST_CSR_CLKSOURCE(CPU) |
-                      ARMV7M_SYST_CSR_ENABLE | ARMV7M_SYST_CSR_TICKINT);
-                }
-              pv->systick_start |= 1;
-            }
+          err = -EBUSY;
+          break;
         }
 
-      LOCK_RELEASE_IRQ(&dev->lock);
+      if (rq->rev && rq->rev != pv->systick_rev)
+        {
+          err = -EAGAIN;
+          break;
+        }
 
-      return err;
+      uint64_t val = pv->systick_value;
+
+      if (rq->delay)
+        rq->deadline = val + rq->delay;
+
+      if (rq->deadline <= val)
+        {
+          err = -ETIMEDOUT;
+          break;
+        }
+
+      dev_timer_pqueue_insert(&pv->systick_queue, dev_timer_rq_s_base(rq));
+      rq->rq.drvdata = pv;
+
+      /* start timer if needed */
+      if (pv->systick_start == 0)
+        {
+          cpu_mem_write_32(ARMV7M_SYST_RVR_ADDR, pv->systick_period);
+          cpu_mem_write_32(ARMV7M_SYST_CVR_ADDR, 0);
+          cpu_mem_write_32(ARMV7M_SYST_CSR_ADDR,
+                           ARMV7M_SYST_CSR_CLKSOURCE(CPU) |
+                           ARMV7M_SYST_CSR_ENABLE | ARMV7M_SYST_CSR_TICKINT);
+        }
+      pv->systick_start |= 1;
+      break;
     }
 #endif
 
     default:
-      return -ENOTSUP;
+      err = -ENOTSUP;
     }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
+
+  return err;
 }
 
 static DEV_TIMER_CANCEL(arm_timer_cancel)
@@ -152,19 +161,17 @@ static DEV_TIMER_CANCEL(arm_timer_cancel)
     case 1: {
       error_t err = 0;
 
-      assert(rq->accessor->dev == dev && rq->accessor->number == 1);
-
       LOCK_SPIN_IRQ(&dev->lock);
 
-      if (rq->drvdata == pv)
+      if (rq->rq.drvdata == pv)
         {
           assert(pv->systick_start & 1);
 
-          rq->drvdata = NULL;
-          dev_timer_queue_remove(&pv->systick_queue, rq);
+          rq->rq.drvdata = NULL;
+          dev_timer_pqueue_remove(&pv->systick_queue, dev_timer_rq_s_base(rq));
 
           /* stop timer if not in use */
-          if (dev_timer_queue_isempty(&pv->systick_queue))
+          if (dev_request_pqueue_isempty(&pv->systick_queue))
             {
               pv->systick_start &= ~1;
               if (pv->systick_start == 0)
@@ -188,11 +195,23 @@ static DEV_TIMER_CANCEL(arm_timer_cancel)
     }
 }
 
-static DEV_TIMER_START_STOP(arm_timer_start_stop)
+DEV_USE(arm_timer_systick_use)
 {
   struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
   error_t err = 0;
+  bool_t start = 0;
+
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR:
+    case DEV_USE_PUT_ACCESSOR:
+      return 0;
+    case DEV_USE_START:
+      start = 1;
+    case DEV_USE_STOP:
+      break;
+    }
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -292,6 +311,8 @@ static DEV_TIMER_GET_VALUE(arm_timer_get_value)
     case 0:
       if (pv->systick_start >= 0)
         err = -EBUSY;
+      else if (rev && rev != 1)
+        err = -EAGAIN;
       else
         {
           uint64_t v = cpu_mem_read_32(ARMV7M_SYST_CVR_ADDR) ^ 0xffffff;
@@ -304,6 +325,7 @@ static DEV_TIMER_GET_VALUE(arm_timer_get_value)
           v += pv->systick_value << 24;
 # endif
           *value = v;
+
         }
       break;
 
@@ -311,6 +333,8 @@ static DEV_TIMER_GET_VALUE(arm_timer_get_value)
     case 1:
       if (pv->systick_start <= 0)
         err = -EBUSY;
+      else if (rev && rev != pv->systick_rev)
+        err = -EAGAIN;
       else
         *value = pv->systick_value;
       break;
@@ -322,6 +346,8 @@ static DEV_TIMER_GET_VALUE(arm_timer_get_value)
       uint32_t ctrl = cpu_mem_read_32(ARM_M_DWT_CTRL_ADDR);
       if (ctrl & ARM_M_DWT_CTRL_NOCYCCNT)
         err = -ENOTSUP;
+      else if (rev && rev != 1)
+        err = -EAGAIN;
       else if (ctrl & ARM_M_DWT_CTRL_CYCCNTENA)
         *value = cpu_mem_read_32(ARM_M_DWT_CYCCNT_ADDR);
       else
@@ -339,18 +365,7 @@ static DEV_TIMER_GET_VALUE(arm_timer_get_value)
   return err;
 }
 
-#ifdef CONFIG_DEVICE_CLOCK
-static DEV_TIMER_GET_FREQ(arm_timer_get_freq)
-{
-  struct device_s *dev = accessor->dev;
-  struct arm_dev_private_s *pv = dev->drv_pv;
-
-  *freq = pv->freq;
-  return 0;
-}
-#endif
-
-static DEV_TIMER_RESOLUTION(arm_timer_resolution)
+static DEV_TIMER_CONFIG(arm_timer_config)
 {
   struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
@@ -358,64 +373,76 @@ static DEV_TIMER_RESOLUTION(arm_timer_resolution)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
+  if (cfg)
+    {
+      cfg->freq = pv->freq;
+      cfg->acc = pv->acc;
+    }
+
   switch (accessor->number)
     {
 #ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
     case 0:    /* systick as a free running counter */
-      if (res)
+      if (res > 1)
+        err = -ERANGE;
+      if (cfg)
         {
-          if (*res != 0)
-            err = -ENOTSUP;
-          *res = 1;
-        }
-      if (max)
+          cfg->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES;
 # ifdef CONFIG_DEVICE_IRQ
-        *max = 0xffffffffffffffffULL;
+          cfg->max = 0xffffffffffffffffULL;
 # else
-        *max = 0xffffff;
+          cfg->cap |= DEV_TIMER_CAP_TICKLESS;
+          cfg->max = 0xffffff;
 # endif
+          cfg->rev = 1;
+          cfg->res = 1;
+        }
       break;
 
 # ifdef CONFIG_DEVICE_IRQ
     case 1:     /* systick as a prescaler */
       if (res)
         {
-          if (*res)
+          if (pv->systick_start)
             {
-              if (pv->systick_start)
-                {
-                  err = -EBUSY;
-                }
-              else if (*res < ARM_M_SYSTICK_MIN_PERIOD)
-                {
-                  pv->systick_period = ARM_M_SYSTICK_MIN_PERIOD;
-                  err = -ERANGE;
-                }
-              else
-                {
-                  pv->systick_period = *res;
-                }
+              err = -EBUSY;
             }
-          *res = pv->systick_period;
+          else if (res < ARM_M_SYSTICK_MIN_PERIOD)
+            {
+              res = ARM_M_SYSTICK_MIN_PERIOD;
+              err = -ERANGE;
+            }
+          else if (res > 0xffffff)
+            {
+              res = 0xffffff;
+              err = -ERANGE;
+            }
+          pv->systick_period = res;
+          pv->systick_rev += 2;
         }
-
-      if (max)
-        *max = 0xffffffffffffffffULL;
+      if (cfg)
+        {
+          cfg->max = 0xffffffffffffffffULL;
+          cfg->rev = pv->systick_rev;
+          cfg->res = pv->systick_period;
+          cfg->cap = DEV_TIMER_CAP_REQUEST | DEV_TIMER_CAP_STOPPABLE;
+        }
       break;
 # endif
 #endif
 
 #ifdef CONFIG_CPU_ARM_TIMER_DWTCYC
     case 2:    /* cycle counter */
-      if (res)
+      if (res > 1)
+        err = -ENOTSUP;
+      if (cfg)
         {
-          if (*res != 0)
-            err = -ENOTSUP;
-          *res = 1;
+          cfg->max = 0xffffffff;
+          cfg->rev = 1;
+          cfg->res = 1;
+          cfg->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES
+            | DEV_TIMER_CAP_TICKLESS;
         }
-
-      if (max)
-        *max = 0xffffffff;
       break;
 #endif
 
@@ -433,13 +460,7 @@ const struct driver_timer_s  arm_m_timer_drv =
   .class_          = DRIVER_CLASS_TIMER,
   .f_request       = arm_timer_request,
   .f_cancel        = arm_timer_cancel,
-  .f_start_stop    = arm_timer_start_stop,
   .f_get_value     = arm_timer_get_value,
-#ifdef CONFIG_DEVICE_CLOCK
-  .f_get_freq      = arm_timer_get_freq,
-#else
-  .f_get_freq      = dev_timer_drv_get_freq,
-#endif
-  .f_resolution    = arm_timer_resolution,
+  .f_config        = arm_timer_config,
 };
 

@@ -33,44 +33,77 @@
 
 #include <mutek/kroutine.h>
 #include <stdlib.h> /* abs */
+#include <enums.h>
 
-GCT_CONTAINER_KEY_PROTOTYPES(dev_timer_queue, extern inline, dev_timer_queue, deadline,
-        init, destroy, isempty, pop, head, remove, insert);
+const char dev_timer_capabilities_e[] = ENUM_DESC_DEV_TIMER_CAPABILITIES_E;
+
+GCT_CONTAINER_KEY_PROTOTYPES(dev_request_pqueue, extern inline, dev_timer_pqueue, dev_timer_pqueue,
+                             remove, insert);
 
 error_t dev_timer_init_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
-                           dev_timer_delay_t s_delay, uint32_t r_unit)
+                           dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit)
 {
-  dev_timer_res_t r = 0;
-  if (DEVICE_OP(accessor, resolution, &r, NULL))
+  struct dev_timer_config_s cfg;
+  error_t err;
+
+  err = DEVICE_OP(accessor, config, &cfg, 0);
+  if (err)
+    return err;
+  if (!DEV_FREQ_IS_VALID(cfg.freq))
     return -EIO;
 
-  struct dev_freq_s f;
-  if (DEVICE_OP(accessor, get_freq, &f))
-    return -EIO;
+  uint64_t d = ((uint64_t)cfg.freq.num * s_delay)
+    / ((uint64_t)r_unit * cfg.res * cfg.freq.denom);
 
-  uint64_t d = f.num * s_delay / ((uint64_t)r_unit * r * f.denom);
   if (d > (uint64_t)(dev_timer_delay_t)-1)
     return -ERANGE;
 
   *delay = d ? d : 1;
+  *rev = cfg.rev;
+
+  return 0;
+}
+
+error_t dev_timer_get_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
+                          dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit)
+{
+  struct dev_timer_config_s cfg;
+  error_t err;
+
+  err = DEVICE_OP(accessor, config, &cfg, 0);
+  if (err)
+    return err;
+  if (!DEV_FREQ_IS_VALID(cfg.freq))
+    return -EIO;
+
+  uint64_t d = ((uint64_t)r_unit * cfg.res * cfg.freq.denom * s_delay)
+    / ((uint64_t)cfg.freq.num);
+
+  if (d > (uint64_t)(dev_timer_delay_t)-1)
+    return -ERANGE;
+
+  *delay = d ? d : 1;
+  *rev = cfg.rev;
 
   return 0;
 }
 
 error_t dev_timer_shift_sec(struct device_timer_s *accessor,
                             int8_t *shift_a, int8_t *shift_b,
+                            dev_timer_cfgrev_t *rev,
                             dev_timer_delay_t s_delay, uint32_t r_unit)
 {
-  dev_timer_res_t r = 0;
-  if (DEVICE_OP(accessor, resolution, &r, NULL))
+  struct dev_timer_config_s cfg;
+  error_t err;
+
+  err = DEVICE_OP(accessor, config, &cfg, 0);
+  if (err)
+    return err;
+  if (!DEV_FREQ_IS_VALID(cfg.freq))
     return -EIO;
 
-  struct dev_freq_s f;
-  if (DEVICE_OP(accessor, get_freq, &f))
-    return -EIO;
-
-  uint64_t a = f.num * s_delay / f.denom;
-  uint64_t b = (uint64_t)r_unit * r;
+  uint64_t a = ((uint64_t)cfg.freq.num * s_delay) / cfg.freq.denom;
+  uint64_t b = (uint64_t)r_unit * cfg.res;
 
   if (a == 0 || b == 0)
     return -ERANGE;
@@ -94,6 +127,8 @@ error_t dev_timer_shift_sec(struct device_timer_s *accessor,
         return -ERANGE;
     }
 
+  *rev = cfg.rev;
+
   return 0;
 }
 
@@ -101,57 +136,74 @@ error_t dev_timer_check_timeout(struct device_timer_s *accessor,
                                 dev_timer_delay_t delay,
                                 const dev_timer_value_t *start)
 {
-  // get max timer value (power of 2 minus 1)
-  dev_timer_value_t max;
-  if (DEVICE_OP(accessor, resolution, NULL, &max))
-    return -EIO;
+  struct dev_timer_config_s cfg;
+  error_t err;
+
+  err = DEVICE_OP(accessor, config, &cfg, 0);
+  if (err)
+    return err;
 
   // compute wrapping mask
-  dev_timer_value_t b = (max >> 1) + 1;
+  dev_timer_value_t b = (cfg.max >> 1) + 1;
   if (delay >= b)
     return -ERANGE;
 
   dev_timer_value_t v;
-  if (DEVICE_OP(accessor, get_value, &v))
+  if (DEVICE_OP(accessor, get_value, &v, cfg.rev))
     return -EIO;
 
-  return ((((*start + delay) & max) - v) & b) != 0;
+  return ((((*start + delay) & cfg.max) - v) & b) != 0;
 }
 
-error_t dev_timer_busy_wait(struct device_timer_s *accessor, struct dev_timer_rq_s *rq)
+error_t dev_timer_busy_wait(struct device_timer_s *accessor, dev_timer_delay_t delay)
 {
   // get max timer value (power of 2 minus 1)
-  dev_timer_value_t max;
-  if (DEVICE_OP(accessor, resolution, NULL, &max))
-    return -EIO;
+  struct dev_timer_config_s cfg;
+  error_t err;
+
+  err = DEVICE_OP(accessor, config, &cfg, 0);
+  if (err)
+    return err;
 
   // compute wrapping mask
-  dev_timer_value_t b = (max >> 1) + 1;
-  if (rq->delay >= b)
+  dev_timer_value_t b = (cfg.max >> 1) + 1;
+  if (delay >= b)
     return -ERANGE;
+
+  if (cfg.cap & DEV_TIMER_CAP_STOPPABLE)
+    if (device_start(accessor))
+      return -EBUSY;
 
   // compute wrapped deadline
   dev_timer_value_t d;
-  if (DEVICE_OP(accessor, get_value, &d))
-    return -EIO;
+  if (DEVICE_OP(accessor, get_value, &d, cfg.rev))
+    {
+      err = -EIO;
+      goto stop;
+    }
 
-  d = (d + rq->delay) & max;
-
-  DEVICE_OP(accessor, start_stop, 1);
+  d = (d + delay) & cfg.max;
 
   while (1)
     {
       dev_timer_value_t v;
-      DEVICE_OP(accessor, get_value, &v);
+      if (DEVICE_OP(accessor, get_value, &v, cfg.rev))
+        {
+          err = -EIO;
+          goto stop;
+        }
 
       // x will wrap when the deadline is reached
       if ((d - v) & b)
         break;
     }
 
-  DEVICE_OP(accessor, start_stop, 0);
+  err = 0;
+ stop:
+  if (cfg.cap & DEV_TIMER_CAP_STOPPABLE)
+    device_stop(accessor);
 
-  return 0;
+  return err;
 }
 
 struct dev_timer_wait_rq_s
@@ -166,8 +218,8 @@ struct dev_timer_wait_rq_s
 #ifdef CONFIG_MUTEK_SCHEDULER
 static KROUTINE_EXEC(dev_timer_wait_request_cb)
 {
-  struct dev_timer_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
-  struct dev_timer_wait_rq_s *status = rq->pvdata;
+  struct dev_timer_rq_s *rq = dev_timer_rq_s_cast(dev_request_s_from_kr(kr));
+  struct dev_timer_wait_rq_s *status = rq->rq.pvdata;
 
   LOCK_SPIN_IRQ(&status->lock);
   if (status->ctx != NULL)
@@ -177,11 +229,9 @@ static KROUTINE_EXEC(dev_timer_wait_request_cb)
 }
 #endif
 
+#ifdef CONFIG_MUTEK_SCHEDULER
 error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *rq)
 {
-#ifndef CONFIG_MUTEK_SCHEDULER
-  return dev_timer_busy_wait(accessor, rq);
-#else
   struct dev_timer_wait_rq_s status;
 
   if (rq->delay == 0)
@@ -190,20 +240,18 @@ error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *
   lock_init(&status.lock);
   status.ctx = NULL;
   status.done = 0;
-  rq->pvdata = &status;
-  kroutine_init(&rq->kr, dev_timer_wait_request_cb, KROUTINE_IMMEDIATE);
+  rq->rq.pvdata = &status;
+  kroutine_init(&rq->rq.kr, dev_timer_wait_request_cb, KROUTINE_IMMEDIATE);
 
   error_t e = DEVICE_OP(accessor, request, rq);
 
-  if (e == -ETIMEDOUT)
+  switch (e)
     {
-    }
-  else if (e < 0)
-    {
-      e = dev_timer_busy_wait(accessor, rq);
-    }
-  else
-    {
+    case -ETIMEDOUT:
+      e = 0;
+      break;
+
+    case 0:
       CPU_INTERRUPT_SAVESTATE_DISABLE;
       lock_spin(&status.lock);
 
@@ -215,22 +263,19 @@ error_t dev_timer_sleep(struct device_timer_s *accessor, struct dev_timer_rq_s *
       else
         lock_release(&status.lock);
 
-      assert(!rq->drvdata);
+      assert(!rq->rq.drvdata);
 
       CPU_INTERRUPT_RESTORESTATE;
       lock_destroy(&status.lock);
+
+    default:
+      break;
     }
 
   lock_destroy(&status.lock);
 
   return e;
+}
 #endif
-}
 
-DEV_TIMER_GET_FREQ(dev_timer_drv_get_freq)
-{
-  if (device_get_res_freq(accessor->dev, freq, accessor->number))
-    return -ENOTSUP;
-  return 0;
-}
 

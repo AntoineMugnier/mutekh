@@ -133,8 +133,8 @@ struct pthread_cond_timedwait_ctx_s
 
 static KROUTINE_EXEC(pthread_cond_timer)
 {
-  struct dev_timer_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
-  struct pthread_cond_timedwait_ctx_s *ev_ctx = rq->pvdata;
+  struct dev_timer_rq_s *rq = KROUTINE_CONTAINER(kr, *rq, rq.kr);
+  struct pthread_cond_timedwait_ctx_s *ev_ctx = rq->rq.pvdata;
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
   sched_queue_wrlock(ev_ctx->wait);
@@ -166,8 +166,7 @@ pthread_cond_timedwait(pthread_cond_t *cond,
 
   struct dev_timer_rq_s rq;
 
-  rq.delay = 0;
-  if (libc_time_to_timer(abstime, &rq.deadline))
+  if (libc_time_to_timer_rq(abstime, &rq))
     return EINVAL;
 
   error_t	res = 0;
@@ -188,8 +187,8 @@ pthread_cond_timedwait(pthread_cond_t *cond,
       this->state &= ~_PTHREAD_STATE_TIMEOUT;
       lock_release(&this->lock);
 
-      kroutine_init(&rq.kr, pthread_cond_timer, KROUTINE_IMMEDIATE);
-      rq.pvdata = &ev_ctx;
+      kroutine_init(&rq.rq.kr, pthread_cond_timer, KROUTINE_IMMEDIATE);
+      rq.rq.pvdata = &ev_ctx;
 
       switch (DEVICE_OP(libc_timer(), request, &rq))
         {

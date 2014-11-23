@@ -78,9 +78,10 @@ struct soclib_timer_state_s
   int_fast8_t start_count;
 
 #ifdef CONFIG_DEVICE_IRQ
-  dev_timer_queue_root_t queue;
+  dev_request_pqueue_root_t queue;
   dev_timer_value_t value;
   dev_timer_res_t   period;
+  dev_timer_cfgrev_t rev;
 #endif
 };
 
@@ -120,7 +121,8 @@ static DEV_IRQ_EP_PROCESS(soclib_timer_irq)
 
       while (1)
         {
-          struct dev_timer_rq_s *rq = dev_timer_queue_head(&p->queue);
+          struct dev_timer_rq_s *rq;
+          rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&p->queue));
 
           if (!rq)
             {
@@ -136,11 +138,11 @@ static DEV_IRQ_EP_PROCESS(soclib_timer_irq)
           if (rq->deadline > p->value)
             break;
 
-          rq->drvdata = NULL;
-          dev_timer_queue_pop(&p->queue);
+          rq->rq.drvdata = NULL;
+          dev_timer_pqueue_remove(&p->queue, dev_timer_rq_s_base(rq));
 
           lock_release(&dev->lock);
-          kroutine_exec(&rq->kr, 0);
+          kroutine_exec(&rq->rq.kr, 0);
           lock_spin(&dev->lock);
         }
     }
@@ -162,16 +164,16 @@ static DEV_TIMER_REQUEST(soclib_timer_request)
     return -ENOTSUP;
 
   if (number >= pv->t_count)
-    return -ENOENT;
-
-  rq->accessor = accessor;
+    return -ENOTSUP;
 
   struct soclib_timer_state_s *p = pv->t + number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   if (p->start_count < 0)  /* hardware timer already used in mode 0 */
-      err = -EBUSY;
+    err = -EBUSY;
+  else if (rq->rev && rq->rev != p->rev)
+    err = -EAGAIN;
   else
     {
       uint64_t val = p->value;
@@ -183,8 +185,8 @@ static DEV_TIMER_REQUEST(soclib_timer_request)
         err = -ETIMEDOUT;
       else
         {
-          rq->drvdata = p;
-          dev_timer_queue_insert(&p->queue, rq);
+          rq->rq.drvdata = p;
+          dev_timer_pqueue_insert(&p->queue, dev_timer_rq_s_base(rq));
 
           /* start timer if needed */
           if (p->start_count == 0)
@@ -218,23 +220,21 @@ static DEV_TIMER_CANCEL(soclib_timer_cancel)
     return -ENOTSUP;
 
   if (number >= pv->t_count)
-    return -ENOENT;
-
-  assert(rq->accessor->dev == dev && rq->accessor->number == accessor->number);
+    return -ENOTSUP;
 
   struct soclib_timer_state_s *p = pv->t + number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (rq->drvdata == p)
+  if (rq->rq.drvdata == p)
     {
       assert(p->start_count & 1);
 
-      dev_timer_queue_remove(&p->queue, rq);
-      rq->drvdata = 0;
+      dev_timer_pqueue_remove(&p->queue, dev_timer_rq_s_base(rq));
+      rq->rq.drvdata = NULL;
 
       /* stop timer if not in use */
-      if (dev_timer_queue_isempty(&p->queue))
+      if (dev_request_pqueue_isempty(&p->queue))
         {
           p->start_count &= ~1;
           if (p->start_count == 0)
@@ -254,15 +254,27 @@ static DEV_TIMER_CANCEL(soclib_timer_cancel)
 #endif
 }
 
-static DEV_TIMER_START_STOP(soclib_timer_state_start_stop)
+static DEV_USE(soclib_timer_use)
 {
   struct device_s *dev = accessor->dev;
   struct soclib_timer_private_s *pv = dev->drv_pv;
   uint_fast8_t number = accessor->number / 2;
   uint_fast8_t mode = accessor->number % 2;
+  bool_t start = 0;
 
   if (number >= pv->t_count)
-    return -ENOENT;
+    return -ENOTSUP;
+
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR:
+    case DEV_USE_PUT_ACCESSOR:
+      return 0;
+    case DEV_USE_START:
+      start = 1;
+    case DEV_USE_STOP:
+      break;
+    }
 
 #ifndef CONFIG_DEVICE_IRQ
   if (mode != 0)
@@ -327,7 +339,7 @@ static DEV_TIMER_GET_VALUE(soclib_timer_get_value)
   error_t err = 0;
 
   if (number >= pv->t_count)
-    return -ENOENT;
+    return -ENOTSUP;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -341,7 +353,10 @@ static DEV_TIMER_GET_VALUE(soclib_timer_get_value)
   else if (mode)
     {
 #ifdef CONFIG_DEVICE_IRQ
-      *value = p->value;
+      if (rev && rev != p->rev)
+        err = -EAGAIN;
+      else
+        *value = p->value;
 #else
       err = -ENOTSUP;
 #endif
@@ -356,7 +371,10 @@ static DEV_TIMER_GET_VALUE(soclib_timer_get_value)
       v += p->value << 32;
 #endif
 
-      *value = v;
+      if (rev && rev != 1)
+        err = -EAGAIN;
+      else
+        *value = v;
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -364,7 +382,7 @@ static DEV_TIMER_GET_VALUE(soclib_timer_get_value)
   return err;
 }
 
-static DEV_TIMER_RESOLUTION(soclib_timer_resolution)
+static DEV_TIMER_CONFIG(soclib_timer_config)
 {
   struct device_s *dev = accessor->dev;
   struct soclib_timer_private_s *pv = dev->drv_pv;
@@ -372,61 +390,72 @@ static DEV_TIMER_RESOLUTION(soclib_timer_resolution)
   uint_fast8_t mode = accessor->number % 2;
 
   if (number >= pv->t_count)
-    return -ENOENT;
+    return -ENOTSUP;
 
   error_t err = 0;
+
+  if (cfg && device_get_res_freq(accessor->dev, &cfg->freq, number))
+    cfg->freq = DEV_FREQ_INVALID;
+
+  LOCK_SPIN_IRQ(&dev->lock);
 
   if (mode)
     {
 #ifdef CONFIG_DEVICE_IRQ
       struct soclib_timer_state_s *p = pv->t + number;
 
-      LOCK_SPIN_IRQ(&dev->lock);
-
       if (res)
         {
-          if (*res)
+          if (p->start_count)
             {
-              if (p->start_count)
+              err = -EBUSY;
+            }
+          else
+            {
+              if (res < SOCLIB_TIMER_MIN_PERIOD)
                 {
-                  err = -EBUSY;
-                }
-              else if (*res < SOCLIB_TIMER_MIN_PERIOD)
-                {
-                  p->period = SOCLIB_TIMER_MIN_PERIOD;
+                  res = SOCLIB_TIMER_MIN_PERIOD;
                   err = -ERANGE;
                 }
-              else
-                {
-                  p->period = *res;
-                }
+              p->rev += 2;
+              p->period = res;
             }
-          *res = p->period;
         }
 
-      if (max)
-        *max = 0xffffffffffffffffULL;
+      if (cfg)
+        {
+          cfg->acc = DEV_FREQ_ACC_INVALID;
+          cfg->max = 0xffffffffffffffffULL;
+          cfg->rev = p->rev;
+          cfg->res = p->period;
+          cfg->cap = DEV_TIMER_CAP_REQUEST | DEV_TIMER_CAP_STOPPABLE;
+        }
 
-      LOCK_RELEASE_IRQ(&dev->lock);
 #else
       err = -ENOTSUP;
 #endif
     }
   else
     {
-      if (res)
+      if (res > 1)
+        err = -ERANGE;
+
+      if (cfg)
         {
-          if (*res != 0)
-            err = -ENOTSUP;
-          *res = 1;
-        }
-      if (max)
+          cfg->acc = DEV_FREQ_ACC_INVALID;
+          cfg->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES;
 #ifdef CONFIG_DEVICE_IRQ
-        *max = 0xffffffffffffffffULL;
+          cfg->max = 0xffffffffffffffffULL;
 #else
-        *max = 0xffffffff;
+          cfg->cap |= DEV_TIMER_CAP_TICKLESS;
+          cfg->max = 0xffffffff;
 #endif
+          cfg->rev = 1;
+          cfg->res = 1;
+        }
     }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
 }
@@ -436,10 +465,8 @@ const struct driver_timer_s  soclib_timer_timer_drv =
   .class_         = DRIVER_CLASS_TIMER,
   .f_request      = soclib_timer_request,
   .f_cancel       = soclib_timer_cancel,
-  .f_start_stop   = soclib_timer_state_start_stop,
   .f_get_value    = soclib_timer_get_value,
-  .f_get_freq     = dev_timer_drv_get_freq,
-  .f_resolution   = soclib_timer_resolution,
+  .f_config       = soclib_timer_config,
 };
 
 /************************************************************************/
@@ -459,6 +486,7 @@ const struct driver_s  soclib_timer_drv =
   .id_table       = soclib_timer_ids,
   .f_init         = soclib_timer_init,
   .f_cleanup      = soclib_timer_cleanup,
+  .f_use          = soclib_timer_use,
 
   .classes        = {
     &soclib_timer_timer_drv,
@@ -496,7 +524,7 @@ static DEV_INIT(soclib_timer_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   dev_timer_res_t resolution = SOCLIB_TIMER_DEFAULT_PERIOD;
-  device_get_param_uint(dev, "period", &resolution);
+  device_get_param_uint(dev, "resolution", &resolution);
   if (resolution < SOCLIB_TIMER_MIN_PERIOD)
     resolution = SOCLIB_TIMER_MIN_PERIOD;
 
@@ -513,12 +541,13 @@ static DEV_INIT(soclib_timer_init)
     {
       struct soclib_timer_state_s *p = pv->t + i;
       p->start_count = 0;
+      p->rev = 1;
 
       cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, i), 0);
 
 # ifdef CONFIG_DEVICE_IRQ
       p->value = 0;
-      dev_timer_queue_init(&p->queue);
+      dev_request_pqueue_init(&p->queue);
       p->period = resolution;
       cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_IRQ, i), 0);
 # endif
@@ -543,7 +572,7 @@ static DEV_CLEANUP(soclib_timer_cleanup)
       cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, i), 0);
 #ifdef CONFIG_DEVICE_IRQ
       struct soclib_timer_state_s *p = pv->t + i;
-      dev_timer_queue_destroy(&p->queue);
+      dev_request_pqueue_destroy(&p->queue);
 #endif
     }
 

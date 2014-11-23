@@ -68,7 +68,8 @@ struct soclib_xicu_pti_s
   int_fast8_t start_count;
 
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
-  dev_timer_queue_root_t queue;
+  dev_timer_cfgrev_t rev;
+  dev_request_pqueue_root_t queue;
   dev_timer_value_t value;
   dev_timer_res_t   period;
 #endif
@@ -97,6 +98,7 @@ struct soclib_xicu_private_s
 #endif
 };
 
+DEV_USE(soclib_xicu_timer_use);
 
 /******** hw registers */
 

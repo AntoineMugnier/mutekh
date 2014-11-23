@@ -49,9 +49,12 @@ struct arm_dev_private_s
 
 #ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
   int_fast8_t systick_start;
-  dev_timer_queue_root_t systick_queue;
+  dev_request_pqueue_root_t systick_queue;
   dev_timer_value_t systick_value;
   dev_timer_res_t   systick_period;
+# ifdef CONFIG_DEVICE_IRQ
+  dev_timer_cfgrev_t systick_rev;
+# endif
 #endif
 #ifdef CONFIG_CPU_ARM_TIMER_DWTCYC
   int_fast8_t dwt_cycnt_start;
@@ -67,6 +70,7 @@ struct arm_dev_private_s
 };
 
 void arm_timer_systick_irq(struct device_s *dev);
+DEV_USE(arm_timer_systick_use);
 
 extern const struct driver_timer_s  arm_m_timer_drv;
 

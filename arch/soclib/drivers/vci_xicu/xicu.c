@@ -40,6 +40,26 @@
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
+static DEV_USE(soclib_xicu_use)
+{
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR:
+    case DEV_USE_PUT_ACCESSOR:
+      return 0;
+    default:
+      switch (accessor->api->class_)
+        {
+#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+        case DRIVER_CLASS_TIMER:
+          return soclib_xicu_timer_use(accessor, op);
+#endif
+        default:
+          return -ENOTSUP;
+        }
+    }
+}
+
 static const struct dev_enum_ident_s  soclib_xicu_ids[] =
 {
   DEV_ENUM_FDTNAME_ENTRY("soclib:vci_xicu"),
@@ -56,6 +76,7 @@ const struct driver_s  soclib_xicu_drv =
 
   .f_init         = soclib_xicu_init,
   .f_cleanup      = soclib_xicu_cleanup,
+  .f_use          = soclib_xicu_use,
 
   .classes        = {
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
@@ -160,9 +181,10 @@ static DEV_INIT(soclib_xicu_init)
       cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_PTI_PER, i), 0);
 
 # ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
-      dev_timer_queue_init(&p->queue);
+      dev_request_pqueue_init(&p->queue);
       p->period = resolution;
       p->value = 0;
+      p->rev = 1;
       // FIXME timer irq routing
       cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_PTI_ENABLE, i), 0xffffffff);
 # endif
@@ -190,8 +212,17 @@ static DEV_CLEANUP(soclib_xicu_cleanup)
   struct soclib_xicu_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
-  /* detach soclib_xicu irq end-points */
+# ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
   uint_fast8_t i;
+  for (i = 0; i < pv->pti_count; i++)
+    {
+      struct soclib_xicu_pti_s *p = pv->pti + i;
+      cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_MSK_PTI_ENABLE, i), 0);
+      dev_request_pqueue_destroy(&p->queue);
+    }
+# endif
+
+  /* detach soclib_xicu irq end-points */
   for (i = 0; i < pv->hwi_count; i++)
     device_irq_sink_unlink(dev, &pv->sinks[i].sink, 1);
   device_irq_source_unlink(dev, pv->srcs, pv->irq_count);

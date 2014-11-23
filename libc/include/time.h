@@ -88,6 +88,11 @@ struct device_timer_s *libc_timer();
 config_depend(CONFIG_LIBC_TIME)
 error_t libc_time_to_timer(const struct timespec *delay, dev_timer_value_t *value);
 
+/** @internal @This intializes the @tt delay, @tt deadline and @tt rev
+    fields of a timer request. @see libc_time_to_timer */
+config_depend(CONFIG_LIBC_TIME)
+error_t libc_time_to_timer_rq(const struct timespec *delay, struct dev_timer_rq_s *rgq);
+
 C_HEADER_END
 
 #endif

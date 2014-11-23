@@ -49,13 +49,14 @@ struct efm32_rtc_private_s
   uintptr_t addr;
   /* Start timer counter, bit 0 indicates if there are pending requests */
   uint_fast8_t start_count;
-  /* Timer Software value */
+  dev_timer_cfgrev_t rev;
 #ifdef CONFIG_DEVICE_IRQ
+  /* Timer Software value */
   uint32_t swvalue;
   /* Interrupt end-point */
   struct dev_irq_ep_s irq_eps;
   /* Request queue */
-  dev_timer_queue_root_t queue;
+  dev_request_pqueue_root_t queue;
 #endif
 
 #ifdef CONFIG_DEVICE_CLOCK
@@ -63,6 +64,8 @@ struct efm32_rtc_private_s
   struct dev_freq_s freq;
   struct dev_freq_accuracy_s acc;
 #endif
+
+  enum dev_timer_capabilities_e cap:8;
 };
 
 #ifdef CONFIG_DEVICE_CLOCK
@@ -71,6 +74,7 @@ static DEV_CLOCK_SINK_CHANGED(efm32_rtc_clk_changed)
   struct device_s *dev = ep->dev;
   struct efm32_rtc_private_s *pv = ep->dev->drv_pv;
   LOCK_SPIN_IRQ(&dev->lock);
+  pv->rev += 2;
   pv->freq = *freq;
   pv->acc = *acc;
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -182,26 +186,10 @@ static DEV_IRQ_EP_PROCESS(efm32_rtc_irq)
       if (irq & EFM32_RTC_IF_OF)
         pv->swvalue++;
 
-      struct dev_timer_rq_s *rq = dev_timer_queue_head(&pv->queue);
-
-      while (rq != NULL)
+      while (1)
         {
-          uint64_t value = get_timer_value(pv);
-
-          /* setup compare for first request */
-          if (rq->deadline > value)
-            if (!efm32_rtc_request_start(pv, rq, value))
-              break;
-
-          dev_timer_queue_pop(&pv->queue);
-          efm32_rtc_disable_compare(pv);
-          rq->drvdata = 0;
-
-          lock_release(&dev->lock);
-          kroutine_exec(&rq->kr, 0);
-          lock_spin(&dev->lock);
-
-          rq = dev_timer_queue_head(&pv->queue);
+          struct dev_timer_rq_s *rq;
+          rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&pv->queue));
           if (rq == NULL)
             {
               pv->start_count &= ~1;
@@ -209,6 +197,21 @@ static DEV_IRQ_EP_PROCESS(efm32_rtc_irq)
                 efm32_rtc_stop_counter(pv);
               break;
             }
+
+          uint64_t value = get_timer_value(pv);
+
+          /* setup compare for first request */
+          if (rq->deadline > value)
+            if (!efm32_rtc_request_start(pv, rq, value))
+              break;
+
+          dev_timer_pqueue_remove(&pv->queue, dev_timer_rq_s_base(rq));
+          efm32_rtc_disable_compare(pv);
+          rq->rq.drvdata = NULL;
+
+          lock_release(&dev->lock);
+          kroutine_exec(&rq->rq.kr, 0);
+          lock_spin(&dev->lock);
         }
 
     }
@@ -224,26 +227,27 @@ static DEV_TIMER_CANCEL(efm32_rtc_cancel)
   struct efm32_rtc_private_s *pv = dev->drv_pv;
   error_t err = -ETIMEDOUT;
 
-  assert(rq->accessor == accessor);
-
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (rq->drvdata == pv)
+  if (rq->rq.drvdata == pv)
     {
-      struct dev_timer_rq_s *rq0 = dev_timer_queue_head(&pv->queue);
-     
-      dev_timer_queue_remove(&pv->queue, rq);
-      rq->drvdata = NULL;
+      struct dev_timer_rq_s *rqnext = NULL;
+      bool_t first = (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL);
 
-      if (rq == rq0)         /* removed first request ? */
+      if (first)
+        rqnext = dev_timer_rq_s_cast(dev_request_pqueue_next(&pv->queue, dev_timer_rq_s_base(rq)));
+
+      dev_timer_pqueue_remove(&pv->queue, dev_timer_rq_s_base(rq));
+      rq->rq.drvdata = NULL;
+
+      if (first)
         {
           efm32_rtc_disable_compare(pv);
-          rq0 = dev_timer_queue_head(&pv->queue);
 
-          if (rq0 != NULL)
+          if (rqnext != NULL)
             {
               /* start next request, raise irq on race condition */
-              if (efm32_rtc_request_start(pv, rq0, get_timer_value(pv)))
+              if (efm32_rtc_request_start(pv, rqnext, get_timer_value(pv)))
                 efm32_rtc_raise_irq(pv);
             }
           else
@@ -274,37 +278,38 @@ static DEV_TIMER_REQUEST(efm32_rtc_request)
   struct efm32_rtc_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  rq->accessor = accessor;
-
   LOCK_SPIN_IRQ(&dev->lock);
 
-  /* Start timer if needed */
-  if (pv->start_count == 0)
-    efm32_rtc_start_counter(pv);
-
-  uint64_t value = get_timer_value(pv);
-
-  if (rq->delay)
-    rq->deadline = value + rq->delay;
-
-  //  printk("%p %llu %llu\n", sched_get_current(), rq->deadline, value);
-
-  if (rq->deadline <= value)
-    err = -ETIMEDOUT;
+  if (rq->rev && rq->rev != pv->rev)
+    err = -EAGAIN;
   else
     {
-      pv->start_count |= 1;
-      dev_timer_queue_insert(&pv->queue, rq);
-      rq->drvdata = pv;
+      /* Start timer if needed */
+      if (pv->start_count == 0)
+        efm32_rtc_start_counter(pv);
 
-      /* start request, raise irq on race condition */
-      if (dev_timer_queue_head(&pv->queue) == rq)
-        if (efm32_rtc_request_start(pv, rq, value))
-          efm32_rtc_raise_irq(pv);
+      uint64_t value = get_timer_value(pv);
+
+      if (rq->delay)
+        rq->deadline = value + rq->delay;
+
+      if (rq->deadline <= value)
+        err = -ETIMEDOUT;
+      else
+        {
+          pv->start_count |= 1;
+          dev_timer_pqueue_insert(&pv->queue, dev_timer_rq_s_base(rq));
+          rq->rq.drvdata = pv;
+
+          /* start request, raise irq on race condition */
+          if (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL)
+            if (efm32_rtc_request_start(pv, rq, value))
+              efm32_rtc_raise_irq(pv);
+        }
+
+      if (pv->start_count == 0)
+        efm32_rtc_stop_counter(pv);
     }
-
-  if (pv->start_count == 0)
-    efm32_rtc_stop_counter(pv);
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -314,12 +319,24 @@ static DEV_TIMER_REQUEST(efm32_rtc_request)
 #endif
 }
 
-static DEV_TIMER_START_STOP(efm32_rtc_state_start_stop)
+static DEV_USE(efm32_rtc_use)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
 
   error_t err = 0;
+  bool_t start = 0;
+
+  switch (op)
+    {
+    case DEV_USE_GET_ACCESSOR:
+    case DEV_USE_PUT_ACCESSOR:
+      return 0;
+    case DEV_USE_START:
+      start = 1;
+    case DEV_USE_STOP:
+      break;
+    }
 
   LOCK_SPIN_IRQ(&dev->lock);
 
@@ -360,38 +377,53 @@ static DEV_TIMER_GET_VALUE(efm32_rtc_get_value)
   return 0;
 }
 
-#ifdef CONFIG_DEVICE_CLOCK
-static DEV_TIMER_GET_FREQ(efm32_rtc_get_freq)
+static DEV_TIMER_CONFIG(efm32_rtc_config)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
 
-  *freq = pv->freq;
-  return 0;
-}
-#endif
-
-static DEV_TIMER_RESOLUTION(efm32_rtc_resolution)
-{
-  struct device_s *dev = accessor->dev;
-
   error_t err = 0;
+
+#ifndef CONFIG_DEVICE_CLOCK
+  if (cfg)
+    {
+      if (device_get_res_freq(accessor->dev, &cfg->freq, 0))
+        cfg->freq = DEV_FREQ_INVALID;
+      cfg->acc = DEV_FREQ_ACC_INVALID;
+    }
+#endif
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (res)
+#ifdef CONFIG_DEVICE_CLOCK
+  if (cfg)
     {
-      if (*res != 0)
-        err = -ENOTSUP;
-      *res = 1;
+      cfg->freq = pv->freq;
+      cfg->acc = pv->acc;
     }
-
-  if (max)
-#ifdef CONFIG_DEVICE_IRQ
-    *max = 0xffffffffffffffffULL;
-#else
-    *max = 0xffffff;
 #endif
+
+  if (res > 1)
+    err = -ERANGE;
+
+  if (cfg)
+    {
+#ifndef CONFIG_DEVICE_CLOCK
+      cfg->rev = pv->rev;
+#else
+      cfg->rev = 1;
+#endif
+      cfg->cap = pv->cap;
+      cfg->res = 1;
+      cfg->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE;
+#ifdef CONFIG_DEVICE_IRQ
+      cfg->cap |= DEV_TIMER_CAP_REQUEST;
+      cfg->max = 0xffffffffffffffffULL;
+#else
+      cfg->cap |= DEV_TIMER_CAP_TICKLESS;
+      cfg->max = EFM32_RTC_HW_MASK;
+#endif
+    }
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -403,14 +435,8 @@ const struct driver_timer_s efm32_rtc_timer_drv =
   .class_         = DRIVER_CLASS_TIMER,
   .f_request      = efm32_rtc_request,
   .f_cancel       = efm32_rtc_cancel,
-  .f_start_stop   = efm32_rtc_state_start_stop,
   .f_get_value    = efm32_rtc_get_value,
-#ifdef CONFIG_DEVICE_CLOCK
-  .f_get_freq     = efm32_rtc_get_freq,
-#else
-  .f_get_freq     = dev_timer_drv_get_freq,
-#endif
-  .f_resolution   = efm32_rtc_resolution,
+  .f_config       = efm32_rtc_config,
 };
 
 /************************************************************************/
@@ -423,6 +449,7 @@ const struct driver_s efm32_rtc_drv =
   .desc           = "EFM32 RTC",
   .f_init         = efm32_rtc_init,
   .f_cleanup      = efm32_rtc_cleanup,
+  .f_use          = efm32_rtc_use,
 
   .classes        = {
     &efm32_rtc_timer_drv,
@@ -452,6 +479,12 @@ static DEV_INIT(efm32_rtc_init)
   pv->start_count = 0;
   dev->drv_pv = pv;
 
+#ifdef CONFIG_DEVICE_IRQ
+  pv->cap |= DEV_TIMER_CAP_REQUEST;
+#else
+  pv->cap |= DEV_TIMER_CAP_TICKLESS;
+#endif
+
 #ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
   dev_clock_sink_init(dev, &pv->clk_ep, &efm32_rtc_clk_changed);
@@ -465,8 +498,13 @@ static DEV_INIT(efm32_rtc_init)
   pv->freq = ckinfo.freq;
   pv->acc = ckinfo.acc;
 
+  if (ckinfo.src_flags & DEV_CLOCK_SRC_EP_VARFREQ)
+    pv->cap |= DEV_TIMER_CAP_VARFREQ | DEV_TIMER_CAP_CLKSKEW;
+
   if (dev_clock_sink_hold(&pv->clk_ep, NULL))
     goto err_clku;
+
+  pv->rev = 1;
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -476,7 +514,7 @@ static DEV_INIT(efm32_rtc_init)
   if (device_irq_source_link(dev, &pv->irq_eps, 1, 1))
     goto err_clk;
 
-  dev_timer_queue_init(&pv->queue);
+  dev_request_pqueue_init(&pv->queue);
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
@@ -529,7 +567,7 @@ static DEV_CLEANUP(efm32_rtc_cleanup)
 #endif
 
 #ifdef CONFIG_DEVICE_IRQ
-  dev_timer_queue_destroy(&pv->queue);
+  dev_request_pqueue_destroy(&pv->queue);
 
   device_irq_source_unlink(dev, &pv->irq_eps, 1);
 #endif

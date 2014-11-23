@@ -53,7 +53,7 @@ struct bcm2835_systimer_private_s
   /* Interrupt end-points */
   struct dev_irq_ep_s irq_eps[4];
   /* Request queue */
-  dev_timer_queue_root_t queue;
+  dev_request_pqueue_root_t queue;
   uint32_t skew;
 #endif
 };
@@ -112,21 +112,26 @@ static DEV_IRQ_EP_PROCESS(bcm2835_systimer_irq)
         break;
 
       cpu_mem_write_32(pv->addr + BCM2835_SYSTIMER_STATUS, endian_le32(status));
+      struct dev_request_s *rq;
 
-      struct dev_timer_rq_s *rq;
-
-      while ((rq = dev_timer_queue_head(&pv->queue)))
+      while ((rq = dev_request_pqueue_head(&pv->queue)))
         {
-          if (rq->deadline > get_timer_value(pv))
+          struct dev_timer_rq_s *trq = dev_timer_rq_s_cast(rq);
+
+          if (trq->deadline > get_timer_value(pv))
             break;
 
-          dev_timer_queue_pop(&pv->queue);
-          rq->drvdata = 0;
+          struct dev_request_s *next = dev_request_pqueue_next(&pv->queue, rq);
+          dev_timer_pqueue_remove(&pv->queue, rq);
+          rq->drvdata = NULL;
 
-          struct dev_timer_rq_s *next = dev_timer_queue_head(&pv->queue);
-          if (next != NULL && next->deadline > get_timer_value(pv))
-            cpu_mem_write_32(pv->addr + BCM2835_SYSTIMER_CMP(BCM2835_SYSTIMER_CMP_CHANNEL),
-                             endian_le32(next->deadline));
+          if (next != NULL)
+            {
+              trq = dev_timer_rq_s_cast(next);
+              if (trq->deadline > get_timer_value(pv))
+                cpu_mem_write_32(pv->addr + BCM2835_SYSTIMER_CMP(BCM2835_SYSTIMER_CMP_CHANNEL),
+                                 endian_le32(trq->deadline));
+            }
 
           lock_release(&dev->lock);
           kroutine_exec(&rq->kr, 0);
@@ -145,24 +150,21 @@ static DEV_TIMER_CANCEL(bcm2835_systimer_cancel)
   struct bcm2835_systimer_private_s *pv = dev->drv_pv;
   error_t err = -ETIMEDOUT;
 
-  assert(rq->accessor == accessor);
-
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (rq->drvdata == pv)
+  if (rq->rq.drvdata == pv)
     {
-      struct dev_timer_rq_s *rq0 = dev_timer_queue_head(&pv->queue);
-     
-      dev_timer_queue_remove(&pv->queue, rq);
-      rq->drvdata = NULL;
-     
-      if (rq == rq0)       /* removed first request ? */
-        {
-          rq0 = dev_timer_queue_head(&pv->queue);
+      struct dev_timer_rq_s *rqnext = NULL;
+      bool_t first = (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL);
 
-          if (rq0 != NULL)
-            set_timer_compare(pv, rq0->deadline);
-        }
+      if (first)
+        rqnext = dev_timer_rq_s_cast(dev_request_pqueue_next(&pv->queue, dev_timer_rq_s_base(rq)));
+
+      dev_timer_pqueue_remove(&pv->queue, dev_timer_rq_s_base(rq));
+      rq->rq.drvdata = NULL;
+
+      if (rqnext)
+        set_timer_compare(pv, rqnext->deadline);
 
       err = 0;
     }
@@ -182,24 +184,27 @@ static DEV_TIMER_REQUEST(bcm2835_systimer_request)
   struct bcm2835_systimer_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  rq->accessor = accessor;
-
   LOCK_SPIN_IRQ(&dev->lock);
 
-  uint64_t value = get_timer_value(pv);
-
-  if (rq->delay)
-    rq->deadline = value + rq->delay;
-
-  if (rq->deadline <= value)
-    err = -ETIMEDOUT;
+  if (rq->rev && rq->rev != 1)
+    err = -EAGAIN;
   else
     {
-      dev_timer_queue_insert(&pv->queue, rq);
-      rq->drvdata = pv;
+      uint64_t value = get_timer_value(pv);
 
-      if (dev_timer_queue_head(&pv->queue) == rq)
-        set_timer_compare(pv, rq->deadline);
+      if (rq->delay)
+        rq->deadline = value + rq->delay;
+
+      if (rq->deadline <= value)
+        err = -ETIMEDOUT;
+      else
+        {
+          dev_timer_pqueue_insert(&pv->queue, dev_timer_rq_s_base(rq));
+          rq->rq.drvdata = pv;
+
+          if (dev_request_pqueue_prev(&pv->queue, dev_timer_rq_s_base(rq)) == NULL)
+            set_timer_compare(pv, rq->deadline);
+        }
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -210,38 +215,45 @@ static DEV_TIMER_REQUEST(bcm2835_systimer_request)
 #endif
 }
 
-static DEV_TIMER_START_STOP(bcm2835_systimer_state_start_stop)
-{
-  return 0;
-}
-
 static DEV_TIMER_GET_VALUE(bcm2835_systimer_get_value)
 {
   struct device_s *dev = accessor->dev;
   struct bcm2835_systimer_private_s *pv = dev->drv_pv;
+  error_t err = 0;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  *value = get_timer_value(pv);
+  if (rev && rev != 1)
+    err = -EAGAIN;
+  else
+    *value = get_timer_value(pv);
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  return 0;
+  return err;
 }
 
-static DEV_TIMER_RESOLUTION(bcm2835_systimer_resolution)
+static DEV_TIMER_CONFIG(bcm2835_systimer_config)
 {
   error_t err = 0;
 
-  if (res)
-    {
-      if (*res != 0)
-        err = -ENOTSUP;
-      *res = 1;
-    }
+  if (cfg && device_get_res_freq(accessor->dev, &cfg->freq, 0))
+    cfg->freq = DEV_FREQ_INVALID;
 
-  if (max)
-    *max = 0xffffffffffffffffULL;
+  if (res > 1)
+    err = -ERANGE;
+
+  if (cfg)
+    {
+      cfg->acc = DEV_FREQ_ACC_INVALID;
+      cfg->rev = 1;
+      cfg->res = 1;
+      cfg->cap = DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE;
+      cfg->max = 0xffffffffffffffffULL;
+#ifdef CONFIG_DEVICE_IRQ
+      cfg->cap |= DEV_TIMER_CAP_REQUEST;
+#endif
+    }
 
   return err;
 }
@@ -251,13 +263,18 @@ const struct driver_timer_s  bcm2835_systimer_timer_drv =
   .class_         = DRIVER_CLASS_TIMER,
   .f_request      = bcm2835_systimer_request,
   .f_cancel       = bcm2835_systimer_cancel,
-  .f_start_stop   = bcm2835_systimer_state_start_stop,
   .f_get_value    = bcm2835_systimer_get_value,
-  .f_get_freq     = dev_timer_drv_get_freq,
-  .f_resolution   = bcm2835_systimer_resolution,
+  .f_config       = bcm2835_systimer_config,
 };
 
 /************************************************************************/
+
+static DEV_USE(bcm2835_systimer_use)
+{
+  if (accessor->number > 0)
+    return -ENOTSUP;
+  return 0;
+}
 
 static DEV_INIT(bcm2835_systimer_init);
 static DEV_CLEANUP(bcm2835_systimer_cleanup);
@@ -267,6 +284,7 @@ const struct driver_s  bcm2835_systimer_drv =
   .desc           = "BCM2835 system timer",
   .f_init         = bcm2835_systimer_init,
   .f_cleanup      = bcm2835_systimer_cleanup,
+  .f_use          = bcm2835_systimer_use,
 
   .classes        = {
     &bcm2835_systimer_timer_drv,
@@ -301,7 +319,7 @@ static DEV_INIT(bcm2835_systimer_init)
   if (device_irq_source_link(dev, pv->irq_eps, 4, 1 << BCM2835_SYSTIMER_CMP_CHANNEL))
     goto err_mem;
 
-  dev_timer_queue_init(&pv->queue);
+  dev_request_pqueue_init(&pv->queue);
   pv->skew = 1;
 #endif
 
@@ -321,7 +339,7 @@ static DEV_CLEANUP(bcm2835_systimer_cleanup)
   struct bcm2835_systimer_private_s *pv = dev->drv_pv;
 
 #ifdef CONFIG_DEVICE_IRQ
-  dev_timer_queue_destroy(&pv->queue);
+  dev_request_pqueue_destroy(&pv->queue);
 
   device_irq_source_unlink(dev, pv->irq_eps, 4);
 #endif

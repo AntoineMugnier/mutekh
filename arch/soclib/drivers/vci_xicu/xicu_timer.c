@@ -65,7 +65,8 @@ void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number)
 
   while (1)
     {
-      struct dev_timer_rq_s *rq = dev_timer_queue_head(&p->queue);
+      struct dev_timer_rq_s *rq;
+      rq = dev_timer_rq_s_cast(dev_request_pqueue_head(&p->queue));
 
       if (!rq)
         {
@@ -81,11 +82,11 @@ void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number)
       if (rq->deadline > p->value)
         break;
 
-      rq->drvdata = 0;
-      dev_timer_queue_pop(&p->queue);
+      rq->rq.drvdata = 0;
+      dev_timer_pqueue_remove(&p->queue, dev_timer_rq_s_base(rq));
 
       lock_release(&dev->lock);
-      kroutine_exec(&rq->kr, 0);
+      kroutine_exec(&rq->rq.kr, 0);
       lock_spin(&dev->lock);
     }
 
@@ -106,9 +107,7 @@ static DEV_TIMER_REQUEST(soclib_xicu_timer_request)
     return -ENOTSUP;
 
   if (number >= pv->pti_count)
-    return -ENOENT;
-
-  rq->accessor = accessor;
+    return -ENOTSUP;
 
   struct soclib_xicu_pti_s *p = pv->pti + number;
 
@@ -116,6 +115,8 @@ static DEV_TIMER_REQUEST(soclib_xicu_timer_request)
 
   if (p->start_count < 0)  /* hardware timer already used in mode 0 */
     err = -EBUSY;
+  else if (rq->rev && rq->rev != p->rev)
+    err = -EAGAIN;
   else
     {
       uint64_t val = p->value;
@@ -127,8 +128,8 @@ static DEV_TIMER_REQUEST(soclib_xicu_timer_request)
         err = -ETIMEDOUT;
       else
         {
-          rq->drvdata = p;
-          dev_timer_queue_insert(&p->queue, rq);
+          rq->rq.drvdata = p;
+          dev_timer_pqueue_insert(&p->queue, dev_timer_rq_s_base(rq));
 
           /* start timer if needed */
           if (p->start_count == 0)
@@ -161,26 +162,24 @@ static DEV_TIMER_CANCEL(soclib_xicu_timer_cancel)
     return -ENOTSUP;
 
   if (number >= pv->pti_count)
-    return -ENOENT;
+    return -ENOTSUP;
 
   if (!rq)
     return 0;
-
-  assert(rq->accessor->dev == dev && rq->accessor->number == accessor->number);
 
   struct soclib_xicu_pti_s *p = pv->pti + number;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  if (rq->drvdata == p)
+  if (rq->rq.drvdata == p)
     {
       assert(p->start_count & 1);
 
-      dev_timer_queue_remove(&p->queue, rq);
-      rq->drvdata = 0;
+      dev_timer_pqueue_remove(&p->queue, dev_timer_rq_s_base(rq));
+      rq->rq.drvdata = 0;
 
       /* stop timer if not in use */
-      if (dev_timer_queue_isempty(&p->queue))
+      if (dev_request_pqueue_isempty(&p->queue))
         {
           p->start_count &= ~1;
           if (p->start_count == 0)
@@ -200,7 +199,7 @@ static DEV_TIMER_CANCEL(soclib_xicu_timer_cancel)
 #endif
 }
 
-static DEV_TIMER_START_STOP(soclib_xicu_timer_start_stop)
+DEV_USE(soclib_xicu_timer_use)
 {
   struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
@@ -208,7 +207,7 @@ static DEV_TIMER_START_STOP(soclib_xicu_timer_start_stop)
   uint_fast8_t mode = accessor->number % 2;
 
   if (number >= pv->pti_count)
-    return -ENOENT;
+    return -ENOTSUP;
 
 #ifndef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
   if (mode != 0)
@@ -216,7 +215,7 @@ static DEV_TIMER_START_STOP(soclib_xicu_timer_start_stop)
 #endif
 
   error_t err = 0;
-
+  bool_t start = (op == DEV_USE_START);
   struct soclib_xicu_pti_s *p = pv->pti + number;
 
   LOCK_SPIN_IRQ(&dev->lock);
@@ -271,36 +270,39 @@ static DEV_TIMER_GET_VALUE(soclib_xicu_timer_get_value)
   error_t err = 0;
 
   if (number >= pv->pti_count)
-    return -ENOENT;
+    return -ENOTSUP;
 
   LOCK_SPIN_IRQ(&dev->lock);
 
   struct soclib_xicu_pti_s *p = pv->pti + number;
 
-  if (!p->start_count || ((p->start_count > 0) ^ mode))
-    {
-      /* timer not started in this mode */
-      err = -EBUSY;
-    }
-  else if (mode)
+  if (mode)
     {
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
-      *value = p->value;
+      if (rev && rev != p->rev)
+        err = -EAGAIN;
+      else
+        *value = p->value;
 #else
       err = -ENOTSUP;
 #endif
     }
-  else
+  else if (p->start_count < 0)
     {
-      *value = ~endian_le32(cpu_mem_read_32(XICU_REG_ADDR(pv->addr, XICU_PTI_VAL, number)));
+      if (rev && rev != 1)
+        err = -EAGAIN;
+      else
+        *value = ~endian_le32(cpu_mem_read_32(XICU_REG_ADDR(pv->addr, XICU_PTI_VAL, number)));
     }
+  else
+    err = -EBUSY; /* timer not started in right mode */
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
 }
 
-static DEV_TIMER_RESOLUTION(soclib_xicu_timer_resolution)
+static DEV_TIMER_CONFIG(soclib_xicu_timer_config)
 {
   struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
@@ -308,57 +310,69 @@ static DEV_TIMER_RESOLUTION(soclib_xicu_timer_resolution)
   uint_fast8_t mode = accessor->number % 2;
 
   if (number >= pv->pti_count)
-    return -ENOENT;
+    return -ENOTSUP;
 
   error_t err = 0;
+
+  if (cfg && device_get_res_freq(accessor->dev, &cfg->freq, number))
+    cfg->freq = DEV_FREQ_INVALID;
+
+  LOCK_SPIN_IRQ(&dev->lock);
 
   if (mode)
     {
 #ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
       struct soclib_xicu_pti_s *p = pv->pti + number;
 
-      LOCK_SPIN_IRQ(&dev->lock);
-
       if (res)
         {
-          if (*res)
+          if (p->start_count)
             {
-              if (p->start_count)
+              err = -EBUSY;
+            }
+          else
+            {
+              if (res < SOCLIB_XICU_PTI_MIN_PERIOD)
                 {
-                  err = -EBUSY;
-                }
-              else if (*res < SOCLIB_XICU_PTI_MIN_PERIOD)
-                {
-                  p->period = SOCLIB_XICU_PTI_MIN_PERIOD;
+                  res = SOCLIB_XICU_PTI_MIN_PERIOD;
                   err = -ERANGE;
                 }
-              else
-                {
-                  p->period = *res;
-                }
+              p->rev += 2;
+              p->period = res;
             }
-          *res = p->period;
         }
 
-      if (max)
-        *max = 0xffffffffffffffffULL;
+      if (cfg)
+        {
+          cfg->acc = DEV_FREQ_ACC_INVALID;
+          cfg->max = 0xffffffffffffffffULL;
+          cfg->rev = p->rev;
+          cfg->res = p->period;
+          cfg->cap = DEV_TIMER_CAP_REQUEST | DEV_TIMER_CAP_STOPPABLE
+            | DEV_TIMER_CAP_KEEPVALUE;
+        }
 
-      LOCK_RELEASE_IRQ(&dev->lock);
 #else
       err = -ENOTSUP;
 #endif
     }
   else
     {
-      if (res)
+      if (res > 1)
+        err = -ERANGE;
+
+      if (cfg)
         {
-          if (*res != 0)
-            err = -ENOTSUP;
-          *res = 1;
+          cfg->acc = DEV_FREQ_ACC_INVALID;
+          cfg->max = 0xffffffff;
+          cfg->rev = 1;
+          cfg->res = 1;
+          cfg->cap = DEV_TIMER_CAP_STOPPABLE
+            | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_TICKLESS;
         }
-      if (max)
-        *max = 0xffffffff;
     }
+
+  LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
 }
@@ -366,11 +380,9 @@ static DEV_TIMER_RESOLUTION(soclib_xicu_timer_resolution)
 const struct driver_timer_s  soclib_xicu_timer_drv =
 {
   .class_         = DRIVER_CLASS_TIMER,
-  .f_request      = soclib_xicu_timer_request, 
+  .f_request      = soclib_xicu_timer_request,
   .f_cancel       = soclib_xicu_timer_cancel,
-  .f_start_stop   = soclib_xicu_timer_start_stop,
   .f_get_value    = soclib_xicu_timer_get_value,
-  .f_get_freq     = dev_timer_drv_get_freq,
-  .f_resolution   = soclib_xicu_timer_resolution,
+  .f_config       = soclib_xicu_timer_config,
 };
 

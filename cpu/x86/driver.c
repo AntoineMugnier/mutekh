@@ -71,8 +71,10 @@ struct x86_dev_private_s
 #endif
 
   struct cpu_tree_s node;
+  struct dev_freq_s freq;
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
+  dev_timer_cfgrev_t timer_rev;
 #endif
 };
 
@@ -214,15 +216,17 @@ static const struct driver_cpu_s  x86_cpu_drv =
 
 #ifdef CONFIG_CPU_X86_TIMER_CYCLECOUNTER
 
-static DEV_TIMER_START_STOP(x86_timer_start_stop)
-{
-  return 0;
-}
-
 static DEV_TIMER_GET_VALUE(x86_timer_get_value)
 {
   struct device_s *dev = accessor->dev;
   __unused__ struct x86_dev_private_s *pv = dev->drv_pv;
+
+#ifdef CONFIG_DEVICE_CLOCK
+  if (rev && rev != pv->timer_rev)
+#else
+  if (rev && rev != 1)
+#endif
+    return -EAGAIN;
 
 #ifdef CONFIG_ARCH_SMP
   if (pv->node.cpu_id != cpu_id())
@@ -237,19 +241,37 @@ static DEV_TIMER_GET_VALUE(x86_timer_get_value)
   return 0;
 }
 
-static DEV_TIMER_RESOLUTION(x86_timer_resolution)
+static DEV_TIMER_CONFIG(x86_timer_config)
 {
+  struct device_s *dev = accessor->dev;
+  struct x86_dev_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  if (res)
+  switch (accessor->number)
     {
-      if (*res != 0)
-        err = -ENOTSUP;
-      *res = 1;
+    case 0: {          /* cycle counter */
+      if (res > 1)
+        err = -ERANGE;
+      if (cfg)
+        {
+          cfg->max = 0xffffffffffffffffULL;
+          cfg->acc = DEV_FREQ_ACC_INVALID;
+          cfg->freq = pv->freq;
+          cfg->cap = DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE | DEV_TIMER_CAP_TICKLESS;
+#ifdef CONFIG_DEVICE_CLOCK
+          cfg->cap |= DEV_TIMER_CAP_VARFREQ;
+          cfg->rev = pv->timer_rev;
+#else
+          cfg->rev = 1;
+#endif
+          cfg->res = 1;
+        }
+      break;
     }
 
-  if (max)
-    *max = 0xffffffffffffffffULL;
+    default:
+      err = -ENOTSUP;
+    }
 
   return err;
 }
@@ -257,10 +279,8 @@ static DEV_TIMER_RESOLUTION(x86_timer_resolution)
 static const struct driver_timer_s  x86_timer_drv =
 {
   .class_          = DRIVER_CLASS_TIMER,
-  .f_start_stop    = x86_timer_start_stop,
   .f_get_value     = x86_timer_get_value,
-  .f_get_freq      = dev_timer_drv_get_freq,
-  .f_resolution    = x86_timer_resolution,
+  .f_config        = x86_timer_config,
   .f_request       = (dev_timer_request_t*)&dev_driver_notsup_fcn,
   .f_cancel        = (dev_timer_request_t*)&dev_driver_notsup_fcn,
 };
@@ -279,9 +299,38 @@ static DEV_CLOCK_SINK_CHANGED(x86_clk_changed)
   struct x86_dev_private_s *pv = dev->drv_pv;
   LOCK_SPIN_IRQ(&dev->lock);
   pv->freq = *freq;
+  pv->timer_rev += 2;
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 #endif
+
+static DEV_USE(x86_use)
+{
+  switch (accessor->api->class_)
+    {
+    case DRIVER_CLASS_TIMER:
+      if (accessor->number > 0)
+        break;
+      return 0;
+
+    case DRIVER_CLASS_CPU:
+    case DRIVER_CLASS_ICU:
+      if (accessor->number > 0)
+        break;
+      switch (op)
+        {
+        case DEV_USE_GET_ACCESSOR:
+        case DEV_USE_PUT_ACCESSOR:
+          return 0;
+        default:
+          break;
+        }
+    default:
+      break;
+    }
+
+  return -ENOTSUP;
+}
 
 static const struct dev_enum_ident_s  x86_ids[] =
 {
@@ -298,6 +347,7 @@ const struct driver_s  x86_drv =
 
   .f_init         = x86_init,
   .f_cleanup      = x86_cleanup,
+  .f_use          = x86_use,
 
   .classes        = {
     &x86_cpu_drv,
@@ -343,6 +393,7 @@ static DEV_INIT(x86_init)
   if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
     goto err_node;
   pv->freq = ckinfo.freq;
+  pv->timer_rev = 1;
 
   if (dev_clock_sink_hold(&pv->clk_ep, NULL))
     goto err_clku;

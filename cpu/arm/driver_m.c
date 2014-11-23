@@ -187,6 +187,35 @@ const struct driver_cpu_s  arm_cpu_drv =
 
 /************************************************************************/
 
+static DEV_USE(arm_use)
+{
+  switch (accessor->api->class_)
+    {
+#ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
+    case DRIVER_CLASS_TIMER:
+      return arm_timer_systick_use(accessor, op);
+#endif
+      break;
+
+    case DRIVER_CLASS_CPU:
+    case DRIVER_CLASS_ICU:
+      if (accessor->number > 0)
+        break;
+      switch (op)
+        {
+        case DEV_USE_GET_ACCESSOR:
+        case DEV_USE_PUT_ACCESSOR:
+          return 0;
+        default:
+          break;
+        }
+    default:
+      break;
+    }
+
+  return -ENOTSUP;
+}
+
 static DEV_CLEANUP(arm_cleanup);
 static DEV_INIT(arm_init);
 
@@ -205,6 +234,7 @@ const struct driver_s  arm_m_drv =
 
   .f_init         = arm_init,
   .f_cleanup      = arm_cleanup,
+  .f_use          = arm_use,
 
   .classes        = {
     &arm_cpu_drv,
@@ -229,6 +259,7 @@ static DEV_CLOCK_SINK_CHANGED(arm_clk_changed)
   pv->freq = *freq;
 # ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
   pv->acc = *acc;
+  pv->systick_rev += 2;
 # endif
   LOCK_RELEASE_IRQ(&dev->lock);
 }
@@ -280,9 +311,10 @@ static DEV_INIT(arm_init)
 
 #ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
   pv->systick_start = 0;
-  dev_timer_queue_init(&pv->systick_queue);
+  dev_request_pqueue_init(&pv->systick_queue);
   pv->systick_period = CONFIG_CPU_ARM_TIMER_SYSTICK_PERIOD;
 # ifdef CONFIG_DEVICE_IRQ
+  pv->systick_rev = 1;
   /* enable systick in NVIC */
   cpu_mem_write_32(ARMV7M_NVIC_ISER_ADDR(0),
     ARMV7M_NVIC_ISER_SETENA(15));

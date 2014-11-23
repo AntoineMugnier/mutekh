@@ -53,6 +53,7 @@ struct arm_dev_private_s
   struct dev_freq_s freq;
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
+  dev_timer_cfgrev_t timer_rev;
 #endif
 };
 
@@ -210,15 +211,17 @@ const struct driver_cpu_s  arm_cpu_drv =
 
 #ifdef CONFIG_CPU_ARM_TIMER_CYCLECOUNTER
 
-static DEV_TIMER_START_STOP(arm_timer_start_stop)
-{
-  return 0;
-}
-
 static DEV_TIMER_GET_VALUE(arm_timer_get_value)
 {
   struct device_s *dev = accessor->dev;
   __unused__ struct arm_dev_private_s *pv = dev->drv_pv;
+
+#ifdef CONFIG_DEVICE_CLOCK
+  if (rev && rev != pv->timer_rev)
+#else
+  if (rev && rev != 1)
+#endif
+    return -EAGAIN;
 
 # ifdef CONFIG_ARCH_SMP
   if(pv->node.cpu_id != cpu_id())
@@ -246,27 +249,36 @@ static DEV_TIMER_GET_VALUE(arm_timer_get_value)
   return 0;
 }
 
-static DEV_TIMER_RESOLUTION(arm_timer_resolution)
+static DEV_TIMER_CONFIG(arm_timer_config)
 {
+  struct device_s *dev = accessor->dev;
+  struct arm_dev_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
   switch (accessor->number)
     {
     case 0: {          /* cycle counter */
-      if (res)
+      if (res > 1)
+        err = -ERANGE;
+      if (cfg)
         {
-          if (*res != 0)
-            err = -ENOTSUP;
-          *res = 1;
+          cfg->freq = pv->freq;
+          cfg->acc = DEV_FREQ_ACC_INVALID;
+          cfg->max = 0xffffffff;
+          cfg->cap = DEV_TIMER_CAP_KEEPVALUE | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_TICKLESS;
+#ifdef CONFIG_DEVICE_CLOCK
+          cfg->cap |= DEV_TIMER_CAP_VARFREQ;
+          cfg->rev = pv->timer_rev;
+#else
+          cfg->rev = 1;
+#endif
+          cfg->res = 1;
         }
-
-      if (max)
-        *max = 0xffffffff;
-      return 0;
+      break;
     }
 
     default:
-      return -ENOTSUP;
+      err = -ENOTSUP;
     }
 
   return err;
@@ -275,10 +287,8 @@ static DEV_TIMER_RESOLUTION(arm_timer_resolution)
 static const struct driver_timer_s  arm_timer_drv =
 {
   .class_          = DRIVER_CLASS_TIMER,
-  .f_start_stop    = arm_timer_start_stop,
   .f_get_value     = arm_timer_get_value,
-  .f_get_freq      = dev_timer_drv_get_freq,
-  .f_resolution    = arm_timer_resolution,
+  .f_config        = arm_timer_config,
   .f_request       = (dev_timer_request_t*)&dev_driver_notsup_fcn,
   .f_cancel        = (dev_timer_request_t*)&dev_driver_notsup_fcn,
 };
@@ -297,9 +307,37 @@ static DEV_CLOCK_SINK_CHANGED(arm_clk_changed)
   struct arm_dev_private_s *pv = dev->drv_pv;
   LOCK_SPIN_IRQ(&dev->lock);
   pv->freq = *freq;
+  pv->timer_rev += 2;
   LOCK_RELEASE_IRQ(&dev->lock);
 }
 #endif
+
+static DEV_USE(arm_use)
+{
+  if (accessor->number > 0)
+    return -ENOTSUP;
+
+  switch (accessor->api->class_)
+    {
+    case DRIVER_CLASS_TIMER:
+      return 0;
+
+    case DRIVER_CLASS_CPU:
+    case DRIVER_CLASS_ICU:
+      switch (op)
+        {
+        case DEV_USE_GET_ACCESSOR:
+        case DEV_USE_PUT_ACCESSOR:
+          return 0;
+        default:
+          break;
+        }
+    default:
+      break;
+    }
+
+  return -ENOTSUP;
+}
 
 static const struct dev_enum_ident_s  arm_ids[] =
 {
@@ -316,6 +354,7 @@ const struct driver_s  arm_drv =
 
   .f_init         = arm_init,
   .f_cleanup      = arm_cleanup,
+  .f_use          = arm_use,
 
   .classes        = {
     &arm_cpu_drv,
@@ -361,6 +400,7 @@ static DEV_INIT(arm_init)
   if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
     goto err_node;
   pv->freq = ckinfo.freq;
+  pv->timer_rev = 1;
 
   if (dev_clock_sink_hold(&pv->clk_ep, NULL))
     goto err_clku;

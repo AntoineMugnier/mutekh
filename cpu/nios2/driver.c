@@ -52,6 +52,7 @@ struct nios2_dev_private_s
   struct dev_freq_s freq;
 #ifdef CONFIG_DEVICE_CLOCK
   struct dev_clock_sink_ep_s clk_ep;
+  dev_timer_cfgrev_t timer_rev;
 #endif
 };
 
@@ -199,15 +200,17 @@ const struct driver_cpu_s  nios2_cpu_drv =
 
 #ifdef CONFIG_CPU_NIOS_TIMER_CYCLECOUNTER
 
-static DEV_TIMER_START_STOP(nios2_timer_start_stop)
-{
-  return 0;
-}
-
 static DEV_TIMER_GET_VALUE(nios2_timer_get_value)
 {
   struct device_s *dev = accessor->dev;
   __unused__ struct nios2_dev_private_s *pv = dev->drv_pv;
+
+#ifdef CONFIG_DEVICE_CLOCK
+  if (rev && rev != pv->timer_rev)
+#else
+  if (rev && rev != 1)
+#endif
+    return -EAGAIN;
 
 #ifdef CONFIG_ARCH_SMP
   if (pv->node.cpu_id != cpu_id())
@@ -219,19 +222,37 @@ static DEV_TIMER_GET_VALUE(nios2_timer_get_value)
   return 0;
 }
 
-static DEV_TIMER_RESOLUTION(nios2_timer_resolution)
+static DEV_TIMER_CONFIG(nios2_timer_config)
 {
+  struct device_s *dev = accessor->dev;
+  struct nios2_dev_private_s *pv = dev->drv_pv;
   error_t err = 0;
 
-  if (res)
+  switch (accessor->number)
     {
-      if (*res != 0)
-        err = -ENOTSUP;
-      *res = 1;
+    case 0: {          /* cycle counter */
+      if (res > 1)
+        err = -ERANGE;
+      if (cfg)
+        {
+          cfg->freq = pv->freq;
+          cfg->acc = DEV_FREQ_ACC_INVALID;
+          cfg->max = 0xffffffff;
+          cfg->cap = DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE | DEV_TIMER_CAP_TICKLESS;
+#ifdef CONFIG_DEVICE_CLOCK
+          cfg->cap |= DEV_TIMER_CAP_VARFREQ;
+          cfg->rev = pv->timer_rev;
+#else
+          cfg->rev = 1;
+#endif
+          cfg->res = 1;
+        }
+      break;
     }
 
-  if (max)
-    *max = 0xffffffff;
+    default:
+      err = -ENOTSUP;
+    }
 
   return err;
 }
@@ -239,10 +260,8 @@ static DEV_TIMER_RESOLUTION(nios2_timer_resolution)
 static const struct driver_timer_s  nios2_timer_drv =
 {
   .class_          = DRIVER_CLASS_TIMER,
-  .f_start_stop    = nios2_timer_start_stop,
   .f_get_value     = nios2_timer_get_value,
-  .f_get_freq      = dev_timer_drv_get_freq,
-  .f_resolution    = nios2_timer_resolution,
+  .f_config        = nios2_timer_config,
   .f_request       = (dev_timer_request_t*)&dev_driver_notsup_fcn,
   .f_cancel        = (dev_timer_request_t*)&dev_driver_notsup_fcn,
 };
@@ -261,8 +280,38 @@ static DEV_CLOCK_SINK_CHANGED(nios2_clk_changed)
   struct nios2_dev_private_s *pv = dev->drv_pv;
   LOCK_SPIN_IRQ(&dev->lock);
   pv->freq = *freq;
+  pv->timer_rev += 2;
   LOCK_RELEASE_IRQ(&dev->lock);
 }
+#endif
+
+static DEV_USE(nios2_use)
+{
+  if (accessor->number > 0)
+    return -ENOTSUP;
+
+  switch (accessor->api->class_)
+    {
+    case DRIVER_CLASS_TIMER:
+      return 0;
+
+    case DRIVER_CLASS_CPU:
+    case DRIVER_CLASS_ICU:
+      switch (op)
+        {
+        case DEV_USE_GET_ACCESSOR:
+        case DEV_USE_PUT_ACCESSOR:
+          return 0;
+        default:
+          break;
+        }
+    default:
+      break;
+    }
+
+  return -ENOTSUP;
+}
+
 static const struct dev_enum_ident_s  nios2_ids[] =
 {
 #ifdef CONFIG_LIBFDT
@@ -278,6 +327,7 @@ const struct driver_s  nios2_drv =
 
   .f_init         = nios2_init,
   .f_cleanup      = nios2_cleanup,
+  .f_use          = nios2_use,
 
   .classes        = {
     &nios2_cpu_drv,
@@ -323,6 +373,7 @@ static DEV_INIT(nios2_init)
   if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
     goto err_node;
   pv->freq = ckinfo.freq;
+  pv->timer_rev = 1;
 
   if (dev_clock_sink_hold(&pv->clk_ep, NULL))
     goto err_clku;

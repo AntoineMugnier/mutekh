@@ -484,7 +484,7 @@ struct arp_entry_s	*arp_update_table(struct net_proto_s	*arp,
 	}
     }
 
-  DEVICE_OP(&libnetwork_timer_dev, get_value, &arp_entry->timestamp);
+  DEVICE_OP(&libnetwork_timer_dev, get_value, &arp_entry->timestamp, 0);
 
   return arp_entry;
 }

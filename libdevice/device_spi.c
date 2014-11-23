@@ -168,7 +168,7 @@ static KROUTINE_EXEC(device_spi_ctrl_next_kr)
   dev_timer_value_t t = 0;
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   if (device_check_accessor(&q->timer))
-    DEVICE_OP(&q->timer, get_value, &t);
+    DEVICE_OP(&q->timer, get_value, &t, 0);
 #endif
 
   return device_spi_ctrl_sched(q, t);
@@ -213,7 +213,7 @@ static void device_spi_ctrl_end(struct dev_spi_ctrl_request_s *rq, error_t err)
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   if (device_check_accessor(&q->timer))
-    DEVICE_OP(&q->timer, start_stop, 0);
+    device_stop(&q->timer);
 #endif
 
   lock_release_irq(&q->lock);
@@ -224,13 +224,13 @@ static void device_spi_ctrl_end(struct dev_spi_ctrl_request_s *rq, error_t err)
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
 static KROUTINE_EXEC(device_spi_ctrl_timeout)
 {
-  struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, kr);
-  struct dev_spi_ctrl_request_s *tm, *rq = trq->pvdata;
+  struct dev_timer_rq_s *trq = KROUTINE_CONTAINER(kr, *trq, rq.kr);
+  struct dev_spi_ctrl_request_s *tm, *rq = trq->rq.pvdata;
   struct dev_spi_ctrl_queue_s *q = rq->queue;
 
   lock_spin_irq(&q->lock);
 
-  rq = trq->pvdata;
+  rq = trq->rq.pvdata;
   tm = q->timeout;
   q->timeout = NULL;
 
@@ -257,8 +257,9 @@ device_spi_ctrl_delay(struct dev_spi_ctrl_request_s *rq)
     {
       trq->deadline = rq->sleep_before;
       trq->delay = 0;
-      kroutine_init(&trq->kr, device_spi_ctrl_timeout, KROUTINE_TRIGGER);
-      trq->pvdata = rq;
+      trq->rev = q->delay_rev;
+      kroutine_init(&trq->rq.kr, device_spi_ctrl_timeout, KROUTINE_TRIGGER);
+      trq->rq.pvdata = rq;
 
       err = DEVICE_OP(&q->timer, request, trq);
     }
@@ -271,6 +272,12 @@ device_spi_ctrl_delay(struct dev_spi_ctrl_request_s *rq)
 
     case -ETIMEDOUT:    /* update time and retry */
       return DEVICE_SPI_CONTINUE_GET_TIME;
+
+    case -EAGAIN:       /* update time conversion and retry */
+      err = dev_timer_shift_sec(&q->timer, &q->delay_shift_a, &q->delay_shift_b,
+                                &q->delay_rev, 1, 1000000);
+      if (!err)
+        return DEVICE_SPI_CONTINUE_GET_TIME;
 
     default:
       device_spi_ctrl_end(rq, err);
@@ -511,7 +518,7 @@ static void device_spi_ctrl_run(struct dev_spi_ctrl_queue_s *q)
       dev_timer_value_t t = 0;
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
       if (device_check_accessor(&q->timer))
-        DEVICE_OP(&q->timer, get_value, &t);
+        DEVICE_OP(&q->timer, get_value, &t, 0);
 #endif
 
       while (r != DEVICE_SPI_CONTINUE_GET_TIME)
@@ -573,7 +580,7 @@ dev_spi_rq_start(struct dev_spi_ctrl_request_s *rq)
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   if (device_check_accessor(&q->timer))
-    err = DEVICE_OP(&q->timer, start_stop, 1);
+    err = device_start(&q->timer);
 #endif
 
   if (!err)
@@ -645,7 +652,8 @@ error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q)
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
   if (!device_get_param_dev_accessor(dev, "spi-timer", &q->timer, DRIVER_CLASS_TIMER))
     {
-      err = dev_timer_shift_sec(&q->timer, &q->delay_shift_a, &q->delay_shift_b, 1, 1000000);
+      err = dev_timer_shift_sec(&q->timer, &q->delay_shift_a, &q->delay_shift_b,
+                                &q->delay_rev, 1, 1000000);
       if (err)
         return err;
     }

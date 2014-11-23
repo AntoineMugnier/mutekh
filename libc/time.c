@@ -32,6 +32,7 @@
 
 struct device_timer_s    libc_timer_dev = DEVICE_ACCESSOR_INIT;
 static dev_timer_value_t libc_timer_offset;      // time value offset
+static dev_timer_cfgrev_t libc_timer_rev;
 
 static uint64_t          libc_time_sec_num;
 static uint64_t          libc_time_sec_den;
@@ -70,43 +71,46 @@ void libc_time_initsmp()
       goto err;
     }
 
-  if (DEVICE_OP(&libc_timer_dev, start_stop, 1))
+  if (device_start(&libc_timer_dev))
     goto err_acc;
 
-  if (DEVICE_OP(&libc_timer_dev, get_value, &libc_timer_offset))
+  struct dev_timer_config_s cfg;
+
+  if (DEVICE_OP(&libc_timer_dev, config, &cfg, 0))
     goto err_stop;
 
-  dev_timer_res_t r = 0;
-  dev_timer_value_t m;
+  if (!DEV_FREQ_IS_VALID(cfg.freq) || (cfg.cap & DEV_TIMER_CAP_VARFREQ))
+    {
+      printk("libc: timer device must have a fixed and known frequency.\n");
+      goto err_stop;
+    }
 
-  if (DEVICE_OP(&libc_timer_dev, resolution, &r, &m))
+  libc_timer_rev = cfg.rev;
+
+  if (DEVICE_OP(&libc_timer_dev, get_value, &libc_timer_offset, libc_timer_rev))
     goto err_stop;
 
-  struct dev_freq_s freq;
-  if (DEVICE_OP(tdev, get_freq, &f))
-    goto err_stop;
-
-  libc_time_sec_num = r * freq.denom;
-  libc_time_sec_den = freq.num;
+  libc_time_sec_num = cfg.res * cfg.freq.denom;
+  libc_time_sec_den = cfg.freq.num;
   adjust_frac(&libc_time_sec_num, &libc_time_sec_den);
 
-  libc_time_usec_num = 1000000ULL * r * freq.denom;
-  libc_time_usec_den = freq.num;
+  libc_time_usec_num = 1000000ULL * cfg.res * cfg.freq.denom;
+  libc_time_usec_den = cfg.freq.num;
   adjust_frac(&libc_time_usec_num, &libc_time_usec_den);
 
-  libc_time_nsec_num = 1000000000ULL * r * freq.denom;
-  libc_time_nsec_den = freq.num;
+  libc_time_nsec_num = 1000000000ULL * cfg.res * cfg.freq.denom;
+  libc_time_nsec_den = cfg.freq.num;
   adjust_frac(&libc_time_nsec_num, &libc_time_nsec_den);
 
-  uint64_t w = m < libc_time_sec_den
-    ? m * libc_time_sec_num / libc_time_sec_den
-    : m / libc_time_sec_den * libc_time_sec_num;
+  uint64_t w = cfg.max < libc_time_sec_den
+    ? cfg.max * libc_time_sec_num / libc_time_sec_den
+    : cfg.max / libc_time_sec_den * libc_time_sec_num;
 
   printk("libc: using timer device `%p' for libc time functions, wrapping period is %llu seconds\n", libc_timer_dev.dev, w);
   return;
 
  err_stop:
-  DEVICE_OP(&libc_timer_dev, start_stop, 0);
+  device_stop(&libc_timer_dev);
  err_acc:
   printk("libc: unable to use `%p' timer device for libc time.\n", libc_timer_dev.dev);
   device_put_accessor(&libc_timer_dev);
@@ -121,7 +125,7 @@ void libc_time_cleanupsmp()
 
   if (device_check_accessor(&libc_timer_dev))
     {
-      DEVICE_OP(&libc_timer_dev, start_stop, 0);
+      device_stop(&libc_timer_dev);
       device_put_accessor(&libc_timer_dev);
     }
 }
@@ -137,7 +141,7 @@ error_t gettimeofday(struct timeval *tv, struct timezone *tz)
     return -1;
 
   dev_timer_value_t t;
-  if (DEVICE_OP(&libc_timer_dev, get_value, &t))
+  if (DEVICE_OP(&libc_timer_dev, get_value, &t, libc_timer_rev))
     return -1;
 
   t += libc_timer_offset;
@@ -164,7 +168,7 @@ time_t time(time_t *r_)
     return (time_t)-1;
 
   dev_timer_value_t t;
-  if (DEVICE_OP(&libc_timer_dev, get_value, &t))
+  if (DEVICE_OP(&libc_timer_dev, get_value, &t, libc_timer_rev))
     return (time_t)-1;
 
   t += libc_timer_offset;
@@ -204,7 +208,7 @@ error_t clock_gettime(clockid_t clk_id, struct timespec *tp)
     {
     case CLOCK_REALTIME: {
       dev_timer_value_t t;
-      if (DEVICE_OP(&libc_timer_dev, get_value, &t))
+      if (DEVICE_OP(&libc_timer_dev, get_value, &t, libc_timer_rev))
         return -1;
 
       t += libc_timer_offset;
@@ -229,7 +233,7 @@ error_t clock_settime(clockid_t clk_id, const struct timespec *tp)
     {
     case CLOCK_REALTIME: {
       dev_timer_value_t t;
-      if (DEVICE_OP(&libc_timer_dev, get_value, &t))
+      if (DEVICE_OP(&libc_timer_dev, get_value, &t, libc_timer_rev))
         return -1;
 
       dev_timer_value_t v;
@@ -248,7 +252,7 @@ error_t clock_settime(clockid_t clk_id, const struct timespec *tp)
 error_t libc_time_to_timer(const struct timespec *delay, dev_timer_value_t *value)
 {
   if (!device_check_accessor(&libc_timer_dev))
-    return -1;
+    return -EIO;
 
   if (delay->tv_sec < 60)
     {
@@ -262,6 +266,13 @@ error_t libc_time_to_timer(const struct timespec *delay, dev_timer_value_t *valu
     }
 
   return 0;
+}
+
+error_t libc_time_to_timer_rq(const struct timespec *delay, struct dev_timer_rq_s *rq)
+{
+  rq->delay = 0;
+  rq->rev = libc_timer_rev;
+  return libc_time_to_timer(delay, &rq->deadline);
 }
 
 /* unistd.h */
