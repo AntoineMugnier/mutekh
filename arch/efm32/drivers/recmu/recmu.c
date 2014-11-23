@@ -172,9 +172,6 @@ static const uint8_t efm32_en_bits[EFM32_CLOCK_count] = {
 #ifdef EFM32_CLOCK_USB
     [EFM32_CLOCK_USB]      = EFM32_CMU_HFCORECLKEN0_USB_SHIFT | 0x80,
 #endif
-#ifdef EFM32_CLOCK_USBC
-    [EFM32_CLOCK_USBC]     = EFM32_CMU_HFCORECLKEN0_USBC_SHIFT | 0x80,
-#endif
 #ifdef EFM32_CLOCK_TIMER0
     [EFM32_CLOCK_TIMER0]   = EFM32_CMU_HFPERCLKEN0_TIMER0_SHIFT | 0x80,
 #endif
@@ -673,6 +670,29 @@ static DEV_CLOCK_CONFIG_NODE(efm32_recmu_config_node)
       break;
     }
 
+#ifdef EFM32_CLOCK_USBC
+    case EFM32_CLOCK_USBC: {
+      if (value != NULL && value->freq.denom != 1)
+        return -ENOTSUP;
+      switch (parent_id)
+        {
+        case EFM32_CLOCK_LFXO:
+          EFM32_CMU_CMD_USBCCLKSEL_SET(pv->r_cmd, LFXO);
+          break;
+        case EFM32_CLOCK_LFRCO:
+          EFM32_CMU_CMD_USBCCLKSEL_SET(pv->r_cmd, LFRCO);
+          break;
+        case EFM32_CLOCK_HFCLK:
+          EFM32_CMU_CMD_USBCCLKSEL_SET(pv->r_cmd, HFCLKNODIV);
+          break;
+        default:
+          return -ENOTSUP;
+        }
+      pv->usbcclk_new_parent = parent_id;
+      break;
+    }
+#endif
+
     case EFM32_CLOCK_LFACLK: {
       if (value != NULL && value->freq.denom != 1)
         return -ENOTSUP;
@@ -920,6 +940,19 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
       cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR, endian_le32(x));
     }
 
+#ifdef EFM32_CLOCK_USBC
+  /* enable/disable EFM32_CLOCK_USBC */
+  if (m & (1 << EFM32_CLOCK_USBC))
+    {
+      bool_t en = (dep_mask >> EFM32_CLOCK_USBC) & 1;
+      uint32_t x = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR));
+      EFM32_CMU_HFCORECLKEN0_USBC_SET(x, en);
+      cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR, endian_le32(x));
+      if (en)
+        dep_mask |= (1 << pv->usbcclk_parent);
+    }
+#endif
+
   /* enable/disable EFM32_CLOCK_LF*CLK */
   {
     uint32_t x = 0;
@@ -1104,6 +1137,9 @@ static void efm32_recmu_read_config(struct efm32_recmu_private_s *pv)
   pv->lfaclk_new_parent = pv->lfaclk_parent;
   pv->lfbclk_new_parent = pv->lfbclk_parent;
   pv->hfclk_new_parent = pv->hfclk_parent;
+#ifdef EFM32_CLOCK_USBC
+  pv->usbcclk_new_parent = pv->usbcclk_parent;
+#endif
 }
 
 static DEV_CLOCK_ROLLBACK(efm32_recmu_rollback)
@@ -1151,6 +1187,11 @@ static DEV_CLOCK_NODE_INFO(efm32_recmu_node_info)
       case EFM32_CLOCK_LFBCLK:
         info->parent_id = pv->lfbclk_parent;
         break;
+#ifdef EFM32_CLOCK_USBC
+      case EFM32_CLOCK_USBC:
+        info->parent_id = pv->usbcclk_parent;
+        break;
+#endif
       default:
         *mask ^= DEV_CLOCK_INFO_PARENT;
         break;
@@ -1258,6 +1299,9 @@ static DEV_INIT(efm32_recmu_init)
   pv->hfclk_parent = EFM32_CLOCK_HFRCO;
   pv->lfaclk_parent = EFM32_CLOCK_LFRCO;
   pv->lfbclk_parent = EFM32_CLOCK_LFRCO;
+#ifdef EFM32_CLOCK_USBC
+  pv->usbcclk_parent = EFM32_CLOCK_HFCLK;
+#endif
 
   efm32_recmu_read_config(pv);
 
