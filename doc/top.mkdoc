@@ -22,6 +22,7 @@
 @include ../libvfs/libvfs.mkdoc
 @include ../libpthread/libpthread.mkdoc
 @include ../libnetwork/libnetwork.mkdoc
+@include ../libble/ble.mkdoc
 @include ../libfdt/libfdt.mkdoc
 @include ../libtermui/libtermui.mkdoc
 @include ../libgomp/libgomp.mkdoc
