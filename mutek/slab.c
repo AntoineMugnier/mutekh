@@ -27,10 +27,12 @@ void slab_init(
     slab_grow_func_t grow,
     enum mem_scope_e scope)
 {
+    lock_init(&slab->lock);
+
     slab_group_list_init(&slab->group_list);
     slab_unit_list_init(&slab->unit_list);
 
-    slab->unit_size = ALIGN_VALUE_UP(unit_size, sizeof(slab_unit_list_entry_t));
+    slab->unit_size = ALIGN_VALUE_UP(unit_size, 8);
     slab->grow = grow;
     slab->scope = scope;
 }
@@ -44,6 +46,8 @@ void slab_cleanup(struct slab_s *slab)
 
     slab_group_list_destroy(&slab->group_list);
     slab_unit_list_destroy(&slab->unit_list);
+
+    lock_destroy(&slab->lock);
 }
 
 void *slab_nolock_grow(struct slab_s *slab)
@@ -52,21 +56,23 @@ void *slab_nolock_grow(struct slab_s *slab)
     uintptr_t base, unit;
     size_t next_count;
     size_t unit_bytes;
+    size_t group_size;
 
     next_count = slab->grow(slab, slab->current_count);
 
     if (next_count == 0)
         return NULL;
 
+    group_size = ALIGN_VALUE_UP(sizeof(*group), 8);
     unit_bytes = slab->unit_size * next_count;
-    group = mem_alloc(sizeof(*group) + unit_bytes, slab->scope);
+    group = mem_alloc(group_size + unit_bytes, slab->scope);
 
     if (!group)
         return NULL;
 
-    slab_group_list_nolock_push(&slab->group_list, group);
+    slab_group_list_push(&slab->group_list, group);
 
-    base = (uintptr_t)(group + 1);
+    base = (uintptr_t)group + group_size;
 
     for (unit = slab->unit_size; unit < unit_bytes; unit += slab->unit_size)
       slab_unit_list_push(&slab->unit_list, (struct slab_unit_s *)(base + unit));

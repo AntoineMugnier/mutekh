@@ -32,6 +32,7 @@
 
 #include <hexo/types.h>
 #include <hexo/error.h>
+#include <hexo/lock.h>
 
 #include <gct_platform.h>
 #include <gct_lock_hexo_lock_irq.h>
@@ -45,8 +46,6 @@
 #define GCT_CONTAINER_ALGO_slab_unit_list SLIST
 /** @internal */
 #define GCT_CONTAINER_ALGO_slab_group_list SLIST
-/** @internal */
-#define GCT_CONTAINER_LOCK_slab_group_list HEXO_LOCK_IRQ
 
 /** @internal */
 struct slab_unit_s {
@@ -80,6 +79,7 @@ struct slab_s;
 typedef SLAB_GROW(slab_grow_func_t);
 
 struct slab_s {
+    lock_t lock;
     slab_group_list_root_t group_list;
     slab_unit_list_root_t unit_list;
     size_t unit_size;
@@ -92,10 +92,7 @@ GCT_CONTAINER_FCNS(slab_unit_list, static inline, slab_unit_list,
                    init, destroy, push, pop);
 
 GCT_CONTAINER_FCNS(slab_group_list, static inline, slab_group_list,
-                   init, destroy, push, pop, wrlock, unlock);
-
-GCT_CONTAINER_NOLOCK_FCNS(slab_group_list, static inline, slab_group_list_nolock,
-                          push);
+                   init, destroy, push, pop);
 
 /**
    @this initializes a new slab.
@@ -137,14 +134,14 @@ void *slab_alloc(struct slab_s *slab)
 {
     struct slab_unit_s *unit;
 
-    slab_group_list_wrlock(&slab->group_list);
+    LOCK_SPIN_IRQ(&slab->lock);
 
     unit = slab_unit_list_pop(&slab->unit_list);
 
     if (!unit)
         unit = slab_nolock_grow(slab);
 
-    slab_group_list_unlock(&slab->group_list);
+    LOCK_RELEASE_IRQ(&slab->lock);
 
     return unit;
 }
@@ -160,7 +157,11 @@ void slab_free(struct slab_s *slab, void *ptr)
 {
     struct slab_unit_s *unit = ptr;
 
+    LOCK_SPIN_IRQ(&slab->lock);
+
     slab_unit_list_push(&slab->unit_list, unit);
+
+    LOCK_RELEASE_IRQ(&slab->lock);
 }
 
 #endif
