@@ -7,6 +7,7 @@ enum \
 gpio \
 lcd \
 mem \
+net \
 persist \
 printk \
 rtt \
