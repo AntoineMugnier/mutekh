@@ -1,0 +1,262 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
+*/
+
+#include <ble/protocol/l2cap.h>
+#include <ble/protocol/advertise.h>
+#include <ble/protocol/gap.h>
+
+#include <ble/protocol/gatt/service.h>
+#include <ble/protocol/gatt/characteristic.h>
+
+#include <ble/stack/central.h>
+#include <ble/stack/context.h>
+
+#include <ble/net/scanner.h>
+#include <ble/net/phy.h>
+#include <ble/net/gatt.h>
+#include <ble/net/sm.h>
+#include <ble/net/gap.h>
+#include <ble/net/att.h>
+#include <ble/net/link.h>
+#include <ble/net/llcp.h>
+
+#include <ble/net/layer_id.h>
+
+#include <mutek/printk.h>
+
+#include <ble/net/generic.h>
+
+static const struct ble_scanner_delegate_vtable_s ctr_scan_vtable;
+
+static void ble_central_target_add(struct ble_central_s *ctrl,
+                                   const struct ble_addr_s *addr,
+                                   enum ble_scanner_policy_e policy);
+
+struct dev_rng_s;
+
+static error_t scan_start(struct ble_central_s *ctr);
+
+static void ctr_state_update(struct ble_central_s *ctr)
+{
+  enum ble_central_state_e state = BLE_CENTRAL_IDLE;
+
+  if (ctr->conn.phy) {
+    state = BLE_CENTRAL_CONNECTED;
+  } else if (ctr->scan) {
+    if (ctr->mode & BLE_CENTRAL_PAIRABLE)
+      state = BLE_CENTRAL_PAIRING;
+    else
+      state = BLE_CENTRAL_SCANNING;
+  }
+
+  if (state == ctr->last_state)
+    return;
+
+  ctr->last_state = state;
+
+  printk("Central state now %d\n", state);
+
+  ctr->handler->state_changed(ctr, state);
+}
+
+static void ctr_conn_drop(struct ble_central_s *ctr, uint8_t reason)
+{
+  ble_stack_connection_drop(&ctr->conn, reason);
+
+  ctr_state_update(ctr);
+  scan_start(ctr);
+}
+
+static void ctr_conn_state_changed(struct ble_stack_connection_s *conn,
+                                    bool_t connected)
+{
+  struct ble_central_s *ctr = ble_central_s_from_conn(conn);
+
+  ctr_state_update(ctr);
+}
+
+static const struct ble_stack_context_handler_s ctr_conn_handler =
+{
+  .state_changed = ctr_conn_state_changed,
+};
+
+static
+bool_t ctr_connection_requested(void *delegate, struct net_layer_s *layer,
+                                 const struct ble_adv_connect_s *conn,
+                                 dev_timer_value_t anchor)
+{
+  struct ble_central_s *ctr = delegate;
+  error_t err;
+
+  printk("Connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
+
+#if defined(CONFIG_BLE_CRYPTO)
+  if (ctr->conn.sm) {
+    printk(" still have sm\n");
+    return 1;
+  }
+#endif
+
+  if (ctr->conn.phy) {
+    printk(" still have master\n");
+    return 1;
+  }
+
+  ctr->handler->connection_opened(ctr, &conn->slave);
+
+  err = ble_stack_connection_create(&ctr->conn, ctr->context,
+                                    &ctr->handler->base,
+                                    &ctr_conn_handler,
+                                    1, conn, anchor);
+
+  if (!err) {
+    net_layer_refdec(ctr->scan);
+    ctr->scan = NULL;
+  }
+
+  ctr_state_update(ctr);
+
+  return err ? 1 : 0;
+}
+
+static error_t scan_start(struct ble_central_s *ctr)
+{
+  error_t err;
+
+  if (ctr->conn.phy) {
+    printk("Cannot scan: has master\n");
+    return 0;
+  }
+
+  if (ctr->scan) {
+    printk("Cannot scan: has scan\n");
+    return 0;
+  }
+
+  ctr->params.access_address = ble_stack_access_address_generate(ctr->context);
+  dev_rng_wait_read(&ctr->context->rng, &ctr->params.crc_init, 4);
+  ctr->params.crc_init &= 0xffffff;
+  ble_stack_context_local_address_get(ctr->context, &ctr->params.local_addr);
+
+  printk("Central scanning starting\n");
+
+  err = DEVICE_OP(&ctr->context->ble, layer_create,
+                  &ctr->context->scheduler,
+                  BLE_NET_LAYER_SCANNER,
+                  &ctr->params,
+                  ctr, &ctr_scan_vtable.base,
+                  &ctr->scan);
+  if (err) {
+    printk("Scanning start failed: %d\n", err);
+    ctr->scan = NULL;
+  }
+  
+  ctr_state_update(ctr);
+
+  return err;
+}
+
+error_t ble_central_init(
+  struct ble_central_s *ctr,
+  const struct ble_central_params_s *params,
+  const struct ble_central_handler_s *handler,
+  struct ble_stack_context_s *context)
+{
+  memset(ctr, 0, sizeof(*ctr));
+
+  ctr->params.interval_ms = params->scan_interval_ms;
+  ctr->params.duration_ms = params->scan_duration_ms;
+  ctr->params.target_count = 0;
+  ctr->params.default_policy = BLE_SCANNER_IGNORE;
+
+  ctr->handler = handler;
+  ctr->context = context;
+  ctr->mode = 0;
+
+  ble_stack_context_local_address_get(context, &ctr->addr);
+
+  return 0;
+}
+
+static void ctr_scan_destroyed(void *delegate, struct net_layer_s *layer)
+{
+  struct ble_central_s *ctr = delegate;
+
+  printk("Scanner layer destroyed\n");
+
+  ctr_state_update(ctr);
+}
+
+static const struct ble_scanner_delegate_vtable_s ctr_scan_vtable =
+{
+  .base.release = ctr_scan_destroyed,
+  .connection_requested = ctr_connection_requested,
+};
+
+void ble_central_mode_set(struct ble_central_s *ctr, uint8_t mode)
+{
+#if defined(CONFIG_BLE_SECURITY_DB)
+  if (ble_security_db_count(&ctr->context->security_db) == 0
+      && mode & BLE_CENTRAL_CONNECTABLE) {
+    mode |= BLE_CENTRAL_PAIRABLE;
+  }
+#else
+  mode |= BLE_CENTRAL_PAIRABLE;
+#endif
+
+  if (mode == ctr->mode)
+    return;
+
+  ctr->mode = mode;
+
+  if (!(mode & BLE_CENTRAL_CONNECTABLE))
+    ctr_conn_drop(ctr, 0);
+
+  if (ctr->scan) {
+    net_layer_refdec(ctr->scan);
+    ctr->scan = NULL;
+  }
+
+  if (mode & BLE_CENTRAL_CONNECTABLE && !ctr->conn.phy)
+    scan_start(ctr);
+}
+
+static void ble_central_target_add(struct ble_central_s *ctrl,
+                                   const struct ble_addr_s *addr,
+                                   enum ble_scanner_policy_e policy)
+{
+  if (ctrl->params.target_count < BLE_SCANNER_TARGET_MAXCOUNT) {
+    ctrl->params.target_count++;
+  } else {
+    memmove(ctrl->params.target, ctrl->params.target + 1,
+            sizeof(struct ble_scanner_target_s) * (BLE_SCANNER_TARGET_MAXCOUNT - 1));
+  }
+
+  ctrl->params.target[ctrl->params.target_count - 1].addr = *addr;
+  ctrl->params.target[ctrl->params.target_count - 1].policy = policy;
+
+  if (ctrl->scan)
+    ble_scanner_params_update(ctrl->scan, &ctrl->params);
+}
+
+void ble_central_connect(struct ble_central_s *ctrl, const struct ble_addr_s *addr)
+{
+  ble_central_target_add(ctrl, addr, BLE_SCANNER_CONNECT);
+}

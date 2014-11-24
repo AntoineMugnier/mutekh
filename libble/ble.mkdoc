@@ -1,0 +1,298 @@
+@section TP {Bluetooth Low Energy library}
+
+@section {Overview}
+
+  Bluetooth Low Energy library is a generic framework for implementing
+  devices using this whole stack of protocols.
+
+  Network-like protocols are modeled through the libnetwork APIs.
+
+  This library provides:
+  @list
+    @item definitions for hardware-dependent layers (Advertiser, Scanner, Master, Slave);
+    @item generic implementation of hardware-agnostic network layers:
+      @list
+        @item Link-layer (crypto), LLCP, L2CAP, L2CAP LE Signalling,
+        @item Security Manager,
+        @item ATT, GATT Server, GATT Client,
+        @item GAP,
+        @item Device scan filtering and selection;
+      @end list
+    @item GATT Database library;
+    @item GATT Client library;
+    @item Protocol utilities and constant definitions;
+    @item Security Database and device host key handling;
+    @item Stack utilities to create standard device contexts (Peripheral, Central, Beacon).
+  @end list
+
+  All radio roles can be used concurrently.  Limitations in terms of
+  maximum concurrent connections are enforced by radio driver and/or
+  available memory.
+
+@end section
+
+@section {Recap for Bluetooth Core Specification (non-)readers}
+
+  @section {Connection and Device Roles}
+
+    For devices that connect to others, Specification speaks of
+    Central and Peripheral.  Central is a device that Scans for
+    presence of Peripherals and connects to them.  Peripheral
+    Advertises its presence and capabilities through Advertisement
+    Data (AD) and accepts connection requests from Centrals.
+
+    Because Scanning requires keeping radio hardware running for long
+    periods of time, Scanner (and, therefore, Central) is usually the
+    device with the biggest battery (or permanent power source).  With
+    the same spirit, once connected, Peripheral battery will be saved
+    as much as possible.
+
+    Once connected, Central is Master of the connection, Peripheral is
+    Slave.  Master defines timing and channel hopping sequence for the
+    connection.
+
+    If allowed, Slave may skip some radio events and sleep instead.
+    This saves battery and is called the "Slave Latency feature".  A
+    Slave applying Slave Latency remains connected as it wakes up
+    periodically to sync clocks and check for incoming messages.  This
+    has a side effect: data usually flows better from Peripheral
+    (Slave) to Central (Master) because Slave knows whether is has
+    data to send and can stop applying Slave Latency.  On the
+    contrary, if Master has data waiting for a Slave applying Slave
+    Latency, data gets queued until Slave listens again and may be
+    delayed for some time (e.g. more than a second).
+
+    Most management operations are driven by Central (Connection
+    establishment, Pairing, Connection Parameter updates, Link-layer
+    cryptography, etc.), but for each operation, Peripheral may
+    sollicit Central for performing them.
+
+  @end section
+
+  @section {GATT and Attribute protocol}
+
+    BLE devices implement Profiles using GATT Services, exposed
+    through a GATT Database.
+
+    There is always a GATT Database in a device, whatever the side of
+    the connection it is on.  GATT Client comunicates to peer's GATT
+    Server.  There are no Server-to-Server or Client-to-Client
+    communications.  A GATT Server exposes a GATT Database.
+
+    GATT Database keeps a hierarchy of Services and Characteristics
+    through careful construction of an Attribute Database.
+
+    Attribute Database is a simple collection of attributes.  Each
+    attribute is a (Handle, Type, Value) tuple.  Attribute Protocol
+    defines a set of operations to enumerate, query, read, write and
+    send update notifications for Attribute Values.  Set of operations
+    that is permitted/possible is Attribute-dependent.
+
+    A GATT Database is an Attribute Database with a specific way of
+    interleaving Definition, Value and Descriptor Attributes.  Service
+    and Characteristic Definition Attributes provide schema and
+    grouping for Characteristic values.  Descriptors are additional
+    Attributes attached to Characteristics.  Definition Attributes are
+    read-only, Value Attributes are read/write/notify depending on
+    Service Specification, and some Descriptors can be read-write
+    (most are read-only).
+
+    A GATT Service is a set of Characteristics and encoding of their
+    values to implement a specific protocol.
+
+    A Profile is an arbitrary Specification using a set of GATT
+    Services for a specific purpose.  A Profile is implemented by a
+    Device when all its requirements in terms of Service and
+    Characteristics are satisfied.  As such, Profile definitions
+    dictate how Services will be declared, implemented and used, but
+    do not defined any protocol.
+
+  @end section
+
+@end section
+
+@section {GATT Database}
+
+  @section {Concepts}
+
+    GATT Services are declared through constant (.rodata) structures
+    containing Characteristics and other Service specificities.  This
+    limits the RAM usage for the GATT DB.  A set of preprocessor
+    macros are provided for shortening writing of said structures.
+
+    Services are to be registered to the GATT Database.  There may be
+    multiple instances of a given Service in a Database.  Database is
+    exposed to the relevant GATT Server network Laeyr, in turn stacked
+    on an Attribute Protocol layer.
+
+    A Characteristic may be declared as a constant BLOB (or string) in
+    read-only data section (.rodata), plain data pointing to a buffer
+    in RAM (.data or .bss) or dynamic (callbacks must handle
+    read/writes).  This ensures maximum flexibility but keeps handler
+    code simple for most cases.
+
+    Characteristics may expose Descriptors.  Usual ones with specific
+    meaning to GATT protocol are handled internally, like Client
+    Configuration Characteristic Descriptor (CCCD), and need not be
+    declared explicitly.
+
+    Attribute handle allocation and encoding of Service/Characteristic
+    Definition Attributes is handled by the library.
+
+    UUIDs are always 128 bits in service/characteristic declarations.
+    Shortening to 16 bits is done when possible if protocol encoding
+    permits so (like Attribute Protocol does).  Keeping UUID-128 in
+    internal representation simplifies handling of UUIDs in generic
+    code (no special case for comparisons, etc.).
+
+    For each request, GATT Server layer knows whether it comes through
+    a secure link-layer and will enforce characteristic-defined security
+    constraints accordingly.
+
+  @end section
+
+  @section {Service declarations}
+
+    Because a service declaration is simple and explicit, there is no
+    library of service declarations: this is unneeded.
+
+    Standard Service, Characteristic and Descriptors assigned numbers
+    are provided in relevant headers, they can be used freely for all
+    device's service declarations.
+
+    For instance, a Device Information Service declaration is as
+    simple as:
+
+    @code
+      BLE_GATTDB_SERVICE_DECL(device_information_service,
+        BLE_GATTDB_SERVICE_PRIMARY,
+        BLE_UUID_SHORT_P(BLE_UUID_DEVICE_INFORMATION_SERVICE),
+        NULL,
+        BLE_GATTDB_CHAR_CONSTANT_STRING(BLE_UUID_SHORT_P(BLE_UUID_MANUFACTURER_NAME_STRING_CHAR), "MutekH"),
+        BLE_GATTDB_CHAR_CONSTANT_STRING(BLE_UUID_SHORT_P(BLE_UUID_MODEL_NUMBER_STRING_CHAR), "XYZ123"),
+        );
+    @end code
+
+    Then, registration of Service is done through a call to
+    @tt{ble_gattdb_service_register}.  This is enough to get the
+    service exposed in the GATT Database.
+
+    A custom Service gets declared the same way.  For instance,
+    Apple-designed MIDI-over-BLE Service gets declared as:
+
+    @code
+      BLE_GATTDB_SERVICE_DECL(midi_service,
+        BLE_GATTDB_SERVICE_PRIMARY | BLE_GATTDB_SERVICE_ADVERTISED,
+        BLE_UUID_P(0x03B80E5A, 0xEDE8, 0x4B33, 0xA751, 0x6CE34EC4C700ULL),
+        NULL,
+        BLE_GATTDB_CHAR(BLE_UUID_P(0x7772E5DB, 0x3868, 0x4112, 0xA1A9, 0xF2669D106BF3ULL),
+          BLE_GATTDB_PERM_AUTH_WRITE | BLE_GATTDB_PERM_AUTH_READ | BLE_GATTDB_NOTIFIABLE,
+          BLE_GATTDB_CHAR_DATA_DYNAMIC(NULL, on_midi_data_write, NULL)),
+        );
+    @end code
+
+    This declares a service with Type UUID @tt
+    {03B80E5A-EDE8-4B33-A751-6CE34EC4C700}.  This service will be
+    declared as primary and advertised in AD.  It contains a
+    write/notify secure characteristic with Type UUID @tt
+    {7772E5DB-3868-4112-A1A9-F2669D106BF3}.  @tt {on_midi_data_write}
+    function will be called to handle writes to the characteristic.
+
+  @end section
+
+  @section {GATT side notes}
+
+    A Characteristic needs at least 2 Attributes to be valid: a
+    Characteristic Declaration Attribute, and a Value Attribute.  Other
+    attributes may follow, they are called Descriptors.
+
+    Because GATT Services and Characteristics are encoded in terms of
+    Attributes in the Attribute Protocol, there is some confusion
+    between the terms "Characteristic" and "Attribute" in many
+    programs and libraries.
+
+    For instance, BlueZ gatttool defines the following commands:
+    "char-read-hnd", "char-read-uuid", "char-write-req",
+    "char-write-cmd", but their names are misleading: they operate on
+    Attributes.
+
+  @end section
+
+@end section
+
+@section {GATT Client}
+@end section
+
+@section {Stack utilities}
+
+  Stack provides a bridge from context to role-specific behavior.
+
+  @section {Stack Context}
+
+    Stack context gets initialized once for a device.  It contains:
+    @list
+      @item references to device instances for Radio, Timer and
+        Cryptography operations,
+      @item reference to a libnetwork Scheduler,
+      @item a network-packet allocation pool,
+      @item a GATT Database,
+      @item a GATT Client context.
+    @end list
+
+  @end section
+
+  @section {Peripheral Stack}
+
+    Peripheral Stack context creates the Advertise Data (AD) from GATT
+    Database and GATT Client:
+    @list
+      @item services registered in GATT Database may define whether
+        they should be advertised for in Service List,
+      @item services registered in GATT Client may request for
+        Service Sollicitation,
+      @item device name and preferred connection parameters are
+        extracted from relevant characteristics in GAP GATT Service.
+    @end list
+
+    Once connection is established, GAP layer also tries to enforce
+    preferred connection parameters defined in GAP Service.
+
+  @end section
+
+@end section
+
+@section {Security Manager and Security DB}
+
+  Security Manager Layer handles pairing.  Pairing uses "legacy
+  pairing" mode, with Just-Works, PIN or OOB methods.
+
+  Security Database purpose is to save context shared with peers.
+  Most of this context is actually related to device identification
+  and link-layer cryptography.
+
+  GATT Server layer also needs to keep some data attached to a given
+  peer.  This is particularly useful for Characteristic update setup
+  that needs to be restored across connections.
+
+@end section
+
+@section {Protocol definitions and utilities}
+
+  All generic constants and definitions are in @code {ble/protocol/}
+  include path.
+
+  There is also a set of packet dissectors, useful for dumping packet
+  contents in a textual form.
+
+  UUIDs are defined as a 16-byte structure.  A set of accessor and
+  comparator functions is provided.  Macros like @tt
+  BLE_UUID_SHORT_P(), @tt BLE_UUID_P() yield valid pointers to
+  constant UUIDs for given values.
+
+  Device addresses are defined as a 48-bit address + 1 bit type
+  (Random / Public).  There are various tools provided to generate and
+  resolve random addresses.
+
+@end section
+
+@end section

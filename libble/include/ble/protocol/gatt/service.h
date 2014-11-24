@@ -1,0 +1,55 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
+*/
+
+#ifndef BLE_PROTOCOL_SERVICES_H
+#define BLE_PROTOCOL_SERVICES_H
+
+#define BLE_UUID_ALERT_NOTIFICATION_SERVICE 0x1811
+#define BLE_UUID_BATTERY_SERVICE 0x180F
+#define BLE_UUID_BLOOD_PRESSURE_SERVICE 0x1810
+#define BLE_UUID_BODY_COMPOSITION_SERVICE 0x181B
+#define BLE_UUID_BOND_MANAGEMENT_SERVICE 0x181E
+#define BLE_UUID_CONTINUOUS_GLUCOSE_MONITORING_SERVICE 0x181F
+#define BLE_UUID_CURRENT_TIME_SERVICE 0x1805
+#define BLE_UUID_CYCLING_POWER_SERVICE 0x1818
+#define BLE_UUID_CYCLING_SPEED_AND_CADENCE_SERVICE 0x1816
+#define BLE_UUID_DEVICE_INFORMATION_SERVICE 0x180A
+#define BLE_UUID_ENVIRONMENTAL_SENSING_SERVICE 0x181A
+#define BLE_UUID_GENERIC_ACCESS_SERVICE 0x1800
+#define BLE_UUID_GENERIC_ATTRIBUTE_SERVICE 0x1801
+#define BLE_UUID_GLUCOSE_SERVICE 0x1808
+#define BLE_UUID_HEALTH_THERMOMETER_SERVICE 0x1809
+#define BLE_UUID_HEART_RATE_SERVICE 0x180D
+#define BLE_UUID_HUMAN_INTERFACE_DEVICE_SERVICE 0x1812
+#define BLE_UUID_IMMEDIATE_ALERT_SERVICE 0x1802
+#define BLE_UUID_INDOOR_POSITIONING_SERVICE 0x1821
+#define BLE_UUID_INTERNET_PROTOCOL_SUPPORT_SERVICE 0x1820
+#define BLE_UUID_LINK_LOSS_SERVICE 0x1803
+#define BLE_UUID_LOCATION_AND_NAVIGATION_SERVICE 0x1819
+#define BLE_UUID_NEXT_DST_CHANGE_SERVICE 0x1807
+#define BLE_UUID_PHONE_ALERT_STATUS_SERVICE 0x180E
+#define BLE_UUID_REFERENCE_TIME_UPDATE_SERVICE 0x1806
+#define BLE_UUID_RUNNING_SPEED_AND_CADENCE_SERVICE 0x1814
+#define BLE_UUID_SCAN_PARAMETERS_SERVICE 0x1813
+#define BLE_UUID_TX_POWER_SERVICE 0x1804
+#define BLE_UUID_USER_DATA_SERVICE 0x181C
+#define BLE_UUID_WEIGHT_SCALE_SERVICE 0x181D
+
+#endif
