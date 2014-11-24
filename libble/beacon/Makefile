@@ -1,0 +1,1 @@
+objs = advertiser.o

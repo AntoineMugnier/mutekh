@@ -1,0 +1,38 @@
+%set OUTPUT_NAME tests
+
+# New source code module to be compiled
+%append MODULES $(OUTPUT_NAME):$(CONFIGPATH)
+
+# Application license
+CONFIG_LICENSE_APP_LGPL
+
+CONFIG_APP_START
+CONFIG_MUTEK_THREAD
+CONFIG_MUTEK_SCHEDULER
+CONFIG_MUTEK_KROUTINE_IDLE
+CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
+
+CONFIG_BLE
+
+%section ble-*
+  %subsection ble-nrf51
+    CONFIG_DRIVER_NRF51_ECB
+    CONFIG_DRIVER_NRF51_RNG
+    CONFIG_DRIVER_NRF51_RTC
+    CONFIG_DRIVER_NRF51_CLOCK
+    CONFIG_DRIVER_NRF51_PRINTK
+  %end
+
+  %subsection ble-efm32
+    CONFIG_DRIVER_EFM32_AES
+  %end
+
+  %subsection ble-soft
+    CONFIG_DRIVER_CRYPTO_SOFT_AES
+  %end
+%end
+
+%include scripts/options.build
+%include arch/arch.build
+
+CONFIG_LOAD_ROM_RW_SIZE 0x800
