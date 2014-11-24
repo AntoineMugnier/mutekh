@@ -1,0 +1,860 @@
+@moduledef {Bluetooth Low Energy library}
+@short BLE Library
+
+Bluetooth Low Energy library is a generic framework for implementing
+devices using this whole stack of protocols defined in @url
+{https://www.bluetooth.com/specifications/adopted-specifications}
+{Bluetooth Core v4.2 specification}.
+
+@insert localtoc
+
+@section tPU {Terminology recap for Core Specification (non-)readers}
+
+  Bluetooth Low Energy (BLE) is a set of protocols used by Personnal
+  Area Network (PAN) devices.  Devices compatible with BLE are
+  marketed as @em {Bluetooth Smart}.
+
+  Typical use case for BLE devices involves a connection between them.
+  Connectionless use cases also exist.
+
+  @section tU {Connection and Device Roles}
+
+    For devices that connect to others, Specification speaks of @em
+    Central and @em Peripheral @em roles.  @em Central is a device
+    that @em scans for presence of @em Peripherals and connects to
+    them.  @em Peripheral @em advertises its presence and capabilities
+    through @em {Advertisement Data (AD)} and accepts connection
+    requests from @em Centrals.
+
+    Because @em scanning requires keeping radio hardware running for long
+    periods of time, @em Scanner (therefore, @em Central) is usually the
+    device with the biggest battery (or permanent power source).  With
+    the same spirit, once connected, @em Peripheral battery will be saved
+    as much as possible.
+
+    During a connection, @em Central is @em Master of the connection,
+    @em Peripheral is @em Slave.  @em Master defines timing and
+    channel hopping sequence for the connection.
+
+    Most management operations are driven by @em Central (connection
+    establishment, @em pairing, connection parameter updates, link-layer
+    cryptography, etc.), but for each operation, @em Peripheral may
+    sollicit @em Central for performing them.
+
+  @end section
+
+  @section tU {Connection events}
+
+    @em Master and @em Slave periodically meet on a specific @em
+    channel.  Timing is driven by @em {Connection Parameters} and @em
+    channel by @em {Channel Map}.  A point in time where packets are
+    exchanged is a @em {Connection Event}.  Duration between two
+    subsequent @em {connection events} is the @em {Connection
+    Interval}.
+
+    @em {Connection interval} is a single value, but for most
+    management operations, Bluetooth specification uses a range of
+    acceptable values, and @em Master decides the final value used.
+
+  @end section
+
+  @section tU {Slave latency}
+
+    If allowed, @em Slave may skip some radio events and sleep
+    instead.  This saves battery and is called the @em {Slave latency
+    feature}.  A @em Slave applying @em {Slave latency} remains
+    connected as it wakes up periodically to sync clocks and check for
+    incoming messages.
+
+    @em {Slave latency} has a side effect: data usually flows better
+    from @em Peripheral (i.e. @em Slave) to @em Central (i.e. @em
+    Master) because @em Slave knows whether is has data to send and
+    can stop applying @em {Slave latency}.  On the other hand, if @em
+    Master has data waiting for a @em Slave applying @em {Slave
+    latency}, data gets queued until @em Slave listens again and may
+    be delayed for some time (e.g. more than one second).
+
+  @end section
+
+  @section tU {Device profiles, GATT and Attribute protocol}
+
+    A @em Profile is an arbitrary specification using a set of @em
+    {GATT Services} for a specific purpose.  A @em Profile is
+    implemented by a @em Device when all its requirements in terms of
+    @em Services are satisfied.  As such, @em Profile definitions
+    dictate how @em Services will be declared, implemented and used,
+    but do not define any protocol.
+
+    There is always a @em {GATT Database} in a device, whatever the
+    side of the connection it is on.
+
+    @em {GATT Database} keeps a hierarchy of @em Services and @em
+    Characteristics through careful construction of an @em {Attribute
+    Database}.
+
+    An @em {Attribute Database} is a simple collection of attributes.
+    Each attribute is a (Handle, Type, Value) tuple.  @em {Attribute
+    Protocol (ATT)} defines a set of operations to enumerate, query,
+    read, write and send update notifications for attribute @em
+    Values.  Set of operations that is permitted/possible is
+    Attribute-dependent.  @em {ATT Client} comunicates to peer's @em
+    {ATT Server}.  There is no Server-to-Server or Client-to-Client
+    communications.
+
+    A GATT Database is an collection of attributes with a specific way
+    of interleaving @em Definition, @em Value and @em Descriptor
+    attributes.  @em {Service Definition} attributes and @em
+    {Characteristic Definition} attributes provide schema and grouping
+    for characteristic @em values.  @em Descriptors are additional
+    attributes attached to @em Characteristics.  Definition attributes
+    are read-only, @em Value Attributes are read/write/notify
+    depending on @em Service specification, and some @em Descriptors
+    may be read-write, but most are read-only.
+
+    A GATT @em Service is a set of @em Characteristics and encoding of
+    their values to implement a specific protocol.
+
+    A @em Characteristic is composed of at least 2 attributes to be
+    valid: a @em {Characteristic Declaration} attribute, and a @em
+    Value attribute.  Other attributes may follow, they are called @em
+    Descriptors.
+
+    Because GATT @em Services and @em Characteristics are encoded in
+    terms of @em Attributes in the @em {Attribute Protocol}, there is
+    some confusion between the terms "Characteristic" and "Attribute"
+    in many programs and libraries.
+
+    For instance, BlueZ @tt gatttool defines the following commands:
+    @tt char-read-hnd, @tt char-read-uuid, @tt char-write-req, @tt
+    char-write-cmd.  Their names are misleading: they operate on
+    Attributes.
+
+  @end section
+
+  @section tU {UUIDs}
+
+    Attributes types, GATT service, characteristic and descriptor
+    types, and other constants are defined through UUID values
+    (128-bit numbers).  This ensures minimal chances of value
+    collisions without the need for a central registry.
+
+    SIG-defined UUIDs receive special treatment as they are commonly
+    used throughout the various protocols of the Specification. They
+    are grouped around the @em {Bluetooth Base UUID} and share 96
+    common bits.  In various protocol parts, they can be transmitted
+    in a short form, skipping the common bits, thus only using 16 or
+    32 bits.  This is an implementation detail specific to some
+    protocols in the whole stack, but because of this, SIG-defined
+    UUIDs are often referred as @em Short UUIDs.
+
+    Apart from SIG-defined UUIDs, any implementor is free to generate
+    its own UUIDs and use them in various protocols.  Custom UUIDs
+    must not use the Bluetooth Base UUID (and cannot be encoded in a
+    short form).
+
+    Specification does not define any grouping scheme for custom
+    UUIDs, but some vendors do incitate to group custom UUIDs for
+    various reasons.  In order to avoid collisions, it is probably
+    better to use full 128-bit random UUIDs anyway.
+
+  @end section
+
+@end section
+
+@section tPU {MutekH BLE stack design}
+
+  This part describes design choices taked in MutekH BLE library.
+
+  Library has no internal globals, thus does not enforce any
+  limitations.  All radio roles can be used concurrently.  Maximum
+  concurrent connection count is enforced by radio driver and/or
+  available memory.
+
+  @section tU {Network layers}
+
+    Network-like protocols are modeled through the libnetwork APIs.
+    Device drivers provide implmentation for the hardware-dependent
+    network layers.
+
+    There are definitions for all network layers in the BLE protocol stack.
+
+    For a connection, usual layer instanciation stack is:
+    @list
+      @item @ref {@ble/net/phy.h} {Physical} (Slave or master)
+        @list
+          @item @ref {@ble/net/link.h} {Link}
+            @list
+              @item @ref {@ble/net/llcp.h} {LLCP}
+                @list
+                  @item @ref {@ble/net/gap.h} {GAP}
+                @end list
+                @item L2CAP
+                  @list
+                    @item Signalling
+                    @item @ref {@ble/net/sm.h} {Security manager}
+                    @item @ref {@ble/net/att.h} {Attribute protocol}
+                      @list
+                        @item @ref {@ble/net/gatt.h} {GATT Server}
+                        @item @ref {@ble/net/gattc.h} {GATT Client}
+                      @end list
+                  @end list
+            @end list
+        @end list
+    @end list
+
+    For an advertiser, usual layer instanciation stack is:
+    @list
+      @item @ref {@ble/net/adv.h} {Advertiser}
+    @end list
+
+    For an scanner, usual layer instanciation stack is:
+    @list
+      @item @ref {@ble/net/scanner.h} {Scanner}
+        @list
+          @item @ref {@ble/net/scan_filter.h} {Scanner filter}
+        @end list
+    @end list
+
+    @parse{
+    ble/net/adv.h
+    ble/net/att.h
+    ble/net/gap.h
+    ble/net/gatt.h
+    ble/net/gattc.h
+    ble/net/link.h
+    ble/net/llcp.h
+    ble/net/phy.h
+    ble/net/scan_filter.h
+    ble/net/scanner.h
+    ble/net/sm.h
+    ble/net/generic.h
+    ble/net/layer_id.h
+    }
+
+    See definitions in
+    @ref {@ble/net/adv.h},
+    @ref {@ble/net/att.h},
+    @ref {@ble/net/gap.h},
+    @ref {@ble/net/gatt.h},
+    @ref {@ble/net/gattc.h},
+    @ref {@ble/net/link.h},
+    @ref {@ble/net/llcp.h},
+    @ref {@ble/net/phy.h},
+    @ref {@ble/net/scan_filter.h},
+    @ref {@ble/net/scanner.h},
+    @ref {@ble/net/sm.h},
+    @ref {@ble/net/generic.h},
+    @ref {@ble/net/layer_id.h}.
+
+  @end section
+
+  @section tU {GATT Database}
+
+    GATT services are declared through constant (@tt {.rodata})
+    structures containing characteristics and other service
+    specificities.  This limits the RAM usage for the GATT DB.  A set
+    of preprocessor macros are provided for shortening writing of said
+    structures.
+
+    Services are to be registered to the GATT database.  There may be
+    multiple instances of a given service in a database.  @ref
+    {ble_gattdb_s} {Database} is exposed to the relevant @ref
+    {@ble/net/gatt.h} {GATT server network Layer}, in turn stacked on
+    an @ref {@ble/net/att.h} {Attribute Protocol} layer.  The stack
+    instanciation is automatic if @xref {Stack Context} is used.
+
+    A Characteristic may be declared as a constant BLOB (or string) in
+    read-only data section (@tt {.rodata}), plain data pointing to a
+    buffer in RAM (@tt .data or @tt .bss) or dynamic (callbacks must
+    handle read/writes).  This ensures maximum flexibility but keeps
+    handler code simple for most cases.
+
+    Characteristics may expose descriptors.  Usual ones with specific
+    meaning to GATT protocol are handled internally, like @em {Client
+    Configuration Characteristic Descriptor (CCCD)}, and need not be
+    declared explicitly.
+
+    Attribute handle allocation and encoding of service/characteristic
+    definition attributes is handled by the library.
+
+    UUIDs are always in full 128-bit form in service/characteristic
+    declarations structures.  Shortening to 16 bits is done when
+    possible if protocol encoding permits so (like Attribute protocol
+    does).  Keeping UUID-128 in internal representation simplifies
+    handling of UUIDs in generic code (no special case for
+    comparisons, etc.).
+
+    For each request, GATT server layer knows whether it comes through
+    a secure link-layer and will enforce characteristic-defined
+    security constraints accordingly.
+
+  @end section
+
+  @section tU {Device stack utilities}
+
+    Stack provides a bridge from context to role-specific behavior.
+
+    @section tU {Stack Context}
+
+      Stack context gets initialized once for a device.  It contains:
+      @list
+        @item references to @ref {device_s} {device instances} for
+          Radio, Timer and Cryptography operations,
+        @item reference to a @ref {net_scheduler_s} {libnetwork Scheduler},
+        @item a network-packet @ref {buffer_pool_s} {allocation pool},
+        @item a @ref {ble_gattdb_s} {GATT Database},
+        @item a @ref {ble_client_s} {GATT Client context}.
+      @end list
+
+    @end section
+
+    @section tU {Peripheral Stack}
+
+      Peripheral @ref {ble_stack_context_s} {Stack context} creates the
+      @em {Advertise Data (AD)} from GATT Database and GATT Client:
+      @list
+        @item services registered in GATT Database may define whether
+          they should be advertised for in @em {Service List},
+        @item services registered in GATT Client may request for
+          @em {Service Sollicitation},
+        @item device name and preferred connection parameters are
+          extracted from relevant characteristics in @em {Generic Access
+          Profile (GAP)} GATT Service, if any.
+      @end list
+
+      Once connection is established, @ref {@ble/net/gap.h} {GAP layer}
+      also tries to enforce preferred @em {connection parameters}
+      defined in GAP service, if any.
+
+    @end section
+
+    @parse{
+    ble/stack/beacon.h
+    ble/stack/central.h
+    ble/stack/connection.h
+    ble/stack/context.h
+    ble/stack/peripheral.h
+    ble/stack/raw_connection.h
+    }
+
+    See definitions in
+    @ref {@ble/stack/beacon.h},
+    @ref {@ble/stack/central.h},
+    @ref {@ble/stack/connection.h},
+    @ref {@ble/stack/context.h},
+    @ref {@ble/stack/peripheral.h},
+    @ref {@ble/stack/raw_connection.h}.
+
+  @end section
+
+  @section tU {Security Manager and Security DB}
+
+    @ref {@ble/net/sm.h} {Security Manager} layer handles pairing.
+    Pairing uses @em {legacy pairing} mode, with @em {Just-Works}, @em
+    PIN or @em OOB methods.
+
+    @ref {@ble/security_db.h} {Security Database} purpose is to save
+    context shared with peers.  Most of this context is actually related
+    to device identification and link-layer cryptography.
+
+    @ref {@ble/net/gatt.h} {GATT server layer} also needs to keep some
+    data attached to a given peer.  This is particularly useful for
+    characteristic notification/indication settings that needs to be
+    restored across connections and reboots.
+
+    @parse{
+    ble/ccm_params.h
+    ble/crypto.h
+    ble/peer.h
+    ble/security_db.h
+    }
+
+    See definitions in
+    @ref {@ble/ccm_params.h},
+    @ref {@ble/crypto.h},
+    @ref {@ble/peer.h},
+    @ref {@ble/security_db.h}.
+
+  @end section
+
+  @section tU {Protocol definitions and utilities}
+
+    All generic constants and definitions are in @sourceref {ble/protocol/}
+    include path.
+
+    There is also a set of packet dissectors, useful for dumping packet
+    contents in a textual form.
+
+    @parse{
+    ble/protocol/advertise.h
+    ble/protocol/att.h
+    ble/protocol/company.h
+    ble/protocol/data.h
+    ble/protocol/error.h
+    ble/protocol/gap.h
+    ble/protocol/gatt/encoding.h
+    ble/protocol/gatt.h
+    ble/protocol/l2cap.h
+    ble/protocol/llcp.h
+    ble/protocol/radio.h
+    ble/protocol/signalling.h
+    ble/protocol/sm.h
+    ble/util/channel_mapper.h
+    ble/util/timing_mapper.h
+    }
+
+    See definitions in
+    @ref {@ble/protocol/advertise.h},
+    @ref {@ble/protocol/att.h},
+    @ref {@ble/protocol/company.h},
+    @ref {@ble/protocol/data.h},
+    @ref {@ble/protocol/error.h},
+    @ref {@ble/protocol/gap.h},
+    @ref {@ble/protocol/gatt/encoding.h},
+    @ref {@ble/protocol/gatt.h},
+    @ref {@ble/protocol/l2cap.h},
+    @ref {@ble/protocol/llcp.h},
+    @ref {@ble/protocol/radio.h},
+    @ref {@ble/protocol/signalling.h},
+    @ref {@ble/protocol/sm.h},
+    @ref {@ble/util/channel_mapper.h},
+    @ref {@ble/util/timing_mapper.h}.
+
+  @end section
+  
+@end section
+
+@section tPU {Usage guide}
+
+  @section tU {Shared data types}
+
+    @section tU {Device addresses}
+
+      @ref {ble_addr_s} {Device addresses} are defined as a 48-bit address
+      + 1 bit type (Random / Public).  There are various tools provided to
+      generate and resolve random addresses.
+
+      @parse{
+      ble/protocol/address.h
+      }
+
+      See definitions in
+      @ref {@ble/protocol/address.h}.
+
+    @end section
+
+    @section tU {UUIDs}
+      
+      UUIDs are defined as a 16-byte structure.  A set of accessor and
+      comparator functions is provided.  Macros like @ref
+      {#BLE_UUID_BT_BASED_P}, @ref {#BLE_UUID_P} yield valid pointers to
+      constant UUIDs for given values.
+
+      @code
+static const struct ble_uuid_s dis_service_type_1 =
+{
+  .value = {0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00,
+            0x00, 0x80,
+            0x00, 0x10,
+            0x00, 0x00,
+            0x0a, 0x18, 0x00, 0x00},
+};
+
+static const struct ble_uuid_s dis_service_type_2 = BLE_UUID(0x180a, 0x0000, 0x1000, 0x8000, 0x00805f9b34fbULL);
+
+static const struct ble_uuid_s dis_service_type_3 = BLE_UUID_BT_BASED(0x180a);
+
+// Those five statements yield a pointer to a constant UUID object with value
+// 0000180a-0000-1000-8000-00805f9b34fb
+
+&dis_service_type_1
+&dis_service_type_2
+&dis_service_type_3
+BLE_UUID_P(0x180a, 0x0000, 0x1000, 0x8000, 0x00805f9b34fbULL);
+BLE_UUID_BT_BASED_P(0x180a)
+      @end code
+      
+      @parse{ble/uuid.h}
+      @see @ble/uuid.h
+
+    @end section
+    
+  @end section
+
+  @section tU {Stack instanciation}
+
+    @section tU {Peripheral stack}
+
+      
+
+    @end section
+
+  @end section
+
+  @section tU {GATT server}
+
+    @section tU {Services declaration}
+
+      A service declaration is a @ref {ble_gattdb_service_s} object
+      containing all the characteristics and their parameters.
+
+      Standard @em Service, @em Characteristic and @em Descriptors
+      assigned-numbers are provided in relevant headers for @ref
+      {@ble/gatt/service.h} {services}, @ref
+      {@ble/gatt/characteristic.h} {characteristics}, and @ref
+      {@ble/gatt/descriptor.h} {descriptors} assigned numbers, they can
+      be used freely for all device's service declarations.
+
+      Service, Characteristics and their parameters are defined
+      through constant structures.  This can be written explicitly,
+      but there are various macros provided to shorten the declaration
+      process.
+      
+      Here is the explicit version of a @em {Device Information
+      Service} declaration where we define characteristic values, UUID
+      objects and characteristic array, and finally, service object.
+
+      @code
+// A Characteristic array
+static const
+struct ble_gattdb_characteristic_s dis_service_characteristic_array[] =
+{
+  {
+    .type = BLE_UUID_BT_BASED_P(BLE_GATT_CHAR_MANUFACTURER_NAME_STRING),
+    .permissions = BLE_GATTDB_PERM_OTHER_READ,
+    .mode = BLE_GATTDB_CHARACTERISTIC_CONSTANT,
+    .data.constant.data = "ACME, Inc.",
+    .data.constant.size = 10,
+  }, {
+    .type = BLE_UUID_BT_BASED_P(BLE_GATT_CHAR_MODEL_NUMBER_STRING),
+    .permissions = BLE_GATTDB_PERM_OTHER_READ,
+    .mode = BLE_GATTDB_CHARACTERISTIC_CONSTANT,
+    .data.constant.data = "XYZ123",
+    .data.constant.size = 6,
+  },
+};
+
+// Service definition object
+const struct ble_gattdb_service_s dis_service = {
+  .flags = BLE_GATTDB_SERVICE_PRIMARY,
+  .type = BLE_UUID_BT_BASED_P(BLE_GATT_SERVICE_DEVICE_INFORMATION),
+  .include = NULL,
+  .characteristic = dis_service_characteristic_array,
+  .characteristic_count = 2,
+};
+      @end code
+
+      But this code is too long and verbose. It should be shorter to
+      get maintainable.  Hopefully, library defines helper macros to
+      define services.
+
+      For instance, the above declaration can be shortened as:
+      @code
+BLE_GATTDB_SERVICE_DECL(
+  // Object name
+  device_information_service,
+  // Flags
+  BLE_GATTDB_SERVICE_PRIMARY,
+  // Type
+  BLE_UUID_BT_BASED_P(BLE_GATT_SERVICE_DEVICE_INFORMATION),
+  // Includes
+  NULL,
+  // All remaining arguments are characteristics
+  BLE_GATTDB_CHAR_CONSTANT_STRING(
+    BLE_UUID_BT_BASED_P(BLE_GATT_CHAR_MANUFACTURER_NAME_STRING),
+    "ACME, Inc."),
+  BLE_GATTDB_CHAR_CONSTANT_STRING(
+    BLE_UUID_BT_BASED_P(BLE_GATT_CHAR_MODEL_NUMBER_STRING),
+    "XYZ123"),
+);
+      @end code
+
+      Because a service declaration is simple and explicit, there is no
+      library of service declarations: this is unneeded.
+
+      Then, registration of service is done through a call to
+      @ref{ble_gattdb_service_register}.  This is enough to get the
+      service exposed in the GATT database.
+
+      A custom service gets declared the same way.  For instance,
+      Apple-designed @url
+      {https://developer.apple.com/bluetooth/Apple-Bluetooth-Low-Energy-MIDI-Specification.pdf}
+      {MIDI over BLE Service} gets declared as:
+
+      @code
+static
+uint8_t on_midi_data_write(struct ble_gattdb_client_s *client,
+                           struct ble_gattdb_registry_s *reg,
+                           uint8_t charid,
+                           const void *data, size_t size)
+{
+  printk("midi data write: %P\n", data, size);
+
+  return 0;
+}
+
+BLE_GATTDB_SERVICE_DECL(midi_service,
+  BLE_GATTDB_SERVICE_PRIMARY | BLE_GATTDB_SERVICE_ADVERTISED,
+  BLE_UUID_P(0x03B80E5A, 0xEDE8, 0x4B33, 0xA751, 0x6CE34EC4C700ULL),
+  NULL,
+  BLE_GATTDB_CHAR(BLE_UUID_P(0x7772E5DB, 0x3868, 0x4112, 0xA1A9, 0xF2669D106BF3ULL),
+    BLE_GATTDB_PERM_AUTH_WRITE | BLE_GATTDB_PERM_AUTH_READ | BLE_GATTDB_NOTIFIABLE,
+    BLE_GATTDB_CHAR_DATA_DYNAMIC(NULL, on_midi_data_write, NULL)),
+  );
+      @end code
+
+      This declares a service with type @tt
+      {03B80E5A-EDE8-4B33-A751-6CE34EC4C700}.  This service will be
+      declared as primary and advertised in AD.  It contains a
+      write/notify secure characteristic with type @tt
+      {7772E5DB-3868-4112-A1A9-F2669D106BF3}.  User-provided @tt
+      {on_midi_data_write} function will be called to handle writes to
+      the characteristic.
+
+      See @sourceref {examples/ble/midi/midi.c} for complete example.
+
+      @em Services defined with the GATT DB library only consider @em
+      Characteristics.  All indices target characteristic index in
+      service, or descriptor index in characteristic.  Handle
+      allocation for attributes is completely hidden.  For instance,
+      third argument to @tt on_midi_data_write above is the
+      characteristic number in the characteristic array (will be @tt
+      0).  This permits to set the same callback function for many
+      characteristics.
+
+      @parse{
+      ble/gatt/characteristic.h
+      ble/gatt/descriptor.h
+      ble/gatt/dis.h
+      ble/gatt/hid.h
+      ble/gatt/service.h
+      }
+
+      See definitions in
+      @ref {@ble/gatt/characteristic.h},
+      @ref {@ble/gatt/descriptor.h},
+      @ref {@ble/gatt/service.h},
+      @ref {@ble/gatt/dis.h},
+      @ref {@ble/gatt/hid.h}.
+
+    @end section
+
+    @section tU {Service flags}
+
+      @ref {ble_gattdb_service_flags_e} {Service flags} let the service
+      be defined as Primary, and allow to advertise the service in
+      @em {Advertise Data (AD)}.
+
+      If @ref {BLE_GATTDB_SERVICE_PRIMARY} {primary service flag} is not
+      set, service will be exposed as @em {secondary service} in GATT
+      DB.
+
+      @ref {BLE_GATTDB_SERVICE_ADVERTISED} {Advertised service flag}
+      makes the service UUID exported in @ref ble_gattdb_srv16_list_get
+      and @ref ble_gattdb_srv128_list_get calls, used internally by
+      stack context to build @em AD.
+
+    @end section
+
+    @section tU {Characteristic data modes}
+
+      There are 3 main @ref {ble_gattdb_characteristic_mode_e}
+      {characteristic modes}:
+      @list
+        @item @ref {BLE_GATTDB_CHARACTERISTIC_CONSTANT} {Constant},
+          where characteristic value is a constant data object in
+          memory, without callback functions;
+        @item @ref {BLE_GATTDB_CHARACTERISTIC_PLAIN} {Plain}, where
+          characteristic value is a global data object, but where
+          callback functions may be defined to handle read, writes,
+          and subscription to notification or indication;
+        @item @ref {BLE_GATTDB_CHARACTERISTIC_DYNAMIC} {Dynamic},
+          where data is dynamically computed for each access.
+      @end list
+
+      @section U {Constant mode}
+
+        For @ref {ble_gattdb_characteristic_s::data::constant}
+        {Constant mode}, user must define data blob and size.
+        Relevant macro is @ref #BLE_GATTDB_CHAR_CONSTANT_BLOB.  There
+        is a shortcut for constant string: @ref
+        #BLE_GATTDB_CHAR_CONSTANT_STRING.
+
+        @code
+static const uint16_t appearance = BLE_GAP_APPEARANCE_HID_MOUSE;
+
+BLE_GATTDB_SERVICE_DECL(gap_service,
+  BLE_GATTDB_SERVICE_PRIMARY,
+  BLE_UUID_SHORT_P(BLE_UUID_GENERIC_ACCESS_SERVICE),
+  NULL,
+  BLE_GATTDB_CHAR_CONSTANT_BLOB(
+    BLE_UUID_SHORT_P(BLE_UUID_GAP_APPEARANCE_CHAR),
+    &appearance, sizeof(appearance)),
+  BLE_GATTDB_CHAR_CONSTANT_STRING(
+    BLE_UUID_SHORT_P(BLE_UUID_GAP_DEVICE_NAME_CHAR),
+    "Mouse"),
+  );
+        @end code
+
+      @end section
+
+      @section U {Plain mode}
+
+        For @ref {ble_gattdb_characteristic_s::data::plain} {Plain mode},
+        user must define data blob and size, and may specify callbacks for
+        subscription and write actions.
+
+        @code
+static uint8_t battery_level;
+
+static
+uint8_t batt_level_subscribe(struct ble_gatt_db_service_s *service,
+                             uint8_t charid,
+                             bool_t subscribed)
+{
+  printk("Battery level %s\n", subscribed ? "subscribed" : "unsubscribed");
+
+  return 0;
+}
+
+BLE_GATTDB_SERVICE_DECL(
+  batt_service,
+  BLE_GATTDB_SERVICE_PRIMARY,
+  BLE_UUID_SHORT_P(BLE_UUID_BATTERY_SERVICE),
+  NULL,
+  // One characteristic
+  BLE_GATTDB_CHAR(
+    // Type
+    BLE_UUID_SHORT_P(BLE_UUID_BATTERY_LEVEL_CHAR),
+    // Readable by all, notifiable
+    BLE_GATTDB_NOTIFIABLE | BLE_GATTDB_PERM_OTHER_READ,
+    // Backed by a global data blob "battery_level"
+    // Library must call batt_level_subscribe on subscription change
+    // No write callback
+    BLE_GATTDB_CHAR_DATA_PLAIN(&battery_level, sizeof(battery_level),
+                               batt_level_subscribe, NULL),
+  );
+        @end code
+
+      @end section
+
+      @section U {Dynamic mode}
+
+        For @ref {ble_gattdb_characteristic_s::data::dynamic} {Dynamic
+        mode}, user must define callbacks for subscription, read and
+        write actions, depending on characteristic access flags.
+
+        @code
+static
+uint8_t on_midi_data_write(struct ble_gattdb_client_s *client,
+                           struct ble_gattdb_registry_s *reg, uint8_t charid,
+                           const void *data, size_t size)
+{
+  printk("midi data write: %P\n", data, size);
+
+  return 0;
+}
+
+BLE_GATTDB_SERVICE_DECL(
+  midi_service,
+  BLE_GATTDB_SERVICE_PRIMARY | BLE_GATTDB_SERVICE_ADVERTISED,
+  BLE_UUID_P(0x03B80E5A, 0xEDE8, 0x4B33, 0xA751, 0x6CE34EC4C700ULL),
+  NULL,
+  BLE_GATTDB_CHAR(
+    BLE_UUID_P(0x7772E5DB, 0x3868, 0x4112, 0xA1A9, 0xF2669D106BF3ULL),
+    // PERM_AUTH_READ implies pairing before subscribing,
+    // but as there is not read handler, reading value
+    // will not be permitted.
+    BLE_GATTDB_PERM_AUTH_WRITE | BLE_GATTDB_PERM_AUTH_READ | BLE_GATTDB_NOTIFIABLE,
+    // Dont implement read
+    // Call on_midi_data_write on write
+    // Dont notify code on subscription
+    BLE_GATTDB_CHAR_DATA_DYNAMIC(NULL, on_midi_data_write, NULL)),
+  );
+        @end code
+          
+      @end section
+
+      For notifiable characteristics, code may call @ref
+      ble_gattdb_char_changed to push a notification to GATT client.
+      
+    @end section
+
+    @section tU {Characteristic perimissions}
+
+      Characteristic permissions can limit how characteristic values are
+      accessed by peer GATT client.  See @ref {ble_gattdb_permission_e}.
+
+      Access to Characteristic values is an inclusive list: @tt
+      {BLE_GATTDB_PERM_AUTH_...} implies @tt {BLE_GATTDB_PERM_ENC_...}
+      implies @tt {BLE_GATTDB_PERM_OTHER_...}.  A client coming in
+      clear text has @em OTHER permissions.  Once encrypted, @em ENC
+      permissions are also granted, then, if pairing is authenticated,
+      @em AUTH permissions are also granted.
+      
+      Library checks for readability for allowing subscription to
+      characteristic value notifications and indications.  A @em
+      dynamic characteristic that can not be read but notified only
+      should still be declared as @ref BLE_GATTDB_PERM_OTHER_READ,
+      @ref BLE_GATTDB_PERM_ENC_READ or @ref BLE_GATTDB_PERM_AUTH_READ
+      in order for the library to tell how to enforce acces control to
+      the value.  @ref
+      {ble_gattdb_characteristic_s::data::dynamic::on_read} {on_read
+      callback} can still be @tt NULL in such cases.
+
+    @end section
+
+    @section tU {Service includes}
+
+      Service includes are mostly useful for standard profiles
+      implementation.  In the library, service include is done
+      referencing a service definition structure from another.  This
+      could lead to some ambiguity if included service is present more
+      than once in GATT DB, but this case never actually happens in
+      practice.
+
+    @end section
+
+    @section tU {Service registration to database}
+
+      
+
+    @end section
+
+    @parse{
+    ble/gattdb/client.h
+    ble/gattdb/db.h
+    ble/gattdb/service.h
+    }
+
+    See definitions in
+    @ref {@ble/gattdb/client.h},
+    @ref {@ble/gattdb/db.h},
+    @ref {@ble/gattdb/service.h}.
+
+  @end section
+
+  @section tU {GATT Client}
+
+    @parse{
+    ble/gattc/client.h
+    ble/gattc/registry.h
+    ble/gattc/service.h
+    }
+
+    See definitions in
+    @ref {@ble/gattc/client.h},
+    @ref {@ble/gattc/registry.h},
+    @ref {@ble/gattc/service.h}.
+
+  @end section
+
+@end section
+
+@end moduledef
+
+@c @parse{
+@c ble/sniffer/advertise.h
+@c ble/sniffer/connection.h
+@c ble/sniffer/radio.h
+@c }
