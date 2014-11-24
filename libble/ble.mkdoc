@@ -1,0 +1,125 @@
+@section TP {BLE library}
+
+BLE Library implements many aspects of the Bluetooth Low Energy
+protocol stack.
+
+@section {GAP}
+
+  @section {Roles}
+
+    Broadcaster, Observer, Central, and Peripheral roles are
+    implemented.  They can be used concurrently.  Limitations in terms
+    of maximum concurrent connections are enforced by radio driver
+    and/or available memory.
+
+  @end section
+
+  @section {GATT Glue}
+
+    GAP contains a bridges from GATT DB to role-specific behavior.
+
+    Library creates the Advertise Data (AD) from services present in
+    GATT Database.  Each service may define whether it should be
+    advertised for in Advertisement / Scan Response packets.
+
+  @end section
+
+@end section
+
+@section {GATT}
+
+  @section {Concepts}
+
+    GATT Services are declared through constant structures containing
+    characteristics and other service specificities.  This limits the
+    RAM usage for the GATT DB.  A set of preprocessor macros are
+    provided to ease up the generation and writing of said structures.
+
+    Services are to be registered to the GATT Database.  There may be
+    multiple instances of a given service in a database.  Database is
+    exposed to the relevant Attribute protocol adaptation layer.
+
+    A Characteristic may be constant (in read-only data section), plain
+    (in read/write data section) or dynamic (callbacks must handle
+    read/writes).  This ensures the maximum flexibility.
+
+    Characteristics may expose descriptors.  Some of them are handled
+    internally, like Client Configuration Characteristic Descriptor, and
+    need not be declared explicitly.
+
+    UUIDs are always 128 bits in service/characteristic declarations.
+    Shortening to 16 bits is done when possible when protocol encoding
+    permits so (like Attribute protocol does).  This simplifies
+    representation and handling of UUIDs in generic code.
+
+  @end section
+
+  @section {Standard Service declarations}
+    
+    Because a service declaration is simple and explicit, there is no
+    library service declaration, this is unneeded.  Service,
+    Characteristic and Descriptors assigned numbers are provided
+    through headers, they can be used freely for service declarations.
+
+    For instance, a Device Information Service declaration is as
+    simple as:
+    
+    @code
+      BLE_GATT_SERVICE_DECL(dis_service, BLE_GATT_SERVICE_PRIMARY,
+        BLE_UUID_SHORT_P(BLE_UUID_DEVICE_INFORMATION_SERVICE), NULL,
+        BLE_GATT_CHAR_CONSTANT_STRING(BLE_UUID_SHORT_P(BLE_UUID_MANUFACTURER_NAME_STRING_CHAR), "MutekH"),
+        BLE_GATT_CHAR_CONSTANT_STRING(BLE_UUID_SHORT_P(BLE_UUID_MODEL_NUMBER_STRING_CHAR), "My Product"),
+        BLE_GATT_CHAR_CONSTANT_STRING(BLE_UUID_SHORT_P(BLE_UUID_FIRMWARE_REVISION_STRING_CHAR), "123"),
+        BLE_GATT_CHAR_CONSTANT_STRING(BLE_UUID_SHORT_P(BLE_UUID_SOFTWARE_REVISION_STRING_CHAR), "42"),
+        );
+    @end code
+    
+    Then, registration of service is done through a call to
+    @tt{ble_gatt_db_service_register}.  This is enough to get the
+    service exposed in the GATT database.
+
+    A custom service gets declared the same way.  For instance,
+    Apple-designed MIDI-over-BLE Service gets declared as:
+
+    @code
+      BLE_GATT_SERVICE_DECL(midi_service, BLE_GATT_SERVICE_PRIMARY | BLE_GATT_SERVICE_ADVERTISED,
+        BLE_UUID_P(0x03B80E5A, 0xEDE8, 0x4B33, 0xA751, 0x6CE34EC4C700ULL), NULL,
+        BLE_GATT_CHAR(BLE_UUID_P(0x7772E5DB, 0x3868, 0x4112, 0xA1A9, 0xF2669D106BF3ULL),
+                      BLE_GATT_PERM_AUTH_WRITE | BLE_GATT_PERM_AUTH_READ | BLE_GATT_NOTIFIABLE,
+                      BLE_GATT_CHAR_DATA_DYNAMIC(NULL, on_midi_data_write, NULL)),
+        );
+    @end code
+
+    This declares a service with UUID @tt
+    {03B80E5A-EDE8-4B33-A751-6CE34EC4C700}.  This service will be
+    declared as primary and advertised in AD.  It contains a
+    write/notify, authenticated, characteristic with UUID @tt
+    {7772E5DB-3868-4112-A1A9-F2669D106BF3}.  @tt {on_midi_data_write}
+    function will be called to handle writes to the characteristic.
+
+  @end section
+
+@end section
+
+@section {Security}
+
+  Security Manager layer handles pairing.  Pairing uses "legacy
+  pairing" mode, with Just-Works, PIN or OOB methods.
+
+  Security Database handles peers' information conservation.  It can
+  also compute resolvable random addresses for private reconnection.
+
+  For each request, GATT layer knows whether it comes through a secure
+  link-layer and will enforce characteristic-defined security
+  constraints accordingly.
+
+@end section
+
+@section {Protocol definitions}
+
+  All generic constants and definitions are in @code {ble/protocol/}
+  include path.
+
+@end section
+
+@end section

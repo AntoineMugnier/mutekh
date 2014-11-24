@@ -1,0 +1,479 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
+*/
+
+#include <ble/stack/peripheral.h>
+#include <ble/protocol/l2cap.h>
+#include <ble/protocol/advertise.h>
+#include <ble/protocol/gap.h>
+
+#include <ble/protocol/gatt/service.h>
+#include <ble/protocol/gatt/characteristic.h>
+
+#include <ble/net/adv.h>
+#include <ble/net/slave.h>
+#include <ble/net/layer.h>
+
+#include <mutek/printk.h>
+
+#include <ble/net/generic.h>
+
+static const struct ble_slave_delegate_vtable_s slave_delegate_vtable;
+#if defined(CONFIG_BLE_CRYPTO)
+static const struct ble_sm_delegate_vtable_s sm_delegate_vtable;
+#endif
+static const struct ble_advertiser_delegate_vtable_s peri_adv_vtable;
+static error_t adv_start(struct ble_peripheral_s *peri);
+
+struct dev_rng_s;
+
+static void peri_state_update(struct ble_peripheral_s *peri)
+{
+  enum ble_peripheral_state_e state = BLE_PERIPHERAL_IDLE;
+
+  if (peri->slave) {
+    state = BLE_PERIPHERAL_CONNECTED;
+  } else if (peri->adv) {
+    if (peri->mode & BLE_PERIPHERAL_PAIRABLE)
+      state = BLE_PERIPHERAL_PAIRING;
+    else
+      state = BLE_PERIPHERAL_ADVERTISING;
+  }
+
+  if (state == peri->last_state)
+    return;
+
+  peri->last_state = state;
+
+  printk("Peripheral state now %d\n", state);
+
+  peri->handler->state_changed(peri, state);
+}
+
+static void conn_connection_closed(void *delegate, struct net_layer_s *layer,
+                                   uint8_t reason)
+{
+  struct ble_peripheral_s *peri = delegate;
+
+  if (layer != peri->slave)
+    return;
+
+  printk("Peripheral connection dropped: %d\n", reason);
+
+  net_layer_refdec(layer);
+  peri->slave = NULL;
+
+  peri->handler->connection_closed(peri, reason);
+
+  peri_state_update(peri);
+  adv_start(peri);
+}
+
+static void peri_slave_destroyed(void *delegate, struct net_layer_s *layer)
+{
+  printk("Slave layer released\n");
+}
+
+#if defined(CONFIG_BLE_CRYPTO)
+static
+void peri_pairing_requested(void *delegate, struct net_layer_s *layer,
+                            bool_t bonding)
+{
+  struct ble_peripheral_s *peri = delegate;
+
+  peri->handler->pairing_requested(peri, bonding);
+}
+
+static
+void peri_pairing_failed(void *delegate, struct net_layer_s *layer,
+                         enum sm_reason reason)
+{
+  struct ble_peripheral_s *peri = delegate;
+
+  peri->handler->pairing_failed(peri, reason);
+}
+
+static
+void peri_pairing_success(void *delegate, struct net_layer_s *layer)
+{
+  struct ble_peripheral_s *peri = delegate;
+
+  peri->handler->pairing_success(peri);
+}
+
+static void peri_sm_invalidate(void *delegate, struct net_layer_s *layer)
+{
+  struct ble_peripheral_s *peri = delegate;
+
+  if (peri->sm == layer)
+    peri->sm = NULL;
+}
+#endif
+
+static void peri_adv_destroyed(void *delegate, struct net_layer_s *layer)
+{
+  printk("Advertise layer destroyed\n");
+}
+
+static
+bool_t peri_connection_requested(void *delegate, struct net_layer_s *layer,
+                                 const struct ble_adv_connect_s *conn,
+                                 dev_timer_value_t anchor)
+{
+  struct ble_peripheral_s *peri = delegate;
+  error_t err;
+  struct net_layer_s *slave, *l2cap, *signalling, *gatt, *gap;
+  uint16_t cid;
+  struct ble_slave_param_s slave_params;
+
+#if defined(CONFIG_BLE_SECURITY_DB)
+  struct net_layer_s *sm;
+
+  if (peri->sm)
+    return 1;
+#endif
+
+  if (peri->slave)
+    return 1;
+
+  printk("Connection request from "BLE_ADDR_FMT"...", BLE_ADDR_ARG(&conn->master));
+
+  if (!peri->handler->connection_requested(peri, &conn->master)) {
+    printk(" rejected by handler\n");
+    return 1;
+  }
+
+#if defined(CONFIG_BLE_SECURITY_DB)
+  if (peri->whitelist_only && !ble_security_db_contains(&peri->context->security_db, &conn->master)) {
+    printk(" ignored: we are not paired\n");
+    return 1;
+  }
+#endif
+
+  slave_params.connect_packet_timestamp = anchor;
+  slave_params.conn_req = *conn;
+#if defined(CONFIG_BLE_CRYPTO)
+  slave_params.rng = &peri->context->rng;
+#endif
+#if defined(CONFIG_BLE_SECURITY_DB)
+  ble_peer_init(&peri->peer, &peri->context->security_db, &conn->master);
+#else
+  ble_peer_init(&peri->peer, NULL, &conn->master);
+#endif
+
+  peri->connection_tk = anchor;
+
+  err = DEVICE_OP(&peri->context->ble, layer_create,
+                  &peri->context->scheduler,
+                  BLE_NET_LAYER_SLAVE,
+                  &slave_params,
+                  peri, &slave_delegate_vtable.base,
+                  &slave);
+  if (err) {
+    printk("error while creating slave: %d\n", err);
+    return 1;
+  }
+
+  err = ble_l2cap_create(&peri->context->scheduler, &l2cap);
+  if (err) {
+    printk("error while creating l2cap: %d\n", err);
+    goto out_slave;
+  }
+
+  cid = BLE_SLAVE_LAYER_L2CAP;
+  err = net_layer_bind(slave, &cid, l2cap);
+  if (err) {
+    printk("error while binding l2cap to slave: %d\n", err);
+    goto out_l2cap;
+  }
+
+#if defined(CONFIG_BLE_SECURITY_DB)
+  struct ble_sm_param_s sm_params = {
+    .peer = &peri->peer,
+    .local_addr = slave_params.conn_req.slave,
+    .rng = &peri->context->rng,
+    .crypto = &peri->context->crypto,
+  };
+
+  err = ble_sm_create(&peri->context->scheduler, &sm_params, peri, &sm_delegate_vtable.base, &sm);
+  if (err) {
+    printk("error while creating sm: %d\n", err);
+    goto out_l2cap;
+  }
+
+  peri->sm = sm;
+
+  cid = BLE_L2CAP_CID_SM;
+  err = net_layer_bind(l2cap, &cid, sm);
+  if (err) {
+    printk("error while binding sm to l2cap: %d\n", err);
+    goto out_sm;
+  }
+#endif
+
+  struct ble_gatt_params_s gatt_params = {
+    .peer = &peri->peer,
+    .db = &peri->context->gattdb,
+  };
+  err = ble_gatt_create(&peri->context->scheduler, &gatt_params, &gatt);
+  if (err) {
+    printk("error while creating gatt: %d\n", err);
+    goto out_sm;
+  }
+
+  cid = BLE_L2CAP_CID_ATT;
+  err = net_layer_bind(l2cap, &cid, gatt);
+  if (err) {
+    printk("error while binding gatt to l2cap: %d\n", err);
+    goto out_gatt;
+  }
+
+  err = ble_signalling_create(&peri->context->scheduler, &signalling);
+  if (err) {
+    printk("error while creating signalling: %d\n", err);
+    goto out_gatt;
+  }
+
+  cid = BLE_L2CAP_CID_SIGNALLING;
+  err = net_layer_bind(l2cap, &cid, signalling);
+  if (err) {
+    printk("error while binding signalling to l2cap: %d\n", err);
+    goto out_signalling;
+  }
+
+  struct ble_gap_params_s gap_params = {
+    .db = &peri->context->gattdb,
+    .sig = signalling,
+  };
+  err = ble_gap_create(&peri->context->scheduler, &gap_params, &gap);
+  if (err) {
+    printk("error while creating gap: %d\n", err);
+    goto out_signalling;
+  }
+
+  cid = BLE_SLAVE_LAYER_GAP;
+  err = net_layer_bind(slave, &cid, gap);
+  if (err) {
+    printk("error while binding gap to slave: %d\n", err);
+    goto out_gap;
+  }
+
+  printk("Connection creation done\n");
+
+ out_gap:
+  net_layer_refdec(gap);
+ out_signalling:
+  net_layer_refdec(signalling);
+ out_gatt:
+  net_layer_refdec(gatt);
+ out_sm:
+#if defined(CONFIG_BLE_SECURITY_DB)
+  net_layer_refdec(sm);
+#endif
+ out_l2cap:
+  net_layer_refdec(l2cap);
+ out_slave:
+
+  if (err) {
+    net_layer_refdec(slave);
+    peri_state_update(peri);
+    return 1;
+  } else {
+    net_layer_refdec(peri->adv);
+    peri->adv = NULL;
+    peri->slave = slave;
+    peri_state_update(peri);
+    return 0;
+  }
+}
+
+static void adv_data_append(uint8_t **buffer, size_t *buffer_size,
+                              const uint8_t type,
+                              const void *data, const uint8_t size)
+{
+  if (*buffer_size < size + 2 || size == 0)
+    return;
+
+  uint8_t *ptr = *buffer;
+
+  *ptr++ = size + 1;
+  *ptr++ = type;
+  memcpy(ptr, data, size);
+
+  *buffer += size + 2;
+  *buffer_size -= size + 2;
+}
+
+static error_t adv_start(struct ble_peripheral_s *peri)
+{
+  static const size_t srv_max_count = 4;
+  static const size_t ad_size_max = 62;
+
+  struct ble_advertiser_param_s params;
+  error_t err;
+  size_t value_size;
+  uint16_t srv_list[srv_max_count];
+  uint8_t srv16_list[16];
+  uint8_t ad_[ad_size_max];
+  const void *data;
+  size_t size, ad_left;
+  uint8_t *ad = ad_;
+
+  if (peri->slave) {
+    printk("Cannot advertise: has slave\n");
+    return 0;
+  }
+
+  if (peri->adv) {
+    printk("Cannot advertise: has adv\n");
+    return 0;
+  }
+
+  printk("Peripheral advertising starting\n");
+
+  params.local_addr = peri->addr;
+  params.interval_ms = peri->params.adv_interval_ms;
+  params.delay_max_ms = peri->params.adv_interval_ms / 16;
+  if (params.delay_max_ms == 0)
+    params.delay_max_ms = 1;
+  params.connectable = 1;
+
+  ad_left = ad_size_max;
+
+  uint8_t flags = BLE_GAP_FLAGS_BREDR_NOT_SUPPORTED;
+  if (peri->mode & BLE_PERIPHERAL_PAIRABLE)
+    flags |= BLE_GAP_FLAGS_LIMITED_ADV;
+  adv_data_append(&ad, &ad_left, BLE_GAP_FLAGS, &flags, sizeof(flags));
+
+  if (!ble_gatt_db_std_char_read(&peri->context->gattdb,
+                                 BLE_UUID_GENERIC_ACCESS_SERVICE,
+                                 BLE_UUID_GAP_APPEARANCE_CHAR,
+                                 &data, &size))
+    adv_data_append(&ad, &ad_left, BLE_GAP_APPEARANCE, data, size);
+
+  value_size = ble_gatt_db_srv16_list_get(&peri->context->gattdb,
+                                          srv_list, sizeof(srv_list[0]) * srv_max_count);
+  if (value_size)
+    adv_data_append(&ad, &ad_left,
+                    value_size <= srv_max_count ? BLE_GAP_UUID16_SERVICE_LIST_COMPLETE
+                    : BLE_GAP_UUID16_SERVICE_LIST_INCOMPLETE,
+                    srv_list, __MIN(sizeof(srv_list[0]), value_size));
+
+  value_size = ble_gatt_db_srv128_list_get(&peri->context->gattdb,
+                                           srv16_list, sizeof(srv16_list));
+  if (value_size)
+    adv_data_append(&ad, &ad_left,
+                    BLE_GAP_UUID128_SERVICE_LIST_COMPLETE,
+                    srv16_list, __MIN(sizeof(srv16_list), value_size));
+
+  if (!ble_gatt_db_std_char_read(&peri->context->gattdb,
+                                 BLE_UUID_GENERIC_ACCESS_SERVICE,
+                                 BLE_UUID_GAP_PERIPHERAL_PREFERRED_CONNECTION_PARAMETERS_CHAR,
+                                 &data, &size))
+    adv_data_append(&ad, &ad_left,
+                    BLE_GAP_SLAVE_CONNECTION_INTERVAL_RANGE, data, 4);
+
+  if (!ble_gatt_db_std_char_read(&peri->context->gattdb,
+                                 BLE_UUID_GENERIC_ACCESS_SERVICE,
+                                 BLE_UUID_GAP_DEVICE_NAME_CHAR,
+                                 &data, &size))
+    adv_data_append(&ad, &ad_left,
+                    BLE_GAP_COMPLETE_LOCAL_NAME, data, size);
+
+  params.ad = ad_;
+  params.ad_len = ad - ad_;
+
+  err = DEVICE_OP(&peri->context->ble, layer_create,
+                  &peri->context->scheduler,
+                  BLE_NET_LAYER_ADV,
+                  &params,
+                  peri, &peri_adv_vtable.base,
+                  &peri->adv);
+  if (err) {
+    printk("Advertising start failed: %d\n", err);
+    peri->adv = NULL;
+  }
+  
+  peri_state_update(peri);
+
+  return err;
+}
+
+error_t ble_peripheral_init(
+  struct ble_peripheral_s *peri,
+  const struct ble_peripheral_params_s *params,
+  const struct ble_peripheral_handler_s *handler,
+  struct ble_stack_context_s *context)
+{
+  struct dev_net_info_s info;
+
+  memset(peri, 0, sizeof(*peri));
+
+  peri->params = *params;
+  peri->handler = handler;
+  peri->context = context;
+  peri->mode = 0;
+
+  DEVICE_OP(&peri->context->ble, get_info, &info);
+  memcpy(peri->addr.addr, info.addr.mac, 6);
+  peri->addr.type = info.addr.random_addr ? BLE_ADDR_RANDOM : BLE_ADDR_PUBLIC;
+
+  return 0;
+}
+
+static const struct ble_slave_delegate_vtable_s slave_delegate_vtable =
+{
+  .base.release = peri_slave_destroyed,
+  .connection_closed = conn_connection_closed,
+};
+
+#if defined(CONFIG_BLE_CRYPTO)
+static const struct ble_sm_delegate_vtable_s sm_delegate_vtable =
+{
+  .base.release = peri_sm_invalidate,
+  .pairing_requested = peri_pairing_requested,
+  .pairing_failed = peri_pairing_failed,
+  .pairing_success = peri_pairing_success,
+};
+#endif
+
+static const struct ble_advertiser_delegate_vtable_s peri_adv_vtable =
+{
+  .base.release = peri_adv_destroyed,
+  .connection_requested = peri_connection_requested,
+};
+
+void ble_peripheral_mode_set(struct ble_peripheral_s *peri, uint8_t mode)
+{
+  if (mode == peri->mode)
+    return;
+
+  peri->mode = mode;
+
+  if (!(mode & BLE_PERIPHERAL_CONNECTABLE) && peri->slave)
+    ble_slave_connection_close(peri->slave);
+
+  if (peri->adv) {
+    net_layer_refdec(peri->adv);
+    peri->adv = NULL;
+  }
+
+  if (mode & BLE_PERIPHERAL_CONNECTABLE && !peri->slave)
+    adv_start(peri);
+}
