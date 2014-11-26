@@ -27,7 +27,12 @@ endif
 
 objs-$(CONFIG_DEVICE_DMA) += device_dma.o
 objs-$(CONFIG_DEVICE_BLOCK) += device_block.o
-objs-$(CONFIG_DEVICE_I2C) += device_i2c.o
+
+ifeq ($(CONFIG_DEVICE_I2C), defined)
+objs += device_i2c.o
+objs-$(CONFIG_DEVICE_SHELL) += shell_i2c.o
+endif
+
 objs-$(CONFIG_DEVICE_SPI) += device_spi.o
 objs-$(CONFIG_DEVICE_LCD) += device_lcd.o
 objs-$(CONFIG_DEVICE_GPIO) += device_gpio.o
