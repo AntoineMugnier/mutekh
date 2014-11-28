@@ -327,22 +327,16 @@ error_t stm32_usart_check_config(struct dev_uart_config_s *cfg)
     default:
       return -ENOTSUP;
 
-    case DEV_UART_DATA_8_BITS:
-    case DEV_UART_DATA_9_BITS:
+    case 8:
+    case 9:
       break;
     }
 
   /* check stop bits (all supported). */
 
   /* check parity (not supported). */
-  switch (cfg->parity)
-    {
-    default:
-      return -ENOTSUP;
-
-    case DEV_UART_PARITY_NONE:
-      break;
-    }
+  if (cfg->parity != DEV_UART_PARITY_NONE)
+    return -ENOTSUP;
 
   /* check flow control (not supported). */
   if (cfg->flow_ctrl)
@@ -368,11 +362,11 @@ error_t stm32_usart_config_simple(struct device_s          *dev,
   default:
     break;
 
-  case DEV_UART_DATA_8_BITS:
+  case 8:
     DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, M, 8_BITS);
     break;
 
-  case DEV_UART_DATA_9_BITS:
+  case 9:
     DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, M, 9_BITS);
     break;
   }
@@ -382,11 +376,11 @@ error_t stm32_usart_config_simple(struct device_s          *dev,
   default:
     break;
 
-  case DEV_UART_STOP_1_BIT:
+  case 1:
     DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR2, STOP, 1_BIT);
     break;
 
-  case DEV_UART_STOP_2_BITS:
+  case 2:
     DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR2, STOP, 2_BITS);
     break;
   }

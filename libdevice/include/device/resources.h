@@ -128,12 +128,12 @@ struct dev_resource_s
 
     /** @see #DEV_STATIC_RES_UART @see device_res_add_uart */
     struct {
-      uintptr_t                 baudrate:CONFIG_DEVICE_UART_MAX_BAUDRATE;
-      uintptr_t                 data_bits:CONFIG_DEVICE_UART_MAX_DATA_BITS;
-      uintptr_t                 stop_bits:CONFIG_DEVICE_UART_MAX_STOP_BITS;
-      uintptr_t                 parity:CONFIG_DEVICE_UART_MAX_PARITY;
-      uintptr_t                 flow_ctrl:CONFIG_DEVICE_UART_MAX_FLOW_CTRL;
-      uintptr_t                 half_duplex:CONFIG_DEVICE_UART_MAX_HALF_DUPLEX;
+      uintptr_t                 baudrate:26;
+      uintptr_t                 data_bits:4;
+      uintptr_t                 stop_bits:2;
+      uintptr_t                 parity:2;
+      uintptr_t                 flow_ctrl:1;
+      uintptr_t                 half_duplex:1;
     }                           uart;
 
     /** @see #DEV_STATIC_RES_ID @see device_res_add_id */

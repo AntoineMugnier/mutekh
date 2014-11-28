@@ -662,7 +662,7 @@ sub inits_sort_predicate
     return 1 if ($b->{isbefore}->{$a->{name}});
     return -1 if ($b->{isafter}->{$a->{name}});
     return -1 if ($a->{isbefore}->{$b->{name}});
-    return $a->{name} cmp $b->{name};
+    return 0;
 }
 
 sub process_inits
@@ -671,7 +671,7 @@ sub process_inits
         my $parents = $init->{parent};
 
         if (!@$parents) {
-            error_loc($init, "init token has no parent");            
+            error_loc($init, "init token has no parent");
         }
 
         $init->{defined} =
@@ -681,13 +681,13 @@ sub process_inits
         $init->{isbefore} = {};
     }
 
-    foreach my $init ( values %inits ) {
+    foreach my $init ( sort { $a->{name} cmp $b->{name} } values %inits ) {
 
 	# setup heirarchy
 	if ( my $during = $init->{during} ) {
 
             $during->{childs} ||= [];
-            push @{$during->{childs}}, $init;
+            push @{$during->{childs}}, $init if ($init->{defined});
 
             if ( $during->{constructor} ) {
                 error_loc($init, "init tokens used with `during' tag can not have `function' defined");
@@ -705,7 +705,7 @@ sub process_inits
             error_loc($init, "init `prototype' can only be defined for non-leaf tokens (without `function')");
         }
 
-	push @init_defined, $init;
+	push @init_defined, $init if ($init->{defined});
     }
 
     # disable some child inits
@@ -715,7 +715,7 @@ sub process_inits
             my $c = shift;
 
 	    if ( $c->{defined} && !$init->{defined} ) {
-		warning_loc($c, "initialization will not take place because `$init->{name}' is disabled");
+		error_loc($c, "initialization will not take place because `$init->{name}' is disabled");
                 $c->{defined} = 0;
 	    }
         });
@@ -777,11 +777,25 @@ sub process_inits
             error_loc($init, "initialization stage can not be empty");
         }
 
-        $init->{calls} = [ sort inits_sort_predicate @init_calls ];
-#            debug(1, $a->{name}, " has no order constraint with ", $b->{name});
+        if ( $init->{flags}->{calls} ) {
 
+            my @c;
+            while ( @init_calls ) {
+                my $t = $init_calls[0];
+                my $j = 0;
+                for ( my $i = 1; $i <= $#init_calls; $i++ ) {
+                    my $r = $init_calls[$i];
+                    if ( $t->{isbefore}->{$r->{name}} ) {
+                        $t = $r;
+                        $j = $i;
+                    }
+                }
+                splice @init_calls, $j, 1;
+                unshift @c, $t;
+            }
+            $init->{calls} = [ @c ];
+        }
     }
-
 }
 
 sub output_inits_calls

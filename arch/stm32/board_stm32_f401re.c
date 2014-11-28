@@ -74,14 +74,7 @@ DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 6,
   DEV_STATIC_RES_IOMUX("rx", 0, /* PA10 */ 0*16+10, /* AF7. */ 7, 0),
 
   /* default configuration. */
-  DEV_STATIC_RES_UART(
-    115200,
-    DEV_UART_DATA_8_BITS,
-    DEV_UART_STOP_1_BIT,
-    DEV_UART_PARITY_NONE,
-    0, /* flow control. */
-    0  /* half duplex.  */
-  ),
+  DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0),
 );
 
 DEV_DECLARE_STATIC(
@@ -106,14 +99,7 @@ DEV_DECLARE_STATIC_RESOURCES(usart2_dev_res, 6,
   DEV_STATIC_RES_IOMUX("rx", 0, /* PB3 */ 1*16+3, /* AF4. */ 4, 0),
 
   /* default configuration. */
-  DEV_STATIC_RES_UART(
-    115200,
-    DEV_UART_DATA_8_BITS,
-    DEV_UART_STOP_1_BIT,
-    DEV_UART_PARITY_NONE,
-    0, /* flow control. */
-    0  /* half duplex.  */
-  ),
+  DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0),
 );
 
 DEV_DECLARE_STATIC(
@@ -138,14 +124,7 @@ DEV_DECLARE_STATIC_RESOURCES(usart6_dev_res, 6,
   DEV_STATIC_RES_IOMUX("rx", 0, /* PA12 */ 0*16+12, /* AF8. */ 8, 0),
 
   /* default configuration. */
-  DEV_STATIC_RES_UART(
-    115200,
-    DEV_UART_DATA_8_BITS,
-    DEV_UART_STOP_1_BIT,
-    DEV_UART_PARITY_NONE,
-    0, /* flow control. */
-    0  /* half duplex.  */
-  ),
+  DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0),
 );
 
 DEV_DECLARE_STATIC(
