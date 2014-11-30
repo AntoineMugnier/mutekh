@@ -388,6 +388,9 @@ static DEV_TIMER_CONFIG(arm_timer_config)
       if (cfg)
         {
           cfg->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES;
+#ifdef CONFIG_DEVICE_CLOCK
+          cfg->cap |= DEV_TIMER_CAP_VARFREQ;
+#endif
 # ifdef CONFIG_DEVICE_IRQ
           cfg->max = 0xffffffffffffffffULL;
 # else
@@ -426,6 +429,9 @@ static DEV_TIMER_CONFIG(arm_timer_config)
           cfg->rev = pv->systick_rev;
           cfg->res = pv->systick_period;
           cfg->cap = DEV_TIMER_CAP_REQUEST | DEV_TIMER_CAP_STOPPABLE;
+#ifdef CONFIG_DEVICE_CLOCK
+          cfg->cap |= DEV_TIMER_CAP_VARFREQ | DEV_TIMER_CAP_CLKSKEW;
+#endif
         }
       break;
 # endif
@@ -442,6 +448,9 @@ static DEV_TIMER_CONFIG(arm_timer_config)
           cfg->res = 1;
           cfg->cap = DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES
             | DEV_TIMER_CAP_TICKLESS;
+#ifdef CONFIG_DEVICE_CLOCK
+          cfg->cap |= DEV_TIMER_CAP_VARFREQ;
+#endif
         }
       break;
 #endif
