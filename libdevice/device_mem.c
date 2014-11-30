@@ -22,14 +22,7 @@
 
 */
 
-#include <device/device.h>
 #include <device/class/mem.h>
-#include <device/driver.h>
-
-#ifdef CONFIG_MUTEK_SCHEDULER
-# include <mutek/scheduler.h>
-# include <hexo/lock.h>
-#endif
 
 #include <alloca.h>
 #include <enums.h>

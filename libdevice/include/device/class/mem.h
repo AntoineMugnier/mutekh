@@ -286,8 +286,7 @@ inline error_t dev_mem_spin_op(struct device_mem_s *accessor,
 
 /** Synchronous memory device operation function. This function use
     the scheduler api to put current context in wait state during the
-    request. This is equivalent to @ref dev_mem_spin_op when the @ref
-    #CONFIG_MUTEK_SCHEDULER configuration token is not defined.
+    request.
 
     This function take care of initializing some fields of the
     request, the @tt type, @tt band_mask, @tt page_count,
