@@ -108,7 +108,7 @@ static DEV_IRQ_EP_PROCESS(dma_soclib_irq)
 
 static const struct dev_enum_ident_s	dma_soclib_ids[] =
 {
-	DEV_ENUM_FDTNAME_ENTRY("soclib:vci_dma"),
+	DEV_ENUM_FDTNAME_ENTRY("soclib:dma"),
 	{ 0 }
 };
 

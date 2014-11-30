@@ -473,7 +473,7 @@ const struct driver_timer_s  soclib_timer_timer_drv =
 
 static const struct dev_enum_ident_s  soclib_timer_ids[] =
 {
-  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_timer"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:timer"),
   { 0 }
 };
 
@@ -503,7 +503,7 @@ static DEV_INIT(soclib_timer_init)
   uintptr_t t_count = 1;
 
   if (device_get_param_uint(dev, "count", &t_count))
-    printk("warning: vci_timer device `%p' has no `count' parameter, assuming only one timer is available.\n", dev);
+    printk("warning: timer device `%p' has no `count' parameter, assuming only one timer is available.\n", dev);
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 

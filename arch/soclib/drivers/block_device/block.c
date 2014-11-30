@@ -333,7 +333,7 @@ static DEV_IRQ_EP_PROCESS(soclib_block_irq)
 
 static const struct dev_enum_ident_s	soclib_block_ids[] =
 {
-  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_block_device"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:block_device"),
   { 0 }
 };
 

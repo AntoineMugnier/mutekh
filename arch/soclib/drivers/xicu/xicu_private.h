@@ -31,7 +31,7 @@
 #include <device/driver.h>
 #include <device/irq.h>
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
 
 #include <device/class/icu.h>
 
@@ -48,7 +48,7 @@ struct soclib_xicu_sink_s
 };
 #endif
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
 
 #include <device/class/timer.h>
 
@@ -67,7 +67,7 @@ struct soclib_xicu_pti_s
      in mode 0. */
   int_fast8_t start_count;
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
   dev_timer_cfgrev_t rev;
   dev_request_pqueue_root_t queue;
   dev_timer_value_t value;
@@ -80,7 +80,7 @@ struct soclib_xicu_private_s
 {
   uintptr_t addr;
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
   uintptr_t hwi_count;
   struct soclib_xicu_sink_s *sinks;
 
@@ -92,7 +92,7 @@ struct soclib_xicu_private_s
 # endif
 #endif
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
   uintptr_t pti_count;
   struct soclib_xicu_pti_s pti[0];
 #endif

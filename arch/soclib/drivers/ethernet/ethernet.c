@@ -307,7 +307,7 @@ static DEV_IRQ_EP_PROCESS(soclib_eth_irq)
 
 static const struct dev_enum_ident_s	soclib_eth_ids[] =
 {
-  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_ethernet"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:ethernet"),
   { 0 }
 };
 

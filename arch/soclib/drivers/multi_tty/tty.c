@@ -172,7 +172,7 @@ static DEV_IRQ_EP_PROCESS(tty_soclib_irq)
 
 static const struct dev_enum_ident_s	tty_soclib_ids[] =
 {
-	DEV_ENUM_FDTNAME_ENTRY("soclib:vci_multi_tty"),
+	DEV_ENUM_FDTNAME_ENTRY("soclib:multi_tty"),
 	{ 0 }
 };
 

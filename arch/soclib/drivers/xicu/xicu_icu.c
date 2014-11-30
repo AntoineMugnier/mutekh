@@ -162,7 +162,7 @@ DEV_IRQ_EP_PROCESS(soclib_xicu_source_process)
         soclib_xicu_rr_mask(pv, xsink);
       }
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
     if (XICU_PRIO_HAS_PTI(prio))
       {
         done = 0;

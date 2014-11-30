@@ -52,7 +52,7 @@
   same time.
 */
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
 void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number)
 {
   struct soclib_xicu_private_s *pv = dev->drv_pv;
@@ -96,7 +96,7 @@ void soclib_xicu_pti_irq_process(struct device_s *dev, uint_fast8_t number)
 
 static DEV_TIMER_REQUEST(soclib_xicu_timer_request)
 {
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
   struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
   error_t err = 0;
@@ -151,7 +151,7 @@ static DEV_TIMER_REQUEST(soclib_xicu_timer_request)
 
 static DEV_TIMER_CANCEL(soclib_xicu_timer_cancel)
 {
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
   struct device_s *dev = accessor->dev;
   struct soclib_xicu_private_s *pv = dev->drv_pv;
   error_t err = 0;
@@ -209,7 +209,7 @@ DEV_USE(soclib_xicu_timer_use)
   if (number >= pv->pti_count)
     return -ENOTSUP;
 
-#ifndef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+#ifndef CONFIG_DRIVER_SOCLIB_XICU_ICU
   if (mode != 0)
     return -ENOTSUP;
 #endif
@@ -229,7 +229,7 @@ DEV_USE(soclib_xicu_timer_use)
     {
       if (p->start_count == 0)
         {
-# ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+# ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
           if (mode)
             {
               cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_PTI_VAL, number), endian_le32(p->period));
@@ -278,7 +278,7 @@ static DEV_TIMER_GET_VALUE(soclib_xicu_timer_get_value)
 
   if (mode)
     {
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
       if (rev && rev != p->rev)
         err = -EAGAIN;
       else
@@ -321,7 +321,7 @@ static DEV_TIMER_CONFIG(soclib_xicu_timer_config)
 
   if (mode)
     {
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
       struct soclib_xicu_pti_s *p = pv->pti + number;
 
       if (res)

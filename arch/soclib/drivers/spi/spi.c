@@ -58,7 +58,7 @@ struct soclib_spi_context_s
   struct dev_irq_ep_s            src_ep;
 #endif
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_SPI_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
   struct dev_irq_ep_s            *sinks;
   uint32_t                       irq_mask;
 #endif
@@ -68,7 +68,7 @@ struct soclib_spi_context_s
   uint_fast8_t                   fifo_lvl;
   uint_fast8_t                   fifo_size;
 
-#if defined(CONFIG_DRIVER_SOCLIB_VCI_SPI_ICU) || defined(CONFIG_DRIVER_SOCLIB_VCI_SPI_GPIO)
+#if defined(CONFIG_DRIVER_SOCLIB_SPI_ICU) || defined(CONFIG_DRIVER_SOCLIB_SPI_GPIO)
   uint_fast8_t                   gpin_cnt;
 #endif
   uint_fast8_t                   gpout_cnt;
@@ -316,7 +316,7 @@ static const struct driver_spi_ctrl_s	soclib_spi_ctrl_drv =
 
 /****************************************************** GPIO */
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_SPI_GPIO
+#ifdef CONFIG_DRIVER_SOCLIB_SPI_GPIO
 
 static DEV_GPIO_SET_MODE(soclib_spi_gpio_set_mode)
 {
@@ -384,7 +384,7 @@ const struct driver_gpio_s  soclib_spi_gpio_drv =
 
 /****************************************************** ICU */
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_SPI_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
 
 static DEV_ICU_GET_ENDPOINT(soclib_spi_icu_get_endpoint)
 {
@@ -494,7 +494,7 @@ const struct driver_icu_s  soclib_spi_icu_drv =
 
 static const struct dev_enum_ident_s  soclib_spi_ids[] =
 {
-  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_spi"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:spi"),
   { 0 }
 };
 
@@ -508,10 +508,10 @@ const struct driver_s	soclib_spi_drv =
   .f_init		= soclib_spi_init,
   .f_cleanup		= soclib_spi_cleanup,
   .classes              = { &soclib_spi_ctrl_drv,
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_SPI_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
                             &soclib_spi_icu_drv,
 #endif
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_SPI_GPIO
+#ifdef CONFIG_DRIVER_SOCLIB_SPI_GPIO
                             &soclib_spi_gpio_drv,
 #endif
                             0 }
@@ -545,7 +545,7 @@ static DEV_IRQ_EP_PROCESS(soclib_spi_irq)
             }
         }
 
-# ifdef CONFIG_DRIVER_SOCLIB_VCI_SPI_ICU
+# ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
       if (p & SOCLIB_SPI_IRQPEND_GPIRQ)
         {
           uint32_t n = SOCLIB_SPI_IRQPEND_GPIRQN_GET(p);
@@ -583,7 +583,7 @@ static DEV_INIT(soclib_spi_init)
   __unused__ uint_fast8_t gpin_cnt = SOCLIB_SPI_CONFIG_GPINCNT_GET(cfg) + 1;
 
   pv = mem_alloc(sizeof(*pv)
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_SPI_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
                  + sizeof(pv->sinks[0]) * gpin_cnt
 #endif
                  , (mem_scope_sys));
@@ -603,12 +603,12 @@ static DEV_INIT(soclib_spi_init)
   /* get fifo size */
   pv->fifo_size = 2 << SOCLIB_SPI_CONFIG_FSIZE_GET(cfg);
 
-#if defined(CONFIG_DRIVER_SOCLIB_VCI_SPI_ICU) || defined(CONFIG_DRIVER_SOCLIB_VCI_SPI_GPIO)
+#if defined(CONFIG_DRIVER_SOCLIB_SPI_ICU) || defined(CONFIG_DRIVER_SOCLIB_SPI_GPIO)
   pv->gpin_cnt = gpin_cnt;
 #endif
   pv->gpout_cnt = SOCLIB_SPI_CONFIG_GPOUTCNT_GET(cfg) + 1;
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_SPI_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
   pv->sinks = (void*)(pv + 1);
   pv->irq_mask = 0;
   if (gpin_cnt)
@@ -631,7 +631,7 @@ static DEV_INIT(soclib_spi_init)
 
   cpu_mem_write_32(pv->addr + SOCLIB_SPI_IRQMASK_ADDR,
                    SOCLIB_SPI_IRQMASK_DONE | SOCLIB_SPI_IRQMASK_RXFULL
-# ifdef CONFIG_DRIVER_SOCLIB_VCI_SPI_ICU
+# ifdef CONFIG_DRIVER_SOCLIB_SPI_ICU
                    | SOCLIB_SPI_IRQMASK_GPIRQ
 # endif
                    );

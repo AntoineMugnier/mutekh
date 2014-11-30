@@ -50,7 +50,7 @@ static DEV_USE(soclib_xicu_use)
     default:
       switch (accessor->api->class_)
         {
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
         case DRIVER_CLASS_TIMER:
           return soclib_xicu_timer_use(accessor, op);
 #endif
@@ -62,7 +62,7 @@ static DEV_USE(soclib_xicu_use)
 
 static const struct dev_enum_ident_s  soclib_xicu_ids[] =
 {
-  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_xicu"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:xicu"),
   { 0 }
 };
 
@@ -79,10 +79,10 @@ const struct driver_s  soclib_xicu_drv =
   .f_use          = soclib_xicu_use,
 
   .classes        = {
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
     &soclib_xicu_icu_drv,
 #endif
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
     &soclib_xicu_timer_drv,
 #endif
     0
@@ -95,10 +95,10 @@ static DEV_INIT(soclib_xicu_init)
   uint_fast8_t i;
 
   uintptr_t pti_count = 0;
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
   device_get_param_uint_default(dev, "pti-count", &pti_count, 0);
 
-# ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+# ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
   dev_timer_res_t resolution = SOCLIB_XICU_PTI_DEFAULT_PERIOD;
   device_get_param_uint(dev, "period", &resolution);
   if (resolution < SOCLIB_XICU_PTI_MIN_PERIOD)
@@ -109,7 +109,7 @@ static DEV_INIT(soclib_xicu_init)
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
   pv = mem_alloc(sizeof (*pv)
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
                  + pti_count * sizeof(struct soclib_xicu_pti_s)
 #endif
                  , (mem_scope_sys));
@@ -122,7 +122,7 @@ static DEV_INIT(soclib_xicu_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
 
   device_get_param_uint_default(dev, "irq-count", &pv->irq_count, 1);
   if (pv->irq_count)
@@ -135,7 +135,7 @@ static DEV_INIT(soclib_xicu_init)
       device_irq_source_init(dev, pv->srcs, pv->irq_count,
                              &soclib_xicu_source_process, DEV_IRQ_SENSE_HIGH_LEVEL);
 
-# ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+# ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
       if (device_irq_source_link(dev, pv->srcs, pv->irq_count, -1))
         goto err_mem2;
 # else
@@ -171,7 +171,7 @@ static DEV_INIT(soclib_xicu_init)
 
 #endif
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
   pv->pti_count = pti_count;
   for (i = 0; i < pti_count; i++)
     {
@@ -180,7 +180,7 @@ static DEV_INIT(soclib_xicu_init)
       cpu_mem_read_32(XICU_REG_ADDR(pv->addr, XICU_PTI_ACK, i));
       cpu_mem_write_32(XICU_REG_ADDR(pv->addr, XICU_PTI_PER, i), 0);
 
-# ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+# ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
       dev_request_pqueue_init(&p->queue);
       p->period = resolution;
       p->value = 0;
@@ -195,7 +195,7 @@ static DEV_INIT(soclib_xicu_init)
   dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
  err_unlink:
   device_irq_source_unlink(dev, pv->srcs, pv->irq_count);
  err_mem2:
@@ -211,8 +211,8 @@ static DEV_CLEANUP(soclib_xicu_cleanup)
 {
   struct soclib_xicu_private_s *pv = dev->drv_pv;
 
-#ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_ICU
-# ifdef CONFIG_DRIVER_SOCLIB_VCI_XICU_TIMER
+#ifdef CONFIG_DRIVER_SOCLIB_XICU_ICU
+# ifdef CONFIG_DRIVER_SOCLIB_XICU_TIMER
   uint_fast8_t i;
   for (i = 0; i < pv->pti_count; i++)
     {

@@ -133,7 +133,7 @@ const struct driver_icu_s  soclib_icu_icu_drv =
 
 static const struct dev_enum_ident_s  soclib_icu_ids[] =
 {
-  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_icu"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:icu"),
   { 0 }
 };
 
