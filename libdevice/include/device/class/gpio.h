@@ -177,8 +177,8 @@ typedef DEV_GPIO_GET_INPUT(dev_gpio_get_input_t);
 
 
 /** @see dev_gpio_request_t */
-#define DEV_GPIO_REQUEST(n) error_t (n)(const struct device_gpio_s *gpio, \
-                                       struct dev_gpio_rq_s *req)
+#define DEV_GPIO_REQUEST(n) void (n)(const struct device_gpio_s *gpio, \
+                                     struct dev_gpio_rq_s *req)
 /**
    This function enqueues a request to the GPIO driver.
 
@@ -245,6 +245,35 @@ DRIVER_CLASS_TYPES(gpio,
                    dev_gpio_get_input_t *f_get_input;
                    dev_gpio_request_t *f_request;
   );
+
+
+/** Synchronous gpio device request function. This function use a
+    busy wait loop during the request. @see dev_gpio_wait_rq */
+config_depend(CONFIG_DEVICE_GPIO)
+inline error_t dev_gpio_spin_rq(struct device_gpio_s *accessor,
+                                struct dev_gpio_rq_s *rq)
+{
+  struct dev_request_status_s st;
+  dev_request_spin_init(&rq->base, &st);
+  DEVICE_OP(accessor, request, rq);
+  dev_request_spin_wait(&st);
+  return rq->error;
+}
+
+/** Synchronous gpio device request function. This function use the
+    scheduler api to put the current context in wait state during the
+    request. */
+config_depend_and2(CONFIG_DEVICE_GPIO, CONFIG_MUTEK_SCHEDULER)
+inline error_t dev_gpio_wait_rq(struct device_gpio_s *accessor,
+                                struct dev_gpio_rq_s *rq)
+{
+  struct dev_request_status_s st;
+  dev_request_sched_init(&rq->base, &st);
+  DEVICE_OP(accessor, request, rq);
+  dev_request_sched_wait(&st);
+  return rq->error;
+}
+
 
 /** @This changes the mode of multiple GPIO pins. */
 config_depend(CONFIG_DEVICE_GPIO)

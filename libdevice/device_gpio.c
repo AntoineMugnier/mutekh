@@ -111,11 +111,7 @@ DEV_GPIO_REQUEST(dev_gpio_request_async_to_sync)
                           req->io_first, req->io_last,
                           req->input.data);
     break;
-
-  default:
-    return -EINVAL;
   }
 
   kroutine_exec(&req->base.kr, cpu_is_interruptible());
-  return 0;
 }
