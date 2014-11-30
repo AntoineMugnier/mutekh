@@ -32,6 +32,8 @@
 #include <assert.h>
 #include <hexo/types.h>
 
+#include <device/types.h>
+
 enum driver_class_e;
 
 /** @This specifies the types of device resource entries. */
@@ -606,59 +608,6 @@ ALWAYS_INLINE error_t device_res_add_product(struct device_s *dev, uintptr_t id,
       } }                                       \
   }
 
-
-/** Clock frequency in Hz = num / denom. The invalid frequency is
-    encoded by setting denom to 0.
-    @see #DEV_FREQ_INVALID @see #DEV_FREQ_IS_VALID
-*/
-struct dev_freq_s
-{
-  uint64_t num:CONFIG_DEVICE_CLOCK_OSCN_WIDTH;
-  uint64_t denom:64-CONFIG_DEVICE_CLOCK_OSCN_WIDTH;
-};
-
-/** @This encodes the invalid frequency value @see dev_freq_s. */
-#define DEV_FREQ_INVALID ((struct dev_freq_s){ .denom = 0 })
-
-/** @This tests if the frequency value is valid @see dev_freq_s. */
-#define DEV_FREQ_IS_VALID(f) ((f).denom != 0)
-
-/** Clock frequency accuracy in ppb.  The value in ppb is
-    @em {(8 | m) * 2^(e-4)}.
-
-    The invalid accuracy value is encoded by setting e to 0.
-    @see #DEV_FREQ_ACC_INVALID @see #DEV_FREQ_ACC_IS_VALID
-*/
-struct dev_freq_accuracy_s
-{
-  uint8_t m:3;
-  uint8_t e:5;
-};
-
-#define DEV_FREQ_ACC(m_, e_) ((struct dev_freq_accuracy_s){ .e = e_, .m = m_ })
-
-/** @This encodes the invalid frequency accuracy value @see dev_freq_accuracy_s */
-#define DEV_FREQ_ACC_INVALID ((struct dev_freq_accuracy_s){ .e = 0 })
-
-/** @This tests if the frequency accuracy value is valid @see dev_freq_accuracy_s */
-#define DEV_FREQ_ACC_IS_VALID(a) ((a).e != 0)
-
-ALWAYS_INLINE uint32_t dev_freq_acc_ppb(const struct dev_freq_accuracy_s *acc)
-{
-  uint32_t r = (acc->m | 8);
-  if (acc->e >= 4)
-    r <<= acc->e - 4;
-  else
-    r >>= 4 - acc->e;
-  return r;
-}
-
-/** Clock ratio */
-struct dev_freq_ratio_s
-{
-  uint32_t num:CONFIG_DEVICE_CLOCK_FRAC_WIDTH;
-  uint32_t denom:CONFIG_DEVICE_CLOCK_FRAC_WIDTH;
-};
 
 /** @This attaches a frequency resource to the device. */
 ALWAYS_INLINE error_t device_res_add_freq(struct device_s *dev,

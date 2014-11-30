@@ -32,6 +32,7 @@
 
 #include <mutek/mem_alloc.h>
 
+const char dev_pin_driving_e[] = ENUM_DESC_DEV_PIN_DRIVING_E;
 const char device_status_e[] = ENUM_DESC_DEVICE_STATUS_E;
 
 #ifdef CONFIG_DEVICE_TREE
