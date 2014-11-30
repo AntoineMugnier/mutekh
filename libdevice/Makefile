@@ -35,9 +35,13 @@ endif
 
 objs-$(CONFIG_DEVICE_SPI) += device_spi.o
 objs-$(CONFIG_DEVICE_LCD) += device_lcd.o
-objs-$(CONFIG_DEVICE_GPIO) += device_gpio.o
 objs-$(CONFIG_DEVICE_IOMUX) += device_iomux.o
 objs-$(CONFIG_DEVICE_RFPACKET) += device_rfpacket.o
+
+ifeq ($(CONFIG_DEVICE_GPIO), defined)
+objs += device_gpio.o
+objs-$(CONFIG_DEVICE_SHELL) += shell_gpio.o
+endif
 
 ifeq ($(CONFIG_DEVICE_CLOCK), defined)
 objs += device_clock.o

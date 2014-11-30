@@ -497,6 +497,7 @@ extern TERMUI_CON_GROUP_DECL(dev_shell_mem_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_pwm_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_crypto_group);
 extern TERMUI_CON_GROUP_DECL(dev_shell_i2c_group);
+extern TERMUI_CON_GROUP_DECL(dev_shell_gpio_group);
 
 static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 {
@@ -524,6 +525,9 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 #endif
 #ifdef CONFIG_DEVICE_I2C
   TERMUI_CON_GROUP_ENTRY(dev_shell_i2c_group, "i2c")
+#endif
+#ifdef CONFIG_DEVICE_GPIO
+  TERMUI_CON_GROUP_ENTRY(dev_shell_gpio_group, "gpio")
 #endif
   TERMUI_CON_LIST_END
 };
