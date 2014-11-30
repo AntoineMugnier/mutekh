@@ -360,8 +360,8 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_f
 
         case DEV_RES_CLOCK_OSC: {
           struct dev_clock_node_info_s info;
-          const char *nname = "unknown";
-          if (!dev_clock_node_info(dev, r->u.clock_rte.node, DEV_CLOCK_INFO_NAME, &info))
+          const char *nname = "?";
+          if (!dev_clock_node_info(dev, r->u.clock_osc.node, DEV_CLOCK_INFO_NAME, &info))
             nname = info.name;
           uint64_t integral  = r->u.clock_osc.num / r->u.clock_osc.denom;
           uint32_t frac      = 1000 * (r->u.clock_osc.num % r->u.clock_osc.denom) /
