@@ -219,7 +219,7 @@ static DEV_GPIO_SET_OUTPUT(efm32_gpio_set_output)
   uintptr_t a = pv->addr + EFM32_GPIO_DOUT_ADDR(io_first / GPIO_BANK_SIZE);
   uint32_t x = endian_le32(cpu_mem_read_32(a));
   uint32_t tg = cmp & smp;
-  x = ((x ^ tg) & (~cmp | smp)) | smp;
+  x = ((x ^ tg) & ~(cmp ^ smp)) | (~cmp & smp);
   //  printk("gpio set : reg=%08x value=%08x clr=%08x set=%08x\n", a, x, cmp, smp);
   cpu_mem_write_32(a, endian_le32(x & EFM32_GPIO_DOUT_MASK));
 
