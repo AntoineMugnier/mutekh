@@ -20,8 +20,6 @@
 
 */
 
-#include "tty.h"
-
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -94,7 +92,7 @@ void tty_soclib_try_read(struct device_s *dev)
   }
 }
 
-DEV_CHAR_REQUEST(tty_soclib_request)
+static DEV_CHAR_REQUEST(tty_soclib_request)
 {
   struct device_s               *dev = accessor->dev;
   struct tty_soclib_context_s	*pv = dev->drv_pv;
@@ -166,10 +164,6 @@ static DEV_IRQ_EP_PROCESS(tty_soclib_irq)
 
 #endif
 
-/* 
- * device open operation
- */
-
 static const struct dev_enum_ident_s	tty_soclib_ids[] =
 {
 	DEV_ENUM_FDTNAME_ENTRY("soclib:multi_tty"),
@@ -182,6 +176,9 @@ static const struct driver_char_s	tty_soclib_char_drv =
   .f_request		= tty_soclib_request,
 };
 
+static DEV_INIT(tty_soclib_init);
+static DEV_CLEANUP(tty_soclib_cleanup);
+
 const struct driver_s	tty_soclib_drv =
 {
   .desc                 = "SoCLib VciMultiTty",
@@ -193,7 +190,7 @@ const struct driver_s	tty_soclib_drv =
 
 REGISTER_DRIVER(tty_soclib_drv);
 
-DEV_INIT(tty_soclib_init)
+static DEV_INIT(tty_soclib_init)
 {
   struct tty_soclib_context_s	*pv;
   device_mem_map( dev , 1 << 0 );
@@ -237,7 +234,7 @@ DEV_INIT(tty_soclib_init)
   return -1;
 }
 
-DEV_CLEANUP(tty_soclib_cleanup)
+static DEV_CLEANUP(tty_soclib_cleanup)
 {
   struct tty_soclib_context_s	*pv = dev->drv_pv;
 
