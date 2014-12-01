@@ -49,7 +49,7 @@ struct bcm2835_gpio_private_s
   uint64_t  pull_up;
   uint64_t  pull_down;
 
-#ifdef CONFIG_DRIVER_GPIO_BCM2835_ICU
+#ifdef CONFIG_DRIVER_BCM2835_GPIO_ICU
   uint32_t edge[GPIO_SRC_IRQ_COUNT];
 
   struct dev_irq_ep_s sink[GPIO_IO_COUNT];
@@ -185,7 +185,7 @@ static DEV_GPIO_SET_MODE(bcm2835_gpio_set_mode)
   uintptr_t a = pv->addr + BCM2835_GPIO_GPFSEL_ADDR(io_first/10);
   uint32_t x = endian_le32(cpu_mem_read_32(a));
   x = (x & ~mp) | (mp & sel);
-#ifndef BCM2835_GPIO_DEBUG
+#ifdef BCM2835_GPIO_DEBUG
   printk("gpio mode: reg=%08x value=%08x\n", a, x);
 #endif
   cpu_mem_write_32(a, endian_le32(x));
@@ -340,7 +340,7 @@ static const struct driver_iomux_s bcm2835_gpio_iomux_drv =
 
 /********************** irq controller driver part *********************/
 
-#ifdef CONFIG_DRIVER_GPIO_BCM2835_ICU
+#ifdef CONFIG_DRIVER_BCM2835_GPIO_ICU
 
 static DEV_ICU_GET_ENDPOINT(bcm2835_gpio_icu_get_endpoint)
 {
@@ -574,7 +574,7 @@ const struct driver_s bcm2835_gpio_drv =
 #ifdef CONFIG_DEVICE_IOMUX
       &bcm2835_gpio_iomux_drv,
 #endif
-#ifdef CONFIG_DRIVER_GPIO_BCM2835_ICU
+#ifdef CONFIG_DRIVER_BCM2835_GPIO_ICU
       &bcm2835_gpio_icu_drv,
 #endif
       NULL
@@ -600,7 +600,7 @@ static DEV_INIT(bcm2835_gpio_init)
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
-#ifdef CONFIG_DRIVER_GPIO_BCM2835_ICU
+#ifdef CONFIG_DRIVER_BCM2835_GPIO_ICU
   /* Disable and clear all interrupts */
   bcm2835_gpio_icu_disall_irq(pv);
 
@@ -622,7 +622,7 @@ static DEV_INIT(bcm2835_gpio_init)
   return 0;
 
  err_unlink:
-#ifdef CONFIG_DRIVER_GPIO_BCM2835_ICU
+#ifdef CONFIG_DRIVER_BCM2835_GPIO_ICU
   device_irq_source_unlink(dev, pv->src, GPIO_SRC_IRQ_COUNT);
 #endif
  err_mem:
@@ -634,7 +634,7 @@ static DEV_CLEANUP(bcm2835_gpio_cleanup)
 {
   struct bcm2835_gpio_private_s  *pv = dev->drv_pv;
 
-#ifdef CONFIG_DRIVER_GPIO_BCM2835_ICU
+#ifdef CONFIG_DRIVER_BCM2835_GPIO_ICU
   bcm2835_gpio_icu_disall_irq(pv);
 
   device_irq_source_unlink(dev, pv->src, GPIO_SRC_IRQ_COUNT);

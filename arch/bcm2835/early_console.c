@@ -57,7 +57,7 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
     ;
 }
 
-void raspberry_early_console_init()
+void bcm2835_early_console_init()
 {
   uintptr_t addr = CONFIG_MUTEK_PRINTK_ADDR;
 

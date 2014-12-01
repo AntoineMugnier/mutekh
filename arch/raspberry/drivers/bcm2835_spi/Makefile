@@ -1,1 +1,0 @@
-objs-$(CONFIG_DRIVER_SPI_BCM2835) += bcm2835_spi.o

@@ -1,0 +1,68 @@
+
+%section bcm2835 bcm2835-* bcm2835-*-*
+  %types architecture
+
+  CONFIG_ARCH_BCM2835
+  CONFIG_CPU_ARM_1176F
+
+  CONFIG_DEVICE
+  CONFIG_DEVICE_IOMUX
+  CONFIG_DRIVER_BCM2835_ICU
+  CONFIG_DRIVER_CHAR_PL011
+  CONFIG_DRIVER_BCM2835_SYSTIMER
+  CONFIG_DRIVER_BCM2835_GPIO
+  CONFIG_DRIVER_BCM2835_SPI
+  CONFIG_DRIVER_BCM2835_I2C
+
+  CONFIG_MUTEK_PRINTK_ADDR   0x20201000
+
+  CONFIG_BCM2835_PRINTK_UART
+
+  CONFIG_STARTUP_HEAP_ADDR   0x00600000
+  CONFIG_STARTUP_HEAP_SIZE   0x003ff000
+
+  CONFIG_STARTUP_STACK_ADDR  0x003ff000
+  CONFIG_STARTUP_STACK_SIZE  0x00001000
+
+  CONFIG_LOAD_BOOTLOAD
+  CONFIG_LOAD_BOOTLOAD_KERNEL_ADDR 0x00400000
+  CONFIG_LOAD_BOOTLOAD_KERNEL_SIZE 0x00200000
+
+  %subsection bcm2835
+    %types board
+  %end
+
+  %subsection bcm2835-raspberry-*
+    %types board
+
+    %subsection bcm2835-raspberry-a2
+      %types model
+      CONFIG_ARCH_BCM2835_BOARD RASPBERRY_A2
+    %end
+
+    %subsection bcm2835-raspberry-b1
+      %types model
+      CONFIG_ARCH_BCM2835_BOARD RASPBERRY_B1
+    %end
+
+    %subsection bcm2835-raspberry-b2
+      %types model
+      CONFIG_ARCH_BCM2835_BOARD RASPBERRY_B2
+    %end
+
+    %subsection bcm2835-raspberry-a1plus
+      %types model
+      CONFIG_ARCH_BCM2835_BOARD RASPBERRY_A1PLUS
+    %end
+
+    %subsection bcm2835-raspberry-b1plus
+      %types model
+      CONFIG_ARCH_BCM2835_BOARD RASPBERRY_B1PLUS
+    %end
+
+    %requiretypes model
+  %end
+
+  %set BUILD_NAME bcm2835-arm
+
+  %requiretypes board

@@ -418,7 +418,7 @@ static DEV_IRQ_EP_PROCESS(bcm2835_i2c_irq)
       /* Reset interrupts flags */
       cpu_mem_write_32(pv->addr + BCM2835_I2C_S_ADDR, endian_le32(x & BCM2835_I2C_IRQ_CLR_ON_WRITE));
 
-      if (!(x & BCM2835_I2C_IRQ_MASK) && rq != NULL)
+      if (!(x & BCM2835_I2C_IRQ_MASK) || rq == NULL)
         break;
 
       if (x & (BCM2835_I2C_S_DONE | BCM2835_I2C_S_ERR | BCM2835_I2C_S_CLKT))

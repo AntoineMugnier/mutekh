@@ -4,7 +4,7 @@
 %include ibmpc/ibmpc.build
 %include soclib/soclib.build
 %include gaisler/gaisler.build
-%include raspberry/raspberry.build
+%include bcm2835/bcm2835.build
 %include zynq/zynq.build
 %include efm32/efm32.build
 %include stm32/stm32.build
