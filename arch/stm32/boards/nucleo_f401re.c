@@ -21,25 +21,6 @@
 
 */
 
-#include <mutek/startup.h>
-
-#include <string.h>
-
-
-/////////////////////////////////////////////////////////////////////
-
-#include <mutek/mem_alloc.h>
-#include <mutek/memory_allocator.h>
-
-void stm32_mem_init()
-{
-  default_region = memory_allocator_init(NULL, (void*)CONFIG_STARTUP_HEAP_ADDR,
-                                         (void*)(CONFIG_STARTUP_HEAP_ADDR +
-                                                 CONFIG_STARTUP_HEAP_SIZE));
-}
-
-/////////////////////////////////////////////////////////////////////
-
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/resources.h>
@@ -61,7 +42,7 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, &cpu_dev_res);
 #include <device/class/uart.h>
 
 /* USART1. */
-DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 6,
+DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 5,
   DEV_STATIC_RES_MEM(
     STM32_DEV_MEM_START(USART, 1),
     STM32_DEV_MEM_END(USART, 1)
@@ -72,9 +53,6 @@ DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 6,
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
   DEV_STATIC_RES_IOMUX("tx", 0, /* PA9 */ 0*16+9, /* AF7. */ 7, 0),
   DEV_STATIC_RES_IOMUX("rx", 0, /* PA10 */ 0*16+10, /* AF7. */ 7, 0),
-
-  /* default configuration. */
-  DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0),
 );
 
 DEV_DECLARE_STATIC(
@@ -111,7 +89,7 @@ DEV_DECLARE_STATIC(
 );
 
 /* USART6. */
-DEV_DECLARE_STATIC_RESOURCES(usart6_dev_res, 6,
+DEV_DECLARE_STATIC_RESOURCES(usart6_dev_res, 5,
   DEV_STATIC_RES_MEM(
     STM32_DEV_MEM_START(USART, 6),
     STM32_DEV_MEM_END(USART, 6)
@@ -122,9 +100,6 @@ DEV_DECLARE_STATIC_RESOURCES(usart6_dev_res, 6,
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
   DEV_STATIC_RES_IOMUX("tx", 0, /* PA11 */ 0*16+11, /* AF8. */ 8, 0),
   DEV_STATIC_RES_IOMUX("rx", 0, /* PA12 */ 0*16+12, /* AF8. */ 8, 0),
-
-  /* default configuration. */
-  DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0),
 );
 
 DEV_DECLARE_STATIC(
@@ -183,6 +158,22 @@ DEV_DECLARE_STATIC_RESOURCES(gpio_dev_res, 8,
 );
 
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, stm32_gpio_drv, &gpio_dev_res);
+
+#endif
+
+#if defined(CONFIG_DRIVER_STM32_TIMER)
+
+/* TIMER 9. */
+DEV_DECLARE_STATIC_RESOURCES(timer4_dev_res, 2,
+  DEV_STATIC_RES_MEM(
+    STM32_DEV_MEM_START(TIM, 4),
+    STM32_DEV_MEM_END(TIM, 4)
+  ),
+
+  DEV_STATIC_RES_IRQ(0, STM32_IRQ_TIM4, 0, "/cpu")
+);
+
+DEV_DECLARE_STATIC(timer4_dev, "timer9", 0, stm32_timer_drv, &timer4_dev_res);
 
 #endif
 
@@ -310,7 +301,7 @@ struct stm32f4xx_flash_dev_s
 #define STM32_FLASH_LAT_WS(n)   ((n) & 0xf)
 
 /* Set the frequency to the maximam valid frequency (84MHz). */
-void stm32_freq_scaling_init()
+void stm32_clock_init()
 {
   struct stm32f4xx_rcc_dev_s * rcc_dev =
     ( struct stm32f4xx_rcc_dev_s * ) 0x40023800;
@@ -319,13 +310,13 @@ void stm32_freq_scaling_init()
     ( struct stm32f4xx_flash_dev_s * ) 0x40023c00;
 
   /* reset configuration. */
-  rcc_dev->RCC_CR = 0x1; /* PLL OFF, PLLI2S OFF, HSE OFF, HSI ON. */
+  rcc_dev->RCC_CR = 1 << 16; /* PLL OFF, PLLI2S OFF, HSE ONN, HSI OFF. */
   //rcc_dev->RCC_CR |= (16 << 3); /* set trim for HSI clock. */
 
   /* configure the pll parameters (HSI 16MHz -> 84MHz). */
   rcc_dev->RCC_PLLCFGR =
-    STM32_RCC_PLLSRC_HSI      |
-    STM32_RCC_PLL_M_DIV(16)   |
+    STM32_RCC_PLLSRC_HSE      |
+    STM32_RCC_PLL_M_DIV(8)    |
     STM32_RCC_PLL_N_SCAL(336) |
     STM32_RCC_PLL_P_DIV_4     | /* System clock @ 84MHz. */
     STM32_RCC_PLL_Q_DIV(7)      /* Peripheral clock @ 48MHz. */
@@ -361,7 +352,7 @@ void stm32_freq_scaling_init()
 
   /* configure APB1 @ 42MHz and APB2 @ 84MHz prescaler. */
   rcc_dev->RCC_CFGR &= ~0xfc00;
-  rcc_dev->RCC_CFGR |= (4 << 10);
+  rcc_dev->RCC_CFGR |= (4 << 10); /* APB1 @ 42MHz */
 
   /* update working frequency. */
   stm32f4xx_clock_freq_ahb1 = 84000000;

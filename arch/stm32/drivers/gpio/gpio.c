@@ -310,21 +310,15 @@ DEV_GPIO_SET_OUTPUT(stm32_gpio_gpio_set_output)
 
       /* toggle */
       case 2 /* 10 */: {
-        uint32_t register odrval = DEVICE_REG_FIELD_IDX_VALUE_DEV(
+        uint32_t register oldval = DEVICE_REG_FIELD_IDX_VALUE_DEV(
           GPIO,
           bkaddr,
           ODR,
           OD,
           io_in_bank
         );
-        DEVICE_REG_FIELD_IDX_UPDATE_DEV(
-          GPIO,
-          bkaddr,
-          BSRR,
-          BR,
-          io_in_bank,
-          ~odrval
-        );
+        DEVICE_REG_FIELD_IDX_UPDATE_DEV(GPIO, bkaddr, ODR, OD, io_in_bank,
+          oldval ^ 0x1);
         break;
       }
 

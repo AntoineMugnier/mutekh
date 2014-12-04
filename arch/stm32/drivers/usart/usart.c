@@ -151,7 +151,7 @@ void stm32_usart_try_write(struct device_s *dev)
 
 #if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_STM32_USART_SWFIFO > 0
   /* try to write as much as possible data from the fifo first. */
-  if (!usart_fifo_isempty(&pv->write_fifo) &&
+  while (!usart_fifo_isempty(&pv->write_fifo) &&
       DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE))
     {
       uint8_t c = usart_fifo_pop(&pv->write_fifo);
@@ -174,40 +174,46 @@ void stm32_usart_try_write(struct device_s *dev)
              it. */
           if (size < rq->size &&
               DEVICE_REG_FIELD_VALUE_DEV(USART, pv->addr, SR, TXE))
-          {
-            DEVICE_REG_FIELD_UPDATE_DEV(
-              USART,
-              pv->addr,
-              DR,
-              DATA,
-              rq->data[size++]
-            );
-          }
+            {
+              DEVICE_REG_FIELD_UPDATE_DEV(
+                USART, pv->addr,
+                DR, DATA,
+                rq->data[size++]
+              );
+            }
 
 #if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_STM32_USART_SWFIFO > 0
         }
 
       if (size < rq->size)
-        size += usart_fifo_pushback_array(
-          &pv->write_fifo,
-          &rq->data[size],
-          rq->size - size
-        );
+        {
+          size += usart_fifo_pushback_array(
+            &pv->write_fifo,
+            &rq->data[size],
+            rq->size - size
+          );
+
+          /* wait for the next write interrupt as the fifo is not empty
+             anymore. */
+          DEVICE_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TXEIE);
+        }
 #endif
 
       if (size)
         {
+          /* update request size and data pointer. */
           rq->size -= size;
-          rq->error = 0;
-          /* update the buffer pointer. */
           rq->data += size;
+          rq->error = 0;
 
           if (rq->type == DEV_CHAR_WRITE_PARTIAL || rq->size == 0)
             {
               dev_request_queue_pop(&pv->write_q);
+
               lock_release(&dev->lock);
               kroutine_exec(&rq->base.kr, 0);
               lock_spin(&dev->lock);
+
               /* look for another pending write request. */
               continue;
             }
@@ -298,11 +304,9 @@ DEV_IRQ_EP_PROCESS(stm32_usart_irq)
       stm32_usart_try_read(dev);
 
 #if CONFIG_DRIVER_STM32_USART_SWFIFO > 0
-    if (usart_fifo_isempty(&pv->write_fifo) &&
-        usart_fifo_isempty(&pv->read_fifo))
+    if (usart_fifo_isempty(&pv->write_fifo))
 #else
-    if (dev_request_queue_isempty(&pv->write_q) &&
-        dev_request_queue_isempty(&pv->read_q))
+    if (dev_request_queue_isempty(&pv->write_q))
 #endif
       break;
   }
@@ -393,30 +397,37 @@ error_t stm32_usart_config_simple(struct device_s          *dev,
   case DEV_UART_PARITY_NONE:
     DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, PCE, NONE);
     break;
+
+  case DEV_UART_PARITY_ODD:
+    DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, PCE, ENABLE);
+    DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, PS, ODD);
+    break;
+
+  case DEV_UART_PARITY_EVEN:
+    DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, PCE, ENABLE);
+    DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, PS, EVEN);
+    break;
   }
 
   /* configure the baudrate. */
-  uint32_t brr = 0;
+  uint64_t brr = 0;
   switch (pv->addr)
   {
   default:
-    assert(0 && "unknown USART base address");
+    assert(!"unknown USART base address");
     break;
 
   case STM32_USART1_ADDR:
   case STM32_USART6_ADDR:
-    brr = ((int)(stm32f4xx_clock_freq_apb2 / 115200.0 * 2 + 0.5)) & 0xffff;
+    brr = (((uint64_t)stm32f4xx_clock_freq_apb2) << 8) / (cfg->baudrate << 8);
     break;
 
   case STM32_USART2_ADDR:
-    brr = ((int)(stm32f4xx_clock_freq_apb1 / 115200.0 * 2 + 0.5)) & 0xffff;
+    brr = (((uint64_t)stm32f4xx_clock_freq_apb1) << 8) / (cfg->baudrate << 8);
     break;
   }
 
-  /* when using oversampling 8, the brr[4] bit must be 0. */
-  brr &= ~(1 << 4);
-  DEVICE_REG_UPDATE_DEV(USART, pv->addr, BRR, brr);
-
+  DEVICE_REG_UPDATE_DEV(USART, pv->addr, BRR, (uint32_t)brr);
   return 0;
 }
 
@@ -569,7 +580,8 @@ DEV_INIT(stm32_usart_init)
     DEVICE_REG_FIELD_SET_DEV(USART, pv->addr, CR1, TE);
 
   /* configure over-sampling. */
-  DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, OVER8, 8);
+  DEVICE_REG_FIELD_UPDATE_DEV(USART, pv->addr, CR1, OVER8, 16);
+  DEVICE_REG_FIELD_CLR_DEV(USART, pv->addr, CR3, ONEBIT);
 
   /* check for default configuration resource. */
   struct dev_resource_s *r = device_res_get(dev, DEV_RES_UART, 0);

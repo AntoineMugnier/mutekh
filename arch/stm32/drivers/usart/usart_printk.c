@@ -21,14 +21,17 @@
 */
 
 #include <hexo/types.h>
-#include <hexo/cpu.h>
 #include <hexo/iospace.h>
 #include <hexo/endian.h>
+
 #include <mutek/printk.h>
 
-#include <arch/stm32_regs.h>
+#include <cpp/device/helpers.h>
+#include <arch/stm32_usart.h>
+#include <arch/stm32_gpio.h>
+#include <arch/stm32_rcc.h>
+#include <arch/stm32_memory_map.h>
 
-#ifdef CONFIG_STM32_PRINTK_UART
 
 extern uint32_t stm32f4xx_clock_freq_apb1;
 
@@ -61,17 +64,13 @@ static PRINTF_OUTPUT_FUNC(early_console_out)
     }
 }
 
-void stm32_early_console_init()
+void stm32_usart_printk_init()
 {
   reg_t cr1 = 0, cr2 = 0, cfg;
 
-#if !defined(CONFIG_STM32_PRINTK_UART)
-# error
-#endif
-
   /* enable clock on USART bus. */
-  cpu_mem_write_32(0x40023830, (1 << 0)); /* enable AHB1 GPIO port A. */
-  cpu_mem_write_32(0x40023840, (1 << 17)); /* enable APB1 USART2. */
+  DEVICE_REG_FIELD_SET(RCC, , AHB1ENR, GPIOAEN);
+  DEVICE_REG_FIELD_SET(RCC, , APB1ENR, USART2EN);
 
   /* configure PA2/PA3 as TX/RX. */
   cfg = DEVICE_REG_VALUE(GPIO, A, MODER);
@@ -95,7 +94,8 @@ void stm32_early_console_init()
   /* configure baud rate tp 9600 Kbps. */
   DEVICE_REG_UPDATE(USART, 2, BRR,
     (int)(
-      stm32f4xx_clock_freq_apb1 / CONFIG_STM32_PRINTK_RATE
+      (float)stm32f4xx_clock_freq_apb1 /
+        CONFIG_DRIVER_STM32_USART_PRINTK_BAUDRATE
       + 0.5
     )
   );
@@ -121,6 +121,4 @@ void stm32_early_console_init()
 
   printk_set_output(early_console_out, NULL);
 }
-
-#endif
 

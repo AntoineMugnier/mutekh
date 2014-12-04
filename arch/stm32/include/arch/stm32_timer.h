@@ -477,7 +477,7 @@
   #define STM32_TIMER_CCMR2IC_IC4F_GET(x)          (((x) >> 12) & 0xf)
 
 #define STM32_TIMER_CCER_ADDR                        0x00000020
-#define STM32_TIMER_CCER_MASK                        0x0000bbbb
+#define STM32_TIMER_CCER_MASK                        0x0000bbbf
   #define STM32_TIMER_CCER_CCE_MASK                0x00000001
   #define STM32_TIMER_CCER_CCE_COUNT               4
   #define STM32_TIMER_CCER_CCE(fidx)               (0x00000001 << ((fidx) * 4))
@@ -490,11 +490,17 @@
   #define STM32_TIMER_CCER_CCP_GET(fidx, x)        (((x) >> ((fidx) * 4 + 1)) & 0x1)
   #define STM32_TIMER_CCER_CCP_HIGH                0x00000000
   #define STM32_TIMER_CCER_CCP_LOW                 0x00000001
-  #define STM32_TIMER_CCER_CC1NPE_MASK             0x00000001
-  #define STM32_TIMER_CCER_CC1NPE_COUNT            4
-  #define STM32_TIMER_CCER_CC1NPE(fidx)            (0x00000008 << ((fidx) * 4))
-  #define STM32_TIMER_CCER_CC1NPE_SET(fidx, x, v)  do { (x) = (((x) & ~(0x8 << ((fidx) * 4))) | ((v) << ((fidx) * 4 + 3))); } while(0)
-  #define STM32_TIMER_CCER_CC1NPE_GET(fidx, x)     (((x) >> ((fidx) * 4 + 3)) & 0x1)
+  #define STM32_TIMER_CCER_CCNE_MASK               0x00000001
+  #define STM32_TIMER_CCER_CCNE                    0x00000004
+  #define STM32_TIMER_CCER_CCNE_SET(x, v)          do { (x) = (((x) & ~0x4) | ((v) << 2)); } while(0)
+  #define STM32_TIMER_CCER_CCNE_GET(x)             (((x) >> 2) & 0x1)
+  #define STM32_TIMER_CCER_CCNP_MASK               0x00000001
+  #define STM32_TIMER_CCER_CCNP_COUNT              4
+  #define STM32_TIMER_CCER_CCNP(fidx, v)           ((STM32_TIMER_CCER_CCNP_##v) << ((fidx) * 4 + 3))
+  #define STM32_TIMER_CCER_CCNP_SET(fidx, x, v)    do { (x) = (((x) & ~(0x8 << ((fidx) * 4))) | ((STM32_TIMER_CCER_CCNP_##v) << ((fidx) * 4 + 3))); } while(0)
+  #define STM32_TIMER_CCER_CCNP_GET(fidx, x)       (((x) >> ((fidx) * 4 + 3)) & 0x1)
+  #define STM32_TIMER_CCER_CCNP_HIGH               0x00000000
+  #define STM32_TIMER_CCER_CCNP_LOW                0x00000001
 
 #define STM32_TIMER_CNT_ADDR                         0x00000024
 #define STM32_TIMER_CNT_MASK                         0x00000000

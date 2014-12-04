@@ -17,23 +17,21 @@
     02110-1301 USA.
 
     Copyright Julien Peeters <contact@julienpeeters.net> (c) 2014
+    Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2012
 
 */
 
-#ifndef _STM32F4xx_MEMORY_MAP_H_
-#define _STM32F4xx_MEMORY_MAP_H_
+#include <mutek/startup.h>
 
-#if defined(CONFIG_BOARD_STM32_NUCLEOF401RE)
-# include <arch/stm32f401re_memory_map.h>
-#endif
+#include <string.h>
 
-#define STM32_DEV_MEM_START(dev, id) \
-  STM32_ ## dev ## id ## _ADDR       \
-/**/
+#include <mutek/mem_alloc.h>
+#include <mutek/memory_allocator.h>
 
-#define STM32_DEV_MEM_END(dev, id)                                    \
-  ( STM32_DEV_MEM_START(dev, id) + STM32_ ## dev ## id ## _SIZE - 1 ) \
-/**/
-
-#endif
+void stm32_mem_init()
+{
+  default_region = memory_allocator_init(NULL, (void*)CONFIG_STARTUP_HEAP_ADDR,
+                                         (void*)(CONFIG_STARTUP_HEAP_ADDR +
+                                                 CONFIG_STARTUP_HEAP_SIZE));
+}
 

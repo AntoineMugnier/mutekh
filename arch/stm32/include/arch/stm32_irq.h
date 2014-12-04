@@ -1,7 +1,7 @@
 #ifndef _STM32_IRQ_H_
 #define _STM32_IRQ_H_
 
-#if defined(CONFIG_BOARD_STM32_F401RE)
+#if defined(CONFIG_BOARD_STM32_NUCLEOF401RE)
 
 #define STM32_IRQ_WWDG          0
 #define STM32_IRQ_EXTI16        1
@@ -68,9 +68,7 @@
 #define STM32_IRQ_FPU           81
 #define STM32_IRQ_SPI4          84
 
-#else
-# error unsupported board definition
-#endif
+#endif // CONFIG_BOARD_STM32_F401RE
 
 #endif
 
