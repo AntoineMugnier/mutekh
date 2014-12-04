@@ -22,6 +22,7 @@
 #include <device/irq.h>
 #include <device/class/iomux.h>
 #include <device/class/clock.h>
+#include <device/class/crypto.h>
 #include <arch/nrf5x/peripheral.h>
 #include <arch/nrf5x/ids.h>
 #include <arch/nrf5x/gpiote.h>
@@ -120,6 +121,18 @@ DEV_DECLARE_STATIC(ble_radio, "ble-radio", 0, nrf5x_ble_radio_drv,
                    DEV_STATIC_RES_IRQ(NRF5X_BLE_RADIO_IRQ_RTC, NRF5X_RTC0, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
                    DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_LF_PRECISE, NRF5X_BLE_RADIO_CLK_SLEEP),
                    DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_HF_PRECISE, NRF5X_BLE_RADIO_CLK_RADIO)
+                   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_NRF5X_AES)
+
+DEV_DECLARE_STATIC(aes_dev, "aes", 0, nrf5x_aes_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_ECB),
+#if defined(CONFIG_DRIVER_NRF5X_AES_CCM)
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_CCM, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+#endif
                    );
 
 #endif
