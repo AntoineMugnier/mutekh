@@ -104,3 +104,14 @@ DEV_DECLARE_STATIC(ble_radio, "ble-radio", 0, nrf51_ble_radio_drv,
                    );
 
 #endif
+
+#if defined(CONFIG_DRIVER_NRF51_AES)
+
+DEV_DECLARE_STATIC(aes_dev, "aes", 0, nrf51_aes_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF51_ECB),
+#if defined(CONFIG_DRIVER_NRF51_AES_CCM)
+                   DEV_STATIC_RES_IRQ(0, NRF51_CCM, 0, "/cpu"),
+#endif
+                   );
+
+#endif
