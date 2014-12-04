@@ -22,6 +22,7 @@
 #include <device/irq.h>
 #include <device/class/iomux.h>
 #include <device/class/clock.h>
+#include <device/class/crypto.h>
 #include <arch/nrf5x/peripheral.h>
 #include <arch/nrf5x/ids.h>
 #include <arch/nrf5x/gpiote.h>
@@ -103,6 +104,18 @@ DEV_DECLARE_STATIC(timer1, "timer1", 0, nrf5x_timer_drv,
                    DEV_STATIC_RES_IRQ(0, NRF5X_TIMER1, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 #if defined(CONFIG_DEVICE_CLOCK)
                    DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_HF, 0),
+#endif
+                   );
+
+#endif
+
+#if defined(CONFIG_DRIVER_NRF5X_AES)
+
+DEV_DECLARE_STATIC(aes_dev, "aes", 0, nrf5x_aes_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_ECB),
+#if defined(CONFIG_DRIVER_NRF5X_AES_CCM)
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_CCM, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 #endif
                    );
 

@@ -9,3 +9,4 @@ objs-$(CONFIG_DRIVER_NRF5X_RTC) += rtc.o
 objs += nvmc.o
 objs-$(CONFIG_DRIVER_NRF5X_RAM) += ram.o
 objs-$(CONFIG_DRIVER_NRF5X_TIMER) += timer.o
+objs-$(CONFIG_DRIVER_NRF5X_AES) += aes.o
