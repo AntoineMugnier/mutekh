@@ -261,6 +261,20 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_alias)
 #include <device/class/clock.h>
 
 static void
+dev_shell_dump_drv_class(struct termui_console_s *con, const struct driver_s *drv)
+{
+  const struct driver_class_s *c;
+  uint_fast8_t i;
+
+  for (i = 0; (c = drv->classes[i]); i++)
+    {
+      if (i > 0)
+        termui_con_printf(con, ", ");
+      termui_con_print_enum(con, driver_class_e, c->class_);
+    }
+}
+
+static void
 dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_fast8_t indent)
 {
   uint_fast8_t i;
@@ -281,19 +295,13 @@ dev_shell_dump_device(struct termui_console_s *con, struct device_s *dev, uint_f
 
   if (dev->drv)
     {
-      const struct driver_class_s *c;
       for (i = 0; i < indent + 1; i++)
         termui_con_printf(con, "  ");
       termui_con_printf(con, "Driver: %p `%s'\n", dev->drv, dev->drv->desc);
       for (i = 0; i < indent + 2; i++)
         termui_con_printf(con, "  ");
       termui_con_printf(con, "Classes: ");
-      for (i = 0; (c = dev->drv->classes[i]); i++)
-        {
-          if (i > 0)
-            termui_con_printf(con, ", ");
-          termui_con_print_enum(con, driver_class_e, c->class_);
-        }
+      dev_shell_dump_drv_class(con, dev->drv);
       termui_con_printf(con, "\n");
     }
 
@@ -489,6 +497,51 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_tree)
   return 0;
 }
 
+static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_drivers)
+{
+  extern const struct driver_s * dev_drivers_table[];
+  extern const struct driver_s * dev_drivers_table_end[];
+
+  const struct driver_s *d, **drv = dev_drivers_table;
+
+  for ( ; drv < dev_drivers_table_end ; drv++ )
+    {
+      d = *drv;
+      if (!d)
+        continue;
+
+      termui_con_printf(con, "\n  Driver %p `%s'\n"
+                        "    Classes: ", d, d->desc);
+      dev_shell_dump_drv_class(con, d);
+      termui_con_printf(con, "\n");
+
+      const struct dev_enum_ident_s *id = d->id_table;
+
+      if (id)
+        while (id->type)
+          {
+            termui_con_printf(con, "    Id: ");
+            termui_con_print_enum(con, dev_enum_type_e, id->type);
+            switch (id->type)
+              {
+              case DEV_ENUM_TYPE_GENERIC:
+                termui_con_printf(con, ", vendor %04x, device %04x, rev %u.%u\n",
+                                  id->generic.vendor, id->generic.device,
+                                  id->generic.rev_major,
+                                  id->generic.rev_minor);
+                break;
+              case DEV_ENUM_TYPE_FDTNAME:
+                termui_con_printf(con, ", name `%s'\n", id->fdtname.name);
+                break;
+              default:
+                termui_con_printf(con, "\n");
+                break;
+              }
+            id++;
+          }
+    }
+}
+
 /*************************************************** device command groups */
 
 extern TERMUI_CON_GROUP_DECL(dev_shell_clock_group);
@@ -502,6 +555,7 @@ extern TERMUI_CON_GROUP_DECL(dev_shell_gpio_group);
 static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
 {
   TERMUI_CON_ENTRY(dev_shell_tree, "tree")
+  TERMUI_CON_ENTRY(dev_shell_drivers, "drivers")
 #ifdef CONFIG_DEVICE_TREE
   TERMUI_CON_ENTRY(dev_shell_alias, "alias",
                    TERMUI_CON_COMPLETE(dev_console_device_comp, NULL)

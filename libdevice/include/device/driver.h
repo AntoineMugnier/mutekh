@@ -66,6 +66,8 @@ enum driver_class_e
   DRIVER_CLASS_User_First = 128,
 };
 
+ENUM_DESCRIPTOR(dev_enum_type_e, strip:DEV_ENUM_TYPE_, upper);
+
 enum dev_enum_type_e
 {
   DEV_ENUM_TYPE_INVALID,

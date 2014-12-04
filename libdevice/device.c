@@ -34,6 +34,7 @@
 
 const char dev_pin_driving_e[] = ENUM_DESC_DEV_PIN_DRIVING_E;
 const char device_status_e[] = ENUM_DESC_DEVICE_STATUS_E;
+const char dev_enum_type_e[] = ENUM_DESC_DEV_ENUM_TYPE_E;
 
 #ifdef CONFIG_DEVICE_TREE
 
