@@ -89,9 +89,10 @@ static TERMUI_CON_COMMAND_PROTOTYPE(gpio_mode_cmd)
     .type = DEV_GPIO_MODE,
     .io_first = c->io[0],
     .io_last = c->io[1],
-    .mode.mask = mask,
-    .mode.mode = c->mode,
   };
+
+  rq.mode.mask = mask;
+  rq.mode.mode = c->mode;
 
   error_t err = dev_gpio_wait_rq(&c->gpio, &rq);
   if (err)
@@ -152,9 +153,10 @@ static TERMUI_CON_COMMAND_PROTOTYPE(gpio_out_cmd)
     .type = DEV_GPIO_SET_OUTPUT,
     .io_first = c->io[0],
     .io_last = c->io[1],
-    .output.set_mask = mask_set,
-    .output.clear_mask = mask_clr,
   };
+
+  rq.output.set_mask = mask_set;
+  rq.output.clear_mask = mask_clr;
 
   error_t err = dev_gpio_wait_rq(&c->gpio, &rq);
   if (err)
@@ -184,8 +186,9 @@ static TERMUI_CON_COMMAND_PROTOTYPE(gpio_in_cmd)
     .type = DEV_GPIO_GET_INPUT,
     .io_first = c->io[0],
     .io_last = c->io[1],
-    .input.data = d,
   };
+
+  rq.input.data = d;
 
   error_t err = dev_gpio_wait_rq(&c->gpio, &rq);
   if (err)
