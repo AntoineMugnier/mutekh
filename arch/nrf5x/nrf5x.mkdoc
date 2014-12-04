@@ -103,9 +103,26 @@ arch/nrf5x/peripheral.h
     hardware-enforced requirement.
   @end section
 
-  @section Timer
+  @section {Timer}
     Timers are implemented as Timer devices.  When driver is enabled,
     Timer1 is instantiated as "timer1".
+  @end section
+
+
+  @section {AES}
+    Hardware AES encrypt block is supported through a crypto driver
+    which supports 4 functions:
+
+    @list
+      @item Basic AES block encrypt,
+      @item a custom AES-based seedable DRBG,
+      @item AES-CMAC, a keyed-hash algorithm used in Bluetooth
+    @end list
+
+    As most operations are fast and shorter than an interrupt
+    round-trip, cryptographical operations use a @ref
+    {dev_request_dlqueue_s} {delayed queued} to handle request from
+    interruptible mode, in a busy-wait manner.
   @end section
 
 @end section
