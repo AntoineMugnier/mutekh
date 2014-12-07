@@ -41,26 +41,28 @@ C_HEADER_BEGIN
 #include <stdarg.h>
 #include <unistd.h>
 
-/** @see formatter_printf */
+config_depend(CONFIG_LIBC_PRINTF)
 ssize_t sprintf(char *str, const char *format, ...);
 
-/** @see formatter_printf */
+config_depend(CONFIG_LIBC_PRINTF)
 ssize_t snprintf(char *str, size_t size, const char *format, ...);
 
-/** @see formatter_printf */
+config_depend(CONFIG_LIBC_PRINTF)
 ssize_t vsprintf(char *str, const char *format, va_list ap);
 
-/** @see formatter_printf */
+config_depend(CONFIG_LIBC_PRINTF)
 ssize_t vsnprintf(char *str, size_t size, const char *format, va_list ap);
 
-config_depend(CONFIG_LIBC_STREAM_STD)
+config_depend_and2(CONFIG_LIBC_SCANF, CONFIG_LIBC_STREAM_STD)
 ssize_t scanf(const char *format, ...);
 
-config_depend(CONFIG_LIBC_STREAM_STD)
+config_depend_and2(CONFIG_LIBC_SCANF, CONFIG_LIBC_STREAM_STD)
 ssize_t vscanf(const char *format, va_list ap);
 
+config_depend(CONFIG_LIBC_SCANF)
 ssize_t sscanf(const char *str, const char *format, ...);
 
+config_depend(CONFIG_LIBC_SCANF)
 ssize_t vsscanf(const char *str, const char *format, va_list ap);
 
 /** standard BUFSIZ macro */
@@ -149,16 +151,16 @@ error_t fflush(FILE *file);
 config_depend(CONFIG_LIBC_STREAM)
 error_t fpurge(FILE *file);
 
-config_depend(CONFIG_LIBC_STREAM)
+config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_LIBC_PRINTF)
 ssize_t vfprintf(FILE *file, const char *format, va_list ap);
 
-config_depend(CONFIG_LIBC_STREAM)
+config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_LIBC_PRINTF)
 ssize_t fprintf(FILE *file, const char *format, ...);
 
-config_depend(CONFIG_LIBC_STREAM)
+config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_LIBC_SCANF)
 ssize_t fscanf(FILE *file, const char *format, ...);
 
-config_depend(CONFIG_LIBC_STREAM)
+config_depend_and2(CONFIG_LIBC_STREAM, CONFIG_LIBC_SCANF)
 ssize_t vfscanf(FILE *file, const char *fmt, va_list ap);
 
 config_depend(CONFIG_LIBC_STREAM)
@@ -245,7 +247,7 @@ int_fast16_t putchar(int_fast16_t c),
 });
 
 /** @see printf */
-config_depend_alwaysinline(CONFIG_LIBC_STREAM_STD,
+config_depend_and2_alwaysinline(CONFIG_LIBC_STREAM_STD, CONFIG_LIBC_PRINTF,
 ssize_t vprintf(const char *format, va_list ap),
 {
   return vfprintf(stdout, format, ap);
@@ -254,7 +256,7 @@ ssize_t vprintf(const char *format, va_list ap),
 /** This function use libc buffered streams and thus require @ref
     #CONFIG_LIBC_STREAM_STD to be enabled. Consider using @ref printk
     instead for direct output. @see formatter_printf */
-config_depend(CONFIG_LIBC_STREAM_STD)
+config_depend_and2(CONFIG_LIBC_STREAM_STD, CONFIG_LIBC_PRINTF)
 ssize_t printf(const char *format, ...);
 
 config_depend_alwaysinline(CONFIG_LIBC_STREAM_STD,
