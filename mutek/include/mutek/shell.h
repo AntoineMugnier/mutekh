@@ -30,18 +30,25 @@
 #ifndef MUTEK_SHELL_H_
 #define MUTEK_SHELL_H_
 
-#include <termui/console.h>
-#include <termui/console_opt.h>
+#ifdef CONFIG_MUTEK_SHELL
+# include <termui/console.h>
+# include <termui/console_opt.h>
+#endif
 
 struct device_char_s;
 
 /** @This starts an interactive shell. This function does not returns
     until the shell is exited by the user. */
+config_depend(CONFIG_MUTEK_SHELL)
 void mutek_shell_start(struct device_char_s *c, const char *term);
 
-#define MUTEK_SHELL_GROUP_REGISTER(group)             \
+#ifdef CONFIG_MUTEK_SHELL
+# define MUTEK_SHELL_GROUP_REGISTER(group)             \
   __attribute__((section(".shell")))                  \
   extern TERMUI_CON_GROUP_DECL(group);
+#else
+# define MUTEK_SHELL_GROUP_REGISTER(group)
+#endif
 
 #endif
 

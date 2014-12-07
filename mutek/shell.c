@@ -75,3 +75,21 @@ void mutek_shell_start(struct device_char_s *c, const char *term)
   mem_free(tm);
 }
 
+#ifdef CONFIG_MUTEK_SHELL_THREAD
+
+#include <mutek/thread.h>
+#include <mutek/console.h>
+
+static CONTEXT_ENTRY(shell_thread)
+{
+  mutek_shell_start(param, "xterm");
+}
+
+void mutek_shell_thread_init()
+{
+  if (device_check_accessor(&console_dev))
+    thread_create(shell_thread, &console_dev, NULL);
+}
+
+#endif
+
