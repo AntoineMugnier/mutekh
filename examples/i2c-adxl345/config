@@ -10,7 +10,10 @@
   # Libs
   CONFIG_PTHREAD
   CONFIG_PTHREAD_MAIN
+  CONFIG_PTHREAD_STACK_SIZE 16384
 
   %include scripts/options.build
   %include arch/arch.build
+
+  CONFIG_DRIVER_ADXL345
 
