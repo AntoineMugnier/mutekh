@@ -35,6 +35,8 @@
 #include <device/driver.h>
 #include <mutek/kroutine.h>
 
+#include <enums.h>
+
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 # include <mutek/bytecode.h>
 # include <device/class/gpio.h>
@@ -58,6 +60,11 @@ struct dev_spi_ctrl_queue_s;
 
 /***************************************** config */
 
+ENUM_DESCRIPTOR(dev_spi_polarity_e, strip:DEV_SPI_CS_, upper);
+ENUM_DESCRIPTOR(dev_spi_ckmode_e, strip:DEV_SPI_CK_, upper);
+ENUM_DESCRIPTOR(dev_spi_bit_order_e, strip:DEV_SPI_, upper);
+ENUM_DESCRIPTOR(dev_spi_cs_policy_e, strip:DEV_SPI_CS_, upper);
+
 enum dev_spi_bit_order_e
 {
   DEV_SPI_MSB_FIRST,
@@ -77,6 +84,7 @@ enum dev_spi_ckmode_e
   DEV_SPI_CK_HIGH_LEADING,
   DEV_SPI_CK_HIGH_TRAILING,
 };
+
 
 enum dev_spi_cs_policy_e
 {
@@ -346,6 +354,13 @@ struct dev_spi_ctrl_queue_s
     entry of the controller, if available.
 */
 error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q);
+
+#if defined(CONFIG_MUTEK_SCHEDULER)
+/** This helper function performs a SPI transfert as defined in @tt tr
+    and waits for end of transfert.
+ */
+error_t dev_spi_wait_transfer(struct dev_spi_ctrl_transfer_s * tr);
+#endif
 
 /** This helper function release the device accessor associated with
     the SPI request queue. @see dev_spi_queue_init

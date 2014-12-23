@@ -26,6 +26,7 @@
 #include <device/class/spi.h>
 #include <device/class/timer.h>
 #include <device/class/gpio.h>
+#include <device/request.h>
 
 #include <mutek/bytecode.h>
 
@@ -34,6 +35,11 @@
 #endif
 #include <hexo/lock.h>
 #include <hexo/interrupt.h>
+
+const char dev_spi_ckmode_e[] = ENUM_DESC_DEV_SPI_CKMODE_E;
+const char dev_spi_polarity_e[] = ENUM_DESC_DEV_SPI_POLARITY_E;
+const char dev_spi_bit_order_e[] = ENUM_DESC_DEV_SPI_BIT_ORDER_E;
+const char dev_spi_cs_policy_e[] = ENUM_DESC_DEV_SPI_CS_POLICY_E;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 
@@ -182,7 +188,7 @@ static void device_spi_ctrl_next(struct dev_spi_ctrl_queue_s *q)
                 rq->priority ? KROUTINE_IMMEDIATE : KROUTINE_SCHED_SWITCH);
   tr->pvdata = q;
 
-  lock_release_irq(&q->lock);
+ l lock_release_irq(&q->lock);
   kroutine_exec(&tr->kr, cpu_is_interruptible());
 }
 #endif
@@ -707,6 +713,55 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq)
   device_put_accessor(&rq->accessor);
   device_put_accessor(&rq->gpio);
 }
+
+
+#if defined(CONFIG_MUTEK_SCHEDULER)
+
+
+KROUTINE_EXEC(dev_request_spi_wait_done)
+{
+  struct dev_request_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
+  struct dev_request_status_s *status = rq->pvdata;
+
+  LOCK_SPIN_IRQ(&status->lock);
+  if (status->ctx != NULL)
+    sched_context_start(status->ctx);
+  status->done = 1;
+  LOCK_RELEASE_IRQ(&status->lock);
+}
+
+error_t dev_spi_wait_transfer(struct dev_spi_ctrl_transfer_s * tr)
+{
+  struct dev_request_status_s status;
+
+  status.done = 0;
+  lock_init(&status.lock);
+  status.ctx = NULL;
+  tr->pvdata = &status;
+  kroutine_init(&tr->kr, &dev_request_spi_wait_done, KROUTINE_IMMEDIATE);
+
+  DEVICE_OP(tr->accessor, transfer, tr);
+
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+
+  lock_spin(&status.lock);
+
+  if (!status.done)
+    {
+      status.ctx = sched_get_current();
+      sched_stop_unlock(&status.lock);
+    }
+  else
+    lock_release(&status.lock);
+
+  CPU_INTERRUPT_RESTORESTATE;
+
+  lock_destroy(&status.lock);
+
+  return tr->err;
+}
+
+#endif
 
 #endif
 

@@ -12,7 +12,8 @@ doc_headers =  device/device.h  device/driver.h device/irq.h device/resources.h 
     device/class/valio.h
 
 enum_headers = device/types.h device/driver.h device/device.h device/class/mem.h \
-               device/class/pwm.h device/class/crypto.h device/class/timer.h
+               device/class/pwm.h device/class/crypto.h device/class/timer.h \
+               device/class/spi.h
 
 objs = driver.o device.o resources.o init.o request.o
 
@@ -33,7 +34,11 @@ objs += device_i2c.o
 objs-$(CONFIG_DEVICE_SHELL) += shell_i2c.o
 endif
 
-objs-$(CONFIG_DEVICE_SPI) += device_spi.o
+ifeq ($(CONFIG_DEVICE_SPI), defined)
+objs += device_spi.o
+objs-$(CONFIG_DEVICE_SHELL) += shell_spi.o
+endif
+
 objs-$(CONFIG_DEVICE_LCD) += device_lcd.o
 objs-$(CONFIG_DEVICE_IOMUX) += device_iomux.o
 objs-$(CONFIG_DEVICE_RFPACKET) += device_rfpacket.o
