@@ -133,6 +133,12 @@ arch/nrf5x/peripheral.h
     This driver should only be used to seed another RNG.
   @end section
 
+  @section {ADC}
+    ADC is handled through relevant @ref {VALIO_ADC_VALUE} {Valio}
+    @ref {valio_adc_group_s} {subclass}.  Analog pin configuration is
+    done at driver instantiation time.
+  @end section
+
 @end section
 
 @section {Implementation notes}
