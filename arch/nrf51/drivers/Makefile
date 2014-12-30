@@ -14,3 +14,4 @@ objs += clock.o
 objs-$(CONFIG_DRIVER_NRF51_BLE_RADIO) += ble_radio.o ble_radio_handler.o
 objs-$(CONFIG_DRIVER_NRF51_AES) += aes.o
 objs-$(CONFIG_DRIVER_NRF51_RNG) += rng.o
+objs-$(CONFIG_DRIVER_NRF51_ADC) += adc.o
