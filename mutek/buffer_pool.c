@@ -51,7 +51,8 @@ struct buffer_s *buffer_pool_alloc(struct buffer_pool_s *pool)
 
     buffer->pool = pool;
     buffer_refinit(buffer);
-    buffer->size = pool->slab.unit_size;
+    buffer->begin = 0;
+    buffer->end = pool->slab.unit_size - sizeof(struct buffer_s);
 
     return buffer;
 }

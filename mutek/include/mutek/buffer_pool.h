@@ -6,21 +6,33 @@
 #include <gct_atomic.h>
 
 #include <gct/refcount.h>
+#include <gct/container_clist.h>
 
 #include "slab.h"
+
+/** @internal */
+#define GCT_CONTAINER_ALGO_buffer_queue CLIST
+#define GCT_CONTAINER_REFCOUNT_buffer_queue buffer
 
 struct buffer_pool_s;
 
 struct buffer_s
 {
-    GCT_REFCOUNT_ENTRY(obj_entry);
-    struct buffer_pool_s *pool;
+  GCT_REFCOUNT_ENTRY(obj_entry);
+  GCT_CONTAINER_ENTRY(buffer_queue, entry);
 
-    uint16_t size;
-    uint8_t data[0];
+  struct buffer_pool_s *pool;
+
+  uint16_t begin;
+  uint16_t end;
+  uint8_t data[0];
 };
 
 GCT_REFCOUNT(buffer, struct buffer_s *, obj_entry);
+
+GCT_CONTAINER_TYPES(buffer_queue, struct buffer_s *, entry);
+GCT_CONTAINER_FCNS(buffer_queue, static inline, buffer_queue,
+                   init, destroy, push, pop, pushback, next, head, isempty);
 
 struct buffer_pool_s {
     struct slab_s slab;
@@ -36,7 +48,19 @@ void buffer_pool_cleanup(struct buffer_pool_s *pool);
 
 struct buffer_s *buffer_pool_alloc(struct buffer_pool_s *pool);
 
+ALWAYS_INLINE
+size_t buffer_pool_unit_size(const struct buffer_pool_s *pool)
+{
+  return pool->slab.unit_size - sizeof(struct buffer_s);
+}
+
 /** @internal */
 void buffer_destroy(struct buffer_s *buffer);
+
+ALWAYS_INLINE
+size_t buffer_size(const struct buffer_s *buffer)
+{
+  return buffer_pool_unit_size(buffer->pool);
+}
 
 #endif
