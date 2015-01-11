@@ -102,21 +102,24 @@ DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 9,
 
 DEV_DECLARE_STATIC(usart1_dev, "spi1", 0, efm32_usart_spi_drv, &usart1_dev_res);
 
-#elif defined(CONFIG_DRIVER_EFM32_USART_CHAR)
+#endif
 
-DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 9,
-  DEV_STATIC_RES_MEM(0x4000c400, 0x4000c800),
-  DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USART1, 0),
 
-  DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_RX, 0, "/cpu"),
-  DEV_STATIC_RES_IRQ(1, EFM32_IRQ_USART1_TX, 0, "/cpu"),
+#if defined(CONFIG_DRIVER_EFM32_USART_CHAR)
+
+DEV_DECLARE_STATIC_RESOURCES(uart0_dev_res, 9,
+  DEV_STATIC_RES_MEM(0x4000e000, 0x4000e400),
+  DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_UART0, 0),
+
+  DEV_STATIC_RES_IRQ(0, EFM32_IRQ_UART0_RX, 0, "/cpu"),
+  DEV_STATIC_RES_IRQ(1, EFM32_IRQ_UART0_TX, 0, "/cpu"),
 
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
-  DEV_STATIC_RES_IOMUX("rx", EFM32_LOC1, EFM32_PD1, 0, 0),
-  DEV_STATIC_RES_IOMUX("tx", EFM32_LOC1, EFM32_PD0, 0, 0),
+  DEV_STATIC_RES_IOMUX("rx", EFM32_LOC1, EFM32_PE1, 0, 0),
+  DEV_STATIC_RES_IOMUX("tx", EFM32_LOC1, EFM32_PE0, 0, 0),
 );
 
-DEV_DECLARE_STATIC(usart1_dev, "uart1", 0, efm32_usart_drv, &usart1_dev_res);
+DEV_DECLARE_STATIC(uart0_dev, "uart0", 0, efm32_usart_drv, &uart0_dev_res);
 
 #endif
 
@@ -133,7 +136,7 @@ DEV_DECLARE_STATIC_RESOURCES(leuart0_dev_res, 6,
   DEV_STATIC_RES_IOMUX("rx",  EFM32_LOC0, EFM32_PD5, 0, 0),
 );
 
-DEV_DECLARE_STATIC(leuart0_dev, "uart0", 0, efm32_leuart_drv, &leuart0_dev_res);
+DEV_DECLARE_STATIC(leuart0_dev, "leuart0", 0, efm32_leuart_drv, &leuart0_dev_res);
 
 #endif
 
