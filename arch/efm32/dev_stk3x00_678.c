@@ -97,7 +97,7 @@ DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 9,
 #endif
 
 #ifdef CONFIG_DRIVER_EFM32_TIMER
-  DEV_STATIC_RES_DEV_PARAM("spi-timer", "/timer1"),
+  DEV_STATIC_RES_DEV_PARAM("spi-timer", "/rtc"),
 #endif
 );
 
