@@ -26,6 +26,7 @@
 
 #include <mutek/mem_alloc.h>
 #include <arch/efm32_gpio.h>
+#include <arch/efm32_devaddr.h>
 
 #include <device/resources.h>
 #include <device/device.h>
@@ -43,8 +44,6 @@
 
 struct efm32_gpio_private_s
 {
-  uintptr_t           addr; 
-
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
   struct dev_irq_ep_s sink[CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT];
 
@@ -120,7 +119,6 @@ static error_t efm32_gpio_mode(enum dev_pin_driving_e mode,
 static DEV_GPIO_SET_MODE(efm32_gpio_set_mode)
 {
   struct device_s *dev = gpio->dev;
-  struct efm32_gpio_private_s *pv = dev->drv_pv;
 
   if (io_last >= GPIO_BANK_SIZE * 6)
     return -ERANGE;
@@ -151,7 +149,7 @@ static DEV_GPIO_SET_MODE(efm32_gpio_set_mode)
   mlen -= GPIO_BANK_SIZE/2;
 
  last:;
-  uintptr_t a = pv->addr + EFM32_GPIO_MODEL_ADDR(io_first / GPIO_BANK_SIZE)
+  uintptr_t a = EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(io_first / GPIO_BANK_SIZE)
               + ((io_first & 8) >> 1);
   uint32_t x = endian_le32(cpu_mem_read_32(a));
   x = (x & ~mp) | (mp & mde); 
@@ -189,8 +187,6 @@ static DEV_GPIO_SET_OUTPUT(efm32_gpio_set_output)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  struct efm32_gpio_private_s *pv = dev->drv_pv;
-
   uint32_t cm, sm, tmask;
   uint32_t cmp = 0;
   uint32_t smp = 0;
@@ -216,7 +212,7 @@ static DEV_GPIO_SET_OUTPUT(efm32_gpio_set_output)
 
  last:;
   /* update DOUT register */
-  uintptr_t a = pv->addr + EFM32_GPIO_DOUT_ADDR(io_first / GPIO_BANK_SIZE);
+  uintptr_t a = EFM32_GPIO_ADDR + EFM32_GPIO_DOUT_ADDR(io_first / GPIO_BANK_SIZE);
   uint32_t x = endian_le32(cpu_mem_read_32(a));
   uint32_t tg = cmp & smp;
   x = ((x ^ tg) & ~(cmp ^ smp)) | (~cmp & smp);
@@ -259,18 +255,17 @@ static DEV_GPIO_GET_INPUT(efm32_gpio_get_input)
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  struct efm32_gpio_private_s *pv = dev->drv_pv;
   uint32_t vp, v;
   uint_fast8_t bf = io_first / GPIO_BANK_SIZE;
   uint_fast8_t bl = io_last / GPIO_BANK_SIZE;
   uint_fast8_t shift = io_first % GPIO_BANK_SIZE;
 
-  vp = endian_le32(cpu_mem_read_32(pv->addr + EFM32_GPIO_DIN_ADDR(bf)));
+  vp = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(bf)));
   vp >>= shift;
 
   while (bf++ < bl)
     {
-      v = endian_le32(cpu_mem_read_32(pv->addr + EFM32_GPIO_DIN_ADDR(bf)));
+      v = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(bf)));
       v = (v << (GPIO_BANK_SIZE - shift)) | vp ;
       vp = v >> GPIO_BANK_SIZE;
 
@@ -300,7 +295,6 @@ static const struct driver_gpio_s efm32_gpio_gpio_drv =
 static DEV_IOMUX_SETUP(efm32_gpio_iomux_setup)
 {
   struct device_s *dev = accessor->dev;
-  struct efm32_gpio_private_s *pv = dev->drv_pv;
 
   if (io_id >= GPIO_BANK_SIZE * 6)
     return -ERANGE;
@@ -309,7 +303,7 @@ static DEV_IOMUX_SETUP(efm32_gpio_iomux_setup)
   if (efm32_gpio_mode(dir, &mde))
     return -ENOTSUP;
 
-  uintptr_t a = pv->addr + EFM32_GPIO_MODEL_ADDR(io_id / GPIO_BANK_SIZE)
+  uintptr_t a = EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(io_id / GPIO_BANK_SIZE)
               + ((io_id & 8) >> 1);
 
   uint_fast8_t shift = (io_id % 8) * 4;
@@ -427,31 +421,31 @@ static DEV_ICU_ENABLE_IRQ(efm32_gpio_icu_enable_irq)
     {
       /* set polarity */
       uint32_t mask = 1 << line;
-      uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_GPIO_EXTIRISE_ADDR));
+      uint32_t x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR));
       x = (mask & e) | (~mask & x);
-      cpu_mem_write_32(pv->addr + EFM32_GPIO_EXTIRISE_ADDR, endian_le32(x));
+      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIRISE_ADDR, endian_le32(x));
 
-      x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_GPIO_EXTIFALL_ADDR));
+      x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR));
       x = (mask & d) | (~mask & x);
-      cpu_mem_write_32(pv->addr + EFM32_GPIO_EXTIFALL_ADDR, endian_le32(x));
+      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_EXTIFALL_ADDR, endian_le32(x));
 
       /* Select bank */
       uintptr_t a = line >= 8 ? EFM32_GPIO_EXTIPSELH_ADDR : EFM32_GPIO_EXTIPSELL_ADDR;
-      x = endian_le32(cpu_mem_read_32(pv->addr + a));
+      x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + a));
       EFM32_GPIO_EXTIPSELL_EXT_SETVAL(line & 7, x, bank);
-      cpu_mem_write_32(pv->addr + a, endian_le32(x));
+      cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
 
       /* Change pin mode to input */
       a = line >= 8 ? EFM32_GPIO_MODEH_ADDR(bank) : EFM32_GPIO_MODEL_ADDR(bank);
-      x = endian_le32(cpu_mem_read_32(pv->addr + a));
+      x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + a));
       EFM32_GPIO_MODEL_MODE_SET(line & 7, x, INPUT);
-      cpu_mem_write_32(pv->addr + a, endian_le32(x));
+      cpu_mem_write_32(EFM32_GPIO_ADDR + a, endian_le32(x));
 
       /* Clear and enable interrupt */
-      cpu_mem_write_32(pv->addr + EFM32_GPIO_IFC_ADDR, endian_le32(1 << line));
-      x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_GPIO_IEN_ADDR));
+      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, endian_le32(1 << line));
+      x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR));
       x |= (1 << line);
-      cpu_mem_write_32(pv->addr + EFM32_GPIO_IEN_ADDR, endian_le32(x));
+      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, endian_le32(x));
 
       pv->irq[line].enabled = 1;
     }
@@ -467,9 +461,9 @@ static DEV_ICU_DISABLE_IRQ(efm32_gpio_icu_disable_irq)
   uint_fast8_t line = icu_in_id % 16;
 
   /* Disable external interrupt */
-  uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_GPIO_IEN_ADDR));
+  uint32_t x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR));
   x &= ~(1 << line);
-  cpu_mem_write_32(pv->addr + EFM32_GPIO_IEN_ADDR, endian_le32(x));
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, endian_le32(x));
 }
 
 static DEV_IRQ_EP_PROCESS(efm32_gpio_source_process)
@@ -478,19 +472,19 @@ static DEV_IRQ_EP_PROCESS(efm32_gpio_source_process)
 
   while (1)
     {
-      uint32_t x = cpu_mem_read_32(pv->addr + EFM32_GPIO_IF_ADDR);
+      uint32_t x = cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_IF_ADDR);
 
       if (!x)
         break;
 
-      cpu_mem_write_32(pv->addr + EFM32_GPIO_IFC_ADDR, x);
+      cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IFC_ADDR, x);
       x = endian_le32(x);
 
       while (x)
         {
           uint_fast8_t i = __builtin_ctz(x);
           struct dev_irq_ep_s *sink = pv->sink + i;
-          uint_fast16_t id = (cpu_mem_read_32(pv->addr + EFM32_GPIO_DIN_ADDR(pv->irq[i].bank)) >> i) & 1;
+          int_fast16_t id = (cpu_mem_read_32(EFM32_GPIO_ADDR + EFM32_GPIO_DIN_ADDR(pv->irq[i].bank)) >> i) & 1;
           sink->process(sink, &id);
           x ^= 1 << i;
         }
@@ -541,8 +535,9 @@ static DEV_INIT(efm32_gpio_init)
 
   dev->drv_pv = pv;
 
-  if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
-    goto err_mem;
+  __unused__ uintptr_t addr = 0;
+  assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0 &&
+         EFM32_GPIO_ADDR == addr);
 
 #ifdef CONFIG_DEVICE_CLOCK
   /* enable clock */
@@ -592,7 +587,7 @@ static DEV_CLEANUP(efm32_gpio_cleanup)
   struct efm32_gpio_private_s  *pv = dev->drv_pv;
 
 #ifdef CONFIG_DRIVER_EFM32_GPIO_ICU
-  cpu_mem_write_32(pv->addr + EFM32_GPIO_IEN_ADDR, 0);
+  cpu_mem_write_32(EFM32_GPIO_ADDR + EFM32_GPIO_IEN_ADDR, 0);
 
   device_irq_source_unlink(dev, pv->src, GPIO_SRC_IRQ_COUNT);
   device_irq_source_unlink(dev, pv->sink, CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT);
@@ -605,4 +600,3 @@ static DEV_CLEANUP(efm32_gpio_cleanup)
 
   mem_free(pv);
 }
-

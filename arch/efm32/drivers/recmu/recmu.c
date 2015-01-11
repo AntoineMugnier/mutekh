@@ -26,16 +26,13 @@
 
 #include <mutek/mem_alloc.h>
 #include <arch/efm32_cmu.h>
+#include <arch/efm32_devaddr.h>
 #include <arch/efm32_clock.h>
 
 #include <device/resources.h>
 #include <device/device.h>
 #include <device/irq.h>
 #include <device/class/clock.h>
-
-#define CONFIG_EFM32_RMU_ADDR 0x400ca000
-#define CONFIG_EFM32_EMU_ADDR 0x400c6000
-#define CONFIG_EFM32_CMU_ADDR 0x400c8000
 
 /* FIXME uint32_t would be better when EFM32_CLOCK_count <= 32 */
 typedef uint64_t efm32_node_mask_t;
@@ -300,7 +297,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_RTC:
       node = EFM32_CLOCK_LFACLK;
       div = 1 << EFM32_CMU_LFAPRESC0_RTC_GET(endian_le32(
-        cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR)));
+        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR)));
       break;
 #endif
 
@@ -308,7 +305,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_LCD:
       node = EFM32_CLOCK_LFACLK;
       div = 16 << EFM32_CMU_LFAPRESC0_LCD_GET(endian_le32(
-        cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR)));
+        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR)));
       break;
 #endif
 
@@ -316,7 +313,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_LETIMER:
       node = EFM32_CLOCK_LFACLK;
       div = 1 << EFM32_CMU_LFAPRESC0_LETIMER0_GET(endian_le32(
-        cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR)));
+        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR)));
       break;
 #endif
 
@@ -324,7 +321,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_LESENSE:
       node = EFM32_CLOCK_LFACLK;
       div = 1 << EFM32_CMU_LFAPRESC0_LESENSE_GET(endian_le32(
-        cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR)));
+        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR)));
       break;
 #endif
 
@@ -333,7 +330,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_LEUART0:
       node = EFM32_CLOCK_LFBCLK;
       div = 1 << EFM32_CMU_LFBPRESC0_LEUART0_GET(endian_le32(
-        cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFBPRESC0_ADDR)));
+        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFBPRESC0_ADDR)));
       break;
 #endif
 
@@ -341,7 +338,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_LEUART1:
       node = EFM32_CLOCK_LFBCLK;
       div = 1 << EFM32_CMU_LFBPRESC0_LEUART1_GET(endian_le32(
-        cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFBPRESC0_ADDR)));
+        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFBPRESC0_ADDR)));
       break;
 #endif
 
@@ -359,7 +356,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
         {
           node = EFM32_CLOCK_HFCLKDIV;
           div = 1 << EFM32_CMU_HFCORECLKDIV_HFCORECLKDIV_GET(endian_le32(
-            cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKDIV_ADDR)));
+            cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKDIV_ADDR)));
         }
 
       /* HFPERCLK & childs */
@@ -367,7 +364,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
         {
           node = EFM32_CLOCK_HFCLKDIV;
           div = 1 << EFM32_CMU_HFPERCLKDIV_HFPERCLKDIV_GET(endian_le32(
-            cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR)));
+            cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR)));
         }
 
       /* not a lower node */
@@ -386,7 +383,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   || defined(CONFIG_EFM32_WONDER_GECKO) \
   || defined(CONFIG_EFM32_GIANT_GECKO)
       div *= EFM32_CMU_CTRL_HFCLKDIV_GET(endian_le32(
-        cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_CTRL_ADDR))) + 1;
+        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_CTRL_ADDR))) + 1;
 # endif
     case EFM32_CLOCK_HFCLK:
       node = pv->hfclk_parent;
@@ -414,7 +411,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   || defined(CONFIG_EFM32_GIANT_GECKO) \
   || defined(CONFIG_EFM32_ZERO_GECKO)
       div *= 2 << EFM32_CMU_HFCORECLKDIV_HFCORECLKLEDIV_GET(endian_le32(
-        cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKDIV_ADDR)));
+        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKDIV_ADDR)));
 # else
       div *= 2;
 # endif
@@ -434,7 +431,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
       static const uint8_t hfrcoband[8] = { 1, 7, 11, 14, 21, 28 };
       freq->denom = 1;
       freq->num = hfrcoband[EFM32_CMU_HFRCOCTRL_BAND_GET(endian_le32(
-        cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFRCOCTRL_ADDR)))] * 1000000;
+        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFRCOCTRL_ADDR)))] * 1000000;
       *acc = DEV_FREQ_ACC(4, 27); /* 1% */
       break;
     }
@@ -444,7 +441,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
       static const uint8_t auxfrcoband[8] = { 14, 11, 7, 1, 0, 0, 28, 21 };
       freq->denom = 1;
       freq->num = auxfrcoband[EFM32_CMU_AUXHFRCOCTRL_BAND_GET(endian_le32(
-        cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR)))] * 1000000;
+        cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR)))] * 1000000;
       *acc = DEV_FREQ_ACC(4, 27); /* 1% */
       break;
     }
@@ -899,7 +896,7 @@ static void efm32_recmu_clock_wait(struct efm32_recmu_private_s *pv)
   if (pv->wait_mask & (1 << EFM32_CLOCK_LFRCO))
     x |= EFM32_CMU_STATUS_LFRCORDY;
 
-  while ((endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR +
+  while ((endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR +
                                       EFM32_CMU_STATUS_ADDR)) & x) != x)
     ;
 
@@ -946,7 +943,7 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
         continue;
 
       /* enable/disable peripherals clocks */
-      uint32_t x = cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + t->addr);
+      uint32_t x = cpu_mem_read_32(EFM32_CMU_ADDR + t->addr);
       while (q)
         {
           dev_clock_node_id_t id = ffs(q) - 1;
@@ -962,7 +959,7 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
 
           q = q & (q - 1);  /* clear rightmost bit set */
         }
-      cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + t->addr, x);
+      cpu_mem_write_32(EFM32_CMU_ADDR + t->addr, x);
     }
 
   /***** intermediate nodes */
@@ -972,9 +969,9 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
   /* enable/disable EFM32_CLOCK_HFPERCLK */
   if (m & (1 << EFM32_CLOCK_HFPERCLK))
     {
-      uint32_t x = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR));
+      uint32_t x = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR));
       EFM32_CMU_HFPERCLKDIV_HFPERCLKEN_SET(x, (dep_mask >> EFM32_CLOCK_HFPERCLK) & 1);
-      cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR, endian_le32(x));
+      cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR, endian_le32(x));
     }
 
 #ifdef EFM32_CLOCK_USBC
@@ -982,9 +979,9 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
   if (m & (1 << EFM32_CLOCK_USBC))
     {
       bool_t en = (dep_mask >> EFM32_CLOCK_USBC) & 1;
-      uint32_t x = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR));
+      uint32_t x = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR));
       EFM32_CMU_HFCORECLKEN0_USBC_SET(x, en);
-      cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR, endian_le32(x));
+      cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR, endian_le32(x));
       if (en)
         dep_mask |= (1 << pv->usbcclk_parent);
     }
@@ -1006,7 +1003,7 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
         dep_mask |= (1 << pv->lfbclk_parent) | (1 << EFM32_CLOCK_LE);
       }
 
-    cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFCLKSEL_ADDR, endian_le32(x));
+    cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFCLKSEL_ADDR, endian_le32(x));
   }
 
   /***** root nodes */
@@ -1016,9 +1013,9 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
   /* enable/disable EFM32_CLOCK_LE */
   if (m & (1 << EFM32_CLOCK_LE))
     {
-      uint32_t x = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR));
+      uint32_t x = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR));
       EFM32_CMU_HFCORECLKEN0_LE_SET(x, (dep_mask >> EFM32_CLOCK_LE) & 1);
-      cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR, endian_le32(x));
+      cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR, endian_le32(x));
     }
 
   /* enable/disable oscillators */
@@ -1047,7 +1044,7 @@ static void efm32_recmu_clock_en(struct efm32_recmu_private_s *pv,
       EFM32_CMU_OSCENCMD_HFXODIS_SET(cmd,  (dis >> EFM32_CLOCK_HFXO) & 1);
       EFM32_CMU_OSCENCMD_HFRCOEN_SET(cmd,  (en  >> EFM32_CLOCK_HFRCO) & 1);
       EFM32_CMU_OSCENCMD_HFRCODIS_SET(cmd, (dis >> EFM32_CLOCK_HFRCO) & 1);
-      cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_OSCENCMD_ADDR, endian_le32(cmd));
+      cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_OSCENCMD_ADDR, endian_le32(cmd));
 
       pv->wait_mask |= en;
     }
@@ -1075,29 +1072,29 @@ static DEV_CLOCK_COMMIT(efm32_recmu_commit)
   efm32_recmu_clock_wait(pv);
 
   /* Write configuration to device registers */
-  cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_CTRL_ADDR,
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_CTRL_ADDR,
                   endian_le32(pv->r_ctrl));
-  cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKDIV_ADDR,
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKDIV_ADDR,
                   endian_le32(pv->r_hfcoreclkdiv));
-  cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR,
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR,
                   endian_le32(pv->r_hfperclkdiv));
-  cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFRCOCTRL_ADDR,
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFRCOCTRL_ADDR,
                   endian_le32(pv->r_hfrcoctrl));
-  cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFRCOCTRL_ADDR,
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFRCOCTRL_ADDR,
                   endian_le32(pv->r_lfrcoctrl));
-  cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR,
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR,
                   endian_le32(pv->r_auxhfrcoctrl));
 
     /* lf clocks use the config mux for gating, register will be
        updated in efm32_recmu_clock_en. */
   pv->lfclksel = pv->r_lfclksel;
 
-  cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR,
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR,
                   endian_le32(pv->r_lfapresc0));
-  cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFBPRESC0_ADDR,
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFBPRESC0_ADDR,
                   endian_le32(pv->r_lfbpresc0));
 
-  cpu_mem_write_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_CMD_ADDR,
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_CMD_ADDR,
                   endian_le32(pv->r_cmd));
   pv->r_cmd = 0;
 
@@ -1160,16 +1157,16 @@ static DEV_CLOCK_COMMIT(efm32_recmu_commit)
 
 static void efm32_recmu_read_config(struct efm32_recmu_private_s *pv)
 {
-  pv->r_ctrl = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_CTRL_ADDR));
-  pv->r_hfcoreclkdiv = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR));
-  pv->r_hfperclkdiv = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR));
-  pv->r_hfrcoctrl = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_HFRCOCTRL_ADDR));
-  pv->r_lfrcoctrl = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFRCOCTRL_ADDR));
-  pv->r_auxhfrcoctrl = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR));
+  pv->r_ctrl = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_CTRL_ADDR));
+  pv->r_hfcoreclkdiv = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR));
+  pv->r_hfperclkdiv = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFPERCLKDIV_ADDR));
+  pv->r_hfrcoctrl = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFRCOCTRL_ADDR));
+  pv->r_lfrcoctrl = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFRCOCTRL_ADDR));
+  pv->r_auxhfrcoctrl = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_AUXHFRCOCTRL_ADDR));
   pv->r_cmd = 0;
   pv->r_lfclksel = pv->lfclksel;
-  pv->r_lfapresc0 = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR));
-  pv->r_lfbpresc0 = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR + EFM32_CMU_LFBPRESC0_ADDR));
+  pv->r_lfapresc0 = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFAPRESC0_ADDR));
+  pv->r_lfbpresc0 = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFBPRESC0_ADDR));
 
   pv->chg_mask = 0;
   pv->lfaclk_new_parent = pv->lfaclk_parent;
@@ -1310,15 +1307,15 @@ static DEV_INIT(efm32_recmu_init)
 {
   struct efm32_recmu_private_s *pv;
 
-  uintptr_t addr = 0;
-  assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0);
-  assert(CONFIG_EFM32_RMU_ADDR == addr);
+  __unused__ uintptr_t addr = 0;
+  assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0 &&
+         EFM32_RMU_ADDR == addr);
 
-  assert(device_res_get_uint(dev, DEV_RES_MEM, 1, &addr, NULL) == 0);
-  assert(CONFIG_EFM32_EMU_ADDR == addr);
+  assert(device_res_get_uint(dev, DEV_RES_MEM, 1, &addr, NULL) == 0 &&
+         EFM32_EMU_ADDR == addr);
 
-  assert(device_res_get_uint(dev, DEV_RES_MEM, 2, &addr, NULL) == 0);
-  assert(CONFIG_EFM32_CMU_ADDR == addr);
+  assert(device_res_get_uint(dev, DEV_RES_MEM, 2, &addr, NULL) == 0 &&
+         EFM32_CMU_ADDR == addr);
 
   dev->status = DEVICE_DRIVER_INIT_FAILED;
 
@@ -1386,7 +1383,7 @@ static DEV_INIT(efm32_recmu_init)
 
   /* hack to keep leuart clock enabled for early console before the
      driver is loaded. */
-  __unused__ uint32_t x = endian_le32(cpu_mem_read_32(CONFIG_EFM32_CMU_ADDR +
+  __unused__ uint32_t x = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR +
                                                       EFM32_CMU_LFBCLKEN0_ADDR));
 
 #ifdef EFM32_CLOCK_LEUART0
