@@ -136,6 +136,7 @@ sub eval_cond
 
     while (1) {
 	next if ($expr =~ s/\bdefined\(\s*([a-zA-Z_]\w*)\s*\)/defined $macros{$1} ? 1 : 0/ge);
+        next if ($expr =~ s/\s*([-+]?)(0x[a-fA-F0-9]+)\s*/$1.hex($2)/ge);
 	next if ($expr =~ s/\b([a-zA-Z_]\w*)\b/defined $macros{$1} ? $macros{$1}->{content} : 0/ge);
 	next if ($expr =~ s/\!\s*($num)/$1 ? 0 : 1/ge);
 	next if ($expr =~ s/\(\s*($num)\s*\)/$1/ge);
