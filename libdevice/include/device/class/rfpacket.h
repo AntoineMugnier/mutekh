@@ -90,12 +90,11 @@ struct dev_rfpacket_config_s
   /** RF frequency in Hz */
   uint32_t                      frequency;
 
-  union {
-    /** frequency deviation in Hz (FSK modulation) */
-    uint32_t                    deviation:24;
-    /** bandwidth in Hz (OOK modulation) */
-    uint32_t                    bw:24;
-  };
+  /** frequency deviation in Hz (FSK modulation) */
+  uint32_t                      deviation:24;
+
+  /** bandwidth in Hz (OOK modulation) */
+  uint32_t                      bw:24;
 
   /** Datarate in bps */
   uint32_t                      drate:24;
