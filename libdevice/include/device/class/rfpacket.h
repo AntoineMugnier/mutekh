@@ -73,17 +73,16 @@ struct dev_rfpacket_rq_s;
 enum dev_rfpacket_cfg_msk_e
 {
   DEV_RFPACKET_FREQUENCY     = (1 <<  0),
-  DEV_RFPACKET_DEVIATION_BW  = (1 <<  1),
-  DEV_RFPACKET_DRATE         = (1 <<  2),
-  DEV_RFPACKET_MOD           = (1 <<  3),
-  DEV_RFPACKET_SYNC_WORD     = (1 <<  4),
-  DEV_RFPACKET_SYMBOLS       = (1 <<  5),
+  DEV_RFPACKET_DEVIATION     = (1 <<  1),
+  DEV_RFPACKET_BW            = (1 <<  2),
+  DEV_RFPACKET_DRATE         = (1 <<  3),
+  DEV_RFPACKET_MOD           = (1 <<  4),
+  DEV_RFPACKET_SYNC_WORD     = (1 <<  5),
   DEV_RFPACKET_RSSI_THRD     = (1 <<  6),
   DEV_RFPACKET_ENCODING      = (1 <<  7),
   DEV_RFPACKET_CRC           = (1 <<  8),
-  DEV_RFPACKET_PREAMBLE_LEN  = (1 <<  9),
-  DEV_RFPACKET_PREAMBLE_TYPE = (1 << 10),
-  DEV_RFPACKET_SYNC_WORD_LEN = (1 << 11),
+  DEV_RFPACKET_PREAMBLE      = (1 <<  9),
+  DEV_RFPACKET_SYMBOLS       = (1 << 10),
 };
 
 struct dev_rfpacket_config_s
