@@ -714,9 +714,10 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq)
   device_put_accessor(&rq->gpio);
 }
 
+#endif
+
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
-
 
 KROUTINE_EXEC(dev_request_spi_wait_done)
 {
@@ -760,8 +761,6 @@ error_t dev_spi_wait_transfer(struct dev_spi_ctrl_transfer_s * tr)
 
   return tr->err;
 }
-
-#endif
 
 #endif
 

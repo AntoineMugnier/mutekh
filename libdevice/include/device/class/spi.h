@@ -355,12 +355,10 @@ struct dev_spi_ctrl_queue_s
 */
 error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q);
 
-#if defined(CONFIG_MUTEK_SCHEDULER)
 /** This helper function performs a SPI transfert as defined in @tt tr
-    and waits for end of transfert.
- */
+    and waits for end of transfert. */
+config_depend(CONFIG_MUTEK_SCHEDULER)
 error_t dev_spi_wait_transfer(struct dev_spi_ctrl_transfer_s * tr);
-#endif
 
 /** This helper function release the device accessor associated with
     the SPI request queue. @see dev_spi_queue_init
