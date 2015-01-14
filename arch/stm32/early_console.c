@@ -95,7 +95,7 @@ void stm32_early_console_init()
   /* configure baud rate tp 9600 Kbps. */
   DEVICE_REG_UPDATE(USART, 2, BRR,
     (int)(
-      stm32f4xx_clock_freq_apb1 / CONFIG_MUTEK_PRINTK_RATE
+      stm32f4xx_clock_freq_apb1 / CONFIG_STM32_PRINTK_RATE
       + 0.5
     )
   );
