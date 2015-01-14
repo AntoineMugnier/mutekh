@@ -22,11 +22,20 @@
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
-#include <hexo/interrupt.h>
 
-#include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
 
+#include <arch/efm32_leuart.h>
+
+static void efm32_leuart_write_reg(uint32_t addr, uintptr_t reg, uint32_t x)
+{
+  while (cpu_mem_read_32(addr + EFM32_LEUART_SYNCBUSY_ADDR)
+         & endian_le32(EFM32_LEUART_SYNCBUSY_MASK))
+    ;
+  cpu_mem_write_32(addr + reg, x);
+}
+
+#include <mutek/mem_alloc.h>
 #include <device/device.h>
 #include <device/resources.h>
 #include <device/driver.h>
@@ -34,8 +43,6 @@
 #include <device/class/char.h>
 #include <device/class/iomux.h>
 #include <device/class/clock.h>
-
-#include <arch/efm32_leuart.h>
 
 #if CONFIG_DRIVER_EFM32_LEUART_SWFIFO > 0
 #include <gct_platform.h>
@@ -74,19 +81,10 @@ struct efm32_leuart_context_s
   bool_t                        write_started:1;
 };
 
-static void efm32_leuart_write_reg(const struct efm32_leuart_context_s *pv,
-                                   uintptr_t reg, uint32_t x)
-{
-  while (cpu_mem_read_32(pv->addr + EFM32_LEUART_SYNCBUSY_ADDR)
-         & endian_le32(EFM32_LEUART_SYNCBUSY_MASK))
-    ;
-  cpu_mem_write_32(pv->addr + reg, x);
-}
-
 static void efm32_leuart_char_update_bauds(struct efm32_leuart_context_s *pv)
 {
   uint32_t div = (32 * pv->freq.num) / (pv->bauds * pv->freq.denom) - 32;
-  efm32_leuart_write_reg(pv, EFM32_LEUART_CLKDIV_ADDR,
+  efm32_leuart_write_reg(pv->addr, EFM32_LEUART_CLKDIV_ADDR,
                          endian_le32(EFM32_LEUART_CLKDIV_DIV(div)));
 }
 
@@ -157,7 +155,7 @@ static void efm32_leuart_try_write(struct device_s *dev)
   if (!uart_fifo_isempty(&pv->write_fifo) &&
          (cpu_mem_read_32(pv->addr + EFM32_LEUART_STATUS_ADDR)
            & endian_le32(EFM32_LEUART_STATUS_TXBL)) )
-    efm32_leuart_write_reg(pv, EFM32_LEUART_TXDATAX_ADDR,
+    efm32_leuart_write_reg(pv->addr, EFM32_LEUART_TXDATAX_ADDR,
                            endian_le32(uart_fifo_pop(&pv->write_fifo)));
 #endif
 
@@ -173,7 +171,7 @@ static void efm32_leuart_try_write(struct device_s *dev)
 #endif
           if (size < rq->size && (cpu_mem_read_32(pv->addr + EFM32_LEUART_STATUS_ADDR)
                     & endian_le32(EFM32_LEUART_STATUS_TXBL)))
-            efm32_leuart_write_reg(pv, EFM32_LEUART_TXDATAX_ADDR,
+            efm32_leuart_write_reg(pv->addr, EFM32_LEUART_TXDATAX_ADDR,
                                    endian_le32(rq->data[size++]));
 
 #if defined(CONFIG_DEVICE_IRQ) && CONFIG_DRIVER_EFM32_LEUART_SWFIFO > 0
@@ -264,7 +262,7 @@ static DEV_IRQ_EP_PROCESS(efm32_leuart_irq)
 
       if (ir & EFM32_LEUART_IF_TXC)
         {
-          efm32_leuart_write_reg(pv, EFM32_LEUART_IFC_ADDR,
+          efm32_leuart_write_reg(pv->addr, EFM32_LEUART_IFC_ADDR,
                                  endian_le32(EFM32_LEUART_IFC_TXC));
           efm32_leuart_try_write(dev);
         }
@@ -350,10 +348,10 @@ static DEV_INIT(efm32_leuart_init)
         ;
 
   /* disable and clear the uart */
-  efm32_leuart_write_reg(pv, EFM32_LEUART_CMD_ADDR,
+  efm32_leuart_write_reg(pv->addr, EFM32_LEUART_CMD_ADDR,
                     endian_le32(EFM32_LEUART_CMD_RXDIS | EFM32_LEUART_CMD_TXDIS));
 
-  efm32_leuart_write_reg(pv, EFM32_LEUART_CMD_ADDR,
+  efm32_leuart_write_reg(pv->addr, EFM32_LEUART_CMD_ADDR,
                     endian_le32(EFM32_LEUART_CMD_CLEARRX | EFM32_LEUART_CMD_CLEARTX));
 
   /* setup pinmux */
@@ -372,7 +370,7 @@ static DEV_INIT(efm32_leuart_init)
 
   EFM32_LEUART_ROUTE_LOCATION_SETVAL(route, loc[0] != IOMUX_INVALID_DEMUX ? loc[0] : loc[1]);
 
-  efm32_leuart_write_reg(pv, EFM32_LEUART_ROUTE_ADDR, endian_le32(route));
+  efm32_leuart_write_reg(pv->addr, EFM32_LEUART_ROUTE_ADDR, endian_le32(route));
 
   /* init software fifos */
   dev_request_queue_init(&pv->read_q);
@@ -397,7 +395,7 @@ static DEV_INIT(efm32_leuart_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* enable irqs */
-  efm32_leuart_write_reg(pv, EFM32_LEUART_IEN_ADDR,
+  efm32_leuart_write_reg(pv->addr, EFM32_LEUART_IEN_ADDR,
                     endian_le32(EFM32_LEUART_IEN_TXC | EFM32_LEUART_IEN_RXDATAV));
 #endif
 
@@ -406,7 +404,7 @@ static DEV_INIT(efm32_leuart_init)
   efm32_leuart_char_update_bauds(pv);
 
   /* enable the uart */
-  efm32_leuart_write_reg(pv, EFM32_LEUART_CMD_ADDR,
+  efm32_leuart_write_reg(pv->addr, EFM32_LEUART_CMD_ADDR,
                     endian_le32(EFM32_LEUART_CMD_RXEN | EFM32_LEUART_CMD_TXEN
                                 | EFM32_LEUART_CMD_RXBLOCKDIS));
 
@@ -443,13 +441,13 @@ DEV_CLEANUP(efm32_leuart_cleanup)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* disable irqs */
-  efm32_leuart_write_reg(pv, EFM32_LEUART_IEN_ADDR, 0);
+  efm32_leuart_write_reg(pv->addr, EFM32_LEUART_IEN_ADDR, 0);
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 #endif
 
   /* disable the uart */
-  efm32_leuart_write_reg(pv, EFM32_LEUART_CMD_ADDR,
+  efm32_leuart_write_reg(pv->addr, EFM32_LEUART_CMD_ADDR,
                          endian_le32(EFM32_LEUART_CMD_RXDIS | EFM32_LEUART_CMD_TXDIS));
 
 #ifdef CONFIG_DEVICE_CLOCK
@@ -469,3 +467,4 @@ DEV_CLEANUP(efm32_leuart_cleanup)
 
   mem_free(pv);
 }
+

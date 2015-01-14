@@ -406,7 +406,7 @@ static DEV_INIT(efm32_usart_char_init)
                                EFM32_USART_FRAME_STOPBITS(ONE)));
 
   /* setup baud rate */
-  pv->bauds = 9600;
+  pv->bauds = CONFIG_DRIVER_EFM32_USART_RATE;
   efm32_usart_char_update_bauds(pv);
 
   /* enable the uart */
