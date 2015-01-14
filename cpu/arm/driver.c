@@ -319,8 +319,10 @@ static DEV_USE(arm_use)
 
   switch (accessor->api->class_)
     {
+#ifdef CONFIG_CPU_ARM_TIMER_CYCLECOUNTER
     case DRIVER_CLASS_TIMER:
       return 0;
+#endif
 
     case DRIVER_CLASS_CPU:
     case DRIVER_CLASS_ICU:
