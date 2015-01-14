@@ -427,7 +427,7 @@ static DEV_INIT(x86_init)
 
 #ifdef CONFIG_DEVICE_IRQ
   /* init x86 irq sink end-points */
-  device_irq_sink_init(dev, pv->sinks, CPU_X86_IRQ_SINKS, DEV_IRQ_SENSE_UNKNOWN_HARDWIRED);
+  device_irq_sink_init(dev, pv->sinks, CPU_X86_IRQ_SINKS, DEV_IRQ_SENSE_ID_BUS);
 
 # ifdef CONFIG_ARCH_SMP
   CPU_LOCAL_CLS_SET(pv->node.cls, x86_icu_dev, dev);

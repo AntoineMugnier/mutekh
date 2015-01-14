@@ -341,8 +341,8 @@ static DEV_ICU_GET_ENDPOINT(efm32_gpio_icu_get_endpoint)
   switch (type)
     {
     case DEV_IRQ_EP_SINK: {
-      uint8_t line = id % 16;
-      uint_fast8_t bank = id / 16;
+      uint8_t line = id % GPIO_BANK_SIZE;
+      uint_fast8_t bank = id / GPIO_BANK_SIZE;
 
       if (line >= CONFIG_DRIVER_EFM32_GPIO_IRQ_COUNT || bank >= 6)
         return NULL;
@@ -355,7 +355,7 @@ static DEV_ICU_GET_ENDPOINT(efm32_gpio_icu_get_endpoint)
         {
           pv->irq[line].bank = bank;
           pv->irq[line].enabled = 0;
-          ep->sense = DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE;
+          ep->sense = DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE | DEV_IRQ_SENSE_ANY_EDGE;
         }
       else if (pv->irq[line].bank != bank)
         return NULL;
@@ -389,19 +389,31 @@ static DEV_ICU_ENABLE_IRQ(efm32_gpio_icu_enable_irq)
   if (!sense)
     return 0;
 
-  uint_fast8_t line = icu_in_id % 16;
+  uint_fast8_t line = icu_in_id % GPIO_BANK_SIZE;
   uint_fast8_t bank = pv->irq[line].bank;
 
+  /* if more than one mode is left, keep only the lsb */
+  sense = sense & ~(sense - 1);
+
   /* Select polarity of interrupt edge */
-  uintptr_t e = EFM32_GPIO_EXTIRISE_ADDR;
-  uintptr_t d = EFM32_GPIO_EXTIFALL_ADDR;
-  if (sense & DEV_IRQ_SENSE_FALLING_EDGE)
+  uint32_t e, d;
+
+  switch (sense)
     {
-      e = EFM32_GPIO_EXTIFALL_ADDR;
-      d = EFM32_GPIO_EXTIRISE_ADDR;
+    case DEV_IRQ_SENSE_FALLING_EDGE:
+      e = 0;
+      d = -1;
+      break;
+    case DEV_IRQ_SENSE_RISING_EDGE:
+      e = -1;
+      d = 0;
+      break;
+    case DEV_IRQ_SENSE_ANY_EDGE:
+      d = e = -1;
+      break;
+    default:
+      return 0;
     }
-  else if (!(sense & DEV_IRQ_SENSE_RISING_EDGE))
-    return 0;
 
   if (!device_icu_irq_enable(pv->src + icu_in_id % 2, 0, NULL, dev_ep))
     {
@@ -409,20 +421,19 @@ static DEV_ICU_ENABLE_IRQ(efm32_gpio_icu_enable_irq)
       return 0;
     }
 
-  /* if more than one mode is left, keep only the lsb */
-  sense = sense & ~(sense - 1);
   src->sense = sink->sense = sense;
 
   if (!pv->irq[line].enabled)
     {
       /* set polarity */
-      uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + e));
-      x |= 1 << line;
-      cpu_mem_write_32(pv->addr + e, endian_le32(x));
+      uint32_t mask = 1 << line;
+      uint32_t x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_GPIO_EXTIRISE_ADDR));
+      x = (mask & e) | (~mask & x);
+      cpu_mem_write_32(pv->addr + EFM32_GPIO_EXTIRISE_ADDR, endian_le32(x));
 
-      x = cpu_mem_read_32(pv->addr + d);
-      x &= ~(1 << line);
-      cpu_mem_write_32(pv->addr + d, endian_le32(x));
+      x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_GPIO_EXTIFALL_ADDR));
+      x = (mask & d) | (~mask & x);
+      cpu_mem_write_32(pv->addr + EFM32_GPIO_EXTIFALL_ADDR, endian_le32(x));
 
       /* Select bank */
       uintptr_t a = line >= 8 ? EFM32_GPIO_EXTIPSELH_ADDR : EFM32_GPIO_EXTIPSELL_ADDR;
@@ -479,7 +490,8 @@ static DEV_IRQ_EP_PROCESS(efm32_gpio_source_process)
         {
           uint_fast8_t i = __builtin_ctz(x);
           struct dev_irq_ep_s *sink = pv->sink + i;
-          sink->process(sink, id);
+          uint_fast16_t id = (cpu_mem_read_32(pv->addr + EFM32_GPIO_DIN_ADDR(pv->irq[i].bank)) >> i) & 1;
+          sink->process(sink, &id);
           x ^= 1 << i;
         }
     }

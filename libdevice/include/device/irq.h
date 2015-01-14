@@ -45,8 +45,8 @@ struct device_s;
    interrupt to other connected end-points. The implementation is
    different for source and sink end-points.
 
-   The @tt id parameter is used when multiple logical interrupts
-   are multiplexed on the same end-point.
+   The meaning of the @tt id parameter depends on the sense mode
+   specified by @ref dev_irq_sense_modes_e.
 
    Sink end-point implementation depends on number of connected source
    end-points. Implementations for possible cases are provided by the
@@ -63,36 +63,6 @@ struct device_s;
  */
 typedef DEV_IRQ_EP_PROCESS(dev_irq_ep_process_t);
 
-//#define DEV_IRQ(n) void (n) (struct dev_irq_ep_s *src, int_fast16_t *id)
-
-/** Common device class irq() function type. Must be called on
-    interrupt request.
-
-    * @param dev pointer to device descriptor
-    * @return 1 if interrupt have been handled by the device
-    */
-
-/**
-   @This is irq handling function of provided by device driver. I must
-   handle interrupt for the assocatied device. In case of interrupt
-   controller device, it may return a pointer to the next sink
-   end-point in the chain.
-
-   @param src end point which relayed the irq.
-   @param id identifier of logical irq for relaying device.
-
-   Interrupt controller device drivers return pointer to next sink
-   end-point or NULL. Other kind of device drivers always return NULL.
-
-   Interrupt controller device drivers have to find the next sink
-   end-point from their internal registers or passed logical interrupe
-   id value. On some systems the interrupt controller passes the
-   decoded logical interrupt id to the processor in hardware and we
-   need a way to pass this value back from one software handler to the
-   next one. Interrupt controller devices may update the id value so
-   that it is relevant for the next handler. */
-//typedef DEV_IRQ(dev_irq_t);
-
 enum dev_irq_ep_type_e
 {
   DEV_IRQ_EP_SOURCE,
@@ -104,13 +74,29 @@ struct dev_irq_bypass_s;
 
 enum dev_irq_sense_modes_e
 {
-  DEV_IRQ_SENSE_HIGH_LEVEL = 1,
-  DEV_IRQ_SENSE_LOW_LEVEL = 2,
-  DEV_IRQ_SENSE_RISING_EDGE = 4,
-  DEV_IRQ_SENSE_FALLING_EDGE = 8,
-  DEV_IRQ_SENSE_ASYNCH_RISING_EDGE = 16,
-  DEV_IRQ_SENSE_ASYNCH_FALLING_EDGE = 32,
-  DEV_IRQ_SENSE_UNKNOWN_HARDWIRED = 64,
+  /** IRQ number transmitted over a dedicated bus. When multiple
+      logical interrupts are multiplexed on the same end-point, the @tt
+      id parameter of the @ref dev_irq_ep_process_t function indicates
+      the logocal id of the triggered interrupt. */
+  DEV_IRQ_SENSE_ID_BUS                = 0x0001,
+  /** Level triggered irq line, active on logic high. */
+  DEV_IRQ_SENSE_HIGH_LEVEL            = 0x0002,
+  /** Level triggered irq line, active on logic low. */
+  DEV_IRQ_SENSE_LOW_LEVEL             = 0x0004,
+  /** Rising edge triggered irq line, sampled on clock edge. */
+  DEV_IRQ_SENSE_RISING_EDGE           = 0x0008,
+  /** Falling edge triggered irq line, sampled on clock edge. */
+  DEV_IRQ_SENSE_FALLING_EDGE          = 0x0010,
+  /** Rising or falling edge triggered irq line, sampled on clock
+      edge. The @tt id parameter of the @ref dev_irq_ep_process_t
+      function indicates the edge polarity. */
+  DEV_IRQ_SENSE_ANY_EDGE              = 0x0020,
+  /** Rising edge triggered irq line. */
+  DEV_IRQ_SENSE_ASYNC_RISING_EDGE     = 0x0040,
+  /** Falling edge triggered irq line. */
+  DEV_IRQ_SENSE_ASYNC_FALLING_EDGE    = 0x0080,
+  /** Rising or falling edge triggered irq line. */
+  DEV_IRQ_SENSE_ASYNC_ANY_EDGE        = 0x0100,
 };
 
 /** Device irq end-point object. Irq source and sink endpoints are

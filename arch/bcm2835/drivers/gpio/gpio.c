@@ -360,7 +360,7 @@ static DEV_ICU_GET_ENDPOINT(bcm2835_gpio_icu_get_endpoint)
         {
           ep->sense = DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE |
                   DEV_IRQ_SENSE_LOW_LEVEL | DEV_IRQ_SENSE_HIGH_LEVEL |
-                  DEV_IRQ_SENSE_ASYNCH_FALLING_EDGE | DEV_IRQ_SENSE_ASYNCH_RISING_EDGE;
+                  DEV_IRQ_SENSE_ASYNC_FALLING_EDGE | DEV_IRQ_SENSE_ASYNC_RISING_EDGE;
         }
 
       return ep;
@@ -463,11 +463,11 @@ static DEV_ICU_ENABLE_IRQ(bcm2835_gpio_icu_enable_irq)
         a =  BCM2835_GPIO_GPFEN_ADDR(bank);
         pv->edge[bank] |= 1 << line;
         break;
-      case DEV_IRQ_SENSE_ASYNCH_RISING_EDGE:
+      case DEV_IRQ_SENSE_ASYNC_RISING_EDGE:
         a =  BCM2835_GPIO_GPAREN_ADDR(bank);
         pv->edge[bank] |= 1 << line;
         break;
-      case DEV_IRQ_SENSE_ASYNCH_FALLING_EDGE:
+      case DEV_IRQ_SENSE_ASYNC_FALLING_EDGE:
         a =  BCM2835_GPIO_GPAFEN_ADDR(bank);
         pv->edge[bank] |= 1 << line;
         break;
@@ -613,7 +613,7 @@ static DEV_INIT(bcm2835_gpio_init)
   device_irq_sink_init(dev, pv->sink, GPIO_IO_COUNT,
                     DEV_IRQ_SENSE_FALLING_EDGE | DEV_IRQ_SENSE_RISING_EDGE |
                     DEV_IRQ_SENSE_LOW_LEVEL | DEV_IRQ_SENSE_HIGH_LEVEL |
-                    DEV_IRQ_SENSE_ASYNCH_FALLING_EDGE | DEV_IRQ_SENSE_ASYNCH_RISING_EDGE);
+                    DEV_IRQ_SENSE_ASYNC_FALLING_EDGE | DEV_IRQ_SENSE_ASYNC_RISING_EDGE);
 
 #endif
 
