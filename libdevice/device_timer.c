@@ -59,7 +59,8 @@ error_t dev_timer_init_sec(struct device_timer_s *accessor, dev_timer_delay_t *d
     return -ERANGE;
 
   *delay = d ? d : 1;
-  *rev = cfg.rev;
+  if (rev)
+    *rev = cfg.rev;
 
   return 0;
 }
@@ -83,7 +84,8 @@ error_t dev_timer_get_sec(struct device_timer_s *accessor, dev_timer_delay_t *de
     return -ERANGE;
 
   *delay = d ? d : 1;
-  *rev = cfg.rev;
+  if (rev)
+    *rev = cfg.rev;
 
   return 0;
 }
@@ -127,7 +129,8 @@ error_t dev_timer_shift_sec(struct device_timer_s *accessor,
         return -ERANGE;
     }
 
-  *rev = cfg.rev;
+  if (rev)
+    *rev = cfg.rev;
 
   return 0;
 }
