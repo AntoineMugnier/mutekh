@@ -408,7 +408,7 @@ const struct driver_timer_s  enst_rttimer_timer_drv =
 static const struct dev_enum_ident_s  enst_rttimer_ids[] =
 {
 #ifdef CONFIG_ARCH_SOCLIB
-  DEV_ENUM_FDTNAME_ENTRY("soclib:vci_rttimer"),
+  DEV_ENUM_FDTNAME_ENTRY("soclib:rttimer"),
 #endif
 #ifdef CONFIG_ARCH_GAISLER
   DEV_ENUM_GAISLER_ENTRY(0x09, 0x003),
@@ -453,15 +453,17 @@ static DEV_INIT(enst_rttimer_init)
   if (t_count == 0)
     return -EINVAL;
 
-  pv = mem_alloc(sizeof (*pv) + t_count * sizeof(struct enst_rttimer_state_s)
+  size_t s = sizeof (*pv) + t_count * sizeof(struct enst_rttimer_state_s)
 #ifdef CONFIG_DEVICE_IRQ
-		              + irq_count * sizeof(struct dev_irq_ep_s)
+    + irq_count * sizeof(struct dev_irq_ep_s)
 #endif
-                                           , (mem_scope_sys));
+    ;
+
+  pv = mem_alloc(s, (mem_scope_sys));
   if (!pv)
     return -ENOMEM;
 
-  memset(pv, 0, sizeof(*pv));
+  memset(pv, 0, s);
   pv->addr = addr;
   pv->t_count = t_count;
   pv->start_count = 0;
