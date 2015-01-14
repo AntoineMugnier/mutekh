@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <enums.h>
 #include <hexo/types.h>
 
 #include <libc/formatter.h>
@@ -405,6 +406,10 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 
 	/* decimal signed integer */
 
+#ifdef CONFIG_LIBC_FORMATTER_SIMPLE
+      case ('N'):
+        va_arg(ap, uint8_t *);
+#endif
       case ('d'):
       case ('i'): {
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
@@ -620,6 +625,23 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 	zeropad = 0;
 #endif
 	break;
+
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+      case ('N'): {
+        uint8_t *desc = va_arg(ap, uint8_t *);
+        buf = "?";
+        len = 1;
+        ENUM_FOREACH(uintptr_t, desc, {
+            if (value == val)
+              {
+                buf = (char*)name;
+                len = strlen(name);
+                break;
+              }
+          });
+        break;
+      }
+#endif
 
       default:
 	goto printf_state_main;
