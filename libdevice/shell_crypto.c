@@ -97,8 +97,6 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_cipher)
       memset(state, 0x55, info.state_size);
     }
 
-  uint8_t *auth;
-
   struct dev_crypto_context_s cctx = {
     .cache_ptr = NULL,
     .state_data = state,
@@ -130,19 +128,19 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_cipher)
       if (!(c->op & DEV_CRYPTO_INVERSE))
         return -EINVAL;
       cctx.auth_len = c->auth.len;
-      rq.auth = c->auth.str;
+      rq.auth = (void*)c->auth.str;
     }
 
   if (used & CRYPTO_OPT_IV)
     {
       cctx.iv_len = c->iv.len;
-      rq.iv_ctr = c->iv.str;
+      rq.iv_ctr = (void*)c->iv.str;
     }
 
   if (used & CRYPTO_OPT_AD)
     {
       rq.ad_len = c->ad.len;
-      rq.ad = c->ad.str;
+      rq.ad = (void*)c->ad.str;
     }
 
   dev_crypto_wait_op(&c->accessor, &rq);
