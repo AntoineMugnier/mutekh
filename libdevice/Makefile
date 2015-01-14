@@ -11,9 +11,14 @@ doc_headers =  device/device.h  device/driver.h device/irq.h device/resources.h 
     device/class/mem.h \
     device/class/valio.h
 
-enum_headers = device/types.h device/driver.h device/device.h device/class/mem.h \
-               device/class/pwm.h device/class/crypto.h device/class/timer.h \
-               device/class/spi.h
+enum_headers = include/device/types.h \
+               include/device/driver.h \
+               include/device/device.h \
+               include/device/class/mem.h \
+               include/device/class/pwm.h \
+               include/device/class/crypto.h \
+               include/device/class/timer.h \
+               include/device/class/spi.h
 
 objs = driver.o device.o resources.o init.o request.o
 

@@ -264,7 +264,7 @@ TARGET_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(objs-defined))
 COPY_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(copy) $$(copy-defined))
 META_OBJECT_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(meta) $$(meta-defined))
 PRE_HEADER_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(pre_headers) $$(pre_headers-defined))
-ENUM_HEADER_LIST+=$$(addprefix $$(LOCAL_SRC_DIR)/include/,$$(enum_headers) $$(enum_headers-defined))
+ENUM_HEADER_LIST+=$$(addprefix $$(LOCAL_SRC_DIR)/,$$(enum_headers) $$(enum_headers-defined))
 CLEAN_FILE_LIST+=$$(addprefix $$(LOCAL_OBJ_DIR)/,$$(objs) $$(copy) $$(meta) $$(objs-defined) $$(copy-defined) $$(meta-defined))
 
 PRE_HEADER_LIST+=$$(filter %.h,$$(COPY_OBJECT_LIST))
