@@ -608,6 +608,14 @@ void mutek_scheduler_initsmp()
 # endif
 #endif
 
+#ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
+  kroutine_queue_init(CPU_LOCAL_ADDR(kroutine_sched_switch));
+#endif
+
+#ifdef CONFIG_MUTEK_KROUTINE_IDLE
+  kroutine_queue_init(CPU_LOCAL_ADDR(kroutine_idle));
+#endif
+
   mutekh_startup_smp_barrier();
 }
 
@@ -616,14 +624,6 @@ void mutek_scheduler_start()
   /* init the processor idle thread */
   struct sched_context_s *idle = CPU_LOCAL_ADDR(sched_idle);
   sched_context_init(idle, CPU_LOCAL_ADDR(cpu_main_context));
-
-#ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
-  kroutine_queue_init(CPU_LOCAL_ADDR(kroutine_sched_switch));
-#endif
-
-#ifdef CONFIG_MUTEK_KROUTINE_IDLE
-  kroutine_queue_init(CPU_LOCAL_ADDR(kroutine_idle));
-#endif
 
   mutekh_startup_smp_barrier();
 
