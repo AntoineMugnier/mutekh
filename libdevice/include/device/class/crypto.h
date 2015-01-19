@@ -157,13 +157,15 @@ enum dev_crypto_mode_e
   DEV_CRYPTO_MODE_OCB3,
 
   /** Stream cipher mode. When this mode is used, the @tt in, @tt out,
-      @tt len and @tt iv_ctr fields are used. The @ref DEV_CRYPTO_INIT
-      operation flag is relevant and a state buffer must be provided
-      when it is not set. The input data is xored with the generated
-      key stream and stored to the output buffer. If the @tt out field
-      is @tt NULL, the amount of requested key stream is discarded. If
-      the @tt in field is @tt NULL, the key stream is stored instead
-      of being xored. */
+      @tt len and @tt iv_ctr fields or the request are used. The input
+      data is xored with the generated key stream and stored to the
+      output buffer. If the @tt out field is @tt NULL, the generated
+      key stream is discarded. If the @tt in field is @tt NULL, the
+      key stream is stored instead of being xored. The cipher is
+      initialized when the @ref DEV_CRYPTO_INIT operation flag is set,
+      taking the IV into account when relevant. The @ref
+      DEV_CRYPTO_FINALIZE flag can be used when a state buffer is not
+      provided. */
   DEV_CRYPTO_MODE_STREAM,
 
   /** Hash processing mode. When this mode is used, the @tt ad, @tt
@@ -187,8 +189,14 @@ enum dev_crypto_mode_e
       DEV_CRYPTO_INVERSE flag. */
   DEV_CRYPTO_MODE_HMAC,
 
-  /** Random data generator mode. When this mode is used, the @tt out,
-      and @tt len fields are used. No key is required. */
+  /** Random data generator mode. When the @ref DEV_CRYPTO_INVERSE
+      operation flag is set, the random generator is seeded with data
+      from the buffer specified by the @tt ad and @tt ad_len fields of
+      the request. When the @ref DEV_CRYPTO_FINALIZE operation flag is
+      set, random data is stored in the buffer specified by the @tt
+      out and @tt len fields. A state buffer must always be provided
+      and the @ref DEV_CRYPTO_INIT operation flag must be used to
+      initialize the state on the initial request. No key is used. */
   DEV_CRYPTO_MODE_RANDOM,
 };
 
