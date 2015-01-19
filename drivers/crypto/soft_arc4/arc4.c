@@ -48,7 +48,14 @@ static DEVCRYPTO_INFO(soft_arc4_info)
 
   memset(info, 0, sizeof(*info));
   info->name = "arc4";
-  info->modes_mask = 1 << DEV_CRYPTO_MODE_STREAM;
+  info->modes_mask = 0
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_ARC4_STREAM
+    | (1 << DEV_CRYPTO_MODE_STREAM)
+#endif
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_ARC4_RANDOM
+    | (1 << DEV_CRYPTO_MODE_RANDOM)
+#endif
+    ;
   info->cap |= DEV_CRYPTO_CAP_INPLACE | DEV_CRYPTO_CAP_NOTINPLACE
     | DEV_CRYPTO_CAP_STATEFUL
     | DEV_CRYPTO_CAP_128BITS_KEY | DEV_CRYPTO_CAP_192BITS_KEY
@@ -57,6 +64,65 @@ static DEVCRYPTO_INFO(soft_arc4_info)
   info->state_size = sizeof(struct soft_arc4_state_s);
 
   return 0;
+}
+
+static void soft_arc4_stinit(struct soft_arc4_state_s *st)
+{
+  uint_fast16_t a;
+  uint8_t * __restrict__ state = st->state;
+
+  for (a = 0; a < 256; a++)
+    state[a] = a;
+  st->a = st->b = 0;
+}
+
+static void soft_arc4_key(struct soft_arc4_state_s *st,
+                          const uint8_t * __restrict__ key, size_t l)
+{
+  uint8_t * __restrict__ state = st->state;
+  uint_fast16_t a, b, k;
+
+  for (k = a = b = 0; a < 256; a++, k++)
+    {
+      uint8_t tmp;
+
+      k &= (l == k) - 1;
+      tmp = state[a];
+      b = (uint8_t)(b + tmp + key[k]);
+
+      state[a] = state[b];
+      state[b] = tmp;
+    }
+}
+
+static void soft_arc4_stream(struct soft_arc4_state_s *st,
+                             const uint8_t * __restrict__ in,
+                             uint8_t * __restrict__ out, size_t l)
+{
+  uint_fast8_t a = st->a, b = st->b;
+  uint8_t * __restrict__ state = st->state;
+
+  while (l--)
+    {
+      uint8_t tmp;
+      a = (uint8_t)(a + 1);
+      b = (uint8_t)(b + state[a]);
+
+      tmp = state[b];
+      state[b] = state[a];
+      state[a] = tmp;
+
+      if (out)
+        {
+          if (in)
+            *out++ = *in++ ^ state[(uint8_t)(state[a] + state[b])];
+          else
+            *out++ = state[(uint8_t)(state[a] + state[b])];
+        }
+    }
+
+  st->a = a;
+  st->b = b;
 }
 
 static DEV_REQUEST_DELAYED_FUNC(soft_arc4_process)
@@ -69,69 +135,63 @@ static DEV_REQUEST_DELAYED_FUNC(soft_arc4_process)
 
   rq->err = -ENOTSUP;
 
-  if (rq->op & DEV_CRYPTO_INIT)
+  switch (ctx->mode)
     {
-      if (ctx->key_len > 256)
-        goto pop;
-
-      if (rq->op & DEV_CRYPTO_FINALIZE)
-        st = alloca(sizeof(*st));
-
-      uint_fast8_t a, b, k;
-      uint8_t * __restrict__ state = st->state;
-
-      for (a = 0; a < 256; a++)
-        state[a] = a;
-
-      for (k = a = b = 0; a < 256; a++, k++)
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_ARC4_STREAM
+    case DEV_CRYPTO_MODE_STREAM: {
+      if (rq->op & DEV_CRYPTO_INIT)
         {
-          uint8_t tmp;
+          if (rq->op & DEV_CRYPTO_FINALIZE)
+            st = alloca(sizeof(*st));
+          else if (ctx->cache_ptr == st)
+            goto done;
+          else
+            ctx->cache_ptr = st;
 
-          k &= (ctx->key_len == k) - 1;
-          tmp = state[a];
-          b = (uint8_t)(b + tmp + ctx->key_data[k]);
+          if (ctx->key_len > 256 || ctx->iv_len > 0)
+            goto pop;
 
-          state[a] = state[b];
-          state[b] = tmp;
+          soft_arc4_stinit(st);
+          soft_arc4_key(st, ctx->key_data, ctx->key_len);
+        done:;
         }
 
-      st->a = st->b = 0;
-    }
-
-
-  if (ctx->mode == DEV_CRYPTO_MODE_STREAM)
-    {
-      const uint8_t *in = rq->in;
-      uint8_t *out = rq->out;
-      uint_fast8_t a = st->a, b = st->b;
-      size_t l = rq->len;
-      uint8_t * __restrict__ state = st->state;
-
-      while (l--)
-        {
-          uint8_t tmp;
-          a = (uint8_t)(a + 1);
-          b = (uint8_t)(b + state[a]);
-
-          tmp = state[b];
-          state[b] = state[a];
-          state[a] = tmp;
-
-          if (out)
-            {
-              if (in)
-                *out++ = *in++ ^ state[(uint8_t)(state[a] + state[b])];
-              else
-                *out++ = state[(uint8_t)(state[a] + state[b])];
-            }
-        }
-
-      st->a = a;
-      st->b = b;
-
+      soft_arc4_stream(st, rq->in, rq->out, rq->len);
       rq->err = 0;
+      break;
     }
-  pop:
+#endif
+
+#ifdef CONFIG_DRIVER_CRYPTO_SOFT_ARC4_RANDOM
+    case DEV_CRYPTO_MODE_RANDOM: {
+      if (rq->op & DEV_CRYPTO_INIT)
+        soft_arc4_stinit(st);
+      if (rq->op & DEV_CRYPTO_INVERSE)
+        {
+          size_t l = rq->ad_len;
+          const uint8_t *in = rq->ad;
+          while (1)
+            {
+              soft_arc4_key(st, in, l);
+              if (l <= 256)
+                break;
+              l -= 256;
+              in += 256;
+            }
+          soft_arc4_stream(st, NULL, NULL, 768);
+        }
+      if (rq->op & DEV_CRYPTO_FINALIZE)
+        soft_arc4_stream(st, NULL, rq->out, rq->len);
+      rq->err = 0;
+      break;
+    }
+#endif
+
+    default:
+      break;
+    }
+
+ pop:
   dev_request_delayed_end(&pv->queue, rq_);
 }
 
