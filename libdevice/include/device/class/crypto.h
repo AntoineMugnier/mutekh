@@ -299,6 +299,18 @@ DRIVER_CLASS_TYPES(crypto,
                    devcrypto_request_t *f_request;
                    );
 
+config_depend(CONFIG_DEVICE_CRYPTO)
+inline error_t
+dev_crypto_spin_op(struct device_crypto_s *accessor,
+                   struct dev_crypto_rq_s *rq)
+{
+  struct dev_request_status_s st;
+  dev_request_spin_init(&rq->rq, &st);
+  DEVICE_OP(accessor, request, rq);
+  dev_request_spin_wait(&st);
+  return rq->err;
+}
+
 /** Synchronous memory device operation function. This function use
     the scheduler api to put current context in wait state during the
     request. */
