@@ -1,4 +1,0 @@
-
-objs =	tuntap.o
-
-
