@@ -35,29 +35,42 @@
 
 enum valio_motion_att_e
 {
-    /* A struct valio_motion_caps_s that defines the capability of the device,
-       including what motion sensors are available. */
+    /* Use with @tt DEVICE_VALIO_READ request type. @tt data is a pointer to a 
+       @tt struct valio_motion_caps_s that defines the capability of the device,
+       including what motion sensors are available.*/ 
     VALIO_MOTION_CAPS,
 
-    /** A struct valio_motion_accel_s that defines the configuration of an
-        accelerometer. */
+    /* Use with @tt DEVICE_VALIO_WRITE request type. @tt data is NULL. This 
+       calibrates device. Calibration can be implemented either in device when 
+       hardware support or in driver. Return -ENOTSUP if calibration is not 
+       supported.*/
+
+    VALIO_MOTION_ACCEL_CALIBRATE,
+
+    /* Use with @tt DEVICE_VALIO_WRITE request type. @tt data is a pointer to a 
+       @tt struct valio_motion_accel_s that defines the configuration of an
+       accelerometer. */
     VALIO_MOTION_ACCEL,
 
-    /** A struct valio_motion_axis_data_s that defines the calibration offset
-        of each X, Y and Z axis of the accelerometer. */
-    VALIO_MOTION_ACCEL_OFST,
-
-    /** A struct valio_motion_gyro_s that defines the configuration of a
-        gyroscope. */
+    /* Use with @tt DEVICE_VALIO_WRITE request type. @tt data is a pointer to a 
+       @tt struct valio_motion_gyro_s that defines the configuration of a
+       gyroscope. */
     VALIO_MOTION_GYRO,
 
-    /** A struct valio_motion_comp_s that defines the configuration of a
-        compass (i.e. magnetometer). */
+    /* Use with @tt DEVICE_VALIO_WRITE request type. @tt data is a pointer to a 
+       @tt struct valio_motion_comp_s that defines the configuration of a
+       compass.(i.e. magnetometer). */
     VALIO_MOTION_COMP,
 
-    /** A struct valio_motion_data_s that defines the value of each of the X, Y
-        Z axis. */
+    /* Use with @tt DEVICE_VALIO_READ request type. @tt data is a pointer to a 
+       @tt struct valio_motion_data_s that defines the value of each of the X, Y
+        Z axis.  */
     VALIO_MOTION_DATA,
+
+    /* Use with @tt DEVICE_VALIO_WAIT_UPDATE request type. @tt data is a pointer to a 
+       @tt struct valio_motion_evt_s that defines the value of each of the X, Y
+        Z axis. */
+    VALIO_MOTION_EVENT,
 };
 
 /** @This is used for selecting one or more axis.
@@ -91,11 +104,20 @@ enum valio_motion_axis_e
 
 enum valio_motion_event_e
 {
-    VALIO_MOTION_ACC_MOVE,
-    VALIO_MOTION_ACC_TAP,
-    VALIO_MOTION_ACC_FF,
-    VALIO_MOTION_GYR_MOVE,
-    VALIO_MOTION_CMP_MOVE,
+    /* Activity event */
+    VALIO_MOTION_ACC_ACT    = (1 << 0),
+    /* Inactivity event */
+    VALIO_MOTION_ACC_INACT  = (1 << 1),
+    /* Tap event */
+    VALIO_MOTION_ACC_TAP    = (1 << 2),
+    /* Double tap event */
+    VALIO_MOTION_ACC_DBLTAP = (1 << 2),
+    /* Free fall event */
+    VALIO_MOTION_ACC_FF     = (1 << 3),
+    /* Activity event */
+    VALIO_MOTION_GYR_ACT    = (1 << 4),
+    /* Activity event */
+    VALIO_MOTION_CMP_ACT    = (1 << 5),
 };
 
 struct valio_motion_thresh_s
@@ -103,10 +125,12 @@ struct valio_motion_thresh_s
     /* Axis selection mask. */
     uint16_t axis:9;
 
-    /* Minimum duration for the event to be emitted. */
-    uint16_t duration;
+    /* Minimum duration in us for the event to be emitted. When 0, any event will be 
+       emitted */
+    uint32_t duration;
 
-    /* Threshold values */
+    /* Threshold values in mg. If device use the same threshold on the three
+       axis, @tt x, @tt y and @tt z must be eguals */ 
     int16_t  x;
     int16_t  y;
     int16_t  z;
@@ -115,19 +139,17 @@ struct valio_motion_thresh_s
 /* Capabilities */
 enum valio_motion_caps_e
 {
-    VALIO_MOTION_CAP_ACC        = (1 << 0),
-    VALIO_MOTION_CAP_ACC_MOVE   = (1 << 1),
+    VALIO_MOTION_CAP_ACC_ACT    = (1 << 0),
+    VALIO_MOTION_CAP_ACC_INACT  = (1 << 1),
     VALIO_MOTION_CAP_ACC_TAP    = (1 << 2),
     VALIO_MOTION_CAP_ACC_DBLTAP = (1 << 3),
     VALIO_MOTION_CAP_ACC_FF     = (1 << 4),
 
     /* Gyroscope caps */
-    VALIO_MOTION_CAP_GYR        = (1 << 5),
-    VALIO_MOTION_CAP_GYR_MOVE   = (1 << 6),
+    VALIO_MOTION_CAP_GYR_ACT    = (1 << 5),
 
     /* Compass caps */
-    VALIO_MOTION_CAP_CMP        = (1 << 7),
-    VALIO_MOTION_CAP_CMP_MOVE   = (1 << 8),
+    VALIO_MOTION_CAP_CMP_ACT    = (1 << 6),
 };
 
 struct valio_motion_caps_s
@@ -137,19 +159,20 @@ struct valio_motion_caps_s
 
 enum valio_motion_accel_opt_e
 {
-    VALIO_MOTION_ACC_OPT_MOVE   = 0x1,
-    VALIO_MOTION_ACC_OPT_TAP    = 0x2,
-    VALIO_MOTION_ACC_OPT_DBLTAP = 0x4,
-    VALIO_MOTION_ACC_OPT_FF     = 0x8,
+    VALIO_MOTION_ACC_OPT_ACT    = (1 << 0),
+    VALIO_MOTION_ACC_OPT_INACT  = (1 << 1),
+    VALIO_MOTION_ACC_OPT_TAP    = (1 << 2),
+    VALIO_MOTION_ACC_OPT_DBLTAP = (1 << 3),
+    VALIO_MOTION_ACC_OPT_FF     = (1 << 4),
 };
 
 struct valio_motion_accel_s
 {
-    /* Option selection mask. If the mask value is zero, then the accelerometer
-       is disabled. */
+    /* A valio_motion_accel_opt_e selection mask. */
     uint8_t mask:4;
 
-    struct valio_motion_thresh_s move;
+    struct valio_motion_thresh_s act;
+    struct valio_motion_thresh_s inact;
 
     struct {
         /* Single tap */
@@ -184,7 +207,7 @@ enum valio_motion_comp_opt_e
 
 struct valio_motion_comp_s
 {
-    /* Option selection mask. If the mask value is zero, then the accelerometer
+    /* Option selection mask. If the mask value is zero, then the compass
        is disabled. */
     uint8_t  mask:1;
     uint16_t gain;
@@ -192,7 +215,9 @@ struct valio_motion_comp_s
 
 struct valio_motion_axis_data_s
 {
-    /* This mask selects the valid axis data in the structure. */
+    /* This mask is set according to motion detection on each axis. If device
+       is not able to differenciate move on each axes, driver must set all axis bits
+       to 1 and return each value of axis */
     uint16_t axis:9;
 
     /** The value of each axis. */
@@ -213,7 +238,13 @@ struct valio_motion_data_s
 
 struct valio_motion_evt_s
 {
+    /* @tt evts and @tt revts are valio_motion_event_e masks. @tt evts specifies which
+       event are monitored. The request is terminated when at least one of these event
+       occurs. @tt revts returns a mask specifying which event has occured */
+
     uint16_t                   evts:9;
+    uint16_t                   revts:9;
+
     struct valio_motion_data_s data;
 };
 
