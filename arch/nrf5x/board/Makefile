@@ -1,1 +1,2 @@
 objs-$(CONFIG_NRF5X_PCA10000) += pca10000.o
+objs-$(CONFIG_NRF5X_PCA10005) += pca10005.o
