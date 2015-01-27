@@ -148,6 +148,14 @@ arch/nrf5x/peripheral.h
     device, RGB LED can be controlled through GPIOs or PWM drivers.
   @end section
 
+  @section {nRF51822-DK nRFgo boards}
+    PCA10004 and PCA10005 are actually the same boards from a software
+    point of view.  Only difference is on the PCB antenna vs. SMA connector.
+
+    Their support is quite basic, connection with hardware on the
+    nRFgo mother board has not been explored.
+  @end section
+
 @end section
 
 @section {Implementation notes}
