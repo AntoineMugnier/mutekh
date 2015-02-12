@@ -120,3 +120,13 @@ DEV_DECLARE_STATIC(aes_dev, "aes", 0, nrf5x_aes_drv,
                    );
 
 #endif
+
+#if defined(CONFIG_DRIVER_NRF5X_RNG)
+
+DEV_DECLARE_STATIC(rng_dev, "rng", 0, nrf5x_rng_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_RNG),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_RNG, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1)
+                   );
+
+#endif

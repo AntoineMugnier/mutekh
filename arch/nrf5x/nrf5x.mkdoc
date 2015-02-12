@@ -99,6 +99,14 @@ Nordic's nRF51 and nRF52 architecture support.
     handle request from interruptible mode, in a busy-wait manner.
   @end section
 
+  @section {RNG}
+    Hardware Thermal noise random number generator is supported as a
+    Cryptographic device yielding a random stream without context.
+    Derivation compensation is enabled.
+
+    This driver should only be used to seed another RNG.
+  @end section
+
 @end section
 
 @section {Implementation notes}
