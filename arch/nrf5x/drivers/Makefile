@@ -12,3 +12,4 @@ objs-$(CONFIG_DRIVER_NRF5X_TIMER) += timer.o
 objs-$(CONFIG_DRIVER_NRF5X_BLE_RADIO) += ble_radio.o ble_radio_handler.o
 objs-$(CONFIG_DRIVER_NRF5X_RADIO) += radio.o
 objs-$(CONFIG_DRIVER_NRF5X_AES) += aes.o
+objs-$(CONFIG_DRIVER_NRF5X_RNG) += rng.o
