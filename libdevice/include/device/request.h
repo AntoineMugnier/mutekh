@@ -79,7 +79,7 @@ GCT_CONTAINER_FCNS(dev_request_queue, inline, dev_request_queue,
 
 GCT_CONTAINER_TYPES(dev_request_pqueue, struct dev_request_s *, pqueue_entry);
 GCT_CONTAINER_FCNS(dev_request_pqueue, inline, dev_request_pqueue,
-                   init, destroy, pop, isempty, head, prev, next);
+                   init, destroy, pop, isempty, head, prev, next, remove);
 
 struct dev_request_status_s
 {
