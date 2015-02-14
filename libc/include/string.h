@@ -47,6 +47,9 @@ void * memset(void *dst, int_fast8_t data, size_t size);
 void * memcpy(void *dst, const void *src, size_t size);
 #define memcpy __builtin_memcpy
 
+/* Reverse memcpy */
+void memrevcpy(uint8_t *dest, const uint8_t *src, size_t size);
+
 void *__memcpy_reverse(void *dst, const void *src, size_t size);
 
 void *memmove(void *dst, const void *src, size_t size);

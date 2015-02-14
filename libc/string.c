@@ -571,3 +571,9 @@ int_fast8_t memcstcmp(const void *s1, int_fast8_t _v, size_t n)
     return 0;
 }
 
+void memrevcpy(uint8_t *dest, const uint8_t *src, size_t size)
+{
+    src += size;
+    while (size--)
+        *dest++ = *--src;
+}
