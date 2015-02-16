@@ -168,6 +168,12 @@ Nordic's nRF51 and nRF52 architecture support.
     well.  Not all of them are driven by MutekH yet, though.
   @end section
 
+  @section {nRF51-Beacon}
+    PCA20006 contains no other IC than the nRF51.  UART is declared as
+    defined in schematic (goes to tag-connect).  RGB-LED and buttons
+    are left to user code.
+  @end section
+
 @end section
 
 @section {Implementation notes}
