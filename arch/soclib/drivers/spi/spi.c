@@ -73,7 +73,7 @@ struct soclib_spi_context_s
 #endif
   uint_fast8_t                   gpout_cnt;
 
-  uint32_t                       freq;
+  struct dev_freq_s              freq;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
   struct dev_spi_ctrl_queue_s    queue;
@@ -113,11 +113,11 @@ static DEV_SPI_CTRL_CONFIG(soclib_spi_config)
 
           cpu_mem_write_32(pv->addr + SOCLIB_SPI_CTRL_ADDR, endian_le32(ctrl));
 
-          uint32_t r = pv->freq / 2 / cfg->bit_rate;
+          uint32_t r = pv->freq.num / pv->freq.denom / 2 / cfg->bit_rate;
           if (r < 1)
             err = -ERANGE;
 
-          cpu_mem_write_32(pv->addr + SOCLIB_SPI_CLKDIV_ADDR, endian_le32(r - 1));
+            cpu_mem_write_32(pv->addr + SOCLIB_SPI_CLKDIV_ADDR, endian_le32(r - 1));
         }
     }
 
@@ -594,9 +594,10 @@ static DEV_INIT(soclib_spi_init)
   dev->drv_pv = pv;
   pv->addr = addr;
 
-  uint64_t f = 1000000ULL << 24; /* FIXME default freq */
-  device_res_get_uint64(dev, DEV_RES_FREQ, 0, &f);
-  pv->freq = f >> 24;
+  pv->freq.num   = 1000000;
+  pv->freq.denom = 1;
+
+  device_get_res_freq(dev, &pv->freq, 0);
 
   pv->tr = NULL;
 
