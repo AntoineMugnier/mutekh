@@ -22,11 +22,13 @@
 
 #include <device/resources.h>
 #include <device/class/iomux.h>
+#include <device/class/dma.h>
 #include <device/class/clock.h>
 
 #include <arch/efm32_irq.h>
 #include <arch/efm32_pin.h>
 #include <arch/efm32_clock.h>
+#include <arch/efm32_dma_source.h>
 
 
 DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 2,
@@ -77,6 +79,18 @@ DEV_DECLARE_STATIC(msc_dev, "mem", 0, efm32_msc_drv, &msc_dev_res);
 
 #endif
 
+#if defined(CONFIG_DRIVER_EFM32_DMA)
+
+DEV_DECLARE_STATIC_RESOURCES(dma_dev_res, 3,
+  DEV_STATIC_RES_MEM(0x400c2000, 0x400c4000),
+  DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_DMA, 0),
+
+  DEV_STATIC_RES_IRQ(0, EFM32_IRQ_DMA, 0, "/cpu"),
+);
+
+DEV_DECLARE_STATIC(dma_dev, "dma", 0, efm32_dma_drv, &dma_dev_res);
+
+#endif
 
 #if defined(CONFIG_DRIVER_EFM32_USART_SPI)
 
@@ -85,7 +99,11 @@ DEV_DECLARE_STATIC_RESOURCES(usart1_dev_res, 9,
   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USART1, 0),
 
   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_RX, 0, "/cpu"),
-  DEV_STATIC_RES_IRQ(1, EFM32_IRQ_USART1_TX, 0, "/cpu"),
+
+#if defined(CONFIG_DRIVER_EFM32_DMA)
+  DEV_STATIC_RES_DMA("/dma", CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT - 1, EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1RXDATAV << 16)),
+  DEV_STATIC_RES_DMA("/dma", CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT - 2, EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1TXEMPTY << 16)),
+#endif
 
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
   DEV_STATIC_RES_IOMUX("clk",  EFM32_LOC3, EFM32_PC15, 0, 0),

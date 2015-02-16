@@ -59,6 +59,7 @@ enum dev_resource_type_e
     DEV_RES_DEV_PARAM,
     DEV_RES_UINT_ARRAY_PARAM,
     DEV_RES_I2C_ADDR,
+    DEV_RES_DMA,
 
     DEV_RES_TYPES_COUNT,              //< Number of resource types
 };
@@ -128,6 +129,12 @@ struct dev_resource_s
       const char                *label;
     }                           iomux;
 
+    /** @see #DEV_STATIC_RES_DMA @see device_res_add_dma */
+    struct {
+      const char                *label;
+      uintptr_t                 channel:5;
+      uintptr_t                 config;
+    }                           dma;
     /** @see #DEV_STATIC_RES_UART @see device_res_add_uart */
     struct {
       uintptr_t                 baudrate:26;
