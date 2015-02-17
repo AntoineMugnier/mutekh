@@ -235,26 +235,10 @@ static DEV_SPI_CTRL_QUEUE(nrf51_spi_queue)
 static DEV_INIT(nrf51_spi_init);
 static DEV_CLEANUP(nrf51_spi_cleanup);
 
-const struct driver_s nrf51_spi_drv =
-{
-  .desc = "nRF SPI",
-  .f_init = nrf51_spi_init,
-  .f_cleanup = nrf51_spi_cleanup,
-  .classes = {
-    &(const struct driver_spi_ctrl_s){
-      .class_ = DRIVER_CLASS_SPI_CTRL,
-      .f_config = nrf51_spi_config,
-      .f_select = nrf51_spi_select,
-      .f_transfer = nrf51_spi_transfer,
-#ifdef CONFIG_DEVICE_SPI_REQUEST
-      .f_queue = nrf51_spi_queue,
-#endif
-    },
-    0,
-  }
-};
+#define nrf51_spi_use dev_use_generic
 
-REGISTER_DRIVER(nrf51_spi_drv);
+DRIVER_DECLARE(nrf51_spi_drv, "nRF51 SPI", nrf51_spi,
+               DRIVER_SPI_CTRL_METHODS(nrf51_spi));
 
 DRIVER_REGISTER(nrf51_spi_drv);
 
