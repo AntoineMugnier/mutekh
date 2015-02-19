@@ -68,7 +68,7 @@ enum dev_rfpacket_crc_e
 };
 
 struct device_rfpacket_s;
-struct dev_rfpacket_rq_s;
+
 
 enum dev_rfpacket_cfg_msk_e
 {
@@ -102,7 +102,7 @@ struct dev_rfpacket_config_s
   /** Modulation */
   enum dev_rfpacket_modulation_e  mod:8;
 
-  /** Sync word value */
+  /** Sync word value. Most significant bit are transmitted first */
   uint32_t                      sw_value;
 
   /** number of symbols */
@@ -345,6 +345,113 @@ DRIVER_CLASS_TYPES(rfpacket,
                    dev_rfpacket_request_t *f_request;
                    dev_rfpacket_receive_t *f_receive;
                   );
+
+inline error_t dev_rfpacket_spin_send_packet(
+       const struct device_rfpacket_s *accessor,
+       const uint8_t *buf,
+       const size_t size,
+       int16_t pwr,
+       uint32_t lifetime)
+{
+    struct dev_request_status_s status;
+    struct dev_rfpacket_rq_s rq = {
+      .accessor = accessor,
+      .err_group = 0,
+      .err = 0,
+      .type = DEV_RFPACKET_RQ_TX,
+      .lifetime = lifetime,
+      .tx.pwr = pwr << 3,
+      .tx.buf = buf,
+      .tx.size = size,
+      };
+
+    dev_request_spin_init(&rq.base, &status);
+
+    DEVICE_OP(accessor, request, &rq, NULL);
+
+    dev_request_spin_wait(&status);
+
+    return rq.err;
+}
+
+inline error_t dev_rfpacket_spin_config(
+    const struct device_rfpacket_s *accessor,
+    const struct dev_rfpacket_config_s *cfg,
+    enum dev_rfpacket_cfg_msk_e mask)
+{
+    struct dev_request_status_s status;
+    struct dev_rfpacket_rq_s rq = {
+      .accessor = accessor,
+      .err_group = 0,
+      .err = 0,
+      .type = DEV_RFPACKET_RQ_CONFIG,
+      .cfg.param = cfg,
+      .cfg.mask = mask,
+      };
+
+    dev_request_spin_init(&rq.base, &status);
+
+    DEVICE_OP(accessor, request, &rq, NULL);
+
+    dev_request_spin_wait(&status);
+
+    return rq.err;
+}
+
+#ifdef CONFIG_MUTEK_SCHEDULER
+inline error_t dev_rfpacket_wait_send_packet(
+       const struct device_rfpacket_s *accessor,
+       const uint8_t *buf,
+       const size_t size,
+       int16_t pwr,
+       uint32_t lifetime)
+{
+    struct dev_request_status_s status;
+    struct dev_rfpacket_rq_s rq = {
+      .accessor = accessor,
+      .err_group = 0,
+      .err = 0,
+      .type = DEV_RFPACKET_RQ_TX,
+      .lifetime = lifetime,
+      .tx.pwr = pwr << 3,
+      .tx.buf = buf,
+      .tx.size = size,
+      };
+
+    dev_request_sched_init(&rq.base, &status);
+
+    DEVICE_OP(accessor, request, &rq, NULL);
+    
+    dev_request_sched_wait(&status);
+
+    return rq.err;
+}
+
+inline error_t dev_rfpacket_wait_config(
+    const struct device_rfpacket_s *accessor,
+    const struct dev_rfpacket_config_s *cfg,
+    enum dev_rfpacket_cfg_msk_e mask)
+{
+    struct dev_request_status_s status;
+    struct dev_rfpacket_rq_s rq = {
+      .accessor = accessor,
+      .err_group = 0,
+      .err = 0,
+      .type = DEV_RFPACKET_RQ_CONFIG,
+      .cfg.param = cfg,
+      .cfg.mask = mask,
+      };
+
+    dev_request_sched_init(&rq.base, &status);
+
+    DEVICE_OP(accessor, request, &rq, NULL);
+
+    dev_request_sched_wait(&status);
+
+    return rq.err;
+}
+
+#endif
 
 #endif
 
