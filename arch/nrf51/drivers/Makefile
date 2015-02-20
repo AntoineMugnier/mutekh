@@ -10,3 +10,4 @@ objs += nvmc.o
 endif
 objs-$(CONFIG_DRIVER_NRF51_RAM) += ram.o
 objs-$(CONFIG_DRIVER_NRF51_TIMER) += timer.o
+objs += clock.o

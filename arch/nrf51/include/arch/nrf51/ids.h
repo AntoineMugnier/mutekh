@@ -64,4 +64,23 @@ enum nrf51_peripheral {
 
 #define NRF51_GPIO_RANGE_IRQ_ID 32
 
+enum nrf51_clock
+{
+  NRF51_CLOCK_LF,
+  NRF51_CLOCK_LF_CALIBRATED,
+  NRF51_CLOCK_HF,
+#if CONFIG_DRIVER_NRF51_CLOCK_HFCLK_FREQ != 0
+  NRF51_CLOCK_HF_PRECISE,
+#else
+  NRF51_CLOCK_HF_PRECISE = NRF51_CLOCK_HF,
+#endif
+  NRF51_CLOCK_EP_COUNT,
+};
+
+enum nrf51_xo
+{
+  NRF51_LFXO,
+  NRF51_HFXO,
+};
+
 #endif

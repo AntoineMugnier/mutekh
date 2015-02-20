@@ -34,13 +34,10 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
 
 #ifdef CONFIG_DRIVER_NRF51_CLOCK
 
-DEV_DECLARE_STATIC_RESOURCES(
-    clock_res, 2,
-    NRF_STATIC_RES_PERIPHERAL_MEM(NRF51_CLOCK),
-    DEV_STATIC_RES_IRQ(0, NRF51_CLOCK, 0, "/cpu"),
-);
-
-DEV_DECLARE_STATIC(clock_dev, "clock", 0, nrf51_clock_drv, &clock_res);
+DEV_DECLARE_STATIC(clock_dev, "clock", 0, nrf51_clock_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF51_CLOCK),
+                   DEV_STATIC_RES_IRQ(0, NRF51_CLOCK, 0, "/cpu")
+                   );
 
 #endif
 
