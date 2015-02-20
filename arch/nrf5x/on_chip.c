@@ -19,6 +19,7 @@
 */
 
 #include <device/resources.h>
+#include <device/irq.h>
 #include <device/class/iomux.h>
 #include <device/class/clock.h>
 
@@ -28,6 +29,20 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
                    DEV_STATIC_RES_ID(0, 0),
 #if defined(CONFIG_ARCH_NRF52) && defined(CONFIG_CPU_ARM32M_TIMER_SYSTICK)
                    DEV_STATIC_RES_CLK_SRC("/clock", NRF_CLOCK_HF, 0),
+#endif
+                   );
+
+#endif
+
+#ifdef CONFIG_DRIVER_NRF5X_CLOCK
+
+DEV_DECLARE_STATIC(clock_dev, "clock", 0, nrf5x_clock_drv,
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_CLOCK),
+                   NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_TEMP),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, NRF5X_CLOCK, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+#if !defined(CONFIG_DRIVER_NRF5X_CLOCK_LFCLK_XOSC)
+                   DEV_STATIC_RES_IRQ(1, NRF5X_TEMP, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
 #endif
                    );
 

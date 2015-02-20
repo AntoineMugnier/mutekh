@@ -2,6 +2,29 @@
 
 Nordic's nRF51 architecture support.
 
+@section {Drivers}
+
+  @section Clocks
+    Clocking in nRF51 is quite simple because most clock dependencies
+    are handled automatically by hardware, and because there are only
+    two clock sources, using fixed frequencies.  Nevertheless, clock
+    driver handles many tedious aspects of the clocking of the device:
+
+    @list
+      @item it handles LFCLK calibration when there is no external
+        chrystal available,
+      @item it monitors temperature to see whether to calibrate LFCLK,
+      @item it tries to delay LFCLK calibration to a later time where
+        HFCLK runs,
+      @item it handles switching source for LFCLK when requested, and
+        indicates when precision changes,
+      @item it handles switching source for HFCLK when requested, and
+        indicates when precision changes.
+    @end list
+  @end section
+  
+@end section
+
 @section {Implementation notes}
 
   @section {Device register access}
