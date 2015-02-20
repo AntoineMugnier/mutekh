@@ -110,4 +110,30 @@ enum nrf5x_peripheral_id_e
     NRF5X_PPI = 31,
 };
 
+/**
+   @this defines identifiers for nRF51/nRF52 clocks as modeled by
+   clock driver in MutekH.
+ */
+enum nrf5x_clock_id_e
+{
+  NRF_CLOCK_LF,
+  NRF_CLOCK_LF_PRECISE,
+  NRF_CLOCK_HF,
+#if CONFIG_DRIVER_NRF5X_CLOCK_HFCLK_FREQ != 0
+  NRF_CLOCK_HF_PRECISE,
+#else
+  NRF_CLOCK_HF_PRECISE = NRF_CLOCK_HF,
+#endif
+  NRF_CLOCK_EP_COUNT,
+};
+
+/**
+   @this defines the external oscillators IDs.
+*/
+enum nrf5x_xo_id_e
+{
+  NRF5X_LFXO,
+  NRF5X_HFXO,
+};
+
 #endif
