@@ -63,4 +63,23 @@ enum nrf5x_peripheral {
     NRF5X_PPI = 31,
 };
 
+enum nrf5x_clock
+{
+  NRF_CLOCK_LF,
+  NRF_CLOCK_LF_PRECISE,
+  NRF_CLOCK_HF,
+#if CONFIG_DRIVER_NRF5X_CLOCK_HFCLK_FREQ != 0
+  NRF_CLOCK_HF_PRECISE,
+#else
+  NRF_CLOCK_HF_PRECISE = NRF_CLOCK_HF,
+#endif
+  NRF_CLOCK_EP_COUNT,
+};
+
+enum nrf5x_xo
+{
+  NRF5X_LFXO,
+  NRF5X_HFXO,
+};
+
 #endif
