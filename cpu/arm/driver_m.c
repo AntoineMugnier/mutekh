@@ -293,7 +293,7 @@ static DEV_INIT(arm_init)
 
   struct dev_clock_link_info_s ckinfo;
   if (dev_clock_sink_link(dev, &pv->clk_ep, &ckinfo, 0, 0))
-    goto err_node;
+    goto no_clock;
   pv->freq = ckinfo.freq;
 # ifdef CONFIG_CPU_ARM_TIMER_SYSTICK
   pv->acc = ckinfo.acc;
@@ -301,6 +301,8 @@ static DEV_INIT(arm_init)
 
   if (dev_clock_sink_hold(&pv->clk_ep, 0))
     goto err_clku;
+
+ no_clock:
 #else
   if (device_get_res_freq(dev, &pv->freq, 0))
     pv->freq = DEV_FREQ_INVALID;
