@@ -50,9 +50,13 @@ enum efm32_clock_node_e {
   EFM32_CLOCK_USB,
 # define EFM32_CLOCK_USB EFM32_CLOCK_USB
 #endif
-#if 0
+
+#ifdef CONFIG_DRIVER_EFM32_DMA
   EFM32_CLOCK_DMA,
 # define EFM32_CLOCK_DMA EFM32_CLOCK_DMA
+#endif
+
+#if 0
   EFM32_CLOCK_EBI,
 # define EFM32_CLOCK_EBI EFM32_CLOCK_EBI
 #endif

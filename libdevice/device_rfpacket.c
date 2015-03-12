@@ -21,9 +21,30 @@
 
 #include <device/class/rfpacket.h>
 
-GCT_CONTAINER_PROTOTYPES(dev_rfpacket_rx_queue, extern inline, dev_rfpacket_rx_queue,
-	           init, destroy, isempty, pushback, pop, head);
 
-GCT_CONTAINER_PROTOTYPES(dev_rfpacket_rq_queue, extern inline, dev_rfpacket_rq_queue,
-		   init, destroy, isempty, pushback, pop, head);
+extern inline error_t dev_rfpacket_spin_send_packet(
+       const struct device_rfpacket_s *accessor,
+       const uint8_t *buf,
+       const size_t size,
+       int16_t pwr,
+       uint32_t lifetime);
 
+extern inline error_t dev_rfpacket_spin_config(
+    const struct device_rfpacket_s *accessor,
+    const struct dev_rfpacket_config_s *cfg,
+    enum dev_rfpacket_cfg_msk_e mask);
+
+# ifdef CONFIG_MUTEK_SCHEDULER
+extern inline error_t dev_rfpacket_wait_send_packet(
+       const struct device_rfpacket_s *accessor,
+       const uint8_t *buf,
+       const size_t size,
+       int16_t pwr,
+       uint32_t lifetime);
+
+extern inline error_t dev_rfpacket_wait_config(
+    const struct device_rfpacket_s *accessor,
+    const struct dev_rfpacket_config_s *cfg,
+    enum dev_rfpacket_cfg_msk_e mask);
+
+#endif

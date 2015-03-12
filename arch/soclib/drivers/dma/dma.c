@@ -40,9 +40,10 @@
 struct dma_soclib_context_s
 {
   /* dma input request queue and dma fifo */
-  dev_dma_queue_root_t		queue;
-  struct dev_irq_ep_s           irq_ep;
-  uintptr_t                     addr;
+  dev_request_queue_root_t		queue;
+  struct dev_irq_ep_s         irq_ep;
+  uintptr_t                   addr;
+  bool_t                      busy;
 };
 
 static void dma_soclib_start(struct device_s *dev, const struct dev_dma_rq_s *rq)
@@ -55,30 +56,40 @@ static void dma_soclib_start(struct device_s *dev, const struct dev_dma_rq_s *rq
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_LEN, endian_le32(rq->size));
 }
 
-DEV_DMA_REQUEST(dma_soclib_request)
+static DEVDMA_REQUEST(dma_soclib_request)
 {
-  struct device_s               *dev = accessor->dev;
+  struct device_s             *dev = accessor->dev;
   struct dma_soclib_context_s	*pv = dev->drv_pv;
 
-  if (rq->flags)
-    return -ENOTSUP;
-
-  assert(rq->size);
+  assert(req->size);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  rq->accessor = accessor;
+  req->err = 0;
 
-  bool_t empty = dev_dma_queue_isempty(&pv->queue);
+  bool_t err = (req->src_inc != DEV_DMA_INC_1_BYTE) ||
+               (req->dst_inc != DEV_DMA_INC_1_BYTE) ||
+               req->channel ||
+               req->const_data;
+  if (err)
+    {
+      req->err = -ENOTSUP;
+      goto end;
+    }
 
-  dev_dma_queue_pushback(&pv->queue, rq);
+  bool_t empty = dev_request_queue_isempty(&pv->queue);
 
-  if (empty)
-    dma_soclib_start(dev, rq);
+  dev_request_queue_pushback(&pv->queue, &req->base);
+
+  if (empty && !pv->busy)
+    dma_soclib_start(dev, req);
+
+end:
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  return 0;
+  if (req->err)
+    kroutine_exec(&req->base.kr, cpu_is_interruptible());
 }
 
 static DEV_IRQ_EP_PROCESS(dma_soclib_irq)
@@ -89,14 +100,23 @@ static DEV_IRQ_EP_PROCESS(dma_soclib_irq)
 
   lock_spin(&dev->lock);
 
-  rq = dev_dma_queue_head(&pv->queue);
+  struct dev_request_s * base = dev_request_queue_head(&pv->queue);
 
-  rq->callback(rq);
-  dev_dma_queue_pop(&pv->queue);
+  dev_request_queue_pop(&pv->queue);
+
+  pv->busy = 1;
+
+  lock_release(&dev->lock);
+
+  kroutine_exec(&base->kr, cpu_is_interruptible());
+
+  lock_spin(&dev->lock);
+
+  pv->busy = 0;
 
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_RESET, 0);
 
-  if ((rq = dev_dma_queue_head(&pv->queue)))
+  if ((rq = dev_dma_rq_s_cast(dev_request_queue_head(&pv->queue))))
     dma_soclib_start(dev, rq);
 
   lock_release(&dev->lock);
@@ -145,7 +165,7 @@ static DEV_INIT(dma_soclib_init)
   if (!pv)
     return -ENOMEM;
 
-  dev_dma_queue_init(&pv->queue);
+  dev_request_queue_init(&pv->queue);
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
@@ -174,7 +194,7 @@ static DEV_CLEANUP(dma_soclib_cleanup)
 
   device_irq_source_unlink(dev, &pv->irq_ep, 1);
 
-  dev_dma_queue_destroy(&pv->queue);
+  dev_request_queue_destroy(&pv->queue);
 
   mem_free(pv);
 }
