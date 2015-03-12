@@ -70,6 +70,8 @@ void *slab_nolock_grow(struct slab_s *slab)
     if (!group)
         return NULL;
 
+    slab->current_count += next_count;
+
     slab_group_list_push(&slab->group_list, group);
 
     base = (uintptr_t)group + group_size;
