@@ -48,14 +48,14 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 
   printk("CPU Fault: cpuid(%u) faultid(%u-%s)\n", cpu_id(), type, name);
   printk("Execution pointer: %p, Bad address (if any): %p\n"
-	 "Registers:"
+	 "Registers:\n"
 		 , (void*)execptr, (void*)dataptr);
 
   for (i = CPU_CONTEXT_REG_FIRST; i < CPU_CONTEXT_REG_COUNT; i++)
 #ifdef CPU_CONTEXT_REG_NAMES
-    printk("%s=%p%c", reg_names[i], (reg_t*)(uintptr_t)regs + i, (i + 1) % 4 ? ' ' : '\n');
+    printk("%s=%p%c", reg_names[i], (void*)(uintptr_t)regs->gpr[i], (i + 1) % 4 ? ' ' : '\n');
 #else
-    printk("%p%c", (void*)(uintptr_t)regs[i], (i + 1) % 4 ? ' ' : '\n');
+    printk("%p%c", (void*)(uintptr_t)regs->gpr[i], (i + 1) % 4 ? ' ' : '\n');
 #endif
 
   printk("Stack top (%p):\n", (void*)stackptr);
