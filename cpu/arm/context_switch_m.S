@@ -234,7 +234,7 @@ FUNC_END(cpu_context_entry)
 
 FUNC_START(.text, cpu_context_stack_use)
 
-        mov     r14,    r1
+        mov     r4,     r1
 
         /* get tls pointer from context struct */
         ldr     r0,     [r0, #(HEXO_CONTEXT_S_TLS * 4)]
@@ -257,7 +257,7 @@ FUNC_START(.text, cpu_context_stack_use)
 
         /* function call */
         mov     r0,     r2
-        bx      r14
+        bx      r4
 
 FUNC_END(cpu_context_stack_use)
 
