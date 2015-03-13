@@ -79,59 +79,63 @@ static inline uint32_t get_mask(uint8_t msk)
   return r;
 }
 
-static error_t efm32_gpio_mode(enum dev_pin_driving_e mode,
-                               uint32_t *mde)
+static void efm32_gpio_out_reg(gpio_id_t io_first, gpio_id_t io_last,
+                               const uint8_t *set_mask, const uint8_t *clear_mask)
 {
-  switch (mode)
+  uint32_t cm, sm, tmask;
+  uint32_t cmp = 0;
+  uint32_t smp = 0;
+
+  uint_fast8_t shift = io_first % GPIO_BANK_SIZE;
+  int_fast8_t mlen  = io_last - io_first + 1;
+
+ mask:
+  /* compute mask word for next clear_mask and set_mask */
+  tmask = mlen > GPIO_BANK_SIZE ? 0xffff : ((1 << mlen) - 1);
+
+ loop:
+  /* compute set and clear masks */
+  cm = (uint32_t)((uint16_t)~endian_le16_na_load(clear_mask) & tmask);
+  cmp = ((cm << shift) | cmp);
+  clear_mask += 2;
+
+  sm = (uint32_t)(endian_le16_na_load(set_mask) & tmask);
+  smp = ((sm << shift) | smp);
+  set_mask += 2;
+
+  mlen -= GPIO_BANK_SIZE;
+
+ last:;
+  /* update DOUT register */
+  uintptr_t a = EFM32_GPIO_ADDR + EFM32_GPIO_DOUT_ADDR(io_first / GPIO_BANK_SIZE);
+  uint32_t x = endian_le32(cpu_mem_read_32(a));
+  uint32_t tg = cmp & smp;
+  x = ((x ^ tg) & ~(cmp ^ smp)) | (~cmp & smp);
+
+  //  printk("gpio set : reg=%08x value=%08x clr=%08x set=%08x\n", a, x, cmp, smp);
+  cpu_mem_write_32(a, endian_le32(x & EFM32_GPIO_DOUT_MASK));
+
+  cmp >>= GPIO_BANK_SIZE;
+  smp >>= GPIO_BANK_SIZE;
+
+  io_first = (io_first | (GPIO_BANK_SIZE - 1)) + 1;
+
+  if (mlen >= GPIO_BANK_SIZE)
+    goto loop;   /* mask is still 0xffff, no need to recompute */
+
+  if (io_first <= io_last)
     {
-    case DEV_PIN_DISABLED:
-      *mde = EFM32_GPIO_MODEL_MODE_DISABLED;
-      break;
-    case DEV_PIN_PUSHPULL:
-      *mde = EFM32_GPIO_MODEL_MODE_PUSHPULL;
-      break;
-    case DEV_PIN_INPUT:
-      *mde = EFM32_GPIO_MODEL_MODE_INPUT;
-      break; 
-    case DEV_PIN_INPUT_PULL:
-      *mde = EFM32_GPIO_MODEL_MODE_INPUTPULL;
-      break;
-      /* FIXME support for DEV_PIN_INPUT_PULLUP and
-         DEV_PIN_INPUT_PULLDOWN would require updating DOUT regs too. */
-    case DEV_PIN_OPENDRAIN:
-      *mde = EFM32_GPIO_MODEL_MODE_WIREDAND;
-      break;
-    case DEV_PIN_OPENSOURCE:
-      *mde = EFM32_GPIO_MODEL_MODE_WIREDOR;
-      break;
-    case DEV_PIN_OPENDRAIN_PULLUP:
-      *mde = EFM32_GPIO_MODEL_MODE_WIREDANDPULLUP;
-      break;
-    case DEV_PIN_OPENSOURCE_PULLDOWN:
-      *mde = EFM32_GPIO_MODEL_MODE_WIREDANDPULLUP;
-      break;
-    default:
-      return -ENOTSUP;
+      if (mlen < 0)
+	goto last;   /* last remaining bits in next register, mask
+                        bits already available */
+
+      goto mask;     /* need to compute new mask for the last word */
     }
-  return 0;
 }
 
-static DEV_GPIO_SET_MODE(efm32_gpio_set_mode)
+static void efm32_gpio_mode_reg(gpio_id_t io_first, gpio_id_t io_last,
+                                const uint8_t *mask, uint32_t mde)
 {
-  struct device_s *dev = gpio->dev;
-
-  if (io_last >= GPIO_BANK_SIZE * 6)
-    return -ERANGE;
-
-  uint32_t mde;
-  if (efm32_gpio_mode(mode, &mde))
-    return -ENOTSUP;
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
-  /* Build a 32 bits mode value */ 
-  mde *= 0x11111111;
-
   uint64_t m, mp = 0;
 
   uint8_t tmask;
@@ -152,7 +156,7 @@ static DEV_GPIO_SET_MODE(efm32_gpio_set_mode)
   uintptr_t a = EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(io_first / GPIO_BANK_SIZE)
               + ((io_first & 8) >> 1);
   uint32_t x = endian_le32(cpu_mem_read_32(a));
-  x = (x & ~mp) | (mp & mde); 
+  x = (x & ~mp) | (mp & mde);
 
   //  printk("gpio mode: reg=%08x value=%08x\n", a, x);
   cpu_mem_write_32(a, endian_le32(x));
@@ -172,7 +176,68 @@ static DEV_GPIO_SET_MODE(efm32_gpio_set_mode)
 
       goto mask;     /* need to compute new mask for the last word */
     }
+}
 
+static error_t efm32_gpio_mode(gpio_id_t io_first, gpio_id_t io_last,
+                               const uint8_t *mask, enum dev_pin_driving_e mode)
+{
+  uint32_t mde;
+
+  switch (mode)
+    {
+    case DEV_PIN_DISABLED:
+      mde = EFM32_GPIO_MODEL_MODE_DISABLED;
+      break;
+    case DEV_PIN_PUSHPULL:
+      mde = EFM32_GPIO_MODEL_MODE_PUSHPULL;
+      break;
+    case DEV_PIN_INPUT:
+      mde = EFM32_GPIO_MODEL_MODE_INPUT;
+      break;
+    case DEV_PIN_INPUT_PULLUP:
+    case DEV_PIN_INPUT_PULLDOWN:
+    case DEV_PIN_INPUT_PULL:
+      mde = EFM32_GPIO_MODEL_MODE_INPUTPULL;
+      break;
+    case DEV_PIN_OPENDRAIN:
+      mde = EFM32_GPIO_MODEL_MODE_WIREDAND;
+      break;
+    case DEV_PIN_OPENSOURCE:
+      mde = EFM32_GPIO_MODEL_MODE_WIREDOR;
+      break;
+    case DEV_PIN_OPENDRAIN_PULLUP:
+      mde = EFM32_GPIO_MODEL_MODE_WIREDANDPULLUP;
+      break;
+    case DEV_PIN_OPENSOURCE_PULLDOWN:
+      mde = EFM32_GPIO_MODEL_MODE_WIREDORPULLDOWN;
+      break;
+    default:
+      return -ENOTSUP;
+    }
+
+  efm32_gpio_mode_reg(io_first, io_last, mask, mde * 0x11111111);
+
+  if (mode & DEV_PIN_RESISTOR_UP_)
+    efm32_gpio_out_reg(io_first, io_last, mask, dev_gpio_mask1);
+  else if (mode & DEV_PIN_RESISTOR_DOWN_)
+    {
+      uint8_t m[8];
+      endian_64_na_store(m, ~endian_64_na_load(mask));
+      efm32_gpio_out_reg(io_first, io_last, dev_gpio_mask0, m);
+    }
+
+  return 0;
+}
+
+static DEV_GPIO_SET_MODE(efm32_gpio_set_mode)
+{
+  struct device_s *dev = gpio->dev;
+
+  if (io_last >= GPIO_BANK_SIZE * 6)
+    return -ERANGE;
+
+  LOCK_SPIN_IRQ(&dev->lock);
+  efm32_gpio_mode(io_first, io_last, mask, mode);
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return 0;
@@ -186,56 +251,7 @@ static DEV_GPIO_SET_OUTPUT(efm32_gpio_set_output)
     return -ERANGE;
 
   LOCK_SPIN_IRQ(&dev->lock);
-
-  uint32_t cm, sm, tmask;
-  uint32_t cmp = 0;
-  uint32_t smp = 0;
-
-  uint_fast8_t shift = io_first % GPIO_BANK_SIZE;
-  int_fast8_t mlen  = io_last - io_first + 1;
-
- mask:
-  /* compute mask word for next clear_mask and set_mask */
-  tmask = mlen > GPIO_BANK_SIZE ? 0xffff : ((1 << mlen) - 1);
-
- loop:
-  /* compute set and clear masks */
-  cm = (uint32_t)((uint16_t)~endian_le16_na_load(clear_mask) & tmask);
-  cmp = ((cm << shift) | cmp); 
-  clear_mask += 2;
-
-  sm = (uint32_t)(endian_le16_na_load(set_mask) & tmask);
-  smp = ((sm << shift) | smp);
-  set_mask += 2;
-
-  mlen -= GPIO_BANK_SIZE;
-
- last:;
-  /* update DOUT register */
-  uintptr_t a = EFM32_GPIO_ADDR + EFM32_GPIO_DOUT_ADDR(io_first / GPIO_BANK_SIZE);
-  uint32_t x = endian_le32(cpu_mem_read_32(a));
-  uint32_t tg = cmp & smp;
-  x = ((x ^ tg) & ~(cmp ^ smp)) | (~cmp & smp);
-  //  printk("gpio set : reg=%08x value=%08x clr=%08x set=%08x\n", a, x, cmp, smp);
-  cpu_mem_write_32(a, endian_le32(x & EFM32_GPIO_DOUT_MASK));
-
-  cmp >>= GPIO_BANK_SIZE; 
-  smp >>= GPIO_BANK_SIZE;
-
-  io_first = (io_first | (GPIO_BANK_SIZE - 1)) + 1;
-
-  if (mlen >= GPIO_BANK_SIZE)
-    goto loop;   /* mask is still 0xffff, no need to recompute */
-
-  if (io_first <= io_last)
-    {
-      if (mlen < 0)
-	goto last;   /* last remaining bits in next register, mask
-                        bits already available */
-
-      goto mask;     /* need to compute new mask for the last word */
-    }
-
+  efm32_gpio_out_reg(io_first, io_last, set_mask, clear_mask);
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return 0;
@@ -299,20 +315,9 @@ static DEV_IOMUX_SETUP(efm32_gpio_iomux_setup)
   if (io_id >= GPIO_BANK_SIZE * 6)
     return -ERANGE;
 
-  uint32_t mde;
-  if (efm32_gpio_mode(dir, &mde))
-    return -ENOTSUP;
-
-  uintptr_t a = EFM32_GPIO_ADDR + EFM32_GPIO_MODEL_ADDR(io_id / GPIO_BANK_SIZE)
-              + ((io_id & 8) >> 1);
-
-  uint_fast8_t shift = (io_id % 8) * 4;
-  uint32_t mp = 0xf << shift;
-
-  uint32_t x = endian_le32(cpu_mem_read_32(a));
-  x = (x & ~mp) | (mde << shift);
-
-  cpu_mem_write_32(a, endian_le32(x));
+  LOCK_SPIN_IRQ(&dev->lock);
+  efm32_gpio_mode(io_id, io_id, dev_gpio_mask1, dir);
+  LOCK_RELEASE_IRQ(&dev->lock);
 
   return 0;
 }
