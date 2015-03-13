@@ -18,6 +18,7 @@ enum_headers = include/device/types.h \
                include/device/class/pwm.h \
                include/device/class/crypto.h \
                include/device/class/timer.h \
+               include/device/class/rfpacket.h \
                include/device/class/spi.h
 
 objs = driver.o device.o resources.o init.o request.o
@@ -46,7 +47,11 @@ endif
 
 objs-$(CONFIG_DEVICE_LCD) += device_lcd.o
 objs-$(CONFIG_DEVICE_IOMUX) += device_iomux.o
-objs-$(CONFIG_DEVICE_RFPACKET) += device_rfpacket.o
+
+ifeq ($(CONFIG_DEVICE_RFPACKET), defined)
+objs += device_rfpacket.o
+objs-$(CONFIG_DEVICE_SHELL) += shell_rfpacket.o
+endif
 
 ifeq ($(CONFIG_DEVICE_GPIO), defined)
 objs += device_gpio.o

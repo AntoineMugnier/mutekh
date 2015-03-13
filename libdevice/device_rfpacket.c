@@ -16,11 +16,13 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
     02110-1301 USA.
 
-    Copyright Alexandre Becoulet <alexandre.becoulet@free.fr> (c) 2014
+    Copyright Sebastien Cerdan <sebcerdan@gmail.com> (c) 2014
 */
 
 #include <device/class/rfpacket.h>
+#include <enums.h>
 
+const char dev_rfpacket_modulation_e[] = ENUM_DESC_DEV_RFPACKET_MODULATION_E;
 
 extern inline error_t dev_rfpacket_spin_send_packet(
        const struct device_rfpacket_s *accessor,
