@@ -568,11 +568,8 @@ bool_t device_icu_irq_enable(struct dev_irq_ep_s *local_src, uint_fast16_t targe
   return res;
 }
 
-error_t device_icu_irq_bind(
-    struct dev_irq_ep_s *source,
-    const char *icu_name,
-    uint8_t channel,
-    uint8_t io)
+error_t device_icu_irq_bind(struct dev_irq_ep_s *source, const char *icu_name,
+                            uint_fast16_t sink_id, uint8_t irq_id)
 {
     error_t err;
     struct device_icu_s icu;
@@ -584,15 +581,22 @@ error_t device_icu_irq_bind(
         return err;
     }
 
-    sink = DEVICE_OP(&icu, get_endpoint, DEV_IRQ_EP_SINK, channel);
+    sink = DEVICE_OP(&icu, get_endpoint, DEV_IRQ_EP_SINK, sink_id);
 
     if (!sink) {
         err = -ENOENT;
         goto out;
     }
 
-    device_irq_ep_link(source, sink);
-    DEVICE_OP(&icu, enable_irq, sink, io, source, source);
+    err = device_irq_ep_link(source, sink);
+    if (err)
+        goto out;
+
+    if (!DEVICE_OP(&icu, enable_irq, sink, irq_id, source, source)) {
+      device_irq_ep_unlink(source, sink);
+      err = -EBUSY;
+      goto out;
+    }
 
     err = 0;
 
