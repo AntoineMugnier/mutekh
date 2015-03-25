@@ -330,6 +330,16 @@ config_depend(CONFIG_DEVICE_TIMER)
 error_t dev_timer_init_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
                            dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
 
+config_depend(CONFIG_DEVICE_TIMER)
+error_t dev_timer_init_sec_round(
+  struct device_timer_s *accessor, dev_timer_delay_t *delay,
+  dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
+
+config_depend(CONFIG_DEVICE_TIMER)
+error_t dev_timer_init_sec_ceil(
+  struct device_timer_s *accessor, dev_timer_delay_t *delay,
+  dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
+
 error_t dev_timer_get_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
                           dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
 

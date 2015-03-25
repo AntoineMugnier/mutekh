@@ -65,6 +65,68 @@ error_t dev_timer_init_sec(struct device_timer_s *accessor, dev_timer_delay_t *d
   return 0;
 }
 
+error_t dev_timer_init_sec_round(
+  struct device_timer_s *accessor, dev_timer_delay_t *delay,
+  dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit)
+{
+  struct dev_timer_config_s cfg;
+  error_t err;
+
+  err = DEVICE_OP(accessor, config, &cfg, 0);
+  if (err)
+    return err;
+  if (!DEV_FREQ_IS_VALID(cfg.freq))
+    return -EIO;
+
+  uint64_t num, denom;
+  num = (uint64_t)cfg.freq.num * s_delay;
+  denom = (uint64_t)r_unit * cfg.res * cfg.freq.denom;
+
+  num += denom / 2;
+
+  uint64_t d = num / denom;
+
+  if (d > (uint64_t)(dev_timer_delay_t)-1)
+    return -ERANGE;
+
+  *delay = d ? d : 1;
+  if (rev)
+    *rev = cfg.rev;
+
+  return 0;
+}
+
+error_t dev_timer_init_sec_ceil(
+  struct device_timer_s *accessor, dev_timer_delay_t *delay,
+  dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit)
+{
+  struct dev_timer_config_s cfg;
+  error_t err;
+
+  err = DEVICE_OP(accessor, config, &cfg, 0);
+  if (err)
+    return err;
+  if (!DEV_FREQ_IS_VALID(cfg.freq))
+    return -EIO;
+
+  uint64_t num, denom;
+  num = (uint64_t)cfg.freq.num * s_delay;
+  denom = (uint64_t)r_unit * cfg.res * cfg.freq.denom;
+
+  num += denom - 1;
+
+  uint64_t d = num / denom;
+
+  if (d > (uint64_t)(dev_timer_delay_t)-1)
+    return -ERANGE;
+
+  *delay = d ? d : 1;
+  if (rev)
+    *rev = cfg.rev;
+
+  return 0;
+}
+
 error_t dev_timer_get_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
                           dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit)
 {
