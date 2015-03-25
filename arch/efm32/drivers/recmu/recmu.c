@@ -1273,9 +1273,6 @@ static DEV_CLOCK_SRC_USE(efm32_recmu_ep_use)
   efm32_recmu_clock_en(pv, pv->use_mask);
   efm32_recmu_clock_wait(pv);
 
-  if (ready != NULL)
-    kroutine_exec(&ready->kr, 0);
-
   return 0;
 }
 

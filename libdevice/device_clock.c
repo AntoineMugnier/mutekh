@@ -28,7 +28,7 @@
 #include <mutek/printk.h>
 
 error_t dev_clock_sink_hold(struct dev_clock_sink_ep_s *sink,
-                           struct dev_clock_ready_s *ready)
+                            bool_t synchronous)
 {
   struct dev_clock_src_ep_s *src = sink->src;
   error_t err = 0;
@@ -37,7 +37,7 @@ error_t dev_clock_sink_hold(struct dev_clock_sink_ep_s *sink,
 
   src->use_count++;
   if (!(src->flags & DEV_CLOCK_SRC_EP_RUNNING))
-    err = src->f_use(src, ready, DEV_CLOCK_SRC_USE_HOLD);
+    err = src->f_use(src, synchronous, DEV_CLOCK_SRC_USE_HOLD);
 
   LOCK_RELEASE_IRQ(&src->dev->lock);
 
@@ -51,7 +51,7 @@ void dev_clock_sink_release(struct dev_clock_sink_ep_s *sink)
   LOCK_SPIN_IRQ(&src->dev->lock);
 
   if (--src->use_count == 0)
-    src->f_use(src, NULL, DEV_CLOCK_SRC_USE_RELEASE);
+    src->f_use(src, 0, DEV_CLOCK_SRC_USE_RELEASE);
 
   LOCK_RELEASE_IRQ(&src->dev->lock);
 }
@@ -208,11 +208,10 @@ error_t dev_clock_sink_link(struct device_s *dev,
         sink->next = src->sink_head;
         src->sink_head = sink;
         if (sink->f_changed != NULL
-            && (src->flags & DEV_CLOCK_SRC_EP_VARFREQ)
             && !(src->flags & DEV_CLOCK_SRC_EP_NOTIFY))
           {
             src->flags |= DEV_CLOCK_SRC_EP_NOTIFY;
-            src->f_use(src, NULL, DEV_CLOCK_SRC_USE_NOTIFY);
+            src->f_use(src, 0, DEV_CLOCK_SRC_USE_NOTIFY);
           }
 
         if (lkinfo != NULL)
@@ -287,7 +286,7 @@ void dev_clock_sink_unlink(struct device_s *dev,
       if ((src->flags & DEV_CLOCK_SRC_EP_NOTIFY) && !notify)
         {
           src->flags ^= DEV_CLOCK_SRC_EP_NOTIFY;
-          src->f_use(src, NULL, DEV_CLOCK_SRC_USE_IGNORE);
+          src->f_use(src, 0, DEV_CLOCK_SRC_USE_IGNORE);
         }
     }
 }

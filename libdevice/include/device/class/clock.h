@@ -60,13 +60,6 @@ struct device_clock_s;
 struct dev_clock_src_ep_s;
 struct dev_clock_sink_ep_s;
 
-/** @This is used by dev_clock_src_use_t to notify */
-struct dev_clock_ready_s
-{
-  struct kroutine_s kr;
-  void *pv;
-};
-
 /** @This specifies the action performed by the @ref
     dev_clock_src_use_t function. */
 enum dev_clock_src_use_e
@@ -79,7 +72,7 @@ enum dev_clock_src_use_e
 
 /** @see dev_clock_ep_use_t */
 #define DEV_CLOCK_SRC_USE(n) error_t (n) (struct dev_clock_src_ep_s *src, \
-                                          struct dev_clock_ready_s *ready, \
+                                          bool_t synchronous, \
                                           enum dev_clock_src_use_e action)
 
 /** @This tells a driver with a clock source end-point if the
@@ -109,9 +102,6 @@ enum dev_clock_src_ep_flags_e
   /** indicates if at least one linked sink end-point has a non @tt
       NULL @ref dev_clock_sink_ep_s::f_changed function pointer. */
   DEV_CLOCK_SRC_EP_NOTIFY   = 0x02,
-  /** indicates if there are configurations end-point can be
-      configured with multiple frequencies */
-  DEV_CLOCK_SRC_EP_VARFREQ  = 0x04,
 };
 
 /** Clock signal source end-point structure. A source end-point is a
@@ -288,12 +278,11 @@ DRIVER_CLASS_TYPES(clock,
                    dev_clock_rollback_t    *f_rollback;
                    );
 
-/** @This increases the clock source use count. The kroutine inside
-    @tt ready is invoked when the clock source is running. If @tt
-    ready is @tt NULL, the function spins until the clock is running. */
+/** @This increases the clock source use count. If @tt synchronous is
+    true, the function spins until the clock is ready. */
 config_depend(CONFIG_DEVICE_CLOCK)
 error_t dev_clock_sink_hold(struct dev_clock_sink_ep_s *sink,
-                            struct dev_clock_ready_s *ready);
+                            bool_t synchronous);
 
 /** @This decreases the clock source use count.
 
