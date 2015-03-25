@@ -88,10 +88,10 @@ struct slab_s {
     enum mem_scope_e scope;
 };
 
-GCT_CONTAINER_FCNS(slab_unit_list, static inline, slab_unit_list,
-                   init, destroy, push, pop);
+GCT_CONTAINER_FCNS(slab_unit_list, ALWAYS_INLINE, slab_unit_list,
+                   init, destroy, push, pop, count);
 
-GCT_CONTAINER_FCNS(slab_group_list, static inline, slab_group_list,
+GCT_CONTAINER_FCNS(slab_group_list, ALWAYS_INLINE, slab_group_list,
                    init, destroy, push, pop);
 
 /**
@@ -129,7 +129,7 @@ void *slab_nolock_grow(struct slab_s *slab);
    @param slab The slab allocator
    @returns a newly allocated item
  */
-static inline
+inline
 void *slab_alloc(struct slab_s *slab)
 {
     struct slab_unit_s *unit;
@@ -152,7 +152,7 @@ void *slab_alloc(struct slab_s *slab)
    @param slab Slab the pointer belongs to
    @param ptr Pointer to deallocate
  */
-static inline
+inline
 void slab_free(struct slab_s *slab, void *ptr)
 {
     struct slab_unit_s *unit = ptr;

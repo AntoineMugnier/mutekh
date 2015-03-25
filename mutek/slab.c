@@ -82,3 +82,7 @@ void *slab_nolock_grow(struct slab_s *slab)
     return (void *)base;
 }
 
+extern inline
+void slab_free(struct slab_s *slab, void *ptr);
+extern inline
+void *slab_alloc(struct slab_s *slab);
