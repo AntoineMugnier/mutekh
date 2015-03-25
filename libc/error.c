@@ -1,8 +1,7 @@
 
 #include <string.h>
 #include <errno.h>
-
-#define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
+#include <hexo/decls.h>
 
 error_t errno = 0;
 

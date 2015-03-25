@@ -41,6 +41,8 @@
 #  define C_HEADER_END
 # endif
 
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
+
 /* make unavailable functions deprecated */
 
 # define __unused__ __attribute__((unused))
