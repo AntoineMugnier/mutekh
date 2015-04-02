@@ -33,6 +33,8 @@ static void thread_cleanup(void *param)
 {
   struct thread_s *th = param;
 
+  context_destroy(&th->context);
+
   mem_free(th);
 
   sched_context_exit();
