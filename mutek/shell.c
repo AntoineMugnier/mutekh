@@ -54,7 +54,7 @@ void mutek_shell_start(struct device_char_s *c, const char *term)
   termui_dev_io_init(tm, c, term);
   termui_con_init(con, tm, (void*)&shell_cmd_table);
 
-  termui_con_set_prompt(con, "[#31;mutek#;] ");
+  termui_con_set_prompt(con, CONFIG_MUTEK_SHELL_PROMPT);
 
   termui_term_printf(tm, "You may type `list' and `help'.\n\n");
 
