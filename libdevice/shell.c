@@ -540,6 +540,8 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_drivers)
             id++;
           }
     }
+
+  return 0;
 }
 
 /*************************************************** device command groups */

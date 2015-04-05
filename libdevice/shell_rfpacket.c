@@ -173,20 +173,17 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_request)
         return -EINVAL;
 
       buf = mem_alloc(c->size, (mem_scope_sys));
+      if (!buf)
+        return -EINVAL;
 
       for (uint16_t i = 0; i<c->size; i++)
         buf[i] = i + c->size - 1;
 
       txsize = c->size;
-
     }
 
-  if (used & RFPACKET_OPT_LIFETIME)
-
-
-
-  if (!txsize || buf == NULL)
-    termui_con_printf(con, "TX size error\n");
+  if (!(used & RFPACKET_OPT_LIFETIME))
+    c->lifetime = 10000;
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
   error_t err = dev_rfpacket_wait_send_packet(&c->accessor, buf, txsize, c->pwr * 8, c->lifetime);
@@ -201,7 +198,6 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_rfpacket_request)
     termui_con_printf(con, "TX failed with error: %d\n", err);
 
   return 0;
-
 }
 
 static TERMUI_CON_OPT_DECL(dev_rfpacket_opts) =
@@ -211,10 +207,10 @@ static TERMUI_CON_OPT_DECL(dev_rfpacket_opts) =
                                     TERMUI_CON_OPT_CONSTRAINTS(RFPACKET_OPT_DEV, 0)
                                     )
 
-  TERMUI_CON_OPT_STRING_ENTRY("-d", "--data", RFPACKET_OPT_DATA, struct termui_optctx_dev_rfpacket_opts,
+  TERMUI_CON_OPT_STRING_ENTRY("-D", "--data", RFPACKET_OPT_DATA, struct termui_optctx_dev_rfpacket_opts,
                             data, 1, TERMUI_CON_OPT_CONSTRAINTS(RFPACKET_OPT_DATA | RFPACKET_OPT_SIZE, 0))
 
-  TERMUI_CON_OPT_INTEGER_ENTRY("-s", "--size", RFPACKET_OPT_SIZE, struct termui_optctx_dev_rfpacket_opts, size, 1,
+  TERMUI_CON_OPT_INTEGER_RANGE_ENTRY("-s", "--size", RFPACKET_OPT_SIZE, struct termui_optctx_dev_rfpacket_opts, size, 1, 1, 256,
                               TERMUI_CON_OPT_CONSTRAINTS(RFPACKET_OPT_DATA | RFPACKET_OPT_SIZE, 0))
 
   TERMUI_CON_OPT_INTEGER_ENTRY("-p", "--power", RFPACKET_OPT_PWR, struct termui_optctx_dev_rfpacket_opts, pwr, 1,
