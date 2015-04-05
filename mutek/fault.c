@@ -51,11 +51,12 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 	 "Registers:\n"
 		 , (void*)execptr, (void*)dataptr);
 
+  reg_t *r = regs->gpr;
   for (i = CPU_CONTEXT_REG_FIRST; i < CPU_CONTEXT_REG_COUNT; i++)
 #ifdef CPU_CONTEXT_REG_NAMES
-    printk("%s=%p%c", reg_names[i], (void*)(uintptr_t)regs->gpr[i], (i + 1) % 4 ? ' ' : '\n');
+    printk("%s=%p%c", reg_names[i], (void*)*(r + i), (i + 1) % 4 ? ' ' : '\n');
 #else
-    printk("%p%c", (void*)(uintptr_t)regs->gpr[i], (i + 1) % 4 ? ' ' : '\n');
+    printk("%p%c", (void*)*(r + i), (i + 1) % 4 ? ' ' : '\n');
 #endif
 
   printk("Stack top (%p):\n", (void*)stackptr);
