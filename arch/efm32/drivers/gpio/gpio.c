@@ -109,8 +109,7 @@ static void efm32_gpio_out_reg(gpio_id_t io_first, gpio_id_t io_last,
   /* update DOUT register */
   uintptr_t a = EFM32_GPIO_ADDR + EFM32_GPIO_DOUT_ADDR(io_first / GPIO_BANK_SIZE);
   uint32_t x = endian_le32(cpu_mem_read_32(a));
-  uint32_t tg = cmp & smp;
-  x = ((x ^ tg) & ~(cmp ^ smp)) | (~cmp & smp);
+  x = smp ^ (x & (smp ^ ~cmp));
 
   //  printk("gpio set : reg=%08x value=%08x clr=%08x set=%08x\n", a, x, cmp, smp);
   cpu_mem_write_32(a, endian_le32(x & EFM32_GPIO_DOUT_MASK));

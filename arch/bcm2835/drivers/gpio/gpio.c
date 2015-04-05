@@ -237,7 +237,7 @@ static DEV_GPIO_SET_OUTPUT(bcm2835_gpio_set_output)
     {
       uint64_t x = endian_le32(cpu_mem_read_32(pv->addr + BCM2835_GPIO_GPLEV_ADDR(1)));
       x = endian_le32(cpu_mem_read_32(pv->addr + BCM2835_GPIO_GPLEV_ADDR(0))) | (x << 32);
-      x = ((x ^ tg) & ~(cm ^ sm)) | (~cm & sm);
+      x = sm ^ (x & (sm ^ ~cm));
 
       cpu_mem_write_32(pv->addr + BCM2835_GPIO_GPSET_ADDR(0), endian_le32(x));
       cpu_mem_write_32(pv->addr + BCM2835_GPIO_GPCLR_ADDR(0), endian_le32(~x));

@@ -146,6 +146,9 @@ typedef DEV_GPIO_SET_MODE(dev_gpio_set_mode_t);
      @item        1     @item         1      @item set
    @end table
 
+   The new value of an output can be computed using this formula:
+   @em {new = set_mask ^ (old & ( set_mask ^ clear_mask ))}.
+
    The lsb of the first byte in the @tt set_mask and @tt clear_mask
    vectors specify the value change for the IO at index @tt
    io_first. The size of the bit vector arrays must be be a multiple
