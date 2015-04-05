@@ -213,6 +213,12 @@ struct dev_spi_ctrl_transfer_s
 typedef DEV_SPI_CTRL_TRANSFER(dev_spi_ctrl_transfer_t);
 
 
+/** This helper function performs a SPI transfert as defined in @tt tr
+    and waits for end of transfert. */
+config_depend(CONFIG_MUTEK_SCHEDULER)
+error_t dev_spi_wait_transfer(struct dev_spi_ctrl_transfer_s * tr);
+
+
 /***************************************** queue getter */
 
 #define DEV_SPI_CTRL_QUEUE(n) struct dev_spi_ctrl_queue_s * (n)(struct device_spi_ctrl_s *accessor)
@@ -354,11 +360,6 @@ struct dev_spi_ctrl_queue_s
     entry of the controller, if available.
 */
 error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q);
-
-/** This helper function performs a SPI transfert as defined in @tt tr
-    and waits for end of transfert. */
-config_depend(CONFIG_MUTEK_SCHEDULER)
-error_t dev_spi_wait_transfer(struct dev_spi_ctrl_transfer_s * tr);
 
 /** This helper function release the device accessor associated with
     the SPI request queue. @see dev_spi_queue_init

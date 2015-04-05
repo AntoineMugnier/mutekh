@@ -135,6 +135,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_select)
   return err;
 }
 
+#ifdef CONFIG_MUTEK_SCHEDULER
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_read)
 {
   struct termui_optctx_dev_spi_opts *data = ctx;
@@ -174,6 +175,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_read)
   
   return err;
 }
+
 static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_swap)
 {
   struct termui_optctx_dev_spi_opts *data = ctx;
@@ -241,6 +243,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_write)
 
   return err;
 }
+#endif
 
 static TERMUI_CON_PARSE_OPT_PROTOTYPE(dev_shell_spi_parse_write)
 {
@@ -329,6 +332,7 @@ TERMUI_CON_GROUP_DECL(dev_shell_spi_ctrl_group) =
                         spi_opts_cleanup)
   )
 
+#if defined(CONFIG_MUTEK_SCHEDULER)
   TERMUI_CON_ENTRY(dev_shell_spi_write, "write",
     TERMUI_CON_OPTS_CTX(dev_spi_opts,
                         SPI_OPT_DEV | SPI_OPT_WR_DATA,
@@ -349,6 +353,8 @@ TERMUI_CON_GROUP_DECL(dev_shell_spi_ctrl_group) =
                         0,
                         spi_opts_cleanup)
   )
+#endif
+
   TERMUI_CON_LIST_END
 };
 

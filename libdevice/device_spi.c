@@ -719,7 +719,7 @@ void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq)
 
 #if defined(CONFIG_MUTEK_SCHEDULER)
 
-KROUTINE_EXEC(dev_request_spi_wait_done)
+static KROUTINE_EXEC(dev_request_spi_wait_done)
 {
   struct dev_request_s *rq = KROUTINE_CONTAINER(kr, *rq, kr);
   struct dev_request_status_s *status = rq->pvdata;
