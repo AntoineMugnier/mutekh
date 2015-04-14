@@ -501,7 +501,7 @@ static DEV_INIT(efm32_rtc_init)
   if (ckinfo.src_flags & DEV_CLOCK_SRC_EP_VARFREQ)
     pv->cap |= DEV_TIMER_CAP_VARFREQ | DEV_TIMER_CAP_CLKSKEW;
 
-  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
+  if (dev_clock_sink_hold(&pv->clk_ep, 0))
     goto err_clku;
 
   pv->rev = 1;

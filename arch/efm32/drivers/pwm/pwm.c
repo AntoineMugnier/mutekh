@@ -352,7 +352,7 @@ static DEV_INIT(efm32_pwm_init)
     goto err_mem;
   pv->core_freq = ckinfo.freq;
 
-  if (dev_clock_sink_hold(&pv->clk_ep, NULL))
+  if (dev_clock_sink_hold(&pv->clk_ep, 0))
     goto err_clku;
 #else
   if (device_get_res_freq(dev, &pv->core_freq, 0))

@@ -102,6 +102,9 @@ enum dev_clock_src_ep_flags_e
   /** indicates if at least one linked sink end-point has a non @tt
       NULL @ref dev_clock_sink_ep_s::f_changed function pointer. */
   DEV_CLOCK_SRC_EP_NOTIFY   = 0x02,
+ /** indicates if there are configurations end-point can be
+     configured with multiple frequencies */
+  DEV_CLOCK_SRC_EP_VARFREQ  = 0x04,
 };
 
 /** Clock signal source end-point structure. A source end-point is a
