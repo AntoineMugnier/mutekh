@@ -129,7 +129,11 @@ void *bsearch(
 
 typedef reg_t	__rand_type_t;
 
-#define RAND_MAX	(sizeof (__rand_type_t) > 1 ? 32767 : 255)
+#ifdef CONFIG_LIBC_RAND_LFSR
+# define RAND_MAX	((__rand_type_t)-1)
+#else
+# define RAND_MAX	(sizeof (__rand_type_t) > 1 ? 32767 : 255)
+#endif
 
 __rand_type_t rand(void);
 __rand_type_t rand_r(__rand_type_t *seedp);
