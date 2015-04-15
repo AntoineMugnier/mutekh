@@ -27,7 +27,9 @@
 #include <mutek/startup.h>
 #include <mutek/printk.h>
 
-#include <device/device.h>
+#ifdef CONFIG_DEVICE
+# include <device/device.h>
+#endif
 
 #include <stdlib.h>
 #include <string.h>
@@ -170,11 +172,15 @@ void mutekh_startup(void *arg)
   /* call all bootstrap init functions */
   INIT_BOOTSTRAP_INIT();
 
+#if defined(CONFIG_DEVICE_CPU)
   const struct cpu_tree_s *cpu = cpu_tree_lookup(CONFIG_ARCH_BOOTSTRAP_CPU_ID);
   assert(cpu != NULL && "processor id not found in the cpu tree.");
 
   /* use processor stack instead of startup stack from now */
   cpu_context_set(cpu->stack, CONFIG_HEXO_CPU_STACK_SIZE, &mutekh_startup_smp);
+#else
+  mutekh_startup_smp();
+#endif
 }
 
 void mutekh_startup_smp()
