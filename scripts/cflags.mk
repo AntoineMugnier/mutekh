@@ -38,6 +38,11 @@ CFLAGS=	-std=gnu99 -nostdlib -fno-builtin -foptimize-sibling-calls \
         -Wall -Wno-main -Wno-unused-label -O$(CONFIG_COMPILE_OPTIMIZE)
 DTC=dtc
 
+ifeq ($(CONFIG_COMPILE_LTO), defined)
+CFLAGS += -flto
+LINK_LDFLAGS += -flto
+endif
+
 ifeq ($(CONFIG_OPENMP), defined)
 CFLAGS += -fopenmp
 endif

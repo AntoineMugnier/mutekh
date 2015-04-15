@@ -2,6 +2,9 @@
 %section noassert
   CONFIG_LIBC_ASSERT undefined
 
+%section lto
+  CONFIG_COMPILE_LTO
+
 %section debug
   CONFIG_DEBUG
 
