@@ -24,7 +24,10 @@
 #include <hexo/context.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
-#include <device/device.h>
+
+#ifdef CONFIG_DEVICE
+# include <device/device.h>
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
 # include <arch/mem_checker.h>
@@ -34,12 +37,14 @@
 
 void hexo_context_initsmp()
 {
+#if defined(CONFIG_DEVICE_CPU)
   const struct cpu_tree_s *cpu = cpu_tree_lookup(cpu_id());
   assert(cpu != NULL && "processor id not found in the cpu tree.");
 
   struct context_s *context = CPU_LOCAL_ADDR(cpu_main_context);
 
   context_bootstrap(context, cpu->stack, CONFIG_HEXO_CPU_STACK_SIZE);
+#endif
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
   soclib_mem_check_change_id(cpu->stack, (uint32_t)context);
