@@ -141,10 +141,12 @@ SECTIONS
                 . = ALIGN(16);
 		*(.rodata*)
 
+#if defined(CONFIG_DEVICE)
                 . = ALIGN(8);
 		dev_drivers_table = .;
 		KEEP(*(.drivers))
 		dev_drivers_table_end = .;
+#endif
 #ifdef CONFIG_MUTEK_SHELL
                 shell_cmd_table = .;
 		KEEP(*(.shell))
@@ -168,10 +170,12 @@ SECTIONS
 		*(.data*)
 		*(.cpuarchdata*)
 
+#if defined(CONFIG_DEVICE)
                 . = ALIGN(8);
 		dev_devices_table = .;
 		KEEP(*(.devices))
 		dev_devices_table_end = .;
+#endif
 #ifndef CONFIG_ARCH_SMP
                 *(.cpudata*) 
 #endif
