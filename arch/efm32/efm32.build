@@ -3,7 +3,6 @@
   %types architecture
 
   CONFIG_ARCH_EFM32
-  CONFIG_DEVICE
 
   # Memory layout
 

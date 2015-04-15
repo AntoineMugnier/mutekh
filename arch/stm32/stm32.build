@@ -3,7 +3,6 @@
   %types architecture
 
   CONFIG_ARCH_STM32
-  CONFIG_DEVICE
 
   CONFIG_DEVICE_HELPER_PREFIX STM32
 

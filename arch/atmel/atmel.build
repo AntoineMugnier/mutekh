@@ -3,7 +3,6 @@
   %types architecture
 
   CONFIG_ARCH_ATMEL
-  CONFIG_DEVICE
 
   # Memory layout
 
