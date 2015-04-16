@@ -378,7 +378,6 @@ sub read_tokens_file
         }
 
 	next if ($line =~ /^[ \t]*(\#.*)?$/);
-        $line =~ s/#.*$//g;
 
 	# catch blocks start and end
 
