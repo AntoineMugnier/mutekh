@@ -311,7 +311,7 @@ static DEV_USE(efm32_pwm_use);
 
 const struct driver_s efm32_pwm_drv =
 {
-  .desc      = "efm32 PWM",
+  .desc      = "EFM32 PWM",
   .f_init    = efm32_pwm_init,
   .f_cleanup = efm32_pwm_cleanup,
   .f_use     = efm32_pwm_use,

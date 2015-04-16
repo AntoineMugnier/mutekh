@@ -376,7 +376,7 @@ static DEV_CLEANUP(efm32_i2c_cleanup);
 
 const struct driver_s efm32_i2c_drv =
 {
-  .desc         = "EFM32 Master Inter-Integrated Circuit Interface (I2C)",
+  .desc         = "EFM32 I2C",
   .f_init       = &efm32_i2c_init,
   .f_cleanup    = &efm32_i2c_cleanup,
   .classes      =
