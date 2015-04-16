@@ -75,7 +75,7 @@ static DEV_CPU_REG_INIT(x86_64_emu_cpu_reg_init)
 # endif
 #endif
 
-#if defined(CONFIG_CPU_X86_64_ALIGNCHECK)
+#if defined(CONFIG_CPU_X86_64_EMU_ALIGNCHECK)
    /* enable alignment check */
     asm volatile("	pushf						\n"
   	       "	orl	$0x40000, (%esp)			\n"

@@ -1588,6 +1588,10 @@ sub tokens_check
 {
     foreach my $opt (values %config_opts) {
 
+        if ( $opt->{parent} && @{$opt->{parent}} > 1 ) {
+            error_loc($opt, "more than one parent defined.");
+        }
+
 	foreach my $fa (keys %{$opt->{flags}}) {
 	    foreach my $fb (keys %{$opt->{flags}}) {
 		if ( $flags_exclude{"$fa/$fb"} ) {
