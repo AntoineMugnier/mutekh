@@ -210,7 +210,10 @@ sub args_flags
 
 	$opts->{flags}->{$flag} = 1;
 	$opts->{flags}->{$flag."_keep"} = 1;
-	$opts->{value} = 'defined' if $flag eq 'mandatory';
+        if ( $flag eq 'mandatory' ) {
+            $opts->{value} = 'defined';
+            $opts->{default} = 'defined';
+        }
     }
 }
 
@@ -276,6 +279,7 @@ sub new_token_block
     $opts->{file} = $file;
     $opts->{name} = $name;
     $opts->{depnotice} = [];
+    $opts->{childs} = [];
 
     return ($opts, \%config_cmd);
 }
@@ -1048,6 +1052,22 @@ sub foreach_and_list
     return 1;
 }
 
+sub foreach_and_parent
+{
+    my ( $token, $process, @args ) = @_;
+
+    return 0 if ( !$process->( $token, @args ) );
+
+    my $list = $token->{parent};
+    return 1 if (!$list);
+
+    my $res;
+    foreach ( @$list ) {
+        $res |= foreach_and_parent( $_, $process, @args );
+    }
+    return $res;
+}
+
 # execute a closure if token flag is defined
 sub if_flag
 {
@@ -1155,6 +1175,20 @@ sub check_definable
     return 1;
 }
 
+sub process_config_define
+{
+    my $opt = shift;
+
+    return if $opt->{userdefined} or $opt->{flags}->{value} or $opt->{flags}->{meta};
+
+    if ( $opt->{default} eq 'defined' ) {
+        debug(1, "$opt->{name} defined by default");
+        $opt->{value} = 'defined';
+    }
+
+    foreach_recurs( $opt, 'childs', \&process_config_define );
+}
+
 # define tokens flagged `auto' when they are referred to by `suggest' or `depend'
 sub process_config_auto
 {
@@ -1191,7 +1225,8 @@ sub process_config_auto
 	    return 0;
         }
 
-	$dep->{value} = 'defined';
+        process_config_define($dep);
+        $dep->{value} = 'defined';
 
 	debug(1, "$dep->{name} has been defined as an autodep of $opt->{name}");
 
@@ -1334,7 +1369,9 @@ sub process_config_when
 
     if ( foreach_or_list( $opt->{when}, \&foreach_and_list, \&check_rule ) ) {
 	debug(1, "$opt->{name} defined thanks to one of its `when' rule");
-	$opt->{value} = 'defined';
+
+        process_config_define($opt);
+        $opt->{value} = 'defined';
 
 	# when rule is used only once
 	$opt->{whendone} = 1;
@@ -1560,6 +1597,11 @@ sub tokens_provider
 	    push @{$t->{providers}}, $opt;
 	    $t->{provided}->{$opt->{name}} = $c->{value};
 	});
+
+	foreach_tag_args( $opt, 'parent', sub {
+	    my $t = shift;
+	    push @{$t->{childs}}, $opt;
+	});
     }
 }
 
@@ -1662,7 +1704,7 @@ sub tokens_check
 	}
 
 	if ($opt->{flags}->{mandatory}) {
-	    foreach my $tag (qw(default when suggest_when warn_when suggest)) {
+	    foreach my $tag (qw(when suggest_when warn_when suggest)) {
 		error_loc($opt, "token with `mandatory' flag can't use the `$tag' tag.")
 		    if ($opt->{$tag});
 	    }
@@ -1737,9 +1779,26 @@ sub check_config
     foreach my $opt (values %config_opts) {
 	if (not defined $opt->{value}) {
 	    $opt->{default} = 'undefined' if !defined $opt->{default};
-	    $opt->{value} = $opt->{default};
+
+            if ( $opt->{userdefined} or $opt->{flags}->{meta} or $opt->{flags}->{mandatory} ) {
+            } elsif ( $opt->{flags}->{meta} ) {
+                $opt->{value} = 'undefined';
+            } elsif ( $opt->{flags}->{value} ) {
+                $opt->{value} = $opt->{default};
+            } else {
+                if ( foreach_and_parent( $opt, sub {
+                    my $l = shift;
+                    return $l->{value} eq 'defined' if $l->{userdefined};
+                    return $l->{default} eq 'defined';
+                } ) ) {
+                    debug(1, "$opt->{name} defined by default");
+                    $opt->{value} = 'defined';
+                } else {
+                    $opt->{value} = 'undefined';
+                }
+            }
 	    $opt->{vlocation} = "$opt->{file}:$opt->{location}";
-	}
+        }
     }
 
     for ( my $chg = 1; $chg--; ) {
