@@ -379,32 +379,42 @@ static DEV_REQUEST_DELAYED_FUNC(soft_salsa_process)
       if (rq->op & DEV_CRYPTO_INIT)
         memset(st, 0, sizeof(soft_salsa_state_t));
 
-      if (rq->op & DEV_CRYPTO_INVERSE)
+      size_t l = rq->ad_len;
+      if ((rq->op & DEV_CRYPTO_INVERSE) && l)
         {
-          size_t l = rq->ad_len;
-          const uint8_t *in = rq->ad;
+          const uint8_t * __restrict__ in = rq->ad;
+          uint8_t *r8 = (uint8_t*)st;
           while (l--)
             {
-              uint8_t s = *in++;
-              st[l % 12] ^= salsa_rotate(s, s & 31);
+              uint_fast8_t i = l % 32;
+              r8[i] ^= *in++;
+              if (!i)
+                {
+                  uint32_t stream[16];
+                  cipher(stream, st, 0);
+                  memcpy(st, stream, sizeof(soft_salsa_state_t));
+                }
             }
         }
 
-      size_t l = rq->len;
-      if (l)
+      l = rq->len;
+      if ((rq->op & DEV_CRYPTO_FINALIZE) && l)
         {
-          uint32_t stream[16];
+          union {
+            uint32_t r32[16];
+            uint8_t  r8[64];
+          }          rout;
           uint8_t * __restrict__ out = rq->out;
-          memcpy(stream, st, sizeof(soft_salsa_state_t));
+          memcpy(rout.r32, st, sizeof(soft_salsa_state_t));
           while (l)
             {
-              cipher(stream, stream, 0);
+              cipher(rout.r32, rout.r32, 0);
               size_t r = __MIN(l, 16);
               l -= r;
               while (r--)
-                *out++ = stream[12 + (r >> 2)] >> ((r & 3) * 8);
+                *out++ = rout.r8[48 + r];
             }
-          memcpy(st, stream, sizeof(soft_salsa_state_t));
+          memcpy(st, rout.r32, sizeof(soft_salsa_state_t));
         }
       rq->err = 0;
       break;
