@@ -65,6 +65,16 @@ struct efm32_aes_context_s
 #endif
 };
 
+struct efm32_aes_state_s
+{
+  union {
+#ifdef CONFIG_DRIVER_EFM32_AES_RANDOM
+    uint32_t rand32[8];
+    uint8_t  rand8[32];
+#endif
+  };
+};
+
 struct efm32_aes_private_s
 {
   struct dev_request_dlqueue_s queue;
@@ -77,6 +87,8 @@ struct efm32_aes_private_s
   struct dev_crypto_context_s *ctx[CONFIG_DRIVER_CRYPTO_SOFT_AES_CTXCOUNT];
   dev_crypto_context_id_t next;
 };
+
+void efm32_aes_random(uint32_t state[8], uint32_t *out);
 
 void efm32_aes_ocb_key(struct efm32_aes_context_s * __restrict__ actx,
                        const struct dev_crypto_context_s * __restrict__ ctx);

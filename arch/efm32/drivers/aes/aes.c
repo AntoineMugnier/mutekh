@@ -24,8 +24,6 @@
 
 #include <mutek/mem_alloc.h>
 
-#include <mutek/printk.h>
-
 static DEVCRYPTO_INFO(efm32_aes_info)
 {
 #if 0
@@ -51,6 +49,9 @@ static DEVCRYPTO_INFO(efm32_aes_info)
 #ifdef CONFIG_DRIVER_EFM32_AES_OCB3
     | (1 << DEV_CRYPTO_MODE_OCB3)
 #endif
+#ifdef CONFIG_DRIVER_EFM32_AES_RANDOM
+    | (1 << DEV_CRYPTO_MODE_RANDOM)
+#endif
     ;
   info->align_log2 = 0;
   info->cap = 0
@@ -64,6 +65,7 @@ static DEVCRYPTO_INFO(efm32_aes_info)
     | DEV_CRYPTO_CAP_INPLACE | DEV_CRYPTO_CAP_NOTINPLACE;
 
   info->block_len = 16;
+  info->state_size = sizeof(struct efm32_aes_state_s);
 
   return 0;
 }
@@ -86,6 +88,49 @@ static DEV_REQUEST_DELAYED_FUNC(efm32_aes_process)
   struct dev_crypto_rq_s *rq = dev_crypto_rq_s_cast(rq_);
   struct dev_crypto_context_s *ctx = rq->ctx;
   const uint8_t *rawkey;
+
+#ifdef CONFIG_DRIVER_EFM32_AES_RANDOM
+  if (ctx->mode == DEV_CRYPTO_MODE_RANDOM)
+    {
+      struct efm32_aes_state_s * __restrict__ st = ctx->state_data;
+
+      if (rq->op & DEV_CRYPTO_INIT)
+        memset(st->rand8, 0, 32);
+
+      size_t l = rq->ad_len;
+      if ((rq->op & DEV_CRYPTO_INVERSE) && l)
+        {
+          const uint8_t * __restrict__ in = rq->ad;
+          while (l--)
+            {
+              uint_fast8_t i = l % 32;
+              st->rand8[i] ^= *in++;
+              if (!i)
+                efm32_aes_random(st->rand32, NULL);
+            }
+        }
+
+      l = rq->len;
+      if ((rq->op & DEV_CRYPTO_FINALIZE) && l)
+        {
+          uint8_t * __restrict__ out = rq->out;
+          union {
+            uint32_t r32[4];
+            uint8_t r8[16];
+          }          rout;
+          while (l)
+            {
+              efm32_aes_random(st->rand32, rout.r32);
+              size_t r = __MIN(l, 16);
+              l -= r;
+              while (r--)
+                *out++ = rout.r8[r];
+            }
+        }
+      rq->err = 0;
+      goto pop;
+    }
+#endif
 
   bool_t ctx_ok = dev_crypto_ctx_bind(ctx, pv->ctx, &pv->next,
                             CONFIG_DRIVER_EFM32_AES_CTXCOUNT);
@@ -177,7 +222,6 @@ static DEV_REQUEST_DELAYED_FUNC(efm32_aes_process)
         {
           efm32_aes_ocb_key(actx, ctx);
           c = 1;
-          printk("key changed\n");
         }
       else
         {
@@ -185,12 +229,10 @@ static DEV_REQUEST_DELAYED_FUNC(efm32_aes_process)
           for ((j = 16 - ctx->iv_len), (i = 0); j < 15; i++, j++)
             c |= rq->iv_ctr[i] ^ actx->ocb_nonce[j];
           c |= (rq->iv_ctr[i] ^ actx->ocb_nonce[j]) & 0xc0;
-          printk("key cached\n");
         }
       if (c)
         {
           efm32_aes_ocb_nonce(actx, rq);
-          printk("nonce changed\n");
         }
       efm32_aes_ocb(actx, rq, rawkey);
       break;
