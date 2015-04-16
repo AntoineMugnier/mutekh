@@ -1379,19 +1379,30 @@ static DEV_INIT(efm32_recmu_init)
 
   efm32_recmu_read_config(pv);
 
+#ifdef CONFIG_DRIVER_EFM32_LEUART_PRINTK
   /* hack to keep leuart clock enabled for early console before the
-     driver is loaded. */
-  __unused__ uint32_t x = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR +
-                                                      EFM32_CMU_LFBCLKEN0_ADDR));
-
-#ifdef EFM32_CLOCK_LEUART0
-  if (x & EFM32_CMU_LFBCLKEN0_LEUART0)
+     leuart driver is loaded. */
+# if defined(EFM32_CLOCK_LEUART0) && CONFIG_MUTEK_PRINTK_ADDR == 0x40084000
     pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_LEUART0);
+# elif defined(EFM32_CLOCK_LEUART1) && CONFIG_MUTEK_PRINTK_ADDR == 0x40084400
+    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_LEUART1);
+# endif
 #endif
 
-#ifdef EFM32_CLOCK_LEUART1
-  if (x & EFM32_CMU_LFBCLKEN0_LEUART1)
-    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_LEUART1);
+#ifdef CONFIG_DRIVER_EFM32_USART_PRINTK
+  /* hack to keep usart clock enabled for early console before the
+     usart driver is loaded. */
+# if defined(EFM32_CLOCK_UART0) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000e000
+    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_UART0);
+# elif defined(EFM32_CLOCK_UART1) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000e400
+    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_UART1);
+# elif defined(EFM32_CLOCK_USART0) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000c000
+    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_USART0);
+# elif defined(EFM32_CLOCK_USART1) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000c400
+    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_USART1);
+# elif defined(EFM32_CLOCK_USART2) && CONFIG_MUTEK_PRINTK_ADDR == 0x4000c800
+    pv->use_mask |= EFM32_CLK_MASK(EFM32_CLOCK_USART2);
+# endif
 #endif
 
   dev->drv = &efm32_recmu_drv;
