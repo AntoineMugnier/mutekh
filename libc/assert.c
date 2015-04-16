@@ -4,7 +4,7 @@
 
 #if defined(CONFIG_LIBC_ASSERT)
 
-#ifdef CONFIG_MUTEK_PRINTK
+#ifdef CONFIG_MUTEK_PRINTK_HANDLER
 ssize_t printk(const char *format, ...);
 #endif
 
@@ -19,7 +19,7 @@ __assert_fail(const char *file,
   if (!already_failed)
     {
       already_failed = 1;
-#ifdef CONFIG_MUTEK_PRINTK
+#ifdef CONFIG_MUTEK_PRINTK_HANDLER
       printk("Assertion failed at %s:%u:%s(): (%s) is false\n", file, line, func, expr);
 #endif
       cpu_trap();

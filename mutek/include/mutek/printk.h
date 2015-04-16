@@ -10,7 +10,7 @@
  * @short Debugging messages output API
  */
 
-#if defined(CONFIG_MUTEK_PRINTK)
+#if defined(CONFIG_MUTEK_PRINTK_HANDLER)
 
 /**
    @this defines the backend function for printk() output
