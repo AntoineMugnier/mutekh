@@ -232,15 +232,16 @@ dev_request_delayed_end(struct dev_request_dlqueue_s *q,
                         struct dev_request_s *rq)
 {
 #ifdef CONFIG_DEVICE_DELAYED_REQUEST
-  struct device_s *dev = rq->drvdata;
+  struct device_accessor_s *accessor = rq->drvdata;
 
   assert(cpu_is_interruptible());
-  if (dev != NULL)
+  if (accessor != NULL)
     {
+      struct device_s *dev = accessor->dev;
       LOCK_SPIN_IRQ(&dev->lock);
       dev_request_queue_remove(&q->queue, rq);
       if (!dev_request_queue_isempty(&q->queue))
-        kroutine_exec(&q->kr, 0);
+        kroutine_exec(&q->kr, 0); /* delayed exec next rq */
       LOCK_RELEASE_IRQ(&dev->lock);
     }
   kroutine_exec(&rq->kr, 1);
@@ -248,41 +249,51 @@ dev_request_delayed_end(struct dev_request_dlqueue_s *q,
 }
 
 /** @This pushes the device request in a @ref dev_request_dlqueue_s
-    delayed execution queue. if the @tt critical parameter is not set
-    and interrupts are enabled, the processing function is called
-    immediately. In the other case, the call is delayed for execution
-    from an interruptible context.
+    delayed execution queue. if interrupts are enabled and either the
+    @tt critical parameter is not set or the queue is empty, the
+    processing function is called immediately. In other cases, the
+    call is delayed for execution from an interruptible context.
 
     When the @tt critical parameter is set, requests are not handled
     in parallel. This means that the next call to the @ref
     dev_request_delayed_func_t processing function will not occur
     before the call to the @ref dev_request_delayed_end function for
-    the current request. */
+    the current request.
+
+    When the @ref #CONFIG_DEVICE_DELAYED_REQUEST token is not defined,
+    no queue is used and critical calls will make processing run with
+    interrupts disabled.
+*/
 inline void
 dev_request_delayed_push(struct device_accessor_s *accessor,
                          struct dev_request_dlqueue_s *q,
                          struct dev_request_s *rq, bool_t critical)
 {
+  struct device_s *dev = accessor->dev;
+  bool_t interruptible = cpu_is_interruptible();
 #ifdef CONFIG_DEVICE_DELAYED_REQUEST
-  if (!critical && cpu_is_interruptible())
+  bool_t empty = 1;
+  rq->drvdata = NULL;
+  if (critical || !interruptible)
     {
-      rq->drvdata = NULL;
-      q->func(accessor, rq);
-    }
-  else
-    {
-      LOCK_SPIN_IRQ(&accessor->dev->lock);
-      bool_t e = dev_request_queue_isempty(&q->queue);
+      LOCK_SPIN_IRQ(&dev->lock);
+      empty = dev_request_queue_isempty(&q->queue);
       rq->drvdata = accessor;
       dev_request_queue_pushback(&q->queue, rq);
-      if (e)
-        kroutine_exec(&q->kr, 0);
-      LOCK_RELEASE_IRQ(&accessor->dev->lock);
+      if (empty && !interruptible)
+        kroutine_exec(&q->kr, 0); /* delayed exec */
+      LOCK_RELEASE_IRQ(&dev->lock);
     }
+  if (empty && interruptible)
+    q->func(accessor, rq);
 #else
-  assert(!critical);
+  reg_t irq_state;
+  if (critical)
+    lock_spin_irq2(&dev->lock, &irq_state);
   q->func(accessor, rq);
-  kroutine_exec(&rq->kr, cpu_is_interruptible());
+  if (critical)
+    lock_release_irq2(&dev->lock, &irq_state);
+  kroutine_exec(&rq->kr, interruptible);    /* request end */
 #endif
 }
 
