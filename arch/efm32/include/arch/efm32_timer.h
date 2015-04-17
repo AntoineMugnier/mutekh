@@ -356,7 +356,7 @@
     #define EFM32_TIMER_CC_CTRL_PRSCONF_PULSE          0x00000000
     #define EFM32_TIMER_CC_CTRL_PRSCONF_LEVEL          0x00000001
 
-#define EFM32_TIMER_CC_CCV_ADDR(ridx)                (0x00000034 + (ridx) * 4)
+#define EFM32_TIMER_CC_CCV_ADDR(ridx)                (0x00000034 + (ridx) * 16)
 #define EFM32_TIMER_CC_CCV_COUNT                     3
 #define EFM32_TIMER_CC_CCV_MASK                      0x0000ffff
 /** In input capture mode, this field holds the first unread capture value. When
@@ -367,7 +367,7 @@
   #define EFM32_TIMER_CC_CCV_CCV_SET(x, v)           do { (x) = (((x) & ~0xffff) | ((v) << 0)); } while(0)
   #define EFM32_TIMER_CC_CCV_CCV_GET(x)              (((x) >> 0) & 0xffff)
 
-#define EFM32_TIMER_CC_CCVP_ADDR(ridx)               (0x00000038 + (ridx) * 4)
+#define EFM32_TIMER_CC_CCVP_ADDR(ridx)               (0x00000038 + (ridx) * 16)
 #define EFM32_TIMER_CC_CCVP_COUNT                    3
 #define EFM32_TIMER_CC_CCVP_MASK                     0x0000ffff
 /** This field is used to read the CC value without pulling data through the FIFO
@@ -376,7 +376,7 @@
   #define EFM32_TIMER_CC_CCVP_CCVP_SET(x, v)         do { (x) = (((x) & ~0xffff) | ((v) << 0)); } while(0)
   #define EFM32_TIMER_CC_CCVP_CCVP_GET(x)            (((x) >> 0) & 0xffff)
 
-#define EFM32_TIMER_CC_CCVB_ADDR(ridx)               (0x0000003c + (ridx) * 4)
+#define EFM32_TIMER_CC_CCVB_ADDR(ridx)               (0x0000003c + (ridx) * 16)
 #define EFM32_TIMER_CC_CCVB_COUNT                    3
 #define EFM32_TIMER_CC_CCVB_MASK                     0x0000ffff
 /** In Input Capture mode, this field holds the last capture value if the
