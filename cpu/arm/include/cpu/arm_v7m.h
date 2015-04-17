@@ -3,7 +3,8 @@
 ***************************************/
 
 /*
-   bfgen -o cdefs cdefs_use_field_shift=1 -O cpu/arm/include/cpu/arm_v7m.h
+   bfgen -I /opt/bfgen/defs/arm/arm_v7m.bf -o cdefs cdefs_use_field_shift=1    \
+     -O cpu/arm/include/cpu/arm_v7m.h
 */
 
 #ifndef _ARMV7M_BFGEN_DEFS_
@@ -158,6 +159,12 @@
 #define ARMV7M_AIRCR_ADDR                            0xe000ed0c
 
 #define ARMV7M_SCR_ADDR                              0xe000ed10
+  #define ARMV7M_SCR_SLEEPONNEXIT                  0x00000002
+  #define ARMV7M_SCR_SLEEPONNEXIT_SHIFT            1
+  #define ARMV7M_SCR_SLEEPDEEP                     0x00000004
+  #define ARMV7M_SCR_SLEEPDEEP_SHIFT               2
+  #define ARMV7M_SCR_SEVONPEND                     0x00000010
+  #define ARMV7M_SCR_SEVONPEND_SHIFT               4
 
 #define ARMV7M_CCR_ADDR                              0xe000ed14
 
