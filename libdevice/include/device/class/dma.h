@@ -46,29 +46,98 @@ enum dev_dma_inc_e
   DEV_DMA_INC_NONE
 };
 
+enum dev_dma_intl_e
+{
+  DEV_DMA_INTL_READ = 0, 
+  DEV_DMA_INTL_WRITE
+};
+
+enum dev_dma_transfer_type_e
+{
+/** @This is the basic DMA transfer mode. Copy a memory block of size @tt size
+    from @tt src to @tt dst. */
+  DEV_DMA_BASIC,
+/** @This is used to write data continously to a destination address @tt dst.
+    DMA transfer source swicthes alternatively between @tt src[0] and @tt src[1].
+    @tt count is decremented and kroutine is called each time DMA 
+    terminates a write operation. When kroutine is called with @tt count null,
+    DMA transfer is terminated and request will be not used anymore by driver.
+    If @tt count is not null when kroutine is called, it can be incremented by the
+    kroutine to continue operation as long as necessary. In the same way, @tt dst
+    can be modified by kroutine to write contigous memory area. Kroutine policy must
+    always be @ref KROUTINE_IMMEDIATE. @tt dst[0] and @tt dst[1] must be equal. */
+  DEV_DMA_DBL_BUF_SRC,
+/** @This is used to read data continously from a source address @tt src.
+    DMA transfer destination swicthes alternatively between @tt dst[0] and @tt dst[1].
+    @tt count is decremented and kroutine is called each time DMA terminates
+    a write operation. When kroutine is called with @tt count null, DMA transfer is
+    terminated and request will be not used anymore by driver. If @tt count is not null
+    when kroutine is called, it can be incremented by the kroutine to continue operation
+    as long as necessary. In the same way, @tt dst can be modified by kroutine to write
+    contigous memory area. Kroutine policy must always be @ref KROUTINE_IMMEDIATE. 
+    @tt src[0] and @tt src[1] must be equal. */
+  DEV_DMA_DBL_BUF_DST,
+/** @This is used to chain a list of DMA operation on a channel. The kroutine
+    is called when all operation have been performed. This can be useful to move multiple
+    memory blocks into one contiguous memory area. The number of operation to perform
+    @tt count is decremented each time an operation is terminated.*/
+  DEV_DMA_SCATTER_GATHER,
+/** @This is used when 2 DMA operations must be synchonized. This can be useful to
+    perform a SPI transfer. In this case, a first DMA operation is in charge of writing
+    data to SPI device and a second DMA operation is in charge of reading data from SPI.
+    The read DMA operation must be started before the write operation to avoid loosing data.
+    @ref tr[0] and param[0] are used for read operation and @tt ref tr[1] and param[1]
+    are used for write operation. The kroutine is called only when the read operation is
+    finished. */
+  DEV_DMA_INTERLEAVED,
+};
+
+struct dev_dma_entry_s
+{
+  size_t                      size;
+  uintptr_t                   src;
+  uintptr_t                   dst;
+};
+
+struct dev_dma_param_s
+{
+  uint8_t                       channel;
+  enum dev_dma_inc_e            src_inc:2;
+  enum dev_dma_inc_e            dst_inc:2;
+  uint8_t                       const_data:1;  
+};
+
 struct device_dma_s;
 
 /** Dma request @see devdma_request_t */
 struct dev_dma_rq_s
 {
-  struct dev_request_s        base;
+  struct dev_request_s          base;
 
-  size_t                      size;
+  enum dev_dma_transfer_type_e  type;
 
-  uintptr_t                   src;
+  union
+  {
+    /** Used with @ref DEV_DMA_BASIC */
+    struct dev_dma_entry_s      basic;
 
-  uintptr_t                   dst;
+    /** Used with @ref DEV_DMA_INTERLEAVED */
+    /** Used with @ref DEV_DMA_DBL_BUF_SRC */
+    /** Used with @ref DEV_DMA_DBL_BUF_DST */
 
-  enum dev_dma_inc_e          src_inc:2;
-  enum dev_dma_inc_e          dst_inc:2;
+    struct dev_dma_entry_s      tr[2];
 
-  uint8_t                     channel;        //< Channel for this request */
-  uint8_t                     const_data:1;   //< Constant data */
-  uint8_t                     arch_rq:1;      //< Architecture dependant request */
+    /** Used with @ref DEV_DMA_SCATTER_GATHER */
+    struct dev_dma_entry_s   ** sg;
+  };
 
-  error_t                     err;            //< error code set by driver
+ 
+  struct dev_dma_param_s        param[2];
 
-  const struct device_dma_s  *accessor;       //< associated dma device
+  uint16_t                      count;
+  uint8_t                       arch_rq:1;
+                             
+  error_t                       error;    
 };
 
 STRUCT_INHERIT(dev_dma_rq_s, dev_request_s, base);
@@ -83,7 +152,7 @@ STRUCT_INHERIT(dev_dma_rq_s, dev_request_s, base);
    @ref src_inc and @ref dst_inc defines the incrementation step of
    respectively @ref src and @ref dst addresses. When
    @ref DEV_DMA_INC_NONE is used, address must not be incremented
-   by DMA. This is useful for FIFO access.
+   by DMA. @ref src and @ref dst can be modified by driver.
    When @ref const_data field is set, src field points to the constant
    data to copy repeatedly to the destination and the @ref const_len
    field must be used to indicate length of the pattern.
@@ -106,31 +175,33 @@ DRIVER_CLASS_TYPES(dma,
                    devdma_request_t *f_request;
                    );
 
-inline error_t dev_dma_spin_copy(struct dev_dma_rq_s* rq)
+inline error_t dev_dma_spin_copy(const struct device_dma_s *accessor, 
+                                 struct dev_dma_rq_s* rq)
 {
     struct dev_request_status_s status;
 
     dev_request_spin_init(&rq->base, &status);
 
-    DEVICE_OP(rq->accessor, request, rq);
+    DEVICE_OP(accessor, request, rq);
 
     dev_request_spin_wait(&status);
 
-    return rq->err;
+    return rq->error;
 }
 
 #ifdef CONFIG_MUTEK_SCHEDULER
-inline error_t dev_dma_wait_copy(struct dev_dma_rq_s* rq)
+inline error_t dev_dma_wait_copy(const struct device_dma_s *accessor,
+                                 struct dev_dma_rq_s* rq)
 {
     struct dev_request_status_s status;
 
     dev_request_sched_init(&rq->base, &status);
 
-    DEVICE_OP(rq->accessor, request, rq);
+    DEVICE_OP(accessor, request, rq);
 
     dev_request_sched_wait(&status);
 
-    return rq->err;
+    return rq->error;
 }
 #endif
 

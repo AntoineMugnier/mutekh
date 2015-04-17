@@ -39,7 +39,7 @@
 #ifdef CONFIG_DRIVER_EFM32_DMA
 #include <device/class/dma.h>
 
-#include <cpu/arm/drivers/pl230dma/pl230_channel.h>
+#include <cpu/pl230_channel.h>
 #include <arch/efm32_dma_source.h>
 #include <arch/efm32_dma_request.h>
 #endif
@@ -74,8 +74,7 @@ struct efm32_usart_spi_context_s
 #ifdef CONFIG_DRIVER_EFM32_DMA
   bool_t                         dma_use;
   struct device_dma_s            dma;
-  struct efm32_dev_dma_rq_s      txrq; 
-  struct efm32_dev_dma_rq_s      rxrq; 
+  struct efm32_dev_dma_rq_s      drq; 
 #endif
 
 };
@@ -231,7 +230,6 @@ static DEV_IRQ_EP_PROCESS(efm32_usart_spi_irq)
   struct device_s *dev = ep->dev;
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;
 
-  /* FIXME: additional interrupt due to edge interrupt */
 
   lock_spin(&dev->lock);
 
@@ -331,31 +329,25 @@ static KROUTINE_EXEC(dma_callback)
 static void efm32_usart_spi_start_dma(struct device_s *dev)
 {
   struct efm32_usart_spi_context_s *pv = dev->drv_pv;
-  struct efm32_dev_dma_rq_s *req;
   
   pv->dma_use = 1;
 
-  req = &pv->txrq;
-
-  req->rq.size = pv->tr->count;
-  req->rq.src = (uintptr_t)pv->tr->out;
-  req->rq.src_inc = (0x20103 >> (pv->tr->out_width * 4)) & 0xf;
-  req->rq.err = 0;
+  pv->drq.rq.error = 0;
+  /* TX */
+  pv->drq.rq.tr[DEV_DMA_INTL_WRITE].size = pv->tr->count;
+  pv->drq.rq.tr[DEV_DMA_INTL_WRITE].src = (uintptr_t)pv->tr->out;
+  pv->drq.rq.param[DEV_DMA_INTL_WRITE].src_inc = (0x20103 >> (pv->tr->out_width * 4)) & 0xf;
+  /* RX */
+  pv->drq.rq.tr[DEV_DMA_INTL_READ].size = pv->tr->count;
+  pv->drq.rq.tr[DEV_DMA_INTL_READ].dst = (uintptr_t)pv->tr->in;
+  pv->drq.rq.param[DEV_DMA_INTL_READ].dst_inc = (0x20103 >> (pv->tr->in_width * 4)) & 0xf;
   
-  req = &pv->rxrq;
-
-  req->rq.size = pv->tr->count;
-  req->rq.dst = (uintptr_t)pv->tr->in;
-  req->rq.dst_inc = (0x20103 >> (pv->tr->in_width * 4)) & 0xf;
-  req->rq.err = 0;
- 
-  req->rq.base.pvdata = dev;
+  pv->drq.rq.base.pvdata = dev;
 
   cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, 0);
 
   /* Start DMA request */ 
-
-  DEVICE_OP(req->rq.accessor, request, &req->rq);
+  DEVICE_OP(&pv->dma, request, &pv->drq.rq);
 
 }
 #endif
@@ -462,6 +454,8 @@ static DEV_INIT(efm32_usart_spi_init)
   if (!pv)
     return -ENOMEM;
 
+  memset(pv, 0, sizeof(*pv));
+
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
 
@@ -521,15 +515,6 @@ static DEV_INIT(efm32_usart_spi_init)
 
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
 
-  /* init irq endpoint */
-#ifdef CONFIG_DEVICE_IRQ
-  device_irq_source_init(dev, &pv->irq_ep, 1,
-                         &efm32_usart_spi_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
-
-  if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
-    goto err_clk;
-#endif
-
   /* setup bit rate */
   pv->bit_rate = 100000;
   efm32_usart_spi_update_rate(pv);
@@ -539,27 +524,27 @@ static DEV_INIT(efm32_usart_spi_init)
                    endian_le32(EFM32_USART_CMD_RXEN | EFM32_USART_CMD_TXEN |
                                EFM32_USART_CMD_MASTEREN));
 
-  dev->drv = &efm32_usart_spi_drv;
-  dev->status = DEVICE_DRIVER_INIT_DONE;
+  /* init irq endpoint */
+#ifdef CONFIG_DEVICE_IRQ
+  device_irq_source_init(dev, &pv->irq_ep, 1,
+                         &efm32_usart_spi_irq, DEV_IRQ_SENSE_HIGH_LEVEL);
+
+  if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
+    goto err_clk;
+#endif
 
 #ifdef CONFIG_DRIVER_EFM32_DMA
 
   /* RX */
   struct dev_resource_s * rx = device_res_get(dev, DEV_RES_DMA, 0); 
 
-  pv->rxrq.rq.channel = rx->u.dma.channel;
-  pv->rxrq.trigsrc = rx->u.dma.config;
-
-  if (pv->rxrq.rq.channel > CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT)
+  if (rx->u.dma.channel > CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT)
     goto err_dma;
 
   /* TX */
   struct dev_resource_s * tx = device_res_get(dev, DEV_RES_DMA, 1); 
 
-  pv->txrq.rq.channel = tx->u.dma.channel; 
-  pv->txrq.trigsrc = tx->u.dma.config;
-
-  if (pv->txrq.rq.channel > CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT)
+  if (tx->u.dma.channel > CONFIG_DRIVER_EFM32_DMA_CHANNEL_COUNT)
     goto err_dma;
 
   if (strcmp(tx->u.dma.label, rx->u.dma.label))
@@ -570,30 +555,37 @@ static DEV_INIT(efm32_usart_spi_init)
 
   /* Set all fields that will not change */
 
-  pv->txrq.rq.arch_rq = 1;
-  pv->txrq.rq.accessor = &pv->dma;
-  pv->txrq.rq.dst = pv->addr + EFM32_USART_TXDATA_ADDR;
-  pv->txrq.rq.dst_inc = DEV_DMA_INC_NONE;
-  pv->txrq.rq.const_data = 0;
-  pv->txrq.mode = DMA_CHANNEL_CFG_CYCLE_CTR_BASIC;
-  pv->txrq.arbiter = DMA_CHANNEL_CFG_R_POWER_AFTER1;
-  pv->txrq.lrq = NULL;
+  pv->drq.rq.arch_rq = 1;
+  pv->drq.rq.type = DEV_DMA_INTERLEAVED;
+
+  /* WRITE */
+
+  pv->drq.rq.tr[DEV_DMA_INTL_WRITE].dst = pv->addr + EFM32_USART_TXDATA_ADDR;
+
+  pv->drq.rq.param[DEV_DMA_INTL_WRITE].dst_inc = DEV_DMA_INC_NONE;
+  pv->drq.rq.param[DEV_DMA_INTL_WRITE].const_data = 0;
+  pv->drq.rq.param[DEV_DMA_INTL_WRITE].channel = tx->u.dma.channel;
+
+  pv->drq.cfg[DEV_DMA_INTL_WRITE].trigsrc = tx->u.dma.config;
+  pv->drq.cfg[DEV_DMA_INTL_WRITE].arbiter = DMA_CHANNEL_CFG_R_POWER_AFTER1;
+
+  /* READ */
+
+  pv->drq.rq.tr[DEV_DMA_INTL_READ].src = pv->addr + EFM32_USART_RXDATA_ADDR;
+
+  pv->drq.rq.param[DEV_DMA_INTL_READ].src_inc = DEV_DMA_INC_NONE;
+  pv->drq.rq.param[DEV_DMA_INTL_READ].const_data = 0;
+  pv->drq.rq.param[DEV_DMA_INTL_READ].channel = rx->u.dma.channel;
+
+  pv->drq.cfg[DEV_DMA_INTL_READ].trigsrc = rx->u.dma.config;
+  pv->drq.cfg[DEV_DMA_INTL_READ].arbiter = DMA_CHANNEL_CFG_R_POWER_AFTER1;
   
-  kroutine_init(&pv->txrq.rq.base.kr, NULL, KROUTINE_NONE);
-
-  pv->rxrq.rq.arch_rq = 1;
-  pv->rxrq.rq.accessor = &pv->dma;
-  pv->rxrq.rq.src = pv->addr + EFM32_USART_RXDATA_ADDR;
-  pv->rxrq.rq.src_inc = DEV_DMA_INC_NONE;
-  pv->rxrq.rq.const_data = 0;
-  pv->rxrq.mode = DMA_CHANNEL_CFG_CYCLE_CTR_BASIC;
-  pv->rxrq.arbiter = DMA_CHANNEL_CFG_R_POWER_AFTER1;
-  pv->rxrq.lrq = &pv->txrq;
-
-  kroutine_init(&pv->rxrq.rq.base.kr, &dma_callback, KROUTINE_IMMEDIATE);
+  kroutine_init(&pv->drq.rq.base.kr, &dma_callback, KROUTINE_IMMEDIATE);
 
 #endif
 
+  dev->drv = &efm32_usart_spi_drv;
+  dev->status = DEVICE_DRIVER_INIT_DONE;
   return 0;
 
  err_dma:

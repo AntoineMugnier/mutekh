@@ -3,18 +3,21 @@
 
 #include <device/class/dma.h>
 
+
+struct efm32_dev_dma_cfg_s
+{
+  /* triggering source */
+  uint32_t                 trigsrc;
+  /* arbiter mode */
+  uint8_t                  arbiter:4;
+};
+
 struct efm32_dev_dma_rq_s
 {
   /* legacy request */
-  struct dev_dma_rq_s      rq;
-  /* triggering source */
-  uint32_t                 trigsrc;
-  /* dma mode */
-  uint8_t                  mode:3;
-  /* arbiter mode */
-  uint8_t                  arbiter:4;
-  /* Request linked to this one */
-  struct efm32_dev_dma_rq_s * lrq;
+  struct dev_dma_rq_s        rq;
+  /* Up to 2 configuration for interleaving */
+  struct efm32_dev_dma_cfg_s cfg[2];
 };
 
 #endif

@@ -51,9 +51,31 @@ static void dma_soclib_start(struct device_s *dev, const struct dev_dma_rq_s *rq
   struct dma_soclib_context_s	*pv = dev->drv_pv;
 
   cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_NOIRQ, 0);
-  cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_SRC, endian_le32((uintptr_t)rq->src));
-  cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_DST, endian_le32((uintptr_t)rq->dst));
-  cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_LEN, endian_le32(rq->size));
+  cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_SRC, endian_le32((uintptr_t)rq->basic.src));
+  cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_DST, endian_le32((uintptr_t)rq->basic.dst));
+  cpu_mem_write_32(pv->addr + TTY_SOCLIB_REG_LEN, endian_le32(rq->basic.size));
+}
+
+static bool_t dma_soclib_validate_request(struct dev_dma_rq_s *rq)
+{
+  if (rq->type != DEV_DMA_BASIC)
+    {
+      rq->error = -ENOTSUP;
+      return 1;
+    }
+
+  if ((rq->param[0].src_inc != DEV_DMA_INC_1_BYTE) ||
+      (rq->param[0].dst_inc != DEV_DMA_INC_1_BYTE) ||
+      (rq->param[0].channel) ||
+       rq->param[0].const_data)
+    {
+      rq->error = -ENOTSUP;
+      return 1;
+    }
+
+  assert(rq->basic.size);
+  
+  return 0;
 }
 
 static DEVDMA_REQUEST(dma_soclib_request)
@@ -61,21 +83,13 @@ static DEVDMA_REQUEST(dma_soclib_request)
   struct device_s             *dev = accessor->dev;
   struct dma_soclib_context_s	*pv = dev->drv_pv;
 
-  assert(req->size);
 
   LOCK_SPIN_IRQ(&dev->lock);
 
-  req->err = 0;
+  req->error = 0;
 
-  bool_t err = (req->src_inc != DEV_DMA_INC_1_BYTE) ||
-               (req->dst_inc != DEV_DMA_INC_1_BYTE) ||
-               req->channel ||
-               req->const_data;
-  if (err)
-    {
-      req->err = -ENOTSUP;
-      goto end;
-    }
+  if (dma_soclib_validate_request(req))
+    goto end;
 
   bool_t empty = dev_request_queue_isempty(&pv->queue);
 
@@ -88,7 +102,7 @@ end:
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
-  if (req->err)
+  if (req->error)
     kroutine_exec(&req->base.kr, cpu_is_interruptible());
 }
 
