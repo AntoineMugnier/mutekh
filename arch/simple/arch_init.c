@@ -46,7 +46,7 @@ void arch_specific_init();
 void arch_init(uintptr_t init_sp) 
 {
 #ifdef CONFIG_DATA_FROM_ROM
-	memcpy_from_code((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
+	memcpy((uint8_t*)&__data_start, (uint8_t*)&__data_load_start, (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
 	memset((uint8_t*)&__bss_start, 0, (uint8_t*)&__bss_end-(uint8_t*)&__bss_start);
 #endif
 

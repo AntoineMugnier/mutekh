@@ -41,9 +41,9 @@ void section_data_init()
   extern __ldscript_symbol_t __data_load_start;
   extern __ldscript_symbol_t __data_load_end;
 
-  memcpy_from_code((uint8_t*)&__data_start,
-                   (uint8_t*)&__data_load_start,
-                   (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
+  memcpy((uint8_t*)&__data_start,
+         (uint8_t*)&__data_load_start,
+         (uint8_t*)&__data_load_end-(uint8_t*)&__data_load_start);
 }
 #endif
 
@@ -72,9 +72,9 @@ void section_excep_init()
   extern __ldscript_symbol_t __exception_load_start;
   extern __ldscript_symbol_t __exception_load_end;
 
-  memcpy_from_code((uint8_t*)&CPU_NAME_DECL(exception_vector),
-                   (uint8_t*)&__exception_load_start,
-                   (uint8_t*)&__exception_load_end - (uint8_t*)&__exception_load_start);
+  memcpy((uint8_t*)&CPU_NAME_DECL(exception_vector),
+         (uint8_t*)&__exception_load_start,
+         (uint8_t*)&__exception_load_end - (uint8_t*)&__exception_load_start);
 }
 
 #endif
@@ -89,9 +89,9 @@ void section_smpreset_init()
   extern __ldscript_symbol_t __smp_reset_load_start;
   extern __ldscript_symbol_t __smp_reset_load_end;
 
-  memcpy_from_code((uint8_t*)&CPU_NAME_DECL(smp_reset_vector),
-                   (uint8_t*)&__smp_reset_load_start,
-                   (uint8_t*)&__smp_reset_load_end - (uint8_t*)&__smp_reset_load_start);
+  memcpy((uint8_t*)&CPU_NAME_DECL(smp_reset_vector),
+         (uint8_t*)&__smp_reset_load_start,
+         (uint8_t*)&__smp_reset_load_end - (uint8_t*)&__smp_reset_load_start);
 }
 
 #endif
