@@ -267,7 +267,10 @@ ALWAYS_INLINE void cpu_interrupt_wait(void)
 
 #   if defined(CONFIG_CPU_ARM_ARCH_PROFILE_M)
         cpu_interrupt_enable();
-	asm volatile ("wfi \n\t" ::: "memory");
+	asm volatile ("wfe \n\t"
+                      "sev \n\t"
+                      "wfe \n\t"
+                      ::: "memory");
 
 #   elif (CONFIG_CPU_ARM_ARCH_VERSION >= 6)
         cpu_interrupt_enable();
