@@ -138,15 +138,6 @@ memmove(void *dst, const void *src, size_t size)
 
 /********************************/
 
-#ifndef HAS_CPU_MEMCPY_FROM_CODE
-inline void * memcpy_from_code (void *dst, const void *src, size_t n)
-{
-  return memcpy(dst, src, n);
-}
-#endif
-
-/********************************/
-
 #ifndef HAS_CPU_STRLEN
 #undef strlen
 inline size_t strlen(const char *s)
@@ -577,3 +568,10 @@ void memrevcpy(uint8_t *dest, const uint8_t *src, size_t size)
     while (size--)
         *dest++ = *--src;
 }
+
+void memxor(uint8_t *dest, const uint8_t *a, const uint8_t *b, size_t size)
+{
+  for (size_t i = 0; i < size; ++i)
+    dest[i] = a[i] ^ b[i];
+}
+

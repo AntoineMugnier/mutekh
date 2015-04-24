@@ -473,12 +473,6 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
         if (flags & (flags > 1)) // PRINTF_FLAG_SPACE == 1
           *--buf = ' ';
 #endif
-        if (flags & PRINTF_FLAG_NEGATIVE)
-          *--buf = '-';
-#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
-        else if (flags & PRINTF_FLAG_PLUS)
-          *--buf = '+';
-#endif
         len = PRINTF_INT_BUFFER_LEN - (buf - buf_);
 
         break;
@@ -650,12 +644,26 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
     size_t padlen = __MAX((ssize_t)(padding[0] - len), 0);
 
-    if (!rightpad)
+    if (!rightpad && !zeropad)
       {
 	while (padlen--)
-	  fcn(ctx, zeropad ? "0" : " ", offset++, 1);
+	  fcn(ctx, " ", offset++, 1);
       }
 #endif
+
+    if (flags & PRINTF_FLAG_NEGATIVE)
+      fcn(ctx, "-", offset++, 1);
+#ifndef CONFIG_LIBC_FORMATTER_SIMPLE
+    else if (flags & PRINTF_FLAG_PLUS)
+      fcn(ctx, "+", offset++, 1);
+
+    if (!rightpad && zeropad)
+      {
+	while (padlen--)
+	  fcn(ctx, "0", offset++, 1);
+      }
+#endif
+
 
     fcn(ctx, buf, offset, len);
     offset += len;

@@ -50,6 +50,8 @@ void * memcpy(void *dst, const void *src, size_t size);
 /* Reverse memcpy */
 void memrevcpy(uint8_t *dest, const uint8_t *src, size_t size);
 
+void memxor(uint8_t *dest, const uint8_t *a, const uint8_t *b, size_t len);
+
 void *__memcpy_reverse(void *dst, const void *src, size_t size);
 
 void *memmove(void *dst, const void *src, size_t size);
@@ -57,10 +59,6 @@ void *memmove(void *dst, const void *src, size_t size);
 int_fast8_t memcmp(const void *s1, const void *s2, size_t n) __attribute__ ((pure));
 
 int_fast8_t memcstcmp(const void *s1, int_fast8_t, size_t n) __attribute__ ((pure));
-
-/** copy data from text address space, different from memcpy() for
-    Harvard architecture processors */
-void * memcpy_from_code(void *dst, const void *src, size_t size);
 
 /***************************************** string operations */
 
