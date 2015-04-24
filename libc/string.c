@@ -577,3 +577,10 @@ void memrevcpy(uint8_t *dest, const uint8_t *src, size_t size)
     while (size--)
         *dest++ = *--src;
 }
+
+void memxor(uint8_t *dest, const uint8_t *a, const uint8_t *b, size_t size)
+{
+  for (size_t i = 0; i < size; ++i)
+    dest[i] = a[i] ^ b[i];
+}
+

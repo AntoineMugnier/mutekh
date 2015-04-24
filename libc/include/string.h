@@ -50,6 +50,8 @@ void * memcpy(void *dst, const void *src, size_t size);
 /* Reverse memcpy */
 void memrevcpy(uint8_t *dest, const uint8_t *src, size_t size);
 
+void memxor(uint8_t *dest, const uint8_t *a, const uint8_t *b, size_t len);
+
 void *__memcpy_reverse(void *dst, const void *src, size_t size);
 
 void *memmove(void *dst, const void *src, size_t size);
