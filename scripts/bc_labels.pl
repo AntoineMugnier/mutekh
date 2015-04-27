@@ -76,6 +76,12 @@ my $longhelp = "
  C conditional directives are used to ignore parts of the bytecode
  when computing instruction addresses but are not striped in
  the output.
+
+ A custom instruction prefix can be specified in order to silent out
+ warnings about unknown instructions. All instructions with a matching
+ name prefix are assumed to be single word opcodes:
+
+     /* custom_opcode_prefix: BC_CUSTOM_ */
 ";
 
 use strict;
@@ -168,6 +174,8 @@ sub eval_cond
     }
 }
 
+my $custom_opcode_prefix;
+
 sub parse
 {
     my ( $filter, $filter2, $reset, $end ) = @_;
@@ -191,6 +199,8 @@ sub parse
             } else {
                 pop @cond;
             }
+        } elsif ( $line =~ /\/\* \s*custom_opcode_prefix:\s*(\w+)\s* \*\//x ) {
+            $custom_opcode_prefix = $1;
         } elsif ($cond[-1] == 1) {
 
 	if ($line =~ /^\s*#define\s+(\w+)\b(.*?)(\\)?\s*$/) {
@@ -285,7 +295,10 @@ parse( sub {
 	   {
 	       if (not defined $macros{$1})
 	       {
-		   print STDERR $in.":".($lnum+1).":unknown instruction/macro `$1', assuming size is 1.\n";
+                   if ( !defined $custom_opcode_prefix ||
+                        index($1, $custom_opcode_prefix != 0) ) {
+                       print STDERR $in.":".($lnum+1).":unknown instruction/macro `$1', assuming size is 1.\n";
+                   }
 		   $addr++;
 	       } elsif ($macros{$1}->{size} == 0) {
 		   print STDERR $in.":".($lnum+1).":macro `$1', of size 0.\n";
