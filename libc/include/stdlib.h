@@ -227,6 +227,9 @@ error_t system(const char *cmd);
     : __builtin_clz(_n) + (sizeof(_t) - sizeof(__compiler_sint_t)) * 8; \
 })
 
+uint32_t gcd32(uint32_t a, uint32_t b);
+uint64_t gcd64(uint64_t a, uint64_t b);
+
 /** @see div */
 typedef struct {
   __compiler_sint_t quot;
