@@ -50,7 +50,6 @@ enum dev_rfpacket_modulation_e
 
 enum dev_rfpacket_preamble_e
 {
-
   DEV_RFPACKET_01,
   DEV_RFPACKET_10,
   DEV_RFPACKET_ADAPTATIVE,
@@ -110,7 +109,7 @@ struct dev_rfpacket_config_s
   uint32_t                      sw_value;
 
   /** number of symbols */
-  uint8_t                      symbols;
+  uint8_t                       symbols;
 
   /** RSSI threshold in 0.125 dBm for RX */
   int16_t                       rssi_th;
@@ -136,13 +135,13 @@ struct dev_rfpacket_config_s
 
 struct dev_rfpacket_statistics_s
 {
-  /** Number of rx request */
+  /** Number of rx packet */
   uint32_t                      rx_count;
-  /** Number of tx request */
+  /** Number of tx packet */
   uint32_t                      tx_count;
-  /** Number of rx error: CRC, Overflow */
+  /** Number of rx packet error : CRC, Overflow */
   uint32_t                      rx_err_count;
-  /** Number of tx error: Underflow */
+  /** Number of tx packet error: Underflow, timeout  */
   uint32_t                      tx_err_count;
 };
 
@@ -154,7 +153,7 @@ struct dev_rfpacket_rx_s
   uint8_t                           *buf;           //< RX buffer, may be NULL
   uint16_t                          size;           //< Length of RX buffer, updated on packet reception
   int16_t                           rssi;           //< value of retrieved rssi in 0.125 dBm unit
-  dev_timer_value_t                 timestamp;
+  dev_timer_value_t                 timestamp;      //< in timer unit
 };
 
 STRUCT_INHERIT(dev_rfpacket_rx_s, dev_request_s, base);
@@ -192,15 +191,13 @@ struct dev_rfpacket_rq_s
 
   union {
     struct {
-      uint32_t                      lifetime;      //< request timeout in 1us unit
+      uint32_t                      lifetime;      //<  request timeout in timer unit
       enum dev_rfpacket_time_anchor_e anchor:2;
 
       struct {
-        dev_timer_value_t         timestamp;
-
+        dev_timer_value_t         timestamp;       //< in timer unit
         const uint8_t             *buf;
         uint16_t                  size;            //< length of TX packet in bytes
-
         int16_t                   pwr;             //< value of TX power in 0.125 dBm unit
       } tx;
     };
@@ -210,8 +207,6 @@ struct dev_rfpacket_rq_s
       enum dev_rfpacket_cfg_msk_e         mask;
     } cfg;
   };
-
-  const struct device_rfpacket_s    *accessor;         //< associated rfp device
 };
 
 STRUCT_INHERIT(dev_rfpacket_rq_s, dev_request_s, base);
@@ -312,6 +307,12 @@ STRUCT_INHERIT(dev_rfpacket_rq_s, dev_request_s, base);
   @item -
   @item Infinite idle aborted
 
+  @item @tt -EIO
+  @item -
+  @item TX underflow  
+  @item -  
+  @item -
+
   @end table
 
 */
@@ -343,11 +344,42 @@ typedef DEV_RFPACKET_REQUEST(dev_rfpacket_request_t);
   @tt timestamp field is set to the date of the beginning of frame.
 
  */
+
 typedef DEV_RFPACKET_RECEIVE(dev_rfpacket_receive_t);
+
+/** @see dev_rfpacket_request_t */
+#define DEV_RFPACKET_GET_TIMER_SKEW(n) error_t (n) (const struct device_rfpacket_s *accessor, \
+                                                    struct device_timer_s *timer, \
+                                                    struct dev_timer_skew_s *skew)
+/**
+  
+  This function returns a skew between the transceiver timer and
+  another timer provided by caller.
+  The @ref accessor can be an accessor on the same timer device as
+  that used in transceiver. In this case @ref skew->d field is null
+  and skew->r.num and skew->r.denom field are equal to 1.
+ */
+
+typedef DEV_RFPACKET_GET_TIMER_SKEW(dev_rfpacket_get_timer_skew_t);
+
+/** @see dev_rfpacket_request_t */
+#define DEV_RFPACKET_STATISTICS(n) const struct dev_rfpacket_statistics_s * (n) (const struct device_rfpacket_s *accessor)
+/**
+  This function returns a skew between the transceiver timer and
+  another timer provided by caller.
+  The @ref accessor can be an accessor on the same timer device as
+  that used in transceiver. In this case @ref skew->d field is null
+  and skew->r.num and skew->r.denom field are equal to 1.
+ */
+
+typedef DEV_RFPACKET_STATISTICS(dev_rfpacket_statistics_t);
+
 
 DRIVER_CLASS_TYPES(rfpacket,
                    dev_rfpacket_request_t *f_request;
                    dev_rfpacket_receive_t *f_receive;
+                   dev_rfpacket_statistics_t *f_stats;
+                   dev_rfpacket_get_timer_skew_t *f_get_timer_skew;
                   );
 
 inline error_t dev_rfpacket_spin_send_packet(
@@ -359,7 +391,6 @@ inline error_t dev_rfpacket_spin_send_packet(
 {
     struct dev_request_status_s status;
     struct dev_rfpacket_rq_s rq = {
-      .accessor = accessor,
       .err_group = 0,
       .err = 0,
       .type = DEV_RFPACKET_RQ_TX,
@@ -385,7 +416,6 @@ inline error_t dev_rfpacket_spin_config(
 {
     struct dev_request_status_s status;
     struct dev_rfpacket_rq_s rq = {
-      .accessor = accessor,
       .err_group = 0,
       .err = 0,
       .type = DEV_RFPACKET_RQ_CONFIG,
@@ -412,7 +442,6 @@ inline error_t dev_rfpacket_wait_send_packet(
 {
     struct dev_request_status_s status;
     struct dev_rfpacket_rq_s rq = {
-      .accessor = accessor,
       .err_group = 0,
       .err = 0,
       .type = DEV_RFPACKET_RQ_TX,
@@ -438,7 +467,6 @@ inline error_t dev_rfpacket_wait_config(
 {
     struct dev_request_status_s status;
     struct dev_rfpacket_rq_s rq = {
-      .accessor = accessor,
       .err_group = 0,
       .err = 0,
       .type = DEV_RFPACKET_RQ_CONFIG,
