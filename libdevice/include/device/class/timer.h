@@ -200,6 +200,16 @@ struct dev_timer_config_s
   enum dev_timer_capabilities_e cap:8;
 };
 
+/** Timer skew structure used to measure skew between two timers */
+struct dev_timer_skew_s
+{
+  /* Difference between two timer values */
+  int64_t  d;
+  /* Ratio between two timer clocks */
+  uint32_t num;
+  uint32_t denom;
+};
+
 /** @see dev_timer_request_t */
 #define DEV_TIMER_REQUEST(n)	error_t  (n) (struct device_timer_s *accessor, \
                                               struct dev_timer_rq_s *rq)
