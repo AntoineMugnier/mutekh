@@ -331,7 +331,10 @@ struct dev_spi_ctrl_queue_s
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
     struct dev_timer_rq_s         timer_rq;
 #endif
-    struct dev_spi_ctrl_transfer_s transfer;
+    struct {
+      struct dev_spi_ctrl_transfer_s transfer;
+      uint32_t                      padding_word;
+    };
   };
 
   /** This keep track of the last used configuration. */

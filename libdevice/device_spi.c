@@ -433,10 +433,10 @@ device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t)
               uint_fast8_t src = op & 0xf;
               uint_fast8_t dst = (op >> 4) & 0xf;
               void *addr = src + l >= 16 ? NULL : &rq->vm.v[src];
-              uint32_t dummy = bc_get_reg(&rq->vm, 14);
+              q->padding_word = bc_get_reg(&rq->vm, 14);
               if (dst + l >= 16)
                 return device_spi_ctrl_transfer(rq, t, sizeof(rq->vm.v[0]), 0,
-                                                addr, &dummy, l);
+                                                addr, &q->padding_word, l);
               else
                 return device_spi_ctrl_transfer(rq, t, sizeof(rq->vm.v[0]),
                          sizeof(rq->vm.v[0]), addr, &rq->vm.v[dst], l);
@@ -449,15 +449,15 @@ device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t)
           void *addr2 = (void*)bc_get_reg(&rq->vm, 1 ^ ((op >> 4) & 0xf));
           size_t count = bc_get_reg(&rq->vm, op & 0xf);
           uint_fast8_t width = (op >> 8) & 3;
-          uint32_t dummy = bc_get_reg(&rq->vm, 14);
+          q->padding_word = bc_get_reg(&rq->vm, 14);
           if (count == 0)
             continue;
           switch (op & 0x0c00)
             {
             case 0x0000:  /* pad */
-              return device_spi_ctrl_transfer(rq, t, 0, 0, NULL, &dummy, count);
+              return device_spi_ctrl_transfer(rq, t, 0, 0, NULL, &q->padding_word, count);
             case 0x0400:  /* rdm */
-              return device_spi_ctrl_transfer(rq, t, width+1, 0, addr, &dummy, count);
+              return device_spi_ctrl_transfer(rq, t, width+1, 0, addr, &q->padding_word, count);
             case 0x0800:  /* wrm */
               return device_spi_ctrl_transfer(rq, t, 0, width+1, NULL, addr, count);
             case 0x0c00:  /* swpm */
