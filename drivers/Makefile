@@ -9,6 +9,7 @@ gpio \
 i2c \
 mem \
 net \
+persist \
 printk \
 rtt \
 rfpacket \
