@@ -40,7 +40,9 @@
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 # include <mutek/bytecode.h>
 # include <device/class/gpio.h>
-# include <device/class/timer.h>
+# ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+#  include <device/class/timer.h>
+# endif
 # include <gct_platform.h>
 # include <gct/container_clist.h>
 #endif
@@ -341,13 +343,6 @@ struct dev_spi_ctrl_queue_s
 
   lock_irq_t                    lock;
   bool_t                        running;
-
-#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
-  dev_timer_cfgrev_t            delay_rev;
-  /** 1us delay shift, computed by @ref dev_timer_shift_sec @multiple */
-  int8_t                        delay_shift_a;
-  int8_t                        delay_shift_b;
-#endif
 };
 
 /** This helper function initializes a SPI request queue struct for
@@ -464,6 +459,8 @@ error_t device_spi_request_wakeup(struct dev_spi_ctrl_request_s *rq);
    @end section
 */
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
+
 /**
    This instruction setup a delay starting when the instruction is
    executed. The execution of the bytecode will not be suspended. When
@@ -472,7 +469,7 @@ error_t device_spi_request_wakeup(struct dev_spi_ctrl_request_s *rq);
    elapsed at that time. The @ref #CONFIG_DEVICE_SPI_REQUEST_TIMER
    must be defined in order to use this instruction.
 
-   The delay given in the register is expressed microsecond unit.
+   The delay given in the register is expressed timer unit.
  */
 #define BC_SPI_DELAY(r) BC_CUSTOM(0x0380 | (r & 0xf))
 
@@ -483,6 +480,8 @@ error_t device_spi_request_wakeup(struct dev_spi_ctrl_request_s *rq);
  */
 #define BC_SPI_NODELAY() BC_CUSTOM(0x0300)
 
+#endif
+
 /**
    This instruction allows other requests targeting slave on the same
    SPI bus to be processed. The chip select will be deasserted in order
@@ -492,6 +491,8 @@ error_t device_spi_request_wakeup(struct dev_spi_ctrl_request_s *rq);
    the bytecode execution will not resume until the delay has elapsed.
  */
 #define BC_SPI_YIELD() BC_CUSTOM(0x0020)
+
+#ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
 
 /**
    This works like @ref #BC_SPI_YIELD but the delay can be canceled by
@@ -528,6 +529,8 @@ error_t device_spi_request_wakeup(struct dev_spi_ctrl_request_s *rq);
    This instruction acts as @ref #BC_SPI_WAIT_DELAY followed by @ref #BC_SPI_WAIT.
  */
 #define BC_SPI_WAIT_DELAY(r, cs) BC_CUSTOM(0x0280 | (r & 0xf) | ((cs & 3) << 4))
+
+#endif
 
 /**
    This instruction set the current chip select policy.

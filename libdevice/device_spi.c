@@ -263,7 +263,7 @@ device_spi_ctrl_delay(struct dev_spi_ctrl_request_s *rq)
     {
       trq->deadline = rq->sleep_before;
       trq->delay = 0;
-      trq->rev = q->delay_rev;
+      trq->rev = 0;
       kroutine_init(&trq->rq.kr, device_spi_ctrl_timeout, KROUTINE_TRIGGER);
       trq->rq.pvdata = rq;
 
@@ -278,12 +278,6 @@ device_spi_ctrl_delay(struct dev_spi_ctrl_request_s *rq)
 
     case -ETIMEDOUT:    /* update time and retry */
       return DEVICE_SPI_CONTINUE_GET_TIME;
-
-    case -EAGAIN:       /* update time conversion and retry */
-      err = dev_timer_shift_sec(&q->timer, &q->delay_shift_a, &q->delay_shift_b,
-                                &q->delay_rev, 1, 1000000);
-      if (!err)
-        return DEVICE_SPI_CONTINUE_GET_TIME;
 
     default:
       device_spi_ctrl_end(rq, err);
@@ -371,8 +365,7 @@ device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t)
             case 0x0000:
               if (op & 0x0080)
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
-                rq->sleep_before = t + dev_timer_delay_shift_s2t(
-                   q->delay_shift_a, bc_get_reg(&rq->vm, op & 0xf));
+                rq->sleep_before = t + bc_get_reg(&rq->vm, op & 0xf);
 #endif
               switch (op & 0x0300)
                 {
@@ -656,14 +649,7 @@ error_t dev_spi_queue_init(struct device_s *dev, struct dev_spi_ctrl_queue_s *q)
   __unused__ error_t err;
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
-  if (!device_get_param_dev_accessor(dev, "spi-timer", &q->timer, DRIVER_CLASS_TIMER))
-    {
-      err = dev_timer_shift_sec(&q->timer, &q->delay_shift_a, &q->delay_shift_b,
-                                &q->delay_rev, 1, 1000000);
-      if (err)
-        return err;
-    }
-  else
+  if (device_get_param_dev_accessor(dev, "spi-timer", &q->timer, DRIVER_CLASS_TIMER))
     device_init_accessor(&q->timer);
 
   q->timeout = NULL;
