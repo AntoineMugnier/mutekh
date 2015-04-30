@@ -162,7 +162,9 @@ static void efm32_dev_dma_set_ctrl(struct device_s *dev,
 
 static void efm32_dev_dma_config(struct device_s *dev, struct dev_dma_rq_s *rq)
 {
+#ifdef CONFIG_DRIVER_EFM32_DMA_DOUBLE_BUFFERING
   struct efm32_dma_context *pv = dev->drv_pv;
+#endif
 
   switch (rq->type)
   {
