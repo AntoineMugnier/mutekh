@@ -7,6 +7,7 @@ enum \
 gpio \
 lcd \
 mem \
+persist \
 printk \
 spi \
 timer \
