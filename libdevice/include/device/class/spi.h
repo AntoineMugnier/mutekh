@@ -39,7 +39,9 @@
 
 #ifdef CONFIG_DEVICE_SPI_REQUEST
 # include <mutek/bytecode.h>
-# include <device/class/gpio.h>
+# ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+#  include <device/class/gpio.h>
+# endif
 # ifdef CONFIG_DEVICE_SPI_REQUEST_TIMER
 #  include <device/class/timer.h>
 # endif
@@ -276,6 +278,7 @@ struct dev_spi_ctrl_request_s
   /** Callback private data */
   void                     *pvdata;
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
   /** If this device accessor refers to a gpio device, it will be used
       to drive the chip select pin and aux pins for this SPI slave. If
       it's not valid, the controller chip select mechanism will be
@@ -288,6 +291,7 @@ struct dev_spi_ctrl_request_s
       of the table is used to drive the chip select signal. */
   const gpio_id_t         *gpio_map;
   const gpio_width_t      *gpio_wmap;
+#endif
 
   /** If the @ref cs_ctrl field is set, this value is used by the SPI
       controller to select the chip select output. */
@@ -299,8 +303,11 @@ struct dev_spi_ctrl_request_s
   /** Chip select polarity of the slave device */
   enum dev_spi_polarity_e cs_polarity:1;
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
   /** Use a gpio device to drive the chip select pin of the slave */
   bool_t                  cs_gpio:1;
+#endif
+
   /** Use the controller to driver the chip select pin of the slave */
   bool_t                  cs_ctrl:1;
 
@@ -579,6 +586,8 @@ error_t device_spi_request_wakeup(struct dev_spi_ctrl_request_s *rq);
  */
 #define BC_SPI_SWPL(wr, rd, count) BC_CUSTOM(0x0800 | ((wr & 0xf) << 4) | (rd & 0xf) | (((count) - 1) << 8))
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+
 /**
    This instruction sets the value of a gpio pin.
  */
@@ -593,6 +602,8 @@ error_t device_spi_request_wakeup(struct dev_spi_ctrl_request_s *rq);
    This instruction mode the value of a gpio pin.
  */
 #define BC_SPI_GPIOMODE(index, mode) BC_CUSTOM(0x4000 | (mode & 0xf) | ((index & 0xff) << 4))
+
+#endif
 
 /**
    This instruction transfers multiple words on the SPI bus. The

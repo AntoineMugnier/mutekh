@@ -25,7 +25,6 @@
 #include <device/resources.h>
 #include <device/class/spi.h>
 #include <device/class/timer.h>
-#include <device/class/gpio.h>
 #include <device/request.h>
 
 #include <mutek/bytecode.h>
@@ -72,6 +71,7 @@ static error_t device_spi_ctrl_select(struct dev_spi_ctrl_request_s *rq,
   if (rq->cs_ctrl)
     return DEVICE_OP(&rq->accessor, select, pc, rq->cs_polarity, rq->cs_id);
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
   if (rq->cs_gpio)
     {
       const uint8_t *value = NULL;
@@ -93,6 +93,7 @@ static error_t device_spi_ctrl_select(struct dev_spi_ctrl_request_s *rq,
       return DEVICE_OP(&rq->gpio, set_output, rq->gpio_map[0],
                        rq->gpio_map[0], value, value);
     }
+#endif
 
   return pc == DEV_SPI_CS_RELEASE ? 0 : -ENOTSUP;
 }
@@ -105,8 +106,10 @@ static KROUTINE_EXEC(device_spi_ctrl_transfer_end)
 
   lock_spin_irq(&q->lock);
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
   if (rq->cs_gpio && rq->cs_policy == DEV_SPI_CS_TRANSFER)
     device_spi_ctrl_select(rq, DEV_SPI_CS_DEASSERT);
+#endif
 
   if (tr->err != 0)
     device_spi_ctrl_end(rq, tr->err);
@@ -128,9 +131,11 @@ device_spi_ctrl_transfer(struct dev_spi_ctrl_request_s *rq, dev_timer_value_t t,
   struct dev_spi_ctrl_transfer_s *tr = &q->transfer;
   error_t err;
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
   if (rq->cs_gpio && rq->cs_policy == DEV_SPI_CS_TRANSFER &&
       (err = device_spi_ctrl_select(rq, DEV_SPI_CS_ASSERT)))
     goto err;
+#endif
 
   if (q->config != &rq->config)
     {
@@ -203,7 +208,11 @@ static void device_spi_ctrl_end(struct dev_spi_ctrl_request_s *rq, error_t err)
 
   if (rq == q->current)
     {
-      if (rq->cs_gpio || rq->cs_ctrl)
+      if (
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+          rq->cs_gpio ||
+#endif
+          rq->cs_ctrl)
         device_spi_ctrl_select(rq, DEV_SPI_CS_DEASSERT);
       q->config = NULL;
       q->current = NULL;
@@ -377,7 +386,11 @@ device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t)
                       bc_skip(&rq->vm);
                       continue;
                     }
-                  if (rq->cs_gpio || rq->cs_ctrl)
+                  if (
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+                      rq->cs_gpio ||
+#endif
+                      rq->cs_ctrl)
                     device_spi_ctrl_select(rq, DEV_SPI_CS_DEASSERT);
                   lock_spin_irq(&q->lock);
                   dev_spi_ctrl_queue_pushback(&q->queue, rq);
@@ -466,6 +479,7 @@ device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t)
           continue;
         }
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
         case 0x4000:            /* gpio* */
         case 0x2000:
         case 0x3000: {
@@ -495,6 +509,7 @@ device_spi_ctrl_exec(struct dev_spi_ctrl_queue_s *q, dev_timer_value_t t)
             }
           continue;
         }
+#endif
 
         }
 
@@ -568,9 +583,15 @@ dev_spi_rq_start(struct dev_spi_ctrl_request_s *rq)
   struct dev_spi_ctrl_queue_s *q = rq->queue;
   error_t err = 0;
 
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
   assert(!rq->cs_gpio || device_check_accessor(&rq->gpio));
+#endif
 
-  if (rq->cs_gpio || rq->cs_ctrl)
+  if (
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
+      rq->cs_gpio ||
+#endif
+      rq->cs_ctrl)
     rq->cs_policy = DEV_SPI_CS_TRANSFER;
   else
     rq->cs_policy = DEV_SPI_CS_RELEASE;
@@ -697,7 +718,9 @@ error_t dev_spi_request_init(struct device_s *slave,
 void dev_spi_request_cleanup(struct dev_spi_ctrl_request_s *rq)
 {
   device_put_accessor(&rq->accessor);
+#ifdef CONFIG_DEVICE_SPI_REQUEST_GPIO
   device_put_accessor(&rq->gpio);
+#endif
 }
 
 #endif
