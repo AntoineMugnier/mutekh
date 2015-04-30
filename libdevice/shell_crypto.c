@@ -211,13 +211,17 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_hash)
 
 static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_random)
 {
+  error_t err = 0;
   struct termui_optctx_dev_crypto_opts *c = ctx;
 
   struct dev_crypto_info_s info;
   if (DEVICE_OP(&c->accessor, info, &info))
     return -EINVAL;
 
-  void *state = alloca(info.state_size);
+  void *state = malloc(info.state_size);
+  if (!state)
+    return -EINVAL;
+
   memset(state, 0x55, info.state_size);
 
   struct dev_crypto_context_s cctx = {
@@ -238,10 +242,16 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_random)
       rq.ad_len = c->iv.len;
     }
 
+  rq.out = NULL;
   if (used & CRYPTO_OPT_OUT_LEN)
     {
       rq.op |= DEV_CRYPTO_FINALIZE;
-      rq.out = alloca(c->out_len);
+      rq.out = malloc(c->out_len);
+      if (!rq.out)
+        {
+          err = -EINVAL;
+          goto err_state;
+        }
       rq.len = c->out_len;
     }
 
@@ -250,13 +260,19 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_crypto_random)
   if (rq.err)
     {
       termui_con_printf(con, "err: %i\n", rq.err);
-      return -EINVAL;
+      err = -EINVAL;
+      goto err_rqout;
     }
 
   if (used & CRYPTO_OPT_OUT_LEN)
     termui_con_printf(con, "algo: %s\nout : %P\n", info.name, rq.out, rq.len);
 
-  return 0;
+ err_rqout:
+  free(rq.out);
+ err_state:
+  free(state);
+
+  return err;
 }
 
 static TERMUI_CON_OPT_DECL(dev_crypto_opts) =
