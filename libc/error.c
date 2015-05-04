@@ -20,6 +20,7 @@ static const char *const strerror_tab[] = {
 	[ECANCELED] = "Operation has been canceled",
 	[EACCES] = "Access denied",
 	[EIO] = "Io error",
+	[ENOSPC] = "No space left on device",
 	[EEOF] = "End of data",
 	[EEXISTS] = "File exists",
 	[EISDIR] = "Is a directory",

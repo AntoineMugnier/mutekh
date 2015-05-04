@@ -93,6 +93,9 @@ typedef int_fast8_t		error_t;
 /** Too many symbolic links encountered */
 #define ELOOP 26
 
+/** No space left on device */
+#define ENOSPC 28
+
 /** broken pipe */
 #define EPIPE		32
 
