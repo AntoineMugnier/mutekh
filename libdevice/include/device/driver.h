@@ -62,6 +62,7 @@ enum driver_class_e
   DRIVER_CLASS_CRYPTO,
   DRIVER_CLASS_CPU,
   DRIVER_CLASS_VALIO,
+  DRIVER_CLASS_PERSIST,
   /** First user defined device class id */
   DRIVER_CLASS_User_First = 128,
 };

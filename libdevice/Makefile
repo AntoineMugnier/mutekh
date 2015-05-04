@@ -19,6 +19,7 @@ enum_headers = include/device/types.h \
                include/device/class/crypto.h \
                include/device/class/timer.h \
                include/device/class/rfpacket.h \
+               include/device/class/persist.h \
                include/device/class/spi.h
 
 objs = driver.o device.o resources.o init.o request.o
@@ -80,3 +81,6 @@ objs += device_crypto.o
 objs-$(CONFIG_DEVICE_SHELL) += shell_crypto.o
 endif
 
+ifeq ($(CONFIG_DEVICE_PERSIST), defined)
+objs += device_persist.o
+endif
