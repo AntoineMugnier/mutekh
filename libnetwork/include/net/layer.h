@@ -132,7 +132,6 @@ error_t net_layer_init(
   struct net_layer_s *layer,
   const struct net_layer_handler_s *handler,
   struct net_scheduler_s *scheduler,
-  uint32_t type,
-  uint8_t max_header_size);
+  uint32_t type);
 
 #endif

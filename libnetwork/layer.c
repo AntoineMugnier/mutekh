@@ -4,28 +4,29 @@
 #include <net/layer.h>
 
 static
-bool_t net_layer_context_updated(struct net_layer_s *layer,
-                                 const struct net_layer_context_s *context)
+void net_layer_context_update(struct net_layer_s *layer,
+                              const struct net_layer_context_s *context)
 {
-  if (!memcmp(&layer->context, context, sizeof(*context)))
-    return 0;
+  bool_t changed = 0;
 
-  layer->context = *context;
-  return 1;
+  if (layer->handler->context_updated) {
+    changed = layer->handler->context_updated(layer, context);
+  } else if (memcmp(&layer->context, context, sizeof(*context))) {
+    layer->context = *context;
+    changed = 1;
+  }
+
+  //printk("Layer %S now %d+%d\n", &layer->type, 4,
+  //       layer->context.mtu, layer->context.prefix_size);
+
+  if (changed)
+    net_layer_context_changed(layer);
 }
 
 void net_layer_context_changed(struct net_layer_s *layer)
 {
   GCT_FOREACH(net_layer_list, &layer->children, child,
-              do {
-                bool_t (*updater)(struct net_layer_s *, const struct net_layer_context_s *);
-                updater = child->handler->context_updated;
-                if (!updater)
-                  updater = net_layer_context_updated;
-
-                if (updater(child, &layer->context))
-                  net_layer_context_changed(child);
-              } while (0);
+              net_layer_context_update(child, &layer->context);
               );
 }
 
@@ -39,7 +40,7 @@ error_t net_layer_bind(
   error_t err = -ENOTSUP;
 
   if (layer->handler->bound)
-    layer->handler->bound(layer, addr, child);
+    err = layer->handler->bound(layer, addr, child);
 
   assert(!child->parent);
 
@@ -50,6 +51,8 @@ error_t net_layer_bind(
 
   child->parent = layer;
   net_layer_list_pushback(&layer->children, child);
+
+  net_layer_context_update(child, &layer->context);
 
   return 0;
 }
@@ -73,8 +76,7 @@ error_t net_layer_init(
     struct net_layer_s *layer,
     const struct net_layer_handler_s *handler,
     struct net_scheduler_s *sched,
-    uint32_t type,
-    uint8_t header_size)
+    uint32_t type)
 {
   net_layer_refinit(layer);
   net_layer_list_init(&layer->children);

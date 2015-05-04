@@ -16,7 +16,7 @@ static
 void net_console_sink_task_handle(struct net_layer_s *layer,
                                   struct net_task_header_s *header)
 {
-  struct net_console_sink_s *sink = net_console_sink_s_from_layer(layer);
+  //struct net_console_sink_s *sink = net_console_sink_s_from_layer(layer);
   struct net_task_s *task = net_task_s_from_header(header);
 
   printk("Sink event %d", header->type);
@@ -46,5 +46,5 @@ error_t net_console_sink_init(
   struct net_console_sink_s *sink,
   struct net_scheduler_s *scheduler)
 {
-  return net_layer_init(&sink->layer, &sink_handler, scheduler, NET_CONSOLE_SINK, 0);
+  return net_layer_init(&sink->layer, &sink_handler, scheduler, NET_CONSOLE_SINK);
 }
