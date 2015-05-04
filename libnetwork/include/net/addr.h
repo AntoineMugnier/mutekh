@@ -18,11 +18,22 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+/**
+   @file
+   @module{Network stack library}
+   @short Network address structure
+ */
+
 #ifndef NET_ADDR_H
 #define NET_ADDR_H
 
 #include <hexo/types.h>
 
+/**
+   @this is a network address.  It contains all addresses that can be
+   set by any layer in the networking stack.  Its fields are enabled
+   depending on compiled network layers and libraries.
+ */
 struct net_addr_s
 {
 #if defined(CONFIG_BLE)

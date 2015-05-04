@@ -209,14 +209,6 @@ struct net_task_s *net_scheduler_task_alloc(
   return task;
 }
 
-struct buffer_s *net_scheduler_packet_alloc(
-  struct net_scheduler_s *sched)
-{
-  struct buffer_s *buffer = buffer_pool_alloc(sched->packet_pool);
-  //printk("Buffer %p created\n", buffer);
-  return buffer;
-}
-
 error_t net_scheduler_init(
   struct net_scheduler_s *sched,
   const struct net_scheduler_handler_s *handler,
@@ -276,15 +268,10 @@ error_t net_scheduler_init(
   return err;
 }
 
-void net_scheduler_stop(struct net_scheduler_s *sched)
+void net_scheduler_destroy(struct net_scheduler_s *sched)
 {
   sched->running = 0;
   net_sched_wakeup(sched);
-}
-
-void net_scheduler_destroy(struct net_scheduler_s *sched)
-{
-  net_scheduler_stop(sched);
 }
 
 void net_scheduler_task_push(

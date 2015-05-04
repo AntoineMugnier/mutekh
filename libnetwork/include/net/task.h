@@ -18,6 +18,32 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+/**
+   @file
+   @module{Network stack library}
+   @short Network task
+  
+   @section {Description}
+  
+   A network task is a work load to be handled by a given layer.  It may
+   be of various types among:
+   @list
+   @item a task happening after a delay,
+   @item a packet to handle,
+   @item a request to respond to,
+   @item a response to a request,
+   @item a one-way notification,
+   @item a layer-specific task.
+   @end list
+  
+   A task always has a source layer and a target layer.  A layer may
+   send a task to itself.
+  
+   There are various helpers to intialize and send tasks directly.
+  
+   @end section
+ */
+
 #ifndef NET_TASK_H
 #define NET_TASK_H
 
@@ -44,13 +70,15 @@ struct net_task_s;
 struct net_task_header_s;
 struct net_layer_s;
 
-void net_scheduler_task_push(
-  struct net_scheduler_s *sched,
-  struct net_task_header_s *task);
-
+/**
+   @this is called when a task gets destroyed.
+ */
 typedef void net_task_destroy_func_t(
   struct net_task_header_s *task);
 
+/**
+   @this is a type for tasks.
+ */
 enum net_task_type_e
 {
   NET_TASK_CUSTOM,
@@ -62,23 +90,30 @@ enum net_task_type_e
 };
 
 /**
-   Tasks are network stack basic workload that must be handled later
-   on.  Network stack may call layer with its own task when ready.
+   @this is a basic task header structure.  Inheriting this structure
+   is mandatory for custom types.
 
-   It is up to layers to inherit this structure if they require custom
-   tasks.
+   A destroy function must be set for each task.  When a task is
+   cleaned up, its destroy function will be called.
+
+   Basic task types are defined in @ref {net_task_s} and handle all
+   this structure fields.
  */
 struct net_task_header_s
 {
   GCT_CONTAINER_ENTRY(net_task_queue, queue_entry);
 
+  /** Destroy function */
   net_task_destroy_func_t *destroy_func;
+  /** Destroy function private data */
   void *allocator_data;
 
-  /** Must be filled, must retain a reference */
+  /** Must be filled, must retain a reference.  This is implicitly
+      done by standard functions. */
   struct net_layer_s *source;
 
-  /** Must be filled, must retain a reference */
+  /** Must be filled, must retain a reference.  This is implicitly
+      done by standard functions. */
   struct net_layer_s *target;
 
   enum net_task_type_e type;
@@ -86,13 +121,27 @@ struct net_task_header_s
 
 GCT_CONTAINER_TYPES(net_task_queue, struct net_task_header_s *, queue_entry);
 
+/**
+   @this pushes a task to a given target, for a given type.
+
+   @param header Task header to push
+   @param target Target layer, mandatory
+   @param source Source layer, mandatory
+   @param type Task type
+ */
 void net_task_push(struct net_task_header_s *header,
                      struct net_layer_s *target,
                      struct net_layer_s *source,
                      enum net_task_type_e type);
 
+/**
+   @this destroys a task.  This calls its destroy function.
+ */
 void net_task_cleanup(struct net_task_s *task);
 
+/**
+   @this is the structure for standard tasks.
+ */
 struct net_task_s
 {
   struct net_task_header_s header;
@@ -139,6 +188,11 @@ struct net_task_s
 
 STRUCT_COMPOSE(net_task_s, header);
 
+/**
+   @this pushes an inbound packet task to a layer.
+
+   @this sets all structure fields and pushes the task.
+ */
 void net_task_inbound_push(struct net_task_s *task,
                            struct net_layer_s *target,
                            struct net_layer_s *source,
@@ -151,30 +205,43 @@ void net_task_inbound_push(struct net_task_s *task,
    Forward an inbound task to another layer without changing timestamp
    and buffer.
 
-   Tash must not be cleared before calling this task.
+   Task must not be cleaned up for before calling this function.
 */
 void net_task_inbound_forward(struct net_task_s *task,
-                                struct net_layer_s *target);
+                              struct net_layer_s *target);
 
+/**
+   @this pushes a timetout task to a layer.  Source layer is same as
+   target layer.
+ */
 void net_task_timeout_push(struct net_task_s *task,
                            struct net_layer_s *target,
                            dev_timer_value_t deadline,
-                             dev_timer_value_t precision);
+                           dev_timer_value_t precision);
 
+/**
+   @this pushes a notification task to a layer.  @tt opcode meaning is
+   source-layer defined.
+ */
 void net_task_notification_push(struct net_task_s *task,
                                 struct net_layer_s *target,
                                 struct net_layer_s *source,
-                                  uint32_t opcode);
+                                uint32_t opcode);
 
+/**
+   @this pushes a query to a layer.  @tt opcode is requester-layer
+   defined.  Responder should use @ref net_task_query_respond_push
+   with the same task for answering.
+ */
 void net_task_query_push(struct net_task_s *task,
                          struct net_layer_s *target,
                          struct net_layer_s *requester,
-                           uint32_t opcode);
+                         uint32_t opcode);
 
 /**
-   Transform a query task into its response counterpart.  Target and
-   query requester fields are taken to use as response responder and
-   target fields.
+   Transform a query task into its response counterpart.  Query target
+   and requester fields are used as response responder and target
+   fields.
  */
 void net_task_query_respond_push(struct net_task_s *task, error_t err);
 
