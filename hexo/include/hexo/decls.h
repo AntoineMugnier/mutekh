@@ -121,10 +121,15 @@
 # define config_depend_or2_alwaysinline(token1, token2, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
 #endif
 
+#ifndef STATIC_ASSERT
+#define STATIC_ASSERT(error, expr)                              \
+  typedef char assertion_failure__##error[-(char)!(expr)];
+#endif
+
 #ifndef FIRST_FIELD_ASSERT
 #define FIRST_FIELD_ASSERT(struct_name, field)                        \
-  typedef char field##_must_be_the_first_field_in_struct_##struct_name \
-  [-(char)!!__builtin_offsetof(struct struct_name, field)];
+  STATIC_ASSERT(field##_must_be_the_first_field_in_struct,\
+                __builtin_offsetof(struct struct_name, field) == 0)
 #endif
 
 #define STRUCT_INHERIT(type_s, base_s, field)                           \
