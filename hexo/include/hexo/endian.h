@@ -332,7 +332,7 @@ ALWAYS_INLINE uint64_t endian_swap64(uint64_t x)
 #define ALIGN_ISPOWTWO(x)	!((x) & ((x) - 1))
 
 /** @this returns true if value is aligned */
-#define IS_ALIGNED(x, b)	!(((uintptr_t)x) & ((b) - 1))
+#define IS_ALIGNED(x, b)	!(((uintptr_t)(x)) & ((b) - 1))
 
 /** @internal @this does not use aligment code if b==1 at compilation time. */
 #define __ALIGN_CONSTANT(x, b, A) (__builtin_constant_p(b) ? ((b) == 1 ? (x) : A(x, b)) : A(x, b))
