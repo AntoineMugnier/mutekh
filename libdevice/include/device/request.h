@@ -50,7 +50,9 @@
 #define GCT_CONTAINER_ALGO_dev_request_queue CLIST
 
 /* Container algorithm used for priority queue of device requests */
-#define GCT_CONTAINER_ALGO_dev_request_pqueue AVL_P
+// For now, AVL_P has no support for collisions
+//#define GCT_CONTAINER_ALGO_dev_request_pqueue AVL_P
+#define GCT_CONTAINER_ALGO_dev_request_pqueue CLIST
 
 struct dev_request_s
 {
