@@ -187,6 +187,15 @@ bool_t nrf51_i2c_request_progress(struct nrf51_i2c_priv_s *pv,
       break;
     }
 
+    uint32_t scl = nrf_reg_get(pv->addr, NRF51_I2C_PSELSCL);
+
+    for (uint8_t i = 0; i < 20; ++i) {
+      uint32_t in = nrf_reg_get(NRF51822_GPIO, NRF51_GPIO_IN);
+      if (!(in & (1 << scl)))
+        break;
+      dprintk("\nscl wait %d\n", (in >> scl) & 1);
+    }
+
     nrf_task_trigger(pv->addr, NRF51_I2C_RESUME);
   }
 
