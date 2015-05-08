@@ -26,12 +26,12 @@
 
 #include "segger-rtt.h"
 
-size_t rtt_ringbuffer_write(
+uint32_t rtt_ringbuffer_write(
   struct rtt_ringbuffer_s *ring,
-  const uint8_t *buf, size_t len)
+  const uint8_t *buf, uint32_t len)
 {
-  size_t available;
-  size_t rptr, wptr;
+  uint32_t available;
+  uint32_t rptr, wptr;
 
   wptr = cpu_mem_read_32((uintptr_t)&ring->write_ptr);
   rptr = cpu_mem_read_32((uintptr_t)&ring->read_ptr);
@@ -44,9 +44,9 @@ size_t rtt_ringbuffer_write(
   if (!available || !len)
     return 0;
 
-  size_t to_copy = __MIN(available, len);
-  size_t to_copy1 = __MIN(ring->buffer_size - wptr, to_copy);
-  size_t to_copy2 = to_copy - to_copy1;
+  uint32_t to_copy = __MIN(available, len);
+  uint32_t to_copy1 = __MIN(ring->buffer_size - wptr, to_copy);
+  uint32_t to_copy2 = to_copy - to_copy1;
 
   memcpy(ring->buffer + wptr, buf, to_copy1);
 
@@ -65,12 +65,12 @@ size_t rtt_ringbuffer_write(
   return to_copy;
 }
 
-size_t rtt_ringbuffer_read(
+uint32_t rtt_ringbuffer_read(
   struct rtt_ringbuffer_s *ring,
-  uint8_t *buf, size_t len)
+  uint8_t *buf, uint32_t len)
 {
-  size_t available;
-  size_t rptr, wptr;
+  uint32_t available;
+  uint32_t rptr, wptr;
 
   wptr = cpu_mem_read_32((uintptr_t)&ring->write_ptr);
   rptr = cpu_mem_read_32((uintptr_t)&ring->read_ptr);
@@ -83,9 +83,9 @@ size_t rtt_ringbuffer_read(
   if (!available || !len)
     return 0;
 
-  size_t to_copy = __MIN(available, len);
-  size_t to_copy1 = __MIN(ring->buffer_size - rptr, to_copy);
-  size_t to_copy2 = to_copy - to_copy1;
+  uint32_t to_copy = __MIN(available, len);
+  uint32_t to_copy1 = __MIN(ring->buffer_size - rptr, to_copy);
+  uint32_t to_copy2 = to_copy - to_copy1;
 
   memcpy(buf, ring->buffer + rptr, to_copy1);
 
@@ -107,7 +107,7 @@ size_t rtt_ringbuffer_read(
 void rtt_ringbuffer_init(
   struct rtt_ringbuffer_s *ring,
   const char *name,
-  uint8_t *buf, size_t len,
+  uint8_t *buf, uint32_t len,
   uint32_t flags)
 {
   ring->name = name;

@@ -26,16 +26,16 @@
 struct rtt_ringbuffer_s {
   const char *name;
   uint8_t *buffer;
-  size_t buffer_size;
-  size_t write_ptr;
-  size_t read_ptr;
+  uint32_t buffer_size;
+  uint32_t write_ptr;
+  uint32_t read_ptr;
   uint32_t flags;
 };
 
 struct rtt_s {
   char id[16];
-  size_t tx_buffer_count;
-  size_t rx_buffer_count;
+  uint32_t tx_buffer_count;
+  uint32_t rx_buffer_count;
   struct rtt_ringbuffer_s buffer[0];
 };
 
@@ -48,9 +48,9 @@ struct rtt_s {
    @param len Buffer size to transfer
    @returns actually transferred buffer length
  */
-size_t rtt_ringbuffer_read(
+uint32_t rtt_ringbuffer_read(
   struct rtt_ringbuffer_s *ring,
-  uint8_t *buf, size_t len);
+  uint8_t *buf, uint32_t len);
 
 /**
    @this writes as much data as possible to the ringbuffer.  Function
@@ -61,9 +61,9 @@ size_t rtt_ringbuffer_read(
    @param len Buffer size to transfer
    @returns actually transferred buffer length
  */
-size_t rtt_ringbuffer_write(
+uint32_t rtt_ringbuffer_write(
   struct rtt_ringbuffer_s *ring,
-  const uint8_t *buf, size_t len);
+  const uint8_t *buf, uint32_t len);
 
 /**
    @this initializes a ring buffer
@@ -77,7 +77,7 @@ size_t rtt_ringbuffer_write(
 void rtt_ringbuffer_init(
   struct rtt_ringbuffer_s *ring,
   const char *name,
-  uint8_t *buf, size_t len,
+  uint8_t *buf, uint32_t len,
   uint32_t flags);
 
 #define RTT_RINGBUFFER_MODE_TRIM 1

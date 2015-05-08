@@ -40,7 +40,7 @@ static struct {
 static PRINTF_OUTPUT_FUNC(rtt_printk_out)
 {
   struct rtt_s *rtt = ctx;
-  size_t done = 0;
+  uint32_t done = 0;
   bool_t blocking = !!(rtt->buffer[0].flags & RTT_RINGBUFFER_MODE_BLOCKING);
 
   while (done < len && blocking)
