@@ -340,16 +340,30 @@ config_depend(CONFIG_DEVICE_TIMER)
 error_t dev_timer_init_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
                            dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
 
+/** @see dev_timer_init_sec. */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_init_sec_round(
-  struct device_timer_s *accessor, dev_timer_delay_t *delay,
-  dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
+error_t dev_timer_init_sec_round(struct device_timer_s *accessor, dev_timer_delay_t *delay,
+                                 dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
 
+/** @see dev_timer_init_sec. */
 config_depend(CONFIG_DEVICE_TIMER)
-error_t dev_timer_init_sec_ceil(
-  struct device_timer_s *accessor, dev_timer_delay_t *delay,
-  dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
+error_t dev_timer_init_sec_ceil(struct device_timer_s *accessor, dev_timer_delay_t *delay,
+                                dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
 
+/** @This multiplies the given fraction by the @em {timer frequency /
+    timer resolution} fraction. The fraction will be simplifyed if the
+    @tt reduce parameter is set.
+
+    The resulting fraction can be used for conversion between timer
+    units and second based delay.*/
+config_depend(CONFIG_DEVICE_TIMER)
+error_t dev_timer_frac(struct device_timer_s *accessor,
+                       uint64_t *num, uint64_t *denom,
+                       dev_timer_cfgrev_t *rev, bool_t reduce);
+
+/** @This works like @ref dev_timer_init_sec but convert from timer
+    unit to second based unit. */
+config_depend(CONFIG_DEVICE_TIMER)
 error_t dev_timer_get_sec(struct device_timer_s *accessor, dev_timer_delay_t *delay,
                           dev_timer_cfgrev_t *rev, dev_timer_delay_t s_delay, uint32_t r_unit);
 
