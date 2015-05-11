@@ -267,22 +267,26 @@ ALWAYS_INLINE void cpu_interrupt_wait(void)
 
 #   if defined(CONFIG_CPU_ARM_ARCH_PROFILE_M)
         cpu_interrupt_enable();
-	asm volatile ("wfe \n\t"
+	asm volatile (/* wait for event */
+                      "wfe \n\t"
+                      /* force clear of the event flag */
                       "sev \n\t"
                       "wfe \n\t"
                       ::: "memory");
 
 #   elif (CONFIG_CPU_ARM_ARCH_VERSION >= 6)
-        cpu_interrupt_enable();
         THUMB_TMP_VAR;
 	asm volatile (
                       THUMB_TO_ARM
+                      /* work with interrupts disabled in order to avoid race */
 		      "mcr p15, 0, %[zero], c7, c0, 4  \n\t"
                       ARM_TO_THUMB
                       /* : */  THUMB_OUT(:)
                       : [zero] "r" (0)
                       : "memory"
                      );
+        /* need to reenable interrupts so that the handler is executed */
+        cpu_interrupt_enable();
 #   else
 #    error CONFIG_CPU_WAIT_IRQ should not be defined here
 #   endif
