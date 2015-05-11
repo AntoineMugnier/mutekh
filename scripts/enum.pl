@@ -195,8 +195,11 @@ do {                                          		\\
 # define ENUM_FLAGS(desc) (*desc)
 # define ENUM_FLAGS_OR 0x80
 # define ENUM_FLAGS_EMPTY 0x40
+# define ENUM_FLAGS_NUMERIC 0x20
 #endif
 ";
+
+my $used_flags = 0;
 
 foreach my $filein (@ARGV) {
 
@@ -305,6 +308,10 @@ foreach my $filein (@ARGV) {
         if ($e->{opts}->{empty}) {
             $flags |= 0x40;
         }
+        if ($e->{opts}->{numeric}) {
+            $flags |= 0x20;
+        }
+        $used_flags |= $flags;
 
         $out .= "\n#define ENUM_DESC_".uc($name)." \\\n";
         $out .=  "\"". sprintf "\\x%02x", $flags;
@@ -378,6 +385,8 @@ foreach my $filein (@ARGV) {
 
     close(IN);
 }
+
+$out .= sprintf("\n#define ENUM_USED_FLAGS 0x%02x\n", $used_flags);
 
 if (defined $fileout) {
     open(OUT, ">$fileout") or die "unable to open `$fileout'\n";

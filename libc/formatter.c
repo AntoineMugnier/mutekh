@@ -623,17 +623,71 @@ formatter_printf(void *ctx, printf_output_func_t * const fcn,
 #ifndef CONFIG_LIBC_FORMATTER_SIMPLE
       case ('N'): {
         uint8_t *desc = va_arg(ap, uint8_t *);
-        buf = "?";
-        len = 1;
-        ENUM_FOREACH(uintptr_t, desc, {
-            if (value == val)
+# if ENUM_USED_FLAGS & ENUM_FLAGS_OR
+        if (ENUM_FLAGS(desc) & ENUM_FLAGS_OR)
+          {
+            static const size_t ENUM_MAX_STRLEN = 64;
+            len = 0;
+            buf = __builtin_alloca(ENUM_MAX_STRLEN);
+            ENUM_FOREACH(uintptr_t, desc, {
+                if (value & val)
+                  {
+                    size_t k = strlen(name);
+                    if (len + k + 1 >= ENUM_MAX_STRLEN - 3)
+                      goto enum_end;
+                    if (len != 0)
+                      buf[len++] = '|';
+                    memcpy(buf + len, name, k);
+                    len += k;
+                    val &= ~value;
+                  }
+            });
+            if (val)
               {
-                buf = (char*)name;
-                len = strlen(name);
-                break;
+                uint32_t v = val;
+                size_t k = 8;
+                if (!(v & 0xffff0000))
+                  (k -= 4, v <<= 16);
+                if (!(v & 0xff000000))
+                  (k -= 2, v <<= 8);
+                if (!(v & 0xf0000000))
+                  (k -= 1, v <<= 4);
+                if (len + 1 + 2 + k >= ENUM_MAX_STRLEN - 3)
+                  goto enum_end;
+                if (len != 0)
+                  buf[len++] = '|';
+                buf[len++] = '0';
+                buf[len++] = 'x';
+                while (k--)
+                  {
+                    buf[len++] = hex_lower_base[(v >> 28) & 15];
+                    v <<= 4;
+                  }
               }
-          });
-        break;
+            else if (len == 0)
+              buf[len++] = '0';
+            break;
+          enum_end:
+            buf[len++] = '.';
+            buf[len++] = '.';
+            buf[len++] = '.';
+            break;
+          }
+        else
+# endif
+          {
+            len = 1;
+            buf = "?";
+            ENUM_FOREACH(uintptr_t, desc, {
+                if (value == val)
+                  {
+                    buf = (char*)name;
+                    len = strlen(name);
+                    break;
+                  }
+            });
+            break;
+          }
       }
 #endif
 
