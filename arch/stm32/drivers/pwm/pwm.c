@@ -74,8 +74,8 @@ struct stm32_pwm_private_s
 };
 
 static
-error_t stm32_pwm_validate(struct device_pwm_s      *pdev,
-                           struct dev_pwm_request_s *rq)
+error_t stm32_pwm_validate(struct device_pwm_s *pdev,
+                           struct dev_pwm_rq_s *rq)
 {
   struct stm32_pwm_private_s *pv   = pdev->dev->drv_pv;
 
@@ -109,13 +109,11 @@ error_t stm32_pwm_validate(struct device_pwm_s      *pdev,
       /* check shard parameter (frequency). */
       if (freq_mask != rq->chan_mask)
         return -ENOTSUP;
-
       /* check device are started before configuration. */
       if ((freq_mask << pdev->number) != pv->start)
         return -ENOTSUP;
     }
 
-  printk("pwm: config valid.\n");
   return 0;
 }
 
@@ -141,7 +139,6 @@ error_t stm32_pwm_freq(struct device_s *dev)
   uint32_t const period = scale / (presc+1);
 
   /* save the configuration. */
-  printk("pwm: presc:%lu period:%lu\n", presc, period);
   DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, RCR, 0);
   DEVICE_REG_FIELD_UPDATE_DEV(TIMER, pv->addr, CR1, CKD, NO_DIV);
   DEVICE_REG_UPDATE_DEV(TIMER, pv->addr, PSC, presc);
@@ -247,7 +244,7 @@ cfg_end:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   rq->error = err;
-  kroutine_exec(&rq->req.kr, 0);
+  kroutine_exec(&rq->base.kr, 0);
 }
 
 static
