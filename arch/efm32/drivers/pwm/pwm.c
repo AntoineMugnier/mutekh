@@ -63,7 +63,7 @@ struct efm32_pwm_private_s
 #endif
 };
 
-static error_t efm32_pwm_validate_parameter(struct device_pwm_s *pdev, struct dev_pwm_request_s *rq)
+static error_t efm32_pwm_validate_parameter(struct device_pwm_s *pdev, struct dev_pwm_rq_s *rq)
 {
   struct efm32_pwm_private_s *pv  = pdev->dev->drv_pv;
   struct dev_freq_s freq = rq->cfg[0]->freq;
@@ -167,7 +167,6 @@ static DEV_PWM_CONFIG(efm32_pwm_config)
 {
   struct device_s            *dev = pdev->dev;
   struct efm32_pwm_private_s *pv  = dev->drv_pv;
-  struct dev_request_s *grq = (struct dev_request_s *)rq;
 
   assert(rq->chan_mask);
 
@@ -237,7 +236,7 @@ cfg_end:
   LOCK_RELEASE_IRQ(&dev->lock);
 
   rq->error = err;
-  kroutine_exec(&grq->kr, 0);
+  kroutine_exec(&rq->base.kr, 0);
 }
 
 #ifdef CONFIG_DEVICE_CLOCK
