@@ -93,10 +93,10 @@ struct dev_pwm_config_s
   uint_fast8_t            mask;
 };
 
-struct dev_pwm_request_s
+struct dev_pwm_rq_s
 {
   /* Generic request. */
-  struct dev_request_s          req;
+  struct dev_request_s          base;
 
   /* Error. */
   error_t                       error;
@@ -108,8 +108,10 @@ struct dev_pwm_request_s
   uint32_t                      chan_mask;
 };
 
-#define DEV_PWM_CONFIG(n) void (n)(struct device_pwm_s      *pdev, \
-                                  struct dev_pwm_request_s *rq)   \
+STRUCT_INHERIT(dev_pwm_rq_s, dev_request_s, base);
+
+#define DEV_PWM_CONFIG(n) void (n)(struct device_pwm_s *pdev, \
+                                  struct dev_pwm_rq_s  *rq)   \
 /**/
 
 /** @This tries to configure some PWM channels. The first channel to configure
@@ -190,17 +192,17 @@ inline error_t dev_pwm_wait_config(struct device_pwm_s *pdev, const struct dev_p
      const struct dev_pwm_config_s * pcfg[1] = {cfg};
      struct dev_request_status_s status;
 
-     struct dev_pwm_request_s rq = 
+     struct dev_pwm_rq_s rq =
      {
        .cfg = pcfg,
        .chan_mask = 1,
        .error = 0,
      };
 
-     dev_request_sched_init(&rq.req, &status);
-     
+     dev_request_sched_init(&rq.base, &status);
+
      DEVICE_OP(pdev, config, &rq);
-     
+
      dev_request_sched_wait(&status);
 
      return rq.error;
@@ -212,17 +214,17 @@ inline error_t dev_pwm_spin_config(struct device_pwm_s *pdev, const struct dev_p
      const struct dev_pwm_config_s * pcfg[1] = {cfg};
      struct dev_request_status_s status;
 
-     struct dev_pwm_request_s rq = 
+     struct dev_pwm_rq_s rq =
      {
        .cfg = pcfg,
        .chan_mask = 1,
        .error = 0,
      };
 
-     dev_request_spin_init(&rq.req, &status);
-     
+     dev_request_spin_init(&rq.base, &status);
+
      DEVICE_OP(pdev, config, &rq);
-     
+
      dev_request_spin_wait(&status);
 
      return rq.error;
