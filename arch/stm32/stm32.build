@@ -1,85 +1,401 @@
 
-%section stm32-*-*-* stm32-*-*
+%section stm32-nucleof401re
+  %inherit stm32-f401re
+
+  CONFIG_BOARD_STM32_NUCLEOF401RE
+  CONFIG_MUTEK_CONSOLE_DEVICE_PATHS "uart2 uart*"
+
+%section stm32-f?????
   %types architecture
 
   CONFIG_ARCH_STM32
+  CONFIG_COMPILE_OPTIMIZE s
+  CONFIG_DEVICE_TREE undefined
+  CONFIG_MUTEK_PRINTK_ADDR    0x40004400
 
   # Memory layout
 
   CONFIG_LOAD_ROM
 
-  CONFIG_COMPILE_OPTIMIZE s
+  CONFIG_STARTUP_STACK_ADDR 0x20000000
+  CONFIG_STARTUP_STACK_SIZE 0x00002000
+
+  CONFIG_LOAD_ROM_RW_ADDR   (CONFIG_STARTUP_STACK_ADDR + CONFIG_STARTUP_STACK_SIZE)
+  CONFIG_LOAD_ROM_RW_SIZE   0x00006000
+
+  CONFIG_STARTUP_HEAP_ADDR  (CONFIG_LOAD_ROM_RW_ADDR + CONFIG_LOAD_ROM_RW_SIZE)
+  CONFIG_STARTUP_HEAP_SIZE  (CONFIG_STM32_AHBRAMSIZE - CONFIG_STARTUP_STACK_SIZE - CONFIG_LOAD_ROM_RW_SIZE)
+
+  CONFIG_LOAD_ROM_RO_ADDR   0x08000000
+  CONFIG_LOAD_ROM_RO_SIZE   CONFIG_STM32_FLASHSIZE
 
   CONFIG_LOAD_EXCEPTIONS_SEPARATE undefined
   CONFIG_LOAD_EXCEPTIONS_TEXT
 
-  CONFIG_DEVICE_TREE undefined
+  ########### Flash size
+
+  %subsection stm32-f????4
+    %types flash
+    # 16KBytes
+    CONFIG_STM32_FLASHSIZE 0x00004000
+  %end
+
+  %subsection stm32-f????6
+    %types flash
+    # 32KBytes
+    CONFIG_STM32_FLASHSIZE 0x00008000
+  %end
+
+  %subsection stm32-f????8
+    %types flash
+    # 64KBytes
+    CONFIG_STM32_FLASHSIZE 0x00010000
+  %end
+
+  %subsection stm32-f????b
+    %types flash
+    # 128KBytes
+    CONFIG_STM32_FLASHSIZE 0x00020000
+  %end
+
+  %subsection stm32-f????c
+    %types flash
+    # 256KBytes
+    CONFIG_STM32_FLASHSIZE 0x00040000
+  %end
+
+  %subsection stm32-f????d
+    %types flash
+    # 384KBytes
+    CONFIG_STM32_FLASHSIZE 0x00060000
+  %end
+
+  %subsection stm32-f????e
+    %types flash
+    # 512KBytes
+    CONFIG_STM32_FLASHSIZE 0x00080000
+  %end
+
+  %subsection stm32-f????f
+    %types flash
+    # 768KBytes
+    CONFIG_STM32_FLASHSIZE 0x000c0000
+  %end
+
+  %subsection stm32-f????g
+    %types flash
+    # 1024KBytes
+    CONFIG_STM32_FLASHSIZE 0x00100000
+  %end
+
+  %subsection stm32-f????h
+    %types flash
+    # 1536KBytes
+    CONFIG_STM32_FLASHSIZE 0x00180000
+  %end
+
+  %subsection stm32-f????i
+    %types flash
+    # 2048KBytes
+    CONFIG_STM32_FLASHSIZE 0x00200000
+  %end
 
   #########################################################
-  # CPUs
+  # F1 family
 
-  %subsection stm32-f4-*-* stm32-f4-*
+  %subsection stm32-f1????
     %types family
 
-    CONFIG_CPU_ARM_CORTEXM4
+    CONFIG_STM32_FAMILY 1
+    CONFIG_CPU_ARM_CORTEXM3
     CONFIG_CPU_ARM_LITTLE
+    CONFIG_STM32_CPURAMSIZE 0x00000000
 
-    %set BUILD_NAME stm32-f4
+    CONFIG_DRIVER_STM32_GPIO
+#    CONFIG_DRIVER_STM32_GPIO_F1XX
+    CONFIG_DRIVER_STM32_USART
 
-    %subsection stm32-f4-401-* stm32-f4-nucleof401re
-      %types cpu
+    %set BUILD_NAME stm32-f1
 
-      CONFIG_STM32_F401
+    ########### Features
 
-      CONFIG_MUTEK_PRINTK_ADDR    0x40004400
-
-      # SRAM = 0x20000000-0x20017fff (96 KBytes)
-
-      CONFIG_STARTUP_STACK_ADDR 0x20000000
-      CONFIG_STARTUP_STACK_SIZE 0x00002000
-
-      CONFIG_LOAD_ROM_RW_ADDR   0x20002000
-      CONFIG_LOAD_ROM_RW_SIZE   0x00006000
-
-      CONFIG_STARTUP_HEAP_ADDR  0x20008000
-      CONFIG_STARTUP_HEAP_SIZE  0x00010000
-
-      CONFIG_DRIVER_STM32_GPIO
-      CONFIG_DRIVER_STM32_I2C
-      CONFIG_DRIVER_STM32_USART
-      CONFIG_DRIVER_STM32_USART_SWFIFO 16
-      CONFIG_DRIVER_STM32_TIMER
-      CONFIG_DRIVER_STM32_PWM
-
-      CONFIG_CPU_ARM_M_IRQ_COUNT 84
-
-    %end
-
-    %subsection stm32-f4-401-re stm32-f4-nucleof401re
-      %types flash
-
-      # Flash memory = 0x0800000-0x0807ffff (512KBytes)
-      CONFIG_LOAD_ROM_RO_ADDR   0x08000000
-      CONFIG_LOAD_ROM_RO_SIZE   0x00080000
-
-    %end
-
-    %subsection stm32-f4-401-*
-      %types features
-    %end
-
-    %subsection stm32-f4-nucleof401re
+    %subsection stm32-f100??
       %types features
 
-      CONFIG_BOARD_STM32_NUCLEOF401RE
-      CONFIG_MUTEK_CONSOLE_DEVICE_PATHS "uart2 uart*"
+      CONFIG_STM32_SERIE 100
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT 0
+    %end
+
+    %subsection stm32-f101??
+      %types features
+
+      CONFIG_STM32_SERIE 101
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT 0
+    %end
+
+    %subsection stm32-f102??
+      %types features
+
+      CONFIG_STM32_SERIE 102
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT 0
+    %end
+
+    %subsection stm32-f103??
+      %types features
+
+      CONFIG_STM32_SERIE 103
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT 0
+    %end
+
+    %subsection stm32-f105??
+      %types features
+
+      CONFIG_STM32_SERIE 105
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT 0
+    %end
+
+    %subsection stm32-f107??
+      %types features
+
+      CONFIG_STM32_SERIE 107
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT 0
+    %end
+
+    ########### Ram size
+
+    %subsection stm32-f100?4 stm32-f100?6 stm32-f101?4
+      %types sram
+      # 4k
+      CONFIG_STM32_AHBRAMSIZE 0x00001000
+    %end
+
+    %subsection stm32-f101?6 stm32-f102?4 stm32-f102?6 stm32-f103?4
+      %types sram
+      # 6k
+      CONFIG_STM32_AHBRAMSIZE 0x00001800
+    %end
+
+    %subsection stm32-f100?8 stm32-f100?b
+      %types sram
+      # 8k
+      CONFIG_STM32_AHBRAMSIZE 0x00002000
+    %end
+
+    %subsection stm32-f101?8 stm32-f102?8 stm32-f103?6
+      %types sram
+      # 10k
+      CONFIG_STM32_AHBRAMSIZE 0x00002800
+    %end
+
+    %subsection stm32-f101?b stm32-f102?b
+      %types sram
+      # 16k
+      CONFIG_STM32_AHBRAMSIZE 0x00004000
+    %end
+
+    %subsection stm32-f100?c
+      %types sram
+      # 24k
+      CONFIG_STM32_AHBRAMSIZE 0x00006000
+    %end
+
+    %subsection stm32-f100?d stm32-f100?e stm32-f101?c
+      %types sram
+      # 32k
+      CONFIG_STM32_AHBRAMSIZE 0x00008000
+    %end
+
+    %subsection stm32-f101?d stm32-f101?e stm32-f103?c
+      %types sram
+      # 48k
+      CONFIG_STM32_AHBRAMSIZE 0x0000c000
+    %end
+
+    %subsection stm32-f103?d stm32-f103?e stm32-f105?? stm32-f107??
+      %types sram
+      # 64k
+      CONFIG_STM32_AHBRAMSIZE 0x00010000
+    %end
+
+    %subsection stm32-f101?f stm32-f101?g
+      %types sram
+      # 80k
+      CONFIG_STM32_AHBRAMSIZE 0x00014000
+    %end
+
+    %subsection stm32-f103?f stm32-f103?g
+      %types sram
+      # 96k
+      CONFIG_STM32_AHBRAMSIZE 0x00018000
     %end
 
   %end
 
-  %requiretypes architecture
+  #########################################################
+  # F4 family
+
+  %subsection stm32-f4????
+    %types family
+
+    CONFIG_STM32_FAMILY 4
+    CONFIG_CPU_ARM_CORTEXM4
+    CONFIG_CPU_ARM_LITTLE
+
+    CONFIG_DRIVER_STM32_GPIO
+    CONFIG_DRIVER_STM32_GPIO_F4XX
+    CONFIG_DRIVER_STM32_I2C
+    CONFIG_DRIVER_STM32_USART
+    CONFIG_DRIVER_STM32_TIMER
+    CONFIG_DRIVER_STM32_PWM
+
+    %set BUILD_NAME stm32-f4
+
+    ########### Features
+
+    %subsection stm32-f401??
+      %types features
+
+      CONFIG_STM32_SERIE 401
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT 84
+    %end
+
+    %subsection stm32-f405??
+      %types features
+
+      CONFIG_STM32_SERIE 405
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT
+    %end
+
+    %subsection stm32-f407??
+      %types features
+
+      CONFIG_STM32_SERIE 407
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT
+    %end
+
+    %subsection stm32-f411??
+      %types features
+
+      CONFIG_STM32_SERIE 411
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT
+    %end
+
+    %subsection stm32-f415??
+      %types features
+
+      CONFIG_STM32_SERIE 415
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT
+    %end
+
+    %subsection stm32-f417??
+      %types features
+
+      CONFIG_STM32_SERIE 417
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT
+    %end
+
+    %subsection stm32-f446??
+      %types features
+
+      CONFIG_STM32_SERIE 446
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT
+    %end
+
+    %subsection stm32-f427??
+      %types features
+
+      CONFIG_STM32_SERIE 427
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT
+    %end
+
+    %subsection stm32-f429??
+      %types features
+
+      CONFIG_STM32_SERIE 429
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT
+    %end
+
+    %subsection stm32-f437??
+      %types features
+
+      CONFIG_STM32_SERIE 437
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT
+    %end
+
+    %subsection stm32-f439??
+      %types features
+
+      CONFIG_STM32_SERIE 439
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT
+    %end
+
+    %subsection stm32-f479??
+      %types features
+
+      CONFIG_STM32_SERIE 479
+
+      CONFIG_CPU_ARM_M_IRQ_COUNT
+    %end
+
+    ########### Ram size
+
+    %subsection stm32-f401?b stm32-f401?c
+      %types sram
+      CONFIG_STM32_AHBRAMSIZE 0x00010000
+      CONFIG_STM32_CPURAMSIZE 0x00000000
+    %end
+
+    %subsection stm32-f401?d stm32-f401?e
+      %types sram
+      CONFIG_STM32_AHBRAMSIZE 0x00018000
+      CONFIG_STM32_CPURAMSIZE 0x00000000
+    %end
+
+    %subsection stm32-f411?? stm32-f446??
+      %types sram
+      CONFIG_STM32_AHBRAMSIZE 0x00010000
+      CONFIG_STM32_CPURAMSIZE 0x00010000
+    %end
+
+    %subsection stm32-f405?? stm32-f407?? stm32-f415?? stm32-f417??
+      %types sram
+      CONFIG_STM32_AHBRAMSIZE 0x00020000
+      CONFIG_STM32_CPURAMSIZE 0x00010000
+    %end
+
+    %subsection stm32-f427?? stm32-f429?? stm32-f437?? stm32-f439??
+      %types sram
+      CONFIG_STM32_AHBRAMSIZE 0x00030000
+      CONFIG_STM32_CPURAMSIZE 0x00010000
+    %end
+
+#    %subsection stm32-f479??
+#      %types sram
+#      CONFIG_STM32_AHBRAMSIZE 
+#      CONFIG_STM32_CPURAMSIZE 
+#    %end
+
+  %end
+
   %requiretypes family
-  %requiretypes cpu
   %requiretypes flash
   %requiretypes features
+  %requiretypes sram
 
