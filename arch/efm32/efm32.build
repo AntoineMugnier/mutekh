@@ -1,4 +1,76 @@
 
+%section efm32-stk3200
+  %inherit efm32-zero-222-f32
+
+  CONFIG_EFM32_STK3200
+
+  CONFIG_MUTEK_PRINTK_ADDR 0x40084000
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
+
+  CONFIG_EFM32_BOOT_BUTTON
+  CONFIG_EFM32_BOOT_BUTTON_PIN 40
+
+%section efm32-g8xxstk
+  %inherit efm32-gecko-890-f128
+
+  CONFIG_EFM32_G8XX_STK
+  # CONFIG_MUTEK_PRINTK_ADDR 0x40084000
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
+
+  CONFIG_MUTEK_PRINTK_ADDR 0x4000e000
+  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
+  CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
+
+  CONFIG_EFM32_BOOT_BUTTON
+  CONFIG_EFM32_BOOT_BUTTON_PIN 25
+
+%section efm32-stk3600
+  %inherit efm32-leopard-990-f256
+
+  CONFIG_EFM32_STK3600
+  # CONFIG_MUTEK_PRINTK_ADDR 0x40084000
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
+
+  CONFIG_MUTEK_PRINTK_ADDR 0x4000e000
+  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
+  CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
+
+  CONFIG_EFM32_BOOT_BUTTON
+  CONFIG_EFM32_BOOT_BUTTON_PIN 25
+
+%section efm32-stk3700
+  %inherit efm32-giant-990-f1024
+
+  CONFIG_EFM32_STK3700
+  # CONFIG_MUTEK_PRINTK_ADDR 0x40084000
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
+
+  CONFIG_MUTEK_PRINTK_ADDR 0x4000e000
+  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
+  CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
+
+  CONFIG_EFM32_BOOT_BUTTON
+  CONFIG_EFM32_BOOT_BUTTON_PIN 25
+
+%section efm32-stk3800
+  %inherit efm32-wonder-990-f256
+
+  CONFIG_EFM32_STK3800
+  # CONFIG_MUTEK_PRINTK_ADDR 0x40084000
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
+  CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
+
+  CONFIG_MUTEK_PRINTK_ADDR 0x4000e000
+  CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
+  CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
+
+  CONFIG_EFM32_BOOT_BUTTON
+  CONFIG_EFM32_BOOT_BUTTON_PIN 25
+
 %section efm32-*-*-* efm32-*
   %types architecture
 
@@ -18,7 +90,7 @@
   #################################################
   # CPUs
 
-  %subsection efm32-zero-*-* efm32-stk3200
+  %subsection efm32-zero-*-*
     %types family
 
     CONFIG_CPU_ARM_CORTEXM0
@@ -63,7 +135,7 @@
       CONFIG_LOAD_ROM_RO_SIZE 0x00004000
     %end
 
-    %subsection efm32-zero-*-f32 efm32-stk3200
+    %subsection efm32-zero-*-f32
       %types flash
 
       CONFIG_LOAD_ROM_RO_ADDR 0x00000000
@@ -79,7 +151,7 @@
       CONFIG_STARTUP_STACK_ADDR (0x20000800 - CONFIG_STARTUP_STACK_SIZE)
     %end
 
-    %subsection efm32-zero-*-f16 efm32-zero-*-f32 efm32-stk3200
+    %subsection efm32-zero-*-f16 efm32-zero-*-f32
       %types sram
 
       CONFIG_LOAD_ROM_RW_ADDR 0x20000000
@@ -96,24 +168,13 @@
       %types features
     %end
   
-    %subsection efm32-*-222-* efm32-stk3200
+    %subsection efm32-*-222-*
       %types features
-    %end
-
-    %subsection efm32-stk3200
-      CONFIG_EFM32_STK3200
-
-      CONFIG_MUTEK_PRINTK_ADDR 0x40084000
-      CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
-      CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
-
-      CONFIG_EFM32_BOOT_BUTTON
-      CONFIG_EFM32_BOOT_BUTTON_PIN 40
     %end
 
   %end
 
-  %subsection efm32-gecko-*-* efm32-g8xxstk
+  %subsection efm32-gecko-*-*
     %types family
 
     CONFIG_CPU_ARM_CORTEXM3
@@ -159,7 +220,7 @@
       CONFIG_LOAD_ROM_RO_SIZE 0x00010000
     %end
 
-    %subsection efm32-gecko-*-f128 efm32-g8xxstk
+    %subsection efm32-gecko-*-f128
       %types flash
 
       CONFIG_LOAD_ROM_RO_ADDR 0x00000000
@@ -175,7 +236,7 @@
       CONFIG_STARTUP_STACK_ADDR (0x20002000 - CONFIG_STARTUP_STACK_SIZE)
     %end
 
-    %subsection efm32-gecko-*-f64 efm32-gecko-*-f128 efm32-g8xxstk
+    %subsection efm32-gecko-*-f64 efm32-gecko-*-f128
       %types sram
 
       CONFIG_LOAD_ROM_RW_ADDR 0x20000000
@@ -200,29 +261,15 @@
       %types features
     %end
 
-    %subsection efm32-gecko-880-* efm32-gecko-890-* efm32-g8xxstk
+    %subsection efm32-gecko-880-* efm32-gecko-890-*
       %types features
-    %end
-
-    %subsection efm32-g8xxstk
-      CONFIG_EFM32_G8XX_STK
-      # CONFIG_MUTEK_PRINTK_ADDR 0x40084000
-      CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
-      CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
-
-      CONFIG_MUTEK_PRINTK_ADDR 0x4000e000
-      CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
-      CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
-
-      CONFIG_EFM32_BOOT_BUTTON
-      CONFIG_EFM32_BOOT_BUTTON_PIN 25
     %end
 
   %end
 
 
 
-  %subsection efm32-leopard-*-* efm32-stk3600
+  %subsection efm32-leopard-*-*
     %types family
 
     %set BUILD_NAME efm32-leopard
@@ -230,23 +277,9 @@
     CONFIG_CPU_ARM_CORTEXM3
     CONFIG_EFM32_LEOPARD_GECKO
 
-    %subsection efm32-stk3600
-      CONFIG_EFM32_STK3600
-      # CONFIG_MUTEK_PRINTK_ADDR 0x40084000
-      CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
-      CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
-
-      CONFIG_MUTEK_PRINTK_ADDR 0x4000e000
-      CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
-      CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
-
-      CONFIG_EFM32_BOOT_BUTTON
-      CONFIG_EFM32_BOOT_BUTTON_PIN 25
-    %end
-
   %end
 
-  %subsection efm32-wonder-*-* efm32-stk3800
+  %subsection efm32-wonder-*-*
     %types family
 
     %set BUILD_NAME efm32-wonder
@@ -254,23 +287,9 @@
     CONFIG_CPU_ARM_CORTEXM4
     CONFIG_EFM32_WONDER_GECKO
 
-    %subsection efm32-stk3800
-      CONFIG_EFM32_STK3800
-      # CONFIG_MUTEK_PRINTK_ADDR 0x40084000
-      CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
-      CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
-
-      CONFIG_MUTEK_PRINTK_ADDR 0x4000e000
-      CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
-      CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
-
-      CONFIG_EFM32_BOOT_BUTTON
-      CONFIG_EFM32_BOOT_BUTTON_PIN 25
-    %end
-
   %end
 
-  %subsection efm32-wonder-*-* efm32-leopard-*-* efm32-stk3600 efm32-stk3800
+  %subsection efm32-wonder-*-* efm32-leopard-*-*
     %types sram
 
     CONFIG_CPU_ARM_M_IRQ_COUNT 39
@@ -313,7 +332,7 @@
   %end
 
 
-  %subsection efm32-giant-*-* efm32-stk3700
+  %subsection efm32-giant-*-*
     %types family
     %types sram
 
@@ -321,20 +340,6 @@
 
     CONFIG_CPU_ARM_CORTEXM3
     CONFIG_EFM32_GIANT_GECKO
-
-    %subsection efm32-stk3700
-      CONFIG_EFM32_STK3700
-      # CONFIG_MUTEK_PRINTK_ADDR 0x40084000
-      CONFIG_DRIVER_EFM32_LEUART_PRINTK_PIN 52
-      CONFIG_DRIVER_EFM32_LEUART_PRINTK_LOC 0
-
-      CONFIG_MUTEK_PRINTK_ADDR 0x4000e000
-      CONFIG_DRIVER_EFM32_USART_PRINTK_PIN 64
-      CONFIG_DRIVER_EFM32_USART_PRINTK_LOC 1
-
-      CONFIG_EFM32_BOOT_BUTTON
-      CONFIG_EFM32_BOOT_BUTTON_PIN 25
-    %end
 
     CONFIG_CPU_ARM_M_IRQ_COUNT 39
 
@@ -366,7 +371,7 @@
       CONFIG_LOAD_ROM_RO_SIZE 0x00080000
     %end
 
-    %subsection efm32-*-*-f1024 efm32-stk3700
+    %subsection efm32-*-*-f1024
       %types flash
 
       CONFIG_LOAD_ROM_RO_ADDR 0x00000000
@@ -376,9 +381,9 @@
   %end
 
 
-  %subsection efm32-wonder-*-* efm32-leopard-*-* efm32-giant-*-* efm32-stk3600 efm32-stk3800 efm32-stk3700
+  %subsection efm32-wonder-*-* efm32-leopard-*-* efm32-giant-*-*
 
-    %subsection efm32-*-*-f256 efm32-stk3600 efm32-stk3800
+    %subsection efm32-*-*-f256
       %types flash
 
       CONFIG_LOAD_ROM_RO_ADDR 0x00000000
@@ -413,7 +418,7 @@
       %types features
     %end
 
-    %subsection efm32-*-980-* efm32-*-990-* efm32-*-995-* efm32-stk3600 efm32-stk3800 efm32-stk3700
+    %subsection efm32-*-980-* efm32-*-990-* efm32-*-995-*
       %types features
     %end
 
