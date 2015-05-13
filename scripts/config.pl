@@ -1890,7 +1890,7 @@ sub read_build_config
 	# replace variables
 	$line =~ s/\$\((\w+)\)/$vars{$1}/ge;
 
-	if ($line =~ /^\s* %(sub)?section \s+ ([*\w\d\s-]+)/x) {
+	if ($line =~ /^\s* %(sub)?section \s+ ([?*\w\d\s-]+)/x) {
 	    my $s = $1;	# subsection ?
 	    my @sections = split(/\s+/, $2);
 	    my $i = 1;
@@ -1901,6 +1901,7 @@ sub read_build_config
 
 		    my $p_ = $p;
 		    $p_ =~ s/\*/[\\w\\d]\+/g;
+		    $p_ =~ s/\?/[\\w\\d]/g;
 
 		    foreach (split(/:/, $section)) {
 			if ( $_ =~ /^$p_$/ ) {
