@@ -1982,6 +1982,11 @@ sub read_build_config
 	    next;
 	}
 
+	if ($line =~ /^\s* %inherit \s+ (.*)$/x) {
+            $section .= ":$1";
+	    next;
+	}
+
 	if ($line =~ /^\s* %error \s+ (.*)$/x) {
 	    error("$file:$lnum: $1");
 	    next;
