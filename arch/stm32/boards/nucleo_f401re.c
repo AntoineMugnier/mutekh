@@ -73,8 +73,8 @@ DEV_DECLARE_STATIC_RESOURCES(usart2_dev_res, 6,
   DEV_STATIC_RES_IRQ(0, STM32_IRQ_USART2, 0, "/cpu"),
 
   DEV_STATIC_RES_DEV_PARAM("iomux", "/gpio"),
-  DEV_STATIC_RES_IOMUX("tx", 0, /* PB2 */ 1*16+2, /* AF4. */ 4, 0),
-  DEV_STATIC_RES_IOMUX("rx", 0, /* PB3 */ 1*16+3, /* AF4. */ 4, 0),
+  DEV_STATIC_RES_IOMUX("tx", 0, /* PA2 */ 0*16+2, /* AF7. */ 7, 0),
+  DEV_STATIC_RES_IOMUX("rx", 0, /* PA3 */ 0*16+3, /* AF7. */ 7, 0),
 
   /* default configuration. */
   DEV_STATIC_RES_UART(115200, 8, DEV_UART_PARITY_NONE, 1, 0, 0),
