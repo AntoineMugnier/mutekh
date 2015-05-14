@@ -25,9 +25,9 @@
 
 #include <hexo/iospace.h>
 
-#include <arch/stm32_gpio.h>
+#include <arch/stm32f4xx_gpio.h>
 #include <arch/stm32_i2c.h>
-#include <arch/stm32_rcc.h>
+#include <arch/stm32f4xx_rcc.h>
 #include <arch/stm32_usart.h>
 
 #include <arch/stm32_irq.h>

@@ -37,8 +37,8 @@
 #include <device/class/iomux.h>
 
 #include <arch/stm32_exti.h>
-#include <arch/stm32_gpio.h>
-#include <arch/stm32_rcc.h>
+#include <arch/stm32f4xx_gpio.h>
+#include <arch/stm32f4xx_rcc.h>
 #include <arch/stm32_syscfg.h>
 
 #include <cpp/device/helpers.h>

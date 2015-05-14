@@ -28,8 +28,8 @@
 
 #include <cpp/device/helpers.h>
 #include <arch/stm32_usart.h>
-#include <arch/stm32_gpio.h>
-#include <arch/stm32_rcc.h>
+#include <arch/stm32f4xx_gpio.h>
+#include <arch/stm32f4xx_rcc.h>
 #include <arch/stm32_memory_map.h>
 
 

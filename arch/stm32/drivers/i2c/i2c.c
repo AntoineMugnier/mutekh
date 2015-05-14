@@ -39,7 +39,7 @@
 #include <arch/stm32_memory_map.h>
 
 #include <arch/stm32_i2c.h>
-#include <arch/stm32_rcc.h>
+#include <arch/stm32f4xx_rcc.h>
 
 
 enum stm32_i2c_state_e
