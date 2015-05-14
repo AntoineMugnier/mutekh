@@ -1,3 +1,11 @@
+%section procble-dongle
+  %inherit psoc4
+
+  CONFIG_DRIVER_PSOC4_PRINTK
+  CONFIG_DRIVER_PSOC4_PRINTK_PORT 1
+  CONFIG_DRIVER_PSOC4_PRINTK_PIN 5
+  CONFIG_DRIVER_PSOC4_PRINTK_RATE 115200
+
 %section psoc4 psoc4
   %types architecture
   %set BUILD_NAME psoc4
