@@ -10,6 +10,7 @@
 %include stm32/stm32.build
 %include nrf51/nrf51.build
 %include cc1326/cc1326.build
+%include psoc4/psoc4.build
 
 %common
   %requiretypes architecture
