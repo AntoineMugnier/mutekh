@@ -514,7 +514,7 @@ stm32_i2c_run(struct stm32_i2c_private_s *pv)
         case STM32_I2C_S_STOP:
             /* if we have just written the last byte, wait for BTF=1. */
             tr = &rq->transfer[rq->error_transfer-1];
-            if (tr->type == DEV_I2C_WRITE &&
+            if (rq->error_offset > 0 && tr->type == DEV_I2C_WRITE &&
                 !DEVICE_REG_FIELD_VALUE_DEV(I2C, pv->addr, SR1, BTF))
                 return 0;
 
