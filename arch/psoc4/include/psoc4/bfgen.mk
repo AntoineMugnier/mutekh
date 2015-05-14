@@ -1,5 +1,5 @@
 
-HEADERS = scb.h hsiom.h
+HEADERS = scb.h hsiom.h core.h
 BFGEN_CDEFS = -o cdefs cdefs_use_reg_mask=1 cdefs_use_field_setval=1
 
 all: $(HEADERS) $(HEADERS:.h=.html)
