@@ -156,7 +156,7 @@ error_t stm32_pwm_duty(struct device_s *dev, uint_fast8_t channel)
     return -ERANGE;
 
   uint32_t const period = DEVICE_REG_VALUE_DEV(TIMER, pv->addr, ARR);
-  uint32_t const ratio  = pv->duty[channel].num * period / pv->duty[channel].denom;
+  uint32_t const ratio  = (uint64_t)pv->duty[channel].num * period / pv->duty[channel].denom;
   DEVICE_REG_IDX_UPDATE_DEV(TIMER, pv->addr, CCR, channel, ratio);
 
   return 0;
