@@ -46,6 +46,10 @@
 
 #include "ble_radio_handler.h"
 
+#if defined(CONFIG_DRIVER_NRF5X_BLE_RADIO_DEBUG)
+# include <arch/nrf5x/gpio.h>
+#endif
+
 #if defined(CONFIG_DEVICE_CLOCK)
 # if defined(CONFIG_ARCH_NRF51)
 #  define HFCLK_RAMPUP_US      900
@@ -95,6 +99,114 @@ enum ppi_id_e
   PPI_RTC_ENABLE_TXEN = NRF_PPI_RTC0_COMPARE_0_RADIO_TXEN,
   PPI_RTC_ENABLE_RXEN = NRF_PPI_RTC0_COMPARE_0_RADIO_RXEN,
 };
+
+#if defined(CONFIG_DRIVER_NRF5X_BLE_RADIO_DEBUG)
+//#define RADIO_DEBUG 1
+//#define GPIO_DEBUG 1
+
+#if defined(GPIO_DEBUG)
+#if defined(CONFIG_NRF5X_PCA20002)
+# define I_NEXT_ACTION 0
+# define I_CLOCK_REQ   0
+# define I_CLOCK_RUN   (1 << 19) // RXD
+# define I_LATER       0
+# define I_ENABLE      0
+# define I_TRANSFER    (1 << 20) // TXD
+# define I_TX          0
+# define I_PIPELINE    0
+# define I_WAIT        0
+#else
+# define I_NEXT_ACTION (1 << 22)
+# define I_CLOCK_REQ   0
+# define I_CLOCK_RUN   0
+# define I_LATER       (1 << 25)
+# define I_ENABLE      (1 << 28)
+# define I_TRANSFER    (1 << 29)
+# define I_TX          0//(1 << 30)
+# define I_PIPELINE    (1 << 31)
+# define I_WAIT        (1 << 23)
+#endif
+#else
+#define gpio(a, b) do{}while(0)
+#endif
+
+static void debug_init(struct ble_radio *pv)
+{
+#if defined(GPIO_DEBUG)
+  uint32_t gpios = 0
+    | I_NEXT_ACTION
+    | I_CLOCK_REQ
+    | I_CLOCK_RUN
+    | I_LATER
+    | I_ENABLE
+    | I_TRANSFER
+    | I_TX
+    | I_PIPELINE
+    | I_WAIT;
+
+  while (gpios) {
+    uint8_t i = __builtin_ctz(gpios);
+    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(i), 0
+                | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+                | NRF_GPIO_PIN_CNF_INPUT_DISCONNECT
+                | NRF_GPIO_PIN_CNF_DRIVE_S0S1
+                );
+
+    gpios &= ~(1 << i);
+  }
+#endif
+}
+
+#if defined(GPIO_DEBUG)
+static inline void gpio(uint32_t mask, uint32_t value)
+{
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTCLR, mask & ~value);
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_OUTSET, value);
+}
+#endif
+
+static inline void debug(struct ble_radio *pv, const char *x)
+{
+#ifdef RADIO_DEBUG
+  uint8_t len = strlen(x);
+
+  while (pv->debug_cur < DEBUG_BUFFER_SIZE && len) {
+    pv->debug[pv->debug_cur++] = *x++;
+    --len;
+  }
+
+  //writek(x, len);
+
+  //for (uint8_t i = 0; x[i]; ++i)
+  //nrf_reg_set(nrf_peripheral_addr(NRF5X_UART0), NRF_UART_TXD, x[i]);
+#endif
+}
+
+static void debug_flush(struct ble_radio *pv)
+{
+#ifdef RADIO_DEBUG
+  writek(pv->debug, pv->debug_cur);
+  writek("\n", 1);
+  pv->debug_cur = 0;
+  // memset(pv->debug, 0, DEBUG_BUFFER_SIZE);
+#endif
+}
+#else
+
+#define gpio(a, b) do{}while(0)
+
+static void debug_init(struct ble_radio *pv)
+{
+}
+
+static inline void debug(struct ble_radio *pv, const char *x)
+{
+}
+
+static inline void debug_flush(struct ble_radio *pv)
+{
+}
+#endif
 
 #define US_TO_TICKS_CEIL(us) (((us) * 32768 + 32767) / 1000000)
 
@@ -243,6 +355,8 @@ static bool_t ble_radio_params_equal(
 static
 void ble_radio_disable(struct ble_radio *pv)
 {
+  debug(pv, ".");
+
   pv->radio_current.channel = -1;
 
   nrf_it_disable_mask(BLE_RADIO_ADDR, -1);
@@ -266,6 +380,7 @@ void ble_radio_disable(struct ble_radio *pv)
   nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_DISABLE);
   while (nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE)
     != NRF_RADIO_STATE_DISABLED);
+  gpio(I_ENABLE | I_TRANSFER | I_TX | I_PIPELINE, 0);
 
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_ADDRESS);
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_END);
@@ -308,6 +423,9 @@ void ble_radio_pipelined_setup(struct ble_radio *pv)
 {
   ble_radio_channel_set(&pv->radio_next);
 
+  debug(pv, "-");
+  gpio(I_PIPELINE, I_PIPELINE);
+
 #if defined(CONFIG_ARCH_NRF52)
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_MODECNF0, 0
     | NRF_RADIO_MODECNF0_RU_NORMAL
@@ -330,6 +448,7 @@ void ble_radio_pipelined_setup(struct ble_radio *pv)
                           );
 
     if (nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END)) {
+      debug(pv, "m");
       nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_TXEN);
     }
 
@@ -370,6 +489,7 @@ void ble_radio_pipelined_setup(struct ble_radio *pv)
     }
 
     if (nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END)) {
+      debug(pv, "m");
       nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_RXEN);
 
       nrf_reg_set(BLE_TIMER_ADDR, NRF_TIMER_CC(TIMER_IFS_TIMEOUT),
@@ -378,6 +498,8 @@ void ble_radio_pipelined_setup(struct ble_radio *pv)
     }
     break;
   }
+
+  gpio(I_PIPELINE, 0);
 }
 
 static void ble_radio_queue_schedule(struct ble_radio *pv)
@@ -428,13 +550,19 @@ static void ble_radio_first_schedule(struct ble_radio *pv)
 {
   assert(!cpu_is_interruptible());
 
+  debug(pv, "Rs");
+  gpio(I_NEXT_ACTION, I_NEXT_ACTION);
+  gpio(I_NEXT_ACTION, 0);
+
   if (pv->current) {
+    debug(pv, "C?");
     return;
   }
 
   ble_radio_queue_schedule(pv);
 
   if (!pv->first) {
+    debug(pv, "!r");
     ble_radio_clock_release(pv);
     return;
   }
@@ -459,6 +587,10 @@ static void ble_radio_first_schedule(struct ble_radio *pv)
 
   if (pv->start > now + US_TO_TICKS_CEIL(RADIO_RAMPUP_US + HFCLK_RAMPUP_US) + 4) {
     uint32_t deadline = pv->start - US_TO_TICKS_CEIL(RADIO_RAMPUP_US + HFCLK_RAMPUP_US) - 2;
+
+    debug(pv, "Rc");
+
+    gpio(I_LATER, I_LATER);
 
     nrf_reg_set(BLE_RTC_ADDR, NRF_RTC_CC(RTC_REQUEST_BOUNDARY), deadline);
     nrf_event_clear(BLE_RTC_ADDR, NRF_RTC_COMPARE(RTC_REQUEST_BOUNDARY));
@@ -495,6 +627,7 @@ static void ble_radio_first_start(struct ble_radio *pv)
   assert(nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE) == NRF_RADIO_STATE_DISABLED);
 
   bool_t clock_running = ble_radio_clock_request(pv);
+  gpio(I_LATER, 0);
 
   // First request is now current request
 
@@ -512,6 +645,7 @@ static void ble_radio_first_start(struct ble_radio *pv)
 
   if (clock_running) {
     if (pv->start < now + US_TO_TICKS_CEIL(RADIO_RAMPUP_US)) {
+      debug(pv, "C!");
       printk("Bad timing: %d < %d + ramp\n", (uint32_t)pv->start, (uint32_t)now);
       pv->current->status = DEVICE_BLE_RADIO_IN_PAST;
       ble_radio_request_done(pv);
@@ -519,6 +653,7 @@ static void ble_radio_first_start(struct ble_radio *pv)
     }
   } else {
     if (pv->start < now + US_TO_TICKS_CEIL(RADIO_RAMPUP_US + HFCLK_RAMPUP_US)) {
+      debug(pv, "C!");
       printk("Bad timing: %d < %d + ramps\n", (uint32_t)pv->start, (uint32_t)now);
       pv->current->status = DEVICE_BLE_RADIO_IN_PAST;
       ble_radio_request_done(pv);
@@ -528,10 +663,13 @@ static void ble_radio_first_start(struct ble_radio *pv)
 
   pv->radio_current.channel = -1;
 
+  debug(pv, "Tf");
+
   // Maybe handler wants to abort, after all...
 
   bool_t running = pv->handler->radio_params(pv, &pv->radio_current);
   if (!running) {
+    debug(pv, "Co");
     pv->current->status = DEVICE_BLE_RADIO_HANDLER_DONE;
     ble_radio_request_done(pv);
     return;
@@ -595,6 +733,8 @@ static void ble_radio_first_start(struct ble_radio *pv)
 static bool_t ble_radio_clock_request(struct ble_radio *pv)
 {
   if (!pv->accurate_clock_requested) {
+    debug(pv, "C+");
+    gpio(I_CLOCK_REQ, I_CLOCK_REQ);
     pv->accurate_clock_requested = 1;
     dev_clock_sink_hold(&pv->clock_sink[NRF5X_BLE_RADIO_CLK_RADIO], 0);
   }
@@ -606,6 +746,8 @@ static bool_t ble_radio_clock_request(struct ble_radio *pv)
 static void ble_radio_clock_release(struct ble_radio *pv)
 {
   if (pv->accurate_clock_requested) {
+    debug(pv, "C-");
+    gpio(I_CLOCK_REQ, 0);
     pv->accurate_clock_requested = 0;
     dev_clock_sink_release(&pv->clock_sink[NRF5X_BLE_RADIO_CLK_RADIO]);
   }
@@ -616,12 +758,16 @@ static DEV_CLOCK_SINK_CHANGED(nrf5x_ble_radio_clock_changed)
   struct ble_radio *pv = ep->dev->drv_pv;
   uint8_t clk = ep - pv->clock_sink;
 
+  debug(pv, "Cd");
+
   if (clk == NRF5X_BLE_RADIO_CLK_SLEEP
       && ep->src->flags & DEV_CLOCK_SRC_EP_RUNNING)
     pv->sleep_acc = *acc;
 
   if (clk == NRF5X_BLE_RADIO_CLK_RADIO) {
     pv->accurate_clock_running = !!(ep->src->flags & DEV_CLOCK_SRC_EP_RUNNING);
+
+    gpio(I_CLOCK_RUN, pv->accurate_clock_running ? I_CLOCK_RUN : 0);
   }
 }
 
@@ -781,6 +927,7 @@ static DEV_INIT(nrf5x_ble_radio_init)
   rtc_init();
   timer_init();
   ppi_init(pv);
+  debug_init(pv);
 
   dev->drv = &nrf5x_ble_radio_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
@@ -908,7 +1055,7 @@ void ble_radio_request_callback(
 
   pv->callbacking = 1;
   lock_release(&dev->lock);
-  //  printk("req cb\n");
+  //printk("req cb\n");
   kroutine_exec(&rq->base.kr);
   lock_spin(&dev->lock);
   pv->callbacking = 0;
@@ -924,6 +1071,7 @@ static void ble_radio_request_done(struct ble_radio *pv)
   nrf_evt_disable(BLE_RTC_ADDR, NRF_RTC_COMPARE(RTC_REQUEST_BOUNDARY));
 
   assert(pv->current && pv->current->base.drvdata && pv->handler);
+  debug_flush(pv);
 
   if (pv->handler->cleanup)
     pv->handler->cleanup(pv);
@@ -965,6 +1113,8 @@ void ble_radio_address_match(struct ble_radio *pv)
     ble_radio_first_schedule(pv);
     return;
   }
+
+  gpio(I_TRANSFER, I_TRANSFER);
 
   ppi_cleanup(pv);
 
@@ -1018,6 +1168,8 @@ void ble_radio_address_match(struct ble_radio *pv)
     return;
   }
 
+  gpio(I_WAIT, I_WAIT);
+
   while (!nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH)) {
     if (!nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE) == NRF_RADIO_STATE_RX) {
       printk("Not in RX any more\n");
@@ -1027,6 +1179,7 @@ void ble_radio_address_match(struct ble_radio *pv)
   }
 
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
+  gpio(I_WAIT, 0);
 
   uint8_t len = cpu_mem_read_8((uintptr_t)(pv->transmitting->data + pv->transmitting->begin + 1));
   uint16_t end_irq_bits = ((uint16_t)len + 5) * 8 - RADIO_IRQ_LATENCY_US;
@@ -1034,13 +1187,19 @@ void ble_radio_address_match(struct ble_radio *pv)
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BCC, end_irq_bits);
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
 
+  gpio(I_WAIT, I_WAIT);
   if (end_irq_bits > 16 + RADIO_IRQ_LATENCY_US * 2 + 4
       && !nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END)) {
+    debug(pv, "Bl");
     nrf_it_enable_mask(BLE_RADIO_ADDR, 0
                        | (1 << NRF_RADIO_BCMATCH)
                        | (1 << NRF_RADIO_END)
                        );
   } else {
+    debug(pv, "Bn");
+    gpio(I_WAIT, 0);
+
+    gpio(I_WAIT, I_WAIT);
     uint32_t some_long_time = 1000;
 
     while (!nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END)) {
@@ -1051,6 +1210,7 @@ void ble_radio_address_match(struct ble_radio *pv)
         return;
       }
     }
+    gpio(I_WAIT, 0);
 
     ble_radio_end(pv);
   }
@@ -1058,6 +1218,8 @@ void ble_radio_address_match(struct ble_radio *pv)
 
 static void ble_radio_data_setup(struct ble_radio *pv)
 {
+  debug(pv, "Ds");
+
   switch (pv->radio_current.mode) {
   case MODE_TX:
     pv->transmitting = pv->handler->payload_get(pv);
@@ -1082,6 +1244,8 @@ static void ble_radio_data_setup(struct ble_radio *pv)
 
 static void ble_radio_pipelined_reset(struct ble_radio *pv)
 {
+  debug(pv, ";");
+
   ble_radio_disable(pv);
   assert(nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_STATE) == NRF_RADIO_STATE_DISABLED);
 
@@ -1107,6 +1271,7 @@ static void ble_radio_pipelined_reset(struct ble_radio *pv)
     nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_RSSISTART);
     break;
   }
+  gpio(I_ENABLE, I_ENABLE);
 }
 
 static
@@ -1115,7 +1280,12 @@ void ble_radio_end(struct ble_radio *pv)
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BCC, 16);
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_END);
 
+  gpio(I_TRANSFER, 0);
+
+  debug(pv, "e");
+
   if (!pv->current) {
+    debug(pv, "!c");
     nrf_it_disable(BLE_RADIO_ADDR, NRF_RADIO_END);
     ble_radio_first_schedule(pv);
     return;
@@ -1127,6 +1297,7 @@ void ble_radio_end(struct ble_radio *pv)
 
   if (shorts & (1 << NRF_RADIO_END_DISABLE) && shorts & (1 << NRF_RADIO_READY_START)
       && shorts & ((1 << NRF_RADIO_DISABLED_RXEN) | (1 << NRF_RADIO_DISABLED_TXEN))) {
+    debug(pv, ">");
     pv->radio_current = pv->radio_next;
   }
 
@@ -1139,13 +1310,19 @@ void ble_radio_end(struct ble_radio *pv)
         pv,
         nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_CRCSTATUS),
         pv->transmitting);
+
+    debug(pv, "+");
   }
 
   buffer_refdec(pv->transmitting);
   pv->transmitting = NULL;
 
+  debug(pv, "=>");
+  gpio(I_PIPELINE, 0);
+
   bool_t running = pv->handler->radio_params(pv, &pv->radio_next);
   if (!running) {
+    debug(pv, "!r");
     pv->current->status = DEVICE_BLE_RADIO_HANDLER_DONE;
     ble_radio_request_done(pv);
     return;
@@ -1164,6 +1341,8 @@ void ble_radio_end(struct ble_radio *pv)
 
   if (!ble_radio_params_equal(&pv->radio_next, &pv->radio_current))
     ble_radio_pipelined_reset(pv);
+
+  gpio(I_TX, pv->radio_current.mode == MODE_TX ? I_TX : 0);
 
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BCC, 16);
   ble_radio_data_setup(pv);
@@ -1185,6 +1364,8 @@ void ble_radio_request_timeout(struct ble_radio *pv)
 static
 void ble_radio_rx_timeout(struct ble_radio *pv)
 {
+  debug(pv, "Tn");
+
   nrf_task_trigger(BLE_TIMER_ADDR, NRF_TIMER_STOP);
   ble_radio_disable(pv);
   ppi_cleanup(pv);
@@ -1207,6 +1388,7 @@ void ble_radio_rx_timeout(struct ble_radio *pv)
 
   bool_t running = pv->handler->radio_params(pv, &pv->radio_next);
   if (!running) {
+    debug(pv, "Co");
     pv->current->status = DEVICE_BLE_RADIO_HANDLER_DONE;
     ble_radio_request_done(pv);
     return;
@@ -1236,8 +1418,12 @@ static DEV_IRQ_SRC_PROCESS(ble_radio_irq)
   struct device_s *dev = ep->base.dev;
   struct ble_radio *pv = dev->drv_pv;
 
+  debug(pv, "Ir");
+
   if (nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_ADDRESS)) {
     nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_ADDRESS);
+
+    debug(pv, "A");
 
     ble_radio_address_match(pv);
   }
@@ -1247,6 +1433,10 @@ static DEV_IRQ_SRC_PROCESS(ble_radio_irq)
     nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
     nrf_it_disable(BLE_RADIO_ADDR, NRF_RADIO_BCMATCH);
 
+    debug(pv, "B");
+
+    gpio(I_WAIT, 0);
+
     assert(nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_BCC) != 16);
     while (!nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END))
       ;
@@ -1255,10 +1445,21 @@ static DEV_IRQ_SRC_PROCESS(ble_radio_irq)
 
   if (nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_END)
       && nrf_it_is_enabled(BLE_RADIO_ADDR, NRF_RADIO_END)) {
+    debug(pv, "E");
 
     //    assert(nrf_reg_get(BLE_RADIO_ADDR, NRF_RADIO_BCC) != 16);
     ble_radio_end(pv);
   }
+
+#if defined(CONFIG_ARCH_NRF52)
+  for (uint8_t i = 0; i < 32; ++i) {
+    if (!nrf_it_is_enabled(BLE_RADIO_ADDR, i) && nrf_event_check(BLE_RADIO_ADDR, i)) {
+      char tmp[3] = {'S', '0' + i, 0};
+      nrf_event_clear(BLE_RADIO_ADDR, i);
+      debug(pv, tmp);
+    }
+  }
+#endif
 }
 
 static DEV_IRQ_SRC_PROCESS(ble_timer_irq)
@@ -1266,11 +1467,15 @@ static DEV_IRQ_SRC_PROCESS(ble_timer_irq)
   struct device_s *dev = ep->base.dev;
   struct ble_radio *pv = dev->drv_pv;
 
+  debug(pv, "It");
+
   if (nrf_event_check(BLE_TIMER_ADDR, NRF_TIMER_COMPARE(TIMER_IFS_TIMEOUT))) {
     nrf_event_clear(BLE_TIMER_ADDR, NRF_TIMER_COMPARE(TIMER_IFS_TIMEOUT));
 
     if (nrf_event_check(BLE_RADIO_ADDR, NRF_RADIO_ADDRESS)) {
       nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_ADDRESS);
+
+      debug(pv, "a");
 
       ble_radio_address_match(pv);
     } else {
@@ -1284,6 +1489,8 @@ static DEV_IRQ_SRC_PROCESS(ble_rtc_irq)
   struct device_s *dev = ep->base.dev;
   struct ble_radio *pv = dev->drv_pv;
 
+  debug(pv, "Ic");
+
   if (nrf_event_check(BLE_RTC_ADDR, NRF_RTC_OVERFLW)) {
     nrf_event_clear(BLE_RTC_ADDR, NRF_RTC_OVERFLW);
 
@@ -1292,6 +1499,7 @@ static DEV_IRQ_SRC_PROCESS(ble_rtc_irq)
 
   /* if (nrf_event_check(BLE_RTC_ADDR, NRF_RTC_COMPARE(RTC_START)) */
   /*     && nrf_it_is_enabled(BLE_RTC_ADDR, NRF_RTC_COMPARE(RTC_START))) { */
+  /*   debug(pv, "s"); */
   /*   nrf_event_clear(BLE_RTC_ADDR, NRF_RTC_COMPARE(RTC_START)); */
   /*   nrf_it_disable(BLE_RTC_ADDR, NRF_RTC_COMPARE(RTC_START)); */
 
