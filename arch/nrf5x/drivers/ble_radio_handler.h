@@ -66,8 +66,17 @@ struct ble_radio_params
   bool_t ifs;
 };
 
+#if defined(CONFIG_DRIVER_NRF5X_BLE_RADIO_DEBUG)
+# define DEBUG_BUFFER_SIZE 128
+#endif
+
 struct ble_radio
 {
+#if defined(CONFIG_DRIVER_NRF5X_BLE_RADIO_DEBUG)
+  uint8_t debug[DEBUG_BUFFER_SIZE];
+  uint8_t debug_cur;
+#endif
+
   struct dev_irq_src_s irq_source[NRF5X_BLE_RADIO_IRQ_COUNT];
 
 #if defined(CONFIG_DEVICE_CLOCK)
