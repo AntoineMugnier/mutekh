@@ -65,6 +65,10 @@ struct ble_radio_params
   bool_t ifs;
 };
 
+#if defined(CONFIG_DRIVER_NRF51_BLE_RADIO_DEBUG)
+# define DEBUG_BUFFER_SIZE 128
+#endif
+
 enum ppi_id_e
 {
   PPI_RTC_TIMEOUT,
@@ -76,6 +80,11 @@ enum ppi_id_e
 
 struct ble_radio
 {
+#if defined(CONFIG_DRIVER_NRF51_BLE_RADIO_DEBUG)
+  uint8_t debug[DEBUG_BUFFER_SIZE];
+  uint8_t debug_cur;
+#endif
+
   struct dev_irq_ep_s irq_source[NRF51_BLE_RADIO_IRQ_COUNT];
 
 #if defined(CONFIG_DEVICE_CLOCK)
