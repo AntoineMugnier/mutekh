@@ -85,7 +85,7 @@ static inline struct context_s *arm_except_preempt()
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
     context_preempt_t *handler = CPU_LOCAL_GET(cpu_preempt_handler);
     if ( handler ) {
-        ctx = handler(CPU_LOCAL_GET(cpu_preempt_param));
+        ctx = handler();
     }
 
 # ifdef CONFIG_HEXO_CONTEXT_STATS

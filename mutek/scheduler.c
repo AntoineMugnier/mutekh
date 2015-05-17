@@ -410,9 +410,9 @@ CONTEXT_PREEMPT(sched_preempt_stop)
   return ctx;
 }
 
-CONTEXT_PREEMPT(sched_preempt_wait_unlock)
+struct context_s *
+sched_wait_unlock_ctx(sched_queue_root_t *queue)
 {
-  sched_queue_root_t *queue = param;
   struct scheduler_s *sched = __scheduler_get();
   struct sched_context_s *cur = CONTEXT_LOCAL_GET(sched_cur);
   struct sched_context_s *next;
@@ -438,6 +438,13 @@ CONTEXT_PREEMPT(sched_preempt_wait_unlock)
   return ctx;
 }
 
+#ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+CONTEXT_PREEMPT(sched_preempt_wait_unlock)
+{
+  sched_queue_root_t *queue = CPU_LOCAL_GET(cpu_preempt_param);
+  return sched_wait_unlock_ctx(queue);
+}
+#endif
 
 void sched_context_init(struct sched_context_s *sched_ctx,
                         struct context_s *ctx)

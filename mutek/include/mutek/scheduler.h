@@ -132,7 +132,7 @@ CONTEXT_PREEMPT(sched_preempt_stop);
     available.
 
     @see context_set_preempt @see #CONTEXT_PREEMPT @see sched_wait_unlock */
-config_depend(CONFIG_MUTEK_SCHEDULER)
+config_depend_and2(CONFIG_MUTEK_SCHEDULER, CONFIG_HEXO_CONTEXT_PREEMPT)
 CONTEXT_PREEMPT(sched_preempt_wait_unlock);
 
 
@@ -161,13 +161,17 @@ void sched_context_exit(void),
   context_jump_to(sched_preempt_stop(NULL));
 });
 
+/** @internal */
+struct context_s *
+sched_wait_unlock_ctx(sched_queue_root_t *queue);
+
 /** @This pushes current context in the 'queue', unlock it and switch
    to next context available in the 'root' queue. Must be called with
    interrupts disabled. @see sched_preempt_wait_unlock */
 config_depend_alwaysinline(CONFIG_MUTEK_SCHEDULER,
 void sched_wait_unlock(sched_queue_root_t *queue),
 {
-  context_switch_to(sched_preempt_wait_unlock(queue));
+  context_switch_to(sched_wait_unlock_ctx(queue));
 });
 
 /** @This enqueues scheduler context for execution. Must be called
