@@ -47,8 +47,7 @@ cpu_context_init(struct context_s *context, context_entry_t *entry, void *param)
         CPU_ARM_CONTEXT_RESTORE_CALLER |
         CPU_ARM_CONTEXT_RESTORE_CALLEE;
     regs->gpr[13] =
-        CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end)
-        - CONFIG_HEXO_STACK_ALIGN;
+        CONTEXT_LOCAL_TLS_GET(context->tls, context_stack_end);
 #ifdef CONFIG_COMPILE_FRAMEPTR
     regs->gpr[11] = regs->gpr[13];
 #endif
@@ -79,23 +78,26 @@ cpu_context_destroy(struct context_s *context)
 __attribute__((noreturn))
 extern void arm_context_jumpto_back();
 
-static inline struct context_s *arm_except_preempt()
+void arm_except_preempt()
 {
-    struct context_s *ctx = NULL;
+    void arm_context_jumpto_fast();
+
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
+    struct context_s *ctx = NULL;
     context_preempt_t *handler = CPU_LOCAL_GET(cpu_preempt_handler);
     if ( handler ) {
         ctx = handler();
     }
 
-# ifdef CONFIG_HEXO_CONTEXT_STATS
     if ( ctx ) {
+# ifdef CONFIG_HEXO_CONTEXT_STATS
         context_preempt_stats(ctx);
-    }
 # endif
+        return cpu_context_jumpto(ctx);
+    }
 #endif
 
-    return ctx;
+    return arm_context_jumpto_fast();
 }
 
 #ifdef CONFIG_HEXO_USERMODE
@@ -104,7 +106,7 @@ extern CONTEXT_LOCAL cpu_exception_handler_t  *cpu_user_exception_handler;
 
 extern CPU_LOCAL cpu_exception_handler_t  *cpu_exception_handler;
 
-struct context_s *arm_exc_common(reg_t no, struct cpu_context_s *context)
+void arm_exc_common(reg_t no, struct cpu_context_s *context)
 {
     cpu_exception_handler_t *handler = NULL;
 #ifdef CONFIG_HEXO_USERMODE
@@ -124,25 +126,11 @@ struct context_s *arm_exc_common(reg_t no, struct cpu_context_s *context)
 #ifdef CONFIG_HEXO_USERMODE
 extern CONTEXT_LOCAL cpu_syscall_handler_t  *cpu_syscall_handler;
 
-struct context_s *arm_swi_common(struct cpu_context_s *context)
+void arm_swi_common(struct cpu_context_s *context)
 {
     cpu_syscall_handler_t *handler =
         CONTEXT_LOCAL_GET(cpu_syscall_handler);
     handler(0, context);
-
-    return arm_except_preempt();
-}
-#endif
-
-#ifdef CONFIG_HEXO_IRQ
-extern CPU_LOCAL cpu_interrupt_handler_t  *cpu_interrupt_handler;
-extern CPU_LOCAL struct device_s *cpu_interrupt_handler_dev;
-
-struct context_s *arm_irq_common(reg_t no, struct cpu_context_s *context)
-{
-    cpu_interrupt_handler_t *handler =
-        CPU_LOCAL_GET(cpu_interrupt_handler);
-    handler(no);
 
     return arm_except_preempt();
 }

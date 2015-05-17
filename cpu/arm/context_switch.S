@@ -59,12 +59,10 @@ FUNC_END(cpu_context_switch)
     msr  cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_IRQ)
     mov  sp, \rsp
 #endif
-    msr  cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_ABORT)
-    mov  sp, \rsp
     msr  cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_UNDEF)
     mov  sp, \rsp
-    // We're back
-    msr  cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_SUPER)
+    msr  cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_ABORT)
+    mov  sp, \rsp
 .endm
 
 
@@ -78,6 +76,7 @@ FUNC_START(.text, arm_setup_exception_stack)
 #endif
         
     CPU_EXC_SP_SETUP r0
+    msr  cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_SUPER)
 
 #ifdef CONFIG_SOCLIB_MEMCHECK
     mov  r3, #0
@@ -122,65 +121,50 @@ FUNC_START(.text, cpu_context_jumpto)
     // Set sp to context &arm_context_regs for all error modes
     CPU_EXC_SP_SETUP r2
 
-    b   arm_context_jumpto_internal
+arm_context_jumpto_fast:
+    .globl arm_context_jumpto_fast
 
-FUNC_END(cpu_context_jumpto)
+    /* We are in ABORT mode from here */
+    msr  cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_ABORT)
 
-        
-FUNC_START(.text, arm_context_jumpto_internal)
+    ldr     r1, [sp, #CPU_ARM_CONTEXT_CPSR]
+    add     r0, sp, #CPU_ARM_CONTEXT_GPR(13)
 
-    mov     r0, r2
-
-    // Take &[r13 r14] in sp
-    add     sp, r2, #CPU_ARM_CONTEXT_GPR(13)
-
-#if defined(CONFIG_HEXO_USERMODE)
-    // Load spsr
-    ldr     lr, [r2, #CPU_ARM_CONTEXT_CPSR]
-#endif
-
-    // Test whether we need to restore caller saved
-    ldr     r1, [r2, #CPU_ARM_CONTEXT_SAVE_MASK]
-    tst     r1, #CPU_ARM_CONTEXT_RESTORE_CALLER
-
-    // We do
-    // r0 is &r0
-    ldmneia r0, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
-    // We dont
-    addeq   r0, r2, #CPU_ARM_CONTEXT_GPR(4)
-    ldmeqia r0, {r4, r5, r6, r7, r8, r9, r10, r11}
+    // restore r13 and r14
+    msr     cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_SUPER)
 
 #if defined(CONFIG_HEXO_USERMODE)
-    /* From now on, we can only touch lr, which is spsr for now. */
-    
+    tst     r1, #0xf
     /* If we are from user mode, restore user regs */
-    tst     lr, #0xf
-    /* if 0 (eq), from user mode */
-    /* from user mode, use ldmia^ */
-    ldmeqia  sp, {r13, r14}^
-    /* We were from super, so restore in place */
-    ldmneia  sp, {r13, r14}
+    ldmeq   r0, {r13, r14}^
+    /* restore super regs instead */
+    ldmne   r0, {r13, r14}
 #else
-    ldmia    sp, {r13, r14}
+    ldm     r0, {r13, r14}
 #endif
-    
-    // Switch to any error mode, say, abort
-    msr      cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_ABORT)
 
-    // Stack pointer is now abort mode's one we set previously in
-	// CPU_EXC_SP_SETUP. It points to &r0
-
-    // restore status
-    ldr     lr, [sp, #CPU_ARM_CONTEXT_CPSR]
-    msr     spsr_cxsf, lr
+    msr     cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_ABORT)
 
     // Load pc
-    ldr      lr, [sp, #CPU_ARM_CONTEXT_GPR(15)]
+    ldr     lr, [sp, #CPU_ARM_CONTEXT_GPR(15)]
+
+    // restore status
+    msr     spsr_cxsf, r1
+
+    // Test whether we need to restore caller saved
+    ldr     r1, [sp, #CPU_ARM_CONTEXT_SAVE_MASK]
+    tst     r1, #CPU_ARM_CONTEXT_RESTORE_CALLER
+
+    // r0 is &r0
+    ldmne   sp, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12}
+    // We dont
+    addeq   r0, sp, #CPU_ARM_CONTEXT_GPR(4)
+    ldmeq   r0, {r4, r5, r6, r7, r8, r9, r10, r11}
+
     // Restore
     movs     pc, lr
 
-arm_context_jumpto_internal_end:
-FUNC_END(arm_context_jumpto_internal)
+FUNC_END(cpu_context_jumpto)
 
 
 FUNC_START(.text, cpu_context_set)
@@ -272,13 +256,13 @@ FUNC_END(cpu_context_stack_use)
 
 FUNC_START(.text, cpu_context_set_user)
     /* set user stack reg */
-    stmda   sp, {r0}
-    ldmda   sp, {r13}^
+    push    {r0}
+    ldm     sp, {r13}^
 
     /* set arg */
     mov     r0,     r2
 
-    /* set user mode psr */
+    /* set USER mode psr */
 # ifndef CONFIG_HEXO_IRQ
     mov     r3,     #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_USER)
 # else
@@ -289,12 +273,13 @@ FUNC_START(.text, cpu_context_set_user)
     orr     r3,     #ARM_PSR_EE
 # endif
 
-    /* Switch to abort mode */
-    msr     cpsr_c, #(ARM_PSR_IRQ_DIS | ARM_PSR_FIQ_DIS | ARM_PSR_MODE_ABORT)
-
-    /* Restore to user mode */
+    /* Restore to USER mode */
     msr     spsr_cxsf,   r3
 
+    /* set SUPER mode stack pointer */
+    CONTEXT_LOCAL_ld context_stack_end, r13, r3
+
+    /* jump to user mode */
     mov     lr,     r1
     movs    pc,     lr
 FUNC_END(cpu_context_set_user)

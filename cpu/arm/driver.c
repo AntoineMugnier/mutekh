@@ -162,6 +162,9 @@ static DEV_CPU_REG_INIT(arm_cpu_reg_init)
   void arm_exc_dabt();
   void arm_exc_dabt_end();
   soclib_mem_bypass_sp_check(&arm_exc_dabt, &arm_exc_dabt_end);
+  void arm_exc_common_asm();
+  void arm_exc_common_asm_end();
+  soclib_mem_bypass_sp_check(&arm_exc_common_asm, &arm_exc_common_asm_end);
 # ifdef CONFIG_HEXO_IRQ
   void arm_exc_irq();
   void arm_exc_irq_end();
@@ -182,8 +185,8 @@ static DEV_CPU_REG_INIT(arm_cpu_reg_init)
 # endif
 
   void cpu_context_jumpto();
-  void arm_context_jumpto_internal_end();
-  soclib_mem_bypass_sp_check(&cpu_context_jumpto, &arm_context_jumpto_internal_end);
+  void cpu_context_jumpto_end();
+  soclib_mem_bypass_sp_check(&cpu_context_jumpto, &cpu_context_jumpto_end);
 #endif
 }
 
