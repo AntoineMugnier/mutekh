@@ -541,11 +541,11 @@ static DEV_INIT(soclib_timer_init)
     {
       struct soclib_timer_state_s *p = pv->t + i;
       p->start_count = 0;
-      p->rev = 1;
 
       cpu_mem_write_32(TIMER_REG_ADDR(pv->addr, TIMER_MODE, i), 0);
 
 # ifdef CONFIG_DEVICE_IRQ
+      p->rev = 1;
       p->value = 0;
       dev_request_pqueue_init(&p->queue);
       p->period = resolution;
