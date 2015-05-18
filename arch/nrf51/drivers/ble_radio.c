@@ -30,6 +30,7 @@
 #include <device/class/timer.h>
 #include <device/class/ble_radio.h>
 
+#include <arch/ppi.h>
 #include <arch/nrf51/ppi.h>
 #include <arch/nrf51/radio.h>
 #include <arch/nrf51/timer.h>
@@ -63,16 +64,9 @@
 #define RTC_ENABLE             0
 #define PPI_RTC_ENABLE_TXEN    NRF51_PPI_RTC0_COMPARE_0_RADIO_TXEN
 #define PPI_RTC_ENABLE_RXEN    NRF51_PPI_RTC0_COMPARE_0_RADIO_RXEN
-
 #define RTC_TIMEOUT            1
-#define PPI_RTC_TIMEOUT        0
-
 #define RTC_START              2
-#define PPI_RTC_MATCH_START    1
-
 #define TIMER_IFS_TIMEOUT      0
-#define PPI_END_TIMER_START    2
-#define PPI_ADDRESS_TIMER_STOP 3
 
 
 static inline uint32_t us_to_ticks_ceil(uint32_t us)
@@ -199,21 +193,23 @@ static void timer_init(void)
     nrf_reg_set(BLE_TIMER_ADDR, NRF51_TIMER_BITMODE, NRF51_TIMER_BITMODE_16);
 }
 
-static void ppi_init(void)
+static void ppi_init(struct ble_radio *pv)
 {
-  nrf51_ppi_setup(NRF51_PPI_ADDR, PPI_RTC_TIMEOUT,
+  assert(!nrf51_ppi_alloc(pv->ppi, PPI_COUNT));
+
+  nrf51_ppi_setup(NRF51_PPI_ADDR, pv->ppi[PPI_RTC_TIMEOUT],
                   BLE_RTC_ADDR, NRF51_RTC_COMPARE(RTC_TIMEOUT),
                   BLE_RADIO_ADDR, NRF51_RADIO_DISABLE);
 
-  nrf51_ppi_setup(NRF51_PPI_ADDR, PPI_RTC_MATCH_START,
+  nrf51_ppi_setup(NRF51_PPI_ADDR, pv->ppi[PPI_RTC_MATCH_START],
                   BLE_RTC_ADDR, NRF51_RTC_COMPARE(RTC_START),
                   BLE_RADIO_ADDR, NRF51_RADIO_START);
 
-  nrf51_ppi_setup(NRF51_PPI_ADDR, PPI_END_TIMER_START,
+  nrf51_ppi_setup(NRF51_PPI_ADDR, pv->ppi[PPI_END_TIMER_START],
                   BLE_RADIO_ADDR, NRF51_RADIO_END,
                   BLE_TIMER_ADDR, NRF51_TIMER_START);
 
-  nrf51_ppi_setup(NRF51_PPI_ADDR, PPI_ADDRESS_TIMER_STOP,
+  nrf51_ppi_setup(NRF51_PPI_ADDR, pv->ppi[PPI_ADDRESS_TIMER_STOP],
                   BLE_RADIO_ADDR, NRF51_RADIO_ADDRESS,
                   BLE_TIMER_ADDR, NRF51_TIMER_STOP);
 }
@@ -238,10 +234,10 @@ void ble_radio_disable(struct ble_radio *pv)
   nrf_short_set(BLE_RADIO_ADDR, 0);
 
   nrf51_ppi_disable_mask(NRF51_PPI_ADDR, 0
-                         | (1 << PPI_RTC_MATCH_START)
+                         | (1 << pv->ppi[PPI_RTC_MATCH_START])
                          | (1 << PPI_RTC_ENABLE_RXEN)
                          | (1 << PPI_RTC_ENABLE_TXEN)
-                         | (1 << PPI_RTC_TIMEOUT)
+                         | (1 << pv->ppi[PPI_RTC_TIMEOUT])
                          );
 
   nrf_evt_disable_mask(BLE_RTC_ADDR, 0
@@ -312,8 +308,8 @@ void ble_radio_pipeline_setup(struct ble_radio *pv)
       nrf_task_trigger(BLE_TIMER_ADDR, NRF51_TIMER_CLEAR);
 
       nrf51_ppi_enable_mask(NRF51_PPI_ADDR, 0
-                            | (1 << PPI_END_TIMER_START)
-                            | (1 << PPI_ADDRESS_TIMER_STOP)
+                            | (1 << pv->ppi[PPI_END_TIMER_START])
+                            | (1 << pv->ppi[PPI_ADDRESS_TIMER_STOP])
                             );
 
       nrf_reg_set(BLE_TIMER_ADDR, NRF51_TIMER_CC(TIMER_IFS_TIMEOUT),
@@ -416,7 +412,7 @@ static void ble_radio_next_action(struct ble_radio *pv)
     nrf_reg_set(BLE_RTC_ADDR, NRF51_RTC_CC(RTC_TIMEOUT), pv->end);
     nrf_event_clear(BLE_RTC_ADDR, NRF51_RTC_COMPARE(RTC_TIMEOUT));
     nrf_it_enable(BLE_RTC_ADDR, NRF51_RTC_COMPARE(RTC_TIMEOUT));
-    nrf51_ppi_enable(NRF51_PPI_ADDR, PPI_RTC_TIMEOUT);
+    nrf51_ppi_enable(NRF51_PPI_ADDR, pv->ppi[PPI_RTC_TIMEOUT]);
   }
 
   pv->current = pv->first;
@@ -449,8 +445,8 @@ static void ble_radio_next_action(struct ble_radio *pv)
 
   pv->radio_current = pv->radio_next;
   nrf51_ppi_disable_mask(NRF51_PPI_ADDR, 0
-                         | (1 << PPI_END_TIMER_START)
-                         | (1 << PPI_ADDRESS_TIMER_STOP)
+                         | (1 << pv->ppi[PPI_END_TIMER_START])
+                         | (1 << pv->ppi[PPI_ADDRESS_TIMER_STOP])
                          );
   nrf_reg_set(BLE_RADIO_ADDR, NRF51_RADIO_BCC, 16);
   ble_radio_config_set(pv->current->packet_pool, &pv->radio_current);
@@ -472,13 +468,13 @@ static void ble_radio_next_action(struct ble_radio *pv)
     case MODE_TX:
       nrf51_ppi_enable_mask(NRF51_PPI_ADDR, 0
                             | (1 << PPI_RTC_ENABLE_TXEN)
-                            | (1 << PPI_RTC_MATCH_START));
+                            | (1 << pv->ppi[PPI_RTC_MATCH_START]));
       break;
 
     case MODE_RX:
       nrf51_ppi_enable_mask(NRF51_PPI_ADDR, 0
                             | (1 << PPI_RTC_ENABLE_RXEN)
-                            | (1 << PPI_RTC_MATCH_START));
+                            | (1 << pv->ppi[PPI_RTC_MATCH_START]));
       break;
 
     case MODE_RSSI:
@@ -704,7 +700,8 @@ static DEV_INIT(nrf51_ble_radio_init)
   ble_radio_init();
   rtc_init();
   timer_init();
-  ppi_init();
+  ppi_init(pv);
+  gpio_init();
 
   dev->drv = &nrf51_ble_radio_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
@@ -835,8 +832,6 @@ static void ble_radio_request_done(struct ble_radio *pv)
   pv->current = NULL;
   pv->handler = NULL;
 
-  debug(pv, "\n");
-
   ble_radio_request_callback(pv, rq);
   ble_radio_next_action(pv);
 }
@@ -844,10 +839,10 @@ static void ble_radio_request_done(struct ble_radio *pv)
 static void ppi_cleanup(struct ble_radio *pv)
 {
   nrf51_ppi_disable_mask(NRF51_PPI_ADDR, 0
-                         | (1 << PPI_RTC_MATCH_START)
+                         | (1 << pv->ppi[PPI_RTC_MATCH_START])
                          | (1 << PPI_RTC_ENABLE_RXEN)
                          | (1 << PPI_RTC_ENABLE_TXEN)
-                         | (1 << PPI_RTC_TIMEOUT)
+                         | (1 << pv->ppi[PPI_RTC_TIMEOUT])
                          );
 
   nrf_evt_disable_mask(BLE_RTC_ADDR, 0
@@ -884,8 +879,8 @@ void ble_radio_address_match(struct ble_radio *pv)
     nrf_short_set(BLE_RADIO_ADDR, 1 << NRF51_RADIO_END_DISABLE);
 
     nrf51_ppi_disable_mask(NRF51_PPI_ADDR, 0
-                           | (1 << PPI_END_TIMER_START)
-                           | (1 << PPI_ADDRESS_TIMER_STOP)
+                           | (1 << pv->ppi[PPI_END_TIMER_START])
+                           | (1 << pv->ppi[PPI_ADDRESS_TIMER_STOP])
                            );
 
     nrf_it_disable(BLE_TIMER_ADDR, NRF51_TIMER_COMPARE(TIMER_IFS_TIMEOUT));
@@ -954,8 +949,8 @@ static void ble_transfer_transfer_restart(struct ble_radio *pv)
 
   pv->radio_current = pv->radio_next;
   nrf51_ppi_disable_mask(NRF51_PPI_ADDR, 0
-                         | (1 << PPI_END_TIMER_START)
-                         | (1 << PPI_ADDRESS_TIMER_STOP)
+                         | (1 << pv->ppi[PPI_END_TIMER_START])
+                         | (1 << pv->ppi[PPI_ADDRESS_TIMER_STOP])
                          );
   nrf_reg_set(BLE_RADIO_ADDR, NRF51_RADIO_BCC, 16);
 

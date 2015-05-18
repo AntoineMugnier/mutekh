@@ -65,6 +65,15 @@ struct ble_radio_params
   bool_t ifs;
 };
 
+enum ppi_id_e
+{
+  PPI_RTC_TIMEOUT,
+  PPI_RTC_MATCH_START,
+  PPI_END_TIMER_START,
+  PPI_ADDRESS_TIMER_STOP,
+  PPI_COUNT,
+};
+
 struct ble_radio
 {
   struct dev_irq_ep_s irq_source[NRF51_BLE_RADIO_IRQ_COUNT];
@@ -76,6 +85,7 @@ struct ble_radio
   bool_t accurate_clock_running;
 #endif
 
+  uint8_t ppi[PPI_COUNT];
   dev_request_pqueue_root_t queue;
 
   struct dev_freq_accuracy_s sleep_acc;
