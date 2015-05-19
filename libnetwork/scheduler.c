@@ -68,16 +68,16 @@ static void net_scheduler_timeout_schedule(struct net_scheduler_s *sched)
 
   task = net_task_s_from_header(net_timeout_queue_head(&sched->delayed_tasks));
   if (!task) {
-    if (sched->timer_rq.rq.pvdata)
+    if (sched->timer_rq.rq.drvdata)
       DEVICE_OP(&sched->timer, cancel, &sched->timer_rq);
     return;
   }
 
-  if (sched->timer_rq.rq.pvdata
+  if (sched->timer_rq.rq.drvdata
       && sched->timer_rq.deadline == task->timeout.deadline)
     return;
 
-  if (sched->timer_rq.rq.pvdata)
+  if (sched->timer_rq.rq.drvdata)
     DEVICE_OP(&sched->timer, cancel, &sched->timer_rq);
 
   kroutine_init(&sched->timer_rq.rq.kr, net_scheduler_timeout, KROUTINE_IMMEDIATE);
@@ -171,7 +171,7 @@ static CONTEXT_ENTRY(net_scheduler_worker)
 
   dprintk("Net scheduler done\n");
 
-  if (sched->timer_rq.rq.pvdata)
+  if (sched->timer_rq.rq.drvdata)
     DEVICE_OP(&sched->timer, cancel, &sched->timer_rq);
 
   net_task_queue_destroy(&sched->pending_tasks);
@@ -217,6 +217,8 @@ error_t net_scheduler_init(
 {
   error_t err;
 
+  memset(sched, 0, sizeof(*sched));
+
   net_scheduler_refinit(sched);
 
   err = device_get_accessor_by_path(&sched->timer, NULL, timer_dev, DRIVER_CLASS_TIMER);
@@ -236,7 +238,7 @@ error_t net_scheduler_init(
   slab_init(&sched->task_pool, sizeof(struct net_task_s),
             scheduler_pool_grow, mem_scope_sys);
 
-  sched->timer_rq.rq.pvdata = NULL;
+  sched->timer_rq.rq.drvdata = NULL;
 
   device_start(&sched->timer);
 
