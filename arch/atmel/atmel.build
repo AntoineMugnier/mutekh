@@ -60,7 +60,7 @@
   %subsection atmel-sam7-*
     %types cpu
 
-    CONFIG_CPU_ARM_7TDMI
+    CONFIG_CPU_ARM32_7TDMI
     %set BUILD_NAME atmel-sam7
 
   %end
@@ -68,7 +68,7 @@
   %subsection atmel-sam3-*
     %types cpu
 
-    CONFIG_CPU_ARM_CORTEXM3
+    CONFIG_CPU_ARM32M_CORTEXM3
     %set BUILD_NAME atmel-sam3
 
     # USART0

@@ -107,8 +107,7 @@
     %types family
 
     CONFIG_STM32_FAMILY 1
-    CONFIG_CPU_ARM_CORTEXM3
-    CONFIG_CPU_ARM_LITTLE
+    CONFIG_CPU_ARM32M_CORTEXM3
     CONFIG_STM32_CPURAMSIZE 0x00000000
 
     CONFIG_DRIVER_STM32_GPIO
@@ -124,7 +123,7 @@
 
       CONFIG_STM32_SERIE 100
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT 0
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 0
     %end
 
     %subsection stm32-f101??
@@ -132,7 +131,7 @@
 
       CONFIG_STM32_SERIE 101
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT 0
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 0
     %end
 
     %subsection stm32-f102??
@@ -140,7 +139,7 @@
 
       CONFIG_STM32_SERIE 102
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT 0
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 0
     %end
 
     %subsection stm32-f103??
@@ -148,7 +147,7 @@
 
       CONFIG_STM32_SERIE 103
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT 0
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 0
     %end
 
     %subsection stm32-f105??
@@ -156,7 +155,7 @@
 
       CONFIG_STM32_SERIE 105
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT 0
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 0
     %end
 
     %subsection stm32-f107??
@@ -164,7 +163,7 @@
 
       CONFIG_STM32_SERIE 107
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT 0
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 0
     %end
 
     ########### Ram size
@@ -244,8 +243,7 @@
     %types family
 
     CONFIG_STM32_FAMILY 4
-    CONFIG_CPU_ARM_CORTEXM4
-    CONFIG_CPU_ARM_LITTLE
+    CONFIG_CPU_ARM32M_CORTEXM4
 
     CONFIG_DRIVER_STM32_GPIO
     CONFIG_DRIVER_STM32_GPIO_F4XX
@@ -263,7 +261,7 @@
 
       CONFIG_STM32_SERIE 401
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT 84
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT 84
     %end
 
     %subsection stm32-f405??
@@ -271,7 +269,7 @@
 
       CONFIG_STM32_SERIE 405
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
 
     %subsection stm32-f407??
@@ -279,7 +277,7 @@
 
       CONFIG_STM32_SERIE 407
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
 
     %subsection stm32-f411??
@@ -287,7 +285,7 @@
 
       CONFIG_STM32_SERIE 411
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
 
     %subsection stm32-f415??
@@ -295,7 +293,7 @@
 
       CONFIG_STM32_SERIE 415
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
 
     %subsection stm32-f417??
@@ -303,7 +301,7 @@
 
       CONFIG_STM32_SERIE 417
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
 
     %subsection stm32-f446??
@@ -311,7 +309,7 @@
 
       CONFIG_STM32_SERIE 446
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
 
     %subsection stm32-f427??
@@ -319,7 +317,7 @@
 
       CONFIG_STM32_SERIE 427
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
 
     %subsection stm32-f429??
@@ -327,7 +325,7 @@
 
       CONFIG_STM32_SERIE 429
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
 
     %subsection stm32-f437??
@@ -335,7 +333,7 @@
 
       CONFIG_STM32_SERIE 437
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
 
     %subsection stm32-f439??
@@ -343,7 +341,7 @@
 
       CONFIG_STM32_SERIE 439
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
 
     %subsection stm32-f479??
@@ -351,7 +349,7 @@
 
       CONFIG_STM32_SERIE 479
 
-      CONFIG_CPU_ARM_M_IRQ_COUNT
+      CONFIG_CPU_ARM32M_M_IRQ_COUNT
     %end
 
     ########### Ram size

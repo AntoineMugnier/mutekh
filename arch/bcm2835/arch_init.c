@@ -50,7 +50,7 @@ DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
   DEV_STATIC_RES_ID(0, 0),
 );
 
-DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_drv, &cpu_dev_res);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32_drv, &cpu_dev_res);
 
 #ifdef CONFIG_DRIVER_BCM2835_ICU
 

@@ -32,7 +32,7 @@
   %subsection soclib-arm
     %types cpu
   
-    CONFIG_CPU_ARM_SOCLIB
+    CONFIG_CPU_ARM32_SOCLIB
     %set BUILD_NAME soclib-arm
   %end
 

@@ -36,7 +36,7 @@ DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 2,
   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_CPU, 0),
 );
 
-DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm_m_drv, &cpu_dev_res);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv, &cpu_dev_res);
 
 
 #ifdef CONFIG_DRIVER_EFM32_RECMU
