@@ -242,7 +242,7 @@ error_t net_scheduler_init(
 
   device_start(&sched->timer);
 
-  const size_t stack_size = 512;
+  const size_t stack_size = 1024;
 
   sched->stack = mem_alloc_align(stack_size, CONFIG_HEXO_STACK_ALIGN, mem_scope_sys);
   if (!sched->stack) {
