@@ -31,6 +31,12 @@ const uint8_t dev_gpio_mask1[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x
 __attribute__((aligned(8)))
 const uint8_t dev_gpio_mask0[8] = { };
 
+extern inline error_t dev_gpio_spin_rq(struct device_gpio_s *accessor,
+                                       struct dev_gpio_rq_s *rq);
+
+extern inline error_t dev_gpio_wait_rq(struct device_gpio_s *accessor,
+                                       struct dev_gpio_rq_s *rq);
+
 error_t device_gpio_map_set_mode(struct device_gpio_s *accessor,
                                  const gpio_id_t *map, const gpio_width_t *wmap,
                                  uint_fast8_t count, /* enum dev_pin_driving_e */ ...)
