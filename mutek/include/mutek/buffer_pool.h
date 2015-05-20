@@ -35,7 +35,7 @@ GCT_REFCOUNT(buffer, struct buffer_s *, obj_entry);
 
 GCT_CONTAINER_TYPES(buffer_queue, struct buffer_s *, entry);
 GCT_CONTAINER_FCNS(buffer_queue, ALWAYS_INLINE, buffer_queue,
-                   init, destroy, push, pop, pushback, next, head, isempty,
+                   init, destroy, push, pop, pushback, next, head, tail, isempty,
                    clear, count);
 
 struct buffer_pool_s {
