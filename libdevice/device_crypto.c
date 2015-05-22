@@ -38,3 +38,81 @@ dev_crypto_ctx_bind(struct dev_crypto_context_s *ctx,
 
 extern inline uint8_t
 dev_crypto_memcmp(const void *a, const void *b, size_t len);
+
+error_t dev_rng_init(struct dev_rng_s *rng, const char *dev)
+{
+  error_t err;
+  struct dev_crypto_info_s info;
+
+  memset(rng, 0, sizeof(*rng));
+
+  err = device_get_accessor_by_path(&rng->device, NULL, dev, DRIVER_CLASS_CRYPTO);
+  if (err)
+    return err;
+
+  DEVICE_OP(&rng->device, info, &info);
+
+  if (info.state_size) {
+    rng->state_data = mem_alloc(info.state_size, mem_scope_sys);
+
+    if (!rng->state_data) {
+      err = -ENOMEM;
+      device_put_accessor(&rng->device);
+    }
+  }
+
+  return err;
+}
+
+void dev_rng_cleanup(struct dev_rng_s *rng)
+{
+  if (rng->state_data)
+    mem_free(rng->state_data);
+  device_put_accessor(&rng->device);
+}
+
+error_t dev_rng_wait_read(struct dev_rng_s *rng, void *data, size_t size)
+{
+  struct dev_crypto_context_s ctx = {
+    .mode = DEV_CRYPTO_MODE_RANDOM,
+    .state_data = rng->state_data,
+  };
+  struct dev_crypto_rq_s rq = {
+    .ctx = &ctx,
+    .op = DEV_CRYPTO_FINALIZE,
+    .out = data,
+    .len = size,
+  };
+
+  return dev_crypto_wait_op(&rng->device, &rq);
+}
+
+error_t dev_rng_wait_seed(struct dev_rng_s *rng, const void *data, size_t size)
+{
+  struct dev_crypto_context_s ctx = {
+    .mode = DEV_CRYPTO_MODE_RANDOM,
+    .state_data = rng->state_data,
+  };
+  struct dev_crypto_rq_s rq = {
+    .ctx = &ctx,
+    .op = DEV_CRYPTO_INVERSE,
+    .ad_len = size,
+    .ad = data,
+  };
+
+  return dev_crypto_wait_op(&rng->device, &rq);
+}
+
+error_t dev_rng_wait_seed_from_other(struct dev_rng_s *rng,
+                                     struct dev_rng_s *other, size_t size)
+{
+  error_t err;
+  uint8_t *tmp = alloca(size);
+
+  err = rng_read(other, tmp, size);
+  if (err)
+    return err;
+
+  return rng_seed(rng, tmp, size);
+}
+

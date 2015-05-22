@@ -399,5 +399,67 @@ inline uint8_t dev_crypto_memcmp(const void *a, const void *b, size_t len)
   return c;
 }
 
-#endif
+/**
+   A random-number generator context, contains a handle on a device
+   and internal state for a RNG.
+ */
+struct dev_rng_s
+{
+  struct device_crypto_s device;
+  void *state_data;
+};
 
+/**
+   @this initializes a random number generator context.
+
+   @param rng RNG backing device to open
+   @param dev Device path to open
+   @returns 0 on success, or an error
+ */
+config_depend(CONFIG_DEVICE_CRYPTO)
+error_t dev_rng_init(struct dev_rng_s *rng, const char *dev);
+
+/**
+   @this releases all objects associated to RNG context
+
+   @param rng RNG context to close
+ */
+config_depend(CONFIG_DEVICE_CRYPTO)
+void dev_rng_cleanup(struct dev_rng_s *rng);
+
+/**
+   @this retrieves a random data stream from device
+
+   @param rng RNG context to read from
+   @param data Data pointer to write to
+   @param size Byte size to read
+   @returns 0 on success, or an error
+ */
+config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_SCHEDULER)
+error_t dev_rng_wait_read(struct dev_rng_s *rng, void *data, size_t size);
+
+/**
+   @this seeds the RNG with some data
+
+   @param rng RNG context to seed
+   @param data Data pointer to read from
+   @param size Byte size to read
+   @returns 0 on success, or an error
+ */
+config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_SCHEDULER)
+error_t dev_rng_wait_seed(struct dev_rng_s *rng, const void *data, size_t size);
+
+/**
+   @this extracts a random stream from a RNG and uses it as seed for
+   another one.
+
+   @param rng RNG context to seed
+   @param other RNG context to read data from
+   @param size Byte size to pass from one to the other
+   @returns 0 on success, or an error
+ */
+config_depend_and2(CONFIG_DEVICE_CRYPTO, CONFIG_MUTEK_SCHEDULER)
+error_t dev_rng_wait_seed_from_other(struct dev_rng_s *rng,
+                                     struct dev_rng_s *other, size_t size);
+
+#endif
