@@ -32,3 +32,20 @@ dev_persist_spin_op(struct device_persist_s *accessor,
 extern inline error_t
 dev_persist_wait_op(struct device_persist_s *accessor,
                    struct dev_persist_rq_s *rq);
+
+inline error_t
+dev_persist_wait_read(struct device_persist_s *accessor,
+                      const struct dev_persist_descriptor_s *desc,
+                      uint16_t uid_offset,
+                      const void **data);
+
+inline error_t
+dev_persist_wait_write(struct device_persist_s *accessor,
+                       const struct dev_persist_descriptor_s *desc,
+                       uint16_t uid_offset,
+                       const void *data);
+
+inline error_t
+dev_persist_wait_inc(struct device_persist_s *accessor,
+                     const struct dev_persist_descriptor_s *desc,
+                     uint16_t uid_offset);

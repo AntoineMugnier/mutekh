@@ -277,5 +277,96 @@ dev_persist_wait_op(struct device_persist_s *accessor,
   return rq->err;
 }
 
+config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_SCHEDULER)
+inline error_t
+dev_persist_wait_read(struct device_persist_s *accessor,
+                      const struct dev_persist_descriptor_s *desc,
+                      uint16_t uid_offset,
+                      const void **data)
+{
+  struct dev_persist_rq_s rq = {
+    .descriptor = desc,
+    .op = DEV_PERSIST_READ,
+    .uid_offset = uid_offset,
+  };
+
+  error_t err = dev_persist_wait_op(accessor, &rq);
+
+  *data = rq.data;
+
+  return err;
+}
+
+config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_SCHEDULER)
+inline error_t
+dev_persist_wait_write(struct device_persist_s *accessor,
+                       const struct dev_persist_descriptor_s *desc,
+                       uint16_t uid_offset,
+                       const void *data)
+{
+  struct dev_persist_rq_s rq = {
+    .descriptor = desc,
+    .op = DEV_PERSIST_WRITE,
+    .uid_offset = uid_offset,
+    .data = data,
+  };
+
+  return dev_persist_wait_op(accessor, &rq);
+}
+
+config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_SCHEDULER)
+inline error_t
+dev_persist_wait_remove(struct device_persist_s *accessor,
+                        const struct dev_persist_descriptor_s *desc,
+                        uint16_t uid_offset)
+{
+  struct dev_persist_rq_s rq = {
+    .descriptor = desc,
+    .op = DEV_PERSIST_REMOVE,
+    .uid_offset = uid_offset,
+  };
+
+  return dev_persist_wait_op(accessor, &rq);
+}
+
+config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_SCHEDULER)
+inline error_t
+dev_persist_wait_inc(struct device_persist_s *accessor,
+                     const struct dev_persist_descriptor_s *desc,
+                     uint16_t uid_offset)
+{
+  struct dev_persist_rq_s rq = {
+    .descriptor = desc,
+    .op = DEV_PERSIST_WRITE,
+    .uid_offset = uid_offset,
+    .counter = 1,
+  };
+
+  return dev_persist_wait_op(accessor, &rq);
+}
+
+config_depend_and2(CONFIG_DEVICE_PERSIST, CONFIG_MUTEK_SCHEDULER)
+inline error_t
+dev_persist_wait_counter_read(struct device_persist_s *accessor,
+                              const struct dev_persist_descriptor_s *desc,
+                              uint16_t uid_offset,
+                              uint64_t *value)
+{
+  struct dev_persist_rq_s rq = {
+    .descriptor = desc,
+    .op = DEV_PERSIST_WRITE,
+    .uid_offset = uid_offset,
+    .counter = 1,
+  };
+
+  error_t err;
+
+  err = dev_persist_wait_op(accessor, &rq);
+
+  *value = rq.counter;
+
+  return err;
+}
+
 #endif
 
