@@ -41,18 +41,20 @@ void atmel_mem_init()
 # include <device/device.h>
 # include <device/class/cpu.h>
 
-DEV_DECLARE_STATIC_RESOURCES(cpu_dev_res, 1,
-  DEV_STATIC_RES_ID(0, 0),
-);
-
 #if defined (CONFIG_CPU_AVR32)
-DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, avr32_drv, &cpu_dev_res);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, avr32_drv,
+                   DEV_STATIC_RES_ID(0, 0)
+                   );
 
 #elif defined (CONFIG_CPU_ARM32)
-DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32_drv, &cpu_dev_res);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32_drv,
+                   DEV_STATIC_RES_ID(0, 0)
+                   );
 
 #elif defined (CONFIG_CPU_ARM32M)
-DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv, &cpu_dev_res);
+DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
+                   DEV_STATIC_RES_ID(0, 0)
+                   );
 
 # error Unknown ATMEL cpu
 #endif

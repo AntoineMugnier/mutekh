@@ -38,7 +38,7 @@ const char dev_enum_type_e[] = ENUM_DESC_DEV_ENUM_TYPE_E;
 
 #ifdef CONFIG_DEVICE_TREE
 
-DEV_DECLARE_STATIC(device_enum_root, "root", 0, device_enum_root_drv, NULL);
+DEV_DECLARE_STATIC(device_enum_root, "root", 0, device_enum_root_drv);
 
 struct device_node_s *device_tree_root()
 {

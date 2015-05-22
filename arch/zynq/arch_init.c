@@ -42,29 +42,23 @@ void zynq_mem_init()
 #include <device/resources.h>
 # include <device/class/cpu.h>
 
-DEV_DECLARE_STATIC_RESOURCES(mpcore_dev_res, 1,
-  DEV_STATIC_RES_MEM(0xf8f00000, 0xf8f02000),
-);
-
-DEV_DECLARE_STATIC(mpcore_dev, "mpcore0", 0, a9mpcore_drv, &mpcore_dev_res);
+DEV_DECLARE_STATIC(mpcore_dev, "mpcore0", 0, a9mpcore_drv,
+                   DEV_STATIC_RES_MEM(0xf8f00000, 0xf8f02000)
+                   );
 
 
 #ifdef CONFIG_DRIVER_CHAR_CADENCE_UART
 
-DEV_DECLARE_STATIC_RESOURCES(uart0_dev_res, 2,
-  DEV_STATIC_RES_MEM(0xe0000000, 0xe0001000),
-  DEV_STATIC_RES_IRQ(0, 59, 0, "/mpcore0/icu"),
-);
-
-DEV_DECLARE_STATIC(uart0_dev, "uart0", 0, cadence_uart_drv, &uart0_dev_res);
+DEV_DECLARE_STATIC(uart0_dev, "uart0", 0, cadence_uart_drv,
+                   DEV_STATIC_RES_MEM(0xe0000000, 0xe0001000),
+                   DEV_STATIC_RES_IRQ(0, 59, 0, "/mpcore0/icu")
+                   );
 
 
-DEV_DECLARE_STATIC_RESOURCES(uart1_dev_res, 2,
-  DEV_STATIC_RES_MEM(0xe0001000, 0xe0002000),
-  DEV_STATIC_RES_IRQ(0, 82, 0, "/mpcore0/icu"),
-);
-
-DEV_DECLARE_STATIC(uart1_dev, "uart1", 0, cadence_uart_drv, &uart1_dev_res);
+DEV_DECLARE_STATIC(uart1_dev, "uart1", 0, cadence_uart_drv,
+                   DEV_STATIC_RES_MEM(0xe0001000, 0xe0002000),
+                   DEV_STATIC_RES_IRQ(0, 82, 0, "/mpcore0/icu")
+                   );
 
 #endif
 

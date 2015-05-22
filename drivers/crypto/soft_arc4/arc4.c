@@ -227,7 +227,7 @@ const struct driver_s soft_arc4_drv =
 
 REGISTER_DRIVER(soft_arc4_drv);
 
-DEV_DECLARE_STATIC(soft_arc4_dev, "arc4_soft", 0, soft_arc4_drv, NULL);
+DEV_DECLARE_STATIC(soft_arc4_dev, "arc4_soft", 0, soft_arc4_drv);
 
 static DEV_INIT(soft_arc4_init)
 {

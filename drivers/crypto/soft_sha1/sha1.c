@@ -243,7 +243,7 @@ const struct driver_s soft_sha1_drv =
 
 REGISTER_DRIVER(soft_sha1_drv);
 
-DEV_DECLARE_STATIC(soft_sha1_dev, "sha1_soft", 0, soft_sha1_drv, NULL);
+DEV_DECLARE_STATIC(soft_sha1_dev, "sha1_soft", 0, soft_sha1_drv);
 
 static DEV_INIT(soft_sha1_init)
 {

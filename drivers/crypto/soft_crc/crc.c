@@ -392,7 +392,7 @@ const struct driver_s soft_crc_drv =
 
 REGISTER_DRIVER(soft_crc_drv);
 
-DEV_DECLARE_STATIC(soft_crc_dev, "crc_soft", 0, soft_crc_drv, NULL);
+DEV_DECLARE_STATIC(soft_crc_dev, "crc_soft", 0, soft_crc_drv);
 
 static DEV_INIT(soft_crc_init)
 {

@@ -169,7 +169,7 @@ struct device_s
     @see #DEV_DECLARE_STATIC_RESOURCES
     @see device_init @see device_alloc
 */
-# define DEV_DECLARE_STATIC(declname_, name_, flags_, driver_, resources_) \
+# define DEV_DECLARE_STATIC(declname_, name_, flags_, driver_, resources_...) \
     extern const struct driver_s driver_;                               \
     __attribute__ ((aligned (sizeof(void*))))                           \
     __attribute__((section (".devices")))                               \
@@ -186,10 +186,12 @@ struct device_s
       .drv = &driver_,                                                  \
       .ref_count = 0,                                                   \
       .enum_dev = NULL,                                                 \
-      .res_tbl = (void*)(resources_),                                   \
+      .res_tbl = VA_COUNT(resources_)                                   \
+      ? (struct dev_resource_table_s *)DEV_STATIC_RESOURCES(resources_) \
+      : NULL,                                                           \
     }
 #else
-# define DEV_DECLARE_STATIC(declname_, name_, flags_, driver_, resources_) \
+# define DEV_DECLARE_STATIC(declname_, name_, flags_, driver_, resources_...) \
     extern const struct driver_s driver_;                               \
     __attribute__ ((aligned (sizeof(void*))))                           \
     __attribute__((section (".devices")))                               \
@@ -202,7 +204,9 @@ struct device_s
       .status = DEVICE_DRIVER_INIT_PENDING,                             \
       .drv = &driver_,                                                  \
       .ref_count = 0,                                                   \
-      .res_tbl = (void*)(resources_),                                   \
+      .res_tbl = ARRAY_SIZE(DEV_STATIC_RESOURCES_ARRAY(resources_))     \
+      ? (struct dev_resource_table_s *)DEV_STATIC_RESOURCES(resources_) \
+      : NULL,                                                           \
     };
 #endif
 

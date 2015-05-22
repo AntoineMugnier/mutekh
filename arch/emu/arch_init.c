@@ -142,9 +142,7 @@ void emu_cpus_enum_init()
 
 /////////////////////////////////////////////////////////////////////
 
-DEV_DECLARE_STATIC_RESOURCES(tty_dev_res, 0, );
-
-DEV_DECLARE_STATIC(tty_dev, "tty", 0, emu_tty_drv, &tty_dev_res);
+DEV_DECLARE_STATIC(tty_dev, "tty", 0, emu_tty_drv);
 
 
 /////////////////////////////////////////////////////////////////////

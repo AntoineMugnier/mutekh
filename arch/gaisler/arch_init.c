@@ -56,12 +56,10 @@ void gaisler_mem_init()
 # include <device/resources.h>
 # include <device/device.h>
 
-DEV_DECLARE_STATIC_RESOURCES(ahbctrl_dev_res, 1,
-  DEV_STATIC_RES_MEM(CONFIG_GAISLER_AHB_ENUM_ADDR,
-                     CONFIG_GAISLER_AHB_ENUM_ADDR + 0xe00),
-);
-
-DEV_DECLARE_STATIC(ahbctrl_dev, "ahbctrl", 0, ahbctrl_drv, &ahbctrl_dev_res);
+DEV_DECLARE_STATIC(ahbctrl_dev, "ahbctrl", 0, ahbctrl_drv,
+                   DEV_STATIC_RES_MEM(CONFIG_GAISLER_AHB_ENUM_ADDR,
+                                      CONFIG_GAISLER_AHB_ENUM_ADDR + 0xe00)
+                   );
 
 #endif
 

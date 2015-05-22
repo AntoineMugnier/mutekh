@@ -31,6 +31,7 @@
 
 #include <assert.h>
 #include <hexo/types.h>
+#include <hexo/decls.h>
 
 #include <device/types.h>
 
@@ -260,25 +261,30 @@ struct dev_resource_table_s
   struct dev_resource_s           table[0];
 };
 
-/** @This statically declares and intializes a global @ref
+#define DEV_STATIC_RESOURCES_ARRAY(args_...)                    \
+  ((struct dev_resource_s[]){                          \
+    args_                                                       \
+  })
+
+/** @This yields a static pointer to an static initialized @ref
     dev_resource_s object.
 
     @see #DEV_DECLARE_STATIC
 */
-#define DEV_DECLARE_STATIC_RESOURCES(declname_, count_, ...)    \
-  static const struct {                                         \
-    struct dev_resource_table_s _table;                         \
-    struct dev_resource_s _entries[count_];                     \
-  } declname_ = {                                               \
+#define DEV_STATIC_RESOURCES(args_...)                          \
+  (const struct dev_resource_table_s *)&(const struct {         \
+      struct dev_resource_table_s _table;                       \
+      struct dev_resource_s _entries[ARRAY_SIZE(DEV_STATIC_RESOURCES_ARRAY(args_))]; \
+  }){                                                           \
     ._table = {                                                 \
       .next = NULL,                                             \
       .flags = DEVICE_RES_TBL_FLAGS_STATIC_CONST,               \
-      .count = (count_),                                        \
+      .count = ARRAY_SIZE(DEV_STATIC_RESOURCES_ARRAY(args_)),   \
     },                                                          \
     ._entries = {                                               \
-      __VA_ARGS__                                               \
+      args_                                                     \
     }                                                           \
-  };
+  }
 
 /** @This iterates over resources entries of a device. */
 #define DEVICE_RES_FOREACH(dev, rvar, ... /* loop body */ )             \

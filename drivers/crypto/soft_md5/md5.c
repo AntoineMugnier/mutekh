@@ -256,7 +256,7 @@ const struct driver_s soft_md5_drv =
 
 REGISTER_DRIVER(soft_md5_drv);
 
-DEV_DECLARE_STATIC(soft_md5_dev, "md5_soft", 0, soft_md5_drv, NULL);
+DEV_DECLARE_STATIC(soft_md5_dev, "md5_soft", 0, soft_md5_drv);
 
 static DEV_INIT(soft_md5_init)
 {

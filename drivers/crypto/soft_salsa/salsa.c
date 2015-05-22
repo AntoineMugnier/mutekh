@@ -461,7 +461,7 @@ const struct driver_s soft_salsa_drv =
 
 REGISTER_DRIVER(soft_salsa_drv);
 
-DEV_DECLARE_STATIC(soft_salsa_dev, "salsa_soft", 0, soft_salsa_drv, NULL);
+DEV_DECLARE_STATIC(soft_salsa_dev, "salsa_soft", 0, soft_salsa_drv);
 
 static DEV_INIT(soft_salsa_init)
 {

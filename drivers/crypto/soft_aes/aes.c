@@ -174,7 +174,7 @@ const struct driver_s soft_aes_drv =
 
 REGISTER_DRIVER(soft_aes_drv);
 
-DEV_DECLARE_STATIC(soft_aes_dev, "aes_soft", 0, soft_aes_drv, NULL);
+DEV_DECLARE_STATIC(soft_aes_dev, "aes_soft", 0, soft_aes_drv);
 
 static DEV_INIT(soft_aes_init)
 {
