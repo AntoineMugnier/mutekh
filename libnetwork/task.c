@@ -70,8 +70,12 @@ void net_task_inbound_push(struct net_task_s *task,
   task->inbound.buffer = buffer_refinc(buffer);
   if (src_addr)
     task->inbound.src_addr = *src_addr;
+  else
+    memset(&task->inbound.src_addr, 0, sizeof(struct net_addr_s));
   if (dst_addr)
     task->inbound.dst_addr = *dst_addr;
+  else
+    memset(&task->inbound.dst_addr, 0, sizeof(struct net_addr_s));
 
   //printk("Task %p forward <- %S\n", task, &source->type, 4);
 
