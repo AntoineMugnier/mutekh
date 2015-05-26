@@ -5,7 +5,7 @@ objs = src/term.o src/term_none.o src/term_printf.o src/term_vt100.o	\
        src/term_vt102.o src/term_xterm.o src/strings.o termio_dev.o \
 
 ifeq ($(CONFIG_LIBTERMUI_GETLINE), defined)
-objs += src/getline.o src/getline_complete.o src/getline_edit.o	\
+objs += src/getline.o src/getline_edit.o	\
 	src/getline_history.o
 endif
 
