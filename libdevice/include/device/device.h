@@ -186,7 +186,7 @@ struct device_s
       .drv = &driver_,                                                  \
       .ref_count = 0,                                                   \
       .enum_dev = NULL,                                                 \
-      .res_tbl = VA_COUNT(resources_)                                   \
+      .res_tbl = ARRAY_SIZE(DEV_STATIC_RESOURCES_ARRAY(resources_))     \
       ? (struct dev_resource_table_s *)DEV_STATIC_RESOURCES(resources_) \
       : NULL,                                                           \
     }
