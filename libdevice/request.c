@@ -60,7 +60,13 @@ dev_request_delayed_end(struct dev_request_dlqueue_s *q,
 
 #ifdef CONFIG_DEVICE_DELAYED_REQUEST
 /** @internal */
-extern inline KROUTINE_EXEC(dev_request_delayed_kr);
+KROUTINE_EXEC(dev_request_delayed_kr)
+{
+  struct dev_request_dlqueue_s *d = KROUTINE_CONTAINER(kr, struct dev_request_dlqueue_s, kr);
+  struct dev_request_s *rq = dev_request_queue_head(&d->queue);
+
+  d->func(rq->drvdata, rq);
+}
 #endif
 
 #endif

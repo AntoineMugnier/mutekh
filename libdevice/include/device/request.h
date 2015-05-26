@@ -195,13 +195,7 @@ struct dev_request_dlqueue_s
 
 #ifdef CONFIG_DEVICE_DELAYED_REQUEST
 /** @internal */
-inline KROUTINE_EXEC(dev_request_delayed_kr)
-{
-  struct dev_request_dlqueue_s *d = KROUTINE_CONTAINER(kr, struct dev_request_dlqueue_s, kr);
-  struct dev_request_s *rq = dev_request_queue_head(&d->queue);
-
-  d->func(rq->drvdata, rq);
-}
+extern KROUTINE_EXEC(dev_request_delayed_kr);
 #endif
 
 /** @This initializes a delayed device request queue. */
@@ -236,7 +230,6 @@ dev_request_delayed_end(struct dev_request_dlqueue_s *q,
 #ifdef CONFIG_DEVICE_DELAYED_REQUEST
   struct device_accessor_s *accessor = rq->drvdata;
 
-  assert(cpu_is_interruptible());
   if (accessor != NULL)
     {
       struct device_s *dev = accessor->dev;
@@ -246,7 +239,7 @@ dev_request_delayed_end(struct dev_request_dlqueue_s *q,
         kroutine_exec(&q->kr, 0); /* delayed exec next rq */
       LOCK_RELEASE_IRQ(&dev->lock);
     }
-  kroutine_exec(&rq->kr, 1);
+  kroutine_exec(&rq->kr, cpu_is_interruptible());
 #endif
 }
 
