@@ -34,8 +34,6 @@
 #define dprintk(...) do{}while(0)
 
 STRUCT_INHERIT(net_scheduler_s, dev_timer_rq_s, timer_rq);
-GCT_CONTAINER_FCNS(net_task_queue, static, net_task_queue,
-                   init, destroy, pushback, pop, remove);
 
 GCT_CONTAINER_KEY_TYPES(net_timeout_queue, CUSTOM, SCALAR,
                         net_task_s_from_header(net_timeout_queue_item)->timeout.deadline,
