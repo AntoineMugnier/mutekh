@@ -37,8 +37,9 @@
 struct net_addr_s
 {
 #if defined(CONFIG_BLE)
-  uint8_t reliable;
-  uint8_t llid;
+  uint8_t llid : 2;
+  uint8_t reliable : 1;
+  uint8_t secure : 1;
   uint16_t att;
   uint16_t cid;
 #endif
