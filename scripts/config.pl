@@ -196,7 +196,7 @@ sub args_flags
 
     foreach my $flag (@args)
     {
-	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private|maxval|minval|sumval|single|deprecated|experimental)$/)
+	if ( $flag !~ /^(internal|value|meta|root|noexport|mandatory|harddep|auto|private|maxval|minval|sumval|single|deprecated|experimental|enum)$/)
 	{
 	    error($location.": unknown flag `".$flag."' for `".$opts->{name}." token'");
 	    next;
@@ -262,6 +262,20 @@ my %config_cmd =
  "desc" => \&args_text_block,
 );
 
+sub new_token
+{
+    my ($name, $file, $lnum) = @_;
+
+    my $opts = $config_opts{$name} = {};
+    $opts->{location} = $lnum;
+    $opts->{file} = $file;
+    $opts->{name} = $name;
+    $opts->{depnotice} = [];
+    $opts->{childs} = [];
+
+    return $opts;
+}
+
 sub new_token_block
 {
     my ($name, $file, $lnum) = @_;
@@ -274,12 +288,7 @@ sub new_token_block
 	return undef;
     }
 
-    $opts = $config_opts{$name} = {};
-    $opts->{location} = $lnum;
-    $opts->{file} = $file;
-    $opts->{name} = $name;
-    $opts->{depnotice} = [];
-    $opts->{childs} = [];
+    $opts = new_token( $name, $file, $lnum );
 
     return ($opts, \%config_cmd);
 }
@@ -1179,7 +1188,8 @@ sub process_config_define
 {
     my $opt = shift;
 
-    return if $opt->{userdefined} or $opt->{flags}->{value} or $opt->{flags}->{meta};
+    return if $opt->{userdefined} or $opt->{flags}->{value} or
+              $opt->{flags}->{enum} or $opt->{flags}->{meta};
 
     if ( $opt->{default} eq 'defined' ) {
         debug(1, "$opt->{name} defined by default");
@@ -1237,7 +1247,7 @@ sub process_config_auto
     my $chg = 0;
 
     return 0 if ( !check_defined( $opt ) );
-    return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} );
+    return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} || $opt->{flags}->{enum} );
 
     my $dlist = [];
     push @$dlist, @{$opt->{depend}} if $opt->{depend};
@@ -1286,7 +1296,7 @@ sub process_config_depend
     my ($opt) = @_;
 
     return 0 if ( !check_defined( $opt ) );
-    return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} );
+    return 0 if ( $opt->{flags}->{meta} || $opt->{flags}->{value} || $opt->{flags}->{enum} );
 
     my $de = $enforce_deps ? 'deperror' : 'depnotice';
 
@@ -1414,7 +1424,7 @@ sub process_config_require
 {
     my ( $opt ) = @_;
 
-    return 0 if ( $opt->{flags}->{value} || $opt->{flags}->{meta} );
+    return 0 if ( $opt->{flags}->{value} || $opt->{flags}->{meta} || $opt->{flags}->{enum} );
     return 0 if ( !check_defined( $opt ) );
 
     return foreach_and_list( $opt->{require}, sub {
@@ -1445,6 +1455,7 @@ sub process_config_range
 		  "range is: [$opt->{range}->{min}, $opt->{range}->{max}]" );
 	}
 
+    } elsif ($opt->{flags}->{enum}) {
     } else {
 	error("token `$opt->{name}' is set to `$opt->{value}' value but lacks the `value' flag")
 	    if ($opt->{value} !~ /(un)?defined/);
@@ -1466,7 +1477,7 @@ sub process_config_suggest
 		my $token = $rule->{token};
 
 		# do not suggest if not a value token and can not define due to other constraints
-		if ( $token->{flags}->{value} || check_definable( $token ) ) {
+		if ( $token->{flags}->{enum} || $token->{flags}->{value} || check_definable( $token ) ) {
 		    notice("`$opt->{name}' token is defined and suggests this configuration: ".
 			   get_rule_name( $rule ) );
 		}
@@ -1603,6 +1614,35 @@ sub tokens_provider
 	    push @{$t->{childs}}, $opt;
 	});
     }
+
+}
+
+sub tokens_enum
+{
+    foreach my $opt (values %config_opts) {
+        if ( $opt->{flags}->{enum} ) {
+            my $value = $opt->{value};
+            $value = oct($value) if $value =~ /^0/;
+            foreach my $pr (sort { $a->{name} cmp $b->{name} } @{$opt->{providers}}) {
+
+                # skip entry if the parent is not defined
+                next if !foreach_or_list( $pr->{parent}, \&check_defined );
+
+                # create _FIRST token for the enum entry
+                my $name = $pr->{name};
+                $name =~ s/_COUNT$//g;
+                my $o = new_token($name.'_FIRST', $pr->{file}, $pr->{location});
+                $o->{value} = $value;
+                $o->{flags}->{value} = 1;
+                $value += $pr->{default};
+            }
+
+            # create _COUNT token for the enum
+            my $o = new_token($opt->{name}.'_COUNT', $opt->{file}, $opt->{location});
+            $o->{value} = $value;
+            $o->{flags}->{value} = 1;
+        }
+    }
 }
 
 # flags exclusion table
@@ -1655,9 +1695,13 @@ sub tokens_check
 	    my $c = shift;
 	    my $p = $c->{token};
 
-	    if (!$p->{flags}->{meta} && !$p->{flags}->{value}) {
-		error_loc($opt, "`provide' tag used on `$p->{name}' token without `meta' or `value' flag.");
+	    if (!$p->{flags}->{meta} && !$p->{flags}->{value} && !$p->{flags}->{enum}) {
+		error_loc($opt, "`provide' tag used on `$p->{name}' token without `meta', `value' or `enum' flag.");
 	    }
+
+            if ($p->{flags}->{enum} && !$opt->{flags}->{value}) {
+		error_loc($opt, "`provide' tag used on `$p->{name}' enum from a non-value token.");
+            }
 
 	    if ($p->{flags}->{meta} && $c->{value} ne 'defined') {
 		error_loc($opt, "can not specify a `provide' value for `$p->{name}' token with `meta' flag");
@@ -1685,7 +1729,7 @@ sub tokens_check
 
 	if ($opt->{flags}->{value}) {
 
-	    foreach my $tag (qw(depend when require provide suggest suggest_when warn_when exclude single)) {
+	    foreach my $tag (qw(depend when require suggest suggest_when warn_when exclude single)) {
 		error_loc($opt, "token with `value' flag can't use the `$tag' tag.")
 		    if ($opt->{$tag});
 	    }
@@ -1783,7 +1827,7 @@ sub check_config
             if ( $opt->{userdefined} or $opt->{flags}->{meta} or $opt->{flags}->{mandatory} ) {
             } elsif ( $opt->{flags}->{meta} ) {
                 $opt->{value} = 'undefined';
-            } elsif ( $opt->{flags}->{value} ) {
+            } elsif ( $opt->{flags}->{value} or $opt->{flags}->{enum} ) {
                 $opt->{value} = $opt->{default};
             } else {
                 if ( foreach_and_parent( $opt, sub {
@@ -2624,6 +2668,7 @@ Usage: config.pl [options]
     exit 1 if $err_flag;
 
     check_config();
+    tokens_enum();
     process_inits();
 
     debug(1, "help and info display actions");
