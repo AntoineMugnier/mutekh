@@ -63,8 +63,10 @@ enum driver_class_e
   DRIVER_CLASS_CPU,
   DRIVER_CLASS_VALIO,
   DRIVER_CLASS_PERSIST,
-  /** First user defined device class id */
-  DRIVER_CLASS_User_First = 128,
+
+  /** Custom driver class IDs should be registered in @ref
+      #CONFIG_DEVICE_CUSTOM_CLASS_COUNT enum config token.
+   */
 };
 
 ENUM_DESCRIPTOR(dev_enum_type_e, strip:DEV_ENUM_TYPE_, upper);
