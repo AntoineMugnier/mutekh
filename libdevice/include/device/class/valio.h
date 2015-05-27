@@ -101,7 +101,9 @@ struct dev_valio_rq_s
 {
     struct dev_request_s base;
 
-    /** Attribute index */
+    /** Attribute index, should be accounted for in
+        @ref #CONFIG_DEVICE_VALIO_ATTRIBUTE config enum token
+    */
     uint16_t attribute;
 
     /** Request type */

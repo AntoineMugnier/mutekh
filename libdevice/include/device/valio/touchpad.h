@@ -30,7 +30,7 @@
 enum valio_touchpad_att {
     /** A struct valio_touchpad_size_s defining size of touch area in
         raw coordinates, constant */
-    VALIO_TOUCHPAD_SIZE,
+    VALIO_TOUCHPAD_SIZE = CONFIG_DEVICE_VALIO_TOUCHPAD_ATTRIBUTE_FIRST,
     /** A struct valio_touchpad_state_s with current position, read
         or update */
     VALIO_TOUCHPAD_STATE,

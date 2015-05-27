@@ -39,7 +39,7 @@ enum valio_button_att {
         button in the @tt timestamp field of data. If no measure of time is possible
         in driver 0 must be returned.
     **/
-    VALIO_BUTTON_TOGGLE,
+    VALIO_BUTTON_TOGGLE = CONFIG_DEVICE_VALIO_BUTTON_ATTRIBUTE_COUNT,
     VALIO_BUTTON_PUSH,
     VALIO_BUTTON_RELEASE,
 };

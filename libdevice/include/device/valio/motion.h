@@ -38,7 +38,7 @@ enum valio_motion_att_e
     /* Use with @tt DEVICE_VALIO_READ request type. @tt data is a pointer to a 
        @tt struct valio_motion_caps_s that defines the capability of the device,
        including what motion sensors are available.*/ 
-    VALIO_MOTION_CAPS,
+    VALIO_MOTION_CAPS = CONFIG_DEVICE_VALIO_MOTION_ATTRIBUTE_FIRST,
 
     /* Use with @tt DEVICE_VALIO_WRITE request type. @tt data is NULL. This 
        calibrates device. Calibration can be implemented either in device when 

@@ -29,7 +29,7 @@
 
 enum valio_hwclock_att {
     /** A struct valio_hwclock_s */
-    VALIO_HWCLOCK,
+    VALIO_HWCLOCK = CONFIG_DEVICE_VALIO_HWCLOCK_ATTRIBUTE_FIRST,
 };
 
 struct valio_hwclock_s
