@@ -1623,6 +1623,7 @@ sub tokens_enum
         if ( $opt->{flags}->{enum} ) {
             my $value = $opt->{value};
             $value = oct($value) if $value =~ /^0/;
+            $opt->{providers} ||= [];
             foreach my $pr (sort { $a->{name} cmp $b->{name} } @{$opt->{providers}}) {
 
                 # skip entry if the parent is not defined
