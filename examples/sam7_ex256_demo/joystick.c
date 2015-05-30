@@ -63,7 +63,7 @@ static DEV_GPIO_IRQ(button_pressed)
 	semaphore_give(&sem, 1);
 }
 
-const char *name[] = {
+const char *const name[] = {
 	"left",
 	"down",
 	"up",

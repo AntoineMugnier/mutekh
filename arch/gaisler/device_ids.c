@@ -1,7 +1,7 @@
 
 #include <arch/device_ids.h>
 
-const char *gaisler_devices_names[GAISLER_DEVICE_count] =
+const char *const gaisler_devices_names[GAISLER_DEVICE_count] =
   {
     [GAISLER_DEVICE_LEON3      ] = "cpu",
     [GAISLER_DEVICE_ETHAHB     ] = "eth",
@@ -42,7 +42,7 @@ const char *gaisler_devices_names[GAISLER_DEVICE_count] =
 
 #ifdef CONFIG_GAISLER_DEVICE_IDS
 
-const char *gaisler_vendors_longnames[GAISLER_VENDOR_count] =
+const char *const gaisler_vendors_longnames[GAISLER_VENDOR_count] =
   {
     [GAISLER_VENDOR_GAISLER    ] = "Gaisler Research",
     [GAISLER_VENDOR_ESA        ] = "European Space Agency",
@@ -57,7 +57,7 @@ const char *gaisler_vendors_longnames[GAISLER_VENDOR_count] =
     [GAISLER_VENDOR_RADIONOR   ] = "Radionor Communications",
   };
 
-const char *gaisler_devices_longnames[GAISLER_DEVICE_count] =
+const char *const gaisler_devices_longnames[GAISLER_DEVICE_count] =
   {
     [GAISLER_DEVICE_LEON2DSU   ] = "Leon2 Debug Support Unit",
     [GAISLER_DEVICE_LEON3      ] = "Leon3 SPARC V8 Processor",

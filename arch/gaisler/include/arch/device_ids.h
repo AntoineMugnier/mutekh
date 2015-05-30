@@ -23,7 +23,7 @@ enum gaisler_vendor_ids_e
 };
 
 #ifdef CONFIG_GAISLER_DEVICE_IDS
-extern const char *gaisler_vendors_longnames[GAISLER_VENDOR_count];
+extern const char *const gaisler_vendors_longnames[GAISLER_VENDOR_count];
 #endif
 
 enum gaisler_device_ids_e
@@ -103,10 +103,10 @@ enum gaisler_device_ids_e
   GAISLER_DEVICE_count     = 0x076,
 };
 
-extern const char *gaisler_devices_names[GAISLER_DEVICE_count];
+extern const char *const gaisler_devices_names[GAISLER_DEVICE_count];
 
 #ifdef CONFIG_GAISLER_DEVICE_IDS
-extern const char *gaisler_devices_longnames[GAISLER_DEVICE_count];
+extern const char *const gaisler_devices_longnames[GAISLER_DEVICE_count];
 #endif
 
 #endif

@@ -55,7 +55,7 @@ typedef uint64_t efm32_clock_mask_t;
    << EFM32_CLOCK_LFBCLK_first)
 
 #ifdef CONFIG_DRIVER_EFM32_RECMU_NAMES
-static const char *efm32_clock_names[EFM32_CLOCK_count] = {
+static const char * const efm32_clock_names[EFM32_CLOCK_count] = {
     [EFM32_CLOCK_HFXO]       = "hfxo",
     [EFM32_CLOCK_HFRCO]      = "hfrco",
 # ifdef EFM32_CLOCK_AUXHFRCO

@@ -13,7 +13,7 @@
 
 extern struct device_s enum_root;
 
-static const char *device_class_str[] = {
+static const char *const device_class_str[] = {
 	"none", "block", "char", "enum", "fb", "icu", "input", "net",
 	"sound", "timer", "spi", "lcd", "gpio", "i2c", "mem",
 };
