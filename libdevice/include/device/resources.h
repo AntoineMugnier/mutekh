@@ -440,6 +440,23 @@ ALWAYS_INLINE error_t device_res_add_io(struct device_s *dev, uintptr_t start, u
       } }                                       \
   }
 
+/** @internal @This looks up an IO resource entry and reads either
+    fields. @tt start and @tt end pointers may be @tt NULL. */
+ALWAYS_INLINE error_t device_get_param_io(const struct device_s *dev,
+                                          uint_fast8_t id, uintptr_t *start, uintptr_t *end)
+{
+  const struct dev_resource_s *r;
+
+  if (!(r = device_res_get(dev, DEV_RES_IO, id)))
+    return -ENOENT;
+
+  if (start)
+    *start = r->u.io.start;
+  if (end)
+    *end = r->u.io.end;
+  return 0;
+}
+
 
 /** @This adds an memory space address range to the device resources list.
     @see #DEV_STATIC_RES_MEM */
