@@ -15,6 +15,7 @@
   CONFIG_COMPILE_OPTIMIZE s
 
 %section release
+  CONFIG_RELEASE
   CONFIG_DEBUG undefined
   CONFIG_LIBC_ASSERT undefined
   CONFIG_COMPILE_DEBUG undefined
