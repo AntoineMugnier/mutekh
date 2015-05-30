@@ -216,6 +216,10 @@ static void pca9557_req_serve(
         pca9557_input_get(pv);
         break;
     }
+
+    case DEV_GPIO_INPUT_IRQ_RANGE:
+      req->error = -ENOTSUP;
+      break;
     }
 }
 
@@ -235,8 +239,10 @@ static DEV_GPIO_REQUEST(pca9557_request)
     struct device_s *dev = gpio->dev;
     struct pca9557_private_s *pv = dev->drv_pv;
 
-    if (req->io_last >= 8)
-        return -ERANGE;
+    if (req->io_last >= 8) {
+        req->error = -ERANGE;
+        return;
+    }
 
     LOCK_SPIN_IRQ(&dev->lock);
 
@@ -247,8 +253,6 @@ static DEV_GPIO_REQUEST(pca9557_request)
         pca9557_req_serve(dev, req);
 
     LOCK_RELEASE_IRQ(&dev->lock);
-
-    return 0;
 }
 
 const struct driver_gpio_s pca9557_gpio_drv =
