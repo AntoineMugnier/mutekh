@@ -182,7 +182,7 @@ ALWAYS_INLINE bool_t lock_state(lock_t *lock)
     lock. This macro must be matched with the LOCK_RELEASE_IRQ macro. */
 #ifdef CONFIG_HEXO_IRQ
 # define LOCK_SPIN_IRQ(lock)					\
-{								\
+  HEXO_ATOMIC_SCOPE_BEGIN                                       \
   reg_t	__interrupt_state;					\
   cpu_interrupt_savestate_disable(&__interrupt_state);		\
   lock_spin(lock);
@@ -236,7 +236,7 @@ ALWAYS_INLINE void lock_release_irq2(lock_t *lock, const reg_t *irq_state)
 # define LOCK_RELEASE_IRQ(lock)					\
   lock_release(lock);						\
   cpu_interrupt_restorestate(&__interrupt_state);		\
-}
+  HEXO_ATOMIC_SCOPE_END
 
 # define LOCK_RELEASE_IRQ_X(lock)				\
   lock_release(lock);						\

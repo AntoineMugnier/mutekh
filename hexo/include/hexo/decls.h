@@ -164,4 +164,30 @@ cont_s##_from_##field(typeof(((struct cont_s*)0)->field) *x)            \
 #undef ENUM_DESCRIPTOR
 #define ENUM_DESCRIPTOR(name, ...) extern const char name[];
 
+#if defined(CONFIG_DEBUG) && !defined(__ASSEMBLER__)
+
+ALWAYS_INLINE void hexo_atomic_scope_check(char *scope_exited_cleanly)
+{
+  extern void abort(void);
+
+  if (!*scope_exited_cleanly)
+    abort();
+}
+
+# define HEXO_ATOMIC_SCOPE_BEGIN                                \
+  {                                                             \
+  __attribute__((cleanup(hexo_atomic_scope_check)))             \
+  char __scope_exited_cleanly = 0;
+
+# define HEXO_ATOMIC_SCOPE_END                                \
+  __scope_exited_cleanly = 1;                                 \
+  }
+
+#else
+
+# define HEXO_ATOMIC_SCOPE_BEGIN {
+# define HEXO_ATOMIC_SCOPE_END }
+
+#endif
+
 #endif /* HEXO_DECLS_H_ */
