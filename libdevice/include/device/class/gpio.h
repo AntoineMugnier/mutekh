@@ -84,6 +84,7 @@
 #include <device/driver.h>
 #include <device/resources.h>
 #include <device/request.h>
+#include <device/irq.h>
 
 struct dev_gpio_rq_s;
 struct device_gpio_s;
@@ -179,6 +180,37 @@ typedef DEV_GPIO_SET_OUTPUT(dev_gpio_set_output_t);
 typedef DEV_GPIO_GET_INPUT(dev_gpio_get_input_t);
 
 
+
+/** @see dev_gpio_input_irq_range_t */
+#define DEV_GPIO_INPUT_IRQ_RANGE(n) error_t (n)(const struct device_gpio_s *gpio, \
+                                                gpio_id_t io_first, gpio_id_t io_last, \
+                                                const uint8_t *mask,    \
+                                                enum dev_irq_sense_modes_e mode, \
+                                                uint_fast8_t ep_id)
+/**
+   @this declares a range of pins as common IRQ source.  This must be
+   used for a device that also implements the ICU device class.
+
+   This configures endpoint @tt ep_id as an interrupt source for
+   changes detected on pins in range @tt io_first to @tt io_last where
+   bits in @tt mask are set.
+
+   Relevant @tt ep_id to use for this call is device-specific.
+
+   Pin direction and other characteristics (pullups, etc.) must be set
+   through @tt set_mode call.
+
+   Any selected change in @tt mode for any selected pin triggers an
+   IRQ on the endpoint.
+
+   When changes are then notified through the IRQ callback, there is
+   no way to tell which pin triggered the IRQ.  It is up to client
+   code to read the input pin status and take action.
+*/
+typedef DEV_GPIO_INPUT_IRQ_RANGE(dev_gpio_input_irq_range_t);
+
+
+
 /** @see dev_gpio_request_t */
 #define DEV_GPIO_REQUEST(n) void (n)(const struct device_gpio_s *gpio, \
                                      struct dev_gpio_rq_s *req)
@@ -196,6 +228,7 @@ enum dev_gpio_request_type
   DEV_GPIO_MODE,
   DEV_GPIO_SET_OUTPUT,
   DEV_GPIO_GET_INPUT,
+  DEV_GPIO_INPUT_IRQ_RANGE,
 };
 
 #define GCT_CONTAINER_ALGO_dev_gpio_queue CLIST
@@ -231,6 +264,12 @@ struct dev_gpio_rq_s
       /** data buffer to read */
       uint8_t                     *data;
     } input;
+
+    struct {
+      const uint8_t               *mask;
+      enum dev_irq_sense_modes_e  mode;
+      uint_fast8_t                ep_id;
+    } input_irq_range;
   };
 };
 
@@ -246,6 +285,7 @@ DRIVER_CLASS_TYPES(gpio,
                    dev_gpio_set_mode_t *f_set_mode;
                    dev_gpio_set_output_t *f_set_output;
                    dev_gpio_get_input_t *f_get_input;
+                   dev_gpio_input_irq_range_t *f_input_irq_range;
                    dev_gpio_request_t *f_request;
   );
 

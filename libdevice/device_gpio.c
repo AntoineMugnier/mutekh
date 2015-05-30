@@ -117,6 +117,14 @@ DEV_GPIO_REQUEST(dev_gpio_request_async_to_sync)
                           req->io_first, req->io_last,
                           req->input.data);
     break;
+
+  case DEV_GPIO_INPUT_IRQ_RANGE:
+    req->error = DEVICE_OP(gpio, input_irq_range,
+                           req->io_first, req->io_last,
+                           req->input_irq_range.mask,
+                           req->input_irq_range.mode,
+                           req->input_irq_range.ep_id);
+    break;
   }
 
   kroutine_exec(&req->base.kr, cpu_is_interruptible());
