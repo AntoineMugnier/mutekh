@@ -714,7 +714,7 @@ ALWAYS_INLINE error_t device_get_param_str(const struct device_s *dev,
     return -ENOENT;
 
   if (a)
-    *a = (const char*)r->u.uint[0];
+    *a = (const char*)r->u.str_param.value;
   return 0;
 }
 
@@ -729,7 +729,7 @@ ALWAYS_INLINE void device_get_param_str_default(const struct device_s *dev, cons
   if (!(r = device_res_get_from_name(dev, DEV_RES_STR_PARAM, 0, name)))
     *a = def;
   else
-    *a = (const char*)r->u.uint[0];
+    *a = (const char*)r->u.str_param.value;
 }
 
 

@@ -57,8 +57,8 @@ struct dev_resource_s *device_res_get_from_name(const struct device_s *dev,
                                                 uint_fast8_t id, const char *name)
 {
   DEVICE_RES_FOREACH(dev, r, {
-      if (r->type == type && r->u.uint[1] &&
-          !device_res_strcmp(name, (const char*)r->u.uint[1]) && !id--)
+      if (r->type == type && r->u.str_param.name &&
+          !device_res_strcmp(name, r->u.str_param.name) && !id--)
         return r;
   });
 
@@ -199,5 +199,5 @@ error_t device_get_param_dev_accessor(struct device_s *dev,
   if (!(r = device_res_get_from_name(dev, DEV_RES_DEV_PARAM, 0, name)))
     return -ENOENT;
 
-  return device_get_accessor_by_path(accessor, &dev->node, (const char*)r->u.uint[0], cl);
+  return device_get_accessor_by_path(accessor, &dev->node, r->u.str_param.value, cl);
 }
