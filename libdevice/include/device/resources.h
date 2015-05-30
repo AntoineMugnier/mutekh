@@ -56,6 +56,7 @@ enum dev_resource_type_e
     DEV_RES_CLOCK_OSC,
     DEV_RES_CLOCK_SRC,
     DEV_RES_STR_PARAM,
+    DEV_RES_BLOB_PARAM,
     DEV_RES_UINT_PARAM,
     DEV_RES_DEV_PARAM,
     DEV_RES_UINT_ARRAY_PARAM,
@@ -225,6 +226,12 @@ struct dev_resource_s
       const char                *value;
       const char                *name;
     }                           str_param;
+
+    /** @see #DEV_STATIC_RES_BLOB_PARAM */
+    struct {
+      const void                *value;
+      const char                *name;
+    }                           blob_param;
 
     /** @see #DEV_STATIC_RES_UINT_PARAM @see device_res_add_uint_param */
     struct {
@@ -708,6 +715,31 @@ ALWAYS_INLINE void device_get_param_str_default(const struct device_s *dev, cons
     *a = (const char*)r->u.uint[0];
 }
 
+
+# define DEV_STATIC_RES_BLOB_PARAM(name_, value_)       \
+  {                                                     \
+  .type = DEV_RES_BLOB_PARAM,                           \
+  .u = { .blob_param = {                                \
+  .name = (name_),                                      \
+  .value = (value_),                                    \
+  } }                                                   \
+  }
+
+/** @This retrieves the value of a blob parameter resource entry from
+    the associated parameter name. */
+ALWAYS_INLINE error_t device_get_param_blob(const struct device_s *dev,
+                                            const char *name, uint8_t id,
+                                            const void **a)
+{
+  struct dev_resource_s *r;
+
+  if (!(r = device_res_get_from_name(dev, DEV_RES_BLOB_PARAM, id, name)))
+    return -ENOENT;
+
+  if (a)
+    *a = (const void*)r->u.blob_param.value;
+  return 0;
+}
 
 
 /** @This attaches an integer parameter resource to the device. The
