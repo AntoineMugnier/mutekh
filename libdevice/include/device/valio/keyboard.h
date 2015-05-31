@@ -46,7 +46,7 @@ enum valio_keyboard_att_e
 
      Requester should allocate enough bytes to store the whole array.
    */
-  VALIO_KEYBOARD_MAP = CONFIG_DEVICE_VALIO_KEYBOARD_ATTRIBUTE_COUNT,
+  VALIO_KEYBOARD_MAP = CONFIG_DEVICE_VALIO_KEYBOARD_ATTRIBUTE_FIRST,
 };
 
 /**
