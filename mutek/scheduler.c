@@ -190,9 +190,10 @@ error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible,
 #ifdef CONFIG_MUTEK_KROUTINE_SCHED_SWITCH
     case KROUTINE_INTERRUPTIBLE:
     case KROUTINE_PREEMPT_INTERRUPTIBLE:
-      if (interruptible)
+      if (interruptible) {
         err = -EBUSY;
-      break;
+        break;
+      }
 
     case KROUTINE_SCHED_SWITCH:
     case KROUTINE_PREEMPT:
