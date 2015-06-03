@@ -23,6 +23,8 @@
 #include <device/class/crypto.h>
 #include <enums.h>
 
+#include <mutek/mem_alloc.h>
+
 const char dev_crypto_mode_e[] = ENUM_DESC_DEV_CRYPTO_MODE_E;
 const char dev_crypto_op_e[] = ENUM_DESC_DEV_CRYPTO_OP_E;
 
@@ -109,10 +111,10 @@ error_t dev_rng_wait_seed_from_other(struct dev_rng_s *rng,
   error_t err;
   uint8_t *tmp = alloca(size);
 
-  err = rng_read(other, tmp, size);
+  err = dev_rng_wait_read(other, tmp, size);
   if (err)
     return err;
 
-  return rng_seed(rng, tmp, size);
+  return dev_rng_wait_seed(rng, tmp, size);
 }
 
