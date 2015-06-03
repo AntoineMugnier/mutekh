@@ -203,14 +203,12 @@ enum kroutine_policy_e
 
 struct kroutine_s
 {
-  union {
 #if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)
-    GCT_CONTAINER_ENTRY(kroutine_queue, queue_entry);
+  GCT_CONTAINER_ENTRY(kroutine_queue, queue_entry);
 #endif
-    atomic_t                    state;
-  };
   kroutine_exec_t              *exec;
   enum kroutine_policy_e       policy;
+  atomic_t                     state;
 };
 
 #if defined(CONFIG_MUTEK_KROUTINE_SCHED_SWITCH) || defined(CONFIG_MUTEK_KROUTINE_IDLE)

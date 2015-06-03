@@ -192,6 +192,8 @@ error_t kroutine_schedule(struct kroutine_s *kr, bool_t interruptible,
     case KROUTINE_PREEMPT_INTERRUPTIBLE:
       if (interruptible)
         err = -EBUSY;
+      break;
+
     case KROUTINE_SCHED_SWITCH:
     case KROUTINE_PREEMPT:
       kroutine_queue_pushback(CPU_LOCAL_ADDR(kroutine_sched_switch), kr);
