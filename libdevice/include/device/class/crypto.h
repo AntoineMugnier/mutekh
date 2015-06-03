@@ -153,6 +153,11 @@ enum dev_crypto_mode_e
   DEV_CRYPTO_MODE_GCM,
   /** Usage is similar to @ref DEV_CRYPTO_MODE_GCM. */
   DEV_CRYPTO_MODE_CCM,
+
+  /** BLE-specific CCM mode. In/Out buffers are BLE packets with full
+      packet type and packet length bytes, but without CRC.. */
+  DEV_CRYPTO_MODE_BLE_CCM,
+
   /** OCB3 cipher mode as specified in rfc7253. Usage is similar to
       @ref DEV_CRYPTO_MODE_GCM. The @tt iv_ctr field points to the
       nonce. */
