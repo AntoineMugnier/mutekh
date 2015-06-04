@@ -116,8 +116,9 @@ dev_request_spin_wait(struct dev_request_status_s *status)
   assert(cpu_is_interruptible());
 # endif
 
-  while (!status->done)
+  do {
     order_compiler_mem();
+  } while (!status->done);
 }
 
 # ifdef CONFIG_MUTEK_SCHEDULER
