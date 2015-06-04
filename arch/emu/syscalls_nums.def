@@ -1,5 +1,9 @@
 /* -*- c -*- */
 
+/*
+   gcc -E -x c -P  arch/emu/syscalls_nums.def  arch/emu/syscalls_args.def -DCONFIG_ARCH_EMU_LINUX | grep '#define' > cpu/XXX-emu/include/emu/syscalls_linux.h
+ */
+
 #define X(x)	x
 #define __SYSCALL_NAME(x,y) X(x##y)
 
@@ -23,7 +27,7 @@ X(#define) EMU_SYSCALL_READ     SYSCALL_NAME(read)
 X(#define) EMU_SYSCALL_WRITE    SYSCALL_NAME(write)
 X(#define) EMU_SYSCALL_CLOSE    SYSCALL_NAME(close)
 X(#define) EMU_SYSCALL_IOCTL    SYSCALL_NAME(ioctl)
-X(#define) EMU_SYSCALL_SOCKET   SYSCALL_NAME(socket)
+X(#define) EMU_SYSCALL_SOCKETCALL   SYSCALL_NAME(socketcall)
 X(#define) EMU_SYSCALL_WAITPID  SYSCALL_NAME(waitpid)
 X(#define) EMU_SYSCALL_WAIT4    SYSCALL_NAME(wait4)
 X(#define) EMU_SYSCALL_PTRACE   SYSCALL_NAME(ptrace)

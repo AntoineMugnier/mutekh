@@ -27,12 +27,12 @@
 #include <hexo/types.h>
 #include <stdarg.h>
 
-#include "arch/hexo/syscalls_nums.h"
-#include "arch/hexo/syscalls_args.h"
 
 extern __compiler_sint_t cpu_pids[CONFIG_ARCH_EMU_CPUS];
 
 #if defined(CONFIG_ARCH_EMU_LINUX)
+
+#include "emu/syscalls_linux.h"
 
 # if defined(CONFIG_CPU_X86_EMU)
 
@@ -105,6 +105,8 @@ emu_do_syscall_va(uint_fast16_t id, size_t argc, va_list ap)
 # endif
 
 #elif defined(CONFIG_ARCH_EMU_DARWIN)
+
+#include "emu/syscalls_darwin.h"
 
 # if defined(CONFIG_CPU_X86_EMU)
 

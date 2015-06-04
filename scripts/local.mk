@@ -167,21 +167,6 @@ $(3)/$(1): $(2)/$(1:.h=.t)
 
 endef
 
-## declare_meta_h: file_name, src_dir, obj_dir
-
-define declare_meta_h
-
-#$( # info  ======== declare_meta_h, $(1), $(2), $(3))
-
-# Extract HOST defined macros and inject values in a new header file.
-# This is used by emultaion platform to get correct syscall numbers and args
-$(3)/$(1): $(2)/$(1:.h=.def) $(OBJ_DIR)/config.h
-	$(call prepare_command,H_CPP,$$@)
-	cat $(OBJ_DIR)/config.h $(2)/$(1:.h=.def) | \
-		$(HOSTCC) $$(CFLAGS) $$(CPUCFLAGS) $$(ARCHCFLAGS) -E - | grep '#define' > $(3)/$(1)
-
-endef
-
 ## declare_meta_cpp: file_name, src_dir, obj_dir
 
 define declare_meta_cpp

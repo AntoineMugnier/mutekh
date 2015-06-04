@@ -99,6 +99,7 @@ void emu_cpus_enum_init()
   struct device_s *d = device_alloc(1);
   device_res_add_id(d, __bootstrap_pid, 0);
   d->node.flags |= DEVICE_FLAG_CPU;
+  device_set_name(d, "cpu0");
   device_attach(d, NULL);
   device_bind_driver(d, &emu_cpu_drv);
 
@@ -121,6 +122,11 @@ void emu_cpus_enum_init()
         struct device_s *d = device_alloc(1);
         device_res_add_id(d, pid, 0);
         d->node.flags |= DEVICE_FLAG_CPU;
+
+        char name[8];
+        sprintf(name, "cpu%u", i);
+        device_set_name(d, name);
+
         device_attach(d, NULL);
         device_bind_driver(d, &emu_cpu_drv);
 
