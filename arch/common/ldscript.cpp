@@ -149,7 +149,7 @@ SECTIONS
 #endif
 #ifdef CONFIG_MUTEK_SHELL
                 shell_cmd_table = .;
-		KEEP(*(.shell))
+		KEEP(*(.shell .shell.*))
                 LONG(0);        /* NULL terminated array */
 # if INT_PTR_SIZE == 64
                 LONG(0);

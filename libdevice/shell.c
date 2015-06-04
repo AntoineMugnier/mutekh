@@ -596,10 +596,5 @@ static TERMUI_CON_GROUP_DECL(dev_shell_subgroup) =
   TERMUI_CON_LIST_END
 };
 
-TERMUI_CON_GROUP_DECL(dev_shell_group) =
-{
-  TERMUI_CON_GROUP_ENTRY(dev_shell_subgroup, "dev")
-};
-
-MUTEK_SHELL_GROUP_REGISTER(dev_shell_group);
+MUTEK_SHELL_ROOT_GROUP(dev_shell_subgroup, "dev")
 

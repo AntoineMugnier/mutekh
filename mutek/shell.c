@@ -30,14 +30,12 @@
 #include <termui/console.h>
 
 /* console commands descriptors array */
-TERMUI_CON_GROUP_DECL(mutek_shell_group) =
-{
-  TERMUI_CON_BUILTIN_HELP(-1)
-  TERMUI_CON_BUILTIN_LIST(-1)
-  TERMUI_CON_BUILTIN_QUIT(-1)
-};
 
-MUTEK_SHELL_GROUP_REGISTER(mutek_shell_group);
+#ifdef CONFIG_LIBTERMUI_CON_HELP
+MUTEK_SHELL_ROOT_ENTRY(help, TERMUI_CON_BUILTIN_HELP(-1) );
+#endif
+MUTEK_SHELL_ROOT_ENTRY(list, TERMUI_CON_BUILTIN_LIST(-1) );
+MUTEK_SHELL_ROOT_ENTRY(quit, TERMUI_CON_BUILTIN_QUIT(-1) );
 
 extern __ldscript_symbol_t shell_cmd_table;
 
