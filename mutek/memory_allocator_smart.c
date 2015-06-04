@@ -1063,10 +1063,7 @@ void memory_allocator_region_check(struct memory_allocator_region_s *region)
             free_blocks++;
 #endif
             if (last_is_free)
-              {
-                printk("Memory allocator: Found contiguous free blocks at %p\n", item);
-                abort();
-              }
+              printk("Memory allocator: Found contiguous free blocks at %p\n", item);
             last_is_free = 1;
             memory_allocator_scramble_check(hdr_size, item);
           }
@@ -1117,3 +1114,45 @@ error_t memory_allocator_stats(struct memory_allocator_region_s *region,
   return -ENOTSUP;
 #endif
 }
+
+#ifdef CONFIG_MUTEK_SHELL
+
+#include <mutek/shell.h>
+
+TERMUI_CON_COMMAND_PROTOTYPE(shell_mem_blocks)
+{
+  struct memory_allocator_region_s *region = default_region;
+
+  GCT_FOREACH(block_list, &region->block_root, item,
+  {
+    if (header_is_endblock(item))
+      {
+        termui_con_printf(con, " END\n");
+      }
+    else
+      {
+        termui_con_printf(con, " %c at %p: %zu bytes\n",
+                          header_is_alloc(item) ? 'A' : 'F',
+                          item, header_get_size(&region->block_root, item));
+      }
+  });
+  return 0;
+}
+
+# ifdef CONFIG_MUTEK_MEMALLOC_STATS
+TERMUI_CON_COMMAND_PROTOTYPE(shell_mem_stats)
+{
+  struct memory_allocator_region_s *region = default_region;
+
+  termui_con_printf(con,
+                    "Allocated blocks: %zu\n"
+                    "Free blocks:      %zu\n"
+                    "Free bytes:       %zu\n",
+                    region->alloc_blocks,
+                    region->free_blocks,
+                    region->free_size);
+  return 0;
+}
+# endif
+#endif
+
