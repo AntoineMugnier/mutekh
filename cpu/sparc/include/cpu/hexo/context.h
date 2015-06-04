@@ -52,6 +52,7 @@ struct cpu_context_s
 {
   union {
     reg_t save_mask;       //< what is being saved and restored
+    reg_t gpr[32];
     struct {
       reg_t g[8];
       reg_t o[8];
@@ -72,8 +73,9 @@ struct cpu_context_s
 # endif
 };
 
+/** name of registers accessible using cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "y", "psr", "pc", "npc"
-# define CPU_CONTEXT_REG_FIRST 1
+/** number of registers in cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_COUNT 36
 
 # endif  /* __MUTEK_ASM__ */

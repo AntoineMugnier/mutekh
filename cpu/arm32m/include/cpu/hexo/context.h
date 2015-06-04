@@ -69,8 +69,9 @@ struct cpu_context_s
 #  endif
 };
 
-#  define CPU_CONTEXT_REG_FIRST 0
+/** name of registers accessible using cpu_context_s::gpr */
 #  define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "xpsr"
+/** number of registers in cpu_context_s::gpr */
 #  define CPU_CONTEXT_REG_COUNT 17
 
 # endif

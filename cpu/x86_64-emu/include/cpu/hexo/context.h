@@ -45,16 +45,20 @@ struct cpu_context_s
 {
   uint64_t mask;
   /* sorted in iret order */
-  struct cpu_context_regs_s kregs;
+  union {
+    reg_t gpr[18];
+    struct cpu_context_regs_s kregs;
+  };
 # ifdef CONFIG_HEXO_FPU
   __attribute__((aligned(16)))
   uint8_t mm[512];  /* fpu and multimedia state */
 # endif
 };
 
-# define CPU_CONTEXT_REG_NAMES "savemask", CPU_GPREG_NAMES, "rip", "rflags"
-# define CPU_CONTEXT_REG_FIRST 1
-# define CPU_CONTEXT_REG_COUNT 17
+/** name of registers accessible using cpu_context_s::gpr */
+# define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "rip", "rflags"
+/** number of registers in cpu_context_s::gpr */
+# define CPU_CONTEXT_REG_COUNT 18
 
 #else
 

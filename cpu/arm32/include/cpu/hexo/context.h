@@ -48,9 +48,10 @@ struct cpu_context_s
     reg_t save_mask;       //< what is being saved and restored
 };
 
-# define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "cpsr", "savemask"
-# define CPU_CONTEXT_REG_FIRST 0
-# define CPU_CONTEXT_REG_COUNT 18
+/** name of registers accessible using cpu_context_s::gpr */
+# define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "cpsr"
+/** number of registers in cpu_context_s::gpr */
+# define CPU_CONTEXT_REG_COUNT 17
 
 #endif
 

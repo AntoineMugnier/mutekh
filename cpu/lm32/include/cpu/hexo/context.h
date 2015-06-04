@@ -49,8 +49,9 @@ struct cpu_context_s
   reg_t pc;
 };
 
+/** name of registers accessible using cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_NAMES CPU_GPREG_NAMES, "ei", "pc"
-# define CPU_CONTEXT_REG_FIRST 1
+/** number of registers in cpu_context_s::gpr */
 # define CPU_CONTEXT_REG_COUNT 34
 
 # endif  /* __MUTEK_ASM__ */

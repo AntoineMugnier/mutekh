@@ -52,7 +52,7 @@ static CPU_EXCEPTION_HANDLER(fault_handler)
 		 , (void*)execptr, (void*)dataptr);
 
   reg_t *r = regs->gpr;
-  for (i = CPU_CONTEXT_REG_FIRST; i < CPU_CONTEXT_REG_COUNT; i++)
+  for (i = 0; i < CPU_CONTEXT_REG_COUNT; i++)
 #ifdef CPU_CONTEXT_REG_NAMES
     printk("%s=%p%c", reg_names[i], (void*)*(r + i), (i + 1) % 4 ? ' ' : '\n');
 #else
