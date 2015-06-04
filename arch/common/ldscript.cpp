@@ -141,10 +141,10 @@ SECTIONS
                 . = ALIGN(16);
 		*(.rodata*)
 
-#if defined(CONFIG_DEVICE)
                 . = ALIGN(8);
+#if defined(CONFIG_DEVICE)
 		dev_drivers_table = .;
-		KEEP(*(.drivers))
+		KEEP(*(.drivers .drivers.*))
 		dev_drivers_table_end = .;
 #endif
 #ifdef CONFIG_MUTEK_SHELL
@@ -173,7 +173,7 @@ SECTIONS
 #if defined(CONFIG_DEVICE)
                 . = ALIGN(8);
 		dev_devices_table = .;
-		KEEP(*(.devices))
+		KEEP(*(.devices .devices.*))
 		dev_devices_table_end = .;
 #endif
 #ifndef CONFIG_ARCH_SMP

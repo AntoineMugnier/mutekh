@@ -285,11 +285,11 @@ struct driver_s
  */
 #if defined(CONFIG_ARCH_EMU_DARWIN)
 #define REGISTER_DRIVER(name) \
-	const __attribute__((section ("__DATA, __drivers"))) \
+	const __attribute__((section ("__DATA, __drivers."#name))) \
 	const struct driver_s *name##_drv_ptr = &name
 #else
 #define REGISTER_DRIVER(name) \
-	const __attribute__((section (".drivers"))) \
+	const __attribute__((section (".drivers."#name))) \
 	const struct driver_s *name##_drv_ptr = &name
 #endif
 

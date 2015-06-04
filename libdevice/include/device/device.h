@@ -172,7 +172,7 @@ struct device_s
 # define DEV_DECLARE_STATIC(declname_, name_, flags_, driver_, resources_...) \
     extern const struct driver_s driver_;                               \
     __attribute__ ((aligned (sizeof(void*))))                           \
-    __attribute__((section (".devices")))                               \
+    __attribute__((section (".devices."#declname_)))                    \
     struct device_s declname_ = {                                       \
       .node = {                                                         \
         .flags = flags_ | DEVICE_FLAG_DEVICE,                           \
@@ -194,7 +194,7 @@ struct device_s
 # define DEV_DECLARE_STATIC(declname_, name_, flags_, driver_, resources_...) \
     extern const struct driver_s driver_;                               \
     __attribute__ ((aligned (sizeof(void*))))                           \
-    __attribute__((section (".devices")))                               \
+    __attribute__((section (".devices."#declname_)))                    \
     struct device_s declname_ = {                                       \
       .node = {                                                         \
         .flags = flags_ | DEVICE_FLAG_DEVICE,                           \
