@@ -18,6 +18,7 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2014
 */
 
+#include <hexo/endian.h>
 #include <mutek/thread.h>
 #include <mutek/scheduler.h>
 
