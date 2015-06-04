@@ -25,18 +25,6 @@
 
 /////////////////////////////////////////////////////////////////////
 
-#include <mutek/mem_alloc.h>
-#include <mutek/memory_allocator.h>
-
-void zynq_mem_init()
-{
-  default_region = memory_allocator_init(NULL, (void*)CONFIG_STARTUP_HEAP_ADDR,
-                                         (void*)(CONFIG_STARTUP_HEAP_ADDR +
-                                                 CONFIG_STARTUP_HEAP_SIZE));
-}
-
-/////////////////////////////////////////////////////////////////////
-
 # include <device/driver.h>
 # include <device/device.h>
 #include <device/resources.h>

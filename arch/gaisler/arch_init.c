@@ -35,18 +35,6 @@ void gaisler_arch_lock_init()
 }
 #endif
 
-/////////////////////////////////////////////////////////////////////
-
-#include <mutek/mem_alloc.h>
-#include <mutek/mem_region.h>
-#include <mutek/memory_allocator.h>
-
-void gaisler_mem_init()
-{
-    default_region = memory_allocator_init(NULL, (void*)CONFIG_STARTUP_HEAP_ADDR,
-                                           (void*)(CONFIG_STARTUP_HEAP_ADDR +
-                                                   CONFIG_STARTUP_HEAP_SIZE));
-}
 
 /////////////////////////////////////////////////////////////////////
 

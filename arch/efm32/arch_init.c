@@ -24,16 +24,6 @@
 
 #include <string.h>
 
-#include <mutek/mem_alloc.h>
-#include <mutek/memory_allocator.h>
-
-void efm32_mem_init()
-{
-    default_region = memory_allocator_init(NULL, (void*)CONFIG_STARTUP_HEAP_ADDR,
-                                           (void*)(CONFIG_STARTUP_HEAP_ADDR +
-                                                   CONFIG_STARTUP_HEAP_SIZE));
-}
-
 #ifdef CONFIG_EFM32_BOOT_BUTTON
 
 #include <hexo/iospace.h>
