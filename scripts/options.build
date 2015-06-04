@@ -35,3 +35,6 @@
 %section collect
   CONFIG_COMPILE_COLLECT
 
+%section binary
+  CONFIG_COMPILE_FORMAT binary
+

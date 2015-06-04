@@ -1,15 +1,8 @@
 POST_TARGET=__foo.out
 
 LDFLAGS=
-TARGET_EXT ?= out
 
 TARGET_SECTIONS=.multiboot .reset .smpreset .text .rodata .excep .cpudata .contextdata .data
-
-LINKING=1
-ifeq ($(TARGET_EXT),o)
-LINKING=0
-endif
-export LINKING
 
 OUT_NAME := $(shell cd $(MUTEK_SRC_DIR) ; \
 		perl $(MUTEK_SRC_DIR)/scripts/config.pl	\
@@ -24,13 +17,20 @@ $(error Configure script failed)
 endif
 
 OBJ_DIR := $(BUILD_DIR)/obj-$(OUT_NAME)
+include $(OBJ_DIR)/config.mk
+
+TARGET_EXT ?= $(CONFIG_COMPILE_FORMAT)
+LINKING=1
+ifeq ($(TARGET_EXT),o)
+LINKING=0
+endif
+export LINKING
+
 target = $(subst /,-,$(OUT_NAME))
 KERNEL_FILE=$(target).$(TARGET_EXT)
 FINAL_KERNEL_FILE=$(target).$(TARGET_EXT)
 LOG_FILE=$(OBJ_DIR)/build.log
 #LOG_REDIR= 3>>$(LOG_FILE) 1>&3 2>&3
-
-include $(OBJ_DIR)/config.mk
 
 DEP_FILE_LIST:=
 
@@ -203,15 +203,14 @@ $(POST_TARGET): $(OBJ_DIR)/$(target).o $(POST_LDSCRIPT)
 	@echo '    LD post ' $(notdir $@) $(LOG_REDIR)
 	$(LD) -o $@ --gc-sections -T $(POST_LDSCRIPT) $< $(LOG_REDIR)
 
-$(OBJ_DIR)/$(target).hex: $(OBJ_DIR)/$(target).out
-	echo 'OBJCOPY HEX ' $(notdir $@) $(LOG_REDIR)
-	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O ihex $< $@ $(LOG_REDIR)
-
-$(OBJ_DIR)/$(target).srec: $(OBJ_DIR)/$(target).out
-	echo 'OBJCOPY HEX ' $(notdir $@) $(LOG_REDIR)
-	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O srec $< $@ $(LOG_REDIR)
-
-$(OBJ_DIR)/$(target).bin: $(OBJ_DIR)/$(target).out
-	echo 'OBJCOPY BIN ' $(notdir $@) $(LOG_REDIR)
-	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O binary $< $@ $(LOG_REDIR)
-
+ifeq ($(CONFIG_COMPILE_FORMAT),out)
+ifneq ($(TARGET_EXT),out)
+$(OBJ_DIR)/$(target).$(TARGET_EXT): $(OBJ_DIR)/$(target).out
+	echo 'CP          ' $(notdir $@) $(LOG_REDIR)
+	cp $< $@ $(LOG_REDIR)
+endif
+else
+$(OBJ_DIR)/$(target).$(TARGET_EXT): $(OBJ_DIR)/$(target).out
+	echo 'OBJCOPY     ' $(notdir $@) $(LOG_REDIR)
+	$(OBJCOPY) $(addprefix -j ,$(TARGET_SECTIONS)) $(OBJCOPYFLAGS) -O $(CONFIG_COMPILE_FORMAT) $< $@ $(LOG_REDIR)
+endif
