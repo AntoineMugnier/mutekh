@@ -123,7 +123,7 @@
 
 #ifndef STATIC_ASSERT
 #define STATIC_ASSERT(error, expr)                              \
-  typedef char assertion_failure__##error[-(char)!(expr)];
+  extern char assertion_failure__##error[-(char)!(expr)];
 #endif
 
 #ifndef FIRST_FIELD_ASSERT
