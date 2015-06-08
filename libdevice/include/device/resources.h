@@ -341,9 +341,9 @@ struct dev_resource_s * device_res_get_from_name(const struct device_s *dev,
 
 /** @internal @This allocates a new device resource and setups 2
     integer or pointers fields. */
-ALWAYS_INLINE error_t device_res_alloc_uint(struct device_s *dev,
-					    enum dev_resource_type_e type,
-					    uintptr_t a, uintptr_t b, struct dev_resource_s **r_)
+inline error_t device_res_alloc_uint(struct device_s *dev,
+                                     enum dev_resource_type_e type,
+                                     uintptr_t a, uintptr_t b, struct dev_resource_s **r_)
 {
   struct dev_resource_s *r;
   error_t err = device_res_alloc(dev, &r, type);
@@ -360,9 +360,9 @@ ALWAYS_INLINE error_t device_res_alloc_uint(struct device_s *dev,
 
 /** @internal @This looks up a resource entry and reads one or two
     integer fields. @tt a and @tt b pointers may be @tt NULL. */
-ALWAYS_INLINE error_t device_res_get_uint(const struct device_s *dev,
-                                          enum dev_resource_type_e type,
-                                          uint_fast8_t id, uintptr_t *a, uintptr_t *b)
+inline error_t device_res_get_uint(const struct device_s *dev,
+                                   enum dev_resource_type_e type,
+                                   uint_fast8_t id, uintptr_t *a, uintptr_t *b)
 {
   const struct dev_resource_s *r;
 
@@ -378,9 +378,9 @@ ALWAYS_INLINE error_t device_res_get_uint(const struct device_s *dev,
 
 /** @internal @This allocates a new device resource and setups a 64
     bits integer field. */
-ALWAYS_INLINE error_t device_res_alloc_uint64(struct device_s *dev,
-					      enum dev_resource_type_e type,
-					      uint64_t a, struct dev_resource_s **r_)
+inline error_t device_res_alloc_uint64(struct device_s *dev,
+                                       enum dev_resource_type_e type,
+                                       uint64_t a, struct dev_resource_s **r_)
 {
   struct dev_resource_s *r;
   error_t err = device_res_alloc(dev, &r, type);
@@ -396,9 +396,9 @@ ALWAYS_INLINE error_t device_res_alloc_uint64(struct device_s *dev,
 
 /** @internal @This looks up a resource entry and reads a 64 bits
     integer resource field. */
-ALWAYS_INLINE error_t device_res_get_uint64(const struct device_s *dev,
-                                            enum dev_resource_type_e type,
-                                            uint_fast8_t id, uint64_t *a)
+inline error_t device_res_get_uint64(const struct device_s *dev,
+                                     enum dev_resource_type_e type,
+                                     uint_fast8_t id, uint64_t *a)
 {
   struct dev_resource_s *r;
 
@@ -442,19 +442,10 @@ ALWAYS_INLINE error_t device_res_add_io(struct device_s *dev, uintptr_t start, u
 
 /** @internal @This looks up an IO resource entry and reads either
     fields. @tt start and @tt end pointers may be @tt NULL. */
-ALWAYS_INLINE error_t device_get_param_io(const struct device_s *dev,
-                                          uint_fast8_t id, uintptr_t *start, uintptr_t *end)
+ALWAYS_INLINE error_t device_res_get_io(const struct device_s *dev,
+                                        uint_fast8_t id, uintptr_t *start, uintptr_t *end)
 {
-  const struct dev_resource_s *r;
-
-  if (!(r = device_res_get(dev, DEV_RES_IO, id)))
-    return -ENOENT;
-
-  if (start)
-    *start = r->u.io.start;
-  if (end)
-    *end = r->u.io.end;
-  return 0;
+  return device_res_get_uint(dev, DEV_RES_IO, id, start, end);
 }
 
 
@@ -477,6 +468,14 @@ ALWAYS_INLINE error_t device_res_add_mem(struct device_s *dev, uintptr_t start, 
         .end = (end_),                          \
       } }                                       \
   }
+
+/** @internal @This looks up a memory resource entry and reads either
+    fields. @tt start and @tt end pointers may be @tt NULL. */
+ALWAYS_INLINE error_t device_res_get_mem(const struct device_s *dev,
+                                         uint_fast8_t id, uintptr_t *start, uintptr_t *end)
+{
+  return device_res_get_uint(dev, DEV_RES_MEM, id, start, end);
+}
 
 
 /** @This adds an IRQ binding to the device resources list.
@@ -562,6 +561,14 @@ ALWAYS_INLINE error_t device_res_add_id(struct device_s *dev, uintptr_t major, u
       } }                                       \
   }
 
+/** @internal @This looks up an id resource entry and reads either
+    fields. @tt start and @tt end pointers may be @tt NULL. */
+ALWAYS_INLINE error_t device_res_get_id(const struct device_s *dev,
+                                        uint_fast8_t id, uintptr_t *major, uintptr_t *minor)
+{
+  return device_res_get_uint(dev, DEV_RES_ID, id, major, minor);
+}
+
 
 /**
    @This adds a revision information for the device.
@@ -582,6 +589,14 @@ ALWAYS_INLINE error_t device_res_add_revision(struct device_s *dev, uintptr_t ma
         .minor = (minor_),                                              \
       } }                                                               \
   }
+
+/** @internal @This looks up a revision resource entry and reads either
+    fields. @tt start and @tt end pointers may be @tt NULL. */
+ALWAYS_INLINE error_t device_res_get_rev(const struct device_s *dev,
+                                         uint_fast8_t id, uintptr_t *major, uintptr_t *minor)
+{
+  return device_res_get_uint(dev, DEV_RES_ID, id, major, minor);
+}
 
 
 /**

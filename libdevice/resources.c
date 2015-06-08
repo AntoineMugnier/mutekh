@@ -31,6 +31,22 @@
 
 #include <string.h>
 
+extern inline error_t device_res_alloc_uint(struct device_s *dev,
+                                            enum dev_resource_type_e type,
+                                            uintptr_t a, uintptr_t b, struct dev_resource_s **r_);
+
+extern inline error_t device_res_get_uint(const struct device_s *dev,
+                                          enum dev_resource_type_e type,
+                                          uint_fast8_t id, uintptr_t *a, uintptr_t *b);
+
+extern inline error_t device_res_alloc_uint64(struct device_s *dev,
+                                              enum dev_resource_type_e type,
+                                              uint64_t a, struct dev_resource_s **r_);
+
+extern inline error_t device_res_get_uint64(const struct device_s *dev,
+                                            enum dev_resource_type_e type,
+                                            uint_fast8_t id, uint64_t *a);
+
 struct dev_resource_s *device_res_get(const struct device_s *dev,
                                       enum dev_resource_type_e type,
                                       uint_fast8_t id)
