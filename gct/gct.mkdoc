@@ -1,0 +1,6 @@
+
+@moduledef{Generic C templates library}
+  @short Data structures template library
+  See @url http://savannah.nongnu.org/cvs/?group=gct
+@end moduledef
+

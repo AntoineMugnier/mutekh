@@ -1,0 +1,21 @@
+
+@moduledef{Mutek}
+ @short Hardware independent kernel services
+ @order 99
+@end moduledef
+
+@parse{
+mutek/buffer_pool.h
+mutek/bytecode.h
+mutek/console.h
+mutek/kroutine.h
+mutek/mem_alloc.h
+mutek/printk.h
+mutek/rwlock.h
+mutek/scheduler.h
+mutek/semaphore.h
+mutek/shell.h
+mutek/slab.h
+mutek/startup.h
+mutek/thread.h
+}

@@ -1,6 +1,30 @@
 
 @include template.mkdoc
-@include modules.mkdoc
+
+@parse{
+  doc/gct.mkdoclib
+}
+
+@include ../libc/libc.mkdoc
+@include ../hexo/hexo.mkdoc
+@include ../mutek/mutek.mkdoc
+@include ../gct/gct.mkdoc
+@include ../libdevice/libdevice.mkdoc
+@include ../libm/libm.mkdoc
+@include ../libvfs/libvfs.mkdoc
+@include ../libpthread/libpthread.mkdoc
+@include ../libnetwork/libnetwork.mkdoc
+@include ../libfdt/libfdt.mkdoc
+@include ../libtermui/libtermui.mkdoc
+@include ../libgomp/libgomp.mkdoc
+
+@moduledef{Device drivers}
+  @internal
+@end moduledef
+
+@parse{
+doc/config.h 
+}
 
 @insert title
 
@@ -16,6 +40,9 @@
 @section HP {Table of contents}
   @insert toc
 @end section
+
+@include ../arch/arch.mkdoc
+@include ../cpu/cpu.mkdoc
 
 @section TP {Modules documentation}
  @section TH {Modules list}

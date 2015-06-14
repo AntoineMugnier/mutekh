@@ -110,17 +110,6 @@
 #  define config_depend_or2_inline(token1, token2, proto, ...) \
   _CONFIG_DEPEND_OR2(#token1, #token2, _##token1, _##token2, inline, proto, __VA_ARGS__)
 
-# endif
-
-#ifdef __MKDOC__
-# define config_depend(token)
-# define config_depend_alwaysinline(token, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
-# define config_depend_and2(token1, token2)
-# define config_depend_and2_alwaysinline(token1, token2, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
-# define config_depend_or2(token1, token2)
-# define config_depend_or2_alwaysinline(token1, token2, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
-#endif
-
 #ifndef STATIC_ASSERT
 #define STATIC_ASSERT(error, expr)                              \
   extern char assertion_failure__##error[-(char)!(expr)];
@@ -163,6 +152,35 @@ cont_s##_from_##field(typeof(((struct cont_s*)0)->field) *x)            \
 
 #undef ENUM_DESCRIPTOR
 #define ENUM_DESCRIPTOR(name, ...) extern const char name[];
+
+#endif /* !defined(__MUTEK_ASM__) */
+
+#ifdef __MKDOC__
+# define config_depend(token)
+# define config_depend_inline(token, proto, ...) inline proto __VA_ARGS__
+# define config_depend_alwaysinline(token, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
+# define config_depend_and2(token1, token2)
+# define config_depend_and2_inline(token1, token2, proto, ...) inline proto __VA_ARGS__
+# define config_depend_and2_alwaysinline(token1, token2, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
+# define config_depend_or2(token1, token2)
+# define config_depend_or2_inline(token1, token2, proto, ...) inline proto __VA_ARGS__
+# define config_depend_or2_alwaysinline(token1, token2, proto, ...) ALWAYS_INLINE proto __VA_ARGS__
+
+#define STRUCT_INHERIT(type_s, base_s, field)                           \
+ALWAYS_INLINE struct base_s *                                           \
+type_s##_base(struct type_s *x);                                        \
+ALWAYS_INLINE struct type_s *                                           \
+type_s##_cast(struct base_s *x);
+
+#define STRUCT_COMPOSE(cont_s, field)                                   \
+ALWAYS_INLINE struct cont_s *                                           \
+cont_s##_from_##field(void *x);
+
+# define STATIC_ASSERT(error, expr)
+# define FIRST_FIELD_ASSERT(struct_name, field)
+# define ENUM_DESCRIPTOR(...)
+#endif
+
 
 #if defined(CONFIG_DEBUG) && !defined(__ASSEMBLER__)
 

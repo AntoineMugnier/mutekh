@@ -1,0 +1,13 @@
+
+@section TP {Supported platforms}
+
+  @include bcm2835/bcm2835.mkdoc
+  @include efm32/efm32.mkdoc
+  @include emu/emu.mkdoc
+  @include gaisler/gaisler.mkdoc
+  @include soclib/soclib.mkdoc
+  @include stm32/stm32.mkdoc
+  @include zynq/zynq.mkdoc
+
+@end section
+

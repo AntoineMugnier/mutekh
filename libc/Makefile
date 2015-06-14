@@ -20,7 +20,3 @@ objs-$(CONFIG_LIBC_SCANF) += scanf.o
 objs-$(CONFIG_LIBC_FORMATTER) += formatter.o
 objs-$(CONFIG_LIBC_FORMATTER_FLOAT) += formatter_float.o
 
-doc_headers = alloca.h assert.h ctype.h errno.h fcntl.h limits.h        \
-	semaphore.h setjmp.h stdarg.h stdbool.h stddef.h stdint.h       \
-	stdio.h stdlib.h string.h time.h unistd.h sys/stat.h            \
-	libc/formatter.h

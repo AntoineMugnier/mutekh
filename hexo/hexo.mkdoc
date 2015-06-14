@@ -1,0 +1,22 @@
+
+@moduledef{Hexo}
+ @short Processor and platform hardware abstraction layer
+ @order 100
+@end moduledef
+
+@parse{
+hexo/atomic.h
+hexo/context.h
+hexo/cpu.h
+hexo/decls.h
+hexo/endian.h
+hexo/error.h
+hexo/interrupt.h
+hexo/iospace.h
+hexo/ipi.h
+hexo/local.h
+hexo/lock.h
+hexo/ordering.h
+hexo/types.h
+}
+

@@ -230,7 +230,7 @@ STRUCT_INHERIT(dev_rfpacket_rq_s, dev_request_s, base);
   @ref DEV_RFPACKET_RQ_RX and @ref DEV_RFPACKET_RQ_IDLE requests.
 
   The time frame during which a request remains valid is defined by
-  the @refdev_rfpacket_rq_s::lifetime field. The start of this time
+  the @ref dev_rfpacket_rq_s::lifetime field. The start of this time
   frame can be relative to the previously handled request, even if
   this request doesn't exist anymore. The value of the @tt anchor
   field defines this behavior (see @ref dev_rfpacket_time_anchor_e).
@@ -272,7 +272,7 @@ STRUCT_INHERIT(dev_rfpacket_rq_s, dev_request_s, base);
   The transceiver device may implement the timer device class which
   wrap the timer used to handle timestamps and lifetime values.
 
-  @table 4 {Error values}
+  @table 5 {Error values}
 
   @item Error @item Config @item TX @item RX @item Idle
   @c---------------------------------------------------

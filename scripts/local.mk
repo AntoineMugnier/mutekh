@@ -199,18 +199,6 @@ endif
 
 endef
 
-define declare_doc_header
-
-MKDOC_ARGS += $(1)
-
-endef
-
-define declare_doc_files
-
-MKDOC_ARGS += $(2)/$(1)
-
-endef
-
 ## scan_local_makefile: src_dir, obj_dir
 
 define scan_local_makefile
@@ -231,16 +219,12 @@ meta:=
 copy:=
 subdirs:=
 pre_headers:=
-doc_headers:=
-doc_files:=
 enum_headers:=
 objs-defined:=
 meta-defined:=
 copy-defined:=
 subdirs-defined:=
 pre_headers-defined:=
-doc_headers-defined:=
-doc_files-defined:=
 enum_headers-defined:=
 
 include $$(LOCAL_SRC_DIR)/Makefile
@@ -266,14 +250,6 @@ $$(eval $$(foreach tometa,$$(filter %.h,$$(meta) $$(meta-defined)),$$(call decla
 $$(eval $$(foreach tometa,$$(filter-out %.h,$$(meta) $$(meta-defined)),$$(call declare_meta_cpp,$$(tometa),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
 $$(eval $$(foreach ph,$$(pre_headers) $$(pre_headers-defined),$$(call declare_gct_header,$$(ph),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
-
-$$(eval \
-$$(foreach h,$$(doc_headers) $$(doc_headers-defined),\
-$$(call declare_doc_header,$$(h))))
-
-$$(eval \
-$$(foreach f,$$(doc_files) $$(doc_files-defined),\
-$$(call declare_doc_files,$$(f),$$(LOCAL_SRC_DIR))))
 
 # Beware this must be left last in calls
 

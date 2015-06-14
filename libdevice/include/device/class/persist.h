@@ -123,7 +123,6 @@ enum dev_persist_type_e
 /**
    Value descriptor.
  */
-__attribute__((packed))
 struct dev_persist_descriptor_s
 {
   /** Platform-wise identifier. @tt rq->uid_offset is added to this
@@ -135,7 +134,7 @@ struct dev_persist_descriptor_s
   uint16_t state : 3;
   /** Byte size for blobs, size of integer part for counters. */
   uint16_t size : 12;
-};
+} __attribute__((packed));
 
 ENUM_DESCRIPTOR(dev_persist_op_e, strip:DEV_PERSIST_, upper);
 

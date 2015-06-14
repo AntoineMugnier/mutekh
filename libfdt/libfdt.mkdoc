@@ -1,0 +1,15 @@
+
+@moduledef{FDT access library}
+ @short Flattened device tree access library
+ This library offers a mid-level access to Flattened Device Tree blobs
+ without the need of dynamic memory allocation. This is mostly intended
+ for system initialization stage.
+
+ See @url https://www.mutek.fr/trac/mutekh/wiki/FlattenedDeviceTree
+@end moduledef
+
+@parse{
+fdt/reader.h
+fdt/writer.h
+}
+

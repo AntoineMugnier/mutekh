@@ -9,5 +9,3 @@ objs-$(CONFIG_PTHREAD_CANCEL) += cancel.o
 objs-$(CONFIG_PTHREAD_BARRIER) += barrier.o
 objs-$(CONFIG_PTHREAD_MAIN) += main_wrap.o
 
-doc_headers = \
-	pthread.h

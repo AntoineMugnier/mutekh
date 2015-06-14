@@ -5,7 +5,3 @@ objs = cpu.o context.o interrupt.o init.o
 
 objs-$(CONFIG_HEXO_IPI) += ipi.o
 
-doc_headers = hexo/asm.h hexo/atomic.h hexo/context.h hexo/cpu.h        \
-        hexo/decls.h hexo/endian.h hexo/error.h hexo/interrupt.h        \
-        hexo/iospace.h hexo/ipi.h hexo/local.h hexo/lock.h              \
-        hexo/ordering.h hexo/types.h

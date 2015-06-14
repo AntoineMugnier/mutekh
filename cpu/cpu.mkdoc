@@ -1,0 +1,13 @@
+
+@section TP {Supported processors}
+
+  @include arm32/arm32.mkdoc
+  @include arm32m/arm32m.mkdoc
+  @include mips/mips.mkdoc
+  @include ppc/ppc.mkdoc
+  @include sparc/sparc.mkdoc
+  @include lm32/lm32.mkdoc
+  @include nios2/nios2.mkdoc
+
+@end section
+

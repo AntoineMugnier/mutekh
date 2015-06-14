@@ -8,9 +8,6 @@ objs = \
     name.o \
 	fs.o
 
-doc_headers = vfs/file.h vfs/fs.h \
- vfs/node.h vfs/path.h vfs/name.h
-
 subdirs = fs
 
 #DIR_CFLAGS=-O0 -ggdb

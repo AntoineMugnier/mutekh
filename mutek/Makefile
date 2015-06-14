@@ -1,9 +1,4 @@
 
-doc_headers = mutek/bytecode.h mutek/console.h mutek/fileops.h  \
-        mutek/kroutine.h mutek/mem_alloc.h mutek/mem_region.h   \
-        mutek/memory_allocator.h mutek/printk.h mutek/rwlock.h  \
-        mutek/scheduler.h mutek/semaphore.h mutek/startup.h
-
 DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
 objs += fault.o startup.o mem_alloc.o

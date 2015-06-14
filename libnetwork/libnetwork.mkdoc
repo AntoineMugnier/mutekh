@@ -1,0 +1,11 @@
+
+@moduledef{Network stack library}
+ @short Network library
+@end moduledef
+
+@parse{
+net/addr.h
+net/layer.h
+net/task.h
+net/scheduler.h
+}
