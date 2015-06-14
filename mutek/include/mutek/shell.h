@@ -27,6 +27,8 @@
  * @short Interactive shell
  */
 
+#include <hexo/decls.h>
+
 #ifndef MUTEK_SHELL_H_
 #define MUTEK_SHELL_H_
 
