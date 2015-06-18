@@ -340,14 +340,14 @@ bool_t mpu6505_switch_mode(struct device_s *dev, enum mpu6505_power_mode_e mode)
     REG_ACCEL_CONFIG_8G,
     REG_ACCEL_CONFIG2_184HZ,
     REG_LP_ACCEL_ODR_15_63HZ,
-    REG_WOM_THR_MG(30),
+    REG_WOM_THR_MG(40),
 
     2, REG_FIFO_EN,
     0,
   };
   static const uint8_t poweroff[] = {
-    2, REG_PWR_MGMT_2,
-    0x70,
+    2, REG_PWR_MGMT_1,
+    REG_PWR_MGMT_1_SLEEP,
   };
   static const uint8_t wom[] = {
     2, REG_INT_ENABLE,
@@ -663,6 +663,9 @@ static DEV_INIT(mpu6505_init)
   dev->drv = &mpu6505_drv;
   dev->status = DEVICE_DRIVER_INIT_DONE;
   pv->timer_req.rq.pvdata = dev;
+  pv->power_mode = -1;
+
+  mpu6505_switch_mode(dev, MPU6505_POWER_OFF);
 
   return 0;
 
