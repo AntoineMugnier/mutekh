@@ -87,6 +87,10 @@ CFLAGS += -ffunction-sections -fdata-sections
 LINK_LDFLAGS += --gc-sections
 endif
 
+ifeq ($(CONFIG_COMPILE_MERGE), defined)
+CFLAGS += -fmerge-all-constants -fmerge-constants
+endif
+
 ifeq ($(CONFIG_COMPILE_INSTRUMENT), defined)
 CFLAGS += -finstrument-functions
 endif
