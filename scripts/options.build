@@ -14,6 +14,9 @@
 %section optsize
   CONFIG_COMPILE_OPTIMIZE! s
 
+%section merge
+  CONFIG_COMPILE_MERGE
+
 %section release
   CONFIG_RELEASE!
   CONFIG_DEBUG! undefined
