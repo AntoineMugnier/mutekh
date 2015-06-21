@@ -67,10 +67,9 @@
 #define STM32_IRQ_DMA2_CHANNEL3         58
 #define STM32_IRQ_DMA2_CHANNEL4_5       59
 
-#endif
-#endif
+#endif // CONFIG_STM32_FLASHSIZE >= 0x000c0000
 
-#if CONFIG_STM32_FAMILY == 4
+#elif CONFIG_STM32_FAMILY == 4
 
 #define STM32_IRQ_WWDG          0
 #define STM32_IRQ_EXTI16        1
