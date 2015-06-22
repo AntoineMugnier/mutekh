@@ -239,7 +239,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(dev_shell_spi_write)
   if (err)
     termui_con_printf(con, "Failed to transfert spi data with error: %d\n", err);
 
-  termui_con_printf(con, "write (%u bytes): %P\n", size, out, size);
+  termui_con_printf(con, "write %u bytes: %P (hex)\n", size, out, size);
 
   return err;
 }
