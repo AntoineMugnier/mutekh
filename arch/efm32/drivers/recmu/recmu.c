@@ -152,6 +152,12 @@ static const char * const efm32_clock_names[EFM32_CLOCK_count] = {
 # ifdef EFM32_CLOCK_LEUART1
     [EFM32_CLOCK_LEUART1]    = "leuart1",
 # endif
+# ifdef EFM32_CLOCK_UART0
+    [EFM32_CLOCK_UART0]      = "uart0",
+# endif
+# ifdef EFM32_CLOCK_UART1
+    [EFM32_CLOCK_UART1]      = "uart1",
+# endif
 };
 #endif
 
@@ -232,6 +238,12 @@ static const uint8_t efm32_en_bits[EFM32_CLOCK_count] = {
 #endif
 #ifdef EFM32_CLOCK_LEUART1
     [EFM32_CLOCK_LEUART1]  = EFM32_CMU_LFBCLKEN0_LEUART1_SHIFT | 0x80,
+#endif
+#ifdef EFM32_CLOCK_UART0
+    [EFM32_CLOCK_UART0]  = EFM32_CMU_HFPERCLKEN0_UART0_SHIFT | 0x80,
+#endif
+#ifdef EFM32_CLOCK_UART1
+    [EFM32_CLOCK_UART1]  = EFM32_CMU_HFPERCLKEN0_UART1_SHIFT | 0x80,
 #endif
 };
 
