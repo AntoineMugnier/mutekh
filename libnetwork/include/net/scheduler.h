@@ -66,30 +66,12 @@ GCT_CONTAINER_TYPES(net_timeout_queue, struct net_task_header_s *, queue_entry);
 struct net_scheduler_s;
 
 /**
-   @this is a vtable for a scheduler.
- */
-struct net_scheduler_handler_s
-{
-  /**
-     @this gets called after the last layer got destroyed and dropped
-     the last reference on the scheduler.
-
-     Delegate should free up the scheduler's context memory.
-   */
-  void (*destroyed)(struct net_scheduler_s *sched);
-};
-
-/**
    @this is a network scheduler context.  No field should be accessed
    directly.
  */
 struct net_scheduler_s
 {
   lock_t lock;
-
-  GCT_REFCOUNT_ENTRY(obj_entry);
-
-  const struct net_scheduler_handler_s *handler;
 
   struct context_s context;
   struct sched_context_s sched_context;
@@ -103,13 +85,14 @@ struct net_scheduler_s
   struct slab_s task_pool;
   struct buffer_pool_s *packet_pool;
 
-  bool_t running;
   bool_t scheduled;
+  bool_t exited;
+  struct sched_context_s *exiter;
+
+  uint32_t timer_usage;
 
   void *stack;
 };
-
-GCT_REFCOUNT(net_scheduler, struct net_scheduler_s *, obj_entry);
 
 /**
    @this initializes a network scheduler context.
@@ -122,9 +105,11 @@ GCT_REFCOUNT(net_scheduler, struct net_scheduler_s *, obj_entry);
  */
 error_t net_scheduler_init(
   struct net_scheduler_s *sched,
-  const struct net_scheduler_handler_s *handler,
   struct buffer_pool_s *packet_pool,
   const char *timer_dev);
+
+void net_scheduler_cleanup(
+  struct net_scheduler_s *sched);
 
 /**
    @this allocates a task in the scheduler's task internal slab.  Task

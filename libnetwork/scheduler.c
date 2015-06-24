@@ -124,14 +124,46 @@ static bool_t net_scheduler_tasks_handle(struct net_scheduler_s *sched)
   return changed;
 }
 
+void net_scheduler_cleanup(struct net_scheduler_s *sched)
+{
+  struct net_task_header_s *task;
+
+  dprintk("%s\n", __FUNCTION__);
+
+  sched->exiter = sched_get_current();
+  net_sched_wakeup(sched);
+
+  CPU_INTERRUPT_SAVESTATE_DISABLE;
+  lock_spin(&sched->lock);
+  while (!sched->exited) {
+    sched_stop_unlock(&sched->lock);
+    lock_spin(&sched->lock);
+  }
+  lock_release(&sched->lock);
+  CPU_INTERRUPT_RESTORESTATE;
+
+  while ((task = net_task_queue_pop(&sched->pending_tasks)))
+    net_task_cleanup(net_task_s_from_header(task));
+
+  while ((task = net_timeout_queue_pop(&sched->delayed_tasks)))
+    net_task_cleanup(net_task_s_from_header(task));
+
+  net_task_queue_destroy(&sched->pending_tasks);
+  net_timeout_queue_destroy(&sched->delayed_tasks);
+
+  mem_free(context_destroy(&sched->context));
+
+  slab_cleanup(&sched->task_pool);
+  lock_destroy(&sched->lock);
+}
+
 static void sched_cleanup(void *param)
 {
   struct net_scheduler_s *sched = param;
 
-  dprintk("Net scheduler cleanup\n");
+  dprintk("%s\n", __FUNCTION__);
 
-  mem_free(context_destroy(&sched->context));
-  sched->handler->destroyed(sched);
+  sched->exited = 1;
 
   sched_context_exit();
 }
@@ -139,11 +171,10 @@ static void sched_cleanup(void *param)
 static CONTEXT_ENTRY(net_scheduler_worker)
 {
   struct net_scheduler_s *sched = param;
-  struct net_task_header_s *task;
 
   dprintk("Net scheduler started\n");
 
-  while (sched->running) {
+  while (!sched->exiter) {
     dprintk("Net scheduler iteration\n");
 
     net_scheduler_timeout_handle(sched);
@@ -161,22 +192,8 @@ static CONTEXT_ENTRY(net_scheduler_worker)
     CPU_INTERRUPT_RESTORESTATE;
   }
 
-  while ((task = net_task_queue_pop(&sched->pending_tasks)))
-    net_task_cleanup(net_task_s_from_header(task));
-
-  while ((task = net_timeout_queue_pop(&sched->delayed_tasks)))
-    net_task_cleanup(net_task_s_from_header(task));
-
-  dprintk("Net scheduler done\n");
-
   if (sched->timer_rq.rq.drvdata)
     DEVICE_OP(&sched->timer, cancel, &sched->timer_rq);
-
-  net_task_queue_destroy(&sched->pending_tasks);
-  net_timeout_queue_destroy(&sched->delayed_tasks);
-  device_stop(&sched->timer);
-  slab_cleanup(&sched->task_pool);
-  lock_destroy(&sched->lock);
 
   cpu_context_stack_use(sched_tmp_context(), sched_cleanup, sched);
 }
@@ -192,8 +209,6 @@ static void scheduler_task_free(
   struct net_scheduler_s *sched = task->header.allocator_data;
 
   slab_free(&sched->task_pool, task);
-
-  net_scheduler_refdec(sched);
 }
 
 struct net_task_s *net_scheduler_task_alloc(
@@ -202,14 +217,13 @@ struct net_task_s *net_scheduler_task_alloc(
   struct net_task_s *task = slab_alloc(&sched->task_pool);
 
   task->header.destroy_func = (void*)scheduler_task_free;
-  task->header.allocator_data = net_scheduler_refinc(sched);
+  task->header.allocator_data = sched;
 
   return task;
 }
 
 error_t net_scheduler_init(
   struct net_scheduler_s *sched,
-  const struct net_scheduler_handler_s *handler,
   struct buffer_pool_s *packet_pool,
   const char *timer_dev)
 {
@@ -217,15 +231,13 @@ error_t net_scheduler_init(
 
   memset(sched, 0, sizeof(*sched));
 
-  net_scheduler_refinit(sched);
-
   err = device_get_accessor_by_path(&sched->timer, NULL, timer_dev, DRIVER_CLASS_TIMER);
   if (err)
     return err;
 
-  sched->handler = handler;
-  sched->running = 1;
+  sched->exiter = NULL;
   sched->scheduled = 0;
+  sched->exited = 0;
   lock_init(&sched->lock);
 
   net_task_queue_init(&sched->pending_tasks);

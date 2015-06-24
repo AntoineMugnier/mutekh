@@ -102,7 +102,7 @@ error_t net_layer_init(
   net_layer_list_init(&layer->children);
 
   layer->handler = handler;
-  layer->scheduler = net_scheduler_refinc(sched);;
+  layer->scheduler = sched;
   layer->parent = NULL;
   layer->type = type;
 
@@ -129,6 +129,5 @@ void net_layer_destroy(
   layer->handler->destroyed(layer);
 
   net_scheduler_from_layer_cancel(sched, layer);
-  net_scheduler_refdec(sched);
 }
 
