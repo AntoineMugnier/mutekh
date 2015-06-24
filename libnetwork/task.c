@@ -53,7 +53,7 @@ void net_task_push(struct net_task_header_s *header,
   header->source = net_layer_refinc(source);
   header->type = type;
 
-  //printk("Task %p push %S\n", header, &header->target->type, 4);
+  //printk("Task %p push %S\n", header, &header->target->handler->type, 4);
 
   net_scheduler_task_push(target->scheduler, header);
 }
@@ -77,7 +77,7 @@ void net_task_inbound_push(struct net_task_s *task,
   else
     memset(&task->inbound.dst_addr, 0, sizeof(struct net_addr_s));
 
-  //printk("Task %p forward <- %S\n", task, &source->type, 4);
+  //printk("Task %p forward <- %S\n", task, &source->handler->type, 4);
 
   net_task_push(&task->header, target, source, NET_TASK_INBOUND);
 }
@@ -88,7 +88,7 @@ void net_task_inbound_forward(struct net_task_s *task,
   struct net_layer_s *old_source = task->header.source;
   struct net_layer_s *old_target = task->header.target;
 
-  //printk("Task %p forward <- %S\n", task, &task->inbound.source->type, 4);
+  //printk("Task %p forward <- %S\n", task, &task->inbound.source->handler->type, 4);
 
   net_task_push(&task->header, target, old_target, NET_TASK_INBOUND);
 

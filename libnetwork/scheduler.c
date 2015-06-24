@@ -116,7 +116,7 @@ static bool_t net_scheduler_tasks_handle(struct net_scheduler_s *sched)
   while ((task = net_task_queue_pop(&sched->pending_tasks))) {
     changed = 1;
 
-    dprintk("Sched task %p handling in %S...\n", task, &task->target->type, 4);
+    dprintk("Sched task %p handling in %S...\n", task, &task->target->handler->type, 4);
 
     task->target->handler->task_handle(task->target, task);
   }
@@ -280,18 +280,12 @@ error_t net_scheduler_init(
   return err;
 }
 
-void net_scheduler_destroy(struct net_scheduler_s *sched)
-{
-  sched->running = 0;
-  net_sched_wakeup(sched);
-}
-
 void net_scheduler_task_push(
     struct net_scheduler_s *sched,
     struct net_task_header_s *task)
 {
-  dprintk("Sched task %p pushed %d to %S\n", task, task->type,
-          &task->target->type, 4);
+  dprintk("Sched task %p pushed %d to %S\n", task, task->handler->type,
+          &task->target->handler->type, 4);
 
   if (task->type == NET_TASK_TIMEOUT)
     net_timeout_queue_insert(&sched->delayed_tasks, task);
@@ -324,3 +318,12 @@ void net_scheduler_from_layer_cancel(
               net_task_queue_remove(&sched->pending_tasks, item);
               );
 }
+
+void net_scheduler_timer_use(struct net_scheduler_s *sched)
+{
+}
+
+void net_scheduler_timer_release(struct net_scheduler_s *sched)
+{
+}
+

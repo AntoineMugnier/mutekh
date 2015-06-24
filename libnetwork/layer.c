@@ -36,7 +36,7 @@ void net_layer_context_update(struct net_layer_s *layer,
     changed = 1;
   }
 
-  //printk("Layer %S now %d+%d\n", &layer->type, 4,
+  //printk("Layer %S now %d+%d\n", &layer->handler->type, 4,
   //       layer->context.mtu, layer->context.prefix_size);
 
   if (changed)
@@ -67,7 +67,7 @@ error_t net_layer_bind(
   if (err)
     return err;
 
-  //printk("Layer %S bound to %S\n", &child->type, 4, &layer->type, 4);
+  //printk("Layer %S bound to %S\n", &child->handler->type, 4, &layer->handler->type, 4);
 
   child->parent = layer;
   net_layer_list_pushback(&layer->children, child);
@@ -83,7 +83,7 @@ void net_layer_unbind(
 {
   assert(child->parent == layer);
 
-  //printk("Layer %S unbound from %S\n", &child->type, 4, &layer->type, 4);
+  //printk("Layer %S unbound from %S\n", &child->handler->type, 4, &layer->handler->type, 4);
 
   if (layer->handler->unbound)
     layer->handler->unbound(layer, child);
@@ -95,8 +95,7 @@ void net_layer_unbind(
 error_t net_layer_init(
     struct net_layer_s *layer,
     const struct net_layer_handler_s *handler,
-    struct net_scheduler_s *sched,
-    uint32_t type)
+    struct net_scheduler_s *sched)
 {
   net_layer_refinit(layer);
   net_layer_list_init(&layer->children);
@@ -104,9 +103,11 @@ error_t net_layer_init(
   layer->handler = handler;
   layer->scheduler = sched;
   layer->parent = NULL;
-  layer->type = type;
 
-  //printk("Layer %S init\n", &layer->type, 4);
+  //printk("Layer %S init\n", &layer->handler->type, 4);
+
+  if (layer->handler->use_timer)
+    net_scheduler_timer_use(layer->scheduler);
 
   return 0;
 }
@@ -116,18 +117,22 @@ void net_layer_destroy(
 {
   struct net_layer_s *child;
   struct net_scheduler_s *sched = layer->scheduler;
+  const struct net_layer_handler_s *handler = layer->handler;
 
   layer->scheduler = NULL;
 
-  //printk("Layer %S destroy\n", &layer->type, 4);
+  //printk("Layer %S destroy\n", &layer->handler->type, 4);
 
   while ((child = net_layer_list_head(&layer->children))) {
     net_layer_unbind(layer, child);
     net_layer_refdec(child);
   }
 
-  layer->handler->destroyed(layer);
-
   net_scheduler_from_layer_cancel(sched, layer);
+
+  handler->destroyed(layer);
+
+  if (handler->use_timer)
+    net_scheduler_timer_release(sched);
 }
 
